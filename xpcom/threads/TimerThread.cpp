@@ -33,6 +33,12 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  */
 
+
+#if defined(XP_MAC) || defined (XP_MACOSX)
+#include <unistd.h>  // for sleep()
+#include <Power.h>
+#endif
+
 #include "nsTimerImpl.h"
 #include "TimerThread.h"
 
@@ -41,6 +47,36 @@
 
 #include "nsIServiceManager.h"
 
+#if defined(XP_MAC) || defined (XP_MACOSX)
+
+static SleepQRec  gSleepQEntry = { NULL, sleepQType, NULL, 0 };
+static PRBool     gSleepQEntryInstalled = PR_FALSE;
+static TimerThread* gTimerThread = NULL;
+
+/*
+  On Mac OS, we have to deal with machine sleep. If we don't readjust
+  timers after sleep, the precise repeating timers think that they
+  are way behind, and fire like crazy for a while after wake.
+  
+  We install a SleepQProc to get notified about sleep and wake.
+*/
+
+static pascal long TimerSleepQProc(long message, SleepQRecPtr sleepQ)
+{
+  if (!gTimerThread) return 0;
+    
+  /* just woke up from sleeping, so must recompute timer timeouts */
+  if (message == kSleepDemand)
+    gTimerThread->DoBeforeSleep();
+  else if (message == kSleepWakeUp)
+    gTimerThread->DoAfterSleep();
+
+  return 0;
+}
+
+#endif  // defined(XP_MAC) || defined (XP_MACOSX)
+
+
 NS_IMPL_THREADSAFE_ISUPPORTS1(TimerThread, nsIRunnable)
 
 TimerThread::TimerThread() :
@@ -48,6 +84,9 @@ TimerThread::TimerThread() :
   mCondVar(nsnull),
   mShutdown(PR_FALSE),
   mWaiting(PR_FALSE),
+#if defined(XP_MAC) || defined (XP_MACOSX)
+  mSleeping(PR_FALSE),
+#endif
   mDelayLineCounter(0),
   mMinTimerPeriod(0),
   mTimeoutAdjustment(0)
@@ -75,6 +114,14 @@ nsresult TimerThread::Init()
 {
   if (mThread)
     return NS_OK;
+
+#if defined(XP_MAC) || defined (XP_MACOSX)
+  if ((gSleepQEntry.sleepQProc = NewSleepQUPP(TimerSleepQProc)) != NULL) {
+    ::SleepQInstall(&gSleepQEntry);
+    gSleepQEntryInstalled = PR_TRUE;
+    gTimerThread = this;
+  }
+#endif
 
   mLock = PR_NewLock();
   if (!mLock)
@@ -104,6 +151,13 @@ nsresult TimerThread::Shutdown()
 {
   if (!mThread)
     return NS_ERROR_NOT_INITIALIZED;
+
+#if defined(XP_MAC) || defined (XP_MACOSX)
+  // clean up the sleepQ entry
+  if (gSleepQEntryInstalled)
+    ::SleepQRemove(&gSleepQEntry);
+  gTimerThread = NULL;
+#endif
 
   {   // lock scope
     nsAutoLock lock(mLock);
@@ -186,78 +240,91 @@ NS_IMETHODIMP TimerThread::Run()
   nsAutoLock lock(mLock);
 
   while (!mShutdown) {
-    PRIntervalTime now = PR_IntervalNow();
-    nsTimerImpl *timer = nsnull;
-
-    if (mTimers.Count() > 0) {
-      timer = NS_STATIC_CAST(nsTimerImpl*, mTimers[0]);
-
-      if (!TIMER_LESS_THAN(now, timer->mTimeout + mTimeoutAdjustment)) {
-  next:
-        // NB: AddRef before the Release under RemoveTimerInternal to avoid
-        // mRefCnt passing through zero, in case all other refs than the one
-        // from mTimers have gone away (the last non-mTimers[i]-ref's Release
-        // must be racing with us, blocked in gThread->RemoveTimer waiting
-        // for TimerThread::mLock, under nsTimerImpl::Release.
-
-        NS_ADDREF(timer);
-        RemoveTimerInternal(timer);
-
-        // We release mLock around the Fire call, of course, to avoid deadlock.
-        lock.unlock();
-
-#ifdef DEBUG_TIMERS
-        if (PR_LOG_TEST(gTimerLog, PR_LOG_DEBUG)) {
-          PR_LOG(gTimerLog, PR_LOG_DEBUG,
-                 ("Timer thread woke up %dms from when it was supposed to\n",
-                  (now >= timer->mTimeout)
-                  ? PR_IntervalToMilliseconds(now - timer->mTimeout)
-                  : -(PRInt32)PR_IntervalToMilliseconds(timer->mTimeout - now))
-                );
-        }
-#endif
-
-        // We are going to let the call to PostTimerEvent here handle the release of the
-        // timer so that we don't end up releasing the timer on the TimerThread
-        // instead of on the thread it targets.
-        timer->PostTimerEvent();
-        timer = nsnull;
-
-        lock.lock();
-        if (mShutdown)
-          break;
-
-        // Update now, as PostTimerEvent plus the locking may have taken a tick or two,
-        // and we may goto next below.
-        now = PR_IntervalNow();
-      }
-    }
-
+    
     PRIntervalTime waitFor = PR_INTERVAL_NO_TIMEOUT;
-
-    if (mTimers.Count() > 0) {
-      timer = NS_STATIC_CAST(nsTimerImpl *, mTimers[0]);
-
-      PRIntervalTime timeout = timer->mTimeout + mTimeoutAdjustment;
-
-      // Don't wait at all (even for PR_INTERVAL_NO_WAIT) if the next timer is
-      // due now or overdue.
-      if (!TIMER_LESS_THAN(now, timeout))
-        goto next;
-      waitFor = timeout - now;
-    }
-
-#ifdef DEBUG_TIMERS
-    if (PR_LOG_TEST(gTimerLog, PR_LOG_DEBUG)) {
-      if (waitFor == PR_INTERVAL_NO_TIMEOUT)
-        PR_LOG(gTimerLog, PR_LOG_DEBUG,
-               ("waiting for PR_INTERVAL_NO_TIMEOUT\n"));
-      else
-        PR_LOG(gTimerLog, PR_LOG_DEBUG,
-               ("waiting for %u\n", PR_IntervalToMilliseconds(waitFor)));
+  
+    PRBool suspendTimerFiring = PR_FALSE;
+    
+#if defined(XP_MAC) || defined (XP_MACOSX)
+    if (mSleeping) {
+      suspendTimerFiring = PR_TRUE;
+      waitFor = PR_MillisecondsToInterval(100);   // sleep for 0.1 seconds while not firing timers
     }
 #endif
-
+    
+    if (!suspendTimerFiring)
+    {
+      PRIntervalTime now = PR_IntervalNow();
+      nsTimerImpl *timer = nsnull;
+  
+      if (mTimers.Count() > 0) {
+        timer = NS_STATIC_CAST(nsTimerImpl*, mTimers[0]);
+  
+        if (!TIMER_LESS_THAN(now, timer->mTimeout + mTimeoutAdjustment)) {
+    next:
+          // NB: AddRef before the Release under RemoveTimerInternal to avoid
+          // mRefCnt passing through zero, in case all other refs than the one
+          // from mTimers have gone away (the last non-mTimers[i]-ref's Release
+          // must be racing with us, blocked in gThread->RemoveTimer waiting
+          // for TimerThread::mLock, under nsTimerImpl::Release.
+  
+          NS_ADDREF(timer);
+          RemoveTimerInternal(timer);
+  
+          // We release mLock around the Fire call, of course, to avoid deadlock.
+          lock.unlock();
+  
+#ifdef DEBUG_TIMERS
+          if (PR_LOG_TEST(gTimerLog, PR_LOG_DEBUG)) {
+            PR_LOG(gTimerLog, PR_LOG_DEBUG,
+                   ("Timer thread woke up %dms from when it was supposed to\n",
+                    (now >= timer->mTimeout)
+                    ? PR_IntervalToMilliseconds(now - timer->mTimeout)
+                    : -(PRInt32)PR_IntervalToMilliseconds(timer->mTimeout - now))
+                  );
+          }
+#endif
+  
+          // We are going to let the call to PostTimerEvent here handle the release of the
+          // timer so that we don't end up releasing the timer on the TimerThread
+          // instead of on the thread it targets.
+          timer->PostTimerEvent();
+          timer = nsnull;
+  
+          lock.lock();
+          if (mShutdown)
+            break;
+  
+          // Update now, as PostTimerEvent plus the locking may have taken a tick or two,
+          // and we may goto next below.
+          now = PR_IntervalNow();
+        }
+      }
+  
+      if (mTimers.Count() > 0) {
+        timer = NS_STATIC_CAST(nsTimerImpl *, mTimers[0]);
+  
+        PRIntervalTime timeout = timer->mTimeout + mTimeoutAdjustment;
+  
+        // Don't wait at all (even for PR_INTERVAL_NO_WAIT) if the next timer is
+        // due now or overdue.
+        if (!TIMER_LESS_THAN(now, timeout))
+          goto next;
+        waitFor = timeout - now;
+      }
+  
+#ifdef DEBUG_TIMERS
+      if (PR_LOG_TEST(gTimerLog, PR_LOG_DEBUG)) {
+        if (waitFor == PR_INTERVAL_NO_TIMEOUT)
+          PR_LOG(gTimerLog, PR_LOG_DEBUG,
+                 ("waiting for PR_INTERVAL_NO_TIMEOUT\n"));
+        else
+          PR_LOG(gTimerLog, PR_LOG_DEBUG,
+                 ("waiting for %u\n", PR_IntervalToMilliseconds(waitFor)));
+      }
+#endif
+    }
+    
     mWaiting = PR_TRUE;
     PR_WaitCondVar(mCondVar, waitFor);
     mWaiting = PR_FALSE;
@@ -353,3 +420,30 @@ PRBool TimerThread::RemoveTimerInternal(nsTimerImpl *aTimer)
   NS_RELEASE(aTimer);
   return PR_TRUE;
 }
+
+#if defined(XP_MAC) || defined (XP_MACOSX)
+
+void TimerThread::DoBeforeSleep()
+{
+  mSleeping = PR_TRUE;
+}
+
+void TimerThread::DoAfterSleep()
+{
+  ::sleep(1);  // this is necessary to give the OS time to update 
+               // gettimeofday(), which PR_IntervalNow() uses.
+
+  for (PRInt32 i = 0; i < mTimers.Count(); i ++)
+  {
+    nsTimerImpl *timer = NS_STATIC_CAST(nsTimerImpl*, mTimers[i]);
+    // this does locking for me
+    timer->SetDelay(timer->GetDelay());
+  }
+  
+  // nuke the stored adjustments, so they get recalibrated
+  mTimeoutAdjustment = 0;
+  mDelayLineCounter = 0;
+  mSleeping = PR_FALSE;
+}
+
+#endif   // defined(XP_MAC) || defined (XP_MACOSX)

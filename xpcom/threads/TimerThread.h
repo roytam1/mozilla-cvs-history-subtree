@@ -74,6 +74,11 @@ public:
   // For use by nsTimerImpl::Fire()
   nsCOMPtr<nsIEventQueueService> mEventQueueService;
 
+#if defined(XP_MAC) || defined (XP_MACOSX)
+  void     DoBeforeSleep();
+  void     DoAfterSleep();
+#endif
+
 private:
   // These two internal helper methods must be called while mLock is held.
   // AddTimerInternal returns the position where the timer was added in the
@@ -87,6 +92,9 @@ private:
 
   PRPackedBool mShutdown;
   PRPackedBool mWaiting;
+#if defined(XP_MAC) || defined (XP_MACOSX)
+  PRPackedBool mSleeping;
+#endif
 
   nsVoidArray mTimers;
 
