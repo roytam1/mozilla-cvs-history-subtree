@@ -487,6 +487,8 @@ XPCJSRuntime::~XPCJSRuntime()
     JS_HashTableDestroy(DEBUG_WrappedNativeHashtable);
 #endif
 
+    delete mThisTranslatorMap;
+
     // unwire the readable/JSString sharing magic
     XPCStringConvert::ShutdownDOMStringFinalizer();
 }
