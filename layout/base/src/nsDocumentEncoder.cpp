@@ -357,6 +357,17 @@ static PRInt32 IndexOf(nsIDOMNode* aParent, nsIDOMNode* aChild)
   return indx;
 }
 
+static inline PRInt32 GetIndex(nsVoidArray& aIndexArray)
+{
+  PRInt32 count = aIndexArray.Count();
+
+  if (count) {
+    return (PRInt32)aIndexArray.ElementAt(count - 1);
+  }
+
+  return 0;
+}
+
 static nsresult GetNextNode(nsIDOMNode* aNode, nsVoidArray& aIndexArray,
                             nsIDOMNode*& aNextNode, PRInt32& aDirection)
 {
@@ -442,7 +453,9 @@ nsDocumentEncoder::SerializeRangeNodes(nsVoidArray& aAncestors,
     node = NS_STATIC_CAST(nsIDOMNode *, aAncestors.ElementAt(--i));
   }
 
-  nsCOMPtr<nsIDOMNode> start, end;
+  nsCOMPtr<nsIDOMNode> start, endContainer, lastNode;
+
+  PRInt32 dir = 1;
 
   PRUint16 type;
   aStart->GetNodeType(&type);
@@ -450,6 +463,12 @@ nsDocumentEncoder::SerializeRangeNodes(nsVoidArray& aAncestors,
   if (type == nsIDOMNode::ELEMENT_NODE || type == nsIDOMNode::DOCUMENT_NODE) {
     rv = ChildAt(aStart, aStartOffset, *getter_AddRefs(start));
     NS_ENSURE_SUCCESS(rv, rv);
+
+    if (!start) {
+      start = aStart;
+
+      dir = -1;
+    }
 
     aStartOffset = 0;
   } else {
@@ -459,25 +478,24 @@ nsDocumentEncoder::SerializeRangeNodes(nsVoidArray& aAncestors,
   aEnd->GetNodeType(&type);
 
   if (type == nsIDOMNode::ELEMENT_NODE || type == nsIDOMNode::DOCUMENT_NODE) {
-    rv = ChildAt(aEnd, aEndOffset, *getter_AddRefs(end));
+    rv = ChildAt(aEnd, aEndOffset, *getter_AddRefs(lastNode));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    if (!end) {
+    if (!lastNode) {
       // The endpoint of the range points to the end of the last child in
-      // a container, in this case we set the end to the container.
+      // a container, in this case we set the endContainer to the container.
 
-      end = aEnd;
+      endContainer = aEnd;
+    } else {
+      aEndOffset = -1;
     }
-
-    aEndOffset = -1;
   } else {
-    end = aEnd;
+    lastNode = aEnd;
   }
 
-  if (start == end) {
+  if (start.get() == aEnd) {
     SerializeNodeStart(start, aStartOffset, aEndOffset, aOutputString); // Is this correct?
   } else {
-    PRInt32 dir = 1;
     nsVoidArray offsets;
 
     SerializeNodeStart(start, aStartOffset, -1, aOutputString);
@@ -486,15 +504,21 @@ nsDocumentEncoder::SerializeRangeNodes(nsVoidArray& aAncestors,
 
     while (node) {
       if (dir > 0) {
-        if (node == end) {
-          SerializeNodeStart(node, 0, aEndOffset, aOutputString);
+        if (node == endContainer || node == lastNode) {
+          if (aEndOffset > 0)
+            SerializeNodeStart(node, 0, aEndOffset, aOutputString);
 
-          break;
+          if (endContainer) {
+            if (GetIndex(offsets) >= aEndOffset)
+              break;
+          } else {
+            break;
+          }
         } else {
           SerializeNodeStart(node, 0, -1, aOutputString);
         }
       } else {
-        if (node == end) {
+        if (node.get() == aEnd) {
           break;
         }
 
@@ -505,8 +529,6 @@ nsDocumentEncoder::SerializeRangeNodes(nsVoidArray& aAncestors,
       GetNextNode(tmpNode, offsets, *getter_AddRefs(node), dir);
     }
   }
-
-  node = end;
 
   while (node && aCommonParent && node.get() != aCommonParent) {
     SerializeNodeEnd(node, aOutputString);
