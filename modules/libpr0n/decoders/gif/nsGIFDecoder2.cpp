@@ -318,41 +318,37 @@ int HaveDecodedRow(
   // is added in GIF89a and control blocks are how the extensions are done.
   // How annoying.
   if(! decoder->mImageFrame) {
-      gfx_format format = nsIGFXFormat::RGB;
-      if (decoder->mGIFStruct.is_transparent)
-        format = nsIGFXFormat::RGB_A1;
+    gfx_format format = nsIGFXFormat::RGB;
+    if (decoder->mGIFStruct.is_transparent)
+      format = nsIGFXFormat::RGB_A1;
 
 #ifdef XP_PC
-      // XXX this works...
-      format += 1; // RGB to BGR
+    // XXX this works...
+    format += 1; // RGB to BGR
 #endif
 
-      // initalize the frame and append it to the container
-      decoder->mImageFrame = do_CreateInstance("@mozilla.org/gfx/image/frame;2");
-      decoder->mImageFrame->Init(
-        decoder->mGIFStruct.x_offset, decoder->mGIFStruct.y_offset, 
-        decoder->mGIFStruct.width, decoder->mGIFStruct.height, format);
-        
-      decoder->mImageContainer->AppendFrame(decoder->mImageFrame);
+    // initalize the frame and append it to the container
+    decoder->mImageFrame = do_CreateInstance("@mozilla.org/gfx/image/frame;2");
+    decoder->mImageFrame->Init(
+      decoder->mGIFStruct.x_offset, decoder->mGIFStruct.y_offset, 
+      decoder->mGIFStruct.width, decoder->mGIFStruct.height, format);
+      
+    decoder->mImageContainer->AppendFrame(decoder->mImageFrame);
 
-      if (decoder->mObserver)
-        decoder->mObserver->OnStartFrame(nsnull, nsnull, decoder->mImageFrame);
+    if (decoder->mObserver)
+      decoder->mObserver->OnStartFrame(nsnull, nsnull, decoder->mImageFrame);
 
+    decoder->mImageFrame->GetImageBytesPerRow(&bpr);
+    decoder->mImageFrame->GetAlphaBytesPerRow(&abpr);
 
-      decoder->mImageFrame->GetImageBytesPerRow(&bpr);
-      decoder->mImageFrame->GetAlphaBytesPerRow(&abpr);
-      decoder->colorLine = (PRUint8 *)nsMemory::Alloc(bpr);
-      if (format == nsIGFXFormat::RGB_A1)
-        decoder->alphaLine = (PRUint8 *)nsMemory::Alloc(abpr);
+    decoder->colorLine = (PRUint8 *)nsMemory::Alloc(bpr);
+    if (format == nsIGFXFormat::RGB_A1 || format == nsIGFXFormat::BGR_A1)
+      decoder->alphaLine = (PRUint8 *)nsMemory::Alloc(abpr);
   } else {
     decoder->mImageFrame->GetImageBytesPerRow(&bpr);
     decoder->mImageFrame->GetAlphaBytesPerRow(&abpr);
   }
   
-  PRUint32 length;
-  PRUint8 *bits;
-  decoder->mImageFrame->GetImageData(&bits, &length);
-
   if (aRowBufPtr) {
 #ifdef FOO
     nscoord width;
@@ -364,21 +360,20 @@ int HaveDecodedRow(
 
     gfx_format format;
     decoder->mImageFrame->GetFormat(&format);
-    PRUint8 *aptr, *cptr;
 
-        // XXX map the data into colors
-        int cmapsize;
-        GIF_RGB* cmap;
-        if(decoder->mGIFStruct.local_colormap) {
-          cmapsize = decoder->mGIFStruct.local_colormap_size;
-          cmap = decoder->mGIFStruct.local_colormap;
-        } else {
-          cmapsize = decoder->mGIFStruct.global_colormap_size;
-          cmap = decoder->mGIFStruct.global_colormap;
-        }
-      
-        PRUint8* rgbRowIndex = aRGBrowBufPtr;
-        PRUint8* rowBufIndex = aRowBufPtr;
+    // XXX map the data into colors
+    int cmapsize;
+    GIF_RGB* cmap;
+    if(decoder->mGIFStruct.local_colormap) {
+      cmapsize = decoder->mGIFStruct.local_colormap_size;
+      cmap = decoder->mGIFStruct.local_colormap;
+    } else {
+      cmapsize = decoder->mGIFStruct.global_colormap_size;
+      cmap = decoder->mGIFStruct.global_colormap;
+    }
+
+    PRUint8* rgbRowIndex = aRGBrowBufPtr;
+    PRUint8* rowBufIndex = aRowBufPtr;
         
     switch (format) {
     case nsIGFXFormat::RGB:
@@ -394,7 +389,6 @@ int HaveDecodedRow(
           *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].green;
           *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].blue;
 #endif
-          //          *rgbRowIndex++ = 0;// pad XXX why do I need to pad data that I say is 3 bytes?
           ++rowBufIndex;
         }
 
@@ -404,17 +398,23 @@ int HaveDecodedRow(
     case nsIGFXFormat::RGB_A1:
     case nsIGFXFormat::BGR_A1:
       {
-        memset(aptr, 0, abpr);
+        memset(decoder->alphaLine, 0, abpr);
+        PRUint32 iwidth = (PRUint32)width;
         for (PRUint32 x=0; x<iwidth; x++) {
-          if(*rowBufIndex == decoder->mGIFStruct.tpixel) {
+          if (*rowBufIndex == decoder->mGIFStruct.tpixel) {
             // set mask bit
           }
-          *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].blue; //XXX off by one at start, alignment I think
           *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].red;
           *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].green;
+          *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].blue;
+
+          if (*rowBufIndex == decoder->mGIFStruct.tpixel)
+            decoder->alphaLine[x>>3] |= 1<<(7-x&0x7);
+
+          ++rowBufIndex;
         }
         decoder->mImageFrame->SetImageData(decoder->colorLine, bpr, aRowNumber*bpr);
-        // decoder->mImageFrame->SetAlphaData(decoder->alphaLine, abpr, aRowNumber*abpr);
+        decoder->mImageFrame->SetAlphaData(decoder->alphaLine, abpr, aRowNumber*abpr);
       }
       break;
     default:
