@@ -55,3 +55,6 @@ ifeq ($(OS_ARCH),OS2)
 BIN_SUFFIX = .exe
 LINK = -ilink
 endif
+ifeq ($(OS_ARCH),WINNT)
+BIN_SUFFIX = .exe
+endif

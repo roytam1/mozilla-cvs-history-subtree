@@ -3,6 +3,8 @@ NS_DEPTH	= ../../../..
 srcdir		= @srcdir@
 ldaptopsrcdir	= @top_srcdir@
 
+include ../../build/autoconf.mk
+
 RM		= rm -f
 SED		= sed
 
@@ -59,7 +61,19 @@ SRCS		= abandon.c \
 		  utf8.c \
 		  vlistctrl.c
 
-REALOBJS	= $(SRCS:.c=.o)
+ifeq ($(OS_ARCH),WINNT)
+LBER_SRCS	= \
+		decode.c \
+		encode.c \
+		io.c \
+		bprint.c \
+		$(NULL)
+
+SRCS		+= mozock.c \
+		$(addprefix ../liblber/,$(LBER_SRCS))
+endif
+
+REALOBJS	= $(SRCS:.c=.$(OBJ_SUFFIX))
 
 #OBJS		= $(REALOBJS) versiont.o
 OBJS		= $(REALOBJS)
@@ -69,7 +83,13 @@ HDIR2		= ../../include
 
 CFLAGS		= $(INCLUDES) $(DEFINES)
 
+ifeq ($(OS_ARCH),WINNT)
+RES		= nsldap.res
+RESNAME		= $(srcdir)/../msdos/winsock/nsldap.rc
+LIBRARY_NAME	= nsldap32v40
+else
 LIBRARY_NAME	= ldap40
+endif
 
 #
 # DEFS are included in CFLAGS
@@ -81,12 +101,6 @@ DEFS		= $(PLATFORMCFLAGS) $(LDAP_DEBUG) $(KERBEROS) $(AFSKERBEROS) \
 		  $(SLAPD_BACKENDS) $(LDBMBACKEND) $(LDBMINCLUDE) $(PHONETIC) \
 		  $(LDAP_SSLIO_HOOKS)
 
-include ../../build/autoconf.mk
-
-ifeq ($(OS_ARCH),OS2)
-OBJS = $(REALOBJS:.o=.obj)
-endif
-
 include $(NSPR_TREE)/config/rules.mk
 
 LOCAL_INCLUDES  = -I$(PUBLIC)/nspr
@@ -94,6 +108,21 @@ INCLUDES	+= -I$(HDIR) -I$(HDIR2) $(KRBINCLUDEFLAG)
 DEFINES		+= $(DEFS) -DFILTERFILE=./ldapfilter.conf \
 		   -DTEMPLATEFILE=./ldaptemplates.conf \
 		   -DNDEBUG -UMOZILLA_CLIENT
+
+ifeq ($(OS_ARCH),WINNT)
+DEFINES		+= /D_WINDOWS /DWINSOCK \
+	/D_WIN32 /DWIN32_KERNEL_THREADS \
+	/DNO_USERINTERFACE /DLDAP_SSLIO_HOOKS 
+EXTRA_LIBS += rpcrt4.lib winmm.lib wsock32.lib oldnames.lib kernel32.lib user32.lib
+DLL_LIBS += /DEF:$(srcdir)/../msdos/winsock/nsldap3240.def \
+	/implib:$(LIBRARY_NAME).$(LIB_SUFFIX) \
+	/nodefaultlib
+ifdef BUILD_OPT
+EXTRA_LIBS += msvcrt.lib
+else
+EXTRA_LIBS += msvcrtd.lib
+endif
+endif
 
 ifeq ($(OS_ARCH), OS2)
 INCLUDES	+=  -I$(DIST)/include
@@ -117,7 +146,11 @@ endif
 GARBAGE		+= $(ETCDIR)/ldapfriendly $(ETCDIR)/ldapfilter.conf \
 		   $(ETCDIR)/ldaptemplates.conf $(ETCDIR)/ldapsearchprefs.conf
 
+ifeq ($(OS_ARCH),WINNT)
+PLATFORMCFLAGS	= -DNEEDPROTOS
+else
 PLATFORMCFLAGS	= -DUSE_WAITPID -DNEEDPROTOS
+endif
 PLATFORMLIBS	=
 THREADS		=
 THREADSLIB	=
@@ -182,11 +215,14 @@ endif
 
 else  # !os2
 
-install::	$(LIBRARY) $(SHARED_LIBRARY)
+install::	$(LIBRARY) $(SHARED_LIBRARY) $(IMPORT_LIBRARY)
 	$(INSTALL) -m 444 $(LIBRARY) $(DIST)/lib
 ifdef MKSHLIB
 	$(INSTALL) -m 555 $(SHARED_LIBRARY) $(DIST)/lib
 	$(INSTALL) -m 555 $(SHARED_LIBRARY) $(DIST)/bin
+ifdef IMPORT_LIBRARY
+	$(INSTALL) -m 444 $(IMPORT_LIBRARY) $(DIST)/lib
+endif
 endif
 
 endif # os2
