@@ -3587,6 +3587,13 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
     aState.PushFloaterContainingBlock(contentFrame, floaterSaveState,
                                       haveFirstLetterStyle,
                                       haveFirstLineStyle);
+
+    // Create any anonymous frames the doc element frame requires
+    // This must happen before ProcessChildren to ensure that popups are
+    // never constructed before the popupset.
+    CreateAnonymousFrames(aPresShell, aPresContext, nsnull, aState, aDocElement, contentFrame,
+                          childItems, PR_TRUE);
+     
     ProcessChildren(aPresShell, aPresContext, aState, aDocElement, contentFrame,
                     PR_TRUE, childItems, isBlockFrame);
 
@@ -3619,10 +3626,6 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
         view->SetViewFlags(viewFlags | NS_VIEW_PUBLIC_FLAG_DONT_BITBLT);
       }
     }
-
-     // Create any anonymous frames the doc element frame requires
-    CreateAnonymousFrames(aPresShell, aPresContext, nsnull, aState, aDocElement, contentFrame,
-                          childItems, PR_TRUE);
 
     // Set the initial child lists
     contentFrame->SetInitialChildList(aPresContext, nsnull,
@@ -5946,20 +5949,21 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
     }
 
     // Process the child content if requested
-    nsFrameItems childItems;
     if (processChildren || processAnonymousChildren) {
-      nsCOMPtr<nsIBindingManager> bindingManager;
-      mDocument->GetBindingManager(getter_AddRefs(bindingManager));
+      nsFrameItems childItems;
       if (processChildren) {
+        nsCOMPtr<nsIBindingManager> bindingManager;
+        mDocument->GetBindingManager(getter_AddRefs(bindingManager));
         bindingManager->ShouldBuildChildFrames(aContent, &processChildren);
         if (processChildren)
-          rv = ProcessChildren(aPresShell, aPresContext, aState, aContent, newFrame,
-                              PR_FALSE, childItems, PR_FALSE);
+          rv = ProcessChildren(aPresShell, aPresContext, aState, aContent,
+                               newFrame, PR_FALSE, childItems, PR_FALSE);
+       
       }
       
-      CreateAnonymousFrames(aPresShell, aPresContext, aTag, aState, aContent, newFrame,
-                          childItems);
-
+      CreateAnonymousFrames(aPresShell, aPresContext, aTag, aState, aContent,
+                            newFrame, childItems);
+ 
       // Set the frame's initial child list
       newFrame->SetInitialChildList(aPresContext, nsnull, childItems.childList);
     }
@@ -5984,11 +5988,14 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
         if (rootFrame)
           rootFrame->FirstChild(aPresContext, nsnull, &rootFrame);   
         nsCOMPtr<nsIRootBox> rootBox(do_QueryInterface(rootFrame));
+        NS_ASSERTION(rootBox, "unexpected null pointer");
         if (rootBox) {
           nsIFrame* popupSetFrame;
           rootBox->GetPopupSetFrame(&popupSetFrame);
+          NS_ASSERTION(popupSetFrame, "unexpected null pointer");
           if (popupSetFrame) {
             nsCOMPtr<nsIPopupSetFrame> popupSet(do_QueryInterface(popupSetFrame));
+            NS_ASSERTION(popupSet, "unexpected null pointer");
             if (popupSet)
               popupSet->AddPopupFrame(newFrame);
           }
@@ -9144,11 +9151,14 @@ DeletingFrameSubtree(nsIPresContext*  aPresContext,
         if (rootFrame)
           rootFrame->FirstChild(aPresContext, nsnull, &rootFrame);   
         nsCOMPtr<nsIRootBox> rootBox(do_QueryInterface(rootFrame));
+        NS_ASSERTION(rootBox, "unexpected null pointer");
         if (rootBox) {
           nsIFrame* popupSetFrame;
           rootBox->GetPopupSetFrame(&popupSetFrame);
+          NS_ASSERTION(popupSetFrame, "unexpected null pointer");
           if (popupSetFrame) {
             nsCOMPtr<nsIPopupSetFrame> popupSet(do_QueryInterface(popupSetFrame));
+            NS_ASSERTION(popupSet, "unexpected null pointer");
             if (popupSet)
               popupSet->RemovePopupFrame(outOfFlowFrame);
           }
