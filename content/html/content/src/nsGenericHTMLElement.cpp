@@ -2381,24 +2381,20 @@ nsGenericHTMLElement::ParseCaseSensitiveEnumValue(const nsAReadableString& aValu
 PRBool
 nsGenericHTMLElement::EnumValueToString(const nsHTMLValue& aValue,
                                         EnumTable* aTable,
-                                        nsAWritableString& aResult,
-                                        PRBool aFoldCase)
-{
-  aResult.Truncate(0);
+                                        nsAWritableString& aResult)                                        
+{  
   if (aValue.GetUnit() == eHTMLUnit_Enumerated) {
     PRInt32 v = aValue.GetIntValue();
     while (nsnull != aTable->tag) {
       if (aTable->value == v) {
-        aResult.Append(NS_ConvertASCIItoUCS2(aTable->tag));
-        if (aFoldCase) {
-          nsWritingIterator<PRUnichar> start; aResult.BeginWriting(start);
-          *start.get() = nsCRT::ToUpper(*start.get());
-        }
+        CopyASCIItoUCS2(nsDependentCString(aTable->tag), aResult);
+
         return PR_TRUE;
       }
       aTable++;
     }
   }
+  aResult.Truncate();
   return PR_FALSE;
 }
 
