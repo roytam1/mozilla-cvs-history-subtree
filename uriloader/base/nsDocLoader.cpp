@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: NPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -391,7 +391,7 @@ nsDocLoaderImpl::GetContentViewerContainer(nsISupports* aDocumentID,
       if (NS_SUCCEEDED(rv) && nsnull != presContext) {
         nsISupports* supp;
         rv = presContext->GetContainer(&supp);
-        if (NS_SUCCEEDED(rv) && nsnull != supp) {          
+        if (NS_SUCCEEDED(rv) && nsnull != supp) {
           rv = supp->QueryInterface(kIContentViewerContainerIID, (void**)aResult);          
           NS_RELEASE(supp);
         }
@@ -595,7 +595,7 @@ nsresult nsDocLoaderImpl::RemoveChildGroup(nsDocLoaderImpl* aLoader)
 
 NS_IMETHODIMP nsDocLoaderImpl::GetDocumentChannel(nsIChannel ** aChannel)
 {
-    nsCOMPtr<nsIChannel> ourChannel = do_QueryInterface(mDocumentRequest);   
+  nsCOMPtr<nsIChannel> ourChannel = do_QueryInterface(mDocumentRequest);   
 
   *aChannel = ourChannel.get();
   NS_IF_ADDREF(*aChannel);
@@ -769,6 +769,16 @@ nsDocLoaderImpl::AddProgressListener(nsIWebProgressListener *aListener)
 {
   nsresult rv;
 
+#ifdef DEBUG
+  {
+    nsCOMPtr<nsIWebProgressListener> tmp =
+      do_QueryInterface((nsISupports *)aListener);
+
+    NS_ASSERTION(tmp, "nsIWebProgress listener does not implement "
+                 "nsIWebProgressListener!");
+  }
+#endif
+
   nsWeakPtr listener = getter_AddRefs(NS_GetWeakReference(aListener));
   if (!listener) return NS_ERROR_INVALID_ARG;
 
@@ -809,7 +819,7 @@ nsDocLoaderImpl::GetDOMWindow(nsIDOMWindow **aResult)
     *aResult = window;
     NS_IF_ADDREF(*aResult);
   } else {
-      rv = NS_ERROR_FAILURE;
+    rv = NS_ERROR_FAILURE;
   }
 
   return rv;
