@@ -926,12 +926,7 @@ XXX ...couldn't get this to work...
             JSObject::defineMethod(cx, name, attr, f);
         }
 
-        // return the class on the top of the stack (or NULL if there
-        // isn't one there).
-        JSType *topClass()
-        {
-            return NULL;;
-        }
+        JSType *topClass()              { return NULL;  }
         
         
         // saved values from a previous execution
@@ -1066,7 +1061,7 @@ XXX ...couldn't get this to work...
 
         // return the class on the top of the stack (or NULL if there
         // isn't one there).
-        virtual JSType *topClass()
+        JSType *topClass()
         {
             JSObject *obj = mScopeStack.back();
             return obj->topClass();
