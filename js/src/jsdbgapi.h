@@ -80,7 +80,7 @@ JS_ClearAllWatchPoints(JSContext *cx);
 extern JSScopeProperty *
 js_FindWatchPoint(JSRuntime *rt, JSObject *obj, jsval userid);
 
-extern JSBool CALLBACK
+extern JSBool DLL_CALLBACK
 js_watch_set(JSContext *cx, JSObject *obj, jsval id, jsval *vp);
 #endif
 

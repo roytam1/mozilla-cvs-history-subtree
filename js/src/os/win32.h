@@ -18,7 +18,6 @@
 
 #ifndef nspr_win32_defs_h___
 #define nspr_win32_defs_h___
-#include "prtypes.h"
 
 #define HAVE_DLL
 #define HAVE_LONG_LONG

@@ -88,7 +88,7 @@ char   js_valueOf_str[]           = "valueOf";
 #define HASH_DOUBLE(dp) ((JSHashNumber)(((uint32*)(dp))[0] ^ ((uint32*)(dp))[1]))
 #define HASH_BOOLEAN(b) ((JSHashNumber)(b))
 
-STATIC_CALLBACK(JSHashNumber)
+STATIC_DLL_CALLBACK(JSHashNumber)
 js_hash_atom_key(const void *key)
 {
     jsval v;
@@ -111,7 +111,7 @@ js_hash_atom_key(const void *key)
     return (JSHashNumber)v;
 }
 
-STATIC_CALLBACK(intN)
+STATIC_DLL_CALLBACK(intN)
 js_compare_atom_keys(const void *k1, const void *k2)
 {
     jsval v1, v2;
@@ -134,25 +134,25 @@ js_compare_atom_keys(const void *k1, const void *k2)
     return v1 == v2;
 }
 
-STATIC_CALLBACK(int)
+STATIC_DLL_CALLBACK(int)
 js_compare_stub(const void *v1, const void *v2)
 {
     return 1;
 }
 
-STATIC_CALLBACK(void *)
+STATIC_DLL_CALLBACK(void *)
 js_alloc_atom_space(void *priv, size_t size)
 {
     return malloc(size);
 }
 
-STATIC_CALLBACK(void)
+STATIC_DLL_CALLBACK(void)
 js_free_atom_space(void *priv, void *item)
 {
     free(item);
 }
 
-STATIC_CALLBACK(JSHashEntry *)
+STATIC_DLL_CALLBACK(JSHashEntry *)
 js_alloc_atom(void *priv, const void *key)
 {
     JSAtomState *state = priv;
@@ -172,7 +172,7 @@ js_alloc_atom(void *priv, const void *key)
     return &atom->entry;
 }
 
-STATIC_CALLBACK(void)
+STATIC_DLL_CALLBACK(void)
 js_free_atom(void *priv, JSHashEntry *he, uintN flag)
 {
     if (flag != HT_FREE_ENTRY)
@@ -268,7 +268,7 @@ typedef struct MarkArgs {
     JSGCThingMarker mark;
 } MarkArgs;
 
-STATIC_CALLBACK(intN)
+STATIC_DLL_CALLBACK(intN)
 js_atom_marker(JSHashEntry *he, intN i, void *arg)
 {
     JSAtom *atom;
@@ -297,7 +297,7 @@ js_MarkAtomState(JSAtomState *state, JSGCThingMarker mark)
     JS_HashTableEnumerateEntries(state->table, js_atom_marker, &args);
 }
 
-STATIC_CALLBACK(intN)
+STATIC_DLL_CALLBACK(intN)
 js_atom_sweeper(JSHashEntry *he, intN i, void *arg)
 {
     JSAtom *atom;
@@ -319,7 +319,7 @@ js_SweepAtomState(JSAtomState *state)
     JS_HashTableEnumerateEntries(state->table, js_atom_sweeper, NULL);
 }
 
-STATIC_CALLBACK(intN)
+STATIC_DLL_CALLBACK(intN)
 js_atom_unpinner(JSHashEntry *he, intN i, void *arg)
 {
     JSAtom *atom;

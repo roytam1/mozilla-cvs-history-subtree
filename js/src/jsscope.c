@@ -33,7 +33,7 @@
 #include "jsscope.h"
 #include "jsstr.h"
 
-STATIC_CALLBACK(JSHashNumber)
+STATIC_DLL_CALLBACK(JSHashNumber)
 js_hash_id(const void *key)
 {
     jsval v;
@@ -51,19 +51,19 @@ typedef struct JSScopePrivate {
     JSScope *scope;
 } JSScopePrivate;
 
-STATIC_CALLBACK(void *)
+STATIC_DLL_CALLBACK(void *)
 js_alloc_scope_space(void *priv, size_t size)
 {
     return JS_malloc(((JSScopePrivate *)priv)->context, size);
 }
 
-STATIC_CALLBACK(void)
+STATIC_DLL_CALLBACK(void)
 js_free_scope_space(void *priv, void *item)
 {
     JS_free(((JSScopePrivate *)priv)->context, item);
 }
 
-STATIC_CALLBACK(JSHashEntry *)
+STATIC_DLL_CALLBACK(JSHashEntry *)
 js_alloc_symbol(void *priv, const void *key)
 {
     JSScopePrivate *spriv;
@@ -80,7 +80,7 @@ js_alloc_symbol(void *priv, const void *key)
     return &sym->entry;
 }
 
-STATIC_CALLBACK(void)
+STATIC_DLL_CALLBACK(void)
 js_free_symbol(void *priv, JSHashEntry *he, uintN flag)
 {
     JSScopePrivate *spriv;
@@ -119,7 +119,7 @@ static JSHashAllocOps hash_scope_alloc_ops = {
 
 /************************************************************************/
 
-STATIC_CALLBACK(JSSymbol *)
+STATIC_DLL_CALLBACK(JSSymbol *)
 js_hash_scope_lookup(JSContext *cx, JSScope *scope, jsid id, JSHashNumber hash)
 {
     JSHashTable *table = scope->data;
@@ -153,7 +153,7 @@ js_hash_scope_lookup(JSContext *cx, JSScope *scope, jsid id, JSHashNumber hash)
 	}                                                                     \
     JS_END_MACRO
 
-STATIC_CALLBACK(JSSymbol *)
+STATIC_DLL_CALLBACK(JSSymbol *)
 js_hash_scope_add(JSContext *cx, JSScope *scope, jsid id, JSScopeProperty *sprop)
 {
     JSHashTable *table = scope->data;
@@ -178,7 +178,7 @@ js_hash_scope_add(JSContext *cx, JSScope *scope, jsid id, JSScopeProperty *sprop
     return sym;
 }
 
-STATIC_CALLBACK(JSBool)
+STATIC_DLL_CALLBACK(JSBool)
 js_hash_scope_remove(JSContext *cx, JSScope *scope, jsid id)
 {
     JSHashTable *table = scope->data;
@@ -193,7 +193,7 @@ js_hash_scope_remove(JSContext *cx, JSScope *scope, jsid id)
 /* Forward declaration for use by js_hash_scope_clear(). */
 extern JS_FRIEND_DATA(JSScopeOps) js_list_scope_ops;
 
-STATIC_CALLBACK(void)
+STATIC_DLL_CALLBACK(void)
 js_hash_scope_clear(JSContext *cx, JSScope *scope)
 {
     JSHashTable *table = scope->data;
@@ -217,7 +217,7 @@ JSScopeOps js_hash_scope_ops = {
 
 /************************************************************************/
 
-STATIC_CALLBACK(JSSymbol *)
+STATIC_DLL_CALLBACK(JSSymbol *)
 js_list_scope_lookup(JSContext *cx, JSScope *scope, jsid id, JSHashNumber hash)
 {
     JSSymbol *sym, **sp;
@@ -238,7 +238,7 @@ js_list_scope_lookup(JSContext *cx, JSScope *scope, jsid id, JSHashNumber hash)
 
 #define HASH_THRESHOLD	5
 
-STATIC_CALLBACK(JSSymbol *)
+STATIC_DLL_CALLBACK(JSSymbol *)
 js_list_scope_add(JSContext *cx, JSScope *scope, jsid id, JSScopeProperty *sprop)
 {
     JSSymbol *list = scope->data;
@@ -297,7 +297,7 @@ js_list_scope_add(JSContext *cx, JSScope *scope, jsid id, JSScopeProperty *sprop
     return sym;
 }
 
-STATIC_CALLBACK(JSBool)
+STATIC_DLL_CALLBACK(JSBool)
 js_list_scope_remove(JSContext *cx, JSScope *scope, jsid id)
 {
     JSSymbol *sym, **sp;
@@ -317,7 +317,7 @@ js_list_scope_remove(JSContext *cx, JSScope *scope, jsid id)
     return JS_FALSE;
 }
 
-STATIC_CALLBACK(void)
+STATIC_DLL_CALLBACK(void)
 js_list_scope_clear(JSContext *cx, JSScope *scope)
 {
     JSSymbol *sym;

@@ -63,9 +63,9 @@
 #define EXTERN_DATA(__type) extern _declspec(dllexport) __type
 #define IMPLEMENT_DATA(__type) _declspec(dllexport) __type
 
-#define CALLBACK
+#define DLL_CALLBACK
 #define CALLBACK_DECL
-#define STATIC_CALLBACK(__x) static __x
+#define STATIC_DLL_CALLBACK(__x) static __x
 
 #elif defined(WIN16)
 
@@ -77,8 +77,8 @@
 #define EXTERN_DATA(__type) extern __type _export
 #define IMPLEMENT_DATA(__type) __type _export
 
-#define CALLBACK             __cdecl __loadds
-#define STATIC_CALLBACK(__x) static __x CALLBACK
+#define DLL_CALLBACK             __cdecl __loadds
+#define STATIC_DLL_CALLBACK(__x) static __x CALLBACK
 
 #else /* this must be .EXE */
 #define EXTERN(__type) extern __type _cdecl _export
@@ -86,8 +86,8 @@
 #define EXTERN_DATA(__type) extern __type _export
 #define IMPLEMENT_DATA(__type) __type _export
 
-#define CALLBACK             __cdecl __loadds
-#define STATIC_CALLBACK(__x) __x CALLBACK
+#define DLL_CALLBACK             __cdecl __loadds
+#define STATIC_DLL_CALLBACK(__x) __x DLL_CALLBACK
 #endif /* _WINDLL */
 
 #elif defined(XP_MAC)
@@ -96,27 +96,27 @@
 #define EXTERN_DATA(__type) extern __declspec(export) __type
 #define IMPLEMENT_DATA(__type) __declspec(export) __type
 
-#define CALLBACK
+#define DLL_CALLBACK
 #define CALLBACK_DECL
-#define STATIC_CALLBACK(__x) static __x
+#define STATIC_DLL_CALLBACK(__x) static __x
 
 #elif defined(XP_OS2) 
 #define EXTERN(__type) extern __type
 #define IMPLEMENT(__type) __type
 #define EXTERN_DATA(__type) extern __type
 #define IMPLEMENT_DATA(__type) __type
-#define CALLBACK
+#define DLL_CALLBACK
 #define CALLBACK_DECL
-#define STATIC_CALLBACK(__x) __x _Optlink
+#define STATIC_DLL_CALLBACK(__x) __x _Optlink
 
 #else /* Unix */
 #define EXTERN(__type) extern __type
 #define IMPLEMENT(__type) __type
 #define EXTERN_DATA(__type) extern __type
 #define IMPLEMENT_DATA(__type) __type
-#define CALLBACK
+#define DLL_CALLBACK
 #define CALLBACK_DECL
-#define STATIC_CALLBACK(__x) static __x
+#define STATIC_DLL_CALLBACK(__x) static __x
 
 #endif
 

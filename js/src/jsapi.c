@@ -809,7 +809,7 @@ typedef struct NamedRootDumpArgs {
     void *data;
 } NamedRootDumpArgs;
 
-STATIC_CALLBACK(intN)
+STATIC_DLL_CALLBACK(intN)
 js_named_root_dumper(JSHashEntry *he, intN i, void *arg)
 {
     NamedRootDumpArgs *args = arg;
@@ -2740,13 +2740,13 @@ BOOL WINAPI DllMain (HINSTANCE hDLL, DWORD dwReason, LPVOID lpReserved)
 
 #else  /* !_WIN32 */
 
-int CALLBACK LibMain( HINSTANCE hInst, WORD wDataSeg,
+int DLL_CALLBACK LibMain( HINSTANCE hInst, WORD wDataSeg,
 		      WORD cbHeapSize, LPSTR lpszCmdLine )
 {
     return TRUE;
 }
 
-BOOL CALLBACK __loadds WEP(BOOL fSystemExit)
+BOOL DLL_CALLBACK __loadds WEP(BOOL fSystemExit)
 {
     return TRUE;
 }

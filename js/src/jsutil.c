@@ -24,7 +24,10 @@
 #include "jstypes.h"
 #include "jsutil.h"
 
-/* Implementation of JS_Assert() is here to avoid building prlog.c */
+#ifdef WIN32
+#    include <windows.h>
+#endif
+
 IMPLEMENT(void) JS_Assert(const char *s, const char *file, JSIntn ln)
 {
 #if defined(XP_UNIX) || defined(XP_OS2)
