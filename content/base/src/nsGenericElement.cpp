@@ -2350,21 +2350,11 @@ nsGenericElement::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 
     return NS_NOINTERFACE;
   }
-  else if (mDOMSlots /* && mDOMSlots->mScriptObject */ && mDocument) {
-#if 0
-
-
-
-    XXX Oh boy, this'll suck now!
-
-
-
+  else if (mDocument) {
     nsCOMPtr<nsIBindingManager> manager;
     mDocument->GetBindingManager(getter_AddRefs(manager));
     if (manager)
-      return manager->GetBindingImplementation(NS_STATIC_CAST(nsIStyledContent*, this), mDOMSlots->mScriptObject, 
-                                               aIID, aInstancePtr);
-#endif
+      return manager->GetBindingImplementation(this, aIID, aInstancePtr);
 
     return NS_NOINTERFACE;
   }
