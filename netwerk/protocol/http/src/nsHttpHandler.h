@@ -28,7 +28,6 @@
 #include "nsIHttpProtocolHandler.h"
 #include "nsIProtocolProxyService.h"
 #include "nsIIOService.h"
-#include "nsIPref.h"
 #include "nsIObserver.h"
 #include "nsIProxyObjectManager.h"
 #include "nsINetModuleMgr.h"
@@ -49,6 +48,7 @@ class nsHttpHeaderArray;
 class nsHttpTransaction;
 class nsHttpAuthCache;
 class nsIHttpChannel;
+class nsIPrefBranch;
 
 //-----------------------------------------------------------------------------
 // nsHttpHandler - protocol handler for HTTP and HTTPS
@@ -179,7 +179,8 @@ private:
     //
     void     BuildUserAgent();
     void     InitUserAgentComponents();
-    void     PrefsChanged(const char *pref = nsnull);
+    void     PrefsChanged(nsIPrefBranch *prefs, const char *pref = nsnull);
+    void     GetPrefBranch(nsIPrefBranch **);
 
     nsresult SetAccept(const char *);
     nsresult SetAcceptLanguages(const char *);
@@ -193,7 +194,6 @@ private:
 
     // cached services
     nsCOMPtr<nsIIOService>              mIOService;
-    nsCOMPtr<nsIPref>                   mPrefs;
     nsCOMPtr<nsIProxyObjectManager>     mProxyMgr;
     nsCOMPtr<nsIEventQueueService>      mEventQueueService;
     nsCOMPtr<nsINetModuleMgr>           mNetModuleMgr;
@@ -254,6 +254,8 @@ private:
     nsCString      mUserAgent;
     nsXPIDLCString mUserAgentOverride;
     PRPackedBool   mUserAgentIsDirty; // true if mUserAgent should be rebuilt
+
+    PRPackedBool   mUseCache;
 };
 
 #endif // nsHttpHandler_h__
