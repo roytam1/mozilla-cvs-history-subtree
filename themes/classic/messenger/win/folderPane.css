@@ -317,11 +317,6 @@ outlinerbody:-moz-outliner-image(folderNameCol, open, isServer-true, serverType-
   }
 */
 
-outlinerbody:-moz-outliner-cell-text(isServer-true)
-{
-  font-weight: bold;
-}
-
 /*
 .tree-folder-row[HasUnreadMessages="true"]
   {
@@ -329,6 +324,7 @@ outlinerbody:-moz-outliner-cell-text(isServer-true)
   }
 */
 
+outlinerbody:-moz-outliner-cell-text(isServer-true),
 outlinerbody:-moz-outliner-cell-text(hasUnreadMessages-true)
 {
   font-weight: bold;
@@ -349,9 +345,9 @@ outlinerbody:-moz-outliner-cell-text(noSelect-true)
 }
 
 #folder-panel 
-  {
-	  min-width             : 10px;
-  }
+{
+  min-width : 10px;
+}
 
 /*
 #folderTree
