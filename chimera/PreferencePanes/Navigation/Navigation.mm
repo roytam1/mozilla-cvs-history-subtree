@@ -63,7 +63,6 @@ const int kDefaultExpireDays = 9;
     expireDays = kDefaultExpireDays;
 
   [textFieldHistoryDays setIntValue:expireDays];
-  [sliderHistoryDays setIntValue:expireDays];
 
   [radioOpenTabsForCommand selectCellWithTag:[self getBooleanPref:"browser.tabs.opentabfor.middleclick" withSuccess:&gotPref]];
   [radioOpenForAE selectCellWithTag:[self getIntPref:"browser.reuse_window" withSuccess:&gotPref]];
@@ -83,6 +82,10 @@ const int kDefaultExpireDays = 9;
   [checkboxUseSystemHomePage setState:useSystemHomePage];
   [textFieldHomePage   setStringValue: [self getCurrentHomePage]];
   [textFieldSearchPage setStringValue: [self getCurrentSearchPage]];
+  
+  [mEnableHelperApps setState:[self getBooleanPref:"browser.download.autoDispatch" withSuccess:&gotPref]];
+  nsSpecialSystemDirectory downloadFolder(kDefaultDownloadFolderType);
+  [mDownloadFolder setStringValue:[NSString stringWithCString:downloadFolder]];
 }
 
 - (void) didUnselect
@@ -123,6 +126,9 @@ const int kDefaultExpireDays = 9;
   }
   else if (sender == checkboxLoadTabsInBackground) {
     [self setPref:"browser.tabs.loadInBackground" toBoolean:[sender state]];
+  }
+  else if (sender == mEnableHelperApps) {
+    [self setPref:"browser.download.autoDispatch" toBoolean:[sender state]];
   }
 }
 
@@ -169,9 +175,7 @@ const int kDefaultExpireDays = 9;
   if (!mPrefService)
     return;
 
-  if (sender == sliderHistoryDays)
-    [textFieldHistoryDays setIntValue:[sliderHistoryDays intValue]];
-  else if (sender == textFieldHistoryDays) {
+  if (sender == textFieldHistoryDays) {
     // If any non-numeric characters were entered make some noise and spit it out.
     if (([[textFieldHistoryDays stringValue] rangeOfCharacterFromSet:[[NSCharacterSet decimalDigitCharacterSet] invertedSet]]).length) {
       BOOL gotPref;
@@ -179,11 +183,9 @@ const int kDefaultExpireDays = 9;
       if (!gotPref)
         prefValue = kDefaultExpireDays;
       [textFieldHistoryDays setIntValue:prefValue];
-      [sliderHistoryDays setIntValue:prefValue];
       NSBeep ();
       return;
-    } else
-      [sliderHistoryDays setIntValue:[textFieldHistoryDays intValue]];
+    }
   }
 
   [self setPref:"browser.history_expire_days" toInt:[sender intValue]];
@@ -273,4 +275,9 @@ const int kDefaultExpireDays = 9;
     cacheServ->EvictEntries(nsICache::STORE_ON_DISK);
 }
 
+
+- (IBAction)checkboxEnableHelperApps:(id)sender
+{
+
+}
 @end

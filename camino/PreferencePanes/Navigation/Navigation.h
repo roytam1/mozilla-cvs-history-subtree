@@ -37,8 +37,10 @@
   IBOutlet id radioOpenForAE;
   IBOutlet NSButton *checkboxLoadTabsInBackground;
   
-  IBOutlet NSSlider *sliderHistoryDays;
   IBOutlet NSTextField *textFieldHistoryDays;
+  
+  IBOutlet NSTextField* mDownloadFolder;
+  IBOutlet NSButton* mEnableHelperApps;
 }
 
 - (IBAction)openSystemInternetPanel:(id)sender;
