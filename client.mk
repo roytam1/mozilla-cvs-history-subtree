@@ -453,7 +453,7 @@ real_checkout:
 	fi
 
 merge:
-	cvs up -jHEAD -jSVG_20010721_TAG $(SVG_BRANCH_FILES)
+	cvs up -dP -jSVG_20010721_TAG -jHEAD $(SVG_BRANCH_FILES)
 
 statictag:
 	cvs tag -F -rHEAD SVG_20010721_TAG $(SVG_BRANCH_FILES)
