@@ -1421,3 +1421,4 @@ IL_DestroyImageGroup(IL_GroupContext *img_cx)
   
     ILTRACE(1, ("il: IL_DestroyImageGroup\n"));
 }
+
