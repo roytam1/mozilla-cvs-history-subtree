@@ -93,8 +93,7 @@ function onLoad()
 
   if (dialog.findKey.value)
     dialog.findKey.select();
-  else
-    dialog.findKey.focus();
+  dialog.findKey.focus();
 }
 
 function onUnload()
@@ -121,6 +120,8 @@ function onOK()
     if (!dialog.bundle)
       dialog.bundle = document.getElementById("findBundle");
     window.alert(dialog.bundle.getString("notFoundWarning"));
+    dialog.findKey.select();
+    dialog.findKey.focus();
   }
 }
 
