@@ -267,25 +267,10 @@ sub GetVersion
   my($hh);
 
   # determine if build was built via gmake
-  if(-e "$depthPath\\dist\\install")
-  {
-    $distWinPathName = "dist";
-  }
-  else
-  {
-    # determine if build is debug or optimized
-    # (used only for nmake builds)
-    if($ENV{MOZ_DEBUG} eq "")
-    {
-      $distWinPathName = "dist\\Win32_o.obj";
-    }
-    else
-    {
-      $distWinPathName = "dist\\Win32_d.obj";
-    }
-  }
+  $distWinPathName = "dist";
 
-  $fileMozilla = "$depthPath\\$distWinPathName\\bin\\mozilla.exe";
+  #$fileMozilla = "$depthPath/$distWinPathName/bin/mozilla.exe";
+  $fileMozilla = "$depthPath/$distWinPathName/bin/beonex-comm.exe";
   # verify the existance of file
   if(!(-e "$fileMozilla"))
   {
