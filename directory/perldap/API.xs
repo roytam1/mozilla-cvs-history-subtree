@@ -802,28 +802,34 @@ ldap_get_lang_values_len(ld,entry,target,type)
 
 #endif
 
+
 int
-ldap_get_lderrno(ld,m,s)
+ldap_get_lderrno(ld, ...)
 	LDAP *		ld
-	SV *		m
-	SV *		s
 	CODE:
 	{
 	   char *match = (char *)NULL, *msg = (char *)NULL;
-           SV *tmp;
+           SV *tmp, *m = (SV *)NULL, *s = (SV *)NULL;
 
-	   RETVAL = ldap_get_lderrno(ld, SvROK(m) ? &match : (char **)NULL,
-	                                 SvROK(s) ? &msg : (char **)NULL);
+	   if (items > 1)
+	      m = ST(1);
+	   if (items > 2)
+	      s = ST(2);
+
+	   RETVAL = ldap_get_lderrno(ld, (m && SvROK(m)) ? &match : (char **)NULL,
+	                                 (s && SvROK(s)) ? &msg : (char **)NULL);
 
 	   if (match)
 	   {
 	      tmp = SvRV(m);
-	      sv_setpv(tmp, match);
+	      if (SvTYPE(tmp) <= SVt_PV)
+	         sv_setpv(tmp, match);
 	   }
 	   if (msg)
 	   {
 	      tmp = SvRV(s);
-	      sv_setpv(tmp, msg);
+	      if (SvTYPE(tmp) <= SVt_PV)
+	         sv_setpv(tmp, msg);
 	   }
 
 	}
