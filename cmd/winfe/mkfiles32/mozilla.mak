@@ -2913,3 +2913,43 @@ ns.zip:
 		xpcom32.dll		\
 		netscape.cfg		\
 		moz40p3	
+
+# This zips up all the files needed to run a MOZ_NGLAYOUT build.
+# Perhaps this should be part of ns.zip, or use ns.zip.
+mozngl.zip:
+	cd $(OUTDIR)
+	zip -9rpu mozngl.zip		\
+		mozilla.exe		\
+		brpref32.dll		\
+		img3240.dll \
+		jpeg3240.dll \
+		jsdom.dll \
+		js3240.dll \
+		jsj3240.dll \
+		libmsgc21.dll \
+		libnspr21.dll \
+		libplc21.dll \
+		libplds21.dll \
+		libreg32.dll \
+		netlib.dll \
+		nsdlg32.dll \
+		prefui32.dll \
+		raptorbase.dll \
+		raptorgfx.dll \
+		raptorgfxwin.dll \
+		raptorhtml.dll \
+		raptorhtmlpars.dll \
+		raptorview.dll \
+		raptorweb.dll \
+		raptorwidget.dll \
+		resdll.dll \
+		sched32.dll \
+		uni3200.dll \
+		unicvt32.dll \
+		xpcom32.dll \
+		xppref32.dll \
+		xpstrdll.dll \
+		zip3240.dll \
+		netscape.cfg \
+		cookies.txt \
+		res
