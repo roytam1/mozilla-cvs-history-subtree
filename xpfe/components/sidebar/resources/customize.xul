@@ -58,10 +58,11 @@
     
           <template>
             <treechildren>
-              <treeitem uri="rdf:*" title="rdf:http://home.netscape.com/NC-rdf#title"
+              <treeitem uri="rdf:*"
+                title="rdf:http://home.netscape.com/NC-rdf#title"
                 content="rdf:http://home.netscape.com/NC-rdf#content">
                 <treerow>
-                  <treecell value="rdf:http://home.netscape.com/NC-rdf#title" />
+                  <treecell value="rdf:http://home.netscape.com/NC-rdf#title"/>
                 </treerow>
               </treeitem>
             </treechildren>
@@ -96,11 +97,13 @@
 
             <template>
               <treechildren>
-                <treeitem uri="rdf:*" title="rdf:http://home.netscape.com/NC-rdf#title"
+                <treeitem uri="rdf:*"
+                  title="rdf:http://home.netscape.com/NC-rdf#title"
                   customize="rdf:http://home.netscape.com/NC-rdf#customize"
                   content="rdf:http://home.netscape.com/NC-rdf#content">
                   <treerow>
-                    <treecell value="rdf:http://home.netscape.com/NC-rdf#title" />
+                    <treecell
+                      value="rdf:http://home.netscape.com/NC-rdf#title" />
                   </treerow>
                 </treeitem>
               </treechildren>
@@ -117,11 +120,12 @@
         <!-- The 'reorder' buttons -->
         <box align="vertical">
           <spring flex="50%"/>
-          <titledbutton onclick="moveUp();"   id="up"   class="borderless up" />
+          <titledbutton onclick="moveUp();" id="up" class="borderless up" />
           <html:div>
           &sidebar.customize.reorder.label;
           </html:div>
-          <titledbutton onclick="moveDown();" id="down" class="borderless down" />
+          <titledbutton onclick="moveDown();" id="down"
+            class="borderless down" />
           <spring flex="50%"/>
         </box>
       </box>
@@ -129,7 +133,6 @@
       <box align="horizontal" class="button-group" flex="100%">
         <titledbutton id="customize-button" onclick="CustomizePanel();" 
           value="&sidebar.customize.customize.label;" />
-
         <titledbutton onclick="RemovePanel()"
           value="&sidebar.customize.remove.label;" />
       </box>
