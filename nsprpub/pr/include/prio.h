@@ -128,16 +128,6 @@ typedef enum PRTransmitFileFlags {
 ** or IPv6 (AF_INET6).
 **************************************************************************
 *************************************************************************/
-#if defined(_PR_INET6)
-
-#if !defined(AF_INET6)
-#error "AF_INET6 is not defined"
-#endif
-
-typedef struct in6_addr PRIPv6Addr;
-typedef struct sockaddr_in6 _pr_sockaddr_in6_t;
-
-#else
 
 struct _pr_in6_addr {
 	union {
@@ -153,16 +143,6 @@ struct _pr_in6_addr {
 #define _pr_s6_addr64 	_S6_un._S6_addr64
 
 typedef struct _pr_in6_addr PRIPv6Addr;
-struct _pr_sockaddr_in6 {
-    PRUint16     		sin6_family;    /* AF_INET6 */
-    PRUint16       		sin6_port;      /* transport layer port # */
-    PRUint32        	sin6_flowinfo;  /* IPv6 traffic class & flow info */
-    struct _pr_in6_addr sin6_addr;      /* IPv6 address */
-    PRUint32        	sin6_scope_id;  /* set of interfaces for a scope */
-};
-typedef struct _pr_sockaddr_in6 _pr_sockaddr_in6_t;
-
-#endif /* defined(_PR_INET6) */
 
 union PRNetAddr {
     struct {

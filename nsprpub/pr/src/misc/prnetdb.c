@@ -99,26 +99,6 @@ PRLock* _getproto_lock = NULL;
 PR_EXTERN(PRBool) _pr_ipv6_is_present;
 #endif
 
-#if defined(_PR_INET6)
-
-const struct in6_addr _pr_in6addr_any = IN6ADDR_ANY_INIT;
-const struct in6_addr _pr_in6addr_loopback = IN6ADDR_LOOPBACK_INIT;
-
-#define _PR_IN6_IS_ADDR_UNSPECIFIED	IN6_IS_ADDR_UNSPECIFIED
-#define _PR_IN6_IS_ADDR_LOOPBACK	IN6_IS_ADDR_LOOPBACK
-#define _PR_IN6_IS_ADDR_V4MAPPED	IN6_IS_ADDR_V4MAPPED
-#define _PR_IN6_IS_ADDR_V4COMPAT	IN6_IS_ADDR_V4COMPAT
-
-#if defined(SOLARIS)
-#define _PR_IN6_V4MAPPED_TO_IPADDR(a) ((a)->_S6_un._S6_u32[3])
-#elif defined(OSF1)
-#define _PR_IN6_V4MAPPED_TO_IPADDR(a) ((a)->s6_laddr[3])
-#else
-#define _PR_IN6_V4MAPPED_TO_IPADDR(a) ((a)->s6_addr32[3])
-#endif
-
-#else  /* _PR_INET6 */
-
 #define _PR_IN6_IS_ADDR_UNSPECIFIED(a)				\
 				(((a)->_pr_s6_addr32[0] == 0) &&	\
 				((a)->_pr_s6_addr32[1] == 0) &&		\
@@ -163,8 +143,6 @@ const PRIPv6Addr _pr_in6addr_loopback = {   0, 0, 0, 0,
 		((a)->_pr_s6_addr32[2] == 0))
 
 #define _PR_IN6_V4MAPPED_TO_IPADDR(a) ((a)->_pr_s6_addr32[3])
-
-#endif /* _PR_INET6 */
 
 void _PR_InitNet(void)
 {
@@ -900,7 +878,11 @@ PR_IMPLEMENT(PRUintn) PR_NetAddrSize(const PRNetAddr* addr)
     if (AF_INET == addr->raw.family)
         addrsize = sizeof(addr->inet);
     else if (PR_AF_INET6 == addr->raw.family)
-        addrsize = sizeof(_pr_sockaddr_in6_t);
+#if defined(_PR_INET6)
+        addrsize = sizeof(struct sockaddr_in6);
+#else
+        addrsize = sizeof(addr->ipv6);
+#endif
 #if defined(XP_UNIX)
     else if (AF_UNIX == addr->raw.family)
         addrsize = sizeof(addr->local);
@@ -1382,22 +1364,13 @@ failed:
 /*
  * Convert an IPv4 addr to an (IPv4-mapped) IPv6 addr
  */
-PR_IMPLEMENT(void) PR_ConvertIpv4AddrToIpv6(PRUint32 v4addr, PRIPv6Addr *v6addr)
+PR_IMPLEMENT(void) PR_ConvertIPv4AddrToIPv6(PRUint32 v4addr, PRIPv6Addr *v6addr)
 {
-
-	if (htonl(INADDR_ANY) == v4addr) {
-		*v6addr = _pr_in6addr_any;
-	} else {
-		PRUint8 *dstp;
-#ifdef _PR_INET6
-		dstp = v6addr->s6_addr;
-#else
-		dstp = v6addr->_pr_s6_addr;
-#endif
-		memset(dstp, 0, 10);
-		memset(dstp + 10, 0xff, 2);
-		memcpy(dstp + 12,(char *) &v4addr, 4);
-	}
+    PRUint8 *dstp;
+    dstp = v6addr->_pr_s6_addr;
+    memset(dstp, 0, 10);
+    memset(dstp + 10, 0xff, 2);
+    memcpy(dstp + 12,(char *) &v4addr, 4);
 }
 
 PR_IMPLEMENT(PRUint16) PR_ntohs(PRUint16 n) { return ntohs(n); }

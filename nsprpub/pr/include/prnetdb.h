@@ -267,20 +267,20 @@ NSPR_API(PRBool) PR_IsNetAddrType(const PRNetAddr *addr, PRNetAddrValue val);
 
 /***********************************************************************
 ** FUNCTION:	
-** DESCRIPTION:	PR_ConvertIpv4AddrToIpv6()
+** DESCRIPTION:	PR_ConvertIPv4AddrToIPv6()
 ** Convert an IPv4 addr to an (IPv4-mapped) IPv6 addr
 **
 ** INPUTS:
-**  PRUint32 	v4addr		Ipv4 address
+**  PRUint32 	v4addr		IPv4 address
 **
 ** OUTPUTS:
-**  PRIPv6Addr *v6addr      The converted Ipv6 address
+**  PRIPv6Addr *v6addr      The converted IPv6 address
 **
 ** RETURN:
 **  void
 **                       
 ***********************************************************************/
-NSPR_API(void) PR_ConvertIpv4AddrToIpv6(PRUint32 v4addr, PRIPv6Addr *v6addr);
+NSPR_API(void) PR_ConvertIPv4AddrToIPv6(PRUint32 v4addr, PRIPv6Addr *v6addr);
 
 /***********************************************************************
 ** MACRO:	

@@ -43,11 +43,7 @@ const PRUint8 *srcp;
 	PR_ASSERT(PR_AF_INET6 == src_v6addr->ipv6.family);
 
 	if (PR_IsNetAddrType(src_v6addr, PR_IpAddrV4Mapped)) {
-#ifdef _PR_INET6
-		srcp = src_v6addr->ipv6.ip.s6_addr;
-#else
 		srcp = src_v6addr->ipv6.ip._pr_s6_addr;
-#endif
 		memcpy((char *) &dst_v4addr->inet.ip, srcp + 12, 4);
     } else if (PR_IsNetAddrType(src_v6addr, PR_IpAddrAny)) {
         dst_v4addr->inet.ip = htonl(INADDR_ANY);
@@ -73,11 +69,7 @@ PRUint8 *dstp;
  	if (htonl(INADDR_ANY) == src_v4addr->inet.ip) {
 		dst_v6addr->ipv6.ip = _pr_in6addr_any;
 	} else {
-#ifdef _PR_INET6
-		dstp = dst_v6addr->ipv6.ip.s6_addr;
-#else
 		dstp = dst_v6addr->ipv6.ip._pr_s6_addr;
-#endif
 		memset(dstp, 0, 10);
 		memset(dstp + 10, 0xff, 2);
 		memcpy(dstp + 12,(char *) &src_v4addr->inet.ip, 4);

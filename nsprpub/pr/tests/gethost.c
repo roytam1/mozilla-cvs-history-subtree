@@ -261,7 +261,7 @@ int main(int argc, char **argv)
 
     	PR_SetNetAddr(PR_IpAddrLoopback, PR_AF_INET, 0, &addr);
 
-		PR_ConvertIpv4AddrToIpv6(addr.inet.ip, &v6addr);
+		PR_ConvertIPv4AddrToIPv6(addr.inet.ip, &v6addr);
     	PR_SetNetAddr(PR_IpAddrAny, PR_AF_INET6, 0, &addr);
 		addr.ipv6.ip = v6addr;
 		PR_NetAddrToString(&addr, tmp_buf, 256);
