@@ -462,7 +462,19 @@ _MD_CloseFile(PRInt32 osfd)
 
 
 /* --- DIR IO ------------------------------------------------------------ */
+#if !defined(WINCE)
 #define GetFileFromDIR(d)       (d)->d_entry.cFileName
+#else
+char* GetFileFromDIR(_MDDir* d)
+{
+    char* retval = NULL;
+
+    WideCharToMultiByte(CP_ACP, WC_COMPOSITECHECK, d->d_entry.cFileName, -1, d->cFileNameA, sizeof(d->cFileNameA), NULL, NULL);
+    retval = d->cFileNameA;
+
+    return retval;
+}
+#endif
 #define FileIsHidden(d)	((d)->d_entry.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN)
 
 void FlipSlashes(char *cp, int len)
@@ -532,17 +544,16 @@ _PR_MD_OPEN_DIR(_MDDir *d, const char *name)
     d->d_hdl = FindFirstFile( filename, &(d->d_entry) );
 #else
     {
-        LPWSTR ceFilename = _PR_MD_MALLOC_A2W(filename);
+        WCHAR ceFileName[MAX_PATH];
+        LPWSTR ceResult = _PR_MD_A2W(filename, ceFileName, MAX_PATH);
 
-        if(NULL != ceFilename)
+        if(NULL != ceResult)
         {
-            d->d_hdl = FindFirstFile( ceFilename, &(d->d_entry) );
-            PR_Free(ceFilename);
+            d->d_hdl = FindFirstFile( ceFileName, &(d->d_entry) );
         }
         else
         {
-            PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
-            return PR_FAILURE;
+            d->d_hdl = INVALID_HANDLE_VALUE;
         }
     }
 #endif
@@ -568,7 +579,11 @@ _PR_MD_READ_DIR(_MDDir *d, PRIntn flags)
                 d->firstEntry = PR_FALSE;
                 rv = 1;
             } else {
+#if !defined(WINCE)
                 rv = FindNextFile(d->d_hdl, &(d->d_entry));
+#else
+                rv = FindNextFile(d->d_hdl, &(d->d_entry));
+#endif
             }
             if (rv == 0) {
                 break;
@@ -810,11 +825,13 @@ IsRootDirectory(char *fn, size_t buflen)
         return PR_TRUE;
     }
 
+#if !defined(WINCE)
     if (isalpha(fn[0]) && fn[1] == ':' && _PR_IS_SLASH(fn[2])
             && fn[3] == '\0') {
         rv = GetDriveType(fn) > 1 ? PR_TRUE : PR_FALSE;
         return rv;
     }
+#endif
 
     /* The UNC root directory */
 
@@ -846,6 +863,7 @@ IsRootDirectory(char *fn, size_t buflen)
         if (_PR_IS_SLASH(*p) && p[1] != '\0') {
             return PR_FALSE;
         }
+#if !defined(WINCE)
         if (*p == '\0') {
             /*
              * GetDriveType() doesn't work correctly if the
@@ -865,6 +883,12 @@ IsRootDirectory(char *fn, size_t buflen)
         if (slashAdded) {
             *--p = '\0';
         }
+#else
+        /*
+         * Assume the path as root.
+         */
+        rv = PR_TRUE;
+#endif
     }
     return rv;
 }
@@ -885,15 +909,39 @@ _PR_MD_GETFILEINFO64(const char *fn, PRFileInfo64 *info)
      * FindFirstFile() expands wildcard characters.  So
      * we make sure the pathname contains no wildcard.
      */
-    if (NULL != _mbspbrk(fn, "?*")) {
+    if (NULL !=
+#if !defined(WINCE)
+        _mbspbrk(fn, "?*")
+#else
+        strpbrk(fn, "?*")
+#endif
+        ) {
         PR_SetError(PR_FILE_NOT_FOUND_ERROR, 0);
         return -1;
     }
 
+#if !defined(WINCE)
     hFindFile = FindFirstFile(fn, &findFileData);
+#else
+    {
+        WCHAR ceFileName[MAX_PATH + 1];
+        LPWSTR ceResult = _PR_MD_A2W(fn, ceFileName, sizeof(ceFileName) / sizeof(WCHAR));
+
+        if(NULL != ceResult)
+        {
+            hFindFile = FindFirstFile(ceFileName, &findFileData);
+        }
+        else
+        {
+            hFindFile = INVALID_HANDLE_VALUE;
+        }
+    }
+#endif
     if (INVALID_HANDLE_VALUE == hFindFile) {
         DWORD len;
+#if !defined(WINCE)
         char *filePart;
+#endif
 
         /*
          * FindFirstFile() does not work correctly on root directories.
@@ -907,12 +955,23 @@ _PR_MD_GETFILEINFO64(const char *fn, PRFileInfo64 *info)
          * If the pathname does not contain ., \, and /, it cannot be
          * a root directory or a pathname that ends in a slash.
          */
-        if (NULL == _mbspbrk(fn, ".\\/")) {
+        if (NULL ==
+#if !defined(WINCE)
+            _mbspbrk(fn, ".\\/")
+#else
+            strpbrk(fn, ".\\/")
+#endif
+            ) {
             _PR_MD_MAP_OPENDIR_ERROR(GetLastError());
             return -1;
         } 
+#if !defined(WINCE)
         len = GetFullPathName(fn, sizeof(pathbuf), pathbuf,
                 &filePart);
+#else
+        strncpy(pathbuf, fn, sizeof(pathbuf));
+        len = strlen(pathbuf);
+#endif
         if (0 == len) {
             _PR_MD_MAP_OPENDIR_ERROR(GetLastError());
             return -1;
@@ -936,7 +995,23 @@ _PR_MD_GETFILEINFO64(const char *fn, PRFileInfo64 *info)
             return -1;
         } else {
             pathbuf[len - 1] = '\0';
+#if !defined(WINCE)
             hFindFile = FindFirstFile(pathbuf, &findFileData);
+#else
+            {
+                WCHAR ceFileName[MAX_PATH + 1];
+                LPWSTR ceResult = _PR_MD_A2W(pathbuf, ceFileName, sizeof(ceFileName) / sizeof(WCHAR));
+                
+                if(NULL != ceResult)
+                {
+                    hFindFile = FindFirstFile(ceFileName, &findFileData);
+                }
+                else
+                {
+                    hFindFile = INVALID_HANDLE_VALUE;
+                }
+            }
+#endif
             if (INVALID_HANDLE_VALUE == hFindFile) {
                 _PR_MD_MAP_OPENDIR_ERROR(GetLastError());
                 return -1;

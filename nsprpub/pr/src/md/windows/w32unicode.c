@@ -69,7 +69,7 @@ LPWSTR _PR_MD_MALLOC_A2W(LPCSTR inString)
     {
         int neededWChars = 0;
 
-        neededWChars = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, (inString), -1, NULL, 0);
+        neededWChars = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, inString, -1, NULL, 0);
         if(0 < neededWChars)
         {
             LPWSTR wstr = NULL;
@@ -79,7 +79,7 @@ LPWSTR _PR_MD_MALLOC_A2W(LPCSTR inString)
             {
                 int convertRes = 0;
 
-                convertRes = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, (inString), -1, wstr, neededWChars);
+                convertRes = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, inString, -1, wstr, neededWChars);
                 if(0 == convertRes)
                 {
                     PR_Free(wstr);
@@ -89,6 +89,33 @@ LPWSTR _PR_MD_MALLOC_A2W(LPCSTR inString)
                     retval = wstr;
                 }
             }
+        }
+    }
+
+    return retval;
+}
+
+/*
+ * _PR_MD_A2W
+ *
+ * Non-mallocing version to return a wide char string based on the
+ *  ANSI (multi byte, ansi code page) string passed in.
+ *
+ * NOTE:  inWideStringChars is number of wide characters in outWideString,
+ *          NOT the number of bytes....
+ */
+LPWSTR _PR_MD_A2W(LPCSTR inString, LPWSTR outWideString, int inWideStringChars)
+{
+    LPWSTR retval = outWideString;
+
+    if(NULL != outWideString)
+    {
+        int convertRes = 0;
+
+        convertRes = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, inString, -1, outWideString, inWideStringChars);
+        if(0 == convertRes)
+        {
+            retval = NULL;
         }
     }
 

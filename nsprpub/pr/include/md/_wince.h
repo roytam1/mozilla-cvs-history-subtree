@@ -121,6 +121,7 @@ struct _MDSegment {
 struct _MDDir {
     HANDLE           d_hdl;
     WIN32_FIND_DATA  d_entry;
+    CHAR             cFileNameA[ MAX_PATH ];
     PRBool           firstEntry;     /* Is this the entry returned
                                       * by FindFirstFile()? */
     PRUint32         magic;          /* for debugging */

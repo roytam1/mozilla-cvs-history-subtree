@@ -48,4 +48,15 @@
  */
 LPWSTR _PR_MD_MALLOC_A2W(LPCSTR inString);
 
+/*
+ * _PR_MD_A2W
+ *
+ * Non-mallocing/faster version to return a wide char string based on the
+ *  ANSI (multi byte, ansi code page) string passed in.
+ *
+ * NOTE:  inWideStringChars is number of wide characters in outWideString,
+ *          NOT the number of bytes....
+ */
+LPWSTR _PR_MD_A2W(LPCSTR inString, LPWSTR outWideString, int inWideStringChars);
+
 #endif /* nspr_win32_unicode_h___ */
