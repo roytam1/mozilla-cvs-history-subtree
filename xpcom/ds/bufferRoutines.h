@@ -76,8 +76,8 @@ public:
         while(*s) {
            if(*s & 0x80) {
              fprintf(mFile, "[%2X]", (char)*s);
-	   } else {
-       fprintf(mFile, "%c", *s);
+           } else {
+             fprintf(mFile, "%c", *s);
            }
            s++;
         }
@@ -99,8 +99,8 @@ public:
         while(*s) {
            if(*s & 0xFF80) {
              fprintf(mFile, "\\u%X", *s);
-	   } else {
-       fprintf(mFile, "%c", *s);
+           } else {
+             fprintf(mFile, "%c", *s);
            }
            s++;
         }
