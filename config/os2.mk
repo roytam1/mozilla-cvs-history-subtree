@@ -47,7 +47,7 @@ MAP_SUFFIX	= map
 BIN_SUFFIX	= .exe
 NSINSTALL	= nsinstall
 INSTALL		= $(NSINSTALL)
-JAVA_PROG	= $(FLIPPER) java -norestart
+JAVA_PROG	= java -norestart
 JAVAC_ZIP	= $(subst $(BSLASH),$(SLASH),$(JAVA_HOME))/lib/classes.zip
 RANLIB		= echo
 EMACS           = emacs
@@ -65,7 +65,7 @@ LINK		= $(CC)
 # a.out and omf.  We default to a.out.
 ifeq ($(MOZ_OS2_EMX_OBJECTFORMAT), OMF)
 OMF_FLAG 	= -Zomf
-AR		= emxomfar r $@
+AR		= emxomfar -p64 r $@
 LIB_SUFFIX	= lib
 else
 AR      	= ar -q $@
@@ -103,7 +103,6 @@ ifdef XP_OS2_VACPP
 ######################################################################
 # These are for VisualAge C++
 ######################################################################
-FLIPPER         = flipper
 CC		= icc
 CCC		= $(CC)
 LINK		= ilink
@@ -128,14 +127,14 @@ OS_LFLAGS	= /PM:VIO /NOLOGO
 OS_DLLFLAGS	= -FREE -NOE -nologo -DLL
 OS_LIBS		= $(SOCKLIB) tcp32dll.lib cppom30o.lib os2386.lib
 
-RC		= $(FLIPPER) rc$(BIN_SUFFIX)
-AR		= $(FLIPPER) ILib //noignorecase //nologo $@
-IMPLIB		= $(FLIPPER) implib -nologo -noignorecase
+RC		= rc$(BIN_SUFFIX)
+AR		= ilib /noignorecase /nologo $(subst /,\\,$@)
+IMPLIB		= implib -nologo -noignorecase
 DLLFLAGS	= -OUT:$@ -MAP:$(@:.dll=.map)
 LFLAGS		= -OUT:$@ $(XLFLAGS) $(DEPLIBS) $(EXTRA_LIBS) -MAP:$(@:.dll=.map) $(DEF_FILE)
 AR_EXTRA_ARGS   = ,,
-MKSHLIB		= $(FLIPPER) ilink
-FILTER		= $(FLIPPER) cppfilt -q -B -P
+MKSHLIB		= ilink
+FILTER		= cppfilt -q -B -P
 LIB_SUFFIX      = lib
 
 ######################################################################
