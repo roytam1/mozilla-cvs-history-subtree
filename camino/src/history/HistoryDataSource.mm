@@ -288,7 +288,7 @@ HistoryRDFObserver::OnChange(nsIRDFDataSource*, nsIRDFResource*,
   NSString *url = [aSender representedObject];
   if ([url isKindOfClass:[NSString class]]) {
     BOOL loadInBackground = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadInBackground" withSuccess:NULL];
-    [mBrowserWindowController openNewTabWithURL:url referrer:nil loadInBackground: loadInBackground];
+    [mBrowserWindowController openNewTabWithURL:url referrer:nil loadInBackground: loadInBackground allowPopups:NO];
   }
 }
 
@@ -299,7 +299,7 @@ HistoryRDFObserver::OnChange(nsIRDFDataSource*, nsIRDFResource*,
   NSString *url = [aSender representedObject];
   if ([url isKindOfClass:[NSString class]]) {
     BOOL loadInBackground = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadInBackground" withSuccess:NULL];
-    [mBrowserWindowController openNewWindowWithURL:url referrer: nil loadInBackground: loadInBackground];  
+    [mBrowserWindowController openNewWindowWithURL:url referrer: nil loadInBackground: loadInBackground allowPopups:NO];  
   }
 }
 
@@ -317,7 +317,7 @@ HistoryRDFObserver::OnChange(nsIRDFDataSource*, nsIRDFResource*,
     else
       [mOutlineView expandItem: item];
   } else {
-    [[mBrowserWindowController getBrowserWrapper] loadURI:[item url] referrer:nil flags:NSLoadFlagsNone activate:YES];
+    [[mBrowserWindowController getBrowserWrapper] loadURI:[item url] referrer:nil flags:NSLoadFlagsNone activate:YES allowPopups:NO];
   }
 }
 
