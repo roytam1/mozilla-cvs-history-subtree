@@ -246,12 +246,12 @@ void initMathObject(Context *cx, JSObject *mathObj)
     uint32 i;
     for (i = 0; i < M_CONSTANTS_COUNT; i++)
         mathObj->defineVariable(widenCString(MathObjectConstants[i].name), 
-                                    NULL, Number_Type, JSValue(MathObjectConstants[i].value));
+                                    (NamespaceList *)(NULL), Number_Type, JSValue(MathObjectConstants[i].value));
 
     for (i = 0; i < sizeof(MathObjectFunctions) / sizeof(MathObjectFunctionDef); i++) {
         JSFunction *f = new JSFunction(cx, MathObjectFunctions[i].imp, Number_Type);
         mathObj->defineVariable(widenCString(MathObjectFunctions[i].name), 
-                                    NULL, Number_Type, JSValue(f));
+                                    (NamespaceList *)(NULL), Number_Type, JSValue(f));
     }
 }    
 

@@ -48,6 +48,7 @@ namespace JavaScript {
     namespace JS2Runtime {
         class JSFunction;
         class JSType;
+        class JSObject;
     }
 
 
@@ -496,6 +497,9 @@ namespace JavaScript {
 
     struct AttributeStmtNode: StmtNode {
         ExprNode *attributes;           // Block or definition's attributes; nil if none
+
+        uint32 attributeFlags;                      // used by backend
+        JS2Runtime::JSObject *attributeValue;       // used by backend
 
         AttributeStmtNode(size_t pos, Kind kind, ExprNode *attributes): StmtNode(pos, kind), attributes(attributes) {}
 

@@ -146,6 +146,7 @@ PushScopeOp,            // <pointer>        XXX !!! XXX
 PopScopeOp,             // <pointer>        XXX !!! XXX
 NewClosureOp,           //                          <function> --> <function>
 ClassOp,                //                          <object> --> <type>
+JuxtaposeOp,            //                          <attribute> <attribute> --> <attribute>
 
 OpCodeCount
 
@@ -250,6 +251,8 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
                                     JSFunction *fnc, 
                                     bool isConstructor, 
                                     JSType *topClass);
+        ByteCodeModule *genCodeForExpression(ExprNode *p);
+
         JSType *genExpr(ExprNode *p);
         Reference *genReference(ExprNode *p, Access acc);
         void genReferencePair(ExprNode *p, Reference *&readRef, Reference *&writeRef);
@@ -268,7 +271,7 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
         std::vector<Label> mLabelList;
         std::vector<uint32> mLabelStack;
 
-        AttributeList *mNamespaceList;
+        NamespaceList *mNamespaceList;
 
         int32 mStackTop;
         int32 mStackMax;
@@ -303,7 +306,7 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
         }
 
         // Make sure there's room for n more operands on the stack
-        void stretchStack(uint32 n)
+        void stretchStack(int32 n)
         {
             if ((mStackTop + n) > mStackMax)
                 mStackMax = mStackTop + n;

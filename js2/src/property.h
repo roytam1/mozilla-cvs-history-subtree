@@ -40,7 +40,6 @@
 namespace JavaScript {
 
     struct ExprNode;
-    typedef ExprNode AttributeList;
 
 namespace JS2Runtime {
 
@@ -48,7 +47,11 @@ namespace JS2Runtime {
     class JSValue;
     class JSType;
 
-    typedef enum { ValuePointer, FunctionPair, IndexPair, Slot, Method, Constructor } PropertyFlag;    
+    typedef enum { ValuePointer, FunctionPair, IndexPair, Slot, Method, Constructor } PropertyFlag;
+    
+    typedef uint32 PropertyAttribute;
+    
+
     
     class Property {
     public:
@@ -81,6 +84,18 @@ namespace JS2Runtime {
             mData.vp = p;
         }
         
+        enum {      
+                    Indexable   = 0x0001, 
+                    Static      = 0x0002,
+                    Dynamic     = 0x0004,
+                    Constructor = 0x0008,
+                    Operator    = 0x0010,
+                    Prototype   = 0x0020,
+                    Extend      = 0x0040,
+                    Virtual     = 0x0080,
+                    True        = 0x0100
+        };
+
         
         union {
             JSValue *vp;        // straightforward value
@@ -96,21 +111,30 @@ namespace JS2Runtime {
                                 // slot (in base->mInstanceValues)
         } mData;
         JSType *mType;
+        PropertyAttribute mAttributes;
         PropertyFlag mFlag;
     };
     Formatter& operator<<(Formatter& f, const Property& prop);
    
+    struct NamespaceList {
+        NamespaceList(const StringAtom &name, NamespaceList *next) : mName(name), mNext(next) { }
 
-    typedef std::pair<Property *, AttributeList *> AttributedProperty;
+        const StringAtom &mName;
+        NamespaceList *mNext;
+    };
 
-    typedef std::multimap<String, AttributedProperty *, std::less<const String> > PropertyMap;
+    typedef std::pair<Property *, NamespaceList *> NamespacedProperty;
+
+    typedef std::multimap<String, NamespacedProperty *, std::less<const String> > PropertyMap;
     typedef PropertyMap::iterator PropertyIterator;
+
+    NamespaceList *buildNamespaceList(ExprNode *attr);
 
 
 #define PROPERTY_KIND(it)           ((it)->second->first->mFlag)
 #define PROPERTY(it)                ((it)->second->first)
-#define ATTR_PROPERTY(it)           ((it)->second)
-#define PROPERTY_ATTRLIST(it)       ((it)->second->second)
+#define NAMESPACED_PROPERTY(it)     ((it)->second)
+#define PROPERTY_NAMESPACELIST(it)  ((it)->second->second)
 #define PROPERTY_VALUEPOINTER(it)   ((it)->second->first->mData.vp)
 #define PROPERTY_INDEX(it)          ((it)->second->first->mData.index)
 #define PROPERTY_NAME(it)           ((it)->first)

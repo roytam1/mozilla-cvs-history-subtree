@@ -74,6 +74,8 @@ using namespace JavaScript::JS2Runtime;
 JavaScript::World world;
 JavaScript::Arena a;
 
+bool gTraceFlag = false;
+
 namespace JavaScript {
 namespace Shell {
 
@@ -121,6 +123,20 @@ static JSValue print(Context *, const JSValue& /*thisValue*/, JSValue *argv, uin
 static JSValue debug(Context *cx, const JSValue& /*thisValue*/, JSValue * /*argv*/, uint32 /*argc*/)
 {
     cx->mDebugFlag = !cx->mDebugFlag;
+    return kUndefinedValue;
+}
+
+static JSValue trace(Context *cx, const JSValue& /*thisValue*/, JSValue * /*argv*/, uint32 /*argc*/)
+{
+    gTraceFlag = true;
+    stdOut << "Will report allocation stats\n";
+    return kUndefinedValue;
+}
+
+static JSValue dikdik(Context * /*cx*/, const JSValue& /*thisValue*/, JSValue * /*argv*/, uint32 /*argc*/)
+{
+    extern void do_dikdik(Formatter &f);
+    do_dikdik(stdOut);
     return kUndefinedValue;
 }
 
@@ -232,9 +248,11 @@ int main(int argc, char **argv)
     JSObject *globalObject;
     Context cx(&globalObject, world, a, Pragma::js2);
 
-    globalObject->defineVariable(widenCString("load"), NULL, NULL, JSValue(new JSFunction(&cx, load, NULL)));
-    globalObject->defineVariable(widenCString("print"), NULL, NULL, JSValue(new JSFunction(&cx, print, NULL)));
-    globalObject->defineVariable(widenCString("debug"), NULL, NULL, JSValue(new JSFunction(&cx, debug, NULL)));
+    globalObject->defineVariable(widenCString("load"), (NamespaceList *)(NULL), NULL, JSValue(new JSFunction(&cx, load, NULL)));
+    globalObject->defineVariable(widenCString("print"), (NamespaceList *)(NULL), NULL, JSValue(new JSFunction(&cx, print, NULL)));
+    globalObject->defineVariable(widenCString("debug"), (NamespaceList *)(NULL), NULL, JSValue(new JSFunction(&cx, debug, NULL)));
+    globalObject->defineVariable(widenCString("trace"), (NamespaceList *)(NULL), NULL, JSValue(new JSFunction(&cx, trace, NULL)));
+    globalObject->defineVariable(widenCString("dikdik"), (NamespaceList *)(NULL), NULL, JSValue(new JSFunction(&cx, dikdik, NULL)));
 
     bool doInteractive = true;
     int result = 0;
@@ -244,7 +262,8 @@ int main(int argc, char **argv)
     if (doInteractive)
         result = readEvalPrint(&cx, stdin);
 
-    trace_dump(JavaScript::stdOut);
+    if (gTraceFlag)
+        trace_dump(JavaScript::stdOut);
 
     return result;
 }

@@ -1252,6 +1252,59 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     pushValue(JSValue(x.getType()));
                 }
                 break;
+            case JuxtaposeOp:
+                {
+                    JSValue a2 = popValue();
+                    JSValue a1 = popValue();
+
+                    ASSERT(a1.isObject() && (a1.object->getType() == Attribute_Type));
+                    ASSERT(a2.isObject() && (a2.object->getType() == Attribute_Type));
+
+                    a1.object->getProperty(this, widenCString("trueFlags"), NULL);
+                    JSValue f = popValue();
+                    ASSERT(f.isNumber());
+                    uint32 a1TrueFlags = (uint32)(f.f64);
+
+                    a1.object->getProperty(this, widenCString("falseFlags"), NULL);
+                    f = popValue();
+                    ASSERT(f.isNumber());
+                    uint32 a1FalseFlags = (uint32)(f.f64);
+
+                    a2.object->getProperty(this, widenCString("trueFlags"), NULL);
+                    f = popValue();
+                    ASSERT(f.isNumber());
+                    uint32 a2TrueFlags = (uint32)(f.f64);
+
+                    a2.object->getProperty(this, widenCString("falseFlags"), NULL);
+                    f = popValue();
+                    ASSERT(f.isNumber());
+                    uint32 a2FalseFlags = (uint32)(f.f64);
+
+                    if ((a1TrueFlags & a2FalseFlags) != 0)
+                        reportError(Exception::semanticError, "Mismatched attributes");
+                    if ((a1FalseFlags & a2TrueFlags) != 0)
+                        reportError(Exception::semanticError, "Mismatched attributes");
+
+                    a1.object->getProperty(this, widenCString("names"), NULL);
+                    JSValue a1names = popValue();
+                    ASSERT(a1names.isObject() && (a1names.object->getType() == Array_Type));
+
+                    a2.object->getProperty(this, widenCString("names"), NULL);
+                    JSValue a2names = popValue();
+                    ASSERT(a2names.isObject() && (a2names.object->getType() == Array_Type));
+                    
+                    JSValue xNames = Array_concat(this, a1names, &a1names, 1);
+                    
+
+                    JSInstance *x = Attribute_Type->newInstance(this);
+                    x->setProperty(this, widenCString("trueFlags"), (NamespaceList *)(NULL), JSValue((float64)(a1TrueFlags | a2TrueFlags)));
+                    x->setProperty(this, widenCString("falseFlags"), (NamespaceList *)(NULL), JSValue((float64)(a1FalseFlags | a2FalseFlags)));
+                    x->setProperty(this, widenCString("names"), (NamespaceList *)(NULL), xNames);
+
+                    pushValue(JSValue(x));
+
+                }
+                break;
 
 
             default:

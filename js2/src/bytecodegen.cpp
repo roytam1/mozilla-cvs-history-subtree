@@ -377,6 +377,7 @@ ByteCodeData gByteCodeData[OpCodeCount] = {
 { 0,        "PopScope", },
 { 0,        "NewClosure" },
 { 0,        "Class" },
+{ -1,       "Juxtapose" },
 
 };
 
@@ -659,6 +660,13 @@ ByteCodeModule *ByteCodeGen::genCodeForScript(StmtNode *p)
     return new ByteCodeModule(this);
 }
 
+ByteCodeModule *ByteCodeGen::genCodeForExpression(ExprNode *p)
+{
+    genExpr(p);
+    addOp(PopOp);
+    return new ByteCodeModule(this);
+}
+
 
 // emit bytecode for the single statement p. Return true if that statement
 // was a return statement (or contained only paths leading to a return statement)
@@ -701,11 +709,13 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             mScopeChain->popScope();
         }
         break;
+    case StmtNode::Const:
     case StmtNode::Var:
         {
             VariableStmtNode *vs = static_cast<VariableStmtNode *>(p);
             VariableBinding *v = vs->bindings;
-            bool isStatic = hasAttribute(vs->attributes, Token::Static);
+//            bool isStatic = hasAttribute(vs->attributes, Token::Static);
+            bool isStatic = (vs->attributeFlags & Property::Static) == Property::Static;
             while (v)  {
                 Reference *ref = mScopeChain->getName(*v->name, CURRENT_ATTR, Write);
                 ASSERT(ref);    // must have been added previously by collectNames
@@ -750,7 +760,8 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
     case StmtNode::Function:
         {
             FunctionStmtNode *f = static_cast<FunctionStmtNode *>(p);
-            bool isConstructor = hasAttribute(f->attributes, m_cx->ConstructorKeyWord);
+//            bool isConstructor = hasAttribute(f->attributes, m_cx->ConstructorKeyWord);
+            bool isConstructor = (f->attributeFlags & Property::Constructor) == Property::Constructor;
             JSFunction *fnc = f->mFunction;    
 
             ASSERT(f->function.name);
@@ -1335,20 +1346,22 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
             if (lType == NULL)
                 lType = genExpr(b->op1);    // generate code for leftside of dot
             if (b->op2->getKind() == ExprNode::qualify) {
-                BinaryExprNode *q = static_cast<BinaryExprNode *>(b->op2);
-                ASSERT(q->op1->getKind() == ExprNode::identifier);
-                ASSERT(q->op2->getKind() == ExprNode::identifier);
-                const StringAtom &fieldName = static_cast<IdentifierExprNode *>(q->op2)->name;
-//                const StringAtom &qualifierName = static_cast<IdentifierExprNode *>(q->op1)->name;
-                AttributeList *id = 0;
-                ASSERT(false);
-                // ***** Fix me: the original code below was corrupting the stack by leaving a dangling
-                // pointer to a temporary object.
-//                AttributeList id(q->op1);
-//                id.next = CURRENT_ATTR;
-                Reference *ref = lType->genReference(fieldName, id, acc, 0);
+                QualifyExprNode *qe = static_cast<QualifyExprNode *>(b->op2);
+                ASSERT(qe->qualifier->getKind() == ExprNode::identifier);   // XXX handle more complex...
+
+                const StringAtom &fieldName = static_cast<IdentifierExprNode *>(b->op2)->name;
+                const StringAtom &qualifierName = static_cast<IdentifierExprNode *>(qe->qualifier)->name;
+
+                NamespaceList *oldNS = mNamespaceList;
+                mNamespaceList = new NamespaceList(qualifierName, mNamespaceList);
+
+                Reference *ref = lType->genReference(fieldName, mNamespaceList, acc, 0);
                 if (ref == NULL)
                     ref = new PropertyReference(fieldName, acc, Object_Type);
+
+                delete mNamespaceList;
+                mNamespaceList = oldNS;
+
                 return ref;
             }
             else {
@@ -2162,6 +2175,14 @@ BinaryOpEquals:
             return uType;
         }
         break;
+    case ExprNode::juxtapose:
+        {
+            BinaryExprNode *j = static_cast<BinaryExprNode *>(p);
+            genExpr(j->op1);
+            genExpr(j->op2);
+            addOp(JuxtaposeOp);
+        }
+        break;
     default:
         NOT_REACHED("Not Implemented Yet");
     }
@@ -2210,6 +2231,7 @@ int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm)
     case LoadGlobalObjectOp:
     case NewClosureOp:
     case ClassOp:
+    case JuxtaposeOp:
         break;
 
     case DoUnaryOp:

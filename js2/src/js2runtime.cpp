@@ -74,52 +74,113 @@ JSType *Boolean_Type;
 JSType *Type_Type;
 JSType *Void_Type;
 JSType *Unit_Type;
+JSType *Attribute_Type;
 JSArrayType *Array_Type;
 
+JSInstance *NullAttribute;
 
+
+// Build a list of namespace names from the exprNode
+NamespaceList *buildNamespaceList(ExprNode *attr)
+{
+    if (attr == NULL)
+        return NULL;
+
+    NamespaceList *result = NULL;
+    while (true) {       
+        ExprNode *thisUn = attr;
+        if (thisUn->getKind() == ExprNode::juxtapose)
+            thisUn = static_cast<BinaryExprNode *>(attr)->op2;
+        if (thisUn->getKind() == ExprNode::identifier) {
+            const StringAtom& name = (static_cast<IdentifierExprNode *>(thisUn))->name;
+            result = new NamespaceList(name, result);
+        }
+        else
+            if (thisUn->getKind() == ExprNode::call) {
+                InvokeExprNode *ie = static_cast<InvokeExprNode *>(thisUn);        
+                ASSERT(ie->op->getKind() == ExprNode::identifier);
+                const StringAtom& idname = (static_cast<IdentifierExprNode *>(ie->op))->name;
+                result = new NamespaceList(idname, result);
+            }
+            else
+                ASSERT(false);
+        if (thisUn == attr)
+            break;
+        else
+            attr = static_cast<BinaryExprNode *>(attr)->op1;
+    }
+    return result;
+}
+
+JSInstance *Context::executeAttributes(ExprNode *attr)
+{
+    if (attr == NULL)
+        return NullAttribute;
+
+    ByteCodeGen bcg(this, mScopeChain);
+    ByteCodeModule *bcm = bcg.genCodeForExpression(attr);
+//    stdOut << *bcm;
+    JSValue result = interpret(bcm, NULL, JSValue(getGlobalObject()), NULL, 0);
+
+    ASSERT(result.isObject() && (result.object->getType() == Attribute_Type));
+    return static_cast<JSInstance *>(result.object);
+}
+
+
+JSType *Context::getExtendArg(JSObject *attributeValue)
+{
+    attributeValue->getProperty(this, widenCString("extendArg"), (NamespaceList *)(NULL));
+    JSValue extArg = popValue();
+    ASSERT(extArg.isType());
+    return extArg.type;
+}
 
 // find a property by the given name, and then check to see if there's any
 // overlap between the supplied attribute list and the property's list.
 // ***** REWRITE ME -- matching attribute lists for inclusion is a bad idea.
-PropertyIterator JSObject::findAttributedProperty(const String &name, AttributeList * /*attrs*/)
+// XXX it's re-written a little bit, but is still doing linear searching (o^2) ...
+PropertyIterator JSObject::findNamespacedProperty(const String &name, NamespaceList *names)
 {
     for (PropertyIterator i = mProperties.lower_bound(name), 
                     end = mProperties.upper_bound(name); (i != end); i++) {
-#if 0
-        if (attrs) {
-            AttributeList *propAttr = PROPERTY_ATTRLIST(i);
-            if (propAttr == NULL)
-                return i;
-            while (attrs) {
-                if (attrs->expr->getKind() == ExprNode::identifier) {
-                    const StringAtom& name = (static_cast<IdentifierExprNode *>(attrs->expr))->name;
-                    if (hasAttribute(propAttr, name))
+        if (names) {
+            NamespaceList *propNames = PROPERTY_NAMESPACELIST(i);
+            if (propNames == NULL)
+                return mProperties.end();       // a namespace list was specified, no match
+            while (names) {
+                NamespaceList *propNameEntry = propNames;
+                while (propNameEntry) {
+                    if (names->mName == propNameEntry->mName)
                         return i;
+                    propNameEntry = propNameEntry->mNext;
                 }
-                else
-                    if (attrs->expr->getKind() == ExprNode::call) {
-                        InvokeExprNode *ie = static_cast<InvokeExprNode *>(attrs->expr);        
-                        ASSERT(ie->op->getKind() == ExprNode::identifier);
-                        const StringAtom& idname = (static_cast<IdentifierExprNode *>(ie->op))->name;
-                        if (hasAttribute(propAttr, idname))
-                            return i;
-                    }
-                    else
-                        ASSERT(false);
-                attrs = attrs->next;
+                names = names->mNext;
             }
         }
         else
-#endif
             return i;
     }
     return mProperties.end();
 }
 
+
+
+/*---------------------------------------------------------------------------------------------*/
+
+
+
+
+
+
+
+
+
+
+
 // see if the property exists by a specific kind of access
-bool JSObject::hasOwnProperty(const String &name, AttributeList *attr, Access acc, PropertyIterator *p)
+bool JSObject::hasOwnProperty(const String &name, NamespaceList *names, Access acc, PropertyIterator *p)
 {
-    *p = findAttributedProperty(name, attr);
+    *p = findNamespacedProperty(name, names);
     if (*p != mProperties.end()) {
         Property *prop = PROPERTY(*p);
         if (prop->mFlag == FunctionPair)
@@ -136,13 +197,13 @@ bool JSObject::hasOwnProperty(const String &name, AttributeList *attr, Access ac
         return false;
 }
 
-bool JSObject::hasProperty(const String &name, AttributeList *attr, Access acc, PropertyIterator *p)
+bool JSObject::hasProperty(const String &name, NamespaceList *names, Access acc, PropertyIterator *p)
 {
-    if (hasOwnProperty(name, attr, acc, p))
+    if (hasOwnProperty(name, names, acc, p))
         return true;
     else
         if (mPrototype)
-            return mPrototype->hasProperty(name, attr, acc, p);
+            return mPrototype->hasProperty(name, names, acc, p);
         else
             return false;
 }
@@ -157,46 +218,73 @@ JSValue JSObject::getPropertyValue(PropertyIterator &i)
 }
 
 
-void JSObject::defineGetterMethod(const String &name, AttributeList *attr, JSFunction *f)
+void JSObject::defineGetterMethod(const String &name, ExprNode *attr, JSFunction *f)
 {
+    NamespaceList *names = buildNamespaceList(attr);
     PropertyIterator i;
-    if (hasProperty(name, attr, Write, &i)) {
+    if (hasProperty(name, names, Write, &i)) {
         ASSERT(PROPERTY_KIND(i) == FunctionPair);
         ASSERT(PROPERTY_GETTERF(i) == NULL);
         PROPERTY_GETTERF(i) = f;
     }
     else {
-        const PropertyMap::value_type e(name, new AttributedProperty(new Property(Function_Type, f, NULL), attr));
+        const PropertyMap::value_type e(name, new NamespacedProperty(new Property(Function_Type, f, NULL), names));
         mProperties.insert(e);
     }
 }
-void JSObject::defineSetterMethod(const String &name, AttributeList *attr, JSFunction *f)
+void JSObject::defineSetterMethod(const String &name, ExprNode *attr, JSFunction *f)
 {
+    NamespaceList *names = buildNamespaceList(attr);
     PropertyIterator i;
-    if (hasProperty(name, attr, Read, &i)) {
+    if (hasProperty(name, names, Read, &i)) {
         ASSERT(PROPERTY_KIND(i) == FunctionPair);
         ASSERT(PROPERTY_SETTERF(i) == NULL);
         PROPERTY_SETTERF(i) = f;
     }
     else {
-        const PropertyMap::value_type e(name, new AttributedProperty(new Property(Function_Type, NULL, f), attr));
+        const PropertyMap::value_type e(name, new NamespacedProperty(new Property(Function_Type, NULL, f), names));
         mProperties.insert(e);
     }
 }
 
-// add a property (with a value)
-Property *JSObject::defineVariable(const String &name, AttributeList *attr, JSType *type, JSValue v)
+// add a property
+Property *JSObject::defineVariable(const String &name, ExprNode *attr, JSType *type)
 {
-    Property *prop = new Property(new JSValue(v), type);
-    const PropertyMap::value_type e(name, new AttributedProperty(prop, attr));
+    Property *prop = new Property(new JSValue(), type);
+    const PropertyMap::value_type e(name, new NamespacedProperty(prop, buildNamespaceList(attr)));
+    mProperties.insert(e);
+    return prop;
+}
+Property *JSObject::defineVariable(const String &name, NamespaceList *names, JSType *type)
+{
+    Property *prop = new Property(new JSValue(), type);
+    const PropertyMap::value_type e(name, new NamespacedProperty(prop, names));
     mProperties.insert(e);
     return prop;
 }
 
-Reference *JSObject::genReference(const String& name, AttributeList *attr, Access acc, uint32 /*depth*/)
+// add a property (with a value)
+Property *JSObject::defineVariable(const String &name, ExprNode *attr, JSType *type, JSValue v)
+{
+    Property *prop = new Property(new JSValue(v), type);
+    const PropertyMap::value_type e(name, new NamespacedProperty(prop, buildNamespaceList(attr)));
+    mProperties.insert(e);
+    return prop;
+}
+Property *JSObject::defineVariable(const String &name, NamespaceList *names, JSType *type, JSValue v)
+{
+    Property *prop = new Property(new JSValue(v), type);
+    const PropertyMap::value_type e(name, new NamespacedProperty(prop, names));
+    mProperties.insert(e);
+    return prop;
+}
+
+
+
+Reference *JSObject::genReference(const String& name, NamespaceList *names, Access acc, uint32 /*depth*/)
 {
     PropertyIterator i;
-    if (hasProperty(name, attr, acc, &i)) {
+    if (hasProperty(name, names, acc, &i)) {
         Property *prop = PROPERTY(i);
         switch (prop->mFlag) {
         case ValuePointer:
@@ -216,10 +304,10 @@ Reference *JSObject::genReference(const String& name, AttributeList *attr, Acces
 }
 
 
-void JSObject::getProperty(Context *cx, const String &name, AttributeList *attr)
+void JSObject::getProperty(Context *cx, const String &name, NamespaceList *names)
 {
     PropertyIterator i;
-    if (hasProperty(name, attr, Read, &i)) {
+    if (hasProperty(name, names, Read, &i)) {
         Property *prop = PROPERTY(i);
         switch (prop->mFlag) {
         case ValuePointer:
@@ -241,54 +329,12 @@ void JSObject::getProperty(Context *cx, const String &name, AttributeList *attr)
         cx->pushValue(kUndefinedValue);        
 }
 
-// ***** REWRITE ME -- attribute expressions should be compile-time evaluated, not traversed looking
-// for keywords.
-// Here attributes is either nil or an expression that contains one or more attributes combined using
-// the juxtapose operator.
-bool hasAttribute(AttributeList *attributes, const StringAtom &name, IdentifierExprNode **attrArg)
-{
-    if (!attributes)
-        return false;
-    while (true) {
-        ExprNode *attribute = attributes;
-        if (attribute->hasKind(ExprNode::juxtapose))
-            attribute = static_cast<BinaryExprNode *>(attributes)->op1;
-        if (attribute->hasKind(ExprNode::identifier)) {
-            const StringAtom& idname = static_cast<IdentifierExprNode *>(attribute)->name;
-            if (idname == name)
-                return true;
-            //  else
-                // look up the name in the scopechain to see if it's a const definition
-                // whose value we can access.
-                // 
-        }
-        else
-            if (attribute->hasKind(ExprNode::call)) {
-                InvokeExprNode *i = static_cast<InvokeExprNode *>(attribute);        
-                ASSERT(i->op->getKind() == ExprNode::identifier);
-                const StringAtom& idname = static_cast<IdentifierExprNode *>(i->op)->name;
-                if (idname == name) {
-                    if (attrArg) {
-                        ExprPairList *p = i->pairs;
-                        ASSERT(p && p->value->hasKind(ExprNode::identifier));
-                        *attrArg = static_cast<IdentifierExprNode *>(p->value);
-                    }
-                    return true;
-                }
-            }
-            else
-                ASSERT(false);
-        if (attribute == attributes)
-            return false;
-        attributes = static_cast<BinaryExprNode *>(attributes)->op2;
-    }
-}
 
 
-void JSInstance::getProperty(Context *cx, const String &name, AttributeList *attr)
+void JSInstance::getProperty(Context *cx, const String &name, NamespaceList *names)
 {
     PropertyIterator i;
-    if (hasProperty(name, attr, Read, &i)) {
+    if (hasProperty(name, names, Read, &i)) {
         Property *prop = PROPERTY(i);
         switch (prop->mFlag) {
         case Slot:
@@ -313,17 +359,17 @@ void JSInstance::getProperty(Context *cx, const String &name, AttributeList *att
         }
     }
     else {
-        if (mType->mStatics && mType->mStatics->hasProperty(name, attr, Read, &i))
-            mType->mStatics->getProperty(cx, name, attr);
+        if (mType->mStatics && mType->mStatics->hasProperty(name, names, Read, &i))
+            mType->mStatics->getProperty(cx, name, names);
         else
-            JSObject::getProperty(cx, name, attr);
+            JSObject::getProperty(cx, name, names);
     }
 }
 
-void JSObject::setProperty(Context *cx, const String &name, AttributeList *attr, const JSValue &v)
+void JSObject::setProperty(Context *cx, const String &name, NamespaceList *names, const JSValue &v)
 {
     PropertyIterator i;
-    if (hasProperty(name, attr, Write, &i)) {
+    if (hasProperty(name, names, Write, &i)) {
         Property *prop = PROPERTY(i);
         switch (prop->mFlag) {
         case ValuePointer:
@@ -341,14 +387,14 @@ void JSObject::setProperty(Context *cx, const String &name, AttributeList *attr,
         }
     }
     else {
-        defineVariable(name, attr, Object_Type, v);
+        defineVariable(name, names, Object_Type, v);
     }
 }
 
-void JSInstance::setProperty(Context *cx, const String &name, AttributeList *attr, const JSValue &v)
+void JSInstance::setProperty(Context *cx, const String &name, NamespaceList *names, const JSValue &v)
 {
     PropertyIterator i;
-    if (hasProperty(name, attr, Write, &i)) {
+    if (hasProperty(name, names, Write, &i)) {
         Property *prop = PROPERTY(i);
         switch (prop->mFlag) {
         case Slot:
@@ -375,25 +421,25 @@ void JSInstance::setProperty(Context *cx, const String &name, AttributeList *att
         }
     }
     else {
-        if (mType->mStatics && mType->mStatics->hasProperty(name, attr, Write, &i)) {
-            mType->mStatics->setProperty(cx, name, attr, v);
+        if (mType->mStatics && mType->mStatics->hasProperty(name, names, Write, &i)) {
+            mType->mStatics->setProperty(cx, name, names, v);
         }
         else {
-            defineVariable(name, attr, Object_Type, v);
+            defineVariable(name, names, Object_Type, v);
         }
     }
 }
 
-void JSArrayInstance::getProperty(Context *cx, const String &name, AttributeList *attr)
+void JSArrayInstance::getProperty(Context *cx, const String &name, NamespaceList *names)
 {
     if (name.compare(widenCString("length")) == 0) {
         cx->pushValue(JSValue((float64)mLength));
     }
     else
-        JSInstance::getProperty(cx, name, attr);
+        JSInstance::getProperty(cx, name, names);
 }
 
-void JSArrayInstance::setProperty(Context *cx, const String &name, AttributeList *attr, const JSValue &v)
+void JSArrayInstance::setProperty(Context *cx, const String &name, NamespaceList *names, const JSValue &v)
 {
     if (name.compare(widenCString("length")) == 0) {
         uint32 newLength = (uint32)(v.toUInt32(cx).f64);
@@ -402,7 +448,7 @@ void JSArrayInstance::setProperty(Context *cx, const String &name, AttributeList
         
         for (uint32 i = newLength; i < mLength; i++) {
             String *id = numberToString(i);
-            if (findAttributedProperty(*id, NULL) != mProperties.end())
+            if (findNamespacedProperty(*id, NULL) != mProperties.end())
                 deleteProperty(*id, NULL);
             delete id;
         }
@@ -410,10 +456,10 @@ void JSArrayInstance::setProperty(Context *cx, const String &name, AttributeList
         mLength = newLength;
     }
     else {
-        if (findAttributedProperty(name, attr) == mProperties.end())
-            defineVariable(name, attr, Object_Type, v);
+        if (findNamespacedProperty(name, names) == mProperties.end())
+            defineVariable(name, names, Object_Type, v);
         else
-            JSInstance::setProperty(cx, name, attr, v);
+            JSInstance::setProperty(cx, name, names, v);
         JSValue v = JSValue(&name);
         JSValue v_int = v.toUInt32(cx);
         if ((v_int.f64 != two32minus1) && (v_int.toString(cx).string->compare(name) == 0)) {
@@ -423,13 +469,13 @@ void JSArrayInstance::setProperty(Context *cx, const String &name, AttributeList
     }
 }
 
-void JSStringInstance::getProperty(Context *cx, const String &name, AttributeList *attr)
+void JSStringInstance::getProperty(Context *cx, const String &name, NamespaceList *names)
 {
     if (name.compare(widenCString("length")) == 0) {
         cx->pushValue(JSValue((float64)mLength));
     }
     else
-        JSInstance::getProperty(cx, name, attr);
+        JSInstance::getProperty(cx, name, names);
 }
 
 
@@ -442,7 +488,7 @@ void JSInstance::initInstance(Context *, JSType *type)
     for (PropertyIterator pi = type->mProperties.begin(), 
                 end = type->mProperties.end();
                 (pi != end); pi++) {            
-        const PropertyMap::value_type e(PROPERTY_NAME(pi), ATTR_PROPERTY(pi));
+        const PropertyMap::value_type e(PROPERTY_NAME(pi), NAMESPACED_PROPERTY(pi));
         mProperties.insert(e);
     }
 
@@ -452,7 +498,7 @@ void JSInstance::initInstance(Context *, JSType *type)
         for (PropertyIterator i = t->mProperties.begin(), 
                     end = t->mProperties.end();
                     (i != end); i++) {            
-            const PropertyMap::value_type e(PROPERTY_NAME(i), ATTR_PROPERTY(i));
+            const PropertyMap::value_type e(PROPERTY_NAME(i), NAMESPACED_PROPERTY(i));
             mProperties.insert(e);            
         }
         t = t->mSuperType;
@@ -465,13 +511,20 @@ void JSInstance::initInstance(Context *, JSType *type)
     mType = type;
 }
 
+// Create a new (empty) instance of this class. The prototype
+// link for this new instance is established from the type's
+// prototype object.
 JSInstance *JSType::newInstance(Context *cx)
 {
     JSInstance *result = new JSInstance(cx, this);
-    result->mPrototype = mPrototype;
+    result->mPrototype = mPrototypeObject;
     return result;
 }
 
+// allocate a new (empty) instance of the class and then
+// run the instance initializer on that object. This becomes
+// the initial instance that then gets copied into each new
+// instance of this class.
 void JSType::setInstanceInitializer(Context *cx, JSFunction *f)
 {
     mInitialInstance = newInstance(cx);
@@ -496,16 +549,17 @@ void JSType::setStaticInitializer(Context *cx, JSFunction *f)
     // build the static instance object
     if (mStatics->mVariableCount)
         mStatics->mInstanceValues = new JSValue[mStatics->mVariableCount];
-/*
-    XXX define a global 'prototype' member if any of the
-    fields are marked as prototype. 
 
-    defineStaticVariable(widenCString("prototype"), NULL, Object_Type);
-    PropertyIterator i;
-    if (mStatics->hasProperty(widenCString("prototype"), NULL, Read, &i) {
-        ASSERT(PROPERTY_KIND(i) == Slot);
-        mStatics->mInstanceValues[PROPERTY_INDEX(i)] = JSValue(type->mSuperType->mPrototype);
-    }
+/*
+    XXX If any of the fields are marked as prototype, define a variable
+    called 'prototype' and point it at the type's prototype object
+
+    ??defineStaticVariable(widenCString("prototype"), NULL, Object_Type);
+    ??PropertyIterator i;
+    ??if (mStatics->hasProperty(widenCString("prototype"), NULL, Read, &i) {
+    ??    ASSERT(PROPERTY_KIND(i) == Slot);
+    ??    mStatics->mInstanceValues[PROPERTY_INDEX(i)] = JSValue(type->mSuperType->mPrototype);
+    ??}
 */
     if (f) {
         JSValue thisValue(mStatics);
@@ -516,23 +570,24 @@ void JSType::setStaticInitializer(Context *cx, JSFunction *f)
 JSInstance *JSArrayType::newInstance(Context *cx)
 {
     JSInstance *result = new JSArrayInstance(cx, this);
-    result->mPrototype = mPrototype;
+    result->mPrototype = mPrototypeObject;
     return result;
 }
 
 JSInstance *JSStringType::newInstance(Context *cx)
 {
     JSInstance *result = new JSStringInstance(cx, this);
-    result->mPrototype = mPrototype;
+    result->mPrototype = mPrototypeObject;
     return result;
 }
 
-void ScopeChain::setNameValue(const String& name, AttributeList *attr, Context *cx)
+void ScopeChain::setNameValue(const String& name, ExprNode *attr, Context *cx)
 {
+    NamespaceList *names = buildNamespaceList(attr);
     PropertyIterator i;
     JSObject *top = *mScopeStack.rbegin();
     JSValue v = cx->topValue();
-    if (top->hasProperty(name, attr, Write, &i)) {
+    if (top->hasProperty(name, names, Write, &i)) {
         if (PROPERTY_KIND(i) == ValuePointer) {
             *PROPERTY_VALUEPOINTER(i) = v;
         }
@@ -544,13 +599,14 @@ void ScopeChain::setNameValue(const String& name, AttributeList *attr, Context *
     }
 }
 
-void ScopeChain::getNameValue(const String& name, AttributeList *attr, Context *cx)
+void ScopeChain::getNameValue(const String& name, ExprNode *attr, Context *cx)
 {
+    NamespaceList *names = buildNamespaceList(attr);
     uint32 depth = 0;
     for (ScopeScanner s = mScopeStack.rbegin(), end = mScopeStack.rend(); (s != end); s++, depth++)
     {
         PropertyIterator i;
-        if ((*s)->hasProperty(name, attr, Read, &i)) {
+        if ((*s)->hasProperty(name, names, Read, &i)) {
             if (PROPERTY_KIND(i) == ValuePointer) {
                 cx->pushValue(*PROPERTY_VALUEPOINTER(i));
             }
@@ -566,56 +622,29 @@ void ScopeChain::getNameValue(const String& name, AttributeList *attr, Context *
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-// ***** REWRITE ME -- attribute expressions should be compile-time evaluated, not traversed looking
-// for keywords.
-// Here attributes is either nil or an expression that contains one or more attributes combined using
-// the juxtapose operator.
-bool hasAttribute(AttributeList *attributes, Token::Kind tokenKind, IdentifierExprNode **attrArg)
+Reference *ParameterBarrel::genReference(const String& name, NamespaceList *names, Access acc, uint32 /*depth*/)
 {
-    if (!attributes)
-        return false;
-    while (true) {
-        ExprNode *attribute = attributes;
-        if (attribute->hasKind(ExprNode::juxtapose))
-            attribute = static_cast<BinaryExprNode *>(attributes)->op1;
-        if (attribute->hasKind(ExprNode::identifier)) {
-            const StringAtom& name = (static_cast<IdentifierExprNode *>(attribute))->name;
-            if (name.tokenKind == tokenKind)
-                return true;
-        }
-        else
-            if (attribute->hasKind(ExprNode::call)) {
-                InvokeExprNode *i = static_cast<InvokeExprNode *>(attribute);        
-                ASSERT(i->op->hasKind(ExprNode::identifier));
-                const StringAtom& name = static_cast<IdentifierExprNode *>(i->op)->name;
-                if (name.tokenKind == tokenKind) {
-                    if (attrArg) {
-                        ExprPairList *p = i->pairs;
-                        ASSERT(p && p->value->getKind() == ExprNode::identifier);
-                        *attrArg = static_cast<IdentifierExprNode *>(p->value);
-                    }
-                    return true;
-                }
-            }
-            else
-                ASSERT(false);
-        if (attribute == attributes)
-            return false;
-        attributes = static_cast<BinaryExprNode *>(attributes)->op2;
+    PropertyIterator i;
+    if (hasProperty(name, names, acc, &i)) {
+        Property *prop = PROPERTY(i);
+        ASSERT(prop->mFlag == Slot);
+        return new ParameterReference(prop->mData.index, acc, prop->mType);
     }
+    NOT_REACHED("bad genRef call");
+    return NULL;
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 JSType *ScopeChain::findType(const StringAtom& typeName, size_t pos) 
 {
@@ -682,6 +711,8 @@ uint32 Context::getParameterCount(FunctionDefinition &function)
 //      compile-time constants)
 void Context::buildRuntime(StmtNode *p)
 {
+    ContextStackReplacement csr(this);
+
     mScopeChain->addScope(getGlobalObject());
     while (p) {
         mScopeChain->collectNames(p);         // adds declarations for each top-level entity in p
@@ -713,15 +744,13 @@ void ScopeChain::collectNames(StmtNode *p)
             ClassStmtNode *classStmt = static_cast<ClassStmtNode *>(p);
             const StringAtom& name = classStmt->name;
             JSType *thisClass = new JSType(m_cx, name, NULL);
-            // XXX detect incompatible settings
-            if (hasAttribute(classStmt->attributes, m_cx->FixedKeyWord))
-                thisClass->mIsDynamic = false;
-            if (hasAttribute(classStmt->attributes, m_cx->DynamicKeyWord))
-                thisClass->mIsDynamic = true;
+
+            m_cx->setAttributeValue(classStmt);            
 
             PropertyIterator it;
-            if (hasProperty(name, classStmt->attributes, Read, &it))
+            if (hasProperty(name, NULL, Read, &it))
                 m_cx->reportError(Exception::referenceError, "Duplicate class definition", p->pos);
+
             defineVariable(name, classStmt->attributes, Type_Type, JSValue(thisClass));
             classStmt->mType = thisClass;
         }
@@ -777,7 +806,10 @@ void ScopeChain::collectNames(StmtNode *p)
         {
             VariableStmtNode *vs = static_cast<VariableStmtNode *>(p);
             VariableBinding *v = vs->bindings;
-            bool isStatic = hasAttribute(vs->attributes, Token::Static);
+            m_cx->setAttributeValue(vs);
+            bool isStatic = (vs->attributeFlags & Property::Static) == Property::Static;
+
+//            bool isStatic = hasAttribute(vs->attributes, Token::Static);
             while (v)  {
                 if (isStatic)
                     v->prop = defineStaticVariable(*v->name, vs->attributes, NULL);
@@ -790,10 +822,18 @@ void ScopeChain::collectNames(StmtNode *p)
     case StmtNode::Function:
         {
             FunctionStmtNode *f = static_cast<FunctionStmtNode *>(p);
+            m_cx->setAttributeValue(f);
+
+            bool isStatic = (f->attributeFlags & Property::Static) == Property::Static;
+            bool isConstructor = (f->attributeFlags & Property::Constructor) == Property::Constructor;
+            bool isOperator = (f->attributeFlags & Property::Operator) == Property::Operator;
+            bool isPrototype = (f->attributeFlags & Property::Prototype) == Property::Prototype;
+/*
             bool isStatic = hasAttribute(f->attributes, Token::Static);
             bool isConstructor = hasAttribute(f->attributes, m_cx->ConstructorKeyWord);
             bool isOperator = hasAttribute(f->attributes, m_cx->OperatorKeyWord);
             bool isPrototype = hasAttribute(f->attributes, m_cx->PrototypeKeyWord);
+*/            
             JSFunction *fnc = new JSFunction(m_cx, NULL, m_cx->getParameterCount(f->function), this);
             fnc->setIsPrototype(isPrototype);
             f->mFunction = fnc;
@@ -806,9 +846,13 @@ void ScopeChain::collectNames(StmtNode *p)
                 fnc->setFunctionName(name);
                 if (topClass())
                     fnc->setClass(topClass());
-                IdentifierExprNode *extendArg;
-                if (hasAttribute(f->attributes, m_cx->ExtendKeyWord, &extendArg)) {
-                    JSType *extendedClass = extractType(extendArg);
+//                IdentifierExprNode *extendArg;
+//                if (hasAttribute(f->attributes, m_cx->ExtendKeyWord, &extendArg)) 
+
+                if ((f->attributeFlags & Property::Extend) == Property::Extend) {
+
+                    JSType *extendedClass = m_cx->getExtendArg(f->attributeValue);
+//                    JSType *extendedClass = extractType(extendArg);
                 
                     // sort of want to fall into the code below, but use 'extendedClass' instead
                     // of whatever the topClass will turn out to be.
@@ -878,7 +922,12 @@ void ScopeChain::collectNames(StmtNode *p)
         break;
     case StmtNode::Namespace:
         {
-            // ok, so it's a namespace.
+            NamespaceStmtNode *n = static_cast<NamespaceStmtNode *>(p);
+            JSInstance *i = Attribute_Type->newInstance(m_cx);
+            i->setProperty(m_cx, widenCString("trueFlags"), (NamespaceList *)(NULL), kPositiveZero);
+            i->setProperty(m_cx, widenCString("falseFlags"), (NamespaceList *)(NULL), kPositiveZero);
+            i->setProperty(m_cx, widenCString("names"), (NamespaceList *)(NULL), JSValue(Array_Type->newInstance(m_cx)));
+            m_cx->getGlobalObject()->defineVariable(n->name, (NamespaceList *)(NULL), Attribute_Type, JSValue(i));            
         }
         break;
     default:
@@ -964,45 +1013,49 @@ void JSType::completeClass(Context *cx, ScopeChain *scopeChain, JSType *super)
 
 }
 
-void JSType::defineMethod(const String& name, AttributeList *attr, JSFunction *f)
+void JSType::defineMethod(const String& name, ExprNode *attr, JSFunction *f)
 {
     uint32 vTableIndex = mMethods.size();
     mMethods.push_back(f);
 
-    const PropertyMap::value_type e(name, new AttributedProperty(new Property(vTableIndex, Function_Type, Method), attr));
+    const PropertyMap::value_type e(name, new NamespacedProperty(new Property(vTableIndex, Function_Type, Method), buildNamespaceList(attr)));
     mProperties.insert(e);
 }
 
-void JSType::defineGetterMethod(const String &name, AttributeList *attr, JSFunction *f)
+void JSType::defineGetterMethod(const String &name, ExprNode *attr, JSFunction *f)
 {
     PropertyIterator i;
     uint32 vTableIndex = mMethods.size();
     mMethods.push_back(f);
 
-    if (hasProperty(name, attr, Write, &i)) {
+    NamespaceList *names = buildNamespaceList(attr);
+
+    if (hasProperty(name, names, Write, &i)) {
         ASSERT(PROPERTY_KIND(i) == IndexPair);
         ASSERT(PROPERTY_GETTERI(i) == 0);
         PROPERTY_GETTERI(i) = vTableIndex;
     }
     else {
-        const PropertyMap::value_type e(name, new AttributedProperty(new Property(vTableIndex, 0, Function_Type), attr));
+        const PropertyMap::value_type e(name, new NamespacedProperty(new Property(vTableIndex, 0, Function_Type), names));
         mProperties.insert(e);
     }
 }
 
-void JSType::defineSetterMethod(const String &name, AttributeList *attr, JSFunction *f)
+void JSType::defineSetterMethod(const String &name, ExprNode *attr, JSFunction *f)
 {
     PropertyIterator i;
     uint32 vTableIndex = mMethods.size();
     mMethods.push_back(f);
 
-    if (hasProperty(name, attr, Read, &i)) {
+    NamespaceList *names = buildNamespaceList(attr);
+
+    if (hasProperty(name, names, Read, &i)) {
         ASSERT(PROPERTY_KIND(i) == IndexPair);
         ASSERT(PROPERTY_SETTERI(i) == 0);
         PROPERTY_SETTERI(i) = vTableIndex;
     }
     else {
-        const PropertyMap::value_type e(name, new AttributedProperty(new Property(0, vTableIndex, Function_Type), attr));
+        const PropertyMap::value_type e(name, new NamespacedProperty(new Property(0, vTableIndex, Function_Type), names));
         mProperties.insert(e);
     }
 }
@@ -1031,13 +1084,13 @@ JSValue JSType::getPropertyValue(PropertyIterator &i)
     }
 }
 
-bool JSType::hasProperty(const String &name, AttributeList *attr, Access acc, PropertyIterator *p)
+bool JSType::hasProperty(const String &name, NamespaceList *names, Access acc, PropertyIterator *p)
 {
-    if (hasOwnProperty(name, attr, acc, p))
+    if (hasOwnProperty(name, names, acc, p))
         return true;
     else
         if (mStatics && mSuperType)
-            if (mSuperType->hasProperty(name, attr, acc, p))
+            if (mSuperType->hasProperty(name, names, acc, p))
                 return true;
 /*
     if (mStatics)
@@ -1047,16 +1100,16 @@ bool JSType::hasProperty(const String &name, AttributeList *attr, Access acc, Pr
         return false;
 }
 
-Reference *JSType::genReference(const String& name, AttributeList *attr, Access acc, uint32 depth)
+Reference *JSType::genReference(const String& name, NamespaceList *names, Access acc, uint32 depth)
 {
     PropertyIterator i;
     /* look in the static instance first */
     if (mStatics) {
-        Reference *result = mStatics->genReference(name, attr, acc, depth);
+        Reference *result = mStatics->genReference(name, names, acc, depth);
         if (result)
             return result;
     }
-    if (hasProperty(name, attr, acc, &i)) {
+    if (hasProperty(name, names, acc, &i)) {
         Property *prop = PROPERTY(i);
         switch (prop->mFlag) {
         case FunctionPair:
@@ -1099,9 +1152,67 @@ Reference *JSType::genReference(const String& name, AttributeList *attr, Access 
     // walk the supertype chain
     if (mStatics && mSuperType) // test mStatics because if it's NULL (i.e. in the static instance)
                                 // then the superType is a pointer back to the class.
-        return mSuperType->genReference(name, attr, acc, depth);
+        return mSuperType->genReference(name, names, acc, depth);
     return NULL;
 }
+
+JSType::JSType(Context *cx, const String &name, JSType *super) 
+            : JSInstance(cx, Type_Type),
+                    mSuperType(super), 
+                    mStatics(NULL), 
+                    mVariableCount(0),
+                    mInitialInstance(NULL),
+                    mClassName(name),
+                    mIsDynamic(false),
+                    mUninitializedValue(kNullValue),
+                    mPrototypeObject(NULL)
+{
+    for (uint32 i = 0; i < OperatorCount; i++)
+        mUnaryOperators[i] = NULL;
+    mStatics = new JSType(cx, this);
+
+    // every class gets a prototype object
+    mPrototypeObject = new JSObject();
+    // and that object is prototype-linked to the super-type's prototype object
+    if (mSuperType)
+        mPrototypeObject->mPrototype = mSuperType->mPrototypeObject;
+}
+
+JSType::JSType(Context *cx, JSType *xClass)     // used for constructing the static component type
+            : JSInstance(cx, Type_Type),
+                    mSuperType(xClass), 
+                    mStatics(NULL), 
+                    mVariableCount(0),
+                    mInitialInstance(NULL),
+                    mIsDynamic(false),
+                    mUninitializedValue(kNullValue),
+                    mPrototypeObject(NULL)
+{
+    for (uint32 i = 0; i < OperatorCount; i++)
+        mUnaryOperators[i] = NULL;
+}
+
+void JSType::setSuperType(JSType *super)
+{
+    mSuperType = super;
+    if (mSuperType)
+        mPrototypeObject->mPrototype = mSuperType->mPrototypeObject;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 void Activation::defineTempVariable(Reference *&readRef, Reference *&writeRef, JSType *type)
@@ -1111,10 +1222,10 @@ void Activation::defineTempVariable(Reference *&readRef, Reference *&writeRef, J
     mVariableCount++;
 }
 
-Reference *Activation::genReference(const String& name, AttributeList *attr, Access acc, uint32 depth)
+Reference *Activation::genReference(const String& name, NamespaceList *names, Access acc, uint32 depth)
 {
     PropertyIterator i;
-    if (hasProperty(name, attr, acc, &i)) {
+    if (hasProperty(name, names, acc, &i)) {
         Property *prop = PROPERTY(i);
         ASSERT((prop->mFlag == Slot) || (prop->mFlag == FunctionPair)); 
 
@@ -1155,6 +1266,17 @@ void Context::buildRuntimeForFunction(FunctionDefinition &f, JSFunction *fnc)
     buildRuntimeForStmt(f.body);
     mScopeChain->popScope();
     mScopeChain->popScope();
+}
+
+void Context::setAttributeValue(AttributeStmtNode *s)
+{
+    JSInstance *attributeValue = executeAttributes(s->attributes);
+    
+    attributeValue->getProperty(this, widenCString("trueFlags"), (NamespaceList *)(NULL));
+    JSValue flags = popValue();
+    ASSERT(flags.isNumber());
+    s->attributeFlags = (uint32)(flags.f64);
+    s->attributeValue = attributeValue;
 }
 
 
@@ -1227,7 +1349,10 @@ void Context::buildRuntimeForStmt(StmtNode *p)
             FunctionStmtNode *f = static_cast<FunctionStmtNode *>(p);
 //            bool isStatic = hasAttribute(f->attributes, Token::Static);
 //            bool isConstructor = hasAttribute(f->attributes, ConstructorKeyWord);
-            bool isOperator = hasAttribute(f->attributes, OperatorKeyWord);
+//            bool isOperator = hasAttribute(f->attributes, OperatorKeyWord);
+            
+            bool isOperator = (f->attributeFlags & Property::Operator) == Property::Operator;
+
             JSType *resultType = mScopeChain->extractType(f->function.resultType);
             JSFunction *fnc = f->mFunction;
             fnc->setResultType(resultType);
@@ -1283,7 +1408,7 @@ void Context::buildRuntimeForStmt(StmtNode *p)
                 superClass = mScopeChain->findType(superClassExpr->name, superClassExpr->pos);
             }
             JSType *thisClass = classStmt->mType;
-            thisClass->mSuperType = superClass;
+            thisClass->setSuperType(superClass);
             mScopeChain->addScope(thisClass->mStatics);
             mScopeChain->addScope(thisClass);
             if (classStmt->body) {
@@ -1425,7 +1550,18 @@ static JSValue Boolean_toString(Context *, const JSValue& thisValue, JSValue * /
         return JSValue(new String(widenCString("false")));
 }
 
+static JSValue ExtendAttribute_Invoke(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+{
+    ASSERT(argc == 1);
 
+    JSInstance *i = Attribute_Type->newInstance(cx);
+    i->setProperty(cx, widenCString("trueFlags"), (NamespaceList *)(NULL), JSValue((float64)(Property::Extend)) );
+    i->setProperty(cx, widenCString("falseFlags"), (NamespaceList *)(NULL), JSValue((float64)(Property::Extend | Property::Virtual)) );
+    i->setProperty(cx, widenCString("names"), (NamespaceList *)(NULL), JSValue(Array_Type->newInstance(cx)));
+    i->setProperty(cx, widenCString("extendArg"), (NamespaceList *)(NULL), argv[0]);
+
+    return JSValue(i);
+}
               
 
 
@@ -1435,17 +1571,13 @@ void Context::initClass(JSType *type, JSType *super, ClassDef *cdef, PrototypeFu
     mScopeChain->addScope(type);
     type->setDefaultConstructor(new JSFunction(this, cdef->defCon, Object_Type));
 
-    // the built-ins get a prototype object
-    type->mPrototype = new JSObject();
-    if (super)
-        type->mPrototype->mPrototype = super->mPrototype;
-
+    // the prototype functions are defined in the prototype object...
     if (pdef) {
         for (uint32 i = 0; i < pdef->mCount; i++) {
             JSFunction *fun = new JSFunction(this, pdef->mDef[i].imp, pdef->mDef[i].result);
             fun->setExpectedArgs(pdef->mDef[i].length);
-            type->mPrototype->defineVariable(widenCString(pdef->mDef[i].name), 
-                                               NULL, 
+            type->mPrototypeObject->defineVariable(widenCString(pdef->mDef[i].name), 
+                                               (NamespaceList *)(NULL), 
                                                pdef->mDef[i].result, 
                                                JSValue(fun));
         }
@@ -1453,7 +1585,7 @@ void Context::initClass(JSType *type, JSType *super, ClassDef *cdef, PrototypeFu
     type->completeClass(this, mScopeChain, super);
     type->setStaticInitializer(this, NULL);
     type->mUninitializedValue = *cdef->uninit;
-    getGlobalObject()->defineVariable(widenCString(cdef->name), NULL, Type_Type, JSValue(type));
+    getGlobalObject()->defineVariable(widenCString(cdef->name), (NamespaceList *)(NULL), Type_Type, JSValue(type));
     mScopeChain->popScope();
     if (pdef) delete pdef;
 }
@@ -1473,20 +1605,22 @@ void Context::initBuiltins()
         { "Boolean",    Boolean_Constructor,   &kFalseValue   },
         { "Void",       NULL,                  &kNullValue    },
         { "Unit",       NULL,                  &kNullValue    },
+        { "Attribute",  NULL,                  &kNullValue    },
     };
 
     Object_Type  = new JSType(this, widenCString(builtInClasses[0].name), NULL);
     Object_Type->mIsDynamic = true;
     // XXX aren't all the built-ins thus?
 
-    Type_Type     = new JSType(this, widenCString(builtInClasses[1].name), Object_Type);
-    Function_Type = new JSType(this, widenCString(builtInClasses[2].name), Object_Type);
-    Number_Type   = new JSType(this, widenCString(builtInClasses[3].name), Object_Type);
-    String_Type   = new JSStringType(this, widenCString(builtInClasses[4].name), Object_Type);
-    Array_Type    = new JSArrayType(this, widenCString(builtInClasses[5].name), Object_Type);
-    Boolean_Type  = new JSType(this, widenCString(builtInClasses[6].name), Object_Type);
-    Void_Type     = new JSType(this, widenCString(builtInClasses[7].name), Object_Type);
-    Unit_Type     = new JSType(this, widenCString(builtInClasses[8].name), Object_Type);
+    Type_Type      = new JSType(this, widenCString(builtInClasses[1].name), Object_Type);
+    Function_Type  = new JSType(this, widenCString(builtInClasses[2].name), Object_Type);
+    Number_Type    = new JSType(this, widenCString(builtInClasses[3].name), Object_Type);
+    String_Type    = new JSStringType(this, widenCString(builtInClasses[4].name), Object_Type);
+    Array_Type     = new JSArrayType(this, widenCString(builtInClasses[5].name), Object_Type);
+    Boolean_Type   = new JSType(this, widenCString(builtInClasses[6].name), Object_Type);
+    Void_Type      = new JSType(this, widenCString(builtInClasses[7].name), Object_Type);
+    Unit_Type      = new JSType(this, widenCString(builtInClasses[8].name), Object_Type);
+    Attribute_Type = new JSType(this, widenCString(builtInClasses[9].name), Object_Type);
 
 
     String_Type->defineVariable(widenCString("fromCharCode"), NULL, String_Type, JSValue(new JSFunction(this, String_fromCharCode, String_Type)));
@@ -1526,14 +1660,24 @@ void Context::initBuiltins()
     // pull up them bootstraps 
     (*mGlobal)->mPrototype = Object_Type->mPrototype;
 
-    initClass(Type_Type,     Object_Type,  &builtInClasses[1], NULL );
-    initClass(Function_Type, Object_Type,  &builtInClasses[2], new PrototypeFunctions(&functionProtos[0]) );
-    initClass(Number_Type,   Object_Type,  &builtInClasses[3], new PrototypeFunctions(&numberProtos[0]) );
-    initClass(String_Type,   Object_Type,  &builtInClasses[4], getStringProtos() );
-    initClass(Array_Type,    Object_Type,  &builtInClasses[5], getArrayProtos() );
-    initClass(Boolean_Type,  Object_Type,  &builtInClasses[6], new PrototypeFunctions(&booleanProtos[0]) );
-    initClass(Void_Type,     Object_Type,  &builtInClasses[7], NULL);
-    initClass(Unit_Type,     Object_Type,  &builtInClasses[8], NULL);
+    initClass(Type_Type,        Object_Type,  &builtInClasses[1], NULL );
+    initClass(Function_Type,    Object_Type,  &builtInClasses[2], new PrototypeFunctions(&functionProtos[0]) );
+    initClass(Number_Type,      Object_Type,  &builtInClasses[3], new PrototypeFunctions(&numberProtos[0]) );
+    initClass(String_Type,      Object_Type,  &builtInClasses[4], getStringProtos() );
+    initClass(Array_Type,       Object_Type,  &builtInClasses[5], getArrayProtos() );
+    initClass(Boolean_Type,     Object_Type,  &builtInClasses[6], new PrototypeFunctions(&booleanProtos[0]) );
+    initClass(Void_Type,        Object_Type,  &builtInClasses[7], NULL);
+    initClass(Unit_Type,        Object_Type,  &builtInClasses[8], NULL);
+    initClass(Attribute_Type,   Object_Type,  &builtInClasses[9], NULL);
+}
+
+void Context::initAttributeValue(char *name, uint32 trueFlags, uint32 falseFlags)
+{
+    JSInstance *i = Attribute_Type->newInstance(this);
+    i->setProperty(this, widenCString("trueFlags"), (NamespaceList *)(NULL), JSValue((float64)trueFlags));
+    i->setProperty(this, widenCString("falseFlags"), (NamespaceList *)(NULL), JSValue((float64)falseFlags));
+    i->setProperty(this, widenCString("names"), (NamespaceList *)(NULL), JSValue(Array_Type->newInstance(this)));
+    getGlobalObject()->defineVariable(widenCString(name), (NamespaceList *)(NULL), Attribute_Type, JSValue(i));
 }
 
 Context::Context(JSObject **global, World &world, Arena &a, Pragma::Flags flags) 
@@ -1566,13 +1710,42 @@ Context::Context(JSObject **global, World &world, Arena &a, Pragma::Flags flags)
     if (Object_Type == NULL) {                
         initBuiltins();
         JSObject *mathObj = Object_Type->newInstance(this);
-        getGlobalObject()->defineVariable(widenCString("Math"), NULL, Object_Type, JSValue(mathObj));
+        getGlobalObject()->defineVariable(widenCString("Math"), (NamespaceList *)(NULL), Object_Type, JSValue(mathObj));
         initMathObject(this, mathObj);    
-        getGlobalObject()->defineVariable(widenCString("undefined"), NULL, Void_Type, kUndefinedValue);
-        getGlobalObject()->defineVariable(widenCString("NaN"), NULL, Void_Type, kNaNValue);
-        getGlobalObject()->defineVariable(widenCString("Infinity"), NULL, Void_Type, kPositiveInfinity);                
+        getGlobalObject()->defineVariable(widenCString("undefined"), (NamespaceList *)(NULL), Void_Type, kUndefinedValue);
+        getGlobalObject()->defineVariable(widenCString("NaN"), (NamespaceList *)(NULL), Void_Type, kNaNValue);
+        getGlobalObject()->defineVariable(widenCString("Infinity"), (NamespaceList *)(NULL), Void_Type, kPositiveInfinity);                
     }
     initOperators();
+    
+    struct Attribute_Init {
+        char *name;
+        uint32 trueFlags;
+        uint32 falseFlags;
+    } attribute_init[] = 
+    {
+        { "virtual",        Property::Virtual,          Property::Static | Property::Constructor },
+        { "constructor",    Property::Constructor,      Property::Virtual },
+        { "operator",       Property::Operator,         Property::Virtual | Property::Constructor },
+        { "dynamic",        Property::Dynamic,          0 },
+        { "fixed",          0,                          Property::Dynamic },
+        { "prototype",      Property::Prototype,        0 },
+        { "static",         Property::Static,           Property::Virtual },
+    };
+    
+    for (uint32 i = 0; i < (sizeof(attribute_init) / sizeof(Attribute_Init)); i++)     
+        initAttributeValue(attribute_init[i].name, attribute_init[i].trueFlags, attribute_init[i].falseFlags);
+
+    JSFunction *x = new JSFunction(this, ExtendAttribute_Invoke, Attribute_Type);
+    getGlobalObject()->defineVariable(widenCString("extend"), (NamespaceList *)(NULL), Attribute_Type, JSValue(x));
+
+
+    NullAttribute = Attribute_Type->newInstance(this);
+    NullAttribute->setProperty(this, widenCString("trueFlags"), (NamespaceList *)(NULL), kPositiveZero);
+    NullAttribute->setProperty(this, widenCString("falseFlags"), (NamespaceList *)(NULL), kPositiveZero);
+    NullAttribute->setProperty(this, widenCString("names"), (NamespaceList *)(NULL), JSValue(Array_Type->newInstance(this)));
+
+
 }
 
 void Context::reportError(Exception::Kind, char *message, size_t pos)
