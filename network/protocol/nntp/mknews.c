@@ -63,6 +63,8 @@
 #include "prefapi.h"	
 #include "xplocale.h"
 
+#include "xp_sock.h"
+
 /*#define CACHE_NEWSGRP_PASSWORD*/
 
 /* for XP_GetString() */
