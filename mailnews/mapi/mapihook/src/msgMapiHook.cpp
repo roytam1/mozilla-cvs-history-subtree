@@ -41,6 +41,10 @@
 
 #define MAPI_STARTUP_ARG       "/MAPIStartUp"
 
+#ifdef MOZ_LOGGING
+// this has to be before the pre-compiled header
+#define FORCE_PR_LOG /* Allow logging in the release build */
+#endif
 #include <mapidefs.h>
 #include <mapi.h>
 #include <tchar.h>
@@ -65,7 +69,6 @@
 #include "nsIPref.h"
 #include "nsString.h"
 #include "nsUnicharUtils.h"
-
 #include "nsIMsgAttachment.h"
 #include "nsIMsgCompFields.h"
 #include "nsIMsgComposeParams.h"
@@ -78,12 +81,14 @@
 #include "nsDirectoryServiceDefs.h"
 #include "nsIDirectoryService.h"
 #include "nsMsgI18N.h"
-
 #include "msgMapi.h"
 #include "msgMapiHook.h"
 #include "msgMapiSupport.h"
 #include "msgMapiMain.h"
 #include "nsNetUtil.h"
+
+extern PRLogModuleInfo *MAPI;
+
 
 static NS_DEFINE_CID(kCmdLineServiceCID, NS_COMMANDLINE_SERVICE_CID);
 
@@ -108,7 +113,10 @@ public:
     /* void OnStopSending (in string aMsgID, in nsresult aStatus, in wstring aMsg, in nsIFileSpec returnFileSpec); */
     NS_IMETHOD OnStopSending(const char *aMsgID, nsresult aStatus, const PRUnichar *aMsg, 
                            nsIFileSpec *returnFileSpec) {
+        PR_CEnterMonitor(this);
+        PR_CNotifyAll(this);
         m_done = PR_TRUE;
+        PR_CExitMonitor(this);
         return NS_OK ;
     }
 
@@ -176,7 +184,7 @@ void nsMapiHook::CleanUp()
     // to cleanup mapi related stuff inside mozilla code.
 }
 
-PRBool nsMapiHook::DisplayLoginDialog(PRBool aLogin, PRUnichar **aUsername, \
+PRBool nsMapiHook::DisplayLoginDialog(PRBool aLogin, PRUnichar **aUsername, 
                       PRUnichar **aPassword)
 {
     nsresult rv;
@@ -346,15 +354,13 @@ nsresult nsMapiHook::BlindSendMail (unsigned long aSession, nsIMsgCompFields * a
 
     /** create nsIMsgComposeParams obj and other fields to populate it **/    
 
+    nsCOMPtr<nsIDOMWindowInternal>  hiddenWindow;
     // get parent window
     nsCOMPtr<nsIAppShellService> appService = do_GetService( "@mozilla.org/appshell/appShellService;1", &rv);
     if (NS_FAILED(rv)|| (!appService) ) return rv ;
 
-    nsCOMPtr<nsIDOMWindowInternal>  hiddenWindow;
     rv = appService->GetHiddenDOMWindow(getter_AddRefs(hiddenWindow));
-
     if ( NS_FAILED(rv) ) return rv ;
-
     // smtp password and Logged in used IdKey from MapiConfig (session obj)
     nsMAPIConfiguration * pMapiConfig = nsMAPIConfiguration::GetMAPIConfiguration() ;
     if (!pMapiConfig) return NS_ERROR_FAILURE ;  // get the singelton obj
@@ -399,7 +405,7 @@ nsresult nsMapiHook::BlindSendMail (unsigned long aSession, nsIMsgCompFields * a
     rv = pMsgCompose->Initialize(hiddenWindow, pMsgComposeParams) ;
     if (NS_FAILED(rv)) return rv ;
 
-    pMsgCompose->SendMsg(nsIMsgSend::nsMsgDeliverNow, pMsgId, nsnull, nsnull, nsnull) ;
+    return pMsgCompose->SendMsg(nsIMsgSend::nsMsgDeliverNow, pMsgId, nsnull, nsnull, nsnull) ;
     if (NS_FAILED(rv)) return rv ;
 
     // assign to interface pointer from nsCOMPtr to facilitate typecast below
@@ -411,7 +417,12 @@ nsresult nsMapiHook::BlindSendMail (unsigned long aSession, nsIMsgCompFields * a
     nsCOMPtr<nsIEventQueue> eventQueue;
     pEventQService->GetThreadEventQueue(NS_CURRENT_THREAD,getter_AddRefs(eventQueue));
     while ( !((nsMAPISendListener *) pSendListener)->IsDone() )
+    {
+        PR_CEnterMonitor(pSendListener);
+        PR_CWait(pSendListener, PR_MicrosecondsToInterval(1000UL));
+        PR_CExitMonitor(pSendListener);
         eventQueue->ProcessPendingEvents();
+    }
 
     return rv ;
 }
@@ -424,47 +435,52 @@ nsresult nsMapiHook::PopulateCompFields(lpnsMapiMessage aMessage,
 
     if (aMessage->lpOriginator)
     {
-        PRUnichar * From = aMessage->lpOriginator->lpszAddress ;
-        aCompFields->SetFrom (From) ;
+        char * From = aMessage->lpOriginator->lpszAddress ;
+        nsAutoString FromStr; FromStr.AssignWithConversion(From);
+        aCompFields->SetFrom (FromStr.get()) ;
     }
 
     nsAutoString To ;
     nsAutoString Cc ; 
     nsAutoString Bcc ;
 
-    nsAutoString Comma ;
-    Comma.AssignWithConversion(",");
+    NS_NAMED_LITERAL_STRING(Comma, ",") ;
 
     if (aMessage->lpRecips)
     {
         for (int i=0 ; i < (int) aMessage->nRecipCount ; i++)
         {
-            if (aMessage->lpRecips[i].lpszAddress)
+            if (aMessage->lpRecips[i].lpszAddress || aMessage->lpRecips[i].lpszName)
             {
+                const char *addressWithoutType = (aMessage->lpRecips[i].lpszAddress)
+                  ? aMessage->lpRecips[i].lpszAddress : aMessage->lpRecips[i].lpszName;
+                if (!PL_strncasecmp(addressWithoutType, "SMTP:", 5))
+                  addressWithoutType += 5;
                 switch (aMessage->lpRecips[i].ulRecipClass)
                 {
                 case MAPI_TO :
                     if (!To.IsEmpty())
                         To += Comma ;
-                    To += (PRUnichar *) aMessage->lpRecips[i].lpszAddress ;
+                    To.AppendWithConversion(addressWithoutType) ;
                     break ;
 
                 case MAPI_CC :
                     if (!Cc.IsEmpty())
                         Cc += Comma ;
-                    Cc += (PRUnichar *) aMessage->lpRecips[i].lpszAddress ;
+                    Cc.AppendWithConversion(addressWithoutType) ;
                     break ;
 
                 case MAPI_BCC :
                     if (!Bcc.IsEmpty())
                         Bcc += Comma ;
-                    Bcc += (PRUnichar *) aMessage->lpRecips[i].lpszAddress ; 
+                    Bcc.AppendWithConversion(addressWithoutType) ; 
                     break ;
                 }
             }
         }
     }
 
+    PR_LOG(MAPI, PR_LOG_DEBUG, ("to: %s cc: %s bcc: %s \n", NS_ConvertUCS2toUTF8(To).get(), NS_ConvertUCS2toUTF8(Cc).get(), NS_ConvertUCS2toUTF8(Bcc).get()));
     // set To, Cc, Bcc
     aCompFields->SetTo (To.get()) ;
     aCompFields->SetCc (Cc.get()) ;
@@ -473,8 +489,10 @@ nsresult nsMapiHook::PopulateCompFields(lpnsMapiMessage aMessage,
     // set subject
     if (aMessage->lpszSubject)
     {
-        PRUnichar * Subject = aMessage->lpszSubject ;
-        aCompFields->SetSubject(Subject) ;
+        nsAutoString Subject;
+
+        Subject.AssignWithConversion(aMessage->lpszSubject);
+        aCompFields->SetSubject(Subject.get()) ;
     }
 
     // handle attachments as File URL
@@ -484,8 +502,11 @@ nsresult nsMapiHook::PopulateCompFields(lpnsMapiMessage aMessage,
     // set body
     if (aMessage->lpszNoteText)
     {
-        PRUnichar * Body = aMessage->lpszNoteText ;
-        rv = aCompFields->SetBody(Body) ;
+        nsString Body;
+        Body.AssignWithConversion(aMessage->lpszNoteText);
+        if (Body.Last() != nsCRT::LF)
+          Body.AppendWithConversion(CRLF);
+        rv = aCompFields->SetBody(Body.get()) ;
     }
 
 #ifdef RAJIV_DEBUG
@@ -557,7 +578,7 @@ nsresult nsMapiHook::HandleAttachments (nsIMsgCompFields * aCompFields, PRInt32 
             else 
               pFile->GetLeafName (leafName);
 
-            // copy the file to it's new location and file name
+            // copy the file to its new location and file name
             pFile->CopyTo(pTempDir, leafName);
             // point pFile to the new location of the attachment
             pFile->InitWithFile(pTempDir); 
@@ -598,33 +619,37 @@ nsresult nsMapiHook::PopulateCompFieldsWithConversion(lpnsMapiMessage aMessage,
     nsAutoString Cc ; 
     nsAutoString Bcc ;
 
-    nsAutoString Comma ;
-    Comma.AssignWithConversion(",");
+    NS_NAMED_LITERAL_STRING(Comma, ",") ;
 
     if (aMessage->lpRecips)
     {
         for (int i=0 ; i < (int) aMessage->nRecipCount ; i++)
         {
-            if (aMessage->lpRecips[i].lpszAddress)
+            if (aMessage->lpRecips[i].lpszAddress || aMessage->lpRecips[i].lpszName)
             {
+                const char *addressWithoutType = (aMessage->lpRecips[i].lpszAddress)
+                  ? aMessage->lpRecips[i].lpszAddress : aMessage->lpRecips[i].lpszName;
+                if (!PL_strncasecmp(addressWithoutType, "SMTP:", 5))
+                  addressWithoutType += 5;
+
                 switch (aMessage->lpRecips[i].ulRecipClass)
                 {
                 case MAPI_TO :
                     if (!To.IsEmpty())
                         To += Comma ;
-                    To.AppendWithConversion ((char *) aMessage->lpRecips[i].lpszAddress);
+                    To.AppendWithConversion (addressWithoutType);
                     break ;
 
                 case MAPI_CC :
                     if (!Cc.IsEmpty())
                         Cc += Comma ;
-                    Cc.AppendWithConversion ((char *) aMessage->lpRecips[i].lpszAddress);
+                    Cc.AppendWithConversion (addressWithoutType);
                     break ;
 
                 case MAPI_BCC :
                     if (!Bcc.IsEmpty())
                         Bcc += Comma ;
-                    Bcc.AppendWithConversion ((char *) aMessage->lpRecips[i].lpszAddress) ; 
+                    Bcc.AppendWithConversion (addressWithoutType) ; 
                     break ;
                 }
             }
@@ -635,6 +660,8 @@ nsresult nsMapiHook::PopulateCompFieldsWithConversion(lpnsMapiMessage aMessage,
     aCompFields->SetTo (To.get()) ;
     aCompFields->SetCc (Cc.get()) ;
     aCompFields->SetBcc (Bcc.get()) ;
+
+    PR_LOG(MAPI, PR_LOG_DEBUG, ("to: %s cc: %s bcc: %s \n", NS_ConvertUCS2toUTF8(To).get(), NS_ConvertUCS2toUTF8(Cc).get(), NS_ConvertUCS2toUTF8(Bcc).get()));
 
     nsCAutoString platformCharSet;
     // set subject
@@ -660,6 +687,8 @@ nsresult nsMapiHook::PopulateCompFieldsWithConversion(lpnsMapiMessage aMessage,
             platformCharSet.Assign(nsMsgI18NFileSystemCharset());
         rv = ConvertToUnicode(platformCharSet.get(), (char *) aMessage->lpszNoteText, Body);
         if (NS_FAILED(rv)) return rv ;
+        if (Body.Last() != nsCRT::LF)
+          Body.AppendWithConversion(CRLF);
         rv = aCompFields->SetBody(Body.get()) ;
     }
 
@@ -758,12 +787,12 @@ nsresult nsMapiHook::PopulateCompFieldsForSendDocs(nsIMsgCompFields * aCompField
             if(NS_FAILED(rv) || leafName.IsEmpty()) return rv ;
 
             if (!Subject.IsEmpty()) 
-                Subject.Append(NS_LITERAL_STRING(", "));
+                Subject.AppendWithConversion(", ");
             Subject += leafName;
 
             // create MsgCompose attachment object
             nsCOMPtr<nsIMsgAttachment> attachment = do_CreateInstance(NS_MSGATTACHMENT_CONTRACTID, &rv);
-            if (NS_FAILED(rv) || (!attachment) ) return rv ;
+            NS_ENSURE_SUCCESS(rv, rv);
 
             nsDependentString fileNameNative(leafName.get());
             rv = pFile->CopyTo(pTempDir, fileNameNative);

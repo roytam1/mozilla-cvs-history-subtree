@@ -19,11 +19,11 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- * Srilatha Moturi <srilatha@netscape.com>
+ *   Srilatha Moturi <srilatha@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * either of the GNU General Public License Version 2 or later (the "GPL"),
+ * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
@@ -566,7 +566,7 @@ nsresult nsMapiRegistryUtils::CopyMozMapiToWinSysDir()
     }
     if (NS_FAILED(rv)) return rv;
     filePath.Assign(buffer);
-    filePath.Append(NS_LITERAL_CSTRING("\\Mapi32.dll"));
+    filePath.Append("\\Mapi32.dll");
     pCurrentMapiFile->InitWithNativePath(filePath);
     rv = pCurrentMapiFile->Exists(&bExist);
     if (NS_SUCCEEDED(rv) && bExist)
@@ -574,7 +574,7 @@ nsresult nsMapiRegistryUtils::CopyMozMapiToWinSysDir()
         rv = pCurrentMapiFile->MoveToNative(nsnull, NS_LITERAL_CSTRING("Mapi32_moz_bak.dll"));
         if (NS_FAILED(rv)) return rv;
         nsCAutoString fullFilePath(buffer);
-        fullFilePath.Append(NS_LITERAL_CSTRING("\\Mapi32_moz_bak.dll"));
+        fullFilePath.Append("\\Mapi32_moz_bak.dll");
         rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
                             kAppDesktopKey, 
                             "Mapi_backup_dll", 
@@ -606,8 +606,8 @@ nsresult nsMapiRegistryUtils::RestoreBackedUpMapiDll()
 
     nsCAutoString filePath(buffer);
     nsCAutoString previousFileName(buffer);
-    filePath.Append(NS_LITERAL_CSTRING("\\Mapi32.dll"));
-    previousFileName.Append(NS_LITERAL_CSTRING("\\Mapi32_moz_bak.dll"));
+    filePath.Append("\\Mapi32.dll");
+    previousFileName.Append("\\Mapi32_moz_bak.dll");
 
     nsCOMPtr <nsILocalFile> pCurrentMapiFile = do_CreateInstance(NS_LOCAL_FILE_CONTRACTID, &rv);
     if (NS_FAILED(rv) || !pCurrentMapiFile) return NS_ERROR_FAILURE;        
