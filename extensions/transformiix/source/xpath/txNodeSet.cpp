@@ -58,7 +58,8 @@ txNodeSet::txNodeSet(txResultRecycler* aRecycler)
       mEnd(nsnull),
       mStartBuffer(nsnull),
       mEndBuffer(nsnull),
-      mDirection(kForward)
+      mDirection(kForward),
+      mMarks(nsnull)
 {
 }
 
@@ -68,7 +69,8 @@ txNodeSet::txNodeSet(const txXPathNode& aNode, txResultRecycler* aRecycler)
       mEnd(nsnull),
       mStartBuffer(nsnull),
       mEndBuffer(nsnull),
-      mDirection(kForward)
+      mDirection(kForward),
+      mMarks(nsnull)
 {
     if (!ensureGrowSize(1)) {
         NS_ERROR("out of memory");
@@ -89,7 +91,8 @@ txNodeSet::txNodeSet(const txNodeSet& aSource, txResultRecycler* aRecycler)
       mEnd(nsnull),
       mStartBuffer(nsnull),
       mEndBuffer(nsnull),
-      mDirection(kForward)
+      mDirection(kForward),
+      mMarks(nsnull)
 {
     append(aSource);
 }
