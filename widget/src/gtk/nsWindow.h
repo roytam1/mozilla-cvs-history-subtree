@@ -89,6 +89,7 @@ public:
   static void SuperWinFilter(GdkSuperWin *superwin, XEvent *event, gpointer p);
 
   void HandleXlibExposeEvent(XEvent *event);
+  void HandleXlibConfigureNotifyEvent(XEvent *event);
 
   // Return the Gdk window used for rendering
   virtual GdkWindow * GetRenderWindow(GtkObject * aGtkWidget);
