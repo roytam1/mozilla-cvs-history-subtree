@@ -798,6 +798,12 @@ extensions/inspector/build/src/Makefile
 extensions/inspector/resources/Makefile
 "
 
+MAKEFILES_sroaming="
+extensions/sroaming/Makefile
+extensions/sroaming/src/Makefile
+extensions/sroaming/resources/Makefile
+"
+
 MAKEFILES_transformiix="
 extensions/transformiix/source/base/Makefile
 extensions/transformiix/source/main/Makefile
@@ -1074,6 +1080,9 @@ for extension in $MOZ_EXTENSIONS; do
             extensions/spellcheck/myspell/dictionaries/Makefile
             extensions/spellcheck/src/Makefile
             " ;;
+        sroaming ) MAKEFILES_extensions="$MAKEFILES_extensions
+            $MAKEFILES_sroaming"
+            ;;
         transformiix ) MAKEFILES_extensions="$MAKEFILES_extensions
             $MAKEFILES_transformiix"
             ;;
