@@ -15,3 +15,36 @@
  * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
  * Reserved.
  */
+
+
+// ÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑ
+//	MailNews_DebugPrefix.h
+//
+//	NOTE:
+//			You typically won't need to change anything in this file.
+// ÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑ
+
+#include "Moz_Config.h"
+ 
+// ÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑ
+//	¥	When we split out the procompiled headers seperately, we will not
+//		be including them here.  We will instead define things like
+//		PowerPlant_PCH and include them at the top of the applicable source
+//		modules
+// ÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑ
+
+#ifdef __powerc
+	#ifdef __cplusplus
+		#include "MailNews_HeadersPPC++"
+	#else
+		#include "MailNews_HeadersPPC"
+	#endif
+#else
+	#ifdef __cplusplus
+		#include "MailNews_Headers68K++"
+	#else
+		#include "MailNews_Headers68K"
+	#endif
+#endif
+
+
