@@ -144,6 +144,7 @@ private:
     OSType			mType, mCreator;
 
     static OSType   mgCurrentProcessSignature;
+    static PRBool   sRunningOSX;
         
 };
 
