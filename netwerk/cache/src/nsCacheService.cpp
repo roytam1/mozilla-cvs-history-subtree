@@ -229,6 +229,12 @@ NS_IMETHODIMP nsCacheService::VisitEntries(nsICacheVisitor *visitor)
 }
 
 
+NS_IMETHODIMP nsCacheService::EvictEntries(nsCacheStoragePolicy storagePolicy)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+
 nsresult
 nsCacheService::CreateDiskDevice()
 {
@@ -434,7 +440,7 @@ nsCacheService::ActivateEntry(nsCacheRequest * request,
 
     if (entry) {
         ++mCacheHits;
-        entry->IncrementFetchCount();
+        entry->Fetched();
     } else {
         ++mCacheMisses;
     }
@@ -465,6 +471,7 @@ nsCacheService::ActivateEntry(nsCacheRequest * request,
         if (!entry)
             return NS_ERROR_OUT_OF_MEMORY;
         
+        entry->Fetched();
         ++mTotalEntries;
         
         // XXX  we could perform an early bind in some cases based on storage policy
@@ -812,7 +819,7 @@ nsCacheService::ClearActiveEntries()
 }
 
 
-PLDHashOperator CRT_CALL
+PLDHashOperator PR_CALLBACK
 nsCacheService::DeactivateAndClearEntry(PLDHashTable *    table,
                                         PLDHashEntryHdr * hdr,
                                         PRUint32          number,
