@@ -436,7 +436,7 @@ sub BuildResources()
     BuildJarFiles();    
 
     # Set the default skin to be classic
-    SetDefaultSkin("classic/1.0"); 
+    SetDefaultSkin("modern/1.0"); 
 
     EndBuildModule("resources");
 }
