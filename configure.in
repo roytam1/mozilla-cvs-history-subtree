@@ -37,10 +37,11 @@ AC_PREREQ(2.12)
 AC_INIT(config/config.mk)
 AC_CONFIG_AUX_DIR(${srcdir}/build/autoconf)
 AC_CANONICAL_SYSTEM
-AC_PREFIX_DEFAULT(`pwd`/dist)
 TARGET_CPU="${target_cpu}"
 TARGET_VENDOR="${target_vendor}"
 TARGET_OS="${target_os}"
+MOZILLA_VERSION='0.9.6+'
+AC_SUBST(MOZILLA_VERSION)
 
 dnl ========================================================
 dnl =
@@ -636,7 +637,7 @@ fi
 
 if test "$GNU_CXX"; then
     # Turn on GNU specific features
-    _WARNINGS_CXXFLAGS="${_WARNINGS_CXXFLAGS} -Wall -Wconversion -Wpointer-arith -Wbad-function-cast -Wcast-align -Woverloaded-virtual -Wsynth"
+    _WARNINGS_CXXFLAGS="${_WARNINGS_CXXFLAGS} -Wall -Wconversion -Wpointer-arith -Wbad-function-cast -Wcast-align -Woverloaded-virtual -Wsynth -Wno-ctor-dtor-privacy"
 
 	dnl The following warning breaks Qt
 	if test ! "$QTDIR"; then
@@ -730,7 +731,7 @@ case "$target" in
     LIBS="$LIBS -lbe"
     AC_CHECK_LIB(bind,main,LIBS="$LIBS -lbind")
     _WARNINGS_CFLAGS="${_WARNINGS_CFLAGS} -Wno-multichar"
-    _WARNINGS_CXXFLAGS="${_WARNINGS_CXXFLAGS} -Wno-multichar -Wno-ctor-dtor-privacy"
+    _WARNINGS_CXXFLAGS="${_WARNINGS_CXXFLAGS} -Wno-multichar"
     ;;
 
 *-bsdi*)
@@ -1152,6 +1153,8 @@ alpha*-*-osf*)
     dnl Solves the problems the QNX compiler has with nsCOMPtr.h.
     AC_DEFINE(NSCAP_DISABLE_TEST_DONTQUERY_CASES)
     AC_DEFINE(NSCAP_DISABLE_DEBUG_PTR_TYPES)
+    dnl Explicit set STDC_HEADERS to workaround QNX 6.0's failing of std test
+    AC_DEFINE(STDC_HEADERS)
     if test "$no_x" = "yes"; then
 	    MOZ_WIDGET_TOOLKIT='photon'
 	    TK_CFLAGS='-I/usr/nto/include/photon'
@@ -1288,6 +1291,8 @@ esac
 if test -z "$SKIP_COMPILER_CHECKS"; then
 dnl Checks for typedefs, structures, and compiler characteristics.
 dnl ========================================================
+AC_LANG_C
+AC_HEADER_STDC
 AC_C_CONST
 AC_TYPE_MODE_T
 AC_TYPE_OFF_T
@@ -1501,7 +1506,6 @@ fi
 
 dnl Checks for header files.
 dnl ========================================================
-AC_HEADER_STDC
 AC_HEADER_DIRENT
 dnl -ldir is a noop for OS/2
 case "$target_os" in
@@ -1578,6 +1582,17 @@ then
     AC_CHECK_LIB(Xinerama, XineramaIsActive, [MOZ_XINERAMA_LIBS="-lXinerama"],,
         $XLIBS $XEXT_LIBS)
     AC_CHECK_HEADER(X11/extensions/Xinerama.h)
+
+    dnl ========================================================
+    dnl = Check for XShm
+    dnl ========================================================
+    AC_CHECK_LIB(Xext, XShmCreateImage, _HAVE_XSHM_XEXT=1,,
+        $XLIBS $XEXT_LIBS)
+    AC_CHECK_HEADER(X11/extensions/XShm.h)
+    if test -n "$ac_cv_header_X11_extensions_XShm_h" &&
+        test -n "$_HAVE_XSHM_XEXT"; then
+        AC_DEFINE(HAVE_XSHM)
+    fi
 
     dnl ========================================================
     dnl = Check for XIE
