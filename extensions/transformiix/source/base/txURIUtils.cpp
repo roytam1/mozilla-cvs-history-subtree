@@ -44,8 +44,8 @@
 #ifdef TX_EXE
 //- Constants -/
 
-const String URIUtils::HTTP_PROTOCOL  = "http";
-const String URIUtils::FILE_PROTOCOL  = "file";
+const String URIUtils::HTTP_PROTOCOL("http");
+const String URIUtils::FILE_PROTOCOL("file");
 const char   URIUtils::HREF_PATH_SEP  = '/';
 const char   URIUtils::DEVICE_SEP     = '|';
 const char   URIUtils::PORT_SEP       = ':';
@@ -76,9 +76,9 @@ istream* URIUtils::getInputStream
     }
     else {
         // Try local files
-        char* fchars = new char[href.length()+1];
-        inStream = new ifstream(href.toCharArray(fchars), ios::in);
-        delete fchars;
+        char* fchars = href.toCharArray();
+        inStream = new ifstream(fchars, ios::in);
+        delete [] fchars;
     }
     delete uri;
 
@@ -170,12 +170,12 @@ void URIUtils::resolveHref(const String& href, const String& base,
     }
     else {
         // Try local files
-        char* xHrefChars = new char[xHref.length()+1];
-        ifstream inFile(xHref.toCharArray(xHrefChars), ios::in);
+        char* xHrefChars = xHref.toCharArray();
+        ifstream inFile(xHrefChars, ios::in);
         if ( inFile ) dest.append(xHref);
         else dest.append(href);
         inFile.close();
-        delete xHrefChars;
+        delete [] xHrefChars;
     }
     delete uri;
     delete newUri;
@@ -186,7 +186,7 @@ void URIUtils::resolveHref(const String& href, const String& base,
 void URIUtils::getFragmentIdentifier(const String& href, String& frag) {
     PRInt32 pos;
     pos = href.lastIndexOf('#');
-    if(pos != NOT_FOUND)
+    if(pos != kNotFound)
         href.subString(pos+1, frag);
     else
         frag.clear();
@@ -195,7 +195,7 @@ void URIUtils::getFragmentIdentifier(const String& href, String& frag) {
 void URIUtils::getDocumentURI(const String& href, String& docUri) {
     PRInt32 pos;
     pos = href.lastIndexOf('#');
-    if(pos != NOT_FOUND)
+    if(pos != kNotFound)
         href.subString(0,pos,docUri);
     else
         docUri = href;
@@ -208,9 +208,9 @@ istream* URIUtils::openStream(ParsedURI* uri) {
 
     istream* inStream = 0;
     if ( FILE_PROTOCOL.isEqual(uri->protocol) ) {
-        char* fchars = new char[uri->path.length()+1];
-        ifstream* inFile = new ifstream(uri->path.toCharArray(fchars), ios::in);
-        delete fchars;
+        char* fchars = uri->path.toCharArray();
+        ifstream* inFile = new ifstream(fchars, ios::in);
+        delete [] fchars;
         inStream = inFile;
     }
 

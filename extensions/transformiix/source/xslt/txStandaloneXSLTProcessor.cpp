@@ -38,9 +38,10 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "txStandaloneXSLTProcessor.h"
+#include "txURIUtils.h"
+#include "XMLParser.h"
 
-txStandaloneXSLTProcessor::txStandaloneXSLTProcessor() :
-    mStandaloneOutputHandler(0)
+txStandaloneXSLTProcessor::txStandaloneXSLTProcessor()
 {
 }
 
@@ -63,7 +64,7 @@ Document* txStandaloneXSLTProcessor::process(istream& xmlInput)
     if (!xmlDoc) {
         String err("error reading XML document: ");
         err.append(xmlParser.getErrorString());
-        notifyError(err, ErrorObserver::FATAL);
+        notifyError(err);
         return 0;
     }
 
@@ -89,13 +90,13 @@ Document* txStandaloneXSLTProcessor::process(Document& xmlDocument)
     // Read in XSL document
     Document* xslDoc = 0;
     if (xslInput) {
-        xslDoc = xmlParser.parse(*xslInput);
+        xslDoc = xmlParser.parse(*xslInput, href);
         delete xslInput;
     }
     if (!xslDoc) {
         String err("error reading XSL stylesheet document: ");
         err.append(xmlParser.getErrorString());
-        notifyError(err, ErrorObserver::FATAL);
+        notifyError(err);
         return 0;
     }
 
@@ -120,7 +121,7 @@ Document* txStandaloneXSLTProcessor::process(istream& xmlInput,
     if (!xmlDoc) {
         String err("error reading XML document: ");
         err.append(xmlParser.getErrorString());
-        notifyError(err, ErrorObserver::FATAL);
+        notifyError(err);
         return 0;
     }
 
@@ -129,7 +130,7 @@ Document* txStandaloneXSLTProcessor::process(istream& xmlInput,
     if (!xslDoc) {
         String err("error reading XSL stylesheet document: ");
         err.append(xmlParser.getErrorString());
-        notifyError(err, ErrorObserver::FATAL);
+        notifyError(err);
         delete xmlDoc;
         return 0;
     }
@@ -170,7 +171,7 @@ void txStandaloneXSLTProcessor::process(istream& xmlInput,
     if (!xmlDoc) {
         String err("error reading XML document: ");
         err.append(xmlParser.getErrorString());
-        notifyError(err, ErrorObserver::FATAL);
+        notifyError(err);
         return 0;
     }
 
@@ -202,7 +203,7 @@ void txStandaloneXSLTProcessor::process(Document& xmlDocument,
     if (!xslDoc) {
         String err("error reading XSL stylesheet document: ");
         err.append(xmlParser.getErrorString());
-        notifyError(err, ErrorObserver::FATAL);
+        notifyError(err);
         return 0;
     }
 
@@ -229,7 +230,7 @@ void txStandaloneXSLTProcessor::process(istream& xmlInput,
     if (!xmlDoc) {
         String err("error reading XML document: ");
         err.append(xmlParser.getErrorString());
-        notifyError(err, ErrorObserver::FATAL);
+        notifyError(err);
         return 0;
     }
 
@@ -238,7 +239,7 @@ void txStandaloneXSLTProcessor::process(istream& xmlInput,
     if (!xslDoc) {
         String err("error reading XSL stylesheet document: ");
         err.append(xmlParser.getErrorString());
-        notifyError(err, ErrorObserver::FATAL);
+        notifyError(err);
         delete xmlDoc;
         return 0;
     }
@@ -312,9 +313,6 @@ Document* txStandaloneXSLTProcessor::transform(Document& aSource,
 
         // Process root of XML source document
         transform(&aXMLDocument, &ps);
-
-        delete mStandaloneOutputHandler;
-        mStandaloneOutputHandler = 0;
     }
     // End of block to ensure the destruction of the ProcessorState
     // before the destruction of the result document.

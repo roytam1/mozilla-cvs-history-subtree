@@ -28,6 +28,7 @@ REQUIRES	= string \
 		  content \
 		  xpconnect \
 		  js \
+		  unicharutil \
 		  $(NULL)
 include <$(DEPTH)/config/config.mak>
 

@@ -77,7 +77,7 @@ public:
      *
      * @returns the result tree.
      */
-    Document* process(istream& xmlInput)
+    Document* process(istream& xmlInput);
 
     /*
      * Processes the given XML Document, the XSL stylesheet
@@ -132,7 +132,7 @@ public:
      * otherwise an empty document will be returned.
      */
     void process(Document& xmlDocument,
-                 ostream& out)
+                 ostream& out);
 
     /*
      * Reads an XML Document from the given XML input stream, and
@@ -157,7 +157,7 @@ public:
 private:
     Document* transform(Document& xmlDocument,
                         Document& xslDocument,
-                        ostream& out)
+                        ostream& out);
 
     /*
      * Parses all XML Stylesheet PIs associated with the
