@@ -30,13 +30,24 @@
 static void usage( void );
 static int dosearch( LDAP *ld, char *base, int scope, char **attrs, 
 			 int attrsonly, char *filtpatt, char *value);
+static void write_string_attr_value( char *attrname, char *strval,
+	unsigned long opts );
+#define LDAPTOOL_WRITEVALOPT_SUPPRESS_NAME	0x01
 static int write_ldif_value( char *type, char *value, unsigned long vallen,
 	unsigned long ldifoptions );
 static void print_entry( LDAP *ld, LDAPMessage *entry, int attrsonly );
 static void options_callback( int option, char *optarg );
 static void parse_and_display_reference( LDAP *ld, LDAPMessage *ref );
 static char *sortresult2string(unsigned long result);
+static char *changetype_num2string( int chgtype );
 static char *msgtype2str( int msgtype );
+
+/*
+ * Prefix used in names of pseudo attributes added to the entry LDIF
+ * output if we receive an entryChangeNotification control with an entry
+ * (requested using persistent search).
+ */
+#define LDAPTOOL_PSEARCH_ATTR_PREFIX	"persistentSearch-"
 
 
 static void
@@ -76,7 +87,7 @@ usage( void )
     fprintf( stderr, "    -l time lim\ttime limit (in seconds) for search\n" );
     fprintf( stderr, "    -z size lim\tsize limit (in entries) for search\n" );
     fprintf( stderr, "    -C ps:changetype[:changesonly[:entrychgcontrols]]\n" );
-    fprintf( stderr, "\t\tchangetypes are add,delete,modify,replace,any\n" );
+    fprintf( stderr, "\t\tchangetypes are add,delete,modify,moddn,any\n" );
     fprintf( stderr, "\t\tchangesonly and  entrychgcontrols are boolean values\n" );
     fprintf( stderr, "\t\t(default is 1)\n" );
     fprintf( stderr, "    -G before%cafter%cindex%ccount | before%cafter%cvalue where 'before' and\n", VLV_PARAM_SEP, VLV_PARAM_SEP, VLV_PARAM_SEP, VLV_PARAM_SEP, VLV_PARAM_SEP );
@@ -99,8 +110,9 @@ static int	use_vlv = 0, vlv_before, vlv_after, vlv_index, vlv_count;
 static int	use_psearch=0;
 static int	write_ldif_version = 1;
 
-/* Persisten search variables */
+/* Persistent search variables */
 static int	chgtype=0, changesonly=1, return_echg_ctls=1;
+
 
 int
 main( int argc, char **argv )
@@ -441,13 +453,13 @@ options_callback( int option, char *optarg )
 	    usage();
 	}
 	if (ps_ptr=strtok(NULL, ":")) {
-	    if ( (changesonly = boolean_str2value(ps_ptr)) == -1) {
+	    if ( (changesonly = ldaptool_boolean_str2value(ps_ptr)) == -1) {
 		fprintf(stderr, "Invalid option value: %s\n", ps_ptr);
 		usage();
 	    }
 	}    
 	if (ps_ptr=strtok(NULL, ":")) {
-	    if ( (return_echg_ctls = boolean_str2value(ps_ptr)) == -1) {
+	    if ( (return_echg_ctls = ldaptool_boolean_str2value(ps_ptr)) == -1) {
 		fprintf(stderr, "Invalid option value: %s\n", ps_ptr);
 		usage();
 	    }
@@ -466,7 +478,7 @@ options_callback( int option, char *optarg )
 		    chgtype |= LDAP_CHANGETYPE_DELETE;
 		else if ((strcasecmp(ps_ptr, "modify"))==0) 
 		    chgtype |= LDAP_CHANGETYPE_MODIFY;
-		else if ((strcasecmp(ps_ptr, "replace"))==0) 
+		else if ((strcasecmp(ps_ptr, "moddn"))==0) 
 		    chgtype |= LDAP_CHANGETYPE_MODDN;
 		else if ((strcasecmp(ps_ptr, "any"))==0) 
 		    chgtype = LDAP_CHANGETYPE_ANY;
@@ -833,21 +845,42 @@ print_entry( ld, entry, attrsonly )
 #endif
 
     dn = ldap_get_dn( ld, entry );
-    if ( ldif ) {
-	write_ldif_value( "dn", dn, strlen( dn ), 0 );
-    } else {
-	printf( "%s\n", dn );
-    }
+    write_string_attr_value( "dn", dn, LDAPTOOL_WRITEVALOPT_SUPPRESS_NAME );
     if ( includeufn ) {
 	ufn = ldap_dn2ufn( dn );
-	if ( ldif ) {
-	    write_ldif_value( "ufn", ufn, strlen( ufn ), 0 );
-	} else {
-	    printf( "%s\n", ufn );
-	}
+	write_string_attr_value( "ufn", ufn,
+			LDAPTOOL_WRITEVALOPT_SUPPRESS_NAME );
 	free( ufn );
     }
     ldap_memfree( dn );
+
+    if ( use_psearch ) {
+	LDAPControl	**ectrls;
+	int		chgtype, chgnumpresent;
+	long		chgnum;
+	char		*prevdn, intbuf[ 128 ];
+
+	if ( ldap_get_entry_controls( ld, entry, &ectrls ) == LDAP_SUCCESS ) {
+	    if ( ldap_parse_entrychange_control( ld, ectrls, &chgtype,
+			&prevdn, &chgnumpresent, &chgnum ) == LDAP_SUCCESS ) {
+		write_string_attr_value(
+			LDAPTOOL_PSEARCH_ATTR_PREFIX "changeType",
+			changetype_num2string( chgtype ), 0 );
+		if ( chgnumpresent ) {
+		    sprintf( intbuf, "%d", chgnum );
+		    write_string_attr_value(
+			    LDAPTOOL_PSEARCH_ATTR_PREFIX "changeNumber",
+			    intbuf, 0 );
+		}
+		if ( NULL != prevdn ) {
+		    write_string_attr_value(
+			    LDAPTOOL_PSEARCH_ATTR_PREFIX "previousDN",
+			    prevdn, 0 );
+		    ldap_memfree( prevdn );
+		}
+	    }
+	}
+    }
 
     for ( a = ldap_first_attribute( ld, entry, &ber ); a != NULL;
 	    a = ldap_next_attribute( ld, entry, ber ) ) {
@@ -911,14 +944,7 @@ print_entry( ld, entry, attrsonly )
 		} else {
 		    notascii = 0;
 		    if ( !ldif && !allow_binary ) {
-			unsigned long	j;
-
-			for ( j = 0; j < bvals[ i ]->bv_len; ++j ) {
-			    if ( !isascii( bvals[ i ]->bv_val[ j ] )) {
-				notascii = 1;
-				break;
-			    }
-			}
+			notascii = !ldaptool_berval_is_ascii( bvals[i] );
 		    }
 
 		    if ( ldif ) {
@@ -942,6 +968,22 @@ print_entry( ld, entry, attrsonly )
 
     if ( ber != NULL ) {
 	ber_free( ber, 0 );
+    }
+}
+
+
+static void
+write_string_attr_value( char *attrname, char *strval, unsigned long opts )
+{
+    if ( strval == NULL ) {
+	strval = "";
+    }
+    if ( ldif ) {
+	write_ldif_value( attrname, strval, strlen( strval ), 0 );
+    } else if ( 0 != ( opts & LDAPTOOL_WRITEVALOPT_SUPPRESS_NAME )) {
+	printf( "%s\n", strval );
+    } else {
+	printf( "%s%s%s\n", attrname, sep, strval );
     }
 }
 
@@ -1112,5 +1154,32 @@ msgtype2str( int msgtype )
 	    s = ldapsearch_msgtypes[ i ].ldst2s_string;	
 	}	
     }    
+    return( s );
+}
+
+
+/*
+ * Return a descriptive string given a Persistent Search change type
+ */
+static char *
+changetype_num2string( int chgtype )
+{
+    char	*s = "unknown";
+
+    switch( chgtype ) {
+    case LDAP_CHANGETYPE_ADD:
+	s = "add";
+	break;
+    case LDAP_CHANGETYPE_DELETE:
+	s = "delete";
+	break;
+    case LDAP_CHANGETYPE_MODIFY:
+	s = "modify";
+	break;
+    case LDAP_CHANGETYPE_MODDN:
+	s = "moddn";
+	break;
+    }
+
     return( s );
 }
