@@ -30,7 +30,12 @@ endif
 CPPSRCS		= pw_win.cpp pw_unix.cpp pwcommon.cpp
 
 ifdef MOZ_SMOOTH_PROGRESS
-CPPSRCS        += nsProgressManager.cpp progress.cpp
+CPPSRCS        += nsProgressManager.cpp	\
+		  nsTopProgressManager.cpp \
+		  nsSubProgressManager.cpp \
+		  nsTransfer.cpp \
+		  progress.cpp \
+		  $(NULL)
 endif
 
 include $(DEPTH)/config/rules.mk
