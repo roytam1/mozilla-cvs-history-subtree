@@ -848,6 +848,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 	if (js_EmitN(cx, cg, switchop, switchsize) < 0)
 	    return JS_FALSE;
 
+        off = -1;
 	if (switchop == JSOP_CONDSWITCH) {
 	    intN caseNoteIndex = -1;
 
@@ -904,7 +905,11 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 	    off = CG_OFFSET(cg) - top;
 	}
 
+        /* We better have set "off" by now. */
+        JS_ASSERT(off != -1);
+
 	/* Set the default offset (to end of switch if no default). */
+        pc = NULL;
 	if (switchop == JSOP_CONDSWITCH) {
 	    JS_ASSERT(defaultOffset != -1);
 	    if (!js_SetJumpOffset(cx, cg, CG_CODE(cg, defaultOffset),
@@ -1252,7 +1257,8 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 #if JS_HAS_EXCEPTIONS
 
       case TOK_TRY: {
-	ptrdiff_t start, end, catchStart, finallyCatch, catchjmp = -1;
+	ptrdiff_t start, end;
+        ptrdiff_t catchStart = -1, finallyCatch = -1, catchjmp = -1;
 	JSParseNode *iter = pn;
 	uint16 depth;
 
@@ -2491,6 +2497,7 @@ js_NewTryNote(JSContext *cx, JSCodeGenerator *cg, ptrdiff_t start,
     JSTryNote *tn;
 
     JS_ASSERT(cg->tryBase <= cg->tryNext);
+    JS_ASSERT(catchStart >= 0);
     tn = cg->tryNext++;
     tn->start = start;
     tn->length = end - start;
