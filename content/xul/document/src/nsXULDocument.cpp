@@ -2676,13 +2676,16 @@ nsXULDocument::LoadOverlay(const nsAString& aURL, nsIObserver* aObserver)
         if (!obs)
             mOverlayLoadObservers.Put(uri, aObserver);
     }
-    return LoadOverlayInternal(uri, PR_TRUE);
+    PRBool shouldReturn;
+    return LoadOverlayInternal(uri, PR_TRUE, &shouldReturn);
 }
 
 nsresult
-nsXULDocument::LoadOverlayInternal(nsIURI* aURI, PRBool aIsDynamic)
+nsXULDocument::LoadOverlayInternal(nsIURI* aURI, PRBool aIsDynamic, PRBool* aShouldReturn)
 {
     nsresult rv;
+
+    *aShouldReturn = PR_FALSE;
 
     nsCOMPtr<nsIScriptSecurityManager> secMan = do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
@@ -2748,6 +2751,7 @@ nsXULDocument::LoadOverlayInternal(nsIURI* aURI, PRBool aIsDynamic)
             // prototype overlay load's completion. When the content
             // sink completes, it will trigger an EndLoad(), which'll
             // wind us back up here, in ResumeWalk().
+            *aShouldReturn = PR_TRUE;
             return NS_OK;
         }
 
@@ -2761,6 +2765,8 @@ nsXULDocument::LoadOverlayInternal(nsIURI* aURI, PRBool aIsDynamic)
 
         PR_LOG(gXULLog, PR_LOG_DEBUG, ("xul: overlay was cached"));
 
+        // If this is a dynamic overlay and we have the prototype in the chrome 
+        // cache already, we must manually call ResumeWalk.
         if (aIsDynamic)
             return ResumeWalk();
     }
@@ -2816,6 +2822,8 @@ nsXULDocument::LoadOverlayInternal(nsIURI* aURI, PRBool aIsDynamic)
         // overlay load's completion. When the content sink
         // completes, it will trigger an EndLoad(), which'll wind
         // us back in ResumeWalk().
+        if (!aIsDynamic)
+            *aShouldReturn = PR_TRUE;
     }
     return NS_OK;
 }
@@ -3012,7 +3020,10 @@ nsXULDocument::ResumeWalk()
 
         mUnloadedOverlays->RemoveElementAt(count - 1);
 
-        return LoadOverlayInternal(uri, PR_FALSE);
+        PRBool shouldReturn;
+        rv = LoadOverlayInternal(uri, PR_FALSE, &shouldReturn);
+        if (shouldReturn || NS_FAILED(rv))
+            return rv;
     }
 
     // If we get here, there is nothing left for us to walk. The content

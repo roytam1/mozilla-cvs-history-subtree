@@ -207,7 +207,8 @@ protected:
                            nsIPrincipal* aDocumentPrincipal,
                            nsIParser** aResult);
 
-    nsresult LoadOverlayInternal(nsIURI* aURI, PRBool aIsDynamic);
+    nsresult 
+    LoadOverlayInternal(nsIURI* aURI, PRBool aIsDynamic, PRBool* aShouldReturn);
 
     nsresult ApplyPersistentAttributes();
     nsresult ApplyPersistentAttributesToElements(nsIRDFResource* aResource,
