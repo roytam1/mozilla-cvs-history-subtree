@@ -262,10 +262,6 @@ conversion_error:
     if (!JSVAL_IS_NUMBER(v)) {                                           \
         if (!JS_ConvertValue(cx, v, JSTYPE_NUMBER, &v))                  \
             goto conversion_error;                                       \
-        /* We allow conversion from NaN numbers to integral types, but */\
-        /* not when the NaN results from conversion of a non-number*/    \
-        if (JSVAL_IS_DOUBLE(v) && JSDOUBLE_IS_NaN(*JSVAL_TO_DOUBLE(v)))  \
-            goto conversion_error;                                       \
         (*cost)++;                                                       \
     }                                                                    \
     {                                                                    \
@@ -284,7 +280,7 @@ conversion_error:
                                                                          \
             /* NaN becomes zero when converted to integral value */      \
             if (JSDOUBLE_IS_NaN(dval))                                   \
-                member_name = 0;                                         \
+                goto numeric_conversion_error;                           \
                                                                          \
             /* Unrepresentably large numbers, including infinities, */   \
             /* cause an error. */                                        \
@@ -340,11 +336,6 @@ static jlong jdouble_to_jlong(jdouble dvalue)
 if (!JSVAL_IS_NUMBER(jsvalue)) {                                         \
         if (!JS_ConvertValue(cx, jsvalue, JSTYPE_NUMBER, &jsvalue))      \
         goto conversion_error;                                           \
-                                                                         \
-        /* We allow conversion from NaN numbers to integral types, but */\
-        /* not when the NaN results from conversion of a non-number*/    \
-        if (JSVAL_IS_DOUBLE(v) && JSDOUBLE_IS_NaN(*JSVAL_TO_DOUBLE(v)))  \
-            goto conversion_error;                                       \
     (*cost)++;                                                           \
     }                                                                    \
     {                                                                    \
@@ -359,7 +350,7 @@ if (!JSVAL_IS_NUMBER(jsvalue)) {                                         \
                                                                          \
             /* NaN becomes zero when converted to integral value */      \
             if (JSDOUBLE_IS_NaN(dval))                                   \
-                member_name = jsint_to_jlong(0);                         \
+                goto numeric_conversion_error;                           \
                                                                          \
             /* Unrepresentably large numbers, including infinities, */   \
             /* cause an error. */                                        \
