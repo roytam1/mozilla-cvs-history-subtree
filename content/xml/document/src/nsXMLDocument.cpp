@@ -320,32 +320,6 @@ nsXMLDocument::OnRedirect(nsIHttpChannel *aHttpChannel, nsIChannel *aNewChannel)
 }
 
 NS_IMETHODIMP
-nsXMLDocument::OnAuthenticate(nsIHttpChannel *aHttpChannel,
-                              const char *aHost,
-                              PRInt32 aPort,
-                              PRBool aIsProxy,
-                              const char *aRealm,
-                              char **aUsername,
-                              char **aPassword)
-{
-  NS_NOTREACHED("not implemented");
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsXMLDocument::OnAuthenticationFailed(nsIHttpChannel *aHttpChannel,
-                                      const char *aHost,
-                                      PRInt32 aPort,
-                                      PRBool aIsProxy,
-                                      const char *aRealm,
-                                      const char *aUsername,
-                                      const char *aPassword)
-{
-  NS_NOTREACHED("not implemented");
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
 nsXMLDocument::Load(const nsAReadableString& aUrl)
 {
   nsCOMPtr<nsIChannel> channel;
