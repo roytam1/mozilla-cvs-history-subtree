@@ -238,7 +238,6 @@ sub search
       ldap_msgfree($self->{"ldres"});
       undef $self->{"ldres"};
     }
-  $self->{"ldres"} = 0;
 
   if (ldap_is_ldap_url($filter))
     {
@@ -261,6 +260,7 @@ sub search
 	}
     }
 
+  undef $self->{"ldres"};
   return "";
 }
 
@@ -278,7 +278,6 @@ sub searchURL
       undef $self->{"ldres"};
     }
       
-  $self->{"ldres"} = 0;
   if (! ldap_url_search_s($self->{"ld"}, $url,
 			  defined($attrsonly) ? $attrsonly : 0,
 			  $self->{"ldres"}))
@@ -287,6 +286,7 @@ sub searchURL
       return $self->nextEntry();
     }
 
+  undef $self->{"ldres"};
   return "";
 }
 
@@ -408,11 +408,13 @@ sub close
   my ($ret) = 1;
 
   ldap_unbind_s($self->{"ld"}) if defined($self->{"ld"});
+
   if (defined($self->{"ldres"}))
     {
       ldap_msgfree($self->{"ldres"});
       undef $self->{"ldres"};
     }
+
   undef $self->{"ld"};
 
   return (($ret == LDAP_SUCCESS) ? 1 : 0);
