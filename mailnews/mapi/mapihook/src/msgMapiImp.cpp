@@ -128,121 +128,31 @@ STDMETHODIMP nsMapiImp::Login(unsigned long aUIArg, LOGIN_PW_TYPE aLogin, LOGIN_
                 unsigned long aFlags, unsigned long *aSessionId)
 {
     HRESULT hr = E_FAIL;
-
-    nsString tempProfileName;
-    nsString tempPassCode;
-
     PRBool bNewSession = PR_FALSE;
-    PRBool bLoginUI = PR_FALSE;
-    PRBool bPasswordUI = PR_FALSE;
-    PRBool bResult = PR_FALSE;
-
     char *id_key = nsnull;
-
-    // See wheather user wants a new session with the same user name.
 
     if (aFlags & MAPI_NEW_SESSION)
         bNewSession = PR_TRUE;
 
     // Check For Profile Name
 
-    if (aLogin == nsnull || aLogin[0] == '\0')
+    if (aLogin != nsnull && aLogin[0] != '\0')
     {
-        // no user name is passed by the user
-
-        if (aFlags & MAPI_LOGON_UI)   // asked to show the login dialog
-            bLoginUI = PR_TRUE;
-        else
-        {
-            // user name not passed and not opted to show the logon UI.
-            // it is an error.
-
-            *aSessionId = MAPI_E_FAILURE;  
-            return hr;
-        }
-    }
-    else
-        tempProfileName.Assign ((PRUnichar *) aLogin);
-
-    // Check For Password
-
-    if (aPassWord == nsnull || aPassWord[0] == '\0')
-    {
-        // no password.. is opted for Password UI.
-
-        if ((aFlags & MAPI_PASSWORD_UI) && !bPasswordUI)
-            bPasswordUI = PR_TRUE;
-        
-        // Looking for 'else' !!.  Don't know wheather password is set! :-)
-    }
-    else
-        tempPassCode.Assign ((PRUnichar *) aPassWord);
-
-    if (bLoginUI)
-    {
-        // Display the Login UI
-
-        PRUnichar *Name = nsnull, *Pass = nsnull;
-
-        bResult = nsMapiHook::DisplayLoginDialog(PR_TRUE, &Name, &Pass);
-        if (bResult == PR_FALSE)
-        {
-            *aSessionId = MAPI_E_USER_ABORT;
-            return hr;
-        }
-
-        tempProfileName.Assign (Name);
-        tempPassCode.Assign (Pass);
-
-        delete(Name);
-        delete(Pass);
-    }
-    else if (bPasswordUI)
-    {
-        // Display the Password UI
-
-        PRUnichar *Name = (PRUnichar *)tempProfileName.get() ; 
-        PRUnichar *Pass = nsnull;
-
-        bResult = nsMapiHook::DisplayLoginDialog(PR_FALSE, &Name, &Pass);
-        if (bResult == PR_FALSE)
-        {
-            *aSessionId = MAPI_E_USER_ABORT;
-            return hr;
-        }
-
-        tempPassCode.Assign (Pass) ;
-
-        delete(Pass);
-    }
-
-    // No matter what ever the params are; Profile Name must be resloved by now
-
-    if (tempProfileName.Length() <= 0)
+        if (nsMapiHook::VerifyUserName(aLogin, &id_key) == PR_FALSE)
     {
         *aSessionId = MAPI_E_LOGIN_FAILURE;
         return hr;
     }
-
-    // Verify wheather username exists in the current mozilla profile.
-
-    bResult = nsMapiHook::VerifyUserName(tempProfileName.get(), &id_key);
-    if (bResult == PR_FALSE)
-    {
-        *aSessionId = MAPI_E_LOGIN_FAILURE;
-        return hr;
     }
 
     // finally register(create) the session.
 
-    
     PRUint32 nSession_Id;
     PRInt16 nResult = 0;
 
     nsMAPIConfiguration *pConfig = nsMAPIConfiguration::GetMAPIConfiguration();
     if (pConfig != nsnull)
-        nResult = pConfig->RegisterSession(aUIArg, tempProfileName.get(),
-                                           tempPassCode.get(),
+        nResult = pConfig->RegisterSession(aUIArg, aLogin, aPassWord,
                                            (aFlags & MAPI_FORCE_DOWNLOAD), bNewSession,
                                            &nSession_Id, id_key);
 
