@@ -368,9 +368,9 @@ function DropOnTree ( event )
     }
     
     // Prevent dropping of a node before, after, or on itself
-    if (sourceNode == targetNode) continue;
+    if (sourceNode == targetNode) return false;
     // Prevent dropping of a node onto its parent container
-    if ((dropAction == "on") && (containerID) && (containerID == parentID))	continue;
+    if ((dropAction == "on") && (containerID) && (containerID == parentID)) return false;
 
     RDFC.Init(Bookmarks, containerNode);
 
