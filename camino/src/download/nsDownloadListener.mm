@@ -233,7 +233,7 @@ NS_IMETHODIMP
 nsDownloadListener::OnStateChange(nsIWebProgress *aWebProgress,  nsIRequest *aRequest,  PRUint32 aStateFlags, 
                                     PRUint32 aStatus)
 {
-  NSLog(@"State changed: state %u, status %u", aStateFlags, aStatus);  
+  // NSLog(@"State changed: state %u, status %u", aStateFlags, aStatus);  
 
   if (!mGotFirstStateChange) {
     mNetworkTransfer = ((aStateFlags & STATE_IS_NETWORK) != 0);
