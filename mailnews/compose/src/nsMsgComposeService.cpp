@@ -256,10 +256,12 @@ nsresult nsMsgComposeService::OpenWindow(const char *chrome, nsIMsgComposeParams
              clear the cache entry if everything goes well
           */
           nsCOMPtr<nsIDOMWindowInternal> domWindow(mCachedWindows[i].window);
-          mCachedWindows[i].listener->OnReopen(params);
           rv = ShowCachedComposeWindow(domWindow, PR_TRUE);
           if (NS_SUCCEEDED(rv))
+          {
+            mCachedWindows[i].listener->OnReopen(params);
             return NS_OK;
+          }
         }
       }
     }
