@@ -43,6 +43,7 @@
 #include "txInstructions.h"
 #include "primitives.h"
 #include "XSLTFunctions.h"
+#include "TxLog.h"
 
 txStylesheet::txStylesheet()
     : mRootFrame(nsnull),
@@ -153,7 +154,7 @@ txStylesheet::findTemplate(Node* aNode,
     }
 
 #ifdef PR_LOGGING
-    txPattern match = 0;
+    txPattern* match = 0;
 #endif
 
     ImportFrame* frame;
@@ -184,23 +185,25 @@ txStylesheet::findTemplate(Node* aNode,
     }
 
 #ifdef PR_LOGGING
-    String mode;
+    nsAutoString mode;
     if (aMode.mLocalName) {
-        TX_GET_ATOM_STRING(aMode.mLocalName, mode);
+        aMode.mLocalName->ToString(mode);
     }
+    nsAutoString nodeName;
+    aNode->getNodeName(nodeName);
     if (matchTemplate) {
-        String matchAttr;
+        nsAutoString matchAttr;
         match->toString(matchAttr);
         PR_LOG(txLog::xslt, PR_LOG_DEBUG,
                ("MatchTemplate, Pattern %s, Mode %s, Node %s\n",
                 NS_LossyConvertUCS2toASCII(matchAttr).get(),
                 NS_LossyConvertUCS2toASCII(mode).get(),
-                NS_LossyConvertUCS2toASCII(aNode->getNodeName()).get()));
+                NS_LossyConvertUCS2toASCII(nodeName).get()));
     }
     else {
         PR_LOG(txLog::xslt, PR_LOG_DEBUG,
                ("No match, Node %s, Mode %s\n", 
-                NS_LossyConvertUCS2toASCII(aNode->getNodeName()).get(),
+                NS_LossyConvertUCS2toASCII(nodeName).get(),
                 NS_LossyConvertUCS2toASCII(mode).get()));
     }
 #endif
