@@ -71,7 +71,6 @@ DIRS =                         \
   modules\libjar               \
   modules\libimg               \
   modules\libpref              \
-  modules\oji                  \
   caps                         \
   rdf                          \
   expat                        \
