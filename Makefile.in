@@ -88,6 +88,7 @@ DIRS		+= \
 		editor \
 		sun-java \
 		profile \
+		security \
 		$(NULL)
 
 ifdef MOZ_BUILD_XPFE
