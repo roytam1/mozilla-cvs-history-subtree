@@ -26,11 +26,9 @@ DEFINES=-D_IMPL_NS_DOM
 INCLUDES=-I..\base
 
 CPPSRCS = nsDOMFactory.cpp      	\
-	  nsHTMLTagsEnums.cpp		\
 	  nsScriptNameSpaceManager.cpp
 
 CPP_OBJS = .\$(OBJDIR)\nsDOMFactory.obj			\
-	   .\$(OBJDIR)\nsHTMLTagsEnums.obj		\
 	   .\$(OBJDIR)\nsScriptNameSpaceManager.obj 
 
 MAKE_OBJ_TYPE = DLL
@@ -50,8 +48,6 @@ LLIBS=							\
 	$(DIST)\lib\js32$(VERSION_NUMBER).lib		\
 	$(DIST)\lib\xpcom.lib				\
 	$(DIST)\lib\caps.lib				\
-	$(DIST)\lib\oji.lib				\
-	$(DIST)\lib\timer_s.lib				\
 	$(LIBNSPR)
 
 include <$(DEPTH)\config\rules.mak>

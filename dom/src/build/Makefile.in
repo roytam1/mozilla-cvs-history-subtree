@@ -33,7 +33,6 @@ IS_COMPONENT    = 1
 
 CPPSRCS		= \
 		nsDOMFactory.cpp \
-		nsHTMLTagsEnums.cpp \
 		nsScriptNameSetRegistry.cpp \
 		nsScriptNameSpaceManager.cpp \
 		$(NULL)
