@@ -36,6 +36,10 @@ static nsModuleComponentInfo components[] =
     NS_PNGDECODER_CID,
     "@mozilla.org/image/decoder;2?type=image/png",
     nsPNGDecoderConstructor, },
+  { "PNG decoder",
+    NS_PNGDECODER_CID,
+    "@mozilla.org/image/decoder;2?type=image/x-png",
+    nsPNGDecoderConstructor, },
 };
 
 NS_IMPL_NSGETMODULE("nsPNGDecoderModule", components)
