@@ -254,6 +254,7 @@ strncasecomp (const char* one, const char * two, int n)
 	  }
 }
 
+#if 0  // moved to mkutils.c
 /*	Allocate a new copy of a block of binary data, and returns it
  */
 PUBLIC char * 
@@ -448,6 +449,7 @@ char *XP_Cat(char *a0, ...)
 	va_end(ap);
     return result;
 }
+#endif
 
 /************************************************************************
  * These are "safe" versions of the runtime library routines. The RTL
