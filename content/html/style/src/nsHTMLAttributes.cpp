@@ -300,6 +300,8 @@ public:
   NS_IMETHOD GetAttribute(nsIAtom* aAttrName,
                           const nsHTMLValue** aValue) const;
 
+  NS_IMETHOD_(PRBool) HasAttribute(nsIAtom* aAttrName) const;
+
   NS_IMETHOD GetAttributeCount(PRInt32& aCount) const;
 
   NS_IMETHOD Equals(const nsIHTMLMappedAttributes* aAttributes, PRBool& aResult) const;
@@ -603,6 +605,17 @@ nsHTMLMappedAttributes::GetAttribute(nsIAtom* aAttrName,
   return NS_CONTENT_ATTR_NOT_THERE;
 }
 
+NS_IMETHODIMP_(PRBool)
+nsHTMLMappedAttributes::HasAttribute(nsIAtom* aAttrName) const
+{
+  if (!aAttrName)
+    return PR_FALSE;
+  
+  const HTMLAttribute* attr = HTMLAttribute::FindHTMLAttribute(aAttrName, &mFirst);
+
+  return attr != nsnull;
+}
+
 NS_IMETHODIMP
 nsHTMLMappedAttributes::GetAttributeCount(PRInt32& aCount) const
 {
@@ -820,6 +833,8 @@ public:
                           nsHTMLValue& aValue) const;
   NS_IMETHOD GetAttribute(nsIAtom* aAttribute,
                           const nsHTMLValue** aValue) const;
+
+  NS_IMETHOD_(PRBool) HasAttribute(nsIAtom* aAttrName) const;
 
   NS_IMETHOD GetAttributeNameAt(PRInt32 aIndex,
                                 nsIAtom*& aName) const;
@@ -1331,6 +1346,17 @@ HTMLAttributesImpl::GetAttribute(nsIAtom* aAttrName,
   return result;
 }
 
+NS_IMETHODIMP_(PRBool)
+HTMLAttributesImpl::HasAttribute(nsIAtom* aAttrName) const
+{
+  if (mMapped)
+    return mMapped->HasAttribute(aAttrName);
+
+  const HTMLAttribute*  attr = HTMLAttribute::FindHTMLAttribute(aAttrName, mFirstUnmapped);
+
+  return attr != nsnull;
+}
+                                                                               
 NS_IMETHODIMP
 HTMLAttributesImpl::GetAttributeNameAt(PRInt32 aIndex,
                                        nsIAtom*& aName) const
