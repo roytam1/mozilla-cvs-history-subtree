@@ -334,11 +334,12 @@ function Startup()
     }
 
     // Focus the content area if the caller instructed us to.
-    if ("arguments" in window && window.arguments.length >= 3 && window.arguments[2] == true ||
-        !window.locationbar.visible)
-      setTimeout("_content.focus();", 0); // XXXjag bug 91884
+    if ("arguments" in window && window.arguments.length >= 3 && window.arguments[2] == true)
+      _content.focus();
+    else if (!window.locationbar.visible)     //if the urlbar can't be focussed because it's hidden
+      setTimeout("_content.focus();", 0);     //schedule for right after onload; see bug 91788 & 91571
     else
-      setTimeout("gURLBar.focus();", 0);  // XXXjag bug 91884
+      gURLBar.focus();
 
     // Perform default browser checking.
     checkForDefaultBrowser();
