@@ -150,31 +150,6 @@ nsPluginManager::UserAgent(const char* *resultingAgentString)
     return NS_OK;
 }
 
-int varMap[] = {
-    (int)NPNVxDisplay,                  // nsPluginManagerVariable_XDisplay = 1,
-    (int)NPNVxtAppContext,              // nsPluginManagerVariable_XtAppContext,
-    (int)NPNVnetscapeWindow,            // nsPluginManagerVariable_NetscapeWindow,
-    (int)NPPVpluginWindowBool,          // nsPluginManagerVariable_WindowBool,
-    (int)NPPVpluginTransparentBool,     // nsPluginManagerVariable_TransparentBool,
-    (int)NPPVjavaClass,                 // nsPluginManagerVariable_JavaClass,
-    (int)NPPVpluginWindowSize,          // nsPluginManagerVariable_WindowSize,
-    (int)NPPVpluginTimerInterval,       // nsPluginManagerVariable_TimerInterval
-};
-
-NS_METHOD
-nsPluginManager::GetValue(nsPluginManagerVariable variable, void *value)
-{
-    NPError err = npn_getvalue(NULL, (NPNVariable)varMap[(int)variable], value);
-    return fromNPError[err];
-}
-
-NS_METHOD
-nsPluginManager::SetValue(nsPluginManagerVariable variable, void *value)
-{
-    NPError err = npn_setvalue(NULL, (NPPVariable)varMap[(int)variable], value);
-    return fromNPError[err];
-}
-
 NS_METHOD
 nsPluginManager::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr) 
 {
@@ -204,7 +179,7 @@ nsPluginManager::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr
         return NS_OK; 
     }
     if (aIID.Equals(kISupportsIID)) {
-        *aInstancePtr = (void*) ((nsISupports*)this); 
+        *aInstancePtr = (void*) ((nsIPluginManager*)this); 
         AddRef(); 
         return NS_OK; 
     } 
@@ -215,7 +190,8 @@ nsPluginManager::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr
         return NS_OK; 
     }
     if (fMalloc == NULL) {
-        if (nsMalloc::Create(this, kISupportsIID, (void**)&fMalloc) != NS_OK)
+        if (nsMalloc::Create((nsIPluginManager*)this, kISupportsIID,
+                             (void**)&fMalloc) != NS_OK)
             return NS_NOINTERFACE;
     }
     return fMalloc->QueryInterface(aIID, aInstancePtr);
@@ -228,51 +204,14 @@ nsPluginManager::GetJVMMgr(const nsIID& aIID)
 #ifdef OJI
     if (fJVMMgr == NULL) {
         // The plugin manager is the outer of the JVM manager
-        if (nsJVMMgr::Create(this, kISupportsIID, (void**)&fJVMMgr) != NS_OK)
+        if (nsJVMMgr::Create((nsIPluginManager*)this, kISupportsIID,
+                             (void**)&fJVMMgr) != NS_OK)
             return NULL;
     }
     if (fJVMMgr->QueryInterface(aIID, (void**)&result) != NS_OK)
         return NULL;
 #endif
     return result;
-}
-
-NS_METHOD
-nsPluginManager::FetchURL(nsISupports* peer, nsURLInfo* urlInfo)
-{
-    NPError rslt = NPERR_INVALID_PARAM;
-    nsPluginInstancePeer* instPeer = NULL;
-    if (!nsVersionOK(urlInfo->version, nsURLInfo_Version))
-        return NS_ERROR_ILLEGAL_VALUE;
-    if (peer->QueryInterface(kPluginInstancePeerCID, (void**)&instPeer) == NS_OK) {
-        NPP npp = instPeer->GetNPP();
-        if (urlInfo->postData || urlInfo->postHeaders) {
-            // XXX need to deal with postHeaders
-            rslt = np_posturlinternal(npp,
-                                      urlInfo->url, 
-                                      urlInfo->target,
-                                      urlInfo->altHost,
-                                      urlInfo->referrer,
-                                      urlInfo->forceJSEnabled,
-                                      urlInfo->postDataLength,
-                                      urlInfo->postData,
-                                      urlInfo->postFile,
-                                      urlInfo->notifyData != NULL,
-                                      urlInfo->notifyData);
-        }
-        else {
-            rslt = np_geturlinternal(npp,
-                                     urlInfo->url,
-                                     urlInfo->target,
-                                     urlInfo->altHost,
-                                     urlInfo->referrer,
-                                     urlInfo->forceJSEnabled,
-                                     urlInfo->notifyData != NULL,
-                                     urlInfo->notifyData);
-        }
-        instPeer->Release();
-    }
-    return fromNPError[rslt];
 }
 
 NS_METHOD
@@ -493,6 +432,60 @@ nsPluginManager::ProcessNextEvent(PRBool *bEventHandled)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// from nsINetworkManager:
+
+NS_METHOD
+nsPluginManager::GetURL(nsISupports* peer, const char* url, const char* target,
+                        void* notifyData, const char* altHost,
+                        const char* referrer, PRBool forceJSEnabled)
+{
+    NPError rslt = NPERR_INVALID_PARAM;
+    nsPluginInstancePeer* instPeer = NULL;
+    if (peer->QueryInterface(kPluginInstancePeerCID, (void**)&instPeer) == NS_OK) {
+        NPP npp = instPeer->GetNPP();
+        rslt = np_geturlinternal(npp,
+                                 url,
+                                 target,
+                                 altHost,
+                                 referrer,
+                                 forceJSEnabled,
+                                 notifyData != NULL,
+                                 notifyData);
+        instPeer->Release();
+    }
+    return fromNPError[rslt];
+}
+
+NS_METHOD
+nsPluginManager::PostURL(nsISupports* peer, const char* url, const char* target,
+                         PRUint32 postDataLen, const char* postData,
+                         PRBool isFile, void* notifyData,
+                         const char* altHost, const char* referrer,
+                         PRBool forceJSEnabled,
+                         PRUint32 postHeadersLen, const char* postHeaders)
+{
+    NPError rslt = NPERR_INVALID_PARAM;
+    nsPluginInstancePeer* instPeer = NULL;
+    if (peer->QueryInterface(kPluginInstancePeerCID, (void**)&instPeer) == NS_OK) {
+        NPP npp = instPeer->GetNPP();
+        PR_ASSERT(postHeaders == NULL); // XXX need to deal with postHeaders
+        rslt = np_posturlinternal(npp,
+                                  url, 
+                                  target,
+                                  altHost,
+                                  referrer,
+                                  forceJSEnabled,
+                                  postDataLen,
+                                  postData,
+                                  isFile,
+                                  notifyData != NULL,
+                                  notifyData);
+        instPeer->Release();
+    }
+    return fromNPError[rslt];
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // File Utilities Interface
 
 nsFileUtilities::nsFileUtilities(nsISupports* outer)
@@ -629,6 +622,31 @@ nsPluginInstancePeer::QueryInterface(const nsIID& aIID, void** aInstancePtr)
         return NS_OK;
     }
     return fTagInfo->QueryInterface(aIID, aInstancePtr);
+}
+
+int varMap[] = {
+    (int)NPNVxDisplay,                  // nsPluginManagerVariable_XDisplay = 1,
+    (int)NPNVxtAppContext,              // nsPluginManagerVariable_XtAppContext,
+    (int)NPNVnetscapeWindow,            // nsPluginManagerVariable_NetscapeWindow,
+    (int)NPPVpluginWindowBool,          // nsPluginManagerVariable_WindowBool,
+    (int)NPPVpluginTransparentBool,     // nsPluginManagerVariable_TransparentBool,
+    (int)NPPVjavaClass,                 // nsPluginManagerVariable_JavaClass,
+    (int)NPPVpluginWindowSize,          // nsPluginManagerVariable_WindowSize,
+    (int)NPPVpluginTimerInterval,       // nsPluginManagerVariable_TimerInterval
+};
+
+NS_METHOD
+nsPluginInstancePeer::GetValue(nsPluginManagerVariable variable, void *value)
+{
+    NPError err = npn_getvalue(fNPP, (NPNVariable)varMap[(int)variable], value);
+    return fromNPError[err];
+}
+
+NS_METHOD
+nsPluginInstancePeer::SetValue(nsPluginManagerVariable variable, void *value)
+{
+    NPError err = npn_setvalue(fNPP, (NPPVariable)varMap[(int)variable], value);
+    return fromNPError[err];
 }
 
 NS_METHOD

@@ -28,10 +28,10 @@ EXPORTS	=				      \
 	nsIJRILiveConnectPlugInstPeer.h       \
 	nsILiveConnectPlugin.h		      \
 	nsILiveConnectPlugInstPeer.h          \
+	nsINetworkManager.h		      \
 	nsIPlugin.h			      \
 	nsIPluginInstance.h		      \
 	nsIPluginInstancePeer.h		      \
-	nsIPluginInstancePeer2.h	      \
 	nsIPluginManager.h		      \
 	nsIPluginManager2.h		      \
 	nsIPluginStream.h		      \

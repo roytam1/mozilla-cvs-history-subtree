@@ -281,7 +281,9 @@ npn_getJavaPeer(NPP npp);
 
 ////////////////////////////////////////////////////////////////////////////////
 
-class nsPluginManager : public nsIPluginManager2 {
+class nsPluginManager : public nsIPluginManager2,
+                        public nsINetworkManager
+{
 public:
 
     ////////////////////////////////////////////////////////////////////////////
@@ -294,18 +296,6 @@ public:
     // (Corresponds to NPN_UserAgent.)
     NS_IMETHOD
     UserAgent(const char* *result);
-
-    // (Corresponds to NPN_GetValue.)
-    NS_IMETHOD
-    GetValue(nsPluginManagerVariable variable, void *value);
-
-    // (Corresponds to NPN_SetValue.)
-    NS_IMETHOD
-    SetValue(nsPluginManagerVariable variable, void *value);
-
-    // (Corresponds to NPN_GetURL and NPN_GetURLNotify.)
-    NS_IMETHOD
-    FetchURL(nsISupports* peer, nsURLInfo* urlInfo);
 
     ////////////////////////////////////////////////////////////////////////////
     // from nsIPluginManager2:
@@ -354,6 +344,22 @@ public:
     // the tickle code can notify it without freezing.
     NS_IMETHOD
     ProcessNextEvent(PRBool *bEventHandled);
+
+    ////////////////////////////////////////////////////////////////////////////
+    // from nsINetworkManager:
+
+    NS_IMETHOD
+    GetURL(nsISupports* peer, const char* url, const char* target,
+           void* notifyData = NULL, const char* altHost = NULL,
+           const char* referrer = NULL, PRBool forceJSEnabled = PR_FALSE);
+
+    NS_IMETHOD
+    PostURL(nsISupports* peer, const char* url, const char* target,
+            PRUint32 postDataLen, const char* postData,
+            PRBool isFile = PR_FALSE, void* notifyData = NULL,
+            const char* altHost = NULL, const char* referrer = NULL,
+            PRBool forceJSEnabled = PR_FALSE,
+            PRUint32 postHeadersLength = 0, const char* postHeaders = NULL);
 
     ////////////////////////////////////////////////////////////////////////////
     // nsPluginManager specific methods:
@@ -425,6 +431,12 @@ public:
 
     ////////////////////////////////////////////////////////////////////////////
     // from nsIPluginInstancePeer:
+
+    NS_IMETHOD
+    GetValue(nsPluginManagerVariable variable, void *value);
+
+    NS_IMETHOD
+    SetValue(nsPluginManagerVariable variable, void *value);
 
     // (Corresponds to NPP_New's MIMEType argument.)
     NS_IMETHOD

@@ -70,6 +70,7 @@
  *  +---------------------+                                        
  *  | nsIPluginManager    |                                        
  *  | nsIPluginManager2   |                                        
+ *  | nsINetworkManager   |                                        
  *  | nsIFileUtilities    |                                        
  *  | nsIPref             |                                        
  *  | nsICacheManager ... |                            
@@ -138,6 +139,12 @@
  * and provides general operations needed by a plugin.
  */
 #include "nsIPluginManager.h"
+
+/**
+ * The network manager provides access to the network for URL get
+ * and post operations.
+ */
+#include "nsINetworkManager.h"
 
 /**
  * A plugin instance peer gets created by the browser and associated with each

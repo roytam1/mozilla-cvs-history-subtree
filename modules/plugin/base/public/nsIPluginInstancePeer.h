@@ -55,6 +55,30 @@ class nsIPluginInstancePeer : public nsISupports {
 public:
 
     /**
+     * Returns the value of a variable associated with the plugin manager.
+     *
+     * (Corresponds to NPN_GetValue.)
+     *
+     * @param variable - the plugin manager variable to get
+     * @param value - the address of where to store the resulting value
+     * @result - NS_OK if this operation was successful
+     */
+    NS_IMETHOD
+    GetValue(nsPluginManagerVariable variable, void *value) = 0;
+
+    /**
+     * Sets the value of a variable associated with the plugin manager.
+     *
+     * (Corresponds to NPN_SetValue.)
+     *
+     * @param variable - the plugin manager variable to get
+     * @param value - the address of the value to store
+     * @result - NS_OK if this operation was successful
+     */
+    NS_IMETHOD
+    SetValue(nsPluginManagerVariable variable, void *value) = 0;
+
+    /**
      * Returns the MIME type of the plugin instance. 
      *
      * (Corresponds to NPP_New's MIMEType argument.)
