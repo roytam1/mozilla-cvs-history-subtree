@@ -3728,7 +3728,8 @@ EOF
 
     PR_MD_CSRCS=irix.c
     PR_MD_ASFILES=os_Irix.s
-    MKSHLIB='$(LD) $(DSO_LDOPTS) -rdata_shared -shared -soname $(notdir $@) -o $@'
+    DSO_LDOPTS='-rdata_shared -shared'
+    MKSHLIB='$(LD) $(DSO_LDOPTS) -soname $(notdir $@) -o $@'
     STRIP="$STRIP -f"
     RESOLVE_LINK_SYMBOLS=1
     if test -n "$USE_64"; then
@@ -3781,7 +3782,7 @@ EOF
 	    case "$target}" in
 	    *-irix6.*)
 	        CFLAGS="$CFLAGS -multigot"
-	        DSO_LDOPTS="-no_unresolved"
+	        DSO_LDOPTS="$DSO_LDOPTS -no_unresolved"
 	        if test "$USE_N32"; then
 		        CFLAGS="$CFLAGS -n32 -woff 1209"
 		        DSO_LDOPTS="$DSO_LDOPTS -n32"

@@ -69,9 +69,9 @@ THREADSLIB	=
 #
 ifeq ($(USE_DLL_EXPORTS_FILE), 1)
 ifeq ($(OS_ARCH), WINNT)
-GENEXPORTS=cmd /c  $(PERL) $(LDAP_SRC)/build/genexports.pl
+GENEXPORTS=cmd /c  $(PERL) $(topsrcdir)/ldap/build/genexports.pl
 else
-GENEXPORTS=$(PERL) $(LDAP_SRC)/build/genexports.pl
+GENEXPORTS=$(PERL) $(topsrcdir)/ldap/build/genexports.pl
 endif
 
 # variable definitions for exported symbols
@@ -123,6 +123,16 @@ EXTRA_LIBS += -l$(SSL_LIBNAME) -l $(PRLDAP_LIBNAME)
 EXTRA_LIBS += -ldl -brtl -lpthreads -lc_r -lm
 endif
 
+ifeq ($(OS_ARCH), IRIX)
+EXTRA_LIBS = -L$(dist_libdir) -l$(LDAP_LIBNAME)
+EXTRA_LIBS += $(DYNAMICNSPR) -l$(NSS_LIBNAME)
+ifeq ($(NSS_DYNAMIC_SOFTOKN),1)
+EXTRA_LIBS += -l$(SOFTOKN_LIBNAME)
+endif
+EXTRA_LIBS += -l$(SSL_LIBNAME) -l $(PRLDAP_LIBNAME)
+EXTRA_LIBS += $(OS_LIBS) -lc
+endif
+
 OBJDEST = $(OBJDIR_NAME)
 
 ###########################################################################
@@ -155,7 +165,7 @@ $(LIBSSLDAP): $(OBJS) $(LIBDIR) $(SSLDAP_EXPORT_DEFS)
 ifdef SO_FILES_TO_REMOVE
 	-$(RM) $(SO_FILES_TO_REMOVE)
 endif
-	$(LINK_DLL) $(DSO_LDOPTS) $(SSLDAP_EXPORT_FLAGS) $(EXTRA_LIBS)
+	$(LINK_DLL) $(SSLDAP_EXPORT_FLAGS) $(EXTRA_LIBS)
 
 veryclean:: clean
 

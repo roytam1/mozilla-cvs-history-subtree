@@ -157,6 +157,10 @@ ifeq ($(OS_ARCH), SunOS)
 EXTRA_LIBS = -L$(dist_libdir) -l$(LBER_LIBNAME)
 endif
 
+ifeq ($(OS_ARCH), IRIX)
+EXTRA_LIBS = -L$(dist_libdir) -l$(LBER_LIBNAME) $(OS_LIBS) -lc
+endif
+
 ifeq ($(OS_ARCH), Linux)
 EXTRA_LIBS = -L$(dist_libdir) -l$(LBER_LIBNAME)
 endif
@@ -229,7 +233,7 @@ $(DLLLDAP): $(OBJS) $(LIBDIR) $(LDAP_EXPORT_DEFS)
 ifdef SO_FILES_TO_REMOVE
 	-$(RM) $(SO_FILES_TO_REMOVE)
 endif
-	$(LINK_DLL) $(DSO_LDOPTS) $(LDAP_EXPORT_FLAGS) $(EXTRA_LIBS)
+	$(LINK_DLL) $(LDAP_EXPORT_FLAGS) $(EXTRA_LIBS)
 
 veryclean:: clean
 
