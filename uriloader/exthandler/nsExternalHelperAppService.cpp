@@ -346,6 +346,7 @@ NS_IMETHODIMP nsExternalHelperAppService::ApplyDecodingForExtension(const char *
       break;
     }
   }
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsExternalHelperAppService::LaunchAppWithTempFile(nsIMIMEInfo * aMimeInfo, nsIFile * aTempFile)
