@@ -26,7 +26,6 @@
 #include "prlink.h"
 #include "jsapi.h"
 #include "jsbuffer.h"
-#include "xpassert.h"
 
 #include <Xm/Xm.h>
 
@@ -48,7 +47,7 @@ pref_InitInitialObjects(void)
 {
     JSBool status;
 
-    XP_ASSERT(pref_init_buffer);
+    PR_ASSERT(pref_init_buffer);
 
     status = PREF_EvaluateJSBuffer(pref_init_buffer, strlen(pref_init_buffer));
 
@@ -71,12 +70,7 @@ PREF_AlterSplashIcon(struct fe_icon_data* icon)
     if ( PREF_IsAutoAdminEnabled() && 
          icon && 
          (splash_screen = (struct fe_icon_type*)
-#ifndef NSPR20
-          PR_FindSymbol("_POLARIS_SplashPro", m_AutoAdminLib)) != NULL ) {
-#else
           PR_FindSymbol(m_AutoAdminLib, "_POLARIS_SplashPro")) != NULL ) {
-#endif
-
         memcpy(icon, splash_screen, sizeof(*icon));
     }
 }
@@ -95,9 +89,9 @@ PREF_GetLabelAndMnemonic(char* name, char** str, void* v_xm_str, void* v_mnemoni
     char* p1;
     char* p2;
 
-    XP_ASSERT(name);
-    XP_ASSERT(str);
-    XP_ASSERT(xm_str);
+    PR_ASSERT(name);
+    PR_ASSERT(str);
+    PR_ASSERT(xm_str);
 
     if ( name == NULL || str == NULL || xm_str == NULL ) return FALSE;
 
@@ -136,7 +130,7 @@ PREF_GetUrl(char* name, char** url)
 {
     char buf[256];
 
-    XP_ASSERT(name);
+    PR_ASSERT(name);
 
     if ( name == NULL || url == NULL ) return FALSE;
 

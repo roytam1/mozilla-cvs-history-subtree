@@ -1865,15 +1865,6 @@ JSBool PR_CALLBACK pref_NativeGetLDAPAttr
 		
 	if (m_AutoAdminLib) {
 		get_ldap_attributes = (ldap_func)
-#ifndef NSPR20
-			PR_FindSymbol(
-#ifndef XP_WIN16
-			"pref_get_ldap_attributes"
-#else
-			MAKEINTRESOURCE(1)
-#endif
-			, m_AutoAdminLib);
-#else /* NSPR20 */
 			PR_FindSymbol(
 			 m_AutoAdminLib,
 #ifndef XP_WIN16
@@ -1882,7 +1873,6 @@ JSBool PR_CALLBACK pref_NativeGetLDAPAttr
 			MAKEINTRESOURCE(1)
 #endif
 			);
-#endif /* NSPR20 */
 	}
 	if (get_ldap_attributes == NULL) {
 		/* This indicates the AutoAdmin dll was not found. */
@@ -2122,11 +2112,7 @@ pref_LoadAutoAdminLib()
 	}
 	/* Make sure it's really libAutoAdmin.so */
     
-#ifndef NSPR20
-	if ( lib && PR_FindSymbol("_POLARIS_SplashPro", lib) == NULL ) return NULL;
-#else 
 	if ( lib && PR_FindSymbol(lib, "_POLARIS_SplashPro") == NULL ) return NULL;
-#endif
 #else
 	lib = PR_LoadLibrary( ADMNLIBNAME );
 #endif
