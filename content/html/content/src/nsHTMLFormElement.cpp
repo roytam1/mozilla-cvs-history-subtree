@@ -853,10 +853,6 @@ nsFormControlList::AddElementToTable(nsIFormControl* aChild,
       list->QueryInterface(NS_GET_IID(nsISupports),
                            getter_AddRefs(listSupports));
 
-      // Remove the current item from the hash so that we don't create
-      // a leak when we add the new item to the hash.
-      mNameLookupTable.Remove(&key);
-
       // Replace the element with the list.
       mNameLookupTable.Put(&key, listSupports);
     } else {
