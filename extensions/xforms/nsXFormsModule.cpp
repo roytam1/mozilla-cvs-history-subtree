@@ -42,15 +42,55 @@
 #include "nsXFormsAtoms.h"
 #include "nsXFormsModelElement.h"
 #include "nsXFormsUtils.h"
+#include "nsICategoryManager.h"
+#include "nsIServiceManager.h"
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsXFormsElementFactory)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsXFormsUtilitiesService)
+
+static NS_IMETHODIMP
+RegisterXFormsModule(nsIComponentManager *aCompMgr,
+                     nsIFile *aPath,
+                     const char *aRegistryLocation,
+                     const char *aComponentType,
+                     const nsModuleComponentInfo *aInfo)
+{
+  nsCOMPtr<nsICategoryManager> catman =
+    do_GetService(NS_CATEGORYMANAGER_CONTRACTID);
+
+  if (!catman)
+    return NS_ERROR_FAILURE;
+
+  nsXPIDLCString previous;
+  return catman->AddCategoryEntry("agent-style-sheets",
+                                  "xforms stylesheet",
+                                  "resource://gre/res/xforms.css",
+                                  PR_TRUE, PR_TRUE, getter_Copies(previous));
+}
+
+static NS_IMETHODIMP
+UnregisterXFormsModule(nsIComponentManager *aCompMgr,
+                       nsIFile *aPath,
+                       const char *aRegistryLocation,
+                       const nsModuleComponentInfo *aInfo)
+{
+  nsCOMPtr<nsICategoryManager> catman =
+    do_GetService(NS_CATEGORYMANAGER_CONTRACTID);
+
+  if (!catman)
+    return NS_ERROR_FAILURE;
+
+  return catman->DeleteCategoryEntry("agent-style-sheets",
+                                     "xforms stylesheet", PR_TRUE);
+}
 
 static const nsModuleComponentInfo components[] = {
   { "XForms element factory",
     NS_XFORMSELEMENTFACTORY_CID,
     NS_XTF_ELEMENT_FACTORY_CONTRACTID_PREFIX NS_NAMESPACE_XFORMS,
-    nsXFormsElementFactoryConstructor },
+    nsXFormsElementFactoryConstructor,
+    RegisterXFormsModule,
+    UnregisterXFormsModule },
   { "XForms Utility Service",
     NS_XFORMSUTILITIESSERVICE_CID,
     NS_XFORMS_UTILITIES_CONTRACTID,
