@@ -201,8 +201,8 @@ nsScriptSecurityManager::CheckSameOrigin(JSContext *aCx, nsIPrincipal* aSubject,
     ** Check for that here
     */
     PRBool capabilityEnabled = PR_FALSE;
-    char* cap = aAction == nsIXPCSecurityManager::ACCESS_SET_PROPERTY ?
-                "UniversalBrowserWrite" : "UniversalBrowserRead";
+    const char* cap = aAction == nsIXPCSecurityManager::ACCESS_SET_PROPERTY ?
+                      "UniversalBrowserWrite" : "UniversalBrowserRead";
     if (NS_FAILED(IsCapabilityEnabled(cap, &capabilityEnabled)))
         return NS_ERROR_FAILURE;
     if (capabilityEnabled)
