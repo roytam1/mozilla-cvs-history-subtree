@@ -309,8 +309,8 @@ function AbDeleteDirectory()
         // check to see if personal or collected address books is selected for deletion.
         // if yes, prompt the user an appropriate message saying these cannot be deleted
         // if no, mark the selected items for deletion
-        if ((selArray[i].getAttribute("id") != "moz-abmdbdirectory://history.mab") &&
-             (selArray[i].getAttribute("id") != "moz-abmdbdirectory://abook.mab"))
+        if ((selArray[i].getAttribute("id") != kCollectedAddressbookURI) &&
+             (selArray[i].getAttribute("id") != kPersonalAddressbookURI))
         {
             var parent = selArray[i].parentNode.parentNode;
             if (parent)

@@ -56,9 +56,7 @@
       <menulist id="addressbookList" persist="selectedAB" oncommand="AbPanelOnChange(event)" flex="1">
         <menupopup id="addressbookList-menupopup" 
           datasources="rdf:addressdirectory" 
-          ref="moz-abdirectory://"
-          sortResource="http://home.netscape.com/NC-rdf#DirName"
-          sortDirection="ascending">
+          ref="moz-abdirectory://">
           <template>
             <rule nc:IsMailList="false">
               <menuitem uri="..."

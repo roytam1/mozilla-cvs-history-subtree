@@ -186,18 +186,31 @@ function MailListOKButton()
   return true;  // close the window
 }
 
-function OnLoadMailList()
+function OnLoadNewMailList()
 {
   //XXX: gAddressBookBundle is set in 2 places because of different callers
   gAddressBookBundle = document.getElementById("bundle_addressBook");
-  var selectedAB;
+  var selectedAB = null;
+
   if (window.arguments && window.arguments[0])
   {
-    if ( window.arguments[0].selectedAB )
-      selectedAB = window.arguments[0].selectedAB;
-    else
-      selectedAB = "moz-abmdbdirectory://abook.mab";
+    var abURI = window.arguments[0].selectedAB;
+    if (abURI) {
+      var directory = GetDirectoryFromURI(abURI);
+      if (directory.isMailList) {
+        var parentURI = GetParentDirectoryForMailingList(abURI);
+        if (parentURI) {
+          selectedAB = parentURI;
+        }
+      }
+      else {
+        selectedAB = abURI;
+      }
+    }
   }
+  
+  if (!selectedAB)
+    selectedAB = kPersonalAddressbookURI;
 
   // set popup with address book names
   var abPopup = document.getElementById('abPopup');

@@ -3,6 +3,9 @@ var gResultsOutliner = 0;
 var gAbView = null;
 var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
 
+const kPersonalAddressbookURI = "moz-abmdbdirectory://abook.mab";
+const kCollectedAddressbookURI = "moz-abmdbdirectory://history.mab";
+
 // functions needed from abMainWindow and abSelectAddresses
 
 // Controller object for Results Pane
@@ -716,3 +719,20 @@ function GetDirectoryFromURI(uri)
   return directory;
 }
 
+
+function GetParentDirectoryForMailingList(abURI)
+{
+  var parentURI = null;
+
+  var abURIArr = abURI.split("/");
+  /*
+   turn turn "moz-abmdbdirectory://abook.mab/MailList6"
+   into ["moz-abmdbdirectory:","","abook.mab","MailList6"]
+   then, turn ["moz-abmdbdirectory:","","abook.mab","MailList6"]
+   into "moz-abmdbdirectory://abook.mab"
+  */
+  if (abURIArr.length == 4 && abURIArr[0] == "moz-abmdbdirectory:") {
+    parentURI = abURIArr[0] + "/" + abURIArr[1] + "/" + abURIArr[2];
+  }
+  return parentURI;
+}

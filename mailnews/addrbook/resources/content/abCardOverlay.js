@@ -54,11 +54,30 @@ function OnLoadNewCard()
 
   if ("arguments" in window && window.arguments[0])
   {
-    if ("selectedAB" in window.arguments[0])
-      editCard.selectedAB = window.arguments[0].selectedAB;
-    else
-      editCard.selectedAB = "moz-abmdbdirectory://abook.mab";
-
+    if ("selectedAB" in window.arguments[0]) {
+      // check if selected ab is a mailing list
+      var abURI = window.arguments[0].selectedAB;
+      
+      var directory = GetDirectoryFromURI(abURI);
+      if (directory.isMailList) {
+        var parentURI = GetParentDirectoryForMailingList(abURI);
+        if (parentURI) {
+          editCard.selectedAB = parentURI;
+        }
+        else {
+          // it's a mailing list, but we failed to determine the parent directory
+          // use the personal addressbook
+          editCard.selectedAB = kPersonalAddressbookURI;
+        }
+      }
+      else {
+        editCard.selectedAB = window.arguments[0].selectedAB;
+      }
+    }
+    else {
+      editCard.selectedAB = kPersonalAddressbookURI;
+    }
+      
     // we may have been given properties to pre-initialize the window with....
     // we'll fill these in here...
     if ("primaryEmail" in window.arguments[0])
