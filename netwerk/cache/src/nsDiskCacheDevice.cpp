@@ -603,9 +603,9 @@ nsDiskCacheDevice::FindEntry(nsCString * key)
     nsCacheEntry * entry = nsnull;
     nsDiskCacheEntry * diskEntry = mBoundEntries.GetEntry(key->get());
     if (!diskEntry) {
-        nsresult rv = readDiskCacheEntry(key, &entry);
+        nsresult rv = readDiskCacheEntry(key->get(), &diskEntry);
         if (NS_FAILED(rv)) return nsnull;
-        diskEntry = ensureDiskCacheEntry(entry);
+        entry = diskEntry->getCacheEntry();
         rv = mBoundEntries.AddEntry(diskEntry);
         if (NS_FAILED(rv)) {
             delete entry;
@@ -999,12 +999,12 @@ nsresult nsDiskCacheDevice::updateDiskCacheEntry(nsDiskCacheEntry* diskEntry)
 }
 
 static nsresult NS_NewCacheEntry(nsCacheEntry ** result,
-                                 nsCString* key,
+                                 const char * key,
                                  PRBool streamBased,
                                  nsCacheStoragePolicy storagePolicy,
                                  nsCacheDevice* device)
 {
-    nsCString* newKey = new nsCString(key->get());
+    nsCString* newKey = new nsCString(key);
     if (!newKey) return NS_ERROR_OUT_OF_MEMORY;
     
     nsCacheEntry* entry = new nsCacheEntry(newKey, streamBased, storagePolicy);
@@ -1016,31 +1016,14 @@ static nsresult NS_NewCacheEntry(nsCacheEntry ** result,
     return NS_OK;
 }
 
-/*
-static nsresult readMetaDataFile(nsIFile* file, nsDiskCacheEntry* diskEntry, MetaDataFile& metaDataFile)
+nsresult nsDiskCacheDevice::readDiskCacheEntry(const char * key, nsDiskCacheEntry ** result)
 {
-    nsCOMPtr<nsITransport>& transport = diskEntry->getMetaTransport(nsICache::ACCESS_READ);
-    if (!transport) {
-        rv = getTransportForFile(file, nsICache::ACCESS_READ, getter_AddRefs(transport));
-        if (NS_FAILED(rv)) break;
-    }
+    // result should be nsull on cache miss.
+    *result = nsnull;
 
-    nsCOMPtr<nsIInputStream> input;
-    rv = transport->OpenInputStream(0, ULONG_MAX, 0, getter_AddRefs(input));
-    if (NS_FAILED(rv)) break;
-    
-    // read the metadata file.
-    MetaDataFile metaDataFile;
-    rv = metaDataFile.Read(input);
-    input->Close();
-}
-*/
-
-nsresult nsDiskCacheDevice::readDiskCacheEntry(nsCString* key, nsCacheEntry ** result)
-{
     // up front, check to see if the file we are looking for exists.
     nsCOMPtr<nsIFile> file;
-    nsresult rv = getFileForKey(key->get(), PR_TRUE, 0, getter_AddRefs(file));
+    nsresult rv = getFileForKey(key, PR_TRUE, 0, getter_AddRefs(file));
     if (NS_FAILED(rv)) return rv;
     PRBool exists;
     rv = file->Exists(&exists);
@@ -1075,7 +1058,7 @@ nsresult nsDiskCacheDevice::readDiskCacheEntry(nsCString* key, nsCacheEntry ** r
         if (NS_FAILED(rv)) break;
         
         // Ensure that the keys match.
-        if (nsCRT::strcmp(key->get(), metaDataFile.mKey) != 0) break;
+        if (nsCRT::strcmp(key, metaDataFile.mKey) != 0) break;
         
         // initialize the entry.
         entry->SetFetchCount(metaDataFile.mFetchCount);
@@ -1091,13 +1074,13 @@ nsresult nsDiskCacheDevice::readDiskCacheEntry(nsCString* key, nsCacheEntry ** r
         }
         
         // celebrate!        
-        *result = entry;
+        *result = diskEntry;
         return NS_OK;
     } while (0);
 
     // oh, auto_ptr<> would be nice right about now.    
     delete entry;
-    return rv;
+    return NS_ERROR_NOT_AVAILABLE;
 }
 
 nsresult nsDiskCacheDevice::deleteDiskCacheEntry(nsDiskCacheEntry * diskEntry)

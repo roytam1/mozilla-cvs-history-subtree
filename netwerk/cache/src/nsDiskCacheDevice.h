@@ -73,7 +73,7 @@ public:
 
     nsresult visitEntries(nsICacheVisitor * visitory);
     
-    nsresult readDiskCacheEntry(nsCString * key, nsCacheEntry ** entry);
+    nsresult readDiskCacheEntry(const char * key, nsDiskCacheEntry ** diskEntry);
 
     nsresult updateDiskCacheEntries();
     nsresult updateDiskCacheEntry(nsDiskCacheEntry * diskEntry);
