@@ -25,6 +25,8 @@ REQUIRES	= xpcom \
 		  necko \
 		  uriloader \
 		  nkcache \
+		  pref \
+		  chardet \
 		  $(NULL)
 
 include <$(DEPTH)\config\config.mak>
