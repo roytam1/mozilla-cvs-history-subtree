@@ -336,12 +336,15 @@ void handle_size_allocate(GtkWidget *w, GtkAllocation *alloc, gpointer p)
 }
 
 void
-handle_xlib_expose_event(GdkSuperWin *superwin, XEvent *event, gpointer p)
+handle_xlib_event(GdkSuperWin *superwin, XEvent *event, gpointer p)
 {
   nsWindow *window = (nsWindow *)p;
   switch(event->xany.type) {
   case Expose:
     window->HandleXlibExposeEvent(event);
+    break;
+  case ConfigureNotify:
+    window->HandleXlibConfigureNotifyEvent(event);
     break;
   }
 }
