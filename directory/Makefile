@@ -26,20 +26,14 @@ NSS_TREE	= ../security
 MOD_DEPTH	= ../nsprpub
 CORECONFDIR	= ../coreconf
 ALTCORECONFDIR	= ../../coreconf
+NSPR_VERSION	= 4.1.2
+NSS_VERSION	= 3.3.1
 DEPTH		= ..
 CONFIGDIR	= c-sdk/config
 MOD_DEPTH	= c-sdk
 
 include		$(CONFIGDIR)/config.mk
 include		c-sdk/build.mk
-
-ifeq ($(OS_ARCH), WINNT)
-	COMPONENT_PULL_METHOD=FTP
-endif
-
-ifeq ($(COMPONENT_PULL_METHOD), FTP)
-	COMP_PULL_ARG="USE_FTP=YES"
-endif
 
 all:	FORCE
 	@echo
@@ -71,9 +65,6 @@ all:	FORCE
 	@echo "   PKG_PRIVATE_HDRS=0	do not ship private headers"
 	@echo "   PKG_PRIVATE_LIBS=0	do not ship private libraries"
 	@echo "   PKG_DEP_LIBS=0	do not ship dependent libraries"
-ifneq ($(OS_ARCH), WINNT)
-	@echo "   COMPONENT_PULL_METHOD=FTP     pull components using FTP"
-endif
 
 	@echo
 	@echo "   For internal builds, coreconf must be installed"
@@ -167,14 +158,25 @@ ifeq ($(HAVE_CCONF), 1)
 	else \
 		echo "No $(CORECONFDIR) directory found"; \
 	fi
+ifeq ($(OS_ARCH), WINNT)
 #	cd $(CORECONFDIR)/dbm; \
-#	$(MAKE) VERSION=$(DBM_RELEASE_TAG)     $(MFLAGS) $(COMP_PULL_ARG) import
+#	$(MAKE) VERSION=$(DBM_RELEASE_TAG)     $(MFLAGS) USE_FTP=YES import
 	cd $(CORECONFDIR)/nspr20; \
-	$(MAKE) VERSION=$(NSPR_RELEASE_TAG)    $(MFLAGS) $(COMP_PULL_ARG) import
+	$(MAKE) VERSION=$(NSPR_RELEASE_TAG)    $(MFLAGS) USE_FTP=YES import
 	cd $(CORECONFDIR)/security; \
-	$(MAKE) VERSION=$(NSS_RELEASE_TAG)     $(MFLAGS) $(COMP_PULL_ARG) import
+	$(MAKE) VERSION=$(NSS_RELEASE_TAG)     $(MFLAGS) USE_FTP=YES import
 	cd $(CORECONFDIR)/svrcore; \
-	$(MAKE) VERSION=$(SVRCORE_RELEASE_TAG) $(MFLAGS) $(COMP_PULL_ARG) import
+	$(MAKE) VERSION=$(SVRCORE_RELEASE_TAG) $(MFLAGS) USE_FTP=YES import
+else
+#	cd $(CORECONFDIR)/dbm; \
+#	$(MAKE) VERSION=$(DBM_RELEASE_TAG)     $(MFLAGS) import
+	cd $(CORECONFDIR)/nspr20; \
+	$(MAKE) VERSION=$(NSPR_RELEASE_TAG)    $(MFLAGS) import
+	cd $(CORECONFDIR)/security; \
+	$(MAKE) VERSION=$(NSS_RELEASE_TAG)     $(MFLAGS) import
+	cd $(CORECONFDIR)/svrcore; \
+	$(MAKE) VERSION=$(SVRCORE_RELEASE_TAG) $(MFLAGS) import
+endif
 endif
 endif
 
