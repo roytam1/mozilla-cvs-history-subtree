@@ -211,15 +211,22 @@ public:
   PRBool   OnComposition(nsCompositionEvent &aEvent) { return OnInput(aEvent); };
   PRBool   OnInput(nsInputEvent &aEvent);
 
+  // this will return the GtkWidget * that owns this object
+  virtual GtkWidget *GetOwningWidget();
+
   // the event handling code needs to let us know the time of the last event
   static void SetLastEventTime(guint32 aTime);
   static void GetLastEventTime(guint32 *aTime);
 
-  static void DropMotionTarget(void) { sButtonMotionTarget = nsnull; };
+  static void DropMotionTarget(void);
 
   // inform the widget code that we are about to do a drag - it must
   // release the sButtonMotionTarget if it is set.
   static void DragStarted(void) { DropMotionTarget(); };
+
+  // give the widget code the chance to process some button events if
+  // there's a passive grab in effect
+  static PRBool ProcessButtonEvent(GdkEvent *aEvent);
 
 protected:
 
@@ -424,9 +431,7 @@ private:
   //
   // Keep track of the last widget being "dragged"
   //
-public:
   static nsWidget *sButtonMotionTarget;
-private:
   static gint sButtonMotionRootX;
   static gint sButtonMotionRootY;
   static gint sButtonMotionWidgetX;

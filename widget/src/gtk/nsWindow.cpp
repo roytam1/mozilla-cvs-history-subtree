@@ -1058,7 +1058,7 @@ NS_IMETHODIMP nsWindow::SetCursor(nsCursor aCursor)
   // the toplevel window to handle it.
   if (!mMozArea) {
     // find the toplevel mozarea for this widget
-    GtkWidget *top_mozarea = GetMozArea();
+    GtkWidget *top_mozarea = GetOwningWidget();
     void *data = gtk_object_get_data(GTK_OBJECT(top_mozarea), "nsWindow");
     nsWindow *mozAreaWindow = NS_STATIC_CAST(nsWindow *, data);
     return mozAreaWindow->SetCursor(aCursor);
@@ -1221,7 +1221,7 @@ nsWindow::SetFocus(PRBool aRaise)
   printf("nsWindow::SetFocus %p\n", NS_STATIC_CAST(void *, this));
 #endif /* DEBUG_FOCUS */
 
-  GtkWidget *top_mozarea = GetMozArea();
+  GtkWidget *top_mozarea = GetOwningWidget();
   GtkWidget *toplevel = nsnull;
 
   if (top_mozarea)
@@ -2096,7 +2096,7 @@ NS_METHOD nsWindow::CreateNative(GtkObject *parentWidget)
 
   // Any time the toplevel window invalidates mark ourselves as dirty
   // with respect to caching window positions.
-  GtkWidget *top_mozarea = GetMozArea();
+  GtkWidget *top_mozarea = GetOwningWidget();
   if (top_mozarea) {
     gtk_signal_connect_while_alive(GTK_OBJECT(top_mozarea),
                                    "toplevel_configure",
@@ -2878,7 +2878,7 @@ NS_IMETHODIMP nsWindow::Resize(PRInt32 aX, PRInt32 aY, PRInt32 aWidth,
 NS_IMETHODIMP nsWindow::GetAttention(void)
 {
   // get the next up moz area
-  GtkWidget *top_mozarea = GetMozArea();
+  GtkWidget *top_mozarea = GetOwningWidget();
   if (top_mozarea) {
     GtkWidget *top_window = gtk_widget_get_toplevel(top_mozarea);
     if (top_window && GTK_WIDGET_VISIBLE(top_window)) {
@@ -3048,7 +3048,7 @@ nsWindow::HandleXlibConfigureNotifyEvent(XEvent *event)
 
 // Return the GtkMozArea that is the nearest parent of this widget
 GtkWidget *
-nsWindow::GetMozArea()
+nsWindow::GetOwningWidget()
 {
   GdkWindow *parent = nsnull;
   GtkWidget *widget;
@@ -3083,27 +3083,20 @@ nsWindow::GetMozArea()
   return (GtkWidget *)mMozAreaClosestParent;
 }
 
+/* static */
 PRBool
 nsWindow::GrabInProgress(void)
 {
-  // there is either an active grab or a passive grab because of a
-  // button motion event
-  return nsWindow::sIsGrabbing || nsWidget::sButtonMotionTarget;
+  return nsWindow::sIsGrabbing;
 }
 
 /* static */
 nsWindow *
 nsWindow::GetGrabWindow(void)
 {
-  if (nsWidget::sButtonMotionTarget) {
-    return NS_STATIC_CAST(nsWindow *, sButtonMotionTarget);
-  }
-
   if (nsWindow::sIsGrabbing)
-  {
     return sGrabWindow;
-  }
-  
+
   return nsnull;
 }
 
@@ -3143,7 +3136,7 @@ GtkWindow *nsWindow::GetTopLevelWindow(void)
 
   if (!mSuperWin)
     return NULL;
-  moz_area = GetMozArea();
+  moz_area = GetOwningWidget();
   return GTK_WINDOW(gtk_widget_get_toplevel(moz_area));
 }
 
@@ -3947,7 +3940,7 @@ nsWindow::IMEGetShellWindow(void)
 {
   if (!mIMEShellWindow) {
     nsWindow *mozAreaWindow = nsnull;
-    GtkWidget *top_mozarea = GetMozArea();
+    GtkWidget *top_mozarea = GetOwningWidget();
     if (top_mozarea) {
       mozAreaWindow = NS_STATIC_CAST(nsWindow *,
                     gtk_object_get_data(GTK_OBJECT(top_mozarea), "nsWindow"));
