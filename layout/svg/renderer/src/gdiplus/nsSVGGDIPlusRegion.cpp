@@ -194,7 +194,7 @@ nsresult NS_NewSVGGDIPlusClonedRegion(nsISVGRendererRegion** result,
   {
     nsIDeviceContext* devicecontext = presContext->DeviceContext();
     // this better be what we think it is:
-    win = (HWND)((nsDeviceContextWin *)(devicecontext.get()))->mWidget;
+    win = (HWND)((nsDeviceContextWin *)devicecontext)->mWidget;
     devicehandle = ::GetDC(win);
   }
 
