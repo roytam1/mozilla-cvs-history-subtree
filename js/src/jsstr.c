@@ -1342,8 +1342,11 @@ find_split(JSContext *cx, JSString *str, JSRegExp *re, jsint *ip,
 		 * sep->length to our return value.
 		 */
 		if ((size_t)i == str->length) {
-		    sep->length = 1;
-		    return i;
+                    if (cx->version == JSVERSION_1_2) {
+		        sep->length = 1;
+		        return i;
+                    }
+                    return -1;
 		}
 		i++;
 		goto again;
