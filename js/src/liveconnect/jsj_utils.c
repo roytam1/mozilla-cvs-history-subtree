@@ -1,4 +1,4 @@
-/* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "License"); you may not use this file except in
@@ -213,16 +213,40 @@ vreport_java_error(JSContext *cx, JNIEnv *jEnv, const char *format, va_list ap)
     const char *java_stack_trace;
     const char *java_error_msg;
     jthrowable java_exception;
-        
+    jsval js_exception;
+    
     java_error_msg = NULL;
     java_exception = (*jEnv)->ExceptionOccurred(jEnv);
-    if (java_exception && njJSException && 
-        (*jEnv)->IsInstanceOf(jEnv, java_exception, njJSException)) {
-        (*jEnv)->ExceptionClear(jEnv);
-        jsj_ReportUncaughtJSException(cx, jEnv, java_exception);
-        return;
-    }
+    if (java_exception) {
+        if (njJSException &&    /* Check for JSException */
+            (*jEnv)->IsInstanceOf(jEnv, java_exception, njJSException)) {
+            (*jEnv)->ExceptionClear(jEnv);
+            jsj_ReportUncaughtJSException(cx, jEnv, java_exception);
+            return;
+            
+#if 0
+        } else if (njJSWrappedException && /* Check for JSWrappedException */
+                   (*jEnv)->IsInstanceOf(jEnv, java_exception, 
+                                         njJSWrappedException)) {
+            js_exception = (jsval)((*jEnv)->GetIntField(jEnv, java_exception, 
+                                                          njJSWrappedException_jsval));
+            JS_SetPendingException(cx, js_exception);                        
+            
+            (*jEnv)->ExceptionClear(jEnv);
+            return;
+#endif        
+        } else { /* Check for internal exception */
+            if (!JSJ_ConvertJavaObjectToJSValue(cx, java_exception,
+                                                &js_exception))
+                goto do_report;
 
+            JS_SetPendingException(cx, js_exception);                        
+            (*jEnv)->ExceptionClear(jEnv);  
+            return;
+        }
+    }
+ 
+do_report:
     js_error_msg = JS_vsmprintf(format, ap);
 
     if (!js_error_msg) {
