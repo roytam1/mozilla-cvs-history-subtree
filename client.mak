@@ -216,7 +216,9 @@ pull_and_build_all: pull_all depend build_all
 
 pull_clobber_and_build_all: pull_all clobber_all build_all
 
-pull_all: pull_nspr pull_psm pull_ldapcsdk pull_accessible pull_gfx2 pull_imglib2 pull_seamonkey
+# I don't *want* pull_psm
+# pull_all: pull_nspr pull_psm pull_ldapcsdk pull_accessible pull_gfx2 pull_imglib2 pull_seamonkey
+pull_all: pull_nspr pull_ldapcsdk pull_accessible pull_gfx2 pull_imglib2 pull_seamonkey
 
 pull_nspr: pull_clientmak
       cd $(MOZ_SRC)\.
