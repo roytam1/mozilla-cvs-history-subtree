@@ -894,7 +894,7 @@ XFE_PixmapMenu::XFE_PixmapMenu(Widget         parent,
 	Widget       menu = getMenuWidget();
 
 	for (; child_spec->toolbarButtonName != NULL; child_spec++) {
-		XFE_XmPushButton* baby = new XFE_XmPushButton(menu, child_spec, this);
+		XFE_XmPushButton* baby = new XFE_XmPushButton(menu, child_spec, tb);
 		baby->show();
 	}
 }
