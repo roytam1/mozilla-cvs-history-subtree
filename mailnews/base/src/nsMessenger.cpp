@@ -52,10 +52,10 @@
 #include "nsRDFCID.h"
 #include "nsIAppShell.h"
 #include "nsIAppShellService.h"
+#include "nsIIOService.h"
 #include "nsAppShellCIDs.h"
 #include "nsMsgRDFUtils.h"
 
-#include "nsINetService.h"
 #include "nsICopyMsgStreamListener.h"
 #include "nsICopyMessageListener.h"
 
@@ -73,11 +73,11 @@
 #include "nsMsgCompCID.h"
 #include "nsIMsgSendLaterListener.h"
 
+static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 static NS_DEFINE_CID(kCMsgMailSessionCID, NS_MSGMAILSESSION_CID); 
 static NS_DEFINE_CID(kCPop3ServiceCID, NS_POP3SERVICE_CID);
 static NS_DEFINE_CID(kRDFServiceCID,	NS_RDFSERVICE_CID);
-static NS_DEFINE_IID(kIDocumentViewerIID,     NS_IDOCUMENT_VIEWER_IID);
-static NS_DEFINE_CID(kNetServiceCID, NS_NETSERVICE_CID); 
+static NS_DEFINE_IID(kIDocumentViewerIID,     NS_IDOCUMENT_VIEWER_IID); 
 static NS_DEFINE_IID(kAppShellServiceCID,        NS_APPSHELL_SERVICE_CID);
 static NS_DEFINE_CID(kTransactionManagerCID, NS_TRANSACTIONMANAGER_CID);
 static NS_DEFINE_CID(kComponentManagerCID,  NS_COMPONENTMANAGER_CID);
@@ -257,7 +257,7 @@ NS_IMPL_ISUPPORTS(nsMessenger, nsIMessenger::GetIID())
 NS_IMETHODIMP    
 nsMessenger::Open3PaneWindow()
 {
-	char *  urlstr=nsnull;
+	const char *  urlstr=nsnull;
 	nsresult rv = NS_OK;
 	
 	nsCOMPtr<nsIWebShellWindow> newWindow;
@@ -265,17 +265,15 @@ nsMessenger::Open3PaneWindow()
 	urlstr = "resource:/res/samples/messenger.html";
 	NS_WITH_SERVICE(nsIAppShellService, appShell, kAppShellServiceCID, &rv);
   
-	nsIURI* url = nsnull;
-	NS_WITH_SERVICE(nsINetService, pNetService, kNetServiceCID, &rv);
-	if (NS_SUCCEEDED(rv) && pNetService) {
-		rv = pNetService->CreateURL(&url, urlstr);
-		if (NS_FAILED(rv))
-			goto done;		// goto in C++ is evil!
-	}
-	else
-		goto done;		// goto in C++ is evil!
+	nsCOMPtr<nsIURI> url;
+	NS_WITH_SERVICE(nsIIOService, pNetService, kIOServiceCID, &rv);
 
-	appShell->CreateTopLevelWindow(nsnull,      // parent
+	if (NS_SUCCEEDED(rv) && pNetService) 
+		rv = pNetService->NewURI(urlstr, nsnull, getter_AddRefs(url));
+
+
+	if (NS_SUCCEEDED(rv))
+		rv = appShell->CreateTopLevelWindow(nsnull,      // parent
                                    url,
                                    PR_TRUE,
                                    getter_AddRefs(newWindow),   // result widget
@@ -283,9 +281,7 @@ nsMessenger::Open3PaneWindow()
                                    nsnull,      // callbacks
                                    200,         // width
                                    200);        // height
-	done:
-	NS_IF_RELEASE(url);
-	return NS_OK;
+	return rv;
 }
 
 nsresult
