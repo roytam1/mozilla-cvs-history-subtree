@@ -26,6 +26,7 @@ interface nsIContentViewer : nsISupports
 
   void loadStart(in nsISupports aDoc);
   void loadComplete(in unsigned long aStatus);
+  void unload();
 
   void destroy();
   void stop();
