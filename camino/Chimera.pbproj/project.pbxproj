@@ -56,6 +56,7 @@
 //104
 		1058C7A0FEA54F0111CA2CBB = {
 			children = (
+				F55A4DED0380705A01A80166,
 				1058C7A1FEA54F0111CA2CBB,
 				F557193A022B4102010001CA,
 				F52D5CDB027D412A01A80166,
@@ -271,11 +272,12 @@
 				F54EF7EF022A2F9D01A80165,
 				F5F24BDB022B88EF010001CA,
 				29B9732DFDCFA39411CA2CEA,
+				F55A4D8E03806CF601A80166,
 			);
 			buildSettings = {
 				DEBUGGING_SYMBOLS = NO;
 				FRAMEWORK_SEARCH_PATHS = "";
-				HEADER_SEARCH_PATHS = "../dist/include/exthandler ../dist/include/helperAppDlg ../dist/include/intl ../dist/include/pipboot ../dist/include/pipnss ../dist/include/webbrwsr ../dist/include/dom ../dist/include/nspr ../dist/include/string ../dist/include/rdf ../dist/include/necko ../dist/include/find ../dist/include/embed_base ../dist/include/commandhandler ../dist/include/windowwatcher ../dist/include/webshell ../dist/include/widget ../dist/include/uriloader ../dist/include/nkcache ../dist/include/docshell ../dist/include/profile ../dist/include/layout ../dist/include/content ../dist/include/webbrowserpersist ../dist/include/pref ../dist/include/mimetype ../dist/include/shistory ../dist/include/view ../dist/include/gfx ../dist/include/xultmpl ../dist/include/xmlextras ../dist/include/htmlparser ../dist/include/locale ../dist/include/unicharutil ../dist/include/appcomps ../dist/include/chrome ../dist/include/xpcom ../dist/include/ \"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon\"";
+				HEADER_SEARCH_PATHS = "../dist/include/exthandler ../dist/include/helperAppDlg ../dist/include/intl ../dist/include/pipboot ../dist/include/pipnss ../dist/include/webbrwsr ../dist/include/dom ../dist/include/nspr ../dist/include/string ../dist/include/rdf ../dist/include/necko ../dist/include/find ../dist/include/embed_base ../dist/include/commandhandler ../dist/include/windowwatcher ../dist/include/webshell ../dist/include/widget ../dist/include/uriloader ../dist/include/nkcache ../dist/include/docshell ../dist/include/profile ../dist/include/layout ../dist/include/content ../dist/include/webbrowserpersist ../dist/include/pref ../dist/include/mimetype ../dist/include/shistory ../dist/include/view ../dist/include/gfx ../dist/include/xultmpl ../dist/include/xmlextras ../dist/include/htmlparser ../dist/include/locale ../dist/include/unicharutil ../dist/include/appcomps ../dist/include/chrome ../dist/include/xpcom ../dist/include/ \"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon\" \"$(LOCAL_LIBRARY_DIR)/Frameworks/SharedMenusCocoa.framework/Headers\"";
 				INSTALL_PATH = "$(HOME)/Applications";
 				LIBRARY_SEARCH_PATHS = "../dist/bin ../dist/lib ../dist/Embed/components ../intl/unicharutil/util ../modules/zlib/src";
 				OPTIMIZATION_CFLAGS = "-O2";
@@ -716,6 +718,7 @@
 				F52D5CDF027D412A01A80166,
 				F52D5CE0027D412A01A80166,
 				F5960E9C02BA686001000103,
+				F55A4DF40380705A01A80166,
 			);
 			isa = PBXFrameworksBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -4112,6 +4115,56 @@
 			path = "";
 			refType = 4;
 		};
+		F55A4D8E03806CF601A80166 = {
+			buildActionMask = 12;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				F55A4DFC03808B8201A80166,
+			);
+			isa = PBXCopyFilesBuildPhase;
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F55A4DED0380705A01A80166 = {
+			isa = PBXFrameworkReference;
+			name = SharedMenusCocoa.framework;
+			path = /Library/Frameworks/SharedMenusCocoa.framework;
+			refType = 0;
+		};
+		F55A4DF40380705A01A80166 = {
+			fileRef = F55A4DED0380705A01A80166;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F55A4DF50380705A01A80166 = {
+			fileRef = F55A4DED0380705A01A80166;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F55A4DFC03808B8201A80166 = {
+			fileRef = F55A4DED0380705A01A80166;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F55A4DFD03808BB401A80166 = {
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				F55A4DFE03808BBE01A80166,
+			);
+			isa = PBXCopyFilesBuildPhase;
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F55A4DFE03808BBE01A80166 = {
+			fileRef = F55A4DED0380705A01A80166;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
 		F55A9BC60228CCE101DAE4DB = {
 			isa = PBXFileReference;
 			name = "security-prefs.js";
@@ -6658,11 +6711,12 @@
 				F5BAAC3702AC6AA201A967F3,
 				F5BAAC3B02AC6AA201A967F3,
 				F5BAAB1D02AC45D301A967F3,
+				F55A4DFD03808BB401A80166,
 			);
 			buildSettings = {
 				DEBUGGING_SYMBOLS = NO;
-				FRAMEWORK_SEARCH_PATHS = "";
-				HEADER_SEARCH_PATHS = "../dist/include/helperAppDlg ../dist/include/exthandler ../dist/include/intl ../dist/include/pipboot ../dist/include/pipnss ../dist/include/webbrwsr ../dist/include/dom ../dist/include/nspr ../dist/include/string ../dist/include/rdf ../dist/include/necko ../dist/include/find ../dist/include/embed_base ../dist/include/commandhandler ../dist/include/windowwatcher ../dist/include/webshell ../dist/include/widget ../dist/include/uriloader ../dist/include/nkcache ../dist/include/docshell ../dist/include/profile ../dist/include/layout ../dist/include/content ../dist/include/webbrowserpersist ../dist/include/pref ../dist/include/mimetype ../dist/include/shistory ../dist/include/view ../dist/include/gfx ../dist/include/xultmpl ../dist/include/xmlextras ../dist/include/htmlparser ../dist/include/locale ../dist/include/unicharutil ../dist/include/appcomps ../dist/include/chrome ../dist/include/xpcom ../dist/include/ \"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon\"";
+				FRAMEWORK_SEARCH_PATHS = /Users/sdagley/Library/Frameworks;
+				HEADER_SEARCH_PATHS = "../dist/include/helperAppDlg ../dist/include/exthandler ../dist/include/intl ../dist/include/pipboot ../dist/include/pipnss ../dist/include/webbrwsr ../dist/include/dom ../dist/include/nspr ../dist/include/string ../dist/include/rdf ../dist/include/necko ../dist/include/find ../dist/include/embed_base ../dist/include/commandhandler ../dist/include/windowwatcher ../dist/include/webshell ../dist/include/widget ../dist/include/uriloader ../dist/include/nkcache ../dist/include/docshell ../dist/include/profile ../dist/include/layout ../dist/include/content ../dist/include/webbrowserpersist ../dist/include/pref ../dist/include/mimetype ../dist/include/shistory ../dist/include/view ../dist/include/gfx ../dist/include/xultmpl ../dist/include/xmlextras ../dist/include/htmlparser ../dist/include/locale ../dist/include/unicharutil ../dist/include/appcomps ../dist/include/chrome ../dist/include/xpcom ../dist/include/ \"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon\" \"$(LOCAL_LIBRARY_DIR)/Frameworks/SharedMenusCocoa.framework/Headers\"";
 				INSTALL_PATH = "$(HOME)/Applications";
 				LIBRARY_SEARCH_PATHS = "../dist/bin ../dist/lib ../dist/lib/components ../intl/unicharutil/src ../gfx/src ../js/src/liveconnect ../intl/unicharutil/util";
 				OPTIMIZATION_CFLAGS = "-O2";
@@ -7159,6 +7213,7 @@
 				F5FEDBCC02AD8DD101A967F3,
 				F5BAABA102AC4AA701A967F3,
 				F5BAABA202AC4AA701A967F3,
+				F55A4DF50380705A01A80166,
 			);
 			isa = PBXFrameworksBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;

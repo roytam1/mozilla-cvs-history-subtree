@@ -112,12 +112,18 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
     mMenuBookmarks = nil;
     
     [NSApp setServicesProvider:self];
+        
+    // Initialize shared menu support
+    mSharedMenusObj = [[SharedMenusObj alloc] init];
   }
   return self;
 }
 
 -(void)dealloc
 {
+  // Terminate shared menus
+  [mSharedMenusObj release];
+
   [mFindDialog release];
   [mKeychainService release];
   [super dealloc];

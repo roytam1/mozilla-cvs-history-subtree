@@ -41,6 +41,7 @@
 #import "SplashScreenWindow.h"
 #import "FindDlgController.h"
 #import "PreferenceManager.h"
+#import "SharedMenusObj.h"
 
 
 @class BookmarksMenu;
@@ -84,6 +85,8 @@
     MVPreferencesController* mPreferencesController;
 
     NSString*               mStartURL;
+    
+    SharedMenusObj*         mSharedMenusObj;
 }
 
 // File menu actions.
