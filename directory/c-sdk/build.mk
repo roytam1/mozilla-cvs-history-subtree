@@ -460,7 +460,7 @@ endif
 endif
 
 
-PERL = perl
+PERL ?= perl
 #
 # shared library symbol export definitions
 #
