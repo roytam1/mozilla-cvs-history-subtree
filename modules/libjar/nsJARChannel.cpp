@@ -662,7 +662,10 @@ nsJARChannel::GetInputStream(nsIInputStream* *aInputStream)
            ("nsJarProtocol: GetInputStream jar entry %s", (const char*)jarURLStr));
 #endif
     NS_ENSURE_TRUE(mJAR, NS_ERROR_NULL_POINTER);
-    return mJAR->GetInputStream(mJAREntry, aInputStream);
+    nsresult rv = mJAR->GetInputStream(mJAREntry, aInputStream);
+    if (NS_SUCCEEDED(rv))
+        (*aInputStream)->Available((PRUint32 *) &mContentLength);
+    return rv;
 }
  
 NS_IMETHODIMP
