@@ -525,7 +525,7 @@ var BookmarksCommand = {
    
     var selection = {item: items, parent:Array(items.length), length: items.length};
     BookmarksUtils.checkSelection(selection);
-    BookmarksUtils.insertAndCheckSelection("paste", selection, aTarget);
+    BookmarksUtils.insertAndCheckSelection("paste", selection, aTarget, -1);
   },
   
   deleteBookmark: function (aSelection)
@@ -696,7 +696,7 @@ var BookmarksCommand = {
   createNewResource: function(aResource, aTarget, aTxnType)
   {
     var selection = BookmarksUtils.getSelectionFromResource(aResource, aTarget.parent);
-    var ok        = BookmarksUtils.insertAndCheckSelection(aTxnType, selection, aTarget);
+    var ok        = BookmarksUtils.insertAndCheckSelection(aTxnType, selection, aTarget, -1);
     if (ok && aTxnType != "newseparator") {
       ok = this.openBookmarkProperties(selection);
       if (!ok)
@@ -1410,17 +1410,21 @@ var BookmarksUtils = {
     transaction.item   = new Array(aSelection.length);
     transaction.parent = new Array(aSelection.length);
     transaction.index  = new Array(aSelection.length);
-    // the -1 business is a hack for 252133; it should go away once we can
-    // consistently add things after a given element.  Note that we
-    // stopped using it, because things magically seem to work now...
-    var index = aTargetIndex ? aTargetIndex : aTarget.index;
+    var index = aTarget.index;
     for (var i=0; i<aSelection.length; ++i) {
       var rSource = aSelection.item[i];
       if (BMSVC.isBookmarkedResource(rSource))
         rSource = BMSVC.cloneResource(rSource);
       transaction.item  [i] = rSource;
       transaction.parent[i] = aTarget.parent;
-      transaction.index [i] = ((index == -1) ? -1 : ++index);
+      // if aTargetIndex is -1, then we prefix the ++,
+      // to get this thing to go to the end.  Otherwise,
+      // our caller already chose a +1'd index for us (e.g.
+      // drag and drop)
+      if (aTargetIndex == -1)
+        transaction.index [i] = (++index);
+      else
+        transaction.index [i] = (index++);
     }
     BMSVC.transactionManager.doTransaction(transaction);
   },
