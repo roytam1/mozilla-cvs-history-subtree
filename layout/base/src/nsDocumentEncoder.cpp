@@ -1085,23 +1085,26 @@ nsHTMLCopyEncoder::GetPromotedPoint(Endpoint aWhere, nsIDOMNode *aNode, PRInt32 
       if (offset == -1) return NS_OK; // we hit generated content; STOP
       while ((IsFirstNode(node)) && (!IsBody(parent)))
       {
-        nsAutoString tag;
-        nsCOMPtr<nsIAtom> atom;
-        nsCOMPtr<nsIContent> content = do_QueryInterface(parent);
-        if (content)
+        if (bResetPromotion)
         {
-          PRBool isBlock = PR_FALSE;
-          PRInt32 id;
-          content->GetTag(*getter_AddRefs(atom));
-          atom->ToString(tag);
-          mParserService->HTMLStringTagToId(tag, &id);
-          mParserService->IsBlock(id, isBlock);
-          if (isBlock)
+          nsAutoString tag;
+          nsCOMPtr<nsIAtom> atom;
+          nsCOMPtr<nsIContent> content = do_QueryInterface(parent);
+          if (content)
           {
-            bResetPromotion = PR_FALSE;
-          }
-        }   
-          
+            PRBool isBlock = PR_FALSE;
+            PRInt32 id;
+            content->GetTag(*getter_AddRefs(atom));
+            atom->ToString(tag);
+            mParserService->HTMLStringTagToId(tag, &id);
+            mParserService->IsBlock(id, isBlock);
+            if (isBlock)
+            {
+              bResetPromotion = PR_FALSE;
+            }
+          }   
+        }
+         
         node = parent;
         rv = GetNodeLocation(node, &parent, &offset);
         NS_ENSURE_SUCCESS(rv, rv);
@@ -1167,22 +1170,25 @@ nsHTMLCopyEncoder::GetPromotedPoint(Endpoint aWhere, nsIDOMNode *aNode, PRInt32 
       if (offset == -1) return NS_OK; // we hit generated content; STOP
       while ((IsLastNode(node)) && (!IsBody(parent)))
       {
-        nsAutoString tag;
-        nsCOMPtr<nsIAtom> atom;
-        nsCOMPtr<nsIContent> content = do_QueryInterface(parent);
-        if (content)
+        if (bResetPromotion)
         {
-          PRBool isBlock = PR_FALSE;
-          PRInt32 id;
-          content->GetTag(*getter_AddRefs(atom));
-          atom->ToString(tag);
-          mParserService->HTMLStringTagToId(tag, &id);
-          mParserService->IsBlock(id, isBlock);
-          if (isBlock)
+          nsAutoString tag;
+          nsCOMPtr<nsIAtom> atom;
+          nsCOMPtr<nsIContent> content = do_QueryInterface(parent);
+          if (content)
           {
-            bResetPromotion = PR_FALSE;
-          }
-        }   
+            PRBool isBlock = PR_FALSE;
+            PRInt32 id;
+            content->GetTag(*getter_AddRefs(atom));
+            atom->ToString(tag);
+            mParserService->HTMLStringTagToId(tag, &id);
+            mParserService->IsBlock(id, isBlock);
+            if (isBlock)
+            {
+              bResetPromotion = PR_FALSE;
+            }
+          }   
+        }
           
         node = parent;
         rv = GetNodeLocation(node, &parent, &offset);
