@@ -89,7 +89,7 @@ protected:
 };
 
 
-NS_IMPL_ISUPPORTS1(StreamLoaderContext, nsISupports)
+NS_IMPL_THREADSAFE_ISUPPORTS1(StreamLoaderContext, nsISupports)
 
 void StreamLoaderContext::LoadComplete(nsresult inLoadStatus, const void* inData, unsigned int inDataLength)
 {
