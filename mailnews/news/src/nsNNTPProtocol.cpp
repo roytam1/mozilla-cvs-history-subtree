@@ -3140,8 +3140,6 @@ nsNNTPProtocol::Notify(nsITimer *timer)
 
 void nsNNTPProtocol::TimerCallback()
 {
-    printf("XXX TimerCallback()\n");
-
 	m_nextState = NNTP_READ_LIST;
 	ProcessProtocolState(nsnull, mInputStream, 0,0); 
 #if 0

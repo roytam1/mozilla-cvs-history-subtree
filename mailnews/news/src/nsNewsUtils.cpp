@@ -171,8 +171,8 @@ nsNewsURI2Path(const char* rootURI, const char* uriStr, nsFileSpec& pathResult)
 nsresult 
 nsParseNewsMessageURI(const char* uri, nsCString& folderURI, PRUint32 *key)
 {
-	if(!key)
-		return NS_ERROR_NULL_POINTER;
+    NS_ENSURE_ARG_POINTER(uri);
+    NS_ENSURE_ARG_POINTER(key);
 
 	nsCAutoString uriStr(uri);
 	PRInt32 keySeparator = uriStr.FindChar('#');
@@ -196,7 +196,6 @@ nsParseNewsMessageURI(const char* uri, nsCString& folderURI, PRUint32 *key)
 		return errorCode;
 	}
 	return NS_ERROR_FAILURE;
-
 }
 
 nsresult nsGetNewsGroupFromUri(const char *uri, nsIMsgNewsFolder **aFolder)
@@ -218,16 +217,14 @@ nsresult nsGetNewsGroupFromUri(const char *uri, nsIMsgNewsFolder **aFolder)
 
   if (!*aFolder) return NS_ERROR_FAILURE;
   return NS_OK;
-
 }
 
 nsresult nsBuildNewsMessageURI(const char *baseURI, PRUint32 key, nsCString& uri)
 {
-	uri.Append(baseURI);
-	uri.Append('#');
-
+  uri.Append(baseURI);
+  uri.Append('#');
   uri.AppendInt(key);
-	return NS_OK;
+  return NS_OK;
 }
 
 nsresult nsCreateNewsBaseMessageURI(const char *baseURI, char **baseMessageURI)
