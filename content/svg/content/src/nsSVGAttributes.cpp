@@ -320,7 +320,7 @@ NS_IMETHODIMP
 nsSVGAttribute::SetValue(const nsAReadableString& aValue)
 {
   if (mOwner) {
-    return mOwner->SetAttribute(mNodeInfo, aValue, PR_TRUE);
+    return mOwner->SetAttr(mNodeInfo, aValue, PR_TRUE);
   }
 
   return GetValue()->SetValueString(aValue);
@@ -520,9 +520,9 @@ nsSVGAttributes::Count()
 }
 
 NS_IMETHODIMP
-nsSVGAttributes::GetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName, 
-                              nsIAtom*& aPrefix,
-                              nsAWritableString& aResult)
+nsSVGAttributes::GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
+                         nsIAtom*& aPrefix,
+                         nsAWritableString& aResult)
 {
   NS_ASSERTION(nsnull != aName, "must have attribute name");
   if (nsnull == aName) {
@@ -562,9 +562,9 @@ nsSVGAttributes::GetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName,
 }
 
 NS_IMETHODIMP
-nsSVGAttributes::SetAttribute(nsINodeInfo* aNodeInfo,
-                              const nsAReadableString& aValue,
-                              PRBool aNotify)
+nsSVGAttributes::SetAttr(nsINodeInfo* aNodeInfo,
+                         const nsAReadableString& aValue,
+                         PRBool aNotify)
 {
   NS_ENSURE_ARG_POINTER(aNodeInfo);
   PRBool modification = PR_FALSE;
@@ -657,8 +657,8 @@ nsSVGAttributes::SetAttribute(nsINodeInfo* aNodeInfo,
 }
 
 NS_IMETHODIMP
-nsSVGAttributes::UnsetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName, 
-                                PRBool aNotify)
+nsSVGAttributes::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
+                           PRBool aNotify)
 {
   NS_ASSERTION(nsnull != aName, "must have attribute name");
   if (nsnull == aName) {
@@ -733,8 +733,8 @@ nsSVGAttributes::UnsetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName,
 
 
 NS_IMETHODIMP
-nsSVGAttributes::NormalizeAttributeString(const nsAReadableString& aStr,
-                                          nsINodeInfo*& aNodeInfo)
+nsSVGAttributes::NormalizeAttrString(const nsAReadableString& aStr,
+                                     nsINodeInfo*& aNodeInfo)
 {
   PRInt32 indx, count = Count();
   for (indx = 0; indx < count; indx++) {
@@ -761,10 +761,10 @@ nsSVGAttributes::NormalizeAttributeString(const nsAReadableString& aStr,
 }
 
 NS_IMETHODIMP
-nsSVGAttributes::GetAttributeNameAt(PRInt32 aIndex,
-                                    PRInt32& aNameSpaceID, 
-                                    nsIAtom*& aName,
-                                    nsIAtom*& aPrefix)
+nsSVGAttributes::GetAttrNameAt(PRInt32 aIndex,
+                               PRInt32& aNameSpaceID, 
+                               nsIAtom*& aName,
+                               nsIAtom*& aPrefix)
 {
   nsSVGAttribute* attr = ElementAt(aIndex);
   if (attr) {
@@ -819,7 +819,7 @@ nsSVGAttributes::CopyAttributes(nsSVGAttributes* dest)
     nsAutoString value;
     rv = attr->GetValue()->GetValueString(value);
     NS_ENSURE_SUCCESS(rv,rv);
-    rv = dest->SetAttribute(attr->GetNodeInfo(), value, PR_FALSE);
+    rv = dest->SetAttr(attr->GetNodeInfo(), value, PR_FALSE);
     NS_ENSURE_SUCCESS(rv,rv);
   }
   return NS_OK;
@@ -866,7 +866,7 @@ nsSVGAttributes::GetNamedItem(const nsAReadableString& aName,
   
   nsCOMPtr<nsINodeInfo> inpNodeInfo;
   
-  if (NS_FAILED(rv = mContent->NormalizeAttributeString(aName, *getter_AddRefs(inpNodeInfo))))
+  if (NS_FAILED(rv = mContent->NormalizeAttrString(aName, *getter_AddRefs(inpNodeInfo))))
     return rv;
   
   for (PRInt32 i = mAttributes.Count() - 1; i >= 0; --i) {

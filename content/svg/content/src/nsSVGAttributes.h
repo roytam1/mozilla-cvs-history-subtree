@@ -149,20 +149,20 @@ public:
   // interface for the content element:
 
   PRInt32 Count();
-  NS_IMETHOD GetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName, 
-                          nsIAtom*& aPrefix,
-                          nsAWritableString& aResult);
-  NS_IMETHOD SetAttribute(nsINodeInfo* aNodeInfo,
-                          const nsAReadableString& aValue,
-                          PRBool aNotify);
-  NS_IMETHOD UnsetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName, 
-                            PRBool aNotify);
-  NS_IMETHOD NormalizeAttributeString(const nsAReadableString& aStr,
-                                      nsINodeInfo*& aNodeInfo);
-  NS_IMETHOD GetAttributeNameAt(PRInt32 aIndex,
-                                PRInt32& aNameSpaceID, 
-                                nsIAtom*& aName,
-                                nsIAtom*& aPrefix);
+  NS_IMETHOD GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
+                     nsIAtom*& aPrefix,
+                     nsAWritableString& aResult);
+  NS_IMETHOD SetAttr(nsINodeInfo* aNodeInfo,
+                     const nsAReadableString& aValue,
+                     PRBool aNotify);
+  NS_IMETHOD UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
+                       PRBool aNotify);
+  NS_IMETHOD NormalizeAttrString(const nsAReadableString& aStr,
+                                 nsINodeInfo*& aNodeInfo);
+  NS_IMETHOD GetAttrNameAt(PRInt32 aIndex,
+                           PRInt32& aNameSpaceID, 
+                           nsIAtom*& aName,
+                           nsIAtom*& aPrefix);
 
   NS_IMETHOD AddMappedSVGValue(nsIAtom* name, nsISupports* value);
 
@@ -176,7 +176,8 @@ protected:
   // implementation helpers:
   void ReleaseAttributes();
   void ReleaseMappedAttributes();
-  PRBool GetMappedAttribute(nsINodeInfo* aNodeInfo, nsSVGAttribute** attrib);
+  PRBool GetMappedAttribute(nsINodeInfo* aNodeInfo, nsSVGAttribute** 
+attrib);
 
   PRBool IsExplicitAttribute(nsSVGAttribute* attrib);
   PRBool IsMappedAttribute(nsSVGAttribute* attrib);  

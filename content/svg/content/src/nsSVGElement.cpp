@@ -311,16 +311,16 @@ nsSVGElement::RemoveChildAt(PRInt32 aIndex, PRBool aNotify)
 }
 
 NS_IMETHODIMP
-nsSVGElement::NormalizeAttributeString(const nsAReadableString& aStr,
+nsSVGElement::NormalizeAttrString(const nsAReadableString& aStr,
                                        nsINodeInfo*& aNodeInfo)
 {
-  return mAttributes->NormalizeAttributeString(aStr, aNodeInfo);
+  return mAttributes->NormalizeAttrString(aStr, aNodeInfo);
 }
 
 NS_IMETHODIMP
-nsSVGElement::SetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName, 
-                          const nsAReadableString& aValue,
-                          PRBool aNotify)
+nsSVGElement::SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
+                      const nsAReadableString& aValue,
+                      PRBool aNotify)
 {
     nsCOMPtr<nsINodeInfoManager> nimgr;
 
@@ -330,51 +330,51 @@ nsSVGElement::SetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName,
     nsCOMPtr<nsINodeInfo> ni;
     nimgr->GetNodeInfo(aName, nsnull, aNameSpaceID, *getter_AddRefs(ni));
 
-    return SetAttribute(ni, aValue, aNotify);
+    return SetAttr(ni, aValue, aNotify);
 }
 
 NS_IMETHODIMP
-nsSVGElement::SetAttribute(nsINodeInfo* aNodeInfo,
-                          const nsAReadableString& aValue,
-                          PRBool aNotify)
+nsSVGElement::SetAttr(nsINodeInfo* aNodeInfo,
+                      const nsAReadableString& aValue,
+                      PRBool aNotify)
 {
-  return mAttributes->SetAttribute(aNodeInfo, aValue, aNotify);  
+  return mAttributes->SetAttr(aNodeInfo, aValue, aNotify);  
 }
 
 NS_IMETHODIMP
-nsSVGElement::GetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName, 
+nsSVGElement::GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
                            nsAWritableString& aResult) const
 {
   nsCOMPtr<nsIAtom> prefix;
-  return GetAttribute(aNameSpaceID, aName, *getter_AddRefs(prefix), aResult);
+  return GetAttr(aNameSpaceID, aName, *getter_AddRefs(prefix), aResult);
 }
 
 NS_IMETHODIMP
-nsSVGElement::GetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName, 
-                          nsIAtom*& aPrefix,
-                          nsAWritableString& aResult) const
+nsSVGElement::GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
+                      nsIAtom*& aPrefix,
+                      nsAWritableString& aResult) const
 {
-  return mAttributes->GetAttribute(aNameSpaceID, aName, aPrefix, aResult);
+  return mAttributes->GetAttr(aNameSpaceID, aName, aPrefix, aResult);
 }
 
 NS_IMETHODIMP
-nsSVGElement::UnsetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName, 
-                            PRBool aNotify)
+nsSVGElement::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
+                        PRBool aNotify)
 {
-  return mAttributes->UnsetAttribute(aNameSpaceID, aName, aNotify);
+  return mAttributes->UnsetAttr(aNameSpaceID, aName, aNotify);
 }
 
 NS_IMETHODIMP
-nsSVGElement::GetAttributeNameAt(PRInt32 aIndex,
-                                PRInt32& aNameSpaceID, 
-                                nsIAtom*& aName,
-                                nsIAtom*& aPrefix) const
+nsSVGElement::GetAttrNameAt(PRInt32 aIndex,
+                            PRInt32& aNameSpaceID, 
+                            nsIAtom*& aName,
+                            nsIAtom*& aPrefix) const
 {
-  return mAttributes->GetAttributeNameAt(aIndex, aNameSpaceID, aName, aPrefix);
+  return mAttributes->GetAttrNameAt(aIndex, aNameSpaceID, aName, aPrefix);
 }
 
 NS_IMETHODIMP
-nsSVGElement::GetAttributeCount(PRInt32& aResult) const
+nsSVGElement::GetAttrCount(PRInt32& aResult) const
 {
   aResult = mAttributes->Count();
   return NS_OK;
@@ -681,7 +681,7 @@ nsSVGElement::HasAttributes(PRBool* aReturn)
   
   PRInt32 attrCount = 0;
   
-  GetAttributeCount(attrCount);
+  GetAttrCount(attrCount);
   
   *aReturn = (attrCount > 0);
   
