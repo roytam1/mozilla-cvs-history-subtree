@@ -114,8 +114,10 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsMIMEInfoImpl)
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsRequestObserverProxy)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsSimpleStreamListener)
+#ifndef MOZ_MINOTAUR
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsDirIndexParser, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDirIndex)
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 
