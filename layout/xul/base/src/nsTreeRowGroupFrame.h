@@ -40,6 +40,9 @@ public:
 
   NS_IMETHOD  TreeInsertFrames(nsIFrame*       aPrevFrame,
                                nsIFrame*       aFrameList);
+
+  PRBool ContinueReflow(nscoord y, nscoord height);
+
 protected:
   nsTreeRowGroupFrame();
   virtual ~nsTreeRowGroupFrame();

@@ -230,3 +230,13 @@ nsTreeRowGroupFrame::TreeAppendFrames(nsIFrame* aFrameList)
   mFrames.AppendFrames(nsnull, aFrameList);
   return NS_OK;
 }
+
+PRBool nsTreeRowGroupFrame::ContinueReflow(nscoord y, nscoord height) 
+{ 
+  printf("Y is: %d\n", y);
+  printf("Height is: %d\n", height); 
+  if (y > height)
+    return PR_FALSE;
+  else return PR_TRUE;
+}
+  

@@ -492,6 +492,9 @@ NS_METHOD nsTableRowGroupFrame::ReflowMappedChildren(nsIPresContext&      aPresC
     if (PR_FALSE==aDoSiblings)
       break;
 
+    if (!ContinueReflow(aReflowState.y, aReflowState.availSize.height))
+      break;
+
     // Get the next child
     GetNextFrame(aPresContext, kidFrame, &kidFrame);
     //kidFrame->GetNextSibling(&kidFrame);

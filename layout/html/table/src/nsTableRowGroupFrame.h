@@ -174,6 +174,8 @@ public:
   
   virtual PRBool RowGroupReceivesExcessSpace() { return PR_TRUE; }
 
+  virtual PRBool ContinueReflow(nscoord y, nscoord height) { return PR_TRUE; }
+
 protected:
 
   /** implement abstract method on nsHTMLContainerFrame */
