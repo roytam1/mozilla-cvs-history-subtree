@@ -23,11 +23,11 @@
 
 #include "nsDOMClassInfo.h"
 #include "nsCRT.h"
-
 #include "nsIServiceManager.h"
 #include "nsIXPConnect.h"
 #include "nsIJSContextStack.h"
 #include "nsIScriptContext.h"
+#include "nsIXPCSecurityManager.h"
 
 // JavaScript includes
 #include "jsapi.h"
@@ -468,6 +468,7 @@ nsDOMClassInfoData sClassInfoData[] = {
 };
 
 nsIXPConnect *nsDOMClassInfo::sXPConnect = nsnull;
+nsIScriptSecurityManager *nsDOMClassInfo::sSecMan = nsnull;
 PRBool nsDOMClassInfo::sIsInitialized = PR_FALSE;
 
 
@@ -475,6 +476,7 @@ PRBool nsDOMClassInfo::sIsInitialized = PR_FALSE;
 JSString *nsDOMClassInfo::sTop_id             = nsnull;
 JSString *nsDOMClassInfo::sScrollbars_id      = nsnull;
 JSString *nsDOMClassInfo::sLocation_id        = nsnull;
+JSString *nsDOMClassInfo::sComponents_id      = nsnull;
 JSString *nsDOMClassInfo::s_content_id        = nsnull;
 JSString *nsDOMClassInfo::sContent_id         = nsnull;
 JSString *nsDOMClassInfo::sSidebar_id         = nsnull;
@@ -519,6 +521,7 @@ nsDOMClassInfo::DefineStaticJSStrings(JSContext *cx)
 
   sScrollbars_id     = ::JS_InternString(cx, "scrollbars");
   sLocation_id       = ::JS_InternString(cx, "location");
+  sComponents_id     = ::JS_InternString(cx, "Components");
   s_content_id       = ::JS_InternString(cx, "_content");
   sContent_id        = ::JS_InternString(cx, "content");
   sSidebar_id        = ::JS_InternString(cx, "sidebar");
@@ -630,23 +633,27 @@ nsDOMClassInfo::Init()
   }
 #endif
 
-  if (!sXPConnect) {
-    nsresult rv = nsServiceManager::GetService(nsIXPConnect::GetCID(),
-                                               nsIXPConnect::GetIID(),
-                                               (nsISupports **)&sXPConnect);
-    NS_ENSURE_SUCCESS(rv, rv);
+  nsresult rv = nsServiceManager::GetService(nsIXPConnect::GetCID(),
+                                             nsIXPConnect::GetIID(),
+                                             (nsISupports **)&sXPConnect);
+  NS_ENSURE_SUCCESS(rv, rv);
 
-    nsCOMPtr<nsIXPCFunctionThisTranslator> old;
+  nsCOMPtr<nsIXPCFunctionThisTranslator> old;
 
-    nsEventListenerThisTranslator *elt = new nsEventListenerThisTranslator();
+  nsEventListenerThisTranslator *elt = new nsEventListenerThisTranslator();
 
-    sXPConnect->SetFunctionThisTranslator(NS_GET_IID(nsIDOMEventListener),
-                                          elt, getter_AddRefs(old));
-  }
+  sXPConnect->SetFunctionThisTranslator(NS_GET_IID(nsIDOMEventListener),
+                                        elt, getter_AddRefs(old));
+
+  PRUint16 flags; // ???
+  nsCOMPtr<nsIScriptSecurityManager> sm = 
+      do_GetService("@mozilla.org/scriptsecuritymanager;1", &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+  sSecMan = sm;
+  NS_ADDREF(sSecMan);
 
   // This method better be called from JS through XPConnect, if not
   // we're out of luck!
-  nsresult rv;
   nsCOMPtr<nsIJSContextStack> stack =
     do_GetService("@mozilla.org/js/xpc/ContextStack;1", &rv);
   NS_ENSURE_SUCCESS(rv, rv);
@@ -997,6 +1004,7 @@ nsDOMClassInfo::ShutDown()
   sTop_id             = jsnullstring;
   sScrollbars_id      = jsnullstring;
   sLocation_id        = jsnullstring;
+  sComponents_id      = jsnullstring;
   s_content_id        = jsnullstring;
   sContent_id         = jsnullstring;
   sSidebar_id         = jsnullstring;
@@ -1034,6 +1042,7 @@ nsDOMClassInfo::ShutDown()
   sOnscroll_id        = jsnullstring;
 
   NS_IF_RELEASE(sXPConnect);
+  NS_IF_RELEASE(sSecMan);
 }
 
 
@@ -1079,12 +1088,52 @@ NS_IMETHODIMP
 nsWindowSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                         JSObject *obj, jsval id, jsval *vp, PRBool *_retval)
 {
-  nsresult rv = NS_OK;
+  nsCOMPtr<nsISupports> native;
+  wrapper->GetNative(getter_AddRefs(native));
+  nsresult rv;
+
+  if (sSecMan) {
+    nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(native));
+    nsCOMPtr<nsIScriptContext> otherScriptContext;
+    if (sgo)
+        sgo->GetContext(getter_AddRefs(otherScriptContext));
+    JSContext *otherJSContext = nsnull;
+    if (otherScriptContext)
+        otherJSContext = (JSContext *) otherScriptContext->GetNativeContext();
+
+    //-- If the caller's context is the same as the callee's,
+    //   we assume they have the same origin, and we can allow the call
+    //   without an additional security check.
+    //   Also, don't check the Components property, 
+    //   since we check its properties anyway. This will help performance.
+    if (otherJSContext != cx &&
+        !(JSVAL_IS_STRING(id) && JSVAL_TO_STRING(id) == sComponents_id))
+    {
+#if 1
+        PRBool isLocation = JSVAL_IS_STRING(id) && JSVAL_TO_STRING(id) == sLocation_id;
+        rv = sSecMan->CheckPropertyAccess(nsIXPCSecurityManager::ACCESS_GET_PROPERTY,
+                                                   cx, obj, native, this, "Window",
+                                                   isLocation ? "location" : "scriptglobals",
+                                                   PR_FALSE);
+#else
+        rv = sSecMan->CanAccess(nsIXPCSecurityManager::ACCESS_GET_PROPERTY, nsnull,
+                                cx, obj, native, this, id, nsnull);
+#endif
+        if (NS_FAILED(rv))
+        {
+            //-- Security check failed. The above call set a JS exception.
+            //   The following lines ensure that the exception is propagated.
+            *_retval = PR_FALSE;
+            nsCOMPtr<nsIXPCNativeCallContext> cnccx;
+            sXPConnect->GetCurrentNativeCallContext(getter_AddRefs(cnccx));
+            if (cnccx)
+                cnccx->SetExceptionWasThrown(PR_TRUE);
+            return NS_OK;
+        }
+    }
+  }
 
   if (JSVAL_IS_NUMBER(id)) {
-    nsCOMPtr<nsISupports> native;
-    wrapper->GetNative(getter_AddRefs(native));
-
     nsCOMPtr<nsIDOMWindowInternal> win(do_QueryInterface(native));
 
     nsCOMPtr<nsIDOMWindowCollection> frames;
@@ -1108,6 +1157,47 @@ NS_IMETHODIMP
 nsWindowSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                         JSObject *obj, jsval id, jsval *vp, PRBool *_retval)
 {
+  nsCOMPtr<nsISupports> native;
+  wrapper->GetNative(getter_AddRefs(native));
+
+  if (sSecMan) {
+    nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(native));
+    nsCOMPtr<nsIScriptContext> otherScriptContext;
+    if (sgo)
+        sgo->GetContext(getter_AddRefs(otherScriptContext));
+    JSContext *otherJSContext = nsnull;
+    if (otherScriptContext)
+        otherJSContext = (JSContext *) otherScriptContext->GetNativeContext();
+
+    //-- If the caller's context is the same as the callee's,
+    //   we assume they have the same origin, and we can allow the call
+    //   without an additional security check.
+    if (otherJSContext != cx)
+    {
+#if 1
+        PRBool isLocation = JSVAL_IS_STRING(id) && JSVAL_TO_STRING(id) == sLocation_id;
+        nsresult rv = sSecMan->CheckPropertyAccess(nsIXPCSecurityManager::ACCESS_SET_PROPERTY,
+                                                   cx, obj, native, this, "Window",
+                                                   isLocation ? "location" : "scriptglobals",
+                                                   PR_FALSE);
+#else
+        nsresult rv = sSecMan->CanAccess(nsIXPCSecurityManager::ACCESS_SET_PROPERTY, nsnull,
+                                cx, obj, native, this, id, nsnull);
+#endif
+        if (NS_FAILED(rv))
+        {
+            //-- Security check failed. The above call set a JS exception.
+            //   The following lines ensure that the exception is propagated.
+            *_retval = PR_FALSE;
+            nsCOMPtr<nsIXPCNativeCallContext> cnccx;
+            sXPConnect->GetCurrentNativeCallContext(getter_AddRefs(cnccx));
+            if (cnccx)
+                cnccx->SetExceptionWasThrown(PR_TRUE);
+            return NS_OK;
+        }
+    }
+  }
+
   if (JSVAL_IS_STRING(id)) {
     JSString *str = JSVAL_TO_STRING(id);
 

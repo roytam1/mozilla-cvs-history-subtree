@@ -4305,6 +4305,21 @@ NavigatorImpl::Preference()
   rv = ncc->GetJSContext(&cx);
   NS_ENSURE_SUCCESS(rv, rv);
 
+  //--Check to see if the caller is allowed to access prefs
+  nsCOMPtr<nsIScriptSecurityManager> secMan = 
+      do_GetService("@mozilla.org/scriptsecuritymanager;1", &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+  rv = secMan->CheckPropertyAccess(argc == 1 ? nsIXPCSecurityManager::ACCESS_GET_PROPERTY :
+                                               nsIXPCSecurityManager::ACCESS_SET_PROPERTY,
+                                   cx, nsnull, nsnull, nsnull, "Navigator","preferenceinternal",
+                                   PR_TRUE);
+  if (NS_FAILED(rv))
+  {
+      //-- XXX doing the right thing here? Does the exception propagate?
+      ncc->SetExceptionWasThrown(PR_TRUE);
+      return NS_OK;
+  }
+
   nsCOMPtr<nsIPref> pref(do_GetService(kPrefServiceCID, &rv));
   NS_ENSURE_SUCCESS(rv, rv);
 

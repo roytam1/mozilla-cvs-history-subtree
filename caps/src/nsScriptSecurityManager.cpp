@@ -63,6 +63,7 @@
 #include "nsIPrompt.h"
 #include "nsIWindowWatcher.h"
 #include "nsIConsoleService.h"
+#include "nsISecurityCheckedComponent.h"
 
 static NS_DEFINE_IID(kIIOServiceIID, NS_IIOSERVICE_IID);
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
@@ -116,25 +117,6 @@ nsScriptSecurityManager::GetCurrentContextQuick()
     return cx;
 }
 
-/*
-static nsDOMProp 
-findDomProp(const char *propName, int n);
-
-inline PRBool
-GetBit(unsigned char *bitVector, PRInt32 index) 
-{
-    unsigned char c = bitVector[index >> 3];
-    c &= (1 << (index & 7));
-    return c != 0;
-}
-
-inline void
-SetBit(unsigned char *bitVector, PRInt32 index) 
-{
-    bitVector[index >> 3] |= (1 << (index & 7));
-}
-*/
-
 /////////////////////////////
 // nsScriptSecurityManager //
 /////////////////////////////
@@ -147,43 +129,208 @@ NS_IMPL_THREADSAFE_ISUPPORTS2(nsScriptSecurityManager,
                    nsIScriptSecurityManager,
                    nsIXPCSecurityManager)
 
-
-
-
 ///////////////////////////////////////////////////
 // Methods implementing nsIScriptSecurityManager //
 ///////////////////////////////////////////////////
 
-///////////////// Security Checks //////////////////
+///////////////// Security Checks /////////////////
 NS_IMETHODIMP
-nsScriptSecurityManager::CheckScriptAccessToURL(JSContext *cx, 
-                                                const char* aObjUrlStr, PRInt32 domPropInt, 
-                                                PRBool isWrite)
+nsScriptSecurityManager::CheckPropertyAccess(PRUint32 aAction,
+                                             JSContext* aJSContext,
+                                             JSObject* aJSObject,
+                                             nsISupports* aObj,
+                                             nsIClassInfo* aClassInfo,
+                                             const char* aClassName,
+                                             const char* aProperty,
+                                             PRBool aSkipFrame)
 {
-    return CheckScriptAccessInternal(cx, nsnull, aObjUrlStr, domPropInt, isWrite);
+    return CheckPropertyAccessImpl(aAction, nsnull, aJSContext, aJSObject, aObj,
+                                   aClassInfo, nsnull, aClassName, aProperty, 
+                                   aSkipFrame, nsnull);
 }
-
-NS_IMETHODIMP
-nsScriptSecurityManager::CheckScriptAccess(JSContext *cx, 
-                                           void *aObj, PRInt32 domPropInt, 
-                                           PRBool isWrite)
-{
-    return CheckScriptAccessInternal(cx, aObj, nsnull, domPropInt, isWrite);
-}
-
 
 nsresult
-nsScriptSecurityManager::CheckScriptAccessInternal(JSContext *cx, 
-                                                   void* aObj, const char* aObjUrlStr, 
-                                                   PRInt32 domPropInt, PRBool isWrite)
+nsScriptSecurityManager::CheckPropertyAccessImpl(PRUint32 aAction,
+                                                 nsIXPCNativeCallContext* aCallContext,
+                                                 JSContext* aJSContext, JSObject* aJSObject,
+                                                 nsISupports* aObj, nsIClassInfo* aClassInfo,
+                                                 jsval aName, const char* aClassName, 
+                                                 const char* aProperty, 
+                                                 PRBool aSkipFrame, void** aPolicy)
 {
-    NS_WARNING("Shouldn't be calling CheckScriptAccess anymore - please change this call");
-    return NS_OK;
+    nsCOMPtr<nsIPrincipal> subjectPrincipal;
+    JSStackFrame *notused;
+    if (NS_FAILED(GetPrincipalAndFrame(aJSContext, aSkipFrame, 
+                                       getter_AddRefs(subjectPrincipal), &notused)))
+        return NS_ERROR_FAILURE;
+
+    PRBool equals;
+    if (!subjectPrincipal ||
+        NS_SUCCEEDED(subjectPrincipal->Equals(mSystemPrincipal, &equals)) && equals) 
+        // We have native code or the system principal: just allow access
+        return NS_OK;
+
+#ifdef DEBUG_mstoltz
+    if (aProperty)
+          printf("### CheckPropertyAccess(%s.%s, %i) ", aClassName, aProperty, aAction);
+    else
+    {
+        nsXPIDLCString classDescription;
+        if (aClassInfo)
+            aClassInfo->GetClassDescription(getter_Copies(classDescription));
+        if(!classDescription)
+            classDescription = "UnknownClass";
+        nsCAutoString propertyStr(classDescription);
+        propertyStr += '.';
+        propertyStr.AppendWithConversion((PRUnichar*)JSValIDToString(aJSContext, aName));
+
+        char* property;
+        property = propertyStr.ToNewCString();
+        printf("### CanAccess(%s, %i) ", property, aAction);
+        PR_FREEIF(property);
+    }
+#endif
+
+    //-- Look up the policy for this property/method
+    PRInt32 secLevel;
+    nsCAutoString capability;
+    if (aPolicy && *aPolicy)
+    {
+#ifdef DEBUG_mstoltz
+        printf("Cached ");
+#endif
+        secLevel = (PRInt32)*aPolicy;
+    }
+    else
+    {
+        nsXPIDLCString className;
+        nsCAutoString propertyName(aProperty);
+        if (aClassName)
+            className = aClassName;
+        else
+        //-- Get className and propertyName from aClassInfo and aName, repectively
+        {
+            if(aClassInfo)
+                aClassInfo->GetClassDescription(getter_Copies(className));
+            if (!className)
+                className = "UnknownClass";
+            propertyName.AssignWithConversion((PRUnichar*)JSValIDToString(aJSContext, aName));
+        }
+
+        secLevel = GetSecurityLevel(aJSContext, subjectPrincipal, aClassInfo, className,
+                                    propertyName, aAction, capability, aPolicy);
+    }
+
+    nsresult rv;
+    switch (secLevel)
+    {
+    case SCRIPT_SECURITY_ALL_ACCESS:
+#ifdef DEBUG_mstoltz
+        printf("Level: AllAccess ");
+#endif
+        rv = NS_OK;
+        break;
+    case SCRIPT_SECURITY_SAME_ORIGIN_ACCESS:
+        {
+#ifdef DEBUG_mstoltz
+		    printf("Level: SameOrigin ");
+#endif
+            if(aJSObject)
+            {
+                nsCOMPtr<nsIPrincipal> objectPrincipal;
+                if (NS_FAILED(GetObjectPrincipal(aJSContext, 
+                                                 NS_REINTERPRET_CAST(JSObject*, aJSObject),
+                                                 getter_AddRefs(objectPrincipal))))
+                    return NS_ERROR_FAILURE;
+                rv = CheckSameOrigin(aJSContext, subjectPrincipal, objectPrincipal,
+                                     aAction == nsIXPCSecurityManager::ACCESS_SET_PROPERTY,
+                                     aSkipFrame);
+            }
+            else
+                rv = NS_ERROR_DOM_SECURITY_ERR;
+            break;
+        }
+    case SCRIPT_SECURITY_CAPABILITY_ONLY:
+        {
+#ifdef DEBUG_mstoltz
+		    printf("Level: Capability ");
+#endif
+            PRBool capabilityEnabled = PR_FALSE;
+            rv = IsCapabilityEnabled(capability, &capabilityEnabled);
+            if (NS_FAILED(rv) || !capabilityEnabled)
+                rv = NS_ERROR_DOM_SECURITY_ERR;
+            else
+                rv = NS_OK;
+            break;
+        }
+    default:
+        // Default is no access
+#ifdef DEBUG_mstoltz
+        printf("Level: NoAccess (%i)",secLevel);
+#endif
+        rv = NS_ERROR_DOM_SECURITY_ERR;
+    }
+
+    if NS_SUCCEEDED(rv)
+    {
+#ifdef DEBUG_mstoltz
+    printf(" GRANTED.\n");
+#endif
+        return rv;
+    }
+
+    //--See if the object advertises a non-default level of access
+    //  using nsISecurityCheckedComponent
+    nsCOMPtr<nsISecurityCheckedComponent> checkedComponent =
+        do_QueryInterface(aObj);
+
+    nsXPIDLCString objectSecurityLevel;
+    if (checkedComponent)
+    {
+        nsCOMPtr<nsIXPConnectWrappedNative> wrapper;
+        nsCOMPtr<nsIInterfaceInfo> interfaceInfo;
+        const nsIID* objIID;
+        rv = aCallContext->GetCalleeWrapper(getter_AddRefs(wrapper));
+        if (NS_SUCCEEDED(rv))
+            rv = wrapper->FindInterfaceWithMember(aName, getter_AddRefs(interfaceInfo));
+        if (NS_SUCCEEDED(rv))
+            rv = interfaceInfo->GetIIDShared(&objIID);
+        if (NS_SUCCEEDED(rv))
+        {
+            switch (aAction)
+            {
+            case nsIXPCSecurityManager::ACCESS_GET_PROPERTY:
+                checkedComponent->CanGetProperty(objIID,
+                                                 JSValIDToString(aJSContext, aName),
+                                                 getter_Copies(objectSecurityLevel));
+                break;
+            case nsIXPCSecurityManager::ACCESS_SET_PROPERTY:
+                checkedComponent->CanSetProperty(objIID,
+                                                 JSValIDToString(aJSContext, aName),
+                                                 getter_Copies(objectSecurityLevel));
+                break;
+            case nsIXPCSecurityManager::ACCESS_CALL_METHOD:
+                checkedComponent->CanCallMethod(objIID,
+                                                JSValIDToString(aJSContext, aName),
+                                                getter_Copies(objectSecurityLevel));
+            }
+        }
+    }
+    rv = CheckXPCPermissions(aJSContext, aObj, objectSecurityLevel, aSkipFrame,
+                               "Permission to access property denied");
+#ifdef DEBUG_mstoltz
+    if(NS_SUCCEEDED(rv))
+        printf("CheckXPCPerms GRANTED.\n");
+    else
+        printf("CheckXPCPerms DENIED.\n");
+#endif
+    return rv;
 }
 
 nsresult
 nsScriptSecurityManager::CheckSameOrigin(JSContext *aCx, nsIPrincipal* aSubject, 
-                                         nsIPrincipal* aObject, PRUint32 aAction)
+                                         nsIPrincipal* aObject, PRUint32 aAction,
+                                         PRBool aSkipFrame)
 {
     /*
     ** Get origin of subject and object and compare.
@@ -217,7 +364,7 @@ nsScriptSecurityManager::CheckSameOrigin(JSContext *aCx, nsIPrincipal* aSubject,
     PRBool capabilityEnabled = PR_FALSE;
     const char* cap = aAction == nsIXPCSecurityManager::ACCESS_SET_PROPERTY ?
                       "UniversalBrowserWrite" : "UniversalBrowserRead";
-    if (NS_FAILED(IsCapabilityEnabled(cap, &capabilityEnabled)))
+    if (NS_FAILED(IsCapabilityEnabledImpl(cap, aSkipFrame, &capabilityEnabled)))
         return NS_ERROR_FAILURE;
     if (capabilityEnabled)
         return NS_OK;
@@ -228,44 +375,42 @@ nsScriptSecurityManager::CheckSameOrigin(JSContext *aCx, nsIPrincipal* aSubject,
     return NS_ERROR_DOM_PROP_ACCESS_DENIED;
 }
 
+PRBool 
+nsScriptSecurityManager::IsDOMClass(nsIClassInfo* aClassInfo)
+{
+    if (!aClassInfo)
+        return PR_FALSE;
+    PRUint32 classFlags;
+    nsresult rv = aClassInfo->GetFlags(&classFlags);
+    return NS_SUCCEEDED(rv) && (classFlags | nsIClassInfo::DOM_OBJECT);
+}
+
 PRInt32 
 nsScriptSecurityManager::GetSecurityLevel(JSContext* aJSContext,
                                           nsIPrincipal *principal,
                                           nsIClassInfo* aClassInfo,
-                                          jsval aPropName, 
+                                          const char* aClassName,
+                                          const char* aPropertyName,
                                           PRUint32 aAction,
                                           nsCString &capability,
                                           void** aPolicy)
 {
-    nsXPIDLCString classDescription;
-    if (aClassInfo)
-        aClassInfo->GetClassDescription(getter_Copies(classDescription));
-    if(!classDescription)
-        classDescription = "UnknownClass";
-
     nsresult rv;
     PRInt32 secLevel = SCRIPT_SECURITY_NO_ACCESS;
     //-- See if we have a security policy for this class, otherwise use the default
     void* classPolicy = nsnull;
     if(mClassPolicies)
     {
-        nsCStringKey classKey(classDescription);
+        nsCStringKey classKey(aClassName);
         classPolicy = mClassPolicies->Get(&classKey);
     }
     if (classPolicy)
     {
         //-- Look up the security policy for this property
-        nsCAutoString propertyStr(classDescription);
-        propertyStr += '.';
-        propertyStr.AppendWithConversion((PRUnichar*)JSValIDToString(aJSContext, aPropName));
-
         nsCAutoString prefName;
-        if (NS_FAILED(GetPrefName(principal, propertyStr,
-                      classPolicy == (void*)CLASS_POLICY_SITE, prefName)))
-        {
-            *aPolicy = (void*)SCRIPT_SECURITY_NO_ACCESS;
+        if (NS_FAILED(GetPrefName(principal, aClassName, aPropertyName,
+                      classPolicy, prefName)))
             return SCRIPT_SECURITY_NO_ACCESS;
-        }
         char *secLevelString;
         rv = mSecurityPrefs->SecurityGetCharPref(prefName, &secLevelString);
         if (NS_FAILED(rv))
@@ -295,14 +440,9 @@ nsScriptSecurityManager::GetSecurityLevel(JSContext* aJSContext,
     }
     //-- No policy for this property.
     //   Use the default policy: sameOrigin for DOM, noAccess for everything else
-    if (aClassInfo)
-    {
-        PRUint32 classFlags;
-        rv = aClassInfo->GetFlags(&classFlags);
-        if(NS_SUCCEEDED(rv) && (classFlags | nsIClassInfo::DOM_OBJECT))
-            secLevel = SCRIPT_SECURITY_SAME_ORIGIN_ACCESS;
-    }
-    if (!classPolicy)
+    if(IsDOMClass(aClassInfo))
+        secLevel = SCRIPT_SECURITY_SAME_ORIGIN_ACCESS;
+    if (!classPolicy && aPolicy)
         //-- If there's no stored policy for this property, 
         //   we can annotate the class's aPolicy field and avoid checking
         //   policy prefs next time.
@@ -341,13 +481,14 @@ struct nsDomainEntry
 };
 
 nsresult
-nsScriptSecurityManager::GetPrefName(nsIPrincipal *principal, 
-                                     nsCString &property, PRBool aClassHasSitePolicy,
-                                     nsCString &result)
+nsScriptSecurityManager::GetPrefName(nsIPrincipal* principal,
+                                     const char* aClassName, const char* aPropertyName,
+                                     void* aClassPolicy, nsCString &result)
 {
     static const char *defaultStr = "default";
     result = "capability.policy.";
-    if (!aClassHasSitePolicy)
+    if (aClassPolicy != (void*)CLASS_POLICY_SITE)
+        //-- No per-site policy; use the policy named "default"
         result += defaultStr;
     else //-- Look up the name of the relevant per-site policy
     {
@@ -409,7 +550,9 @@ nsScriptSecurityManager::GetPrefName(nsIPrincipal *principal,
         }
     }
     result += '.';
-    result += property;
+    result += aClassName;
+    result += '.';
+    result += aPropertyName;
     return NS_OK;
 }
 
@@ -957,7 +1100,10 @@ nsScriptSecurityManager::GetPrincipalAndFrame(JSContext *cx,
     if (skipInnerFrame) // Skip the innermost frame
     {
         fp = JS_FrameIterator(cx, &fp);
-        NS_ASSERTION(fp, "GetPrincipalAndFrame unexpectedly reached bottom of stack");
+#ifdef DEBUG_mstoltz
+        if(!fp)
+            printf("####### JS stack weirdness in GetPrincipalAndFrame.\n");
+#endif
     }
     for (fp = JS_FrameIterator(cx, &fp); fp; fp = JS_FrameIterator(cx, &fp))
     {
@@ -1113,7 +1259,15 @@ nsScriptSecurityManager::SavePrincipal(nsIPrincipal* aToSave)
 ///////////////// Capabilities API /////////////////////
 NS_IMETHODIMP
 nsScriptSecurityManager::IsCapabilityEnabled(const char *capability,
-                                             PRBool *result)
+                                                 PRBool *result)
+{
+    return IsCapabilityEnabledImpl(capability, PR_FALSE, result);
+}
+
+nsresult
+nsScriptSecurityManager::IsCapabilityEnabledImpl(const char *capability,
+                                                 PRBool aSkipFrame,
+                                                 PRBool *result)
 {
     nsresult rv;
     JSStackFrame *fp = nsnull;
@@ -1124,6 +1278,8 @@ nsScriptSecurityManager::IsCapabilityEnabled(const char *capability,
         *result = PR_TRUE;
         return NS_OK;
     }
+    if (aSkipFrame)
+       fp = JS_FrameIterator(cx, &fp);
 
     do
     {
@@ -1477,23 +1633,43 @@ nsScriptSecurityManager::CanCreateWrapper(JSContext *aJSContext,
 {
 #if 0
     char* iidStr = aIID.ToString();
-    printf("### CanCreateWrapper(%s) - always OK?\n", iidStr);
+    printf("### CanCreateWrapper(%s) ", iidStr);
     PR_FREEIF(iidStr);
 #endif
-// Special case for nsIXPCException
-    return NS_OK;
+// XXX Special case for nsIXPCException ?
+    if (IsDOMClass(aClassInfo))
+    {
+#if 0
+        printf("DOM class - GRANTED.\n");
+#endif
+        return NS_OK;
+    }
+
+    //--See if the object advertises a non-default level of access
+    //  using nsISecurityCheckedComponent
+    nsCOMPtr<nsISecurityCheckedComponent> checkedComponent =
+        do_QueryInterface(aObj);
+
+    nsXPIDLCString objectSecurityLevel;
+    if (checkedComponent)
+        checkedComponent->CanCreateWrapper((nsIID *)&aIID, getter_Copies(objectSecurityLevel));
+
+    return CheckXPCPermissions(aJSContext, aObj, objectSecurityLevel, PR_FALSE,
+                               "Permission to create wrapper denied");
 }
 
 NS_IMETHODIMP
-nsScriptSecurityManager::CanCreateInstance(JSContext *aJSContext, 
+nsScriptSecurityManager::CanCreateInstance(JSContext *aJSContext,
                                            const nsCID &aCID)
 {
+    //XXX Special cases needed: exceptions?
 #if 0
     char* cidStr = aCID.ToString();
-    printf("### CanCreateInstance(%s) - always OK?\n", cidStr);
+    printf("### CanCreateInstance(%s) ", cidStr);
     PR_FREEIF(cidStr);
 #endif
-    return NS_OK;
+
+    return CheckXPCPermissions(aJSContext, nsnull, nsnull, PR_FALSE, "Permission to create instance of class denied");
 }
 
 NS_IMETHODIMP
@@ -1502,172 +1678,80 @@ nsScriptSecurityManager::CanGetService(JSContext *aJSContext,
 {
 #if 0
     char* cidStr = aCID.ToString();
-    printf("### CanGetService(%s) - Privileged access only\n", cidStr);
+    printf("### CanGetService(%s) ", cidStr);
     PR_FREEIF(cidStr);
 #endif
-    return NS_OK;
+
+    return CheckXPCPermissions(aJSContext, nsnull, nsnull, PR_FALSE, "Permission to get service denied");
 }
 
 /* void CanAccess (in PRUint32 aAction, in nsIXPCNativeCallContext aCallContext, in JSContextPtr aJSContext, in JSObjectPtr aJSObject, in nsISupports aObj, in nsIClassInfo aClassInfo, in JSVal aName, inout voidPtr aPolicy); */
 NS_IMETHODIMP 
 nsScriptSecurityManager::CanAccess(PRUint32 aAction,
-                                   nsIXPCNativeCallContext *aCallContext,
-                                   JSContext * aJSContext,
-                                   JSObject * aJSObject,
-                                   nsISupports *aObj,
-                                   nsIClassInfo *aClassInfo,
+                                   nsIXPCNativeCallContext* aCallContext,
+                                   JSContext* aJSContext,
+                                   JSObject* aJSObject,
+                                   nsISupports* aObj,
+                                   nsIClassInfo* aClassInfo,
                                    jsval aName,
                                    void** aPolicy)
 {
-    nsCOMPtr<nsIPrincipal> subjectPrincipal;
-    if (NS_FAILED(GetCallingPrincipal(aJSContext, getter_AddRefs(subjectPrincipal))))
-        return NS_ERROR_FAILURE;
-
-    PRBool equals;
-    if (!subjectPrincipal || 
-        NS_SUCCEEDED(subjectPrincipal->Equals(mSystemPrincipal, &equals)) && equals) 
-        // We have native code or the system principal: just allow access
-        return NS_OK;
-
-#ifdef DEBUG_mstoltz
-    nsXPIDLCString classDescription;
-    if (aClassInfo)
-        aClassInfo->GetClassDescription(getter_Copies(classDescription));
-    if(!classDescription)
-        classDescription = "UnknownClass";
-    //-- Look up the security policy for this property
-    nsCAutoString propertyStr(classDescription);
-    propertyStr += '.';
-    propertyStr.AppendWithConversion((PRUnichar*)JSValIDToString(aJSContext, aName));
-
-    char* property;
-    property = propertyStr.ToNewCString();
-    printf("### CanAccess(%s, %i) ", property, aAction);
-    PR_FREEIF(property);
-#endif
-
-    //-- Look up the policy for this property/method
-    PRInt32 secLevel;
-    nsCAutoString capability;
-
-    if(aPolicy)
-    {
-        if (*aPolicy)
-        {
-#ifdef DEBUG_mstoltz
-            printf("Cached ");
-#endif
-            secLevel = (PRInt32)*aPolicy;
-        }
-        else
-            secLevel = GetSecurityLevel(aJSContext, subjectPrincipal, aClassInfo, aName,
-                                        aAction, capability, aPolicy);
-    } 
-    else {
-        secLevel = SCRIPT_SECURITY_NO_ACCESS;
-    }
-    
-    nsresult rv;
-    switch (secLevel)
-    {
-    case SCRIPT_SECURITY_ALL_ACCESS:
-#ifdef DEBUG_mstoltz
-        printf("Level: AllAccess ");
-#endif
-        rv = NS_OK;
-        break;
-    case SCRIPT_SECURITY_SAME_ORIGIN_ACCESS:
-        {
-#ifdef DEBUG_mstoltz
-		    printf("Level: SameOrigin ");
-#endif
-            nsCOMPtr<nsIPrincipal> objectPrincipal;
-            if (NS_FAILED(GetObjectPrincipal(aJSContext, NS_REINTERPRET_CAST(JSObject*, aJSObject),
-                                             getter_AddRefs(objectPrincipal))))
-                return NS_ERROR_FAILURE;
-            rv = CheckSameOrigin(aJSContext, subjectPrincipal, objectPrincipal,
-                                 aAction == nsIXPCSecurityManager::ACCESS_SET_PROPERTY);
-            break;
-        }
-    case SCRIPT_SECURITY_CAPABILITY_ONLY:
-        {
-#ifdef DEBUG_mstoltz
-		    printf("Level: Capability ");
-#endif
-            PRBool capabilityEnabled = PR_FALSE;
-            rv = IsCapabilityEnabled(capability, &capabilityEnabled);
-            if (NS_FAILED(rv) || !capabilityEnabled)
-                rv = NS_ERROR_DOM_SECURITY_ERR;
-            else
-                rv = NS_OK;
-            break;
-        }
-    default:
-        // Default is no access
-#ifdef DEBUG_mstoltz
-        printf("Level: NoAccess ");
-#endif
-        rv = NS_ERROR_DOM_SECURITY_ERR;
-    }
-
-    if NS_SUCCEEDED(rv)
-    {
-#ifdef DEBUG_mstoltz
-    printf(" GRANTED.\n");
-#endif
-        return rv;
-    }
-
-    //-- Check for carte blanche
-    PRBool ok = PR_FALSE;
-    if (NS_SUCCEEDED(IsCapabilityEnabled("UniversalXPConnect", &ok)) && ok)
-    {
-#ifdef DEBUG_mstoltz
-        printf("UniversalXPConnect GRANTED.\n");
-#endif
-        return NS_OK;
-    }
-
-    static const char exceptionMsg[] = "Access to property denied";
-    JS_SetPendingException(aJSContext, 
-                           STRING_TO_JSVAL(JS_NewStringCopyZ(aJSContext, exceptionMsg)));
-#ifdef DEBUG_mstoltz
-    printf("DENIED.\n");
-#endif
-    return rv;
+    return CheckPropertyAccessImpl(aAction, aCallContext, aJSContext, aJSObject,
+                                   aObj, aClassInfo, aName, nsnull, nsnull, PR_TRUE, aPolicy);
 }
 
-/*
 nsresult
 nsScriptSecurityManager::CheckXPCPermissions(JSContext *aJSContext,
-                                             nsISupports* aObj)
+                                             nsISupports* aObj,
+                                             const char* aObjectSecurityLevel,
+                                             PRBool aSkipFrame,
+                                             const char* aErrorMsg)
 {
-    NS_ASSERTION(mPrefs,"nsScriptSecurityManager::mPrefs not initialized");
+    //-- Check for the all-powerful UniversalXPConnect privilege
     PRBool ok = PR_FALSE;
-    if (NS_FAILED(IsCapabilityEnabled("UniversalXPConnect", &ok)))
-        ok = PR_FALSE;
-    if (!ok) {
-        //-- If user allows scripting of plugins by untrusted scripts, 
-        //   and the target object is a plugin, allow the access anyway.
-        if(aObj)
+    if (NS_SUCCEEDED(IsCapabilityEnabledImpl("UniversalXPConnect", aSkipFrame, &ok)) && ok)
+        return NS_OK;
+
+    //-- If the object implements nsISecurityCheckedComponent, it has a non-default policy.
+    if (aObjectSecurityLevel)
+    {
+        if (PL_strcasecmp(aObjectSecurityLevel, "AllAccess") == 0)
+            return NS_OK;
+        else if (PL_strcasecmp(aObjectSecurityLevel, "NoAccess") != 0)
         {
-            nsresult rv;
-            nsCOMPtr<nsIPluginInstance> plugin = do_QueryInterface(aObj, &rv);
-            if (NS_SUCCEEDED(rv))
-            {
-                PRBool allow = PR_FALSE;
-                //XXX May want to store the value of the pref in a local,
-                //    this will help performance when dealing with plugins.
-                rv = mPrefs->GetBoolPref("security.xpconnect.plugin.unrestricted", &allow);
-                if (NS_SUCCEEDED(rv) && allow) 
-                    return NS_OK;
-            }
+            PRBool canAccess = PR_FALSE;
+            if (NS_SUCCEEDED(IsCapabilityEnabled(aObjectSecurityLevel, &canAccess)) &&
+                canAccess)
+                return NS_OK;
         }
-        return NS_ERROR_DOM_XPCONNECT_ACCESS_DENIED;
     }
-    return NS_OK;
+
+    //-- If user allows scripting of plugins by untrusted scripts, 
+    //   and the target object is a plugin, allow the access.
+    if(aObj)
+    {
+        nsresult rv;
+        nsCOMPtr<nsIPluginInstance> plugin = do_QueryInterface(aObj, &rv);
+        if (NS_SUCCEEDED(rv))
+        {
+            static PRBool prefSet = PR_FALSE;
+            static PRBool allowPluginAccess = PR_FALSE;
+            if (!prefSet)
+            {
+                rv = mPrefs->GetBoolPref("security.xpconnect.plugin.unrestricted",
+                                         &allowPluginAccess);
+                prefSet = PR_TRUE;
+            }
+            if (allowPluginAccess)
+                return NS_OK;
+        }
+    }
+
+    //-- Access tests failed, so report error
+    JS_SetPendingException(aJSContext, 
+                           STRING_TO_JSVAL(JS_NewStringCopyZ(aJSContext, aErrorMsg)));
+    return NS_ERROR_DOM_XPCONNECT_ACCESS_DENIED;
 }
-*/
 
 /////////////////////////////////////////////
 // Constructor, Destructor, Initialization //
@@ -1683,7 +1767,6 @@ nsScriptSecurityManager::nsScriptSecurityManager(void)
 
 {
     NS_INIT_REFCNT();
-    memset(hasDomainPolicyVector, 0, sizeof(hasDomainPolicyVector));
     InitPrefs();
     mThreadJSContextStack = do_GetService("@mozilla.org/js/xpc/ContextStack;1");
 }

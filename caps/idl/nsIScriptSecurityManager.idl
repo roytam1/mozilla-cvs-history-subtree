@@ -24,24 +24,24 @@
 
 #include "nsISupports.idl"
 #include "nsIPrincipal.idl"
-
-%{C++
-#include "jspubtd.h"
-%}
-[ptr] native JSContextPtr(JSContext);
-
+#include "nsIXPCSecurityManager.idl"
 interface nsIURI;
 
-
 [scriptable, uuid(58df5780-8006-11d2-bd91-00805f8ae3f4)]
-interface nsIScriptSecurityManager : nsISupports
+interface nsIScriptSecurityManager : nsIXPCSecurityManager
 {
     ///////////////// Security Checks //////////////////
     /**
-     * This function is obsolete and should no longer be used.
+     * Checks whether the running script is allowed to access aProperty.
      */
-    [noscript] void checkScriptAccess(in JSContextPtr cx, in voidPtr obj, 
-                           in long prop, in boolean isWrite);
+    [noscript] void checkPropertyAccess(in PRUint32 aAction,
+                                        in JSContextPtr aJSContext,
+                                        in JSObjectPtr aJSObject,
+                                        in nsISupports aObj,
+                                        in nsIClassInfo aClassInfo,
+                                        in string aClassName,
+                                        in string aProperty,
+                                        in boolean skipFrame);
 
     /**
      * Check that the script currently running in context "cx" can load "uri".
@@ -54,7 +54,7 @@ interface nsIScriptSecurityManager : nsISupports
      */
     [noscript] void checkLoadURIFromScript(in JSContextPtr cx, in nsIURI uri);
 
-    /** 
+    /**
      * Default CheckLoadURI permissions
      */
     // Default permissions
@@ -170,23 +170,7 @@ interface nsIScriptSecurityManager : nsISupports
      * by code signed by the system certificate.
      */
     void setCanEnableCapability(in string certificateID, in string capability, 
-                                in short canEnable);    
-
-
-    //////////////// Temporary ///////////////////////////////////////
-    /**
-     * Checks whether the currently executing script can load the
-     * given URL (special case for XMLHttpRequest)
-     *
-     * @param cx The current active JavaScript context
-     * @param url The url that is being accessed
-     * @param prop The ordinal of the property being accessed (see
-     * nsDOMPropEnums.h)
-     * @param isWrite True if write access is being attempted
-
-     */
-    [noscript] void checkScriptAccessToURL(in JSContextPtr cx, in string url, 
-                                           in long prop, in boolean isWrite);
+                                in short canEnable);
 };
 
 %{C++

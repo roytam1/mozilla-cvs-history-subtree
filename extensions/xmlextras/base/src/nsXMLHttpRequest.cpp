@@ -949,9 +949,10 @@ nsXMLHttpRequest::Open(const char *method, const char *url)
     NS_WITH_SERVICE(nsIScriptSecurityManager, secMan,
                     NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
      if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+ /*
      rv = secMan->CheckScriptAccessToURL(cx, url, NS_DOM_PROP_XMLHTTPREQUEST_OPEN, PR_FALSE);
      if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
- 
+ */
      nsCOMPtr<nsIPrincipal> principal;
      rv = secMan->GetSubjectPrincipal(getter_AddRefs(principal));
       if (NS_SUCCEEDED(rv)) {

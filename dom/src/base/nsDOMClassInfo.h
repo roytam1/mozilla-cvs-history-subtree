@@ -27,9 +27,9 @@
 #include "nsIDOMClassInfo.h"
 #include "nsIXPCScriptable.h"
 #include "jsapi.h"
+#include "nsIScriptSecurityManager.h"
 
 class nsIPluginInstance;
-
 
 struct nsDOMClassInfoData;
 typedef void (*GetDOMClassIIDsFnc)(nsVoidArray& aArray);
@@ -77,6 +77,7 @@ protected:
   nsDOMClassInfoID mID;
 
   static nsIXPConnect *sXPConnect;
+  static nsIScriptSecurityManager *sSecMan;
 
   // nsIXPCScriptable code
   static nsresult DefineStaticJSStrings(JSContext *cx);
@@ -86,6 +87,7 @@ protected:
   static JSString *sTop_id;
   static JSString *sScrollbars_id;
   static JSString *sLocation_id;
+  static JSString *sComponents_id;
   static JSString *s_content_id;
   static JSString *sContent_id;
   static JSString *sSidebar_id;
