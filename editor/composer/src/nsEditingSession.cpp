@@ -78,6 +78,29 @@
 
 /*---------------------------------------------------------------------------
 
+  nsEditingSessionControllerData
+
+----------------------------------------------------------------------------*/
+
+struct nsEditingSessionControllerData
+{
+  nsEditingSessionControllerData(nsIDOMWindow *aWindow)
+    : mWindow(aWindow)
+    , mBaseCommandControllerId(0)
+    , mHTMLCommandControllerId(0)
+  {
+  }
+
+  virtual ~nsEditingSessionControllerData() {}
+
+  nsIDOMWindow* mWindow; // Un-AddRef'd pointer
+  PRUint32      mBaseCommandControllerId;
+  PRUint32      mHTMLCommandControllerId;
+};
+
+
+/*---------------------------------------------------------------------------
+
   nsEditingSession
 
 ----------------------------------------------------------------------------*/
@@ -86,8 +109,6 @@ nsEditingSession::nsEditingSession()
 , mStateMaintainer(nsnull)
 , mEditorClassString(nsnull)
 , mEditorType(nsnull)
-, mBaseCommandControllerId(0)
-, mHTMLCommandControllerId(0)
 {
   NS_INIT_ISUPPORTS();
 }
@@ -100,6 +121,11 @@ nsEditingSession::nsEditingSession()
 nsEditingSession::~nsEditingSession()
 {
   NS_IF_RELEASE(mStateMaintainer);
+
+  PRInt32 cnt = mControllerData.Count();
+
+  for (PRInt32 i = 0; i < cnt; i++)
+    delete (nsEditingSessionControllerData*)mControllerData.ElementAt(i);
 }
 
 NS_IMPL_ISUPPORTS3(nsEditingSession, nsIEditingSession, nsIWebProgressListener, 
@@ -183,13 +209,19 @@ nsEditingSession::MakeWindowEditable(nsIDOMWindow *aWindow,
   rv = editorDocShell->MakeEditable(aDoAfterUriLoad);
   if (NS_FAILED(rv)) return rv;  
   
+  PRUint32 baseControllerId = 0;
+
   // Setup commands common to plaintext and html editors,
   //  including the document creation observers
   // the first is an editor controller
   rv = SetupEditorCommandController("@mozilla.org/editor/editorcontroller;1",
                                     aWindow,
                                     NS_STATIC_CAST(nsIEditingSession*, this),
-                                    &mBaseCommandControllerId);
+                                    &baseControllerId);
+  if (NS_FAILED(rv)) return rv;
+
+  rv = SetBaseControllerId(aWindow, baseControllerId);
+
   if (NS_FAILED(rv)) return rv;
 
   if (!aDoAfterUriLoad)
@@ -253,10 +285,16 @@ nsEditingSession::SetupEditorOnWindow(nsIDOMWindow *aWindow)
 
   if (needHTMLController)
   {
+    PRUint32 htmlControllerId = 0;
+
     // The third controller takes an nsIEditor as the context
     rv = SetupEditorCommandController("@mozilla.org/editor/htmleditorcontroller;1",
                                       aWindow, editor,
-                                      &mHTMLCommandControllerId);
+                                      &htmlControllerId);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = SetHTMLControllerId(aWindow, htmlControllerId);
+
     if (NS_FAILED(rv)) return rv;
   }
 
@@ -283,9 +321,11 @@ nsEditingSession::SetupEditorOnWindow(nsIDOMWindow *aWindow)
   if (NS_FAILED(rv)) return rv;
 
   // make the UI state maintainer
-  NS_NEWXPCOM(mStateMaintainer, nsComposerCommandsUpdater);
-  if (!mStateMaintainer) return NS_ERROR_OUT_OF_MEMORY;
-  mStateMaintainer->AddRef();      // the owning reference
+  if (!mStateMaintainer) {
+    NS_NEWXPCOM(mStateMaintainer, nsComposerCommandsUpdater);
+    if (!mStateMaintainer) return NS_ERROR_OUT_OF_MEMORY;
+    mStateMaintainer->AddRef();      // the owning reference
+  }
 
   // now init the state maintainer
   // XXX this needs to swap out editors
@@ -374,12 +414,9 @@ nsEditingSession::TearDownEditorOnWindow(nsIDOMWindow *aWindow)
       // No editor: we have a new window and previous controllers
       //   were destroyed with the contentWindow.
       //   Clear IDs to trigger creation of new controllers
-      mBaseCommandControllerId = 0;
-      mHTMLCommandControllerId = 0;
+      SetBaseControllerId(aWindow, 0);
+      SetHTMLControllerId(aWindow, 0);
     }
-
-    mStateMaintainer->Release();
-    mStateMaintainer = nsnull;
   }
   
   return NS_OK;
@@ -804,17 +841,19 @@ nsEditingSession::SetEditorOnControllers(nsIDOMWindow *aWindow,
   rv = domWindowInt->GetControllers(getter_AddRefs(controllers));
   if (NS_FAILED(rv)) return rv;
 
-  nsCOMPtr<nsISupports> editorAsISupports = do_QueryInterface(aEditor);
-  if (mBaseCommandControllerId)
+  nsCOMPtr<nsISupports> editorAsISupports = do_QueryInterface(aEditor); 
+  PRUint32 controllerId = GetBaseControllerId(aWindow);
+  if (controllerId)
   {
     rv = SetContextOnControllerById(controllers, editorAsISupports,
-                                   mBaseCommandControllerId);
+                                    controllerId);
     if (NS_FAILED(rv)) return rv;
   }
 
-  if (mHTMLCommandControllerId)
+  controllerId = GetHTMLControllerId(aWindow);
+  if (controllerId)
     rv = SetContextOnControllerById(controllers, editorAsISupports,
-                                   mHTMLCommandControllerId);
+                                    controllerId);
 
   return rv;
 }
@@ -837,3 +876,125 @@ nsEditingSession::SetContextOnControllerById(nsIControllers* aControllers,
 
   return editorController->SetCommandContext(aContext);
 }
+
+/*---------------------------------------------------------------------------
+
+  GetControllerData
+
+  Gets the nsEditingSessionControllerData associated with the given
+  window. If aCreateIfNecessary is PR_TRUE, and there is no existing
+  data stored for the window, it will create and return a new data object.
+----------------------------------------------------------------------------*/
+
+nsEditingSessionControllerData *
+nsEditingSession::GetControllerData(nsIDOMWindow *aWindow,
+                                    PRBool aCreateIfNecessary)
+{
+  PRInt32 cnt = mControllerData.Count();
+
+  for (PRInt32 i = 0; i < cnt; i++)
+  {
+    nsEditingSessionControllerData *data =
+            (nsEditingSessionControllerData*)mControllerData.ElementAt(i);
+
+    if (data && data->mWindow == aWindow)
+      return data;
+  }
+
+  if (aCreateIfNecessary)
+  {
+    nsEditingSessionControllerData *data =
+            new nsEditingSessionControllerData(aWindow);
+
+    if (data)
+    {
+      if (mControllerData.AppendElement(data))
+        return data;
+
+      delete data;
+    }
+  }
+
+  return nsnull;
+}
+
+/*---------------------------------------------------------------------------
+
+  GetBaseControllerId
+
+  Get the BaseControllerId for the given window.
+----------------------------------------------------------------------------*/
+
+PRUint32
+nsEditingSession::GetBaseControllerId(nsIDOMWindow *aWindow)
+{
+  nsEditingSessionControllerData *data = GetControllerData(aWindow, PR_FALSE);
+
+  if (data)
+    return data->mBaseCommandControllerId;
+
+  return 0;
+}
+
+/*---------------------------------------------------------------------------
+
+  SetBaseControllerId
+
+  Store the BaseControllerId for the given window.
+----------------------------------------------------------------------------*/
+
+nsresult
+nsEditingSession::SetBaseControllerId(nsIDOMWindow *aWindow,
+                                      PRUint32 aBaseControllerId)
+{
+  NS_ENSURE_ARG_POINTER(aWindow);
+
+  nsEditingSessionControllerData *data = GetControllerData(aWindow, PR_TRUE);
+
+  if (!data) return NS_ERROR_FAILURE;
+
+  data->mBaseCommandControllerId = aBaseControllerId;
+
+  return NS_OK;
+}
+
+/*---------------------------------------------------------------------------
+
+  GetHTMLControllerId
+
+  Get the HTMLControllerId for the given window.
+----------------------------------------------------------------------------*/
+
+PRUint32
+nsEditingSession::GetHTMLControllerId(nsIDOMWindow *aWindow)
+{
+  nsEditingSessionControllerData *data = GetControllerData(aWindow, PR_FALSE);
+
+  if (data)
+    return data->mHTMLCommandControllerId;
+
+  return 0;
+}
+
+/*---------------------------------------------------------------------------
+
+  SetHTMLControllerId
+
+  Store the HTMLControllerId for the given window.
+----------------------------------------------------------------------------*/
+
+nsresult
+nsEditingSession::SetHTMLControllerId(nsIDOMWindow *aWindow,
+                                      PRUint32 aHTMLControllerId)
+{
+  NS_ENSURE_ARG_POINTER(aWindow);
+
+  nsEditingSessionControllerData *data = GetControllerData(aWindow, PR_TRUE);
+
+  if (!data) return NS_ERROR_FAILURE;
+
+  data->mHTMLCommandControllerId = aHTMLControllerId;
+
+  return NS_OK;
+}
+

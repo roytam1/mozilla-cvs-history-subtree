@@ -63,6 +63,7 @@
 #include "nsIEditingSession.h"
 #endif
 
+#include "nsVoidArray.h"
 
 
 #define NS_EDITINGSESSION_CID                            \
@@ -71,8 +72,11 @@
 
 class nsIWebProgress;
 class nsIEditorDocShell;
+class nsIDOMWindow;
 
 class nsComposerCommandsUpdater;
+
+struct nsEditingSessionControllerData;
 
 class nsEditingSession : public nsIEditingSession,
                          public nsIWebProgressListener,
@@ -117,6 +121,14 @@ protected:
   
   PRBool          NotifyingCurrentDocument(nsIWebProgress *aWebProgress);
 
+  nsEditingSessionControllerData *GetControllerData(nsIDOMWindow *aWindow,
+                                                    PRBool aCreateIfNecessary);
+  PRUint32        GetBaseControllerId(nsIDOMWindow *aWindow);
+  nsresult        SetBaseControllerId(nsIDOMWindow *aWindow,
+                                      PRUint32 aBaseControllerId);
+  PRUint32        GetHTMLControllerId(nsIDOMWindow *aWindow);
+  nsresult        SetHTMLControllerId(nsIDOMWindow *aWindow,
+                                      PRUint32 aHTMLControllerId);
 protected:
 
   nsWeakPtr       mEditingShell;      // weak ptr back to our editing (web) shell. It owns us.
@@ -126,8 +138,7 @@ protected:
   const char *    mEditorClassString; //we need this to hold onto the type for invoking editor after loading uri  
   nsCString       mEditorType; 
   PRUint32        mEditorFlags;
-  PRUint32        mBaseCommandControllerId;
-  PRUint32        mHTMLCommandControllerId;
+  nsVoidArray     mControllerData;
 };
 
 
