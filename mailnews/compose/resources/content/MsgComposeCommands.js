@@ -18,6 +18,7 @@
  * Rights Reserved.
  */
 
+
 const MEDIATOR_CONTRACTID = "@mozilla.org/rdf/datasource;1?name=window-mediator";
 var msgCompDeliverMode = Components.interfaces.nsIMsgCompDeliverMode;
 var msgCompSendFormat = Components.interfaces.nsIMsgCompSendFormat;
