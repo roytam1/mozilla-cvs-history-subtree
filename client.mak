@@ -128,7 +128,7 @@ build_all:  build_dist  \
 !if defined(MOZ_RAPTOR)
 build_raptor: 
 	cd $(MOZ_SRC)\$(MOZ_TOP)
-	$(NMAKE) -f $(RAPTOR_MAKEFILE) STANDALONE_IMAGE_LIB=1 RAPTOR=1
+	$(NMAKE) -f $(RAPTOR_MAKEFILE) STANDALONE_IMAGE_LIB=1 RAPTOR_BUILD_PREFIX=1
 !endif
 
 build_dist:
