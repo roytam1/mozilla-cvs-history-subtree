@@ -19,9 +19,9 @@
  *
  * Contributor(s): 
  */
-package org.mozilla.webclient.wrapper_native.motif;
+package org.mozilla.webclient.wrapper_native.gtk;
 
-// MotifBrowserControlCanvas.java
+// GtkBrowserControlCanvas.java
 
 import org.mozilla.util.Assert;
 import org.mozilla.util.Log;
@@ -29,8 +29,8 @@ import org.mozilla.util.ParameterCheck;
 
 /**
 
- * MotifBrowserControlCanvas provides a concrete realization
- * of the RaptorCanvas for Motif.
+ * GtkBrowserControlCanvas provides a concrete realization
+ * of the RaptorCanvas for Gtk.
 
  * <B>Lifetime And Scope</B> <P>
 
@@ -51,14 +51,14 @@ import org.mozilla.webclient.*;
 import org.mozilla.webclient.wrapper_native.*;
 
 /**
- * MotifBrowserControlCanvas provides a concrete realization
+ * GtkBrowserControlCanvas provides a concrete realization
  * of the RaptorCanvas.
  */
-public class MotifBrowserControlCanvas extends BrowserControlCanvas /* implements ActionListener*/  {
+public class GtkBrowserControlCanvas extends BrowserControlCanvas /* implements ActionListener*/  {
 
     static {
         System.loadLibrary("webclientstub");
-        MotifBrowserControlCanvas.loadMainDll();
+        GtkBrowserControlCanvas.loadMainDll();
     }
     
     static private boolean firstTime = true;
@@ -79,7 +79,7 @@ public class MotifBrowserControlCanvas extends BrowserControlCanvas /* implement
     //New method for obtaining access to the Native Peer handle
     private native int getHandleToPeer();
 
-    public MotifBrowserControlCanvas() {
+    public GtkBrowserControlCanvas() {
         super();
         
         this.gtkWinID = 0;
