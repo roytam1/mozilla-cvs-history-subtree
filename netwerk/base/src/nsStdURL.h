@@ -17,7 +17,7 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
+ * Contributor(s):
  */
 
 #ifndef nsStdURL_h__
@@ -39,14 +39,15 @@
 class nsStdURL : public nsIURL
 {
 public:
+
     ////////////////////////////////////////////////////////////////////////////
     // nsStdURL methods:
 
     nsStdURL(const char* i_Spec, nsISupports* outer=nsnull);
-    nsStdURL(const nsStdURL& i_URL); 
+    nsStdURL(const nsStdURL& i_URL);
     virtual ~nsStdURL();
 
-    nsStdURL&   operator =(const nsStdURL& otherURL); 
+    nsStdURL&   operator =(const nsStdURL& otherURL);
     PRBool      operator ==(const nsStdURL& otherURL) const;
 
     static NS_METHOD
@@ -62,15 +63,22 @@ public:
     // nsIURL methods:
     NS_DECL_NSIURL
 
-    /* todo move this to protected later */
-    nsresult ParsePath(void);
-
 protected:
     nsresult Parse(void);
     nsresult ReconstructPath(void);
     nsresult ReconstructSpec(void);
+    nsresult ParseScheme(char* i_Spec, char* *o_Scheme, char* *o_PreHost,
+                         char* *o_Host, PRInt32 *o_Port, char* *o_Path);
+    nsresult ParsePreHost(char* i_Spec, char* *o_PreHost, char* *o_Host,
+                          PRInt32 *o_Port, char* *o_Path);
+    nsresult ParseHost(char* i_Spec, char* *o_Host,
+                       PRInt32 *o_Port, char* *o_Path);
+    nsresult ParsePort(char* i_Spec, PRInt32 *o_Port, char* *o_Path);
+    nsresult ParsePath(char* i_Spec, char* *o_Path);
+    nsresult ParsePath(char* i_Path, char* *o_Directory, char* *o_FileName,
+                       char* *o_Param, char* *o_Query, char* *o_Ref);
 
-    // Some handy functions 
+    // Some handy functions
     nsresult DupString(char* *o_Dest, const char* i_Src);
     nsresult ExtractString(char* i_Src, char* *o_Dest, PRUint32 length);
 protected:
@@ -87,7 +95,7 @@ protected:
     char*       mQuery;
     char*       mRef;
 
-    char*       mSpec; 
+    char*       mSpec;
 
 };
 

@@ -37,6 +37,7 @@
 #include "nsIInterfaceRequestor.h"
 #include "nsProxyObjectManager.h"
 #include "nsXPIDLString.h"
+#include "nsNetUtil.h"
 
 static NS_DEFINE_CID(kSocketProviderService, NS_SOCKETPROVIDERSERVICE_CID);
 static NS_DEFINE_CID(kDNSService, NS_DNSSERVICE_CID);
@@ -1518,8 +1519,7 @@ nsSocketTransport::AsyncOpen(nsIStreamObserver *observer, nsISupports* ctxt)
 
   // Create a marshalling open observer to receive notifications...
   if (NS_SUCCEEDED(rv)) {
-    rv = NS_NewAsyncStreamObserver(getter_AddRefs(mOpenObserver),
-                                   nsnull, observer);
+    rv = NS_NewAsyncStreamObserver(observer, nsnull, getter_AddRefs(mOpenObserver));
   }
 
   if (NS_SUCCEEDED(rv)) {
@@ -1579,8 +1579,7 @@ nsSocketTransport::AsyncRead(PRUint32 startPosition, PRInt32 readCount,
 
   // Create a marshalling stream listener to receive notifications...
   if (NS_SUCCEEDED(rv)) {
-    rv = NS_NewAsyncStreamListener(getter_AddRefs(mReadListener),
-                                   nsnull, aListener);
+    rv = NS_NewAsyncStreamListener(aListener, nsnull, getter_AddRefs(mReadListener));
   }
 
   if (NS_SUCCEEDED(rv)) {
@@ -1632,8 +1631,7 @@ nsSocketTransport::AsyncWrite(nsIInputStream* aFromStream,
 
     // Create a marshalling stream observer to receive notifications...
     if (aObserver) {
-      rv = NS_NewAsyncStreamObserver(getter_AddRefs(mWriteObserver), 
-                                     nsnull, aObserver);
+      rv = NS_NewAsyncStreamObserver(aObserver, nsnull, getter_AddRefs(mWriteObserver));
     }
 
     mWriteCount = writeCount;

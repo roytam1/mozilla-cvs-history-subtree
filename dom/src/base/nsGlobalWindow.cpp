@@ -74,7 +74,7 @@
 #include "nsIJSContextStack.h"
 #include "nsIIOService.h"
 #include "nsIURL.h"
-#include "nsNeckoUtil.h"
+#include "nsNetUtil.h"
 #include "nsRDFCID.h"
 #include "nsDOMPropEnums.h"
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);

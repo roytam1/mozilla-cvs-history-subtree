@@ -75,11 +75,6 @@ LINCS=                     \
 
 LLIBS=                         \
         $(DIST)\lib\xpcom.lib  \
-!ifdef NECKO
-        $(DIST)\lib\neckoutil_s.lib \
-!else
-        $(DIST)\lib\netlib.lib \
-!endif
         $(LIBNSPR)
 
 !if "$(MOZ_BITS)"=="32" && defined(MOZ_DEBUG) && defined(GLOWCODE)

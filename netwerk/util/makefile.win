@@ -25,7 +25,6 @@ MODULE = necko
 
 DIRS=          \
 	public \
-	src    \
 	$(NULL)
 
 include <$(DEPTH)\config\rules.mak>

@@ -62,4 +62,7 @@
 #endif /* !XP_PC */
 #endif /* !_IMPL_NS_NET */
 
+extern nsresult
+GetScheme(const char* inURI, char* *scheme);
+
 #endif // __netCore_h__

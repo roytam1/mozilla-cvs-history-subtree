@@ -21,7 +21,7 @@
 #include "nsIURL.h"
 #include "nsIIOService.h"
 #include "nsIServiceManager.h"
-#include "nsNeckoUtil.h"
+#include "nsNetUtil.h"
 #include "nsFileSpec.h"
 #include "nsIDocumentLoader.h"
 #include "nsIContentViewer.h"
@@ -456,6 +456,9 @@ GtkMozillaContainer::StartStream(const char *base_url,
     goto error;
   
   rv = NS_NewLoadGroup(nsnull, nsnull, &mLoadGroup);
+  if (NS_FAILED(rv)) 
+    goto error;
+  rv = mLoadGroup->Init(nsnull, nsnull);
   if (NS_FAILED(rv)) 
     goto error;
   
