@@ -211,13 +211,11 @@ SVG_BRANCH_NEW_FILES = \
 	layout/svg/renderer/public/nsISVGRendererPathBuilder.idl \
 	layout/svg/renderer/public/nsISVGRendererPathGeometry.idl \
 	layout/svg/renderer/public/nsISVGRendererRegion.idl   \
-	layout/svg/renderer/public/nsISVGRendererRenderContext.idl \
 	layout/svg/renderer/src/Makefile.in                   \
 	layout/svg/renderer/src/gdiplus/Makefile.in           \
 	layout/svg/renderer/src/gdiplus/nsISVGGDIPlusCanvas.h \
 	layout/svg/renderer/src/gdiplus/nsISVGGDIPlusGlyphMetrics.h \
 	layout/svg/renderer/src/gdiplus/nsISVGGDIPlusRegion.h \
-	layout/svg/renderer/src/gdiplus/nsISVGGDIPlusRenderContext.h \
 	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusCanvas.cpp \
 	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusCanvas.h  \
 	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusGlyphGeometry.cpp \
@@ -230,8 +228,6 @@ SVG_BRANCH_NEW_FILES = \
 	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusPathGeometry.h \
 	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusRegion.cpp \
 	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusRegion.h  \
-	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusRenderContext.cpp \
-	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusRenderContext.h \
 	layout/svg/renderer/src/gdiplus/nsSVGRendererGDIPlus.cpp 
 
 
