@@ -129,7 +129,7 @@
               prefstring="mail.biff.show_alert"
               accesskey="&showAnimatedAlert.accesskey;"/>
 
-#ifdef MAC_OSX
+#ifdef XP_MACOSX
     <checkbox id="newMailNotificationBounce" label="&bounceSystemDockIcon.label;"
               prefstring="mail.biff.animate_dock_icon"
               accesskey="&bounceSystemDockIcon.accesskey;"/>
