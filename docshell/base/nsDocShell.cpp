@@ -2578,8 +2578,6 @@ nsDocShell::GetParentWidget(nsIWidget ** parentWidget)
 NS_IMETHODIMP
 nsDocShell::SetParentWidget(nsIWidget * aParentWidget)
 {
-    NS_ENSURE_STATE(!mContentViewer);
-
     mParentWidget = aParentWidget;
 
     return NS_OK;
@@ -3752,20 +3750,20 @@ nsDocShell::SetupNewViewer(nsIContentViewer * aNewViewer)
 
     nsCOMPtr<nsIWidget> widget;
     NS_ENSURE_SUCCESS(GetMainWidget(getter_AddRefs(widget)), NS_ERROR_FAILURE);
-    if (!widget) {
-        NS_ERROR("GetMainWidget coughed up a null widget");
-        return NS_ERROR_FAILURE;
+
+    if (widget) {
+        NS_ENSURE_SUCCESS(EnsureDeviceContext(), NS_ERROR_FAILURE);
     }
 
     nsRect bounds(x, y, cx, cy);
-    NS_ENSURE_SUCCESS(EnsureDeviceContext(), NS_ERROR_FAILURE);
+
     if (NS_FAILED(mContentViewer->Init(widget, mDeviceContext, bounds))) {
         mContentViewer = nsnull;
         NS_ERROR("ContentViewer Initialization failed");
         return NS_ERROR_FAILURE;
     }
 
-    if (bgSet) {
+    if (bgSet && widget) {
         // Stuff the bgcolor from the last view manager into the new
         // view manager. This improves page load continuity.
         nsCOMPtr<nsIDocumentViewer> docviewer =

@@ -35,6 +35,7 @@ REQUIRES	= xpcom \
 		  view \
 		  pref \
 		  docshell \
+		  uriloader \
 		  xpconnect \
 		  caps \
 		  editor \

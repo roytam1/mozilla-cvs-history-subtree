@@ -41,7 +41,7 @@
 #include "nsIDOMEventReceiver.h"
 #include "nsIDOMWindow.h"
 #include "nsIScriptGlobalObject.h"
-#include "nsIHTMLContent.h"
+#include "nsIFrameLoader.h"
 #include "nsGenericHTMLElement.h"
 #include "nsHTMLAtoms.h"
 #include "nsIStyleContext.h"
@@ -54,12 +54,28 @@
 #include "nsIChromeEventHandler.h"
 #include "nsDOMError.h"
 #include "nsRuleNode.h"
+#include "nsIDocShell.h"
+#include "nsIDocShellTreeItem.h"
+#include "nsIDocShellTreeNode.h"
+#include "nsIDocShellTreeOwner.h"
+#include "nsIDocShellLoadInfo.h"
+#include "nsIWebShell.h"
+#include "nsIWebProgressListener.h"
+#include "nsIWebProgress.h"
+#include "nsWeakReference.h"
+
+#include "nsIScriptSecurityManager.h"
+#include "nsICodebasePrincipal.h"
+
+#include "nsIURI.h"
+#include "nsNetUtil.h"
 
 class nsHTMLIFrameElement : public nsGenericHTMLContainerElement,
                             public nsIDOMHTMLIFrameElement,
                             public nsIDOMNSHTMLFrameElement,
                             public nsIChromeEventHandler,
-                            public nsIDOMEventListener
+                            public nsIDOMEventListener,
+                            public nsIFrameLoaderOwner
 {
 public:
   nsHTMLIFrameElement();
@@ -89,6 +105,12 @@ public:
   // nsIDOMEventListener
   NS_DECL_NSIDOMEVENTLISTENER
 
+  // nsIFrameLoaderOwner
+  NS_IMETHOD GetFrameLoader(nsIFrameLoader **aFrameLoader);
+
+  // nsIContent
+  NS_IMETHOD SetParent(nsIContent *aParent);
+
   NS_IMETHOD StringToAttribute(nsIAtom* aAttribute,
                                const nsAReadableString& aValue,
                                nsHTMLValue& aResult);
@@ -101,6 +123,13 @@ public:
 #ifdef DEBUG
   NS_IMETHOD SizeOf(nsISizeOfHandler* aSizer, PRUint32* aResult) const;
 #endif
+
+protected:
+  nsresult GetPresContextDeep(nsIPresContext **aPresContext);
+  nsresult EnsureFrameLoader();
+  nsresult LoadSrc(const nsAReadableString& aStr);
+
+  nsCOMPtr<nsIFrameLoader> mFrameLoader;
 };
 
 nsresult
@@ -149,6 +178,7 @@ NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLIFrameElement,
   NS_INTERFACE_MAP_ENTRY(nsIDOMNSHTMLFrameElement)
   NS_INTERFACE_MAP_ENTRY(nsIChromeEventHandler)
   NS_INTERFACE_MAP_ENTRY(nsIDOMEventListener)
+  NS_INTERFACE_MAP_ENTRY(nsIFrameLoaderOwner)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLIFrameElement)
 NS_HTML_CONTENT_INTERFACE_MAP_END
 
@@ -189,69 +219,187 @@ NS_IMPL_STRING_ATTR(nsHTMLIFrameElement, MarginHeight, marginheight)
 NS_IMPL_STRING_ATTR(nsHTMLIFrameElement, MarginWidth, marginwidth)
 NS_IMPL_STRING_ATTR(nsHTMLIFrameElement, Name, name)
 NS_IMPL_STRING_ATTR(nsHTMLIFrameElement, Scrolling, scrolling)
-NS_IMPL_STRING_ATTR(nsHTMLIFrameElement, Src, src)
 NS_IMPL_STRING_ATTR(nsHTMLIFrameElement, Width, width)
 
+NS_IMETHODIMP
+nsHTMLIFrameElement::GetSrc(nsAWritableString& aSrc)
+{
+  nsGenericHTMLContainerElement::GetAttr(kNameSpaceID_None, nsHTMLAtoms::src,
+                                         aSrc);
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHTMLIFrameElement::SetSrc(const nsAReadableString& aSrc)
+{
+  SetAttribute(NS_LITERAL_STRING("src"), aSrc);
+
+  return LoadSrc(aSrc);
+}
 
 NS_IMETHODIMP
 nsHTMLIFrameElement::GetContentDocument(nsIDOMDocument** aContentDocument)
 {
   NS_ENSURE_ARG_POINTER(aContentDocument);
 
-  *aContentDocument = nsnull;
+  nsresult rv = EnsureFrameLoader();
+  NS_ENSURE_SUCCESS(rv, rv);
 
-  NS_ENSURE_TRUE(mDocument, NS_OK);
+  nsCOMPtr<nsIDocShell> doc_shell;
+  mFrameLoader->GetDocShell(getter_AddRefs(doc_shell));
 
-  nsCOMPtr<nsIPresShell> presShell;
+  nsCOMPtr<nsIDOMWindow> win(do_GetInterface(doc_shell));
 
-  mDocument->GetShellAt(0, getter_AddRefs(presShell));
-  NS_ENSURE_TRUE(presShell, NS_OK);
+  if (!win) {
+    *aContentDocument = nsnull;
 
-  nsCOMPtr<nsISupports> tmp;
+    return NS_OK;
+  }
 
-  presShell->GetSubShellFor(this, getter_AddRefs(tmp));
-  NS_ENSURE_TRUE(tmp, NS_OK);
-
-  nsCOMPtr<nsIWebNavigation> webNav = do_QueryInterface(tmp);
-  NS_ENSURE_TRUE(webNav, NS_OK);
-
-  nsCOMPtr<nsIDOMDocument> domDoc;
-
-  webNav->GetDocument(getter_AddRefs(domDoc));
-
-  *aContentDocument = domDoc;
-
-  NS_IF_ADDREF(*aContentDocument);
-
-  return NS_OK;
+  return win->GetDocument(aContentDocument);
 }
 
 NS_IMETHODIMP
 nsHTMLIFrameElement::GetContentWindow(nsIDOMWindow** aContentWindow)
 {
   NS_ENSURE_ARG_POINTER(aContentWindow);
-  *aContentWindow = nsnull;
 
-  nsCOMPtr<nsIDOMDocument> content_doc;
-
-  nsresult rv = GetContentDocument(getter_AddRefs(content_doc));
+  nsresult rv = EnsureFrameLoader();
   NS_ENSURE_SUCCESS(rv, rv);
 
-  nsCOMPtr<nsIDocument> doc(do_QueryInterface(content_doc));
+  nsCOMPtr<nsIDocShell> doc_shell;
+  mFrameLoader->GetDocShell(getter_AddRefs(doc_shell));
 
-  if (!doc) {
-    return NS_OK;
-  }
+  nsCOMPtr<nsIDOMWindow> win(do_GetInterface(doc_shell));
 
-  nsCOMPtr<nsIScriptGlobalObject> globalObj;
-  doc->GetScriptGlobalObject(getter_AddRefs(globalObj));
-
-  nsCOMPtr<nsIDOMWindow> window (do_QueryInterface(globalObj));
-
-  *aContentWindow = window;
+  *aContentWindow = win;
   NS_IF_ADDREF(*aContentWindow);
 
   return NS_OK;
+}
+
+nsresult
+nsHTMLIFrameElement::GetPresContextDeep(nsIPresContext **aPresContext)
+{
+  *aPresContext = nsnull;
+
+  nsCOMPtr<nsIDocument> doc;
+  mNodeInfo->GetDocument(*getter_AddRefs(doc));
+
+  while (doc) {
+    nsCOMPtr<nsIPresShell> presShell;
+    doc->GetShellAt(0, getter_AddRefs(presShell));
+
+    if (presShell) {
+      presShell->GetPresContext(aPresContext);
+
+      return NS_OK;
+    }
+
+    nsCOMPtr<nsIDocument> parent;
+    doc->GetParentDocument(getter_AddRefs(parent));
+
+    doc = parent;
+  }
+
+  return NS_OK;
+}
+
+nsresult
+nsHTMLIFrameElement::EnsureFrameLoader()
+{
+  if (mFrameLoader || !mParent) {
+    return NS_OK;
+  }
+
+  nsresult rv = NS_NewFrameLoader(getter_AddRefs(mFrameLoader));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  mFrameLoader->Init(this);
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHTMLIFrameElement::GetFrameLoader(nsIFrameLoader **aFrameLoader)
+{
+  *aFrameLoader = mFrameLoader;
+  NS_IF_ADDREF(*aFrameLoader);
+
+  return NS_OK;
+}
+
+nsresult
+nsHTMLIFrameElement::LoadSrc(const nsAReadableString& aStr)
+{
+  if (!mParent) {
+    return NS_OK;
+  }
+
+  nsresult rv = EnsureFrameLoader();
+
+
+  // Prevent recursion, or is that something the frame loader should do?
+
+
+
+  //    mCreatingViewer=PR_TRUE;
+
+
+
+  nsAutoString src(aStr);
+  GetSrc(src);
+  src.Trim(" \t\n\r");
+
+  if (src.IsEmpty()) {
+    // about:blank will be synthesized into a frame if not URL is
+    // loaded into it (bug 35986)
+
+
+
+
+
+
+
+
+
+    // load about:blank if we're loading something already
+
+
+
+
+
+
+
+    return NS_OK;
+  }
+
+  // Make an absolute URI
+  nsCOMPtr<nsIURI> base_uri;
+  GetBaseURL(*getter_AddRefs(base_uri));
+
+  nsCOMPtr<nsIURI> uri;
+  rv = NS_NewURI(getter_AddRefs(uri), src, base_uri);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = mFrameLoader->LoadURI(uri);
+  NS_ASSERTION(NS_SUCCEEDED(rv), "failed to load URL");
+
+  return rv;
+}
+
+
+NS_IMETHODIMP
+nsHTMLIFrameElement::SetParent(nsIContent *aParent)
+{
+  nsresult rv = nsGenericHTMLContainerElement::SetParent(aParent);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsAutoString src;
+  GetSrc(src);
+
+  return LoadSrc(src);
 }
 
 NS_IMETHODIMP
@@ -366,7 +514,7 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
     if (aData->mPositionData->mHeight.GetUnit() == eCSSUnit_Null) {
       aAttributes->GetAttribute(nsHTMLAtoms::height, value);
       if (value.GetUnit() == eHTMLUnit_Pixel)
-        aData->mPositionData->mHeight.SetFloatValue((float)value.GetPixelValue(), eCSSUnit_Pixel);   
+        aData->mPositionData->mHeight.SetFloatValue((float)value.GetPixelValue(), eCSSUnit_Pixel);
       else if (value.GetUnit() == eHTMLUnit_Percent)
         aData->mPositionData->mHeight.SetPercentValue(value.GetPercentValue());
     }
@@ -377,7 +525,8 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
 }
 
 NS_IMETHODIMP
-nsHTMLIFrameElement::GetMappedAttributeImpact(const nsIAtom* aAttribute, PRInt32 aModType,
+nsHTMLIFrameElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
+                                              PRInt32 aModType,
                                               PRInt32& aHint) const
 {
   if ((aAttribute == nsHTMLAtoms::width) ||
@@ -419,13 +568,13 @@ nsHTMLIFrameElement::SizeOf(nsISizeOfHandler* aSizer, PRUint32* aResult) const
 
 //*****************************************************************************
 // nsHTMLIFrameElement::nsIChromeEventHandler
-//*****************************************************************************   
+//*****************************************************************************
 
 NS_IMETHODIMP
 nsHTMLIFrameElement::HandleChromeEvent(nsIPresContext* aPresContext,
                                        nsEvent* aEvent,
                                        nsIDOMEvent** aDOMEvent,
-                                       PRUint32 aFlags, 
+                                       PRUint32 aFlags,
                                        nsEventStatus* aEventStatus)
 {
    return HandleDOMEvent(aPresContext, aEvent, aDOMEvent, aFlags,aEventStatus);

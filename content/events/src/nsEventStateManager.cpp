@@ -1382,39 +1382,36 @@ nsEventStateManager::GetParentScrollingView(nsMouseScrollEvent *aEvent,
 {
   if (!aEvent) return NS_ERROR_FAILURE;
   if (!aPresContext) return NS_ERROR_FAILURE;
-  
-  nsCOMPtr<nsISupports> shell;
-  aPresContext->GetContainer(getter_AddRefs(shell));
-  if (!shell) return NS_ERROR_FAILURE;
-  
-  nsCOMPtr<nsIDocShellTreeItem> treeItem = do_QueryInterface(shell);
-  if (!treeItem) return NS_ERROR_FAILURE;
 
-  /* get our docshell's parent */
-  nsCOMPtr<nsIDocShellTreeItem> parent;
-  treeItem->GetParent(getter_AddRefs(parent));
-  if (!parent) return NS_ERROR_FAILURE;
-  
-  nsCOMPtr<nsIDocShell> pDocShell = do_QueryInterface(parent);
-  if (!pDocShell) return NS_ERROR_FAILURE;
+  nsCOMPtr<nsIDocument> doc;
 
-  nsCOMPtr<nsIPresShell> pPresShell;
-  pDocShell->GetPresShell(getter_AddRefs(pPresShell));
-  if (!pPresShell) return NS_ERROR_FAILURE;
+  {
+    nsCOMPtr<nsIPresShell> presShell;
+    aPresContext->GetShell(getter_AddRefs(presShell));
+    NS_ASSERTION(presShell, "No presshell in prescontext!");
+
+    presShell->GetDocument(getter_AddRefs(doc));
+  }
+
+  NS_ASSERTION(doc, "No document in prescontext!");
 
   nsCOMPtr<nsIDocument> parentDoc;
-  pPresShell->GetDocument(getter_AddRefs(parentDoc));
+  doc->GetParentDocument(getter_AddRefs(parentDoc));
 
-  nsCOMPtr<nsIContent> rootContent;
-  parentDoc->GetRootContent(getter_AddRefs(rootContent));
+  if (!parentDoc) {
+    return NS_OK;
+  }
 
-  nsCOMPtr<nsIDocShell> ourDS = do_QueryInterface(shell);
+  nsCOMPtr<nsIPresShell> pPresShell;
+  parentDoc->GetShellAt(0, getter_AddRefs(pPresShell));
+  NS_ENSURE_TRUE(pPresShell, NS_ERROR_FAILURE);
 
-  /* now find the content node in our parent docshell's document that corresponds
-     to our docshell */
+  /* now find the content node in our parent docshell's document that
+     corresponds to our docshell */
   nsCOMPtr<nsIContent> frameContent;
-  pPresShell->FindContentForShell(ourDS, getter_AddRefs(frameContent));
-  if (!frameContent) return NS_ERROR_FAILURE;
+
+  parentDoc->FindContentForSubDocument(doc, getter_AddRefs(frameContent));
+  NS_ENSURE_TRUE(frameContent, NS_ERROR_FAILURE);
 
   /*
     get this content node's frame, and use it as the new event target,
@@ -1422,6 +1419,7 @@ nsEventStateManager::GetParentScrollingView(nsMouseScrollEvent *aEvent,
     Note that we don't actually need to translate the event coordinates
     because they are not used by DoWheelScroll().
   */
+
   nsIFrame* frameFrame = nsnull;
   pPresShell->GetPrimaryFrameFor(frameContent, &frameFrame);
   if (!frameFrame) return NS_ERROR_FAILURE;
@@ -2631,7 +2629,19 @@ nsEventStateManager::ShiftFocus(PRBool forward, nsIContent* aStart)
     // does, we send focus into the subshell.
 
     nsCOMPtr<nsISupports> shellObject;
-    presShell->GetSubShellFor(nextFocus, getter_AddRefs(shellObject));
+
+
+
+
+
+    //    presShell->GetSubShellFor(nextFocus, getter_AddRefs(shellObject));
+
+
+
+
+
+
+
     if (shellObject) {
       nsCOMPtr<nsIDocShell> subShell = do_QueryInterface(shellObject);
       if (subShell) {
@@ -2699,8 +2709,20 @@ nsEventStateManager::ShiftFocus(PRBool forward, nsIContent* aStart)
           parentDS->GetPresShell(getter_AddRefs(parentShell));
           
           nsCOMPtr<nsIContent> shellContent;
-          parentShell->FindContentForShell(docShell, getter_AddRefs(shellContent));
+
+
+
+
+
+
+
+          //          parentShell->FindContentForShell(docShell, getter_AddRefs(shellContent));
           
+
+
+
+
+
           nsCOMPtr<nsIPresContext> parentPC;
           parentShell->GetPresContext(getter_AddRefs(parentPC));
           
@@ -4133,6 +4155,14 @@ PRBool
 nsEventStateManager::IsIFrameDoc(nsIDocShell* aDocShell)
 {
   NS_ASSERTION(aDocShell, "docshell is null");
+
+  nsCOMPtr<nsIPresShell> presShell;
+  aDocShell->GetPresShell(getter_AddRefs(presShell));
+
+  nsCOMPtr<nsIDocument> doc;
+  presShell->GetDocument(getter_AddRefs(doc));
+  NS_ASSERTION(doc, "No document in presshell!");
+
   nsCOMPtr<nsIDocShellTreeItem> treeItem = do_QueryInterface(aDocShell);
   nsCOMPtr<nsIDocShellTreeItem> parentItem;
   treeItem->GetParent(getter_AddRefs(parentItem));
@@ -4140,12 +4170,17 @@ nsEventStateManager::IsIFrameDoc(nsIDocShell* aDocShell)
     return PR_FALSE;
   
   nsCOMPtr<nsIDocShell> parentDS = do_QueryInterface(parentItem);
-  nsCOMPtr<nsIPresShell> parentShell;
-  parentDS->GetPresShell(getter_AddRefs(parentShell));
-  NS_ASSERTION(parentShell, "presshell is null");
-  
+  nsCOMPtr<nsIPresShell> parentPresShell;
+  parentDS->GetPresShell(getter_AddRefs(parentPresShell));
+  NS_ASSERTION(parentPresShell, "presshell is null");
+
+  nsCOMPtr<nsIDocument> parentDoc;
+  parentPresShell->GetDocument(getter_AddRefs(parentDoc));
+
   nsCOMPtr<nsIContent> docContent;
-  parentShell->FindContentForShell(aDocShell, getter_AddRefs(docContent));
+
+  parentDoc->FindContentForSubDocument(doc, getter_AddRefs(docContent));
+
   if (!docContent)
     return PR_FALSE;
   

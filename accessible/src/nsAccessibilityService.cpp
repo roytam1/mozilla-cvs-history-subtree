@@ -682,28 +682,24 @@ nsAccessibilityService::CreateIFrameAccessible(nsIDOMNode* aDOMNode, nsIAccessib
   nsCOMPtr<nsIDocument> doc;
   if (NS_SUCCEEDED(content->GetDocument(*getter_AddRefs(doc))) && doc) {
     if (outerPresShell) {
-      nsCOMPtr<nsISupports> supps;
-      outerPresShell->GetSubShellFor(content, getter_AddRefs(supps));
-      if (supps) {
-        nsCOMPtr<nsIDocShell> docShell(do_QueryInterface(supps));
-        if (docShell) {
-          nsCOMPtr<nsIPresShell> innerPresShell;
-          docShell->GetPresShell(getter_AddRefs(innerPresShell));
-          if (innerPresShell) {
-            nsCOMPtr<nsIWeakReference> innerWeakShell(do_GetWeakReference(innerPresShell));
-            nsCOMPtr<nsIDocument> innerDoc;
-            innerPresShell->GetDocument(getter_AddRefs(innerDoc)); 
-            if (innerDoc) {
-              nsCOMPtr<nsIAccessible> innerRootAccessible(new nsHTMLIFrameRootAccessible(aDOMNode, innerWeakShell));
-              if (innerRootAccessible) {
-                nsHTMLIFrameAccessible* outerRootAccessible = new nsHTMLIFrameAccessible(aDOMNode, innerRootAccessible, outerWeakShell, innerDoc);
-                if (outerRootAccessible) {
-                  *_retval = NS_STATIC_CAST(nsIAccessible*, outerRootAccessible);
-                  if (*_retval) {
-                    NS_ADDREF(*_retval);
-                    return NS_OK;
-                  }
-                }
+      nsCOMPtr<nsIDocument> sub_doc;
+
+      doc->GetSubDocumentFor(content, getter_AddRefs(sub_doc));
+
+      if (sub_doc) {
+        nsCOMPtr<nsIPresShell> innerPresShell;
+        sub_doc->GetShellAt(0, getter_AddRefs(innerPresShell));
+
+        if (innerPresShell) {
+          nsCOMPtr<nsIWeakReference> innerWeakShell(do_GetWeakReference(innerPresShell));
+          nsCOMPtr<nsIAccessible> innerRootAccessible(new nsHTMLIFrameRootAccessible(aDOMNode, innerWeakShell));
+          if (innerRootAccessible) {
+            nsHTMLIFrameAccessible* outerRootAccessible = new nsHTMLIFrameAccessible(aDOMNode, innerRootAccessible, outerWeakShell, sub_doc);
+            if (outerRootAccessible) {
+              *_retval = NS_STATIC_CAST(nsIAccessible*, outerRootAccessible);
+              if (*_retval) {
+                NS_ADDREF(*_retval);
+                return NS_OK;
               }
             }
           }
@@ -716,15 +712,24 @@ nsAccessibilityService::CreateIFrameAccessible(nsIDOMNode* aDOMNode, nsIAccessib
 
 void nsAccessibilityService::GetOwnerFor(nsIPresShell *aPresShell, nsIPresShell **aOwnerShell, nsIContent **aOwnerContent)
 {
+  *aOwnerShell = nsnull;
+  *aOwnerContent = nsnull;
+
   nsCOMPtr<nsIPresContext> presContext;
   aPresShell->GetPresContext(getter_AddRefs(presContext));
   if (!presContext) 
     return;
+
+  nsCOMPtr<nsIDocument> doc;
+  aPresShell->GetDocument(getter_AddRefs(doc));
+
+  if (!doc)
+    return;
+
   nsCOMPtr<nsISupports> pcContainer;
   presContext->GetContainer(getter_AddRefs(pcContainer));
   if (!pcContainer) 
     return;
-  nsCOMPtr<nsISupports> docShellSupports(do_QueryInterface(pcContainer));
 
   nsCOMPtr<nsIDocShellTreeItem> treeItem(do_QueryInterface(pcContainer));
   if (!treeItem) 
@@ -750,17 +755,11 @@ void nsAccessibilityService::GetOwnerFor(nsIPresShell *aPresShell, nsIPresShell 
   if (!parentDoc)
     return;
 
-  nsCOMPtr<nsIContent> rootContent;
-  parentDoc->GetRootContent(getter_AddRefs(rootContent));
+  parentDoc->FindContentForSubDocument(doc, aOwnerContent);
 
-  nsCOMPtr<nsIContent> tempContent;
-  parentPresShell->FindContentForShell(docShellSupports, getter_AddRefs(tempContent));
-
-  if (tempContent) {
-    *aOwnerContent = tempContent;
+  if (*aOwnerContent) {
     *aOwnerShell = parentPresShell;
     NS_ADDREF(*aOwnerShell);
-    NS_ADDREF(*aOwnerContent);
   }
 }
 

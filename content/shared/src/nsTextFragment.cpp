@@ -53,12 +53,7 @@ void
 nsTextFragment::ReleaseText()
 {
   if (mState.mLength && m1b && mState.mInHeap) {
-    if (mState.mIs2b) {
-      nsMemory::Free(m2b);
-    }
-    else {
-      nsMemory::Free(m1b);
-    }
+    nsMemory::Free(m1b); // m1b == m2b as far as nsMemory is concerned
   }
   m1b = nsnull;
   mState.mIs2b = 0;

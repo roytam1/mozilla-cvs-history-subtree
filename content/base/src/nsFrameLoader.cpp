@@ -66,6 +66,13 @@
 #include "nsIURI.h"
 #include "nsNetUtil.h"
 
+
+// Bug 8065: Limit content frame depth to some reasonable level. This
+// does not count chrome frames when determining depth, nor does it
+// prevent chrome recursion.
+#define MAX_DEPTH_CONTENT_FRAMES 25
+
+
 class nsFrameLoader : public nsIFrameLoader,
                       public nsIDOMEventListener,
                       public nsIWebProgressListener,
@@ -153,13 +160,9 @@ nsFrameLoader::LoadURI(nsIURI *aURI)
 
   nsresult rv = EnsureDocShell();
 
-
-  // Prevent recursion
-
-
-
-  //    mCreatingViewer=PR_TRUE;
-
+  if (NS_FAILED(rv)) {
+    return rv;
+  }
 
   // Check for security
   nsCOMPtr<nsIScriptSecurityManager> secMan =
@@ -221,6 +224,7 @@ nsFrameLoader::LoadURI(nsIURI *aURI)
     webProgress->AddProgressListener(this);
   }
 
+  // Kick off the load...
   rv = mDocShell->LoadURI(mURI, loadInfo, nsIWebNavigation::LOAD_FLAGS_NONE);
   NS_ASSERTION(NS_SUCCEEDED(rv), "failed to load URL");
 
@@ -287,16 +291,15 @@ nsFrameLoader::EnsureDocShell()
     return NS_OK;
   }
 
-#if 0
-
-
-
+  nsCOMPtr<nsIPresContext> presContext;
+  GetPresContext(getter_AddRefs(presContext));
+  NS_ENSURE_TRUE(presContext, NS_ERROR_UNEXPECTED);
 
   // Bug 8065: Don't exceed some maximum depth in content frames
   // (MAX_DEPTH_CONTENT_FRAMES)
   PRInt32 depth = 0;
   nsCOMPtr<nsISupports> parentAsSupports;
-  aPresContext->GetContainer(getter_AddRefs(parentAsSupports));
+  presContext->GetContainer(getter_AddRefs(parentAsSupports));
 
   if (parentAsSupports) {
     nsCOMPtr<nsIDocShellTreeItem> parentAsItem =
@@ -321,10 +324,18 @@ nsFrameLoader::EnsureDocShell()
       }
     }
   }
-#endif
 
+
+  // Create the docshell...
   mDocShell = do_CreateInstance("@mozilla.org/webshell;1");
   NS_ENSURE_TRUE(mDocShell, NS_ERROR_FAILURE);
+
+
+
+
+
+  // This code needs to go someplace else, we don't have the new
+  // document here yet...
 
 #if 0
   // notify the pres shell that a docshell has been created
@@ -343,6 +354,10 @@ nsFrameLoader::EnsureDocShell()
   }
 #endif
 
+
+
+
+
   nsCOMPtr<nsIDocShellTreeItem> docShellAsItem(do_QueryInterface(mDocShell));
   NS_ENSURE_TRUE(docShellAsItem, NS_ERROR_FAILURE);
   nsAutoString frameName;
@@ -356,124 +371,103 @@ nsFrameLoader::EnsureDocShell()
   // child. If it's not a web-shell then some things will not operate
   // properly.
 
-
-  nsCOMPtr<nsIPresContext> presContext;
-  GetPresContext(getter_AddRefs(presContext));
-
-
-
-
-
-
-
-
-
-
-
-  // what if !presContext ?
-
-
-
-
-
-
-
-
-
   nsCOMPtr<nsISupports> container;
   presContext->GetContainer(getter_AddRefs(container));
 
-  if (container) {
-    nsCOMPtr<nsIDocShellTreeNode> parentAsNode(do_QueryInterface(container));
-    if (parentAsNode) {
-      nsCOMPtr<nsIDocShellTreeItem> parentAsItem =
-        do_QueryInterface(parentAsNode);
+  nsCOMPtr<nsIDocShellTreeNode> parentAsNode(do_QueryInterface(container));
+  if (parentAsNode) {
+    nsCOMPtr<nsIDocShellTreeItem> parentAsItem =
+      do_QueryInterface(parentAsNode);
 
-      PRInt32 parentType;
-      parentAsItem->GetItemType(&parentType);
+    PRInt32 parentType;
+    parentAsItem->GetItemType(&parentType);
 
-      nsAutoString value, valuePiece;
-      PRBool isContent;
+    nsAutoString value, valuePiece;
+    PRBool isContent;
 
-      isContent = PR_FALSE;
-      mOwnerElement->GetAttribute(NS_LITERAL_STRING("type"), value);
+    isContent = PR_FALSE;
+    mOwnerElement->GetAttribute(NS_LITERAL_STRING("type"), value);
 
-      if (!value.IsEmpty()) {
-        // we accept "content" and "content-xxx" values.
-        // at time of writing, we expect "xxx" to be "primary", but
-        // someday it might be an integer expressing priority
+    if (!value.IsEmpty()) {
+      // we accept "content" and "content-xxx" values.
+      // at time of writing, we expect "xxx" to be "primary", but
+      // someday it might be an integer expressing priority
 
+      if (value.Length() >= 7) {
+        value.ToLowerCase();
 
+        nsAutoString::const_iterator start, end;
+        value.BeginReading(start);
+        value.EndReading(end);
 
+        nsAutoString::const_iterator iter(start);
+        iter.advance(7);
 
-        // string iterators!
+        const nsAString& valuePiece = Substring(start, iter);
 
-
-        value.Left(valuePiece, 7);
-        if (valuePiece.EqualsIgnoreCase("content") &&
-           (value.Length() == 7 ||
-            value.Mid(valuePiece, 7, 1) == 1 &&
-            valuePiece.EqualsWithConversion("-"))) {
+        if (valuePiece.Equals(NS_LITERAL_STRING("content")) &&
+            (iter == end || *iter == '-')) {
           isContent = PR_TRUE;
         }
       }
-
-      if (isContent) {
-        // The web shell's type is content.
-        docShellAsItem->SetItemType(nsIDocShellTreeItem::typeContent);
-      } else {
-        // Inherit our type from our parent webshell.  If it is
-        // chrome, we'll be chrome.  If it is content, we'll be
-        // content.
-        docShellAsItem->SetItemType(parentType);
-      }
-
-      parentAsNode->AddChild(docShellAsItem);
-
-      if (isContent) {
-        nsCOMPtr<nsIDocShellTreeOwner> parentTreeOwner;
-        parentAsItem->GetTreeOwner(getter_AddRefs(parentTreeOwner));
-        if(parentTreeOwner) {
-          PRBool is_primary = value.EqualsIgnoreCase("content-primary");
-
-          parentTreeOwner->ContentShellAdded(docShellAsItem, is_primary,
-                                             value.get());
-        }
-      }
-
-      // connect the container...
-      nsCOMPtr<nsIWebShell> webShell(do_QueryInterface(mDocShell));
-      nsCOMPtr<nsIWebShellContainer> outerContainer =
-        do_QueryInterface(container);
-
-      if (outerContainer) {
-        webShell->SetContainer(outerContainer);
-      }
-
-      // Make sure all shells have links back to the content element
-      // in the nearest enclosing chrome shell.
-      nsCOMPtr<nsIChromeEventHandler> chromeEventHandler;
-
-      if (parentType == nsIDocShellTreeItem::typeChrome) {
-        // Our parent shell is a chrome shell. It is therefore our nearest
-        // enclosing chrome shell.
-        chromeEventHandler = do_QueryInterface(mOwnerElement);
-        NS_WARN_IF_FALSE(chromeEventHandler,
-                         "This mContent should implement this.");
-      } else {
-        nsCOMPtr<nsIDocShell> parentShell(do_QueryInterface(parentAsNode));
-
-        // Our parent shell is a content shell. Get the chrome info from
-        // it and use that for our shell as well.
-        parentShell->GetChromeEventHandler(getter_AddRefs(chromeEventHandler));
-      }
-
-
-
-      // Should this be in the layout code?
-
-      mDocShell->SetChromeEventHandler(chromeEventHandler);
     }
+
+    if (isContent) {
+      // The web shell's type is content.
+
+      docShellAsItem->SetItemType(nsIDocShellTreeItem::typeContent);
+    } else {
+      // Inherit our type from our parent webshell.  If it is
+      // chrome, we'll be chrome.  If it is content, we'll be
+      // content.
+
+      docShellAsItem->SetItemType(parentType);
+    }
+
+    parentAsNode->AddChild(docShellAsItem);
+
+    if (isContent) {
+      nsCOMPtr<nsIDocShellTreeOwner> parentTreeOwner;
+      parentAsItem->GetTreeOwner(getter_AddRefs(parentTreeOwner));
+
+      if(parentTreeOwner) {
+        PRBool is_primary = value.EqualsIgnoreCase("content-primary");
+
+        parentTreeOwner->ContentShellAdded(docShellAsItem, is_primary,
+                                           value.get());
+      }
+    }
+
+    // connect the container...
+    nsCOMPtr<nsIWebShell> webShell(do_QueryInterface(mDocShell));
+    nsCOMPtr<nsIWebShellContainer> outerContainer =
+      do_QueryInterface(container);
+
+    if (outerContainer) {
+      webShell->SetContainer(outerContainer);
+    }
+
+    // Make sure all shells have links back to the content element
+    // in the nearest enclosing chrome shell.
+    nsCOMPtr<nsIChromeEventHandler> chromeEventHandler;
+
+    if (parentType == nsIDocShellTreeItem::typeChrome) {
+      // Our parent shell is a chrome shell. It is therefore our nearest
+      // enclosing chrome shell.
+
+      chromeEventHandler = do_QueryInterface(mOwnerElement);
+      NS_WARN_IF_FALSE(chromeEventHandler,
+                       "This mContent should implement this.");
+    } else {
+      nsCOMPtr<nsIDocShell> parentShell(do_QueryInterface(parentAsNode));
+
+      // Our parent shell is a content shell. Get the chrome event
+      // handler from it and use that for our shell as well.
+
+      parentShell->GetChromeEventHandler(getter_AddRefs(chromeEventHandler));
+    }
+
+    mDocShell->SetChromeEventHandler(chromeEventHandler);
   }
 
   return NS_OK;

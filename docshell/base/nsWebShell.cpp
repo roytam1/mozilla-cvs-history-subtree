@@ -1400,9 +1400,11 @@ NS_IMETHODIMP nsWebShell::Create()
   uriLoader->GetDocumentLoaderForContext(NS_STATIC_CAST( nsISupports*, (nsIWebShell *) this), &mDocLoader);
 
   // Set the webshell as the default IContentViewerContainer for the loader...
-  mDocLoader->SetContainer(NS_STATIC_CAST(nsIContentViewerContainer*, (nsIWebShell*)this));
+  mDocLoader->SetContainer(NS_STATIC_CAST(nsIContentViewerContainer *,
+                                          NS_STATIC_CAST(nsIWebShell *,
+                                                         this)));
 
-   return nsDocShell::Create();
+  return nsDocShell::Create();
 }
 
 NS_IMETHODIMP nsWebShell::Destroy()

@@ -154,9 +154,6 @@
 #include "nsIContentViewer.h"
 #include "nsIDocumentViewer.h"
 
-// SubShell map
-#include "nsDST.h"
-
 #ifdef IBMBIDI
 #include "nsIBidiKeyboard.h"
 #endif // IBMBIDI
@@ -799,29 +796,6 @@ DummyLayoutRequest::Cancel(nsresult status)
 }
 
 // ----------------------------------------------------------------------------
-//   A generic nsDSTNodeFunctor to look for a specific value in the map
-
-class nsSearchEnumerator : public nsDSTNodeFunctor
-{
-public:
-  nsSearchEnumerator(void* aTargetValue)
-    : mTargetValue(aTargetValue) { 
-    mResultKey = nsnull;
-  }
-  
-  void operator() (void* aKey, void* aValue) {
-    if (aValue == mTargetValue)
-      mResultKey = aKey;
-  }
-  
-  void* GetResult() { return mResultKey; }
-
-private:
-  void* mResultKey;
-  void* mTargetValue;
-};
-
-// ----------------------------------------------------------------------------
 
 class PresShell : public nsIPresShell, public nsIViewObserver,
                   private nsIDocumentObserver, public nsIFocusTracker,
@@ -882,12 +856,6 @@ public:
                                 nsIStyleContext** aStyleContext) const;
   NS_IMETHOD GetLayoutObjectFor(nsIContent*   aContent,
                                 nsISupports** aResult) const;
-  NS_IMETHOD GetSubShellFor(nsIContent*   aContent,
-                            nsISupports** aResult) const;
-  NS_IMETHOD SetSubShellFor(nsIContent*  aContent,
-                            nsISupports* aSubShell);
-  NS_IMETHOD FindContentForShell(nsISupports* aSubShell,
-                                 nsIContent** aContent) const;
   NS_IMETHOD GetPlaceholderFrameFor(nsIFrame*  aFrame,
                                     nsIFrame** aPlaceholderFrame) const;
   NS_IMETHOD AppendReflowCommand(nsIReflowCommand* aReflowCommand);
@@ -1235,10 +1203,6 @@ protected:
 
   static void sPaintSuppressionCallback(nsITimer* aTimer, void* aPresShell); // A callback for the timer.
 
-  // subshell map
-  nsDST*            mSubShellMap;  // map of content/subshell pairs
-  nsDST::NodeArena* mDSTNodeArena; // weak link. DST owns (mSubShellMap object)
-
   MOZ_TIMER_DECLARE(mReflowWatch)  // Used for measuring time spent in reflow
   MOZ_TIMER_DECLARE(mFrameCreationWatch)  // Used for measuring time spent in frame creation 
 
@@ -1457,7 +1421,6 @@ PresShell::PresShell():mAnonymousContentTable(nsnull),
   mPendingReflowEvent = PR_FALSE;    
   mBatchReflows = PR_FALSE;
   mDocumentLoading = PR_FALSE;
-  mSubShellMap = nsnull;
   mRCCreatedDuringLoad = 0;
   mDummyLayoutRequest = nsnull;
   mPrefStyleSheet = nsnull;
@@ -1698,13 +1661,6 @@ PresShell::Destroy()
 
   // Clobber weak leaks in case of re-entrancy during tear down
   mHistoryState = nsnull;
-
-  // kill subshell map, if any.  It holds only weak references
-  if (mSubShellMap)
-  {
-    delete mSubShellMap;
-    mSubShellMap = nsnull;
-  }
 
   // release current event content and any content on event stack
   NS_IF_RELEASE(mCurrentEventContent);
@@ -5374,76 +5330,6 @@ PresShell::GetLayoutObjectFor(nsIContent*   aContent,
     }
   }
   return result;
-}
-
-  
-NS_IMETHODIMP
-PresShell::GetSubShellFor(nsIContent*   aContent,
-                          nsISupports** aResult) const
-{
-  NS_ENSURE_ARG_POINTER(aContent);
-  NS_ENSURE_ARG_POINTER(aResult);
-  *aResult = nsnull;
-
-  if (mSubShellMap) {
-    mSubShellMap->Search(aContent, 0, (void**)aResult);
-    if (*aResult) {
-      NS_ADDREF(*aResult);
-    }
-  }
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-PresShell::SetSubShellFor(nsIContent*  aContent,
-                          nsISupports* aSubShell)
-{
-  NS_ENSURE_ARG_POINTER(aContent);
-
-  // If aSubShell is NULL, then remove the mapping
-  if (!aSubShell) {
-    if (mSubShellMap) {
-      mSubShellMap->Remove(aContent);
-    }
-  } else {
-    // Create a new DST if necessary
-    if (!mSubShellMap) {
-      if (!mDSTNodeArena) {
-        mDSTNodeArena = nsDST::NewMemoryArena();
-        if (!mDSTNodeArena) {
-          return NS_ERROR_OUT_OF_MEMORY;
-        }
-      }
-      mSubShellMap = new nsDST(mDSTNodeArena);
-      if (!mSubShellMap) {
-        return NS_ERROR_OUT_OF_MEMORY;
-      }
-    }
-
-    // Add a mapping to the hash table
-    mSubShellMap->Insert(aContent, (void*)aSubShell, nsnull);
-  }
-  return NS_OK;
-}
-  
-NS_IMETHODIMP
-PresShell::FindContentForShell(nsISupports* aSubShell,
-                               nsIContent** aContent) const
-{
-  NS_ENSURE_ARG_POINTER(aSubShell);
-  NS_ENSURE_ARG_POINTER(aContent);
-  *aContent = nsnull;
-  
-  if (!mSubShellMap)
-    return NS_OK;
-  
-  nsSearchEnumerator enumerator(NS_STATIC_CAST(void*, aSubShell));
-  mSubShellMap->Enumerate(enumerator);
-  *aContent = NS_STATIC_CAST(nsIContent*, enumerator.GetResult());
-  NS_IF_ADDREF(*aContent);
-
-  return NS_OK;
 }
 
 NS_IMETHODIMP

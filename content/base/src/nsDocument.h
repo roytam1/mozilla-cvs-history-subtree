@@ -70,6 +70,8 @@
 #include "nsScriptLoader.h"
 #include "nsICSSLoader.h"
 
+#include "pldhash.h"
+
 class nsIEventListenerManager;
 class nsDOMStyleSheetList;
 class nsIOutputStream;
@@ -365,9 +367,11 @@ public:
    */
   NS_IMETHOD GetParentDocument(nsIDocument** aParent);
   NS_IMETHOD SetParentDocument(nsIDocument* aParent);
-  NS_IMETHOD AddSubDocument(nsIDocument* aSubDoc);
-  NS_IMETHOD GetNumberOfSubDocuments(PRInt32* aCount);
-  NS_IMETHOD GetSubDocumentAt(PRInt32 aIndex, nsIDocument** aSubDoc);
+
+  NS_IMETHOD SetSubDocumentFor(nsIContent *aContent, nsIDocument* aSubDoc);
+  NS_IMETHOD GetSubDocumentFor(nsIContent *aContent, nsIDocument** aSubDoc);
+  NS_IMETHOD FindContentForSubDocument(nsIDocument *aDocument,
+                                       nsIContent **aContent);
 
   /**
    * Return the root content object for this document.
@@ -575,7 +579,9 @@ protected:
   nsString mCharacterSet;
   nsVoidArray mCharSetObservers;
   nsIDocument* mParentDocument;
-  nsVoidArray mSubDocuments;
+
+  PLDHashTable *mSubDocuments;
+
   nsVoidArray mPresShells;
   nsCOMPtr<nsISupportsArray> mChildren; // contains owning references
   nsIContent* mRootContent; // a weak reference to the only element in

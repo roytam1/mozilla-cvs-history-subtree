@@ -218,11 +218,12 @@ public:
 
     NS_IMETHOD SetParentDocument(nsIDocument* aParent);
 
-    NS_IMETHOD AddSubDocument(nsIDocument* aSubDoc);
+    NS_IMETHOD SetSubDocumentFor(nsIContent *aContent, nsIDocument* aSubDoc);
 
-    NS_IMETHOD GetNumberOfSubDocuments(PRInt32* aCount);
+    NS_IMETHOD GetSubDocumentFor(nsIContent *aContent, nsIDocument** aSubDoc);
 
-    NS_IMETHOD GetSubDocumentAt(PRInt32 aIndex, nsIDocument** aSubDoc);
+    NS_IMETHOD FindContentForSubDocument(nsIDocument *aDocument,
+                                         nsIContent **aContent);
 
     NS_IMETHOD GetRootContent(nsIContent** aRoot);
 
@@ -582,7 +583,7 @@ protected:
     nsCOMPtr<nsIRDFDataSource>          mLocalStore;
     nsCOMPtr<nsILineBreaker>            mLineBreaker;    // [OWNER] 
     nsCOMPtr<nsIWordBreaker>            mWordBreaker;    // [OWNER] 
-    nsVoidArray                mSubDocuments;     // [OWNER] of subelements
+    PLDHashTable              *mSubDocuments;     // [OWNER] of subelements
     PRPackedBool               mIsPopup;
     PRPackedBool               mIsFastLoad;
     PRPackedBool               mApplyingPersistedAttrs;

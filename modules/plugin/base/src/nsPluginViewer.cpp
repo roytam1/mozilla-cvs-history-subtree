@@ -217,7 +217,6 @@ public:
   nsIChannel* mChannel;
   pluginInstanceOwner *mOwner;
   PRBool mEnableRendering;
-
 };
 
 //----------------------------------------------------------------------
@@ -311,7 +310,6 @@ PluginViewerImpl::GetContainer(nsISupports** aResult)
 
    return NS_OK;
 }
-
 
 NS_IMETHODIMP
 PluginViewerImpl::Init(nsIWidget* aParentWidget,
@@ -656,6 +654,36 @@ PluginViewerImpl::Hide()
 
   // should we call SetWindow(nsnull) here?
 
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+PluginViewerImpl::GetWidget(nsIWidget **aWidget)
+{
+  *aWidget = mWindow;
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+PluginViewerImpl::SetWidget(nsIWidget *aWidget)
+{
+  mWindow = aWidget;
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+PluginViewerImpl::GetDeviceContext(nsIDeviceContext **aDeviceContext)
+{
+  *aDeviceContext = nsnull; // We don't have a device context handy
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+PluginViewerImpl::SetDeviceContext(nsIDeviceContext *aDeviceContext)
+{
   return NS_OK;
 }
 
