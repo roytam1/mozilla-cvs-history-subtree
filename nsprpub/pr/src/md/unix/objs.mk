@@ -30,7 +30,12 @@ PTH_USER_CSRCS =          \
 	pthreads_user.c \
 	$(NULL)
 
-ifndef USE_AUTOCONF
+ifdef USE_AUTOCONF
+
+CSRCS	+= $(PR_MD_CSRCS)
+ASFILES += $(PR_MD_ASFILES)
+
+else # ! USE_AUTOCONF
 IRIX_CSRCS =	 \
 	irix.c	 \
 	$(NULL)
@@ -224,11 +229,6 @@ endif
 ifeq ($(OS_ARCH)$(OS_RELEASE),BSD_OS2.1)
     ASFILES = os_BSD_386_2.s
 endif
-
-else # USE_AUTOCONF
-
-CSRCS	+= $(PR_MD_CSRCS)
-ASFILES += $(PR_MD_ASFILES)
 
 endif # !USE_AUTOCONF
 
