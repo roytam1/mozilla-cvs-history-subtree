@@ -88,9 +88,10 @@ protected:
   static nsIRDFResource      *kNC_Folder;
   static nsIRDFResource      *kNC_Parent;
   static nsIRDFResource      *kNC_Child;
-  static nsIRDFResource      *kNC_Name;
   static nsIRDFResource      *kNC_URL;
-  static nsIRDFResource      *kNC_LDAPURL;
+  static nsIRDFResource      *kNC_Name;
+  static nsIRDFResource      *kNC_ShortcutURL;
+  static nsIRDFResource      *kNC_Description;
 
   static nsIRDFResource      *kNC_BookmarkCommand_NewBookmark;
   static nsIRDFResource      *kNC_BookmarkCommand_NewFolder;
@@ -109,8 +110,11 @@ protected:
   nsCOMPtr<nsIRDFResource>    mProperty;
   nsCOMPtr<nsIRDFNode>        mOldTarget;
   nsCOMPtr<nsIRDFNode>        mNewTarget;
-  nsCOMPtr<nsIRDFLiteral>     mNameLiteral;
   nsCOMPtr<nsIRDFLiteral>     mURLLiteral;
+  nsCOMPtr<nsIRDFLiteral>     mNameLiteral;
+  nsCOMPtr<nsIRDFLiteral>     mShortcutLiteral;
+  nsCOMPtr<nsIRDFLiteral>     mDescLiteral;
+  
   nsCOMPtr<nsITimer>          mTimer;
   nsString                    mPassword;
   PRUint32                    mOpcode;
