@@ -97,6 +97,7 @@ nsStreamListenerProxy::nsStreamListenerProxy()
     : mListenerStatus(NS_OK)
     , mLMonitor(nsnull)
     , mCMonitor(nsnull)
+    , mPendingEvents(0)
 { }
 
 nsStreamListenerProxy::~nsStreamListenerProxy()
@@ -156,6 +157,7 @@ nsOnDataAvailableEvent::HandleEvent()
     nsIStreamListener *listener = listenerProxy->GetListener();
     if (!listener) {
         PRINTF("Already called OnStopRequest (listener is NULL)\n");
+        PR_AtomicDecrement(&listenerProxy->mPendingEvents);
         return NS_ERROR_FAILURE;
     }
 
@@ -196,16 +198,23 @@ nsOnDataAvailableEvent::HandleEvent()
         //
         // Stoke the pipe observer if it doesn't appear to have run.
         //
-        if (listenerProxy->mChannelToResume) {
+        {
+            nsAutoMonitor mon(listenerProxy->mCMonitor);
+            if (listenerProxy->mChannelToResume && (listenerProxy->mPendingEvents == 1)) {
 #ifdef DEBUG
-            PRUint32 bytesRead = TO_INPUT_STREAM_GUARD(mSource)->GetBytesRead();
-            PRINTF("HandleEvent -- %u bytes read out of %u total\n", bytesRead, mCount);FLUSH();
+                PRUint32 bytesRead = TO_INPUT_STREAM_GUARD(mSource)->GetBytesRead();
+                PRINTF("HandleEvent -- %u bytes read out of %u total\n", bytesRead, mCount);FLUSH();
 #endif
-            if (avail && (NS_SUCCEEDED(rv) || rv == NS_BASE_STREAM_WOULD_BLOCK))
-                NS_WARNING("listener did not consume all data");
+                if (avail && (NS_SUCCEEDED(rv) || rv == NS_BASE_STREAM_WOULD_BLOCK)) {
+                    PRINTF("HandleEvent -- listener did not consume all data [avail=%u, rv=%x]\n",
+                        avail, rv);
+                    NS_WARNING("listener did not consume all data");
+                }
 
-            PRINTF("HandleEvent -- stoking pipe observer...\n");FLUSH();
-            listenerProxy->OnEmpty(mSource);
+                PRINTF("HandleEvent -- stoking pipe observer...\n");FLUSH();
+                mon.Exit();
+                listenerProxy->OnEmpty(mSource);
+            }
         }
 
 #ifdef DEBUG
@@ -231,6 +240,7 @@ nsOnDataAvailableEvent::HandleEvent()
     else
         PRINTF("not calling OnDataAvailable");FLUSH();
 #endif
+    PR_AtomicDecrement(&listenerProxy->mPendingEvents);
     return NS_OK;
 }
 
@@ -364,6 +374,8 @@ nsStreamListenerProxy::OnDataAvailable(nsIChannel *aChannel,
                                    aOffset, bytesWritten);
     if (!ev) return NS_ERROR_OUT_OF_MEMORY;
 
+    PR_AtomicIncrement(&mPendingEvents);
+
     rv = ev->FireEvent(mEventQueue);
     if (NS_FAILED(rv)) {
         delete ev;
@@ -442,14 +454,10 @@ nsStreamListenerProxy::OnEmpty(nsIInputStream *aInputStream)
     //
     nsCOMPtr<nsIChannel> chan;
     {
-        PRUint32 before = PR_IntervalNow();
         nsAutoMonitor mon(mCMonitor);
-        PRUint32 after = PR_IntervalNow();
 
         chan = mChannelToResume;
         mChannelToResume = 0;
-
-        PRINTF("OnEmpty -- time to acquire monitor: %u ticks\n", after - before);FLUSH();
     }
     if (chan) {
         PRINTF("OnEmpty -- resuming channel\n");FLUSH();

@@ -35,12 +35,14 @@ public:
     nsresult   mListenerStatus;
     PRMonitor *mLMonitor;
 
-    nsCOMPtr<nsIChannel>      mChannelToResume;
+    nsCOMPtr<nsIChannel> mChannelToResume;
+    PRMonitor           *mCMonitor;
+
+    PRInt32              mPendingEvents;
 
 protected:
     nsCOMPtr<nsIInputStream>  mPipeIn;
     nsCOMPtr<nsIOutputStream> mPipeOut;
-    PRMonitor                *mCMonitor;
 };
 
 #endif /* !nsStreamListenerProxy_h__ */

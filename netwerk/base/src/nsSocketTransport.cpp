@@ -606,12 +606,11 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
       mStatus = mCancelStatus;
       mCancelStatus = NS_OK;
     }
-
     //
     // If the transport has been suspended, then return NS_OK immediately...
     // This removes the transport from the select list...
     //
-    if (mSuspendCount) {
+    else if (mSuspendCount) {
       PRINTF("Transport [host=%s:%d this=%x] is suspended.\n", 
               mHostName, mPort, this);
       mStatus = NS_OK;
@@ -1894,6 +1893,10 @@ nsSocketTransport::Cancel(nsresult status)
   nsAutoMonitor mon(mMonitor);
 
   mCancelStatus = status;
+
+  // A cancelled transport cannot be suspended.
+  mSuspendCount = 0;
+
   //
   // Wake up the transport on the socket transport thread so it can
   // be removed from the select list...  
@@ -1910,6 +1913,10 @@ nsSocketTransport::Cancel(nsresult status)
 NS_IMETHODIMP
 nsSocketTransport::Suspend(void)
 {
+  // Silently ignore calls to suspend a cancelled transport
+  if (NS_FAILED(mCancelStatus))
+    return NS_OK;
+
   nsresult rv = NS_OK;
 
   // Enter the socket transport lock...
@@ -1938,6 +1945,10 @@ nsSocketTransport::Suspend(void)
 NS_IMETHODIMP
 nsSocketTransport::Resume(void)
 {
+  // Silently ignore calls to resume a cancelled transport
+  if (NS_FAILED(mCancelStatus))
+    return NS_OK;
+
   nsresult rv = NS_OK;
 
   // Enter the socket transport lock...

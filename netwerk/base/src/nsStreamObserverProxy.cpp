@@ -92,13 +92,11 @@ public:
                           nsISupports *aContext)
         : nsStreamObserverEvent(aProxy, aChannel, aContext)
     {
-        PRINTF("Constructing nsOnStartRequestEvent\n");
         MOZ_COUNT_CTOR(nsOnStartRequestEvent);
     }
 
    ~nsOnStartRequestEvent()
     {
-        PRINTF("Destroying nsOnStartRequestEvent\n");
         MOZ_COUNT_DTOR(nsOnStartRequestEvent);
     }
 
@@ -108,12 +106,13 @@ public:
 NS_IMETHODIMP
 nsOnStartRequestEvent::HandleEvent()
 {
-    PRINTF("OnStartRequestEvent::HandleEvent [event=%x]\n", this);
+    PRINTF("HandleEvent -- OnStartRequest [event=%x]\n", this);
 
     nsIStreamObserver *observer = GET_OBSERVER_PROXY(mProxy)->GetReceiver();
-    if (!observer)
-        // Must have already called OnStopRequest (it clears the receiver)
+    if (!observer) {
+        PRINTF("Already called OnStopRequest (observer is NULL)\n");
         return NS_ERROR_FAILURE;
+    }
 
     return observer->OnStartRequest(mChannel, mContext);
 }
@@ -133,13 +132,11 @@ public:
         , mStatus(aStatus)
         , mStatusText(aStatusText)
     {
-        PRINTF("Constructing nsOnStopRequestEvent\n");
         MOZ_COUNT_CTOR(nsOnStopRequestEvent);
     }
 
    ~nsOnStopRequestEvent()
     {
-        PRINTF("Destroying nsOnStopRequestEvent\n");
         MOZ_COUNT_DTOR(nsOnStopRequestEvent);
     }
     
@@ -153,14 +150,15 @@ protected:
 NS_IMETHODIMP
 nsOnStopRequestEvent::HandleEvent()
 {
-    PRINTF("nsOnStopRequestEvent::HandleEvent [event=%x]\n", this);
+    PRINTF("HandleEvent -- OnStopRequest [event=%x]\n", this);
 
     nsStreamObserverProxy *observerProxy = GET_OBSERVER_PROXY(mProxy);
 
     nsCOMPtr<nsIStreamObserver> observer = observerProxy->GetReceiver();
-    if (!observer)
-        // Must have already called OnStopRequest (it clears the receiver)
+    if (!observer) {
+        PRINTF("Already called OnStopRequest (observer is NULL)\n");
         return NS_ERROR_FAILURE;
+    }
 
     observerProxy->ClearReceiver();
     return observer->OnStopRequest(mChannel, mContext, mStatus, mStatusText.GetUnicode());
