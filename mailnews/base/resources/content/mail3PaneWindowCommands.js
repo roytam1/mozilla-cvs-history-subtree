@@ -47,7 +47,7 @@ var FolderPaneController =
 
 	isCommandEnabled: function(command)
 	{
-    dump("FolderPaneController isCommandEnabled called\n");
+    //dump("FolderPaneController isCommandEnabled called\n");
     if (IsFakeAccount()) 
       return false;
 
@@ -146,7 +146,7 @@ var ThreadPaneController =
 
 	isCommandEnabled: function(command)
 	{
-    dump("ThreadPaneController isCommandEnabled called\n");
+    //dump("ThreadPaneController isCommandEnabled called\n");
 		switch ( command )
 		{
 			case "cmd_selectAll":
@@ -284,7 +284,7 @@ var DefaultController =
 
   isCommandEnabled: function(command)
   {
-    dump("DefaultController isCommandEnabled called" + command + "\n");
+    //dump("DefaultController isCommandEnabled called" + command + "\n");
     var enabled = new Object();
     enabled.value = false;
     var checkStatus = new Object();
