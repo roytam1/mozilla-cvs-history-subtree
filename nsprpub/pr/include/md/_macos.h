@@ -103,6 +103,7 @@ struct _MDFileDesc {
 	_MDSocketCallerInfo  misc;
 	_MDSocketCallerInfo  read;
 	_MDSocketCallerInfo  write;
+	_MDSocketCallerInfo  poll;
 };
 
 /*
