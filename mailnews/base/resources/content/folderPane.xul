@@ -28,8 +28,8 @@
   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
-<popup id="folderTooltip" class="tooltip" oncreate="return FillInFolderTooltip(document.tooltipNode);" > 
-    <text id="foldertooltipText"/>
+<popup id="folderTooltip" class="tooltip" oncreate="return FillInFolderTooltip(event);" >
+  <text id="foldertooltipText"/>
 </popup>
 
 <!--
@@ -99,7 +99,9 @@
   </tree>
 -->
 
-  <outliner id="folderOutliner" class="mail-folders" flex="1">
+  <outliner id="folderOutliner"
+            class="mail-folders"
+            flex="1">
     <outlinercol id="folderNameCol"
                  class="outlinercol-header outlinercol-inset-header sortDirectionIndicator"
                  flex="1"

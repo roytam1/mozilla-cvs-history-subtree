@@ -905,19 +905,17 @@ function MsgViewAllMsgs()
 	}
 }
 
-function FillInFolderTooltip(tooltipNode)
+function FillInFolderTooltip(event)
 {
     dump('In FillInFolderTooltip\n');
 
-/*
     var folderOutliner = GetFolderOutliner();
     var row = { };
     var col = { };
     var elt = { };
-    dump(event.clientX +' '+ event.clientY+'\n');
-    folderOutliner.outlinerBoxObject.getCellAt(event.clientX, event.clientY, row, col, elt);
+    // XXX this is only workaround
+    folderOutliner.outlinerBoxObject.getCellAt(event.clientX, event.clientY - 20, row, col, elt);
 
-    dump(row.value);
     var folderResource = GetFolderResource(row.value);
 
     var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
@@ -936,7 +934,6 @@ function FillInFolderTooltip(tooltipNode)
     textNode.setAttribute('value', folderTooltip);
 
     return true;
-*/
 }
 
 function GetFolderNameFromUri(uri, outliner)

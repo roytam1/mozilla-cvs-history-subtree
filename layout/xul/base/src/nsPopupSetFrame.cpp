@@ -619,7 +619,7 @@ nsPopupSetFrame::OnCreate(nsIContent* aPopupContent)
 {
   nsEventStatus status = nsEventStatus_eIgnore;
   nsMouseEvent event;
-  event.eventStructType = NS_EVENT;
+  event.eventStructType = NS_MOUSE_EVENT;
   event.message = NS_MENU_CREATE;
   event.isShift = PR_FALSE;
   event.isControl = PR_FALSE;
@@ -627,6 +627,8 @@ nsPopupSetFrame::OnCreate(nsIContent* aPopupContent)
   event.isMeta = PR_FALSE;
   event.clickCount = 0;
   event.widget = nsnull;
+  event.refPoint.x = mXPos;
+  event.refPoint.y = mYPos;
 
   if (aPopupContent) {
     nsCOMPtr<nsIPresShell> shell;
@@ -698,7 +700,7 @@ nsPopupSetFrame::OnDestroy()
 {
   nsEventStatus status = nsEventStatus_eIgnore;
   nsMouseEvent event;
-  event.eventStructType = NS_EVENT;
+  event.eventStructType = NS_MOUSE_EVENT;
   event.message = NS_MENU_DESTROY;
   event.isShift = PR_FALSE;
   event.isControl = PR_FALSE;
@@ -706,6 +708,8 @@ nsPopupSetFrame::OnDestroy()
   event.isMeta = PR_FALSE;
   event.clickCount = 0;
   event.widget = nsnull;
+  event.refPoint.x = mXPos;
+  event.refPoint.y = mYPos;
 
   nsCOMPtr<nsIContent> content;
   GetActiveChildElement(getter_AddRefs(content));

@@ -570,25 +570,27 @@ NS_METHOD nsDOMEvent::GetClientX(PRInt32* aClientX)
     }
   }
 
-
   nsRect bounds, offset;
   offset.x = 0;
 
   nsIWidget* parent = ((nsGUIEvent*)mEvent)->widget;
-  //Add extra ref since loop will free one.
-  NS_ADDREF(parent);
-  nsIWidget* tmp;
-  while (rootWidget != parent && nsnull != parent) {
-    parent->GetBounds(bounds);
-    offset.x += bounds.x;
-    tmp = parent;
-    parent = tmp->GetParent();
-    NS_RELEASE(tmp);
+  if (parent) {
+    //Add extra ref since loop will free one.
+    NS_ADDREF(parent);
+    nsIWidget* tmp;
+    while (rootWidget != parent && nsnull != parent) {
+      parent->GetBounds(bounds);
+      offset.x += bounds.x;
+      tmp = parent;
+      parent = tmp->GetParent();
+      NS_RELEASE(tmp);
+    }
+    NS_IF_RELEASE(parent);
   }
-  NS_IF_RELEASE(parent);
   NS_IF_RELEASE(rootWidget);
   
   *aClientX = mEvent->refPoint.x + offset.x;
+
   return NS_OK;
 }
 
@@ -610,22 +612,23 @@ NS_METHOD nsDOMEvent::GetClientY(PRInt32* aClientY)
     }
   }
 
-
   nsRect bounds, offset;
   offset.y = 0;
 
   nsIWidget* parent = ((nsGUIEvent*)mEvent)->widget;
-  //Add extra ref since loop will free one.
-  NS_ADDREF(parent);
-  nsIWidget* tmp;
-  while (rootWidget != parent && nsnull != parent) {
-    parent->GetBounds(bounds);
-    offset.y += bounds.y;
-    tmp = parent;
-    parent = tmp->GetParent();
-    NS_RELEASE(tmp);
+  if (parent) {
+    //Add extra ref since loop will free one.
+    NS_ADDREF(parent);
+    nsIWidget* tmp;
+    while (rootWidget != parent && nsnull != parent) {
+      parent->GetBounds(bounds);
+      offset.y += bounds.y;
+      tmp = parent;
+      parent = tmp->GetParent();
+      NS_RELEASE(tmp);
+    }
+    NS_IF_RELEASE(parent);
   }
-  NS_IF_RELEASE(parent);
   NS_IF_RELEASE(rootWidget);
   
   *aClientY = mEvent->refPoint.y + offset.y;
