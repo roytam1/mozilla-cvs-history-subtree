@@ -154,8 +154,9 @@ class nsStyleSet
   // All sheet types are ordered most-significant-first.
   enum sheetType {
     eAgentSheet,
-    eUserSheet,
     ePresHintSheet,
+    eUserSheet,
+    eHTMLPresHintSheet,
     eDocSheet,
     eOverrideSheet,
     eSheetTypeCount
