@@ -91,6 +91,11 @@
 #define LDIF_LINEBREAK_LEN     2
 #endif
 
+// our schema is not fixed yet, but we still want some sort of objectclass
+// for now, use obsolete in the class name, hinting that this will change
+// see bugs bug #116692 and #118454
+#define MOZ_AB_OBJECTCLASS "mozillaAbPersonObsolete"
+
 // for now, these should be in the same order as they are in the import code
 // see importMsgProperties and nsImportStringBundle.h
 
@@ -109,21 +114,17 @@ struct ExportAttributesTableStruct
 //
 // here's how we're coming up with the ldapPropertyName values
 // if they are specified in RFC 2798, use them
-// else use the 4.x LDIF attribute names
-//
-// the import code has to support 4.x LDIF, and the more attributes we support
-// the less lossy we are when going from AB -> LDIF -> AB
-//
-// one day, the nsnull values will be replaced by attribute names
-// and we'll fix the import code to handle them.
-// until then, AB -> LDIF -> AB will be lossy.  see bug #119360
+// else use the 4.x LDIF attribute names (for example, "xmozillanickname"
+// as we want to allow export from mozilla back to 4.x, and other apps
+// are probably out there that can handle 4.x LDIF)
+// else use the MOZ_AB_LDIF_PREFIX prefix, see nsIAddrDatabase.idl
 static ExportAttributesTableStruct EXPORT_ATTRIBUTES_TABLE[] = { 
   {kFirstNameColumn, "givenName", PR_TRUE},
   {kLastNameColumn, "sn", PR_TRUE},
   {kDisplayNameColumn, "cn", PR_TRUE},
   {kNicknameColumn, "xmozillanickname", PR_TRUE},
   {kPriEmailColumn, "mail", PR_TRUE},
-  {k2ndEmailColumn, nsnull, PR_TRUE},
+  {k2ndEmailColumn, MOZ_AB_LDIF_PREFIX "SecondEmail", PR_TRUE},
   {kPreferMailFormatColumn, "xmozillausehtmlmail", PR_FALSE},
   {kLastModifiedDateColumn, "modifytimestamp", PR_FALSE},
   {kWorkPhoneColumn, "telephoneNumber", PR_TRUE}, 
@@ -132,13 +133,13 @@ static ExportAttributesTableStruct EXPORT_ATTRIBUTES_TABLE[] = {
   {kPagerColumn, "pager", PR_TRUE},
   {kCellularColumn, "mobile", PR_TRUE},
   {kHomeAddressColumn, "homePostalAddress", PR_TRUE},
-  {kHomeAddress2Column, nsnull, PR_TRUE},
-  {kHomeCityColumn, nsnull, PR_TRUE},
-  {kHomeStateColumn, nsnull, PR_TRUE},
-  {kHomeZipCodeColumn, nsnull, PR_TRUE},
-  {kHomeCountryColumn, nsnull, PR_TRUE},
+  {kHomeAddress2Column, MOZ_AB_LDIF_PREFIX "HomePostalAddress2", PR_TRUE},
+  {kHomeCityColumn, MOZ_AB_LDIF_PREFIX "HomeLocalityName", PR_TRUE},
+  {kHomeStateColumn, MOZ_AB_LDIF_PREFIX "HomeStreet", PR_TRUE},
+  {kHomeZipCodeColumn, MOZ_AB_LDIF_PREFIX "HomePostalCode", PR_TRUE},
+  {kHomeCountryColumn, MOZ_AB_LDIF_PREFIX "HomeCountryName", PR_TRUE},
   {kWorkAddressColumn, "postalAddress", PR_TRUE},
-  {kWorkAddress2Column, nsnull, PR_TRUE}, 
+  {kWorkAddress2Column, MOZ_AB_LDIF_PREFIX "PostalAddress2", PR_TRUE}, 
   {kWorkCityColumn, "l", PR_TRUE}, 
   {kWorkStateColumn, "st", PR_TRUE}, 
   {kWorkZipCodeColumn, "postalCode", PR_TRUE}, 
@@ -148,9 +149,9 @@ static ExportAttributesTableStruct EXPORT_ATTRIBUTES_TABLE[] = {
   {kCompanyColumn, "o", PR_TRUE},
   {kWebPage1Column, "workurl", PR_TRUE},
   {kWebPage2Column, "homeurl", PR_TRUE},
-  {kBirthYearColumn, nsnull, PR_TRUE},
-  {kBirthMonthColumn, nsnull, PR_TRUE}, 
-  {kBirthDayColumn, nsnull, PR_TRUE}, 
+  {kBirthYearColumn, nsnull, PR_TRUE}, // unused for now
+  {kBirthMonthColumn, nsnull, PR_TRUE}, // unused for now
+  {kBirthDayColumn, nsnull, PR_TRUE}, // unused for now
   {kCustom1Column, "custom1", PR_TRUE},
   {kCustom2Column, "custom2", PR_TRUE},
   {kCustom3Column, "custom3", PR_TRUE},
@@ -1726,10 +1727,33 @@ nsresult nsAddressBook::AppendBasicLDIFForCard(nsIAbCard *aCard, nsAFlatCString 
   aResult += LDIF_LINEBREAK \
     "objectclass: top" LDIF_LINEBREAK \
     "objectclass: person" LDIF_LINEBREAK \
-    "objectclass: organizationalPerson" LDIF_LINEBREAK 
-    "objectclass: inetOrgPerson" LDIF_LINEBREAK;
+    "objectclass: organizationalPerson" LDIF_LINEBREAK \
+    "objectclass: inetOrgPerson" LDIF_LINEBREAK \
+    "objectclass: " MOZ_AB_OBJECTCLASS LDIF_LINEBREAK;  
+
 
   return rv;
+}
+
+PRBool nsAddressBook::IsSafeLDIFString(const PRUnichar *aStr)
+{
+  // follow RFC 2849 to determine if something is safe "as is" for LDIF
+  if (aStr[0] == PRUnichar(' ') ||
+      aStr[0] == PRUnichar(':') ||
+      aStr[0] == PRUnichar('<')) 
+    return PR_FALSE;
+
+  PRUint32 i;
+  PRUint32 len = nsCRT::strlen(aStr);
+  for (i=0; i<len; i++) {
+    // If string contains CR or LF, it is not safe for LDIF
+    // and MUST be base64 encoded
+    if ((aStr[i] == PRUnichar('\n')) ||
+        (aStr[i] == PRUnichar('\r')) ||
+        (!nsCRT::IsAscii(aStr[i])))
+      return PR_FALSE;
+  }
+  return PR_TRUE;
 }
 
 nsresult nsAddressBook::AppendProperty(const char *aProperty, const PRUnichar *aValue, nsAFlatCString &aResult)
@@ -1738,13 +1762,8 @@ nsresult nsAddressBook::AppendProperty(const char *aProperty, const PRUnichar *a
 
   aResult += aProperty;
  
-  // follow RFC 2849 for when we MUST base64 encode
-  if (nsCRT::IsAscii(aValue) && 
-    aValue[0] != PRUnichar(' ') &&
-    aValue[0] != PRUnichar('\n') &&
-    aValue[0] != PRUnichar('\r') &&
-    aValue[0] != PRUnichar(':') &&
-    aValue[0] != PRUnichar('<')) {
+  // if the string is not safe "as is", base64 encode it
+  if (IsSafeLDIFString(aValue)) {
     aResult += NS_LITERAL_CSTRING(": ") + NS_LossyConvertUCS2toASCII(aValue);
   }
   else {
