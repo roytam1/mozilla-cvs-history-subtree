@@ -52,14 +52,10 @@ REQUIRES	=\
 			xfeicons \
 			rdf \
 			xpcom \
-<<<<<<< Makefile
-			plug \
 			netcnvts
-=======
 			msg \
 			progress \
 			plug
->>>>>>> 3.3.2.8
 
 CPPSRCS		= \
 		  plugin.cpp \

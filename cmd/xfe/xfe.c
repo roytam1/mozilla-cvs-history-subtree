@@ -76,13 +76,9 @@
 
 #include "prefapi.h"
 #include "NSReg.h"
-<<<<<<< xfe.c
 #ifdef MOZ_SMARTUPDATE
 #include "softupdt.h"
 #endif
-=======
-#include "softupdt.h"
->>>>>>> 3.1.14.3
 
 #if defined(_HPUX_SOURCE)
 /* I don't know where this is coming from...  "ld -y Error" says
@@ -2593,18 +2589,10 @@ fe_MinimalNoUICleanup()
   
 #ifdef JAVA
   NR_ShutdownRegistry();
-<<<<<<< xfe.c
 #ifdef MOZ_SMARTUPDATE
   SU_Shutdown();
 #endif
 
-=======
-#if defined(MOZ_SMARTUPDATE)
-  SU_Shutdown();
-#endif /* MOZ_SMARTUPDATE */
-#endif
-  
->>>>>>> 3.1.14.3
   RDF_Shutdown();
   GH_SaveGlobalHistory ();
   NET_SaveCookies(NULL);

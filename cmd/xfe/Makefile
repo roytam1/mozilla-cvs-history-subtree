@@ -368,7 +368,6 @@ ifdef MOZ_MAIL_NEWS
 BASIC_LIBS	+= $(DIST)/lib/libjsl.a
 endif
 
-<<<<<<< Makefile
 BASIC_LIBS	+= $(DIST)/lib/libjrt.a
 
 else  # MOZ_JAVA
@@ -383,15 +382,6 @@ endif
 BASIC_LIBS      += $(DIST)/lib/libsoftupdate.a
 
 endif # MOZ_JAVA
-=======
-ifdef MOZ_MAIL_NEWS
-ifndef NO_SECURITY
-BASIC_LIBS	+= $(DIST)/lib/libsecnav.a
-endif
-endif
-
-BASIC_LIBS	+= $(DIST)/lib/libjrt.a
->>>>>>> 3.9.2.16
 
 else  # JAVA_OR_OJI
 
@@ -483,12 +473,8 @@ ifdef USE_ABCOM
 DEFINES		+= -DUSE_ABCOM
 endif
 
-<<<<<<< Makefile
-INCLUDES	+= -Isrc -I.
-=======
 INCLUDES	+= -Isrc -I. -I$(DEPTH)/dist/public/nls -I$(DEPTH)/dist/public/security \
 		-I$(DEPTH)/lib/libmsg -I$(DEPTH)/dist/public/ldap
->>>>>>> 3.9.2.16
 
 
 #######################################################################
