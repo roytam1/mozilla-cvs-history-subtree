@@ -87,41 +87,6 @@ nsSVGGraphicElement::Init()
   return NS_OK;
 }
 
-PRBool
-nsSVGGraphicElement::IsPresentationAttribute(const nsIAtom* name)const
-{
-  if (
-      // PresentationAttributes-FillStroke
-      name==nsSVGAtoms::fill              ||
-      name==nsSVGAtoms::fill_opacity      ||
-      name==nsSVGAtoms::fill_rule         ||
-      name==nsSVGAtoms::stroke            ||
-      name==nsSVGAtoms::stroke_dasharray  ||
-      name==nsSVGAtoms::stroke_dashoffset ||
-      name==nsSVGAtoms::stroke_linecap    ||
-      name==nsSVGAtoms::stroke_linejoin   ||
-      name==nsSVGAtoms::stroke_miterlimit ||
-      name==nsSVGAtoms::stroke_opacity    ||
-      name==nsSVGAtoms::stroke_width      ||
-      // PresentationAttributes-Graphics
-      name==nsSVGAtoms::clip_path         ||
-      name==nsSVGAtoms::clip_rule         ||
-      name==nsSVGAtoms::cursor            ||
-      name==nsSVGAtoms::display           ||
-      name==nsSVGAtoms::filter            ||
-      name==nsSVGAtoms::image_rendering   ||
-      name==nsSVGAtoms::mask              ||
-      name==nsSVGAtoms::opacity           ||
-      name==nsSVGAtoms::pointer_events    ||
-      name==nsSVGAtoms::shape_rendering   ||
-      name==nsSVGAtoms::text_rendering    ||
-      name==nsSVGAtoms::visibility        
-      )
-    return PR_TRUE;
-  else
-    return PR_FALSE;
-}
-
 //----------------------------------------------------------------------
 // nsIDOMSVGLocatable methods
 
@@ -336,5 +301,46 @@ NS_IMETHODIMP nsSVGGraphicElement::GetTransform(nsIDOMSVGAnimatedTransformList *
   *aTransform = mTransforms;
   NS_IF_ADDREF(*aTransform);
   return NS_OK;
+}
+
+
+//----------------------------------------------------------------------
+// nsISVGContent methods
+
+NS_IMETHODIMP
+nsSVGGraphicElement::IsPresentationAttribute(const nsIAtom* name, PRBool *retval)
+{
+  if (
+      // PresentationAttributes-FillStroke
+      name==nsSVGAtoms::fill              ||
+      name==nsSVGAtoms::fill_opacity      ||
+      name==nsSVGAtoms::fill_rule         ||
+      name==nsSVGAtoms::stroke            ||
+      name==nsSVGAtoms::stroke_dasharray  ||
+      name==nsSVGAtoms::stroke_dashoffset ||
+      name==nsSVGAtoms::stroke_linecap    ||
+      name==nsSVGAtoms::stroke_linejoin   ||
+      name==nsSVGAtoms::stroke_miterlimit ||
+      name==nsSVGAtoms::stroke_opacity    ||
+      name==nsSVGAtoms::stroke_width      ||
+      // PresentationAttributes-Graphics
+      name==nsSVGAtoms::clip_path         ||
+      name==nsSVGAtoms::clip_rule         ||
+      name==nsSVGAtoms::cursor            ||
+      name==nsSVGAtoms::display           ||
+      name==nsSVGAtoms::filter            ||
+      name==nsSVGAtoms::image_rendering   ||
+      name==nsSVGAtoms::mask              ||
+      name==nsSVGAtoms::opacity           ||
+      name==nsSVGAtoms::pointer_events    ||
+      name==nsSVGAtoms::shape_rendering   ||
+      name==nsSVGAtoms::text_rendering    ||
+      name==nsSVGAtoms::visibility        
+      ) {
+    *retval = PR_TRUE;
+    return NS_OK;
+  }
+  else
+    return nsSVGGraphicElementBase::IsPresentationAttribute(name, retval);
 }
 

@@ -201,7 +201,7 @@ attrib);
   void RemoveElementAt(PRInt32 aIndex);
 
   PRBool AffectsContentStyleRule(const nsIAtom* aAttribute);
-  void UpdateContentStyleRule(nsIAtom* aAttribute, const nsAString& aValue);
+  void UpdateContentStyleRule();
   
   nsIStyledContent* mContent; // our owner
 

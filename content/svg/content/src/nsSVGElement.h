@@ -53,11 +53,13 @@
 #include "nsISVGValueObserver.h"
 #include "nsWeakReference.h"
 #include "nsISVGStyleValue.h"
+#include "nsISVGContent.h"
 
-class nsSVGElement : public nsGenericElement,    // :nsIHTMLContent:nsIStyledContent:nsIContent
+class nsSVGElement : public nsGenericElement,    // :nsIHTMLContent:nsIXMLContent:nsIStyledContent:nsIContent
                      public nsIDOMSVGElement,    // :nsIDOMElement:nsIDOMNode
                      public nsISVGValueObserver, 
-                     public nsSupportsWeakReference // :nsISupportsWeakReference
+                     public nsSupportsWeakReference, // :nsISupportsWeakReference
+                     public nsISVGContent
 {
 protected:
   nsSVGElement();
@@ -164,12 +166,15 @@ public:
 
   // nsISupportsWeakReference
   // implementation inherited from nsSupportsWeakReference
+
+  // nsISVGContent interface
+  NS_IMETHOD IsPresentationAttribute(const nsIAtom* attribute, PRBool* retval){*retval=PR_FALSE; return NS_OK;}
+
   
 protected:
 
   nsresult CopyNode(nsSVGElement* dest, PRBool deep);
   virtual void ParentChainChanged(){}; 
-  virtual PRBool IsPresentationAttribute(const nsIAtom* name)const{ return PR_FALSE; }
   
   nsVoidArray                  mChildren;   
   nsSVGAttributes*             mAttributes;

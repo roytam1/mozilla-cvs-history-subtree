@@ -90,9 +90,11 @@ public:
 
   // nsISVGSVGElement interface:
   NS_IMETHOD GetParentViewportRect(nsISVGViewportRect **parentViewport);
+
+  // nsISVGContent interface
+  NS_IMETHOD IsPresentationAttribute(const nsIAtom* attribute, PRBool* retval);
     
 protected:
-  virtual PRBool IsPresentationAttribute(const nsIAtom* aName)const;
   
   // implementation helpers:
   void GetScreenPosition(PRInt32 &x, PRInt32 &y);
@@ -311,63 +313,6 @@ nsSVGSVGElement::Init()
 
   return NS_OK;
 }
-
-PRBool
-nsSVGSVGElement::IsPresentationAttribute(const nsIAtom* name)const
-{
-  if (
-      // PresentationAttributes-FillStroke
-      name==nsSVGAtoms::fill              ||
-      name==nsSVGAtoms::fill_opacity      ||
-      name==nsSVGAtoms::fill_rule         ||
-      name==nsSVGAtoms::stroke            ||
-      name==nsSVGAtoms::stroke_dasharray  ||
-      name==nsSVGAtoms::stroke_dashoffset ||
-      name==nsSVGAtoms::stroke_linecap    ||
-      name==nsSVGAtoms::stroke_linejoin   ||
-      name==nsSVGAtoms::stroke_miterlimit ||
-      name==nsSVGAtoms::stroke_opacity    ||
-      name==nsSVGAtoms::stroke_width      ||
-      // PresentationAttributes-Graphics
-      name==nsSVGAtoms::clip_path         ||
-      name==nsSVGAtoms::clip_rule         ||
-      name==nsSVGAtoms::cursor            ||
-      name==nsSVGAtoms::display           ||
-      name==nsSVGAtoms::filter            ||
-      name==nsSVGAtoms::image_rendering   ||
-      name==nsSVGAtoms::mask              ||
-      name==nsSVGAtoms::opacity           ||
-      name==nsSVGAtoms::pointer_events    ||
-      name==nsSVGAtoms::shape_rendering   ||
-      name==nsSVGAtoms::text_rendering    ||
-      name==nsSVGAtoms::visibility        ||
-      // PresentationAttributes-TextContentElements
-      name==nsSVGAtoms::alignment_baseline ||
-      name==nsSVGAtoms::baseline_shift    ||
-      name==nsSVGAtoms::direction         ||
-      name==nsSVGAtoms::dominant_baseline ||
-      name==nsSVGAtoms::glyph_orientation_horizontal ||
-      name==nsSVGAtoms::glyph_orientation_vertical ||
-      name==nsSVGAtoms::kerning           ||
-      name==nsSVGAtoms::letter_spacing    ||
-      name==nsSVGAtoms::text_anchor       ||
-      name==nsSVGAtoms::text_decoration   ||
-      name==nsSVGAtoms::unicode_bidi      ||
-      name==nsSVGAtoms::word_spacing      ||
-      // PresentationAttributes-FontSpecification
-      name==nsSVGAtoms::font_family       ||
-      name==nsSVGAtoms::font_size         ||
-      name==nsSVGAtoms::font_size_adjust  ||
-      name==nsSVGAtoms::font_stretch      ||
-      name==nsSVGAtoms::font_style        ||
-      name==nsSVGAtoms::font_variant      ||
-      name==nsSVGAtoms::font_weight      
-      )
-    return PR_TRUE;
-  else
-    return PR_FALSE;
-}
-
 
 //----------------------------------------------------------------------
 // nsIDOMNode methods
@@ -1083,6 +1028,66 @@ nsSVGSVGElement::GetParentViewportRect(nsISVGViewportRect **parentViewport)
   return NS_OK;
 }
 
+//----------------------------------------------------------------------
+// nsISVGContent methods
+
+NS_IMETHODIMP
+nsSVGSVGElement::IsPresentationAttribute(const nsIAtom* name, PRBool *retval)
+{
+  if (
+      // PresentationAttributes-FillStroke
+      name==nsSVGAtoms::fill              ||
+      name==nsSVGAtoms::fill_opacity      ||
+      name==nsSVGAtoms::fill_rule         ||
+      name==nsSVGAtoms::stroke            ||
+      name==nsSVGAtoms::stroke_dasharray  ||
+      name==nsSVGAtoms::stroke_dashoffset ||
+      name==nsSVGAtoms::stroke_linecap    ||
+      name==nsSVGAtoms::stroke_linejoin   ||
+      name==nsSVGAtoms::stroke_miterlimit ||
+      name==nsSVGAtoms::stroke_opacity    ||
+      name==nsSVGAtoms::stroke_width      ||
+      // PresentationAttributes-Graphics
+      name==nsSVGAtoms::clip_path         ||
+      name==nsSVGAtoms::clip_rule         ||
+      name==nsSVGAtoms::cursor            ||
+      name==nsSVGAtoms::display           ||
+      name==nsSVGAtoms::filter            ||
+      name==nsSVGAtoms::image_rendering   ||
+      name==nsSVGAtoms::mask              ||
+      name==nsSVGAtoms::opacity           ||
+      name==nsSVGAtoms::pointer_events    ||
+      name==nsSVGAtoms::shape_rendering   ||
+      name==nsSVGAtoms::text_rendering    ||
+      name==nsSVGAtoms::visibility        ||
+      // PresentationAttributes-TextContentElements
+      name==nsSVGAtoms::alignment_baseline ||
+      name==nsSVGAtoms::baseline_shift    ||
+      name==nsSVGAtoms::direction         ||
+      name==nsSVGAtoms::dominant_baseline ||
+      name==nsSVGAtoms::glyph_orientation_horizontal ||
+      name==nsSVGAtoms::glyph_orientation_vertical ||
+      name==nsSVGAtoms::kerning           ||
+      name==nsSVGAtoms::letter_spacing    ||
+      name==nsSVGAtoms::text_anchor       ||
+      name==nsSVGAtoms::text_decoration   ||
+      name==nsSVGAtoms::unicode_bidi      ||
+      name==nsSVGAtoms::word_spacing      ||
+      // PresentationAttributes-FontSpecification
+      name==nsSVGAtoms::font_family       ||
+      name==nsSVGAtoms::font_size         ||
+      name==nsSVGAtoms::font_size_adjust  ||
+      name==nsSVGAtoms::font_stretch      ||
+      name==nsSVGAtoms::font_style        ||
+      name==nsSVGAtoms::font_variant      ||
+      name==nsSVGAtoms::font_weight      
+      ) {
+    *retval = PR_TRUE;
+    return NS_OK;
+  }
+  else
+    return nsSVGElement::IsPresentationAttribute(name, retval);
+}
 
 //----------------------------------------------------------------------
 // implementation helpers

@@ -16,7 +16,7 @@
  *
  * The Initial Developer of the Original Code is 
  * Crocodile Clips Ltd..
- * Portions created by the Initial Developer are Copyright (C) 2001
+ * Portions created by the Initial Developer are Copyright (C) 2002
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -36,34 +36,24 @@
  *
  * ----- END LICENSE BLOCK ----- */
 
-#ifndef __NS_SVGGRAPHICELEMENT_H__
-#define __NS_SVGGRAPHICELEMENT_H__
+#ifndef __NS_ISVGCONTENT__
+#define __NS_ISVGCONTENT__
 
-#include "nsSVGElement.h"
-#include "nsIDOMSVGLocatable.h"
-#include "nsIDOMSVGTransformable.h"
-#include "nsIDOMSVGAnimTransformList.h"
+#include "nsISupports.h"
 
-typedef nsSVGElement nsSVGGraphicElementBase;
+////////////////////////////////////////////////////////////////////////
+// nsISVGContent
 
-class nsSVGGraphicElement : public nsSVGGraphicElementBase,
-                            public nsIDOMSVGTransformable // : nsIDOMSVGLocatable
+// {4473C9A8-4376-48A5-BF99-D5820A1FF14E}
+#define NS_ISVGCONTENT_IID \
+{ 0x4473c9a8, 0x4376, 0x48a5, { 0xbf, 0x99, 0xd5, 0x82, 0x0a, 0x1f, 0xf1, 0x4e } }
+
+class nsISVGContent : public nsISupports
 {
-protected:
-  virtual nsresult Init();
-  
 public:
-  // interfaces:  
-  NS_DECL_ISUPPORTS_INHERITED
-  NS_DECL_NSIDOMSVGLOCATABLE
-  NS_DECL_NSIDOMSVGTRANSFORMABLE
+  static const nsIID& GetIID() { static nsIID iid = NS_ISVGCONTENT_IID; return iid; }
 
-  // nsISVGContent interface
-  NS_IMETHOD IsPresentationAttribute(const nsIAtom* attribute, PRBool* retval);
-  
-protected:
-  
-  nsCOMPtr<nsIDOMSVGAnimatedTransformList> mTransforms;
+  NS_IMETHOD IsPresentationAttribute(const nsIAtom* attribute, PRBool* retval)=0;
 };
 
-#endif // __NS_SVGGRAPHICELEMENT_H__
+#endif // __NS_ISVGCONTENT__

@@ -76,12 +76,13 @@ public:
   NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsSVGTextElementBase::)
   NS_FORWARD_NSIDOMELEMENT(nsSVGTextElementBase::)
   NS_FORWARD_NSIDOMSVGELEMENT(nsSVGTextElementBase::)
+
+  // nsISVGContent interface
+  NS_IMETHOD IsPresentationAttribute(const nsIAtom* attribute, PRBool* retval);
   
 protected:
   virtual void ParentChainChanged();
 
-  virtual PRBool IsPresentationAttribute(const nsIAtom* name)const;
-  
   already_AddRefed<nsISVGTextContentMetrics> GetTextContentMetrics();
   
   // nsIDOMSVGTextPositioning properties:
@@ -180,38 +181,6 @@ nsSVGTextElement::Init()
   }
   return NS_OK;
 }
-
-PRBool
-nsSVGTextElement::IsPresentationAttribute(const nsIAtom* name)const
-{
-  if (
-      // PresentationAttributes-TextContentElements
-      name==nsSVGAtoms::alignment_baseline ||
-      name==nsSVGAtoms::baseline_shift    ||
-      name==nsSVGAtoms::direction         ||
-      name==nsSVGAtoms::dominant_baseline ||
-      name==nsSVGAtoms::glyph_orientation_horizontal ||
-      name==nsSVGAtoms::glyph_orientation_vertical ||
-      name==nsSVGAtoms::kerning           ||
-      name==nsSVGAtoms::letter_spacing    ||
-      name==nsSVGAtoms::text_anchor       ||
-      name==nsSVGAtoms::text_decoration   ||
-      name==nsSVGAtoms::unicode_bidi      ||
-      name==nsSVGAtoms::word_spacing      ||
-      // PresentationAttributes-FontSpecification
-      name==nsSVGAtoms::font_family       ||
-      name==nsSVGAtoms::font_size         ||
-      name==nsSVGAtoms::font_size_adjust  ||
-      name==nsSVGAtoms::font_stretch      ||
-      name==nsSVGAtoms::font_style        ||
-      name==nsSVGAtoms::font_variant      ||
-      name==nsSVGAtoms::font_weight      
-      )
-    return PR_TRUE;
-  else
-    return nsSVGTextElementBase::IsPresentationAttribute(name);
-}
-
 
 //----------------------------------------------------------------------
 // nsIDOMNode methods
@@ -378,6 +347,42 @@ NS_IMETHODIMP nsSVGTextElement::SelectSubString(PRUint32 charnum, PRUint32 nchar
 {
   NS_NOTYETIMPLEMENTED("write me!");
   return NS_ERROR_UNEXPECTED;
+}
+
+//----------------------------------------------------------------------
+// nsISVGContent methods
+
+NS_IMETHODIMP
+nsSVGTextElement::IsPresentationAttribute(const nsIAtom* name, PRBool *retval)
+{
+  if (
+      // PresentationAttributes-TextContentElements
+      name==nsSVGAtoms::alignment_baseline ||
+      name==nsSVGAtoms::baseline_shift    ||
+      name==nsSVGAtoms::direction         ||
+      name==nsSVGAtoms::dominant_baseline ||
+      name==nsSVGAtoms::glyph_orientation_horizontal ||
+      name==nsSVGAtoms::glyph_orientation_vertical ||
+      name==nsSVGAtoms::kerning           ||
+      name==nsSVGAtoms::letter_spacing    ||
+      name==nsSVGAtoms::text_anchor       ||
+      name==nsSVGAtoms::text_decoration   ||
+      name==nsSVGAtoms::unicode_bidi      ||
+      name==nsSVGAtoms::word_spacing      ||
+      // PresentationAttributes-FontSpecification
+      name==nsSVGAtoms::font_family       ||
+      name==nsSVGAtoms::font_size         ||
+      name==nsSVGAtoms::font_size_adjust  ||
+      name==nsSVGAtoms::font_stretch      ||
+      name==nsSVGAtoms::font_style        ||
+      name==nsSVGAtoms::font_variant      ||
+      name==nsSVGAtoms::font_weight      
+      ) {
+    *retval = PR_TRUE;
+    return NS_OK;
+  }
+  else
+    return nsSVGTextElementBase::IsPresentationAttribute(name, retval);
 }
 
 //----------------------------------------------------------------------

@@ -92,6 +92,7 @@ NS_INTERFACE_MAP_BEGIN(nsSVGElement)
   NS_INTERFACE_MAP_ENTRY_TEAROFF(nsIDOM3Node, nsNode3Tearoff(this))
   NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
   NS_INTERFACE_MAP_ENTRY(nsISVGValueObserver)
+  NS_INTERFACE_MAP_ENTRY(nsISVGContent)
 // provided by nsGenericElement:
 //  NS_INTERFACE_MAP_ENTRY(nsIStyledContent)
 //  NS_INTERFACE_MAP_ENTRY(nsIContent)
@@ -463,6 +464,9 @@ nsSVGElement::GetID(nsIAtom*& aId)const
 NS_IMETHODIMP
 nsSVGElement::WalkContentStyleRules(nsRuleWalker* aRuleWalker)
 {
+#ifdef DEBUG
+//  printf("nsSVGElement(%p)::WalkContentStyleRules()\n", this);
+#endif
   nsCOMPtr<nsIStyleRule> rule;
   mAttributes->GetContentStyleRule(getter_AddRefs(rule));
   if (rule)  
@@ -480,8 +484,13 @@ NS_IMETHODIMP
 nsSVGElement::GetMappedAttributeImpact(const nsIAtom* aAttribute, PRInt32 aModType,
                                        nsChangeHint& aHint) const
 {
+#ifdef DEBUG
+//  nsAutoString str;
+//  ((nsIAtom *)aAttribute)->ToString(str);
+//  printf("nsSVGElement(%p)::GetMappedAttributeImpact(%s)\n", this, NS_ConvertUCS2toUTF8(str).get());
+#endif
   // We only need the cssframeconstructor to handle changes on
-  // style-related attributes, such as the 'style'-attribute and the
+  // style-related attributes, i.e. the 'style'-attribute and the
   // svg presentation attributes. Other 'interesting' attributes get
   // handled by a listener mechanism specific to the SVG
   // implementation.
@@ -491,8 +500,10 @@ nsSVGElement::GetMappedAttributeImpact(const nsIAtom* aAttribute, PRInt32 aModTy
   // re-resolve the style context if the attribute is used in a css
   // selector.
 
-  if (aAttribute==nsSVGAtoms::style ||
-      IsPresentationAttribute(aAttribute))
+  PRBool isPresentationAttr;
+  NS_CONST_CAST(nsSVGElement*,this)->IsPresentationAttribute(aAttribute, &isPresentationAttr);
+  
+  if (aAttribute==nsSVGAtoms::style || isPresentationAttr)
     aHint = NS_STYLE_HINT_VISUAL;
   else
     aHint = NS_STYLE_HINT_CONTENT;

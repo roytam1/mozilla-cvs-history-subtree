@@ -53,6 +53,7 @@
 #include "nsCSSDeclaration.h"
 #include "nsIURI.h"
 #include "nsSVGAtoms.h"
+#include "nsISVGContent.h"
 
 ////////////////////////////////////////////////////////////////////////
 // nsSVGAttribute implementation
@@ -531,24 +532,25 @@ nsSVGAttributes::AffectsContentStyleRule(const nsIAtom* aAttribute)
 {
   NS_ASSERTION(mContent, "null owner");
 
-  // XXX we really want mContent->IsPresentationAttribute(.)  
-  nsChangeHint hint;
-  mContent->GetMappedAttributeImpact(aAttribute, 0, hint);
-  if (hint==NS_STYLE_HINT_VISUAL && aAttribute!=nsSVGAtoms::style)
-    return PR_TRUE;
-  return PR_FALSE;
+  nsCOMPtr<nsISVGContent> svgcontent = do_QueryInterface(mContent);
+  NS_ASSERTION(svgcontent, "could not get nsISVGContent interface");
+
+  PRBool retval;
+  svgcontent->IsPresentationAttribute(aAttribute, &retval); 
+  return retval;
 }
 
 void
-nsSVGAttributes::UpdateContentStyleRule(nsIAtom* aAttribute, const nsAString& aValue)
+nsSVGAttributes::UpdateContentStyleRule()
 {
-  if (!mContentStyleRule)
-    NS_NewCSSStyleRule(getter_AddRefs(mContentStyleRule), nsCSSSelector());
+  NS_ASSERTION(!mContentStyleRule, "we already have a content style rule");
+
+  NS_NewCSSStyleRule(getter_AddRefs(mContentStyleRule), nsCSSSelector());
   NS_ASSERTION(mContentStyleRule, "could not create contentstylerule");
 
-  nsCSSDeclaration* declaration = mContentStyleRule->GetDeclaration();
-  if (!declaration)
-    NS_NewCSSDeclaration(&declaration);
+  nsCSSDeclaration* declaration = nsnull;
+  NS_NewCSSDeclaration(&declaration);
+  NS_ASSERTION(declaration, "could not create css declaration");
 
   nsCOMPtr<nsIURI> baseURL;
   {
@@ -562,16 +564,28 @@ nsSVGAttributes::UpdateContentStyleRule(nsIAtom* aAttribute, const nsAString& aV
   nsCOMPtr<nsICSSParser> parser;
   NS_NewCSSParser(getter_AddRefs(parser));
 
-  nsAutoString name;
-  aAttribute->ToString(name);
+  for (int i = 0; i< mAttributes.Count(); ++i) {
+    nsSVGAttribute* attr = (nsSVGAttribute*) mAttributes[i];
+    nsCOMPtr<nsIAtom> nameatom;
+    attr->GetNodeInfo()->GetNameAtom(*getter_AddRefs(nameatom));
+
+    if (!AffectsContentStyleRule(nameatom)) continue;
+
+    nsAutoString name;
+    nameatom->ToString(name);
+    nsAutoString value;
+
+    nsCOMPtr<nsISVGValue> svgvalue;
+    attr->GetSVGValue(getter_AddRefs(svgvalue));
+    svgvalue->GetValueString(value);
+    
+    parser->ParseProperty(name,
+                          value,
+                          baseURL,
+                          declaration,
+                          nsnull);
+  }
   
-  parser->ParseProperty(name,
-                        aValue,
-                        baseURL,
-                        declaration,
-                        nsnull);
-
-
   mContentStyleRule->SetDeclaration(declaration);
 }
 
@@ -643,6 +657,15 @@ nsSVGAttributes::SetAttr(nsINodeInfo* aNodeInfo,
   aNodeInfo->GetNameAtom(*getter_AddRefs(name));
   aNodeInfo->GetNamespaceID(nameSpaceID);
 
+#ifdef DEBUG
+//   {
+//     nsAutoString str;
+//     name->ToString(str);
+//     printf("nsSVGAttributes(%p)::SetAttr(%s, %s)\n", this,
+//            NS_ConvertUCS2toUTF8(str).get(),NS_ConvertUCS2toUTF8(aValue).get());
+//   }
+#endif
+
   nsCOMPtr<nsIDocument> document;
   if (mContent)
     mContent->GetDocument(*getter_AddRefs(document));
@@ -685,9 +708,12 @@ nsSVGAttributes::SetAttr(nsINodeInfo* aNodeInfo,
   }
 
   // if this is an svg presentation attribute we need to map it into
-  // the content stylerule:
+  // the content stylerule.
+  // XXX For some reason incremental mapping doesn't work, so for now
+  // just delete the style rule and lazily reconstruct it in
+  // GetContentStyleRule()
   if(AffectsContentStyleRule(name)) 
-    UpdateContentStyleRule(name, aValue);
+    mContentStyleRule = nsnull;
 
   
   if (document && NS_SUCCEEDED(rv)) {
@@ -921,6 +947,8 @@ nsSVGAttributes::CopyAttributes(nsSVGAttributes* dest)
 void
 nsSVGAttributes::GetContentStyleRule(nsIStyleRule** rule)
 {
+  if (!mContentStyleRule)
+    UpdateContentStyleRule();
   *rule=mContentStyleRule;
   NS_IF_ADDREF(*rule);
 }

@@ -130,6 +130,7 @@ SVG_BRANCH_MODIFIED_FILES = \
 	layout/base/public/nsStyleConsts.h                    \
 	layout/build/Makefile.in                              \
 	layout/build/nsLayoutModule.cpp                       \
+	layout/html/base/src/nsFrameManager.cpp               \
 	layout/html/style/src/nsCSSFrameConstructor.cpp       \
 	layout/svg/Makefile.in                                \
 	layout/svg/base/src/Makefile.in                       \
@@ -239,6 +240,7 @@ SVG_BRANCH_OBSOLETE_FILES = \
 
 # list of new files in branch
 SVG_BRANCH_NEW_FILES = \
+	content/svg/content/src/nsISVGContent.h               \
 	content/svg/content/src/nsISVGLength.h                \
 	content/svg/content/src/nsISVGLengthList.h            \
 	content/svg/content/src/nsISVGSVGElement.h            \

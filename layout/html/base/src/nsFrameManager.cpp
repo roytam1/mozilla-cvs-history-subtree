@@ -76,6 +76,10 @@
 #include "nsDummyLayoutRequest.h"
 #include "nsLayoutErrors.h"
 
+#ifdef MOZ_SVG
+#include "nsISVGContent.h"
+#endif
+
   #ifdef DEBUG
     //#define NOISY_DEBUG
     //#define DEBUG_UNDISPLAYED_MAP
@@ -2042,6 +2046,15 @@ FrameManager::AttributeAffectsStyle(nsIAtom *aAttribute, nsIContent *aContent,
     return NS_OK;
   }
 
+#ifdef MOZ_SVG
+  nsCOMPtr<nsISVGContent> svg(do_QueryInterface(aContent));
+  if (svg) {
+    svg->IsPresentationAttribute(aAttribute, &aAffects);
+    if (aAffects)
+      return NS_OK;
+  }
+#endif
+  
   nsCOMPtr<nsIXMLContent> xml(do_QueryInterface(aContent));
   if (xml) {
     rv = mStyleSet->AttributeAffectsStyle(aAttribute, aContent, aAffects);
