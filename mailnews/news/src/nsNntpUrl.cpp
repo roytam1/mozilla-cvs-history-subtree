@@ -217,7 +217,12 @@ NS_IMETHODIMP nsNntpUrl::GetMessageHeader(nsIMsgDBHdr ** aMsgHdr)
   nsCOMPtr <nsIMsgMessageService> msgService = do_QueryInterface(nntpService, &rv);
   NS_ENSURE_SUCCESS(rv,rv);
 
-  rv = msgService->MessageURIToMsgHdr(mURI.get(), aMsgHdr);
+  if (mOriginalMessageURI.IsEmpty()) {
+    // this can happen when viewing a news://host/message-id url
+    return NS_ERROR_FAILURE;
+  }
+
+  rv = msgService->MessageURIToMsgHdr(mOriginalMessageURI.get(), aMsgHdr);
   NS_ENSURE_SUCCESS(rv,rv);
   
   return NS_OK;
@@ -255,6 +260,16 @@ nsNntpUrl::SetOriginalSpec(const char *aSpec)
 nsresult nsNntpUrl::GetMsgFolder(nsIMsgFolder **msgFolder)
 {
    nsresult rv;
+
+   nsXPIDLCString path;
+   rv = GetPath(getter_Copies(path));
+   if (NS_SUCCEEDED(rv) && nsCRT::strlen((const char *)path)) {
+    if (PL_strchr((const char *)path, '@') || PL_strstr((const char *)path,"%40")) {
+      // this is a message id url, perhaps we should return the msgFolder for the server?
+      return NS_ERROR_FAILURE;
+    }
+   }
+
    nsCOMPtr <nsINntpService> nntpService = do_GetService(NS_NNTPSERVICE_CONTRACTID, &rv);
    NS_ENSURE_SUCCESS(rv,rv);
 
@@ -270,6 +285,7 @@ nsNntpUrl::GetFolderCharset(PRUnichar ** aCharacterSet)
   nsCOMPtr<nsIMsgFolder> folder;
   nsresult rv = GetMsgFolder(getter_AddRefs(folder));
   NS_ENSURE_SUCCESS(rv,rv);
+
   NS_ENSURE_TRUE(folder, NS_ERROR_FAILURE);
   rv = folder->GetCharset(aCharacterSet);
   NS_ENSURE_SUCCESS(rv,rv);

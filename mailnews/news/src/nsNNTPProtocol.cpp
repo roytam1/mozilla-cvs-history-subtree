@@ -1764,21 +1764,15 @@ PRInt32 nsNNTPProtocol::SendFirstNNTPCommand(nsIURI * url)
 	char *command=0;
 	PRInt32 status = 0;
 
-	if (m_typeWanted == ARTICLE_WANTED)
-	  {
-		nsresult rv;
-       
-        nsXPIDLCString newsgroupName;
-        if (m_newsFolder) {
-            rv = m_newsFolder->GetAsciiName(getter_Copies(newsgroupName));
-            NS_ENSURE_SUCCESS(rv,rv);
-        }
-        else {
-            NS_ASSERTION(0,"no news folder, fix this");
-            rv = NS_ERROR_UNEXPECTED;
-        }
-		
-		if (NS_SUCCEEDED(rv) && ((const char *)newsgroupName) && (m_key != nsMsgKey_None)) {
+	if (m_typeWanted == ARTICLE_WANTED) {
+		if (m_key != nsMsgKey_None) {
+		    nsresult rv;
+            nsXPIDLCString newsgroupName;
+            if (m_newsFolder) {
+                rv = m_newsFolder->GetAsciiName(getter_Copies(newsgroupName));
+                NS_ENSURE_SUCCESS(rv,rv);
+            }
+
 		    PR_LOG(NNTP,PR_LOG_ALWAYS,("current group = %s, desired group = %s",(const char *)m_currentGroup, (const char *)newsgroupName));
             // if the current group is the desired group, we can just issue the ARTICLE command
             // if not, we have to do a GROUP first
@@ -2382,8 +2376,7 @@ nsresult nsNNTPProtocol::MarkCurrentMsgRead()
 	nsresult rv = NS_OK;
 
   // if this is a message id url, (news://host/message-id) then don't go try to mark it read
-  if (m_runningURL && !m_messageID)
-  {
+  if (m_runningURL && !m_messageID && (m_key != nsMsgKey_None)) {
 	  rv = m_runningURL->GetMessageHeader(getter_AddRefs(msgHdr));
 
 	  if (NS_SUCCEEDED(rv) && msgHdr)
