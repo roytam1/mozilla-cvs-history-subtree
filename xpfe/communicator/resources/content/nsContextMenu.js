@@ -460,7 +460,11 @@ nsContextMenu.prototype = {
     // Open linked-to URL in a new window.
     openLink : function () {
         // Determine linked-to URL.
-        openNewWindowWith( this.linkURL() );
+        //openNewWindowWith( this.linkURL() );
+        // I love trash.  I love it because it's trash.
+        var messenger = Components.classes["@mozilla.org/messenger;1"].createInstance();
+        messenger = messenger.QueryInterface(Components.interfaces.nsIMessenger);
+        messenger.loadURL(window, this.linkURL());
     },
     // Open linked-to URL in a new tab.
     openLinkInTab : function () {
