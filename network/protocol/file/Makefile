@@ -20,14 +20,18 @@ DEPTH		= ../../..
 MODULE		= fileurl
 LIBRARY_NAME	= fileurl
 
-CSRCS		= \
-	mkfile.c	\
+CPPSRCS		= \
+	mkfile.cpp	\
 	$(NULL)
 
 EXPORTS= fileurl.h
 
 REQUIRES	= network nspr2 dbm util pref js java fileurl \
 	security layer img httpurl jtools mimetype
+
+ifdef MOZ_SMOOTH_PROGRESS
+REQUIRES += progress xpcom
+endif
 
 include $(DEPTH)/config/rules.mk
 
