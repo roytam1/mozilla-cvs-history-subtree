@@ -888,6 +888,10 @@ toolbarbutton.chevron > .toolbarbutton-menu-dropmarker {
   list-style-image: none;
   border: none;}
 
+.tabs-closebutton:hover > .toolbarbutton-icon {
+	background-image: none !important;
+}
+
 .tabs-closebutton:hover:active {
 	list-style-image: url("chrome://global/skin/icons/closetab-active.png") !important;
 }
@@ -917,8 +921,7 @@ toolbarbutton.chevron > .toolbarbutton-menu-dropmarker {
 #FindToolbar > toolbarbutton > .toolbarbutton-text 
 {
   height: 16px !important;
-  padding-top: 1px;
-  padding-right: 7px;
+  padding: 1px 7px 1px 2px;
   font-weight: bold;
   color: #565656;
 }
@@ -1049,7 +1052,7 @@ toolbarbutton.chevron > .toolbarbutton-menu-dropmarker {
 }
 
 #find-status {
-	color: #505050;
+	color: #6783ad;
 }
 
 tabpanels.plain {
