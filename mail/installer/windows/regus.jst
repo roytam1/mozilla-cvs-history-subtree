@@ -59,7 +59,6 @@ if(verifyDiskSpace(fProgram, srDest))
   {
     // register chrome
     var cf = getFolder(fProgram, "chrome/"+ chromeName);
-    registerChrome(chromeType, cf, localeName + "global-region/");
     registerChrome(chromeType, cf, localeName + "messenger-region/");
 
     err = performInstall(); 
