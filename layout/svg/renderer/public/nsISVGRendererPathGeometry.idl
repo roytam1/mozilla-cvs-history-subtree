@@ -41,18 +41,69 @@
 interface nsISVGRendererRegion;
 interface nsISVGRendererCanvas;
 
+/**
+ * \addtogroup renderer_interfaces Rendering Engine Interfaces
+ * @{
+ */
+
+/**
+ * One of a number of interfaces (all starting with nsISVGRenderer*)
+ * to be implemented by an SVG rendering engine. See nsISVGRenderer
+ * for more details.
+ *
+ * The SVG rendering backend uses this interface to communicate to the
+ * rendering engine-native path objects.
+ *
+ * A glyph object is instantiated by the rendering backend for a given
+ * nsISVGPathGeometrySource object with a call to
+ * nsISVGRenderer::createPathGeometry(). The path geometry object is
+ * assumed to store a reference to its associated source object and
+ * provide rendering, hit-testing and metrics for the path described
+ * by the nsISVGPathGeometrySource members.
+ */
 [scriptable, uuid(86edbfce-7ed8-4ca5-a88e-68447bdac4e9)]
 interface nsISVGRendererPathGeometry : nsISupports
 {
+  /**
+   * Paint this object.
+   *
+   * @param canvas The canvas to render to.
+   */
   void render(in nsISVGRendererCanvas canvas);
   
+  /**
+   * Called by this object's corresponding nsISVGPathGeometrySource as
+   * a notification that some of the source's data (identified by
+   * paramter 'updatemask') has changed.
+   *
+   * @param updatemask An OR-ed combination of the UPDATEMASK_*
+   * constants defined in nsISVGPathGeometrySource.
+   * @return Region that needs to be redrawn.
+   */
   nsISVGRendererRegion update(in unsigned long updatemask);
+  
+  /**
+   * Get a region object describing the area covered with paint by
+   * this glyph geometry.
+   *
+   * @return Covered region.
+   */
   nsISVGRendererRegion getCoveredRegion();
 
-
+  /**
+   * Hit-testing method. Does this path geometry (with all relevant
+   * transformations applied) contain the point x,y? Mode of operation
+   * (e.g. whether to test fill or stroke) is determined by
+   * nsISVGPathGeometrySource::hittestMask.
+   *
+   * @param x X-coordinate of test point.  @param y Y-coordinate of
+   * test point.
+   * @return PR_TRUE if the glyph geometry contains the point,
+   * PR_FALSE otherwise.
+   */
   boolean containsPoint(in float x, in float y);
   
   /* XXX segment at length, point at length */
-  
 };
 
+/** @} */

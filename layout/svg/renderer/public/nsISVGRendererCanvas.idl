@@ -50,14 +50,60 @@ typedef PRUint32 nscolor;
 interface nsIRenderingContext;
 interface nsIPresContext;
 
+/**
+ * \addtogroup renderer_interfaces Rendering Engine Interfaces
+ * @{
+ */
+
+/**
+ * One of a number of interfaces (all starting with nsISVGRenderer*)
+ * to be implemented by an SVG rendering engine. See nsISVGRenderer
+ * for more details.
+ *
+ * This interface abstracts a rendering engine-native canvas object
+ * onto which path and glyph geometries can be painted.
+ *
+ * A canvas object is instantiated by the backend for a given
+ * Mozilla-native rendering object with a call to
+ * nsISVGRenderer::createCanvas().
+ */
 [scriptable, uuid(a1d9f15e-ee63-4ce1-9fe7-b6cdb09a48a0)]
 interface nsISVGRendererCanvas : nsISupports
-{ 
+{
+  /**
+   * Lock a portion of the canvas and obtain a rendering context onto
+   * which Mozilla can paint non-svg content. This is needed for
+   * (partial) foreignObject support.
+   *
+   * lockRenderingContext() calls are paired with
+   * unlockRenderingContext() calls.
+   *
+   * @param rect Area to be locked.
+   * @return Mozilla-native rendering context for the locked area.
+   */
   [noscript] nsIRenderingContext lockRenderingContext([const] in nsRectRef rect);
+
+  /**
+   * Unlock the canvas portion locked with a previous call to
+   * lockRenderingContext(). 
+   */
   void unlockRenderingContext();
+
+  // XXX do we need this?
   nsIPresContext getPresContext();
-  
+
+  /**
+   * Fill the canvas with the given color.
+   *
+   * @param color Fill color.
+   */
   void clear(in nscolor color);
+
+  /**
+   * Ensure that all renderings on the canvas have been flushed to the
+   * Mozilla-native rendering context.
+   */
   void flush();
 };
 
+/** @} */

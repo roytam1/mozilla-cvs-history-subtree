@@ -40,17 +40,63 @@
 
 interface nsISVGRendererPathBuilder;
 
+/**
+ * \addtogroup rendering_backend_interfaces Rendering Backend Interfaces
+ * @{
+ */
+
+/**
+ * Describes a 'path geometry' object in the SVG rendering backend,
+ * i.e. a graphical object composed of lines, Bezier curves and
+ * elliptical arcs, that can be stroked and filled. The rendering
+ * backend maintains an object implementing this interface for each
+ * rendering engine-native path geometry object.
+ *
+ * An engine-native path geometry object will be informed of changes
+ * in a path geometry's description with a call to its
+ * nsISVGRendererPathGeometry::update() method with an OR-ed
+ * combination of the UPDATEMASK_* constants defined in this interface
+ * (and its base-interface).
+ *
+ * @nosubgrouping
+ */
 [scriptable, uuid(73c9350e-6b0b-4458-aa24-aa5333476eff)]
 interface nsISVGPathGeometrySource : nsISVGGeometrySource
-{ 
-  void constructPath(in nsISVGRendererPathBuilder pathBuilder);
-  const unsigned long UPDATEMASK_PATH         = 0x00008000;
+{
 
-  // hittest mask codes:
+  /**
+   * @name Path description
+   * @{
+   */
+  
+  /**
+   * Write a description of the path to the 'pathBuilder'.
+   *
+   * @param pathBuilder Object to write path description to.
+   */
+  void constructPath(in nsISVGRendererPathBuilder pathBuilder);
+  
+  const unsigned long UPDATEMASK_PATH         = 0x00008000;
+  
+  /** @} */
+
+  /**
+   * @name Hittest mode of operation
+   * @{
+   */
+  
   const unsigned short HITTEST_MASK_FILL   = 0x0001;
   const unsigned short HITTEST_MASK_STROKE = 0x0002;
 
+  /**
+   * Determines mode of operation expected of the
+   * nsISVGRendererPathGeometry::containsPoint() method.  One of the
+   * 'HITTEST_MASK_*' constants defined in this interface.
+   */
   readonly attribute unsigned short hittestMask;
+  
   const unsigned long UPDATEMASK_HITTEST_MASK = 0x00010000;
+  /** @} */
 };
 
+/** @} */

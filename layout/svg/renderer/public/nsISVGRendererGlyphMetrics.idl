@@ -40,15 +40,56 @@
 
 interface nsIDOMSVGRect;
 
+/**
+ * \addtogroup renderer_interfaces Rendering Engine Interfaces
+ * @{
+ */
+
+/**
+ * One of a number of interfaces (all starting with nsISVGRenderer*)
+ * to be implemented by an SVG rendering engine. See nsISVGRenderer
+ * for more details.
+ *
+ * The SVG rendering backend uses this interface to communicate to the
+ * rendering engine-native glyph metrics objects.
+ *
+ * A glyph metrics object is instantiated by the backend for a given
+ * nsISVGGlyphMetricsSource object with a call to
+ * nsISVGRenderer::createGlyphMetrics(). The glyph metrics object is
+ * assumed to store a reference to its associated source object and
+ * provide metrics information about the (composite) glyph described
+ * by nsISVGGlyphMetricsSource::characterData,
+ * nsISVGGlyphMetricsSource::font, nsISVGGlyphMetricsSource::CTM, and
+ * other relevant style such as nsISVGGlyphMetricsSource::strokeWidth.
+ */
 [scriptable, uuid(8665f6e9-6ed6-4ff8-b511-46c8068b3960)]
 interface nsISVGRendererGlyphMetrics : nsISupports
 {
+  /**
+   * Untransformed width of the composite glyph in pixels.
+   */
   readonly attribute float advance;
+
+  /**
+   * Untransformed bounding box of the composite glyph in pixel
+   * coordinates.
+   */
   readonly attribute nsIDOMSVGRect boundingBox;
 
-  [noscript] nsIDOMSVGRect getExtentOfChar(in unsigned long charnum);
-  
-  // baseline offset indentifiers:
+  /**
+   * Get the untransformed bounding box of an individual glyph.
+   *
+   * @param charnum The index of the character in
+   * nsISVGGlyphMetricsSource::characterData whose glyph bounding box
+   * is to be determined
+   * @return The untransformed bounding box in pixel coordinates
+   */
+  nsIDOMSVGRect getExtentOfChar(in unsigned long charnum);
+
+  /**
+   * @name Baseline offset constants for getBaselineOffset()
+   * @{
+   */
   const unsigned short BASELINE_ALPHABETIC       = 0;
   const unsigned short BASELINE_HANGING          = 1;
   const unsigned short BASELINE_IDEOGRAPHC       = 2;
@@ -57,9 +98,29 @@ interface nsISVGRendererGlyphMetrics : nsISupports
   const unsigned short BASELINE_MIDDLE           = 5;
   const unsigned short BASELINE_TEXT_BEFORE_EDGE = 6;
   const unsigned short BASELINE_TEXT_AFTER_EDGE  = 7;
-
-  float getBaselineOffset(in unsigned short baselineIdentifier); // in pixels
+  /** @} */
   
-  boolean update(in unsigned long updatemask); // true retval == metrics changed
+  /**
+   * Retrieve the (y-axis) offset of the given baseline.
+   * 
+   * @param baselineIdentifier One of the BASELINE_* constants defined
+   * in this interface.
+   * @return Y-axis offset in pixels relative to top of bounding box.
+   */
+  float getBaselineOffset(in unsigned short baselineIdentifier);
+
+  /**
+   * Called by this object's corresponding nsISVGGlyphMetricsSource as
+   * a notification that some of the source's data (identified by
+   * paramter 'updatemask') has changed.
+   *
+   * @param updatemask An OR-ed combination of the UPDATEMASK_*
+   * constants defined in nsISVGGlyphMetricsSource.
+   * @return PR_TRUE if the metrics have changed as a result of the
+   * source update, PR_FALSE otherwise.
+   */
+  boolean update(in unsigned long updatemask); 
 
 };
+
+/** @} */

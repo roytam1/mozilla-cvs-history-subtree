@@ -44,15 +44,48 @@
 
 native nsFont(nsFont);
 
+/**
+ * \addtogroup rendering_backend_interfaces Rendering Backend Interfaces
+ * @{
+ */
+
+/**
+ * Abstracts a description of a 'composite glyph' (character string
+ * with associated font and styling information) in the SVG rendering
+ * backend for use by a rendering engine's nsISVGRendererGlyphMetrics
+ * objects.
+ *
+ * An engine-native glyph metrics object will be informed of changes
+ * in its associated composite glyph with a call to its
+ * nsISVGRendererGlyphMetrics::update() method with an OR-ed
+ * combination of the UPDATEMASK_* constants defined in this interface
+ * (and its base-interface).
+ *
+ * @nosubgrouping
+ */
 [scriptable, uuid(8e96a973-c8bb-43a2-8584-4976e75ca478)]
 interface nsISVGGlyphMetricsSource : nsISVGGeometrySource
 {
+  /**
+   * @name Font
+   * @{
+   */
   [noscript] readonly attribute nsFont font;
   const unsigned long UPDATEMASK_FONT            = 0x00008000;
-  
+  /** @} */
+
+  /**
+   * @name Character data
+   * @{
+   */
   readonly attribute DOMString characterData;
   const unsigned long UPDATEMASK_CHARACTER_DATA  = 0x00010000;
+  /** @} */
 
+  /**
+   * @name Text rendering mode
+   * @{
+   */
   /* enums for textRendering */
   const unsigned short TEXT_RENDERING_AUTO               = 0;
   const unsigned short TEXT_RENDERING_OPTIMIZESPEED      = 1;
@@ -61,4 +94,7 @@ interface nsISVGGlyphMetricsSource : nsISVGGeometrySource
 
   readonly attribute unsigned short textRendering;
   const unsigned long UPDATEMASK_TEXT_RENDERING  = 0x00020000;
+  /** @} */
 };
+
+/** @} */

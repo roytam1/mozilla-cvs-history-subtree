@@ -38,9 +38,19 @@
 
 #include "nsISupports.idl"
 
+/**
+ * \addtogroup rendering_backend_interfaces Rendering Backend Interfaces
+ * @{
+ */
+
+/**
+ * Interface handed to nsISVGRendererRegion::getRectangleScans() to
+ * obtain an approximation of the region with rectangles.
+ */
 [scriptable, uuid(0340df1d-1096-445f-bbf9-e1d1e5a10827)]
 interface nsISVGRectangleSink : nsISupports
 {
   void sinkRectangle(in float x, in float y, in float width, in float height);
 };
 
+/** @} */
