@@ -19,7 +19,6 @@
 
   <!-- overlay information -->
   <RDF:Seq about="urn:mozilla:overlays">
-    <RDF:li resource="chrome://communicator/content/pref/preftree.xul"/>
     <RDF:li resource="chrome://communicator/content/pref/pref-appearance.xul"/>
     <RDF:li resource="chrome://communicator/content/pref/pref-scripts.xul"/>
     <RDF:li resource="chrome://cookie/content/pref-cookies.xul"/>
@@ -32,11 +31,6 @@
     <RDF:li resource="chrome://communicator/content/tasksOverlay.xul"/>
   </RDF:Seq>
 
-
-  <!-- messenger preferences branches -->
-  <RDF:Seq about="chrome://communicator/content/pref/preftree.xul">
-    <RDF:li>chrome://messenger/content/mailPrefsOverlay.xul</RDF:li>
-  </RDF:Seq>
 
   <!-- messenger startup pref -->
   <RDF:Seq about="chrome://communicator/content/pref/pref-appearance.xul">

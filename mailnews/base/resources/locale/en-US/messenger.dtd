@@ -390,7 +390,7 @@ Rights Reserved.
 <!ENTITY totalColumn.label "Total">
 
 <!-- Toolbar items -->
-<!ENTITY getMsgButton.label "Get Msgs">
+<!ENTITY getMsgButton.label "Get Mail">
 <!ENTITY newMsgButton.label "Write">
 <!ENTITY replyButton.label "Reply">
 <!ENTITY replyAllButton.label "Reply All">
