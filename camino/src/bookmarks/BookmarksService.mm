@@ -481,10 +481,7 @@ CheckXMLDocumentParseSuccessful(nsIDOMDocument* inDOMDoc)
   docContent->GetTag(*getter_AddRefs(tagName));
 
   nsCOMPtr<nsIAtom>	parserErrorAtom = do_GetAtom("parsererror");
-  if (parserErrorAtom != tagName)
-    return PR_TRUE;
-
-  return PR_FALSE;
+  return (tagName != parserErrorAtom);
 }
 
 static PRBool
@@ -576,6 +573,9 @@ BookmarksService::ReadBookmarks()
     NSString *okButton  = NSLocalizedString(@"OKButtonText",@"");
     NSRunAlertPanel(alert, message, okButton, nil, nil);
 
+    // save the error to a file so the user can see what's wrong
+    SaveBookmarksToFile(NS_LITERAL_STRING("bookmarks_parse_error.xml"));
+
     // maybe we should read the default bookmarks here?
     gBookmarksFileReadOK = PR_FALSE;
     return;
@@ -591,16 +591,22 @@ BookmarksService::ReadBookmarks()
 void
 BookmarksService::FlushBookmarks()
 {
-    // XXX we need to insert a mechanism here to ensure that we don't write corrupt
-    //     bookmarks files (e.g. full disk, program crash, whatever), because our
-    //     error handling in the parse stage is NON-EXISTENT.
+  // XXX we need to insert a mechanism here to ensure that we don't write corrupt
+  //     bookmarks files (e.g. full disk, program crash, whatever), because our
+  //     error handling in the parse stage is NON-EXISTENT.
   //  This is now partially handled by looking for a <parsererror> node at read time.
   if (!gBookmarksFileReadOK)
     return;
   
+  SaveBookmarksToFile(NS_LITERAL_STRING("bookmarks.xml"));
+}
+
+void
+BookmarksService::SaveBookmarksToFile(const nsString& inFileName)
+{
   nsCOMPtr<nsIFile> bookmarksFile;
   NS_GetSpecialDirectory(NS_APP_USER_PROFILE_50_DIR, getter_AddRefs(bookmarksFile));
-  bookmarksFile->Append(NS_LITERAL_STRING("bookmarks.xml"));
+  bookmarksFile->Append(inFileName);
   
   nsCOMPtr<nsIOutputStream> outputStream;
   NS_NewLocalFileOutputStream(getter_AddRefs(outputStream), bookmarksFile);
