@@ -237,4 +237,42 @@ CreateProcessA (
     return retval;
 }
 
+HANDLE
+WINAPI
+_MD_CreateFileA(
+    LPCSTR lpFileName,
+    DWORD dwDesiredAccess,
+    DWORD dwShareMode,
+    LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+    DWORD dwCreationDisposition,
+    DWORD dwFlagsAndAttributes,
+    HANDLE hTemplateFile
+    )
+{
+    HANDLE retval = (HANDLE)INVALID_HANDLE_VALUE;
+    LPWSTR wideStr = NULL;
+    WCHAR widePath[MAX_PATH + 1];
+
+    wideStr = _PR_MD_A2W(lpFileName, widePath, sizeof(widePath) / sizeof(WCHAR));
+    if(NULL != wideStr)
+    {
+        retval = CreateFileW(
+            wideStr,
+            dwDesiredAccess,
+            dwShareMode,
+            lpSecurityAttributes,
+            dwCreationDisposition,
+            dwFlagsAndAttributes,
+            hTemplateFile
+            );
+    }
+    else
+    {
+        PR_SetError(PR_NAME_TOO_LONG_ERROR, 0);
+    }
+
+    return retval;
+}
+
+
 #endif /* WINCE */

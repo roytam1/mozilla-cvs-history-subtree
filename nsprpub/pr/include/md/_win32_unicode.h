@@ -59,4 +59,26 @@ LPWSTR _PR_MD_MALLOC_A2W(LPCSTR inString);
  */
 LPWSTR _PR_MD_A2W(LPCSTR inString, LPWSTR outWideString, int inWideStringChars);
 
+#if defined(WINCE)
+/*
+ * WinCE Only
+ *
+ * Some of the functions we intend to proxy to get around multi-byte API
+ *  assumptions are imported from DLLs.  I would rather not fake out
+ *  the linkage by prepending _imp_ ## functioname to make things happen.
+ * We need to provide our own linkage symbol for all this to work out.
+ */
+HANDLE
+WINAPI
+_MD_CreateFileA(
+    LPCSTR lpFileName,
+    DWORD dwDesiredAccess,
+    DWORD dwShareMode,
+    LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+    DWORD dwCreationDisposition,
+    DWORD dwFlagsAndAttributes,
+    HANDLE hTemplateFile
+    );
+#endif /* WINCE */
+
 #endif /* nspr_win32_unicode_h___ */

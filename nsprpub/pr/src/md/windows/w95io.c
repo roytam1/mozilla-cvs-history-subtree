@@ -210,7 +210,7 @@ _PR_MD_OPEN(const char *name, PRIntn osflags, int mode)
 #if !defined(WINCE)
            CreateFile
 #else
-           CreateFileA
+           _MD_CreateFileA
 #endif
                       (
                        name,
@@ -275,7 +275,7 @@ _PR_MD_OPEN_FILE(const char *name, PRIntn osflags, int mode)
 #if !defined(WINCE)
           CreateFile
 #else
-          CreateFileA
+          _MD_CreateFileA
 #endif
                       (
                        name,
@@ -729,7 +729,7 @@ _PR_MD_STAT(const char *fn, struct stat *info)
 #if !defined(WINCE)
                  CreateFile
 #else
-                 CreateFileA
+                 _MD_CreateFileA
 #endif
                            (
                             fn,
