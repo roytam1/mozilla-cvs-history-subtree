@@ -29,7 +29,7 @@ MOZ_TOP=mozilla
 !if defined(MOZ_NGLAYOUT)
 NGLAYOUT_MAKEFILE=nglayout.mak
 NGLAYOUT_ENV_VARS=STANDALONE_IMAGE_LIB=1 MODULAR_NETLIB=1 NGLAYOUT_BUILD_PREFIX=1
-MOZNGLAYOUT_BRANCH=RAPTOR_INTEGRATION0_BRANCH
+MOZNGLAYOUT_BRANCH=NGLAYOUT_INTEGRATION_BRANCH
 CVSCO = cvs -q co -P
 !endif
 
@@ -99,9 +99,11 @@ pull_netlib:
 	$(NMAKE) -f $(NGLAYOUT_MAKEFILE) pull_netlib $(NGLAYOUT_ENV_VARS)
 
 # Here is where we pull everything on the layout integration branch
+# Pull some specific netlib files.
 repull_ngl_integration:
 	@cd $(MOZ_SRC)
-	$(CVSCO) -r $(MOZNGLAYOUT_BRANCH) $(MOZ_TOP)/include $(MOZ_TOP)/cmd $(MOZ_TOP)/lib $(MOZ_TOP)/modules
+#	$(CVSCO) -r $(MOZNGLAYOUT_BRANCH) $(MOZ_TOP)/include $(MOZ_TOP)/cmd $(MOZ_TOP)/lib $(MOZ_TOP)/modules
+	$(CVSCO) -r $(MOZNGLAYOUT_BRANCH) $(MOZ_TOP)/network/cnvts/cvmime.c $(MOZ_TOP)/network/main/mkgeturl.c $(MOZ_TOP)/network/cache/mkmemcac.c $(MOZ_TOP)/network/protocol/about/mkabout.c $(MOZ_TOP)/network/protocol/file/mkfile.c
 	@cd $(MOZ_SRC)/$(MOZ_TOP)
 
 # Careful to put this after repull_ngl_integration, want modules/libutil and 
