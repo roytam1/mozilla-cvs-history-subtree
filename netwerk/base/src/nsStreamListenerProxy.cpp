@@ -206,9 +206,6 @@ NS_IMETHODIMP
 nsStreamListenerProxy::OnStartRequest(nsIRequest *aRequest,
                                       nsISupports *aContext)
 {
-    nsresult rv = mPipeIn->SetObserver(this);
-    if (NS_FAILED(rv)) return rv;
-
     return nsStreamProxyBase::OnStartRequest(aRequest, aContext);
 }
 
@@ -218,11 +215,6 @@ nsStreamListenerProxy::OnStopRequest(nsIRequest *aRequest,
                                      nsresult aStatus,
                                      const PRUnichar *aStatusText)
 {
-    //
-    // We are done with the pipe.
-    //
-    (void) mPipeIn->SetObserver(nsnull);
-
     mPipeIn = 0;
     mPipeOut = 0;
 
@@ -359,6 +351,9 @@ nsStreamListenerProxy::Init(nsIStreamListener *aListener,
                              aBufferSegmentSize,
                              aBufferMaxSize,
                              PR_TRUE, PR_TRUE);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = mPipeIn->SetObserver(this);
     if (NS_FAILED(rv)) return rv;
 
     SetReceiver(aListener);
