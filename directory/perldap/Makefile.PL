@@ -144,8 +144,8 @@ if ($osname =~ /mswin/i)
 {
    $my_extlib = "$lib_ldap\\$ldaplib[0]";
    $my_extlib .= " $lib_ldap\\$lberlib[0]" if $lber_lib;
-   push(@extras,
-	'OTHERLDFLAGS'	=>	"kernel32.lib oldnames.lib");
+   push(@extras, 'dynamic_lib' => {
+     'OTHERLDFLAGS' => "kernel32.lib oldnames.lib" });
 } else {
    $my_extlib = "";
 }
@@ -172,5 +172,8 @@ WriteMakefile(
 	      'MYEXTLIB'	=>	$my_extlib,
 	      'DEFINE'		=> 	"$v3_def $ssl_def",
 	      'XSOPT'		=>	"-nolinenumbers",
+	      dynamic_lib	=>	{
+		OTHERLDFLAGS => 'kernel32.lib oldnames.lib'
+	      },
 	      @extras
 );
