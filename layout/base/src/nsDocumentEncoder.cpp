@@ -53,6 +53,11 @@ static NS_DEFINE_CID(kCharsetConverterManagerCID,
                      NS_ICHARSETCONVERTERMANAGER_CID);
 
 
+enum nsRangeIterationDirection {
+  kDirectionOut = -1,
+  kDirectionIn = 1
+};
+
 class nsDocumentEncoder : public nsIDocumentEncoder
 {
 public:
@@ -369,7 +374,8 @@ static inline PRInt32 GetIndex(nsVoidArray& aIndexArray)
 }
 
 static nsresult GetNextNode(nsIDOMNode* aNode, nsVoidArray& aIndexArray,
-                            nsIDOMNode*& aNextNode, PRInt32& aDirection)
+                            nsIDOMNode*& aNextNode,
+                            nsRangeIterationDirection& aDirection)
 {
   PRBool hasChildren;
 
@@ -377,19 +383,19 @@ static nsresult GetNextNode(nsIDOMNode* aNode, nsVoidArray& aIndexArray,
 
   aNode->HasChildNodes(&hasChildren);
 
-  if (hasChildren && aDirection > 0) {
+  if (hasChildren && aDirection == kDirectionIn) {
     ChildAt(aNode, 0, aNextNode);
     NS_ENSURE_TRUE(aNextNode, NS_ERROR_FAILURE);
 
     aIndexArray.AppendElement((void *)0);
 
-    aDirection = 1;
-  } else if (aDirection > 0) {
+    aDirection = kDirectionIn;
+  } else if (aDirection == kDirectionIn) {
     aNextNode = aNode;
 
     NS_ADDREF(aNextNode);
 
-    aDirection = -1;
+    aDirection = kDirectionOut;
   } else {
     nsCOMPtr<nsIDOMNode> parent;
 
@@ -419,9 +425,9 @@ static nsresult GetNextNode(nsIDOMNode* aNode, nsVoidArray& aIndexArray,
     }
 
     if (aNextNode) {
-      aDirection = 1;
+      aDirection = kDirectionIn;
     } else {
-      aDirection = -1;
+      aDirection = kDirectionOut;
 
       aNextNode = parent;
 
@@ -455,7 +461,7 @@ nsDocumentEncoder::SerializeRangeNodes(nsVoidArray& aAncestors,
 
   nsCOMPtr<nsIDOMNode> start, endContainer, lastNode;
 
-  PRInt32 dir = 1;
+  nsRangeIterationDirection dir = kDirectionIn;
 
   PRUint16 type;
   aStart->GetNodeType(&type);
@@ -467,7 +473,7 @@ nsDocumentEncoder::SerializeRangeNodes(nsVoidArray& aAncestors,
     if (!start) {
       start = aStart;
 
-      dir = -1;
+      dir = kDirectionOut;
     }
 
     aStartOffset = 0;
@@ -503,7 +509,7 @@ nsDocumentEncoder::SerializeRangeNodes(nsVoidArray& aAncestors,
     GetNextNode(start, offsets, *getter_AddRefs(node), dir);
 
     while (node) {
-      if (dir > 0) {
+      if (dir == kDirectionIn) {
         if (node == endContainer || node == lastNode) {
           if (aEndOffset > 0)
             SerializeNodeStart(node, 0, aEndOffset, aOutputString);
