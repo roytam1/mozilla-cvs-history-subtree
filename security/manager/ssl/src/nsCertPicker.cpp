@@ -74,6 +74,14 @@ NS_IMETHODIMP nsCertPicker::PickByUsage(nsIInterfaceRequestor *ctx, const PRUnic
   CERTCertificate* cert = nsnull;
   nsresult rv;
 
+  {
+    CERTCertList *allcerts = nsnull;
+    nsCOMPtr<nsIInterfaceRequestor> ctx = new PipUIContext();
+    allcerts = PK11_ListCerts(PK11CertListUnique, ctx);
+    CERT_DestroyCertList(allcerts);
+  }
+
+
   /* find all user certs that are valid and for SSL */
   /* note that we are allowing expired certs in this list */
 
@@ -87,7 +95,7 @@ NS_IMETHODIMP nsCertPicker::PickByUsage(nsIInterfaceRequestor *ctx, const PRUnic
   );
   
   if (!certList) {
-    return NS_ERROR_OUT_OF_MEMORY;
+    return NS_ERROR_NOT_AVAILABLE;
   }
   
   nsNSSAutoCPtr<CERTCertNicknames> nicknames(
@@ -98,7 +106,7 @@ NS_IMETHODIMP nsCertPicker::PickByUsage(nsIInterfaceRequestor *ctx, const PRUnic
   );
 
   if (!certList) {
-    return NS_ERROR_OUT_OF_MEMORY;
+    return NS_ERROR_NOT_AVAILABLE;
   }
 
   certNicknameList = (PRUnichar **)nsMemory::Alloc(sizeof(PRUnichar *) * nicknames->numnicknames);

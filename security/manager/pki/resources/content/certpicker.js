@@ -65,6 +65,7 @@ function onLoad()
         }
     }
 
+    dialogParams.SetInt(1,0); // set cancel return value
     setDetails();
 }
 
