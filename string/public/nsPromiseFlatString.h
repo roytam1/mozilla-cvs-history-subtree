@@ -58,6 +58,9 @@ class basic_nsPromiseFlatString
       virtual const CharT* GetReadableFragment( nsReadableFragment<CharT>&, nsFragmentRequest, PRUint32 = 0 ) const;
       virtual       CharT* GetWritableFragment( nsWritableFragment<CharT>&, nsFragmentRequest, PRUint32 = 0 ) { return 0; }
 
+      virtual const CharT* get() const { return mBuffer; }
+        // eliminate this function after we correctly implement |GetBufferHandle|
+
     protected:
       PRUint32      mLength;
       const CharT*  mBuffer;

@@ -79,7 +79,6 @@ protected:
 public:
   virtual const PRUnichar* get() const { return GetUnicode(); }
 
-
 public:
   /**
    * Default constructor. 
@@ -125,7 +124,6 @@ public:
    * @return string length
    */
   virtual void SizeOf(nsISizeOfHandler* aHandler, PRUint32* aResult) const;
-
 
   /**
    * Call this method if you want to force a different string length

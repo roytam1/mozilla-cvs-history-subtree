@@ -241,7 +241,6 @@ public:
     string conversion methods...
    *********************************************************************/
 //#ifndef STANDALONE_STRING_TESTS
-  operator char*() {return mStr;}
   operator const char*() const {return (const char*)mStr;}
 //#endif
 
