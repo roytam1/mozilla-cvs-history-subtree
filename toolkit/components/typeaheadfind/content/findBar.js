@@ -550,6 +550,8 @@ function onFindAgainCmd()
       selectFindBar();
       if (gFindMode != FIND_NORMAL)
         setFindCloseTimeout();
+      
+      updateStatus(res, true);
     }
   }
 }
@@ -567,6 +569,8 @@ function onFindPreviousCmd()
       selectFindBar();
       if (gFindMode != FIND_NORMAL)
         setFindCloseTimeout();
+      
+      updateStatus(res, false);
     }
   }
 }
