@@ -352,7 +352,7 @@
 
           settings.shrinkToFit = false;
           settings.scaling = aValue;
-          print.printPreview(settings);
+          print.printPreview(settings, null);
           // update total number of pages since this could have changed
           this.mTotalPages.value = print.printPreviewNumPages;
         ]]>
