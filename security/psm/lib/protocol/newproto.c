@@ -39,6 +39,9 @@
 #ifdef XP_MAC
 #include "macsocket.h"
 #endif
+#ifdef XP_BEOS
+#include "ByteOrder.h"
+#endif
 
 #include "newproto.h"
 
