@@ -110,6 +110,11 @@ NativeInterfaceSweeper(JSHashEntry *he, intN i, void *arg)
     return HT_ENUMERATE_REMOVE;
 }
 
+// *Some* NativeSets are referenced from mClassInfo2NativeSetMap. 
+// *All* NativeSets are referenced from mNativeSetMap.
+// So, in mClassInfo2NativeSetMap we just clear references to the unmarked.
+// In mNativeSetMap we clear the references to the unmarked *and* delete them.
+
 JS_STATIC_DLL_CALLBACK(intN)
 NativeUnMarkedSetRemover(JSHashEntry *he, intN i, void *arg)
 {
@@ -177,8 +182,8 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
             }        
             case JSGC_FINALIZE_END:
             {
-                // We use this occasion to mark and sweep WNInterafaces
-                // and WNInterafaceSets...
+                // We use this occasion to mark and sweep NativeInterfaces
+                // and NativeSets...
 
                 XPCCallContext ccx(JS_CALLER, cx);
                 if(!ccx.IsValid())

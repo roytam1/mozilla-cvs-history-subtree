@@ -424,8 +424,8 @@ XPCWrappedNative::SystemIsBeingShutDown(XPCCallContext& ccx)
     if(!IsValid())
         return;
 
-    // The long standing strategy is to leak the objects still held at shutdown.
-    // The general problem is that propigating release out of xpconnect at 
+    // The long standing strategy is to leak some objects still held at shutdown.
+    // The general problem is that propagating release out of xpconnect at 
     // shutdown time causes a world of problems.
 
     // We leak mIdentity.
@@ -438,10 +438,8 @@ XPCWrappedNative::SystemIsBeingShutDown(XPCCallContext& ccx)
     // may hold a dynamically allocated JSClass that the JS engine can 
     // reference when manipulating the (leaked) mFlatJSObject. That would crash! 
     
-
     mProto->SystemIsBeingShutDown(ccx);
-    // We *must* leak the proto (i.e. don't call Release). This is
-    // necessary because it *also* may hold a dynamically allocated JSClass.
+    mProto->Release();
     mProto = nsnull;
 
     // cleanup the tearoffs...

@@ -154,6 +154,9 @@ XPCWrappedNativeProto::SystemIsBeingShutDown(XPCCallContext& ccx)
         // short circuit future finalization
         JS_SetPrivate(ccx.GetJSContext(), mJSProtoObject, nsnull);
         mJSProtoObject = nsnull;
+        // We *must* leak the scriptable because it holds a dynamically 
+        // allocated JSClass that the JS engine might try to use.
+        mScriptableInfo = nsnull;
         Release();
     }    
 }
