@@ -54,7 +54,6 @@ static const char INTL_ACCEPT_LANGUAGES[] = "intl.accept_languages";
 static const char INTL_ACCEPT_CHARSET[] = "intl.charset.default";
 
 static NS_DEFINE_CID(kStandardURLCID, NS_STANDARDURL_CID);
-static NS_DEFINE_CID(kProtocolProxyServiceCID, NS_PROTOCOLPROXYSERVICE_CID);
 static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
 static NS_DEFINE_CID(kCategoryManagerCID, NS_CATEGORYMANAGER_CID);
 static NS_DEFINE_CID(kNetModuleMgrCID, NS_NETMODULEMGR_CID);
@@ -158,12 +157,6 @@ nsHttpHandler::Init()
     nsresult rv = NS_OK;
 
     LOG(("nsHttpHandler::Init\n"));
-
-    /*
-    mProxySvc = do_GetService(kProtocolProxyServiceCID, &rv);
-    if (NS_FAILED(rv))
-        LOG(("protocol proxy service not available"));
-    */
 
     mPrefs = do_GetService(kPrefServiceCID, &rv);
     if (NS_FAILED(rv)) {
@@ -1335,30 +1328,13 @@ nsHttpHandler::NewChannel(nsIURI *uri, nsIChannel **result)
             return NS_ERROR_UNEXPECTED;
         }
     }
+    
+    rv = NewProxyChannel(uri,
 
-    // we'll use this object to capture the proxy settings for the given uri
-    nsProxyQuery *query = nsnull;
-    NS_NEWXPCOM(query, nsProxyQuery);
-    if (!query)
-        return NS_ERROR_OUT_OF_MEMORY;
-    NS_ADDREF(query);
-
-    // check if this channel requires a proxy
-    rv = NS_OK;
-    if (mProxySvc) {
-        PRBool checkForProxy = PR_FALSE;
-        rv = mProxySvc->GetProxyEnabled(&checkForProxy);
-        if (NS_SUCCEEDED(rv) && checkForProxy)
-            rv = mProxySvc->ExamineForProxy(uri, query);
-    }
-
-    if (NS_SUCCEEDED(rv))
-        rv = NewProxyChannel(uri,
-                             query->Host(),
-                             query->Port(),
-                             query->Type(),
-                             result);
-    NS_RELEASE(query);
+                         nsnull,
+                         -1,
+                         nsnull,
+                         result);
     return rv;
 }
 
@@ -1544,50 +1520,6 @@ nsHttpHandler::Observe(nsISupports *subject,
         if (mAuthCache)
             mAuthCache->ClearAll();
     }
-    return NS_OK;
-}
-
-//-----------------------------------------------------------------------------
-// nsHttpHandler::nsProxyQuery
-//-----------------------------------------------------------------------------
-
-NS_IMPL_ISUPPORTS1(nsHttpHandler::nsProxyQuery, nsIProxy)
-
-NS_IMETHODIMP nsHttpHandler::
-nsProxyQuery::GetProxyHost(char **value)
-{
-    return DupString(mHost, value);
-}
-NS_IMETHODIMP nsHttpHandler::
-nsProxyQuery::SetProxyHost(const char *value)
-{
-    mHost = value;
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsHttpHandler::
-nsProxyQuery::GetProxyPort(PRInt32 *value)
-{
-    NS_ENSURE_ARG_POINTER(value);
-    *value = mPort;
-    return NS_OK;
-}
-NS_IMETHODIMP nsHttpHandler::
-nsProxyQuery::SetProxyPort(PRInt32 value)
-{
-    mPort = value;
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsHttpHandler::
-nsProxyQuery::GetProxyType(char **value)
-{
-    return DupString(mType, value);
-}
-NS_IMETHODIMP nsHttpHandler::
-nsProxyQuery::SetProxyType(const char *value)
-{
-    mType = value;
     return NS_OK;
 }
 

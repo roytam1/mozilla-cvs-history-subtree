@@ -118,29 +118,6 @@ public:
     nsresult OnExamineResponse(nsIHttpChannel *);
 
 private:
-    // 
-    // We instantiate an object of this class for talking to the proxy
-    // service on behalf of a channel we are about to create.
-    //
-    class nsProxyQuery : public nsIProxy
-    {
-    public:
-        NS_DECL_ISUPPORTS
-        NS_DECL_NSIPROXY
-
-        nsProxyQuery() : mPort(-1) { NS_INIT_ISUPPORTS(); }
-        virtual ~nsProxyQuery() {}
-
-        const char *Host() { return mHost; }
-        PRInt32     Port() { return mPort; }
-        const char *Type() { return mType; }
-
-    private:
-        nsXPIDLCString mHost;
-        PRInt32        mPort;
-        nsXPIDLCString mType;
-    };
-
     //
     // Transactions that have not yet been assigned to a connection are kept
     // in a queue of nsPendingTransaction objects.  nsPendingTransaction 
@@ -191,7 +168,6 @@ private:
 
     // cached services
     nsCOMPtr<nsIPref>                 mPrefs;
-    nsCOMPtr<nsIProtocolProxyService> mProxySvc;
     nsCOMPtr<nsIProxyObjectManager>   mProxyMgr;
     nsCOMPtr<nsINetModuleMgr>         mNetModuleMgr;
 

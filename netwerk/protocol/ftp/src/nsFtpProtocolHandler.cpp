@@ -66,7 +66,6 @@ PRLogModuleInfo* gFTPLog = nsnull;
 
 static NS_DEFINE_IID(kIOServiceCID, NS_IOSERVICE_CID);
 static NS_DEFINE_CID(kStandardURLCID,       NS_STANDARDURL_CID);
-static NS_DEFINE_CID(kProtocolProxyServiceCID, NS_PROTOCOLPROXYSERVICE_CID);
 static NS_DEFINE_CID(kHttpHandlerCID, NS_HTTPPROTOCOLHANDLER_CID);
 static NS_DEFINE_CID(kErrorServiceCID, NS_ERRORSERVICE_CID);
 
@@ -95,9 +94,6 @@ nsFtpProtocolHandler::Init() {
     if (!gFTPLog) gFTPLog = PR_NewLogModule("nsFTPProtocol");
 #endif /* PR_LOGGING */
 
-    mProxySvc = do_GetService(kProtocolProxyServiceCID, &rv);
-    if (NS_FAILED(rv)) return rv;
-   
     mIOSvc = do_GetService(kIOServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
 
@@ -158,8 +154,6 @@ nsFtpProtocolHandler::NewChannel(nsIURI* url, nsIChannel* *result)
 {
     nsresult rv = NS_OK;
 
-    PRBool useProxy = PR_FALSE;
-
     nsFTPChannel* channel = nsnull;
     rv = nsFTPChannel::Create(nsnull, NS_GET_IID(nsIChannel), (void**)&channel);
     if (NS_FAILED(rv)) return rv;
@@ -169,68 +163,6 @@ nsFtpProtocolHandler::NewChannel(nsIURI* url, nsIChannel* *result)
         PR_LOG(gFTPLog, PR_LOG_DEBUG, ("nsFtpProtocolHandler::NewChannel() FAILED\n"));
         return rv;
     }
-
-    if (NS_SUCCEEDED(mProxySvc->GetProxyEnabled(&useProxy)) && useProxy)
-    {
-        rv = mProxySvc->ExamineForProxy(url, channel);
-        if (NS_FAILED(rv)) return rv;
-    }
-    
-    // XXX replace with new proxy code
-#if 0
-    useProxy = PR_FALSE;
-    if (NS_SUCCEEDED(channel->GetUsingProxy(&useProxy)) && useProxy) {
-        
-        nsCOMPtr<nsIChannel> proxyChannel;
-        // if an FTP proxy is enabled, push things off to HTTP.
-        
-        nsCOMPtr<nsIHttpProtocolHandler> httpHandler = do_GetService(kHttpHandlerCID, &rv);
-        if (NS_FAILED(rv)) return rv;
-        
-        // rjc says: the dummy URI (for the HTTP layer) needs to be a syntactically valid URI
-        nsCOMPtr<nsIURI> uri;
-        rv = NS_NewURI(getter_AddRefs(uri), "http://test.com/");
-        if (NS_FAILED(rv)) return rv;
-        
-        rv = httpHandler->NewChannel(uri, getter_AddRefs(proxyChannel));
-        if (NS_FAILED(rv)) return rv;
-        
-        nsCOMPtr<nsIHTTPChannel> httpChannel = do_QueryInterface(proxyChannel, &rv);
-        if (NS_FAILED(rv)) return rv;
-        
-        nsXPIDLCString spec;
-        rv = url->GetSpec(getter_Copies(spec));
-        if (NS_FAILED(rv)) return rv;
-        
-        rv = httpChannel->SetProxyRequestURI((const char*)spec);
-        if (NS_FAILED(rv)) return rv;
-        
-        nsCOMPtr<nsIProxy> proxyHTTP = do_QueryInterface(httpChannel, &rv);
-        if (NS_FAILED(rv)) return rv;
-        
-        nsXPIDLCString proxyHost;
-        rv = channel->GetProxyHost(getter_Copies(proxyHost));
-        if (NS_FAILED(rv)) return rv;
-        
-        rv = proxyHTTP->SetProxyHost(proxyHost);
-        if (NS_FAILED(rv)) return rv;
-        
-        PRInt32 proxyPort;
-        rv = channel->GetProxyPort(&proxyPort);
-        if (NS_FAILED(rv)) return rv;
-        
-        rv = proxyHTTP->SetProxyPort(proxyPort);
-        if (NS_FAILED(rv)) return rv;
-        
-        nsXPIDLCString proxyType;
-        rv = channel->GetProxyType(getter_Copies(proxyType));
-        
-        if (NS_SUCCEEDED(rv)) 
-            proxyHTTP->SetProxyType(proxyType);
-        
-        rv = channel->SetProxyChannel(proxyChannel);
-    }
-#endif
     
     *result = channel;
     return rv;

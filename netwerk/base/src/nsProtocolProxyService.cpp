@@ -364,19 +364,22 @@ nsProtocolProxyService::CanUseProxy(nsIURI* aURI)
 
 // nsIProtocolProxyService
 NS_IMETHODIMP
-nsProtocolProxyService::ExamineForProxy(nsIURI *aURI, nsIProxy *aProxy) {
+nsProtocolProxyService::ExamineForProxy(nsIURI *aURI, char * *aProxyHost, PRInt32 *aProxyPort, char * *aProxyType) {
     nsresult rv = NS_OK;
     
-    NS_ASSERTION(aURI && aProxy, "need a uri and proxy iface folks.");
+    NS_ASSERTION(aURI, "need a uri folks.");
     
+    NS_ENSURE_ARG_POINTER(aProxyHost);
+    NS_ENSURE_ARG_POINTER(aProxyType);
+
+    *aProxyHost = nsnull;
+    *aProxyType = nsnull;
+    *aProxyPort = -1;
+
     // if proxies are enabled and this host:port combo is
     // supposed to use a proxy, check for a proxy.
     if ((0 == mUseProxy) || 
         ((1 == mUseProxy) && !CanUseProxy(aURI))) {
-        rv = aProxy->SetProxyHost(nsnull);
-        if (NS_FAILED(rv)) return rv;
-        rv = aProxy->SetProxyPort(-1);
-        if (NS_FAILED(rv)) return rv;
         return NS_OK;
     }
     
@@ -388,22 +391,11 @@ nsProtocolProxyService::ExamineForProxy(nsIURI *aURI, nsIProxy *aProxy) {
             return NS_ERROR_NULL_POINTER;
         }
 
-        nsXPIDLCString p_host;
-        nsXPIDLCString p_type;
-        PRInt32 p_port;
-        if (NS_SUCCEEDED(rv = mPAC->ProxyForURL(aURI, 
-                                                getter_Copies(p_host),
-                                                &p_port, 
-                                                getter_Copies(p_type))))
-            {
-                if (NS_FAILED(rv = aProxy->SetProxyHost(p_host))) 
-                    return rv;
-                if (NS_FAILED(rv = aProxy->SetProxyPort(p_port)))
-                    return rv;
-                if (NS_FAILED(rv = aProxy->SetProxyType(p_type)))
-                    return rv;
-                return NS_OK;
-            }
+         rv = mPAC->ProxyForURL(aURI, 
+                                aProxyHost,
+                                aProxyPort, 
+                                aProxyType);
+
         return rv;
     }
     
@@ -411,45 +403,44 @@ nsProtocolProxyService::ExamineForProxy(nsIURI *aURI, nsIProxy *aProxy) {
     rv = aURI->GetScheme(getter_Copies(scheme));
     if (NS_FAILED(rv)) return rv;
     
-    if (mFTPProxyHost.get()[0] && mFTPProxyPort > 0 &&
-        !PL_strcasecmp(scheme, "ftp")) {
-        rv = aProxy->SetProxyHost(mFTPProxyHost);
-        if (NS_FAILED(rv)) return rv;
-        aProxy->SetProxyType("http");
-        return aProxy->SetProxyPort(mFTPProxyPort);
-    }
-
-    if (mGopherProxyHost.get()[0] && mGopherProxyPort > 0 &&
-        !PL_strcasecmp(scheme, "gopher")) {
-        rv = aProxy->SetProxyHost(mGopherProxyHost);
-        if (NS_FAILED(rv)) return rv;
-        aProxy->SetProxyType("http");
-        return aProxy->SetProxyPort(mGopherProxyPort);
-    }
-    
     if (mHTTPProxyHost.get()[0] && mHTTPProxyPort > 0 &&
         !PL_strcasecmp(scheme, "http")) {
-        rv = aProxy->SetProxyHost(mHTTPProxyHost);
-        if (NS_FAILED(rv)) return rv;
-        aProxy->SetProxyType("http");
-        return aProxy->SetProxyPort(mHTTPProxyPort);
+        *aProxyHost = (char*) nsMemory::Clone(mHTTPProxyHost, strlen(mHTTPProxyHost)+1);
+        *aProxyType = (char*) nsMemory::Clone("http", 5);
+        *aProxyPort = mHTTPProxyPort;
+        return NS_OK;
     }
     
     if (mHTTPSProxyHost.get()[0] && mHTTPSProxyPort > 0 &&
         !PL_strcasecmp(scheme, "https")) {
-        rv = aProxy->SetProxyHost(mHTTPSProxyHost);
-        if (NS_FAILED(rv)) return rv;
-        aProxy->SetProxyType("http");
-        return aProxy->SetProxyPort(mHTTPSProxyPort);
+        *aProxyHost = (char*) nsMemory::Clone(mHTTPSProxyHost, strlen(mHTTPSProxyHost)+1);
+        *aProxyType = (char*) nsMemory::Clone("http", 5);
+        *aProxyPort = mHTTPSProxyPort;
+        return NS_OK;
+    }
+    
+    if (mFTPProxyHost.get()[0] && mFTPProxyPort > 0 &&
+        !PL_strcasecmp(scheme, "ftp")) {
+        *aProxyHost = (char*) nsMemory::Clone(mFTPProxyHost, strlen(mFTPProxyHost)+1);
+        *aProxyType = (char*) nsMemory::Clone("http", 5);
+        *aProxyPort = mFTPProxyPort;
+        return NS_OK;
+    }
+
+    if (mGopherProxyHost.get()[0] && mGopherProxyPort > 0 &&
+        !PL_strcasecmp(scheme, "gopher")) {
+        *aProxyHost = (char*) nsMemory::Clone(mGopherProxyHost, strlen(mGopherProxyHost)+1);
+        *aProxyType = (char*) nsMemory::Clone("http", 5);
+        *aProxyPort = mGopherProxyPort;
+        return NS_OK;
     }
     
     if (mSOCKSProxyHost.get()[0] && mSOCKSProxyPort > 0) {
-        rv = aProxy->SetProxyHost(mSOCKSProxyHost);
-        if (NS_FAILED(rv)) return rv;
-        aProxy->SetProxyType("socks");
-        return aProxy->SetProxyPort(mSOCKSProxyPort);
+        *aProxyHost = (char*) nsMemory::Clone(mSOCKSProxyHost, strlen(mSOCKSProxyHost)+1);
+        *aProxyType = (char*) nsMemory::Clone("socks", 6);
+        *aProxyPort = mSOCKSProxyPort;
+        return NS_OK;
     }
-    
     
     return NS_OK;
 }
