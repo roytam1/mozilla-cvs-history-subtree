@@ -286,7 +286,7 @@ static JSValue String_lastIndexOf(Context *cx, const JSValue& thisValue, JSValue
         }
     }
     pos = str->rfind(*searchStr, pos);
-    if (toUInt32(pos) == String::npos)
+    if (pos == String::npos)
         return JSValue(-1.0);
     return JSValue((float64)pos);
 }
@@ -326,27 +326,46 @@ static JSValue String_slice(Context *cx, const JSValue& thisValue, JSValue *argv
     const String *sourceString = thisValue.toString(cx).string;
 
     uint32 sourceLength = sourceString->size();
-    int32 start = (argc > 0) ? (int32)(argv[0].toInt32(cx).f64) : 0;
-    int32 end = (argc > 1) ? (int32)(argv[1].toInt32(cx).f64) : sourceLength;
+    uint32 start, end;
 
-    if (start < 0) {
-        start = sourceLength + start;
-        if (start < 0)
-            start = 0;
+    if (argc > 0) {
+        int32 arg0 = (int32)(argv[0].toInt32(cx).f64);
+        if (arg0 < 0) {
+            arg0 += sourceLength;
+            if (arg0 < 0)
+                start = 0;
+            else
+                start = toUInt32(arg0);
+        }
+        else {
+            if (toUInt32(arg0) < sourceLength)
+                start = toUInt32(arg0);
+            else
+                start = sourceLength;
+        }            
     }
-    else {
-        if (toUInt32(start) >= sourceLength)
-            start = sourceLength;
+    else
+        start = 0;
+
+    if (argc > 1) {
+        int32 arg1 = (int32)(argv[1].toInt32(cx).f64);
+        if (arg1 < 0) {
+            arg1 += sourceLength;
+            if (arg1 < 0)
+                end = 0;
+            else
+                end = toUInt32(arg1);
+        }
+        else {
+            if (toUInt32(arg1) < sourceLength)
+                end = toUInt32(arg1);
+            else
+                end = sourceLength;
+        }            
     }
-    if (end < 0) {
-        end = sourceLength + end;
-        if (end < 0)
-            end = 0;
-    }
-    else {
-        if (toUInt32(end) >= sourceLength)
-            end = sourceLength;
-    }    
+    else
+        end = sourceLength;
+
     if (start > end)
         return JSValue(new String());
     return JSValue(new String(sourceString->substr(start, end - start)));
@@ -358,24 +377,36 @@ static JSValue String_substring(Context *cx, const JSValue& thisValue, JSValue *
     const String *sourceString = thisValue.toString(cx).string;
 
     uint32 sourceLength = sourceString->size();
-    int32 start = (argc > 0) ? (int32)(argv[0].toInt32(cx).f64) : 0;
-    int32 end = (argc > 1) ? (int32)(argv[1].toInt32(cx).f64) : sourceLength;
+    uint32 start, end;
 
-    if (start < 0)
+    if (argc > 0) {
+        int32 arg0 = (int32)(argv[0].toInt32(cx).f64);
+        if (arg0 < 0)
+            start = 0;
+        else
+            if (toUInt32(arg0) < sourceLength)
+                start = toUInt32(arg0);
+            else
+                start = sourceLength;
+    }
+    else
         start = 0;
-    else {
-        if (toUInt32(start) >= sourceLength)
-            start = sourceLength;
+
+    if (argc > 1) {
+        int32 arg1 = (int32)(argv[1].toInt32(cx).f64);
+        if (arg1 < 0)
+            end = 0;
+        else
+            if (toUInt32(arg1) < sourceLength)
+                end = toUInt32(arg1);
+            else
+                end = sourceLength;
     }
-    if (end < 0)
-        end = 0;
-    else {
-        if (toUInt32(end) >= sourceLength)
-            end = sourceLength;
-    }
+    else
+        end = sourceLength;
 
     if (start > end) {
-        int32 t = start;
+        uint32 t = start;
         start = end;
         end = t;
     }
