@@ -225,7 +225,11 @@ endif
 ifeq ($(OS_ARCH), WINNT)
 EXE_SUFFIX=.exe
 RSC=rc
+ifdef NS_USE_GCC
+OFFLAG=-o #
+else
 OFFLAG=/Fo
+endif
 else
 OFFLAG=-o
 endif
@@ -235,8 +239,10 @@ DEFS            += -DLINUX2_0 -DLINUX1_2 -DLINUX2_1
 endif
 
 ifeq ($(OS_ARCH), WINNT)
+ifndef NS_USE_GCC
 DLLEXPORTS_PREFIX=/DEF:
 USE_DLL_EXPORTS_FILE	= 1
+endif
 endif
 
 ifeq ($(OS_ARCH), SunOS)
@@ -354,6 +360,11 @@ endif # Linux
 
 ifeq ($(OS_ARCH), WINNT)
 
+ifdef NS_USE_GCC
+LINK_EXE	= $(CC) -o $@ $(LDFLAGS) $(LCFLAGS) $(DEPLIBS) $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
+LINK_LIB	= $(AR) cr $@ $(OBJS)
+LINK_DLL	= $(CC) -shared -Wl,--export-all-symbols -Wl,--out-implib -Wl,$(@:.$(DLL_SUFFIX)=.$(LIB_SUFFIX)) $(LLFLAGS) $(DLL_LDFLAGS) -o $@ $(OBJS) $(EXTRA_LIBS) $(EXTRA_DLL_LIBS)
+else
 DEBUG_LINK_OPT=/DEBUG:FULL
 ifeq ($(BUILD_OPT), 1)
   DEBUG_LINK_OPT=
@@ -368,6 +379,7 @@ LINK_LIB        = $(CYGWIN_WRAPPER) lib -OUT:"$@"  $(OBJS)
 LINK_DLL        = $(CYGWIN_WRAPPER) link $(DEBUG_LINK_OPT) /nologo /MAP /DLL /PDB:NONE /DEBUGTYPE:BOTH \
         $(ML_DEBUG) /SUBSYSTEM:$(SUBSYSTEM) $(LLFLAGS) $(DLL_LDFLAGS) \
         $(EXTRA_LIBS) /out:"$@" $(OBJS)
+endif # NS_USE_GCC
 else # WINNT
 #
 # UNIX link commands
