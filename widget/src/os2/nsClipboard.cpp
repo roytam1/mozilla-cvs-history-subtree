@@ -30,6 +30,7 @@
 #include "nsPrimitiveHelpers.h"
 #include "nsXPIDLString.h"
 #include "prmem.h"
+#include "nsIObserverService.h"
 
 #include "nsOS2Uni.h"
 
