@@ -83,6 +83,7 @@ NS_IMPL_ADDREF(nsURL);
 PRBool
 nsURL::Equals(const nsIURI* i_URI) const
 {
+    NS_NOTYETIMPLEMENTED("Eeeks!");
     return PR_FALSE;
 }
 
@@ -123,175 +124,288 @@ nsURL::ExtractPortFrom(int start, int length)
     delete[] port;
 }
 
-nsresult
-nsURL::GetDocument(const char* *o_Data)
-{
-    NS_PRECONDITION( (0 != m_URL), "GetDocument called on empty url!");
-    *o_Data = "Here is your data";
-    return NS_OK;
-}
-
-
 nsresult nsURL::OpenStream(nsIInputStream* *o_InputStream)
 {
     NS_PRECONDITION( (0 != m_URL), "OpenStream called on empty url!");
     return NS_OK;
 }
 
+// This code will need thorough testing. A lot of this has to do with 
+// usability and expected behaviour when a user types something in the
+// location bar.
 nsresult nsURL::Parse(void)
 {
     NS_PRECONDITION( (0 != m_URL), "Parse called on empty url!");
     if (!m_URL)
-        return NS_OK; //TODO change to error
+    {
+        NS_POSTCONDITION(0,"Fix this error return!");
+        return NS_OK; // TODO change to error
+    }
 
     //Remember to remove leading/trailing spaces, etc. TODO
-
     int len = PL_strlen(m_URL);
-    char* colon = PL_strchr(m_URL, ':');
-    char* at = PL_strchr(m_URL, '@');
-    char* slash = PL_strchr (m_URL, '/');
-
-    if (colon)
+    static const char delimiters[] = "/:@"; //this order is optimized.
+    char* brk = PL_strpbrk(m_URL, delimiters);
+    char* lastbrk = brk;
+    if (brk) 
     {
-        // If the first colon is followed by // then its definitely a spec
-        if ((*(colon+1) == '/') && (*(colon+2) == '/')) // e.g. http://
+        switch (*brk)
         {
-            SET_POSITION(SCHEME, 0, (colon - m_URL));
-            colon += 3; // Now points to start of anything after ://
-            slash = PL_strchr(colon, '/');
-            
-            if (at) // http://username@host...
+        case '/' :
+            // If the URL starts with a slash then everything is a path
+            if (brk == m_URL)
             {
-                SET_POSITION(PREHOST, (colon - m_URL), (at - colon));
-                ++at; // at now points to start of anything after @
-    
-                colon = PL_strchr(colon, ':'); //Find the next colon
-                if (colon) // Could be http://user:pass@hostname.com: or http://user@hostname:80/path...
+                SET_POSITION(PATH, 0, len);
+                return NS_OK;
+            }
+            else // The first part is host, so its host/path
+            {
+                SET_POSITION(HOST, 0, (brk - m_URL));
+                SET_POSITION(PATH, (brk - m_URL), (len - (brk - m_URL)));
+                return NS_OK;
+            }
+            break;
+        case ':' :
+            // If the first colon is followed by // then its definitely a spec
+            if ((*(brk+1) == '/') && (*(brk+2) == '/')) // e.g. http://
+            {
+                SET_POSITION(SCHEME, 0, (brk - m_URL));    
+                lastbrk = brk+3;
+                brk = PL_strpbrk(lastbrk, delimiters);
+                if (brk)
                 {
-                    if (colon < at) // Its a password : and we don't parse that so skip it...
-                        colon = PL_strchr(at, ':'); // Assumption-more colons before @ is anyway sick.
-
-                    if (colon>at) // This is a colon after the @ sign so cant be password.
-                                // Its of port. http://username@host:80...
+                    switch (*brk)
                     {
-                        SET_POSITION(HOST, (at - m_URL), (colon - at));
-                        int portLen;
-                        ++colon; //Moved to start of port now
+                        case '/' : // standard case- http://host/path
+                            SET_POSITION(HOST, (lastbrk - m_URL), (brk - lastbrk));
+                            SET_POSITION(PATH, (brk - m_URL), (len - (brk - m_URL)));
+                            return NS_OK;
+                            break;
+                        case ':' : 
+                            {
+                                // It could be http://user:pass@host/path or http://host:port/path
+                                // For the first case, there has to be an at after this colon, so...
+                                char* atSign = PL_strchr(brk, '@');
+                                if (atSign)
+                                {
+                                    SET_POSITION(PREHOST, (lastbrk - m_URL), (atSign - lastbrk));
+                                    brk = PL_strpbrk(atSign+1, "/:");
+                                    if (brk) // http://user:pass@host:port/path or http://user:pass@host/path
+                                    {
+                                        SET_POSITION(HOST, (atSign+1 - m_URL), (brk - (atSign+1)));
+                                        if (*brk == '/')
+                                        {
+                                            SET_POSITION(PATH, (brk - m_URL), len - (brk - m_URL));
+                                            return NS_OK;
+                                        }
+                                        else // we have a port since (brk == ':')
+                                        {
+                                            lastbrk = brk+1;
+                                            brk = PL_strchr(lastbrk, '/');
+                                            if (brk) // http://user:pass@host:port/path
+                                            {
+                                                ExtractPortFrom((lastbrk - m_URL), (brk-lastbrk));
+                                                SET_POSITION(PATH, (brk-m_URL), len - (brk-m_URL));
+                                                return NS_OK;
+                                            }
+                                            else // http://user:pass@host:port
+                                            {
+                                                ExtractPortFrom((lastbrk - m_URL), len - (lastbrk - m_URL));
+                                                return NS_OK;
+                                            }
+                                        }
 
-                        if (slash) // http://username@host:80/path
-                        {
-                            portLen = slash - colon;
-                            SET_POSITION(PATH, (slash - m_URL), len - (slash - m_URL));
-                        }
-                        else // Everything else is just port http://username@host:80
-                        {
-                            portLen = len-(colon - m_URL);
-                        }
-                        ExtractPortFrom((colon-m_URL), portLen);
+                                    }
+                                    else // its just http://user:pass@host
+                                    {
+                                        SET_POSITION(HOST, (atSign+1 - m_URL), len - (atSign+1 - m_URL));
+                                        return NS_OK;
+                                    }
+                                }
+                                else // definitely the port option, i.e. http://host:port/path
+                                {
+                                    SET_POSITION(HOST, (lastbrk-m_URL), (brk-lastbrk));
+                                    lastbrk = brk+1;
+                                    brk = PL_strchr(lastbrk, '/');
+                                    if (brk)    // http://host:port/path
+                                    {
+                                        ExtractPortFrom((lastbrk-m_URL),(brk-lastbrk));
+                                        SET_POSITION(PATH, (brk-m_URL), len - (brk-m_URL));
+                                        return NS_OK;
+                                    }
+                                    else        // http://host:port
+                                    {
+                                        ExtractPortFrom((lastbrk-m_URL),len - (lastbrk-m_URL));
+                                        return NS_OK;
+                                    }
+                                }
+                            }
+                            break;
+                        case '@' : 
+                            // http://user@host...
+                            {
+                                SET_POSITION(PREHOST, (lastbrk-m_URL), (brk-lastbrk));
+                                lastbrk = brk+1;
+                                brk = PL_strpbrk(lastbrk, ":/");
+                                if (brk)
+                                {
+                                    SET_POSITION(HOST, (lastbrk-m_URL), (brk - lastbrk));
+                                    if (*brk == ':') // http://user@host:port...
+                                    {
+                                        lastbrk = brk+1;
+                                        brk = PL_strchr(lastbrk, '/');
+                                        if (brk)    // http://user@host:port/path
+                                        {
+                                            ExtractPortFrom((lastbrk-m_URL),(brk-lastbrk));
+                                            SET_POSITION(PATH, (brk-m_URL), len - (brk-m_URL));
+                                            return NS_OK;
+                                        }
+                                        else        // http://user@host:port
+                                        {
+                                            ExtractPortFrom((lastbrk-m_URL),len - (lastbrk-m_URL));
+                                            return NS_OK;
+                                        }
+
+                                    }
+                                    else // (*brk == '/') so no port just path i.e. http://user@host/path
+                                    {
+                                        SET_POSITION(PATH, (brk - m_URL), len - (brk - m_URL));
+                                        return NS_OK;
+                                    }
+                                }
+                                else // its just http://user@host
+                                {
+                                    SET_POSITION(HOST, (lastbrk+1 - m_URL), len - (lastbrk+1 - m_URL));
+                                    return NS_OK;
+                                }
+
+                            }
+                            break;
+                        default: NS_POSTCONDITION(0, "This just can't be!");
+                            break;
+                    }
+
+                }
+                else // everything else is a host, as in http://host
+                {
+                    SET_POSITION(HOST, (lastbrk - m_URL), len - (lastbrk - m_URL));
+                    return NS_OK;
+                }
+
+            }
+            else // host:port...
+            {
+                SET_POSITION(HOST, 0, (brk - m_URL));
+                lastbrk = brk+1;
+                brk = PL_strpbrk(lastbrk, delimiters);
+                if (brk)
+                {
+                    switch (*brk)
+                    {
+                        case '/' : // The path, so its host:port/path
+                            ExtractPortFrom(lastbrk-m_URL, brk-lastbrk);
+                            SET_POSITION(PATH, brk- m_URL, len - (brk-m_URL));
+                            return NS_OK;
+                            break;
+                        case ':' : 
+                            //Return error?
+                            return NS_OK; // TODO
+                            break;
+                        case '@' :
+                            // This is a special case of user:pass@host... so 
+                            // Cleanout our earliar knowledge of host
+                            SET_POSITION(HOST, -1, -1);
+
+                            SET_POSITION(PREHOST, 0, (brk-m_URL));
+                            lastbrk = brk+1;
+                            brk = PL_strpbrk(lastbrk, ":/");
+                            if (brk)
+                            {
+                                SET_POSITION(HOST, (lastbrk-m_URL), (brk-lastbrk));
+                                if (*brk == ':') // user:pass@host:port...
+                                {
+                                    lastbrk = brk+1;
+                                    brk = PL_strchr(lastbrk, '/');
+                                    if (brk)    // user:pass@host:port/path
+                                    {
+                                        ExtractPortFrom((lastbrk-m_URL),(brk-lastbrk));
+                                        SET_POSITION(PATH, (brk-m_URL), len - (brk-m_URL));
+                                        return NS_OK;
+                                    }
+                                    else        // user:pass@host:port
+                                    {
+                                        ExtractPortFrom((lastbrk-m_URL),len - (lastbrk-m_URL));
+                                        return NS_OK;
+                                    }
+                                }
+                                else // (*brk == '/') so user:pass@host/path
+                                {
+                                    SET_POSITION(PATH, (brk - m_URL), len - (brk - m_URL));
+                                    return NS_OK;
+                                }
+                            }
+                            else // its user:pass@host so everthing else is just the host
+                            {
+                                SET_POSITION(HOST, (lastbrk-m_URL), len - (lastbrk-m_URL));
+                                return NS_OK;
+                            }
+
+                            break;
+                        default: NS_POSTCONDITION(0, "This just can't be!");
+                            break;
                     }
                 }
-                else //No colons found 
+                else // Everything else is just the port
                 {
-                    if (slash)
-                    {
-                        SET_POSITION(HOST, (at - m_URL), (slash - at));
-                        SET_POSITION(PATH, (slash - m_URL), len - (slash - m_URL));
-                    }
-                    else //everything past the @ is the host
-                    {
-                        SET_POSITION(HOST, (at - m_URL), len - (at - m_URL));
-                    }
+                    ExtractPortFrom(lastbrk-m_URL, len - (lastbrk-m_URL));
+                    return NS_OK;
                 }
             }
-
-        }
-        else // no construct like http:// so it probably just starts with username, or hostname or just path...
-        {
-            if (at > colon) // http:user@hostname - note that this can never be user:pass@hostname 
-                            // as it clashes with the first and a more likely candidate form.
-                            // This is very debatable an issue and I will revisit it after I get some 
-                            // Usability guys' feedback. I am more inclined at making it the latter though...
+            break;
+        case '@' :
+            //Everything before the @ is the prehost stuff
+            SET_POSITION(PREHOST, 0, brk-m_URL);
+            lastbrk = brk+1;
+            brk = PL_strpbrk(lastbrk, ":/");
+            if (brk)
             {
-                SET_POSITION(SCHEME, 0, (colon - m_URL));
-                SET_POSITION(PREHOST, (colon+1 - m_URL), (at - colon-1));
-                //There is still a possibility of a port here so lets check
-                //TODO change to PL_stnbrk or whatever that is...
-                colon = PL_strchr(at, ':');
-                slash = PL_strchr(at, '/');
-                if (colon) 
+                SET_POSITION(HOST, (lastbrk-m_URL), (brk-lastbrk));
+                if (*brk == ':') // user@host:port...
                 {
-                    if ((slash) && (colon < slash)) // http:username@hostname:80/path
+                    lastbrk = brk+1;
+                    brk = PL_strchr(lastbrk, '/');
+                    if (brk)    // user@host:port/path
                     {
-                        SET_POSITION(HOST, (at+1 - m_URL), colon - (at+1));
-                        ExtractPortFrom(colon+1-m_URL, slash-colon-1);
-                        SET_POSITION(PATH, (slash - m_URL), len - (slash - m_URL));
+                        ExtractPortFrom((lastbrk-m_URL),(brk-lastbrk));
+                        SET_POSITION(PATH, (brk-m_URL), len - (brk-m_URL));
+                        return NS_OK;
                     }
-                    else //There is a colon but no slash so everything after the colon is port.
-                        // // http:username@hostname:80
+                    else        // user@host:port
                     {
-                        SET_POSITION(HOST, (at+1 - m_URL), colon - (at+1));
-                        ExtractPortFrom(colon+1 - m_URL, len - (colon+1 - m_URL));
+                        ExtractPortFrom((lastbrk-m_URL),len - (lastbrk-m_URL));
+                        return NS_OK;
                     }
                 }
-                else
+                else // (*brk == '/') so user@host/path
                 {
-                    if (slash) // http:user@hostname/path
-                    {
-                        SET_POSITION(HOST, (at +1 - m_URL), (slash - at));
-                        SET_POSITION(PATH, (slash - m_URL), len - (slash - m_URL));
-                    }
-                    else // http:user@hostname
-                    {
-                        SET_POSITION(HOST, (at+1 - m_URL), len - (at+1 - m_URL));
-                    }
+                    SET_POSITION(PATH, (brk - m_URL), len - (brk - m_URL));
+                    return NS_OK;
                 }
             }
-            else    // user@host:80/something
+            else // its user@host so everything else is just the host
             {
-                SET_POSITION(PREHOST, 0, (at - m_URL));
-                SET_POSITION(HOST, (at-m_URL+1), (colon - at-1));
-                slash = PL_strchr(colon, '/');
-                if (slash)
-                {
-                    ExtractPortFrom(colon+1 -m_URL, (slash - colon));
-                    SET_POSITION(PATH, (slash - m_URL), len - (slash - m_URL));
-                }
-                else // user@host:81
-                {
-                    ExtractPortFrom(colon+1 -m_URL, len - (colon + 1 - m_URL));
-                }
+                SET_POSITION(HOST, (lastbrk-m_URL), (len - (lastbrk-m_URL)));
+                return NS_OK;
             }
+            break;
+        default:
+            NS_POSTCONDITION(0, "This just can't be!");
+            break;
         }
     }
-    else // No colons, so its probably just a prehost,host/path format like username@host/path
+    else // everything is a host
     {
-        if (at) //username@host/path
-        {
-            SET_POSITION(PREHOST, 0, (at - m_URL));
-            slash = PL_strchr(at, '/');
-            if (slash) //username@host/path 
-            {
-                SET_POSITION(HOST, (at +1 - m_URL), (slash - at-1));
-                SET_POSITION(PATH, (slash - m_URL), (len - (slash - m_URL)));
-            }
-            else    //username@host
-            {
-                SET_POSITION(HOST, (at+1 - m_URL), (len - (at+1 - m_URL)));
-            }
-        }
-        else //host/path
-        {
-            if (slash) //host/path or even /path
-            {
-                SET_POSITION(HOST, 0, (slash - m_URL));
-                SET_POSITION(PATH, (slash - m_URL), (len - (slash - m_URL)));
-            }
-            else    //host
-            {
-                SET_POSITION(HOST, 0, len);
-            }
-            
-        }
+        SET_POSITION(HOST, 0, len);
     }
     return NS_OK;
 }
@@ -330,12 +444,14 @@ NS_IMPL_RELEASE(nsURL);
 nsresult
 nsURL::SetHost(const char* i_Host)
 {
+    NS_NOTYETIMPLEMENTED("Eeeks!");
     return NS_OK;
 }
 
 nsresult
 nsURL::SetPath(const char* i_Path)
 {
+    NS_NOTYETIMPLEMENTED("Eeeks!");
     return NS_OK;
 }
 
@@ -363,12 +479,14 @@ nsURL::SetPort(PRInt32 i_Port)
 nsresult
 nsURL::SetPreHost(const char* i_PreHost)
 {
+    NS_NOTYETIMPLEMENTED("Eeeks!");
     return NS_OK;
 }
 
 nsresult
 nsURL::SetScheme(const char* i_Scheme)
 {
+    NS_NOTYETIMPLEMENTED("Eeeks!");
     return NS_OK;
 }
 

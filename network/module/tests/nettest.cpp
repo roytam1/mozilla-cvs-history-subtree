@@ -223,7 +223,7 @@ nsresult ReadStreamSynchronously(nsIInputStream* aIn)
     return NS_OK;
 }
 
-int testURL();
+int testURL(const char* pURL=0);
 
 int main(int argc, char **argv)
 {
@@ -236,7 +236,7 @@ int main(int argc, char **argv)
     int i;
 
     if (argc < 2) {
-        printf("nettest: [[-trace] [-sync] <URL> | -urltest]\n");
+        printf("nettest: [-trace] [-sync] [-urltest] <URL> \n");
         return 0;
     }
 
@@ -271,7 +271,7 @@ int main(int argc, char **argv)
 
         if (PL_strcasecmp(argv[i], "-urltest") == 0) 
         {
-            testURL();
+            testURL(i+1<argc ? argv[i+1] : 0);
             return 0;
         }
         urlLoaded = 0;
@@ -351,17 +351,28 @@ int main(int argc, char **argv)
 }
 
 
-int testURL()
+int testURL(const char* i_pURL)
 {
     const char* temp;
-    const int tests = 5;
+	if (i_pURL)
+	{
+		nsICoolURL* pURL = CreateURL(i_pURL);
+		pURL->DebugString(&temp);
+		cout << temp <<endl;
+		pURL->Release();
+		return 0;
+	}
+
+    const int tests = 7;
     const char* url[tests] = 
     {
         "http://username:password@hostname.com:80/pathname/./more/stuff/../path",
         "username@host:8080/path",
+        "http://gagan/",
+        "host:port/netlib", //port should now be 0
         "", //empty string
-        "http:user@hostname.edu:80/pathname", //this is http:user and not user:pass -TODO ??
-        "http:username:password@hostname:80/pathname"
+        "user:pass@hostname.edu:80/pathname", //this is always user:pass and not http:user
+        "username:password@hostname:80/pathname"
     };
 
     for (int i = 0; i< tests; ++i)
