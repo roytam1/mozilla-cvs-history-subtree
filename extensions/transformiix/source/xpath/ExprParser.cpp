@@ -21,8 +21,10 @@
  * Keith Visco, kvisco@ziplink.net
  *   -- original author.
  * Olivier Gerardin, ogerardin@vo.lu
- *   -- fixed a bug in CreateExpr (@xxx=/yyy was parsed as
- *      @xxx=@xxx/yyy)
+ *   -- fixed a bug in CreateExpr (@xxx=/yyy was parsed as @xxx=@xxx/yyy)
+ * Marina Mechtcheriakova
+ *   -- fixed bug in ::parsePredicates,
+ *      made sure we continue looking for more predicates.
  *
  * $Id$
  */
@@ -811,8 +813,19 @@ String* ExprParser::parsePredicates(PredicateList* predicateList, ExprLexer& lex
         }
         if ( tok->type == Token::R_BRACKET) {
             lexer.nextToken(); //-- eat ']'
-            break;
+
+
+            //-- Fix: look ahead at next token for mulitple predicates - Marina M.
+            tok = lexer.peek();
+            if ((!tok) || ( tok->type != Token::L_BRACKET )) break;
+            //-- /Fix
         }
+
+        //-- Fix: handle multiple predicates - Marina M.
+        if (tok->type == Token::L_BRACKET)
+            lexer.nextToken(); //-- swallow '['
+        //-- /Fix
+
         Expr* expr = createExpr(lexer);
         predicateList->add(expr);
     }
