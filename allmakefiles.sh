@@ -866,7 +866,6 @@ MAKEFILES_phoenix="
 browser/Makefile
 browser/app/Makefile
 browser/app/profile/Makefile
-browser/app/profile/chrome/Makefile
 browser/base/Makefile
 browser/locales/Makefile
 browser/components/Makefile
