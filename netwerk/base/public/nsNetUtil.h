@@ -455,6 +455,56 @@ NS_NewStreamProviderProxy(nsIStreamProvider **aResult,
     return NS_OK;
 }
 
+inline nsresult
+NS_NewSimpleStreamListener(nsIStreamListener **aResult,
+                           nsIOutputStream *aSink,
+                           nsIStreamObserver *aObserver=nsnull)
+{
+    NS_ENSURE_ARG_POINTER(aResult);
+
+    nsresult rv;
+    nsCOMPtr<nsISimpleStreamListener> listener;
+    static NS_DEFINE_CID(kSimpleStreamListenerCID, NS_SIMPLESTREAMLISTENER_CID);
+    rv = nsComponentManager::CreateInstance(kSimpleStreamListenerCID,
+                                            nsnull,
+                                            NS_GET_IID(nsISimpleStreamListener),
+                                            getter_AddRefs(listener));
+    if (NS_FAILED(rv)) return rv;
+
+    rv = listener->Init(aSink, aObserver);
+    if (NS_FAILED(rv)) return rv;
+
+    *aResult = listener.get();
+    NS_ADDREF(*aResult);
+
+    return NS_OK;
+}
+
+inline nsresult
+NS_NewSimpleStreamProvider(nsIStreamProvider **aResult,
+                           nsIInputStream *aSource,
+                           nsIStreamObserver *aObserver=nsnull)
+{
+    NS_ENSURE_ARG_POINTER(aResult);
+
+    nsresult rv;
+    nsCOMPtr<nsISimpleStreamProvider> provider;
+    static NS_DEFINE_CID(kSimpleStreamProviderCID, NS_SIMPLESTREAMPROVIDER_CID);
+    rv = nsComponentManager::CreateInstance(kSimpleStreamProviderCID,
+                                            nsnull,
+                                            NS_GET_IID(nsISimpleStreamProvider),
+                                            getter_AddRefs(provider));
+    if (NS_FAILED(rv)) return rv;
+
+    rv = provider->Init(aSource, aObserver);
+    if (NS_FAILED(rv)) return rv;
+
+    *aResult = provider.get();
+    NS_ADDREF(*aResult);
+
+    return NS_OK;
+}
+
 // Depracated, prefer NS_NewStreamObserverProxy
 inline nsresult
 NS_NewAsyncStreamObserver(nsIStreamObserver **result,
@@ -475,15 +525,15 @@ NS_NewAsyncStreamListener(nsIStreamListener **result,
 
 // Depracated, prefer a true synchonous implementation
 inline nsresult
-NS_NewSyncStreamListener(nsIInputStream **inStream, 
-                         nsIOutputStream **outStream,
-                         nsIStreamListener **result)
+NS_NewSyncStreamListener(nsIInputStream **aInStream, 
+                         nsIOutputStream **aOutStream,
+                         nsIStreamListener **aResult)
 {
-    NS_ENSURE_ARG_POINTER(inStream);
-    NS_ENSURE_ARG_POINTER(outStream);
-    NS_ENSURE_ARG_POINTER(result);
-
     nsresult rv;
+
+    NS_ENSURE_ARG_POINTER(aInStream);
+    NS_ENSURE_ARG_POINTER(aOutStream);
+
     nsCOMPtr<nsIInputStream> pipeIn;
     nsCOMPtr<nsIOutputStream> pipeOut;
 
@@ -493,23 +543,14 @@ NS_NewSyncStreamListener(nsIInputStream **inStream,
                     32*1024); // NS_SYNC_STREAM_LISTENER_BUFFER_SIZE
     if (NS_FAILED(rv)) return rv;
 
-    nsCOMPtr<nsISimpleStreamListener> listener;
-    static NS_DEFINE_CID(kSimpleStreamListenerCID, NS_SIMPLESTREAMLISTENER_CID);
-    rv = nsComponentManager::CreateInstance(kSimpleStreamListenerCID,
-                                            nsnull,
-                                            NS_GET_IID(nsISimpleStreamListener),
-                                            getter_AddRefs(listener));
+    rv = NS_NewSimpleStreamListener(aResult, pipeOut);
     if (NS_FAILED(rv)) return rv;
 
-    rv = listener->Init(pipeOut, nsnull);
-    if (NS_FAILED(rv)) return rv;
+    *aInStream = pipeIn;
+    NS_ADDREF(*aInStream);
+    *aOutStream = pipeOut;
+    NS_ADDREF(*aOutStream);
 
-    *inStream = pipeIn;
-    *outStream = pipeOut;
-    *result = listener;
-    NS_ADDREF(*inStream);
-    NS_ADDREF(*outStream);
-    NS_ADDREF(*result);
     return NS_OK;
 }
 
@@ -526,16 +567,10 @@ NS_AsyncWriteFromStream(nsIChannel *aChannel,
     NS_ENSURE_ARG_POINTER(aChannel);
 
     nsresult rv;
-    nsCOMPtr<nsISimpleStreamProvider> provider;
-    static NS_DEFINE_CID(kSimpleStreamProviderCID, NS_SIMPLESTREAMPROVIDER_CID);
-
-    rv = nsComponentManager::CreateInstance(kSimpleStreamProviderCID,
-                                            nsnull,
-                                            NS_GET_IID(nsISimpleStreamProvider),
-                                            getter_AddRefs(provider));
-    if (NS_FAILED(rv)) return rv;
-
-    rv = provider->Init(aSource, aObserver);
+    nsCOMPtr<nsIStreamProvider> provider;
+    rv = NS_NewSimpleStreamProvider(getter_AddRefs(provider),
+                                    aSource,
+                                    aObserver);
     if (NS_FAILED(rv)) return rv;
 
     return aChannel->AsyncWrite(provider, aContext);
@@ -554,16 +589,10 @@ NS_AsyncReadToStream(nsIChannel *aChannel,
     NS_ENSURE_ARG_POINTER(aChannel);
 
     nsresult rv;
-    nsCOMPtr<nsISimpleStreamListener> listener;
-    static NS_DEFINE_CID(kSimpleStreamListenerCID, NS_SIMPLESTREAMLISTENER_CID);
-
-    rv = nsComponentManager::CreateInstance(kSimpleStreamListenerCID,
-                                            nsnull,
-                                            NS_GET_IID(nsISimpleStreamListener),
-                                            getter_AddRefs(listener));
-    if (NS_FAILED(rv)) return rv;
-
-    rv = listener->Init(aSink, aObserver);
+    nsCOMPtr<nsIStreamListener> listener;
+    rv = NS_NewSimpleStreamListener(getter_AddRefs(listener),
+                                    aSink,
+                                    aObserver);
     if (NS_FAILED(rv)) return rv;
 
     return aChannel->AsyncRead(listener, aContext);

@@ -1318,11 +1318,13 @@ nsresult nsSocketTransport::doReadAsync(PRInt16 aSelectFlags)
     PRINTF("READING [this=%x] calling listener [offset=%u, count=%u]\n",
             this, mReadOffset, transferAmt);
 
+    PR_ExitMonitor(mMonitor);
     nsresult rv = mReadListener->OnDataAvailable(this,
                                                  mReadContext,
                                                  mSocketInputStream,
                                                  mReadOffset,
                                                  transferAmt);
+    PR_EnterMonitor(mMonitor);
 
     //
     // Handle the error conditions
@@ -1498,11 +1500,13 @@ nsresult nsSocketTransport::doWriteAsync(PRInt16 aSelectFlags)
 
     PRUint32 transferAmt = PR_MIN(mBufferMaxSize, MAX_IO_TRANSFER_SIZE);
 
+    PR_ExitMonitor(mMonitor);
     nsresult rv = mWriteProvider->OnProvideData(this,
                                                 mWriteContext,
                                                 mSocketOutputStream,
                                                 mWriteOffset,
                                                 transferAmt);
+    PR_EnterMonitor(mMonitor);
 
     //
     // Handle the error conditions

@@ -484,7 +484,9 @@ nsFileTransport::Run(void)
                 mXferState = CLOSING;
             mStatus = mCancelStatus;
         }
+        mon.Exit();
         Process();
+        mon.Enter();
     }
     mActive = PR_FALSE;
     return NS_OK;
