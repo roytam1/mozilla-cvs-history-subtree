@@ -41,10 +41,12 @@ JRI_GEN		= netscape.softupdate.FolderSpec \
 		  netscape.softupdate.VersionInfo \
 		  netscape.softupdate.VersionRegistry \
 		  netscape.softupdate.VerRegEnumerator \
+		  java.lang.Integer \
 		  $(NULL)
 
 CSRCS		= softupdt.c \
 		  su_trigger.c \
+		  su_patch.c \
 		  su_folderspec.c \
 		  su_instl.c \
 		  su_nodl.c \
