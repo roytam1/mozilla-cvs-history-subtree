@@ -3219,9 +3219,9 @@ nsMsgLocalMailFolder::OnStopRunningUrl(nsIURI * aUrl, nsresult aExitCode)
     mDownloadWindow = nsnull;
     return nsMsgDBFolder::OnStopRunningUrl(aUrl, aExitCode);
   }
+  nsresult rv;
   if (NS_SUCCEEDED(aExitCode))
   {
-    nsresult rv;
     nsCOMPtr<nsIMsgMailSession> mailSession = do_GetService(NS_MSGMAILSESSION_CONTRACTID, &rv);
     if (NS_FAILED(rv)) return rv;	
     nsCOMPtr<nsIMsgWindow> msgWindow;
@@ -3265,16 +3265,6 @@ nsMsgLocalMailFolder::OnStopRunningUrl(nsIURI * aUrl, nsresult aExitCode)
     
     if (mFlags & MSG_FOLDER_FLAG_INBOX)
     {
-      // if we are the inbox and running pop url 
-      nsCOMPtr<nsIPop3URL> popurl = do_QueryInterface(aUrl, &rv);
-      if (NS_SUCCEEDED(rv))
-      {
-        nsCOMPtr<nsIMsgIncomingServer> server;
-        GetServer(getter_AddRefs(server));
-        // this is the deferred to account, in the global inbox case
-        if (server)
-          server->SetPerformingBiff(PR_FALSE);  //biff is over
-      }
       if (mDatabase)
       {
         if (mCheckForNewMessagesAfterParsing)
@@ -3296,6 +3286,19 @@ nsMsgLocalMailFolder::OnStopRunningUrl(nsIURI * aUrl, nsresult aExitCode)
   {
     mReparseListener->OnStopRunningUrl(aUrl, aExitCode);
     mReparseListener = nsnull;
+  }
+  if (mFlags & MSG_FOLDER_FLAG_INBOX)
+  {
+    // if we are the inbox and running pop url 
+    nsCOMPtr<nsIPop3URL> popurl = do_QueryInterface(aUrl, &rv);
+    if (NS_SUCCEEDED(rv))
+    {
+      nsCOMPtr<nsIMsgIncomingServer> server;
+      GetServer(getter_AddRefs(server));
+      // this is the deferred to account, in the global inbox case
+      if (server)
+        server->SetPerformingBiff(PR_FALSE);  //biff is over
+    }
   }
   m_parsingFolder = PR_FALSE;
   return nsMsgDBFolder::OnStopRunningUrl(aUrl, aExitCode);
