@@ -487,6 +487,14 @@ $InstallSizeArchive$:xpcom.xpi
 ;                            will be ignored.  If the .xpi file is not to be
 ;                            installed, then this attribute is ignored.
 ;
+;   SUPERSEDE     - Component is to be shown as disabled and unselected
+;                   if a file exists.
+;                   Use SupersedeType=File Exists to specify the type of comparison
+;                   Use SupersedeFileX=File Name to specify the file
+;                   Use SupersedeMinVersionX=a.b.c.d to specify the minimum version
+;                   of the file.  If the file version is greater than the
+;                   SupersedeMinVersion it will be superseded
+;
 Attributes=SELECTED|INVISIBLE|FORCE_UPGRADE
 Force Upgrade File0=[SETUP PATH]\xpcom.dll
 
@@ -1099,6 +1107,17 @@ Decrypt Name Value=TRUE
 Overwrite Key=TRUE
 Overwrite Name=TRUE
 Timing=pre smartupdate
+
+[Cleanup Previous Product RegKeys]
+Reg Key Root0=HKEY_LOCAL_MACHINE
+Product Name0=Mozilla
+Product Reg Key0=Software\Mozilla.org\Mozilla
+Current Version0=$UserAgent$
+;
+Reg Key Root1=HKEY_CURRENT_USER
+Product Name1=Mozilla
+Product Reg Key1=Software\Mozilla.org\Mozilla
+Current Version1=$UserAgent$
 
 
 
