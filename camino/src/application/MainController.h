@@ -61,9 +61,10 @@
     IBOutlet NSMenuItem*    mCloseTabMenuItem;
     IBOutlet NSMenuItem*    mToggleSidebarMenuItem;
 
+    IBOutlet NSMenu*        mGoMenu;
     IBOutlet NSMenu*        mBookmarksMenu;
     IBOutlet NSMenu*        mDockMenu;
-	IBOutlet NSMenu*        mServersSubmenu;
+    IBOutlet NSMenu*        mServersSubmenu;
 	
     IBOutlet NSMenuItem*    mBookmarksToolbarMenuItem;
     IBOutlet NSMenuItem*    mAddBookmarkMenuItem;

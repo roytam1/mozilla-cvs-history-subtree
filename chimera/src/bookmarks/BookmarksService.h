@@ -156,8 +156,6 @@ public:
   static nsIAtom* gOpenAtom;
   static nsIAtom* gGroupAtom;
   
-  static const int kBookmarksDividerTag;
-
   static int CHInsertNone;
   static int CHInsertInto;
   static int CHInsertBefore;

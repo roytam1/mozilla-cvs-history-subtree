@@ -37,45 +37,18 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#import <Foundation/Foundation.h>
 
-@class NetworkServices;
+// Put UI constants (menu item tags etc) in this file to reduce the
+// chance of conflicts.
 
-// protocol implemented by someone who wants to provide UI for network services
+// Go menu
 
-@protocol NetworkServicesClient
+// the tag of the separator after which to insert history menu items
+const int kRendezvousRelatedItemTag = 3000;
+const int kDividerTag = 4000;
 
-- (void)availableServicesChanged:(NetworkServices*)servicesProvider;
-- (void)serviceResolved:(int)serviceID withURL:(NSString*)url;
-- (void)serviceResolutionFailed:(int)serviceID;
 
-@end
+// Bookmarks menu
 
-@interface NetworkServices : NSObject
-{
-    // browser can only do one search at a time, so we have a browser for
-    // each protocol that we care about.
-    NSNetServiceBrowser*    mHttpBrowser;
-    NSNetServiceBrowser*    mHttpsBrowser;
-    NSNetServiceBrowser*    mFtpBrowser;
-
-    int                     mCurServiceID;      // unique ID for each service
-    NSMutableDictionary*    mNetworkServices;		// services keyed by ID
-    
-    NSMutableArray*         mClients;           // array of id<NetworkServicesClient>    
-}
-
-- (void)startServices;
-- (void)stopServices;
-
-- (void)registerClient:(id<NetworkServicesClient>)client;
-- (void)unregisterClient:(id<NetworkServicesClient>)client;
-
-- (void)attemptResolveService:(int)serviceID;
-
-- (NSString*)serviceName:(int)serviceID;
-- (NSString*)serviceProtocol:(int)serviceID;
-
-- (NSEnumerator*)serviceEnumerator;
-
-@end
+// the tag of the separator after which to insert bookmark items
+const int kBookmarksDividerTag = -1;

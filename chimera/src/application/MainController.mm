@@ -40,6 +40,7 @@
 
 #import "NSString+Utils.h"
 
+#import "ChimeraUIConstants.h"
 #import "MainController.h"
 #import "BrowserWindowController.h"
 #import "BookmarksMenu.h"
@@ -181,7 +182,7 @@ const int kReuseWindowOnAE = 2;
   [mBookmarksMenu setAutoenablesItems: NO];
 
   // menubar bookmarks
-  int firstBookmarkItem = [mBookmarksMenu indexOfItemWithTag:BookmarksService::kBookmarksDividerTag] + 1;
+  int firstBookmarkItem = [mBookmarksMenu indexOfItemWithTag:kBookmarksDividerTag] + 1;
   mMenuBookmarks = [[BookmarksMenu alloc] initWithMenu: mBookmarksMenu
                                              firstItem: firstBookmarkItem
                                            rootContent: [bmManager getRootContent]
@@ -213,19 +214,29 @@ const int kReuseWindowOnAE = 2;
   if ([[PreferenceManager sharedInstance] getBooleanPref:"chimera.log_js_to_console" withSuccess:&success])
     [JSConsole sharedJSConsole];
 
+  BOOL doingRendezvous = NO;
+  
   if ([[PreferenceManager sharedInstance] getBooleanPref:"chimera.enable_rendezvous" withSuccess:&success])
   {
     // are we on 10.2.3 or higher? The DNS resolution stuff is broken before 10.2.3
     long systemVersion;
     OSErr err = ::Gestalt(gestaltSystemVersion, &systemVersion);
-    if ((err == noErr) && (systemVersion >= 0x00001023))
+    if ((err == noErr) && (systemVersion >= 0x00001022))
     {
       mNetworkServices = [[NetworkServices alloc] init];
       [mNetworkServices registerClient:self];
       [mNetworkServices startServices];
+      doingRendezvous = YES;
     }
   }
   
+  if (!doingRendezvous)
+  {
+    // remove rendezvous items
+    int itemIndex;
+    while ((itemIndex = [mGoMenu indexOfItemWithTag:kRendezvousRelatedItemTag]) != -1)
+      [mGoMenu removeItemAtIndex:itemIndex];
+  }
 }
 
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)sender
@@ -1201,6 +1212,9 @@ static int SortByProtocolAndName(NSDictionary* item1, NSDictionary* item2, void 
 
   if ([servicesArray count] == 0)
   {
+    // add a separator
+    [mServersSubmenu addItem:[NSMenuItem separatorItem]];
+
     NSMenuItem* newItem = [mServersSubmenu addItemWithTitle:NSLocalizedString(@"NoServicesFound", @"") action:nil keyEquivalent:@""];
     [newItem setTag:-1];
     [newItem setTarget:self];

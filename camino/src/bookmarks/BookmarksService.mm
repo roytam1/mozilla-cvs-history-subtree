@@ -203,8 +203,6 @@ int BookmarksService::CHInsertInto = 1;
 int BookmarksService::CHInsertBefore = 2;
 int BookmarksService::CHInsertAfter = 3;
 
-const int BookmarksService::kBookmarksDividerTag = -1;
-
 static NS_DEFINE_CID(kCContentIteratorCID, NS_CONTENTITERATOR_CID);
 
 void
