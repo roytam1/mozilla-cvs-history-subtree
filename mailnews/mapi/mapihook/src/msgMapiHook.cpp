@@ -533,7 +533,7 @@ nsresult nsMapiHook::HandleAttachments (nsIMsgCompFields * aCompFields, PRInt32 
             nsCOMPtr <nsILocalFile> pTempDir = do_QueryInterface(pTempFileDir);
 
             // create a new sub directory called moz_mapi underneath the temp directory
-            pTempDir->AppendRelativePath(NS_LITERAL_STRING("\moz_mapi"));
+            pTempDir->AppendRelativePath(NS_LITERAL_STRING("moz_mapi"));
             pTempDir->Exists (&bExist) ;
             if (!bExist)
             {
