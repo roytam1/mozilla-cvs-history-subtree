@@ -425,6 +425,11 @@ nsImageWin :: CreateDDB(nsDrawingSurface aSurface)
 
   ((nsDrawingSurfaceWin *)aSurface)->GetDC(&TheHDC);
 
+  int   rasterCaps = ::GetDeviceCaps(TheHDC, RASTERCAPS);
+  PRBool isPaletteDevice = RC_PALETTE == (rasterCaps & RC_PALETTE);
+  if (isPaletteDevice) return;  
+
+
   if (TheHDC != NULL){
     if (mSizeImage > 0){
        if (mAlphaDepth == 8) {
