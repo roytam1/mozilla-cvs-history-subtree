@@ -124,7 +124,7 @@ public:
     nsresult addParam(Expr* aExpr);
 
     /*
-     * XXX txIEvalContext should be txIParseContest, to do
+     * XXX txIEvalContext should be txIParseContest, bug 143291
      */
     virtual MBool requireParams(int aParamCountMin, txIEvalContext* aContext);
     virtual MBool requireParams(int aParamCountMin,
