@@ -75,5 +75,6 @@ function dumpView()
 
 function populateView()
 {
+    dump("populate view\n");
     dbview.populateView();
 }

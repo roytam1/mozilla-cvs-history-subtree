@@ -94,14 +94,44 @@ nsresult nsMsgDBView::ReverseSort()
     return NS_OK;
 }
 
+#include "nsIDBFolderInfo.h"
+#include "nsIMsgDatabase.h"
+#include "nsIRDFService.h"
+#include "nsIMsgFolder.h"
+#include "nsMsgRDFUtils.h"
+
 NS_IMETHODIMP nsMsgDBView::PopulateView()
 {
-    PRUint32 i;
-    for (i=0;i<10;i++) {
-        m_keys.InsertAt(i,i*100+1);
-        m_flags.InsertAt(i,i);
-    }
-    return NS_OK;
+  nsresult rv;
+  nsCOMPtr<nsIRDFService> rdf = do_GetService(NS_RDF_CONTRACTID "/rdf-service;1",&rv);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  nsCOMPtr<nsIRDFResource> resource;
+  rv = rdf->GetResource("mailbox://nobody@Local%20Folders/Trash", getter_AddRefs(resource));
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  nsCOMPtr<nsIMsgFolder> folder;
+  folder = do_QueryInterface(resource, &rv);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  nsCOMPtr<nsIDBFolderInfo> folderInfo;
+  rv = folder->GetDBFolderInfoAndDB(getter_AddRefs(folderInfo), getter_AddRefs(m_db));
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  nsCOMPtr<nsIMsgDBHdr> msgHdr;
+  nsMsgKeyArray   keys;
+  PRUint32 flags;
+  m_db->ListAllKeys(keys);
+  PRUint32 size = keys.GetSize();
+  for (PRUint32 i=0;i<size;i++) {
+    m_keys.InsertAt(i,keys[i]);
+    rv = m_db->GetMsgHdrForKey(keys[i], getter_AddRefs(msgHdr));
+    NS_ENSURE_SUCCESS(rv,rv);
+    rv = msgHdr->GetFlags(&flags);
+    NS_ENSURE_SUCCESS(rv,rv);
+    m_flags.InsertAt(i,flags);
+  }
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::DumpView()
@@ -218,6 +248,9 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
 {
     nsresult rv;
 
+    NS_ASSERTION(m_db, "no db");
+    if (!m_db) return NS_ERROR_FAILURE;
+
     printf("XXX nsMsgDBView::Sort(%d,%d)\n",(int)sortType,(int)sortOrder);
     if (m_sortType == sortType && m_sortValid) {
         if (m_sortOrder == sortOrder) {
@@ -247,7 +280,7 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
     PRUint16 maxLen;
     eFieldType fieldType;
 
-    rv = GetFieldTypeAndLenForSort(m_sortType, &maxLen, &fieldType);
+    rv = GetFieldTypeAndLenForSort(sortType, &maxLen, &fieldType);
     NS_ENSURE_SUCCESS(rv,rv);
 
     PRUint32 arraySize = GetSize();
