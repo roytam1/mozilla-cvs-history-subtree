@@ -1081,7 +1081,7 @@ Boolean	CPluginWindow::ObeyCommand(CommandT inCommand, void *ioParam)
 	if (IsPluginCommand(inCommand)) {
 		EventRecord menuEvent;
 		::OSEventAvail(0, &menuEvent);
-		menuEvent.what = nsEventType_menuCommandEvent;
+		menuEvent.what = nsPluginEventType_MenuCommandEvent;
 		menuEvent.message = -inCommand;			// PowerPlant encodes a raw menu selection as the negation of the selection.
 		return PassPluginEvent(menuEvent);
 	}
@@ -1164,7 +1164,7 @@ void CPluginWindow::DeactivateSelf()
 void CPluginWindow::AdjustCursorSelf(Point inPortPt, const EventRecord& inMacEvent)
 {
 	EventRecord cursorEvent = inMacEvent;
-	cursorEvent.what = adjustCursorEvent;
+	cursorEvent.what = nsPluginEventType_AdjustCursorEvent;
 	if (!PassPluginEvent(cursorEvent))
 		LWindow::AdjustCursorSelf(inPortPt, inMacEvent);
 }
@@ -1612,7 +1612,7 @@ void CPluginView::EmbedDisplay(LO_EmbedStruct* embed_struct, Boolean isPrinting)
 		//
 		ResetDrawRect();
 
-		memset(&updateEvent, 0, sizeof(EventRecord));
+		::OSEventAvail(0, &updateEvent);
 		updateEvent.what = updateEvt;
 		(void) PassEvent(updateEvent);
 	}
@@ -1724,8 +1724,8 @@ Boolean	CPluginView::ObeyCommand(CommandT inCommand, void *ioParam)
 	if (IsPluginCommand(inCommand)) {
 		// assume this is a plugin menu item, since menusharing didn't handle it.
 		EventRecord menuEvent;
-		::memset(&menuEvent, 0, sizeof(EventRecord));
-		menuEvent.what = nsEventType_menuCommandEvent;
+		::OSEventAvail(0, &menuEvent);
+		menuEvent.what = nsPluginEventType_MenuCommandEvent;
 		menuEvent.message = -inCommand;			// PowerPlant encodes a raw menu selection as the negation of the selection.
 		return PassEvent(menuEvent);
 	}
@@ -1772,7 +1772,7 @@ void CPluginView::DrawSelf()
 		else
 			{
 			EventRecord updateEvent;
-			memset(&updateEvent, 0, sizeof(EventRecord));
+			::OSEventAvail(0, &updateEvent);
 			updateEvent.what = updateEvt;
 			(void) PassEvent(updateEvent);
 			}
@@ -1804,7 +1804,7 @@ void CPluginView::SpendTime(const EventRecord& inMacEvent)
 void CPluginView::ActivateSelf()
 {
 	EventRecord activateEvent;
-	memset(&activateEvent, 0, sizeof(EventRecord));
+	::OSEventAvail(0, &activateEvent);
 	activateEvent.what = activateEvt;
 	activateEvent.modifiers = activeFlag;
 	(void) PassEvent(activateEvent);
@@ -1814,7 +1814,7 @@ void CPluginView::ActivateSelf()
 void CPluginView::DeactivateSelf()
 {
 	EventRecord activateEvent;
-	memset(&activateEvent, 0, sizeof(EventRecord));
+	::OSEventAvail(0, &activateEvent);
 	activateEvent.what = activateEvt;
 	(void) PassEvent(activateEvent);
 }
@@ -1831,8 +1831,8 @@ void CPluginView::BeTarget()
 	XP_ASSERT(!fHidden);
 	CPluginView::sPluginTarget = this;					// Parallel to LCommander::sTarget, except only for plug-ins
 	EventRecord focusEvent;
-	memset(&focusEvent, 0, sizeof(EventRecord));
-	focusEvent.what = getFocusEvent;
+	::OSEventAvail(0, &focusEvent);
+	focusEvent.what = nsPluginEventType_GetFocusEvent;
 	Boolean handled = PassEvent(focusEvent);
 	if (!handled)										// If the plugin doesnÕt want the focus,
 		SwitchTarget(GetSuperCommander());				//		switch the focus back to our super
@@ -1842,8 +1842,8 @@ void CPluginView::DontBeTarget()
 {
 	CPluginView::sPluginTarget = NULL;					// Parallel to LCommander::sTarget, except only for plug-ins
 	EventRecord focusEvent;
-	memset(&focusEvent, 0, sizeof(EventRecord));
-	focusEvent.what = loseFocusEvent;
+	::OSEventAvail(0, &focusEvent);
+	focusEvent.what = nsPluginEventType_LoseFocusEvent;
 	(void) PassEvent(focusEvent);
 }
 
@@ -1852,7 +1852,7 @@ void CPluginView::AdjustCursorSelf(Point inPortPt, const EventRecord& inMacEvent
 {
 	XP_ASSERT(!fHidden);
 	EventRecord cursorEvent = inMacEvent;
-	cursorEvent.what = adjustCursorEvent;
+	cursorEvent.what = nsPluginEventType_AdjustCursorEvent;
 	
 	Boolean handled = PassEvent(cursorEvent);
 	if (!handled)
@@ -2135,7 +2135,9 @@ void CPluginView::DrawBroken(Boolean hilite)
 Boolean CPluginView::HandleEmbedEvent(CL_Event *event)
 {
 	fe_EventStruct *fe_event = (fe_EventStruct *)event->fe_event;
+
 	EventRecord macEvent;
+	::OSEventAvail(0, &macEvent);
 
 	// For windowless plugins, the last draw might have been to the offscreen port,
 	// but for event handling, we want the current port to be the onscreen port (so
@@ -2163,13 +2165,13 @@ Boolean CPluginView::HandleEmbedEvent(CL_Event *event)
 		case CL_EVENT_MOUSE_MOVE:
 			//macEvent = *(EventRecord *)fe_event->event;
 			macEvent = fe_event->event.macEvent; // 1997-02-22 mjc
-			macEvent.what = adjustCursorEvent;
+			macEvent.what = nsPluginEventType_AdjustCursorEvent;
 			break;
 		case CL_EVENT_KEY_FOCUS_GAINED:
-			macEvent.what = getFocusEvent;
+			macEvent.what = nsPluginEventType_GetFocusEvent;
 			break;
 		case CL_EVENT_KEY_FOCUS_LOST:
-			macEvent.what = loseFocusEvent;
+			macEvent.what = nsPluginEventType_LoseFocusEvent;
 			break;
 		default:
 			return false;
