@@ -201,6 +201,7 @@
  */
 
 #include "mimehdrs.h"
+#include "nsICMSDecoder.h"
 
 typedef struct MimeObject      MimeObject;
 typedef struct MimeObjectClass MimeObjectClass;
@@ -305,11 +306,11 @@ extern char *mime_find_content_type_of_part(const char *part, MimeObject *obj);
    to the `obj' argument.
  */
 extern void mime_find_security_info_of_part(const char *part, MimeObject *obj,
-									  void **cms_encrypt_content_info_return,
-									     void **cms_sign_content_info_return,
+									  nsICMSMessage **cms_encrypt_content_info_return,
+									     nsICMSMessage **cms_sign_content_info_return,
 											char **sender_email_addr_return,
-											PRUint32 *decode_error_return,
-											PRUint32 *verify_error_return);
+											PRInt32 *decode_error_return,
+											PRInt32 *verify_error_return);
 
 /* Parse the various "?" options off the URL and into the options struct.
  */
@@ -365,7 +366,7 @@ struct MimeParseStateObject {
   PRBool first_data_written_p;	/* State used for Mozilla lazy-stream-
 								   creation evilness. */
 
-  PRBool xlated_p;			/* If options->dexlate_p is true, then this
+  PRBool decrypted_p;			/* If options->dexlate_p is true, then this
 								   will be set to indicate whether any
 								   dexlateion did in fact occur.
 								 */

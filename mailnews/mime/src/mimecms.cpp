@@ -1,11 +1,11 @@
 /* Insert copyright and license here 1996 */
 
+#include "nsICMSDecoder.h"
 #include "mimecms.h"
 #include "nsCRT.h"
 #include "nspr.h"
 #include "nsEscape.h"
 #include "mimemsg.h"
-#include "nsICMSDecoder.h"
 #include "nsIWindowWatcher.h"
 #include "nsIPrompt.h"
 
@@ -22,7 +22,7 @@ static int MimeCMS_eof (void *, PRBool);
 static char * MimeCMS_generate (void *);
 static void MimeCMS_free (void *);
 static void MimeCMS_get_content_info (MimeObject *,
-										SEC_PKCS7ContentInfo **,
+										nsICMSMessage **,
 										char **, PRInt32 *, PRInt32 *, PRBool *);
 
 
@@ -51,9 +51,8 @@ MimeEncryptedCMSClassInitialize(MimeEncryptedCMSClass *clazz)
 typedef struct MimeCMSdata {
   int (*output_fn) (const char *buf, PRInt32 buf_size, void *output_closure);
   void *output_closure;
-  nsCOMPtr<nsICMSDecoder> cms_decoder;
-  SEC_PKCS7DecoderContext *decoder_context;
-  SEC_PKCS7ContentInfo *content_info;
+  nsCOMPtr<nsICMSDecoder> decoder_context;
+  nsCOMPtr<nsICMSMessage> content_info;
   PRBool ci_is_encrypted;
   char *sender_addr;
   PRInt32 decode_error;
@@ -66,7 +65,7 @@ typedef struct MimeCMSdata {
 
 static void
 MimeCMS_get_content_info(MimeObject *obj,
-							   SEC_PKCS7ContentInfo **content_info_ret,
+							   nsICMSMessage **content_info_ret,
 							   char **sender_email_addr_return,
 							   PRInt32 *decode_error_ret,
 							   PRInt32 *verify_error_ret,
@@ -116,6 +115,8 @@ MimeCMS_content_callback (void *arg, const char *buf, unsigned long length)
 PRBool
 MimeEncryptedCMS_encrypted_p (MimeObject *obj)
 {
+  PRBool encrypted;
+
   PR_ASSERT(obj);
   if (!obj) return PR_FALSE;
   if (mime_typep(obj, (MimeObjectClass *) &mimeEncryptedCMSClass))
@@ -123,7 +124,8 @@ MimeEncryptedCMS_encrypted_p (MimeObject *obj)
 	  MimeEncrypted *enc = (MimeEncrypted *) obj;
 	  MimeCMSdata *data = (MimeCMSdata *) enc->crypto_closure;
 	  if (!data || !data->content_info) return PR_FALSE;
-	  return SEC_PKCS7ContentIsEncrypted(data->content_info);
+    data->content_info->ContentIsEncrypted(&encrypted);
+	  return encrypted;
 	}
   return PR_FALSE;
 }
@@ -139,7 +141,7 @@ extern char *IMAP_CreateReloadAllPartsUrl(const char *url);
 
 PRBool
 MimeCMSHeadersAndCertsMatch(MimeObject *obj,
-							  SEC_PKCS7ContentInfo *content_info,
+							  nsICMSMessage *content_info,
 							  char **sender_email_addr_return)
 {
   MimeHeaders *msg_headers = 0;
@@ -156,8 +158,8 @@ MimeCMSHeadersAndCertsMatch(MimeObject *obj,
   PR_ASSERT(content_info);
   if (content_info)
 	{
-	  cert_name = SEC_PKCS7GetSignerCommonName (content_info);
-	  cert_addr = SEC_PKCS7GetSignerEmailAddress (content_info);
+	  content_info->GetSignerCommonName (&cert_name);
+	  content_info->GetSignerEmailAddress (&cert_addr);
 	}
   if (!cert_name && !cert_addr) goto DONE;
 
@@ -338,10 +340,10 @@ MimeCMS_init(MimeObject *obj,
   data->output_fn = output_fn;
   data->output_closure = output_closure;
   PR_SetError(0, 0);
-  data->cms_decoder = do_CreateInstance(NS_CMSDECODER_CONTRACTID, &rv);
+  data->decoder_context = do_CreateInstance(NS_CMSDECODER_CONTRACTID, &rv);
   if (NS_FAILED(rv)) return 0;
 
-  rv = data->cms_decoder->Start(MimeCMS_content_callback, data);
+  rv = data->decoder_context->Start(MimeCMS_content_callback, data);
   if (NS_FAILED(rv)) return 0;
 
   // XXX Fix later XXX //
@@ -375,11 +377,11 @@ MimeCMS_write (const char *buf, PRInt32 buf_size, void *closure)
   MimeCMSdata *data = (MimeCMSdata *) closure;
   nsresult rv;
 
-  PR_ASSERT(data && data->output_fn && data->cms_decoder);
-  if (!data || !data->output_fn || !data->cms_decoder) return -1;
+  PR_ASSERT(data && data->output_fn && data->decoder_context);
+  if (!data || !data->output_fn || !data->decoder_context) return -1;
 
   PR_SetError(0, 0);
-  rv = data->cms_decoder->Update(buf, buf_size);
+  rv = data->decoder_context->Update(buf, buf_size);
   if (NS_FAILED(rv)) {
     data->verify_error = -1;
   }
@@ -394,8 +396,8 @@ MimeCMS_eof (void *crypto_closure, PRBool abort_p)
   MimeCMSdata *data = (MimeCMSdata *) crypto_closure;
   nsresult rv;
 
-  PR_ASSERT(data && data->output_fn && data->cms_decoder);
-  if (!data || !data->output_fn || !data->cms_decoder)
+  PR_ASSERT(data && data->output_fn && data->decoder_context);
+  if (!data || !data->output_fn || !data->decoder_context)
 	return -1;
 
   /* Hand an EOF to the crypto library.  It may call data->output_fn.
@@ -407,7 +409,7 @@ MimeCMS_eof (void *crypto_closure, PRBool abort_p)
    */
 
   PR_SetError(0, 0);
-  rv = data->cms_decoder->Finish();
+  rv = data->decoder_context->Finish(getter_AddRefs(data->content_info));
   if (NS_FAILED(rv)) {
 	  data->verify_error = PR_GetError();
   } else {
@@ -439,16 +441,16 @@ MimeCMS_free (void *crypto_closure)
 
   if (data->content_info)
 	{
-	  SEC_PKCS7DestroyContentInfo(data->content_info);
+    // Free reference to nsICMSMessage //
 	  data->content_info = 0;
 	}
 
+  // Do an orderly release of nsICMSDecoder and nsICMSMessage //
   if (data->decoder_context)
 	{
-	  SEC_PKCS7ContentInfo *cinfo =
-		SEC_PKCS7DecoderFinish (data->decoder_context);
-	  if (cinfo)
-		SEC_PKCS7DestroyContentInfo(cinfo);
+    nsCOMPtr<nsICMSMessage> cinfo;
+    data->decoder_context->Finish(getter_AddRefs(cinfo));
+    data->decoder_context = 0;
 	}
 
   PR_FREEIF(data);
@@ -528,16 +530,19 @@ MimeCMS_generate (void *crypto_closure)
 
   if (data->content_info)
 	{
-	  self_signed_p = SEC_PKCS7ContentIsSigned(data->content_info);
-	  self_encrypted_p = SEC_PKCS7ContentIsEncrypted(data->content_info);
+	  data->content_info->ContentIsSigned(&self_signed_p);
+	  data->content_info->ContentIsEncrypted(&self_encrypted_p);
 	  union_encrypted_p = (self_encrypted_p || data->parent_is_encrypted_p);
 
 	  if (self_signed_p)
 		{
 		  PR_SetError(0, 0);
+      good_p = data->content_info->VerifySignature();
+#if 0 // XXX Fix this XXX //
 		  good_p = SEC_PKCS7VerifySignature(data->content_info,
 											0, /*certUsageEmailSigner */ /* #### */
 											PR_TRUE);  /* #### keepcerts */
+#endif
 		  if (!good_p)
 			{
 			  if (!data->verify_error)
@@ -557,10 +562,12 @@ MimeCMS_generate (void *crypto_closure)
 			}
 		}
 
+#if 0 // XXX Fix this XXX .//
 	  if (SEC_PKCS7ContainsCertsOrCrls(data->content_info))
 		{
 		  /* #### call libsec telling it to import the certs */
 		}
+#endif
 
 	  /* Don't free these yet -- keep them around for the lifetime of the
 		 MIME object, so that we can get at the security info of sub-parts
@@ -611,48 +618,3 @@ MimeCMS_generate (void *crypto_closure)
 	return result;
   }
 }
-
-PRBool SEC_PKCS7DecoderUpdate(SEC_PKCS7DecoderContext*, const char*, PRInt32)
-{
-  return PR_TRUE;
-}
-
-SEC_PKCS7ContentInfo* SEC_PKCS7DecoderFinish (SEC_PKCS7DecoderContext*)
-{
-  return nsnull;
-}
-
-void SEC_PKCS7DestroyContentInfo(SEC_PKCS7ContentInfo*)
-{
-  return;
-}
-
-PRBool SEC_PKCS7ContainsCertsOrCrls(SEC_PKCS7ContentInfo*)
-{
-  return PR_TRUE;
-}
-
-PRBool SEC_PKCS7VerifySignature(SEC_PKCS7ContentInfo*, PRInt32,PRBool)
-{
-  return PR_TRUE;
-}
-
-PRBool SEC_PKCS7ContentIsEncrypted(SEC_PKCS7ContentInfo*)
-{
-  return PR_TRUE;
-}
-
-PRBool SEC_PKCS7ContentIsSigned(SEC_PKCS7ContentInfo*)
-{
-  return PR_TRUE;
-}
-char*  SEC_PKCS7GetSignerCommonName (SEC_PKCS7ContentInfo*)
-{
-  return nsnull;
-}
-
-char*  SEC_PKCS7GetSignerEmailAddress (SEC_PKCS7ContentInfo*)
-{
-  return nsnull;
-}
-

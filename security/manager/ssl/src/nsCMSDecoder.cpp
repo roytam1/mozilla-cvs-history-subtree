@@ -38,6 +38,12 @@ nsHash::~nsHash()
   }
 }
 
+NS_IMETHODIMP nsHash::ResultLen(PRInt16 aAlg, PRUint32 * aLen)
+{
+  *aLen = HASH_ResultLen((HASH_HashType)aAlg);
+  return NS_OK;
+}
+
 NS_IMETHODIMP nsHash::Create(PRInt16 aAlg)
 {
   m_ctxt = HASH_Create((HASH_HashType)aAlg);
@@ -75,6 +81,11 @@ nsCMSMessage::nsCMSMessage(NSSCMSMessage *aCMSMsg)
 
 nsCMSMessage::~nsCMSMessage()
 {
+}
+
+NS_IMETHODIMP nsCMSMessage::VerifyDetachedSignature()
+{
+  return  NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMPL_ISUPPORTS1(nsCMSDecoder, nsICMSDecoder)

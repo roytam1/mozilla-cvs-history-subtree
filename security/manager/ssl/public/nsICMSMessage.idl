@@ -25,20 +25,6 @@
 interface nsIX509Cert;
 
 /**
- * nsICMSMessage
- *  Interface for managing Cryptographic Messenging Service
- *  messages.
- */
-[scriptable, uuid(22d6bed4-1dd2-11b2-b2b1-e3ff227e4c71)]
-interface nsICMSMessage2 : nsISupports
-{
-  /**
-   * isSigned - tests to see if the CMS message has a signature
-   */
-  boolean isSigned();
-};
-
-/**
  * nsICMSManager (service)
  *  Interface to access users certificate store
  */
@@ -73,6 +59,5 @@ interface nsICMSManager : nsISupports
  *   implements nsICMSMessage
  */
 %{C++
-#define NS_CMSMESSAGE_CONTRACTID "@mozilla.org/nsCMSMessage;1"
 #define NS_CMSMANAGER_CONTRACTID "@mozilla.org/nsCMSManager;1"
 %}

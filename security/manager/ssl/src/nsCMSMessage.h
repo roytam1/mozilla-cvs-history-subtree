@@ -29,31 +29,6 @@
 #include "cms.h"
 
 // ===============================================
-// nsCMSMessage - implementation of nsICMSMessage
-// ===============================================
-
-#define NS_CMSMESSAGE_CLASSNAME "CMS Message Object"
-#define NS_CMSMESSAGE_CID \
-  { 0x892b0fc2, 0x1dd2, 0x11b2, { 0xb0, 0xd7, 0xea, 0x5f, 0x2b, 0x52, 0xb7, 0x55 } }
-
-class nsCMSMessage
-: public nsICMSMessage
-{
-public:
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSICMSMESSAGE
-
-  nsCMSMessage();
-  virtual ~nsCMSMessage();
-
-  NS_METHOD Init();
-
-private:
-  NSSCMSMessage *mMessage;
-};
-
-
-// ===============================================
 // nsCMSManager - implementation of nsICMSManager
 // ===============================================
 

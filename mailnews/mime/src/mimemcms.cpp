@@ -3,6 +3,7 @@
 #include "mimemcms.h"
 #include "nsMimeTypes.h"
 #include "nspr.h"
+#include "nsMimeStringResources.h"
 
 #define MIME_SUPERCLASS mimeMultipartSignedClass
 MimeDefClass(MimeMultipartSignedCMS, MimeMultipartSignedCMSClass,
@@ -56,7 +57,7 @@ MimeMultipartSignedCMS_initialize (MimeObject *object)
 
 typedef struct MimeMultCMSdata {
   PRInt16 hash_type;
-  nsIHash *data_hash_context;
+  nsCOMPtr<nsIHash> data_hash_context;
   nsCOMPtr<nsICMSDecoder> sig_decoder_context;
   nsCOMPtr<nsICMSMessage> content_info;
   char *sender_addr;
@@ -111,6 +112,7 @@ MimeMultCMS_init (MimeObject *obj)
   MimeMultCMSdata *data = 0;
   char *ct, *micalg;
   PRInt16 hash_type;
+  nsresult rv;
 
   ct = MimeHeaders_get (hdrs, HEADER_CONTENT_TYPE, PR_FALSE, PR_FALSE);
   if (!ct) return 0; /* #### bogus message?  out of memory? */
@@ -211,16 +213,16 @@ MimeMultCMS_data_eof (void *crypto_closure, PRBool abort_p)
 
   PR_ASSERT(!data->sig_decoder_context);
 
-  data->item_len = HASH_ResultLen(data->hash_type);
+  data->data_hash_context->ResultLen(data->hash_type, &data->item_len);
   data->item_data = (unsigned char *) PR_MALLOC(data->item_len);
-  if (!data->item_data) return MK_OUT_OF_MEMORY;
+  if (!data->item_data) return MIME_OUT_OF_MEMORY;
 
   PR_SetError(0, 0);
   data->data_hash_context->End(data->item_data, &data->item_len, data->item_len);
   if (!data->verify_error)
 	data->verify_error = PR_GetError();
 
-  RELEASE_REF(data->data_hash_context);
+  // Release our reference to nsIHash //
   data->data_hash_context = 0;
 
   /* At this point, data->item.data contains a digest for the first part.
@@ -251,9 +253,9 @@ MimeMultCMS_sig_init (void *crypto_closure,
   ct = MimeHeaders_get (signature_hdrs, HEADER_CONTENT_TYPE, PR_TRUE, PR_FALSE);
 
   /* Verify that the signature object is of the right type. */
-  if (!ct || (nsCRT::strcasecmp(ct, APPLICATION_XPKCS7_SIGNATURE) &&
-              nsCRT::strcasecmp(ct, APPLICATION_PKCS7_SIGNATURE)))
-	status = -1; /* #### error msg about bogus message */
+  if (!ct || (nsCRT::strcasecmp(ct, APPLICATION_XPKCS7_SIGNATURE))) {
+	  status = -1; /* #### error msg about bogus message */
+  }
   PR_FREEIF(ct);
   if (status < 0) return status;
 
@@ -274,13 +276,14 @@ static int
 MimeMultCMS_sig_hash (char *buf, PRInt32 size, void *crypto_closure)
 {
   MimeMultCMSdata *data = (MimeMultCMSdata *) crypto_closure;
+  nsresult rv;
 
   PR_ASSERT(data && data->sig_decoder_context);
   if (!data || !data->sig_decoder_context) return -1;
 
   PR_ASSERT(!data->data_hash_context);
 
-  rv = data->sig_decoder_context->Update(buf, buf_size);
+  rv = data->sig_decoder_context->Update(buf, size);
   if (NS_FAILED(rv)) {
 	  if (!data->verify_error)
 		data->verify_error = PR_GetError();
@@ -311,8 +314,11 @@ MimeMultCMS_sig_eof (void *crypto_closure, PRBool abort_p)
 
   if (data->sig_decoder_context)
 	{
-	  data->sig_decoder_context->Finish(getter_Addref(data->content_info));
+	  data->sig_decoder_context->Finish(getter_AddRefs(data->content_info));
+
+    // Release our reference to nsICMSDecoder //
 	  data->sig_decoder_context = 0;
+
 	  if (!data->content_info && !data->verify_error)
 		data->verify_error = PR_GetError();
 
@@ -322,8 +328,6 @@ MimeMultCMS_sig_eof (void *crypto_closure, PRBool abort_p)
 
   return 0;
 }
-
-
 
 static void
 MimeMultCMS_free (void *crypto_closure)
@@ -336,27 +340,25 @@ MimeMultCMS_free (void *crypto_closure)
 
   if (data->data_hash_context)
 	{
-	  HASH_Destroy(data->data_hash_context);
+    // Release our reference to nsIHash //
 	  data->data_hash_context = 0;
 	}
 
+  // Do a graceful shutdown of the nsICMSDecoder and release the nsICMSMessage //
   if (data->sig_decoder_context)
 	{
-	  SEC_CMSContentInfo *cinfo =
-		SEC_CMSDecoderFinish (data->sig_decoder_context);
-	  if (cinfo)
-		SEC_CMSDestroyContentInfo(cinfo);
+	  nsCOMPtr<nsICMSMessage> cinfo;
+    data->sig_decoder_context->Finish(getter_AddRefs(cinfo));
 	}
 
   if (data->content_info)
 	{
-	  SEC_CMSDestroyContentInfo(data->content_info);
+    // Release our reference to nsICMSMessage //
 	  data->content_info = 0;
 	}
 
   PR_FREEIF(data->item_data);
-
-  PR_FREE(data);
+  PR_FREEIF(data);
 }
 
 
@@ -376,11 +378,14 @@ MimeMultCMS_generate (void *crypto_closure)
   if (data->content_info)
 	{
 	  good_p =
+		data->content_info->VerifyDetachedSignature();
+#if 0
 		content_info->VerifyDetachedSignature(data->content_info,
 										 certUsageEmailSigner,
 										 &data->item,
 										 data->hash_type,
 										 PR_TRUE);  /* #### keepcerts */
+#endif
 	  if (!good_p)
 		{
 		  if (!data->verify_error)
@@ -395,13 +400,16 @@ MimeMultCMS_generate (void *crypto_closure)
 												 data->content_info,
 												 &data->sender_addr);
 		  if (!good_p && !data->verify_error)
-			data->verify_error = SEC_ERROR_CERT_ADDR_MISMATCH;
+			data->verify_error = -1;
+// XXX Fix this		data->verify_error = SEC_ERROR_CERT_ADDR_MISMATCH; XXX //
 		}
 
+#if 0 // XXX Fix this. What do we do here? //
 	  if (SEC_CMSContainsCertsOrCrls(data->content_info))
 		{
 		  /* #### call libsec telling it to import the certs */
-		}
+		
+#endif
 
 	  /* Don't free these yet -- keep them around for the lifetime of the
 		 MIME object, so that we can get at the security info of sub-parts
@@ -432,10 +440,11 @@ MimeMultCMS_generate (void *crypto_closure)
 	char *stamp_url = 0, *result;
 	if (data->self)
 	{
-		if (unverified_p && data->self->options)
-			stamp_url = IMAP_CreateReloadAllPartsUrl(data->self->options->url);
-		else
+    if (unverified_p && data->self->options) {
+			// XXX Fix this stamp_url = IMAP_CreateReloadAllPartsUrl(data->self->options->url); XXX //
+    } else {
 			stamp_url = MimeCMS_MakeSAURL(data->self);
+    }
 	}
 
 	result =

@@ -43,45 +43,6 @@
 
 // Standard ISupports implementation
 // NOTE: Should these be the thread-safe versions?
-NS_IMPL_ISUPPORTS1(nsCMSMessage, nsICMSMessage)
-
-// nsCMSMessage constructor
-nsCMSMessage::nsCMSMessage()
-: mMessage(0)
-{
-  // initialize superclass
-  NS_INIT_ISUPPORTS();
-}
-
-// nsCMSMessage destructor
-nsCMSMessage::~nsCMSMessage()
-{
-  if (mMessage) NSS_CMSMessage_Destroy(mMessage);
-}
-
-// nssCMSMessage initializer
-nsresult nsCMSMessage::
-Init()
-{
-  nsresult rv = NS_OK;
-
-  mMessage = NSS_CMSMessage_Create(NULL);
-  if (!mMessage) rv = NS_ERROR_OUT_OF_MEMORY;
-
-  return rv;
-}
-
-/* boolean isSigned(); */
-NS_IMETHODIMP nsCMSMessage::
-IsSigned(PRBool * _retval)
-{
-  nsresult rv = NS_OK;
-
-  /* Use location of object as indicator signed state */
-  *_retval = (((long)mMessage & 0x80) != 0);
-
-  return rv;
-}
 
 /*****
  * nsCMSManager

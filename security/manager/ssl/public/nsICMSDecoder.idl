@@ -36,11 +36,12 @@ interface nsIHash : nsISupports
   const short HASH_AlgMD2  = 1;
   const short HASH_AlgMD5  = 2;
   const short HASH_AlgSHA1 = 3;
-  const unsigned long MD2_LENGTH  = 16;
-  const unsigned long MD5_LENGTH  = 16;
-  const unsigned long SHA1_LENGTH = 20;
-  const unsigned long MAX_HASH_LENGTH = SHA1_LENGTH;  
+  const unsigned long MD2_LEN  = 16;
+  const unsigned long MD5_LEN  = 16;
+  const unsigned long SHA1_LEN = 20;
+  const unsigned long MAX_HASH_LEN = SHA1_LEN;  
 
+  unsigned long resultLen(in short aAlg);
   void create(in short aAlg);
   void begin();
   void update(in UnsignedCharPtr aBuf, in  unsigned long aLen);
@@ -54,6 +55,11 @@ interface nsIHash : nsISupports
 [uuid(a4557478-ae16-11d5-ba4b-00108303b117)]
 interface nsICMSMessage : nsISupports
 {
+  void contentIsSigned(out boolean aSigned);
+  void contentIsEncrypted(out boolean aEncrypted);
+  void getSignerCommonName(out string aName);
+  void getSignerEmailAddress(out string aEmail);
+  void verifySignature();
   void verifyDetachedSignature();
 };
 
@@ -76,4 +82,5 @@ interface nsICMSDecoder : nsISupports
 %{C++
 #define NS_CMSDECODER_CONTRACTID "@mozilla.org/nsCMSDecoder;1"
 #define NS_CMSMESSAGE_CONTRACTID "@mozilla.org/nsCMSMessage;1"
+#define NS_HASH_CONTRACTID "@mozilla.org/nsHash;1"
 %}
