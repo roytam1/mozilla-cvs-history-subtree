@@ -227,6 +227,8 @@ interface nsIMsgDBView : nsISupports
     boolean navigateStatus(in nsMsgNavigationTypeValue motion, in nsMsgViewIndex index, out nsMsgKey selection, in unsigned long numSelected);
 
 	attribute nsIDOMElement sortedColumn;
+   
+    readonly attribute nsIMsgFolder msgFolder;
 
     /**
      * temporary, so we can inspect from js

@@ -863,24 +863,8 @@ function GetSelectedMessages()
 
 function GetLoadedMsgFolder()
 {
-	var loadedFolder = GetThreadTreeFolder();
-	var folderUri = loadedFolder.getAttribute("ref");
-	if(folderUri && folderUri != "" && folderUri !="null")
-	{
-		var folderResource = RDF.GetResource(folderUri);
-		if(folderResource)
-		{
-			try {
-				var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
-				return msgFolder;
-			}
-			catch (ex) {
-				dump(ex + "\n");
-				dump("we know about this.  see bug #35591\n");
-			}
-		}
-	}
-	return null;
+    if (!gDBView) return null;
+    return gDBView.msgFolder;
 }
 
 function GetLoadedMessage()

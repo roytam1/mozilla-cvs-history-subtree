@@ -752,7 +752,7 @@ NS_IMETHODIMP nsMsgDBView::GetCommandStatus(nsMsgViewCommandTypeValue command, P
 
   GetSelectedIndices(&selection);
 
-  nsMsgViewIndex *indices = selection.GetData();
+  //nsMsgViewIndex *indices = selection.GetData();
   PRInt32 numindices = selection.GetSize();
 
   nsresult rv = NS_OK;
@@ -1801,7 +1801,7 @@ nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded
 {
 	PRUint32			flags = m_flags[index];
 	nsMsgKey		firstIdInThread;
-  nsMsgKey        startMsg = nsMsgKey_None;
+    //nsMsgKey        startMsg = nsMsgKey_None;
 	nsresult		rv = NS_OK;
 	PRUint32			numExpanded = 0;
 
@@ -3059,3 +3059,10 @@ nsresult nsMsgDBView::SetThreadWatched(nsIMsgThread *thread, nsMsgViewIndex inde
 	return rv;
 }
 
+NS_IMETHODIMP nsMsgDBView::GetMsgFolder(nsIMsgFolder **aMsgFolder)
+{
+  NS_ENSURE_ARG_POINTER(aMsgFolder);
+  *aMsgFolder = m_folder;
+  NS_IF_ADDREF(*aMsgFolder);
+  return NS_OK;
+}
