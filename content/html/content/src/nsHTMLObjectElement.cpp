@@ -93,6 +93,7 @@ public:
 
 protected:
   PRPackedBool mIsDoneAddingChildren;
+  nsCString mType;
 };
 
 nsresult
@@ -231,10 +232,30 @@ NS_IMPL_INT_ATTR(nsHTMLObjectElement, Hspace, hspace)
 NS_IMPL_STRING_ATTR(nsHTMLObjectElement, Name, name)
 NS_IMPL_STRING_ATTR(nsHTMLObjectElement, Standby, standby)
 NS_IMPL_INT_ATTR(nsHTMLObjectElement, TabIndex, tabindex)
-NS_IMPL_STRING_ATTR(nsHTMLObjectElement, Type, type)
+//NS_IMPL_STRING_ATTR(nsHTMLObjectElement, Type, type)
 NS_IMPL_STRING_ATTR(nsHTMLObjectElement, UseMap, usemap)
 NS_IMPL_INT_ATTR(nsHTMLObjectElement, Vspace, vspace)
 NS_IMPL_STRING_ATTR(nsHTMLObjectElement, Width, width)
+
+NS_IMETHODIMP
+nsHTMLObjectElement::GetType(nsAString& aType)
+{
+  if (mType.IsEmpty()) {
+    GetAttr(kNameSpaceID_None, nsHTMLAtoms::type, aType);
+  } else {
+    CopyUTF8toUTF16(mType, aType);
+  }
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHTMLObjectElement::SetType(const nsAString& aType)
+{
+  CopyUTF16toUTF8(aType, mType);
+
+  return NS_OK;
+}
 
 
 NS_IMETHODIMP

@@ -55,6 +55,7 @@ REQUIRES	= xpcom \
 		  oji \
 		  exthandler \
 		  docshell \
+		  webshell \
 		  windowwatcher \
 		  imglib2 \
 		  layout \

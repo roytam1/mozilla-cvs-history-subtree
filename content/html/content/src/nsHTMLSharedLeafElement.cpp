@@ -101,6 +101,9 @@ public:
                                nsAString& aResult) const;
   NS_IMETHOD GetAttributeMappingFunction(nsMapRuleToAttributesFunc& aMapRuleFunc) const;
   NS_IMETHOD_(PRBool) IsAttributeMapped(const nsIAtom* aAttribute) const;
+
+protected:
+  nsCString mType;
 };
 
 nsresult
@@ -199,8 +202,28 @@ NS_IMPL_STRING_ATTR(nsHTMLSharedLeafElement, Align, align)
 NS_IMPL_STRING_ATTR(nsHTMLSharedLeafElement, Height, height)
 NS_IMPL_STRING_ATTR(nsHTMLSharedLeafElement, Width, width)
 NS_IMPL_STRING_ATTR(nsHTMLSharedLeafElement, Name, name)
-NS_IMPL_STRING_ATTR(nsHTMLSharedLeafElement, Type, type)
+//NS_IMPL_STRING_ATTR(nsHTMLSharedLeafElement, Type, type)
 NS_IMPL_STRING_ATTR(nsHTMLSharedLeafElement, Src, src)
+
+NS_IMETHODIMP
+nsHTMLSharedLeafElement::GetType(nsAString& aType)
+{
+  if (mType.IsEmpty()) {
+    GetAttr(kNameSpaceID_None, nsHTMLAtoms::type, aType);
+  } else {
+    CopyUTF8toUTF16(mType, aType);
+  }
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHTMLSharedLeafElement::SetType(const nsAString& aType)
+{
+  CopyUTF16toUTF8(aType, mType);
+
+  return NS_OK;
+}
 
 // nsIDOMHTMLParamElement
 NS_IMPL_STRING_ATTR(nsHTMLSharedLeafElement, Value, value)

@@ -14,7 +14,7 @@
  *
  * The Original Code is mozilla.org code.
  *
- * The Initial Developer of the Original Code is 
+ * The Initial Developer of the Original Code is
  * Netscape Communications Corporation.
  * Portions created by the Initial Developer are Copyright (C) 1998
  * the Initial Developer. All Rights Reserved.
@@ -46,13 +46,14 @@
 #include "nsIMIMEService.h"
 #include "nsIMIMEInfo.h"
 #include "nsIFile.h"
+#include "nsIPrefService.h"
 
 
 MimeTypeArrayImpl::MimeTypeArrayImpl(nsIDOMNavigator* navigator)
 {
-	mNavigator = navigator;
-	mMimeTypeCount = 0;
-	mMimeTypeArray = nsnull;
+  mNavigator = navigator;
+  mMimeTypeCount = 0;
+  mMimeTypeArray = nsnull;
 }
 
 MimeTypeArrayImpl::~MimeTypeArrayImpl()
@@ -76,29 +77,29 @@ NS_IMPL_RELEASE(MimeTypeArrayImpl)
 NS_IMETHODIMP
 MimeTypeArrayImpl::GetLength(PRUint32* aLength)
 {
-	if (mMimeTypeArray == nsnull) {
-		nsresult rv = GetMimeTypes();
-		if (rv != NS_OK)
-			return rv;
-	}
-	*aLength = mMimeTypeCount;
-	return NS_OK;
+  if (mMimeTypeArray == nsnull) {
+    nsresult rv = GetMimeTypes();
+    if (rv != NS_OK)
+      return rv;
+  }
+  *aLength = mMimeTypeCount;
+  return NS_OK;
 }
 
 NS_IMETHODIMP
 MimeTypeArrayImpl::Item(PRUint32 aIndex, nsIDOMMimeType** aReturn)
 {
-	if (mMimeTypeArray == nsnull) {
-		nsresult rv = GetMimeTypes();
-		if (rv != NS_OK)
-			return rv;
-	}
-	if (aIndex < mMimeTypeCount) {
-		*aReturn = mMimeTypeArray[aIndex];
-		NS_IF_ADDREF(*aReturn);
-		return NS_OK;
-	}
-	return NS_ERROR_FAILURE;
+  if (mMimeTypeArray == nsnull) {
+    nsresult rv = GetMimeTypes();
+    if (rv != NS_OK)
+      return rv;
+  }
+  if (aIndex < mMimeTypeCount) {
+    *aReturn = mMimeTypeArray[aIndex];
+    NS_IF_ADDREF(*aReturn);
+    return NS_OK;
+  }
+  return NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP
@@ -116,10 +117,10 @@ MimeTypeArrayImpl::NamedItem(const nsAString& aName,
 
   PRUint32 i;
 
+  nsAutoString type;
   for (i = 0; i < mMimeTypeCount; i++) {
     nsIDOMMimeType *mtype = mMimeTypeArray[i];
 
-    nsAutoString type;
     mtype->GetType(type);
 
     if (type.Equals(aName)) {
@@ -200,53 +201,53 @@ nsresult MimeTypeArrayImpl::GetMimeTypes()
   NS_PRECONDITION(!mMimeTypeArray && mMimeTypeCount==0,
                       "already initialized");
 
-	nsIDOMPluginArray* pluginArray = nsnull;
-	nsresult rv = mNavigator->GetPlugins(&pluginArray);
-	if (rv == NS_OK) {
-		// count up all possible MimeTypes, and collect them here. Later,
-		// we'll remove duplicates.
-		mMimeTypeCount = 0;
-		PRUint32 pluginCount = 0;
-		rv = pluginArray->GetLength(&pluginCount);
-		if (rv == NS_OK) {
-			PRUint32 i;
-			for (i = 0; i < pluginCount; i++) {
-				nsIDOMPlugin* plugin = nsnull;
-				if (pluginArray->Item(i, &plugin) == NS_OK) {
-					PRUint32 mimeTypeCount = 0;
-					if (plugin->GetLength(&mimeTypeCount) == NS_OK)
-						mMimeTypeCount += mimeTypeCount;
-					NS_RELEASE(plugin);
-				}
-			}
-			// now we know how many there are, start gathering them.
-			mMimeTypeArray = new nsIDOMMimeType*[mMimeTypeCount];
-			if (mMimeTypeArray == nsnull)
-				return NS_ERROR_OUT_OF_MEMORY;
-			PRUint32 mimeTypeIndex = 0;
-			PRUint32 k;
-			for (k = 0; k < pluginCount; k++) {
-				nsIDOMPlugin* plugin = nsnull;
-				if (pluginArray->Item(k, &plugin) == NS_OK) {
-					PRUint32 mimeTypeCount = 0;
-					if (plugin->GetLength(&mimeTypeCount) == NS_OK) {
-						for (PRUint32 j = 0; j < mimeTypeCount; j++)
-							plugin->Item(j, &mMimeTypeArray[mimeTypeIndex++]);
-					}
-					NS_RELEASE(plugin);
-				}
-			}
-		}
-		NS_RELEASE(pluginArray);
-	}
-	return rv;
+  nsIDOMPluginArray* pluginArray = nsnull;
+  nsresult rv = mNavigator->GetPlugins(&pluginArray);
+  if (rv == NS_OK) {
+    // count up all possible MimeTypes, and collect them here. Later,
+    // we'll remove duplicates.
+    mMimeTypeCount = 0;
+    PRUint32 pluginCount = 0;
+    rv = pluginArray->GetLength(&pluginCount);
+    if (rv == NS_OK) {
+      PRUint32 i;
+      for (i = 0; i < pluginCount; i++) {
+        nsIDOMPlugin* plugin = nsnull;
+        if (pluginArray->Item(i, &plugin) == NS_OK) {
+          PRUint32 mimeTypeCount = 0;
+          if (plugin->GetLength(&mimeTypeCount) == NS_OK)
+            mMimeTypeCount += mimeTypeCount;
+          NS_RELEASE(plugin);
+        }
+      }
+      // now we know how many there are, start gathering them.
+      mMimeTypeArray = new nsIDOMMimeType*[mMimeTypeCount];
+      if (mMimeTypeArray == nsnull)
+        return NS_ERROR_OUT_OF_MEMORY;
+      PRUint32 mimeTypeIndex = 0;
+      PRUint32 k;
+      for (k = 0; k < pluginCount; k++) {
+        nsIDOMPlugin* plugin = nsnull;
+        if (pluginArray->Item(k, &plugin) == NS_OK) {
+          PRUint32 mimeTypeCount = 0;
+          if (plugin->GetLength(&mimeTypeCount) == NS_OK) {
+            for (PRUint32 j = 0; j < mimeTypeCount; j++)
+              plugin->Item(j, &mMimeTypeArray[mimeTypeIndex++]);
+          }
+          NS_RELEASE(plugin);
+        }
+      }
+    }
+    NS_RELEASE(pluginArray);
+  }
+  return rv;
 }
 
 MimeTypeElementImpl::MimeTypeElementImpl(nsIDOMPlugin* aPlugin,
                                          nsIDOMMimeType* aMimeType)
 {
-	mPlugin = aPlugin;
-	mMimeType = aMimeType;
+  mPlugin = aPlugin;
+  mMimeType = aMimeType;
 }
 
 MimeTypeElementImpl::~MimeTypeElementImpl()
@@ -269,27 +270,42 @@ NS_IMPL_RELEASE(MimeTypeElementImpl)
 NS_IMETHODIMP
 MimeTypeElementImpl::GetDescription(nsAString& aDescription)
 {
-	return mMimeType->GetDescription(aDescription);
+  return mMimeType->GetDescription(aDescription);
 }
 
 NS_IMETHODIMP
 MimeTypeElementImpl::GetEnabledPlugin(nsIDOMPlugin** aEnabledPlugin)
-{	
-	*aEnabledPlugin = mPlugin;
-	NS_IF_ADDREF(*aEnabledPlugin);
-	return NS_OK;
+{
+  nsAutoString type;
+  GetType(type);
+
+  PRBool disabled = PR_FALSE;
+
+  if (type.Length() == 1 && type.First() == '*') {
+    nsCOMPtr<nsIPrefBranch> prefBranch =
+      do_GetService(NS_PREFSERVICE_CONTRACTID);
+    if (prefBranch) {
+      // Check if the default plugin is disabled.
+      prefBranch->GetBoolPref("plugin.default_plugin_disabled", &disabled);
+    }
+  }
+
+  *aEnabledPlugin = disabled ? nsnull : mPlugin;
+  NS_IF_ADDREF(*aEnabledPlugin);
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP
 MimeTypeElementImpl::GetSuffixes(nsAString& aSuffixes)
 {
-	return mMimeType->GetSuffixes(aSuffixes);
+  return mMimeType->GetSuffixes(aSuffixes);
 }
 
 NS_IMETHODIMP
 MimeTypeElementImpl::GetType(nsAString& aType)
 {
-	return mMimeType->GetType(aType);
+  return mMimeType->GetType(aType);
 }
 
 // QueryInterface implementation for HelperMimeTypeImpl
@@ -298,28 +314,28 @@ NS_IMPL_ISUPPORTS1(HelperMimeTypeImpl, nsIDOMMimeType)
 NS_IMETHODIMP
 HelperMimeTypeImpl::GetDescription(nsAString& aDescription)
 {
-	aDescription.Truncate();
-	return NS_OK;
+  aDescription.Truncate();
+  return NS_OK;
 }
 
 NS_IMETHODIMP
 HelperMimeTypeImpl::GetEnabledPlugin(nsIDOMPlugin** aEnabledPlugin)
 {
-	*aEnabledPlugin = nsnull;
-	return NS_OK;
+  *aEnabledPlugin = nsnull;
+  return NS_OK;
 }
-  
+
 NS_IMETHODIMP
 HelperMimeTypeImpl::GetSuffixes(nsAString& aSuffixes)
 {
-	aSuffixes.Truncate();
-	return NS_OK;
+  aSuffixes.Truncate();
+  return NS_OK;
 }
-  
+
 NS_IMETHODIMP
 HelperMimeTypeImpl::GetType(nsAString& aType)
 {
-	aType = mType;
-	return NS_OK;
+  aType = mType;
+  return NS_OK;
 }
 

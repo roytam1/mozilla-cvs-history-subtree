@@ -493,6 +493,7 @@ private:
   PRBool      mIsDestroyed;
   PRBool      mOverrideInternalTypes; // set by pref plugin.override_internal_types
   PRBool      mAllowAlienStarHandler;  // set by pref plugin.allow_alien_star_handler
+  PRBool      mDefaultPluginDisabled;
 
   nsActivePluginList mActivePluginList;
   nsVoidArray mUnusedLibraries;
