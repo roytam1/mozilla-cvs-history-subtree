@@ -704,7 +704,7 @@ net_send_password_response(ActiveEntry * ce)
         cd->next_state = FTP_ERROR_DONE;
 #if defined(SingleSignon)
 	if (cd->cc) { /* just for safety, probably cd->cc can never be null */
-	    SI_RemoveUser(cd->cc->hostname, cd->cc->hostname, TRUE);
+	    SI_RemoveUser(cd->cc->hostname, cd->username, TRUE);
 	}
 #endif
         FE_Alert(ce->window_id, cd->return_msg ? cd->return_msg :
