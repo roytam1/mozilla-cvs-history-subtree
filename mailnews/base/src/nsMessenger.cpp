@@ -1078,7 +1078,7 @@ NS_IMETHODIMP
 nsMessenger::CopyMessages(nsIRDFCompositeDataSource *database,
                           nsIRDFResource *srcResource, // folder
 						  nsIRDFResource *dstResource,
-                          nsISupportsArray *argumentArray, // nsIMessages
+                          nsISupportsArray *argumentArray, // nsIMsgDBHdrs
                           PRBool isMove)
 {
 	nsresult rv;

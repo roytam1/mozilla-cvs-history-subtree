@@ -398,26 +398,7 @@ function DownloadSelectedMessages(compositeDataSource, messages, markFlagged)
 
 function MarkThreadAsRead(compositeDataSource, message)
 {
-    dump("fix this\n");
-	if(message)
-	{
-		var folder = message.msgFolder
-		if(folder)
-		{
-			var thread = folder.getThreadForMessage(message);
-			if(thread)
-			{
-				var folderResource = folder.QueryInterface(Components.interfaces.nsIRDFResource);
-				var folderResourceArray = Components.classes["@mozilla.org/supports-array;1"].createInstance(Components.interfaces.nsISupportsArray);
-				folderResourceArray.AppendElement(folderResource);
-
-				var argumentArray = Components.classes["@mozilla.org/supports-array;1"].createInstance(Components.interfaces.nsISupportsArray);
-				argumentArray.AppendElement(thread);
-
-				DoRDFCommand(compositeDataSource, "http://home.netscape.com/NC-rdf#MarkThreadRead", folderResourceArray, argumentArray);
-			}
-		}
-	}
+  gDBView.doCommand(nsMsgViewCommandType.markThreadRead);
 }
 
 

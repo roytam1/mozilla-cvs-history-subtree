@@ -1139,6 +1139,7 @@ NS_IMETHODIMP nsMsgDBView::DoCommand(nsMsgViewCommandTypeValue command)
   case nsMsgViewCommandType::unflagMessages:
   case nsMsgViewCommandType::deleteMsg:
   case nsMsgViewCommandType::deleteNoTrash:
+  case nsMsgViewCommandType::markThreadRead:
 		// since the FE could have constructed the list of indices in
 		// any order (e.g. order of discontiguous selection), we have to
 		// sort the indices in order to find out which nsMsgViewIndex will
@@ -1168,17 +1169,12 @@ NS_IMETHODIMP nsMsgDBView::DoCommand(nsMsgViewCommandTypeValue command)
         mOutliner->Invalidate();
     }
     break;
-  case nsMsgViewCommandType::markThreadRead:
-    printf("implement mark thread read\n");
-    break;
   case nsMsgViewCommandType::markAllRead:
-    printf("implement mark all read\n");
-    break;
-  case nsMsgViewCommandType::toggleThreadKilled:
-    printf("implement toggle thread killed\n");
+    if (m_folder)
+      rv = m_folder->MarkAllMessagesRead();
     break;
   case nsMsgViewCommandType::toggleThreadWatched:
-    printf("implement toggle thread watched\n");
+    rv = ToggleWatched(indices,	numIndices);
     break;
   case nsMsgViewCommandType::expandAll:
     rv = ExpandAll();
@@ -1213,7 +1209,6 @@ NS_IMETHODIMP nsMsgDBView::GetCommandStatus(nsMsgViewCommandTypeValue command, P
   case nsMsgViewCommandType::toggleMessageRead:
   case nsMsgViewCommandType::flagMessages:
   case nsMsgViewCommandType::unflagMessages:
-  case nsMsgViewCommandType::toggleThreadKilled:
   case nsMsgViewCommandType::toggleThreadWatched:
   case nsMsgViewCommandType::deleteMsg:
   case nsMsgViewCommandType::deleteNoTrash:

@@ -155,10 +155,6 @@ interface nsMsgViewCommandType
   const nsMsgViewCommandTypeValue flagMessages = 3;
   const nsMsgViewCommandTypeValue unflagMessages = 4;
 
-  /**
-   * must match nsMsgNavigationTypeValue toggleThreadKilled 
-   */
-  const nsMsgViewCommandTypeValue toggleThreadKilled = 5;
   const nsMsgViewCommandTypeValue toggleThreadWatched = 6;
 
   const nsMsgViewCommandTypeValue deleteMsg = 7;
