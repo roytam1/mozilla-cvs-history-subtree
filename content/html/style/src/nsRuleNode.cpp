@@ -414,6 +414,17 @@ nsRuleNode::GetRule(nsIStyleRule** aResult)
 NS_IMETHODIMP
 nsRuleNode::ClearCachedData(nsIStyleRule* aRule)
 {
+  nsRuleNode* curr = this;
+  while (curr) {
+    if (curr->mRule == aRule) {
+      // We have a match.  Blow away all data stored at this node.
+      if (mStyleData.mResetData || mStyleData.mInheritedData)
+        mStyleData.Destroy(0, mPresContext);
+      break;
+    }
+    curr = curr->mParent;
+  }
+
   return NS_OK;
 }
 
