@@ -28,7 +28,8 @@
 NS_IMPL_ISUPPORTS1(nsImageFrame, nsIImageFrame)
 
 nsImageFrame::nsImageFrame() :
-  mBits(nsnull)
+  mInitalized(PR_FALSE),
+  mAlphaData(nsnull)
 {
   NS_INIT_ISUPPORTS();
   /* member initializers and constructor code */
@@ -37,97 +38,8 @@ nsImageFrame::nsImageFrame() :
 nsImageFrame::~nsImageFrame()
 {
   /* destructor code */
-  delete[] mBits;
-  mBits = nsnull;
+  delete mAlphaData;
 }
-
-
-
-#include <windows.h>
-
-void errhandler(char *foo, void *a) {}
-
-void CreateBMPFile(HWND hwnd, LPTSTR pszFile, PBITMAPINFO pbi, 
-                  HBITMAP hBMP, HDC hDC) 
- { 
-     HANDLE hf;                 // file handle 
-    BITMAPFILEHEADER hdr;       // bitmap file-header 
-    PBITMAPINFOHEADER pbih;     // bitmap info-header 
-    LPBYTE lpBits;              // memory pointer 
-    DWORD dwTotal;              // total count of bytes 
-    DWORD cb;                   // incremental count of bytes 
-    BYTE *hp;                   // byte pointer 
-    DWORD dwTmp; 
-
-    pbih = (PBITMAPINFOHEADER) pbi; 
-    lpBits = (LPBYTE) GlobalAlloc(GMEM_FIXED, pbih->biSizeImage);
-
-    if (!lpBits) 
-         errhandler("GlobalAlloc", hwnd); 
-
-    // Retrieve the color table (RGBQUAD array) and the bits 
-    // (array of palette indices) from the DIB. 
-    if (!GetDIBits(hDC, hBMP, 0, (WORD) pbih->biHeight, lpBits, pbi, 
-        DIB_RGB_COLORS)) 
-    {
-        errhandler("GetDIBits", hwnd); 
-    }
-
-    // Create the .BMP file. 
-    hf = CreateFile(pszFile, 
-                   GENERIC_READ | GENERIC_WRITE, 
-                   (DWORD) 0, 
-                    NULL, 
-                   CREATE_ALWAYS, 
-                   FILE_ATTRIBUTE_NORMAL, 
-                   (HANDLE) NULL); 
-    if (hf == INVALID_HANDLE_VALUE) 
-        errhandler("CreateFile", hwnd); 
-    hdr.bfType = 0x4d42;        // 0x42 = "B" 0x4d = "M" 
-    // Compute the size of the entire file. 
-    hdr.bfSize = (DWORD) (sizeof(BITMAPFILEHEADER) + 
-                 pbih->biSize + pbih->biClrUsed 
-                 * sizeof(RGBQUAD) + pbih->biSizeImage); 
-    hdr.bfReserved1 = 0; 
-    hdr.bfReserved2 = 0; 
-
-    // Compute the offset to the array of color indices. 
-    hdr.bfOffBits = (DWORD) sizeof(BITMAPFILEHEADER) + 
-                    pbih->biSize + pbih->biClrUsed 
-                    * sizeof (RGBQUAD); 
-
-    // Copy the BITMAPFILEHEADER into the .BMP file. 
-    if (!WriteFile(hf, (LPVOID) &hdr, sizeof(BITMAPFILEHEADER), 
-        (LPDWORD) &dwTmp,  NULL)) 
-    {
-       errhandler("WriteFile", hwnd); 
-    }
-
-    // Copy the BITMAPINFOHEADER and RGBQUAD array into the file. 
-    if (!WriteFile(hf, (LPVOID) pbih, 
-                   sizeof(BITMAPINFOHEADER) + pbih->biClrUsed * sizeof (RGBQUAD), 
-                  (LPDWORD) &dwTmp,
-                  (NULL)
-                  ) 
-       )
-        errhandler("WriteFile", hwnd); 
-
-    // Copy the array of color indices into the .BMP file. 
-    dwTotal = cb = pbih->biSizeImage; 
-    hp = lpBits; 
-    if (!WriteFile(hf, (LPSTR) hp, (int) cb, (LPDWORD) &dwTmp,NULL)) 
-           errhandler("WriteFile", hwnd); 
-
-    // Close the .BMP file. 
-     if (!CloseHandle(hf)) 
-           errhandler("CloseHandle", hwnd); 
-
-    // Free memory. 
-    GlobalFree((HGLOBAL)lpBits);
-}
-
-
-
 
 /* void init (in gfx_coord aX, in gfx_coord aY, in gfx_dimension aWidth, in gfx_dimension aHeight, in gfx_format aFormat); */
 NS_IMETHODIMP nsImageFrame::Init(gfx_coord aX, gfx_coord aY, gfx_dimension aWidth, gfx_dimension aHeight, gfx_format aFormat)
@@ -137,36 +49,66 @@ NS_IMETHODIMP nsImageFrame::Init(gfx_coord aX, gfx_coord aY, gfx_dimension aWidt
     return NS_ERROR_FAILURE;
   }
 
-  delete[] mBits;
+  if (mInitalized)
+    return NS_ERROR_FAILURE;
+
+  mInitalized = PR_TRUE;
 
   mRect.SetRect(aX, aY, aWidth, aHeight);
   mFormat = aFormat;
 
+  PRInt32 ceilWidth(GFXCoordToIntCeil(mRect.width));
+
+
+  // XXX this makes an assumption about what values these have and what is between them.. i'm being bad.
+  if (mFormat >= nsIGFXFormat::RGB_A1 && mFormat <= nsIGFXFormat::BGR_A8)
+    mAlphaData = new ImageData;
+
   switch (aFormat) {
+  case nsIGFXFormat::BGR:
   case nsIGFXFormat::RGB:
-  case nsIGFXFormat::RGB_A1:
-  case nsIGFXFormat::RGB_A8:
-    mDepth = 24;
+    mImageData.depth = 24;
     break;
+  case nsIGFXFormat::BGRA:
   case nsIGFXFormat::RGBA:
-    mDepth = 32;
+    mImageData.depth = 32;
     break;
+
+  case nsIGFXFormat::BGR_A1:
+  case nsIGFXFormat::RGB_A1:
+    mImageData.depth = 24;
+    mAlphaData->depth = 1;
+    mAlphaData->bytesPerRow = (((ceilWidth + 7) / 8) + 3) & ~0x3;
+    break;
+  case nsIGFXFormat::BGR_A8:
+  case nsIGFXFormat::RGB_A8:
+    mImageData.depth = 24;
+    mAlphaData->depth = 8;
+    mAlphaData->bytesPerRow = (ceilWidth + 3) & ~0x3;
+    break;
+
   default:
     printf("unsupposed gfx_format\n");
     break;
   }
 
-  PRInt32 ceilWidth(GFXCoordToIntCeil(mRect.width));
 
-  mBytesPerRow = (ceilWidth * mDepth) >> 5;
+  mImageData.bytesPerRow = (ceilWidth * mImageData.depth) >> 5;
 
-  if ((ceilWidth * mDepth) & 0x1F)
-    mBytesPerRow++;
-  mBytesPerRow <<= 2;
+  if ((ceilWidth * mImageData.depth) & 0x1F)
+    mImageData.bytesPerRow++;
+  mImageData.bytesPerRow <<= 2;
 
-  mBitsLength = mBytesPerRow * GFXCoordToIntCeil(mRect.height);
 
-  mBits = new PRUint8[mBitsLength];
+  PRInt32 ceilHeight = GFXCoordToIntCeil(mRect.height);
+
+  mImageData.length = mImageData.bytesPerRow * ceilHeight;
+  mImageData.data = new PRUint8[mImageData.length];
+
+  if (mAlphaData) {
+    mAlphaData->length = mAlphaData->bytesPerRow * ceilHeight;
+    mAlphaData->data = new PRUint8[mAlphaData->length];
+  }
 
   return NS_OK;
 }
@@ -174,7 +116,7 @@ NS_IMETHODIMP nsImageFrame::Init(gfx_coord aX, gfx_coord aY, gfx_dimension aWidt
 /* readonly attribute gfx_coord x; */
 NS_IMETHODIMP nsImageFrame::GetX(gfx_coord *aX)
 {
-  if (!mBits)
+  if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
   *aX = mRect.x;
@@ -184,7 +126,7 @@ NS_IMETHODIMP nsImageFrame::GetX(gfx_coord *aX)
 /* readonly attribute gfx_coord y; */
 NS_IMETHODIMP nsImageFrame::GetY(gfx_coord *aY)
 {
-  if (!mBits)
+  if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
   *aY = mRect.y;
@@ -195,7 +137,7 @@ NS_IMETHODIMP nsImageFrame::GetY(gfx_coord *aY)
 /* readonly attribute gfx_dimension width; */
 NS_IMETHODIMP nsImageFrame::GetWidth(gfx_dimension *aWidth)
 {
-  if (!mBits)
+  if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
   *aWidth = mRect.width;
@@ -205,7 +147,7 @@ NS_IMETHODIMP nsImageFrame::GetWidth(gfx_dimension *aWidth)
 /* readonly attribute gfx_dimension height; */
 NS_IMETHODIMP nsImageFrame::GetHeight(gfx_dimension *aHeight)
 {
-  if (!mBits)
+  if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
   *aHeight = mRect.height;
@@ -217,7 +159,7 @@ NS_IMETHODIMP nsImageFrame::GetRect(nsRect2 **aRect)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 
-  if (!mBits)
+  if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
 //  *aRect = mRect;
@@ -227,91 +169,10 @@ NS_IMETHODIMP nsImageFrame::GetRect(nsRect2 **aRect)
 /* readonly attribute gfx_format format; */
 NS_IMETHODIMP nsImageFrame::GetFormat(gfx_format *aFormat)
 {
-  if (!mBits)
+  if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
-#if 0
-
-  HWND bg = GetDesktopWindow();
-  HDC memDC = GetDC(NULL);
-
-  LPBITMAPINFOHEADER mBHead = (LPBITMAPINFOHEADER)new char[sizeof(BITMAPINFO)];
-
-  mBHead->biSize = sizeof(BITMAPINFOHEADER);
-	mBHead->biWidth = GFXCoordToIntCeil(mRect.width);
-	mBHead->biHeight = -GFXCoordToIntCeil(mRect.height);
-	mBHead->biPlanes = 1;
-	mBHead->biBitCount = mDepth;
-	mBHead->biCompression = BI_RGB;
-	mBHead->biSizeImage = mBitsLength;            // not compressed, so we dont need this to be set
-	mBHead->biXPelsPerMeter = 0;
-	mBHead->biYPelsPerMeter = 0;
-	mBHead->biClrUsed = 0;
-	mBHead->biClrImportant = 0;
-
-  HBITMAP memBM = ::CreateDIBitmap(memDC,mBHead,CBM_INIT,mBits,(LPBITMAPINFO)mBHead,
-				                           DIB_RGB_COLORS);
-
-  SelectObject(memDC, memBM);
-
-
-	mBHead->biHeight = -mBHead->biHeight;
-
-  CreateBMPFile(bg, "c:\\whatever.bmp", (LPBITMAPINFO)mBHead, 
-                memBM, memDC) ;
-
-  ReleaseDC(NULL, memDC);
-
-  DeleteObject(memBM);
-
-#endif
   *aFormat = mFormat;
-  return NS_OK;
-}
-
-/* readonly attribute unsigned long bytesPerRow; */
-NS_IMETHODIMP nsImageFrame::GetBytesPerRow(PRUint32 *aBytesPerRow)
-{
-  if (!mBits)
-    return NS_ERROR_NOT_INITIALIZED;
-
-  *aBytesPerRow = mBytesPerRow;
-  return NS_OK;
-}
-
-/* readonly attribute unsigned long bitsLength; */
-NS_IMETHODIMP nsImageFrame::GetBitsLength(PRUint32 *aBitsLength)
-{
-  if (!mBits)
-    return NS_ERROR_NOT_INITIALIZED;
-
-  *aBitsLength = mBitsLength;
-  return NS_OK;
-}
-
-/* void getBits([array, size_is(length)] out PRUint8 bits, out unsigned long length); */
-NS_IMETHODIMP nsImageFrame::GetBits(PRUint8 **aBits, PRUint32 *length)
-{
-  if (!mBits)
-    return NS_ERROR_NOT_INITIALIZED;
-
-  *aBits = mBits;
-  *length = mBitsLength;
-
-  return NS_OK;
-}
-
-/* void setBits ([array, size_is (length), const] in PRUint8 data, in unsigned long length, in long offset); */
-NS_IMETHODIMP nsImageFrame::SetBits(const PRUint8 *data, PRUint32 length, PRInt32 offset)
-{
-  if (!mBits)
-    return NS_ERROR_NOT_INITIALIZED;
-
-  if (((PRUint32)offset + length) > mBitsLength)
-    return NS_ERROR_FAILURE;
-
-  memcpy(mBits + offset, data, length);
-
   return NS_OK;
 }
 
@@ -324,3 +185,96 @@ NS_IMETHODIMP nsImageFrame::SetTimeout(PRInt32 aTimeout)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
+
+/* readonly attribute unsigned long imageBytesPerRow; */
+NS_IMETHODIMP nsImageFrame::GetImageBytesPerRow(PRUint32 *aBytesPerRow)
+{
+  if (!mInitalized)
+    return NS_ERROR_NOT_INITIALIZED;
+
+  *aBytesPerRow = mImageData.bytesPerRow;
+  return NS_OK;
+}
+
+/* readonly attribute unsigned long imageDataLength; */
+NS_IMETHODIMP nsImageFrame::GetImageDataLength(PRUint32 *aBitsLength)
+{
+  if (!mInitalized)
+    return NS_ERROR_NOT_INITIALIZED;
+
+  *aBitsLength = mImageData.length;
+  return NS_OK;
+}
+
+/* void getImageData([array, size_is(length)] out PRUint8 bits, out unsigned long length); */
+NS_IMETHODIMP nsImageFrame::GetImageData(PRUint8 **aData, PRUint32 *length)
+{
+  if (!mInitalized)
+    return NS_ERROR_NOT_INITIALIZED;
+
+  *aData = mImageData.data;
+  *length = mImageData.length;
+
+  return NS_OK;
+}
+
+/* void setImageData ([array, size_is (length), const] in PRUint8 data, in unsigned long length, in long offset); */
+NS_IMETHODIMP nsImageFrame::SetImageData(const PRUint8 *data, PRUint32 length, PRInt32 offset)
+{
+  if (!mInitalized)
+    return NS_ERROR_NOT_INITIALIZED;
+
+  if (((PRUint32)offset + length) > mImageData.length)
+    return NS_ERROR_FAILURE;
+
+  memcpy(mImageData.data + offset, data, length);
+
+  return NS_OK;
+}
+
+/* readonly attribute unsigned long alphaBytesPerRow; */
+NS_IMETHODIMP nsImageFrame::GetAlphaBytesPerRow(PRUint32 *aBytesPerRow)
+{
+  if (!mInitalized || !mAlphaData)
+    return NS_ERROR_NOT_INITIALIZED;
+
+  *aBytesPerRow = mAlphaData->bytesPerRow;
+  return NS_OK;
+}
+
+/* readonly attribute unsigned long alphaDataLength; */
+NS_IMETHODIMP nsImageFrame::GetAlphaDataLength(PRUint32 *aBitsLength)
+{
+  if (!mInitalized || !mAlphaData)
+    return NS_ERROR_NOT_INITIALIZED;
+
+  *aBitsLength = mAlphaData->length;
+  return NS_OK;
+}
+
+/* void getAlphaData([array, size_is(length)] out PRUint8 bits, out unsigned long length); */
+NS_IMETHODIMP nsImageFrame::GetAlphaData(PRUint8 **aBits, PRUint32 *length)
+{
+  if (!mInitalized || !mAlphaData)
+    return NS_ERROR_NOT_INITIALIZED;
+
+  *aBits = mAlphaData->data;
+  *length = mAlphaData->length;
+
+  return NS_OK;
+}
+
+/* void setAlphaData ([array, size_is (length), const] in PRUint8 data, in unsigned long length, in long offset); */
+NS_IMETHODIMP nsImageFrame::SetAlphaData(const PRUint8 *data, PRUint32 length, PRInt32 offset)
+{
+  if (!mInitalized || !mAlphaData)
+    return NS_ERROR_NOT_INITIALIZED;
+
+  if (((PRUint32)offset + length) > mAlphaData->length)
+    return NS_ERROR_FAILURE;
+
+  memcpy(mAlphaData->data + offset, data, length);
+
+  return NS_OK;
+}
+

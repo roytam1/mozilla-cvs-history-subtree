@@ -33,6 +33,18 @@
     {0x9b, 0x33, 0xd9, 0xa6, 0x32, 0x8f, 0x49, 0xbd} \
 }
 
+struct ImageData
+{
+  ImageData() : bytesPerRow(0), data(nsnull), length(0), depth(0) {}
+  ~ImageData() {
+    delete[] data;
+  }
+  PRUint32 bytesPerRow; // bytes per row
+  PRUint8 *data;
+  PRUint32 length; // length of the data in bytes
+  gfx_depth depth;
+};
+
 class nsImageFrame : public nsIImageFrame
 {
 public:
@@ -44,13 +56,12 @@ public:
 
 private:
   /* additional members */
-  PRUint32 mBytesPerRow;
   nsRect2 mRect;
-  gfx_format mFormat;
 
-  PRUint32 mBitsLength;
+  PRPackedBool mInitalized;   // 8 bits
+  // ???                      // 8 bits
+  gfx_format mFormat;         // 16 bits
 
-  gfx_depth mDepth;
-  PRUint8 *mBits;
+  ImageData mImageData;
+  ImageData *mAlphaData;
 };
-

@@ -86,15 +86,26 @@ interface nsIImageFrame : nsISupports
    */
   readonly attribute gfx_format format;
 
-  readonly attribute unsigned long bytesPerRow;
+  /**
+   * Represents the number of milliseconds until the next frame should be displayed.
+   * @note -1 means that this frame should be displayed forever.
+   */
+  attribute long timeout;
+
+
+
+  /* data accessors */
+
+
+  readonly attribute unsigned long imageBytesPerRow;
 
   /**
    * returns the number of bytes allocated for the image
    */
-  readonly attribute unsigned long bitsLength;
+  readonly attribute unsigned long imageDataLength;
 
   // XXX do we copy here?  lets not...
-  void getBits([array, size_is(length)] out PRUint8 bits, out unsigned long length);
+  void getImageData([array, size_is(length)] out PRUint8 bits, out unsigned long length);
 
   /**
    * Sets \a length bytes of \a data in this object.
@@ -104,15 +115,29 @@ interface nsIImageFrame : nsISupports
    *   the first row of a RGBA32 image, the offset should be 20.
    * @attension should we use PRUint32 instead?
    */
-  void setBits([array, size_is(length), const] in PRUint8 data,
-               in unsigned long length,
-               in long offset);
+  void setImageData([array, size_is(length), const] in PRUint8 data,
+                    in unsigned long length,
+                    in long offset);
 
+
+
+  /* alpha stuff.. used for _A1 and _A8 formated images */
+
+  readonly attribute unsigned long alphaBytesPerRow;
 
   /**
-   * Represents the number of milliseconds until the next frame should be displayed.
-   * @note -1 means that this frame should be displayed forever.
+   * returns the number of bytes allocated for the alpha mask
    */
-  attribute long timeout;
+  readonly attribute unsigned long alphaDataLength;
+
+  // XXX do we copy here?  lets not...
+  void getAlphaData([array, size_is(length)] out PRUint8 bits, out unsigned long length);
+
+  /**
+   * Sets \a length bytes of \a data in this object.
+   */
+  void setAlphaData([array, size_is(length), const] in PRUint8 data,
+                    in unsigned long length,
+                    in long offset);
 
 };
