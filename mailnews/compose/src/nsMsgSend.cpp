@@ -596,8 +596,11 @@ nsMsgComposeAndSend::GatherMimeAttachments()
 		  }
     }
 
-		if (tempfile.failed()) 
+    if (NS_FAILED(tempfile.flush()) || tempfile.failed())
+    {
+			status = NS_MSG_ERROR_WRITING_FILE;
       goto FAIL;
+    }
 
     tempfile.close();
 
@@ -1051,8 +1054,7 @@ nsMsgComposeAndSend::GatherMimeAttachments()
   
   if (mOutputFile) 
   {
-		/* If we don't do this check...ZERO length files can be sent */
-		if (mOutputFile->failed()) 
+		if (NS_FAILED(mOutputFile->flush()) || mOutputFile->failed()) 
     {
 			status = NS_MSG_ERROR_WRITING_FILE;
 			goto FAIL;
@@ -1060,8 +1062,15 @@ nsMsgComposeAndSend::GatherMimeAttachments()
 
     mOutputFile->close();
 		delete mOutputFile;
+	  mOutputFile = nsnull;
+
+		/* If we don't do this check...ZERO length files can be sent */
+		if (mTempFileSpec->GetFileSize() == 0)
+    {
+			status = NS_MSG_ERROR_WRITING_FILE;
+			goto FAIL;
+		}
 	}
-	mOutputFile = nsnull;
 
   mComposeBundle->GetStringByID(NS_MSG_ASSEMB_DONE_MSG, getter_Copies(msg));
   SetStatusMessage( msg );
@@ -4162,6 +4171,9 @@ FAIL:
 
   if (tempOutfile.is_open()) 
   {
+    if (NS_FAILED(tempOutfile.flush()) || tempOutfile.failed())
+      status = NS_MSG_ERROR_WRITING_FILE;
+
     tempOutfile.close();
     if (mCopyFileSpec)
       mCopyFileSpec->CloseStream();
