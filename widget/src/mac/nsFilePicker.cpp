@@ -58,6 +58,7 @@ OSType nsFilePicker::sCurrentProcessSignature = 0;
 //-------------------------------------------------------------------------
 nsFilePicker::nsFilePicker()
   : mAllFilesDisplayed(PR_TRUE)
+  , mApplicationsDisplayed(PR_FALSE)
   , mSelectedType(0)
   , mTypeOffset(0)
 {
@@ -371,8 +372,8 @@ nsFilePicker::GetLocalFiles(const nsString& inTitle, PRBool inAllowMultiple, nsC
   // sets up the |mTypeLists| array so the filter proc can use it
   MapFilterToFileTypes();
 	
-  // allow packages to be chosen if the filter is "*"
-  if (mAllFilesDisplayed)
+  // allow packages to be chosen if the filter is "*" or "..apps"
+  if (mAllFilesDisplayed || mApplicationsDisplayed)
     dialogCreateOptions.optionFlags |= kNavSupportPackages;		
 
   // Display the get file dialog. Only use a filter proc if there are any
@@ -688,6 +689,11 @@ nsFilePicker::MapFilterToFileTypes ( )
       char* filter = ToNewCString(filterWide);
 
       NS_ASSERTION ( filterWide.Length(), "Oops. filepicker.properties not correctly installed");       
+
+      // look for the flag indicating applications
+      if (filterWide.Equals(NS_LITERAL_STRING("..apps")))
+        mApplicationsDisplayed = PR_TRUE;
+
       if ( filterWide.Length() && filter )
       {
         PRUint32 filterIndex = 0;         // Index into the filter string
