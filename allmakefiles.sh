@@ -146,6 +146,14 @@ gfx/src/xlibrgb/Makefile
 gfx/tests/Makefile
 "
 
+MAKEFILES_gfx2="
+gfx2/Makefile
+gfx/public/Makefile
+gfx/src/Makefile
+gfx/src/xlib/Makefile
+gfx/src/mac/Makefile
+"
+
 MAKEFILES_htmlparser="
 htmlparser/Makefile
 htmlparser/robot/Makefile
@@ -958,6 +966,7 @@ $MAKEFILES_embedding
 $MAKEFILES_expat
 $MAKEFILES_extensions
 $MAKEFILES_gfx
+$MAKEFILES_gfx2
 $MAKEFILES_htmlparser
 $MAKEFILES_intl
 $MAKEFILES_java_supplement

@@ -98,6 +98,7 @@ DIRS		+= \
 		expat \
 		htmlparser \
 		gfx \
+		gfx2 \
 		modules/plugin \
 		dom \
 		view \
