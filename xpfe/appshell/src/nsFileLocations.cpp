@@ -96,6 +96,8 @@ void nsSpecialFileSpec::operator = (Type aType)
 	        {
 	            *this = nsSpecialSystemDirectory(nsSpecialSystemDirectory::Mac_PreferencesDirectory);
 	            *this += "Netscape \xC4";
+	            if (!Exists())
+	                CreateDirectory();
 	            break;
 	        }
     #elif defined(XP_PC)
