@@ -178,10 +178,10 @@ BOOTSTRAP_macbrowser := mozilla/camino/config/mozconfig
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-#MOZ_CO_TAG          = <tag>
-NSPR_CO_TAG          = NSPRPUB_PRE_4_2_CLIENT_BRANCH
-NSS_CO_TAG           = NSS_CLIENT_TAG
-LDAPCSDK_CO_TAG      = ldapcsdk_50_client_branch
+MOZ_CO_TAG          = MOZILLA_1_8a6_RELEASE
+NSPR_CO_TAG          = MOZILLA_1_8a6_RELEASE
+NSS_CO_TAG           = MOZILLA_1_8a6_RELEASE
+LDAPCSDK_CO_TAG      = MOZILLA_1_8a6_RELEASE
 LAYOUT_CO_TAG        = REFLOW_20050111_BRANCH
 LOCALES_CO_TAG       =
 
