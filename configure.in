@@ -48,18 +48,34 @@ dnl =
 dnl ========================================================
 CFLAGS="${CFLAGS=}"
 CXXFLAGS="${CXXFLAGS=}"
+LDFLAGS="${LDFLAGS=}"
+HOST_CFLAGS="${HOST_CFLAGS=}"
+HOST_CXXFLAGS="${HOST_CXXFLAGS=}"
+HOST_LDFLAGS="${HOST_LDFLAGS=}"
+_SUBDIR_CC="$CC"
+_SUBDIR_CXX="$CXX"
+_SUBDIR_CFLAGS="$CFLAGS"
+_SUBDIR_CXXFLAGS="$CFLAGS"
+_SUBDIR_LDFLAGS="$LDFLAGS"
+_SUBDIR_HOST_CC="$HOST_CC"
+_SUBDIR_HOST_CFLAGS="$HOST_CFLAGS"
+_SUBDIR_HOST_CXXFLAGS="$HOST_CXXFLAGS"
+_SUBDIR_HOST_LDFLAGS="$HOST_LDFLAGS"
 
+dnl ========================================================
 dnl Set the version number of the libs included with mozilla
 dnl ========================================================
 MOZJPEG=62
 MOZPNG=95
 NSPR_VERSION=3
 
+dnl ========================================================
 dnl Set the minimum version of toolkit libs used by mozilla
 dnl ========================================================
 GTK_VERSION=1.2.0
 LIBIDL_VERSION=0.6.3
 
+dnl ========================================================
 dnl Set various checks
 dnl ========================================================
 MISSING_FULLCIRCLE=
@@ -67,6 +83,7 @@ MISSING_MOTIF=
 MISSING_NSPR=
 MISSING_X=
 
+dnl ==============================================================
 dnl Do not allow a separate objdir build if a srcdir build exists.
 dnl ==============================================================
 _topsrcdir=`cd \`dirname $0\`; pwd`
@@ -100,10 +117,134 @@ then
   fi
 fi
 
-dnl Checks for programs.
 dnl ========================================================
-AC_PROG_CC
-AC_PROG_CXX
+dnl =
+dnl = Check --enable options that may affect the compiler
+dnl =
+dnl ========================================================
+AC_ARG_ENABLE(target,
+    [  --enable-target=\$t         Turn on features for target \$t when build has multiple targets],
+    MOZ_TARGET=`echo $enableval | tr A-Z a-z`,
+    MOZ_TARGET=)
+
+if test "$MOZ_DEBUG"; then
+    CFLAGS="$CFLAGS -g"
+    CXXFLAGS="$CXXFLAGS -g"
+fi
+
+dnl ========================================================
+dnl Checks for compilers.
+dnl ========================================================
+if test "$target" != "$host"; then
+    echo "cross compiling from $host to $target"
+    cross_compiling=yes
+
+    _SAVE_CC="$CC"
+    _SAVE_CFLAGS="$CFLAGS"
+    _SAVE_LDFLAGS="$LDFLAGS"
+
+    AC_MSG_CHECKING([for host c compiler])
+    if test -z "$HOST_CC"; then
+	AC_CHECK_PROGS(HOST_CC, gcc cc /usr/ucb/cc, "")
+	if test -z "$HOST_CC"; then
+	    AC_MSG_ERROR([no acceptable c compiler found in \$PATH])
+	fi
+    fi
+    AC_MSG_RESULT([$HOST_CC])
+    AC_MSG_CHECKING([for host c++ compiler])
+    if test -z "$HOST_CXX"; then
+	AC_CHECK_PROGS(HOST_CXX, $CCC c++ g++ gcc CC cxx cc++ cl, "")
+	if test -z "$HOST_CXX"; then
+	    AC_MSG_ERROR([no acceptable c++ compiler found in \$PATH])
+	fi
+    fi
+    AC_MSG_RESULT([$HOST_CXX])
+
+    if test -z "$HOST_CFLAGS"; then
+	HOST_CFLAGS="$CFLAGS"
+    fi
+    if test -z "$HOST_CXXFLAGS"; then
+	HOST_CXXFLAGS="$CXXFLAGS"
+    fi
+    if test -z "$HOST_LDFLAGS"; then
+	HOST_LDFLAGS="$LDFLAGS"
+    fi
+    if test -z "$HOST_RANLIB"; then
+	AC_CHECK_PROG(HOST_RANLIB, ranlib, ranlib, :)
+    fi
+    CC="$HOST_CC"
+    CFLAGS="$HOST_CFLAGS"
+    LDFLAGS="$HOST_LDFLAGS"
+
+    AC_MSG_CHECKING([whether the host c compiler ($HOST_CC $HOST_CFLAGS $HOST_LDFLAGS) works])
+    AC_TRY_COMPILE([], [return(0);], 
+	[ac_cv_prog_hostcc_works=1 AC_MSG_RESULT([yes])],
+	AC_MSG_ERROR([installation or configuration problem: host compiler $HOST_CC cannot create executables.]) )
+
+    CC="$HOST_CXX"
+    CFLAGS="$HOST_CXXFLAGS"
+
+    AC_MSG_CHECKING([whether the host c++ compiler ($HOST_CXX $HOST_CXXFLAGS $HOST_LDFLAGS) works])
+    AC_TRY_COMPILE([], [return(0);], 
+	[ac_cv_prog_hostcxx_works=1 AC_MSG_RESULT([yes])],
+	AC_MSG_ERROR([installation or configuration problem: host compiler $HOST_CXX cannot create executables.]) )
+    
+    CC=$_SAVE_CC
+    CFLAGS=$_SAVE_CFLAGS
+    LDFLAGS=$_SAVE_LDFLAGS
+
+    if test -z "$CC"; then
+	AC_CHECK_PROGS(CC, "${target_alias}-gcc" "${target}-gcc", :)
+    fi
+    unset ac_cv_prog_CC
+    AC_PROG_CC
+    if test -z "$CXX"; then
+	AC_CHECK_PROGS(CXX, "${target_alias}-g++" "${target}-g++", :)
+    fi
+    unset ac_cv_prog_CXX
+    AC_PROG_CXX
+    if test -z "$RANLIB"; then
+	AC_CHECK_PROGS(RANLIB, "${target_alias}-ranlib" "${target}-ranlib", :)
+    fi
+    if test -z "$AR"; then
+	AC_CHECK_PROGS(AR, "${target_alias}-ar" "${target}-ar", :)
+    fi
+    if test -z "$AS"; then
+	AC_CHECK_PROGS(AS, "${target_alias}-as" "${target}-as", :)
+    fi
+    if test -z "$DLLTOOL"; then
+	AC_CHECK_PROGS(DLLTOOL, "${target_alias}-dlltool" "${target}-dlltool", :)
+    fi
+    if test -z "$WINDRES"; then
+	AC_CHECK_PROGS(WINDRES, "${target_alias}-windres" "${target}-windres", :)
+    fi
+else
+    AC_PROG_CC
+    AC_PROG_CXX
+    AC_PROG_RANLIB
+    AC_PATH_PROGS(AS, as, $CC)
+    AC_PATH_PROGS(AR, ar, :)
+    AC_PATH_PROGS(DLLTOOL, dlltool, :)
+    if test -z "$HOST_CC"; then
+	HOST_CC="$CC"
+    fi
+    if test -z "$HOST_CFLAGS"; then
+	HOST_CFLAGS="$CFLAGS"
+    fi
+    if test -z "$HOST_CXX"; then
+	HOST_CXX="$CXX"
+    fi
+    if test -z "$HOST_CXXFLAGS"; then
+	HOST_CXXFLAGS="$CXXFLAGS"
+    fi
+    if test -z "$HOST_LDFLAGS"; then
+	HOST_LDFLAGS="$LDFLAGS"
+    fi
+    if test -z "$HOST_RANLIB"; then
+	HOST_RANLIB="$RANLIB"
+    fi
+fi
+
 AC_PROG_CC_C_O
 if grep "NO_MINUS_C_MINUS_O 1" ./confdefs.h >/dev/null; then
     USING_HCC=1
@@ -112,13 +253,36 @@ if grep "NO_MINUS_C_MINUS_O 1" ./confdefs.h >/dev/null; then
     CC="${srcdir}/build/hcc '$CC'"
     CXX="${srcdir}/build/hcpp '$CXX'"
 fi
-AC_PROG_CPP
-AC_PROG_CXXCPP
-AC_PROG_INSTALL
-AC_PROG_AWK
-AC_PROG_RANLIB
 
+GNU_CC=
+GNU_CXX=
+if test "$GCC" = "yes"; then
+    GNU_CC=1
+fi
+if test "$GXX" = "yes"; then
+    GNU_CXX=1
+fi
+
+AC_SUBST(GNU_CC)
+AC_SUBST(GNU_CXX)
+
+dnl ========================================================
+dnl Checks for programs.
+dnl ========================================================
+AC_PROG_INSTALL
+AC_PROG_LN_S
+AC_PROG_AWK
+AC_PATH_PROGS(PERL, perl5 perl, :)
+AC_PATH_PROGS(EMACS, xemacs lemacs emacs, :)
+AC_PATH_PROGS(PERL, perl5 perl, :)
+AC_PATH_PROG(WHOAMI, whoami, :)
+AC_PATH_PROG(UNZIP, unzip, :)
+AC_PATH_PROG(ZIP, zip, :)
+AC_PATH_PROG(SYSTEM_MAKEDEPEND, makedepend)
+
+dnl ========================================================
 dnl Be sure the make we use is GNU make.
+dnl ========================================================
 AC_PATH_PROGS(MAKE, gmake make, :)
 _make_try=`$MAKE --version 2>/dev/null`
 if test ! "$_make_try"
@@ -142,41 +306,20 @@ fi
 
 AC_PROG_MAKE_SET
 
-dnl Support for X11 makedepend, if found on the system
-dnl ========================================================
-AC_PATH_PROG(SYSTEM_MAKEDEPEND,makedepend)
-
-AC_PATH_PROGS(EMACS, xemacs lemacs emacs, :)
-AC_PATH_PROGS(PERL, perl5 perl, :)
-AC_PATH_PROG(WHOAMI, whoami, :)
-AC_PATH_PROG(UNZIP, unzip, :)
-AC_PATH_PROG(ZIP, zip, :)
-
 AC_PATH_XTRA
 
 XLDFLAGS="$X_LIBS"
 XLIBS="$X_EXTRA_LIBS"
 
-GNU_CC=
-GNU_CXX=
-if test "$GCC" = "yes"; then
-    GNU_CC=1
-fi
-if test "$GXX" = "yes"; then
-    GNU_CXX=1
-fi
-
-AC_SUBST(GNU_CC)
-AC_SUBST(GNU_CXX)
-
+dnl ========================================================
 dnl set the defaults first
 dnl ========================================================
-AR='ar cr $@'
-AS=
 AS_DASH_C_FLAG='-c'
-NS_USE_NATIVE=
-DLL_SUFFIX="so"
+DLL_SUFFIX=so
+OBJ_SUFFIX=o
+LIB_SUFFIX=a
 
+dnl ========================================================
 dnl GNU specific defaults
 dnl ========================================================
 if test "$GNU_CC"; then
@@ -202,7 +345,7 @@ else
     DSO_LDOPTS='-shared -h $(@:$(OBJDIR)/%.$(DLL_SUFFIX)=%.$(DLL_SUFFIX))'
     DSO_CFLAGS=''
     DSO_PIC_CFLAGS='-KPIC'
-    _DEFINES_CFLAGS='$(ACDEFINES)'
+    _DEFINES_CFLAGS='$(DEFS)'
 fi
 
 if test "$GNU_CXX"; then
@@ -212,9 +355,10 @@ if test "$GNU_CXX"; then
     _DEFINES_CXXFLAGS='-include $(DEPTH)/config-defs.h'
     _USE_CPP_INCLUDE_FLAG=1
 else
-    _DEFINES_CXXFLAGS='$(ACDEFINES)'
+    _DEFINES_CXXFLAGS='$(DEFS)'
 fi
 
+dnl ========================================================
 dnl gcc can come with its own linker so it is better to use the pass-thru calls
 dnl MKSHLIB_FORCE_ALL is used to force the linker to include all object
 dnl files present in an archive. MKSHLIB_UNFORCE_ALL reverts the linker to
@@ -252,7 +396,17 @@ LOOP_INPUT
   fi
 fi
 
-dnl System overrides of the defaults
+dnl ========================================================
+dnl System overrides of the defaults for host
+dnl ========================================================
+case "$host" in
+*-linux*)
+    HOST_NSPR_MDCPUCFG='\"md/_linux.cfg\"'
+    ;;
+esac
+
+dnl ========================================================
+dnl System overrides of the defaults for target
 dnl ========================================================
 case "$target" in
 *-aix*)
@@ -339,6 +493,46 @@ dnl Linux Alpha needs -mieee for FPU to work correctly
 alpha*-*-linux*)
     CFLAGS="$CFLAGS -mieee"
     CXXFLAGS="$CXXFLAGS -mieee"
+    ;;
+
+*-mingw*)
+    DEFINES="$DEFINES -DXP_PC -D_WINDOWS"
+    OBJ_SUFFIX=obj
+    LIB_SUFFIX=lib
+    DLL_SUFFIX=dll
+    MKSHLIB='$(DLLTOOL) --as=$(AS) -k --dllname $*.dll --output-lib $@'
+    MKCSHLIB='$(DLLTOOL) --as=$(AS) -k --dllname $*.dll --output-lib $@'
+
+    case "$MOZ_TARGET" in
+    win95)
+	TARGET_NSPR_MDCPUCFG='\"md/_win95.cfg\"'
+	;;
+    winnt)
+	TARGET_NSPR_MDCPUCFG='\"md/_winnt.cfg\"'
+	;;
+    win16)
+	TARGET_NSPR_MDCPUCFG='\"md/_win16.cfg\"'
+	;;
+
+    *)
+	AC_MSG_ERROR([Missing MOZ_TARGET for ${target}.  Use --enable-target to set.])
+	;;
+    esac
+
+    case "$target" in
+    i?86-*)
+	DEFINES="$DEFINES -D_X86_"
+	;;
+    alpha-*)
+	DEFINES="$DEFINES -D_ALPHA_=1"
+	;;
+    mips-*)
+	DEFINES="$DEFINES -D_MIPS_"
+	;;
+    *)
+	DEFINES="$DEFINES -D_CPU_ARCH_NOT_DEFINED"
+	;;
+    esac
     ;;
 
 *-netbsd*)
@@ -1058,7 +1252,6 @@ if test "${NSPR_DIR}" -a -d "${NSPR_DIR}"; then
     fi
 fi
 
-dnl
 dnl If NSPR was not detected in the system, use the one in the source
 dnl tree (mozilla/nsprpub)
 dnl
@@ -1066,21 +1259,11 @@ dnl NSPR_INCLUDE_DIR and NSPR_CFLAGS are blank because NSPR built as
 dnl part of the mozilla build, will install its headers and libs in
 dnl the same place as mozilla.
 dnl
-if test ! -z "$MISSING_NSPR"; then
-   echo
-   echo "*** NSPR was not detected in your system.  This is not a problem."
-   echo "*** I will use the one in the current source tree instead. "
-   echo
-   sleep 3
-
-   NSPR_INCLUDE_DIR=
-   NSPR_CFLAGS=
-   NSPR_LIBS="-lplds$NSPR_VERSION -lplc$NSPR_VERSION -lnspr$NSPR_VERSION $PTHREAD_LDFLAGS"
-dnl
-dnl Otherwise, we are using an NSPR installed in the system.
-dnl
-dnl We need to set MOZ_NATIVE_NSPR so that mozilla/nsprpub is not built.
-dnl
+if test -n "$MISSING_NSPR"; then
+   MOZ_NATIVE_NSPR=
+   NSPR_INCLUDE_DIR='$(DEPTH)/nsprpub/dist/include'
+   NSPR_CFLAGS='-I${NSPR_INCLUDE_DIR}'
+   NSPR_LIBS="-L\$(DEPTH)/nsprpub/dist/lib -lplds$NSPR_VERSION -lplc$NSPR_VERSION -lnspr$NSPR_VERSION $PTHREAD_LDFLAGS"
 else
    MOZ_NATIVE_NSPR=1
 fi
@@ -2040,6 +2223,8 @@ dnl   LDFLAGS=`echo  $LDFLAGS  | sed 's/ *-O[^ ]*//g;'`
 dnl   changequote([,])dnl
 dnl fi
 
+AC_SUBST(MOZ_TARGET)
+
 AC_SUBST(SYSTEM_MAKEDEPEND)
 AC_SUBST(SYSTEM_JPEG)
 AC_SUBST(SYSTEM_PNG)
@@ -2058,9 +2243,21 @@ AC_SUBST(MOZ_NATIVE_NSPR)
 
 AC_SUBST(CFLAGS)
 AC_SUBST(CXXFLAGS)
+AC_SUBST(DEFINES)
 AC_SUBST(LDFLAGS)
 AC_SUBST(LIBS)
 
+AC_SUBST(HOST_CC)
+AC_SUBST(HOST_CXX)
+AC_SUBST(HOST_CFLAGS)
+AC_SUBST(HOST_CXXFLAGS)
+
+AC_SUBST(HOST_RANLIB)
+AC_SUBST(HOST_NSPR_MDCPUCFG)
+AC_SUBST(TARGET_NSPR_MDCPUCFG)
+
+AC_SUBST(LIB_SUFFIX)
+AC_SUBST(OBJ_SUFFIX)
 AC_SUBST(MOZ_DISABLE_DTD_DEBUG)
 
 AC_SUBST(WRAP_MALLOC_CFLAGS)
@@ -2110,20 +2307,21 @@ AC_DEFINE(STANDALONE_IMAGE_LIB)
 STANDALONE_IMAGE_LIB=1
 AC_SUBST(STANDALONE_IMAGE_LIB)
 
-OS_TARGET=`uname -s`
-AC_SUBST(OS_TARGET)
-
-if test "$OS_TARGET" = "OS2"; then
-  AC_DEFINE(XP_PC)
-elif test "$OS_TARGET" = "WINNT"; then
-  AC_DEFINE(XP_PC)
-else
-  AC_DEFINE(XP_UNIX)
-  AC_DEFINE(UNIX_EMBED)
-  AC_DEFINE(X_PLUGINS)
-  AC_DEFINE(UNIX_LDAP)
-  AC_DEFINE(UNIX_ASYNC_DNS)
-fi
+case "$target" in 
+*-mingw*)
+    AC_DEFINE(XP_PC)
+    ;;
+*-OS2*)
+    AC_DEFINE(XP_PC)
+    ;;
+*)
+    AC_DEFINE(XP_UNIX)
+    AC_DEFINE(UNIX_EMBED)
+    AC_DEFINE(X_PLUGINS)
+    AC_DEFINE(UNIX_LDAP)
+    AC_DEFINE(UNIX_ASYNC_DNS)
+    ;;
+esac
 
 AC_DEFINE(JS_THREADSAFE)
 AC_DEFINE(LAYERS)
@@ -2162,40 +2360,7 @@ AC_SUBST(MOZ_RPM_SEAMONKEY_OPTIMIZE)
 AC_SUBST(MOZ_RPM_TMP)
 AC_SUBST(MOZ_RPM_VERSION)
 
-dnl ========================================================
-dnl =
-dnl = Support for feeding NSPR environment variables via
-dnl = a file as opposed to the environment itself.
-dnl = 
-dnl = The following 2 files get generated by configure and
-dnl = copied into
-dnl = 
-dnl = build/unix/nspr_my_config.mk support
-dnl = build/unix/nspr_my_override.mk support
-dnl = 
-dnl = nsprpub/config 
-dnl = 
-dnl = NSPR will then include these files in its build environment.
-dnl = 
-dnl = The following variables might need to be set to properly
-dnl = build NSPR for unix:
-dnl = 
-dnl = my_config.mk:
-dnl = 
-dnl = USE_PTHREADS
-dnl = BUILD_OPT
-dnl = NS_USE_GCC
-dnl = NO_MDUPDATE
-dnl = NS_USE_NATIVE
-dnl = MOZILLA_CLIENT
-dnl = CLASSIC_NSPR
-dnl = 
-dnl = my_overrides.mk:
-dnl = 
-dnl = DIST
-dnl = 
-dnl ========================================================
-if test ! "$MOZ_NATIVE_NSPR"
+if test -z "$MOZ_NATIVE_NSPR"
 then
 dnl 
 dnl USE_PTHREADS
@@ -2216,101 +2381,10 @@ dnl
 dnl Same as detected above.
 dnl
 MOZ_NSPRENV_USE_PTHREADS=$USE_PTHREADS
-
-dnl
-dnl CLASSIC_NSPR
-dnl
-dnl On Linux libc5, CLASSIC_NSPR needs to be set so that NSPR chooses
-dnl the correct threading implementation (user threads - not pthreads).
-dnl On Linux, CLASSIC_NSPR's only purpose to to control linking against
-dnl libpthreads.
-dnl
-MOZ_NSPRENV_CLASSIC_NSPR=
-case "$target" in
-	*-linux*)
-		if test "$USE_PTHREADS"x = x
-		then
-			MOZ_NSPRENV_CLASSIC_NSPR=1
-		fi
-	;;
-esac
-
-dnl 
-dnl BUILD_OPT
-dnl
-dnl This flag controls whether NSPR is built with debug info
-dnl 
-if test "$MOZ_DEBUG"
-then
-  MOZ_NSPRENV_BUILD_OPT=
-else
-  MOZ_NSPRENV_BUILD_OPT=1
-fi
-
-dnl 
-dnl NS_USE_GCC 
-dnl NS_USE_NATIVE
-dnl
-dnl These are NSPR's way of switching between "native" and GNU compilers
-dnl 
-if test "$GNU_CC"
-then
-  MOZ_NSPRENV_NS_USE_GCC=1
-  MOZ_NSPRENV_NS_USE_NATIVE=
-else
-  MOZ_NSPRENV_NS_USE_NATIVE=1
-  MOZ_NSPRENV_NS_USE_GCC=
-fi
-
-dnl 
-dnl NO_MDUPDATE
-dnl
-dnl These are set just to be safe.  It is possible that NSPR doesnt
-dnl use these anymore.
-dnl 
-MOZ_NSPRENV_NO_MDUPDATE=1
-
-dnl
-dnl MOZILLA_CLIENT
-dnl
-MOZ_NSPRENV_MOZILLA_CLIENT=
-
-dnl 
-dnl DIST
-dnl
-dnl Where the NSPR stuff gets installed: $DIST/{bin,lib,include}
-dnl 
 MOZ_NSPRENV_DIST=`pwd`/dist
-
-dnl 
-dnl MAKE
-dnl
-dnl NSPR is not safe for gnu make -jX (where X > 1) builds.  Force make
-dnl in NSPR to be 'make -j1' - or just 'make'
-dnl 
-case "$target" in
-	*-linux*)
-		MOZ_NSPRENV_OVERRIDE_MAKE=`echo $MAKE | $AWK '{print \$1}'`
-	;;
-
-	*)
-		MOZ_NSPRENV_OVERRIDE_MAKE=
-	;;
-esac
-
-AC_SUBST(MOZ_NSPRENV_USE_PTHREADS)
-AC_SUBST(MOZ_NSPRENV_BUILD_OPT)
-AC_SUBST(MOZ_NSPRENV_NS_USE_GCC)
-AC_SUBST(MOZ_NSPRENV_NO_MDUPDATE)
-AC_SUBST(MOZ_NSPRENV_NS_USE_NATIVE)
-AC_SUBST(MOZ_NSPRENV_MOZILLA_CLIENT)
-AC_SUBST(MOZ_NSPRENV_CLASSIC_NSPR)
-AC_SUBST(MOZ_NSPRENV_DIST)
-AC_SUBST(MOZ_NSPRENV_OVERRIDE_MAKE)
 fi
+
 dnl ========================================================
-
-
 dnl Spit out some output
 dnl ========================================================
 
@@ -2333,7 +2407,9 @@ EOF
   fi
 fi
 
+dnl ========================================================
 dnl Need to manual make the directories to get around deficiency in AC_OUTPUT
+dnl ========================================================
 for dir in lib modules modules/security build build/package; do
    if test ! -d $dir; then rm -f $dir; mkdir $dir; fi
 done
@@ -2351,22 +2427,25 @@ done
 #
 # This does not change the $MAKEFILES variable.
 #
-eval `echo $MAKEFILES | \
-      $PERL $srcdir/build/autoconf/acoutput-fast.pl` 2>/dev/null
+#eval `echo $MAKEFILES | \
+#      $PERL $srcdir/build/autoconf/acoutput-fast.pl` 2>/dev/null
 
-AC_OUTPUT($MAKEFILES)
+AC_OUTPUT([$MAKEFILES])
 
 dnl ========================================================
-dnl = 
-dnl = If we are building NSPR as part of the build, make sure 
-dnl = the NSPR environment config and override files get copied
-dnl = to the right place.
-dnl = 
+dnl NSPR is a standalone product so don't give it all of the mozilla
+dnl cruft when running NSPR's configure
 dnl ========================================================
-if test ! "$MOZ_NATIVE_NSPR"
-then
-  rm -f ${srcdir}/nsprpub/config/my_config.mk
-  rm -f ${srcdir}/nsprpub/config/my_overrides.mk
-  cp build/unix/nspr_my_config.mk ${srcdir}/nsprpub/config/my_config.mk
-  cp build/unix/nspr_my_overrides.mk ${srcdir}/nsprpub/config/my_overrides.mk
-fi
+
+CC="$_SUBDIR_CC" 
+CXX="$_SUBDIR_CXX" 
+CFLAGS="$_SUBDIR_CFLAGS" 
+CXXFLAGS="$_SUBDIR_CXXFLAGS"
+LDFLAGS="$_SUBDIR_LDFLAGS"
+HOST_CC="$_SUBDIR_HOST_CC" 
+HOST_CFLAGS="$_SUBDIR_HOST_CFLAGS"
+HOST_LDFLAGS="$_SUBDIR_HOST_LDFLAGS"
+
+AC_OUTPUT_SUBDIRS(nsprpub)
+dnl AC_CONFIG_SUBDIRS(nsprpub)
+
