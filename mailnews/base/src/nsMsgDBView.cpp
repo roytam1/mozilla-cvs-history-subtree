@@ -3509,25 +3509,19 @@ nsMsgDBView::GetKeyForFirstSelectedMessage(nsMsgKey *key)
 {
   NS_ENSURE_ARG_POINTER(key);
 
-  if (!mOutlinerSelection) return NS_ERROR_UNEXPECTED;
+  if (!mOutlinerSelection) return NS_ERROR_FAILURE;
 
   PRInt32 selectionCount; 
   nsresult rv = mOutlinerSelection->GetRangeCount(&selectionCount);
   NS_ENSURE_SUCCESS(rv, rv); 
 
-  if (selectionCount < 0) return NS_ERROR_UNEXPECTED;
+  if (selectionCount < 0) return NS_ERROR_FAILURE;
 
+  // get the first key (startRange) of the first range (range 0)
   PRInt32 startRange;
   PRInt32 endRange;
   rv = mOutlinerSelection->GetRangeAt(0, &startRange, &endRange);
   NS_ENSURE_SUCCESS(rv, rv);
-
-  if (startRange >= 0 && startRange == endRange && startRange < GetSize()) {
-    *key = m_keys.GetAt(startRange);
-  }
-  else {
-    return NS_ERROR_UNEXPECTED;
-  }
-
+  *key = m_keys.GetAt(startRange);
   return NS_OK;
 }
