@@ -1297,9 +1297,10 @@ nsWidget::debug_GetName(GtkObject * aGtkWidget)
 nsCAutoString
 nsWidget::debug_GetName(GtkWidget * aGtkWidget)
 {
-  if (nsnull != aGtkWidget)
-    return debug_GetName(GTK_WIDGET(aGtkWidget));
 
+  if (nsnull != aGtkWidget)
+    return nsCAutoString(gtk_widget_get_name(aGtkWidget));
+  
   return nsCAutoString("null");
 }
 
