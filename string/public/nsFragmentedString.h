@@ -27,8 +27,8 @@
 
   // WORK IN PROGRESS
 
-#ifndef nsAWritableString_h___
-#include "nsAWritableString.h"
+#ifndef nsAString_h___
+#include "nsAString.h"
 #endif
 
 #ifndef nsSharedBufferList_h___
@@ -37,7 +37,7 @@
 
 
 class nsFragmentedString
-      : public basic_nsAWritableString<PRUnichar>
+      : public nsAString
     /*
       ...
     */

@@ -29,6 +29,8 @@ LIBRARY_NAME=string_s
 LCFLAGS = -D_IMPL_NS_COM -D_IMPL_NS_BASE -DWIN32_LEAN_AND_MEAN
 
 CPP_OBJS =                                      \
+        .\$(OBJDIR)\nsAString.obj               \
+        .\$(OBJDIR)\nsCommonString.obj          \
         .\$(OBJDIR)\nsLocalString.obj           \
         .\$(OBJDIR)\nsFragmentedString.obj      \
         .\$(OBJDIR)\nsPrintfCString.obj         \

@@ -832,6 +832,7 @@ void nsCString::AssignWithConversion(PRUnichar aChar) {
   AppendWithConversion(aChar);
 }
 
+#if 0
 void nsCString::do_AppendFromReadable( const nsAReadableCString& aReadable )
   {
     if ( SameImplementation( NS_STATIC_CAST(const nsAReadableCString&, *this), aReadable) )
@@ -839,6 +840,7 @@ void nsCString::do_AppendFromReadable( const nsAReadableCString& aReadable )
     else
       nsAWritableCString::do_AppendFromReadable(aReadable);
   }
+#endif
 
 
 /**
@@ -962,6 +964,7 @@ void nsCString::InsertWithConversion(PRUnichar aChar,PRUint32 anOffset){
   StrInsert(*this,anOffset,temp,0,1);
 }
 
+#if 0
 void nsCString::do_InsertFromReadable( const nsAReadableCString& aReadable, PRUint32 atPosition )
   {
     if ( SameImplementation( NS_STATIC_CAST(const nsAReadableCString&, *this), aReadable) )
@@ -969,6 +972,7 @@ void nsCString::do_InsertFromReadable( const nsAReadableCString& aReadable, PRUi
     else
       nsAWritableCString::do_InsertFromReadable(aReadable, atPosition);
   }
+#endif
 
 
 

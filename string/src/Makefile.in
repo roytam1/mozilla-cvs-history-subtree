@@ -34,6 +34,8 @@ LIBRARY_NAME	= string_s
 REQUIRES	= xpcom
 
 CPPSRCS		=				\
+		nsAString.cpp		\
+		nsCommonString.cpp		\
 		nsLocalString.cpp		\
 		nsFragmentedString.cpp		\
 		nsPrintfCString.cpp		\

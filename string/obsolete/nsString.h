@@ -57,11 +57,10 @@
 class NS_COM nsSubsumeCStr;
 
 class NS_COM nsCString :
-  public nsAWritableCString,
+  public nsAFlatCString,
   public nsStr {
 
 protected:
-  virtual const void* Implementation() const { return "nsCString"; }
   virtual const char* GetReadableFragment( nsReadableFragment<char>&, nsFragmentRequest, PRUint32 ) const;
   virtual char* GetWritableFragment( nsWritableFragment<char>&, nsFragmentRequest, PRUint32 );
 
@@ -306,7 +305,7 @@ public:
 
   nsCString& operator=( const nsCString& aString )                  { Assign(aString); return *this; }
   nsCString& operator=( const nsAReadableCString& aReadable )       { Assign(aReadable); return *this; }
-  nsCString& operator=( const nsPromiseReadable<char>& aReadable )  { Assign(aReadable); return *this; }
+//nsCString& operator=( const nsPromiseReadable<char>& aReadable )  { Assign(aReadable); return *this; }
   nsCString& operator=( const char* aPtr )                          { Assign(aPtr); return *this; }
   nsCString& operator=( char aChar )                                { Assign(aChar); return *this; }
 
@@ -333,12 +332,14 @@ public:
   void AppendInt(PRInt32 aInteger,PRInt32 aRadix=10); //radix=8,10 or 16
   void AppendFloat( double aFloat );
 
-  virtual void do_AppendFromReadable( const nsAReadableCString& );
 
   void InsertWithConversion(PRUnichar aChar,PRUint32 anOffset);
   // Why no |InsertWithConversion(PRUnichar*)|?
 
+#if 0
+  virtual void do_AppendFromReadable( const nsAReadableCString& );
   virtual void do_InsertFromReadable( const nsAReadableCString&, PRUint32 );
+#endif
 
 
   /**********************************************************************
@@ -490,7 +491,7 @@ public:
     void operator=( PRUnichar ); // NOT TO BE IMPLEMENTED
   public:
     nsCAutoString& operator=( const nsAReadableCString& aReadable )       { Assign(aReadable); return *this; }
-    nsCAutoString& operator=( const nsPromiseReadable<char>& aReadable )  { Assign(aReadable); return *this; }
+//  nsCAutoString& operator=( const nsPromiseReadable<char>& aReadable )  { Assign(aReadable); return *this; }
     nsCAutoString& operator=( const char* aPtr )                          { Assign(aPtr); return *this; }
     nsCAutoString& operator=( char aChar )                                { Assign(aChar); return *this; }
 
@@ -574,7 +575,7 @@ public:
 
   nsSubsumeCStr& operator=( const nsSubsumeCStr& aString )              { Assign(aString); return *this; }
   nsSubsumeCStr& operator=( const nsAReadableCString& aReadable )       { Assign(aReadable); return *this; }
-  nsSubsumeCStr& operator=( const nsPromiseReadable<char>& aReadable )  { Assign(aReadable); return *this; }
+//nsSubsumeCStr& operator=( const nsPromiseReadable<char>& aReadable )  { Assign(aReadable); return *this; }
   nsSubsumeCStr& operator=( const char* aPtr )                          { Assign(aPtr); return *this; }
   nsSubsumeCStr& operator=( char aChar )                                { Assign(aChar); return *this; }
 private:

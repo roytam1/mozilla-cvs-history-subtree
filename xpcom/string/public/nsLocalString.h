@@ -23,8 +23,8 @@
 #ifndef nsLocalString_h___
 #define nsLocalString_h___
 
-#ifndef nsAReadableString_h___
-#include "nsAReadableString.h"
+#ifndef nsAFlatString_h___
+#include "nsAFlatString.h"
 #endif
 
     /*
@@ -46,10 +46,11 @@
     */
 
 class NS_COM nsLocalString
-      : public basic_nsAReadableString<PRUnichar>
+      : public nsAFlatString
   {
     protected:
       virtual const PRUnichar* GetReadableFragment( nsReadableFragment<PRUnichar>&, nsFragmentRequest, PRUint32 ) const;
+      virtual       PRUnichar* GetWritableFragment( nsWritableFragment<PRUnichar>&, nsFragmentRequest, PRUint32 ) { }
 
     public:
     
@@ -84,10 +85,7 @@ class NS_COM nsLocalString
     public:
 
       virtual PRUint32 Length() const;
-
-
-      const PRUnichar* get() const        { return mStart; }
-      operator const PRUnichar*() const   { return get(); }   // to be deprecated, prefer |get()|
+      virtual void SetLength( size_type ) { }
 
     private:
       const PRUnichar* mStart;
@@ -97,10 +95,11 @@ class NS_COM nsLocalString
 
 
 class NS_COM nsLocalCString
-      : public basic_nsAReadableString<char>
+      : public nsAFlatCString
   {
     protected:
       virtual const char* GetReadableFragment( nsReadableFragment<char>&, nsFragmentRequest, PRUint32 ) const;
+      virtual       char* GetWritableFragment( nsWritableFragment<char>&, nsFragmentRequest, PRUint32 ) { }
 
     public:
     
@@ -135,10 +134,7 @@ class NS_COM nsLocalCString
     public:
 
       virtual PRUint32 Length() const;
-
-
-      const char* get() const        { return mStart; }
-      operator const char*() const   { return get(); }   // to be deprecated, prefer |get()|
+      virtual void SetLength( size_type ) { }
 
     private:
       const char* mStart;

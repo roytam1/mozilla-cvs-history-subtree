@@ -55,6 +55,10 @@
 #include "nsAWritableString.h"
 #include "nsLiteralString.h"
 
+#ifndef nsAFlatString_h___
+#include "nsAFlatString.h"
+#endif
+
 #ifdef STANDALONE_MI_STRING_TESTS
   class nsAReadableString { public: virtual ~nsAReadableString() { } };
   class nsAWritableString : public nsAReadableString { public: virtual ~nsAWritableString() { } };
@@ -69,7 +73,7 @@ class nsISizeOfHandler;
 class NS_COM nsSubsumeStr;
 
 class NS_COM nsString :
-  public nsAWritableString,
+  public nsAFlatString,
   public nsStr {
 
 protected:
@@ -343,7 +347,7 @@ public:
 
   nsString& operator=( const nsString& aString )                              { Assign(aString); return *this; }
   nsString& operator=( const nsAReadableString& aReadable )                   { Assign(aReadable); return *this; }
-  nsString& operator=( const nsPromiseReadable<PRUnichar>& aReadable )        { Assign(aReadable); return *this; }
+//nsString& operator=( const nsPromiseReadable<PRUnichar>& aReadable )        { Assign(aReadable); return *this; }
   nsString& operator=( const PRUnichar* aPtr )                                { Assign(aPtr); return *this; }
   nsString& operator=( PRUnichar aChar )                                      { Assign(aChar); return *this; }
 
@@ -563,7 +567,7 @@ public:
     void operator=( char ); // NOT TO BE IMPLEMENTED
   public:
     nsAutoString& operator=( const nsAReadableString& aReadable )                   { Assign(aReadable); return *this; }
-    nsAutoString& operator=( const nsPromiseReadable<PRUnichar>& aReadable )        { Assign(aReadable); return *this; }
+//  nsAutoString& operator=( const nsPromiseReadable<PRUnichar>& aReadable )        { Assign(aReadable); return *this; }
     nsAutoString& operator=( const PRUnichar* aPtr )                                { Assign(aPtr); return *this; }
     nsAutoString& operator=( PRUnichar aChar )                                      { Assign(aChar); return *this; }
 
@@ -596,7 +600,7 @@ class NS_COM NS_ConvertASCIItoUCS2
           return GetUnicode();
         }
 
-      operator nsLiteralString() const
+      operator const nsLiteralString() const
         {
           return nsLiteralString(mUStr, mLength);
         }
@@ -685,7 +689,7 @@ public:
 
   nsSubsumeStr& operator=( const nsSubsumeStr& aReadable )                        { Assign(aReadable); return *this; }
   nsSubsumeStr& operator=( const nsAReadableString& aReadable )                   { Assign(aReadable); return *this; }
-  nsSubsumeStr& operator=( const nsPromiseReadable<PRUnichar>& aReadable )        { Assign(aReadable); return *this; }
+//nsSubsumeStr& operator=( const nsPromiseReadable<PRUnichar>& aReadable )        { Assign(aReadable); return *this; }
   nsSubsumeStr& operator=( const PRUnichar* aPtr )                                { Assign(aPtr); return *this; }
   nsSubsumeStr& operator=( PRUnichar aChar )                                      { Assign(aChar); return *this; }
 private:

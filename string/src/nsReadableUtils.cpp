@@ -26,6 +26,11 @@
 #include "nsString.h"
 #include "nsCRT.h"
 
+#ifndef nsStringTraits_h___
+#include "nsStringTraits.h"
+#endif
+
+
 
 template <class CharT> class CalculateLength
   {
@@ -106,7 +111,7 @@ class LossyConvertEncoding
 
 NS_COM
 void
-CopyUCS2toASCII( const nsAReadableString& aSource, nsAWritableCString& aDest )
+CopyUCS2toASCII( const nsAString& aSource, nsAWritableCString& aDest )
   {
       // right now, this won't work on multi-fragment destinations
     aDest.SetLength(aSource.Length());
@@ -121,7 +126,7 @@ CopyUCS2toASCII( const nsAReadableString& aSource, nsAWritableCString& aDest )
 
 NS_COM
 void
-CopyASCIItoUCS2( const nsAReadableCString& aSource, nsAWritableString& aDest )
+CopyASCIItoUCS2( const nsACString& aSource, nsAWritableString& aDest )
   {
       // right now, this won't work on multi-fragment destinations
     aDest.SetLength(aSource.Length());
@@ -142,10 +147,10 @@ CopyASCIItoUCS2( const nsAReadableCString& aSource, nsAWritableString& aDest )
    * @return a new buffer (of the type specified by the second parameter) which you must free with |nsMemory::Free|.
    *
    */
-template <class FromCharT, class ToCharT>
+template <class FromStringT, class ToCharT>
 inline
 ToCharT*
-AllocateStringCopy( const basic_nsAReadableString<FromCharT>& aSource, ToCharT* )
+AllocateStringCopy( const FromStringT& aSource, ToCharT* )
   {
     return NS_STATIC_CAST(ToCharT*, nsMemory::Alloc((aSource.Length()+1) * sizeof(ToCharT)));
   }
@@ -153,7 +158,7 @@ AllocateStringCopy( const basic_nsAReadableString<FromCharT>& aSource, ToCharT* 
 
 NS_COM
 char*
-ToNewCString( const nsAReadableString& aSource )
+ToNewCString( const nsAString& aSource )
   {
     char* result = AllocateStringCopy(aSource, (char*)0);
 
@@ -165,7 +170,7 @@ ToNewCString( const nsAReadableString& aSource )
 
 NS_COM
 char*
-ToNewUTF8String( const nsAReadableString& aSource )
+ToNewUTF8String( const nsAString& aSource )
   {
     NS_ConvertUCS2toUTF8 temp(aSource);
 
@@ -189,7 +194,7 @@ ToNewUTF8String( const nsAReadableString& aSource )
 
 NS_COM
 char*
-ToNewCString( const nsAReadableCString& aSource )
+ToNewCString( const nsACString& aSource )
   {
     // no conversion needed, just allocate a buffer of the correct length and copy into it
 
@@ -203,7 +208,7 @@ ToNewCString( const nsAReadableCString& aSource )
 
 NS_COM
 PRUnichar*
-ToNewUnicode( const nsAReadableString& aSource )
+ToNewUnicode( const nsAString& aSource )
   {
     // no conversion needed, just allocate a buffer of the correct length and copy into it
 
@@ -217,7 +222,7 @@ ToNewUnicode( const nsAReadableString& aSource )
 
 NS_COM
 PRUnichar*
-ToNewUnicode( const nsAReadableCString& aSource )
+ToNewUnicode( const nsACString& aSource )
   {
     PRUnichar* result = AllocateStringCopy(aSource, (PRUnichar*)0);
 
@@ -229,7 +234,7 @@ ToNewUnicode( const nsAReadableCString& aSource )
 
 NS_COM
 PRUnichar*
-CopyUnicodeTo( const nsAReadableString& aSource, PRUint32 aSrcOffset, PRUnichar* aDest, PRUint32 aLength )
+CopyUnicodeTo( const nsAString& aSource, PRUint32 aSrcOffset, PRUnichar* aDest, PRUint32 aLength )
   {
     nsReadingIterator<PRUnichar> fromBegin, fromEnd;
     PRUnichar* toBegin = aDest;    
@@ -268,7 +273,7 @@ AppendUnicodeTo( const nsReadingIterator<PRUnichar>& aSrcStart,
 
 NS_COM
 PRBool
-IsASCII( const nsAReadableString& aString )
+IsASCII( const nsAString& aString )
   {
     static const PRUnichar NOT_ASCII = PRUnichar(~0x007F);
 
@@ -375,7 +380,7 @@ ToLowerCase( nsAWritableCString& aCString )
 template <class CharT>
 inline // probably wishful thinking
 PRBool
-FindInReadable_Impl( const basic_nsAReadableString<CharT>& aPattern,
+FindInReadable_Impl( const typename nsStringTraits<CharT>::abstract_string_type& aPattern,
                      nsReadingIterator<CharT>& aSearchStart,
                      nsReadingIterator<CharT>& aSearchEnd )
   {
@@ -443,14 +448,14 @@ FindInReadable_Impl( const basic_nsAReadableString<CharT>& aPattern,
 
 NS_COM
 PRBool
-FindInReadable( const nsAReadableString& aPattern, nsReadingIterator<PRUnichar>& aSearchStart, nsReadingIterator<PRUnichar>& aSearchEnd )
+FindInReadable( const nsAString& aPattern, nsReadingIterator<PRUnichar>& aSearchStart, nsReadingIterator<PRUnichar>& aSearchEnd )
   {
     return FindInReadable_Impl(aPattern, aSearchStart, aSearchEnd);
   }
 
 NS_COM
 PRBool
-FindInReadable( const nsAReadableCString& aPattern, nsReadingIterator<char>& aSearchStart, nsReadingIterator<char>& aSearchEnd )
+FindInReadable( const nsACString& aPattern, nsReadingIterator<char>& aSearchStart, nsReadingIterator<char>& aSearchEnd )
   {
     return FindInReadable_Impl(aPattern, aSearchStart, aSearchEnd);
   }
@@ -463,7 +468,7 @@ FindInReadable( const nsAReadableCString& aPattern, nsReadingIterator<char>& aSe
 template <class CharT>
 inline // probably wishful thinking
 PRBool
-RFindInReadable_Impl( const basic_nsAReadableString<CharT>& aPattern,
+RFindInReadable_Impl( const typename nsStringTraits<CharT>::abstract_string_type& aPattern,
                       nsReadingIterator<CharT>& aSearchStart,
                       nsReadingIterator<CharT>& aSearchEnd )
   {
@@ -499,14 +504,14 @@ RFindInReadable_Impl( const basic_nsAReadableString<CharT>& aPattern,
 
 NS_COM
 PRBool
-RFindInReadable( const nsAReadableString& aPattern, nsReadingIterator<PRUnichar>& aSearchStart, nsReadingIterator<PRUnichar>& aSearchEnd )
+RFindInReadable( const nsAString& aPattern, nsReadingIterator<PRUnichar>& aSearchStart, nsReadingIterator<PRUnichar>& aSearchEnd )
   {
     return RFindInReadable_Impl(aPattern, aSearchStart, aSearchEnd);
   }
 
 NS_COM
 PRBool
-RFindInReadable( const nsAReadableCString& aPattern, nsReadingIterator<char>& aSearchStart, nsReadingIterator<char>& aSearchEnd )
+RFindInReadable( const nsACString& aPattern, nsReadingIterator<char>& aSearchStart, nsReadingIterator<char>& aSearchEnd )
   {
     return RFindInReadable_Impl(aPattern, aSearchStart, aSearchEnd);
   }
@@ -557,7 +562,7 @@ FindCharInReadable( char aChar, nsReadingIterator<char>& aSearchStart, const nsR
 
 template <class CharT>
 PRUint32 
-CountCharInReadable_Impl( const basic_nsAReadableString<CharT>& aStr,
+CountCharInReadable_Impl( const typename nsStringTraits<CharT>::abstract_string_type& aStr,
                           CharT aChar )
 {
   PRUint32 count = 0;
@@ -578,7 +583,7 @@ CountCharInReadable_Impl( const basic_nsAReadableString<CharT>& aStr,
 
 NS_COM 
 PRUint32 
-CountCharInReadable( const nsAReadableString& aStr,
+CountCharInReadable( const nsAString& aStr,
                      PRUnichar aChar )
 {
   return CountCharInReadable_Impl(aStr, aChar);
@@ -586,7 +591,7 @@ CountCharInReadable( const nsAReadableString& aStr,
 
 NS_COM 
 PRUint32 
-CountCharInReadable( const nsAReadableCString& aStr,
+CountCharInReadable( const nsACString& aStr,
                      char aChar )
 {
   return CountCharInReadable_Impl(aStr, aChar);

@@ -27,14 +27,21 @@
 #include "nsStringFragment.h"
 #endif
 
+#ifndef nsCharTraits_h___
+#include "nsCharTraits.h"
+#endif
+
+#ifndef nsStringTraits_h___
+#include "nsStringTraits.h"
+#endif
+
 #ifndef nsAlgorithm_h___
 #include "nsAlgorithm.h"
   // for |NS_MIN|, |NS_MAX|, and |NS_COUNT|...
 #endif
 
 
-template <class CharT> class basic_nsAReadableString;
-template <class CharT> class basic_nsAWritableString;
+
 
 
 
@@ -56,11 +63,13 @@ class nsReadingIterator
 //    typedef bidirectional_iterator_tag  iterator_category;
 
     private:
-      friend class basic_nsAReadableString<CharT>;
+      friend class nsAString;
+      friend class nsACString;
+      typedef typename nsStringTraits<CharT>::abstract_string_type string_type;
 
-      nsReadableFragment<CharT>             mFragment;
-      const CharT*                          mPosition;
-      const basic_nsAReadableString<CharT>* mOwningString;
+      nsReadableFragment<CharT>   mFragment;
+      const CharT*                mPosition;
+      const string_type*          mOwningString;
 
     public:
       nsReadingIterator() { }
@@ -132,7 +141,7 @@ class nsReadingIterator
           return mFragment;
         }
 
-      const basic_nsAReadableString<CharT>&
+      const string_type&
       string() const
         {
           NS_ASSERTION(mOwningString, "iterator not attached to a string (|mOwningString| == 0)");
@@ -155,8 +164,8 @@ class nsReadingIterator
       advance( difference_type n )
         {
           while ( n > 0 )
-                  {
-                    difference_type one_hop = NS_MIN(n, size_forward());
+            {
+              difference_type one_hop = NS_MIN(n, size_forward());
 
               NS_ASSERTION(one_hop>0, "Infinite loop: can't advance a reading iterator beyond the end of a string");
                 // perhaps I should |break| if |!one_hop|?
@@ -194,11 +203,13 @@ class nsWritingIterator
 //    typedef bidirectional_iterator_tag  iterator_category;
 
     private:
-      friend class basic_nsAWritableString<CharT>;
+      friend class nsAString;
+      friend class nsACString;
+      typedef typename nsStringTraits<CharT>::abstract_string_type string_type;
 
-      nsWritableFragment<CharT>       mFragment;
-      CharT*                          mPosition;
-      basic_nsAWritableString<CharT>* mOwningString;
+      nsWritableFragment<CharT>   mFragment;
+      CharT*                      mPosition;
+      string_type*                mOwningString;
 
     public:
       nsWritingIterator() { }
@@ -276,14 +287,14 @@ class nsWritingIterator
           return mFragment;
         }
 
-      const basic_nsAWritableString<CharT>&
+      const string_type&
       string() const
         {
           NS_ASSERTION(mOwningString, "iterator not attached to a string (|mOwningString| == 0)");
           return *mOwningString;
         }
 
-      basic_nsAWritableString<CharT>&
+      string_type&
       string()
         {
           NS_ASSERTION(mOwningString, "iterator not attached to a string (|mOwningString| == 0)");
@@ -362,6 +373,22 @@ nsReadingIterator<CharT>::normalize_backward()
     while ( mPosition == mFragment.mStart
          && mOwningString->GetReadableFragment(mFragment, kPrevFragment) )
         mPosition = mFragment.mEnd;
+  }
+
+template <class CharT>
+inline
+PRBool
+operator==( const nsReadingIterator<CharT>& lhs, const nsReadingIterator<CharT>& rhs )
+  {
+    return lhs.get() == rhs.get();
+  }
+
+template <class CharT>
+inline
+PRBool
+operator!=( const nsReadingIterator<CharT>& lhs, const nsReadingIterator<CharT>& rhs )
+  {
+    return lhs.get() != rhs.get();
   }
 
 

@@ -39,6 +39,8 @@
 #include "nsStringIteratorUtils.h"
 #endif
 
+class nsAString;
+class nsACString;
 
 #ifdef HAVE_CPP_BOOL
   typedef bool nsCharTraits_bool;
@@ -49,8 +51,8 @@
 template <class CharT>
 struct nsCharTraits
   {
-    typedef CharT char_type;
-    typedef char  incompatible_char_type;
+    typedef CharT     char_type;
+    typedef char      incompatible_char_type;
 
     static
     void
@@ -214,8 +216,8 @@ struct nsCharTraits
 NS_SPECIALIZE_TEMPLATE
 struct nsCharTraits<char>
   {
-    typedef char      char_type;
-    typedef PRUnichar incompatible_char_type;
+    typedef char        char_type;
+    typedef PRUnichar   incompatible_char_type;
 
     static
     void
@@ -341,7 +343,7 @@ struct nsCharTraits<char>
 NS_SPECIALIZE_TEMPLATE
 struct nsCharTraits<wchar_t>
   {
-    typedef wchar_t char_type;
+    typedef wchar_t     char_type;
 
     static
     void
