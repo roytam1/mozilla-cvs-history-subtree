@@ -3640,9 +3640,6 @@ MOZ_ARG_DISABLE_BOOL(plugins,
 [  --disable-plugins       Disable plugins support],
     MOZ_PLUGINS=,
     MOZ_PLUGINS=1)
-if test -n "$MOZ_PLUGINS"; then
-    AC_DEFINE(MOZ_PLUGINS)
-fi
 
 dnl ========================================================
 dnl = Open JVM Interface (OJI) support
