@@ -489,7 +489,8 @@ JS_EndRequest(JSContext *cx)
 	JS_LOCK_GC(rt);
 	JS_ASSERT(rt->requestCount > 0);
 	rt->requestCount--;
-	JS_NOTIFY_REQUEST_DONE(rt);
+        if (rt->requestCount == 0)
+	    JS_NOTIFY_REQUEST_DONE(rt);
 	JS_UNLOCK_GC(rt);
     }
 }
@@ -504,7 +505,8 @@ JS_YieldRequest(JSContext *cx)
 	rt = cx->runtime;
     JS_ASSERT(rt->requestCount > 0);
     rt->requestCount--;
-    JS_NOTIFY_REQUEST_DONE(rt);
+    if (rt->requestCount == 0)
+        JS_NOTIFY_REQUEST_DONE(rt);
     JS_UNLOCK_GC(rt);
     JS_LOCK_GC(rt);
     rt->requestCount++;
