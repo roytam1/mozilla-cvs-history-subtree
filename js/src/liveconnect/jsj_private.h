@@ -205,6 +205,9 @@ extern jclass jlDouble;                        /* java.lang.Double */
 extern jclass jlString;                        /* java.lang.String */
 extern jclass njJSObject;                      /* netscape.javascript.JSObject */
 extern jclass njJSException;                   /* netscape.javascript.JSException */
+#if 0
+extern jclass njJSWrappedException;                   /* netscape.javascript.JSWrappedException */
+#endif
 extern jclass njJSUtil;                        /* netscape.javascript.JSUtil */
 
 extern jmethodID jlClass_getMethods;           /* java.lang.Class.getMethods() */
@@ -239,7 +242,10 @@ extern jmethodID jlSystem_identityHashCode;    /* java.lang.System.identityHashC
 
 extern jobject jlVoid_TYPE;                    /* java.lang.Void.TYPE value */
 
-extern jmethodID njJSException_JSException;    /* netscape.javascipt.JSexception constructor */
+extern jmethodID njJSException_JSException;    /* netscape.javascipt.JSException constructor */
+#if 0
+extern jmethodID njJSWrappedException_JSWrappedException; /* netscape.javascipt.JSWrappedException constructor */
+#endif
 extern jmethodID njJSObject_JSObject;          /* netscape.javascript.JSObject constructor */
 extern jmethodID njJSUtil_getStackTrace;       /* netscape.javascript.JSUtil.getStackTrace() */
 extern jfieldID njJSObject_internal;           /* netscape.javascript.JSObject.internal */
@@ -247,7 +253,9 @@ extern jfieldID njJSException_lineno;          /* netscape.javascript.JSExceptio
 extern jfieldID njJSException_tokenIndex;      /* netscape.javascript.JSException.tokenIndex */
 extern jfieldID njJSException_source;          /* netscape.javascript.JSException.source */
 extern jfieldID njJSException_filename;        /* netscape.javascript.JSException.filename */
-
+#if 0
+extern jfieldID njJSWrappedException_jsval;        /* netscape.javascript.JSWrappedException.jsval */
+#endif
 
 /**************** Java <==> JS conversions and Java types *******************/
 extern JSBool
