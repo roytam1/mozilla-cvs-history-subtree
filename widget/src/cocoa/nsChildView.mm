@@ -473,23 +473,23 @@ static pascal OSStatus OnContentClick(EventHandlerCallRef handler, EventRef even
     return noErr;
 }
 
-#define AppKitVersionNumberWithCarbonWindowRefSupport 644
+#define AppKitVersionJaguar 644
 
-inline bool hasCarbonWindowRef()
+inline bool hasJaguarAppKit()
 {
-  return (NSAppKitVersionNumber >= AppKitVersionNumberWithCarbonWindowRefSupport);
+  return (NSAppKitVersionNumber >= AppKitVersionJaguar);
 }
 
 inline WindowRef windowToWindowRef(NSWindow* window)
 {
-  return (WindowRef) (hasCarbonWindowRef() ?
+  return (WindowRef) (hasJaguarAppKit() ?
                       [window windowRef] :
                       [window _windowRef]);
 }
 
 inline NSRect getWindowRefFrame(NSWindow* window)
 {
-    return (hasCarbonWindowRef() ?
+    return (hasJaguarAppKit() ?
             [[window contentView] frame] :
             [window frame]);
 }
@@ -2307,7 +2307,13 @@ const PRInt32 kNumLines = 4;
   geckoEvent.eventStructType = NS_MOUSE_SCROLL_EVENT;
   geckoEvent.nativeMsg = nsnull;
   [self convert:theEvent message:NS_MOUSE_SCROLL toGeckoEvent:&geckoEvent];
-  geckoEvent.delta = PRInt32([theEvent deltaY])*(-kNumLines);
+  PRInt32 incomingDeltaY = [theEvent deltaY];
+  // Use hasJaguarAppKit to determine if we're on 10.2 where the user has control
+  // over the deltaY from a scrollwheel event via the Mouse panel in System Preferences
+  if (hasJaguarAppKit())
+    geckoEvent.delta = -incomingDeltaY;
+  else
+    geckoEvent.delta = incomingDeltaY * -kNumLines;
   geckoEvent.scrollFlags |= nsMouseScrollEvent::kIsVertical;
  
   // send event into Gecko by going directly to the
