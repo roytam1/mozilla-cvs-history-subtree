@@ -331,7 +331,8 @@ function stackTrace(aArguments, aMaxCount)
   var temp = aArguments.callee.caller;
   var count = 0;
   while (temp) {
-    dump("***     " + stackTraceFunctionFormat(temp.name) + ")\n");
+    dump("***     " + stackTraceFunctionFormat(temp.name) + "()\n");
+    
     temp = temp.arguments.callee.caller;
     if (aMaxCount > 0 && ++count == aMaxCount)
       break;
@@ -745,7 +746,7 @@ nsInstallLogReader.prototype = {
         this._listener.onAddFile(lf);
       }
       catch (e) { 
-        dump("*** nsInstallLogReader::_parseLine - failed to remove file\n"); 
+        dump("*** nsInstallLogReader::_parseLine - failed to remove file " + e + "\n"); 
       }
       break;
     case this.TOKEN_REGISTER_CHROME:
@@ -4156,7 +4157,8 @@ nsExtensionsDataSource.prototype = {
       var type = getItemType(aSource.Value);
       var id = stripPrefix(aSource.Value, type);
       var targetAppInfo = this.getTargetApplicationInfo(id, this, type);
-      dump("*** info = " + targetAppInfo.toSource() + "\n");
+      if (!targetAppInfo)
+        return this._emL("false");
       getVersionChecker();
       
       var appVersion = gPref.getCharPref(PREF_EM_APP_EXTENSIONS_VERSION);
