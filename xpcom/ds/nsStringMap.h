@@ -75,7 +75,7 @@ public:
 
         PRInt32 memcmp(const char *ostr, PRUint32 olen) {
             if(olen==slen) {
-                return nsCRT::memcmp((void*)cstr, ostr, slen);
+                return ::memcmp((void*)cstr, ostr, slen);
             } else {
                 return olen - slen;
             }

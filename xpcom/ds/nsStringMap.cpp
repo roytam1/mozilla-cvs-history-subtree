@@ -52,9 +52,6 @@
         static int memcmp(const void *a, const void *b, PRUint32 c) {
             return ::memcmp(a,b,c);
         }
-        static void memcpy(const void *a, const void *b, PRUint32 c) {
-            ::memcmp(a,b,c);
-        }
     };
 #else
 #   include "nsCRT.h"
@@ -174,7 +171,7 @@ nsStringMap::Put(const char *str, PRUint32 slen, void *obj, PRBool copy)
         PRUint32 mask  = sizeof(double) - 1;
         PRUint32 asize = (slen+mask) & ~mask;
         char *tstr = (char*) PL_ArenaAllocate(&mPool, asize);
-        nsCRT::memcpy(tstr, str, slen);
+        memcpy(tstr, str, slen);
         str = tstr;
     }
 
