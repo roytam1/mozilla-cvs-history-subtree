@@ -5,6 +5,8 @@
 #include "nsHttp.h"
 #include "netCore.h"
 #include "nsNetCID.h"
+#include "nsString2.h"
+#include "nsReadableUtils.h"
 
 static NS_DEFINE_CID(kStreamListenerProxyCID, NS_STREAMLISTENERPROXY_CID);
 
@@ -15,7 +17,9 @@ static NS_DEFINE_CID(kStreamListenerProxyCID, NS_STREAMLISTENERPROXY_CID);
 nsHttpChannel::nsHttpChannel()
     : mTransaction(0)
     , mConnectionInfo(0)
+    , mLoadFlags(LOAD_NORMAL)
     , mCapabilities(0)
+    , mIsPending(PR_FALSE)
 {
     NS_INIT_ISUPPORTS();
 }
@@ -99,6 +103,9 @@ nsHttpChannel::Connect()
     rv = SetupTransaction();
     if (NS_FAILED(rv)) return rv;
 
+    if (mLoadGroup)
+        mLoadGroup->AddRequest(this, nsnull);
+
     return nsHttpHandler::get()->
             InitiateTransaction(mTransaction, mConnectionInfo);
 }
@@ -164,19 +171,24 @@ NS_IMPL_ISUPPORTS5(nsHttpChannel,
 NS_IMETHODIMP
 nsHttpChannel::GetName(PRUnichar **aName)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    NS_ENSURE_ARG_POINTER(aName);
+    *aName = ToNewUnicode(NS_ConvertASCIItoUCS2(mSpec));
+    return NS_OK;
 }
 
 NS_IMETHODIMP
-nsHttpChannel::IsPending(PRBool *_retval)
+nsHttpChannel::IsPending(PRBool *value)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    NS_ENSURE_ARG_POINTER(value);
+    *value = mIsPending;
+    return NS_OK;
 }
 
 NS_IMETHODIMP
 nsHttpChannel::GetStatus(nsresult *aStatus)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    *aStatus = NS_OK;
+    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -200,23 +212,30 @@ nsHttpChannel::Resume()
 NS_IMETHODIMP
 nsHttpChannel::GetLoadGroup(nsILoadGroup **aLoadGroup)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    NS_ENSURE_ARG_POINTER(aLoadGroup);
+    *aLoadGroup = mLoadGroup;
+    NS_IF_ADDREF(*aLoadGroup);
+    return NS_OK;
 }
 NS_IMETHODIMP
 nsHttpChannel::SetLoadGroup(nsILoadGroup *aLoadGroup)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    mLoadGroup = aLoadGroup;
+    return NS_OK;
 }
 
 NS_IMETHODIMP
 nsHttpChannel::GetLoadFlags(nsLoadFlags *aLoadFlags)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    NS_ENSURE_ARG_POINTER(aLoadFlags);
+    *aLoadFlags = mLoadFlags;
+    return NS_OK;
 }
 NS_IMETHODIMP
 nsHttpChannel::SetLoadFlags(nsLoadFlags aLoadFlags)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    mLoadFlags = aLoadFlags;
+    return NS_OK;
 }
 
 //-----------------------------------------------------------------------------
@@ -226,7 +245,7 @@ nsHttpChannel::SetLoadFlags(nsLoadFlags aLoadFlags)
 NS_IMETHODIMP
 nsHttpChannel::GetOriginalURI(nsIURI **aOriginalURI)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    return GetURI(aOriginalURI);
 }
 NS_IMETHODIMP
 nsHttpChannel::SetOriginalURI(nsIURI *aOriginalURI)
@@ -240,7 +259,7 @@ nsHttpChannel::GetURI(nsIURI **aURI)
     NS_ENSURE_ARG_POINTER(aURI);
     *aURI = mURI;
     NS_IF_ADDREF(*aURI);
-    return NS_ERROR_NOT_IMPLEMENTED;
+    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -251,7 +270,7 @@ nsHttpChannel::GetOwner(nsISupports **aOwner)
 NS_IMETHODIMP
 nsHttpChannel::SetOwner(nsISupports *aOwner)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -262,19 +281,27 @@ nsHttpChannel::GetNotificationCallbacks(nsIInterfaceRequestor **aCallbacks)
 NS_IMETHODIMP
 nsHttpChannel::SetNotificationCallbacks(nsIInterfaceRequestor *aCallbacks)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    return NS_OK;
 }
 
 NS_IMETHODIMP
 nsHttpChannel::GetSecurityInfo(nsISupports **aSecurityInfo)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    NS_ENSURE_ARG_POINTER(aSecurityInfo);
+    *aSecurityInfo = nsnull;
+    return NS_OK;
 }
 
 NS_IMETHODIMP
 nsHttpChannel::GetContentType(char **aContentType)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    NS_ENSURE_ARG_POINTER(aContentType);
+
+    if (mTransaction && mTransaction->ContentType())
+        *aContentType = PL_strdup(mTransaction->ContentType());
+    else
+        *aContentType = nsnull;
+    return NS_OK;
 }
 NS_IMETHODIMP
 nsHttpChannel::SetContentType(const char *aContentType)
@@ -285,7 +312,12 @@ nsHttpChannel::SetContentType(const char *aContentType)
 NS_IMETHODIMP
 nsHttpChannel::GetContentLength(PRInt32 *aContentLength)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    NS_ENSURE_ARG_POINTER(aContentLength);
+    if (mTransaction)
+        *aContentLength = mTransaction->ContentLength();
+    else
+        *aContentLength = -1;
+    return NS_OK;
 }
 NS_IMETHODIMP
 nsHttpChannel::SetContentLength(PRInt32 aContentLength)
@@ -304,7 +336,9 @@ nsHttpChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *context)
 {
     LOG(("nsHttpChannel::AsyncOpen [this=%x]\n", this));
 
-    NS_ENSURE_TRUE(!mListener, NS_ERROR_IN_PROGRESS);
+    NS_ENSURE_TRUE(!mIsPending, NS_ERROR_IN_PROGRESS);
+
+    mIsPending = PR_TRUE;
 
     mListener = listener;
     mListenerContext = context;
@@ -328,6 +362,7 @@ nsHttpChannel::GetRequestMethod(char **aRequestMethod)
 NS_IMETHODIMP
 nsHttpChannel::SetRequestMethod(const char *aRequestMethod)
 {
+    NS_ENSURE_TRUE(!mIsPending, NS_ERROR_IN_PROGRESS);
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -350,6 +385,7 @@ nsHttpChannel::GetReferrer(nsIURI **aReferrer)
 NS_IMETHODIMP
 nsHttpChannel::SetReferrer(nsIURI *aReferrer)
 {
+    NS_ENSURE_TRUE(!mIsPending, NS_ERROR_IN_PROGRESS);
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -362,6 +398,7 @@ nsHttpChannel::GetRequestHeader(const char *header, char **_retval)
 NS_IMETHODIMP
 nsHttpChannel::SetRequestHeader(const char *header, const char *value)
 {
+    NS_ENSURE_TRUE(!mIsPending, NS_ERROR_IN_PROGRESS);
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -374,36 +411,42 @@ nsHttpChannel::VisitRequestHeaders(nsIHttpHeaderVisitor *visitor)
 NS_IMETHODIMP
 nsHttpChannel::GetResponseStatus(PRUint32 *aResponseStatus)
 {
+    NS_ENSURE_TRUE(!mIsPending, NS_ERROR_NOT_AVAILABLE);
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
 nsHttpChannel::GetResponseStatusText(char **aResponseStatusText)
 {
+    NS_ENSURE_TRUE(!mIsPending, NS_ERROR_NOT_AVAILABLE);
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
 nsHttpChannel::GetResponseHeader(const char *header, char **_retval)
 {
+    NS_ENSURE_TRUE(!mIsPending, NS_ERROR_NOT_AVAILABLE);
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
 nsHttpChannel::SetResponseHeader(const char *header, const char *value)
 {
+    NS_ENSURE_TRUE(!mIsPending, NS_ERROR_NOT_AVAILABLE);
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
 nsHttpChannel::VisitResponseHeaders(nsIHttpHeaderVisitor *visitor)
 {
+    NS_ENSURE_TRUE(!mIsPending, NS_ERROR_NOT_AVAILABLE);
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
 nsHttpChannel::GetCharset(char **aCharset)
 {
+    NS_ENSURE_TRUE(!mIsPending, NS_ERROR_NOT_AVAILABLE);
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -454,14 +497,38 @@ NS_IMETHODIMP
 nsHttpChannel::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
 {
     NS_ENSURE_TRUE(mListener, NS_ERROR_NULL_POINTER);
+    LOG(("nsHttpChannel::OnStartRequest [this=%x]\n", this));
     return mListener->OnStartRequest(this, mListenerContext);
 }
 
 NS_IMETHODIMP
-nsHttpChannel::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult statusCode)
+nsHttpChannel::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult status)
 {
     NS_ENSURE_TRUE(mListener, NS_ERROR_NULL_POINTER);
-    return mListener->OnStopRequest(this, mListenerContext, statusCode);
+
+    LOG(("nsHttpChannel::OnStopRequest [this=%x status=%x]\n",
+        this, status));
+
+    mIsPending = PR_FALSE;
+
+    mListener->OnStopRequest(this, mListenerContext, status);
+
+    if (mLoadGroup)
+        mLoadGroup->RemoveRequest(this, nsnull, status);
+
+    NS_ASSERTION(mTransaction, "what? no transaction!");
+    // 
+    // we need to decide what to do with the transaction's connection.  if
+    // authentication is required, then we would want to explicitly reuse
+    // the connection.  otherwise, the connection can just be recycled.
+    //
+    // XXX need to support authentication
+    if (mTransaction->Connection()) {
+        nsHttpHandler::get()->RecycleConnection(mTransaction->Connection());
+        mTransaction->SetConnection(nsnull);
+    }
+
+    return NS_OK;
 }
 
 //-----------------------------------------------------------------------------
@@ -474,5 +541,7 @@ nsHttpChannel::OnDataAvailable(nsIRequest *request, nsISupports *ctxt,
                                PRUint32 offset, PRUint32 count)
 {
     NS_ENSURE_TRUE(mListener, NS_ERROR_NULL_POINTER);
+    LOG(("nsHttpChannel::OnDataAvailable [this=%x offset=%u count=%u]\n",
+        this, offset, count));
     return mListener->OnDataAvailable(this, mListenerContext, input, offset, count);
 }

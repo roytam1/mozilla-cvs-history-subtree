@@ -104,9 +104,9 @@ interface nsITransport : nsISupports
      * ask the transport to not proxy the callback.  The caller must then
      * be prepared to handle callbacks on any thread.
      */
-    const unsigned long DONT_PROXY_STREAM_OBSERVER = 1 << 0;
-    const unsigned long DONT_PROXY_STREAM_LISTENER = 1 << 1;
-    const unsigned long DONT_PROXY_STREAM_PROVIDER = 1 << 1;
+    const unsigned long DONT_PROXY_OBSERVER = 1 << 0;
+    const unsigned long DONT_PROXY_LISTENER = 1 << 1;
+    const unsigned long DONT_PROXY_PROVIDER = 1 << 1;
 
 };
 

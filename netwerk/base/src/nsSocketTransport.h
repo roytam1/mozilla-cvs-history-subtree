@@ -377,7 +377,7 @@ private:
 /**
  * base request
  */
-class nsSocketRequest : public nsITransportRequest
+class nsSocketRequest : public nsISocketTransportRequest
 {
 public:
     NS_DECL_ISUPPORTS
@@ -418,6 +418,8 @@ protected:
 class nsSocketReadRequest : public nsSocketRequest
 {
 public:
+    NS_DECL_NSISOCKETTRANSPORTREQUEST
+
     nsSocketReadRequest();
     virtual ~nsSocketReadRequest();
 
@@ -438,6 +440,8 @@ private:
 class nsSocketWriteRequest : public nsSocketRequest
 {
 public:
+    NS_DECL_NSISOCKETTRANSPORTREQUEST
+
     nsSocketWriteRequest();
     virtual ~nsSocketWriteRequest();
 

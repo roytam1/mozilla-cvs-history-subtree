@@ -30,7 +30,7 @@ public:
     virtual ~nsHttpTransaction();
 
     // Called when added to a connection
-    nsresult SetConnection(nsHttpConnection *);
+    void SetConnection(nsHttpConnection *);
 
     // Called to initialize the transaction
     nsresult SetRequestInfo(nsHttpAtom method,
@@ -45,6 +45,9 @@ public:
     nsHttpVersion         ResponseVersion()    { return mResponseVersion; }
     PRUint32              ResponseStatus()     { return mResponseStatus; }
     const char           *ResponseStatusText() { return mResponseStatusText; }
+    PRInt32               ContentLength()      { return mContentLength; }
+    const char           *ContentType()        { return mContentType; }
+    const char           *ContentCharset()     { return mContentCharset; }
 
     // Called to write data to the socket until return NS_BASE_STREAM_CLOSED
     nsresult OnDataWritable(nsIOutputStream *, PRUint32 count);
@@ -53,7 +56,7 @@ public:
     nsresult OnDataAvailable(nsIInputStream *, PRUint32 count);
 
     // Called when the transaction completes, possibly prematurely with an error.
-    nsresult OnStopRequest(nsresult);
+    nsresult OnStopTransaction(nsresult);
 
 private:
     nsresult ParseVersion(const char *version);
@@ -61,12 +64,9 @@ private:
     nsresult ParseHeaderLine(const char *line);
     nsresult ParseLine(const char *line);
     nsresult HandleSegment(const char *segment, PRUint32 count, PRUint32 *countRead);
-    nsresult HandleContent(nsIInputStream *, PRUint32 count);
+    nsresult HandleContent(nsIInputStream *, PRUint32 count, PRBool fromSocket);
+    nsresult DecodeContentType(const char *);
     nsresult InstallChunkedDecoder();
-
-    // ReadSegments callback
-    static NS_METHOD WriteSegmentFun(nsIInputStream *, void *, const char *,
-                                     PRUint32, PRUint32, PRUint32 *);
 
 private:
     nsCOMPtr<nsIStreamListener> mListener;
@@ -81,8 +81,14 @@ private:
     PRUint32                    mResponseStatus;
     nsXPIDLCString              mResponseStatusText;
 
+    nsXPIDLCString              mContentType;
+    nsXPIDLCString              mContentCharset;
+
     char                       *mReadBuf; // read ahead buffer
     nsCString                   mLineBuf; // may contain a partial line
+
+    PRInt32                     mContentLength; // equals -1 if unknown
+    PRUint32                    mContentRead;   // count of consumed content bytes
 
     // we hold onto this context to know when eof has been reached
     nsHTTPChunkConvContext     *mChunkConvCtx;

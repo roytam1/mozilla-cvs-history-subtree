@@ -71,3 +71,12 @@ interface nsISocketTransport : nsITransport
 	 */
 	[noscript] string GetIPStr(in unsigned long aStrLen);
 };
+
+[scriptable, uuid(bd39c4fc-da22-47d4-8de5-6c1dc725965b)]
+interface nsISocketTransportRequest : nsITransportRequest
+{
+    /**
+     * Returns the number of bytes transfered by this request so far.
+     */
+    readonly attribute unsigned long transferCount;
+};

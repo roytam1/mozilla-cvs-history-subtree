@@ -39,7 +39,7 @@ static struct PLHashTable *gHttpAtomTable;
 
 // Hash string ignore case, based on PL_HashString
 static PLHashNumber
-HashString(const PRUint8 *key)
+StringHash(const PRUint8 *key)
 {
     PLHashNumber h;
     const PRUint8 *s;
@@ -50,6 +50,33 @@ HashString(const PRUint8 *key)
     return h;
 }
 
+static PRIntn
+StringCompare(const char *a, const char *b)
+{
+    return PL_strcasecmp(a, b) == 0;
+}
+
+#if 0
+#define NBUCKETS(ht)    (1 << (PL_HASH_BITS - (ht)->shift))
+static void
+DumpAtomTable()
+{
+    if (gHttpAtomTable) {
+        PLHashEntry *he, **hep;
+        PRUint32 i, nbuckets = NBUCKETS(gHttpAtomTable);
+        for (i=0; i<nbuckets; ++i) {
+            printf("bucket %d: ", i);
+            hep = &gHttpAtomTable->buckets[i];
+            while ((he = *hep) != 0) {
+                printf("(%s,%x,%x) ", (const char *) he->key, he->keyHash, he->value);
+                hep = &he->next;
+            }
+            printf("\n");
+        }
+    }
+}
+#endif
+
 // We put the atoms in a hash table for speedy lookup.. see ResolveAtom.
 static nsresult
 CreateAtomTable()
@@ -59,9 +86,9 @@ CreateAtomTable()
     if (gHttpAtomTable)
         return NS_OK;
 
-    gHttpAtomTable = PL_NewHashTable(128, (PLHashFunction) HashString,
-                                          (PLHashComparator) PL_strcasecmp, 
-                                          (PLHashComparator) PL_strcasecmp, 0, 0);
+    gHttpAtomTable = PL_NewHashTable(128, (PLHashFunction) StringHash,
+                                          (PLHashComparator) StringCompare,
+                                          (PLHashComparator) 0, 0, 0);
     if (!gHttpAtomTable)
         return NS_ERROR_OUT_OF_MEMORY;
 
@@ -70,7 +97,7 @@ CreateAtomTable()
 #include "nsHttpAtomList.h"
 #undef HTTP_ATOM
 
-    nsHttp::DumpAtomTable();
+    //DumpAtomTable();
     return NS_OK;
 }
 
@@ -83,25 +110,6 @@ nsHttp::DestroyAtomTable()
     }
 }
 
-#define NBUCKETS(ht)    (1 << (PL_HASH_BITS - (ht)->shift))
-void
-nsHttp::DumpAtomTable()
-{
-    if (gHttpAtomTable) {
-        PLHashEntry *he, **hep;
-        PRUint32 i, nbuckets = NBUCKETS(gHttpAtomTable);
-        for (i=0; i<nbuckets; ++i) {
-            printf("bucket %d: ", i);
-            hep = &gHttpAtomTable->buckets[i];
-            while ((he = *hep) != 0) {
-                printf("(%x,%s,%x,%x) ", he->key, (const char *) he->key, he->keyHash, he->value);
-                hep = &he->next;
-            }
-            printf("\n");
-        }
-    }
-}
-
 nsHttpAtom
 nsHttp::ResolveAtom(const char *str)
 {
@@ -110,11 +118,8 @@ nsHttp::ResolveAtom(const char *str)
 
     nsHttpAtom atom = { nsnull };
 
-    if (gHttpAtomTable) {
-        printf("ResolveAtom: str=[%s,%x] --> ", str, HashString((const PRUint8 *) str));
+    if (gHttpAtomTable)
         atom._val = (const char *) PL_HashTableLookup(gHttpAtomTable, str);
-        printf("[%s]\n", atom.get());
-    }
 
     return atom;
 }

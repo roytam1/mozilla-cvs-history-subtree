@@ -584,7 +584,7 @@ NS_AsyncWriteFromStream(nsIRequest **aRequest,
     //
     // So, let's always make this optimization.
     //
-    aFlags |= nsITransport::DONT_PROXY_STREAM_PROVIDER;
+    aFlags |= nsITransport::DONT_PROXY_PROVIDER;
 
     return aTransport->AsyncWrite(provider, aContext,
                                   aOffset,

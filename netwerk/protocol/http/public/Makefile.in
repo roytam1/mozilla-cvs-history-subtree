@@ -30,9 +30,10 @@ XPIDL_MODULE = necko_http
 
 XPIDLSRCS = \
 		nsIHttpChannel.idl \
-		nsIHttpNotify.idl \
 		nsIHttpProtocolHandler.idl \
 		nsIHttpEventSink.idl \
 		$(NULL)
+
+		#nsIHttpNotify.idl \
 
 include $(topsrcdir)/config/rules.mk

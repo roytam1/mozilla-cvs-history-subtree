@@ -34,7 +34,19 @@ public:
     // connection.  It fails if there is already an existing transaction.
     nsresult SetTransaction(nsHttpTransaction *);
 
-    nsISocketTransport   *SocketTransport() { return mTransport.get(); }
+    // called by the transaction to inform the connection that it is done.
+    nsresult OnTransactionComplete(nsresult status);
+
+    nsresult GetBytesWritten(PRUint32 *);
+    nsresult GetBytesRead(PRUint32 *);
+
+    PRBool   CanReuse(); // can this connection be reused?
+    PRBool   IsAlive();
+    PRUint32 ReuseCount() { return mReuseCount; }
+    PRUint32 MaxReuseCount() { return mMaxReuseCount; }
+    PRUint32 IdleTimeout() { return mIdleTimeout; }
+
+    //nsISocketTransport   *SocketTransport() { return mTransport.get(); }
     nsHttpTransaction    *Transaction()     { return mTransaction; }
     nsHttpConnectionInfo *ConnectionInfo()  { return mConnectionInfo; }
 
@@ -51,12 +63,15 @@ private:
     nsresult CreateTransport();
 
 private:
-    nsCOMPtr<nsISocketTransport> mTransport;
-    nsCOMPtr<nsIRequest>         mWriteReq;
-    nsCOMPtr<nsIRequest>         mReadReq;
+    nsCOMPtr<nsISocketTransport> mSocketTransport;
+    nsCOMPtr<nsIRequest>         mWriteRequest;
+    nsCOMPtr<nsIRequest>         mReadRequest;
     nsHttpTransaction           *mTransaction;    // hard ref
     nsHttpConnectionInfo        *mConnectionInfo; // hard ref
     PRUint32                     mState;
+    PRUint32                     mReuseCount;
+    PRUint32                     mMaxReuseCount; // value of keep-alive: max=
+    PRUint32                     mIdleTimeout;   // value of keep-alive: timeout=
 };
 
 //-----------------------------------------------------------------------------

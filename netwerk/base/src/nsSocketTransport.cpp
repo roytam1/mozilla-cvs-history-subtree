@@ -1403,9 +1403,9 @@ nsSocketTransport::AsyncRead(nsIStreamListener* aListener,
 
     if (NS_SUCCEEDED(rv)) {
         // Proxy the stream listener and observer methods by default.
-        if (!(aFlags & nsITransport::DONT_PROXY_STREAM_OBSERVER)) {
+        if (!(aFlags & nsITransport::DONT_PROXY_OBSERVER)) {
             // Cannot proxy the listener unless the observer part is also proxied.
-            if (!(aFlags & nsITransport::DONT_PROXY_STREAM_PROVIDER)) {
+            if (!(aFlags & nsITransport::DONT_PROXY_PROVIDER)) {
                 rv = NS_NewStreamListenerProxy(getter_AddRefs(listener),
                                                aListener, nsnull,
                                                mBufferSegmentSize,
@@ -1480,9 +1480,9 @@ nsSocketTransport::AsyncWrite(nsIStreamProvider* aProvider,
     
     if (NS_SUCCEEDED(rv)) {
         // Proxy the stream provider and observer methods by default.
-        if (!(aFlags & nsITransport::DONT_PROXY_STREAM_OBSERVER)) {
+        if (!(aFlags & nsITransport::DONT_PROXY_OBSERVER)) {
             // Cannot proxy the provider unless the observer part is also proxied.
-            if (!(aFlags & nsITransport::DONT_PROXY_STREAM_PROVIDER)) {
+            if (!(aFlags & nsITransport::DONT_PROXY_PROVIDER)) {
                 rv = NS_NewStreamProviderProxy(getter_AddRefs(provider),
                                                aProvider, nsnull,
                                                mBufferSegmentSize,
@@ -2381,9 +2381,10 @@ nsSocketOS::SetObserver(nsIOutputStreamObserver *aObserver)
 //----------------------------------------------------------------------------
 //
 
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsSocketRequest,
+NS_IMPL_THREADSAFE_ISUPPORTS3(nsSocketRequest,
                               nsIRequest,
-                              nsITransportRequest)
+                              nsITransportRequest,
+                              nsISocketTransportRequest)
 
 nsSocketRequest::nsSocketRequest()
     : mTransport(nsnull)
@@ -2469,8 +2470,7 @@ nsSocketRequest::Cancel(nsresult status)
     mCanceled = PR_TRUE;
 
     // if status is a fail, we need to force a dispatch
-    if (NS_FAILED(status))
-        mTransport->Dispatch(this);
+    mTransport->Dispatch(this);
     return NS_OK;
 }
 
@@ -2657,6 +2657,17 @@ nsSocketReadRequest::OnRead()
     return rv;
 }
 
+NS_IMETHODIMP
+nsSocketReadRequest::GetTransferCount(PRUint32 *count)
+{
+    NS_ENSURE_ARG_POINTER(count);
+    if (mInputStream)
+        *count = mInputStream->GetOffset();
+    else
+        *count = 0;
+    return NS_OK;
+}
+
 //
 //----------------------------------------------------------------------------
 // nsSocketWriteRequest
@@ -2753,4 +2764,15 @@ nsSocketWriteRequest::OnWrite()
         }
     }
     return rv;
+}
+
+NS_IMETHODIMP
+nsSocketWriteRequest::GetTransferCount(PRUint32 *count)
+{
+    NS_ENSURE_ARG_POINTER(count);
+    if (mOutputStream)
+        *count = mOutputStream->GetOffset();
+    else
+        *count = 0;
+    return NS_OK;
 }

@@ -71,7 +71,6 @@ struct nsHttpAtom
 struct nsHttp
 {
     static void DestroyAtomTable();
-    static void DumpAtomTable();
 
     static nsHttpAtom ResolveAtom(const char *);
 

@@ -5,6 +5,7 @@
 #include "nsIHttpChannel.h"
 #include "nsIStreamListener.h"
 #include "nsIURI.h"
+#include "nsILoadGroup.h"
 #include "nsCOMPtr.h"
 #include "nsXPIDLString.h"
 
@@ -43,6 +44,7 @@ private:
     nsCOMPtr<nsIURI>            mURI;
     nsCOMPtr<nsIStreamListener> mListener;
     nsCOMPtr<nsISupports>       mListenerContext;
+    nsCOMPtr<nsILoadGroup>      mLoadGroup;
 
     nsHttpHeaderArray           mRequestHeaders;
     nsHttpTransaction          *mTransaction;    // hard ref
@@ -50,7 +52,10 @@ private:
 
     nsXPIDLCString              mSpec;
 
+    PRUint32                    mLoadFlags;
     PRUint32                    mCapabilities;
+
+    PRPackedBool                mIsPending;
 };
 
 #endif

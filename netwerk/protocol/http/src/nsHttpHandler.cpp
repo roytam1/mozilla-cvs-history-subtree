@@ -245,7 +245,7 @@ failed:
 nsresult
 nsHttpHandler::RecycleConnection(nsHttpConnection *connection)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    return NS_OK;
 }
 
 const char *

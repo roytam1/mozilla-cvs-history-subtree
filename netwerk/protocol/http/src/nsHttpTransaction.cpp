@@ -22,6 +22,8 @@ nsHttpTransaction::nsHttpTransaction(nsIStreamListener *listener)
     , mResponseVersion(HTTP_VERSION_UNKNOWN)
     , mResponseStatus(0)
     , mReadBuf(0)
+    , mContentLength(-1)
+    , mContentRead(0)
     , mChunkConvCtx(0)
     , mHaveStatusLine(0)
     , mHaveAllHeaders(0)
@@ -75,13 +77,12 @@ nsHttpTransaction::SetRequestInfo(nsHttpAtom method,
     return rv;
 }
 
-nsresult
+void
 nsHttpTransaction::SetConnection(nsHttpConnection *connection)
 {
     NS_IF_RELEASE(mConnection);
     mConnection = connection;
     NS_IF_ADDREF(mConnection);
-    return NS_OK;
 }
 
 // called on the socket transport thread
@@ -103,7 +104,7 @@ nsHttpTransaction::OnDataAvailable(nsIInputStream *is, PRUint32 count)
 
     if (mHaveAllHeaders)
         // simply pipe the data over to the channel's thread
-        return HandleContent(is, count);
+        return HandleContent(is, count, PR_TRUE);
 
     //
     // need to parse status line and headers
@@ -160,7 +161,7 @@ done:
             nsCOMPtr<nsIInputStream> stream = do_QueryInterface(sup, &rv);
             if (NS_FAILED(rv)) return rv;
 
-            rv = HandleContent(stream, bufCount);
+            rv = HandleContent(stream, bufCount, PR_FALSE);
             // the stream listener proxy should have room for all of the data
             // in this stream.
             NS_POSTCONDITION(rv != NS_BASE_STREAM_WOULD_BLOCK, "bad listener");
@@ -168,16 +169,17 @@ done:
             if (NS_FAILED(rv)) return rv;
         }
         if (count) // try to read some more from the socket
-            return HandleContent(is, count);
+            return HandleContent(is, count, PR_TRUE);
     }
     return NS_OK;
 }
 
 // called on the socket transport thread
 nsresult
-nsHttpTransaction::OnStopRequest(nsresult status)
+nsHttpTransaction::OnStopTransaction(nsresult status)
 {
-    LOG(("nsHttpTransaction::OnStopRequest [this=%x]\n", this));
+    LOG(("nsHttpTransaction::OnStopTransaction [this=%x status=%x]\n",
+        this, status));
 
     if (mReadBuf) {
         PR_Free(mReadBuf);
@@ -294,10 +296,8 @@ nsHttpTransaction::ParseHeaderLine(const char *line)
     if (*line == '\0')
         mHaveAllHeaders = PR_TRUE;
     else if ((p = PL_strchr(line, ':')) != nsnull) {
-        LOG(("found :\n"));
         *p = 0;
         nsHttpAtom atom = nsHttp::ResolveAtom(line);
-        LOG(("resolved header atom: %s\n", atom.get()));
         if (atom) {
             // skip over whitespace
             do {
@@ -305,12 +305,12 @@ nsHttpTransaction::ParseHeaderLine(const char *line)
             } while (*p == ' ');
             // assign response header
             mResponseHeaders.SetHeader(atom, p);
-
-            LOG(("setting header [%s:%s]\n", atom.get(), p));
         }
+        else
+            LOG(("unknown header; skipping\n"));
     }
     else
-        LOG(("mal-formed header line [%s]\n", line));
+        LOG(("mal-formed header\n"));
 
     // We ignore mal-formed headers in the hope that we'll still be able
     // to do something useful with the response.
@@ -370,31 +370,119 @@ nsHttpTransaction::HandleSegment(const char *segment,
 }
 
 nsresult
-nsHttpTransaction::HandleContent(nsIInputStream *stream, PRUint32 count)
+nsHttpTransaction::HandleContent(nsIInputStream *stream,
+                                 PRUint32 count,
+                                 PRBool fromSocket)
 {
     nsresult rv;
 
     LOG(("nsHttpTransaction::HandleContent [this=%x count=%u]\n",
         this, count));
 
+    NS_PRECONDITION(mConnection, "no connection");
+
     if (!mFiredOnStart) {
         mFiredOnStart = PR_TRUE;
 
-        LOG(("firing OnStartRequest\n"));
-
+        LOG(("nsHttpTransaction [this=%x] sending OnStartRequest\n", this));
         rv = mListener->OnStartRequest(this, nsnull);
         if (NS_FAILED(rv)) return rv;
 
-        // handle chunked encoding here
-        const char *val =
-            mResponseHeaders.PeekHeader(nsHttp::Transfer_Encoding);
+        const char *val;
+
+        // decode the content-length header if given
+        val = mResponseHeaders.PeekHeader(nsHttp::Content_Length);
+        if (val)
+            mContentLength = atoi(val);
+
+        // decode the content-type header if given
+        val = mResponseHeaders.PeekHeader(nsHttp::Content_Type);
+        if (val)
+            DecodeContentType(val);
+
+        // handle chunked encoding here, so we'll know immediately when
+        // we're done with the socket.  please note that _all_ other
+        // decoding is done when the channel receives the content data
+        // so as not to block the socket transport thread too much.
+        val = mResponseHeaders.PeekHeader(nsHttp::Transfer_Encoding);
         if (val) {
+            // we only support the "chunked" transfer encoding right now.
             rv = InstallChunkedDecoder();
             if (NS_FAILED(rv)) return rv;
         }
     }
 
-    return mListener->OnDataAvailable(this, nsnull, stream, 0, count);
+    // we cannot trust that all of "count" data will be read, so we have to
+    // interogate the connection for the current number of bytes read.
+    PRUint32 before = 0, after = 0;
+    if (fromSocket) {
+        rv = mConnection->GetBytesRead(&before);
+        if (NS_FAILED(rv)) return rv;
+    }
+
+    rv = mListener->OnDataAvailable(this, nsnull, stream, mContentRead, count);
+    if (NS_FAILED(rv)) return rv;
+
+    if (fromSocket) {
+        rv = mConnection->GetBytesRead(&after);
+        if (NS_FAILED(rv)) return rv;
+    }
+    else
+        after = count;
+
+    NS_ASSERTION(after >= before, "bytes read NOT monotonically increasing!");
+
+    // update count of content bytes read..
+    mContentRead += (after - before);
+
+    LOG(("nsHttpTransaction [this=%x mContentRead=%u mContentLength=%d]\n",
+        this, mContentRead, mContentLength));
+
+    // check for end-of-file
+    if ((PRInt32(mContentRead) == mContentLength) ||
+            (mChunkConvCtx && mChunkConvCtx->GetEOF())) {
+        // let the connection know that we are done with it; this should
+        // result in OnStopTransaction being fired.
+        rv = mConnection->OnTransactionComplete(NS_OK);
+        if (NS_FAILED(rv)) return rv;
+    }
+
+    return NS_OK;
+}
+
+nsresult
+nsHttpTransaction::DecodeContentType(const char *val)
+{
+    nsCAutoString type(val);
+
+    // we don't care about comments
+    PRInt32 i = type.FindChar('(');
+    if (i != kNotFound) {
+        type.Truncate(i);
+        type.Trim(" ", PR_FALSE);
+    }
+
+    if (!type.IsEmpty()) {
+        i = type.FindChar(';');
+        if (i == kNotFound)
+            mContentType = type.get();
+        else {
+            // the content-type value has additional fields
+            nsCAutoString buf;
+            type.Left(buf, i);
+            mContentType = buf.get();
+
+            // does the content-type value contain a charset?
+            type.Mid(buf, i+1, PRUint32(-1));
+            buf.Trim(" ");
+            if (buf.Find("charset=", PR_TRUE) == 0) {
+                // set the charset
+                buf.Cut(0, sizeof("charset=") - 1);
+                mContentCharset = buf.get();
+            }
+        }
+    }
+    return NS_OK;
 }
 
 nsresult
@@ -412,12 +500,13 @@ nsHttpTransaction::InstallChunkedDecoder()
     if (!mChunkConvCtx)
         return NS_ERROR_OUT_OF_MEMORY;
 
+    // we need to pass in our converter context as an nsISupports
     nsCOMPtr<nsISupportsVoid> ctx =
             do_CreateInstance(kSupportsVoidCID, &rv);
     if (NS_FAILED(rv)) return rv;
-
     ctx->SetData(mChunkConvCtx);
 
+    // create the "chunked" decoder
     nsCOMPtr<nsIStreamListener> listener;
     rv = serv->AsyncConvertData(NS_LITERAL_STRING("chunked").get(),
                                 NS_LITERAL_STRING("unchunked").get(),
@@ -425,21 +514,36 @@ nsHttpTransaction::InstallChunkedDecoder()
                                 getter_AddRefs(listener));
     if (NS_FAILED(rv)) return rv;
 
-    // data will now be pumped through the chunked decoder
+    // data will now be pushed through the "chunked" decoder
     mListener = listener;
-    return NS_OK;
-}
 
-NS_METHOD
-nsHttpTransaction::WriteSegmentFun(nsIInputStream *in,
-                                   void *closure,
-                                   const char *fromSegment,
-                                   PRUint32 offset,
-                                   PRUint32 count,
-                                   PRUint32 *writeCount)
-{
-    nsHttpTransaction *self = (nsHttpTransaction *) closure;
-    return self->HandleSegment(fromSegment, count, writeCount);
+    // before we start pushing data through the decoder, we have to
+    // tell it about any expected trailer headers, so it can consume
+    // them for us.  if we don't do this, then we won't properly detect
+    // the end of the data stream.
+    const char *val = mResponseHeaders.PeekHeader(nsHttp::Trailer);
+    if (val) {
+        nsCString ts(val);
+        ts.StripWhitespace();
+
+        //XXXjag convert to new string code sometime
+        char *cp = NS_CONST_CAST(char *, ts.get());
+
+        while (*cp) {
+            char *pp = PL_strchr(cp, ',');
+            if (!pp) {
+                mChunkConvCtx->AddTrailerHeader(cp);
+                break;
+            }
+            else {
+                *pp = 0;
+                mChunkConvCtx->AddTrailerHeader(cp);
+                *pp = ',';
+                cp = pp + 1;
+            }
+        }
+    }
+    return NS_OK;
 }
 
 //-----------------------------------------------------------------------------
