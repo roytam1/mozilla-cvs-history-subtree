@@ -597,7 +597,6 @@
 				F507A84E03116E7401026D5D,
 				F5568A8F0217C7F5010001CA,
 				F5568A910217CA82010001CA,
-				F507A84803116E6901026D5D,
 				F53F2206022B7C78010001CA,
 				F53F2207022B7C78010001CA,
 				F507A86203128A3D01026D5D,
@@ -988,26 +987,6 @@
 		};
 		F507A84603116E5501026D5D = {
 			fileRef = F507A84403116E5501026D5D;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F507A84703116E6901026D5D = {
-			children = (
-				F5247C2D02289FD9013DD99A,
-			);
-			isa = PBXVariantGroup;
-			name = alert.nib;
-			refType = 4;
-		};
-		F507A84803116E6901026D5D = {
-			fileRef = F507A84703116E6901026D5D;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F507A84903116E6901026D5D = {
-			fileRef = F507A84703116E6901026D5D;
 			isa = PBXBuildFile;
 			settings = {
 			};
@@ -2503,12 +2482,6 @@
 			settings = {
 			};
 		};
-		F5247C2D02289FD9013DD99A = {
-			isa = PBXFileReference;
-			name = English;
-			path = resources/localized/English.lproj/alert.nib;
-			refType = 2;
-		};
 		F5247C2F0228B5E7013DD99A = {
 			children = (
 				F5247C300228B8E5013DD99A,
@@ -3114,7 +3087,7 @@
 			};
 		};
 		F52CE65902BFA88701026D5D = {
-			fileEncoding = 30;
+			fileEncoding = 10;
 			isa = PBXFileReference;
 			name = English;
 			path = resources/localized/English.lproj/Localizable.strings;
@@ -6291,7 +6264,6 @@
 			children = (
 				F507A84103116E1D01026D5D,
 				F507A84403116E5501026D5D,
-				F507A84703116E6901026D5D,
 				F507A84A03116E6E01026D5D,
 				F583E3BB03B820AC01A80166,
 				F507A84D03116E7401026D5D,
@@ -7662,7 +7634,6 @@
 				F507A84F03116E7401026D5D,
 				F5BAAB5602AC4A5301A967F3,
 				F5BAAB5702AC4A5301A967F3,
-				F507A84903116E6901026D5D,
 				F5BAAB5902AC4A5301A967F3,
 				F5BAAB5A02AC4A5301A967F3,
 				F507A86303128A3D01026D5D,
