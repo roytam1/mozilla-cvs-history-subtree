@@ -1312,7 +1312,11 @@ nsStdURL::GetFile(nsIFile * *aFile)
     }
     path.ReplaceChar('/', '\\');
 #elif defined(XP_MAC)
-#error fix up path
+	// For now we'll just convert the /'s into :'s to make it look like a Mac path
+	// at some point we need to doa  better job - FIX ME!!!!!!!
+    path.ReplaceChar('/', ':');
+    if (path.CharAt(0) == ':')
+        path.Cut(0, 1);
 #endif
     nsCOMPtr<nsILocalFile> localFile;
     rv = NS_NewLocalFile(path, getter_AddRefs(localFile));

@@ -37,6 +37,11 @@
 
 #include <Files.h>
 
+typedef enum {
+	eInitWithPath = 0,
+	eInitWithFSSpec
+} nsLocalFileMacInitType;
+
 class NS_COM nsLocalFile : public nsILocalFile, public nsILocalFileMac
 {
 public:
@@ -60,27 +65,42 @@ public:
 
   NS_IMETHOD GetFSSpec(FSSpec *fileSpec);
 
+  NS_IMETHOD GetType(OSType *type);
+  NS_IMETHOD SetType(OSType type);
+  
+  NS_IMETHOD GetCreator(OSType *creator);
+  NS_IMETHOD SetCreator(OSType creator);
+
 private:
 
     // this is the flag which indicates if I can used cached information about the file
     PRBool mStatDirty;
 
-    // this string will alway be in native format!
+    // If we're inited with a path then we store it here
     nsCString mWorkingPath;
     
+    // Any nodes added with AppendPath are stored here
+    nsCString mAppendedPath;
+
     // this will be the resolved path which will *NEVER* be returned to the user
     nsCString mResolvedPath;
     
     // The Mac data structure for a file system object
-    FSSpec    mSpec;
+    FSSpec    mSpec;			// This is the raw spec from InitWIthPath or InitWithFSSpec
+    FSSpec    mResolvedSpec;	// This is the spec we've called ResolveAlias on
     
-    // Is the mSpec member valid?
-    PRBool	haveValidSpec;
+    // Is the mResolvedSpec member valid?  Only after we resolve the mSpec or mWorkingPath
+    PRBool	mHaveValidSpec;
+    
+    // 
+    nsLocalFileMacInitType	mInitType;
     
     // Do we have to create the path hierarchy before the spec is usable?
-    PRBool	mustCreate;
+    PRBool	mMustCreate;
     
     void MakeDirty();
+    nsresult ResolvePath();
+    nsresult ResolveAndStat(PRBool resolveTerminal);
 
     nsresult CopyMove(nsIFile *newParentDir, const char *newName, PRBool followSymlinks, PRBool move);
     nsresult CopySingleFile(nsIFile *source, nsIFile* dest, const char * newName, PRBool followSymlinks, PRBool move);

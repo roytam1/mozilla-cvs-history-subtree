@@ -43,10 +43,21 @@ class nsILocalFileMac : public nsISupports
 {
  public: 
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_ILOCALFILEMAC_IID)
-
+  
+  // Since the OS native way to represent a file on the Mac is an FSSpec
+  // we provide a way to initialize an nsLocalFile with one
   NS_IMETHOD InitWithFSSpec(const FSSpec *fileSpec) = 0;
-
+  
+  // In case we need to get the FSSpec at the heart of an nsLocalFIleMac
   NS_IMETHOD GetFSSpec(FSSpec *fileSpec) = 0;
+
+  // Get/Set methods for the file type
+  NS_IMETHOD GetType(OSType *type) = 0;
+  NS_IMETHOD SetType(OSType type) = 0;
+
+  // Get/Set methods for the file creator
+  NS_IMETHOD GetCreator(OSType *creator) = 0;
+  NS_IMETHOD SetCreator(OSType creator) = 0;
 };
 
 #endif

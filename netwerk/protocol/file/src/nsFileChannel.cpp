@@ -30,6 +30,8 @@
 #include "nsIFile.h"
 #include "nsInt64.h"
 
+#include "prio.h"	// Need to pick up def of PR_RDONLY
+
 static NS_DEFINE_CID(kFileTransportServiceCID, NS_FILETRANSPORTSERVICE_CID);
 static NS_DEFINE_CID(kMIMEServiceCID, NS_MIMESERVICE_CID);
 static NS_DEFINE_CID(kStandardURLCID, NS_STANDARDURL_CID);
