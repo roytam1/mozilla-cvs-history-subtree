@@ -30,40 +30,53 @@
  * may use your version of this file under either the MPL or the
  * GPL.
  */
-#ifndef _XCONST_H_
-#define _XCONST_H_
 
 #include "certt.h"
 
-typedef struct CERTAltNameEncodedContextStr {
+typedef struct PKUPEncodedContext{
+    SECItem notBefore;
+    SECItem notAfter;
+    /*    SECItem encodedValue; */
+    PRArenaPool *arena;
+}PKUPEncodedContext;
+
+typedef struct AltNameEncodedContext{
     SECItem **encodedGenName;
-} CERTAltNameEncodedContext;
+}AltNameEncodedContext;
 
 
+typedef struct NameConstraint{
+    CERTGeneralName  generalName;
+    int              min;
+    int              max;
+}NameConstraint;
 
-SEC_BEGIN_PROTOS
+
 
 extern SECStatus
-CERT_EncodePrivateKeyUsagePeriod(PRArenaPool *arena, 
-                                CERTPrivKeyUsagePeriod *pkup,
+CERT_EncodePublicKeyUsagePeriod(PRArenaPool *arena, PKUPEncodedContext *pkup,
 				SECItem *encodedValue);
 
 extern SECStatus
-CERT_EncodeNameConstraintsExtension(PRArenaPool *arena, 
-                                    CERTNameConstraints  *value,
-			            SECItem *encodedValue);
+CERT_EncodeNameConstraintsExtension(PRArenaPool *arena, CERTNameConstraints  *value,
+			    SECItem *encodedValue);
+extern CERTGeneralName *
+CERT_DecodeAltNameExtension(PRArenaPool *arena, SECItem *EncodedAltName);
+
+extern CERTNameConstraints *
+CERT_DecodeNameConstraintsExtension(PRArenaPool *arena, SECItem *encodedConstraints);
 
 extern SECStatus 
-CERT_EncodeSubjectKeyID(PRArenaPool *arena, char *value, int len, 
-                        SECItem *encodedValue);
+CERT_EncodeSubjectKeyID(PRArenaPool *arena, char *value, int len, SECItem *encodedValue);
 
 extern SECStatus 
-CERT_EncodeIA5TypeExtension(PRArenaPool *arena, char *value, 
-                            SECItem *encodedValue);
+CERT_EncodeIA5TypeExtension(PRArenaPool *arena, char *value, SECItem *encodedValue);
+
+CERTAuthInfoAccess **
+cert_DecodeAuthInfoAccessExtension(PRArenaPool *arena,
+				   SECItem     *encodedExtension);
 
 SECStatus
 cert_EncodeAuthInfoAccessExtension(PRArenaPool *arena,
 				   CERTAuthInfoAccess **info,
 				   SECItem *dest);
-SEC_END_PROTOS
-#endif

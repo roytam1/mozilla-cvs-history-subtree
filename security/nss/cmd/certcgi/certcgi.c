@@ -1048,14 +1048,14 @@ AddPrivKeyUsagePeriod(void             *extHandle,
     char *notAfterStr;
     PRArenaPool *arena = NULL;
     SECStatus rv = SECSuccess;
-    CERTPrivKeyUsagePeriod *pkup;
+    PKUPEncodedContext *pkup;
 
 
     arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
     if ( !arena ) {
 	error_allocate();
     }
-    pkup = PORT_ArenaZNew (arena, CERTPrivKeyUsagePeriod);
+    pkup = PORT_ArenaZAlloc (arena, sizeof (PKUPEncodedContext));
     if (pkup == NULL) {
 	error_allocate();
     }
@@ -1173,7 +1173,7 @@ AddPrivKeyUsagePeriod(void             *extHandle,
 						    PR_TRUE), 
 				    SEC_OID_X509_PRIVATE_KEY_USAGE_PERIOD, 
 				    (EXTEN_VALUE_ENCODER)
-				    CERT_EncodePrivateKeyUsagePeriod);
+				    CERT_EncodePublicKeyUsagePeriod);
     if (arena) {
 	PORT_FreeArena (arena, PR_FALSE);
     }

@@ -659,9 +659,7 @@ cert_GetCertType(CERTCertificate *cert)
 	PORT_Free(encodedExtKeyUsage.data);
 	CERT_DestroyOidSequence(extKeyUsage);
     }
-    /* Assert that it is safe to cast &cert->nsCertType to "PRInt32 *" */
-    PORT_Assert(sizeof(cert->nsCertType) == sizeof(PRInt32));
-    PR_AtomicSet((PRInt32 *)&cert->nsCertType, nsCertType);
+    PR_AtomicSet(&cert->nsCertType, nsCertType);
     return(SECSuccess);
 }
 
@@ -1482,7 +1480,7 @@ cert_VerifySubjectAltName(CERTCertificate *cert, const char *hn)
 	default:
 	    break;
 	}
-	current = CERT_GetNextGeneralName(current);
+	current = cert_get_next_general_name(current);
     } while (current != nameList);
 
     if ((!isIPaddr && !DNSextCount) || (isIPaddr && !IPextCount)) {
@@ -2014,17 +2012,9 @@ CERT_DecodeTrustString(CERTCertTrust *trust, char *trusts)
     unsigned int i;
     unsigned int *pflags;
     
-    if (!trust) {
-	PORT_SetError(SEC_ERROR_INVALID_ARGS);
-	return SECFailure;
-    }
     trust->sslFlags = 0;
     trust->emailFlags = 0;
     trust->objectSigningFlags = 0;
-    if (!trusts) {
-	PORT_SetError(SEC_ERROR_INVALID_ARGS);
-	return SECFailure;
-    }
 
     pflags = &trust->sslFlags;
     

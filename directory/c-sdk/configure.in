@@ -1,45 +1,41 @@
 dnl -*- Mode: Autoconf; tab-width: 4; indent-tabs-mode: nil; -*-
 dnl 
-dnl ***** BEGIN LICENSE BLOCK *****
-dnl Version: MPL 1.1/GPL 2.0/LGPL 2.1
+dnl The contents of this file are subject to the Mozilla Public
+dnl License Version 1.1 (the "License"); you may not use this file
+dnl except in compliance with the License. You may obtain a copy of
+dnl the License at http://www.mozilla.org/MPL/
 dnl 
-dnl The contents of this file are subject to the Mozilla Public License Version 
-dnl 1.1 (the "License"); you may not use this file except in compliance with 
-dnl the License. You may obtain a copy of the License at 
-dnl http://www.mozilla.org/MPL/
-dnl 
-dnl Software distributed under the License is distributed on an "AS IS" basis,
-dnl WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
-dnl for the specific language governing rights and limitations under the
-dnl License.
+dnl Software distributed under the License is distributed on an "AS
+dnl IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+dnl implied. See the License for the specific language governing
+dnl rights and limitations under the License.
 dnl 
 dnl The Original Code is the Netscape Portable Runtime (NSPR).
 dnl 
-dnl The Initial Developer of the Original Code is
-dnl Netscape Communications Corporation.
-dnl Portions created by the Initial Developer are Copyright (C) 1998-2000
-dnl the Initial Developer. All Rights Reserved.
+dnl The Initial Developer of the Original Code is Netscape
+dnl Communications Corporation.  Portions created by Netscape are 
+dnl Copyright (C) 1998-2000 Netscape Communications Corporation.  All
+dnl Rights Reserved.
 dnl 
 dnl Contributor(s):
-dnl   Christopher Seawood <cls@seawood.org>
-dnl   Dan Mosedale <dmose@netscape.com>
+dnl     Christopher Seawood <cls@seawood.org>
+dnl     Dan Mosedale <dmose@netscape.com>
 dnl 
-dnl Alternatively, the contents of this file may be used under the terms of
-dnl either of the GNU General Public License Version 2 or later (the "GPL"),
-dnl or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
-dnl in which case the provisions of the GPL or the LGPL are applicable instead
-dnl of those above. If you wish to allow use of your version of this file only
-dnl under the terms of either the GPL or the LGPL, and not to allow others to
-dnl use your version of this file under the terms of the MPL, indicate your
-dnl decision by deleting the provisions above and replace them with the notice
-dnl and other provisions required by the GPL or the LGPL. If you do not delete
-dnl the provisions above, a recipient may use your version of this file under
-dnl the terms of any one of the MPL, the GPL or the LGPL.
+dnl Alternatively, the contents of this file may be used under the
+dnl terms of the GNU General Public License Version 2 or later (the
+dnl "GPL"), in which case the provisions of the GPL are applicable 
+dnl instead of those above.  If you wish to allow use of your 
+dnl version of this file only under the terms of the GPL and not to
+dnl allow others to use your version of this file under the MPL,
+dnl indicate your decision by deleting the provisions above and
+dnl replace them with the notice and other provisions required by
+dnl the GPL.  If you do not delete the provisions above, a recipient
+dnl may use your version of this file under either the MPL or the
+dnl GPL.
 dnl 
-dnl ***** END LICENSE BLOCK ***** 
 
 AC_PREREQ(2.12)
-AC_INIT(ldap/include/ldap.h)
+AC_INIT(ldap/build/dirver.c)
 
 AC_CONFIG_AUX_DIR(${srcdir}/config/autoconf)
 AC_CANONICAL_SYSTEM
@@ -366,11 +362,6 @@ else
     DEFINES="$DEFINES -UDEBUG"
 fi
 
-# Use mozilla's nsinstall
-if test -n "$MOZILLA_CLIENT"; then
-   NSINSTALL='$(dist_bindir)/nsinstall'
-fi
-
 if test -z "$SKIP_COMPILER_CHECKS"; then
 dnl ========================================================
 dnl Checks for compilers.
@@ -384,10 +375,12 @@ if test "$target" != "$host"; then
     _SAVE_LDFLAGS="$LDFLAGS"
 
     AC_MSG_CHECKING([for $host compiler])
-    AC_CHECK_PROGS(HOST_CC, gcc cc /usr/ucb/cc, "")
-	if test -z "$HOST_CC"; then
-	    AC_MSG_ERROR([no acceptable cc found in \$PATH])
-	fi
+    if test -z "$HOST_CC"; then
+	    AC_CHECK_PROGS(HOST_CC, gcc cc /usr/ucb/cc, "")
+	    if test -z "$HOST_CC"; then
+	        AC_MSG_ERROR([no acceptable cc found in \$PATH])
+	    fi
+    fi
     AC_MSG_RESULT([$HOST_CC])
     if test -z "$HOST_CFLAGS"; then
 	    HOST_CFLAGS="$CFLAGS"
@@ -409,18 +402,34 @@ if test "$target" != "$host"; then
     CFLAGS=$_SAVE_CFLAGS
     LDFLAGS=$_SAVE_LDFLAGS
 
-    AC_CHECK_PROGS(CC, $CC "${target_alias}-gcc" "${target}-gcc", echo)
+    if test -z "$CC"; then
+	    AC_CHECK_PROGS(CC, "${target_alias}-gcc" "${target}-gcc", echo)
+    fi
     unset ac_cv_prog_CC
     AC_PROG_CC
-    AC_CHECK_PROGS(CXX, $CXX "${target_alias}-g++" "${target}-g++", echo)
+    if test -z "$CXX"; then
+	    AC_CHECK_PROGS(CXX, "${target_alias}-g++" "${target}-g++", echo)
+    fi
     unset ac_cv_prog_CXX
     AC_PROG_CXX
-    AC_CHECK_PROGS(RANLIB, $RANLIB "${target_alias}-ranlib" "${target}-ranlib", echo)
-    AC_CHECK_PROGS(AR, $AR "${target_alias}-ar" "${target}-ar", echo)
-    AC_CHECK_PROGS(AS, $AS "${target_alias}-as" "${target}-as", echo)
-    AC_CHECK_PROGS(LD, $LD "${target_alias}-ld" "${target}-ld", echo)
-    AC_CHECK_PROGS(STRIP, $STRIP "${target_alias}-strip" "${target}-strip", echo)
-    AC_CHECK_PROGS(WINDRES, $WINDRES "${target_alias}-windres" "${target}-windres", echo)
+    if test -z "$RANLIB"; then
+	    AC_CHECK_PROGS(RANLIB, "${target_alias}-ranlib" "${target}-ranlib", echo)
+    fi
+    if test -z "$AR"; then
+	    AC_CHECK_PROGS(AR, "${target_alias}-ar" "${target}-ar", echo)
+    fi
+    if test -z "$AS"; then
+	    AC_CHECK_PROGS(AS, "${target_alias}-as" "${target}-as", echo)
+    fi
+    if test -z "$LD"; then
+	    AC_CHECK_PROGS(LD, "${target_alias}-ld" "${target}-ld", echo)
+    fi
+    if test -z "$STRIP"; then
+	    AC_CHECK_PROGS(STRIP, "${target_alias}-strip" "${target}-strip", echo)
+    fi
+    if test -z "$WINDRES"; then
+	    AC_CHECK_PROGS(WINDRES, "${target_alias}-windres" "${target}-windres", echo)
+    fi
 
 else
     AC_PROG_CXX
@@ -524,20 +533,9 @@ AR_FLAGS='cr $@'
 AS='$(CC)'
 ASFLAGS='$(CFLAGS)'
 
-if test -n "$CROSS_COMPILE"; then
-    OS_ARCH=`echo $target_os | sed -e 's|/|_|g'`
-    OS_RELEASE=
-    OS_TEST="${target_cpu}"
-    case "${target_os}" in
-        linux*)       OS_ARCH=Linux ;;
-        solaris*)     OS_ARCH=SunOS OS_RELEASE=5 ;;
-        mingw*)     OS_ARCH=WINNT ;;
-    esac
-else
-    OS_ARCH=`uname -s | sed -e 's|/|_|g'`
-    OS_RELEASE=`uname -r`
-    OS_TEST=`uname -m`
-fi
+OS_ARCH=`uname -s | sed -e 's|/|_|g'`
+OS_RELEASE=`uname -r`
+OS_TEST=`uname -m`
 
 if test "$OS_ARCH" = "IRIX64"; then
     OS_ARCH=IRIX
@@ -675,11 +673,6 @@ dnl Override of system specific host options
 dnl ========================================================
 case "$host" in
 *-mingw*|*-cygwin*|*-msvc*|*-mks*)
-    CYGWIN_WRAPPER='sh $(topsrcdir)/config/cygwin-wrapper'
-    NSINSTALL='$(CYGWIN_WRAPPER) nsinstall'
-    if test "`${PERL} -v | grep -c cygwin  2>/dev/null`" = 0; then
-        PERL='$(CYGWIN_WRAPPER) perl'
-    fi
     ;;
 *-beos*)
     HOST_CFLAGS="$HOST_CFLAGS -DXP_BEOS -DBeOS -DBEOS -D_POSIX_SOURCE"
@@ -1195,6 +1188,12 @@ case "$target" in
     PR_MD_ARCH_DIR=windows
     RESOLVE_LINK_SYMBOLS=1
     PROG_SUFFIX=.exe
+    CYGWIN_WRAPPER='sh $(topsrcdir)/config/cygwin-wrapper'
+    NSINSTALL='$(CYGWIN_WRAPPER) nsinstall'
+    if test "`${PERL} -v | grep -c cygwin  2>/dev/null`" = 0; then
+        PERL='$(CYGWIN_WRAPPER) perl'
+    fi
+
     if test -n "$GNU_CC"; then
         CC="$CC -mno-cygwin"
         CXX="$CXX -mno-cygwin"
@@ -1203,7 +1202,6 @@ case "$target" in
         # Use temp file for windres (bug 213281)
         RC="$WINDRES -O coff --use-temp-file"
     else
-        CYGWIN_WRAPPER='sh $(topsrcdir)/config/cygwin-wrapper'
         CC=cl
         CXX=cl
         LD=link
@@ -1211,7 +1209,7 @@ case "$target" in
         AR_FLAGS=
         RANLIB='echo not_ranlib'
         STRIP='echo not_strip'
-        RC='$(CYGWIN_WRAPPER) rc.exe'
+        RC=rc.exe
         GARBAGE='$(OBJDIR)/vc20.pdb $(OBJDIR)/vc40.pdb'
 	    OBJ_SUFFIX=obj
 	    LIB_SUFFIX=lib
@@ -1494,7 +1492,7 @@ mips-sony-newsos*)
         MKSHLIB='$(CC) $(DSO_LDOPTS) -o $@'
         DSO_CFLAGS=
         DSO_LDOPTS='-Zomf -Zdll'
-        _OPTIMIZE_FLAGS=-O3
+        _OPTIMIZE_FLAGS="-O2 -s"
         _DEBUG_FLAGS="-g -fno-inline"
         if test -n "$MOZ_OPTIMIZE"; then
           DSO_LDOPTS="$DSO_LDOPTS -Zlinker /EXEPACK:2 -Zlinker /PACKCODE -Zlinker /PACKDATA"
@@ -2219,7 +2217,7 @@ dnl ========================================================
 dnl Use cygwin wrapper for win32 builds
 dnl ========================================================
 case "$target_os" in
-mingw*|cygwin*|msvc*|mksnt*)
+mingw*|cygwin*|msvc*|mks*)
     CC="\$(CYGWIN_WRAPPER) $CC"
     CXX="\$(CYGWIN_WRAPPER) $CXX"
     RC="\$(CYGWIN_WRAPPER) $RC"
@@ -2323,6 +2321,7 @@ Makefile
 config/Makefile
 config/autoconf.mk
 ldap/Makefile
+ldap/build/Makefile
 ldap/clients/tools/Makefile
 ldap/include/Makefile
 ldap/libraries/Makefile

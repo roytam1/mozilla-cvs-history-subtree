@@ -33,9 +33,9 @@
 
 CORE_DEPTH = ../../..
 
-MODULE = nss
+MODULE = seccmd
 
-PRIVATE_EXPORTS = zlib.h zconf.h
+EXPORTS = zlib.h zconf.h
 
 CSRCS =	adler32.c 	\
 	crc32.c 	\
@@ -58,4 +58,3 @@ LIBRARY_NAME = zlib
 
 DEFINES = -DNSPR20=1 -DMOZILLA_CLIENT=1
 
-NO_MD_RELEASE = 1

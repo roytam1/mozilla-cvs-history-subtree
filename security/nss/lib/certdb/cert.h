@@ -646,6 +646,13 @@ CERT_VerifyCertChain(CERTCertDBHandle *handle, CERTCertificate *cert,
 		     void *wincx, CERTVerifyLog *log);
 
 /*
+** This must only be called on a cert that is known to have an issuer
+** with an invalid time
+*/
+extern CERTCertificate *
+CERT_FindExpiredIssuer (CERTCertDBHandle *handle, CERTCertificate *cert);
+
+/*
 ** Read a base64 ascii encoded DER certificate and convert it to our
 ** internal format.
 **	"certstr" is a null-terminated string containing the certificate
@@ -1086,33 +1093,6 @@ CERT_DestroyCertificatePoliciesExtension(CERTCertificatePolicies *policies);
 
 CERTUserNotice *
 CERT_DecodeUserNotice(SECItem *noticeItem);
-
-extern CERTGeneralName *
-CERT_DecodeAltNameExtension(PRArenaPool *arena, SECItem *EncodedAltName);
-
-extern CERTNameConstraints *
-CERT_DecodeNameConstraintsExtension(PRArenaPool *arena, 
-                                    SECItem *encodedConstraints);
-
-/* returns addr of a NULL termainated array of pointers to CERTAuthInfoAccess */
-extern CERTAuthInfoAccess **
-CERT_DecodeAuthInfoAccessExtension(PRArenaPool *arena,
-				   SECItem     *encodedExtension);
-
-extern CERTPrivKeyUsagePeriod *
-CERT_DecodePrivKeyUsagePeriodExtension(PLArenaPool *arena, SECItem *extnValue);
-
-extern CERTGeneralName *
-CERT_GetNextGeneralName(CERTGeneralName *current);
-
-extern CERTGeneralName *
-CERT_GetPrevGeneralName(CERTGeneralName *current);
-
-CERTNameConstraint *
-CERT_GetNextNameConstraint(CERTNameConstraint *current);
-
-CERTNameConstraint *
-CERT_GetPrevNameConstraint(CERTNameConstraint *current);
 
 void
 CERT_DestroyUserNotice(CERTUserNotice *userNotice);
