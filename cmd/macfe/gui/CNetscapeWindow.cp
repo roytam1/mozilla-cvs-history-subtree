@@ -35,6 +35,7 @@
 #ifdef MOZ_OFFLINE
 #include "CPatternProgressBar.h"
 #include "MailNewsgroupWindow_Defines.h"
+#include "LGAIconSuiteControl.h"
 #endif //MOZ_OFFLINE
 
 #include "CNSContext.h"
