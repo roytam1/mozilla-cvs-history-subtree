@@ -1671,6 +1671,8 @@ nsObjectFrame::CreateDefaultFrames(nsIPresContext *aPresContext,
                    "font-size: 12px;"
                    "font-family: sans-serif;"
                    "background: white;"
+                   "cursor: pointer;"
+                   "-moz-user-select: none;"
                    "color: black;", style);
 
   // Style things and load the image
