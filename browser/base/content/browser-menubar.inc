@@ -372,8 +372,15 @@
 
 #endif
               <menuseparator/>
-              <menuitem label="&downloads.label;" accesskey="&downloads.accesskey;" 
-                        key="key_openDownloads" command="Tools:Downloads"/>
+              <menuitem label="&downloads.label;" accesskey="&downloads.accesskey;"
+# all platforms except Unix, because Ctrl+J is used for Web Search there
+#ifndef XP_UNIX
+                        key="key_openDownloads"
+#endif
+#ifdef XP_MACOSX
+                        key="key_openDownloads"
+#endif
+                        command="Tools:Downloads"/>
               <menuitem label="&extensions.label;" accesskey="&extensions.accesskey;" 
                         command="Tools:Extensions"/>
               <menuitem label="&themes.label;" accesskey="&themes.accesskey;" 

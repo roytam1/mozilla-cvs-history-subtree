@@ -119,7 +119,7 @@
 <!ENTITY downloads.label              "Downloads">
 <!ENTITY downloads.tooltip            "Display the progress of ongoing downloads">
 <!ENTITY downloads.accesskey          "D">
-<!ENTITY downloads.commandkey         "J">
+<!ENTITY downloads.commandkey         "j">
 <!ENTITY extensions.label             "Extensions">
 <!ENTITY extensions.tooltip           "Show and Manage installed Extensions">
 <!ENTITY extensions.accesskey         "E">
@@ -195,6 +195,10 @@
 
 <!ENTITY openCmd.commandkey           "l">
 <!ENTITY urlbar.accesskey             "d">
+<!-- Be careful when changing these keys. Ctrl+K is 'kill end of line',
+     Ctrl+E is 'jump to end of line' in Linux when textareas are focussed.
+     But we use Ctrl+E on other platforms to be compatible with IE.
+     And ask Ben before changing Ctrl+K :)                                  -->
 <!ENTITY searchFocus.commandkey       "k">
 <!ENTITY searchFocus.commandkey2      "e">
 <!ENTITY searchFocusUnix.commandkey   "j">

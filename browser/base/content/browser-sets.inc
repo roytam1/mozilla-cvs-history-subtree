@@ -279,8 +279,13 @@
     <key id="key_gotoHistory"  key="&historySidebarCmd.commandKey;"  command="viewHistorySidebar" modifiers="accel"/>
 #endif
 
+# all platforms except Unix, because Ctrl+J is used for Web Search there
+#ifndef XP_UNIX
     <key id="key_openDownloads"   key="&downloads.commandkey;"           command="Tools:Downloads" modifiers="accel"/>
-
+#endif
+#ifdef XP_MACOSX
+    <key id="key_openDownloads"   key="&downloads.commandkey;"           command="Tools:Downloads" modifiers="accel"/>
+#endif
     <key id="key_newMessage" key="&sendMessage.commandkey;" command="Browser:NewMessage" modifiers="accel"/>
 
     <key id="key_textZoomReduce"  key="&textZoomReduceCmd.commandkey;"   command="cmd_textZoomReduce"  modifiers="accel"/>
