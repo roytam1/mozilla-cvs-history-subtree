@@ -178,7 +178,7 @@ PRInt32 String::indexOf(const String& aData, const PRUint32 aOffset) const
   PRUint32 searchLimit = mLength - aData.mLength;
 
   while (searchIndex <= searchLimit) {
-    if (isEqual(&mBuffer[searchIndex], aData.mBuffer, aData.mLength))
+    if (memcmp(&mBuffer[searchIndex], aData.mBuffer, aData.mLength) == 0)
       return searchIndex;
     ++searchIndex;
   }
@@ -203,13 +203,7 @@ MBool String::isEqual(const String& aData) const
   if (mLength != aData.mLength)
     return MB_FALSE;
 
-  PRUint32 compLoop = 0;
-  while (compLoop < mLength) {
-    if (mBuffer[compLoop] != aData.mBuffer[compLoop])
-      return MB_FALSE;
-    ++compLoop;
-  }
-  return MB_TRUE;
+  return (memcmp(mBuffer, aData.mBuffer[compLoop], mLength) == 0);
 }
 
 MBool String::isEqualIgnoreCase(const String& aData) const
