@@ -80,7 +80,7 @@ public class Range extends Object implements Cloneable, Serializable {
      * Creates an instance of Range from another Range object 
      * otherRange which must be non-null.
      *
-     * @param	range	the reference range to create this range from	
+     * @param	otherRange	the reference range to create this range from	
      * @exception  IllegalArgumentException if otherRange is null
      */
     public Range(Range otherRange) {
@@ -262,7 +262,7 @@ public class Range extends Object implements Cloneable, Serializable {
      * otherRange. A zero-length range has no overlapping elements
      * with any range.
      *
-     * @param	a range to check overlaps with this range
+     * @param otherRange	a range to check overlaps with this range
      * @exception  IllegalArgumentException if otherRange is null
      * @return	number of elements in both this range and otherRange
      */
