@@ -81,8 +81,8 @@ ResizeEventListener::~ResizeEventListener()
 NS_IMETHODIMP
 ResizeEventListener::HandleEvent(nsIDOMEvent* aMouseEvent)
 {
-  nsCOMPtr<nsIHTMLObjectResizer> objectResizer = do_QueryInterface(mEditor);
-  objectResizer->RefreshResizers();
+  nsCOMPtr<nsIHTMLObjectResizer> imageResizer = do_QueryInterface(mEditor);
+  imageResizer->RefreshResizers();
   return NS_OK;
 }
 
@@ -115,8 +115,8 @@ ResizerSelectionListener::NotifySelectionChanged(nsIDOMDocument *, nsISelection 
                   nsISelectionListener::SELECTALL_REASON)) && aSelection) {
     // the selection changed and we need to check if we have to
     // hide and/or redisplay resizing handles
-    nsCOMPtr<nsIHTMLObjectResizer> objectResizer = do_QueryInterface(mEditor);
-    objectResizer->CheckResizingState(aSelection);
+    nsCOMPtr<nsIHTMLObjectResizer> imageResizer = do_QueryInterface(mEditor);
+    imageResizer->CheckResizingState(aSelection);
   }
 
   return NS_OK;
@@ -154,16 +154,16 @@ ResizerMutationListener::NodeInserted(nsIDOMEvent* aMutationEvent)
 NS_IMETHODIMP
 ResizerMutationListener::NodeRemoved(nsIDOMEvent* aMutationEvent)
 {
-  nsCOMPtr<nsIHTMLObjectResizer> objectResizer = do_QueryInterface(mEditor);
+  nsCOMPtr<nsIHTMLObjectResizer> imageResizer = do_QueryInterface(mEditor);
   nsCOMPtr<nsIDOMEventTarget> target;
   nsresult res = aMutationEvent->GetTarget(getter_AddRefs(target));
   if (NS_FAILED(res)) return res;
   if (!target) return NS_ERROR_NULL_POINTER;
   nsCOMPtr<nsIDOMElement> targetElement = do_QueryInterface(target);
   nsCOMPtr<nsIDOMElement> resizedElt;
-  objectResizer->GetResizedObject(getter_AddRefs(resizedElt));
+  imageResizer->GetResizedObject(getter_AddRefs(resizedElt));
   if (resizedElt == targetElement)
-    return objectResizer->HideResizers();
+    return imageResizer->HideResizers();
 
   return NS_OK;
 }
@@ -183,9 +183,9 @@ ResizerMutationListener::NodeInsertedIntoDocument(nsIDOMEvent* aMutationEvent)
 NS_IMETHODIMP
 ResizerMutationListener::AttrModified(nsIDOMEvent* aMutationEvent) 
 {
-  nsCOMPtr<nsIHTMLObjectResizer> objectResizer = do_QueryInterface(mEditor);
+  nsCOMPtr<nsIHTMLObjectResizer> imageResizer = do_QueryInterface(mEditor);
   nsCOMPtr<nsIDOMElement> elt;
-  objectResizer->GetResizedObject(getter_AddRefs(elt));
+  imageResizer->GetResizedObject(getter_AddRefs(elt));
   PRInt32 w, h;
   nsCOMPtr<nsIDOMNSHTMLElement> nsElement = do_QueryInterface(elt);
   if (!nsElement) {return NS_ERROR_NULL_POINTER; }
@@ -196,11 +196,11 @@ ResizerMutationListener::AttrModified(nsIDOMEvent* aMutationEvent)
 
   // and let's get the last size we dealt with
   PRInt32 objectW, objectH;
-  objectResizer->GetResizedObjectSize(&objectW, &objectH);
+  imageResizer->GetResizedObjectSize(&objectW, &objectH);
 
   // if the sizes are different, let's refresh the resizers
   if (w != objectW || h != objectH)
-    objectResizer->RefreshResizers();
+    imageResizer->RefreshResizers();
   return NS_OK;
 }
 
@@ -255,8 +255,8 @@ ResizerMouseMotionListener::MouseMove(nsIDOMEvent* aMouseEvent)
   if (htmlEditor)
   {
     // check if we have to redisplay a resizing shadow
-    nsCOMPtr<nsIHTMLObjectResizer> objectResizer = do_QueryInterface(htmlEditor);
-    objectResizer->MouseMove(aMouseEvent);
+    nsCOMPtr<nsIHTMLObjectResizer> imageResizer = do_QueryInterface(htmlEditor);
+    imageResizer->MouseMove(aMouseEvent);
   }
 
   return NS_OK;
@@ -333,7 +333,7 @@ nsHTMLEditor::CreateResizer(nsIDOMElement ** aReturn, PRInt16 aLocation, nsISupp
   }
 
 
-  res = newElement->SetAttribute(NS_LITERAL_STRING("_moz_anonclass"),
+  res = newElement->SetAttribute(NS_LITERAL_STRING("anonclass"),
                                  NS_LITERAL_STRING("mozResizer"));
   if (NS_FAILED(res)) return res;
   res = newElement->SetAttribute(NS_LITERAL_STRING("anonlocation"),
@@ -379,7 +379,7 @@ nsHTMLEditor::CreateResizingInfo(nsIDOMElement ** aReturn, nsISupportsArray * aA
   *aReturn = newElement;
   NS_ADDREF(*aReturn);
 
-  res = newElement->SetAttribute(NS_LITERAL_STRING("_moz_anonclass"),
+  res = newElement->SetAttribute(NS_LITERAL_STRING("anonclass"),
                                  NS_LITERAL_STRING("mozResizingInfo"));
   if (NS_FAILED(res)) return res;
   res = newElement->SetAttribute(NS_LITERAL_STRING("class"),
@@ -568,17 +568,12 @@ nsHTMLEditor::ShowResizers(nsIDOMElement *aResizedElement)
 }
 
 void
-nsHTMLEditor::DeleteRefToAnonymousNode(nsIDOMNode * aNode)
+nsHTMLEditor::DeleteAnonymousFrameFor(nsIDOMNode * aNode)
 {
   nsCOMPtr<nsIDOMElement> elt = do_QueryInterface(aNode);
   NS_ASSERTION(elt, "anonymous node is not an element");
   // let's destroy element's frame
   elt->SetAttribute(NS_LITERAL_STRING("class"), NS_LITERAL_STRING("hidden"));
-
-  nsCOMPtr<nsIContent> content = do_QueryInterface(aNode);
-  content->SetParent(nsnull);
-  content->SetDocument(nsnull, PR_TRUE, PR_TRUE);
-  content->SetBindingParent(nsnull);
 }
 
 NS_IMETHODIMP 
@@ -587,26 +582,26 @@ nsHTMLEditor::HideResizers(void)
   if (!mIsShowingResizeHandles || !mResizedObject)
     return NS_OK;
 
-  DeleteRefToAnonymousNode(mTopLeftHandle);
+  DeleteAnonymousFrameFor(mTopLeftHandle);
   mTopLeftHandle = nsnull;
-  DeleteRefToAnonymousNode(mTopHandle);
+  DeleteAnonymousFrameFor(mTopHandle);
   mTopHandle = nsnull;
-  DeleteRefToAnonymousNode(mTopRightHandle);
+  DeleteAnonymousFrameFor(mTopRightHandle);
   mTopRightHandle = nsnull;
-  DeleteRefToAnonymousNode(mLeftHandle);
+  DeleteAnonymousFrameFor(mLeftHandle);
   mLeftHandle = nsnull;
-  DeleteRefToAnonymousNode(mRightHandle);
+  DeleteAnonymousFrameFor(mRightHandle);
   mRightHandle = nsnull;
-  DeleteRefToAnonymousNode(mBottomLeftHandle);
+  DeleteAnonymousFrameFor(mBottomLeftHandle);
   mBottomLeftHandle = nsnull;
-  DeleteRefToAnonymousNode(mBottomHandle);
+  DeleteAnonymousFrameFor(mBottomHandle);
   mBottomHandle = nsnull;
-  DeleteRefToAnonymousNode(mBottomRightHandle);
+  DeleteAnonymousFrameFor(mBottomRightHandle);
   mBottomRightHandle = nsnull;
 
-  DeleteRefToAnonymousNode(mResizingShadow);
+  DeleteAnonymousFrameFor(mResizingShadow);
   mResizingShadow = nsnull;
-  DeleteRefToAnonymousNode(mResizingInfo);
+  DeleteAnonymousFrameFor(mResizingInfo);
   mResizingInfo = nsnull;
 
   // don't forget to remove the listeners !
@@ -720,11 +715,11 @@ nsHTMLEditor::MouseDown(PRInt32 aClientX, PRInt32 aClientY,
                         nsIDOMElement *aTarget)
 {
   PRBool anonElement = PR_FALSE;
-  if (aTarget && NS_SUCCEEDED(aTarget->HasAttribute(NS_LITERAL_STRING("_moz_anonclass"), &anonElement)))
+  if (aTarget && NS_SUCCEEDED(aTarget->HasAttribute(NS_LITERAL_STRING("anonclass"), &anonElement)))
     // we caught a click on an anonymous element
     if (anonElement) {
       nsAutoString anonclass;
-      nsresult res = aTarget->GetAttribute(NS_LITERAL_STRING("_moz_anonclass"), anonclass);
+      nsresult res = aTarget->GetAttribute(NS_LITERAL_STRING("anonclass"), anonclass);
       if (NS_FAILED(res)) return res;
       if (anonclass.Equals(NS_LITERAL_STRING("mozResizer"))) {
         // and that element is a resizer, let's start resizing!
@@ -849,7 +844,7 @@ nsHTMLEditor::SetShadowPosition(nsIDOMElement *aResizedObject,
     res = mResizingShadow->SetAttribute(NS_LITERAL_STRING("src"), imageSource);
     if (NS_FAILED(res)) return res;
   }
-  return mResizingShadow->SetAttribute(NS_LITERAL_STRING("_moz_anonclass"),
+  return mResizingShadow->SetAttribute(NS_LITERAL_STRING("anonclass"),
                                        NS_LITERAL_STRING("mozResizingShadow"));
 }
 

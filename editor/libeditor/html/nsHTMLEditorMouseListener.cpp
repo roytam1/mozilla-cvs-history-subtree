@@ -21,6 +21,7 @@
  *
  * Contributor(s):
  *    Charles Manske (cmanske@netscape.com)
+ *    Daniel Glazman (glazman@netscape.com)
  *
  *
  * Alternatively, the contents of this file may be used under the terms of
@@ -53,6 +54,7 @@
 
 #include "nsIEditor.h"
 #include "nsIHTMLEditor.h"
+#include "nsIHTMLObjectResizer.h"
 #include "nsIEditProperty.h"
 #include "nsTextEditUtils.h"
 
@@ -73,6 +75,36 @@ nsHTMLEditorMouseListener::~nsHTMLEditorMouseListener()
 }
 
 NS_IMPL_ISUPPORTS_INHERITED1(nsHTMLEditorMouseListener, nsTextEditorMouseListener, nsIDOMMouseListener)
+
+nsresult
+nsHTMLEditorMouseListener::MouseUp(nsIDOMEvent* aMouseEvent)
+{
+  NS_ENSURE_ARG_POINTER(aMouseEvent);
+  nsCOMPtr<nsIDOMMouseEvent> mouseEvent ( do_QueryInterface(aMouseEvent) );
+  if (!mouseEvent) {
+    //non-ui event passed in.  bad things.
+    return NS_OK;
+  }
+  nsresult res;
+
+  // Don't do anything special if not an HTML editor
+  nsCOMPtr<nsIHTMLEditor> htmlEditor = do_QueryInterface(mEditor);
+  if (htmlEditor)
+  {
+    nsCOMPtr<nsIDOMEventTarget> target;
+    nsresult res = aMouseEvent->GetTarget(getter_AddRefs(target));
+    if (NS_FAILED(res)) return res;
+    if (!target) return NS_ERROR_NULL_POINTER;
+    nsCOMPtr<nsIDOMElement> element = do_QueryInterface(target);
+
+    nsCOMPtr<nsIHTMLObjectResizer> imageResizer = do_QueryInterface(htmlEditor);
+    PRInt32 clientX, clientY;
+    mouseEvent->GetClientX(&clientX);
+    mouseEvent->GetClientY(&clientY);
+    imageResizer->MouseUp(clientX, clientY, element);
+  }
+  return NS_OK;
+}
 
 nsresult
 nsHTMLEditorMouseListener::MouseDown(nsIDOMEvent* aMouseEvent)
@@ -111,14 +143,14 @@ nsHTMLEditorMouseListener::MouseDown(nsIDOMEvent* aMouseEvent)
     res = mouseEvent->GetDetail(&clickCount);
     if (NS_FAILED(res)) return res;
 
+    nsCOMPtr<nsIDOMEventTarget> target;
+    res = aMouseEvent->GetTarget(getter_AddRefs(target));
+    if (NS_FAILED(res)) return res;
+    if (!target) return NS_ERROR_NULL_POINTER;
+    nsCOMPtr<nsIDOMElement> element = do_QueryInterface(target);
+
     if (isContextClick || (buttonNumber == 0 && clickCount == 2))
     {
-      nsCOMPtr<nsIDOMEventTarget> target;
-      res = aMouseEvent->GetTarget(getter_AddRefs(target));
-      if (NS_FAILED(res)) return res;
-      if (!target) return NS_ERROR_NULL_POINTER;
-      nsCOMPtr<nsIDOMElement> element = do_QueryInterface(target);
-
       PRInt32 clickCount;
       res = mouseEvent->GetDetail(&clickCount);
       if (NS_FAILED(res)) return res;
@@ -209,6 +241,11 @@ nsHTMLEditorMouseListener::MouseDown(nsIDOMEvent* aMouseEvent)
           }
         }
       }
+      // HACK !!! Context click places the caret but the context menu consumes
+      // the event; so we need to check resizing state ourselves
+      nsCOMPtr<nsIHTMLObjectResizer> imageResizer = do_QueryInterface(htmlEditor);
+      imageResizer->CheckResizingState(selection);
+
       // Prevent bubbling if we changed selection or 
       //   for all context clicks
       if (element || isContextClick)
@@ -216,6 +253,15 @@ nsHTMLEditorMouseListener::MouseDown(nsIDOMEvent* aMouseEvent)
         mouseEvent->PreventDefault();
         return NS_OK;
       }
+    }
+    else if (!isContextClick & buttonNumber == 0 && clickCount == 1)
+    {
+      // if the target element is an image, we have to display resizers
+      nsCOMPtr<nsIHTMLObjectResizer> imageResizer = do_QueryInterface(htmlEditor);
+      PRInt32 clientX, clientY;
+      mouseEvent->GetClientX(&clientX);
+      mouseEvent->GetClientY(&clientY);
+      imageResizer->MouseDown(clientX, clientY, element);
     }
   }
 

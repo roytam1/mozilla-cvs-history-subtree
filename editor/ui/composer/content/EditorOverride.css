@@ -93,3 +93,66 @@ label {
 option {
   -moz-user-select: text !important;
 }
+
+/* the following rules are for Image Resizing */
+
+*[anonclass="mozResizer"] {
+  width: 4px;
+  height: 4px;
+  position: absolute;
+  display: block;
+  border: 1px black solid;
+  background-color: black;
+  -moz-user-select: none;
+}
+
+*[anonclass="mozResizer"].hidden,
+*[anonclass="mozResizingShadow"].hidden,
+*[anonclass="mozResizingInfo"].hidden {
+  display: none ! important;
+}
+
+*[anonclass="mozResizer"][anonlocation="nw"] {
+  cursor: nw-resize;
+}
+*[anonclass="mozResizer"][anonlocation="n"] {
+  cursor: n-resize;
+}
+*[anonclass="mozResizer"][anonlocation="ne"] {
+  cursor: ne-resize;
+}
+*[anonclass="mozResizer"][anonlocation="w"] {
+  cursor: w-resize;
+}
+*[anonclass="mozResizer"][anonlocation="e"] {
+  cursor: e-resize;
+}
+*[anonclass="mozResizer"][anonlocation="sw"] {
+  cursor: sw-resize;
+}
+*[anonclass="mozResizer"][anonlocation="s"] {
+  cursor: s-resize;
+}
+*[anonclass="mozResizer"][anonlocation="se"] {
+  cursor: se-resize;
+}
+
+*[anonclass="mozResizingShadow"] {
+  border: thin dashed black;
+  -moz-user-select: none;
+  display: block;
+  -moz-opacity: 0.5;
+  position: absolute;
+}
+
+*[anonclass="mozResizingInfo"] {
+  font-family: sans-serif;
+  font-size: x-small;
+  color: black;
+  background-color: #d0d0d0;
+  border: ridge 2px #d0d0d0;
+  padding: 2px;
+  position: absolute;
+  display: block;
+}
+
