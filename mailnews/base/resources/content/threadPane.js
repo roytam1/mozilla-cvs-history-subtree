@@ -77,7 +77,7 @@ nsMsgDBViewCommandUpdater.prototype =
       UpdateMailToolbar("dbview driven, thread pane");
     },
 
-  displayMessageChanged : function(aFolder, aSubject)
+  displayMessageChanged : function(aFolder, aSubject, aKeywords)
   {
     setTitleFromFolder(aFolder, aSubject);
     gHaveLoadedMessage = true;

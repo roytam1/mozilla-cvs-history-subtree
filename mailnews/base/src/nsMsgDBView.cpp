@@ -903,7 +903,12 @@ nsresult nsMsgDBView::UpdateDisplayMessage(nsMsgKey aMsgKey)
       NS_ENSURE_SUCCESS(rv,rv);
       nsXPIDLString subject;
       FetchSubject(msgHdr, m_flags[viewPosition], getter_Copies(subject));
-      mCommandUpdater->DisplayMessageChanged(m_folder, subject);
+      
+      nsXPIDLCString keywords;
+      rv = msgHdr->GetStringProperty("keywords", getter_Copies(keywords));
+      NS_ENSURE_SUCCESS(rv,rv);
+
+      mCommandUpdater->DisplayMessageChanged(m_folder, subject, keywords);
     } // if view position is valid
   } // if we have an updater
   return NS_OK;

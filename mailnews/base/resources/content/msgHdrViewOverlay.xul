@@ -93,7 +93,7 @@ Rights Reserved.
 </grid>
 
 <hbox id="expandedHeaderView" class="header-part1" flex="1" collapsed="true">
-  <vbox id="expandedHeaders" flex="1">
+   <vbox id="expandedHeaders" flex="1">
     <mail-toggle-headerfield id="expandedsubjectBox" class="subjectvalue" label="&subjectField.label;" ontwistyclick="ToggleHeaderView();" collapsed="true"/>
     
     <mail-emailheaderfield id="expandedfromBox" label="&fromField.label;" collapsed="true"/>
@@ -109,6 +109,10 @@ Rights Reserved.
     <mail-headerfield id="expandedfollowup-toBox" label="&followupToField.label;" collapsed="true"/>
     <mail-headerfield id="expandeduser-agentBox"  label="&userAgentField.label;"  collapsed="true"/>
    
+   </vbox>
+
+   <vbox id="expandedKeywordBox">
+     <image id="expandedKeywordImage" class="keyword-part"/>  
    </vbox>
 
    <vbox id="editMessageBox" class="header-part1" collapsed="true">

@@ -77,7 +77,7 @@ nsMsgDBViewCommandUpdater.prototype =
       UpdateMailToolbar("dbview, std alone window");
     },
 
-  displayMessageChanged : function(aFolder, aSubject)
+  displayMessageChanged : function(aFolder, aSubject, aKeywords)
   {
     setTitleFromFolder(aFolder, aSubject);
     gCurrentMessageUri = gDBView.URIForFirstSelectedMessage;
