@@ -1672,9 +1672,53 @@ nsEventStateManager::DoScrollText(nsIPresContext* aPresContext,
     sv = GetNearestScrollingView(focusView);
   }
 
-  PRBool passToParent;
+  // After firing the mouse event to the content, we need to reget focusFrame,
+  // svp, focusView, and sv as they might have changed as a result of the event.
+  // This is a essentially a cut and paste of the above code and was done
+  // in light of this code already being rewritten on the trunk and therefore 
+  // any meaningful work here would be lost anyway.
+
   if (sv) {
     GenerateMouseEnterExit(aPresContext, &mouseOutEvent);
+
+    if (mCurrentFocus) {
+      GetFocusedFrame(&focusFrame);
+    }
+    else {
+      // If there is no focused content, get the document content
+      EnsureDocument(presShell);
+      focusContent = mDocument->GetRootContent();
+      if (!focusContent)
+        return NS_ERROR_FAILURE;
+    }
+    
+    if (aUseTargetFrame)
+      focusFrame = aTargetFrame;
+    else if (!focusFrame)
+      presShell->GetPrimaryFrameFor(focusContent, &focusFrame);
+  
+    if (!focusFrame)
+      return NS_ERROR_FAILURE;
+  
+    // Now check whether this frame wants to provide us with an
+    // nsIScrollableView to use for scrolling.
+
+    svp = do_QueryInterface(focusFrame);
+    if (svp) {
+      svp->GetScrollableView(aPresContext, &sv);
+      if (sv)
+        CallQueryInterface(sv, &focusView);
+    } else {
+      focusView = focusFrame->GetClosestView();
+      if (!focusView)
+        return NS_ERROR_FAILURE;
+      
+      sv = GetNearestScrollingView(focusView);
+    }
+  }
+
+  PRBool passToParent;
+  if (sv) {
 
     // If we're already at the scroll limit for this view, scroll the
     // parent view instead.
