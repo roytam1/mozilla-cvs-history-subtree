@@ -805,9 +805,6 @@ NS_IMETHODIMP nsImageWin::DrawTile(nsIRenderingContext &aContext,
   ::DeleteObject(tileBits);
   ::DeleteObject(offDC);
 
-
-#endif
-
   return NS_OK;
 }
 
