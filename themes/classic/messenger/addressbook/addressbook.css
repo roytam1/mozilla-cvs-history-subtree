@@ -191,6 +191,13 @@ sidebarheader {
   cursor: pointer;
 }
 
+.CardViewLinkNoIndent {
+  margin: 0px 2px;
+  color: blue;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 
 #cvHomeMapIt, #cvWorkMapIt {
   margin-bottom: 0px;
