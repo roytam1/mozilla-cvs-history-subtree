@@ -182,10 +182,9 @@ protected:
                                             uintN argc, jsval *argv,
                                             jsval *rval);
 
-  static nsresult GlobalResolve(nsIXPConnectWrappedNative *wrapper,
-                                JSContext *cx, JSObject *obj, JSString *str,
-                                PRUint32 flags, JSObject **objp,
-                                PRBool *_retval);
+  static nsresult GlobalResolve(nsISupports *aNative, JSContext *cx,
+                                JSObject *obj, JSString *str, PRUint32 flags,
+                                JSObject **objp, PRBool *_retval);
 
 public:
   NS_IMETHOD PreCreate(nsISupports *nativeObj, JSContext *cx,

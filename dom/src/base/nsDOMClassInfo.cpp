@@ -1028,26 +1028,6 @@ NS_IMETHODIMP
 nsWindowSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                         JSObject *obj, jsval id, jsval *vp, PRBool *_retval)
 {
-  if (JSVAL_IS_STRING(id)) {
-    if (JSVAL_TO_STRING(id) == s_content_id) {
-      // Map window._content to window.content for backwards
-      // compatibility, this should spit out an message on the JS
-      // console.
-
-      nsCOMPtr<nsISupports> native;
-      wrapper->GetNative(getter_AddRefs(native));
-
-      nsCOMPtr<nsIDOMWindowInternal> window(do_QueryInterface(native));
-      NS_ENSURE_TRUE(window, NS_ERROR_UNEXPECTED);
-
-      nsCOMPtr<nsIDOMWindow> content;
-      nsresult rv = window->GetContent(getter_AddRefs(content));
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      return WrapNative(cx, obj, content, NS_GET_IID(nsISupports), vp);
-    }
-  }
-
   return nsEventRecieverSH::GetProperty(wrapper, cx, obj, id, vp, _retval);
 }
 
@@ -1169,9 +1149,9 @@ nsWindowSH::StubConstructor(JSContext *cx, JSObject *obj, uintN argc,
 }
 
 nsresult
-nsWindowSH::GlobalResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
-                          JSObject *obj, JSString *str, PRUint32 flags,
-                          JSObject **objp, PRBool *_retval)
+nsWindowSH::GlobalResolve(nsISupports *aNative, JSContext *cx, JSObject *obj,
+                          JSString *str, PRUint32 flags, JSObject **objp,
+                          PRBool *_retval)
 {
   extern nsScriptNameSpaceManager *gNameSpaceManager;
 
@@ -1253,12 +1233,7 @@ nsWindowSH::GlobalResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
       do_CreateInstance(name_struct->mCID, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    nsCOMPtr<nsISupports> native;
-
-    wrapper->GetNative(getter_AddRefs(native));
-    NS_ABORT_IF_FALSE(native, "No native!");
-
-    nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(native));
+    nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(aNative));
     NS_ENSURE_TRUE(sgo, NS_ERROR_UNEXPECTED);
 
     nsCOMPtr<nsIScriptContext> context;
@@ -1281,6 +1256,12 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 {
   if (JSVAL_IS_STRING(id)) {
     JSString *str = JSVAL_TO_STRING(id);
+    nsresult rv = NS_OK;
+
+    nsCOMPtr<nsISupports> native;
+    wrapper->GetNative(getter_AddRefs(native));
+    NS_ENSURE_TRUE(native, NS_ERROR_UNEXPECTED);
+
 
     if (str == sLocation_id) {
       if (!::JS_DefineUCProperty(cx, obj, ::JS_GetStringChars(str),
@@ -1296,7 +1277,7 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
     const JSObject *o = *objp;
 
-    nsresult rv = GlobalResolve(wrapper, cx, obj, str, flags, objp, _retval);
+    rv = GlobalResolve(wrapper, cx, obj, str, flags, objp, _retval);
     NS_ENSURE_SUCCESS(rv, rv);
 
     if (o != *objp) {
@@ -1304,10 +1285,6 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
       return NS_OK;
     }
-
-    nsCOMPtr<nsISupports> native;
-    wrapper->GetNative(getter_AddRefs(native));
-    NS_ENSURE_TRUE(native, NS_ERROR_UNEXPECTED);
 
     // Hmm, we do an aweful lot of QI's here, maybe we should add a
     // method on an interface that would let us just call into the
