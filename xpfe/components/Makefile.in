@@ -32,7 +32,7 @@ DIRS		= download-manager filepicker find   xfer prefwindow  timebomb console aut
 ifndef MOZ_MINOTAUR
 DIRS		+= bookmarks directory history search sidebar related regviewer shistory urlbarhistory
 else
-DIRS += history/public shistory/public
+DIRS += history/public shistory/public sidebar/public
 endif
 
 ifdef MOZ_ENABLE_XREMOTE
