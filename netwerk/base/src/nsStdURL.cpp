@@ -39,8 +39,12 @@
 #include "nsEscape.h"
 #include "nsNetCID.h"
 
-#if defined(XP_PC) && !defined(XP_OS2)
+#if defined(XP_WIN)
 #include <windows.h>
+#endif
+
+#if defined(XP_WIN) || defined(XP_OS2)
+#include <direct.h>
 #endif
 
 static NS_DEFINE_CID(kThisStdURLImplementationCID,
@@ -1017,7 +1021,7 @@ nsStdURL::GetFile(nsIFile * *aFile)
 
     rv = AppendFileName(path,mFileBaseName,mFileExtension,ESCAPED);
 
-#ifdef XP_PC
+#if defined(XP_WIN) || defined(XP_OS2)
     if (path.CharAt(2) == '|')
         path.SetCharAt(':', 2);
 
@@ -1034,6 +1038,19 @@ nsStdURL::GetFile(nsIFile * *aFile)
              path.Insert(host, 0);
          }
     }
+
+    if ((path.CharAt(0) == '/' && path.CharAt(1) == '/')) {
+        // unc path
+#ifdef DEBUG_dougt
+        printf("+++ accessing UNC path\n");
+#endif
+    }
+    else if (path.CharAt(1) != ':') {
+        char driveLetter = toupper( _getdrive() ) + 'A' - 1;
+        path.Insert(driveLetter, 0);
+        path.Insert(":\\", 1);
+    }
+
     path.ReplaceChar('/', '\\');
 #endif
 
