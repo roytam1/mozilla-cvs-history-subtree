@@ -89,6 +89,7 @@ nsresult DeleteRegistryValue(HKEY baseKey, const char * keyName,
 PRBool IsDefaultMailClient();
     // Sets Mozilla as default Mail Client
     nsresult setDefaultMailClient() ;
+
     // Removes Mozilla as the default Mail client and restores the previous setting
     nsresult unsetDefaultMailClient() ;
 
@@ -98,6 +99,20 @@ nsresult saveDefaultMailClient();
     // Saves the current user setting of the default Mail Client in 
     // HKEY_LOCAL_MACHINE\\Software\\Mozilla\\Desktop
 nsresult saveUserDefaultMailClient();
+
+    // Sets Mozilla as the default News Client
+    nsresult setDefaultNewsClient();
+
+    // Removes Mozilla as the default Mail client and restores the previous setting
+    nsresult unsetDefaultNewsClient();
+
+    // Saves the current setting of the default News Client in 
+    // HKEY_LOCAL_MACHINE\\Software\\Mozilla\\Desktop
+    nsresult saveDefaultNewsClient();
+    nsresult saveUserDefaultNewsClient();
+
+    nsresult saveDefaultProtocol(const char * aClientKey, const char * aProtocol); // helper method
+    nsresult setupDefaultProtocolKey(const char * aDefaultAppRegKey, const char * aProtocol, const char * aProtocolEntryValue, const char * aCmdLineParam); // helper method
 
     nsresult setMailtoProtocolHandler();
     nsresult setNewsProtocolHandler();
