@@ -346,6 +346,7 @@ nsAboutCache::VisitEntry(const char *deviceID,
         mBuffer.Append("No last modified time");
     mBuffer.Append("<br>");
 
+    /*
     mBuffer.Append("<tt>Last Validated: </tt>");
     entryInfo->GetLastFetched(&t);
     if (t) {
@@ -354,6 +355,7 @@ nsAboutCache::VisitEntry(const char *deviceID,
     } else
         mBuffer.Append("No last validated time");
     mBuffer.Append("<br>");
+    */
 
     // Expires time
     mBuffer.Append("<tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
