@@ -25,7 +25,6 @@
 #include "nsProxiedService.h"
 #include "nsIEventQueueService.h"
 #include "nsPSMUICallbacks.h"
-#include "nsINetSupportDialogService.h"
 #include "nsIFilePicker.h"
 
 #include "nsAppShellCIDs.h"
@@ -43,12 +42,12 @@
 #include "nsIInterfaceRequestor.h"
 #include "nsIPrompt.h"
 #include "nsIScriptGlobalObject.h"
+#include "nsIWindowWatcher.h"
 #include "nsIURL.h"
 #include "nsIXULWindow.h"
 #include "nsIPref.h"
 
 static NS_DEFINE_IID(kAppShellServiceCID, NS_APPSHELL_SERVICE_CID);
-static NS_DEFINE_CID(kNetSupportDialogCID, NS_NETSUPPORTDIALOG_CID);
 
 
 // Happy callbacks
@@ -68,8 +67,9 @@ NS_IMPL_THREADSAFE_ISUPPORTS1(nsPSMUIHandlerImpl, nsIPSMUIHandler)
 NS_METHOD
 nsPSMUIHandlerImpl::DisplayURI(PRInt32 width, PRInt32 height, PRBool modal, const char *urlStr, nsIDOMWindow * win)
 {
+    nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
     nsresult rv;
-    nsCOMPtr<nsIDOMWindowInternal> parentWindow;
+    nsCOMPtr<nsIDOMWindow> parentWindow;
     JSContext *jsContext;
 	jsval	*argv = NULL;
 
@@ -89,16 +89,6 @@ nsPSMUIHandlerImpl::DisplayURI(PRInt32 width, PRInt32 height, PRBool modal, cons
 		if (!jsContext) { rv = NS_ERROR_FAILURE; goto loser; }
 
 		parentWindow = do_QueryInterface(win);
-	} else {
-		NS_WITH_SERVICE(nsIAppShellService, appShell, kAppShellServiceCID, &rv);
-		if (NS_FAILED(rv)) {
-			goto loser;
-		}
-		rv = appShell->GetHiddenWindowAndJSContext( getter_AddRefs( parentWindow ),
-				                                        &jsContext );
-		if ( NS_FAILED( rv ) ) {
-			goto loser;
-		}
 	}
 
   // Set up arguments for "window.open"
@@ -115,23 +105,13 @@ nsPSMUIHandlerImpl::DisplayURI(PRInt32 width, PRInt32 height, PRBool modal, cons
               : "menubar=no,height=%d,width=%d",
               height,
               width );
-  void *stackPtr;
-  argv = JS_PushArguments(jsContext, &stackPtr, "sss", urlStr, "_blank", buffer);
-  if (argv) {
-    // open the window
-    nsIDOMWindowInternal *newWindow;
-#if defined(WIN32) || defined(XP_OS2)
-    if (modal && win) {
-      parentWindow->OpenDialog(jsContext, argv, 3, &newWindow);
-    } else {
-      parentWindow->Open(jsContext, argv, 3, &newWindow);
+
+
+    if (wwatch) {
+        nsCOMPtr<nsIDOMWindow> newwin;
+        wwatch->OpenWindow(parentWindow, urlStr, "_blank", buffer, 0, getter_AddRefs(newwin));
     }
-    newWindow->ResizeTo(width, height);
-#else
-    parentWindow->Open(jsContext, argv, 3, &newWindow);
-#endif
-    JS_PopArguments(jsContext, stackPtr);
-  }
+
  loser:
   return rv;
 }
@@ -374,13 +354,13 @@ char * PromptUserCallback(void *arg, char *prompt, void* clientContext, int isPa
       csi->GetNotificationCallbacks(getter_AddRefs(callbacks));
     }
 
+    nsCOMPtr<nsIProxyObjectManager> proxyman(do_GetService(NS_XPCOMPROXY_CONTRACTID));
+    if (!proxyman) return nsnull;
+
     if (csi && callbacks) {
 
       // The notification callbacks object may not be safe, so
       // proxy the call to get the nsIPrompt.
-
-      nsCOMPtr<nsIProxyObjectManager> proxyman(do_GetService(NS_XPCOMPROXY_CONTRACTID));
-      if (!proxyman) return nsnull;
 
       nsCOMPtr<nsIInterfaceRequestor> proxiedCallbacks;
       proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ,
@@ -405,17 +385,26 @@ char * PromptUserCallback(void *arg, char *prompt, void* clientContext, int isPa
         NS_ASSERTION(PR_FALSE, "callbacks does not implement nsIPrompt");
         return nsnull;
       }
-
     } else {
-      NS_WITH_PROXIED_SERVICE(nsIPrompt, tmpPrompt, kNetSupportDialogCID, 
-                              NS_UI_THREAD_EVENTQ, &rv);
-      proxyPrompt = tmpPrompt;
-    
+      nsCOMPtr<nsIPrompt> prompter;
+      nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
+      if (wwatch)
+        wwatch->GetNewPrompter(0, getter_AddRefs(prompter));
+      if (prompter)
+        proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ,
+                                    NS_GET_IID(nsIPrompt),
+                                    prompter,
+                                    PROXY_SYNC,
+                                    getter_AddRefs(proxyPrompt));
+      if (!proxyPrompt) {
+        NS_ASSERTION(PR_FALSE, "failed to get proxied generic prompter");
+        return nsnull;
+      }
     }
+
     if (proxyPrompt) {
       rv = proxyPrompt->PromptPassword(nsnull, NS_ConvertASCIItoUCS2(prompt).GetUnicode(),
-                                       NS_LITERAL_STRING(" ").get(),      // hostname
-                                       nsIPrompt::SAVE_PASSWORD_NEVER, &password, &value);
+                                       &password, nsnull, nsnull, &value);
 
     }
     if (NS_SUCCEEDED(rv) && value) {

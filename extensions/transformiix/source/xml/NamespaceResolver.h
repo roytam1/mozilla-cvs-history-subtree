@@ -20,10 +20,10 @@
  */
 
 
-#include "TxString.h"
-
 #ifndef TRANSFRMX_NAMESPACE_RESOLVER_H
 #define TRANSFRMX_NAMESPACE_RESOLVER_H
+
+#include "TxString.h"
 
 /**
  * A class that returns the relevant namespace URI for a node.

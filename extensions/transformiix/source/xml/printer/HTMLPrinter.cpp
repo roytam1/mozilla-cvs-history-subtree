@@ -70,7 +70,7 @@ void HTMLPrinter::initialize(ostream& os, int indentSize) {
     XMLPrinter::setUseEmptyElementShorthand(MB_FALSE);
     setUseFormat(MB_TRUE);
 
-    MITREObject* nonNull = &htmlEmptyTags;
+    TxObject* nonNull = &htmlEmptyTags;
     htmlEmptyTags.put("AREA",       nonNull);
     htmlEmptyTags.put("BASE",       nonNull);
     htmlEmptyTags.put("BASEFONT",   nonNull);

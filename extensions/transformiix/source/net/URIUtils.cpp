@@ -34,6 +34,14 @@
 
 #include "URIUtils.h"
 
+#ifdef MOZ_XSL
+#include "nsIServiceManager.h"
+#include "nsIIOService.h"
+#include "nsIURL.h"
+#include "nsXPIDLString.h"
+#include "nsNetCID.h"
+#endif
+
 /**
  * URIUtils
  * A set of utilities for handling URIs
@@ -97,7 +105,8 @@ void URIUtils::getDocumentBase(const String& href, String& dest) {
     nsCOMPtr<nsIURI> pURL;
     nsresult result = NS_OK;
 
-    NS_WITH_SERVICE(nsIIOService, pService, kIOServiceCID, &result);
+    nsCOMPtr<nsIIOService> pService(do_GetService(NS_IOSERVICE_CONTRACTID,
+                                                  &result));
     if (NS_SUCCEEDED(result)) {
         // XXX This is ugly, there must be an easier (cleaner way).
         char *uriStr = (((String)href).getConstNSString()).ToNewCString();
@@ -150,7 +159,8 @@ void URIUtils::resolveHref(const String& href, const String& base, String& dest)
     nsCOMPtr<nsIURI> pURL;
     nsresult result = NS_OK;
 
-    NS_WITH_SERVICE(nsIIOService, pService, kIOServiceCID, &result);
+    nsCOMPtr<nsIIOService> pService(do_GetService(NS_IOSERVICE_CONTRACTID,
+                                                  &result));
     if (NS_SUCCEEDED(result)) {
         // XXX This is ugly, there must be an easier (cleaner way).
         char *baseStr = (base.getConstNSString()).ToNewCString();
@@ -249,6 +259,8 @@ istream* URIUtils::openStream(ParsedURI* uri) {
 URIUtils::ParsedURI* URIUtils::parseURI(const String& uri) {
 
     ParsedURI* uriTokens = new ParsedURI;
+    if (!uriTokens)
+        return NULL;
     uriTokens->isMalformed = MB_FALSE;
 
     short mode = PROTOCOL_MODE;

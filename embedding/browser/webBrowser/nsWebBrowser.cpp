@@ -44,6 +44,7 @@
 #include "nsIWebProgress.h"
 #include "nsIWebProgressListener.h"
 #include "nsIWebBrowserFocus.h"
+#include "nsIPresShell.h"
 
 // Printing Includes
 #include "nsIContentViewer.h"
@@ -57,18 +58,22 @@ static NS_DEFINE_CID(kPrintOptionsCID, NS_PRINTOPTIONS_CID);
 static NS_DEFINE_CID(kWebShellCID,         NS_WEB_SHELL_CID);
 static NS_DEFINE_IID(kChildCID,               NS_CHILD_CID);
 static NS_DEFINE_IID(kDeviceContextCID,       NS_DEVICE_CONTEXT_CID);
+static NS_DEFINE_IID(kRenderingContextCID,    NS_RENDERING_CONTEXT_CID);
 
 //*****************************************************************************
 //***    nsWebBrowser: Object Management
 //*****************************************************************************
 
 nsWebBrowser::nsWebBrowser() : mDocShellTreeOwner(nsnull), 
-   mContentListener(nsnull), mInitInfo(nsnull), mContentType(typeContentWrapper),
+   mInitInfo(nsnull), mContentType(typeContentWrapper),
    mParentNativeWindow(nsnull), mParentWidget(nsnull), mParent(nsnull),
-   mProgressListener(nsnull), mListenerArray(nsnull), mFindImpl(nsnull)
+   mProgressListener(nsnull), mListenerArray(nsnull), mFindImpl(nsnull),
+   mBackgroundColor(0)
 {
     NS_INIT_REFCNT();
     mInitInfo = new nsWebBrowserInitInfo();
+    mWWatch = do_GetService("@mozilla.org/embedcomp/window-watcher;1");
+    NS_ASSERTION(mWWatch, "failed to get WindowWatcher");
 }
 
 nsWebBrowser::~nsWebBrowser()
@@ -94,11 +99,6 @@ NS_IMETHODIMP nsWebBrowser::InternalDestroy()
       {
       mDocShellTreeOwner->WebBrowser(nsnull);
       NS_RELEASE(mDocShellTreeOwner);
-      }
-   if(mContentListener)
-      {
-      mContentListener->WebBrowser(nsnull);
-      NS_RELEASE(mContentListener);
       }
    if(mInitInfo)
       {
@@ -301,17 +301,25 @@ NS_IMETHODIMP nsWebBrowser::GetParentURIContentListener(nsIURIContentListener**
    aParentContentListener)
 {
    NS_ENSURE_ARG_POINTER(aParentContentListener);
-   NS_ENSURE_SUCCESS(EnsureContentListener(), NS_ERROR_FAILURE);
+   *aParentContentListener = nsnull;
 
-   return mContentListener->GetParentContentListener(aParentContentListener);
+   // get the interface from the docshell
+   nsCOMPtr<nsIURIContentListener> listener(do_GetInterface(mDocShell));
+
+   if (listener)
+       return listener->GetParentContentListener(aParentContentListener);
+   return NS_OK;
 }
 
 NS_IMETHODIMP nsWebBrowser::SetParentURIContentListener(nsIURIContentListener*
    aParentContentListener)
 {
-   NS_ENSURE_SUCCESS(EnsureContentListener(), NS_ERROR_FAILURE);
+   // get the interface from the docshell
+   nsCOMPtr<nsIURIContentListener> listener(do_GetInterface(mDocShell));
 
-   return mContentListener->SetParentContentListener(aParentContentListener);
+   if (listener)
+       return listener->SetParentContentListener(aParentContentListener);
+   return NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP nsWebBrowser::GetContentDOMWindow(nsIDOMWindow **_retval)
@@ -659,7 +667,6 @@ NS_IMETHODIMP nsWebBrowser::SaveURI(nsIURI *aURI, nsIInputStream *aPostData, con
     persist->AddRef();
     persist->SetProgressListener(mProgressListener);
     nsresult rv = persist->SaveURI(aURI, aPostData, aFileName);
-    persist->Release();
     return rv;
 }
 
@@ -706,7 +713,6 @@ NS_IMETHODIMP nsWebBrowser::SaveDocument(nsIDOMDocument *aDocument, const char *
     persist->AddRef();
     persist->SetProgressListener(mProgressListener);
     nsresult rv = persist->SaveDocument(doc, aFileName, aDataPath);
-    persist->Release();
     return rv;
 }
 
@@ -856,7 +862,6 @@ NS_IMETHODIMP nsWebBrowser::Create()
    NS_ENSURE_STATE(!mDocShell && (mParentNativeWindow || mParentWidget));
 
    NS_ENSURE_SUCCESS(EnsureDocShellTreeOwner(), NS_ERROR_FAILURE);
-   NS_ENSURE_SUCCESS(EnsureContentListener(), NS_ERROR_FAILURE);
 
    nsCOMPtr<nsIWidget> docShellParentWidget(mParentWidget);
    if(!mParentWidget) // We need to create a widget
@@ -888,6 +893,22 @@ NS_IMETHODIMP nsWebBrowser::Create()
       mInternalWidget->Create(mParentNativeWindow, bounds, nsWebBrowser::HandleEvent,
          deviceContext, nsnull, nsnull, &widgetInit);  
       }
+
+   // create a rendering context and device context for this widget
+   mDC = do_CreateInstance(kDeviceContextCID);
+   mDC->Init(mInternalWidget->GetNativeData(NS_NATIVE_WINDOW));
+
+   mRC = do_CreateInstance(kRenderingContextCID);
+   mRC->Init(mDC, mInternalWidget.get());
+
+   // get the default background color for painting later
+   SystemAttrStruct info;
+   info.mColor = &mBackgroundColor;
+   mDC->GetSystemAttribute(eSystemAttr_Color_WindowBackground, &info);
+
+   // set the foreground color of our rendering context so we don't
+   // have to do it later.
+   mRC->SetColor(mBackgroundColor);
 
    nsCOMPtr<nsIDocShell> docShell(do_CreateInstance(kWebShellCID));
    NS_ENSURE_SUCCESS(SetDocShell(docShell), NS_ERROR_FAILURE);
@@ -935,7 +956,6 @@ NS_IMETHODIMP nsWebBrowser::Create()
        mDocShellAsItem->SetItemType(nsIDocShellTreeItem::typeContent);
    }
    mDocShellAsItem->SetTreeOwner(mDocShellTreeOwner);
-   mDocShell->SetParentURIContentListener(mContentListener);
    
    // If the webbrowser is a content docshell item then we won't hear any
    // events from subframes. To solve that we install our own chrome event handler
@@ -949,6 +969,7 @@ NS_IMETHODIMP nsWebBrowser::Create()
    NS_ENSURE_SUCCESS(mDocShellAsWin->Create(), NS_ERROR_FAILURE);
 
    mDocShellTreeOwner->AddToWatcher(); // evil twin of Remove in SetDocShell(0)
+   mDocShellTreeOwner->AddChromeListeners();
 
    delete mInitInfo;
    mInitInfo = nsnull;
@@ -1402,20 +1423,6 @@ NS_IMETHODIMP nsWebBrowser::EnsureDocShellTreeOwner()
    return NS_OK;
 }
 
-NS_IMETHODIMP nsWebBrowser::EnsureContentListener()
-{
-   if(mContentListener)
-      return NS_OK;
-
-   mContentListener = new nsWBURIContentListener();
-   NS_ENSURE_TRUE(mContentListener, NS_ERROR_OUT_OF_MEMORY);
-
-   NS_ADDREF(mContentListener);
-   mContentListener->WebBrowser(this);
-   
-   return NS_OK;
-}
-
 NS_IMETHODIMP nsWebBrowser::EnsureFindImpl()
 {
    if (mFindImpl)
@@ -1424,6 +1431,12 @@ NS_IMETHODIMP nsWebBrowser::EnsureFindImpl()
    mFindImpl = new nsWebBrowserFindImpl;
    NS_ENSURE_TRUE(mFindImpl, NS_ERROR_OUT_OF_MEMORY);
    return mFindImpl->Init();
+}
+
+NS_IMETHODIMP nsWebBrowser::FillBackground(const nsRect &aRect)
+{
+    mRC->FillRect(aRect);
+    return NS_OK;
 }
 
 /* static */
@@ -1445,58 +1458,19 @@ nsEventStatus PR_CALLBACK nsWebBrowser::HandleEvent(nsGUIEvent *aEvent)
   switch(aEvent->message) {
 
   case NS_ACTIVATE: {
-    nsCOMPtr<nsIDOMWindow> domWindow;
-    browser->GetContentDOMWindow(getter_AddRefs(domWindow));
-    if (domWindow) {
-      nsCOMPtr<nsPIDOMWindow> privateDOMWindow = do_QueryInterface(domWindow);
-      if(privateDOMWindow)
-        privateDOMWindow->Activate();
-    }
+    browser->Activate();
     break;
   }
 
   case NS_DEACTIVATE: {
-    nsCOMPtr<nsIDOMWindow> domWindow;
-    browser->GetContentDOMWindow(getter_AddRefs(domWindow));
-    if (domWindow) {
-      nsCOMPtr<nsPIDOMWindow> privateDOMWindow = do_QueryInterface(domWindow);
-      if(privateDOMWindow)
-        privateDOMWindow->Deactivate();
-    }
+    browser->Deactivate();
     break;
   }
 
-  case NS_GOTFOCUS: {
-    // try to set focus on the last focused window as stored in the
-    // focus controller object.
-    nsCOMPtr<nsIDOMWindow> domWindowExternal;
-    browser->GetContentDOMWindow(getter_AddRefs(domWindowExternal));
-    nsCOMPtr<nsIDOMWindowInternal> domWindow;
-    domWindow = do_QueryInterface(domWindowExternal);
-    nsCOMPtr<nsPIDOMWindow> piWin(do_QueryInterface(domWindow));
-    nsCOMPtr<nsIFocusController> focusController;
-    piWin->GetRootFocusController(getter_AddRefs(focusController));
-    if (focusController) {
-      nsCOMPtr<nsIDOMWindowInternal> focusedWindow;
-      focusController->GetFocusedWindow(getter_AddRefs(focusedWindow));
-      if (focusedWindow) {
-        focusController->SetSuppressFocus(PR_TRUE);
-        domWindow->Focus(); // This sets focus, but we'll ignore it.  
-                           // A subsequent activate will cause us to stop suppressing.
-        break;
-      }
-    }
-
-    // If there wasn't a focus controller and focused window just set
-    // focus on the primary content shell.  If that wasn't focused,
-    // try and just set it on the toplevel DOM window.
-    nsCOMPtr<nsIDOMWindowInternal> contentDomWindow;
-    browser->GetPrimaryContentWindow(getter_AddRefs(contentDomWindow));
-    if (contentDomWindow)
-      contentDomWindow->Focus();
-    else if (domWindow)
-      domWindow->Focus();
-    break;
+  case NS_PAINT: {
+      nsRect *rect = NS_STATIC_CAST(nsPaintEvent *, aEvent)->rect;
+      browser->FillBackground(*rect);
+      break;
   }
 
   default:
@@ -1536,13 +1510,91 @@ NS_IMETHODIMP nsWebBrowser::GetPrimaryContentWindow(nsIDOMWindowInternal **aDOMW
 /* void activate (); */
 NS_IMETHODIMP nsWebBrowser::Activate(void)
 {
+  // try to set focus on the last focused window as stored in the
+  // focus controller object.
+  nsCOMPtr<nsIDOMWindow> domWindowExternal;
+  GetContentDOMWindow(getter_AddRefs(domWindowExternal));
+  nsCOMPtr<nsIDOMWindowInternal> domWindow;
+  domWindow = do_QueryInterface(domWindowExternal);
+  nsCOMPtr<nsPIDOMWindow> piWin(do_QueryInterface(domWindow));
+  nsCOMPtr<nsIFocusController> focusController;
+  piWin->GetRootFocusController(getter_AddRefs(focusController));
+  PRBool needToFocus = PR_TRUE;
+  if (focusController) {
+    // Go ahead and mark the focus controller as being active.  We have
+    // to do this even before the activate message comes in.
+    focusController->SetActive(PR_TRUE);
+
+    nsCOMPtr<nsIDOMWindowInternal> focusedWindow;
+    focusController->GetFocusedWindow(getter_AddRefs(focusedWindow));
+    if (focusedWindow) {
+      needToFocus = PR_FALSE;
+      focusController->SetSuppressFocus(PR_TRUE, "Activation Suppression");
+      domWindow->Focus(); // This sets focus, but we'll ignore it.  
+                         // A subsequent activate will cause us to stop suppressing.
+    }
+  }
+
+  // If there wasn't a focus controller and focused window just set
+  // focus on the primary content shell.  If that wasn't focused,
+  // try and just set it on the toplevel DOM window.
+  if (needToFocus) {
+    nsCOMPtr<nsIDOMWindowInternal> contentDomWindow;
+    GetPrimaryContentWindow(getter_AddRefs(contentDomWindow));
+    if (contentDomWindow)
+      contentDomWindow->Focus();
+    else if (domWindow)
+      domWindow->Focus();
+  }
+
+  nsCOMPtr<nsIDOMWindow> win;
+  GetContentDOMWindow(getter_AddRefs(win));
+  if (win) {
+    // tell windowwatcher about the new active window
+    if (mWWatch)
+      mWWatch->SetActiveWindow(win);
+
+    /* Activate the window itself. Do this only if the PresShell has
+       been created, since DOMWindow->Activate asserts otherwise.
+       (This method can be called during window creation before
+       the PresShell exists. For ex, Windows apps responding to
+       WM_ACTIVATE). */
+    NS_ENSURE_STATE(mDocShell);
+    nsCOMPtr<nsIPresShell> presShell;
+    mDocShell->GetPresShell(getter_AddRefs(presShell));
+    if(presShell) {
+      nsCOMPtr<nsPIDOMWindow> privateDOMWindow = do_QueryInterface(win);
+      if(privateDOMWindow)
+        privateDOMWindow->Activate();
+    }
+  }
+
   return NS_OK;
 }
 
 /* void deactivate (); */
 NS_IMETHODIMP nsWebBrowser::Deactivate(void)
 {
-  return NS_OK;
+    /* At this time we don't clear mWWatch's ActiveWindow; we just allow
+       the presumed other newly active window to set it when it comes in.
+       This seems harmless and maybe safer, but we have no real evidence
+       either way just yet. */
+
+    NS_ENSURE_STATE(mDocShell);
+    nsCOMPtr<nsIPresShell> presShell;
+    mDocShell->GetPresShell(getter_AddRefs(presShell));
+    if(!presShell)
+        return NS_OK;
+
+    nsCOMPtr<nsIDOMWindow> domWindow;
+    GetContentDOMWindow(getter_AddRefs(domWindow));
+    if (domWindow) {
+        nsCOMPtr<nsPIDOMWindow> privateDOMWindow = do_QueryInterface(domWindow);
+        if(privateDOMWindow)
+          privateDOMWindow->Deactivate();
+    }
+
+    return NS_OK;
 }
 
 /* void setFocusAtFirstElement (); */

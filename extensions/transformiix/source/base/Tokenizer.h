@@ -36,12 +36,11 @@
 **/
 
 
-#include "baseutils.h"
-#include "TxString.h"
-
-
 #ifndef MITRE_TOKENIZER_H
 #define MITRE_TOKENIZER_H
+
+#include "baseutils.h"
+#include "TxString.h"
 
 class Tokenizer {
 

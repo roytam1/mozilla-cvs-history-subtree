@@ -23,7 +23,6 @@
 
 #include "SetDocTitleTxn.h"
 #include "nsEditor.h"
-#include "nsHTMLEditor.h"
 #include "nsIDOMNode.h"
 #include "nsIDOMNodeList.h"
 #include "nsIDOMDocument.h"
@@ -39,7 +38,7 @@ SetDocTitleTxn::SetDocTitleTxn()
 }
 
 NS_IMETHODIMP SetDocTitleTxn::Init(nsIHTMLEditor *aEditor,
-                                   const nsString *aValue)
+                                   const nsAReadableString *aValue)
 
 {
   NS_ASSERTION(aEditor && aValue, "null args");
@@ -73,7 +72,7 @@ NS_IMETHODIMP SetDocTitleTxn::RedoTransaction(void)
   return SetDocTitle(mValue);
 }
 
-nsresult SetDocTitleTxn::SetDocTitle(nsString& aTitle)
+nsresult SetDocTitleTxn::SetDocTitle(const nsAReadableString& aTitle)
 {
   NS_ASSERTION(mEditor, "bad state");
   if (!mEditor) return NS_ERROR_NOT_INITIALIZED;
@@ -81,7 +80,8 @@ nsresult SetDocTitleTxn::SetDocTitle(nsString& aTitle)
   nsCOMPtr<nsIDOMDocument>  domDoc;
   nsCOMPtr<nsIEditor> editor = do_QueryInterface(mEditor);
   if (!editor) return NS_ERROR_FAILURE;
-  nsresult res = editor->GetDocument(getter_AddRefs(domDoc));
+  nsresult rv = editor->GetDocument(getter_AddRefs(domDoc));
+  if (NS_FAILED(rv)) return rv;
   if (!domDoc) return NS_ERROR_FAILURE;
   nsCOMPtr<nsIDOMHTMLDocument> HTMLDoc = do_QueryInterface(domDoc);
   if (!HTMLDoc) return NS_ERROR_FAILURE;
@@ -89,7 +89,7 @@ nsresult SetDocTitleTxn::SetDocTitle(nsString& aTitle)
   return HTMLDoc->SetTitle(aTitle);
 }
 
-nsresult SetDocTitleTxn::SetDomTitle(nsString& aTitle)
+nsresult SetDocTitleTxn::SetDomTitle(const nsAReadableString& aTitle)
 {
   nsCOMPtr<nsIDOMDocument>  domDoc;
   nsCOMPtr<nsIEditor> editor = do_QueryInterface(mEditor);

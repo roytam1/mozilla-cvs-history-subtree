@@ -31,6 +31,7 @@
 **/
 
 #include "Numbering.h"
+#include "Names.h"
 
 void Numbering::doNumbering
     (Element* xslNumber, String& dest, Node* context, ProcessorState* ps)

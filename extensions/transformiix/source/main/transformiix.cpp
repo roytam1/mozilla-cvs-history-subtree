@@ -36,6 +36,7 @@
 
 
 #include "XSLTProcessor.h"
+#include "CommandLineUtils.h"
 
   //--------------/
  //- Prototypes -/

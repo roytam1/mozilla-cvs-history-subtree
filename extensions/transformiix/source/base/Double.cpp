@@ -31,6 +31,14 @@
  */
 
 #include "primitives.h"
+#include  <math.h>
+#ifdef WIN32
+#include <float.h>
+#endif
+//A trick to handle IEEE floating point exceptions on FreeBSD - E.D.
+#ifdef __FreeBSD__
+#include <floatingpoint.h>
+#endif
 
 //----------------------------/
 //- Implementation of Double -/

@@ -165,7 +165,10 @@ ExprResult* RelationalExpr::evaluate(Node* context, ContextState* cs) {
         delete lResult;
         return new BooleanResult();
     }
-    return new BooleanResult(compareResults(lResult, rResult));
+    BooleanResult* boolResult = new BooleanResult(compareResults(lResult, rResult));
+    delete lResult;
+    delete rResult;
+    return boolResult;
 } //-- evaluate
 
 /**

@@ -24,6 +24,7 @@
 #include "nsAOLCiter.h"
 
 #include "nsWrapUtils.h"
+#include "nsReadableUtils.h"
 
 /** Mail citations using the AOL style >> This is a citation <<
   */
@@ -62,51 +63,55 @@ nsAOLCiter::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 }
 
 NS_IMETHODIMP
-nsAOLCiter::GetCiteString(const nsString& aInString, nsString& aOutString)
+nsAOLCiter::GetCiteString(const nsAReadableString& aInString, nsAWritableString& aOutString)
 {
-  aOutString.AssignWithConversion("\n\n>> ");
+  aOutString = NS_LITERAL_STRING("\n\n>> ");
   aOutString += aInString;
 
   // See if the last char is a newline, and replace it if so
   PRUnichar newline ('\n');
   if (aOutString.Last() == newline)
   {
-    aOutString.SetCharAt(' ',aOutString.Length());
-    aOutString.AppendWithConversion("<<\n");
+    aOutString.Append(PRUnichar(' '));
+    aOutString.Append(NS_LITERAL_STRING("<<\n"));
   }
   else
   {
-    aOutString.AppendWithConversion(" <<\n");
+    aOutString.Append(NS_LITERAL_STRING(" <<\n"));
   }
 
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsAOLCiter::StripCites(const nsString& aInString, nsString& aOutString)
+nsAOLCiter::StripCites(const nsAReadableString& aInString, nsAWritableString& aOutString)
 {
   // Remove the beginning cites, if any:
-  if (aInString.EqualsWithConversion(">>", PR_FALSE, 2))
+  nsAutoString tOutputString;
+  nsReadingIterator <PRUnichar> iter,enditer;
+  aInString.BeginReading(iter);
+  aInString.EndReading(enditer);
+  if (!Compare(Substring(aInString,0,2),NS_LITERAL_STRING(">>")))
   {
-    PRInt32 i = 3;
-    while (nsCRT::IsAsciiSpace(aInString[i]))
-      ++i;
-    aOutString.Append(aInString.GetUnicode(), i);
+    iter.advance(2);
+    while (nsCRT::IsAsciiSpace(*iter))
+      ++iter;
+    AppendUnicodeTo(iter,enditer,tOutputString);
   }
   else
-    aOutString = aInString;
+    CopyUnicodeTo(iter,enditer,tOutputString);
 
   // Remove the end cites, if any:
-  aOutString.Trim("<", PR_FALSE, PR_TRUE, PR_FALSE);
-
+  tOutputString.Trim("<", PR_FALSE, PR_TRUE, PR_FALSE);
+  aOutString.Assign(tOutputString);
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsAOLCiter::Rewrap(const nsString& aInString,
+nsAOLCiter::Rewrap(const nsAReadableString& aInString,
                    PRUint32 aWrapCol, PRUint32 aFirstLineOffset,
                    PRBool aRespectNewlines,
-                   nsString& aOutString)
+                   nsAWritableString& aOutString)
 {
   nsString citeString;
   return nsWrapUtils::Rewrap(aInString, aWrapCol, aFirstLineOffset,

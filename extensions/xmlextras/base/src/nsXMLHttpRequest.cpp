@@ -21,7 +21,6 @@
  */
 
 #include "nsXMLHttpRequest.h"
-#include "nsIStreamObserver.h"
 #include "nsISimpleEnumerator.h"
 #include "nsIHTTPHeader.h"
 #include "nsIXPConnect.h"
@@ -291,7 +290,7 @@ NS_INTERFACE_MAP_BEGIN(nsXMLHttpRequest)
    NS_INTERFACE_MAP_ENTRY(nsIXMLHttpRequest)
    NS_INTERFACE_MAP_ENTRY(nsIDOMLoadListener)
    NS_INTERFACE_MAP_ENTRY(nsISecurityCheckedComponent)
-   NS_INTERFACE_MAP_ENTRY(nsIStreamObserver)
+   NS_INTERFACE_MAP_ENTRY(nsIRequestObserver)
    NS_INTERFACE_MAP_ENTRY(nsIStreamListener)
    NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
 NS_INTERFACE_MAP_END
@@ -1022,8 +1021,8 @@ nsXMLHttpRequest::GetStreamForWString(const PRUnichar* aStr,
   nsCRT::memcpy(postData+headerSize, postData+MAX_HEADER_SIZE, charLength);
 
   // Shove in the traling CRLF
-  postData[headerSize+charLength] = CR;
-  postData[headerSize+charLength+1] = LF;
+  postData[headerSize+charLength] = nsCRT::CR;
+  postData[headerSize+charLength+1] = nsCRT::LF;
   postData[headerSize+charLength+2] = '\0';
 
   // The new stream takes ownership of the buffer
@@ -1099,9 +1098,9 @@ nsXMLHttpRequest::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
 
 /* void onStopRequest (in nsIRequest request, in nsISupports ctxt, in nsresult status, in wstring statusArg); */
 NS_IMETHODIMP 
-nsXMLHttpRequest::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult status, const PRUnichar *statusArg)
+nsXMLHttpRequest::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult status)
 {
-  nsresult rv = mXMLParserStreamListener->OnStopRequest(request,ctxt,status,statusArg);
+  nsresult rv = mXMLParserStreamListener->OnStopRequest(request,ctxt,status);
   mXMLParserStreamListener = nsnull;
   mReadRequest = nsnull;
   mContext = nsnull;

@@ -27,16 +27,15 @@
 #ifndef MITREXSL_VARIABLE_H
 #define MITREXSL_VARIABLE_H
 
-#include "MITREObject.h"
+#include "TxObject.h"
 #include "TxString.h"
-#include "baseutils.h"
 #include "ExprResult.h"
 
 /**
  * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
  * @version $Revision$ $Date$
 **/
-class VariableBinding : public MITREObject {
+class VariableBinding : public TxObject {
 
 public:
 

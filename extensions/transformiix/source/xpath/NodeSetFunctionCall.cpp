@@ -35,6 +35,9 @@
 **/
 
 #include "FunctionLib.h"
+#include "XMLUtils.h"
+#include "XMLDOMUtils.h"
+#include <math.h>
 
 /**
  * Creates a default NodeSetFunctionCall. The Position function
@@ -185,13 +188,31 @@ ExprResult* NodeSetFunctionCall::evaluate(Node* context, ContextState* cs) {
 
                 switch ( type ) {
                     case LOCAL_NAME :
-                        XMLUtils::getLocalPart(node->getNodeName(),name);
+                        switch (node->getNodeType()) {
+                            case Node::ATTRIBUTE_NODE :
+                            case Node::ELEMENT_NODE :
+                            case Node::PROCESSING_INSTRUCTION_NODE :
+                            // XXX Namespace: namespaces have a local name
+                                XMLUtils::getLocalPart(node->getNodeName(),name);
+                                break;
+                            default:
+                                break;
+                        }
                         break;
                     case NAMESPACE_URI :
                         XMLUtils::getNameSpace(node->getNodeName(),name);
                         break;
                     default:
-                        name = node->getNodeName();
+                        switch (node->getNodeType()) {
+                            case Node::ATTRIBUTE_NODE :
+                            case Node::ELEMENT_NODE :
+                            case Node::PROCESSING_INSTRUCTION_NODE :
+                            // XXX Namespace: namespaces have a name
+                                name = node->getNodeName();
+                                break;
+                            default:
+                                break;
+                        }
                         break;
                 }
                 result = new StringResult(name);

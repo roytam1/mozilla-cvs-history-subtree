@@ -37,10 +37,8 @@
 #include "nsIDOMRange.h"
 #include "nsIPrivateTextRange.h"
 #include "nsITransactionManager.h"
-#include "TransactionFactory.h"
 #include "nsIComponentManager.h"
 #include "nsISupportsArray.h"
-#include "nsIEditProperty.h"
 #include "nsIDOMCharacterData.h"
 #include "nsICSSStyleSheet.h"
 #include "nsIDTD.h"
@@ -71,7 +69,6 @@ class AddStyleSheetTxn;
 class RemoveStyleSheetTxn;
 class nsIFile;
 class nsISelectionController;
-
 
 /** implementation of an editor object.  it will be the controller/focal point 
  *  for the main editor services. i.e. the GUIManager, publishing, transaction 
@@ -125,123 +122,16 @@ public:
 //NOTE: Use   NS_DECL_ISUPPORTS_INHERITED in any class inherited from nsEditor
   NS_DECL_ISUPPORTS
 
-  /* ------------ nsIEditor methods -------------- */
-  NS_IMETHOD Init(nsIDOMDocument *aDoc, nsIPresShell *aPresShell, nsIContent *aRoot, nsISelectionController *aSelCon, PRUint32 aFlags);
-  NS_IMETHOD PostCreate();
-  NS_IMETHOD PreDestroy();
-  NS_IMETHOD GetFlags(PRUint32 *aFlags);
-  NS_IMETHOD SetFlags(PRUint32 aFlags);
-  NS_IMETHOD GetDocument(nsIDOMDocument **aDoc);
-  NS_IMETHOD GetRootElement(nsIDOMElement **aElement);
+  /* ------------ utility methods   -------------- */
   NS_IMETHOD GetPresShell(nsIPresShell **aPS);
-  NS_IMETHOD GetSelectionController(nsISelectionController **aSel);
-  NS_IMETHOD GetSelection(nsISelection **aSelection);
-  NS_IMETHOD DeleteSelection(EDirection aAction);
-  
-  NS_IMETHOD EnableUndo(PRBool aEnable);
-  NS_IMETHOD GetTransactionManager(nsITransactionManager* *aTxnManager);
-  NS_IMETHOD Do(nsITransaction *aTxn);
-  NS_IMETHOD Undo(PRUint32 aCount);
-  NS_IMETHOD CanUndo(PRBool &aIsEnabled, PRBool &aCanUndo);
-  NS_IMETHOD Redo(PRUint32 aCount);
-  NS_IMETHOD CanRedo(PRBool &aIsEnabled, PRBool &aCanRedo);
-
-  NS_IMETHOD BeginTransaction();
-  NS_IMETHOD EndTransaction();
-
-  NS_IMETHOD BeginPlaceHolderTransaction(nsIAtom *aName);
-  NS_IMETHOD EndPlaceHolderTransaction();
-  NS_IMETHOD ShouldTxnSetSelection(PRBool *aResult);
-
-  NS_IMETHOD GetDocumentIsEmpty(PRBool *aDocumentIsEmpty);
-
-  // file handling
-  NS_IMETHOD GetDocumentModified(PRBool *outDocModified);
-  NS_IMETHOD GetDocumentCharacterSet(PRUnichar** characterSet);
-  NS_IMETHOD SetDocumentCharacterSet(const PRUnichar* characterSet);
-  NS_IMETHOD SaveFile(nsIFile *aFileSpec, PRBool aReplaceExisting, PRBool aSaveCopy, const nsString& aFormat);
-
-  NS_IMETHOD Cut();
-  NS_IMETHOD CanCut(PRBool &aCanCut);
-  NS_IMETHOD Copy();
-  NS_IMETHOD CanCopy(PRBool &aCanCopy);
-  NS_IMETHOD Paste(PRInt32 aSelectionType);
-  NS_IMETHOD CanPaste(PRInt32 aSelectionType, PRBool &aCanPaste);
-  NS_IMETHOD CanDrag(nsIDOMEvent *aEvent, PRBool &aCanDrag);
-  NS_IMETHOD DoDrag(nsIDOMEvent *aEvent);
-  NS_IMETHOD InsertFromDrop(nsIDOMEvent *aEvent);
-
-  NS_IMETHOD SelectAll();
-
-  NS_IMETHOD BeginningOfDocument();
-  NS_IMETHOD EndOfDocument();
-
-
-  /* Node and element manipulation */
-  NS_IMETHOD SetAttribute(nsIDOMElement * aElement, 
-                          const nsString& aAttribute, 
-                          const nsString& aValue);
-                          
-  NS_IMETHOD GetAttributeValue(nsIDOMElement * aElement, 
-                               const nsString& aAttribute, 
-                               nsString&       aResultValue, 
-                               PRBool&         aResultIsSet);
-                               
-  NS_IMETHOD RemoveAttribute(nsIDOMElement *aElement, const nsString& aAttribute);
-
-  NS_IMETHOD CreateNode(const nsString& aTag,
-                        nsIDOMNode *    aParent,
-                        PRInt32         aPosition,
-                        nsIDOMNode **   aNewNode);
-                        
-  NS_IMETHOD InsertNode(nsIDOMNode * aNode,
-                        nsIDOMNode * aParent,
-                        PRInt32      aPosition);
-
-  NS_IMETHOD SplitNode(nsIDOMNode * aExistingRightNode,
-                       PRInt32      aOffset,
-                       nsIDOMNode ** aNewLeftNode);
-
-  NS_IMETHOD JoinNodes(nsIDOMNode * aLeftNode,
-                       nsIDOMNode * aRightNode,
-                       nsIDOMNode * aParent);
-
-  NS_IMETHOD DeleteNode(nsIDOMNode * aChild);
-
-  NS_IMETHOD MarkNodeDirty(nsIDOMNode* aNode);
-
-
-  /* output */
-  NS_IMETHOD OutputToString(nsAWritableString& aOutputString,
-                            const nsAReadableString& aFormatType,
-                            PRUint32 aFlags);
-                            
-  NS_IMETHOD OutputToStream(nsIOutputStream* aOutputStream,
-                            const nsAReadableString& aFormatType,
-                            const nsAReadableString* aCharsetOverride,
-                            PRUint32 aFlags);
-
-  /* Listeners */
-  NS_IMETHOD AddEditorObserver(nsIEditorObserver *aObserver);
-  NS_IMETHOD RemoveEditorObserver(nsIEditorObserver *aObserver);
-  void  NotifyEditorObservers(void);
-
-  NS_IMETHOD AddEditActionListener(nsIEditActionListener *aListener);
-  NS_IMETHOD RemoveEditActionListener(nsIEditActionListener *aListener);
-
-  NS_IMETHOD AddDocumentStateListener(nsIDocumentStateListener *aListener);
-  NS_IMETHOD RemoveDocumentStateListener(nsIDocumentStateListener *aListener);
-
-
-  NS_IMETHOD DumpContentTree();
-  NS_IMETHOD DebugDumpContent() const;
-  NS_IMETHOD DebugUnitTests(PRInt32 *outNumTests, PRInt32 *outNumTestsFailed);
-
+  void NotifyEditorObservers(void);
+  /* ------------ nsIEditor methods -------------- */
+  NS_DECL_NSIEDITOR
   /* ------------ nsIEditorIMESupport methods -------------- */
   
   NS_IMETHOD BeginComposition(nsTextEventReply* aReply);
   NS_IMETHOD QueryComposition(nsTextEventReply* aReply);
-  NS_IMETHOD SetCompositionString(const nsString& aCompositionString, nsIPrivateTextRangeList* aTextRangeList,nsTextEventReply* aReply);
+  NS_IMETHOD SetCompositionString(const nsAReadableString& aCompositionString, nsIPrivateTextRangeList* aTextRangeList,nsTextEventReply* aReply);
   NS_IMETHOD EndComposition(void);
   NS_IMETHOD ForceCompositionEnd(void);
   NS_IMETHOD GetReconversionString(nsReconversionEventReply *aReply);
@@ -249,31 +139,31 @@ public:
 public:
 
   
-  NS_IMETHOD InsertTextImpl(const nsString& aStringToInsert, 
+  NS_IMETHOD InsertTextImpl(const nsAReadableString& aStringToInsert, 
                                nsCOMPtr<nsIDOMNode> *aInOutNode, 
                                PRInt32 *aInOutOffset,
                                nsIDOMDocument *aDoc);
-  NS_IMETHOD InsertTextIntoTextNodeImpl(const nsString& aStringToInsert, 
+  NS_IMETHOD InsertTextIntoTextNodeImpl(const nsAReadableString& aStringToInsert, 
                                            nsIDOMCharacterData *aTextNode, 
                                            PRInt32 aOffset);
   NS_IMETHOD DeleteSelectionImpl(EDirection aAction);
-  NS_IMETHOD DeleteSelectionAndCreateNode(const nsString& aTag,
+  NS_IMETHOD DeleteSelectionAndCreateNode(const nsAReadableString& aTag,
                                            nsIDOMNode ** aNewNode);
 
   /* helper routines for node/parent manipulations */
   nsresult ReplaceContainer(nsIDOMNode *inNode, 
                             nsCOMPtr<nsIDOMNode> *outNode, 
-                            const nsString &aNodeType,
-                            const nsString *aAttribute = nsnull,
-                            const nsString *aValue = nsnull,
+                            const nsAReadableString &aNodeType,
+                            const nsAReadableString *aAttribute = nsnull,
+                            const nsAReadableString *aValue = nsnull,
                             PRBool aCloneAttributes = PR_FALSE);
 
   nsresult RemoveContainer(nsIDOMNode *inNode);
   nsresult InsertContainerAbove(nsIDOMNode *inNode, 
                                 nsCOMPtr<nsIDOMNode> *outNode, 
-                                const nsString &aNodeType,
-                                const nsString *aAttribute = nsnull,
-                                const nsString *aValue = nsnull);
+                                const nsAReadableString &aNodeType,
+                                const nsAReadableString *aAttribute = nsnull,
+                                const nsAReadableString *aValue = nsnull);
   nsresult MoveNode(nsIDOMNode *aNode, nsIDOMNode *aParent, PRInt32 aOffset);
 
   /* Method to replace certain CreateElementNS() calls. 
@@ -281,15 +171,10 @@ public:
       nsString& aTag          - tag you want
       nsIContent** aContent   - returned Content that was created with above namespace.
   */
-  nsresult CreateHTMLContent(const nsString& aTag, nsIContent** aContent);
+  nsresult CreateHTMLContent(const nsAReadableString& aTag, nsIContent** aContent);
 
 protected:
 
-
-
-  //NOTE: Most callers are dealing with Nodes,
-  //  but these objects must supports nsIDOMElement
-  NS_IMETHOD CloneAttributes(nsIDOMNode *aDestNode, nsIDOMNode *aSourceNode);
   /*
   NS_IMETHOD SetProperties(nsVoidArray *aPropList);
   NS_IMETHOD GetProperties(nsVoidArray *aPropList);
@@ -298,19 +183,19 @@ protected:
   /** create a transaction for setting aAttribute to aValue on aElement
     */
   NS_IMETHOD CreateTxnForSetAttribute(nsIDOMElement *aElement, 
-                                      const nsString& aAttribute, 
-                                      const nsString& aValue,
+                                      const nsAReadableString &  aAttribute, 
+                                      const nsAReadableString &  aValue,
                                       ChangeAttributeTxn ** aTxn);
 
   /** create a transaction for removing aAttribute on aElement
     */
   NS_IMETHOD CreateTxnForRemoveAttribute(nsIDOMElement *aElement, 
-                                         const nsString& aAttribute,
+                                         const nsAReadableString &  aAttribute,
                                          ChangeAttributeTxn ** aTxn);
 
   /** create a transaction for creating a new child node of aParent of type aTag.
     */
-  NS_IMETHOD CreateTxnForCreateElement(const nsString& aTag,
+  NS_IMETHOD CreateTxnForCreateElement(const nsAReadableString & aTag,
                                        nsIDOMNode     *aParent,
                                        PRInt32         aPosition,
                                        CreateElementTxn ** aTxn);
@@ -339,12 +224,12 @@ protected:
   /** create a transaction for inserting aStringToInsert into aTextNode
     * if aTextNode is null, the string is inserted at the current selection.
     */
-  NS_IMETHOD CreateTxnForInsertText(const nsString & aStringToInsert,
+  NS_IMETHOD CreateTxnForInsertText(const nsAReadableString & aStringToInsert,
                                     nsIDOMCharacterData *aTextNode,
                                     PRInt32 aOffset,
                                     InsertTextTxn ** aTxn);
 
-  NS_IMETHOD CreateTxnForIMEText(const nsString & aStringToInsert,
+  NS_IMETHOD CreateTxnForIMEText(const nsAReadableString & aStringToInsert,
                                  IMETextTxn ** aTxn);
 
   /** create a transaction for adding a style sheet
@@ -439,7 +324,7 @@ public:
 
 
   /** return the string that represents text nodes in the content tree */
-  static nsresult GetTextNodeTag(nsString& aOutString);
+  static nsresult GetTextNodeTag(nsAWritableString& aOutString);
 
   /** 
    * SplitNode() creates a new node identical to an existing node, and split the contents between the two nodes
@@ -482,15 +367,6 @@ public:
   static nsresult GetNodeLocation(nsIDOMNode *aChild, 
                                  nsCOMPtr<nsIDOMNode> *aParent, 
                                  PRInt32    *aOffset);
-
-  /** set aIsInline to PR_TRUE if aNode is inline as defined by HTML DTD */
-  static nsresult IsNodeInline(nsIDOMNode *aNode, PRBool &aIsInline);
-
-  /** set aIsBlock to PR_TRUE if aNode is block as defined by HTML DTD */
-  static nsresult IsNodeBlock(nsIDOMNode *aNode, PRBool &aIsBlock);
-
-  /** This version is for exposure to JavaScript */
-  NS_IMETHOD NodeIsBlock(nsIDOMNode *aNode, PRBool &aIsBlock);
 
   /** returns the number of things inside aNode in the out-param aCount.  
     * @param  aNode is the node to get the length of.  
@@ -562,17 +438,17 @@ public:
    *  @param   aResult is the node we found, or nsnull if there is none
    */
   static nsresult GetFirstNodeOfType(nsIDOMNode     *aStartNode, 
-                                     const nsString &aTag, 
+                                     const nsAReadableString &aTag, 
                                      nsIDOMNode    **aResult);
 
   /** returns PR_TRUE if aNode is of the type implied by aTag */
   static PRBool NodeIsType(nsIDOMNode *aNode, nsIAtom *aTag);
-  static PRBool NodeIsType(nsIDOMNode *aNode, const nsString &aTag);
+  static PRBool NodeIsType(nsIDOMNode *aNode, const nsAReadableString &aTag);
 
   /** returns PR_TRUE if aParent can contain a child of type aTag */
-  PRBool CanContainTag(nsIDOMNode* aParent, const nsString &aTag);
-  PRBool TagCanContain(const nsString &aParentTag, nsIDOMNode* aChild);
-  virtual PRBool TagCanContainTag(const nsString &aParentTag, const nsString &aChildTag);
+  PRBool CanContainTag(nsIDOMNode* aParent, const nsAReadableString &aTag);
+  PRBool TagCanContain(const nsAReadableString &aParentTag, nsIDOMNode* aChild);
+  virtual PRBool TagCanContainTag(const nsAReadableString &aParentTag, const nsAReadableString &aChildTag);
 
   /** returns PR_TRUE if aNode is a descendant of our root node */
   PRBool IsDescendantOfBody(nsIDOMNode *inNode);
@@ -598,54 +474,15 @@ public:
 
 
   /** from html rules code - migration in progress */
-  static nsresult GetTagString(nsIDOMNode *aNode, nsString& outString);
+  static nsresult GetTagString(nsIDOMNode *aNode, nsAWritableString& outString);
   static nsCOMPtr<nsIAtom> GetTag(nsIDOMNode *aNode);
   static PRBool NodesSameType(nsIDOMNode *aNode1, nsIDOMNode *aNode2);
-  static PRBool IsBlockNode(nsIDOMNode *aNode);
-  static PRBool IsInlineNode(nsIDOMNode *aNode);
-  static nsCOMPtr<nsIDOMNode> GetBlockNodeParent(nsIDOMNode *aNode);
-  static PRBool HasSameBlockNodeParent(nsIDOMNode *aNode1, nsIDOMNode *aNode2);
-  /** Determines the bounding nodes for the block section containing aNode.
-    * The calculation is based on some nodes intrinsically being block elements
-    * acording to HTML.  Style sheets are not considered in this calculation.
-    * <BR> tags separate block content sections.  So the HTML markup:
-    * <PRE>
-    *      <P>text1<BR>text2<B>text3</B></P>
-    * </PRE>
-    * contains two block content sections.  The first has the text node "text1"
-    * for both endpoints.  The second has "text2" as the left endpoint and
-    * "text3" as the right endpoint.
-    * Notice that offsets aren't required, only leaf nodes.  Offsets are implicit.
-    *
-    * @param aNode      the block content returned includes aNode
-    * @param aLeftNode  [OUT] the left endpoint of the block content containing aNode
-    * @param aRightNode [OUT] the right endpoint of the block content containing aNode
-    *
-    */
-  static nsresult GetBlockSection(nsIDOMNode  *aNode,
-                                  nsIDOMNode **aLeftNode, 
-                                  nsIDOMNode **aRightNode);
-
-  /** Compute the set of block sections in a given range.
-    * A block section is the set of (leftNode, rightNode) pairs given
-    * by GetBlockSection.  The set is computed by computing the 
-    * block section for every leaf node in the range and throwing 
-    * out duplicates.
-    *
-    * @param aRange     The range to compute block sections for.
-    * @param aSections  Allocated storage for the resulting set, stored as nsIDOMRanges.
-    */
-  static nsresult GetBlockSectionsForRange(nsIDOMRange      *aRange, 
-                                           nsISupportsArray *aSections);
-
-  
   static PRBool IsTextOrElementNode(nsIDOMNode *aNode);
   static PRBool IsTextNode(nsIDOMNode *aNode);
   
   static PRInt32 GetIndexOf(nsIDOMNode *aParent, nsIDOMNode *aChild);
   static nsCOMPtr<nsIDOMNode> GetChildAt(nsIDOMNode *aParent, PRInt32 aOffset);
   
-  static nsCOMPtr<nsIDOMNode> NextNodeInBlock(nsIDOMNode *aNode, IterDirection aDir);
   static nsresult GetStartNodeAndOffset(nsISelection *aSelection, nsCOMPtr<nsIDOMNode> *outStartNode, PRInt32 *outStartOffset);
   static nsresult GetEndNodeAndOffset(nsISelection *aSelection, nsCOMPtr<nsIDOMNode> *outEndNode, PRInt32 *outEndOffset);
 
@@ -663,18 +500,6 @@ public:
   nsresult ClearSelection();
 
   nsresult IsPreformatted(nsIDOMNode *aNode, PRBool *aResult);
-  nsresult IsNextCharWhitespace(nsIDOMNode *aParentNode, 
-                                PRInt32 aOffset, 
-                                PRBool *outIsSpace, 
-                                PRBool *outIsNBSP,
-                                nsCOMPtr<nsIDOMNode> *outNode = 0,
-                                PRInt32 *outOffset = 0);
-  nsresult IsPrevCharWhitespace(nsIDOMNode *aParentNode, 
-                                PRInt32 aOffset, 
-                                PRBool *outIsSpace, 
-                                PRBool *outIsNBSP,
-                                nsCOMPtr<nsIDOMNode> *outNode = 0,
-                                PRInt32 *outOffset = 0);
 
   nsresult SplitNodeDeep(nsIDOMNode *aNode, 
                          nsIDOMNode *aSplitPointParent, 
@@ -685,13 +510,19 @@ public:
                          nsCOMPtr<nsIDOMNode> *outRightNode = 0);
   nsresult JoinNodeDeep(nsIDOMNode *aLeftNode, nsIDOMNode *aRightNode, nsCOMPtr<nsIDOMNode> *aOutJoinNode, PRInt32 *outOffset); 
 
-  nsresult GetString(const nsString& name, nsString& value);
+  nsresult GetString(const nsAReadableString& name, nsAWritableString& value);
 
   nsresult BeginUpdateViewBatch(void);
   nsresult EndUpdateViewBatch(void);
 
   PRBool GetShouldTxnSetSelection();
-  void   SetShouldTxnSetSelection(PRBool aShould);
+
+public:
+  // Argh!  These transaction names are used by PlaceholderTxn and
+  // nsPlaintextEditor.  They should be localized to those classes.
+  static nsIAtom *gTypingTxnName;
+  static nsIAtom *gIMETxnName;
+  static nsIAtom *gDeleteTxnName;
 
 protected:
 
@@ -702,7 +533,6 @@ protected:
   nsIViewManager *mViewManager;
   PRInt32         mUpdateCount;
   nsCOMPtr<nsITransactionManager> mTxnMgr;
-  nsCOMPtr<nsIEditProperty>  mEditProperty;
   nsCOMPtr<nsICSSStyleSheet> mLastStyleSheet;			// is owning this dangerous?
   nsWeakPtr         mPlaceHolderTxn;     // weak reference to placeholder for begin/end batch purposes
   nsIAtom          *mPlaceHolderName;    // name of placeholder transaction

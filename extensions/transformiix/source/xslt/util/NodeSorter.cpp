@@ -26,6 +26,9 @@
 
 
 #include "NodeSorter.h"
+#include "StringComparator.h"
+#include "Names.h"
+#include "XMLDOMUtils.h"
 
 /*
  * Sorts Nodes as specified by the W3C XSLT 1.0 Recommendation

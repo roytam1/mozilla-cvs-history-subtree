@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 
-<?xml-stylesheet href="chrome://help/skin/help.css" type="text/css"?>
+<?xml-stylesheet href="chrome://communicator/skin/help.css" type="text/css"?>
 <?xml-stylesheet href="chrome://navigator/skin" type="text/css"?>
 <?xml-stylesheet href="chrome://global/skin" type="text/css"?>
 
@@ -26,7 +26,7 @@
 	id="helpToolbar" 
 	grippytooltip="aTooltip" 
 	grippytooltiptext="The Help Toolbar"
-       tbautostretch="always" 
+        tbautostretch="always" 
 	persist="collapsed">
 
         <button id="helpBackButton"
@@ -64,17 +64,17 @@
 
         <box orient="vertical" id="help-subset">
           <!-- these we will want to clean up or style better -->
-	  <text label="&t1.label;"/>
-          <text label="&t2.label;"/>
-          <text label="&t3.label;"/>
+	  <text value="&t1.label;"/>
+          <text value="&t2.label;"/>
+          <text value="&t3.label;"/>
         </box>
 
-        <tabcontrol orient="vertical" flex="1">
-          <tabbox orient="horizontal">
-            <tab label="Contents"/>
-            <tab label="Index"/>
-          </tabbox>
-          <tabpanel flex="1">
+        <tabbox orient="vertical" flex="1">
+          <tabs orient="horizontal">
+            <tab label="&tab1.label;"/>
+            <tab label="&tab2.label;"/>
+          </tabs>
+          <tabpanels flex="1">
             <box id="help-toc">
               <tree id="help-toc-tree" ref="urn:root" flex="1*"
                     datasources="chrome://help/locale/help-toc.rdf"
@@ -129,8 +129,8 @@
 		src="chrome://help/locale/help_index.html" />
             </box>
 
-          </tabpanel>
-        </tabcontrol>
+          </tabpanels>
+        </tabbox>
       </box>
 
       <splitter id="helpsidebar-splitter"

@@ -29,7 +29,7 @@
 **/
 
 #include "DOMHelper.h"
-
+#include "primitives.h"
 
 /**
  * Creates a new DOMHelper
@@ -112,25 +112,30 @@ void DOMHelper::generateId(Node* node, String& dest) {
 Node* DOMHelper::getParentNode(Node* node) {
 
     if (!node) return 0;
+    //XXX Namespace: the parent of a namespace node is the element
     if (node->getNodeType() != Node::ATTRIBUTE_NODE)
         return node->getParentNode();
 
 #ifdef MOZ_XSL
-    void* key = node->getNSObj();
-#else
-    Int32 key = (Int32)node;
-#endif
-    MITREObjectWrapper* wrapper = 0;
+    // XXX temporary fix for 70979
+    nsCOMPtr<nsIDOMAttr> attr(do_QueryInterface(node->getNSObj()));
+    nsCOMPtr<nsIDOMElement> tmpParent;
 
-    wrapper = (MITREObjectWrapper*) parents.retrieve(key);
+    if (attr && NS_SUCCEEDED(attr->GetOwnerElement(getter_AddRefs(tmpParent))))
+        return node->getOwnerDocument()->createWrapper(tmpParent);
+    return NULL;
+#else
+    TxObjectWrapper* wrapper = 0;
+
+    wrapper = (TxObjectWrapper*) parents.get(node);
     if (!wrapper) {
         continueIndexing(node);
-        wrapper = (MITREObjectWrapper*) parents.retrieve(key);
+        wrapper = (TxObjectWrapper*) parents.get(node);
     }
 
     if (wrapper) return (Node*)wrapper->object;
     return 0;    
-
+#endif
 } //-- getParentNode
 
 
@@ -142,16 +147,10 @@ Node* DOMHelper::getParentNode(Node* node) {
  * Adds the given child/parent mapping
 **/
 void DOMHelper::addParentReference(Node* child, Node* parent) {
-
-#ifdef MOZ_XSL
-    void* key = child->getNSObj();
-#else
-    Int32 key = (Int32)child;
-#endif
-    MITREObjectWrapper* wrapper = (MITREObjectWrapper*) parents.retrieve(key);
+    TxObjectWrapper* wrapper = (TxObjectWrapper*) parents.get(child);
     if (!wrapper) {
-        wrapper = new MITREObjectWrapper();
-        parents.add(wrapper, key);
+        wrapper = new TxObjectWrapper();
+        parents.put(wrapper, child);
     } 
     wrapper->object = parent;
 
@@ -164,7 +163,7 @@ void DOMHelper::addParentReference(Node* child, Node* parent) {
 void DOMHelper::continueIndexing(Node* node) {
     if (!node) return;
 
-    MITREObjectWrapper* wrapper = 0;
+    TxObjectWrapper* wrapper = 0;
 
     //-- get indexing information
     Document* doc = 0;
@@ -273,12 +272,7 @@ OrderInfo* DOMHelper::getDocumentOrder(Node* node) {
 
     if (!node) return 0;
 
-#ifdef MOZ_XSL
-    void* key = node->getNSObj();
-#else
-    Int32 key = (Int32)node;
-#endif
-    OrderInfo* orderInfo = (OrderInfo*)orders.retrieve(key);
+    OrderInfo* orderInfo = (OrderInfo*)orders.get(node);
 
     if (!orderInfo) {
         if (node->getNodeType() == Node::DOCUMENT_NODE) {
@@ -306,7 +300,7 @@ OrderInfo* DOMHelper::getDocumentOrder(Node* node) {
                 orderInfo->order[0] = 0;            
             }
         }
-        orders.add(orderInfo, key);
+        orders.put(orderInfo, node);
     }
 
     return orderInfo;
@@ -338,7 +332,7 @@ IndexState::~IndexState() {};
 /**
  * Creates a new OrderInfo
 **/
-OrderInfo::OrderInfo() : MITREObject() {
+OrderInfo::OrderInfo() : TxObject() {
    order = 0;
    size  = 0;
 } //-- OrderInfo

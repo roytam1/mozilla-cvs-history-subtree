@@ -25,8 +25,8 @@
 /* Implementations of nsIControllerCommand for composer commands */
 
 
-var commonDialogsService = Components.classes["@mozilla.org/appshell/commonDialogs;1"].getService();
-commonDialogsService = commonDialogsService.QueryInterface(Components.interfaces.nsICommonDialogs);
+var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService();
+promptService = promptService.QueryInterface(Components.interfaces.nsIPromptService);
 
 //-----------------------------------------------------------------------------------
 function SetupHTMLEditorCommands()
@@ -375,7 +375,7 @@ var nsRevertCommand =
   doCommand: function(aCommand)
   {
     // Confirm with the user to abandon current changes
-    if (commonDialogsService)
+    if (promptService)
     {
       var result = {value:0};
 
@@ -386,7 +386,7 @@ var nsRevertCommand =
 
       var msg = window.editorShell.GetString("AbandonChanges").replace(/%title%/,title);
 
-      commonDialogsService.UniversalDialog(
+      promptService.universalDialog(
         window,
         null,
         window.editorShell.GetString("RevertCaption"),
@@ -400,7 +400,7 @@ var nsRevertCommand =
         null,
         {value:0},
         {value:0},
-        "chrome://global/skin/question-icon.gif",
+        "question-icon",
         {value:"false"},
         2,
         0,
@@ -897,13 +897,13 @@ var nsSetSmiley =
         break;
         case ";-)": strSml="s3";
         break;
-        case ";-P": strSml="s4";
+        case ":-P": strSml="s4";
         break;
-        case ":)":  strSml="s5";
+        case ":-D": strSml="s5";
         break;
-        case ":(":  strSml="s6";
+        case ":-[": strSml="s6";
         break;
-        case ";)":  strSml="s7";
+        case ":-\\": strSml="s7";
         break;
         default:	strSml="";
         break;

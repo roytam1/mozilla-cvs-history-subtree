@@ -43,13 +43,15 @@ CPPSRCS =                         \
       InsertElementTxn.cpp        \
       InsertTextTxn.cpp           \
       JoinElementTxn.cpp          \
-      nsComposerCommands.cpp      \
       nsEditorCommands.cpp        \
+      nsComposerCommands.cpp      \
       nsEditorController.cpp      \
+      nsComposerController.cpp    \
       nsEditor.cpp                \
       nsEditorEventListeners.cpp  \
       nsEditorUtils.cpp           \
       nsEditProperty.cpp          \
+      nsTextEditUtils.cpp         \
       nsHTMLEditUtils.cpp         \
       nsPlaintextDataTransfer.cpp \
       nsPlaintextEditor.cpp       \
@@ -74,12 +76,14 @@ CPP_OBJS =                                \
   .\$(OBJDIR)\InsertTextTxn.obj           \
   .\$(OBJDIR)\JoinElementTxn.obj          \
   .\$(OBJDIR)\nsComposerCommands.obj      \
+  .\$(OBJDIR)\nsComposerController.obj    \
   .\$(OBJDIR)\nsEditorCommands.obj        \
   .\$(OBJDIR)\nsEditorController.obj      \
   .\$(OBJDIR)\nsEditorEventListeners.obj  \
   .\$(OBJDIR)\nsEditor.obj                \
   .\$(OBJDIR)\nsEditorUtils.obj           \
   .\$(OBJDIR)\nsEditProperty.obj          \
+  .\$(OBJDIR)\nsTextEditUtils.obj         \
   .\$(OBJDIR)\nsHTMLEditUtils.obj         \
   .\$(OBJDIR)\nsPlaintextDataTransfer.obj \
   .\$(OBJDIR)\nsPlaintextEditor.obj       \

@@ -25,7 +25,6 @@
 
 // Local Includes
 #include "nsDocShellTreeOwner.h"
-#include "nsWBURIContentListener.h"
 
 // Core Includes
 #include "nsCOMPtr.h"
@@ -49,6 +48,11 @@
 #include "nsIWebBrowserFocus.h"
 #include "nsIWebBrowserFind.h"
 #include "nsIWebBrowserPrint.h"
+#include "nsIWindowWatcher.h"
+
+// for painting the background window
+#include "nsIDeviceContext.h"
+#include "nsIRenderingContext.h"
 
 #include "nsVoidArray.h"
 #include "nsWeakPtr.h"
@@ -94,7 +98,6 @@ class nsWebBrowser : public nsIWebBrowser,
                      public nsIWebBrowserPrint
 {
 friend class nsDocShellTreeOwner;
-friend class nsWBURIContentListener;
 public:
     nsWebBrowser();
 
@@ -119,17 +122,17 @@ protected:
 
     NS_IMETHOD SetDocShell(nsIDocShell* aDocShell);
     NS_IMETHOD EnsureDocShellTreeOwner();
-    NS_IMETHOD EnsureContentListener();
     NS_IMETHOD GetPrimaryContentWindow(nsIDOMWindowInternal **aDomWindow);
     NS_IMETHOD BindListener(nsISupports *aListener, const nsIID& aIID);
     NS_IMETHOD UnBindListener(nsISupports *aListener, const nsIID& aIID);
     NS_IMETHOD EnsureFindImpl();
 
+    NS_IMETHOD FillBackground(const nsRect &aRect);
+
     static nsEventStatus PR_CALLBACK HandleEvent(nsGUIEvent *aEvent);
 
 protected:
    nsDocShellTreeOwner*       mDocShellTreeOwner;
-   nsWBURIContentListener*    mContentListener;
    nsCOMPtr<nsIDocShell>      mDocShell;
    nsCOMPtr<nsIInterfaceRequestor> mDocShellAsReq;
    nsCOMPtr<nsIBaseWindow>    mDocShellAsWin;
@@ -138,12 +141,18 @@ protected:
    nsCOMPtr<nsIScrollable>    mDocShellAsScrollable;
    nsCOMPtr<nsITextScroll>    mDocShellAsTextScroll;
    nsCOMPtr<nsIWidget>        mInternalWidget;
+   nsCOMPtr<nsIWindowWatcher> mWWatch;
    nsWebBrowserInitInfo*      mInitInfo;
    PRUint32                   mContentType;
    nativeWindow               mParentNativeWindow;
    nsIWebBrowserPersistProgress *mProgressListener;
    nsCOMPtr<nsIWebProgress>   mWebProgress;
    nsWebBrowserFindImpl*      mFindImpl;
+
+   // so that we can draw when we get expose events
+   nsCOMPtr<nsIRenderingContext> mRC;
+   nsCOMPtr<nsIDeviceContext>    mDC;
+   nscolor                       mBackgroundColor;
 
    //Weak Reference interfaces...
    nsIWidget*                 mParentWidget;

@@ -25,6 +25,8 @@
 
 #include "nsIGenericFactory.h"
 #include "nsICategoryManager.h"
+#include "nsIScriptNameSpaceManager.h"
+#include "prprf.h"
 
 #include "XSLTProcessor.h"
 #include "XPathProcessor.h"

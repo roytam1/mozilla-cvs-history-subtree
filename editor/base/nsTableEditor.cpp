@@ -45,6 +45,7 @@
 #include "nsVoidArray.h"
 
 #include "nsEditorUtils.h"
+#include "nsTextEditUtils.h"
 #include "nsHTMLEditUtils.h"
 
 static NS_DEFINE_CID(kCContentIteratorCID, NS_CONTENTITERATOR_CID);
@@ -365,7 +366,6 @@ nsHTMLEditor::GetNextRow(nsIDOMNode* aCurrentRowNode, nsIDOMNode **aRowNode)
     // We can encounter "__moz_text" nodes here -- must find a row
     while (nextRow && !IsRowNode(nextRow))
     {
-      nsCOMPtr<nsIDOMNode> nextNode;
       res = nextRow->GetNextSibling(getter_AddRefs(nextNode));
       if (NS_FAILED(res)) return res;
 
@@ -1884,7 +1884,7 @@ nsHTMLEditor::CopyCellBackgroundColor(nsIDOMElement *destCell, nsIDOMElement *so
   nsAutoString bgcolor; bgcolor.AssignWithConversion("bgcolor");
   nsAutoString color;
   PRBool isSet;
-  nsresult res = GetAttributeValue(sourceCell, bgcolor, color, isSet);
+  nsresult res = GetAttributeValue(sourceCell, bgcolor, color, &isSet);
 
   if (NS_SUCCEEDED(res) && isSet)
     res = SetAttribute(destCell, bgcolor, color);
@@ -3534,7 +3534,7 @@ nsHTMLEditor::IsEmptyCell(nsIDOMElement *aCell)
     {
       // We insert a single break into a cell by default
       //   to have some place to locate a cursor -- it is dispensable
-      PRBool isEmpty = nsHTMLEditUtils::IsBreak(cellChild);
+      PRBool isEmpty = nsTextEditUtils::IsBreak(cellChild);
       // Or check if no real content
       if (!isEmpty)
         IsEmptyNode(cellChild, &isEmpty, PR_FALSE, PR_FALSE);

@@ -28,7 +28,6 @@
 #include "nsIDOMDocument.h"
 #include "nsIPref.h"
 #include "nsILocale.h"
-#include "nsIEditProperty.h"  // to be removed  XXX
 
 #include "nsIDOMText.h"
 #include "nsIDOMElement.h"
@@ -145,7 +144,6 @@ static const PRBool gNoisy = PR_FALSE;
 #endif
 
 
-const PRUnichar nbsp = 160;
 PRInt32 nsEditor::gInstanceCount = 0;
 
 
@@ -155,6 +153,9 @@ PRInt32 nsEditor::gInstanceCount = 0;
 //
 //---------------------------------------------------------------------------
 
+nsIAtom *nsEditor::gTypingTxnName;
+nsIAtom *nsEditor::gIMETxnName;
+nsIAtom *nsEditor::gDeleteTxnName;
 
 nsEditor::nsEditor()
 :  mPresShellWeak(nsnull)
@@ -184,10 +185,58 @@ nsEditor::nsEditor()
   NS_INIT_REFCNT();
 
   PR_AtomicIncrement(&gInstanceCount);
+
+  if (!gTypingTxnName)
+    gTypingTxnName = NS_NewAtom("Typing");
+  else
+    NS_ADDREF(gTypingTxnName);
+  if (!gIMETxnName)
+    gIMETxnName = NS_NewAtom("IME");
+  else
+    NS_ADDREF(gIMETxnName);
+  if (!gDeleteTxnName)
+    gDeleteTxnName = NS_NewAtom("Deleting");
+  else
+    NS_ADDREF(gDeleteTxnName);
 }
 
 nsEditor::~nsEditor()
 {
+  /* first, delete the transaction manager if there is one.
+     this will release any remaining transactions.
+     this is important because transactions can hold onto the atoms (gTypingTxnName, ...)
+     and to make the optimization (holding refcounted statics) work correctly, 
+     the editor instance needs to hold the last refcount.
+     If you get this wrong, expect to deref a garbage gTypingTxnName pointer if you bring up a second editor.
+  */
+  if (mTxnMgr) { 
+    mTxnMgr = 0;
+  }
+  nsrefcnt refCount=0;
+  if (gTypingTxnName)  // we addref'd in the constructor
+  { // want to release it without nulling out the pointer.
+    refCount = gTypingTxnName->Release();
+    if (0==refCount) {
+      gTypingTxnName = nsnull; 
+    }
+  }
+
+  if (gIMETxnName)  // we addref'd in the constructor
+  { // want to release it without nulling out the pointer.
+    refCount = gIMETxnName->Release();
+    if (0==refCount) {
+      gIMETxnName = nsnull;
+    }
+  }
+
+  if (gDeleteTxnName)  // we addref'd in the constructor
+  { // want to release it without nulling out the pointer.
+    refCount = gDeleteTxnName->Release();
+    if (0==refCount) {
+      gDeleteTxnName = nsnull;
+    }
+  }
+
   delete mEditorObservers;   // no need to release observers; we didn't addref them
   mEditorObservers = 0;
   
@@ -251,11 +300,6 @@ nsEditor::Init(nsIDOMDocument *aDoc, nsIPresShell* aPresShell, nsIContent *aRoot
   // XXX - in the long run we want to get this from the document, but there
   // is no way to do that right now.  So we leave it null here and set
   // up a nav html dtd in nsHTMLEditor::Init
-
-  // Init mEditProperty
-  nsresult result = NS_NewEditProperty(getter_AddRefs(mEditProperty));
-  if (NS_FAILED(result)) { return result; }
-  if (!mEditProperty) {return NS_ERROR_NULL_POINTER;}
 
   ps->GetViewManager(&mViewManager);
   if (!mViewManager) {return NS_ERROR_NULL_POINTER;}
@@ -536,17 +580,19 @@ nsEditor::Undo(PRUint32 aCount)
 }
 
 
-NS_IMETHODIMP nsEditor::CanUndo(PRBool &aIsEnabled, PRBool &aCanUndo)
+NS_IMETHODIMP nsEditor::CanUndo(PRBool *aIsEnabled, PRBool *aCanUndo)
 {
-  aIsEnabled = ((PRBool)((nsITransactionManager *)0!=mTxnMgr.get()));
-  if (aIsEnabled)
+  if (!aIsEnabled || !aCanUndo)
+     return NS_ERROR_NULL_POINTER;
+  *aIsEnabled = ((PRBool)((nsITransactionManager *)0!=mTxnMgr.get()));
+  if (*aIsEnabled)
   {
     PRInt32 numTxns=0;
     mTxnMgr->GetNumberOfUndoItems(&numTxns);
-    aCanUndo = ((PRBool)(0!=numTxns));
+    *aCanUndo = ((PRBool)(0!=numTxns));
   }
   else {
-    aCanUndo = PR_FALSE;
+    *aCanUndo = PR_FALSE;
   }
   return NS_OK;
 }
@@ -580,17 +626,20 @@ nsEditor::Redo(PRUint32 aCount)
 }
 
 
-NS_IMETHODIMP nsEditor::CanRedo(PRBool &aIsEnabled, PRBool &aCanRedo)
+NS_IMETHODIMP nsEditor::CanRedo(PRBool *aIsEnabled, PRBool *aCanRedo)
 {
-  aIsEnabled = ((PRBool)((nsITransactionManager *)0!=mTxnMgr.get()));
-  if (aIsEnabled)
+  if (!aIsEnabled || !aCanRedo)
+     return NS_ERROR_NULL_POINTER;
+
+  *aIsEnabled = ((PRBool)((nsITransactionManager *)0!=mTxnMgr.get()));
+  if (*aIsEnabled)
   {
     PRInt32 numTxns=0;
     mTxnMgr->GetNumberOfRedoItems(&numTxns);
-    aCanRedo = ((PRBool)(0!=numTxns));
+    *aCanRedo = ((PRBool)(0!=numTxns));
   }
   else {
-    aCanRedo = PR_FALSE;
+    *aCanRedo = PR_FALSE;
   }
   return NS_OK;
 }
@@ -693,13 +742,20 @@ nsEditor::EndPlaceHolderTransaction()
   return NS_OK;
 }
 
-NS_IMETHODIMP nsEditor::ShouldTxnSetSelection(PRBool *aResult)
+NS_IMETHODIMP
+nsEditor::ShouldTxnSetSelection(PRBool *aResult)
 {
   if (!aResult) return NS_ERROR_NULL_POINTER;
   *aResult = mShouldTxnSetSelection;
   return NS_OK;
 }
 
+NS_IMETHODIMP  
+nsEditor::SetShouldTxnSetSelection(PRBool aShould)
+{
+  mShouldTxnSetSelection = aShould;
+  return NS_OK;
+}
 
 NS_IMETHODIMP
 nsEditor::GetDocumentIsEmpty(PRBool *aDocumentIsEmpty)
@@ -847,24 +903,19 @@ nsEditor::GetDocumentModified(PRBool *outDocModified)
 }
 
 NS_IMETHODIMP
-nsEditor::GetDocumentCharacterSet(PRUnichar** characterSet)
+nsEditor::GetDocumentCharacterSet(nsAWritableString &characterSet)
 {
   nsresult rv;
   nsCOMPtr<nsIDocument> doc;
   nsCOMPtr<nsIPresShell> presShell;
-  nsAutoString  character_set;
-
-  if (characterSet==nsnull) return NS_ERROR_NULL_POINTER;
 
   rv = GetPresShell(getter_AddRefs(presShell));
   if (NS_SUCCEEDED(rv))
   {
     presShell->GetDocument(getter_AddRefs(doc));
-    if (doc ) {
-    rv = doc->GetDocumentCharacterSet(character_set);
-    if (NS_SUCCEEDED(rv)) *characterSet=character_set.ToNewUnicode();
-    return rv;
-  }
+    if (doc )
+      return doc->GetDocumentCharacterSet(characterSet);
+    rv = NS_ERROR_NULL_POINTER;
   }
 
   return rv;
@@ -872,22 +923,20 @@ nsEditor::GetDocumentCharacterSet(PRUnichar** characterSet)
 }
 
 NS_IMETHODIMP
-nsEditor::SetDocumentCharacterSet(const PRUnichar* characterSet)
+nsEditor::SetDocumentCharacterSet(const nsAReadableString& characterSet)
 {
   nsresult rv;
   nsCOMPtr<nsIDocument> doc;
   nsCOMPtr<nsIPresShell> presShell;
-  nsAutoString character_set(characterSet);
-
-  if (characterSet==nsnull) return NS_ERROR_NULL_POINTER;
 
   rv = GetPresShell(getter_AddRefs(presShell));
   if (NS_SUCCEEDED(rv))
   {
     presShell->GetDocument(getter_AddRefs(doc));
     if (doc) {
-      return doc->SetDocumentCharacterSet(character_set);
+      return doc->SetDocumentCharacterSet(characterSet);
     }
+    rv = NS_ERROR_NULL_POINTER;
   }
 
   return rv;
@@ -913,7 +962,7 @@ nsEditor::GetWrapWidth(PRInt32 *aWrapColumn)
 
 NS_IMETHODIMP 
 nsEditor::SaveFile(nsIFile *aFileSpec, PRBool aReplaceExisting,
-                   PRBool aSaveCopy, const nsString& aFormat)
+                   PRBool aSaveCopy, const nsAReadableString& aFormat)
 {
   if (!aFileSpec)
     return NS_ERROR_NULL_POINTER;
@@ -953,8 +1002,9 @@ nsEditor::SaveFile(nsIFile *aFileSpec, PRBool aReplaceExisting,
   GetWrapWidth(&wrapColumn);
   if (wrapColumn > 0)
     flags |= nsIDocumentEncoder::OutputWrap;
+  const nsPromiseFlatString &formatFlat = PromiseFlatString(aFormat);
   rv = diskDoc->SaveFile(aFileSpec, aReplaceExisting, aSaveCopy, 
-                         aFormat.GetUnicode(), NS_LITERAL_STRING("").get(),
+                         formatFlat.get(), NS_LITERAL_STRING("").get(),
                          flags, wrapColumn);
   if (NS_SUCCEEDED(rv))
     DoAfterDocumentSave();
@@ -971,7 +1021,7 @@ nsEditor::Cut()
 }
 
 NS_IMETHODIMP
-nsEditor::CanCut(PRBool &aCanCut)
+nsEditor::CanCut(PRBool *aCanCut)
 {
   return NS_ERROR_NOT_IMPLEMENTED; 
 }
@@ -983,7 +1033,7 @@ nsEditor::Copy()
 }
 
 NS_IMETHODIMP
-nsEditor::CanCopy(PRBool &aCanCopy)
+nsEditor::CanCopy(PRBool *aCanCut)
 {
   return NS_ERROR_NOT_IMPLEMENTED; 
 }
@@ -995,13 +1045,13 @@ nsEditor::Paste(PRInt32 aSelectionType)
 }
 
 NS_IMETHODIMP
-nsEditor::CanPaste(PRInt32 aSelectionType, PRBool &aCanPaste)
+nsEditor::CanPaste(PRInt32 aSelectionType, PRBool *aCanPaste)
 {
   return NS_ERROR_NOT_IMPLEMENTED; 
 }
 
 NS_IMETHODIMP
-nsEditor::CanDrag(nsIDOMEvent *aEvent, PRBool &aCanDrag)
+nsEditor::CanDrag(nsIDOMEvent *aEvent, PRBool *aCanDrag)
 {
   return NS_ERROR_NOT_IMPLEMENTED; 
 }
@@ -1020,7 +1070,7 @@ nsEditor::InsertFromDrop(nsIDOMEvent *aEvent)
 
 
 NS_IMETHODIMP 
-nsEditor::SetAttribute(nsIDOMElement *aElement, const nsString& aAttribute, const nsString& aValue)
+nsEditor::SetAttribute(nsIDOMElement *aElement, const nsAReadableString & aAttribute, const nsAReadableString & aValue)
 {
   ChangeAttributeTxn *txn;
   nsresult result = CreateTxnForSetAttribute(aElement, aAttribute, aValue, &txn);
@@ -1035,11 +1085,13 @@ nsEditor::SetAttribute(nsIDOMElement *aElement, const nsString& aAttribute, cons
 
 NS_IMETHODIMP 
 nsEditor::GetAttributeValue(nsIDOMElement *aElement, 
-                            const nsString& aAttribute, 
-                            nsString& aResultValue, 
-                            PRBool&   aResultIsSet)
+                            const nsAReadableString & aAttribute, 
+                            nsAWritableString & aResultValue, 
+                            PRBool *aResultIsSet)
 {
-  aResultIsSet=PR_FALSE;
+  if (!aResultIsSet)
+    return NS_ERROR_NULL_POINTER;
+  *aResultIsSet=PR_FALSE;
   nsresult result=NS_OK;
   if (nsnull!=aElement)
   {
@@ -1047,7 +1099,7 @@ nsEditor::GetAttributeValue(nsIDOMElement *aElement,
     result = aElement->GetAttributeNode(aAttribute, getter_AddRefs(attNode));
     if ((NS_SUCCEEDED(result)) && attNode)
     {
-      attNode->GetSpecified(&aResultIsSet);
+      attNode->GetSpecified(aResultIsSet);
       attNode->GetValue(aResultValue);
     }
   }
@@ -1055,7 +1107,7 @@ nsEditor::GetAttributeValue(nsIDOMElement *aElement,
 }
 
 NS_IMETHODIMP 
-nsEditor::RemoveAttribute(nsIDOMElement *aElement, const nsString& aAttribute)
+nsEditor::RemoveAttribute(nsIDOMElement *aElement, const nsAReadableString& aAttribute)
 {
   ChangeAttributeTxn *txn;
   nsresult result = CreateTxnForRemoveAttribute(aElement, aAttribute, &txn);
@@ -1085,7 +1137,7 @@ nsEditor::MarkNodeDirty(nsIDOMNode* aNode)
 #pragma mark -
 #endif
 
-NS_IMETHODIMP nsEditor::CreateNode(const nsString& aTag,
+NS_IMETHODIMP nsEditor::CreateNode(const nsAReadableString& aTag,
                                    nsIDOMNode *    aParent,
                                    PRInt32         aPosition,
                                    nsIDOMNode **   aNewNode)
@@ -1336,9 +1388,9 @@ NS_IMETHODIMP nsEditor::DeleteNode(nsIDOMNode * aElement)
 nsresult
 nsEditor::ReplaceContainer(nsIDOMNode *inNode, 
                            nsCOMPtr<nsIDOMNode> *outNode, 
-                           const nsString &aNodeType,
-                           const nsString *aAttribute,
-                           const nsString *aValue,
+                           const nsAReadableString &aNodeType,
+                           const nsAReadableString *aAttribute,
+                           const nsAReadableString *aValue,
                            PRBool aCloneAttributes)
 {
   if (!inNode || !outNode)
@@ -1458,9 +1510,9 @@ nsEditor::RemoveContainer(nsIDOMNode *inNode)
 nsresult
 nsEditor::InsertContainerAbove( nsIDOMNode *inNode, 
                                 nsCOMPtr<nsIDOMNode> *outNode, 
-                                const nsString &aNodeType,
-                                const nsString *aAttribute,
-                                const nsString *aValue)
+                                const nsAReadableString &aNodeType,
+                                const nsAReadableString *aAttribute,
+                                const nsAReadableString *aValue)
 {
   if (!inNode || !outNode)
     return NS_ERROR_NULL_POINTER;
@@ -1727,7 +1779,7 @@ NS_IMETHODIMP nsEditor::OutputToString(nsAWritableString& aOutputString,
 NS_IMETHODIMP
 nsEditor::OutputToStream(nsIOutputStream* aOutputStream,
                          const nsAReadableString& aFormatType,
-                         const nsAReadableString* aCharsetOverride,
+                         const nsAReadableString& aCharsetOverride,
                          PRUint32 aFlags)
 {
   // these should be implemented by derived classes.
@@ -1744,7 +1796,7 @@ nsEditor::DumpContentTree()
 
 
 NS_IMETHODIMP
-nsEditor::DebugDumpContent() const
+nsEditor::DebugDumpContent()
 {
   nsCOMPtr<nsIContent>content;
   nsCOMPtr<nsIDOMNodeList>nodeList;
@@ -1841,7 +1893,7 @@ nsEditor::QueryComposition(nsTextEventReply* aReply)
   if (NS_SUCCEEDED(result) && caretP) {
     if (aReply) {
       caretP->SetCaretDOMSelection(selection);
-      result = caretP->GetCaretCoordinates(nsICaret::eTopLevelWindowCoordinates, selection,
+      result = caretP->GetCaretCoordinates(nsICaret::eIMECoordinates, selection,
 		                      &(aReply->mCursorPosition), &(aReply->mCursorIsCollapsed));
     }
   }
@@ -1891,7 +1943,7 @@ nsEditor::EndComposition(void)
 }
 
 NS_IMETHODIMP
-nsEditor::SetCompositionString(const nsString& aCompositionString, nsIPrivateTextRangeList* aTextRangeList,nsTextEventReply* aReply)
+nsEditor::SetCompositionString(const nsAReadableString& aCompositionString, nsIPrivateTextRangeList* aTextRangeList,nsTextEventReply* aReply)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
@@ -2232,7 +2284,7 @@ NS_IMETHODIMP nsEditor::ScrollIntoView(PRBool aScrollToBegin)
 }
 
 /** static helper method */
-nsresult nsEditor::GetTextNodeTag(nsString& aOutString)
+nsresult nsEditor::GetTextNodeTag(nsAWritableString& aOutString)
 {
   aOutString.SetLength(0);
   static nsString *gTextNodeTag=nsnull;
@@ -2247,7 +2299,7 @@ nsresult nsEditor::GetTextNodeTag(nsString& aOutString)
 }
 
 
-NS_IMETHODIMP nsEditor::InsertTextImpl(const nsString& aStringToInsert, 
+NS_IMETHODIMP nsEditor::InsertTextImpl(const nsAReadableString& aStringToInsert, 
                                           nsCOMPtr<nsIDOMNode> *aInOutNode, 
                                           PRInt32 *aInOutOffset,
                                           nsIDOMDocument *aDoc)
@@ -2308,7 +2360,7 @@ NS_IMETHODIMP nsEditor::InsertTextImpl(const nsString& aStringToInsert,
 }
 
 
-NS_IMETHODIMP nsEditor::InsertTextIntoTextNodeImpl(const nsString& aStringToInsert, 
+NS_IMETHODIMP nsEditor::InsertTextIntoTextNodeImpl(const nsAReadableString& aStringToInsert, 
                                                      nsIDOMCharacterData *aTextNode, 
                                                      PRInt32 aOffset)
 {
@@ -2526,7 +2578,7 @@ nsEditor::NotifyDocumentListeners(TDocumentListenerNotification aNotificationTyp
 }
 
 
-NS_IMETHODIMP nsEditor::CreateTxnForInsertText(const nsString & aStringToInsert,
+NS_IMETHODIMP nsEditor::CreateTxnForInsertText(const nsAReadableString & aStringToInsert,
                                                nsIDOMCharacterData *aTextNode,
                                                PRInt32 aOffset,
                                                InsertTextTxn ** aTxn)
@@ -3033,101 +3085,6 @@ nsEditor::GetLengthOfDOMNode(nsIDOMNode *aNode, PRUint32 &aCount)
   return result;
 }
 
-// Non-static version for the nsIEditor interface and JavaScript
-NS_IMETHODIMP 
-nsEditor::NodeIsBlock(nsIDOMNode *aNode, PRBool &aIsBlock)
-{
-  if (!aNode) { return NS_ERROR_NULL_POINTER; }
-  return IsNodeBlock(aNode, aIsBlock);
-}
-
-// The list of block nodes is shorter, so do the real work here...
-nsresult
-nsEditor::IsNodeBlock(nsIDOMNode *aNode, PRBool &aIsBlock)
-{
-  // this is a content-based implementation
-  if (!aNode) { return NS_ERROR_NULL_POINTER; }
-
-  nsresult result = NS_ERROR_FAILURE;
-  aIsBlock = PR_FALSE;
-  nsCOMPtr<nsIDOMElement>element;
-  element = do_QueryInterface(aNode);
-  if (element)
-  {
-    nsAutoString tagName;
-    result = element->GetTagName(tagName);
-    if (NS_SUCCEEDED(result))
-    {
-      tagName.ToLowerCase();
-      nsIAtom *tagAtom = NS_NewAtom(tagName);
-      if (!tagAtom) { return NS_ERROR_NULL_POINTER; }
-
-      if (tagAtom==nsIEditProperty::p          ||
-          tagAtom==nsIEditProperty::div        ||
-          tagAtom==nsIEditProperty::blockquote ||
-          tagAtom==nsIEditProperty::h1         ||
-          tagAtom==nsIEditProperty::h2         ||
-          tagAtom==nsIEditProperty::h3         ||
-          tagAtom==nsIEditProperty::h4         ||
-          tagAtom==nsIEditProperty::h5         ||
-          tagAtom==nsIEditProperty::h6         ||
-          tagAtom==nsIEditProperty::ul         ||
-          tagAtom==nsIEditProperty::ol         ||
-          tagAtom==nsIEditProperty::dl         ||
-          tagAtom==nsIEditProperty::pre        ||
-          tagAtom==nsIEditProperty::noscript   ||
-          tagAtom==nsIEditProperty::form       ||
-          tagAtom==nsIEditProperty::hr         ||
-          tagAtom==nsIEditProperty::table      ||
-          tagAtom==nsIEditProperty::fieldset   ||
-          tagAtom==nsIEditProperty::address    ||
-          tagAtom==nsIEditProperty::body       ||
-          tagAtom==nsIEditProperty::tr         ||
-          tagAtom==nsIEditProperty::td         ||
-          tagAtom==nsIEditProperty::th         ||
-          tagAtom==nsIEditProperty::caption    ||
-          tagAtom==nsIEditProperty::col        ||
-          tagAtom==nsIEditProperty::colgroup   ||
-          tagAtom==nsIEditProperty::tbody      ||
-          tagAtom==nsIEditProperty::thead      ||
-          tagAtom==nsIEditProperty::tfoot      ||
-          tagAtom==nsIEditProperty::li         ||
-          tagAtom==nsIEditProperty::dt         ||
-          tagAtom==nsIEditProperty::dd         ||
-          tagAtom==nsIEditProperty::legend     )
-      {
-        aIsBlock = PR_TRUE;
-      }
-      NS_RELEASE(tagAtom);
-      result = NS_OK;
-    }
-  } else {
-    // We don't have an element -- probably a text node
-    nsCOMPtr<nsIDOMCharacterData>nodeAsText = do_QueryInterface(aNode);
-    if (nodeAsText)
-    {
-      aIsBlock = PR_FALSE;
-      result = NS_OK;
-    }
-  }
-  return result;
-}
-
-// ...and simply assume non-block element is inline
-nsresult
-nsEditor::IsNodeInline(nsIDOMNode *aNode, PRBool &aIsInline)
-{
-  // this is a content-based implementation
-  if (!aNode) { return NS_ERROR_NULL_POINTER; }
-
-  nsresult result;
-  aIsInline = PR_FALSE;
-  PRBool IsBlock = PR_FALSE;
-  result = IsNodeBlock(aNode, IsBlock);
-  aIsInline = !IsBlock;
-  return result;
-}
-
 
 nsresult 
 nsEditor::GetPriorNode(nsIDOMNode  *aParentNode, 
@@ -3431,24 +3388,22 @@ nsEditor::NodeIsType(nsIDOMNode *aNode, nsIAtom *aTag)
 }
 
 PRBool 
-nsEditor::NodeIsType(nsIDOMNode *aNode, const nsString &aTagStr)
+nsEditor::NodeIsType(nsIDOMNode *aNode, const nsAReadableString &aTagStr)
 {
   nsCOMPtr<nsIDOMElement>element;
   element = do_QueryInterface(aNode);
   if (element)
   {
-    nsAutoString tag;
+    nsAutoString tag, tagStr(aTagStr);
     element->GetTagName(tag);
-    if (tag.EqualsIgnoreCase(aTagStr))
-    {
+    if (tag.EqualsIgnoreCase(tagStr))
       return PR_TRUE;
-    }
   }
   return PR_FALSE;
 }
 
 PRBool 
-nsEditor::CanContainTag(nsIDOMNode* aParent, const nsString &aChildTag)
+nsEditor::CanContainTag(nsIDOMNode* aParent, const nsAReadableString &aChildTag)
 {
   nsAutoString parentStringTag;
   
@@ -3460,7 +3415,7 @@ nsEditor::CanContainTag(nsIDOMNode* aParent, const nsString &aChildTag)
 }
 
 PRBool 
-nsEditor::TagCanContain(const nsString &aParentTag, nsIDOMNode* aChild)
+nsEditor::TagCanContain(const nsAReadableString &aParentTag, nsIDOMNode* aChild)
 {
   nsAutoString childStringTag;
   
@@ -3478,7 +3433,7 @@ nsEditor::TagCanContain(const nsString &aParentTag, nsIDOMNode* aChild)
 }
 
 PRBool 
-nsEditor::TagCanContainTag(const nsString &aParentTag, const nsString &aChildTag)
+nsEditor::TagCanContainTag(const nsAReadableString &aParentTag, const nsAReadableString &aChildTag)
 {
   // if we don't have a dtd then assume we can insert whatever want
   if (!mDTD) return PR_TRUE;
@@ -3539,7 +3494,8 @@ nsEditor::IsEditable(nsIDOMNode *aNode)
   if (!shell)  return PR_FALSE;
 
   if (IsMozEditorBogusNode(aNode)) return PR_FALSE;
-
+  
+/*  THIS DOESN'T WORK!
   // it's not the bogus node, so see if it is an irrelevant text node
   if (PR_TRUE==IsTextNode(aNode))
   {
@@ -3566,7 +3522,7 @@ nsEditor::IsEditable(nsIDOMNode *aNode)
       return PR_FALSE;
     }
   }
-  
+*/  
   // we got this far, so see if it has a frame.  If so, we'll edit it.
   nsIFrame *resultFrame;
   nsCOMPtr<nsIContent>content;
@@ -3732,7 +3688,7 @@ void nsEditor::HACKForceRedraw()
 
 nsresult
 nsEditor::GetFirstNodeOfType(nsIDOMNode     *aStartNode, 
-                             const nsString &aTag, 
+                             const nsAReadableString &aTag, 
                              nsIDOMNode    **aResult)
 {
   nsresult result=NS_OK;
@@ -3749,11 +3705,11 @@ nsEditor::GetFirstNodeOfType(nsIDOMNode     *aStartNode,
   while (childNode)
   {
     result = childNode->QueryInterface(NS_GET_IID(nsIDOMNode),getter_AddRefs(element));
-    nsAutoString tag;
     if (NS_SUCCEEDED(result) && (element))
     {    
+      nsAutoString tag, tagStr(aTag);
       element->GetTagName(tag);
-      if (PR_TRUE==aTag.EqualsIgnoreCase(tag))
+      if (tagStr.EqualsIgnoreCase(tag))
       {
         return (childNode->QueryInterface(NS_GET_IID(nsIDOMNode),(void **) aResult)); // does the addref
       }
@@ -3849,7 +3805,7 @@ nsEditor::GetTag(nsIDOMNode *aNode)
 // GetTagString: digs out string for the tag of this node
 //                    
 nsresult 
-nsEditor::GetTagString(nsIDOMNode *aNode, nsString& outString)
+nsEditor::GetTagString(nsIDOMNode *aNode, nsAWritableString& outString)
 {
   nsCOMPtr<nsIAtom> atom;
   
@@ -3892,239 +3848,6 @@ nsEditor::NodesSameType(nsIDOMNode *aNode1, nsIDOMNode *aNode2)
 }
 
 
-
-///////////////////////////////////////////////////////////////////////////
-// IsBlockNode: true if this node is an html block node
-//                    
-PRBool
-nsEditor::IsBlockNode(nsIDOMNode *aNode)
-{
-  return !IsInlineNode(aNode);
-}
-
-
-///////////////////////////////////////////////////////////////////////////
-// IsInlineNode: true if this node is an html inline node
-//                    
-PRBool
-nsEditor::IsInlineNode(nsIDOMNode *aNode)
-{
-  PRBool retVal = PR_FALSE;
-  IsNodeInline(aNode, retVal);
-  return retVal;
-}
-
-
-///////////////////////////////////////////////////////////////////////////
-// GetBlockNodeParent: returns enclosing block level ancestor, if any
-//
-nsCOMPtr<nsIDOMNode>
-nsEditor::GetBlockNodeParent(nsIDOMNode *aNode)
-{
-  nsCOMPtr<nsIDOMNode> tmp;
-  nsCOMPtr<nsIDOMNode> p;
-
-  if (!aNode)
-  {
-    NS_NOTREACHED("null node passed to GetBlockNodeParent()");
-    return PR_FALSE;
-  }
-
-  if (NS_FAILED(aNode->GetParentNode(getter_AddRefs(p))))  // no parent, ran off top of tree
-    return tmp;
-
-  while (p && !IsBlockNode(p))
-  {
-    if ( NS_FAILED(p->GetParentNode(getter_AddRefs(tmp))) || !tmp) // no parent, ran off top of tree
-      return p;
-
-    p = tmp;
-  }
-  return p;
-}
-
-
-///////////////////////////////////////////////////////////////////////////
-// HasSameBlockNodeParent: true if nodes have same block level ancestor
-//               
-PRBool
-nsEditor::HasSameBlockNodeParent(nsIDOMNode *aNode1, nsIDOMNode *aNode2)
-{
-  if (!aNode1 || !aNode2)
-  {
-    NS_NOTREACHED("null node passed to HasSameBlockNodeParent()");
-    return PR_FALSE;
-  }
-  
-  if (aNode1 == aNode2)
-    return PR_TRUE;
-    
-  nsCOMPtr<nsIDOMNode> p1 = GetBlockNodeParent(aNode1);
-  nsCOMPtr<nsIDOMNode> p2 = GetBlockNodeParent(aNode2);
-
-  return (p1 == p2);
-}
-
-
-///////////////////////////////////////////////////////////////////////////
-// GetBlockSection: return leftmost/rightmost nodes in aChild's block
-//               
-nsresult
-nsEditor::GetBlockSection(nsIDOMNode *aChild,
-                          nsIDOMNode **aLeftNode, 
-                          nsIDOMNode **aRightNode) 
-{
-  nsresult result = NS_OK;
-  if (!aChild || !aLeftNode || !aRightNode) {return NS_ERROR_NULL_POINTER;}
-  *aLeftNode = aChild;
-  *aRightNode = aChild;
-
-  nsCOMPtr<nsIDOMNode>sibling;
-  result = aChild->GetPreviousSibling(getter_AddRefs(sibling));
-  while ((NS_SUCCEEDED(result)) && sibling)
-  {
-    PRBool isInline;
-    IsNodeInline(sibling, isInline);
-    if (PR_FALSE==isInline) 
-    {
-      nsCOMPtr<nsIDOMCharacterData>nodeAsText = do_QueryInterface(sibling);
-      if (!nodeAsText) {
-        break;
-      }
-      // XXX: needs some logic to work for other leaf nodes besides text!
-    }
-    *aLeftNode = sibling;
-    result = (*aLeftNode)->GetPreviousSibling(getter_AddRefs(sibling)); 
-  }
-  NS_ADDREF((*aLeftNode));
-  // now do the right side
-  result = aChild->GetNextSibling(getter_AddRefs(sibling));
-  while ((NS_SUCCEEDED(result)) && sibling)
-  {
-    PRBool isInline;
-    IsNodeInline(sibling, isInline);
-    if (PR_FALSE==isInline) 
-    {
-      nsCOMPtr<nsIDOMCharacterData>nodeAsText = do_QueryInterface(sibling);
-      if (!nodeAsText) {
-        break;
-      }
-    }
-    *aRightNode = sibling;
-    result = (*aRightNode)->GetNextSibling(getter_AddRefs(sibling)); 
-  }
-  NS_ADDREF((*aRightNode));
-  if (gNoisy) { printf("GetBlockSection returning %p %p\n", 
-                       (void*)(*aLeftNode), (void*)(*aRightNode)); }
-
-  return result;
-}
-
-
-///////////////////////////////////////////////////////////////////////////
-// GetBlockSectionsForRange: return list of block sections that intersect 
-//                           this range
-nsresult
-nsEditor::GetBlockSectionsForRange(nsIDOMRange *aRange, nsISupportsArray *aSections) 
-{
-  if (!aRange || !aSections) {return NS_ERROR_NULL_POINTER;}
-
-  nsresult result;
-  nsCOMPtr<nsIContentIterator>iter;
-  result = nsComponentManager::CreateInstance(kCContentIteratorCID, nsnull,
-                                              NS_GET_IID(nsIContentIterator), getter_AddRefs(iter));
-  if ((NS_SUCCEEDED(result)) && iter)
-  {
-    nsCOMPtr<nsIDOMRange> lastRange;
-    iter->Init(aRange);
-    nsCOMPtr<nsIContent> currentContent;
-    iter->CurrentNode(getter_AddRefs(currentContent));
-    while (NS_ENUMERATOR_FALSE == iter->IsDone())
-    {
-      nsCOMPtr<nsIDOMNode>currentNode = do_QueryInterface(currentContent);
-      if (currentNode)
-      {
-        nsCOMPtr<nsIAtom> currentContentTag;
-        currentContent->GetTag(*getter_AddRefs(currentContentTag));
-        // <BR> divides block content ranges.  We can achieve this by nulling out lastRange
-        if (nsIEditProperty::br==currentContentTag.get())
-        {
-          lastRange = do_QueryInterface(nsnull);
-        }
-        else
-        {
-          PRBool isInlineOrText;
-          result = IsNodeInline(currentNode, isInlineOrText);
-          if (PR_FALSE==isInlineOrText)
-          {
-            PRUint16 nodeType;
-            currentNode->GetNodeType(&nodeType);
-            if (nsIDOMNode::TEXT_NODE == nodeType) {
-              isInlineOrText = PR_TRUE;
-            }
-          }
-          if (PR_TRUE==isInlineOrText)
-          {
-            nsCOMPtr<nsIDOMNode>leftNode;
-            nsCOMPtr<nsIDOMNode>rightNode;
-            result = GetBlockSection(currentNode,
-                                     getter_AddRefs(leftNode),
-                                     getter_AddRefs(rightNode));
-            if (gNoisy) {printf("currentNode %p has block content (%p,%p)\n", (void*)currentNode.get(), (void*)leftNode.get(), (void*)rightNode.get());}
-            if ((NS_SUCCEEDED(result)) && leftNode && rightNode)
-            {
-              // add range to the list if it doesn't overlap with the previous range
-              PRBool addRange=PR_TRUE;
-              if (lastRange)
-              {
-                nsCOMPtr<nsIDOMNode> lastStartNode;
-                nsCOMPtr<nsIDOMElement> blockParentOfLastStartNode;
-                lastRange->GetStartContainer(getter_AddRefs(lastStartNode));
-                blockParentOfLastStartNode = do_QueryInterface(GetBlockNodeParent(lastStartNode));
-                if (blockParentOfLastStartNode)
-                {
-                  if (gNoisy) {printf("lastStartNode %p has block parent %p\n", (void*)lastStartNode.get(), (void*)blockParentOfLastStartNode.get());}
-                  nsCOMPtr<nsIDOMElement> blockParentOfLeftNode;
-                  blockParentOfLeftNode = do_QueryInterface(GetBlockNodeParent(leftNode));
-                  if (blockParentOfLeftNode)
-                  {
-                    if (gNoisy) {printf("leftNode %p has block parent %p\n", (void*)leftNode.get(), (void*)blockParentOfLeftNode.get());}
-                    if (blockParentOfLastStartNode==blockParentOfLeftNode) {
-                      addRange = PR_FALSE;
-                    }
-                  }
-                }
-              }
-              if (PR_TRUE==addRange) 
-              {
-                if (gNoisy) {printf("adding range, setting lastRange with start node %p\n", (void*)leftNode.get());}
-                nsCOMPtr<nsIDOMRange> range;
-                result = nsComponentManager::CreateInstance(kCRangeCID, nsnull, 
-                                                            NS_GET_IID(nsIDOMRange), getter_AddRefs(range));
-                if ((NS_SUCCEEDED(result)) && range)
-                { // initialize the range
-                  range->SetStart(leftNode, 0);
-                  range->SetEnd(rightNode, 0);
-                  aSections->AppendElement(range);
-                  lastRange = do_QueryInterface(range);
-                }
-              }        
-            }
-          }
-        }
-      }
-      /* do not check result here, and especially do not return the result code.
-       * we rely on iter->IsDone to tell us when the iteration is complete
-       */
-      iter->Next();
-      iter->CurrentNode(getter_AddRefs(currentContent));
-    }
-  }
-  return result;
-}
-
-
-///////////////////////////////////////////////////////////////////////////
 // IsTextOrElementNode: true if node of dom type element or text
 //               
 PRBool
@@ -4213,61 +3936,6 @@ nsEditor::GetChildAt(nsIDOMNode *aParent, PRInt32 aOffset)
   return resultNode;
 }
   
-
-
-///////////////////////////////////////////////////////////////////////////
-// NextNodeInBlock: gets the next/prev node in the block, if any.  Next node
-//                  must be an element or text node, others are ignored
-nsCOMPtr<nsIDOMNode>
-nsEditor::NextNodeInBlock(nsIDOMNode *aNode, IterDirection aDir)
-{
-  nsCOMPtr<nsIDOMNode> nullNode;
-  nsCOMPtr<nsIContent> content;
-  nsCOMPtr<nsIContent> blockContent;
-  nsCOMPtr<nsIDOMNode> node;
-  nsCOMPtr<nsIDOMNode> blockParent;
-  
-  if (!aNode)  return nullNode;
-
-  nsCOMPtr<nsIContentIterator> iter;
-  if (NS_FAILED(nsComponentManager::CreateInstance(kCContentIteratorCID, nsnull,
-                                        NS_GET_IID(nsIContentIterator), 
-                                        getter_AddRefs(iter))))
-    return nullNode;
-
-  // much gnashing of teeth as we twit back and forth between content and domnode types
-  content = do_QueryInterface(aNode);
-  if (IsBlockNode(aNode))
-  {
-    blockParent = do_QueryInterface(aNode);
-  }
-  else
-  {
-    blockParent = GetBlockNodeParent(aNode);
-  }
-  if (!blockParent) return nullNode;
-  blockContent = do_QueryInterface(blockParent);
-  if (!blockContent) return nullNode;
-  
-  if (NS_FAILED(iter->Init(blockContent)))  return nullNode;
-  if (NS_FAILED(iter->PositionAt(content)))  return nullNode;
-  
-  while (NS_ENUMERATOR_FALSE == iter->IsDone())
-  {
-    if (NS_FAILED(iter->CurrentNode(getter_AddRefs(content)))) return nullNode;
-    // ignore nodes that aren't elements or text, or that are the block parent 
-    node = do_QueryInterface(content);
-    if (node && IsTextOrElementNode(node) && (node != blockParent) && (node.get() != aNode))
-      return node;
-    
-    if (aDir == kIterForward)
-      iter->Next();
-    else
-      iter->Prev();
-  }
-  
-  return nullNode;
-}
 
 
 ///////////////////////////////////////////////////////////////////////////
@@ -4384,148 +4052,6 @@ nsEditor::IsPreformatted(nsIDOMNode *aNode, PRBool *aResult)
 
   *aResult = bPreformatted;
   return NS_OK;
-}
-
-
-///////////////////////////////////////////////////////////////////////////
-// IsNextCharWhitespace: checks the adjacent content in the same block
-//                       to see if following selection is whitespace or nbsp
-nsresult 
-nsEditor::IsNextCharWhitespace(nsIDOMNode *aParentNode, 
-                                      PRInt32 aOffset,
-                                      PRBool *outIsSpace,
-                                      PRBool *outIsNBSP,
-                                      nsCOMPtr<nsIDOMNode> *outNode,
-                                      PRInt32 *outOffset)
-{
-  if (!outIsSpace || !outIsNBSP) return NS_ERROR_NULL_POINTER;
-  *outIsSpace = PR_FALSE;
-  *outIsNBSP = PR_FALSE;
-  if (outNode) *outNode = nsnull;
-  if (outOffset) *outOffset = -1;
-  
-  nsAutoString tempString;
-  PRUint32 strLength;
-  nsCOMPtr<nsIDOMText> textNode = do_QueryInterface(aParentNode);
-  if (textNode)
-  {
-    textNode->GetLength(&strLength);
-    if ((PRUint32)aOffset < strLength)
-    {
-      // easy case: next char is in same node
-      textNode->SubstringData(aOffset,aOffset+1,tempString);
-      *outIsSpace = nsCRT::IsAsciiSpace(tempString.First());
-      *outIsNBSP = (tempString.First() == nbsp);
-      if (outNode) *outNode = do_QueryInterface(aParentNode);
-      if (outOffset) *outOffset = aOffset+1;  // yes, this is _past_ the character; 
-      return NS_OK;
-    }
-  }
-  
-  // harder case: next char in next node.
-  nsCOMPtr<nsIDOMNode> node = NextNodeInBlock(aParentNode, kIterForward);
-  nsCOMPtr<nsIDOMNode> tmp;
-  while (node) 
-  {
-    if (!IsInlineNode(node))  // skip over bold, italic, link, ect nodes
-    {
-      if (IsTextNode(node) && IsEditable(node))
-      {
-        textNode = do_QueryInterface(node);
-        textNode->GetLength(&strLength);
-        if (strLength)
-        {
-          textNode->SubstringData(0,1,tempString);
-          *outIsSpace = nsCRT::IsAsciiSpace(tempString.First());
-          *outIsNBSP = (tempString.First() == nbsp);
-          if (outNode) *outNode = do_QueryInterface(node);
-          if (outOffset) *outOffset = 1;  // yes, this is _past_ the character; 
-          return NS_OK;
-        }
-        // else it's an empty text node, or not editable; skip it.
-      }
-      else  // node is an image or some other thingy that doesn't count as whitespace
-      {
-        break;
-      }
-    }
-    tmp = node;
-    node = NextNodeInBlock(tmp, kIterForward);
-  }
-  
-  return NS_OK;
-}
-
-
-///////////////////////////////////////////////////////////////////////////
-// IsPrevCharWhitespace: checks the adjacent content in the same block
-//                       to see if following selection is whitespace
-nsresult 
-nsEditor::IsPrevCharWhitespace(nsIDOMNode *aParentNode, 
-                                      PRInt32 aOffset,
-                                      PRBool *outIsSpace,
-                                      PRBool *outIsNBSP,
-                                      nsCOMPtr<nsIDOMNode> *outNode,
-                                      PRInt32 *outOffset)
-{
-  if (!outIsSpace || !outIsNBSP) return NS_ERROR_NULL_POINTER;
-  *outIsSpace = PR_FALSE;
-  *outIsNBSP = PR_FALSE;
-  if (outNode) *outNode = nsnull;
-  if (outOffset) *outOffset = -1;
-  
-  nsAutoString tempString;
-  PRUint32 strLength;
-  nsCOMPtr<nsIDOMText> textNode = do_QueryInterface(aParentNode);
-  if (textNode)
-  {
-    if (aOffset > 0)
-    {
-      // easy case: prev char is in same node
-      textNode->SubstringData(aOffset-1,aOffset,tempString);
-      *outIsSpace = nsCRT::IsAsciiSpace(tempString.First());
-      *outIsNBSP = (tempString.First() == nbsp);
-      if (outNode) *outNode = do_QueryInterface(aParentNode);
-      if (outOffset) *outOffset = aOffset-1;  
-      return NS_OK;
-    }
-  }
-  
-  // harder case: prev char in next node
-  nsCOMPtr<nsIDOMNode> node = NextNodeInBlock(aParentNode, kIterBackward);
-  nsCOMPtr<nsIDOMNode> tmp;
-  while (node) 
-  {
-    if (!IsInlineNode(node))  // skip over bold, italic, link, ect nodes
-    {
-      if (IsTextNode(node) && IsEditable(node))
-      {
-        textNode = do_QueryInterface(node);
-        textNode->GetLength(&strLength);
-        if (strLength)
-        {
-          // you could use nsITextContent::IsOnlyWhitespace here
-          textNode->SubstringData(strLength-1,strLength,tempString);
-          *outIsSpace = nsCRT::IsAsciiSpace(tempString.First());
-          *outIsNBSP = (tempString.First() == nbsp);
-          if (outNode) *outNode = do_QueryInterface(aParentNode);
-          if (outOffset) *outOffset = strLength-1;  
-          return NS_OK;
-        }
-        // else it's an empty text node, or not editable; skip it.
-      }
-      else  // node is an image or some other thingy that doesn't count as whitespace
-      {
-        break;
-      }
-    }
-    // otherwise we found a node we want to skip, keep going
-    tmp = node;
-    node = NextNodeInBlock(tmp, kIterBackward);
-  }
-  
-  return NS_OK;
-  
 }
 
 
@@ -4798,12 +4324,6 @@ nsEditor::GetShouldTxnSetSelection()
 }
 
 
-void   
-nsEditor::SetShouldTxnSetSelection(PRBool aShould)
-{
-  mShouldTxnSetSelection = aShould;
-}
-
 #ifdef XP_MAC
 #pragma mark -
 #pragma mark  protected nsEditor methods 
@@ -4859,7 +4379,7 @@ nsEditor::DeleteSelectionImpl(nsIEditor::EDirection aAction)
 
 // XXX: error handling in this routine needs to be cleaned up!
 NS_IMETHODIMP
-nsEditor::DeleteSelectionAndCreateNode(const nsString& aTag,
+nsEditor::DeleteSelectionAndCreateNode(const nsAReadableString& aTag,
                                            nsIDOMNode ** aNewNode)
 {
   nsCOMPtr<nsIDOMNode> parentSelectedNode;
@@ -5038,8 +4558,8 @@ nsEditor::DoAfterDocumentSave()
 
 NS_IMETHODIMP 
 nsEditor::CreateTxnForSetAttribute(nsIDOMElement *aElement, 
-                                   const nsString& aAttribute, 
-                                   const nsString& aValue,
+                                   const nsAReadableString& aAttribute, 
+                                   const nsAReadableString& aValue,
                                    ChangeAttributeTxn ** aTxn)
 {
   nsresult result = NS_ERROR_NULL_POINTER;
@@ -5056,7 +4576,7 @@ nsEditor::CreateTxnForSetAttribute(nsIDOMElement *aElement,
 
 NS_IMETHODIMP 
 nsEditor::CreateTxnForRemoveAttribute(nsIDOMElement *aElement, 
-                                      const nsString& aAttribute,
+                                      const nsAReadableString& aAttribute,
                                       ChangeAttributeTxn ** aTxn)
 {
   nsresult result = NS_ERROR_NULL_POINTER;
@@ -5073,7 +4593,7 @@ nsEditor::CreateTxnForRemoveAttribute(nsIDOMElement *aElement,
 }
 
 
-NS_IMETHODIMP nsEditor::CreateTxnForCreateElement(const nsString& aTag,
+NS_IMETHODIMP nsEditor::CreateTxnForCreateElement(const nsAReadableString& aTag,
                                                   nsIDOMNode     *aParent,
                                                   PRInt32         aPosition,
                                                   CreateElementTxn ** aTxn)
@@ -5161,7 +4681,7 @@ NS_IMETHODIMP nsEditor::CreateTxnForDeleteElement(nsIDOMNode * aElement,
 */
 
 NS_IMETHODIMP 
-nsEditor::CreateTxnForIMEText(const nsString & aStringToInsert,
+nsEditor::CreateTxnForIMEText(const nsAReadableString& aStringToInsert,
                               IMETextTxn ** aTxn)
 {
   NS_ASSERTION(aTxn, "illegal value- null ptr- aTxn");
@@ -5566,7 +5086,7 @@ nsresult nsEditor::ClearSelection()
 }
 
 nsresult
-nsEditor::CreateHTMLContent(const nsString& aTag, nsIContent** aContent)
+nsEditor::CreateHTMLContent(const nsAReadableString& aTag, nsIContent** aContent)
 {
   nsresult rv;
 

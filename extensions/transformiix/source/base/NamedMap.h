@@ -25,7 +25,7 @@
  */
 
 /**
- * A Named Map for MITREObjects
+ * A Named Map for TxObjects
  * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
  * @version $Revision$ $Date$
 **/
@@ -33,13 +33,11 @@
 #ifndef TRANSFRMX_NAMEDMAP_H
 #define TRANSFRMX_NAMEDMAP_H
 
-#include "TxString.h"
 #include "baseutils.h"
-#include "MITREObject.h"
 #include "TxObject.h"
 #include "StringList.h"
 
-class NamedMap : public MITREObject {
+class NamedMap : public TxObject {
 
 
 public:

@@ -32,6 +32,9 @@
 **/
 
 #include "FunctionLib.h"
+#include "XMLUtils.h"
+#include "XMLDOMUtils.h"
+#include <math.h>
 
 /**
  * Creates a default StringFunctionCall. The string() function
@@ -260,9 +263,10 @@ ExprResult* StringFunctionCall::evaluate(Node* context, ContextState* cs) {
                     else src.append(chars[i]);
                 }
                 delete chars;
-                return new StringResult(src);
+                result = new StringResult(src);
             }
-            result = new StringResult("");
+            else
+                result = new StringResult("");
             break;
 
         default : //-- string( object? )

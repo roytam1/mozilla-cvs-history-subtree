@@ -26,6 +26,7 @@
 #define nsComposerCommands_h_
 
 #include "nsIControllerCommand.h"
+#include "nsString.h"
 
 // This is a virtual base class for commands registered with the composer controller.
 // Note that such commands are instantiated once per composer, so can store state.
@@ -43,18 +44,20 @@ public:
               nsBaseComposerCommand();
   virtual     ~nsBaseComposerCommand() {}
     
+  // nsISupports
   NS_DECL_ISUPPORTS
     
-  NS_IMETHOD  IsCommandEnabled(const PRUnichar *aCommand, nsISupports* refCon, PRBool *_retval) = 0;
-  NS_IMETHOD  DoCommand(const PRUnichar *aCommand, nsISupports* refCon) = 0;
+  // nsIControllerCommand. Declared longhand so we can make them pure virtual
+  NS_IMETHOD IsCommandEnabled(const nsAReadableString & aCommandName, nsISupports *aCommandRefCon, PRBool *_retval) = 0;
+  NS_IMETHOD DoCommand(const nsAReadableString & aCommandName, nsISupports *aCommandRefCon) = 0;
 
 protected:
 
   // utility methods to get/set the "state" attribute on the command node in the XUL
-  nsresult    GetInterfaceNode(const PRUnichar* nodeID, nsIEditorShell* editorShell, nsIDOMElement **outNode);
+  nsresult    GetInterfaceNode(const nsAReadableString & nodeID, nsIEditorShell* editorShell, nsIDOMElement **outNode);
   
-  nsresult    GetCommandNodeState(const PRUnichar *aCommand, nsIEditorShell* editorShell, nsString& outNodeState);
-  nsresult    SetCommandNodeState(const PRUnichar *aCommand, nsIEditorShell* editorShell, const nsString& inNodeState);
+  nsresult    GetCommandNodeState(const nsAReadableString & aCommandName, nsIEditorShell* editorShell, nsString& outNodeState);
+  nsresult    SetCommandNodeState(const nsAReadableString & aCommandName, nsIEditorShell* editorShell, const nsString& inNodeState);
 
 };
 

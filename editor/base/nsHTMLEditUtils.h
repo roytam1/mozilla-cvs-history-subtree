@@ -32,13 +32,8 @@ class nsHTMLEditUtils
 {
 public:
   // from nsTextEditRules:
-  static PRBool IsBody(nsIDOMNode *aNode);
-  static PRBool IsBreak(nsIDOMNode *aNode);
   static PRBool IsBig(nsIDOMNode *aNode);
   static PRBool IsSmall(nsIDOMNode *aNode);
-  static PRBool IsMozBR(nsIDOMNode *aNode);
-  static PRBool HasMozAttr(nsIDOMNode *aNode);
-  static PRBool InBody(nsIDOMNode *aNode, nsIEditor *aEditor);
 
   // from nsHTMLEditRules:
   static PRBool IsHeader(nsIDOMNode *aNode);
@@ -64,6 +59,8 @@ public:
   static PRBool IsNormalDiv(nsIDOMNode *aNode);
   static PRBool IsMozDiv(nsIDOMNode *aNode);
   static PRBool IsMailCite(nsIDOMNode *aNode);
+  static PRBool IsTextarea(nsIDOMNode *aNode);
+  static PRBool IsMap(nsIDOMNode *aNode);
   static PRBool IsDescendantOf(nsIDOMNode *aNode, nsIDOMNode *aParent);
   
   static PRBool IsLeafNode(nsIDOMNode *aNode);

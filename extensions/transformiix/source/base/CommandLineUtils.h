@@ -24,13 +24,11 @@
  * $Id$
  */
 
-#include "baseutils.h"
-#include "StringList.h"
-#include "NamedMap.h"
-#include "TxString.h"
-
 #ifndef TRANSFRMX_COMMANDLINEUTILS_H
 #define TRANSFRMX_COMMANDLINEUTILS_H
+
+#include "StringList.h"
+#include "NamedMap.h"
 
 /**
  * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>

@@ -68,7 +68,6 @@
 #include "nsIDOMHTMLImageElement.h"
 #include "nsReadableUtils.h"
 #include "nsIPrompt.h"
-#include "nsIWalletService.h"
 #include "nsEmbedAPI.h"		 
 #include "nsISHistory.h"
 #include "nsISHEntry.h"
@@ -76,12 +75,15 @@
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsIProfileChangeStatus.h"
 #include "nsIObserverService.h"
+#ifdef MOZ_OLD_CACHE
 #include "nsINetDataCacheManager.h"
+#endif
 #include "nsError.h"
 #include "nsIObserver.h"
 #include "nsWeakReference.h"
 #include "nsIEmbeddingSiteWindow.h"
 #include "nsIWebBrowserFind.h"
+#include "nsIWebBrowserFocus.h"
 
 // Printer Includes
 #include "nsIPrintOptions.h"

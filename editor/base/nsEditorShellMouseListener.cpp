@@ -37,10 +37,10 @@
 #include "nsIDOMNSUIEvent.h"
 #include "nsIDOMHTMLTableElement.h"
 #include "nsIDOMHTMLTableCellElement.h"
+#include "nsIContent.h"
 
 #include "nsIEditor.h"
 #include "nsIHTMLEditor.h"
-#include "nsHTMLEditUtils.h"
 
 /*
  * nsEditorShellMouseListener implementation
@@ -148,6 +148,29 @@ PRBool GetParentCell(nsIDOMEvent* aMouseEvent, nsIDOMElement **aCellElement)
       if (NS_FAILED(node->GetParentNode(getter_AddRefs(parent))) || !parent)
         return PR_FALSE;
       node = parent;
+    }
+  }
+  return PR_FALSE;
+}
+
+static 
+PRBool ElementIsType(nsIDOMElement *aElement, const nsAReadableString& aTag)
+{
+  if (aElement)
+  {
+    nsCOMPtr<nsIContent> content = do_QueryInterface(aElement);
+    if (content)
+    {
+      nsCOMPtr<nsIAtom> atom;
+      content->GetTag(*getter_AddRefs(atom));
+      if (atom)
+      {
+        nsAutoString tag;
+        atom->ToString(tag);
+        tag.ToLowerCase();
+        if (tag.Equals(aTag))
+          return PR_TRUE;
+      }
     }
   }
   return PR_FALSE;
@@ -275,8 +298,8 @@ nsEditorShellMouseListener::MouseDown(nsIDOMEvent* aMouseEvent)
       // Set selection to node clicked on if NOT within an existing selection
       //   and not the entire body or table element
       if (element && !NodeIsInSelection && 
-          !nsHTMLEditUtils::IsBody(element) &&
-          !nsHTMLEditUtils::IsTableElement(element))
+          !ElementIsType(element, NS_LITERAL_STRING("body")) &&
+          !ElementIsType(element, NS_LITERAL_STRING("table")))
       {
         mEditorShell->SelectElement(element);
       }

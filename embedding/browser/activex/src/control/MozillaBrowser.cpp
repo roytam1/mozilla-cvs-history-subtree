@@ -43,6 +43,7 @@
 #include "nsISelectionController.h"
 #include "nsIWebBrowserPersist.h"
 #include "nsIClipboardCommands.h"
+#include "nsIProfile.h"
 
 #include "nsIDOMWindowInternal.h"
 #include "nsIDOMHTMLAnchorElement.h"
@@ -887,9 +888,35 @@ HRESULT CMozillaBrowser::Initialize()
 		return E_FAIL;
 	}
 
-    rv = mPrefs->StartUp();		//Initialize the preference service
-    rv = mPrefs->ReadUserPrefs();	//Reads from default_prefs.js
-	
+    // Set the profile which the control will use
+    NS_WITH_SERVICE(nsIProfile, profileService, NS_PROFILE_CONTRACTID, &rv);
+    if (NS_FAILED(rv))
+    {
+        return E_FAIL;
+    }
+
+    // Make a new default profile
+    nsAutoString newProfileName; newProfileName.AssignWithConversion("MozillaControl");
+    PRBool profileExists = PR_FALSE;
+    rv = profileService->ProfileExists(newProfileName.get(), &profileExists);
+    if (NS_FAILED(rv))
+    {
+        return E_FAIL;
+    }
+    else if (!profileExists)
+    {
+        rv = profileService->CreateNewProfile(newProfileName.get(), nsnull, nsnull, PR_FALSE);
+        if (NS_FAILED(rv))
+        {
+            return E_FAIL;
+        }
+    }
+    rv = profileService->SetCurrentProfile(newProfileName.get());
+    if (NS_FAILED(rv))
+    {
+        return E_FAIL;
+    }
+
 #ifdef HACK_NON_REENTRANCY
     }
 #endif
@@ -1095,14 +1122,14 @@ HRESULT CMozillaBrowser::OnEditorCommand(DWORD nCmdID)
 		PRBool bAll = PR_TRUE;
 
 		// Set or remove
-		pHtmlEditor->GetInlineProperty(pInlineProperty, nsnull, nsnull, bFirst, bAny, bAll);
+		pHtmlEditor->GetInlineProperty(pInlineProperty, nsString(), nsString(), &bFirst, &bAny, &bAll);
 		if (bAny)
 		{
-			pHtmlEditor->RemoveInlineProperty(pInlineProperty, nsnull);
+			pHtmlEditor->RemoveInlineProperty(pInlineProperty, nsString());
 		}
 		else
 		{
-			pHtmlEditor->SetInlineProperty(pInlineProperty, nsnull, nsnull);
+			pHtmlEditor->SetInlineProperty(pInlineProperty, nsString(), nsString());
 		}
 	}
 

@@ -71,7 +71,7 @@
   <popupset id="aTooltipSet" />
   <popupset id="editorContentContextSet"/>
 
-  <commands id="commands">
+  <commandset id="tasksCommands">
     <commandset id="globalEditMenuItems"/>
     <commandset id="selectEditMenuItems"/>
     <commandset id="undoEditMenuItems"/>
@@ -84,7 +84,8 @@
     <commandset id="composerStyleMenuItems"/>
     <commandset id="composerTableMenuItems"/>
     <commandset id="composerListMenuItems"/>
-  </commands>
+    <command id="toggleSidebar"/>
+  </commandset>
 
   <!-- Use this when we abandon the default startup page -->
   <!-- broadcaster id="args" value="about:blank"/ -->
@@ -95,16 +96,19 @@
   <broadcaster id="dialog.start" ready="false"/>
   <observes element="dialog.start" attribute="ready" onbroadcast="EditorStartup('html')"/>
 -->
-  <!-- command nodes are appended here from the overlays -->
   <broadcasterset id="broadcasterset">
     <broadcaster id="Editor:Throbber" busy="false"/>
+    <broadcaster id="Communicator:WorkMode"/>
   </broadcasterset>
 
   <!-- keys are appended from the overlay -->
-  <keyset id="keyset"/>
+  <keyset id="editorKeys">
+    <keyset id="tasksKeys"/>
+    <key id="showHideSidebar"/>
+  </keyset>
 
   <toolbox class="toolbox-top" id="EditorToolbox">
-  <menubar id="main-menubar" class="chromeclass-menubar">
+  <menubar id="main-menubar" class="chromeclass-menubar" persist="collapsed">
     <menu id="fileMenu"/>
     <menu id="editMenu"/>
 
@@ -149,25 +153,26 @@
 
   <!-- toolbar filled out from editorOverlay -->
   <!-- add  class="standard" for dark blue background (icons need rework first) -->
-  <toolbar class="toolbar-primary" id="EditToolbar" persist="collapsed">
+  <toolbar class="toolbar-primary" id="EditToolbar" persist="collapsed" tbautostretch="always">
     <button id="newButton"/>
     <button id="openButton"/>
     <button id="saveButton"/>
     <button id="previewButton"/>
     <menubutton id="printButton" />
     <button id="spellingButton"/>
-    <spring style="width: 8px"/>
+    <toolbarseparator class="toolbarseparator-primary"/>
     <button id="imageButton"/>
     <button id="hlineButton"/>
     <button id="tableButton"/>
     <button id="linkButton"/>
     <button id="namedAnchorButton"/>
     <spring flex="1"/>
-
-    <button id="navigator-throbber" oncommand="goClickThrobber('editor.throbber.url')">
-      <!-- tooltip="aTooltip" tooltiptext="&throbber.tooltip; -->
-      <observes element="Editor:Throbber" attribute="busy"/>
-    </button>
+    <box id="throbber-box" autostretch="never">
+      <button id="navigator-throbber" oncommand="goClickThrobber('editor.throbber.url')">
+        <!-- tooltip="aTooltip" tooltiptext="&throbber.tooltip; -->
+        <observes element="Editor:Throbber" attribute="busy"/>
+      </button>
+    </box> 
   </toolbar>
   <toolbar id="FormatToolbar" persist="collapsed" tbautostretch="never">
     <!-- We need this else menulists get stretched -->
@@ -234,12 +239,12 @@
     </deck>
 
     <box id="EditModeToolbar" hidden="false" autostretch="never" valign="middle" persist="hidden collapsed">
-      <tabbox id="EditModeTabbox" class="tabbox-bottom" flex="1">
-      <tab id="NormalModeButton"/>
+      <tabs id="EditModeTabs" class="tabs-bottom" flex="1">
+        <tab id="NormalModeButton"/>
         <tab id="TagModeButton"/>
         <tab id="SourceModeButton"/>
         <tab id="PreviewModeButton"/>
-    </tabbox>
+    </tabs>
     </box>
 
     <!-- Some of this is from globarOverlay.xul -->

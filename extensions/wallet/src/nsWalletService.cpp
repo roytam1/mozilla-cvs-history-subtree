@@ -26,6 +26,7 @@
 #include "nsIServiceManager.h"
 #include "wallet.h"
 #include "singsign.h"
+#include "nsPassword.h"
 #include "nsIObserverService.h"
 #include "nsIDOMHTMLDocument.h"
 #include "nsIDOMHTMLCollection.h"
@@ -40,16 +41,16 @@
 #include "nsIFormControl.h"
 #include "nsIDocShell.h"
 #include "nsIDOMWindowInternal.h"
-#include "nsINetSupportDialogService.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIPrompt.h"
 #include "nsIChannel.h"
+#include "nsIWindowWatcher.h"
 
 // for making the leap from nsIDOMWindowInternal -> nsIPresShell
 #include "nsIScriptGlobalObject.h"
 
 static NS_DEFINE_IID(kDocLoaderServiceCID, NS_DOCUMENTLOADER_SERVICE_CID);
-static NS_DEFINE_CID(kNetSupportDialogCID, NS_NETSUPPORTDIALOG_CID);
+
 
 nsWalletlibService::nsWalletlibService()
 {
@@ -181,16 +182,6 @@ NS_IMETHODIMP nsWalletlibService::WALLET_GetNocaptureListForViewer(nsAutoString&
 
 NS_IMETHODIMP nsWalletlibService::WALLET_GetPrefillListForViewer(nsAutoString& aPrefillList){
   ::WLLT_GetPrefillListForViewer(aPrefillList);
-  return NS_OK;
-}
-
-NS_IMETHODIMP nsWalletlibService::SI_GetSignonListForViewer(nsAutoString& aSignonList){
-  ::SINGSIGN_GetSignonListForViewer(aSignonList);
-  return NS_OK;
-}
-
-NS_IMETHODIMP nsWalletlibService::SI_GetRejectListForViewer(nsAutoString& aRejectList){
-  ::SINGSIGN_GetRejectListForViewer(aRejectList);
   return NS_OK;
 }
 
@@ -381,8 +372,11 @@ nsWalletlibService::OnEndDocumentLoad(nsIDocumentLoader* aLoader, nsIRequest *re
                             channel->GetNotificationCallbacks(getter_AddRefs(interfaces));
                           if (interfaces)
                             interfaces->GetInterface(NS_GET_IID(nsIPrompt), getter_AddRefs(prompter));
-                          if (!prompter)
-                            prompter = do_GetService(kNetSupportDialogCID);
+                          if (!prompter) {
+                            nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
+                            if (wwatch)
+                              wwatch->GetNewPrompter(0, getter_AddRefs(prompter));
+                          }
                           if (prompter) {
                             SINGSIGN_RestoreSignonData(prompter, URLName, nameString, &valueString, elementNumber++);
                           }
@@ -473,7 +467,7 @@ nsWalletlibService::WALLET_Decrypt (const char *crypt, PRUnichar **text) {
 
 NS_IMPL_THREADSAFE_ISUPPORTS4(nsSingleSignOnPrompt,
                               nsISingleSignOnPrompt,
-                              nsIPrompt,
+                              nsIAuthPrompt,
                               nsIObserver,
                               nsISupportsWeakReference)
 
@@ -492,33 +486,6 @@ nsSingleSignOnPrompt::Init()
   return NS_OK;
 }
 
-NS_IMETHODIMP
-nsSingleSignOnPrompt::Alert(const PRUnichar *dialogTitle, const PRUnichar *text)
-{
-  return mPrompt->Alert(dialogTitle, text);
-}
-
-NS_IMETHODIMP
-nsSingleSignOnPrompt::AlertCheck(const PRUnichar *dialogTitle, 
-                              const PRUnichar *text, 
-                              const PRUnichar *checkMsg, 
-                              PRBool *checkValue)
-{
-  return mPrompt->AlertCheck(dialogTitle, text, checkMsg, checkValue);
-}
-
-NS_IMETHODIMP
-nsSingleSignOnPrompt::Confirm(const PRUnichar *dialogTitle, const PRUnichar *text, PRBool *_retval)
-{
-  return mPrompt->Confirm(dialogTitle, text, _retval);
-}
-
-NS_IMETHODIMP
-nsSingleSignOnPrompt::ConfirmCheck(const PRUnichar *dialogTitle, const PRUnichar *text, 
-                                   const PRUnichar *checkMsg, PRBool *checkValue, PRBool *_retval)
-{
-  return mPrompt->ConfirmCheck(dialogTitle, text, checkMsg, checkValue, _retval);
-}
 
 NS_IMETHODIMP
 nsSingleSignOnPrompt::Prompt(const PRUnichar *dialogTitle, const PRUnichar *text, 
@@ -556,29 +523,6 @@ nsSingleSignOnPrompt::PromptPassword(const PRUnichar *dialogTitle, const PRUnich
   rv = SINGSIGN_PromptPassword(dialogTitle, text, pwd,
                                realm.get(), mPrompt, _retval, savePassword);
   return rv;
-}
-
-NS_IMETHODIMP
-nsSingleSignOnPrompt::Select(const PRUnichar *dialogTitle, const PRUnichar *text, PRUint32 count,
-                    const PRUnichar **selectList, PRInt32 *outSelection, PRBool *_retval)
-{
-  return mPrompt->Select(dialogTitle, text, count, selectList, outSelection, _retval);
-}
-
-NS_IMETHODIMP
-nsSingleSignOnPrompt::UniversalDialog(const PRUnichar *titleMessage, const PRUnichar *dialogTitle, 
-                             const PRUnichar *text, const PRUnichar *checkboxMsg, const PRUnichar *button0Text,
-                             const PRUnichar *button1Text, const PRUnichar *button2Text, 
-                             const PRUnichar *button3Text, const PRUnichar *editfield1Msg,
-                             const PRUnichar *editfield2Msg, PRUnichar **editfield1Value,
-                             PRUnichar **editfield2Value, const PRUnichar *iconURL,
-                             PRBool *checkboxState, PRInt32 numberButtons, PRInt32 numberEditfields,
-                             PRInt32 editField1Password, PRInt32 *buttonPressed)
-{
-  return mPrompt->UniversalDialog(titleMessage, dialogTitle, text, checkboxMsg, button0Text, button1Text,
-                                  button2Text, button3Text, editfield1Msg, editfield2Msg, editfield1Value,
-                                  editfield2Value, iconURL, checkboxState, numberButtons, numberEditfields,
-                                  editField1Password, buttonPressed);
 }
   
 // nsISingleSignOnPrompt methods:

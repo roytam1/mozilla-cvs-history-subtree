@@ -23,7 +23,7 @@
   -->
 
 <?xml-stylesheet href="chrome://communicator/skin/" type="text/css"?>
-<?xul-overlay href="chrome://global/content/dialogOverlay.xul"?>
+<?xml-stylesheet href="chrome://communicator/skin/dialogOverlay.css" type="text/css"?>
 <?xul-overlay href="chrome://global/content/globalOverlay.xul"?>
 
 <!DOCTYPE window SYSTEM "chrome://editor/locale/pref-composer.dtd" >
@@ -33,10 +33,6 @@
         class="color-dialog"
         orient="vertical" 
         onload="parent.initPanel('chrome://editor/content/pref-composer.xul');">
-
-  <!-- We need these for separator "thin" class -->
-  <script type="application/x-javascript" src="chrome://global/content/strres.js"/>
-  <script type="application/x-javascript" src="chrome://communicator/content/pref/prefutilities.js"/>
 
   <script type="application/x-javascript">
   <!-- Add "shouldAutoSave", "autoSaveAmount" to _elementIDs when implemented -->

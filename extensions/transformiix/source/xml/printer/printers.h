@@ -27,14 +27,14 @@
  */
 
 
+#ifndef TRANSFRMX_PRINTERS_H
+#define TRANSFRMX_PRINTERS_H
+
 #include "dom.h"
 #include "TxString.h"
 #include "baseutils.h"
 #include "NamedMap.h"
 #include <iostream.h>
-
-#ifndef TRANSFRMX_PRINTERS_H
-#define TRANSFRMX_PRINTERS_H
 
 
 /**

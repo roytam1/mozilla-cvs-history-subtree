@@ -29,13 +29,15 @@ include $(DEPTH)/config/autoconf.mk
 MODULE		= wallet
 LIBRARY_NAME	= wallet
 IS_COMPONENT	= 1
-REQUIRES	= xpcom string necko dom js layout widget uriloader pref webshell docshell appshell locale intl
+REQUIRES	= xpcom string necko dom js layout widget uriloader pref webshell docshell appshell locale intl gfx2 windowwatcher
 
 CPPSRCS		= \
 		nsWalletFactory.cpp \
 		nsWalletService.cpp \
 		wallet.cpp \
 		singsign.cpp \
+		nsPassword.cpp \
+		nsPasswordManager.cpp \
 		nsBasicStreamGenerator.cpp \
 		$(NULL)
 

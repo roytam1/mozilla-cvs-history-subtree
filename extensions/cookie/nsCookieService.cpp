@@ -132,13 +132,20 @@ nsCookieService::GetCookieString(nsIURI *aURL, char ** aCookie) {
 
 NS_IMETHODIMP
 nsCookieService::GetCookieStringFromHttp(nsIURI *aURL, nsIURI *aFirstURL, char ** aCookie) {
+  if (!aURL) {
+    return NS_ERROR_FAILURE;
+  }
   nsXPIDLCString spec;
   nsresult rv = aURL->GetSpec(getter_Copies(spec));
   if (NS_FAILED(rv)) return rv;
-  nsXPIDLCString firstSpec;
-  rv = aFirstURL->GetSpec(getter_Copies(firstSpec));
-  if (NS_FAILED(rv)) return rv;
-  *aCookie = COOKIE_GetCookieFromHttp((char *)(const char *)spec, (char *)(const char *)firstSpec);
+  if (aFirstURL) {
+    nsXPIDLCString firstSpec;
+    rv = aFirstURL->GetSpec(getter_Copies(firstSpec));
+    if (NS_FAILED(rv)) return rv;
+    *aCookie = COOKIE_GetCookieFromHttp((char *)(const char *)spec, (char *)(const char *)firstSpec);
+  } else {
+    *aCookie = COOKIE_GetCookieFromHttp((char *)(const char *)spec, nsnull);
+  }
   return NS_OK;
 }
 

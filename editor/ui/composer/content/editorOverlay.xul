@@ -33,34 +33,13 @@
 <script type="application/x-javascript" src="chrome://editor/content/editorOverlay.js"/>
 <script type="application/x-javascript" src="chrome://editor/content/ComposerCommands.js"/>
 
-  <!--keyset id="platformOverlayKeyset" /--> <!-- Don't do that, only one keyset per window! Anyway, this keyset is not defined! -->
-
-  <key id="pastequotationkb"  key="&editpastequotation.keybinding;"   observes="cmd_pasteQuote"  modifiers="accel, shift"/>
-  <key id="findkb"            key="&editfind.keybinding;"            observes="cmd_find"  modifiers="accel"/>
-  <key id="findnextkb"        key="&editfindnext.keybinding;"        observes="cmd_findNext"  modifiers="accel"/>
-  <key id="checkspellingkb"   key="&editcheckspelling.keybinding;"   observes="cmd_spelling"  modifiers="accel"/>
-
-  <key id="boldkb"         key="&stylebold.keybinding;"       observes="cmd_bold" modifiers="accel"/>
-  <key id="italickb"       key="&styleitalic.keybinding;"     observes="cmd_italic" modifiers="accel"/>
-  <key id="underlinekb"    key="&styleunderline.keybinding;"  observes="cmd_underline" modifiers="accel"/>
-
-  <key id="fontfixedwidthkb"  key="&formatfontfixed.keybinding;"  oncommand="doStatefulCommand('cmd_fontFace', 'tt')"  modifiers="accel, shift"/>
-  <key id="increaseindentkb"  key="&formatindent.keybinding;"  observes="cmd_indent"  modifiers="accel"/>
-  <key id="decreaseindentkb"  key="&formatoutdent.keybinding;"  observes="cmd_outdent"  modifiers="accel"/>
-
-  <key id="removestyleskb"       key="&formatremovestyles.keybinding;"   observes="cmd_removeStyles"  modifiers="shift, accel"/>
-  <key id="removelinkskb"        key="&formatremovelinks.keybinding;"    observes="cmd_removeLinks"  modifiers="shift, accel"/>
-  <key id="decreasefontsizekb"   key="&decreaseFontSize.keybinding;"     observes="cmd_decreaseFont"  modifiers="shift, accel"/>
-  <key id="increasefontsizekb"   key="&increaseFontSize.keybinding;"     observes="cmd_increaseFont"  modifiers="shift, accel"/>
-
-  <keyset id="keyset">
-
+  <keyset id="editorKeys">
     <!-- defined in globalOverlay -->
     <key id="key_newNavigator"/>
     <key id="key_newBlankPage"/>
 
     <key id="openeditorkb"   key="&fileopen.keybinding;"   observes="cmd_open"  modifiers="accel"/>
-    <key id="openremoteeditorkb"  key="&fileopenremote.keybinding;"  observes="cmd_openRemote"  modifiers="accel"/>
+    <key id="openremoteeditorkb"  key="&fileopenremote.keybinding;"  observes="cmd_openRemote"  modifiers="accel,shift"/>
     <key id="savekb"         key="&filesave.keybinding;"   observes="cmd_save" modifiers="accel"/>
     <key id="closekb"        key="&fileclose.keybinding;"  observes="cmd_close"  modifiers="accel"/>
     <key id="printkb"        key="&fileprint.keybinding;"  observes="cmd_print"  modifiers="accel"/>
@@ -70,26 +49,25 @@
     <key id="key_cut"/>
     <key id="key_copy"/>
     <key id="key_paste"/>
-    <key id="pastequotationkb"/>
     <key id="key_delete"/>
     <key id="key_selectAll"/>
-    <key id="findkb"/>
-    <key id="findnextkb"/>
-    <key id="checkspellingkb"/>
-    
-    <key id="boldkb"/>
-    <key id="italickb"/>
-    <key id="underlinekb"/>
+    <key id="pastequotationkb"  key="&editpastequotation.keybinding;"   observes="cmd_pasteQuote"  modifiers="accel, shift"/>
+    <key id="findkb"            key="&editfind.keybinding;"            observes="cmd_find"  modifiers="accel"/>
+    <key id="findnextkb"        key="&editfindnext.keybinding;"        observes="cmd_findNext"  modifiers="accel"/>
+    <key id="checkspellingkb"   key="&editcheckspelling.keybinding;"   observes="cmd_spelling"  modifiers="accel"/>
 
-    <key id="fontfixedwidthkb"/>
-    <key id="increaseindentkb"/>
-    <key id="decreaseindentkb"/>
+    <key id="boldkb"         key="&stylebold.keybinding;"       observes="cmd_bold" modifiers="accel"/>
+    <key id="italickb"       key="&styleitalic.keybinding;"     observes="cmd_italic" modifiers="accel"/>
+    <key id="underlinekb"    key="&styleunderline.keybinding;"  observes="cmd_underline" modifiers="accel"/>
 
-    <key id="removestyleskb"/>
-    <key id="removelinkskb"/>
+    <key id="fontfixedwidthkb"  key="&formatfontfixed.keybinding;"  oncommand="doStatefulCommand('cmd_fontFace', 'tt')"  modifiers="accel, shift"/>
+    <key id="increaseindentkb"  key="&formatindent.keybinding;"  observes="cmd_indent"  modifiers="accel"/>
+    <key id="decreaseindentkb"  key="&formatoutdent.keybinding;"  observes="cmd_outdent"  modifiers="accel"/>
 
-    <key id="decreasefontsizekb"/>
-    <key id="increasefontsizekb"/>
+    <key id="removestyleskb"       key="&formatremovestyles.keybinding;"   observes="cmd_removeStyles"  modifiers="shift, accel"/>
+    <key id="removelinkskb"        key="&formatremovelinks.keybinding;"    observes="cmd_removeLinks"  modifiers="shift, accel"/>
+    <key id="decreasefontsizekb"   key="&decreaseFontSize.keybinding;"     observes="cmd_decreaseFont"  modifiers="shift, accel"/>
+    <key id="increasefontsizekb"   key="&increaseFontSize.keybinding;"     observes="cmd_increaseFont"  modifiers="shift, accel"/>
   </keyset>
 
   <!-- commands updated when the editor gets created -->
@@ -129,7 +107,7 @@
     <command id="cmd_objectProperties" oncommand="goDoCommand('cmd_objectProperties')"/>
     <command id="cmd_insertChars"      oncommand="goDoCommand('cmd_insertChars')"     label="&insertCharsCmd.label;"/>
     <command id="cmd_insertHTML"       oncommand="goDoCommand('cmd_insertHTML')"     label="&insertHTMLCmd.label;"/>
-    <command id="cmd_smiley"           state=""         oncommand="goDoCommand('cmd_smiley')"/>
+
     <command id="cmd_insertBreak"      oncommand="goDoCommand('cmd_insertBreak')"/>
     <command id="cmd_insertBreakAll"   oncommand="goDoCommand('cmd_insertBreakAll')"/>
     <command id="cmd_NormalMode"       oncommand="goDoCommand('cmd_NormalMode')"     label="&NormalMode.label;"/>
@@ -186,6 +164,7 @@
     <command id="cmd_bold"          state="false"     oncommand="goDoCommand('cmd_bold')"/>
     <command id="cmd_italic"        state="false"     oncommand="goDoCommand('cmd_italic')"/>
     <command id="cmd_underline"     state="false"     oncommand="goDoCommand('cmd_underline')"/>
+    <command id="cmd_smiley"        state=""  />
 
     <command id="cmd_strikethrough" state="false"     oncommand="goDoCommand('cmd_strikethrough')"/>
     <command id="cmd_superscript"   state="false"     oncommand="goDoCommand('cmd_superscript')"/>
@@ -271,7 +250,7 @@
 
     <command id="cmd_viewCompToolbar"     oncommand="goToggleToolbar('EditToolbar','cmd_viewCompToolbar');"         checked="true"/>
     <command id="cmd_viewFormatToolbar"   oncommand="goToggleToolbar('FormatToolbar','cmd_viewFormatToolbar');"     checked="true"/>
-    <command id="cmd_viewEditModeToolbar" oncommand="goToggleToolbar('EditModeToolbar','cmd_viewEditModeToolbar');" checked="false"/>
+    <command id="cmd_viewEditModeToolbar" oncommand="goToggleToolbar('EditModeToolbar','cmd_viewEditModeToolbar');" checked="true"/>
     <command id="cmd_viewtaskbar"         oncommand="goToggleToolbar('taskbar','cmd_viewtaskbar');"                 checked="true"/>
 
     <!-- Obsolete; these will go away -->
@@ -310,7 +289,7 @@
       <!-- menuitem id="menu_SendPage" is merged here from mailEditorOverlay.xul,
            where "position" is assumed to be 14. Change that label if menu position changes.      -->
       <menuitem accesskey="&fileprintsetup.accesskey;" observes="cmd_printSetup" />
-      <menuitem accesskey="&fileprint.accesskey;"      observes="cmd_print" label="&printCmd.label;"/>
+      <menuitem accesskey="&fileprint.accesskey;" key="printkb" observes="cmd_print" label="&printCmd.label;"/>
       <menuseparator/>
       <!-- The Exit/Quit item is merged from platformGlobalOverlay.xul -->
     </menupopup>
@@ -456,14 +435,14 @@
     <menuseparator position="8"/>
 
     <!-- Note: the 'Init' menu methods for Paragraph, List, and Align
-         assume that the id = 'menu_'+tagName (the 'data' label),
+         assume that the id = 'menu_'+tagName (the 'value' label),
          except for the first ('none') item
      -->
     <!-- Paragraph Style submenu -->
     <menu id="paragraphMenu" label="&paragraphMenu.label;"
           accesskey="&formatparagraphmenu.accesskey;"
           position="9" oncreate="InitParagraphMenu()">
-      <menupopup oncommand="doStatefulCommand('cmd_paragraphState', event.target.getAttribute('data'))">
+      <menupopup oncommand="doStatefulCommand('cmd_paragraphState', event.target.getAttribute('value'))">
         <menuitem id="menu_bodyText"  type="radio" name="1" label="&bodyTextCmd.label;"             accesskey="&bodytext.accesskey;"              value=""/>
         <menuitem id="menu_p"         type="radio" name="1" label="&paragraphParagraphCmd.label;"   accesskey="&paragraphparagraph.accesskey;"  value="p"/>
         <menuitem id="menu_h1"        type="radio" name="1" label="&heading1Cmd.label;"             accesskey="&heading1.accesskey;"            value="h1"/>
@@ -504,7 +483,7 @@
         oncreate="InitAlignMenu()"
         position="14">
       <!-- Align submenu -->
-      <menupopup oncommand="doStatefulCommand('cmd_align', event.target.getAttribute('data'))">
+      <menupopup oncommand="doStatefulCommand('cmd_align', event.target.getAttribute('value'))">
         <menuitem id="menu_left"    label="&alignLeft.label;"  accesskey="&alignleft.accesskey;"      type="radio" name="1" value="left"/>
         <menuitem id="menu_center"  label="&alignCenter.label;"  accesskey="&aligncenter.accesskey;"  type="radio" name="1" value="center"/>
         <menuitem id="menu_right"   label="&alignRight.label;"   accesskey="&alignright.accesskey;"   type="radio" name="1" value="right"/>
@@ -575,34 +554,26 @@
 
 
   <!-- smiley menu -->
-  <menu id="smileButtonMenu" tooltip="aTooltip" tooltiptext="&SmileButton.tooltip;">
-       <button class="button-toolbar" id="smileButton">
-       </button>
-       <menupopup id="smilyPopup" flex="100%">
-               <menuitem oncommand="doStatefulCommand('cmd_smiley', ':-)' )">
-                       <button class="plain" id="insert-smile" align="left"  label="&smiley1Cmd.label;"/>
-               </menuitem>
-               <menuitem oncommand="doStatefulCommand('cmd_smiley', ':-(' )">
-                       <button class="plain" id="insert-frown" align="left"  label="&smiley2Cmd.label;"/>
-               </menuitem>
-               <menuitem oncommand="doStatefulCommand('cmd_smiley', ';-)' )">
-                       <button class="plain" id="insert-wink" align="left"   label="&smiley3Cmd.label;"/>
-               </menuitem>
-               <menuitem oncommand="doStatefulCommand('cmd_smiley', ':-P' )">
-                       <button class="plain" id="insert-sick" align="left"   label="&smiley4Cmd.label;"/>
-               </menuitem>
-               <menuitem oncommand="doStatefulCommand('cmd_smiley', ':)' )">
-                       <button class="plain" id="insert-smile5" align="left" label="&smiley5Cmd.label;"/>
-               </menuitem>
-               <menuitem oncommand="doStatefulCommand('cmd_smiley', ':(' )">
-                       <button class="plain" id="insert-smile6" align="left" label="&smiley6Cmd.label;"/>
-           </menuitem>
-               <menuitem oncommand="doStatefulCommand('cmd_smiley', ';)' )">
-                       <button class="plain" id="insert-smile7" align="left" label="&smiley7Cmd.label;"/>
-               </menuitem>
-           <spring flex="100%" />
+  <menubutton id="smileButtonMenu" class="button-toolbar" observes="cmd_smiley"
+			tooltip="aTooltip" tooltiptext="&SmileButton.tooltip;">
+       <menupopup id="smilyPopup">
+               <menuitem class="smiley insert-smile menuitem-iconic"       label="&smiley1Cmd.label;" 
+						oncommand="doStatefulCommand('cmd_smiley', ':-)'  )"  />
+               <menuitem class="smiley insert-frown menuitem-iconic"       label="&smiley2Cmd.label;"
+						oncommand="doStatefulCommand('cmd_smiley', ':-('  )" />                                              
+               <menuitem class="smiley insert-wink menuitem-iconic"        label="&smiley3Cmd.label;"
+						oncommand="doStatefulCommand('cmd_smiley', ';-)'  )"  />                       
+               <menuitem class="smiley insert-tongue menuitem-iconic"      label="&smiley4Cmd.label;"
+						oncommand="doStatefulCommand('cmd_smiley', ':-P'  )" />
+               <menuitem class="smiley insert-laughing menuitem-iconic"    label="&smiley5Cmd.label;"
+						oncommand="doStatefulCommand('cmd_smiley', ':-D'  )" />
+               <menuitem class="smiley insert-embarrassed menuitem-iconic" label="&smiley6Cmd.label;"
+						oncommand="doStatefulCommand('cmd_smiley', ':-['  )" />
+               <menuitem class="smiley insert-undecided menuitem-iconic"   label="&smiley7Cmd.label;"
+						oncommand="doStatefulCommand('cmd_smiley', ':-\\' )" />           
        </menupopup>
-   </menu>
+   </menubutton>
+
 
   <!-- this is only used in mailnews -->
   <menubutton id="AlignPopupButton" class="button-toolbar" observes="cmd_align"
@@ -654,7 +625,7 @@
               observes="cmd_print" tooltip="aTooltip" tooltiptext="&printToolbarCmd.tooltip;"
               crop="right">  
     <menupopup id="printMenu">
-      <menuitem accesskey="&fileprint.accesskey;" key="printkb" label="&printCmd.label;" default="true"/>
+      <menuitem accesskey="&fileprint.accesskey;"      label="&printCmd.label;" default="true"/>
       <menuitem accesskey="&fileprintsetup.accesskey;" observes="cmd_printSetup" />
     </menupopup>
   </menubutton>

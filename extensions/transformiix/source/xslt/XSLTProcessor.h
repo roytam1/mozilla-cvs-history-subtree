@@ -38,28 +38,16 @@
 
 #ifdef MOZ_XSL
 #include "nsIDocumentTransformer.h"
-#else
-#include "CommandLineUtils.h"
-#include "printers.h"
-#include "XMLDOMUtils.h"
 #endif
 
-#include "URIUtils.h"
-#include "XMLParser.h"
 #include "dom.h"
 #include "ExprParser.h"
-#include "MITREObject.h"
+#include "TxObject.h"
 #include "NamedMap.h"
-#include "Names.h"
-#include "NodeSet.h"
 #include "ProcessorState.h"
 #include "TxString.h"
-#include "Tokenizer.h"
 #include "ErrorObserver.h"
 #include "List.h"
-#include "VariableBinding.h"
-#include "Numbering.h"
-#include "NodeSorter.h"
 
 #ifdef MOZ_XSL
 /* bacd8ad0-552f-11d3-a9f7-000064657374 */
@@ -358,7 +346,7 @@ private:
 
 }; //-- XSLTProcessor
 
-class XSLType : public MITREObject {
+class XSLType : public TxObject {
 
 public:
     enum types {

@@ -44,14 +44,14 @@
 
   <spring id="location" offsetY="50" persist="offsetX offsetY"/>
   <broadcaster id="args" value=""/>
-  <keyset id="keyset"/>
+  <keyset id="dialogKeys"/>
 
-  <tabcontrol align="vertical" orient="vertical">
-    <tabbox flex="1">
+  <tabbox orient="vertical">
+    <tabs flex="1">
       <tab id="TableTab" oncommand="SelectTableTab()" label="&tableTab.label;"/>
       <tab id="CellTab" oncommand="SelectCellTab()" label="&cellTab.label;"/>
-    </tabbox>
-    <tabpanel orient="vertical" id="TabPanel">
+    </tabs>
+    <tabpanels orient="vertical" id="TabPanels">
 
       <!-- TABLE PANEL -->
       <box id="TablePanel" orient="vertical">
@@ -160,8 +160,8 @@
               </menupopup>
             </menulist>
             <box flex="1">
-              <button id="PreviousButton" class="dialog"       label="&cellSelectPrevious.label;" oncommand="MoveSelection(0)" flex="1"/>
-              <button id="NextButton"     class="dialog right" label="&cellSelectNext.label;"     oncommand="MoveSelection(1)" flex="1"/>
+              <button id="PreviousButton" class="dialog"             label="&cellSelectPrevious.label;" oncommand="MoveSelection(0)" flex="1"/>
+              <button id="NextButton"     class="dialog align-right" label="&cellSelectNext.label;"     oncommand="MoveSelection(1)" flex="1"/>
             </box>
           </box>
           <spring class="bigspacer"/>
@@ -271,7 +271,7 @@
         <spring flex="1"/>
       </box><!-- Cell Panel -->
 
-    </tabpanel> 
+    </tabpanels> 
     <spring class="spacer"/>
     <!-- from EdDialogOverlay -->
     <box>
@@ -279,5 +279,5 @@
       <button class="dialog" label="&applyButton.label;" oncommand="Apply();"/>
       <box id="okCancelButtons"/> 
     </box>
-  </tabcontrol>
+  </tabbox>
 </window>

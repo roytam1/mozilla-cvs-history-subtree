@@ -26,13 +26,11 @@
  * $Id$
  */
 
-#include "TxObject.h"
-#include "dom.h"
-#include "primitives.h"
-
 #ifndef TRANSFRMX_EXPRRESULT_H
 #define TRANSFRMX_EXPRRESULT_H
 
+#include "TxObject.h"
+#include "primitives.h"
 
 /*
  * ExprResult

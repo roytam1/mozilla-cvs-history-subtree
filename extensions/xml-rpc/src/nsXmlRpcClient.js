@@ -467,7 +467,7 @@ nsXmlRpcClient.prototype = {
         if (!iid.equals(Components.interfaces.nsISupports) &&
             !iid.equals(XMLRPCCLIENT_IID) &&
             !iid.equals(Components.interfaces.nsIXmlRpcClientListener) &&
-            !iid.equals(Components.interfaces.nsIStreamObserver) &&
+            !iid.equals(Components.interfaces.nsIRequestObserver) &&
             !iid.equals(Components.interfaces.nsIStreamListener))
             throw Components.results.NS_ERROR_NO_INTERFACE;
         return this;

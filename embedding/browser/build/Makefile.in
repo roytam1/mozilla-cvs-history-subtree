@@ -30,7 +30,7 @@ IS_COMPONENT	= 1
 include $(DEPTH)/config/autoconf.mk
 
 LIBRARY_NAME	= webbrwsr
-REQUIRES	= xpcom string docshell dom widget layout locale necko uriloader shistory timer
+REQUIRES	= xpcom string docshell dom widget layout locale necko uriloader shistory timer gfx2 windowwatcher
 
 CPPSRCS		= \
 		nsWebBrowserModule.cpp		\

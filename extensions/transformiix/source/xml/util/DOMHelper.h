@@ -27,11 +27,9 @@
 
 #include "baseutils.h"
 #include "TxString.h"
-#include "List.h"
 #include "dom.h"
-#include "HashTable.h"
-#include "MITREObject.h"
-#include "primitives.h"
+#include "Map.h"
+#include "TxObject.h"
 
 
 //----------------------/
@@ -42,7 +40,7 @@
  * A class used by DOMHelper to hold document order information
  * for DOM Nodes
 **/
-class OrderInfo : public MITREObject {
+class OrderInfo : public TxObject {
 
  public:
 
@@ -137,12 +135,12 @@ private:
     /**
      * A Hashtable of attribute's parent nodes
     **/
-    HashTable parents;
+    Map parents;
 
     /**
      * A Hashtable of Node/OrderInfo mappings
     **/
-    HashTable orders;
+    Map orders;
 
     /**
      * A list of IndexState objects (one for each Document)

@@ -28,6 +28,7 @@
  */
 
 #include "FunctionLib.h"
+#include "Names.h"
 
 /**
  * Creates a default BooleanFunctionCall, which always evaluates to False

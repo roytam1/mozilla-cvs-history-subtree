@@ -496,7 +496,7 @@ COOKIE_GetCookie(char * address) {
       /* check for expired cookies */
       if( cookie_s->expires && (cookie_s->expires < cur_time) ) {
         /* expire and remove the cookie */
-        cookie_list->RemoveElementAt(i);
+        cookie_list->RemoveElementAt(i--); /* decr i so next cookie isn't skipped */
         deleteCookie((void*)cookie_s, nsnull);
         cookie_changed = PR_TRUE;
         continue;
@@ -620,7 +620,7 @@ PUBLIC char *
 COOKIE_GetCookieFromHttp(char * address, char * firstAddress) {
 
   if ((cookie_GetBehaviorPref() == PERMISSION_DontAcceptForeign) &&
-      cookie_isForeign(address, firstAddress)) {
+      (!firstAddress || cookie_isForeign(address, firstAddress))) {
 
     /*
      * WARNING!!! This is a different behavior than 4.x.  In 4.x we used this pref to
@@ -723,7 +723,7 @@ cookie_SetCookieString(char * curURL, nsIPrompt *aPrompter, const char * setCook
 
   /* terminate at any carriage return or linefeed */
   for(ptr=setCookieHeaderInternal; *ptr; ptr++) {
-    if(*ptr == LF || *ptr == CR) {
+    if(*ptr == nsCRT::LF || *ptr == nsCRT::CR) {
       *ptr = '\0';
       break;
     }
@@ -950,13 +950,16 @@ cookie_SetCookieString(char * curURL, nsIPrompt *aPrompter, const char * setCook
   //          cookie_from_header, host_from_header, path_from_header));
 
   /* use common code to determine if we can set the cookie */
-  PRBool permission = Permission_Check(aPrompter, host_from_header, COOKIEPERMISSION,
+  PRBool permission = PR_TRUE;
+  if (NS_SUCCEEDED(PERMISSION_Read())) {
+    permission = Permission_Check(aPrompter, host_from_header, COOKIEPERMISSION,
 // I believe this is the right place to eventually add the logic to ask
 // about cookies that have excessive lifetimes, but it shouldn't be done
 // until generalized per-site preferences are available.
                                        //cookie_GetLifetimeAsk(timeToExpire) ||
                                        cookie_GetWarningPref(),
                                        new_string);
+  }
   PR_FREEIF(new_string);
   if (!permission) {
     PR_FREEIF(path_from_header);
@@ -1149,10 +1152,15 @@ COOKIE_Write() {
     return NS_OK;
   }
 
-  strm.write("# HTTP Cookie File\n", 19);
-  strm.write("# http://www.netscape.com/newsref/std/cookie_spec.html\n", 55);
-  strm.write("# This is a generated file!  Do not edit.\n", 42);
-  strm.write("# To delete cookies, use the Cookie Manager.\n\n", 46);
+#define COOKIEFILE_LINE1 "# HTTP Cookie File\n"
+#define COOKIEFILE_LINE2 "# http://www.netscape.com/newsref/std/cookie_spec.html\n"
+#define COOKIEFILE_LINE3 "# This is a generated file!  Do not edit.\n"
+#define COOKIEFILE_LINE4 "# To delete cookies, use the Cookie Manager.\n\n"
+
+  strm.write(COOKIEFILE_LINE1, PL_strlen(COOKIEFILE_LINE1));
+  strm.write(COOKIEFILE_LINE2, PL_strlen(COOKIEFILE_LINE2));
+  strm.write(COOKIEFILE_LINE3, PL_strlen(COOKIEFILE_LINE3));
+  strm.write(COOKIEFILE_LINE4, PL_strlen(COOKIEFILE_LINE4));
 
   /* format shall be:
    *
@@ -1240,8 +1248,8 @@ COOKIE_Read() {
 
     if ( !buffer.IsEmpty() ) {
       PRUnichar firstChar = buffer.CharAt(0);
-      if (firstChar == '#' || firstChar == CR ||
-          firstChar == LF || firstChar == 0) {
+      if (firstChar == '#' || firstChar == nsCRT::CR ||
+          firstChar == nsCRT::LF || firstChar == 0) {
         continue;
       }
     }
@@ -1389,10 +1397,15 @@ COOKIE_Count() {
   if (!cookie_list) {
     return 0;
   }
+  /* Get rid of any expired cookies now so user doesn't
+   * think/see that we're keeping cookies in memory.
+   */
+  cookie_RemoveExpiredCookies();
+
   return cookie_list->Count();
 }
 
-PUBLIC void
+PUBLIC nsresult
 COOKIE_Enumerate
     (PRInt32 count,
      char **name,
@@ -1402,11 +1415,8 @@ COOKIE_Enumerate
      char ** path,
      PRBool * isSecure,
      PRUint64 * expires) {
-  if (count == 0) {
-    /* Get rid of any expired cookies now so user doesn't
-     * think/see that we're keeping cookies in memory.
-     */
-    cookie_RemoveExpiredCookies();
+  if (count > COOKIE_Count()) {
+    return NS_ERROR_FAILURE;
   }
   cookie_CookieStruct *cookie;
   cookie = NS_STATIC_CAST(cookie_CookieStruct*, cookie_list->ElementAt(count));
@@ -1430,6 +1440,7 @@ COOKIE_Enumerate
   }
   // *expires = expiresTime; -- no good no mac, using next line instead
   LL_UI2L(*expires, expiresTime);
+  return NS_OK;
 }
 
 PUBLIC void
@@ -1456,7 +1467,9 @@ COOKIE_Remove
           }
           CKutil_StrAllocCopy(hostname, hostnameAfterDot);
           if (hostname) {
-            Permission_AddHost(hostname, PR_FALSE, COOKIEPERMISSION, PR_TRUE);
+            if (NS_SUCCEEDED(PERMISSION_Read())) {
+              Permission_AddHost(hostname, PR_FALSE, COOKIEPERMISSION, PR_TRUE);
+            }
           }
         }
         cookie_list->RemoveElementAt(count);

@@ -36,11 +36,18 @@
 
 #include "ProcessorState.h"
 #include "XSLTFunctions.h"
+#include "FunctionLib.h"
 #include "URIUtils.h"
+#include "XMLUtils.h"
+#include "XMLDOMUtils.h"
+#include "Tokenizer.h"
+#include "VariableBinding.h"
+#include "ExprResult.h"
+#include "Names.h"
 #ifdef MOZ_XSL
-  #include "nslog.h"
-  #define PRINTF NS_LOG_PRINTF(XPATH)
-  #define FLUSH  NS_LOG_FLUSH(XPATH)
+//  #include "nslog.h"
+//  #define PRINTF NS_LOG_PRINTF(XPATH)
+//  #define FLUSH  NS_LOG_FLUSH(XPATH)
 #else
   #include "TxLog.h"
 #endif
@@ -93,8 +100,8 @@ ProcessorState::~ProcessorState() {
   StringListIterator* iter = keys->iterator();
   while (iter->hasNext()) {
       String* key = iter->next();
-      MITREObjectWrapper* objWrapper
-          = (MITREObjectWrapper*)includes.remove(*key);
+      TxObjectWrapper* objWrapper
+          = (TxObjectWrapper*)includes.remove(*key);
       delete (Document*)objWrapper->object;
       delete objWrapper;
   }
@@ -160,7 +167,7 @@ void ProcessorState::addErrorObserver(ErrorObserver& errorObserver) {
  * including the same document more than once
 **/
 void ProcessorState::addInclude(const String& href, Document* xslDocument) {
-  MITREObjectWrapper* objWrapper = new MITREObjectWrapper();
+  TxObjectWrapper* objWrapper = new TxObjectWrapper();
   objWrapper->object = xslDocument;
   includes.put(href, objWrapper);
 } //-- addInclude
@@ -176,7 +183,7 @@ void ProcessorState::addTemplate(Element* xslTemplate) {
     String name = xslTemplate->getAttribute(NAME_ATTR);
     if ( name.length() > 0 ) {
         //-- check for duplicates
-        MITREObjectWrapper* mObj = (MITREObjectWrapper*)namedTemplates.get(name);
+        TxObjectWrapper* mObj = (TxObjectWrapper*)namedTemplates.get(name);
         if ( mObj ) {
             String warn("error duplicate template name: ");
             warn.append(name);
@@ -184,8 +191,8 @@ void ProcessorState::addTemplate(Element* xslTemplate) {
             recieveError(warn,ErrorObserver::WARNING);
             delete mObj;
         }
-        MITREObjectWrapper* oldObj = mObj;
-        mObj= new MITREObjectWrapper();
+        TxObjectWrapper* oldObj = mObj;
+        mObj= new TxObjectWrapper();
         mObj->object = xslTemplate;
         namedTemplates.put(name,mObj);
         if ( oldObj ) delete oldObj;
@@ -393,45 +400,11 @@ Stack* ProcessorState::getDefaultNSURIStack() {
 } //-- getDefaultNSURIStack
 
 /**
- * Returns the global document base for resolving relative URIs within
- * the XSL stylesheets
-**/
-const String& ProcessorState::getDocumentBase() {
-    return documentBase;
-} //-- getDocumentBase
-
-/**
- * Returns the href for the given XSL document by looking in the
- * includes and imports lists
- **/
-void ProcessorState::getDocumentHref
-    (Document* xslDocument, String& documentBase)
-{
-
-  documentBase.clear();
-
-  //-- lookup includes
-  StringList* keys = includes.keys();
-  StringListIterator* iter = keys->iterator();
-  while (iter->hasNext()) {
-      String* key = iter->next();
-      MITREObjectWrapper* objWrapper
-          = (MITREObjectWrapper*)includes.get(*key);
-      if (xslDocument == objWrapper->object) {
-          documentBase.append(*key);
-          break;
-      }
-  }
-  delete iter;
-  delete keys;
-} //-- getDocumentBase
-
-/**
  * @return the included xsl document that was associated with the
  * given href, or null if no document is found
 **/
 Document* ProcessorState::getInclude(const String& href) {
-  MITREObjectWrapper* objWrapper = (MITREObjectWrapper*)includes.get(href);
+  TxObjectWrapper* objWrapper = (TxObjectWrapper*)includes.get(href);
   Document* doc = 0;
   if (objWrapper) {
     doc = (Document*) objWrapper->object;
@@ -440,9 +413,9 @@ Document* ProcessorState::getInclude(const String& href) {
 } //-- getInclude(String)
 
 Expr* ProcessorState::getExpr(const String& pattern) {
-    NS_IMPL_LOG(XPATH)
-    PRINTF("Resolving XPath Expr %s",pattern.toCharArray());
-    FLUSH();
+//    NS_IMPL_LOG(XPATH)
+//    PRINTF("Resolving XPath Expr %s",pattern.toCharArray());
+//    FLUSH();
     Expr* expr = (Expr*)exprHash.get(pattern);
     if ( !expr ) {
         expr = exprParser.createExpr(pattern);
@@ -461,7 +434,7 @@ Expr* ProcessorState::getExpr(const String& pattern) {
  * null if not template is found
 **/
 Element* ProcessorState::getNamedTemplate(String& name) {
-    MITREObjectWrapper* mObj = (MITREObjectWrapper*)namedTemplates.get(name);
+    TxObjectWrapper* mObj = (TxObjectWrapper*)namedTemplates.get(name);
     if ( mObj ) {
         return (Element*)mObj->object;
     }
@@ -667,10 +640,6 @@ void ProcessorState::setDefaultNameSpaceURIForResult(const String& nsURI) {
 /**
  * Sets the document base for use when resolving relative URIs
 **/
-void ProcessorState::setDocumentBase(const String& documentBase) {
-     this->documentBase = documentBase;
-} //-- setDocumentBase
-
 /**
  * Sets the output method. Valid output method options are,
  * "xml", "html", or "text".
@@ -785,7 +754,11 @@ MBool ProcessorState::isStripSpaceAllowed(Node* node) {
             break;
         }
         case Node::TEXT_NODE:
+            if (!XMLUtils::shouldStripTextnode(node->getNodeValue()))
+                return MB_FALSE;
             return isStripSpaceAllowed(node->getParentNode());
+        case Node::DOCUMENT_NODE:
+            return MB_TRUE;
         default:
             break;
     }

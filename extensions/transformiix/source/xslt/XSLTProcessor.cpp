@@ -42,10 +42,26 @@
  */
 
 #include "XSLTProcessor.h"
+#include "Names.h"
+#include "XMLParser.h"
+#include "VariableBinding.h"
+#include "XMLUtils.h"
+#include "XMLDOMUtils.h"
+#include "NodeSorter.h"
+#include "Numbering.h"
+#include "Tokenizer.h"
+#include "URIUtils.h"
 #ifdef MOZ_XSL
 #include "nsIObserverService.h"
-#include "nslog.h"
+#include "nsIURL.h"
+#include "nsIServiceManager.h"
+#include "nsIIOService.h"
+#include "nsILoadGroup.h"
+#include "nsIChannel.h"
+#include "nsNetCID.h"
+//#include "nslog.h"
 #else
+#include "printers.h"
 #include "TxLog.h"
 #endif
 
@@ -416,21 +432,19 @@ void XSLTProcessor::processTopLevel
                     //-- Read in XSL document
 
                     if (ps->getInclude(href)) {
+                        /* XXX this is wrong, it's allowed to include one stylesheet multiple
+                           times but we should build some sort of stack to make sure that we
+                           don't have circular inclusions */
                         String err("stylesheet already included: ");
                         err.append(href);
                         notifyError(err, ErrorObserver::WARNING);
                         break;
                     }
 
-                    //-- get document base
-                    String realHref;
-                    String thisDocBase = ps->getDocumentBase();
                     String errMsg;
                     XMLParser xmlParser;
 
-                    URIUtils::resolveHref(href, thisDocBase, realHref);
-
-                    Document* xslDoc = xmlParser.getDocumentFromURI(realHref, thisDocBase, errMsg);
+                    Document* xslDoc = xmlParser.getDocumentFromURI(href, element->getBaseURI(), errMsg);
 
                     if (!xslDoc) {
                         String err("error including XSL stylesheet: ");
@@ -442,11 +456,7 @@ void XSLTProcessor::processTopLevel
                     else {
                         //-- add stylesheet to list of includes
                         ps->addInclude(href, xslDoc);
-                        String newDocBase;
-                        URIUtils::getDocumentBase(realHref, newDocBase);
-                        ps->setDocumentBase(newDocBase);
                         processTopLevel(xslDoc, ps);
-                        ps->setDocumentBase(thisDocBase);
                     }
                     break;
 
@@ -540,7 +550,6 @@ Document* XSLTProcessor::process
 
     //-- create a new ProcessorState
     ProcessorState ps(xslDocument, *result);
-    ps.setDocumentBase(xslDocument.getBaseURI());
 
     //-- add error observers
     ListIterator* iter = errorObservers.iterator();
@@ -579,7 +588,6 @@ void XSLTProcessor::process
 
     //-- create a new ProcessorState
     ProcessorState ps(xslDocument, *result);
-    ps.setDocumentBase(xslDocument.getBaseURI());
 
     //-- add error observers
     ListIterator* iter = errorObservers.iterator();
@@ -883,7 +891,7 @@ void XSLTProcessor::processAction
                 Attr* modeAttr = actionElement->getAttributeNode(MODE_ATTR);
                 if ( modeAttr ) mode = new String(modeAttr->getValue());
                 String selectAtt  = actionElement->getAttribute(SELECT_ATTR);
-                if ( selectAtt.length() == 0 ) selectAtt = "* | text()";
+                if ( selectAtt.length() == 0 ) selectAtt = "node()";
                 pExpr = ps->getPatternExpr(selectAtt);
                 ExprResult* exprResult = pExpr->evaluate(node, ps);
                 NodeSet* nodeSet = 0;
@@ -1285,16 +1293,6 @@ void XSLTProcessor::processAction
                     break;
                 }
                 exprResult->stringValue(value);
-                //-- handle whitespace stripping
-                if ( exprResult->getResultType() == ExprResult::NODESET) {
-                    NodeSet* nodes = (NodeSet*)exprResult;
-                    if ( nodes->size() > 0) {
-                        Node* node = nodes->get(0);
-                        if ( ps->isStripSpaceAllowed(node) && 
-                             XMLUtils::shouldStripTextnode(value))
-                            value.clear();
-                    }
-                }
                 if (value.length()>0)
                     ps->addToResultTree(resultDoc->createTextNode(value));
                 delete exprResult;
@@ -1723,8 +1721,8 @@ void XSLTProcessor::xslCopyOf(ExprResult* exprResult, ProcessorState* ps) {
 } //-- xslCopyOf
 
 #ifdef MOZ_XSL
-#define PRINTF NS_LOG_PRINTF(XSLT)
-#define FLUSH  NS_LOG_FLUSH(XSLT)
+//#define PRINTF NS_LOG_PRINTF(XSLT)
+//#define FLUSH  NS_LOG_FLUSH(XSLT)
 NS_IMETHODIMP
 XSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
                                nsIDOMNode* aStyleDOM,
@@ -1747,29 +1745,28 @@ XSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
     }
     Document* xslDocument = new Document(styleDOMDocument);
 
+    nsCOMPtr<nsILoadGroup> loadGroup;
+    nsCOMPtr<nsIChannel> channel;
+    nsCOMPtr<nsIDocument> inputDocument(do_QueryInterface(sourceDOMDocument));
+    if (inputDocument) {
+        inputDocument->GetDocumentLoadGroup(getter_AddRefs(loadGroup));
+        nsCOMPtr<nsIIOService> serv(do_GetService(NS_IOSERVICE_CONTRACTID));
+        if (serv) {
+            // Create a temporary channel to get nsIDocument->Reset to
+            // do the right thing. We want the output document to get
+            // much of the input document's characteristics.
+            serv->NewChannelFromURI(inputDocument->GetDocumentURL(),
+                                    getter_AddRefs(channel));
+        }
+    }
+ 
+    nsCOMPtr<nsIDocument> outputDocument(do_QueryInterface(aOutputDoc));
+    outputDocument->Reset(channel, loadGroup);
+
     Document* resultDocument = new Document(aOutputDoc);
 
     //-- create a new ProcessorState
     ProcessorState* ps = new ProcessorState(*xslDocument, *resultDocument);
-
-    // XXX HACK, baseURI is something to be done in the DOM
-    nsIURI* docURL = nsnull;
-    nsCOMPtr<nsIDocument> sourceNsDocument = do_QueryInterface(styleDOMDocument);
-    sourceNsDocument->GetBaseURL(docURL);
-    if (docURL) {
-        char* urlString;
-
-        docURL->GetSpec(&urlString);
-        String documentBase(urlString);
-        NS_IMPL_LOG(XSLT)
-        PRINTF("Transforming with stylesheet %s",documentBase.toCharArray());
-        FLUSH();
-        ps->setDocumentBase(documentBase);
-        nsCRT::free(urlString);
-        NS_IF_RELEASE(docURL);
-    }
-    else
-        ps->setDocumentBase("");
 
     //-- add error observers
 
@@ -1795,9 +1792,9 @@ XSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
         nsCOMPtr<nsIObserverService> anObserverService = do_GetService(NS_OBSERVERSERVICE_CONTRACTID, &res);
         if (NS_SUCCEEDED(res)) {
             Node* docElement = resultDocument->getDocumentElement();
-            nsIDOMNode* nsDocElement;
+            nsISupports* nsDocElement;
             if (docElement) {
-                nsDocElement = docElement->getNSNode();
+                nsDocElement = docElement->getNSObj();
             }
             else {
                 nsDocElement = nsnull;

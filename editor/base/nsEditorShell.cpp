@@ -80,10 +80,12 @@
 #include "nsIFilePicker.h"
 #include "nsIFindComponent.h"
 #include "nsIPrompt.h"
-#include "nsICommonDialogs.h"
+#include "nsIDialogParamBlock.h"
+#include "nsIPromptService.h"
+#include "nsPIPromptService.h"
 
 #include "nsIEditorController.h"
-#include "nsEditorController.h"
+//#include "nsEditorController.h"
 #include "nsIControllers.h"
 #include "nsIDocShell.h"
 #include "nsIDocShellTreeItem.h"
@@ -124,8 +126,6 @@
 #include "nsISpellChecker.h"
 #include "nsInterfaceState.h"
 
-#include "nsAOLCiter.h"
-#include "nsInternetCiter.h"
 #include "nsEditorShellMouseListener.h"
 
 ///////////////////////////////////////
@@ -140,8 +140,6 @@
 static NS_DEFINE_CID(kHTMLEditorCID,            NS_HTMLEDITOR_CID);
 static NS_DEFINE_CID(kCTextServicesDocumentCID, NS_TEXTSERVICESDOCUMENT_CID);
 static NS_DEFINE_CID(kCStringBundleServiceCID,  NS_STRINGBUNDLESERVICE_CID);
-static NS_DEFINE_CID(kCommonDialogsCID,         NS_CommonDialog_CID );
-static NS_DEFINE_CID(kDialogParamBlockCID,      NS_DialogParamBlock_CID);
 static NS_DEFINE_CID(kPrefServiceCID,           NS_PREF_CID);
 static NS_DEFINE_CID(kChromeRegistryCID,        NS_CHROMEREGISTRY_CID);
 static NS_DEFINE_CID(kStandardURLCID,           NS_STANDARDURL_CID);
@@ -1063,9 +1061,7 @@ nsEditorShell::SetAttribute(nsIDOMElement *element, const PRUnichar *attr, const
   nsresult  result = NS_NOINTERFACE;
   nsCOMPtr<nsIEditor> editor = do_QueryInterface(mEditor);
   if (editor) {
-    nsAutoString attributeStr(attr);
-    nsAutoString valueStr(value);
-    result = editor->SetAttribute(element, attributeStr, valueStr); 
+    result = editor->SetAttribute(element, nsLiteralString(attr), nsLiteralString(value)); 
   }
 
   return result;
@@ -1080,8 +1076,7 @@ nsEditorShell::RemoveAttribute(nsIDOMElement *element, const PRUnichar *attr)
   nsresult  result = NS_NOINTERFACE;
   nsCOMPtr<nsIEditor> editor = do_QueryInterface(mEditor);
   if (editor) {
-    nsAutoString attributeStr(attr);
-    result = editor->RemoveAttribute(element, attributeStr);
+    result = editor->RemoveAttribute(element, nsLiteralString(attr));
   }
 
   return result;
@@ -1096,16 +1091,13 @@ nsEditorShell::SetTextProperty(const PRUnichar *prop, const PRUnichar *attr, con
 
   nsCOMPtr<nsIAtom> styleAtom = getter_AddRefs(NS_NewAtom(prop));      /// XXX Hack alert! Look in nsIEditProperty.h for this
   if (! styleAtom) return NS_ERROR_OUT_OF_MEMORY;
-
-  nsAutoString    attributeStr(attr);
-  nsAutoString    valueStr(value);
-  
+ 
   switch (mEditorType)
   {
     case ePlainTextEditorType:
         // should we allow this?
     case eHTMLTextEditorType:
-      err = mEditor->SetInlineProperty(styleAtom, &attributeStr, &valueStr);
+      err = mEditor->SetInlineProperty(styleAtom, nsLiteralString(attr), nsLiteralString(value));
       break;
     default:
       err = NS_ERROR_NOT_IMPLEMENTED;
@@ -1129,7 +1121,7 @@ nsEditorShell::RemoveOneProperty(const nsString& aProp, const nsString &aAttr)
     case ePlainTextEditorType:
         // should we allow this?
     case eHTMLTextEditorType:
-      err = mEditor->RemoveInlineProperty(styleAtom, &aAttr);
+      err = mEditor->RemoveInlineProperty(styleAtom, aAttr);
       break;
     default:
       err = NS_ERROR_NOT_IMPLEMENTED;
@@ -1174,15 +1166,12 @@ nsEditorShell::GetTextProperty(const PRUnichar *prop, const PRUnichar *attr, con
 
   styleAtom = NS_NewAtom(prop);      /// XXX Hack alert! Look in nsIEditProperty.h for this
 
-  nsAutoString  aAttr(attr);
-  nsAutoString  aValue(value);
-  
   switch (mEditorType)
   {
     case ePlainTextEditorType:
         // should we allow this?
     case eHTMLTextEditorType:
-      err = mEditor->GetInlineProperty(styleAtom, &aAttr, &aValue, *firstHas, *anyHas, *allHas);
+      err = mEditor->GetInlineProperty(styleAtom, nsLiteralString(attr), nsLiteralString(value), firstHas, anyHas, allHas);
       break;
     default:
       err = NS_ERROR_NOT_IMPLEMENTED;
@@ -1240,7 +1229,7 @@ nsEditorShell::GetParagraphState(PRBool *aMixed, PRUnichar **_retval)
   {
     PRBool bMixed;
     nsAutoString state;
-    err = htmlEditor->GetParagraphState(bMixed, state);
+    err = htmlEditor->GetParagraphState(&bMixed, state);
     if (!bMixed)
       *_retval = state.ToNewUnicode();
   }
@@ -1259,7 +1248,7 @@ nsEditorShell::GetListState(PRBool *aMixed, PRUnichar **_retval)
   if (htmlEditor)
   {
     PRBool bOL, bUL, bDL;
-    err = htmlEditor->GetListState(*aMixed, bOL, bUL, bDL);
+    err = htmlEditor->GetListState(aMixed, &bOL, &bUL, &bDL);
     if (NS_SUCCEEDED(err))
     {
       if (!*aMixed)
@@ -1287,7 +1276,7 @@ nsEditorShell::GetListItemState(PRBool *aMixed, PRUnichar **_retval)
   if (htmlEditor)
   {
     PRBool bLI,bDT,bDD;
-    err = htmlEditor->GetListItemState(*aMixed, bLI, bDT, bDD);
+    err = htmlEditor->GetListItemState(aMixed, &bLI, &bDT, &bDD);
     if (NS_SUCCEEDED(err))
     {
       if (!*aMixed)
@@ -1315,7 +1304,7 @@ nsEditorShell::GetAlignment(PRBool *aMixed, PRUnichar **_retval)
   if (htmlEditor)
   {
     nsIHTMLEditor::EAlignment firstAlign;
-    err = htmlEditor->GetAlignment(*aMixed, firstAlign);
+    err = htmlEditor->GetAlignment(aMixed, &firstAlign);
     if (NS_SUCCEEDED(err))
     {
       nsAutoString tagStr;
@@ -1476,8 +1465,7 @@ nsEditorShell::FinishHTMLSource(void)
   if (mHTMLSourceMode)
   {
     // Call the JS command to convert and switch to previous edit mode
-    nsAutoString command(NS_LITERAL_STRING("cmd_FinishHTMLSource"));
-    return DoControllerCommand(command);
+    return DoControllerCommand(NS_LITERAL_STRING("cmd_FinishHTMLSource"));
   }
   return NS_OK;
 }
@@ -1752,10 +1740,10 @@ nsEditorShell::SaveDocument(PRBool aSaveAs, PRBool aSaveCopy, const PRUnichar* a
           if (!mMailCompose && (!saveAsText && mEditorType == eHTMLTextEditorType) && (title.Length() == 0))
           {
             // Use a "prompt" common dialog to get title string from user
-            NS_WITH_SERVICE(nsICommonDialogs, dialog, kCommonDialogsCID, &res); 
-            if (NS_SUCCEEDED(res)) 
+            nsCOMPtr<nsIPromptService> dialog(do_GetService("@mozilla.org/embedcomp/prompt-service;1"));
+            if (dialog)
             { 
-              PRUnichar *titleUnicode;
+              PRUnichar *titleUnicode = ToNewUnicode(nsLiteralString(title.get()));
               nsAutoString captionStr, msgStr1, msgStr2;
               
               GetBundleString(NS_LITERAL_STRING("DocumentTitle"), captionStr);
@@ -1767,11 +1755,11 @@ nsEditorShell::SaveDocument(PRBool aSaveAs, PRBool aSaveCopy, const PRUnichar* a
               PRBool retVal = PR_FALSE;
               if(!mContentWindow)
                 return NS_ERROR_NOT_INITIALIZED;
-              nsCOMPtr<nsIDOMWindowInternal> cwP = do_QueryReferent(mContentWindow);
+              nsCOMPtr<nsIDOMWindow> cwP = do_QueryReferent(mContentWindow);
               if (!cwP) return NS_ERROR_NOT_INITIALIZED;
 
               res = dialog->Prompt(cwP, captionStr.GetUnicode(), msgStr1.GetUnicode(),
-                                   title.GetUnicode(), &titleUnicode, &retVal); 
+                                   &titleUnicode, 0, 0, &retVal); 
               
               if( retVal == PR_FALSE)
               {
@@ -1780,7 +1768,7 @@ nsEditorShell::SaveDocument(PRBool aSaveAs, PRBool aSaveCopy, const PRUnichar* a
                 return NS_OK;
               }
               // This sets title in HTML node
-              mEditor->SetDocumentTitle(titleUnicode);
+              mEditor->SetDocumentTitle(nsLiteralString(titleUnicode));
               title = titleUnicode;
               nsCRT::free(titleUnicode);
               titleChanged = PR_TRUE;
@@ -2180,8 +2168,7 @@ nsEditorShell::UpdateWindowTitleAndRecentMenu(PRBool aSaveToPrefs)
   // For now, don't update the menu at all if aSaveToPrefs is false
   if (aSaveToPrefs)
   {
-    nsAutoString commandName(NS_LITERAL_STRING("cmd_buildRecentPagesMenu"));
-    res = DoControllerCommand(commandName);
+    res = DoControllerCommand(NS_LITERAL_STRING("cmd_buildRecentPagesMenu"));
   }
    
   return res;
@@ -2244,7 +2231,7 @@ nsEditorShell::SetDocumentTitle(const PRUnichar *title)
   if (mEditorType != eHTMLTextEditorType)
     return NS_ERROR_NOT_IMPLEMENTED;
 
-  res = mEditor->SetDocumentTitle(title);
+  res = mEditor->SetDocumentTitle(nsLiteralString(title));
   if (NS_FAILED(res)) return res;
 
   // PR_FALSE means don't save menu to prefs
@@ -2287,9 +2274,7 @@ nsEditorShell::NodeIsBlock(nsIDOMNode *node, PRBool *_retval)
     case ePlainTextEditorType:
     case eHTMLTextEditorType:
       {
-        nsCOMPtr<nsIEditor>  editor = do_QueryInterface(mEditor);
-        if (editor)
-          rv = editor->NodeIsBlock(node, *_retval);
+        rv = mEditor->NodeIsBlock(node, _retval);
       }
       break;
 
@@ -2536,174 +2521,22 @@ nsEditorShell::InsertAsCitedQuotation(const PRUnichar *quotedText,
   return err;
 }
 
-// Utility routine to make a new citer.  This addrefs, of course.
-static nsICiter* MakeACiter()
-{
-  // Make a citer of an appropriate type
-  nsICiter* citer = 0;
-  nsresult rv;
-  NS_WITH_SERVICE(nsIPref, prefs, kPrefServiceCID, &rv);
-  if (NS_FAILED(rv)) return 0;
-
-  char *citationType = 0;
-  rv = prefs->CopyCharPref("mail.compose.citationType", &citationType);
-                          
-  if (NS_SUCCEEDED(rv) && citationType[0])
-  {
-    if (!strncmp(citationType, "aol", 3))
-      citer = new nsAOLCiter;
-    else
-      citer = new nsInternetCiter;
-    PL_strfree(citationType);
-  }
-  else
-    citer = new nsInternetCiter;
-
-  if (citer)
-    NS_ADDREF(citer);
-  return citer;
-}
-
 NS_IMETHODIMP    
 nsEditorShell::Rewrap(PRBool aRespectNewlines)
 {
-  PRInt32 wrapCol;
-  nsresult rv = GetWrapColumn(&wrapCol);
-  if (NS_FAILED(rv))
-    return NS_OK;
-#ifdef DEBUG_akkana
-  printf("nsEditorShell::Rewrap to %ld columns\n", (long)wrapCol);
-#endif
-
-  nsCOMPtr<nsISelection> selection;
-  rv = GetEditorSelection(getter_AddRefs(selection));
-  if (NS_FAILED(rv)) return rv;
-
-  if (!selection)
-    return NS_ERROR_NOT_INITIALIZED;
-  PRBool isCollapsed;
-  rv = selection->GetIsCollapsed(&isCollapsed);
-  if (NS_FAILED(rv)) return rv;
-
-  // Variables we'll need either way
-  nsAutoString format; format.AssignWithConversion("text/plain");
-  nsAutoString current;
-  nsString wrapped;
-  nsCOMPtr<nsIEditor> nsied (do_QueryInterface(mEditor));
-  if (!nsied)
-    return NS_ERROR_UNEXPECTED;
-
-  if (isCollapsed)    // rewrap the whole document
-  {
-    rv = nsied->OutputToString(current, format,
-                               nsIDocumentEncoder::OutputFormatted);
-    if (NS_FAILED(rv)) return rv;
-
-    nsCOMPtr<nsICiter> citer = dont_AddRef(MakeACiter());
-    if (NS_FAILED(rv)) return rv;
-    if (!citer) return NS_ERROR_UNEXPECTED;
-
-    rv = citer->Rewrap(current, wrapCol, 0, aRespectNewlines, wrapped);
-    if (NS_FAILED(rv)) return rv;
-
-    rv = SelectAll();
-    if (NS_FAILED(rv)) return rv;
-
-    nsCOMPtr<nsIPlaintextEditor> textEditor (do_QueryInterface(mEditor));
-    if (!textEditor)
-      return NS_NOINTERFACE;
-    return textEditor->InsertText(wrapped.GetUnicode());
-  }
-  else                // rewrap only the selection
-  {
-    rv = nsied->OutputToString(current, format,
-                               nsIDocumentEncoder::OutputFormatted
-                                | nsIDocumentEncoder::OutputSelectionOnly);
-    if (NS_FAILED(rv)) return rv;
-
-    nsCOMPtr<nsICiter> citer = dont_AddRef(MakeACiter());
-    if (NS_FAILED(rv)) return rv;
-    if (!citer) return NS_ERROR_UNEXPECTED;
-
-    PRUint32 firstLineOffset = 0;   // XXX need to get this
-    rv = citer->Rewrap(current, wrapCol, firstLineOffset, aRespectNewlines,
-                       wrapped);
-    if (NS_FAILED(rv)) return rv;
-
-    nsCOMPtr<nsIPlaintextEditor> textEditor (do_QueryInterface(mEditor));
-    if (!textEditor)
-      return NS_NOINTERFACE;
-    return textEditor->InsertText(wrapped.GetUnicode());
-  }
-  return NS_OK;
+  nsCOMPtr<nsIEditorMailSupport> mailEditor = do_QueryInterface(mEditor);
+  if (!mailEditor)
+    return NS_NOINTERFACE;
+  return mailEditor->Rewrap(aRespectNewlines);
 }
 
 NS_IMETHODIMP    
 nsEditorShell::StripCites()
 {
-#ifdef DEBUG_akkana
-  printf("nsEditorShell::StripCites()\n");
-#endif
-
-  nsCOMPtr<nsISelection> selection;
-  nsresult rv = GetEditorSelection(getter_AddRefs(selection));
-  if (NS_FAILED(rv)) return rv;
-
-  if (!selection)
-    return NS_ERROR_NOT_INITIALIZED;
-  PRBool isCollapsed;
-  rv = selection->GetIsCollapsed(&isCollapsed);
-  if (NS_FAILED(rv)) return rv;
-
-  // Variables we'll need either way
-  nsAutoString format; format.AssignWithConversion("text/plain");
-  nsAutoString current;
-  nsString stripped;
-  nsCOMPtr<nsIEditor> nsied (do_QueryInterface(mEditor));
-  if (!nsied)
-    return NS_ERROR_UNEXPECTED;
-
-  if (isCollapsed)    // rewrap the whole document
-  {
-    rv = nsied->OutputToString(current, format,
-                               nsIDocumentEncoder::OutputFormatted);
-    if (NS_FAILED(rv)) return rv;
-
-    nsCOMPtr<nsICiter> citer = dont_AddRef(MakeACiter());
-    if (NS_FAILED(rv)) return rv;
-    if (!citer) return NS_ERROR_UNEXPECTED;
-
-    rv = citer->StripCites(current, stripped);
-    if (NS_FAILED(rv)) return rv;
-
-    rv = SelectAll();
-    if (NS_FAILED(rv)) return rv;
-
-    nsCOMPtr<nsIPlaintextEditor> textEditor (do_QueryInterface(mEditor));
-    if (!textEditor)
-      return NS_NOINTERFACE;
-    return textEditor->InsertText(stripped.GetUnicode());
-  }
-  else                // rewrap only the selection
-  {
-    rv = nsied->OutputToString(current, format,
-                               nsIDocumentEncoder::OutputFormatted
-                                | nsIDocumentEncoder::OutputSelectionOnly);
-    if (NS_FAILED(rv)) return rv;
-
-    nsCOMPtr<nsICiter> citer = dont_AddRef(MakeACiter());
-    if (NS_FAILED(rv)) return rv;
-    if (!citer) return NS_ERROR_UNEXPECTED;
-
-    rv = citer->StripCites(current, stripped);
-    if (NS_FAILED(rv)) return rv;
-
-    nsCOMPtr<nsIPlaintextEditor> textEditor (do_QueryInterface(mEditor));
-    if (!textEditor)
-      return NS_NOINTERFACE;
-    return textEditor->InsertText(stripped.GetUnicode());
-  }
-  return NS_OK;
+  nsCOMPtr<nsIEditorMailSupport> mailEditor = do_QueryInterface(mEditor);
+  if (!mailEditor)
+    return NS_NOINTERFACE;
+  return mailEditor->StripCites();
 }
 
 NS_IMETHODIMP    
@@ -2768,7 +2601,7 @@ nsEditorShell::InsertText(const PRUnichar *textToInsert)
       {
         nsCOMPtr<nsIPlaintextEditor> textEditor (do_QueryInterface(mEditor));
         if (textEditor)
-          err = textEditor->InsertText(textToInsert);
+          err = textEditor->InsertText(nsLiteralString(textToInsert));
       }
       break;
 
@@ -2965,7 +2798,7 @@ void nsEditorShell::GetBundleString(const nsAReadableString &stringName, nsAWrit
   outString.Truncate();
   
   nsXPIDLString   tempString;
-  if (NS_SUCCEEDED(GetString(nsPromiseFlatString(stringName).get(), getter_Copies(tempString))) && tempString)
+  if (NS_SUCCEEDED(GetString(PromiseFlatString(stringName).get(), getter_Copies(tempString))) && tempString)
     outString = tempString.get();
 }
 
@@ -2994,17 +2827,17 @@ nsEditorShell::ConfirmWithCancel(const nsString& aTitle, const nsString& aQuesti
                                  const nsString *aYesString, const nsString *aNoString)
 {
   nsEditorShell::EConfirmResult result = nsEditorShell::eCancel;
-  
+
   nsIDialogParamBlock* block = NULL; 
-  nsresult rv = nsComponentManager::CreateInstance(kDialogParamBlockCID, 0,
-                                          NS_GET_IID(nsIDialogParamBlock), 
+  nsresult rv = nsComponentManager::CreateInstance("@mozilla.org/embedcomp/dialogparam;1",
+                                          0, NS_GET_IID(nsIDialogParamBlock), 
                                           (void**)&block ); 
   if ( NS_SUCCEEDED(rv) )
   { 
     // Stuff in Parameters 
-    block->SetString( nsICommonDialogs::eMsg, aQuestion.GetUnicode()); 
-    nsAutoString url; url.AssignWithConversion( "chrome://global/skin/question-icon.gif"  ); 
-    block->SetString( nsICommonDialogs::eIconURL, url.GetUnicode()); 
+    block->SetString( nsPIPromptService::eMsg, aQuestion.GetUnicode()); 
+    NS_NAMED_LITERAL_STRING(styleClass, "question-icon");
+    block->SetString(nsPIPromptService::eIconClass, styleClass.get());
 
     nsAutoString yesStr, noStr;
     // Default is Yes, No, Cancel
@@ -3018,34 +2851,34 @@ nsEditorShell::ConfirmWithCancel(const nsString& aTitle, const nsString& aQuesti
     if (aNoString && aNoString->Length() > 0)
     {
       noStr.Assign(*aNoString);
-      block->SetString( nsICommonDialogs::eButton2Text, noStr.GetUnicode() ); 
+      block->SetString( nsPIPromptService::eButton2Text, noStr.GetUnicode() ); 
     }
     else
     {
       // No string for "No" means we only want Yes, Cancel
       numberOfButtons = 2;
     }    
-    block->SetInt( nsICommonDialogs::eNumberButtons, numberOfButtons ); 
+    block->SetInt( nsPIPromptService::eNumberButtons, numberOfButtons ); 
 
     nsAutoString cancelStr;
     GetBundleString(NS_LITERAL_STRING("Cancel"), cancelStr);
 
-    block->SetString( nsICommonDialogs::eDialogTitle, aTitle.GetUnicode() );
+    block->SetString( nsPIPromptService::eDialogTitle, aTitle.GetUnicode() );
     //Note: "button0" is always Ok or Yes action, "button1" is Cancel
-    block->SetString( nsICommonDialogs::eButton0Text, yesStr.GetUnicode() ); 
-    block->SetString( nsICommonDialogs::eButton1Text, cancelStr.GetUnicode() ); 
+    block->SetString( nsPIPromptService::eButton0Text, yesStr.GetUnicode() ); 
+    block->SetString( nsPIPromptService::eButton1Text, cancelStr.GetUnicode() ); 
 
-    NS_WITH_SERVICE(nsICommonDialogs, dialog, kCommonDialogsCID, &rv); 
-    if ( NS_SUCCEEDED( rv ) ) 
+    nsCOMPtr<nsPIPromptService> dialog(do_GetService("@mozilla.org/embedcomp/prompt-service;1"));
+    if (dialog)
     { 
       PRInt32 buttonPressed = 0; 
       if(!mContentWindow)
         return result;
-      nsCOMPtr<nsIDOMWindowInternal> cwP = do_QueryReferent(mContentWindow);
+      nsCOMPtr<nsIDOMWindow> cwP = do_QueryReferent(mContentWindow);
       if (!cwP) return result;
       rv = dialog->DoDialog( cwP, block, "chrome://global/content/commonDialog.xul" ); 
-      block->GetInt( nsICommonDialogs::eButtonPressed, &buttonPressed ); 
-      // NOTE: If order of buttons changes in nsICommonDialogs,
+      block->GetInt( nsPIPromptService::eButtonPressed, &buttonPressed ); 
+      // NOTE: If order of buttons changes in nsIPromptService,
       //       then we must change the EConfirmResult enums in nsEditorShell.h
       result = nsEditorShell::EConfirmResult(buttonPressed);
     } 
@@ -3061,12 +2894,12 @@ nsEditorShell::Confirm(const nsString& aTitle, const nsString& aQuestion)
   nsresult rv;
   PRBool   result = PR_FALSE;
 
-  NS_WITH_SERVICE(nsICommonDialogs, dialog, kCommonDialogsCID, &rv); 
-  if (NS_SUCCEEDED(rv) && dialog)
+  nsCOMPtr<nsIPromptService> dialog(do_GetService("@mozilla.org/embedcomp/prompt-service;1"));
+  if (dialog)
   {
     if(!mContentWindow)
       return NS_ERROR_NOT_INITIALIZED;
-    nsCOMPtr<nsIDOMWindowInternal> cwP = do_QueryReferent(mContentWindow);
+    nsCOMPtr<nsIDOMWindow> cwP = do_QueryReferent(mContentWindow);
     if (!cwP) return NS_ERROR_NOT_INITIALIZED;
     rv = dialog->Confirm(cwP, aTitle.GetUnicode(), aQuestion.GetUnicode(), &result);
   }
@@ -3080,12 +2913,12 @@ nsEditorShell::AlertWithTitle(const PRUnichar *aTitle, const PRUnichar *aMsg)
     return NS_ERROR_NULL_POINTER;
 
   nsresult rv = NS_ERROR_FAILURE;
-  NS_WITH_SERVICE(nsICommonDialogs, dialog, kCommonDialogsCID, &rv); 
-  if (NS_SUCCEEDED(rv) && dialog)
+  nsCOMPtr<nsIPromptService> dialog(do_GetService("@mozilla.org/embedcomp/prompt-service;1"));
+  if (dialog)
   {
     if(!mContentWindow)
       return NS_ERROR_NOT_INITIALIZED;
-    nsCOMPtr<nsIDOMWindowInternal> cwP = do_QueryReferent(mContentWindow);
+    nsCOMPtr<nsIDOMWindow> cwP = do_QueryReferent(mContentWindow);
     if (!cwP) return NS_ERROR_NOT_INITIALIZED;
     rv = dialog->Alert(cwP, aTitle, aMsg);
   }
@@ -3097,12 +2930,12 @@ void
 nsEditorShell::Alert(const nsString& aTitle, const nsString& aMsg)
 {
   nsresult rv;
-  NS_WITH_SERVICE(nsICommonDialogs, dialog, kCommonDialogsCID, &rv); 
-  if (NS_SUCCEEDED(rv) && dialog)
+  nsCOMPtr<nsIPromptService> dialog(do_GetService("@mozilla.org/embedcomp/prompt-service;1"));
+  if (dialog)
   {
     if(!mContentWindow)
       return;
-    nsCOMPtr<nsIDOMWindowInternal> cwP = do_QueryReferent(mContentWindow);
+    nsCOMPtr<nsIDOMWindow> cwP = do_QueryReferent(mContentWindow);
     if (!cwP) return;
     rv = dialog->Alert(cwP, aTitle.GetUnicode(), aMsg.GetUnicode());
   }
@@ -3111,11 +2944,19 @@ nsEditorShell::Alert(const nsString& aTitle, const nsString& aMsg)
 NS_IMETHODIMP
 nsEditorShell::GetDocumentCharacterSet(PRUnichar** characterSet)
 {
+  if (!characterSet)
+      return NS_ERROR_NULL_POINTER;
   nsCOMPtr<nsIEditor> editor = do_QueryInterface(mEditor);
-
+  nsAutoString copiedData;
+  *characterSet = nsnull;
   if (editor)
-    return editor->GetDocumentCharacterSet(characterSet);
-
+  {
+    if (NS_SUCCEEDED(editor->GetDocumentCharacterSet(copiedData)))
+    {
+      *characterSet = ToNewUnicode(copiedData);
+      return NS_OK;
+    }
+  }
   return NS_ERROR_FAILURE;
 }
 
@@ -3126,7 +2967,7 @@ nsEditorShell::SetDocumentCharacterSet(const PRUnichar* characterSet)
 
   nsresult res = NS_OK;
   if (editor)
-    res = editor->SetDocumentCharacterSet(characterSet);
+    res = editor->SetDocumentCharacterSet(nsAutoString(characterSet));
   
   if(NS_SUCCEEDED(res)) {
     nsCOMPtr<nsIScriptGlobalObject> globalObj( do_QueryReferent(mContentWindow));
@@ -3695,19 +3536,27 @@ nsEditorShell::DeleteElement(nsIDOMElement *element)
 }
 
 NS_IMETHODIMP
-nsEditorShell::InsertElement(nsIDOMElement *element, nsIDOMElement *parent, PRInt32 position)
+nsEditorShell::InsertElement(nsIDOMElement *element, nsIDOMElement *parent, PRInt32 position, PRBool dontChangeSelection)
 {
   if (!element || !parent)
     return NS_ERROR_NULL_POINTER;
 
   nsresult  result = NS_NOINTERFACE;
   nsCOMPtr<nsIEditor> editor = do_QueryInterface(mEditor);
-  if (editor) {
+  if (editor) 
+  {
+    // Set flag so InsertElementTxn doesn't change the selection
+    if (dontChangeSelection)
+      editor->SetShouldTxnSetSelection(PR_FALSE);
+
     // The nsIEditor::InsertNode() wants nodes as params,
     //   but it actually requires that they are elements!
     nsCOMPtr<nsIDOMNode> node = do_QueryInterface(element);
     nsCOMPtr<nsIDOMNode> parentNode = do_QueryInterface(parent);
     result = editor->InsertNode(node, parentNode, position);
+
+    if (dontChangeSelection)
+      editor->SetShouldTxnSetSelection(PR_TRUE);
   }
   return result;
 }
@@ -5389,17 +5238,13 @@ nsEditorShell::HandleMouseClickOnElement(nsIDOMElement *aElement, PRInt32 aClick
   // For double-click, edit element properties
   if (aClickCount == 2)
   {
-    nsAutoString commandName;
-
     // In "All Tags" mode, use AdvancedProperties,
     //  in others use appriate object property dialog
-    if (mDisplayMode != eDisplayModeAllTags) 
-      commandName = NS_LITERAL_STRING("cmd_objectProperties");
+    if (mDisplayMode == eDisplayModeAllTags)
+        rv = DoControllerCommand(NS_LITERAL_STRING("cmd_advancedProperties"));
     else
-      commandName = NS_LITERAL_STRING("cmd_advancedProperties");
-    
-    rv = DoControllerCommand(commandName);
-
+        rv = DoControllerCommand(NS_LITERAL_STRING("cmd_objectProperties"));
+        
     if (NS_SUCCEEDED(rv))
       *_retval = PR_TRUE;
   }
@@ -5408,7 +5253,7 @@ nsEditorShell::HandleMouseClickOnElement(nsIDOMElement *aElement, PRInt32 aClick
 }
 
 nsresult
-nsEditorShell::DoControllerCommand(nsString& aCommand)
+nsEditorShell::DoControllerCommand(const nsAReadableString& aCommand)
 {
   // Get the list of controllers...
   nsCOMPtr<nsIControllers> controllers;      
@@ -5424,7 +5269,7 @@ nsEditorShell::DoControllerCommand(nsString& aCommand)
   //... then find the specific controller supporting desired command
   nsCOMPtr<nsIController> controller; 
 
-  rv = controllers->GetControllerForCommand(aCommand.GetUnicode(), getter_AddRefs(controller));
+  rv = controllers->GetControllerForCommand(aCommand, getter_AddRefs(controller));
   
   if (NS_SUCCEEDED(rv))
   {
@@ -5432,7 +5277,7 @@ nsEditorShell::DoControllerCommand(nsString& aCommand)
 
     nsCOMPtr<nsIEditorController> composerController = do_QueryInterface(controller);
     // Execute the command
-    rv = composerController->DoCommand(aCommand.GetUnicode());
+    rv = composerController->DoCommand(aCommand);
   }
   return rv;
 }

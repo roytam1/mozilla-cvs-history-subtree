@@ -162,7 +162,7 @@ function EditorStartup(editorType, editorElement)
     gPreviewModeButton = document.getElementById("PreviewModeButton");
 
     // mark first tab as selected
-    document.getElementById("EditModeTabbox").selectedTab = gNormalModeButton;
+    document.getElementById("EditModeTabs").selectedTab = gNormalModeButton;
 
     // XUL elements we use when switching from normal editor to edit source
     gContentWindowDeck = document.getElementById("ContentWindowDeck");
@@ -393,7 +393,7 @@ function CheckAndSaveDocument(reasonToSave, allowDontSave)
   dialogMsg = (dialogMsg.replace(/%title%/,title)).replace(/%reason%/,reasonToSave);
 
   var result = {value:0};
-  commonDialogsService.UniversalDialog(
+  promptService.universalDialog(
     window,
     null,
     dialogTitle,
@@ -407,7 +407,7 @@ function CheckAndSaveDocument(reasonToSave, allowDontSave)
     null,
     {value:0},
     {value:0},
-    "chrome://global/skin/question-icon.gif",
+    "question-icon",
     {value:"false"},
     (allowDontSave ? 3 : 2),
     0,
@@ -541,7 +541,7 @@ function onParagraphFormatChange(paraMenuList, commandID)
     for (var i=0; i < menuItems.length; i++)
     {
       var menuItem = menuItems.item(i);
-      if (menuItem.value == state)
+      if ("value" in menuItem && menuItem.value == state)
       {
         paraMenuList.selectedItem = menuItem;
         break;
@@ -577,7 +577,7 @@ function onFontFaceChange(fontFaceMenuList, commandID)
     for (var i=0; i < menuItems.length; i++)
     {
       var menuItem = menuItems.item(i);
-      if (menuItem.getAttribute("label") && (menuItem.value.toLowerCase() == state.toLowerCase()))
+      if (menuItem.getAttribute("label") && ("value" in menuItem && menuItem.value.toLowerCase() == state.toLowerCase()))
       {
         fontFaceMenuList.selectedItem = menuItem;
         break;
@@ -1128,7 +1128,14 @@ function SetEditMode(mode)
 
       window._content.focus();
     }
+    ResetWindowTitleWithFilename();
   }
+}
+
+function ResetWindowTitleWithFilename()
+{
+  // Calling this resets the "Title [filename]" that we show on window caption
+  window.editorShell.SetDocumentTitle(window.editorShell.GetDocumentTitle());
 }
 
 function CancelHTMLSource()
@@ -1136,6 +1143,8 @@ function CancelHTMLSource()
   // Don't convert source text back into the DOM document
   gSourceContentWindow.value = "";
   SetDisplayMode(PreviousNonSourceDisplayMode);
+
+  ResetWindowTitleWithFilename();
 }
 
 
@@ -1191,7 +1200,7 @@ function SetDisplayMode(mode)
     if (mode == DisplayModeAllTags) selectedTab = gTagModeButton;
     if (mode == DisplayModeSource) selectedTab = gSourceModeButton;
     if (selectedTab)
-      document.getElementById("EditModeTabbox").selectedTab = selectedTab;
+      document.getElementById("EditModeTabs").selectedTab = selectedTab;
 
     if (mode == DisplayModeSource)
     {
@@ -1229,7 +1238,7 @@ function SetDisplayMode(mode)
     document.getElementById("viewPreviewMode").setAttribute("checked","false");
     document.getElementById("viewNormalMode").setAttribute("checked","false");
     document.getElementById("viewAllTagsMode").setAttribute("checked","false");
-    document.getElementById("viewSourceMode").setAttribute("checked","true");
+    document.getElementById("viewSourceMode").setAttribute("checked","false");
 
     var menuID;
     switch(mode)

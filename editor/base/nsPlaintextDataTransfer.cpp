@@ -22,9 +22,7 @@
 
 
 #include "nsPlaintextEditor.h"
-#include "nsHTMLEditUtils.h"
-
-#include "nsEditorEventListeners.h"
+#include "nsTextEditUtils.h"
 
 #include "nsIDOMText.h"
 #include "nsIDOMNodeList.h"
@@ -44,7 +42,6 @@
 
 #include "nsIFrameSelection.h"  // For TABLESELECTION_ defines
 #include "nsIIndependentSelection.h" //domselections answer to frameselection
-
 
 #include "nsICSSLoader.h"
 #include "nsICSSStyleSheet.h"
@@ -80,7 +77,6 @@
 #include "nsAOLCiter.h"
 #include "nsInternetCiter.h"
 #include "nsISupportsPrimitives.h"
-#include "InsertTextTxn.h"
 
 // netwerk
 #include "nsIURI.h"
@@ -93,12 +89,7 @@
 #include "nsIDragService.h"
 #include "nsIDOMNSUIEvent.h"
 
-// Transactionas
-#include "PlaceholderTxn.h"
-#include "nsStyleSheetTxns.h"
-
 // Misc
-#include "TextEditorTest.h"
 #include "nsEditorUtils.h"
 #include "nsIPref.h"
 const PRUnichar nbsp = 160;
@@ -169,7 +160,7 @@ NS_IMETHODIMP nsPlaintextEditor::InsertTextFromTransferable(nsITransferable *tra
         textDataObj->ToString ( &text );
         stuffToPaste.Assign ( text, len / 2 );
         nsAutoEditBatch beginBatching(this);
-        rv = InsertText(stuffToPaste.GetUnicode());
+        rv = InsertText(stuffToPaste);
         if (text)
           nsMemory::Free(text);
       }
@@ -364,12 +355,14 @@ NS_IMETHODIMP nsPlaintextEditor::InsertFromDrop(nsIDOMEvent* aDropEvent)
   return rv;
 }
 
-NS_IMETHODIMP nsPlaintextEditor::CanDrag(nsIDOMEvent *aDragEvent, PRBool &aCanDrag)
+NS_IMETHODIMP nsPlaintextEditor::CanDrag(nsIDOMEvent *aDragEvent, PRBool *aCanDrag)
 {
+  if (!aCanDrag)
+    return NS_ERROR_NULL_POINTER;
   /* we really should be checking the XY coordinates of the mouseevent and ensure that
    * that particular point is actually within the selection (not just that there is a selection)
    */
-  aCanDrag = PR_FALSE;
+  *aCanDrag = PR_FALSE;
  
   // KLUDGE to work around bug 50703
   // After double click and object property editing, 
@@ -404,7 +397,7 @@ NS_IMETHODIMP nsPlaintextEditor::CanDrag(nsIDOMEvent *aDragEvent, PRBool &aCanDr
       res = selection->ContainsNode(eventTargetDomNode, PR_FALSE, &amTargettedCorrectly);
       if (NS_FAILED(res)) return res;
 
-    	aCanDrag = amTargettedCorrectly;
+    	*aCanDrag = amTargettedCorrectly;
     }
   }
 
@@ -541,9 +534,11 @@ NS_IMETHODIMP nsPlaintextEditor::Paste(PRInt32 aSelectionType)
 }
 
 
-NS_IMETHODIMP nsPlaintextEditor::CanPaste(PRInt32 aSelectionType, PRBool &aCanPaste)
+NS_IMETHODIMP nsPlaintextEditor::CanPaste(PRInt32 aSelectionType, PRBool *aCanPaste)
 {
-  aCanPaste = PR_FALSE;
+  if (!aCanPaste)
+    return NS_ERROR_NULL_POINTER;
+  *aCanPaste = PR_FALSE;
   
   // can't paste if readonly
   if (!IsModifiable())
@@ -581,6 +576,6 @@ NS_IMETHODIMP nsPlaintextEditor::CanPaste(PRInt32 aSelectionType, PRBool &aCanPa
   rv = clipboard->HasDataMatchingFlavors(flavorsList, aSelectionType, &haveFlavors);
   if (NS_FAILED(rv)) return rv;
   
-  aCanPaste = haveFlavors;
+  *aCanPaste = haveFlavors;
   return NS_OK;
 }

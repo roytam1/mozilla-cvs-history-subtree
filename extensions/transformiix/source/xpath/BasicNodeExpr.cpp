@@ -108,6 +108,9 @@ MBool BasicNodeExpr::matches(Node* node, Node* context, ContextState* cs) {
         case NodeExpr::PI_EXPR :
             return (MBool) (node->getNodeType() == Node::PROCESSING_INSTRUCTION_NODE);
         default: //-- node()
+            if(node->getNodeType() == Node::TEXT_NODE)
+                return !cs->isStripSpaceAllowed(node);
+            return MB_TRUE;
             break;
     }
     return MB_TRUE;

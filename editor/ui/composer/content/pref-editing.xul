@@ -23,7 +23,7 @@
 
 <?xml-stylesheet href="chrome://communicator/skin/" type="text/css"?>
 <?xml-stylesheet href="chrome://editor/skin/EditorDialog.css" type="text/css"?>
-<?xul-overlay href="chrome://global/content/dialogOverlay.xul"?>
+<?xml-stylesheet href="chrome://communicator/skin/dialogOverlay.css" type="text/css"?>
 
 <!DOCTYPE window SYSTEM "chrome://editor/locale/pref-editing.dtd">
 
@@ -41,9 +41,8 @@
 
   <script type="application/x-javascript" src="chrome://editor/content/pref-composer.js"/>
   <script type="application/x-javascript" src="chrome://editor/content/EdDialogCommon.js"/>
-  <script type="application/x-javascript" src="chrome://global/content/strres.js"/>
-  <script type="application/x-javascript" src="chrome://communicator/content/pref/prefutilities.js"/>
-        
+  <script type="application/x-javascript" src="chrome://global/content/strres.js" />
+
   <box class="box-smallheader" title="&lHeader;"/>
 
   <titledbox orient="vertical">
@@ -158,9 +157,13 @@
 
     <text class="label" value="&backgroundImage.label;" accesskey="&backgroundImage.accesskey;"/>
     <box valign="middle" autostretch="never">
-      <textbox id="BackgroundImageInput" oninput="ChangeBackgroundImage();" style="min-width : 16em"/>
+      <textbox id="BackgroundImageInput" oninput="ChangeBackgroundImage();" style="min-width : 16em">
+        <observes element="backgroundImageData" attribute="disabled"/>
+      </textbox>
       <button class="dialog" label="&chooseFile.label;" accesskey="&chooseFile.accesskey;" 
-              oncommand="ChooseImageFile()"/>
+              oncommand="ChooseImageFile()">
+        <observes element="backgroundImageData" attribute="disabled"/>
+      </button>
       <data id="backgroundImageData" pref="true" preftype="string" prefstring="editor.default_background_image" prefattribute="value"/>
     </box>
 

@@ -48,6 +48,7 @@
 #include "BrowserImpl.h"
 #include "nsIWindowWatcher.h"
 #include "plstr.h"
+#include "Preferences.h"
 #include <io.h>
 #include <fcntl.h>
 
@@ -62,6 +63,7 @@ BEGIN_MESSAGE_MAP(CMfcEmbedApp, CWinApp)
 	ON_COMMAND(ID_NEW_BROWSER, OnNewBrowser)
 	ON_COMMAND(ID_MANAGE_PROFILES, OnManageProfiles)
 	ON_COMMAND(ID_APP_ABOUT, OnAppAbout)
+    ON_COMMAND(ID_EDIT_PREFERENCES, OnEditPreferences)
 	// NOTE - the ClassWizard will add and remove mapping macros here.
 	//    DO NOT EDIT what you see in these blocks of generated code!
 	//}}AFX_MSG_MAP
@@ -71,6 +73,11 @@ CMfcEmbedApp::CMfcEmbedApp() :
     m_ProfileMgr(NULL)
 {
     mRefCnt = 1; // Start at one - nothing is going to addref this object
+
+    m_strHomePage = "";
+
+    m_iStartupPage = 0; 
+
 }
 
 CMfcEmbedApp theApp;
@@ -262,7 +269,7 @@ void CMfcEmbedApp::OnNewBrowser()
 	CBrowserFrame *pBrowserFrame = CreateNewBrowserFrame();
 
 	//Load the HomePage into the browser view
-	if(pBrowserFrame)
+	if(pBrowserFrame && (GetStartupPageMode() == 1))
 		pBrowserFrame->m_wndBrowserView.LoadHomePage();
 }
 
@@ -335,6 +342,34 @@ void CMfcEmbedApp::OnManageProfiles()
     m_ProfileMgr->DoManageProfilesDialog(PR_FALSE);
 }
 
+void CMfcEmbedApp::OnEditPreferences()
+{
+    CPreferences prefs(_T("Preferences"));
+    
+    prefs.m_startupPage.m_iStartupPage = m_iStartupPage;
+    prefs.m_startupPage.m_strHomePage = m_strHomePage;   
+
+    if(prefs.DoModal() == IDOK)
+    {
+        // Update our member vars with these new pref values
+        m_iStartupPage = prefs.m_startupPage.m_iStartupPage;
+        m_strHomePage = prefs.m_startupPage.m_strHomePage;
+
+        // Save these changes to disk now
+        nsresult rv;
+        NS_WITH_SERVICE(nsIPref, prefs, NS_PREF_CONTRACTID, &rv);
+        if (NS_SUCCEEDED(rv)) 
+        {
+            prefs->SetIntPref("browser.startup.page", m_iStartupPage);
+            rv = prefs->SetCharPref("browser.startup.homepage", m_strHomePage);
+            if (NS_SUCCEEDED(rv))
+                rv = prefs->SavePrefFile();
+        }
+        else
+		    NS_ASSERTION(PR_FALSE, "Could not get preferences service");
+    }
+}
+
 BOOL CMfcEmbedApp::InitializeProfiles()
 {
     m_ProfileMgr = new CProfileMgr;
@@ -376,9 +411,6 @@ nsresult CMfcEmbedApp::InitializePrefs()
    NS_WITH_SERVICE(nsIPref, prefs, NS_PREF_CONTRACTID, &rv);
    if (NS_SUCCEEDED(rv)) {	  
 
-        rv = InitializeCachePrefs();
-        NS_ASSERTION(NS_SUCCEEDED(rv), "Could not initialize cache prefs");
-        
 		// We are using the default prefs from mozilla. If you were
 		// disributing your own, this would be done simply by editing
 		// the default pref files.
@@ -387,13 +419,30 @@ nsresult CMfcEmbedApp::InitializePrefs()
 		rv = prefs->GetBoolPref("mfcbrowser.prefs_inited", &inited);
 		if (NS_FAILED(rv) || !inited)
 		{
+            m_iStartupPage = 1;
+            m_strHomePage = "http://www.mozilla.org/projects/embedding";
+
+            prefs->SetIntPref("browser.startup.page", m_iStartupPage);
+            prefs->SetCharPref("browser.startup.homepage", m_strHomePage);
             prefs->SetIntPref("font.size.variable.x-western", 16);
             prefs->SetIntPref("font.size.fixed.x-western", 13);
             rv = prefs->SetBoolPref("mfcbrowser.prefs_inited", PR_TRUE);
             if (NS_SUCCEEDED(rv))
                 rv = prefs->SavePrefFile();
         }
-        
+        else
+        {
+            // The prefs are present, read them in
+
+            prefs->GetIntPref("browser.startup.page", &m_iStartupPage);
+
+            CString strBuf;
+            char *pBuf = strBuf.GetBuffer(_MAX_PATH);
+            prefs->CopyCharPref("browser.startup.homepage", &pBuf);
+            strBuf.ReleaseBuffer(-1);
+            if(pBuf)
+                m_strHomePage = pBuf;
+        }       
 	}
 	else
 		NS_ASSERTION(PR_FALSE, "Could not get preferences service");
@@ -401,42 +450,6 @@ nsresult CMfcEmbedApp::InitializePrefs()
     return rv;
 }
 
-nsresult CMfcEmbedApp::InitializeCachePrefs()
-{
-	const char * const CACHE_DIR_PREF   = "browser.cache.directory";
-	
-	nsresult rv;
-	NS_WITH_SERVICE(nsIPref, prefs, NS_PREF_CONTRACTID, &rv);
-	if (NS_FAILED(rv)) return rv;
-	
-	// See if we have a pref to a dir which exists
-    nsCOMPtr<nsILocalFile> prefDir;
-    rv = prefs->GetFileXPref(CACHE_DIR_PREF, getter_AddRefs(prefDir));
-    if (NS_SUCCEEDED(rv)) {
-        PRBool isDir;
-        rv = prefDir->IsDirectory(&isDir);
-        if (NS_SUCCEEDED(rv) && isDir)
-            return NS_OK;
-    }
-
-    // Set up the new pref
-    nsCOMPtr<nsIFile> profileDir;   
-    rv = NS_GetSpecialDirectory(NS_APP_USER_PROFILE_50_DIR, getter_AddRefs(profileDir));
-    NS_ASSERTION(profileDir, "NS_APP_USER_PROFILE_50_DIR is not defined");
-    if (NS_FAILED(rv)) return rv;
-
-    nsCOMPtr<nsILocalFile> cacheDir(do_QueryInterface(profileDir));
-    NS_ASSERTION(cacheDir, "Cannot get nsILocalFile from cache dir");
-
-    PRBool exists;
-    cacheDir->Append("Cache");
-    rv = cacheDir->Exists(&exists);
-    if (NS_SUCCEEDED(rv) && !exists)
-    rv = cacheDir->Create(nsIFile::DIRECTORY_TYPE, 0775);
-    if (NS_FAILED(rv)) return rv;
-
-    return prefs->SetFileXPref(CACHE_DIR_PREF, cacheDir);
-}
 
 /* InitializeWindowCreator creates and hands off an object with a callback
    to a window creation function. This will be used by Gecko C++ code
@@ -505,10 +518,6 @@ NS_IMETHODIMP CMfcEmbedApp::Observe(nsISupports *aSubject, const PRUnichar *aTop
 				pBrowserFrame->DestroyWindow();
 		    }
 	    }
-
-        NS_WITH_SERVICE(nsINetDataCacheManager, cacheMgr, NS_NETWORK_CACHE_MANAGER_CONTRACTID, &rv);
-        if (NS_SUCCEEDED(rv))
-          cacheMgr->Clear(nsINetDataCacheManager::MEM_CACHE);
     }
     else if (nsCRT::strcmp(aTopic, NS_LITERAL_STRING("profile-after-change").get()) == 0)
     {

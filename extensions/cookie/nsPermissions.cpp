@@ -28,13 +28,13 @@
 #include "nsUtils.h"
 #include "nsXPIDLString.h"
 #include "nsIFileSpec.h"
-#include "nsINetSupportDialogService.h"
+#include "nsIPrompt.h"
+#include "nsIWindowWatcher.h"
 #include "nsVoidArray.h"
 #include "xp_core.h"
 #include "prmem.h"
 #include "nsAppDirectoryServiceDefs.h"
 
-static NS_DEFINE_CID(kNetSupportDialogCID, NS_NETSUPPORTDIALOG_CID);
 static const char *kCookiesPermFileName = "cookperm.txt";
 
 typedef struct _permission_HostStruct {
@@ -62,8 +62,11 @@ permission_CheckConfirmYN(nsIPrompt *aPrompter, PRUnichar * szMessage, PRUnichar
 
   if (aPrompter)
     dialog = aPrompter;
-  else
-    dialog = do_GetService(kNetSupportDialogCID);
+  else {
+    nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
+    if (wwatch)
+      wwatch->GetNewPrompter(0, getter_AddRefs(dialog));
+  }
   if (!dialog) {
     *checkValue = 0;
     return PR_FALSE;
@@ -74,7 +77,6 @@ permission_CheckConfirmYN(nsIPrompt *aPrompter, PRUnichar * szMessage, PRUnichar
   PRUnichar * no_string = CKutil_Localize(NS_LITERAL_STRING("No").get());
   PRUnichar * confirm_string = CKutil_Localize(NS_LITERAL_STRING("Confirm").get());
 
-  nsAutoString tempStr; tempStr.AssignWithConversion("chrome://global/skin/question-icon.gif");
   res = dialog->UniversalDialog(
     NULL, /* title message */
     confirm_string, /* title text in top line of window */
@@ -88,7 +90,7 @@ permission_CheckConfirmYN(nsIPrompt *aPrompter, PRUnichar * szMessage, PRUnichar
     NULL, /* second edit field label */
     NULL, /* first edit field initial and final value */
     NULL, /* second edit field initial and final value */
-    tempStr.GetUnicode() ,
+    NS_LITERAL_STRING("question-icon").get(),
     checkValue, /* initial and final value of checkbox */
     2, /* number of buttons */
     0, /* number of edit fields */
@@ -377,9 +379,13 @@ Permission_Save() {
     return;
   }
 
-  strm.write("# HTTP Permission File\n", 30); 
-  strm.write("# http://www.netscape.com/newsref/std/cookie_spec.html\n", 55);
-  strm.write("# This is a generated file!  Do not edit.\n\n", 43);
+#define PERMISSIONFILE_LINE1 "# HTTP Permission File\n"
+#define PERMISSIONFILE_LINE2 "# http://www.netscape.com/newsref/std/cookie_spec.html\n"
+#define PERMISSIONFILE_LINE3 "# This is a generated file!  Do not edit.\n\n"
+
+  strm.write(PERMISSIONFILE_LINE1, PL_strlen(PERMISSIONFILE_LINE1));
+  strm.write(PERMISSIONFILE_LINE2, PL_strlen(PERMISSIONFILE_LINE2));
+  strm.write(PERMISSIONFILE_LINE3, PL_strlen(PERMISSIONFILE_LINE3));
 
   /* format shall be:
    * host \t permission \t permission ... \n
@@ -457,8 +463,8 @@ PERMISSION_Read() {
   while(CKutil_GetLine(strm,buffer) != -1) {
     if ( !buffer.IsEmpty() ) {
       PRUnichar firstChar = buffer.CharAt(0);
-      if (firstChar == '#' || firstChar == CR ||
-          firstChar == LF || firstChar == 0) {
+      if (firstChar == '#' || firstChar == nsCRT::CR ||
+          firstChar == nsCRT::LF || firstChar == 0) {
         continue;
       }
     }
@@ -551,9 +557,12 @@ PERMISSION_TypeCount(PRInt32 host) {
   return hostStruct->permissionList->Count();
 }
 
-PUBLIC void
+PUBLIC nsresult
 PERMISSION_Enumerate
     (PRInt32 hostNumber, PRInt32 typeNumber, char **host, PRInt32 *type, PRBool *capability) {
+  if (hostNumber > PERMISSION_HostCount()  || typeNumber > PERMISSION_TypeCount(hostNumber)) {
+    return NS_ERROR_FAILURE;
+  }
   permission_HostStruct *hostStruct;
   permission_TypeStruct * typeStruct;
 
@@ -567,6 +576,7 @@ PERMISSION_Enumerate
     (permission_TypeStruct*, hostStruct->permissionList->ElementAt(typeNumber));
   *capability = typeStruct->permission;
   *type = typeStruct->type;
+  return NS_OK;
 }
 
 PRIVATE void

@@ -22,7 +22,7 @@
      Peter Annema <disttsc@bart.nl>
   -->
 <?xml-stylesheet href="chrome://communicator/skin/" type="text/css"?>
-<?xul-overlay href="chrome://global/content/dialogOverlay.xul"?>
+<?xml-stylesheet href="chrome://communicator/skin/dialogOverlay.css" type="text/css"?>
 
 <!DOCTYPE window [
 <!ENTITY % brandDTD SYSTEM "chrome://global/locale/brand.dtd" >
@@ -31,10 +31,10 @@
 %prefImagesDTD;
 ]>
 
-<window debug="false" xmlns:html="http://www.w3.org/1999/xhtml" id="imagesWindow"
+<window xmlns:html="http://www.w3.org/1999/xhtml" id="imagesWindow"
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         class="color-dialog"
-        align="vertical"
+        orient="vertical"
         onload="init();">
           
   <script type="application/x-javascript" src="chrome://cookie/content/cookieOverlay.js"/>
@@ -64,7 +64,10 @@
 
   function setWarnAboutImagesEnabled(aEnabled)
   {
-    document.getElementById("networkImageWarnAboutImages").disabled = !aEnabled;
+    var warnCheckbox = document.getElementById("networkImageWarnAboutImages");
+    warnCheckbox.disabled = !aEnabled;
+    if (parent.hPrefWindow.getPrefIsLocked(warnCheckbox.getAttribute("prefstring")) )
+      warnCheckbox.disabled = true;
   }
  
   ]]>
@@ -108,7 +111,9 @@
     <box autostretch="never" halign="right">
       <button class="dialog" id="viewImages" label="&viewImages.label;"
               accesskey="&viewImages.accesskey;" oncommand="viewImages();"
-              observes="haveImageBlocking"/>
+              observes="haveImageBlocking"
+              pref="true" preftype="bool"
+              prefstring="pref.advanced.images.disable_button.view_image" prefattribute="disabled"/>
     </box>
 
   </titledbox>

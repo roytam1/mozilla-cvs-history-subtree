@@ -79,7 +79,7 @@ function Startup()
     }
     try {
       var tab = window.arguments[0];
-      var element2 = document.getElementById("tabcontrol");
+      var element2 = document.getElementById("tabcontrols");
       if (tab == "0") {
         element = document.getElementById("cookiesTab");
         element2.selectedTab = element;
@@ -233,7 +233,10 @@ function ViewCookieSelected( e )
               : bundle.GetStringFromName("AtEndOfSession");
     } else {
       field = document.getElementById(rows[i]);
-      value = ( !selItemsMax ) ? props[i] : "";  // multiple selections clear fields.
+      value = props[i];
+    }
+    if (selItemsMax && rows[i] != "ifl_isDomain") {
+      value = ""; // clear field if multiple selections
     }
     field.setAttribute("value", value);
     if(rows[i] == "ifl_expires") break;
@@ -245,21 +248,28 @@ function ViewCookieSelected( e )
 // purpose  : deletes all the cookies that are selected
 function DeleteCookieSelected() {
   // delete selected item
-  deleted_cookies_count += document.getElementById("cookietree").selectedItems.length;
+  var cookietree = document.getElementById("cookietree");
+  deleted_cookies_count += cookietree.selectedItems.length;
+  var newIndex = cookietree.selectedIndex;
   gone_c += DeleteItemSelected("cookietree", "cookietree_", "cookieList");
   // set fields
   var rows = ["ifl_name","ifl_value","ifl_host","ifl_path","ifl_isSecure","ifl_expires"];
   for(var k = 0; k < rows.length; k++) 
   {
     var row = document.getElementById(rows[k]);
-    row.setAttribute("label","");
+    row.setAttribute("value","");
   }
-  if( !document.getElementById("cookietree").selectedItems.length ) {
+  var netCookieCount = cookies.length - deleted_cookies_count;
+  if (netCookieCount) {
+    cookietree.selectedIndex =
+      (newIndex < netCookieCount) ? newIndex : netCookieCount-1;
+  }
+  if( !cookietree.selectedItems.length ) {
     if( !document.getElementById("removeCookies").disabled ) {
       document.getElementById("removeCookies").setAttribute("disabled", "true")
     }
   }
-  if (deleted_cookies_count >= cookies.length) {
+  if (netCookieCount <= 0) {
     document.getElementById("removeAllCookies").setAttribute("disabled","true");
   }
 }
@@ -274,7 +284,7 @@ function DeleteAllCookies() {
   for(var k = 0; k < rows.length; k++) 
   {
     var row = document.getElementById(rows[k]);
-    row.setAttribute("label","");
+    row.setAttribute("value","");
   }
   if( !document.getElementById("removeCookies").disabled ) {
     document.getElementById("removeCookies").setAttribute("disabled", "true")
@@ -346,24 +356,21 @@ function loadPermissions()
     if(host.charAt(0) == ".") {  // get rid of the ugly dot on the start of some domains
       host = host.substring(1,host.length);
     }
-    if(capability) {
-      contentStr = bundle.GetStringFromName("can");
-    } else {
-      contentStr = bundle.GetStringFromName("cannot");    
-    }
     if (type == cookieType) {
+      contentStr = bundle.GetStringFromName(capability ? "can" : "cannot");
       AddPermissionToList(cookie_permissions_count, host, type, capability);
       AddItem("cookiePermList", [host, contentStr], "cookiepermtree_", cookie_permissions_count++);
+      if (cookie_permissions_count == 0) {
+        document.getElementById("removeAllPermissions").setAttribute("disabled","true");
+      }
     } else if (type == imageType) {
+      contentStr = bundle.GetStringFromName(capability ? "canImages" : "cannotImages");
       AddPermissionToList(image_permissions_count, host, type, capability);
       AddItem("imagePermList", [host, contentStr], "imagepermtree_", image_permissions_count++);
+      if (image_permissions_count == 0) {
+        document.getElementById("removeAllImages").setAttribute("disabled","true");
+      }
     }
-  }
-  if (cookie_permissions_count == 0) {
-    document.getElementById("removeAllPermissions").setAttribute("disabled","true");
-  }
-  if (image_permissions_count == 0) {
-    document.getElementById("removeAllImages").setAttribute("disabled","true");
   }
 }
 
@@ -376,15 +383,22 @@ function ViewCookiePermissionSelected()
 
 function DeleteCookiePermissionSelected()
 {
-  deleted_cookie_permissions_count +=
-    document.getElementById("cookiepermissionstree").selectedItems.length;
+  var cookiepermissiontree = document.getElementById("cookiepermissionstree");
+  deleted_cookie_permissions_count += cookiepermissiontree.selectedItems.length;
+  var newIndex = cookiepermissiontree.selectedIndex;
   gone_p += DeleteItemSelected('cookiepermissionstree', 'cookiepermtree_', 'cookiePermList');
-  if( !document.getElementById("cookiepermissionstree").selectedItems.length ) {
+  var netCookiePermissionCount =
+    cookie_permissions_count - deleted_cookie_permissions_count;
+  if (netCookiePermissionCount) {
+    cookiepermissiontree.selectedIndex =
+      (newIndex < netCookiePermissionCount) ? newIndex : netCookiePermissionCount-1;
+  }
+  if( !cookiepermissiontree.selectedItems.length ) {
     if( !document.getElementById("removePermissions").disabled ) {
       document.getElementById("removePermissions").setAttribute("disabled", "true")
     }
   }
-  if (deleted_cookie_permissions_count >= cookie_permissions_count) {
+  if (netCookiePermissionCount <= 0) {
     document.getElementById("removeAllPermissions").setAttribute("disabled","true");
   }
 }
@@ -409,15 +423,22 @@ function ViewImagePermissionSelected()
 
 function DeleteImagePermissionSelected()
 {
-  deleted_image_permissions_count
-    += document.getElementById("imagepermissionstree").selectedItems.length;
+  var imagepermissiontree = document.getElementById("imagepermissionstree");
+  deleted_image_permissions_count += imagepermissiontree.selectedItems.length;
+  var newIndex = imagepermissiontree.selectedIndex;
   gone_i += DeleteItemSelected('imagepermissionstree', 'imagepermtree_', 'imagePermList');
-  if( !document.getElementById("imagepermissionstree").selectedItems.length ) {
+  var netImagePermissionCount =
+    image_permissions_count - deleted_image_permissions_count;
+  if (netImagePermissionCount) {
+    imagepermissiontree.selectedIndex =
+      (newIndex < netImagePermissionCount) ? newIndex : netImagePermissionCount-1;
+  }
+  if( !imagepermissiontree.selectedItems.length ) {
     if( !document.getElementById("removeImages").disabled ) {
       document.getElementById("removeImages").setAttribute("disabled", "true")
     }
   }
-  if (deleted_image_permissions_count >= image_permissions_count) {
+  if (netImagePermissionCount <= 0) {
     document.getElementById("removeAllImages").setAttribute("disabled","true");
   }
 }

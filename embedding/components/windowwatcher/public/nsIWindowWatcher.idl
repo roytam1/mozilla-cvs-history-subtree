@@ -49,7 +49,10 @@ and that windows remove themselves from the service when they are closed.
 
 interface nsIDOMWindow;
 interface nsIObserver;
+interface nsIPrompt;
+interface nsIAuthPrompt;
 interface nsISimpleEnumerator;
+interface nsIWebBrowserChrome;
 interface nsIWindowCreator;
 
 [scriptable, uuid(002286a8-494b-43b3-8ddd-49e3fc50622b)]
@@ -105,6 +108,20 @@ interface nsIWindowWatcher : nsISupports {
 
   nsISimpleEnumerator getWindowEnumerator();
 
+  /** Return a newly created nsIPrompt implementation.
+      @param aParent the parent window used for posing alerts. can be null.
+      @return a new nsIPrompt object
+  */
+
+  nsIPrompt getNewPrompter(in nsIDOMWindow aParent);
+
+  /** Return a newly created nsIAuthPrompt implementation.
+      @param aParent the parent window used for posing alerts. can be null.
+      @return a new nsIAuthPrompt object
+  */
+
+  nsIAuthPrompt getNewAuthPrompter(in nsIDOMWindow aParent);
+
   /** Set the window creator callback. It must be filled in by the app.
       openWindow will use it to create new windows.
       @param creator the callback. if null, the callback will be cleared
@@ -112,6 +129,16 @@ interface nsIWindowWatcher : nsISupports {
   */
   void setWindowCreator(in nsIWindowCreator creator);
 
+
+  /** Retrieve the chrome window mapped to the given DOM window. Window
+      Watcher keeps a list of all top-level DOM windows currently open,
+      along with their corresponding chrome interfaces. Since DOM Windows
+      lack a (public) means of retrieving their corresponding chrome,
+      this method will do that.
+      @param aWindow the DOM window whose chrome window the caller needs
+      @return the corresponding chrome window
+  */
+  nsIWebBrowserChrome getChromeForWindow(in nsIDOMWindow aWindow);
 
   /** The Watcher serves as a global storage facility for the current active
       (frontmost non-floating-palette-type) window, storing and returning

@@ -32,11 +32,11 @@
  * @version $Revision$ $Date$
 **/
 
-#include "TxString.h"
-#include "baseutils.h"
-
 #ifndef TRANSFRMX_STRINGLIST_H
 #define TRANSFRMX_STRINGLIST_H
+
+#include "TxString.h"
+#include "baseutils.h"
 
 class StringList {
    friend class StringListIterator;
