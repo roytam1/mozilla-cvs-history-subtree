@@ -74,6 +74,7 @@ DIRS =                         \
   expat                        \
   gfx                          \
   gfx2                         \
+  modules\libpr0n              \
   modules\plugin               \
   uriloader                    \
   htmlparser                   \
