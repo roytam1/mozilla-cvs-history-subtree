@@ -2090,7 +2090,9 @@ si_SaveSignonDataLocked(PRBool fullSave) {
 
   nsAutoString buffer;
   buffer = "";
-  saveCountP += 16; /* preserve low order four bits which designate the file type */
+  if (fullSave2) {
+    saveCountP += 16; /* preserve low order four bits which designate the file type */
+  }
   buffer.Append(PRInt32(saveCountP),10);
   si_WriteLine(strmu, strmp, buffer, PR_FALSE, fullSave2, 0, 0, PR_TRUE);
   si_WriteLine(strmu, strmp, buffer, PR_FALSE, fullSave2, 0, 0, PR_TRUE);
