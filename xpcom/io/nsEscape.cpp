@@ -348,23 +348,6 @@ const int EscapeChars[256] =
    esc_Forced        =  1024
 */
 
-NS_COM nsresult nsStdEscape(const char* str, PRInt16 mask, nsCString &result)
-{
-    result.Truncate();
-    nsresult rv = NS_EscapeURL(str, -1, mask, result);
-    if (NS_SUCCEEDED(rv) && result.IsEmpty())
-        result = str;
-    return rv;
-}
-
-NS_COM nsresult nsStdUnescape(char *str, char **result)
-{
-    *result = nsCRT::strdup(str);
-    if (!*result)
-        return NS_ERROR_OUT_OF_MEMORY;
-    nsUnescape(*result);
-    return NS_OK;
-}
 
 NS_COM PRBool NS_EscapeURL(const char *part,
                            PRInt32 partLen,

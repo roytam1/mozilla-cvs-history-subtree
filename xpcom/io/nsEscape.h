@@ -85,12 +85,6 @@ nsEscapeHTML2(const PRUnichar *aSourceBuffer,
   */
 
 
-/**
- * DEPRECATED API: use NS_EscapeURL/NS_UnescapeURL instead
- */
-NS_COM nsresult nsStdEscape(const char* str, PRInt16 mask, nsCString &result);
-NS_COM nsresult nsStdUnescape(char* str, char **result);
-
 #ifdef __cplusplus
 }
 #endif
