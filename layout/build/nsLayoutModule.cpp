@@ -96,7 +96,6 @@
 #include "nsIRangeUtils.h"
 #include "nsIScriptNameSpaceManager.h"
 #include "nsISelection.h"
-#include "nsITextContent.h"
 #include "nsIXBLService.h"
 #include "nsIFrameLoader.h"
 #include "nsICaret.h"
@@ -544,7 +543,6 @@ MAKE_CTOR(CreateSVGDocument,              nsIDocument,                 NS_NewSVG
 MAKE_CTOR(CreateImageDocument,            nsIDocument,                 NS_NewImageDocument)
 MAKE_CTOR(CreateCSSParser,                nsICSSParser,                NS_NewCSSParser)
 MAKE_CTOR(CreateCSSLoader,                nsICSSLoader,                NS_NewCSSLoader)
-MAKE_CTOR(CreateTextNode,                 nsITextContent,              NS_NewTextNode)
 MAKE_CTOR(CreateDOMSelection,             nsISelection,                NS_NewDomSelection)
 MAKE_CTOR(CreateSelection,                nsIFrameSelection,           NS_NewSelection)
 MAKE_CTOR(CreateRange,                    nsIDOMRange,                 NS_NewRange)
@@ -956,11 +954,6 @@ static const nsModuleComponentInfo gComponents[] = {
     NS_CSS_LOADER_CID,
     nsnull,
     CreateCSSLoader },
-
-  { "Text element",
-    NS_TEXTNODE_CID,
-    nsnull,
-    CreateTextNode },
 
   { "Dom selection",
     NS_DOMSELECTION_CID,

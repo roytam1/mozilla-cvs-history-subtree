@@ -111,7 +111,7 @@ nsXTFElementWrapper::SetDocument(nsIDocument* aDocument, PRBool aDeep,
   // make sure that we only route notifications if the document has
   // actually changed.
   bool docReallyChanged = false;
-  if (aDocument!=mDocument) docReallyChanged = true;
+  if (aDocument!=GetCurrentDoc()) docReallyChanged = true;
 
   if (docReallyChanged &&
       (mNotificationMask & nsIXTFElement::NOTIFY_WILL_CHANGE_DOCUMENT))
@@ -468,11 +468,12 @@ nsXTFElementWrapper::GetDocumentFrameElement(nsIDOMElement * *aDocumentFrameElem
 {
   *aDocumentFrameElement = nsnull;
   
-  if (!mDocument) {
+  nsIDocument *doc = GetCurrentDoc();
+  if (!doc) {
     NS_WARNING("no document");
     return NS_OK;
   }
-  nsCOMPtr<nsISupports> container = mDocument->GetContainer();
+  nsCOMPtr<nsISupports> container = doc->GetContainer();
   if (!container) {
     NS_ERROR("no docshell");
     return NS_ERROR_FAILURE;

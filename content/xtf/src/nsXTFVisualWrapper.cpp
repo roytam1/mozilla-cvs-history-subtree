@@ -65,7 +65,8 @@ NS_IMETHODIMP
 nsXTFVisualWrapper::CreateAnonymousContent(nsPresContext* aPresContext,
                                            nsISupportsArray& aAnonymousItems)
 {
-  NS_ASSERTION(mDocument, "no document; cannot create anonymous content");
+  nsIDocument *doc = GetCurrentDoc();
+  NS_ASSERTION(doc, "no document; cannot create anonymous content");
 
   if (!mVisualContent) {
     CreateVisualContent(getter_AddRefs(mVisualContent));
@@ -74,7 +75,7 @@ nsXTFVisualWrapper::CreateAnonymousContent(nsPresContext* aPresContext,
   
   // Check if we are creating content for the primary presShell
   bool isPrimaryShell =
-    (aPresContext->PresShell() == mDocument->GetShellAt(0));
+    (aPresContext->PresShell() == doc->GetShellAt(0));
 
   nsCOMPtr<nsIDOMNode> contentToAppend;
   if (!isPrimaryShell) {
