@@ -56,7 +56,7 @@
 #include "nsCOMPtr.h"
 #include "nsIURI.h"
 #include "nsXPIDLString.h"
-#include "nsIHTTPChannel.h"
+#include "nsIHttpChannel.h"
 #include "nsIServiceManager.h"
 #include "nsICharsetAlias.h"
 #include "nsIPref.h"
@@ -217,8 +217,8 @@ nsXMLDocument::QueryInterface(REFNSIID aIID,
     inst = NS_STATIC_CAST(nsIHTMLContentContainer *, this);
   } else if (aIID.Equals(NS_GET_IID(nsIInterfaceRequestor))) {
     inst = NS_STATIC_CAST(nsIInterfaceRequestor *, this);
-  } else if (aIID.Equals(NS_GET_IID(nsIHTTPEventSink))) {
-    inst = NS_STATIC_CAST(nsIHTTPEventSink *, this);
+  } else if (aIID.Equals(NS_GET_IID(nsIHttpEventSink))) {
+    inst = NS_STATIC_CAST(nsIHttpEventSink *, this);
   } else {
     return nsDocument::QueryInterface(aIID, aInstancePtr);
   }
@@ -284,15 +284,9 @@ nsXMLDocument::GetInterface(const nsIID& aIID, void** aSink)
 }
 
 
-// nsIHTTPEventSink
+// nsIHttpEventSink
 NS_IMETHODIMP
-nsXMLDocument::OnHeadersAvailable(nsISupports *aContext)
-{
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsXMLDocument::OnRedirect(nsISupports *aContext, nsIURI *aNewLocation)
+nsXMLDocument::OnRedirect(nsIHttpChannel *httpChannel, nsIChannel *newChannel)
 {
   nsresult rv;
 
@@ -302,10 +296,14 @@ nsXMLDocument::OnRedirect(nsISupports *aContext, nsIURI *aNewLocation)
   if (NS_FAILED(rv))
     return NS_ERROR_FAILURE;
 
-  nsCOMPtr<nsIPrincipal> newCodebase;
-  rv = securityManager->GetCodebasePrincipal(aNewLocation,
-                                             getter_AddRefs(newCodebase));
+  nsCOMPtr<nsIURI> newLocation;
+  rv = newChannel->GetURI(getter_AddRefs(newLocation));
+  if (NS_FAILED(rv))
+    return NS_ERROR_FAILURE;
 
+  nsCOMPtr<nsIPrincipal> newCodebase;
+  rv = securityManager->GetCodebasePrincipal(newLocation,
+                                             getter_AddRefs(newCodebase));
   if (NS_FAILED(rv))
     return NS_ERROR_FAILURE;
 
@@ -318,6 +316,32 @@ nsXMLDocument::OnRedirect(nsISupports *aContext, nsIURI *aNewLocation)
   rv = agg->SetCodebase(newCodebase);
 
   return rv;
+}
+
+NS_IMETHODIMP
+nsXMLDocument::OnAuthenticate(nsIHttpChannel *httpChannel,
+                              const char *host,
+                              PRInt32 port,
+                              PRBool isProxy,
+                              const char *realm,
+                              char **username,
+                              char **password)
+{
+  NS_NOTREACHED("not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsXMLDocument::OnAuthenticationFailed(nsIHttpChannel *httpChannel,
+                                      const char *host,
+                                      PRInt32 port,
+                                      PRBool isProxy,
+                                      const char *realm,
+                                      const char *username,
+                                      const char *password)
+{
+  NS_NOTREACHED("not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
@@ -410,14 +434,12 @@ nsXMLDocument::StartDocumentLoad(const char* aCommand,
     aContentType = nsnull;
   }
 
-  nsCOMPtr<nsIHTTPChannel> httpChannel = do_QueryInterface(aChannel);
+  nsCOMPtr<nsIHttpChannel> httpChannel = do_QueryInterface(aChannel);
   if(httpChannel) {
-     nsIAtom* contentTypeKey = NS_NewAtom("content-type");
      nsXPIDLCString contenttypeheader;
-     rv = httpChannel->GetResponseHeader(contentTypeKey, getter_Copies(contenttypeheader));
+     rv = httpChannel->GetResponseHeader("content-type", getter_Copies(contenttypeheader));
 
 
-     NS_RELEASE(contentTypeKey);
      if (NS_SUCCEEDED(rv)) {
 	nsAutoString contentType;
 	contentType.AssignWithConversion( NS_STATIC_CAST(const char*, contenttypeheader) );

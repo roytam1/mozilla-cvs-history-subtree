@@ -27,7 +27,7 @@
 #include "nsIXMLDocument.h"
 #include "nsIHTMLContentContainer.h"
 #include "nsIInterfaceRequestor.h"
-#include "nsIHTTPEventSink.h"
+#include "nsIHttpEventSink.h"
 
 class nsIParser;
 class nsIDOMNode;
@@ -38,7 +38,7 @@ class nsXMLDocument : public nsMarkupDocument,
                       public nsIXMLDocument,
                       public nsIHTMLContentContainer,
                       public nsIInterfaceRequestor,
-                      public nsIHTTPEventSink
+                      public nsIHttpEventSink
 {
 public:
   nsXMLDocument();
@@ -98,8 +98,7 @@ public:
   NS_IMETHOD GetInterface(const nsIID& aIID, void** aSink);
 
   // nsIHTTPEventSink
-  NS_IMETHOD OnHeadersAvailable(nsISupports *aContext);
-  NS_IMETHOD OnRedirect(nsISupports *aContext, nsIURI *aNewLocation);
+  NS_DECL_NSIHTTPEVENTSINK
 
 protected:
   virtual void InternalAddStyleSheet(nsIStyleSheet* aSheet);  // subclass hook for sheet ordering
