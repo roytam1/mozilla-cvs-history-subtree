@@ -47,6 +47,8 @@
 #   MOZ_MAKE_FLAGS       - Flags to pass to $(MAKE)
 #
 
+CVS_CO_FLAGS := $(CVS_CO_FLAGS) -r nscp_beta1_BRANCH 
+
 CWD		:= $(shell pwd)
 ifneq (, $(wildcard client.mk))
 ROOTDIR		:= $(shell dirname $(CWD))
@@ -125,8 +127,6 @@ ifeq "$(origin MOZ_CO_FLAGS)" "undefined"
 else
   CVS_CO_FLAGS := $(MOZ_CO_FLAGS)
 endif
-
-  CVS_CO_FLAGS := $(CVS_CO_FLAGS) -r nscp_beta1_BRANCH 
 
 ifdef MOZ_CO_DATE
   CVS_CO_FLAGS := $(CVS_CO_FLAGS) -D "$(MOZ_CO_DATE)"
