@@ -54,11 +54,9 @@ NO_COMPONENT_LINK_MAP = 1
 MOZ_COMPONENTS_VERSION_SCRIPT_LDFLAGS =
 endif
 
-REQUIRES = \
-  ipcd \
-  nspr \
-  xpcom \
-  $(NULL)
+REQUIRES	= nspr \
+		  xpcom \
+		  $(NULL)
 
 CPPSRCS = \
   tmIPCModule.cpp \

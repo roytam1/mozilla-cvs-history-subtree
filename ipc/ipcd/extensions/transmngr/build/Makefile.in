@@ -48,12 +48,10 @@ EXPORT_LIBRARY = 1
 IS_COMPONENT = 1
 MODULE_NAME = transmngr
 
-REQUIRES = \
-  ipcd \
-  string \
-  transmngr \
-  xpcom \
-  $(NULL)
+REQUIRES	= ipcd \
+		  string \
+		  xpcom \
+		  $(NULL)
 
 CPPSRCS = tmModule.cpp
 EXPORTS = tmCID.h

@@ -47,11 +47,9 @@ LIBRARY_NAME = transmngr_s
 FORCE_STATIC_LIB = 1
 MODULE_NAME = ipcd
 
-REQUIRES = \
-  ipcd \
-  string \
-  xpcom \
-  $(NULL)
+REQUIRES	= string \
+		  xpcom \
+		  $(NULL)
 
 CPPSRCS = \
   tmTransactionService.cpp \

@@ -44,13 +44,11 @@ include $(DEPTH)/config/autoconf.mk
 
 MODULE = tm_test
 
-REQUIRES = \
-  ipcd \
-  nspr \
-  string \
-  transmngr \
-  xpcom \
-  $(NULL)
+REQUIRES	= ipcd \
+		  nspr \
+		  string \
+		  xpcom \
+		  $(NULL)
 
 CPPSRCS = \
   tmModuleTest.cpp \
