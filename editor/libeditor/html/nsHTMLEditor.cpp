@@ -362,10 +362,6 @@ NS_IMETHODIMP nsHTMLEditor::Init(nsIDOMDocument *aDoc,
 
   if (NS_FAILED(rulesRes)) return rulesRes;
 
-  result = AddOverrideStyleSheet(kBaseEditorStyleSheet);
-  if (NS_FAILED(result)) return result;
-  return AddOverrideStyleSheet(kNormalStyleSheet);
-
   return result;
 }
 
