@@ -47,7 +47,7 @@ include <$(DEPTH)\config\config.mak>
 
 DIRS =                         \
 !if "$(OS_TARGET)" == "WINCE"
-  tools\build\windows\a2ww2a   \
+  tools\build\windows          \
 !endif
   config                       \
   include                      \

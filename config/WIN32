@@ -166,10 +166,16 @@ RTL_FLAGS=-MDd         # Dynamically linked, multithreaded MSVC4.0 debug RTL
 #//
 #//------------------------------------------------------------------------
 !if "$(OS_TARGET)" == "WINCE"
+#
+#   Note that the shunt.h include is forced, and should be built/exported
+#       as the very first build step for WinCE to address missing api
+#       considerations.
+#
 OS_CFLAGS=$(OPTIMIZER) $(RTL_FLAGS) -W3 -nologo -D_$(TARGETCPU)_ -D_WINDOWS  -DWIN32 \
             -DXP_PC -DXP_WIN -DXP_WIN32 -DHW_THREADS -DWINVER=0x400 -Gy \
             -DWINCE -DUNICODE -D_UNICODE -DUNDER_CE=300 -D_WIN32_WCE=300 \
-            -DMSVC4
+            -DMSVC4 \
+            -FI$(XPDIST)\include\shunt\shunt.h
 
 !if "$(TARGETCPU)" == "X86"
 OS_CFLAGS=$(OS_CFLAGS) -Dx86 -D_WIN32_WCE_CEPC

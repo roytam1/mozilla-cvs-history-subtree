@@ -112,11 +112,7 @@
 #define XP_FREEIF(x)        if ((x)) free((x))
 #define XP_STRCMP(x,y)      strcmp((x),(y))
 #define XP_STRNCMP(x,y,n)   strncmp((x),(y),(n))
-#if !defined(WINCE)
 #define XP_STRDUP(s)        strdup((s))
-#else
-#define XP_STRDUP(s)        _strdup((s))
-#endif
 #define XP_MEMCPY(d, s, l)  memcpy((d), (s), (l))
 #define XP_MEMSET(d, c, l)  memset((d), (c), (l))
 

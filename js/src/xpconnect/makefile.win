@@ -39,7 +39,9 @@ DIRS=public idl src \
      tests \
 !endif
 !if !defined(MOZ_STATIC_COMPONENT_LIBS)
+!if "$(OS_TARGET)" != "WINCE"
      shell \
+!endif
 !endif
     loader \
 !if defined(XPC_TOOLS_SUPPORT)

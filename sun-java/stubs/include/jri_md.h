@@ -42,7 +42,9 @@
 #ifndef JRI_MD_H
 #define JRI_MD_H
 
+#if !defined(WINCE)
 #include <assert.h>
+#endif
 #include "prtypes.h" /* Needed for HAS_LONG_LONG ifdefs */
 
 #ifdef __cplusplus

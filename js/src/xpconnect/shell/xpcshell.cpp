@@ -57,6 +57,7 @@
 
 // all this crap is needed to do the interactive shell stuff
 #include <stdlib.h>
+#if !defined(WINCE)
 #include <errno.h>
 #ifdef XP_PC
 #include <io.h>     /* for isatty() */
@@ -66,6 +67,7 @@
 #include <unistd.h>
 #include <unix.h>
 #endif
+#endif /* !WINCE */
 #include "jsparse.h"
 #include "jsscan.h"
 #include "jsemit.h"
@@ -448,7 +450,13 @@ Process(JSContext *cx, JSObject *obj, char *filename, FILE *filehandle)
         if (!fh) {
             JS_ReportErrorNumber(cx, my_GetErrorMessage, NULL,
                             JSSMSG_CANT_OPEN,
-                            filename, strerror(errno));
+                            filename,
+#if !defined(WINCE)
+                            strerror(errno)
+#else
+                            "fopen failed"
+#endif
+                            );
             gExitCode = EXITCODE_FILE_NOT_FOUND;
             return;
         }
@@ -456,7 +464,12 @@ Process(JSContext *cx, JSObject *obj, char *filename, FILE *filehandle)
         fh = filehandle;
     }
 
-    if (!isatty(fileno(fh))) {
+#if !defined(WINCE)
+    if (!isatty(fileno(fh)))
+#else
+    if (1)
+#endif
+    {
         /*
          * It's not interactive - just execute it.
          *
