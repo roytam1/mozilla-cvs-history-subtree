@@ -48,13 +48,12 @@
 #include "nsISupportsArray.h"
 #include "nsIURI.h"
 #include "nsIWordBreakerFactory.h"
-#include "nsIXULChildDocument.h"
 #include "nsIXULDocument.h"
-#include "nsIXULParentDocument.h"
 #include "nsIXULPrototypeDocument.h"
 #include "nsRDFDOMNodeList.h"
 #include "nsVoidArray.h"
 #include "nsWeakPtr.h"
+#include "nsWeakReference.h"
 
 class nsIAtom;
 class nsIHTMLElementFactory;
@@ -81,8 +80,7 @@ class nsXULDocument : public nsIDocument,
                       public nsIJSScriptObject,
                       public nsIScriptObjectOwner,
                       public nsIHTMLContentContainer,
-                      public nsIXULParentDocument,
-                      public nsIXULChildDocument
+                      public nsSupportsWeakReference
 {
 public:
     nsXULDocument();
@@ -278,8 +276,6 @@ public:
                                    nsIPrincipal* aPrincipal,
                                    nsIContentViewerContainer* aContainer);
 
-    NS_IMETHOD GetPrototype(nsIXULPrototypeDocument** aResult);
-
     // nsIStreamLoadableDocument interface
     NS_IMETHOD LoadFromStream(nsIInputStream& xulStream,
                               nsIContentViewerContainer* aContainer,
@@ -326,14 +322,6 @@ public:
     // nsIDOMXULDocument interface
     NS_DECL_IDOMXULDOCUMENT
                    
-    // nsIXULParentDocument interface
-    NS_IMETHOD    GetContentViewerContainer(nsIContentViewerContainer** aContainer);
-    NS_IMETHOD    GetCommand(nsString& aCommand);
-    
-    // nsIXULChildDocument Interface
-    NS_IMETHOD    SetContentSink(nsIXULContentSink* aContentSink);
-    NS_IMETHOD    GetContentSink(nsIXULContentSink** aContentSink);
-
     // nsIDOMNode interface
     NS_IMETHOD    GetNodeName(nsString& aNodeName);
     NS_IMETHOD    GetNodeValue(nsString& aNodeValue);
@@ -424,10 +412,16 @@ protected:
                            nsIAtom* aTag,
                            nsIContent** aResult);
 
-    nsresult PrepareToLoad(nsCOMPtr<nsIParser>* created_parser,
-                           nsIContentViewerContainer* aContainer,
+    nsresult PrepareToLoad(nsIContentViewerContainer* aContainer,
                            const char* aCommand,
-                           nsIChannel* aChannel, nsILoadGroup* aLoadGroup);
+                           nsIChannel* aChannel,
+                           nsILoadGroup* aLoadGroup,
+                           nsIParser** aResult);
+
+    nsresult
+    PrepareToLoadPrototype(nsIURI* aURI,
+                           const char* aCommand,
+                           nsIParser** aResult);
 
     nsresult ApplyPersistentAttributes();
     nsresult ApplyPersistentAttributesToElements(nsIRDFResource* aResource, nsISupportsArray* aElements);
@@ -513,7 +507,6 @@ protected:
     nsCOMPtr<nsIWordBreaker>            mWordBreaker;    // [OWNER] 
     nsIContentViewerContainer* mContentViewerContainer;  // [WEAK] it owns me! (indirectly)
     nsString                   mCommand;
-    nsIXULContentSink*         mParentContentSink;     // [WEAK] 
     nsVoidArray                mSubDocuments;     // [OWNER] of subelements
     PRBool                     mIsPopup; 
     nsCOMPtr<nsIDOMHTMLFormElement>     mHiddenForm;   // [OWNER] of this content element
@@ -533,179 +526,169 @@ protected:
     nsCOMPtr<nsIDOMNode>    mPopupNode;            // [OWNER] element triggering the popup
     nsCOMPtr<nsIDOMNode>    mTooltipNode;          // [OWNER] element triggering the tooltip
 
-    /** 
-     * A helper class that builds the delegate content model from the
-     * prototype.
+    /**
+     * Context stack, which maintains the state of the Builder and allows
+     * it to be interrupted.
      */
-    class Builder {
+    class ContextStack {
     protected:
-        /**
-         * Context stack manager
-         */
-        class ContextStack {
-        protected:
-            struct Entry {
-                nsXULPrototypeElement* mPrototype;
-                nsIContent*            mElement;
-                PRInt32                mIndex;
-                Entry*                 mNext;
-            };
-
-            Entry* mTop;
-            PRInt32 mDepth;
-
-        public:
-            ContextStack();
-            ~ContextStack();
-
-            PRInt32 Depth() { return mDepth; }
-
-            nsresult Push(nsXULPrototypeElement* aPrototype, nsIContent* aElement);
-            nsresult Pop();
-            nsresult Peek(nsXULPrototypeElement** aPrototype, nsIContent** aElement, PRInt32* aIndex);
-
-            nsresult SetTopIndex(PRInt32 aIndex);
-
-            PRBool IsInsideXULTemplate();
+        struct Entry {
+            nsXULPrototypeElement* mPrototype;
+            nsIContent*            mElement;
+            PRInt32                mIndex;
+            Entry*                 mNext;
         };
 
-        ContextStack mContextStack;
-
-        nsXULDocument* mDocument;
-
-        enum State { eState_Master, eState_Overlay };
-        State mState;
-
-        /**
-         * An array of overlay nsIURIs that have yet to be resolved.
-         */
-        nsCOMPtr<nsISupportsArray> mOverlays;
-
-        /**
-         * Build the "real" content model from the prototype.
-         */
-        nsresult Build();
-
-        /**
-         * Load the transcluded script at the specified URI. If the
-         * prototype construction must 'block' until the load has
-         * completed, aBlock will be set to true.
-         */
-        nsresult LoadScript(nsIURI* aURI, PRBool* aBlock);
-
-        /**
-         * Evaluate the script text in aScript. aURL and aLineNo
-         * specify meta-information about the script in order to
-         * provide useful error messages.
-         */
-        nsresult EvaluateScript(nsIURI* aURL, const nsString& aScript, PRInt32 aLinenNo);
-
-        /**
-         * Create a delegate content model element from a prototype.
-         */
-        nsresult CreateElement(nsXULPrototypeElement* aPrototype, nsIContent** aResult);
-
-        /**
-         * Create a temporary 'overlay' element to which content nodes
-         * can be attached for later resolution.
-         */
-        nsresult CreateOverlayElement(nsXULPrototypeElement* aPrototype, nsIContent** aResult);
-
-        /**
-         * Add attributes from the prototype to the element.
-         */
-        nsresult AddAttributes(nsXULPrototypeElement* aPrototype, nsIContent* aElement);
-
-        /**
-         * Callback invoked when a transcluded script completes loading.
-         */
-        static nsresult
-        DoneLoadingScript(nsIUnicharStreamLoader* aLoader,
-                          nsString& aData,
-                          void* aRef,
-                          nsresult aStatus);
-
-        /**
-         * The URL of the current transcluded script that is being loaded
-         */
-        nsCOMPtr<nsIURI> mCurrentScriptURL;
-
-        /**
-         * Create a XUL template builder on the specified node.
-         * @return The template builder.
-         */
-        nsresult CreateTemplateBuilder(nsIContent* aElement,
-                                       const nsString& aDataSources,
-                                       nsCOMPtr<nsIRDFContentModelBuilder>* aResult);
-
-        /**
-         * Used to resolve broadcaster references
-         */
-        class BroadcasterHookup : public nsForwardReference
-        {
-        protected:
-            nsCOMPtr<nsIContent> mObservesElement;
-            PRBool mResolved;
-
-        public:
-            BroadcasterHookup(nsIContent* aObservesElement) :
-                mObservesElement(aObservesElement), mResolved(PR_FALSE) {}
-
-            virtual ~BroadcasterHookup();
-
-            virtual Priority GetPriority() { return ePriority_Hookup; }
-            virtual Result Resolve();
-        };
-
-        friend class BroadcasterHookup;
-
-
-        /**
-         * Used to hook up overlays
-         */
-        class OverlayForwardReference : public nsForwardReference
-        {
-        protected:
-            nsCOMPtr<nsIContent> mContent;
-            PRBool mResolved;
-
-            nsresult Merge(nsIContent* aOriginalNode, nsIContent* aOverlayNode);
-
-        public:
-            OverlayForwardReference(nsIContent* aElement)
-                : mContent(aElement), mResolved(PR_FALSE) {}
-
-            virtual ~OverlayForwardReference();
-
-            virtual Priority GetPriority() { return ePriority_Construction; }
-            virtual Result Resolve();
-        };
-
-        friend class OverlayForwardReference;
-
-
-        static
-        nsresult
-        InsertElement(nsIContent* aParent, nsIContent* aChild);
-
-        static
-        nsresult
-        ProcessCommonAttributes(nsIContent* aElement);
+        Entry* mTop;
+        PRInt32 mDepth;
 
     public:
-        Builder(nsXULDocument* aDocument);
-        ~Builder();
+        ContextStack();
+        ~ContextStack();
 
-        nsresult Start();
-        nsresult Stop();
+        PRInt32 Depth() { return mDepth; }
+
+        nsresult Push(nsXULPrototypeElement* aPrototype, nsIContent* aElement);
+        nsresult Pop();
+        nsresult Peek(nsXULPrototypeElement** aPrototype, nsIContent** aElement, PRInt32* aIndex);
+
+        nsresult SetTopIndex(PRInt32 aIndex);
+
+        PRBool IsInsideXULTemplate();
     };
 
-    friend class Builder;
-    friend class Builder::ContextStack;
-    friend class Builder::OverlayForwardReference;
-    friend class Builder::BroadcasterHookup;
+    friend class ContextStack;
+    ContextStack mContextStack;
 
-    nsCOMPtr<nsIXULPrototypeDocument> mPrototype;
+    enum State { eState_Master, eState_Overlay };
+    State mState;
+
+    /**
+     * An array of overlay nsIURIs that have yet to be resolved.
+     */
+    nsCOMPtr<nsISupportsArray> mOverlays;
+
+    /**
+     * Load the transcluded script at the specified URI. If the
+     * prototype construction must 'block' until the load has
+     * completed, aBlock will be set to true.
+     */
+    nsresult LoadScript(nsIURI* aURI, PRBool* aBlock);
+
+    /**
+     * Evaluate the script text in aScript. aURL and aLineNo
+     * specify meta-information about the script in order to
+     * provide useful error messages.
+     */
+    nsresult EvaluateScript(nsIURI* aURL, const nsString& aScript, PRInt32 aLinenNo);
+
+    /**
+     * Create a delegate content model element from a prototype.
+     */
+    nsresult CreateElement(nsXULPrototypeElement* aPrototype, nsIContent** aResult);
+
+    /**
+     * Create a temporary 'overlay' element to which content nodes
+     * can be attached for later resolution.
+     */
+    nsresult CreateOverlayElement(nsXULPrototypeElement* aPrototype, nsIContent** aResult);
+
+    /**
+     * Add attributes from the prototype to the element.
+     */
+    nsresult AddAttributes(nsXULPrototypeElement* aPrototype, nsIContent* aElement);
+
+    /**
+     * Callback invoked when a transcluded script completes loading.
+     */
+    static nsresult
+    DoneLoadingScript(nsIUnicharStreamLoader* aLoader,
+                      nsString& aData,
+                      void* aRef,
+                      nsresult aStatus);
+
+    /**
+     * The URL of the current transcluded script that is being loaded
+     */
+    nsCOMPtr<nsIURI> mCurrentScriptURL;
+
+    /**
+     * Create a XUL template builder on the specified node.
+     * @return The template builder.
+     */
+    nsresult CreateTemplateBuilder(nsIContent* aElement,
+                                   const nsString& aDataSources,
+                                   nsCOMPtr<nsIRDFContentModelBuilder>* aResult);
+
+    /**
+     * Used to resolve broadcaster references
+     */
+    class BroadcasterHookup : public nsForwardReference
+    {
+    protected:
+        nsCOMPtr<nsIContent> mObservesElement;
+        PRBool mResolved;
+
+    public:
+        BroadcasterHookup(nsIContent* aObservesElement) :
+            mObservesElement(aObservesElement), mResolved(PR_FALSE) {}
+
+        virtual ~BroadcasterHookup();
+
+        virtual Priority GetPriority() { return ePriority_Hookup; }
+        virtual Result Resolve();
+    };
+
+    friend class BroadcasterHookup;
+
+
+    /**
+     * Used to hook up overlays
+     */
+    class OverlayForwardReference : public nsForwardReference
+    {
+    protected:
+        nsCOMPtr<nsIContent> mContent;
+        PRBool mResolved;
+
+        nsresult Merge(nsIContent* aOriginalNode, nsIContent* aOverlayNode);
+
+    public:
+        OverlayForwardReference(nsIContent* aElement)
+            : mContent(aElement), mResolved(PR_FALSE) {}
+
+        virtual ~OverlayForwardReference();
+
+        virtual Priority GetPriority() { return ePriority_Construction; }
+        virtual Result Resolve();
+    };
+
+    friend class OverlayForwardReference;
+
+
+    static
+    nsresult
+    InsertElement(nsIContent* aParent, nsIContent* aChild);
+
+    static
+    nsresult
+    ProcessCommonAttributes(nsIContent* aElement);
+
+    /**
+     * The current prototype that we are walking to construct the
+     * content model.
+     */
+    nsCOMPtr<nsIXULPrototypeDocument> mCurrentPrototype;
+
+    /**
+     *
+     */
+    nsresult PrepareToWalk();
+
+    /**
+     *
+     */
+    nsresult ResumeWalk();
 };
 
 

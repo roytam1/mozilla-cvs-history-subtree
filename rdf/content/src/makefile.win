@@ -45,8 +45,6 @@ CPP_OBJS=\
         .\$(OBJDIR)\nsXULContentUtils.obj         \
         .\$(OBJDIR)\nsXULContentSink.obj          \
         .\$(OBJDIR)\nsXULDocument.obj             \
-        .\$(OBJDIR)\nsXULDocumentBuilder.obj      \
-        .\$(OBJDIR)\nsXULDocumentInfo.obj	  \
         .\$(OBJDIR)\nsXULKeyListener.obj          \
         .\$(OBJDIR)\nsXULSortService.obj          \
         .\$(OBJDIR)\nsXULTreeElement.obj          \
