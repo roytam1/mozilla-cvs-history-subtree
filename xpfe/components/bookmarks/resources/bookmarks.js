@@ -1397,16 +1397,17 @@ var BookmarksUtils = {
     if (aSelection.length == 0)
       return null;
     var dataSet = new TransferDataSet();
-    var data, item, parent, name;
+    var data, item, itemUrl, itemName, parent, name;
     for (var i=0; i<aSelection.length; ++i) {
-      data   = new TransferData();
-      item   = aSelection.item[i].Value;
-      parent = aSelection.parent[i].Value;
-      name   = BookmarksUtils.getProperty(item, "Name");
+      data     = new TransferData();
+      item     = aSelection.item[i].Value;
+      itemUrl  = this.getProperty(item, NC_NS+"URL");
+      itemName = this.getProperty(item, NC_NS+"Name");
+      parent   = aSelection.parent[i].Value;
       data.addDataForFlavour("moz/rdfitem",    item+"\n"+(parent?parent:""));
-      data.addDataForFlavour("text/x-moz-url", item+"\n"+name);
-      data.addDataForFlavour("text/html",      "<A HREF='"+item+"'>"+name+"</A>");
-      data.addDataForFlavour("text/unicode",   item);
+      data.addDataForFlavour("text/x-moz-url", itemUrl+"\n"+itemName);
+      data.addDataForFlavour("text/html",      "<A HREF='"+itemUrl+"'>"+itemName+"</A>");
+      data.addDataForFlavour("text/unicode",   itemUrl);
       dataSet.push(data);
     }
     return dataSet;
@@ -1443,13 +1444,9 @@ var BookmarksUtils = {
         break;
       case "text/x-moz-url":
       case "text/unicode":
-        if (!BMSVC.IsBookmarked(uri)) {
-          var charSet = aDragSession.sourceDocument ? 
-                        aDragSession.sourceDocument.characterSet : null;
-          rSource = BookmarksUtils.createBookmark(null, uri, charSet, extra);
-        } else {
-          rSource = RDF.GetResource(uri);
-        }
+        var charSet = aDragSession.sourceDocument ? 
+                      aDragSession.sourceDocument.characterSet : null;
+        rSource = BookmarksUtils.createBookmark(null, uri, charSet, extra);
         parent = null;
         break;
       }
