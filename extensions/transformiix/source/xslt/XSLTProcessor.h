@@ -343,6 +343,7 @@ private:
     void processTemplateParams(Node* xslTemplate, Node* context, ProcessorState* ps);
 
     void processTopLevel(Document* xslDocument, ProcessorState* ps);
+    void processTopLevel(Element* stylesheet, ProcessorState* ps);
 
     ExprResult* processVariable(Node* node, Element* xslVariable, ProcessorState* ps);
 

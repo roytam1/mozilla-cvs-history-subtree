@@ -355,7 +355,13 @@ void XSLTProcessor::processTopLevel
     //-------------------------------------------------------/
 
     Element* stylesheet = xslDocument->getDocumentElement();
+    processTopLevel(stylesheet, ps);
+   
+}
 
+void XSLTProcessor::processTopLevel
+   (Element* stylesheet, ProcessorState* ps)
+{
     if (!stylesheet) return;
 
     NodeList* nl = stylesheet->getChildNodes();
