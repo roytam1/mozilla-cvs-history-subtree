@@ -66,8 +66,8 @@ Contributor(s):
   </grid>
 
   <hbox>
-    <checkbox id="printBGColors" label="&printBGColorsInput.label;"/>
-    <checkbox id="printBGImages" label="&printBGImagesInput.label;"/>
+    <checkbox id="printBGColors" label="&printBGColorsInput.label;" disabled="true"/>
+    <checkbox id="printBGImages" label="&printBGImagesInput.label;" disabled="true"/>
   </hbox>
 
   <grid>
