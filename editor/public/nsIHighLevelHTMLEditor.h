@@ -68,6 +68,8 @@ public:
   /** get the length of the document in characters */
   NS_IMETHOD GetDocumentLength(PRInt32 *aCount)=0;
 
+  NS_IMETHOD SetMaxTextLength(PRInt32 aMaxTextLength)=0;
+  NS_IMETHOD GetMaxTextLength(PRInt32& aMaxTextLength)=0;
 
   /* ------------ Inline property methods -------------- */
 
