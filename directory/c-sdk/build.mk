@@ -182,6 +182,19 @@ LIBNLS_LIB_LOC	    = $(RELEASE_TREE)/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)
 else
 LIBNLS_INCLUDES_LOC = /share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/include
 LIBNLS_LIB_LOC	    = /share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/lib
+
+ifeq ($(OS_ARCH), SunOS)
+ifneq ($(USE_64), 1)
+OS_VERS         := $(shell uname -r)
+ifeq ($(OS_VERS),5.8)
+ifneq ($(OS_TEST),i86pc)
+LIBNLS_INCLUDES_LOC = /share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/forte6/$(OBJDIR_NAME)/include
+LIBNLS_LIB_LOC	    = /share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/forte6/$(OBJDIR_NAME)/lib
+endif
+endif
+endif
+endif
+
 endif
 LIBNLS_DIR	    = ../../../../../dist/libnls$(NLS_LIBVERSION)
 ifeq ($(OS_ARCH), WINNT)
