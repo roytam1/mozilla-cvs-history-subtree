@@ -2644,11 +2644,10 @@ NS_IMETHODIMP VirtualFolderChangeListener::OnParentChanged(nsMsgKey aKeyChanged,
 
 NS_IMETHODIMP VirtualFolderChangeListener::OnAnnouncerGoingAway(nsIDBChangeAnnouncer *instigator)
 {
-  nsresult rv;
-  nsCOMPtr<nsIMsgDBService> msgDBService = do_GetService(NS_MSGDB_SERVICE_CONTRACTID, &rv);
-  if (msgDBService)
-    msgDBService->UnregisterPendingListener(this);
-  return rv;
+  nsCOMPtr <nsIMsgDatabase> msgDB = do_QueryInterface(instigator);
+  if (msgDB)
+    msgDB->RemoveListener(this);
+  return NS_OK;
 }
 
 NS_IMETHODIMP VirtualFolderChangeListener::OnReadChanged(nsIDBChangeListener *aInstigator)
@@ -2833,6 +2832,8 @@ NS_IMETHODIMP nsMsgAccountManager::SaveVirtualFolders()
             nsCOMPtr <nsIMsgDatabase> db;
             nsCOMPtr <nsIDBFolderInfo> dbFolderInfo;
             rv = msgFolder->GetDBFolderInfoAndDB(getter_AddRefs(dbFolderInfo), getter_AddRefs(db)); // force db to get created.
+            if (dbFolderInfo)
+            {
             nsXPIDLCString srchFolderUri;
             nsXPIDLCString searchTerms; 
             PRBool searchOnline = PR_FALSE;
@@ -2847,6 +2848,7 @@ NS_IMETHODIMP nsMsgAccountManager::SaveVirtualFolders()
           }
         }
       }
+   }
    }
    if (outputStream)
     outputStream->Close();
