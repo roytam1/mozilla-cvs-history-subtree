@@ -22,6 +22,7 @@
 #include "intelli.h"
 #endif
 #include "navcontv.h"
+#include "rdfliner.h"
 
 //  What is CPaneCX?
 //      A pane is part of a complete window.
@@ -1492,3 +1493,16 @@ BOOL CPaneCX::SubClass(HWND hWnd, BOOL bSubClass)
     return(bRetval);
 }
 
+void CPaneCX::DisplayBuiltin(MWContext *pContext, int iLocation, LO_BuiltinStruct *builtin_struct)
+{
+	// get the current view for param 5 of CreateWindow() below
+    HWND cView = PANECX(pContext)->GetPane();
+
+	// Ok, we have the parent window.  we need to know where to display it.
+	int xPos = builtin_struct->x;
+    int yPos = builtin_struct->y;
+	int width = builtin_struct->width;
+	int height = builtin_struct->height;
+	
+	CRDFContentView::DisplayRDFTree(CWnd::FromHandle(cView), xPos, yPos, width, height);
+}

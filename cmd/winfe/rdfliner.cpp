@@ -3845,21 +3845,21 @@ void embeddedTreeNotifyProcedure (HT_Notification ns, HT_Resource n, HT_Event wh
 		theOutliner->HandleEvent(ns, n, whatHappened);
 }
 
-void CRDFContentView::DisplayRDFTree(CWnd* pParent, int width, int height, RDF_Resource rdfResource)
+void CRDFContentView::DisplayRDFTree(CWnd* pParent, int xPos, int yPos, int width, int height)
 {
 	HT_Notification ns = new HT_NotificationStruct;
 	ns->notifyProc = embeddedTreeNotifyProcedure;
 	ns->data = NULL;
 	
 	// Construct the pane and give it our notification struct
-	HT_Pane thePane = HT_PaneFromResource(rdfResource, ns, PR_FALSE);
+	HT_Pane thePane = HT_NewPersonalToolbarPane(ns);
 	
 	// Build our FE windows.
 	CRDFOutlinerParent* newParent = new CRDFOutlinerParent(thePane, HT_GetSelectedView(thePane));
 	CRDFContentView* newView = new CRDFContentView(newParent);
 
 	// Create the windows
-	CRect rClient(0, 0, width, height);
+	CRect rClient(xPos, yPos, width, height);
 	newView->Create( NULL, "", WS_CHILD | WS_VISIBLE, rClient, pParent, NC_IDW_OUTLINER);
 
 	// Initialize the columns, etc.

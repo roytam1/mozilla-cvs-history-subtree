@@ -1503,7 +1503,14 @@ extern "C" MWContext *FE_IsNetcasterRunning(void) {
 
 void CFE_DisplayBuiltin(MWContext *context, int iLocation, LO_BuiltinStruct *builtin_struct)
 {
-    return;
+	if(ABSTRACTCX(context)->IsDestroyed())	
+	{
+		//	Don't allow this to happen if the context has been destroyed...
+		TRACE("Context %p Destroyed :: DisplayBuiltin Blocking\n", context);
+		return;
+	}
+
+    ABSTRACTCX(context)->DisplayBuiltin(context, iLocation, builtin_struct);
 }
 
 void CFE_FreeBuiltinElement(MWContext *context, LO_BuiltinStruct *builtin_struct)

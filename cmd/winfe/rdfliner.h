@@ -407,7 +407,7 @@ public:
 
 	void InvalidateOutlinerParent();
 
-	static void DisplayRDFTree(CWnd* pParent, int width, int height, RDF_Resource rdfResource);
+	static void DisplayRDFTree(CWnd* pParent, int xPos, int yPos, int width, int height);
 		// This function can be called to create an embedded RDF tree view inside another window.
 		// Used to embed the tree in HTML.
 
