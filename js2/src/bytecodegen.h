@@ -47,10 +47,7 @@
 #include "strings.h"
 
 namespace JavaScript {
-namespace ByteCode {
-
-
-    using namespace JS2Runtime;
+namespace JS2Runtime {
 
     typedef enum {
         NoThis,

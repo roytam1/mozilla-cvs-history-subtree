@@ -63,9 +63,7 @@ static void initConsole(StringPtr consoleName,
 
 #endif
 
-#ifndef _WIN32
 using namespace JavaScript::JS2Runtime;
-#endif
 
 
 JavaScript::World world;

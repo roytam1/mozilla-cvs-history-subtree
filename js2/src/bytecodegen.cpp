@@ -51,7 +51,7 @@
 namespace JavaScript {    
 namespace JS2Runtime {
 
-using namespace ByteCode;
+//using namespace ByteCode;
 
 Activation::Activation(Context *cx, 
                             JSValue *locals, 
@@ -295,13 +295,6 @@ void ElementReference::emitCodeSequence(ByteCodeGen *bcg)
         bcg->addByte(SetElementOp);
 }
 
-}   // namespace JS2Runtime
-
-
-
-namespace ByteCode {
-
-using namespace JS2Runtime;
 
 ByteCodeModule::ByteCodeModule(ByteCodeGen *bcg)
 {

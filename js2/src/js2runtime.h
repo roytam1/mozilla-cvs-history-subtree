@@ -50,14 +50,10 @@
 #include "property.h"
 
 namespace JavaScript {
-    namespace ByteCode {
-        class ByteCodeGen;
-        class ByteCodeModule;
-    }
 namespace JS2Runtime {
 
-    using namespace ByteCode;
-
+    class ByteCodeGen;
+    class ByteCodeModule;
 
 
 #ifdef IS_LITTLE_ENDIAN

@@ -48,6 +48,8 @@
 #include "bytecodegen.h"
 
 #include "jsstring.h"
+#include "jsarray.h"
+
 
 #include "fdlibm_ns.h"
 
@@ -57,7 +59,6 @@
 namespace JavaScript {    
 namespace JS2Runtime {
 
-using namespace ByteCode;
 
 //
 // XXX don't these belong in the context? But don't
@@ -281,11 +282,11 @@ void Context::buildRuntime(StmtNode *p)
     mScopeChain->popScope();
 }
 
-ByteCodeModule *Context::genCode(StmtNode *p, String sourceName)
+JS2Runtime::ByteCodeModule *Context::genCode(StmtNode *p, String sourceName)
 {
     mScopeChain->addScope(mGlobal);
-    ByteCodeGen bcg(this, mScopeChain);
-    ByteCodeModule *result = bcg.genCodeForScript(p);
+    JS2Runtime::ByteCodeGen bcg(this, mScopeChain);
+    JS2Runtime::ByteCodeModule *result = bcg.genCodeForScript(p);
     mScopeChain->popScope();
     return result;
 }
@@ -335,7 +336,7 @@ bool Context::executeOperator(Operator op, JSType *t1, JSType *t2)
     }
 }
 
-JSValue Context::interpret(ByteCodeModule *bcm, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue Context::interpret(JS2Runtime::ByteCodeModule *bcm, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
     uint8 *pc = bcm->mCodeBase;
     uint8 *endPC = bcm->mCodeBase + bcm->mLength;
@@ -1417,7 +1418,7 @@ void JSType::completeClass(Context *cx, ScopeChain *scopeChain, JSType *super)
         }
         bcg.addByte(LoadThisOp);
         bcg.addByte(ReturnOp);
-        fnc->mByteCode = new ByteCodeModule(&bcg);        
+        fnc->mByteCode = new JS2Runtime::ByteCodeModule(&bcg);        
 
         scopeChain->defineConstructor(mClassName, NULL, NULL, fnc);   // XXX attributes?
     }
@@ -1944,121 +1945,6 @@ JSValue Number_toString(Context *cx, JSValue *thisValue, JSValue *argv, uint32 a
 }
 
 
-
-JSValue Array_Constructor(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
-{
-    if (thisValue->isNull())
-        thisValue = new JSValue(Array_Type->newInstance(cx));
-    ASSERT(thisValue->isObject());
-    JSObject *thisObj = thisValue->object;
-    ASSERT(dynamic_cast<JSArrayInstance *>(thisObj));
-    JSArrayInstance *arrInst = (JSArrayInstance *)thisObj;
-    if (argc > 0) {
-        if (argc == 1) {
-            arrInst->mLength = (uint32)(argv[0].toNumber(cx).f64);
-           // arrInst->mInstanceValues = new JSValue[arrInst->mLength];
-        }
-        else {
-            arrInst->mLength = argc;
-            //arrInst->mInstanceValues = new JSValue[arrInst->mLength];
-            for (uint32 i = 0; i < argc; i++) {
-                String *id = numberToString(i);
-                arrInst->defineVariable(*id, NULL, Object_Type, argv[i]);
-                delete id;
-            }
-        }
-    }
-    return *thisValue;
-}
-
-JSValue Array_toString(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
-{
-    ASSERT(thisValue->isObject());
-    JSObject *thisObj = thisValue->object;
-    ASSERT(dynamic_cast<JSArrayInstance *>(thisObj));
-    JSArrayInstance *arrInst = (JSArrayInstance *)thisObj;
-
-    if (arrInst->mLength == 0)
-        return JSValue(new String(widenCString("")));
-    else {
-        String *s = new String();
-        for (uint32 i = 0; i < arrInst->mLength; i++) {
-            String *id = numberToString(i);
-            arrInst->getProperty(cx, *id, NULL);
-            JSValue result = cx->mStack.back();
-            cx->mStack.pop_back();
-            s->append(*result.toString(cx).string);
-            if (i < (arrInst->mLength - 1))
-                s->append(widenCString(","));
-        }
-        return JSValue(s);
-    }
-    
-}
-
-JSValue Array_toSource(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
-{
-    ASSERT(thisValue->isObject());
-    JSObject *thisObj = thisValue->object;
-    ASSERT(dynamic_cast<JSArrayInstance *>(thisObj));
-    JSArrayInstance *arrInst = (JSArrayInstance *)thisObj;
-
-    if (arrInst->mLength == 0)
-        return JSValue(new String(widenCString("[]")));
-    else {
-        String *s = new String(widenCString("["));
-        for (uint32 i = 0; i < arrInst->mLength; i++) {
-            String *id = numberToString(i);
-            arrInst->getProperty(cx, *id, NULL);
-            JSValue result = cx->mStack.back();
-            cx->mStack.pop_back();
-            if (!result.isUndefined())
-                s->append(*result.toString(cx).string);
-            if (i < (arrInst->mLength - 1))
-                s->append(widenCString(", "));
-        }
-        s->append(widenCString("]"));
-        return JSValue(s);
-    }
-    
-}
-
-JSValue Array_push(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
-{
-    ASSERT(thisValue->isObject());
-    JSObject *thisObj = thisValue->object;
-    ASSERT(dynamic_cast<JSArrayInstance *>(thisObj));
-    JSArrayInstance *arrInst = (JSArrayInstance *)thisObj;
-
-    for (uint32 i = 0; i < argc; i++) {
-        String *id = numberToString(i + arrInst->mLength);
-        arrInst->defineVariable(*id, NULL, Object_Type, argv[i]);
-        delete id;
-    }
-    arrInst->mLength += argc;
-    return JSValue((float64)arrInst->mLength);
-}
-              
-JSValue Array_pop(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
-{
-    ASSERT(thisValue->isObject());
-    JSObject *thisObj = thisValue->object;
-    ASSERT(dynamic_cast<JSArrayInstance *>(thisObj));
-    JSArrayInstance *arrInst = (JSArrayInstance *)thisObj;
-
-    if (arrInst->mLength > 0) {
-        String *id = numberToString(arrInst->mLength - 1);
-        arrInst->getProperty(cx, *id, NULL);
-        JSValue result = cx->mStack.back();
-        cx->mStack.pop_back();
-        arrInst->deleteProperty(*id, NULL);
-        --arrInst->mLength;
-        delete id;
-        return result;
-    }
-    else
-        return kUndefinedValue;
-}
 
 JSValue Boolean_Constructor(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
@@ -2687,14 +2573,6 @@ void Context::initBuiltins()
         { NULL }
     };
 
-    ProtoFunDef arrayProtos[] = 
-    {
-        { "toString", String_Type, 0, Array_toString },
-        { "toSource", String_Type, 0, Array_toSource },
-        { "push",     Number_Type, 1, Array_push },
-        { "pop",      Object_Type, 0, Array_pop },
-        { NULL }
-    };
     ProtoFunDef booleanProtos[] = 
     {
         { "toString", String_Type, 0, Boolean_toString },
@@ -2706,7 +2584,7 @@ void Context::initBuiltins()
     initClass(Object_Type,  NULL,         &builtInClasses[0], new PrototypeFunctions(&objectProtos[0]) );
     initClass(Number_Type,  Object_Type,  &builtInClasses[1], new PrototypeFunctions(&numberProtos[0]) );
     initClass(String_Type,  Object_Type,  &builtInClasses[2], getStringProtos() );
-    initClass(Array_Type,   Object_Type,  &builtInClasses[3], new PrototypeFunctions(&arrayProtos[0]) );
+    initClass(Array_Type,   Object_Type,  &builtInClasses[3], getArrayProtos() );
     initClass(Boolean_Type, Object_Type,  &builtInClasses[4], new PrototypeFunctions(&booleanProtos[0]) );
     initClass(Void_Type,    Object_Type,  &builtInClasses[5], NULL);
 
