@@ -434,7 +434,7 @@ sub Checkout()
 
     my($nsprpub_tag) = "EMBEDDING_08042000_BRANCH";
     my($nss_tab) = "Netscape_20000922_SECURITY_MAC_BRANCH";
-    my($psm_tag) = "EMBEDDING_08042000_BRANCH";
+    my($psm_tag) = "Netscape_20000922_SECURITY_MAC_BRANCH";
     my($ldapsdk_tag) = "EMBEDDING_08042000_BRANCH";
     my($sma_tag) = "EMBEDDING_08042000_BRANCH";
     
