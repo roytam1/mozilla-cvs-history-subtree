@@ -298,20 +298,18 @@ struct nsPluginEvent {
 #endif
 };
 
-#ifdef XP_MAC
-
 /*
  *  Non-standard event types that can be passed to HandleEvent
  */
 enum nsPluginEventType {
-    nsPluginEventType_Idle                 = 0,
+#ifdef XP_MAC
     nsPluginEventType_GetFocusEvent        = (osEvt + 16),
     nsPluginEventType_LoseFocusEvent       = (osEvt + 17),
     nsPluginEventType_AdjustCursorEvent    = (osEvt + 18),
-    nsPluginEventType_MenuCommandEvent     = (osEvt + 19)
-};
-
+    nsPluginEventType_MenuCommandEvent     = (osEvt + 19),
 #endif /* XP_MAC */
+    nsPluginEventType_Idle                 = 0
+};
 
 ////////////////////////////////////////////////////////////////////////////////
 
