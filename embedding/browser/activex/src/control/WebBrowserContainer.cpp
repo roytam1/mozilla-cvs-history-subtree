@@ -477,6 +477,13 @@ CWebBrowserContainer::SetFocus(void)
 
 
 NS_IMETHODIMP 
+CWebBrowserContainer::Blur(void)
+{
+    return NS_ERROR_FAILURE;
+}
+
+
+NS_IMETHODIMP 
 CWebBrowserContainer::GetTitle(PRUnichar * *aTitle)
 {
     NG_ASSERT_POINTER(aTitle, PRUnichar **);

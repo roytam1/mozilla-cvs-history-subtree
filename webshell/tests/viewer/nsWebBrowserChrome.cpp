@@ -349,6 +349,11 @@ NS_IMETHODIMP nsWebBrowserChrome::SetFocus()
    return mBrowserWindow->SetFocus();
 }
 
+NS_IMETHODIMP nsWebBrowserChrome::Blur()
+{  
+   return NS_ERROR_NOT_IMPLEMENTED;
+}
+
 NS_IMETHODIMP nsWebBrowserChrome::GetTitle(PRUnichar** aTitle)
 {
    return mBrowserWindow->GetTitle(aTitle);

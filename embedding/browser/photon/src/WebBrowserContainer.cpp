@@ -829,6 +829,11 @@ NS_IMETHODIMP CWebBrowserContainer::SetFocus()
 	return browserBaseWindow->SetFocus();
 }
 
+NS_IMETHODIMP CWebBrowserContainer::Blur()
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
 /* attribute boolean visibility; */
 NS_IMETHODIMP CWebBrowserContainer::GetVisibility(PRBool *aVisibility)
 {

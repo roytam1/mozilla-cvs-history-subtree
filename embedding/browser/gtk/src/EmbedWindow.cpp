@@ -314,6 +314,12 @@ EmbedWindow::SetFocus(void)
 }
 
 NS_IMETHODIMP
+EmbedWindow::Blur(void)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
 EmbedWindow::GetTitle(PRUnichar **aTitle)
 {
   *aTitle = mTitle.ToNewUnicode();

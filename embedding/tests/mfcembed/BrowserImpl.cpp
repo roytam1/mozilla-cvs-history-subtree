@@ -342,6 +342,11 @@ NS_IMETHODIMP CBrowserImpl::SetFocus()
 	return NS_OK;
 }
 
+NS_IMETHODIMP CBrowserImpl::Blur()
+{
+	return NS_ERROR_NOT_IMPLEMENTED;
+}
+
 NS_IMETHODIMP CBrowserImpl::GetTitle(PRUnichar** aTitle)
 {
 	if(! m_pBrowserFrameGlue)

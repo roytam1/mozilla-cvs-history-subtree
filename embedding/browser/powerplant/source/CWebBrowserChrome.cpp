@@ -427,6 +427,12 @@ NS_IMETHODIMP CWebBrowserChrome::SetFocus()
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
+NS_IMETHODIMP CWebBrowserChrome::Blur()
+{
+    NS_ASSERTION(PR_FALSE, "Not Yet Implemented");
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
 NS_IMETHODIMP CWebBrowserChrome::GetVisibility(PRBool *aVisibility)
 {
     NS_ENSURE_STATE(mBrowserWindow);
