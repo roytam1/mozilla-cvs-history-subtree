@@ -2181,20 +2181,18 @@ nsImapMailFolder::NormalEndMsgWriteStream(nsIImapProtocol* aProtocol)
 	{
         nsCOMPtr<nsISupports> aSupport;
 		m_tempMessageStream->Close();
+
 		res = aProtocol->GetStreamConsumer(getter_AddRefs(aSupport));
         if (NS_SUCCEEDED(res))
         {
             nsCOMPtr<nsIWebShell> webShell;
             nsFilePath filePath(MESSAGE_PATH);
-
             webShell = do_QueryInterface(aSupport, &res);
             if (NS_SUCCEEDED(res) && webShell)
             {
                 nsFileURL  fileURL(filePath);
                 char * message_path_url = PL_strdup(fileURL.GetAsString());
-                
-                res = webShell->LoadURL(nsAutoString(message_path_url).GetUnicode(), nsnull, PR_TRUE, nsURLReloadBypassCache, 0);
-                
+                res = webShell->LoadURL(nsAutoString(message_path_url).GetUnicode(), nsnull, PR_TRUE);
 				if (NS_SUCCEEDED(res))
 				{
 					// now mark the message as read in the db.
@@ -2204,8 +2202,9 @@ nsImapMailFolder::NormalEndMsgWriteStream(nsIImapProtocol* aProtocol)
 					if (NS_SUCCEEDED(res))
 						msgHdr->MarkRead(PR_TRUE);
 				}
+
                 PR_FREEIF(message_path_url);
-            }
+			}
             else
             {
                 nsCOMPtr<nsIStreamListener> streamListener;
@@ -2214,6 +2213,7 @@ nsImapMailFolder::NormalEndMsgWriteStream(nsIImapProtocol* aProtocol)
                 {
                     nsCOMPtr<nsIURI> aUrl;
                     res = aProtocol->GetRunningUrl(getter_AddRefs(aUrl));
+					nsCOMPtr<nsISupports> aCtxt = do_QueryInterface(aUrl);
                     nsFileSpec fileSpec(filePath);
                     nsInputFileStream *inputFileStream = nsnull;
                     nsCOMPtr<nsIInputStream> inputStream;
@@ -2223,10 +2223,10 @@ nsImapMailFolder::NormalEndMsgWriteStream(nsIImapProtocol* aProtocol)
                         do_QueryInterface(inputFileStream->GetIStream(), &res);
                     PRUint32 fileSize = 0;
                     res = inputStream->GetLength(&fileSize);
-                    streamListener->OnStartRequest(aUrl, "");
-                    streamListener->OnDataAvailable(aUrl, inputStream,
+                    streamListener->OnStartRequest(nsnull, aCtxt);
+                    streamListener->OnDataAvailable(nsnull /* channel */, aCtxt, inputStream, 0 /* offset */, 
                                                     fileSize);
-                    streamListener->OnStopRequest(aUrl, 0, nsnull);
+                    streamListener->OnStopRequest(nsnull, aCtxt, 0, nsnull);
                     inputStream = null_nsCOMPtr();
                     delete inputFileStream;
                 }
