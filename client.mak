@@ -81,8 +81,8 @@ clobber_build_all:: 	clobber_all \
 
 !if defined(MOZ_NGLAYOUT)
 # The MOZ_NGLAYOUT pull is complicated, be very careful choosing which files are on 
-# the tip and which are on the branches.
-pull_all:: pull_client_source_product pull_nglayout pull_netlib repull_ngl_integration pull_imglib repull_include
+# the tip and which are on the branches.  The order of the pulls matters.
+pull_all:: pull_client_source_product pull_nglayout pull_netlib repull_ngl_integration pull_imglib repull_tip
 !else
 pull_all:: pull_client_source_product 
 !endif
@@ -111,10 +111,12 @@ pull_imglib:
 	@cd $(MOZ_SRC)/$(MOZ_TOP)
 	$(NMAKE) -f $(NGLAYOUT_MAKEFILE) pull_imglib $(NGLAYOUT_ENV_VARS)
 
-# Want certain files in the include directory to be on the tip
-repull_include:
+# Want certain files to be on the tip
+# libpref should be on the tip, missed a few files landing XPCOM_BRANCH.
+repull_tip:
 	@cd $(MOZ_SRC)
 	$(CVSCO) -A $(MOZ_TOP)/include/net.h
+	$(CVSCO) -r XPCOM_BRANCH $(MOZ_TOP)/modules/libpref
 !endif
 
 
