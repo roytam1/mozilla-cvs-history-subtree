@@ -545,6 +545,10 @@ nsresult nsMsgDBView::FetchDate(nsIMsgHdr * aHdr, PRUnichar ** aDateString)
   // if the message is from the last week, show the day of the week.   (i.e. Mon 3:15 pm)
   // in all other cases, show the full date (03/19/01 3:15 pm)
   nsDateFormatSelector dateFormat = kDateFormatShort;
+  // disabling, see item
+  // 2.4.2 All dates should have full date including messages received in the last day
+  // http://jazz.mcom.com/users/scottip/publish/ishmail/Japan_Requirements.html
+#if 0
   if (explodedCurrentTime.tm_year == explodedMsgTime.tm_year &&
       explodedCurrentTime.tm_month == explodedMsgTime.tm_month &&
       explodedCurrentTime.tm_mday == explodedMsgTime.tm_mday)
@@ -552,6 +556,7 @@ nsresult nsMsgDBView::FetchDate(nsIMsgHdr * aHdr, PRUnichar ** aDateString)
     // same day...
     dateFormat = kDateFormatNone;
   } 
+#endif
   // the following chunk of code causes us to show a day instead of a number if the message was received
   // within the last 7 days. i.e. Mon 5:10pm. We need to add a preference so folks to can enable this behavior
   // if they want it. 
