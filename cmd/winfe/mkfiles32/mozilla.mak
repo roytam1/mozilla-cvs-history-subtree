@@ -105,7 +105,7 @@ CPP= \
 LINK= \
 !if "$(MOZ_BITS)"=="32"
 !if "$(MOZ_BCPRO)" == ""
-    link.exe /nologo $(MOZ_LFLAGS)
+    link.exe /nologo /DEF:expsymbl.def $(MOZ_LFLAGS)
 !else
     bclink.exe /nologo $(MOZ_LFLAGS)
 !endif

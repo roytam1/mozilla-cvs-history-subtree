@@ -1,0 +1,5 @@
+EXPORTS
+	SEC_GetHookTable
+	SEC_GetDispatchTable
+	SEC_NumDispatchPoints
+
