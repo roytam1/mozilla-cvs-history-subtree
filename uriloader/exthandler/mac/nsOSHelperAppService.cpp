@@ -34,6 +34,8 @@
 
 #include "nsIInternetConfigService.h"
 
+#include <LaunchServices.h>
+
 // chrome URL's
 #define HELPERAPPLAUNCHER_BUNDLE_URL "chrome://global/locale/helperAppLauncher.properties"
 #define BRAND_BUNDLE_URL "chrome://global/locale/brand.properties"
@@ -52,11 +54,12 @@ NS_IMETHODIMP nsOSHelperAppService::LaunchAppWithTempFile(nsIMIMEInfo * aMIMEInf
   nsresult rv = NS_OK;
   if (aMIMEInfo)
   {
-    nsCOMPtr<nsIFile> application;   
+    nsCOMPtr<nsIFile> application;
     aMIMEInfo->GetPreferredApplicationHandler(getter_AddRefs(application));
+
     if (application)
     {
-  	  nsCOMPtr <nsILocalFileMac> app = do_QueryInterface(application, &rv);
+  	  nsCOMPtr<nsILocalFileMac> app = do_QueryInterface(application, &rv);
   	  if (NS_FAILED(rv)) return rv;
   	
   	  nsCOMPtr <nsILocalFile> docToLoad = do_QueryInterface(aTempFile, &rv);
@@ -64,6 +67,28 @@ NS_IMETHODIMP nsOSHelperAppService::LaunchAppWithTempFile(nsIMIMEInfo * aMIMEInf
   	
   	  rv = app->LaunchWithDoc(docToLoad, PR_FALSE); 
     }
+#if XP_MACOSX
+    else
+    { // We didn't get an application to handle the file from aMIMEInfo, ask LaunchServices directly
+      FSRef tempFileRef;
+      FSRef appFSRef;
+      nsCOMPtr <nsILocalFileMac> tempFile = do_QueryInterface(aTempFile, &rv);
+      if (NS_FAILED(rv)) return rv;
+      
+      tempFile->GetFSRef(&tempFileRef);
+      if (::LSGetApplicationForItem(&tempFileRef, kLSRolesAll, &appFSRef, NULL) == noErr)
+      {
+        nsCOMPtr<nsILocalFileMac> app(do_CreateInstance("@mozilla.org/file/local;1"));
+        if (!app) return NS_ERROR_FAILURE;
+        app->InitWithFSRef(&appFSRef);
+        
+        nsCOMPtr <nsILocalFile> docToLoad = do_QueryInterface(aTempFile, &rv);
+        if (NS_FAILED(rv)) return rv;
+        
+        rv = app->LaunchWithDoc(docToLoad, PR_FALSE); 
+      }
+    }
+#endif    
   }
   return rv;
 }
