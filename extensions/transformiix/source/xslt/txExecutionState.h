@@ -156,6 +156,7 @@ private:
     txIEvalContext* mEvalContext;
     txIEvalContext* mInitialEvalContext;
     Document* mRTFDocument;
+    txExpandedNameMap* mGlobalParams;
     
     nsVoidArray mRecursionInstructions;
     nsVoidArray mRecursionContexts;

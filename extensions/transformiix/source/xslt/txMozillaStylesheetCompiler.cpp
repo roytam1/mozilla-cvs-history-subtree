@@ -366,7 +366,8 @@ static nsresult handleNode(nsIDOMNode* aNode, txStylesheetCompiler* aCompiler)
     return NS_OK;
 }
 
-txStylesheet* TX_CompileStylesheet(nsIDOMNode* aNode)
+nsresult
+TX_CompileStylesheet(nsIDOMNode* aNode, txStylesheet** aStylesheet)
 {
     nsCOMPtr<nsIDOMDocument> document;
     aNode->GetOwnerDocument(getter_AddRefs(document));
@@ -382,9 +383,16 @@ txStylesheet* TX_CompileStylesheet(nsIDOMNode* aNode)
 
     NS_ConvertUTF8toUCS2 base(baseURI);
     nsRefPtr<txStylesheetCompiler> compiler = new txStylesheetCompiler(base, nsnull);
+    NS_ENSURE_TRUE(compiler, NS_ERROR_OUT_OF_MEMORY);
 
-    handleNode(document, compiler);
-    compiler->doneLoading();
+    nsresult rv = handleNode(document, compiler);
+    NS_ENSURE_SUCCESS(rv, rv);
 
-    return compiler->getStylesheet();
+    rv = compiler->doneLoading();
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    *aStylesheet = compiler->getStylesheet();
+    NS_ADDREF(*aStylesheet);
+
+    return NS_OK;
 }

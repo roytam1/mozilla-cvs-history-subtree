@@ -310,12 +310,9 @@ txMozillaXSLTProcessor::ImportStylesheet(nsIDOMNode *aStyle)
                    NS_ERROR_INVALID_ARG);
 
     
-    txStylesheet* style = TX_CompileStylesheet(aStyle);
-    if (!style) {
-        return NS_ERROR_FAILURE;
-    }
+    nsresult rv = TX_CompileStylesheet(aStyle, getter_AddRefs(mStylesheet));
+    NS_ENSURE_SUCCESS(rv, rv);
 
-    mStylesheet = style;
     return NS_OK;
 }
 

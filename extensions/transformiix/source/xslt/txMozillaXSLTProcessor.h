@@ -157,6 +157,7 @@ extern nsresult TX_NewStylesheetSink(nsIXMLContentSink** aResult,
                                      nsIURI* aURI,
                                      txMozillaXSLTProcessor* aProcessor);
 
-extern txStylesheet* TX_CompileStylesheet(nsIDOMNode* aNode);
+extern nsresult TX_CompileStylesheet(nsIDOMNode* aNode,
+                                     txStylesheet** aStylesheet);
 
 #endif

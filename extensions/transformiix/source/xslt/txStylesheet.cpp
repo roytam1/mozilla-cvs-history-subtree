@@ -251,17 +251,10 @@ txStylesheet::getOutputFormat()
     return &mOutputFormat;
 }
 
-nsresult
-txStylesheet::getGlobalVariable(const txExpandedName& aName, Expr*& aExpr,
-                                txInstruction*& aInstr)
+txStylesheet::GlobalVariable*
+txStylesheet::getGlobalVariable(const txExpandedName& aName)
 {
-    GlobalVariable* var = (GlobalVariable*)mGlobalVariables.get(aName);
-    NS_ENSURE_TRUE(var, NS_ERROR_FAILURE);
-    
-    aExpr = var->mExpr;
-    aInstr = var->mFirstInstruction;
-
-    return NS_OK;
+    return (GlobalVariable*)mGlobalVariables.get(aName);
 }
 
 const txExpandedNameMap&
@@ -578,15 +571,15 @@ txStylesheet::addGlobalVariable(txVariableItem* aVariable)
     if (mGlobalVariables.get(aVariable->mName)) {
         return NS_OK;
     }
-    GlobalVariable* var = new GlobalVariable(aVariable->mValue,
-                                             aVariable->mFirstInstruction);
+    nsAutoPtr<GlobalVariable> var(
+        new GlobalVariable(aVariable->mValue, aVariable->mFirstInstruction,
+                           aVariable->mIsParam));
     NS_ENSURE_TRUE(var, NS_ERROR_OUT_OF_MEMORY);
     
     nsresult rv = mGlobalVariables.add(aVariable->mName, var);
-    if (NS_FAILED(rv)) {
-        delete var;
-        return rv;
-    }
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    var.forget();
     
     return NS_OK;
     
@@ -660,7 +653,8 @@ txStylesheet::ImportFrame::~ImportFrame()
 }
 
 txStylesheet::GlobalVariable::GlobalVariable(nsAutoPtr<Expr> aExpr,
-                                             nsAutoPtr<txInstruction> aFirstInstruction)
-    : mExpr(aExpr), mFirstInstruction(aFirstInstruction)
+                                             nsAutoPtr<txInstruction> aFirstInstruction,
+                                             PRBool aIsParam)
+    : mExpr(aExpr), mFirstInstruction(aFirstInstruction), mIsParam(aIsParam)
 {
 }

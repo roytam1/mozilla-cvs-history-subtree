@@ -58,6 +58,7 @@ class txStylesheet
 {
 public:
     class ImportFrame;
+    class GlobalVariable;
     friend class txStylesheetCompilerState;
     // To be able to do some cleaning up in destructor
     friend class ImportFrame;
@@ -89,8 +90,7 @@ public:
     txInstruction* getAttributeSet(const txExpandedName& aName);
     txInstruction* getNamedTemplate(const txExpandedName& aName);
     txOutputFormat* getOutputFormat();
-    nsresult getGlobalVariable(const txExpandedName& aName, Expr*& aExpr,
-                               txInstruction*& aInstr);
+    GlobalVariable* getGlobalVariable(const txExpandedName& aName);
     const txExpandedNameMap& getKeyMap();
     PRBool isStripSpaceAllowed(Node* aNode, txIMatchContext* aContext);
 
@@ -130,6 +130,17 @@ public:
         ImportFrame* mFirstNotImported;
     };
 
+    class GlobalVariable : public TxObject {
+    public:
+        GlobalVariable(nsAutoPtr<Expr> aExpr,
+                       nsAutoPtr<txInstruction> aFirstInstruction,
+                       PRBool aIsParam);
+
+        nsAutoPtr<Expr> mExpr;
+        nsAutoPtr<txInstruction> mFirstInstruction;
+        PRBool mIsParam;
+    };
+
 private:
     class MatchableTemplate {
     public:
@@ -146,15 +157,6 @@ private:
         double mPriority;
     };
     
-    class GlobalVariable : public TxObject {
-    public:
-        GlobalVariable(nsAutoPtr<Expr> aExpr,
-                       nsAutoPtr<txInstruction> aFirstInstruction);
-
-        nsAutoPtr<Expr> mExpr;
-        nsAutoPtr<txInstruction> mFirstInstruction;
-    };
-
     nsresult addTemplate(txTemplateItem* aTemplate, ImportFrame* aImportFrame);
     nsresult addGlobalVariable(txVariableItem* aVariable);
     nsresult addFrames(txListIterator& aInsertIter);

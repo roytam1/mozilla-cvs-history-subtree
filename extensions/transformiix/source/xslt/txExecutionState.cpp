@@ -108,6 +108,7 @@ txExecutionState::txExecutionState(txStylesheet* aStylesheet)
       mEvalContext(nsnull),
       mInitialEvalContext(nsnull),
       mRTFDocument(nsnull),
+      mGlobalParams(nsnull),
       mKeyHash(aStylesheet->getKeyMap())
 {
 }
@@ -138,6 +139,8 @@ txExecutionState::init(Node* aNode,
                        txExpandedNameMap* aGlobalParams)
 {
     nsresult rv = NS_OK;
+
+    mGlobalParams = aGlobalParams;
 
     // Set up initial context
     mEvalContext = new txSingleNodeContext(aNode, this);
@@ -177,8 +180,6 @@ txExecutionState::init(Node* aNode,
     rv = mKeyHash.init();
     NS_ENSURE_SUCCESS(rv, rv);
 
-    // XXX ToDo: set global parameters
-
     return NS_OK;
 }
 
@@ -196,6 +197,7 @@ nsresult
 txExecutionState::getVariable(PRInt32 aNamespace, nsIAtom* aLName,
                               ExprResult*& aResult)
 {
+    nsresult rv = NS_OK;
     txExpandedName name(aNamespace, aLName);
 
     // look for a local variable
@@ -211,36 +213,52 @@ txExecutionState::getVariable(PRInt32 aNamespace, nsIAtom* aLName,
     }
 
     // Is there perchance a global variable not evaluated yet?
-    Expr* expr;
-    txInstruction* instr;
-    nsresult rv = mStylesheet->getGlobalVariable(name, expr, instr);
-    if (NS_FAILED(rv)) {
+    txStylesheet::GlobalVariable* var = mStylesheet->getGlobalVariable(name);
+    if (!var) {
         // XXX ErrorReport: variable doesn't exist in this scope
-        return rv;
+        return NS_ERROR_FAILURE;
     }
     
-    NS_ASSERTION(expr && !instr || !expr && instr,
+    NS_ASSERTION(var->mExpr && !var->mFirstInstruction ||
+                 !var->mExpr && var->mFirstInstruction,
                  "global variable should have either instruction or expression");
+
+    // Is this a stylesheet parameter that has a value?
+    if (var->mIsParam) {
+        txIGlobalParameter* param =
+            (txIGlobalParameter*)mGlobalParams->get(name);
+        if (param) {
+            rv = param->getValue(&aResult);
+            NS_ENSURE_SUCCESS(rv, rv);
+
+            rv = mGlobalVariableValues.bindVariable(name, aResult, PR_FALSE);
+            if (NS_FAILED(rv)) {
+                aResult = nsnull;
+                return rv;
+            }
+            
+            return NS_OK;
+        }
+    }
 
     // evaluate the global variable
     pushEvalContext(mInitialEvalContext);
-    if (expr) {
-        aResult = expr->evaluate(getEvalContext());
+    if (var->mExpr) {
+        aResult = var->mExpr->evaluate(getEvalContext());
         NS_ENSURE_TRUE(aResult, NS_ERROR_FAILURE);
     }
     else {
-        txRtfHandler* rtfHandler = new txRtfHandler;
+        nsAutoPtr<txRtfHandler> rtfHandler(new txRtfHandler);
         NS_ENSURE_TRUE(rtfHandler, NS_ERROR_OUT_OF_MEMORY);
 
         rv = pushResultHandler(rtfHandler);
-        if (NS_FAILED(rv)) {
-            delete rtfHandler;
-            return rv;
-        }
+        NS_ENSURE_SUCCESS(rv, rv);
+        
+        rtfHandler.forget();
 
         txInstruction* prevInstr = mNextInstruction;
         // set return to nsnull to stop execution
-        rv = runTemplate(instr, nsnull);
+        rv = runTemplate(var->mFirstInstruction, nsnull);
         NS_ENSURE_SUCCESS(rv, rv);
 
         // XXX reset current-template-rule
@@ -248,12 +266,12 @@ txExecutionState::getVariable(PRInt32 aNamespace, nsIAtom* aLName,
         rv = txXSLTProcessor::execute(*this);
         NS_ENSURE_SUCCESS(rv, rv);
 
+        // XXX unreset current-template-rule
+
         mNextInstruction = prevInstr;
-        popResultHandler();
+        rtfHandler = (txRtfHandler*)popResultHandler();
         aResult = rtfHandler->createRTF();
         NS_ENSURE_TRUE(aResult, NS_ERROR_OUT_OF_MEMORY);
-
-        delete rtfHandler;
     }
     popEvalContext();
 
