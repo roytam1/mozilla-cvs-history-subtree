@@ -789,6 +789,7 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\libmime\mimedrft.c
 	$(DEPTH)\lib\libmisc\mime.c   
 	$(DEPTH)\lib\libmisc\dirprefs.c
+	$(DEPTH)\lib\libmime\mimecal.c
 !endif
  
 	$(DEPTH)\lib\libmisc\glhist.c 
