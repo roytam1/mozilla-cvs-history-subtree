@@ -39,11 +39,16 @@
 
 /***************************************************************************/
 
+// All of the exceptions thrown into JS from this file go through here.
+// That makes this a nice place to set a breakpoint.
+
 static JSBool Throw(uintN errNum, JSContext* cx)
 {
     XPCThrower::Throw(errNum, cx);
     return JS_FALSE;
 }
+
+// Handy macro used in many callback stub below.
 
 #define THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper)                         \
     PR_BEGIN_MACRO                                                           \
@@ -114,6 +119,11 @@ ToStringGuts(XPCCallContext& ccx)
 
             if(count == 1)
                 name = JS_sprintf_append(name, "%s", array[0]->GetNameString());
+            else if(count == 2 && 
+                    array[0] == XPCNativeInterface::GetISupports(ccx))
+            {
+                name = JS_sprintf_append(name, "%s", array[1]->GetNameString());
+            }
             else
             {
                 for(PRUint16 i = 0; i < count; i++)
@@ -185,6 +195,16 @@ XPC_WN_Shared_ToSource(JSContext *cx, JSObject *obj,
 }
 
 /***************************************************************************/
+
+// A "double wrapped object" is a user JSObject that has been wrapped as a 
+// wrappedJS in order to be used by native code and then re-wrapped by a 
+// wrappedNative wrapper to be used by JS code. One might think of it as:
+//    wrappedNative(wrappedJS(underlying_JSObject))
+// This is done (as opposed to just unwrapping the wrapped JS and automatically 
+// returning the underlying JSObject so that JS callers will see what looks
+// Like any other xpcom object - and be limited to use its interfaces.
+//
+// See the comment preceeding nsIXPCWrappedJSObjectGetter in nsIXPConnect.idl.
 
 static JSObject*
 GetDoubleWrappedJSObject(XPCCallContext& ccx, XPCWrappedNative* wrapper)
@@ -272,7 +292,10 @@ XPC_WN_DoubleWrappedGetter(JSContext *cx, JSObject *obj,
 
 /***************************************************************************/
 
+// This is our shared function to define properties on our JSObjects.
+
 /*
+ * NOTE:
  * We *never* set the tearoff names (e.g. nsIFoo) as JS_ENUMERATE.
  * We *never* set toString or toSource as JS_ENUMERATE.
  */
