@@ -1107,7 +1107,7 @@ nsScriptSecurityManager::SavePrincipal(nsIPrincipal* aToSave)
         mSecurityPrefs->SecurityClearUserPref(idPrefName);
 
     mIsWritingPrefs = PR_FALSE;
-    return mPrefs->SavePrefFile();
+    return mPrefs->SavePrefFile(nsnull);
 }
 
 ///////////////// Capabilities API /////////////////////
@@ -1212,9 +1212,8 @@ Localize(char *genericString, nsString &result)
         nsCRT::free(spec);
         return ret;
     }
-    nsILocale *locale = nsnull;
     nsIStringBundle *bundle = nsnull;
-    ret = pStringService->CreateBundle(spec, locale, &bundle);
+    ret = pStringService->CreateBundle(spec, &bundle);
     nsCRT::free(spec);
     nsServiceManager::ReleaseService(kStringBundleServiceCID, pStringService);
     if (NS_FAILED(ret))

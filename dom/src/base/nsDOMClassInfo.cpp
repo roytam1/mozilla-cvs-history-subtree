@@ -268,6 +268,8 @@ nsDOMClassInfoData sClassInfoData[] = {
   // Event
   NS_DEFINE_CLASSINFO_DATA(Event, nsDOMGenericSH::Create,
                            DOM_DEFAULT_SCRIPTABLE_FLAGS)
+  NS_DEFINE_CLASSINFO_DATA(MutationEvent, nsDOMGenericSH::Create,
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
 
   // Misc HTML classes
   NS_DEFINE_CLASSINFO_DATA(HTMLDocument, nsHTMLDocumentSH::Create,

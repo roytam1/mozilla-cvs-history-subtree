@@ -772,8 +772,6 @@ nsXULElement::QueryInterface(REFNSIID iid, void** result)
 
         NS_ENSURE_TRUE(inst, NS_ERROR_OUT_OF_MEMORY);
 
-        NS_ADDREF(inst);
-
         *result = inst;
 
         return NS_OK;

@@ -670,6 +670,8 @@ nsDocument::Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup)
       owner->QueryInterface(NS_GET_IID(nsIPrincipal), (void**)&mPrincipal);
   }
 
+  mDocumentBaseURL = mDocumentURL;
+
   if (aLoadGroup) {
     mDocumentLoadGroup = getter_AddRefs(NS_GetWeakReference(aLoadGroup));
     // there was an assertion here that aLoadGroup was not null.  This is no longer valid
@@ -784,8 +786,37 @@ nsDocument::GetDocumentLoadGroup(nsILoadGroup **aGroup) const
 NS_IMETHODIMP
 nsDocument::GetBaseURL(nsIURI*& aURL) const
 {
-  aURL = mDocumentURL;
+  aURL = mDocumentBaseURL.get();
   NS_IF_ADDREF(aURL);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDocument::SetBaseURL(nsIURI* aURL)
+{
+  nsresult rv;
+  NS_WITH_SERVICE(nsIScriptSecurityManager, securityManager, 
+                  NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
+  if (NS_SUCCEEDED(rv)) {
+    rv = securityManager->CheckLoadURI(mDocumentURL, aURL, nsIScriptSecurityManager::STANDARD);
+    if (NS_SUCCEEDED(rv)) {
+      mDocumentBaseURL = aURL;
+    }
+  }
+
+  return rv;
+}
+
+NS_IMETHODIMP
+nsDocument::GetBaseTarget(nsAWritableString &aBaseTarget)
+{
+  aBaseTarget.Truncate();
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDocument::SetBaseTarget(const nsAReadableString &aBaseTarget)
+{
   return NS_OK;
 }
 
@@ -2714,9 +2745,9 @@ NS_IMETHODIMP
 nsDocument::GetBaseURI(nsAWritableString &aURI)
 {
   aURI.Truncate();
-  if (mDocumentURL) {
+  if (mDocumentBaseURL) {
     nsXPIDLCString spec;
-    mDocumentURL->GetSpec(getter_Copies(spec));
+    mDocumentBaseURL->GetSpec(getter_Copies(spec));
     if (spec) {
       CopyASCIItoUCS2(nsLiteralCString(spec), aURI);
     }

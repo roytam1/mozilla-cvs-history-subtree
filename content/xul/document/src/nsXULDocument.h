@@ -142,6 +142,12 @@ public:
 
     NS_IMETHOD GetBaseURL(nsIURI*& aURL) const;
 
+    NS_IMETHOD SetBaseURL(nsIURI *aURI);
+    
+    NS_IMETHOD GetBaseTarget(nsAWritableString &aBaseTarget);
+
+    NS_IMETHOD SetBaseTarget(const nsAReadableString &aBaseTarget);
+
     NS_IMETHOD GetStyleSheets(nsIDOMStyleSheetList** aStyleSheets);
 
     NS_IMETHOD GetDocumentCharacterSet(nsAWritableString& oCharSetID);
@@ -477,6 +483,7 @@ protected:
     nsVoidArray                mObservers;
     nsString                   mDocumentTitle;
     nsCOMPtr<nsIURI>           mDocumentURL;        // [OWNER] ??? compare with loader
+    nsCOMPtr<nsIURI>           mDocumentBaseURL;
     nsWeakPtr                  mDocumentLoadGroup;  // [WEAK] leads to loader
     nsCOMPtr<nsIPrincipal>     mDocumentPrincipal;  // [OWNER]
     nsCOMPtr<nsIContent>       mRootContent;        // [OWNER]

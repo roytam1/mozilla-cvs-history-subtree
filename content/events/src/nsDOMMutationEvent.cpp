@@ -24,10 +24,11 @@
 #include "nsIDOMMutationEvent.h"
 #include "nsDOMEvent.h"
 #include "nsMutationEvent.h"
+#include "nsContentUtils.h"
 
 class nsIPresContext;
 
-class nsDOMMutationEvent : public nsIDOMMutationEvent, public nsDOMEvent
+class nsDOMMutationEvent : public nsDOMEvent, public nsIDOMMutationEvent
 {
   NS_DECL_NSIDOMMUTATIONEVENT
   NS_FORWARD_NSIDOMEVENT(nsDOMEvent::)
@@ -38,14 +39,13 @@ class nsDOMMutationEvent : public nsIDOMMutationEvent, public nsDOMEvent
                      nsEvent* aEvent);
 
   ~nsDOMMutationEvent();
-
 };
 
 nsDOMMutationEvent::nsDOMMutationEvent(nsIPresContext* aPresContext,
                                        nsEvent* aEvent)
-:nsDOMEvent(aPresContext, aEvent, NS_LITERAL_STRING("MutationEvent")) 
+  :nsDOMEvent(aPresContext, aEvent, NS_LITERAL_STRING("MutationEvents")) 
 {  
-  nsMutationEvent* mutation = (nsMutationEvent*)aEvent;
+  nsMutationEvent* mutation = (nsMutationEvent*)mEvent;
   SetTarget(mutation->mTarget);
 }
 
@@ -53,14 +53,22 @@ nsDOMMutationEvent::~nsDOMMutationEvent() {
   
 }
 
-NS_IMPL_ADDREF_INHERITED(nsDOMMutationEvent, nsDOMEvent)
-NS_IMPL_RELEASE_INHERITED(nsDOMMutationEvent, nsDOMEvent)
+// XPConnect interface list for nsDOMMutationEvent
+NS_CLASSINFO_MAP_BEGIN(MutationEvent)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMMutationEvent)
+NS_CLASSINFO_MAP_END
 
 NS_INTERFACE_MAP_BEGIN(nsDOMMutationEvent)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMMutationEvent)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsIDOMEvent, nsIDOMMutationEvent)
   NS_INTERFACE_MAP_ENTRY(nsIPrivateDOMEvent)
   NS_INTERFACE_MAP_ENTRY(nsIDOMMutationEvent)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(MutationEvent)
 NS_INTERFACE_MAP_END
+
+NS_IMPL_ADDREF_INHERITED(nsDOMMutationEvent, nsDOMEvent)
+NS_IMPL_RELEASE_INHERITED(nsDOMMutationEvent, nsDOMEvent)
+
 
 NS_IMETHODIMP
 nsDOMMutationEvent::GetRelatedNode(nsIDOMNode** aRelatedNode)

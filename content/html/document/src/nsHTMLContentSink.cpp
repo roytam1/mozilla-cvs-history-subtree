@@ -366,14 +366,14 @@ public:
 
   void AddBaseTagInfo(nsIHTMLContent* aContent);
 
-  nsresult ProcessLink(nsIHTMLContent* aElement, const nsString& aLinkData);
+  nsresult ProcessLink(nsIHTMLContent* aElement, const nsAReadableString& aLinkData);
   nsresult ProcessStyleLink(nsIHTMLContent* aElement,
                             const nsString& aHref, const nsString& aRel,
                             const nsString& aTitle, const nsString& aType,
                             const nsString& aMedia);
 
-  void ProcessBaseHref(const nsString& aBaseHref);
-  void ProcessBaseTarget(const nsString& aBaseTarget);
+  void ProcessBaseHref(const nsAReadableString& aBaseHref);
+  void ProcessBaseTarget(const nsAReadableString& aBaseTarget);
 
   nsresult RefreshIfEnabled(nsIViewManager* vm);
 
@@ -387,7 +387,7 @@ public:
   nsresult ProcessSCRIPTTag(const nsIParserNode& aNode);
   nsresult ProcessSTYLETag(const nsIParserNode& aNode);
 
-  nsresult ProcessHeaderData(nsIAtom* aHeader,nsString& aValue,nsIHTMLContent* aContent=nsnull);
+  nsresult ProcessHeaderData(nsIAtom* aHeader,const nsAReadableString& aValue,nsIHTMLContent* aContent=nsnull);
   nsresult ProcessHTTPHeaders(nsIChannel* aChannel);
 
   // Script processing related routines
@@ -2390,7 +2390,9 @@ HTMLContentSink::Init(nsIDocument* aDoc,
     prefs->GetIntPref("content.notify.interval", &mNotificationInterval);
   }
 
-  mMaxTextRun = 8192;
+  // Changed from 8192 to greatly improve page loading performance on large
+  // pages.  See bugzilla bug 77540.
+  mMaxTextRun = 8191;
   if (prefs) {
     prefs->GetIntPref("content.maxtextrun", &mMaxTextRun);
   }
@@ -2436,7 +2438,7 @@ HTMLContentSink::Init(nsIDocument* aDoc,
   }
 
   // Make head part
-  rv = mNodeInfoManager->GetNodeInfo(NS_ConvertASCIItoUCS2("head"),
+  rv = mNodeInfoManager->GetNodeInfo(NS_LITERAL_STRING("head"),
                                      nsnull, kNameSpaceID_None,
                                      *getter_AddRefs(nodeInfo));
   NS_ENSURE_SUCCESS(rv, rv);
@@ -3742,25 +3744,29 @@ HTMLContentSink::ProcessAREATag(const nsIParserNode& aNode)
 }
 
 void 
-HTMLContentSink::ProcessBaseHref(const nsString& aBaseHref)
+HTMLContentSink::ProcessBaseHref(const nsAReadableString& aBaseHref)
 {
   //-- Make sure this page is allowed to load this URL
   nsresult rv;
-  NS_WITH_SERVICE(nsIScriptSecurityManager, securityManager, 
-                  NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
-  if (NS_FAILED(rv)) return;
   nsCOMPtr<nsIURI> baseHrefURI;
   rv = NS_NewURI(getter_AddRefs(baseHrefURI), aBaseHref, nsnull);
   if (NS_FAILED(rv)) return;
-  rv = securityManager->CheckLoadURI(mDocumentBaseURL, baseHrefURI, nsIScriptSecurityManager::STANDARD);
-  if (NS_FAILED(rv)) return;
 
   if (nsnull == mBody) {  // still in real HEAD
-    mHTMLDocument->SetBaseURL(aBaseHref);
-    NS_RELEASE(mDocumentBaseURL);
-    mDocument->GetBaseURL(mDocumentBaseURL);
+    rv = mDocument->SetBaseURL(baseHrefURI); // The document checks if it is legal to set this base
+    if (NS_SUCCEEDED(rv)) {
+      NS_RELEASE(mDocumentBaseURL);
+      mDocument->GetBaseURL(mDocumentBaseURL);
+    }
   }
   else {  // NAV compatibility quirk
+    NS_WITH_SERVICE(nsIScriptSecurityManager, securityManager, 
+                    NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
+    if (NS_FAILED(rv)) return;
+
+    rv = securityManager->CheckLoadURI(mDocumentBaseURL, baseHrefURI, nsIScriptSecurityManager::STANDARD);
+    if (NS_FAILED(rv)) return;
+
     mBaseHREF = aBaseHref;
   }
 }
@@ -3785,10 +3791,10 @@ HTMLContentSink::RefreshIfEnabled(nsIViewManager* vm)
 }
 
 void 
-HTMLContentSink::ProcessBaseTarget(const nsString& aBaseTarget)
+HTMLContentSink::ProcessBaseTarget(const nsAReadableString& aBaseTarget)
 {
   if (nsnull == mBody) { // still in real HEAD
-    mHTMLDocument->SetBaseTarget(aBaseTarget);
+    mDocument->SetBaseTarget(aBaseTarget);
   }
   else {  // NAV compatibility quirk
     mBaseTarget = aBaseTarget;
@@ -3809,7 +3815,7 @@ HTMLContentSink::ProcessBASETag(const nsIParserNode& aNode)
     // Create content object
     nsCOMPtr<nsIHTMLContent> element;
     nsCOMPtr<nsINodeInfo> nodeInfo;
-    mNodeInfoManager->GetNodeInfo(NS_ConvertASCIItoUCS2("base"),
+    mNodeInfoManager->GetNodeInfo(NS_LITERAL_STRING("base"),
                                   nsnull, kNameSpaceID_None,
                                   *getter_AddRefs(nodeInfo));
 
@@ -3849,7 +3855,7 @@ const PRUnichar kLessThanCh = PRUnichar('<');
 const PRUnichar kGreaterThanCh = PRUnichar('>');
 
 nsresult 
-HTMLContentSink::ProcessLink(nsIHTMLContent* aElement, const nsString& aLinkData)
+HTMLContentSink::ProcessLink(nsIHTMLContent* aElement, const nsAReadableString& aLinkData)
 {
   nsresult result = NS_OK;
   
@@ -4071,9 +4077,9 @@ HTMLContentSink::ProcessStyleLink(nsIHTMLContent* aElement,
   ParseLinkTypes(aRel, linkTypes);
   PRBool isAlternate = PR_FALSE;
 
-  if (-1 != linkTypes.IndexOf(NS_ConvertASCIItoUCS2("stylesheet"))) {  // is it a stylesheet link?
+  if (-1 != linkTypes.IndexOf(NS_LITERAL_STRING("stylesheet"))) {  // is it a stylesheet link?
 
-    if (-1 != linkTypes.IndexOf(NS_ConvertASCIItoUCS2("alternate"))) { // if alternate, does it have title?
+    if (-1 != linkTypes.IndexOf(NS_LITERAL_STRING("alternate"))) { // if alternate, does it have title?
       if (0 == aTitle.Length()) { // alternates must have title
         return NS_OK; //return without error, for now
       } else {
@@ -4118,7 +4124,7 @@ HTMLContentSink::ProcessStyleLink(nsIHTMLContent* aElement,
         return NS_OK; // The URL is bad, move along, don't propogate the error (for now)
       }
 
-      if (-1 == linkTypes.IndexOf(NS_ConvertASCIItoUCS2("alternate"))) {
+      if (-1 == linkTypes.IndexOf(NS_LITERAL_STRING("alternate"))) {
         if (0 < aTitle.Length()) {  // possibly preferred sheet
           if (0 == mPreferredStyle.Length()) {
             mPreferredStyle = aTitle;
@@ -4289,7 +4295,7 @@ HTMLContentSink::ProcessMETATag(const nsIParserNode& aNode)
   if (nsnull != parent) {
     // Create content object
     nsCOMPtr<nsINodeInfo> nodeInfo;
-    rv = mNodeInfoManager->GetNodeInfo(NS_ConvertASCIItoUCS2("meta"), nsnull,
+    rv = mNodeInfoManager->GetNodeInfo(NS_LITERAL_STRING("meta"), nsnull,
                                        kNameSpaceID_None,
                                        *getter_AddRefs(nodeInfo));
     NS_ENSURE_SUCCESS(rv, rv);
@@ -4361,7 +4367,7 @@ HTMLContentSink::ProcessHTTPHeaders(nsIChannel* aChannel) {
 }
 
 nsresult
-HTMLContentSink::ProcessHeaderData(nsIAtom* aHeader,nsString& aValue,nsIHTMLContent* aContent)
+HTMLContentSink::ProcessHeaderData(nsIAtom* aHeader,const nsAReadableString& aValue,nsIHTMLContent* aContent)
 {
   nsresult rv=NS_OK;
   // XXX necko isn't going to process headers coming in from the parser          
@@ -4394,7 +4400,7 @@ HTMLContentSink::ProcessHeaderData(nsIAtom* aHeader,nsString& aValue,nsIHTMLCont
     nsCOMPtr<nsIWebNavigation> webNav = do_QueryInterface(docShell);
     rv = webNav->GetCurrentURI(getter_AddRefs(baseURI));
     if (NS_FAILED(rv)) return rv;
-    char *cookie = aValue.ToNewCString();
+    char *cookie = ToNewUTF8String(aValue);
     nsCOMPtr<nsIScriptGlobalObject> globalObj;
     nsCOMPtr<nsIPrompt> prompt;
     mDocument->GetScriptGlobalObject(getter_AddRefs(globalObj));

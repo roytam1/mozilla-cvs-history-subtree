@@ -1580,7 +1580,26 @@ NS_IMETHODIMP GlobalWindowImpl::Dump(const nsAReadableString& aStr)
   return NS_OK;
 }
 
-NS_IMETHODIMP GlobalWindowImpl::Alert(const nsAReadableString& aString)
+static void EnsureReflowFlushAndPaint(nsIDocShell* aDocShell)
+{
+  if (!aDocShell)
+    return;
+
+  nsCOMPtr<nsIPresShell> presShell;
+  aDocShell->GetPresShell(getter_AddRefs(presShell));
+
+  if (!presShell)
+    return;
+
+  // Flush pending reflows.
+  presShell->FlushPendingNotifications();
+
+  // Unsuppress painting.
+  presShell->UnsuppressPainting();
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::Alert(const nsAReadableString& aString)
 {
   NS_ENSURE_STATE(mDocShell);
 
@@ -1592,6 +1611,10 @@ NS_IMETHODIMP GlobalWindowImpl::Alert(const nsAReadableString& aString)
 
   nsCOMPtr<nsIPrompt> prompter(do_GetInterface(mDocShell));
   NS_ENSURE_TRUE(prompter, NS_ERROR_FAILURE);
+
+  // Before bringing up the window, unsuppress painting and flush
+  // pending reflows.
+  EnsureReflowFlushAndPaint(mDocShell);
 
   return prompter->Alert(nsnull, str.GetUnicode());
 }
@@ -1611,6 +1634,10 @@ GlobalWindowImpl::Confirm(const nsAReadableString& aString, PRBool* aReturn)
 
   nsCOMPtr<nsIPrompt> prompter(do_GetInterface(mDocShell));
   NS_ENSURE_TRUE(prompter, NS_ERROR_FAILURE);
+
+  // Before bringing up the window, unsuppress painting and flush
+  // pending reflows.
+  EnsureReflowFlushAndPaint(mDocShell);
 
   return prompter->Confirm(nsnull, str.GetUnicode(), aReturn);
 }
@@ -1634,6 +1661,10 @@ GlobalWindowImpl::Prompt(const nsAReadableString& aMessage,
 
   PRBool b;
   nsXPIDLString uniResult;
+
+  // Before bringing up the window, unsuppress painting and flush
+  // pending reflows.
+  EnsureReflowFlushAndPaint(mDocShell);
 
   rv = prompter->Prompt(PromiseFlatString(aTitle).get(),
                         PromiseFlatString(aMessage).get(), nsnull,
@@ -1724,6 +1755,10 @@ GlobalWindowImpl::Prompt(nsAWritableString& aReturn)
   nsCOMPtr<nsIAuthPrompt> prompter(do_GetInterface(mDocShell));
 
   NS_ENSURE_TRUE(prompter, NS_ERROR_FAILURE);
+
+  // Before bringing up the window, unsuppress painting and flush
+  // pending reflows.
+  EnsureReflowFlushAndPaint(mDocShell);
 
   PRBool b;
   PRUnichar *uniResult = nsnull;

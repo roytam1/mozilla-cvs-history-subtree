@@ -486,7 +486,8 @@ if test "$GNU_CC"; then
     # Warnings slamm took out for now (these were giving more noise than help):
     # -Wbad-function-cast - warns when casting a function to a new return type
     # -Wconversion - complained when char's or short's were used a function args
-    _WARNINGS_CFLAGS="${_WARNINGS_CFLAGS} -Wall -W -Wno-unused -Wshadow -Wpointer-arith -Wcast-align"
+    # -Wshadow - removed because it generates more noise than help --pete
+    _WARNINGS_CFLAGS="${_WARNINGS_CFLAGS} -Wall -W -Wno-unused -Wpointer-arith -Wcast-align"
 
     dnl Turn pedantic on but disable the warnings for long long
     _PEDANTIC=1
@@ -509,7 +510,7 @@ if test "$GNU_CXX"; then
 
 	dnl The following warning breaks Qt
 	if test ! "$QTDIR"; then
-    	_WARNINGS_CXXFLAGS="${_WARNINGS_CXXFLAGS} -Wshadow"
+    	_WARNINGS_CXXFLAGS="${_WARNINGS_CXXFLAGS}"
 	fi
 
     _DEFINES_CXXFLAGS='-DMOZILLA_CLIENT -include $(DEPTH)/config-defs.h'
@@ -1358,7 +1359,7 @@ dnl ========================================================
 if test "$no_x" != "yes"
 then
 	AC_ARG_WITH(java-supplement,
-	[  --with-java-supplement   Enable Blackwood Java Code],
+	[  --with-java-supplement  Enable Blackwood Java Code],
 	[
 		if test "$withval" = "yes"
 		then
@@ -1814,6 +1815,12 @@ XCFLAGS="$X_CFLAGS"
 AC_SUBST(XCFLAGS)
 AC_SUBST(XLDFLAGS)
 AC_SUBST(XLIBS)
+
+if test "$MOZ_ENABLE_GTK" || test "$MOZ_ENABLE_QT" \
+|| test "$MOZ_ENABLE_XLIB" || test "$MOZ_ENABLE_MOTIF"
+then
+AC_DEFINE(MOZ_X11)
+fi
 
 dnl Check for GLib and libIDL.
 dnl ========================================================
@@ -2994,7 +3001,8 @@ AC_SUBST(MOZ_MAIL_NEWS)
 dnl Turn on editor logging by default
 MOZ_EDITOR_API_LOG=1
 MOZ_ARG_DISABLE_BOOL(editor-api-log,
-[  --disable-editor-api-log      Disable editor logging],
+[  --disable-editor-api-log
+                          Disable editor logging],
   MOZ_EDITOR_API_LOG= )
 if test "$MOZ_EDITOR_API_LOG"; then
   AC_DEFINE(MOZ_EDITOR_API_LOG)
@@ -3038,13 +3046,13 @@ AC_DEFINE(NS_MT_SUPPORTED)
 dnl build the tests by default
 ENABLE_TESTS=1
 MOZ_ARG_DISABLE_BOOL(tests,
-[  --disable-tests         Dont build the tests],
+[  --disable-tests         Do not build tests libraries & programs],
   ENABLE_TESTS= )
 
 dnl bi-directional support off by default
 IBMBIDI=
 MOZ_ARG_ENABLE_BOOL(bidi,
-[  --enable-bidi     Enable bi-directional support],
+[  --enable-bidi           Enable bi-directional support],
   IBMBIDI=1)
 if test "$IBMBIDI"; then
   AC_DEFINE(IBMBIDI)
@@ -3148,7 +3156,7 @@ dnl =
 dnl ========================================================
 BUILD_MODULES=all
 MOZ_ARG_ENABLE_STRING(modules,
-[  --enable-modules        Enable build of specific modules],
+[  --enable-modules        Enable standalone build of specific modules],
   [ BUILD_MODULES=`echo $enableval | sed 's/,/ /g'` ] )
 dnl ========================================================
 
@@ -3193,7 +3201,7 @@ dnl =
 dnl ========================================================
 
 MOZ_ARG_ENABLE_BOOL(lea,
-[  --enable-lea            Enable Lea malloc for Linux ],
+[  --enable-lea            Enable Lea malloc ],
   [ XPCOM_USE_LEA=1
     AC_DEFINE(XPCOM_USE_LEA)] )
 
@@ -3213,7 +3221,7 @@ then
 fi
 
 MOZ_ARG_ENABLE_STRING(optimize,
-[  --enable-optimize(=flag) Enable code optimizations (flag, ie. -O2) ],
+[  --enable-optimize(=val) Enable compiler optimizations (val, ie. -O2) ],
     [ if test "$enableval" != "no"; then
 	MOZ_OPTIMIZE=1
 	if test -n "$enableval" && test "$enableval" != "yes"; then
@@ -3340,7 +3348,8 @@ dnl =   pass args to --without-debug-modules)
 dnl = 
 dnl ========================================================
 MOZ_ARG_WITH_STRING(default-mozilla-five-home,
-[  --with-default-mozilla-five-home    Set the default value for MOZILLA_FIVE_HOME],
+[  --with-default-mozilla-five-home
+                          Set the default value for MOZILLA_FIVE_HOME],
   [ val=`echo $withval`
     AC_DEFINE_UNQUOTED(MOZ_DEFAULT_MOZILLA_FIVE_HOME,"$val")
     ])
@@ -3351,13 +3360,13 @@ dnl =
 dnl = --with-debug-modules=module1,^module2,etc
 dnl = 
 dnl = Enable/disable debug for specific modules only
-dnl =   module names beginning with ^ will be disabled (this is because you can't
-dnl =   pass args to --without-debug-modules)
+dnl =   module names beginning with ^ will be disabled 
+dnl =   (this is because you can't pass args to --without-debug-modules)
 dnl = 
 dnl ========================================================
 
 MOZ_ARG_WITH_STRING(debug-modules,
-[  --with-debug-modules    Enable/disable debug for specific modules only],
+[  --with-debug-modules    Enable/disable debug info for specific modules],
   [ MOZ_DEBUG_MODULES=`echo $withval | sed 's/,/ /g'` ] )
 dnl ========================================================
 
@@ -3371,17 +3380,20 @@ dnl =    module names beginning with ^ will be disabled
 dnl = 
 dnl ========================================================
 
-MOZ_DBGRINFO_MODULES="ALL_MODULES"
+MOZ_DBGRINFO_MODULES=""
 
 MOZ_ARG_WITH_STRING(dbgrinfo-modules,
-[  --with-dbgrinfo-modules Enable/disable generation of debugger info for specific modules only],
+[  --with-dbgrinfo-modules Enable/disable debugger info for specific modules],
   [ for i in `echo $withval | sed 's/,/ /g'`; do
 
-      dnl note that the list of module names is reversed as it is copied - this is
-      dnl important, as it will allow config.mk to interpret stuff like
+      dnl note that the list of module names is reversed as it is copied
+      dnl this is important, as it will allow config.mk to interpret stuff like
       dnl "^ALL_MODULES xpcom" properly
       if test "$i" = "no"; then
         i="^ALL_MODULES"
+      fi
+      if test "$i" = "yes"; then
+        i="ALL_MODULES"
       fi
       MOZ_DBGRINFO_MODULES="$i $MOZ_DBGRINFO_MODULES";
     done ])
@@ -3621,7 +3633,7 @@ dnl ========================================================
 MOZ_ARG_HEADER(Profiling and Instrumenting)
 
 MOZ_ARG_ENABLE_BOOL(eazel-profiler,
-[  --enable-eazel-profiler          Enable Corel/Eazel profiler],
+[  --enable-eazel-profiler Enable Corel/Eazel profiler],
   [  ENABLE_EAZEL_PROFILER=1
      AC_DEFINE(ENABLE_EAZEL_PROFILER)
      USE_ELF_DYNSTR_GC=
@@ -3630,7 +3642,7 @@ MOZ_ARG_ENABLE_BOOL(eazel-profiler,
      EAZEL_PROFILER_LIBS="-lprofiler -lpthread"])
 
 MOZ_ARG_WITH_STRING(profile-modules,
-[  --with-profile-modules    Enable/disable profile for specific modules only],
+[  --with-profile-modules  Enable/disable profiling for specific modules],
   [ MOZ_PROFILE_MODULES=`echo $withval | sed 's/,/ /g'` ] )
 dnl ========================================================
 dnl ========================================================
@@ -3647,12 +3659,12 @@ MOZ_ARG_ENABLE_BOOL(insure,
 
 MOZ_ARG_WITH_STRING(insure-dirs,
 [  --with-insure-dirs=\$dirs
-                          Dirs to instrument ],
+                          Dirs to instrument with insure ],
   MOZ_INSURE_DIRS=$withval )
 
 MOZ_ARG_WITH_STRING(insure-exclude-dirs,
 [  --with-insure-exclude-dirs=\$dirs
-                          Dirs to not instrument ],
+                          Dirs to not instrument with insure ],
   MOZ_INSURE_EXCLUDE_DIRS="config $withval" )
 
 MOZ_ARG_ENABLE_BOOL(boehm,
@@ -3709,7 +3721,7 @@ MOZ_ARG_DISABLE_BOOL(double-buffer,
   AC_DEFINE(NO_DOUBLE_BUFFER))
 
 MOZ_ARG_ENABLE_BOOL(wrap-malloc,
-[  --enable-wrap-malloc    Wrap malloc calls (gnu linker only) (default=no) ],
+[  --enable-wrap-malloc    Wrap malloc calls (gnu linker only)],
   [ if test "$GNU_CC"; then
       WRAP_MALLOC_CFLAGS="${LDFLAGS} -Wl,--wrap -Wl,malloc -Wl,--wrap -Wl,free -Wl,--wrap -Wl,realloc -Wl,--wrap -Wl,__builtin_new -Wl,--wrap -Wl,__builtin_vec_new -Wl,--wrap -Wl,__builtin_delete -Wl,--wrap -Wl,__builtin_vec_delete -Wl,--wrap -Wl,PR_Free -Wl,--wrap -Wl,PR_Malloc -Wl,--wrap -Wl,PR_Calloc -Wl,--wrap -Wl,PR_Realloc"
       MKSHLIB='$(CXX) $(DSO_LDOPTS) $(WRAP_MALLOC_CFLAGS) -o $@'
@@ -3720,7 +3732,7 @@ MOZ_ARG_WITH_STRING(wrap-malloc,
   WRAP_MALLOC_LIB=$withval)
 
 MOZ_ARG_ENABLE_BOOL(efence,
-[  --enable-efence         Link with Electric Fence if available (default=no) ],
+[  --enable-efence         Link with Electric Fence],
   AC_CHECK_LIB(efence,malloc))
 
 dnl ========================================================
@@ -3788,7 +3800,7 @@ dnl [ Location of the mozilla user directory (default is ~/.mozilla).],
   AC_DEFINE(MOZ_USER_DIR,".mozilla") )
 
 MOZ_ARG_ENABLE_BOOL(idltool,
-[  --enable-idlc           Build idl tool (default=no) ],
+[  --enable-idlc           Build idl tool ],
   BUILD_IDLC=1)
 
 MOZ_ARG_ENABLE_BOOL(xterm-updates,
@@ -3807,7 +3819,7 @@ dnl
 dnl --disable-ldap
 dnl
 MOZ_ARG_DISABLE_BOOL(ldap,
-[  --disable-ldap           Disable LDAP support],
+[  --disable-ldap          Disable LDAP support],
   MOZ_LDAP_XPCOM=
     )
 
@@ -3815,7 +3827,7 @@ dnl --enable-ldap-experimental
 dnl
 MOZ_ARG_ENABLE_BOOL(ldap-experimental,
 [  --enable-ldap-experimental
-                          Enable LDAP experimental features (default=no)],
+                          Enable LDAP experimental features],
   MOZ_LDAP_XPCOM_EXPERIMENTAL=1
     )
 
@@ -3939,7 +3951,7 @@ dnl ========================================================
 
 MOZ_ARG_ENABLE_STRING(static-components,
 [  --enable-static-components
-                           Enable/disable static linking for specific components only],
+                          Build meta-component from specific components],
   [ MOZ_STATIC_COMPONENTS=`echo $enableval | sed 's/,/ /g'` ] )
 
 dnl ========================================================

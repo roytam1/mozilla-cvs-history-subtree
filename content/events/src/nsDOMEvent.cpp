@@ -154,7 +154,7 @@ nsDOMEvent::nsDOMEvent(nsIPresContext* aPresContext, nsEvent* aEvent,
       mEvent = PR_NEWZAP(nsEvent);
       mEvent->eventStructType = NS_EVENT;
     }
-    else if (eventType.EqualsIgnoreCase("MutationEvent")) {
+    else if (eventType.EqualsIgnoreCase("MutationEvents")) {
       mEvent = PR_NEWZAP(nsMutationEvent);
       mEvent->eventStructType = NS_MUTATION_EVENT;
     }
@@ -247,7 +247,7 @@ nsDOMEvent::~nsDOMEvent()
 NS_IMPL_ADDREF(nsDOMEvent)
 NS_IMPL_RELEASE(nsDOMEvent)
 
-// XPConnect interface list for nsHTMLFormElement
+// XPConnect interface list for nsDOMEvent
 NS_CLASSINFO_MAP_BEGIN(Event)
   NS_CLASSINFO_MAP_ENTRY(nsIDOMKeyEvent)
   NS_CLASSINFO_MAP_ENTRY(nsIDOMMouseEvent)

@@ -178,6 +178,13 @@ nsEventStateManager::Init()
 
 nsEventStateManager::~nsEventStateManager()
 {
+#if CLICK_HOLD_CONTEXT_MENUS
+  if ( mClickHoldTimer ) {
+    mClickHoldTimer->Cancel();
+    mClickHoldTimer = nsnull;
+  }
+#endif
+
   NS_IF_RELEASE(mCurrentTargetContent);
   NS_IF_RELEASE(mCurrentRelatedContent);
 
@@ -695,6 +702,26 @@ nsEventStateManager :: CreateClickHoldTimer ( nsIPresContext* inPresContext, nsG
     mClickHoldTimer = nsnull;
   }
   
+  // if content clicked on has a popup, don't even start the timer
+  // since we'll end up conflicting and both will show.
+  nsCOMPtr<nsIContent> clickedContent;
+  if ( mGestureDownFrame ) {
+    mGestureDownFrame->GetContent(getter_AddRefs(clickedContent));
+    if ( clickedContent ) {
+      // check for the |popup| attribute
+      nsAutoString popup;
+      clickedContent->GetAttribute(kNameSpaceID_None, nsXULAtoms::popup, popup);
+      if ( popup != NS_LITERAL_STRING("") )
+        return;
+      
+      // check for a <menubutton> like bookmarks
+      nsCOMPtr<nsIAtom> tag;
+      clickedContent->GetTag ( *getter_AddRefs(tag) );
+      if ( tag == nsXULAtoms::menubutton )
+        return;
+    }
+  }
+
   mClickHoldTimer = do_CreateInstance("@mozilla.org/timer;1");
   if ( mClickHoldTimer )
     mClickHoldTimer->Init(sClickHoldCallback, this, kClickHoldDelay, NS_PRIORITY_HIGH);
@@ -878,6 +905,7 @@ nsEventStateManager :: BeginTrackingDragGesture ( nsIPresContext* aPresContext, 
 void
 nsEventStateManager :: StopTrackingDragGesture ( )
 {
+  SetContentState(nsnull, NS_EVENT_STATE_ACTIVE);
   mIsTrackingDragGesture = PR_FALSE;
   mGestureDownPoint = nsPoint(0,0);
   mGestureDownFrame = nsnull;
@@ -1156,31 +1184,35 @@ nsEventStateManager::DoWheelScroll(nsIPresContext* aPresContext,
     curFrame->GetParent(&curFrame);
   }
   
+  // Create a mouseout event that we fire to the content before
+  // scrolling, to allow tooltips to disappear, etc.
+
+  nsMouseEvent mouseOutEvent;
+  mouseOutEvent.eventStructType = NS_MOUSE_EVENT;
+  mouseOutEvent.message = NS_MOUSE_EXIT_SYNTH;
+  mouseOutEvent.widget = msEvent->widget;
+  mouseOutEvent.clickCount = 0;
+  mouseOutEvent.point = nsPoint(0,0);
+  mouseOutEvent.refPoint = nsPoint(0,0);
+  mouseOutEvent.isShift = PR_FALSE;
+  mouseOutEvent.isControl = PR_FALSE;
+  mouseOutEvent.isAlt = PR_FALSE;
+  mouseOutEvent.isMeta = PR_FALSE;
+
+  nsCOMPtr<nsIContent> targetContent;
+  aTargetFrame->GetContent(getter_AddRefs(targetContent));
+
+  nsEventStatus mouseoutStatus = nsEventStatus_eIgnore;
+
   if (treeFrame) {
-    PRInt32 scrollIndex, visibleRows;
-    treeFrame->GetIndexOfFirstVisibleRow(&scrollIndex);
-    treeFrame->GetNumberOfVisibleRows(&visibleRows);
-
-    if (scrollPage)
-      scrollIndex += ((numLines > 0) ? visibleRows : -visibleRows);
-    else
-      scrollIndex += numLines;
-    
-    if (scrollIndex < 0)
-      scrollIndex = 0;
-    else {
-      PRInt32 numRows, lastPageTopRow;
-      treeFrame->GetRowCount(&numRows);
-      lastPageTopRow = numRows - visibleRows;
-      if (scrollIndex > lastPageTopRow)
-        scrollIndex = lastPageTopRow;
-    }
-    
-    treeFrame->ScrollToIndex(scrollIndex);
-    return NS_OK;
-  }
-
-  if (outlinerBoxObject) {
+    if (targetContent)
+      targetContent->HandleDOMEvent(aPresContext, &mouseOutEvent, nsnull,
+                                    NS_EVENT_FLAG_INIT, &mouseoutStatus);
+    return DoTreeScroll(aPresContext, numLines, scrollPage, treeFrame);
+  } else if (outlinerBoxObject) {
+    if (targetContent)
+      targetContent->HandleDOMEvent(aPresContext, &mouseOutEvent, nsnull,
+                                    NS_EVENT_FLAG_INIT, &mouseoutStatus);
     if (scrollPage)
       outlinerBoxObject->ScrollByPages((numLines > 0) ? 1 : -1);
     else
@@ -1236,6 +1268,10 @@ nsEventStateManager::DoWheelScroll(nsIPresContext* aPresContext,
   }
 
   if (sv) {
+    if (targetContent)
+      targetContent->HandleDOMEvent(aPresContext, &mouseOutEvent, nsnull,
+                                    NS_EVENT_FLAG_INIT, &mouseoutStatus);
+
     if (scrollPage)
       sv->ScrollByPages((numLines > 0) ? 1 : -1);
     else
@@ -2611,7 +2647,7 @@ nsEventStateManager::GetNextTabbableContent(nsIContent* aRootContent, nsIFrame* 
           if (nextAnchor)
             nextAnchor->GetTabIndex(&tabIndex);
           nsAutoString href;
-          nextAnchor->GetAttribute(NS_ConvertASCIItoUCS2("href"), href);
+          nextAnchor->GetAttribute(NS_LITERAL_STRING("href"), href);
           if (!href.Length()) {
             disabled = PR_TRUE; // Don't tab unless href, bug 17605
           } else {
@@ -3239,7 +3275,8 @@ nsEventStateManager::SendFocusBlur(nsIPresContext* aPresContext, nsIContent *aCo
             nsCOMPtr<nsPIDOMWindow> newWindow = do_QueryInterface(newGlobal);
 		    nsCOMPtr<nsPIDOMWindow> oldWindow = do_QueryInterface(oldGlobal);
 
-		    newWindow->GetRootFocusController(getter_AddRefs(newFocusController));
+        if (newWindow)
+          newWindow->GetRootFocusController(getter_AddRefs(newFocusController));
 		    oldWindow->GetRootFocusController(getter_AddRefs(oldFocusController));
             if(oldFocusController && oldFocusController != newFocusController)
 			  oldFocusController->SetSuppressFocus(PR_TRUE, "SendFocusBlur Window Switch #2");

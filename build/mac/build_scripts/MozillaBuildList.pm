@@ -337,6 +337,7 @@ sub ProcessJarManifests()
     CreateJarFromManifest(":mozilla:themes:classic:communicator:mac:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:themes:classic:communicator:search:mac:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:themes:classic:communicator:sidebar:mac:jar.mn", $chrome_dir, \%jars);
+    CreateJarFromManifest(":mozilla:themes:classic:communicator:bookmarks:mac:jar.mn", , $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:themes:classic:global:mac:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:themes:classic:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:themes:classic:navigator:mac:jar.mn", $chrome_dir, \%jars);
@@ -727,6 +728,7 @@ sub BuildClientDist()
     InstallFromManifest(":mozilla:embedding:browser:webbrowser:MANIFEST_IDL",      "$distdirectory:idl:");
     InstallFromManifest(":mozilla:embedding:components:windowwatcher:public:MANIFEST_IDL", "$distdirectory:idl:");
     InstallFromManifest(":mozilla:embedding:components:appstartup:src:MANIFEST",   "$distdirectory:embedding:components:");
+    InstallFromManifest(":mozilla:embedding:components:find:public:MANIFEST_IDL",  "$distdirectory:idl:");
 
     #WIDGET
     InstallFromManifest(":mozilla:widget:public:MANIFEST",                         "$distdirectory:widget:");

@@ -106,10 +106,8 @@
 #include "nsIDocumentCharsetInfo.h"
 #include "nsIDocumentEncoder.h" //for outputting selection
 #include "nsIBookmarksService.h"
-#ifdef MOZ_OLD_CACHE
-#include "nsINetDataCacheManager.h"
-#include "nsICachedNetData.h"
-#endif
+#include "nsICachingChannel.h"
+#include "nsICacheEntryDescriptor.h"
 #include "nsIXMLContent.h" //for createelementNS
 #include "nsHTMLParts.h" //for createelementNS
 #include "nsIJSContextStack.h"
@@ -423,9 +421,7 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
     }
   }
 
-#ifdef MOZ_OLD_CACHE
-  nsCOMPtr<nsICachedNetData> cachedData;
-#endif
+  nsCOMPtr<nsICacheEntryDescriptor> cacheDescriptor;
   nsresult rv = nsDocument::StartDocumentLoad(aCommand,
                                               aChannel, aLoadGroup,
                                               aContainer,
@@ -527,18 +523,12 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
       }
     }
 
-    PRUint32 loadAttr = 0;
-    rv = httpChannel->GetLoadFlags(&loadAttr);
-    NS_ASSERTION(NS_SUCCEEDED(rv),"cannot get load attribute");
-    if(NS_SUCCEEDED(rv)) {
-#ifdef MOZ_OLD_CACHE
-      // copy from nsHTTPChannel.cpp
-      if(loadAttr & nsIChannel::CACHE_AS_FILE)
-        cacheFlags = nsINetDataCacheManager::CACHE_AS_FILE;
-      else if(loadAttr & nsIRequest::INHIBIT_PERSISTENT_CACHING)
-        cacheFlags = nsINetDataCacheManager::BYPASS_PERSISTENT_CACHE;
-      bTryCache = PR_TRUE;
-#endif
+    nsCOMPtr<nsICachingChannel> cachingChan = do_QueryInterface(httpChannel);
+    if (cachingChan) {
+      nsCOMPtr<nsISupports> cacheToken;
+      cachingChan->GetCacheToken(getter_AddRefs(cacheToken));
+      if (cacheToken)
+        cacheDescriptor = do_QueryInterface(cacheToken);
     }
 
     // Don't propogate the result code beyond here, since it
@@ -783,31 +773,20 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
        }
     } 
 
-    if(bTryCache && urlSpec)
+    if (cacheDescriptor && urlSpec)
     {
-#ifdef MOZ_OLD_CACHE
-       nsCOMPtr<nsINetDataCacheManager> cacheMgr;
-       cacheMgr = do_GetService(NS_NETWORK_CACHE_MANAGER_CONTRACTID, &rv);       
-       if(NS_SUCCEEDED(rv))
-       {
-          rv = cacheMgr->GetCachedNetData(urlSpec, nsnull, 0, cacheFlags, getter_AddRefs(cachedData));
-          if(NS_SUCCEEDED(rv)) {
-              if(kCharsetFromCache > charsetSource) 
-              {
-                nsXPIDLCString cachedCharset;
-                PRUint32 cachedCharsetLen = 0;
-                rv = cachedData->GetAnnotation( "charset", &cachedCharsetLen, 
-                      getter_Copies(cachedCharset));
-                if(NS_SUCCEEDED(rv) && (cachedCharsetLen > 0)) 
-                {
-                   charset.AssignWithConversion(cachedCharset);
-                   charsetSource = kCharsetFromCache;
-                }
-              }    
-          }
-       }
-       rv=NS_OK;
-#endif
+      if (kCharsetFromCache > charsetSource) 
+      {
+        nsXPIDLCString cachedCharset;
+        rv = cacheDescriptor->GetMetaDataElement("charset",
+                                                 getter_Copies(cachedCharset));
+        if (NS_SUCCEEDED(rv) && PL_strlen(cachedCharset) > 0)
+        {
+          charset.AssignWithConversion(cachedCharset);
+          charsetSource = kCharsetFromCache;
+        }
+      }    
+      rv = NS_OK;
     }
 
     if (kCharsetFromParentFrame > charsetSource) {
@@ -872,13 +851,11 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
     return rv;
   }
 
-#ifdef MOZ_OLD_CACHE
-  if(cachedData) {
-       rv=cachedData->SetAnnotation("charset",charset.Length()+1,
+  if(cacheDescriptor) {
+    rv = cacheDescriptor->SetMetaDataElement("charset",
                                     NS_ConvertUCS2toUTF8(charset).get());
-       NS_ASSERTION(NS_SUCCEEDED(rv),"cannot SetAnnotation");
+    NS_ASSERTION(NS_SUCCEEDED(rv),"cannot SetMetaDataElement");
   }
-#endif
 
   // Set the parser as the stream listener for the document loader...
   if (mParser) {
@@ -1061,32 +1038,17 @@ nsHTMLDocument::InternalInsertStyleSheetAt(nsIStyleSheet* aSheet, PRInt32 aIndex
   mStyleSheets.InsertElementAt(aSheet, aIndex + 1); // offset one for the attr style sheet
 }
 
-
 NS_IMETHODIMP
 nsHTMLDocument::GetBaseURL(nsIURI*& aURL) const
 {
-  if (nsnull != mBaseURL) {
-    NS_ADDREF(mBaseURL);
-    aURL = mBaseURL;
+  if (mDocumentBaseURL) {    
+    aURL = mDocumentBaseURL.get();
+    NS_ADDREF(aURL);
   }
   else {
     aURL = GetDocumentURL();
   }
   return NS_OK;
-}
-
-NS_IMETHODIMP
-nsHTMLDocument::SetBaseURL(const nsAReadableString& aURLSpec)
-{
-  nsresult result = NS_OK;
-
-  NS_IF_RELEASE(mBaseURL);
-  if (0 < aURLSpec.Length()) {
-    {
-        result = NS_NewURI(&mBaseURL, aURLSpec, mDocumentURL);
-    }
-  }
-  return result;
 }
 
 NS_IMETHODIMP

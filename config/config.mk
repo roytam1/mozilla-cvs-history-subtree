@@ -159,16 +159,21 @@ endif
 
 OS_CONFIG	:= $(OS_ARCH)$(OS_RELEASE)
 
+FINAL_LINK_LIBS = $(DEPTH)/config/final-link-libs
+FINAL_LINK_COMPS = $(DEPTH)/config/final-link-comps
+
 # determine debug-related options
 DEBUG_FLAGS :=
 
 ifndef MOZ_DEBUG
-  #global debugging is disabled - check if it was explicitly enabled for this module
+  # global debugging is disabled 
+  # check if it was explicitly enabled for this module
   ifneq (, $(findstring $(MODULE), $(MOZ_DEBUG_MODULES)))
     MOZ_DEBUG:=1
-endif
+  endif
 else
-  #global debugging is enabled - check if it was explicitly disabled for this module
+  # global debugging is enabled
+  # check if it was explicitly disabled for this module
   ifneq (, $(findstring ^$(MODULE), $(MOZ_DEBUG_MODULES)))
     MOZ_DEBUG:=
   endif
@@ -180,45 +185,56 @@ else
   DEBUG_FLAGS += $(MOZ_DEBUG_DISABLE_DEFS)
 endif
 
+# determine if -g should be passed to the compiler, based on
+# the current module, and the value of MOZ_DBGRINFO_MODULES
+
 ifdef MOZ_DEBUG
-  # debugging is enabled - determine if -g should be passed to the compiler, based on
-  # the current module, and the value of MOZ_DBGRINFO_MODULES
+  MOZ_DBGRINFO_MODULES += ALL_MODULES
+  pattern := ALL_MODULES ^ALL_MODULES
+else
+  MOZ_DBGRINFO_MODULES += ^ALL_MODULES
+  pattern := ^ALL_MODULES
+endif
 
-  pattern:=ALL_MODULES ^ALL_MODULES
-  ifdef MODULE
-    # our current Makefile specifies a module name - add it to our pattern
-    pattern += $(MODULE) ^$(MODULE)
-  endif
+ifdef MODULE
+  # our current Makefile specifies a module name - add it to our pattern
+  pattern += $(MODULE) ^$(MODULE)
+endif
 
-  # start by finding the first relevant module name (remember that the order of the
-  # module names in MOZ_DBGRINFO_MODULES is reversed from the order the user
-  # specified to configure - this allows the user to put general names at the beginning
-  # of the list, and to override them with explicit module names later in the list)
-  first_match:=$(firstword $(filter $(pattern), $(MOZ_DBGRINFO_MODULES)))
-  ifeq ($(first_match), $(MODULE))
-    # the user specified explicitly that this module should be compiled with -g
-    DEBUG_FLAGS += $(MOZ_DEBUG_FLAGS)
+# start by finding the first relevant module name 
+# (remember that the order of the module names in MOZ_DBGRINFO_MODULES 
+# is reversed from the order the user specified to configure - 
+# this allows the user to put general names at the beginning
+# of the list, and to override them with explicit module names later 
+# in the list)
+
+first_match:=$(firstword $(filter $(pattern), $(MOZ_DBGRINFO_MODULES)))
+
+ifeq ($(first_match), $(MODULE))
+  # the user specified explicitly that 
+  # this module should be compiled with -g
+  DEBUG_FLAGS += $(MOZ_DEBUG_FLAGS)
+else
+  ifeq ($(first_match), ^$(MODULE))
+    # the user specified explicitly that this module 
+    # should not be compiled with -g (nothing to do)
   else
-    ifeq ($(first_match), ^$(MODULE))
-      # the user specified explicitly that this module should not be compiled with -g
-      # (nothing to do)
+    ifeq ($(first_match), ALL_MODULES)
+      # the user didn't mention this module explicitly, 
+      # but wanted all modules to be compiled with -g
+      DEBUG_FLAGS += $(MOZ_DEBUG_FLAGS)
     else
-      ifeq ($(first_match), ALL_MODULES)
-        # the user didn't mention this module explicitly, but wanted all modules to be
-        # compiled with -g
-        DEBUG_FLAGS += $(MOZ_DEBUG_FLAGS)
-      else
-        ifeq ($(first_match), ^ALL_MODULES)
-          # the user didn't mention this module explicitly, but wanted all modules to be
-          # compiled without -g (nothing to do)
-        endif
+      ifeq ($(first_match), ^ALL_MODULES)
+        # the user didn't mention this module explicitly, 
+        # but wanted all modules to be compiled without -g (nothing to do)
       endif
     endif
   endif
 endif
 
-# append debug flags (these might have been above when processing
-# MOZ_DBGRINFO_MODULES)
+
+# append debug flags 
+# (these might have been above when processing MOZ_DBGRINFO_MODULES)
 OS_CFLAGS += $(DEBUG_FLAGS)
 OS_CXXFLAGS += $(DEBUG_FLAGS)
 
@@ -378,7 +394,7 @@ endif
 
 DEPENDENCIES	= .md
 
-MOZ_COMPONENT_LIBS=$(MOZ_COMPONENT_NSPR_LIBS) $(MOZ_COMPONENT_XPCOM_LIBS)
+MOZ_COMPONENT_LIBS=$(MOZ_COMPONENT_XPCOM_LIBS) $(MOZ_COMPONENT_NSPR_LIBS)
 
 ifdef GC_LEAK_DETECTOR
 MOZ_COMPONENT_XPCOM_LIBS += -lboehm
@@ -409,7 +425,7 @@ ifdef MOZ_NATIVE_MAKEDEPEND
 MKDEPEND_DIR	=
 MKDEPEND	= $(MOZ_NATIVE_MAKEDEPEND)
 else
-MKDEPEND_DIR	= $(DEPTH)/config/mkdepend
+MKDEPEND_DIR	= $(CONFIG_TOOLS)/mkdepend
 MKDEPEND	= $(MKDEPEND_DIR)/mkdepend
 ifndef COMPILER_DEPEND
 ifneq ($(OS_ARCH),OS2)

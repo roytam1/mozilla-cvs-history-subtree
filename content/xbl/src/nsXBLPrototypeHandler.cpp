@@ -199,7 +199,7 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
   nsCOMPtr<nsIAtom> tag;
   mHandlerElement->GetTag(*getter_AddRefs(tag));
   PRBool isXULKey = (tag.get() == nsXULAtoms::key);
-    
+
   PRBool isReceiverCommandElement = PR_FALSE;
   nsCOMPtr<nsIContent> content(do_QueryInterface(aReceiver));
   if (isXULKey && content && content.get() != mHandlerElement)
@@ -281,6 +281,29 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
       focusController->GetControllerForCommand(command, getter_AddRefs(controller));
     else GetController(aReceiver, getter_AddRefs(controller)); // We're attached to the receiver possibly.
 
+    nsAutoString type;
+    GetEventType (type);
+
+    // 32 is for the space key, there must be a better way to do this
+    if (type == NS_LITERAL_STRING("keypress") &&
+        mDetail == 32 &&
+        mDetail2 == 1) {
+      // get the focused element so that we can pageDown only at
+      // certain times.
+      nsCOMPtr<nsIDOMElement> focusedElement;
+      focusController->GetFocusedElement(getter_AddRefs(focusedElement));
+      
+      if (focusedElement) {
+        nsAutoString tagName;
+        focusedElement->GetTagName(tagName);
+        
+        // if the focused element is a link then we do want space to
+        // scroll down.
+        if (tagName != NS_LITERAL_STRING("A"))
+          return NS_OK;
+      }
+    }
+    
     if (controller)
       controller->DoCommand(command);
 
@@ -886,6 +909,20 @@ PRInt32 nsXBLPrototypeHandler::KeyToMask(PRInt32 key)
       return cControl;
   }
   return cControl;  // for warning avoidance
+}
+
+void
+nsXBLPrototypeHandler::GetEventType(nsAWritableString &type)
+{
+  mHandlerElement->GetAttribute(kNameSpaceID_None, kTypeAtom, type);
+  
+  if (type.IsEmpty()) {
+    // If we're a XUL key element, let's assume that we're "keypress".
+    nsCOMPtr<nsIAtom> tag;
+    mHandlerElement->GetTag(*getter_AddRefs(tag));
+    if (tag.get() == kKeyAtom)
+      type = NS_LITERAL_STRING("keypress");
+  }
 }
 
 void

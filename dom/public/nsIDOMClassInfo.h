@@ -67,6 +67,7 @@ public:
 
     // Event classes
     eEvent_id,
+    eMutationEvent_id,
 
     // HTML classes
     eHTMLDocument_id,

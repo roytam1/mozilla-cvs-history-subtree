@@ -115,7 +115,7 @@ ifeq ($(MOZ_OS2_TOOLS),VACPP)
 EXTRA_DSO_LIBS		:= $(addsuffix .$(LIB_SUFFIX),$(addprefix $(DIST)/lib/,$(EXTRA_DSO_LIBS)))
 EXTRA_DSO_LIBS		:= $(filter-out %/bin %/lib,$(EXTRA_DSO_LIBS))
 EXTRA_DSO_LDOPTS    := $(patsubst -l%,$(DIST)/lib/%.$(LIB_SUFFIX),$(EXTRA_DSO_LDOPTS))
-LIBS                := $(patsubst -l%,$(DIST)/lib/%.$(LIB_SUFFIX),$(LIBS))
+LIBS                := $(patsubst -l%,$(DIST)/lib/lib%.$(LIB_SUFFIX),$(LIBS))
 else
 EXTRA_DSO_LIBS		:= $(addprefix -l,$(EXTRA_DSO_LIBS))
 endif
@@ -508,6 +508,22 @@ endif
 export:: $(SUBMAKEFILES) $(MAKE_DIRS) $(MKDEPEND_BUILTIN)
 	+$(LOOP_OVER_DIRS)
 
+#
+# Rule to create list of libraries for final link
+#
+export::
+ifdef LIBRARY_NAME
+ifdef EXPORT_LIBRARY
+ifdef IS_COMPONENT
+ifndef NO_STATIC_LIB
+	@$(PERL) $(MOZILLA_DIR)/config/build-list.pl $(FINAL_LINK_COMPS) $(LIBRARY_NAME)
+endif
+else
+	$(PERL) $(MOZILLA_DIR)/config/build-list.pl $(FINAL_LINK_LIBS) $(LIBRARY_NAME)
+endif # IS_COMPONENT
+endif # EXPORT_LIBRARY
+endif # LIBRARY_NAME
+
 ##############################################
 install:: $(SUBMAKEFILES) $(MAKE_DIRS) $(HOST_LIBRARY) $(LIBRARY) $(SHARED_LIBRARY) $(IMPORT_LIBRARY) $(HOST_PROGRAM) $(PROGRAM) $(HOST_SIMPLE_PROGRAMS) $(SIMPLE_PROGRAMS) $(MAPS)
 ifndef NO_STATIC_LIB
@@ -521,8 +537,8 @@ else
 	$(INSTALL) $(IFLAGS1) $(LIBRARY) $(DIST)/lib
 endif
 endif # OS2
-endif
-endif
+endif # LIBRARY
+endif # ! NO_STATIC_LIB
 ifdef MAPS
 	$(INSTALL) $(IFLAGS1) $(MAPS) $(DIST)/bin
 endif

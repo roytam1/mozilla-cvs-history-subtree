@@ -194,9 +194,6 @@ endif
 # CVS defines for PSM
 #
 PSM_CO_MODULE= mozilla/security/manager
-ifndef MOZ_NSS_AUTOCONF
-PSM_CO_MODULE += mozilla/security/psm mozilla/security/Makefile.in
-endif
 PSM_CO_FLAGS := -P -A
 ifdef PSM_CO_TAG
   PSM_CO_FLAGS := $(PSM_CO_FLAGS) -r $(PSM_CO_TAG)
@@ -211,15 +208,6 @@ NSS_CO_MODULE = mozilla/security/nss \
 		$(NULL)
 
 ifdef MOZ_NSS_AUTOCONF
-NSS_CO_MODULE += \
-		mozilla/security/build \
-		mozilla/security/Makefile.in \
-		mozilla/security/configure \
-		mozilla/security/configure.in \
-		mozilla/security/secmakefiles.sh \
-		mozilla/security/aclocal.m4 \
-		$(NULL)
-
 NSS_CO_TAG = NSS_CLIENT_BRANCH
 endif
 		
@@ -313,12 +301,6 @@ ifeq (,$(filter gfx2, $(BUILD_MODULE_CVS)))
 endif
 ifeq (,$(filter modules/libpr0n, $(BUILD_MODULE_CVS)))
   CVSCO_IMGLIB2 :=
-endif
-else
-ifndef MOZ_NSS_AUTOCONF
-  # Do not pull PSM/NSS by default
-  CVSCO_PSM :=
-  CVSCO_NSS :=
 endif
 endif
 
