@@ -77,9 +77,11 @@
 #ifdef NEW_CONTEXT_PARENTAGE_INVARIANT
 
   #ifdef DEBUG
-    #undef NOISY_DEBUG
+    //#define NOISY_DEBUG
+    //#define DEBUG_UNDISPLAYED_MAP
   #else
     #undef NOISY_DEBUG
+    #undef DEBUG_UNDISPLAYED_MAP
   #endif
 
   #ifdef NOISY_DEBUG
@@ -846,6 +848,12 @@ FrameManager::SetUndisplayedContent(nsIContent* aContent,
                                     nsIStyleContext* aStyleContext)
 {
   NS_ENSURE_TRUE(mPresShell, NS_ERROR_NOT_AVAILABLE);
+  
+#ifdef DEBUG_UNDISPLAYED_MAP
+   static int i = 0;
+   printf("SetUndisplayedContent(%d): p=%p \n", i++, (void *)aContent);
+#endif
+
   if (! mUndisplayedMap) {
     mUndisplayedMap = new UndisplayedMap;
   }
@@ -853,6 +861,7 @@ FrameManager::SetUndisplayedContent(nsIContent* aContent,
     nsresult result = NS_OK;
     nsIContent* parent = nsnull;
     aContent->GetParent(parent);
+    NS_ASSERTION(parent, "undisplayed content must have a parent");
     if (parent) {
       result = mUndisplayedMap->AddNodeFor(parent, aContent, aStyleContext);
       NS_RELEASE(parent);
@@ -867,6 +876,12 @@ FrameManager::SetUndisplayedPseudoIn(nsIStyleContext* aPseudoContext,
                                      nsIContent* aParentContent)
 {
   NS_ENSURE_TRUE(mPresShell, NS_ERROR_NOT_AVAILABLE);
+
+#ifdef DEBUG_UNDISPLAYED_MAP
+  static int i = 0;
+  printf("SetUndisplayedPseudo(%d): sp=%p cp=%p \n", i++, (void *)aPseudoContext, (void *)aParentContent);
+#endif
+
   if (! mUndisplayedMap) {
     mUndisplayedMap = new UndisplayedMap;
   }
@@ -880,11 +895,28 @@ NS_IMETHODIMP
 FrameManager::ClearUndisplayedContentIn(nsIContent* aContent, nsIContent* aParentContent)
 {
   NS_ENSURE_TRUE(mPresShell, NS_ERROR_NOT_AVAILABLE);
+
+#ifdef DEBUG_UNDISPLAYED_MAP
+  static int i = 0;
+  printf("ClearUndisplayedContent(%d): content=%p parent=%p --> ", i++, (void *)aContent, (void*)aParentContent);
+#endif
+  
   if (mUndisplayedMap) {
     UndisplayedNode* node = mUndisplayedMap->GetFirstNode(aParentContent);
     while (node) {
       if (node->mContent == aContent) {
-        return mUndisplayedMap->RemoveNodeFor(aParentContent, node);
+        nsresult rv = mUndisplayedMap->RemoveNodeFor(aParentContent, node);
+
+#ifdef DEBUG_UNDISPLAYED_MAP
+        printf( "REMOVED! (rv=%d)\n", (int)rv);
+#endif
+#ifdef DEBUG
+        // make sure that there are no more entries for the same content
+        nsIStyleContext *context = nsnull;
+        GetUndisplayedContent(aContent, &context);
+        NS_ASSERTION(context == nsnull, "Found more undisplayed content data after removal");
+#endif
+        return rv;
       }
       node = node->mNext;
     }
@@ -896,6 +928,12 @@ NS_IMETHODIMP
 FrameManager::ClearAllUndisplayedContentIn(nsIContent* aParentContent)
 {
   NS_ENSURE_TRUE(mPresShell, NS_ERROR_NOT_AVAILABLE);
+ 
+#ifdef DEBUG_UNDISPLAYED_MAP
+  static int i = 0;
+  printf("ClearAllUndisplayedContentIn(%d): parent=%p \n", i++, (void*)aParentContent);
+#endif
+
   if (mUndisplayedMap) {
     return mUndisplayedMap->RemoveNodesFor(aParentContent);
   }
@@ -906,6 +944,12 @@ NS_IMETHODIMP
 FrameManager::ClearUndisplayedContentMap()
 {
   NS_ENSURE_TRUE(mPresShell, NS_ERROR_NOT_AVAILABLE);
+
+#ifdef DEBUG_UNDISPLAYED_MAP
+  static int i = 0;
+  printf("ClearUndisplayedContentMap(%d)\n", i++);
+#endif
+
   if (mUndisplayedMap) {
     mUndisplayedMap->Clear();
   }
@@ -1860,8 +1904,21 @@ FrameManager::ReResolveStyleContext(nsIPresContext* aPresContext,
         nsIStyleContext* undisplayedContext = nsnull;
         undisplayed->mStyle->GetPseudoType(pseudoTag);
         if (undisplayed->mContent && pseudoTag == nsnull) {  // child content
-          aPresContext->ResolveStyleContextFor(undisplayed->mContent, newContext, 
-                                              PR_TRUE, &undisplayedContext);
+
+          // DIAGNOSTIC CHECK: bug 118014 tracks a topcrash coming out of this call. The following
+          // code to discriminate beween HTML and non HTML is an attempt to better understand
+          // what kind of element is causing the crash, since it cannot so far be reproduced in a
+          // debugging environment. (temporary: 03.29.2002 attinasi@netscape.com)
+          nsIContent *theContent = undisplayed->mContent;
+          if (theContent->IsContentOfType(nsIContent::eHTML)) {
+            // HTML element
+            aPresContext->ResolveStyleContextFor(theContent, newContext, 
+                                                PR_TRUE, &undisplayedContext);
+          } else {
+            // non-HTML element (probably XUL)
+            aPresContext->ResolveStyleContextFor(theContent, newContext, 
+                                                 PR_TRUE, &undisplayedContext);
+          }
         }
         else {  // pseudo element
           NS_ASSERTION(pseudoTag, "pseudo element without tag");
@@ -2844,11 +2901,10 @@ UndisplayedMap::RemoveNodesFor(nsIContent* aParentContent)
   NS_ASSERTION(entry, "content not in map");
   if (*entry) {
     UndisplayedNode*  node = (UndisplayedNode*)((*entry)->value);
+    NS_ASSERTION(node, "null node for non-null entry in UndisplayedMap");
     delete node;
-    if (entry == mLastLookup) {
-      mLastLookup = nsnull;
-    }
     PL_HashTableRawRemove(mTable, entry, *entry);
+    mLastLookup = nsnull; // hashtable may have shifted bucket out from under us
   }
   return NS_OK;
 }
