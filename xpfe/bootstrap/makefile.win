@@ -31,8 +31,6 @@ SEDCMDS=nsStaticComonents.cpp.sed
 GARBAGE=$(GARBAGE) $(LIBFILE) $(SEDCMDS) nsStaticComponents.cpp
 !endif
 
-MODULE=raptor 
-
 CPPSRCS=                                \
  nsAppRunner.cpp                        \
  nsSetupRegistry.cpp                    \
@@ -159,8 +157,8 @@ nsStaticComponents.cpp: nsStaticComponents.cpp.in $(FINAL_LINK_COMP_NAMES) $(SED
         sed -f $(SEDCMDS) nsStaticComponents.cpp.in > $@
         rm -f $(SEDCMDS)
 
-$(LIBFILE): $(FINAL_LINK_COMPONENTS) $(FINAL_LINK_LIBS)
-        echo +++ make: Creating list of component libraries: $@
+$(LIBFILE): $(FINAL_LINK_COMPS) $(FINAL_LINK_LIBS)
+        echo +++ make: Creating list of link libraries: $@
         rm -f $@
         sed -e "s/^/$(DIST:\=\\\)\\\lib\\\/" -e "s/$$/.lib/" $(FINAL_LINK_COMPS)  > $@
         sed -e "s/^/$(DIST:\=\\\)\\\lib\\\/" -e "s/$$/.lib/" $(FINAL_LINK_LIBS)  >> $@
