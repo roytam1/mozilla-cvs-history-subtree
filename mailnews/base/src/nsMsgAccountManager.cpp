@@ -1644,6 +1644,7 @@ NS_IMETHODIMP nsMsgAccountManager::NotifyServerLoaded(nsIMsgIncomingServer *serv
 {
 	nsresult rv;
 	PRUint32 count;
+  server->SetFilterList(nsnull); // clear this to cut shutdown leaks. we always pass valid non-null server here
 	rv = m_incomingServerListeners->Count(&count);
 	if (NS_FAILED(rv)) return rv;
 

@@ -1037,6 +1037,13 @@ nsMsgIncomingServer::clearPrefEnum(const char *aPref, void *aClosure)
     prefs->ClearUserPref(aPref);
 }
 
+NS_IMETHODIMP
+nsMsgIncomingServer::SetFilterList(nsIMsgFilterList *aFilterList)
+{
+  mFilterList = aFilterList;
+  return NS_OK;
+}
+
 nsresult
 nsMsgIncomingServer::GetFilterList(nsIMsgWindow *aMsgWindow, nsIMsgFilterList **aResult)
 {
