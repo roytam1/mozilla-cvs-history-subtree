@@ -305,13 +305,7 @@ FeedItem.prototype.writeToFolder = function() {
 
   // Convert the title to UTF-16 before performing our HTML entity replacement
   // reg expressions.
-  var title;
-  
-  try {
-    title = FeedItem.unicodeConverter.ConvertToUnicode(this.title);
-  } catch (ex) {
-    title = this.title;
-  }
+  var title = this.title + "&gt;"; 
 
   // the subject may contain HTML entities.
   // Convert these to their unencoded state. i.e. &amp; becomes '&'
@@ -323,14 +317,7 @@ FeedItem.prototype.writeToFolder = function() {
   // Compress white space in the subject to make it look better.
   title = title.replace(/[\t\r\n]+/g, " ");
 
-  // now convert back from utf-16
-  try {
-    this.title = FeedItem.unicodeConverter.ConvertFromUnicode(title);
-  } catch (ex) {
-    this.title = title;
-  }
-
-  this.title = this.mimeEncodeSubject(this.title, this.characterSet);
+  this.title = this.mimeEncodeSubject(title, this.characterSet);
 
   // If the date looks like it's in W3C-DTF format, convert it into
   // an IETF standard date.  Otherwise assume it's in IETF format.
