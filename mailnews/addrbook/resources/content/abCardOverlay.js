@@ -186,6 +186,15 @@ function NewCardOKButton()
       return false;  // don't close window
     // -----
 
+    //Test whether email or other value is empty.
+    var email = document.getElementById('PrimaryEmail');
+    if ( email && !email.value)
+    {
+      var emptyText = gAddressBookBundle.getString("newCardIsEmpty");
+      if (!window.confirm(emptyText))
+        return false;
+    }
+
     if ( editCard.card )
     {
       SetCardValues(editCard.card, document);
