@@ -39,7 +39,7 @@
 #include "txXSLTProcessor.h"
 #include "txInstructions.h"
 #include "txAtoms.h"
-#include "txLog.h"
+#include "TxLog.h"
 #include "txStylesheetCompileHandlers.h"
 #include "txExecutionState.h"
 #ifdef TX_EXE
