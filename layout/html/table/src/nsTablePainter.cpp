@@ -475,6 +475,11 @@ TableBackgroundPainter::PaintTable(nsTableFrame* aTableFrame)
              col = NS_STATIC_CAST(nsTableColFrame*, col->GetNextSibling())) {
           /*Create data struct for column*/
           PRUint32 colIndex = col->GetColIndex();
+          // please file a bug if you can reproduce the assertion below 
+          // (see bug 240854)
+          NS_ASSERTION(colIndex < mNumCols, "prevent array boundary violation");
+          if (mNumCols <= colIndex)
+            break;
           mCols[colIndex].mCol.SetFull(mPresContext, mRenderingContext, col);
           //Bring column mRect into table's coord system
           mCols[colIndex].mCol.mRect.MoveBy(cgData->mRect.x, cgData->mRect.y);
