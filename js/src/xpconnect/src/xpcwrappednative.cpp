@@ -145,17 +145,17 @@ XPCWrappedNative::Init(XPCCallContext& ccx)
 
     if(HasSharedProto())
     {
-        XPCNativeScriptableInfo* info = mProto->GetScriptableInfo();
-        if(info->GetScriptable())
+        XPCNativeScriptableInfo* si = mProto->GetScriptableInfo();
+        if(si->GetScriptable())
         {
-            if(info->DontAskInstanceForScriptable())
-                mScriptableInfo = info;
+            if(si->DontAskInstanceForScriptable())
+                mScriptableInfo = si;
             else
             {
                 helper = do_QueryInterface(mIdentity);
-                if(!helper || helper.get() == info->GetScriptable())
+                if(!helper || helper.get() == si->GetScriptable())
                 {
-                    mScriptableInfo = info;
+                    mScriptableInfo = si;
                 }
             }
         }
@@ -175,6 +175,17 @@ XPCWrappedNative::Init(XPCCallContext& ccx)
             mScriptableInfo = XPCNativeScriptableInfo::NewInfo(helper, flags);
             if(!mScriptableInfo)
                 return JS_FALSE;
+        }
+    }
+
+    JSObject* parent = mProto->GetScope()->GetGlobalJSObject();
+
+    if(mScriptableInfo && mScriptableInfo->WantPreCreate())
+    {
+        if(NS_FAILED(mScriptableInfo->GetScriptable()->
+            PreCreate(mIdentity, cx, parent, &parent)))
+        {
+            return JS_FALSE;        
         }
     }
 
@@ -200,7 +211,7 @@ XPCWrappedNative::Init(XPCCallContext& ccx)
 
     mFlatJSObject = JS_NewObject(cx, jsclazz,
                                  mProto->GetJSProtoObject(),
-                                 mProto->GetScope()->GetGlobalJSObject());
+                                 parent);
     if(!mFlatJSObject || !JS_SetPrivate(cx, mFlatJSObject, this))
         return JS_FALSE;
 

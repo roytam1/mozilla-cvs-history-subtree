@@ -1653,6 +1653,7 @@ public:
     JSClass*          GetJSClass()           {return &mJSClass;}
 
 
+    JSBool WantPreCreate()                const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_PRECREATE);}
     JSBool WantCreate()                   const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_CREATE);}
     JSBool WantAddProperty()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_ADDPROPERTY);}
     JSBool WantDelProperty()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_DELPROPERTY);}
