@@ -113,6 +113,16 @@ NS_IMETHODIMP nsWindow::WidgetToScreen(const nsRect& aOldRect, nsRect& aNewRect)
     else
       return NS_ERROR_FAILURE;
   }
+#ifdef USE_SUPERWIN
+  else if (mSuperWin)
+  {
+    if (mSuperWin->bin_window)
+    {
+      gdk_window_get_origin(mSuperWin->bin_window, &x, &y);
+      aNewRect.x = x + aOldRect.x;
+      aNewRect.y = y + aOldRect.y;
+    }
+#else
   else if (mWidget)
   {
     if (mWidget->window)
@@ -121,6 +131,8 @@ NS_IMETHODIMP nsWindow::WidgetToScreen(const nsRect& aOldRect, nsRect& aNewRect)
       aNewRect.x = x + aOldRect.x;
       aNewRect.y = y + aOldRect.y;
     }
+#endif
+
     else
       return NS_ERROR_FAILURE;
   }
