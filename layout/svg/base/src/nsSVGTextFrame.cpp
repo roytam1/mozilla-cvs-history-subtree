@@ -164,6 +164,7 @@ protected:
   void UpdateGlyphPositioning();
   already_AddRefed<nsIDOMSVGLengthList> GetX();
   already_AddRefed<nsIDOMSVGLengthList> GetY();
+  already_AddRefed<nsIDOMSVGAnimatedTransformList> GetTransform();
   nsISVGGlyphFragmentNode *GetFirstGlyphFragmentChildNode();
   nsISVGGlyphFragmentNode *GetNextGlyphFragmentChildNode(nsISVGGlyphFragmentNode*node);
   nsISVGGlyphFragmentLeaf *GetGlyphFragmentAtCharNum(PRUint32 charnum);
@@ -248,10 +249,7 @@ nsresult nsSVGTextFrame::Init()
   }
 
   {
-    nsCOMPtr<nsIDOMSVGTransformable> transformable = do_QueryInterface(mContent);
-    NS_ASSERTION(transformable, "wrong content element");
-    nsCOMPtr<nsIDOMSVGAnimatedTransformList> transforms;
-    transformable->GetTransform(getter_AddRefs(transforms));
+    nsCOMPtr<nsIDOMSVGAnimatedTransformList> transforms = GetTransform();
     NS_ADD_SVGVALUE_OBSERVER(transforms);
   }
   
@@ -429,15 +427,25 @@ nsSVGTextFrame::WillModifySVGObservable(nsISVGValue* observable)
 NS_IMETHODIMP
 nsSVGTextFrame::DidModifySVGObservable (nsISVGValue* observable)
 {
-  
-  nsIFrame* kid = mFrames.FirstChild();
-  while (kid) {
-    nsISVGChildFrame* SVGFrame=0;
-    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
-    if (SVGFrame)
-      SVGFrame->NotifyCTMChanged(); // XXX
-    kid->GetNextSibling(&kid);
-  }  
+  nsCOMPtr<nsIDOMSVGAnimatedTransformList> transforms = GetTransform();
+  if (SameCOMIdentity(observable, transforms)) {
+    // transform has changed
+    nsIFrame* kid = mFrames.FirstChild();
+    while (kid) {
+      nsISVGChildFrame* SVGFrame=0;
+      kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
+      if (SVGFrame)
+        SVGFrame->NotifyCTMChanged();
+      kid->GetNextSibling(&kid);
+    }
+  }
+  else {
+    // x, y have changed
+    mPositioningDirty = PR_TRUE;
+    if (mMetricsState == unsuspended) {
+      UpdateGlyphPositioning();
+    }
+  }
   return NS_OK;
 }
 
@@ -1059,6 +1067,17 @@ nsSVGTextFrame::GetY()
   tpElement->GetY(getter_AddRefs(animLengthList));
   nsIDOMSVGLengthList *retval;
   animLengthList->GetAnimVal(&retval);
+  return retval;
+}
+
+already_AddRefed<nsIDOMSVGAnimatedTransformList>
+nsSVGTextFrame::GetTransform()
+{
+  nsCOMPtr<nsIDOMSVGTransformable> transformable = do_QueryInterface(mContent);
+  NS_ASSERTION(transformable, "wrong content element");
+  
+  nsIDOMSVGAnimatedTransformList *retval;
+  transformable->GetTransform(&retval);
   return retval;
 }
 
