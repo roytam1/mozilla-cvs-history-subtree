@@ -115,6 +115,8 @@ LOCAL_INCLUDES	= -I$(srcdir)/components
 LDFLAGS += /HEAP:0x40000
 
 
+include $(topsrcdir)/config/config.mk
+
 ifdef BUILD_STATIC_LIBS
 
 include $(topsrcdir)/config/static-config.mk
