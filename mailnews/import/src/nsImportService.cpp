@@ -185,7 +185,7 @@ NS_IMETHODIMP NS_NewImportService( nsISupports* aOuter, REFNSIID aIID, void **aR
 
 nsImportService::nsImportService() : m_pModules( nsnull)
 {
-    NS_INIT_REFCNT();
+    NS_INIT_ISUPPORTS();
 
 	IMPORT_LOG0( "* nsImport Service Created\n");
 
