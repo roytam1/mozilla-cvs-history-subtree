@@ -28,7 +28,7 @@
 #include "nsError.h"
 
 //----------------------------------------------------------------------------------------
-void nsFileSpecHelpers::Canonify(char*& ioPath, bool inMakeDirs)
+void nsFileSpecHelpers::Canonify(char*& ioPath, PRBool inMakeDirs)
 // Canonify, make absolute, and check whether directories exist
 //----------------------------------------------------------------------------------------
 {
@@ -91,7 +91,7 @@ char* nsFileSpec::GetLeafName() const
 } // nsFileSpec::GetLeafName
 
 //----------------------------------------------------------------------------------------
-bool nsFileSpec::Exists() const
+PRBool nsFileSpec::Exists() const
 //----------------------------------------------------------------------------------------
 {
     struct stat st;
@@ -99,7 +99,7 @@ bool nsFileSpec::Exists() const
 } // nsFileSpec::Exists
 
 //----------------------------------------------------------------------------------------
-bool nsFileSpec::IsFile() const
+PRBool nsFileSpec::IsFile() const
 //----------------------------------------------------------------------------------------
 {
     struct stat st;
@@ -107,7 +107,7 @@ bool nsFileSpec::IsFile() const
 } // nsFileSpec::IsFile
 
 //----------------------------------------------------------------------------------------
-bool nsFileSpec::IsDirectory() const
+PRBool nsFileSpec::IsDirectory() const
 //----------------------------------------------------------------------------------------
 {
     struct stat st;
@@ -145,7 +145,7 @@ void nsFileSpec::CreateDirectory(int mode)
 } // nsFileSpec::CreateDirectory
 
 //----------------------------------------------------------------------------------------
-void nsFileSpec::Delete(bool inRecursive)
+void nsFileSpec::Delete(PRBool inRecursive)
 // To check if this worked, call Exists() afterwards, see?
 //----------------------------------------------------------------------------------------
 {
