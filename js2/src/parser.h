@@ -130,7 +130,7 @@ namespace JavaScript {
 
 
 	struct ExprNode: ParseNode {
-		// Keep synchronized with kindNames and simpleLookup
+		// Keep synchronized with kindNames
 		enum Kind {						// Actual class			Operands
 			none,
 			identifier,					// IdentifierExprNode	<name>
@@ -205,6 +205,7 @@ namespace JavaScript {
 			As,							// BinaryExprNode		<op1> as <op2>
 			In,							// BinaryExprNode		<op1> in <op2>
 			Instanceof,					// BinaryExprNode		<op1> instanceof <op2>
+			Is,                         // BinaryExprNode		<op1> is <op2>
 
 			assignment,					// BinaryExprNode		<op1> = <op2>
 

@@ -47,7 +47,7 @@ namespace JavaScript
     class Token {
       public:
         enum Kind {
-            // Keep synchronized with kindNames, kindFlags, and tokenBinaryOperatorInfos tables
+            // Keep synchronized with the kindNames, kindFlags, and tokenBinaryOperatorInfos tables
 
             // Special
             end,                        // End of token stream
@@ -151,6 +151,7 @@ namespace JavaScript
             In,                         // in
             Instanceof,                 // instanceof
             Interface,                  // interface
+            Is,                         // is
             Namespace,                  // namespace
             Native,                     // native
             New,                        // new

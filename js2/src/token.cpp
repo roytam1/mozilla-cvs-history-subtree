@@ -136,6 +136,7 @@ const char *const JS::Token::kindNames[kindsEnd] = {
     "in",                           // In
     "instanceof",                   // Instanceof
     "interface",                    // Interface
+    "is",                           // Is
     "namespace",                    // Namespace
     "native",                       // Native
     "new",                          // New
@@ -274,6 +275,7 @@ const uchar JS::Token::kindFlags[kindsEnd] = {
     0,                    // In
     0,                    // Instanceof
     followAttr,           // Interface
+    0,                    // Is
     followAttr,           // Namespace
     followAttr,           // Native
     0,                    // New

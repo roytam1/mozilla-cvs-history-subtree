@@ -801,6 +801,7 @@ const JS::Parser::BinaryOperatorInfo JS::Parser::tokenBinaryOperatorInfos[Token:
 	{ExprNode::In, pRelational, pRelational, false},				// Token::In
 	{ExprNode::Instanceof, pRelational, pRelational, false},		// Token::Instanceof
 	{ExprNode::none, pExpression, pNone, false},					// Token::Interface
+	{ExprNode::Is, pRelational, pRelational, false},				// Token::Is
 	{ExprNode::none, pExpression, pNone, false},					// Token::Namespace
 	{ExprNode::none, pExpression, pNone, false},					// Token::Native
 	{ExprNode::none, pExpression, pNone, false},					// Token::New
@@ -2196,6 +2197,7 @@ const char *const JS::ExprNode::kindNames[kindsEnd] = {
 	"as",					// As
 	"in",					// In
 	"instanceof",			// Instanceof
+	"is",					// Is
 
 	"=",					// assignment
 	"+=",					// addEquals
