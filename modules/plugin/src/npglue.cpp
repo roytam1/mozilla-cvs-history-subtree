@@ -4521,13 +4521,15 @@ PR_IMPLEMENT(XP_Bool) NPL_IsJVMAndMochaPrefsEnabled(void)
    return bPrefs;
 }
 
-PR_IMPLEMENT(void)NPL_JSJInit(void)
+PR_IMPLEMENT(PRBool)NPL_JSJInit(void)
 {
+    PRBool    bJSJInited = PR_FALSE;
     nsJVMMgr* pJVMMgr = JVM_GetJVMMgr();
     if (pJVMMgr != NULL) {
-        pJVMMgr->JSJInit();
+        bJSJInited = pJVMMgr->JSJInit();
         pJVMMgr->Release();
     }
+    return bJSJInited;
 }
 
 PR_IMPLEMENT(JNIEnv *)NPL_EnsureJNIExecEnv(PRThread* thread)
