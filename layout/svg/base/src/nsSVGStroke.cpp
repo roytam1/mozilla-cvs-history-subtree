@@ -29,6 +29,7 @@
 #include "nsIPref.h"
 #include "prdtoa.h"
 #include "nsMemory.h"
+#include "nsReadableUtils.h"
 
 void
 nsSVGStroke::Build(ArtVpath* path, const nsSVGStrokeStyle& style)
@@ -75,7 +76,7 @@ nsSVGStroke::Build(ArtVpath* path, const nsSVGStrokeStyle& style)
     char* str;
     {
       nsAutoString temp(style.dasharray);
-      str = temp.ToNewCString();
+      str = ToNewCString(temp);
     }
 
     // array elements are separated by commas. count them to get our
