@@ -317,7 +317,6 @@ nsSocketTransport::nsSocketTransport():
     mCurrentState(eSocketState_Created),
     mHostName(nsnull),
     mPort(0),
-    mLoadAttributes(LOAD_NORMAL),
     mMonitor(nsnull),
     mOperation(eSocketOperation_None),
     mProxyPort(0),
@@ -830,8 +829,8 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
         }
 
         // Notify the nsIProgressEventSink of the progress...
-        if (!(nsIChannel::LOAD_BACKGROUND & mLoadAttributes))
-            fireStatus(mCurrentState);
+        //if (!(nsIChannel::LOAD_BACKGROUND & mLoadAttributes))
+        //    fireStatus(mCurrentState);
 
         //
         // If the current state has successfully completed, then move to the
@@ -1311,10 +1310,12 @@ nsresult nsSocketTransport::doReadAsync(PRInt16 aSelectFlags)
             rv = NS_BASE_STREAM_WOULD_BLOCK;
         }
 
+#if 0
         if (total && !(nsIChannel::LOAD_BACKGROUND & mLoadAttributes) && mEventSink)
             // we don't have content length info at the socket level
             // just pass 0 through.
             mEventSink->OnProgress(this, mReadContext, mReadOffset, 0);
+#endif
     }
     return rv;
 }
@@ -1402,10 +1403,12 @@ nsresult nsSocketTransport::doRead(PRInt16 aSelectFlags)
         "Total bytes read: %d\n\n",
         mHostName, mPort, this, rv, totalBytesWritten));
 
+#if 0
     if (!(nsIChannel::LOAD_BACKGROUND & mLoadAttributes) && mEventSink)
         // we don't have content length info at the socket level
         // just pass 0 through.
         (void)mEventSink->OnProgress(this, mReadContext, mReadOffset, 0);
+#endif
 
     return rv;
 }
@@ -1494,10 +1497,12 @@ nsresult nsSocketTransport::doWriteAsync(PRInt16 aSelectFlags)
             rv = NS_BASE_STREAM_WOULD_BLOCK;
         }
 
+#if 0
         if (total && !(nsIChannel::LOAD_BACKGROUND & mLoadAttributes) && mEventSink)
             // we don't have content length info at the socket level
             // just pass 0 through.
             mEventSink->OnProgress(this, mWriteContext, mWriteOffset, 0);
+#endif
     }
     return rv;
 }
@@ -1583,10 +1588,12 @@ nsresult nsSocketTransport::doWrite(PRInt16 aSelectFlags)
         "Total bytes written: %d\n\n",
         mHostName, mPort, this, rv, totalBytesWritten));
 
+#if 0
     if (!(nsIChannel::LOAD_BACKGROUND & mLoadAttributes) && mEventSink)
         // we don't have content length info at the socket level
         // just pass 0 through.
         mEventSink->OnProgress(this, mWriteContext, mWriteOffset, 0);
+#endif
 
     return rv;
 }
@@ -1673,13 +1680,14 @@ nsresult nsSocketTransport::CloseConnection(PRBool bNow)
 // --------------------------------------------------------------------------
 //
 
-NS_IMPL_THREADSAFE_ISUPPORTS6(nsSocketTransport, 
-                              nsIChannel, 
-                              nsIRequest, 
-                              nsIDNSListener, 
+NS_IMPL_THREADSAFE_ISUPPORTS7(nsSocketTransport,
+                              nsISocketTransport,
+                              nsITransport,
+                              nsITransportRequest,
+                              nsIRequest,
+                              nsIDNSListener,
                               nsIInputStreamObserver,
-                              nsIOutputStreamObserver,
-                              nsISocketTransport);
+                              nsIOutputStreamObserver);
 
 //
 // --------------------------------------------------------------------------
@@ -1886,20 +1894,6 @@ nsSocketTransport::Resume(void)
     return rv;
 }
 
-NS_IMETHODIMP
-nsSocketTransport::GetParent(nsISupports **aParent)
-{
-    NS_ADDREF(*aParent = (nsISupports *)(nsIChannel *) this);
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSocketTransport::SetParent(nsISupports *aParent)
-{
-    NS_NOTREACHED("SetParent");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
 // 
 // -------------------------------------------------------------------------- 
 // nsIInputStreamObserver/nsIOutputStreamObserver implementation... 
@@ -2090,6 +2084,7 @@ nsSocketTransport::OnStopLookup(nsISupports *aContext,
 // nsIChannel implementation...
 // --------------------------------------------------------------------------
 //
+#if 0
 NS_IMETHODIMP
 nsSocketTransport::GetOriginalURI(nsIURI* *aURL)
 {
@@ -2131,12 +2126,14 @@ nsSocketTransport::SetURI(nsIURI* aURL)
 {
     return SetOriginalURI(aURL);
 }
+#endif
 
 NS_IMETHODIMP
 nsSocketTransport::AsyncRead(nsIStreamListener* aListener,
                              nsISupports* aContext,
                              PRUint32 aTransferOffset,
                              PRUint32 aTransferCount,
+                             PRUint32 aFlags,
                              nsIRequest **aRequest)
 {
     NS_ENSURE_ARG_POINTER(aRequest);
@@ -2183,6 +2180,7 @@ nsSocketTransport::AsyncWrite(nsIStreamProvider* aProvider,
                               nsISupports* aContext,
                               PRUint32 aTransferOffset,
                               PRUint32 aTransferCount,
+                              PRUint32 aFlags,
                               nsIRequest **aRequest)
 {
     NS_ENSURE_ARG_POINTER(aRequest);
@@ -2229,6 +2227,7 @@ nsSocketTransport::AsyncWrite(nsIStreamProvider* aProvider,
 NS_IMETHODIMP
 nsSocketTransport::OpenInputStream(PRUint32 aTransferOffset,
                                    PRUint32 aTransferCount,
+                                   PRUint32 aFlags,
                                    nsIInputStream **aResult)
 {
     NS_ENSURE_ARG_POINTER(aResult);
@@ -2284,6 +2283,7 @@ nsSocketTransport::OpenInputStream(PRUint32 aTransferOffset,
 NS_IMETHODIMP
 nsSocketTransport::OpenOutputStream(PRUint32 aTransferOffset,
                                     PRUint32 aTransferCount,
+                                    PRUint32 aFlags,
                                     nsIOutputStream **aResult)
 {
     nsresult rv = NS_OK;
@@ -2337,6 +2337,7 @@ nsSocketTransport::OpenOutputStream(PRUint32 aTransferOffset,
     return rv;
 }
 
+#if 0
 NS_IMETHODIMP
 nsSocketTransport::GetLoadAttributes(PRUint32 *aLoadAttributes)
 {
@@ -2415,6 +2416,7 @@ nsSocketTransport::SetNotificationCallbacks(nsIInterfaceRequestor* aNotification
 
     return NS_OK;
 }
+#endif
 
 NS_IMETHODIMP
 nsSocketTransport::IsAlive (PRUint32 seconds, PRBool *alive)

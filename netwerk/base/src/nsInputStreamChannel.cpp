@@ -181,7 +181,6 @@ NS_INTERFACE_MAP_BEGIN(nsStreamIOChannel)
     NS_INTERFACE_MAP_ENTRY(nsIStreamIOChannel)
     NS_INTERFACE_MAP_ENTRY(nsIChannel)
     NS_INTERFACE_MAP_ENTRY(nsIRequest)
-    NS_INTERFACE_MAP_ENTRY(nsIStreamContentInfo)
     NS_INTERFACE_MAP_ENTRY(nsIStreamListener)
     NS_INTERFACE_MAP_ENTRY(nsIStreamProvider)
     NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsIStreamObserver, nsIStreamListener)
@@ -253,20 +252,6 @@ nsStreamIOChannel::Resume(void)
     return NS_OK;
 }
 
-NS_IMETHODIMP
-nsStreamIOChannel::GetParent(nsISupports **aParent)
-{
-    NS_ADDREF(*aParent=(nsISupports*)(nsIChannel*)this);
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsStreamIOChannel::SetParent(nsISupports *aParent)
-{
-    NS_NOTREACHED("SetParent");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // nsIChannel implementation:
 ////////////////////////////////////////////////////////////////////////////////
@@ -302,20 +287,13 @@ nsStreamIOChannel::SetURI(nsIURI* aURI)
 }
 
 NS_IMETHODIMP
-nsStreamIOChannel::OpenInputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIInputStream **result)
+nsStreamIOChannel::Open(nsIInputStream **result)
 {
     return mStreamIO->GetInputStream(result);
 }
 
 NS_IMETHODIMP
-nsStreamIOChannel::OpenOutputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIOutputStream **result)
-{
-    return mStreamIO->GetOutputStream(result);
-}
-
-NS_IMETHODIMP
-nsStreamIOChannel::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt,
-                             PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
+nsStreamIOChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *ctxt)
 {
     nsresult rv;
 
@@ -355,7 +333,7 @@ nsStreamIOChannel::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt,
         if (NS_FAILED(rv)) goto done;
     }
 #endif
-    rv = mFileTransport->AsyncRead(this, ctxt, 0, -1, getter_AddRefs(mRequest));
+    rv = mFileTransport->AsyncRead(this, ctxt, 0, 0, 0, getter_AddRefs(mRequest));
 
   done:
     if (NS_FAILED(rv)) {
@@ -365,11 +343,10 @@ nsStreamIOChannel::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt,
         // release the transport so that we don't think we're in progress
         mFileTransport = nsnull;
     }
-
-    NS_IF_ADDREF(*_retval = mRequest);
     return rv;
 }
 
+#if 0
 NS_IMETHODIMP
 nsStreamIOChannel::AsyncWrite(nsIStreamProvider *provider, nsISupports *ctxt,
                               PRUint32 transferOffset, PRUint32 transferCount,
@@ -430,6 +407,7 @@ nsStreamIOChannel::AsyncWrite(nsIStreamProvider *provider, nsISupports *ctxt,
     NS_IF_ADDREF(*_retval = mRequest);
     return rv;
 }
+#endif
 
 NS_IMETHODIMP
 nsStreamIOChannel::GetLoadAttributes(nsLoadFlags *aLoadAttributes)
@@ -490,17 +468,14 @@ nsStreamIOChannel::SetNotificationCallbacks(nsIInterfaceRequestor* aNotification
   return NS_OK;
 }
 
-
+#if 0
 NS_IMETHODIMP 
 nsStreamIOChannel::GetSecurityInfo(nsISupports * *aSecurityInfo)
 {
     *aSecurityInfo = nsnull;
     return NS_OK;
 }
-
-////////////////////////////////////////////////////////////////////////////////
-// nsIContentStreamInfo implementation:
-////////////////////////////////////////////////////////////////////////////////
+#endif
 
 NS_IMETHODIMP
 nsStreamIOChannel::GetContentType(char * *aContentType)

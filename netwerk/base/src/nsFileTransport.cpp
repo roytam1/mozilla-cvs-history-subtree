@@ -208,7 +208,7 @@ nsFileTransport::nsFileTransport()
       mOffset(0),
       mTotalAmount(-1),
       mTransferAmount(-1),
-      mLoadAttributes(LOAD_NORMAL),
+      //mLoadAttributes(LOAD_NORMAL),
       mSourceWrapper(nsnull),
       mSinkWrapper(nsnull),
       mService(nsnull)
@@ -284,10 +284,10 @@ nsFileTransport::~nsFileTransport()
 }
 
 NS_IMPL_THREADSAFE_ISUPPORTS4(nsFileTransport, 
-                              nsIChannel, 
+                              nsITransport, 
+                              nsITransportRequest,
                               nsIRequest, 
-                              nsIRunnable,
-                              nsIStreamContentInfo)
+                              nsIRunnable)
 
 NS_METHOD
 nsFileTransport::Create(nsISupports* aOuter, const nsIID& aIID, void* *aResult)
@@ -385,19 +385,16 @@ nsFileTransport::Resume()
     return NS_OK;
 }
 
-NS_IMETHODIMP
-nsFileTransport::GetParent(nsISupports **aParent)
-{
-    NS_ENSURE_ARG_POINTER(aParent);
-    NS_ADDREF(*aParent = (nsISupports *)(nsIChannel *) this);
-    return NS_OK;
-}
+////////////////////////////////////////////////////////////////////////////////
+// From nsITransportRequest
+////////////////////////////////////////////////////////////////////////////////
 
 NS_IMETHODIMP
-nsFileTransport::SetParent(nsISupports *aParent)
+nsFileTransport::GetTransport(nsITransport **result)
 {
-    NS_NOTREACHED("SetParent");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    NS_ENSURE_ARG_POINTER(result);
+    NS_ADDREF(*result = this);
+    return NS_OK;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -407,6 +404,7 @@ nsFileTransport::SetParent(nsISupports *aParent)
 NS_IMETHODIMP
 nsFileTransport::OpenInputStream(PRUint32 aTransferOffset,
                                  PRUint32 aTransferCount,
+                                 PRUint32 aFlags,
                                  nsIInputStream **aResult)
 {
     NS_ENSURE_ARG_POINTER(aResult);
@@ -428,6 +426,7 @@ nsFileTransport::OpenInputStream(PRUint32 aTransferOffset,
 NS_IMETHODIMP
 nsFileTransport::OpenOutputStream(PRUint32 aTransferOffset,
                                   PRUint32 aTransferCount,
+                                  PRUint32 aFlags,
                                   nsIOutputStream **aResult)
 {
     NS_ASSERTION(aTransferOffset == 0, "need to seek to specified offset");
@@ -440,6 +439,7 @@ nsFileTransport::AsyncRead(nsIStreamListener *aListener,
                            nsISupports *aContext,
                            PRUint32 aTransferOffset,
                            PRUint32 aTransferCount,
+                           PRUint32 aFlags,
                            nsIRequest **aResult)
 {
     NS_ENSURE_ARG_POINTER(aResult);
@@ -479,6 +479,7 @@ nsFileTransport::AsyncWrite(nsIStreamProvider *aProvider,
                             nsISupports *aContext,
                             PRUint32 aTransferOffset,
                             PRUint32 aTransferCount,
+                            PRUint32 aFlags,
                             nsIRequest **aResult)
 {
     NS_ENSURE_ARG_POINTER(aResult);
@@ -711,12 +712,14 @@ nsFileTransport::Process(void)
                 LOG(("nsFileTransport: READING [this=%x %s] read %u bytes [offset=%u]\n",
                     this, mStreamName.GetBuffer(), total, mOffset));
 
+#if 0
             if (mProgress && !(mLoadAttributes & LOAD_BACKGROUND)
                     && (mTransferAmount >= 0)) {
                 mProgress->OnProgress(this, mContext,
                                       mTotalAmount - mTransferAmount,
                                       mTotalAmount);
             }
+#endif
         }
         break;
       }
@@ -744,6 +747,7 @@ nsFileTransport::Process(void)
             mListener->OnStopRequest(this, mContext, mStatus, nsnull);
             mListener = 0;
         }
+#if 0
         if (mProgress && !(mLoadAttributes & LOAD_BACKGROUND)) {
             nsAutoString fileName;
             fileName.AssignWithConversion(mStreamName);
@@ -751,6 +755,7 @@ nsFileTransport::Process(void)
                                 NS_NET_STATUS_READ_FROM, 
                                 fileName.GetUnicode());
         }
+#endif
         mContext = 0;
 
         // close the data source
@@ -884,11 +889,13 @@ nsFileTransport::Process(void)
                 LOG(("nsFileTransport: WRITING [this=%x %s] wrote %u bytes [offset=%u]\n",
                     this, mStreamName.GetBuffer(), total, mOffset));
 
+#if 0
             if (mProgress && !(mLoadAttributes & LOAD_BACKGROUND)
                     && (mTransferAmount >= 0))
                 mProgress->OnProgress(this, mContext,
                                       mTotalAmount - mTransferAmount,
                                       mTotalAmount);
+#endif
         }
         break;
       }
@@ -915,11 +922,12 @@ nsFileTransport::Process(void)
         NS_IF_RELEASE(mSinkWrapper);
         mSinkWrapper = nsnull;
 
-        nsresult rv;
+        //nsresult rv;
         if (mProvider) {
             mProvider->OnStopRequest(this, mContext, mStatus, nsnull);
             mProvider = 0;
         }
+#if 0
         if (mProgress && !(mLoadAttributes & LOAD_BACKGROUND)) {
             nsAutoString fileName; fileName.AssignWithConversion(mStreamName);
             rv = mProgress->OnStatus(this, mContext,
@@ -927,6 +935,7 @@ nsFileTransport::Process(void)
                                      fileName.GetUnicode());
             NS_ASSERTION(NS_SUCCEEDED(rv), "unexpected OnStatus failure");
         }
+#endif
         mContext = 0;
 
         mXferState = CLOSING;
@@ -968,6 +977,7 @@ nsFileTransport::DoClose(void)
 // other nsIChannel methods:
 ////////////////////////////////////////////////////////////////////////////////
 
+#if 0
 NS_IMETHODIMP
 nsFileTransport::GetOriginalURI(nsIURI* *aURI)
 {
@@ -1107,6 +1117,7 @@ nsFileTransport::SetNotificationCallbacks(nsIInterfaceRequestor* aNotificationCa
     return NS_OK;
 }
 
+#endif
 
 NS_IMETHODIMP 
 nsFileTransport::GetSecurityInfo(nsISupports * *aSecurityInfo)

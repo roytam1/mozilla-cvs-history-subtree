@@ -82,8 +82,7 @@ nsDownloader::Init(nsIURI* aURL,
            return pObserver->OnDownloadComplete(this, mContext, rv, localFile);
      }
   }
-  nsCOMPtr<nsIRequest> request;
-  return channel->AsyncRead(this, aContext, 0, -1, getter_AddRefs(request));
+  return channel->AsyncOpen(this, aContext);
 }
 
 NS_METHOD
@@ -119,8 +118,7 @@ nsDownloader::OnStopRequest(nsIRequest *request, nsISupports *ctxt,
     nsresult rv;
     nsCOMPtr<nsIURI> uri;
     
-    nsCOMPtr<nsIChannel> channel;
-    rv = request->GetParent(getter_AddRefs(channel));
+    nsCOMPtr<nsIChannel> channel = do_QueryInterface(request, &rv);
     if (NS_FAILED(rv)) return rv;
     
     rv = channel->GetURI(getter_AddRefs(uri));

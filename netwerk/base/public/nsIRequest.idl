@@ -71,7 +71,7 @@ interface nsIRequest : nsISupports
 };
 
 [scriptable, uuid(d7abf5a4-ce72-482a-9217-a219a905c019)]
-interface nsITransportRequest : nsISupports
+interface nsITransportRequest : nsIRequest
 {
    readonly attribute nsITransport transport;
 };

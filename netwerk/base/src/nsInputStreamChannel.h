@@ -33,6 +33,7 @@
 #include "nsIStreamProvider.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIStreamIO.h"
+#include "nsITransport.h"
 
 class nsInputStreamIO : public nsIInputStreamIO
 {
@@ -59,14 +60,11 @@ protected:
 
 class nsStreamIOChannel : public nsIStreamIOChannel, 
                           public nsIStreamListener,
-                          public nsIStreamProvider,
-                          public nsIRequest,
-                          public nsIStreamContentInfo
+                          public nsIStreamProvider
 {
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIREQUEST
-    NS_DECL_NSISTREAMCONTENTINFO
     NS_DECL_NSICHANNEL
     NS_DECL_NSISTREAMIOCHANNEL
     NS_DECL_NSISTREAMOBSERVER
@@ -95,7 +93,7 @@ protected:
     nsCOMPtr<nsIStreamIO>               mStreamIO;
     nsCOMPtr<nsILoadGroup>              mLoadGroup;
     nsCOMPtr<nsISupports>               mOwner;
-    nsCOMPtr<nsIChannel>                mFileTransport;
+    nsCOMPtr<nsITransport>              mFileTransport;
     nsCOMPtr<nsIRequest>                mRequest;
     nsCOMPtr<nsIStreamObserver>         mUserObserver;
     PRUint32                            mBufferSegmentSize;

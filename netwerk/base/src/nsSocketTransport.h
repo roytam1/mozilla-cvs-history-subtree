@@ -29,7 +29,8 @@
 #include "prinrval.h"
 #include "nsCOMPtr.h"
 #include "nsISocketTransport.h"
-#include "nsIChannel.h"
+#include "nsITransport.h"
+#include "nsIRequest.h"
 #include "nsIInputStream.h"
 #include "nsIInputStream.h"
 #include "nsIOutputStream.h"
@@ -120,8 +121,7 @@ class nsSocketOutputStream;
 class nsIInterfaceRequestor;
 
 class nsSocketTransport : public nsISocketTransport,
-                          public nsIChannel, 
-                          public nsIRequest,
+                          public nsITransportRequest,
                           public nsIDNSListener,
                           public nsIInputStreamObserver,
                           public nsIOutputStreamObserver
@@ -129,8 +129,9 @@ class nsSocketTransport : public nsISocketTransport,
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSISOCKETTRANSPORT
+    NS_DECL_NSITRANSPORTREQUEST
     NS_DECL_NSIREQUEST
-    NS_DECL_NSICHANNEL
+    NS_DECL_NSITRANSPORT
     NS_DECL_NSIINPUTSTREAMOBSERVER
     NS_DECL_NSIOUTPUTSTREAMOBSERVER
     NS_DECL_NSIDNSLISTENER
@@ -222,7 +223,7 @@ protected:
     PRInt32                         mPort;
     PRIntervalTime                  mLastActiveTime;
     PRCList                         mListLink;
-    PRUint32                        mLoadAttributes;
+    //PRUint32                        mLoadAttributes;
     PRMonitor*                      mMonitor;
     PRNetAddr                       mNetAddress;
     nsSocketOperation               mOperation;

@@ -227,6 +227,7 @@ nsLoadGroup::Cancel(nsresult status)
                 continue;
             }
 
+#if 0
 #if defined(PR_LOGGING)
             nsXPIDLString nameStr;
             request->GetName(getter_Copies(nameStr));
@@ -234,6 +235,7 @@ nsLoadGroup::Cancel(nsresult status)
                    ("LOADGROUP [%x]: Canceling request %x %s.\n",
                    this, request, nameStr));
 #endif /* PR_LOGGING */
+#endif
 
             //
             // Remove the request from the load group...  This may cause
@@ -289,6 +291,7 @@ nsLoadGroup::Suspend()
             continue;
         }
 
+#if 0
 #if defined(PR_LOGGING)
             nsXPIDLString nameStr;
             request->GetName(getter_Copies(nameStr));
@@ -296,6 +299,7 @@ nsLoadGroup::Suspend()
                    ("LOADGROUP [%x]: Suspending request %x %s.\n",
                    this, request, nameStr));
 #endif /* PR_LOGGING */
+#endif
 
         // Suspend the request...
         rv = request->Suspend();
@@ -334,6 +338,7 @@ nsLoadGroup::Resume()
             continue;
         }
 
+#if 0
 #if defined(PR_LOGGING)
         nsXPIDLString nameStr;
         request->GetName(getter_Copies(nameStr));
@@ -341,6 +346,7 @@ nsLoadGroup::Resume()
               ("LOADGROUP [%x]: Resuming request %x %s.\n",
               this, request, nameStr));
 #endif /* PR_LOGGING */
+#endif
 
         // Resume the request...
         rv = request->Resume();
@@ -404,6 +410,7 @@ nsLoadGroup::AddRequest(nsIRequest *request, nsISupports* ctxt)
 {
     nsresult rv;
 
+#if 0
 #if defined(PR_LOGGING)
     PRUint32 count = 0;
     (void)mRequests->Count(&count);
@@ -413,6 +420,7 @@ nsLoadGroup::AddRequest(nsIRequest *request, nsISupports* ctxt)
               ("LOADGROUP [%x]: Adding request %x %s (count=%d).\n",
               this, request, nameStr, count));
 #endif /* PR_LOGGING */
+#endif
 
     nsLoadFlags flags;
     rv = MergeLoadAttributes(request, flags);
@@ -469,6 +477,7 @@ nsLoadGroup::RemoveRequest(nsIRequest *request, nsISupports* ctxt,
 {
     nsresult rv;
 
+#if 0
 #if defined(PR_LOGGING)
         PRUint32 count = 0;
         (void)mRequests->Count(&count);
@@ -478,6 +487,7 @@ nsLoadGroup::RemoveRequest(nsIRequest *request, nsISupports* ctxt,
               ("LOADGROUP [%x]: Removing request %x %s status %x (count=%d).\n",
               this, request, nameStr, aStatus, count-1));
 #endif /* PR_LOGGING */
+#endif
 
     //
     // Remove the request from the group.  If this fails, it means that
@@ -496,9 +506,8 @@ nsLoadGroup::RemoveRequest(nsIRequest *request, nsISupports* ctxt,
     }
 
     nsLoadFlags flags;
-    nsCOMPtr<nsIChannel> aChannel;
-    rv = request->GetParent(getter_AddRefs(aChannel));
-    if (NS_FAILED(rv) || !aChannel) 
+    nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(request, &rv);
+    if (NS_FAILED(rv)) 
       return NS_ERROR_FAILURE;
 
     rv = aChannel->GetLoadAttributes(&flags);
@@ -607,9 +616,8 @@ nsresult nsLoadGroup::MergeLoadAttributes(nsIRequest *aRequest, nsLoadFlags& out
   nsresult rv;
   nsLoadFlags flags, oldFlags;
 
-  nsCOMPtr<nsIChannel> aChannel;
-  rv = aRequest->GetParent(getter_AddRefs(aChannel));
-  if (NS_FAILED(rv) || !aChannel) 
+  nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(aRequest, &rv);
+  if (NS_FAILED(rv)) 
       return NS_ERROR_FAILURE;
 
   rv = aChannel->GetLoadAttributes(&flags);
@@ -659,15 +667,4 @@ nsresult nsLoadGroup::MergeLoadAttributes(nsIRequest *aRequest, nsLoadFlags& out
   outFlags = flags;
 
   return rv;
-}
-
-
-/* attribute nsISupports parent; */
-NS_IMETHODIMP nsLoadGroup::GetParent(nsISupports * *aParent)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-NS_IMETHODIMP nsLoadGroup::SetParent(nsISupports * aParent)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
 }

@@ -23,7 +23,8 @@
 #ifndef nsFileTransport_h__
 #define nsFileTransport_h__
 
-#include "nsIChannel.h"
+#include "nsITransport.h"
+#include "nsIRequest.h"
 #include "nsIRunnable.h"
 #include "nsFileSpec.h"
 #include "prlock.h"
@@ -50,17 +51,16 @@ class nsIInterfaceRequestor;
 class nsFileTransportSourceWrapper;
 class nsFileTransportSinkWrapper;
 
-class nsFileTransport : public nsIChannel, 
-                        public nsIRequest,
-                        public nsIRunnable,
-                        public nsIStreamContentInfo
+class nsFileTransport : public nsITransport, 
+                        public nsITransportRequest,
+                        public nsIRunnable
 {
 public:
     NS_DECL_ISUPPORTS
+    NS_DECL_NSITRANSPORT
     NS_DECL_NSIREQUEST
-    NS_DECL_NSICHANNEL
+    NS_DECL_NSITRANSPORTREQUEST
     NS_DECL_NSIRUNNABLE
-    NS_DECL_NSISTREAMCONTENTINFO
 
     nsFileTransport();
     // Always make the destructor virtual: 
@@ -129,7 +129,6 @@ protected:
     PRUint32                            mOffset;
     PRInt32                             mTotalAmount;
     PRInt32                             mTransferAmount;
-    nsLoadFlags                         mLoadAttributes;
 
     // reading state variables:
     nsCOMPtr<nsIStreamListener>         mListener;
