@@ -383,8 +383,8 @@
 #define HG23298
 #define HG29898
 #define HG22201
-#define HG38738 FALSE
-#define HG02873
+#define HG38738 FALSE,
+#define HG02873 FALSE,
 #define HG92892
 #define HG92871
 #define HG82772
