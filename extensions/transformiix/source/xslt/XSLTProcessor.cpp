@@ -55,6 +55,10 @@
 #include "nsIObserverService.h"
 #include "nsIURL.h"
 #include "nsIServiceManager.h"
+#include "nsIIOService.h"
+#include "nsILoadGroup.h"
+#include "nsIChannel.h"
+#include "nsNetCID.h"
 //#include "nslog.h"
 #else
 #include "printers.h"
@@ -1741,6 +1745,24 @@ XSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
     }
     Document* xslDocument = new Document(styleDOMDocument);
 
+    nsCOMPtr<nsILoadGroup> loadGroup;
+    nsCOMPtr<nsIChannel> channel;
+    nsCOMPtr<nsIDocument> inputDocument(do_QueryInterface(sourceDOMDocument));
+    if (inputDocument) {
+        inputDocument->GetDocumentLoadGroup(getter_AddRefs(loadGroup));
+        nsCOMPtr<nsIIOService> serv(do_GetService(NS_IOSERVICE_CONTRACTID));
+        if (serv) {
+            // Create a temporary channel to get nsIDocument->Reset to
+            // do the right thing. We want the output document to get
+            // much of the input document's characteristics.
+            serv->NewChannelFromURI(inputDocument->GetDocumentURL(),
+                                    getter_AddRefs(channel));
+        }
+    }
+ 
+    nsCOMPtr<nsIDocument> outputDocument(do_QueryInterface(aOutputDoc));
+    outputDocument->Reset(channel, loadGroup);
+
     Document* resultDocument = new Document(aOutputDoc);
 
     //-- create a new ProcessorState
@@ -1770,9 +1792,9 @@ XSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
         nsCOMPtr<nsIObserverService> anObserverService = do_GetService(NS_OBSERVERSERVICE_CONTRACTID, &res);
         if (NS_SUCCEEDED(res)) {
             Node* docElement = resultDocument->getDocumentElement();
-            nsIDOMNode* nsDocElement;
+            nsISupports* nsDocElement;
             if (docElement) {
-                nsDocElement = NS_STATIC_CAST(nsIDOMNode*, docElement->getNSObj());
+                nsDocElement = docElement->getNSObj();
             }
             else {
                 nsDocElement = nsnull;
