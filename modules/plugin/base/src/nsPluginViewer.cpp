@@ -47,6 +47,7 @@
 #include "nsPluginViewer.h"
 #include "nsGUIEvent.h"
 #include "nsIPluginViewer.h"
+#include "nsIWebNavigation.h"
 
 
 #include "nsITimer.h"
@@ -81,6 +82,7 @@ public:
 
   PluginViewerImpl* mViewer;
   nsIStreamListener* mNextStream;
+  PRBool mOnStartRequestFailed;
 };
  
   
@@ -868,6 +870,7 @@ PluginListener::PluginListener(PluginViewerImpl* aViewer)
   NS_INIT_REFCNT();
   mViewer = aViewer;
   NS_ADDREF(aViewer);
+  mOnStartRequestFailed = PR_FALSE;
 }
 
 PluginListener::~PluginListener()
@@ -897,7 +900,17 @@ PluginListener::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
   }
   if (nsnull == mNextStream) 
     return NS_ERROR_FAILURE;
-  return mNextStream->OnStartRequest(request, ctxt);
+
+  rv = mNextStream->OnStartRequest(request, ctxt);
+
+  // if we do not succeed here that probably means that plugin
+  // cannot be displayed in the browser window. MediaPlayer launches
+  // a helper app, see http://bugscape.netscape.com/show_bug.cgi?id=11600
+  // and our page is not getting repainted. Set the flag here so we know
+  // that we should do something about it later, in OnStopRequest()
+  mOnStartRequestFailed = NS_FAILED(rv);
+
+  return rv;
 }
 
 NS_IMETHODIMP
@@ -907,7 +920,19 @@ PluginListener::OnStopRequest(nsIRequest *request, nsISupports *ctxt,
   if (nsnull == mNextStream) {
     return NS_ERROR_FAILURE;
   }
-  return mNextStream->OnStopRequest(request, ctxt, status);
+
+  nsresult rv = mNextStream->OnStopRequest(request, ctxt, status);
+  
+  // if we failed in OnStartRequest let's just load the blank page
+  if(mOnStartRequestFailed) {
+    if(mViewer) {
+      nsCOMPtr<nsIWebNavigation> webNav = do_QueryInterface(mViewer->mContainer);
+      if(webNav)
+        webNav->LoadURI(NS_LITERAL_STRING("about:blank").get(), nsIWebNavigation::LOAD_FLAGS_REPLACE_HISTORY);
+    }
+  }
+
+  return rv;
 }
 
 NS_IMETHODIMP
@@ -917,6 +942,7 @@ PluginListener::OnDataAvailable(nsIRequest *request, nsISupports *ctxt,
   if (nsnull == mNextStream) {
     return NS_ERROR_FAILURE;
   }
+
   return mNextStream->OnDataAvailable(request, ctxt, inStr, sourceOffset, count);
 }
 
