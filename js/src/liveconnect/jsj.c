@@ -59,6 +59,7 @@ report_java_initialization_error(JNIEnv *jEnv, const char *js_error_msg)
     }
 
     jsj_LogError(error_msg);
+    free((void*)error_msg);
 }
 
 /*
@@ -273,10 +274,11 @@ init_java_VM_reflection(JSJavaVM *jsjava_vm, JNIEnv *jEnv)
 
 #include "netscape_javascript_JSObject.h"
 
+/* Manually load the required native methods. */
 static JSBool
 JSObject_RegisterNativeMethods(JNIEnv* jEnv)
 {
-    /* Manually load the required native methods. */
+
     static JNINativeMethod nativeMethods[] = {
         {"initClass", "()V", (void*)&Java_netscape_javascript_JSObject_initClass},
         {"getMember", "(Ljava/lang/String;)Ljava/lang/Object;", (void*)&Java_netscape_javascript_JSObject_getMember},
@@ -298,7 +300,7 @@ JSObject_RegisterNativeMethods(JNIEnv* jEnv)
         (*jEnv)->ExceptionClear(jEnv);
         return JS_FALSE;
     }
-    /* call the initClass method, since we nailed the static initializer for testing. */
+    /* Call the initClass method */
     Java_netscape_javascript_JSObject_initClass(jEnv, njJSObject);
     return JS_TRUE;
 }
@@ -400,8 +402,7 @@ JSJ_ConnectToJavaVM(SystemJavaVM *java_vm_arg, void* initargs)
             free(jsjava_vm);
             return NULL;
         }
-    }
-    else {
+    } else {
         JSBool ok;
         JS_ASSERT(JSJ_callbacks->create_java_vm);
         JS_ASSERT(JSJ_callbacks->destroy_java_vm);
@@ -533,7 +534,6 @@ JSJ_DisconnectFromJavaVM(JSJavaVM *jsjava_vm)
         UNLOAD_CLASS(netscape/javascript/JSException, njJSException);
         UNLOAD_CLASS(netscape/javascript/JSUtil,      njJSUtil);
     }
-
 
     /* Remove this VM from the list of all JSJavaVM objects. */
     for (jp = &jsjava_vm_list; (j = *jp) != NULL; jp = &j->next) {
@@ -724,6 +724,8 @@ JSJ_DetachCurrentThreadFromJava(JSJavaThreadState *jsj_env)
     return JS_TRUE;
 }
 
+/* Utility routine to wrap a Java object inside a JS object, having a 
+   a result type of either JavaObject or JavaArray. */
 JSBool
 JSJ_ConvertJavaObjectToJSValue(JSContext *cx, jobject java_obj, jsval *vp)
 {
