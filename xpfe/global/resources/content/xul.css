@@ -278,6 +278,11 @@ outlinercol {
  -moz-binding: url("chrome://global/content/outlinerBindings.xml#outlinercol");
 }
 
+outlinercol[hidden="true"] {
+ visibility: collapse;
+ display: block;
+}
+
 outlinercol.outlinercol-image {
  -moz-binding: url("chrome://global/content/outlinerBindings.xml#outlinercol-image");
 }
@@ -288,6 +293,10 @@ outlinerbody {
 
 outlinerrows {
  -moz-binding: url("chrome://global/content/outlinerBindings.xml#outlinerrows");
+}
+
+outlinercol.outliner-columnpicker {
+  -moz-binding: url(chrome://global/content/outlinerBindings.xml#columnpicker);
 }
 
 /******** Tree widget **********/

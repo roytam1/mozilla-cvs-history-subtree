@@ -9,6 +9,7 @@
     <content orient="vertical">
       <xul:box class="outliner-columns">
         <children includes="outlinercol|splitter"/>
+		<xul:outlinercol class="outliner-columnpicker"/>
       </xul:box>
       <xul:outlinerrows class="outliner-rows" flex="1">
         <children/>
@@ -255,7 +256,7 @@
       </xul:box>
     </content>
     <handlers>
-      <handler event="click" action="this.parentNode.outlinerBoxObject.view.cycleHeader(this.id, this)"/>
+      <handler event="click" action="if (event.originalTarget == this) { this.parentNode.outlinerBoxObject.view.cycleHeader(this.id, this); }"/>
     </handlers>
   </binding>
 
@@ -270,5 +271,69 @@
     </handlers>
   </binding>
 
+  <binding id="columnpicker">
+    <content>
+      <xul:menu class="outliner-colpicker-menu" autostretch="never" allowevents="true">
+        <xul:image class="outliner-colpicker-icon"/>
+        <xul:menupopup popupanchor="bottomright" popupalign="topright"
+                  oncreate="this.parentNode.parentNode.buildPopup(this);"/>
+      </xul:menu>
+    </content>
+    <implementation>
+       <method name="buildPopup">
+         <parameter name="aPopup"/>
+         <body>
+           <![CDATA[
+             var popupChild = aPopup.firstChild;
+             var firstTime = !popupChild ? true : false;
+             var currCol = this.parentNode.parentNode.firstChild;
+             var count = 0;
+
+             while (currCol) {
+               while (currCol.localName != "outlinercol")
+                 currCol = currCol.nextSibling;
+ 
+               if (currCol != this) {
+                 // Construct an entry for each cell in the row.
+                 if (firstTime) {
+                     var columnName = currCol.getAttribute("value");
+                     popupChild = document.createElement("menuitem");
+                     popupChild.setAttribute("type", "checkbox");
+                     popupChild.setAttribute("value", columnName);
+                     if (columnName == "") {
+                       var display = currCol.getAttribute("display");
+                       popupChild.setAttribute("value", display);
+                     }
+                     popupChild.setAttribute("colid", currCol.id);
+                     popupChild.setAttribute("oncommand",
+                                             "this.parentNode.parentNode.parentNode.toggleColumnState(this);");
+                     if (currCol.getAttribute("hidden") != "true")
+                       popupChild.setAttribute("checked", "true");
+                     aPopup.appendChild(popupChild);
+                 }
+              } 
+              currCol = currCol.nextSibling;
+            }
+           ]]>
+        </body>
+       </method>
+       <method name="toggleColumnState">
+         <parameter name="aPopup"/>
+         <body>
+           <![CDATA[
+             var colid = aPopup.getAttribute("colid");
+             var colNode = document.getElementById(colid);
+             if (colNode) {
+               var checkedState = aPopup.getAttribute("checked");
+               if (checkedState == "true")
+                 colNode.removeAttribute("hidden");
+               else
+                 colNode.setAttribute("hidden", "true");
+             }
+           ]]>
+         </body>
+       </method>         
+     </implementation>
+   </binding>
 </bindings>
 

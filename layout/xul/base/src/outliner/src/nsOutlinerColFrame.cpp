@@ -159,7 +159,7 @@ nsOutlinerColFrame::AttributeChanged(nsIPresContext* aPresContext,
   nsresult rv = nsBoxFrame::AttributeChanged(aPresContext, aChild,
                                                aNameSpaceID, aAttribute, aHint);
 
-  if (aAttribute == nsHTMLAtoms::width) {
+  if (aAttribute == nsHTMLAtoms::width || aAttribute == nsHTMLAtoms::hidden) {
     // Invalidate the outliner.
     if (!mOutliner) {
       // Get our parent node.

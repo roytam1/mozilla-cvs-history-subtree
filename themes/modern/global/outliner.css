@@ -121,3 +121,8 @@ outlinercol:hover:active > .outlinercol-image-box
 .sortDirectionIndicator[sortDirection="descending"] > .outlinercol-box > .outlinercol-sortdirection {
   list-style-image: url("chrome://global/skin/sortDescending.gif");
 }
+
+.outliner-colpicker-icon
+{
+  list-style-image       : url("chrome://global/skin/columnselect.gif");
+}
