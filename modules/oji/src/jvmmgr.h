@@ -47,19 +47,15 @@ typedef enum nsJVMStatus {
 class nsIPluginTagInfo2;
 class nsSymantecDebugManager;
 
-struct ThreadLocalStorageAtIndex0 {
- PRUint32 refcount;
-};
-typedef struct ThreadLocalStorageAtIndex0 ThreadLocalStorageAtIndex0;
-typedef struct ThreadLocalStorageAtIndex1 ThreadLocalStorageAtIndex1;
-struct ThreadLocalStorageAtIndex1 {
+struct JVMSecurityStack {
   void        **pNSIPrincipaArray;
   int           numPrincipals;
   void         *pNSISecurityContext;
   JSStackFrame *pJavaToJSSFrame;
-  ThreadLocalStorageAtIndex1 *next;
-  ThreadLocalStorageAtIndex1 *prev;
+  JVMSecurityStack *next;
+  JVMSecurityStack *prev;
 };
+typedef struct JVMSecurityStack JVMSecurityStack;
 
 /*******************************************************************************
  * JVMMgr is the interface to the JVM manager that the browser sees. All
@@ -75,10 +71,20 @@ public:
     /* from nsIJVMManager: */
     
     /**
-     * Creates a proxy JNI for a given secure environment.
+     * Creates a proxy JNI with an optional secure environment (which can be NULL).
+     * There is a one-to-one correspondence between proxy JNIs and threads, so
+     * calling this method multiple times from the same thread will return
+     * the same proxy JNI.
      */
 	NS_IMETHOD
 	CreateProxyJNI(nsISecureJNI2* inSecureEnv, JNIEnv** outProxyEnv);
+	
+	/**
+	 * Returns the proxy JNI associated with the current thread, or NULL if no
+	 * such association exists.
+	 */
+	NS_IMETHOD
+	GetProxyJNI(JNIEnv** outProxyEnv);
     
     /* from nsIThreadManager: */
     
@@ -311,8 +317,8 @@ JVM_NSISecurityContextImplies(JSStackFrame  *pCurrentFrame, const char* target, 
 PR_EXTERN(JSPrincipals*)
 JVM_GetJavaPrincipalsFromStack(JSStackFrame  *pCurrentFrame);
 
-PR_EXTERN(JSStackFrame*)
-JVM_GetStartJSFrameFromParallelStack();
+PR_EXTERN(JSStackFrame**)
+JVM_GetStartJSFrameFromParallelStack(void);
 
 PR_EXTERN(JSStackFrame*)
 JVM_GetEndJSFrameFromParallelStack(JSStackFrame  *pCurrentFrame);
