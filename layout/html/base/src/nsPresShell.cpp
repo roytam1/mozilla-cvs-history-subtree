@@ -640,7 +640,6 @@ public:
 
 	// nsIRequest
   NS_IMETHOD GetName(PRUnichar* *result) { 
-    NS_NOTREACHED("DummyLayoutRequest::GetName");
     return NS_ERROR_NOT_IMPLEMENTED;
   }
   NS_IMETHOD IsPending(PRBool *_retval) { *_retval = PR_TRUE; return NS_OK; }

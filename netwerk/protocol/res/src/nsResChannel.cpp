@@ -29,6 +29,11 @@
 #include "nsIURL.h"
 #include "nsIIOService.h"
 #include "nsXPIDLString.h"
+#include "nsCExternalHandlerService.h"
+#include "nsIMIMEService.h"
+#include "nsNetUtil.h"
+#include "nsMimeTypes.h"
+
 
 static NS_DEFINE_CID(kFileTransportServiceCID, NS_FILETRANSPORTSERVICE_CID);
 static NS_DEFINE_CID(kStandardURLCID, NS_STANDARDURL_CID);
@@ -83,13 +88,21 @@ nsResChannel::~nsResChannel()
 {
 }
 
-NS_IMPL_ISUPPORTS6(nsResChannel,
-                   nsIResChannel,
-                   nsIFileChannel,
-                   nsIRequest,
-                   nsIStreamContentInfo,
-                   nsIStreamListener,
-                   nsIStreamObserver)
+
+NS_IMPL_THREADSAFE_ADDREF(nsResChannel)
+NS_IMPL_THREADSAFE_RELEASE(nsResChannel)
+
+
+NS_INTERFACE_MAP_BEGIN(nsResChannel)
+    NS_INTERFACE_MAP_ENTRY(nsIResChannel)
+    NS_INTERFACE_MAP_ENTRY(nsIFileChannel)
+    NS_INTERFACE_MAP_ENTRY(nsIRequest)
+    NS_INTERFACE_MAP_ENTRY(nsIStreamContentInfo)
+    NS_INTERFACE_MAP_ENTRY(nsIStreamListener)
+    NS_INTERFACE_MAP_ENTRY(nsIStreamObserver)
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIResChannel)
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsIChannel, nsIResChannel)
+NS_INTERFACE_MAP_END_THREADSAFE
 
 NS_METHOD
 nsResChannel::Create(nsISupports* aOuter, const nsIID& aIID, void* *aResult)
@@ -501,7 +514,11 @@ nsResChannel::GetContentType(char * *aContentType)
         nsCOMPtr<nsIStreamContentInfo> cr = do_QueryInterface(mResolvedRequest);
         if (cr) return cr->GetContentType(aContentType);
     }
-    return NS_ERROR_FAILURE;
+    
+    // if we have not created a mResolvedRequest, use the mime service
+    nsCOMPtr<nsIMIMEService> MIMEService (do_GetService(NS_MIMESERVICE_CONTRACTID));
+    if (!MIMEService) return NS_ERROR_FAILURE;
+    return MIMEService->GetTypeFromURI(mResourceURI, aContentType);
 }
 
 NS_IMETHODIMP

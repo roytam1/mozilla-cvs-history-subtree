@@ -741,7 +741,8 @@ nsXBLService::GetContentList(nsIContent* aContent, nsIDOMNodeList** aResult, nsI
   nsCOMPtr<nsIXBLBinding> binding;
   bindingManager->GetBinding(aContent, getter_AddRefs(binding));
   
-  binding->GetAnonymousNodes(getter_AddRefs(aResult), aParent, aMultipleInsertionPoints);
+  if (binding)
+      binding->GetAnonymousNodes(getter_AddRefs(aResult), aParent, aMultipleInsertionPoints);
   return NS_OK;
 }
 
@@ -1279,7 +1280,15 @@ nsXBLService::FetchBindingDocument(nsIContent* aBoundElement, nsIDocument* aBoun
 
   // If we couldn't open the channel, then just return.
   if (NS_FAILED(rv)) return NS_OK;
+  
+  // if request is null, qi input stream for it.
+  if (!request) {
+      // dougt - this does not work yet; request = do_QueryInterface(in);
+      request = do_QueryInterface(channel);
+  }
 
+  NS_ASSERTION(request != nsnull, "no request info");
+  
   NS_ASSERTION(in != nsnull, "no input stream");
   if (! in) return NS_ERROR_FAILURE;
 

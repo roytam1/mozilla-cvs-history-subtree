@@ -4711,7 +4711,7 @@ HTMLContentSink::OnStreamComplete(nsIStreamLoader* aLoader,
     nsCOMPtr<nsIChannel> channel;
     nsCOMPtr<nsIRequest> request;
     rv = aLoader->GetRequest(getter_AddRefs(request));    
-    NS_ASSERTION(channel, "StreamLoader's request went away prematurely");
+    NS_ASSERTION(request, "StreamLoader's request went away prematurely");
     if (NS_FAILED(rv)) return rv;
 
     rv = request->GetParent(getter_AddRefs(channel));
