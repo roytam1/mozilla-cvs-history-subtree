@@ -55,7 +55,7 @@ locale/global-platform/unix,                              en-US/locale/global-pl
 #################################################################################################
 # communicator
 #################################################################################################
-locale/en-US/communicator,                                en-US/locale/en-US/communicator
+locale/communicator,                                      en-US/locale/communicator
 
 #################################################################################################
 # editor
