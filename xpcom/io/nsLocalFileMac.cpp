@@ -1442,6 +1442,22 @@ nsLocalFile::GetPath(char **_retval)
 	if ((*_retval)[lastChar] == ':')
 		(*_retval)[lastChar] = '\0';
 
+#ifdef MACOSX
+	// Watch out for a really big hack, coming soon to this space!
+	char* slashified = (char*) nsMemory::Alloc(sizeof("/Volumes/") + strlen(*_retval));
+	if (slashified) {
+		strcpy(slashified, "/Volumes/");
+		strcat(slashified, *_retval);
+		nsMemory::Free(*_retval);
+		*_retval = slashified;
+		char *colon = strchr(slashified, ':');
+		while (colon != NULL) {
+			*colon = '/';
+			colon = strchr(colon + 1, ':');
+		}
+	}
+#endif
+
 	return NS_OK;
 }
 

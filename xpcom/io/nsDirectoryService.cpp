@@ -28,7 +28,7 @@
 #include "nsLocalFile.h"
 #include "nsDebug.h"
 
-#if defined(XP_MAC) || defined(MACOSX)
+#if defined(XP_MAC)
 #include <Folders.h>
 #include <Files.h>
 #include <Memory.h>
@@ -41,7 +41,7 @@
 #include <shlobj.h>
 #include <stdlib.h>
 #include <stdio.h>
-#elif defined(XP_UNIX)
+#elif defined(XP_UNIX) || defined(MACOSX)
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/param.h>
@@ -81,10 +81,10 @@
 // For Windows platform, We are choosing Appdata folder as HOME
 #if defined (XP_WIN)
 #define HOME_DIR NS_WIN_APPDATA_DIR
-#elif defined (XP_MAC) || defined(MACOSX)
+#elif defined (XP_MAC)
 #define HOME_DIR NS_MAC_HOME_DIR
 #elif defined (XP_UNIX)
-#define HOME_DIR NS_UNIX_HOME_DIR
+#define HOME_DIR NS_UNIX_HOME_DIR || defined(MACOSX)
 #elif defined (XP_OS2)
 #define HOME_DIR NS_OS2_HOME_DIR
 #elif defined (XP_BEOS)
@@ -147,7 +147,7 @@ nsDirectoryService::GetCurrentProcessDirectory(nsILocalFile** aFile)
         return NS_OK;
     }
 
-#elif defined(XP_MAC) || defined(MACOSX)
+#elif defined(XP_MAC)
     // get info for the the current process to determine the directory
     // its located in
     OSErr err;
@@ -229,7 +229,7 @@ nsDirectoryService::GetCurrentProcessDirectory(nsILocalFile** aFile)
     }
 #endif
 
-#elif defined(XP_UNIX)
+#elif defined(XP_UNIX) || defined(MACOSX)
 
     // In the absence of a good way to get the executable directory let
     // us try this for unix:
@@ -339,7 +339,7 @@ nsIAtom*  nsDirectoryService::sOS_DriveDirectory = nsnull;
 nsIAtom*  nsDirectoryService::sOS_TemporaryDirectory = nsnull;
 nsIAtom*  nsDirectoryService::sOS_CurrentProcessDirectory = nsnull;
 nsIAtom*  nsDirectoryService::sOS_CurrentWorkingDirectory = nsnull;
-#if defined(XP_MAC) || defined(MACOSX)
+#if defined(XP_MAC)
 nsIAtom*  nsDirectoryService::sDirectory = nsnull;
 nsIAtom*  nsDirectoryService::sDesktopDirectory = nsnull;
 nsIAtom*  nsDirectoryService::sTrashDirectory = nsnull;
@@ -382,7 +382,7 @@ nsIAtom*  nsDirectoryService::sCommon_Startup = nsnull;
 nsIAtom*  nsDirectoryService::sCommon_Desktopdirectory = nsnull;
 nsIAtom*  nsDirectoryService::sAppdata = nsnull;
 nsIAtom*  nsDirectoryService::sPrinthood = nsnull;
-#elif defined (XP_UNIX) 
+#elif defined (XP_UNIX) || defined(MACOSX)
 nsIAtom*  nsDirectoryService::sLocalDirectory = nsnull;
 nsIAtom*  nsDirectoryService::sLibDirectory = nsnull;
 nsIAtom*  nsDirectoryService::sHomeDirectory = nsnull;
@@ -438,7 +438,7 @@ nsDirectoryService::Init()
     nsDirectoryService::sOS_TemporaryDirectory      = NS_NewAtom(NS_OS_TEMP_DIR);
     nsDirectoryService::sOS_CurrentProcessDirectory = NS_NewAtom(NS_OS_CURRENT_PROCESS_DIR);
     nsDirectoryService::sOS_CurrentWorkingDirectory = NS_NewAtom(NS_OS_CURRENT_WORKING_DIR);
-#if defined(XP_MAC) || defined(MACOSX)
+#if defined(XP_MAC)
     nsDirectoryService::sDirectory                  = NS_NewAtom(NS_OS_SYSTEM_DIR);
     nsDirectoryService::sDesktopDirectory           = NS_NewAtom(NS_MAC_DESKTOP_DIR);
     nsDirectoryService::sTrashDirectory             = NS_NewAtom(NS_MAC_TRASH_DIR);
@@ -481,7 +481,7 @@ nsDirectoryService::Init()
     nsDirectoryService::sCommon_Desktopdirectory    = NS_NewAtom(NS_WIN_COMMON_DESKTOP_DIRECTORY);
     nsDirectoryService::sAppdata                    = NS_NewAtom(NS_WIN_APPDATA_DIR);
     nsDirectoryService::sPrinthood                  = NS_NewAtom(NS_WIN_PRINTHOOD);
-#elif defined (XP_UNIX) 
+#elif defined (XP_UNIX) || defined(MACOSX)
     nsDirectoryService::sLocalDirectory             = NS_NewAtom(NS_UNIX_LOCAL_DIR);
     nsDirectoryService::sLibDirectory               = NS_NewAtom(NS_UNIX_LIB_DIR);
     nsDirectoryService::sHomeDirectory              = NS_NewAtom(NS_UNIX_HOME_DIR);
@@ -519,7 +519,7 @@ nsDirectoryService::~nsDirectoryService()
      NS_IF_RELEASE(nsDirectoryService::sOS_TemporaryDirectory);
      NS_IF_RELEASE(nsDirectoryService::sOS_CurrentProcessDirectory);
      NS_IF_RELEASE(nsDirectoryService::sOS_CurrentWorkingDirectory);
-#if defined(XP_MAC) || defined(MACOSX)
+#if defined(XP_MAC)
      NS_IF_RELEASE(nsDirectoryService::sDirectory);
      NS_IF_RELEASE(nsDirectoryService::sDesktopDirectory);
      NS_IF_RELEASE(nsDirectoryService::sTrashDirectory);
@@ -561,7 +561,7 @@ nsDirectoryService::~nsDirectoryService()
      NS_IF_RELEASE(nsDirectoryService::sCommon_Desktopdirectory);
      NS_IF_RELEASE(nsDirectoryService::sAppdata);
      NS_IF_RELEASE(nsDirectoryService::sPrinthood);
-#elif defined (XP_UNIX) 
+#elif defined (XP_UNIX) || defined(MACOSX)
      NS_IF_RELEASE(nsDirectoryService::sLocalDirectory);
      NS_IF_RELEASE(nsDirectoryService::sLibDirectory);
      NS_IF_RELEASE(nsDirectoryService::sHomeDirectory);
@@ -800,7 +800,7 @@ nsDirectoryService::GetFile(const char *prop, PRBool *persistent, nsIFile **_ret
         rv = NS_FileSpecToIFile(&fileSpec, getter_AddRefs(localFile));  
     }
        
-#if defined(XP_MAC) || defined(MACOSX)          
+#if defined(XP_MAC)
     else if (inAtom == nsDirectoryService::sDirectory)
     {
         nsSpecialSystemDirectory fileSpec(nsSpecialSystemDirectory::Mac_SystemDirectory); 
@@ -1007,7 +1007,7 @@ nsDirectoryService::GetFile(const char *prop, PRBool *persistent, nsIFile **_ret
         nsSpecialSystemDirectory fileSpec(nsSpecialSystemDirectory::Win_Printhood); 
         rv = NS_FileSpecToIFile(&fileSpec, getter_AddRefs(localFile));  
     }
-#elif defined (XP_UNIX)       
+#elif defined (XP_UNIX) || defined(MACOSX)
 
     else if (inAtom == nsDirectoryService::sLocalDirectory)
     {

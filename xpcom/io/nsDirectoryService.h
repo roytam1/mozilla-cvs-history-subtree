@@ -67,7 +67,7 @@ private:
     static nsIAtom *sOS_TemporaryDirectory;
     static nsIAtom *sOS_CurrentProcessDirectory;
     static nsIAtom *sOS_CurrentWorkingDirectory;
-#if defined(XP_MAC) || defined(MACOSX)
+#if defined(XP_MAC)
     static nsIAtom *sDirectory;
     static nsIAtom *sDesktopDirectory;
     static nsIAtom *sTrashDirectory;
@@ -110,7 +110,7 @@ private:
     static nsIAtom *sCommon_Desktopdirectory;
     static nsIAtom *sAppdata;
     static nsIAtom *sPrinthood;
-#elif defined (XP_UNIX) 
+#elif defined (XP_UNIX) || defined(MACOSX)
     static nsIAtom *sLocalDirectory;
     static nsIAtom *sLibDirectory;
     static nsIAtom *sHomeDirectory;
