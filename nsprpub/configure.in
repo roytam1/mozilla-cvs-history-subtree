@@ -1263,7 +1263,7 @@ case "$target" in
         else
             if test "$OS_TARGET" = "WINCE"; then
                 CFLAGS="$CFLAGS -Zl -GR- -GX- -Gi- -Gm-"
-                _DEBUG_FLAGS="-Od -Zi"
+                _DEBUG_FLAGS="-Od -O1 -Zi"
             else
                 if test -n "$USE_DEBUG_RTL"; then
                     CFLAGS="$CFLAGS -MDd"

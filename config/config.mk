@@ -596,6 +596,9 @@ endif # USE_NON_MT_LIBS
 endif # USE_STATIC_LIBS
 else
 RTL_FLAGS=-Zl -GR- -GX- -Gi- -Gm-
+ifneq (,$(MOZ_DEBUG))
+RTL_FLAGS+=-Od -O1
+endif
 endif # WINCE
 endif # WINNT
 
