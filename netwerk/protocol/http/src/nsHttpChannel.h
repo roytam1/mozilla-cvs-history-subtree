@@ -34,6 +34,9 @@
 #include "nsIInputStream.h"
 #include "nsIProgressEventSink.h"
 #include "nsICachingChannel.h"
+#include "nsICacheEntryDescriptor.h"
+#include "nsICacheListener.h"
+#include "nsITransport.h"
 #include "nsCOMPtr.h"
 #include "nsXPIDLString.h"
 
@@ -51,6 +54,7 @@ class nsHttpChannel : public nsIHttpChannel
                     , public nsIInterfaceRequestor
                     , public nsIProgressEventSink
                     , public nsICachingChannel
+                    , public nsICacheListener
 {
 public:
     NS_DECL_ISUPPORTS
@@ -62,6 +66,7 @@ public:
     NS_DECL_NSIINTERFACEREQUESTOR
     NS_DECL_NSIPROGRESSEVENTSINK
     NS_DECL_NSICACHINGCHANNEL
+    NS_DECL_NSICACHELISTENER
 
     nsHttpChannel();
     virtual ~nsHttpChannel();
@@ -73,7 +78,8 @@ public:
                   const char *proxyType=0);
 
 private:
-    nsresult Connect();
+    nsresult Connect(PRBool firstTime = PR_TRUE);
+    nsresult AsyncAbort(nsresult status);
     nsresult SetupTransaction();
     nsresult BuildConnectionInfo(nsHttpConnectionInfo **);
     nsresult ProcessResponse();
@@ -81,6 +87,17 @@ private:
     nsresult ProcessNotModified();
     nsresult ProcessRedirection(PRUint32 httpStatus);
     nsresult ProcessAuthentication(PRUint32 httpStatus);
+
+    // cache specific methods
+    nsresult OpenCacheEntry(PRBool *delayed);
+    nsresult GenerateCacheKey(nsACString &key);
+    nsresult UpdateExpirationTime();
+    nsresult CheckCache();
+    nsresult ReadFromCache();
+    nsresult CloseCacheEntry(nsresult status);
+    nsresult CacheReceivedResponse();
+
+    // auth specific methods
     nsresult GetCredentials(const char *challenges, PRBool proxyAuth, nsAFlatCString &creds);
     nsresult SelectChallenge(const char *challenges, nsAFlatCString &challenge, nsIHttpAuthenticator **); 
     nsresult GetAuthenticator(const char *scheme, nsIHttpAuthenticator **);
@@ -91,34 +108,44 @@ private:
     nsresult GetCurrentPath(char **);
 
 private:
-    nsCOMPtr<nsIURI>                mOriginalURI;
-    nsCOMPtr<nsIURI>                mURI;
-    nsCOMPtr<nsIStreamListener>     mListener;
-    nsCOMPtr<nsISupports>           mListenerContext;
-    nsCOMPtr<nsILoadGroup>          mLoadGroup;
-    nsCOMPtr<nsISupports>           mOwner;
-    nsCOMPtr<nsIInterfaceRequestor> mCallbacks;
-    nsCOMPtr<nsIProgressEventSink>  mProgressSink;
-    nsCOMPtr<nsIHttpEventSink>      mHttpEventSink;
-    nsCOMPtr<nsIURI>                mReferrer;
-    nsCOMPtr<nsIInputStream>        mUploadStream;
+    nsCOMPtr<nsIURI>                  mOriginalURI;
+    nsCOMPtr<nsIURI>                  mURI;
+    nsCOMPtr<nsIStreamListener>       mListener;
+    nsCOMPtr<nsISupports>             mListenerContext;
+    nsCOMPtr<nsILoadGroup>            mLoadGroup;
+    nsCOMPtr<nsISupports>             mOwner;
+    nsCOMPtr<nsIInterfaceRequestor>   mCallbacks;
+    nsCOMPtr<nsIProgressEventSink>    mProgressSink;
+    nsCOMPtr<nsIHttpEventSink>        mHttpEventSink;
+    nsCOMPtr<nsIURI>                  mReferrer;
+    nsCOMPtr<nsIInputStream>          mUploadStream;
 
-    nsHttpRequestHead               mRequestHead;
-    nsHttpResponseHead             *mResponseHead;
+    nsHttpRequestHead                 mRequestHead;
+    nsHttpResponseHead               *mResponseHead;
 
-    nsHttpTransaction              *mTransaction;    // hard ref
-    nsHttpConnectionInfo           *mConnectionInfo; // hard ref
+    nsHttpTransaction                *mTransaction;    // hard ref
+    nsHttpConnectionInfo             *mConnectionInfo; // hard ref
 
-    nsXPIDLCString                  mSpec;
+    nsXPIDLCString                    mSpec;
 
-    PRUint32                        mLoadFlags;
-    PRUint32                        mCapabilities;
-    PRUint32                        mStatus;
+    PRUint32                          mLoadFlags;
+    PRUint32                          mCapabilities;
+    PRUint32                          mStatus;
 
-    PRPackedBool                    mIsPending;
-    PRPackedBool                    mApplyConversion;
-    PRPackedBool                    mTriedCredentialsFromPrehost;
-    PRPackedBool                    mTriedCredentials;
+    // cache specific data
+    nsCOMPtr<nsICacheEntryDescriptor> mCacheEntry;
+    nsCOMPtr<nsITransport>            mCacheTransport;
+    nsCOMPtr<nsIRequest>              mCacheReadRequest;
+    nsHttpResponseHead               *mCachedResponseHead;
+    nsCacheAccessMode                 mCacheAccess;
+    PRUint32                          mPostID;
+    PRUint32                          mRequestTime;
+
+    PRPackedBool                      mIsPending;
+    PRPackedBool                      mApplyConversion;
+    PRPackedBool                      mTriedCredentialsFromPrehost;
+    PRPackedBool                      mFromCacheOnly;
+    PRPackedBool                      mCachedContentIsValid;
 };
 
 #endif

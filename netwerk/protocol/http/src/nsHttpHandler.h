@@ -32,6 +32,7 @@
 #include "nsINetModuleMgr.h"
 #include "nsIProxy.h"
 #include "nsIStreamConverterService.h"
+#include "nsICacheSession.h"
 #include "nsXPIDLString.h"
 #include "nsString.h"
 #include "nsCOMPtr.h"
@@ -81,6 +82,11 @@ public:
     PRBool SendReferrer() { return mSendReferrer; }
 
     nsHttpAuthCache *AuthCache() { return mAuthCache; }
+
+    // cache support
+    nsresult GetCacheSession(nsCacheStoragePolicy, nsICacheSession **);
+    PRUint32 GenerateUniqueID() { return ++mLastUniqueID; }
+    PRUint32 SessionStartTime() { return mSessionStartTime; }
 
     //
     // Connection management methods:
@@ -199,6 +205,12 @@ private:
     nsCString mAcceptLanguages;
     nsCString mAcceptEncodings;
     nsCString mAcceptCharsets;
+
+    // cache support
+    nsCOMPtr<nsICacheSession> mCacheSession_ANY;
+    nsCOMPtr<nsICacheSession> mCacheSession_MEM;
+    PRUint32                  mLastUniqueID;
+    PRUint32                  mSessionStartTime;
 
     // connection management
     nsVoidArray mActiveConnections;    // list of nsHttpConnection objects

@@ -21,11 +21,13 @@
  *   Darin Fisher <darin@netscape.com> (original author)
  */
 
+#include <stdlib.h>
 #include "nsHttpResponseHead.h"
 #include "prprf.h"
+#include "prtime.h"
 
 //-----------------------------------------------------------------------------
-// nsHttpResponseHead
+// nsHttpResponseHead <public>
 //-----------------------------------------------------------------------------
 
 nsresult
@@ -54,7 +56,38 @@ nsHttpResponseHead::Flatten(nsACString &buf)
 nsresult
 nsHttpResponseHead::Parse(char *block)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    nsresult rv;
+
+    LOG(("nsHttpResponseHead::Parse [this=%x]\n", this));
+
+    // this command works on a buffer as prepared by Flatten, as such it is
+    // not very forgiving ;-)
+
+    char *p = PL_strstr(block, "\r\n");
+    if (!p)
+        return NS_ERROR_UNEXPECTED;
+
+    *p = 0;
+    rv = ParseStatusLine(block);
+    if (NS_FAILED(rv)) return rv;
+
+    do {
+        block = p + 2;
+
+        p = PL_strstr(block, "\r\n");
+        if (!p)
+            return NS_ERROR_UNEXPECTED;
+
+        if (p == block)
+            break;
+
+        *p = 0;
+        rv = ParseHeaderLine(block);
+        if (NS_FAILED(rv)) return rv;
+
+    } while (1);
+
+    return NS_OK;
 }
 
 nsresult
@@ -143,6 +176,98 @@ nsHttpResponseHead::ParseHeaderLine(char *line)
     return NS_OK;
 }
 
+// From section 13.2.3 of RFC2616, we compute the current age of a cached
+// response as follows:
+//
+//    currentAge = max(max(0, responseTime - dateValue), ageValue)
+//               + now - requestTime
+//
+//    where responseTime == now
+//
+// This is typically a very small number.
+//
+nsresult
+nsHttpResponseHead::ComputeCurrentAge(PRUint32 now,
+                                      PRUint32 requestTime,
+                                      PRUint32 *result)
+{
+    PRUint32 dateValue;
+    PRUint32 ageValue;
+
+    *result = 0;
+
+    if (NS_FAILED(GetDateValue(&dateValue))) {
+        LOG(("nsHttpResponseHead::ComputeCurrentAge [this=%x] "
+             "Date response header not set!\n", this));
+        // Assume we have a fast connection and that our clock
+        // is in sync with the server.
+        dateValue = now;
+    }
+
+    // Compute apparent age
+    if (now > dateValue)
+        *result = now - dateValue;
+
+    // Compute corrected received age
+    if (NS_SUCCEEDED(GetAgeValue(&ageValue)))
+        *result = PR_MAX(*result, ageValue);
+
+    NS_ASSERTION(now >= requestTime, "bogus request time");
+
+    // Compute current age
+    *result += (now - requestTime);
+    return NS_OK;
+}
+
+// From section 13.2.4 of RFC2616, we compute the freshness lifetime of a cached
+// response as follows:
+//
+//     freshnessLifetime = max_age_value
+// <or>
+//     freshnessLifetime = expires_value - date_value
+// <or>
+//     freshnessLifetime = (date_value - last_modified_value) * 0.10
+// <or>
+//     freshnessLifetime = 0
+//
+nsresult
+nsHttpResponseHead::ComputeFreshnessLifetime(PRUint32 *result)
+{
+    *result = 0;
+
+    // Try HTTP/1.1 style max-age directive...
+    if (NS_SUCCEEDED(GetMaxAgeValue(result)))
+        return NS_OK;
+
+    PRUint32 date, date2;
+
+    if (NS_SUCCEEDED(GetDateValue(&date))) {
+        // Try HTTP/1.0 style expires header...
+        if (NS_SUCCEEDED(GetExpiresValue(&date2))) {
+            *result = date2 - date;
+            return NS_OK;
+        }
+
+        // Fallback on heuristic using last modified header...
+        if (NS_SUCCEEDED(GetLastModifiedValue(&date2))) {
+            LOG(("using last-modified to determine freshness-lifetime\n"));
+            LOG(("last-modified = %u, date = %u\n", date2, date));
+            *result = (date - date2) / 10;
+            return NS_OK;
+        }
+    }
+
+    LOG(("nsHttpResponseHead::ComputeFreshnessLifetime [this = %x] "
+         "Insufficient information to compute a non-zero freshness "
+         "lifetime!\n", this));
+
+    return NS_OK;
+}
+
+//-----------------------------------------------------------------------------
+// nsHttpResponseHead <private>
+//-----------------------------------------------------------------------------
+
 nsresult
 nsHttpResponseHead::ParseVersion(const char *str)
 {
@@ -212,5 +337,48 @@ nsHttpResponseHead::ParseContentType(char *type)
         mContentType = type;
     }
 
+    return NS_OK;
+}
+
+nsresult
+nsHttpResponseHead::ParseDateHeader(nsHttpAtom header, PRUint32 *result)
+{
+    const char *val = PeekHeader(header);
+    if (!val)
+        return NS_ERROR_NOT_AVAILABLE;
+
+    PRTime time;
+    PRStatus st = PR_ParseTimeString(val, PR_TRUE, &time);
+    if (st != PR_SUCCESS)
+        return NS_ERROR_NOT_AVAILABLE;
+
+    *result = PRTimeToSeconds(time); 
+    return NS_OK;
+}
+
+nsresult
+nsHttpResponseHead::GetAgeValue(PRUint32 *result)
+{
+    const char *val = PeekHeader(nsHttp::Age);
+    if (!val)
+        return NS_ERROR_NOT_AVAILABLE;
+
+    *result = (PRUint32) atoi(val);
+    return NS_OK;
+}
+
+// Return the value of the (HTTP 1.1) max-age directive, which itself is a
+// component of the Cache-Control response header
+nsresult nsHttpResponseHead::GetMaxAgeValue(PRUint32 *result)
+{
+    const char *val = PeekHeader(nsHttp::Cache_Control);
+    if (!val)
+        return NS_ERROR_NOT_AVAILABLE;
+
+    const char *p = PL_strstr(val, "max-age=");
+    if (!p)
+        return NS_ERROR_NOT_AVAILABLE;
+
+    *result = (PRUint32) atoi(p + 8);
     return NS_OK;
 }
