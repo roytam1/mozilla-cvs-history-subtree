@@ -43,7 +43,6 @@
 
 #include "XSLTProcessor.h"
 #include "Names.h"
-#include "Numbering.h"
 #include "Tokenizer.h"
 #include "txAtoms.h"
 #include "TxLog.h"
@@ -53,6 +52,7 @@
 #include "txTextHandler.h"
 #include "txURIUtils.h"
 #include "txVariableMap.h"
+#include "txXSLTNumber.h"
 #include "XMLDOMUtils.h"
 #include "XMLUtils.h"
 
@@ -557,8 +557,10 @@ txXSLTProcessor::processAction(Node* aNode,
         PRUint32 length = value.length();
         while ((pos = value.indexOf('-', pos)) != kNotFound) {
             ++pos;
-            if (((PRUint32)pos == length) || (value.charAt(pos) == '-'))
+            if (((PRUint32)pos == length) || (value.charAt(pos) == '-')) {
                 value.insert(pos++, ' ');
+                ++length;
+            }
         }
         NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
         aPs->mResultHandler->comment(value);
@@ -740,7 +742,8 @@ txXSLTProcessor::processAction(Node* aNode,
     // xsl:number
     else if (localName == txXSLTAtoms::number) {
         String result;
-        Numbering::doNumbering(actionElement, result, aPs);
+        // XXX ErrorReport, propagate result from ::createNumber
+        txXSLTNumber::createNumber(actionElement, aPs, result);
         NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
         aPs->mResultHandler->characters(result);
     }
@@ -791,18 +794,20 @@ txXSLTProcessor::processAction(Node* aNode,
         XMLDOMUtils::getNodeValue(actionElement, data);
 
         NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
-#ifdef TX_EXE
-        String aValue;
+        MBool doe = PR_FALSE;
         if ((aPs->mResultHandler == aPs->mOutputHandler) &&
-            actionElement->getAttr(txXSLTAtoms::disableOutputEscaping,
-                                   kNameSpaceID_None, aValue) &&
-            aValue.isEqual(YES_VALUE))
+            aPs->mOutputHandler->getDisableOutputEscaping()) {
+            String attValue;
+            doe = actionElement->getAttr(txXSLTAtoms::disableOutputEscaping,
+                                         kNameSpaceID_None, attValue) &&
+                  attValue.isEqual(YES_VALUE);
+        }
+        if (doe) {
             aPs->mOutputHandler->charactersNoOutputEscaping(data);
-        else
+        }
+        else {
             aPs->mResultHandler->characters(data);
-#else
-        aPs->mResultHandler->characters(data);
-#endif
+        }
     }
     // xsl:value-of
     else if (localName == txXSLTAtoms::valueOf) {
@@ -823,18 +828,20 @@ txXSLTProcessor::processAction(Node* aNode,
         exprResult->stringValue(value);
 
         NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
-#ifdef TX_EXE
-        String aValue;
+        MBool doe = PR_FALSE;
         if ((aPs->mResultHandler == aPs->mOutputHandler) &&
-            actionElement->getAttr(txXSLTAtoms::disableOutputEscaping,
-                                   kNameSpaceID_None, aValue) &&
-            aValue.isEqual(YES_VALUE))
+            aPs->mOutputHandler->getDisableOutputEscaping()) {
+            String attValue;
+            doe = actionElement->getAttr(txXSLTAtoms::disableOutputEscaping,
+                                         kNameSpaceID_None, attValue) &&
+                  attValue.isEqual(YES_VALUE);
+        }
+        if (doe) {
             aPs->mOutputHandler->charactersNoOutputEscaping(value);
-        else
+        }
+        else {
             aPs->mResultHandler->characters(value);
-#else
-        aPs->mResultHandler->characters(value);
-#endif
+        }
         delete exprResult;
     }
     // xsl:variable

@@ -56,7 +56,7 @@ public:
 
     NS_DECL_ISUPPORTS
 
-    /*
+    /**
      * Signals to receive the start of an attribute.
      *
      * @param aName the name of the attribute
@@ -67,27 +67,37 @@ public:
                    const PRInt32 aNsID,
                    const String& aValue);
 
-    /*
+    /**
      * Signals to receive characters.
      *
      * @param aData the characters to receive
      */
     void characters(const String& aData);
 
-    /*
+    /**
+     * Signals to receive characters that don't need output escaping.
+     *
+     * @param aData the characters to receive
+     */
+    void charactersNoOutputEscaping(const String& aData)
+    {
+        NS_ASSERTION(0, "Don't call this in module, we don't do d-o-e");
+    }
+
+    /**
      * Signals to receive data that should be treated as a comment.
      *
      * @param data the comment data to receive
      */
     void comment(const String& aData);
 
-    /*
+    /**
      * Signals the end of a document. It is an error to call
      * this method more than once.
      */
     void endDocument();
 
-    /*
+    /**
      * Signals to receive the end of an element.
      *
      * @param aName the name of the element
@@ -96,7 +106,19 @@ public:
     void endElement(const String& aName,
                     const PRInt32 aNsID);
 
-    /*
+    /**
+     * Returns whether the output handler supports
+     * disable-output-escaping.
+     *
+     * @return MB_TRUE if this handler supports
+     *                 disable-output-escaping
+     */
+    MBool getDisableOutputEscaping()
+    {
+        return MB_FALSE;
+    }
+
+    /**
      * Signals to receive a processing instruction.
      *
      * @param aTarget the target of the processing instruction
@@ -104,12 +126,12 @@ public:
      */
     void processingInstruction(const String& aTarget, const String& aData);
 
-    /*
+    /**
      * Signals the start of a document.
      */
     void startDocument();
 
-    /*
+    /**
      * Signals to receive the start of an element.
      *
      * @param aName the name of the element
@@ -118,28 +140,28 @@ public:
     void startElement(const String& aName,
                       const PRInt32 aNsID);
 
-    /*
+    /**
      * Sets the output format.
      *
      * @param aOutputFormat the output format
      */
     void setOutputFormat(txOutputFormat* aOutputFormat);
 
-    /*
+    /**
      * Sets the Mozilla source document
      *
      * @param aDocument the Mozilla source document
      */
     void setSourceDocument(nsIDOMDocument* aDocument);
 
-    /*
+    /**
      * Gets the Mozilla output document
      *
      * @param aDocument the Mozilla output document
      */
     void getOutputDocument(nsIDOMDocument** aDocument);
 
-    /*
+    /**
      * Sets the content-sink observer
      *
      * @param aObserver the content-sink observer
