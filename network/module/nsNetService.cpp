@@ -446,11 +446,11 @@ nsresult nsNetlibService::OpenStream(nsIURL *aUrl,
      * Currently, this information is needed to marshall the call to the URL
      * exit_routine(...) on the correct thread...
      */
-    NS_ADDREF(evQueue);
+    
     URL_s->owner_data = evQueue;
 		
 		/* Done with the event queue pointer at this point. Release it. */
-		NS_RELEASE(evQueue);
+		NS_IF_RELEASE(evQueue);
 
     /*
      * Give the protocol a chance to initialize any URL_Struct fields...
@@ -622,11 +622,10 @@ nsresult nsNetlibService::OpenBlockingStream(nsIURL *aUrl,
          * Currently, this information is needed to marshall the call to the URL
          * exit_routine(...) on the correct thread...
          */
-				NS_ADDREF(evQueue);
         URL_s->owner_data = evQueue;
 				
 				/* Done with the event queue pointer at this point. Release it. */
-				NS_RELEASE(evQueue);
+				NS_IF_RELEASE(evQueue);
 
         /*
          * Give the protocol a chance to initialize any URL_Struct fields...
