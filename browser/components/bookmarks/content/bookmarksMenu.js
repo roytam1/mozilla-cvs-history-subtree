@@ -115,7 +115,7 @@ var BookmarksMenu = {
   {
     var rParent = RDF.GetResource(aTarget.parentNode.id)
     var type = BookmarksUtils.resolveType(rParent);
-    if (type != "Folder" && type != "PersonalToolbarFolder")
+    if (type != "Folder" && type != "PersonalToolbarFolder" && type != "Livemark")
       return false;
     var count = 0;
     if (!aTarget.hasChildNodes())

@@ -336,7 +336,8 @@ var BookmarksCommand = {
                   "copy"];
       break;
     case "Livemark":
-      commands = ["cut", "copy", "bm_separator",
+      commands = ["bm_expandfolder", "bm_openfolder", "bm_separator",
+                  "cut", "copy", "bm_separator",
                   "delete", "bm_separator",
                   "bm_refreshlivemark", "bm_separator",
                   "bm_properties"];
@@ -552,7 +553,7 @@ var BookmarksCommand = {
         else
           this.openOneBookmark(aSelection.item[i].Value, aTargetBrowser, aDS);
       }
-      else if (type == "Folder" || type == "PersonalToolbarFolder")
+      else if (type == "Folder" || type == "PersonalToolbarFolder" || type == "Livemark")
         this.openGroupBookmark(aSelection.item[i].Value, aTargetBrowser);
     }
   },
@@ -882,7 +883,8 @@ var BookmarksController = {
         RDFC.Init(BMDS, aSelection.item[i]);
         var children = RDFC.GetElements();
         while (children.hasMoreElements()) {
-          if (BookmarksUtils.resolveType(children.getNext()) == "Bookmark")
+          if (BookmarksUtils.resolveType(children.getNext()) == "Bookmark" ||
+              BookmarksUtils.resolveType(children.getNext()) == "LivemarkBookmark")
             return true;
         }
       }
