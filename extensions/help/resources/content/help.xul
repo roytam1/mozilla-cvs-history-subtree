@@ -211,7 +211,7 @@
                <treecol id="IndexNameColumn" flex="1"
                   hideheader="true"
                   primary="true"
-                  sortActive="true"
+                  sortActive="&sortflag;"
                   sortDirection="ascending"
                   sort="?name"/>
             </treecols>

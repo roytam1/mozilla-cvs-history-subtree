@@ -579,10 +579,20 @@ nsProgressDialog.prototype = {
                 cancelButton.label = this.getString( "close" );
                 cancelButton.focus();
 
-                // Activate reveal/launch buttons.
-                this.enable( "reveal" );
-                if ( this.target && !this.target.isExecutable() ) {
-                    this.enable( "launch" );
+                // Activate reveal/launch buttons if we enable them.
+                var enableButtons = true;
+                try {
+                  var prefs = Components.classes[ "@mozilla.org/preferences-service;1" ]
+                                  .getService( Components.interfaces.nsIPrefBranch );
+                  enableButtons = prefs.getBoolPref( "browser.download.progressDnldDialog.enable_launch_reveal_buttons" );
+                } catch ( e ) {
+                }
+
+                if ( enableButtons ) {
+                    this.enable( "reveal" );
+                    if ( this.target && !this.target.isExecutable() ) {
+                        this.enable( "launch" );
+                    }
                 }
 
                 // Disable the Pause/Resume buttons.

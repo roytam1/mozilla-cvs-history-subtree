@@ -594,6 +594,8 @@ private:
                        nsIPresShell*  aPresShell,
                        nsIContent*    aContent);
   void MapContentToWebShells(PrintObject* aRootPO, PrintObject* aPO);
+  void CheckForChildFrameSets(PrintObject* aPO);
+
   nsresult MapSubDocFrameLocations(PrintObject* aPO);
   PrintObject* FindPrintObjectByDOMWin(PrintObject* aParentObject, nsIDOMWindowInternal * aDOMWin);
   void GetPresShellAndRootContent(nsIWebShell * aWebShell, nsIPresShell** aPresShell, nsIContent** aContent);
@@ -3209,6 +3211,37 @@ DocumentViewerImpl::MapContentToWebShells(PrintObject* aRootPO,
 }
 
 //-------------------------------------------------------
+// The walks the PO tree and checks to see if the aPO is
+// an eFrame and has children that are eFrames.
+// If so, then this means the parent eFrame is actually an eFrameSet
+// and we should change.
+// This gets incorrectly set to an eFrame because the content node 
+// in the parent document is actually frame.
+//
+// Also note: we only want to call this we are printing "Each Frame Separately"
+//            when printing "As Is" leave it as an eFrame
+void
+DocumentViewerImpl::CheckForChildFrameSets(PrintObject* aPO)
+{
+  NS_ASSERTION(aPO, "Pointer is null!");
+
+  // Continue recursively walking the chilren of this PO
+  PRBool hasChildFrames = PR_FALSE;
+  for (PRInt32 i=0;i<aPO->mKids.Count();i++) {
+    PrintObject* po = (PrintObject*)aPO->mKids[i];
+    CheckForChildFrameSets(po);
+    if (po->mFrameType == eFrame) {
+      hasChildFrames = PR_TRUE;
+    }
+  }
+
+  if (hasChildFrames && aPO->mFrameType == eFrame) {
+    aPO->mFrameType = eFrameSet;
+  }
+}
+
+
+//-------------------------------------------------------
 // This gets ref counted copies of the PresShell and Root Content
 // for a given nsIWebShell
 void 
@@ -4956,6 +4989,11 @@ nsresult DocumentViewerImpl::DocumentReadyForPrinting()
 
   webContainer = do_QueryInterface(mContainer);
   if(webContainer) {
+
+    if (mPrt->mPrintFrameType == nsIPrintSettings::kEachFrameSep) {
+      CheckForChildFrameSets(mPrt->mPrintObject);
+    }
+
     //
     // Send the document to the printer...
     //
@@ -6746,6 +6784,8 @@ DocumentViewerImpl::Print(nsIPrintSettings*       aPrintSettings,
                   mPrt->mPrintSettings->SetPrintFrameType(mPrt->mPrintFrameType);
                 }
               }
+            } else {
+              mPrt->mPrintSettings->GetPrintFrameType(&mPrt->mPrintFrameType);
             }
 
             // Get the Needed info for Calling PrepareDocument

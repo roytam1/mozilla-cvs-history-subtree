@@ -78,7 +78,7 @@
       <property name="direction">
         <getter>
           if (this.hasAttribute("direction"))
-            return this.getAttribute("direction");
+            return this.getAttribute("direction").toLowerCase();
           return "left"; //default value is "left"
         </getter>
       </property>
@@ -86,7 +86,7 @@
       <property name="behavior">
         <getter>
           if (this.hasAttribute("behavior"))
-            return this.getAttribute("behavior");
+            return this.getAttribute("behavior").toLowerCase();
           return "scroll"; //default value is "scroll"
         </getter>
       </property>
@@ -123,7 +123,7 @@
       </property> 
 
       <!-- For sniffing purposes -->
-      <field name="nsMarqueeVersion">"0.9.6"</field>
+      <field name="nsMarqueeVersion">"0.9.7"</field>
   
       <method name="start">
         <body>
@@ -185,19 +185,11 @@
             }
           }
 
-          switch(this.direction)
-          {
-            case "up":
-            case "down":
-              this.outerDiv.scrollTop = this.newPosition;
-            break;
-
-            case "left":
-            case "right":
-            default:
-              this.outerDiv.scrollLeft = this.newPosition;
-            break;
-          }
+         // change the scroll position
+          if ((this.direction == "up") || (this.direction == "down"))
+            this.outerDiv.scrollTop = this.newPosition;
+          else 
+            this.outerDiv.scrollLeft = this.newPosition;
 
           var myThis = this;
           var myTimeOut = function myTimeOutFunction(){myThis.start();}
@@ -245,6 +237,10 @@
           // Some sites access the element via the evil IE way of elementID.foo()
           if (this.hasAttribute('id'))
             window[this.getAttribute('id')] = this;
+
+          // Website can define a background color via the bgcolor attribute
+          if (this.hasAttribute("bgcolor"))
+            this.outerDiv.style.backgroundColor = this.getAttribute("bgcolor");
 
           this.start();
         ]]>
