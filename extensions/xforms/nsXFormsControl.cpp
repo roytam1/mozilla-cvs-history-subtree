@@ -124,7 +124,7 @@ nsXFormsControl::GetModelAndBind(nsIDOMElement **aBindElement)
 }
 
 already_AddRefed<nsIDOMNode>
-nsXFormsControl::GetInstanceNode()
+nsXFormsControl::FindInstanceNode()
 {
   // A control may be attached to a model by either using the 'bind'
   // attribute to give the id of a bind element, or using the 'model'

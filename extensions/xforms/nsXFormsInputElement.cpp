@@ -142,7 +142,7 @@ nsXFormsInputElement::DocumentChanged(nsISupports *aNewDocument)
   // - check for a "type" model item property on the result node
   // - construct appropriate UI for xsd:boolean, xsd:date, etc
 
-  mInstanceNode = GetInstanceNode();
+  mInstanceNode = FindInstanceNode();
 
   nsCOMPtr<nsIDOMElement> node;
   mWrapper->GetElementNode(getter_AddRefs(node));

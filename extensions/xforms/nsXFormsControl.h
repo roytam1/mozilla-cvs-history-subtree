@@ -54,7 +54,7 @@ class nsXFormsControl : public nsXFormsElement
 {
 public:
   NS_HIDDEN_(nsXFormsModelElement*) GetModelAndBind(nsIDOMElement **aBindElement);
-  NS_HIDDEN_(already_AddRefed<nsIDOMNode>) GetInstanceNode();
+  NS_HIDDEN_(already_AddRefed<nsIDOMNode>) FindInstanceNode();
 
 protected:
   nsCOMPtr<nsIXTFXMLVisualWrapper> mWrapper;
