@@ -138,13 +138,17 @@ OutputDebugStringA(
     LPCSTR lpOutputString
     )
 {
-    LPWSTR str = NULL;
+    LPWSTR wideStr = NULL;
 
-    str = _PR_MD_MALLOC_A2W(lpOutputString);
-    if(NULL != str)
+    wideStr = _PR_MD_MALLOC_A2W(lpOutputString);
+    if(NULL == lpOutputString || NULL != wideStr)
     {
-        OutputDebugStringW(str);
-        PR_Free(str);
+        OutputDebugStringW(wideStr);
+
+        if(NULL != wideStr)
+        {
+            PR_Free(wideStr);
+        }
     }
     else
     {
@@ -194,7 +198,7 @@ CreateProcessA (
     LPWSTR wideImageName = NULL;
 
     wideImageName = _PR_MD_MALLOC_A2W(pszImageName);
-    if(NULL != wideImageName)
+    if(NULL == pszImageName || NULL != wideImageName)
     {
         LPWSTR wideCmdLine = NULL;
 
@@ -227,7 +231,10 @@ CreateProcessA (
             PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
         }
 
-        PR_Free(wideImageName);
+        if(NULL != wideImageName)
+        {
+            PR_Free(wideImageName);
+        }
     }
     else
     {
@@ -401,6 +408,41 @@ _MD_RemoveDirectoryA(
     else
     {
         PR_SetError(PR_NAME_TOO_LONG_ERROR, 0);
+    }
+
+    return retval;
+}
+
+HANDLE
+WINAPI
+_MD_CreateSemaphoreA(
+    IN LPSECURITY_ATTRIBUTES lpSemaphoreAttributes,
+    IN LONG lInitialCount,
+    IN LONG lMaximumCount,
+    IN LPCSTR lpName
+    )
+{
+    HANDLE retval = NULL;
+    LPWSTR wideStr = NULL;
+
+    wideStr = _PR_MD_MALLOC_A2W(lpName);
+    if(NULL == lpName || NULL != wideStr)
+    {
+        retval = CreateSemaphoreW(
+            lpSemaphoreAttributes,
+            lInitialCount,
+            lMaximumCount,
+            wideStr
+            );
+
+        if(NULL != wideStr)
+        {
+            PR_Free(wideStr);
+        }
+    }
+    else
+    {
+        PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
     }
 
     return retval;

@@ -113,6 +113,15 @@ _MD_RemoveDirectoryA(
     LPCSTR lpPathName
     );
 
+HANDLE
+WINAPI
+_MD_CreateSemaphoreA(
+    IN LPSECURITY_ATTRIBUTES lpSemaphoreAttributes,
+    IN LONG lInitialCount,
+    IN LONG lMaximumCount,
+    IN LPCSTR lpName
+    );
+
 #endif /* WINCE */
 
 #endif /* nspr_win32_unicode_h___ */

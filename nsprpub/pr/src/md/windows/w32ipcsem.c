@@ -147,7 +147,7 @@ PRSem *_PR_MD_OPEN_SEMAPHORE(
 #if !defined(WINCE)
         sem->sem = CreateSemaphore(lpSA, value, 0x7fffffff, osname);
 #else
-        sem->sem = CreateSemaphoreA(lpSA, value, 0x7fffffff, osname);
+        sem->sem = _MD_CreateSemaphoreA(lpSA, value, 0x7fffffff, osname);
 #endif
         if (lpSA != NULL) {
             _PR_NT_FreeSecurityDescriptorACL(pSD, pACL);
@@ -189,7 +189,7 @@ PRSem *_PR_MD_OPEN_SEMAPHORE(
          * We create the semaphore.  If it existed previouisly, the
          *  state is signaled by GetLastError....
          */
-        sem->sem = CreateSemaphoreA(lpSA, 0, 0x7fffffff, osname);
+        sem->sem = _MD_CreateSemaphoreA(lpSA, 0, 0x7fffffff, osname);
         if(NULL != sem->sem)
         {
             DWORD lastErr = GetLastError();
