@@ -60,7 +60,6 @@
 #include "nsAppDirectoryServiceDefs.h"
 
 #include "nsISound.h"
-//#include "nsICommonDialogs.h"
 #include "nsINetSupportDialogService.h"
 #include "nsIPrompt.h"
 #include "nsAppShellCIDs.h"
@@ -90,10 +89,7 @@
 #include "nsIDocShell.h"
 #include "nsIXULWindow.h"
 
-#ifndef XP_MAC
 nsIRDFResource		*kNC_IEFavoritesRoot;
-#endif 
-
 nsIRDFResource		*kNC_Bookmark;
 nsIRDFResource		*kNC_BookmarkSeparator;
 nsIRDFResource		*kNC_BookmarkAddDate;
@@ -3212,6 +3208,25 @@ nsBookmarksService::Move(nsIRDFResource* aOldSource,
 	return(rv);
 }
 
+NS_IMETHODIMP
+nsBookmarksService::HasAssertion(nsIRDFResource* source,
+				nsIRDFResource* property,
+				nsIRDFNode* target,
+				PRBool tv,
+				PRBool* hasAssertion)
+{
+#ifdef	XP_MAC
+	    // on the Mac, IE favorites are stored in an HTML file.
+	    // Defer importing this files contents until necessary.
+
+	    if ((source == kNC_IEFavoritesRoot) && (mIEFavoritesAvailable == PR_FALSE))
+	    {
+		    ReadFavorites();
+	    }
+#endif
+		return mInner->HasAssertion(source, property, target, tv, hasAssertion);
+}
+
 
 NS_IMETHODIMP
 nsBookmarksService::AddObserver(nsIRDFObserver* aObserver)
@@ -3243,7 +3258,65 @@ nsBookmarksService::RemoveObserver(nsIRDFObserver* aObserver)
 	return NS_OK;
 }
 
+NS_IMETHODIMP
+nsBookmarksService::HasArcIn(nsIRDFNode *aNode, nsIRDFResource *aArc, PRBool *_retval)
+{
+#ifdef	XP_MAC
+	    // on the Mac, IE favorites are stored in an HTML file.
+	    // Defer importing this files contents until necessary.
 
+	    if ((aNode == kNC_IEFavoritesRoot) && (mIEFavoritesAvailable == PR_FALSE))
+	    {
+		    ReadFavorites();
+	    }
+#endif
+	    return mInner->HasArcIn(aNode, aArc, _retval);
+}
+
+NS_IMETHODIMP
+nsBookmarksService::HasArcOut(nsIRDFResource *aSource, nsIRDFResource *aArc, PRBool *_retval)
+{
+#ifdef	XP_MAC
+	    // on the Mac, IE favorites are stored in an HTML file.
+	    // Defer importing this files contents until necessary.
+
+	    if ((aSource == kNC_IEFavoritesRoot) && (mIEFavoritesAvailable == PR_FALSE))
+	    {
+		    ReadFavorites();
+	    }
+#endif
+	    return mInner->HasArcOut(aSource, aArc, _retval);
+}
+
+NS_IMETHODIMP
+nsBookmarksService::ArcLabelsOut(nsIRDFResource* source,
+				nsISimpleEnumerator** labels)
+{
+#ifdef	XP_MAC
+
+		// on the Mac, IE favorites are stored in an HTML file.
+		// Defer importing this files contents until necessary.
+
+		if ((source == kNC_IEFavoritesRoot) && (mIEFavoritesAvailable == PR_FALSE))
+		{
+			ReadFavorites();
+		}
+#endif
+
+		return mInner->ArcLabelsOut(source, labels);
+}
+
+NS_IMETHODIMP
+nsBookmarksService::GetAllResources(nsISimpleEnumerator** aResult)
+{
+#ifdef	XP_MAC
+		if (mIEFavoritesAvailable == PR_FALSE)
+		{
+			ReadFavorites();
+		}
+#endif
+		return mInner->GetAllResources(aResult);
+}
 
 NS_IMETHODIMP
 nsBookmarksService::GetAllCommands(nsIRDFResource* source,
