@@ -40,6 +40,7 @@
 #import <SystemConfiguration/SystemConfiguration.h>
 #import "PreferenceManager.h"
 #import "UserDefaults.h"
+#import "CHBrowserService.h"
 
 #include "nsIServiceManager.h"
 #include "nsIProfile.h"
@@ -56,6 +57,17 @@
 nsresult PR_CALLBACK
 app_getModuleInfo(nsStaticModuleInfo **info, PRUint32 *count);
 #endif
+
+@interface PreferenceManager(PreferenceManagerPrivate)
+
+- (void)registerNotificationListener;
+
+- (void)termEmbedding: (NSNotification*)aNotification;
+- (void)xpcomTerminate: (NSNotification*)aNotification;
+
+@end
+
+
 
 @implementation PreferenceManager
 
@@ -83,6 +95,8 @@ static BOOL gMadePrefManager;
 {
   if ((self = [super init]))
   {
+    [self registerNotificationListener];
+
     if ([self initInternetConfig] == NO) {
       // XXXw. throw here
       NSLog (@"Failed to initialize Internet Config");
@@ -100,25 +114,42 @@ static BOOL gMadePrefManager;
 
 - (void) dealloc
 {
-  // XXX this never gets called!
-#if DEBUG
-  NSLog(@"Prefs manager dealloc");
-#endif
-
-  ::ICStop(mInternetConfig);
-  NS_IF_RELEASE(mPrefs);
-
-  nsresult rv;
-  nsCOMPtr<nsIPrefService> pref(do_GetService(NS_PREF_CONTRACTID, &rv));
-  if (NS_SUCCEEDED(rv)) {
-      //NSLog(@"Saving prefs file");
-      pref->SavePrefFile(nsnull);
-  }
-
-  if (self == gSharedInstance)
-    gSharedInstance = NULL;
-  
+  [[NSNotificationCenter defaultCenter] removeObserver:self];
   [super dealloc];
+}
+
+- (void)termEmbedding: (NSNotification*)aNotification
+{
+  ::ICStop(mInternetConfig);
+  mInternetConfig = nil;
+  NS_IF_RELEASE(mPrefs);
+}
+
+- (void)xpcomTerminate: (NSNotification*)aNotification
+{
+  // save prefs now, in case any termination listeners set prefs.
+  [self savePrefsFile];
+  [gSharedInstance release];
+}
+
+- (void)registerNotificationListener
+{
+  [[NSNotificationCenter defaultCenter] addObserver:  self
+                                        selector:     @selector(termEmbedding:)
+                                        name:         TermEmbeddingNotificationName
+                                        object:       nil];
+
+  [[NSNotificationCenter defaultCenter] addObserver:  self
+                                        selector:     @selector(xpcomTerminate:)
+                                        name:         XPCOMShutDownNotificationName
+                                        object:       nil];
+}
+
+- (void) savePrefsFile
+{
+  nsCOMPtr<nsIPrefService> prefsService = do_GetService(NS_PREF_CONTRACTID);
+  if (prefsService)
+      prefsService->SavePrefFile(nsnull);
 }
 
 - (BOOL) initInternetConfig
@@ -414,6 +445,23 @@ static BOOL gMadePrefManager;
   return intPref;
 }
 
+- (void)setPref:(const char*)prefName toString:(NSString*)value
+{
+  if (mPrefs)
+    (void)mPrefs->SetCharPref(prefName, [value UTF8String]);
+}
+
+- (void)setPref:(const char*)prefName toInt:(int)value
+{
+  if (mPrefs)
+    (void)mPrefs->SetIntPref(prefName, (PRInt32)value);
+}
+
+- (void)setPref:(const char*)prefName toBoolean:(BOOL)value
+{
+  if (mPrefs)
+    (void)mPrefs->SetBoolPref(prefName, (PRBool)value);
+}
 
 
 //- (BOOL) getICBoolPref:(ConstStr255Param) prefKey;

@@ -54,6 +54,7 @@ class nsIPref;
 - (BOOL) initInternetConfig;
 - (BOOL) initMozillaPrefs;
 - (void) syncMozillaPrefs;
+- (void) savePrefsFile;
 
 - (NSString *) getICStringPref:(ConstStr255Param) prefKey;
 - (NSString *) homePage:(BOOL) checkStartupPagePref;
@@ -63,5 +64,9 @@ class nsIPref;
 - (NSColor*)getColorPref: (const char*)prefName withSuccess:(BOOL*)outSuccess;
 - (BOOL)getBooleanPref: (const char*)prefName withSuccess:(BOOL*)outSuccess;
 - (int)getIntPref: (const char*)prefName withSuccess:(BOOL*)outSuccess;
+
+- (void)setPref:(const char*)prefName toString:(NSString*)value;
+- (void)setPref:(const char*)prefName toInt:(int)value;
+- (void)setPref:(const char*)prefName toBoolean:(BOOL)value;
 
 @end
