@@ -1188,9 +1188,6 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\cmd\winfe\srvritem.cpp
 	$(DEPTH)\cmd\winfe\statbar.cpp
 	$(DEPTH)\cmd\winfe\stshfont.cpp
-!ifdef MOZ_LOC_INDEP
-	$(DEPTH)\cmd\winfe\stshli.cpp
-!endif
 	$(DEPTH)\cmd\winfe\stshplug.cpp
 	$(DEPTH)\cmd\winfe\styles.cpp
 	$(DEPTH)\cmd\winfe\sysinfo.cpp
@@ -1216,6 +1213,7 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\cmd\winfe\viewerse.cpp
 	$(DEPTH)\cmd\winfe\winclose.cpp
 	$(DEPTH)\cmd\winfe\winpref.c
+	$(DEPTH)\cmd\winfe\winprog.cpp
 !ifdef MOZ_LOC_INDEP
 	$(DEPTH)\cmd\winfe\winli.cpp
 !endif
