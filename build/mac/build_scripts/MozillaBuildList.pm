@@ -711,10 +711,7 @@ sub BuildClientDist()
     InstallFromManifest(":mozilla:layout:html:base:src:MANIFEST",                  "$distdirectory:layout:");
     InstallFromManifest(":mozilla:layout:html:forms:public:MANIFEST",              "$distdirectory:layout:");
     InstallFromManifest(":mozilla:layout:html:table:public:MANIFEST",              "$distdirectory:layout:");
-    #if ($main::options{svg})
-    #{
-    #    InstallFromManifest(":mozilla:layout:svg:base:public:MANIFEST",                        "$distdirectory:layout:");
-    #}
+   
     InstallFromManifest(":mozilla:layout:xul:base:public:Manifest",                "$distdirectory:layout:");
 
     #GFX
@@ -888,6 +885,7 @@ sub BuildClientDist()
     #DOCUMENT INSPECTOR
     if ($main::options{inspector})
     {
+    
         InstallFromManifest(":mozilla:extensions:inspector:base:public:MANIFEST_IDL", "$distdirectory:idl:");
     }
 
@@ -906,7 +904,9 @@ sub BuildClientDist()
 
 	# SVG
 	if ($main::options{svg}) {
-		InstallFromManifest(":mozilla:modules:libart_lgpl:MANIFEST", "$distdirectory:include:");
+		InstallFromManifest(":mozilla:other-licenses:libart_lgpl:MANIFEST", "$distdirectory:include:");
+		InstallFromManifest(":mozilla:content:svg:content:src:MANIFEST", "$distdirectory:content:");
+		InstallFromManifest(":mozilla:layout:svg:base:src:MANIFEST", "$distdirectory:layout:");
 	}
 
     print("--- Client Dist export complete ----\n");
@@ -1613,7 +1613,6 @@ sub BuildLayoutProjects()
 
 	if ($main::options{svg})
     {
-    	BuildOneProject(":mozilla:content:macbuild:contentsharedsvg.mcp",             "contentsharedsvg$D.o", 0, 0, 0);
         BuildOneProject(":mozilla:content:macbuild:contentSVG.mcp",                   "contentSVG$D.o", 0, 0, 0);
     }
     else
@@ -1632,9 +1631,7 @@ sub BuildLayoutProjects()
     }
     if ($main::options{svg})
     {
-    	BuildProject(":mozilla:modules:libart_lgpl:macbuild:libart.mcp",			"libart$D.shlb", 1, $main::ALIAS_SYM_FILES, 0);
-    	copy(":mozilla:modules:libart_lgpl:macbuild:libart$D.shlb",$dist_dir."Essential Files:libart$D.shlb");
-    	
+    	BuildOneProject(":mozilla:other-licenses:libart_lgpl:macbuild:libart.mcp",			"libart$D.shlb", 1, $main::ALIAS_SYM_FILES, 0);
         BuildProject(":mozilla:layout:macbuild:layoutsvg.mcp",                   "layoutsvg$D.o");
     }
     else
