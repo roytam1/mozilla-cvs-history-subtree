@@ -83,6 +83,8 @@ public:
 protected:
     virtual ~nsXULPDGlobalObject();
 
+    static void Finalize(JSContext *cx, JSObject *obj);
+
     nsCOMPtr<nsIScriptContext> mScriptContext;
     JSObject *mScriptObject;    // XXX JS language rabies bigotry badness
 
@@ -138,16 +140,17 @@ protected:
     nsresult Init();
 
     friend NS_IMETHODIMP
-    NS_NewXULPrototypeDocument(nsISupports* aOuter, REFNSIID aIID, void** aResult);
+    NS_NewXULPrototypeDocument(nsISupports* aOuter, REFNSIID aIID,
+                               void** aResult);
 };
 
 JSClass nsXULPDGlobalObject::gSharedGlobalClass = {
     "nsXULPrototypeScript compilation scope",
     JSCLASS_HAS_PRIVATE,
     JS_PropertyStub,  JS_PropertyStub, JS_PropertyStub, JS_PropertyStub,
-    JS_EnumerateStub, JS_ResolveStub,  JS_ConvertStub,  JS_FinalizeStub /*nsJSUtils::nsGenericFinalize */
+    JS_EnumerateStub, JS_ResolveStub,  JS_ConvertStub,
+    nsXULPDGlobalObject::Finalize
 };
-
 
 
 //----------------------------------------------------------------------
@@ -563,5 +566,23 @@ nsXULPDGlobalObject::GetPrincipal(nsIPrincipal** aPrincipal)
     nsCOMPtr<nsIXULPrototypeDocument> protoDoc
       = do_QueryInterface(mGlobalObjectOwner);
     return protoDoc->GetDocumentPrincipal(aPrincipal);
+}
+
+void
+nsXULPDGlobalObject::Finalize(JSContext *cx, JSObject *obj)
+{
+    nsXULPDGlobalObject *nativeThis =
+        (nsXULPDGlobalObject*)::JS_GetPrivate(cx, obj);
+  
+    if (!nativeThis) {
+        NS_WARNING("No private data in nsXULPDGlobalObject's script object!");
+
+        return;
+    }
+
+    nativeThis->mScriptObject = nsnull;
+
+    // The addref was part of JSObject construction
+    NS_RELEASE(nativeThis);
 }
 
