@@ -43,8 +43,6 @@ REQUIRES	= xpcom \
 		  commandhandler \
 		  $(NULL)
 
-WIN_LIBS=shell32.lib
-
 include <$(DEPTH)\config\config.mak>
 
 

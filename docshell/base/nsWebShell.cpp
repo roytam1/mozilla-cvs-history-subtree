@@ -117,7 +117,10 @@ typedef unsigned long HMTX;
 #include "nsIFileStream.h"
 #include "nsISHistoryInternal.h"
 
-#include <windows.h>
+#ifndef IS_DEFAULT_BROWSER
+#include "nsIExternalProtocolService.h"
+#include "nsCExternalHandlerService.h"
+#endif
 
 #include "nsIHttpChannel.h" // add this to the ick include list...we need it to QI for post data interface
 
@@ -569,14 +572,7 @@ nsWebShell::OnLinkClickSync(nsIContent *aContent,
     *aRequest = nsnull;
   }
 
-  // extract the url spec from the url
-  NS_ConvertUCS2toUTF8 specHack(aURLSpec);
-  LONG r = (LONG) ::ShellExecute( NULL, "open", specHack.get(), NULL, NULL, SW_SHOWNORMAL);
-  if (r < 32) 
-    return NS_ERROR_FAILURE;
-  else
-    return NS_OK;
-
+#ifdef IS_DEFAULT_BROWSER
   switch(aVerb) {
     case eLinkVerb_New:
       target.Assign(NS_LITERAL_STRING("_blank"));
@@ -636,6 +632,18 @@ nsWebShell::OnLinkClickSync(nsIContent *aContent,
       NS_ABORT_IF_FALSE(0,"unexpected link verb");
       return NS_ERROR_UNEXPECTED;
   }
+#else
+  nsCOMPtr <nsIURI> uri;
+  rv = NS_NewURI(getter_AddRefs(uri), NS_ConvertUCS2toUTF8(aURLSpec).get());
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  nsCOMPtr<nsIExternalProtocolService> extProtService = do_GetService(NS_EXTERNALPROTOCOLSERVICE_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  rv = extProtService->LoadUrl(uri);
+  NS_ENSURE_SUCCESS(rv,rv);
+  return rv;
+#endif
 }
 
 NS_IMETHODIMP
