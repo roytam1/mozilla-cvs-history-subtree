@@ -92,16 +92,17 @@ else
 # (RTL) in the debug build
 #
 ifeq ($(OS_TARGET),WINCE)
+OPTIMIZER = -Od -Zd
 OS_CFLAGS += -Zl
 else
+OPTIMIZER = -Od -Z7
+#OPTIMIZER = -Zi -Fd$(OBJDIR)/ -Od
 ifdef USE_DEBUG_RTL
 OS_CFLAGS += -MDd
 else
 OS_CFLAGS += -MD
 endif
 endif
-OPTIMIZER = -Od -Z7
-#OPTIMIZER = -Zi -Fd$(OBJDIR)/ -Od
 DEFINES = -DDEBUG -D_DEBUG -UNDEBUG
 
 DLLFLAGS = -DEBUG -DEBUGTYPE:CV -OUT:"$@"

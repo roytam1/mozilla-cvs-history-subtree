@@ -103,8 +103,12 @@ include $(topsrcdir)/config/rules.mk
 
 ifeq ($(OS_ARCH),WINNT)
 ifndef GNU_CC
+ifneq ($(OS_TARGET),WINCE)
 #//  -Zi -GM needed to compile mmx functions in assembly.
 CFLAGS	+= -Zi -GM
+else
+CFLAGS	+= -Zd -GM
+endif
 endif
 endif
 
