@@ -189,9 +189,15 @@ lo_FormatObject(MWContext* context, lo_DocState* state, PA_Tag* tag)
                   (XP_STRNCASECMP(str, "javabean:", 9) == 0) )
 		{
 			/* It's a Java class */
+#ifdef OJI
+			if (type == LO_NONE)
+				type = LO_EMBED;
+			else if (type != LO_EMBED) /* XXX */
+#else
 			if (type == LO_NONE)
 				type = LO_JAVA;
 			else if (type != LO_JAVA)
+#endif
 				type = LO_UNKNOWN;
 		}
 		else
@@ -678,30 +684,57 @@ void
 lo_DeleteObjectStack(lo_ObjectStack* top)
 {
 	/* Delete parameters */
-	if (top->param_count > 0)
+#ifdef OJI
+	if (top->parameters.n > 0)
 	{
 		uint32 index;
-		
-		if (top->param_values != NULL)
+
+		if (top->parameters.values != NULL)
 		{
-			for (index = 0; index < top->param_count; index++)
+			for (index = 0; index < top->parameters.n; index++)
 			{
-				if (top->param_names[index] != NULL)
-					XP_FREE(top->param_names[index]);
+				if (top->parameters.names[index] != NULL)
+					XP_FREE(top->parameters.names[index]);
 			}
-			XP_FREE(top->param_names);
+			XP_FREE(top->parameters.names);
 		}
 		
-		if (top->param_values != NULL)
+		if (top->parameters.values != NULL)
 		{
-			for (index = 0; index < top->param_count; index++)
+			for (index = 0; index < top->parameters.n; index++)
 			{
-				if (top->param_values[index] != NULL)
-					XP_FREE(top->param_values[index]);
+				if (top->parameters.values[index] != NULL)
+					XP_FREE(top->parameters.values[index]);
 			}
-			XP_FREE(top->param_values);
+			XP_FREE(top->parameters.values);
 		}
 	}
+#else
+ 	if (top->param_count > 0)
+  	{
+  		uint32 index;
+  		
+ 		if (top->param_values != NULL)
+  		{
+ 			for (index = 0; index < top->param_count; index++)
+  			{
+ 				if (top->param_names[index] != NULL)
+ 					XP_FREE(top->param_names[index]);
+  			}
+ 			XP_FREE(top->param_names);
+  		}
+  		
+ 		if (top->param_values != NULL)
+  		{
+ 			for (index = 0; index < top->param_count; index++)
+  			{
+ 				if (top->param_values[index] != NULL)
+ 					XP_FREE(top->param_values[index]);
+ 			}
+ 			XP_FREE(top->param_values);
+  		}
+  	}
+#endif /* OJI */
 	
 	/* Delete tag copy */
 	if (top->clone_tag != NULL)
@@ -847,6 +880,20 @@ lo_ProcessObjectTag(MWContext* context, lo_DocState* state, PA_Tag* tag, XP_Bool
 				 {
 					if (object->lo_element.type == LO_EMBED)
 					{
+#ifdef OJI
+						lo_FormatEmbedObject(context,
+											 state,
+											 top->clone_tag,
+											 (LO_EmbedStruct*) object,
+											 FALSE, /* Stream not started */
+											 top->parameters.n,
+											 top->parameters.names,
+											 top->parameters.values);
+						top->formatted_object = TRUE;
+						top->parameters.n = 0;
+						top->parameters.names = NULL;
+						top->parameters.values = NULL;
+#else
 						lo_FormatEmbedObject(context,
 											 state,
 											 top->clone_tag,
@@ -859,6 +906,7 @@ lo_ProcessObjectTag(MWContext* context, lo_DocState* state, PA_Tag* tag, XP_Bool
 						top->param_count = 0;
 						top->param_names = NULL;
 						top->param_values = NULL;
+#endif /* OJI */
 					}
 #ifdef JAVA
 					else if (object->lo_element.type == LO_JAVA)
@@ -892,22 +940,37 @@ lo_ProcessParamTag(MWContext* context, lo_DocState* state, PA_Tag* tag, XP_Bool 
 		 * for ownership of the parameter.
 		 */
 #ifdef JAVA
+
 	    if (state->current_java != NULL && blocked == FALSE)
 	    {
 	    	LO_JavaAppStruct* java_app = state->current_java;
 			lo_ObjectParam(context, state, tag,
-						   (uint32*) &(java_app->param_cnt),
+						   (uint32*) &(java_app->parameters.n),
+#ifdef OJI
+						   &(java_app->parameters.names),
+						   &(java_app->parameters.values));
+#else 
 						   &(java_app->param_names),
 						   &(java_app->param_values));
+#endif /* OJI */
 		}
 		else 
-#endif
+
+#endif /* JAVA */
+
 		if (top != NULL && top->read_params == FALSE)
 		{
+#ifdef OJI
+			lo_ObjectParam(context, state, tag,
+						   &(top->parameters.n),
+						   &(top->parameters.names),
+						   &(top->parameters.values));
+#else 
 			lo_ObjectParam(context, state, tag,
 						   &(top->param_count),
 						   &(top->param_names),
 						   &(top->param_values));
+#endif /* OJI */
 		}
 	}
 }
@@ -984,6 +1047,19 @@ LO_NewObjectStream(FO_Present_Types format_out, void* type,
 			/* Now we know the object type */
 			top->object->lo_element.type = LO_EMBED;
 			
+#ifdef OJI
+			lo_FormatEmbedObject(top->context,
+								 top->state,
+								 top->clone_tag,
+								 (LO_EmbedStruct*) top->object,
+								 TRUE,
+								 top->parameters.n,
+								 top->parameters.names,
+								 top->parameters.values);
+			top->parameters.n = 0;
+			top->parameters.names = NULL;
+			top->parameters.values = NULL;
+#else
 			lo_FormatEmbedObject(top->context,
 								 top->state,
 								 top->clone_tag,
@@ -995,6 +1071,7 @@ LO_NewObjectStream(FO_Present_Types format_out, void* type,
 			top->param_count = 0;
 			top->param_names = NULL;
 			top->param_values = NULL;
+#endif
 			top->formatted_object = TRUE;
 
 			/* Set the FE data that libplug expects */
@@ -1285,15 +1362,27 @@ static void lo_SetJavaArgs(char* tag, LO_JavaAppStruct* current_java)
 				}
 				
 			/* increment and resize array */
-			++(current_java->param_cnt);
-			current_java->param_names = XP_REALLOC(current_java->param_names, current_java->param_cnt*sizeof(char*));
+#ifdef OJI
+			++(current_java->parameters.n);
+			current_java->parameters.names = XP_REALLOC(current_java->parameters.names, current_java->parameters.n*sizeof(char*));
+			XP_ASSERT(current_java->parameters.names);
+			current_java->parameters.values = XP_REALLOC(current_java->parameters.values, current_java->parameters.n*sizeof(char*));
+			XP_ASSERT(current_java->parameters.values);
+			
+			/* point the new array elements to the newly allocated paramName and paramValue */
+			current_java->parameters.names[current_java->parameters.n-1] = paramName;
+			current_java->parameters.values[current_java->parameters.n-1] = paramValue;
+#else
+			++(current_java->param_count);
+			current_java->param_names = XP_REALLOC(current_java->param_names, current_java->param_count*sizeof(char*));
 			XP_ASSERT(current_java->param_names);
-			current_java->param_values = XP_REALLOC(current_java->param_values, current_java->param_cnt*sizeof(char*));
+			current_java->param_values = XP_REALLOC(current_java->param_values, current_java->param_count*sizeof(char*));
 			XP_ASSERT(current_java->param_values);
 			
 			/* point the new array elements to the newly allocated paramName and paramValue */
-			current_java->param_names[current_java->param_cnt-1] = paramName;
-			current_java->param_values[current_java->param_cnt-1] = paramValue;
+			current_java->param_names[current_java->param_count-1] = paramName;
+			current_java->param_values[current_java->param_count-1] = paramValue;
+#endif
 		}
 }
 #endif

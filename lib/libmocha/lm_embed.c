@@ -279,12 +279,21 @@ LM_ReflectEmbed(MWContext *context, LO_EmbedStruct *lo_embed,
 
     /* get the name */
     name = 0;
-    for (i = 0; i < lo_embed->attribute_cnt; i++) {
+#ifdef OJI
+    for (i = 0; i < lo_embed->attributes.n; i++) {
+        if (!XP_STRCASECMP(lo_embed->attributes.names[i], "name")) {
+            name = strdup(lo_embed->attributes.values[i]);
+            break;
+        }
+    }
+#else
+    for (i = 0; i < lo_embed->attributes.n; i++) {
         if (!XP_STRCASECMP(lo_embed->attribute_list[i], "name")) {
             name = strdup(lo_embed->value_list[i]);
             break;
         }
     }
+#endif
 
     /* Get the document object that will hold this applet */
     document = lm_GetDocumentFromLayerId(decoder, layer_id);

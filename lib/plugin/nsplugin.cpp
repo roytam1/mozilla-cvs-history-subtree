@@ -25,14 +25,20 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "npglue.h" 
+
 #ifdef OJI
+#include "nsplugin.h"
 #include "jvmmgr.h" 
+#include "plstr.h" /* PL_strcasecmp */
 #endif
+
 #include "xp_mem.h"
 #include "xpassert.h" 
+
 #ifdef XP_MAC
 #include "MacMemAllocator.h"
 #endif
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // THINGS IMPLEMENTED BY THE BROWSER...
@@ -233,6 +239,162 @@ nsPluginInstancePeer::GetMode(void)
     return (NPPluginType)instance->type;
 }
 
+#ifdef OJI
+NS_METHOD_(NPPluginError)
+nsPluginInstancePeer::GetAttributes(PRUint16& n, 
+                                    const char*const*& names, 
+                                    const char*const*& values)
+{
+    np_instance* instance = (np_instance*)npp->ndata;
+
+#if 0
+    // defense
+    PR_ASSERT( 0 != names );
+    PR_ASSERT( 0 != values );
+    if( 0 == names || 0 == values )
+        return 0;
+#endif
+
+    if (instance->type == NP_EMBED) {
+        np_data* ndata = (np_data*)instance->app->np_data;
+
+        names = (const char*const*)ndata->lo_struct->attributes.names;
+        values = (const char*const*)ndata->lo_struct->attributes.values;
+        n = (PRUint16)ndata->lo_struct->attributes.n;
+
+        return NPPluginError_NoError;
+    } else {
+        static char _name[] = "PALETTE";
+        static char* _names[1];
+
+        static char _value[] = "foreground";
+        static char* _values[1];
+
+        _names[0] = _name;
+        _values[0] = _value;
+
+        names = (const char*const*) _names;
+        values = (const char*const*) _values;
+        n = 1;
+
+        return NPPluginError_NoError;
+    }
+
+    // random, sun-spot induced error
+    PR_ASSERT( 0 );
+
+    n = 0;
+    const char* const* empty_list = { { '\0' } };
+    names = values = empty_list;
+
+    return NPPluginError_GenericError;
+}
+
+NS_METHOD_(const char*)
+nsPluginInstancePeer::GetAttribute(const char* name) 
+{
+    PRUint16 nAttrs, i;
+    const char*const* names;
+    const char*const* values;
+
+    if( NPCallFailed( GetAttributes( nAttrs, names, values )) )
+      return 0;
+
+    for( i = 0; i < nAttrs; i++ ) {
+        if( PL_strcasecmp( name, names[i] ) == 0 )
+            return values[i];
+    }
+
+    return 0;
+}
+
+NS_METHOD_(NPPluginError)
+nsPluginInstancePeer::GetParameters(PRUint16& n, 
+                                    const char*const*& names, 
+                                    const char*const*& values)
+{
+    np_instance* instance = (np_instance*)npp->ndata;
+
+    if (instance->type == NP_EMBED) {
+        np_data* ndata = (np_data*)instance->app->np_data;
+
+        names = (const char*const*)ndata->lo_struct->parameters.names;
+        values = (const char*const*)ndata->lo_struct->parameters.values;
+        n = (PRUint16)ndata->lo_struct->parameters.n;
+
+        return NPPluginError_NoError;
+    } else {
+        static char _name[] = "PALETTE";
+        static char* _names[1];
+
+        static char _value[] = "foreground";
+        static char* _values[1];
+
+        _names[0] = _name;
+        _values[0] = _value;
+
+        names = (const char*const*) _names;
+        values = (const char*const*) _values;
+        n = 1;
+
+        return NPPluginError_NoError;
+    }
+
+    // random, sun-spot induced error
+    PR_ASSERT( 0 );
+
+    n = 0;
+    const char* const* empty_list = { { '\0' } };
+    names = values = empty_list;
+
+    return NPPluginError_GenericError;
+}
+
+NS_METHOD_(const char*)
+nsPluginInstancePeer::GetParameter(const char* name) 
+{
+    PRUint16 nParams, i;
+    const char*const* names;
+    const char*const* values;
+
+    if( NPCallFailed( GetParameters( nParams, names, values )) )
+      return 0;
+
+    for( i = 0; i < nParams; i++ ) {
+        if( PL_strcasecmp( name, names[i] ) == 0 )
+            return values[i];
+    }
+
+    return 0;
+}
+
+NS_METHOD_(tag_id) 
+nsPluginInstancePeer::GetTagType(void)
+{
+#ifdef XXX
+    switch (fLayoutElement->lo_element.type) {
+      case LO_JAVA:
+        return TAG_APPLET;
+      case LO_EMBED:
+        return TAG_EMBED;
+      case LO_OBJECT:
+        return TAG_OBJECT;
+
+      default:
+        return TAG_UNKNOWN;
+    }
+#endif
+    return TAG_UNKNOWN;
+}
+
+NS_METHOD_(const char *) 
+nsPluginInstancePeer::GetTagText(void)
+{
+    // XXX
+    return NULL;
+}
+
+#else /* OJI */
 NS_METHOD_(PRUint16)
 nsPluginInstancePeer::GetArgCount(void)
 {
@@ -245,38 +407,39 @@ nsPluginInstancePeer::GetArgCount(void)
         return 1;
     }
 }
-
+  
 NS_METHOD_(const char**)
 nsPluginInstancePeer::GetArgNames(void)
 {
-    np_instance* instance = (np_instance*)npp->ndata;
-    if (instance->type == NP_EMBED) {
-        np_data* ndata = (np_data*)instance->app->np_data;
-        return (const char**)ndata->lo_struct->attribute_list;
-    }
-    else {
-        static char name[] = "PALETTE";
-        static char* names[1];
-        names[0] = name;
-        return (const char**)names;
-    }
+      np_instance* instance = (np_instance*)npp->ndata;
+      if (instance->type == NP_EMBED) {
+          np_data* ndata = (np_data*)instance->app->np_data;
+         return (const char**)ndata->lo_struct->attribute_list;
+     }
+     else {
+         static char name[] = "PALETTE";
+         static char* names[1];
+         names[0] = name;
+         return (const char**)names;
+      }
 }
-
+  
 NS_METHOD_(const char**)
 nsPluginInstancePeer::GetArgValues(void)
 {
-    np_instance* instance = (np_instance*)npp->ndata;
-    if (instance->type == NP_EMBED) {
-        np_data* ndata = (np_data*)instance->app->np_data;
-        return (const char**)ndata->lo_struct->value_list;
-    }
-    else {
-        static char value[] = "foreground";
-        static char* values[1];
-        values[0] = value;
-        return (const char**)values;
-    }
+     np_instance* instance = (np_instance*)npp->ndata;
+     if (instance->type == NP_EMBED) {
+         np_data* ndata = (np_data*)instance->app->np_data;
+         return (const char**)ndata->lo_struct->value_list;
+     }
+     else {
+         static char value[] = "foreground";
+         static char* values[1];
+         values[0] = value;
+         return (const char**)values;
+      }
 }
+#endif /* OJI */
 
 NS_METHOD_(NPIPluginManager*)
 nsPluginInstancePeer::GetPluginManager(void)
@@ -310,7 +473,12 @@ nsPluginInstancePeer::NewStream(nsMIMEType type, const char* target,
 {
     NPStream* pstream;
     NPPluginError err = (NPPluginError)
-        npn_newstream(npp, (char*)type, (char*)target, &pstream);
+#ifdef OJI        
+        npn_newstream(npp, const_cast<char*>(type),
+                      const_cast<char*>(target), &pstream);
+#else
+    npn_newstream(npp, (char*)type,(char*)target, &pstream);
+#endif
     if (err != NPPluginError_NoError)
         return err;
     *result = new nsPluginManagerStream(npp, pstream);

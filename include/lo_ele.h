@@ -942,6 +942,15 @@ struct LO_CellStruct_struct {
 		Bool isCaption;		/* Needed for relayout without reload */
 };
 
+#ifdef OJI
+struct lo_NVList {
+  uint32 n; /* number of name/value pairs */
+  char** names;
+  char** values;
+};
+
+#define LO_NVList_Init( pList ) (pList)->n=0; (pList)->names=NULL; (pList)->values=NULL
+#endif
 
 struct LO_EmbedStruct_struct {
 		int16 type;
@@ -958,26 +967,54 @@ struct LO_EmbedStruct_struct {
 
 		void * FE_Data;
 		void *session_data;
-		PA_Block embed_src;
-		int32 attribute_cnt;
-		char **attribute_list;
-		char **value_list;
+#ifdef OJI
 		int32 alignment;
 		int32 border_width;
 		int32 border_vert_space;
 		int32 border_horiz_space;
 		uint16 ele_attrmask; /* floating, secure, selected, etc. */
 		int32 embed_index;	/* Unique ID within this doc */
-		struct LO_EmbedStruct_struct *nextEmbed;
+
 #ifdef MOCHA
 		struct JSObject *mocha_object;
-#endif
-		PA_Tag *tag;
-		CL_Layer *layer;
+#endif		
+                PA_Tag *tag;
+                CL_Layer *layer;
 
 		int32 percent_width; /* needed for relayout. */
 		int32 percent_height; /* needed for relayout. */
+
+                struct lo_NVList attributes;
+                struct lo_NVList parameters;
+
 		PA_Block base_url;
+
+		struct LO_EmbedStruct_struct *nextEmbed;
+
+		PA_Block embed_src;
+#else
+		PA_Block embed_src;
+		int32 attribute_cnt;
+ 		char **attribute_list;
+ 		char **value_list;
+  		int32 alignment;
+  		int32 border_width;
+  		int32 border_vert_space;
+  		int32 border_horiz_space;
+  		uint16 ele_attrmask; /* floating, secure, selected, etc. */
+  		int32 embed_index;	/* Unique ID within this doc */
+ 		struct LO_EmbedStruct_struct *nextEmbed;
+#ifdef MOCHA
+  		struct JSObject *mocha_object;
+#endif
+		PA_Tag *tag;
+ 		CL_Layer *layer;
+  
+  		int32 percent_width; /* needed for relayout. */
+  		int32 percent_height; /* needed for relayout. */
+  		PA_Block base_url;
+#endif /* OJI */
+
 };
 
 #define LO_JAVA_SELECTOR_APPLET             0
@@ -1000,30 +1037,33 @@ struct LO_JavaAppStruct_struct {
 
 		void * FE_Data;
 		void *session_data;
-		PA_Block base_url;
-		PA_Block attr_code;
-		PA_Block attr_codebase;
-		PA_Block attr_archive;
-		PA_Block attr_name;
-		int32 param_cnt;
-		char **param_names;
-		char **param_values;
+#ifdef OJI
 		int32 alignment;
 		int32 border_width;
 		int32 border_vert_space;
 		int32 border_horiz_space;
 		uint16 ele_attrmask; /* floating, secure, selected, etc. */
 		int32 embed_index;	/* Unique ID within this doc */
-		Bool may_script;
-		/* linked list thread for applets in the current document.
-		 * should be "prev" since they're in reverse order but who's
-		 * counting? */
-		struct LO_JavaAppStruct_struct *nextApplet;
+
 #ifdef MOCHA
 		struct JSObject *mocha_object;
 #endif
 		PA_Tag *tag;
-        CL_Layer *layer;
+                CL_Layer *layer;
+
+		int32 percent_width;	/* For relayout */
+		int32 percent_height;	/* For relayout */
+
+                struct lo_NVList attributes;
+                struct lo_NVList parameters;
+
+		PA_Block base_url;
+
+		/* linked list thread for applets in the current document.
+		 * should be "prev" since they're in reverse order but who's
+		 * counting? */
+		struct LO_JavaAppStruct_struct *nextApplet;
+
 		/* selector_type indicates whether the tag was an
 		 * APPLET tag or OBJECT tag, and if it was an OBJECT tag,
 		 * whether the protocol selector in CLASSID was "java:",
@@ -1031,8 +1071,47 @@ struct LO_JavaAppStruct_struct {
 		 */
 		int32 selector_type;
 
-		int32 percent_width;	/* For relayout */
-		int32 percent_height;	/* For relayout */
+                /* XXX ditch these */
+                PA_Block attr_code;
+		PA_Block attr_codebase;
+		PA_Block attr_archive;
+		PA_Block attr_name;
+
+		Bool may_script;
+#else /* OJI */
+ 		PA_Block base_url;
+ 		PA_Block attr_code;
+ 		PA_Block attr_codebase;
+ 		PA_Block attr_archive;
+ 		PA_Block attr_name;
+ 		int32 param_cnt;
+ 		char **param_names;
+ 		char **param_values;
+  		int32 alignment;
+  		int32 border_width;
+  		int32 border_vert_space;
+  		int32 border_horiz_space;
+  		uint16 ele_attrmask; /* floating, secure, selected, etc. */
+  		int32 embed_index;	/* Unique ID within this doc */
+ 		Bool may_script;
+ 		/* linked list thread for applets in the current document.
+ 		 * should be "prev" since they're in reverse order but who's
+ 		 * counting? */
+ 		struct LO_JavaAppStruct_struct *nextApplet;
+#ifdef MOCHA
+ 		struct JSObject *mocha_object;
+#endif
+  		PA_Tag *tag;
+                CL_Layer *layer;
+  		/* selector_type indicates whether the tag was an
+  		 * APPLET tag or OBJECT tag, and if it was an OBJECT tag,
+  		 * whether the protocol selector in CLASSID was "java:",
+                 */
+		int32 selector_type;
+
+ 		int32 percent_width;	/* For relayout */
+ 		int32 percent_height;	/* For relayout */
+#endif /* OJI */
 };
 
 

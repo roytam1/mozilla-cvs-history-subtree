@@ -353,17 +353,58 @@ public:
     NS_IMETHOD_(NPPluginType)
     GetMode(void);
 
-    // (Corresponds to NPP_New's argc argument.)
-    NS_IMETHOD_(PRUint16)
-    GetArgCount(void);
+#ifdef OJI
+    // Get a ptr to the paired list of attribute names and values,
+    // returns the length of the array.
+    //
+    // Each name or value is a null-terminated string.
+    //
+    NS_IMETHOD_(NPPluginError)
+    GetAttributes(PRUint16& n, const char*const*& names, const char*const*& values);
 
-    // (Corresponds to NPP_New's argn argument.)
-    NS_IMETHOD_(const char**)
-    GetArgNames(void);
+    // Get the value for the named attribute.  Returns null
+    // if the attribute was not set.
+    NS_IMETHOD_(const char*)
+    GetAttribute(const char* name);
 
-    // (Corresponds to NPP_New's argv argument.)
-    NS_IMETHOD_(const char**)
-    GetArgValues(void);
+    // Get a ptr to the paired list of parameter names and values,
+    // returns the length of the array.
+    //
+    // Each name or value is a null-terminated string.
+    NS_IMETHOD_(NPPluginError)
+    GetParameters(PRUint16& n, const char*const*& names, const char*const*& values);
+
+    // Get the value for the named parameter.  Returns null
+    // if the parameter was not set.
+    NS_IMETHOD_(const char*)
+    GetParameter(const char* name);
+
+    // Get the complete text of the HTML tag that was
+    // used to instantiate this plugin
+    NS_IMETHOD_(const char *)
+    GetTagText();
+
+    // Get the type of the HTML tag that was used ot instantiate this
+    // plugin.  Currently supported tags are EMBED, OBJECT and APPLET.
+    // 
+    // returns a tag_id, defined above as follows:
+    //    typedef enum { TAG_EMBED, TAG_OBJECT, TAG_APPLET } tag_id;
+    //
+    NS_IMETHOD_(tag_id) 
+    GetTagType();
+#else
+     // (Corresponds to NPP_New's argc argument.)
+     NS_IMETHOD_(PRUint16)
+     GetArgCount(void);
+  
+     // (Corresponds to NPP_New's argn argument.)
+     NS_IMETHOD_(const char**)
+     GetArgNames(void);
+  
+     // (Corresponds to NPP_New's argv argument.)
+     NS_IMETHOD_(const char**)
+     GetArgValues(void);
+#endif /* OJI */
 
     NS_IMETHOD_(NPIPluginManager*)
     GetPluginManager(void);

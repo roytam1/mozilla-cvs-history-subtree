@@ -343,6 +343,8 @@ enum NPPluginError {
     NPPluginError_StreamNotSeekable
 };
 
+#define NPCallFailed( code ) ((code) != NPPluginError_NoError)
+
 enum NPPluginReason {
     NPPluginReason_Base = 0,
     NPPluginReason_Done = 0,
@@ -656,6 +658,10 @@ public:
 ////////////////////////////////////////////////////////////////////////////////
 // Plugin Instance Peer Interface
 
+#ifdef OJI
+typedef enum { TAG_UNKNOWN, TAG_EMBED, TAG_OBJECT, TAG_APPLET } tag_id;
+#endif
+
 class NPIPluginInstancePeer : public nsISupports {
 public:
 
@@ -670,18 +676,57 @@ public:
     NS_IMETHOD_(NPPluginType)
     GetMode(void) = 0;
 
-    // (Corresponds to NPP_New's argc argument.)
-    NS_IMETHOD_(PRUint16)
-    GetArgCount(void) = 0;
+#ifdef OJI
+    // Get a ptr to the paired list of attribute names and values,
+    // returns the length of the array.
+    //
+    // Each name or value is a null-terminated string.
+    NS_IMETHOD_(NPPluginError)
+    GetAttributes(PRUint16& n, const char*const*& names, const char*const*& values) = 0;
 
-    // (Corresponds to NPP_New's argn argument.)
-    NS_IMETHOD_(const char**)
-    GetArgNames(void) = 0;
+    // Get the value for the named attribute.  Returns null
+    // if the attribute was not set.
+    NS_IMETHOD_(const char*)
+    GetAttribute(const char* name) = 0;
 
-    // (Corresponds to NPP_New's argv argument.)
-    NS_IMETHOD_(const char**)
-    GetArgValues(void) = 0;
+    // Get a ptr to the paired list of parameter names and values,
+    // returns the length of the array.
+    //
+    // Each name or value is a null-terminated string.
+    NS_IMETHOD_(NPPluginError)
+    GetParameters(PRUint16& n, const char*const*& names, const char*const*& values) = 0;
 
+    // Get the value for the named parameter.  Returns null
+    // if the parameter was not set.
+    NS_IMETHOD_(const char*)
+    GetParameter(const char* name) = 0;
+
+    // Get the complete text of the HTML tag that was
+    // used to instantiate this plugin
+    NS_IMETHOD_(const char *)
+    GetTagText() = 0;
+
+    // Get the type of the HTML tag that was used ot instantiate this
+    // plugin.  Currently supported tags are EMBED, OBJECT and APPLET.
+    // 
+    // returns a tag_id, defined above as follows:
+    //    typedef enum { TAG_EMBED, TAG_OBJECT, TAG_APPLET } tag_id;
+    //
+    NS_IMETHOD_(tag_id) 
+    GetTagType() = 0;
+#else
+     // (Corresponds to NPP_New's argc argument.)
+     NS_IMETHOD_(PRUint16)
+     GetArgCount(void) = 0;
+ 
+     // (Corresponds to NPP_New's argn argument.)
+     NS_IMETHOD_(const char**)
+     GetArgNames(void) = 0;
+ 
+     // (Corresponds to NPP_New's argv argument.)
+     NS_IMETHOD_(const char**)
+     GetArgValues(void) = 0;
+#endif /* OJI */
     NS_IMETHOD_(NPIPluginManager*)
     GetPluginManager(void) = 0;
 
