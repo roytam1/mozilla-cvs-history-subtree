@@ -61,9 +61,6 @@
 
 - (void)initializeToolbar
 {
-  BookmarksManager* bmManager = [BookmarksManager sharedBookmarksManager];
-  [bmManager addBookmarksClient:self];
-
   [self buildButtonList];
 }
 
@@ -78,9 +75,6 @@
 {
   [mButtons release];
   mButtons = nil;
-
-  BookmarksManager* bmManager = [BookmarksManager sharedBookmarksManager];
-  [bmManager removeBookmarksClient:self];
 }
 
 - (void)registerForShutdownNotification
@@ -94,6 +88,16 @@
 -(void)shutdown: (NSNotification*)aNotification
 {
   [self cleanup];
+}
+
+- (void)viewWillMoveToWindow:(NSWindow *)newWindow
+{
+  BookmarksManager* bmManager = [BookmarksManager sharedBookmarksManager];
+
+  if (newWindow)	// moving to window
+    [bmManager addBookmarksClient:self];  
+  else						// leaving window
+    [bmManager removeBookmarksClient:self];
 }
 
 - (void)drawRect:(NSRect)aRect
