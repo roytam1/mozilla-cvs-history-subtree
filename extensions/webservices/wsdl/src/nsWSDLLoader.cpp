@@ -900,8 +900,6 @@ nsWSDLLoadRequest::ProcessTypesElement(nsIDOMElement* aElement)
 
       nsStringKey key(targetNamespace);
       mTypes.Put(&key, schema);
-
-      break;
     }
   }
 
