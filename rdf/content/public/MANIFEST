@@ -4,6 +4,7 @@ nsIDOMXULElement.h
 nsIDOMXULTreeElement.h
 nsIXULParentDocument.h
 nsIXULChildDocument.h
+nsIXULContentSink.h
 nsIXULContentUtils.h
 nsIXULDocumentInfo.h
 nsIXULPopupListener.h

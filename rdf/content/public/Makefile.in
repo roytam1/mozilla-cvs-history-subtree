@@ -30,6 +30,7 @@ EXPORTS		= \
 		nsIDOMXULTreeElement.h \
 		nsIXULParentDocument.h \
 		nsIXULChildDocument.h \
+		nsIXULContentSink.h \
 		nsIXULDocumentInfo.h \
 		nsIXULPopupListener.h \
 		nsIDOMXULCommandDispatcher.h \
