@@ -51,7 +51,9 @@
 #include "mplugin.h"
 
 //	***** BEGIN HACK ***** (Bug #83149)
+#if defined (JAVA)
 #include "MJava.h"
+#endif
 //	***** END HACK *****
 
 #pragma mark --- CPrintHTMLView ---
