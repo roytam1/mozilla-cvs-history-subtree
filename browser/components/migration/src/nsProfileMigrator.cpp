@@ -133,9 +133,6 @@ nsProfileMigrator::Import()
   if (ImportRegistryProfiles(NS_LITERAL_CSTRING("Firefox")))
     return NS_OK;
 
-  if (ImportRegistryProfiles(NS_LITERAL_CSTRING("Phoenix")))
-    return NS_OK;
-
   return NS_ERROR_FAILURE;
 }
 
