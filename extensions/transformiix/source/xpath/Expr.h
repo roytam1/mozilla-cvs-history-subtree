@@ -605,7 +605,7 @@ private:
      * all nodes that match the Expr
      */
     void evalDescendants(Expr* aStep, Node* aNode,
-                         txIEvalContext* aContext,
+                         txIMatchContext* aContext,
                          NodeSet* resNodes);
 
 }; //-- PathExpr

@@ -34,6 +34,7 @@
 #include "Expr.h"
 #include "XMLUtils.h"
 #include "txNodeSetContext.h"
+#include "txSingleNodeContext.h"
 
   //------------/
  //- PathExpr -/
@@ -155,15 +156,12 @@ ExprResult* PathExpr::evaluate(txIEvalContext* aContext)
 /**
  * Selects from the descendants of the context node
  * all nodes that match the Expr
- * -- this will be moving to a Utility class
 **/
 void PathExpr::evalDescendants (Expr* aStep, Node* aNode, 
-                                txIEvalContext* aContext,
+                                txIMatchContext* aContext,
                                 NodeSet* resNodes)
 {
-    NodeSet set(aNode);
-    txNodeSetContext eContext(&set, aContext);
-    eContext.next();
+    txSingleNodeContext eContext(aNode, aContext);
     ExprResult *res = aStep->evaluate(&eContext);
     if (!res || (res->getResultType() != ExprResult::NODESET)) {
         //XXX ErrorReport: report nonnodeset error
