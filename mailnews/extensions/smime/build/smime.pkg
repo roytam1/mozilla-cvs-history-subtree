@@ -1,6 +1,8 @@
 [xpfe-mailnews]
 #if SHARED_LIBRARY
 dist/bin/components/@SHARED_LIBRARY@
+#else
+!staticcomp @LIBRARY@ @MODULE_NAME@
 #endif
 dist/bin/components/smime-service.js
 !xpt dist/bin/components/msgsmime.xpt

@@ -1,8 +1,8 @@
-# XXXbsmedberg -- forked chromeservice creates problems
-
 [gecko]
 #if SHARED_LIBRARY
 dist/bin/components/@SHARED_LIBRARY@
+#else
+!staticcomp @LIBRARY@ @MODULE_NAME@
 #endif
 dist/bin/regchrome@BINS@
 
