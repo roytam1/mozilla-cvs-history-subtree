@@ -636,6 +636,9 @@ sub BuildIt {
 			}
 
             my $make = "$Settings::Make -f client.mk $Settings::MakeOverrides CONFIGURE_ENV_ARGS='$Settings::ConfigureEnvArgs'";
+			if ($Settings::FastUpdate) {
+				$make = "$Settings::Make -f client.mk fast-update && $Settings::Make -f client.mk $Settings::MakeOverrides CONFIGURE_ENV_ARGS='$Settings::ConfigureEnvArgs' build";
+			}
             my $targets = $TreeSpecific::checkout_target;
             $targets = $TreeSpecific::checkout_clobber_target unless $Settings::BuildDepend;
 			# Make sure we have an ObjDir if we need one.
