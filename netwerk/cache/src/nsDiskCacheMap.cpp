@@ -36,21 +36,17 @@ nsDiskCacheMap::~nsDiskCacheMap()
 
 nsDiskCacheRecord* nsDiskCacheMap::GetRecord(PRUint32 hashNumber)
 {
-    PRUint32 index = (hashNumber & (kBucketsPerTable - 1));
-    nsDiskCacheBucket& bucket = mBuckets[index];
+    nsDiskCacheBucket& bucket = mBuckets[(hashNumber & (kBucketsPerTable - 1))];
     nsDiskCacheRecord* oldestRecord = &bucket.mRecords[0];
 
-    for (int i = 0; i < kRecordsPerBucket; ++i) {
-        nsDiskCacheRecord* record = &bucket.mRecords[i];
+    for (int r = 0; r < kRecordsPerBucket; ++r) {
+        nsDiskCacheRecord* record = &bucket.mRecords[r];
         if (record->HashNumber() == 0 || record->HashNumber() == hashNumber)
             return record;
-        if (record->EvictionRank() > oldestRecord->EvictionRank())
+        if (record->EvictionRank() < oldestRecord->EvictionRank())
             oldestRecord = record;
     }
-
-    // record not found, so must evict a record.
-    oldestRecord->SetHashNumber(0);
-    oldestRecord->SetEvictionRank(0);
+    // if we don't find an empty record, return the oldest record for eviction.
     return oldestRecord;
 }
 
@@ -99,7 +95,7 @@ nsresult nsDiskCacheMap::Write(nsIOutputStream* output)
     // swap all of the active records.
     for (int b = 1; b < kBucketsPerTable; ++b) {
         nsDiskCacheBucket& bucket = mBuckets[b];
-        for (int r = 1; r < kRecordsPerBucket; ++r) {
+        for (int r = 0; r < kRecordsPerBucket; ++r) {
             nsDiskCacheRecord* record = &bucket.mRecords[r];
             if (record->HashNumber() == 0)
                 break;
