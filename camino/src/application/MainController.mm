@@ -311,6 +311,9 @@ const int kReuseWindowOnAE = 2;
 
 - (void)setupStartpage
 {
+  // only do this if no url was specified in the command-line
+  if (mStartURL) return;
+  
   // for non-nightly builds, show a special start page
   PreferenceManager* prefManager = [PreferenceManager sharedInstance];
 
