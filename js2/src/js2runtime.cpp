@@ -352,7 +352,8 @@ bool Context::executeOperator(Operator op, JSType *t1, JSType *t2)
     // XXX more code needed here, obviously
 
     if (candidate->isNative()) {
-        JSValue result = candidate->mCode(this, &mStack.at(mStack.size() - 2), 2);
+        // JSValue result = candidate->mCode(this, &mStack.at(mStack.size() - 2), 2);
+        JSValue result = candidate->mCode(this, mStack.end() - 2, 2);
         mStack.pop_back();      // XXX
         mStack.pop_back();
         mStack.push_back(result);
@@ -390,7 +391,8 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     uint32 argCount = *((uint32 *)pc); 
                     pc += sizeof(uint32);
                     
-                    JSValue *targetValue = &mStack.at(mStack.size() - (argCount + 1));
+                    // JSValue *targetValue = &mStack.at(mStack.size() - (argCount + 1));
+                    JSValue *targetValue = mStack.end() - (argCount + 1);
                     ASSERT(targetValue->isFunction());
                     JSFunction *target = targetValue->function;
                     JSValue *argBase = NULL;
@@ -500,8 +502,10 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
             case DoOperatorOp:
                 {
                     Operator op = (Operator)(*pc++);
-                    JSValue v1 = mStack.at(mStack.size() - 2);
-                    JSValue v2 = mStack.back();
+                    // JSValue v1 = mStack.at(mStack.size() - 2);
+                    // JSValue v2 = mStack.back();
+                    JSValue v1 = *(mStack.end() - 2);
+                    JSValue v2 = *(mStack.end() - 1);
                     if (executeOperator(op, v1.getType(), v2.getType())) {
                         // need to invoke
                     }

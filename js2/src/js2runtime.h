@@ -159,10 +159,10 @@ namespace JS2Runtime {
 
         /* These are the ECMA types, for use in 'toPrimitive' calls */
         enum ECMA_type {
-            Undefined, Null, Boolean, Number, Object, String, 
-            NoHint
+            Undefined_t, Null_t, Boolean_t, Number_t, Object_t, String_t, 
+            NoHint_t
         };
-        JSValue toPrimitive(Context *cx, ECMA_type hint = NoHint) const;
+        JSValue toPrimitive(Context *cx, ECMA_type hint = NoHint_t) const;
         
         static JSValue valueToNumber(const JSValue& value);
         static JSValue valueToString(Context *cx, const JSValue& value);
