@@ -45,6 +45,6 @@ dist/bin/defaults/pref/aix.js
 dist/bin/defaults/pref/non-shared.txt
 #endif
 
-[browser]
+[xpfe-browser]
 dist/bin/defaults/pref/mailnews.js
 dist/bin/defaults/pref/editor.js
