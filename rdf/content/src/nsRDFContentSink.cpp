@@ -275,8 +275,8 @@ nsRDFContentSink::~nsRDFContentSink()
         PRInt32 index = mNameSpaceStack->Count();
 
         while (0 < index--) {
-          nsINameSpace* nameSpace = (nsINameSpace*)mNameSpaceStack->ElementAt(index);
-          NS_RELEASE(nameSpace);
+            nsINameSpace* nameSpace = (nsINameSpace*)mNameSpaceStack->ElementAt(index);
+            NS_RELEASE(nameSpace);
         }
         delete mNameSpaceStack;
     }
@@ -1131,12 +1131,12 @@ nsRDFContentSink::PushNameSpacesFrom(const nsIParserNode& aNode)
     nsINameSpace* nameSpace = nsnull;
 
     if ((nsnull != mNameSpaceStack) && (0 < mNameSpaceStack->Count())) {
-      nameSpace = (nsINameSpace*)mNameSpaceStack->ElementAt(mNameSpaceStack->Count() - 1);
-      NS_ADDREF(nameSpace);
+        nameSpace = (nsINameSpace*)mNameSpaceStack->ElementAt(mNameSpaceStack->Count() - 1);
+        NS_ADDREF(nameSpace);
     }
     else {
-      mNameSpaceManager->RegisterNameSpace(kRDFNameSpaceURI, mRDFNameSpaceID);
-      mNameSpaceManager->CreateRootNameSpace(nameSpace);
+        mNameSpaceManager->RegisterNameSpace(kRDFNameSpaceURI, mRDFNameSpaceID);
+        mNameSpaceManager->CreateRootNameSpace(nameSpace);
     }
 
     if (nsnull != nameSpace) {
@@ -1171,6 +1171,8 @@ nsRDFContentSink::PushNameSpacesFrom(const nsIParserNode& aNode)
                 NS_IF_RELEASE(prefixAtom);
             }
         }
+
+        // Now push the *last* namespace that we discovered on to the stack.
         if (nsnull == mNameSpaceStack) {
             mNameSpaceStack = new nsVoidArray();
         }
@@ -1181,31 +1183,31 @@ nsRDFContentSink::PushNameSpacesFrom(const nsIParserNode& aNode)
 nsIAtom* 
 nsRDFContentSink::CutNameSpacePrefix(nsString& aString)
 {
-  nsAutoString  prefix;
-  PRInt32 nsoffset = aString.Find(kNameSpaceSeparator);
-  if (-1 != nsoffset) {
-    aString.Left(prefix, nsoffset);
-    aString.Cut(0, nsoffset+1);
-  }
-  if (0 < prefix.Length()) {
-    return NS_NewAtom(prefix);
-  }
-  return nsnull;
+    nsAutoString  prefix;
+    PRInt32 nsoffset = aString.Find(kNameSpaceSeparator);
+    if (-1 != nsoffset) {
+        aString.Left(prefix, nsoffset);
+        aString.Cut(0, nsoffset+1);
+    }
+    if (0 < prefix.Length()) {
+        return NS_NewAtom(prefix);
+    }
+    return nsnull;
 }
 
 PRInt32 
 nsRDFContentSink::GetNameSpaceID(nsIAtom* aPrefix)
 {
-  PRInt32 id = kNameSpaceID_Unknown;
+    PRInt32 id = kNameSpaceID_Unknown;
   
-  if ((nsnull != mNameSpaceStack) && (0 < mNameSpaceStack->Count())) {
-    PRInt32 index = mNameSpaceStack->Count() - 1;
-    nsINameSpace* nameSpace = (nsINameSpace*)mNameSpaceStack->ElementAt(index);
-    nameSpace->FindNameSpaceID(aPrefix, id);
-  }
+    if ((nsnull != mNameSpaceStack) && (0 < mNameSpaceStack->Count())) {
+        PRInt32 index = mNameSpaceStack->Count() - 1;
+        nsINameSpace* nameSpace = (nsINameSpace*)mNameSpaceStack->ElementAt(index);
+        nameSpace->FindNameSpaceID(aPrefix, id);
+    }
 
-  NS_ASSERTION(kNameSpaceID_Unknown != mRDFNameSpaceID, "failed to register RDF nameSpace");
-  return id;
+    NS_ASSERTION(kNameSpaceID_Unknown != mRDFNameSpaceID, "failed to register RDF nameSpace");
+    return id;
 }
 
 void
@@ -1217,11 +1219,15 @@ nsRDFContentSink::GetNameSpaceURI(PRInt32 aID, nsString& aURI)
 void
 nsRDFContentSink::PopNameSpaces()
 {
-  if ((nsnull != mNameSpaceStack) && (0 < mNameSpaceStack->Count())) {
-    PRInt32 index = mNameSpaceStack->Count() - 1;
-    nsINameSpace* nameSpace = (nsINameSpace*)mNameSpaceStack->ElementAt(index);
-    mNameSpaceStack->RemoveElementAt(index);
-    NS_RELEASE(nameSpace);
-  }
+    if ((nsnull != mNameSpaceStack) && (0 < mNameSpaceStack->Count())) {
+        PRInt32 index = mNameSpaceStack->Count() - 1;
+        nsINameSpace* nameSpace = (nsINameSpace*)mNameSpaceStack->ElementAt(index);
+        mNameSpaceStack->RemoveElementAt(index);
+
+        // Releasing the most deeply nested namespace will recursively
+        // release intermediate parent namespaces until the next
+        // reference is held on the namespace stack.
+        NS_RELEASE(nameSpace);
+    }
 }
 
