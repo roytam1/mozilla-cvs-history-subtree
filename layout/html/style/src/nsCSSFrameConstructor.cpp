@@ -7417,14 +7417,20 @@ nsCSSFrameConstructor::ReconstructDocElementHierarchy(nsIPresContext* aPresConte
       state.mFrameManager->ClearUndisplayedContentMap();
 
       if (docElementFrame) {
-        nsIFrame* docParentFrame;
-        docElementFrame->GetParent(&docParentFrame);
+        // the parent is the doc element containing block
+        if (mDocElementContainingBlock) {
 
-        if (docParentFrame) {
+          nsIFrame* child;
+
+          // get first child
+          mDocElementContainingBlock->FirstChild(aPresContext, nsnull, &child);
+
           // Remove the old document element hieararchy
           rv = state.mFrameManager->RemoveFrame(aPresContext, *shell,
-                                                docParentFrame, nsnull, 
-                                                docElementFrame);
+                                                mDocElementContainingBlock, nsnull, 
+                                                child);
+
+
           if (NS_SUCCEEDED(rv)) {
             // Remove any existing fixed items: they are always on the FixedContainingBlock
             rv = RemoveFixedItems(*aPresContext, *shell);
@@ -7433,14 +7439,14 @@ nsCSSFrameConstructor::ReconstructDocElementHierarchy(nsIPresContext* aPresConte
               nsIFrame*                 newChild;
               nsCOMPtr<nsIStyleContext> rootPseudoStyle;
           
-              docParentFrame->GetStyleContext(getter_AddRefs(rootPseudoStyle));
+              mDocElementContainingBlock->GetStyleContext(getter_AddRefs(rootPseudoStyle));
+
               rv = ConstructDocElementFrame(shell, aPresContext, state, rootContent,
-                                            docParentFrame, rootPseudoStyle,
-                                            newChild);
+                                            mDocElementContainingBlock, rootPseudoStyle,                                            newChild);
 
               if (NS_SUCCEEDED(rv)) {
                 rv = state.mFrameManager->InsertFrames(aPresContext, *shell,
-                                                       docParentFrame, nsnull,
+                                                       mDocElementContainingBlock, nsnull,
                                                        nsnull, newChild);
 
                 // Tell the fixed containing block about its 'fixed' frames

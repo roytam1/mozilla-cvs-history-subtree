@@ -83,6 +83,9 @@ public:
   NS_IMETHOD  AddScrollPositionListener(nsIScrollPositionListener* aListener);
   NS_IMETHOD  RemoveScrollPositionListener(nsIScrollPositionListener* aListener);
 
+  NS_IMETHOD InsertChild(nsIView *child, nsIView *sibling);
+  NS_IMETHOD RemoveChild(nsIView *child);
+
   //locals
   //void HandleScrollEvent(nsGUIEvent *aEvent, PRUint32 aEventFlags);
  

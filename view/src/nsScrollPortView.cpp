@@ -567,3 +567,31 @@ NS_IMETHODIMP nsScrollPortView::Paint(nsIRenderingContext& rc, const nsRect& rec
     
     return rv;
 }
+
+NS_IMETHODIMP nsScrollPortView :: InsertChild(nsIView *child, nsIView *sibling)
+{
+  NS_PRECONDITION(nsnull != child, "null ptr");
+
+  NS_ASSERTION(mFirstChild == nsnull, "ScrollPortViews can only have a single child!");
+
+  mFirstChild = child;
+  mFirstChild->SetParent(this);
+
+  mNumKids = 1;
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsScrollPortView :: RemoveChild(nsIView *child)
+{
+  NS_PRECONDITION(nsnull != child, "null ptr");
+
+  NS_ASSERTION(mFirstChild == child, "ScrollPortView doesn't contain that child!");
+
+  mFirstChild->SetParent(nsnull);
+  mFirstChild = nsnull;
+  mNumKids = 0;
+
+  return NS_OK;
+}
+
