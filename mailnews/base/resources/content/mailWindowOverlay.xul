@@ -1456,7 +1456,6 @@ Rights Reserved.
   </menupopup>
 </menu>
 <menu id="windowMenu"/>
-<menu id="menu_Help"/>
 <spacer flex="100%"/>
 </menubar>
 
@@ -1604,7 +1603,6 @@ Rights Reserved.
 
 <statusbar class="chromeclass-status" id="status-bar"> 
   <hbox insertbefore="unreadMessageCount" flex="1">
-    <statusbarpanel id="component-bar"/>
     <statusbarpanel id="statusText" label="&statusText.label;" flex="1"/>
     <statusbarpanel class="statusbarpanel-progress">
       <progressmeter class="progressmeter-statusbar" id="statusbar-icon" mode="normal" value="0" oncommand="dumpProgress()"/>
