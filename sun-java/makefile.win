@@ -47,17 +47,7 @@ CLASSSRC=classsrc
 !if !defined(MOZ_JAVA)
 DIRS=stubs
 !else     
-!if "$(MOZ_BITS)" == "16"
-DIRS=include md-include  md runtime netscape awt jtools jpegwrap zipwrap
-!else
-DIRS=javah $(CLASSSRC) include md-include  md runtime netscape awt mmedia jtools jpegwrap zipwrap bn jdbc jit\win32\symantec\netscape
-!endif
 !endif # MOZ_JAVA
-
-# There is no Java in the Free Source World.  Contact Javasoft.
-!if defined(MOZ_JAVA)
-DIRS=stubs
-!endif
 
 !if "$(STAND_ALONE_JAVA)" == "1"
 DIRS=javah $(CLASSSRC) include md-include md runtime netscape\console awt mmedia  jpegwrap zipwrap bn jdbc  jit\win32\symantec\netscape
