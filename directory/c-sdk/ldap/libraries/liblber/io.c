@@ -1177,10 +1177,16 @@ ber_get_next_buffer_ext( void *buffer, size_t buffer_size, unsigned long *len,
 		 * First, we read the tag.
 		 */
 
-		if ( (tag = get_buffer_tag( &sb )) == LBER_DEFAULT ) {
-			goto premature_exit;
+                /* if we have been called before with a fragment not
+		 * containing a comlete length, we have no rwptr but
+	 	 * a tag already
+                 */
+		if ( ber->ber_tag == LBER_DEFAULT ) {
+			if ( (tag = get_buffer_tag( &sb )) == LBER_DEFAULT ) {
+				goto premature_exit;
+			}
+			ber->ber_tag = tag;
 		}
-		ber->ber_tag = tag;
 
 		/*
 		 * Next, read the length.  The first byte contains the length
@@ -1189,6 +1195,10 @@ ber_get_next_buffer_ext( void *buffer, size_t buffer_size, unsigned long *len,
 		 * length that's greater than what we can hold in an unsigned
 		 * long.
 		 */
+
+                /* if the length is in long form and we don't get it in one
+                 * fragment, we should handle this (TBD).
+                 */
 
 		*len = netlen = 0;
 		if ( read_bytes( &sb, &lc, 1 ) != 1 ) {
