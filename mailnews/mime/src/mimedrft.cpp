@@ -1251,7 +1251,8 @@ mime_parse_stream_complete (nsMIMESession *stream)
       // msgCompWindow = CreateCompositionWindow (fields, body, editorType);
       
       PR_FREEIF(body);
-      mime_free_attachments (mdd->messageBody, 1);
+printf("RICHIE: I'm not cleanup up here!\n");
+// SHERRY      mime_free_attachments (mdd->messageBody, 1);
     }
     else
     {
@@ -1373,6 +1374,8 @@ mime_parse_stream_abort (nsMIMESession *stream, int status )
 
   if ( mdd->headers )
     MimeHeaders_free (mdd->headers);
+
+
   if (mdd->attachments)
     mime_free_attachments( mdd->attachments, mdd->attachments_count );
 
@@ -1405,7 +1408,7 @@ mime_decompose_file_init_fn ( void *stream_closure, MimeHeaders *headers )
   int nAttachments = 0;
   char *hdr_value = NULL, *parm_value = NULL;
   PRBool needURL = PR_FALSE;
-  PRBool creatingMsgBody = PR_FALSE;
+  PRBool creatingMsgBody = PR_TRUE;
   
   PR_ASSERT (mdd && headers);
   if (!mdd || !headers) 
@@ -1481,15 +1484,23 @@ mime_decompose_file_init_fn ( void *stream_closure, MimeHeaders *headers )
     nsCRT::memset ( newAttachment, 0, sizeof (nsMsgAttachedFile) * 2 );
   }
 
-  char *workURLSpec = MimeHeaders_get_name ( headers );
+  char *workURLSpec = nsnull;
+  char *contLoc = nsnull;
 
+  newAttachment->real_name = MimeHeaders_get_name ( headers );
+  contLoc = MimeHeaders_get( headers, HEADER_CONTENT_LOCATION, PR_FALSE, PR_FALSE );
+  if (!contLoc)
+      contLoc = MimeHeaders_get( headers, HEADER_CONTENT_BASE, PR_FALSE, PR_FALSE );
+
+  if ( (!contLoc) && (newAttachment->real_name) )
+    workURLSpec = PL_strdup(newAttachment->real_name);
+  if ( (contLoc) && (!workURLSpec) )
+    workURLSpec = PL_strdup(contLoc);
+
+  PR_FREEIF(contLoc);
   if (workURLSpec)
   {
-    nsMimeNewURI(&(newAttachment->orig_url), workURLSpec);
-  }
-  else
-  {
-    parm_value = MimeHeaders_get( headers, HEADER_CONTENT_BASE, PR_FALSE, PR_FALSE );
+    parm_value = PL_strdup(workURLSpec);
     if (parm_value) 
     {
       char *cp = NULL, *cp1=NULL ;
@@ -1502,10 +1513,12 @@ mime_decompose_file_init_fn ( void *stream_closure, MimeHeaders *headers )
         *cp1 = 0;
 
       nsMimeNewURI(&(newAttachment->orig_url), cp);
+      PR_FREEIF(workURLSpec);
+      workURLSpec = PL_strdup(cp);
       PR_FREEIF(parm_value);
     }
   }
-  
+
   mdd->curAttachment = newAttachment;
   
   newAttachment->type =  MimeHeaders_get ( headers, HEADER_CONTENT_TYPE, PR_TRUE, PR_FALSE );
@@ -1533,15 +1546,21 @@ mime_decompose_file_init_fn ( void *stream_closure, MimeHeaders *headers )
                                               PR_FALSE, PR_FALSE );
   newAttachment->description = MimeHeaders_get( headers, HEADER_CONTENT_DESCRIPTION,
                                                 PR_FALSE, PR_FALSE );
+  // 
+  // If we came up empty for description or the orig URL, we should do something about it.
+  //
+  if  ( ( (!newAttachment->description) || (!*newAttachment->description) ) && (workURLSpec) )
+    newAttachment->description = PL_strdup(workURLSpec);
+
   nsFileSpec *tmpSpec = nsnull;
-  if (workURLSpec)
-    tmpSpec = nsMsgCreateTempFileSpec(workURLSpec);
+  if (newAttachment->real_name)
+    tmpSpec = nsMsgCreateTempFileSpec(newAttachment->real_name);
   else
   {
     char *ptr = PL_strchr(newAttachment->type, '/');
     if (!ptr)
     {
-      nsFileSpec *tmpSpec = nsMsgCreateTempFileSpec("nsmail.tmp");
+      tmpSpec = nsMsgCreateTempFileSpec("nsmail.tmp");
     }
     else
     {
@@ -1565,6 +1584,8 @@ mime_decompose_file_init_fn ( void *stream_closure, MimeHeaders *headers )
   if (!mdd->tmpFileStream)
     return MIME_UNABLE_TO_OPEN_TMP_FILE;
     
+  // For now, we are always going to decode all of the attachments 
+  // for the message. This way, we have native data 
   if (creatingMsgBody) 
   {
     MimeDecoderData *(*fn) (int (*) (const char*, PRInt32, void*), void*) = 0;
@@ -1579,24 +1600,21 @@ mime_decompose_file_init_fn ( void *stream_closure, MimeHeaders *headers )
     else if (!PL_strcasecmp(newAttachment->encoding, ENCODING_QUOTED_PRINTABLE))
       fn = &MimeQPDecoderInit;
     else if (!PL_strcasecmp(newAttachment->encoding, ENCODING_UUENCODE) ||
-      !PL_strcasecmp(newAttachment->encoding, ENCODING_UUENCODE2) ||
-      !PL_strcasecmp(newAttachment->encoding, ENCODING_UUENCODE3) ||
-      !PL_strcasecmp(newAttachment->encoding, ENCODING_UUENCODE4))
+             !PL_strcasecmp(newAttachment->encoding, ENCODING_UUENCODE2) ||
+             !PL_strcasecmp(newAttachment->encoding, ENCODING_UUENCODE3) ||
+             !PL_strcasecmp(newAttachment->encoding, ENCODING_UUENCODE4))
       fn = &MimeUUDecoderInit;
     
     if (fn) 
     {
-      mdd->decoder_data =
-      fn (/* The (int (*) ...) cast is to turn the `void' argument
-			   into `MimeObject'. */
-         ((int (*) (const char *, PRInt32, void *))
-         dummy_file_write),
-         mdd->tmpFileStream);
-      
+      mdd->decoder_data = fn (/* The (int (*) ...) cast is to turn the `void' argument into `MimeObject'. */
+                              ((int (*) (const char *, PRInt32, void *))
+                              dummy_file_write), mdd->tmpFileStream);
       if (!mdd->decoder_data)
         return MIME_OUT_OF_MEMORY;
     }
   }
+
   return 0;
 }
 
@@ -1723,7 +1741,7 @@ mime_bridge_create_draft_stream(
 	 that wasn't xlated for them doesn't work.  We have to dexlate it
 	 before sending it.
    */
-  mdd->options->dexlate_p = PR_TRUE;
+// SHERRY  mdd->options->dexlate_p = PR_TRUE;
 #endif /* FO_MAIL_MESSAGE_TO */
 
   obj = mime_new ( (MimeObjectClass *) &mimeMessageClass, (MimeHeaders *) NULL, MESSAGE_RFC822 );
