@@ -150,7 +150,7 @@ RDF_AddDataSource(RDF rdf, char* dataSource)
   }
 #endif
 #endif
-  if (rdf->numTranslators == rdf->translatorArraySize) {
+  if (rdf->numTranslators >= rdf->translatorArraySize) {
     RDFT* tmp = (RDFT*)getMem((rdf->numTranslators+5)*(sizeof(RDFT)));
     memcpy(tmp, rdf->translators, (rdf->numTranslators * sizeof(RDFT)));
     rdf->translatorArraySize = rdf->numTranslators + 5;
