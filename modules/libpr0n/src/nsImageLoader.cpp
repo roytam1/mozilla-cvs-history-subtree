@@ -42,6 +42,9 @@
 
 #include "nspr.h"
 
+static NS_DEFINE_CID(kImageRequestCID, NS_IMAGEREQUEST_CID);
+static NS_DEFINE_CID(kImageRequestProxyCID, NS_IMAGEREQUESTPROXY_CID);
+
 NS_IMPL_ISUPPORTS1(nsImageLoader, nsIImageLoader)
 
 nsImageLoader::nsImageLoader()
@@ -74,7 +77,7 @@ NS_IMETHODIMP nsImageLoader::LoadImage(nsIURI *aURI, nsIImageDecoderObserver *aO
     // XXX do we need to SetOwner here?
     newChannel->SetOwner(this); // the channel is now holding a strong ref to 'this'
 
-    nsCOMPtr<nsIImageRequest> req(do_CreateInstance("@mozilla.org/image/request/real;1"));
+    nsCOMPtr<nsIImageRequest> req(do_CreateInstance(kImageRequestCID));
     imgRequest = NS_REINTERPRET_CAST(nsImageRequest*, req.get());
     NS_ADDREF(imgRequest);
 
@@ -85,7 +88,7 @@ NS_IMETHODIMP nsImageLoader::LoadImage(nsIURI *aURI, nsIImageDecoderObserver *aO
     newChannel->AsyncRead(NS_STATIC_CAST(nsIStreamListener *, imgRequest), cx);  // XXX are we calling this too early?
   }
 
-  nsCOMPtr<nsIImageRequest> proxyRequest(do_CreateInstance("@mozilla.org/image/request/proxy;1"));
+  nsCOMPtr<nsIImageRequest> proxyRequest(do_CreateInstance(kImageRequestProxyCID));
   // init adds itself to imgRequest's list of observers
   NS_REINTERPRET_CAST(nsImageRequestProxy*, proxyRequest.get())->Init(imgRequest, aObserver, cx);
 
@@ -118,7 +121,8 @@ NS_IMETHODIMP nsImageLoader::LoadImageWithChannel(nsIChannel *channel, nsIImageD
 
     *listener = nsnull; // give them back a null nsIStreamListener
   } else {
-    nsCOMPtr<nsIImageRequest> req(do_CreateInstance("@mozilla.org/image/request/real;1"));
+    nsCOMPtr<nsIImageRequest> req(do_CreateInstance(kImageRequestCID));
+
     imgRequest = NS_REINTERPRET_CAST(nsImageRequest*, req.get());
     NS_ADDREF(imgRequest);
 
@@ -130,7 +134,8 @@ NS_IMETHODIMP nsImageLoader::LoadImageWithChannel(nsIChannel *channel, nsIImageD
     NS_IF_ADDREF(*listener);
   }
 
-  nsCOMPtr<nsIImageRequest> proxyRequest(do_CreateInstance("@mozilla.org/image/request/proxy;1"));
+  nsCOMPtr<nsIImageRequest> proxyRequest(do_CreateInstance(kImageRequestProxyCID));
+
   // init adds itself to imgRequest's list of observers
   NS_REINTERPRET_CAST(nsImageRequestProxy*, proxyRequest.get())->Init(imgRequest, aObserver, cx);
 
