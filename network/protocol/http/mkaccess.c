@@ -230,7 +230,8 @@ NET_BuildAuthString(MWContext * context, URL_Struct *URL_s)
 	net_AuthStruct * auth_s = net_CheckForAuthorization(address, FALSE);
 
 	if(!auth_s)
-#if defined(XP_WIN) && defined(MOZILLA_CLIENT)
+/* #if defined(XP_WIN) && defined(MOZILLA_CLIENT) */
+#if 0
 		return(WFE_BuildCompuserveAuthString(URL_s));
 #else
 		return(NULL);
@@ -492,7 +493,8 @@ NET_AskForAuthString(MWContext *context,
 	  	 	*/
 
 		PR_FREEIF(host);
-#if defined(XP_WIN) && defined(MOZILLA_CLIENT)
+/* #if defined(XP_WIN) && defined(MOZILLA_CLIENT) */
+#if 0
 		return(WFE_DoCompuserveAuthenticate(context, URL_s, authenticate_header_value));
 #else
 		return(NET_AUTH_FAILED_DISPLAY_DOCUMENT);		

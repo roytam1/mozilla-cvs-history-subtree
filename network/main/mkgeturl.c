@@ -84,9 +84,6 @@
 #endif
 
 #include "libi18n.h"
-#ifndef MODULAR_NETLIB
-#include "htmldlgs.h"
-#endif
 
 #include "np.h"
 #include "prefapi.h"
@@ -319,8 +316,6 @@ PRIVATE NETExitCallbackNode *NETExitCallbackHead = NULL;
 
 /* forward decl */
 PRIVATE void net_cleanup_reg_protocol_impls(void);
-PRIVATE void NET_InitTotallyRandomStuffPeopleAddedProtocols(void);
-
 
 
 /* fix Mac warning for missing prototype */
@@ -738,8 +733,6 @@ NET_InitNetLib(int socket_buffer_size, int max_number_of_connections)
 	NET_InitNFSProtocol();
 	NET_InitURNProtocol();
 	NET_InitWAISProtocol();
-	NET_InitTotallyRandomStuffPeopleAddedProtocols();
-
 	NET_InitMailtoProtocol();  /* has a stub for MOZ_MAIL_NEWS */
 #ifdef MOZ_MAIL_NEWS    
 	NET_InitNewsProtocol();
@@ -4282,164 +4275,6 @@ PRIVATE void add_slash_to_URL (URL_Struct *URL_s)
 }
  
 #ifdef MOZILLA_CLIENT
-/* print out security URL
- */
-PRIVATE int net_output_security_url(ActiveEntry * cur_entry, MWContext *cx)
-{
-    NET_StreamClass * stream;
-	char * content_type;
-	char * which = cur_entry->URL_s->address;
-	char * colon = PL_strchr (which, ':');
-
-	if (colon)
-	  {
-		/* found the first colon; now find the question mark
-		   (as in "about:security?certs"). */
-		which = colon + 1;
-		colon = PL_strchr (which, '?');
-		if (colon)
-		  which = colon + 1;
-		else
-		  which = which + PL_strlen (which); /* give it "" */
-	  }
-
-	content_type = SECNAV_SecURLContentType(which);
-	if (!content_type) {
-		cur_entry->status = MK_MALFORMED_URL_ERROR;
-
-	} else if (!PL_strcasecmp(content_type, "advisor")) {
-	    cur_entry->status = SECNAV_SecHandleSecurityAdvisorURL(cx, which);
-
-	} else {
-		int status;
-
-		StrAllocCopy(cur_entry->URL_s->content_type, content_type);
-
-		cur_entry->format_out = CLEAR_CACHE_BIT(cur_entry->format_out);
-
-		stream = NET_StreamBuilder(cur_entry->format_out,
-								   cur_entry->URL_s, cur_entry->window_id);
-
-		if (!stream)
-			return(MK_UNABLE_TO_CONVERT);
-
-		status = SECNAV_SecURLData(which, stream, cx);
-
-		if (status >= 0) {
-			(*stream->complete) (stream);
-		} else {
-			(*stream->abort) (stream, status);
-		}
-
-		cur_entry->status = status;
-
-		FREE(stream);
-	}
-
-    return(-1);
-}
-
-PRIVATE int32
-net_SecurityURLLoad(ActiveEntry *ce)
-{
-	if(ce->URL_s)
-		StrAllocCopy(ce->URL_s->charset, INTL_ResourceCharSet());
-	return net_output_security_url(ce, ce->window_id);
-}
-
-PRIVATE int32
-net_SeclibURLLoad(ActiveEntry *ce)
-{
-	if(ce->URL_s)
-		StrAllocCopy(ce->URL_s->charset, INTL_ResourceCharSet());
-	SECNAV_HandleInternalSecURL(ce->URL_s, ce->window_id);
-	return -1;
-}
-
-PRIVATE int32
-net_HTMLPanelLoad(ActiveEntry *ce)
-{
-	if(ce->URL_s)
-		StrAllocCopy(ce->URL_s->charset, INTL_ResourceCharSet());
-	XP_HandleHTMLPanel(ce->URL_s);
-	return -1;
-}
-
-PRIVATE int32
-net_HTMLDialogLoad(ActiveEntry *ce)
-{
-	if(ce->URL_s)
-		StrAllocCopy(ce->URL_s->charset, INTL_ResourceCharSet());
-	XP_HandleHTMLDialog(ce->URL_s);
-	return -1;
-}
-
-PRIVATE int32
-net_WysiwygLoad(ActiveEntry *ce)
-{
-	const char *real_url = LM_SkipWysiwygURLPrefix(ce->URL_s->address);
-	char *new_address;
-
-	/* XXX can't use StrAllocCopy because it frees dest first */
-	if (real_url && (new_address = PL_strdup(real_url)) != NULL)
-	{
-		PR_Free(ce->URL_s->address);
-		ce->URL_s->address = new_address;
-		FREE_AND_CLEAR(ce->URL_s->wysiwyg_url);
-	}
-
-	/* no need to free real_url */
-
-	ce->status = MK_DO_REDIRECT;
-	return MK_DO_REDIRECT;
-}
-
-PRIVATE int32
-net_ProtoMainStub(ActiveEntry *ce)
-{
-#ifdef DO_ANNOYING_ASSERTS_IN_STUBS
-	PR_ASSERT(0);
-#endif
-	return -1;
-}
-
-PRIVATE void
-net_ProtoCleanupStub(void)
-{
-}
-
-PRIVATE void
-net_reg_random_protocol(NET_ProtoInitFunc *LoadRoutine, int type)
-{
-    NET_ProtoImpl *random_proto_impl;
-
-	random_proto_impl = PR_NEW(NET_ProtoImpl);
-
-	if(!random_proto_impl)
-		return;
-	
-    random_proto_impl->init = LoadRoutine;
-    random_proto_impl->process = net_ProtoMainStub;
-    random_proto_impl->interrupt = net_ProtoMainStub;
-    random_proto_impl->cleanup = net_ProtoCleanupStub;
-
-    NET_RegisterProtocolImplementation(random_proto_impl, type);
-}
-
-/* don't you just hate it when people come along and hack this
- * kind of stuff into your code.
- *
- * @@@ clean this up some time
- */
-PRIVATE void
-NET_InitTotallyRandomStuffPeopleAddedProtocols(void)
-{
-	net_reg_random_protocol(net_SecurityURLLoad, SECURITY_TYPE_URL);
-	net_reg_random_protocol(net_SeclibURLLoad, INTERNAL_SECLIB_TYPE_URL);
-	net_reg_random_protocol(net_HTMLPanelLoad, HTML_PANEL_HANDLER_TYPE_URL);
-	net_reg_random_protocol(net_HTMLDialogLoad, HTML_DIALOG_HANDLER_TYPE_URL);
-	net_reg_random_protocol(net_WysiwygLoad, WYSIWYG_TYPE_URL);
-}
 
 #endif /* MOZILLA_CLIENT */
 

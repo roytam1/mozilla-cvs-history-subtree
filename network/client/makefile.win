@@ -65,18 +65,23 @@ REQUIRES= network
 # use LINCS on win32 for now since REQUIRES seems to be broken
 #!if "$(MOZ_BITS)" != "16"
 LINCS= \
-    -I$(XPDIST)\public\network 	\
-    -I$(XPDIST)\public\netcache 	\
-    -I$(XPDIST)\public\abouturl 	\
-    -I$(XPDIST)\public\dataurl	\
-    -I$(XPDIST)\public\fileurl	\
-    -I$(XPDIST)\public\ftpurl	\
-    -I$(XPDIST)\public\gophurl	\
-    -I$(XPDIST)\public\httpurl	\
-    -I$(XPDIST)\public\jsurl	\
-    -I$(XPDIST)\public\certurl	\
-    -I$(XPDIST)\public\remoturl	\
-    -I$(XPDIST)\public\marimurl 
+    -I$(PUBLIC)\java	\
+    -I$(PUBLIC)\jtools   \
+    -I$(PUBLIC)\js       \
+    -I$(PUBLIC)\htmldlgs	\
+    -I$(PUBLIC)\security        \
+    -I$(PUBLIC)\network 	\
+    -I$(PUBLIC)\netcache 	\
+    -I$(PUBLIC)\abouturl 	\
+    -I$(PUBLIC)\dataurl	\
+    -I$(PUBLIC)\fileurl	\
+    -I$(PUBLIC)\ftpurl	\
+    -I$(PUBLIC)\gophurl	\
+    -I$(PUBLIC)\httpurl	\
+    -I$(PUBLIC)\jsurl	\
+    -I$(PUBLIC)\certurl	\
+    -I$(PUBLIC)\remoturl	\
+    -I$(PUBLIC)\marimurl 
 #!endif
 
 !endif

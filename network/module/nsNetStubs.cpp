@@ -19,7 +19,6 @@
 #include "nsNetStubs.h"
 
 #include "nspr.h"
-#include "xp_hash.h"
 #include "xp_file.h"
 #include "libi18n.h"
 #include "libevent.h"
@@ -27,7 +26,6 @@
 #include "net.h"
 
 extern "C" {
-#include "secnav.h"
 #include "preenc.h"
 };
 
@@ -261,29 +259,6 @@ PUBLIC void INTL_CCCReportMetaCharsetTag(MWContext *context, char *charset_tag)
 {
     MOZ_FUNCTION_STUB;
 }
-
-/*
- *---------------------------------------------------------------------------
- * From ns/cmd/winfe/authdll.cpp
- *---------------------------------------------------------------------------
- */
-char * WFE_BuildCompuserveAuthString(URL_Struct *URL_s)
-{
-    MOZ_FUNCTION_STUB;
-    return NULL;
-}
-
-
-int
-WFE_DoCompuserveAuthenticate(MWContext *context,
-                             URL_Struct *URL_s, 
-                             char *authenticate_header_value)
-{
-    MOZ_FUNCTION_STUB;
-    return NET_AUTH_FAILED_DONT_DISPLAY;
-}
-
-
 
 /*
  *---------------------------------------------------------------------------
@@ -521,19 +496,6 @@ IL_Type(const char *buf, int32 len)
  *---------------------------------------------------------------------------
  */
 
-/*
- * Create an HTML stream and generate HTML describing
- * the image cache.  Use "about:memory-cache" URL to acess.
- */
-int 
-IL_DisplayMemCacheInfoAsHTML(FO_Present_Types format_out, URL_Struct *urls,
-                             OPAQUE_CONTEXT *cx)
-{
-    MOZ_FUNCTION_STUB;
-    return 0;
-}
-
-
 char *
 IL_HTMLImageInfo(char *url_address)
 {
@@ -597,22 +559,6 @@ GH_SaveGlobalHistory(void)
     MOZ_FUNCTION_STUB;
 }
 
-
-
-/* create an HTML stream and push a bunch of HTML about
- * the global history
- */
-MODULE_PRIVATE int
-NET_DisplayGlobalHistoryInfoAsHTML(MWContext *context,
-                                   URL_Struct *URL_s,
-                                   int format_out)
-{
-    MOZ_FUNCTION_STUB;
-    return MK_UNABLE_TO_CONVERT;
-}
-
-
-
 /*
  *---------------------------------------------------------------------------
  * From ns/lib/libmisc/shist.c
@@ -652,35 +598,6 @@ LM_SkipWysiwygURLPrefix(const char *url_string)
     MOZ_FUNCTION_STUB;
     return NULL;
 }
-
-
-
-/*
- *---------------------------------------------------------------------------
- * From ns/lib/htmldlgs/htmldlgs.c
- *---------------------------------------------------------------------------
- */
-
-void
-XP_HandleHTMLPanel(URL_Struct *url)
-{
-    MOZ_FUNCTION_STUB;
-}
-
-
-void
-XP_HandleHTMLDialog(URL_Struct *url)
-{
-    MOZ_FUNCTION_STUB;
-}
-
-
-/*
- *---------------------------------------------------------------------------
- * From ns/nav-java/netscape/net/netStubs.c
- *---------------------------------------------------------------------------
- */
-
 
 /*
  *---------------------------------------------------------------------------
