@@ -1675,7 +1675,26 @@ GlobalWindowImpl::Prompt(const nsAReadableString& aMessage,
     aReturn.Assign(uniResult);
   }
   else {
-    // XXX: Null out the return string!!!
+    SetDOMStringToNull(aReturn);
+
+    // XXX: Since DOMString's can't be null yet we'll haveto do this here...
+
+    if (sXPConnect) {
+      nsCOMPtr<nsIXPCNativeCallContext> ncc;
+
+      sXPConnect->GetCurrentNativeCallContext(getter_AddRefs(ncc));
+
+      if (ncc) {
+        jsval *retval = nsnull;
+
+        rv = ncc->GetRetValPtr(&retval);
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        *retval = JSVAL_NULL;
+
+        ncc->SetReturnValueWasSet(PR_TRUE);
+      }
+    }
   }
 
   return rv;
