@@ -30,8 +30,8 @@ function DeleteAllFromTree
   table.length = 0;
 
   // redisplay
-  var oldCount = view._rowCount;
-  view._rowCount = 0;
+  var oldCount = view.rowCount;
+  view.rowCount = 0;
   tree.treeBoxObject.rowCountChanged(0, -oldCount);
 
 
@@ -61,7 +61,7 @@ function DeleteSelectedItemFromTree
         k++;
       }
       table.splice(j, k-j);
-      view._rowCount -= k - j;
+      view.rowCount -= k - j;
       tree.treeBoxObject.rowCountChanged(j, j - k);
     }
   }
