@@ -164,12 +164,6 @@ public:
                                ExprResult* aDefaultValue);
 
     /**
-     * Add a stylesheet parameter
-     */
-    nsresult addStyleSheetParameter(txExpandedName& aName,
-                                    ExprResult* aValue);
-
-    /**
      * Returns map on top of the stack of local variable-bindings
      */
     txVariableMap* getLocalVariables();
@@ -268,11 +262,6 @@ public:
      * Sets current template rule
      */
     void setCurrentTemplateRule(TemplateRule* aTemplateRule);
-
-    /**
-     * Determines if the given XSL node allows Whitespace stripping
-     */
-    MBool isXSLStripSpaceAllowed(Node* node);
 
     /**
      * Adds the set of names to the Whitespace preserving element set
@@ -392,8 +381,6 @@ public:
 
 private:
 
-    enum XMLSpaceMode {STRIP = 0, DEFAULT, PRESERVE};
-
     class MatchableTemplate {
     public:
         MatchableTemplate(Node* aTemplate, txPattern* aPattern,
@@ -506,11 +493,6 @@ private:
     Document* mRTFDocument;
     
     MBool mHaveDocumentElement;
-
-    /**
-     * Returns the closest xml:space value for the given node
-     */
-    XMLSpaceMode getXMLSpaceMode(Node* aNode);
 
 #ifdef TX_EXE
     txStreamXMLEventHandler* mStandaloneOutputHandler;

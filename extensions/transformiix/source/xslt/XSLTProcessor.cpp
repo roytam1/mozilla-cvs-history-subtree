@@ -249,8 +249,8 @@ txXSLTProcessor::processAction(Node* aAction,
     if (nodeType == Node::TEXT_NODE ||
         nodeType == Node::CDATA_SECTION_NODE) {
         const String& textValue = aAction->getNodeValue();
-        if (!aPs->isXSLStripSpaceAllowed(aAction) ||
-            !XMLUtils::isWhitespace(textValue)) {
+        if (!XMLUtils::isWhitespace(textValue) ||
+            XMLUtils::getXMLSpacePreserve(aAction)) {
             NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
             aPs->mResultHandler->characters(textValue);
         }
