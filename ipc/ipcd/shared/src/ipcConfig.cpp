@@ -43,7 +43,7 @@
 #include "prenv.h"
 #include "plstr.h"
 
-static const char kDefaultSocketPrefix[] = "/tmp/.mozilla";
+static const char kDefaultSocketPrefix[] = "/tmp/.mozilla-";
 static const char kDefaultSocketSuffix[] = "-ipc/ipcd";
 
 void IPC_GetDefaultSocketPath(char *buf, PRUint32 bufLen)
