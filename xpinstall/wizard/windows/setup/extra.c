@@ -931,10 +931,14 @@ HRESULT InitDlgSetupType(diST *diDialog)
   if((diDialog->szReadmeApp = NS_GlobalAlloc(MAX_BUF)) == NULL)
     return(1);
 
-  diDialog->stSetupType0.dwItems = 0;
-  diDialog->stSetupType1.dwItems = 0;
-  diDialog->stSetupType2.dwItems = 0;
-  diDialog->stSetupType3.dwItems = 0;
+  diDialog->stSetupType0.dwCItems = 0;
+  diDialog->stSetupType1.dwCItems = 0;
+  diDialog->stSetupType2.dwCItems = 0;
+  diDialog->stSetupType3.dwCItems = 0;
+  diDialog->stSetupType0.dwAItems = 0;
+  diDialog->stSetupType1.dwAItems = 0;
+  diDialog->stSetupType2.dwAItems = 0;
+  diDialog->stSetupType3.dwAItems = 0;
   if((diDialog->stSetupType0.szDescriptionShort = NS_GlobalAlloc(MAX_BUF)) == NULL)
     return(1);
   if((diDialog->stSetupType0.szDescriptionLong = NS_GlobalAlloc(MAX_BUF)) == NULL)
@@ -2692,25 +2696,29 @@ HRESULT ParseConfigIni(LPSTR lpszCmdLine)
   {
     dwSetupType     = ST_RADIO0;
     dwTempSetupType = dwSetupType;
-    SiCNodeSetItemsSelected(diSetupType.stSetupType0.dwItems, diSetupType.stSetupType0.dwItemsSelected);
+    SiCNodeSetItemsSelected(diSetupType.stSetupType0.dwCItems, diSetupType.stSetupType0.dwCItemsSelected);
+    SiCNodeSetItemsSelected(diSetupType.stSetupType0.dwAItems, diSetupType.stSetupType0.dwAItemsSelected);
   }
   else if((lstrcmpi(szBuf, "Setup Type 1") == 0) && diSetupType.stSetupType1.bVisible)
   {
     dwSetupType     = ST_RADIO1;
     dwTempSetupType = dwSetupType;
-    SiCNodeSetItemsSelected(diSetupType.stSetupType1.dwItems, diSetupType.stSetupType1.dwItemsSelected);
+    SiCNodeSetItemsSelected(diSetupType.stSetupType1.dwCItems, diSetupType.stSetupType1.dwCItemsSelected);
+    SiCNodeSetItemsSelected(diSetupType.stSetupType1.dwAItems, diSetupType.stSetupType1.dwAItemsSelected);
   }
   else if((lstrcmpi(szBuf, "Setup Type 2") == 0) && diSetupType.stSetupType2.bVisible)
   {
     dwSetupType     = ST_RADIO2;
     dwTempSetupType = dwSetupType;
-    SiCNodeSetItemsSelected(diSetupType.stSetupType2.dwItems, diSetupType.stSetupType2.dwItemsSelected);
+    SiCNodeSetItemsSelected(diSetupType.stSetupType2.dwCItems, diSetupType.stSetupType2.dwCItemsSelected);
+    SiCNodeSetItemsSelected(diSetupType.stSetupType2.dwAItems, diSetupType.stSetupType2.dwAItemsSelected);
   }
   else if((lstrcmpi(szBuf, "Setup Type 3") == 0) && diSetupType.stSetupType3.bVisible)
   {
     dwSetupType     = ST_RADIO3;
     dwTempSetupType = dwSetupType;
-    SiCNodeSetItemsSelected(diSetupType.stSetupType3.dwItems, diSetupType.stSetupType3.dwItemsSelected);
+    SiCNodeSetItemsSelected(diSetupType.stSetupType3.dwCItems, diSetupType.stSetupType3.dwCItemsSelected);
+    SiCNodeSetItemsSelected(diSetupType.stSetupType3.dwAItems, diSetupType.stSetupType3.dwAItemsSelected);
   }
   else
   {
@@ -2718,25 +2726,29 @@ HRESULT ParseConfigIni(LPSTR lpszCmdLine)
     {
       dwSetupType     = ST_RADIO0;
       dwTempSetupType = dwSetupType;
-      SiCNodeSetItemsSelected(diSetupType.stSetupType0.dwItems, diSetupType.stSetupType0.dwItemsSelected);
+      SiCNodeSetItemsSelected(diSetupType.stSetupType0.dwCItems, diSetupType.stSetupType0.dwCItemsSelected);
+      SiCNodeSetItemsSelected(diSetupType.stSetupType0.dwAItems, diSetupType.stSetupType0.dwAItemsSelected);
     }
     else if(diSetupType.stSetupType1.bVisible)
     {
       dwSetupType     = ST_RADIO1;
       dwTempSetupType = dwSetupType;
-      SiCNodeSetItemsSelected(diSetupType.stSetupType1.dwItems, diSetupType.stSetupType1.dwItemsSelected);
+      SiCNodeSetItemsSelected(diSetupType.stSetupType1.dwCItems, diSetupType.stSetupType1.dwCItemsSelected);
+      SiCNodeSetItemsSelected(diSetupType.stSetupType1.dwAItems, diSetupType.stSetupType1.dwAItemsSelected);
     }
     else if(diSetupType.stSetupType2.bVisible)
     {
       dwSetupType     = ST_RADIO2;
       dwTempSetupType = dwSetupType;
-      SiCNodeSetItemsSelected(diSetupType.stSetupType2.dwItems, diSetupType.stSetupType2.dwItemsSelected);
+      SiCNodeSetItemsSelected(diSetupType.stSetupType2.dwCItems, diSetupType.stSetupType2.dwCItemsSelected);
+      SiCNodeSetItemsSelected(diSetupType.stSetupType2.dwAItems, diSetupType.stSetupType2.dwAItemsSelected);
     }
     else if(diSetupType.stSetupType3.bVisible)
     {
       dwSetupType     = ST_RADIO3;
       dwTempSetupType = dwSetupType;
-      SiCNodeSetItemsSelected(diSetupType.stSetupType3.dwItems, diSetupType.stSetupType3.dwItemsSelected);
+      SiCNodeSetItemsSelected(diSetupType.stSetupType3.dwCItems, diSetupType.stSetupType3.dwCItemsSelected);
+      SiCNodeSetItemsSelected(diSetupType.stSetupType3.dwAItems, diSetupType.stSetupType3.dwAItemsSelected);
     }
   }
 
@@ -2989,22 +3001,45 @@ void STGetComponents(LPSTR szSection, st *stSetupType, LPSTR szFileIniConfig)
     stSetupType->bVisible = TRUE;
 
   dwIndex = 0;
-  stSetupType->dwItems = 0;
+  stSetupType->dwCItems = 0;
   itoa(dwIndex, szIndex, 10);
   lstrcpy(szKey, "C");
   lstrcat(szKey, szIndex);
   GetPrivateProfileString(szSection, szKey, "", szBuf, MAX_BUF, szFileIniConfig);
   while(*szBuf != '\0')
   {
+    /* hack used to determine the numerical value of the component */
     if(lstrlen(szBuf) > 8)
     {
-      ++stSetupType->dwItems;
-      stSetupType->dwItemsSelected[dwIndex] = atoi(&szBuf[9]);
+      ++stSetupType->dwCItems;
+      stSetupType->dwCItemsSelected[dwIndex] = atoi(&szBuf[9]);
     }
 
     ++dwIndex;
     itoa(dwIndex, szIndex, 10);
     lstrcpy(szKey, "C");
+    lstrcat(szKey, szIndex);
+    GetPrivateProfileString(szSection, szKey, "", szBuf, MAX_BUF, szFileIniConfig);
+  }
+
+  dwIndex = 0;
+  stSetupType->dwAItems = 0;
+  itoa(dwIndex, szIndex, 10);
+  lstrcpy(szKey, "A");
+  lstrcat(szKey, szIndex);
+  GetPrivateProfileString(szSection, szKey, "", szBuf, MAX_BUF, szFileIniConfig);
+  while(*szBuf != '\0')
+  {
+    /* hack used to determine the numerical value of the component */
+    if(lstrlen(szBuf) > 8)
+    {
+      ++stSetupType->dwAItems;
+      stSetupType->dwAItemsSelected[dwIndex] = atoi(&szBuf[9]);
+    }
+
+    ++dwIndex;
+    itoa(dwIndex, szIndex, 10);
+    lstrcpy(szKey, "A");
     lstrcat(szKey, szIndex);
     GetPrivateProfileString(szSection, szKey, "", szBuf, MAX_BUF, szFileIniConfig);
   }
