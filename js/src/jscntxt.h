@@ -35,6 +35,8 @@
 
 JS_BEGIN_EXTERN_C
 
+typedef enum GC_Flag { FORCE_GC, NO_GC, MAYBE_GC } GC_Flag;
+
 struct JSRuntime {
     /* Garbage collector state, used by jsgc.c. */
     JSArenaPool         gcArenaPool;
@@ -199,7 +201,7 @@ extern JSContext *
 js_NewContext(JSRuntime *rt, size_t stacksize);
 
 extern void
-js_DestroyContext(JSContext *cx, JSBool force_gc);
+js_DestroyContext(JSContext *cx, GC_Flag gcFlag);
 
 extern JSContext *
 js_ContextIterator(JSRuntime *rt, JSContext **iterp);
