@@ -50,7 +50,7 @@ $source_subdir =~ s|^$quoted_object_root/||;
 # will be relative to the top of the object tree.
 #
 for $makefile (@makefiles) {
-  $makefile = "$source_subdir$makefile";
+    $makefile = my_noupwards("$source_subdir$makefile");
 }
 
 create_directories(@makefiles);
@@ -277,4 +277,28 @@ sub run_config_status {
     $ENV{CONFIG_FILES}= join ' ', @unhandled;
     system "./config.status";
   }
+}
+
+sub my_noupwards($) {
+    my ($file) = @_;
+    my (@outlist, $dir, $lastdot);
+
+    # Assume that the path begins with ..
+    $lastdot = 1;
+
+    # Do what File::Spec::Unix->no_upwards should do
+    foreach $dir (split(/\//,$file)) {
+	if ($dir eq '..') {
+	    if ($lastdot) {
+		push @outlist, $dir;
+	    } else {
+		pop @outlist;
+	    }
+	} else {
+	    push @outlist, $dir;
+	    $lastdot = 0;
+	}
+    }
+    $file = join '/',@outlist;
+    return $file;
 }
