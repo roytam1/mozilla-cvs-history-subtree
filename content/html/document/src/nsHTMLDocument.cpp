@@ -69,7 +69,6 @@
 #include "nsICodebasePrincipal.h"
 #include "nsIAggregatePrincipal.h"
 #include "nsIScriptSecurityManager.h"
-#include "nsJSUtils.h"
 #include "nsDOMPropEnums.h"
 #include "nsIScrollableView.h"
 

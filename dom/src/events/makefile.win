@@ -27,6 +27,8 @@ MODULE=raptor
 
 DEFINES=-D_IMPL_NS_DOM -DWIN32_LEAN_AND_MEAN
 
+LINCS= -I..\base
+
 CPPSRCS =				\
 	nsJSEventListener.cpp		\
 	nsJSDOMEventListener.cpp	\

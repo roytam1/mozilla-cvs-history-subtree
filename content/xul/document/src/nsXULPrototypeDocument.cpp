@@ -40,7 +40,7 @@
 #include "nsISupportsArray.h"
 #include "nsIURI.h"
 #include "nsIXULPrototypeDocument.h"
-#include "nsJSUtils.h"
+#include "jsapi.h"
 #include "nsString.h"
 #include "nsVoidArray.h"
 #include "nsXULElement.h"
