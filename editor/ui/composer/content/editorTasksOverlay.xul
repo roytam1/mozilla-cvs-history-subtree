@@ -67,10 +67,6 @@
     <toolbarbutton class="taskbutton" id="mini-comp" command="Tasks:Editor" 
                    tooltiptext="&taskComposer.tooltip;"/>
   </statusbarpanel>
-  
-  <menupopup id="windowPopup">
-    <menuitem label="&editorCmd.label;" accesskey="&editorCmd.accesskey;" key="key_editor" command="Tasks:Editor" id="tasksMenuEditor" insertafter="IMMenuItem,tasksMenuNavigator" class="menuitem-iconic icon-composer16 menu-iconic"/>
-  </menupopup>
-  
+    
 </overlay>         
 
