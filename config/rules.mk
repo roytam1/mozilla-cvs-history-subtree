@@ -516,14 +516,10 @@ ifdef LIBRARY_NAME
 ifdef EXPORT_LIBRARY
 ifdef IS_COMPONENT
 ifndef NO_STATIC_LIB
-	@if ! grep -c "^${LIBRARY_NAME}$$" $(FINAL_LINK_COMPS) 2>/dev/null; then \
-		echo "$(LIBRARY_NAME)" >> $(FINAL_LINK_COMPS); \
-	fi
+	@$(PERL) $(topsrcdir)/config/build-list.pl $(FINAL_LINK_COMPS) $(LIBRARY_NAME)
 endif
 else
-	@if ! grep -c "^${LIBRARY_NAME}$$" $(FINAL_LINK_LIBS) 2>/dev/null; then \
-		echo "$(LIBRARY_NAME)" >> $(FINAL_LINK_LIBS); \
-	fi
+	$(PERL) $(topsrcdir)/config/build-list.pl $(FINAL_LINK_LIBS) $(LIBRARY_NAME)
 endif # IS_COMPONENT
 endif # EXPORT_LIBRARY
 endif # LIBRARY_NAME
