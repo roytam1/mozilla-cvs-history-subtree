@@ -51,6 +51,7 @@
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kIPluginManagerIID, NS_IPLUGINMANAGER_IID);
 static NS_DEFINE_IID(kIPluginManager2IID, NS_IPLUGINMANAGER2_IID);
+static NS_DEFINE_IID(kINetworkManagerIID, NS_INETWORKMANAGER_IID);
 static NS_DEFINE_IID(kIJNIEnvIID, NS_IJNIENV_IID); 
 static NS_DEFINE_IID(kILiveConnectPluginInstancePeerIID, NS_ILIVECONNECTPLUGININSTANCEPEER_IID);
 static NS_DEFINE_IID(kIWindowlessPluginInstancePeerIID, NS_IWINDOWLESSPLUGININSTANCEPEER_IID);
@@ -99,25 +100,15 @@ nsresult fromNPError[] = {
 nsPluginManager* thePluginManager = NULL;
 
 nsPluginManager::nsPluginManager(nsISupports* outer)
-    : 
-#if 0
-    fJVMMgr(NULL), 
-#endif
-    fMalloc(NULL), fAllocatedMenuIDs(NULL)
+    : fJVMMgr(NULL), fMalloc(NULL), fAllocatedMenuIDs(NULL)
 {
-#if 0
     NS_INIT_AGGREGATED(outer);
-#else
-    NS_INIT_REFCNT();
-#endif
 }
 
 nsPluginManager::~nsPluginManager(void)
 {
-#if 0
     fJVMMgr->Release();
     fJVMMgr = NULL;
-#endif
     fMalloc->Release();
     fMalloc = NULL;
 
@@ -129,12 +120,7 @@ nsPluginManager::~nsPluginManager(void)
 #endif
 }
 
-#if 0
 NS_IMPL_AGGREGATED(nsPluginManager);
-#else
-NS_IMPL_ADDREF(nsPluginManager)
-NS_IMPL_RELEASE(nsPluginManager)
-#endif
 
 NS_METHOD
 nsPluginManager::Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr)
@@ -149,28 +135,17 @@ nsPluginManager::Create(nsISupports* outer, const nsIID& aIID, void* *aInstanceP
     return result;
 }
 
-int varMap[] = {
-    (int)NPNVxDisplay,                  // nsPluginManagerVariable_XDisplay = 1,
-    (int)NPNVxtAppContext,              // nsPluginManagerVariable_XtAppContext,
-    (int)NPNVnetscapeWindow,            // nsPluginManagerVariable_NetscapeWindow,
-    (int)NPPVpluginWindowBool,          // nsPluginInstancePeerVariable_WindowBool,
-    (int)NPPVpluginTransparentBool,     // nsPluginInstancePeerVariable_TransparentBool,
-    (int)NPPVjavaClass,                 // nsPluginInstancePeerVariable_JavaClass,
-    (int)NPPVpluginWindowSize,          // nsPluginInstancePeerVariable_WindowSize,
-    (int)NPPVpluginTimerInterval,       // nsPluginInstancePeerVariable_TimerInterval
-};
-
 NS_METHOD
 nsPluginManager::GetValue(nsPluginManagerVariable variable, void *value)
 {
-    NPError err = npn_getvalue(NULL, (NPNVariable)varMap[(int)variable], value);
+    NPError err = npn_getvalue(NULL, (NPNVariable)variable, value);
     return fromNPError[err];
 }
 
 NS_METHOD
 nsPluginManager::SetValue(nsPluginManagerVariable variable, void *value)
 {
-    NPError err = npn_setvalue(NULL, (NPPVariable)varMap[(int)variable], value);
+    NPError err = npn_setvalue(NULL, (NPPVariable)variable, value);
     return fromNPError[err];
 }
 
@@ -189,11 +164,7 @@ nsPluginManager::UserAgent(const char* *resultingAgentString)
 }
 
 NS_METHOD
-#if 0
 nsPluginManager::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr) 
-#else
-nsPluginManager::QueryInterface(const nsIID& aIID, void** aInstancePtr) 
-#endif
 {
     if (NULL == aInstancePtr) {                                            
         return NS_ERROR_NULL_POINTER;                                        
@@ -201,7 +172,12 @@ nsPluginManager::QueryInterface(const nsIID& aIID, void** aInstancePtr)
     if (aIID.Equals(kIPluginManagerIID) || 
         aIID.Equals(kIPluginManager2IID) ||
         aIID.Equals(kISupportsIID)) {
-        *aInstancePtr = (void*) this; 
+        *aInstancePtr = (nsIPluginManager*) this; 
+        AddRef(); 
+        return NS_OK; 
+    } 
+    if (aIID.Equals(kINetworkManagerIID)) {
+        *aInstancePtr = (nsINetworkManager*) this; 
         AddRef(); 
         return NS_OK; 
     } 
@@ -220,19 +196,12 @@ nsPluginManager::QueryInterface(const nsIID& aIID, void** aInstancePtr)
 //        AddRef();     // XXX should the plugin instance peer and the env be linked?
         return NS_OK; 
     }
-    if (aIID.Equals(kISupportsIID)) {
-        *aInstancePtr = (void*) ((nsIPluginManager*)this); 
-        AddRef(); 
-        return NS_OK; 
-    } 
     // Aggregates...
-#if 0
     nsIJVMManager* jvmMgr = GetJVMMgr(aIID);
     if (jvmMgr) {
         *aInstancePtr = (void*) ((nsISupports*)jvmMgr);
         return NS_OK; 
     }
-#endif
     if (fMalloc == NULL) {
         if (nsMalloc::Create((nsIPluginManager*)this, kISupportsIID,
                              (void**)&fMalloc) != NS_OK)
@@ -241,7 +210,6 @@ nsPluginManager::QueryInterface(const nsIID& aIID, void** aInstancePtr)
     return fMalloc->QueryInterface(aIID, aInstancePtr);
 }
 
-#if 0
 nsIJVMManager*
 nsPluginManager::GetJVMMgr(const nsIID& aIID)
 {
@@ -258,7 +226,6 @@ nsPluginManager::GetJVMMgr(const nsIID& aIID)
 #endif
     return result;
 }
-#endif
 
 NS_METHOD
 nsPluginManager::BeginWaitCursor(void)
@@ -472,13 +439,55 @@ nsPluginManager::ProcessNextEvent(PRBool *bEventHandled)
   		*bEventHandled = npl_ProcessNextEventProc(npl_ProcessNextEventData);
 	return NS_OK;
 #else 
-    *bEventHandled = PR_TRUE;
+    *bEventHandled = PR_FALSE;
     return NS_OK;
 #endif
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // from nsINetworkManager:
+
+#include "plevent.h"
+
+extern "C" {
+extern PREventQueue* mozilla_event_queue;
+extern PRThread* mozilla_thread;
+};
+
+struct GetURLEvent {
+    PLEvent event;
+    nsPluginInstancePeer* peer;
+    const char* url;
+    const char* target;
+    void* notifyData;
+    const char* altHost;
+    const char* referrer;
+    PRBool forceJSEnabled;
+};
+
+static void*
+HandleGetURLEvent(PLEvent* event)
+{
+    PR_ASSERT(PR_CurrentThread() == mozilla_thread);
+    GetURLEvent* e = (GetURLEvent*)event;
+    NPP npp = e->peer->GetNPP();
+    NPError rslt = np_geturlinternal(npp,
+                                     e->url,
+                                     e->target,
+                                     e->altHost,
+                                     e->referrer,
+                                     e->forceJSEnabled,
+                                     e->notifyData != NULL,
+                                     e->notifyData);
+    return (void*)rslt;
+}
+
+static void
+DestroyGetURLEvent(PLEvent* event)
+{
+    GetURLEvent* e = (GetURLEvent*)event;
+    PR_Free(event);
+}
 
 NS_METHOD
 nsPluginManager::GetURL(nsISupports* peer, const char* url, const char* target,
@@ -488,18 +497,80 @@ nsPluginManager::GetURL(nsISupports* peer, const char* url, const char* target,
     NPError rslt = NPERR_INVALID_PARAM;
     nsPluginInstancePeer* instPeer = NULL;
     if (peer->QueryInterface(kPluginInstancePeerCID, (void**)&instPeer) == NS_OK) {
-        NPP npp = instPeer->GetNPP();
-        rslt = np_geturlinternal(npp,
-                                 url,
-                                 target,
-                                 altHost,
-                                 referrer,
-                                 forceJSEnabled,
-                                 notifyData != NULL,
-                                 notifyData);
+        if (PR_CurrentThread() == mozilla_thread) {
+            NPP npp = instPeer->GetNPP();
+            rslt = np_geturlinternal(npp,
+                                     url,
+                                     target,
+                                     altHost,
+                                     referrer,
+                                     forceJSEnabled,
+                                     notifyData != NULL,
+                                     notifyData);
+        }
+        else {
+            GetURLEvent* e = PR_NEW(GetURLEvent);
+            if (e == NULL) {
+                rslt = NPERR_OUT_OF_MEMORY_ERROR;
+            }
+            else {
+                PL_InitEvent(&e->event, NULL, HandleGetURLEvent, DestroyGetURLEvent);
+                e->peer = instPeer;
+                e->url = url;
+                e->target = target;
+                e->notifyData = notifyData;
+                e->altHost = altHost;
+                e->referrer = referrer;
+                e->forceJSEnabled = forceJSEnabled;
+                rslt = (NPError)PL_PostSynchronousEvent(mozilla_event_queue, &e->event);
+            }
+        }
         instPeer->Release();
     }
     return fromNPError[rslt];
+}
+
+struct PostURLEvent {
+    PLEvent event;
+    nsPluginInstancePeer* peer;
+    const char* url;
+    const char* target;
+    PRUint32 postDataLen;
+    const char* postData;
+    PRBool isFile;
+    void* notifyData;
+    const char* altHost;
+    const char* referrer;
+    PRBool forceJSEnabled;
+    PRUint32 postHeadersLen;
+    const char* postHeaders;
+};
+
+static void*
+HandlePostURLEvent(PLEvent* event)
+{
+    PR_ASSERT(PR_CurrentThread() == mozilla_thread);
+    PostURLEvent* e = (PostURLEvent*)event;
+    NPP npp = e->peer->GetNPP();
+    NPError rslt = np_posturlinternal(npp,
+                                      e->url, 
+                                      e->target,
+                                      e->altHost,
+                                      e->referrer,
+                                      e->forceJSEnabled,
+                                      e->postDataLen,
+                                      e->postData,
+                                      e->isFile,
+                                      e->notifyData != NULL,
+                                      e->notifyData);
+    return (void*)rslt;
+}
+
+static void
+DestroyPostURLEvent(PLEvent* event)
+{
+    PostURLEvent* e = (PostURLEvent*)event;
+    PR_Free(event);
 }
 
 NS_METHOD
@@ -513,19 +584,43 @@ nsPluginManager::PostURL(nsISupports* peer, const char* url, const char* target,
     NPError rslt = NPERR_INVALID_PARAM;
     nsPluginInstancePeer* instPeer = NULL;
     if (peer->QueryInterface(kPluginInstancePeerCID, (void**)&instPeer) == NS_OK) {
-        NPP npp = instPeer->GetNPP();
-        PR_ASSERT(postHeaders == NULL); // XXX need to deal with postHeaders
-        rslt = np_posturlinternal(npp,
-                                  url, 
-                                  target,
-                                  altHost,
-                                  referrer,
-                                  forceJSEnabled,
-                                  postDataLen,
-                                  postData,
-                                  isFile,
-                                  notifyData != NULL,
-                                  notifyData);
+        if (PR_CurrentThread() == mozilla_thread) {
+            NPP npp = instPeer->GetNPP();
+            PR_ASSERT(postHeaders == NULL); // XXX need to deal with postHeaders
+            rslt = np_posturlinternal(npp,
+                                      url, 
+                                      target,
+                                      altHost,
+                                      referrer,
+                                      forceJSEnabled,
+                                      postDataLen,
+                                      postData,
+                                      isFile,
+                                      notifyData != NULL,
+                                      notifyData);
+        }
+        else {
+            PostURLEvent* e = PR_NEW(PostURLEvent);
+            if (e == NULL) {
+                rslt = NPERR_OUT_OF_MEMORY_ERROR;
+            }
+            else {
+                PL_InitEvent(&e->event, NULL, HandlePostURLEvent, DestroyPostURLEvent);
+                e->peer = instPeer;
+                e->url = url;
+                e->target = target;
+                e->notifyData = notifyData;
+                e->altHost = altHost;
+                e->referrer = referrer;
+                e->forceJSEnabled = forceJSEnabled;
+                e->postDataLen = postDataLen;
+                e->postData = postData;
+                e->isFile = isFile;
+                e->postHeadersLen = postHeadersLen;
+                e->postHeaders = postHeaders;
+                rslt = (NPError)PL_PostSynchronousEvent(mozilla_event_queue, &e->event);
+            }
+        }
         instPeer->Release();
     }
     return fromNPError[rslt];
@@ -673,14 +768,14 @@ nsPluginInstancePeer::QueryInterface(const nsIID& aIID, void** aInstancePtr)
 NS_METHOD
 nsPluginInstancePeer::GetValue(nsPluginInstancePeerVariable variable, void *value)
 {
-    NPError err = npn_getvalue(fNPP, (NPNVariable)varMap[(int)variable], value);
+    NPError err = npn_getvalue(fNPP, (NPNVariable)variable, value);
     return fromNPError[err];
 }
 
 NS_METHOD
 nsPluginInstancePeer::SetValue(nsPluginInstancePeerVariable variable, void *value)
 {
-    NPError err = npn_setvalue(fNPP, (NPPVariable)varMap[(int)variable], value);
+    NPError err = npn_setvalue(fNPP, (NPPVariable)variable, value);
     return fromNPError[err];
 }
 
