@@ -376,7 +376,7 @@ int FilesTest::IterateDirectoryChildren(nsFileSpec& startChild)
     nsFilePath grandparentPath(grandparent);
     
     mConsole << "Forwards listing of " << (const char*)grandparentPath << ":" << nsEndl;
-    for (nsDirectoryIterator i(grandparent, +1); i; i++)
+    for (nsDirectoryIterator i(grandparent, +1); i.Exists(); i++)
     {
     	char* itemName = ((nsFileSpec&)i).GetLeafName();
     	mConsole << '\t' << itemName << nsEndl;
@@ -384,7 +384,7 @@ int FilesTest::IterateDirectoryChildren(nsFileSpec& startChild)
     }
 
     mConsole << "Backwards listing of " << (const char*)grandparentPath << ":" << nsEndl;
-    for (nsDirectoryIterator j(grandparent, -1); j; j--)
+    for (nsDirectoryIterator j(grandparent, -1); j.Exists(); j--)
     {
     	char* itemName = ((nsFileSpec&)j).GetLeafName();
     	mConsole << '\t' << itemName << nsEndl;

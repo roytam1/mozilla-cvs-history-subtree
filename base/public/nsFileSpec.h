@@ -126,12 +126,13 @@
 #define NS_NAMESPACE_PROTOTYPE
 #define NS_NAMESPACE namespace
 #define NS_NAMESPACE_END
-
+#define NS_EXPLICIT explicit
 #else
 
 #define NS_NAMESPACE_PROTOTYPE static
 #define NS_NAMESPACE struct
 #define NS_NAMESPACE_END ;
+#define NS_EXPLICIT
 
 #endif
 //=========================== End Compiler-specific macros ===============================
@@ -178,10 +179,10 @@ class NS_BASE nsFileSpec
 {
     public:
                                 nsFileSpec();
-        explicit                nsFileSpec(const char* inString, PRBool inCreateDirs = PR_FALSE);
-        explicit                nsFileSpec(const nsFilePath& inPath);
-        explicit                nsFileSpec(const nsFileURL& inURL);
-        explicit                nsFileSpec(const nsPersistentFileDescriptor& inURL);
+        NS_EXPLICIT             nsFileSpec(const char* inString, PRBool inCreateDirs = PR_FALSE);
+        NS_EXPLICIT             nsFileSpec(const nsFilePath& inPath);
+        NS_EXPLICIT             nsFileSpec(const nsFileURL& inURL);
+        NS_EXPLICIT             nsFileSpec(const nsPersistentFileDescriptor& inURL);
                                 nsFileSpec(const nsFileSpec& inPath);
         virtual                 ~nsFileSpec();
 
@@ -307,9 +308,9 @@ class NS_BASE nsFileURL
 {
     public:
                                 nsFileURL(const nsFileURL& inURL);
-        explicit                nsFileURL(const char* inString, PRBool inCreateDirs = PR_FALSE);
-        explicit                nsFileURL(const nsFilePath& inPath);
-        explicit                nsFileURL(const nsFileSpec& inPath);
+        NS_EXPLICIT             nsFileURL(const char* inString, PRBool inCreateDirs = PR_FALSE);
+        NS_EXPLICIT             nsFileURL(const nsFilePath& inPath);
+        NS_EXPLICIT             nsFileURL(const nsFileSpec& inPath);
         virtual                 ~nsFileURL();
 
 //        nsString             GetString() const { return mPath; }
@@ -350,9 +351,9 @@ class NS_BASE nsFilePath
 {
     public:
                                 nsFilePath(const nsFilePath& inPath);
-        explicit                nsFilePath(const char* inString, PRBool inCreateDirs = PR_FALSE);
-        explicit                nsFilePath(const nsFileURL& inURL);
-        explicit                nsFilePath(const nsFileSpec& inPath);
+        NS_EXPLICIT             nsFilePath(const char* inString, PRBool inCreateDirs = PR_FALSE);
+        NS_EXPLICIT             nsFilePath(const nsFileURL& inURL);
+        NS_EXPLICIT             nsFilePath(const nsFileSpec& inPath);
         virtual                 ~nsFilePath();
 
                                 
@@ -448,7 +449,7 @@ class NS_BASE nsDirectoryIterator
 	// Macintosh currently doesn't allocate, so needn't clean up.
 	    virtual                 ~nsDirectoryIterator();
 #endif
-	                            operator bool() const { return mExists; } // MUST be bool.
+	    PRBool                  Exists() const { return mExists; }
 	    nsDirectoryIterator&    operator ++(); // moves to the next item, if any.
 	    nsDirectoryIterator&    operator ++(int) { return ++(*this); } // post-increment.
 	    nsDirectoryIterator&    operator --(); // moves to the previous item, if any.
