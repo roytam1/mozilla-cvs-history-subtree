@@ -414,17 +414,17 @@ static JSJCallbacks jsj_callbacks = {
     get_java_vm_impl
 };
 
-void
+PRBool
 nsJVMMgr::JSJInit()
 {
     nsIJVMPlugin* pJVMPI = NULL;
+    PRBool        bJSJInited = PR_FALSE;
     
     if(fJSJavaVM == NULL)
     {
-        JSJ_Init(&jsj_callbacks);
-
         if( (pJVMPI = GetJVMPlugin()) != NULL)
         {
+            JSJ_Init(&jsj_callbacks);
             if (StartupJVM() == nsJVMStatus_Running) {
                 const char* classpath = NULL;
                 nsresult err = pJVMPI->GetClassPath(&classpath);
@@ -432,8 +432,15 @@ nsJVMMgr::JSJInit()
                 fJSJavaVM = JSJ_ConnectToJavaVM(JVM_GetJavaVM(), classpath);
             }
             pJVMPI->Release();
+            bJSJInited = PR_TRUE;
         }
     }
+    else
+    {
+       bJSJInited = PR_TRUE;
+    }
+
+    return bJSJInited;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
