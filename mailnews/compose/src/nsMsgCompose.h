@@ -182,7 +182,7 @@ public:
     NS_IMETHOD ConvertToPlainText(PRBool formatflowed = PR_FALSE);
 
 private:
-    NS_IMETHODIMP QuoteStreamListener::InsertToCompose(nsIEditorShell *aEditorShell, PRBool aHTMLEditor);
+    NS_IMETHOD InsertToCompose(nsIEditorShell *aEditorShell, PRBool aHTMLEditor);
     nsWeakPtr                 mWeakComposeObj;
     nsString       				mAuthor;
     nsString       				mQuote;
