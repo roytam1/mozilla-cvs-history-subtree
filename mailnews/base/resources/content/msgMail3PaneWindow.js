@@ -630,6 +630,7 @@ function OnLoadMessenger()
   InitPanes();
 
   accountManager.setSpecialFolders();
+  accountManager.loadVirtualFolders();
   accountManager.addIncomingServerListener(gThreePaneIncomingServerListener);
 
   AddToSession();

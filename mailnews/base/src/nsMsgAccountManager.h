@@ -84,6 +84,7 @@ private:
   PRBool m_haveShutdown;
   PRBool m_shutdownInProgress;
   PRBool m_userAuthenticated;
+  PRBool m_loadingVirtualFolders;
 
   /* we call FindServer() a lot.  so cache the last server found */
   nsCOMPtr <nsIMsgIncomingServer> m_lastFindServerResult;
@@ -182,7 +183,6 @@ private:
 
   // handle virtual folders
   nsresult GetVirtualFoldersFile(nsCOMPtr<nsILocalFile>& file);
-  nsresult LoadVirtualFolders();
   nsresult WriteLineToOutputStream(const char *prefix, const char * line, nsIOutputStream *outputStream);
 
   static void getUniqueKey(const char* prefix,

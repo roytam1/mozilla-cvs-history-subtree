@@ -823,6 +823,7 @@ function delayedOnLoadMessenger()
   InitPanes();
 
   accountManager.setSpecialFolders();
+  accountManager.loadVirtualFolders();
   accountManager.addIncomingServerListener(gThreePaneIncomingServerListener);
 
   AddToSession();
