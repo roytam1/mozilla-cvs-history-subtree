@@ -54,7 +54,6 @@
 #include "nsVoidArray.h"
 #include "prprf.h"
 
-static nsresult RecursiveCopy(nsIFile* srcDir, nsIFile* destDir); // helper routine
 static PRUint32 StringHash(const char *ubuf);
 nsresult NS_MsgHashIfNecessary(nsCString &name);
 
@@ -88,19 +87,107 @@ struct PrefBranchStruct {
   };
 };
 
-NS_IMPL_ISUPPORTS1(nsSeamonkeyProfileMigrator, nsIMailProfileMigrator)
+struct fileTransactionEntry {
+  nsCOMPtr<nsIFile> srcFile;
+  nsCOMPtr<nsIFile> destFile;
+};
+
+NS_IMPL_ISUPPORTS2(nsSeamonkeyProfileMigrator, nsIMailProfileMigrator, nsITimerCallback)
+
 
 nsSeamonkeyProfileMigrator::nsSeamonkeyProfileMigrator()
 {
   mObserverService = do_GetService("@mozilla.org/observer-service;1");
+
+  // create the array we'll be using to keep track of the asynchronous file copy routines
+  mFileCopyTransactions = new nsVoidArray();
+  mFileCopyTransactionIndex = 0;
+  mMaxProgress = LL_ZERO;
+  mCurrentProgress = LL_ZERO;
 }
 
 nsSeamonkeyProfileMigrator::~nsSeamonkeyProfileMigrator()
-{
+{           
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// nsIBrowserProfileMigrator
+// nsITimerCallback
+
+NS_IMETHODIMP
+nsSeamonkeyProfileMigrator::Notify(nsITimer *timer)
+{
+  CopyNextFolder();
+  return NS_OK;
+}
+
+void nsSeamonkeyProfileMigrator::CopyNextFolder() 
+{
+  if (mFileCopyTransactionIndex < mFileCopyTransactions->Count())
+  {
+    PRUint32 percentage = 0;
+    fileTransactionEntry* fileTransaction = (fileTransactionEntry*) mFileCopyTransactions->SafeElementAt(mFileCopyTransactionIndex++);
+    if (fileTransaction) // copy the file
+    {
+      fileTransaction->srcFile->CopyTo(fileTransaction->destFile, nsString());
+
+      // add to our current progress
+      PRInt64 fileSize;
+      fileTransaction->srcFile->GetFileSize(&fileSize);
+      LL_ADD(mCurrentProgress, mCurrentProgress, fileSize);
+
+      PRInt64 percentDone;
+      LL_MUL(percentDone, mCurrentProgress, 100);
+
+      LL_DIV(percentDone, percentDone, mMaxProgress);
+      
+      LL_L2UI(percentage, percentDone);
+
+      nsAutoString index;
+      index.AppendInt( percentage ); 
+
+      NOTIFY_OBSERVERS(MIGRATION_PROGRESS, index.get());
+    }
+    // fire a timer to handle the next one. 
+    mFileIOTimer = do_CreateInstance("@mozilla.org/timer;1");
+    // if the progress = 100% let's pause for a second or two with a finished progessmeter before we move on
+    mFileIOTimer->InitWithCallback(NS_STATIC_CAST(nsITimerCallback *, this), percentage == 100 ? 500 : 0, nsITimer::TYPE_ONE_SHOT);
+  } else
+    EndCopyFolders();
+  
+  return;
+}
+
+void nsSeamonkeyProfileMigrator::EndCopyFolders() 
+{
+  // clear out the file transaction array
+  if (mFileCopyTransactions)
+  {
+    PRUint32 count = mFileCopyTransactions->Count();
+    for (PRUint32 i = 0; i < count; ++i) 
+    {
+      fileTransactionEntry* fileTransaction = (fileTransactionEntry*) mFileCopyTransactions->ElementAt(i);
+      if (fileTransaction)
+      {
+        fileTransaction->srcFile = nsnull;
+        fileTransaction->destFile = nsnull;
+        delete fileTransaction;
+      }
+    }
+  
+    mFileCopyTransactions->Clear();
+    delete mFileCopyTransactions;
+  }
+
+  // notify the UI that we are done with the migration process
+  nsAutoString index;
+  index.AppendInt(nsIMailProfileMigrator::MAILDATA); 
+  NOTIFY_OBSERVERS(MIGRATION_ITEMAFTERMIGRATE, index.get());
+
+  NOTIFY_OBSERVERS(MIGRATION_ENDED, nsnull);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// nsIMailProfileMigrator
 
 NS_IMETHODIMP
 nsSeamonkeyProfileMigrator::Migrate(PRUint16 aItems, nsIProfileStartup* aStartup, const PRUnichar* aProfile)
@@ -127,7 +214,28 @@ nsSeamonkeyProfileMigrator::Migrate(PRUint16 aItems, nsIProfileStartup* aStartup
   COPY_DATA(CopyJunkTraining, aReplace, nsIMailProfileMigrator::JUNKTRAINING);
   COPY_DATA(CopyPasswords,    aReplace, nsIMailProfileMigrator::PASSWORDS);
 
-  NOTIFY_OBSERVERS(MIGRATION_ENDED, nsnull);
+  // the last thing to do is to actually copy over any mail folders we have marked for copying
+  // we want to do this last and it will be asynchronous so the UI doesn't freeze up while we perform 
+  // this potentially very long operation. 
+  
+  nsAutoString index;
+  index.AppendInt(nsIMailProfileMigrator::MAILDATA); 
+  NOTIFY_OBSERVERS(MIGRATION_ITEMBEFOREMIGRATE, index.get());
+
+  // Generate the max progress value now that we know all of the files we need to copy
+  PRUint32 count = mFileCopyTransactions->Count();
+  for (PRUint32 i = 0; i < count; ++i) 
+  {
+    fileTransactionEntry* fileTransaction = (fileTransactionEntry*) mFileCopyTransactions->ElementAt(i);
+    if (fileTransaction)
+    {
+      PRInt64 fileSize; 
+      fileTransaction->srcFile->GetFileSize(&fileSize);
+      LL_ADD(mMaxProgress, mMaxProgress, fileSize);
+    }
+  }
+
+  CopyNextFolder();
 
   return rv;
 }
@@ -304,12 +412,15 @@ nsSeamonkeyProfileMigrator::PrefTransform gTransforms[] = {
   MAKESAMETYPEPREFTRANSFORM("mailnews.headers.showOrganization",        Bool),
   MAKESAMETYPEPREFTRANSFORM("mail.wrap_long_lines",                     Bool),
   MAKESAMETYPEPREFTRANSFORM("news.wrap_long_lines",                     Bool),
+  MAKESAMETYPEPREFTRANSFORM("mailnews.customHeaders",                   String),
   MAKESAMETYPEPREFTRANSFORM("mail.default_html_action",                 Int),
   MAKESAMETYPEPREFTRANSFORM("mail.forward_message_mode",                Int),
   MAKESAMETYPEPREFTRANSFORM("mail.SpellCheckBeforeSend",                Bool),
   MAKESAMETYPEPREFTRANSFORM("mail.warn_on_send_accel_key",              Bool),
   MAKESAMETYPEPREFTRANSFORM("mailnews.html_domains",                    String),
   MAKESAMETYPEPREFTRANSFORM("mailnews.plaintext_domains",               String),
+  MAKESAMETYPEPREFTRANSFORM("mailnews.headers.showUserAgent",           Bool), 
+  MAKESAMETYPEPREFTRANSFORM("mailnews.headers.showOrganization",        Bool), 
   MAKESAMETYPEPREFTRANSFORM("mail.biff.play_sound",                     Bool),
   MAKESAMETYPEPREFTRANSFORM("mail.biff.play_sound.type",                Int),
   MAKESAMETYPEPREFTRANSFORM("mail.biff.play_sound.url",                 String),
@@ -332,8 +443,14 @@ nsSeamonkeyProfileMigrator::PrefTransform gTransforms[] = {
   MAKESAMETYPEPREFTRANSFORM("mail.accountmanager.accounts",             String),
   MAKESAMETYPEPREFTRANSFORM("mail.accountmanager.defaultaccount",       String),
   MAKESAMETYPEPREFTRANSFORM("mail.accountmanager.localfoldersserver",   String), 
-
   MAKESAMETYPEPREFTRANSFORM("mail.smtp.defaultserver",   String), 
+
+  MAKESAMETYPEPREFTRANSFORM("msgcompose.font_face",                     String),
+  MAKESAMETYPEPREFTRANSFORM("msgcompose.font_size",                     String),
+  MAKESAMETYPEPREFTRANSFORM("msgcompose.text_color",                    String),
+  MAKESAMETYPEPREFTRANSFORM("msgcompose.background_color",              String),
+
+  MAKEPREFTRANSFORM("mail.pane_config","mail.pane_config.dynamic", Int, Int)
 };
 
 
@@ -440,10 +557,6 @@ nsresult nsSeamonkeyProfileMigrator::CopyMailFolders(nsVoidArray* aMailServers, 
   // for that server. We need to do two things for that case...
   // (1) Fix up the directory path for the new profile
   // (2) copy the mail folder data from the source directory pref to the destination directory pref
-
-  nsAutoString index;
-  index.AppendInt(nsIMailProfileMigrator::MAILDATA); 
-  NOTIFY_OBSERVERS(MIGRATION_ITEMBEFOREMIGRATE, index.get());
 
   nsresult rv = NS_OK;
 
@@ -553,8 +666,6 @@ nsresult nsSeamonkeyProfileMigrator::CopyMailFolders(nsVoidArray* aMailServers, 
     }
   }
 
-  NOTIFY_OBSERVERS(MIGRATION_ITEMAFTERMIGRATE, index.get());
-
   return NS_OK;
 }
 
@@ -565,8 +676,7 @@ nsSeamonkeyProfileMigrator::CopyPreferences(PRBool aReplace)
   if (!aReplace)
     return rv;
 
-  rv |= TransformPreferences(FILE_NAME_PREFS, FILE_NAME_PREFS);
-  
+  rv |= TransformPreferences(FILE_NAME_PREFS, FILE_NAME_PREFS); 
   rv |= CopyFile(FILE_NAME_USER_PREFS, FILE_NAME_USER_PREFS);
 
   // Security Stuff
@@ -576,8 +686,7 @@ nsSeamonkeyProfileMigrator::CopyPreferences(PRBool aReplace)
 
   // User MIME Type overrides
   rv |= CopyFile(FILE_NAME_MIMETYPES, FILE_NAME_MIMETYPES);
-
-//   rv |= CopyFile(FILE_NAME_MSG_FOLDER_CACHE, FILE_NAME_MSG_FOLDER_CACHE);
+  rv |= CopyFile(FILE_NAME_PERSONALDICTIONARY, FILE_NAME_PERSONALDICTIONARY);
   return rv;
 }
 
@@ -706,7 +815,7 @@ nsSeamonkeyProfileMigrator::CopyPasswords(PRBool aReplace)
 // helper function, copies the contents of srcDir into destDir.
 // destDir will be created if it doesn't exist.
 
-static nsresult RecursiveCopy(nsIFile* srcDir, nsIFile* destDir)
+nsresult nsSeamonkeyProfileMigrator::RecursiveCopy(nsIFile* srcDir, nsIFile* destDir)
 {
   nsresult rv;
   PRBool isDir;
@@ -756,9 +865,16 @@ static nsresult RecursiveCopy(nsIFile* srcDir, nsIFile* destDir)
           }
         }
         else
-          rv = dirEntry->CopyTo(destDir, nsString());
-      }
-      
+        {
+          // we aren't going to do any actual file copying here. Instead, add this to our
+          // file transaction list so we can copy files asynchronously...
+          fileTransactionEntry* fileEntry = new fileTransactionEntry;
+          fileEntry->srcFile = dirEntry;
+          fileEntry->destFile = destDir;
+
+          mFileCopyTransactions->AppendElement((void*) fileEntry);
+        }
+      }      
     }
     rv = dirIterator->HasMoreElements(&hasMore);
     if (NS_FAILED(rv)) return rv;

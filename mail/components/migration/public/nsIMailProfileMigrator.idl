@@ -52,8 +52,8 @@ interface nsIMailProfileMigrator : nsISupports
   const unsigned short JUNKTRAINING     = 0x0008;
   const unsigned short PASSWORDS        = 0x0010;
   const unsigned short OTHERDATA        = 0x0020;
-  const unsigned short MAILDATA         = 0x0040;
-  const unsigned short NEWSDATA         = 0x0080;
+  const unsigned short NEWSDATA         = 0x0040;
+  const unsigned short MAILDATA         = 0x0080;
 
   /**
    * Copy user profile information to the current active profile.

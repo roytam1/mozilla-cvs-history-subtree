@@ -17,6 +17,7 @@ var MigrationWizard = {
     os.addObserver(this, "Migration:ItemBeforeMigrate", false);
     os.addObserver(this, "Migration:ItemAfterMigrate", false);
     os.addObserver(this, "Migration:Ended", false);
+    os.addObserver(this, "Migration:Progress", false);
     
     this._wiz = document.documentElement;
 
@@ -39,6 +40,7 @@ var MigrationWizard = {
     os.removeObserver(this, "Migration:ItemBeforeMigrate");
     os.removeObserver(this, "Migration:ItemAfterMigrate");
     os.removeObserver(this, "Migration:Ended");
+    os.removeObserver(this, "Migration:Progress");
   },
   
   // 1 - Import Source
@@ -272,6 +274,9 @@ var MigrationWizard = {
         nextButton.disabled = false;
         nextButton.click();
       }
+      break;
+    case "Migration:Progress":
+      document.getElementById('progressBar').value = aData;
       break;
     }
   },

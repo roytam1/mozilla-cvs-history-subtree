@@ -44,6 +44,7 @@
 #include "nsISupportsArray.h"
 #include "nsNetscapeProfileMigratorBase.h"
 #include "nsString.h"
+#include "nsITimer.h"
 
 class nsIFile;
 class nsIPrefBranch;
@@ -51,11 +52,13 @@ class nsIPrefService;
 class nsVoidArray;
 
 class nsSeamonkeyProfileMigrator : public nsNetscapeProfileMigratorBase, 
-                                   public nsIMailProfileMigrator
+                                   public nsIMailProfileMigrator,
+                                   public nsITimerCallback
 {
 public:
   NS_DECL_NSIMAILPROFILEMIGRATOR
   NS_DECL_ISUPPORTS
+  NS_DECL_NSITIMERCALLBACK
 
   nsSeamonkeyProfileMigrator();
   virtual ~nsSeamonkeyProfileMigrator();
@@ -77,10 +80,22 @@ protected:
   void ReadBranch(const char * branchName,  nsIPrefService* aPrefService, nsVoidArray* aPrefs);
   void WriteBranch(const char * branchName, nsIPrefService* aPrefService, nsVoidArray* aPrefs);
 
+  void CopyNextFolder();
+  void EndCopyFolders();
+
+  nsresult RecursiveCopy(nsIFile* srcDir, nsIFile* destDir); // helper routine
+
 private:
   nsCOMPtr<nsISupportsArray> mProfileNames;
   nsCOMPtr<nsISupportsArray> mProfileLocations;
   nsCOMPtr<nsIObserverService> mObserverService;
+  nsCOMPtr<nsITimer> mFileIOTimer;
+
+  nsVoidArray * mFileCopyTransactions; // list of src/destination files we still have to copy into the new profile directory
+  PRUint32 mFileCopyTransactionIndex;
+
+  PRInt64 mMaxProgress;
+  PRInt64 mCurrentProgress;
 };
  
 #endif

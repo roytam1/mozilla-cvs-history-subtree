@@ -42,6 +42,7 @@
 #define MIGRATION_ITEMAFTERMIGRATE  "Migration:ItemAfterMigrate"
 #define MIGRATION_STARTED           "Migration:Started"
 #define MIGRATION_ENDED             "Migration:Ended"
+#define MIGRATION_PROGRESS          "Migration:Progress"
 
 #define NOTIFY_OBSERVERS(message, item) \
   mObserverService->NotifyObservers(nsnull, message, item)

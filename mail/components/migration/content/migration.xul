@@ -94,10 +94,16 @@
   <wizardpage id="migrating" pageid="migrating" label="&migrating.title;"
               next="done"
               onpageshow="MigrationWizard.onMigratingPageShow();">
-    <description>&migrating.label;</description>
-    
+   
+    <description>&migrating.label;</description>    
     <separator class="thin"/> 
-    <vbox id="migratingItems" class="indent" style="overflow: auto;" align="left"/>
+    <vbox id="migratingItems" class="indent" style="overflow: auto;" flex="1" align="left"/>
+    <separator class="thin"/> 
+
+    <hbox>
+      <progressmeter class="progressmeter-statusbar" id="progressBar"  flex="1" mode="normal" value="0"/>
+    </hbox>
+
   </wizardpage>
 
   <wizardpage id="done" pageid="done" label="&done.title;"
