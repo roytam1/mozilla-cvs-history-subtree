@@ -18,6 +18,13 @@
 #if defined(WIN16)
 #include <windows.h>
 #endif
+#if defined(XP_OS2)
+#define INCL_WIN
+#include <os2.h>
+#define PostMessage   WinPostMsg
+#define DefWindowProc WinDefWindowProc
+typedef MPARAM WPARAM,LPARAM;
+#endif
 #include "plevent.h"
 #include "prmem.h"
 #include "prcmon.h"
@@ -25,7 +32,7 @@
 #if !defined(WIN32)
 #include <errno.h>
 #include <stddef.h>
-#if !defined(OS2)
+#if !defined(XP_OS2)
 #include <unistd.h>
 #endif
 #endif
@@ -66,7 +73,7 @@ static PRStatus    _pl_NativeNotify(PLEventQueue* self);
 static PRStatus    _pl_AcknowledgeNativeNotify(PLEventQueue* self);
 
 
-#if defined(_WIN32) || defined(WIN16)
+#if defined(_WIN32) || defined(WIN16) || defined(XP_OS2)
 PLEventQueue * _pr_main_event_queue;
 UINT _pr_PostEventMsgId;
 HWND _pr_eventReceiverWindow;
@@ -540,7 +547,7 @@ _pl_NativeNotify(PLEventQueue* self)
 	self->notifyCount++;
     return (count == 1) ? PR_SUCCESS : PR_FAILURE;
 
-#elif defined(XP_PC) && ( defined(WINNT) || defined(WIN95) || defined(WIN16))
+#elif defined(XP_PC)
     /*
     ** Post a message to the NSPR window on the main thread requesting 
     ** it to process the pending events. This is only necessary for the
@@ -717,16 +724,16 @@ PL_InitializeEventsLib(char *name)
 }
 #endif
 
-#if defined(_WIN32) || defined(WIN16)
+#if defined(_WIN32) || defined(WIN16) || defined(XP_OS2)
 PR_IMPLEMENT(HWND)
 PR_GetEventReceiverWindow()
 {
-    if(_pr_eventReceiverWindow != NULL)
+    if(_pr_eventReceiverWindow != 0)
     {
 	return _pr_eventReceiverWindow;
     }
 
-    return NULL;
+    return 0;
 
 }
 #endif

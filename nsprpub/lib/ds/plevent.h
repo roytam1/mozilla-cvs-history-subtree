@@ -366,7 +366,7 @@ PL_DestroyEvent(PLEvent* self);
 PR_EXTERN(void)
 PL_DequeueEvent(PLEvent* self, PLEventQueue* queue);
 
-#if defined(_WIN32) || defined(WIN16)
+#if defined(_WIN32) || defined(WIN16) || defined(XP_OS2)
 PR_EXTERN(HWND)
 PR_GetEventReceiverWindow();
 #endif
