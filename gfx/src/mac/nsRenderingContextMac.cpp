@@ -68,6 +68,36 @@
 #define STACK_THRESHOLD 1000
 
 
+//
+// This object sits on the stack, saving the state of the port so it
+// can be restored when the object goes out of scope.
+//
+class nsRenderingContextMacPortState {
+ public:
+  nsRenderingContextMacPortState(CGrafPtr port, nsGraphicState* gs)
+  : mPortSetter(port), mOriginSetter(port),
+    mSaveClip(sNativeRegionPool.GetNewRegion())
+  {
+    if (mSaveClip) {
+      ::GetClip(mSaveClip);
+    }
+    ::SetClip(gs->mClipRegion);
+    ::SetOrigin(-gs->mOffx, -gs->mOffy);
+  }
+
+  ~nsRenderingContextMacPortState()
+  {
+    if (mSaveClip) {
+      ::SetClip(mSaveClip);
+    }      
+  }
+
+ private:
+  StPortSetter mPortSetter;
+  StOriginSetter mOriginSetter;
+  RgnHandle mSaveClip;
+};
+
 //------------------------------------------------------------------------
 
 nsRenderingContextMac::nsRenderingContextMac()
@@ -214,7 +244,8 @@ void nsRenderingContextMac::SelectDrawingSurface(nsDrawingSurfaceMac* aSurface, 
 	mGS = aSurface->GetGS();
 	mTranMatrix = &(mGS->mTMatrix);
 
-  nsGraphicsUtils::SafeSetPort(mPort);
+  StPortSetter portSetter(mPort);
+  StOriginSetter originSetter(mPort);
 
 	::SetOrigin(-mGS->mOffx, -mGS->mOffy);		// line order...
 
@@ -276,15 +307,7 @@ nsresult nsRenderingContextMac::SetPortTextState()
 	return NS_OK;
 }
 
-
 //------------------------------------------------------------------------
-
-void nsRenderingContextMac::SetupPortState()
-{
-  nsGraphicsUtils::SafeSetPort(mPort);
-	::SetOrigin(-mGS->mOffx, -mGS->mOffy);
-	::SetClip(mGS->mClipRegion);
-}
 
 #pragma mark -
 
@@ -302,6 +325,12 @@ NS_IMETHODIMP nsRenderingContextMac::PushState(void)
 
 	// copy the current GS into it
 	gs->Duplicate(mGS);
+
+	Rect rect;
+	::GetPortBounds(mPort, &rect);
+	gs->mSaveOffx = -rect.left;
+	gs->mSaveOffy = -rect.top;
+	::SetOrigin(-gs->mOffx, -gs->mOffy);
 
 	// put the new GS at the end of the stack
 	mGSStack.AppendElement(gs);
@@ -325,6 +354,10 @@ NS_IMETHODIMP nsRenderingContextMac::PopState(PRBool &aClipEmpty)
 	
 		// get the GS from the stack
 		nsGraphicState* gs = (nsGraphicState *)mGSStack.ElementAt(index);
+
+		::SetOrigin(-gs->mSaveOffx, -gs->mSaveOffy);
+		gs->mSaveOffx = 0;
+		gs->mSaveOffy = 0;
 
 		// copy the GS into the current one and tell the current surface to use it
 		mGS->Duplicate(gs);
@@ -750,7 +783,7 @@ NS_IMETHODIMP nsRenderingContextMac::GetClipRegion(nsIRegion **aRegion)
 
 NS_IMETHODIMP nsRenderingContextMac::SetColor(nscolor aColor)
 {
-	SetupPortState();
+	nsRenderingContextMacPortState state(mPort, mGS);
 
 	#define COLOR8TOCOLOR16(color8)	 ((color8 << 8) | color8)
 
@@ -762,7 +795,7 @@ NS_IMETHODIMP nsRenderingContextMac::SetColor(nscolor aColor)
 	mGS->mColor = aColor ;
 
 	mChanges |= kColorChanged;
-  	
+
 	return NS_OK;
 }
 
@@ -858,7 +891,7 @@ NS_IMETHODIMP nsRenderingContextMac::GetCurrentTransform(nsTransform2D *&aTransf
 
 NS_IMETHODIMP nsRenderingContextMac::DrawLine(nscoord aX0, nscoord aY0, nscoord aX1, nscoord aY1)
 {
-  SetupPortState();
+	nsRenderingContextMacPortState state(mPort, mGS);
 
 	mGS->mTMatrix.TransformCoord(&aX0,&aY0);
 	mGS->mTMatrix.TransformCoord(&aX1,&aY1);
@@ -884,7 +917,7 @@ NS_IMETHODIMP nsRenderingContextMac::DrawLine(nscoord aX0, nscoord aY0, nscoord 
 
 NS_IMETHODIMP nsRenderingContextMac::DrawStdLine(nscoord aX0, nscoord aY0, nscoord aX1, nscoord aY1)
 {
-	SetupPortState();
+	nsRenderingContextMacPortState state(mPort, mGS);
 
 	// make the line one pixel shorter to match other platforms
 	nscoord diffX = aX1 - aX0;
@@ -907,7 +940,7 @@ NS_IMETHODIMP nsRenderingContextMac::DrawStdLine(nscoord aX0, nscoord aY0, nscoo
 
 NS_IMETHODIMP nsRenderingContextMac::DrawPolyline(const nsPoint aPoints[], PRInt32 aNumPoints)
 {
-	SetupPortState();
+	nsRenderingContextMacPortState state(mPort, mGS);
 
 	PRUint32   i;
 	PRInt32    x,y;
@@ -957,7 +990,7 @@ NS_IMETHODIMP nsRenderingContextMac::DrawRect(const nsRect& aRect)
 
 NS_IMETHODIMP nsRenderingContextMac::DrawRect(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight)
 {
-	SetupPortState();
+	nsRenderingContextMacPortState state(mPort, mGS);
 	
 	nscoord x,y,w,h;
 	Rect	therect;
@@ -985,7 +1018,7 @@ NS_IMETHODIMP nsRenderingContextMac::FillRect(const nsRect& aRect)
 
 NS_IMETHODIMP nsRenderingContextMac::FillRect(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight)
 {
-	SetupPortState();
+	nsRenderingContextMacPortState state(mPort, mGS);
 
 	nscoord x,y,w,h;
 	Rect	therect;
@@ -1007,7 +1040,7 @@ NS_IMETHODIMP nsRenderingContextMac::FillRect(nscoord aX, nscoord aY, nscoord aW
 
 NS_IMETHODIMP nsRenderingContextMac::DrawPolygon(const nsPoint aPoints[], PRInt32 aNumPoints)
 {
-	SetupPortState();
+	nsRenderingContextMacPortState state(mPort, mGS);
 
 	PRUint32   i;
 	PolyHandle thepoly;
@@ -1043,7 +1076,7 @@ NS_IMETHODIMP nsRenderingContextMac::DrawPolygon(const nsPoint aPoints[], PRInt3
 
 NS_IMETHODIMP nsRenderingContextMac::FillPolygon(const nsPoint aPoints[], PRInt32 aNumPoints)
 {
-	SetupPortState();
+	nsRenderingContextMacPortState state(mPort, mGS);
 
 	PRUint32   i;
 	PolyHandle thepoly;
@@ -1084,7 +1117,7 @@ NS_IMETHODIMP nsRenderingContextMac::DrawEllipse(const nsRect& aRect)
 
 NS_IMETHODIMP nsRenderingContextMac::DrawEllipse(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight)
 {
-	SetupPortState();
+	nsRenderingContextMacPortState state(mPort, mGS);
 
 	nscoord x,y,w,h;
 	Rect    therect;
@@ -1112,7 +1145,7 @@ NS_IMETHODIMP nsRenderingContextMac::FillEllipse(const nsRect& aRect)
 
 NS_IMETHODIMP nsRenderingContextMac::FillEllipse(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight)
 {
-	SetupPortState();
+	nsRenderingContextMacPortState state(mPort, mGS);
 
 	nscoord x,y,w,h;
 	Rect    therect;
@@ -1142,7 +1175,7 @@ NS_IMETHODIMP nsRenderingContextMac::DrawArc(const nsRect& aRect,
 NS_IMETHODIMP nsRenderingContextMac::DrawArc(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight,
                                  float aStartAngle, float aEndAngle)
 {
-	SetupPortState();
+	nsRenderingContextMacPortState state(mPort, mGS);
 
 	nscoord x,y,w,h;
 	Rect    therect;
@@ -1172,7 +1205,7 @@ NS_IMETHODIMP nsRenderingContextMac::FillArc(const nsRect& aRect,
 NS_IMETHODIMP nsRenderingContextMac::FillArc(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight,
                                  float aStartAngle, float aEndAngle)
 {
-	SetupPortState();
+	nsRenderingContextMacPortState state(mPort, mGS);
 
 	nscoord x,y,w,h;
 	Rect	therect;
@@ -1235,7 +1268,7 @@ NS_IMETHODIMP nsRenderingContextMac::GetWidth(const char *aString, nscoord &aWid
 NS_IMETHODIMP
 nsRenderingContextMac::GetWidth(const char* aString, PRUint32 aLength, nscoord& aWidth)
 {
-	SetupPortState();
+	nsRenderingContextMacPortState state(mPort, mGS);
 
 	// set native font and attributes
 	SetPortTextState();
@@ -1254,7 +1287,7 @@ nsRenderingContextMac::GetWidth(const char* aString, PRUint32 aLength, nscoord& 
 
 NS_IMETHODIMP nsRenderingContextMac::GetWidth(const PRUnichar *aString, PRUint32 aLength, nscoord &aWidth, PRInt32 *aFontID)
 {
-	SetupPortState();
+	nsRenderingContextMacPortState state(mPort, mGS);
 	
  	nsresult rv = SetPortTextState();
  	if (NS_FAILED(rv))
@@ -1263,7 +1296,7 @@ NS_IMETHODIMP nsRenderingContextMac::GetWidth(const PRUnichar *aString, PRUint32
 	rv = mUnicodeRenderingToolkit.PrepareToDraw(mP2T, mContext, mGS, mPort, mRightToLeftText);
 	if (NS_SUCCEEDED(rv))
     rv = mUnicodeRenderingToolkit.GetWidth(aString, aLength, aWidth, aFontID);
-    
+
 	return rv;
 }
 
@@ -1286,7 +1319,7 @@ NS_IMETHODIMP
 nsRenderingContextMac::GetTextDimensions(const PRUnichar* aString, PRUint32 aLength,
                                          nsTextDimensions& aDimensions, PRInt32* aFontID)
 {
-  SetupPortState();
+	nsRenderingContextMacPortState state(mPort, mGS);
   
   nsresult rv = SetPortTextState();
   if (NS_FAILED(rv))
@@ -1295,7 +1328,7 @@ nsRenderingContextMac::GetTextDimensions(const PRUnichar* aString, PRUint32 aLen
   rv = mUnicodeRenderingToolkit.PrepareToDraw(mP2T, mContext, mGS, mPort, mRightToLeftText);
 	if (NS_SUCCEEDED(rv))
     rv = mUnicodeRenderingToolkit.GetTextDimensions(aString, aLength, aDimensions, aFontID);
-    
+
   return rv;
 }
 
@@ -1306,7 +1339,7 @@ NS_IMETHODIMP nsRenderingContextMac::DrawString(const char *aString, PRUint32 aL
                                          nscoord aX, nscoord aY,
                                          const nscoord* aSpacing)
 {
-	SetupPortState();
+	nsRenderingContextMacPortState state(mPort, mGS);
 
 	PRInt32 x = aX;
 	PRInt32 y = aY;
@@ -1353,7 +1386,7 @@ NS_IMETHODIMP nsRenderingContextMac::DrawString(const PRUnichar *aString, PRUint
                                          nscoord aX, nscoord aY, PRInt32 aFontID,
                                          const nscoord* aSpacing)
 {
-	SetupPortState();
+	nsRenderingContextMacPortState state(mPort, mGS);
 
  	nsresult rv = SetPortTextState();
  	if (NS_FAILED(rv))
@@ -1413,7 +1446,7 @@ NS_IMETHODIMP nsRenderingContextMac::DrawImage(nsIImage *aImage, nscoord aX, nsc
 
 NS_IMETHODIMP nsRenderingContextMac::DrawImage(nsIImage *aImage, const nsRect& aSRect, const nsRect& aDRect)
 {
-	SetupPortState();
+	nsRenderingContextMacPortState state(mPort, mGS);
 
 	nsRect sr = aSRect;
 	nsRect dr = aDRect;
@@ -1430,7 +1463,7 @@ NS_IMETHODIMP nsRenderingContextMac::DrawImage(nsIImage *aImage, const nsRect& a
 
 NS_IMETHODIMP nsRenderingContextMac::DrawImage(nsIImage *aImage, const nsRect& aRect)
 {
-	SetupPortState();
+	nsRenderingContextMacPortState state(mPort, mGS);
 
 	nsRect tr = aRect;
 	mGS->mTMatrix.TransformCoord(&tr.x,&tr.y,&tr.width,&tr.height);
@@ -1465,7 +1498,7 @@ NS_IMETHODIMP nsRenderingContextMac::InvertRect(const nsRect& aRect)
 
 NS_IMETHODIMP nsRenderingContextMac::InvertRect(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight)
 {
-	SetupPortState();
+	nsRenderingContextMacPortState state(mPort, mGS);
 
 	nscoord x,y,w,h;
 	Rect	therect;

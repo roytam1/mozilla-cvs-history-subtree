@@ -765,7 +765,7 @@ case "$target" in
     CFLAGS="$CFLAGS -fpascal-strings -traditional-cpp -fno-common"
     CXXFLAGS="$CXXFLAGS -fpascal-strings -traditional-cpp -fno-common"
     DLL_SUFFIX=".dylib"
-    DSO_LDOPTS='-compatibility_version 1 -current_version 1'
+    DSO_LDOPTS="$DSO_LDOPTS -arch ppc"
     STRIP="$STRIP -x -S"
     case "${target_cpu}" in
     powerpc*)
@@ -776,7 +776,7 @@ case "$target" in
         no_x=yes
         MACOSX=1
         _PLATFORM_DEFAULT_TOOLKIT='mac'
-        DSO_LDOPTS="$DSO_LDOPTS -arch ppc -install_name @executable_path/\$@"
+        DSO_LDOPTS="$DSO_LDOPTS -arch ppc"
         TK_LIBS='-framework Carbon /System/Library/Frameworks/Carbon.framework/Carbon'
         TK_CFLAGS="-I/Developer/Headers/FlatCarbon -F/System/Library/Frameworks"
         CFLAGS="$CFLAGS $TK_CFLAGS"

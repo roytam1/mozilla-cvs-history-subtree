@@ -73,6 +73,7 @@ class nsIChannel;
 enum eParserCommands {
   eViewNormal,
   eViewSource,
+  eViewFragment,
   eViewErrors
 };
 

@@ -32,7 +32,7 @@
 #
 CORE_DEPTH = ../../..
 
-MODULE = security
+MODULE = nss
 
 REQUIRES = dbm
 
@@ -40,7 +40,7 @@ LIBRARY_NAME = softokn
 LIBRARY_VERSION = 3
 MAPFILE = $(OBJDIR)/softokn.def
 
-DEFINES += -DSHLIB_SUFFIX=\"${DLL_SUFFIX}\"
+DEFINES += -DSHLIB_SUFFIX=\"$(DLL_SUFFIX)\"
 
 
 EXPORTS = \
@@ -61,6 +61,7 @@ PRIVATE_EXPORTS = \
 CSRCS = \
 	alghmac.c \
 	dbinit.c \
+	dbmshim.c \
 	fipstest.c \
 	fipstokn.c \
 	keydb.c    \

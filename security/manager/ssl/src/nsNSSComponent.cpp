@@ -923,7 +923,6 @@ nsNSSComponent::InitializeNSS()
         NSS_NoDB_Init(profileStr.get());
       }
     }
-
     // init phase 3, only if phase 2 was successful
 
     if (problem_no_security_at_all != which_nss_problem) {
@@ -1071,11 +1070,16 @@ nsNSSComponent::Init()
   // Do that before NSS init, to make sure we won't get unloaded.
   RegisterObservers();
 
+  // Photon apps initialize NSS themselves, so don't do it here.//
+  // Kaie is coming up with a more formal mechanism to do this. //
+  // But for now, we just skip this part - ddrinan //
+#if 0 
   rv = InitializeNSS();
   if (NS_FAILED(rv)) {
     PR_LOG(gPIPNSSLog, PR_LOG_ERROR, ("Unable to Initialize NSS.\n"));
     return rv;
   }
+#endif
 
   InitializeCRLUpdateTimer();
   RegisterPSMContentListener();

@@ -63,7 +63,9 @@
 #include "nsNetUtil.h"
 
 #include "nsIImage.h"
-
+  
+// oddly, this isn't in the MSVC headers anywhere.
+UINT nsClipboard::CF_HTML = ::RegisterClipboardFormat("HTML Format");
 
 //-------------------------------------------------------------------------
 //
@@ -102,6 +104,8 @@ UINT nsClipboard::GetFormat(const char* aMimeStr)
     format = CF_HDROP;
   else if (mimeStr.Equals(kURLMime))
     format = CF_UNICODETEXT;
+  else if (mimeStr.Equals(kNativeHTMLMime))
+    format = CF_HTML;
   else
     format = ::RegisterClipboardFormat(aMimeStr);
 
@@ -182,7 +186,7 @@ nsresult nsClipboard::SetupNativeDataObject(nsITransferable * aTransferable, IDa
         // if we find text/html, also advertise win32's html flavor (which we will convert
         // on our own in nsDataObj::GetText().
         FORMATETC htmlFE;
-        SET_FORMATETC(htmlFE, ::RegisterClipboardFormat("HTML Format"), 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL);
+        SET_FORMATETC(htmlFE, CF_HTML, 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL);
         dObj->AddDataFlavor(kHTMLMime, &htmlFE);     
       }
       else if ( strcmp(flavorStr, kURLMime) == 0 ) {
@@ -244,18 +248,22 @@ NS_IMETHODIMP nsClipboard::SetNativeClipboardData ( PRInt32 aWhichClipboard )
 nsresult nsClipboard::GetGlobalData(HGLOBAL aHGBL, void ** aData, PRUint32 * aLen)
 {
   // Allocate a new memory buffer and copy the data from global memory.
-  // Recall that win98 allocates to nearest DWORD boundary.
+  // Recall that win98 allocates to nearest DWORD boundary. As a safety
+  // precaution, allocate an extra 2 bytes (but don't report them!) and
+  // null them out to ensure that all of our strlen calls will succeed.
   nsresult  result = NS_ERROR_FAILURE;
   if (aHGBL != NULL) {
     LPSTR lpStr = (LPSTR)::GlobalLock(aHGBL);
     DWORD allocSize = ::GlobalSize(aHGBL);
-    char* data = NS_STATIC_CAST(char*, nsMemory::Alloc(allocSize));
+    char* data = NS_STATIC_CAST(char*, nsMemory::Alloc(allocSize + sizeof(PRUnichar)));
     if ( data ) {    
-       memcpy ( data, lpStr, allocSize );
-    
+      memcpy ( data, lpStr, allocSize );
+      data[allocSize] = data[allocSize + 1] = '\0';     // null terminate for safety
+      
       ::GlobalUnlock(aHGBL);
       *aData = data;
       *aLen = allocSize;
+
       result = NS_OK;
     }
   } 
@@ -480,7 +488,15 @@ nsresult nsClipboard::GetNativeDataOffClipboard(IDataObject * aDataObject, UINT 
                 //        may become an incorrect assumption. Stay tuned.
                 PRUint32 allocLen = 0;
                 if ( NS_SUCCEEDED(GetGlobalData(stm.hGlobal, aData, &allocLen)) ) {
-                  *aLen = nsCRT::strlen(NS_REINTERPRET_CAST(PRUnichar*, *aData)) * 2;
+                  if ( fe.cfFormat == CF_HTML ) {
+                    // CF_HTML is actually UTF8, not unicode, so disregard the assumption
+                    // above. We have to check the header for the actual length, and we'll
+                    // do that in FindPlatformHTML(). For now, return the allocLen. This
+                    // case is mostly to ensure we don't try to call strlen on the buffer.
+                    *aLen = allocLen;
+                  }
+                  else
+                    *aLen = nsCRT::strlen(NS_REINTERPRET_CAST(PRUnichar*, *aData)) * sizeof(PRUnichar);
                   result = NS_OK;
                 }
               }
@@ -572,7 +588,16 @@ nsresult nsClipboard::GetDataFromDataObject(IDataObject     * aDataObject,
 	        if ( NS_SUCCEEDED(NS_NewNativeLocalFile(filepath, PR_FALSE, getter_AddRefs(file))) )
 	          genericDataWrapper = do_QueryInterface(file);
 	      }
-	      else {
+        else if ( strcmp(flavorStr, kNativeHTMLMime) == 0) {
+          // the editor folks want CF_HTML exactly as it's on the clipboard, no conversions,
+          // no fancy stuff. Pull it off the clipboard, stuff it into a wrapper and hand
+          // it back to them.
+          if ( FindPlatformHTML(aDataObject, anIndex, &data, &dataLen) )
+            nsPrimitiveHelpers::CreatePrimitiveForData ( flavorStr, data, dataLen, getter_AddRefs(genericDataWrapper) );
+          else
+            continue;     // something wrong with this flavor, keep looking for other data
+        }
+        else {
           // we probably have some form of text. The DOM only wants LF, so convert from Win32 line 
           // endings to DOM line endings.
           PRInt32 signedLen = NS_STATIC_CAST(PRInt32, dataLen);
@@ -597,6 +622,35 @@ nsresult nsClipboard::GetDataFromDataObject(IDataObject     * aDataObject,
 
   return res;
 
+}
+
+
+
+//
+// FindPlatformHTML
+//
+// Someone asked for the OS CF_HTML flavor. We give it back to them exactly as-is.
+//
+PRBool
+nsClipboard :: FindPlatformHTML ( IDataObject* inDataObject, UINT inIndex, void** outData, PRUint32* outDataLen )
+{
+  PRBool dataFound = PR_FALSE;
+
+  if ( outData && *outData ) {
+    // CF_HTML is UTF8, not unicode. We also can't rely on it being null-terminated
+    // so we have to check the CF_HTML header for the correct length. The length we return
+    // is the bytecount from the beginning of the data to the end, without
+    // the null termination. Because it's UTF8, we're guaranteed the header is ascii (yay!).
+    float vers = 0.0;
+    PRUint32 startOfData = 0;
+    sscanf((char*)*outData, "Version:%f\nStartHTML:%d\nEndHTML:%d", &vers, &startOfData, outDataLen);
+    NS_ASSERTION(startOfData && *outDataLen, "Couldn't parse CF_HTML description header");
+ 
+    if ( *outDataLen )
+      dataFound = PR_TRUE;
+  }
+
+  return dataFound;
 }
 
 
