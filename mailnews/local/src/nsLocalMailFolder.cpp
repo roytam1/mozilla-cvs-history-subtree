@@ -1122,6 +1122,8 @@ NS_IMETHODIMP nsMsgLocalMailFolder::Rename(const PRUnichar *aNewName, nsIMsgWind
   nsCAutoString newDiskName;
   newDiskName.Assign(convertedNewName.get());
   NS_MsgHashIfNecessary(newDiskName);
+  nsAutoString safeFolderName;
+  safeFolderName.AssignWithConversion(newDiskName);
   
   nsXPIDLCString oldLeafName;
   oldPathSpec->GetLeafName(getter_Copies(oldLeafName));
@@ -1176,11 +1178,10 @@ NS_IMETHODIMP nsMsgLocalMailFolder::Rename(const PRUnichar *aNewName, nsIMsgWind
   nsCOMPtr<nsIMsgFolder> newFolder;
   if (parentSupport)
   {
-    nsAutoString newFolderName(aNewName);
-    rv = parentFolder->AddSubfolder(newFolderName, getter_AddRefs(newFolder));
+    rv = parentFolder->AddSubfolder(safeFolderName, getter_AddRefs(newFolder));
     if (newFolder) 
     {
-      newFolder->SetPrettyName(newFolderName.get());
+      newFolder->SetPrettyName(aNewName);
       PRBool changed = PR_FALSE;
       MatchOrChangeFilterDestination(newFolder, PR_TRUE /*caseInsenstive*/, &changed);
       if (changed)
