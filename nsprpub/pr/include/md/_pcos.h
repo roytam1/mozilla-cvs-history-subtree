@@ -42,11 +42,11 @@
 ** Routines for processing command line arguments
 */
 PR_BEGIN_EXTERN_C
-
+#ifndef XP_OS2_EMX
 extern char *optarg;
 extern int optind;
 extern int getopt(int argc, char **argv, char *spec);
-
+#endif
 PR_END_EXTERN_C
 
 #define gcmemcpy(a,b,c) memcpy(a,b,c)

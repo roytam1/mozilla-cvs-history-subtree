@@ -153,7 +153,7 @@ static FactoryEntry *platformFind(const nsCID &aCID)
 
 #else // USE_NSREG
 
-#ifdef XP_PC
+#if defined(XP_PC) && !defined(XP_OS2)
 #define USE_REGISTRY
 
 static nsresult platformRegister(const nsCID &aCID, const char *aLibrary)

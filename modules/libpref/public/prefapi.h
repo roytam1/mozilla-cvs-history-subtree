@@ -29,7 +29,7 @@
 #include "jscompat.h"
 #include "jspubtd.h"
 
-#ifdef XP_WIN
+#if defined(XP_WIN) || defined(XP_OS2)
 #ifndef NSPR20
 #include "prhash.h"
 #else
@@ -40,7 +40,9 @@
 NSPR_BEGIN_EXTERN_C
 
 #if defined(XP_WIN) || defined(XP_OS2)
+/*
 // horrible pre-declaration...so kill me.
+*/
 int pref_InitInitialObjects(JSContext *js_context,JSObject *js_object);
 PR_EXTERN(int) pref_savePref(PRHashEntry *he, int i, void *arg);
 #endif

@@ -24,13 +24,17 @@
  */
 
 #ifdef _IMPL_NS_COM
-#  ifdef XP_PC
+#  ifdef XP_OS2
+#    define NS_COM
+#  elif defined(XP_PC)
 #    define NS_COM _declspec(dllexport)
 #  else  // !XP_PC
 #    define NS_COM
 #  endif // !XP_PC
 #else  // !_IMPL_NS_COM
-#  ifdef XP_PC
+#  ifdef XP_OS2
+#    define NS_COM
+#  elif defined(XP_PC)
 #    define NS_COM _declspec(dllimport)
 #  else  // !XP_PC
 #    define NS_COM
@@ -42,14 +46,16 @@
  */
 
 #ifndef NS_EXPORT
-#  ifdef XP_PC
+#  ifdef XP_OS2
+#    define NS_EXPORT _Export
+#  elif defined(XP_PC)
 #    define NS_EXPORT           _declspec(dllexport)
 #  else  // !XP_PC
 #    define NS_EXPORT
 #  endif // !XP_PC
 #endif // !NS_EXPORT
 
-#ifdef XP_PC
+#if defined(XP_PC) && !defined(XP_OS2)
 #  define NS_METHOD_(Type)      Type __stdcall
 #  define NS_METHOD             nsresult __stdcall
 #else  // !XP_PC

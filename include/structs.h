@@ -375,7 +375,7 @@ struct PA_Tag_struct {
     TagType type;
     PRPackedBool is_end;
     uint16 newline_count;
-#if defined(XP_WIN) || defined(XP_OS2)
+#if defined(XP_WIN) || defined(XP_OS2_VACPP)
     union {                 /* use an anonymous union for debugging purposes*/
     	PA_Block data;
         char* data_str;
