@@ -83,6 +83,15 @@ protected:
   // also cleans up the attributes on the previously sorted column.
   nsresult UpdateSortUI(nsIDOMElement * aNewSortColumn);
   nsresult GenerateURIForMsgKey(nsMsgKey aMsgKey, char ** aURI);
+  // Save and Restore Selection are a pair of routines you should
+  // use when performing an operation which is going to change the view
+  // and you want to remember the selection. (i.e. for sorting). 
+  // Call SaveSelection and we'll give you an array of msg keys for
+  // the current selection. We also freeze selection. When  you are done
+  // changing the view, call RestoreSelection passing in the same array
+  // and we'll restore the selection AND unfreeze selection in the UI.
+  nsresult SaveSelection(nsMsgKeyArray * aMsgKeyArray);
+  nsresult RestoreSelection(nsMsgKeyArray * aMsgKeyArray);
 
   nsresult GetSelectedIndices(nsUInt32Array *selection);
   // routines used in building up view

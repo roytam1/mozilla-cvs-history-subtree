@@ -162,6 +162,50 @@ nsresult nsMsgDBView::UpdateSortUI(nsIDOMElement * aNewSortColumn)
   return NS_OK;
 }
 
+nsresult nsMsgDBView::SaveSelection(nsMsgKeyArray * aMsgKeyArray)
+{
+  NS_ENSURE_TRUE(mOutlinerSelection, NS_OK);
+
+  // first, freeze selection.
+  mOutlinerSelection->SetSelectEventsSuppressed(PR_TRUE);
+  // second, get an array of view indices for the selection..
+  nsUInt32Array selection;
+  GetSelectedIndices(&selection);
+  PRInt32 numIndices = selection.GetSize();
+
+  // now store the msg key for each selected item.
+  nsMsgKey msgKey;
+  for (PRInt32 index = 0; index < numIndices; index++)
+  {
+    msgKey = m_keys.GetAt(selection.GetAt(index));
+    aMsgKeyArray->Add(msgKey);
+  }
+
+  return NS_OK;
+}
+
+nsresult nsMsgDBView::RestoreSelection(nsMsgKeyArray * aMsgKeyArray)
+{
+  NS_ENSURE_TRUE(mOutlinerSelection, NS_OK);
+
+  // first, unfreeze selection.
+  mOutlinerSelection->ClearSelection(); // clear the existing selection.
+  mOutlinerSelection->SetSelectEventsSuppressed(PR_FALSE);
+  
+  // second, turn our message keys into corresponding view indices
+  PRInt32 arraySize = aMsgKeyArray->GetSize();
+  nsMsgViewIndex	newViewPosition;
+  for (PRInt32 index = 0; index < arraySize; index ++)
+  {
+    newViewPosition = FindKey(aMsgKeyArray->GetAt(index), PR_FALSE);  
+    // check to make sure newViewPosition is valid.
+    // add the index back to the selection.
+    mOutlinerSelection->RangedSelect(newViewPosition, newViewPosition, PR_TRUE /* augment */);
+  }
+
+  return NS_OK;
+}
+
 nsresult nsMsgDBView::GenerateURIForMsgKey(nsMsgKey aMsgKey, char ** aURI)
 {
   nsXPIDLCString baseURI;
@@ -1214,6 +1258,8 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
     NS_ASSERTION(m_db, "no db");
     if (!m_db) return NS_ERROR_FAILURE;
 
+    nsMsgKeyArray preservedSelection;
+
     printf("XXX nsMsgDBView::Sort(%d,%d)\n",(int)sortType,(int)sortOrder);
     if (m_sortType == sortType && m_sortValid) {
         if (m_sortOrder == sortOrder) {
@@ -1221,6 +1267,7 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
             return NS_OK;
         }   
         else {
+            SaveSelection(&preservedSelection);
             if (m_sortType != nsMsgViewSortType::byThread) {
                 rv = ReverseSort();
                 NS_ENSURE_SUCCESS(rv,rv);
@@ -1232,6 +1279,7 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
 
             m_sortOrder = sortOrder;
             // we just reversed the sort order...we still need to invalidate the view
+            RestoreSelection(&preservedSelection);
             mOutliner->Invalidate();
             return NS_OK;
         }
@@ -1240,6 +1288,8 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
     if (sortType == nsMsgViewSortType::byThread) {
         return NS_OK;
     }
+
+    SaveSelection(&preservedSelection);
 
     // figure out how much memory we'll need, and the malloc it
     PRUint16 maxLen;
@@ -1415,7 +1465,10 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
     m_sortValid = PR_TRUE;
     //m_db->SetSortInfo(sortType, sortOrder);
 
-    // last but not least, invalidate the entire view
+    // last but not least, invalidate the entire view and restore
+    // the selection.
+    RestoreSelection(&preservedSelection);
+
     if (mOutliner)
       mOutliner->Invalidate();
 
