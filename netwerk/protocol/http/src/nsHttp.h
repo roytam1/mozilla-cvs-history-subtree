@@ -51,7 +51,7 @@ extern PRLogModuleInfo *gHttpLog;
 #define LOG(args) LOG4(args)
 
 #define NS_HTTP_SEGMENT_SIZE 4096
-#define NS_HTTP_BUFFER_SIZE  4096*8 // 32k maximum
+#define NS_HTTP_BUFFER_SIZE  4096*4 // 16k maximum
 
 enum nsHttpVersion {
     NS_HTTP_VERSION_UNKNOWN,
