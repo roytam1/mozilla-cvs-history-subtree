@@ -262,6 +262,8 @@ pref("browser.chrome.toolbar_style",        2);
 
 pref("browser.turbo.enabled", false);
 
+pref("browser.xul.error_pages.enabled", true);  
+
 // Dialog modality issues
 pref("browser.prefWindowModal", true);
 pref("browser.show_about_as_stupid_modal_window", false);
