@@ -94,11 +94,11 @@ endif
 ifdef USE_MSVC
 LIBRARY = $(OBJDIR)/jsj.lib
 SHARED_LIBRARY = $(OBJDIR)/jsj.dll
-PROGRAM = $(OBJDIR)/jsj.exe
+PROGRAM = $(OBJDIR)/lcshell.exe
 else
 LIBRARY = $(OBJDIR)/libjsj.a
 SHARED_LIBRARY = $(OBJDIR)/libjsj.$(SO_SUFFIX)
-PROGRAM = $(OBJDIR)/jsj
+PROGRAM = $(OBJDIR)/lcshell
 endif
 
 include $(DEPTH)/rules.mk
@@ -108,14 +108,14 @@ $(OBJDIR)/$(PROG_FILE)_lc.obj: ../$(PROG_FILE).c
 	@$(MAKE_OBJDIR)
 	$(CC) -Fo$@ -c $(CFLAGS) -DLIVECONNECT ../$(PROG_FILE).c
 
-$(PROGRAM): $(OBJDIR)/$(PROG_FILE)_lc.obj $(LIBRARY)
-	link.exe -out:"$@" /pdb:"$(OBJDIR)/$(@F:.exe=.pdb)" $(EXE_LINK_FLAGS) ../$(OBJDIR)/js32.lib $?
+$(PROGRAM): $(OBJDIR)/$(PROG_FILE)_lc.obj $(OBJDIR)/jsj_simpleapi.obj $(LIBRARY)
+	link.exe -out:"$@" $(EXE_LINK_FLAGS) ../$(OBJDIR)/js32.lib $(OTHER_LIBS) $?
 else
 $(OBJDIR)/$(PROG_FILE).o: ../$(PROG_FILE).c
 	@$(MAKE_OBJDIR)
 	$(CC) -o $@ -c $(CFLAGS) -DLIVECONNECT ../$(PROG_FILE).c
 
-$(PROGRAM): $(OBJDIR)/$(PROG_FILE).o
+$(PROGRAM): $(OBJDIR)/$(PROG_FILE).o $(OBJDIR)/jsj_simpleapi.o
 	@$(MAKE_OBJDIR)
 	$(CC) -o $@ $(CFLAGS) $+ $(LIBRARY) ../$(OBJDIR)/libjs.a $(LDFLAGS) $(OTHER_LIBS)
 endif

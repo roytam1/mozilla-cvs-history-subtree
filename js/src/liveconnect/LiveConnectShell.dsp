@@ -102,5 +102,9 @@ SOURCE=..\js.c
 
 SOURCE=..\Debug\js32.lib
 # End Source File
+# Begin Source File
+
+SOURCE=.\jsj_simpleapi.c
+# End Source File
 # End Target
 # End Project
