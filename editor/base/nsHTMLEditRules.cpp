@@ -741,6 +741,7 @@ nsHTMLEditRules::GetParagraphState(PRBool &aMixed, nsString &outFormat)
         {
           nsAutoString tag;
           nsEditor::GetTagString(block,tag);
+          tag.ToLowerCase();
           format = tag;
         }
         else
@@ -757,6 +758,7 @@ nsHTMLEditRules::GetParagraphState(PRBool &aMixed, nsString &outFormat)
     {
       nsAutoString tag;
       nsEditor::GetTagString(curNode,tag);
+      tag.ToLowerCase();
       format = tag;
     }
     else if (nsIEditProperty::p == atom.get()           ||
@@ -1907,6 +1909,7 @@ nsHTMLEditRules::WillMakeList(nsISelection *aSelection,
     {
       nsAutoString existingListStr;
       res = mEditor->GetTagString(curNode, existingListStr);
+      existingListStr.ToLowerCase();
       // do we have a curList already?
       if (curList && !nsHTMLEditUtils::IsDescendantOf(curNode, curList))
       {
@@ -1936,6 +1939,7 @@ nsHTMLEditRules::WillMakeList(nsISelection *aSelection,
     {
       nsAutoString existingListStr;
       res = mEditor->GetTagString(curParent, existingListStr);
+      existingListStr.ToLowerCase();
       if ( existingListStr != *aListType )
       {
         // list item is in wrong type of list.  
@@ -2320,6 +2324,7 @@ nsHTMLEditRules::WillIndent(nsISelection *aSelection, PRBool *aCancel, PRBool * 
       {
         nsAutoString listTag;
         nsEditor::GetTagString(curParent,listTag);
+        listTag.ToLowerCase();
         // create a new nested list of correct type
         res = SplitAsNeeded(&listTag, &curParent, &offset);
         if (NS_FAILED(res)) return res;
@@ -4386,7 +4391,7 @@ nsHTMLEditRules::ApplyBlockStyle(nsISupportsArray *arrayOfNodes, const nsString 
     if (NS_FAILED(res)) return res;
     nsAutoString curNodeTag;
     nsEditor::GetTagString(curNode, curNodeTag);
-        
+    curNodeTag.ToLowerCase();
  
     // is it already the right kind of block?
     if (!bNoParent && curNodeTag == *aBlockTag)

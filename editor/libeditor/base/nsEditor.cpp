@@ -4045,11 +4045,12 @@ PRBool
 nsEditor::CanContainTag(nsIDOMNode* aParent, const nsString &aChildTag)
 {
   nsAutoString parentStringTag;
-  
+    
   nsCOMPtr<nsIDOMElement> parentElement = do_QueryInterface(aParent);
   if (!parentElement) return PR_FALSE;
   
   parentElement->GetTagName(parentStringTag);
+  parentStringTag.ToLowerCase();
   return TagCanContainTag(parentStringTag, aChildTag);
 }
 
@@ -4067,6 +4068,7 @@ nsEditor::TagCanContain(const nsString &aParentTag, nsIDOMNode* aChild)
     nsCOMPtr<nsIDOMElement> childElement = do_QueryInterface(aChild);
     if (!childElement) return PR_FALSE;
     childElement->GetTagName(childStringTag);
+    childStringTag.ToLowerCase();
   }
   return TagCanContainTag(aParentTag, childStringTag);
 }
