@@ -411,7 +411,7 @@ PRBool nsMacEventHandler::DragEvent ( unsigned int aMessage, Point aMouseGlobal,
 	geckoEvent.isShift = ((aKeyModifiers & shiftKey) != 0);
 	geckoEvent.isControl = ((aKeyModifiers & controlKey) != 0);
 	geckoEvent.isAlt = ((aKeyModifiers & optionKey) != 0);
-	geckoEvent.isCommand = ((aKeyModifiers & cmdKey) != 0);
+	geckoEvent.isMeta = ((aKeyModifiers & cmdKey) != 0);
 
 	// nsMouseEvent
 	geckoEvent.clickCount = 1;
@@ -648,7 +648,7 @@ void nsMacEventHandler::InitializeKeyEvent(nsKeyEvent& aKeyEvent, EventRecord& a
 	aKeyEvent.isShift			= ((aOSEvent.modifiers & shiftKey) != 0);
 	aKeyEvent.isControl		= ((aOSEvent.modifiers & controlKey) != 0);
 	aKeyEvent.isAlt				= ((aOSEvent.modifiers & optionKey) != 0);
-	aKeyEvent.isCommand		= ((aOSEvent.modifiers & cmdKey) != 0);
+	aKeyEvent.isMeta		= ((aOSEvent.modifiers & cmdKey) != 0);
 	
 	//
 	// nsKeyEvent parts
@@ -1221,7 +1221,7 @@ void nsMacEventHandler::ConvertOSEventToMouseEvent(
 	aMouseEvent.isShift		= ((aOSEvent.modifiers & shiftKey) != 0);
 	aMouseEvent.isControl	= ((aOSEvent.modifiers & controlKey) != 0);
 	aMouseEvent.isAlt			= ((aOSEvent.modifiers & optionKey) != 0);
-	aMouseEvent.isCommand	= ((aOSEvent.modifiers & cmdKey) != 0);
+	aMouseEvent.isMeta	= ((aOSEvent.modifiers & cmdKey) != 0);
 
 	// nsMouseEvent
 	aMouseEvent.clickCount = sLastClickCount;
