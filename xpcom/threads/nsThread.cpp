@@ -393,6 +393,7 @@ nsIThread::GetIThread(PRThread* prthread, nsIThread* *result)
     return NS_OK;
 }
 
+#if !defined(WINCE)
 NS_COM nsresult
 nsIThread::SetMainThread()
 {
@@ -404,6 +405,15 @@ nsIThread::SetMainThread()
     }
     return GetCurrent(&gMainThread);
 }
+#else /* WINCE */
+NS_COM nsresult
+nsIThread::SetMainThread()
+{
+    // wince, being unicode, may unfortunately initialize xpcom2 multiple
+    // times to perform rudimentary upper case conversion....
+    return GetCurrent(&gMainThread);
+}
+#endif /* WINCE */
 
 NS_COM nsresult
 nsIThread::GetMainThread(nsIThread **result)

@@ -417,6 +417,46 @@ nsresult NS_COM NS_InitXPCOM2(nsIServiceManager* *result,
             NS_ADDREF(*result = serviceManager);
         }
     }
+#if defined(WINCE)
+    else
+    {
+        // WINCE may cause multiple XPCOM initializations, due to some unicode
+        // string conversions other code requiers....
+        //
+        // Handle that here.
+
+        compMgr = nsComponentManagerImpl::gComponentManager;
+
+        PRBool value;
+        if (binDirectory)
+        {
+            rv = binDirectory->IsDirectory(&value);
+
+            if (NS_SUCCEEDED(rv) && value)
+            {
+                gDirectoryService->Define(NS_XPCOM_INIT_CURRENT_PROCESS_DIR, binDirectory);
+            }
+
+            nsCAutoString path;
+            binDirectory->GetNativePath(path);
+            nsFileSpec spec(path.get());
+
+            nsSpecialSystemDirectory::Set(nsSpecialSystemDirectory::Moz_BinDirectory, &spec);
+        }
+        if (appFileLocationProvider) {
+            rv = dirService->RegisterProvider(appFileLocationProvider);
+            if (NS_FAILED(rv))
+            {
+                return rv;
+            }
+        }
+
+        if (result) {
+            nsIServiceManager *serviceManager = NS_STATIC_CAST(nsIServiceManager*, compMgr);
+            NS_ADDREF(*result = serviceManager);
+        }
+    }
+#endif /* WINCE */
 
     nsCOMPtr<nsIMemory> memory;
     NS_GetMemoryManager(getter_AddRefs(memory));
