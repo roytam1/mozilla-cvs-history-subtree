@@ -51,7 +51,6 @@ CPPSRCS = \
 	HistoryActionEvents.cpp \
 	ISupportsPeer.cpp \
 	NativeEventThread.cpp \
-	NativeEventThreadActionEvents.cpp \
 	NavigationImpl.cpp \
 	NavigationActionEvents.cpp \
 	InputStreamShim.cpp \
