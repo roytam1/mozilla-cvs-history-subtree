@@ -333,9 +333,9 @@ nsNetDiskCache::SetEnabled(PRBool aEnabled)
 }
 
 NS_IMETHODIMP
-nsNetDiskCache::GetReadOnly(PRBool *aReadOnly) 
+nsNetDiskCache::GetFlags(PRUint32 *aFlags) 
 {
-  *aReadOnly = PR_FALSE ;
+  *aFlags = FILE_PER_URL_CACHE;
   return NS_OK ;
 }
 
@@ -392,15 +392,6 @@ NS_IMETHODIMP
 nsNetDiskCache::GetCapacity(PRUint32 *aCapacity)
 {
   *aCapacity = m_Capacity ;
-  return NS_OK ;
-}
-
-// I think cache manager should be responsible for purging if current cap is
-// bigger than the new value.
-NS_IMETHODIMP
-nsNetDiskCache::SetCapacity(PRUint32 aCapacity)
-{
-  m_Capacity = aCapacity ;
   return NS_OK ;
 }
 
