@@ -22,6 +22,7 @@ include $(DEPTH)/config/config.mk
 MODULE		= xfe2
 
 USE_3PANE 	= 1
+USE_ABCOM 	= 1
 GLUE_COMPO_CONTEXT = 1
 
 LIBRARY_NAME	= xfe2
