@@ -103,7 +103,8 @@ nsBookmarksShell.prototype =
   {
     var boxObject = this.element.outlinerBoxObject;
     var last = { };
-    var firstRange = boxObject.selection.getRangeAt(0, { }, last);
+    var rangeCount = boxObject.selection.getRangeCount();
+    var firstRange = boxObject.selection.getRangeAt(rangeCount - 1, { }, last);
     return last.value;
   },
   
@@ -122,6 +123,13 @@ nsBookmarksShell.prototype =
     return selnIndices;
   },
 
+  get RDFC()
+  {
+    const kRDFCContractID = "@mozilla.org/rdf/container;1";
+    const kRDFCIID = Components.interfaces.nsIRDFContainer;
+    return Components.classes[kRDFCContractID].getService(kRDFCIID);
+  },
+  
   //////////////////////////////////////////////////////////////////////////////
   // Mouse down on outliner. Need to get some mouse coords for use when figuring
   // out where we clicked during context menu creation. 
@@ -165,13 +173,14 @@ nsBookmarksShell.prototype =
   openBookmark: function ()
   {
     // Get the current item, and load it. 
-    var itemRes = this.outlinerBuilder.getResourceAtIndex(this.element.outlinerBoxObject.selection.currentIndex);
-    url = this.getStringValue(itemRes, "URL");
+    var selection = gBookmarksShell.element.outlinerBoxObject.selection;
+    var itemRes = gBookmarksShell.outlinerBuilder.getResourceAtIndex(selection.currentIndex);
+    url = gBookmarksShell.getStringValue(itemRes, "URL");
     
     // Ignore "NC:" and empty urls.
     if (url.substring(0,3) == "NC:" || !url) return;
 
-    if (this.openNewWindow)
+    if (gBookmarksShell.openNewWindow)
       openDialog (getBrowserURL(), "_blank", "chrome,all,dialog=no", url);
     else
       openTopWin (url);
@@ -509,7 +518,7 @@ nsBookmarksShell.prototype =
       const kRDFCtrContractID = "@mozilla.org/rdf/container;1"
       const kRDFCtrIID = Components.interfaces.nsIRDFContainer;
       const kRDFCtr = Components.classes[kRDFCtrContractID].getService(kRDFCtrIID);
-      var container = kRDFCtr.Init(this.bookmarksDB, folder);
+      kRDFCtr.Init(this.bookmarksDB, folder);
 
       // 3) The relative item is the parent. 
       parentIndex = relativeIndex;
@@ -519,7 +528,7 @@ nsBookmarksShell.prototype =
       //    and it'd be much nicer if nsIRDFContainer had a method that would
       //    give back the element at an index. 
       var ordinalURI = "http://www.w3.org/TR/WD-rdf-syntax#_%idx%";
-      ordinalURI = ordinalURI.replace(/%idx%/, container.GetCount());
+      ordinalURI = ordinalURI.replace(/%idx%/, kRDFCtr.GetCount());
       var ordinal = kRDFSvc.GetResource(ordinalURI);
       try {
         var lastItem = this.bookmarksDB.GetTarget(folder, ordinal, true);
@@ -616,7 +625,7 @@ nsBookmarksShell.prototype =
       var url = LITERAL(this.db, current.Value, NC_NS + "URL");
       var name = LITERAL(this.db, current.Value, NC_NS + "Name");
 
-      sBookmarkItem += current.Value + "\r";
+      sBookmarkItem += current.Value + "\n";
       sTextUnicode += url + "\n";
       sTextHTML += "<A HREF=\"" + url + "\">" + name + "</A> ";
     }    
@@ -641,7 +650,113 @@ nsBookmarksShell.prototype =
     const kClipboardIID = Components.interfaces.nsIClipboard;
     var clipboard = Components.classes[kClipboardContractID].getService(kClipboardIID);
     clipboard.setData(xferable, null, kClipboardIID.kGlobalClipboard);
-  }
+  },
+  
+  canPaste: function ()
+  {
+    const kClipboardContractID = "@mozilla.org/widget/clipboard;1";
+    const kClipboardIID = Components.interfaces.nsIClipboard;
+    var clipboard = Components.classes[kClipboardContractID].getService(kClipboardIID);
+    const kSuppArrayContractID = "@mozilla.org/supports-array;1";
+    const kSuppArrayIID = Components.interfaces.nsISupportsArray;
+    var flavourArray = Components.classes[kSuppArrayContractID].createInstance(kSuppArrayIID);
+    const kSuppStringContractID = "@mozilla.org/supports-string;1";
+    const kSuppStringIID = Components.interfaces.nsISupportsString;
+    
+    var flavours = ["moz/bookmarkclipboarditem", "text/x-moz-url"];
+    for (var i = 0; i < flavours.length; ++i) {
+      const kSuppString = Components.classes[kSuppStringContractID].createInstance(kSuppStringIID);
+      kSuppString.data = flavours[i];
+      flavourArray.AppendElement(kSuppString);
+    }
+    var hasFlavors = clipboard.hasDataMatchingFlavors(flavourArray, kClipboardIID.kGlobalClipboard);
+    return hasFlavors;
+  },
+  
+  paste: function ()
+  {
+    const kXferableContractID = "@mozilla.org/widget/transferable;1";
+    const kXferableIID = Components.interfaces.nsITransferable;
+    var xferable = Components.classes[kXferableContractID].createInstance(kXferableIID);
+    xferable.addDataFlavor("moz/bookmarkclipboarditem");
+    xferable.addDataFlavor("text/x-moz-url");
+    xferable.addDataFlavor("text/unicode");
+
+    const kClipboardContractID = "@mozilla.org/widget/clipboard;1";
+    const kClipboardIID = Components.interfaces.nsIClipboard;
+    var clipboard = Components.classes[kClipboardContractID].getService(kClipboardIID);
+    clipboard.getData(xferable, kClipboardIID.kGlobalClipboard);
+    
+    var flavour = { };
+    var data = { };
+    var length = { };
+    xferable.getAnyTransferData(flavour, data, length);
+    var nodes = []; var names = [];
+    data = data.value.QueryInterface(Components.interfaces.nsISupportsWString).data;
+    switch (flavour.value) {
+    case "moz/bookmarkclipboarditem":
+      nodes = data.split("\n");
+      break;
+    case "text/x-moz-url":
+      var ix = data.indexOf("\n");
+      nodes.push(data.substring(0, ix != -1 ? ix : data.length));
+      names.push(data.substring(ix));
+      break;
+    default: 
+      return;
+    }
+
+    var insertionPoint = this.getBestCreationIndices();
+    var parent = insertionPoint.parent.resource;
+    var relative = insertionPoint.relative.resource;
+    
+    dump("*** parent = " + parent.Value + "\n");
+    dump("*** relative = " + relative.Value + "\n");
+    
+    var RDFC = this.RDFC;
+    
+    var additiveFlag = false;
+    for (var i = 0; i < nodes.length; ++i) {
+      if (!nodes[i]) continue;
+      var rCurrent = kRDFSvc.GetResource(nodes[i]);
+      const krTypeProperty = kRDFSvc.GetResource(RDF_NS + "type");
+      var rType = this.db.GetTarget(rCurrent, krTypeProperty, true);
+      try {
+        rType = rType.QueryInterface(Components.interfaces.nsIRDFResource);
+      }
+      catch (e) {
+        try {
+          rType = rType.QueryInterface(Components.interfaces.nsIRDFLiteral);
+        }
+        catch (e) {
+          // OK, no type exists, so node does not exist in the graph. 
+          // (e.g. user pastes url as text)
+          // Do some housekeeping to create a new bookmark. 
+          const krName = kRDFSvc.GetResource(names[i]);
+          const krNameProperty = kRDFSvc.GetResource(NC_NS + "Name");
+          const krBookmark = kRDFSvc.GetResource(NC_NS + "Bookmark");
+          kBMDS.Assert(rCurrent, krNameProperty, krName, true);
+          kBMDS.Assert(rCurrent, krTypeProperty, krBookmark, true);
+        }
+      }
+
+      // If the node is a folder, then we need to create a new anonymous 
+      // resource and copy all the arcs over.
+      if (rType && rType.Value == NC_NS + "Folder")
+        rCurrent = BookmarksUtils.cloneFolder(rCurrent, parent, relative);
+
+      RDFC.Init(this.bookmarksDB, parent);
+      ix = RDFC.IndexOf(relative);
+      if (ix != -1) 
+        RDFC.InsertElementAt(rCurrent, ix+1, true);
+      else
+        RDFC.AppendElement(rCurrent);
+      if (!additiveFlag) additiveFlag = true;
+
+      var rds = this.bookmarksDB.QueryInterface(Components.interfaces.nsIRDFRemoteDataSource);
+      rds.Flush();
+    }
+  }    
 }
 
 function CommandArrayEnumerator (aCommandArray)
@@ -757,9 +872,9 @@ nsBookmarksOutlinerController.prototype =
     case "cmd_bm_copy":
       var boxObject = this.shell.element.outlinerBoxObject;
       return boxObject.selection.count >= 1;
-    case "cmd_bm_cut":
-    case "cmd_bm_copy":
     case "cmd_bm_paste":
+      return this.shell.canPaste();
+    case "cmd_bm_cut":
     case "cmd_bm_openfolderinnewwindow":
     case "cmd_bm_rename":
     case "cmd_bm_setnewbookmarkfolder":
@@ -813,9 +928,9 @@ nsBookmarksOutlinerController.prototype =
       return this.shell.element.outlinerBoxObject.selection.selectAll();
     case "cmd_bm_copy":
       return this.shell.copySelection();
-    case "cmd_bm_cut":
-    case "cmd_bm_copy":
     case "cmd_bm_paste":
+      return this.shell.paste();
+    case "cmd_bm_cut":
     case "cmd_bm_openfolderinnewwindow":
     case "cmd_bm_rename":
     case "cmd_bm_setnewbookmarkfolder":
