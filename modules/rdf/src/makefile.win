@@ -42,7 +42,7 @@ PROGRAM=.\$(OBJDIR)\test.exe
 
 MODULE=rdf 
 LIBRARY_NAME=rdf 
-REQUIRES=nspr dbm java js htmldlgs util img layer pref
+REQUIRES=nspr dbm java js htmldlgs util img layer pref cstream
 CSRCS=bmk2mcf.c vocab.c  nlcstore.c mcf.c mcff2mcf.c rdfht.c \
     remstore.c ht.c glue.c utils.c fs2rdf.c hist2rdf.c \
     rdfparse.c   es2mcf.c columns.c   \
@@ -60,7 +60,7 @@ LINCS=-I$(XPDIST)\public\nspr -I$(XPDIST)\public\dbm \
     -I$(XPDIST)\public\java -I$(XPDIST)\public\js \
     -I$(XPDIST)\public\htmldlgs -I$(XPDIST)\public\util \
     -I$(XPDIST)\public\img -I$(XPDIST)\public\layer \
-    -I$(XPDIST)\public\pref
+    -I$(XPDIST)\public\pref -I$(XPDIST)\public\cstream
      
 !endif
 
