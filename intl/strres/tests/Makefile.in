@@ -37,7 +37,6 @@ LIBS		= \
 	-lhttpurl \
 	-lnetwork \
 	-lnetcache \
-	-lgmbase$(MOZ_TOOLKIT) \
 	$(TK_LIBS) \
 	-lpref \
 	-lsecfree \

@@ -52,7 +52,6 @@ LIBS = \
 	-lxp	\
 	-lpref	\
 	-lmozjs	\
-	-lgmbase$(MOZ_TOOLKIT) \
 	-lsecfree \
 	$(ZLIB_LIBS) \
 	$(NSPR_LIBS) \

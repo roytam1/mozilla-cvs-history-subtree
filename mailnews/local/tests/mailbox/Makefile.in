@@ -55,7 +55,6 @@ LIBS = \
 	-lmozjs	\
 	-lmork \
 	-lmsgbaseutil \
-	-lgmbase$(MOZ_TOOLKIT) \
 	-lsecfree \
 	$(ZLIB_LIBS) \
 	$(NSPR_LIBS) \

@@ -30,7 +30,6 @@ REQUIRES	=
 
 TOOLKIT_GFX_LIB		:= -lgfx$(MOZ_TOOLKIT)
 TOOLKIT_WIDGET_LIB	:= -lwidget$(MOZ_TOOLKIT)
-TOOLKIT_BASE_LIB	:= -lgmbase$(MOZ_TOOLKIT)
 
 BASE_LIBS =	     \
 	-lpref	     \
@@ -49,7 +48,6 @@ GECKO_LIBS =		      \
 	$(TOOLKIT_GFX_LIB)    \
 	-lgfxps  \
 	-lraptorhtml	      \
-	$(TOOLKIT_BASE_LIB)   \
 	-lraptorhtmlpars      \
 	-lexpat \
 	-lxmltok \
@@ -89,7 +87,6 @@ LIBS		= \
 	$(IMGLIB_LIBS) \
 	$(BASE_LIBS) \
 	$(NSPR_LIBS) \
-	$(TOOLKIT_BASE_LIB) \
 	$(TK_LIBS) \
 	$(NULL)
 

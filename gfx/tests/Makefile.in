@@ -49,7 +49,6 @@ LIBS = \
 	-lnetcnvts \
 	-lnetcache \
 	-lpwcac \
-	-lgmbase$(MOZ_TOOLKIT) \
 	$(TK_LIBS) \
 	-lxpcom \
 	-lreg \

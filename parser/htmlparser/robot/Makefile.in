@@ -36,7 +36,6 @@ LIBS = \
 	-lexpat \
 	-lxmltok \
 	-lnetlib \
-	-lgmbase$(MOZ_TOOLKIT) \
 	-lftpurl \
 	-lfileurl \
 	-labouturl \

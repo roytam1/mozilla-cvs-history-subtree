@@ -44,7 +44,6 @@ LIBS		= \
 	-labouturl \
 	-lnetwork \
 	-lnetcnvts \
-	-lgmbase$(MOZ_TOOLKIT) \
 	$(TK_LIBS) \
 	-lpref \
 	-l$(MOZ_LIB_JS_PREFIX)js \

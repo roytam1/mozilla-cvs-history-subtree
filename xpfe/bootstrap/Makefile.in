@@ -30,7 +30,6 @@ include $(DEPTH)/config/autoconf.mk
 
 TOOLKIT_GFX_LIB     = -lgfx$(MOZ_TOOLKIT)
 TOOLKIT_WIDGET_LIB  = -lwidget$(MOZ_TOOLKIT)
-TOOLKIT_BASE_LIB    = -lgmbase$(MOZ_TOOLKIT)
 
 
 LIBS = \
@@ -41,7 +40,6 @@ LIBS = \
 	-lraptorgfx	\
 	$(TOOLKIT_GFX_LIB)\
 	-lgfxps         \
-	$(TOOLKIT_BASE_LIB)\
 	-lreg		\
 	-labouturl	\
 	-lhttpurl	\

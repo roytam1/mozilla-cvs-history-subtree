@@ -54,7 +54,6 @@ LIBS = \
 	-lnetcache \
 	-lsockstuburl \
 	-lnetwork \
-	-lgmbase$(MOZ_TOOLKIT) \
 	$(TK_LIBS) \
 	-lpref \
 	-lsecfree \
