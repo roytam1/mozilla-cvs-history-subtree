@@ -45,7 +45,7 @@ nsresult NS_NewNodeInfoManager(nsINodeInfoManager** aResult)
 
 
 nsNodeInfoManager::nsNodeInfoManager()
-  : mNameSpaceManager(nsnull)
+  : mDocument(nsnull)
 {
   NS_INIT_REFCNT();
 
