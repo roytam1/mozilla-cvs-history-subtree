@@ -756,10 +756,6 @@ nsEditor::EndPlaceHolderTransaction()
   NS_PRECONDITION(mPlaceHolderBatch > 0, "zero or negative placeholder batch count when ending batch!");
   if (mPlaceHolderBatch == 1)
   {
-#ifdef USE_CARET_FRAME_OFFSET_CACHE
-// XXX: Ifdef'd out caret frame offset caching code because it breaks
-//      JA IME (bug 204434) on the 1.4 branch.
-
     nsCOMPtr<nsISelection>selection;
     nsresult rv = GetSelection(getter_AddRefs(selection));
     if (NS_FAILED(rv))
@@ -776,19 +772,16 @@ nsEditor::EndPlaceHolderTransaction()
     if (selPrivate) {
       selPrivate->SetCanCacheFrameOffset(PR_TRUE);
     }
-#endif // USE_CARET_FRAME_OFFSET_CACHE
     
     // time to turn off the batch
     EndUpdateViewBatch();
     // make sure selection is in view
     ScrollSelectionIntoView(PR_FALSE);
 
-#ifdef USE_CARET_FRAME_OFFSET_CACHE
     // cached for frame offset are Not available now
     if (selPrivate) {
       selPrivate->SetCanCacheFrameOffset(PR_FALSE);
     }
-#endif // USE_CARET_FRAME_OFFSET_CACHE
 
     if (mSelState)
     {
