@@ -427,6 +427,10 @@ endif
 endif
 
 
+define MAKE_DIR
+if test ! -d $@; then rm -rf $@; $(NSINSTALL) -D $@; fi
+endef
+
 #
 # Personal makefile customizations go in these optional make include files.
 #
