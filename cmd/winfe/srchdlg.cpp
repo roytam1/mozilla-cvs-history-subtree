@@ -86,9 +86,9 @@ void CSearchDialog::OnHelp()
 {
 #ifdef FEATURE_BUTTONPROPERTYPAGE
 	if (GetActivePage() == m_pAdvancedSearch)
-		NetHelp(HELP_ADD_USER_PROPS);
+		NetHelp(HELP_SEARCH_LDAP_ADVANCED);
 	if (GetActivePage() == m_pBasicSearch)
-		NetHelp(HELP_ADD_USER_PROPS);
+		NetHelp(HELP_SEARCH_LDAP_BASIC);
 #endif
 }
 
@@ -248,7 +248,7 @@ CAdvancedSearch::CAdvancedSearch(CWnd *pParent)
 	//{{AFX_DATA_INIT(CAddressUser)
 	//}}AFX_DATA_INIT
 	m_iMoreCount = 0;
-	m_bLogicType = 0;
+	m_bLogicType = 1;
 	m_bChanged = FALSE;
 }
 
@@ -288,7 +288,8 @@ BEGIN_MESSAGE_MAP(CAdvancedSearch, CDialog)
 	ON_CBN_SELCHANGE(IDC_COMBO_OP3, OnOperatorValueChanged)
 	ON_CBN_SELCHANGE(IDC_COMBO_OP4, OnOperatorValueChanged)
 	ON_CBN_SELCHANGE(IDC_COMBO_OP5, OnOperatorValueChanged)
-	ON_CBN_SELCHANGE(IDC_COMBO_AND_OR, OnAndOr)
+	ON_BN_CLICKED(IDC_RADIO_ALL, OnAndOr)
+	ON_BN_CLICKED(IDC_RADIO_ANY, OnAndOr)
 	ON_EN_CHANGE( IDC_EDIT_VALUE1, OnEditValueChanged )
 	ON_EN_CHANGE( IDC_EDIT_VALUE2, OnEditValueChanged )
 	ON_EN_CHANGE( IDC_EDIT_VALUE3, OnEditValueChanged )
