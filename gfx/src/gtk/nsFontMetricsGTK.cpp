@@ -34,12 +34,14 @@
 #include "nsCOMPtr.h"
 #include "nspr.h"
 #include "nsHashtable.h"
+#include "nsStringMap.h"
 #include "nsReadableUtils.h"
 #include "nsAWritableString.h"
 #include "nsXPIDLString.h"
 
 #include <gdk/gdk.h>
 #include <gdk/gdkx.h>
+
 
 #include <X11/Xatom.h>
 
@@ -207,8 +209,8 @@ static nsIPref* gPref = nsnull;
 static nsICharsetConverterManager2* gCharSetManager = nsnull;
 static nsIUnicodeEncoder* gUserDefinedConverter = nsnull;
 
-static nsHashtable* gAliases = nsnull;
-static nsHashtable* gCharSetMaps = nsnull;
+static nsStringMap* gAliases = nsnull;
+static nsStringMap* gCharSetMaps = nsnull;
 static nsHashtable* gFamilies = nsnull;
 static nsHashtable* gNodes = nsnull;
 // gCachedFFRESearches holds the "already looked up"
@@ -600,7 +602,7 @@ static PRUnichar gDoubleByteSpecialChars[] = {
 
 
 static PRBool
-FreeCharSetMap(nsHashKey* aKey, void* aData, void* aClosure)
+FreeCharSetMap(const char* aKey, void* aData, void* aClosure)
 {
   nsFontCharSetMap* charsetMap = (nsFontCharSetMap*) aData;
   NS_IF_RELEASE(charsetMap->mInfo->mConverter);
@@ -846,15 +848,14 @@ InitGlobals(void)
     FreeGlobals();
     return NS_ERROR_OUT_OF_MEMORY;
   }
-  gAliases = new nsHashtable();
+  gAliases = new nsStringMap;
   if (!gAliases) {
     FreeGlobals();
     return NS_ERROR_OUT_OF_MEMORY;
   }
   nsFontFamilyName* f = gFamilyNameTable;
   while (f->mName) {
-    nsCStringKey key(f->mName);
-    gAliases->Put(&key, f->mXName);
+    gAliases->Put(f->mName, f->mXName);
     f++;
   }
   gWeights = new nsHashtable();
@@ -879,15 +880,14 @@ InitGlobals(void)
     gStretches->Put(&key, (void*) p->mValue);
     p++;
   }
-  gCharSetMaps = new nsHashtable();
+  gCharSetMaps = new nsStringMap;
   if (!gCharSetMaps) {
     FreeGlobals();
     return NS_ERROR_OUT_OF_MEMORY;
   }
   nsFontCharSetMap* charSetMap = gCharSetMap;
   while (charSetMap->mName) {
-    nsCStringKey key(charSetMap->mName);
-    gCharSetMaps->Put(&key, charSetMap);
+    gCharSetMaps->Put(charSetMap->mName, charSetMap);
     charSetMap++;
   }
   gSpecialCharSets = new nsHashtable();
@@ -3076,9 +3076,8 @@ GetFontNames(const char* aPattern, nsFontNodeArray* aNodes)
     if (!*charSetName) {
       continue;
     }
-    nsCStringKey charSetKey(charSetName);
     nsFontCharSetMap* charSetMap =
-      (nsFontCharSetMap*) gCharSetMaps->Get(&charSetKey);
+      (nsFontCharSetMap*) gCharSetMaps->Get(charSetName);
     if (!charSetMap)
       charSetMap = gNoneCharSetMap;
     nsFontCharSetInfo* charSetInfo = charSetMap->mInfo;
@@ -3508,8 +3507,7 @@ nsFontMetricsGTK::TryFamily(nsCString* aName, PRUnichar aChar)
 nsFontGTK*
 nsFontMetricsGTK::TryAliases(nsCString* aAlias, PRUnichar aChar)
 {
-  nsCStringKey key(*aAlias);
-  char* name = (char*) gAliases->Get(&key);
+  char* name = (char*) gAliases->Get(aAlias->get());
   if (name) {
     nsCAutoString str(name);
     return TryFamily(&str, aChar);
