@@ -194,9 +194,9 @@ extern const char * const z_errmsg[10]; /* indexed by 2-zlib_error */
 #endif
 
 #ifdef HAVE_STRERROR
-#ifndef VMS
-   extern char *strerror OF((int));
-#endif
+#  ifndef VMS
+     extern char *strerror OF((int));
+#  endif
 #  define zstrerror(errnum) strerror(errnum)
 #else
 #  define zstrerror(errnum) ""
