@@ -866,12 +866,14 @@ nsMimeBaseEmitter::Complete()
 
   if (mOutListener)
   {
-    PRUint32 bytesInStream;
+    PRUint32 bytesInStream = 0; 
     nsresult rv2 = mInputStream->Available(&bytesInStream);
 	NS_ASSERTION(NS_SUCCEEDED(rv2), "Available failed");
+    if (bytesInStream)
+    { 
     nsCOMPtr<nsIRequest> request = do_QueryInterface(mChannel);
     rv2 = mOutListener->OnDataAvailable(request, mURL, mInputStream, 0, bytesInStream);
-	NS_ASSERTION(NS_SUCCEEDED(rv2), "OnDataAvailable failed");
+    } 
   }
 
   return NS_OK;
