@@ -36,23 +36,41 @@
 # ***** END LICENSE BLOCK *****
 
 DEPTH		= ../../../../..
-topsrcdir	= ../../../../..
-srcdir		= .
-VPATH		= .
+topsrcdir	= @top_srcdir@
+srcdir		= @srcdir@
+VPATH		= @srcdir@
 
-#BUILDSTYLE	= Deployment
+include $(DEPTH)/config/autoconf.mk
+
+ifdef MOZ_DEBUG
 BUILDSTYLE	= Development
+else
+ifdef CHIMERA_OPT_SYMBOLS
+BUILDSTYLE	= DeploymentSymbols
+else
+BUILDSTYLE	= Deployment
+endif
+endif
 
 TARGET		= "Default Plugin"
+
+include $(topsrcdir)/config/rules.mk
 
 # decodes resource files from AppleSingle to Resource Manager format.
 ASDECODE = ../../../../../dist/bin/asdecode
 RESOURCE_FILES = _NullPlugin.rsrc
 
-all:: $(RESOURCE_FILES)
-	pbxbuild -target $(TARGET) -buildstyle $(BUILDSTYLE)
+all:: build-plugin
 
-resources:: $(RESOURCE_FILES)
+libs install:: install-plugin
+
+install-plugin: build-plugin
+	$(INSTALL) "build/Default Plugin.plugin" $(DIST)/bin/plugins
+
+resources: $(RESOURCE_FILES)
+
+build-plugin: resources
+	pbxbuild -target $(TARGET) -buildstyle $(BUILDSTYLE)
 
 _%.rsrc: %.rsrc
 	$(ASDECODE) $< $@

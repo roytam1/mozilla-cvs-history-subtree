@@ -55,7 +55,7 @@
 				OTHER_CFLAGS = "-DXP_MACOSX=1 -DNO_X11=1 -DUSE_SYSTEM_CONSOLE=1";
 				OTHER_LDFLAGS = "";
 				OTHER_REZFLAGS = "";
-				PRODUCT_NAME = "Default Plug-in";
+				PRODUCT_NAME = "Default Plugin";
 				SECTORDER_FLAGS = "";
 				WARNING_CFLAGS = "-Wmost -Wno-four-char-constants -Wno-unknown-pragmas";
 				WRAPPER_EXTENSION = plugin;
@@ -74,7 +74,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleExecutable</key>
-	<string>Default Plug-in</string>
+	<string>Default Plugin</string>
 	<key>CFBundleIconFile</key>
 	<string></string>
 	<key>CFBundleIdentifier</key>
@@ -218,7 +218,7 @@
 //4F4
 		4F9091AB011F3BD104CA0E50 = {
 			isa = PBXBundleReference;
-			path = "Default Plug-in.plugin";
+			path = "Default Plugin.plugin";
 			refType = 3;
 		};
 		4F9091AC011F3BD104CA0E50 = {
