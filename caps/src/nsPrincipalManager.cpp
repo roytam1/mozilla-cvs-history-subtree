@@ -365,7 +365,7 @@ nsPrincipalManager::Init()
   NS_ADDREF(this);
   itsPrinNameToPrincipalTable = new nsHashtable();
   if(itsPrinNameToPrincipalTable == NULL) return NS_ERROR_OUT_OF_MEMORY;
-  NS_WITH_SERVICE1(nsIComponentManager, compMgr, nsnull, kComponentManagerCID,& rv);
+  NS_WITH_SERVICE(nsIComponentManager, compMgr, kComponentManagerCID,& rv);
   if (NS_FAILED(rv)) return rv;
   rv = compMgr->CreateInstance(NS_PRINCIPALARRAY_PROGID, nsnull,NS_GET_IID(nsIPrincipalArray), (void * *)& theUnsignedPrincipalArray);
   if(NS_FAILED(rv)) return rv;
