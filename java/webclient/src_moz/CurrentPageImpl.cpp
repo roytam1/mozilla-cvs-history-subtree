@@ -308,7 +308,11 @@ JNIEXPORT jobject JNICALL Java_org_mozilla_webclient_wrapper_1native_CurrentPage
 		::util_ThrowExceptionToJava(env, "Exception: Can't get DOM Node.");
 		return nsnull;
 	}
-    result = env->CallStaticObjectMethod(clazz, mid, documentLong);
+
+    wsGetDOMEvent * actionEvent = new wsGetDOMEvent(env, clazz, mid, documentLong);
+    PLEvent			* event       = (PLEvent*) *actionEvent;      
+    result = ::util_PostSynchronousEvent(initContext, event);
+
     
     return result;
 }

@@ -240,6 +240,9 @@ jint util_GetJavaVM(JNIEnv *env, JavaVM **vm);
 
 jclass util_FindClass(JNIEnv *env, const char *fullyQualifiedClassName);
 
+jobject util_CallStaticObjectMethodlongArg(JNIEnv *env, jclass clazz, 
+                                    jmethodID methodID, jlong longArg);
+
 jfieldID util_GetStaticFieldID(JNIEnv *env, jclass clazz, 
                                const char *fieldName, 
                                const char *signature);

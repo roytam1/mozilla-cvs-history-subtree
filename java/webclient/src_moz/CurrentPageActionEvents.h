@@ -38,7 +38,7 @@
 #include "nsIFindComponent.h"
 #include "nsISearchContext.h"
 #include "nsISHistory.h"
-
+#include "jni_util.h"
 
 class wsCopySelectionEvent : public nsActionEvent {
 public:
@@ -85,6 +85,18 @@ public:
 protected:
     nsIDocShell * mDocShell;
     PRBool mViewMode;
+};
+
+class wsGetDOMEvent : public nsActionEvent {
+public:
+    wsGetDOMEvent (JNIEnv *env, jclass clz, jmethodID yourID, jlong yourDoc);
+    void * handleEvent (void);
+
+protected:
+    JNIEnv * mEnv;
+    jclass mClazz;
+    jmethodID mID;
+    jlong mDoc;
 };
 
 #endif /* CurrentPageActionEvents_h___ */

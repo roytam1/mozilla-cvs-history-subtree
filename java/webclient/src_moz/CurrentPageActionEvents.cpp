@@ -167,3 +167,30 @@ wsViewSourceEvent::handleEvent ()
     return nsnull;
 }
 
+
+wsGetDOMEvent::wsGetDOMEvent(JNIEnv *yourEnv, jclass clz, 
+                             jmethodID yourID, jlong yourDoc) :
+    nsActionEvent(),
+    mEnv(yourEnv),
+    mClazz(clz),
+    mID(yourID),
+    mDoc(yourDoc)
+{
+}
+
+void *
+wsGetDOMEvent::handleEvent ()
+{
+
+    void * result = nsnull;
+    if (mEnv != nsnull && mClazz != nsnull && 
+        mID != nsnull && mDoc != nsnull)
+        result = (void *) util_CallStaticObjectMethodlongArg(mEnv, mClazz, mID, mDoc);
+    
+    return result;
+}
+
+
+
+
+ 

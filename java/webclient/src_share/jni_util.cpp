@@ -373,6 +373,19 @@ jclass util_FindClass(JNIEnv *env, const char *fullyQualifiedClassName)
     return result;
 }
 
+
+jobject util_CallStaticObjectMethodlongArg(JNIEnv *env, jclass clazz, 
+                                    jmethodID methodID, jlong longArg)
+{
+    jobject result = nsnull;
+#ifdef BAL_INTERFACE
+#else
+    result = env->CallStaticObjectMethod(clazz, methodID, longArg);
+#endif
+    return result;
+}
+
+
 jfieldID util_GetStaticFieldID(JNIEnv *env, jclass clazz, 
                                const char *fieldName, 
                                const char *signature)
