@@ -72,7 +72,7 @@ public:
 #define TX_DECL_TOPLEVELITEM virtual type getType();
 #define TX_IMPL_GETTYPE(_class, _type) \
 txToplevelItem::type \
-_class##::getType() { return _type;}
+_class::getType() { return _type;}
 
 class txInstructionContainer : public txToplevelItem
 {
