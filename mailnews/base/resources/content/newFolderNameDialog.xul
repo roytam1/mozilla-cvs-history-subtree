@@ -47,9 +47,16 @@ Rights Reserved.
           datasources="rdf:msgaccountmanager rdf:mailnewsfolders"
           ref="msgaccounts:/">
           <template>
+              <rule iscontainer="true">
               <html:option uri="..." value="...">
                 <text value="rdf:http://home.netscape.com/NC-rdf#Name"/>
               </html:option>
+              </rule>
+              <rule>
+                <html:option uri="..." value="...">
+                  <text value="rdf:http://home.netscape.com/NC-rdf#Name"/>
+                </html:option>
+              </rule>
           </template>
         </html:select>
 		<spring flex="100%"/>

@@ -15,9 +15,11 @@
  * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
  * Reserved.
  */
-#include "xp.h"
+#include "prlog.h"
 #include "prmem.h"
 #include "plstr.h"
+
+#include "xp_core.h"            /* for XP_BEGIN_PROTOS, for intl_csi.h */
 #include "intl_csi.h"
 
 INTL_CharSetInfo 
@@ -28,7 +30,7 @@ LO_GetDocumentCharacterSetInfo(MWContext *context)
 }
 
 void 
-INTL_CharSetIDToName(int16 csid, char  *charset)
+INTL_CharSetIDToName(PRInt16 csid, char  *charset)
 {
   if (charset) {
 	PR_ASSERT(INTL_CsidToCharsetNamePt(csid));
@@ -48,20 +50,20 @@ char *INTL_ResourceCharSet(void)
 
 /* ----------- CSI CSID ----------- */
 void
-INTL_SetCSIDocCSID (INTL_CharSetInfo c, int16 doc_csid)
+INTL_SetCSIDocCSID (INTL_CharSetInfo c, PRInt16 doc_csid)
 {
 	return;
 }
 
-int16
+PRInt16
 INTL_GetCSIDocCSID(INTL_CharSetInfo c)
 {
 	return 0;
 }
 
 unsigned char *INTL_ConvertLineWithoutAutoDetect(
-    int16 fromcsid,
-    int16 tocsid,
+    PRInt16 fromcsid,
+    PRInt16 tocsid,
     unsigned char *pSrc,
     uint32 block_size)
 {
@@ -72,14 +74,14 @@ unsigned char *INTL_ConvertLineWithoutAutoDetect(
  * INTL_DocToWinCharSetID,
  * Based on DefaultDocCSID, it determines which Win CSID to use for Display
  */
-int16 
-INTL_DocToWinCharSetID(int16 csid)
+PRInt16 
+INTL_DocToWinCharSetID(PRInt16 csid)
 {
     /* MOZ_FUNCTION_STUB; */
     return CS_FE_ASCII;
 }
 
-int16
+PRInt16
 INTL_DefaultDocCharSetID(iDocumentContext context)
 {
 	return CS_DEFAULT;

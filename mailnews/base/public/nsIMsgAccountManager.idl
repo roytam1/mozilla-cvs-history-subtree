@@ -27,41 +27,73 @@ interface nsIMsgFolderCache;
 [scriptable, uuid(6ed2cc00-e623-11d2-b7fc-00805f05ffa5)]
 interface nsIMsgAccountManager : nsISupports {
 
+  /**
+   * creates a new account and adds it to the internal list of accounts
+   * and the preferences. This also assigns a new, unique key to the account.
+   * @returns the newly created account
+   */
   nsIMsgAccount createAccount();
-  nsIMsgAccount getAccount(in string key);
-    
-  void RemoveAccount(in nsIMsgAccount account);
 
-  /*
-   * creates a new identity and assigns it a new, unique "key"
+  /**
+   * retrieve an account with the given key. If the given account does not
+   * exist, creates a new account and adds it to the internal list
+   * and the preferences
+   *
+   * @param key the account key
+   * @returns the account specified by the given key, possibly new
+   */
+  nsIMsgAccount getAccount(in string key);
+
+  /**
+   * removes an account from the internal list of accounts and the preferences
+   *
+   * @param account the account to remove
+   */
+  void removeAccount(in nsIMsgAccount account);
+
+  /**
+   * creates a new identity and adds it to the internal list of identities.
+   * This also assigns a new, unique key to the identity
+   *
+   * @returns the newly created account
    */
   nsIMsgIdentity createIdentity();
 
-  /*
+  /**
    * creates a new server and assigns it a new, unique "key"
-   * the given type will be used to construct a ProgID
+   * the given type will be used to construct a ProgID so that the
+   * correct server object is created.
+   * 
+   * @param type a string corresponding to the server type, such as "imap"
+   * @returns the newly created server
    */
   nsIMsgIncomingServer createIncomingServer(in string type);
   
   /*
    * get the identity with the given key
    * if the identity does not exist, it will be created
+   *
+   * @param key the identity key
+   * @returns the account associated with the key, possibly newly
    */
   nsIMsgIdentity getIdentity(in string key);
 
   /*
    * Gets the existing incoming server with the given key
    * if the server's type does not exist in the preference,
-   * an error is returned/thrown
+   * an error is returned/thrown because the server type cannot be "guessed"
+   *
+   * @param key the server's known key
+   * @returns the existing server
    */
   nsIMsgIncomingServer getIncomingServer(in string key);
 
   
-  /* account list stuff */
-
-  /* defaultAccount should always be set if there are any accounts
+  /**
+   * defaultAccount should always be set if there are any accounts
    * in the account manager. You can only set the defaultAccount to an
-   * account already in the account manager */
+   * account already in the account manager
+   */
   attribute nsIMsgAccount defaultAccount;
 
   /**
@@ -70,59 +102,110 @@ interface nsIMsgAccountManager : nsISupports {
    */
   readonly attribute nsISupportsArray accounts;
 
-  /* list of all identities in all accounts
+  /**
+   * list of all identities in all accounts
    * array of nsIMsgIdentity
    */
   readonly attribute nsISupportsArray allIdentities;
 
-  /* list of all servers in all accounts
+  /**
+   * list of all servers in all accounts
    * array of nsIMsgIncomingServer
    */
   readonly attribute nsISupportsArray allServers;
 
-  /*
+  /**
    * search for the server with the given username, hostname, and type
    * the type is the same as is specified in the preferences,
    * i.e. "imap", "pop3", "none", or "nntp"
+   *
+   * @param userName the user's login name
+   * @param hostname the hosts name
+   * @param type a string specifying the type, such as "imap"
+   * @returns a server, if one is found (error or null when not found??)
    */
   nsIMsgIncomingServer
-      FindServer(in string userName, in string hostname, in string type);
+      findServer(in string userName, in string hostname, in string type);
 
+  /**
+   * This needs to go away. Returns a server with the given URI
+   * please do not use this, you can get there by:
+   * resource = RDFService.GetResource(uri);
+   * folder = resource.QueryInterface(nsIMsgFolder);
+   * server = folder.server;
+   */
   nsIMsgIncomingServer
-	FindServerUsingURI(in string uri);
+	findServerUsingURI(in string uri);
 
   /**
    * find the index of this server in the (ordered) list of accounts
+   *
+   * @param server the server to find
+   * @returns the index to a server (what if not found??)
    */
-  long FindServerIndex(in nsIMsgIncomingServer server);
+  long findServerIndex(in nsIMsgIncomingServer server);
 
+  /**
+   * Given a server, find it's parent account
+   *
+   * @param server the known server
+   * @returns the associated account (what if not found??)
+   */
   nsIMsgAccount
-      FindAccountForServer(in nsIMsgIncomingServer server);
+      findAccountForServer(in nsIMsgIncomingServer server);
 
-  /* given a server, return all identities in accounts that have this server
-   * returns an array of nsIMsgIdentity
+  /**
+   * Map server->identity:
+   * given a server, return all identities in accounts that have this server
+   *
+   * @param server the known server
+   * @returns an array of nsIMsgIdentity objects
    */
   nsISupportsArray GetIdentitiesForServer(in nsIMsgIncomingServer server);
 
-  /* given an identity, return all servers in accounts that have
+  /**
+   * Map identity->server
+   * given an identity, return all servers in accounts that have
    * this identity
-   * returns an array of nsIMsgIncomingServer
+   *
+   * @param identity the known identity
+   * @returns an array of nsIMsgIncomingServer
    */
   nsISupportsArray GetServersForIdentity(in nsIMsgIdentity identity);
 
-  /* load accounts kicks off the creation of all accounts. You do not need
-   * to call this and all accounts should be loaded lazily if you use any
-   * of the above.
+  /**
+   * kicks off the creation of all accounts. You do not need
+   * to call this and all accounts should be loaded on demand if you use any
+   * of the above calls.
+   *
    */
   void LoadAccounts();
 
-  /* unload accounts frees all the account manager data structures */
+  /**
+   * unload accounts frees all the account manager data structures
+   *
+   */
   void UnloadAccounts();
 
+  /**
+   * go through the loaded folders in every account and write cache data
+   * to the given cache
+   *
+   * @param folderCache the cache to write to
+   */
   void WriteToFolderCache(in nsIMsgFolderCache folderCache);
 
+  /**
+   * Close open network connections on all servers
+   *
+   */
   void CloseCachedConnections();
-  /* search for 4.x mailnews prefs, and migrate to 5.0 prefs */
+
+  
+  /**
+   * search for 4.x mailnews prefs, and migrate to 5.0 prefs
+   *
+   */
   void UpgradePrefs();
 };
 

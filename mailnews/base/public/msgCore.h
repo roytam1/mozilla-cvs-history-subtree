@@ -21,9 +21,8 @@
 
 #ifndef msgCore_h__
 #define msgCore_h__
-
-#include "nscore.h"
 #include "xp_core.h"
+#include "nscore.h"
 #include "nsCRT.h"
 #include "prmem.h"
 #include "plstr.h"

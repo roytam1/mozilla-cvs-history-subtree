@@ -20,6 +20,7 @@
 #include "nsIMsgSignature.idl"
 #include "nsIFileSpec.idl"
 #include "nsIMsgVCard.idl"
+#include "nsIMsgFolder.idl"
 
 /*
  * this interface contains all the personal outgoing mail information
@@ -72,15 +73,15 @@ interface nsIMsgIdentity : nsISupports {
   attribute nsIMsgVCard vCard;
 
   attribute boolean doFcc;
-  attribute string fccFolder;
+  attribute nsIMsgFolder fccFolder;
   
   attribute boolean bccSelf;
   attribute boolean bccOthers;
   attribute string bccList;
 
-  attribute string draftFolder;
-  attribute string stationaryFolder;
-  attribute string junkMailFolder;
+  attribute nsIMsgFolder draftFolder;
+  attribute nsIMsgFolder stationaryFolder;
+  attribute nsIMsgFolder junkMailFolder;
   
   wstring toString();
 };

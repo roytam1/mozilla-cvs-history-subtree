@@ -67,6 +67,9 @@ protected:
   nsresult getDefaultIntPref(const char *pref, PRInt32 *);
   nsresult setIntPref(const char *pref, PRInt32);
 
+  nsresult getFolderPref(const char *pref, nsIMsgFolder **);
+  nsresult setFolderPref(const char *pref, nsIMsgFolder*);
+  
 };
 
 
@@ -104,6 +107,18 @@ NS_IMETHODIMP	   								\
 nsMsgIdentity::Set##_postfix(PRInt32 value)		\
 {												\
   return setIntPref(_prefname, value);			\
+}
+
+#define NS_IMPL_IDPREF_MSGFOLDER(_postfix, _prefname)  \
+NS_IMETHODIMP                                          \
+nsMsgIdentity::Get##_postfix(nsIMsgFolder **aResult)  \
+{                                                      \
+  return getFolderPref(_prefname, aResult);            \
+}                                                      \
+NS_IMETHODIMP                                          \
+nsMsgIdentity::Set##_postfix(nsIMsgFolder *folder)    \
+{                                                      \
+  return setFolderPref(_prefname, folder);             \
 }
 
 

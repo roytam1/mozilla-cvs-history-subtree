@@ -2030,7 +2030,6 @@ GetFolderURIFromUserPrefs(nsMsgDeliverMode   aMode,
 {
   nsresult      rv = NS_OK;
   char          *uri = nsnull;
-
   if (!identity) return nsnull;
 
   if (aMode == nsMsgQueueForLater)       // QueueForLater (Outbox)
@@ -2050,7 +2049,10 @@ GetFolderURIFromUserPrefs(nsMsgDeliverMode   aMode,
   }
   else 
   {
-    rv = identity->GetFccFolder(&uri);
+    PRBool doFcc;
+    rv = identity->GetDoFcc(&doFcc);
+    if (NS_SUCCEEDED(rv) && doFcc)
+      rv = identity->GetFccFolder(&uri);
   }
 
   return uri;

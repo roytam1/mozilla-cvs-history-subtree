@@ -44,6 +44,10 @@
 #include "nsIURL.h"
 #include "nsISmtpService.h"
 
+#include "rdf.h"
+#include "nsIRDFService.h"
+#include "nsIRDFResource.h"
+
 // this should eventually be moved to the pop3 server for upgrading
 #include "nsIPop3IncomingServer.h"
 // this should eventually be moved to the imap server for upgrading
@@ -204,6 +208,24 @@ static NS_DEFINE_IID(kIFileLocatorIID,      NS_IFILELOCATOR_IID);
     if (NS_SUCCEEDED(macro_rv)) { \
       MACRO_OBJECT->MACRO_METHOD(macro_oldStr); \
       PR_FREEIF(macro_oldStr); \
+    } \
+  }
+
+#define MIGRATE_SIMPLE_FOLDER_PREF(PREFNAME,MACRO_OBJECT,MACRO_METHOD,MACRO_RDF) \
+  { \
+    nsresult macro_rv; \
+    char *macro_oldStr = nsnull; \
+    macro_rv = m_prefs->CopyCharPref(PREFNAME, &macro_oldStr); \
+    if (NS_SUCCEEDED(macro_rv)) { \
+      nsCOMPtr<nsIRDFResource> macro_folderResource; \
+      macro_rv = MACRO_RDF->GetResource(macro_oldStr, getter_AddRefs(macro_folderResource)); \
+      if (NS_SUCCEEDED(macro_rv)) { \
+        nsCOMPtr<nsIMsgFolder> macro_folder(do_QueryInterface(macro_folderResource, &macro_rv)); \
+        if (NS_SUCCEEDED(macro_rv)) { \
+          MACRO_OBJECT->MACRO_METHOD(macro_folder); \
+          PR_FREEIF(macro_oldStr); \
+        } \
+      } \
     } \
   }
 
@@ -1270,16 +1292,22 @@ nsMsgAccountManager::UpgradePrefs()
 nsresult
 nsMsgAccountManager::MigrateIdentity(nsIMsgIdentity *identity)
 {
+
   MIGRATE_SIMPLE_STR_PREF(PREF_4X_MAIL_IDENTITY_USEREMAIL,identity,SetEmail)
   MIGRATE_SIMPLE_STR_PREF(PREF_4X_MAIL_IDENTITY_USERNAME,identity,SetFullName)
   MIGRATE_SIMPLE_STR_PREF(PREF_4X_MAIL_IDENTITY_REPLY_TO,identity,SetReplyTo)
   MIGRATE_SIMPLE_STR_PREF(PREF_4X_MAIL_IDENTITY_ORGANIZATION,identity,SetOrganization)
   MIGRATE_SIMPLE_BOOL_PREF(PREF_4X_MAIL_COMPOSE_HTML,identity,SetComposeHtml)
-  MIGRATE_SIMPLE_STR_PREF(PREF_4X_MAIL_DEFAULT_DRAFTS,identity,SetDraftFolder)
-  CONVERT_4X_URI(identity,DEFAULT_4X_DRAFTS_FOLDER_NAME,GetDraftFolder,SetDraftFolder)
     
-  MIGRATE_SIMPLE_STR_PREF(PREF_4X_MAIL_DEFAULT_TEMPLATES,identity,SetStationaryFolder)
-  CONVERT_4X_URI(identity,DEFAULT_4X_TEMPLATES_FOLDER_NAME,GetStationaryFolder,SetStationaryFolder)
+  nsresult rv;
+  NS_WITH_SERVICE(nsIRDFService, rdf, NS_RDF_PROGID "/rdf-service", &rv);
+  if (NS_SUCCEEDED(rv)) {
+    MIGRATE_SIMPLE_FOLDER_PREF(PREF_4X_MAIL_DEFAULT_DRAFTS,identity,SetDraftFolder, rdf)
+    MIGRATE_SIMPLE_FOLDER_PREF(PREF_4X_MAIL_DEFAULT_TEMPLATES,identity,SetStationaryFolder, rdf)
+    CONVERT_4X_URI(identity,DEFAULT_4X_DRAFTS_FOLDER_NAME,GetDraftFolder,SetDraftFolder)
+    CONVERT_4X_URI(identity,DEFAULT_4X_TEMPLATES_FOLDER_NAME,GetStationaryFolder,SetStationaryFolder)
+  }
+    
     
   // what about the new 5.0 spam folder pref?
   return NS_OK;
@@ -2363,51 +2391,23 @@ nsMsgAccountManager::MigrateOldNntpPrefs(nsIMsgIncomingServer *server, const cha
 }
 
 NS_IMETHODIMP
-nsMsgAccountManager::FindServerUsingURI(const char* uri, nsIMsgIncomingServer **aResult)
+nsMsgAccountManager::FindServerUsingURI(const char* uri,
+                                        nsIMsgIncomingServer **aResult)
 {
-	nsresult rv;
-    	nsXPIDLCString username;
-    	nsXPIDLCString hostname;
-    	nsXPIDLCString scheme;
-    	nsXPIDLCString type;
-    	nsCOMPtr <nsIURL> url;
+  // this is a gross hack for now, but it's fast...
+  // this is the only place that we are dependant on RDF.
+  nsresult rv;
+  NS_WITH_SERVICE(nsIRDFService, rdf, NS_RDF_PROGID "/rdf-service", &rv);
+  
+  nsCOMPtr<nsIRDFResource> serverFolderResource;
+  rv = rdf->GetResource(uri, getter_AddRefs(serverFolderResource));
+  if (NS_FAILED(rv)) return rv;
+  
+  nsCOMPtr<nsIMsgFolder> serverFolder =
+    do_QueryInterface(serverFolderResource, &rv);
+  if (NS_FAILED(rv)) return rv;
 
-    	if (!uri) return NS_ERROR_NULL_POINTER;
-    
-    	rv = nsComponentManager::CreateInstance(kStandardUrlCID, nsnull, nsCOMTypeInfo<nsIURL>::GetIID(), getter_AddRefs(url)); 
-        if (NS_FAILED(rv)) return rv;
-    
-    	rv = url->SetSpec(uri);
-        if (NS_FAILED(rv)) return rv;
-    
-    	rv = url->GetHost(getter_Copies(hostname));
-        if (NS_FAILED(rv)) return rv;
-        rv = url->GetPreHost(getter_Copies(username));
-        if (NS_FAILED(rv)) return rv;
-        rv = url->GetScheme(getter_Copies(scheme));
-        if (NS_FAILED(rv)) return rv;
-    
-    	if (PL_strcmp("imap", (const char *)scheme) == 0) {
-    		rv = FindServer(username, hostname, "imap", aResult);
-    	}
-    	else if (PL_strcmp("news", (const char *)scheme) == 0) {
-    		rv = FindServer(username, hostname, "nntp", aResult);
-    	}
-    	else if (PL_strcmp("mailbox", (const char *)scheme) == 0) {
-    		// mailbox:/ can be "pop3" or "none" (a.k.a, local mail)
-    		rv = FindServer(username, hostname, "pop3", aResult);
-    		if (NS_FAILED(rv)) {
-    			rv = FindServer(username, hostname, "none", aResult);
-    		}
-    	}
-    	else {
-#ifdef DEBUG_ACCOUNTMANAGER
-		NS_ASSERTION(0,"FindServerUsingURI failed because scheme was unrecognized");
-#endif
-    		rv = NS_ERROR_FAILURE;
-    	}
-    	
-    	return rv;
+  return serverFolder->GetServer(aResult);
 }
 
 NS_IMETHODIMP

@@ -20,6 +20,11 @@
 #include "nsMsgIdentity.h"
 #include "nsIPref.h"
 #include "nsXPIDLString.h"
+#include "nsCOMPtr.h"
+
+#include "rdf.h"
+#include "nsIRDFService.h"
+#include "nsIRDFResource.h"
 
 static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
 
@@ -230,6 +235,50 @@ nsMsgIdentity::getDefaultIntPref(const char *prefname,
 }
 
 nsresult
+nsMsgIdentity::getFolderPref(const char* prefname,
+                             nsIMsgFolder **aResult)
+{
+  nsresult rv;
+  char *folderURI;
+  rv = getCharPref(prefname, &folderURI);
+  if (NS_FAILED(rv)) return rv;
+
+  // dip into RDF to convert a URI to a resource
+  NS_WITH_SERVICE(nsIRDFService, rdf, NS_RDF_PROGID "/rdf-service", &rv);
+  if (NS_FAILED(rv)) return rv;
+  
+  nsCOMPtr<nsIRDFResource> folderResource;
+  rv = rdf->GetResource(folderURI, getter_AddRefs(folderResource));
+  if (NS_FAILED(rv)) return rv;
+
+  nsCOMPtr<nsIMsgFolder> folder =
+    do_QueryInterface(folderResource, &rv);
+  if (NS_FAILED(rv)) return rv;
+
+  *aResult = folder;
+  NS_ADDREF(*aResult);
+
+  return NS_OK;
+}
+
+nsresult
+nsMsgIdentity::setFolderPref(const char* prefname,
+                             nsIMsgFolder *folder)
+{
+  nsresult rv;
+
+  nsCOMPtr<nsIRDFResource> folderResource =
+    do_QueryInterface(folder, &rv);
+  if (NS_FAILED(rv)) return rv;
+  
+  nsXPIDLCString folderURI;
+  rv = folderResource->GetValue(getter_Copies(folderURI));
+  if (NS_FAILED(rv)) return rv;
+  
+  return setCharPref(prefname, folderURI);
+}
+
+nsresult
 nsMsgIdentity::setIntPref(const char *prefname,
                                  PRInt32 val)
 {
@@ -330,6 +379,13 @@ nsMsgIdentity::SetSignature(nsIFileSpec *sig)
   return NS_OK;
 }
 
+
+NS_IMPL_IDPREF_MSGFOLDER(FccFolder, "fcc_folder");
+NS_IMPL_IDPREF_MSGFOLDER (DraftFolder, "draft_folder");
+NS_IMPL_IDPREF_MSGFOLDER (StationaryFolder, "stationary_folder");
+NS_IMPL_IDPREF_MSGFOLDER (JunkMailFolder, "spam_folder");
+
+
 NS_IMPL_GETSET(nsMsgIdentity, VCard, nsIMsgVCard*, m_vCard);
   
 NS_IMPL_GETTER_STR(nsMsgIdentity::GetKey, m_identityKey);
@@ -343,14 +399,9 @@ NS_IMPL_IDPREF_BOOL(AttachVCard, "attach_vcard");
 NS_IMPL_IDPREF_BOOL(AttachSignature, "attach_signature");
 
 NS_IMPL_IDPREF_BOOL(DoFcc, "fcc");
-NS_IMPL_IDPREF_STR(FccFolder, "fcc_folder");
 
 NS_IMPL_IDPREF_BOOL(BccSelf, "bcc_self");
 NS_IMPL_IDPREF_BOOL(BccOthers, "bcc_other");
 NS_IMPL_IDPREF_STR (BccList, "bcc_other_list");
-
-NS_IMPL_IDPREF_STR (DraftFolder, "draft_folder");
-NS_IMPL_IDPREF_STR (StationaryFolder, "stationary_folder");
-NS_IMPL_IDPREF_STR (JunkMailFolder, "spam_folder");
 
 
