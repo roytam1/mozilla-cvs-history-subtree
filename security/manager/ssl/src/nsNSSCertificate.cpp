@@ -2355,7 +2355,7 @@ done:
     PR_FREEIF(tmp);
     return(nickname);
 }
-static SECStatus
+static SECStatus PR_CALLBACK
 collect_certs(void *arg, SECItem **certs, int numcerts)
 {
     CERTDERCerts *collectArgs;
@@ -2704,9 +2704,10 @@ PRInt32 nsOCSPResponder::CompareEntries(nsIOCSPResponder *a, nsIOCSPResponder *b
   }
 }
 
-static SECStatus GetOCSPResponders (CERTCertificate *aCert,
-                          SECItem         *aDBKey,
-                          void            *aArg)
+static SECStatus PR_CALLBACK 
+GetOCSPResponders (CERTCertificate *aCert,
+                   SECItem         *aDBKey,
+                   void            *aArg)
 {
   nsISupportsArray *array = NS_STATIC_CAST(nsISupportsArray*, aArg);
   PRUnichar* nn = nsnull;
