@@ -127,7 +127,7 @@ CVSCO_LOGFILE := $(ROOTDIR)/cvsco.log
 CVSCO_LOGFILE := $(shell echo $(CVSCO_LOGFILE) | sed s%//%/%)
 
 ifdef MOZ_CO_TAG
-  CVS_CO_FLAGS :=  -r $(MOZ_CO_TAG)
+  CVS_CO_FLAGS := -f -r $(MOZ_CO_TAG)
 endif
 
 ####################################
