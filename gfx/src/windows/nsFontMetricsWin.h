@@ -150,7 +150,7 @@ public:
 
   PRInt32             mIndexOfSubstituteFont;
 
-  nscoord             mMeasuredChars[256];
+  //nscoord             mMeasuredChars[256];
 
   nsStringArray       mFonts;
   PRUint16            mFontsIndex;
