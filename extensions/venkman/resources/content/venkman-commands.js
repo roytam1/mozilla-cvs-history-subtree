@@ -931,7 +931,7 @@ function cmdHelp (e)
  
         if (ary.length == 0)
         {
-            display (getMsg(MSN_ERR_NOCOMMAND, e.pattern), MT_ERROR);
+            display (getMsg(MSN_ERR_NO_COMMAND, e.pattern), MT_ERROR);
             return false;
         }
 

@@ -510,7 +510,9 @@ function init()
     for (i = 0; i < startupMsgs.length; ++i)
         display (startupMsgs[i][0], startupMsgs[i][1]);
     
-    dispatch ("commands");
+    display (MSG_TIP1_HELP);
+    display (MSG_TIP2_HELP);
+    //dispatch ("commands");
     //dispatch ("help");
 
     dispatch ("pprint", { toggle: console.prefs["prettyprint"] });

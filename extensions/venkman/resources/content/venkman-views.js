@@ -3362,6 +3362,7 @@ function wv_init()
         [
          ["watch-expr",     cmdWatchExpr,          CMD_CONSOLE | CMD_NEED_STACK],
          ["watch-exprd",    cmdWatchExpr,          CMD_CONSOLE],
+         ["remove-watch",   cmdUnwatch,            CMD_CONSOLE],
          ["watch-property", cmdWatchProperty,      0],
         ];
 
@@ -3369,6 +3370,8 @@ function wv_init()
         getContext: this.getContext,
         items:
         [
+         ["remove-watch"],
+         ["-"],
          ["find-creator",
                  {enabledif: "cx.target instanceof ValueRecord && " +
                   "cx.target.jsType == jsdIValue.TYPE_OBJECT  && " +
@@ -3433,15 +3436,24 @@ console.views.watches.getContext =
 function wv_getcx(cx)
 {
     cx.jsdValueList = new Array();
+    cx.indexList    = new Array();
 
     function recordContextGetter (cx, rec, i)
     {
         if (rec instanceof ValueRecord)
         {
             if (i == 0)
+            {
                 cx.jsdValue = rec.value;
+                if (rec.parentRecord == console.views.watches.childData)
+                    cx.index = rec.childIndex;
+            }
             else
+            {
                 cx.jsdValueList.push(rec.value);
+                if (rec.parentRecord == console.views.watches.childData)
+                    cx.indexList.push(rec.childIndex);
+            }
         }
     };
     
@@ -3472,6 +3484,33 @@ console.views.watches.onDblClick =
 function wv_dblclick ()
 {
     //dd ("watches double click");
+}
+
+function cmdUnwatch (e)
+{
+    var watches = console.views.watches.childData;
+
+    function unwatch (index)
+    {
+        if (!index in watches)
+        {
+            display (getMsg(MSN_ERR_INVALID_PARAM, ["index", index]), MT_ERROR);
+            return;
+        }
+
+        watches.removeChildAtIndex(index);
+    };
+    
+    if (e.indexList)
+    {
+        e.indexList = e.indexList.sort();
+        for (var i = e.indexList.length - 1; i >= 0; --i)
+            unwatch(e.indexList[i]);
+    }
+    else
+    {
+        unwatch (e.index);
+    }
 }
 
 function cmdWatchExpr (e)

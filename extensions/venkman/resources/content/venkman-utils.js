@@ -219,8 +219,7 @@ function openTopWin (url)
         }
     }
 
-    return window.openDialog (getBrowserURL(), "_blank", "chrome,all,dialog=no",
-                              url);
+    return openDialog (getBrowserURL(), "_blank", "chrome,all,dialog=no", url);
 }
     
 function getWindowByType (windowType)
