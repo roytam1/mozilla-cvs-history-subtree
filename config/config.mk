@@ -161,6 +161,7 @@ FINAL_LINK_COMP_NAMES = $(DEPTH)/config/final-link-comp-names
 # 
 # NSS libs needed for final link in static build
 # 
+NSS_3_4=1
 
 ifneq (,$(filter OS2 WINNT,$(OS_ARCH)))
 NSS_LIBS	= \
@@ -285,19 +286,18 @@ else
 # an optimized build with debugging symbols. Useful for debugging
 # compiler optimization bugs, as well as running with Quantify.
 ifdef MOZ_PROFILE
-MOZ_OPTIMIZE_FLAGS=-Zi -O1 -UDEBUG -DNDEBUG
-OS_LDFLAGS = /DEBUG /DEBUGTYPE:CV /PDB:NONE /OPT:REF /OPT:nowin98
-WIN32_EXE_LDFLAGS=/FIXED:NO
+_WIN32_PROFILE_FLAGS=-Zi -O1 -UDEBUG -DNDEBUG
+OS_CFLAGS += $(_WIN32_PROFILE_FLAGS)
+OS_CXXFLAGS += $(_WIN32_PROFILE_FLAGS)
+OS_LDFLAGS += /DEBUG /DEBUGTYPE:CV /OPT:REF /OPT:nowin98
 endif
 
 # if MOZ_COVERAGE is set, we handle pdb files slightly differently
 ifdef MOZ_COVERAGE
-MOZ_OPTIMIZE_FLAGS=-Zi -O1 -UDEBUG -DNDEBUG
-OS_LDFLAGS = /DEBUG /DEBUGTYPE:CV /PDB:NONE /OPT:REF /OPT:nowin98
-_ORDERFILE := $(wildcard $(srcdir)/win32.order)
-ifneq (,$(_ORDERFILE))
-OS_LDFLAGS += /ORDER:@$(srcdir)/win32.order
-endif
+_WIN32_COVERAGE_FLAGS=-Zi -O1 -UDEBUG -DNDEBUG
+OS_CFLAGS += $(_WIN32_COVERAGE_FLAGS)
+OS_CXXFLAGS += $(_WIN32_COVERAGE_FLAGS)
+OS_LDFLAGS += /DEBUG /DEBUGTYPE:CV /OPT:REF /OPT:nowin98
 endif
 # MOZ_COVERAGE
 
@@ -307,7 +307,7 @@ endif
 #
 ifdef NS_TRACE_MALLOC
 MOZ_OPTIMIZE_FLAGS=-Zi -Od -UDEBUG -DNDEBUG
-OS_LDFLAGS = /DEBUG /DEBUGTYPE:CV /PDB:NONE /OPT:REF /OPT:nowin98
+OS_LDFLAGS += /DEBUG /DEBUGTYPE:CV /PDB:NONE /OPT:REF /OPT:nowin98
 endif
 # NS_TRACE_MALLOC
 
@@ -336,30 +336,9 @@ endif
 #
 _ALL_META_COMPONENTS=mail crypto
 
-MOZ_META_COMPONENTS_mail = nsMsgBaseModule IMAP_factory nsVCardModule mime_services nsMimeEmitterModule nsMsgNewsModule  nsMsgComposeModule local_mail_services nsAbSyncModule nsImportServiceModule nsTextImportModule nsAbModule nsMsgDBModule nsMsgMdnModule nsComm4xMailImportModule
-MOZ_META_COMPONENTS_mail_comps = msgimap mime msgnews import addrbook impText vcard msgdb msgmdn
-MOZ_META_COMPONENTS_mail_libs = mimecthglue_s
-
-ifeq ($(OS_ARCH),WINNT)
-MOZ_META_COMPONENTS_mail += nsEudoraImportModule nsOEImport nsOutlookImport msgMapiModule
-MOZ_META_COMPONENTS_mail_comps += msgbase impEudra importOE impOutlk msgMapi 
-else
-MOZ_META_COMPONENTS_mail_comps += mailnews
-endif
-
-ifdef USE_SHORT_LIBNAME
-MOZ_META_COMPONENTS_mail_comps += emitter msgcompo msglocal absyncsv
-ifeq ($(OS_ARCH),WINNT)
-MOZ_META_COMPONENTS_mail_comps += impComm4xMail
-else
-MOZ_META_COMPONENTS_mail_comps += imp4Mail
-endif
-MOZ_META_COMPONENTS_mail_libs += msgbsutl
-else
-MOZ_META_COMPONENTS_mail_cops += mimeemitter msgcompose localmail absyncsvc impComm4xMail
-MOZ_META_COMPONENTS_mail_libs += msgbaseutil
-endif
-
+MOZ_META_COMPONENTS_mail = nsMsgBaseModule IMAP_factory nsVCardModule mime_services nsMimeEmitterModule nsMsgNewsModule  nsMsgComposeModule local_mail_services nsAbSyncModule nsImportServiceModule nsTextImportModule nsAbModule nsMsgDBModule
+MOZ_META_COMPONENTS_mail_comps = mailnews msgimap mime mimeemitter msgnews msgcompose localmail absyncsvc import addrbook impText vcard msgdb
+MOZ_META_COMPONENTS_mail_libs = msgbaseutil mimecthglue_s
 ifdef MOZ_PSM
 MOZ_META_COMPONENTS_mail += nsMsgSMIMEModule
 MOZ_META_COMPONENTS_mail_comps += msgsmime
@@ -422,10 +401,20 @@ ifeq ($(OS_ARCH),WINNT)
 ifdef MOZ_STATIC_COMPONENT_LIBS
 DEFINES	+= \
 	-D_IMPL_NS_APPSHELL \
+	-D_IMPL_NS_COOKIE \
+	-D_IMPL_NS_DOM \
 	-D_IMPL_NS_GFX \
+	-D_IMPL_NS_HTML \
+	-D_IMPL_NS_HTMLPARS \
+	-D_IMPL_NS_INTL \
+	-D_IMPL_NS_LAYOUT \
 	-D_IMPL_NS_MSG_BASE \
+	-D_IMPL_NS_NET \
 	-D_IMPL_NS_PICS \
 	-D_IMPL_NS_PLUGIN \
+	-D_IMPL_NS_RDF \
+	-D_IMPL_NS_VIEW \
+	-D_IMPL_NS_WEB \
 	-D_IMPL_NS_WIDGET \
 	$(NULL)
 endif
@@ -483,7 +472,6 @@ else
 XPIDL_COMPILE 	= $(DIST)/bin/xpidl$(BIN_SUFFIX)
 XPIDL_LINK	= $(DIST)/bin/xpt_link$(BIN_SUFFIX)
 endif
-MIDL		= midl
 
 ifeq ($(OS_ARCH),OS2)
 PATH_SEPARATOR	:= \;
@@ -563,15 +551,6 @@ CXXFLAGS	+= $(MOZ_OPTIMIZE_FLAGS)
 endif # MOZ_OPTIMIZE == 1
 LDFLAGS		+= $(MOZ_OPTIMIZE_LDFLAGS)
 endif # MOZ_OPTIMIZE
-
-ifeq ($(MOZ_OS2_TOOLS),VACPP)
-ifdef USE_STATIC_LIBS
-RTL_FLAGS += /Gd-
-else # !USE_STATIC_LIBS
-RTL_FLAGS += /Gd+
-endif
-endif
-
 
 ifeq ($(OS_ARCH),WINNT)
 #// Currently, unless USE_STATIC_LIBS is defined, the multithreaded
@@ -672,19 +651,17 @@ endif
 endif
 endif
 
-ifeq ($(OS_ARCH),Darwin)
-ifdef USE_PREBINDING
-export LD_PREBIND=1
-export LD_SEG_ADDR_TABLE=$(shell cd $(topsrcdir); pwd)/config/prebind-address-table
-endif
-endif
-
 ifdef MOZ_NATIVE_MAKEDEPEND
 MKDEPEND_DIR	=
 MKDEPEND	= $(MOZ_NATIVE_MAKEDEPEND)
 else
 MKDEPEND_DIR	= $(CONFIG_TOOLS)/mkdepend
 MKDEPEND	= $(MKDEPEND_DIR)/mkdepend$(BIN_SUFFIX)
+ifndef COMPILER_DEPEND
+ifneq ($(OS_ARCH),OS2)
+MKDEPEND_BUILTIN = $(MKDEPEND_DIR)/mkdepend$(BIN_SUFFIX)
+endif
+endif
 endif
 
 #
@@ -745,7 +722,7 @@ GARBAGE		+= $(DEPENDENCIES) $(MKDEPENDENCIES) $(MKDEPENDENCIES).bak core $(wildc
 
 ifeq (,$(filter-out WINNT, $(OS_ARCH)))
 ifeq ($(OS_ARCH),WINNT)
-NSINSTALL	= $(CYGWIN_WRAPPER) $(MOZ_TOOLS_DIR)/bin/nsinstall
+NSINSTALL	= $(MOZ_TOOLS_DIR)/bin/nsinstall
 else
 NSINSTALL	= nsinstall
 endif

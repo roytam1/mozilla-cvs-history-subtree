@@ -77,9 +77,21 @@ $MILESTONE_NUM = $MILESTONE;
 #
 # Split the milestone into parts (major, minor, minor2, minor3, ...)
 #
-if ($MILESTONE =~ /\+$/) {    # for things like 0.9.9+, strip off the +
-    $MILESTONE_QUALIFIER = "+";
+if ($MILESTONE =~ /\D$/) {    # for things like 0.9.9+, strip off the +
+    $MILESTONE_QUALIFIER = $MILESTONE;
+    $MILESTONE_QUALIFIER =~ s/.*\d//;
     $MILESTONE_NUM =~ s/\D*$//;
+}
+if ($MILESTONE_NUM =~ /[^0-9\.]/) {
+    die(<<END
+Illegal milestone $MILESTONE in $MILESTONE_FILE!
+A proper milestone would look like
+
+        x.x.x
+        x.x.x.x
+        x.x.x+
+END
+    );
 }
 @MILESTONE_PARTS = split(/\./, $MILESTONE_NUM);
 

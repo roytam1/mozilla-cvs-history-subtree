@@ -35,6 +35,7 @@
  * the terms of any one of the NPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
+/* test comment */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

@@ -142,7 +142,7 @@ INCS=$(INCS) -I$(PUBLIC) -I$(DIST)\include -I$(XPDIST)\include\nspr
 
 # use perl to translate REQUIRES into a proper include line
 # using \1 instead of $1 because nmake barfs on $1
-!if [echo $(REQUIRES) | perl -pe "s/(\S+)/-I$(XPDIST:\=\/)\\\include\\\\\1/g; print \"REQINCS=$_\";" > reqincs.inc]
+!if [echo $(REQUIRES) | perl -pe "s/(\w+)/-I$(XPDIST:\=\/)\\\include\\\\\1/g; print \"REQINCS=$_\";" > reqincs.inc]
 !endif
  
 !else
@@ -207,11 +207,19 @@ FINAL_LINK_LIBS=$(DIST)\final-link-libs
 # building them into the executable.
 CFLAGS=$(CFLAGS) -D_IMPL_NS_APPSHELL
 CFLAGS=$(CFLAGS) -D_IMPL_NS_COOKIE
+CFLAGS=$(CFLAGS) -D_IMPL_NS_DOM
 CFLAGS=$(CFLAGS) -D_IMPL_NS_GFX
+CFLAGS=$(CFLAGS) -D_IMPL_NS_HTML
+CFLAGS=$(CFLAGS) -D_IMPL_NS_HTMLPARS
+CFLAGS=$(CFLAGS) -D_IMPL_NS_INTL
 CFLAGS=$(CFLAGS) -D_IMPL_NS_LAYOUT
 CFLAGS=$(CFLAGS) -D_IMPL_NS_MSG_BASE
+CFLAGS=$(CFLAGS) -D_IMPL_NS_NET
 CFLAGS=$(CFLAGS) -D_IMPL_NS_PICS
 CFLAGS=$(CFLAGS) -D_IMPL_NS_PLUGIN
+CFLAGS=$(CFLAGS) -D_IMPL_NS_RDF
+CFLAGS=$(CFLAGS) -D_IMPL_NS_VIEW
+CFLAGS=$(CFLAGS) -D_IMPL_NS_WEB
 CFLAGS=$(CFLAGS) -D_IMPL_NS_WIDGET
 !endif
 
@@ -276,6 +284,10 @@ CFLAGS=$(CFLAGS) -DSTAND_ALONE_JAVA
 NECKO=1
 CFLAGS=$(CFLAGS) -DNECKO
 
+
+!if defined(XPCOM_STANDALONE)
+CFLAGS=$(CFLAGS) -DXPCOM_STANDALONE
+!endif
 
 !if defined(XPCONNECT_STANDALONE)
 CFLAGS=$(CFLAGS) -DXPCONNECT_STANDALONE
@@ -367,8 +379,6 @@ CFLAGS=$(CFLAGS) -DUSE_IMG2 -DNS_PRINT_PREVIEW
 !ifdef MOZ_STATIC_COMPONENT_LIBS
 CFLAGS=$(CFLAGS) -DXPCOM_TRANSLATE_NSGM_ENTRY_POINT -DMOZ_STATIC_COMPONENT_LIBS
 !endif
-
-CFLAGS=$(CFLAGS) -DCPP_THROW_NEW=throw()
 
 #//-----------------------------------------------------------------------
 #//

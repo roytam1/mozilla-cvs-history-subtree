@@ -113,7 +113,6 @@ ifeq ($(MOZ_OS2_TOOLS),VACPP)
 _EXTRA_DSO_RELATIVE_PATHS=1
 else
 ifeq (_WINNT,$(GNU_CC)_$(OS_ARCH))
-_NO_AUTO_VARS=1
 _EXTRA_DSO_RELATIVE_PATHS=1
 endif
 endif
@@ -199,16 +198,20 @@ endif
 
 ifeq ($(OS_ARCH),WINNT)
 
+ifdef MOZ_PROFILE
+PDBFILE=NONE
+else
 ifdef LIBRARY_NAME
 PDBFILE=$(LIBRARY_NAME).pdb
 ifdef MOZ_DEBUG
 CODFILE=$(LIBRARY_NAME).cod
 endif
 else
-PDBFILE=$(basename $(@F)).pdb
+PDBFILE=$*.pdb
 ifdef MOZ_DEBUG
-MAPFILE=$(basename $(@F)).map
-CODFILE=$(basename $(@F)).cod
+MAPFILE=$*.map
+CODFILE=$*.cod
+endif
 endif
 endif
 
@@ -283,11 +286,10 @@ ALL_TRASH = \
 	$(GARBAGE) $(TARGETS) $(OBJS) $(PROGOBJS) LOGS TAGS a.out \
 	$(HOST_PROGOBJS) $(HOST_OBJS) $(IMPORT_LIBRARY) $(DEF_FILE)\
 	$(EXE_DEF_FILE) so_locations _gen _stubs $(wildcard *.res) \
-	$(wildcard *.pdb) $(CODFILE) $(MAPFILE) $(IMPORT_LIBRARY) \
+	$(PDBFILE) $(CODFILE) $(MAPFILE) $(IMPORT_LIBRARY) \
 	$(SHARED_LIBRARY:$(DLL_SUFFIX)=.exp) \
 	$(PROGRAM:$(BIN_SUFFIX)=.exp) $(SIMPLE_PROGRAMS:$(BIN_SUFFIX)=.exp) \
 	$(PROGRAM:$(BIN_SUFFIX)=.lib) $(SIMPLE_PROGRAMS:$(BIN_SUFFIX)=.lib) \
-	$(SIMPLE_PROGRAMS:$(BIN_SUFFIX)=.$(OBJ_SUFFIX)) \
 	$(wildcard gts_tmp_*) $(LIBRARY:%.a=.%.timestamp)
 ALL_TRASH_DIRS = \
 	$(GARBAGE_DIRS) /no-such-file
@@ -449,7 +451,7 @@ ifeq ($(OS_ARCH),Darwin)
 ifdef IS_COMPONENT
 EXTRA_DSO_LDOPTS	+= -bundle
 else
-EXTRA_DSO_LDOPTS	+= -dynamiclib -install_name @executable_path/\$@ -compatibility_version 1 -current_version 1
+EXTRA_DSO_LDOPTS	+= -dynamiclib
 endif
 endif
 
@@ -636,7 +638,7 @@ ifdef DIRS
 	done
 endif
 
-export:: $(SUBMAKEFILES) $(MAKE_DIRS)
+export:: $(SUBMAKEFILES) $(MAKE_DIRS) $(MKDEPEND_BUILTIN)
 	+$(LOOP_OVER_DIRS)
 
 #
@@ -820,7 +822,7 @@ ifeq ($(MOZ_OS2_TOOLS),VACPP)
 	$(LD) -OUT:$@ $(LDFLAGS) $(PROGOBJS) $(LIBS) $(EXTRA_LIBS) $(OS_LIBS) $(EXE_DEF_FILE) /ST:0x100000
 else
 ifeq (_WINNT,$(GNU_CC)_$(OS_ARCH))
-	$(LD) /NOLOGO /OUT:$@ /PDB:$(PDBFILE) $(PROGOBJS) $(RESFILE) $(WIN32_EXE_LDFLAGS) $(LDFLAGS) $(LIBS) $(EXTRA_LIBS) $(OS_LIBS)
+	$(LD) /NOLOGO /OUT:$@ /PDB:$(PDBFILE) $(PROGOBJS) $(RESFILE) $(LDFLAGS) $(LIBS) $(EXTRA_LIBS) $(OS_LIBS)
 else
 ifeq ($(CPP_PROG_LINK),1)
 	$(CCC) -o $@ $(CXXFLAGS) $(WRAP_MALLOC_CFLAGS) $(PROGOBJS) $(LDFLAGS) $(LIBS_DIR) $(LIBS) $(OS_LIBS) $(EXTRA_LIBS) $(BIN_FLAGS) $(WRAP_MALLOC_LIB) $(PROFILER_LIBS)
@@ -863,7 +865,7 @@ ifeq ($(MOZ_OS2_TOOLS),VACPP)
 	$(LD) /Out:$@ $< $(LDFLAGS) $(LIBS) $(OS_LIBS) $(EXTRA_LIBS) $(WRAP_MALLOC_LIB) $(PROFILER_LIBS)
 else
 ifeq (_WINNT,$(GNU_CC)_$(OS_ARCH))
-	$(LD) /nologo /out:$@ /pdb:$(PDBFILE) $< $(WIN32_EXE_LDFLAGS) $(LDFLAGS) $(LIBS) $(EXTRA_LIBS) $(OS_LIBS)
+	$(LD) /nologo /out:$@ /pdb:$(PDBFILE) $< $(LDFLAGS) $(LIBS) $(EXTRA_LIBS) $(OS_LIBS)
 else
 ifeq ($(CPP_PROG_LINK),1)
 	$(CCC) $(WRAP_MALLOC_CFLAGS) $(CXXFLAGS) -o $@ $< $(LDFLAGS) $(LIBS_DIR) $(LIBS) $(OS_LIBS) $(EXTRA_LIBS) $(WRAP_MALLOC_LIB) $(PROFILER_LIBS)
@@ -914,9 +916,7 @@ ifneq ($(OS_ARCH),OS2)
 #
 ifdef SHARED_LIBRARY_LIBS
 ifeq ($(OS_ARCH),WINNT)
-ifneq (,$(BUILD_STATIC_LIBS)$(FORCE_STATIC_LIB))
 LOBJS	+= $(SHARED_LIBRARY_LIBS)
-endif
 else
 ifneq (,$(filter OSF1 BSD_OS FreeBSD NetBSD OpenBSD SunOS Darwin,$(OS_ARCH)))
 CLEANUP1	:= | egrep -v '(________64ELEL_|__.SYMDEF)'
@@ -939,10 +939,6 @@ endif
 	$(AR) $(AR_FLAGS) $(OBJS) $(LOBJS) $(SUB_LOBJS)
 	$(RANLIB) $@
 	@rm -f foodummyfilefoo $(SUB_LOBJS)
-
-ifeq ($(OS_ARCH),WINNT)
-$(IMPORT_LIBRARY): $(SHARED_LIBRARY)
-endif
 
 else # OS2
 ifdef SHARED_LIBRARY_LIBS
@@ -1043,18 +1039,6 @@ ifndef COMPILER_DEPEND
 #
 _MDDEPFILE = $(MDDEPDIR)/$(@F).pp
 
-ifeq ($(OS_ARCH),WINNT)
-define MAKE_DEPS_AUTO
-if test -d $(@D); then \
-	set -e ; \
-	touch $(_MDDEPFILE) && \
-	$(MKDEPEND) -o'.$(OBJ_SUFFIX)' -f$(_MDDEPFILE) $(DEFINES) $(ACDEFINES) $(INCLUDES) $(srcdir)/$(<F) >/dev/null 2>&1 && \
-	mv $(_MDDEPFILE) $(_MDDEPFILE).old && \
-	cat $(_MDDEPFILE).old | sed -e "s|^$(srcdir)/||g" > $(_MDDEPFILE) && rm -f $(_MDDEPFILE).old ; \
-	echo "Building deps for $(srcdir)/$(<F)"; \
-fi
-endef
-else
 define MAKE_DEPS_AUTO
 if test -d $(@D); then \
 	set -e ; \
@@ -1065,7 +1049,6 @@ if test -d $(@D); then \
 	echo "Building deps for $<"; \
 fi
 endef
-endif # WINNT
 
 endif # !COMPILER_DEPEND
 
@@ -1074,28 +1057,16 @@ endif # MOZ_AUTO_DEPS
 %: %.c Makefile.in
 	$(REPORT_BUILD)
 	@$(MAKE_DEPS_AUTO)
-ifdef _NO_AUTO_VARS
-	$(ELOG) $(CC) $(CFLAGS) $(LDFLAGS) $(OUTOPTION)$@ $(srcdir)/$*.c
-else
 	$(ELOG) $(CC) $(CFLAGS) $(LDFLAGS) $(OUTOPTION)$@ $<
-endif
 
 $(OBJ_PREFIX)%.$(OBJ_SUFFIX): %.c Makefile.in
 	$(REPORT_BUILD)
 	@$(MAKE_DEPS_AUTO)
-ifdef _NO_AUTO_VARS
-	$(ELOG) $(CC) $(OUTOPTION)$@ -c $(COMPILE_CFLAGS) $(srcdir)/$*.c
-else
 	$(ELOG) $(CC) $(OUTOPTION)$@ -c $(COMPILE_CFLAGS) $<
-endif
 
 $(OBJ_PREFIX)%.ho: %.c Makefile.in
 	$(REPORT_BUILD)
-ifdef _NO_AUTO_VARS
-	$(ELOG) $(HOST_CC) $(OUTOPTION)$@ -c $(HOST_CFLAGS) $(INCLUDES) $(NSPR_CFLAGS) $(srcdir)/$*.c
-else
 	$(ELOG) $(HOST_CC) $(OUTOPTION)$@ -c $(HOST_CFLAGS) $(INCLUDES) $(NSPR_CFLAGS) $<
-endif
 
 moc_%.cpp: %.h Makefile.in
 	$(MOC) $< $(OUTOPTION)$@ 
@@ -1114,11 +1085,7 @@ endif
 
 %: %.cpp Makefile.in
 	@$(MAKE_DEPS_AUTO)
-ifdef _NO_AUTO_VARS
-	$(CCC) $(OUTOPTION)$@ $(CXXFLAGS) $(srcdir)/$*.cpp $(LDFLAGS)
-else
 	$(CCC) $(OUTOPTION)$@ $(CXXFLAGS) $< $(LDFLAGS)
-endif
 
 #
 # Please keep the next two rules in sync.
@@ -1126,11 +1093,7 @@ endif
 $(OBJ_PREFIX)%.$(OBJ_SUFFIX): %.cc Makefile.in
 	$(REPORT_BUILD)
 	@$(MAKE_DEPS_AUTO)
-ifdef _NO_AUTO_VARS
-	$(ELOG) $(CCC) $(OUTOPTION)$@ -c $(COMPILE_CXXFLAGS) $(srcdir)/$*.cc
-else
 	$(ELOG) $(CCC) $(OUTOPTION)$@ -c $(COMPILE_CXXFLAGS) $<
-endif
 
 $(OBJ_PREFIX)%.$(OBJ_SUFFIX): %.cpp Makefile.in
 	$(REPORT_BUILD)
@@ -1140,11 +1103,7 @@ ifdef STRICT_CPLUSPLUS_SUFFIX
 	$(ELOG) $(CCC) -o $@ -c $(COMPILE_CXXFLAGS) t_$*.cc
 	rm -f t_$*.cc
 else
-ifdef _NO_AUTO_VARS
-	$(ELOG) $(CCC) $(OUTOPTION)$@ -c $(COMPILE_CXXFLAGS) $(srcdir)/$*.cpp
-else
 	$(ELOG) $(CCC) $(OUTOPTION)$@ -c $(COMPILE_CXXFLAGS) $<
-endif
 endif #STRICT_CPLUSPLUS_SUFFIX
 
 $(OBJ_PREFIX)%.$(OBJ_SUFFIX): %.mm Makefile.in
@@ -1197,7 +1156,7 @@ Makefile: Makefile.in $(topsrcdir)/configure
 ifdef SUBMAKEFILES
 # VPATH does not work on some machines in this case, so add $(srcdir)
 $(SUBMAKEFILES): % : $(srcdir)/%.in
-	$(PERL) $(AUTOCONF_TOOLS)/make-makefile -t $(topsrcdir) -d $(DEPTH) $@
+	@$(PERL) $(AUTOCONF_TOOLS)/make-makefile -t $(topsrcdir) -d $(DEPTH) $@
 endif
 
 ifdef AUTOUPDATE_CONFIGURE
@@ -1500,11 +1459,7 @@ $(XPIDL_GEN_DIR)/.done:
 
 $(XPIDL_GEN_DIR)/%.h: %.idl $(XPIDL_COMPILE) $(XPIDL_GEN_DIR)/.done
 	$(REPORT_BUILD)
-ifdef _NO_AUTO_VARS
-	$(ELOG) $(XPIDL_COMPILE) -m header -w -I $(IDL_DIR) -I$(srcdir) -o $(XPIDL_GEN_DIR)/$* $(srcdir)/$*.idl
-else
 	$(ELOG) $(XPIDL_COMPILE) -m header -w -I $(IDL_DIR) -I$(srcdir) -o $(XPIDL_GEN_DIR)/$* $<
-endif
 	@if test -n "$(findstring $*.h, $(EXPORTS) $(SDK_HEADERS))"; \
 	  then echo "*** WARNING: file $*.h generated from $*.idl overrides $(srcdir)/$*.h"; else true; fi
 
@@ -1513,11 +1468,7 @@ ifndef NO_GEN_XPT
 # into $(XPIDL_MODULE).xpt and export it to $(DIST)/bin/components.
 $(XPIDL_GEN_DIR)/%.xpt: %.idl $(XPIDL_COMPILE)
 	$(REPORT_BUILD)
-ifdef _NO_AUTO_VARS
-	$(ELOG) $(XPIDL_COMPILE) -m typelib -w -I $(IDL_DIR) -I$(srcdir) -o $(XPIDL_GEN_DIR)/$* $(srcdir)/$*.idl
-else
 	$(ELOG) $(XPIDL_COMPILE) -m typelib -w -I $(IDL_DIR) -I$(srcdir) -o $(XPIDL_GEN_DIR)/$* $<
-endif
 
 $(XPIDL_GEN_DIR)/$(XPIDL_MODULE).xpt: $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.xpt,$(XPIDLSRCS) $(SDK_XPIDLSRCS)) Makefile.in Makefile
 	$(XPIDL_LINK) $(XPIDL_GEN_DIR)/$(XPIDL_MODULE).xpt $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.xpt,$(XPIDLSRCS) $(SDK_XPIDLSRCS)) 
@@ -1565,29 +1516,6 @@ ifndef NO_INSTALL
 endif
 
 endif # XPIDLSRCS
-
-
-
-#
-# General rules for exporting idl files.
-#
-# WORK-AROUND ONLY, for mozilla/tools/module-deps/bootstrap.pl build.
-# Bug to fix idl dependecy problems w/o this extra build pass is
-#   http://bugzilla.mozilla.org/show_bug.cgi?id=145777
-#
-$(IDL_DIR)::
-	@if test ! -d $@; then echo Creating $@; rm -rf $@; $(NSINSTALL) -D $@; else true; fi
-
-export-idl:: $(XPIDLSRCS) $(SDK_XPIDLSRCS) $(IDL_DIR)
-ifneq ($(XPIDLSRCS),)
-ifndef NO_DIST_INSTALL
-	$(INSTALL) $(IFLAGS1) $^
-endif
-endif
-	+$(LOOP_OVER_DIRS)
-
-
-
 
 ifneq ($(SDK_XPIDLSRCS),)
 # export .idl files to $(IDL_DIR) & $(SDK_IDL_DIR)
@@ -1662,11 +1590,11 @@ ifdef NO_JAR_AUTO_REG
 _JAR_AUTO_REG=-a
 endif
 
-ifeq ($(OS_TARGET),WIN95)
+ifeq ($(OS_ARCH),WINNT)
 _NO_FLOCK=-l
 endif
 
-libs chrome:: $(CHROME_DEPS)
+libs:: $(CHROME_DEPS)
 ifndef NO_DIST_INSTALL
 	@if test -f $(JAR_MANIFEST); then $(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/make-jars.pl $(_NO_FLOCK) $(_JAR_AUTO_REG) -f $(MOZ_CHROME_FILE_FORMAT) -d $(DIST)/bin/chrome -s $(srcdir) < $(JAR_MANIFEST); fi
 	@if test -f $(JAR_MANIFEST); then $(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/make-chromelist.pl $(DIST)/bin/chrome $(JAR_MANIFEST) $(_NO_FLOCK); fi
@@ -1740,23 +1668,22 @@ endif
 
 else # ! COMPILER_DEPEND
 
+ifndef MOZ_NATIVE_MAKEDEPEND
+$(MKDEPEND_BUILTIN):
+ifneq ($(OS_ARCH),WINNT)
+	$(MAKE) -C $(DEPTH)/config nsinstall$(BIN_SUFFIX)
+endif
+	$(MAKE) -C $(MKDEPEND_DIR) mkdepend$(BIN_SUFFIX)
+endif
+
 ifndef MOZ_AUTO_DEPS
 
-ifeq ($(OS_ARCH),WINNT)
-define MAKE_DEPS_NOAUTO
-	set -e ; \
-	touch $@ && \
-	$(MKDEPEND) -w1024 -o'.$(OBJ_SUFFIX)' -f$@ $(DEFINES) $(ACDEFINES) $(INCLUDES) $(srcdir)/$(<F) >/dev/null 2>&1 && \
-	mv $@ $@.old && cat $@.old | sed "s|^$(srcdir)/||g" > $@ && rm -f $@.old
-endef
-else
 define MAKE_DEPS_NOAUTO
 	set -e ; \
 	touch $@ && \
 	$(MKDEPEND) -w1024 -o'.$(OBJ_SUFFIX)' -f$@ $(DEFINES) $(ACDEFINES) $(INCLUDES) $< >/dev/null 2>&1 && \
 	mv $@ $@.old && cat $@.old | sed "s|^$(<D)/||g" > $@ && rm -f $@.old
 endef
-endif # WINNT
 
 $(MDDEPDIR)/%.pp: %.c
 	$(REPORT_BUILD)
@@ -1771,7 +1698,7 @@ $(MDDEPDIR)/%.pp: %.s
 	@$(MAKE_DEPS_NOAUTO)
 
 ifneq (,$(OBJS))
-depend:: $(SUBMAKEFILES) $(MAKE_DIRS) $(MDDEPFILES)
+depend:: $(SUBMAKEFILES) $(MAKE_DIRS) $(MKDEPEND_BUILTIN) $(MDDEPFILES)
 else
 depend:: $(SUBMAKEFILES)
 endif
@@ -1864,15 +1791,6 @@ FORCE:
 
 # Delete target if error occurs when building target
 .DELETE_ON_ERROR:
-
-# pdbfiles are written to by every file when debugging in enabled,
-# so the files must be built serially
-# This requires a recent version of gmake 
-ifeq ($(OS_ARCH),WINNT)
-ifneq (,$(MOZ_DEBUG)$(MOZ_PROFILE)$(MOZ_COVERAGE))
-.NOTPARALLEL::
-endif
-endif
 
 tags: TAGS
 

@@ -2,12 +2,9 @@
 
 # make-jars [-f] [-v] [-l] [-d <chromeDir>] [-s <srcdir>] < <jar.mn>
 
-if ($^O ne "cygwin") {
 # we'll be pulling in some stuff from the script directory
-require FindBin;
-import FindBin;
+use FindBin;
 push @INC, $FindBin::Bin;
-}
 
 use strict;
 
@@ -294,9 +291,8 @@ sub EnsureFileInDir
         copy($file, $destPath) || die "copy($file, $destPath) failed: $!";
 
         # fix the mod date so we don't jar everything (is this faster than just jarring everything?)
+        my $atime = stat($file)->atime || die $!;
         my $mtime = stat($file)->mtime || die $!;
-        my $atime = stat($file)->atime;
-        $atime = $mtime if !defined($atime);
         utime($atime, $mtime, $destPath);
 
         return 1;

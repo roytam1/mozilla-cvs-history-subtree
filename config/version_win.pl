@@ -309,12 +309,12 @@ if (open(RCINCLUDE, "<$rcinclude"))
 #	my $mstring="";
 	while (<RCINCLUDE>) 
 	{
-                print RCFILE $_;
+		print RCFILE $_;
 #		my $instr=$_;
 #		chomp($instr);
 #		$mstring .= "$instr\;";
 	}
-	close(RCINCLUDE);
+#	close(RCINCLUDE);
 #	$mstring =~ s/\/\*.*\*\///g;
 #	my @mlines = split(/\;/,$mstring);
 #	for(@mlines)
