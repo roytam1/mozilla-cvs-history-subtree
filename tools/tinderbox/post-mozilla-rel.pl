@@ -57,7 +57,7 @@ sub stagesymbols {
 sub makefullsoft {
   my $builddir = shift;
   # should go in config
-  my $moforoot = "leaf\%mozilla.org\@cvs.mozilla.org:/mofo"; 
+  my $moforoot = "cltbld\@cvs.mozilla.org:/mofo"; 
   TinderUtils::run_shell_command "cd $builddir; cvs -d$moforoot co -d fullsoft talkback/fullsoft";
   TinderUtils::run_shell_command "make -C $builddir/fullsoft";
   TinderUtils::run_shell_command "make -C $builddir/fullsoft fullcircle-push";
