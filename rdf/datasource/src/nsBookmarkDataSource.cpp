@@ -29,10 +29,10 @@
 
 ////////////////////////////////////////////////////////////////////////
 
-static NS_DEFINE_IID(kIRDFDataSourceIID,      NS_IRDFDATASOURCE_IID);
-static NS_DEFINE_IID(kIRDFServiceIID,         NS_IRDFSERVICE_IID);
-static NS_DEFINE_CID(kRDFMemoryDataSourceCID, NS_RDFMEMORYDATASOURCE_CID);
-static NS_DEFINE_CID(kRDFServiceCID,          NS_RDFSERVICE_CID);
+static NS_DEFINE_IID(kIRDFDataSourceIID,        NS_IRDFDATASOURCE_IID);
+static NS_DEFINE_IID(kIRDFServiceIID,           NS_IRDFSERVICE_IID);
+static NS_DEFINE_CID(kRDFInMemoryDataSourceCID, NS_RDFINMEMORYDATASOURCE_CID);
+static NS_DEFINE_CID(kRDFServiceCID,            NS_RDFSERVICE_CID);
 
 static const char kURI_bookmarks[] = "rdf:bookmarks"; // XXX?
 
@@ -569,7 +569,7 @@ BookmarkDataSourceImpl::BookmarkDataSourceImpl(void)
     nsresult rv;
 
     // XXX do or die, my friend...
-    rv = nsRepository::CreateInstance(kRDFMemoryDataSourceCID,
+    rv = nsRepository::CreateInstance(kRDFInMemoryDataSourceCID,
                                       nsnull,
                                       kIRDFDataSourceIID,
                                       (void**) &mInner);

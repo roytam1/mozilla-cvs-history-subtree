@@ -73,16 +73,16 @@ static NS_DEFINE_IID(kITextContentIID,        NS_ITEXT_CONTENT_IID); // XXX grr.
 static NS_DEFINE_IID(kIWebShellIID,           NS_IWEB_SHELL_IID);
 static NS_DEFINE_IID(kIXMLDocumentIID,        NS_IXMLDOCUMENT_IID);
 
-static NS_DEFINE_CID(kHTMLStyleSheetCID,      NS_HTMLSTYLESHEET_CID);
-static NS_DEFINE_CID(kNameSpaceManagerCID,    NS_NAMESPACEMANAGER_CID);
-static NS_DEFINE_CID(kParserCID,              NS_PARSER_IID); // XXX
-static NS_DEFINE_CID(kPresShellCID,           NS_PRESSHELL_CID);
-static NS_DEFINE_CID(kRDFMemoryDataSourceCID, NS_RDFMEMORYDATASOURCE_CID);
-static NS_DEFINE_CID(kRDFServiceCID,          NS_RDFSERVICE_CID);
-static NS_DEFINE_CID(kRDFSimpleDataBaseCID,   NS_RDFSIMPLEDATABASE_CID);
-static NS_DEFINE_CID(kRangeListCID,           NS_RANGELIST_CID);
-static NS_DEFINE_CID(kTextNodeCID,            NS_TEXTNODE_CID);
-static NS_DEFINE_CID(kWellFormedDTDCID,       NS_WELLFORMEDDTD_CID);
+static NS_DEFINE_CID(kHTMLStyleSheetCID,        NS_HTMLSTYLESHEET_CID);
+static NS_DEFINE_CID(kNameSpaceManagerCID,      NS_NAMESPACEMANAGER_CID);
+static NS_DEFINE_CID(kParserCID,                NS_PARSER_IID); // XXX
+static NS_DEFINE_CID(kPresShellCID,             NS_PRESSHELL_CID);
+static NS_DEFINE_CID(kRDFInMemoryDataSourceCID, NS_RDFINMEMORYDATASOURCE_CID);
+static NS_DEFINE_CID(kRDFServiceCID,            NS_RDFSERVICE_CID);
+static NS_DEFINE_CID(kRDFSimpleDataBaseCID,     NS_RDFSIMPLEDATABASE_CID);
+static NS_DEFINE_CID(kRangeListCID,             NS_RANGELIST_CID);
+static NS_DEFINE_CID(kTextNodeCID,              NS_TEXTNODE_CID);
+static NS_DEFINE_CID(kWellFormedDTDCID,         NS_WELLFORMEDDTD_CID);
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -230,7 +230,7 @@ nsRDFDocument::StartDocumentLoad(nsIURL *aURL,
 
     NS_RELEASE(webShell);
 
-    if (NS_FAILED(rv = nsRepository::CreateInstance(kRDFMemoryDataSourceCID,
+    if (NS_FAILED(rv = nsRepository::CreateInstance(kRDFInMemoryDataSourceCID,
                                                     nsnull,
                                                     kIRDFDataSourceIID,
                                                     (void**) &ds))) {

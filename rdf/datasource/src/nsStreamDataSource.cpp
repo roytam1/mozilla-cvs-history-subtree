@@ -30,21 +30,22 @@
 #include "nsIRDFCursor.h"
 #include "nsIStreamListener.h"
 #include "nsIURL.h"
+#include "nsLayoutCID.h" // for NS_NAMESPACEMANAGER_CID.
 #include "nsParserCIID.h"
 #include "nsRDFCID.h"
 
 ////////////////////////////////////////////////////////////////////////
 
-static NS_DEFINE_IID(kIDTDIID,            NS_IDTD_IID);
-static NS_DEFINE_IID(kIParserIID,         NS_IPARSER_IID);
-static NS_DEFINE_IID(kIRDFContentSinkIID, NS_IRDFCONTENTSINK_IID);
-static NS_DEFINE_IID(kIRDFDataSourceIID,  NS_IRDFDATASOURCE_IID);
-static NS_DEFINE_IID(kIStreamListenerIID, NS_ISTREAMLISTENER_IID);
+static NS_DEFINE_IID(kIDTDIID,               NS_IDTD_IID);
+static NS_DEFINE_IID(kINameSpaceManagerIID,  NS_INAMESPACEMANAGER_IID);
+static NS_DEFINE_IID(kIParserIID,            NS_IPARSER_IID);
+static NS_DEFINE_IID(kIRDFDataSourceIID,     NS_IRDFDATASOURCE_IID);
+static NS_DEFINE_IID(kIStreamListenerIID,    NS_ISTREAMLISTENER_IID);
 
+static NS_DEFINE_CID(kRDFInMemoryDataSourceCID, NS_RDFINMEMORYDATASOURCE_CID);
+static NS_DEFINE_CID(kNameSpaceManagerCID,      NS_NAMESPACEMANAGER_CID);
 static NS_DEFINE_CID(kParserCID,                NS_PARSER_IID); // XXX
-static NS_DEFINE_CID(kRDFSimpleContentSinkCID,  NS_RDFSIMPLECONTENTSINK_CID);
 static NS_DEFINE_CID(kWellFormedDTDCID,         NS_WELLFORMEDDTD_CID);
-
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -166,16 +167,22 @@ StreamDataSourceImpl::Init(const char* uri)
     nsIDTD* dtd             = nsnull;
     nsIStreamListener* lsnr = nsnull;
 
-    // XXX Get a namespace manager *here*
-    PR_ASSERT(0);
-
-    if (NS_FAILED(rv = nsRepository::CreateInstance(kRDFSimpleContentSinkCID,
+    if (NS_FAILED(rv = nsRepository::CreateInstance(kRDFInMemoryDataSourceCID,
                                                     nsnull,
-                                                    kIRDFContentSinkIID,
-                                                    (void**) &sink)))
+                                                    kIRDFDataSourceIID,
+                                                    (void**) &mInner)))
         goto done;
 
-    if (NS_FAILED(rv = sink->Init(mURL, ns)))
+    if (NS_FAILED(rv = mInner->Init(uri)))
+        goto done;
+
+    if (NS_FAILED(rv = nsRepository::CreateInstance(kNameSpaceManagerCID,
+                                                    nsnull,
+                                                    kINameSpaceManagerIID,
+                                                    (void**) &ns)))
+        goto done;
+
+    if (NS_FAILED(rv = NS_NewRDFSimpleContentSink(&sink, mURL, ns)))
         goto done;
 
     if (NS_FAILED(rv = sink->SetDataSource(this)))
@@ -200,7 +207,6 @@ StreamDataSourceImpl::Init(const char* uri)
     if (NS_FAILED(rv = parser->QueryInterface(kIStreamListenerIID, (void**) &lsnr)))
         goto done;
 
-    // XXX This _can't_ be all I need to do -- how do I start the parser?
     if (NS_FAILED(parser->Parse(mURL)))
         goto done;
 
@@ -237,3 +243,6 @@ NS_NewRDFStreamDataSource(nsIRDFDataSource** result)
     NS_ADDREF(*result);
     return NS_OK;
 }
+
+////////////////////////////////////////////////////////////////////////
+
