@@ -77,7 +77,7 @@ typedef PRUcs2 PRUnichar;
 #undef NS_EXPORT_
 
 #define NS_EXPORT __declspec(export)
-#define NS_EXPORT_(type) type __declspec(export)
+#define NS_EXPORT_(type) __declspec(export) type
 
 #else
 /* XXX do something useful? */
