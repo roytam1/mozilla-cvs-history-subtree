@@ -67,6 +67,7 @@ MOZ_VIEWER_NAME="viewer"
 ##
 MOZ_DIST_BIN=""
 MOZ_PROGRAM=""
+NSPR_DIST_BIN=""
 
 ##
 ## Functions
@@ -348,6 +349,11 @@ then
 
 	# pop
 	cd $here
+
+	cd $depth/nsprpub/dist/bin
+	NSPR_DIST_BIN=`pwd`
+	cd $here
+
 else
 	##
 	## Running the program from dist/bin
