@@ -197,7 +197,11 @@ nsSVGLibartBitmapDefault::GetBits()
 NS_IMETHODIMP_(nsISVGLibartBitmap::PixelFormat)
 nsSVGLibartBitmapDefault::GetPixelFormat()
 {
+#ifdef WIN32
+  return PIXEL_FORMAT_24_BGR;
+#else
   return PIXEL_FORMAT_24_RGB;
+#endif
 }
 
 NS_IMETHODIMP_(int)

@@ -61,8 +61,9 @@ public:
   static const nsIID& GetIID() { static nsIID iid = NS_ISVGLIBARTBITMAP_IID; return iid; }
 
   enum PixelFormat {
-    PIXEL_FORMAT_24_RGB  = 1, // linux, windows
-    PIXEL_FORMAT_32_ABGR = 2  // mac
+    PIXEL_FORMAT_24_RGB  = 1, // linux
+    PIXEL_FORMAT_24_BGR  = 2, // windows
+    PIXEL_FORMAT_32_ABGR = 3  // mac
   };
   
   NS_IMETHOD_(PRUint8 *) GetBits()=0;

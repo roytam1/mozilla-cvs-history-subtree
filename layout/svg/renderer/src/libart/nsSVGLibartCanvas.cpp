@@ -196,6 +196,17 @@ nsSVGLibartCanvas::Clear(nscolor color)
       }
       break;
     }
+    case nsISVGLibartBitmap::PIXEL_FORMAT_24_BGR:
+    {
+      PRInt32 stride = mBitmap->GetLineStride();
+      PRInt32 width  = mBitmap->GetWidth();
+      PRUint8* buf = mBitmap->GetBits();
+      PRUint8* end = buf + stride*mBitmap->GetHeight();
+      for ( ; buf<end; buf += stride) {
+        art_rgb_fill_run(buf, blue, green, red, width);
+      }
+      break;
+    }
     case nsISVGLibartBitmap::PIXEL_FORMAT_32_ABGR:
     {
       NS_ASSERTION(mBitmap->GetLineStride() == 4*mBitmap->GetWidth(), "strange pixel format");
@@ -253,6 +264,11 @@ nsSVGLibartCanvas::GetArtColor(nscolor rgb, ArtColor& artColor)
       artColor[0] = ART_PIX_MAX_FROM_8(NS_GET_R(rgb));
       artColor[1] = ART_PIX_MAX_FROM_8(NS_GET_G(rgb));
       artColor[2] = ART_PIX_MAX_FROM_8(NS_GET_B(rgb));
+      break;
+    case nsISVGLibartBitmap::PIXEL_FORMAT_24_BGR:
+      artColor[0] = ART_PIX_MAX_FROM_8(NS_GET_B(rgb));
+      artColor[1] = ART_PIX_MAX_FROM_8(NS_GET_G(rgb));
+      artColor[2] = ART_PIX_MAX_FROM_8(NS_GET_R(rgb));
       break;
     case nsISVGLibartBitmap::PIXEL_FORMAT_32_ABGR:
       artColor[3] = ART_PIX_MAX_FROM_8(NS_GET_R(rgb));
