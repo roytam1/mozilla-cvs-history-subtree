@@ -653,9 +653,31 @@ function getDefaultFileName(aDefaultFileName, aNameFromHeaders, aDocumentURI, aD
   if (aNameFromHeaders)
     return validateFileName(aNameFromHeaders);  // 1) Use the name suggested by the HTTP headers
 
-  var url = aDocumentURI.QueryInterface(Components.interfaces.nsIURL);
-  if (url.fileName != "")
-    return url.fileName;                        // 2) Use the actual file name, if present
+  try {
+    var url = aDocumentURI.QueryInterface(Components.interfaces.nsIURL);
+    if (url.fileName != "") {
+      // 2) Use the actual file name, if present
+      return unescape(url.fileName);
+    }
+  } catch (e) {
+    try {
+      // the file name might be non ASCII
+      // try unescape again with a characterSet
+      var textToSubURI = Components.classes["@mozilla.org/intl/texttosuburi;1"]
+                                   .getService(Components.interfaces.nsITextToSubURI);
+      var charset;
+      if (aDocument)
+        charset = aDocument.characterSet;
+      else if (document.commandDispatcher.focusedWindow)
+        charset = document.commandDispatcher.focusedWindow.document.characterSet;
+      else
+        charset = window._content.document.characterSet;
+      return textToSubURI.unEscapeURIForUI(charset, url.fileName);
+    } catch (e) {
+      // This is something like a wyciwyg:, data:, and so forth
+      // URI... no usable filename here.
+    }
+  }
   
   if (aDocument && aDocument.title != "") 
     return validateFileName(aDocument.title)    // 3) Use the document title
