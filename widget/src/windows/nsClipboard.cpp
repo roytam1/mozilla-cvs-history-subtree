@@ -42,11 +42,6 @@
 #include <shlobj.h>
 #include <intshcut.h>
 
-// XXX: mingw doesn't have an impl of the urlmon header or import lib
-#ifndef __MINGW32__
-#include <urlmon.h> // needed for CopyStgMedium
-#endif
-
 // shellapi.h is needed to build with WIN32_LEAN_AND_MEAN
 #include <shellapi.h>
 
@@ -432,10 +427,10 @@ nsresult nsClipboard::GetNativeDataOffClipboard(IDataObject * aDataObject, UINT 
   // Currently this is only handling TYMED_HGLOBAL data
   // For Text, Dibs, Files, and generic data (like HTML)
   if (S_OK == hres) {
-    static CLIPFORMAT fileDescriptorFlavor = ::RegisterClipboardFormat( CFSTR_FILEDESCRIPTOR ); 
-    static CLIPFORMAT fileFlavor = ::RegisterClipboardFormat( CFSTR_FILECONTENTS ); 
+    static CLIPFORMAT fileDescriptorFlavor = ::RegisterClipboardFormat( CFSTR_FILEDESCRIPTOR );
+    static CLIPFORMAT fileFlavor = ::RegisterClipboardFormat( CFSTR_FILECONTENTS );
     switch (stm.tymed) {
-     case TYMED_HGLOBAL: 
+     case TYMED_HGLOBAL:
         {
           switch (fe.cfFormat) {
             case CF_TEXT:
@@ -470,14 +465,10 @@ nsresult nsClipboard::GetNativeDataOffClipboard(IDataObject * aDataObject, UINT 
 
             case CF_DIB :
               {
-                HGLOBAL hGlobal = stm.hGlobal;
-                BYTE  * pGlobal = (BYTE  *)::GlobalLock (hGlobal) ;
-                BITMAPV4HEADER * header = (BITMAPV4HEADER *)pGlobal;
-
                 nsIClipboardImage * nativeImageWrapper = nsnull; // don't use a nsCOMPtr here
 
-                nsresult rv = nsComponentManager::CreateInstance("@mozilla.org/widget/clipboardimage;1", nsnull, 
-                                                    NS_GET_IID(nsIClipboardImage), 
+                result = nsComponentManager::CreateInstance("@mozilla.org/widget/clipboardimage;1", nsnull,
+                                                    NS_GET_IID(nsIClipboardImage),
                                                     (void**) &nativeImageWrapper);
 
                 if (nativeImageWrapper)
@@ -487,11 +478,9 @@ nsresult nsClipboard::GetNativeDataOffClipboard(IDataObject * aDataObject, UINT 
                   *aLen = sizeof(nsIClipboardImage *);
                   result = NS_OK;
                 }
-                else
-                 ::GlobalUnlock (hGlobal); // only unlock this memory if we did not store it in the native image wrapper
               } break;
 
-            case CF_HDROP : 
+            case CF_HDROP :
               {
                 // in the case of a file drop, multiple files are stashed within a
                 // single data object. In order to match mozilla's D&D apis, we
@@ -757,8 +746,8 @@ nsClipboard :: FindURLFromLocalFile ( IDataObject* inDataObject, UINT inIndex, v
 
   nsresult loadResult = GetNativeDataOffClipboard(inDataObject, inIndex, GetFormat(kFileMime), outData, outDataLen);
   if ( NS_SUCCEEDED(loadResult) && *outData ) {
-	  // we have a file path in |data|. Is it an internet shortcut or a normal file?
-	  char* filepath = NS_REINTERPRET_CAST(char*, *outData);
+    // we have a file path in |data|. Is it an internet shortcut or a normal file?
+    char* filepath = NS_REINTERPRET_CAST(char*, *outData);
     if ( IsInternetShortcut(filepath) ) {
       char* buffer = nsnull;
 
@@ -854,9 +843,7 @@ nsClipboard :: IsInternetShortcut ( const char* inFileName )
 {
   if ( strstr(inFileName, ".URL") || strstr(inFileName, ".url") )
     return PR_TRUE;
-  else
-    return PR_FALSE;
-
+  return PR_FALSE;
 } // IsInternetShortcut
 
 
@@ -956,29 +943,53 @@ nsClipboardImage :: ~nsClipboardImage()
 
 NS_IMPL_ISUPPORTS1(nsClipboardImage, nsIClipboardImage)
 
+static HGLOBAL CopyGlobalMemory(HGLOBAL hSource)
+{
+  if (hSource == NULL)
+    return NULL;
+
+  DWORD nSize = (DWORD)::GlobalSize(hSource);
+  HGLOBAL hDest = ::GlobalAlloc(GMEM_SHARE | GMEM_MOVEABLE, nSize);
+  if (hDest == NULL)
+    return NULL;
+
+  // copy the bits
+  LPVOID lpSource = ::GlobalLock(hSource);
+  LPVOID lpDest = ::GlobalLock(hDest);
+  memcpy(lpDest, lpSource, nSize);
+  ::GlobalUnlock(hDest);
+  ::GlobalUnlock(hSource);
+
+  return hDest;
+}
+
 NS_IMETHODIMP nsClipboardImage::SetNativeImage(void * aNativeImageData)
 {
-#ifdef __MINGW32__
-  return NS_ERROR_NOT_IMPLEMENTED;
-#else
+  STGMEDIUM * stg = (STGMEDIUM *)aNativeImageData;
+
+  HGLOBAL hDest = CopyGlobalMemory(stg->hGlobal);
+  if (hDest == NULL)
+    return NS_ERROR_OUT_OF_MEMORY;
+
   if(mStgMedium.hGlobal)
     ReleaseStgMedium(&mStgMedium);
-    
-  HRESULT err = CopyStgMedium((STGMEDIUM *) aNativeImageData, &mStgMedium);
+  mStgMedium = *stg;
+  mStgMedium.hGlobal = hDest;
   return NS_OK;
-#endif
 }
 
 NS_IMETHODIMP nsClipboardImage::GetNativeImage(void * aNativeImageData)
 {
-#ifdef __MINGW32__
-  return NS_ERROR_NOT_IMPLEMENTED;
-#else
   // the caller should be passing in a STGMEDIUM object which we can copy into
+  HGLOBAL hDest = CopyGlobalMemory(mStgMedium.hGlobal);
+  if (hDest == NULL)
+    return NS_ERROR_OUT_OF_MEMORY;
 
-  HRESULT err = CopyStgMedium(&mStgMedium, (STGMEDIUM *) aNativeImageData);
+  STGMEDIUM * stg = (STGMEDIUM *)aNativeImageData;
+
+  *stg = mStgMedium;
+  stg->hGlobal = hDest;
   return NS_OK;
-#endif
 }
 
 NS_IMETHODIMP nsClipboardImage::ReleaseNativeImage(void * aNativeImageData)
