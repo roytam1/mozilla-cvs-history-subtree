@@ -594,8 +594,9 @@ DecompileSwitch(SprintStack *ss, TableEntry *table, uintN tableLength,
 	    jp->indent -= 4;
 	}
 
-	if (isCondSwitch)
-	    caseExprOff = (ptrdiff_t) js_CodeSpec[JSOP_CONDSWITCH].length;
+	caseExprOff = isCondSwitch 
+                      ? (ptrdiff_t) js_CodeSpec[JSOP_CONDSWITCH].length
+                      : 0;
 
 	for (i = 0; i < tableLength; i++) {
 	    off = table[i].offset;
@@ -2033,6 +2034,7 @@ js_DecompileFunction(JSPrinter *jp, JSFunction *fun, JSBool newlines)
     }
     js_printf(jp, "function %s(", fun->atom ? ATOM_BYTES(fun->atom) : "");
 
+    scope = NULL;
     if (fun->script && fun->object) {
 	/* Print the parameters.
 	 *
@@ -2068,7 +2070,7 @@ js_DecompileFunction(JSPrinter *jp, JSFunction *fun, JSBool newlines)
     js_puts(jp, ") {\n");
     indent = jp->indent;
     jp->indent += 4;
-    if (fun->script) {
+    if (fun->script && fun->object) {
 	oldscope = jp->scope;
 	jp->scope = scope;
 	ok = js_DecompileScript(jp, fun->script);
