@@ -56,4 +56,4 @@ protected:
     static nsCLiveconnect  *m_pNSCLiveconnect;  
 };
 
-#endif // nsCLiveconnectFactory_h___
+#endif /* // nsCLiveconnectFactory_h___ */
