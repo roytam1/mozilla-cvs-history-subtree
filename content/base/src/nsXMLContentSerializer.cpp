@@ -200,7 +200,7 @@ nsXMLContentSerializer::AppendDoctype(nsIDOMDocumentType *aDoctype,
   if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
   rv = aDoctype->GetSystemId(systemId);
   if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
-  rv = aDoctype->GetInternalSubset(publicId);
+  rv = aDoctype->GetInternalSubset(internalSubset);
   if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
 
   AppendToString(NS_LITERAL_STRING("<!DOCTYPE "), aStr);
