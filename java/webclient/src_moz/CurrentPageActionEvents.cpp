@@ -279,7 +279,7 @@ wsSelectAllEvent::handleEvent ()
     return result;
 }
 
-/*
+/* PENDING(ashuk): remove this from here and in the motif directory
 wsViewSourceEvent::wsViewSourceEvent(nsIDocShell* docShell, PRBool viewMode) :
     nsActionEvent(),
     mDocShell(docShell),

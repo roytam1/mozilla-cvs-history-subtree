@@ -93,7 +93,7 @@ public static void main(String [] arg)
         printUsage();
         System.exit(-1);
     }
-    String urlArg =(2 == arg.length) ? arg[1] : "file:///E|/Projects/tmp/5105.html";
+    String urlArg =(2 == arg.length) ? arg[1] : "http://www.mozilla.org/projects/blackwood/webclient/";
 
     // set class vars used in EmbeddedMozilla ctor 
     binDir = arg[0];

@@ -189,7 +189,7 @@ JNIEXPORT jobject JNICALL Java_org_mozilla_webclient_wrapper_1native_CurrentPage
  * Signature: ()Ljava/lang/String;
  */
 
-/*
+/* PENDING(ashuk): remove this from here and in the motif directory
 JNIEXPORT jstring JNICALL Java_org_mozilla_webclient_wrapper_1native_CurrentPageImpl_nativeGetSource
 (JNIEnv * env, jobject jobj)
 {
@@ -206,7 +206,7 @@ JNIEXPORT jstring JNICALL Java_org_mozilla_webclient_wrapper_1native_CurrentPage
  * Signature: ()[B
  */
 
-/*
+/* PENDING(ashuk): remove this from here and in the motif directory
 JNIEXPORT jbyteArray JNICALL Java_org_mozilla_webclient_wrapper_1native_CurrentPageImpl_nativeGetSourceBytes
 (JNIEnv * env, jobject jobj, jint webShellPtr, jboolean viewMode)
 {

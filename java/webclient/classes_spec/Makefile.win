@@ -81,3 +81,17 @@ JAVAC_CLASSPATH=$(JAVAC_CLASSPATH);$(CLASSPATH)
 include <$(DEPTH)\config\javarules.mak>
 include <$(DEPTH)\config\rules.mak>
 
+install:: jarEmUp
+
+jarEmup:
+!ifdef PACKAGE_BUILD
+	-mkdir $(DIST)\javadev
+	chmod 775 $(DIST)\javadev
+	-mkdir $(DIST)\javadev\lib
+	chmod 775 $(DIST)\javadev\lib
+	cd $(DIST)\..\classes 
+	@echo +++ Current dir is pwd
+	jar -xvf ..\..\java\external\dom2.jar 
+	jar -cvfM0 Webclient.jar org 
+	cp Webclient.jar ..\..\java\webclient\src_moz\$(DIST)\javadev\lib\Webclient.jar 
+!endif

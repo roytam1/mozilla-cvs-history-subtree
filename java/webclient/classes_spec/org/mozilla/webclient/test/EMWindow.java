@@ -137,7 +137,7 @@ private UniversalDialog           uniDialog = null;
        		MenuItem closeItem = new MenuItem("Close");
        		MenuItem findItem = new MenuItem("Find");
        		MenuItem findNextItem = new MenuItem("Find Next");
-		MenuItem sourceItem = new MenuItem("View Page Source");
+		MenuItem sourceItem = new MenuItem("View Page Source as String");
 		MenuItem pageInfoItem = new MenuItem("View Page Info");
 		MenuItem selectAllItem = new MenuItem("Select All");
         MenuItem copyItem = new MenuItem("Copy");
@@ -276,7 +276,7 @@ private UniversalDialog           uniDialog = null;
         // Create the Context Menus
         add(popup);
 
-        popup.add(popup_ViewSource = new MenuItem("View Source"));
+        popup.add(popup_ViewSource = new MenuItem("View Source as ByteArray"));
         popup.add(popup_SelectAll = new MenuItem("Select All"));
         
         contextListener = new PopupActionListener();
@@ -312,7 +312,7 @@ private UniversalDialog           uniDialog = null;
                 System.setProperty("http.proxyPort", proxyPort);
             }
              
-            Properties prefsProps = prefs.getPrefs();
+            //prefsProps = prefs.getPrefs();
             //prefsProps.list(System.out);  // This works, try it!
         }
 		catch (Exception e) {
@@ -441,9 +441,8 @@ public void actionPerformed (ActionEvent evt)
         else if (command.equals("Find Next")) {
             currentPage.findNextInPage();
         }
-        else if (command.equals("View Page Source")) {
-            byte source[] = currentPage.getSourceBytes();
-            String sou = new String(source);
+        else if (command.equals("View Page Source as String")) {
+            String sou = currentPage.getSource();
             System.out.println("+++++++++++ Page Source is +++++++++++\n\n" + sou);
         }
         else if (command.equals("View Page Info")) {
@@ -915,7 +914,7 @@ public void actionPerformed(ActionEvent event)
 class PopupActionListener implements ActionListener {
 public void actionPerformed(ActionEvent event) {
     String command = event.getActionCommand();
-    if (command.equals("View Source"))
+    if (command.equals("View Source as ByteArray"))
         {
             System.out.println("I will now View Source");
             byte source[] = EMWindow.this.currentPage.getSourceBytes();

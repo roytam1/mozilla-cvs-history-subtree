@@ -97,7 +97,7 @@ public Properties getPageInfo();
             
 public String getSource();
  
-public byte [] getSourceBytes(boolean viewMode);
+public byte [] getSourceBytes();
             
 public void resetFind();
             

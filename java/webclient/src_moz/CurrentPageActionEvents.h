@@ -80,7 +80,7 @@ protected:
     WebShellInitContext *mInitContext;
 };
 
-/*
+/* PENDING(ashuk): remove this from here and in the motif directory
 class wsViewSourceEvent : public nsActionEvent {
 public:
     wsViewSourceEvent (nsIDocShell * docShell, PRBool viewMode);
