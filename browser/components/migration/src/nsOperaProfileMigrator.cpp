@@ -38,6 +38,7 @@
 #include "nsBrowserProfileMigratorUtils.h"
 #include "nsCRT.h"
 #include "nsDirectoryServiceDefs.h"
+#include "nsIBookmarksService.h"
 #include "nsIBrowserProfileMigrator.h"
 #include "nsIBrowserHistory.h"
 #include "nsIGlobalHistory.h"
@@ -49,6 +50,8 @@
 #include "nsIPrefLocalizedString.h"
 #include "nsIPrefService.h"
 #include "nsIProperties.h"
+#include "nsIRDFContainer.h"
+#include "nsIRDFService.h"
 #include "nsIServiceManager.h"
 #include "nsISupportsPrimitives.h"
 #include "nsNetUtil.h"
@@ -91,7 +94,7 @@ nsOperaProfileMigrator::Migrate(PRUint32 aItems, PRBool aReplace, const PRUnicha
   COPY_DATA(CopyHistory,      aReplace, nsIBrowserProfileMigrator::HISTORY,   NS_LITERAL_STRING("history").get());
   COPY_DATA(CopyFormData,     aReplace, nsIBrowserProfileMigrator::FORMDATA,  NS_LITERAL_STRING("formdata").get());
   COPY_DATA(CopyPasswords,    aReplace, nsIBrowserProfileMigrator::PASSWORDS, NS_LITERAL_STRING("passwords").get());
-  COPY_DATA(CopyHotlist,      aReplace, nsIBrowserProfileMigrator::BOOKMARKS, NS_LITERAL_STRING("bookmarks").get());
+  COPY_DATA(CopyBookmarks,    aReplace, nsIBrowserProfileMigrator::BOOKMARKS, NS_LITERAL_STRING("bookmarks").get());
   COPY_DATA(CopyOtherData,    aReplace, nsIBrowserProfileMigrator::OTHERDATA, NS_LITERAL_STRING("otherdata").get());
 
   NOTIFY_OBSERVERS(MIGRATION_ENDED, nsnull);
@@ -536,11 +539,230 @@ nsOperaProfileMigrator::CopyPasswords(PRBool aReplace)
 }
 
 nsresult
-nsOperaProfileMigrator::CopyHotlist(PRBool aReplace)
+nsOperaProfileMigrator::CopyBookmarks(PRBool aReplace)
 {
-  printf("*** copy opera hotlist\n");
+  // Find Opera Bookmarks
+  nsCOMPtr<nsIFile> operaBookmarks;
+  mOperaProfile->Clone(getter_AddRefs(operaBookmarks));
+  operaBookmarks->Append(NS_LITERAL_STRING("opera6.adr"));
+
+  nsCOMPtr<nsIInputStream> fileInputStream;
+  NS_NewLocalFileInputStream(getter_AddRefs(fileInputStream), operaBookmarks);
+  if (!fileInputStream) return NS_ERROR_OUT_OF_MEMORY;
+
+  nsCOMPtr<nsILineInputStream> lineInputStream(do_QueryInterface(fileInputStream));
+
+  nsCOMPtr<nsIRDFService> rdf(do_GetService("@mozilla.org/rdf/rdf-service;1"));
+  nsCOMPtr<nsIRDFResource> root, toolbar;
+  rdf->GetResource(NS_LITERAL_CSTRING("NC:BookmarksRoot"), getter_AddRefs(root));
+
+  nsCOMPtr<nsIBookmarksService> bms(do_GetService("@mozilla.org/browser/bookmarks-service;1"));
+  bms->GetBookmarksToolbarFolder(getter_AddRefs(toolbar));
+  
+  if (aReplace)
+    ClearToolbarFolder(bms, toolbar);
+
+  return ParseBookmarksFolder(lineInputStream, root, toolbar, bms);
+}
+
+void
+nsOperaProfileMigrator::ClearToolbarFolder(nsIBookmarksService* aBookmarksService, nsIRDFResource* aToolbarFolder)
+{
+  // If we're here, it means the user's doing a _replace_ import which means
+  // clear out the content of this folder, and replace it with the new content
+  nsCOMPtr<nsIRDFContainer> ctr(do_CreateInstance("@mozilla.org/rdf/container;1"));
+  nsCOMPtr<nsIRDFDataSource> bmds(do_QueryInterface(aBookmarksService));
+  ctr->Init(bmds, aToolbarFolder);
+
+  nsCOMPtr<nsISimpleEnumerator> e;
+  ctr->GetElements(getter_AddRefs(e));
+
+  PRBool hasMore;
+  e->HasMoreElements(&hasMore);
+  while (hasMore) {
+    nsCOMPtr<nsIRDFResource> b;
+    e->GetNext(getter_AddRefs(b));
+
+    ctr->RemoveElement(b, PR_FALSE);
+
+    e->HasMoreElements(&hasMore);
+  }
+}
+
+typedef enum { LineType_FOLDER, 
+               LineType_BOOKMARK, 
+               LineType_SEPARATOR, 
+               LineType_NAME, 
+               LineType_URL, 
+               LineType_KEYWORD,
+               LineType_DESCRIPTION,
+               LineType_ONTOOLBAR,
+               LineType_NL,
+               LineType_OTHER } LineType;
+
+static LineType GetLineType(nsAString& aBuffer, nsAString& aData)
+{
+  if (Substring(aBuffer, 0, 7).Equals(NS_LITERAL_STRING("#FOLDER")))
+    return LineType_FOLDER;
+  if (Substring(aBuffer, 0, 4).Equals(NS_LITERAL_STRING("#URL")))
+    return LineType_BOOKMARK;
+  if (Substring(aBuffer, 0, 1).Equals(NS_LITERAL_STRING("-")))
+    return LineType_SEPARATOR;
+  if (Substring(aBuffer, 1, 5).Equals(NS_LITERAL_STRING("NAME="))) {
+    const nsAString& data = Substring(aBuffer, 6, aBuffer.Length() - 6);
+    aData = ToNewUnicode(data);
+    return LineType_NAME;
+  }
+  if (Substring(aBuffer, 1, 4).Equals(NS_LITERAL_STRING("URL="))) {
+    const nsAString& data = Substring(aBuffer, 5, aBuffer.Length() - 5);
+    aData = ToNewUnicode(data);
+    return LineType_URL;
+  }
+  if (Substring(aBuffer, 1, 12).Equals(NS_LITERAL_STRING("DESCRIPTION="))) {
+    const nsAString& data = Substring(aBuffer, 13, aBuffer.Length() - 13);
+    aData = ToNewUnicode(data);
+    return LineType_DESCRIPTION;
+  }
+  if (Substring(aBuffer, 1, 11).Equals(NS_LITERAL_STRING("SHORT NAME="))) {
+    const nsAString& data = Substring(aBuffer, 12, aBuffer.Length() - 12);
+    aData = ToNewUnicode(data);
+    return LineType_KEYWORD;
+  }
+  if (Substring(aBuffer, 1, 15).Equals(NS_LITERAL_STRING("ON PERSONALBAR="))) {
+    const nsAString& data = Substring(aBuffer, 16, aBuffer.Length() - 16);
+    aData = ToNewUnicode(data);
+    return LineType_ONTOOLBAR;
+  }
+  if (aBuffer.IsEmpty())
+    return LineType_NL; // Newlines separate bookmarks
+  return LineType_OTHER;
+}
+
+typedef enum { EntryType_BOOKMARK, EntryType_FOLDER } EntryType;
+
+nsresult
+nsOperaProfileMigrator::ParseBookmarksFolder(nsILineInputStream* aStream, 
+                                             nsIRDFResource* aParent, 
+                                             nsIRDFResource* aToolbar,
+                                             nsIBookmarksService* aBMS)
+{
+  static PRBool foundToolbarFolder = PR_FALSE;
+
+  PRBool moreData = PR_FALSE;
+  nsAutoString buffer;
+  EntryType entryType = EntryType_BOOKMARK;
+  nsAutoString name, keyword, description;
+  nsCAutoString url;
+  PRBool onToolbar = PR_FALSE;
+  do {
+    nsresult rv = aStream->ReadLine(buffer, &moreData);
+    if (NS_FAILED(rv)) return rv;
+
+    if (!moreData) break;
+
+    nsAutoString data;
+    LineType type = GetLineType(buffer, data);
+    switch(type) {
+    case LineType_FOLDER:
+      entryType = EntryType_FOLDER;
+      break;
+    case LineType_BOOKMARK:
+      entryType = EntryType_BOOKMARK;
+      break;
+    case LineType_SEPARATOR:
+      // If we're here, we need to break out of the loop for the current folder, 
+      // essentially terminating this instance of ParseBookmarksFolder and return
+      // to the calling function, which is either ParseBookmarksFolder for a parent
+      // folder, or CopyBookmarks (which means we're done parsing all bookmarks).
+      goto done;
+    case LineType_NAME:
+      name = data;
+      break;
+    case LineType_URL:
+      url.AssignWithConversion(data);
+      break;
+    case LineType_KEYWORD:
+      keyword = data;
+      break;
+    case LineType_DESCRIPTION:
+      description = data;
+      break;
+    case LineType_ONTOOLBAR:
+      if (data.Equals(NS_LITERAL_STRING("YES")))
+        onToolbar = PR_TRUE;
+      break;
+    case LineType_NL: {
+      nsCOMPtr<nsIRDFResource> itemRes;
+      NS_NAMED_LITERAL_STRING(empty, "");
+      if (entryType == EntryType_BOOKMARK) {
+        if (!name.IsEmpty() && !url.IsEmpty()) {
+          rv = aBMS->CreateBookmarkInContainer(name.get(), 
+                                               url.get(), 
+                                               keyword.get(), 
+                                               description.get(), 
+                                               nsnull, 
+                                               onToolbar ? aToolbar : aParent, 
+                                               -1, 
+                                               getter_AddRefs(itemRes));
+          name = empty;
+          url.AssignWithConversion(empty);
+          keyword = empty;
+          description = empty;
+          if (NS_FAILED(rv)) 
+            continue;
+        }
+      }
+      else if (entryType == EntryType_FOLDER) {
+        if (!name.IsEmpty()) {
+          rv = aBMS->CreateFolderInContainer(name.get(), 
+                                             onToolbar ? aToolbar : aParent, 
+                                             -1, 
+                                             getter_AddRefs(itemRes));
+          name = empty;
+          if (NS_FAILED(rv)) 
+            continue;
+          ParseBookmarksFolder(aStream, itemRes, aToolbar, aBMS);
+        }
+      }
+      break;
+    }
+    case LineType_OTHER:
+      break;
+    }
+  }
+  while (1);
+
+done:
   return NS_OK;
 }
+
+#if 0
+line == "#FOLDER"
+	ParseFolderContents()
+
+ParseFolderContents(root) {
+static PRBool foundPT = PR_FALSE;
+
+var parent = root;
+switch (line) {
+case "#FOLDER":
+  read lines, Assert Name
+  parent->Append(item);
+  ctr = makeContainer;
+  if (!foundPT && ON PERSONAL BAR) {
+    parent->SetAsPersonalToolbarFolder
+    foundPT = TRUE;
+  }
+  ParseFolderContents(ctr);
+case "#URL":
+  read lines, Assert Name, URL
+  parent->append(item);
+  if (!foundPT && ON PERSONAL BAR) {
+    parent->SetAsPersonalToolbarFolder
+    foundPT = TRUE;
+  }
+
+#endif
 
 nsresult
 nsOperaProfileMigrator::CopyOtherData(PRBool aReplace)

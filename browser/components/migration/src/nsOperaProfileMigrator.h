@@ -45,6 +45,7 @@
 #include "nsString.h"
 #include "nsVoidArray.h"
 
+class nsILineInputStream;
 class nsILocalFile;
 class nsINIParser;
 class nsIPrefBranch;
@@ -95,8 +96,14 @@ protected:
   nsresult CopyHistory(PRBool aReplace);
   nsresult CopyFormData(PRBool aReplace);
   nsresult CopyPasswords(PRBool aReplace);
-  nsresult CopyHotlist(PRBool aReplace);
   nsresult CopyOtherData(PRBool aReplace);
+
+  nsresult CopyBookmarks(PRBool aReplace);
+  void     ClearToolbarFolder(nsIBookmarksService* aBookmarksService, nsIRDFResource* aToolbarFolder);
+  nsresult ParseBookmarksFolder(nsILineInputStream* aStream, 
+                                nsIRDFResource* aFolder,
+                                nsIRDFResource* aToolbar, 
+                                nsIBookmarksService* aBMS);
 
   void     GetOperaProfile(const PRUnichar* aProfile, nsILocalFile** aFile);
 
