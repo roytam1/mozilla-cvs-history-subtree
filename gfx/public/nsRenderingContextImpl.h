@@ -79,7 +79,6 @@ public:
    */
   NS_IMETHOD RasterPolygon(const nsPoint aPoints[], PRInt32 aNumPoints);
 
-
   /** ---------------------------------------------------
    *  See documentation in nsIRenderingContext.h
    *	@update 05/01/00 dwc
@@ -91,6 +90,14 @@ public:
    *	@update 05/01/00 dwc
    */
   NS_IMETHOD FillStdPolygon(const nsPoint aPoints[], PRInt32 aNumPoints) { return NS_OK; }
+
+
+  NS_IMETHOD DrawImage(gfxIImageContainer *aImage, const nsRect * aSrcRect, const nsPoint * aDestPoint);
+  NS_IMETHOD DrawScaledImage(gfxIImageContainer *aImage, const nsRect * aSrcRect, const nsRect * aDestRect);
+  NS_IMETHOD DrawTile(gfxIImageContainer *aImage, gfx_coord aXOffset, gfx_coord aYOffset, const nsRect * aTargetRect);
+  NS_IMETHOD DrawScaledTile(gfxIImageContainer *aImage, gfx_coord aXOffset, gfx_coord aYOffset, gfx_dimension aTileWidth, gfx_dimension aTileHeight, const nsRect * aTargetRect);
+
+
 
 protected:
   virtual ~nsRenderingContextImpl();
