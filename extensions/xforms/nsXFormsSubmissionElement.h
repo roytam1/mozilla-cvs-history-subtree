@@ -46,6 +46,7 @@
 class nsIMultiplexInputStream;
 class nsIInputStream;
 class nsIContent;
+class nsIFile;
 class nsCString;
 class nsString;
 
@@ -65,10 +66,13 @@ public:
 
   NS_HIDDEN_(void)     Submit();
   NS_HIDDEN_(nsresult) SubmitEnd(PRBool succeeded);
+  NS_HIDDEN_(PRBool)   GetBooleanAttr(nsIAtom *attrName, PRBool defaultVal = PR_FALSE);
   NS_HIDDEN_(void)     GetDefaultInstanceData(nsIDOMNode **result);
   NS_HIDDEN_(nsresult) GetSelectedInstanceData(nsIDOMNode **result);
   NS_HIDDEN_(nsresult) SerializeData(nsIDOMNode *data, PRUint32 format, nsCString &uri, nsIInputStream **, nsCString &contentType);
   NS_HIDDEN_(nsresult) SerializeDataXML(nsIDOMNode *data, PRUint32 format, nsIInputStream **, nsCString &contentType);
+  NS_HIDDEN_(nsresult) CreateSubmissionDoc(nsIDOMDocument *source, const nsString &encoding, nsIDOMDocument **result);
+  NS_HIDDEN_(nsresult) CopyChildren(nsIDOMNode *source, nsIDOMNode *dest, nsIDOMDocument *destDoc, const nsString &cdataElements, PRBool indent, PRUint32 depth);
   NS_HIDDEN_(nsresult) SerializeDataURLEncoded(nsIDOMNode *data, PRUint32 format, nsCString &uri, nsIInputStream **, nsCString &contentType);
   NS_HIDDEN_(void)     AppendURLEncodedData(nsIDOMNode *data, const nsCString &sep, nsCString &buf);
   NS_HIDDEN_(nsresult) SerializeDataMultipartRelated(nsIDOMNode *data, PRUint32 format, nsIInputStream **, nsCString &contentType);
@@ -76,9 +80,7 @@ public:
   NS_HIDDEN_(nsresult) AppendMultipartFormData(nsIDOMNode *data, const nsCString &boundary, nsCString &buf, nsIMultiplexInputStream *);
   NS_HIDDEN_(nsresult) AppendPostDataChunk(nsCString &postDataChunk, nsIMultiplexInputStream *multiStream);
   NS_HIDDEN_(nsresult) GetElementEncodingType(nsIDOMNode *data, PRUint32 *encType);
-  NS_HIDDEN_(nsresult) GetElementContentType(nsIDOMNode *data, PRUint32 encType, nsCString &contentType);
-  NS_HIDDEN_(void)     GetElementFilename(nsIDOMNode *data, nsCString &filename);
-  NS_HIDDEN_(nsresult) CreateFileStream(const nsString &absURI, nsIInputStream **result);
+  NS_HIDDEN_(nsresult) CreateFileStream(const nsString &absURI, nsIFile **file, nsIInputStream **stream);
   NS_HIDDEN_(nsresult) SendData(PRUint32 format, const nsCString &uri, nsIInputStream *stream, const nsCString &contentType);
 
 private:

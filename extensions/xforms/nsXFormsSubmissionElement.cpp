@@ -64,6 +64,8 @@
 #include "nsIDOMXPathNSResolver.h"
 #include "nsIDOMXPathExpression.h"
 #include "nsIDOMSerializer.h"
+#include "nsIDOMDOMImplementation.h"
+#include "nsIDOMProcessingInstruction.h"
 #include "nsComponentManagerUtils.h"
 #include "nsIWebNavigation.h"
 #include "nsIStringStream.h"
@@ -75,6 +77,7 @@
 #include "nsIDocument.h"
 #include "nsIContent.h"
 #include "nsIFileURL.h"
+#include "nsIMIMEService.h"
 #include "nsLinebreakConverter.h"
 #include "nsEscape.h"
 #include "nsString.h"
@@ -150,6 +153,15 @@ MakeMultipartBoundary(nsCString &boundary)
   boundary.AppendInt(rand());
 }
 
+static void
+MakeMultipartContentID(nsCString &cid)
+{
+  cid.AppendInt(rand(), 16);
+  cid.Append('.');
+  cid.AppendInt(rand(), 16);
+  cid.AppendLiteral("@mozilla.org");
+}
+
 static nsresult
 URLEncode(const nsString &buf, nsCString &result)
 {
@@ -172,6 +184,16 @@ URLEncode(const nsString &buf, nsCString &result)
 
   result.Adopt(escapedBuf);
   return NS_OK;
+}
+
+static void
+GetMimeTypeFromFile(nsIFile *file, nsCString &result)
+{
+  nsCOMPtr<nsIMIMEService> mime = do_GetService("@mozilla.org/mime;1");
+  if (mime)
+    mime->GetTypeFromFile(file, result);
+  if (result.IsEmpty())
+    result.Assign("application/octet-stream");
 }
 
 // nsISupports
@@ -497,6 +519,25 @@ nsXFormsSubmissionElement::GetSelectedInstanceData(nsIDOMNode **result)
   return nodeset->GetSingleNodeValue(result);
 }
 
+PRBool
+nsXFormsSubmissionElement::GetBooleanAttr(nsIAtom *name, PRBool defaultVal)
+{
+  nsAutoString value;
+  mContent->GetAttr(kNameSpaceID_None, name, value);
+
+  // use defaultVal when value does not match a legal literal
+
+  if (!value.IsEmpty())
+  {
+    if (value.EqualsLiteral("true") || value.EqualsLiteral("1"))
+      return PR_TRUE;
+    if (value.EqualsLiteral("false") || value.EqualsLiteral("0"))
+      return PR_FALSE;
+  }
+  
+  return defaultVal;
+}
+
 void
 nsXFormsSubmissionElement::GetDefaultInstanceData(nsIDOMNode **result)
 {
@@ -580,6 +621,11 @@ nsXFormsSubmissionElement::SerializeDataXML(nsIDOMNode *data,
   else
     CopyUTF16toUTF8(mediaType, contentType);
 
+  nsAutoString encoding;
+  mContent->GetAttr(kNameSpaceID_None, nsXFormsAtoms::encoding, encoding);
+  if (encoding.IsEmpty())
+    encoding.AssignLiteral("UTF-8");
+
   nsCOMPtr<nsIStorageStream> storage;
   NS_NewStorageStream(4096, PR_UINT32_MAX, getter_AddRefs(storage));
   NS_ENSURE_TRUE(storage, NS_ERROR_OUT_OF_MEMORY);
@@ -592,16 +638,17 @@ nsXFormsSubmissionElement::SerializeDataXML(nsIDOMNode *data,
       do_GetService("@mozilla.org/xmlextras/xmlserializer;1");
   NS_ENSURE_TRUE(serializer, NS_ERROR_UNEXPECTED);
 
-  // XXX might this be a property of the instance document?
-  NS_NAMED_LITERAL_CSTRING(charset, "UTF-8");
-
   nsCOMPtr<nsIDOMDocument> doc;
   data->GetOwnerDocument(getter_AddRefs(doc));
   NS_ENSURE_TRUE(doc, NS_ERROR_UNEXPECTED);
 
-  // XXX we need to clone the document and possibly modify it before serializing
+  // clone and possibly modify the document for submission
+  nsCOMPtr<nsIDOMDocument> modifiedDoc;
+  CreateSubmissionDoc(doc, encoding, getter_AddRefs(modifiedDoc));
+  NS_ENSURE_TRUE(modifiedDoc, NS_ERROR_UNEXPECTED);
   
-  nsresult rv = serializer->SerializeToStream(doc, sink, charset);
+  nsresult rv = serializer->SerializeToStream(modifiedDoc, sink,
+                                  NS_LossyConvertUTF16toASCII(encoding));
   NS_ENSURE_SUCCESS(rv, rv);
 
   // close the output stream, so that the input stream will not return
@@ -609,6 +656,103 @@ nsXFormsSubmissionElement::SerializeDataXML(nsIDOMNode *data,
   sink->Close();
 
   return storage->NewInputStream(0, stream);
+}
+
+nsresult
+nsXFormsSubmissionElement::CreateSubmissionDoc(nsIDOMDocument *source,
+                                               const nsString &encoding,
+                                               nsIDOMDocument **result)
+{
+  PRBool indent = GetBooleanAttr(nsXFormsAtoms::indent, PR_FALSE);
+  PRBool omit_xml_declaration
+      = GetBooleanAttr(nsXFormsAtoms::omit_xml_declaration, PR_FALSE);
+
+  nsAutoString cdataElements;
+  mContent->GetAttr(kNameSpaceID_None, nsXFormsAtoms::cdata_section_elements,
+                    cdataElements);
+
+  // XXX cdataElements contains space delimited QNames.  these may have
+  //     namespace prefixes relative to our document.  we need to translate
+  //     them to the corresponding namespace prefix in the source document.
+
+  nsCOMPtr<nsIDOMDOMImplementation> impl;
+  source->GetImplementation(getter_AddRefs(impl));
+  NS_ENSURE_TRUE(impl, NS_ERROR_UNEXPECTED);
+
+  nsCOMPtr<nsIDOMDocument> doc;
+  impl->CreateDocument(EmptyString(), EmptyString(), nsnull,
+                       getter_AddRefs(doc));
+  NS_ENSURE_TRUE(doc, NS_ERROR_UNEXPECTED);
+
+  if (!omit_xml_declaration)
+  {
+    nsAutoString buf
+        = NS_LITERAL_STRING("version=\"1.0\" encoding=\"") + encoding
+        + NS_LITERAL_STRING("\"");
+
+    nsCOMPtr<nsIDOMProcessingInstruction> pi;
+    doc->CreateProcessingInstruction(NS_LITERAL_STRING("xml"), buf,
+                                     getter_AddRefs(pi));
+    
+    nsCOMPtr<nsIDOMNode> newChild;
+    doc->AppendChild(pi, getter_AddRefs(newChild));
+  }
+  
+  // recursively walk the source document, copying nodes as appropriate
+
+  CopyChildren(source, doc, doc, cdataElements, indent, 0);
+
+  NS_ADDREF(*result = doc);
+  return NS_OK;
+}
+
+nsresult
+nsXFormsSubmissionElement::CopyChildren(nsIDOMNode *source, nsIDOMNode *dest,
+                                        nsIDOMDocument *destDoc,
+                                        const nsString &cdataElements,
+                                        PRBool indent, PRUint32 depth)
+{
+  nsCOMPtr<nsIDOMNode> sourceChild, node, destChild;
+  source->GetFirstChild(getter_AddRefs(sourceChild));
+  while (sourceChild)
+  {
+    // if not indenting, then strip all unnecessary whitespace
+
+    destDoc->ImportNode(sourceChild, PR_FALSE, getter_AddRefs(destChild));
+    NS_ENSURE_TRUE(destChild, NS_ERROR_UNEXPECTED);
+
+    PRUint16 type;
+    destChild->GetNodeType(&type);
+    if (type == nsIDOMNode::PROCESSING_INSTRUCTION_NODE)
+    {
+      nsCOMPtr<nsIDOMProcessingInstruction> pi = do_QueryInterface(destChild);
+      NS_ENSURE_TRUE(pi, NS_ERROR_UNEXPECTED);
+
+      // ignore "<?xml ... ?>" since we would have already inserted this.
+
+      nsAutoString target;
+      pi->GetTarget(target);
+      if (!target.EqualsLiteral("xml"))
+        dest->AppendChild(destChild, getter_AddRefs(node));
+    }
+    else if (type == nsIDOMNode::TEXT_NODE)
+    {
+      // XXX honor cdata-section-elements (see xslt spec section 16.1)
+      dest->AppendChild(destChild, getter_AddRefs(node));
+    }
+    else
+    {
+      dest->AppendChild(destChild, getter_AddRefs(node));
+
+      if (NS_FAILED(CopyChildren(sourceChild, destChild, destDoc,
+                                 cdataElements, indent, depth + 1)))
+        return NS_ERROR_UNEXPECTED;
+    }
+
+    sourceChild->GetNextSibling(getter_AddRefs(node));
+    sourceChild.swap(node);
+  }
+  return NS_OK;
 }
 
 nsresult
@@ -740,10 +884,51 @@ nsXFormsSubmissionElement::SerializeDataMultipartRelated(nsIDOMNode *data,
                                                          nsIInputStream **stream,
                                                          nsCString &contentType)
 {
-  contentType.AssignLiteral("multipart/related"); // XXX boundary=xxx; type=yyy; start=zzz
+  NS_ASSERTION(format & METHOD_POST, "unexpected submission method");
 
-  NS_WARNING("not implemented");
-  return NS_ERROR_NOT_IMPLEMENTED;
+  nsCAutoString boundary;
+  MakeMultipartBoundary(boundary);
+
+  nsCOMPtr<nsIMultiplexInputStream> multiStream =
+      do_CreateInstance("@mozilla.org/io/multiplex-input-stream;1");
+  NS_ENSURE_TRUE(multiStream, NS_ERROR_UNEXPECTED);
+
+  nsCAutoString type, start;
+
+  MakeMultipartContentID(start);
+
+  // XXX we need to extend SerializeDataXML so that it has a mode in which it
+  //     generates ContentIDs for elements of type xsd:anyURI, and returns a
+  //     list of ContentID <-> URI mappings.
+
+  nsCOMPtr<nsIInputStream> xml;
+  SerializeDataXML(data, ENCODING_XML | METHOD_POST, getter_AddRefs(xml), type);
+
+  // XXX we should output a 'charset=' with the 'Content-Type' header
+
+  nsCString postDataChunk;
+  postDataChunk += NS_LITERAL_CSTRING("--") + boundary
+                +  NS_LITERAL_CSTRING("\r\nContent-Type: ") + type
+                +  NS_LITERAL_CSTRING("\r\nContent-ID: <") + start
+                +  NS_LITERAL_CSTRING(">\r\n");
+  nsresult rv = AppendPostDataChunk(postDataChunk, multiStream);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  multiStream->AppendStream(xml);
+
+  postDataChunk += NS_LITERAL_CSTRING("\r\n--") + boundary
+                +  NS_LITERAL_CSTRING("--\r\n");
+  rv = AppendPostDataChunk(postDataChunk, multiStream);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  contentType =
+      NS_LITERAL_CSTRING("multipart/related; boundary=") + boundary +
+      NS_LITERAL_CSTRING("; type=") + type +
+      NS_LITERAL_CSTRING("; start=\"<") + start +
+      NS_LITERAL_CSTRING(">\"");
+
+  NS_ADDREF(*stream = multiStream);
+  return NS_OK;
 }
 
 nsresult
@@ -833,10 +1018,6 @@ nsXFormsSubmissionElement::AppendMultipartFormData(nsIDOMNode *data,
     rv = GetElementEncodingType(data, &encType);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    nsCAutoString contentType;
-    rv = GetElementContentType(data, encType, contentType);
-    NS_ENSURE_SUCCESS(rv, rv);
-
     NS_ConvertUTF16toUTF8 encName(localName);
     encName.Adopt(nsLinebreakConverter::ConvertLineBreaks(encName.get(),
                   nsLinebreakConverter::eLinebreakAny,
@@ -846,13 +1027,32 @@ nsXFormsSubmissionElement::AppendMultipartFormData(nsIDOMNode *data,
                   +  NS_LITERAL_CSTRING("\r\nContent-Disposition: form-data; name=\"")
                   +  encName + NS_LITERAL_CSTRING("\"");
 
+    nsCAutoString contentType;
+    nsCOMPtr<nsIInputStream> fileStream;
     if (encType == ELEMENT_ENCTYPE_URI)
     {
-      nsCAutoString filename;
-      GetElementFilename(data, filename);
-      if (!filename.IsEmpty())
-        postDataChunk += NS_LITERAL_CSTRING("; filename=\"")
-                      +  filename + NS_LITERAL_CSTRING("\"");
+      // 'value' contains an absolute URI reference
+      nsCOMPtr<nsIFile> file;
+      rv = CreateFileStream(value, getter_AddRefs(file), getter_AddRefs(fileStream));
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      nsAutoString leafName;
+      file->GetLeafName(leafName);
+
+      postDataChunk += NS_LITERAL_CSTRING("; filename=\"")
+                    +  NS_ConvertUTF16toUTF8(leafName)
+                    +  NS_LITERAL_CSTRING("\"");
+
+      // use mime service to get content-type
+      GetMimeTypeFromFile(file, contentType);
+    }
+    else if (encType == ELEMENT_ENCTYPE_STRING)
+    {
+      contentType.AssignLiteral("text/plain; charset=UTF-8");
+    }
+    else
+    {
+      contentType.AssignLiteral("application/octet-stream");
     }
 
     postDataChunk += NS_LITERAL_CSTRING("\r\nContent-Type: ")
@@ -861,11 +1061,6 @@ nsXFormsSubmissionElement::AppendMultipartFormData(nsIDOMNode *data,
     if (encType == ELEMENT_ENCTYPE_URI)
     {
       AppendPostDataChunk(postDataChunk, multiStream);
-
-      // 'value' contains an absolute URI reference
-      nsCOMPtr<nsIInputStream> fileStream;
-      rv = CreateFileStream(value, getter_AddRefs(fileStream));
-      NS_ENSURE_SUCCESS(rv, rv);
 
       multiStream->AppendStream(fileStream);
 
@@ -939,6 +1134,9 @@ nsXFormsSubmissionElement::GetElementEncodingType(nsIDOMNode *node, PRUint32 *en
     nsAutoString prefix;
     dom3Node->LookupPrefix(NAMESPACE_XML_SCHEMA, prefix);
 
+    if (prefix.IsEmpty())
+      NS_WARNING("namespace prefix not found!");
+
     if (type.Length() > prefix.Length() &&
         prefix.Equals(StringHead(type, prefix.Length())) &&
         type.CharAt(prefix.Length()) == PRUnichar(':'))
@@ -957,34 +1155,9 @@ nsXFormsSubmissionElement::GetElementEncodingType(nsIDOMNode *node, PRUint32 *en
 }
 
 nsresult
-nsXFormsSubmissionElement::GetElementContentType(nsIDOMNode *node,
-                                                 PRUint32 encType,
-                                                 nsCString &contentType)
-{
-  switch (encType)
-  {
-    case ELEMENT_ENCTYPE_STRING:
-      // XXX assume UTF-8 for all strings -- is this correct?
-      contentType.AssignLiteral("text/plain; charset=UTF-8");
-      break;
-    default:
-      // XXX perhaps <upload> should set a property on the content node for us?
-      contentType.AssignLiteral("application/octet-stream");
-      break;
-  }
-  return NS_OK;
-}
-
-void
-nsXFormsSubmissionElement::GetElementFilename(nsIDOMNode *node,
-                                              nsCString &filename)
-{
-  // XXX perhaps <upload> should set a property on the content node for us?
-}
-
-nsresult
 nsXFormsSubmissionElement::CreateFileStream(const nsString &absURI,
-                                            nsIInputStream **result)
+                                            nsIFile **resultFile,
+                                            nsIInputStream **resultStream)
 {
   nsCOMPtr<nsIURI> uri;
   NS_NewURI(getter_AddRefs(uri), absURI);
@@ -1000,11 +1173,10 @@ nsXFormsSubmissionElement::CreateFileStream(const nsString &absURI,
   nsCOMPtr<nsIFileURL> fileURL = do_QueryInterface(uri);
   NS_ENSURE_TRUE(fileURL, NS_ERROR_UNEXPECTED);
 
-  nsCOMPtr<nsIFile> file;
-  fileURL->GetFile(getter_AddRefs(file));
-  NS_ENSURE_TRUE(file, NS_ERROR_UNEXPECTED);
+  fileURL->GetFile(resultFile);
+  NS_ENSURE_TRUE(*resultFile, NS_ERROR_UNEXPECTED);
 
-  return NS_NewLocalFileInputStream(result, file);
+  return NS_NewLocalFileInputStream(resultStream, *resultFile);
 }
 
 nsresult

@@ -59,28 +59,38 @@ nsIAtom *nsXFormsAtoms::method;
 nsIAtom *nsXFormsAtoms::replace;
 nsIAtom *nsXFormsAtoms::separator;
 nsIAtom *nsXFormsAtoms::mediaType;
+nsIAtom *nsXFormsAtoms::indent;
+nsIAtom *nsXFormsAtoms::encoding;
+nsIAtom *nsXFormsAtoms::omit_xml_declaration;
+nsIAtom *nsXFormsAtoms::cdata_section_elements;
+nsIAtom *nsXFormsAtoms::includenamespaceprefixes;
 
 const nsStaticAtom nsXFormsAtoms::Atoms_info[] = {
-  { "schema",            &nsXFormsAtoms::schema },
-  { "instance",          &nsXFormsAtoms::instance },
-  { "src",               &nsXFormsAtoms::src },
-  { "bind",              &nsXFormsAtoms::bind },
-  { "nodeset",           &nsXFormsAtoms::nodeset },
-  { "type",              &nsXFormsAtoms::type },
-  { "readonly",          &nsXFormsAtoms::readonly },
-  { "required",          &nsXFormsAtoms::required },
-  { "relevant",          &nsXFormsAtoms::relevant },
-  { "calculate",         &nsXFormsAtoms::calculate },
-  { "constraint",        &nsXFormsAtoms::constraint },
-  { "p3ptype",           &nsXFormsAtoms::p3ptype },
-  { "model",             &nsXFormsAtoms::model },
-  { "ModelListProperty", &nsXFormsAtoms::modelListProperty },
-  { "ref",               &nsXFormsAtoms::ref },
-  { "action",            &nsXFormsAtoms::action },
-  { "method",            &nsXFormsAtoms::method },
-  { "replace",           &nsXFormsAtoms::replace },
-  { "separator",         &nsXFormsAtoms::separator },
-  { "mediaType",         &nsXFormsAtoms::mediaType }
+  { "schema",                   &nsXFormsAtoms::schema },
+  { "instance",                 &nsXFormsAtoms::instance },
+  { "src",                      &nsXFormsAtoms::src },
+  { "bind",                     &nsXFormsAtoms::bind },
+  { "nodeset",                  &nsXFormsAtoms::nodeset },
+  { "type",                     &nsXFormsAtoms::type },
+  { "readonly",                 &nsXFormsAtoms::readonly },
+  { "required",                 &nsXFormsAtoms::required },
+  { "relevant",                 &nsXFormsAtoms::relevant },
+  { "calculate",                &nsXFormsAtoms::calculate },
+  { "constraint",               &nsXFormsAtoms::constraint },
+  { "p3ptype",                  &nsXFormsAtoms::p3ptype },
+  { "model",                    &nsXFormsAtoms::model },
+  { "ModelListProperty",        &nsXFormsAtoms::modelListProperty },
+  { "ref",                      &nsXFormsAtoms::ref },
+  { "action",                   &nsXFormsAtoms::action },
+  { "method",                   &nsXFormsAtoms::method },
+  { "replace",                  &nsXFormsAtoms::replace },
+  { "separator",                &nsXFormsAtoms::separator },
+  { "mediaType",                &nsXFormsAtoms::mediaType },
+  { "indent",                   &nsXFormsAtoms::indent },
+  { "encoding",                 &nsXFormsAtoms::encoding },
+  { "omit-xml-declaration",     &nsXFormsAtoms::omit_xml_declaration },
+  { "cdata-section-elements",   &nsXFormsAtoms::cdata_section_elements },
+  { "includenamespaceprefixes", &nsXFormsAtoms::includenamespaceprefixes }
 };
 
 void

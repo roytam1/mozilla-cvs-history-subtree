@@ -59,6 +59,7 @@ REQUIRES	= \
 		websrvcs \
 		xmlextras \
 		docshell \
+		mimetype \
 		$(NULL)
 
 CPPSRCS		= \

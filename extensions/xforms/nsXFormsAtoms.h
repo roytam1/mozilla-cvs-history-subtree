@@ -61,6 +61,11 @@ class nsXFormsAtoms
   static NS_HIDDEN_(nsIAtom *) replace;
   static NS_HIDDEN_(nsIAtom *) separator;
   static NS_HIDDEN_(nsIAtom *) mediaType;
+  static NS_HIDDEN_(nsIAtom *) indent;
+  static NS_HIDDEN_(nsIAtom *) encoding;
+  static NS_HIDDEN_(nsIAtom *) omit_xml_declaration;
+  static NS_HIDDEN_(nsIAtom *) cdata_section_elements;
+  static NS_HIDDEN_(nsIAtom *) includenamespaceprefixes;
 
   static NS_HIDDEN_(void) InitAtoms();
 
