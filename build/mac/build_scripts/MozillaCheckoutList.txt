@@ -7,13 +7,13 @@
 #   mozilla/gc, , 10/25/2000 12:00:00
 #
 
-mozilla/nsprpub,          STATIC_BUILD_20010523_BRANCH
-mozilla/security/nss,     STATIC_BUILD_20010523_BRANCH
-mozilla/security/psm,     STATIC_BUILD_20010523_BRANCH
-mozilla/security/manager, STATIC_BUILD_20010523_BRANCH
-mozilla/accessible,       STATIC_BUILD_20010523_BRANCH
-DirectorySDKSourceC,      STATIC_BUILD_20010523_BRANCH
-mozilla/lib/mac/Instrumentation, STATIC_BUILD_20010523_BRANCH
-mozilla/gfx2,             STATIC_BUILD_20010523_BRANCH
-mozilla/modules/libpr0n,  STATIC_BUILD_20010523_BRANCH
-SeaMonkeyAll,             STATIC_BUILD_20010523_BRANCH
+mozilla/nsprpub,          STATIC_BUILD_20010612_BRANCH
+mozilla/security/nss,     STATIC_BUILD_20010612_BRANCH
+mozilla/security/psm,     STATIC_BUILD_20010612_BRANCH
+mozilla/security/manager, STATIC_BUILD_20010612_BRANCH
+mozilla/accessible,       STATIC_BUILD_20010612_BRANCH
+DirectorySDKSourceC,      STATIC_BUILD_20010612_BRANCH
+mozilla/lib/mac/Instrumentation, STATIC_BUILD_20010612_BRANCH
+mozilla/gfx2,             STATIC_BUILD_20010612_BRANCH
+mozilla/modules/libpr0n,  STATIC_BUILD_20010612_BRANCH
+SeaMonkeyAll,             STATIC_BUILD_20010612_BRANCH
