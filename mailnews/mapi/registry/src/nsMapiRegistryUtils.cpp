@@ -286,7 +286,7 @@ nsresult setDefaultMailClient()
         nsCAutoString dllPath(thisApplication());
         PRInt32 index = dllPath.RFind("\\");
         if (index != kNotFound)
-            dllPath.Truncate(index);
+            dllPath.Truncate(index + 1);
         dllPath += "mozMapi32.dll";
         rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
                             (char *)keyName.get(), "DLLPath", 
@@ -356,7 +356,7 @@ nsresult unsetDefaultMailClient() {
             if (NS_SUCCEEDED(result)) {
                 PRInt32 index = appPath.RFind("\\");
                 if (index != kNotFound)
-                    appPath.Truncate(index);
+                    appPath.Truncate(index + 1);
                 appPath += "mozMapi32.dll";
                 keyName.Assign("Software\\Clients\\Mail\\");
                 keyName.Append(appName.get());
