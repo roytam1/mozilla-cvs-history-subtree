@@ -26,12 +26,7 @@
 
 
 #include "if.h"
-#ifdef STANDALONE_IMAGE_LIB
-#include "xpcompat.h"
-#else
 #include "xp_qsort.h"
-#endif
-
 
 #ifdef PROFILE
 #pragma profile on
