@@ -23,6 +23,7 @@
  * Contributor(s):
  *   Pierre Phaneuf <pp@ludusdesign.com>
  *   Peter Annema <disttsc@bart.nl>
+ *   Brendan Eich <brendan@mozilla.org>
  *
  *
  * This Original Code has been modified by IBM Corporation.
@@ -175,7 +176,7 @@ static nsresult
 AddJSGCRoot(JSContext* cx, void* aScriptObjectRef, const char* aName)
 {
     PRBool ok;
-    ok = JS_AddNamedRoot(cx, aScriptObjectRef, aName);
+    ok = ::JS_AddNamedRoot(cx, aScriptObjectRef, aName);
     if (! ok) return NS_ERROR_OUT_OF_MEMORY;
 
     if (gScriptRuntimeRefcnt++ == 0) {
@@ -198,7 +199,7 @@ RemoveJSGCRoot(void* aScriptObjectRef)
     if (! gScriptRuntime)
         return NS_ERROR_FAILURE;
 
-    JS_RemoveRootRT(gScriptRuntime, aScriptObjectRef);
+    ::JS_RemoveRootRT(gScriptRuntime, aScriptObjectRef);
 
     if (--gScriptRuntimeRefcnt == 0) {
         NS_RELEASE(gJSRuntimeService);
@@ -4823,25 +4824,35 @@ nsXULPrototypeScript::Serialize(nsIObjectOutputStream* aStream,
     JSXDRState *xdr = ::JS_XDRNewMem(cx, JSXDR_ENCODE);
     if (! xdr)
         return NS_ERROR_OUT_OF_MEMORY;
+    xdr->userdata = (void*) aStream;
 
     JSScript *script = NS_REINTERPRET_CAST(JSScript*,
                                            ::JS_GetPrivate(cx, mJSObject));
     if (! ::JS_XDRScript(xdr, &script)) {
         rv = NS_ERROR_OUT_OF_MEMORY;    // extremely likely, barring bugs!
     } else {
-        // Get the encoded JSXDRState data and write it.
+        // Get the encoded JSXDRState data and write it.  The JSXDRState owns
+        // this buffer memory and will free it beneath ::JS_XDRDestroy.
+        //
+        // If an XPCOM object needs to be written in the midst of the JS XDR
+        // encoding process, the C++ code called back from the JS engine (e.g.,
+        // nsEncodeJSPrincipals in caps/src/nsJSPrincipals.cpp) will flush data
+        // from the JSXDRState to aStream, then write the object, then return
+        // to JS XDR code with xdr reset so new JS data is encoded at the front
+        // of the xdr's data buffer.
+        //
+        // However many XPCOM objects are interleaved with JS XDR data in the
+        // stream, when control returns here from ::JS_XDRScript, we'll have
+        // one last buffer of data to write to aStream.
+
         PRUint32 size;
         const char* data = NS_REINTERPRET_CAST(const char*,
                                                ::JS_XDRMemGetData(xdr, &size));
         NS_ASSERTION(data, "no decoded JSXDRState data!");
 
         rv = aStream->Write32(size);
-        if (NS_SUCCEEDED(rv)) {
-            PRUint32 count;
-            rv = aStream->Write(data, size, &count);
-            if (NS_SUCCEEDED(rv) && count != size)
-                rv = NS_ERROR_FAILURE;
-        }
+        if (NS_SUCCEEDED(rv))
+            rv = aStream->WriteBytes(data, size);
     }
 
     ::JS_XDRDestroy(xdr);
@@ -4870,42 +4881,57 @@ nsXULPrototypeScript::Deserialize(nsIObjectInputStream* aStream,
     rv = aStream->Read32(&size);
     if (NS_FAILED(rv)) return rv;
 
-    char* data = new char[size];
-    if (!data)
-        return NS_ERROR_OUT_OF_MEMORY;
-
-    PRUint32 count;
-    rv = aStream->Read(data, size, &count);
+    char* data;
+    rv = aStream->ReadBytes(&data, size);
     if (NS_SUCCEEDED(rv)) {
-        if (count != size) {
-            rv = NS_ERROR_FAILURE;
+        JSContext* cx = NS_REINTERPRET_CAST(JSContext*,
+                                            aContext->GetNativeContext());
+
+        JSXDRState *xdr = ::JS_XDRNewMem(cx, JSXDR_DECODE);
+        if (! xdr) {
+            rv = NS_ERROR_OUT_OF_MEMORY;
         } else {
-            JSContext* cx = NS_REINTERPRET_CAST(JSContext*,
-                                                aContext->GetNativeContext());
+            xdr->userdata = (void*) aStream;
+            ::JS_XDRMemSetData(xdr, data, size);
 
-            JSXDRState *xdr = ::JS_XDRNewMem(cx, JSXDR_DECODE);
-            if (! xdr) {
-                rv = NS_ERROR_OUT_OF_MEMORY;
+            JSScript *script = nsnull;
+            if (! ::JS_XDRScript(xdr, &script)) {
+                rv = NS_ERROR_OUT_OF_MEMORY;        // likely error
             } else {
-                ::JS_XDRMemSetData(xdr, data, size);
-
-                JSScript *script = nsnull;
-                if (! ::JS_XDRScript(xdr, &script)) {
-                    rv = NS_ERROR_OUT_OF_MEMORY;        // likely error
-                } else {
-                    mJSObject = ::JS_NewScriptObject(cx, script);
-                    if (! mJSObject) {
-                        rv = NS_ERROR_OUT_OF_MEMORY;    // certain error
-                        ::JS_DestroyScript(cx, script);
-                    }
+                mJSObject = ::JS_NewScriptObject(cx, script);
+                if (! mJSObject) {
+                    rv = NS_ERROR_OUT_OF_MEMORY;    // certain error
+                    ::JS_DestroyScript(cx, script);
                 }
-
-                ::JS_XDRDestroy(xdr);
             }
-        }
-    }
 
-    delete data;
+            // Update data in case ::JS_XDRScript called back into C++ code to
+            // read an XPCOM object.
+            //
+            // In that case, the serialization process must have flushed a run
+            // of counted bytes containing JS data at the point where the XPCOM
+            // object starts, after which an encoding C++ callback from the JS
+            // XDR code must have written the XPCOM object directly into the
+            // nsIObjectOutputStream.
+            //
+            // The deserialization process will XDR-decode counted bytes up to
+            // but not including the XPCOM object, then call back into C++ to
+            // read the object, then read more counted bytes and hand them off
+            // to the JSXDRState, so more JS data can be decoded.
+            //
+            // This interleaving of JS XDR data and XPCOM object data may occur
+            // several times beneath the call to ::JS_XDRScript, above.  At the
+            // end of the day, we need to free (via nsMemory) the data owned by
+            // the JSXDRState.  So we steal it back, nulling xdr's buffer so it
+            // doesn't get passed to ::JS_free by ::JS_XDRDestroy.
+
+            data = ::JS_XDRMemGetData(xdr, &size);
+            ::JS_XDRMemSetData(xdr, NULL, 0);
+            ::JS_XDRDestroy(xdr);
+        }
+
+        nsMemory::Free(data);
+    }
     if (NS_FAILED(rv)) return rv;
 
     PRUint32 version;
