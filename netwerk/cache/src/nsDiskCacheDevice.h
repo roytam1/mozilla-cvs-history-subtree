@@ -98,12 +98,14 @@ public:
 
     nsresult scanDiskCacheEntries(nsISupportsArray ** result);
     nsresult evictDiskCacheEntries();
+
+    nsresult clobberDiskCache();
     
     nsresult openCacheMap();
     nsresult readCacheMap();
     nsresult writeCacheMap();
 
-    nsresult updateCacheMap(nsDiskCacheEntry * diskEntry, PRBool commit);
+    nsresult updateCacheMap(nsDiskCacheEntry * diskEntry);
     nsresult evictDiskCacheRecord(nsDiskCacheRecord * record);
     
 private:
