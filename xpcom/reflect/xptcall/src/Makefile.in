@@ -22,7 +22,7 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 MODULE		= xpcom
-LIBRARY_NAME	= xpcomxptcall_s
+LIBRARY_NAME	= xpcomxptcall
 
 DIRS = md
 
