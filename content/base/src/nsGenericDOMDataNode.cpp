@@ -500,18 +500,28 @@ nsGenericDOMDataNode::AppendData(const nsAString& aData)
 {
 #if 1
   nsresult rv = NS_OK;
+  PRInt32 length = 0;
 
-  nsAutoString old_data;
+  // See bugzilla bug 77585.
+  if (mText.Is2b() || (!IsASCII(aData))) {
+    nsAutoString old_data;
+    mText.AppendTo(old_data);
+    length = old_data.Length();
 
-  mText.AppendTo(old_data);
+    // XXXjag We'd like to just say |old_data + aData|, but due
+    // to issues with dependent concatenation and sliding (sub)strings
+    // we'll just have to copy for now. See bug 121841 for details.
+    old_data.Append(aData);
 
-  // XXXjag We'd like to just say |old_data + aData|, but due
-  // to issues with dependent concatenation and sliding (sub)strings
-  // we'll just have to copy for now. See bug 121841 for details.
-  nsAutoString text(old_data);
-  text.Append(aData);
+    rv = SetText(old_data, PR_FALSE);
+  } else {
+    nsCAutoString old_data;
+    mText.AppendTo(old_data);
+    length = old_data.Length();
+    old_data.AppendWithConversion(aData);
+    rv = SetText(old_data.get(), old_data.Length(), PR_FALSE);
+  }
 
-  rv = SetText(text, PR_FALSE);
   NS_ENSURE_SUCCESS(rv, rv);
 
   // Trigger a reflow
@@ -522,7 +532,7 @@ nsGenericDOMDataNode::AppendData(const nsAString& aData)
     nsTextContentChangeData* tccd = nsnull;
     rv = NS_NewTextContentChangeData(&tccd);
     if (NS_SUCCEEDED(rv)) {
-      tccd->SetData(nsITextContentChangeData::Append, old_data.Length(),
+      tccd->SetData(nsITextContentChangeData::Append, length,
                     aData.Length());
       rv = mDocument->ContentChanged(this, tccd);
       NS_RELEASE(tccd);
