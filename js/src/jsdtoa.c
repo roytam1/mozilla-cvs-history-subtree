@@ -308,13 +308,46 @@ extern double rnd_prod(double, double), rnd_quot(double, double);
 #ifdef JS_THREADSAFE
 #define MULTIPLE_THREADS
 static PRLock *freelist_lock;
-#define ACQUIRE_DTOA_LOCK(n) PR_Lock(freelist_lock)
+#define ACQUIRE_DTOA_LOCK(n)                                                  \
+    JS_BEGIN_MACRO                                                            \
+        if (!initialized)                                                     \
+            InitDtoa();                                                       \
+        PR_Lock(freelist_lock);                                               \
+    JS_END_MACRO
 #define FREE_DTOA_LOCK(n) PR_Unlock(freelist_lock)
 #else
 #undef MULTIPLE_THREADS
 #define ACQUIRE_DTOA_LOCK(n)    /*nothing*/
 #define FREE_DTOA_LOCK(n)   /*nothing*/
 #endif
+
+#ifdef JS_THREADSAFE
+static PRLock *p5s_lock;
+#endif
+
+#ifdef JS_THREADSAFE
+static JSBool initialized = JS_FALSE;
+
+/* hacked replica of nspr _PR_InitDtoa */
+static void InitDtoa(void)
+{
+    freelist_lock = PR_NewLock();
+        p5s_lock = PR_NewLock();
+    initialized = JS_TRUE;
+}
+#endif
+
+void js_FinishDtoa(void)
+{
+#ifdef JS_THREADSAFE
+    if (initialized == JS_TRUE) 
+    {
+        PR_DestroyLock(freelist_lock);
+        PR_DestroyLock(p5s_lock);
+        initialized = JS_FALSE;
+    }
+#endif
+}
 
 #define Kmax 15
 
@@ -634,10 +667,6 @@ static Bigint *mult(CONST Bigint *a, CONST Bigint *b)
  */
 
 static Bigint *p5s;
-
-#ifdef JS_THREADSAFE
-static PRLock *p5s_lock;
-#endif
 
 /* Return b * 5^k.  Deallocate the old b.  k must be nonnegative. */
 static Bigint *pow5mult(Bigint *b, int32 k)
@@ -1051,31 +1080,6 @@ static int match(CONST char **sp, char *t)
     }
 #endif /* INFNAN_CHECK */
 
-
-#ifdef JS_THREADSAFE
-static JSBool initialized = JS_FALSE;
-
-/* hacked replica of nspr _PR_InitDtoa */
-static void InitDtoa(void)
-{
-    freelist_lock = PR_NewLock();
-        p5s_lock = PR_NewLock();
-    initialized = JS_TRUE;
-}
-#endif
-
-void js_FinishDtoa(void)
-{
-#ifdef JS_THREADSAFE
-    if (initialized == JS_TRUE) 
-    {
-        PR_DestroyLock(freelist_lock);
-        PR_DestroyLock(p5s_lock);
-        initialized = JS_FALSE;
-    }
-#endif
-}
-
 /* nspr2 watcom bug ifdef omitted */
 
 JS_FRIEND_API(double)
@@ -1089,10 +1093,6 @@ JS_strtod(CONST char *s00, char **se, int *err)
     Long L;
     ULong y, z;
     Bigint *bb, *bb1, *bd, *bd0, *bs, *delta;
-
-#ifdef JS_THREADSAFE
-    if (!initialized) InitDtoa();
-#endif
 
     *err = 0;
 
@@ -1897,10 +1897,6 @@ JS_dtoa(double d, int mode, JSBool biasUp, int ndigits,
     Bigint *b, *b1, *delta, *mlo, *mhi, *S;
     double d2, ds, eps;
     char *s;
-
-#ifdef JS_THREADSAFE
-    if (!initialized) InitDtoa();
-#endif
 
     if (word0(d) & Sign_bit) {
         /* set sign for everything, including 0's and NaNs */
