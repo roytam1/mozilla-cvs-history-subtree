@@ -4013,7 +4013,13 @@ nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded
   }
   else
     rv = ListIdsInThread(pThread,  index, &numExpanded);
-  
+ 
+  // make sure that the has children flag is set appropriately. This is useful
+  // when switching to a threaded view from a flat view, when new headers
+  // have been added to the threaded view.
+  if (numExpanded > 0)
+    m_flags[index] = flags | MSG_VIEW_FLAG_HASCHILDREN;
+
   NoteStartChange(index + 1, numExpanded, nsMsgViewNotificationCode::insertOrDelete);
   
   NoteEndChange(index + 1, numExpanded, nsMsgViewNotificationCode::insertOrDelete);

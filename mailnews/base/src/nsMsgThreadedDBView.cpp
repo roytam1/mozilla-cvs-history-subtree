@@ -215,6 +215,12 @@ nsresult nsMsgThreadedDBView::SortThreads(nsMsgViewSortTypeValue sortType, nsMsg
     for (PRInt32 j = 0; j < saveKeys.GetSize(); j++)
     {
       PRUint32 flags = saveFlags.GetAt(j);
+      // this has the side effect of correcting the hasChildren view flag when 
+      // we expand the thread. Inserting into a flat view doesn't set that flag
+      // correctly because it's not relevant to a flat view.
+      // If we don't expand the threads here, we'll need to correct the 
+      // MSG_VIEW_FLAG_HASCHILDREN flag explicitly.
+
       if (flags & (MSG_VIEW_FLAG_ISTHREAD | MSG_FLAG_ELIDED) == MSG_VIEW_FLAG_ISTHREAD | MSG_FLAG_ELIDED)
         FindKey(saveKeys.GetAt(j), PR_TRUE /* expand */);
     }
