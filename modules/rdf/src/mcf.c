@@ -106,7 +106,7 @@ RDF_GetDB (const char** dataSources)
   RDF r = (RDF) getMem(sizeof(struct RDF_DBStruct)) ;
   RDFL nrl = (RDFL)getMem(sizeof(struct RDF_ListStruct));
   while (*(dataSources + n++)) {} 
-  r->translators = (RDFT*)getMem((n-1) * sizeof(RDFT));
+  r->translators = (RDFT*)getMem((n) * sizeof(RDFT));
   n = 0;
   while ((next = (char*) *(dataSources + n)) != NULL) {
     RDFL rl = (RDFL)getMem(sizeof(struct RDF_ListStruct));
@@ -122,7 +122,7 @@ RDF_GetDB (const char** dataSources)
     n++;
   }
   r->numTranslators = m;
-  r->translatorArraySize = n-1;
+  r->translatorArraySize = n;
   nrl->rdf = r;
   nrl->next = gAllDBs;
   gAllDBs = nrl;
