@@ -65,7 +65,7 @@ void Reference::emitDelete(ByteCodeGen *bcg)
     bcg->addOp(LoadConstantFalseOp);
 }
 
-void AccessorReference::emitCodeSequence(ByteCodeGen *bcg) 
+void AccessorReference::emitCodeSequence(ByteCodeGen */*bcg*/) 
 { 
     ASSERT(false);      // NYI
 //    bcg->addOp(InvokeOp); 

@@ -78,7 +78,7 @@ JSValue Array_Constructor(Context *cx, const JSValue& thisValue, JSValue *argv, 
 }
 
 
-JSValue Array_toString(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue Array_toString(Context *cx, const JSValue& thisValue, JSValue */*argv*/, uint32 /*argc*/)
 {
     ASSERT(thisValue.isObject());
     JSObject *thisObj = thisValue.object;
@@ -104,7 +104,7 @@ JSValue Array_toString(Context *cx, const JSValue& thisValue, JSValue *argv, uin
     
 }
 
-JSValue Array_toSource(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue Array_toSource(Context *cx, const JSValue& thisValue, JSValue */*argv*/, uint32 /*argc*/)
 {
     ASSERT(thisValue.isObject());
     JSObject *thisObj = thisValue.object;
@@ -132,7 +132,7 @@ JSValue Array_toSource(Context *cx, const JSValue& thisValue, JSValue *argv, uin
     
 }
 
-JSValue Array_push(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue Array_push(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     ASSERT(thisValue.isObject());
     JSObject *thisObj = thisValue.object;
@@ -148,7 +148,7 @@ JSValue Array_push(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 
     return JSValue((float64)arrInst->mLength);
 }
               
-JSValue Array_pop(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue Array_pop(Context *cx, const JSValue& thisValue, JSValue */*argv*/, uint32 /*argc*/)
 {
     ASSERT(thisValue.isObject());
     JSObject *thisObj = thisValue.object;
@@ -202,7 +202,7 @@ JSValue Array_concat(Context *cx, const JSValue& thisValue, JSValue *argv, uint3
     return JSValue(A);
 }
 
-JSValue Array_join(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue Array_join(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     ContextStackReplacement csr(cx);
 
@@ -237,7 +237,7 @@ JSValue Array_join(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 
     return JSValue(S);
 }
 
-JSValue Array_reverse(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue Array_reverse(Context *cx, const JSValue& thisValue, JSValue */*argv*/, uint32 /*argc*/)
 {
     ContextStackReplacement csr(cx);
 
@@ -284,7 +284,7 @@ JSValue Array_reverse(Context *cx, const JSValue& thisValue, JSValue *argv, uint
     return thisValue;
 }
 
-JSValue Array_shift(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue Array_shift(Context *cx, const JSValue& thisValue, JSValue */*argv*/, uint32 /*argc*/)
 {
     ContextStackReplacement csr(cx);
 
@@ -322,7 +322,7 @@ JSValue Array_shift(Context *cx, const JSValue& thisValue, JSValue *argv, uint32
     return result;
 }
 
-JSValue Array_slice(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue Array_slice(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     ContextStackReplacement csr(cx);
 
@@ -381,12 +381,12 @@ JSValue Array_slice(Context *cx, const JSValue& thisValue, JSValue *argv, uint32
     return JSValue(A);
 }
 
-JSValue Array_sort(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue Array_sort(Context */*cx*/, const JSValue& /*thisValue*/, JSValue */*argv*/, uint32 /*argc*/)
 {
     return kUndefinedValue;
 }
 
-JSValue Array_splice(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue Array_splice(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     if (argc > 1) {
         uint32 k;
@@ -473,7 +473,7 @@ JSValue Array_splice(Context *cx, const JSValue& thisValue, JSValue *argv, uint3
     return kUndefinedValue;
 }
 
-JSValue Array_unshift(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue Array_unshift(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     ContextStackReplacement csr(cx);
 

@@ -1735,6 +1735,7 @@ JSValue JSValue::valueToString(Context *cx, const JSValue& value)
                 return (target->getNativeCode())(cx, value, NULL, 0);
         }
         throw new Exception(Exception::runtimeError, "toString");    // XXX
+        return kUndefinedValue;	// keep compilers happy
     }
     else
         return JSValue(strp);

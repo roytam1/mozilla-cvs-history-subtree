@@ -140,7 +140,7 @@ namespace JavaScript {
 namespace Shell {
 
 
-void do_dikdik(Formatter &f)
+static void do_dikdik(Formatter &f)
 {
 
     

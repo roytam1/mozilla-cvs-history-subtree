@@ -254,7 +254,7 @@ Property *JSObject::defineVariable(Context *cx, const String &name, AttributeStm
     mProperties.insert(e);
     return prop;
 }
-Property *JSObject::defineVariable(Context *cx, const String &name, NamespaceList *names, JSType *type)
+Property *JSObject::defineVariable(Context */*cx*/, const String &name, NamespaceList *names, JSType *type)
 {
     Property *prop = new Property(new JSValue(), type);
     const PropertyMap::value_type e(name, new NamespacedProperty(prop, names));
@@ -270,7 +270,7 @@ Property *JSObject::defineVariable(Context *cx, const String &name, AttributeStm
     mProperties.insert(e);
     return prop;
 }
-Property *JSObject::defineVariable(Context *cx, const String &name, NamespaceList *names, JSType *type, JSValue v)
+Property *JSObject::defineVariable(Context */*cx*/, const String &name, NamespaceList *names, JSType *type, JSValue v)
 {
     Property *prop = new Property(new JSValue(v), type);
     const PropertyMap::value_type e(name, new NamespacedProperty(prop, names));
@@ -1569,7 +1569,7 @@ static JSValue Boolean_toString(Context *, const JSValue& thisValue, JSValue * /
         return JSValue(new String(widenCString("false")));
 }
 
-static JSValue ExtendAttribute_Invoke(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue ExtendAttribute_Invoke(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 argc)
 {
     ASSERT(argc == 1);
 
