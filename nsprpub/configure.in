@@ -14,7 +14,7 @@ dnl The Original Code is the Netscape Portable Runtime (NSPR).
 dnl 
 dnl The Initial Developer of the Original Code is Netscape
 dnl Communications Corporation.  Portions created by Netscape are 
-dnl Copyright (C) 1998o-2000 Netscape Communications Corporation.  All
+dnl Copyright (C) 1998-2000 Netscape Communications Corporation.  All
 dnl Rights Reserved.
 dnl 
 dnl Contributor(s):
@@ -1202,29 +1202,26 @@ case "$target" in
         AC_DEFINE(NONAMELESSUNION)
         MKSHLIB='$(DLLTOOL) --as=$(AS) -k --dllname $*.dll --output-lib $@'
     else
+        CYGWIN_WRAPPER='sh $(topsrcdir)/build/cygwin-wrapper'
         if test "$OS_TARGET" = "WINCE"; then
             if test "$TARGETCPU" = "ARM"; then
-                CC=clarm
-                CXX=clarm
+                CC='$(CYGWIN_WRAPPER) clarm'
+                CXX='$(CYGWIN_WRAPPER) clarm'
             else
-                CC=cl
-                CXX=cl
+                CC='$(CYGWIN_WRAPPER) cl'
+                CXX='$(CYGWIN_WRAPPER) cl'
             fi
         else
-            CC=cl
-            CXX=cl
+            CC='$(CYGWIN_WRAPPER) cl'
+            CXX='$(CYGWIN_WRAPPER) cl'
         fi
         LD=link
         AR='lib -NOLOGO -OUT:"$@"'
         AR_FLAGS=
         RANLIB='echo not_ranlib'
         STRIP='echo not_strip'
-        if test -n "$CYGWIN_WRAPPER"; then
-            NSINSTALL="$CYGWIN_WRAPPER nsinstall"
-        else
-            NSINSTALL="nsinstall"
-        fi
-        RC=rc.exe
+        NSINSTALL='$(CYGWIN_WRAPPER) nsinstall'
+        RC='$(CYGWIN_WRAPPER) rc.exe'
         GARBAGE='$(OBJDIR)/vc20.pdb $(OBJDIR)/vc40.pdb'
 	    OBJ_SUFFIX=obj
 	    LIB_SUFFIX=lib
@@ -2409,6 +2406,7 @@ AC_SUBST(DLLFLAGS)
 AC_SUBST(EXEFLAGS)
 AC_SUBST(OS_DLLFLAGS)
 AC_SUBST(DLL_LIBS)
+AC_SUBST(CYGWIN_WRAPPER)
 
 dnl ========================================================
 dnl Generate output files.
