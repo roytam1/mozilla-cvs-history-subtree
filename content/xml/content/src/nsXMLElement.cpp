@@ -120,6 +120,7 @@ nsXMLElement::~nsXMLElement()
 // XPConnect interface list for nsXMLElement
 NS_CLASSINFO_MAP_BEGIN(Element)
   NS_CLASSINFO_MAP_ENTRY(nsIDOMElement)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMEventTarget)
 NS_CLASSINFO_MAP_END
 
 
