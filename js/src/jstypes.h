@@ -33,8 +33,6 @@
 #ifndef jstypes_h___
 #define jstypes_h___
 
-#include "jscpucfg.h"
-
 #include <stddef.h>
 
 /***********************************************************************
@@ -167,6 +165,8 @@
 #define JS_ROUNDUP(x,y) ((((x)+((y)-1))/(y))*(y))
 #define JS_MIN(x,y)     ((x)<(y)?(x):(y))
 #define JS_MAX(x,y)     ((x)>(y)?(x):(y))
+
+#include "jscpucfg.h"
 
 JS_BEGIN_EXTERN_C
 

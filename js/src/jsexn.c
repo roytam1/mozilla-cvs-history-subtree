@@ -139,7 +139,7 @@ exn_initPrivate(JSContext *cx, JSErrorReport *report, const char *message)
 /*
  * Undo all the damage done by exn_initPrivate.
  */
-void
+static void
 exn_destroyPrivate(JSContext *cx, JSExnPrivate *privateData)
 {
     JS_ASSERT(privateData->message);
@@ -383,7 +383,7 @@ js_InitExceptionClasses(JSContext *cx, JSObject *obj)
     return protos[0];
 }
 
-JSErrorReport *
+static JSErrorReport *
 js_GetErrorFromException(JSContext *cx, JSObject *errobj)
 {
     JSExnPrivate *privateData;
