@@ -85,6 +85,10 @@ interface nsIExtensionManager : nsISupports
                    out unsigned long aItemCount,
                    [retval, array, size_is(aItemCount)] out nsIUpdateItem aItems);
 
+  void moveUp(in string aItemID);
+  void moveDown(in string aItemID);
+  void moveTop(in string aItemID);
+
   readonly attribute nsIRDFDataSource datasource;
 };
 

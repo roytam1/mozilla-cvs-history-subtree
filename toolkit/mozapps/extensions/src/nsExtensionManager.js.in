@@ -1686,6 +1686,21 @@ nsExtensionManager.prototype = {
     this._ensureDS();
     this._ds.uninstallTheme(aThemeID);
   },
+  
+  moveTop: function (aItemID)
+  {
+    this._ds.moveTop(aItemID);
+  },
+  
+  moveUp: function (aItemID)
+  {
+    this._ds.moveUp(aItemID);
+  },
+  
+  moveDown: function (aItemID)
+  {
+    this._ds.moveDown(aItemID);
+  },
 
   get datasource()
   {
@@ -2358,7 +2373,8 @@ nsExtensionsDataSource.prototype = {
       dump("*** getItemProperty failing for lack of an item. This means _getResourceForItem \
                 failed to locate a resource for aItemID (" + aItemID + ")\n");
     }
-    var val = this._getItemProperty(item, aProperty);
+    else 
+      return this._getItemProperty(item, aProperty);
   },
   
   _getItemProperty: function (aItemResource, aProperty)
@@ -2562,6 +2578,60 @@ nsExtensionsDataSource.prototype = {
     }
   },
   
+  moveTop: function (aItemID)
+  {
+    var extensions = this._rdf.GetResource("urn:mozilla:extension:root");
+    var item = this._getResourceForItem(aItemID);
+    var ds = this._getTargetDSFromSource(item);
+    var container = Components.classes["@mozilla.org/rdf/container;1"]
+                              .createInstance(Components.interfaces.nsIRDFContainer);
+    container.Init(ds, extensions);
+    
+    var index = container.IndexOf(item);
+    if (index > 1) {
+      container.RemoveElement(item, false);
+      container.InsertElementAt(item, 1, true);
+    }
+    this._flush(this.isProfileItem(aItemID));
+  },
+  
+  moveUp: function (aItemID)
+  {
+    var extensions = this._rdf.GetResource("urn:mozilla:extension:root");
+    var item = this._getResourceForItem(aItemID);
+    var ds = this._getTargetDSFromSource(item);
+    var container = Components.classes["@mozilla.org/rdf/container;1"]
+                              .createInstance(Components.interfaces.nsIRDFContainer);
+    container.Init(ds, extensions);
+    
+    var item = this._getResourceForItem(aItemID);
+    var index = container.IndexOf(item);
+    if (index > 1) {
+      container.RemoveElement(item, false);
+      container.InsertElementAt(item, index - 1, true);
+    }
+    this._flush(this.isProfileItem(aItemID));
+  },
+  
+  moveDown: function (aItemID)
+  {
+    var extensions = this._rdf.GetResource("urn:mozilla:extension:root");
+    var item = this._getResourceForItem(aItemID);
+    var ds = this._getTargetDSFromSource(item);
+    var container = Components.classes["@mozilla.org/rdf/container;1"]
+                              .createInstance(Components.interfaces.nsIRDFContainer);
+    container.Init(ds, extensions);
+    
+    var item = this._getResourceForItem(aItemID);
+    var index = container.IndexOf(item);
+    var count = container.GetCount();
+    if (index < count) {
+      container.RemoveElement(item, true);
+      container.InsertElementAt(item, index + 1, true);
+    }
+    this._flush(this.isProfileItem(aItemID));
+  },
+
   addDownload: function (aName, aURL, aIconURL, aItemType)
   {
     var root = this._rdf.GetResource(getItemRoot(aItemType));

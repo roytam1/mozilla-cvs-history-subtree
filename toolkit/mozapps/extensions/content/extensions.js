@@ -640,65 +640,22 @@ var gExtensionsViewController = {
     
     cmd_movetop: function ()
     {
-      var rdfs = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
-
-      var extensions = rdfs.GetResource("urn:mozilla:extension:root");
-      var container = Components.classes["@mozilla.org/rdf/container;1"].createInstance(Components.interfaces.nsIRDFContainer);
-      container.Init(gExtensionManager.datasource, extensions);
-      
       var movingID = gExtensionsView.selected.id;
-      var extension = rdfs.GetResource(movingID);
-      var index = container.IndexOf(extension);
-      if (index > 1) {
-        container.RemoveElement(extension, false);
-        container.InsertElementAt(extension, 1, true);
-      }
-      
-      flushDataSource();
-      
+      gExtensionManager.moveTop(stripPrefix(movingID));
       gExtensionsView.selected = document.getElementById(movingID);
     },
     
     cmd_moveup: function ()
     {
-      var rdfs = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
-
-      var extensions = rdfs.GetResource("urn:mozilla:extension:root");
-      var container = Components.classes["@mozilla.org/rdf/container;1"].createInstance(Components.interfaces.nsIRDFContainer);
-      container.Init(gExtensionManager.datasource, extensions);
-      
       var movingID = gExtensionsView.selected.id;
-      var extension = rdfs.GetResource(movingID);
-      var index = container.IndexOf(extension);
-      if (index > 1) {
-        container.RemoveElement(extension, false);
-        container.InsertElementAt(extension, index - 1, true);
-      }
-      
-      flushDataSource();
-      
+      gExtensionManager.moveUp(stripPrefix(movingID));
       gExtensionsView.selected = document.getElementById(movingID);
     },
     
     cmd_movedn: function ()
     {
-      var rdfs = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
-
-      var extensions = rdfs.GetResource("urn:mozilla:extension:root");
-      var container = Components.classes["@mozilla.org/rdf/container;1"].createInstance(Components.interfaces.nsIRDFContainer);
-      container.Init(gExtensionManager.datasource, extensions);
-      
       var movingID = gExtensionsView.selected.id;
-      var extension = rdfs.GetResource(movingID);
-      var index = container.IndexOf(extension);
-      var count = container.GetCount();
-      if (index < count) {
-        container.RemoveElement(extension, true);
-        container.InsertElementAt(extension, index + 1, true);
-      }
-      
-      flushDataSource();
-      
+      gExtensionManager.moveDown(stripPrefix(movingID));
       gExtensionsView.selected = document.getElementById(movingID);
     },
     
