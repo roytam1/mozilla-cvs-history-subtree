@@ -70,7 +70,7 @@ EXTRA_DSO_LDOPTS = \
 include $(topsrcdir)/config/rules.mk
 
 _IPC_FILES = \
-    $(LIB_PREFIX)$(LIBRARY_NAME)$(DLL_SUFFIX) \
+    $(DLL_PREFIX)$(LIBRARY_NAME)$(DLL_SUFFIX) \
     $(NULL)
 
 libs:: $(_IPC_FILES)
