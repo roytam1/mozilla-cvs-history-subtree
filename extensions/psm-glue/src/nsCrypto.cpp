@@ -36,7 +36,7 @@
 #include "nsJSPrincipals.h"
 #include "nsIPrincipal.h"
 #include "nsIAppShellService.h"
-#include "nsAppShellCIDS.h"
+#include "nsAppShellCIDs.h"
 #include "jsapi.h"
 #include "jsdbgapi.h"
 #include "jscntxt.h"
