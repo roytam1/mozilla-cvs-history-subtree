@@ -857,8 +857,8 @@ NS_IMETHODIMP nsNNTPProtocol::AsyncOpen(nsIStreamListener *listener, nsISupports
     // to really load the msg with a protocol connection...
     if (cacheEntry && contentLength > 0 && !partialFlag)
     {
-      nsCOMPtr<nsITransport> cacheChannel;
-      rv = cacheEntry->NewTransport(m_loadGroup, getter_AddRefs(cacheChannel));
+      nsCOMPtr<nsIChannel> cacheChannel;
+      rv = cacheEntry->NewChannel(m_loadGroup, getter_AddRefs(cacheChannel));
       if (NS_SUCCEEDED(rv))
       {
         nsNntpCacheStreamListener * cacheListener = new nsNntpCacheStreamListener();
@@ -867,7 +867,7 @@ NS_IMETHODIMP nsNNTPProtocol::AsyncOpen(nsIStreamListener *listener, nsISupports
         m_typeWanted = ARTICLE_WANTED;
         cacheListener->Init(m_channelListener, NS_STATIC_CAST(nsIChannel *, this), mailnewsUrl);
         nsCOMPtr<nsIRequest> request;
-        rv = cacheChannel->AsyncRead(cacheListener, m_channelContext, 0, -1, 0, getter_AddRefs(request));
+        rv = cacheChannel->AsyncOpen(cacheListener, m_channelContext);
         NS_RELEASE(cacheListener);
 
         MarkCurrentMsgRead();

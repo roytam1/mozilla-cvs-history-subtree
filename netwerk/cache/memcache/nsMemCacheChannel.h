@@ -23,35 +23,49 @@
 #define _nsMemCacheChannel_h_
 
 #include "nsMemCacheRecord.h"
+#include "nsIChannel.h"
 #include "nsITransport.h"
-#include "nsIRequest.h"
 #include "nsIInputStream.h"
 #include "nsCOMPtr.h"
 
 
 class AsyncReadStreamAdaptor;
 
-class nsMemCacheTransport : public nsITransport, public nsITransportRequest
+class nsMemCacheChannel : public nsIChannel, public nsITransport
 {
 public:
     // Constructors and Destructor
-    nsMemCacheTransport(nsMemCacheRecord *aRecord, nsILoadGroup *aLoadGroup);
-    virtual ~nsMemCacheTransport();
+    nsMemCacheChannel(nsMemCacheRecord *aRecord, nsILoadGroup *aLoadGroup);
+    virtual ~nsMemCacheChannel();
 
+    // Declare nsISupports methods
     NS_DECL_ISUPPORTS
+
+    // Declare nsIRequest methods
     NS_DECL_NSIREQUEST
-    NS_DECL_NSITRANSPORTREQUEST
-    NS_DECL_NSITRANSPORT
+
+    // Declare nsIChannel methods
+    NS_DECL_NSICHANNEL
+
+    // Declare nsITransport methods
+    NS_IMETHOD GetProgressEventSink(nsIProgressEventSink **);
+    NS_IMETHOD SetProgressEventSink(nsIProgressEventSink *);
+    NS_IMETHOD OpenInputStream(PRUint32, PRUint32, PRUint32, nsIInputStream **);
+    NS_IMETHOD OpenOutputStream(PRUint32, PRUint32, PRUint32, nsIOutputStream **);
+    NS_IMETHOD AsyncRead(nsIStreamListener *, nsISupports *, PRUint32, PRUint32, PRUint32, nsIRequest **);
+    NS_IMETHOD AsyncWrite(nsIStreamProvider *, nsISupports *, PRUint32, PRUint32, PRUint32, nsIRequest **);
 
 protected:
     void NotifyStorageInUse(PRInt32 aBytesUsed);
 
     nsCOMPtr<nsMemCacheRecord>   mRecord;
     nsCOMPtr<nsIInputStream>     mInputStream;
-    nsCOMPtr<nsIRequest>         mCurrentReadRequest;
+    nsCOMPtr<nsISupports>        mOwner;
     AsyncReadStreamAdaptor*      mAsyncReadStream; // non-owning pointer
     PRUint32                     mStartOffset;
     nsresult                     mStatus;
+
+    nsLoadFlags                  mLoadAttributes;
 
     friend class MemCacheWriteStreamWrapper;
     friend class AsyncReadStreamAdaptor;

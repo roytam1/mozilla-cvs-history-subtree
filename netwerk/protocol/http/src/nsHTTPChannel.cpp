@@ -1105,18 +1105,15 @@ nsHTTPChannel::ReadFromCache()
 #endif /* PR_LOGGING */
 
     // Create a cache transport to read the cached response...
-    rv = mCacheEntry->NewTransport(mLoadGroup, getter_AddRefs(mCacheTransport));
+    rv = mCacheEntry->NewChannel(mLoadGroup, getter_AddRefs(mCacheChannel));
     if (NS_FAILED(rv)) return rv;
 
-// XXX Transports do not have load attributes
-#if 0
     //
     // Propagate the load attributes of this channel into the cache channel.
     // This will ensure that notifications are suppressed if necessary.
     //
-    rv = mCacheTransport->SetLoadAttributes(mLoadAttributes);
+    rv = mCacheChannel->SetLoadAttributes(mLoadAttributes);
     if (NS_FAILED(rv)) return rv;
-#endif
 
     // Fake it so that HTTP headers come from cached versions
     SetResponse(mCachedResponse);
@@ -1136,8 +1133,7 @@ nsHTTPChannel::ReadFromCache()
     FinishedResponseHeaders();
 
     // Pump the cache data downstream
-    nsCOMPtr<nsIRequest> request;
-    rv = mCacheTransport->AsyncRead(listener, mResponseContext, 0, -1, 0, getter_AddRefs(request));
+    rv = mCacheChannel->AsyncOpen(listener, mResponseContext);
     NS_RELEASE(listener);
     if (NS_FAILED(rv)) {
         ResponseCompleted(nsnull, rv, nsnull);
@@ -1745,7 +1741,7 @@ nsresult nsHTTPChannel::ResponseCompleted(nsIStreamListener *aListener,
 
     // Release the cache transport. This would free the entry's channelCount enabling changes
     // to the cacheEntry
-    mCacheTransport = nsnull;
+    mCacheChannel = nsnull;
 
     if (mCacheEntry)
     {
@@ -2463,11 +2459,11 @@ nsHTTPChannel::ProcessNotModifiedResponse(nsIStreamListener *aListener)
     SetResponse(mCachedResponse);
 
     // Create a cache transport to read the cached response...
-    rv = mCacheEntry->NewTransport(mLoadGroup, getter_AddRefs(mCacheTransport));
+    rv = mCacheEntry->NewChannel(mLoadGroup, getter_AddRefs(mCacheChannel));
     if (NS_FAILED (rv)) return rv;
 
     // Set StreamAsFileObserver
-    nsCOMPtr<nsIStreamAsFile> streamAsFile = do_QueryInterface(mCacheTransport);
+    nsCOMPtr<nsIStreamAsFile> streamAsFile = do_QueryInterface(mCacheChannel);
     if (streamAsFile)
     {
         nsCOMPtr< nsIStreamAsFileObserver> observer;
@@ -2492,9 +2488,7 @@ nsHTTPChannel::ProcessNotModifiedResponse(nsIStreamListener *aListener)
     cacheListener->SetListener(aListener);
     mResponseDataListener = 0/* aListener */;
 
-    nsCOMPtr<nsIRequest> request;
-    rv = mCacheTransport->AsyncRead(cacheListener, mResponseContext, 
-                                    0, -1, 0, getter_AddRefs(request));
+    rv = mCacheChannel->AsyncOpen(cacheListener, mResponseContext);
     if (NS_FAILED(rv)) {
       ResponseCompleted(cacheListener, rv, nsnull);
     }

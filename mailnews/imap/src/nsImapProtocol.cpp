@@ -6940,16 +6940,15 @@ NS_IMETHODIMP nsImapMockChannel::AsyncOpen(nsIStreamListener *listener, nsISuppo
     if (NS_SUCCEEDED(rv) && annotationLength == nsCRT::strlen("Not Modified") 
       && annotation && !nsCRT::strncmp(annotation, "Not Modified", annotationLength))
     {
-      nsCOMPtr<nsITransport> cacheChannel;
-      rv = cacheEntry->NewTransport(m_loadGroup, getter_AddRefs(cacheChannel));
+      nsCOMPtr<nsIChannel> cacheChannel;
+      rv = cacheEntry->NewChannel(m_loadGroup, getter_AddRefs(cacheChannel));
       if (NS_SUCCEEDED(rv))
       {
         // if we are going to read from the cache, then create a mock stream listener class and use it
         nsImapCacheStreamListener * cacheListener = new nsImapCacheStreamListener();
         NS_ADDREF(cacheListener);
         cacheListener->Init(m_channelListener, NS_STATIC_CAST(nsIChannel *, this));
-        nsCOMPtr<nsIRequest> request;
-        rv = cacheChannel->AsyncRead(cacheListener, m_channelContext, 0, -1, 0, getter_AddRefs(request));
+        rv = cacheChannel->AsyncOpen(cacheListener, m_channelContext);
         NS_RELEASE(cacheListener);
 
         if (NS_SUCCEEDED(rv)) // ONLY if we succeeded in actually starting the read should we return

@@ -26,31 +26,60 @@
 #define _nsCacheEntryChannel_h_
 
 #include "nsCOMPtr.h"
+#include "nsIChannel.h"
 #include "nsITransport.h"
 #include "nsCachedNetData.h"
 #include "nsILoadGroup.h"
 
 class nsIStreamListener;
 
-// Override several nsITransport methods so that they interact with the cache manager
-class nsCacheEntryTransport : public nsITransport {
+// A proxy for an nsIChannel, useful when only a few nsIChannel
+// methods must be overridden
+class nsChannelProxy : public nsIChannel {
+
+public:
+    NS_FORWARD_NSICHANNEL(mChannel->)
+    NS_FORWARD_NSIREQUEST(mChannel->)
+
+protected:
+    nsChannelProxy(nsIChannel* aChannel):mChannel(aChannel) {};
+    virtual ~nsChannelProxy() {};
+    nsCOMPtr<nsIChannel>      mChannel;
+};
+
+// Override several nsIChannel methods so that they interact with the cache manager
+class nsCacheEntryChannel : public nsChannelProxy, public nsITransport {
 
 public:
     NS_DECL_ISUPPORTS
-    NS_DECL_NSITRANSPORT
+
+    // nsIChannel methods
+    NS_IMETHOD Open(nsIInputStream* *aInputStream);
+    NS_IMETHOD AsyncOpen(nsIStreamListener *aListener, nsISupports *aContext);
+    NS_IMETHOD GetLoadAttributes(nsLoadFlags *aLoadAttributes);
+    NS_IMETHOD SetLoadAttributes(nsLoadFlags aLoadAttributes);
+    NS_IMETHOD GetLoadGroup(nsILoadGroup* *aLoadGroup);
+    NS_IMETHOD GetURI(nsIURI * *aURI);
+    NS_IMETHOD GetOriginalURI(nsIURI * *aURI);
+
+    // nsITransport methods
+    NS_IMETHOD GetSecurityInfo(nsISupports **);
+    NS_IMETHOD GetProgressEventSink(nsIProgressEventSink **);
+    NS_IMETHOD SetProgressEventSink(nsIProgressEventSink *);
+    NS_IMETHOD OpenInputStream(PRUint32, PRUint32, PRUint32, nsIInputStream **);
+    NS_IMETHOD OpenOutputStream(PRUint32, PRUint32, PRUint32, nsIOutputStream **);
+    NS_IMETHOD AsyncRead(nsIStreamListener *, nsISupports *, PRUint32, PRUint32, PRUint32, nsIRequest **);
+    NS_IMETHOD AsyncWrite(nsIStreamProvider *, nsISupports *, PRUint32, PRUint32, PRUint32, nsIRequest **);
 
 protected:
-    nsCacheEntryTransport(nsCachedNetData* aCacheEntry,
-                          nsITransport* aTransport,
-                          nsILoadGroup* aLoadGroup);
-    virtual ~nsCacheEntryTransport();
+    nsCacheEntryChannel(nsCachedNetData* aCacheEntry, nsIChannel* aChannel, nsILoadGroup* aLoadGroup);
+    virtual ~nsCacheEntryChannel();
 
     friend class nsCachedNetData;
 
 private:
     nsCOMPtr<nsCachedNetData>    mCacheEntry;
     nsCOMPtr<nsILoadGroup>       mLoadGroup;
-    nsCOMPtr<nsITransport>       mTransport;
 };
 
 #endif // _nsCacheEntryChannel_h_
