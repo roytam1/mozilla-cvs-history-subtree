@@ -73,8 +73,6 @@ Contributor(s):
   <commandset id="selectEditMenuItems"/> 
   <commandset id="undoEditMenuItems"/>
   <commandset id="globalEditMenuItems"/>
-    <command id="cmd_newNavigator"/>
-    <command id="cmd_newEditor"/>
     <command id="cmd_printSetup" oncommand="goPageSetup()"/>
     <command id="cmd_printCard" oncommand="AbPrintCard()"/>
     <command id="cmd_printAddressBook" oncommand="AbPrintAddressBook()"/>
@@ -105,7 +103,6 @@ Contributor(s):
 
 <keyset id="tasksKeys">
   <!-- File Menu -->
-  <key id="key_newNavigator"/>
   <key id="key_printCard"  key="&printCardViewCmd.key;" command="cmd_printCard"  modifiers="accel"/>
   <key id="key_close"/>
   <key id="key_quit"/>
@@ -148,8 +145,6 @@ Contributor(s):
                       <menuitem label="&newIM.label;" key="key_im" accesskey="&newIM.accesskey;" oncommand="AbIMSelected()"/>
                       <menuitem label="&newChat.label;" key="key_chat" accesskey="&newChat.accesskey;" oncommand="AbChatSelected()"/>
 -->
-                      <menuitem id="menu_newNavigator"/>
-                      <menuitem id="menu_newEditor"/>
                     </menupopup>
                 </menu>
                 <menuitem id="menu_close"/>

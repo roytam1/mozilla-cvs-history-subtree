@@ -99,8 +99,6 @@ Rights Reserved.
 </commandset>
 
 <commandset id="mailCommands">
-  <command id="cmd_newNavigator"/>
-  <command id="cmd_newEditor"/>
   <command id="cmd_quit"/>
   <!--The cmd_createFilterFromPopup is used to notify the email context popup -->
   <command id="cmd_createFilterFromPopup"/>
@@ -268,8 +266,6 @@ Rights Reserved.
     <key id="space" key=" " oncommand="SpaceHit()"/>
 
   <!-- File Menu -->
-  <key id="key_newNavigator"/>
-  <key id="key_newBlankPage"/>
   <key id="key_close"/>
   <key id="key_quit"/>
   <!-- Edit Menu -->
@@ -624,10 +620,6 @@ Rights Reserved.
   <popup id="messagePaneContext"   
      onpopupshowing="gContextMenu = new nsContextMenu(this); return fillMessagePaneContextMenu();"
      onpopuphiding="gContextMenu.onDestroy(); gContextMenu = null;">
-        <menuitem id="context-openlink"
-                  label="&openLinkCmd.label;"
-                  accesskey="&openLinkCmd.accesskey;"
-                  oncommand="gContextMenu.openLink();"/>
         <menuseparator id="messagePaneContext-sep-link"/>
         <menuitem id="context-selectall"
                   label="&selectAllCmd.label;"
@@ -895,8 +887,6 @@ Rights Reserved.
                      accesskey="&newAccountCmd.accesskey;"
                      oncommand="MsgAccountWizard();"/>
           <menuseparator/>
-          <menuitem id="menu_newNavigator"/>
-          <menuitem id="menu_newEditor"/>
         </menupopup>
       </menu>
       <menuitem id="openMessageWindowMenuitem" label="&openMessageWindowCmd.label;"
