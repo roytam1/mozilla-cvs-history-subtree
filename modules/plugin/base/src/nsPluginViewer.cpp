@@ -494,8 +494,9 @@ HandlePluginEvent(nsGUIEvent *aEvent)
     (nsIWidget*)(aEvent->widget)->SetFocus();  // send focus to child window
 
 #ifdef XP_MAC   // on Mac, we store a pointer to this class as native data in the widget
-  PluginViewerImpl * pluginViewer;
-  (nsIWidget*)(aEvent->widget)->GetClientData((PluginViewerImpl *)pluginViewer);
+  void *dataPtr;
+  (nsIWidget*)(aEvent->widget)->GetClientData(dataPtr);
+  PluginViewerImpl * pluginViewer = static_cast<PluginViewerImpl *>(dataPtr);
   if (pluginViewer != nsnull && pluginViewer->mOwner != nsnull)
     return pluginViewer->mOwner->ProcessEvent(*aEvent);
 #endif
