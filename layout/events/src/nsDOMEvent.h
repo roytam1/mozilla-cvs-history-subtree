@@ -90,7 +90,7 @@ public:
     eDOMEvents_overflowchanged
   };
 
-  nsDOMEvent(nsIPresContext* aPresContext, nsEvent* aEvent, const nsString& aEventType);
+  nsDOMEvent(nsIPresContext* aPresContext, nsEvent* aEvent, const nsAReadableString& aEventType);
   virtual ~nsDOMEvent();
 
   NS_DECL_ISUPPORTS

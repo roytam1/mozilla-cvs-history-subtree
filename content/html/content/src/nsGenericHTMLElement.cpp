@@ -172,7 +172,8 @@ nsDOMCSSAttributeDeclaration::RemoveProperty(const nsAReadableString& aPropertyN
     PRInt32 hint;
     decl->GetStyleImpact(&hint);
 
-    nsCSSProperty prop = nsCSSProps::LookupProperty(aPropertyName);
+    nsAutoString propName(aPropertyName);
+    nsCSSProperty prop = nsCSSProps::LookupProperty(propName);
     nsCSSValue val;
 
     rv = decl->RemoveProperty(prop, val);
@@ -2311,7 +2312,8 @@ nsGenericHTMLElement::ParseColor(const nsAReadableString& aString,
       }
     }
     else {
-      if (NS_LooseHexToRGB(aString, &color)) {  // no space compression
+      nsAutoString str(aString);
+      if (NS_LooseHexToRGB(str, &color)) {  // no space compression
         aResult.SetColorValue(color);
         return PR_TRUE;
       }

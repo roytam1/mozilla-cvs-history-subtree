@@ -1166,8 +1166,9 @@ nsHTMLDocument::SetHeaderData(nsIAtom* aHeaderField,
         if (PR_FALSE == type.Equals(textHtml)) {
           sheet->GetTitle(title);
           if (0 < title.Length()) {  // if sheet has title
+            nsAutoString data(aData);
             PRBool disabled = ((0 == aData.Length()) || 
-                               (PR_FALSE == title.EqualsIgnoreCase(aData)));
+                               (PR_FALSE == title.EqualsIgnoreCase(data)));
             SetStyleSheetDisabledState(sheet, disabled);
           }
         }
@@ -1644,7 +1645,9 @@ nsHTMLDocument::SetDomain(const nsAReadableString& aDomain)
     nsAutoString suffix;
     current.Right(suffix, aDomain.Length());
     PRUnichar c = current.CharAt(current.Length() - aDomain.Length() - 1);
-    if (suffix.EqualsIgnoreCase(aDomain) && (c == '.' || c == '/'))
+    // FIX ME to be more efficient
+    nsAutoString str(aDomain);
+    if (suffix.EqualsIgnoreCase(str) && (c == '.' || c == '/'))
       ok = PR_TRUE;
   }
   if (!ok) {
@@ -2063,7 +2066,7 @@ nsHTMLDocument::Close()
 }
 
 nsresult
-nsHTMLDocument::WriteCommon(const nsString& aText,
+nsHTMLDocument::WriteCommon(const nsAReadableString& aText,
                             PRBool aNewlineTerminate)
 {
   nsresult result = NS_OK;
@@ -2201,7 +2204,7 @@ nsHTMLDocument::Writeln(JSContext *cx, jsval *argv, PRUint32 argc)
 }
 
 nsIContent *
-nsHTMLDocument::MatchName(nsIContent *aContent, const nsString& aName)
+nsHTMLDocument::MatchName(nsIContent *aContent, const nsAReadableString& aName)
 {
   nsAutoString value;
   nsIContent *result = nsnull;

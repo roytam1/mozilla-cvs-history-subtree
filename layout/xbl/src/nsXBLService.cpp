@@ -456,7 +456,7 @@ nsXBLService::LoadBindings(nsIContent* aContent, const nsAReadableString& aURL, 
 
   if (!newBinding) {
     nsCAutoString str = "Failed to locate XBL binding. XBL is now using id instead of name to reference bindings. Make sure you have switched over.  The invalid binding name is: ";
-    str.AppendWithConversion(NS_ConvertUCS2toUTF8(aURL));
+    str.AppendWithConversion(aURL);
     NS_ERROR(str);
     return NS_OK;
   }

@@ -1531,10 +1531,11 @@ NS_IMETHODIMP
 nsDOMSelection::ToString(const nsAReadableString& aFormatType, PRUint32 aFlags, PRInt32 aWrapCount, nsAWritableString& aReturn)
 {
   nsresult rv = NS_OK;
-
+  nsAutoString formatTypeStr(aFormatType);
+  
   nsCOMPtr<nsIDocumentEncoder> encoder;
   nsCAutoString formatType = NS_DOC_ENCODER_PROGID_BASE;
-  formatType.AppendWithConversion(aFormatType);
+  formatType.AppendWithConversion(formatTypeStr);
   rv = nsComponentManager::CreateInstance(formatType,
                                           nsnull,
                                           NS_GET_IID(nsIDocumentEncoder),
@@ -1554,7 +1555,7 @@ nsDOMSelection::ToString(const nsAReadableString& aFormatType, PRUint32 aFlags, 
   // Flags should always include OutputSelectionOnly if we're coming from here:
   aFlags |= nsIDocumentEncoder::OutputSelectionOnly;
 
-  rv = encoder->Init(doc, aFormatType, aFlags);
+  rv = encoder->Init(doc, formatTypeStr, aFlags);
   NS_ENSURE_SUCCESS(rv, rv);
 
   encoder->SetSelection(this);

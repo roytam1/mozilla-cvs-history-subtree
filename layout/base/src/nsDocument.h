@@ -74,7 +74,7 @@ protected:
 class nsDocHeaderData
 {
 public:
-  nsDocHeaderData(nsIAtom* aField, const nsString& aData)
+  nsDocHeaderData(nsIAtom* aField, const nsAReadableString& aData)
   {
     mField = aField;
     NS_IF_ADDREF(mField);

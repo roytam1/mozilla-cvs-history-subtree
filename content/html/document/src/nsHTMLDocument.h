@@ -195,7 +195,7 @@ protected:
                             PRBool aInForm);
 
   void DeleteNamedItems();
-  nsIContent *MatchName(nsIContent *aContent, const nsString& aName);
+  nsIContent *MatchName(nsIContent *aContent, const nsAReadableString& aName);
 
   virtual void InternalAddStyleSheet(nsIStyleSheet* aSheet);
   virtual void InternalInsertStyleSheetAt(nsIStyleSheet* aSheet, PRInt32 aIndex);
@@ -211,7 +211,7 @@ protected:
 
   NS_IMETHOD GetDomainURI(nsIURI **uri);
 
-  nsresult WriteCommon(const nsString& aText,
+  nsresult WriteCommon(const nsAReadableString& aText,
                        PRBool aNewlineTerminate);
   nsresult ScriptWriteCommon(JSContext *cx, 
                              jsval *argv, 

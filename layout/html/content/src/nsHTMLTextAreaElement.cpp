@@ -369,7 +369,8 @@ nsHTMLTextAreaElement::SetValue(const nsAReadableString& aValue)
   if (NS_OK == nsGenericHTMLElement::GetPrimaryFrame(this, formControlFrame)) {
     nsIPresContext* presContext;
     nsGenericHTMLElement::GetPresContext(this, &presContext);
-    formControlFrame->SetProperty(presContext, nsHTMLAtoms::value, aValue);
+    nsAutoString value(aValue);
+    formControlFrame->SetProperty(presContext, nsHTMLAtoms::value, value);
     NS_IF_RELEASE(presContext);
   }
   // Set the attribute in the DOM too, we call SetAttribute with aNotify

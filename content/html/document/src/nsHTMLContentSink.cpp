@@ -4238,7 +4238,8 @@ HTMLContentSink::ProcessMETATag(const nsIParserNode& aNode)
                 if (!uriAttrib) {
                     uri = baseURI;
                 } else {
-                    rv = NS_NewURI(getter_AddRefs(uri), uriAttrib, baseURI);
+                    nsAutoString str(uriAttrib);
+                    rv = NS_NewURI(getter_AddRefs(uri), str, baseURI);
                     nsMemory::Free(uriAttrib);
                 }
 

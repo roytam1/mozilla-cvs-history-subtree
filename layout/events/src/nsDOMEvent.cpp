@@ -53,7 +53,7 @@ static char* mEventNames[] = {
   "scroll","overflow", "underflow", "overflowchanged"
 }; 
 
-nsDOMEvent::nsDOMEvent(nsIPresContext* aPresContext, nsEvent* aEvent, const nsString& aEventType) {
+nsDOMEvent::nsDOMEvent(nsIPresContext* aPresContext, nsEvent* aEvent, const nsAReadableString& aEventType) {
   mPresContext = aPresContext;
   if (mPresContext)
     NS_ADDREF(mPresContext);
@@ -63,15 +63,16 @@ nsDOMEvent::nsDOMEvent(nsIPresContext* aPresContext, nsEvent* aEvent, const nsSt
   }
   else {
     //Allocate internal event
-    if (aEventType.EqualsIgnoreCase("MouseEvent")) {
+    nsAutoString eventType(aEventType);
+    if (eventType.EqualsIgnoreCase("MouseEvent")) {
       mEvent = PR_NEWZAP(nsMouseEvent);
       mEvent->eventStructType = NS_MOUSE_EVENT;
     }
-    else if (aEventType.EqualsIgnoreCase("KeyEvent")) {
+    else if (eventType.EqualsIgnoreCase("KeyEvent")) {
       mEvent = PR_NEWZAP(nsKeyEvent);
       mEvent->eventStructType = NS_KEY_EVENT;
     }
-    else if (aEventType.EqualsIgnoreCase("HTMLEvent")) {
+    else if (eventType.EqualsIgnoreCase("HTMLEvent")) {
       mEvent = PR_NEWZAP(nsEvent);
       mEvent->eventStructType = NS_EVENT;
     }
@@ -1166,7 +1167,7 @@ const char* nsDOMEvent::GetEventName(PRUint32 aEventType)
 
 nsresult NS_NewDOMUIEvent(nsIDOMEvent** aInstancePtrResult,
                           nsIPresContext* aPresContext,
-                          const nsString& aEventType,
+                          const nsAReadableString& aEventType,
                           nsEvent *aEvent) 
 {
   nsDOMEvent* it = new nsDOMEvent(aPresContext, aEvent, aEventType);

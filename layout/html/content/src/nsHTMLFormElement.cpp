@@ -917,7 +917,8 @@ nsFormControlList::NamedItem(const nsAReadableString& aName, nsIDOMNode** aRetur
   NS_ENSURE_ARG_POINTER(aReturn);
 
   nsresult rv = NS_OK;
-  nsStringKey key(aName);
+  nsAutoString name(aName);
+  nsStringKey key(name);
   nsCOMPtr<nsISupports> supports;
   *aReturn = nsnull;
 
@@ -947,7 +948,8 @@ nsFormControlList::NamedItem(const nsAReadableString& aName, nsIDOMNode** aRetur
 nsresult
 nsFormControlList::AddElementToTable(nsIFormControl* aChild, const nsAReadableString& aName)
 {
-  nsStringKey key(aName);
+  nsAutoString name(aName);
+  nsStringKey key(name);
   if (!mLookupTable) {
     mLookupTable = new nsSupportsHashtable(NS_FORM_CONTROL_LIST_HASHTABLE_SIZE);
     NS_ENSURE_TRUE(mLookupTable, NS_ERROR_OUT_OF_MEMORY);
@@ -1016,10 +1018,10 @@ nsresult
 nsFormControlList::RemoveElementFromTable(nsIFormControl* aChild,
                                           const nsAReadableString& aName)
 {
-  nsAutoString name;
+  nsAutoString name(aName);
   nsCOMPtr<nsIContent> content = do_QueryInterface(aChild);  
   if (mLookupTable && content) {
-    nsStringKey key(aName);
+    nsStringKey key(name);
 
     nsCOMPtr<nsISupports> supports;
     supports = dont_AddRef((nsISupports *)mLookupTable->Get(&key));

@@ -1924,7 +1924,7 @@ nsRange::CreateContextualFragment(const nsAReadableString& aFragment,
             }
             else {
               // Who're we kidding. This only works for html.
-              contentType.AssignWithConversion("text/html");
+              contentType.Assign(NS_LITERAL_STRING("text/html"));
             }
 
             result = parser->ParseFragment(aFragment, (void*)0,

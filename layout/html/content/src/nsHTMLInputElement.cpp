@@ -431,11 +431,12 @@ nsHTMLInputElement::SetValue(const nsAReadableString& aValue)
 
     }
     nsIFormControlFrame* formControlFrame = nsnull;
+    nsAutoString value(aValue);
     if (NS_SUCCEEDED(nsGenericHTMLElement::GetPrimaryFrame(this, formControlFrame))) {
       if (nsnull != formControlFrame ) { 
         nsIPresContext* presContext;
         nsGenericHTMLElement::GetPresContext(this, &presContext);
-        formControlFrame->SetProperty(presContext, nsHTMLAtoms::value, aValue);
+        formControlFrame->SetProperty(presContext, nsHTMLAtoms::value, value);
         NS_IF_RELEASE(presContext);
       }
     }
@@ -446,7 +447,7 @@ nsHTMLInputElement::SetValue(const nsAReadableString& aValue)
 
       // Obtain the value property from the presentation state.
       if (presState) {
-        presState->SetStateProperty(NS_ConvertASCIItoUCS2("value"), aValue);
+        presState->SetStateProperty(NS_LITERAL_STRING("value"), value);
       }
     }
     return NS_OK;
