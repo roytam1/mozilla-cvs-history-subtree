@@ -880,23 +880,22 @@ XPCConvert::JSData2Native(XPCCallContext& ccx, void* d, jsval s,
 
             length = JS_GetStringLength(str);
 
+            nsCString *rs;
             if(useAllocator)
             {                
-                const nsACString *rs = new NS_ConvertUCS2toUTF8((const PRUnichar*)chars, length);
+                // Use nsCString to enable sharing
+                rs = new nsCString();
                 if(!rs)
                     return JS_FALSE;
 
-                *((const nsACString**)d) = rs;
+                *((const nsCString**)d) = rs;
             }
             else
             {
-                nsCString* rs = *((nsCString**)d);
-
-                // XXX This code needs to change when Jag lands the new
-                // UTF8String implementation.  Adopt() is a method that 
-                // shouldn't be used by string consumers.
-                rs->Adopt(ToNewUTF8String(nsDependentString((const PRUnichar*)chars, length)));
+                rs = *((nsCString**)d);
             }
+            CopyUTF16toUTF8(nsDependentString((const PRUnichar*)chars, length),
+                            *rs);
             return JS_TRUE;
         }
 
