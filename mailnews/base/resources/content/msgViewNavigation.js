@@ -74,7 +74,7 @@ function FindNextFolder(originalFolderURI)
 
 function ScrollToFirstNewMessage()
 {
-  // this needs rewritten.
+  dump("XXX ScrollToFirstNewMessage needs to be rewritten.\n");
 /*
 	var tree = GetThreadTree();
 	var treeFolder = GetThreadTreeFolder();
