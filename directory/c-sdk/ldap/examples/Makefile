@@ -1,6 +1,22 @@
+# The contents of this file are subject to the Netscape Public
+# License Version 1.1 (the "License"); you may not use this file
+# except in compliance with the License. You may obtain a copy of
+# the License at http://www.mozilla.org/NPL/
 #
-# Copyright (c) 1996-1998.  Netscape Communications Corporation.  All
-# rights reserved.
+# Software distributed under the License is distributed on an "AS
+# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# rights and limitations under the License.
+#
+# The Original Code is Mozilla Communicator client code, released
+# March 31, 1998.
+#
+# The Initial Developer of the Original Code is Netscape
+# Communications Corporation. Portions created by Netscape are
+# Copyright (C) 1998-1999 Netscape Communications Corporation. All
+# Rights Reserved.
+#
+# Contributor(s):
 #
 #
 # UNIX Makefile for Directory SDK examples
@@ -29,22 +45,32 @@
 # version you've downloaded.
 #
 
-# For Solaris
+# For Solaris (32 bit)
 EXTRACFLAGS=
 EXTRALDFLAGS=-lsocket -lnsl 
 EXTRANSPRLDFLAGS=-mt
-LDAPLIB=ldapssl41 
-#LDAPLIB=ldap41
-LDAPPRLIB=ldappr41
+LDAPLIB=ldapssl50 
+#LDAPLIB=ldap50
+LDAPPRLIB=ldappr50
 NSPRLIB=nspr3
 CC=cc
+
+# For Solaris (64 bit)
+EXTRACFLAGS=
+EXTRALDFLAGS=-lsocket -lnsl 
+EXTRANSPRLDFLAGS=-mt
+LDAPLIB=ldapssl50 
+#LDAPLIB=ldap50
+LDAPPRLIB=ldappr50
+NSPRLIB=nspr3
+CC=cc -xarch=v9
 
 # For HP/UX (32 bit)
 #EXTRACFLAGS=-Dhpux -D_HPUX_SOURCE -D_REENTRANT -Aa
 #EXTRALDFLAGS=-Wl,+s+b
-#LDAPLIB=ldapssl41
-#LDAPLIB=ldap41
-#LDAPPRLIB=ldappr41
+#LDAPLIB=ldapssl50
+#LDAPLIB=ldap50
+#LDAPPRLIB=ldappr50
 #NSPRLIB=nspr3
 #CC=cc
 
@@ -52,9 +78,9 @@ CC=cc
 #EXTRACFLAGS=-DHPUX11 -DIS_64 +e +DA2.0W +DChpux +DS2.0 
 #EXTRACFLAGS+=-D_LARGEFILE64_SOURCE -D_PR_HAVE_OFF64_T
 #EXTRALDFLAGS=-lpthread +DA2.0W +DS2.0
-#LDAPLIB=ldapssl41
-#LDAPLIB=ldap41
-#LDAPPRLIB=ldappr41
+#LDAPLIB=ldapssl50
+#LDAPLIB=ldap50
+#LDAPPRLIB=ldappr50
 #NSPRLIB=nspr3
 #CC=/opt/ansic/bin/cc
 
@@ -62,36 +88,36 @@ CC=cc
 # For IRIX
 #EXTRACFLAGS=
 #EXTRALDFLAGS=
-#LDAPLIB=ldapssl41
-#LDAPLIB=ldap41
-#LDAPPRLIB=ldappr41
+#LDAPLIB=ldapssl50
+#LDAPLIB=ldap50
+#LDAPPRLIB=ldappr50
 #NSPRLIB=nspr3
 #CC=cc
 
 # For AIX
 #EXTRACFLAGS=
 #EXTRALDFLAGS=-brtl
-#LDAPLIB=ldapssl41
-#LDAPLIB=ldap41
-#LDAPPRLIB=ldappr41
+#LDAPLIB=ldapssl50
+#LDAPLIB=ldap50
+#LDAPPRLIB=ldappr50
 #NSPRLIB=nspr3
 #CC=cc
 
 # For Digital UNIX 4.0
 #EXTRACFLAGS=
 #EXTRALDFLAGS=-taso -rpath ../lib
-#LDAPLIB=ldapssl41
-#LDAPLIB=ldap41
-#LDAPPRLIB=ldappr41
+#LDAPLIB=ldapssl50
+#LDAPLIB=ldap50
+#LDAPPRLIB=ldappr50
 #NSPRLIB=nspr3
 #CC=cc
 
 # For Linux 2.2
 #EXTRACFLAGS=
 #EXTRALDFLAGS=-lpthread
-#LDAPLIB=ldapssl41
-#LDAPLIB=ldap41
-#LDAPPRLIB=ldappr41
+#LDAPLIB=ldapssl50
+#LDAPLIB=ldap50
+#LDAPPRLIB=ldappr50
 #NSPRLIB=nspr3
 #CC=gcc
 
