@@ -610,8 +610,9 @@ GlobalWindowImpl::HandleDOMEvent(nsIPresContext* aPresContext,
     else {
       aDOMEvent = &domEvent;
     }
-    aEvent->flags = aFlags;
+    aEvent->flags |= aFlags;
     aFlags &= ~(NS_EVENT_FLAG_CANT_BUBBLE | NS_EVENT_FLAG_CANT_CANCEL);
+    aFlags |= NS_EVENT_FLAG_BUBBLE | NS_EVENT_FLAG_CAPTURE;
 
     // Execute bindingdetached handlers before we tear ourselves
     // down.
@@ -629,12 +630,12 @@ GlobalWindowImpl::HandleDOMEvent(nsIPresContext* aPresContext,
   }
 
   // Capturing stage
-  if ((NS_EVENT_FLAG_BUBBLE != aFlags) && mChromeEventHandler) {
+  if ((NS_EVENT_FLAG_CAPTURE & aFlags) && mChromeEventHandler) {
     // Check chrome document capture here.
     // XXX The chrome can not handle this, see bug 51211
     if (aEvent->message != NS_IMAGE_LOAD) {
       mChromeEventHandler->HandleChromeEvent(aPresContext, aEvent, aDOMEvent,
-                                             NS_EVENT_FLAG_CAPTURE,
+                                             aFlags & NS_EVENT_CAPTURE_MASK,
                                              aEventStatus);
     }
   }
@@ -653,7 +654,7 @@ GlobalWindowImpl::HandleDOMEvent(nsIPresContext* aPresContext,
     mIsDocumentLoaded = PR_TRUE;
 
   // Bubbling stage
-  if ((NS_EVENT_FLAG_CAPTURE != aFlags) && mChromeEventHandler) {
+  if ((NS_EVENT_FLAG_BUBBLE & aFlags) && mChromeEventHandler) {
     // Bubble to a chrome document if it exists
     // XXX Need a way to know if an event should really bubble or not.
     // For now filter out load and unload, since they cause problems.
@@ -663,7 +664,7 @@ GlobalWindowImpl::HandleDOMEvent(nsIPresContext* aPresContext,
         (aEvent->message != NS_FOCUS_CONTENT) &&
         (aEvent->message != NS_BLUR_CONTENT)) {
       mChromeEventHandler->HandleChromeEvent(aPresContext, aEvent,
-                                             aDOMEvent, NS_EVENT_FLAG_BUBBLE,
+                                             aDOMEvent, aFlags & NS_EVENT_BUBBLE_MASK,
                                              aEventStatus);
     }
   }

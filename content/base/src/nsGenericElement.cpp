@@ -1605,8 +1605,9 @@ nsGenericElement::HandleDOMEvent(nsIPresContext* aPresContext,
     else {
       aDOMEvent = &domEvent;
     }
-    aEvent->flags = aFlags;
+    aEvent->flags |= aFlags;
     aFlags &= ~(NS_EVENT_FLAG_CANT_BUBBLE | NS_EVENT_FLAG_CANT_CANCEL);
+    aFlags |= NS_EVENT_FLAG_BUBBLE | NS_EVENT_FLAG_CAPTURE;
   }
 
   // Find out if we're anonymous.
@@ -1686,16 +1687,16 @@ nsGenericElement::HandleDOMEvent(nsIPresContext* aPresContext,
 
   PRBool intermediateCapture = PR_FALSE;
   //Capturing stage evaluation
-  if (NS_EVENT_FLAG_BUBBLE != aFlags && aEvent->message != NS_PAGE_LOAD
+  if (NS_EVENT_FLAG_CAPTURE & aFlags && aEvent->message != NS_PAGE_LOAD
       && aEvent->message != NS_SCRIPT_LOAD &&
       aEvent->message != NS_IMAGE_ERROR && aEvent->message != NS_IMAGE_LOAD) {
     //Initiate capturing phase.  Special case first call to document
     if (parent) {
-      parent->HandleDOMEvent(aPresContext, aEvent, aDOMEvent, NS_EVENT_FLAG_CAPTURE, aEventStatus);
+      parent->HandleDOMEvent(aPresContext, aEvent, aDOMEvent, aFlags & NS_EVENT_CAPTURE_MASK, aEventStatus);
     }
     else if (mDocument != nsnull) {
         ret = mDocument->HandleDOMEvent(aPresContext, aEvent, aDOMEvent,
-                                        NS_EVENT_FLAG_CAPTURE, aEventStatus);
+                                        aFlags & NS_EVENT_CAPTURE_MASK, aEventStatus);
     }
   }
 
@@ -1727,7 +1728,7 @@ nsGenericElement::HandleDOMEvent(nsIPresContext* aPresContext,
   }
 
   //Bubbling stage
-  if (NS_EVENT_FLAG_CAPTURE != aFlags && mDocument &&
+  if (NS_EVENT_FLAG_BUBBLE & aFlags && mDocument &&
       aEvent->message != NS_PAGE_LOAD && aEvent->message != NS_SCRIPT_LOAD &&
       aEvent->message != NS_IMAGE_ERROR && aEvent->message != NS_IMAGE_LOAD) {
     if (parent) {
@@ -1735,14 +1736,14 @@ nsGenericElement::HandleDOMEvent(nsIPresContext* aPresContext,
        * If there's a parent we pass the event to the parent...
        */
       ret = parent->HandleDOMEvent(aPresContext, aEvent, aDOMEvent,
-                                   NS_EVENT_FLAG_BUBBLE, aEventStatus);
+                                   aFlags & NS_EVENT_BUBBLE_MASK, aEventStatus);
     } else {
       /*
        * If there's no parent but there is a document (i.e. this is the
        * root node) we pass the event to the document...
        */
       ret = mDocument->HandleDOMEvent(aPresContext, aEvent, aDOMEvent,
-                                      NS_EVENT_FLAG_BUBBLE, aEventStatus);
+                                      aFlags & NS_EVENT_BUBBLE_MASK, aEventStatus);
     }
   }
 

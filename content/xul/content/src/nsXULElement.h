@@ -320,8 +320,8 @@ public:
 
 class nsXULElement : public nsIXULContent,
                      public nsIDOMXULElement,
-                     public nsIDOMEventReceiver,
-                     public nsIDOM3EventTarget,
+                     /*public nsIDOMEventReceiver,
+                     public nsIDOM3EventTarget,*/
                      public nsIScriptEventHandlerOwner,
                      public nsIChromeEventHandler
 {
@@ -404,6 +404,7 @@ public:
     NS_IMETHOD GetBindingParent(nsIContent** aContent);
     NS_IMETHOD SetBindingParent(nsIContent* aParent);
     NS_IMETHOD_(PRBool) IsContentOfType(PRUint32 aFlags);
+    NS_IMETHOD GetListenerManager(nsIEventListenerManager** aResult);
 
     // nsIXMLContent
     NS_IMETHOD MaybeTriggerAutoLink(nsIWebShell *aShell);
@@ -436,6 +437,7 @@ public:
     // nsIDOMXULElement
     NS_DECL_NSIDOMXULELEMENT
 
+    /*
     // nsIDOMEventTarget interface (from nsIDOMEventReceiver)
     NS_DECL_NSIDOMEVENTTARGET
 
@@ -448,6 +450,7 @@ public:
     NS_IMETHOD GetListenerManager(nsIEventListenerManager** aInstancePtrResult);
     NS_IMETHOD HandleEvent(nsIDOMEvent *aEvent);
     NS_IMETHOD GetSystemEventGroup(nsIDOMEventGroup** aGroup);
+    */
 
     // nsIScriptEventHandlerOwner
     NS_IMETHOD CompileEventHandler(nsIScriptContext* aContext,

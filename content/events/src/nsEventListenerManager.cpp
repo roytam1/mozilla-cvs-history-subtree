@@ -570,7 +570,8 @@ nsresult nsEventListenerManager::AddEventListenerByIID(nsIDOMEventListener *aLis
 {
   nsCOMPtr<nsIDOMEventGroup> sysGroup;
   GetSystemEventGroupLM(getter_AddRefs(sysGroup));
-  AddEventListener(aListener, GetTypeForIID(aIID), NS_EVENT_BITS_NONE, nsnull, aFlags, sysGroup);
+  //AddEventListener(aListener, GetTypeForIID(aIID), NS_EVENT_BITS_NONE, nsnull, aFlags, sysGroup);
+  AddEventListener(aListener, GetTypeForIID(aIID), NS_EVENT_BITS_NONE, nsnull, aFlags, nsnull);
   return NS_OK;
 }
 
@@ -581,7 +582,8 @@ nsEventListenerManager::RemoveEventListenerByIID(nsIDOMEventListener *aListener,
 {
   nsCOMPtr<nsIDOMEventGroup> sysGroup;
   GetSystemEventGroupLM(getter_AddRefs(sysGroup));
-  RemoveEventListener(aListener, GetTypeForIID(aIID), NS_EVENT_BITS_NONE, nsnull, aFlags, sysGroup);
+  //RemoveEventListener(aListener, GetTypeForIID(aIID), NS_EVENT_BITS_NONE, nsnull, aFlags, sysGroup);
+  RemoveEventListener(aListener, GetTypeForIID(aIID), NS_EVENT_BITS_NONE, nsnull, aFlags, nsnull);
   return NS_OK;
 }
 

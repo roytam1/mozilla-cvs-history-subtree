@@ -3259,13 +3259,14 @@ nsresult nsDocument::HandleDOMEvent(nsIPresContext* aPresContext,
     else {
       aDOMEvent = &domEvent;
     }
-    aEvent->flags = aFlags;
+    aEvent->flags |= aFlags;
     aFlags &= ~(NS_EVENT_FLAG_CANT_BUBBLE | NS_EVENT_FLAG_CANT_CANCEL);
+    aFlags |= NS_EVENT_FLAG_BUBBLE | NS_EVENT_FLAG_CAPTURE;
   }
   
   //Capturing stage
-  if (NS_EVENT_FLAG_BUBBLE != aFlags && nsnull != mScriptGlobalObject) {
-    mScriptGlobalObject->HandleDOMEvent(aPresContext, aEvent, aDOMEvent, NS_EVENT_FLAG_CAPTURE, aEventStatus);
+  if (NS_EVENT_FLAG_CAPTURE & aFlags && nsnull != mScriptGlobalObject) {
+    mScriptGlobalObject->HandleDOMEvent(aPresContext, aEvent, aDOMEvent, aFlags & NS_EVENT_CAPTURE_MASK, aEventStatus);
   }
   
   //Local handling stage
@@ -3277,8 +3278,8 @@ nsresult nsDocument::HandleDOMEvent(nsIPresContext* aPresContext,
   }
 
   //Bubbling stage
-  if (NS_EVENT_FLAG_CAPTURE != aFlags && nsnull != mScriptGlobalObject) {
-    mScriptGlobalObject->HandleDOMEvent(aPresContext, aEvent, aDOMEvent, NS_EVENT_FLAG_BUBBLE, aEventStatus);
+  if (NS_EVENT_FLAG_BUBBLE & aFlags && nsnull != mScriptGlobalObject) {
+    mScriptGlobalObject->HandleDOMEvent(aPresContext, aEvent, aDOMEvent, aFlags & NS_EVENT_BUBBLE_MASK, aEventStatus);
   }
 
   if (NS_EVENT_FLAG_INIT & aFlags) {
