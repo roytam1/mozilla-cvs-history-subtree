@@ -44,6 +44,7 @@ public:
 
   // nsIBufferInputStream methods:
   NS_IMETHOD GetBuffer(nsIBuffer* *result);
+  NS_IMETHOD Search(const char *forString, PRBool ignoreCase, PRBool *found, PRUint32 *offsetSearchedTo);
   NS_IMETHOD Fill(const char* aBuf, PRUint32 aCount, PRUint32 *aWriteCount);
   NS_IMETHOD FillFrom(nsIInputStream *inStr, PRUint32 count, PRUint32 *_retval);
 

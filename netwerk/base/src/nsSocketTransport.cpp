@@ -710,6 +710,7 @@ nsresult nsSocketTransport::doRead(PRInt16 aSelectFlags)
     rv = NS_OK;
   } 
   else if (NS_SUCCEEDED(rv)) {
+    // continue to return WOULD_BLOCK until we've completely finished this read
     rv = NS_BASE_STREAM_WOULD_BLOCK;
   }
 

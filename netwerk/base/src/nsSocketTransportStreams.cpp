@@ -242,6 +242,13 @@ nsSocketTransportStream::GetBuffer(nsIBuffer* *result)
 }
 
 NS_IMETHODIMP
+nsSocketTransportStream::Search(const char *forString, PRBool ignoreCase, PRBool *found, PRUint32 *offsetSearchedTo)
+{
+  return mStream->Search(forString, ignoreCase, found, offsetSearchedTo);
+
+}
+
+NS_IMETHODIMP
 nsSocketTransportStream::FillFrom(nsIInputStream* aStream, 
                                   PRUint32 aCount, 
                                   PRUint32 *aWriteCount)
