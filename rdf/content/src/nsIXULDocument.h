@@ -108,11 +108,6 @@ public:
                                  nsIXULPrototypeDocument* aPrototype,
                                  nsIPrincipal* aPrincipal,
                                  nsIContentViewerContainer* aContainer) = 0;
-
-  /**
-   * Get the prototype document that is associated with this XUL document
-   */
-  NS_IMETHOD GetPrototype(nsIXULPrototypeDocument** aPrototype) = 0;
 };
 
 // factory functions
