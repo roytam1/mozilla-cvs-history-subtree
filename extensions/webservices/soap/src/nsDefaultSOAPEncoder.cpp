@@ -155,6 +155,7 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::MarshallCall(nsISOAPMessage *aMessage, nsISu
   for (PRUint32 i = 0; i < count; i++) {
     next = dont_AddRef(parameters->ElementAt(i));
     param = do_QueryInterface(next);
+    if (!param) return NS_ERROR_FAILURE;
     rv = param->GetType(type);
     if (NS_FAILED(rv)) return rv;
     rv = param->GetHeader(&isHeader);
