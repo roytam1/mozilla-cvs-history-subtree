@@ -53,7 +53,8 @@ ExprResult* txKeyFunctionCall::evaluate(txIEvalContext* aContext)
     if (!aContext || !requireParams(2, 2, aContext))
         return new StringResult(NS_LITERAL_STRING("error"));
 
-    txExecutionState* es = (txExecutionState*)aContext->getPrivateContext();
+    txExecutionState* es =
+        NS_STATIC_CAST(txExecutionState*, aContext->getPrivateContext());
 
     NodeSet* res = new NodeSet;
     if (!res) {

@@ -59,7 +59,8 @@ DocumentFunctionCall::DocumentFunctionCall(const nsAString& aBaseURI)
  */
 ExprResult* DocumentFunctionCall::evaluate(txIEvalContext* aContext)
 {
-    txExecutionState* es = (txExecutionState*)aContext->getPrivateContext();
+    txExecutionState* es =
+        NS_STATIC_CAST(txExecutionState*, aContext->getPrivateContext());
 
     NodeSet* nodeSet = new NodeSet();
     NS_ENSURE_TRUE(nodeSet, nsnull);
