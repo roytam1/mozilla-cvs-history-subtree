@@ -45,11 +45,16 @@ interface nsISVGRendererGlyphMetrics;
 interface nsISVGGlyphGeometrySource : nsISVGGlyphMetricsSource
 {
   readonly attribute nsISVGRendererGlyphMetrics metrics;
+  const unsigned long UPDATEMASK_METRICS       = 0x00040000;
   
   readonly attribute float x; // start position of glyph *before* applying CTM
+  const unsigned long UPDATEMASK_X             = 0x00080000;
   readonly attribute float y;
+  const unsigned long UPDATEMASK_Y             = 0x00100000;
 
   readonly attribute boolean hasHighlight;
+  const unsigned long UPDATEMASK_HAS_HIGHLIGHT = 0x00200000;
   [noscript] void getHighlight(out unsigned long charnum, out unsigned long nchars,
                                out nscolor foreground, out nscolor background);
+  const unsigned long UPDATEMASK_HIGHLIGHT     = 0x00400000;
 };

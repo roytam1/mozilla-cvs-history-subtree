@@ -290,7 +290,7 @@ nsSVGGDIPlusGlyphGeometry::Render(nsISVGRendererCanvas *canvas)
   // make sure that we have constructed our render objects
   if (!mCoveredRegion) {
     nsCOMPtr<nsISVGRendererRegion> region;
-    Update(UPDATEMASK_ALL, getter_AddRefs(region));
+    Update(nsISVGGeometrySource::UPDATEMASK_ALL, getter_AddRefs(region));
   }
 
   PRBool hasFill = PR_FALSE;
@@ -400,22 +400,38 @@ nsSVGGDIPlusGlyphGeometry::Render(nsISVGRendererCanvas *canvas)
 NS_IMETHODIMP
 nsSVGGDIPlusGlyphGeometry::Update(PRUint32 updatemask, nsISVGRendererRegion **_retval)
 {
-  nsCOMPtr<nsISVGRendererRegion> regionBefore = mCoveredRegion;
+  *_retval = nsnull;
+
+  const unsigned long strokemask =
+    nsISVGGlyphMetricsSource::UPDATEMASK_FONT           |
+    nsISVGGlyphMetricsSource::UPDATEMASK_CHARACTER_DATA |
+    nsISVGGlyphGeometrySource::UPDATEMASK_METRICS       |
+    nsISVGGlyphGeometrySource::UPDATEMASK_X             |
+    nsISVGGlyphGeometrySource::UPDATEMASK_Y             |
+    nsISVGGeometrySource::UPDATEMASK_STROKE_PAINT_TYPE  |
+    nsISVGGeometrySource::UPDATEMASK_STROKE_WIDTH       |
+    nsISVGGeometrySource::UPDATEMASK_STROKE_LINECAP     |
+    nsISVGGeometrySource::UPDATEMASK_STROKE_LINEJOIN    |
+    nsISVGGeometrySource::UPDATEMASK_STROKE_MITERLIMIT  |
+    nsISVGGeometrySource::UPDATEMASK_STROKE_DASH_ARRAY  |
+    nsISVGGeometrySource::UPDATEMASK_STROKE_DASHOFFSET  |
+    nsISVGGeometrySource::UPDATEMASK_CTM;
   
-  if ((updatemask & UPDATEMASK_FILL_PAINT) == updatemask) {
-    // force update of regions:
-    mCoveredRegion = nsnull;
-  }
-  else if (updatemask != UPDATEMASK_NOTHING) {
-    // force update of regions:
-    mCoveredRegion = nsnull;
+  const unsigned long regionsmask =
+    nsISVGGlyphGeometrySource::UPDATEMASK_METRICS |
+    nsISVGGlyphGeometrySource::UPDATEMASK_X       |
+    nsISVGGlyphGeometrySource::UPDATEMASK_Y       |
+    nsISVGGeometrySource::UPDATEMASK_CTM;
+
+  
+  nsCOMPtr<nsISVGRendererRegion> regionBefore = mCoveredRegion;
+
+    
+  if ((updatemask & strokemask)!=0) {
     UpdateStroke();
   }
 
-  if (!mCoveredRegion) {
-    // either the coveredRegion might have changed or this is the
-    // first update.
-    
+  if ((updatemask & regionsmask)!=0) {
     UpdateRegions();
     if (regionBefore) {
       regionBefore->Combine(mCoveredRegion, _retval);
@@ -425,8 +441,8 @@ nsSVGGDIPlusGlyphGeometry::Update(PRUint32 updatemask, nsISVGRendererRegion **_r
       NS_IF_ADDREF(*_retval);
     }
   }
-  else {
-    // region hasn't changed
+  else if (updatemask != nsISVGGeometrySource::UPDATEMASK_NOTHING) {
+    // region hasn't changed, but something has. so invalidate whole area:
     *_retval = mCoveredRegion;
     NS_IF_ADDREF(*_retval);
   }    

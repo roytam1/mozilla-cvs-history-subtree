@@ -122,7 +122,7 @@ nsSVGPathFrame::DidModifySVGObservable(nsISVGValue* observable)
 {
   nsCOMPtr<nsIDOMSVGPathSegList> l = do_QueryInterface(observable);
   if (l && mSegments==l) {
-    UpdateGraphic(nsISVGRendererPathGeometry::UPDATEMASK_GEOMETRY_DATA);
+    UpdateGraphic(nsISVGPathGeometrySource::UPDATEMASK_PATH);
     return NS_OK;
   }
   // else

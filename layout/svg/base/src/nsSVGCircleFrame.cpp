@@ -156,7 +156,7 @@ nsSVGCircleFrame::DidModifySVGObservable(nsISVGValue* observable)
 {
   nsCOMPtr<nsIDOMSVGLength> l = do_QueryInterface(observable);
   if (l && (mCx==l || mCy==l || mR==l)) {
-    UpdateGraphic(nsISVGRendererPathGeometry::UPDATEMASK_GEOMETRY_DATA);
+    UpdateGraphic(nsISVGPathGeometrySource::UPDATEMASK_PATH);
     return NS_OK;
   }
   // else

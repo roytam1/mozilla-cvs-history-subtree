@@ -46,20 +46,6 @@ interface nsISVGRendererCanvas;
 interface nsISVGRendererGlyphGeometry : nsISupports
 {
   void render(in nsISVGRendererCanvas canvas);
-
-  // updatemask codes:
-  const unsigned long UPDATEMASK_NOTHING         = 0x00000000;
-  const unsigned long UPDATEMASK_CTM             = 0x00000001;
-  const unsigned long UPDATEMASK_RENDER_TYPE     = 0x00000008;
-  const unsigned long UPDATEMASK_STROKE_PAINT    = 0x00000010;
-  const unsigned long UPDATEMASK_FILL_PAINT      = 0x00000020;
-  const unsigned long UPDATEMASK_CHARACTER_DATA  = 0x00000040;
-  const unsigned long UPDATEMASK_FONT            = 0x00000080;
-  const unsigned long UPDATEMASK_POSITIONING     = 0x00000100;
-  const unsigned long UPDATEMASK_METRICS         = 0x00000200;
-  const unsigned long UPDATEMASK_HIGHLIGHT       = 0x00000400;
-  const unsigned long UPDATEMASK_ALL             = 0xFFFFFFFF;
-
   nsISVGRendererRegion update(in unsigned long updatemask);
   nsISVGRendererRegion getCoveredRegion();
   boolean containsPoint(in float x, in float y);

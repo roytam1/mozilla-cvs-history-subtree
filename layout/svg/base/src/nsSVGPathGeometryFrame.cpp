@@ -140,7 +140,7 @@ nsSVGPathGeometryFrame::DidSetStyleContext(nsIPresContext* aPresContext)
   // style_hints don't map very well onto svg. Here seems to be the
   // best place to deal with style changes:
 
-  UpdateGraphic(nsISVGRendererPathGeometry::UPDATEMASK_ALL);
+  UpdateGraphic(nsISVGGeometrySource::UPDATEMASK_ALL);
 
   return NS_OK;
 }
@@ -186,7 +186,7 @@ nsSVGPathGeometryFrame::GetCoveredRegion()
 NS_IMETHODIMP
 nsSVGPathGeometryFrame::InitialUpdate()
 {
-  UpdateGraphic(nsISVGRendererPathGeometry::UPDATEMASK_ALL);
+  UpdateGraphic(nsISVGGeometrySource::UPDATEMASK_ALL);
 
   return NS_OK;
 }
@@ -194,7 +194,7 @@ nsSVGPathGeometryFrame::InitialUpdate()
 NS_IMETHODIMP
 nsSVGPathGeometryFrame::NotifyCTMChanged()
 {
-  UpdateGraphic(nsISVGRendererPathGeometry::UPDATEMASK_CTM);
+  UpdateGraphic(nsISVGGeometrySource::UPDATEMASK_CTM);
   
   return NS_OK;
 }
@@ -245,7 +245,7 @@ nsSVGPathGeometryFrame::DidModifySVGObservable (nsISVGValue* observable)
   // the observables we're listening in on affect the ctm by
   // default. We can specialize in the subclasses when needed.
   
-  UpdateGraphic(nsISVGRendererPathGeometry::UPDATEMASK_CTM);
+  UpdateGraphic(nsISVGGeometrySource::UPDATEMASK_CTM);
   
   return NS_OK;
 }

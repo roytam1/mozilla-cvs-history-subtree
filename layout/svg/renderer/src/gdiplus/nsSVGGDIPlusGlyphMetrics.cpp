@@ -308,12 +308,12 @@ nsSVGGDIPlusGlyphMetrics::Update(PRUint32 updatemask, PRBool *_retval)
 {
   *_retval = PR_FALSE;
   
-  if (updatemask & UPDATEMASK_CHARACTER_DATA) {
+  if (updatemask & nsISVGGlyphMetricsSource::UPDATEMASK_CHARACTER_DATA) {
     MarkRectForUpdate();
     *_retval = PR_TRUE;
   }
 
-  if (updatemask & UPDATEMASK_FONT) {
+  if (updatemask & nsISVGGlyphMetricsSource::UPDATEMASK_FONT) {
     ClearFontInfo();
     MarkRectForUpdate();
     *_retval = PR_TRUE;

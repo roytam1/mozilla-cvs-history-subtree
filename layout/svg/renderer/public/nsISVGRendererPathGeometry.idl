@@ -46,18 +46,6 @@ interface nsISVGRendererPathGeometry : nsISupports
 {
   void render(in nsISVGRendererCanvas canvas);
   
-  // updatemask codes:
-  const unsigned long UPDATEMASK_NOTHING         = 0x00000000;
-  const unsigned long UPDATEMASK_CTM             = 0x00000001;
-  const unsigned long UPDATEMASK_STROKE_STYLE    = 0x00000002;
-  const unsigned long UPDATEMASK_FILL_STYLE      = 0x00000004;
-  const unsigned long UPDATEMASK_RENDER_TYPE     = 0x00000008;
-  const unsigned long UPDATEMASK_STROKE_PAINT    = 0x00000010;
-  const unsigned long UPDATEMASK_FILL_PAINT      = 0x00000020;
-  const unsigned long UPDATEMASK_GEOMETRY_DATA   = 0x00000040;
-  const unsigned long UPDATEMASK_HITTEST_MASK    = 0x00000080;
-  const unsigned long UPDATEMASK_ALL             = 0xFFFFFFFF;
-  
   nsISVGRendererRegion update(in unsigned long updatemask);
   nsISVGRendererRegion getCoveredRegion();
 

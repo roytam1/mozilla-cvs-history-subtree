@@ -50,20 +50,29 @@ interface nsIPresContext;
 [scriptable, uuid(d65a8784-5382-4b68-848d-0a91cd096937)]
 interface nsISVGGeometrySource : nsISupports
 {
+  const unsigned long UPDATEMASK_NOTHING           = 0x00000000;
+  const unsigned long UPDATEMASK_ALL               = 0xFFFFFFFF;
+  
   /* **** presentation context information ************************* */
   [noscript] readonly attribute nsIPresContext presContext;
+  const unsigned long UPDATEMASK_PRES_CONTEXT      = 0x00000001;
   
   /* **** current transform matrix ********************************* */
   readonly attribute nsIDOMSVGMatrix CTM;
-
+  const unsigned long UPDATEMASK_CTM               = 0x00000002;
+  
   /* **** stroke style ********************************************* */
   readonly attribute float strokeOpacity;
+  const unsigned long UPDATEMASK_STROKE_OPACITY    = 0x00000004;
   readonly attribute float strokeWidth;
+  const unsigned long UPDATEMASK_STROKE_WIDTH      = 0x00000008;
   
   void getStrokeDashArray([array, size_is(count)] out float arr,
                           out unsigned long count);
-  
+  const unsigned long UPDATEMASK_STROKE_DASH_ARRAY = 0x00000010;
+
   readonly attribute float strokeDashoffset;
+  const unsigned long UPDATEMASK_STROKE_DASHOFFSET = 0x00000020;
 
   /* enums for linecap */
   const unsigned short STROKE_LINECAP_BUTT   = 0;
@@ -71,6 +80,7 @@ interface nsISVGGeometrySource : nsISupports
   const unsigned short STROKE_LINECAP_SQUARE = 2;
 
   readonly attribute unsigned short strokeLinecap;
+  const unsigned long UPDATEMASK_STROKE_LINECAP    = 0x00000040;
 
   /* enums for linejoin */
   const unsigned short STROKE_LINEJOIN_MITER = 0;
@@ -78,17 +88,21 @@ interface nsISVGGeometrySource : nsISupports
   const unsigned short STROKE_LINEJOIN_BEVEL = 2;
 
   readonly attribute unsigned short strokeLinejoin;
+  const unsigned long UPDATEMASK_STROKE_LINEJOIN   = 0x00000080;
 
   readonly attribute float strokeMiterlimit;
-  
+  const unsigned long UPDATEMASK_STROKE_MITERLIMIT = 0x00000100;
+
   /* **** fill style *********************************************** */
   readonly attribute float fillOpacity;
+  const unsigned long UPDATEMASK_FILL_OPACITY      = 0x00000200;
 
   /* enums for fillrule */
   const unsigned short FILL_RULE_NONZERO = 0;
   const unsigned short FILL_RULE_EVENODD = 1;
   
   readonly attribute unsigned short fillRule;
+  const unsigned long UPDATEMASK_FILL_RULE         = 0x00000400;
   
   /* paint type enums for stroke and fill */
   const unsigned short PAINT_TYPE_NONE        = 0;
@@ -97,11 +111,16 @@ interface nsISVGGeometrySource : nsISupports
   
   /* **** stroke paint XXX needs consolidation ********************* */  
   readonly attribute unsigned short strokePaintType; 
+  const unsigned long UPDATEMASK_STROKE_PAINT_TYPE = 0x00000800;
+
   [noscript] readonly attribute nscolor strokePaint; 
+  const unsigned long UPDATEMASK_STROKE_PAINT      = 0x00001000;
 
   /* **** fill paint XXX needs consolidation *********************** */
   readonly attribute unsigned short fillPaintType; 
+  const unsigned long UPDATEMASK_FILL_PAINT_TYPE   = 0x00002000;
+
   [noscript] readonly attribute nscolor fillPaint; 
-  
+  const unsigned long UPDATEMASK_FILL_PAINT        = 0x00004000;  
 };
 

@@ -116,7 +116,7 @@ nsSVGPolygonFrame::DidModifySVGObservable(nsISVGValue* observable)
 {
   nsCOMPtr<nsIDOMSVGPointList> l = do_QueryInterface(observable);
   if (l && mPoints==l) {
-    UpdateGraphic(nsISVGRendererPathGeometry::UPDATEMASK_GEOMETRY_DATA);
+    UpdateGraphic(nsISVGPathGeometrySource::UPDATEMASK_PATH);
     return NS_OK;
   }
   // else

@@ -397,61 +397,55 @@ NS_IMETHODIMP
 nsSVGGDIPlusPathGeometry::Update(PRUint32 updatemask, nsISVGRendererRegion **_retval)
 {
   *_retval = nsnull;
-#ifdef DEBUG
-  //printf("nsSVGGDIPlusPathGeometry::Update %p\n", this);
-#endif
+
+  const unsigned long pathmask =
+    nsISVGGeometrySource::UPDATEMASK_FILL_RULE |
+    nsISVGPathGeometrySource::UPDATEMASK_PATH;
+
+  const unsigned long fillmask = 
+    pathmask |
+    nsISVGGeometrySource::UPDATEMASK_CTM;
+
+  const unsigned long strokemask =
+    pathmask |
+    nsISVGGeometrySource::UPDATEMASK_STROKE_WIDTH       |
+    nsISVGGeometrySource::UPDATEMASK_STROKE_LINECAP     |
+    nsISVGGeometrySource::UPDATEMASK_STROKE_LINEJOIN    |
+    nsISVGGeometrySource::UPDATEMASK_STROKE_MITERLIMIT  |
+    nsISVGGeometrySource::UPDATEMASK_STROKE_DASH_ARRAY  |
+    nsISVGGeometrySource::UPDATEMASK_STROKE_DASHOFFSET  |
+    nsISVGGeometrySource::UPDATEMASK_CTM;
+
+  const unsigned long hittestregionmask =
+    fillmask                                            |
+    strokemask                                          |
+    nsISVGPathGeometrySource::UPDATEMASK_HITTEST_MASK;
+
+  const unsigned long coveredregionmask =
+    fillmask                                            |
+    strokemask                                          |
+    nsISVGGeometrySource::UPDATEMASK_FILL_PAINT_TYPE    |
+    nsISVGGeometrySource::UPDATEMASK_STROKE_PAINT_TYPE;
+  
   nsCOMPtr<nsISVGRendererRegion> before;
   GetCoveredRegion(getter_AddRefs(before));
 
-  
-  if (updatemask & UPDATEMASK_GEOMETRY_DATA) {
+  if ((updatemask & pathmask)!=0)
     ClearPath();
+  if ((updatemask & fillmask)!=0)
     ClearFill();
+  if ((updatemask & strokemask)!=0)
     ClearStroke();
+  if ((updatemask & hittestregionmask)!=0)
+    ClearHitTestRegion();
+  if ((updatemask & coveredregionmask)!=0) {
     ClearCoveredRegion();
-    ClearHitTestRegion();
-    goto finished;
+    nsCOMPtr<nsISVGRendererRegion> after;
+    GetCoveredRegion(getter_AddRefs(after));
+    if (after)
+      after->Combine(before, _retval);
   }
-  
-  if (updatemask & UPDATEMASK_CTM) {
-    // retain path
-    ClearFill();
-    ClearStroke();
-    ClearCoveredRegion();
-    ClearHitTestRegion();
-    goto finished;
-  }
-
-  if (updatemask & UPDATEMASK_STROKE_STYLE) {
-    ClearStroke();
-    ClearCoveredRegion();
-    ClearHitTestRegion();
-  }
-
-  if (updatemask & UPDATEMASK_FILL_STYLE) {
-    ClearFill();
-    ClearCoveredRegion();
-    ClearHitTestRegion();
-  }
-
-  if (updatemask & UPDATEMASK_HITTEST_MASK) {
-    ClearHitTestRegion();
-  }
-  
-  if (updatemask & UPDATEMASK_FILL_PAINT) {
-    // XXX suboptimal
-  }
-
-  if (updatemask & UPDATEMASK_STROKE_PAINT) {
-    // XXX suboptimal
-  }
-
-  finished:
-  nsCOMPtr<nsISVGRendererRegion> after;
-  GetCoveredRegion(getter_AddRefs(after));
-  if (after)
-    after->Combine(before, _retval);
-  else {
+  else if (updatemask != nsISVGGeometrySource::UPDATEMASK_NOTHING) {
     *_retval = before;
     NS_IF_ADDREF(*_retval);
   }

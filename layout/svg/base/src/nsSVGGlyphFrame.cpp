@@ -257,8 +257,8 @@ nsSVGGlyphFrame::ContentChanged(nsIPresContext* aPresContext,
   
   outerSVGFrame->SuspendRedraw();
   UpdateFragmentTree();
-  UpdateMetrics(nsISVGRendererGlyphMetrics::UPDATEMASK_ALL);
-  UpdateGeometry(nsISVGRendererGlyphGeometry::UPDATEMASK_ALL);
+  UpdateMetrics(nsISVGGeometrySource::UPDATEMASK_ALL);
+  UpdateGeometry(nsISVGGeometrySource::UPDATEMASK_ALL);
   outerSVGFrame->UnsuspendRedraw();
 
   return NS_OK;
@@ -290,7 +290,9 @@ nsSVGGlyphFrame::SetSelected(nsIPresContext* aPresContext,
     frameState &= ~NS_FRAME_SELECTED_CONTENT;
   SetFrameState(frameState);
 
-  UpdateGeometry(nsISVGRendererGlyphGeometry::UPDATEMASK_HIGHLIGHT, PR_FALSE);  
+  UpdateGeometry(nsISVGGlyphGeometrySource::UPDATEMASK_HIGHLIGHT |
+                 nsISVGGlyphGeometrySource::UPDATEMASK_HAS_HIGHLIGHT,
+                 PR_FALSE);  
 
   return NS_OK;
 }
@@ -365,8 +367,8 @@ nsSVGGlyphFrame::InitialUpdate()
   
   outerSVGFrame->SuspendRedraw();
   UpdateFragmentTree();
-  UpdateMetrics(nsISVGRendererGlyphMetrics::UPDATEMASK_ALL);
-  UpdateGeometry(nsISVGRendererGlyphGeometry::UPDATEMASK_ALL);
+  UpdateMetrics(nsISVGGeometrySource::UPDATEMASK_ALL);
+  UpdateGeometry(nsISVGGeometrySource::UPDATEMASK_ALL);
   outerSVGFrame->UnsuspendRedraw();
   
   return NS_OK;
@@ -375,7 +377,7 @@ nsSVGGlyphFrame::InitialUpdate()
 NS_IMETHODIMP
 nsSVGGlyphFrame::NotifyCTMChanged()
 {
-  UpdateGeometry(nsISVGRendererGlyphGeometry::UPDATEMASK_CTM);
+  UpdateGeometry(nsISVGGeometrySource::UPDATEMASK_CTM);
   
   return NS_OK;
 }
@@ -839,7 +841,8 @@ nsSVGGlyphFrame::SetGlyphPosition(float x, float y)
 {
   mX = x;
   mY = y;
-  UpdateGeometry(nsISVGRendererGlyphGeometry::UPDATEMASK_POSITIONING);
+  UpdateGeometry(nsISVGGlyphGeometrySource::UPDATEMASK_X |
+                 nsISVGGlyphGeometrySource::UPDATEMASK_Y);
 }
 
 NS_IMETHODIMP_(float)
@@ -959,7 +962,7 @@ nsSVGGlyphFrame::NotifyMetricsUnsuspended()
     PRBool metricsDirty;
     mMetrics->Update(mMetricsUpdateFlags, &metricsDirty);
     if (metricsDirty) {
-      mGeometryUpdateFlags |= nsISVGRendererGlyphGeometry::UPDATEMASK_METRICS;
+      mGeometryUpdateFlags |= nsISVGGlyphGeometrySource::UPDATEMASK_METRICS;
       nsISVGTextFrame* text_frame = GetTextFrame();
       NS_ASSERTION(text_frame, "null text frame");
       if (text_frame)
@@ -1031,7 +1034,7 @@ void nsSVGGlyphFrame::UpdateMetrics(PRUint32 flags)
     PRBool metricsDirty;
     mMetrics->Update(mMetricsUpdateFlags, &metricsDirty);
     if (metricsDirty) {
-      mGeometryUpdateFlags |= nsISVGRendererGlyphGeometry::UPDATEMASK_METRICS;
+      mGeometryUpdateFlags |= nsISVGGlyphGeometrySource::UPDATEMASK_METRICS;
       text_frame->NotifyGlyphMetricsChange(this);
     }
     mMetricsUpdateFlags = 0;

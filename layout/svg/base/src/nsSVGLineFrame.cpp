@@ -169,7 +169,7 @@ nsSVGLineFrame::DidModifySVGObservable(nsISVGValue* observable)
 {
   nsCOMPtr<nsIDOMSVGLength> l = do_QueryInterface(observable);
   if (l && (mX1==l || mY1==l || mX2==l || mY2==l)) {
-    UpdateGraphic(nsISVGRendererPathGeometry::UPDATEMASK_GEOMETRY_DATA);
+    UpdateGraphic(nsISVGPathGeometrySource::UPDATEMASK_PATH);
     return NS_OK;
   }
   // else

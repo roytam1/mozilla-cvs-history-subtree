@@ -48,7 +48,10 @@ native nsFont(nsFont);
 interface nsISVGGlyphMetricsSource : nsISVGGeometrySource
 {
   [noscript] readonly attribute nsFont font;
+  const unsigned long UPDATEMASK_FONT            = 0x00008000;
+  
   readonly attribute DOMString characterData;
+  const unsigned long UPDATEMASK_CHARACTER_DATA  = 0x00010000;
 
   /* enums for textRendering */
   const unsigned short TEXT_RENDERING_AUTO               = 0;
@@ -57,4 +60,5 @@ interface nsISVGGlyphMetricsSource : nsISVGGeometrySource
   const unsigned short TEXT_RENDERING_GEOMETRICPRECISION = 3;
 
   readonly attribute unsigned short textRendering;
+  const unsigned long UPDATEMASK_TEXT_RENDERING  = 0x00020000;
 };

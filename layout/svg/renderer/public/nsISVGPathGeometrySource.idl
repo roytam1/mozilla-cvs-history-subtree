@@ -44,11 +44,13 @@ interface nsISVGRendererPathBuilder;
 interface nsISVGPathGeometrySource : nsISVGGeometrySource
 { 
   void constructPath(in nsISVGRendererPathBuilder pathBuilder);
+  const unsigned long UPDATEMASK_PATH         = 0x00008000;
 
   // hittest mask codes:
   const unsigned short HITTEST_MASK_FILL   = 0x0001;
   const unsigned short HITTEST_MASK_STROKE = 0x0002;
 
   readonly attribute unsigned short hittestMask;
+  const unsigned long UPDATEMASK_HITTEST_MASK = 0x00010000;
 };
 
