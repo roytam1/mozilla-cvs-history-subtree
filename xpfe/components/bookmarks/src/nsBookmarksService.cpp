@@ -3292,7 +3292,13 @@ nsBookmarksService::ImportSystemBookmarks(nsIRDFResource* aParentFolder)
   nsCOMPtr<nsIFile> favoritesDirectory;
   fileLocator->Get("Favs", NS_GET_IID(nsIFile), getter_AddRefs(favoritesDirectory));
 
+  // If |favoritesDirectory| is null, it means that we're on a Windows 
+  // platform that does not have a Favorites folder, e.g. Windows 95 
+  // (early SRs, before IE integrated with the shell). Only try to 
+  // read Favorites folder if it exists on the machine. 
+  if (favoritesDirectory) 
   return ParseFavoritesFolder(favoritesDirectory, aParentFolder);
+
 #elif XP_MAC
   nsSpecialSystemDirectory ieFavoritesFile(nsSpecialSystemDirectory::Mac_PreferencesDirectory);
   ieFavoritesFile += "Explorer";
@@ -3305,9 +3311,8 @@ nsBookmarksService::ImportSystemBookmarks(nsIRDFResource* aParentFolder)
   EndUpdateBatch(this);
 
   return NS_OK;
-#else
-  return NS_OK;
 #endif
+  return NS_OK;
 }
 
 #if defined(XP_WIN) || defined(XP_MAC)
