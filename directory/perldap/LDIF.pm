@@ -22,7 +22,7 @@
 
 package Mozilla::LDAP::LDIF;
 
-use vars qw($VERSION); $VERSION = "0.08";
+use vars qw($VERSION); $VERSION = "0.09";
 
 require Exporter;
 @ISA       = qw(Exporter);
@@ -85,25 +85,26 @@ sub _to_LDIF_records # \@_ $funcname $wantarray
 
 sub _continue_lines
 {
-    my ($max_line, $from) = @_;
-    # If $from contains '\n' bytes, they will be lost; that is, an LDIF
+    my ($sep, $max_line, $from) = @_;
+    # If $from contains $sep bytes, they will be lost; that is, an LDIF
     # parser will not reconstruct them from the output.  But the remaining
     # characters are preserved, and the output is fairly legible, with an
-    # LDIF continuation line break in place of each '\n' in $from.
+    # LDIF continuation line break in place of each $sep in $from.
     # This is useful for a person trying to read the value.
 
     my ($into) = "";
-    foreach my $line (split /\n/, $from, -1) {
+    my $qsep = quotemeta $sep;
+    foreach my $line (split /$qsep/, $from, -1) {
 	$line = " $line" if length $into; # continuation of previous line
 	if (defined $max_line) {
 	    while ($max_line < length $line) {
 		my $chunk;
 		($chunk, $line) = unpack ("a${max_line}a*", $line);
-		$into .= "$chunk\n";
+		$into .= "$chunk$sep";
 		$line = " $line";
 	    }
 	}
-	$into .= "$line\n";
+	$into .= "$line$sep";
     }
     return $into;
 }
@@ -111,11 +112,31 @@ sub _continue_lines
 #############################################################################
 # unpack/pack
 
+use vars qw($SEP); $SEP = "\015\012|\012"; # LDIF standard ( CR LF | LF )
+# Input lines may be separated by $SEP or $/.
+# The latter is not standard, but useful.
+# Maintainers note: the order of alternatives is significant;
+# in particular, "\012|\015\012" would be wrong.
+
 sub unpack_LDIF
 {
     my ($str, $read_ref, $option) = @_;
-    $str =~ s"\r$/"$/"g # SEP = ( CR LF | LF )
-			unless ($/ eq "\r"); # Macintosh
+    { # Change $SEP to $/:
+	my $irs = $/; # Input Record Separator
+	if (($irs =~ /^($SEP)$/) or (not $irs =~ /$SEP/)) {
+	    $str =~ s/$SEP/$irs/g;
+	} else { # $SEP matches a proper substring of $/
+	    $str =~ s/$irs|$SEP/$irs/g;
+	}
+	$str =~ s/^($SEP)*//; # ignore leading empty lines
+	# This also handles CRLF when $/ eq CR; in that case,
+	# the final LF of each record is read together with
+	# the beginning of the next record.  For example,
+	# the input stream "a: i\015\012\015\012a: j"
+	# is handled (in consecutive calls to get_LDIF) as:
+	# unpack_LDIF("a: i\015\012\015");
+	# unpack_LDIF("\012a: j");
+    }
     $str =~ s"$/ ""g; # combine continuation lines
     $str =~ s"^#.*($/|$)""gm # ignore comments
 	unless ((defined $option) and ("comments" eq lc $option));
@@ -144,17 +165,25 @@ sub unpack_LDIF
     return @record;
 }
 
+sub output_separator
+{
+    return "\015\012" if "\n" =~ /\015/;
+    return "\012";
+}
+
 use vars qw($_std_encode); $_std_encode = '^[:< ]|[^ -\x7E]';
 
 sub pack_LDIF
 {
     my $max_line = shift;
     my $encode = undef;
+    my $sep = "\n";
     if ((ref $max_line) eq "ARRAY") {
 	my @options = @$max_line; $max_line = undef;
 	while (@options) {
 	    my ($option, $value) = splice @options, 0, 2;
 	    if      ("max_line" eq lc $option) { $max_line = $value;
+	    } elsif ("sep"      eq lc $option) { $sep      = $value;
 	    } elsif ("encode"   eq lc $option) {
 		$encode = ($value eq $_std_encode) ? undef : $value;
 	    }
@@ -164,12 +193,12 @@ sub pack_LDIF
     my $str = "";
     foreach my $record (_to_LDIF_records \@_) {
 	my @record = @$record;
-	$str .= "\n" if length $str; # blank line between records
+	$str .= $sep if length $str; # blank line between records
 	while (@record) {
 	    my ($attr, $val) = splice @record, 0, 2;
 	    foreach $val (((ref $val) eq "ARRAY") ? @$val : $val) {
 		if (not defined $val) {
-		    $str .= _continue_lines ($max_line, $attr);
+		    $str .= _continue_lines ($sep, $max_line, $attr);
 		} else {
 		    my $value;
 		    if (ref $val) {
@@ -183,7 +212,7 @@ sub pack_LDIF
 		    } else {
 			$value = " $val";
 		    }
-		    $str .= _continue_lines ($max_line, "$attr:$value");
+		    $str .= _continue_lines ($sep, $max_line, "$attr:$value");
 		}
 	    }
 	}
@@ -198,6 +227,7 @@ sub get_LDIF
 {
     my ($fh, $eof, @options) = @_;
     $fh = *STDIN unless defined $fh;
+    my $empty_line = ($/ =~ /^($SEP)$/) ? "($SEP)($SEP)" : "($/|$SEP)($/|$SEP)"; 
     my (@record, $localEOF);
 
     $eof = (@_ > 1) ? \$_[$[+1] : \$localEOF;
@@ -212,10 +242,8 @@ sub get_LDIF
 	    $str .= $line;
 	    if (not chomp $line) {
 		$$eof = 1; last; # EOF from a terminal
-	    } elsif (($line eq "")
-		 or (($line eq "\r")
-		    and ($/ ne "\r"))) {
-	        last;            # empty line
+	    } elsif ($str =~ /$empty_line/) {
+	        last;            # end of record
 	    }
 	}
 	@record = unpack_LDIF ($str, @options);
@@ -227,10 +255,15 @@ sub put_LDIF
 {
     my $fh = shift;
     my $options = shift;
+    my $sep = "\n";
+    if ((ref $options) eq "ARRAY") {
+	next_attribute ($options, undef, type => '"sep" eq lc $_',
+			value => sub {$sep = $_; return 0;});
+    }
     $fh = select() unless defined $fh;
     foreach my $record (_to_LDIF_records \@_) {
 	no strict qw(refs); # $fh might be a string
-	print $fh (pack_LDIF ($options, $record), "\n");
+	print $fh (pack_LDIF ($options, $record), $sep);
     }
 }
 
@@ -999,15 +1032,14 @@ Default: 0 (output is not broken into continuation lines).
 =item C<encode =E<gt>>I< pattern>
 
 Base64 encode output values that match I<pattern>.
-Warning: As a rule, your I<pattern> should match any value that contains '\n'.
+Warning: As a rule, your I<pattern> should match any value that contains
+an output line separator (see the SEP option, below).
 If any such value is not Base64 encoded, it will be output in a form
-that does not represent the '\n' bytes in LDIF form.
+that does not represent the separator bytes in LDIF form.
 That is, if the output is parsed as LDIF, the resulting value will be
-like the original value, except the '\n' bytes will be removed.
+like the original value, except the separator bytes will be removed.
 
 Default: C<"^[:E<lt> ]|[^ -\x7E]">
-
-=back
 
 For example:
 
@@ -1020,6 +1052,20 @@ Such a string may be easier to view or edit than standard LDIF,
 although it's more prone to be garbled when sent in email
 or processed by software designed for ASCII.
 It can be parsed without loss of information (by unpack_LDIF).
+
+=item C<sep =E<gt>>I< string>
+
+Output I<string> at the end of each line.
+
+Default: C<"\n"> (the usual line separator, for output text).
+
+=back
+
+=item B<output_separator> ()
+
+Return the standard LDIF line separator most similar to "\n".
+The output option C<[sep =E<gt> output_separator()]> is recommended,
+B<if> you want to produce standard LDIF output.
 
 =back
 
@@ -1204,11 +1250,43 @@ to pass it only a single record.
         last if $eof;
     }
 
+=head1 BUGS
+
+=over 4
+
+=item Output Line Separator
+
+Output lines are separated by "\n", by default.
+Although this works well in many cases, it is not standard LDIF
+unless "\n" is "\012" or "\015\012".
+It is not, on some platforms (Macintosh, for example).
+To get standard output, use the output option
+C<[sep =E<gt> Mozilla::LDAP::LDIF::output_separator()]>.
+
+=item Input Line Separator
+
+This package may fail to read standard LDIF correctly,
+if the input record separator is not LF.
+To avoid this bug, set $/ = "\012".
+Other values of $/ work less well:
+CR ($/ eq "\015") handles input separated by CR or CR LF, but not LF alone;
+and
+CR LF ($/ eq "\015\012") handles input separated by CR LF, but not LF alone.
+
+This bug arises when handling standard LDIF received 'raw' via the Internet
+(via HTTP, for example).
+There's no problem with an input file that has been converted (as generic text)
+from standard Internet line separators to $/ (that is, the usual line separator
+for the local platform).
+
+=back
+
 =head1 AUTHOR
 
 John Kristian <kristian@netscape.com>
 
-Thanks to Leif Hedstrom, from whose code I took ideas.
+Thanks to Leif Hedstrom, from whose code I took ideas;
+and to the users who took the trouble to correct my mistakes.
 But I accept all blame.
 
 =head1 SEE ALSO
