@@ -32,7 +32,7 @@ void handle_size_allocate(GtkWidget *w, GtkAllocation *alloc, gpointer p);
 gint handle_expose_event(GtkWidget *w, GdkEventExpose *event, gpointer p);
 
 void
-handle_xlib_expose_event(GdkSuperWin *superwin, XEvent *event, gpointer p);
+handle_xlib_event(GdkSuperWin *superwin, XEvent *event, gpointer p);
 
 #ifdef USE_XIM
 gint handle_key_release_event_for_text(GtkWidget *w, GdkEventKey* event, gpointer p);
