@@ -82,6 +82,7 @@ var key = {
  "?ssl_prefs":  "chrome://help/locale/ssl_help.html#ssl_first",
  "?validation_prefs":  "chrome://help/locale/validation_help.html",
  "?passwords_prefs":  "chrome://help/locale/passwords_help.html",
+ "?passwords_master":  "chrome://help/locale/passwords_help.html#Master_Password_Timeout",
  "?forms_prefs":  "chrome://help/locale/using_priv_help.html#using_forms",  
  "?cookies_prefs": "chrome://help/locale/using_priv_help.html#using_cookies",
  "?images_prefs": "chrome://help/locale/using_priv_help.html#using_images",
