@@ -676,7 +676,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                 break;
             case PushScopeOp:
                 {
-                    JSObject *s = *((JSFunction **)pc);
+//                    JSObject *s = *((JSFunction **)pc);
                     pc += sizeof(JSFunction *);
                 }
                 break;
@@ -782,6 +782,8 @@ void ScopeChain::collectNames(StmtNode *p)
             }
         }
         break;
+    default:
+        NOT_REACHED("Implement me");
     }
 }
 
@@ -859,7 +861,7 @@ void Context::buildRuntimeForStmt(StmtNode *p)
         {
             VariableStmtNode *vs = static_cast<VariableStmtNode *>(p);
             VariableBinding *v = vs->bindings;
-            bool isStatic = hasAttribute(vs->attributes, Token::Static);
+//            bool isStatic = hasAttribute(vs->attributes, Token::Static);
             while (v)  {
                 Property &prop = PROPERTY(v->prop);
                 if (v->name && (v->name->getKind() == ExprNode::identifier)) {
@@ -972,6 +974,8 @@ void Context::buildRuntimeForStmt(StmtNode *p)
             mScopeChain.popScope();
         }        
         break;
+    default:
+        NOT_REACHED("Implement me");
     }
 
 }

@@ -58,14 +58,13 @@ Activation::Activation(JSValue *locals, uint32 argBase, uint8 *pc, ByteCodeModul
     memcpy(mLocals, locals, sizeof(JSValue) * mModule->mLocalsCount);
 }
 
-// XXX don't seem to need 'hasBase' anywhere?
-void AccessorReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
+void AccessorReference::emitCodeSequence(ByteCodeGen *bcg) 
 { 
     bcg->addByte(InvokeOp); 
     bcg->addPointer(mFunction);
 }
 
-void LocalVarReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
+void LocalVarReference::emitCodeSequence(ByteCodeGen *bcg) 
 {
     if (mAccess == Read)
         bcg->addByte(GetLocalVarOp);
@@ -74,7 +73,7 @@ void LocalVarReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase)
     bcg->addLong(mIndex); 
 }
 
-void ParameterReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
+void ParameterReference::emitCodeSequence(ByteCodeGen *bcg) 
 {
     if (mAccess == Read)
         bcg->addByte(GetArgOp);
@@ -83,7 +82,7 @@ void ParameterReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase)
     bcg->addLong(mIndex); 
 }
 
-void ClosureVarReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
+void ClosureVarReference::emitCodeSequence(ByteCodeGen *bcg) 
 {
     if (mAccess == Read)
         bcg->addByte(GetClosureVarOp);
@@ -104,7 +103,7 @@ void FieldReference::emitImplicitLoad(ByteCodeGen *bcg)
     bcg->addByte(LoadThisOp);
 }
 
-void FieldReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
+void FieldReference::emitCodeSequence(ByteCodeGen *bcg) 
 {
     if (mAccess == Read)
         bcg->addByte(GetFieldOp);
@@ -113,7 +112,7 @@ void FieldReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase)
     bcg->addLong(mIndex); 
 }
 
-void StaticFieldReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
+void StaticFieldReference::emitCodeSequence(ByteCodeGen *bcg) 
 {
     if (mAccess == Read)
         bcg->addByte(GetStaticFieldOp);
@@ -122,19 +121,19 @@ void StaticFieldReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase)
     bcg->addLong(mIndex); 
 }
 
-void MethodReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
+void MethodReference::emitCodeSequence(ByteCodeGen *bcg) 
 {
     bcg->addByte(GetMethodOp);
     bcg->addLong(mIndex); 
 }
 
-void StaticFunctionReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
+void StaticFunctionReference::emitCodeSequence(ByteCodeGen *bcg) 
 {
     bcg->addByte(GetStaticMethodOp);
     bcg->addLong(mIndex); 
 }
 
-void GetterMethodReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
+void GetterMethodReference::emitCodeSequence(ByteCodeGen *bcg) 
 {
     bcg->addByte(GetMethodOp);
     bcg->addLong(mIndex); 
@@ -148,25 +147,25 @@ void SetterMethodReference::emitImplicitLoad(ByteCodeGen *bcg)
     bcg->addLong(mIndex); 
 }
 
-void SetterMethodReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
+void SetterMethodReference::emitCodeSequence(ByteCodeGen *bcg) 
 {
     bcg->addByte(InvokeOp);
     bcg->addLong(1);
 }
 
-void FunctionReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
+void FunctionReference::emitCodeSequence(ByteCodeGen *bcg) 
 {
     bcg->addByte(LoadFunctionOp);
     bcg->addPointer(mFunction);
 }
 
-void ConstructorReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
+void ConstructorReference::emitCodeSequence(ByteCodeGen *bcg) 
 {
     bcg->addByte(LoadFunctionOp);
     bcg->addPointer(mFunction);
 }
 
-void GetterFunctionReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
+void GetterFunctionReference::emitCodeSequence(ByteCodeGen *bcg) 
 {
     bcg->addByte(LoadFunctionOp);
     bcg->addPointer(mFunction);
@@ -180,13 +179,13 @@ void SetterFunctionReference::emitImplicitLoad(ByteCodeGen *bcg)
     bcg->addPointer(mFunction);
 }
 
-void SetterFunctionReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
+void SetterFunctionReference::emitCodeSequence(ByteCodeGen *bcg) 
 {
     bcg->addByte(InvokeOp);
     bcg->addLong(1);
 }
 
-void NameReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
+void NameReference::emitCodeSequence(ByteCodeGen *bcg) 
 {
     if (mAccess == Read)
         bcg->addByte(GetNameOp);
@@ -195,7 +194,7 @@ void NameReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase)
     bcg->addStringRef(mName); 
 }
 
-void ValueReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
+void ValueReference::emitCodeSequence(ByteCodeGen *bcg) 
 {
     if (mAccess == Read)
         bcg->addByte(GetNameOp);
@@ -204,7 +203,7 @@ void ValueReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase)
     bcg->addStringRef(mName); 
 }
 
-void PropertyReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
+void PropertyReference::emitCodeSequence(ByteCodeGen *bcg) 
 {
     if (mAccess == Read)
         bcg->addByte(GetPropertyOp);
@@ -273,13 +272,13 @@ void ByteCodeGen::genCodeForFunction(FunctionStmtNode *f, JSFunction *fnc, bool 
                         // 
                         BinaryExprNode *b = static_cast<BinaryExprNode *>(i->op);
                         if ((b->op1->getKind() == ExprNode::This) && (b->op2->getKind() == ExprNode::identifier)) {
-                            IdentifierExprNode *i = static_cast<IdentifierExprNode *>(b->op2);
+//                            IdentifierExprNode *i = static_cast<IdentifierExprNode *>(b->op2);
                             // XXX verify that i->name is a constructor in the superclass
                             foundSuperCall = true;
                         }
                         else {
                             if ((b->op1->getKind() == ExprNode::Super) && (b->op2->getKind() == ExprNode::identifier)) {
-                                IdentifierExprNode *i = static_cast<IdentifierExprNode *>(b->op2);
+//                                IdentifierExprNode *i = static_cast<IdentifierExprNode *>(b->op2);
                                 // XXX verify that i->name is a constructor in this class
                                 foundSuperCall = true;
                             }
@@ -570,7 +569,7 @@ JSType *ByteCodeGen::genExpr(ExprNode *p)
     case ExprNode::identifier:
         {
             Reference *ref = genReference(p, Read);
-            ref->emitCodeSequence(this, false);
+            ref->emitCodeSequence(this);
             JSType *type = ref->mType;
             delete ref;
             return type;

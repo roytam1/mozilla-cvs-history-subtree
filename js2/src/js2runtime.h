@@ -243,7 +243,7 @@ namespace JS2Runtime {
 
         virtual void emitImplicitLoad(ByteCodeGen *bcg) { } 
 
-        virtual void emitCodeSequence(ByteCodeGen *bcg, bool hasBase = true) 
+        virtual void emitCodeSequence(ByteCodeGen *bcg) 
                 { throw Exception(Exception::internalError, "gen code for base ref"); }
         virtual JSValue getValue()
                 { throw Exception(Exception::internalError, "get value for base ref"); }
@@ -260,7 +260,7 @@ namespace JS2Runtime {
     public:
         AccessorReference(JSFunction *f);
         JSFunction *mFunction;
-        void emitCodeSequence(ByteCodeGen *bcg, bool hasBase = true);
+        void emitCodeSequence(ByteCodeGen *bcg);
         bool getValue(Context *cx);
         bool setValue(Context *cx);
     };
@@ -272,7 +272,7 @@ namespace JS2Runtime {
             : Reference(type), mAccess(acc), mIndex(index) { }
         Access mAccess;
         uint32 mIndex;
-        void emitCodeSequence(ByteCodeGen *bcg, bool hasBase = true);
+        void emitCodeSequence(ByteCodeGen *bcg);
         bool getValue(Context *cx);
         bool setValue(Context *cx);
     };
@@ -283,7 +283,7 @@ namespace JS2Runtime {
         ClosureVarReference(uint32 depth, uint32 index, Access acc, JSType *type) 
                         : LocalVarReference(index, acc, type), mDepth(depth) { }
         uint32 mDepth;
-        void emitCodeSequence(ByteCodeGen *bcg, bool hasBase = true);
+        void emitCodeSequence(ByteCodeGen *bcg);
     };
     // a member field in an instance
     class FieldReference : public Reference {
@@ -292,7 +292,7 @@ namespace JS2Runtime {
             : Reference(type), mAccess(acc), mIndex(index) { }
         Access mAccess;
         uint32 mIndex;
-        void emitCodeSequence(ByteCodeGen *bcg, bool hasBase = true);
+        void emitCodeSequence(ByteCodeGen *bcg);
         void emitImplicitLoad(ByteCodeGen *bcg);
     };
     // a static field
@@ -303,7 +303,7 @@ namespace JS2Runtime {
         Access mAccess;
         uint32 mIndex;
         JSType *mClass;
-        void emitCodeSequence(ByteCodeGen *bcg, bool hasBase = true);
+        void emitCodeSequence(ByteCodeGen *bcg);
         void emitImplicitLoad(ByteCodeGen *bcg);
     };
     // a static function
@@ -312,7 +312,7 @@ namespace JS2Runtime {
         StaticFunctionReference(uint32 index, JSType *type)
             : Reference(type), mIndex(index) { }
         uint32 mIndex;
-        void emitCodeSequence(ByteCodeGen *bcg, bool hasBase = true);
+        void emitCodeSequence(ByteCodeGen *bcg);
     };
     // a member function in a vtable
     class MethodReference : public Reference {
@@ -321,7 +321,7 @@ namespace JS2Runtime {
             : Reference(type), mIndex(index), mClass(baseClass) { }
         uint32 mIndex;
         JSType *mClass;
-        void emitCodeSequence(ByteCodeGen *bcg, bool hasBase = true);
+        void emitCodeSequence(ByteCodeGen *bcg);
         virtual bool needsThis() { return true; }
         virtual JSValue getValue();
     };
@@ -329,14 +329,14 @@ namespace JS2Runtime {
     public:
         GetterMethodReference(uint32 index, JSType *baseClass, JSType *type)
             : MethodReference(index, baseClass, type) { }
-        void emitCodeSequence(ByteCodeGen *bcg, bool hasBase = true);
+        void emitCodeSequence(ByteCodeGen *bcg);
         virtual bool needsThis() { return true; }
     };
     class SetterMethodReference : public MethodReference {
     public:
         SetterMethodReference(uint32 index, JSType *baseClass, JSType *type)
             : MethodReference(index, baseClass, type) { }
-        void emitCodeSequence(ByteCodeGen *bcg, bool hasBase = true);
+        void emitCodeSequence(ByteCodeGen *bcg);
         virtual bool needsThis() { return true; }
         void emitImplicitLoad(ByteCodeGen *bcg);
     };
@@ -346,7 +346,7 @@ namespace JS2Runtime {
     public:
         FunctionReference(JSFunction *f);
         JSFunction *mFunction;
-        void emitCodeSequence(ByteCodeGen *bcg, bool hasBase = true);
+        void emitCodeSequence(ByteCodeGen *bcg);
     };
     // a constructor
     class ConstructorReference : public Reference {
@@ -354,7 +354,7 @@ namespace JS2Runtime {
         ConstructorReference(JSFunction *f, JSType *baseClass)
             : Reference(baseClass), mFunction(f) { }
         JSFunction *mFunction;
-        void emitCodeSequence(ByteCodeGen *bcg, bool hasBase = true);
+        void emitCodeSequence(ByteCodeGen *bcg);
         bool isConstructor()    { return true; }
         virtual bool needsThis() { return true; }
     };
@@ -363,14 +363,14 @@ namespace JS2Runtime {
     public:
         GetterFunctionReference(JSFunction *f);
         JSFunction *mFunction;
-        void emitCodeSequence(ByteCodeGen *bcg, bool hasBase = true);
+        void emitCodeSequence(ByteCodeGen *bcg);
     };
     // a setter function
     class SetterFunctionReference : public Reference {
     public:
         SetterFunctionReference(JSFunction *f);
         JSFunction *mFunction;
-        void emitCodeSequence(ByteCodeGen *bcg, bool hasBase = true);
+        void emitCodeSequence(ByteCodeGen *bcg);
         void emitImplicitLoad(ByteCodeGen *bcg);
     };
     // a known-to-exist property in an object
@@ -383,7 +383,7 @@ namespace JS2Runtime {
         JSObject *mBase;
         const String& mName;
         Access mAccess;
-        void emitCodeSequence(ByteCodeGen *bcg, bool hasBase = true);
+        void emitCodeSequence(ByteCodeGen *bcg);
         bool getValue(Context *cx);
         bool setValue(Context *cx);
         JSValue getValue();
@@ -396,7 +396,7 @@ namespace JS2Runtime {
             : Reference(Object_Type), mAccess(acc), mName(name) { }
         Access mAccess;
         const String& mName;
-        void emitCodeSequence(ByteCodeGen *bcg, bool hasBase = true);
+        void emitCodeSequence(ByteCodeGen *bcg);
     };
     // a parameter slot (they can't have getter/setter, right?)
     class ParameterReference : public Reference {
@@ -405,7 +405,7 @@ namespace JS2Runtime {
             : Reference(type), mAccess(acc), mIndex(index) { }
         Access mAccess;
         uint32 mIndex;
-        void emitCodeSequence(ByteCodeGen *bcg, bool hasBase = true);
+        void emitCodeSequence(ByteCodeGen *bcg);
     };
 
     // the generic "we don't know anybody by that name" - not bound to a specific object
@@ -416,7 +416,7 @@ namespace JS2Runtime {
             : Reference(Object_Type), mAccess(acc), mName(name) { }
         Access mAccess;
         const String& mName;
-        void emitCodeSequence(ByteCodeGen *bcg, bool hasBase = true);
+        void emitCodeSequence(ByteCodeGen *bcg);
         bool getValue(Context *cx)
                 { throw Exception(Exception::internalError, "get value for name ref"); }
         bool setValue(Context *cx)
