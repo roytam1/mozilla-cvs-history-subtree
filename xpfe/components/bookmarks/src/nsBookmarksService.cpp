@@ -158,7 +158,7 @@ static const char kURINC_NewSearchFolder[]            = "NC:NewSearchFolder";
 static const char kDefaultPersonalToolbarFolder[]     = "Personal Toolbar Folder";
 static const char kBookmarkCommand[]                  = "http://home.netscape.com/NC-rdf#command?";
 
-#define bookmark_properties  NS_LITERAL_CSTRING("chrome://communicator/locale/bookmarks/bookmark.properties")
+#define bookmark_properties  NS_LITERAL_CSTRING("chrome://communicator/locale/bookmarks/bookmarks.properties")
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -5540,7 +5540,8 @@ nsBookmarksService::CanAccept(nsIRDFResource* aSource,
 	PRBool		isBookmarkedFlag = PR_FALSE, canAcceptFlag = PR_FALSE, isOrdinal;
 
 	if (
-#ifndef MOZ_PHOENIX
+        // MUST FIX BEFORE LANDING THE BRANCH !!!
+#if 0
         NS_SUCCEEDED(rv = IsBookmarkedInternal(aSource, &isBookmarkedFlag)) &&
 		(isBookmarkedFlag == PR_TRUE) &&
 #endif

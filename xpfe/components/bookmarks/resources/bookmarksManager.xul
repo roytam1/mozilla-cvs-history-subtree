@@ -62,9 +62,9 @@
   <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
 
   <!-- Shared Bookmarks Utility Library -->
-  <script type="application/x-javascript" src="chrome://communicator/content/bookmarks/bookmarksOverlay.js"/>
-  <!-- Bookmarks Window -->
   <script type="application/x-javascript" src="chrome://communicator/content/bookmarks/bookmarks.js"/>
+  <!-- Bookmarks Window -->
+  <script type="application/x-javascript" src="chrome://communicator/content/bookmarks/bookmarksManager.js"/>
 
   <!-- Bookmarks Window Drag & Drop -->
   <script type="application/x-javascript" src="chrome://global/content/nsDragAndDrop.js"/>
