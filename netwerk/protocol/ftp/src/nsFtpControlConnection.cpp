@@ -69,10 +69,14 @@ nsFtpControlConnection::nsFtpControlConnection(nsIChannel* socketTransport)
     PR_LOG(gFTPLog, PR_LOG_ALWAYS, ("(%x) nsFtpControlConnection created", this));
     mServerType = 0;
     mConnected = mList = PR_FALSE;
+
+    mLock = PR_NewLock();
+    NS_ASSERTION(mLock, "null lock");
 }
 
 nsFtpControlConnection::~nsFtpControlConnection() 
 {
+    if (mLock) PR_DestroyLock(mLock);
     PR_LOG(gFTPLog, PR_LOG_ALWAYS, ("(%x) nsFtpControlConnection destroyed", this));
 }
 
@@ -147,6 +151,7 @@ nsFtpControlConnection::GetChannel(nsIChannel** controlChannel)
 nsresult 
 nsFtpControlConnection::SetStreamListener(nsIStreamListener *aListener)
 {
+    nsAutoLock lock(mLock);
     mListener = aListener;
     return NS_OK;
 }
@@ -154,7 +159,16 @@ nsFtpControlConnection::SetStreamListener(nsIStreamListener *aListener)
 NS_IMETHODIMP
 nsFtpControlConnection::OnStartRequest(nsIChannel *aChannel, nsISupports *aContext)
 {
-    if (!mListener || !mConnected) return NS_OK;
+    if (!mConnected) 
+        return NS_OK;
+    
+    PR_Lock(mLock);
+    nsCOMPtr<nsIStreamListener> myListener =  mListener;   
+    PR_Unlock(mLock);
+    
+    if (!myListener)
+        return NS_OK;
+    
     return mListener->OnStartRequest(aChannel, aContext);
 }
 
@@ -162,7 +176,17 @@ NS_IMETHODIMP
 nsFtpControlConnection::OnStopRequest(nsIChannel *aChannel, nsISupports *aContext,
                             nsresult aStatus, const PRUnichar* aStatusArg)
 {
-    if (!mListener || !mConnected) return NS_OK;
+    
+    if (!mConnected) 
+        return NS_OK;
+    
+    PR_Lock(mLock);
+    nsCOMPtr<nsIStreamListener> myListener =  mListener;   
+    PR_Unlock(mLock);
+    
+    if (!myListener)
+        return NS_OK;
+    
     return mListener->OnStopRequest(aChannel, aContext, aStatus, aStatusArg);
 }
 
@@ -174,7 +198,16 @@ nsFtpControlConnection::OnDataAvailable(nsIChannel *aChannel,
                                        PRUint32 aOffset, 
                                        PRUint32 aCount)
 {
-    if (!mListener || !mConnected) return NS_OK;
-    return mListener->OnDataAvailable(aChannel, aContext, aInStream,
+    if (!mConnected) 
+        return NS_OK;
+    
+    PR_Lock(mLock);
+    nsCOMPtr<nsIStreamListener> myListener =  mListener;   
+    PR_Unlock(mLock);
+    
+    if (!myListener)
+        return NS_OK;
+
+    return myListener->OnDataAvailable(aChannel, aContext, aInStream,
                                       aOffset,  aCount);
 }

@@ -52,7 +52,7 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
 #define FTP_CACHE_CONTROL_CONNECTION 1
 //#define FTP_NO_HTTP_INDEX_FORMAT
-
+//#define FTP_SIMULATE_DROPPED_CONTROL_CONNECTION
 
 #if defined(PR_LOGGING)
 extern PRLogModuleInfo* gFTPLog;
@@ -68,7 +68,7 @@ nsFtpState::nsFtpState() {
 
     PR_LOG(gFTPLog, PR_LOG_ALWAYS, ("(%x) nsFtpState created", this));
     // bool init
-    mList = mRetryPass = PR_FALSE;
+    mCanceled = mList = mRetryPass = PR_FALSE;
     mFireCallbacks = mBin = mKeepRunning = mAnonymous = PR_TRUE;
 
     mAction = GET;
@@ -89,6 +89,8 @@ nsFtpState::nsFtpState() {
 
     mIPv6Checked = PR_FALSE;
     mIPv6ServerAddress = nsnull;
+    
+    mControlConnection = nsnull;
 }
 
 nsFtpState::~nsFtpState() 
@@ -233,8 +235,7 @@ nsFtpState::OnStopRequest(nsIChannel *aChannel, nsISupports *aContext,
 {
     PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) nsFtpState::OnStopRequest() rv=%d\n", this, aStatus));
 
-    if (NS_FAILED(aStatus)) {
-        mInternalError = aStatus;
+    if (NS_FAILED(aStatus) || NS_FAILED(mInternalError)) {
         StopProcessing();
     }
     return NS_OK;
@@ -265,11 +266,11 @@ nsFtpState::EstablishControlConnection()
         
         // we're already connected to this server, skip login.
         mState = FTP_S_PASV;
-        rv = Process();
+        mResponseCode = 530;  //assume the control connection was dropped.
         
         // if we succeed, return.  Otherwise, we need to 
         // create a transport
-        if (NS_SUCCEEDED(rv)) return rv;
+        return NS_OK;
     }
 
     PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) creating control\n", this));
@@ -304,6 +305,9 @@ nsFtpState::Process() {
     nsresult    rv = NS_OK;
     PRBool      processingRead = PR_TRUE;
     
+    if (mCanceled)
+        mState = FTP_COMPLETE;
+
     while (mKeepRunning && processingRead) {
         switch(mState) {
 
@@ -311,6 +315,18 @@ nsFtpState::Process() {
 //// INTERNAL STATES
 //////////////////////////////
             case FTP_COMMAND_CONNECT:
+                {
+                    KillControlConnnection();
+                    PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) Establishing control connection...", this));
+                    rv = EstablishControlConnection();
+                    mInternalError = rv;
+                    if (NS_FAILED(rv)) {
+                        mState = FTP_ERROR;
+                        PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) FAILED\n", this));
+                    }
+                    else
+                        PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) SUCCEEDED\n", this));
+                    }
               break;
             case FTP_READ_BUF:
                 {
@@ -320,19 +336,14 @@ nsFtpState::Process() {
                 }
                 // END: FTP_READ_BUF
 
-            case FTP_ERROR:
+            case FTP_ERROR: // xx needs more work to handle dropped control connection cases
                 {
                  if (mResponseCode == 530 &&
                      mInternalError == NS_ERROR_FTP_PASV) {
                     // The user was logged out during an pasv operation
                     // we want to restart this request with a new control
                     // channel.
-                    
-                    mResponseCode = 0; // break any possible recursion.
-                    KillControlConnnection();
-                    mInternalError = EstablishControlConnection();
-                    NS_ASSERTION(NS_SUCCEEDED(mInternalError), "EstablishControlConnection failed.");
-                    
+                    mState = FTP_COMMAND_CONNECT;
                  }
                  else if (mResponseCode == 421 && 
                           mInternalError != NS_ERROR_FTP_LOGIN) {
@@ -340,14 +351,9 @@ nsFtpState::Process() {
                     // Fire it back up, unless we were trying to login
                     // in which case the server might just be telling us
                     // that the max number of users has been reached...
-
-                    mResponseCode = 0; // break any possible recursion.
-                    KillControlConnnection();
-                    mInternalError = EstablishControlConnection();
-                    NS_ASSERTION(NS_SUCCEEDED(mInternalError), "EstablishControlConnection failed.");
-		            
+                    mState = FTP_COMMAND_CONNECT;
                 } else {
-                    PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) ERROR\n", this));
+                    PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) FTP_ERROR - Calling StopProcessing\n", this));
                     rv = StopProcessing();
                     NS_ASSERTION(NS_SUCCEEDED(rv), "StopProcessing failed.");
                     processingRead = PR_FALSE;
@@ -815,7 +821,7 @@ nsFtpState::Process() {
         } // END: switch 
     } // END: while loop
     
-    return NS_OK;
+    return rv;
 }
 
 nsresult
@@ -1585,19 +1591,22 @@ nsFtpState::Cancel(nsresult status)
 {
     NS_ASSERTION(NS_FAILED(status), "shouldn't cancel with a success code");
     PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) nsFtpState::Cancel() rv=%d\n", this, status));
+    
+    // We want to try to save the control connection during
+    // a cancel.  We do not cancel the mCPipe, but just set 
+    // a flag.  When Process() is called (through OnData() or
+    // onStopRequest()), we will check this flag and set the 
+    // mState accordingly.  We can't set mState directly because
+    // cancel may be called out-of-band and I do not want to enter
+    // a critical section when manipulating mState.
+    mCanceled = PR_TRUE;
 
-    nsresult rv = NS_OK;
-    if (mCPipe) {
-        rv = mCPipe->Cancel(status);
-        if (NS_FAILED(rv)) return rv;
-    }
+    // kill the data connection immediately. 
     if (mDPipe) {
-        rv = mDPipe->Cancel(status);
-        if (NS_FAILED(rv)) return rv;
+        mDPipe->Cancel(status);
     }
-    mInternalError = status;
-    mState = FTP_COMPLETE;
-    return rv;
+    
+    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -1713,7 +1722,9 @@ nsFtpState::Init(nsIFTPChannel* aChannel,
 nsresult
 nsFtpState::Connect()
 {
-    nsresult rv = EstablishControlConnection();
+    mState = FTP_COMMAND_CONNECT;
+    nsresult rv = Process();
+
     // check for errors.
     if (NS_FAILED(rv)) {
         PR_LOG(gFTPLog, PR_LOG_DEBUG, ("-- Connect() on Control Connect FAILED with rv = %d\n", rv));
@@ -1733,13 +1744,20 @@ nsFtpState::SetWriteStream(nsIInputStream* aInStream, PRUint32 aWriteCount) {
 
 nsresult 
 nsFtpState::KillControlConnnection() {
-
+    nsresult rv;
+    mCanceled = PR_FALSE;
     mControlReadContinue = PR_FALSE;
     mControlReadBrokenLine = PR_FALSE;
     mControlReadCarryOverBuf.Truncate(0);
 
     // reference to mCPipe is held by the mControlConnection
-    mCPipe = 0;
+
+#ifdef FTP_SIMULATE_DROPPED_CONTROL_CONNECTION        
+        // hack to simulate dropped control connection
+        if (mCPipe)
+            mCPipe->Cancel(NS_BINDING_ABORTED);
+#endif
+        mCPipe = 0;
 
     // if the control goes away, the data socket goes away...
     if (mDPipe) {
@@ -1774,8 +1792,11 @@ nsFtpState::KillControlConnnection() {
         mControlConnection->mCwd        = mCwd;                  
         mControlConnection->mList       = mList;                 
         mControlConnection->mPassword   = mPassword;
-        (void) nsFtpProtocolHandler::InsertConnection(mURL, 
+        rv = nsFtpProtocolHandler::InsertConnection(mURL, 
                                            NS_STATIC_CAST(nsISupports*, mControlConnection));
+        // Can't cache it?  Kill it then.  
+        if (NS_FAILED(rv))
+            mControlConnection->Disconnect();
     } 
     else
         mControlConnection->Disconnect();

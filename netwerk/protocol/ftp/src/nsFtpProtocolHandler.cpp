@@ -239,7 +239,9 @@ nsresult
 nsFtpProtocolHandler::RemoveConnection(nsIURI *aKey, nsISupports* *_retval) {
     NS_ASSERTION(_retval, "null pointer");
     NS_ASSERTION(aKey, "null pointer");
-    NS_ASSERTION(mRootConnectionList, "null pointer");
+    
+    if (!mRootConnectionList)
+        return NS_ERROR_NULL_POINTER;
     
     *_retval = nsnull;
 
@@ -265,7 +267,9 @@ nsresult
 nsFtpProtocolHandler::InsertConnection(nsIURI *aKey, nsISupports *aConn) {
     NS_ASSERTION(aConn, "null pointer");
     NS_ASSERTION(aKey, "null pointer");
-    NS_ASSERTION(mRootConnectionList, "null pointer");
+    
+    if (!mRootConnectionList)
+        return NS_ERROR_NULL_POINTER;
 
     nsXPIDLCString spec;
     aKey->GetPrePath(getter_Copies(spec));

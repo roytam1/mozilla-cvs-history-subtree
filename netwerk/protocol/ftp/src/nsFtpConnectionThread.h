@@ -159,7 +159,8 @@ private:
         // ****** state machine vars
     FTP_STATE           mState;             // the current state
     FTP_STATE           mNextState;         // the next state
-    PRBool              mKeepRunning;       // thread event loop boolean
+    PRPackedBool        mKeepRunning;       // thread event loop boolean
+    PRPackedBool        mCanceled;          // indicates channel being canceled.
     PRInt32             mResponseCode;      // the last command response code
     nsCAutoString       mResponseMsg;       // the last command response text
 
@@ -177,7 +178,7 @@ private:
 
         // ****** connection cache vars
     PRInt32             mServerType;    // What kind of server are we talking to
-    PRBool              mList;          // Use LIST instead of NLST
+    PRPackedBool        mList;          // Use LIST instead of NLST
     nsCAutoString       mCwd;           // Our current working dir.
     nsCAutoString       mCwdAttempt;    // The dir we're trying to get into.
 
@@ -185,9 +186,9 @@ private:
     nsAutoString        mUsername;      // username
     nsAutoString        mPassword;      // password
     FTP_ACTION          mAction;        // the higher level action (GET/PUT)
-    PRBool              mBin;           // transfer mode (ascii or binary)
-    PRBool              mAnonymous;     // try connecting anonymous (default)
-    PRBool              mRetryPass;     // retrying the password
+    PRPackedBool        mBin;           // transfer mode (ascii or binary)
+    PRPackedBool        mAnonymous;     // try connecting anonymous (default)
+    PRPackedBool        mRetryPass;     // retrying the password
     nsresult            mInternalError; // represents internal state errors
 
         // ****** URI vars
@@ -204,15 +205,15 @@ private:
     PRLock                 *mLock;
     nsCOMPtr<nsIInputStream> mWriteStream; // This stream is written to the server.
     PRUint32               mWriteCount;    // The amount of data to write to the server.
-    PRBool                 mFireCallbacks; // Fire the listener callbacks.
+    PRPackedBool           mFireCallbacks; // Fire the listener callbacks.
 
-    nsCOMPtr<nsIPrompt>     mPrompter;
-    PRBool                  mIPv6Checked;
-    char                    *mIPv6ServerAddress; // Server IPv6 address; null if server not IPv6
+    PRPackedBool           mIPv6Checked;
+    nsCOMPtr<nsIPrompt>    mPrompter;
+    char                   *mIPv6ServerAddress; // Server IPv6 address; null if server not IPv6
 
     // ***** control read gvars
-    PRBool                  mControlReadContinue;
-    PRBool                  mControlReadBrokenLine;
+    PRPackedBool            mControlReadContinue;
+    PRPackedBool            mControlReadBrokenLine;
     nsCAutoString           mControlReadCarryOverBuf;
   
 };

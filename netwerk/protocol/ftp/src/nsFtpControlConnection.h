@@ -30,6 +30,7 @@
 #include "nsIChannel.h"
 #include "nsString.h"
 #include "nsIOutputStream.h"
+#include "nsAutoLock.h"
 
 class nsFtpControlConnection  : public nsIStreamListener
 {
@@ -55,11 +56,11 @@ public:
     nsAutoString     mPassword;
 
 private:
-	nsCOMPtr<nsIChannel> mCPipe;
-    nsCOMPtr<nsIOutputStream> mOutStream;
+	PRLock* mLock;  // protects mListener.
 
+    nsCOMPtr<nsIChannel> mCPipe;
+    nsCOMPtr<nsIOutputStream> mOutStream;
     nsCOMPtr<nsIStreamListener> mListener;
-    
     PRBool          mConnected;
 };
 
