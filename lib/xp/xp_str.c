@@ -254,7 +254,7 @@ strncasecomp (const char* one, const char * two, int n)
 	  }
 }
 
-#if 0  // moved to mkutils.c
+#ifndef MODULAR_NETLIB  /* moved to nsNetStubs.cpp */
 /*	Allocate a new copy of a block of binary data, and returns it
  */
 PUBLIC char * 
