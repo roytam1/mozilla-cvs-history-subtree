@@ -43,9 +43,10 @@
 
 class txXSLTProcessor
 {
+public:
     /**
-     * Initialisation and shutdown routines
-     * Allocate and free static atoms.
+     * Initialisation and shutdown routines. Initilizes and cleansup all
+     * dependant classes
      */
     static MBool init();
     static void shutdown();

@@ -18,11 +18,14 @@
  *   -- original author.
  */
 
-#include "ProcessorState.h"
+#include "txExecutionState.h"
 #include "txAtoms.h"
 #include "txSingleNodeContext.h"
 #include "XMLDOMUtils.h"
 #include "XSLTFunctions.h"
+#include "nsReadableUtils.h"
+#include "txKey.h"
+#include "txXSLTPatterns.h"
 
 /*
  * txKeyFunctionCall
@@ -59,22 +62,12 @@ ExprResult* txKeyFunctionCall::evaluate(txIEvalContext* aContext)
     txListIterator iter(&params);
     String keyQName;
     evaluateToString((Expr*)iter.next(), aContext, keyQName);
-    Expr* param = (Expr*) iter.next();
 
     txExpandedName keyName;
     txXSLKey* key = 0;
     nsresult rv = keyName.init(keyQName, mMappings, MB_FALSE);
-    if (NS_SUCCEEDED(rv)) {
-        //key = mProcessorState->getKey(keyName);
-    }
 
-    if (!key) {
-        String err("No key with that name in: ");
-        toString(err);
-        aContext->receiveError(err, NS_ERROR_INVALID_ARG);
-        return res;
-    }
-
+    Expr* param = (Expr*)iter.next();
     ExprResult* exprResult = param->evaluate(aContext);
     if (!exprResult)
         return res;
@@ -88,21 +81,41 @@ ExprResult* txKeyFunctionCall::evaluate(txIEvalContext* aContext)
 
     if (exprResult->getResultType() == ExprResult::NODESET) {
         NodeSet* nodeSet = (NodeSet*) exprResult;
-        for (int i=0; i<nodeSet->size(); i++) {
+        int i;
+        for (i = 0; i < nodeSet->size(); ++i) {
             String val;
             XMLDOMUtils::getNodeValue(nodeSet->get(i), val);
-            res->add(key->getNodes(val, contextDoc));
+            NodeSet* nodes = 0;
+            //rv = mProcessorState->getKeyValue(keyName, contextDoc, val,
+            //                                  i == 0, &nodes);
+            if (NS_FAILED(rv)) {
+                delete res;
+                delete exprResult;
+                return new StringResult("error");
+            }
+            if (nodes) {
+                res->add(nodes);
+            }
         }
     }
     else {
         String val;
         exprResult->stringValue(val);
-        res->append(key->getNodes(val, contextDoc));
+        NodeSet* nodes = 0;
+        //rv = mProcessorState->getKeyValue(keyName, contextDoc, val,
+        //                                  PR_TRUE, &nodes);
+        if (NS_FAILED(rv)) {
+            delete res;
+            delete exprResult;
+            return new StringResult("error");
+        }
+        if (nodes) {
+            res->append(nodes);
+        }
     }
     delete exprResult;
     return res;
-
-} // evaluate
+}
 
 nsresult txKeyFunctionCall::getNameAtom(txAtom** aAtom)
 {
@@ -111,16 +124,145 @@ nsresult txKeyFunctionCall::getNameAtom(txAtom** aAtom)
     return NS_OK;
 }
 
+/**
+ * Hash functions
+ */
+
+PR_STATIC_CALLBACK(const void *)
+txKeyValueHashGetKey(PLDHashTable *table, PLDHashEntryHdr *entry)
+{
+    txKeyValueHashEntry *e =
+        NS_STATIC_CAST(txKeyValueHashEntry *, entry);
+    return &e->mKey;
+}
+
+PR_STATIC_CALLBACK(PLDHashNumber)
+txKeyValueHashHashKey(PLDHashTable *table, const void *key)
+{
+    const txKeyValueHashKey* valueKey =
+        NS_STATIC_CAST(const txKeyValueHashKey *, key);
+    return valueKey->GetHash();
+}
+
+PR_STATIC_CALLBACK(PRBool)
+txKeyValueHashMatchEntry(PLDHashTable *table,
+                         const PLDHashEntryHdr *entry,
+                         const void *key)
+{
+    const txKeyValueHashEntry *e =
+        NS_STATIC_CAST(const txKeyValueHashEntry *, entry);
+    const txKeyValueHashKey* hashKey =
+        NS_STATIC_CAST(const txKeyValueHashKey *, key);
+
+    return hashKey->Equals(e->mKey);
+}
+
+PR_STATIC_CALLBACK(void)
+txKeyValueHashClearEntry(PLDHashTable *table,
+                         PLDHashEntryHdr *entry)
+{
+    txKeyValueHashEntry *e =
+        NS_STATIC_CAST(txKeyValueHashEntry *, entry);
+
+    // Clear the entry using the dtor
+    e->~txKeyValueHashEntry();
+}
+
+PR_STATIC_CALLBACK(void)
+txKeyValueHashInitEntry(PLDHashTable *table, PLDHashEntryHdr *entry,
+                        const void *key)
+{
+    const txKeyValueHashKey* hashKey =
+        NS_STATIC_CAST(const txKeyValueHashKey *, key);
+
+    // Inititlize the entry with placement new
+    new (entry) txKeyValueHashEntry(*hashKey);
+}
+
+PLDHashTableOps gTxKeyValueHashOps =
+{
+    PL_DHashAllocTable,
+    PL_DHashFreeTable,
+    txKeyValueHashGetKey,
+    txKeyValueHashHashKey,
+    txKeyValueHashMatchEntry,
+    PL_DHashMoveEntryStub,
+    txKeyValueHashClearEntry,
+    PL_DHashFinalizeStub,
+    txKeyValueHashInitEntry
+};
+
+
+PR_STATIC_CALLBACK(const void *)
+txIndexedKeyHashGetKey(PLDHashTable *table, PLDHashEntryHdr *entry)
+{
+    txIndexedKeyHashEntry *e =
+        NS_STATIC_CAST(txIndexedKeyHashEntry *, entry);
+    return &e->mKey;
+}
+
+PR_STATIC_CALLBACK(PLDHashNumber)
+txIndexedKeyHashHashKey(PLDHashTable *table, const void *key)
+{
+    const txIndexedKeyHashKey* indexKey =
+        NS_STATIC_CAST(const txIndexedKeyHashKey *, key);
+    return indexKey->GetHash();
+}
+
+PR_STATIC_CALLBACK(PRBool)
+txIndexedKeyHashMatchEntry(PLDHashTable *table,
+                           const PLDHashEntryHdr *entry,
+                           const void *key)
+{
+    const txIndexedKeyHashEntry *e =
+        NS_STATIC_CAST(const txIndexedKeyHashEntry *, entry);
+    const txIndexedKeyHashKey *hashKey =
+        NS_STATIC_CAST(const txIndexedKeyHashKey *, key);
+
+    return hashKey->Equals(e->mKey);
+}
+
+PR_STATIC_CALLBACK(void)
+txIndexedKeyHashClearEntry(PLDHashTable *table,
+                           PLDHashEntryHdr *entry)
+{
+    txIndexedKeyHashEntry *e =
+        NS_STATIC_CAST(txIndexedKeyHashEntry *, entry);
+
+    // Clear the entry using the dtor
+    e->~txIndexedKeyHashEntry();
+}
+
+PR_STATIC_CALLBACK(void)
+txIndexedKeyHashInitEntry(PLDHashTable *table, PLDHashEntryHdr *entry,
+                          const void *key)
+{
+    const txIndexedKeyHashKey* hashKey =
+        NS_STATIC_CAST(const txIndexedKeyHashKey *, key);
+
+    // Inititlize the entry with placement new
+    new (entry) txIndexedKeyHashEntry(*hashKey);
+}
+
+PLDHashTableOps gTxIndexedKeyHashOps =
+{
+    PL_DHashAllocTable,
+    PL_DHashFreeTable,
+    txIndexedKeyHashGetKey,
+    txIndexedKeyHashHashKey,
+    txIndexedKeyHashMatchEntry,
+    PL_DHashMoveEntryStub,
+    txIndexedKeyHashClearEntry,
+    PL_DHashFinalizeStub,
+    txIndexedKeyHashInitEntry
+};
+
+
+
 /*
  * Class representing an <xsl:key>. Or in the case where several <xsl:key>s
  * have the same name one object represents all <xsl:key>s with that name
  */
-
-txXSLKey::txXSLKey(ProcessorState* aPs)
-{
-    mProcessorState = aPs;
-    mMaps.setOwnership(Map::eOwnsItems);
-} // txXSLKey
 
 txXSLKey::~txXSLKey()
 {
@@ -131,37 +273,7 @@ txXSLKey::~txXSLKey()
         delete key->useExpr;
         delete key;
     }
-} // ~txXSLKey
-
-/*
- * Returns a NodeSet containing all nodes within the specified document
- * that have the value keyValue. The document is indexed in case it
- * hasn't been searched previously. The returned nodeset is owned by
- * the txXSLKey object
- * @param aKeyValue Value to search for
- * @param aDoc      Document to search in
- * @return a NodeSet* containing all nodes in doc matching with value
- *         keyValue
- */
-const NodeSet* txXSLKey::getNodes(String& aKeyValue, Document* aDoc)
-{
-    NS_ASSERTION(aDoc, "missing document");
-    if (!aDoc)
-        return &mEmptyNodeset;
-
-    NamedMap* map = (NamedMap*)mMaps.get(aDoc);
-    if (!map) {
-        map = addDocument(aDoc);
-        if (!map)
-            return &mEmptyNodeset;
-    }
-
-    NodeSet* nodes = (NodeSet*)map->get(aKeyValue);
-    if (!nodes)
-        return &mEmptyNodeset;
-
-    return nodes;
-} // getNodes
+}
 
 /*
  * Adds a match/use pair. Returns MB_FALSE if matchString or useString
@@ -183,98 +295,119 @@ MBool txXSLKey::addKey(txPattern* aMatch, Expr* aUse)
     key->useExpr = aUse;
     mKeys.add(key);
     return MB_TRUE;
-} // addKey
+}
 
-/*
- * Indexes a document and adds it to the set of indexed documents
- * @param aDoc Document to index and add
- * @returns a NamedMap* containing the index
+/**
+ * Indexes a document and adds it to the hash of key values
+ * @param aDocument     Document to index and add
+ * @param aKeyName      Name of this key
+ * @param aKeyValueHash Hash to add values to
+ * @param aEs           txExecutionState to use for XPath evaluation
  */
-NamedMap* txXSLKey::addDocument(Document* aDoc)
+nsresult txXSLKey::indexDocument(Document* aDocument,
+                                 const txExpandedName& aKeyName,
+                                 PLDHashTable* aKeyValueHash,
+                                 txExecutionState* aEs)
 {
-    NamedMap* map = new NamedMap;
-    if (!map)
-        return NULL;
-    map->setObjectDeletion(MB_TRUE);
-    mMaps.put(aDoc, map);
-    indexTree(aDoc, map);
-    return map;
-} // addDocument
+    txKeyValueHashKey key(aKeyName, aDocument, NS_LITERAL_STRING(""));
+    return indexTree(aDocument, &key, aKeyValueHash, aEs);
+}
 
-/*
+/**
  * Recursively searches a node, its attributes and its subtree for
  * nodes matching any of the keys match-patterns.
- * @param aNode node to search
- * @param aMap index to add search result in
+ * @param aNode         Node to search
+ * @param aKey          Key to use when adding into the hash
+ * @param aKeyValueHash Hash to add values to
+ * @param aEs           txExecutionState to use for XPath evaluation
  */
-void txXSLKey::indexTree(Node* aNode, NamedMap* aMap)
+nsresult txXSLKey::indexTree(Node* aNode, txKeyValueHashKey* aKey,
+                             PLDHashTable* aKeyValueHash, txExecutionState* aEs)
 {
-    testNode(aNode, aMap);
+    nsresult rv = testNode(aNode, aKey, aKeyValueHash, aEs);
+    NS_ENSURE_SUCCESS(rv, rv);
 
     // check if the nodes attributes matches
     NamedNodeMap* attrs = aNode->getAttributes();
     if (attrs) {
         for (PRUint32 i=0; i<attrs->getLength(); i++) {
-            testNode(attrs->item(i), aMap);
+            rv = testNode(attrs->item(i), aKey, aKeyValueHash, aEs);
+            NS_ENSURE_SUCCESS(rv, rv);
         }
     }
 
     Node* child = aNode->getFirstChild();
     while (child) {
-        indexTree(child, aMap);
+        rv = indexTree(child, aKey, aKeyValueHash, aEs);
+        NS_ENSURE_SUCCESS(rv, rv);
+
         child = child->getNextSibling();
     }
-} // indexTree
+    
+    return NS_OK;
+}
 
-/*
+/**
  * Tests one node if it matches any of the keys match-patterns. If
  * the node matches its values are added to the index.
- * @param aNode node to test
- * @param aMap index to add values to
+ * @param aNode         Node to test
+ * @param aKey          Key to use when adding into the hash
+ * @param aKeyValueHash Hash to add values to
+ * @param aEs           txExecutionState to use for XPath evaluation
  */
-void txXSLKey::testNode(Node* aNode, NamedMap* aMap)
+nsresult txXSLKey::testNode(Node* aNode, txKeyValueHashKey* aKey,
+                            PLDHashTable* aKeyValueHash, txExecutionState* aEs)
 {
     String val;
-    NodeSet *nodeSet;
-
     txListIterator iter(&mKeys);
     while (iter.hasNext())
     {
         Key* key=(Key*)iter.next();
-        if (key->matchPattern->matches(aNode, mProcessorState)) {
-            txSingleNodeContext evalContext(aNode, mProcessorState);
-            txIEvalContext* prevCon =
-                mProcessorState->setEvalContext(&evalContext);
+        if (key->matchPattern->matches(aNode, aEs)) {
+            txSingleNodeContext evalContext(aNode, aEs);
+            aEs->pushEvalContext(&evalContext);
             ExprResult* exprResult = key->useExpr->evaluate(&evalContext);
-            mProcessorState->setEvalContext(prevCon);
+            aEs->popEvalContext();
             if (exprResult->getResultType() == ExprResult::NODESET) {
                 NodeSet* res = (NodeSet*)exprResult;
                 for (int i=0; i<res->size(); i++) {
                     val.clear();
                     XMLDOMUtils::getNodeValue(res->get(i), val);
 
-                    nodeSet = (NodeSet*)aMap->get(val);
-                    if (!nodeSet) {
-                        nodeSet = new NodeSet;
-                        if (!nodeSet)
-                            return;
-                        aMap->put(val, nodeSet);
+                    aKey->mKeyValue.Assign(val);
+                    txKeyValueHashEntry* entry = 
+                        NS_STATIC_CAST(txKeyValueHashEntry *,
+                                       PL_DHashTableOperate(aKeyValueHash,
+                                                            aKey,
+                                                            PL_DHASH_ADD));
+                    NS_ENSURE_TRUE(entry, NS_ERROR_OUT_OF_MEMORY);
+
+                    if (entry->mNodeSet.isEmpty() ||
+                        entry->mNodeSet.get(entry->mNodeSet.size()-1) !=
+                                            aNode) {
+                        entry->mNodeSet.append(aNode);
                     }
-                    nodeSet->append(aNode);
                 }
             }
             else {
                 exprResult->stringValue(val);
-                nodeSet = (NodeSet*)aMap->get(val);
-                if (!nodeSet) {
-                    nodeSet = new NodeSet;
-                    if (!nodeSet)
-                        return;
-                    aMap->put(val, nodeSet);
+
+                aKey->mKeyValue.Assign(val);
+                txKeyValueHashEntry* entry = 
+                    NS_STATIC_CAST(txKeyValueHashEntry *,
+                                   PL_DHashTableOperate(aKeyValueHash,
+                                                        aKey,
+                                                        PL_DHASH_ADD));
+                NS_ENSURE_TRUE(entry, NS_ERROR_OUT_OF_MEMORY);
+
+                if (entry->mNodeSet.isEmpty() ||
+                    entry->mNodeSet.get(entry->mNodeSet.size()-1) != aNode) {
+                    entry->mNodeSet.append(aNode);
                 }
-                nodeSet->append(aNode);
             }
             delete exprResult;
         }
     }
-} // testNode
+    
+    return NS_OK;
+}

@@ -30,12 +30,6 @@
 
 #include "ProcessorState.h"
 
-class txIGlobalParameter : public TxObject
-{
-public:
-    virtual nsresult getValue(ExprResult** aValue) = 0;
-};
-
 /**
  * A class for Processing XSLT Stylesheets
  */

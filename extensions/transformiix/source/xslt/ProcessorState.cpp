@@ -85,6 +85,24 @@ ProcessorState::ProcessorState(Document* aSourceDocument,
 
     // Make sure all loaded documents get deleted
     loadedDocuments.setObjectDeletion(MB_TRUE);
+    
+    // Init key-hashes
+    PRBool success = PL_DHashTableInit(&mKeyValues,
+                                       &gTxKeyValueHashOps,
+                                       nsnull,
+                                       sizeof(txKeyValueHashEntry),
+                                       16);
+    if (!success) {
+        mKeyValues.ops = nsnull;
+    }
+    success = PL_DHashTableInit(&mIndexedKeys,
+                                &gTxIndexedKeyHashOps,
+                                nsnull,
+                                sizeof(txIndexedKeyHashEntry),
+                                16);
+    if (!success) {
+        mIndexedKeys.ops = nsnull;
+    }
 }
 
 /**
@@ -108,6 +126,13 @@ ProcessorState::~ProcessorState()
 #ifdef TX_EXE
   delete mOutputHandler;
 #endif
+
+    if (mKeyValues.ops) {
+        PL_DHashTableFinish(&mKeyValues);
+    }
+    if (mIndexedKeys.ops) {
+        PL_DHashTableFinish(&mIndexedKeys);
+    }
 } //-- ~ProcessorState
 
 
@@ -792,7 +817,7 @@ MBool ProcessorState::addKey(Element* aKeyElem)
 
     txXSLKey* xslKey = (txXSLKey*)mXslKeys.get(keyName);
     if (!xslKey) {
-        xslKey = new txXSLKey(this);
+        xslKey = new txXSLKey();
         if (!xslKey)
             return MB_FALSE;
         rv = mXslKeys.add(keyName, xslKey);
@@ -821,11 +846,76 @@ MBool ProcessorState::addKey(Element* aKeyElem)
 /**
  * Adds the supplied xsl:key to the set of keys
  * returns NULL if no such key exists
-**/
-txXSLKey* ProcessorState::getKey(txExpandedName& keyName)
+ */
+nsresult ProcessorState::getKeyValue(const txExpandedName& aKeyName,
+                                     Document* aDocument,
+                                     const nsAString& aKeyValue,
+                                     PRBool aIndexIfNotFound,
+                                     NodeSet** aResult)
 {
-    return (txXSLKey*)mXslKeys.get(keyName);
+    *aResult = nsnull;
+    txKeyValueHashKey valueKey(aKeyName, aDocument, aKeyValue);
+    txKeyValueHashEntry* valueEntry = 
+        NS_STATIC_CAST(txKeyValueHashEntry *,
+                       PL_DHashTableOperate(&mKeyValues,
+                                            &valueKey,
+                                            PL_DHASH_LOOKUP));
+    if (PL_DHASH_ENTRY_IS_BUSY(valueEntry)) {
+        *aResult = &valueEntry->mNodeSet;
+        return NS_OK;
+    }
+
+    // we didn't find a value. This could either mean that that key has no
+    // nodes with that value or that the key hasn't been indexed using this
+    // document.
+
+    if (!aIndexIfNotFound) {
+        // if aIndexIfNotFound is set then the caller knows this key is
+        // indexed, so don't bother investigating
+        return NS_OK;
+    }
+
+    txIndexedKeyHashKey indexKey(aKeyName, aDocument);
+    txIndexedKeyHashEntry* indexEntry = 
+        NS_STATIC_CAST(txIndexedKeyHashEntry *,
+                       PL_DHashTableOperate(&mIndexedKeys,
+                                            &indexKey,
+                                            PL_DHASH_ADD));
+    NS_ENSURE_TRUE(indexEntry, NS_ERROR_OUT_OF_MEMORY);
+
+    if (indexEntry->mIndexed) {
+        // The key was indexed and apparently didn't contain this value so
+        // return null
+
+        return NS_OK;
+    }
+
+    // The key needs to be indexed
+    txXSLKey* xslKey = (txXSLKey*)mXslKeys.get(aKeyName);
+    if (!xslKey) {
+        // The key didn't exist, so bail.
+        return NS_ERROR_FAILURE;
+    }
+
+    nsresult rv = xslKey->indexDocument(aDocument, aKeyName, &mKeyValues,
+                                        this);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    indexEntry->mIndexed = PR_TRUE;
+
+    // Now that the key is indexed we can get it's new value
+    valueEntry =
+        NS_STATIC_CAST(txKeyValueHashEntry *,
+                       PL_DHashTableOperate(&mKeyValues,
+                                            &valueKey,
+                                            PL_DHASH_LOOKUP));
+    if (PL_DHASH_ENTRY_IS_BUSY(valueEntry)) {
+        *aResult = &valueEntry->mNodeSet;
+    }
+
+    return NS_OK;
 }
+
 
 /*
  * Adds a decimal format. Returns false if the format already exists

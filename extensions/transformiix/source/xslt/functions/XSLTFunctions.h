@@ -35,11 +35,13 @@
 #include "Map.h"
 #include "NodeSet.h"
 #include "txNamespaceMap.h"
+#include "XMLUtils.h"
 
 class NamedMap;
-class ProcessorState;
 class txPattern;
 class txStylesheet;
+class txKeyValueHashKey;
+class txExecutionState;
 
 /**
  * The definition for the XSLT document() function
@@ -84,22 +86,9 @@ private:
 class txXSLKey : public TxObject {
     
 public:
-    txXSLKey(ProcessorState* aPs);
     ~txXSLKey();
     
-    /*
-     * Returns a NodeSet containing all nodes within the specified document
-     * that have the value keyValue. The document is indexed in case it
-     * hasn't been searched previously. The returned nodeset is owned by
-     * the txXSLKey object
-     * @param aKeyValue Value to search for
-     * @param aDoc      Document to search in
-     * @return a NodeSet* containing all nodes in doc matching with value
-     *         keyValue
-     */
-    const NodeSet* getNodes(String& aKeyValue, Document* aDoc);
-    
-    /*
+    /**
      * Adds a match/use pair. Returns MB_FALSE if matchString or useString
      * can't be parsed.
      * @param aMatch  match-pattern
@@ -107,32 +96,42 @@ public:
      * @return MB_FALSE if an error occured, MB_TRUE otherwise
      */
     MBool addKey(txPattern* aMatch, Expr* aUse);
-    
-private:
-    /*
-     * Indexes a document and adds it to the set of indexed documents
-     * @param aDoc Document to index and add
-     * @returns a NamedMap* containing the index
-     */
-    NamedMap* addDocument(Document* aDoc);
 
-    /*
+    /**
+     * Indexes a document and adds it to the hash of key values
+     * @param aDocument     Document to index and add
+     * @param aKeyName      Name of this key
+     * @param aKeyValueHash Hash to add values to
+     * @param aEs           txExecutionState to use for XPath evaluation
+     */
+    nsresult indexDocument(Document* aDocument,
+                           const txExpandedName& aKeyName,
+                           PLDHashTable* aKeyValueHash, txExecutionState* aEs);
+
+private:
+    /**
      * Recursively searches a node, its attributes and its subtree for
      * nodes matching any of the keys match-patterns.
-     * @param aNode node to search
-     * @param aMap index to add search result in
+     * @param aNode         Node to search
+     * @param aKey          Key to use when adding into the hash
+     * @param aKeyValueHash Hash to add values to
+     * @param aEs           txExecutionState to use for XPath evaluation
      */
-    void indexTree(Node* aNode, NamedMap* aMap);
+    nsresult indexTree(Node* aNode, txKeyValueHashKey* aKey,
+                       PLDHashTable* aKeyValueHash, txExecutionState* aEs);
 
-    /*
+    /**
      * Tests one node if it matches any of the keys match-patterns. If
      * the node matches its values are added to the index.
-     * @param aNode node to test
-     * @param aMap index to add values to
+     * @param aNode         Node to test
+     * @param aKey          Key to use when adding into the hash
+     * @param aKeyValueHash Hash to add values to
+     * @param aEs           txExecutionState to use for XPath evaluation
      */
-    void testNode(Node* aNode, NamedMap* aMap);
+    nsresult testNode(Node* aNode, txKeyValueHashKey* aKey,
+                      PLDHashTable* aKeyValueHash, txExecutionState* aEs);
 
-    /*
+    /**
      * represents one match/use pair
      */
     struct Key {
@@ -140,28 +139,10 @@ private:
         Expr* useExpr;
     };
 
-    /*
-     * List of all match/use pairs
+    /**
+     * List of all match/use pairs. The items as |Key|s
      */
     List mKeys;
-
-    /*
-     * Map containing all indexes (keyed on document). Every index is a
-     * NamedMap. Every NamedMap contains NodeLists with the nodes for
-     * a certain value
-     */
-    Map mMaps;
-    
-    /*
-     * ProcessorState used to parse the match-patterns and
-     * use-expressions
-     */
-    ProcessorState* mProcessorState;
-    
-    /*
-     * Used to return empty nodeset
-     */
-    NodeSet mEmptyNodeset;
 };
 
 /**

@@ -173,5 +173,14 @@ protected:
     MBool mStrips;
 };
 
+/**
+ * Value of a global parameter
+ */
+class txIGlobalParameter : public TxObject
+{
+public:
+    virtual nsresult getValue(ExprResult** aValue) = 0;
+};
+
 
 #endif //TRANSFRMX_TXSTYLESHEET_H

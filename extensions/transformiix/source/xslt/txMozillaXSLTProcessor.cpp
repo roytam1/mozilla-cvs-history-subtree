@@ -53,6 +53,7 @@
 #include "XMLUtils.h"
 #include "txUnknownHandler.h"
 #include "nsIHTMLDocument.h"
+#include "XSLTProcessor.h"
 
 /**
  * Output Handler Factories

@@ -42,6 +42,7 @@
 #include "nsCRT.h"
 #include "nsIScriptSecurityManager.h"
 #include "txURIUtils.h"
+#include "txXSLTProcessor.h"
 
 /* 1c1a3c01-14f6-11d6-a7f2-ea502af815dc */
 #define TRANSFORMIIX_DOMCI_EXTENSION_CID   \
@@ -196,7 +197,7 @@ Initialize(nsIModule* aSelf)
         xs->RegisterExceptionProvider(gXPathExceptionProvider,
                                       NS_ERROR_MODULE_DOM_XPATH);
 
-    if (!txXSLTProcessor::txInit()) {
+    if (!txXSLTProcessor::init()) {
         return NS_ERROR_OUT_OF_MEMORY;
     }
 
@@ -243,7 +244,7 @@ Shutdown(nsIModule* aSelf)
     NS_IF_RELEASE(NS_CLASSINFO_NAME(XPathNSResolver));
     NS_IF_RELEASE(NS_CLASSINFO_NAME(XPathResult));
 
-    txXSLTProcessor::txShutdown();
+    txXSLTProcessor::shutdown();
 
     NS_IF_RELEASE(gTxSecurityManager);
     NS_IF_RELEASE(gTxNameSpaceManager);

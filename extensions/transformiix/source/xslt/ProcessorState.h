@@ -42,6 +42,7 @@
 #include "txXMLEventHandler.h"
 #include "XSLTFunctions.h"
 #include "txError.h"
+#include "txKey.h"
 
 class txVariableMap;
 class txXSLKey;
@@ -282,7 +283,9 @@ public:
      * Returns the key with the supplied name
      * returns NULL if no such key exists
      */
-    txXSLKey* getKey(txExpandedName& keyName);
+    nsresult getKeyValue(const txExpandedName& aKeyName, Document* aDocument,
+                         const nsAString& aKeyValue, PRBool aIndexIfNotFound,
+                         NodeSet** aResult);
 
     /**
      * Adds a decimal format. Returns false if the format already exists
@@ -421,6 +424,16 @@ private:
      * The set of all available keys
      */
     txExpandedNameMap mXslKeys;
+
+    /**
+     * Hash of all indexed key-values
+     */
+    PLDHashTable mKeyValues;
+
+    /**
+     * Hash showing which keys+documents has been indexed
+     */
+    PLDHashTable mIndexedKeys;
 
     /**
      * The set of all avalible decimalformats
