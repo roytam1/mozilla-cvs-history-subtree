@@ -242,6 +242,18 @@ xptiInterfaceInfo::IsScriptable(PRBool* result)
 }
 
 NS_IMETHODIMP
+xptiInterfaceInfo::IsFunction(PRBool* result)
+{
+    NS_ASSERTION(result, "bad bad caller!");
+
+    if(!EnsureResolved())
+        return NS_ERROR_UNEXPECTED;
+
+    *result = XPT_ID_IS_FUNCTION(mInterface->mDescriptor->flags);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
 xptiInterfaceInfo::GetParent(nsIInterfaceInfo** parent)
 {
     NS_PRECONDITION(parent, "bad param");

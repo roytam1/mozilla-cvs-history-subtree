@@ -110,5 +110,7 @@ interface nsIInterfaceInfo : nsISupports
 
     void   getNameShared([shared,retval] out string name);
     void   getIIDShared([shared,retval] out nsIIDPtrShared iid);
+
+    PRBool isFunction();
 };
 

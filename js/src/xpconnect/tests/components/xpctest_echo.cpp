@@ -503,6 +503,13 @@ xpctestEcho::GetThrowInGetter(PRInt16 *aThrowInGetter)
     return NS_ERROR_FAILURE;
 }        
 
+/* void callFunction (in nsITestXPCFunctionCallback callback, in string s); */
+NS_IMETHODIMP 
+xpctestEcho::CallFunction(nsITestXPCFunctionCallback *callback, const char *s)
+{
+    return callback->Call(s);
+}
+
 /***************************************************/
 
 /***************************************************************************/

@@ -642,9 +642,18 @@ nsXPCWrappedJSClass::CallMethod(nsXPCWrappedJS* wrapper, uint16 methodIndex,
         // We get fval before allocating the stack to avoid gc badness that can 
         // happen if the GetProperty call leaves our request and the gc runs 
         // while the stack we allocate contains garbage.
+    
+        // If the interface is marked as a [function] then we will assume that
+        // our JSObject is a function and not an object with a named method.
 
+        PRBool isFunction;
+        if(NS_FAILED(mInfo->IsFunction(&isFunction)))
+            goto pre_call_clean_up;
+        
         // later we will check to see if fval might really be callable
-        if(!JS_GetProperty(cx, obj, name, &fval))
+        if(isFunction)
+            fval = OBJECT_TO_JSVAL(obj);
+        else if(!JS_GetProperty(cx, obj, name, &fval))
         {
             // XXX We really want to factor out the error reporting better and 
             // specifically report the failure to find a function with this name.    
