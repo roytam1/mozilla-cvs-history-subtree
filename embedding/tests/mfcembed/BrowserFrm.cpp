@@ -524,9 +524,9 @@ void CBrowserFrame::OnUpdateItalics(CCmdUI* pCmdUI)
   CEditorImpl  *editimpl = (CEditorImpl *) impl;
   if (editimpl)
   {
-    PRBool retval;
+//    PRBool retval;
     nsCOMPtr<nsICommandParams> params;
-    if (NS_SUCCEEDED(editimpl->GetCommandState("cmd_italic",getter_AddRefs(params))) && retval)
+    if (NS_SUCCEEDED(editimpl->GetCommandState("cmd_italic",getter_AddRefs(params))))
     {
 
       pCmdUI->Enable(TRUE);
