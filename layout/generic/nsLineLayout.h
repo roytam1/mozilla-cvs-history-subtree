@@ -131,8 +131,10 @@ public:
     PushFrame(aFrame);
   }
 
-  void VerticalAlignLine(nsLineBox* aLineBox,
-                         nscoord* aMaxElementWidthResult);
+  void VerticalAlignLine(nsLineBox* aLineBox);
+
+  // XXX This probably requires that the line has already been reflowed.
+  nscoord GetLineMaxElementWidth(nsLineBox* aLineBox);
 
   PRBool TrimTrailingWhiteSpace();
 

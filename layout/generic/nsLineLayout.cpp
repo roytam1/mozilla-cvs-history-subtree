@@ -1619,8 +1619,7 @@ PRBool IsPercentageAwareFrame(nsPresContext *aPresContext, nsIFrame *aFrame)
 
 
 void
-nsLineLayout::VerticalAlignLine(nsLineBox* aLineBox,
-                                nscoord* aMaxElementWidthResult)
+nsLineLayout::VerticalAlignLine(nsLineBox* aLineBox)
 {
   // Synthesize a PerFrameData for the block frame
   PerFrameData rootPFD;
@@ -1691,84 +1690,11 @@ nsLineLayout::VerticalAlignLine(nsLineBox* aLineBox,
   // frames we find.
   // XXX PERFORMANCE: set a bit per-span to avoid the extra work
   // (propagate it upward too)
-  PerFrameData* pfd = psd->mFirstFrame;
-  nscoord maxElementWidth = 0;
-  PRBool prevFrameAccumulates = PR_FALSE;
-  nscoord accumulatedWidth = 0;
-#ifdef HACK_MEW
-  PRBool strictMode = InStrictMode();
-  PRBool inUnconstrainedTable = InUnconstrainedTableCell(*mBlockReflowState);
-#endif
 #ifdef DEBUG
   int frameCount = 0;
 #endif
 
-  nscoord indent = mTextIndent; // Used for the first frame.
-
-  while (nsnull != pfd) {
-
-    // Compute max-element-width if necessary
-    if (mComputeMaxElementWidth) {
-
-      nscoord mw = pfd->mMaxElementWidth +
-        pfd->mMargin.left + pfd->mMargin.right + indent;
-      // Zero |indent| after including the 'text-indent' only for the
-      // frame that is indented.
-      indent = 0;
-
-      if (psd->mNoWrap) {
-        maxElementWidth += mw;
-      }
-      else {
-
-#ifdef HACK_MEW
-
-#ifdef DEBUG
-      if (nsBlockFrame::gNoisyMaxElementWidth) 
-        frameCount++;
-#endif
-        // if in Quirks mode and in a table cell with an unconstrained width, then emulate an IE
-        // quirk to keep consecutive images from breaking the line
-        // - see bugs 54565, 32191, and their many dups
-        // XXX - reconsider how textFrame text measurement happens and have it take into account
-        //       image frames as well, thus eliminating the need for this code
-        if (!strictMode && inUnconstrainedTable ) {
-
-          nscoord imgSizes = AccumulateImageSizes(*mPresContext, *pfd->mFrame);
-          PRBool curFrameAccumulates = (imgSizes > 0) || 
-                                       (pfd->mMaxElementWidth == pfd->mBounds.width &&
-                                        pfd->GetFlag(PFD_ISNONWHITESPACETEXTFRAME));
-            // NOTE: we check for the maxElementWidth == the boundsWidth to detect when
-            //       a textframe has whitespace in it and thus should not be used as the basis
-            //       for accumulating the image width
-            // - this is to handle images in a text run
-
-          if(prevFrameAccumulates && curFrameAccumulates) {
-            accumulatedWidth += mw;
-          } else {
-            accumulatedWidth = mw;
-          } 
-          // now update the prevFrame
-          prevFrameAccumulates = curFrameAccumulates;
-        
-#ifdef DEBUG
-          if (nsBlockFrame::gNoisyMaxElementWidth) {
-            nsFrame::IndentBy(stdout, nsBlockFrame::gNoiseIndent);
-            printf("(%d) last frame's MEW=%d | Accumulated MEW=%d\n", frameCount, mw, accumulatedWidth);
-          }
-#endif 
-
-          mw = accumulatedWidth;
-        }
-
-#endif // HACK_MEW
-
-        // and finally reset the max element width
-        if (maxElementWidth < mw) {
-          maxElementWidth = mw;
-        }
-      }
-    }
+  for (PerFrameData* pfd = psd->mFirstFrame; pfd; pfd = pfd->mNext) {
     PerSpanData* span = pfd->mSpan;
 #ifdef DEBUG
     NS_ASSERTION(0xFF != pfd->mVerticalAlign, "umr");
@@ -1817,7 +1743,6 @@ nsLineLayout::VerticalAlignLine(nsLineBox* aLineBox,
       if (IsPercentageAwareFrame(mPresContext, pfd->mFrame))
         aLineBox->DisableResizeReflowOptimization();
     }
-    pfd = pfd->mNext;
   }
 
   // Fill in returned line-box and max-element-width data
@@ -1826,20 +1751,91 @@ nsLineLayout::VerticalAlignLine(nsLineBox* aLineBox,
   aLineBox->mBounds.width = psd->mX - psd->mLeftEdge;
   aLineBox->mBounds.height = lineHeight;
   mFinalLineHeight = lineHeight;
-  *aMaxElementWidthResult = maxElementWidth;
   aLineBox->SetAscent(baselineY - mTopEdge);
 #ifdef NOISY_VERTICAL_ALIGN
   printf(
-    "  [line]==> bounds{x,y,w,h}={%d,%d,%d,%d} lh=%d a=%d mew=%d\n",
+    "  [line]==> bounds{x,y,w,h}={%d,%d,%d,%d} lh=%d a=%d\n",
     aLineBox->mBounds.x, aLineBox->mBounds.y,
     aLineBox->mBounds.width, aLineBox->mBounds.height,
-    mFinalLineHeight, aLineBox->GetAscent(),
-    *aMaxElementWidthResult);
+    mFinalLineHeight, aLineBox->GetAscent());
 #endif
 
   // Undo root-span mFrame pointer to prevent brane damage later on...
   mRootSpan->mFrame = nsnull;
   mLineBox = nsnull;
+}
+
+nscoord
+nsLineLayout::GetLineMaxElementWidth(nsLineBox* aLineBox)
+{
+  PRBool strictMode = InStrictMode();
+  PRBool inUnconstrainedTable = InUnconstrainedTableCell(*mBlockReflowState);
+  nscoord maxElementWidth = 0;
+  PRBool prevFrameAccumulates = PR_FALSE;
+  nscoord accumulatedWidth = 0;
+  nscoord indent = mTextIndent; // Used for the first frame.
+
+  for (PerFrameData* pfd = mRootSpan->mFirstFrame; pfd; pfd = pfd->mNext) {
+    nscoord mw = pfd->mMaxElementWidth +
+      pfd->mMargin.left + pfd->mMargin.right + indent;
+    // Zero |indent| after including the 'text-indent' only for the
+    // frame that is indented.
+    indent = 0;
+
+    if (psd->mNoWrap) {
+      maxElementWidth += mw;
+    }
+    else {
+
+#ifdef HACK_MEW
+
+#ifdef DEBUG
+      if (nsBlockFrame::gNoisyMaxElementWidth) 
+        frameCount++;
+#endif
+      // if in Quirks mode and in a table cell with an unconstrained width, then emulate an IE
+      // quirk to keep consecutive images from breaking the line
+      // - see bugs 54565, 32191, and their many dups
+      // XXX - reconsider how textFrame text measurement happens and have it take into account
+      //       image frames as well, thus eliminating the need for this code
+      if (!strictMode && inUnconstrainedTable ) {
+
+        nscoord imgSizes = AccumulateImageSizes(*mPresContext, *pfd->mFrame);
+        PRBool curFrameAccumulates = (imgSizes > 0) || 
+                                     (pfd->mMaxElementWidth == pfd->mBounds.width &&
+                                      pfd->GetFlag(PFD_ISNONWHITESPACETEXTFRAME));
+          // NOTE: we check for the maxElementWidth == the boundsWidth to detect when
+          //       a textframe has whitespace in it and thus should not be used as the basis
+          //       for accumulating the image width
+          // - this is to handle images in a text run
+
+        if(prevFrameAccumulates && curFrameAccumulates) {
+          accumulatedWidth += mw;
+        } else {
+          accumulatedWidth = mw;
+        } 
+        // now update the prevFrame
+        prevFrameAccumulates = curFrameAccumulates;
+      
+#ifdef DEBUG
+        if (nsBlockFrame::gNoisyMaxElementWidth) {
+          nsFrame::IndentBy(stdout, nsBlockFrame::gNoiseIndent);
+          printf("(%d) last frame's MEW=%d | Accumulated MEW=%d\n", frameCount, mw, accumulatedWidth);
+        }
+#endif 
+
+        mw = accumulatedWidth;
+      }
+
+#endif // HACK_MEW
+
+      // and finally reset the max element width
+      if (maxElementWidth < mw) {
+        maxElementWidth = mw;
+      }
+    }
+  }
+  return maxElementWidth;
 }
 
 void
