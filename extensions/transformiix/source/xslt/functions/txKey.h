@@ -83,7 +83,7 @@ struct txKeyValueHashEntry : public PLDHashEntryHdr
     nsRefPtr<txNodeSet> mNodeSet;
 };
 
-DECL_DHASH_WRAPPER(txKeyValueHash, txKeyValueHashEntry, txKeyValueHashKey&);
+DECL_DHASH_WRAPPER(txKeyValueHash, txKeyValueHashEntry, txKeyValueHashKey&)
 
 class txIndexedKeyHashKey
 {
