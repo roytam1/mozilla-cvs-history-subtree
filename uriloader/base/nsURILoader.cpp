@@ -46,6 +46,7 @@
 #include "nsIServiceManager.h"
 #include "nsIStreamListener.h"
 #include "nsIURI.h"
+#include "nsIURL.h"
 #include "nsIChannel.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIInterfaceRequestorUtils.h"
@@ -275,6 +276,32 @@ nsresult nsDocumentOpenInfo::DispatchContent(nsIRequest *request, nsISupports * 
 
   rv = aChannel->GetContentType(contentType);
   if (NS_FAILED(rv)) return rv;
+  
+  // Hack to see if a text/plain or text/html content type is actually a .dmg file
+  // by checking the extension.  That isn't ideal but until we can determine some magic
+  // number to indicate a .dmg file...
+  // If we find a .dmg extension we're going to force it to be application/octet-stream
+  // so it'll be saved to disk rather than being displayed in a browser window
+  if (contentType.Equals(NS_LITERAL_CSTRING("text/plain"), nsCaseInsensitiveCStringComparator()) ||
+     contentType.Equals(NS_LITERAL_CSTRING("text/html"), nsCaseInsensitiveCStringComparator()))
+  {
+    nsCOMPtr<nsIURI> uri;
+    aChannel->GetURI(getter_AddRefs(uri));
+    nsCOMPtr<nsIURL> url = do_QueryInterface(uri);
+    if (url)
+    {
+      nsCAutoString theFileName;
+      url->GetFileName(theFileName);
+      PRInt32 extPosition = theFileName.RFind(".dmg");
+      PRInt32 nameLength = theFileName.Length();
+      if (extPosition > 0 &&
+          ((extPosition == nameLength - 4) || (extPosition == nameLength - 7)))
+      {
+        aChannel->SetContentType(nsDependentCString("application/octet-stream"));
+        rv = aChannel->GetContentType(contentType);
+      }
+    }
+  }
 
    // go to the uri dispatcher and give them our stuff...
   nsCOMPtr<nsIURILoader> uriLoader;
