@@ -293,7 +293,7 @@ void MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes, nsRuleDat
         nsHTMLValue value;
         aAttributes->GetAttribute(nsHTMLAtoms::valign, value);
         if (value.GetUnit() == eHTMLUnit_Enumerated) 
-          aData->mTextData->mTextAlign = nsCSSValue(value.GetIntValue(), eCSSUnit_Enumerated);
+          aData->mTextData->mVerticalAlign = nsCSSValue(value.GetIntValue(), eCSSUnit_Enumerated);
       }
     }
   }
