@@ -53,6 +53,7 @@ class txNodeSet;
 class TxObject;
 class txXPathResultComparator;
 class txIEvalContext;
+class txNodeSetContext;
 
 /*
  * Sorts Nodes as specified by the W3C XSLT 1.0 Recommendation
@@ -67,16 +68,16 @@ public:
     nsresult addSortElement(Expr* aSelectExpr, Expr* aLangExpr,
                             Expr* aDataTypeExpr, Expr* aOrderExpr,
                             Expr* aCaseOrderExpr, txIEvalContext* aContext);
-    nsresult sortNodeSet(txNodeSet* aNodes, txExecutionState* aEs);
+    nsresult sortNodeSet(txNodeSet* aNodes, txExecutionState* aEs,
+                         txNodeSet** aResult);
 
 private:
-    class SortableNode
+    struct SortData
     {
-    public:
-        SortableNode(const txXPathNode& aNode, int aNValues);
-        void clear(int aNValues);
+        txNodeSorter* mNodeSorter;
+        txNodeSetContext* mContext;
         TxObject** mSortValues;
-        const nsAutoPtr<txXPathNode> mNode;
+        nsresult mRv;
     };
     struct SortKey
     {
@@ -84,11 +85,10 @@ private:
         txXPathResultComparator* mComparator;
     };
     
-    int compareNodes(SortableNode* sNode1,
-                     SortableNode* sNode2,
-                     txNodeSet* aNodes,
-                     txExecutionState* aEs);
-
+    static int compareNodes(const void* aIndexA, const void* aIndexB,
+                            void* aSortData);
+    static PRBool calcSortValue(TxObject*& aSortValue, SortKey* aKey,
+                                SortData* aSortData, PRUint32 aNodeIndex);
     txList mSortKeys;
     int mNKeys;
 };
