@@ -45,6 +45,7 @@
 #include "nsXPathNSResolver.h"
 #include "nsXPathResult.h"
 #include "nsContentCID.h"
+#include "Expr.h"
 #include "ExprParser.h"
 #include "nsDOMError.h"
 #include "txURIUtils.h"
@@ -153,7 +154,7 @@ nsresult nsXPathEvaluator::ParseContextImpl::resolveNamespacePrefix
     }
 
     if (!mNSMan) {
-        mNSMan = do_CreateInstance(kNameSpaceManagerCID);
+        mNSMan = do_GetService(kNameSpaceManagerCID);
         if (!mNSMan) {
             return NS_ERROR_FAILURE;
         }
