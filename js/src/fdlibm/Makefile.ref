@@ -61,7 +61,7 @@
 # is double scalb(double, double)
 #
 
-DEPTH		= ..
+DEPTH           = ..
 
 ifdef BUILD_OPT
 OPTIMIZER  = -O
@@ -113,7 +113,7 @@ INCLUDES   = -I$(OBJDIR)
 # Default IEEE libm
 #
 CFLAGS          = -DXP_UNIX $(OPTIMIZER) $(OS_CFLAGS) $(DEFINES) $(INCLUDES) \
-                  -DJSFILE $(XCFLAGS) -D_IEEE_LIBM
+		  -DJSFILE $(XCFLAGS) -D_IEEE_LIBM
 
 
 
@@ -122,7 +122,7 @@ CFLAGS          = -DXP_UNIX $(OPTIMIZER) $(OS_CFLAGS) $(DEFINES) $(INCLUDES) \
 INCFILES = fdlibm.h
 .INIT: $(INCFILES)
 .KEEP_STATE:
-FDLIBM_CFILES =		\
+FDLIBM_CFILES =         \
 	k_standard.c k_rem_pio2.c \
 	k_cos.c k_sin.c k_tan.c \
 	e_acos.c e_acosh.c e_asin.c e_atan2.c \
@@ -150,7 +150,14 @@ else
 FDLIBM_OBJS = $(addprefix $(OBJDIR)/, $(FDLIBM_CFILES:.c=.o))
 endif
 
-all: libfdm.a 
+ifdef USE_MSVC
+LIBRARY = $(OBJDIR)/fdlibm.dll
+else
+LIBRARY = $(OBJDIR)/libfdm.a
+endif
+
+
+all: $(LIBRARY) 
 
 $(OBJDIR)/%: %.c
 	@$(MAKE_OBJDIR)
@@ -164,11 +171,34 @@ $(OBJDIR)/%.o: %.s
 	@$(MAKE_OBJDIR)
 	$(AS) -o $@ $(ASFLAGS) $*.s
 
+# windows only
+$(OBJDIR)/%.obj: %.c
+	@$(MAKE_OBJDIR)
+	$(CC) -Fo$(OBJDIR)/ -c $(CFLAGS) $*.c
+
+ifeq ($(OS_ARCH),OS2)
+$(LIBRARY): $(FDLIBM_OBJS)
+	$(AR) $@ $? $(AR_OS2_SUFFIX)
+	$(RANLIB) $@
+else
+ifdef USE_MSVC
+$(LIBRARY): $(FDLIBM_OBJS)
+	link.exe $(LIB_LINK_FLAGS) /base:0x61000000 \
+	    /out:"$@" /pdb:"$(OBJDIR)/fdlibm.pdb" /implib:"$(OBJDIR)/fdlibm.lib" $?
+else
+$(LIBRARY): $(FDLIBM_OBJS)
+	$(AR) rv $@ $?
+	$(RANLIB) $@
+endif
+endif
+
 libfdm.a : $(FDLIBM_OBJS) 
 	ar cru $(OBJDIR)/libfdm.a $(FDLIBM_OBJS)
 	ranlib $(OBJDIR)/libfdm.a
 
-source: $(FDLIBM_CFILES) README
+clean:
+	rm -rf $(FDLIBM_OBJS)
 
-clean: 
-	/bin/rm -f $(FDLIBM_OBJS) $(OBJDIR)/a.out $(OBJDIR)/libfdm.a
+SUFFIXES: .i
+%.i: %.c
+	$(CC) -C -E $(CFLAGS) $< > $*.i
