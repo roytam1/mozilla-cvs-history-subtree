@@ -2084,7 +2084,11 @@ nsImapMailFolder::NormalEndMsgWriteStream(nsIImapProtocol* aProtocol)
 			nsFileURL  fileURL(filePath);
 			char * message_path_url = PL_strdup(fileURL.GetAsString());
 
+			// mscott -- we don't have converters yet..comment out the load code
+			// until we are done!
+#ifdef NECKO_CONVERTERS
 			res = webShell->LoadURL(nsAutoString(message_path_url).GetUnicode(), nsnull, PR_TRUE, nsURLReloadBypassCache, 0);
+#endif
 
 			PR_FREEIF(message_path_url);
 		}
