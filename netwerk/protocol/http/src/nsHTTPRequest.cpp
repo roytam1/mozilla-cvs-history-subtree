@@ -791,14 +791,6 @@ nsHTTPPipelinedRequest::OnStopRequest (nsIChannel* channel, nsISupports* i_Conte
 
         // Notify the HTTPChannel that the request has finished
 
-        // XXX/ruslan: we need to walk through all the requests !!!!!!!!!!!!!!
-
-        nsCOMPtr<nsIStreamListener> consumer;
-
-        req -> mConnection -> GetResponseDataListener (getter_AddRefs (consumer));
-        if (consumer)
-            req -> mConnection -> ResponseCompleted (consumer, rv, i_Msg);
-
         if (mTransport)
         {
             nsIChannel *p = mTransport;
@@ -806,6 +798,14 @@ nsHTTPPipelinedRequest::OnStopRequest (nsIChannel* channel, nsISupports* i_Conte
 
             mHandler -> ReleaseTransport (p, nsIHTTPProtocolHandler::DONTRECORD_CAPABILITIES);
         }
+
+        // XXX/ruslan: we need to walk through all the requests !!!!!!!!!!!!!!
+
+        nsCOMPtr<nsIStreamListener> consumer;
+
+        req -> mConnection -> GetResponseDataListener (getter_AddRefs (consumer));
+        if (consumer)
+            req -> mConnection -> ResponseCompleted (consumer, rv, i_Msg);
 
     }
  
