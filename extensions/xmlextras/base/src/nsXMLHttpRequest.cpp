@@ -125,7 +125,7 @@ nsXMLHttpRequestScriptListener::~nsXMLHttpRequestScriptListener()
 
 NS_IMPL_ISUPPORTS2(nsXMLHttpRequestScriptListener, nsIDOMEventListener, nsIPrivateJSEventListener)
 
-nsresult 
+NS_IMETHODIMP
 nsXMLHttpRequestScriptListener::HandleEvent(nsIDOMEvent* aEvent)
 {
   JSContext* cx;
@@ -175,13 +175,13 @@ public:
   NS_DECL_ISUPPORTS
 
   // nsIDOMEventListener
-  virtual nsresult HandleEvent(nsIDOMEvent* aEvent);
+  NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent);
 
   // nsIDOMLoadListener
-  virtual nsresult Load(nsIDOMEvent* aEvent);
-  virtual nsresult Unload(nsIDOMEvent* aEvent);
-  virtual nsresult Abort(nsIDOMEvent* aEvent);
-  virtual nsresult Error(nsIDOMEvent* aEvent);
+  NS_IMETHOD Load(nsIDOMEvent* aEvent);
+  NS_IMETHOD Unload(nsIDOMEvent* aEvent);
+  NS_IMETHOD Abort(nsIDOMEvent* aEvent);
+  NS_IMETHOD Error(nsIDOMEvent* aEvent);
 
 protected:
   nsWeakPtr  mParent;
@@ -199,7 +199,7 @@ nsLoadListenerProxy::~nsLoadListenerProxy()
 
 NS_IMPL_ISUPPORTS1(nsLoadListenerProxy, nsIDOMLoadListener)
 
-nsresult
+NS_IMETHODIMP
 nsLoadListenerProxy::HandleEvent(nsIDOMEvent* aEvent)
 {
   nsCOMPtr<nsIDOMLoadListener> listener(do_QueryReferent(mParent));
@@ -211,7 +211,7 @@ nsLoadListenerProxy::HandleEvent(nsIDOMEvent* aEvent)
   return NS_OK;
 }
 
-nsresult 
+NS_IMETHODIMP
 nsLoadListenerProxy::Load(nsIDOMEvent* aEvent)
 {
   nsCOMPtr<nsIDOMLoadListener> listener(do_QueryReferent(mParent));
@@ -223,7 +223,7 @@ nsLoadListenerProxy::Load(nsIDOMEvent* aEvent)
   return NS_OK;
 }
 
-nsresult 
+NS_IMETHODIMP
 nsLoadListenerProxy::Unload(nsIDOMEvent* aEvent)
 {
   nsCOMPtr<nsIDOMLoadListener> listener(do_QueryReferent(mParent));
@@ -235,7 +235,7 @@ nsLoadListenerProxy::Unload(nsIDOMEvent* aEvent)
   return NS_OK;
 }
 
-nsresult 
+NS_IMETHODIMP
 nsLoadListenerProxy::Abort(nsIDOMEvent* aEvent)
 {
   nsCOMPtr<nsIDOMLoadListener> listener(do_QueryReferent(mParent));
@@ -247,7 +247,7 @@ nsLoadListenerProxy::Abort(nsIDOMEvent* aEvent)
   return NS_OK;
 }
 
-nsresult 
+NS_IMETHODIMP
 nsLoadListenerProxy::Error(nsIDOMEvent* aEvent)
 {
   nsCOMPtr<nsIDOMLoadListener> listener(do_QueryReferent(mParent));

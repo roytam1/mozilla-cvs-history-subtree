@@ -93,57 +93,6 @@ nsXMLExtrasNameset::InitializeClasses(nsIScriptContext* aScriptContext)
   return NS_OK;
 }
 
-NS_IMETHODIMP
-nsXMLExtrasNameset::AddNameSet(nsIScriptContext* aScriptContext)
-{
-  static NS_DEFINE_CID(kXMLSerializer_CID, NS_XMLSERIALIZER_CID);
-  static NS_DEFINE_CID(kXMLHttpRequest_CID, NS_XMLHTTPREQUEST_CID);
-  static NS_DEFINE_CID(kDOMParser_CID, NS_DOMPARSER_CID);
-#ifdef MOZ_SOAP
-  static NS_DEFINE_CID(kSOAPCall_CID, NS_SOAPCALL_CID);
-  static NS_DEFINE_CID(kSOAPParameter_CID, NS_SOAPPARAMETER_CID);
-#endif
-  nsresult result;
-  nsCOMPtr<nsIScriptNameSpaceManager> manager;
-  
-  result = aScriptContext->GetNameSpaceManager(getter_AddRefs(manager));
-  if (NS_SUCCEEDED(result)) {
-    result = manager->RegisterGlobalName(NS_ConvertASCIItoUCS2("XMLSerializer"), 
-                                         NS_GET_IID(nsIDOMSerializer),
-                                         kXMLSerializer_CID, 
-                                         PR_TRUE);
-    NS_ENSURE_SUCCESS(result, result);
-
-    result = manager->RegisterGlobalName(NS_ConvertASCIItoUCS2("XMLHttpRequest"), 
-                                         NS_GET_IID(nsIXMLHttpRequest),
-                                         kXMLHttpRequest_CID, 
-                                         PR_TRUE);
-    NS_ENSURE_SUCCESS(result, result);
-
-    result = manager->RegisterGlobalName(NS_ConvertASCIItoUCS2("DOMParser"), 
-                                         NS_GET_IID(nsIDOMParser),
-                                         kDOMParser_CID, 
-                                         PR_TRUE);
-    NS_ENSURE_SUCCESS(result, result);
-
-#ifdef MOZ_SOAP
-    result = manager->RegisterGlobalName(NS_ConvertASCIItoUCS2("SOAPCall"), 
-                                         NS_GET_IID(nsISOAPCall),
-                                         kSOAPCall_CID, 
-                                         PR_TRUE);
-    NS_ENSURE_SUCCESS(result, result);
-
-    result = manager->RegisterGlobalName(NS_ConvertASCIItoUCS2("SOAPParameter"), 
-                                         NS_GET_IID(nsISOAPParameter),
-                                         kSOAPParameter_CID, 
-                                         PR_TRUE);
-    NS_ENSURE_SUCCESS(result, result);
-#endif
-  }
-
-  return result;
-}
-
 #define NS_XML_EXTRAS_CID                          \
  { /* 33e569b0-40f8-11d4-9a41-000064657374 */      \
   0x33e569b0, 0x40f8, 0x11d4,                      \
@@ -201,12 +150,6 @@ RegisterXMLExtras(nsIComponentManager *aCompMgr,
   NS_ENSURE_SUCCESS(rv, rv);
 
   rv = catman->AddCategoryEntry(JAVASCRIPT_GLOBAL_CONSTRUCTOR_CATEGORY,
-                                "XMLSerializer",
-                                NS_XMLSERIALIZER_CONTRACTID,
-                                PR_TRUE, PR_TRUE, getter_Copies(previous));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  rv = catman->AddCategoryEntry(JAVASCRIPT_GLOBAL_CONSTRUCTOR_CATEGORY,
                                 "XMLHttpRequest",
                                 NS_XMLHTTPREQUEST_CONTRACTID,
                                 PR_TRUE, PR_TRUE, getter_Copies(previous));
@@ -218,6 +161,7 @@ RegisterXMLExtras(nsIComponentManager *aCompMgr,
                                 PR_TRUE, PR_TRUE, getter_Copies(previous));
   NS_ENSURE_SUCCESS(rv, rv);
 
+#ifdef MOZ_SOAP
   rv = catman->AddCategoryEntry(JAVASCRIPT_GLOBAL_CONSTRUCTOR_CATEGORY,
                                 "SOAPCall",
                                 NS_SOAPCALL_CONTRACTID,
@@ -229,6 +173,7 @@ RegisterXMLExtras(nsIComponentManager *aCompMgr,
                                 NS_SOAPPARAMETER_CONTRACTID,
                                 PR_TRUE, PR_TRUE, getter_Copies(previous));
   NS_ENSURE_SUCCESS(rv, rv);
+#endif
 
   return rv;
 }

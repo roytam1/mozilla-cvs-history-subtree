@@ -67,13 +67,13 @@ public:
   NS_DECL_NSIXMLHTTPREQUEST
 
   // nsIDOMEventListener
-  virtual nsresult HandleEvent(nsIDOMEvent* aEvent);
+  NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent);
 
   // nsIDOMLoadListener
-  virtual nsresult Load(nsIDOMEvent* aEvent);
-  virtual nsresult Unload(nsIDOMEvent* aEvent);
-  virtual nsresult Abort(nsIDOMEvent* aEvent);
-  virtual nsresult Error(nsIDOMEvent* aEvent);
+  NS_IMETHOD Load(nsIDOMEvent* aEvent);
+  NS_IMETHOD Unload(nsIDOMEvent* aEvent);
+  NS_IMETHOD Abort(nsIDOMEvent* aEvent);
+  NS_IMETHOD Error(nsIDOMEvent* aEvent);
 
   // nsISecurityCheckedComponent
   NS_DECL_NSISECURITYCHECKEDCOMPONENT
@@ -212,7 +212,7 @@ public:
   NS_DECL_ISUPPORTS
   
   // nsIDOMEventListener
-  virtual nsresult HandleEvent(nsIDOMEvent* aEvent);
+  NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent);
 
   // nsIPrivateJSEventListener
   NS_IMETHOD GetFunctionObj(JSObject** aObj);
