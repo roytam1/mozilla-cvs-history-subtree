@@ -2080,7 +2080,7 @@ NET_ReadCookies(char * filename)
      *
 	 * if this format isn't respected we move onto the next line in the file.
      * is_domain is TRUE or FALSE	-- defaulting to FALSE
-     * secure is TRUE or FALSE   -- should default to TRUE
+     * xxx is TRUE or FALSE   -- should default to TRUE
      * expires is a time_t integer
      * cookie can have tabs
      */
@@ -2111,7 +2111,7 @@ NET_ReadCookies(char * filename)
 		if(*xxx == CR || *xxx == LF || *xxx == 0)
 			continue;
 
-		if( !(expires = XP_STRCHR(secure, '\t')) )
+		if( !(expires = XP_STRCHR(xxx, '\t')) )
 			continue;
 		*expires++ = '\0';
 		if(*expires == CR || *expires == LF || *expires == 0)
