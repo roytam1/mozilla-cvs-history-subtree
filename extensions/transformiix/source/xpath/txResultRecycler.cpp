@@ -286,3 +286,16 @@ txResultRecycler::getNonSharedNodeSet(txNodeSet* aNodeSet, txNodeSet** aResult)
 
     return NS_OK;
 }
+
+void
+txAExprResult::Release()
+{
+    if (--mRefCnt == 0) {
+        if (mRecycler) {
+            mRecycler->recycle(this);
+        }
+        else {
+            delete this;
+        }
+    }
+}
