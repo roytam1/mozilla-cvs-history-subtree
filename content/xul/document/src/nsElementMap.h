@@ -70,6 +70,9 @@ public:
     nsresult
     Find(const nsString& aID, nsISupportsArray* aResults);
 
+    nsresult
+    FindFirst(const nsString& aID, nsIContent** aContent);
+
     typedef PRIntn (*nsElementMapEnumerator)(const nsString& aID,
                                              nsIContent* aElement,
                                              void* aClosure);

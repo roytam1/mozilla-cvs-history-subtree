@@ -17,6 +17,12 @@
  * Netscape Communications Corporation.  All Rights Reserved.
  */
 
+/*
+
+   Maps IDs to elements.
+
+ */
+
 #include "nsCRT.h"
 #include "nsElementMap.h"
 #include "nsIContent.h"
@@ -219,6 +225,28 @@ nsElementMap::Find(const nsString& aID, nsISupportsArray* aResults)
         aResults->AppendElement(item->mContent);
         item = item->mNext;
     }
+    return NS_OK;
+}
+
+
+nsresult
+nsElementMap::FindFirst(const nsString& aID, nsIContent** aResult)
+{
+    NS_PRECONDITION(mMap != nsnull, "not initialized");
+    if (! mMap)
+        return NS_ERROR_NOT_INITIALIZED;
+
+    ContentListItem* item =
+        NS_REINTERPRET_CAST(ContentListItem*, PL_HashTableLookup(mMap, aID.GetUnicode()));
+
+    if (item) {
+        *aResult = item->mContent;
+        NS_ADDREF(*aResult);
+    }
+    else {
+        *aResult = nsnull;
+    }
+
     return NS_OK;
 }
 
