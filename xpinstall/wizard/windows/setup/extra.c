@@ -1217,6 +1217,8 @@ siC *CreateSiCNode()
     exit(1);
   if((siCNode->szArchivePath = NS_GlobalAlloc(MAX_BUF)) == NULL)
     exit(1);
+  if((siCNode->szDestinationPath = NS_GlobalAlloc(MAX_BUF)) == NULL)
+    exit(1);
   if((siCNode->szDescriptionShort = NS_GlobalAlloc(MAX_BUF)) == NULL)
     exit(1);
   if((siCNode->szDescriptionLong = NS_GlobalAlloc(MAX_BUF)) == NULL)
@@ -1258,6 +1260,7 @@ void SiCNodeDelete(siC *siCTemp)
     siCTemp->Next       = NULL;
     siCTemp->Prev       = NULL;
 
+    FreeMemory(&(siCTemp->szDestinationPath));
     FreeMemory(&(siCTemp->szArchivePath));
     FreeMemory(&(siCTemp->szArchiveName));
     FreeMemory(&(siCTemp->szDescriptionLong));
@@ -2311,7 +2314,7 @@ HRESULT ParseConfigIni(LPSTR lpszCmdLine)
   GetPrivateProfileString("General", "Product Name", "", sgProduct.szProductName, MAX_BUF, szFileIniConfig);
   
   /* get main install path */
-  if(LocatePreviousPath(sgProduct.szPath, MAX_PATH) == FALSE)
+  if(LocatePreviousPath("Locate Previous Product Path", sgProduct.szPath, MAX_PATH) == FALSE)
   {
     GetPrivateProfileString("General", "Path", "", szBuf, MAX_BUF, szFileIniConfig);
     DecryptString(sgProduct.szPath, szBuf);
@@ -2567,11 +2570,71 @@ HRESULT ParseConfigIni(LPSTR lpszCmdLine)
   return(0);
 }
 
-BOOL LocatePreviousPath(LPSTR szPath, DWORD dwPathSize)
+BOOL LocatePreviousPath(LPSTR szMainSectionName, LPSTR szPath, DWORD dwPathSize)
 {
   DWORD dwIndex;
   char  szIndex[MAX_BUF];
   char  szSection[MAX_BUF];
+  char  szValue[MAX_BUF];
+  BOOL  bFound;
+
+  bFound  = FALSE;
+  dwIndex = -1;
+  while(!bFound)
+  {
+    ++dwIndex;
+    itoa(dwIndex, szIndex, 10);
+    lstrcpy(szSection, szMainSectionName);
+    lstrcat(szSection, szIndex);
+
+    GetPrivateProfileString(szSection, "Key", "", szValue, MAX_BUF, szFileIniConfig);
+    if(*szValue != '\0')
+      bFound = LocatePathNscpReg(szSection, szPath, dwPathSize);
+    else
+    {
+      GetPrivateProfileString(szSection, "HKey", "", szValue, MAX_BUF, szFileIniConfig);
+      if(*szValue != '\0')
+        bFound = LocatePathWinReg(szSection, szPath, dwPathSize);
+      else
+      {
+        GetPrivateProfileString(szSection, "Path", "", szValue, MAX_BUF, szFileIniConfig);
+        if(*szValue != '\0')
+          bFound = LocatePath(szSection, szPath, dwPathSize);
+        else
+          break;
+      }
+    }
+  }
+
+  return(bFound);
+}
+
+BOOL LocatePathNscpReg(LPSTR szSection, LPSTR szPath, DWORD dwPathSize)
+{
+  char  szKey[MAX_BUF];
+  char  szBuf[MAX_BUF];
+  BOOL  bReturn;
+
+  bReturn = FALSE;
+  GetPrivateProfileString(szSection, "Key", "", szKey, MAX_BUF, szFileIniConfig);
+  if(*szKey != '\0')
+  {
+    bReturn = FALSE;
+    ZeroMemory(szPath, dwPathSize);
+
+    VR_GetPath(szKey, MAX_BUF, szBuf);
+    if(*szBuf != '\0')
+    {
+      lstrcpy(szPath, szBuf);
+      bReturn = TRUE;
+    }
+  }
+
+  return(bReturn);
+}
+
+BOOL LocatePathWinReg(LPSTR szSection, LPSTR szPath, DWORD dwPathSize)
+{
   char  szHKey[MAX_BUF];
   char  szHRoot[MAX_BUF];
   char  szName[MAX_BUF];
@@ -2583,12 +2646,8 @@ BOOL LocatePreviousPath(LPSTR szPath, DWORD dwPathSize)
   HKEY  hkeyRoot;
 
   bReturn = FALSE;
-  dwIndex = 0;
-  itoa(dwIndex, szIndex, 10);
-  lstrcpy(szSection, "Locate Previous Product Path");
-  lstrcat(szSection, szIndex);
   GetPrivateProfileString(szSection, "HKey", "", szHKey, MAX_BUF, szFileIniConfig);
-  while(*szHKey != '\0')
+  if(*szHKey != '\0')
   {
     bReturn = FALSE;
     ZeroMemory(szPath, dwPathSize);
@@ -2603,10 +2662,10 @@ BOOL LocatePreviousPath(LPSTR szPath, DWORD dwPathSize)
       bDecryptKey = TRUE;
 
     GetPrivateProfileString(szSection, "Contains Filename",   "", szBuf, MAX_BUF, szFileIniConfig);
-    if(lstrcmpi(szBuf, "FALSE") == 0)
-      bContainsFilename = FALSE;
-    else
+    if(lstrcmpi(szBuf, "TRUE") == 0)
       bContainsFilename = TRUE;
+    else
+      bContainsFilename = FALSE;
 
     if(lstrcmpi(szHRoot, "HKEY_CLASSES_ROOT") == 0)
       hkeyRoot = HKEY_CLASSES_ROOT;
@@ -2663,17 +2722,26 @@ BOOL LocatePreviousPath(LPSTR szPath, DWORD dwPathSize)
 
         bReturn = TRUE;
       }
-
-      // break if a valid path was found, else keep looking
-      if(bReturn == TRUE)
-        break;
     }
+  }
 
-    ++dwIndex;
-    itoa(dwIndex, szIndex, 10);
-    lstrcpy(szSection, "Locate Previous Product Path");
-    lstrcat(szSection, szIndex);
-    GetPrivateProfileString(szSection, "HKey", "", szHKey, MAX_BUF, szFileIniConfig);
+  return(bReturn);
+}
+
+BOOL LocatePath(LPSTR szSection, LPSTR szPath, DWORD dwPathSize)
+{
+  char  szPathKey[MAX_BUF];
+  BOOL  bReturn;
+
+  bReturn = FALSE;
+  GetPrivateProfileString(szSection, "Path", "", szPathKey, MAX_BUF, szFileIniConfig);
+  if(*szPathKey != '\0')
+  {
+    bReturn = FALSE;
+    ZeroMemory(szPath, dwPathSize);
+
+    DecryptString(szPath, szPathKey);
+    bReturn = TRUE;
   }
 
   return(bReturn);
