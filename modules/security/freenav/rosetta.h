@@ -15,6 +15,9 @@
  * Reserved.
  */
 
+#ifndef _ROSETTA_H_
+#define _ROSETTA_H_
+
 #define HG87729
 #define HG92192 FALSE
 #define HG21872
@@ -336,7 +339,7 @@
 #define HG98376
 #define HG92362
 #define HG26300
-#define HG27229 "mkfile.h"
+#define HG27229 "rosetta.h"
 #define HG27230
 #define HG27326 "mkutils.h"
 #define HG32828
@@ -488,6 +491,7 @@
 #define HG79266
 #define HG72611
 #define HG72625
+#define HG47991
 #define HG27367
 #define HG72671
 #define HG72729 ss = XP_GetString(XFE_SECURITY_DISABLED);
@@ -659,3 +663,4 @@
 
 
 
+#endif /* _ROSETTA_H_ */
