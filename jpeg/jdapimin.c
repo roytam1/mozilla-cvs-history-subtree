@@ -26,6 +26,8 @@ static int mmxsupport();
 #endif
 
 #ifdef HAVE_SSE2_INTEL_MNEMONICS
+#include "windows.h"
+
 int SSE2Available = 0;
 static int sse2support();
 #endif
@@ -482,6 +484,7 @@ static int sse2support()
 {
 	int sse2available = 0;
 	int my_edx;
+
 	_asm
 	{
 		mov eax, 01                       
@@ -492,6 +495,25 @@ static int sse2support()
 		sse2available = 1; 
 	else sse2available = 2;
 
+	/* The code below checks to see if the OS can handle */
+	/* SSE2 instructions. Windows NT below Service Pack  */
+	/* 5 without a special Intel Driver doesn't support  */
+	/* SSE2 instructions even though the processor may.  */
+	if (sse2available == 1)
+	{
+		__try
+		{
+			_asm
+			{
+				xorpd xmm0, xmm0  ; SSE2 instruction
+			}
+		}
+		__except(EXCEPTION_EXECUTE_HANDLER)
+		{
+			sse2available = 2;
+		}
+	}
+  
 	return sse2available;
 }
 
