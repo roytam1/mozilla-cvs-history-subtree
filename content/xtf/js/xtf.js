@@ -251,10 +251,13 @@ XTFVisual.addProtoObj(
   function(wrapper) {
     this.XTFElement$onCreated(wrapper);
     var builder = ContentBuilder.instantiate();
+    
+    // XXX Don't set document here as it leads to wrappers and their
+    // anonymous content leaking! (See content/xtf/readme.txt)
     // XXX For XUL docs, ownerDocument will be null at this
     // point. This leads to some XBL subtleties. See
     // content/xtf/readme.txt for more details.
-    builder.setDocument(this._wrapper.ownerDocument); 
+    //builder.setDocument(this._wrapper.ownerDocument); 
     this._buildVisualContent(builder);
     this._visualContent = builder.root;
   });
