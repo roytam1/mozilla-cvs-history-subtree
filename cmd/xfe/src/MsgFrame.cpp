@@ -21,7 +21,7 @@
  */
 
 
-
+#include "rosetta.h"
 #include "MsgFrame.h"
 #include "MsgView.h"
 #include "ThreadView.h"
@@ -234,11 +234,7 @@ ToolbarSpec XFE_MsgFrame::toolbar_spec[] = {
 		XFE_TOOLBAR_DELAY_LONG								// Popup delay
 	},
 	{ xfeCmdPrint,			PUSHBUTTON, &TB_Print_group },
-	{ xfeCmdViewSecurity,		PUSHBUTTON, 
-			&TB_Unsecure_group,
-                        &TB_Secure_group,
-                        &MNTB_SignUnsecure_group,
-                        &MNTB_SignSecure_group},
+	HG71611
 	{ xfeCmdMarkMessageRead, // XX news only
 	  CASCADEBUTTON, 
 	  &MNTB_MarkRead_group, NULL, NULL, NULL,				// Icons
@@ -297,8 +293,7 @@ XFE_MsgFrame::XFE_MsgFrame(Widget toplevel, XFE_Frame *parent_frame, Chrome *chr
   // Configure the dashboard
   XP_ASSERT( m_dashboard != NULL );
 
-  m_dashboard->setShowSecurityIcon(True);
-  m_dashboard->setShowSignedIcon(True);
+  HG11111
   m_dashboard->setShowStatusBar(True);
   m_dashboard->setShowProgressBar(True);
 
@@ -704,37 +699,8 @@ fe_showMsg(Widget toplevel,
 int
 XFE_MsgFrame::getSecurityStatus()
 {
- XP_Bool is_signed = False;
- XP_Bool is_encrypted = False;
- XFE_MsgView *mview = (XFE_MsgView*)m_view;
  XFE_MailSecurityStatusType status = XFE_UNSECURE_UNSIGNED;
-
- MIME_GetMessageCryptoState(getContext(), 0, 0, &is_signed, &is_encrypted);
-
- if (mview && mview->isDisplayingNews() )
- {
-   // If this is displaying news, we decide if a newsgroup is secure(encrypted)
-   // or not by checking the security status ...instead of the crypto state
-
-    is_encrypted = XFE_Frame::getSecurityStatus() == XFE_SECURE;
- }
-
- if (is_encrypted && is_signed )
- {
-     status = XFE_SECURE_SIGNED;
- }
- else if (!is_encrypted && is_signed)
- {
-     status = XFE_UNSECURE_SIGNED;
- }
- else if (is_encrypted && !is_signed)
- {
-     status = XFE_SECURE_UNSIGNED;
- }
- else if (!is_encrypted && !is_signed )
- {
-     status = XFE_UNSECURE_UNSIGNED;
- }
+ HG98200
  return status;
 }
 

@@ -21,7 +21,7 @@
    */
 
 
-
+#include "rosetta.h"
 #include "xfe2_extern.h"
 #include "ComposeView.h"
 #include "ComposeFolderView.h"
@@ -46,7 +46,7 @@
 #include <xpgetstr.h>
 extern int MK_MSG_EMPTY_MESSAGE;
 extern int MK_MSG_DOUBLE_INCLUDE;
-extern int MK_MSG_MIXED_SECURITY;
+HG12821
 extern int MK_MSG_MISSING_SUBJECT;
 extern int XFE_NO_SUBJECT;
 
@@ -112,7 +112,7 @@ const char *XFE_ComposeView::tabBeforeSubject = "XFE_ComposeView::tabBeforeSubje
 const char *XFE_ComposeView::tabAfterSubject = "XFE_ComposeView::tabAfterSubject";
 const char *XFE_ComposeView::tabPrev   = "XFE_ComposeView::tabPrev";
 const char *XFE_ComposeView::tabNext   = "XFE_ComposeView::tabNext";
-const char *XFE_ComposeView::updateSecurityOption= "XFE_ComposeView::updateSecurityOption";
+HG12111
 
 static void TabBeforeSubjectTraverse(Widget w, XEvent *, String *, Cardinal *)
 {
@@ -1156,10 +1156,7 @@ XFE_ComposeView::continueAfterSanityCheck()
   {
         cont = XFE_Confirm(m_contextData,XP_GetString(errcode));
   }
-  else if ( errcode == MK_MSG_MIXED_SECURITY ) 
-  {
-        cont = XFE_Confirm(m_contextData,XP_GetString(errcode));
-  }
+  
   else if ( errcode == MK_MSG_MISSING_SUBJECT ) 
   {
         const char *def = XP_GetString(XFE_NO_SUBJECT);
@@ -1491,11 +1488,7 @@ XDEBUG(	printf ("Do Command: %s \n", Command::getString(command));)
   {
 	  toggleAddressArea();
   }
-  else if (command == xfeCmdViewSecurity ) 
-  {
-           updateHeaderInfo();
-           fe_sec_logo_cb(NULL, getContext(), NULL);
-  }
+  HG81210
   else if (command == xfeCmdDeleteItem) {
 	  if ( m_focusW ) {
 		  if ( m_focusW != m_addrTypeW ) {
@@ -2540,10 +2533,6 @@ XFE_ComposeView::getCommandView(XFE_Command* )
 extern "C" void
 FE_SecurityOptionsChanged(MWContext * pContext)
 {
-   XFE_Frame * pFrame = ViewGlue_getFrame(XP_GetNonGridContext(pContext));
-   if ( pFrame ) {
-        ((XFE_ComposeView*)pFrame->getView())->getToplevel()->
-		notifyInterested(XFE_ComposeView::updateSecurityOption, NULL);
-   }
+   HG03833
 }
 

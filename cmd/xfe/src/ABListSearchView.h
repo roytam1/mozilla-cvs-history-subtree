@@ -23,6 +23,7 @@
 #ifndef _ABLISTSEARCHVIEW_H_
 #define _ABLISTSEARCHVIEW_H_
 
+#include "rosetta.h"
 #include "MNListView.h"
 #include "ABSearchView.h"
 #include "PopupMenu.h"
@@ -218,7 +219,7 @@ public:
   // icons for the outliner
   static fe_icon m_personIcon;
   static fe_icon m_listIcon;
-  static fe_icon m_securityIcon;
+  HG82719
 
 #if defined(USE_MOTIF_DND)
 	/* motif drag and drop interface. 

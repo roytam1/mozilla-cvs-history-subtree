@@ -21,7 +21,7 @@
  */
 
 
-
+#include "rosetta.h"
 #include "MozillaApp.h"
 #include "FolderFrame.h"
 #include "FolderView.h"
@@ -343,11 +343,7 @@ ToolbarSpec XFE_ThreadFrame::toolbar_spec[] = {
 		XFE_TOOLBAR_DELAY_LONG								// Popup delay
 	},
 	{ xfeCmdPrint,			PUSHBUTTON, &TB_Print_group },
-	{ xfeCmdViewSecurity,		PUSHBUTTON, 
-			&TB_Unsecure_group,
-                       	&TB_Secure_group,
-                       	&MNTB_SignUnsecure_group,
-                        &MNTB_SignSecure_group},
+	HG20938
 	{ xfeCmdMarkMessageRead, // XX news only
 	  CASCADEBUTTON, 
 	  &MNTB_MarkRead_group, NULL, NULL, NULL,				// Icons
@@ -448,8 +444,7 @@ XFE_ThreadFrame::XFE_ThreadFrame(Widget toplevel, XFE_Frame *parent_frame,
 	// Configure the dashboard
 	XP_ASSERT( m_dashboard != NULL );
 	
-	m_dashboard->setShowSecurityIcon(True);
-	m_dashboard->setShowSignedIcon(True);
+	HG71710
 	m_dashboard->setShowStatusBar(True);
 	m_dashboard->setShowProgressBar(True);
 
@@ -524,21 +519,20 @@ XFE_CALLBACK_DEFN(XFE_ThreadFrame, updateBanner)(XFE_NotificationCenter *,
 	if (MSG_GetFolderLineById(XFE_MNView::getMaster(),
 							  t_view->getFolderInfo(), &folderline))
 		{
-			XP_Bool secure = FALSE;
+			XP_Bool xxxe = FALSE;
 
-			/* we need to check if newshosts are secure */
+			/* we need to check newshosts  */
 			if (folderline.flags & MSG_FOLDER_FLAG_NEWSGROUP)
 			{
 				MSG_NewsHost *host = MSG_GetNewsHostForFolder(folderline.id);
-				if (host)
-					secure = MSG_IsNewsHostSecure(host);
+				HG11299
 			}
 
 			m_dropdown->selectFolder(t_view->getFolderInfo(),False);
 			
 			m_banner->setProxyIcon(XFE_FolderView::treeInfoToIcon(folderline.level - 1,
 																  folderline.flags,
-																  secure));
+																  xxxe));
 
 			proxy = m_banner->getProxyIcon();
 								   
@@ -1019,8 +1013,7 @@ XFE_ThreadFrame::commandToString(CommandType cmd,
 int
 XFE_ThreadFrame::getSecurityStatus()
 {
- XP_Bool is_signed = False;
- XP_Bool is_encrypted = False;
+ HG12922
 #ifdef USE_3PANE
  XFE_ThreadView *tview = (XFE_ThreadView*)(
 			((XFE_ThreePaneView*)m_view)->getThreadView());
@@ -1034,51 +1027,19 @@ XFE_ThreadFrame::getSecurityStatus()
  printf("XFE_ThreadFrame::getSecurityStatus\n");
 #endif
 
- MIME_GetMessageCryptoState(m_context, 0, 0, &is_signed, &is_encrypted);
+ 
 
  if (tview && tview->isDisplayingNews() )
  {
-   // If this is displaying news, we decide if a newsgroup is secure(encrypted)
-   // or not by checking the security status ...instead of the crypto state
+   // If this is displaying news, we decide if a newsgroup is s x
+   // or not by checking the status ...instead of the c state
 
 #ifdef DEBUG_dora
     printf("News Thread Frame context...\n");
 #endif
-    is_encrypted = XFE_Frame::getSecurityStatus() == XFE_SECURE;
+    HG28182
  }
-
- if (is_encrypted && is_signed )
- {
-#ifdef DEBUG_dora
-     printf("signed and encrypted %d\n", XFE_SECURE_SIGNED);
-#endif
-     status = XFE_SECURE_SIGNED;
- }
- else if (!is_encrypted && is_signed)
- {
-#ifdef DEBUG_dora
-     printf("signed and NO encrypted %d\n", XFE_UNSECURE_SIGNED);
-#endif
-     status = XFE_UNSECURE_SIGNED;
- }
- else if (is_encrypted && !is_signed)
- {
-#ifdef DEBUG_dora
-     printf("NO signed and  encrypted %d\n", XFE_SECURE_UNSIGNED);
-#endif
-     status = XFE_SECURE_UNSIGNED;
- }
- else if (!is_encrypted && !is_signed )
- {
-#ifdef DEBUG_dora
-     printf("NO signed and  NO encrypted %d\n", XFE_UNSECURE_UNSIGNED);
-#endif
-     status = XFE_UNSECURE_UNSIGNED;
- } else {
-	 // Error.  Play it safe, go unsecure.
-	 XP_ASSERT(0);
-	 status = XFE_UNSECURE_UNSIGNED;
- }
+ HG12832
 
  return status;
 }

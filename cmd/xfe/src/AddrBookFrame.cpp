@@ -21,6 +21,7 @@
    Revised: Tao Cheng <tao@netscape.com>, 01-nov-96
  */
 
+#include "rosetta.h"
 #include "AddrBookFrame.h"
 #include "LdapSearchFrame.h"
 
@@ -255,7 +256,7 @@ XFE_AddrBookFrame::XFE_AddrBookFrame(Widget toplevel,
   m_dashboard->setShowStatusBar(True);
   m_dashboard->setShowProgressBar(True);
   //
-  m_dashboard->setShowSecurityIcon(True);
+  HG01283
 
   // Configure the toolbox for the first time
   configureToolbox();

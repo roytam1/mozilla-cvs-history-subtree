@@ -21,7 +21,7 @@
  */
 
 
-
+#include "rosetta.h"
 #include "Frame.h"
 
 #include "layers.h"
@@ -164,7 +164,7 @@ MenuSpec XFE_Frame::bookmark_submenu_spec[] = {
 
 MenuSpec XFE_Frame::tools_submenu_spec[] = {
 	{ xfeCmdOpenHistory,		PUSHBUTTON },
-	{ xfeCmdViewSecurity,		PUSHBUTTON },
+	HG27632
 #ifndef MOZ_LITE
 	{ xfeCmdOpenFolders,			PUSHBUTTON },
 #endif
@@ -214,10 +214,8 @@ MenuSpec XFE_Frame::window_menu_spec[] = {
 #if JAVA
 	{ xfeCmdJavaConsole,		PUSHBUTTON },
 #endif
-#ifndef NO_SECURITY
-	{ xfeCmdViewSecurity,		PUSHBUTTON },
-#endif
-	MENU_SEPARATOR,
+	HG87782
+#	MENU_SEPARATOR,
 	{ "toolsSubmenu",	CASCADEBUTTON, tools_submenu_spec },
 	{ "serverToolsSubmenu",	CASCADEBUTTON, servertools_submenu_spec },
 	MENU_SEPARATOR,
@@ -2206,23 +2204,7 @@ XFE_Frame::getSecurityStatus()
 {
   int rval = XFE_UNSECURE;
 
-#ifndef NO_SECURITY
-  switch (XP_GetSecurityStatus(m_context)) 
-    {
-    case SSL_SECURITY_STATUS_ON_HIGH: // us     
-    case SSL_SECURITY_STATUS_ON_LOW:  // export
-      rval = XFE_SECURE;
-      break;
-      /* rval =  XFE_SECURE_MIXED;
-      break;*/
-    case SSL_SECURITY_STATUS_NOOPT: // fall through
-    case SSL_SECURITY_STATUS_OFF:   // fall through
-    case SSL_SECURITY_STATUS_FORTEZZA:  // fall through  (is this be secure???)
-    default:
-      rval = XFE_UNSECURE;
-      break;
-    }
-#endif /* ! NO_SECURITY */
+  HG87111
 
   return rval;
 }
@@ -2670,9 +2652,7 @@ XFE_Frame::queryChrome(Chrome * chrome)
   chrome->show_button_bar        = m_toolbar && m_toolbar->isShown();
   chrome->show_bottom_status_bar = m_dashboard && m_dashboard->isShown();
   chrome->show_menu              = m_menubar && m_menubar->isShown();
-#ifndef NO_SECURITY
-  chrome->show_security_bar      = context_data->show_security_bar_p;
-#endif /* ! NO_SECURITY */
+  HG37211
 
   if (isTitleBarShown())
 	chrome->hide_title_bar = FALSE;

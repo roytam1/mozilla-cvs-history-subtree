@@ -25,6 +25,7 @@
 #ifndef _xfe_addressfolderview_h
 #define _xfe_addressfolderview_h
 
+#include "rosetta.h"
 #include "MNListView.h"
 #include "Addressable.h"
 #include "Outliner.h"
@@ -116,7 +117,7 @@ public:
   void insertNewDataAfter(int line);
   Boolean hasDataAt(int line);
 
-  char *changedItem(char *pString, int* iconType, short* security);
+  char *changedItem(char *pString, int* iconType, short* xxx);
  
   // Return actual data count from the receipient data list
   int getTotalData();
@@ -128,7 +129,7 @@ public:
   static const int ADDRESS_OUTLINER_COLUMN_TYPE;
   static const int ADDRESS_OUTLINER_COLUMN_ICON;
 #ifdef HAVE_ADDRESS_SECURITY_COLUMN
-  static const int ADDRESS_OUTLINER_COLUMN_SECURITY;
+  HG21817
 #endif
   static const int ADDRESS_OUTLINER_COLUMN_RECEIPIENT;
 
@@ -170,7 +171,7 @@ private:
   static fe_icon listIcon;
   static fe_icon newsIcon;
 
-  static fe_icon securityIcon;
+  HG81761
   const char *setData(int line,  char *receipient);
 
   // These member data may not need to be here ??

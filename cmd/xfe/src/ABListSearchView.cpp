@@ -20,6 +20,7 @@
    Created: Tao Cheng <tao@netscape.com>, 17-dec-96
  */
 
+#include "rosetta.h"
 #include "Frame.h"
 #include "ViewGlue.h"
 #include "ABListSearchView.h"
@@ -69,7 +70,7 @@ const char *XFE_ABListSearchView::dirSelect =
 // icons
 fe_icon XFE_ABListSearchView::m_personIcon = { 0 };
 fe_icon XFE_ABListSearchView::m_listIcon = { 0 };
-fe_icon XFE_ABListSearchView::m_securityIcon = { 0 };
+HG28190
 
 extern int XFE_AB_HEADER_NAME;
 extern int XFE_AB_HEADER_CERTIFICATE;
@@ -410,7 +411,7 @@ void XFE_ABListSearchView::idToPerson(DIR_Server *pDir,
 		if (AB_GetDistName(dir, aBook, entry, a_line) != MSG_VIEWINDEXNONE)
 			pPerson->pDistName = XP_STRDUP(a_line);
 #endif
-		AB_GetSecurity(dir, aBook, entry, &pPerson->Security);
+		HG87291
 		
 		a_line[0] = '\0';
 		if (AB_GetCoolAddress(dir, aBook, entry, a_line) != MSG_VIEWINDEXNONE)

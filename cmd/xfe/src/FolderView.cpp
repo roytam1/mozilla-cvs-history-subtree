@@ -21,7 +21,7 @@
    */
 
 
-
+#include "rosetta.h"
 #include "FolderView.h"
 #include "SubscribeDialog.h" /* for fe_showSubscribeDialog */
 #include "ThreadFrame.h" /* for fe_showMessages */
@@ -370,15 +370,7 @@ XFE_FolderView::initFolderIcons(Widget widget, Pixel bg_pixel, Pixel fg_pixel)
 					   MN_NewsServer.width, MN_NewsServer.height,
 					   MN_NewsServer.mono_bits, MN_NewsServer.color_bits, MN_NewsServer.mask_bits, FALSE);
 
-    if (!newsServerSecureIcon.pixmap)
-		fe_NewMakeIcon(widget,
-					   fg_pixel,
-					   bg_pixel,
-					   &newsServerSecureIcon,
-					   NULL, 
-					   MN_NewsServerSecure.width, MN_NewsServerSecure.height,
-					   MN_NewsServerSecure.mono_bits, MN_NewsServerSecure.color_bits, MN_NewsServerSecure.mask_bits, FALSE);
-	
+    HG39875	
     if (!newsgroupIcon.pixmap)
 		fe_NewMakeIcon(widget,
 					   fg_pixel,
@@ -479,8 +471,7 @@ XFE_FolderView::isCommandEnabled(CommandType cmd, void *call_data, XFE_CommandIn
             )
       return True;
 #endif
-  else if (IS_CMD(xfeCmdViewSecurity))
-      return True;
+  HG07326
   else if (IS_CMD(xfeCmdViewProperties))
 	  {
 		  return count == 1;
@@ -623,7 +614,7 @@ XFE_FolderView::handlesCommand(CommandType cmd, void *, XFE_CommandInfo*)
       || IS_CMD(xfeCmdSendMessagesInOutbox)
       || IS_CMD(xfeCmdDeleteAny)
       || IS_CMD(xfeCmdDeleteFolder)
-      || IS_CMD(xfeCmdViewSecurity)
+      HG82883
 	  || IS_CMD(xfeCmdViewProperties)
       || IS_CMD(xfeCmdUpdateMessageCount)
       || IS_CMD(xfeCmdShowPopup))
@@ -843,12 +834,7 @@ D(	printf ("in XFE_FolderView::doCommand()\n");)
 			MSG_Command(m_pane, MSG_DeleteFolder, (MSG_ViewIndex*)selected, count);
 			XFE_MozillaApp::theApp()->notifyInterested(XFE_MNView::foldersHaveChanged);
 		}
-	else if (IS_CMD(xfeCmdViewSecurity))
-		{
-            D(	printf ("MSG_FolderPane::viewSecurity()\n");)
-            fe_sec_logo_cb(NULL, m_contextData, NULL);
-            return;
-        }
+	HG20388
 	else if (IS_CMD(xfeCmdEditMailFilterRules))
 		{
 			fe_showMailFilterDlg(getToplevel()->getBaseWidget(), 
@@ -966,12 +952,12 @@ D(	printf ("in XFE_FolderView::doCommand()\n");)
              {
                  const char *serverName = d->getServer();
                  int serverPort = d->getPort();
-                 XP_Bool isSecure = d->isSecure();
+                 XP_Bool isxxx = HG72988;
                  MSG_NewsHost *host;
 
                  host = MSG_CreateNewsHost(XFE_MNView::getMaster(),
                                            serverName,
-                                           isSecure,
+                                           isxxx,
                                            serverPort);
 					
                  XFE_MozillaApp::theApp()->notifyInterested(XFE_MNView::foldersHaveChanged);
@@ -1118,12 +1104,12 @@ XFE_FolderView::commandToString(CommandType cmd, void *calldata, XFE_CommandInfo
 }
 
 fe_icon*
-XFE_FolderView::treeInfoToIcon(int depth, int flags, XP_Bool expanded, XP_Bool secure)
+XFE_FolderView::treeInfoToIcon(int depth, int flags, XP_Bool expanded, XP_Bool xxxe)
 {
 	if (depth < 1)
 		{
 			if (flags & MSG_FOLDER_FLAG_NEWS_HOST)
-			  return secure ? &newsServerSecureIcon : &newsServerIcon;
+			  return HG17272 &newsServerIcon;
 			else if (flags & MSG_FOLDER_FLAG_IMAPBOX)
 				return &mailServerIcon;
 			else
@@ -1131,7 +1117,7 @@ XFE_FolderView::treeInfoToIcon(int depth, int flags, XP_Bool expanded, XP_Bool s
 		}
 
 	if (flags & MSG_FOLDER_FLAG_NEWSGROUP)
-		return secure ? &newsServerSecureIcon : &newsgroupIcon;
+		return HG00288 &newsgroupIcon;
 	else if (flags & MSG_FOLDER_FLAG_INBOX)
 		return expanded ? &inboxOpenIcon : &inboxIcon;
 	else if (flags & MSG_FOLDER_FLAG_DRAFTS)
@@ -1494,16 +1480,15 @@ XFE_FolderView::getColumnIcon(int column)
 
   if (column == OUTLINER_COLUMN_NAME)
     {
-	  XP_Bool secure = False;
-	  /* we need to check if newshosts are secure */
+	  XP_Bool xxxe = False;
+	  /* we need to check newshosts */
 	  if (m_folderLine.flags & MSG_FOLDER_FLAG_NEWS_HOST)
 		{
 		  MSG_NewsHost *host = MSG_GetNewsHostForFolder(m_folderLine.id);
-		  if (host)
-			secure = MSG_IsNewsHostSecure(host);
+		  HG82992
 		}
 
-		return treeInfoToIcon(depth, m_folderLine.flags, expanded, secure);
+		return treeInfoToIcon(depth, m_folderLine.flags, expanded, xxxe);
     }
   else
     {

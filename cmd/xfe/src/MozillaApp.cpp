@@ -21,7 +21,7 @@
  */
 
 
-
+#include "rosetta.h"
 #include "Frame.h"
 #include "MozillaApp.h"
 #include "ViewGlue.h"
@@ -912,7 +912,7 @@ xfeDoCommandAction(Widget w, XEvent *event,
 		** whether or not hot keys are enabled
 		*/
 		cmd != xfeCmdExit &&
-		cmd != xfeCmdViewSecurity &&
+		HG20363
 		cmd != xfeCmdCut &&
 		cmd != xfeCmdCopy &&
 		cmd != xfeCmdPaste)

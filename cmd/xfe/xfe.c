@@ -20,7 +20,7 @@
    Created: Jamie Zawinski <jwz@netscape.com>, 22-Jun-94.
  */
 
-
+#include "rosetta.h"
 #include "mozilla.h"
 #include "altmail.h"
 #include "xfe.h"
@@ -941,9 +941,7 @@ fe_copy_context_settings(MWContext *to, MWContext *from)
     dto->show_directory_buttons_p = dfrom->show_directory_buttons_p;
     dto->show_menubar_p           = dfrom->show_menubar_p;
     dto->show_bottom_status_bar_p = dfrom->show_bottom_status_bar_p;
-#ifndef NO_SECURITY
-    dto->show_security_bar_p	= dfrom->show_security_bar_p;
-#endif
+    HG21989
     dto->autoload_images_p	= dfrom->autoload_images_p;
     dto->loading_images_p	= False;
     dto->looping_images_p	= False;
@@ -966,9 +964,7 @@ fe_copy_context_settings(MWContext *to, MWContext *from)
     dto->show_directory_buttons_p = fe_globalPrefs.show_directory_buttons_p;
     dto->show_menubar_p           = fe_globalPrefs.show_menubar_p;
     dto->show_bottom_status_bar_p = fe_globalPrefs.show_bottom_status_bar_p;
-#ifndef NO_SECURITY
-    dto->show_security_bar_p	= fe_globalPrefs.show_security_bar_p;
-#endif
+    HG12976
     dto->autoload_images_p	= fe_globalPrefs.autoload_images_p;
     dto->loading_images_p	= False;
     dto->looping_images_p	= False;

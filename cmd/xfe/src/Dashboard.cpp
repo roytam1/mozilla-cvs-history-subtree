@@ -21,7 +21,7 @@
  */
 
 
-
+#include "rosetta.h"
 #include "Dashboard.h"
 #include "Button.h"
 #include "View.h"
@@ -504,16 +504,12 @@ XFE_Dashboard::createSecurityBar()
 {
 	XP_ASSERT( m_parentFrame != NULL );
 	XP_ASSERT( XfeIsAlive(m_widget) );
-	XP_ASSERT( m_securityBar == NULL );
+	/* XP_ASSERT( m_securityBar == NULL ); */
 
 	if (!m_parentFrame)
 		return;
 
-	// Create the icon toolbar
-	m_securityBar = XtVaCreateWidget(ICON_TOOL_BAR_NAME,
-									 xfeToolBarWidgetClass,
-									 m_widget,
-									 NULL);
+	HG12928
 }
 //////////////////////////////////////////////////////////////////////////
 void
@@ -521,46 +517,13 @@ XFE_Dashboard::addSecurityIcon()
 {
 	XP_ASSERT( m_parentFrame != NULL );
 	XP_ASSERT( XfeIsAlive(m_widget) );
-	XP_ASSERT( XfeIsAlive(m_securityBar) );
-	XP_ASSERT( m_securityIcon == NULL );
+	/* XP_ASSERT( XfeIsAlive(m_securityBar) ); */
+	/* XP_ASSERT( m_securityIcon == NULL ); */
 
 	if (!m_parentFrame)
 		return;
 
-	m_securityIcon = new XFE_Button(m_parentFrame,
-									m_securityBar,
-									xfeCmdViewSecurity,
-									&Dash_Unsecure_group,
-									&Dash_Secure_group,
-									&Dash_Unsecure_group,
-									&Dash_Secure_group);
-
-	// Show or hide the new security icon based on its isEnabled state.
-	m_securityIcon->show();
-
-	// Configure the icon
-	m_securityIcon->setToplevel(m_parentFrame);
-
-	XtVaSetValues(m_securityIcon->getBaseWidget(),
-				  XmNtraversalOn,			True,
-				  XmNhighlightThickness,	0,
-				  NULL);
-
-    // Add chrome update notice to parent frame if needed
-    if (m_parentFrame && !m_securityRegistered)
-	{
-		m_securityRegistered = True;
-		
-		m_parentFrame->registerInterest(XFE_View::chromeNeedsUpdating,
-										this,
-										(XFE_FunctionNotification)update_cb);
-    }
-
-    // Add button command notice
-	m_securityIcon->registerInterest(
-		XFE_Button::doCommandCallback,
-		this,
-		(XFE_FunctionNotification)doSecurityCommand_cb);
+	HG00298
 }
 //////////////////////////////////////////////////////////////////////////
 void
@@ -568,57 +531,19 @@ XFE_Dashboard::addSignedIcon()
 {
 	XP_ASSERT( m_parentFrame != NULL );
 	XP_ASSERT( XfeIsAlive(m_widget) );
-	XP_ASSERT( XfeIsAlive(m_securityBar) );
-	XP_ASSERT( m_signedIcon == NULL );
+	/* XP_ASSERT( XfeIsAlive(m_securityBar) ); */
+	/* XP_ASSERT( m_signedIcon == NULL ); */
 
 	if (!m_parentFrame)
 		return;
 
-	m_signedIcon = new XFE_Button(m_parentFrame,
-								  m_securityBar,
-								  xfeCmdViewSecurity,
-								  &Dash_Unsigned_group,
-								  &Dash_Unsigned_group,
-								  &Dash_Signed_group,
-								  &Dash_Signed_group);
-
-	// Show or hide the new signed icon based on its isEnabled state.
-	m_signedIcon->show();
-
-	// Configure the icon
-	m_signedIcon->setToplevel(m_parentFrame);
-
-	XtVaSetValues(m_signedIcon->getBaseWidget(),
-				  XmNtraversalOn,			True,
-				  XmNhighlightThickness,	0,
-				  NULL);
-
-    // Add chrome update notice to parent frame if needed
-    if (m_parentFrame && !m_securityRegistered)
-	{
-		m_securityRegistered = True;
-		
-		m_parentFrame->registerInterest(XFE_View::chromeNeedsUpdating,
-										this,
-										(XFE_FunctionNotification)update_cb);
-    }
-
-    // Add button command notice
-	m_signedIcon->registerInterest(
-		XFE_Button::doCommandCallback,
-		this,
-		(XFE_FunctionNotification)doSecurityCommand_cb);
+	HG02920
 }
 //////////////////////////////////////////////////////////////////////////
 void
 XFE_Dashboard::configureSecurityBar()
 {
-	// Make sure the is a security bar to configure
-	if (XfeIsAlive(m_securityBar))
-	{
-		XfeSetManagedState(m_securityBar,
-						   isSecurityIconShown() || isSignedIconShown());
-	}
+	HG02092
 }
 //////////////////////////////////////////////////////////////////////////
 void
@@ -996,16 +921,7 @@ XFE_CALLBACK_DEFN(XFE_Dashboard, update)
 	if (!XfeIsAlive(m_widget))
 		return;
 
-  if (m_securityIcon && m_securityIcon->isAlive())
-	  {
-		  m_securityIcon->setPretendSensitive(m_parentFrame->isCommandEnabled((CommandType)m_securityIcon->getName()));
-		  m_securityIcon->useIconGroup(m_parentFrame->getSecurityStatus());
-	  }
-  if (m_signedIcon && m_signedIcon->isAlive())
-	  {
-		  m_signedIcon->setPretendSensitive(m_parentFrame->isCommandEnabled((CommandType)m_signedIcon->getName()));
-		  m_signedIcon->useIconGroup(m_parentFrame->getSecurityStatus());
-	  }
+  HG28999
 }
 //////////////////////////////////////////////////////////////////////////
 XFE_CALLBACK_DEFN(XFE_Dashboard, doSecurityCommand)
@@ -1018,11 +934,7 @@ XFE_CALLBACK_DEFN(XFE_Dashboard, doSecurityCommand)
 	if (!XfeIsAlive(m_widget))
 		return;
 
-  m_parentFrame->doCommand(cmdArgs->cmd, cmdArgs->callData,
-                           cmdArgs->info );
-	
-  m_parentFrame->notifyInterested(Command::commandDispatchedCallback, 
-                                  callData);
+  HG09219
 }
 //////////////////////////////////////////////////////////////////////////
 XFE_CALLBACK_DEFN(XFE_Dashboard, startCylonNotice)
@@ -1253,27 +1165,7 @@ XFE_Dashboard::setShowSecurityIcon(XP_Bool state)
 		return;
 	}
 
-	// Create the security bar if needed
-	if (!m_securityBar)
-	{
-		createSecurityBar();
-	}
-
-	// Create the security icon if needed
-	if (!m_securityIcon)
-	{
-		addSecurityIcon();
-	}
-
-	XP_ASSERT( m_securityIcon != NULL );
-
-	if (m_securityIcon && m_securityIcon->isAlive())
-	{
-		m_securityIcon->setShowingState(state);
-	}
-
-	// Configure the secutiry bar
-	configureSecurityBar();
+	HG89219
 }
 //////////////////////////////////////////////////////////////////////////
 void
@@ -1319,57 +1211,25 @@ XFE_Dashboard::setShowSignedIcon(XP_Bool state)
 	}
 
 
-	// Create the security bar if needed
-	if (!m_securityBar)
-	{
-		createSecurityBar();
-	}
-
-	// Create the signed icon if needed
-	if (!m_signedIcon)
-	{
-		addSignedIcon();
-	}
-
-	XP_ASSERT( m_signedIcon != NULL );
-
-	if (m_signedIcon && m_signedIcon->isAlive())
-	{
-		m_signedIcon->setShowingState(state);
-	}
-
-	// Configure the secutiry bar
-	configureSecurityBar();
+	HG82198
 }
 //////////////////////////////////////////////////////////////////////////
 XP_Bool
 XFE_Dashboard::isSecurityIconShown()
 {
-	return (m_securityIcon && m_securityIcon->isShown());
+	return (HG20303);
 }
 //////////////////////////////////////////////////////////////////////////
 XP_Bool
 XFE_Dashboard::isSignedIconShown()
 {
-	return (m_signedIcon && m_signedIcon->isShown());
+	return (HG02023);
 }
 //////////////////////////////////////////////////////////////////////////
 XP_Bool
 XFE_Dashboard::processTraversal(XmTraversalDirection direction)
 {
-	// Try the security icon
-	if ((m_securityIcon && m_securityIcon->isAlive()) && 
-		XmProcessTraversal(m_securityIcon->getBaseWidget(),direction))
-	{
-		return True;
-	}
-
-	// Try the signed icon
-	if ((m_signedIcon && m_signedIcon->isAlive()) && 
-		XmProcessTraversal(m_signedIcon->getBaseWidget(),direction))
-	{
-		return True;
-	}
+	HG93649
 
 	// Try the progress bar
 	if (XfeIsAlive(m_progressBar) && 

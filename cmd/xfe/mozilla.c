@@ -21,6 +21,7 @@
    Created: Jamie Zawinski <jwz@netscape.com>, 22-Jun-94.
  */
 
+#include "rosetta.h"
 #include "mozilla.h"
 #include "altmail.h"
 #include "name.h"
@@ -176,7 +177,7 @@ extern int XFE_THE_MOTIF_KEYSYMS_NOT_DEFINED;
 extern int XFE_SOME_MOTIF_KEYSYMS_NOT_DEFINED;
 
 extern int XFE_SPLASH_REGISTERING_CONVERTERS;
-extern int XFE_SPLASH_INITIALIZING_SECURITY_LIBRARY;
+HG78265
 extern int XFE_SPLASH_INITIALIZING_NETWORK_LIBRARY;
 extern int XFE_SPLASH_INITIALIZING_MESSAGE_LIBRARY;
 extern int XFE_SPLASH_INITIALIZING_IMAGE_LIBRARY;
@@ -912,12 +913,11 @@ static XEvent fe_last_event;
 
 /* Process events. The idea here is to give X events priority over
    file descriptor input so that the user gets better interactive
-   response under heavy i/o load.
+   response under heavy i/o load. */
 
-   While we are it, we try to gather up a bunch of events to shovel
-   into the security library to "improve" randomness.
+   HG87627
 
-   Finally, we try to block when there is really nothing to do,
+/*   Finally, we try to block when there is really nothing to do,
    but we block in such a way as to allow java applets to get the
    cpu while we are blocked.
 
@@ -938,11 +938,7 @@ fe_EventLoop ()
   entry_depth++;
 #endif
 
-  /* Feed the security library the last event we handled. We do this here
-     before peeking for another event so that the elapsed time between calls
-     can have some impact on the outcome.
-     */
-  fe_EventForRNG (&fe_last_event);
+  HG72721
 
   /* Release X lock and wait for an event to show up. This might not return
      an X event, and it will not block until there is an X event. However,
@@ -1031,19 +1027,10 @@ fe_EventLoop ()
 	     we want to be as responsive to the user as possible.
 	     */
 	  if (device_event_count < 300) {
-	      /* While the security library is still hungry for events
-		 we feed it all the events we get. We use XtAppPeekEvent
-		 to grab a copy of the event that XtAppPending said was
-		 available.
-		 */
+	      
 	      XtAppPeekEvent(fe_XtAppContext, &fe_last_event);
-	      fe_EventForRNG (&fe_last_event);
+		HG13267
 
-	      /* If it's an interesting event, count it towards our
-		 goal of 300 events. After 300 events, we don't need
-		 to feed the security library as often (which makes
-		 us more efficient at event processing)
-		 */
 	      if (fe_last_event.xany.type == ButtonPress ||
 		  fe_last_event.xany.type == ButtonRelease ||
 		  fe_last_event.xany.type == KeyPress ||
@@ -1154,17 +1141,7 @@ fe_EventForRNG (XEvent *event)
 
   data.event = *event;
 
-  /* At this point, we are idle.  Get a high-res clock value. */
-  (void) RNG_GetNoise(data.noise, sizeof(data.noise));
-
-  /* Kick security library random number generator to make it very
-     hard for a bad guy to predict where the random number generator
-     is at.  Initialize it with the current time, and the *previous*
-     X event we read (which happens to have a server timestamp in it.)
-     The X event came from before this current idle period began, and
-     will be uninitialized stack data the first time through.
-   */
-  RNG_RandomUpdate(&data, sizeof(data));
+  HG87262
 }
 
 
@@ -1887,8 +1864,7 @@ build_user_agent_string(char *versionLocale)
     }
 
     strcat (buf, " (X11; ");
-    /* US or International security versions */
-    strcat (buf, SECNAV_SecurityVersion (PR_FALSE));
+    HG71265
     strcat (buf, "; ");
 
     if (uname (&uts) < 0)
@@ -2517,14 +2493,14 @@ main
 #endif /*XFE_XLOCK_FD_TIMER_HACK*/
    }
 
-  /* For security stuff... */
+  /* For xxx stuff... */
   fe_dpy_kludge = dpy;
   fe_screen_kludge = XtScreen (toplevel);
 
 
-  /* Initialize the security library. This must be done prior
+  /* Initialize the xxx library. This must be done prior
      to any calls that will cause X event activity, since the
-     event loop calls security functions.
+     event loop calls xxx functions.
    */
 
   XtGetApplicationNameAndClass (dpy,
@@ -2864,8 +2840,7 @@ main
   ** OTHERWISE THE FILE LOCK ON THE HISTORY DB IS LOST!
   */
 #ifdef NSPR_SPLASH
-  if (fe_globalData.show_splash)
-    fe_splashUpdateText(XP_GetString(XFE_SPLASH_INITIALIZING_SECURITY_LIBRARY));
+	HG72587
 #endif
   SECNAV_Init();
 
@@ -4390,27 +4365,7 @@ FE_MakeAppletSecurityChrome(Widget parent, char* warning)
     label = XmCreateLabelGadget (form, "mouseDocumentation", av, ac);
     XmStringFree(cwarning);
 
-#ifndef NO_SECURITY
-    /*
-    ** This section of displays security logos.  It won't compile
-    ** properly if security is turned off.  Instead of ifdef'ing
-    ** we might want to replace with a placeholder.
-    */
-    {
-	Dimension w, h;
-	Pixmap p = fe_SecurityPixmap(NULL, &w, &h, 0);
-	ac = 0;
-	XtSetArg(av[ac], XmNresizable, False); ac++;
-	XtSetArg(av[ac], XmNlabelType, XmPIXMAP); ac++;
-	XtSetArg(av[ac], XmNalignment, XmALIGNMENT_CENTER); ac++;
-	XtSetArg(av[ac], XmNlabelPixmap, p); ac++;
-	XtSetArg(av[ac], XmNwidth, w); ac++;
-	XtSetArg(av[ac], XmNheight, h); ac++;
-	XtSetArg(av[ac], XmNcolormap, cmap); ac++;
-	XtSetArg (av [ac], XmNshadowThickness, 2); ac++;
-	sec_logo = XmCreatePushButtonGadget (form, "javaSecLogo", av, ac);
-    }
-#endif /* ! NO_SECURITY */
+	HG87271
 
     /* Now that widgets have been created, do the form attachments */
     XtVaSetValues(skinnyDrawingArea,

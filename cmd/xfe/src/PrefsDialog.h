@@ -33,6 +33,7 @@
 #ifndef _xfe_prefsdialog_h
 #define _xfe_prefsdialog_h
 
+#include "rosetta.h"
 #include "outline.h"
 #include "Dialog.h"
 #include "xeditor.h"
@@ -814,8 +815,7 @@ public:
     XFE_PrefsOutgoingServer(Widget outgoingServerBox);
     Widget get_server_name() { return m_servername_text; };
     Widget get_user_name() { return m_username_text; };
-    int32 get_ssl();
-    void set_ssl(int32);
+    HG02621
  private:
     
     Widget m_outgoing;
@@ -824,10 +824,7 @@ public:
     Widget m_servername_text;           // Text field
     Widget m_username_text;         // Text field
     
-    // Configure SSL toggle buttons
-    Widget m_ssl_never_toggle;
-    Widget m_ssl_possible_toggle;
-    Widget m_ssl_always_toggle;
+    HG19282
 };
 
 // Local mail directory data
@@ -938,7 +935,7 @@ public:
 	// Callbacks - page Mail News/News Server
 
 	static void cb_browse(Widget, XtPointer, XtPointer);
-	static void cb_toggleSecure(Widget, XtPointer, XtPointer);
+	HG92727
 
 private:	
 

@@ -21,7 +21,7 @@
  */
 
 
-
+#include "rosetta.h"
 #include "ComposeFrame.h"
 #include "EditorFrame.h"
 #include "LdapSearchFrame.h"
@@ -175,11 +175,7 @@ ToolbarSpec XFE_ComposeFrame::toolbar_spec[] = {
   { xfeCmdSpellCheck,		PUSHBUTTON, &MNC_SpellCheck_group },
   { xfeCmdSaveDraft,		PUSHBUTTON, &MNC_Save_group },
   TOOLBAR_SEPARATOR,
-  { xfeCmdViewSecurity,		PUSHBUTTON, 
-			&TB_Unsecure_group,
-			&TB_Secure_group,
-			&MNTB_SignUnsecure_group,
-			&MNTB_SignSecure_group},
+  HG82981
   { xfeCmdStopLoading,		PUSHBUTTON, &TB_Stop_group },
   { NULL }
 };
@@ -305,8 +301,7 @@ XDEBUG(	printf ("in XFE_ComposeFrame::XFE_ComposeFrame()\n");)
   // Configure the dashboard
   XP_ASSERT( m_dashboard != NULL );
 
-  m_dashboard->setShowSecurityIcon(True);
-  m_dashboard->setShowSignedIcon(True);
+  HG87288
   m_dashboard->setShowStatusBar(True);
   m_dashboard->setShowProgressBar(True);
 
@@ -393,7 +388,7 @@ XFE_ComposeFrame::getPane()
 XP_Bool
 XFE_ComposeFrame::isCommandEnabled(CommandType cmd, void *cd, XFE_CommandInfo* info)
 {
-  if ( cmd == xfeCmdViewSecurity
+  if ( HG82111
        || (cmd == xfeCmdSearchAddress) 
        || cmd == xfeCmdAddresseePicker )
 	return True;
@@ -442,7 +437,7 @@ XFE_ComposeFrame::doCommand(CommandType cmd, void *cd, XFE_CommandInfo* info)
 XP_Bool
 XFE_ComposeFrame::handlesCommand(CommandType cmd, void *, XFE_CommandInfo*)
 {
-  if ( cmd == xfeCmdViewSecurity    ||
+  if ( HG92828
        cmd == xfeCmdSearchAddress   ||
        cmd == xfeCmdAddresseePicker ||
 	   cmd == xfeCmdCut             ||
@@ -545,42 +540,8 @@ fe_showCompose(Widget toplevel, Chrome *chromespec, MWContext *old_context,
 int
 XFE_ComposeFrame::getSecurityStatus()
 {
-    XP_Bool is_signed = False; 
-    XP_Bool is_encrypted = False;
     XFE_MailSecurityStatusType status = XFE_UNSECURE_UNSIGNED;
-
-    XDEBUG(printf("XFE_ComposeFrame::getSecurityStatus\n");)
-
-    if (getPane() == NULL) return XFE_UNSECURE_UNSIGNED;
-
-    // Encrypted
-    if ( MSG_GetCompBoolHeader(getPane(), MSG_ENCRYPTED_BOOL_HEADER_MASK) )
-    {
-        is_encrypted = True;
-    }
-
-    // Signed
-    if ( MSG_GetCompBoolHeader(getPane(), MSG_SIGNED_BOOL_HEADER_MASK) )
-    {
-        is_signed = True;
-    }
-
-    if (is_encrypted && is_signed ) 
-    {
-        status = XFE_SECURE_SIGNED;
-    }
-    else if (!is_encrypted && is_signed) 
-    {
-      	status = XFE_UNSECURE_SIGNED;
-    }
-    else if (is_encrypted && !is_signed) 
-    {
-      	status = XFE_SECURE_UNSIGNED;
-    }
-    else if (!is_encrypted && !is_signed )
-    {
-       	status = XFE_UNSECURE_UNSIGNED;
-    }
+   HG18181
    return status;
 }
 

@@ -215,7 +215,7 @@ void XFE_ABNameFolderDlg::setDlgValues(ABID entry, PersonEntry* pPerson,
 	  if (pPerson->pHomePhone)
 		  m_personEntry.pHomePhone = XP_STRDUP(pPerson->pHomePhone);
 
-	  m_personEntry.Security = pPerson->Security;
+	  HG17211
 
 	  if (pPerson->pCoolAddress)
 		  m_personEntry.pCoolAddress = XP_STRDUP(pPerson->pCoolAddress);
@@ -329,7 +329,7 @@ void XFE_ABNameFolderDlg::setDlgValues(ABID entry, Boolean newUser)
 	  if (AB_GetDistName(dir, aBook, entry, a_line) != MSG_VIEWINDEXNONE)
 		  m_personEntry.pDistName = XP_STRDUP(a_line);
 #endif
-	  AB_GetSecurity(dir, aBook, entry, &m_personEntry.Security);
+	  HG01019
 	  
 	  a_line[0] = '\0';
 	  if (AB_GetCoolAddress(dir, aBook, entry, a_line) != MSG_VIEWINDEXNONE)

@@ -20,6 +20,7 @@
    Created: Linda Wei <lwei@netscape.com>, 17-Sep-96.
  */
 
+#include "rosetta.h"
 #include "MozillaApp.h"
 #include "felocale.h"
 #include "structs.h"
@@ -1867,8 +1868,7 @@ XFE_PrefsOutgoingServer::XFE_PrefsOutgoingServer(Widget outgoingServerBox)
  
     Widget server_label;
     Widget server_user_name_label;
-    Widget choose_ssl_label;
-    Widget ssl_radiobox;
+    HG11326
      
     kids[i++] = server_label = 
         XmCreateLabelGadget(outgoingServerBox, "outgoingServerLabel", NULL, 0);
@@ -1882,21 +1882,7 @@ XFE_PrefsOutgoingServer::XFE_PrefsOutgoingServer(Widget outgoingServerBox)
     kids[i++] = m_username_text = 
         fe_CreateTextField(outgoingServerBox, "serverUsernameText", NULL, 0);
  
-    kids[i++] = choose_ssl_label = 
-        XmCreateLabelGadget(outgoingServerBox, "chooseSSLLabel", NULL, 0);
- 	
-    ssl_radiobox = XmCreateRadioBox(outgoingServerBox, "sslRadioBox", NULL,0);
-    XtVaSetValues(ssl_radiobox,
-                  XmNnumColumns, 3,
-                  XmNpacking, XmPACK_COLUMN,
-                  NULL);
- 
-    m_ssl_never_toggle =
-        XmCreateToggleButtonGadget(ssl_radiobox, "sslNever", NULL, 0);
-    m_ssl_possible_toggle =
-        XmCreateToggleButtonGadget(ssl_radiobox, "sslIfPossible", NULL, 0);
-    m_ssl_always_toggle =
-        XmCreateToggleButtonGadget(ssl_radiobox, "sslAlways", NULL, 0);
+    HG72819
  
          
     XtVaSetValues(server_label,
@@ -1932,48 +1918,20 @@ XFE_PrefsOutgoingServer::XFE_PrefsOutgoingServer(Widget outgoingServerBox)
                   XmNtopWidget, m_servername_text,
                   NULL);
  
-    XtVaSetValues(choose_ssl_label,
-                  XmNleftAttachment, XmATTACH_FORM,
-                  XmNrightAttachment, XmATTACH_FORM,
-                  XmNtopAttachment, XmATTACH_WIDGET,
-                  XmNtopWidget, m_username_text,
-                  NULL);
- 
-    XtVaSetValues(ssl_radiobox,
-                  XmNleftAttachment, XmATTACH_FORM,
-                  XmNrightAttachment, XmATTACH_FORM,
-                  XmNbottomAttachment, XmATTACH_NONE,
-                  XmNtopAttachment, XmATTACH_WIDGET,
-                  XmNtopWidget, choose_ssl_label,
-                  NULL);
- 
-    XtManageChild(m_ssl_never_toggle);
-    XtManageChild(m_ssl_possible_toggle);
-    XtManageChild(m_ssl_always_toggle);
-    XtManageChild(ssl_radiobox);
+    HG71199
     XtManageChildren(kids, i);
 }
  
 int32
 XFE_PrefsOutgoingServer::get_ssl() {
-    if (XmToggleButtonGetState(m_ssl_never_toggle))
-        return 0;
-    if (XmToggleButtonGetState(m_ssl_possible_toggle))
-        return 1;
-    if (XmToggleButtonGetState(m_ssl_always_toggle))
-        return 2;
+    HG18159
     return -1;
 }
  
 void
 XFE_PrefsOutgoingServer::set_ssl(int32 val) {
  
-    if (val==0)
-        XmToggleButtonSetState(m_ssl_never_toggle,True,False);
-    if (val==1)
-        XmToggleButtonSetState(m_ssl_possible_toggle,True,False);
-    if (val==2)
-        XmToggleButtonSetState(m_ssl_always_toggle,True,False);
+    HG28688
 }
  
 void XFE_PrefsLocalMailDir::cb_choose(Widget    /*w*/,
@@ -2190,8 +2148,7 @@ void XFE_PrefsPageMailNewsMserver::init()
     fe_SetTextField(xfe_outgoing->get_user_name(), charval);
     XP_FREE(charval);
  
-    PREF_GetIntPref("mail.smtp.ssl", &intval);
-    xfe_outgoing->set_ssl(intval);
+    HG82160
  
     // Fill in the local mail directory field
     PREF_CopyCharPref("mail.directory", &charval);
@@ -2241,8 +2198,7 @@ void XFE_PrefsPageMailNewsMserver::save()
                      fe_GetTextField(xfe_local_mail->get_local_dir_text()));
  
  
-    PREF_SetIntPref("mail.smtp.ssl",
-                    xfe_outgoing->get_ssl());
+    HG92799
  	
     install();
 }

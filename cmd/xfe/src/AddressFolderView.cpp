@@ -21,7 +21,7 @@
    */
 
 
-
+#include "rosetta.h"
 #include "AddressFolderView.h"
 #include "AddressOutliner.h"
 #include "ABListSearchView.h"
@@ -71,7 +71,7 @@ extern "C" char *fe_StringTrim (char *string);
 extern "C" char* xfe_ExpandForNameCompletion(char *pString,
                                              ABook *pAddrBook,
                                              DIR_Server *pDirServer);
-extern "C" char * xfe_ExpandName(char *pString, int* iconType, short* security,
+extern "C" char * xfe_ExpandName(char *pString, int* iconType, short* xxx,
                                  ABook *pAddrBook, DIR_Server *pDirServer);
 
 extern "C"
@@ -97,7 +97,7 @@ const int XFE_AddressFolderView::ADDRESS_OUTLINER_COLUMN_ICON = 2;
 const int XFE_AddressFolderView::ADDRESS_OUTLINER_COLUMN_RECEIPIENT= 3;
 
 #ifdef HAVE_ADDRESS_SECURITY_COLUMN
-const int XFE_AddressFolderView::ADDRESS_OUTLINER_COLUMN_SECURITY = 4;
+HG98269
 #endif
 
 const int XFE_AddressFolderView::ADDRESS_ICON_PERSON = 0;
@@ -110,7 +110,7 @@ fe_icon XFE_AddressFolderView::personIcon = { 0 };
 fe_icon XFE_AddressFolderView::listIcon = { 0 };
 fe_icon XFE_AddressFolderView::newsIcon = { 0 };
 
-fe_icon XFE_AddressFolderView::securityIcon = { 0 };
+HG91001
 
 
 typedef enum {
@@ -168,7 +168,7 @@ XFE_AddressFolderView::handlesCommand(CommandType command,
   if (command == xfeCmdGetNewMessages
       || command == xfeCmdAddNewsgroup
       || command == xfeCmdDelete
-      || command == xfeCmdViewSecurity
+      HG92179
       || command == xfeCmdStopLoading)
     return True;
 
@@ -394,8 +394,7 @@ XFE_AddressFolderView::getColumnName(int column)
     case ADDRESS_OUTLINER_COLUMN_ICON:
       return "Icon";
 #ifdef HAVE_ADDRESS_SECURITY_COLUMN
-    case ADDRESS_OUTLINER_COLUMN_SECURITY:
-      return "Security";
+    HG92769
 #endif
     case ADDRESS_OUTLINER_COLUMN_RECEIPIENT:
       return "Receipient";
@@ -417,8 +416,7 @@ XFE_AddressFolderView::getColumnHeaderText(int column)
     case ADDRESS_OUTLINER_COLUMN_ICON:
       return "";
 #ifdef HAVE_ADDRESS_SECURITY_COLUMN
-    case ADDRESS_OUTLINER_COLUMN_SECURITY:
-      return "";
+    HG98268
 #endif
     case ADDRESS_OUTLINER_COLUMN_RECEIPIENT:
       return "Receipient";
@@ -637,7 +635,7 @@ XFE_AddressFolderView::setData(int line, char *recipient)
 
   if ( recipient && strlen(recipient))
   {
-     expandedStr = changedItem(recipient, &iconType, &m_fieldData->security);
+     HG82688
 
      if ( strcmp(m_fieldData->type, XFE_AddressFolderView::NEWSGROUP) ) // If it's newsgroup, then, don't change it's icon
         m_fieldData->icon = iconType;
@@ -870,12 +868,7 @@ XFE_AddressFolderView::getColumnIcon(int column)
 	}
 	break;
 #ifdef HAVE_ADDRESS_SECURITY_COLUMN
-	case ADDRESS_OUTLINER_COLUMN_SECURITY:
-        if (m_fieldData->security != 0)
-            return &securityIcon;
-        else
-            return 0;
-		break;
+	HG32179
 #endif
   }
   return 0;
@@ -971,18 +964,7 @@ XFE_AddressFolderView::setupIcons()
 		     MN_Newsgroup.mask_bits, FALSE);
 
 
-	// Security
-        fe_NewMakeIcon(getToplevel()->getBaseWidget(),
-                       BlackPixelOfScreen(XtScreen(base)), // umm. fix me
-                       bg_pixel,
-                       &securityIcon,
-                       NULL,
-                       MN_CertIndicator.width, 
-                       MN_CertIndicator.height,
-                       MN_CertIndicator.mono_bits, 
-                       MN_CertIndicator.color_bits, 
-                       MN_CertIndicator.mask_bits, 
-                       FALSE);
+	HG82687
   }
 }
 
@@ -1045,7 +1027,7 @@ XFE_AddressFolderView::createWidgets(Widget parent_widget)
 
 #ifdef HAVE_ADDRESS_SECURITY_COLUMN
 	// Security thing, didn't make 4.0
-	m_outliner->setColumnResizable(ADDRESS_OUTLINER_COLUMN_SECURITY, False);
+	HG78277
 #endif
 
 	gridW= ( (XFE_AddressOutliner*)m_outliner)->getBaseWidget();
@@ -1224,19 +1206,19 @@ void XFE_AddressFolderView::updateHeaderInfo ( void )
 // This method should be called from Activate Callback
 char *
 XFE_AddressFolderView::changedItem(char *pString, int*  iconType,
-                                   short* securityp)
+                                   short* xxx)
 {
 #if defined(DEBUG_tao)
 	printf("\nXFE_AddressFolderView::changedItem,%s\n",pString?pString:"");
 #endif 
-   return  xfe_ExpandName(pString, iconType, securityp,
+   return  xfe_ExpandName(pString, iconType, xxx,
                           m_pAddrBook, m_pCompleteServer);
 }
 
 
 //----------- Address Book stuff here ------------
 
-extern "C" char * xfe_ExpandName(char * pString, int* iconID, short* security,
+extern "C" char * xfe_ExpandName(char * pString, int* iconID, short* xxx,
                                  ABook *pAddrBook, DIR_Server *pDirServer)
 {
         ABID entryID;
@@ -1268,7 +1250,7 @@ extern "C" char * xfe_ExpandName(char * pString, int* iconID, short* security,
 	       *iconID = XFE_AddressFolderView::ADDRESS_ICON_LIST;
 	   }
 		
-       AB_GetSecurity(pDirServer, pAddrBook, entryID, security);
+       HG91268
 
           AB_GetExpandedName(
                         pDirServer,
