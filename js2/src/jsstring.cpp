@@ -242,18 +242,20 @@ static JSValue String_indexOf(Context *cx, const JSValue& thisValue, JSValue *ar
 
     const String *str = thisValue.toString(cx).string;
     const String *searchStr = argv[0].toString(cx).string;
-    int32 pos = 0;
+    uint32 pos = 0;
 
     if (argc > 1) {
-        pos = (int32)(argv[1].toInt32(cx).f64);
-        if (pos < 0)
+        int32 arg1 = (int32)(argv[1].toInt32(cx).f64);
+        if (arg1 < 0)
             pos = 0;
         else
-            if (toUInt32(pos) >= str->size()) 
+            if (toUInt32(arg1) >= str->size()) 
                 pos = str->size();
+            else
+                pos = toUInt32(arg1);
     }
     pos = str->find(*searchStr, pos);
-    if (toUInt32(pos) == String::npos)
+    if (pos == String::npos)
         return JSValue(-1.0);
     return JSValue((float64)pos);
 }
@@ -266,18 +268,21 @@ static JSValue String_lastIndexOf(Context *cx, const JSValue& thisValue, JSValue
 
     const String *str = thisValue.toString(cx).string;
     const String *searchStr = argv[0].toString(cx).string;
-    int32 pos = 0;
+    uint32 pos = 0;
 
     if (argc > 1) {
         float64 fpos = argv[1].toNumber(cx).f64;
         if (fpos != fpos) 
-            pos = pos = str->size();
+            pos = str->size();
         else {
-            if (pos < 0) 
+            int32 arg1 = (int32)(fpos);
+            if (arg1 < 0) 
                 pos = 0;
             else
-                if (toUInt32(pos) >= str->size()) 
+                if (toUInt32(arg1) >= str->size()) 
                     pos = str->size();
+                else
+                    pos = toUInt32(arg1);
         }
     }
     pos = str->rfind(*searchStr, pos);

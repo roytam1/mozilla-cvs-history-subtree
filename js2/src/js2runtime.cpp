@@ -615,7 +615,7 @@ void ScopeChain::setNameValue(const String& name, AttributeStmtNode *attr, Conte
             ASSERT(false);      // what else needs to be implemented ?
     }
     else {
-        top->defineVariable(cx, name, attr, Object_Type, v);
+        cx->getGlobalObject()->defineVariable(cx, name, attr, Object_Type, v);
     }
 }
 

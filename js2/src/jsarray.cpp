@@ -409,15 +409,20 @@ static JSValue Array_splice(Context *cx, const JSValue& thisValue, JSValue *argv
 
         JSArrayInstance *A = (JSArrayInstance *)Array_Type->newInstance(cx);
 
-        int32 start = (int32)(argv[0].toInt32(cx).f64);
-        if (start < 0) {
-            start += length;
-            if (start < 0)
+        int32 arg0 = (int32)(argv[0].toInt32(cx).f64);
+        uint32 start;
+        if (arg0 < 0) {
+            arg0 += length;
+            if (arg0 < 0)
                 start = 0;
+            else
+                start = toUInt32(arg0);
         }
         else {
-            if (toUInt32(start) >= length)
+            if (toUInt32(arg0) >= length)
                 start = length;
+            else
+                start = toUInt32(arg0);
         }
 
         int32 deleteCount = (int32)(argv[1].toInt32(cx).f64);
