@@ -217,6 +217,188 @@ txComment::execute(txExecutionState& aEs)
 }
 
 nsresult
+txCopyBase::copyNode(Node* aNode, txExecutionState& aEs)
+{
+    NS_ASSERTION(aNode, "missing node to copy");
+    switch (aNode->getNodeType()) {
+        case Node::ATTRIBUTE_NODE:
+        {
+            nsAutoString nodeName, nodeValue;
+            aNode->getNodeName(nodeName);
+            aNode->getNodeValue(nodeValue);
+            aEs.mResultHandler->attribute(nodeName,
+                                          aNode->getNamespaceID(),
+                                          nodeValue);
+            break;
+        }
+        case Node::COMMENT_NODE:
+        {
+            nsAutoString nodeValue;
+            aNode->getNodeValue(nodeValue);
+            aEs.mResultHandler->comment(nodeValue);
+            break;
+        }
+        case Node::DOCUMENT_NODE:
+        case Node::DOCUMENT_FRAGMENT_NODE:
+        {
+            // Copy children
+            Node* child = aNode->getFirstChild();
+            while (child) {
+                copyNode(child, aEs);
+                child = child->getNextSibling();
+            }
+            break;
+        }
+        case Node::ELEMENT_NODE:
+        {
+            Element* element = (Element*)aNode;
+            nsAutoString name;
+            element->getNodeName(name);
+            PRInt32 nsID = element->getNamespaceID();
+            aEs.mResultHandler->startElement(name, nsID);
+
+            // Copy attributes
+            NamedNodeMap* attList = element->getAttributes();
+            if (attList) {
+                PRUint32 i = 0;
+                for (i = 0; i < attList->getLength(); i++) {
+                    Attr* attr = (Attr*)attList->item(i);
+                    nsAutoString nodeName, nodeValue;
+                    attr->getNodeName(nodeName);
+                    attr->getNodeValue(nodeValue);
+                    aEs.mResultHandler->attribute(nodeName,
+                                                  attr->getNamespaceID(),
+                                                  nodeValue);
+                }
+            }
+
+            // Copy children
+            Node* child = element->getFirstChild();
+            while (child) {
+                copyNode(child, aEs);
+                child = child->getNextSibling();
+            }
+
+            aEs.mResultHandler->endElement(name, nsID);
+            break;
+        }
+        case Node::PROCESSING_INSTRUCTION_NODE:
+        {
+            nsAutoString target, data;
+            aNode->getNodeName(target);
+            aNode->getNodeValue(data);
+            aEs.mResultHandler->processingInstruction(target, data);
+            break;
+        }
+        case Node::TEXT_NODE:
+        case Node::CDATA_SECTION_NODE:
+        {
+            nsAutoString nodeValue;
+            aNode->getNodeValue(nodeValue);
+            aEs.mResultHandler->characters(nodeValue, PR_FALSE);
+            break;
+        }
+    }
+    
+    return NS_OK;
+}
+
+txCopy::txCopy()
+    : mBailTarget(nsnull)
+{
+}
+
+nsresult
+txCopy::execute(txExecutionState& aEs)
+{
+    nsresult rv = NS_OK;
+    Node* node = aEs.getEvalContext()->getContextNode();
+
+    switch (node->getNodeType()) {
+        case Node::DOCUMENT_NODE:
+        {
+            // "close" current element to ensure that no attributes are added
+            aEs.mResultHandler->characters(NS_LITERAL_STRING(""), PR_FALSE);
+
+            rv = aEs.pushString(NS_LITERAL_STRING(""));
+            NS_ENSURE_SUCCESS(rv, rv);
+
+            rv = aEs.pushInt(kNameSpaceID_None);
+            NS_ENSURE_SUCCESS(rv, rv);
+
+            break;
+        }
+        case Node::ELEMENT_NODE:
+        {
+            nsAutoString nodeName;
+            node->getNodeName(nodeName);
+            PRInt32 nsID = node->getNamespaceID();
+
+            aEs.mResultHandler->startElement(nodeName, nsID);
+            // XXX copy namespace nodes once we have them
+
+            rv = aEs.pushString(nodeName);
+            NS_ENSURE_SUCCESS(rv, rv);
+
+            rv = aEs.pushInt(nsID);
+            NS_ENSURE_SUCCESS(rv, rv);
+
+            break;
+        }
+        default:
+        {
+            rv = copyNode(node, aEs);
+            NS_ENSURE_SUCCESS(rv, rv);
+            
+            aEs.gotoInstruction(mBailTarget);
+        }
+    }
+
+    return NS_OK;
+}
+
+txCopyOf::txCopyOf(Expr* aSelect)
+    : mSelect(aSelect)
+{
+}
+
+txCopyOf::~txCopyOf()
+{
+    delete mSelect;
+}
+
+nsresult
+txCopyOf::execute(txExecutionState& aEs)
+{
+    nsresult rv = NS_OK;
+    ExprResult* exprRes = mSelect->evaluate(aEs.getEvalContext());
+    NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
+
+    if (exprRes->getResultType() == ExprResult::NODESET) {
+        NodeSet* nodes = (NodeSet*)exprRes;
+        int i;
+        for (i = 0; i < nodes->size(); ++i) {
+            Node* node = nodes->get(i);
+            rv = copyNode(node, aEs);
+            if (NS_FAILED(rv)) {
+                delete exprRes;
+                return rv;
+            }
+        }
+    }
+    else {
+        nsAutoString value;
+        exprRes->stringValue(value);
+        if (!value.IsEmpty()) {
+            aEs.mResultHandler->characters(value, PR_FALSE);
+        }
+    }
+    delete exprRes;
+    
+    return NS_OK;
+}
+
+nsresult
 txEndElement::execute(txExecutionState& aEs)
 {
     PRInt32 namespaceID = aEs.popInt();

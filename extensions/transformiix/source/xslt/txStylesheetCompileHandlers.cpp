@@ -928,6 +928,89 @@ txFnEndComment(txStylesheetCompilerState& aState)
     return NS_OK;
 }
 
+/*
+  xsl:copy
+
+  txCopy        -+
+  [children]     |
+  txEndElement   |
+               <-+
+*/
+nsresult
+txFnStartCopy(PRInt32 aNamespaceID,
+              nsIAtom* aLocalName,
+              nsIAtom* aPrefix,
+              txStylesheetAttr* aAttributes,
+              PRInt32 aAttrCount,
+              txStylesheetCompilerState& aState)
+{
+    txCopy* copy = new txCopy;
+    NS_ENSURE_TRUE(copy, NS_ERROR_OUT_OF_MEMORY);
+
+    nsresult rv = aState.pushPtr(copy);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = aState.addInstruction(copy);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = parseUseAttrSets(aAttributes, aAttrCount, PR_FALSE, aState);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return NS_OK;
+}
+
+nsresult
+txFnEndCopy(txStylesheetCompilerState& aState)
+{
+    txInstruction* instr = new txEndElement;
+    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+
+    nsresult rv = aState.addInstruction(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    txCopy* copy = (txCopy*)aState.popPtr();
+    rv = aState.addGotoTarget(&copy->mBailTarget);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return NS_OK;
+}
+
+/*
+  xsl:copy-of
+
+  txCopyOf
+*/
+nsresult
+txFnStartCopyOf(PRInt32 aNamespaceID,
+                nsIAtom* aLocalName,
+                nsIAtom* aPrefix,
+                txStylesheetAttr* aAttributes,
+                PRInt32 aAttrCount,
+                txStylesheetCompilerState& aState)
+{
+    nsresult rv = NS_OK;
+
+    Expr* select = nsnull;
+    rv = getExprAttr(aAttributes, aAttrCount, txXSLTAtoms::select, PR_TRUE,
+                    aState, select);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    txInstruction* instr = new txCopyOf(select);
+    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+    
+    rv = aState.addInstruction(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return aState.pushHandlerTable(gTxIgnoreHandler);
+}
+
+nsresult
+txFnEndCopyOf(txStylesheetCompilerState& aState)
+{
+    aState.popHandlerTable();
+    return NS_OK;
+}
+
 // xsl:element
 nsresult
 txFnStartElement(PRInt32 aNamespaceID,
@@ -1495,6 +1578,8 @@ txHandlerTableData gTxTemplateTableData = {
     { kNameSpaceID_XSLT, "attribute", txFnStartAttribute, txFnEndAttribute },
     { kNameSpaceID_XSLT, "call-template", txFnStartCallTemplate, txFnEndCallTemplate },
     { kNameSpaceID_XSLT, "comment", txFnStartComment, txFnEndComment },
+    { kNameSpaceID_XSLT, "copy", txFnStartCopy, txFnEndCopy },
+    { kNameSpaceID_XSLT, "copy-of", txFnStartCopyOf, txFnEndCopyOf },
     { kNameSpaceID_XSLT, "element", txFnStartElement, txFnEndElement },
     { kNameSpaceID_XSLT, "fallback", txFnStartElementSetIgnore, txFnEndElementSetIgnore },
     { kNameSpaceID_XSLT, "for-each", txFnStartForEach, txFnEndForEach },

@@ -122,6 +122,33 @@ public:
     TX_DECL_TXINSTRUCTION
 };
 
+class txCopyBase : public txInstruction
+{
+protected:
+    nsresult copyNode(Node* aNode, txExecutionState& aEs);
+};
+
+class txCopy : public txCopyBase
+{
+public:
+    txCopy();
+
+    TX_DECL_TXINSTRUCTION
+    
+    txInstruction* mBailTarget;
+};
+
+class txCopyOf : public txCopyBase
+{
+public:
+    txCopyOf(Expr* aSelect);
+    ~txCopyOf();
+
+    TX_DECL_TXINSTRUCTION
+    
+    Expr* mSelect;
+};
+
 class txEndElement : public txInstruction
 {
 public:
