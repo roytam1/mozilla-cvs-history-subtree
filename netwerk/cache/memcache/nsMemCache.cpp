@@ -235,10 +235,10 @@ nsMemCache::SetEnabled(PRBool aEnabled)
 }
 
 NS_IMETHODIMP
-nsMemCache::GetReadOnly(PRBool *aReadOnly)
+nsMemCache::GetFlags(PRUint32 *aFlags)
 {
-    NS_ENSURE_ARG(aReadOnly);
-    *aReadOnly = PR_FALSE;
+    NS_ENSURE_ARG(aFlags);
+    *aFlags = MEMORY_CACHE;
     return NS_OK;
 }
 
