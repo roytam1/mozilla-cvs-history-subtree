@@ -1051,6 +1051,9 @@ NSSTrustDomain_TraverseCertificates (
 	                                           collector,
 	                                           collection);
 	    nssToken_Destroy(token);
+	    if (status != PR_SUCCESS) {
+		goto loser;
+	    }
 	}
     }
 

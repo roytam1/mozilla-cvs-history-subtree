@@ -225,7 +225,7 @@ echo "\nNSPR Test Results - $OBJDIR\n"
 echo "BEGIN\t\t\t`date`"
 echo "NSPR_TEST_LOGFILE\t${LOGFILE}\n"
 echo "Test\t\t\tResult\n"
-if [ $OS_PLATFORM = "Windows_95" ] || [ $OS_PLATFORM = "Windows_98" ] || [ $OS_PLATFORM = "Windows_NT" ] ; then
+if [ $OS_PLATFORM = "Windows_95" ] || [ $OS_PLATFORM = "Windows_98" ] || [ $OS_PLATFORM = "Windows_NT" ] || [ $OS_PLATFORM = "OS/2" ] ; then
 	for prog in $TESTS
 	do
 		echo "$prog\c"

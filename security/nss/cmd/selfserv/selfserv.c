@@ -1739,13 +1739,7 @@ main(int argc, char **argv)
     free(nickName);
     free(passwd);
 
-    SSL_ShutdownServerSessionIDCache();
-
-    if (NSS_Shutdown() != SECSuccess) {
-	SECU_PrintError(progName, "NSS_Shutdown");
-	PR_Cleanup();
-	exit(1);
-    }
+    NSS_Shutdown();
     PR_Cleanup();
     printf("selfserv: normal termination\n");
     return 0;

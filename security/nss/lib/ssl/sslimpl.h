@@ -1261,9 +1261,6 @@ ssl_GetWrappingKey( PRInt32                   symWrapMechIndex,
 extern PRBool
 ssl_SetWrappingKey(SSLWrappedSymWrappingKey *wswk);
 
-/* get rid of the symmetric wrapping key references. */
-extern SECStatus SSL3_ShutdownServerCache(void);
-
 /********************** misc calls *********************/
 
 extern int ssl_MapLowLevelError(int hiLevelError);

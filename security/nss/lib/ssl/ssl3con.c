@@ -423,27 +423,28 @@ typedef enum { ec_noName = 0,
 	       ec_pastLastName
 } ECName;
 
-#define supportedCurve(x) (((x) > ec_noName) && ((x) < ec_pastLastName))
+/* XXX Change this when more curves are supported */
+#define supportedCurve(x) (((x) >= ec_secp160k1) && ((x) <= ec_secp521r1))
 
 /* Table containing OID tags for elliptic curves named in the
  * ECC-TLS IETF draft.
  */
 static const SECOidTag ecName2OIDTag[] = {
 	0,  
-	SEC_OID_SECG_EC_SECT163K1,  /*  1 */
-	SEC_OID_SECG_EC_SECT163R1,  /*  2 */
-	SEC_OID_SECG_EC_SECT163R2,  /*  3 */
-	SEC_OID_SECG_EC_SECT193R1,  /*  4 */
-	SEC_OID_SECG_EC_SECT193R2,  /*  5 */
-	SEC_OID_SECG_EC_SECT233K1,  /*  6 */
-	SEC_OID_SECG_EC_SECT233R1,  /*  7 */
-	SEC_OID_SECG_EC_SECT239K1,  /*  8 */
-	SEC_OID_SECG_EC_SECT283K1,  /*  9 */
-	SEC_OID_SECG_EC_SECT283R1,  /* 10 */
-	SEC_OID_SECG_EC_SECT409K1,  /* 11 */
-	SEC_OID_SECG_EC_SECT409R1,  /* 12 */
-	SEC_OID_SECG_EC_SECT571K1,  /* 13 */
-	SEC_OID_SECG_EC_SECT571R1,  /* 14 */
+	0, /* SEC_OID_SECG_EC_SECT163K1, */  /*  1 */
+	0, /* SEC_OID_SECG_EC_SECT163R1, */  /*  2 */
+	0, /* SEC_OID_SECG_EC_SECT163R2, */  /*  3 */
+	0, /* SEC_OID_SECG_EC_SECT193R1, */  /*  4 */
+	0, /* SEC_OID_SECG_EC_SECT193R2, */  /*  5 */
+	0, /* SEC_OID_SECG_EC_SECT233K1, */  /*  6 */
+	0, /* SEC_OID_SECG_EC_SECT233R1, */  /*  7 */
+	0, /* SEC_OID_SECG_EC_SECT239K1, */  /*  8 */
+	0, /* SEC_OID_SECG_EC_SECT283K1, */  /*  9 */
+	0, /* SEC_OID_SECG_EC_SECT283R1, */  /* 10 */
+	0, /* SEC_OID_SECG_EC_SECT409K1, */  /* 11 */
+	0, /* SEC_OID_SECG_EC_SECT409R1, */  /* 12 */
+	0, /* SEC_OID_SECG_EC_SECT571K1, */  /* 13 */
+	0, /* SEC_OID_SECG_EC_SECT571R1, */  /* 14 */
 	SEC_OID_SECG_EC_SECP160K1,  /* 15 */
 	SEC_OID_SECG_EC_SECP160R1,  /* 16 */
 	SEC_OID_SECG_EC_SECP160R2,  /* 17 */
@@ -3319,33 +3320,6 @@ typedef struct {
     PK11SymKey *      symWrapKey[kt_kea_size];
 } ssl3SymWrapKey;
 
-static PZLock *          symWrapKeysLock;
-static ssl3SymWrapKey    symWrapKeys[SSL_NUM_WRAP_MECHS];
-
-SECStatus
-SSL3_ShutdownServerCache(void)
-{
-    int             i, j;
-
-    if (!symWrapKeysLock)
-    	return SECSuccess;	/* was never initialized */
-    PZ_Lock(symWrapKeysLock);
-    /* get rid of all symWrapKeys */
-    for (i = 0; i < SSL_NUM_WRAP_MECHS; ++i) {
-    	for (j = 0; j < kt_kea_size; ++j) {
-	    PK11SymKey **   pSymWrapKey;
-	    pSymWrapKey = &symWrapKeys[i].symWrapKey[j];
-	    if (*pSymWrapKey) {
-		PK11_FreeSymKey(*pSymWrapKey);
-	    	*pSymWrapKey = NULL;
-	    }
-	}
-    }
-
-    PZ_Unlock(symWrapKeysLock);
-    return SECSuccess;
-}
-
 /* Try to get wrapping key for mechanism from in-memory array.
  * If that fails, look for one on disk.
  * If that fails, generate a new one, put the new one on disk,
@@ -3369,6 +3343,9 @@ getWrappingKey( sslSocket *       ss,
     SECStatus                rv;
     SECItem                  wrappedKey;
     SSLWrappedSymWrappingKey wswk;
+
+    static PZLock *          symWrapKeysLock;
+    static ssl3SymWrapKey    symWrapKeys[SSL_NUM_WRAP_MECHS];
 
     svrPrivKey  = ss->serverCerts[exchKeyType].serverKey;
     PORT_Assert(svrPrivKey != NULL);

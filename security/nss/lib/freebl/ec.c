@@ -41,7 +41,6 @@
 #include "secitem.h"
 #include "ec.h"
 #include "GFp_ecl.h"
-#include "GF2m_ecl.h"
 
 #ifdef NSS_ENABLE_ECC
 
@@ -70,7 +69,7 @@ ec_point_add(ECParams *params, SECItem *pointP,
              SECItem *pointQ, SECItem *pointR)
 {
     mp_int Px, Py, Qx, Qy, Rx, Ry;
-    mp_int irreducible, a;
+    mp_int prime, a;
     SECStatus rv = SECFailure;
     mp_err err = MP_OKAY;
     int len;
@@ -110,7 +109,7 @@ ec_point_add(ECParams *params, SECItem *pointP,
     MP_DIGITS(&Qy) = 0;
     MP_DIGITS(&Rx) = 0;
     MP_DIGITS(&Ry) = 0;
-    MP_DIGITS(&irreducible) = 0;
+    MP_DIGITS(&prime) = 0;
     MP_DIGITS(&a) = 0;
     CHECK_MPI_OK( mp_init(&Px) );
     CHECK_MPI_OK( mp_init(&Py) );
@@ -118,7 +117,7 @@ ec_point_add(ECParams *params, SECItem *pointP,
     CHECK_MPI_OK( mp_init(&Qy) );
     CHECK_MPI_OK( mp_init(&Rx) );
     CHECK_MPI_OK( mp_init(&Ry) );
-    CHECK_MPI_OK( mp_init(&irreducible) );
+    CHECK_MPI_OK( mp_init(&prime) );
     CHECK_MPI_OK( mp_init(&a) );
 
     /* Initialize Px and Py */
@@ -133,21 +132,14 @@ ec_point_add(ECParams *params, SECItem *pointP,
     CHECK_MPI_OK( mp_read_unsigned_octets(&Qy, pointQ->data + 1 + len, 
 	                                  (mp_size) len) );
 
-    /* Set up the curve coefficient */
+    /* Set up the prime and curve coefficient */
+    SECITEM_TO_MPINT( params->fieldID.u.prime, &prime );
     SECITEM_TO_MPINT( params->curve.a, &a );
 
     /* Compute R = P + Q */
-    if (params->fieldID.type == ec_field_GFp) {
-	SECITEM_TO_MPINT( params->fieldID.u.prime, &irreducible );
-	if (GFp_ec_pt_add(&irreducible, &a, &Px, &Py, &Qx, &Qy, 
+    if (GFp_ec_pt_add(&prime, &a, &Px, &Py, &Qx, &Qy, 
 	    &Rx, &Ry) != SECSuccess)
 	    goto cleanup;
-    } else {
-	SECITEM_TO_MPINT( params->fieldID.u.poly, &irreducible );
-	if (GF2m_ec_pt_add(&irreducible, &a, &Px, &Py, &Qx, &Qy, &Rx, &Ry) 
-	    != SECSuccess) 
-	    goto cleanup;
-    }
 
     /* Construct the SECItem representation of the result */
     pointR->data[0] = EC_POINT_FORM_UNCOMPRESSED;
@@ -171,7 +163,7 @@ cleanup:
     mp_clear(&Qy);
     mp_clear(&Rx);
     mp_clear(&Ry);
-    mp_clear(&irreducible);
+    mp_clear(&prime);
     mp_clear(&a);
     if (err) {
 	MP_TO_SEC_ERROR(err);
@@ -190,7 +182,7 @@ ec_point_mul(ECParams *params, mp_int *k,
              SECItem *pointP, SECItem *pointQ)
 {
     mp_int Px, Py, Qx, Qy;
-    mp_int irreducible, a, b;
+    mp_int prime, a, b;
     SECStatus rv = SECFailure;
     mp_err err = MP_OKAY;
     int len;
@@ -217,7 +209,8 @@ ec_point_mul(ECParams *params, mp_int *k,
 
     /* NOTE: We only support prime field curves for now */
     len = (params->fieldID.size + 7) >> 3;
-    if ((pointP->data[0] != EC_POINT_FORM_UNCOMPRESSED) ||
+    if ((params->fieldID.type != ec_field_GFp) ||
+	(pointP->data[0] != EC_POINT_FORM_UNCOMPRESSED) ||
 	(pointP->len != (2 * len + 1))) {
 	    return SECFailure;
     };
@@ -226,16 +219,17 @@ ec_point_mul(ECParams *params, mp_int *k,
     MP_DIGITS(&Py) = 0;
     MP_DIGITS(&Qx) = 0;
     MP_DIGITS(&Qy) = 0;
-    MP_DIGITS(&irreducible) = 0;
+    MP_DIGITS(&prime) = 0;
     MP_DIGITS(&a) = 0;
     MP_DIGITS(&b) = 0;
     CHECK_MPI_OK( mp_init(&Px) );
     CHECK_MPI_OK( mp_init(&Py) );
     CHECK_MPI_OK( mp_init(&Qx) );
     CHECK_MPI_OK( mp_init(&Qy) );
-    CHECK_MPI_OK( mp_init(&irreducible) );
+    CHECK_MPI_OK( mp_init(&prime) );
     CHECK_MPI_OK( mp_init(&a) );
     CHECK_MPI_OK( mp_init(&b) );
+
 
     /* Initialize Px and Py */
     CHECK_MPI_OK( mp_read_unsigned_octets(&Px, pointP->data + 1, 
@@ -243,23 +237,15 @@ ec_point_mul(ECParams *params, mp_int *k,
     CHECK_MPI_OK( mp_read_unsigned_octets(&Py, pointP->data + 1 + len, 
 	                                  (mp_size) len) );
 
-    /* Set up mp_ints containing the curve coefficients */
+    /* Set up mp_ints containing the prime and curve coefficients */
+    SECITEM_TO_MPINT( params->fieldID.u.prime, &prime );
     SECITEM_TO_MPINT( params->curve.a, &a );
     SECITEM_TO_MPINT( params->curve.b, &b );
 
     /* Compute Q = k * P */
-    if (params->fieldID.type == ec_field_GFp) {
-	SECITEM_TO_MPINT( params->fieldID.u.prime, &irreducible );
-	if (GFp_ec_pt_mul(&irreducible, &a, &b, &Px, &Py, k, &Qx, &Qy) 
-	    != SECSuccess) 
+    if (GFp_ec_pt_mul(&prime, &a, &b, &Px, &Py, k, 
+	&Qx, &Qy) != SECSuccess) 
 	    goto cleanup;
-    } else {
-	SECITEM_TO_MPINT( params->fieldID.u.poly, &irreducible );
-	if (GF2m_ec_pt_mul(&irreducible, &a, &b, &Px, &Py, k, &Qx, &Qy) 
-	    != SECSuccess) {
-	    goto cleanup;
-	}
-    }
 
     /* Construct the SECItem representation of point Q */
     pointQ->data[0] = EC_POINT_FORM_UNCOMPRESSED;
@@ -267,7 +253,6 @@ ec_point_mul(ECParams *params, mp_int *k,
 	                              (mp_size) len) );
     CHECK_MPI_OK( mp_to_fixlen_octets(&Qy, pointQ->data + 1 + len,
 	                              (mp_size) len) );
-
     rv = SECSuccess;
 
 #if EC_DEBUG
@@ -282,7 +267,7 @@ cleanup:
     mp_clear(&Py);
     mp_clear(&Qx);
     mp_clear(&Qy);
-    mp_clear(&irreducible);
+    mp_clear(&prime);
     mp_clear(&a);
     mp_clear(&b);
     if (err) {
@@ -343,13 +328,8 @@ EC_NewKeyFromSeed(ECParams *ecParams, ECPrivateKey **privKey,
     key->ecParams.type = ecParams->type;
     key->ecParams.fieldID.size = ecParams->fieldID.size;
     key->ecParams.fieldID.type = ecParams->fieldID.type;
-    if (ecParams->fieldID.type == ec_field_GFp) {
-	CHECK_SEC_OK(SECITEM_CopyItem(arena, &key->ecParams.fieldID.u.prime,
-	    &ecParams->fieldID.u.prime));
-    } else {
-	CHECK_SEC_OK(SECITEM_CopyItem(arena, &key->ecParams.fieldID.u.poly,
-	    &ecParams->fieldID.u.poly));
-    }
+    CHECK_SEC_OK(SECITEM_CopyItem(arena, &key->ecParams.fieldID.u.prime,
+	&ecParams->fieldID.u.prime));
     key->ecParams.fieldID.k1 = ecParams->fieldID.k1;
     key->ecParams.fieldID.k2 = ecParams->fieldID.k2;
     key->ecParams.fieldID.k3 = ecParams->fieldID.k3;
@@ -807,6 +787,7 @@ ECDSA_VerifyDigest(ECPublicKey *key, const SECItem *signature,
 
     ecParams = &(key->ecParams);
     len = (ecParams->fieldID.size + 7) >> 3;  
+    printf("len is %d\n", len);
     if (signature->len < 2*len) {
 	PORT_SetError(SEC_ERROR_INVALID_ARGS);
 	goto cleanup;
