@@ -23,7 +23,7 @@
 
 class EventRecord;
 
-class NS_GFX Repeater {
+class NS_NET Repeater {
   public:
   
     Repeater();
