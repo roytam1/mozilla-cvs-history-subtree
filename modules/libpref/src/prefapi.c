@@ -16,6 +16,19 @@
  * Reserved.
  */
 
+  /** USAGE NOTE: 
+     <font color=red>
+
+     This file (prefapi.c) is being obsoleted, and functions previously declared
+     here are migrating to preffunc.cpp in this module.  If you make changes
+     in this file, please be sure to check preffunc.cpp to ensure that similar
+     changes are made in that file.
+     
+     Currently Windows uses preffunc.cpp and the other platforms use prefapi.c.
+
+     </font>
+  **/
+
 #include "jsapi.h"
 #include "xp_core.h"
 #include "xp_mcom.h"
@@ -159,7 +172,7 @@ void pref_Alert(char* msg);
 int pref_HashPref(const char *key, PrefValue value, PrefType type, PrefAction action);
 
 /* -- Platform specific function extern */
-#if !defined(XP_OS2)
+#if !defined(XP_WIN) && !defined(XP_OS2)
 extern JSBool pref_InitInitialObjects(void);
 #endif
 
@@ -217,7 +230,7 @@ int pref_OpenFile(const char* filename, XP_Bool is_error_fatal, XP_Bool verifyHa
 	long fileLength;
 
 	stats.st_size = 0;
-	if ( stat(filename, &stats) == -1 )
+	if ( stat(filename, (struct stat *) &stats) == -1 )
 		return PREF_ERROR;
 
 	fileLength = stats.st_size;
@@ -2167,7 +2180,6 @@ pref_ErrorReporter(JSContext *cx, const char *message,
 {
 	char *last;
 
-	int i, j, k, n;
 	const char *s, *t;
 
 	last = PR_sprintf_append(0, "An error occurred reading the startup configuration file.  "
