@@ -684,7 +684,10 @@ function SortFolderPane(column, sortKey)
         dump('Couldnt find sort column\n');
         return false;
     }
-    SortColumn(node, sortKey, null, null);
+    var folderOutliner = GetFolderOutliner();
+    var columnElement = document.getElementById(column);
+    columnElement.setAttribute('sort', 'true');
+    folderOutliner.outlinerBoxObject.view.cycleHeader(column, columnElement);
     //Remove the sortActive attribute because we don't want this pane to have any
     //sort styles.
     node.setAttribute("sortActive", "false");
@@ -699,6 +702,7 @@ function GetOutlinerSelection(startRange, endRange)
     debug('startRange: ' + startRange + ', endRange: ' + endRange);
 }
 
+/* not used
 function SortColumn(node, sortKey, secondarySortKey, direction)
 {
     var xulSortService = Components.classes["@mozilla.org/xul/xul-sort-service;1"].getService();
@@ -737,6 +741,7 @@ function SortColumn(node, sortKey, secondarySortKey, direction)
         }
     }
 }
+*/
 
 //Called when the splitter in between the thread and message panes is clicked.
 function OnClickThreadAndMessagePaneSplitter()
