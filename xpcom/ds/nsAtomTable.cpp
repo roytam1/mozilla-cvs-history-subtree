@@ -164,16 +164,14 @@ static PLHashNumber HashKey(const PRUnichar* k)
   return (PLHashNumber) nsCRT::HashCode(k, nsCRT::strlen(k));
 }
 
-static PRIntn CompareKeys( const PRUnichar* k1, const nsAReadableString* k2 )
+static PRIntn CompareKeys( const nsAReadableString* k1, const PRUnichar* k2 )
 {
-  return Compare(k1, *k2);
+  return Compare(*k1, k2);
 }
 
 NS_COM nsIAtom* NS_NewAtom(const char* isolatin1)
 {
-  nsAutoString tmp;
-  tmp.AssignWithConversion(isolatin1);
-  return NS_NewAtom(tmp.GetUnicode());
+  return NS_NewAtom(NS_ConvertASCIItoUCS2(isolatin1));
 }
 
 NS_COM nsIAtom* NS_NewAtom( const nsAReadableString& aString )
