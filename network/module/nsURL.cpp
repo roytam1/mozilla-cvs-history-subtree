@@ -149,8 +149,11 @@ nsresult nsURL::OpenProtocolInstance(nsIProtocolInstance* *o_ProtocolInstance)
 {
     const char* scheme =0;
     GetScheme(&scheme);
+    // If the expected behaviour is to have http as the default scheme, a 
+    // caller must check that before calling this function.
     if (0 == scheme)
         return NS_ERROR_BAD_URL; 
+
     // Here we should check with the repository for a
     // protocol handler that can handle this scheme. 
     // Then assuming this is class returned 
