@@ -63,7 +63,6 @@
 
 class nsISizeOfHandler;
 
-
 #define nsString2     nsString
 #define nsAutoString2 nsAutoString
 
@@ -340,6 +339,15 @@ public:
   void AssignWithConversion(const char*);
   void AssignWithConversion(const char*, PRInt32);
 
+  void AssignWithConversion(const nsAFlatCString& aCString)
+    {
+      AssignWithConversion(aCString.get(), aCString.Length());
+    }
+
+  void AssignWithConversion(const nsAFlatCString& aCString, PRInt32 aCount)
+    {
+      AssignWithConversion(aCString.get(), aCount);
+    }
 
   /*
    *  Appends n characters from given string to this,
@@ -353,6 +361,16 @@ public:
   void AppendFloat(double);
   void AppendWithConversion(const char*, PRInt32=-1);
   void AppendWithConversion(char);
+
+  void AppendWithConversion(const nsAFlatCString& aCString)
+    {
+      AppendWithConversion(aCString.get(), aCString.Length());
+    }
+
+  void AppendWithConversion(const nsAFlatCString& aCString, PRInt32 aCount)
+    {
+      AppendWithConversion(aCString.get(), aCount);
+    }
 
   virtual void do_AppendFromElement( PRUnichar );
 
