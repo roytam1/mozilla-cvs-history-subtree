@@ -49,13 +49,13 @@
 #include <stdlib.h>
 
 /*
- * This release (4.4) is backward compatible with the
- * 4.0.x, 4.1.x, 4.2.x, and 4.3.x releases.  It, of course,
+ * This release (4.4.1) is backward compatible with the
+ * 4.0.x, 4.1.x, 4.2.x, 4.3.x, and 4.4 releases.  It, of course,
  * is compatible with itself.
  */
 static char *compatible_version[] = {
     "4.0", "4.0.1", "4.1", "4.1.1", "4.1.2", "4.1.3",
-    "4.2", "4.2.1", "4.2.2", "4.3", PR_VERSION
+    "4.2", "4.2.1", "4.2.2", "4.3", "4.4", PR_VERSION
 };
 
 /*
