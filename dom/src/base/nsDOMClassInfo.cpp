@@ -6146,14 +6146,14 @@ nsHTMLDocumentSH::DocumentAllTagsNewResolve(JSContext *cx, JSObject *obj,
 
     JSString *str = JSVAL_TO_STRING(id);
 
-    jsval found;
-    if (!::JS_LookupUCProperty(cx, ::JS_GetPrototype(cx, obj),
-                               ::JS_GetStringChars(str),
-                               ::JS_GetStringLength(str), &found)) {
+    JSBool found;
+    if (!::JS_HasUCProperty(cx, ::JS_GetPrototype(cx, obj),
+                            ::JS_GetStringChars(str),
+                            ::JS_GetStringLength(str), &found)) {
       return JS_FALSE;
     }
 
-    if (!JSVAL_IS_VOID(found)) {
+    if (found) {
       return JS_TRUE;
     }
 
@@ -6886,13 +6886,13 @@ nsHTMLExternalObjSH::SetProperty(nsIXPConnectWrappedNative *wrapper,
   const jschar *id_chars = ::JS_GetStringChars(id_str);
   size_t id_length = ::JS_GetStringLength(id_str);
 
-  jsval found;
-  *_retval = ::JS_LookupUCProperty(cx, pi_obj, id_chars, id_length, &found);
+  JSBool found;
+  *_retval = ::JS_HasUCProperty(cx, pi_obj, id_chars, id_length, &found);
   if (! *_retval) {
     return NS_ERROR_UNEXPECTED;
   }
 
-  if (!JSVAL_IS_VOID(found)) {
+  if (found) {
     *_retval = ::JS_SetUCProperty(cx, pi_obj, id_chars, id_length, vp);
     return *_retval ? NS_OK : NS_ERROR_FAILURE;
   }
