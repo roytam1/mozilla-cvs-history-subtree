@@ -333,11 +333,11 @@ init_netscape_java_classes(JSJavaVM *jsjava_vm, JNIEnv *jEnv)
     LOAD_CONSTRUCTOR(netscape.javascript.JSException,
                                             JSException,        "(Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;I)V",
                                                                                                 njJSException);
-
     /* Load second constructor for wrapping JS exception objects inside JSExceptions */
     _LOAD_METHOD(netscape.javascript.JSException,<init>,
                  JSException_wrap, "(ILjava/lang/Object;)V",        
                  njJSException, JS_FALSE);
+
 
 #ifndef OJI
     LOAD_FIELDID(netscape.javascript.JSObject,  
