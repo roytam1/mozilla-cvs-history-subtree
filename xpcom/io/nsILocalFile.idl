@@ -73,4 +73,6 @@ interface nsILocalFile : nsIFile
 %{C++
 #define NS_LOCAL_FILE_PROGID "component://netscape/file/local"
 #define NS_LOCAL_FILE_CLASSNAME "Local File Specification"
+extern NS_COM nsresult NS_NewLocalFile(nsILocalFile** result);
+
 %}
