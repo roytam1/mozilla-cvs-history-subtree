@@ -62,6 +62,7 @@
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsXPIDLString.h"
 #include "nsIFile.h"
+#include "nsILocalFile.h"
 
 /* utility functions */
 static PRBool     check_for_rollup(GdkWindow *aWindow,
