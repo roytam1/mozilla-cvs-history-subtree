@@ -32,10 +32,10 @@ MOZ_TOP=mozilla
 #// Figure out how to do the pull.
 #//------------------------------------------------------------------------
 # uncomment these, modify branch tag, and check in to branch for milestones
-MOZ_BRANCH=Netscape_Shrimp_BRANCH
-NSPR_CO_TAG=Netscape_Shrimp_BRANCH
-PSM_CO_TAG=Netscape_Shrimp_BRANCH
-LDAP_SDK_CO_TAG=Netscape_Shrimp_BRANCH
+MOZ_BRANCH=Netscape_20000922_BRANCH
+NSPR_CO_TAG=Netscape_20000922_BRANCH
+PSM_CO_TAG=Netscape_20000922_BRANCH
+LDAP_SDK_CO_TAG=Netscape_20000922_BRANCH
 
 !if "$(MOZ_BRANCH)" != ""
 CVS_BRANCH=-r $(MOZ_BRANCH)
