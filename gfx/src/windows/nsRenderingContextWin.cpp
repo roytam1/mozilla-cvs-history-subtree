@@ -2601,7 +2601,7 @@ public:
   SolidBrushCache();
   ~SolidBrushCache();
 
-  HBRUSH  GetSolidBrush(COLORREF aColor);
+  HBRUSH  GetSolidBrush(HDC theHDC, COLORREF aColor);
 
 private:
   struct CacheEntry {
@@ -2634,7 +2634,7 @@ SolidBrushCache::~SolidBrushCache()
 }
 
 HBRUSH
-SolidBrushCache::GetSolidBrush(COLORREF aColor)
+SolidBrushCache::GetSolidBrush(HDC theHDC, COLORREF aColor)
 {
   int     i;
   HBRUSH  result = NULL;
@@ -2644,6 +2644,7 @@ SolidBrushCache::GetSolidBrush(COLORREF aColor)
     if (mCache[i].mBrush && (mCache[i].mBrushColor == aColor)) {
       // Found an existing brush
       result = mCache[i].mBrush;
+      ::SelectObject(theHDC, result);
       break;
     }
   }
@@ -2652,6 +2653,10 @@ SolidBrushCache::GetSolidBrush(COLORREF aColor)
     // We didn't find it in the set of existing brushes, so create a
     // new brush
     result = (HBRUSH)::CreateSolidBrush(PALETTERGB_COLORREF(aColor));
+
+    // Select the brush.  NOTE: we want to select the new brush before
+    // deleting the old brush to prevent any win98 GDI leaks (bug 159298)
+    ::SelectObject(theHDC, result);
 
     // If there's an empty slot in the cache, then just add it there
     if (i >= BRUSH_CACHE_SIZE) {
@@ -2678,9 +2683,8 @@ HBRUSH nsRenderingContextWin :: SetupSolidBrush(void)
 {
   if ((mCurrentColor != mCurrBrushColor) || (NULL == mCurrBrush))
   {
-    HBRUSH tbrush = gSolidBrushCache.GetSolidBrush(mColor);
-    
-    ::SelectObject(mDC, tbrush);
+    HBRUSH tbrush = gSolidBrushCache.GetSolidBrush(mDC, mColor);
+
     mCurrBrush = tbrush;
     mCurrBrushColor = mCurrentColor;
   }
