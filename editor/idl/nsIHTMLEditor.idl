@@ -110,42 +110,6 @@ interface nsIHTMLEditor : nsISupports
   void removeAllDefaultProperties();
 
   /**
-   * AddAlternateProperty() registers an alternate style property with the editor
-   *
-   * @param aProperty   the property to set by when alternate properties are used
-   * @param aAttribute  the attribute of the property, if applicable.
-   *                    May be null.
-   *                    Example: aProperty="font", aAttribute="color"
-   * @param aValue      if aAttribute is not null, the value of the attribute.
-   *                    Example: aProperty="font", aAttribute="color",
-   *                             aValue="0x00FFFF"
-   */
-  void addAlternateProperty(in nsIAtom aProperty, 
-                          in AString aAttribute, 
-                          in AString aValue);
-
-  /**
-   * RemoveAlternateProperty() unregisters an alternate style property with the editor
-   *
-   * @param aProperty   the property to remove from alternate property list
-   * @param aAttribute  the attribute of the property, if applicable.
-   *                    May be null.
-   *                    Example: aProperty="font", aAttribute="color"
-   * @param aValue      if aAttribute is not null, the value of the attribute.
-   *                    Example: aProperty="font", aAttribute="color",
-   *                             aValue="0x00FFFF"
-   */
-  void removeAlternateProperty(in nsIAtom aProperty, 
-                             in AString aAttribute, 
-                             in AString aValue);
-
-  /**
-   * RemoveAllAlternateProperties() unregisters all alternate style properties with the editor
-   *
-   */
-  void removeAllAlternateProperties();
-  
-  /**
    * AddDefaultPropertyOverride() registers an override for a given default style property
    *
    * @param aProperty   the property to apply override to
@@ -159,20 +123,6 @@ interface nsIHTMLEditor : nsISupports
                                   in AString aAttribute, 
                                   in nsIAtom aTag);
                              
-  /**
-   * AddAlternatePropertyOverride() registers an override for a given alternate style property
-   *
-   * @param aProperty   the property to apply override to
-   * @param aAttribute  the attribute of the property to apply override to, if applicable.
-   *                    May be null.
-   *                    Example: aProperty="font", aAttribute="color"
-   * @param aTag        the tag of the override.  "Nodes corresponding to type tag will not
-   *                    get the alternate style applied.
-   */
-  void addAlternatePropertyOverride(in nsIAtom aProperty, 
-                                    in AString aAttribute, 
-                                    in nsIAtom aTag);
-                                    
   /**
    * SetPastePolicy() sets the style policy for Paste/Drop/InsertHTML.
    * @param aPolicy   the property to set on the selection

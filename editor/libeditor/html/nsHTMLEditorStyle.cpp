@@ -119,41 +119,10 @@ NS_IMETHODIMP nsHTMLEditor::RemoveAllDefaultProperties()
 }
 
 
-NS_IMETHODIMP nsHTMLEditor::AddAlternateProperty(nsIAtom *aProperty, 
-                              const nsAString & aAttribute, 
-                              const nsAString & aValue)
-{
-  NS_ERROR("Not implemented");
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP nsHTMLEditor::RemoveAlternateProperty(nsIAtom *aProperty, 
-                                 const nsAString & aAttribute, 
-                                 const nsAString & aValue)
-{
-  NS_ERROR("Not implemented");
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP nsHTMLEditor::RemoveAllAlternateProperties()
-{
-  NS_ERROR("Not implemented");
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
 NS_IMETHODIMP 
 nsHTMLEditor::AddDefaultPropertyOverride(nsIAtom *aProperty, 
                                          const nsAString & aAttribute,
                                          nsIAtom *aTag)
-{
-  NS_ERROR("Not implemented");
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP 
-nsHTMLEditor::AddAlternatePropertyOverride(nsIAtom *aProperty, 
-                                           const nsAString & aAttribute,
-                                           nsIAtom *aTag)
 {
   NS_ERROR("Not implemented");
   return NS_ERROR_NOT_IMPLEMENTED;
@@ -164,6 +133,7 @@ NS_IMETHODIMP nsHTMLEditor::SetPastePolicy(PRInt32 aPolicy)
   NS_ERROR("Not implemented");
   return NS_ERROR_NOT_IMPLEMENTED;
 }
+
 
 // Add the CSS style corresponding to the HTML inline style defined
 // by aProperty aAttribute and aValue to the selection

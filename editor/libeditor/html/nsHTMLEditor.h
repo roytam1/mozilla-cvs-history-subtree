@@ -161,23 +161,9 @@ public:
 
   NS_IMETHOD RemoveAllDefaultProperties();
 
-  NS_IMETHOD AddAlternateProperty(nsIAtom *aProperty, 
-                                const nsAString & aAttribute, 
-                                const nsAString & aValue);
-
-  NS_IMETHOD RemoveAlternateProperty(nsIAtom *aProperty, 
-                                   const nsAString & aAttribute, 
-                                   const nsAString & aValue);
-
-  NS_IMETHOD RemoveAllAlternateProperties();
-
   NS_IMETHOD AddDefaultPropertyOverride(nsIAtom *aProperty, 
                                         const nsAString & aAttribute,
                                         nsIAtom *aTag);
-
-  NS_IMETHOD AddAlternatePropertyOverride(nsIAtom *aProperty, 
-                                          const nsAString & aAttribute,
-                                          nsIAtom *aTag);
 
   NS_IMETHOD SetPastePolicy(PRInt32 aPolicy);
   
