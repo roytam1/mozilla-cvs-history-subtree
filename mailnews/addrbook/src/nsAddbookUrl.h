@@ -37,6 +37,7 @@ class nsAddbookUrl : public nsIAddbookUrl
 {
 public:
     NS_DECL_ISUPPORTS
+    NS_DECL_NSISERIALIZABLE
     NS_DECL_NSIURI
     NS_DECL_NSIADDBOOKURL
 

@@ -107,7 +107,7 @@ public:
     }
 
 protected:
-    NS_IMETHOD Fill() { return NS_OK; } // no-op for output streams
+    NS_IMETHOD Fill();
 };
 
 ////////////////////////////////////////////////////////////////////////////////

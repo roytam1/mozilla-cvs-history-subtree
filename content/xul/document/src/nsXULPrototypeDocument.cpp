@@ -32,6 +32,8 @@
 */
 
 #include "nsCOMPtr.h"
+#include "nsIObjectInputStream.h"
+#include "nsIObjectOutputStream.h"
 #include "nsIPrincipal.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptGlobalObjectOwner.h"
@@ -105,6 +107,9 @@ public:
     // nsISupports interface
     NS_DECL_ISUPPORTS
 
+    // nsISerializable interface
+    NS_DECL_NSISERIALIZABLE
+
     // nsIXULPrototypeDocument interface
     NS_IMETHOD GetURI(nsIURI** aResult);
     NS_IMETHOD SetURI(nsIURI* aURI);
@@ -127,6 +132,7 @@ public:
     // nsIScriptGlobalObjectOwner methods
     NS_DECL_NSISCRIPTGLOBALOBJECTOWNER
 
+    NS_DEFINE_STATIC_CID_ACCESSOR(NS_XULPROTOTYPEDOCUMENT_CID);
 
 protected:
     nsCOMPtr<nsIURI> mURI;
@@ -219,13 +225,10 @@ nsXULPrototypeDocument::~nsXULPrototypeDocument()
     delete mRoot;
 }
 
-NS_IMPL_ADDREF(nsXULPrototypeDocument)
-NS_IMPL_RELEASE(nsXULPrototypeDocument)
-
-NS_INTERFACE_MAP_BEGIN(nsXULPrototypeDocument)
-    NS_INTERFACE_MAP_ENTRY(nsIXULPrototypeDocument)
-    NS_INTERFACE_MAP_ENTRY(nsIScriptGlobalObjectOwner)
-NS_INTERFACE_MAP_END
+NS_IMPL_ISUPPORTS3(nsXULPrototypeDocument,
+                   nsIXULPrototypeDocument,
+                   nsIScriptGlobalObjectOwner,
+                   nsISerializable)
 
 NS_IMETHODIMP
 NS_NewXULPrototypeDocument(nsISupports* aOuter, REFNSIID aIID, void** aResult)
@@ -250,6 +253,70 @@ NS_NewXULPrototypeDocument(nsISupports* aOuter, REFNSIID aIID, void** aResult)
     NS_RELEASE(result);
 
     return rv;
+}
+
+
+//----------------------------------------------------------------------
+//
+// nsISerializable methods
+//
+
+#define XUL_FAST_LOAD_VERSION   0
+
+NS_IMETHODIMP
+nsXULPrototypeDocument::Read(nsIObjectInputStream* aStream)
+{
+    nsresult rv;
+
+    PRUint32 version;
+    rv = aStream->Read32(&version);
+    if (NS_FAILED(rv)) return rv;
+
+    if (version != XUL_FAST_LOAD_VERSION)
+        return NS_ERROR_FAILURE;
+
+    rv = aStream->ReadObject(PR_TRUE, getter_AddRefs(mURI));
+    if (NS_FAILED(rv)) return rv;
+
+    // XXXbe more to come
+    return NS_OK;
+}
+
+
+NS_IMETHODIMP
+nsXULPrototypeDocument::Write(nsIObjectOutputStream* aStream)
+{
+    nsresult rv;
+
+    rv = aStream->Write32(XUL_FAST_LOAD_VERSION);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = aStream->WriteCompoundObject(mURI, NS_GET_IID(nsIURI), PR_TRUE);
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsIScriptContext> scriptContext;
+    rv = mGlobalObject->GetContext(getter_AddRefs(scriptContext));
+    if (NS_FAILED(rv)) return rv;
+
+#if 0
+    rv = mRoot->Serialize(aStream, scriptContext);
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsISupportsArray> mStyleSheetReferences;
+    nsCOMPtr<nsISupportsArray> mOverlayReferences;
+    nsCOMPtr<nsIPrincipal> mDocumentPrincipal;
+
+    nsCOMPtr<nsIScriptGlobalObject> mGlobalObject;
+#endif
+    return NS_OK;
+}
+
+
+NS_IMETHODIMP
+nsXULPrototypeDocument::GetCID(nsCID* aResult)
+{
+    *aResult = GetCID();
+    return NS_OK;
 }
 
 

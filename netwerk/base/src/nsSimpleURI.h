@@ -38,6 +38,7 @@ class nsSimpleURI : public nsIURI
 {
 public:
     NS_DECL_AGGREGATED
+    NS_DECL_NSISERIALIZABLE
     NS_DECL_NSIURI
 
     // nsSimpleURI methods:

@@ -29,7 +29,7 @@
 #ifndef nsIXULPrototypeDocument_h__
 #define nsIXULPrototypeDocument_h__
 
-#include "nsISupports.h"
+#include "nsISerializable.h"
 #include "nsAWritableString.h"
 
 class nsIAtom;
@@ -45,7 +45,7 @@ class nsXULPrototypeElement;
 { 0x187a63d0, 0x8337, 0x11d3, { 0xbe, 0x47, 0x0, 0x10, 0x4b, 0xde, 0x60, 0x48 } }
 
 
-class nsIXULPrototypeDocument : public nsISupports
+class nsIXULPrototypeDocument : public nsISerializable
 {
 public:
     NS_DEFINE_STATIC_IID_ACCESSOR(NS_IXULPROTOTYPEDOCUMENT_IID);
@@ -74,6 +74,12 @@ public:
     NS_IMETHOD GetDocumentPrincipal(nsIPrincipal** aResult) = 0;
     NS_IMETHOD SetDocumentPrincipal(nsIPrincipal* aPrincipal) = 0;
 };
+
+
+// CID for factory-based creation, used only for deserialization.
+#define NS_XULPROTOTYPEDOCUMENT_CLASSNAME "XUL Prototype Document"
+#define NS_XULPROTOTYPEDOCUMENT_CID \
+    {0xa08101ae,0xc0e8,0x4464,{0x99,0x9e,0xe5,0xa4,0xd7,0x09,0xa9,0x28}}
 
 
 extern NS_IMETHODIMP

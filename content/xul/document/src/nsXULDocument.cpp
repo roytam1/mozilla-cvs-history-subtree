@@ -138,6 +138,9 @@
 #include "nsNetUtil.h"
 #include "nsMimeTypes.h"
 #include "nsContentUtils.h"
+#include "nsIFastLoadService.h"
+#include "nsIObjectInputStream.h"
+#include "nsIObjectOutputStream.h"
 
 
 //----------------------------------------------------------------------
@@ -426,6 +429,8 @@ nsXULDocument::nsXULDocument(void)
 #endif // IBMBIDI
 }
 
+nsIFastLoadService* nsXULDocument::gFastLoadService = nsnull;
+
 nsXULDocument::~nsXULDocument()
 {
     NS_ASSERTION(mNextSrcLoadWaiter == nsnull,
@@ -503,6 +508,11 @@ nsXULDocument::~nsXULDocument()
         if (gXULCache) {
             nsServiceManager::ReleaseService(kXULPrototypeCacheCID, gXULCache);
             gXULCache = nsnull;
+        }
+
+        if (gFastLoadService) {
+            NS_RELEASE(gFastLoadService); // don't need ReleaseService nowadays!
+            gFastLoadService = nsnull;
         }
     }
 
@@ -679,7 +689,6 @@ nsXULDocument::StartDocumentLoad(const char* aCommand,
                                  PRBool aReset)
 {
     nsresult rv;
-    mCommand.AssignWithConversion(aCommand);
 
     mDocumentLoadGroup = getter_AddRefs(NS_GetWeakReference(aLoadGroup));
 
@@ -722,6 +731,32 @@ nsXULDocument::StartDocumentLoad(const char* aCommand,
             return NS_ERROR_OUT_OF_MEMORY;
     }
     else {
+        // Try to open a FastLoad file for reading, or create one for writing.
+        // If one exists and looks valid, mObjectInputStream will be non-null
+        // and we'll deserialize saved objects from that stream.  Else we will
+        // serialize to mObjectOutputStream.
+        if (nsCRT::strcmp(aCommand, "view-source") != 0) {
+            InitFastLoad(mDocumentURL);
+#if 0
+            if (mObjectInputStream) {
+                // XXXbe skip the prototype document header so we can pull
+                //       scripts from the stream as we sink content
+                nsCOMPtr<nsIXULPrototypeDocument> dummy;
+                rv = mObjectInputStream->ReadObject(PR_TRUE,
+                                                    getter_AddRefs(dummy));
+                if (NS_FAILED(rv)) return rv;
+
+#ifdef NS_DEBUG
+                nsCOMPtr<nsIURI> dummyURL;
+                dummy->GetURI(getter_AddRefs(dummyURL));
+                PRBool equals = PR_FALSE;
+                dummyURL->Equals(mDocumentURL, &equals);
+                NS_ASSERTION(equals, "bad URI in object stream!");
+#endif
+            }
+#endif
+        }
+
         // It's just a vanilla document load. Create a parser to deal
         // with the stream n' stuff.
         nsCOMPtr<nsIParser> parser;
@@ -1535,21 +1570,22 @@ nsXULDocument::EndLoad()
    
     // Walk the sheets and add them to the prototype. Also put them into the document.
     if (sheets) {
-      nsCOMPtr<nsICSSStyleSheet> sheet;
-      PRUint32 count;
-      sheets->Count(&count);
-      for (PRUint32 i = 0; i < count; i++) {
-        sheets->QueryElementAt(i, NS_GET_IID(nsICSSStyleSheet), getter_AddRefs(sheet));
-        if (sheet) {
-          nsCOMPtr<nsIURI> sheetURL;
-          sheet->GetURL(*getter_AddRefs(sheetURL));
+        nsCOMPtr<nsICSSStyleSheet> sheet;
+        PRUint32 count;
+        sheets->Count(&count);
+        for (PRUint32 i = 0; i < count; i++) {
+            sheets->QueryElementAt(i, NS_GET_IID(nsICSSStyleSheet),
+                                   getter_AddRefs(sheet));
+            if (sheet) {
+                nsCOMPtr<nsIURI> sheetURL;
+                sheet->GetURL(*getter_AddRefs(sheetURL));
 
-          if (useXULCache && IsChromeURI(sheetURL)) {
-              mCurrentPrototype->AddStyleSheetReference(sheetURL);
-          }
-          AddStyleSheet(sheet);
+                if (useXULCache && IsChromeURI(sheetURL)) {
+                    mCurrentPrototype->AddStyleSheetReference(sheetURL);
+                }
+                AddStyleSheet(sheet);
+            }
         }
-      }
     }
 
     if (useXULCache && IsChromeURI(mDocumentURL)) {
@@ -4262,6 +4298,103 @@ nsXULDocument::CreateElement(nsINodeInfo *aNodeInfo, nsIContent** aResult)
 }
 
 
+// XXXbe move to nsXULPrototypeDocument.cpp in the nsISerializable section.
+// We'll increment (or maybe decrement, for easier deciphering) this maigc
+// number as we flesh out the FastLoad file to include more and more data
+// induced by the master prototype document.
+
+#define XUL_PROTOTYPE_DOCUMENT_SERIALIZATION_VERSION  0xfeedbeef
+
+#define XUL_SERIALIZATION_BUFFER_SIZE   (64 * 1024)
+#define XUL_DESERIALIZATION_BUFFER_SIZE (8 * 1024)
+
+nsresult
+nsXULDocument::InitFastLoad(nsIURI* aURI)
+{
+    nsCOMPtr<nsIFastLoadService> fastLoadService = gFastLoadService;
+    if (! fastLoadService) {
+        fastLoadService = do_GetService(NS_FAST_LOAD_SERVICE_CONTRACTID);
+        if (! fastLoadService)
+            return NS_ERROR_FAILURE;
+        NS_ADDREF(gFastLoadService = fastLoadService);
+    }
+
+    nsCOMPtr<nsIURL> url(do_QueryInterface(aURI));
+    if (! url)
+        return NS_ERROR_UNEXPECTED;
+
+    nsresult rv;
+    nsXPIDLCString name;
+    rv = url->GetFileBaseName(getter_Copies(name));
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsIFile> file;
+    rv = fastLoadService->NewFastLoadFile(name, getter_AddRefs(file));
+    if (NS_FAILED(rv)) return rv;
+
+    PRBool exists = PR_FALSE;
+    if (NS_SUCCEEDED(file->Exists(&exists)) && exists) {
+        nsCOMPtr<nsIInputStream> fileInput;
+        rv = NS_NewLocalFileInputStream(getter_AddRefs(fileInput), file);
+        if (NS_FAILED(rv)) return rv;
+
+        nsCOMPtr<nsIInputStream> bufferedInput;
+        rv = NS_NewBufferedInputStream(getter_AddRefs(bufferedInput),
+                                       fileInput,
+                                       XUL_DESERIALIZATION_BUFFER_SIZE);
+        if (NS_FAILED(rv)) return rv;
+
+        nsCOMPtr<nsIObjectInputStream> objectInput;
+        PRUint32 checksum;
+        rv = fastLoadService->NewInputStream(bufferedInput, &checksum,
+                                             getter_AddRefs(objectInput));
+        if (NS_FAILED(rv)) return rv;
+
+        // XXXbe verify checksum, clear exists if bad
+        // XXXbe check dependencies, clear exists if any are newer
+
+        // XXXbe version number, then scripts only for now -- bump
+        // version later when rest of prototype document header is
+        // serialized
+        PRUint32 version;
+        rv = objectInput->Read32(&version);
+        NS_ASSERTION(version == XUL_PROTOTYPE_DOCUMENT_SERIALIZATION_VERSION,
+                     "bad FastLoad file version");
+        if (version != XUL_PROTOTYPE_DOCUMENT_SERIALIZATION_VERSION)
+            return NS_ERROR_UNEXPECTED;
+
+        fastLoadService->SetCurrentInputStream(objectInput);
+        mObjectInputStream = objectInput;
+    }
+    
+    if (! exists) {
+        nsCOMPtr<nsIOutputStream> fileOutput;
+        rv = NS_NewLocalFileOutputStream(getter_AddRefs(fileOutput), file);
+        if (NS_FAILED(rv)) return rv;
+
+        nsCOMPtr<nsIOutputStream> bufferedOutput;
+        rv = NS_NewBufferedOutputStream(getter_AddRefs(bufferedOutput),
+                                        fileOutput,
+                                        XUL_SERIALIZATION_BUFFER_SIZE);
+        if (NS_FAILED(rv)) return rv;
+
+        nsCOMPtr<nsIObjectOutputStream> objectOutput;
+        rv = fastLoadService->NewOutputStream(bufferedOutput,
+                                              getter_AddRefs(objectOutput));
+        if (NS_FAILED(rv)) return rv;
+
+        PRUint32 version = XUL_PROTOTYPE_DOCUMENT_SERIALIZATION_VERSION;
+        rv = objectOutput->Write32(version);
+        if (NS_FAILED(rv)) return rv;
+
+        fastLoadService->SetCurrentOutputStream(objectOutput);
+        mObjectOutputStream = objectOutput;
+    }
+
+    return NS_OK;
+}
+
+
 nsresult
 nsXULDocument::PrepareToLoad(nsISupports* aContainer,
                              const char* aCommand,
@@ -4290,7 +4423,9 @@ nsXULDocument::PrepareToLoadPrototype(nsIURI* aURI, const char* aCommand,
     nsresult rv;
 
     // Create a new prototype document
-    rv = NS_NewXULPrototypeDocument(nsnull, NS_GET_IID(nsIXULPrototypeDocument), getter_AddRefs(mCurrentPrototype));
+    rv = NS_NewXULPrototypeDocument(nsnull,
+                                    NS_GET_IID(nsIXULPrototypeDocument),
+                                    getter_AddRefs(mCurrentPrototype));
     if (NS_FAILED(rv)) return rv;
 
     // Bootstrap the master document prototype
@@ -4903,8 +5038,7 @@ nsXULDocument::ResumeWalk()
                 }
             }
             break;
-
-            }
+        }
         }
 
         // Once we get here, the context stack will have been
@@ -5003,6 +5137,21 @@ nsXULDocument::ResumeWalk()
 
     StartLayout();
 
+    // Since we've bothered to load and parse all this fancy XUL, let's try to
+    // save a condensed serialization of it for faster loading next time.
+    nsCOMPtr<nsIObjectOutputStream> objectOutput = mObjectOutputStream;
+    if (objectOutput) {
+        if (gFastLoadService)
+            gFastLoadService->SetCurrentOutputStream(nsnull);
+        mObjectOutputStream = nsnull;
+
+#if 0
+        // XXXbe for now, write scripts as we sink content...
+        objectOutput->WriteObject(mMasterPrototype, PR_TRUE);
+#endif
+        objectOutput->Close();
+    }
+
     for (PRInt32 i = 0; i < mObservers.Count(); i++) {
         nsIDocumentObserver* observer = (nsIDocumentObserver*) mObservers[i];
         observer->EndLoad(this);
@@ -5077,28 +5226,21 @@ nsXULDocument::OnStreamComplete(nsIStreamLoader* aLoader,
                                 const char* string)
 {
     // print a load error on bad status
-    if (NS_FAILED(aStatus))
-    {
-      if (aLoader)
-      {
-          nsCOMPtr<nsIRequest> request;
-        nsCOMPtr<nsIChannel> channel;
+    if (NS_FAILED(aStatus) && aLoader) {
+        nsCOMPtr<nsIRequest> request;
         aLoader->GetRequest(getter_AddRefs(request));
-        if (request)
-            channel = do_QueryInterface(request);
-        if (channel)
-        {
-          nsCOMPtr<nsIURI> uri;
-          channel->GetURI(getter_AddRefs(uri));
-          if (uri)
-          {
-            char* uriSpec;
-            uri->GetSpec(&uriSpec);
-            printf("Failed to load %s\n", uriSpec ? uriSpec : "");
-            nsCRT::free(uriSpec);
-          }
+        nsCOMPtr<nsIChannel> channel;
+        channel = do_QueryInterface(request);
+        if (channel) {
+            nsCOMPtr<nsIURI> uri;
+            channel->GetURI(getter_AddRefs(uri));
+            if (uri) {
+                nsXPIDLCString uriSpec;
+                uri->GetSpec(getter_Copies(uriSpec));
+                printf("Failed to load %s\n",
+                       uriSpec.get() ? (const char*) uriSpec : "");
+            }
         }
-      }
     }
     
     // This is the completion routine that will be called when a

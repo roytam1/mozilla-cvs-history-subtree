@@ -60,18 +60,19 @@ EXPORTS =                          \
 
 XPIDL_MODULE = xpcom_ds
 
-XPIDLSRCS =                         \
-        .\nsIAtom.idl               \
-	.\nsIAtomService.idl        \
-        .\nsICollection.idl         \
-        .\nsIEnumerator.idl         \
-	.\nsIObserver.idl           \
-	.\nsIObserverService.idl    \
-        .\nsIProperties.idl         \
-	.\nsISupportsArray.idl	    \
-	.\nsISupportsIterators.idl  \
-	.\nsISupportsPrimitives.idl \
+XPIDLSRCS =                            \
+        .\nsIAtom.idl                  \
+	.\nsIAtomService.idl           \
+        .\nsICollection.idl            \
+        .\nsIEnumerator.idl            \
+	.\nsIObserver.idl              \
+	.\nsIObserverService.idl       \
 	.\nsIPersistentProperties2.idl \
+        .\nsIProperties.idl            \
+        .\nsISerializable.idl          \
+	.\nsISupportsArray.idl	       \
+	.\nsISupportsIterators.idl     \
+	.\nsISupportsPrimitives.idl    \
         $(NULL)
 
 ################################################################################

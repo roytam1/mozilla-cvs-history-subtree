@@ -46,7 +46,7 @@ nsMailtoUrl::~nsMailtoUrl()
 {
 }
 
-NS_IMPL_ISUPPORTS2(nsMailtoUrl, nsIMailtoUrl, nsIURI)
+NS_IMPL_ISUPPORTS3(nsMailtoUrl, nsIMailtoUrl, nsIURI, nsISerializable)
 
 nsresult nsMailtoUrl::ParseMailtoUrl(char * searchPart)
 {
@@ -288,6 +288,29 @@ NS_IMETHODIMP nsMailtoUrl::GetMessageContents(char ** aToPart, char ** aCcPart, 
 	if (aForcePlainText)
 		*aForcePlainText = m_forcePlainText;
 	return NS_OK;
+}
+
+////////////////////////////////////////////////////////////////////////////////////
+// Begin nsISerializable support
+////////////////////////////////////////////////////////////////////////////////////
+
+
+NS_IMETHODIMP nsMailtoUrl::Read(nsIObjectInputStream *aStream)
+{
+  NS_NOTREACHED("nsMailtoUrl::Read");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsMailtoUrl::Write(nsIObjectOutputStream *aStream)
+{
+  NS_NOTREACHED("nsMailtoUrl::Write");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsMailtoUrl::GetCID(nsCID *aResult)
+{
+  NS_NOTREACHED("nsMailtoUrl::GetCID");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////

@@ -667,26 +667,34 @@ NS_IMETHODIMP_(nsrefcnt) Class::Release(void)                               \
   NS_IMPL_QUERY_INTERFACE_INHERITED1(Class, Super, i1)                      \
 
 #define NS_IMPL_QUERY_INTERFACE_INHERITED0(Class, Super)                    \
-  NS_IMPL_QUERY_HEAD(Class)                                       \
-  NS_IMPL_QUERY_TAIL_INHERITING(Super)                                \
+  NS_IMPL_QUERY_HEAD(Class)                                                 \
+  NS_IMPL_QUERY_TAIL_INHERITING(Super)                                      \
 
 #define NS_IMPL_QUERY_INTERFACE_INHERITED1(Class, Super, i1)                \
-  NS_IMPL_QUERY_HEAD(Class)                                       \
+  NS_IMPL_QUERY_HEAD(Class)                                                 \
   NS_IMPL_QUERY_BODY(i1)                                                    \
-  NS_IMPL_QUERY_TAIL_INHERITING(Super)                                \
+  NS_IMPL_QUERY_TAIL_INHERITING(Super)                                      \
 
 #define NS_IMPL_QUERY_INTERFACE_INHERITED2(Class, Super, i1, i2)            \
-  NS_IMPL_QUERY_HEAD(Class)                                       \
+  NS_IMPL_QUERY_HEAD(Class)                                                 \
   NS_IMPL_QUERY_BODY(i1)                                                    \
   NS_IMPL_QUERY_BODY(i2)                                                    \
-  NS_IMPL_QUERY_TAIL_INHERITING(Super)                                \
+  NS_IMPL_QUERY_TAIL_INHERITING(Super)                                      \
 
 #define NS_IMPL_QUERY_INTERFACE_INHERITED3(Class, Super, i1, i2, i3)        \
-  NS_IMPL_QUERY_HEAD(Class)                                       \
+  NS_IMPL_QUERY_HEAD(Class)                                                 \
   NS_IMPL_QUERY_BODY(i1)                                                    \
   NS_IMPL_QUERY_BODY(i2)                                                    \
   NS_IMPL_QUERY_BODY(i3)                                                    \
-  NS_IMPL_QUERY_TAIL_INHERITING(Super)                                \
+  NS_IMPL_QUERY_TAIL_INHERITING(Super)                                      \
+
+#define NS_IMPL_QUERY_INTERFACE_INHERITED4(Class, Super, i1, i2, i3, i4)    \
+  NS_IMPL_QUERY_HEAD(Class)                                                 \
+  NS_IMPL_QUERY_BODY(i1)                                                    \
+  NS_IMPL_QUERY_BODY(i2)                                                    \
+  NS_IMPL_QUERY_BODY(i3)                                                    \
+  NS_IMPL_QUERY_BODY(i4)                                                    \
+  NS_IMPL_QUERY_TAIL_INHERITING(Super)                                      \
 
 #define NS_IMPL_ISUPPORTS_INHERITED(Class, Super, i1)                       \
   NS_IMPL_ISUPPORTS_INHERITED1(Class, Super, i1)                            \
@@ -708,6 +716,11 @@ NS_IMETHODIMP_(nsrefcnt) Class::Release(void)                               \
 
 #define NS_IMPL_ISUPPORTS_INHERITED3(Class, Super, i1, i2, i3)              \
     NS_IMPL_QUERY_INTERFACE_INHERITED3(Class, Super, i1, i2, i3)            \
+    NS_IMPL_ADDREF_INHERITED(Class, Super)                                  \
+    NS_IMPL_RELEASE_INHERITED(Class, Super)                                 \
+
+#define NS_IMPL_ISUPPORTS_INHERITED4(Class, Super, i1, i2, i3, i4)          \
+    NS_IMPL_QUERY_INTERFACE_INHERITED4(Class, Super, i1, i2, i3, i4)        \
     NS_IMPL_ADDREF_INHERITED(Class, Super)                                  \
     NS_IMPL_RELEASE_INHERITED(Class, Super)                                 \
 

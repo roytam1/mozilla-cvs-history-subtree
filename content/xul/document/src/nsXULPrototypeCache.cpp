@@ -198,8 +198,9 @@ nsXULPrototypeCache::PutPrototype(nsIXULPrototypeDocument* aDocument)
     rv = aDocument->GetURI(getter_AddRefs(uri));
 
     nsIURIKey key(uri);
-        // Put() w/o  a third parameter with a destination for the
-        // replaced value releases it 
+
+    // Put() w/o  a third parameter with a destination for the
+    // replaced value releases it 
     mPrototypeTable.Put(&key, aDocument);
 
     return NS_OK;

@@ -50,10 +50,10 @@ interface nsIBufferInputStream : nsIInputStream
     /**
      * Returns the buffer underlying this input stream.
      */
-    readonly attribute nsIBuffer Buffer;
+    readonly attribute nsIBuffer buffer;
 
     
-    [noscript] unsigned long ReadSegments(in nsWriteSegmentFun writer,
+    [noscript] unsigned long readSegments(in nsWriteSegmentFun writer,
                                           in voidPtr closure,
                                           in unsigned long count);
 
@@ -67,7 +67,7 @@ interface nsIBufferInputStream : nsIInputStream
      * In the case the stream is at EOF and the string is not found, the first
      * byte not searched will correspond to the length of the buffer.
      */
-    void Search(in string forString, 
+    void search(in string forString, 
                 in boolean ignoreCase, 
                 out boolean found,
                 out unsigned long offsetSearchedTo);
@@ -75,5 +75,5 @@ interface nsIBufferInputStream : nsIInputStream
     /**
      * Set this attribute to put the stream in non-blocking mode.
      */
-    attribute boolean NonBlocking;
+    attribute boolean nonBlocking;
 };

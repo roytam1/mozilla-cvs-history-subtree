@@ -46,6 +46,7 @@ public:
   virtual ~nsNntpUrl();
 
   NS_DECL_ISUPPORTS_INHERITED
+  NS_DECL_NSISERIALIZABLE
 
 protected:  
   virtual nsresult ParseUrl(const char * aSpec);

@@ -70,6 +70,7 @@ NS_INTERFACE_MAP_BEGIN(nsMsgMailNewsUrl)
    NS_INTERFACE_MAP_ENTRY(nsIMsgMailNewsUrl)
    NS_INTERFACE_MAP_ENTRY(nsIURL)
    NS_INTERFACE_MAP_ENTRY(nsIURI)
+   NS_INTERFACE_MAP_ENTRY(nsISerializable)
 NS_INTERFACE_MAP_END_THREADSAFE
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -690,3 +691,30 @@ NS_IMETHODIMP nsMsgMailNewsUrl:: GetMemCacheEntry(nsICacheEntryDescriptor **memC
 
   return rv;
 }
+
+////////////////////////////////////////////////////////////////////////////////////
+// Begin nsISerializable support
+////////////////////////////////////////////////////////////////////////////////////
+
+
+NS_IMETHODIMP
+nsMsgMailNewsUrl::Read(nsIObjectInputStream *aStream)
+{
+  NS_NOTREACHED("nsMsgMailNewsUrl::Read");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsMsgMailNewsUrl::Write(nsIObjectOutputStream *aStream)
+{
+  NS_NOTREACHED("nsMsgMailNewsUrl::Write");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsMsgMailNewsUrl::GetCID(nsCID *aResult)
+{
+  NS_NOTREACHED("nsMsgMailNewsUrl::GetCID");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+

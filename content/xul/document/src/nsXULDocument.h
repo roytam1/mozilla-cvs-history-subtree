@@ -81,13 +81,19 @@ class nsITimer;
 class nsIXULContentUtils;
 class nsIXULPrototypeCache;
 #if 0 // XXXbe save me, scc (need NSCAP_FORWARD_DECL(nsXULPrototypeScript))
+class nsIObjectInputStream;
+class nsIObjectOutputStream;
 class nsIXULPrototypeScript;
 #else
+#include "nsIObjectInputStream.h"
+#include "nsIObjectOutputStream.h"
 #include "nsXULElement.h"
 #endif
 
 struct JSObject;
 struct PRLogModuleInfo;
+
+class nsIFastLoadService;
 
 /**
  * The XUL document class
@@ -422,6 +428,10 @@ protected:
 
     nsresult CreateElement(nsINodeInfo *aNodeInfo, nsIContent** aResult);
 
+    nsresult InitFastLoad(nsIURI* aURI);
+
+    static nsIFastLoadService* gFastLoadService;
+
     nsresult PrepareToLoad(nsISupports* aContainer,
                            const char* aCommand,
                            nsIChannel* aChannel,
@@ -507,7 +517,6 @@ protected:
     nsCOMPtr<nsIRDFDataSource>          mLocalStore;
     nsCOMPtr<nsILineBreaker>            mLineBreaker;    // [OWNER] 
     nsCOMPtr<nsIWordBreaker>            mWordBreaker;    // [OWNER] 
-    nsString                   mCommand;
     nsVoidArray                mSubDocuments;     // [OWNER] of subelements
     PRBool                     mIsPopup;
     nsCOMPtr<nsIDOMXULCommandDispatcher>     mCommandDispatcher; // [OWNER] of the focus tracker
@@ -630,12 +639,12 @@ protected:
      */
     nsXULPrototypeScript* mCurrentScriptProto;
 
-	/**
-	 * A "dummy" channel that is used as a placeholder to signal document load
-	 * completion.
-	 */
-	nsCOMPtr<nsIRequest> mPlaceHolderRequest;
-	
+    /**
+     * A "dummy" channel that is used as a placeholder to signal document load
+     * completion.
+     */
+    nsCOMPtr<nsIRequest> mPlaceHolderRequest;
+        
     /**
      * Create a XUL template builder on the specified node if a 'datasources'
      * attribute is present.
@@ -796,6 +805,8 @@ private:
 
     nsresult GetFocusController(nsIFocusController** aController);
 
+    nsCOMPtr<nsIObjectInputStream>  mObjectInputStream;
+    nsCOMPtr<nsIObjectOutputStream> mObjectOutputStream;
 };
 
 

@@ -28,6 +28,8 @@
 #include "nsJSPrincipals.h"
 #include "nsVoidArray.h"
 #include "nsHashtable.h"
+#include "nsIObjectInputStream.h"
+#include "nsIObjectOutputStream.h"
 
 class nsBasePrincipal: public nsIPrincipal {
 public:
@@ -66,6 +68,12 @@ public:
     InitFromPersistent(const char* aPrefName,const char* aID, 
                        const char* aGrantedList, const char* aDeniedList);
 
+    NS_IMETHOD
+    Read(nsIObjectInputStream* aStream);
+
+    NS_IMETHOD
+    Write(nsIObjectOutputStream* aStream);
+
     static const char Invalid[];
 
 protected:
@@ -74,6 +82,9 @@ protected:
     NS_IMETHOD
     SetCapability(const char *capability, void **annotation, 
                   AnnotationValue value);
+
+    static PRBool
+    CapabilityWriteFunc(nsHashKey* aKey, void* aData, void* closure);
 
     nsJSPrincipals mJSPrincipals;
     nsVoidArray mAnnotations;
