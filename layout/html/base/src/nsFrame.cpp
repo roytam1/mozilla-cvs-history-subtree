@@ -4385,7 +4385,7 @@ nsFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
   }                          
 
   
-  if ( result == NS_OK && selectStyle == NS_STYLE_USER_SELECT_ALL )
+  if ( NS_SUCCEEDED(result) && selectStyle == NS_STYLE_USER_SELECT_ALL )
   {
     //get parent frame until we no longer have this style
     //then grab the content and set the offsets accordingly
