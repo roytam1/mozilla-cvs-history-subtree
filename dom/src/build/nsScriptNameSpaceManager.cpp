@@ -178,7 +178,7 @@ nsScriptNameSpaceManager::FillHashWithDOMInterfaces()
       NS_ENSURE_SUCCESS(rv, rv);
 
       if (!nsCRT::strncmp(if_name.get(), NS_DOM_INTERFACE_PREFIX,
-                          strlen(NS_DOM_INTERFACE_PREFIX))) {
+                          nsCRT::strlen(NS_DOM_INTERFACE_PREFIX))) {
         nsGlobalNameStruct *s = new nsGlobalNameStruct;
         NS_ENSURE_TRUE(s, NS_ERROR_OUT_OF_MEMORY);
 
