@@ -76,6 +76,7 @@
 #include "nsTextFormatter.h"
 #include "nsCPasswordManager.h"
 #include "nsMsgDBCID.h"
+#include "nsNativeCharsetUtils.h"
 
 #include <time.h>
 
@@ -3264,11 +3265,11 @@ NS_IMETHODIMP nsMsgDBFolder::Rename(const PRUnichar *aNewName, nsIMsgWindow *msg
   
   // convert from PRUnichar* to char* due to not having Rename(PRUnichar*)
   // function in nsIFileSpec 
+
   nsAutoString safeName(aNewName);
   NS_MsgHashIfNecessary(safeName);
-
-  nsXPIDLCString newDiskName;
-  if (NS_FAILED(ConvertFromUnicode(nsMsgI18NFileSystemCharset(), safeName, getter_Copies(newDiskName))))
+  nsCAutoString newDiskName;
+  if (NS_FAILED(NS_CopyUnicodeToNative(safeName, newDiskName)))
     return NS_ERROR_FAILURE;
   
   nsXPIDLCString oldLeafName;
@@ -3300,7 +3301,7 @@ NS_IMETHODIMP nsMsgDBFolder::Rename(const PRUnichar *aNewName, nsIMsgWindow *msg
   
   ForceDBClosed();
   
-  nsCAutoString newNameDirStr(newDiskName.get());  //save of dir name before appending .msf 
+  nsCAutoString newNameDirStr(newDiskName);  //save of dir name before appending .msf 
   
   if (! (mFlags & MSG_FOLDER_FLAG_VIRTUAL))
     rv = oldPathSpec->Rename(newDiskName.get());

@@ -328,23 +328,15 @@ nsresult NS_MsgHashIfNecessary(nsAutoString &name)
 }
 
 
-nsresult NS_MsgCreatePathStringFromFolderURI(const char *folderURI, nsCString& pathString)
+nsresult NS_MsgCreatePathStringFromFolderURI(const char *folderURI, nsCString& pathCString)
 {
-	// A file name has to be in native charset, convert from UTF-8.
-  nsCAutoString oldCPath;
-  if (nsCRT::IsAscii(folderURI))
-    oldCPath.Assign(folderURI);
-  else
-  {
-    nsXPIDLCString nativeString;
-    nsresult rv = ConvertFromUnicode(nsMsgI18NFileSystemCharset(), 
-                                     NS_ConvertUTF8toUCS2(folderURI), getter_Copies(nativeString));
-    NS_ENSURE_SUCCESS(rv, rv);
-    oldCPath.Assign(nativeString.get());
-  }
+  // A file name has to be in native charset. Here we convert 
+  // to UTF-16 and check for 'unsafe' characters before converting 
+  // to native charset.
+  NS_ENSURE_TRUE(IsUTF8(nsDependentCString(folderURI)), NS_ERROR_UNEXPECTED);
+  NS_ConvertUTF8toUTF16 oldPath(folderURI);
 
-	nsAutoString pathPiece, oldPath, path;
-  NS_CopyNativeToUnicode(oldCPath, oldPath);
+  nsAutoString pathPiece, path;
 
 	PRInt32 startSlashPos = oldPath.FindChar('/');
 	PRInt32 endSlashPos = (startSlashPos >= 0) 
@@ -360,7 +352,7 @@ nsresult NS_MsgCreatePathStringFromFolderURI(const char *folderURI, nsCString& p
 
         // add .sbd onto the previous path
         if (haveFirst) {
-          path.Append(NS_LITERAL_STRING(".sbd/"));
+        AppendASCIItoUTF16(".sbd/", path);
         }
         
         NS_MsgHashIfNecessary(pathPiece);
@@ -379,9 +371,7 @@ nsresult NS_MsgCreatePathStringFromFolderURI(const char *folderURI, nsCString& p
 		  break;
     }
 
-    NS_CopyUnicodeToNative(path, pathString);
-
-	return NS_OK;
+  return NS_CopyUnicodeToNative(path, pathCString);
 }
 
 /* Given a string and a length, removes any "Re:" strings from the front.

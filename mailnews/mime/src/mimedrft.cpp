@@ -64,6 +64,7 @@
 #include "nsIMsgHeaderParser.h"
 #include "nsIMsgAccountManager.h"
 #include "nsMsgBaseCID.h"
+#include "nsNativeCharsetUtils.h"
 
 //
 // Header strings...
@@ -117,8 +118,8 @@ nsMsgCreateTempFileSpec(const char *tFileName)
   }
   else {
     nsAutoString tempNameUni;
-    if (NS_FAILED(ConvertToUnicode(nsMsgI18NFileSystemCharset(), 
-                                   tFileName, tempNameUni))) {
+    if (NS_FAILED(NS_CopyNativeToUnicode(nsDependentCString(tFileName),
+                                         tempNameUni))) {
       tempName = SAFE_TMP_FILENAME;
       goto fallback;
     }
@@ -147,12 +148,8 @@ nsMsgCreateTempFileSpec(const char *tFileName)
         }
       }
     } 
-
-    nsXPIDLCString nativeString;
-    nsresult rv = ConvertFromUnicode(nsMsgI18NFileSystemCharset(), 
-                                     tempNameUni, getter_Copies(nativeString));
+    rv = NS_CopyUnicodeToNative(tempNameUni, tempName);
     NS_ASSERTION(NS_SUCCEEDED(rv), "UTF-16 to native filename failed"); 
-    tempName.Assign(nativeString.get());   
   }
 
 fallback:
