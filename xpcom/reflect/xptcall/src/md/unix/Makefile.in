@@ -211,19 +211,33 @@ endif
 CXXFLAGS 	:=  $(filter-out $(MOZ_OPTIMIZE_FLAGS), $(CXXFLAGS))
 endif
 
+#
+# Linux/PPC
+#
 ifeq ($(OS_ARCH)$(OS_TEST),Linuxppc)
 CPPSRCS		:= xptcinvoke_ppc_linux.cpp xptcstubs_ppc_linux.cpp
 ASFILES		:= xptcinvoke_asm_ppc_linux.s xptcstubs_asm_ppc_linux.s
+AS		:= $(CC) -c -x assembler-with-cpp
 endif
 
+#
+# NetBSD/PPC
+#
 ifneq (,$(filter NetBSDmacppc NetBSDbebox NetBSDofppc NetBSDprep NetBSDamigappc,$(OS_ARCH)$(OS_TEST)))                           
 CPPSRCS		:= xptcinvoke_ppc_netbsd.cpp xptcstubs_ppc_netbsd.cpp
 ASFILES		:= xptcinvoke_asm_ppc_netbsd.s xptcstubs_asm_ppc_netbsd.s
 endif
 
+#
+# Darwin/PPC
+#
 ifeq ($(OS_ARCH),Darwin)
+ASFLAGS		+= -x assembler-with-cpp   # assumes $(AS) == $(CC)
+ifdef HAVE_GCC3_ABI
+ASFLAGS		+= -DHAVE_GCC3_ABI
+endif
 CPPSRCS		:= xptcinvoke_ppc_rhapsody.cpp xptcstubs_ppc_rhapsody.cpp
-ASFILES		:= xptcinvoke_asm_ppc_rhapsody.s xptcstubs_asm_ppc_rhapsody.s
+ASFILES		:= xptcinvoke_asm_ppc_rhapsody.s xptcstubs_asm_ppc_darwin.s
 endif
 
 ######################################################################
@@ -244,7 +258,11 @@ endif
 ifeq ($(OS_ARCH),Linux)
 ifneq (,$(findstring sparc,$(OS_TEST)))
 CPPSRCS		:= xptcinvoke_sparc_solaris.cpp xptcstubs_sparc_solaris.cpp
+ifdef HAVE_GCC3_ABI
+ASFILES		:= xptcinvoke_asm_sparc_linux_GCC3.s xptcstubs_asm_sparc_solaris.s
+else
 ASFILES		:= xptcinvoke_asm_sparc_linux.s xptcstubs_asm_sparc_solaris.s
+endif
 endif
 endif
 #
@@ -298,6 +316,13 @@ xptcstubs_asm_mips.o: xptcstubs_asm_mips.s.m4 $(PUBLIC)/xptcstubsdef.inc
 	$(AS) -o $@ $(ASFLAGS) $(AS_DASH_C_FLAG) ./xptcstubs_asm_mips.s
 	$(RM) -f ./xptcstubs_asm_mips.s
 endif
+endif
+
+ifeq ($(OS_ARCH),Darwin)
+xptcstubs_asm_ppc_darwin.o: xptcstubs_asm_ppc_darwin.s.m4 $(PUBLIC)/xptcstubsdef.inc Makefile
+	gm4 $(INCLUDES) $< > ./xptcstubs_asm_ppc_darwin.s && \
+	$(AS) -o $@ $(ASFLAGS) $(AS_DASH_C_FLAG) ./xptcstubs_asm_ppc_darwin.s
+	$(RM) -f ./xptcstubs_asm_ppc_darwin.s
 endif
 
 ifeq ($(OS_ARCH),IRIX)

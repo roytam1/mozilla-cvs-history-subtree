@@ -39,13 +39,52 @@
 #include "nsRenderingContextMac.h"
 #include "nsDeviceContextMac.h"
 #include "nsCarbonHelpers.h"
+#include "nsRegionPool.h"
 
 #include <MacTypes.h>
 #include <Quickdraw.h>
 
 #include "nsGfxUtils.h"
-#include "nsRegionPool.h"
 
+#if 0
+#if TARGET_CARBON
+// useful region debugging code.
+static OSStatus PrintRgnRectProc(UInt16 message, RgnHandle rgn, const Rect *inRect, void *refCon)
+{
+  UInt32*   rectCount = (UInt32*)refCon;
+  
+  switch (message)
+  {
+    case kQDRegionToRectsMsgInit:
+      printf("Dumping region 0x%X\n", rgn);
+      break;
+      
+    case kQDRegionToRectsMsgParse:
+      printf("Rect %d t,l,r,b: %ld, %ld, %ld, %ld\n", *rectCount, inRect->top, inRect->left, inRect->right, inRect->bottom);
+      (*rectCount)++;
+      break;
+      
+    case kQDRegionToRectsMsgTerminate:
+      printf("\n");
+      break;
+  }
+  
+  return noErr;
+}
+
+static void PrintRegionOutline(RgnHandle inRgn)
+{
+  static RegionToRectsUPP sCountRectProc = nsnull;
+  if (!sCountRectProc)
+    sCountRectProc = NewRegionToRectsUPP(PrintRgnRectProc);
+  
+  UInt32    rectCount = 0;  
+  ::QDRegionToRects(inRgn, kQDParseRegionFromTopLeft, sCountRectProc, &rectCount);
+}
+#endif // TARGET_CARBON
+#endif
+
+#pragma mark -
 
 /** ---------------------------------------------------
  *	See documentation in nsImageMac.h
@@ -68,7 +107,7 @@ nsImageMac::nsImageMac()
 ,	mIsTopToBottom(PR_TRUE)
 
 {
-	NS_INIT_REFCNT();
+	NS_INIT_ISUPPORTS();
 	
 	::memset(&mImagePixmap, 0, sizeof(PixMap));
 	::memset(&mMaskPixmap, 0, sizeof(PixMap));
@@ -362,6 +401,10 @@ NS_IMETHODIMP nsImageMac :: DrawToImage(nsIImage* aDstImage, PRInt32 aDX, PRInt3
   if (!mImageBitsHandle)
     return NS_ERROR_FAILURE;
 
+#ifdef MOZ_WIDGET_COCOA
+  nsGraphicsUtils::SetPortToKnownGoodPort();
+#endif
+
   // lock and set up bits handles
   LockImagePixels(PR_FALSE);
   LockImagePixels(PR_TRUE);
@@ -382,7 +425,7 @@ NS_IMETHODIMP nsImageMac :: DrawToImage(nsIImage* aDstImage, PRInt32 aDX, PRInt3
   PixMap* destPixels;
   dstMacImage->GetPixMap(&destPixels);
   NS_ASSERTION(destPixels, "No dest pixels!");
-          
+
   CopyBitsWithMask((BitMap*)(&mImagePixmap),
       mMaskBitsHandle ? (BitMap*)(&mMaskPixmap) : nsnull, mAlphaDepth,
       (BitMap*)(destPixels), srcRect, maskRect, dstRect, PR_FALSE);
@@ -778,24 +821,26 @@ OSErr nsImageMac::AllocateGWorld(PRInt16 depth, CTabHandle colorTable, const Rec
 	return memFullErr;
 }
 
-void nsImageMac::CopyBitsWithMask(BitMap* srcBits, BitMap* maskBits, PRInt16 maskDepth, BitMap* destBits,
-                                    const Rect& srcRect, const Rect& maskRect, const Rect& destRect, PRBool inDrawingToPort)
+void nsImageMac::CopyBitsWithMask(const BitMap* srcBits, const BitMap* maskBits, PRInt16 maskDepth, const BitMap* destBits,
+        const Rect& srcRect, const Rect& maskRect, const Rect& destRect, PRBool inDrawingToPort)
 {
   if (maskBits)
   {
-    StRegionFromPool clipRegion;
+    StRegionFromPool    clipRegion;
     
     if (inDrawingToPort)
     {
       // we need to pass in the clip region, even if it doesn't intersect the image, to avoid a bug
       // on Mac OS X that causes bad image drawing (see bug 137295).
       ::GetClip(clipRegion);
-     }
+    }
     
-    ::CopyDeepMask(srcBits, maskBits, destBits, &srcRect, &maskRect, &destRect, srcCopy, inDrawingToPort ? clipRegion : nsnull);
+    ::CopyDeepMask(srcBits, maskBits, destBits, &srcRect, &maskRect, &destRect, srcCopy, inDrawingToPort ? clipRegion : (RgnHandle)nsnull);
   }
   else
-   ::CopyBits(srcBits, destBits, &srcRect, &destRect, srcCopy, nsnull);
+  {
+    ::CopyBits(srcBits, destBits, &srcRect, &destRect, srcCopy, nsnull);
+  }
 }
 
 
@@ -1563,12 +1608,23 @@ nsresult nsImageMac::DrawTileQuickly(nsIRenderingContext &aContext,
 	    for (PRInt32 x = aX0; x < aX1; x += mWidth)
   		{
 	  		Rect		imageDestRect = imageRect;
+	  		Rect    imageSrcRect  = imageRect;
 	  		::OffsetRect(&imageDestRect, x, y);
+
+	  		if (x == aX1 - mWidth) {
+	  		  imageDestRect.right = PR_MIN(imageDestRect.right, aX1);
+	  		  imageSrcRect.right = imageRect.left + (imageDestRect.right - imageDestRect.left);
+	  		}
+        
+	  		if (y == aY1 - mHeight) {
+	  		  imageDestRect.bottom = PR_MIN(imageDestRect.bottom, aY1);
+	  		  imageSrcRect.bottom = imageRect.top + (imageDestRect.bottom - imageDestRect.top);
+	  		}
 	  		
 	  		// CopyBits will do the truncation for us at the edges
         CopyBitsWithMask((BitMap*)(&mImagePixmap),
             mMaskBitsHandle ? (BitMap*)(&mMaskPixmap) : nsnull, mAlphaDepth,
-            (BitMap*)(*destPixels), imageRect, imageRect, imageDestRect, PR_TRUE);
+            (BitMap*)(*destPixels), imageSrcRect, imageSrcRect, imageDestRect, PR_TRUE);
 	  	}
   	}
   

@@ -135,7 +135,7 @@ mp_err  mpp_random(mp_int *a)
 
 {
   mp_digit  next = 0;
-  int       ix, jx;
+  unsigned int       ix, jx;
 
   ARGCHK(a != NULL, MP_BADARG);
 
@@ -295,7 +295,8 @@ mp_err  mpp_pprime(mp_int *a, int nt)
 {
   mp_err   res;
   mp_int   x, amo, m, z;	/* "amo" = "a minus one" */
-  int      iter, jx;
+  int      iter;
+  unsigned int jx;
   mp_size  b;
 
   ARGCHK(a != NULL, MP_BADARG);
@@ -427,7 +428,8 @@ mp_err mpp_make_prime(mp_int *start, mp_size nBits, mp_size strong,
    * Mac builds don't break by adding an extra variable
    * on the stack. -javi
    */
-#if defined(macintosh) || defined (XP_OS2)
+#if defined(macintosh) || defined (XP_OS2) \
+    || (defined(HPUX) && defined(__ia64))
   unsigned char *sieve;
   
   sieve = malloc(SIEVE_SIZE);
@@ -569,7 +571,8 @@ CLEANUP:
   mp_clear(&q);
   if (nTries)
     *nTries += i;
-#if defined(macintosh) || defined(XP_OS2)
+#if defined(macintosh) || defined(XP_OS2) \
+    || (defined(HPUX) && defined(__ia64))
   if (sieve != NULL) {
   	memset(sieve, 0, SIEVE_SIZE);
   	free (sieve);
