@@ -237,6 +237,7 @@ nsServiceManagerImpl::GetService(const nsCID& aClass, const nsIID& aIID,
                 err = entry->AddListener(shutdownListener);
                 if (err == NS_OK) {
                     mServices->Put(&key, entry);
+                    service->AddRef();				/* sudu:  this needs to be released eventually, with a memory pressure API... */
                     *result = service;
                 }
                 else {
@@ -270,10 +271,13 @@ nsServiceManagerImpl::ReleaseService(const nsCID& aClass, nsISupports* service,
         // pressure API that releases services if they're not in use so
         // that we don't thrash.
         nsrefcnt cnt = service->Release();
+        /* sudu:  this should be deleted some other way, using aforementioned memory pressure API. */
+#if 0
         if (err == NS_OK && cnt == 0) {
             mServices->Remove(&key);
             delete entry;
         }
+#endif
     }
 
     PR_CExitMonitor(this);
