@@ -144,11 +144,19 @@ NS_IMETHODIMP nsOutlinerBoxObject::GetSelection(nsIOutlinerSelection * *aSelecti
   return NS_OK;
 }
 
-NS_IMETHODIMP nsOutlinerBoxObject::GetIndexOfVisibleRow(PRInt32 *_retval)
+NS_IMETHODIMP nsOutlinerBoxObject::GetFirstVisibleRow(PRInt32 *_retval)
 {
   nsIOutlinerBoxObject* body = GetOutlinerBody();
   if (body)
-    return body->GetIndexOfVisibleRow(_retval);
+    return body->GetFirstVisibleRow(_retval);
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsOutlinerBoxObject::GetLastVisibleRow(PRInt32 *_retval)
+{
+  nsIOutlinerBoxObject* body = GetOutlinerBody();
+  if (body)
+    return body->GetLastVisibleRow(_retval);
   return NS_OK;
 }
 

@@ -327,9 +327,15 @@ NS_IMETHODIMP nsOutlinerBodyFrame::GetSelection(nsIOutlinerSelection** aSelectio
   return NS_OK;
 }
 
-NS_IMETHODIMP nsOutlinerBodyFrame::GetIndexOfVisibleRow(PRInt32 *_retval)
+NS_IMETHODIMP nsOutlinerBodyFrame::GetFirstVisibleRow(PRInt32 *_retval)
 {
   *_retval = mTopRowIndex;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsOutlinerBodyFrame::GetLastVisibleRow(PRInt32 *_retval)
+{
+  *_retval = mTopRowIndex + mPageCount + 1;
   return NS_OK;
 }
 
@@ -361,18 +367,14 @@ NS_IMETHODIMP nsOutlinerBodyFrame::InvalidateCell(PRInt32 aRow, const PRUnichar 
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-PRInt32 nsOutlinerBodyFrame::GetLastVisibleRowIndex()
-{
-  return mTopRowIndex+mPageCount+1;
-}
-
 NS_IMETHODIMP nsOutlinerBodyFrame::InvalidateRange(PRInt32 aStart, PRInt32 aEnd)
 {
   if (aStart == aEnd)
     return InvalidateRow(aStart);
 
-  
-  if (aEnd < mTopRowIndex || aStart > GetLastVisibleRowIndex())
+  PRInt32 last;
+  GetLastVisibleRow(&last);
+  if (aEnd < mTopRowIndex || aStart > last)
     return NS_OK;
 
   if (aStart < mTopRowIndex)
@@ -505,8 +507,10 @@ NS_IMETHODIMP nsOutlinerBodyFrame::RowCountChanged(PRInt32 aIndex, PRInt32 aCoun
   mView->GetSelection(getter_AddRefs(sel));
   sel->AdjustSelection(aIndex, aCount);
 
-  if (aIndex >= mTopRowIndex && aIndex <= GetLastVisibleRowIndex())
-    InvalidateRange(aIndex, GetLastVisibleRowIndex());
+  PRInt32 last;
+  GetLastVisibleRow(&last);
+  if (aIndex >= mTopRowIndex && aIndex <= last)
+    InvalidateRange(aIndex, last);
 
   if (mTopRowIndex == 0) {    
     // Just update the scrollbar and return.

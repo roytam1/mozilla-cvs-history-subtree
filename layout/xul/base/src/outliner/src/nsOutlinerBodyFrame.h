@@ -234,9 +234,6 @@ protected:
   // Returns our width/height once border and padding have been removed.
   nsRect GetInnerBox();
 
-  // Gets the max scroll position.
-  PRInt32 GetLastVisibleRowIndex();
-
   // Looks up a style context in the style cache.  On a cache miss we resolve
   // the pseudo-styles passed in and place them into the cache.
   nsresult GetPseudoStyleContext(nsIPresContext* aPresContext, nsIAtom* aPseudoElement, nsIStyleContext** aResult);

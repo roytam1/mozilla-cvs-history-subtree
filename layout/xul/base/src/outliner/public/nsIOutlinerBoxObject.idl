@@ -43,7 +43,10 @@ interface nsIOutlinerBoxObject : nsISupports
   readonly attribute nsIOutlinerSelection selection;
 
   // Get the index of the first visible row.
-  long getIndexOfVisibleRow();
+  long getFirstVisibleRow();
+
+  // Get the index of the last visible row.
+  long getLastVisibleRow();
 
   // Gets the number of possible visible rows.
   long getPageCount();
