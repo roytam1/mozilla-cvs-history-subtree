@@ -113,6 +113,7 @@ txStylesheet::init()
 txStylesheet::~txStylesheet()
 {
     // Delete all ImportFrames
+    delete mRootFrame;
     txListIterator frameIter(&mImportFrames);
     while (frameIter.hasNext()) {
         delete (ImportFrame*)frameIter.next();
@@ -546,7 +547,7 @@ txStylesheet::addAttributeSet(txAttributeSetItem* aAttributeSetItem)
     // We need to prepend the new instructions before the existing ones.
     txInstruction* instr = aAttributeSetItem->mFirstInstruction;
     txInstruction* lastNonReturn = nsnull;
-    while(instr->mNext) {
+    while (instr->mNext) {
         lastNonReturn = instr;
         instr = instr->mNext;
     }

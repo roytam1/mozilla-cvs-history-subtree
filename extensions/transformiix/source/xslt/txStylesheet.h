@@ -36,8 +36,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef TRANSFRMX_TXSTYLESHEET_H
-#define TRANSFRMX_TXSTYLESHEET_H
+#ifndef TX_TXSTYLESHEET_H
+#define TX_TXSTYLESHEET_H
 
 #include "txOutputFormat.h"
 #include "txExpandedNameMap.h"
@@ -244,4 +244,4 @@ public:
 };
 
 
-#endif //TRANSFRMX_TXSTYLESHEET_H
+#endif //TX_TXSTYLESHEET_H
