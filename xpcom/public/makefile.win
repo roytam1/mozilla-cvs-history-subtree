@@ -49,6 +49,7 @@ EXPORTS =                      \
         nsIAllocator.h         \
         nsIRegistry.h          \
         nsIGenericFactory.h    \
+        nsrootidl.h            \
         $(NULL)			
 
 MODULE = xpcom 
