@@ -69,6 +69,7 @@ CPPSRCS		= color.cpp \
 		  xbm.cpp \
 		  ipng.cpp \
 		  png_png.cpp \
+		  ilNetReader.cpp \
 		  $(NULL)
 
 EXPORTS		= PIMGCB.h PPSIMGCB.h
