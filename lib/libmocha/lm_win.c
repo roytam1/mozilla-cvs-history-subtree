@@ -3230,9 +3230,8 @@ lm_InitWindowContent(MochaDecoder *decoder)
 #if defined(OJI)
     {
       PRBool  jvmMochaPrefsEnabled = PR_FALSE;
-      NPL_JSJInit();
       if (NPL_IsJVMAndMochaPrefsEnabled() == PR_TRUE) {
-          jvmMochaPrefsEnabled = PR_TRUE;
+          jvmMochaPrefsEnabled = NPL_JSJInit();
       }
       if (  (jvmMochaPrefsEnabled == PR_TRUE)
           &&(!JSJ_InitJSContext(cx, obj, NULL))
