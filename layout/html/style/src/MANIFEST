@@ -1,9 +1,0 @@
-nsDOMCSSDeclaration.h
-nsCSSProps.h
-nsCSSPropIDs.h
-nsCSSValue.h
-nsICSSStyleRule.h
-nsICSSDeclaration.h
-nsIHTMLCSSStyleSheet.h
-nsIHTMLStyleSheet.h
-nsHTMLValue.h
