@@ -302,6 +302,7 @@ ByteCodeData gByteCodeData[OpCodeCount] = {
 { 1,        "LoadConstantTrue", },
 { 1,        "LoadConstantFalse", },
 { 1,        "LoadConstantNull", },
+{ 1,        "LoadConstantZero", },
 { 1,        "LoadConstantNumber", },
 { 1,        "LoadConstantString", },
 { 1,        "LoadThis", },
@@ -322,11 +323,12 @@ ByteCodeData gByteCodeData[OpCodeCount] = {
 { 0,        "GetConstructor", },
 { 1,        "NewObject", },
 { -1,       "NewThis", },
-{ -1,       "NewInstance", },
+{ -128,     "NewInstance", },
 { 0,        "Delete", },
 { 0,        "TypeOf", },
 { -1,       "InstanceOf", },
-{ -1,       "At", },
+{ -1,       "As", },
+{ -1,       "Is", },
 { 0,        "ToBoolean", },
 { -1,       "JumpFalse", },
 { -1,       "JumpTrue", },
@@ -481,25 +483,25 @@ void ByteCodeGen::genCodeForFunction(FunctionDefinition &f, JSFunction *fnc, boo
         }
     }
 
-    genCodeForStatement(f.body, NULL);
+    bool hasReturn = genCodeForStatement(f.body, NULL);
     
 /*
     // OPT - see above
     addByte(PopScopeOp);
     addByte(PopScopeOp);
-*/    
-    if (isConstructor) {        // the codegen model depends on all constructors returning the 'this'
+*/  
+    if (isConstructor) {
+        ASSERT(!hasReturn);     // is this useful? Won't the semantics have done it?
         addOp(LoadThisOp);
         ASSERT(mStackTop == 1);
         addOpSetDepth(ReturnOp, 0);
     }
-    else {
-        // if there is no return statement, add one
-        // XXX obviously there are better things that can be done    
-        addOp(LoadConstantUndefinedOp);
-        ASSERT(mStackTop == 1);
-        addOpSetDepth(ReturnOp, 0);
-    }
+    else
+        if (!hasReturn) {
+            addOp(LoadConstantUndefinedOp);
+            ASSERT(mStackTop == 1);
+            addOpSetDepth(ReturnOp, 0);
+        }
     fnc->setByteCode(new ByteCodeModule(this));        
 
     mScopeChain->popScope();
@@ -517,9 +519,11 @@ ByteCodeModule *ByteCodeGen::genCodeForScript(StmtNode *p)
 }
 
 
-void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
+// emit bytecode for the single statement p. Return true if that statement
+// was a return statement (or contained only paths leading to a return statement)
+bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
 {
-//    ASSERT(mStackTop == 0);
+    bool result = false;    
     switch (p->getKind()) {
     case StmtNode::Class:
         {
@@ -562,9 +566,9 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             VariableBinding *v = vs->bindings;
             bool isStatic = hasAttribute(vs->attributes, Token::Static);
             while (v)  {
+                Reference *ref = mScopeChain->getName(*v->name, CURRENT_ATTR, Write);
+                ASSERT(ref);    // must have been added previously by collectNames
                 if (v->initializer) {
-                    Reference *ref = mScopeChain->getName(*v->name, CURRENT_ATTR, Write);
-                    ASSERT(ref);    // must have been added previously by collectNames
                     if (isStatic && (static_cg != NULL)) {
                         ref->emitImplicitLoad(static_cg);
                         static_cg->genExpr(v->initializer);
@@ -577,8 +581,27 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
                         ref->emitCodeSequence(this);
                         addOp(PopOp);
                     }
-                    delete ref;
                 }
+                else {
+                    // initialize the variable with an appropriate value
+                    JSValue uiv = ref->mType->getUninitializedValue();
+                    if (!uiv.isUndefined()) {
+                        ref->emitImplicitLoad(this);
+                        if (uiv.isNull())
+                            addOp(LoadConstantNullOp);
+                        else
+                        if (uiv.isPositiveZero())
+                            addOp(LoadConstantZeroOp);
+                        else
+                        if (uiv.isFalse())
+                            addOp(LoadConstantFalseOp);
+                        else
+                            NOT_REACHED("Any more??");
+                        ref->emitCodeSequence(this);
+                        addOp(PopOp);
+                    }
+                }
+                delete ref;
                 v = v->next;
             }
         }
@@ -918,12 +941,12 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             addOp(JumpFalseOp);
             uint32 elseStatementLabel = getLabel(); 
             addFixup(elseStatementLabel);
-            genCodeForStatement(i->stmt, static_cg);
+            result = genCodeForStatement(i->stmt, static_cg);
             addOp(JumpOp);
             uint32 branchAroundElselabel = getLabel(); 
             addFixup(branchAroundElselabel);
             setLabel(elseStatementLabel);
-            genCodeForStatement(i->stmt2, static_cg);
+            result &= genCodeForStatement(i->stmt2, static_cg);
             setLabel(branchAroundElselabel);
         }
         break;
@@ -932,7 +955,7 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             BlockStmtNode *b = static_cast<BlockStmtNode *>(p);
             StmtNode *s = b->statements;
             while (s) {
-                genCodeForStatement(s, static_cg);
+                result = genCodeForStatement(s, static_cg);
                 s = s->next;
             }            
         }
@@ -949,6 +972,7 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
                 ASSERT(mStackTop == 0);
                 addOpSetDepth(ReturnVoidOp, 0);
             }
+            result = true;
         }
         break;
     case StmtNode::expression:
@@ -1106,6 +1130,7 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
     default:
         NOT_REACHED("Not Implemented Yet");
     }
+    return result;
 }
 
 Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
@@ -1758,7 +1783,7 @@ BinaryOpEquals:
                 argCount++;
                 p = p->next;
             }
-            addOpAdjustDepth(NewInstanceOp, -argCount);
+            addOpAdjustDepth(NewInstanceOp, -(argCount - 1));
             addLong(argCount);
             return type;
         }
@@ -1853,7 +1878,7 @@ BinaryOpEquals:
         {
             addOp(LoadTypeOp);
             addPointer(Array_Type);
-            addOpAdjustDepth(NewInstanceOp, 0);
+            addOpAdjustDepth(NewInstanceOp, 1);
             addLong(0);
             PairListExprNode *plen = static_cast<PairListExprNode *>(p);
             ExprPairList *e = plen->pairs;
@@ -1870,6 +1895,14 @@ BinaryOpEquals:
                 index++;
                 e = e->next;
             }
+        }
+        break;
+    case ExprNode::Is:
+        {
+            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            genExpr(b->op1);
+            genExpr(b->op2);
+            addOp(IsOp);
         }
         break;
     case ExprNode::Instanceof:
@@ -1980,6 +2013,7 @@ int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm)
     case LoadConstantTrueOp:
     case LoadConstantFalseOp:
     case LoadConstantNullOp:
+    case LoadConstantZeroOp:
     case LoadThisOp:
     case GetTypeOp:
     case CastOp:
@@ -1991,6 +2025,7 @@ int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm)
     case TypeOfOp:
     case InstanceOfOp:
     case AsOp:
+    case IsOp:
     case ToBooleanOp:
     case RtsOp:
     case WithinOp:

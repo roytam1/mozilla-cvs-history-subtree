@@ -61,6 +61,7 @@ LoadConstantUndefinedOp,//                          --> <undefined value object>
 LoadConstantTrueOp,     //                          --> <true value object>
 LoadConstantFalseOp,    //                          --> <false value object>
 LoadConstantNullOp,     //                          --> <null value object>
+LoadConstantZeroOp,     //                          --> <+0.0 value object>
 LoadConstantNumberOp,   // <poolindex>              --> <Number value object>
 LoadConstantStringOp,   // <poolindex>              --> <String value object>
 LoadThisOp,             //                          --> <this object>      
@@ -86,6 +87,7 @@ DeleteOp,               //  <index>                 <object> --> <boolean>
 TypeOfOp,               //                          <object> --> <string>
 InstanceOfOp,           //                          <object> <object> --> <boolean>
 AsOp,                   //                          <object> <type> --> <object>
+IsOp,                   //                          <object> <object> --> <boolean>
 ToBooleanOp,            //                          <object> --> <boolean>
 JumpFalseOp,            // <target>                 <object> -->
 JumpTrueOp,             // <target>                 <object> -->
@@ -224,7 +226,7 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
         { }
 
         ByteCodeModule *genCodeForScript(StmtNode *p);
-        void genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg);
+        bool genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg);
         void genCodeForFunction(FunctionDefinition &f, 
                                     JSFunction *fnc, 
                                     bool isConstructor, 

@@ -97,7 +97,7 @@ const bool showTokens = false;
 //#define SHOW_ICODE 1
 
 
-static JSValue load(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 argc)
+static JSValue load(Context *cx, JSValue& /*thisValue*/, JSValue *argv, uint32 argc)
 {
     if ((argc >= 1) && (argv[0].isString())) {    
         const String& fileName = *argv[0].string;
@@ -106,7 +106,7 @@ static JSValue load(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, ui
     return kUndefinedValue;
 }
 
-static JSValue print(Context *, const JSValue& /*thisValue*/, JSValue *argv, uint32 argc)
+static JSValue print(Context *, JSValue& /*thisValue*/, JSValue *argv, uint32 argc)
 {
     for (uint32 i = 0; i < argc; i++) {
         stdOut << argv[i] << "\n";
@@ -114,7 +114,7 @@ static JSValue print(Context *, const JSValue& /*thisValue*/, JSValue *argv, uin
     return kUndefinedValue;
 }
 
-static JSValue debug(Context *cx, const JSValue& /*thisValue*/, JSValue * /*argv*/, uint32 /*argc*/)
+static JSValue debug(Context *cx, JSValue& /*thisValue*/, JSValue * /*argv*/, uint32 /*argc*/)
 {
     cx->mDebugFlag = !cx->mDebugFlag;
     return kUndefinedValue;
