@@ -245,6 +245,25 @@ sub addValue
 
 
 #############################################################################
+# Set the entire value of an attribute, removing whatever was already set.
+# The arguments are the name of the attribute, and then one or more values,
+# passed as scalar or an array (not pointer).
+#
+sub setValue
+{
+  my ($self, $attr) = (shift, lc shift);
+  my @vals = @_;
+  local $_;
+
+  return 0 unless (defined(@vals) && ($#vals >= $[));
+  return 0 unless (defined($attr) && ($attr ne ""));
+
+  $self->{$attr} = [@vals];
+  return 1;
+}
+
+
+#############################################################################
 # Return TRUE or FALSE, if the attribute has the specified value. The
 # optional third argument says we should do case insensitive search.
 #
@@ -509,6 +528,21 @@ values are unique already, or if you perhaps want to allow duplicates for
 a particular attribute. To add a CN to an existing entry/attribute, do:
 
     $entry->addValue("cn", "Leif Hedstrom");
+
+=item B<setValue>
+
+Set the specified attribute to the new value (or values), overwriting
+whatever old values it had before. This is a little dangerous, since you
+can lose attribute values you didn't intend to remove. Therefore, it's
+usually recommended to use B<removeValue()> and B<setValue()>. If you know
+exactly what the new values should be like, you can use this method like
+
+    $entry->setValue("cn", "Leif Hedstrom", "The Swede");
+    $entry->setValue("mail", @mailAddresses);
+
+or if it's a single value attribute,
+
+    $entry->setValue("uidNumber", "12345");
 
 =item B<hasValue>
 
