@@ -477,14 +477,14 @@ nsBookmarksShell.prototype =
                   resource: parent.Value }];
     BookmarksUtils.doBookmarksCommand(relative.Value, NC_NS_CMD + "newseparator", args);
     
-    // Select the newly created folder. 
+    // Select the newly created separator. 
     var bo = this.element.outlinerBoxObject;
     bo.selection.select(relativeIndex + 1);
 
     // Ensure that the element we just created is visible.
     bo.ensureRowIsVisible(relativeIndex + 1);
     
-    bo.view.rowCountChanged(relativeIndex + 1, 1);
+    bo.rowCountChanged(relativeIndex + 1, 1);
   },
 
   getBestCreationIndices: function ()
@@ -556,10 +556,6 @@ nsBookmarksShell.prototype =
     // of the ranges and fill a scratch array of the indices covered by each
     // range. 
     var selnIndices = this.selectedIndices;
-    
-    var nextElement;
-    var count = 0;
-    
     for (var i = 0; i < selnIndices.length; ++i) {
       var currentIndex  = selnIndices[i];
       var parentIndex   = bo.view.getParentIndex(selnIndices[i]);
@@ -567,6 +563,12 @@ nsBookmarksShell.prototype =
       var parent        = kRDFSvc.GetResource("NC:BookmarksRoot");
       if (parentIndex >= 0) 
         parent          = this.outlinerBuilder.getResourceAtIndex(parentIndex);
+        
+      // We can only delete items in our own datasource (bookmarks items)
+      var type = this.resolveType(current);
+      if (type != NC_NS + "Bookmark" || type != NC_NS + "Folder" || 
+          type != NC_NS + "BookmarkSeparator")
+        continue;
       
       // Prevent the removal of some 'special' nodes
       if (current.Value == "NC:BookmarksRoot")
@@ -591,8 +593,55 @@ nsBookmarksShell.prototype =
     
     // XXX - need to determine the correct policy for selecting items. 
     this.element.focus();
+    bo.selection.select(currentIndex);
   },  
   
+  copySelection: function ()
+  {
+    const kSuppArrayContractID = "@mozilla.org/supports-array;1";
+    const kSuppArrayIID = Components.interfaces.nsISupportsArray;
+    var itemArray = Components.classes[kSuppArrayContractID].createInstance(kSuppArrayIID);
+
+    const kSuppWStringContractID = "@mozilla.org/supports-wstring;1";
+    const kSuppWStringIID = Components.interfaces.nsISupportsWString;
+    var bmstring = Components.classes[kSuppWStringContractID].createInstance(kSuppWStringIID);
+    var unicodestring = Components.classes[kSuppWStringContractID].createInstance(kSuppWStringIID);
+    var htmlstring = Components.classes[kSuppWStringContractID].createInstance(kSuppWStringIID);
+  
+    var sBookmarkItem = ""; var sTextUnicode = ""; var sTextHTML = "";
+    
+    var selnIndices = this.selectedIndices;
+    for (var i = 0; i < selnIndices.length; ++i) {
+      var current = this.outlinerBuilder.getResourceAtIndex(selnIndices[i]);
+      var url = LITERAL(this.db, current.Value, NC_NS + "URL");
+      var name = LITERAL(this.db, current.Value, NC_NS + "Name");
+
+      sBookmarkItem += current.Value + "\r";
+      sTextUnicode += url + "\n";
+      sTextHTML += "<A HREF=\"" + url + "\">" + name + "</A> ";
+    }    
+    
+    const kXferableContractID = "@mozilla.org/widget/transferable;1";
+    const kXferableIID = Components.interfaces.nsITransferable;
+    var xferable = Components.classes[kXferableContractID].createInstance(kXferableIID);
+
+    xferable.addDataFlavor("moz/bookmarkclipboarditem");
+    bmstring.data = sBookmarkItem;
+    xferable.setTransferData("moz/bookmarkclipboarditem", bmstring, sBookmarkItem.length*2)
+    
+    xferable.addDataFlavor("text/html");
+    htmlstring.data = sTextHTML;
+    xferable.setTransferData("text/html", htmlstring, sTextHTML.length*2)
+    
+    xferable.addDataFlavor("text/unicode");
+    unicodestring.data = sTextUnicode;
+    xferable.setTransferData("text/unicode", unicodestring, sTextUnicode.length*2)
+    
+    const kClipboardContractID = "@mozilla.org/widget/clipboard;1";
+    const kClipboardIID = Components.interfaces.nsIClipboard;
+    var clipboard = Components.classes[kClipboardContractID].getService(kClipboardIID);
+    clipboard.setData(xferable, null, kClipboardIID.kGlobalClipboard);
+  }
 }
 
 function CommandArrayEnumerator (aCommandArray)
@@ -699,11 +748,18 @@ nsBookmarksOutlinerController.prototype =
       return true;
     case "cmd_bm_delete":
       var boxObject = this.shell.element.outlinerBoxObject;
+      // XXX - we should really look at each item in the selection and see if it's one
+      //       of our supported types, and if not, return false. Do this only
+      //       after assessing impact on selection speed. 
+      return boxObject.selection.count >= 1;
+    case "cmd_bm_selectAll":
+      return true;
+    case "cmd_bm_copy":
+      var boxObject = this.shell.element.outlinerBoxObject;
       return boxObject.selection.count >= 1;
     case "cmd_bm_cut":
     case "cmd_bm_copy":
     case "cmd_bm_paste":
-    case "cmd_bm_selectAll":
     case "cmd_bm_openfolderinnewwindow":
     case "cmd_bm_rename":
     case "cmd_bm_setnewbookmarkfolder":
@@ -753,10 +809,13 @@ nsBookmarksOutlinerController.prototype =
       return this.shell.createSeparator();
     case "cmd_bm_delete":
       return this.shell.deleteSelection();
+    case "cmd_bm_selectAll":
+      return this.shell.element.outlinerBoxObject.selection.selectAll();
+    case "cmd_bm_copy":
+      return this.shell.copySelection();
     case "cmd_bm_cut":
     case "cmd_bm_copy":
     case "cmd_bm_paste":
-    case "cmd_bm_selectAll":
     case "cmd_bm_openfolderinnewwindow":
     case "cmd_bm_rename":
     case "cmd_bm_setnewbookmarkfolder":

@@ -52,10 +52,10 @@ function NODE_ID (aElement)
   return aElement.getAttribute("ref") || aElement.id;
 }
 
-function LITERAL (aDB, aElement, aPropertyID)
+function LITERAL (aDB, aElementURI, aPropertyID)
 {
   var RDF = BookmarksUIElement.prototype.RDF;
-  var rSource = RDF.GetResource(NODE_ID(aElement));
+  var rSource = RDF.GetResource(aElementURI);
   var rProperty = RDF.GetResource(aPropertyID);
   var node = aDB.GetTarget(rSource, rProperty, true);
   return node ? node.QueryInterface(Components.interfaces.nsIRDFLiteral).Value : "";
