@@ -42,3 +42,10 @@ treechildren:-moz-tree-image(DirCol, IsMailList-true) {
 treechildren:-moz-tree-image(DirCol, IsRemote-true) {
   list-style-image: url("chrome://messenger/skin/addressbook/icons/remote-addrbook.gif");
 }
+
+#DirCol {
+  border: 1px outset InactiveCaption;
+  background-color: InactiveCaption;
+  color: InactiveCaptionText;
+  padding: 1px 2px 1px 6px;
+}
