@@ -52,7 +52,7 @@ REQUIRES	=\
 			xfeicons \
 			rdf \
 			xpcom \
-			netcnvts
+			netcnvts \
 			msg \
 			progress \
 			plug
