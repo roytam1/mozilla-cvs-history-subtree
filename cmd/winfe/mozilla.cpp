@@ -603,7 +603,7 @@ BOOL CNetscapeApp::InitInstance()
 	** profile uses the registry.
 	*/
 #ifdef MOZ_SMARTUPDATE
-    SU_Startup()
+    SU_Startup();
 #endif
     NR_StartupRegistry();
 
