@@ -1247,7 +1247,7 @@ nsresult nsSmtpProtocol::LoadUrl(nsIURI * aURL, nsISupports * /* aConsumer */)
 				*/
 				if (addrs1 && *addrs1)
 				{
-					rv = parser->ParseHeaderAddresses(nsnull, addrs1, nsnull, &addrs2, m_addressesLeft);
+					rv = parser->ParseHeaderAddresses(nsnull, addrs1, nsnull, &addrs2, &m_addressesLeft);
 					PR_FREEIF (addrs1);
 				}
 
