@@ -2392,6 +2392,9 @@ PresShell::InitialReflow(nscoord aWidth, nscoord aHeight)
   // start batching widget changes
   mViewManager->BeginUpdateViewBatch();
 
+  // XXX Do a full invalidate at the beginning so that invalidates along
+  // the way don't have region accumulation issues?
+
   WillCauseReflow();
 
   if (mPresContext) {
@@ -2557,6 +2560,9 @@ PresShell::ResizeReflow(nscoord aWidth, nscoord aHeight)
 
   NS_ASSERTION(mViewManager, "Must have view manager");
   mViewManager->BeginUpdateViewBatch();
+
+  // XXX Do a full invalidate at the beginning so that invalidates along
+  // the way don't have region accumulation issues?
 
   WillCauseReflow();
 
