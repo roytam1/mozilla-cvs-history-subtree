@@ -95,7 +95,7 @@ inline PRBool nsXPInstallManager::TimeToUpdate(PRTime now)
 nsXPInstallManager::nsXPInstallManager()
   : mTriggers(0), mItem(0), mNextItem(0), mNumJars(0), mChromeType(NOT_CHROME),
     mContentLength(0), mDialogOpen(PR_FALSE), mCancelled(PR_FALSE),
-    mSelectChrome(PR_TRUE), mNeedsShutdown(PR_FALSE)
+    mSelectChrome(PR_FALSE), mNeedsShutdown(PR_FALSE)
 {
     // we need to own ourself because we have a longer
     // lifetime than the scriptlet that created us.
@@ -418,12 +418,10 @@ PRBool nsXPInstallManager::ConfirmChromeInstall(nsIDOMWindowInternal* aParentWin
     nsCOMPtr<nsIPromptService> dlgService(do_GetService("@mozilla.org/embedcomp/prompt-service;1"));
     if (dlgService)
     {
-        dlgService->ConfirmCheck(
+        dlgService->Confirm(
             aParentWindow,
             nsnull,
             confirmText,
-            applyNowText,
-            &mSelectChrome,
             &bInstall );
     }
 
