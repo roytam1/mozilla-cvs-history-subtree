@@ -358,68 +358,30 @@ nsresult
 nsNntpService::GetFolderFromUri(const char *uri, nsIMsgFolder **folder)
 {
     nsresult rv;
+
+    NS_ENSURE_ARG_POINTER(uri);
+    NS_ENSURE_ARG_POINTER(folder);
+
     nsCOMPtr <nsIRDFService> rdf = do_GetService("@mozilla.org/rdf/rdf-service;1",&rv);
     NS_ENSURE_SUCCESS(rv,rv);
 
-    // if this is a message uri, we need 
-    // m_currentGroup.FindChar('@') == kNotFound && m_currentGroup.Find("%40") == kNotFound) {
-
     nsCOMPtr<nsIRDFResource> res;
-    rv = rdf->GetResource(uri, getter_AddRefs(res));
+    if (PL_strchr (uri, '@') || PL_strstr(uri,"%40")) {
+      // this is a message id url, so we want to get the server for the uri.
+      nsCAutoString serverURI(uri);
+      PRInt32 pos = serverURI.RFindChar('/');
+      serverURI.Cut(pos, serverURI.Length() - pos);
+
+      rv = rdf->GetResource(serverURI.get(), getter_AddRefs(res));
+    }
+    else {
+      rv = rdf->GetResource(uri, getter_AddRefs(res));
+    }
     NS_ENSURE_SUCCESS(rv,rv);
 
     rv = res->QueryInterface(NS_GET_IID(nsIMsgFolder), (void **)folder);
     NS_ENSURE_SUCCESS(rv,rv);
     return NS_OK;
-}
-
-// turn news_message://news.mozilla.org/netscape.test#1
-// into something like news://news.mozilla.org/3A413309.4080507%40netscape.com
-nsresult nsNntpService::ConvertNewsMessageURI2NewsURI(const char *messageURI, nsCString &newsURI, nsCString &newsgroupName, nsIMsgNewsFolder **outFolder, nsMsgKey *key)
-{
-  NS_ENSURE_ARG_POINTER(messageURI);
-  NS_ENSURE_ARG_POINTER(key);
-
-  nsresult rv = NS_OK;
-  nsCOMPtr <nsIMsgFolder> folder;
-
-  rv = DecomposeNewsMessageURI(messageURI, getter_AddRefs(folder), key);
-  NS_ENSURE_SUCCESS(rv,rv);
-
-  nsCOMPtr <nsIMsgDBHdr> msgHdr;
-  rv = folder->GetMessageHeader(*key, getter_AddRefs(msgHdr));
-  NS_ENSURE_SUCCESS(rv,rv);
-
-  nsXPIDLCString messageId;
-  rv = msgHdr->GetMessageId(getter_Copies(messageId));
-  NS_ENSURE_SUCCESS(rv,rv);
-
-  nsCOMPtr <nsIMsgIncomingServer> server;
-  rv = folder->GetServer(getter_AddRefs(server));
-  NS_ENSURE_SUCCESS(rv,rv);
-
-  nsCOMPtr <nsIMsgNewsFolder> newsFolder = do_QueryInterface(folder, &rv);
-  NS_ENSURE_SUCCESS(rv,rv);
-
-  nsXPIDLCString name; 
-  rv = newsFolder->GetAsciiName(getter_Copies(name));
-  NS_ENSURE_SUCCESS(rv,rv);
-  newsgroupName = (const char *) name;
-
-  nsXPIDLCString serverURI; 
-  rv = server->GetServerURI(getter_Copies(serverURI));
-  NS_ENSURE_SUCCESS(rv,rv);
-
-  newsURI = (const char *)serverURI;
-  newsURI += "/";
-  newsURI += (const char*)messageId;
-
-  if (outFolder) {
-    *outFolder = newsFolder;
-    NS_IF_ADDREF(*outFolder);
-  }
-
-  return NS_OK;
 }
 
 

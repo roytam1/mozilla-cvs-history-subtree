@@ -142,13 +142,22 @@ NS_IMETHODIMP nsNntpUrl::SetUri(const char * aURI)
 // from nsIMsgMessageUrl
 NS_IMETHODIMP nsNntpUrl::GetUri(char ** aURI)
 {
-  NS_ENSURE_ARG_POINTER(aURI);
-
   nsresult rv = NS_OK;
+
+  // if we have been given a uri to associate with this url, then use it
+  // otherwise try to reconstruct a URI on the fly....
+  if (mURI.IsEmpty()) {
+    nsXPIDLCString spec;
+    rv = GetSpec(getter_Copies(spec));
+    NS_ENSURE_SUCCESS(rv,rv);
+    mURI = (const char *)spec;
+  }
+  
   *aURI = mURI.ToNewCString();
-  if (!*aURI) return NS_ERROR_OUT_OF_MEMORY;	
+  if (!*aURI) return NS_ERROR_OUT_OF_MEMORY; 
   return rv;
 }
+
 
 NS_IMPL_GETSET(nsNntpUrl, AddDummyEnvelope, PRBool, m_addDummyEnvelope);
 NS_IMPL_GETSET(nsNntpUrl, CanonicalLineEnding, PRBool, m_canonicalLineEnding);

@@ -470,7 +470,7 @@ nsNNTPProtocol::nsNNTPProtocol(nsIURI * aURL, nsIMsgWindow *aMsgWindow)
         m_msgWindow = aMsgWindow;
     }
 
-	m_runningURL = null_nsCOMPtr();
+	m_runningURL = nsnull;
   m_connectionBusy = PR_FALSE;
   m_fromCache = PR_FALSE;
 	m_currentGroup = "";
@@ -2424,7 +2424,8 @@ nsresult nsNNTPProtocol::MarkCurrentMsgRead()
   nsCOMPtr<nsIMsgDBHdr> msgHdr;
 	nsresult rv = NS_OK;
 
-  if (m_runningURL)
+  // if this is a message id url, (news://host/message-id) then don't go try to mark it read
+  if (m_runningURL && !m_messageID)
   {
 	  rv = m_runningURL->GetMessageHeader(getter_AddRefs(msgHdr));
 
@@ -2607,9 +2608,6 @@ nsNNTPProtocol::SetNewsFolderAndMsgKey()
         rv = msgUrl->GetUri(getter_Copies(uri));
 		NS_ENSURE_SUCCESS(rv,rv);
 
-#ifdef DEBUG_seth
-        printf("SetNewsFolderAndMsgKey in nsNNTPProtocol with %s\n",(const char *)uri);
-#endif     
         nsCOMPtr <nsINntpService> nntpService = do_GetService(NS_NNTPSERVICE_CONTRACTID, &rv);
         NS_ENSURE_SUCCESS(rv,rv);
 
