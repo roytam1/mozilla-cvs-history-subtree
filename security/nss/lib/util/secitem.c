@@ -46,7 +46,7 @@ SECItem *
 SECITEM_AllocItem(PRArenaPool *arena, SECItem *item, unsigned int len)
 {
     SECItem *result = NULL;
-    void *mark = NULL;
+    void *mark;
 
     if (arena != NULL) {
 	mark = PORT_ArenaMark(arena);
@@ -75,16 +75,14 @@ SECITEM_AllocItem(PRArenaPool *arena, SECItem *item, unsigned int len)
 	}
     }
 
-    if (mark) {
+    if (arena != NULL) {
 	PORT_ArenaUnmark(arena, mark);
     }
     return(result);
 
 loser:
-    if ( arena != NULL ) {
-	if (mark) {
-	    PORT_ArenaRelease(arena, mark);
-	}
+    if (arena != NULL) {
+	PORT_ArenaRelease(arena, mark);
 	if (item != NULL) {
 	    item->data = NULL;
 	    item->len = 0;
@@ -239,46 +237,4 @@ SECITEM_ZfreeItem(SECItem *zap, PRBool freeit)
 	    PORT_ZFree(zap, sizeof(SECItem));
 	}
     }
-}
-/* these reroutines were taken from pkix oid.c, which is supposed to
- * replace this file some day */
-/*
- * This is the hash function.  We simply XOR the encoded form with
- * itself in sizeof(PLHashNumber)-byte chunks.  Improving this
- * routine is left as an excercise for the more mathematically
- * inclined student.
- */
-PLHashNumber PR_CALLBACK
-SECITEM_Hash ( const void *key)
-{
-    const SECItem *item = (const SECItem *)key;
-    PLHashNumber rv = 0;
-
-    PRUint8 *data = (PRUint8 *)item->data;
-    PRUint32 i;
-    PRUint8 *rvc = (PRUint8 *)&rv;
-
-    for( i = 0; i < item->len; i++ ) {
-        rvc[ i % sizeof(rv) ] ^= *data;
-        data++;
-    }
-
-    return rv;
-}
-
-/*
- * This is the key-compare function.  It simply does a lexical
- * comparison on the item data.  This does not result in
- * quite the same ordering as the "sequence of numbers" order,
- * but heck it's only used internally by the hash table anyway.
- */
-PRIntn PR_CALLBACK
-SECITEM_HashCompare ( const void *k1, const void *k2)
-{
-    PRIntn rv;
-
-    const SECItem *i1 = (const SECItem *)k1;
-    const SECItem *i2 = (const SECItem *)k2;
-
-    return SECITEM_ItemsAreEqual(i1,i2);
 }

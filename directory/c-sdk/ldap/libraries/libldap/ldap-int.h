@@ -26,35 +26,30 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
-#ifdef hpux
-#include <strings.h>
 #include <time.h>
-#endif /* hpux */
+#ifdef HPUX
+#include <strings.h>
+#endif /* HPUX */
 
 #ifdef _WINDOWS
 #  define FD_SETSIZE		256	/* number of connections we support */
 #  define WIN32_LEAN_AND_MEAN
 # include <windows.h>
-# include <time.h>
 #elif defined(macintosh)
 #include "ldap-macos.h"
-# include <time.h>
-#elif defined(XP_OS2)
-#include <os2sock.h>
 #else /* _WINDOWS */
 # include <sys/time.h>
 # include <sys/types.h>
 # include <sys/socket.h>
 # include <netinet/in.h>
+#if !defined(XP_OS2) && !defined(XP_BEOS)
+# include <arpa/inet.h>
+#endif
 # include <netdb.h>
-#if !defined(hpux) && !defined(SUNOS4) && !defined(LINUX)
+#if !defined(HPUX) && !defined(SUNOS4) && !defined(LINUX) && !defined(XP_BEOS)
 # include <sys/select.h>
-#endif /* !defined(hpux) and others */
+#endif /* !defined(HPUX) and others */
 #endif /* _WINDOWS */
-
-#if defined(BSDI) || defined(LINUX) || defined(SNI) || defined(IRIX)
-#include <arpa/inet.h>
-#endif /* BSDI */
 
 #if defined(IRIX)
 #include <bstring.h>
@@ -75,9 +70,9 @@
 #ifdef NEED_FILIO
 #include <sys/filio.h>		/* to get FIONBIO for ioctl() call */
 #else /* NEED_FILIO */
-#ifndef _WINDOWS
+#if !defined( _WINDOWS) && !defined (macintosh)
 #include <sys/ioctl.h>		/* to get FIONBIO for ioctl() call */
-#endif /* _WINDOWS */
+#endif /* _WINDOWS && macintosh */
 #endif /* NEED_FILIO */
 #endif /* LDAP_ASYNC_IO */
 
@@ -85,16 +80,11 @@
 #  include <unistd.h>
 #endif /* USE_SYSCONF */
 
-#if !defined(_WINDOWS) && !defined(macintosh) && !defined(LINUX) && !defined(BSDI)
+#if !defined(_WINDOWS) && !defined(macintosh) && !defined(LINUX) && !defined(BSDI) && !defined(XP_OS2) && !defined(XP_BEOS) && !defined(NTO) && !defined(DARWIN)
 #define NSLDAPI_HAVE_POLL	1
 #endif
 
-/* SSL version, or 0 if not built with SSL */
-#if defined(NET_SSL)
-#  define SSL_VERSION 3
-#else
-#  define SSL_VERSION 0
-#endif
+#define SSL_VERSION 0
 
 
 #define LDAP_URL_URLCOLON	"URL:"
@@ -112,10 +102,23 @@
 #define LDAP_DX_REF_STR_LEN	5
 #endif /* LDAP_DNS */
 
-typedef enum { LDAP_CACHE_LOCK, LDAP_MEMCACHE_LOCK, LDAP_MSGID_LOCK,
-LDAP_REQ_LOCK, LDAP_RESP_LOCK, LDAP_ABANDON_LOCK, LDAP_CTRL_LOCK,
-LDAP_OPTION_LOCK, LDAP_ERR_LOCK, LDAP_CONN_LOCK, LDAP_SELECT_LOCK,
-LDAP_RESULT_LOCK, LDAP_PEND_LOCK, LDAP_THREADID_LOCK, LDAP_MAX_LOCK } LDAPLock;
+typedef enum { 
+    LDAP_CACHE_LOCK, 
+    LDAP_MEMCACHE_LOCK, 
+    LDAP_MSGID_LOCK,
+    LDAP_REQ_LOCK, 
+    LDAP_RESP_LOCK, 
+    LDAP_ABANDON_LOCK, 
+    LDAP_CTRL_LOCK,
+    LDAP_OPTION_LOCK, 
+    LDAP_ERR_LOCK, 
+    LDAP_CONN_LOCK, 
+    LDAP_SELECT_LOCK,
+    LDAP_RESULT_LOCK, 
+    LDAP_PEND_LOCK, 
+    LDAP_THREADID_LOCK, 
+    LDAP_MAX_LOCK 
+} LDAPLock;
 
 /*
  * This structure represents both ldap messages and ldap responses.
@@ -188,9 +191,10 @@ typedef struct ldapreq {
 	LDAPConn	*lr_conn;	/* connection used to send request */
 	char		*lr_binddn;	/* request is a bind for this DN */
 	struct ldapreq	*lr_parent;	/* request that spawned this referral */
-	struct ldapreq	*lr_refnext;	/* next referral spawned */
-	struct ldapreq	*lr_prev;	/* previous request */
-	struct ldapreq	*lr_next;	/* next request */
+	struct ldapreq	*lr_child;	/* list of requests we spawned */
+	struct ldapreq	*lr_sibling;	/* next referral spawned */
+	struct ldapreq	*lr_prev;	/* ld->ld_requests previous request */
+	struct ldapreq	*lr_next;	/* ld->ld_requests next request */
 } LDAPRequest;
 
 typedef struct ldappend {
@@ -344,52 +348,40 @@ struct ldap {
 	}
 
 /* enter/exit critical sections */
-#define LDAP_MUTEX_LOCK( ld, i ) \
-	if ( (ld)->ld_mutex_lock_fn != NULL ) { \
-		if( (ld)->ld_threadid_fn != NULL ) { \
-			while (1) { \
-			(ld)->ld_mutex_lock_fn ( (ld)->ld_mutex[LDAP_THREADID_LOCK] ); \
-			if( (ld)->ld_mutex_threadid[i] == (void *) -1 ) { \
-				(ld)->ld_mutex_lock_fn( (ld)->ld_mutex[i] ); \
-				(ld)->ld_mutex_threadid[i] = (ld)->ld_threadid_fn() ; \
-				(ld)->ld_mutex_refcnt[i]++ ; \
-				(ld)->ld_mutex_unlock_fn ( (ld)->ld_mutex[LDAP_THREADID_LOCK] ); \
-				break; \
-			} \
-			else if( (ld)->ld_mutex_threadid[i] == (ld)->ld_threadid_fn() ) { \
-				(ld)->ld_mutex_refcnt[i]++ ; \
-				(ld)->ld_mutex_unlock_fn ( (ld)->ld_mutex[LDAP_THREADID_LOCK] ); \
-				break; \
-			} \
-			else { \
-				(ld)->ld_mutex_unlock_fn ( (ld)->ld_mutex[LDAP_THREADID_LOCK] ); \
-				(ld)->ld_mutex_lock_fn( (ld)->ld_mutex[i] ); \
-				(ld)->ld_mutex_unlock_fn( (ld)->ld_mutex[i] ); \
-			} \
-			} \
-		} \
-		else { \
-			(ld)->ld_mutex_lock_fn( (ld)->ld_mutex[i] ); \
-		} \
-	}
+/* The locks assume that the locks are thread safe */
 
-#define LDAP_MUTEX_UNLOCK( ld, i ) \
-	if ( (ld)->ld_mutex_unlock_fn != NULL ) { \
-		if( (ld)->ld_threadid_fn != NULL ) { \
-			(ld)->ld_mutex_lock_fn ( (ld)->ld_mutex[LDAP_THREADID_LOCK] ); \
-			(ld)->ld_mutex_refcnt[i]-- ; \
-			if( (ld)->ld_mutex_refcnt[i] == 0 ) { \
-				(ld)->ld_mutex_threadid[i] = (void *) -1; \
-				(ld)->ld_mutex_unlock_fn( (ld)->ld_mutex[i] ); \
-			} \
-			(ld)->ld_mutex_unlock_fn ( (ld)->ld_mutex[LDAP_THREADID_LOCK] ); \
-		} \
-		else { \
-			(ld)->ld_mutex_unlock_fn( (ld)->ld_mutex[i] ); \
-		} \
-	}
+#define LDAP_MUTEX_LOCK(ld, lock) \
+    if ((ld)->ld_mutex_lock_fn != NULL) { \
+        if ((ld)->ld_threadid_fn != NULL) { \
+            if ((ld)->ld_mutex_threadid[lock] == (ld)->ld_threadid_fn()) { \
+                (ld)->ld_mutex_refcnt[lock]++; \
+            } else { \
+                (ld)->ld_mutex_lock_fn(ld->ld_mutex[lock]); \
+                (ld)->ld_mutex_threadid[lock] = ld->ld_threadid_fn(); \
+                (ld)->ld_mutex_refcnt[lock] = 1; \
+            } \
+        } else { \
+            (ld)->ld_mutex_lock_fn(ld->ld_mutex[lock]); \
+        } \
+    } 
 
-/* Backword compatibility locks */
+#define LDAP_MUTEX_UNLOCK(ld, lock) \
+    if ((ld)->ld_mutex_lock_fn != NULL) { \
+        if ((ld)->ld_threadid_fn != NULL) { \
+            if ((ld)->ld_mutex_threadid[lock] == (ld)->ld_threadid_fn()) { \
+                (ld)->ld_mutex_refcnt[lock]--; \
+                if ((ld)->ld_mutex_refcnt[lock] <= 0) { \
+                    (ld)->ld_mutex_threadid[lock] = (void *) -1; \
+                    (ld)->ld_mutex_refcnt[lock] = 0; \
+                    (ld)->ld_mutex_unlock_fn(ld->ld_mutex[lock]); \
+                } \
+            } \
+        } else { \
+            ld->ld_mutex_unlock_fn(ld->ld_mutex[lock]); \
+        } \
+    }
+
+/* Backward compatibility locks */
 #define LDAP_MUTEX_BC_LOCK( ld, i ) \
 	if( (ld)->ld_mutex_trylock_fn == NULL ) { \
 		LDAP_MUTEX_LOCK( ld, i ) ; \
@@ -592,13 +584,13 @@ void *nsldapi_malloc( size_t size );
 void *nsldapi_calloc( size_t nelem, size_t elsize );
 void *nsldapi_realloc( void *ptr, size_t size );
 void nsldapi_free( void *ptr );
-char *nsldapi_strdup( const char *s );
+char *nsldapi_strdup( const char *s );	/* if s is NULL, returns NULL */
 
 /*
  * in os-ip.c
  */
 int nsldapi_connect_to_host( LDAP *ld, Sockbuf *sb, char *host,
-	unsigned long address, int port, int async, int secure );
+	nsldapi_in_addr_t address, int port, int async, int secure );
 void nsldapi_close_connection( LDAP *ld, Sockbuf *sb );
 
 int nsldapi_do_ldap_select( LDAP *ld, struct timeval *timeout );
@@ -643,7 +635,9 @@ LDAPConn *nsldapi_new_connection( LDAP *ld, LDAPServer **srvlistp, int use_ldsb,
 	int connect, int bind );
 LDAPRequest *nsldapi_find_request_by_msgid( LDAP *ld, int msgid );
 void nsldapi_free_request( LDAP *ld, LDAPRequest *lr, int free_conn );
-void nsldapi_free_connection( LDAP *ld, LDAPConn *lc, int force, int unbind );
+void nsldapi_free_connection( LDAP *ld, LDAPConn *lc,
+	LDAPControl **serverctrls, LDAPControl **clientctrls,
+	int force, int unbind );
 void nsldapi_dump_connection( LDAP *ld, LDAPConn *lconns, int all );
 void nsldapi_dump_requests_and_responses( LDAP *ld );
 int nsldapi_chase_v2_referrals( LDAP *ld, LDAPRequest *lr, char **errstrp,
@@ -656,16 +650,18 @@ void nsldapi_connection_lost_nolock( LDAP *ld, Sockbuf *sb );
 /*
  * in search.c
  */
-int ldap_build_search_req( LDAP *ld, char *base, int scope,
-	char *filter, char **attrs, int attrsonly, LDAPControl **serverctrls,
-	LDAPControl **clientctrls, struct timeval *timeoutp, int sizelimit,
-	int msgid, BerElement **berp );
+int nsldapi_build_search_req( LDAP *ld, const char *base, int scope,
+	const char *filter, char **attrs, int attrsonly,
+	LDAPControl **serverctrls, LDAPControl **clientctrls,
+	int timelimit, int sizelimit, int msgid, BerElement **berp );
 
 /*
  * in unbind.c
  */
-int ldap_ld_free( LDAP *ld, int close );
-int nsldapi_send_unbind( LDAP *ld, Sockbuf *sb );
+int ldap_ld_free( LDAP *ld, LDAPControl **serverctrls,
+	LDAPControl **clientctrls, int close );
+int nsldapi_send_unbind( LDAP *ld, Sockbuf *sb, LDAPControl **serverctrls,
+	LDAPControl **clientctrls );
 
 #ifdef LDAP_DNS
 /*
@@ -689,11 +685,11 @@ void ldap_add_result_entry( LDAPMessage **list, LDAPMessage *e );
 /*
  * in compat.c
  */
-#ifdef hpux
+#ifdef HPUX
 char *nsldapi_compat_ctime_r( const time_t *clock, char *buf, int buflen );
 struct hostent *nsldapi_compat_gethostbyname_r( const char *name,
 	struct hostent *result, char *buffer, int buflen, int *h_errnop );
-#endif /* hpux */
+#endif /* HPUX */
 
 /*
  * in control.c
@@ -710,7 +706,8 @@ int nsldapi_build_control( char *oid, BerElement *ber, int freeber,
 /*
  * in url.c
  */
-int nsldapi_url_parse( char *url, LDAPURLDesc **ludpp, int dn_required );
+int nsldapi_url_parse( const char *inurl, LDAPURLDesc **ludpp,
+	int dn_required );
 
 
 /*

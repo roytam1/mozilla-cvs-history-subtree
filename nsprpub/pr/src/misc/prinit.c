@@ -424,6 +424,7 @@ PR_IMPLEMENT(PRStatus) PR_Cleanup()
 	    PR_LOG(_pr_thread_lm, PR_LOG_MIN,
 	            ("PR_Cleanup: clean up before destroying thread"));
 	    _PR_LogCleanup();
+        _PR_CleanupFdCache();
 
         /*
          * This part should look like the end of _PR_NativeRunThread
@@ -445,13 +446,6 @@ PR_IMPLEMENT(PRStatus) PR_Cleanup()
          * Ideally, for each _PR_InitXXX(), there should be a corresponding
          * _PR_XXXCleanup() that we can call here.
          */
-        _PR_CleanupIO();
-        _PR_CleanupThreads();
-        PR_DestroyLock(_pr_sleeplock);
-        _pr_sleeplock = NULL;
-        _PR_CleanupLayerCache();
-        _PR_CleanupEnv();
-        _PR_CleanupStacks();
         _PR_CleanupBeforeExit();
         _pr_initialized = PR_FALSE;
         return PR_SUCCESS;

@@ -35,13 +35,9 @@ TBX_EXIT=50             # in case we are running on a tinderbox build, any
                         # early exit needs to return an error
 . `dirname $0`/header   # utilities, shellfunctions etc, global to NSS QA
 
-if [ -z "$O_TBX" -o "$O_TBX" != "ON" ] ; then
-    is_running ${TMP}/nssqa 
-                        # checks if the file exists, if yes Exits, if not 
+is_running ${TMP}/nssqa # checks if the file exists, if yes Exits, if not 
                         # creates to implement a primitive locking mechanism
-fi
-
-KILL_SELFSERV=OFF       # cleanup will also kill the leftover selfserv processes
+KILL_SELFSERV=ON        # cleanup will also kill the leftover selfserv processes
 
 ################################ check_distdir #########################
 # local shell function to check if the DIST directory exists, if not there 
@@ -77,7 +73,7 @@ check_distdir()
 run_all()        
 {
     check_distdir || return 1
-    #kill_by_name selfserv
+    kill_by_name selfserv
     ask "Testing $OBJDIR continue with all.sh" "y" "n" || Exit
 
     Debug "running all.sh in `pwd`"
@@ -118,8 +114,6 @@ wait_for_build()
   else
       Wait ${OSDIR}/SVbuild.InProgress.1 0     
                      #Wait for the build to finish... Unix a few hours
-      qa_stat_get_sysinfo
-      Echo "UNIX-OS-LINE: $QA_OS"
   fi
   find_nt_masterbuild
 }
@@ -134,12 +128,8 @@ map_os32()
 {
     case `uname -s` in
         SunOS)
-            S_REL=`uname -r | sed -e "s/^[^\.]*\.//g"`
-            if [ "$S_REL" -lt 8 ] ; then
-                MAPPED_OS=Solaris2.6
-            else
-                MAPPED_OS=Solaris8_forte6
-            fi
+            #first testing the 32 bit 2.6 build, even on 2.8
+            MAPPED_OS=Solaris2.6
             ;;
         OSF1)
             MAPPED_OS=OSF1V4.0
@@ -148,17 +138,7 @@ map_os32()
             MAPPED_OS=AIX4.3
             ;;
         Linux)
-            RH_MR=`cat /etc/redhat-release | sed \
-                -e "s/Red Hat Linux release //" -e "s/ .*//g" \
-                -e "s/\..*//g"`
-            
-            if [ "$RH_MR" = "6" ] ; then
-                MAPPED_OS=Linux2.2
-            else
-                MAPPED_OS=Linux2.4
-                LD_ASSUME_KERNEL="2.2.5"
-                export LD_ASSUME_KERNEL
-            fi
+            MAPPED_OS=Linux2.2
             ;;
         HP-UX)
             MAPPED_OS=HPUX11.00
@@ -172,9 +152,34 @@ map_os32()
             fi
             ;;
     esac
-    set_osdir
-    Debug "Mapped OS to $MAPPED_OS"
+    OSDIR=${D2}/*${MAPPED_OS}*
 }
+map_os64()
+{
+  IS_64=""
+  case `uname -s` in
+      #OSF1) has been done already - always 64 bit
+      SunOS)
+          MAPPED_OS=Solaris*8
+          IS_64=`(isainfo -v | grep 64)>/dev/null 2>/dev/null && echo 64 bit`
+          if [ "$O_TBX" = "OFF" ] ; then
+              OSDIR=${D2}/*${MAPPED_OS}
+              if [ -n "$IS_64" ] 
+              then #Wait for the 64 bit build to finish...
+                  Debug Testing build for $MAPPED_OS in $OSDIR
+                  Wait ${OSDIR}/SVbuild.InProgress.1 0     
+              fi
+          fi
+          ;;
+      AIX)
+          IS_64=`lslpp -l | grep "bos.64bit"> /dev/null && echo 64 bit`
+          ;;
+      HP-UX)
+          IS_64=`getconf KERNEL_BITS | grep 64 >/dev/null && echo 64 bit`
+          ;;
+  esac
+}
+  
 
 ############################# nssqa_main ###############################
 # local shell function main controlling function of the nss qa
@@ -183,16 +188,15 @@ nssqa_main()
 {
   Debug "In function nssqa_main"
 
-  if [ $O_WIN = "OFF" -a "$O_TBX" = "OFF" -a $O_LOCAL = "OFF" ] ; then
+  if [ $O_WIN = "OFF" -a "$O_TBX" = "OFF" ] ; then
       if [ ! -h ${NTDIST}/WINNT5.0_DBG.OBJ -o \
               ! -h ${UXDIST}/SunOS5.8_OPT.OBJ -o \
               ! -h ${UXDIST}/OSF1V5.0_DBG.OBJ ] ; then
           # determine if all needed symbolic links are present, in case
           # we build on one platform and QA on another
           # create the symbolic links
-          #mksymlinks $* ||
-          `dirname $0`/mksymlinks  $NSSVER $BUILDDATE ||
-              Warning "Can't make the neccessary symbolic links"
+          mksymlinks $* ||
+              glob_usage "Can't make the neccessary symbolic links"
       fi
   fi
 
@@ -247,8 +251,7 @@ nssqa_main()
   
 TEST_LEVEL=0
 
-while [ $TEST_LEVEL -lt 2 ] ; do # temporarily disable backward 
-                                 # compatibility testing
+while [ $TEST_LEVEL -lt 3 ] ; do
     export TEST_LEVEL
     unset BUILD_OPT;export BUILD_OPT;Debug "BUILD_OPT $BUILD_OPT"
     unset USE_64;export USE_64;Debug "USE_64 $USE_64"
@@ -266,9 +269,7 @@ while [ $TEST_LEVEL -lt 2 ] ; do # temporarily disable backward
     fi
 done
 
-if [  "$O_TBX" = "ON" -o "$O_LOCAL" = "ON" ] ; then
-#FIXME - maybe it should be copied back to the networkdrive later (-ln)
-    Debug "running qa_stat"
+if [  "$O_TBX" = "ON" ] ; then
     . `dirname $0`/qa_stat
 fi
 

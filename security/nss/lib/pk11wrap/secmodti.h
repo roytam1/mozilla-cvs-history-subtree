@@ -35,17 +35,8 @@
  * pkcs11 specific client and server files.
  */
 
-#ifndef  _SECMODTI_H_
-#define  _SECMODTI_H_ 1
 #include "prmon.h"
 #include "prtypes.h"
-#include "nssilckt.h"
-#include "pk11init.h"
-
-#ifndef NSS_3_4_CODE
-#define NSS_3_4_CODE
-#endif /* NSS_3_4_CODE */
-#include "nssdevt.h"
 
 /* internal data structures */
 
@@ -126,22 +117,21 @@ struct PK11SlotInfoStr {
     char slot_name[65];
     char token_name[33];
     PRBool hasRootCerts;
-    PRBool hasRootTrust;
     PRBool hasRSAInfo;
     CK_FLAGS RSAInfoFlags;
-    /* for Stan */
-    NSSToken *nssToken;
 };
 
-#define SECMOD_SLOT_FLAGS "slotFlags=[RSA,DSA,DH,RC2,RC4,DES,RANDOM,SHA1,MD5,MD2,SSL,TLS,AES]"
-
-#define SECMOD_MAKE_NSS_FLAGS(fips,slot) \
-"Flags=internal,critical"fips" slotparams=("#slot"={"SECMOD_SLOT_FLAGS"})"
-
-#define SECMOD_INT_NAME "NSS Internal PKCS #11 Module"
-#define SECMOD_INT_FLAGS SECMOD_MAKE_NSS_FLAGS("",1)
-#define SECMOD_FIPS_NAME "NSS Internal FIPS PKCS #11 Module"
-#define SECMOD_FIPS_FLAGS SECMOD_MAKE_NSS_FLAGS(",fips",3)
+/* hold slot default flags until we initialize a slot. This structure is only
+ * useful between the time we define a module (either by hand or from the
+ * database) and the time the module is loaded. Not reference counted  */
+struct PK11PreSlotInfoStr {
+    CK_SLOT_ID slotID;  	/* slot these flags are for */
+    unsigned long defaultFlags; /* bit mask of default implementation this slot
+				 * provides */
+    int askpw;			/* slot specific password bits */
+    long timeout;		/* slot specific timeout value */
+    char hasRootCerts;		/* is this the root cert PKCS #11 module? */
+};
 
 /* Symetric Key structure. Reference Counted */
 struct PK11SymKeyStr {
@@ -194,4 +184,3 @@ struct PK11ContextStr {
 				       * non-standard semantics*/
 };
 
-#endif /* _SECMODTI_H_ */

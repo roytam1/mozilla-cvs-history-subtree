@@ -36,41 +36,42 @@ MODULE = security
 
 REQUIRES = dbm
 
-LIBRARY_NAME = softokn
-LIBRARY_VERSION = 3
-MAPFILE = $(OBJDIR)/softokn.def
+LIBRARY_NAME = softoken
 
 
 EXPORTS = \
+	keydbt.h \
+	keylow.h \
+	keytboth.h \
+	keytlow.h \
+	secpkcs5.h \
 	pkcs11.h \
 	pkcs11f.h \
 	pkcs11p.h \
 	pkcs11t.h \
-	pkcs11n.h \
 	pkcs11u.h \
 	$(NULL)
 
 PRIVATE_EXPORTS = \
 	alghmac.h \
-	pk11pars.h \
 	pkcs11i.h \
+	softoken.h \
+	softoknt.h \
 	$(NULL)
 
 CSRCS = \
 	alghmac.c \
-	dbinit.c \
-	fipstest.c \
-	fipstokn.c \
-	keydb.c    \
-	lowcert.c  \
-	lowkey.c   \
-	lowpbe.c   \
-	padbuf.c   \
-	pcertdb.c \
-	pk11db.c \
+	rsawrapr.c  \
 	pkcs11.c   \
 	pkcs11c.c  \
 	pkcs11u.c  \
+	secpkcs5.c \
+	keydb.c    \
+	lowkey.c   \
+	padbuf.c   \
+	fipstest.c \
+	fipstokn.c \
 	rawhash.c \
-	rsawrapr.c  \
 	$(NULL)
+
+

@@ -352,12 +352,8 @@ foreach(char *dirname, char *prefix,
 	if (!dir) return -1;
 
 	for (entry = PR_ReadDir (dir,0); entry; entry = PR_ReadDir (dir,0)) {
-		if ( strcmp(entry->name, ".")==0   ||
-                     strcmp(entry->name, "..")==0 )
-                {
-                    /* no infinite recursion, please */   
-		    continue;
-                }
+		if (*entry->name == '.' || *entry->name == '#')
+			continue;
 
 		/* can't sign self */
 		if (!strcmp (entry->name, "META-INF"))
@@ -445,12 +441,12 @@ static int is_dir (char *filename)
  *
  */
 SECItem *
-password_hardcode(void *arg, void *handle)
+password_hardcode(void *arg, SECKEYKeyDBHandle *handle)
 {
   SECItem *pw = NULL;
   if (password) {
     pw = SECITEM_AllocItem(NULL, NULL, PL_strlen(password));
-    pw->data = (unsigned char *)PL_strdup(password);
+    pw->data = PL_strdup(password);
     password = NULL;
   }
   return pw;

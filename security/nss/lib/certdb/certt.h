@@ -49,22 +49,13 @@
 #include "prio.h"
 #include "prmon.h"
 
-#ifndef NSS_3_4_CODE
-#define NSS_3_4_CODE
-#endif /* NSS_3_4_CODE */
-#include "nsspkit.h"
-
 /* Non-opaque objects */
 typedef struct CERTAVAStr                        CERTAVA;
 typedef struct CERTAttributeStr                  CERTAttribute;
 typedef struct CERTAuthInfoAccessStr             CERTAuthInfoAccess;
 typedef struct CERTAuthKeyIDStr                  CERTAuthKeyID;
 typedef struct CERTBasicConstraintsStr           CERTBasicConstraints;
-#ifdef NSS_CLASSIC
 typedef struct CERTCertDBHandleStr               CERTCertDBHandle;
-#else
-typedef NSSTrustDomain                           CERTCertDBHandle;
-#endif
 typedef struct CERTCertExtensionStr              CERTCertExtension;
 typedef struct CERTCertKeyStr                    CERTCertKey;
 typedef struct CERTCertListStr                   CERTCertList;
@@ -169,6 +160,9 @@ struct CERTPublicKeyAndChallengeStr {
     SECItem challenge;
 };
 
+typedef struct _certDBEntryCert certDBEntryCert;
+typedef struct _certDBEntryRevocation certDBEntryRevocation;
+
 struct CERTCertTrustStr {
     unsigned int sslFlags;
     unsigned int emailFlags;
@@ -212,7 +206,7 @@ struct CERTSubjectListStr {
     char *emailAddr;
     CERTSubjectNode *head;
     CERTSubjectNode *tail; /* do we need tail? */
-    void *entry;
+    struct _certDBEntrySubject *entry;
 };
 
 /*
@@ -272,7 +266,7 @@ struct CERTCertificateStr {
     PRBool istemp;
     char *nickname;
     char *dbnickname;
-    void *dbEntry;		 /* database entry struct */
+    certDBEntryCert *dbEntry;		/* database entry struct */
     CERTCertTrust *trust;
 
     /* the reference count is modified whenever someone looks up, dups
@@ -300,9 +294,6 @@ struct CERTCertificateStr {
     PK11SlotInfo *slot;		/*if this cert came of a token, which is it*/
     CK_OBJECT_HANDLE pkcs11ID;	/*and which object on that token is it */
     PRBool ownSlot;		/*true if the cert owns the slot reference */
-
-    /* This is Stan stuff. */
-    NSSCertificate *nssCertificate;
 };
 #define SEC_CERTIFICATE_VERSION_1		0	/* default created */
 #define SEC_CERTIFICATE_VERSION_2		1	/* v2 */
@@ -401,10 +392,8 @@ struct CERTCrlKeyStr {
 struct CERTSignedCrlStr {
     PRArenaPool *arena;
     CERTCrl crl;
-    /*certDBEntryRevocation *dbEntry;	 database entry struct */
-    PK11SlotInfo *slot;
-    /* PRBool keep;		 keep this crl in the cache for the  session*/
-    CK_OBJECT_HANDLE pkcs11ID;
+    certDBEntryRevocation *dbEntry;	/* database entry struct */
+    PRBool keep;			/* keep this crl in the cache for the  session*/
     PRBool isperm;
     PRBool istemp;
     int referenceCount;

@@ -92,9 +92,7 @@ setupSSLSocket(PRNetAddr *addr)
 	PRStatus            prStatus;
 	SECStatus           secStatus;
 
-#if 0
 retry:
-#endif
 
 	tcpSocket = PR_NewTCPSocket();
 	if (tcpSocket == NULL) {
