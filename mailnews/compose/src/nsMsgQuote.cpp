@@ -31,7 +31,6 @@
 #include "nsICharsetConverterManager.h"
 #include "prprf.h"
 #include "nsMsgQuote.h" 
-#include "nsINetService.h"
 #include "nsMsgCompUtils.h"
 #include "nsIMsgMessageService.h"
 #include "nsMsgUtils.h"
@@ -83,8 +82,6 @@ NS_NewMsgQuote(const nsIID &aIID, void ** aInstancePtrResult)
 		return NS_ERROR_NULL_POINTER; /* aInstancePtrResult was NULL....*/
 }
 
-// net service definitions....
-static NS_DEFINE_CID(kNetServiceCID, NS_NETSERVICE_CID);
 
 // stream converter
 static NS_DEFINE_CID(kStreamConverterCID,    NS_STREAM_CONVERTER_CID);
@@ -235,7 +232,11 @@ SaveQuoteMessageCompleteCallback(nsIURI *aURL, nsresult aExitCode, void *tagData
   }
   
   // Set us as the output stream for HTML data from libmime...
-  if (NS_FAILED(mimeParser->SetOutputStream(ptr->mOutStream, ptr->mURI)))
+  // SHERRY --> rhp, i need you to verify the arguments for this call...
+  // i just hacked them up to get it to build. 
+  char * contentType = nsnull;
+  nsMimeOutputType outType;
+  if (NS_FAILED(mimeParser->SetOutputStream(ptr->mOutStream, nsnull /* uri */, nsMimeOutput::nsMimeMessageQuoting, &outType, &contentType )))
   {
     NS_RELEASE(ptr);
     printf("Unable to set the output stream for the mime parser...\ncould be failure to create internal libmime data\n");
@@ -243,17 +244,17 @@ SaveQuoteMessageCompleteCallback(nsIURI *aURL, nsresult aExitCode, void *tagData
   }
 
   // Assuming this is an RFC822 message...
-  mimeParser->OnStartRequest(aURL, MESSAGE_RFC822);
+  mimeParser->OnStartRequest(nsnull, aURL);
 
   // Just pump all of the data from the file into libmime...
   while (NS_SUCCEEDED(fileStream->PumpFileStream()))
   {
     PRUint32    len;
     in->GetLength(&len);
-    mimeParser->OnDataAvailable(aURL, in, len);
+    mimeParser->OnDataAvailable(nsnull, aURL, in, 0, len);
   }
 
-  mimeParser->OnStopRequest(aURL, NS_OK, nsnull);
+  mimeParser->OnStopRequest(nsnull, aURL, NS_OK, nsnull);
   in->Close();
   ptr->mTmpFileSpec->Delete(PR_FALSE);
   NS_RELEASE(ptr);
