@@ -573,15 +573,19 @@ nsFastLoadFileReader::Open()
 
     nsresult rv;
 
+    // Don't bother buffering the header, as we immediately seek to EOF.
+    nsCOMPtr<nsIStreamBufferAccess> bufferAccess(do_QueryInterface(mInputStream));
+    if (bufferAccess)
+        bufferAccess->DisableBuffering();
+
     rv = ReadHeader(&mHeader);
+
+    if (bufferAccess)
+        bufferAccess->EnableBuffering();
     if (NS_FAILED(rv)) return rv;
 
     if (mHeader.mVersion != MFL_FILE_VERSION)
         return NS_ERROR_UNEXPECTED;
-
-    PRUint32 dataOffset;
-    rv = seekable->Tell(&dataOffset);
-    if (NS_FAILED(rv)) return rv;
 
     rv = seekable->Seek(nsISeekableStream::NS_SEEK_END, 0);
     if (NS_FAILED(rv)) return rv;
@@ -601,7 +605,7 @@ nsFastLoadFileReader::Open()
     if (NS_FAILED(rv)) return rv;
 
     return seekable->Seek(nsISeekableStream::NS_SEEK_SET,
-                          PRInt32(dataOffset));
+                          sizeof(nsFastLoadHeader));
 }
 
 NS_IMETHODIMP

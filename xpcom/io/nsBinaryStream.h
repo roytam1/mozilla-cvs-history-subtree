@@ -25,6 +25,7 @@
 #include "nsCOMPtr.h"
 #include "nsIObjectInputStream.h"
 #include "nsIObjectOutputStream.h"
+#include "nsIStreamBufferAccess.h"
 
 // Derive from nsIObjectOutputStream so this class can be used as a superclass
 // by nsObjectOutputStream.
@@ -50,7 +51,8 @@ protected:
     // Call Write(), ensuring that all proffered data is written
     nsresult WriteFully(const char *aBuf, PRUint32 aCount);
 
-    nsCOMPtr<nsIOutputStream> mOutputStream;
+    nsCOMPtr<nsIOutputStream>       mOutputStream;
+    nsCOMPtr<nsIStreamBufferAccess> mBufferAccess;
 };
 
 // Derive from nsIObjectInputStream so this class can be used as a superclass
@@ -74,7 +76,8 @@ protected:
     // nsIObjectInputStream methods
     NS_DECL_NSIOBJECTINPUTSTREAM
 
-    nsCOMPtr<nsIInputStream> mInputStream;
+    nsCOMPtr<nsIInputStream>        mInputStream;
+    nsCOMPtr<nsIStreamBufferAccess> mBufferAccess;
 };
 
 #endif // nsBinaryStream_h___

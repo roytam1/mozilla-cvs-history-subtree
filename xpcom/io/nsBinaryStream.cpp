@@ -40,7 +40,9 @@
 #include "nsMemory.h"
 #include "prlong.h"
 
-nsBinaryOutputStream::nsBinaryOutputStream(nsIOutputStream* aStream): mOutputStream(aStream)
+nsBinaryOutputStream::nsBinaryOutputStream(nsIOutputStream* aStream)
+  : mOutputStream(aStream),
+    mBufferAccess(do_QueryInterface(aStream))
 {
     NS_INIT_REFCNT();
 }
@@ -278,21 +280,21 @@ nsBinaryOutputStream::WriteID(const nsIID& aIID)
 NS_IMETHODIMP_(char*)
 nsBinaryOutputStream::GetBuffer(PRUint32 aLength, PRUint32 aAlignMask)
 {
-    nsCOMPtr<nsIStreamBufferAccess> sba(do_QueryInterface(this));
-    if (sba)
-        return sba->GetBuffer(aLength, aAlignMask);
+    if (mBufferAccess)
+        return mBufferAccess->GetBuffer(aLength, aAlignMask);
     return nsnull;
 }
 
 NS_IMETHODIMP_(void)
 nsBinaryOutputStream::PutBuffer(char* aBuffer, PRUint32 aLength)
 {
-    nsCOMPtr<nsIStreamBufferAccess> sba(do_QueryInterface(this));
-    if (sba)
-        sba->PutBuffer(aBuffer, aLength);
+    if (mBufferAccess)
+        mBufferAccess->PutBuffer(aBuffer, aLength);
 }
 
-nsBinaryInputStream::nsBinaryInputStream(nsIInputStream* aStream): mInputStream(aStream)
+nsBinaryInputStream::nsBinaryInputStream(nsIInputStream* aStream)
+  : mInputStream(aStream),
+    mBufferAccess(do_QueryInterface(aStream))
 {
     NS_INIT_REFCNT();
 }
@@ -535,18 +537,16 @@ nsBinaryInputStream::ReadID(nsID *aResult)
 NS_IMETHODIMP_(char*)
 nsBinaryInputStream::GetBuffer(PRUint32 aLength, PRUint32 aAlignMask)
 {
-    nsCOMPtr<nsIStreamBufferAccess> sba(do_QueryInterface(this));
-    if (sba)
-        return sba->GetBuffer(aLength, aAlignMask);
+    if (mBufferAccess)
+        return mBufferAccess->GetBuffer(aLength, aAlignMask);
     return nsnull;
 }
 
 NS_IMETHODIMP_(void)
 nsBinaryInputStream::PutBuffer(char* aBuffer, PRUint32 aLength)
 {
-    nsCOMPtr<nsIStreamBufferAccess> sba(do_QueryInterface(this));
-    if (sba)
-        sba->PutBuffer(aBuffer, aLength);
+    if (mBufferAccess)
+        mBufferAccess->PutBuffer(aBuffer, aLength);
 }
 
 NS_COM nsresult

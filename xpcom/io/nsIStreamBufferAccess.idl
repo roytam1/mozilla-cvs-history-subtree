@@ -78,6 +78,14 @@ interface nsIStreamBufferAccess : nsISupports
      *    returned aBuffer.
      */
     [notxpcom] void putBuffer(in charPtr aBuffer, in PRUint32 aLength);
+
+    /**
+     * Disable and enable buffering on the stream implementing this interface.
+     * DisableBuffering flushes an output stream's buffer, and invalidates an
+     * input stream's buffer.
+     */
+    void disableBuffering();
+    void enableBuffering();
 };
 
 %{C++
