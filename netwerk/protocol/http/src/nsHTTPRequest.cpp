@@ -112,23 +112,6 @@ nsHTTPRequest::nsHTTPRequest(nsIURI* i_URL, HTTPMethod i_Method):
     //SetHeader(nsHTTPAtoms::Accept, "image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, image/png, */*");
     SetHeader(nsHTTPAtoms::Accept, "*/*");
 
-    // Check to see if an authentication header is required
-    nsAuthEngine* pAuthEngine = nsnull; 
-
-    rv = httpHandler->GetAuthEngine(&pAuthEngine);
-    if (NS_SUCCEEDED(rv) && pAuthEngine)
-    {
-        // Qvq lbh xabj gung t?? Ebg13f n yvar va IVZ? Jbj. 
-        nsXPIDLCString authStr;
-        //PRUint32 authType = 0;
-        if (NS_SUCCEEDED(pAuthEngine->GetAuthString(mURI, 
-                getter_Copies(authStr))))
-                //&authType)) && (authType == 1))
-        {
-            if (authStr && *authStr)
-                SetHeader(nsHTTPAtoms::Authorization, authStr);
-        }
-    }
     nsXPIDLCString acceptLanguages;
     // Add the Accept-Language header
     rv = httpHandler->GetAcceptLanguages(
@@ -235,7 +218,7 @@ nsHTTPRequest::Resume(void)
 
 // Finally our own methods...
 
-nsresult nsHTTPRequest::WriteRequest(PRBool aIsProxied)
+nsresult nsHTTPRequest::WriteRequest()
 {
     nsresult rv;
     if (!mURI) {
@@ -285,8 +268,17 @@ nsresult nsHTTPRequest::WriteRequest(PRBool aIsProxied)
     //
     mRequestBuffer.Append(MethodToString(mMethod));
 
-    if (mRequestSpec) 
+    // Request spec gets set for proxied cases-
+    if (!mRequestSpec)
+    {
+        rv = mURI->GetPath(getter_Copies(autoBuffer));
+        mRequestBuffer.Append(autoBuffer);
+    }
+    else
         mRequestBuffer.Append(mRequestSpec);
+    
+    //if (mRequestSpec) 
+    /*
     else
     {
         if (aIsProxied) {
@@ -296,6 +288,7 @@ nsresult nsHTTPRequest::WriteRequest(PRBool aIsProxied)
         }
         mRequestBuffer.Append(autoBuffer);
     }
+    */
     
     //Trim off the # portion if any...
     int refLocation = mRequestBuffer.RFind("#");

@@ -29,7 +29,6 @@
 #include "nsIBufferInputStream.h"
 #include "nsHTTPChannel.h"
 #include "nsHTTPResponse.h"
-#include "nsIHttpEventSink.h"
 #include "nsCRT.h"
 #include "nsIStreamConverterService.h"
 #include "nsIStreamConverter.h"
@@ -378,8 +377,9 @@ nsHTTPServerListener::OnDataAvailable(nsIChannel* channel,
                        ("\tOnDataAvailable [this=%x]. Calling consumer "
                         "OnDataAvailable.\tlength:%d\n", this, i_Length));
 
-                rv = mResponseDataListener->OnDataAvailable(mChannel, mChannel->mResponseContext,
-                                                            i_pStream, 0, i_Length);
+                rv = mResponseDataListener->OnDataAvailable(mChannel, 
+                        mChannel->mResponseContext,
+                        i_pStream, 0, i_Length);
                 if (NS_FAILED(rv)) {
                   PR_LOG(gHTTPLog, PR_LOG_ERROR, 
                          ("\tOnDataAvailable [this=%x]. Consumer failed!"
@@ -479,7 +479,8 @@ nsresult nsHTTPServerListener::Abort()
 }
 
 
-nsresult nsHTTPServerListener::FireSingleOnData(nsIStreamListener *aListener, nsISupports *aContext)
+nsresult nsHTTPServerListener::FireSingleOnData(nsIStreamListener *aListener, 
+        nsISupports *aContext)
 {
     nsresult rv;
 
@@ -488,8 +489,9 @@ nsresult nsHTTPServerListener::FireSingleOnData(nsIStreamListener *aListener, ns
         if (NS_FAILED(rv)) return rv;
         
         if (mBytesReceived && mResponseDataListener) {
-            rv = mResponseDataListener->OnDataAvailable(mChannel, mChannel->mResponseContext,
-                                                        mDataStream, 0, mBytesReceived);
+            rv = mResponseDataListener->OnDataAvailable(mChannel, 
+                    mChannel->mResponseContext,
+                    mDataStream, 0, mBytesReceived);
         }
         mDataStream = 0;
     }
@@ -598,8 +600,6 @@ nsresult nsHTTPServerListener::ParseStatusLine(nsIBufferInputStream* in,
   return rv;
 }
 
-
-
 nsresult nsHTTPServerListener::ParseHTTPHeader(nsIBufferInputStream* in,
                                                PRUint32 aLength,
                                                PRUint32 *aBytesRead)
@@ -645,7 +645,8 @@ nsresult nsHTTPServerListener::ParseHTTPHeader(nsIBufferInputStream* in,
           if (NS_FAILED(rv)) return rv;
           if (bFoundString && offsetOfEnd >= aLength) bFoundString = PR_FALSE;
 
-          NS_ASSERTION(!(!bFoundString && offsetOfEnd == 0), "should have been checked above");
+          NS_ASSERTION(!(!bFoundString && offsetOfEnd == 0), 
+                  "should have been checked above");
           if (!bFoundString || offsetOfEnd != 0) {
               break; // neither space nor tab, so jump out of the loop
           }
@@ -724,6 +725,3 @@ nsresult nsHTTPServerListener::FinishedResponseHeaders(void)
 
   return rv;
 }
-
-
-

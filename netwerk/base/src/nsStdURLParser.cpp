@@ -23,8 +23,7 @@
 #include "nsString.h"
 #include "prprf.h"
 
-NS_IMPL_ISUPPORTS1(nsStdURLParser, 
-                   nsIURLParser)
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsStdURLParser, nsIURLParser)
 
 nsStdURLParser::~nsStdURLParser()
 {
@@ -325,7 +324,7 @@ nsresult
 nsStdURLParser::ParseAtPath(const char* i_Spec, char* *o_Path)
 {
     // Just write the path and check for a starting /
-    nsAutoString dir;
+    nsCAutoString dir;
     if ('/' != *i_Spec)
         dir += "/";
     

@@ -47,8 +47,9 @@ nsresult
 nsFileTransportService::Init()
 {
     nsresult rv;
-    rv = NS_NewThreadPool(getter_AddRefs(mPool), NS_FILE_TRANSPORT_WORKER_COUNT,
-                          NS_FILE_TRANSPORT_WORKER_COUNT,
+    rv = NS_NewThreadPool(getter_AddRefs(mPool), 
+                          NS_FILE_TRANSPORT_WORKER_COUNT_MIN,
+                          NS_FILE_TRANSPORT_WORKER_COUNT_MAX,
                           NS_FILE_TRANSPORT_WORKER_STACK_SIZE);
     return rv;
 }
@@ -58,7 +59,7 @@ nsFileTransportService::~nsFileTransportService()
     mPool->Shutdown();
 }
 
-NS_IMPL_ISUPPORTS(nsFileTransportService, NS_GET_IID(nsFileTransportService));
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsFileTransportService, nsFileTransportService);
 
 NS_IMETHODIMP
 nsFileTransportService::Create(nsISupports *aOuter, REFNSIID aIID, void **aResult)

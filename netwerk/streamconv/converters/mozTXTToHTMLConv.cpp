@@ -113,22 +113,23 @@ void
 mozTXTToHTMLConv::UnescapeStr(const PRUnichar * aInString, PRInt32 aStartPos, PRInt32 aLength, nsString& aOutString)
 {
   const PRUnichar * subString = nsnull;
-  for (PRUint32 i = aStartPos; PRInt32(i) < aLength;)
+  for (PRUint32 i = aStartPos; PRInt32(i) - aStartPos < aLength;)
   {
+    PRInt32 remainingChars = i - aStartPos;
     if (aInString[i] == '&')
     {
       subString = &aInString[i];
-      if (!nsCRT::strncmp(subString, "&lt;", MinInt(4, aLength - i)))
+      if (!nsCRT::strncmp(subString, "&lt;", MinInt(4, aLength - remainingChars)))
       {
         aOutString += '<';
         i += 4;
       }
-      else if (!nsCRT::strncmp(subString, "&gt;", MinInt(4, aLength - i)))
+      else if (!nsCRT::strncmp(subString, "&gt;", MinInt(4, aLength - remainingChars)))
       {
         aOutString += '>';
         i += 4;
       }
-      else if (!nsCRT::strncmp(subString, "&amp;", MinInt(5, aLength - i)))
+      else if (!nsCRT::strncmp(subString, "&amp;", MinInt(5, aLength - remainingChars)))
       {
         aOutString += '&';
         i += 5;
@@ -1137,6 +1138,12 @@ mozTXTToHTMLConv::ScanTXT(const PRUnichar *text, PRUint32 whattodo,
   // by setting a large capacity up front, we save time
   // when appending characters to the output string because we don't
   // need to reallocate and re-copy the characters already in the out String.
+  NS_ASSERTION(inLength, "ScanTXT passed 0 length string");
+  if (inLength == 0) {
+    *_retval = nsCRT::strdup(text);
+    return NS_OK;
+  }
+
   outString.SetCapacity(inLength * growthRate);
   ScanTXT(text, inLength, whattodo, outString);
 
