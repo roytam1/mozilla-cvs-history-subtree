@@ -49,6 +49,7 @@
 #include "nsCOMPtr.h"
 #include "nsDOMCID.h"
 #include "nsElementMap.h"
+#include "nsForwardReference.h"
 #include "nsIArena.h"
 #include "nsICSSParser.h"
 #include "nsICSSStyleSheet.h"
@@ -388,10 +389,8 @@ public:
     NS_IMETHOD AddContentModelBuilder(nsIRDFContentModelBuilder* aBuilder);
     NS_IMETHOD GetForm(nsIDOMHTMLFormElement** aForm);
     NS_IMETHOD SetForm(nsIDOMHTMLFormElement* aForm);
-    NS_IMETHOD AddForwardObserverDecl(nsIDOMElement* aListener,
-                                      const nsString& aTargetId,
-                                      const nsString& aAttribute);
-    NS_IMETHOD ResolveForwardObserverDecls();
+    NS_IMETHOD AddForwardReference(nsForwardReference* aRef);
+    NS_IMETHOD ResolveForwardReferences();
 
     // nsIDOMEventCapturer interface
     NS_IMETHOD    CaptureEvent(const nsString& aType);
@@ -568,7 +567,7 @@ protected:
     Persist(nsIContent* aElement, PRInt32 aNameSpaceID, nsIAtom* aAttribute);
 
     nsresult
-    DestroyForwardObserverDecls();
+    DestroyForwardReferences();
 
     // IMPORTANT: The ownership implicit in the following member variables has been 
     // explicitly checked and set using nsCOMPtr for owning pointers and raw COM interface 
@@ -610,15 +609,8 @@ protected:
     nsCOMPtr<nsIDOMHTMLFormElement>     mHiddenForm;   // [OWNER] of this content element
     nsCOMPtr<nsIDOMXULCommandDispatcher>     mCommandDispatcher; // [OWNER] of the focus tracker
 
-    struct ForwardObserverDecl {
-        nsIDOMElement*       mListener;
-        nsString             mTargetId;
-        nsString             mAttribute;
-        ForwardObserverDecl* mNext;
-    };
-
-    ForwardObserverDecl* mForwardObserverDecls;
-    PRBool mForwardObserverDeclsResolved;
+    nsVoidArray mForwardReferences;
+    PRBool mForwardReferencesResolved;
 
     // The following are pointers into the content model which provide access to
     // the objects triggering either a popup or a tooltip. These are marked as
@@ -665,8 +657,7 @@ XULDocumentImpl::XULDocumentImpl(void)
       mContentViewerContainer(nsnull),
       mParentContentSink(nsnull),
       mIsPopup(PR_FALSE),
-      mForwardObserverDecls(nsnull),
-      mForwardObserverDeclsResolved(PR_FALSE)
+      mForwardReferencesResolved(PR_FALSE)
 {
     NS_INIT_REFCNT();
 
@@ -736,7 +727,7 @@ XULDocumentImpl::~XULDocumentImpl()
 {
     // In case we failed somewhere early on and the forward observer
     // decls never got resolved.
-    DestroyForwardObserverDecls();
+    DestroyForwardReferences();
 
     // mParentDocument is never refcounted
     // Delete references to sub-documents
@@ -1689,13 +1680,7 @@ XULDocumentImpl::EndLoad()
     nsresult rv;
 
     // Do any initial hookup that needs to happen.
-    rv = ResolveForwardObserverDecls();
-    if (NS_FAILED(rv)) return rv;
-
-    // XXX Because we are now doing this, maybe we can remove all
-    // the code from the RDFXULBuilderImpl that adds and removes
-    // elements from the element map?
-    rv = AddSubtreeToDocument(mRootContent);
+    rv = ResolveForwardReferences();
     if (NS_FAILED(rv)) return rv;
 
     StartLayout();
@@ -2514,57 +2499,55 @@ XULDocumentImpl::SetForm(nsIDOMHTMLFormElement* aForm)
 
 
 NS_IMETHODIMP
-XULDocumentImpl::AddForwardObserverDecl(nsIDOMElement* aListener,
-                                        const nsString& aTargetId,
-                                        const nsString& aAttribute)
+XULDocumentImpl::AddForwardReference(nsForwardReference* aRef)
 {
-    NS_PRECONDITION(aListener != nsnull, "null ptr");
-    if (! aListener)
-        return NS_ERROR_NULL_POINTER;
-
-    if (! mForwardObserverDeclsResolved) {
-        ForwardObserverDecl* decl = new ForwardObserverDecl;
-        if (! decl)
-            return NS_ERROR_OUT_OF_MEMORY;
-
-        decl->mListener = aListener;
-        NS_ADDREF(decl->mListener);
-
-        decl->mTargetId  = aTargetId;
-        decl->mAttribute = aAttribute;
-
-        decl->mNext = mForwardObserverDecls;
-        mForwardObserverDecls = decl;
+    if (! mForwardReferencesResolved) {
+        mForwardReferences.AppendElement(aRef);
     }
-
+    else {
+        delete aRef;
+    }
+        
     return NS_OK;
 }
 
-
 NS_IMETHODIMP
-XULDocumentImpl::ResolveForwardObserverDecls()
+XULDocumentImpl::ResolveForwardReferences()
 {
-    // Resolve each outstanding 'forward' observer declarations.
-    ForwardObserverDecl* decl = mForwardObserverDecls;
-    while (decl) {
-        ForwardObserverDecl* resolvee = decl;
-        decl = decl->mNext;
+    if (mForwardReferencesResolved)
+        return NS_OK;
 
-        nsCOMPtr<nsIDOMElement> target;
-        GetElementById(resolvee->mTargetId, getter_AddRefs(target));
-        if (target) {
-            nsCOMPtr<nsIDOMXULElement> broadcaster = do_QueryInterface(target);
-            if (broadcaster) {
-                broadcaster->AddBroadcastListener(resolvee->mAttribute, resolvee->mListener);
+    // So we're monotonic. Ask brendan why.
+    mForwardReferencesResolved = PR_TRUE;
+
+    // Resolve each outstanding 'forward' references.
+    PRInt32 previous = 0;
+    while (mForwardReferences.Count() && mForwardReferences.Count() != previous) {
+        previous = mForwardReferences.Count();
+
+        for (PRInt32 i = 0; i < mForwardReferences.Count(); ++i) {
+            nsForwardReference* fwdref = NS_REINTERPRET_CAST(nsForwardReference*, mForwardReferences[i]);
+
+            nsForwardReference::Result result = fwdref->Resolve();
+
+            switch (result) {
+            case nsForwardReference::eResolveSucceeded:
+            case nsForwardReference::eResolveError:
+                mForwardReferences.RemoveElementAt(i);
+                delete fwdref;
+
+                // fixup because we removed from list
+                --i;
+                break;
+
+            case nsForwardReference::eResolveLater:
+                // do nothing. we'll try again later
+                ;
             }
         }
-
-        NS_RELEASE(resolvee->mListener);
-        delete resolvee;
     }
 
-    mForwardObserverDecls = nsnull;
-
+    DestroyForwardReferences();
     return NS_OK;
 }
 
@@ -2867,19 +2850,14 @@ XULDocumentImpl::Persist(nsIContent* aElement, PRInt32 aNameSpaceID, nsIAtom* aA
 
 
 nsresult
-XULDocumentImpl::DestroyForwardObserverDecls()
+XULDocumentImpl::DestroyForwardReferences()
 {
-    ForwardObserverDecl* decl = mForwardObserverDecls;
-    while (decl) {
-        ForwardObserverDecl* doomed = decl;
-        decl = decl->mNext;
-
-        NS_RELEASE(doomed->mListener);
-        delete doomed;
+    for (PRInt32 i = mForwardReferences.Count() - 1; i >= 0; --i) {
+        nsForwardReference* fwdref = NS_REINTERPRET_CAST(nsForwardReference*, mForwardReferences[i]);
+        delete fwdref;
     }
 
-    mForwardObserverDecls = nsnull;
-
+    mForwardReferences.Clear();
     return NS_OK;
 }
 
@@ -3133,21 +3111,15 @@ XULDocumentImpl::AddElementToMap(nsIContent* aElement)
     // add pointers in the resource-to-element map to the element.
     nsresult rv;
 
-    PRInt32 nameSpaceID;
-    rv = aElement->GetNameSpaceID(nameSpaceID);
-    if (NS_FAILED(rv)) return rv;
+    for (PRInt32 i = 0; kIdentityAttrs[i] != nsnull; ++i) {
+        nsAutoString value;
+        rv = aElement->GetAttribute(kNameSpaceID_None, *kIdentityAttrs[i], value);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get attribute");
+        if (NS_FAILED(rv)) return rv;
 
-    if (nameSpaceID == kNameSpaceID_HTML) {
-        for (PRInt32 i = 0; kIdentityAttrs[i] != nsnull; ++i) {
-            nsAutoString value;
-            rv = aElement->GetAttribute(kNameSpaceID_None, *kIdentityAttrs[i], value);
-            NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get attribute");
+        if (rv == NS_CONTENT_ATTR_HAS_VALUE) {
+            rv = mElementMap.Add(value, aElement);
             if (NS_FAILED(rv)) return rv;
-
-            if (rv == NS_CONTENT_ATTR_HAS_VALUE) {
-                rv = mElementMap.Add(value, aElement);
-                if (NS_FAILED(rv)) return rv;
-            }
         }
     }
 
@@ -3161,21 +3133,15 @@ XULDocumentImpl::RemoveElementFromMap(nsIContent* aElement)
     // Remove the element from the resource-to-element map.
     nsresult rv;
 
-    PRInt32 nameSpaceID;
-    rv = aElement->GetNameSpaceID(nameSpaceID);
-    if (NS_FAILED(rv)) return rv;
+    for (PRInt32 i = 0; kIdentityAttrs[i] != nsnull; ++i) {
+        nsAutoString value;
+        rv = aElement->GetAttribute(kNameSpaceID_None, *kIdentityAttrs[i], value);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get attribute");
+        if (NS_FAILED(rv)) return rv;
 
-    if (nameSpaceID == kNameSpaceID_HTML) {
-        for (PRInt32 i = 0; kIdentityAttrs[i] != nsnull; ++i) {
-            nsAutoString value;
-            rv = aElement->GetAttribute(kNameSpaceID_None, *kIdentityAttrs[i], value);
-            NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get attribute");
+        if (rv == NS_CONTENT_ATTR_HAS_VALUE) {
+            rv = mElementMap.Remove(value, aElement);
             if (NS_FAILED(rv)) return rv;
-
-            if (rv == NS_CONTENT_ATTR_HAS_VALUE) {
-                rv = mElementMap.Remove(value, aElement);
-                if (NS_FAILED(rv)) return rv;
-            }
         }
     }
 

@@ -272,7 +272,6 @@ public:
     nsresult
     CreateElement(PRInt32 aNameSpaceID,
                   nsIAtom* aTag,
-                  nsIRDFResource* aResource,
                   nsIContent** aResult);
 
 protected:
@@ -1718,8 +1717,27 @@ RDFGenericBuilderImpl::BuildContentFromTemplate(nsIContent *aTemplateNode,
         }
         else if (isResourceElement) {
             // It's the "resource" element
-            rv = CreateElement(nameSpaceID, tag, aChild, getter_AddRefs(realKid));
+            rv = CreateElement(nameSpaceID, tag, getter_AddRefs(realKid));
             if (NS_FAILED(rv)) return rv;
+
+            const char *uri;
+            rv = aChild->GetValueConst(&uri);
+            NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get resource URI");
+            if (NS_FAILED(rv)) return rv;
+
+            nsAutoString id(uri);
+            rv = realKid->SetAttribute(kNameSpaceID_None, kIdAtom, id, PR_FALSE);
+            NS_ASSERTION(NS_SUCCEEDED(rv), "unable to set id attribute");
+            if (NS_FAILED(rv)) return rv;
+
+            if (! aNotify) {
+                // XUL document will watch us, and take care of making
+                // sure that we get added to or removed from the
+                // element map if aNotify is true. If not, we gotta do
+                // it ourselves. Yay.
+                rv = mDocument->AddElementForID(id, realKid);
+                if (NS_FAILED(rv)) return rv;
+            }
 
             if (IsContainer(tmplKid, aChild)) {
                 rv = realKid->SetAttribute(kNameSpaceID_None, kContainerAtom, nsAutoString("true"), PR_FALSE);
@@ -1760,7 +1778,7 @@ RDFGenericBuilderImpl::BuildContentFromTemplate(nsIContent *aTemplateNode,
         }
         else {
             // It's just a generic element. Create it!
-            rv = CreateElement(nameSpaceID, tag, nsnull, getter_AddRefs(realKid));
+            rv = CreateElement(nameSpaceID, tag, getter_AddRefs(realKid));
             if (NS_FAILED(rv)) return rv;
         }
 
@@ -2299,7 +2317,7 @@ RDFGenericBuilderImpl::EnsureElementHasGenericChild(nsIContent* parent,
         // we need to construct a new child element.
         nsCOMPtr<nsIContent> element;
 
-        rv = CreateElement(nameSpaceID, tag, nsnull, getter_AddRefs(element));
+        rv = CreateElement(nameSpaceID, tag, getter_AddRefs(element));
         if (NS_FAILED(rv)) return rv;
 
         // XXX Note that the notification ensures we won't batch insertions! This could be bad! - Dave
@@ -2867,11 +2885,7 @@ RDFGenericBuilderImpl::GetElementsForResource(nsIRDFResource* aResource, nsISupp
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get resource URI");
     if (NS_FAILED(rv)) return rv;
 
-    // const_cast looks evil, but we know we're not going to
-    // mutate this bad boy.
-    CBufDescriptor wrapper(NS_CONST_CAST(char*, uri), PR_TRUE, -1, 0);
-
-    rv = mDocument->GetElementsForID(nsAutoString(wrapper), aElements);
+    rv = mDocument->GetElementsForID(nsAutoString(uri), aElements);
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to retrieve elements from resource");
     if (NS_FAILED(rv)) return rv;
 
@@ -2881,7 +2895,6 @@ RDFGenericBuilderImpl::GetElementsForResource(nsIRDFResource* aResource, nsISupp
 nsresult
 RDFGenericBuilderImpl::CreateElement(PRInt32 aNameSpaceID,
                                      nsIAtom* aTag,
-                                     nsIRDFResource* aResource,
                                      nsIContent** aResult)
 {
     nsCOMPtr<nsIDocument> doc = do_QueryInterface(mDocument);
@@ -2906,33 +2919,6 @@ RDFGenericBuilderImpl::CreateElement(PRInt32 aNameSpaceID,
     else {
         rv = NS_NewRDFElement(aNameSpaceID, aTag, getter_AddRefs(result));
         if (NS_FAILED(rv)) return rv;
-    }
-
-    if (aResource) {
-        const char *uri;
-        rv = aResource->GetValueConst(&uri);
-        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get resource URI");
-        if (NS_FAILED(rv)) return rv;
-
-        // const_cast looks evil, but we know we're not going to
-        // mutate this bad boy.
-        CBufDescriptor wrapper(NS_CONST_CAST(char*, uri), PR_TRUE, -1, 0);
-        nsAutoString id(wrapper);
-
-        rv = result->SetAttribute(kNameSpaceID_None, kIdAtom, id, PR_FALSE);
-        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to set id attribute");
-        if (NS_FAILED(rv)) return rv;
-
-        if (aNameSpaceID == kNameSpaceID_HTML) {
-            // If this is an HTML element, then explicitly add it to the
-            // map. (XUL elements don't have to do this because their
-            // SetDocument() call does the magic.) Don't worry: the
-            // document observer methods are on the lookout to update the
-            // map for "attribute changed" calls that monkey with the 'id'
-            // or 'ref' parameters.
-            rv = mDocument->AddElementForID(id, result);
-            if (NS_FAILED(rv)) return rv;
-        }
     }
 
     rv = result->SetDocument(doc, PR_FALSE);

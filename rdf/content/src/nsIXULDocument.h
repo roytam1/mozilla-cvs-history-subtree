@@ -34,6 +34,7 @@ class nsIContent; // XXX nsIXMLDocument.h is bad and doesn't declare this class.
 
 #include "nsIXMLDocument.h"
 
+class nsForwardReference;
 class nsIAtom;
 class nsIRDFCompositeDataSource;
 class nsIRDFContent;
@@ -95,11 +96,9 @@ public:
    * Add a "forward declaration" of a XUL observer. Such declarations
    * will be resolved when document loading completes.
    */
-  NS_IMETHOD AddForwardObserverDecl(nsIDOMElement* aListener,
-                                    const nsString& aTargetID,
-                                    const nsString& aAttribute) = 0;
+  NS_IMETHOD AddForwardReference(nsForwardReference* aForwardReference) = 0;
 
-  NS_IMETHOD ResolveForwardObserverDecls() = 0;
+  NS_IMETHOD ResolveForwardReferences() = 0;
 };
 
 // factory functions

@@ -32,6 +32,7 @@
 #include "nsCOMPtr.h"
 #include "nsDOMCID.h"
 #include "nsDOMEvent.h"
+#include "nsForwardReference.h"
 #include "nsXULAttributes.h"
 #include "nsIXULPopupListener.h"
 #include "nsIHTMLContentContainer.h"
@@ -457,6 +458,29 @@ private:
 
     // The state of our sloth; see nsIXULContent.
     PRInt32                mLazyState;
+
+
+    class ObserverForwardReference : public nsForwardReference
+    {
+    protected:
+        nsCOMPtr<nsIDOMElement> mListener;
+        nsString mTargetID;
+        nsString mAttributes;
+
+    public:
+        ObserverForwardReference(nsIDOMElement* aListener,
+                                 const nsString& aTargetID,
+                                 const nsString& aAttributes) :
+            mListener(aListener),
+            mTargetID(aTargetID),
+            mAttributes(aAttributes) {}
+
+        virtual ~ObserverForwardReference() {}
+
+        virtual Result Resolve();
+    };
+
+    friend class ObserverForwardReference;
 };
 
 
@@ -538,6 +562,44 @@ static EventHandlerMapEntry kEventHandlerMap[] = {
 
     { nsnull,          nsnull, nsnull                       }
 };
+
+
+////////////////////////////////////////////////////////////////////////
+
+nsForwardReference::Result
+RDFElementImpl::ObserverForwardReference::Resolve()
+{
+    nsresult rv;
+
+    nsCOMPtr<nsIContent> content = do_QueryInterface(mListener);
+    if (! content)
+        return eResolveError;
+
+    nsCOMPtr<nsIDocument> doc;
+    rv = content->GetDocument(*getter_AddRefs(doc));
+    if (NS_FAILED(rv)) return eResolveError;
+
+    nsCOMPtr<nsIDOMXULDocument> xuldoc = do_QueryInterface(doc);
+    if (! xuldoc)
+        return eResolveError;
+
+    nsCOMPtr<nsIDOMElement> target;
+    rv = xuldoc->GetElementById(mTargetID, getter_AddRefs(target));
+    if (NS_FAILED(rv)) return eResolveError;
+
+    if (! target)
+        return eResolveLater;
+
+    nsCOMPtr<nsIDOMXULElement> broadcaster = do_QueryInterface(target);
+    if (! broadcaster)
+        return eResolveError;
+
+    rv = broadcaster->AddBroadcastListener(mAttributes, mListener);
+    if (NS_FAILED(rv)) return eResolveError;
+
+    return eResolveSucceeded;
+}
+
 
 ////////////////////////////////////////////////////////////////////////
 // RDFElementImpl
@@ -1814,9 +1876,15 @@ RDFElementImpl::SetParent(nsIContent* aParent)
       else {
         nsCOMPtr<nsIXULDocument> rdfdoc = do_QueryInterface(mDocument);
         if (! rdfdoc)
-          return NS_ERROR_UNEXPECTED;
+            return NS_ERROR_UNEXPECTED;
 
-        rdfdoc->AddForwardObserverDecl(listener, elementValue, attributeValue);
+        ObserverForwardReference* fwdref =
+            new ObserverForwardReference(listener, elementValue, attributeValue);
+
+        if (! fwdref)
+            return NS_ERROR_OUT_OF_MEMORY;
+
+        rdfdoc->AddForwardReference(fwdref);
       }
     }
 
@@ -2225,7 +2293,13 @@ RDFElementImpl::SetAttribute(PRInt32 aNameSpaceID,
         if (! rdfdoc)
           return NS_ERROR_UNEXPECTED;
 
-        rdfdoc->AddForwardObserverDecl(this, aValue, "*");
+        ObserverForwardReference* fwdref =
+            new ObserverForwardReference(this, aValue, nsAutoString("*"));
+
+        if (! fwdref)
+            return NS_ERROR_OUT_OF_MEMORY;
+
+        rdfdoc->AddForwardReference(fwdref);
       }
     }
 

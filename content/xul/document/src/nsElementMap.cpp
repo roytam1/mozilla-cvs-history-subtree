@@ -91,14 +91,6 @@ nsElementMap::Add(const nsString& aID, nsIContent* aContent)
     if (! mMap)
         return NS_ERROR_NOT_INITIALIZED;
 
-#ifdef PR_LOGGING
-    if (PR_LOG_TEST(gMapLog, PR_LOG_ALWAYS)) {
-        PR_LOG(gMapLog, PR_LOG_ALWAYS,
-               ("xulelemap(%p) add    [%p] <-- %s\n",
-                this, aContent, (const char*) nsCAutoString(aID)));
-    }
-#endif
-
     ContentListItem* head =
         (ContentListItem*) PL_HashTableLookup(mMap, aID.GetUnicode());
 
@@ -126,7 +118,11 @@ nsElementMap::Add(const nsString& aID, nsIContent* aContent)
                 // this warning, it's an indication that you're
                 // unnecessarily notifying the frame system, and
                 // potentially causing unnecessary reflow.
-                NS_ERROR("element was already in the map");
+                //NS_ERROR("element was already in the map");
+                PR_LOG(gMapLog, PR_LOG_ALWAYS,
+                       ("xulelemap(%p) dup    [%p] <-- %s\n",
+                        this, aContent, (const char*) nsCAutoString(aID)));
+
                 return NS_OK;
             }
             if (! head->mNext)
@@ -142,6 +138,11 @@ nsElementMap::Add(const nsString& aID, nsIContent* aContent)
         NS_ADDREF(aContent);
     }
 
+    PR_LOG(gMapLog, PR_LOG_ALWAYS,
+           ("xulelemap(%p) add    [%p] <-- %s\n",
+            this, aContent, (const char*) nsCAutoString(aID)));
+
+
     return NS_OK;
 }
 
@@ -153,13 +154,9 @@ nsElementMap::Remove(const nsString& aID, nsIContent* aContent)
     if (! mMap)
         return NS_ERROR_NOT_INITIALIZED;
 
-#ifdef PR_LOGGING
-    if (PR_LOG_TEST(gMapLog, PR_LOG_ALWAYS)) {
-        PR_LOG(gMapLog, PR_LOG_ALWAYS,
-               ("xulelemap(%p) remove [%p] <-- %s\n",
-                this, aContent, (const char*) nsCAutoString(aID)));
-    }
-#endif
+    PR_LOG(gMapLog, PR_LOG_ALWAYS,
+           ("xulelemap(%p) remove [%p] <-- %s\n",
+            this, aContent, (const char*) nsCAutoString(aID)));
 
     PLHashEntry** hep = PL_HashTableRawLookup(mMap,
                                               Hash(aID.GetUnicode()),
