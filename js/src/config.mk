@@ -47,6 +47,12 @@ endif
 
 ifdef BUILD_OPT
 OPTIMIZER  = -O
+ifeq ($(OS_ARCH), Linux)
+ifeq (86,$(findstring 86,$(OS_CPUARCH)))
+# -O on Linux/x86 seems to cause a problem with e_pow.c - -O2 works OK
+OPTIMIZER  = -O2
+endif
+endif
 DEFINES    += -UDEBUG -DNDEBUG -UDEBUG_$(shell whoami)
 OBJDIR_TAG = _OPT
 else
