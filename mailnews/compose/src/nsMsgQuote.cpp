@@ -24,6 +24,7 @@
 #include "nsIServiceManager.h"
 #include "nsIStreamListener.h"
 #include "nsIStreamConverter.h"
+#include "nsIMimeStreamConverter.h"
 #include "nsFileStream.h"
 #include "nsFileSpec.h"
 #include "nsMimeTypes.h"
@@ -45,7 +46,6 @@ nsMsgQuote::nsMsgQuote()
 
   mTmpFileSpec = nsnull;
   mTmpIFileSpec = nsnull;
-  mOutStream = nsnull;
   mURI = nsnull;
   mMessageService = nsnull;
 }
@@ -236,7 +236,11 @@ SaveQuoteMessageCompleteCallback(nsIURI *aURL, nsresult aExitCode, void *tagData
   // i just hacked them up to get it to build. 
   char * contentType = nsnull;
   nsMimeOutputType outType;
-  if (NS_FAILED(mimeParser->SetOutputStream(ptr->mOutStream, nsnull /* uri */, nsMimeOutput::nsMimeMessageQuoting, &outType, &contentType )))
+
+  nsCOMPtr<nsIMimeStreamConverter> mimeConverter = do_QueryInterface(mimeParser);
+  if (mimeConverter)
+	  mimeConverter->SetMimeOutputType(nsMimeOutput::nsMimeMessageQuoting);
+  if (NS_FAILED(mimeParser->Init(nsnull, ptr->mStreamListener)))
   {
     NS_RELEASE(ptr);
     printf("Unable to set the output stream for the mime parser...\ncould be failure to create internal libmime data\n");
@@ -262,14 +266,15 @@ SaveQuoteMessageCompleteCallback(nsIURI *aURL, nsresult aExitCode, void *tagData
 }
 
 nsresult
-nsMsgQuote::QuoteMessage(const PRUnichar *msgURI, nsIOutputStream *outStream)
+nsMsgQuote::QuoteMessage(const PRUnichar *msgURI, nsIStreamListener * aQuoteMsgStreamListener)
 {
 nsresult  rv;
 
   if (!msgURI)
     return NS_ERROR_INVALID_ARG;
 
-  mOutStream = outStream;
+  mStreamListener = aQuoteMsgStreamListener;
+
   mTmpFileSpec = nsMsgCreateTempFileSpec("nsquot.tmp"); 
 	if (!mTmpFileSpec)
     return NS_ERROR_FAILURE;
