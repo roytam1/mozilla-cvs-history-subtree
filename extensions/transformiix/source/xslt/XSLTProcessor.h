@@ -337,8 +337,8 @@ private:
     void processTemplate(Node* node, Node* xslTemplate, ProcessorState* ps, NamedMap* actualParams = NULL);
     void processTemplateParams(Node* xslTemplate, Node* context, ProcessorState* ps, NamedMap* actualParams);
 
-    void processTopLevel(Document* xslDocument, ProcessorState* ps);
-    void processTopLevel(Element* stylesheet, ProcessorState* ps);
+    void processTopLevel(Document* aSource, Document* aStylesheet, ProcessorState* aPs);
+    void processTopLevel(Document* aSource, Element* aStylesheet, ProcessorState* aPs);
 
     ExprResult* processVariable(Node* node, Element* xslVariable, ProcessorState* ps);
 
