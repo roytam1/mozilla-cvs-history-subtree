@@ -134,6 +134,8 @@ XTF_BRANCH_NEW_FILES = \
 	js/src/xpconnect/codelib/mozIJSCodeLib.idl \
 	js/src/xpconnect/codelib/mozJSCodeLib.cpp \
 	js/src/xpconnect/codelib/mozJSCodeLib.h \
+	js/src/xpconnect/codelib/IOLib.js \
+	js/src/xpconnect/codelib/ProfileLib.js \
 	js/src/xpconnect/codelib/StdLib.js \
 	js/src/xpconnect/codelib/TemplateLib.js \
 	js/src/xpconnect/shared/Makefile.in \
