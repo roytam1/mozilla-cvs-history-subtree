@@ -162,10 +162,14 @@ txStandaloneXSLTProcessor::transform(Document* aSource, Node* aStylesheet,
         return rv;
     }
 
+#ifndef XP_WIN
     bool sync = aOut.sync_with_stdio(false);
+#endif
     // Process root of XML source document
     txXSLTProcessor::transform(&ps);
+#ifndef XP_WIN
     aOut.sync_with_stdio(sync);
+#endif
 
     return NS_OK;
 }
