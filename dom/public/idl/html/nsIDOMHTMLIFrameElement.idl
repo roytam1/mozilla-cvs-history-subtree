@@ -35,5 +35,5 @@ interface nsIDOMHTMLIFrameElement : nsIDOMHTMLElement
            attribute DOMString        src;
            attribute DOMString        width;
   // Introduced in DOM Level 2:
-           attribute nsIDOMDocument   contentDocument;
+  readonly attribute nsIDOMDocument   contentDocument;
 };

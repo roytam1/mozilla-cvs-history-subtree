@@ -201,12 +201,6 @@ nsHTMLFrameElement::GetContentDocument(nsIDOMDocument** aContentDocument)
 }
 
 NS_IMETHODIMP
-nsHTMLFrameElement::SetContentDocument(nsIDOMDocument* aContentDocument)
-{
-  return NS_ERROR_DOM_INVALID_MODIFICATION_ERR;
-}
-
-NS_IMETHODIMP
 nsHTMLFrameElement::StringToAttribute(nsIAtom* aAttribute,
                                       const nsAReadableString& aValue,
                                       nsHTMLValue& aResult)

@@ -33,5 +33,5 @@ interface nsIDOMHTMLFrameElement : nsIDOMHTMLElement
            attribute DOMString        scrolling;
            attribute DOMString        src;
   // Introduced in DOM Level 2:
-           attribute nsIDOMDocument   contentDocument;
+  readonly attribute nsIDOMDocument   contentDocument;
 };

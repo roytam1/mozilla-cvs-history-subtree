@@ -24,7 +24,7 @@
 [scriptable, uuid(a6cf90b7-15b3-11d2-932e-00805f8add32)]
 interface nsIDOMHTMLTableCellElement : nsIDOMHTMLElement
 {
-           attribute long             cellIndex;
+  readonly attribute long             cellIndex;
            attribute DOMString        abbr;
            attribute DOMString        align;
            attribute DOMString        axis;
