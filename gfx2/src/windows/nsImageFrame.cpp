@@ -404,7 +404,7 @@ nsresult nsImageFrame::DrawImage(HDC aDestDC, const nsRect * aSrcRect, const nsP
 
 //	mBHead->biHeight = -mBHead->biHeight;
   int rop = SRCCOPY;
-  if (mAlphaData) {
+  if (mAlphaData && mAlphaData->depth == 1) {
     MONOBITMAPINFO bmi(width, -height);
     bmi.bmiHeader.biSizeImage = mAlphaData->length;
     ::StretchDIBits(aDestDC, (aDestPoint->x + aSrcRect->x), (aDestPoint->y + aSrcRect->y), width, height,
