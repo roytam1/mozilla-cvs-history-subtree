@@ -53,9 +53,7 @@ pref("xpinstall.dialog.progress.type.chrome", "Extension:Manager-extensions");
 // this application as an extension target, and by the SmartUpdate system to identify
 // this application to the Update server.
 pref("app.id", "{ec8030f7-c20a-464f-9b0e-13a3a9e97384}");
-pref("app.version", 
-#expand __APP_VERSION__
-);
+pref("app.version", "0.9");
 pref("app.build_id", 
 #expand __BUILD_ID__
 );
