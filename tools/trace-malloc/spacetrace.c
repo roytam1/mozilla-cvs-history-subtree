@@ -1977,17 +1977,22 @@ void tmEventHandler(tmreader* aReader, tmevent* aEvent)
                     if(NULL != CALLSITE_RUN(callsite))
                     {
                         char eventType = aEvent->type;
+                        PRUint32 eventSize = aEvent->u.alloc.size;
                         
                         /*
                         ** Play a nasty trick on reallocs of size zero.
-                        ** They are to become free events.
+                        ** They are to become free events, adjust the size accordingly.
                         ** This allows me to avoid all types of special case code.
                         */
                         if(0 == aEvent->u.alloc.size && TM_EVENT_REALLOC == aEvent->type)
                         {
                             eventType = TM_EVENT_FREE;
+                            if(0 != aEvent->u.alloc.oldserial)
+                            {
+                                eventSize = aEvent->u.alloc.oldsize;
+                            }
                         }
-                        trackEvent(ticks2msec(aReader, aEvent->u.alloc.interval), eventType, ticks2usec(aReader, aEvent->u.alloc.cost), callsite, aEvent->u.alloc.ptr, aEvent->u.alloc.size, oldcallsite, oldptr, oldsize);
+                        trackEvent(ticks2msec(aReader, aEvent->u.alloc.interval), eventType, ticks2usec(aReader, aEvent->u.alloc.cost), callsite, aEvent->u.alloc.ptr, eventSize, oldcallsite, oldptr, oldsize);
                     }
                 }
                 else
