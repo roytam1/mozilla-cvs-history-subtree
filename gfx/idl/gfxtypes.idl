@@ -34,6 +34,7 @@
 #ifndef NS_NO_VTABLE
 #define NS_NO_VTABLE
 #endif
+#include "gfxcompat.h"
 %}
 /*! @endverbatim */
 
@@ -61,11 +62,9 @@ typedef float               gfx_angle;
  * A color is a 32 bit unsigned integer with
  * four components: R, G, B and A.
  *
- * @var typedef unsigned long gfx_color
+ * @var typedef PRUint32 gfx_color
  */
-typedef unsigned long       gfx_color;
-
-typedef gfx_color nscolor;
+typedef PRUint32            gfx_color;
 
 /**
  * typedef that should be used for bit depths
@@ -119,15 +118,13 @@ interface nsIGFXFormat
 };
 
 /*! @verbatim */
-[ptr] native nsRect(nsRect);
-[ptr] native nsSize(nsSize);
-[ptr] native nsPoint(nsPoint);
-[ptr] native nsFont(nsFont);
+[ptr] native nsRect2(nsRect2);
+[ptr] native nsSize2(nsSize2);
+[ptr] native nsPoint2(nsPoint2);
 
 %{C++
- struct nsPoint;
- struct nsSize; 
- struct nsRect;
- struct nsFont;
+ struct nsPoint2;
+ struct nsSize2;
+ struct nsRect2;
 %}
 /*! @endverbatim */
