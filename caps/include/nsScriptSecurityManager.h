@@ -31,6 +31,9 @@ public:
   virtual ~nsScriptSecurityManager();
 
   NS_DECL_ISUPPORTS
+  
+  static nsScriptSecurityManager *
+  GetScriptSecurityManager();
 
   NS_IMETHOD CheckScriptAccess(nsIScriptContext* aContext, void* aObj, const char* aProp, PRBool* aResult);
   NS_IMETHOD GetSubjectOriginURL(JSContext *aCx, char** aOrigin);

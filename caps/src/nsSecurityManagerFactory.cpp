@@ -41,6 +41,34 @@ static NS_DEFINE_CID(kScriptSecurityManagerCID, NS_SCRIPTSECURITYMANAGER_CID);
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsScriptSecurityManager)
 
 static NS_IMETHODIMP
+Construct_nsIScriptSecurityManager(nsISupports * aOuter, REFNSIID aIID, void * * aResult)
+{
+	nsresult rv;
+	nsISupports *obj;
+	if(!aResult)
+	{
+		rv = NS_ERROR_NULL_POINTER;
+		goto done;
+	}
+	*aResult = NULL;
+	if(aOuter)
+	{
+		rv = NS_ERROR_NO_AGGREGATION;
+		goto done;
+	}
+	obj = nsScriptSecurityManager::GetScriptSecurityManager();
+	if(!obj)
+	{
+		rv = NS_ERROR_OUT_OF_MEMORY;
+		goto done;
+	}
+	rv = obj->QueryInterface(aIID, aResult);
+	NS_ASSERTION(NS_SUCCEEDED(rv), "unable to find correct interface");
+done:
+	return rv;
+}
+
+static NS_IMETHODIMP
 Construct_nsISecurityManager(nsISupports * aOuter, REFNSIID aIID, void * * aResult)
 {
 	nsresult rv;
@@ -138,7 +166,7 @@ NSGetFactory(nsISupports * aServMgr, const nsCID & aClass, const char * aClassNa
 	if(aClass.Equals(kCCapsManagerCID)) rv = factory->SetConstructor(Construct_nsISecurityManager);
 	else if(aClass.Equals(kPrivilegeManagerCID)) rv = factory->SetConstructor(Construct_nsIPrivilegeManager);
 	else if(aClass.Equals(kPrincipalManagerCID)) rv = factory->SetConstructor(Construct_nsIPrincipalManager);
-  else if(aClass.Equals(kScriptSecurityManagerCID)) rv = factory->SetConstructor(nsScriptSecurityManagerConstructor);
+  else if(aClass.Equals(kScriptSecurityManagerCID)) rv = factory->SetConstructor(Construct_nsIScriptSecurityManager);
 	else
 	{
 		NS_ASSERTION(0, "incorrectly registered");

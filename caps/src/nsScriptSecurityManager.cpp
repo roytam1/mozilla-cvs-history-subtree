@@ -48,6 +48,14 @@ nsScriptSecurityManager::~nsScriptSecurityManager(void)
 //  nsServiceManager::ReleaseService(kPrefServiceCID, mPrefs);  
 } 
 
+nsScriptSecurityManager *
+nsScriptSecurityManager::GetScriptSecurityManager()
+{
+	static nsScriptSecurityManager * ssecMan = NULL;
+	if(!ssecMan) ssecMan = new nsScriptSecurityManager();
+	return ssecMan;
+}
+
 NS_IMETHODIMP 
 nsScriptSecurityManager::NewJSPrincipals(nsIURI *aURL, nsString* aName, nsIPrincipal * * result)
 {

@@ -100,7 +100,6 @@ nsJSContext::nsJSContext(JSRuntime *aRuntime)
 	mNameSpaceManager = nsnull;
 	mIsInitialized = PR_FALSE;
 	mNumEvaluations = 0;
-	mSecManager = nsnull;
 }
 
 nsJSContext::~nsJSContext()
@@ -118,14 +117,12 @@ nsJSContext::~nsJSContext()
 	
 	NS_IF_RELEASE(mNameSpaceManager);
 	JS_DestroyContext(mContext);
-	NS_IF_RELEASE(mSecManager);
 }
 
 NS_IMPL_ISUPPORTS(nsJSContext, kIScriptContextIID);
 
 NS_IMETHODIMP_(PRBool)
-nsJSContext::EvaluateString(const nsString& aScript, const char * aURL,
-                            PRUint32 aLineNo, nsString& aRetValue, PRBool* aIsUndefined)
+nsJSContext::EvaluateString(const nsString& aScript, const char * aURL, PRUint32 aLineNo, nsString& aRetValue, PRBool* aIsUndefined)
 {
 	jsval val;
 	nsIScriptGlobalObject *global = GetGlobalObject();
@@ -384,19 +381,14 @@ nsJSContext::GetNameSpaceManager(nsIScriptNameSpaceManager** aInstancePtr)
 }
 
 NS_IMETHODIMP
-nsJSContext::GetSecurityManager(nsIScriptSecurityManager** aInstancePtr)
+nsJSContext::GetSecurityManager(nsIScriptSecurityManager * * aInstancePtr)
 {
-	if (mSecManager) {
-		*aInstancePtr = mSecManager;
-		NS_ADDREF(*aInstancePtr);
-		return NS_OK;
-	}
-  //XXXARIEL seems like not the best way to make singleton
   nsresult ret;
-  NS_WITH_SERVICE(nsIScriptSecurityManager,mSecManager,NS_SCRIPTSECURITYMANAGER_PROGID,&ret);
-	if (NS_OK == ret) {
-		*aInstancePtr = mSecManager;
-		NS_ADDREF(*aInstancePtr);
+  NS_WITH_SERVICE(nsIScriptSecurityManager, secManager,NS_SCRIPTSECURITYMANAGER_PROGID,& ret);
+	if (NS_OK == ret) 
+	{
+    *aInstancePtr = secManager;
+	  NS_ADDREF(* aInstancePtr);
 	}
 	return ret;
 }
