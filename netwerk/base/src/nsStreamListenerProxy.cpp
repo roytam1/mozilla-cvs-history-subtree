@@ -1,11 +1,32 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ *
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s):
+ */
+
 #include "nsStreamListenerProxy.h"
 #include "nsIGenericFactory.h"
 #include "nsIInputStream.h"
 #include "nsIPipe.h"
 #include "nsAutoLock.h"
 
-#define PRINTF NS_LOG_PRINTF(nsStreamProxyLog)
-#define FLUSH NS_LOG_FLUSH(nsStreamProxyLog)
+#define LOG(args) PR_LOG(gStreamProxyLog, PR_LOG_DEBUG, args)
 
 #define DEFAULT_BUFFER_SEGMENT_SIZE 2048
 #define DEFAULT_BUFFER_MAX_SIZE  (4*2048)
@@ -28,80 +49,6 @@
 // suspended!!  For the moment this is not a problem, but it should be fixed.
 //----------------------------------------------------------------------------
 //
-
-#ifdef DEBUG
-//
-//----------------------------------------------------------------------------
-// nsInputStreamGuard
-//   - limits the listener's access to the underlying pipe
-//   - records the number of bytes read from the pipe for debugging purposes.
-//----------------------------------------------------------------------------
-//
-class nsInputStreamGuard : public nsIInputStream
-{
-    NS_DECL_ISUPPORTS
-
-    nsInputStreamGuard() : mBytesRead(0) {NS_INIT_ISUPPORTS();}
-    virtual ~nsInputStreamGuard() {}
-
-    NS_IMETHOD Close() {
-        mSource = 0;
-        return NS_OK;
-    }
-    NS_IMETHOD Available(PRUint32 *aResult) {
-        NS_PRECONDITION(mSource, "source is null");
-        return mSource->Available(aResult);
-    }
-    NS_IMETHOD Read(char *aBuf, PRUint32 aCount, PRUint32 *aBytesRead) {
-        NS_PRECONDITION(mSource, "source is null");
-        nsresult rv = mSource->Read(aBuf, aCount, aBytesRead);
-        if (NS_SUCCEEDED(rv))
-            mBytesRead += *aBytesRead;
-        return rv;
-    }
-    NS_IMETHOD ReadSegments(nsWriteSegmentFun aWriter, void *aClosure,
-                            PRUint32 aCount, PRUint32 *aBytesRead) {
-        NS_PRECONDITION(mSource, "source is null");
-        nsresult rv = mSource->ReadSegments(aWriter, aClosure, aCount, aBytesRead);
-        if (NS_SUCCEEDED(rv))
-            mBytesRead += *aBytesRead;
-        return rv;
-    }
-    NS_IMETHOD GetNonBlocking(PRBool *aResult) {
-        NS_PRECONDITION(mSource, "source is null");
-        return mSource->GetNonBlocking(aResult);
-    }
-    NS_IMETHOD GetObserver(nsIInputStreamObserver **aObserver) {
-        NS_NOTREACHED("GetObserver");
-        return NS_ERROR_NOT_IMPLEMENTED;
-    }
-    NS_IMETHOD SetObserver(nsIInputStreamObserver *aObserver) {
-        NS_NOTREACHED("SetObserver");
-        return NS_ERROR_NOT_IMPLEMENTED;
-    }
-
-    // 
-    // Helper methods
-    //
-    void SetSource(nsIInputStream *aSource) {
-        mSource = aSource;
-    }
-    PRUint32 GetBytesRead() {
-        return mBytesRead;
-    }
-
-protected:
-    nsCOMPtr<nsIInputStream> mSource;
-    PRUint32                 mBytesRead;
-};
-
-NS_IMPL_THREADSAFE_ISUPPORTS1(nsInputStreamGuard,
-                              nsIInputStream)
-
-#define TO_INPUT_STREAM_GUARD(p) \
-    ((nsInputStreamGuard *) (nsIInputStream *) p)
-
-#endif /* !DEBUG */
 
 //
 //----------------------------------------------------------------------------
@@ -145,7 +92,7 @@ nsStreamListenerProxy::GetPendingCount()
 class nsOnDataAvailableEvent : public nsStreamObserverEvent
 {
 public:
-    nsOnDataAvailableEvent(nsStreamObserverProxyBase *aProxy,
+    nsOnDataAvailableEvent(nsStreamProxyBase *aProxy,
                            nsIChannel *aChannel,
                            nsISupports *aContext,
                            nsIInputStream *aSource,
@@ -172,14 +119,14 @@ protected:
 NS_IMETHODIMP
 nsOnDataAvailableEvent::HandleEvent()
 {
-    PRINTF("HandleEvent -- OnDataAvailable [event=%x]", this);
+    LOG(("HandleEvent -- OnDataAvailable [event=%x]", this));
 
     nsStreamListenerProxy *listenerProxy =
         NS_STATIC_CAST(nsStreamListenerProxy *, mProxy);
 
     nsCOMPtr<nsIStreamListener> listener = listenerProxy->GetListener();
     if (!listener) {
-        PRINTF("Already called OnStopRequest (listener is NULL)\n");
+        LOG(("Already called OnStopRequest (listener is NULL)\n"));
         return NS_ERROR_FAILURE;
     }
 
@@ -198,24 +145,20 @@ nsOnDataAvailableEvent::HandleEvent()
         // Find out from the listener proxy how many bytes to report.
         //
         PRUint32 count = listenerProxy->GetPendingCount();
-#ifdef NS_ENABLE_LOGGING
+
+#if defined(PR_LOGGING)
         {
             PRUint32 avail;
             mSource->Available(&avail);
-            PRINTF("HandleEvent -- calling the consumer's OnDataAvailable [offset=%u count=%u avail=%u]\n",
-                    mOffset, count, avail);FLUSH();
+            LOG(("HandleEvent -- calling the consumer's OnDataAvailable [offset=%u count=%u avail=%u]\n",
+                mOffset, count, avail));
         }
 #endif
 
-        // Give the listener a chance to read some data.
+        // Forward call to listener
         rv = listener->OnDataAvailable(mChannel, mContext, mSource, mOffset, count);
 
-        PRINTF("HandleEvent -- done with the consumer's OnDataAvailable [rv=%x]\n", rv);FLUSH();
-
-#ifdef DEBUG
-        PRUint32 bytesRead = TO_INPUT_STREAM_GUARD(mSource)->GetBytesRead();
-        PRINTF("HandleEvent -- %u bytes read out of %u total\n", bytesRead, count);FLUSH();
-#endif
+        LOG(("HandleEvent -- done with the consumer's OnDataAvailable [rv=%x]\n", rv));
 
         //
         // XXX Need to suspend the underlying channel... must consider
@@ -225,7 +168,7 @@ nsOnDataAvailableEvent::HandleEvent()
         //
         if (rv == NS_BASE_STREAM_WOULD_BLOCK) {
             NS_NOTREACHED("listener returned NS_BASE_STREAM_WOULD_BLOCK"
-                          " -- functionality not implemented");
+                          " -- support for this is not implemented");
             rv = NS_ERROR_NOT_IMPLEMENTED;
         }
 
@@ -234,11 +177,8 @@ nsOnDataAvailableEvent::HandleEvent()
         //
         listenerProxy->SetListenerStatus(rv);
     }
-#ifdef NS_ENABLE_LOGGING
-    else {
-        PRINTF("not calling OnDataAvailable");FLUSH();
-    }
-#endif
+    else
+        LOG(("not calling OnDataAvailable"));
     return NS_OK;
 }
 
@@ -248,7 +188,7 @@ nsOnDataAvailableEvent::HandleEvent()
 //----------------------------------------------------------------------------
 //
 NS_IMPL_ISUPPORTS_INHERITED3(nsStreamListenerProxy,
-                             nsStreamObserverProxyBase,
+                             nsStreamProxyBase,
                              nsIStreamListenerProxy,
                              nsIStreamListener,
                              nsIInputStreamObserver)
@@ -263,7 +203,7 @@ nsStreamListenerProxy::OnStartRequest(nsIChannel *aChannel,
                                       nsISupports *aContext)
 {
 
-    return nsStreamObserverProxyBase::OnStartRequest(aChannel, aContext);
+    return nsStreamProxyBase::OnStartRequest(aChannel, aContext);
 }
 
 NS_IMETHODIMP
@@ -278,8 +218,8 @@ nsStreamListenerProxy::OnStopRequest(nsIChannel *aChannel,
     mPipeIn = 0;
     mPipeOut = 0;
 
-    return nsStreamObserverProxyBase::OnStopRequest(aChannel, aContext,
-                                                    aStatus, aStatusText);
+    return nsStreamProxyBase::OnStopRequest(aChannel, aContext,
+                                            aStatus, aStatusText);
 }
 
 //
@@ -297,14 +237,12 @@ nsStreamListenerProxy::OnDataAvailable(nsIChannel *aChannel,
     nsresult rv;
     PRUint32 bytesWritten=0;
 
-    PRINTF("nsStreamListenerProxy::OnDataAvailable [offset=%u, count=%u]\n",
-            aOffset, aCount);
+    LOG(("nsStreamListenerProxy::OnDataAvailable [offset=%u, count=%u]\n",
+         aOffset, aCount));
 
     NS_PRECONDITION(mChannelToResume == 0, "Unexpected call to OnDataAvailable");
     NS_PRECONDITION(mPipeIn, "Pipe not initialized");
     NS_PRECONDITION(mPipeOut, "Pipe not initialized");
-    NS_PRECONDITION(mListenerStatus != NS_BASE_STREAM_WOULD_BLOCK,
-                    "Invalid listener status");
 
     //
     // Any non-successful listener status gets passed back to the caller
@@ -312,7 +250,7 @@ nsStreamListenerProxy::OnDataAvailable(nsIChannel *aChannel,
     {
         nsresult status = mListenerStatus;
         if (NS_FAILED(status)) {
-            PRINTF("listener failed [status=%x]\n", status);
+            LOG(("listener failed [status=%x]\n", status));
             return status;
         }
     }
@@ -331,22 +269,20 @@ nsStreamListenerProxy::OnDataAvailable(nsIChannel *aChannel,
         // ChannelToResume lock ensures that the resume will follow
         // the suspend.
         //
-        PRINTF("Writing to the pipe...\n");FLUSH();
         rv = mPipeOut->WriteFrom(aSource, aCount, &bytesWritten);
 
-        PRINTF("mPipeOut->WriteFrom(aSource) "
-               "[rv=%x aCount=%u bytesWritten=%u]\n",
-                rv, aCount, bytesWritten);FLUSH();
+        LOG(("Wrote data to pipe [rv=%x count=%u bytesWritten=%u]\n",
+            rv, aCount, bytesWritten));
 
         if (NS_FAILED(rv)) {
             if (rv == NS_BASE_STREAM_WOULD_BLOCK) {
-                PRINTF("Setting channel to resume\n");FLUSH();
+                LOG(("Setting channel to resume\n"));
                 mChannelToResume = aChannel;
             }
             return rv;
         }
         else if (bytesWritten == 0) {
-            PRINTF("Copied zero bytes; not posting an event\n");
+            LOG(("Copied zero bytes; not posting an event\n"));
             return NS_BASE_STREAM_CLOSED; // there was no more data to read!
         }
     }
@@ -365,8 +301,8 @@ nsStreamListenerProxy::OnDataAvailable(nsIChannel *aChannel,
         //
         if (mPendingCount > 0) {
             mPendingCount += bytesWritten;
-            PRINTF("Piggy-backing pending OnDataAvailable event [mPendingCount=%u]\n",
-                    mPendingCount);
+            LOG(("Piggy-backing pending OnDataAvailable event [mPendingCount=%u]\n",
+                mPendingCount));
             return NS_OK;
         }
         else
@@ -376,15 +312,8 @@ nsStreamListenerProxy::OnDataAvailable(nsIChannel *aChannel,
     //
     // Post an event for the number of bytes actually written.
     //
-    nsCOMPtr<nsIInputStream> source;
-#ifdef DEBUG
-    NS_NEWXPCOM(source, nsInputStreamGuard);
-    TO_INPUT_STREAM_GUARD(source)->SetSource(mPipeIn);
-#else
-    source = mPipeIn;
-#endif
     nsOnDataAvailableEvent *ev =
-        new nsOnDataAvailableEvent(this, aChannel, aContext, source, aOffset);
+        new nsOnDataAvailableEvent(this, aChannel, aContext, mPipeIn, aOffset);
     if (!ev) return NS_ERROR_OUT_OF_MEMORY;
 
     rv = ev->FireEvent(GetEventQueue());
@@ -432,10 +361,7 @@ nsStreamListenerProxy::Init(nsIStreamListener *aListener,
     if (NS_FAILED(rv)) return rv;
 
     rv = mPipeIn->SetObserver(this);
-    if (NS_FAILED(rv)) {
-        PRINTF("SetObserver failed: rv=%x\n", rv);
-        return rv;
-    }
+    if (NS_FAILED(rv)) return rv;
 
     SetReceiver(aListener);
     return SetEventQueue(aEventQ);
@@ -449,7 +375,7 @@ nsStreamListenerProxy::Init(nsIStreamListener *aListener,
 NS_IMETHODIMP
 nsStreamListenerProxy::OnEmpty(nsIInputStream *aInputStream)
 {
-    PRINTF("OnEmpty\n");FLUSH();
+    LOG(("OnEmpty\n"));
     //
     // The pipe has been emptied by the listener.  If the channel
     // has been suspended (waiting for the pipe to be emptied), then
@@ -459,12 +385,11 @@ nsStreamListenerProxy::OnEmpty(nsIInputStream *aInputStream)
     nsCOMPtr<nsIChannel> chan;
     {
         nsAutoLock lock(mCLock);
-
         chan = mChannelToResume;
         mChannelToResume = 0;
     }
     if (chan) {
-        PRINTF("OnEmpty -- resuming channel\n");FLUSH();
+        LOG(("OnEmpty -- resuming channel\n"));
         chan->Resume();
     }
     return NS_OK;
@@ -473,6 +398,6 @@ nsStreamListenerProxy::OnEmpty(nsIInputStream *aInputStream)
 NS_IMETHODIMP
 nsStreamListenerProxy::OnClose(nsIInputStream *aInputStream)
 {
-    PRINTF("OnClose\n");FLUSH();
+    LOG(("OnClose\n"));
     return NS_OK;
 }

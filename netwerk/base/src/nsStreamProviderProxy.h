@@ -6,7 +6,7 @@
 #include "nsIInputStream.h"
 #include "nsIOutputStream.h"
 
-class nsStreamProviderProxy : public nsStreamObserverProxyBase
+class nsStreamProviderProxy : public nsStreamProxyBase
                             , public nsIStreamProviderProxy
 {
 public:
@@ -31,7 +31,6 @@ public:
 protected:
     nsCOMPtr<nsIInputStream>  mPipeIn;
     nsCOMPtr<nsIOutputStream> mPipeOut;
-
     nsresult                  mProviderStatus;
 };
 

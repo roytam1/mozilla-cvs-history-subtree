@@ -1,8 +1,29 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ *
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s):
+ */
+
 #include "nsStreamProviderProxy.h"
 #include "nsIPipe.h"
 
-#define PRINTF NS_LOG_PRINTF(nsStreamProxyLog)
-#define FLUSH NS_LOG_FLUSH(nsStreamProxyLog)
+#define LOG(args) PR_LOG(gStreamProxyLog, PR_LOG_DEBUG, args)
 
 #define DEFAULT_BUFFER_SEGMENT_SIZE 2048
 #define DEFAULT_BUFFER_MAX_SIZE  (4*2048)
@@ -37,7 +58,7 @@ nsStreamProviderProxy::~nsStreamProviderProxy()
 class nsOnProvideDataEvent : public nsStreamObserverEvent
 {
 public:
-    nsOnProvideDataEvent(nsStreamObserverProxyBase *aProxy,
+    nsOnProvideDataEvent(nsStreamProxyBase *aProxy,
                          nsIChannel *aChannel,
                          nsISupports *aContext,
                          nsIOutputStream *aSink,
@@ -67,14 +88,14 @@ protected:
 NS_IMETHODIMP
 nsOnProvideDataEvent::HandleEvent()
 {
-    PRINTF("HandleEvent -- OnProvideData [event=%x]", this);
+    LOG(("HandleEvent -- OnProvideData [event=%x]", this));
 
     nsStreamProviderProxy *providerProxy = 
         NS_STATIC_CAST(nsStreamProviderProxy *, mProxy);
 
     nsCOMPtr<nsIStreamProvider> provider = providerProxy->GetProvider();
     if (!provider) {
-        PRINTF("Already called OnStopRequest (provider is NULL)\n");
+        LOG(("Already called OnStopRequest (provider is NULL)\n"));
         return NS_ERROR_FAILURE;
     }
 
@@ -89,9 +110,9 @@ nsOnProvideDataEvent::HandleEvent()
     // have cancelled the channel after _this_ event was triggered.
     //
     if (NS_SUCCEEDED(status)) {
-        PRINTF("HandleEvent -- calling the consumer's OnProvideData\n");
+        LOG(("HandleEvent -- calling the consumer's OnProvideData\n"));
         rv = provider->OnProvideData(mChannel, mContext, mSink, mOffset, mCount);
-        PRINTF("HandleEvent -- done with the consumer's OnProvideData [rv=%x]\n", rv);
+        LOG(("HandleEvent -- done with the consumer's OnProvideData [rv=%x]\n", rv));
 
         //
         // Mask NS_BASE_STREAM_WOULD_BLOCK return values.
@@ -108,7 +129,7 @@ nsOnProvideDataEvent::HandleEvent()
     }
 #ifdef NS_ENABLE_LOGGING
     else
-        PRINTF("not calling OnProvideData");
+        LOG(("not calling OnProvideData"));
 #endif
     return NS_OK;
 }
@@ -119,7 +140,7 @@ nsOnProvideDataEvent::HandleEvent()
 //----------------------------------------------------------------------------
 //
 NS_IMPL_ISUPPORTS_INHERITED2(nsStreamProviderProxy,
-                             nsStreamObserverProxyBase,
+                             nsStreamProxyBase,
                              nsIStreamProviderProxy,
                              nsIStreamProvider)
 
@@ -132,7 +153,7 @@ NS_IMETHODIMP
 nsStreamProviderProxy::OnStartRequest(nsIChannel *aChannel,
                                       nsISupports *aContext)
 {
-    return nsStreamObserverProxyBase::OnStartRequest(aChannel, aContext);
+    return nsStreamProxyBase::OnStartRequest(aChannel, aContext);
 }
 
 NS_IMETHODIMP
@@ -147,8 +168,8 @@ nsStreamProviderProxy::OnStopRequest(nsIChannel *aChannel,
     mPipeIn = 0;
     mPipeOut = 0;
 
-    return nsStreamObserverProxyBase::OnStopRequest(aChannel, aContext,
-                                                    aStatus, aStatusText);
+    return nsStreamProxyBase::OnStopRequest(aChannel, aContext,
+                                            aStatus, aStatusText);
 }
 
 //
@@ -177,8 +198,8 @@ nsStreamProviderProxy::OnProvideData(nsIChannel *aChannel,
 {
     nsresult rv;
 
-    PRINTF("nsStreamProviderProxy::OnProvideData [offset=%u, count=%u]\n",
-            aOffset, aCount);
+    LOG(("nsStreamProviderProxy::OnProvideData [offset=%u, count=%u]\n",
+        aOffset, aCount));
 
     NS_PRECONDITION(aCount > 0, "Invalid parameter");
     NS_PRECONDITION(mPipeIn, "Pipe not initialized");
@@ -190,7 +211,7 @@ nsStreamProviderProxy::OnProvideData(nsIChannel *aChannel,
     // Any non-successful provider status gets passed back to the caller
     //
     if (NS_FAILED(mProviderStatus)) {
-        PRINTF("provider failed [status=%x]\n", mProviderStatus);
+        LOG(("provider failed [status=%x]\n", mProviderStatus));
         return mProviderStatus;
     }
 

@@ -27,18 +27,20 @@
 #include "nsIEventQueue.h"
 #include "nsIChannel.h"
 #include "nsCOMPtr.h"
-#include "nslog.h"
+#include "prlog.h"
 
-NS_DECL_LOG(nsStreamProxyLog)
+#if defined(PR_LOGGING)
+extern PRLogModuleInfo *gStreamProxyLog;
+#endif
 
-class nsStreamObserverProxyBase : public nsIStreamObserver
+class nsStreamProxyBase : public nsIStreamObserver
 {
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSISTREAMOBSERVER
 
-    nsStreamObserverProxyBase() { NS_INIT_ISUPPORTS(); }
-    virtual ~nsStreamObserverProxyBase() {}
+    nsStreamProxyBase() { NS_INIT_ISUPPORTS(); }
+    virtual ~nsStreamProxyBase() {}
 
     nsIEventQueue *GetEventQueue() { return mEventQ.get(); }
     nsIStreamObserver *GetReceiver() { return mReceiver.get(); }
@@ -55,19 +57,19 @@ private:
     nsCOMPtr<nsIStreamObserver> mReceiver;
 };
 
-class nsStreamObserverProxy : public nsStreamObserverProxyBase
+class nsStreamObserverProxy : public nsStreamProxyBase
                             , public nsIStreamObserverProxy
 {
 public:
     NS_DECL_ISUPPORTS_INHERITED
-    NS_FORWARD_NSISTREAMOBSERVER(nsStreamObserverProxyBase::)
+    NS_FORWARD_NSISTREAMOBSERVER(nsStreamProxyBase::)
     NS_DECL_NSISTREAMOBSERVERPROXY
 };
 
 class nsStreamObserverEvent
 {
 public:
-    nsStreamObserverEvent(nsStreamObserverProxyBase *proxy,
+    nsStreamObserverEvent(nsStreamProxyBase *proxy,
                           nsIChannel *channel, nsISupports *context);
     virtual ~nsStreamObserverEvent();
 
@@ -78,10 +80,10 @@ protected:
     static void PR_CALLBACK HandlePLEvent(PLEvent *);
     static void PR_CALLBACK DestroyPLEvent(PLEvent *);
 
-    PLEvent                    mEvent;
-    nsStreamObserverProxyBase *mProxy;
-    nsCOMPtr<nsIChannel>       mChannel;
-    nsCOMPtr<nsISupports>      mContext;
+    PLEvent                mEvent;
+    nsStreamProxyBase     *mProxy;
+    nsCOMPtr<nsIChannel>   mChannel;
+    nsCOMPtr<nsISupports>  mContext;
 };
 
 #define GET_STREAM_OBSERVER_EVENT(_mEvent_ptr) \

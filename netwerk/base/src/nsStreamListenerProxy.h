@@ -8,7 +8,7 @@
 #include "nsIOutputStream.h"
 #include "nsCOMPtr.h"
 
-class nsStreamListenerProxy : public nsStreamObserverProxyBase
+class nsStreamListenerProxy : public nsStreamProxyBase
                             , public nsIStreamListenerProxy
                             , public nsIInputStreamObserver
 {
@@ -37,13 +37,10 @@ public:
 protected:
     nsCOMPtr<nsIInputStream>  mPipeIn;
     nsCOMPtr<nsIOutputStream> mPipeOut;
-
     nsCOMPtr<nsIChannel>      mChannelToResume;
     PRLock                   *mCLock;
-
     PRUint32                  mPendingCount;
     PRLock                   *mPLock;
-
     nsresult                  mListenerStatus;
 };
 

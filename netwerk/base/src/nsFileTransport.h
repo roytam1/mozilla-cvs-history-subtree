@@ -44,6 +44,9 @@
 
 class nsIInterfaceRequestor;
 
+class nsFileTransportSourceWrapper;
+class nsFileTransportSinkWrapper;
+
 class nsFileTransport : public nsIChannel, 
                         public nsIRunnable
 {
@@ -96,7 +99,7 @@ protected:
     nsCOMPtr<nsIInterfaceRequestor>     mCallbacks;
     nsCOMPtr<nsIProgressEventSink>      mProgress;
     nsCOMPtr<nsIStreamIO>               mStreamIO;
-    char*                               mContentType;
+    char                               *mContentType;
     PRUint32                            mBufferSegmentSize;
     PRUint32                            mBufferMaxSize;
 
@@ -109,7 +112,8 @@ protected:
     // file transport thread:
     RunState                            mRunState;
     nsresult                            mCancelStatus;
-    PRMonitor*                          mMonitor;
+    PRInt32                             mSuspendCount;
+    PRLock                             *mLock;
 
     // The transport is active if it is currently being processed by a thread.
     PRBool                              mActive;
@@ -122,22 +126,18 @@ protected:
     PRInt32                             mTransferAmount;
     nsLoadFlags                         mLoadAttributes;
 
-    // reading state varialbles:
+    // reading state variables:
     nsCOMPtr<nsIStreamListener>         mListener;
     nsCOMPtr<nsIInputStream>            mSource;
-    nsCOMPtr<nsIInputStream>            mSourceWrapper;
+    nsFileTransportSourceWrapper       *mSourceWrapper;
 
     // writing state variables:
     nsCOMPtr<nsIStreamProvider>         mProvider;
     nsCOMPtr<nsIOutputStream>           mSink;
-    nsCOMPtr<nsIOutputStream>           mSinkWrapper;
-
-    // pipe ends:
-    //nsCOMPtr<nsIInputStream>            mPipeIn;
-    //nsCOMPtr<nsIOutputStream>           mPipeOut;
+    nsFileTransportSinkWrapper         *mSinkWrapper;
 
     nsCString                           mStreamName;
-    nsFileTransportService*             mService;
+    nsFileTransportService             *mService;
 };
 
 #define NS_FILE_TRANSPORT_DEFAULT_SEGMENT_SIZE   (2*1024)

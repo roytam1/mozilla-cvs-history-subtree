@@ -25,22 +25,20 @@
 #include "nsIServiceManager.h"
 #include "nsIEventQueueService.h"
 #include "nsString.h"
-#include "nslog.h"
 
-NS_IMPL_LOG(nsStreamProxyLog)
-#define PRINTF NS_LOG_PRINTF(nsStreamProxyLog)
+#if defined(PR_LOGGING)
+PRLogModuleInfo *gStreamProxyLog;
+#endif
+#define LOG(args) PR_LOG(gStreamProxyLog, PR_LOG_DEBUG, args)
 
 static NS_DEFINE_CID(kEventQueueService, NS_EVENTQUEUESERVICE_CID);
-
-#define GET_OBSERVER_PROXY(p) \
-    ((nsStreamObserverProxy *) (nsIStreamObserverProxy *) p)
 
 //
 //----------------------------------------------------------------------------
 // nsStreamObserverEvent implementation...
 //----------------------------------------------------------------------------
 //
-nsStreamObserverEvent::nsStreamObserverEvent(nsStreamObserverProxyBase *aProxy,
+nsStreamObserverEvent::nsStreamObserverEvent(nsStreamProxyBase *aProxy,
                                              nsIChannel *aChannel,
                                              nsISupports *aContext)
     : mProxy(aProxy)
@@ -94,7 +92,7 @@ nsStreamObserverEvent::DestroyPLEvent(PLEvent *aEvent)
 class nsOnStartRequestEvent : public nsStreamObserverEvent
 {
 public:
-    nsOnStartRequestEvent(nsStreamObserverProxyBase *aProxy,
+    nsOnStartRequestEvent(nsStreamProxyBase *aProxy,
                           nsIChannel *aChannel,
                           nsISupports *aContext)
         : nsStreamObserverEvent(aProxy, aChannel, aContext)
@@ -113,11 +111,11 @@ public:
 NS_IMETHODIMP
 nsOnStartRequestEvent::HandleEvent()
 {
-    PRINTF("HandleEvent -- OnStartRequest [event=%x]\n", this);
+    LOG(("HandleEvent -- OnStartRequest [event=%x]\n", this));
 
     nsCOMPtr<nsIStreamObserver> observer = mProxy->GetReceiver();
     if (!observer) {
-        PRINTF("Already called OnStopRequest (observer is NULL)\n");
+        LOG(("Already called OnStopRequest (observer is NULL)\n"));
         return NS_ERROR_FAILURE;
     }
 
@@ -132,7 +130,7 @@ nsOnStartRequestEvent::HandleEvent()
 class nsOnStopRequestEvent : public nsStreamObserverEvent
 {
 public:
-    nsOnStopRequestEvent(nsStreamObserverProxyBase *aProxy,
+    nsOnStopRequestEvent(nsStreamProxyBase *aProxy,
                          nsIChannel *aChannel, nsISupports *aContext,
                          nsresult aStatus, const PRUnichar *aStatusText)
         : nsStreamObserverEvent(aProxy, aChannel, aContext)
@@ -157,11 +155,11 @@ protected:
 NS_IMETHODIMP
 nsOnStopRequestEvent::HandleEvent()
 {
-    PRINTF("HandleEvent -- OnStopRequest [event=%x]\n", this);
+    LOG(("HandleEvent -- OnStopRequest [event=%x]\n", this));
 
     nsCOMPtr<nsIStreamObserver> observer = mProxy->GetReceiver();
     if (!observer) {
-        PRINTF("Already called OnStopRequest (observer is NULL)\n");
+        LOG(("Already called OnStopRequest (observer is NULL)\n"));
         return NS_ERROR_FAILURE;
     }
 
@@ -178,22 +176,22 @@ nsOnStopRequestEvent::HandleEvent()
 
 //
 //----------------------------------------------------------------------------
-// nsStreamObserverProxyBase: nsISupports implementation...
+// nsStreamProxyBase: nsISupports implementation...
 //----------------------------------------------------------------------------
 //
-NS_IMPL_THREADSAFE_ISUPPORTS1(nsStreamObserverProxyBase,
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsStreamProxyBase,
                               nsIStreamObserver)
 
 //
 //----------------------------------------------------------------------------
-// nsStreamObserverProxyBase: nsIStreamObserver implementation...
+// nsStreamProxyBase: nsIStreamObserver implementation...
 //----------------------------------------------------------------------------
 //
 NS_IMETHODIMP 
-nsStreamObserverProxyBase::OnStartRequest(nsIChannel *aChannel,
-                                          nsISupports *aContext)
+nsStreamProxyBase::OnStartRequest(nsIChannel *aChannel,
+                                  nsISupports *aContext)
 {
-    PRINTF("nsStreamObserverProxyBase::OnStartRequest\n");
+    LOG(("nsStreamProxyBase::OnStartRequest\n"));
     nsOnStartRequestEvent *ev = 
             new nsOnStartRequestEvent(this, aChannel, aContext);
     if (!ev)
@@ -206,12 +204,12 @@ nsStreamObserverProxyBase::OnStartRequest(nsIChannel *aChannel,
 }
 
 NS_IMETHODIMP 
-nsStreamObserverProxyBase::OnStopRequest(nsIChannel *aChannel,
+nsStreamProxyBase::OnStopRequest(nsIChannel *aChannel,
                                  nsISupports *aContext,
                                  nsresult aStatus,
                                  const PRUnichar *aStatusText)
 {
-    PRINTF("nsStreamObserverProxyBase::OnStopRequest [status=%x]\n", aStatus);
+    LOG(("nsStreamProxyBase::OnStopRequest [status=%x]\n", aStatus));
     nsOnStopRequestEvent *ev = 
             new nsOnStopRequestEvent(this, aChannel, aContext, aStatus, aStatusText);
     if (!ev)
@@ -225,12 +223,16 @@ nsStreamObserverProxyBase::OnStopRequest(nsIChannel *aChannel,
 
 //
 //----------------------------------------------------------------------------
-// nsStreamObserverProxyBase: implementation...
+// nsStreamProxyBase: implementation...
 //----------------------------------------------------------------------------
 //
 nsresult
-nsStreamObserverProxyBase::SetEventQueue(nsIEventQueue *aEventQ)
+nsStreamProxyBase::SetEventQueue(nsIEventQueue *aEventQ)
 {
+#if defined(PR_LOGGING)
+    if (!gStreamProxyLog)
+        gStreamProxyLog = PR_NewLogModule("nsStreamProxy");
+#endif
     nsresult rv = NS_OK;
     if ((aEventQ == NS_CURRENT_EVENTQ) || (aEventQ == NS_UI_THREAD_EVENTQ)) {
         nsCOMPtr<nsIEventQueueService> serv =
@@ -250,7 +252,7 @@ nsStreamObserverProxyBase::SetEventQueue(nsIEventQueue *aEventQ)
 //----------------------------------------------------------------------------
 //
 NS_IMPL_ISUPPORTS_INHERITED1(nsStreamObserverProxy,
-                             nsStreamObserverProxyBase,
+                             nsStreamProxyBase,
                              nsIStreamObserverProxy)
 
 //

@@ -172,8 +172,6 @@ nsresult nsSocketTransportService::AddToWorkQ(nsSocketTransport* aTransport)
   nsresult rv = NS_OK;
   PRCList* qp;
 
-  //fprintf(stderr, "**** AddToWorkQ [transport=%x]\n", aTransport);
-
   {
     nsAutoLock lock(mThreadLock);
     //
@@ -207,8 +205,6 @@ nsresult nsSocketTransportService::ProcessWorkQ(void)
 {
   nsresult rv = NS_OK;
   PRCList* qp;
-
-  //fprintf(stderr, "**** ProcessWorkQ\n");
 
   //
   // Only process pending operations while there is space available in the
@@ -256,14 +252,11 @@ nsresult nsSocketTransportService::ProcessWorkQ(void)
   }
   PR_Unlock(mThreadLock);
 
-  //fprintf(stderr, "**** Exiting ProcessWorkQ\n");
   return rv;
 }
 
 nsresult nsSocketTransportService::AddToSelectList(nsSocketTransport* aTransport)
 {
-  //fprintf(stderr, "**** AddToSelectList [transport=%x]\n", aTransport);
-
   nsresult rv = NS_OK;
 
   NS_ASSERTION(MAX_OPEN_CONNECTIONS > mSelectFDSetCount, "reached max open connections");
@@ -301,8 +294,6 @@ nsresult nsSocketTransportService::AddToSelectList(nsSocketTransport* aTransport
 
 nsresult nsSocketTransportService::RemoveFromSelectList(nsSocketTransport* aTransport)
 {
-  //fprintf(stderr, "**** RemoveFromSelectList [transport=%x]\n", aTransport);
-
   int i;
   nsresult rv = NS_ERROR_FAILURE;
 
@@ -391,11 +382,7 @@ nsSocketTransportService::Run(void)
     nsSocketTransport* transport;
     int i;
 
-    //fprintf(stderr, "**** Entering PR_Poll\n");
-
     count = PR_Poll(mSelectFDSet, mSelectFDSetCount, pollTimeout);
-
-    //fprintf(stderr, "**** Waking from PR_Poll [setcount=%d]\n", mSelectFDSetCount);
 
     if (-1 == count) {
       // XXX: PR_Poll failed...  What should happen?
