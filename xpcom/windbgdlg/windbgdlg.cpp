@@ -20,6 +20,8 @@
  *
  * Contributor(s): 
  *   John Bandhauer <jband@netscape.com>
+ *   Garrett Arch Blythe <blythe@netscape.com>
+ *          03/19/2002  Unicode enabled for WinCE
  *
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License (the "GPL"), in which case the
@@ -39,17 +41,22 @@
 
 int WINAPI 
 WinMain(HINSTANCE  hInstance, HINSTANCE  hPrevInstance, 
-        LPSTR  lpszCmdLine, int  nCmdShow)
+        LPTSTR  lpszCmdLine, int  nCmdShow)
 {
-    static char msg[4048];
+    static TCHAR msg[4048];
 
     wsprintf(msg,
-             "%s\n\nClick Abort to exit the Application.\n"
-             "Click Retry to Debug the Application..\n"
-             "Click Ignore to continue running the Application.", 
+             _T("%s\n\nClick Abort to exit the Application.\n")
+             _T("Click Retry to Debug the Application..\n")
+             _T("Click Ignore to continue running the Application."), 
              lpszCmdLine);
              
-    return MessageBox(NULL, msg, "nsDebug::Assertion",
-                      MB_ICONSTOP | MB_SYSTEMMODAL| 
+    return MessageBox(NULL, msg, _T("nsDebug::Assertion"),
+                      MB_ICONSTOP |
+#if !defined(WINCE)
+                      MB_SYSTEMMODAL |
+#else
+                      MB_APPLMODAL | MB_TOPMOST | MB_SETFOREGROUND |
+#endif
                       MB_ABORTRETRYIGNORE | MB_DEFBUTTON3);
 }

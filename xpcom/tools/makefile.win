@@ -24,10 +24,14 @@ DEPTH=..\..
 # XXXwaterson this is just because we can't figure out how to make
 # this link right now.
 
-DIRS = windows \
+!if "$(OS_TARGET)" != "WINCE"
+DIRS = \
+    windows \
 !if !defined(MOZ_STATIC_COMPONENT_LIBS)
-       registry \
+    registry \
 !endif
-       $(NULL)
+    $(NULL)
+!endif
+
 
 include <$(DEPTH)\config\rules.mak>
