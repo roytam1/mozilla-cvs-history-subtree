@@ -41,7 +41,6 @@ CPPSRCS		= \
 		nsNntpService.cpp \
 		nsNewsFolder.cpp \
 		nsNntpIncomingServer.cpp \
-		nsNewsMessage.cpp \
 		nsNewsUtils.cpp \
         nsNewsDownloadDialogArgs.cpp \
 		$(NULL)
@@ -57,7 +56,6 @@ EXPORTS		= \
 		nsNntpService.h \
 		nsNewsFolder.h \
 		nsNntpIncomingServer.h \
-		nsNewsMessage.h \
 		nsNewsUtils.h \
 		nsNNTPHost.h \
 		nsNNTPCategoryContainer.h \
