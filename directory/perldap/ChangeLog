@@ -1,3 +1,9 @@
+1998-12-04  Leif Hedstrom  <leif@netscape.com>
+
+	* Makefile.PL: Added "filters" to remove .dll and .sl from shared
+	libraries when creating link options. I also replaced the code to
+	put the valid library extensions into a variable (bug #1344).
+
 1998-12-03  Leif Hedstrom  <leif@netscape.com>
 
 	* Conn.pm (update): Bug fix, now we empty the hash array before
