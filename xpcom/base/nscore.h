@@ -144,7 +144,9 @@ typedef PRUint16 PRUnichar;
 
 /* unix now determines this automatically */
 #ifndef XP_UNIX
+#ifndef HAVE_CPP_NEW_CASTS
 #define HAVE_CPP_NEW_CASTS /* we'll be optimistic. */
+#endif
 #endif
 
 #if defined(HAVE_CPP_NEW_CASTS)
