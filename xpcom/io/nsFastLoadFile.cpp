@@ -622,22 +622,34 @@ nsFastLoadFileReader::Open()
 NS_IMETHODIMP
 nsFastLoadFileReader::Close()
 {
+#ifdef DEBUG_brendan
     PRUint32 strongTotal = 0, weakTotal = 0;
+#endif
 
-    // Give up any dangling strong refs, after asserting there aren't any.
+    // Give up our strong "keepalive" references, in case not all objects that
+    // were deserialized were fully re-connected.  This happens for sure when
+    // nsFastLoadFileUpdater has to deserialize sharp objects from its aReader
+    // constructor parameter in order to map object info by object address, in
+    // order to write a valid file footer when the update process completes.
+    //
+    // XXXbe get rid of strongTotal, weakTotal, and the warnings
     for (PRUint32 i = 0, n = mFooter.mNumSharpObjects; i < n; i++) {
         nsObjectMapEntry* entry = &mFooter.mObjectMap[i];
 
+#ifdef DEBUG_brendan
         strongTotal += entry->mStrongRefCnt;
         weakTotal += entry->mWeakRefCnt;
+#endif
 
         entry->mObject = nsnull;
     }
 
+#ifdef DEBUG_brendan
     if (strongTotal != 0)
         NS_WARNING("failed to deserialize all strong refs from FastLoad file");
     if (weakTotal != 0)
         NS_WARNING("failed to deserialize all weak refs from FastLoad file");
+#endif
 
     return mInputStream->Close();
 }
@@ -1703,6 +1715,9 @@ nsFastLoadFileUpdater::Open(nsFastLoadFileReader* aReader)
                                                 PL_DHASH_ADD));
         if (!writeEntry)
             return NS_ERROR_OUT_OF_MEMORY;
+
+        writeEntry->mObject = readEntry->mObject;
+        writeEntry->mOID = MFL_SHARP_INDEX_TO_OID(i);
         writeEntry->mInfo = NS_STATIC_CAST(nsFastLoadSharpObjectInfo, *readEntry);
     }
 

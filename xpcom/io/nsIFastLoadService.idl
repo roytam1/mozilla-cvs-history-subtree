@@ -45,17 +45,27 @@ interface nsIFastLoadService : nsISupports
                                          out PRUint32 aChecksum);
     nsIObjectOutputStream newOutputStream(in nsIOutputStream aDestStream);
 
+    // Flag values for the currentDirection attribute and the aDirectionFlags
+    // parameter to startMuxedDocument.
+    const PRInt32 NS_FASTLOAD_READ = 1;
+    const PRInt32 NS_FASTLOAD_WRITE = 2;
+
     attribute nsIObjectInputStream  currentInputStream;
     attribute nsIObjectOutputStream currentOutputStream;
     attribute nsIFastLoadFileIO     currentFileIO;
+    readonly attribute PRInt32      currentDirection;
 
     /**
      * Consumers of currentInputStream and currentOutputStream should
      * attempt to demultiplex data from the current input stream only if
-     * startMuxedDocument succeeds; otherwise they should slow-load the
-     * document and multiplex its data to the current output stream.
+     * fastLoadService->StartMuxedDocument(uri, urispec, NS_FASTLOAD_READ)
+     * succeeds.  If StartMuxedDocument fails with NS_ERROR_NOT_AVAILABLE,
+     * callers should slow-load the document and multiplex its data to the
+     * current output stream.
      */
-    void   startMuxedDocument(in nsISupports aURI, in string aURISpec);
+    void   startMuxedDocument(in nsISupports aURI,
+                              in string aURISpec,
+                              in PRInt32 aDirectionFlags);
     void   selectMuxedDocument(in nsISupports aURI);
     void   endMuxedDocument(in nsISupports aURI);
 

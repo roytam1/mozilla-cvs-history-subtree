@@ -54,7 +54,8 @@ NS_IMPL_THREADSAFE_ISUPPORTS1(nsFastLoadService, nsIFastLoadService)
 
 nsFastLoadService::nsFastLoadService()
   : mLock(nsnull),
-    mFastLoadPtrMap(nsnull)
+    mFastLoadPtrMap(nsnull),
+    mDirection(0)
 {
     NS_INIT_REFCNT();
 
@@ -65,10 +66,10 @@ nsFastLoadService::~nsFastLoadService()
 {
     gFastLoadService_ = nsnull;
 
-    if (mObjectInputStream)
-        mObjectInputStream->Close();
-    if (mObjectOutputStream)
-        mObjectOutputStream->Close();
+    if (mInputStream)
+        mInputStream->Close();
+    if (mOutputStream)
+        mOutputStream->Close();
 
     if (mFastLoadPtrMap)
         PL_DHashTableDestroy(mFastLoadPtrMap);
@@ -176,7 +177,7 @@ nsFastLoadService::NewOutputStream(nsIOutputStream* aDestStream,
 NS_IMETHODIMP
 nsFastLoadService::GetCurrentInputStream(nsIObjectInputStream* *aResult)
 {
-    NS_IF_ADDREF(*aResult = mObjectInputStream);
+    NS_IF_ADDREF(*aResult = mInputStream);
     return NS_OK;
 }
 
@@ -184,14 +185,14 @@ NS_IMETHODIMP
 nsFastLoadService::SetCurrentInputStream(nsIObjectInputStream* aStream)
 {
     nsAutoLock lock(mLock);
-    mObjectInputStream = aStream;
+    mInputStream = aStream;
     return NS_OK;
 }
 
 NS_IMETHODIMP
 nsFastLoadService::GetCurrentOutputStream(nsIObjectOutputStream* *aResult)
 {
-    NS_IF_ADDREF(*aResult = mObjectOutputStream);
+    NS_IF_ADDREF(*aResult = mOutputStream);
     return NS_OK;
 }
 
@@ -199,7 +200,7 @@ NS_IMETHODIMP
 nsFastLoadService::SetCurrentOutputStream(nsIObjectOutputStream* aStream)
 {
     nsAutoLock lock(mLock);
-    mObjectOutputStream = aStream;
+    mOutputStream = aStream;
     return NS_OK;
 }
 
@@ -219,37 +220,49 @@ nsFastLoadService::SetCurrentFileIO(nsIFastLoadFileIO* aFileIO)
 }
 
 NS_IMETHODIMP
-nsFastLoadService::StartMuxedDocument(nsISupports* aURI, const char* aURISpec)
+nsFastLoadService::GetCurrentDirection(PRInt32 *aResult)
+{
+    *aResult = mDirection;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsFastLoadService::StartMuxedDocument(nsISupports* aURI, const char* aURISpec,
+                                      PRInt32 aDirectionFlags)
 {
     nsresult rv = NS_ERROR_NOT_AVAILABLE;
     nsAutoLock lock(mLock);
 
     // Try for an input stream first, in case aURISpec's data is multiplexed
     // in the current FastLoad file.
-    if (mObjectInputStream) {
-        nsFastLoadFileReader* reader = GetReader(mObjectInputStream);
+    if ((aDirectionFlags & NS_FASTLOAD_READ) && mInputStream) {
+        nsFastLoadFileReader* reader = GetReader(mInputStream);
         rv = reader->StartMuxedDocument(aURI, aURISpec);
         if (NS_SUCCEEDED(rv) || rv != NS_ERROR_NOT_AVAILABLE)
             return rv;
 
         // If aURISpec is not found in the reader, wrap it with an updater
-        // and store the updater at mObjectOutputStream.
-        if (!mObjectOutputStream && mFileIO) {
+        // and store the updater at mOutputStream.
+        if (!mOutputStream && mFileIO) {
             nsCOMPtr<nsIOutputStream> output;
             rv = mFileIO->GetOutputStream(getter_AddRefs(output));
             if (NS_FAILED(rv)) return rv;
 
-            rv = NS_NewFastLoadFileUpdater(getter_AddRefs(mObjectOutputStream),
+            rv = NS_NewFastLoadFileUpdater(getter_AddRefs(mOutputStream),
                                            output,
                                            reader);
             if (NS_FAILED(rv)) return rv;
         }
+
+        if (aDirectionFlags == NS_FASTLOAD_READ) {
+            // Tell our caller to re-start multiplexing, rather than attempt
+            // to select and deserialize now.
+            return NS_ERROR_NOT_AVAILABLE;
+        }
     }
 
-    // Otherwise, or if we created an updater, prepare to save document data
-    // for aURISpec/aURI in the FastLoad file.
-    if (mObjectOutputStream)
-        rv = GetWriter(mObjectOutputStream)->StartMuxedDocument(aURI, aURISpec);
+    if ((aDirectionFlags & NS_FASTLOAD_WRITE) && mOutputStream)
+        rv = GetWriter(mOutputStream)->StartMuxedDocument(aURI, aURISpec);
     return rv;
 }
 
@@ -261,10 +274,18 @@ nsFastLoadService::SelectMuxedDocument(nsISupports* aURI)
 
     // Try to select the reader, if any; then only if the URI was not in the
     // file already, select the writer/updater.
-    if (mObjectInputStream)
-        rv = GetReader(mObjectInputStream)->SelectMuxedDocument(aURI);
-    if (rv == NS_ERROR_NOT_AVAILABLE && mObjectOutputStream)
-        rv = GetWriter(mObjectOutputStream)->SelectMuxedDocument(aURI);
+    if (mInputStream) {
+        rv = GetReader(mInputStream)->SelectMuxedDocument(aURI);
+        if (NS_SUCCEEDED(rv))
+            mDirection = NS_FASTLOAD_READ;
+    }
+
+    if (rv == NS_ERROR_NOT_AVAILABLE && mOutputStream) {
+        rv = GetWriter(mOutputStream)->SelectMuxedDocument(aURI);
+        if (NS_SUCCEEDED(rv))
+            mDirection = NS_FASTLOAD_WRITE;
+    }
+
     return rv;
 }
 
@@ -276,10 +297,13 @@ nsFastLoadService::EndMuxedDocument(nsISupports* aURI)
 
     // Try to end the document identified by aURI in the reader, if any; then
     // only if the URI was not in the file already, select the writer/updater.
-    if (mObjectInputStream)
-        rv = GetReader(mObjectInputStream)->EndMuxedDocument(aURI);
-    if (rv == NS_ERROR_NOT_AVAILABLE && mObjectOutputStream)
-        rv = GetWriter(mObjectOutputStream)->EndMuxedDocument(aURI);
+    if (mInputStream)
+        rv = GetReader(mInputStream)->EndMuxedDocument(aURI);
+
+    if (rv == NS_ERROR_NOT_AVAILABLE && mOutputStream)
+        rv = GetWriter(mOutputStream)->EndMuxedDocument(aURI);
+
+    mDirection = 0;
     return rv;
 }
 
@@ -287,10 +311,10 @@ NS_IMETHODIMP
 nsFastLoadService::AppendDependency(const char* aFileName)
 {
     nsAutoLock lock(mLock);
-    if (!mObjectOutputStream)
+    if (!mOutputStream)
         return NS_OK;
 
-    if (!GetWriter(mObjectOutputStream)->AppendDependency(aFileName))
+    if (!GetWriter(mOutputStream)->AppendDependency(aFileName))
         return NS_ERROR_OUT_OF_MEMORY;
     return NS_OK;
 }
@@ -301,10 +325,10 @@ nsFastLoadService::MaxDependencyModifiedTime(PRTime *aTime)
     *aTime = LL_ZERO;
 
     nsAutoLock lock(mLock);
-    if (!mObjectOutputStream)
+    if (!mOutputStream)
         return NS_OK;
 
-    nsFastLoadFileWriter* writer = GetWriter(mObjectOutputStream);
+    nsFastLoadFileWriter* writer = GetWriter(mOutputStream);
 
     for (PRUint32 i = 0, n = writer->GetDependencyCount(); i < n; i++) {
         PRFileInfo info;
@@ -329,7 +353,7 @@ nsFastLoadService::GetFastLoadReferent(nsISupports* *aPtrAddr)
                  "aPtrAddr doesn't point to null nsFastLoadPtr<T>::mRawAddr?");
 
     nsAutoLock lock(mLock);
-    if (!mFastLoadPtrMap || !mObjectInputStream)
+    if (!mFastLoadPtrMap || !mInputStream)
         return NS_OK;
 
     nsFastLoadPtrEntry* entry =
@@ -340,12 +364,12 @@ nsFastLoadService::GetFastLoadReferent(nsISupports* *aPtrAddr)
         return NS_OK;
 
     nsresult rv;
-    nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mObjectInputStream));
+    nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mInputStream));
 
     rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET, entry->mOffset);
     if (NS_FAILED(rv)) return rv;
 
-    rv = mObjectInputStream->ReadObject(PR_TRUE, aPtrAddr);
+    rv = mInputStream->ReadObject(PR_TRUE, aPtrAddr);
     if (NS_FAILED(rv)) return rv;
 
     // Shrink the table if half the entries are removed sentinels.

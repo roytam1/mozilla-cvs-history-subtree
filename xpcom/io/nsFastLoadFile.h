@@ -109,6 +109,7 @@ typedef PRUint32 NSFastLoadOID;         // nsFastLoadFooter::mObjectMap index
  * Convert an OID to an index into nsFastLoadFooter::mObjectMap.
  */
 #define MFL_OID_TO_SHARP_INDEX(oid)     (((oid) >> MFL_OBJECT_TAG_BITS) - 1)
+#define MFL_SHARP_INDEX_TO_OID(index)   (((index) + 1) << MFL_OBJECT_TAG_BITS)
 
 /**
  * Magic "number" at start of a FastLoad file.  Inspired by the PNG "magic"

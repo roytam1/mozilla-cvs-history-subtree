@@ -42,10 +42,10 @@ class NS_COM nsFastLoadService : public nsIFastLoadService
     Create(nsISupports *aOuter, REFNSIID aIID, void **aResult);
 
   private:
-    PRLock*             mLock;
-    PLDHashTable*       mFastLoadPtrMap;
-
-    nsCOMPtr<nsIObjectInputStream>  mObjectInputStream;
-    nsCOMPtr<nsIObjectOutputStream> mObjectOutputStream;
+    PRLock*                         mLock;
+    PLDHashTable*                   mFastLoadPtrMap;
+    nsCOMPtr<nsIObjectInputStream>  mInputStream;
+    nsCOMPtr<nsIObjectOutputStream> mOutputStream;
     nsCOMPtr<nsIFastLoadFileIO>     mFileIO;
+    PRInt32                         mDirection;
 };
