@@ -40,9 +40,9 @@ DISTHDIR	= $(DIST)/public/ldap
 HDIR		= $(topsrcdir)/ldap/include
 
 LIBPRLDAP	= $(addprefix $(OBJDIR_NAME)/, \
-			$(LIB_PREFIX)nsldappr32v$(PRLDAPVERS).$(LIB_SUFFIX))
+			$(LIB_PREFIX)$(PRLDAP_LIBNAME)$(PRLDAPVERS).$(LIB_SUFFIX))
 DLLPRLDAP	= $(addprefix $(OBJDIR_NAME)/, \
-			$(LIB_PREFIX)nsldappr32v$(PRLDAPVERS).$(DLL_SUFFIX))
+			$(LIB_PREFIX)$(PRLDAP_LIBNAME)$(PRLDAPVERS).$(DLL_SUFFIX))
 
 INSTALLDIR      = $(DIST)/$(OBJDIR_NAME)
 
