@@ -112,7 +112,7 @@ void NodeSorter::sort
      // Build hash table of sort keys
      for ( ; i < nodes->size(); i++) {
          Node* node = nodes->get(i);
-         String* sortKey = new String();
+         DOMString* sortKey = new DOMString();
          exprResult = selectExpr->evaluate(node, ps);
          if ((!exprResult) || (exprResult->getResultType() != ExprResult::NODESET)) {
              //-- should we flag this as an error?
