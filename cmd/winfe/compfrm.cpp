@@ -92,8 +92,6 @@ BEGIN_MESSAGE_MAP(CComposeFrame, CGenericFrame)
    ON_UPDATE_COMMAND_UI(IDM_SAVEASDRAFT, OnUpdateSaveDraft)
    ON_COMMAND(IDM_SAVEASTEMPLATE, OnSaveTemplate)
    ON_UPDATE_COMMAND_UI(IDM_SAVEASTEMPLATE, OnUpdateSaveTemplate)
-   ON_COMMAND(IDM_SAVEASTEMPLATE, OnSaveTemplate)
-   ON_UPDATE_COMMAND_UI(IDM_SAVEASTEMPLATE, OnUpdateSaveTemplate)
    ON_COMMAND(IDM_CONVERT,OnConvert)
    ON_UPDATE_COMMAND_UI(IDM_CONVERT, OnUpdateConvert)
    ON_COMMAND(IDM_ATTACHFILE,OnAttachFile)
@@ -1210,53 +1208,6 @@ void CComposeFrame::OnUpdateSaveTemplate(CCmdUI *pCmdUI)
     OnUpdateThis(pCmdUI, MSG_SaveTemplate );
 
 }
-
-
-void CComposeFrame::OnSaveTemplate ( void )
-
-{
-    ASSERT(m_pComposeBar);
-    m_pComposeBar->UpdateHeaderInfo ( );
-
-    // first we must get the text from the front end and then
-    // tell the backend what text to send.
-
-	uint32 ulBodySize;
-	char *pBody;
-
-	FE_GetMessageBody(GetMsgPane(), &pBody, &ulBodySize, NULL);
-    
-    // if we could get text, tell the backend
-    if (ulBodySize) 
-	MSG_SetCompBody(GetMsgPane(),pBody);
-
-    // start the meteors tumbling    
-	GetChrome()->StartAnimation();
-
-	MWContext *context;
-	context = GetMainContext()->GetContext();
-
-    // Pass current csid to backend, so it can do right conversion for 
-    // 8bit header.    
-	INTL_SetCSIDocCSID(LO_GetDocumentCharacterSetInfo(context), m_iCSID);
-
-    MSG_Command(GetMsgPane(), MSG_SaveTemplate, 0, 0);
-	
-	GetChrome()->StopAnimation();
-
-    if (!m_bUseHtml)
-        m_EditorParent.m_bModified = FALSE;
-}
-
-void CComposeFrame::OnUpdateSaveTemplate(CCmdUI *pCmdUI)
-{
-
-    // Change the string based on the deferred sending status
-
-    OnUpdateThis(pCmdUI, MSG_SaveTemplate );
-
-}
-
 
 LRESULT CComposeFrame::OnButtonMenuOpen(WPARAM wParam, LPARAM lParam)
 {

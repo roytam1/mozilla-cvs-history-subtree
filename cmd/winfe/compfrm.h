@@ -239,6 +239,7 @@ protected:
   	afx_msg void OnUpdateEncoding(CCmdUI* pCmdUI);
   
     afx_msg LRESULT OnFindReplace(WPARAM wParam, LPARAM lParam) ;
+	afx_msg LRESULT OnSetMessageString(WPARAM wParam, LPARAM lParam); 
     afx_msg LONG OnProcessMAPIMessage(WPARAM wParam, LPARAM lParam); // rhp: for MAPI
 
 	DECLARE_MESSAGE_MAP()
