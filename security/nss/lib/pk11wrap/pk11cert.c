@@ -64,7 +64,6 @@
 #include "pkim.h"
 #include "pkitm.h"
 #include "pkistore.h" /* to remove temp cert */
-#include "devt.h"
 
 #define PK11_SEARCH_CHUNKSIZE 10
 
@@ -287,14 +286,6 @@ PK11_MatchItem(PK11SlotInfo *slot, CK_OBJECT_HANDLE searchID,
 	PORT_SetError( PK11_MapError(crv) );
 	return CK_INVALID_HANDLE;
     }
-
-    if ((theTemplate[0].ulValueLen == 0) || (theTemplate[0].ulValueLen == -1)) {
-	PORT_FreeArena(arena,PR_FALSE);
-	PORT_SetError(SEC_ERROR_BAD_KEY);
-	return CK_INVALID_HANDLE;
-     }
-	
-	
 
     /*
      * issue the find
@@ -594,7 +585,6 @@ PK11_MakeCertFromHandle(PK11SlotInfo *slot,CK_OBJECT_HANDLE certID,
 	cert->slot = PK11_ReferenceSlot(slot);
 	cert->pkcs11ID = certID;
 	cert->ownSlot = PR_TRUE;
-	cert->series = slot->series;
     }
 
     trust = (CERTCertTrust*)PORT_ArenaAlloc(cert->arena, sizeof(CERTCertTrust));
@@ -963,7 +953,7 @@ typedef struct pk11CertCallbackStr {
 /*
  * Extract all the certs on a card from a slot.
  */
-SECStatus
+static SECStatus
 pk11_TraverseAllSlots( SECStatus (*callback)(PK11SlotInfo *,void *),
 						void *arg,void *wincx) {
     PK11SlotList *list;
@@ -1440,13 +1430,11 @@ PK11_FindCertsFromNickname(char *nickname, void *wincx) {
     }
     if (nickCopy) PORT_Free(nickCopy);
     if (foundCerts) {
-	PRTime now = PR_Now();
 	certList = CERT_NewCertList();
 	for (i=0, c = *foundCerts; c; c = foundCerts[++i]) {
 	    CERTCertificate *certCert = STAN_GetCERTCertificate(c);
 	    if (certCert) {
-		CERT_AddCertToListSorted(certList, certCert,
-			CERT_SortCBValidity, &now);
+		CERT_AddCertToListTail(certList, certCert);
 	    }
 	}
 	if (CERT_LIST_HEAD(certList) == NULL) {
@@ -1481,7 +1469,6 @@ PK11_GetPubIndexKeyID(CERTCertificate *cert) {
 	break;
     case dhKey:
         newItem = SECITEM_DupItem(&pubk->u.dh.publicValue);
-	break;
     case fortezzaKey:
     default:
 	newItem = NULL; /* Fortezza Fix later... */
@@ -1685,7 +1672,6 @@ PK11_ImportCert(PK11SlotInfo *slot, CERTCertificate *cert,
     cert->dbhandle = STAN_GetDefaultTrustDomain();
     if (cert->slot == NULL) {
 	cert->slot = PK11_ReferenceSlot(slot);
-	cert->series = slot->series;
 	cert->ownSlot = PR_TRUE;
 	if (cert->nssCertificate) {
 	    nssCryptokiInstance *instance;
@@ -1806,11 +1792,9 @@ pk11_getcerthandle(PK11SlotInfo *slot, CERTCertificate *cert,
 
     if (cert->slot == slot) {
 	certh = cert->pkcs11ID;
-	if ((certh == CK_INVALID_HANDLE) ||
-			(cert->series != slot->series)) {
+	if (certh == CK_INVALID_HANDLE) {
     	     certh = pk11_FindObjectByTemplate(slot,theTemplate,tsize);
 	     cert->pkcs11ID = certh;
-	     cert->series = slot->series;
 	}
     } else {
     	certh = pk11_FindObjectByTemplate(slot,theTemplate,tsize);
@@ -2015,84 +1999,6 @@ pk11_FindCertObjectByTemplate(PK11SlotInfo **slotPtr,
     return certHandle;
 }
 
-CERTCertificate *
-PK11_FindCertByIssuerAndSNOnToken(PK11SlotInfo *slot, 
-				CERTIssuerAndSN *issuerSN, void *wincx)
-{
-    CERTCertificate *rvCert = NULL;
-    NSSCertificate *cert = NULL;
-    NSSDER issuer, serial;
-    NSSTrustDomain *td = STAN_GetDefaultTrustDomain();
-    NSSToken *token = slot->nssToken;
-    nssSession *session;
-    nssCryptokiObject *instance = NULL;
-    nssPKIObject *object = NULL;
-    SECItem *derSerial;
-    PRStatus status;
-
-    /* Paranoia */
-    if (token == NULL) {
-	PORT_SetError(SEC_ERROR_NO_TOKEN);
-	return NULL;
-    }
-
-
-    /* PKCS#11 needs to use DER-encoded serial numbers.  Create a
-     * CERTIssuerAndSN that actually has the encoded value and pass that
-     * to PKCS#11 (and the crypto context).
-     */
-    derSerial = SEC_ASN1EncodeItem(NULL, NULL,
-                                   &issuerSN->serialNumber,
-                                   SEC_IntegerTemplate);
-    if (!derSerial) {
-	return NULL;
-    }
-
-    NSSITEM_FROM_SECITEM(&issuer, &issuerSN->derIssuer);
-    NSSITEM_FROM_SECITEM(&serial, derSerial);
-
-    session = nssToken_GetDefaultSession(token);
-    if (!session) {
-	goto loser;
-    }
-
-    instance = nssToken_FindCertificateByIssuerAndSerialNumber(token,session,
-		&issuer, &serial, nssTokenSearchType_TokenForced, &status);
-
-    SECITEM_FreeItem(derSerial, PR_TRUE);
-
-    if (!instance) {
-	goto loser;
-    }
-    object = nssPKIObject_Create(NULL, instance, td, NULL);
-    if (!object) {
-	goto loser;
-    }
-    instance = NULL; /* adopted by the previous call */
-    cert = nssCertificate_Create(object);
-    if (!cert) {
-	goto loser;
-    }
-    object = NULL; /* adopted by the previous call */
-    nssTrustDomain_AddCertsToCache(td, &cert,1);
-    rvCert = STAN_GetCERTCertificate(cert);
-    if (!rvCert) {
-	goto loser;
-    }
-    return rvCert;
-
-loser:
-    if (instance) {
-	nssCryptokiObject_Destroy(instance);
-    }
-    if (object) {
-	nssPKIObject_Destroy(object);
-    }
-    if (cert) {
-	nssCertificate_Destroy(cert);
-    }
-    return NULL;
-}
 
 /*
  * We're looking for a cert which we have the private key for that's on the
@@ -2101,28 +2007,57 @@ loser:
  * this stuff should REALLY be in the SMIME code, but some things in here are not public
  * (they should be!)
  */
-static CERTCertificate *
-pk11_FindCertObjectByRecipientNew(PK11SlotInfo *slot, NSSCMSRecipient **recipientlist, int *rlIndex, void *pwarg)
+static CK_OBJECT_HANDLE
+pk11_FindCertObjectByRecipientNew(PK11SlotInfo *slot, NSSCMSRecipient **recipientlist, int *rlIndex)
 {
+    CK_OBJECT_HANDLE certHandle;
+    CK_OBJECT_CLASS certClass = CKO_CERTIFICATE;
+    CK_OBJECT_CLASS peerClass ;
+    CK_ATTRIBUTE searchTemplate[] = {
+	{ CKA_CLASS, NULL, 0 },
+	{ CKA_ISSUER, NULL, 0 },
+	{ CKA_SERIAL_NUMBER, NULL, 0}
+    };
+    int count = sizeof(searchTemplate)/sizeof(CK_ATTRIBUTE);
     NSSCMSRecipient *ri = NULL;
+    CK_ATTRIBUTE *attrs;
     int i;
 
+    peerClass = CKO_PRIVATE_KEY;
+    if (!PK11_IsLoggedIn(slot,NULL) && PK11_NeedLogin(slot)) {
+	peerClass = CKO_PUBLIC_KEY;
+    }
+
     for (i=0; (ri = recipientlist[i]) != NULL; i++) {
-	CERTCertificate *cert = NULL;
 	/* XXXXX fixme - not yet implemented! */
 	if (ri->kind == RLSubjKeyID)
 	    continue;
-	cert = PK11_FindCertByIssuerAndSNOnToken(slot, ri->id.issuerAndSN, 
-								pwarg);
-	if (cert) {
-	    ri->slot = PK11_ReferenceSlot(slot);
-	    *rlIndex = i;
-	    return cert;
-	}
 
+    	attrs = searchTemplate;
+
+	PK11_SETATTRS(attrs, CKA_CLASS, &certClass,sizeof(certClass)); attrs++;
+	PK11_SETATTRS(attrs, CKA_ISSUER, ri->id.issuerAndSN->derIssuer.data, 
+				ri->id.issuerAndSN->derIssuer.len); attrs++;
+	PK11_SETATTRS(attrs, CKA_SERIAL_NUMBER, 
+	  ri->id.issuerAndSN->serialNumber.data,ri->id.issuerAndSN->serialNumber.len);
+
+	certHandle = pk11_FindObjectByTemplate(slot,searchTemplate,count);
+	if (certHandle != CK_INVALID_HANDLE) {
+	    CERTCertificate *cert = pk11_fastCert(slot,certHandle,NULL,NULL);
+	    if (PK11_IsUserCert(slot,cert,certHandle)) {
+		/* we've found a cert handle, now let's see if there is a key
+	         * associated with it... */
+		ri->slot = PK11_ReferenceSlot(slot);
+		*rlIndex = i;
+	
+		CERT_DestroyCertificate(cert);       
+		return certHandle;
+	    }
+	    CERT_DestroyCertificate(cert);       
+	}
     }
     *rlIndex = -1;
-    return NULL;
+    return CK_INVALID_HANDLE;
 }
 
 /*
@@ -2131,12 +2066,12 @@ pk11_FindCertObjectByRecipientNew(PK11SlotInfo *slot, NSSCMSRecipient **recipien
  * this stuff should REALLY be in the SMIME code, but some things in here are not public
  * (they should be!)
  */
-static CERTCertificate *
+static CK_OBJECT_HANDLE
 pk11_AllFindCertObjectByRecipientNew(NSSCMSRecipient **recipientlist, void *wincx, int *rlIndex)
 {
     PK11SlotList *list;
     PK11SlotListElement *le;
-    CERTCertificate *cert = NULL;
+    CK_OBJECT_HANDLE certHandle = CK_INVALID_HANDLE;
     SECStatus rv;
 
     /* get them all! */
@@ -2153,54 +2088,80 @@ pk11_AllFindCertObjectByRecipientNew(NSSCMSRecipient **recipientlist, void *winc
 	    if (rv != SECSuccess) continue;
 	}
 
-	cert = pk11_FindCertObjectByRecipientNew(le->slot, 
-					recipientlist, rlIndex, wincx);
-	if (cert)
+	certHandle = pk11_FindCertObjectByRecipientNew(le->slot, recipientlist, rlIndex);
+	if (certHandle != CK_INVALID_HANDLE)
 	    break;
     }
 
     PK11_FreeSlotList(list);
 
-    return cert;
+    return (le == NULL) ? CK_INVALID_HANDLE : certHandle;
 }
 
 /*
  * We're looking for a cert which we have the private key for that's on the
  * list of recipients. This searches one slot.
  */
-static CERTCertificate *
+static CK_OBJECT_HANDLE
 pk11_FindCertObjectByRecipient(PK11SlotInfo *slot, 
-	SEC_PKCS7RecipientInfo **recipientArray,
-	SEC_PKCS7RecipientInfo **rip, void *pwarg)
+	SEC_PKCS7RecipientInfo **recipientArray,SEC_PKCS7RecipientInfo **rip)
 {
+    CK_OBJECT_HANDLE certHandle;
+    CK_OBJECT_CLASS certClass = CKO_CERTIFICATE;
+    CK_OBJECT_CLASS peerClass ;
+    CK_ATTRIBUTE searchTemplate[] = {
+	{ CKA_CLASS, NULL, 0 },
+	{ CKA_ISSUER, NULL, 0 },
+	{ CKA_SERIAL_NUMBER, NULL, 0}
+    };
+    int count = sizeof(searchTemplate)/sizeof(CK_ATTRIBUTE);
     SEC_PKCS7RecipientInfo *ri = NULL;
+    CK_ATTRIBUTE *attrs;
     int i;
 
+
+    peerClass = CKO_PRIVATE_KEY;
+    if (!PK11_IsLoggedIn(slot,NULL) && PK11_NeedLogin(slot)) {
+	peerClass = CKO_PUBLIC_KEY;
+    }
+
     for (i=0; (ri = recipientArray[i]) != NULL; i++) {
-	CERTCertificate *cert;
+    	attrs = searchTemplate;
 
-	cert = PK11_FindCertByIssuerAndSNOnToken(slot, ri->issuerAndSN, 
-								pwarg);
-        if (cert) {
-	    *rip = ri;
-	    return cert;
+	PK11_SETATTRS(attrs, CKA_CLASS, &certClass,sizeof(certClass)); attrs++;
+	PK11_SETATTRS(attrs, CKA_ISSUER, ri->issuerAndSN->derIssuer.data, 
+				ri->issuerAndSN->derIssuer.len); attrs++;
+	PK11_SETATTRS(attrs, CKA_SERIAL_NUMBER, 
+	  ri->issuerAndSN->serialNumber.data,ri->issuerAndSN->serialNumber.len);
+
+	certHandle = pk11_FindObjectByTemplate(slot,searchTemplate,count);
+	if (certHandle != CK_INVALID_HANDLE) {
+	    CERTCertificate *cert = pk11_fastCert(slot,certHandle,NULL,NULL);
+	    if (PK11_IsUserCert(slot,cert,certHandle)) {
+		/* we've found a cert handle, now let's see if there is a key
+	         * associated with it... */
+		*rip = ri;
+	
+		CERT_DestroyCertificate(cert);       
+		return certHandle;
+	    }
+	    CERT_DestroyCertificate(cert);       
 	}
-
     }
     *rip = NULL;
-    return NULL;
+    return CK_INVALID_HANDLE;
 }
 
 /*
  * This function is the same as above, but it searches all the slots.
  */
-static CERTCertificate *
+static CK_OBJECT_HANDLE
 pk11_AllFindCertObjectByRecipient(PK11SlotInfo **slotPtr, 
 	SEC_PKCS7RecipientInfo **recipientArray,SEC_PKCS7RecipientInfo **rip,
 							void *wincx) {
     PK11SlotList *list;
     PK11SlotListElement *le;
-    CERTCertificate * cert;
+    CK_OBJECT_HANDLE certHandle = CK_INVALID_HANDLE;
     PK11SlotInfo *slot = NULL;
     SECStatus rv;
 
@@ -2222,9 +2183,9 @@ pk11_AllFindCertObjectByRecipient(PK11SlotInfo **slotPtr,
 	    if (rv != SECSuccess) continue;
 	}
 
-	cert = pk11_FindCertObjectByRecipient(le->slot, recipientArray, 
-							rip, wincx);
-	if (cert) {
+	certHandle = pk11_FindCertObjectByRecipient(le->slot,
+							recipientArray,rip);
+	if (certHandle != CK_INVALID_HANDLE) {
 	    slot = PK11_ReferenceSlot(le->slot);
 	    break;
 	}
@@ -2233,10 +2194,10 @@ pk11_AllFindCertObjectByRecipient(PK11SlotInfo **slotPtr,
     PK11_FreeSlotList(list);
 
     if (slot == NULL) {
-	return NULL;
+	return CK_INVALID_HANDLE;
     }
     *slotPtr = slot;
-    return cert;
+    return certHandle;
 }
 
 /*
@@ -2257,28 +2218,40 @@ PK11_FindCertAndKeyByRecipientList(PK11SlotInfo **slotPtr,
     SECStatus rv;
 
     *privKey = NULL;
-    *slotPtr = NULL;
-    cert = pk11_AllFindCertObjectByRecipient(slotPtr,array,rip,wincx);
-    if (!cert) {
+    certHandle = pk11_AllFindCertObjectByRecipient(slotPtr,array,rip,wincx);
+    if (certHandle == CK_INVALID_HANDLE) {
 	return NULL;
     }
 
     rv = PK11_Authenticate(*slotPtr,PR_TRUE,wincx);
     if (rv != SECSuccess) {
-	goto loser;
+	PK11_FreeSlot(*slotPtr);
+	*slotPtr = NULL;
+	return NULL;
     }
 
-    *privKey = PK11_FindKeyByAnyCert(cert, wincx);
+    keyHandle = PK11_MatchItem(*slotPtr,certHandle,CKO_PRIVATE_KEY);
+    if (keyHandle == CK_INVALID_HANDLE) { 
+	PK11_FreeSlot(*slotPtr);
+	*slotPtr = NULL;
+	return NULL;
+    }
+
+    *privKey =  PK11_MakePrivKey(*slotPtr, nullKey, PR_TRUE, keyHandle, wincx);
     if (*privKey == NULL) {
-	goto loser;
+	PK11_FreeSlot(*slotPtr);
+	*slotPtr = NULL;
+	return NULL;
     }
-
+    cert = PK11_MakeCertFromHandle(*slotPtr,certHandle,NULL);
+    if (cert == NULL) {
+	PK11_FreeSlot(*slotPtr);
+	SECKEY_DestroyPrivateKey(*privKey);
+	*slotPtr = NULL;
+	*privKey = NULL;
+	return NULL;
+    }
     return cert;
-loser:
-    if (cert) CERT_DestroyCertificate(cert);
-    if (*slotPtr) PK11_FreeSlot(*slotPtr);
-    *slotPtr = NULL;
-    return NULL;
 }
 
 /*
@@ -2289,12 +2262,13 @@ loser:
 int
 PK11_FindCertAndKeyByRecipientListNew(NSSCMSRecipient **recipientlist, void *wincx)
 {
-    CERTCertificate *cert;
+    CK_OBJECT_HANDLE certHandle = CK_INVALID_HANDLE;
+    CK_OBJECT_HANDLE keyHandle = CK_INVALID_HANDLE;
     NSSCMSRecipient *rl;
     int rlIndex;
 
-    cert = pk11_AllFindCertObjectByRecipientNew(recipientlist, wincx, &rlIndex);
-    if (!cert) {
+    certHandle = pk11_AllFindCertObjectByRecipientNew(recipientlist, wincx, &rlIndex);
+    if (certHandle == CK_INVALID_HANDLE) {
 	return -1;
     }
 
@@ -2304,23 +2278,36 @@ PK11_FindCertAndKeyByRecipientListNew(NSSCMSRecipient **recipientlist, void *win
 
     /* authenticate to the token */
     if (PK11_Authenticate(rl->slot, PR_TRUE, wincx) != SECSuccess) {
-	goto loser;
+	PK11_FreeSlot(rl->slot);
+	rl->slot = NULL;
+	return -1;
     }
 
-    rl->privkey = PK11_FindKeyByAnyCert(cert, wincx);
+    /* try to get a private key handle for the cert we found */
+    keyHandle = PK11_MatchItem(rl->slot, certHandle, CKO_PRIVATE_KEY);
+    if (keyHandle == CK_INVALID_HANDLE) { 
+	PK11_FreeSlot(rl->slot);
+	rl->slot = NULL;
+	return -1;
+    }
+
+    /* make a private key out of the handle */
+    rl->privkey = PK11_MakePrivKey(rl->slot, nullKey, PR_TRUE, keyHandle, wincx);
     if (rl->privkey == NULL) {
-	goto loser;
+	PK11_FreeSlot(rl->slot);
+	rl->slot = NULL;
+	return -1;
     }
-
     /* make a cert from the cert handle */
-    rl->cert = cert;
+    rl->cert = PK11_MakeCertFromHandle(rl->slot, certHandle, NULL);
+    if (rl->cert == NULL) {
+	PK11_FreeSlot(rl->slot);
+	SECKEY_DestroyPrivateKey(rl->privkey);
+	rl->slot = NULL;
+	rl->privkey = NULL;
+	return -1;
+    }
     return rlIndex;
-
-loser:
-    if (cert) CERT_DestroyCertificate(cert);
-    if (rl->slot) PK11_FreeSlot(rl->slot);
-    rl->slot = NULL;
-    return -1;
 }
 
 CERTCertificate *
@@ -2429,7 +2416,6 @@ PK11_FindObjectForCert(CERTCertificate *cert, void *wincx, PK11SlotInfo **pSlot)
 	    cert->slot = PK11_ReferenceSlot(*pSlot);
 	    cert->pkcs11ID = certHandle;
 	    cert->ownSlot = PR_TRUE;
-	    cert->series = cert->slot->series;
 	}
     }
 
@@ -3239,25 +3225,30 @@ struct listCertsStr {
 };
 
 static PRBool
-isOnList(CERTCertList *certList,NSSCertificate *c)
+isOnList(CERTCertList *certList,CERTCertificate *cert)
 {
 	CERTCertListNode *cln;
 
 	for (cln = CERT_LIST_HEAD(certList); !CERT_LIST_END(cln,certList);
 			cln = CERT_LIST_NEXT(cln)) {
-	    if (cln->cert->nssCertificate == c) {
+	    if (cln->cert == cert) {
 		return PR_TRUE;
 	    }
 	}
 	return PR_FALSE;
 }
-static PRStatus
-pk11ListCertCallback(NSSCertificate *c, void *arg)
+static SECStatus
+#ifdef NSS_CLASSIC
+pk11ListCertCallback(CERTCertificate *cert, SECItem *derCert, void *arg)
+#else
+pk11ListCertCallback(CERTCertificate *cert, void *arg)
+#endif
 {
     struct listCertsStr *listCertP = (struct listCertsStr *)arg;
     CERTCertificate *newCert = NULL;
     PK11CertListType type = listCertP->type;
     CERTCertList *certList = listCertP->certList;
+    CERTCertTrust *trust;
     PRBool isUnique = PR_FALSE;
     PRBool isCA = PR_FALSE;
     char *nickname = NULL;
@@ -3269,37 +3260,53 @@ pk11ListCertCallback(NSSCertificate *c, void *arg)
     if ((type == PK11CertListCA) || (type == PK11CertListRootUnique)) {
 	isCA = PR_TRUE;
     }
+    /* at this point the nickname is correct for the cert. save it for later */
+    if (!isUnique && cert->nickname) {
+         nickname = PORT_ArenaStrdup(listCertP->certList->arena,cert->nickname);
+    }
+#ifdef NSS_CLASSIC
+    if (derCert == NULL) {
+	newCert=CERT_DupCertificate(cert);
+    } else {
+	newCert=CERT_FindCertByDERCert(CERT_GetDefaultCertDB(),&cert->derCert);
+    }
+#else
+    newCert=CERT_DupCertificate(cert);
+#endif
 
+    if (newCert == NULL) return SECSuccess;
+
+    trust = newCert->trust;
 
     /* if we want user certs and we don't have one skip this cert */
     if ((type == PK11CertListUser) && 
-		!NSSCertificate_IsPrivateKeyAvailable(c, NULL,NULL)) {
-	return PR_SUCCESS;
+	  ((trust == NULL) || 
+		( ((trust->sslFlags & CERTDB_USER) == 0)  && 
+			((trust->emailFlags & CERTDB_USER) == 0) )) ) {
+	CERT_DestroyCertificate(newCert);
+	return SECSuccess;
     }
 
     /* if we want root certs, skip the user certs */
     if ((type == PK11CertListRootUnique) && 
-		NSSCertificate_IsPrivateKeyAvailable(c, NULL,NULL)) {
-	return PR_SUCCESS;
+	  ((trust) && (((trust->sslFlags & CERTDB_USER )  || 
+				(trust->emailFlags & CERTDB_USER))) ) ) {
+	CERT_DestroyCertificate(newCert);
+	return SECSuccess;
     }
+
 
     /* if we want Unique certs and we already have it on our list, skip it */
-    if ( isUnique && isOnList(certList,c) ) {
-	return PR_SUCCESS;
+    if ( isUnique && isOnList(certList,newCert) ) {
+	CERT_DestroyCertificate(newCert);
+	return SECSuccess;
     }
 
-
-    newCert = STAN_GetCERTCertificate(c);
-    if (!newCert) {
-	return PR_SUCCESS;
-    }
     /* if we want CA certs and it ain't one, skip it */
     if( isCA  && (!CERT_IsCACert(newCert, &certType)) ) {
-	return PR_SUCCESS;
+	CERT_DestroyCertificate(newCert);
+	return SECSuccess;
     }
-    CERT_DupCertificate(newCert);
-
-    nickname = STAN_GetCERTCertificateName(c);
 
     /* put slot certs at the end */
     if (newCert->slot && !PK11_IsInternal(newCert->slot)) {
@@ -3307,7 +3314,7 @@ pk11ListCertCallback(NSSCertificate *c, void *arg)
     } else {
     	CERT_AddCertToListHeadWithData(certList,newCert,nickname);
     }
-    return PR_SUCCESS;
+    return SECSuccess;
 }
 
 
@@ -3332,15 +3339,25 @@ PK11_ListCerts(PK11CertListType type, void *pwarg)
 #else
     NSSTrustDomain *defaultTD = STAN_GetDefaultTrustDomain();
     CERTCertList *certList = NULL;
+    struct nss3_cert_cbstr pk11cb;
     struct listCertsStr listCerts;
     certList = CERT_NewCertList();
     listCerts.type = type;
     listCerts.certList = certList;
+    pk11cb.callback = pk11ListCertCallback;
+    pk11cb.arg = &listCerts;
 
     /* authenticate to the slots */
     (void) pk11_TraverseAllSlots( NULL, NULL, pwarg);
-    NSSTrustDomain_TraverseCertificates(defaultTD, pk11ListCertCallback,
-								 &listCerts);
+#ifdef notdef
+    if (type == PK11CertListUser) {
+	NSSTrustDomain_TraverseUserCertificates(defaultTD, convert_cert &pk11cb);
+    } else {
+	NSSTrustDomain_TraverseCertificates(defaultTD, convert_cert, &pk11cb);
+    }
+#else
+	NSSTrustDomain_TraverseCertificates(defaultTD, convert_cert, &pk11cb);
+#endif
     return certList;
 #endif
 }
@@ -4009,69 +4026,3 @@ PK11_SaveSMimeProfile(PK11SlotInfo *slot, char *emailAddr, SECItem *derSubj,
 }
 
 
-CERTSignedCrl * crl_storeCRL (PK11SlotInfo *slot,char *url,
-                  CERTSignedCrl *newCrl, SECItem *derCrl, int type);
-
-/* import the CRL into the token */
-
-CERTSignedCrl* PK11_ImportCRL(PK11SlotInfo * slot, SECItem *derCRL, char *url,
-    int type, void *wincx, PRInt32 importOptions, PRArenaPool* arena,
-    PRInt32 decodeoptions)
-{
-    CERTSignedCrl *newCrl, *crl;
-    SECStatus rv;
-
-    newCrl = crl = NULL;
-
-    do {
-        newCrl = CERT_DecodeDERCrlEx(arena, derCRL, type, decodeoptions);
-        if (newCrl == NULL) {
-            if (type == SEC_CRL_TYPE) {
-                /* only promote error when the error code is too generic */
-                if (PORT_GetError () == SEC_ERROR_BAD_DER)
-                    PORT_SetError(SEC_ERROR_CRL_INVALID);
-	        } else {
-                PORT_SetError(SEC_ERROR_KRL_INVALID);
-            }
-            break;		
-        }
-
-        if (0 == (importOptions & CRL_IMPORT_BYPASS_CHECKS)){
-            CERTCertificate *caCert;
-            CERTCertDBHandle* handle = CERT_GetDefaultCertDB();
-            PR_ASSERT(handle != NULL);
-            caCert = CERT_FindCertByName (handle,
-                                          &newCrl->crl.derName);
-            if (caCert == NULL) {
-                PORT_SetError(SEC_ERROR_UNKNOWN_ISSUER);	    
-                break;
-            }
-
-            /* If caCert is a v3 certificate, make sure that it can be used for
-               crl signing purpose */
-            rv = CERT_CheckCertUsage (caCert, KU_CRL_SIGN);
-            if (rv != SECSuccess) {
-                break;
-            }
-
-            rv = CERT_VerifySignedData(&newCrl->signatureWrap, caCert,
-                                       PR_Now(), wincx);
-            if (rv != SECSuccess) {
-                if (type == SEC_CRL_TYPE) {
-                    PORT_SetError(SEC_ERROR_CRL_BAD_SIGNATURE);
-                } else {
-                    PORT_SetError(SEC_ERROR_KRL_BAD_SIGNATURE);
-                }
-                break;
-            }
-        }
-
-	crl = crl_storeCRL(slot, url, newCrl, derCRL, type);
-
-    } while (0);
-
-    if (crl == NULL) {
-	SEC_DestroyCrl (newCrl);
-    }
-    return (crl);
-}

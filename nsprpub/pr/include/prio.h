@@ -1240,7 +1240,7 @@ NSPR_API(PRStatus) PR_Connect(
  *         PR_Poll()
  * RETURN: PRStatus
  *     If the nonblocking connect has successfully completed,
- *     PR_ConnectContinue returns PR_SUCCESS.  If PR_ConnectContinue()
+ *     PR_GetConnectStatus returns PR_SUCCESS.  If PR_GetConnectStatus()
  *     returns PR_FAILURE, call PR_GetError():
  *     - PR_IN_PROGRESS_ERROR: the nonblocking connect is still in
  *       progress and has not completed yet.  The caller should poll
@@ -1880,12 +1880,9 @@ struct PRPollDesc {
 ** DESCRIPTION:
 **
 ** The call returns as soon as I/O is ready on one or more of the underlying
-** socket objects. A count of the number of ready descriptors is
+** file/socket objects. A count of the number of ready descriptors is
 ** returned unless a timeout occurs in which case zero is returned.
 **
-** PRPollDesc.fd should be set to a pointer to a PRFileDesc object
-** representing a socket. This field can be set to NULL to indicate to
-** PR_Poll that this PRFileDesc object should be ignored.
 ** PRPollDesc.in_flags should be set to the desired request
 ** (read/write/except or some combination). Upon successful return from
 ** this call PRPollDesc.out_flags will be set to indicate what kind of

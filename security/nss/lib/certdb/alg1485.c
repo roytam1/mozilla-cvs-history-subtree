@@ -520,43 +520,29 @@ CERT_AsciiToName(char *string)
 
 /************************************************************************/
 
-typedef struct stringBufStr {
-    char *buffer;
-    unsigned offset;
-    unsigned size;
-} stringBuf;
-
-#define DEFAULT_BUFFER_SIZE 200
-#define MAX(x,y) ((x) > (y) ? (x) : (y))
-
 static SECStatus
-AppendStr(stringBuf *bufp, char *str)
+AppendStr(char **bufp, unsigned *buflenp, char *str)
 {
     char *buf;
     unsigned bufLen, bufSize, len;
-    int size = 0;
 
     /* Figure out how much to grow buf by (add in the '\0') */
-    buf = bufp->buffer;
-    bufLen = bufp->offset;
+    buf = *bufp;
+    bufLen = *buflenp;
     len = PORT_Strlen(str);
     bufSize = bufLen + len;
-    if (!buf) {
+    if (buf) {
+	buf = (char*) PORT_Realloc(buf, bufSize);
+    } else {
 	bufSize++;
-	size = MAX(DEFAULT_BUFFER_SIZE,bufSize*2);
-	buf = (char *) PORT_Alloc(size);
-	bufp->size = size;
-    } else if (bufp->size < bufSize) {
-	size = bufSize*2;
-	buf =(char *) PORT_Realloc(buf,size);
-	bufp->size = size;
+	buf = (char*) PORT_Alloc(bufSize);
     }
     if (!buf) {
 	PORT_SetError(SEC_ERROR_NO_MEMORY);
 	return SECFailure;
     }
-    bufp->buffer = buf;
-    bufp->offset = bufSize;
+    *bufp = buf;
+    *buflenp = bufSize;
 
     /* Concatenate str onto buf */
     buf = buf + bufLen;
@@ -617,7 +603,7 @@ CERT_RFC1485_EscapeAndQuote(char *dst, int dstlen, char *src, int srclen)
 }
 
 static SECStatus
-AppendAVA(stringBuf *bufp, CERTAVA *ava)
+AppendAVA(char **bufp, unsigned *buflenp, CERTAVA *ava)
 {
     char *tagName;
     char tmpBuf[384];
@@ -677,7 +663,7 @@ AppendAVA(stringBuf *bufp, CERTAVA *ava)
 	PORT_SetError(SEC_ERROR_INVALID_AVA);
 	return SECFailure;
 #else
-	rv = AppendStr(bufp, "ERR=Unknown AVA");
+	rv = AppendStr(bufp, buflenp, "ERR=Unknown AVA");
 	return rv;
 #endif
     }
@@ -703,7 +689,7 @@ AppendAVA(stringBuf *bufp, CERTAVA *ava)
     SECITEM_FreeItem(avaValue, PR_TRUE);
     if (rv) return SECFailure;
     
-    rv = AppendStr(bufp, tmpBuf);
+    rv = AppendStr(bufp, buflenp, tmpBuf);
     return rv;
 }
 
@@ -719,7 +705,6 @@ CERT_NameToAscii(CERTName *name)
     PRBool first = PR_TRUE;
     char *buf = NULL;
     unsigned buflen = 0;
-    stringBuf strBuf = { NULL, 0, 0 };
     
     rdns = name->rdns;
     if (rdns == NULL) {
@@ -739,22 +724,20 @@ CERT_NameToAscii(CERTName *name)
 	while ((ava = *avas++) != NULL) {
 	    /* Put in comma separator */
 	    if (!first) {
-		rv = AppendStr(&strBuf, ", ");
+		rv = AppendStr(&buf, &buflen, ", ");
 		if (rv) goto loser;
 	    } else {
 		first = PR_FALSE;
 	    }
 	    
 	    /* Add in tag type plus value into buf */
-	    rv = AppendAVA(&strBuf, ava);
+	    rv = AppendAVA(&buf, &buflen, ava);
 	    if (rv) goto loser;
 	}
     }
-    return strBuf.buffer;
+    return buf;
   loser:
-    if (strBuf.buffer) {
-	PORT_Free(strBuf.buffer);
-    }
+    PORT_Free(buf);
     return NULL;
 }
 
@@ -793,7 +776,7 @@ loser:
 }
 
 static char *
-CERT_GetNameElement(PRArenaPool *arena, CERTName *name, int wantedTag)
+CERT_GetNameElement(CERTName *name, int wantedTag)
 {
     CERTRDN** rdns;
     CERTRDN *rdn;
@@ -813,11 +796,7 @@ CERT_GetNameElement(PRArenaPool *arena, CERTName *name, int wantedTag)
 		if(!decodeItem) {
 		    return NULL;
 		}
-		if (arena) {
-		    buf = (char *)PORT_ArenaZAlloc(arena,decodeItem->len + 1);
-		} else {
-		    buf = (char *)PORT_ZAlloc(decodeItem->len + 1);
-		}
+		buf = (char *)PORT_ZAlloc(decodeItem->len + 1);
 		if ( buf ) {
 		    PORT_Memcpy(buf, decodeItem->data, decodeItem->len);
 		    buf[decodeItem->len] = 0;
@@ -846,16 +825,13 @@ CERT_GetCertificateEmailAddress(CERTCertificate *cert)
     
     subAltName.data = NULL;
 
-    rawEmailAddr = CERT_GetNameElement(cert->arena, &(cert->subject),
-						 SEC_OID_PKCS9_EMAIL_ADDRESS);
+    rawEmailAddr = CERT_GetNameElement(&(cert->subject), SEC_OID_PKCS9_EMAIL_ADDRESS);
     if ( rawEmailAddr == NULL ) {
-	rawEmailAddr = CERT_GetNameElement(cert->arena, &(cert->subject), 
-							SEC_OID_RFC1274_MAIL);
+	rawEmailAddr = CERT_GetNameElement(&(cert->subject), SEC_OID_RFC1274_MAIL);
     }
     if ( rawEmailAddr == NULL) {
 
-	rv = CERT_FindCertExtension(cert,  SEC_OID_X509_SUBJECT_ALT_NAME, 
-								&subAltName);
+	rv = CERT_FindCertExtension(cert,  SEC_OID_X509_SUBJECT_ALT_NAME, &subAltName);
 	if (rv != SECSuccess) {
 	    goto finish;
 	}
@@ -870,16 +846,14 @@ CERT_GetCertificateEmailAddress(CERTCertificate *cert)
 	if (nameList != NULL) {
 	    do {
 		if (current->type == certDirectoryName) {
-		    rawEmailAddr = CERT_GetNameElement(cert->arena,
-			&(current->name.directoryName), 
-					       SEC_OID_PKCS9_EMAIL_ADDRESS);
+		    rawEmailAddr = CERT_GetNameElement(&(current->name.directoryName), 
+						       SEC_OID_PKCS9_EMAIL_ADDRESS);
 		    if ( rawEmailAddr == NULL ) {
-			rawEmailAddr = CERT_GetNameElement(cert->arena,
-			  &(current->name.directoryName), SEC_OID_RFC1274_MAIL);
+			rawEmailAddr = CERT_GetNameElement(&(current->name.directoryName), 
+							   SEC_OID_RFC1274_MAIL);
 		    }
 		} else if (current->type == certRFC822Name) {
-		    rawEmailAddr = (char*)PORT_ArenaZAlloc(cert->arena,
-						current->name.other.len + 1);
+		    rawEmailAddr = (char*)PORT_ZAlloc(current->name.other.len + 1);
 		    if (!rawEmailAddr) {
 			goto finish;
 		    }
@@ -895,12 +869,18 @@ CERT_GetCertificateEmailAddress(CERTCertificate *cert)
 	}
     }
     if (rawEmailAddr) {
-	for (i = 0; i <= (int) PORT_Strlen(rawEmailAddr); i++) {
-	    rawEmailAddr[i] = tolower(rawEmailAddr[i]);
+	emailAddr = (char*)PORT_ArenaZAlloc(cert->arena, PORT_Strlen(rawEmailAddr) + 1);
+	for (i = 0; i <= PORT_Strlen(rawEmailAddr); i++) {
+	    emailAddr[i] = tolower(rawEmailAddr[i]);
 	}
-    } 
+    } else {
+	emailAddr = NULL;
+    }
 
 finish:
+    if ( rawEmailAddr ) {
+	PORT_Free(rawEmailAddr);
+    }
 
     /* Don't free nameList, it's part of the arena. */
 
@@ -912,7 +892,7 @@ finish:
 	SECITEM_FreeItem(&subAltName, PR_FALSE);
     }
 
-    return(rawEmailAddr);
+    return(emailAddr);
 }
 
 char *
@@ -922,9 +902,9 @@ CERT_GetCertEmailAddress(CERTName *name)
     char *emailAddr;
 
     
-    rawEmailAddr = CERT_GetNameElement(NULL, name, SEC_OID_PKCS9_EMAIL_ADDRESS);
+    rawEmailAddr = CERT_GetNameElement(name, SEC_OID_PKCS9_EMAIL_ADDRESS);
     if ( rawEmailAddr == NULL ) {
-	rawEmailAddr = CERT_GetNameElement(NULL, name, SEC_OID_RFC1274_MAIL);
+	rawEmailAddr = CERT_GetNameElement(name, SEC_OID_RFC1274_MAIL);
     }
     emailAddr = CERT_FixupEmailAddr(rawEmailAddr);
     if ( rawEmailAddr ) {
@@ -936,54 +916,54 @@ CERT_GetCertEmailAddress(CERTName *name)
 char *
 CERT_GetCommonName(CERTName *name)
 {
-    return(CERT_GetNameElement(NULL, name, SEC_OID_AVA_COMMON_NAME));
+    return(CERT_GetNameElement(name, SEC_OID_AVA_COMMON_NAME));
 }
 
 char *
 CERT_GetCountryName(CERTName *name)
 {
-    return(CERT_GetNameElement(NULL, name, SEC_OID_AVA_COUNTRY_NAME));
+    return(CERT_GetNameElement(name, SEC_OID_AVA_COUNTRY_NAME));
 }
 
 char *
 CERT_GetLocalityName(CERTName *name)
 {
-    return(CERT_GetNameElement(NULL, name, SEC_OID_AVA_LOCALITY));
+    return(CERT_GetNameElement(name, SEC_OID_AVA_LOCALITY));
 }
 
 char *
 CERT_GetStateName(CERTName *name)
 {
-    return(CERT_GetNameElement(NULL, name, SEC_OID_AVA_STATE_OR_PROVINCE));
+    return(CERT_GetNameElement(name, SEC_OID_AVA_STATE_OR_PROVINCE));
 }
 
 char *
 CERT_GetOrgName(CERTName *name)
 {
-    return(CERT_GetNameElement(NULL, name, SEC_OID_AVA_ORGANIZATION_NAME));
+    return(CERT_GetNameElement(name, SEC_OID_AVA_ORGANIZATION_NAME));
 }
 
 char *
 CERT_GetDomainComponentName(CERTName *name)
 {
-    return(CERT_GetNameElement(NULL, name, SEC_OID_AVA_DC));
+    return(CERT_GetNameElement(name, SEC_OID_AVA_DC));
 }
 
 char *
 CERT_GetOrgUnitName(CERTName *name)
 {
-    return(CERT_GetNameElement(NULL, name, SEC_OID_AVA_ORGANIZATIONAL_UNIT_NAME));
+    return(CERT_GetNameElement(name, SEC_OID_AVA_ORGANIZATIONAL_UNIT_NAME));
 }
 
 char *
 CERT_GetDnQualifier(CERTName *name)
 {
-    return(CERT_GetNameElement(NULL, name, SEC_OID_AVA_DN_QUALIFIER));
+    return(CERT_GetNameElement(name, SEC_OID_AVA_DN_QUALIFIER));
 }
 
 char *
 CERT_GetCertUid(CERTName *name)
 {
-    return(CERT_GetNameElement(NULL, name, SEC_OID_RFC1274_UID));
+    return(CERT_GetNameElement(name, SEC_OID_RFC1274_UID));
 }
 

@@ -246,13 +246,10 @@ nss_smime_get_cipher_for_alg_and_key(SECAlgorithmID *algid, PK11SymKey *key, uns
 	switch (keylen_bits) {
 	case 40:
 	    c = SMIME_RC2_CBC_40;
-	    break;
 	case 64:
 	    c = SMIME_RC2_CBC_64;
-	    break;
 	case 128:
 	    c = SMIME_RC2_CBC_128;
-	    break;
 	default:
 	    rv = SECFailure;
 	    break;
@@ -260,13 +257,10 @@ nss_smime_get_cipher_for_alg_and_key(SECAlgorithmID *algid, PK11SymKey *key, uns
 	break;
     case SEC_OID_DES_CBC:
 	c = SMIME_DES_CBC_56;
-	break;
     case SEC_OID_DES_EDE3_CBC:
 	c = SMIME_DES_EDE3_168;
-	break;
     case SEC_OID_FORTEZZA_SKIPJACK:
 	c = SMIME_FORTEZZA;
-	break;
     default:
 	rv = SECFailure;
     }
@@ -559,7 +553,7 @@ NSS_SMIMEUtil_FindBulkAlgForRecipients(CERTCertificate **rcerts, SECOidTag *bulk
     mapi = smime_mapi_by_cipher(cipher);
 
     *bulkalgtag = smime_cipher_map[mapi].algtag;
-    *keysize = smime_keysize_by_cipher(smime_cipher_map[mapi].cipher);
+    *keysize = smime_keysize_by_cipher(smime_cipher_map[mapi].algtag);
 
     return SECSuccess;
 }

@@ -60,7 +60,6 @@ EXPORTS = \
 	$(NULL)
 
 CSRCS = \
-	quickder.c \
 	secdig.c \
 	derdec.c \
 	derenc.c \

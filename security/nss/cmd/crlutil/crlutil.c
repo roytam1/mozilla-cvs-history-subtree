@@ -45,7 +45,6 @@
 #include "cert.h"
 #include "certdb.h"
 #include "nss.h"
-#include "pk11func.h"
 
 #define SEC_CERT_DB_EXISTS 0
 #define SEC_CREATE_CERT_DB 1
@@ -93,6 +92,7 @@ static void ListCRLNames (CERTCertDBHandle *certHandle, int crlType)
     CERTName *name = NULL;
     PRArenaPool *arena = NULL;
     SECStatus rv;
+    void *mark;
 
     do {
 	arena = PORT_NewArena (SEC_ASN1_DEFAULT_ARENA_SIZE);
@@ -173,15 +173,12 @@ static SECStatus DeleteCRL (CERTCertDBHandle *certHandle, char *name, int type)
 }
 
 SECStatus ImportCRL (CERTCertDBHandle *certHandle, char *url, int type, 
-                     PRFileDesc *inFile, PRInt32 importOptions, PRInt32 decodeOptions)
+                     PRFileDesc *inFile)
 {
     CERTCertificate *cert = NULL;
     CERTSignedCrl *crl = NULL;
     SECItem crlDER;
-    PK11SlotInfo* slot = NULL;
     int rv;
-    PRIntervalTime starttime, endtime, elapsed;
-    PRUint32 mins, secs, msecs;
 
     crlDER.data = NULL;
 
@@ -192,35 +189,21 @@ SECStatus ImportCRL (CERTCertDBHandle *certHandle, char *url, int type,
 	SECU_PrintError(progName, "unable to read input file");
 	return (SECFailure);
     }
-
-    decodeOptions |= CRL_DECODE_DONT_COPY_DER;
-
-    slot = PK11_GetInternalKeySlot();
- 
-    starttime = PR_IntervalNow();
-    crl = PK11_ImportCRL(slot, &crlDER, url, type,
-          NULL, importOptions, NULL, decodeOptions);
-    endtime = PR_IntervalNow();
-    elapsed = endtime - starttime;
-    mins = PR_IntervalToSeconds(elapsed) / 60;
-    secs = PR_IntervalToSeconds(elapsed) % 60;
-    msecs = PR_IntervalToMilliseconds(elapsed) % 1000;
-    printf("Elapsed : %2d:%2d.%3d\n", mins, secs, msecs);
+    
+    crl = CERT_ImportCRL (certHandle, &crlDER, url, type, NULL);
     if (!crl) {
 	const char *errString;
 
 	errString = SECU_Strerror(PORT_GetError());
 	if ( errString && PORT_Strlen (errString) == 0)
 	    SECU_PrintError
-		    (progName, "CRL is not imported (error: input CRL is not up to date.)");
+		    (progName, "CRL is not import (error: input CRL is not up to date.)");
 	else    
 	    SECU_PrintError
 		    (progName, "unable to import CRL");
     }
+    PORT_Free (crlDER.data);
     SEC_DestroyCrl (crl);
-    if (slot) {
-        PK11_FreeSlot(slot);
-    }
     return (rv);
 }
 	    
@@ -230,7 +213,7 @@ static void Usage(char *progName)
     fprintf(stderr,
 	    "Usage:  %s -L [-n nickname[ [-d keydir] [-t crlType]\n"
 	    "        %s -D -n nickname [-d keydir]\n"
-	    "        %s -I -i crl -t crlType [-u url] [-d keydir] [-B]\n",
+	    "        %s -I -i crl -t crlType [-u url] [-d keydir]\n",
 	    progName, progName, progName);
 
     fprintf (stderr, "%-15s List CRL\n", "-L");
@@ -253,8 +236,6 @@ static void Usage(char *progName)
     fprintf(stderr, "%-20s CRL Types (default is SEC_CRL_TYPE):\n", " ");
     fprintf(stderr, "%-20s \t 0 - SEC_KRL_TYPE\n", " ");
     fprintf(stderr, "%-20s \t 1 - SEC_CRL_TYPE\n", " ");        
-    fprintf(stderr, "\n%-20s Bypass CA certificate checks.\n", "-B");
-    fprintf(stderr, "\n%-20s Partial decode for faster operation.\n", "-P");
 
     exit(-1);
 }
@@ -267,6 +248,7 @@ int main(int argc, char **argv)
     PRFileDesc *inFile;
     int listCRL;
     int importCRL;
+    int opt;
     int deleteCRL;
     int rv;
     char *nickName;
@@ -275,9 +257,6 @@ int main(int argc, char **argv)
     PLOptState *optstate;
     PLOptStatus status;
     SECStatus secstatus;
-    PRBool bypassChecks = PR_FALSE;
-    PRInt32 decodeOptions = CRL_DECODE_DEFAULT_OPTIONS;
-    PRInt32 importOptions = CRL_IMPORT_DEFAULT_OPTIONS;
 
     progName = strrchr(argv[0], '/');
     progName = progName ? progName+1 : argv[0];
@@ -293,20 +272,12 @@ int main(int argc, char **argv)
     /*
      * Parse command line arguments
      */
-    optstate = PL_CreateOptState(argc, argv, "PBIALd:i:Dn:Ct:u:");
+    optstate = PL_CreateOptState(argc, argv, "IALd:i:Dn:Ct:u:");
     while ((status = PL_GetNextOpt(optstate)) == PL_OPT_OK) {
 	switch (optstate->option) {
 	  case '?':
 	    Usage(progName);
 	    break;
-
-          case 'P':
-            decodeOptions |= CRL_DECODE_SKIP_ENTRIES;
-            break;
-
-	  case 'B':
-            importOptions |= CRL_IMPORT_BYPASS_CHECKS;
-            break;
 
 	  case 'C':
 	      listCRL = 1;
@@ -382,8 +353,7 @@ int main(int argc, char **argv)
     else if (listCRL)
 	ListCRL (certHandle, nickName, crlType);
     else if (importCRL) 
-	rv = ImportCRL (certHandle, url, crlType, inFile, importOptions,
-                        decodeOptions);
+	rv = ImportCRL (certHandle, url, crlType, inFile);
     
     return (rv);
 }

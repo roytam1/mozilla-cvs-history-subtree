@@ -189,7 +189,7 @@ ssl_cov()
   html_head "SSL Cipher Coverage $NORM_EXT"
 
   testname=""
-  sparam="-c ABCDEFabcdefghijklmnvyz"
+  sparam="-c ABCDEFabcdefghijklmnvy"
   start_selfserv # Launch the server
                
   p=""
@@ -205,6 +205,10 @@ ssl_cov()
           TLS_FLAG=-T
           if [ $tls = "TLS" ]; then
               TLS_FLAG=""
+          fi
+          sparam=""
+          if [ ${param} = "i" ]; then
+              sparam='-c i'
           fi
 
           is_selfserv_alive

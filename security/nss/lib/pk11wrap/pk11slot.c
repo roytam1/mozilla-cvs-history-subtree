@@ -657,7 +657,6 @@ pk11_CheckPassword(PK11SlotInfo *slot,char *pw)
     PK11_EnterSlotMonitor(slot);
     crv = PK11_GETTAB(slot)->C_Login(slot->session,CKU_USER,
 						(unsigned char *)pw,len);
-    slot->lastLoginCheck = 0;
     PK11_ExitSlotMonitor(slot);
     switch (crv) {
     /* if we're already logged in, we're good to go */
@@ -701,7 +700,6 @@ PK11_CheckUserPassword(PK11SlotInfo *slot,char *pw)
 
     crv = PK11_GETTAB(slot)->C_Login(slot->session,CKU_USER,
 					(unsigned char *)pw,len);
-    slot->lastLoginCheck = 0;
     PK11_ExitSlotMonitor(slot);
     switch (crv) {
     /* if we're already logged in, we're good to go */
@@ -729,7 +727,6 @@ PK11_Logout(PK11SlotInfo *slot)
     /* force a logout */
     PK11_EnterSlotMonitor(slot);
     crv = PK11_GETTAB(slot)->C_Logout(slot->session);
-    slot->lastLoginCheck = 0;
     PK11_ExitSlotMonitor(slot);
     if (crv != CKR_OK) {
 	PORT_SetError(PK11_MapError(crv));
@@ -783,7 +780,6 @@ PK11_HandlePasswordCheck(PK11SlotInfo *slot,void *wincx)
 			 (PK11_Global.transaction != slot->authTransact)) {
     	    PK11_EnterSlotMonitor(slot);
 	    PK11_GETTAB(slot)->C_Logout(slot->session);
-	    slot->lastLoginCheck = 0;
     	    PK11_ExitSlotMonitor(slot);
 	    NeedAuth = PR_TRUE;
 	}
@@ -937,7 +933,6 @@ PK11_CheckSSOPassword(PK11SlotInfo *slot, char *ssopw)
     /* check the password */
     crv = PK11_GETTAB(slot)->C_Login(rwsession,CKU_SO,
 						(unsigned char *)ssopw,len);
-    slot->lastLoginCheck = 0;
     switch (crv) {
     /* if we're already logged in, we're good to go */
     case CKR_OK:
@@ -952,8 +947,6 @@ PK11_CheckSSOPassword(PK11SlotInfo *slot, char *ssopw)
 	rv = SECFailure; /* some failure we can't fix by retrying */
     }
     PK11_GETTAB(slot)->C_Logout(rwsession);
-    slot->lastLoginCheck = 0;
-
     /* release rwsession */
     PK11_RestoreROSession(slot,rwsession);
     return rv;
@@ -1006,7 +999,6 @@ PK11_InitPin(PK11SlotInfo *slot,char *ssopw, char *userpw)
     /* check the password */
     crv = PK11_GETTAB(slot)->C_Login(rwsession,CKU_SO, 
 					  (unsigned char *)ssopw,ssolen);
-    slot->lastLoginCheck = 0;
     if (crv != CKR_OK) {
 	PORT_SetError(PK11_MapError(crv));
 	goto done;
@@ -1021,7 +1013,6 @@ PK11_InitPin(PK11SlotInfo *slot,char *ssopw, char *userpw)
 
 done:
     PK11_GETTAB(slot)->C_Logout(rwsession);
-    slot->lastLoginCheck = 0;
     PK11_RestoreROSession(slot,rwsession);
     if (rv == SECSuccess) {
         /* update our view of the world */
@@ -1029,7 +1020,6 @@ done:
 	PK11_EnterSlotMonitor(slot);
     	PK11_GETTAB(slot)->C_Login(slot->session,CKU_USER,
 						(unsigned char *)userpw,len);
-	slot->lastLoginCheck = 0;
 	PK11_ExitSlotMonitor(slot);
     }
     return rv;
@@ -1726,9 +1716,7 @@ PK11_InitToken(PK11SlotInfo *slot, PRBool loadCerts)
     slot->hasRandom = ((tokenInfo.flags & CKF_RNG) ? PR_TRUE : PR_FALSE);
     slot->protectedAuthPath =
     		((tokenInfo.flags & CKF_PROTECTED_AUTHENTICATION_PATH) 
-	 						? PR_TRUE : PR_FALSE);
-    slot->lastLoginCheck = 0;
-    slot->lastState = 0;
+							? PR_TRUE : PR_FALSE);
     /* on some platforms Active Card incorrectly sets the 
      * CKF_PROTECTED_AUTHENTICATION_PATH bit when it doesn't mean to. */
     if (slot->isActiveCard) {
@@ -2173,22 +2161,6 @@ PK11_GetModuleID(PK11SlotInfo *slot)
     return slot->module->moduleID;
 }
 
-static void
-pk11_zeroTerminatedToBlankPadded(CK_CHAR *buffer, size_t buffer_size)
-{
-    CK_CHAR *walk = buffer;
-    CK_CHAR *end = buffer + buffer_size;
-
-    /* find the NULL */
-    while (walk < end && *walk != '\0') {
-	walk++;
-    }
-
-    /* clear out the buffer */
-    while (walk < end) {
-	*walk++ = ' ';
-    }
-}
 
 /* return the slot info structure */
 SECStatus
@@ -2197,17 +2169,7 @@ PK11_GetSlotInfo(PK11SlotInfo *slot, CK_SLOT_INFO *info)
     CK_RV crv;
 
     if (!slot->isThreadSafe) PK11_EnterSlotMonitor(slot);
-    /*
-     * some buggy drivers do not fill the buffer completely, 
-     * erase the buffer first
-     */
-    PORT_Memset(info->slotDescription,' ',sizeof(info->slotDescription));
-    PORT_Memset(info->manufacturerID,' ',sizeof(info->manufacturerID));
     crv = PK11_GETTAB(slot)->C_GetSlotInfo(slot->slotID,info);
-    pk11_zeroTerminatedToBlankPadded(info->slotDescription,
-					sizeof(info->slotDescription));
-    pk11_zeroTerminatedToBlankPadded(info->manufacturerID,
-					sizeof(info->manufacturerID));
     if (!slot->isThreadSafe) PK11_ExitSlotMonitor(slot);
     if (crv != CKR_OK) {
 	PORT_SetError(PK11_MapError(crv));
@@ -2222,21 +2184,7 @@ PK11_GetTokenInfo(PK11SlotInfo *slot, CK_TOKEN_INFO *info)
 {
     CK_RV crv;
     if (!slot->isThreadSafe) PK11_EnterSlotMonitor(slot);
-    /*
-     * some buggy drivers do not fill the buffer completely, 
-     * erase the buffer first
-     */
-    PORT_Memset(info->label,' ',sizeof(info->label));
-    PORT_Memset(info->manufacturerID,' ',sizeof(info->manufacturerID));
-    PORT_Memset(info->model,' ',sizeof(info->model));
-    PORT_Memset(info->serialNumber,' ',sizeof(info->serialNumber));
     crv = PK11_GETTAB(slot)->C_GetTokenInfo(slot->slotID,info);
-    pk11_zeroTerminatedToBlankPadded(info->label,sizeof(info->label));
-    pk11_zeroTerminatedToBlankPadded(info->manufacturerID,
-					sizeof(info->manufacturerID));
-    pk11_zeroTerminatedToBlankPadded(info->model,sizeof(info->model));
-    pk11_zeroTerminatedToBlankPadded(info->serialNumber,
-					sizeof(info->serialNumber));
     if (!slot->isThreadSafe) PK11_ExitSlotMonitor(slot);
     if (crv != CKR_OK) {
 	PORT_SetError(PK11_MapError(crv));
@@ -2249,19 +2197,6 @@ PK11_GetTokenInfo(PK11SlotInfo *slot, CK_TOKEN_INFO *info)
 PRBool
 PK11_NeedUserInit(PK11SlotInfo *slot)
 {
-    PRBool needUserInit = (PRBool) ((slot->flags & CKF_USER_PIN_INITIALIZED) 
-					== 0);
-
-    if (needUserInit) {
-	CK_TOKEN_INFO info;
-	SECStatus rv;
-
-	/* see if token has been initialized off line */
-	rv = PK11_GetTokenInfo(slot, &info);
-	if (rv == SECSuccess) {
-	    slot->flags = info.flags;
-	}
-    }
     return (PRBool)((slot->flags & CKF_USER_PIN_INITIALIZED) == 0);
 }
 
@@ -2292,17 +2227,6 @@ PK11_GetInternalSlot(void)
     return PK11_ReferenceSlot(mod->slots[0]);
 }
 
-PRBool 
-pk11_InDelayPeriod(PRIntervalTime lastTime, PRIntervalTime delayTime, 
-						PRIntervalTime *retTime)
-{
-    PRIntervalTime time;
-
-    *retTime = time = PR_IntervalNow();
-    return (PRBool) (lastTime) && (time > lastTime) && 
-				((time-lastTime) < delayTime);
-}
-
 /*
  * Determine if the token is logged in. We have to actually query the token,
  * because it's state can change without intervention from us.
@@ -2314,12 +2238,6 @@ PK11_IsLoggedIn(PK11SlotInfo *slot,void *wincx)
     int askpw = slot->askpw;
     int timeout = slot->timeout;
     CK_RV crv;
-    PRIntervalTime curTime;
-    static PRIntervalTime login_delay_time = 0;
-
-    if (login_delay_time == 0) {
-	login_delay_time = PR_SecondsToInterval(1);
-    }
 
     /* If we don't have our own password default values, use the system
      * ones */
@@ -2350,7 +2268,6 @@ PK11_IsLoggedIn(PK11SlotInfo *slot,void *wincx)
 	if (LL_CMP(result, <, currtime) ) {
 	    PK11_EnterSlotMonitor(slot);
 	    PK11_GETTAB(slot)->C_Logout(slot->session);
-	    slot->lastLoginCheck = 0;
 	    PK11_ExitSlotMonitor(slot);
 	} else {
 	    slot->authTime = currtime;
@@ -2358,16 +2275,7 @@ PK11_IsLoggedIn(PK11SlotInfo *slot,void *wincx)
     }
 
     PK11_EnterSlotMonitor(slot);
-    if (pk11_InDelayPeriod(slot->lastLoginCheck,login_delay_time, &curTime)) {
-	sessionInfo.state = slot->lastState;
-	crv = CKR_OK;
-    } else {
-	crv = PK11_GETTAB(slot)->C_GetSessionInfo(slot->session,&sessionInfo);
-	if (crv == CKR_OK) {
-	    slot->lastState = sessionInfo.state;
-	    slot->lastLoginCheck = curTime;
-	}
-    }
+    crv = PK11_GETTAB(slot)->C_GetSessionInfo(slot->session,&sessionInfo);
     PK11_ExitSlotMonitor(slot);
     /* if we can't get session info, something is really wrong */
     if (crv != CKR_OK) {
@@ -2901,7 +2809,6 @@ PK11_GetKeyGen(CK_MECHANISM_TYPE type)
     case CKM_AES_MAC:
     case CKM_AES_MAC_GENERAL:
     case CKM_AES_CBC_PAD:
-    case CKM_AES_KEY_GEN:
 	return CKM_AES_KEY_GEN;
     case CKM_DES_ECB:
     case CKM_DES_CBC:
@@ -2909,38 +2816,32 @@ PK11_GetKeyGen(CK_MECHANISM_TYPE type)
     case CKM_DES_MAC_GENERAL:
     case CKM_KEY_WRAP_LYNKS:
     case CKM_DES_CBC_PAD:
-    case CKM_DES_KEY_GEN:
 	return CKM_DES_KEY_GEN;
     case CKM_DES3_ECB:
     case CKM_DES3_CBC:
     case CKM_DES3_MAC:
     case CKM_DES3_MAC_GENERAL:
     case CKM_DES3_CBC_PAD:
-    case CKM_DES3_KEY_GEN:
 	return CKM_DES3_KEY_GEN;
     case CKM_CDMF_ECB:
     case CKM_CDMF_CBC:
     case CKM_CDMF_MAC:
     case CKM_CDMF_MAC_GENERAL:
     case CKM_CDMF_CBC_PAD:
-    case CKM_CDMF_KEY_GEN:
 	return CKM_CDMF_KEY_GEN;
     case CKM_RC2_ECB:
     case CKM_RC2_CBC:
     case CKM_RC2_MAC:
     case CKM_RC2_MAC_GENERAL:
     case CKM_RC2_CBC_PAD:
-    case CKM_RC2_KEY_GEN:
 	return CKM_RC2_KEY_GEN;
     case CKM_RC4:
-    case CKM_RC4_KEY_GEN:
 	return CKM_RC4_KEY_GEN;
     case CKM_RC5_ECB:
     case CKM_RC5_CBC:
     case CKM_RC5_MAC:
     case CKM_RC5_MAC_GENERAL:
     case CKM_RC5_CBC_PAD:
-    case CKM_RC5_KEY_GEN:
 	return CKM_RC5_KEY_GEN;
     case CKM_SKIPJACK_CBC64:
     case CKM_SKIPJACK_ECB64:
@@ -2950,7 +2851,6 @@ PK11_GetKeyGen(CK_MECHANISM_TYPE type)
     case CKM_SKIPJACK_CFB16:
     case CKM_SKIPJACK_CFB8:
     case CKM_SKIPJACK_WRAP:
-    case CKM_SKIPJACK_KEY_GEN:
 	return CKM_SKIPJACK_KEY_GEN;
     case CKM_BATON_ECB128:
     case CKM_BATON_ECB96:
@@ -2958,42 +2858,36 @@ PK11_GetKeyGen(CK_MECHANISM_TYPE type)
     case CKM_BATON_COUNTER:
     case CKM_BATON_SHUFFLE:
     case CKM_BATON_WRAP:
-    case CKM_BATON_KEY_GEN:
 	return CKM_BATON_KEY_GEN;
     case CKM_JUNIPER_ECB128:
     case CKM_JUNIPER_CBC128:
     case CKM_JUNIPER_COUNTER:
     case CKM_JUNIPER_SHUFFLE:
     case CKM_JUNIPER_WRAP:
-    case CKM_JUNIPER_KEY_GEN:
 	return CKM_JUNIPER_KEY_GEN;
     case CKM_IDEA_CBC:
     case CKM_IDEA_ECB:
     case CKM_IDEA_MAC:
     case CKM_IDEA_MAC_GENERAL:
     case CKM_IDEA_CBC_PAD:
-    case CKM_IDEA_KEY_GEN:
 	return CKM_IDEA_KEY_GEN;
     case CKM_CAST_ECB:
     case CKM_CAST_CBC:
     case CKM_CAST_MAC:
     case CKM_CAST_MAC_GENERAL:
     case CKM_CAST_CBC_PAD:
-    case CKM_CAST_KEY_GEN:
 	return CKM_CAST_KEY_GEN;
     case CKM_CAST3_ECB:
     case CKM_CAST3_CBC:
     case CKM_CAST3_MAC:
     case CKM_CAST3_MAC_GENERAL:
     case CKM_CAST3_CBC_PAD:
-    case CKM_CAST3_KEY_GEN:
 	return CKM_CAST3_KEY_GEN;
     case CKM_CAST5_ECB:
     case CKM_CAST5_CBC:
     case CKM_CAST5_MAC:
     case CKM_CAST5_MAC_GENERAL:
     case CKM_CAST5_CBC_PAD:
-    case CKM_CAST5_KEY_GEN:
 	return CKM_CAST5_KEY_GEN;
     case CKM_RSA_PKCS:
     case CKM_RSA_9796:
@@ -3002,20 +2896,15 @@ PK11_GetKeyGen(CK_MECHANISM_TYPE type)
     case CKM_MD5_RSA_PKCS:
     case CKM_SHA1_RSA_PKCS:
     case CKM_KEY_WRAP_SET_OAEP:
-    case CKM_RSA_PKCS_KEY_PAIR_GEN:
 	return CKM_RSA_PKCS_KEY_PAIR_GEN;
     case CKM_DSA:
     case CKM_DSA_SHA1:
-    case CKM_DSA_KEY_PAIR_GEN:
 	return CKM_DSA_KEY_PAIR_GEN;
     case CKM_DH_PKCS_DERIVE:
-    case CKM_DH_PKCS_KEY_PAIR_GEN:
 	return CKM_DH_PKCS_KEY_PAIR_GEN;
     case CKM_KEA_KEY_DERIVE:
-    case CKM_KEA_KEY_PAIR_GEN:
 	return CKM_KEA_KEY_PAIR_GEN;
     case CKM_ECDSA:
-    case CKM_ECDSA_KEY_PAIR_GEN:
 	return CKM_ECDSA_KEY_PAIR_GEN;
     case CKM_SSL3_PRE_MASTER_KEY_GEN:
     case CKM_SSL3_MASTER_KEY_DERIVE:
@@ -3032,7 +2921,6 @@ PK11_GetKeyGen(CK_MECHANISM_TYPE type)
     case CKM_MD5_HMAC:
     case CKM_MD5_HMAC_GENERAL:
     case CKM_TLS_PRF_GENERAL:
-    case CKM_GENERIC_SECRET_KEY_GEN:
 	return CKM_GENERIC_SECRET_KEY_GEN;
     case CKM_PBE_MD2_DES_CBC:
     case CKM_PBE_MD5_DES_CBC:
@@ -3251,7 +3139,6 @@ PK11_ParamFromIV(CK_MECHANISM_TYPE type,SECItem *iv)
     if (param == NULL) return NULL;
     param->data = NULL;
     param->len = 0;
-    param->type = 0;
     switch (type) {
     case CKM_AES_ECB:
     case CKM_DES_ECB:
@@ -3555,7 +3442,6 @@ PK11_ParamFromAlgid(SECAlgorithmID *algid)
 
     mech = (SECItem *) PORT_Alloc(sizeof(SECItem));
     if (mech == NULL) return NULL;
-    mech->type = siBuffer;
 
 
     /* handle the complicated cases */
@@ -3865,7 +3751,6 @@ PK11_GenerateNewParam(CK_MECHANISM_TYPE type, PK11SymKey *key) {
     if (mech == NULL) return NULL;
 
     rv = SECSuccess;
-    mech->type = siBuffer;
     switch (type) {
     case CKM_RC4:
     case CKM_AES_ECB:
