@@ -42,21 +42,6 @@ public:
 };
 
 //////////////////////////////////////////////////
-// TestConverter1
-#define NS_TESTCONVERTER1_CID                             \
-{ /* 2BA20BB0-5598-11d3-9E63-0010A4053FD0 */         \
-    0x2ba20bb0,                                      \
-    0x5598,                                          \
-    0x11d3,                                          \
-    {0x9e, 0x63, 0x00, 0x10, 0xa4, 0x5, 0x3f, 0xd0} \
-}
-static NS_DEFINE_CID(kTestConverter1CID, NS_TESTCONVERTER1_CID);
-
-// Derrives solely from TestConverter.
-class TestConverter1 : public TestConverter {
-};
-
-//////////////////////////////////////////////////
 // FACTORY
 class TestConverterFactory : public nsIFactory
 {

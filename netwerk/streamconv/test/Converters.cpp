@@ -141,10 +141,6 @@ TestConverterFactory::CreateInstance(nsISupports *aOuter,
         TestConverter *conv = new TestConverter();
         if (!conv) return NS_ERROR_OUT_OF_MEMORY;
         conv->QueryInterface(NS_GET_IID(nsISupports), (void**)&inst);
-    } else if (mClassID.Equals(kTestConverter1CID)) {
-        TestConverter1 *conv = new TestConverter1();
-        if (!conv) return NS_ERROR_OUT_OF_MEMORY;
-        conv->QueryInterface(NS_GET_IID(nsISupports), (void**)&inst);
     }
     else {
         return NS_ERROR_NO_INTERFACE;

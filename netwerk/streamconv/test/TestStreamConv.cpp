@@ -27,14 +27,10 @@
 #include "nsICategoryManager.h"
 #include "nsIFactory.h"
 #include "nsIStringStream.h"
-#include "nsIIOService.h"
 #include "nsCOMPtr.h"
 #include "nsNetUtil.h"
 
-static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
-
 #include "nspr.h"
-
 
 #define ASYNC_TEST // undefine this if you want to test sycnronous conversion.
 
@@ -101,16 +97,10 @@ public:
     }
 
     // nsIStreamObserver methods
-    NS_IMETHOD OnStartRequest(nsIRequest* request, nsISupports *ctxt) 
-    {
-        return NS_OK;
-    }
+    NS_IMETHOD OnStartRequest(nsIRequest* request, nsISupports *ctxt) { return NS_OK; }
 
     NS_IMETHOD OnStopRequest(nsIRequest* request, nsISupports *ctxt, 
-                             nsresult aStatus, const PRUnichar* aStatusArg)
-    {
-        return NS_OK;
-    }
+                             nsresult aStatus, const PRUnichar* aStatusArg) { return NS_OK; }
 };
 
 NS_IMPL_ISUPPORTS1(EndListener, nsIStreamListener);
@@ -123,14 +113,11 @@ nsresult SendData(const char * aData, nsIStreamListener* aListener, nsIRequest* 
     nsString data;
     data.AssignWithConversion(aData);
     nsCOMPtr<nsIInputStream> dataStream;
-    nsCOMPtr<nsISupports> sup;
-    nsresult rv = NS_NewStringInputStream(getter_AddRefs(sup), data);
-    if (NS_FAILED(rv)) return rv;
-    dataStream = do_QueryInterface(sup, &rv);
+    nsresult rv = NS_NewStringInputStream(getter_AddRefs(dataStream), data);
     if (NS_FAILED(rv)) return rv;
     return aListener->OnDataAvailable(request, nsnull, dataStream, 0, -1);
 }
-#define SEND_DATA(x) SendData(x, converterListener, nsnull)
+#define SEND_DATA(x) SendData(x, converterListener, request)
 
 int
 main(int argc, char* argv[])
@@ -154,123 +141,80 @@ main(int argc, char* argv[])
     if (NS_FAILED(rv)) return rv;
     nsXPIDLCString previous;
 
-
-
     ///////////////////////////////////////////
     // BEGIN - Stream converter registration
-    //   All stream converters must register with the ComponentManager, _and_ make
-    //   a registry entry.
+    //   All stream converters must register with the ComponentManager
     ///////////////////////////////////////////
+
+    // these stream converters are just for testing. running this harness
+    // from the dist/bin dir will also pickup converters registered
+    // in other modules (necko converters for example).
+
+    char *converterList[] = {
+        "?from=a/foo&to=b/foo",
+        "?from=b/foo&to=c/foo",
+        "?from=b/foo&to=d/foo",
+        "?from=c/foo&to=d/foo",
+        "?from=d/foo&to=e/foo",
+        "?from=d/foo&to=f/foo",
+        "?from=t/foo&to=k/foo"
+    };
+
     TestConverterFactory *convFactory = new TestConverterFactory(kTestConverterCID, "TestConverter", NS_ISTREAMCONVERTER_KEY);
-    nsIFactory *convFactSup = nsnull;
-    rv = convFactory->QueryInterface(NS_GET_IID(nsIFactory), (void**)&convFactSup);
-    if (NS_FAILED(rv)) return rv;
-
-    TestConverterFactory *convFactory1 = new TestConverterFactory(kTestConverter1CID, "TestConverter1", NS_ISTREAMCONVERTER_KEY);
-    nsIFactory *convFactSup1 = nsnull;
-    rv = convFactory1->QueryInterface(NS_GET_IID(nsIFactory), (void**)&convFactSup1);
-    if (NS_FAILED(rv)) return rv;
-
-    // register the TestConverter with the component manager. One contractid registration
-    // per conversion pair (from - to pair).
-    rv = nsComponentManager::RegisterFactory(kTestConverterCID,
-                                             "TestConverter",
-                                             NS_ISTREAMCONVERTER_KEY "?from=a/foo&to=b/foo",
-                                             convFactSup,
-                                             PR_TRUE);
+    nsCOMPtr<nsIFactory> convFactSup(do_QueryInterface(convFactory, &rv));
     if (NS_FAILED(rv)) return rv;
     rv = catman->AddCategoryEntry(NS_ISTREAMCONVERTER_KEY, "?from=a/foo&to=b/foo", "x",
                                     PR_TRUE, PR_TRUE, getter_Copies(previous));
     if (NS_FAILED(rv)) return rv;
 
-    rv = nsComponentManager::RegisterFactory(kTestConverter1CID,
-                                             "TestConverter1",
-                                             NS_ISTREAMCONVERTER_KEY "?from=b/foo&to=c/foo",
-                                             convFactSup1,
-                                             PR_TRUE);
-    if (NS_FAILED(rv)) return rv;
-    rv = catman->AddCategoryEntry(NS_ISTREAMCONVERTER_KEY, "?from=b/foo&to=c/foo", "x",
-                                    PR_TRUE, PR_TRUE, getter_Copies(previous));
-    if (NS_FAILED(rv)) return rv;
-
-    rv = nsComponentManager::RegisterFactory(kTestConverterCID,
-                                             "TestConverter",
-                                             NS_ISTREAMCONVERTER_KEY "?from=b/foo&to=d/foo",
-                                             convFactSup,
-                                             PR_TRUE);
-    if (NS_FAILED(rv)) return rv;
-    rv = catman->AddCategoryEntry(NS_ISTREAMCONVERTER_KEY, "?from=b/foo&to=d/foo", "x",
-                                    PR_TRUE, PR_TRUE, getter_Copies(previous));
-    if (NS_FAILED(rv)) return rv;
-
-    rv = nsComponentManager::RegisterFactory(kTestConverterCID,
-                                             "TestConverter",
-                                             NS_ISTREAMCONVERTER_KEY "?from=c/foo&to=d/foo",
-                                             convFactSup,
-                                             PR_TRUE);
-    if (NS_FAILED(rv)) return rv;
-    rv = catman->AddCategoryEntry(NS_ISTREAMCONVERTER_KEY, "?from=c/foo&to=d/foo", "x",
-                                    PR_TRUE, PR_TRUE, getter_Copies(previous));
-    if (NS_FAILED(rv)) return rv;
-    
-    rv = nsComponentManager::RegisterFactory(kTestConverterCID,
-                                             "TestConverter",
-                                             NS_ISTREAMCONVERTER_KEY "?from=d/foo&to=e/foo",
-                                             convFactSup,
-                                             PR_TRUE);
-    if (NS_FAILED(rv)) return rv;
-    rv = catman->AddCategoryEntry(NS_ISTREAMCONVERTER_KEY, "?from=d/foo&to=e/foo", "x",
-                                    PR_TRUE, PR_TRUE, getter_Copies(previous));
-    if (NS_FAILED(rv)) return rv;
-
-    rv = nsComponentManager::RegisterFactory(kTestConverterCID,
-                                             "TestConverter",
-                                             NS_ISTREAMCONVERTER_KEY "?from=d/foo&to=f/foo",
-                                             convFactSup,
-                                             PR_TRUE);
-    if (NS_FAILED(rv)) return rv;
-    rv = catman->AddCategoryEntry(NS_ISTREAMCONVERTER_KEY, "?from=d/foo&to=f/foo", "x",
-                                    PR_TRUE, PR_TRUE, getter_Copies(previous));
-    if (NS_FAILED(rv)) return rv;
-
-    rv = nsComponentManager::RegisterFactory(kTestConverterCID,
-                                             "TestConverter",
-                                             NS_ISTREAMCONVERTER_KEY "?from=t/foo&to=k/foo",
-                                             convFactSup,
-                                             PR_TRUE);
-    if (NS_FAILED(rv)) return rv;
-    rv = catman->AddCategoryEntry(NS_ISTREAMCONVERTER_KEY, "?from=t/foo&to=k/foo", "x",
-                                    PR_TRUE, PR_TRUE, getter_Copies(previous));
-    if (NS_FAILED(rv)) return rv;
-    
+    PRUint32 count = 0;
+    while (count < sizeof(converterList)) {
+        // register the TestConverter with the component manager. One contractid registration
+        // per conversion pair (from - to pair).
+        nsCString contractID(NS_ISTREAMCONVERTER_KEY);
+        contractID.Append(converterList[count]);
+        rv = nsComponentManager::RegisterFactory(kTestConverterCID,
+                                                 "TestConverter",
+                                                 contractID.get(),
+                                                 convFactSup,
+                                                 PR_TRUE);
+        if (NS_FAILED(rv)) return rv;
+        rv = catman->AddCategoryEntry(NS_ISTREAMCONVERTER_KEY, converterList[count], nsnull,
+                                        PR_TRUE, PR_TRUE, getter_Copies(previous));
+        if (NS_FAILED(rv)) return rv;
+    }
 
     NS_WITH_SERVICE(nsIStreamConverterService, StreamConvService, kStreamConverterServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
 
+    // Define the *from* content type and *to* content-type for conversion.
     nsString fromStr;
     fromStr.AssignWithConversion("a/foo");
     nsString toStr;
     toStr.AssignWithConversion("c/foo");
     
-
 #ifdef ASYNC_TEST
     // ASYNCRONOUS conversion
 
-    NS_WITH_SERVICE(nsIIOService, serv, kIOServiceCID, &rv);
-    if (NS_FAILED(rv)) return rv;
 
-    // we need a dummy channel for the async calls.
+    // Build up a channel that represents the content we're
+    // starting the transaction with.
+    //
+    // sample multipart mixed content-type string:
+    // "multipart/x-mixed-replacE;boundary=thisrandomstring"
     nsCOMPtr<nsIChannel> channel;
     nsCOMPtr<nsIURI> dummyURI;
-    rv = serv->NewURI("http://aaa", nsnull, getter_AddRefs(dummyURI));
+    rv = NS_NewURI(getter_AddRefs(dummyURI), "http://meaningless");
     if (NS_FAILED(rv)) return rv;
+
     rv = NS_NewInputStreamChannel(getter_AddRefs(channel),
                                   dummyURI,
                                   nsnull,   // inStr
-                                  "multipart/x-mixed-replacE;boundary=thisrandomstring",
+                                  "text/plain", // content-type
                                   -1);      // XXX fix contentLength
     if (NS_FAILED(rv)) return rv;
 
+    nsCOMPtr<nsIRequest> request(do_QueryInterface(channel));
 
     // setup a listener to receive the converted data. This guy is the end
     // listener in the chain, he wants the fully converted (toType) data.
@@ -281,14 +225,15 @@ main(int argc, char* argv[])
     // unconverted data of fromType, and the final listener in the chain (in this case
     // the dataReceiver.
     nsCOMPtr<nsIStreamListener> converterListener;
-    rv = StreamConvService->AsyncConvertData(fromStr.GetUnicode(), toStr.GetUnicode(), dataReceiver, nsnull, getter_AddRefs(converterListener));
+    rv = StreamConvService->AsyncConvertData(fromStr.GetUnicode(), toStr.GetUnicode(), 
+                                             dataReceiver, nsnull, getter_AddRefs(converterListener));
     if (NS_FAILED(rv)) return rv;
 
     // at this point we have a stream listener to push data to, and the one
     // that will receive the converted data. Let's mimic On*() calls and get the conversion
     // going. Typically these On*() calls would be made inside their respective wrappers On*()
     // methods.
-    rv = converterListener->OnStartRequest(nsnull, nsnull);
+    rv = converterListener->OnStartRequest(request, nsnull);
     if (NS_FAILED(rv)) return rv;
 
 
@@ -299,18 +244,17 @@ main(int argc, char* argv[])
     if (NS_FAILED(rv)) return rv;    
 
     // Finish the request.
-    rv = converterListener->OnStopRequest(nsnull, nsnull, rv, nsnull);
+    rv = converterListener->OnStopRequest(request, nsnull, rv, nsnull);
     if (NS_FAILED(rv)) return rv;
 
 
 #else
     // SYNCRONOUS conversion
-    nsIInputStream *convertedData = nsnull;
-    rv = StreamConvService->Convert(inputData, fromStr.GetUnicode(), toStr.GetUnicode(), nsnull, &convertedData);
-#endif
-
-    NS_RELEASE(convFactSup);
+    nsCOMPtr<nsIInputStream> convertedData;
+    rv = StreamConvService->Convert(inputData, fromStr.GetUnicode(), toStr.GetUnicode(), 
+                                    nsnull, getter_AddRefs(convertedData));
     if (NS_FAILED(rv)) return rv;
+#endif
 
     // Enter the message pump to allow the URL load to proceed.
     while ( gKeepRunning ) {
