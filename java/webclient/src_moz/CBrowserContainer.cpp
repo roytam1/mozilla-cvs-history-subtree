@@ -180,7 +180,6 @@ NS_IMETHODIMP CBrowserContainer::PromptUsernameAndPassword(const PRUnichar *dial
 
     JNIEnv *env = (JNIEnv *) JNU_GetEnv(gVm, JNI_VERSION);
     wsPromptUsernameAndPasswordEvent *actionEvent = nsnull;
-    void *voidResult = nsnull;
 
     wsStringStruct strings[3] = { 
         {dialogTitle, nsnull},
@@ -223,10 +222,9 @@ NS_IMETHODIMP CBrowserContainer::PromptUsernameAndPassword(const PRUnichar *dial
         goto PUAP_CLEANUP;
     }
     // the out params to this method are set in wsPromptUsernameAndPasswordEvent::handleEvent()
-    voidResult = ::util_PostSynchronousEvent(mInitContext, 
+    ::util_PostEvent(mInitContext, 
                                              (PLEvent *) *actionEvent);
-
-    rv = (nsresult) voidResult;
+    rv = NS_OK;
  PUAP_CLEANUP:
 
     ::util_DeleteJstringsFromUnichars(strings, 3);
@@ -281,7 +279,6 @@ CBrowserContainer::UniversalDialog(const PRUnichar *inTitleMessage,
     
     JNIEnv *env = (JNIEnv *) JNU_GetEnv(gVm, JNI_VERSION);
     wsPromptUniversalDialogEvent *actionEvent = nsnull;
-    void *voidResult = nsnull;
 
     wsStringStruct strings[10] = { 
         {inTitleMessage, nsnull},
@@ -338,10 +335,9 @@ CBrowserContainer::UniversalDialog(const PRUnichar *inTitleMessage,
         goto UD_CLEANUP;
     }
     // the out params to this method are set in wsPromptUsernameAndPasswordEvent::handleEvent()
-    voidResult = ::util_PostSynchronousEvent(mInitContext, 
-                                             (PLEvent *) *actionEvent);
+    ::util_PostEvent(mInitContext, (PLEvent *) *actionEvent);
 
-    rv = (nsresult) voidResult;
+    rv = NS_OK;
  UD_CLEANUP:
 
     ::util_DeleteJstringsFromUnichars(strings, 10);

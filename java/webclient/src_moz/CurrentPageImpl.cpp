@@ -348,7 +348,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_mozilla_webclient_wrapper_1native_CurrentP
           new wsViewSourceEvent(initContext->docShell, ((JNI_TRUE == viewMode)? PR_TRUE : PR_FALSE));
       PLEvent	   	* event       = (PLEvent*) *actionEvent;
 
-      ::util_PostSynchronousEvent(initContext, event);
+      ::util_PostEvent(initContext, event);
   }
 
     jbyteArray result = nsnull;

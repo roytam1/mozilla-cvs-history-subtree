@@ -150,7 +150,6 @@ JNIEXPORT void JNICALL Java_org_mozilla_webclient_wrapper_1native_NavigationImpl
 {
 	JNIEnv	*	pEnv = env;
 	jobject		jobj = obj;
-	void	*	voidResult = nsnull;
 
     WebShellInitContext* initContext = (WebShellInitContext *) webShellPtr;
 
@@ -163,7 +162,7 @@ JNIEXPORT void JNICALL Java_org_mozilla_webclient_wrapper_1native_NavigationImpl
 		wsRefreshEvent	* actionEvent = new wsRefreshEvent(initContext->webNavigation, (PRInt32) loadFlags);
         PLEvent	   	* event       = (PLEvent*) *actionEvent;
 
-        voidResult = ::util_PostSynchronousEvent(initContext, event);
+        ::util_PostEvent(initContext, event);
 
 		return;
 	}

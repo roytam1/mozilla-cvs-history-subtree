@@ -51,7 +51,7 @@ Java_org_mozilla_webclient_wrapper_1native_HistoryImpl_nativeBack
           new wsBackEvent(initContext->webNavigation);
       PLEvent	   	* event       = (PLEvent*) *actionEvent;
 
-      ::util_PostSynchronousEvent(initContext, event);
+      ::util_PostEvent(initContext, event);
     }
 
     return;
@@ -120,7 +120,7 @@ JNIEXPORT void JNICALL Java_org_mozilla_webclient_wrapper_1native_HistoryImpl_na
           new wsForwardEvent(initContext->webNavigation);
       PLEvent	   	* event       = (PLEvent*) *actionEvent;
       
-      ::util_PostSynchronousEvent(initContext, event);
+      ::util_PostEvent(initContext, event);
     }
 
     return;
@@ -214,7 +214,6 @@ Java_org_mozilla_webclient_wrapper_1native_HistoryImpl_nativeSetCurrentHistoryIn
 {
     JNIEnv	*	pEnv = env;
     jobject		jobj = obj;
-    void	*	voidResult = nsnull;
     
     WebShellInitContext* initContext = (WebShellInitContext *) webShellPtr;
     
@@ -228,7 +227,7 @@ Java_org_mozilla_webclient_wrapper_1native_HistoryImpl_nativeSetCurrentHistoryIn
           new wsGoToEvent(initContext->webNavigation, historyIndex);
       PLEvent	   	* event       = (PLEvent*) *actionEvent;
       
-      voidResult = ::util_PostSynchronousEvent(initContext, event);
+      ::util_PostEvent(initContext, event);
     }
     
     return;
