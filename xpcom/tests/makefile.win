@@ -25,7 +25,8 @@ MAKE_OBJ_TYPE	= EXE
 PROG1 = .\$(OBJDIR)\TestFactory.exe
 PROG2 = .\$(OBJDIR)\RegFactory.exe
 PROG3 = .\$(OBJDIR)\TestArray.exe
-PROGRAMS = $(PROG1) $(PROG2) $(PROG3)
+PROG4 = .\$(OBJDIR)\TestID.exe
+PROGRAMS = $(PROG1) $(PROG2) $(PROG3) $(PROG4)
 
 LCFLAGS=-DUSE_NSREG
 
@@ -65,4 +66,5 @@ clobber::
 $(PROG1): $(OBJDIR) TestFactory.cpp
 $(PROG2): $(OBJDIR) RegFactory.cpp
 $(PROG3): $(OBJDIR) TestArray.cpp
+$(PROG3): $(OBJDIR) TestID.cpp
 
