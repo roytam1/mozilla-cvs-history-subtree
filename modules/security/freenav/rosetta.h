@@ -30,6 +30,7 @@
 #define HG69136
 #define HG86722
 #define HG87489
+#define HG22864
 #define HG40560
 #define HG33086
 #define HG17928
@@ -48,3 +49,11 @@
 #define HG82168
 #define HG29989
 #define HG48722
+#define HG47352
+#define HG05988
+#define HG05989
+#define HG83344
+#define HG73299
+#define HG00374
+#define HG83666
+
