@@ -143,7 +143,7 @@ text_name=Name:
 ;
 ; Information panes text
 ;
-info_about_intro="The tabs across the top of this window let you control these Personal Security Manager version 1.2 settings: "
+info_about_intro="The tabs across the top of this window let you control these Personal Security Manager version 1.3 settings: "
 info_information=" Click Selected Item to see security information (if available) for the browser window or message you are currently viewing."
 info_applications=" Security settings for Navigator, Messenger, and Java/JavaScript applications."
 info_certificates=" Settings for security certificates stored in your browser, including your personal security password."
@@ -325,11 +325,8 @@ http_error_no_spec_err="No specific error message was reported."
 ;
 ; client auth UI text strings
 ;
-bad_client_auth_title="Authentication Has Failed"
-bad_client_auth_header="No Acceptable Identification"
 client_auth_greeting_string="This site has requested that you identify yourself with a security {glossary certificate,certificate}:"
 
-bad_client_auth_string="However, you have no certificates available that are accepted as valid identification by this site."
 client_auth_header="User Identification Request"
 client_auth_string="Choose a certificate to present as identification:"
 serverCert_not_before="Valid from: "

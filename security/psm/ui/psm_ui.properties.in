@@ -892,13 +892,16 @@ left1-1_content={leftframework left1-1tabs,info_selected}
 left1-2_type=text/html
 left1-2_content={leftframework left1-2tabs,info_about}
 
+app_does_smime={link_left_tab {text_messenger},2,2}
+app_does_javajs={link_left_tab {text_javajs},2,3}
+
 ;
 ; Applications pane
 ;
 left2-1tabs:
 {select_left_tab {text_navigator}}
-{link_left_tab {text_messenger},2,2}
-{link_left_tab {text_javajs},2,3}
+{_smime_tab}
+{_java_js_tab}
 :left2-1tabs
 left2-2tabs:
 {link_left_tab {text_navigator},2,1}
@@ -919,12 +922,14 @@ left2-2_content={leftframework left2-2tabs,apps_messenger}
 left2-3_type=text/html
 left2-3_content={leftframework left2-3tabs,apps_javajs}
 
+app_uses_others={link_left_tab {text_others},3,2}
+
 ;
 ; Certificates pane
 ;
 left3-1tabs:
 {select_left_tab {text_mine},3,1}
-{link_left_tab {text_others},3,2}
+{_addOthersCerts}
 {link_left_tab {text_websites},3,3}
 {link_left_tab {text_authorities},3,4}
 :left3-1tabs
@@ -3950,6 +3955,13 @@ top.window.open("%1$s",'%2$s',null,true);
 ; OK-6px-Cancel-12px-HELP|<- end of frame
 ;
 buttons_only:
+<script language=javascript>
+var doCancel = false;
+
+function setCancelFlag() {
+  doCancel = true;
+}
+</script>
 <div align=right>
 <table border=0 cellspacing=0 cellpadding=0 height=100%%>
 <tr align=right valign=center>
@@ -3960,7 +3972,8 @@ buttons_only:
 </td>
 <td>
 <div class=buttonspace>
-<input type="submit" name="do_cancel" value="{text_cancel}" width="72" >
+<input type="submit" name="do_cancel" value="{text_cancel}" width="72" 
+       onClick="setCancelFlag();">
 </div>
 </td>
 <td width=30%%>
@@ -4719,7 +4732,7 @@ set_token_password_main_content:
 <body class=content alink="#333399">
 {formsubmit document.forms[0]}
 <div>
-<form method="get" action="formsubmit_handler" > 
+<form method="get" action="formsubmit_handler">
 <input type=hidden name="formName" value="set_db_password">
 <input type=hidden name="target" value="%1$d">
 <input type=hidden name="baseRef" value="windowclose_doclose_js">
@@ -4855,22 +4868,36 @@ set_token_password_buttons_content:
 	onLoad="parent.SetHelpURL('help.htm#1051739')">
 <script language=javascript>
 {pop_up_alert}
+function resetForm(f)
+{
+  if (f.oldpassword) {
+    f.oldpassword.focus();
+  } else {
+    f.newpassword.focus();
+  }
+  f.reset();
+}
 function checknewpasswordfield()
 {
   var passwordform = window.parent.DialogContent.document.forms[0];
+  if (doCancel) {
+    return true;
+  }
   if (passwordform.oldpassword && passwordform.oldpassword.value == '') {
     PopUpAlert('{supply_current_password}');
+    resetForm(passwordform);
     return false;
   }
   if (passwordform.newpassword.value != 
     passwordform.repeatpassword.value) {
     PopUpAlert('{invalid_new_password}');
+    resetForm(passwordform);
     return false;
   }
   return true;
 }
 </script>
-<form method="get" action="check_for_cancel" >
+<form method="get" action="check_for_cancel" onSubmit="return (checknewpasswordfield())">
 
 <input type=hidden name="baseRef" value="formsubmit_dosubmit_js">
 <input type=hidden name=target value="%1$d">
@@ -5578,72 +5605,6 @@ glossary_icon:
 <img SRC="get?baseRef=infojpg" ALT="Glossary Entry" ALIGN=ABSBOTTOM>
 :glossary_icon
 
-;
-; client auth failure top level fram set HTML
-;
-bad_client_auth_type="text/html"
-bad_client_auth_hdrs=""
-bad_client_auth_width=520
-bad_client_auth_height=350
-bad_client_auth_content:
-{frame_set bca,windowclose}
-:bad_client_auth_content
-
-;
-; client auth failure top frame
-;
-bca_top_type="text/html"
-bca_top_hdrs=""
-bca_top_content:
-{top_frame bad_client_auth_header,lockedgif,35,30}
-:bca_top_content
-
-;
-; client auth failure buttons frame
-;
-bca_buttons_type="text/html"
-bca_buttons_hdrs=""
-bca_buttons_content:
-{windowclose_buttons_frame BCAButton,help.htm#1036343}
-:bca_buttons_content
-
-;
-; client auth failure main frame
-;
-bca_main_type="text/html"
-bca_main_hdrs=""
-bca_main_content:
-<html>
-<head>
-<meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
-{disable_right_click_js}
-</head>
-<body class=content alink="#FF0000">
-<p>{client_auth_greeting_string}</p>
-
-<table WIDTH=500px>
-<tr VALIGN=CENTER>
-<td ALIGN=CENTER WIDTH="90px"><img SRC="get?baseRef=certgif" height=60 width=80></td>
-
-<td ALIGN=CENTER VALIGN=TOP>
-{_server_cert_info simple,serverCert_format,serverCert_format}
-
-</td></tr></table>
-
-<HR WIDTH=96% ALIGN=CENTER>
-
-<table>
-<tr VALIGN=CENTER>
-<td align=center width="90px"><img SRC="get?baseRef=nocertgif" height=60 width=80></td>
-<td WIDTH="400">
-<div class=plain>
-{bad_client_auth_string}
-</div>
-</td></tr></table>
-</body>
-</html>
-:bca_main_content
 
 ;
 ; server cert format
@@ -5675,10 +5636,6 @@ serverCert_format:
 </td><td></td></tr></table>
 <!-- %2$s %3$s unused -->
 :serverCert_format
-
-;
-; -- END -- bad_client_auth
-;
 
 ;
 ; client auth top level frame set HTML
