@@ -167,15 +167,19 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 {
   NS_IF_RELEASE(mPrintSettings);
 
-  nsCOMPtr<nsIBaseWindow> baseWin = do_QueryInterface(_webBrowser);
-  if ( baseWin ) {
-    // clean up here rather than in the dtor so that if anyone tries to get our
-    // web browser, it won't get a garbage object that's past its prime. As a result,
-    // this routine MUST be called otherwise we will leak.
-    baseWin->Destroy();
-    NS_RELEASE(_webBrowser);
-    NS_RELEASE(_listener);
-  }
+  { // scope...
+    nsCOMPtr<nsIBaseWindow> baseWin = do_QueryInterface(_webBrowser);
+    if ( baseWin ) {
+      // clean up here rather than in the dtor so that if anyone tries to get our
+      // web browser, it won't get a garbage object that's past its prime. As a result,
+      // this routine MUST be called otherwise we will leak.
+      baseWin->Destroy();
+      NS_RELEASE(_webBrowser);
+      NS_RELEASE(_listener);
+    }
+  } // matters
+
+  CHBrowserService::BrowserClosed();
 }
 
 - (void)dealloc 
@@ -183,8 +187,6 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
   // it is imperative that |destroyWebBrowser()| be called before we get here, otherwise
   // we will leak the webBrowser.
 	NS_ASSERTION(!_webBrowser, "BrowserView going away, destroyWebBrowser not called; leaking webBrowser!");
-  
-  CHBrowserService::BrowserClosed();
   
 #if DEBUG
   NSLog(@"CHBrowserView died.");

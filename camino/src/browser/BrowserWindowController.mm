@@ -283,6 +283,12 @@ static NSArray* sToolbarDefaults = nil;
     [[item view] windowClosed];
   }
 
+  nsCOMPtr<nsIRDFRemoteDataSource> dataSource ( do_QueryInterface(mGlobalHistory) );
+  if (dataSource)
+    dataSource->Flush();
+  NS_IF_RELEASE(mGlobalHistory);
+  NS_IF_RELEASE(mURIFixer);
+
   // autorelease just in case we're here because of a window closing
   // initiated from gecko, in which case this BWC would still be on the 
   // stack and may need to stay alive until it unwinds. We've already
@@ -311,12 +317,6 @@ static NSArray* sToolbarDefaults = nil;
   [self stopThrobber];
   [mThrobberImages release];
   [mURLFieldEditor release];
-
-  nsCOMPtr<nsIRDFRemoteDataSource> dataSource ( do_QueryInterface(mGlobalHistory) );
-  if ( dataSource )
-    dataSource->Flush();
-  NS_IF_RELEASE(mGlobalHistory);
-  NS_IF_RELEASE(mURIFixer);
   
   [super dealloc];
 }

@@ -146,6 +146,7 @@ const int kReuseWindowOnAE = 2;
 #ifdef _BUILD_STATIC_BIN
   [self updatePrebinding];
 #endif
+  
   // initialize if we haven't already.
   [self preferenceManager];
   
