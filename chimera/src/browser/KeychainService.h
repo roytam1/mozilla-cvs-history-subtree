@@ -65,9 +65,11 @@ class nsIPrefBranch;
 - (void) shutdown:(id)sender;
 
 - (BOOL) getUsernameAndPassword:(NSString*)realm user:(NSMutableString*)username password:(NSMutableString*)pwd;
+- (BOOL) findUsernameAndPassword:(NSString*)realm;
 - (void) storeUsernameAndPassword:(NSString*)realm user:(NSString*)username password:(NSString*)pwd;
 - (void) removeUsernameAndPassword:(NSString*)realm;
 - (void) updateUsernameAndPassword:(NSString*)realm user:(NSString*)username password:(NSString*)pwd;
+
 - (void) addListenerToView:(CHBrowserView*)view;
 
 - (BOOL) isEnabled;

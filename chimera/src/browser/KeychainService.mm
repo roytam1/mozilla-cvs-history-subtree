@@ -71,7 +71,7 @@
 
 
 nsresult
-FindUsernamePasswordFields(nsIDocument* inDocument, nsIDOMHTMLInputElement** outUsername,
+FindUsernamePasswordFields(nsIDOMHTMLFormElement* inFormElement, nsIDOMHTMLInputElement** outUsername,
                             nsIDOMHTMLInputElement** outPassword, PRBool inStopWhenFound);
 
 
@@ -108,7 +108,7 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
 
 - (id) init
 {
-  if ( self = [super init] ) {
+  if ( (self = [super init]) ) {
     // Add a new form submit observer. We explicitly hold a ref in case the
     // observer service uses a weakref.
     nsCOMPtr<nsIObserverService> svc = do_GetService("@mozilla.org/observer-service;1");
@@ -207,6 +207,11 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
   [username setString:[NSString stringWithCString:buffer length:actualSize]];
   
   return true;
+}
+
+- (BOOL) findUsernameAndPassword:(NSString*)realm
+{
+    return [self getUsernameAndPassword:realm user:[NSMutableString string] password:[NSMutableString string]];
 }
 
 - (void) updateUsernameAndPassword:(NSString*)realm user:(NSString*)username password:(NSString*)pwd
@@ -310,8 +315,12 @@ KeychainPrompt::PreFill(const PRUnichar *realm, PRUnichar **user, PRUnichar **pw
     return;
 
   //
+  // TODO: add support for ftp username/password. The given realm for
+  // an ftp server has the form ftp://<username>@<server>/<path>, see
+  // netwerk/protocol/ftp/src/nsFtpConnectionThread.cpp.
+  //
   // Get server name from the password realm ("hostname:port (realm)",
-  // see nsHttpChannel.cpp)
+  // see netwerk/protocol/http/src/nsHttpChannel.cpp)
   //
   NSString* passwordRealm = [NSString stringWithPRUnichars:realm];
   NSRange r = [passwordRealm rangeOfString:@":"];
@@ -475,15 +484,14 @@ KeychainFormSubmitObserver::Observe(nsISupports *aSubject, const char *aTopic, c
 }
 
 NS_IMETHODIMP 
-KeychainFormSubmitObserver::Notify(nsIContent* formNode, nsIDOMWindowInternal* window, nsIURI* actionURL, 
+KeychainFormSubmitObserver::Notify(nsIContent* node, nsIDOMWindowInternal* window, nsIURI* actionURL, 
                                     PRBool* cancelSubmit)
 {
-  if(![mKeychain isEnabled])
+  if (![mKeychain isEnabled])
     return NS_OK;
 
-  nsCOMPtr<nsIDocument> doc;
-  formNode->GetDocument(*getter_AddRefs(doc));
-  if (!doc)
+  nsCOMPtr<nsIDOMHTMLFormElement> formNode(do_QueryInterface(node));
+  if (!formNode)
     return NS_OK;
 
   // seek out the username and password fields. If there are two password fields, we don't
@@ -491,7 +499,9 @@ KeychainFormSubmitObserver::Notify(nsIContent* formNode, nsIDOMWindowInternal* w
   // param will cause FUPF to look for multiple password fields and then bail if that is the 
   // case, seting |passwordElement| to nsnull.
   nsCOMPtr<nsIDOMHTMLInputElement> usernameElement, passwordElement;
-  nsresult rv = FindUsernamePasswordFields(doc, getter_AddRefs(usernameElement), getter_AddRefs(passwordElement), PR_FALSE);
+  nsresult rv = FindUsernamePasswordFields(formNode, getter_AddRefs(usernameElement),  getter_AddRefs(passwordElement),
+                                           PR_FALSE);
+
   if (NS_SUCCEEDED(rv) && usernameElement && passwordElement) {
   
     // extract username and password from the fields
@@ -500,6 +510,11 @@ KeychainFormSubmitObserver::Notify(nsIContent* formNode, nsIDOMWindowInternal* w
     passwordElement->GetValue(pword);
     NSString* username = [NSString stringWith_nsAString:uname];
     NSString* password = [NSString stringWith_nsAString:pword];
+    
+    nsCOMPtr<nsIDocument> doc;
+    node->GetDocument(*getter_AddRefs(doc));
+    if (!doc)
+      return NS_OK;
     
     nsCOMPtr<nsIURI> docURL;
     rv = doc->GetDocumentURL(getter_AddRefs(docURL));
@@ -514,11 +529,13 @@ KeychainFormSubmitObserver::Notify(nsIContent* formNode, nsIDOMWindowInternal* w
     // there's no entry ask the user if he wants to store the
     // password in the keychain and eventually store it.
     //
+    // TODO: also check if the values are different from the one
+    // stored in the keychain and ask the user if he wants to update
+    // the keychain if that's the case.
+    //
     NSString* realm = [NSString stringWithCString:hostPort.get()];
-    if(![mKeychain getUsernameAndPassword:realm user:[NSMutableString string] password:[NSMutableString string]] 
-        && CheckConfirmYN(window)) {
+    if (![mKeychain findUsernameAndPassword:realm] && CheckConfirmYN(window))
       [mKeychain storeUsernameAndPassword:realm user:username password:password];
-    }
   }
 
   return NS_OK;
@@ -560,7 +577,7 @@ KeychainFormSubmitObserver::CheckConfirmYN(nsIDOMWindowInternal* window)
 
 - (id)initWithBrowser:(KeychainService*)keychain browser:(CHBrowserView*)aBrowser
 {
-  if ( self = [super init] ) {
+  if ( (self = [super init]) ) {
     mKeychain = keychain;
     mBrowserView = aBrowser;
   }
@@ -592,35 +609,71 @@ KeychainFormSubmitObserver::CheckConfirmYN(nsIDOMWindowInternal* window)
     return;
   }
   
-  // seek out the username and password fields. Stop when we find the
-  // first pair.
-  nsCOMPtr<nsIDOMHTMLInputElement> usernameElement, passwordElement;
-  nsresult rv = FindUsernamePasswordFields(doc, getter_AddRefs(usernameElement), getter_AddRefs(passwordElement), PR_TRUE);
+  nsCOMPtr<nsIDOMHTMLDocument> htmldoc(do_QueryInterface(doc));
+  if (!htmldoc)
+    return;
 
-  // See if the password is stored in the keychain and prefill the
-  // username/password if that's the case.
-  if (NS_SUCCEEDED(rv) && usernameElement && passwordElement) {    
-    nsCOMPtr<nsIURI> docURL;
-    rv = doc->GetDocumentURL(getter_AddRefs(docURL));
-    if (NS_FAILED(rv) || !docURL)
-      return;
+  nsCOMPtr<nsIDOMHTMLCollection> forms;
+  nsresult rv = htmldoc->GetForms(getter_AddRefs(forms));
+  if (NS_FAILED(rv) || !forms) 
+    return;
 
-    NSMutableString* username = [NSMutableString string];
-    NSMutableString* password = [NSMutableString string];
-    
-    nsCAutoString hostPort;
-    docURL->GetHostPort(hostPort);
-    NSString *realm = [NSString stringWithCString:hostPort.get()];
+  PRUint32 numForms;
+  forms->GetLength(&numForms);
 
-    if ([mKeychain getUsernameAndPassword:realm user:username password:password]) {
-      nsAutoString user, pwd;
-      [username assignTo_nsAString:user];
-      [password assignTo_nsAString:pwd];
+  //
+  // Seek out username and password element in all forms. If found in
+  // a form, check the keychain to see if the username passowrd are
+  // stored and prefill the elements.
+  //
+  for (PRUint32 formX = 0; formX < numForms; formX++) {
+
+    nsCOMPtr<nsIDOMNode> formNode;
+    rv = forms->Item(formX, getter_AddRefs(formNode));
+    if (NS_FAILED(rv) || formNode == nsnull)
+      continue;
+
+    // search the current form for the text fields
+    nsCOMPtr<nsIDOMHTMLFormElement> formElement(do_QueryInterface(formNode));
+    if (!formElement) 
+      continue;
+    nsCOMPtr<nsIDOMHTMLInputElement> usernameElement, passwordElement;
+    rv = FindUsernamePasswordFields(formElement, getter_AddRefs(usernameElement), getter_AddRefs(passwordElement), 
+                                    PR_TRUE);
+
+    if (NS_SUCCEEDED(rv) && usernameElement && passwordElement) {    
+      //
+      // We found the text field and password field. Check if there's
+      // a username/password stored in the keychain for this host and
+      // pre-fill the fields if that's the case.
+      //
+      nsCOMPtr<nsIURI> docURL;
+      rv = doc->GetDocumentURL(getter_AddRefs(docURL));
+      if (NS_FAILED(rv) || !docURL)
+        return;
+  
+      NSMutableString* username = [NSMutableString string];
+      NSMutableString* password = [NSMutableString string];
       
-      rv = usernameElement->SetValue(user);
-      rv = passwordElement->SetValue(pwd);
+      nsCAutoString hostPort;
+      docURL->GetHostPort(hostPort);
+      NSString *realm = [NSString stringWithCString:hostPort.get()];
+  
+      if ([mKeychain getUsernameAndPassword:realm user:username password:password]) {
+        nsAutoString user, pwd;
+        [username assignTo_nsAString:user];
+        [password assignTo_nsAString:pwd];
+        
+        rv = usernameElement->SetValue(user);
+        rv = passwordElement->SetValue(pwd);
+      }
+        
+      // We found the sign-in form so return now. This means we don't
+      // support pages where there's multiple sign-in forms.
+      return;
     }
-  }
+
+  } // for each form on page
 }
 
 - (void)onLoadingStarted
@@ -657,112 +710,95 @@ KeychainFormSubmitObserver::CheckConfirmYN(nsIDOMWindowInternal* window)
 
 @end
 
-
 //
 // FindUsernamePasswordFields
 //
-// Searches the forms on the page for the first username and password fields per page. If
-// none are found, the out params will be nsnull. |inStopWhenFound| determines how we
-// proceed once we find things. When true, we bail as soon as we find both a username and
-// password field. If false, we continue searching the form for a 2nd password field (such
-// as in a "change your password" form). If we find one, null out |outPassword| 
-// since we probably don't want to prefill this form.
+// Searches the form for the first username and password fields. If
+// none are found, the out params will be nsnull. |inStopWhenFound|
+// determines how we proceed once we find things. When true, we bail
+// as soon as we find both a username and password field. If false, we
+// continue searching the form for a 2nd password field (such as in a
+// "change your password" form). If we find one, null out
+// |outPassword| since we probably don't want to prefill this form.
 //
 nsresult
-FindUsernamePasswordFields(nsIDocument* inDocument, nsIDOMHTMLInputElement** outUsername,
+FindUsernamePasswordFields(nsIDOMHTMLFormElement* inFormElement, nsIDOMHTMLInputElement** outUsername,
                             nsIDOMHTMLInputElement** outPassword, PRBool inStopWhenFound)
 {
   if ( !outUsername || !outPassword )
     return NS_ERROR_FAILURE;
   *outUsername = *outPassword = nsnull;
 
-  nsCOMPtr<nsIDOMHTMLDocument> htmldoc(do_QueryInterface(inDocument));
-  if (!htmldoc)
-    return NS_ERROR_FAILURE;
-
-  nsCOMPtr<nsIDOMHTMLCollection> forms;
-  nsresult rv = htmldoc->GetForms(getter_AddRefs(forms));
-  if (NS_FAILED(rv) || !forms) 
-    return rv;
-
-  PRUint32 numForms;
-  forms->GetLength(&numForms);
-
   //
-  // Search in each form the first text field and a password field. We
-  // are only interested in signon forms, so we require only one
-  // password in the form. If there's more than one password it's
-  // probably a form to setup the password or to change the
+  // Search the form the password field and the preceding text field
+  // We are only interested in signon forms, so we require
+  // only one password in the form. If there's more than one password
+  // it's probably a form to setup the password or to change the
   // password. We don't want to handle this kind of form at this
   // point.
   //
-  for (PRUint32 formX = 0; formX < numForms; formX++) {
+  // BENOIT: We keep the first text field and password field we find
+  // Shouldn't we keep the text field which is just
+  // preceding the password field instead? There's maybe better chance
+  // that the text field preceding the password field is the username
+  // field in the case of a form where's there's multiple text
+  // field...
+  //
+  nsCOMPtr<nsIDOMHTMLCollection> elements;
+  nsresult rv = inFormElement->GetElements(getter_AddRefs(elements));
+  if (NS_FAILED(rv) || !elements) 
+  return NS_OK;
 
-    nsCOMPtr<nsIDOMNode> formNode;
-    rv = forms->Item(formX, getter_AddRefs(formNode));
-    if (NS_FAILED(rv) || formNode == nsnull)
+  PRUint32 numElements;
+  elements->GetLength(&numElements);
+
+  for (PRUint32 elementX = 0; elementX < numElements; elementX++) {
+
+    nsCOMPtr<nsIDOMNode> elementNode;
+    rv = elements->Item(elementX, getter_AddRefs(elementNode));
+    if (NS_FAILED(rv) || !elementNode)
       continue;
 
-    nsCOMPtr<nsIDOMHTMLFormElement> formElement(do_QueryInterface(formNode));
-    if (!formElement) 
+    nsCOMPtr<nsIDOMHTMLInputElement> inputElement(do_QueryInterface(elementNode));
+    if (!inputElement)
       continue;
 
-    nsCOMPtr<nsIDOMHTMLCollection> elements;
-    rv = formElement->GetElements(getter_AddRefs(elements));
-    if (NS_FAILED(rv) || !elements) 
+    nsAutoString type;
+    rv = inputElement->GetType(type);
+    if (NS_FAILED(rv))
       continue;
 
-    PRUint32 numElements;
-    elements->GetLength(&numElements);
+    bool isText = (type.IsEmpty() || type.Equals(NS_LITERAL_STRING("text"), nsCaseInsensitiveStringComparator()));
+    bool isPassword = type.Equals(NS_LITERAL_STRING("password"), nsCaseInsensitiveStringComparator());
 
-    for (PRUint32 elementX = 0; elementX < numElements; elementX++) {
+    if(!isText && !isPassword)
+      continue;
 
-      nsCOMPtr<nsIDOMNode> elementNode;
-      rv = elements->Item(elementX, getter_AddRefs(elementNode));
-      if (NS_FAILED(rv) || !elementNode)
-        continue;
-
-      nsCOMPtr<nsIDOMHTMLInputElement> inputElement(do_QueryInterface(elementNode));
-      if (!inputElement)
-        continue;
-
-      nsAutoString type;
-      rv = inputElement->GetType(type);
-      if (NS_FAILED(rv))
-        continue;
-
-      bool isText = (type.IsEmpty() || type.Equals(NS_LITERAL_STRING("text"), nsCaseInsensitiveStringComparator()));
-      bool isPassword = type.Equals(NS_LITERAL_STRING("password"), nsCaseInsensitiveStringComparator());
-
-      if(!isText && !isPassword)
-        continue;
-
-      //
-      // If there's a second password in the form, it's probably not a
-      // signin form, probably a form to setup or change
-      // passwords. Stop here and ensure we don't store this password.
-      //
-      if (!inStopWhenFound && isPassword && *outPassword) {
-        NS_RELEASE(*outPassword);
-        *outPassword = nsnull;
-        return NS_OK;
-      }
-      
-      if(isText && !*outUsername) {
-        *outUsername = inputElement;
-        NS_ADDREF(*outUsername);
-      }
-      else if (isPassword && !*outPassword) {
-        *outPassword = inputElement;
-        NS_ADDREF(*outPassword);
-      }
-      
-      // we've got everything we need, we're done.
-      if (inStopWhenFound && *outPassword && *outUsername)
-        return NS_OK;
-      
-    } // for each item in form
-  } // for each form on page
+    //
+    // If there's a second password in the form, it's probably not a
+    // signin form, probably a form to setup or change
+    // passwords. Stop here and ensure we don't store this password.
+    //
+    if (!inStopWhenFound && isPassword && *outPassword) {
+      NS_RELEASE(*outPassword);
+      *outPassword = nsnull;
+      return NS_OK;
+    }
+    
+    if(isText && !*outUsername) {
+      *outUsername = inputElement;
+      NS_ADDREF(*outUsername);
+    }
+    else if (isPassword && !*outPassword) {
+      *outPassword = inputElement;
+      NS_ADDREF(*outPassword);
+    }
+    
+    // we've got everything we need, we're done.
+    if (inStopWhenFound && *outPassword && *outUsername)
+      return NS_OK;
+    
+  } // for each item in form
 
   return NS_OK;
 }
