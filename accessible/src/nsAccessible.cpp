@@ -39,6 +39,7 @@
 #include "nsIWebShell.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIDOMHTMLIFrameElement.h"
+#include "nsIDOMHTMLFrameElement.h"
 #include "nsIDocShellTreeItem.h"
 
 #ifdef NS_DEBUG
@@ -1146,6 +1147,7 @@ nsAccessible::FindContentForWebShell(nsIPresShell* aParentPresShell,
   NS_ASSERTION(aFoundContent, "Pointer is null!");
 
   nsCOMPtr<nsIDOMHTMLIFrameElement> iFrame(do_QueryInterface(aParentContent));
+  nsCOMPtr<nsIDOMHTMLFrameElement> frame(do_QueryInterface(aParentContent));
 #ifdef NS_DEBUG_X
   {
     printf("** FindContent - Content %p",aParentContent);
@@ -1161,7 +1163,7 @@ nsAccessible::FindContentForWebShell(nsIPresShell* aParentPresShell,
   }
 #endif
 
-  if (iFrame) {
+  if (iFrame || frame) {
     //printf("********* Found IFrame %p\n", aParentContent);
     nsCOMPtr<nsISupports> supps;
     aParentPresShell->GetSubShellFor(aParentContent, getter_AddRefs(supps));
