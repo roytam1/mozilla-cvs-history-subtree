@@ -172,6 +172,7 @@ SECStatus
 SSL_AuthCertificateHook(PRFileDesc *s, SSLAuthCertificate func, void *arg)
 {
     sslSocket *ss;
+    SECStatus rv;
 
     ss = ssl_FindSocket(s);
     if (!ss) {
@@ -192,6 +193,7 @@ SSL_GetClientAuthDataHook(PRFileDesc *s, SSLGetClientAuthData func,
 			      void *arg)
 {
     sslSocket *ss;
+    SECStatus rv;
 
     ss = ssl_FindSocket(s);
     if (!ss) {
@@ -210,6 +212,7 @@ SECStatus
 SSL_SetPKCS11PinArg(PRFileDesc *s, void *arg)
 {
     sslSocket *ss;
+    SECStatus rv;
 
     ss = ssl_FindSocket(s);
     if (!ss) {

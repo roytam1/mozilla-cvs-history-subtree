@@ -32,7 +32,7 @@
 
 CORE_DEPTH = ../../..
 
-MODULE = nss
+MODULE = security
 
 EXPORTS = 
 
@@ -48,7 +48,7 @@ CSRCS = signtool.c		\
 
 PROGRAM =  signtool
 
-REQUIRES = dbm seccmd
+REQUIRES = security dbm seccmd
 
 DEFINES += -DNSPR20
 

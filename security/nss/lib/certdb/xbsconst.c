@@ -137,7 +137,7 @@ SECStatus CERT_DecodeBasicConstraintValue
 	    GEN_BREAK (SECFailure);
 	}
 
-        rv = SEC_QuickDERDecodeItem
+	rv = SEC_ASN1DecodeItem
 	     (our_pool, &decodeContext, CERTBasicConstraintsTemplate, encodedValue);
 	if (rv == SECFailure)
 	    break;

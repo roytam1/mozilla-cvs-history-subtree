@@ -135,7 +135,7 @@ mp_err  mpp_random(mp_int *a)
 
 {
   mp_digit  next = 0;
-  unsigned int       ix, jx;
+  int       ix, jx;
 
   ARGCHK(a != NULL, MP_BADARG);
 
@@ -295,8 +295,7 @@ mp_err  mpp_pprime(mp_int *a, int nt)
 {
   mp_err   res;
   mp_int   x, amo, m, z;	/* "amo" = "a minus one" */
-  int      iter;
-  unsigned int jx;
+  int      iter, jx;
   mp_size  b;
 
   ARGCHK(a != NULL, MP_BADARG);

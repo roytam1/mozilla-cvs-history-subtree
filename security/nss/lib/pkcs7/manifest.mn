@@ -43,7 +43,7 @@ PRIVATE_EXPORTS = \
 	p7local.h \
 	$(NULL)
 
-MODULE = nss
+MODULE = security
 
 CSRCS = \
 	certread.c \
@@ -55,6 +55,6 @@ CSRCS = \
 	secmime.c  \
 	$(NULL)
 
-REQUIRES = dbm
+REQUIRES = security dbm
 
 LIBRARY_NAME = pkcs7

@@ -44,12 +44,12 @@ PRIVATE_EXPORTS = \
 EXPORTS =	   \
 	$(NULL)
 
-MODULE = nss
+MODULE = security
 
 CSRCS =		   \
 	asn1.c	   \
 	$(NULL)
 
-REQUIRES = nspr
+REQUIRES = security nspr
 
 LIBRARY_NAME = asn1

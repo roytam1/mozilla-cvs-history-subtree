@@ -1187,11 +1187,8 @@ case "$target" in
         AC_DEFINE(NONAMELESSUNION)
         MKSHLIB='$(DLLTOOL) --as=$(AS) -k --dllname $*.dll --output-lib $@'
     else
-        case "$target" in
-        *-mingw*|*-cygwin*)
-            CYGWIN_WRAPPER='sh $(topsrcdir)/build/cygwin-wrapper'
-            ;;
-        esac
+        topsrcdir=$srcdir
+        CYGWIN_WRAPPER='sh $(topsrcdir)/build/cygwin-wrapper'
         CC='$(CYGWIN_WRAPPER) cl'
         CXX='$(CYGWIN_WRAPPER) cl'
         LD=link

@@ -44,7 +44,7 @@ EXPORTS =	   \
 	nssbase.h  \
 	$(NULL)
 
-MODULE = nss
+MODULE = security
 
 CSRCS =		   \
 	arena.c	   \
@@ -60,6 +60,6 @@ CSRCS =		   \
 	whatnspr.c \
 	$(NULL)
 
-REQUIRES = nspr
+REQUIRES = security nspr
 
 LIBRARY_NAME = nssb

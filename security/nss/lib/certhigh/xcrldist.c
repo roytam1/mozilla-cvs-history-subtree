@@ -146,7 +146,6 @@ CERT_DecodeCRLDistributionPoints (PRArenaPool *arena, SECItem *encodedValue)
    CERTCrlDistributionPoints *value = NULL;    
    CRLDistributionPoint **pointList, *point;    
    SECStatus rv;
-   SECItem newEncodedValue;
 
    PORT_Assert (arena);
    do {
@@ -155,17 +154,10 @@ CERT_DecodeCRLDistributionPoints (PRArenaPool *arena, SECItem *encodedValue)
 	    rv = SECFailure;
 	    break;
 	}
-
-        /* copy the DER into the arena, since Quick DER returns data that points
-           into the DER input, which may get freed by the caller */
-        rv = SECITEM_CopyItem(arena, &newEncodedValue, encodedValue);
-        if ( rv != SECSuccess ) {
-	    break;
-        }
-
-	rv = SEC_QuickDERDecodeItem
+	    
+	rv = SEC_ASN1DecodeItem
 	     (arena, &value->distPoints, CERTCRLDistributionPointsTemplate,
-	      &newEncodedValue);
+	      encodedValue);
 	if (rv != SECSuccess)
 	    break;
 
@@ -181,7 +173,7 @@ CERT_DecodeCRLDistributionPoints (PRArenaPool *arena, SECItem *encodedValue)
 		    SECItem innerDER;
 		
 		    innerDER.data = NULL;
-		    rv = SEC_QuickDERDecodeItem
+		    rv = SEC_ASN1DecodeItem
 			 (arena, point, FullNameTemplate, &(point->derDistPoint));
 		    if (rv != SECSuccess)
 			break;
@@ -192,7 +184,7 @@ CERT_DecodeCRLDistributionPoints (PRArenaPool *arena, SECItem *encodedValue)
 			break;
 		}
 		else if ( relativeDistinguishedName) {
-		    rv = SEC_QuickDERDecodeItem
+		    rv = SEC_ASN1DecodeItem
 			 (arena, point, RelativeNameTemplate, &(point->derDistPoint));
 		    if (rv != SECSuccess)
 			break;

@@ -50,7 +50,7 @@ CPPSRCS =
 
 PROGRAM =  modutil
 
-REQUIRES = seccmd nss dbm
+REQUIRES = seccmd security dbm
 
 DEFINES = -DNSPR20
 

@@ -93,7 +93,7 @@ nss_item_hash
   const void *key
 )
 {
-  unsigned int i;
+  int i;
   PLHashNumber h;
   NSSItem *it = (NSSItem *)key;
   h = 0;
