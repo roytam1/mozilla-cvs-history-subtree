@@ -308,11 +308,11 @@ nsresult txPatternParser::createStepPattern(ExprLexer& aLexer,
         }
         if (isAttr) {
             nodeTest = new txNameTest(prefix, lName, nspace,
-                                      Node::ATTRIBUTE_NODE);
+                                      txXPathNodeType::ATTRIBUTE_NODE);
         }
         else {
             nodeTest = new txNameTest(prefix, lName, nspace,
-                                      Node::ELEMENT_NODE);
+                                      txXPathNodeType::ELEMENT_NODE);
         }
         if (!nodeTest) {
             return NS_ERROR_OUT_OF_MEMORY;

@@ -63,9 +63,9 @@ public:
     }
     ~txLoadedDocumentEntry()
     {
-        delete mDocument;
+        txXPathNodeUtils::destroy(mDocument);
     }
-    Document* mDocument;
+    txXPathNode* mDocument;
 };
 
 DECL_DHASH_WRAPPER(txLoadedDocumentsBase, txLoadedDocumentEntry, nsAString&)
@@ -74,13 +74,13 @@ class txLoadedDocumentsHash : public txLoadedDocumentsBase
 {
 public:
     ~txLoadedDocumentsHash();
-    nsresult init(Document* aSourceDocument);
-    void Add(Document* aDocument);
-    Document* Get(const nsAString& aURI);
+    nsresult init(txXPathNode* aSourceDocument);
+    void Add(txXPathNode* aDocument);
+    txXPathNode* Get(const nsAString& aURI);
 
 private:
     friend class txExecutionState;
-    Document* mSourceDocument;
+    txXPathNode* mSourceDocument;
 };
 
 
@@ -89,7 +89,7 @@ class txExecutionState : public txIMatchContext
 public:
     txExecutionState(txStylesheet* aStylesheet);
     ~txExecutionState();
-    nsresult init(Node* aNode, txExpandedNameMap* aGlobalParams);
+    nsresult init(const txXPathNode& aNode, txExpandedNameMap* aGlobalParams);
     nsresult end();
 
     TX_DECL_MATCH_CONTEXT;
@@ -123,10 +123,11 @@ public:
     // state-getting functions
     txIEvalContext* getEvalContext();
     txExpandedNameMap* getParamMap();
-    Node* retrieveDocument(const nsAString& uri, const nsAString& baseUri);
-    nsresult getKeyNodes(const txExpandedName& aKeyName, Document* aDocument,
+    txXPathNode* retrieveDocument(const nsAString& uri, const nsAString& baseUri);
+    nsresult getKeyNodes(const txExpandedName& aKeyName,
+                         const txXPathNode& aDocument,
                          const nsAString& aKeyValue, PRBool aIndexIfNotFound,
-                         NodeSet** aResult);
+                         txNodeSet** aResult);
     TemplateRule* getCurrentTemplateRule();
 
     // state-modification functions
@@ -168,7 +169,7 @@ private:
 
     txIEvalContext* mEvalContext;
     txIEvalContext* mInitialEvalContext;
-    Document* mRTFDocument;
+    //Document* mRTFDocument;
     txExpandedNameMap* mGlobalParams;
 
     txLoadedDocumentsHash mLoadedDocuments;

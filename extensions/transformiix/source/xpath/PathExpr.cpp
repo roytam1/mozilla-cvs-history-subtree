@@ -32,7 +32,7 @@
  */
 
 #include "Expr.h"
-#include "NodeSet.h"
+#include "txNodeSet.h"
 #include "txNodeSetContext.h"
 #include "txSingleNodeContext.h"
 #include "XMLUtils.h"
@@ -99,7 +99,7 @@ PathExpr::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
 {
     *aResult = nsnull;
 
-    nsRefPtr<NodeSet> nodes;
+    nsRefPtr<txNodeSet> nodes;
     nsresult rv = aContext->recycler()->getNodeSet(aContext->getContextNode(),
                                                    getter_AddRefs(nodes));
     NS_ENSURE_SUCCESS(rv, rv);
@@ -107,18 +107,18 @@ PathExpr::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
     txListIterator iter(&expressions);
     PathExprItem* pxi;
     while ((pxi = (PathExprItem*)iter.next())) {
-        nsRefPtr<NodeSet> tmpNodes;
+        nsRefPtr<txNodeSet> tmpNodes;
         txNodeSetContext eContext(nodes, aContext);
         while (eContext.hasNext()) {
             eContext.next();
-            Node* node = eContext.getContextNode();
-            
-            nsRefPtr<NodeSet> resNodes;
+
+            nsRefPtr<txNodeSet> resNodes;
             if (pxi->pathOp == DESCENDANT_OP) {
                 rv = aContext->recycler()->getNodeSet(getter_AddRefs(resNodes));
                 NS_ENSURE_SUCCESS(rv, rv);
 
-                rv = evalDescendants(pxi->expr, node, &eContext, resNodes);
+                rv = evalDescendants(pxi->expr, eContext.getContextNode(),
+                                     &eContext, resNodes);
                 NS_ENSURE_SUCCESS(rv, rv);
             }
             else {
@@ -130,7 +130,7 @@ PathExpr::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
                     //XXX ErrorReport: report nonnodeset error
                     return NS_ERROR_XSLT_NODESET_EXPECTED;
                 }
-                resNodes = NS_STATIC_CAST(NodeSet*,
+                resNodes = NS_STATIC_CAST(txNodeSet*,
                                           NS_STATIC_CAST(txAExprResult*,
                                                          res));
             }
@@ -143,7 +143,7 @@ PathExpr::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
                         getNonSharedNodeSet(oldSet, getter_AddRefs(tmpNodes));
                     NS_ENSURE_SUCCESS(rv, rv);
 
-                    tmpNodes->add(resNodes);
+                    tmpNodes->addAndTransfer(resNodes);
                 }
             }
             else {
@@ -167,8 +167,8 @@ PathExpr::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
  * all nodes that match the Expr
 **/
 nsresult
-PathExpr::evalDescendants(Expr* aStep, Node* aNode, txIMatchContext* aContext,
-                          NodeSet* resNodes)
+PathExpr::evalDescendants(Expr* aStep, const txXPathNode& aNode,
+                          txIMatchContext* aContext, txNodeSet* resNodes)
 {
     txSingleNodeContext eContext(aNode, aContext);
     nsRefPtr<txAExprResult> res;
@@ -179,21 +179,25 @@ PathExpr::evalDescendants(Expr* aStep, Node* aNode, txIMatchContext* aContext,
         //XXX ErrorReport: report nonnodeset error
         return NS_ERROR_XSLT_NODESET_EXPECTED;
     }
-    resNodes->add(NS_STATIC_CAST(NodeSet*, NS_STATIC_CAST(txAExprResult*,
-                                                          res)));
+
+    resNodes->addAndTransfer(NS_STATIC_CAST(txNodeSet*,
+                                            NS_STATIC_CAST(txAExprResult*,
+                                                           res)));
 
     MBool filterWS = aContext->isStripSpaceAllowed(aNode);
 
-    Node* child = aNode->getFirstChild();
-    while (child) {
+    txXPathTreeWalker walker(aNode);
+    PRBool hasChild = walker.moveToFirstChild();
+    while (hasChild) {
         if (!(filterWS &&
-              (child->getNodeType() == Node::TEXT_NODE ||
-               child->getNodeType() == Node::CDATA_SECTION_NODE) &&
-              XMLUtils::isWhitespace(child))) {
-            rv = evalDescendants(aStep, child, aContext, resNodes);
+              (walker.getNodeType() == txXPathNodeType::TEXT_NODE ||
+               walker.getNodeType() == txXPathNodeType::CDATA_SECTION_NODE) &&
+              txXPathNodeUtils::isWhitespace(walker.getCurrentPosition()))) {
+            rv = evalDescendants(aStep, walker.getCurrentPosition(), aContext,
+                                 resNodes);
             NS_ENSURE_SUCCESS(rv, rv);
         }
-        child = child->getNextSibling();
+        hasChild = walker.moveToNextSibling();
     }
     
     return NS_OK;

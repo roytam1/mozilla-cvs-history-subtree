@@ -24,7 +24,7 @@
  */
 
 #include "Expr.h"
-#include "NodeSet.h"
+#include "txNodeSet.h"
 #include "txIXPathContext.h"
 
 /**
@@ -45,12 +45,9 @@ RootExpr::RootExpr(MBool aSerialize) {
 nsresult
 RootExpr::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
 {
-    Node* context = aContext->getContextNode();
-    if (context->getNodeType() != Node::DOCUMENT_NODE) {
-        context = context->getOwnerDocument();
-    }
-
-    return aContext->recycler()->getNodeSet(context, aResult);
+    const txXPathNode& context = aContext->getContextNode();
+    nsAutoPtr<txXPathNode> document(txXPathNodeUtils::getOwnerDocument(context));
+    return aContext->recycler()->getNodeSet(*document, aResult);
 } //-- evaluate
 
 /**

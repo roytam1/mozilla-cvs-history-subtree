@@ -44,8 +44,8 @@
 
 class txAExprResult;
 class StringResult;
-class NodeSet;
-class Node;
+class txNodeSet;
+class txXPathNode;
 class NumberResult;
 class BooleanResult;
 
@@ -80,10 +80,10 @@ public:
      */
     nsresult getStringResult(StringResult** aResult);
     nsresult getStringResult(const nsAString& aValue, txAExprResult** aResult);
-    nsresult getNodeSet(NodeSet** aResult);
-    nsresult getNodeSet(NodeSet* aNodeSet, NodeSet** aResult);
-    nsresult getNodeSet(Node* aNode, txAExprResult** aResult);
-    nsresult getNodeSet(Node* aNode, NodeSet** aResult);
+    nsresult getNodeSet(txNodeSet** aResult);
+    nsresult getNodeSet(txNodeSet* aNodeSet, txNodeSet** aResult);
+    nsresult getNodeSet(const txXPathNode& aNode, txAExprResult** aResult);
+    nsresult getNodeSet(const txXPathNode& aNode, txNodeSet** aResult);
     nsresult getNumberResult(double aValue, txAExprResult** aResult);
 
     /**
@@ -96,7 +96,7 @@ public:
     /**
      * Functions that return non-shared resultsobjects
      */
-    nsresult getNonSharedNodeSet(NodeSet* aNodeSet, NodeSet** aResult);
+    nsresult getNonSharedNodeSet(txNodeSet* aNodeSet, txNodeSet** aResult);
 
 private:
     nsAutoRefCnt mRefCnt;

@@ -33,8 +33,8 @@
 #include "FunctionLib.h"
 #include "txAtoms.h"
 #include "txIXPathContext.h"
-#include "XMLDOMUtils.h"
 #include "XMLUtils.h"
+#include "txXPathTreeWalker.h"
 #include <math.h>
 #include "nsReadableUtils.h"
 
@@ -105,8 +105,8 @@ StringFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
             if (iter.hasNext())
                 evaluateToString((Expr*)iter.next(), aContext, resultStr);
             else
-                XMLDOMUtils::getNodeValue(aContext->getContextNode(),
-                                          resultStr);
+                txXPathNodeUtils::getNodeValue(aContext->getContextNode(),
+                                               resultStr);
 
             nsRefPtr<StringResult> strRes;
             rv = aContext->recycler()->getStringResult(getter_AddRefs(strRes));
@@ -164,8 +164,8 @@ StringFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
             if (iter.hasNext())
                 evaluateToString((Expr*)iter.next(), aContext, resultStr);
             else
-                XMLDOMUtils::getNodeValue(aContext->getContextNode(),
-                                          resultStr);
+                txXPathNodeUtils::getNodeValue(aContext->getContextNode(),
+                                               resultStr);
             rv = aContext->recycler()->getNumberResult(resultStr.Length(),
                                                        aResult);
             NS_ENSURE_SUCCESS(rv, rv);
@@ -278,12 +278,18 @@ StringFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
             if (!requireParams(3, 3, aContext))
                 return NS_ERROR_XPATH_BAD_ARGUMENT_COUNT;
 
+            nsAutoString src;
+            evaluateToString((Expr*)iter.next(), aContext, src);
+            if (src.IsEmpty()) {
+                aContext->recycler()->getEmptyStringResult(aResult);
+
+                return NS_OK;
+            }
+            
             nsRefPtr<StringResult> strRes;
             rv = aContext->recycler()->getStringResult(getter_AddRefs(strRes));
             NS_ENSURE_SUCCESS(rv, rv);
 
-            nsAutoString src;
-            evaluateToString((Expr*)iter.next(), aContext, src);
             strRes->mValue.SetCapacity(src.Length());
             nsAutoString oldChars, newChars;
             evaluateToString((Expr*)iter.next(), aContext, oldChars);
@@ -317,8 +323,8 @@ StringFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
             if (iter.hasNext())
                 evaluateToString((Expr*)iter.next(), aContext, strRes->mValue);
             else
-                XMLDOMUtils::getNodeValue(aContext->getContextNode(),
-                                          strRes->mValue);
+                txXPathNodeUtils::getNodeValue(aContext->getContextNode(),
+                                               strRes->mValue);
             *aResult = strRes;
             NS_ADDREF(*aResult);
 

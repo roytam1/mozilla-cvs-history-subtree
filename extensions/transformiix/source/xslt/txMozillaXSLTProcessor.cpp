@@ -290,24 +290,22 @@ txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
 
     nsresult rv = TX_CompileStylesheet(aStyleDOM, getter_AddRefs(mStylesheet));
     NS_ENSURE_SUCCESS(rv, rv);
-    // Create wrapper for the source document.
-    mSource = aSourceDOM;
-    nsCOMPtr<nsIDOMDocument> sourceDOMDocument;
-    mSource->GetOwnerDocument(getter_AddRefs(sourceDOMDocument));
-    if (!sourceDOMDocument) {
-        sourceDOMDocument = do_QueryInterface(mSource);
-    }
-    NS_ENSURE_TRUE(sourceDOMDocument, NS_ERROR_FAILURE);
-    Document sourceDocument(sourceDOMDocument);
-    Node* sourceNode = sourceDocument.createWrapper(mSource);
-    NS_ENSURE_TRUE(sourceNode, NS_ERROR_FAILURE);
 
     txExecutionState es(mStylesheet);
+
+    nsAutoPtr<txXPathNode> sourceNode(txXPathNativeNode::createXPathNode(aSourceDOM));
+
+    nsCOMPtr<nsIDOMDocument> sourceDOMDocument;
+    aSourceDOM->GetOwnerDocument(getter_AddRefs(sourceDOMDocument));
+    if (!sourceDOMDocument) {
+        sourceDOMDocument = do_QueryInterface(aSourceDOM);
+    }
+
     txToDocHandlerFactory handlerFactory(&es, sourceDOMDocument, aOutputDoc,
                                          nsnull);
     es.mOutputHandlerFactory = &handlerFactory;
 
-    es.init(sourceNode, &mVariables);
+    es.init(*sourceNode.get(), &mVariables);
 
     // Process root of XML source document
     rv = txXSLTProcessor::execute(es);
@@ -348,26 +346,23 @@ txMozillaXSLTProcessor::DoTransform()
     NS_ENSURE_TRUE(mStylesheet, NS_ERROR_UNEXPECTED);
     NS_ASSERTION(mObserver, "no observer");
 
-    // Create wrapper for the source document.
+    txExecutionState es(mStylesheet);
+
+    // XXX Need to add error observers
+
+    nsAutoPtr<txXPathNode> sourceNode(txXPathNativeNode::createXPathNode(mSource));
+
     nsCOMPtr<nsIDOMDocument> sourceDOMDocument;
     mSource->GetOwnerDocument(getter_AddRefs(sourceDOMDocument));
     if (!sourceDOMDocument) {
         sourceDOMDocument = do_QueryInterface(mSource);
     }
-    NS_ENSURE_TRUE(sourceDOMDocument, NS_ERROR_FAILURE);
-    Document sourceDocument(sourceDOMDocument);
-    Node* sourceNode = sourceDocument.createWrapper(mSource);
-    NS_ENSURE_TRUE(sourceNode, NS_ERROR_FAILURE);
-
-    txExecutionState es(mStylesheet);
-
-    // XXX Need to add error observers
 
     txToDocHandlerFactory handlerFactory(&es, sourceDOMDocument, nsnull,
                                          mObserver);
     es.mOutputHandlerFactory = &handlerFactory;
 
-    es.init(sourceNode, &mVariables);
+    es.init(*sourceNode.get(), &mVariables);
 
     // Process root of XML source document
     nsresult rv = txXSLTProcessor::execute(es);
@@ -437,26 +432,23 @@ txMozillaXSLTProcessor::TransformToDocument(nsIDOMNode *aSource,
     nsresult rv = ensureStylesheet();
     NS_ENSURE_SUCCESS(rv, rv);
 
-    // Create wrapper for the source document.
+    txExecutionState es(mStylesheet);
+
+    // XXX Need to add error observers
+
+    nsAutoPtr<txXPathNode> sourceNode(txXPathNativeNode::createXPathNode(aSource));
+
     nsCOMPtr<nsIDOMDocument> sourceDOMDocument;
     aSource->GetOwnerDocument(getter_AddRefs(sourceDOMDocument));
     if (!sourceDOMDocument) {
         sourceDOMDocument = do_QueryInterface(aSource);
     }
-    NS_ENSURE_TRUE(sourceDOMDocument, NS_ERROR_FAILURE);
-    Document sourceDocument(sourceDOMDocument);
-    Node* sourceNode = sourceDocument.createWrapper(aSource);
-    NS_ENSURE_TRUE(sourceNode, NS_ERROR_FAILURE);
-
-    txExecutionState es(mStylesheet);
-
-    // XXX Need to add error observers
 
     txToDocHandlerFactory handlerFactory(&es, sourceDOMDocument, nsnull,
                                          nsnull);
     es.mOutputHandlerFactory = &handlerFactory;
 
-    es.init(sourceNode, &mVariables);
+    es.init(*sourceNode.get(), &mVariables);
 
     // Process root of XML source document
     rv = txXSLTProcessor::execute(es);
@@ -490,27 +482,18 @@ txMozillaXSLTProcessor::TransformToFragment(nsIDOMNode *aSource,
     nsresult rv = ensureStylesheet();
     NS_ENSURE_SUCCESS(rv, rv);
 
-    // Create wrapper for the source document.
-    nsCOMPtr<nsIDOMDocument> sourceDOMDocument;
-    aSource->GetOwnerDocument(getter_AddRefs(sourceDOMDocument));
-    if (!sourceDOMDocument) {
-        sourceDOMDocument = do_QueryInterface(aSource);
-    }
-    NS_ENSURE_TRUE(sourceDOMDocument, NS_ERROR_FAILURE);
-    Document sourceDocument(sourceDOMDocument);
-    Node* sourceNode = sourceDocument.createWrapper(aSource);
-    NS_ENSURE_TRUE(sourceNode, NS_ERROR_FAILURE);
-
     txExecutionState es(mStylesheet);
 
     // XXX Need to add error observers
+
+    nsAutoPtr<txXPathNode> sourceNode(txXPathNativeNode::createXPathNode(aSource));
 
     rv = aOutput->CreateDocumentFragment(aResult);
     NS_ENSURE_SUCCESS(rv, rv);
     txToFragmentHandlerFactory handlerFactory(*aResult);
     es.mOutputHandlerFactory = &handlerFactory;
 
-    es.init(sourceNode, &mVariables);
+    es.init(*sourceNode.get(), &mVariables);
 
     // Process root of XML source document
     rv = txXSLTProcessor::execute(es);

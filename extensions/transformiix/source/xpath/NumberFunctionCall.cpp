@@ -35,10 +35,9 @@
 
 #include "FunctionLib.h"
 #include <math.h>
-#include "NodeSet.h"
+#include "txNodeSet.h"
 #include "txAtoms.h"
 #include "txIXPathContext.h"
-#include "XMLDOMUtils.h"
 
 /*
  * Creates a NumberFunctionCall of the given type
@@ -121,7 +120,7 @@ NumberFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
             int i;
             for (i = 0; i < nodes->size(); i++) {
                 nsAutoString resultStr;
-                XMLDOMUtils::getNodeValue(nodes->get(i), resultStr);
+                txXPathNodeUtils::getNodeValue(nodes->get(i), resultStr);
                 res += Double::toDouble(resultStr);
             }
             return aContext->recycler()->getNumberResult(res, aResult);
@@ -134,8 +133,8 @@ NumberFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
             }
             else {
                 nsAutoString resultStr;
-                XMLDOMUtils::getNodeValue(aContext->getContextNode(),
-                                          resultStr);
+                txXPathNodeUtils::getNodeValue(aContext->getContextNode(),
+                                               resultStr);
                 res = Double::toDouble(resultStr);
             }
             return aContext->recycler()->getNumberResult(res, aResult);

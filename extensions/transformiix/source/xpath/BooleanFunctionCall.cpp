@@ -29,10 +29,11 @@
 
 #include "ExprResult.h"
 #include "FunctionLib.h"
+#include "nsReadableUtils.h"
 #include "txAtoms.h"
 #include "txIXPathContext.h"
-#include "nsReadableUtils.h"
 #include "txStringUtils.h"
+#include "txXPathTreeWalker.h"
 
 /**
  * Creates a default BooleanFunctionCall, which always evaluates to False
@@ -71,27 +72,28 @@ BooleanFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
             if (!requireParams(1, 1, aContext))
                 return NS_ERROR_XPATH_BAD_ARGUMENT_COUNT;
 
+            txXPathTreeWalker walker(aContext->getContextNode());
+
             nsAutoString lang;
-            Node* node = aContext->getContextNode();
-            while (node) {
-                if (node->getNodeType() == Node::ELEMENT_NODE) {
-                    Element* elem = (Element*)node;
-                    if (elem->getAttr(txXMLAtoms::lang,
-                                      kNameSpaceID_XML, lang))
-                        break;
-                }
-                node = node->getParentNode();
+            PRBool found = walker.getAttr(txXMLAtoms::lang, kNameSpaceID_XML,
+                                           lang);
+            while (!found && walker.moveToParent()) {
+                found = walker.getAttr(txXMLAtoms::lang, kNameSpaceID_XML,
+                                       lang);
             }
 
-            MBool result = MB_FALSE;
-            if (node) {
-                nsAutoString arg;
-                evaluateToString((Expr*)iter.next(), aContext, arg);
-                result = arg.Equals(Substring(lang, 0, arg.Length()),
-                                    txCaseInsensitiveStringComparator()) &&
-                         (lang.Length() == arg.Length() ||
-                          lang.CharAt(arg.Length()) == '-');
+            if (!found) {
+                aContext->recycler()->getBoolResult(PR_FALSE, aResult);
+
+                return NS_OK;
             }
+
+            nsAutoString arg;
+            evaluateToString((Expr*)iter.next(), aContext, arg);
+            PRBool result = arg.Equals(Substring(lang, 0, arg.Length()),
+                                       txCaseInsensitiveStringComparator()) &&
+                            (lang.Length() == arg.Length() ||
+                             lang.CharAt(arg.Length()) == '-');
 
             aContext->recycler()->getBoolResult(result, aResult);
 

@@ -26,7 +26,7 @@
  */
 
 #include "Expr.h"
-#include "NodeSet.h"
+#include "txNodeSet.h"
 #include "txIXPathContext.h"
 
 //-- Implementation of FilterExpr --/
@@ -70,10 +70,11 @@ FilterExpr::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
     NS_ENSURE_TRUE(exprRes->getResultType() == txAExprResult::NODESET,
                    NS_ERROR_XSLT_NODESET_EXPECTED);
 
-    nsRefPtr<NodeSet> nodes =
-        NS_STATIC_CAST(NodeSet*, NS_STATIC_CAST(txAExprResult*, exprRes));
+    nsRefPtr<txNodeSet> nodes =
+        NS_STATIC_CAST(txNodeSet*, NS_STATIC_CAST(txAExprResult*, exprRes));
     // null out exprRes so that we can test for shared-ness
     exprRes = nsnull;
+
     nsRefPtr<NodeSet> nonShared;
     rv = aContext->recycler()->getNonSharedNodeSet(nodes,
                                                    getter_AddRefs(nonShared));

@@ -28,8 +28,7 @@
  */
 
 #include "Expr.h"
-#include "NodeSet.h"
-#include "XMLDOMUtils.h"
+#include "txNodeSet.h"
 #include "txIXPathContext.h"
 
 RelationalExpr::RelationalExpr(Expr* aLeftExpr, Expr* aRightExpr,
@@ -63,9 +62,8 @@ RelationalExpr::compareResults(txIEvalContext* aContext, txAExprResult* aLeft,
 
         int i;
         for (i = 0; i < nodeSet->size(); ++i) {
-            Node* node = nodeSet->get(i);
             strResult->mValue.Truncate();
-            XMLDOMUtils::getNodeValue(node, strResult->mValue);
+            txXPathNodeUtils::getNodeValue(nodeSet->get(i), strResult->mValue);
             if (compareResults(aContext, strResult, aRight)) {
                 return PR_TRUE;
             }
@@ -81,16 +79,15 @@ RelationalExpr::compareResults(txIEvalContext* aContext, txAExprResult* aLeft,
             return compareResults(aContext, aLeft, &rightBool);
         }
 
-        NodeSet* nodeSet = NS_STATIC_CAST(NodeSet*, aRight);
+        txNodeSet* nodeSet = NS_STATIC_CAST(txNodeSet*, aRight);
         nsRefPtr<StringResult> strResult;
         rv = aContext->recycler()->getStringResult(getter_AddRefs(strResult));
         NS_ENSURE_SUCCESS(rv, rv);
 
         int i;
         for (i = 0; i < nodeSet->size(); ++i) {
-            Node* node = nodeSet->get(i);
             strResult->mValue.Truncate();
-            XMLDOMUtils::getNodeValue(node, strResult->mValue);
+            txXPathNodeUtils::getNodeValue(nodeSet->get(i), strResult->mValue);
             if (compareResults(aContext, aLeft, strResult)) {
                 return PR_TRUE;
             }
@@ -159,21 +156,23 @@ RelationalExpr::compareResults(txIEvalContext* aContext, txAExprResult* aLeft,
         return PR_FALSE;
 #endif
 
-    switch (mOp) {
-        case LESS_THAN:
-            return leftDbl < rightDbl;
-
-        case LESS_OR_EQUAL:
-            return leftDbl <= rightDbl;
-
-        case GREATER_THAN :
-            return leftDbl > rightDbl;
-
-        case GREATER_OR_EQUAL:
-            return leftDbl >= rightDbl;
+    if (mOp == LESS_THAN) {
+        return leftDbl < rightDbl;
     }
 
-    NS_NOTREACHED("We should have cought all cases");
+    if (mOp == LESS_OR_EQUAL) {
+        return leftDbl <= rightDbl;
+    }
+
+    if (mOp == GREATER_THAN) {
+        return leftDbl > rightDbl;
+    }
+
+    if (mOp == GREATER_OR_EQUAL) {
+        return leftDbl >= rightDbl;
+    }
+
+    NS_NOTREACHED("We should have caught all cases");
 
     return PR_FALSE;
 }

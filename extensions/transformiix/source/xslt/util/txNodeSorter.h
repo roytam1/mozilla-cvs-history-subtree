@@ -43,12 +43,13 @@
 #include "baseutils.h"
 #include "List.h"
 #include "nsIAtom.h"
+#include "nsAutoPtr.h"
+#include "txXPathNode.h"
 
 class Element;
 class Expr;
-class Node;
-class NodeSet;
 class txExecutionState;
+class txNodeSet;
 class TxObject;
 class txXPathResultComparator;
 class txIEvalContext;
@@ -66,16 +67,16 @@ public:
     nsresult addSortElement(Expr* aSelectExpr, Expr* aLangExpr,
                             Expr* aDataTypeExpr, Expr* aOrderExpr,
                             Expr* aCaseOrderExpr, txIEvalContext* aContext);
-    nsresult sortNodeSet(NodeSet* aNodes, txExecutionState* aEs);
+    nsresult sortNodeSet(txNodeSet* aNodes, txExecutionState* aEs);
 
 private:
     class SortableNode
     {
     public:
-        SortableNode(Node* aNode, int aNValues);
+        SortableNode(const txXPathNode& aNode, int aNValues);
         void clear(int aNValues);
         TxObject** mSortValues;
-        Node* mNode;
+        const nsAutoPtr<txXPathNode> mNode;
     };
     struct SortKey
     {
@@ -85,12 +86,8 @@ private:
     
     int compareNodes(SortableNode* sNode1,
                      SortableNode* sNode2,
-                     NodeSet* aNodes,
+                     txNodeSet* aNodes,
                      txExecutionState* aEs);
-
-    MBool getAttrAsAVT(Element* aSortElement,
-                       nsIAtom* aAttrName,
-                       nsAString& aResult);
 
     txList mSortKeys;
     int mNKeys;

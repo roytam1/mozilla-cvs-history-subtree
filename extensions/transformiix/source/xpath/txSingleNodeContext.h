@@ -44,10 +44,11 @@
 class txSingleNodeContext : public txIEvalContext
 {
 public:
-    txSingleNodeContext(Node* aContextNode, txIMatchContext* aContext)
-        : mNode(aContextNode), mInner(aContext)
+    txSingleNodeContext(const txXPathNode& aContextNode,
+                        txIMatchContext* aContext)
+        : mNode(aContextNode),
+          mInner(aContext)
     {
-        NS_ASSERTION(aContextNode, "context node must be given");
         NS_ASSERTION(aContext, "txIMatchContext must be given");
     }
     ~txSingleNodeContext()
@@ -60,7 +61,7 @@ public:
         return mInner->getVariable(aNamespace, aLName, aResult);
     }
 
-    MBool isStripSpaceAllowed(Node* aNode)
+    MBool isStripSpaceAllowed(const txXPathNode& aNode)
     {
         NS_ASSERTION(mInner, "mInner is null!!!");
         return mInner->isStripSpaceAllowed(aNode);
@@ -90,7 +91,7 @@ public:
 #endif
     }
 
-    Node* getContextNode()
+    const txXPathNode& getContextNode()
     {
         return mNode;
     }
@@ -106,7 +107,7 @@ public:
     }
 
 private:
-    Node* mNode;
+    const txXPathNode& mNode;
     txIMatchContext* mInner;
 };
 

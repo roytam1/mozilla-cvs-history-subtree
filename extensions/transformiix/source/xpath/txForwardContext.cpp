@@ -37,11 +37,11 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "txForwardContext.h"
-#include "NodeSet.h"
+#include "txNodeSet.h"
 
-Node* txForwardContext::getContextNode()
+const txXPathNode& txForwardContext::getContextNode()
 {
-    return mContext;
+    return mContextNode;
 }
 
 PRUint32 txForwardContext::size()
@@ -51,9 +51,9 @@ PRUint32 txForwardContext::size()
 
 PRUint32 txForwardContext::position()
 {
-    int pos = mContextSet->indexOf(mContext);
+    PRInt32 pos = mContextSet->indexOf(mContextNode);
     NS_ASSERTION(pos >= 0, "Context is not member of context node list.");
-    return (PRUint32)(pos+1);
+    return (PRUint32)(pos + 1);
 }
 
 nsresult txForwardContext::getVariable(PRInt32 aNamespace, nsIAtom* aLName,
@@ -63,7 +63,7 @@ nsresult txForwardContext::getVariable(PRInt32 aNamespace, nsIAtom* aLName,
     return mInner->getVariable(aNamespace, aLName, aResult);
 }
 
-MBool txForwardContext::isStripSpaceAllowed(Node* aNode)
+MBool txForwardContext::isStripSpaceAllowed(const txXPathNode& aNode)
 {
     NS_ASSERTION(mInner, "mInner is null!!!");
     return mInner->isStripSpaceAllowed(aNode);

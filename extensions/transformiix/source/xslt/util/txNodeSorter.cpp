@@ -45,7 +45,6 @@
 #include "ExprResult.h"
 #include "Expr.h"
 #include "txStringUtils.h"
-#include "NodeSet.h"
 
 /*
  * Sorts Nodes as specified by the W3C XSLT 1.0 Recommendation
@@ -165,7 +164,7 @@ txNodeSorter::addSortElement(Expr* aSelectExpr, Expr* aLangExpr,
     return NS_OK;
 }
 
-nsresult txNodeSorter::sortNodeSet(NodeSet* aNodes, txExecutionState* aEs)
+nsresult txNodeSorter::sortNodeSet(txNodeSet* aNodes, txExecutionState* aEs)
 {
     if (mNKeys == 0)
         return NS_OK;
@@ -205,7 +204,7 @@ nsresult txNodeSorter::sortNodeSet(NodeSet* aNodes, txExecutionState* aEs)
     iter.reset();
     while (iter.hasNext()) {
         SortableNode* sNode = (SortableNode*)iter.next();
-        aNodes->append(sNode->mNode);
+        aNodes->append(*sNode->mNode);
         sNode->clear(mNKeys);
         delete sNode;
     }
@@ -215,7 +214,7 @@ nsresult txNodeSorter::sortNodeSet(NodeSet* aNodes, txExecutionState* aEs)
 
 int txNodeSorter::compareNodes(SortableNode* aSNode1,
                                SortableNode* aSNode2,
-                               NodeSet* aNodes,
+                               txNodeSet* aNodes,
                                txExecutionState* aEs)
 {
     txListIterator iter(&mSortKeys);
@@ -227,7 +226,8 @@ int txNodeSorter::compareNodes(SortableNode* aSNode1,
         SortKey* key = (SortKey*)iter.next();
         // Lazy create sort values
         if (!aSNode1->mSortValues[i]) {
-            txForwardContext evalContext(aEs->getEvalContext(), aSNode1->mNode, aNodes);
+            txForwardContext evalContext(aEs->getEvalContext(), *aSNode1->mNode,
+                                         aNodes);
             aEs->pushEvalContext(&evalContext);
             nsRefPtr<txAExprResult> res;
             rv = key->mExpr->evaluate(&evalContext, getter_AddRefs(res));
@@ -241,7 +241,8 @@ int txNodeSorter::compareNodes(SortableNode* aSNode1,
             }
         }
         if (!aSNode2->mSortValues[i]) {
-            txForwardContext evalContext(aEs->getEvalContext(), aSNode2->mNode, aNodes);
+            txForwardContext evalContext(aEs->getEvalContext(), *aSNode2->mNode,
+                                         aNodes);
             aEs->pushEvalContext(&evalContext);
             nsRefPtr<txAExprResult> res;
             rv = key->mExpr->evaluate(&evalContext, getter_AddRefs(res));
@@ -265,9 +266,9 @@ int txNodeSorter::compareNodes(SortableNode* aSNode1,
     return 0;
 }
 
-txNodeSorter::SortableNode::SortableNode(Node* aNode, int aNValues)
+txNodeSorter::SortableNode::SortableNode(const txXPathNode& aNode, int aNValues)
+    : mNode(txXPathNodeUtils::cloneNode(aNode))
 {
-    mNode = aNode;
     mSortValues = new TxObject*[aNValues];
     if (!mSortValues) {
         // XXX ErrorReport: out of memory

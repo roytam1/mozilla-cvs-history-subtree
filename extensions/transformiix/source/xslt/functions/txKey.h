@@ -40,10 +40,10 @@
 #define txKey_h__
 
 #include "nsDoubleHashtable.h"
-#include "XMLUtils.h"
-#include "NodeSet.h"
 #include "List.h"
 #include "txXSLTPatterns.h"
+#include "txNodeSet.h"
+#include "XMLUtils.h"
 
 class txPattern;
 class Expr;
@@ -53,7 +53,7 @@ class txKeyValueHashKey
 {
 public:
     txKeyValueHashKey(const txExpandedName& aKeyName,
-                      Document* aDocument,
+                      PRInt32 aDocument,
                       const nsAString& aKeyValue)
         : mKeyName(aKeyName),
           mKeyValue(aKeyValue),
@@ -63,14 +63,14 @@ public:
 
     txExpandedName mKeyName;
     nsString mKeyValue;
-    Document* mDocument;
+    PRInt32 mDocument;
 };
 
 struct txKeyValueHashEntry : public PLDHashEntryHdr
 {
     txKeyValueHashEntry(const void* aKey)
         : mKey(*NS_STATIC_CAST(const txKeyValueHashKey*, aKey)),
-          mNodeSet(new NodeSet(nsnull))
+          mNodeSet(new txNodeSet(nsnull))
     {
     }
 
@@ -80,7 +80,7 @@ struct txKeyValueHashEntry : public PLDHashEntryHdr
     static PLDHashNumber HashKey(const void* aKey);
     
     txKeyValueHashKey mKey;
-    nsRefPtr<NodeSet> mNodeSet;
+    nsRefPtr<txNodeSet> mNodeSet;
 };
 
 DECL_DHASH_WRAPPER(txKeyValueHash, txKeyValueHashEntry, txKeyValueHashKey&);
@@ -89,14 +89,14 @@ class txIndexedKeyHashKey
 {
 public:
     txIndexedKeyHashKey(txExpandedName aKeyName,
-                        Document* aDocument)
+                        PRInt32 aDocument)
         : mKeyName(aKeyName),
           mDocument(aDocument)
     {
     }
 
     txExpandedName mKeyName;
-    Document* mDocument;
+    PRInt32 mDocument;
 };
 
 struct txIndexedKeyHashEntry : public PLDHashEntryHdr
@@ -145,11 +145,16 @@ public:
      * @param aKeyValueHash Hash to add values to
      * @param aEs           txExecutionState to use for XPath evaluation
      */
-    nsresult indexDocument(Document* aDocument,
+    nsresult indexDocument(const txXPathNode& aDocument,
                            txKeyValueHash& aKeyValueHash,
                            txExecutionState& aEs);
 
 private:
+    nsresult indexNodeAndAtts(const txXPathNode& aNode,
+                              txKeyValueHashKey& aKey,
+                              txKeyValueHash& aKeyValueHash,
+                              txExecutionState& aEs);
+
     /**
      * Recursively searches a node, its attributes and its subtree for
      * nodes matching any of the keys match-patterns.
@@ -158,7 +163,7 @@ private:
      * @param aKeyValueHash Hash to add values to
      * @param aEs           txExecutionState to use for XPath evaluation
      */
-    nsresult indexTree(Node* aNode, txKeyValueHashKey& aKey,
+    nsresult indexTree(const txXPathNode& aNode, txKeyValueHashKey& aKey,
                        txKeyValueHash& aKeyValueHash, txExecutionState& aEs);
 
     /**
@@ -169,7 +174,7 @@ private:
      * @param aKeyValueHash Hash to add values to
      * @param aEs           txExecutionState to use for XPath evaluation
      */
-    nsresult testNode(Node* aNode, txKeyValueHashKey& aKey,
+    nsresult testNode(const txXPathNode& aNode, txKeyValueHashKey& aKey,
                       txKeyValueHash& aKeyValueHash, txExecutionState& aEs);
 
     /**
@@ -203,11 +208,11 @@ public:
     nsresult init();
 
     nsresult getKeyNodes(const txExpandedName& aKeyName,
-                         Document* aDocument,
+                         const txXPathNode& aDocument,
                          const nsAString& aKeyValue,
                          PRBool aIndexIfNotFound,
                          txExecutionState& aEs,
-                         NodeSet** aResult);
+                         txNodeSet** aResult);
 
 private:
     // Hash of all indexed key-values
@@ -220,7 +225,7 @@ private:
     const txExpandedNameMap& mKeys;
     
     // Empty nodeset returned if no key is found
-    nsRefPtr<NodeSet> mEmptyNodeSet;
+    nsRefPtr<txNodeSet> mEmptyNodeSet;
 };
 
 

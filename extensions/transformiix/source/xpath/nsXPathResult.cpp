@@ -38,9 +38,8 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsXPathResult.h"
-#include "dom.h"
 #include "ExprResult.h"
-#include "NodeSet.h"
+#include "txNodeSet.h"
 #include "nsDOMError.h"
 #include "nsIContent.h"
 #include "nsIDOMClassInfo.h"
@@ -170,7 +169,7 @@ nsXPathResult::IterateNext(nsIDOMNode **aResult)
         return NS_ERROR_DOM_INVALID_STATE_ERR;
 
     NS_ENSURE_ARG(aResult);
-    if (mElements && mCurrentPos < mElements->Count()) {
+    if (mElements && mCurrentPos < (PRUint32)mElements->Count()) {
         *aResult = mElements->ObjectAt(mCurrentPos++);
         NS_ADDREF(*aResult);
         return NS_OK;
@@ -187,7 +186,7 @@ nsXPathResult::SnapshotItem(PRUint32 aIndex, nsIDOMNode **aResult)
         return NS_ERROR_DOM_TYPE_ERR;
 
     NS_ENSURE_ARG(aResult);
-    if (mElements && aIndex < mElements->Count()) {
+    if (mElements && aIndex < (PRUint32)mElements->Count()) {
         *aResult = mElements->ObjectAt(aIndex);
         NS_ADDREF(*aResult);
         return NS_OK;
@@ -289,13 +288,13 @@ nsXPathResult::SetExprResult(txAExprResult* aExprResult, PRUint16 aResultType)
 
     if (aExprResult->getResultType() == txAExprResult::NODESET) {
         nsresult rv = NS_OK;
-        NodeSet* nodeSet = (NodeSet*)aExprResult;
+        txNodeSet* nodeSet = NS_STATIC_CAST(txNodeSet*, aExprResult);
 
         if (mResultType == FIRST_ORDERED_NODE_TYPE ||
             mResultType == ANY_UNORDERED_NODE_TYPE) {
-            Node* node = nodeSet->get(0);
-            if (node)
-                rv = CallQueryInterface(node->getNSObj(), &mNode);
+            if (nodeSet->size() > 0) {
+                txXPathNativeNode::getNode(nodeSet->get(0), &mNode);
+            }
         }
         else {
             if (mResultType == UNORDERED_NODE_ITERATOR_TYPE ||
@@ -303,7 +302,7 @@ nsXPathResult::SetExprResult(txAExprResult* aExprResult, PRUint16 aResultType)
                 mInvalidIteratorState = PR_FALSE;
             }
 
-            int count = nodeSet->size();
+            PRInt32 count = nodeSet->size();
             if (count == 0)
                 return NS_OK;
 
@@ -311,9 +310,9 @@ nsXPathResult::SetExprResult(txAExprResult* aExprResult, PRUint16 aResultType)
             NS_ENSURE_TRUE(mElements, NS_ERROR_OUT_OF_MEMORY);
 
             nsCOMPtr<nsIDOMNode> node;
-            int i;
+            PRInt32 i;
             for (i = 0; i < count; ++i) {
-                node = do_QueryInterface(nodeSet->get(i)->getNSObj());
+                txXPathNativeNode::getNode(nodeSet->get(i), getter_AddRefs(node));
                 NS_ASSERTION(node, "node isn't an nsIDOMNode");
                 mElements->AppendObject(node);
             }

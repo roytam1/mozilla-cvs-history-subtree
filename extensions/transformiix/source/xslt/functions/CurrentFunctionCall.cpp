@@ -1,6 +1,7 @@
 #include "txAtoms.h"
 #include "XSLTFunctions.h"
 #include "txExecutionState.h"
+#include "txNodeSet.h"
 
 /*
   Implementation of XSLT 1.0 extension function: current

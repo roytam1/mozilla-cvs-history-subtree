@@ -28,7 +28,7 @@
 */
 
 #include "Expr.h"
-#include "NodeSet.h"
+#include "txNodeSet.h"
 #include "txIXPathContext.h"
 
 /**
@@ -64,75 +64,83 @@ LocationStep::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
     nsresult rv = aContext->recycler()->getNodeSet(getter_AddRefs(nodes));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    MBool reverse = MB_FALSE;
+    PRBool reverse = PR_FALSE;
+    txXPathTreeWalker walker(aContext->getContextNode());
 
-    Node* node = aContext->getContextNode();
     switch (mAxisIdentifier) {
-        case ANCESTOR_AXIS :
-            node = node->getXPathParent();
-            //-- do not break here
-        case ANCESTOR_OR_SELF_AXIS :
-            reverse = MB_TRUE;
-            while (node) {
-                if (mNodeTest->matches(node, aContext)) {
-                    nodes->append(node);
-                }
-                node = node->getXPathParent();
-            }
-            break;
-        case ATTRIBUTE_AXIS :
+        case ANCESTOR_AXIS:
         {
-            NamedNodeMap* atts = node->getAttributes();
-            if (atts) {
-                for (PRUint32 i = 0; i < atts->getLength(); i++) {
-                    Node* attr = atts->item(i);
-                    if (attr->getNamespaceID() != kNameSpaceID_XMLNS &&
-                        mNodeTest->matches(attr, aContext))
-                        nodes->append(attr);
+            if (!walker.moveToParent()) {
+                break;
+            }
+            // do not break here
+        }
+        case ANCESTOR_OR_SELF_AXIS:
+        {
+            reverse = PR_TRUE;
+
+            if (mNodeTest->matches(walker.getCurrentPosition(), aContext)) {
+                nodes->append(walker.getCurrentPosition());
+            }
+            while (walker.moveToParent()) {
+                if (mNodeTest->matches(walker.getCurrentPosition(), aContext)) {
+                    nodes->append(walker.getCurrentPosition());
                 }
             }
             break;
         }
-        case DESCENDANT_OR_SELF_AXIS :
-            if (mNodeTest->matches(node, aContext))
-                nodes->append(node);
-            //-- do not break here
-        case DESCENDANT_AXIS :
-            fromDescendants(node, aContext, nodes);
-            break;
-        case FOLLOWING_AXIS :
+        case ATTRIBUTE_AXIS:
         {
-            if ( node->getNodeType() == Node::ATTRIBUTE_NODE) {
-                node = node->getXPathParent();
-                fromDescendants(node, aContext, nodes);
-            }
-            while (node && !node->getNextSibling()) {
-                node = node->getXPathParent();
-            }
-            while (node) {
-                node = node->getNextSibling();
-
-                if (mNodeTest->matches(node, aContext))
-                    nodes->append(node);
-
-                if (node->hasChildNodes())
-                    fromDescendants(node, aContext, nodes);
-
-                while (node && !node->getNextSibling()) {
-                    node = node->getParentNode();
+            PRBool haveAttr = walker.moveToFirstAttribute();
+            while (haveAttr) {
+                if (mNodeTest->matches(walker.getCurrentPosition(), aContext)) {
+                    nodes->append(walker.getCurrentPosition());
                 }
+                haveAttr = walker.moveToNextSibling();
             }
             break;
         }
-        case FOLLOWING_SIBLING_AXIS :
-            node = node->getNextSibling();
-            while (node) {
-                if (mNodeTest->matches(node, aContext))
-                    nodes->append(node);
-                node = node->getNextSibling();
+        case DESCENDANT_OR_SELF_AXIS:
+        {
+            if (mNodeTest->matches(walker.getCurrentPosition(), aContext)) {
+                nodes->append(walker.getCurrentPosition());
+            }
+            // do not break here
+        }
+        case DESCENDANT_AXIS:
+        {
+            PRBool hasDescendant = walker.moveToFirstDescendant();
+            while (hasDescendant) {
+                if (mNodeTest->matches(walker.getCurrentPosition(), aContext)) {
+                    nodes->append(walker.getCurrentPosition());
+                }
+                hasDescendant = walker.moveToNextDescendant();
             }
             break;
-        case NAMESPACE_AXIS : //-- not yet implemented
+        }
+        case FOLLOWING_AXIS:
+        {
+            PRBool hasFollowing = walker.moveToFirstFollowing();
+            while (hasFollowing) {
+                if (mNodeTest->matches(walker.getCurrentPosition(), aContext)) {
+                    nodes->append(walker.getCurrentPosition());
+                }
+                hasFollowing = walker.moveToNextFollowing();
+            }
+            break;
+        }
+        case FOLLOWING_SIBLING_AXIS:
+        {
+            PRBool hasFollowing = walker.moveToFirstFollowingSibling();
+            while (hasFollowing) {
+                if (mNodeTest->matches(walker.getCurrentPosition(), aContext)) {
+                    nodes->append(walker.getCurrentPosition());
+                }
+                hasFollowing = walker.moveToNextSibling();
+            }
+            break;
+        }
+        case NAMESPACE_AXIS: //-- not yet implemented
 #if 0
             // XXX DEBUG OUTPUT
             cout << "namespace axis not yet implemented"<<endl;
@@ -140,108 +148,73 @@ LocationStep::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
             break;
         case PARENT_AXIS :
         {
-            Node* parent = node->getXPathParent();
-            if (mNodeTest->matches(parent, aContext))
-                    nodes->append(parent);
+            if (walker.moveToParent() &&
+                mNodeTest->matches(walker.getCurrentPosition(), aContext)) {
+                nodes->append(walker.getCurrentPosition());
+            }
             break;
         }
-        case PRECEDING_AXIS :
-            reverse = MB_TRUE;
-            while (node && !node->getPreviousSibling()) {
-                node = node->getXPathParent();
-            }
-            while (node) {
-                node = node->getPreviousSibling();
-
-                if (node->hasChildNodes())
-                    fromDescendantsRev(node, aContext, nodes);
-
-                if (mNodeTest->matches(node, aContext))
-                    nodes->append(node);
-
-                while (node && !node->getPreviousSibling()) {
-                    node = node->getParentNode();
-                }
-            }
-            break;
-        case PRECEDING_SIBLING_AXIS:
-            reverse = MB_TRUE;
-            node = node->getPreviousSibling();
-            while (node) {
-                if (mNodeTest->matches(node, aContext))
-                    nodes->append(node);
-                node = node->getPreviousSibling();
-            }
-            break;
-        case SELF_AXIS :
-            if (mNodeTest->matches(node, aContext))
-                nodes->append(node);
-            break;
-        default: //-- Children Axis
+        case PRECEDING_AXIS:
         {
-            node = node->getFirstChild();
-            while (node) {
-                if (mNodeTest->matches(node, aContext))
-                    nodes->append(node);
-                node = node->getNextSibling();
+            reverse = PR_TRUE;
+
+            PRBool hasPreceding = walker.moveToFirstPreceding();
+            while (hasPreceding) {
+                if (mNodeTest->matches(walker.getCurrentPosition(), aContext)) {
+                    nodes->append(walker.getCurrentPosition());
+                }
+                hasPreceding = walker.moveToNextPreceding();
             }
             break;
         }
-    } //-- switch
+        case PRECEDING_SIBLING_AXIS:
+        {
+            reverse = PR_TRUE;
 
-    //-- apply predicates
+            PRBool hasSibling = walker.moveToFirstPrecedingSibling();
+            while (hasSibling) {
+                if (mNodeTest->matches(walker.getCurrentPosition(), aContext)) {
+                    nodes->append(walker.getCurrentPosition());
+                }
+                hasSibling = walker.moveToPreviousSibling();
+            }
+            break;
+        }
+        case SELF_AXIS:
+        {
+            if (mNodeTest->matches(walker.getCurrentPosition(), aContext)) {
+                nodes->append(walker.getCurrentPosition());
+            }
+            break;
+        }
+        default: // Children Axis
+        {
+            PRBool hasChild = walker.moveToFirstChild();
+            while (hasChild) {
+                if (mNodeTest->matches(walker.getCurrentPosition(), aContext)) {
+                    nodes->append(walker.getCurrentPosition());
+                }
+                hasChild = walker.moveToNextSibling();
+            }
+            break;
+        }
+    }
+
+    // Apply predicates
     if (!isEmpty()) {
         rv = evaluatePredicates(nodes, aContext);
         NS_ENSURE_SUCCESS(rv, rv);
     }
 
-    if (reverse)
+    if (reverse) {
         nodes->reverse();
+    }
 
     *aResult = nodes;
     NS_ADDREF(*aResult);
 
     return NS_OK;
 }
-
-void LocationStep::fromDescendants(Node* node, txIMatchContext* cs,
-                                   NodeSet* nodes)
-{
-    if (!node)
-        return;
-
-    Node* child = node->getFirstChild();
-    while (child) {
-        if (mNodeTest->matches(child, cs))
-            nodes->append(child);
-        //-- check childs descendants
-        if (child->hasChildNodes())
-            fromDescendants(child, cs, nodes);
-
-        child = child->getNextSibling();
-    }
-
-} //-- fromDescendants
-
-void LocationStep::fromDescendantsRev(Node* node, txIMatchContext* cs,
-                                      NodeSet* nodes)
-{
-    if (!node)
-        return;
-
-    Node* child = node->getLastChild();
-    while (child) {
-        //-- check childs descendants
-        if (child->hasChildNodes())
-            fromDescendantsRev(child, cs, nodes);
-
-        if (mNodeTest->matches(child, cs))
-            nodes->append(child);
-
-        child = child->getPreviousSibling();
-    }
-
-} //-- fromDescendantsRev
 
 /**
  * Creates a String representation of this Expr

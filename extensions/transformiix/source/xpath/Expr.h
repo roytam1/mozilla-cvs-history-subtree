@@ -36,7 +36,6 @@
 #define TRANSFRMX_EXPR_H
 
 #include "baseutils.h"
-#include "dom.h"
 #include "List.h"
 #include "nsString.h"
 #include "nsIAtom.h"
@@ -49,10 +48,11 @@
   Much of this code was ported from XSL:P.
 */
 
-class NodeSet;
 class txIParseContext;
 class txIMatchContext;
 class txIEvalContext;
+class txNodeSet;
+class txXPathNode;
 
 /**
  * A Base Class for all XSL Expressions
@@ -164,7 +164,7 @@ protected:
      * If the result is not a NodeSet an error is returned.
      */
     nsresult evaluateToNodeSet(Expr* aExpr, txIEvalContext* aContext,
-                               NodeSet** aResult);
+                               txNodeSet** aResult);
 
     /*
      * Returns the name of the function as an atom.
@@ -209,13 +209,14 @@ public:
      * standalone. The NodeTest node() is different to the
      * Pattern "node()" (document node isn't matched)
      */
-    virtual MBool matches(Node* aNode, txIMatchContext* aContext) = 0;
+    virtual PRBool matches(const txXPathNode& aNode,
+                           txIMatchContext* aContext) = 0;
     virtual double getDefaultPriority() = 0;
     virtual void toString(nsAString& aDest) = 0;
 };
 
 #define TX_DECL_NODE_TEST \
-    MBool matches(Node* aNode, txIMatchContext* aContext); \
+    PRBool matches(const txXPathNode& aNode, txIMatchContext* aContext); \
     double getDefaultPriority(); \
     void toString(nsAString& aDest)
 
@@ -230,7 +231,7 @@ public:
      * principal node type
      */
     txNameTest(nsIAtom* aPrefix, nsIAtom* aLocalName, PRInt32 aNSID,
-               Node::NodeType aNodeType);
+               PRInt32 aNodeType);
 
     ~txNameTest();
 
@@ -240,7 +241,7 @@ private:
     nsCOMPtr<nsIAtom> mPrefix;
     nsCOMPtr<nsIAtom> mLocalName;
     PRInt32 mNamespace;
-    Node::NodeType mNodeType;
+    PRInt32 mNodeType;
 };
 
 /*
@@ -299,7 +300,7 @@ public:
     **/
     void add(Expr* expr);
 
-    nsresult evaluatePredicates(NodeSet* aNodes, txIMatchContext* aContext);
+    nsresult evaluatePredicates(txNodeSet* aNodes, txIMatchContext* aContext);
 
     /**
      * returns true if this predicate list is empty
@@ -321,12 +322,10 @@ protected:
     List predicates;
 }; //-- PredicateList
 
-class LocationStep : public PredicateList, public Expr {
-
+class LocationStep : public PredicateList,
+                     public Expr
+{
 public:
-
-    // Axis Identifier Types
-    //-- LF changed from static const short to enum
     enum LocationStepType {
         ANCESTOR_AXIS = 0,
         ANCESTOR_OR_SELF_AXIS,
@@ -353,17 +352,9 @@ public:
     TX_DECL_EXPR;
 
 private:
-
     nsAutoPtr<txNodeTest> mNodeTest;
     LocationStepType mAxisIdentifier;
-
-    void fromDescendants(Node* node, txIMatchContext* aContext,
-                         NodeSet* nodes);
-    void fromDescendantsRev(Node* node, txIMatchContext* aContext,
-                            NodeSet* nodes);
-
-}; //-- LocationStep
-
+};
 
 class FilterExpr : public PredicateList, public Expr {
 
@@ -585,10 +576,9 @@ private:
      * Selects from the descendants of the context node
      * all nodes that match the Expr
      */
-    nsresult evalDescendants(Expr* aStep, Node* aNode,
+    nsresult evalDescendants(Expr* aStep, const txXPathNode& aNode,
                              txIMatchContext* aContext,
-                             NodeSet* resNodes);
-
+                             txNodeSet* resNodes);
 }; //-- PathExpr
 
 /**

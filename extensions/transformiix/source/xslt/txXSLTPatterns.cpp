@@ -108,7 +108,7 @@ double txUnionPattern::getDefaultPriority()
  * This should be called on the simple patterns for xsl:template,
  * but is fine for xsl:key and xsl:number
  */
-MBool txUnionPattern::matches(Node* aNode, txIMatchContext* aContext)
+MBool txUnionPattern::matches(const txXPathNode& aNode, txIMatchContext* aContext)
 {
     txListIterator iter(&mLocPathPatterns);
     while (iter.hasNext()) {
@@ -182,9 +182,9 @@ nsresult txLocPathPattern::addStep(txPattern* aPattern, MBool isChild)
     return NS_OK;
 }
 
-MBool txLocPathPattern::matches(Node* aNode, txIMatchContext* aContext)
+MBool txLocPathPattern::matches(const txXPathNode& aNode, txIMatchContext* aContext)
 {
-    NS_ASSERTION(aNode && mSteps.getLength(), "Internal error");
+    NS_ASSERTION(mSteps.getLength(), "Internal error");
 
     /*
      * The idea is to split up a path into blocks separated by descendant
@@ -205,40 +205,42 @@ MBool txLocPathPattern::matches(Node* aNode, txIMatchContext* aContext)
     step = (Step*)iter.previous();
     if (!step->pattern->matches(aNode, aContext))
         return MB_FALSE;
-    Node* node = aNode->getXPathParent();
+
+    txXPathTreeWalker walker(aNode);
+    PRBool hasParent = walker.moveToParent();
 
     while (step->isChild) {
         step = (Step*)iter.previous();
         if (!step)
             return MB_TRUE; // all steps matched
-        if (!node || !step->pattern->matches(node, aContext))
+        if (!hasParent || !step->pattern->matches(walker.getCurrentPosition(), aContext))
             return MB_FALSE; // no more ancestors or no match
 
-        node = node->getXPathParent();
+        hasParent = walker.moveToParent();
     }
 
     // We have at least one // path separator
-    Node *blockStart = node;
+    txXPathTreeWalker blockWalker(walker);
     txListIterator blockIter(iter);
 
     while ((step = (Step*)iter.previous())) {
-        if (!node)
+        if (!hasParent)
             return MB_FALSE; // There are more steps in the current block 
                              // than ancestors of the tested node
 
-        if (!step->pattern->matches(node, aContext)) {
+        if (!step->pattern->matches(walker.getCurrentPosition(), aContext)) {
             // Didn't match. We restart at beginning of block using a new
             // start node
             iter = blockIter;
-            blockStart = blockStart->getXPathParent();
-            node = blockStart;
+            hasParent = blockWalker.moveToParent();
+            walker.moveTo(blockWalker);
         }
         else {
-            node = node->getXPathParent();
+            hasParent = walker.moveToParent();
             if (!step->isChild) {
                 // We've matched an entire block. Set new start iter and start node
                 blockIter = iter;
-                blockStart = node;
+                blockWalker.moveTo(walker);
             }
         }
     }
@@ -288,9 +290,9 @@ txRootPattern::~txRootPattern()
 {
 }
 
-MBool txRootPattern::matches(Node* aNode, txIMatchContext* aContext)
+MBool txRootPattern::matches(const txXPathNode& aNode, txIMatchContext* aContext)
 {
-    return aNode && (aNode->getNodeType() == Node::DOCUMENT_NODE);
+    return (txXPathNodeUtils::getNodeType(aNode) == txXPathNodeType::DOCUMENT_NODE);
 }
 
 double txRootPattern::getDefaultPriority()
@@ -339,9 +341,9 @@ txIdPattern::~txIdPattern()
 {
 }
 
-MBool txIdPattern::matches(Node* aNode, txIMatchContext* aContext)
+MBool txIdPattern::matches(const txXPathNode& aNode, txIMatchContext* aContext)
 {
-    if (aNode->getNodeType() != Node::ELEMENT_NODE) {
+    if (txXPathNodeUtils::getNodeType(aNode) != txXPathNodeType::ELEMENT_NODE) {
         return MB_FALSE;
     }
 
@@ -351,7 +353,8 @@ MBool txIdPattern::matches(Node* aNode, txIMatchContext* aContext)
     if (!((Element*)aNode)->getIDValue(value))
         return MB_FALSE;
 #else
-    nsCOMPtr<nsIContent> content = do_QueryInterface(aNode->getNSObj());
+    nsCOMPtr<nsIContent> content;
+    txXPathNativeNode::getContent(aNode, getter_AddRefs(content));
     NS_ASSERTION(content, "a Element without nsIContent");
     if (!content) {
         return MB_FALSE;
@@ -410,16 +413,12 @@ txKeyPattern::~txKeyPattern()
 {
 }
 
-MBool txKeyPattern::matches(Node* aNode, txIMatchContext* aContext)
+MBool txKeyPattern::matches(const txXPathNode& aNode, txIMatchContext* aContext)
 {
     txExecutionState* es = (txExecutionState*)aContext->getPrivateContext();
-    Document* contextDoc;
-    if (aNode->getNodeType() == Node::DOCUMENT_NODE)
-        contextDoc = (Document*)aNode;
-    else
-        contextDoc = aNode->getOwnerDocument();
-    nsRefPtr<NodeSet> nodes;
-    nsresult rv = es->getKeyNodes(mName, contextDoc, mValue, PR_TRUE,
+    txXPathNode* contextDoc = txXPathNodeUtils::getOwnerDocument(aNode);
+    nsRefPtr<txNodeSet> nodes;
+    nsresult rv = es->getKeyNodes(mName, *contextDoc, mValue, PR_TRUE,
                                   getter_AddRefs(nodes));
     NS_ENSURE_SUCCESS(rv, PR_FALSE);
 
@@ -464,16 +463,15 @@ txStepPattern::~txStepPattern()
     delete mNodeTest;
 }
 
-MBool txStepPattern::matches(Node* aNode, txIMatchContext* aContext)
+MBool txStepPattern::matches(const txXPathNode& aNode, txIMatchContext* aContext)
 {
-    NS_ASSERTION(mNodeTest && aNode, "Internal error");
-    if (!aNode)
-        return MB_FALSE;
+    NS_ASSERTION(mNodeTest, "Internal error");
 
     if (!mNodeTest->matches(aNode, aContext))
         return MB_FALSE;
 
-    if (!mIsAttr && !aNode->getParentNode())
+    txXPathTreeWalker walker(aNode);
+    if (!walker.moveToDOMParent() && !mIsAttr)
         return MB_FALSE;
     if (isEmpty()) {
         return MB_TRUE;
@@ -498,28 +496,26 @@ MBool txStepPattern::matches(Node* aNode, txIMatchContext* aContext)
      */
 
     // Create the context node set for evaluating the predicates
-    nsRefPtr<NodeSet> nodes;
+    nsRefPtr<txNodeSet> nodes;
     nsresult rv = aContext->recycler()->getNodeSet(getter_AddRefs(nodes));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    Node* parent = aNode->getXPathParent();
     if (mIsAttr) {
-        NamedNodeMap* atts = parent->getAttributes();
-        if (atts) {
-            PRUint32 i;
-            for (i = 0; i < atts->getLength(); i++) {
-                Node* attr = atts->item(i);
-                if (mNodeTest->matches(attr, aContext))
-                    nodes->append(attr);
+        PRBool hasAttr = walker.moveToFirstAttribute();
+        while (hasAttr) {
+            if (mNodeTest->matches(walker.getCurrentPosition(), aContext)) {
+                nodes->append(walker.getCurrentPosition());
             }
+            hasAttr = walker.moveToNextSibling();
         }
     }
     else {
-        Node* tmpNode = parent->getFirstChild();
-        while (tmpNode) {
-            if (mNodeTest->matches(tmpNode, aContext))
-                nodes->append(tmpNode);
-            tmpNode = tmpNode->getNextSibling();
+        PRBool hasChild = walker.moveToFirstChild();
+        while (hasChild) {
+            if (mNodeTest->matches(walker.getCurrentPosition(), aContext)) {
+                nodes->append(walker.getCurrentPosition());
+            }
+            hasChild = walker.moveToNextSibling();
         }
     }
 
@@ -544,7 +540,7 @@ MBool txStepPattern::matches(Node* aNode, txIMatchContext* aContext)
                     // handle default, [position() == numberValue()]
                     if ((double)predContext.position() ==
                         exprResult->numberValue()) {
-                        Node* tmp = predContext.getContextNode();
+                        const txXPathNode& tmp = predContext.getContextNode();
                         if (tmp == aNode)
                             contextIsInPredicate = MB_TRUE;
                         newNodes->append(tmp);
@@ -552,7 +548,7 @@ MBool txStepPattern::matches(Node* aNode, txIMatchContext* aContext)
                     break;
                 default:
                     if (exprResult->booleanValue()) {
-                        Node* tmp = predContext.getContextNode();
+                        const txXPathNode& tmp = predContext.getContextNode();
                         if (tmp == aNode)
                             contextIsInPredicate = MB_TRUE;
                         newNodes->append(tmp);
@@ -562,7 +558,7 @@ MBool txStepPattern::matches(Node* aNode, txIMatchContext* aContext)
         }
         // Move new NodeSet to the current one
         nodes->clear();
-        nodes->append(newNodes);
+        nodes->append(*newNodes);
         if (!contextIsInPredicate) {
             return MB_FALSE;
         }

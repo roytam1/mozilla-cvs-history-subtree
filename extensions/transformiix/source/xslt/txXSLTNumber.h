@@ -44,10 +44,10 @@
 #include "nsString.h"
 
 class Expr;
-class Node;
 class txPattern;
 class txIEvalContext;
 class txIMatchContext;
+class txXPathTreeWalker;
 
 class txXSLTNumber {
 public:
@@ -74,10 +74,9 @@ private:
                                 txList& aCounters, nsAString& aHead,
                                 nsAString& aTail);
 
-    static PRInt32 getSiblingCount(Node* aNode, txPattern* aCountPattern,
+    static PRInt32 getSiblingCount(const txXPathTreeWalker& aWalker,
+                                   txPattern* aCountPattern,
                                    txIMatchContext* aContext);
-    
-    static Node* getPrevInDocumentOrder(Node* aNode);
     
     static MBool isAlphaNumeric(PRUnichar ch);
 };

@@ -24,6 +24,8 @@
 
 #include "txXMLParser.h"
 #include "txURIUtils.h"
+#include "txXPathTreeWalker.h"
+
 #ifndef TX_EXE
 #include "nsIDocument.h"
 #include "nsIDOMDocument.h"
@@ -42,7 +44,7 @@ class txXMLParser
 {
   public:
     nsresult parse(istream& aInputStream, const nsAString& aUri,
-                   Document** aResultDoc);
+                   txXPathNode** aResultDoc);
     const nsAString& getErrorString();
 
     /**
@@ -60,7 +62,7 @@ class txXMLParser
   protected:
     void createErrorString();
     nsString  mErrorString;
-    Document* mDocument;
+    txXPathNode* mDocument;
     Node*  mCurrentNode;
     XML_Parser mExpatParser;
 };
@@ -68,8 +70,8 @@ class txXMLParser
 
 nsresult
 txParseDocumentFromURI(const nsAString& aHref, const nsAString& aReferrer,
-                       Document* aLoader, nsAString& aErrMsg,
-                       Document** aResult)
+                       const txXPathNode& aLoader, nsAString& aErrMsg,
+                       txXPathNode** aResult)
 {
     NS_ENSURE_ARG_POINTER(aResult);
     *aResult = nsnull;
@@ -79,8 +81,8 @@ txParseDocumentFromURI(const nsAString& aHref, const nsAString& aReferrer,
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsCOMPtr<nsIDOMDocument> theDocument;
-    nsCOMPtr<nsIDocument> loaderDocument =
-        do_QueryInterface(aLoader->getNSObj());
+    nsCOMPtr<nsIDocument> loaderDocument;
+    txXPathNativeNode::getDocument(aLoader, getter_AddRefs(loaderDocument));
     nsCOMPtr<nsILoadGroup> loadGroup;
     nsCOMPtr<nsIURI> loaderUri;
     loaderDocument->GetDocumentLoadGroup(getter_AddRefs(loadGroup));
@@ -114,7 +116,7 @@ txParseDocumentFromURI(const nsAString& aHref, const nsAString& aReferrer,
         return rv;
     }
 
-    *aResult = new Document(theDocument);
+    *aResult = txXPathNativeNode::createXPathNode(theDocument);
     if (!*aResult) {
         return NS_ERROR_FAILURE;
     }

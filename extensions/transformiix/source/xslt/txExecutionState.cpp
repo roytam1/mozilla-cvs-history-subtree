@@ -57,7 +57,7 @@ const PRInt32 txExecutionState::kMaxRecursionDepth = 20000;
 
 DHASH_WRAPPER(txLoadedDocumentsBase, txLoadedDocumentEntry, nsAString&)
 
-nsresult txLoadedDocumentsHash::init(Document* aSourceDocument)
+nsresult txLoadedDocumentsHash::init(txXPathNode* aSourceDocument)
 {
     nsresult rv = Init(8);
     NS_ENSURE_SUCCESS(rv, rv);
@@ -75,24 +75,24 @@ txLoadedDocumentsHash::~txLoadedDocumentsHash()
     }
 
     nsAutoString baseURI;
-    mSourceDocument->getBaseURI(baseURI);
+    txXPathNodeUtils::getBaseURI(*mSourceDocument, baseURI);
     txLoadedDocumentEntry* entry = GetEntry(baseURI);
     if (entry) {
         entry->mDocument = nsnull;
     }
 }
 
-void txLoadedDocumentsHash::Add(Document* aDocument)
+void txLoadedDocumentsHash::Add(txXPathNode* aDocument)
 {
     nsAutoString baseURI;
-    aDocument->getBaseURI(baseURI);
+    txXPathNodeUtils::getBaseURI(*aDocument, baseURI);
     txLoadedDocumentEntry* entry = AddEntry(baseURI);
     if (entry) {
         entry->mDocument = aDocument;
     }
 }
 
-Document* txLoadedDocumentsHash::Get(const nsAString& aURI)
+txXPathNode* txLoadedDocumentsHash::Get(const nsAString& aURI)
 {
     txLoadedDocumentEntry* entry = GetEntry(aURI);
     if (entry) {
@@ -112,7 +112,7 @@ txExecutionState::txExecutionState(txStylesheet* aStylesheet)
       mTemplateRuleCount(0),
       mEvalContext(nsnull),
       mInitialEvalContext(nsnull),
-      mRTFDocument(nsnull),
+//      mRTFDocument(nsnull),
       mGlobalParams(nsnull),
       mKeyHash(aStylesheet->getKeyMap())
 {
@@ -123,7 +123,7 @@ txExecutionState::~txExecutionState()
     delete mResultHandler;
     delete mLocalVariables;
     delete mEvalContext;
-    delete mRTFDocument;
+//    delete mRTFDocument;
 
     PRInt32 i;
     for (i = 0; i < mTemplateRuleCount; ++i) {
@@ -156,7 +156,7 @@ txExecutionState::~txExecutionState()
 }
 
 nsresult
-txExecutionState::init(Node* aNode,
+txExecutionState::init(const txXPathNode& aNode,
                        txExpandedNameMap* aGlobalParams)
 {
     nsresult rv = NS_OK;
@@ -189,14 +189,7 @@ txExecutionState::init(Node* aNode,
     NS_ENSURE_SUCCESS(rv, rv);
 
     // Set up loaded-documents-hash
-    Document* sourceDoc;
-    if (aNode->getNodeType() == Node::DOCUMENT_NODE) {
-        sourceDoc = (Document*)aNode;
-    }
-    else {
-        sourceDoc = aNode->getOwnerDocument();
-    }
-    rv = mLoadedDocuments.init(sourceDoc);
+    rv = mLoadedDocuments.init(txXPathNodeUtils::getOwnerDocument(aNode));
     NS_ENSURE_SUCCESS(rv, rv);
 
     // Init members    
@@ -340,7 +333,7 @@ txExecutionState::getVariable(PRInt32 aNamespace, nsIAtom* aLName,
 }
 
 PRBool
-txExecutionState::isStripSpaceAllowed(Node* aNode)
+txExecutionState::isStripSpaceAllowed(const txXPathNode& aNode)
 {
     return mStylesheet->isStripSpaceAllowed(aNode, this);
 }
@@ -476,7 +469,7 @@ txExecutionState::getEvalContext()
     return mEvalContext;
 }
 
-Node*
+txXPathNode*
 txExecutionState::retrieveDocument(const nsAString& uri,
                                    const nsAString& baseUri)
 {
@@ -507,17 +500,17 @@ txExecutionState::retrieveDocument(const nsAString& uri,
             NS_LossyConvertUCS2toASCII(frag).get()));
 
     // try to get already loaded document
-    Document* xmlDoc = mLoadedDocuments.Get(docUrl);
+    txXPathNode* xmlDoc = mLoadedDocuments.Get(docUrl);
 
     if (!xmlDoc) {
         // open URI
         nsAutoString errMsg, refUri;
         // XXX we should get the referrer from the actual node
         // triggering the load, but this will do for the time being
-        mLoadedDocuments.mSourceDocument->getBaseURI(refUri);
+        txXPathNodeUtils::getBaseURI(*mLoadedDocuments.mSourceDocument, refUri);
         nsresult rv;
         rv = txParseDocumentFromURI(docUrl, refUri,
-                                    mLoadedDocuments.mSourceDocument, errMsg,
+                                    *mLoadedDocuments.mSourceDocument, errMsg,
                                     &xmlDoc);
 
         if (NS_FAILED(rv) || !xmlDoc) {
@@ -530,18 +523,19 @@ txExecutionState::retrieveDocument(const nsAString& uri,
     }
 
     // return element with supplied id if supplied
-    if (!frag.IsEmpty())
-        return xmlDoc->getElementById(frag);
+    if (!frag.IsEmpty()) {
+        return txXPathNodeUtils::getElementById(*xmlDoc, frag);
+    }
 
     return xmlDoc;
 }
 
 nsresult
 txExecutionState::getKeyNodes(const txExpandedName& aKeyName,
-                              Document* aDocument,
+                              const txXPathNode& aDocument,
                               const nsAString& aKeyValue,
                               PRBool aIndexIfNotFound,
-                              NodeSet** aResult)
+                              txNodeSet** aResult)
 {
     return mKeyHash.getKeyNodes(aKeyName, aDocument, aKeyValue,
                                 aIndexIfNotFound, *this, aResult);

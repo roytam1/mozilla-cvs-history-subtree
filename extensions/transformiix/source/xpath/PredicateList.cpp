@@ -24,7 +24,7 @@
  */
 
 #include "Expr.h"
-#include "NodeSet.h"
+#include "txNodeSet.h"
 #include "txNodeSetContext.h"
 
 /*
@@ -57,14 +57,14 @@ void PredicateList::add(Expr* expr)
 } // add
 
 nsresult
-PredicateList::evaluatePredicates(NodeSet* nodes,
+PredicateList::evaluatePredicates(txNodeSet* nodes,
                                   txIMatchContext* aContext)
 {
     NS_ASSERTION(nodes, "called evaluatePredicates with NULL NodeSet");
-    nsRefPtr<NodeSet> newNodes;
+    nsRefPtr<txNodeSet> newNodes;
     nsresult rv = aContext->recycler()->getNodeSet(getter_AddRefs(newNodes));
     NS_ENSURE_SUCCESS(rv, rv);
-    
+
     txListIterator iter(&predicates);
     while (iter.hasNext() && !nodes->isEmpty()) {
         Expr* expr = (Expr*)iter.next();
@@ -81,24 +81,21 @@ PredicateList::evaluatePredicates(NodeSet* nodes,
             rv = expr->evaluate(&predContext, getter_AddRefs(exprResult));
             NS_ENSURE_SUCCESS(rv, rv);
 
-            switch(exprResult->getResultType()) {
-                case txAExprResult::NUMBER:
-                    // handle default, [position() == numberValue()]
-                    if ((double)predContext.position() ==
-                        exprResult->numberValue())
-                        newNodes->append(predContext.getContextNode());
-                    break;
-                default:
-                    if (exprResult->booleanValue())
-                        newNodes->append(predContext.getContextNode());
-                    break;
+            // handle default, [position() == numberValue()]
+            if (exprResult->getResultType() == txAExprResult::NUMBER) {
+                if ((double)predContext.position() == exprResult->numberValue()) {
+                    newNodes->append(predContext.getContextNode());
+                }
+            }
+            else if (exprResult->booleanValue()) {
+                newNodes->append(predContext.getContextNode());
             }
         }
         // Move new NodeSet to the current one
         nodes->clear();
-        nodes->append(newNodes);
+        nodes->append(*newNodes);
     }
-    
+
     return NS_OK;
 }
 
