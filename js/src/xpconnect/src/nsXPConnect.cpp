@@ -327,38 +327,11 @@ nsXPConnect::CreateRuntime()
 /***************************************************************************/
 // nsIXPConnect interface methods...
 
-#if 0
-// XXX hacky test code...
-#include "xpctest.h"
-
-static JSBool
-AttachEcho(XPCCallContext& ccx, XPCWrappedNativeScope* aScope, JSObject* aGlobal) 
+inline nsresult UnexpectedFailure(nsresult rv)
 {
-    nsCOMPtr<nsIEcho> echo(do_CreateInstance("@mozilla.org/js/xpc/test/Echo;1"));
-    if(!echo)
-        return JS_FALSE;
-
-    XPCNativeInterface* iface = 
-        XPCNativeInterface::GetNewOrUsed(ccx, &NS_GET_IID(nsIEcho));
-
-    if(!iface)
-        return JS_FALSE;
-
-    nsCOMPtr<XPCWrappedNative> 
-        wrapper(
-            dont_AddRef(
-                XPCWrappedNative::GetNewOrUsed(ccx, echo, aScope, iface)));
-    if(!wrapper)
-        return JS_FALSE;
-    
-    JSObject* obj = wrapper->GetFlatJSObject();
-    
-    return obj && JS_DefineProperty(ccx.GetJSContext(),
-                                    aGlobal, "echo", OBJECT_TO_JSVAL(obj),
-                                    nsnull, nsnull,
-                                    JSPROP_ENUMERATE);
-}        
-#endif
+    NS_ERROR("This is not supposed to fail!");
+    return rv;        
+}
 
 /* void initClasses (in JSContextPtr aJSContext, in JSObjectPtr aGlobalJSObj); */
 NS_IMETHODIMP
@@ -369,28 +342,22 @@ nsXPConnect::InitClasses(JSContext * aJSContext, JSObject * aGlobalJSObj)
 
     XPCCallContext ccx(NATIVE_CALLER, aJSContext);
     if(!ccx.IsValid())
-        return NS_ERROR_FAILURE;
+        return UnexpectedFailure(NS_ERROR_FAILURE);
 
     XPCContext* xpcc = ccx.GetXPCContext();
 
     if(!xpc_InitWrappedNativeJSOps())
-        return NS_ERROR_FAILURE;
+        return UnexpectedFailure(NS_ERROR_FAILURE);
 
     if(!nsXPCWrappedJSClass::InitClasses(ccx, aGlobalJSObj))
-        return NS_ERROR_FAILURE;
+        return UnexpectedFailure(NS_ERROR_FAILURE);
 
     XPCWrappedNativeScope* scope = new XPCWrappedNativeScope(ccx, aGlobalJSObj);
     if(!scope)
-        return NS_ERROR_FAILURE;
+        return UnexpectedFailure(NS_ERROR_FAILURE);
 
     if(!nsXPCComponents::AttachNewComponentsObject(ccx, scope, aGlobalJSObj))
-        return NS_ERROR_FAILURE;
-
-#if 0
-    // XXX hacky test code...
-    if(!AttachEcho(ccx, scope, aGlobalJSObj)) 
-        return NS_ERROR_FAILURE;
-#endif
+        return UnexpectedFailure(NS_ERROR_FAILURE);
 
     return NS_OK;
 }        
@@ -422,19 +389,19 @@ nsXPConnect::InitClassesWithNewWrappedGlobal(JSContext * aJSContext, nsISupports
 
     if(!tempGlobal ||
        !JS_InitStandardClasses(aJSContext, tempGlobal))
-        return NS_ERROR_FAILURE;
+        return UnexpectedFailure(NS_ERROR_FAILURE);
 
     if(NS_FAILED(InitClasses(aJSContext, tempGlobal)))
-        return NS_ERROR_FAILURE;
+        return UnexpectedFailure(NS_ERROR_FAILURE);
 
     nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
     if(NS_FAILED(WrapNative(aJSContext, tempGlobal, aCOMObj, aIID,
                             getter_AddRefs(holder))) || !holder)
-        return NS_ERROR_FAILURE;
+        return UnexpectedFailure(NS_ERROR_FAILURE);
 
     JSObject* aGlobalJSObj;
     if(NS_FAILED(holder->GetJSObject(&aGlobalJSObj)) || !aGlobalJSObj)
-        return NS_ERROR_FAILURE;
+        return UnexpectedFailure(NS_ERROR_FAILURE);
 
     // voodoo to fixup scoping and parenting...
 
@@ -443,20 +410,20 @@ nsXPConnect::InitClassesWithNewWrappedGlobal(JSContext * aJSContext, nsISupports
 
     if(aCallJS_InitStandardClasses &&
        !JS_InitStandardClasses(aJSContext, aGlobalJSObj))
-        return NS_ERROR_FAILURE;
+        return UnexpectedFailure(NS_ERROR_FAILURE);
 
     XPCWrappedNative* wrapper = 
         NS_REINTERPRET_CAST(XPCWrappedNative*, holder.get());
     XPCWrappedNativeScope* scope = wrapper->GetScope();
     
     if(!scope)
-        return NS_ERROR_FAILURE;
+        return UnexpectedFailure(NS_ERROR_FAILURE);
 
     scope->SetGlobal(ccx, aGlobalJSObj);
     
     XPCWrappedNativeProto* proto = wrapper->GetProto();
     if(!proto)
-        return NS_ERROR_FAILURE;
+        return UnexpectedFailure(NS_ERROR_FAILURE);
 
     JSObject* protoJSObject = proto->GetJSProtoObject();
     if(protoJSObject)
@@ -466,7 +433,7 @@ nsXPConnect::InitClassesWithNewWrappedGlobal(JSContext * aJSContext, nsISupports
     }
 
     if(NS_FAILED(InitClasses(aJSContext, aGlobalJSObj)))
-        return NS_ERROR_FAILURE;
+        return UnexpectedFailure(NS_ERROR_FAILURE);
     
     NS_ADDREF(*_retval = holder);
 
@@ -486,7 +453,7 @@ nsXPConnect::WrapNative(JSContext * aJSContext, JSObject * aScope, nsISupports *
 
     XPCCallContext ccx(NATIVE_CALLER, aJSContext);
     if(!ccx.IsValid())
-        return NS_ERROR_FAILURE;
+        return UnexpectedFailure(NS_ERROR_FAILURE);
 
     nsresult rv;
     if(!XPCConvert::NativeInterface2JSObject(ccx, _retval,
@@ -507,7 +474,7 @@ nsXPConnect::WrapJS(JSContext * aJSContext, JSObject * aJSObj, const nsIID & aII
 
     XPCCallContext ccx(NATIVE_CALLER, aJSContext);
     if(!ccx.IsValid())
-        return NS_ERROR_FAILURE;
+        return UnexpectedFailure(NS_ERROR_FAILURE);
 
     nsresult rv;
     if(!XPCConvert::JSObject2NativeInterface(ccx, result, aJSObj, 
@@ -529,7 +496,7 @@ nsXPConnect::WrapJSAggregatedToNative(nsISupports *aOuter, JSContext * aJSContex
 
     XPCCallContext ccx(NATIVE_CALLER, aJSContext);
     if(!ccx.IsValid())
-        return NS_ERROR_FAILURE;
+        return UnexpectedFailure(NS_ERROR_FAILURE);
 
     nsresult rv;
     if(!XPCConvert::JSObject2NativeInterface(ccx, result, aJSObj, 
@@ -548,7 +515,7 @@ nsXPConnect::GetWrappedNativeOfJSObject(JSContext * aJSContext, JSObject * aJSOb
 
     XPCCallContext ccx(NATIVE_CALLER, aJSContext);
     if(!ccx.IsValid())
-        return NS_ERROR_FAILURE;
+        return UnexpectedFailure(NS_ERROR_FAILURE);
 
     nsIXPConnectWrappedNative* wrapper = 
         XPCWrappedNative::GetWrappedNativeOfJSObject(aJSContext, aJSObj);
@@ -576,7 +543,7 @@ nsXPConnect::GetWrappedNativeOfNativeObject(JSContext * aJSContext, JSObject * a
 
     XPCCallContext ccx(NATIVE_CALLER, aJSContext);
     if(!ccx.IsValid())
-        return NS_ERROR_FAILURE;
+        return UnexpectedFailure(NS_ERROR_FAILURE);
 
     XPCWrappedNativeScope* scope =
         XPCWrappedNativeScope::FindInJSObjectScope(ccx, aScope);
@@ -605,7 +572,7 @@ nsXPConnect::SetSecurityManagerForJSContext(JSContext * aJSContext, nsIXPCSecuri
 
     XPCCallContext ccx(NATIVE_CALLER, aJSContext);
     if(!ccx.IsValid())
-        return NS_ERROR_FAILURE;
+        return UnexpectedFailure(NS_ERROR_FAILURE);
 
     XPCContext* xpcc = ccx.GetXPCContext();
 
@@ -628,7 +595,7 @@ nsXPConnect::GetSecurityManagerForJSContext(JSContext * aJSContext, nsIXPCSecuri
 
     XPCCallContext ccx(NATIVE_CALLER, aJSContext);
     if(!ccx.IsValid())
-        return NS_ERROR_FAILURE;
+        return UnexpectedFailure(NS_ERROR_FAILURE);
 
     XPCContext* xpcc = ccx.GetXPCContext();
 
@@ -710,7 +677,7 @@ nsXPConnect::GetCurrentNativeCallContext(nsIXPCNativeCallContext * *aCurrentNati
     }
     //else...
     *aCurrentNativeCallContext = nsnull;
-    return NS_ERROR_FAILURE;
+    return UnexpectedFailure(NS_ERROR_FAILURE);
 }        
 
 /* attribute nsIXPCException PendingException; */
@@ -723,7 +690,7 @@ nsXPConnect::GetPendingException(nsIXPCException * *aPendingException)
     if(!data)
     {
         *aPendingException = nsnull;
-        return NS_ERROR_FAILURE;
+        return UnexpectedFailure(NS_ERROR_FAILURE);
     }
 
     *aPendingException = data->GetException();
@@ -735,7 +702,7 @@ nsXPConnect::SetPendingException(nsIXPCException * aPendingException)
 {
     XPCPerThreadData* data = XPCPerThreadData::GetData();
     if(!data)
-        return NS_ERROR_FAILURE;
+        return UnexpectedFailure(NS_ERROR_FAILURE);
 
     data->SetException(aPendingException);
     return NS_OK;
