@@ -368,7 +368,10 @@ NS_IMPL_THREADSAFE_ISUPPORTS1(BackstagePass, nsIXPCScriptable);
 #define                             XPC_MAP_WANT_NEWRESOLVE
 #define XPC_MAP_FLAGS       nsIXPCScriptable::USE_JSSTUB_FOR_ADDPROPERTY   | \
                             nsIXPCScriptable::USE_JSSTUB_FOR_DELPROPERTY   | \
-                            nsIXPCScriptable::USE_JSSTUB_FOR_SETPROPERTY
+                            nsIXPCScriptable::USE_JSSTUB_FOR_SETPROPERTY   | \
+                            nsIXPCScriptable::DONT_ENUM_STATIC_PROPS       | \
+                            nsIXPCScriptable::DONT_ENUM_QUERY_INTERFACE    | \
+                            nsIXPCScriptable::DONT_REFLECT_INTERFACE_NAMES
 #include "xpc_map_end.h" /* This will #undef the above */
 
 /* PRBool newResolve (in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj, in JSVal id, in PRUint32 flags, out JSObjectPtr objp); */

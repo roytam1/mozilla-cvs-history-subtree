@@ -128,7 +128,8 @@ static NS_DEFINE_IID(kCPluginManagerCID, NS_PLUGINMANAGER_CID);
   nsIXPCScriptable::ALLOW_PROP_MODS_TO_PROTOTYPE |                            \
   nsIXPCScriptable::DONT_ASK_INSTANCE_FOR_SCRIPTABLE |                        \
   nsIXPCScriptable::DONT_ENUM_QUERY_INTERFACE |                               \
-  nsIXPCScriptable::CLASSINFO_INTERFACES_ONLY
+  nsIXPCScriptable::CLASSINFO_INTERFACES_ONLY |                               \
+  nsIXPCScriptable::DONT_REFLECT_INTERFACE_NAMES
 
 #define NODE_SCRIPTABLE_FLAGS                                                 \
   (DEFAULT_SCRIPTABLE_FLAGS |                                                 \

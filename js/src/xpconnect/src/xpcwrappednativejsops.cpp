@@ -307,69 +307,68 @@ DefinePropertyIfFound(XPCCallContext& ccx,
                                            propFlags & ~JSPROP_ENUMERATE,
                                            nsnull);
             }
+        }
+        // This *might* be a tearoff name that is not yet part of our
+        // set. Let's lookup the name and see if it is the name of an
+        // interface. Then we'll see if the object actually *does* this
+        // interface and add a tearoff as necessary.
 
-            // This *might* be a tearoff name that is not yet part of our
-            // set. Let's lookup the name and see if it is the name of an
-            // interface. Then we'll see if the object actually *does* this
-            // interface and add a tearoff as necessary.
+        if(wrapperToReflectInterfaceNames)
+        {
+            XPCWrappedNativeTearOff* to;
+            JSObject* jso;
 
-            if(wrapperToReflectInterfaceNames)
+            if(JSVAL_IS_STRING(idval) &&
+               nsnull != (name = JS_GetStringBytes(JSVAL_TO_STRING(idval))) &&
+               nsnull != (iface = XPCNativeInterface::GetNewOrUsed(ccx, name)) &&
+               nsnull != (to = wrapperToReflectInterfaceNames->
+                                    FindTearOff(ccx, iface, JS_TRUE)) &&
+               nsnull != (jso = to->GetJSObject()))
+
             {
-                XPCWrappedNativeTearOff* to;
-                JSObject* jso;
-
-                if(JSVAL_IS_STRING(idval) &&
-                   nsnull != (name = JS_GetStringBytes(JSVAL_TO_STRING(idval))) &&
-                   nsnull != (iface = XPCNativeInterface::GetNewOrUsed(ccx, name)) &&
-                   nsnull != (to = wrapperToReflectInterfaceNames->
-                                        FindTearOff(ccx, iface, JS_TRUE)) &&
-                   nsnull != (jso = to->GetJSObject()))
-
-                {
-                    AutoResolveName arn(ccx, idval);
-                    if(resolved) 
-                        *resolved = JS_TRUE;
-                    return JS_ValueToId(ccx, idval, &id) &&
-                           OBJ_DEFINE_PROPERTY(ccx, obj, id, OBJECT_TO_JSVAL(jso),
-                                               nsnull, nsnull,
-                                               propFlags & ~JSPROP_ENUMERATE,
-                                               nsnull);
-                }
-            }
-
-            // This *might* be a double wrapped JSObject
-            if(wrapperToReflectDoubleWrap &&
-               idval == rt->GetStringJSVal(XPCJSRuntime::IDX_WRAPPED_JSOBJECT) &&
-               GetDoubleWrappedJSObject(ccx, wrapperToReflectDoubleWrap))
-            {
-                // We build and add a getter function.
-                // A security is done on a per-get basis.
-
-                JSFunction* fun;
-
-                id = rt->GetStringID(XPCJSRuntime::IDX_WRAPPED_JSOBJECT);
-                name = rt->GetStringName(XPCJSRuntime::IDX_WRAPPED_JSOBJECT);
-
-                fun = JS_NewFunction(ccx, XPC_WN_DoubleWrappedGetter,
-                                     0, JSFUN_GETTER, obj, name);
-
-                if(!fun)
-                    return JS_FALSE;
-
-                JSObject* funobj = JS_GetFunctionObject(fun);
-                if(!funobj)
-                    return JS_FALSE;
-
-                propFlags |= JSPROP_GETTER;
-                propFlags &= ~JSPROP_ENUMERATE;
-
                 AutoResolveName arn(ccx, idval);
                 if(resolved) 
                     *resolved = JS_TRUE;
-                return OBJ_DEFINE_PROPERTY(ccx, obj, id, JSVAL_VOID,
-                                           (JSPropertyOp) funobj, nsnull,
-                                           propFlags, nsnull);
+                return JS_ValueToId(ccx, idval, &id) &&
+                       OBJ_DEFINE_PROPERTY(ccx, obj, id, OBJECT_TO_JSVAL(jso),
+                                           nsnull, nsnull,
+                                           propFlags & ~JSPROP_ENUMERATE,
+                                           nsnull);
             }
+        }
+
+        // This *might* be a double wrapped JSObject
+        if(wrapperToReflectDoubleWrap &&
+           idval == rt->GetStringJSVal(XPCJSRuntime::IDX_WRAPPED_JSOBJECT) &&
+           GetDoubleWrappedJSObject(ccx, wrapperToReflectDoubleWrap))
+        {
+            // We build and add a getter function.
+            // A security is done on a per-get basis.
+
+            JSFunction* fun;
+
+            id = rt->GetStringID(XPCJSRuntime::IDX_WRAPPED_JSOBJECT);
+            name = rt->GetStringName(XPCJSRuntime::IDX_WRAPPED_JSOBJECT);
+
+            fun = JS_NewFunction(ccx, XPC_WN_DoubleWrappedGetter,
+                                 0, JSFUN_GETTER, obj, name);
+
+            if(!fun)
+                return JS_FALSE;
+
+            JSObject* funobj = JS_GetFunctionObject(fun);
+            if(!funobj)
+                return JS_FALSE;
+
+            propFlags |= JSPROP_GETTER;
+            propFlags &= ~JSPROP_ENUMERATE;
+
+            AutoResolveName arn(ccx, idval);
+            if(resolved) 
+                *resolved = JS_TRUE;
+            return OBJ_DEFINE_PROPERTY(ccx, obj, id, JSVAL_VOID,
+                                       (JSPropertyOp) funobj, nsnull,
+                                       propFlags, nsnull);
         }
         
         if(resolved) 
@@ -927,16 +926,24 @@ XPC_WN_Helper_NewResolve(JSContext *cx, JSObject *obj, jsval idval, uintN flags,
             {
                 XPCWrappedNative* oldResolvingWrapper;
 
-                uintN enumFlag =
-                    (si && si->GetFlags().DontEnumStaticProps()) ? 
-                                                0 : JSPROP_ENUMERATE;
+                XPCNativeScriptableFlags siFlags(0);
+                if(si)
+                    siFlags = si->GetFlags();
+
+                uintN enumFlag = 
+                    siFlags.DontEnumStaticProps() ? 0 : JSPROP_ENUMERATE;
+                
+                XPCWrappedNative* wrapperForInterfaceNames = 
+                    siFlags.DontReflectInterfaceNames() ? nsnull : wrapper;
 
                 JSBool resolved;
                 oldResolvingWrapper = ccx.SetResolvingWrapper(wrapper);
                 retval = DefinePropertyIfFound(ccx, obj, idval,
                                                set, iface, member,
                                                wrapper->GetScope(),
-                                               JS_FALSE, wrapper, nsnull, si,
+                                               JS_FALSE, 
+                                               wrapperForInterfaceNames, 
+                                               nsnull, si,
                                                enumFlag, &resolved);
                 (void)ccx.SetResolvingWrapper(oldResolvingWrapper);
                 if(retval && resolved) 
