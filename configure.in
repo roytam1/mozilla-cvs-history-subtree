@@ -3604,7 +3604,7 @@ AC_SUBST(MOZ_SVG)
 
 MOZ_ARG_ENABLE_BOOL(svg-renderer-gdiplus,
 [  --enable-svg-renderer-gdiplus Enable SVG gdi+ renderer ],
-    MOZ_SVG_RENDERER_GDIPLUS=1
+    MOZ_SVG_RENDERER_GDIPLUS=1,
     MOZ_SVG_RENDERER_GDIPLUS= )
 if test -n "MOZ_SVG_RENDERER_GDIPLUS"; then
   AC_DEFINE(MOZ_SVG_RENDERER_GDIPLUS)
@@ -3613,7 +3613,7 @@ AC_SUBST(MOZ_SVG_RENDERER_GDIPLUS)
 
 MOZ_ARG_ENABLE_BOOL(svg-renderer-libart,
 [  --enable-svg-renderer-libart Enable SVG libart renderer ],
-    MOZ_SVG_RENDERER_LIBART=1
+    MOZ_SVG_RENDERER_LIBART=1,
     MOZ_SVG_RENDERER_LIBART= )
 if test -n "MOZ_SVG_RENDERER_LIBART"; then
   AC_DEFINE(MOZ_SVG_RENDERER_LIBART)
