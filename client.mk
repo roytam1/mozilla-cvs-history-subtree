@@ -52,14 +52,16 @@
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-MOZ_CO_TAG = MOZILLA_1_0_RELEASE
-NSPR_CO_TAG = MOZILLA_1_0_RELEASE
-PSM_CO_TAG = MOZILLA_1_0_RELEASE
-NSS_CO_TAG = MOZILLA_1_0_RELEASE
-LDAPCSDK_CO_TAG = MOZILLA_1_0_RELEASE
-ACCESSIBLE_CO_TAG = MOZILLA_1_0_RELEASE
-GFX2_CO_TAG = MOZILLA_1_0_RELEASE
-IMGLIB2_CO_TAG = MOZILLA_1_0_RELEASE
+MOZ_CO_TAG = CHIMERA_M1_0_BRANCH
+NSPR_CO_TAG = CHIMERA_M1_0_BRANCH
+PSM_CO_TAG = CHIMERA_M1_0_BRANCH
+NSS_CO_TAG = CHIMERA_M1_0_BRANCH
+LDAPCSDK_CO_TAG = CHIMERA_M1_0_BRANCH
+ACCESSIBLE_CO_TAG = CHIMERA_M1_0_BRANCH
+GFX2_CO_TAG = CHIMERA_M1_0_BRANCH
+IMGLIB2_CO_TAG = CHIMERA_M1_0_BRANCH
+# Pull mozilla/chimera from the trunk
+# CHIMERA_CO_TAG = CHIMERA_M1_0_BRANCH
 BUILD_MODULES = all
 
 #######################################################################
@@ -362,6 +364,19 @@ CHECKOUT_CALENDAR := true
 FASTUPDATE_CALENDAR := true
 endif
 
+####################################
+# CVS defines for Chimera
+#
+CHIMERA_CO_MODULE = mozilla/chimera
+CHIMERA_CO_FLAGS := -P
+ifdef MOZ_CO_FLAGS
+  CHIMERA_CO_FLAGS := $(MOZ_CO_FLAGS)
+endif
+ifdef CHIMERA_CO_TAG
+  CHIMERA_CO_FLAGS := $(CHIMERA_CO_FLAGS) -r $(CHIMERA_CO_TAG)
+endif
+CVSCO_CHIMERA = $(CVS) $(CVS_FLAGS) co $(CHIMERA_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(CHIMERA_CO_MODULE)
+
 
 # because some cygwin tools can't handle native dos-drive paths & vice-versa
 # force configure to use a relative path for --srcdir
@@ -437,6 +452,7 @@ real_checkout:
         cvs_co $(CVSCO_ACCESSIBLE) && \
         cvs_co $(CVSCO_GFX2) && \
         cvs_co $(CVSCO_IMGLIB2) && \
+        cvs_co $(CVSCO_CHIMERA) && \
 	$(CHECKOUT_CALENDAR) && \
 	$(CHECKOUT_LIBART) && \
 	cvs_co $(CVSCO_SEAMONKEY) && \
@@ -497,6 +513,7 @@ real_fast-update:
 	fast_update $(CVSCO_ACCESSIBLE) && \
 	fast_update $(CVSCO_GFX2) && \
 	fast_update $(CVSCO_IMGLIB2) && \
+	fast_update $(CVSCO_CHIMERA) && \
 	$(FASTUPDATE_CALENDAR) && \
 	$(FASTUPDATE_LIBART) && \
 	fast_update $(CVSCO_SEAMONKEY) && \
