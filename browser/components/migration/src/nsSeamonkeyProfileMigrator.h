@@ -46,6 +46,8 @@
 
 class nsIFile;
 class nsIPrefBranch;
+class nsIPrefService;
+class nsVoidArray;
 
 class nsSeamonkeyProfileMigrator : public nsNetscapeProfileMigratorBase, 
                                    public nsIBrowserProfileMigrator
@@ -70,7 +72,9 @@ protected:
   nsresult CopyPreferences(PRBool aReplace);
   nsresult TransformPreferences(const nsAString& aSourcePrefFileName,
                                 const nsAString& aTargetPrefFileName);
-  void     ReadFontsBranch();
+  void     ReadFontsBranch(nsIPrefService* aPrefService, nsVoidArray* aPrefs);
+  void     WriteFontsBranch(nsIPrefService* aPrefService, nsVoidArray* aPrefs);
+
   nsresult CopyUserContentSheet();
 
   nsresult CopyCookies(PRBool aReplace);

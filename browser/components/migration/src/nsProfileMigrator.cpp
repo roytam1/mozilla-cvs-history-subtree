@@ -192,7 +192,7 @@ nsProfileMigrator::GetDefaultBrowserMigratorKey(nsIBrowserProfileMigrator** aMig
             }
             else if (!nsCRT::strcasecmp((char*)internalName, INTERNAL_NAME_FIREBIRD)) {
               key->SetData(NS_LITERAL_STRING("opera"));
-              bpm = do_CreateInstance(NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "opera");
+              bpm = do_CreateInstance(NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "seamonkey");
             }
             else if (!nsCRT::strcasecmp((char*)internalName, INTERNAL_NAME_OPERA)) {
               key->SetData(NS_LITERAL_STRING("opera"));

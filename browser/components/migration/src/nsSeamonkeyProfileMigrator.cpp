@@ -36,8 +36,10 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsBrowserProfileMigratorUtils.h"
+#include "nsCRT.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsIObserverService.h"
+#include "nsIPrefLocalizedString.h"
 #include "nsIPrefService.h"
 #include "nsIProfile.h"
 #include "nsIProfileInternal.h"
@@ -46,6 +48,7 @@
 #include "nsISupportsArray.h"
 #include "nsISupportsPrimitives.h"
 #include "nsSeamonkeyProfileMigrator.h"
+#include "nsVoidArray.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 // nsSeamonkeyProfileMigrator
@@ -377,13 +380,20 @@ nsSeamonkeyProfileMigrator::TransformPreferences(const nsAString& aSourcePrefFil
   for (transform = gTransforms; transform < end; ++transform)
     transform->prefGetterFunc(transform, branch);
 
-  ReadFontsBranch();
+  nsVoidArray* fontPrefs = new nsVoidArray();
+  if (!fontPrefs)
+    return NS_ERROR_OUT_OF_MEMORY;
+  ReadFontsBranch(psvc, fontPrefs);
 
   // Now that we have all the pref data in memory, load the target pref file,
   // and write it back out
   psvc->ResetPrefs();
   for (transform = gTransforms; transform < end; ++transform)
     transform->prefSetterFunc(transform, branch);
+
+  WriteFontsBranch(psvc, fontPrefs);
+  delete fontPrefs;
+  fontPrefs = nsnull;
 
   nsCOMPtr<nsIFile> targetPrefsFile;
   mTargetProfile->Clone(getter_AddRefs(targetPrefsFile));
@@ -393,11 +403,106 @@ nsSeamonkeyProfileMigrator::TransformPreferences(const nsAString& aSourcePrefFil
   return NS_OK;
 }
 
+typedef struct {
+  char*         prefName;
+  PRInt32       type;
+  union {
+    char*       stringValue;
+    PRInt32     intValue;
+    PRBool      boolValue;
+    PRUnichar*  wstringValue;
+  };
+} FontPref;
+
 void
-nsSeamonkeyProfileMigrator::ReadFontsBranch()
+nsSeamonkeyProfileMigrator::ReadFontsBranch(nsIPrefService* aPrefService, 
+                                            nsVoidArray* aPrefs)
 {
-  // XXXben TODO!
-  return;
+  // Enumerate the branch
+  nsCOMPtr<nsIPrefBranch> branch;
+  aPrefService->GetBranch("font.", getter_AddRefs(branch));
+
+  PRUint32 count;
+  char** prefs = nsnull;
+  nsresult rv = branch->GetChildList("", &count, &prefs);
+  if (NS_FAILED(rv)) return;
+
+  for (PRUint32 i = 0; i < count; ++i) {
+    // Save each pref's value into an array
+    char* currPref = prefs[i];
+    PRInt32 type;
+    branch->GetPrefType(currPref, &type);
+    FontPref* pref = new FontPref;
+    pref->prefName = currPref;
+    pref->type = type;
+    switch (type) {
+    case nsIPrefBranch::PREF_STRING:
+      rv = branch->GetCharPref(currPref, &pref->stringValue);
+      break;
+    case nsIPrefBranch::PREF_BOOL:
+      rv = branch->GetBoolPref(currPref, &pref->boolValue);
+      break;
+    case nsIPrefBranch::PREF_INT:
+      rv = branch->GetIntPref(currPref, &pref->intValue);
+      break;
+    case nsIPrefBranch::PREF_INVALID:
+      {
+        nsCOMPtr<nsIPrefLocalizedString> str;
+        rv = branch->GetComplexValue(currPref, 
+                                    NS_GET_IID(nsIPrefLocalizedString), 
+                                    getter_AddRefs(str));
+        if (NS_SUCCEEDED(rv) && str)
+          str->ToString(&pref->wstringValue);
+      }
+      break;
+    }
+
+    if (NS_SUCCEEDED(rv))
+      aPrefs->AppendElement((void*)pref);
+  }
+}
+
+void
+nsSeamonkeyProfileMigrator::WriteFontsBranch(nsIPrefService* aPrefService,
+                                             nsVoidArray* aPrefs)
+{
+  nsresult rv;
+
+  // Enumerate the branch
+  nsCOMPtr<nsIPrefBranch> branch;
+  aPrefService->GetBranch("font.", getter_AddRefs(branch));
+
+  PRUint32 count = aPrefs->Count();
+  for (PRUint32 i = 0; i < count; ++i) {
+    FontPref* pref = (FontPref*)aPrefs->ElementAt(i);
+    switch (pref->type) {
+    case nsIPrefBranch::PREF_STRING:
+      rv = branch->SetCharPref(pref->prefName, pref->stringValue);
+      nsCRT::free(pref->stringValue);
+      pref->stringValue = nsnull;
+      break;
+    case nsIPrefBranch::PREF_BOOL:
+      rv = branch->SetBoolPref(pref->prefName, pref->boolValue);
+      break;
+    case nsIPrefBranch::PREF_INT:
+      rv = branch->SetIntPref(pref->prefName, pref->intValue);
+      break;
+    case nsIPrefBranch::PREF_INVALID:
+      nsCOMPtr<nsIPrefLocalizedString> pls(do_CreateInstance("@mozilla.org/pref-localizedstring;1"));
+      pls->SetData(pref->wstringValue);
+      rv = branch->SetComplexValue(pref->prefName, 
+                                   NS_GET_IID(nsIPrefLocalizedString),
+                                   pls);
+      nsCRT::free(pref->wstringValue);
+      pref->wstringValue = nsnull;
+      break;
+    }
+    nsCRT::free(pref->prefName);
+    pref->prefName = nsnull;
+    free(pref);
+    pref = nsnull;
+  }
+  aPrefs->Clear();
 }
 
 nsresult
