@@ -125,11 +125,11 @@ function downloadCompleted(aDownload)
     
     rdfc.Init(db, rdf.GetResource("NC:DownloadsRoot"));
 
-    var id = aDownload.target.path;
+    var id = aDownload.targetFile.path;
     
     // Refresh the icon, so that executable icons are shown.
     var mimeService = Components.classes["@mozilla.org/uriloader/external-helper-app-service;1"].getService(Components.interfaces.nsIMIMEService);
-    var contentType = mimeService.getTypeFromFile(aDownload.target);
+    var contentType = mimeService.getTypeFromFile(aDownload.targetFile);
     
     var listItem = document.getElementById(id);
     var oldImage = listItem.getAttribute("image");
@@ -582,8 +582,9 @@ var XPInstallDownloadManager = {
       if (!iconURL) 
         iconURL = "chrome://mozapps/skin/xpinstall/xpinstallItemGeneric.png";
       
+      var targetUrl = makeFileURL(localTarget);
       var download = gDownloadManager.addDownload(Components.interfaces.nsIXPInstallManagerUI.DOWNLOAD_TYPE_INSTALL, 
-                                                  uri, localTarget, displayName, iconURL, mimeInfo, 0, null);
+                                                  uri, targetUrl, displayName, iconURL, mimeInfo, 0, null);
       
       // Advance the enumerator
       var certName = aParams.GetString(i++);
