@@ -374,7 +374,7 @@ nsLocalFile::Create(PRUint32 type, PRUint32 permissions)
 }
 
 NS_IMETHODIMP
-nsLocalFile::AppendPath(const char *fragment)
+nsLocalFile::Append(const char *fragment)
 {
     NS_ENSURE_ARG(fragment);
     CHECK_mPath();
@@ -420,6 +420,30 @@ nsLocalFile::GetLeafName(char **aLeafName)
     *aLeafName = nsCRT::strdup(leafName);
     if (!*aLeafName)
         return NS_ERROR_OUT_OF_MEMORY;
+    return NS_OK;
+}
+
+
+
+NS_IMETHODIMP
+nsLocalFile::SetLeafName(const char *aLeafName)
+{
+    NS_ENSURE_ARG(aLeafName);
+    CHECK_mPath();
+
+    nsresult rv;
+    const char *leafName;
+    if (NS_FAILED(rv = GetLeafNameRaw(&leafName)))
+	return rv;
+    
+    *leafName = 0;
+    
+    strcpy(newPath, mPath);
+    strcat(newPath, "/");
+    strcat(newPath, aLeafName);
+    mPath = newPath;
+    InvalidateCache();
+    nsAllocator::Free(newPath);
     return NS_OK;
 }
 
