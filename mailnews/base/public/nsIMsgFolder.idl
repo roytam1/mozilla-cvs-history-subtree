@@ -66,6 +66,7 @@ interface nsITransport;
 interface nsIFileSpec;
 interface nsIOutputStream;
 interface nsIInputStream;
+interface nsIMsgIdentity;
 
 typedef long nsMsgBiffState;
 // enumerated type for determining if a message has been replied to, forwarded, etc.
@@ -456,4 +457,8 @@ const nsMsgBiffState nsMsgBiffState_Unknown = 2; // We dunno whether there is ne
 
   readonly attribute boolean inVFEditSearchScope;
   void setInVFEditSearchScope(in boolean aSearchThisFolder, in boolean aSetOnSubFolders);
+  // this allows a folder to have a special identity. E.g., you might want to
+  // associate an identity with a particular newsgroup, or for IMAP shared folders in
+  // the other users namespace, you might want to create a delegated identity
+  readonly attribute nsIMsgIdentity customIdentity;
 };

@@ -453,7 +453,6 @@ void nsImapOfflineSync::ProcessMoveOperation(nsIMsgOfflineImapOperation *current
         nsCOMPtr <nsISupportsArray> messages = do_CreateInstance(NS_SUPPORTSARRAY_CONTRACTID, &rv);
         if (messages && NS_SUCCEEDED(rv))
         {
-          NS_NewISupportsArray(getter_AddRefs(messages));
           for (PRUint32 keyIndex = 0; keyIndex < matchingFlagKeys.GetSize(); keyIndex++)
           {
             nsCOMPtr<nsIMsgDBHdr> mailHdr = nsnull;
@@ -550,7 +549,6 @@ void nsImapOfflineSync::ProcessCopyOperation(nsIMsgOfflineImapOperation *current
         nsCOMPtr <nsISupportsArray> messages = do_CreateInstance(NS_SUPPORTSARRAY_CONTRACTID, &rv);
         if (messages && NS_SUCCEEDED(rv))
         {
-          NS_NewISupportsArray(getter_AddRefs(messages));
           for (PRUint32 keyIndex = 0; keyIndex < matchingFlagKeys.GetSize(); keyIndex++)
           {
             nsCOMPtr<nsIMsgDBHdr> mailHdr = nsnull;

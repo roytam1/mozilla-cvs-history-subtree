@@ -104,7 +104,7 @@ nsMsgAccount::GetIncomingServer(nsIMsgIncomingServer * *aIncomingServer)
   if (!m_incomingServer) {
     // ignore the error (and return null), but it's still bad so assert
     nsresult rv = createIncomingServer();
-//    NS_ASSERTION(NS_SUCCEEDED(rv), "couldn't lazily create the server\n");
+    NS_ASSERTION(NS_SUCCEEDED(rv), "couldn't lazily create the server\n");
   }
   
   NS_IF_ADDREF(*aIncomingServer = m_incomingServer);

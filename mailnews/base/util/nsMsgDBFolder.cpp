@@ -4987,3 +4987,10 @@ NS_IMETHODIMP nsMsgDBFolder::SetInVFEditSearchScope (PRBool aInVFEditSearchScope
   NotifyBoolPropertyChanged(kInVFEditSearchScopeAtom, oldInVFEditSearchScope, mInVFEditSearchScope);
   return NS_OK;
 }
+
+NS_IMETHODIMP nsMsgDBFolder::GetCustomIdentity(nsIMsgIdentity **aIdentity)
+{
+  NS_ENSURE_ARG_POINTER(aIdentity);
+  *aIdentity = nsnull;
+  return NS_OK;
+}
