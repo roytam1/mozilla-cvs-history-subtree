@@ -1918,11 +1918,9 @@ nsFtpState::StopProcessing() {
             (void) mPrompter->Alert(nsnull, text.get());
    }
     
-    nsresult broadcastErrorCode = NS_OK;
-    if ( NS_FAILED(mControlStatus) || NS_FAILED(mInternalError)) {
-        // Lets mask the FTP error code so that a client does not have to parse it
-        broadcastErrorCode = NS_BINDING_ABORTED;
-    }
+    nsresult broadcastErrorCode = mControlStatus;
+    if ( NS_SUCCEEDED(broadcastErrorCode))
+        broadcastErrorCode = mInternalError;
 
     if (mFireCallbacks && mChannel) {
         nsCOMPtr<nsIStreamListener> channelListener = do_QueryInterface(mChannel);
