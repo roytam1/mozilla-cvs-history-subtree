@@ -509,6 +509,13 @@ TestTruncation(nsINetDataCache *cache)
         randomStream = new RandomStream(0);
         randomStream->Skip(CACHE_KEY_LENGTH + CACHE_METADATA_LENGTH + 1);
 
+        PRUint32 afterContentLength;
+        rv = record->GetStoredContentLength(&afterContentLength);
+        NS_ASSERTION(NS_SUCCEEDED(rv), " ");
+
+        NS_ASSERTION(afterContentLength == expectedStreamLength,
+                     "nsINetDataCacheRecord::SetContentLength() failed to truncate record");
+
         TestReadStream(record, randomStream, expectedStreamLength);
         WaitForEvents();
     }
