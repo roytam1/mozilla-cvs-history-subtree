@@ -76,7 +76,7 @@ sub _verbosePrint {
 
 my $cansymlink = eval {symlink('', ''); 1; };
 
-# this global var may be set by clients who want to force a copy
+# global var may be set by clients who want to force a copy
 # instead of a symlink
 $MozPackager::forceCopy = 0;
 
@@ -92,17 +92,40 @@ sub ensureDirs {
     mkpath($dirPath, 0, 0775);
 }
 
-# this performs a symlink if possible on this system, otherwise
+# copies files in a directory to another location
+sub copyFiles {
+    my($aSrc, $aDestDir) = @_;
+
+    ensureDirs($aDestDir);
+
+    if (-d $aSrc) {
+        opendir(my $sDir, $aSrc) || die("Couldn't open directory '$aSrc'");
+
+        while(my $file = readdir($sDir)) {
+            (warn("Recursive copy not implemented."), next)
+                if (-d "$aSrc/$file");
+            symcopy("$aSrc/$file", "$aDestDir/$file");
+        }
+        closedir $sDir;
+    } elsif (-f $aSrc) {
+        my ($vol, $dirs, $leaf) = File::Spec->splitpath($aSrc);
+        symcopy($aSrc, "$aDestDir/$leaf");
+    } else {
+        die "File not found: $aSrc";
+    }
+}
+
+# performs a symlink if possible on this system, otherwise
 # peforms a regular "copy". It creates the directory structure if
 # necessary.
 sub symCopy {
-    my ($from, $to) = @_;
+    my ($from, $to, $forceCopy) = @_;
 
     MozPackager::_verbosePrint(1, "Copying $from\t to $to");
 
     ensureDirs($to);
 
-    if ($cansymlink && !$MozPackager::forceCopy) {
+    if ((!$forceCopy) && (!$MozPackager::forceCopy) && $cansymlink) {
         # $from is relative to the current (objdir) directory, so we need to
         # make it relative to $to
         my ($tovol, $topath, $tofile) = File::Spec->splitpath($to);
@@ -842,10 +865,11 @@ sub stage {
     }
 }
 
-sub makeXPI {
+# since an .XPI is just a zipfile, we use the same command for both
+sub makeZIP {
     my ($stageDir, $xpiFile) = @_;
 
-    MozPackager::_verbosePrint(1, "Making XPI file.");
+    MozPackager::_verbosePrint(1, "Making ZIP/XPI file '$xpiFile'.");
     MozPackager::ensureDirs($xpiFile);
 
     unlink $xpiFile if -e $xpiFile;
@@ -856,6 +880,49 @@ sub makeXPI {
     chdir $stageDir;
     MozPackager::system("zip -r -D -9 $xpiFile *");
     chdir $savedCwd;
+}
+
+sub makeTGZ {
+    my ($stageDir, $tgzFile) = @_;
+
+    MozPackager::_verbosePrint(1, "Making TGZ file '$tgzFile'");
+    MozPackager::ensureDirs($tgzFile);
+
+    unlink $tgzFile if -e $tgzFile;
+
+    my $savedCwd = cwd();
+    $tgzFile = File::Spec->rel2abs($tgzFile);
+
+    chdir $stageDir;
+    MozPackager::system("tar -cf - * | gzip -vf9 > $tgzFile");
+    chdir $savedCwd;
+}
+
+sub makeBZ2 {
+    my ($stageDir, $bz2File) = @_;
+
+    MozPackager::_verbosePrint(1, "Making BZ2 file '$bz2File'");
+    MozPackager::ensureDirs($bz2File);
+
+    unlink $bz2File if -e $bz2File;
+
+    my $savedCwd = cwd();
+    $bz2File = File::Spec->rel2abs($bz2File);
+
+    chdir $stageDir;
+    MozPackager::system("tar -cf - * | bzip -vf > $bz2File");
+    chdir $savedCwd;
+}
+
+sub makeDMG {
+    my ($stageDir, $dmgFile, $topsrcdir, $volumeName) = @_;
+
+    MozPackager::_verbosePrint(1, "Making DMG file '$dmgFile'");
+    MozPackager::ensureDirs($dmgFile);
+
+    unlink $dmgFile if -e $dmgFile;
+
+    MozPackager::system("$topsrcdir/build/package/mac_osx/make-diskimage $dmgFile $stageDir $volumeName");
 }
 
 return 1;

@@ -49,6 +49,11 @@ include $(topsrcdir)/config/rules.mk
 # override these variables in special situations
 STAGE_DIR        = $(DEPTH)/stage$(if $*,/$*)
 XPI_FILE         = $(DIST)/xpi/$*.xpi
+ZIP_FILE         = $(DIST)/$*.zip
+TGZ_FILE         = $(DIST)/$*.tar.gz
+BZ2_FILE         = $(DIST)/$*.tar.bz2
+DMG_FILE         = $(DIST)/$*.dmg
+
 PACKAGE_LIST = $(srcdir)/packages.list
 PACKAGE_FLAGS = 
 HANDLERS = xptmerge touch optional preprocess
@@ -62,10 +67,22 @@ dump-packages:
 # do ^packages (subtraction packages) use the stage-packages rule and set PACKAGES
 # on the command line
 stage-%:
-	$(PERL) -I $(srcdir) $(srcdir)/stage-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -s $(STAGE_DIR) $(addprefix -m ,$(MAPPINGS)) $(addprefix -c ,$(HANDLERS)) -p $(topsrcdir)/config/preprocessor.pl $(PACKAGE_FLAGS) $*
+	$(PERL) $(srcdir)/stage-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -s $(STAGE_DIR) $(addprefix -m ,$(MAPPINGS)) $(addprefix -c ,$(HANDLERS)) -d $(PACKAGE_FLAGS) $*
 
 makexpi-%:
-	$(PERL) -I $(srcdir) $(srcdir)/stage-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -s $(STAGE_DIR) $(addprefix -m ,$(MAPPINGS)) $(addprefix -c, $(HANDLERS)) -p $(topsrcdir)/config/preprocessor.pl --make-xpi=$(XPI_FILE) -d $(PACKAGE_FLAGS) $*
+	$(PERL) $(srcdir)/stage-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -s $(STAGE_DIR) $(addprefix -m ,$(MAPPINGS)) $(addprefix -c ,$(HANDLERS)) --make-package xpi=$(XPI_FILE) -d $(PACKAGE_FLAGS) $*
+
+makezip-%:
+	$(PERL) $(srcdir)/stage-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -s $(STAGE_DIR) $(addprefix -m ,$(MAPPINGS)) $(addprefix -c ,$(HANDLERS)) --make-package zip=$(ZIP_FILE) -d $(PACKAGE_FLAGS) $*
+
+maketgz-%:
+	$(PERL) $(srcdir)/stage-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -s $(STAGE_DIR) $(addprefix -m ,$(MAPPINGS)) $(addprefix -c ,$(HANDLERS)) --make-package tgz=$(TGZ_FILE) -d $(PACKAGE_FLAGS) $*
+
+makebz2-%:
+	$(PERL) $(srcdir)/stage-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -s $(STAGE_DIR) $(addprefix -m ,$(MAPPINGS)) $(addprefix -c ,$(HANDLERS)) --make-package bz2=$(BZ2_FILE) -d $(PACKAGE_FLAGS) $*
+
+makedmg-%:
+	$(PERL) $(srcdir)/stage-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -s $(STAGE_DIR) $(addprefix -m ,$(MAPPINGS)) $(addprefix -c ,$(HANDLERS)) --make-package dmg=$(DMG_FILE) -d $(PACKAGE_FLAGS) $*
 
 ifndef PACKAGES
 stage-packages makexpi-packages:
@@ -73,9 +90,10 @@ stage-packages makexpi-packages:
 
 else #PACKAGES
 stage-packages:
-	$(PERL) -I $(srcdir) $(srcdir)/stage-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -s $(STAGE_DIR) $(addprefix -m ,$(MAPPINGS)) $(apprefix -c ,$(HANDLERS)) -p $(topsrcdir)/config/preprocessor.pl $(PACKAGE_FLAGS) $(PACKAGES)
+	$(PERL) $(srcdir)/stage-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -s $(STAGE_DIR) $(addprefix -m ,$(MAPPINGS)) $(apprefix -c ,$(HANDLERS)) $(PACKAGE_FLAGS) $(PACKAGES)
 
 makexpi-packages:
-	$(PERL) -I $(srcdir) $(srcdir)/stage-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -s $(STAGE_DIR) $(addprefix -m ,$(MAPPINGS)) $(apprefix -c ,$(HANDLERS)) -p $(topsrcdir)/config/preprocessor.pl --make-xpi=$(XPI_FILE) -d $(PACKAGE_FLAGS) $(PACKAGES)
+	$(PERL) $(srcdir)/stage-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -s $(STAGE_DIR) $(addprefix -m ,$(MAPPINGS)) $(apprefix -c ,$(HANDLERS)) --make-package xpi=$(XPI_FILE) -d $(PACKAGE_FLAGS) $(PACKAGES)
+
 endif
 

@@ -66,6 +66,11 @@ gecko                  : nspr xpcom
 gecko-support          :
 # gecko-devel in the future (the SDK)
 
+# the build process builds many test programs and files, most of which
+# don't need to be packaged. But some people might want these files, so
+# we give them a package.
+gecko-tests            :
+
 nss                    :
 # nss-devel in the future
 
@@ -151,3 +156,8 @@ seamonkey-stub-en-xpi  :
 seamonkeygre-enUS      : xpfe-browser xpfe-lang-enUS xpfe-locale-US xpfe-default-US xpfe-mailnews xpfe-editor venkman inspector chatzilla talkback
 # seamonkey with the GRE (nightly tarball)
 seamonkeyall-enUS      : seamonkeygre-enUS gre
+
+# there are some runtime files that should never be packaged. In order for
+# the dump-packages "unpackaged files" warning to be meaningful, we need
+# to warn it about these files:
+unpackaged-files       :

@@ -1,6 +1,90 @@
+# ***** BEGIN LICENSE BLOCK *****
+# Version: MPL 1.1/GPL 2.0/LGPL 2.1
+#
+# The contents of this file are subject to the Mozilla Public License Version
+# 1.1 (the "License"); you may not use this file except in compliance with
+# the License. You may obtain a copy of the License at
+# http://www.mozilla.org/MPL/
+#
+# Software distributed under the License is distributed on an "AS IS" basis,
+# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+# for the specific language governing rights and limitations under the
+# License.
+#
+# The Original Code is Mozilla packaging scripts.
+#
+# The Initial Developer of the Original Code is
+# Benjamin Smedberg <bsmedberg@covad.net>.
+# Portions created by the Initial Developer are Copyright (C) 2003
+# the Initial Developer. All Rights Reserved.
+#
+# Contributor(s):
+#
+# Alternatively, the contents of this file may be used under the terms of
+# either the GNU General Public License Version 2 or later (the "GPL"), or
+# the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+# in which case the provisions of the GPL or the LGPL are applicable instead
+# of those above. If you wish to allow use of your version of this file only
+# under the terms of either the GPL or the LGPL, and not to allow others to
+# use your version of this file under the terms of the MPL, indicate your
+# decision by deleting the provisions above and replace them with the notice
+# and other provisions required by the GPL or the LGPL. If you do not delete
+# the provisions above, a recipient may use your version of this file under
+# the terms of any one of the MPL, the GPL or the LGPL.
+#
+# ***** END LICENSE BLOCK *****
+
+sub PrintUsage
+{
+    print
+"stage-packages.pl
+
+  Parses package list and package files, and copies (stages) the files
+  for a set of packages to a staging area. It will optionally also
+  create a tarball from the package.
+
+Usage
+
+  perl make-packages.pl [options] packages...
+
+  -i, --ignore-missing
+    Silently continue when a file listed in a package is missing. NOT
+    RECOMMENDED. See -w
+
+  -o, --objdir=path
+    The build directory. Default is the source directory.
+
+  -l, --package-list=file
+    The packages list. Defaults to srcdir/build/package/packages.list
+
+  -p, --packages-dir=path
+    The directory of package files. Defaults to objdir/dist/packages
+
+  -u, --report-unpackaged
+    Report files that are in dist/bin but are not in any packages.
+
+  -v, --verbose
+    Report more status information about actions being performed. This
+    option may be listed up to three times.
+
+  -w, --warn-missing
+    Issue a warning when a file listed in a package is missing. The
+    default behavior is to abort.\n";
+}
+
 use File::Spec;
+use File::Path;
 use Getopt::Long;
+use File::Basename;
+use Cwd;
+
+$DEPTH = "../..";
+$topsrcdir = GetTopSrcDir();
+push @INC, "$topsrcdir/build/package";
 require MozPackager;
+
+$packageList = "$topsrcdir/build/package/packages.list";
+$objdir      = $topsrcdir;
 
 Getopt::Long::Configure ("bundling");
 
@@ -9,14 +93,14 @@ my $packagesDir = "";
 my $warnMissing = 0;
 my $ignoreMissing = 0;
 
-# xxxbsmedberg: need usage()
-
-GetOptions("objdir|o=s"         => \$objdir,
-           "package-list|l=s"   => \$packageList,
-           "packages-dir|p=s"   => \$packagesDir,
-           "warn-missing|w"     => \$warnMissing,
-           "ignore-missing|i"   => \$ignoreMissing,
-           "verbose|v+"         => \$MozPackager::verbosity);
+GetOptions("help|h|?"            => \&PrintUsage,
+           "objdir|o=s"          => \$objdir,
+           "package-list|l=s"    => \$packageList,
+           "packages-dir|p=s"    => \$packagesDir,
+           "warn-missing|w"      => \$warnMissing,
+           "ignore-missing|i"    => \$ignoreMissing,
+           "report-unpackaged|u" => \$reportUnpackaged,
+           "verbose|v+"          => \$MozPackager::verbosity);
 
 $packageList || die("Specify --package-list=");
 
@@ -48,12 +132,12 @@ foreach my $package (keys %MozPackages::packages) {
     my $parser = new MozParser;
     MozParser::XPTDist::add($parser);
     MozParser::Touch::add($parser, File::Spec->catfile("dist", "dummy.file"));
+    MozParser::Preprocess::add($parser);
     MozParser::Optional::add($parser);
-    MozParser::Preprocess::add($parser, "", "");
-    $parser->addMapping("dist/bin", "bin");
-    $parser->addMapping("dist/lib", "lib");
-    $parser->addMapping("dist/include", "include");
-    $parser->addMapping("dist/idl", "idl");
+    $parser->addMapping("dist/bin", "dist/bin");
+    $parser->addMapping("dist/lib", "dist/lib");
+    $parser->addMapping("dist/include", "dist/include");
+    $parser->addMapping("dist/idl", "dist/idl");
     $parser->addMapping("xpiroot", "xpiroot");
     my $files = $parser->parse($packagesDir, $package);
 
@@ -62,4 +146,30 @@ foreach my $package (keys %MozPackages::packages) {
         print "$files->{$result}\t$result";
     }
     print "";
+
+    if ($reportUnpackaged) {
+        %packaged = (%packaged, map({$_ => 1} values %$files));
+    }
+}
+
+if ($reportUnpackaged) {
+    print "Unpackaged files:";
+    $alldist = `find dist/bin -not -type d`;
+    @alldist = split /[\n\r]+/, $alldist;
+    foreach $distFile (@alldist) {
+        if (!exists(${packaged{$distFile}})) {
+            print $distFile;
+        }
+    }
+}
+
+sub GetTopSrcDir
+{
+    my $rootDir = File::Spec->catdir(dirname($0), $DEPTH);
+    my $savedCwd = cwd();
+
+    chdir $rootDir;
+    $rootDir = cwd();
+    chdir $savedCwd;
+    return $rootDir;
 }
