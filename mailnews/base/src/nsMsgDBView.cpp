@@ -90,9 +90,76 @@ NS_IMETHODIMP nsMsgDBView::AddKeys(nsMsgKey *pKeys, PRInt32 *pFlags, const char 
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
+// reversing threads involves reversing the threads but leaving the
+// expanded messages ordered relative to the thread, so we
+// make a copy of each array and copy them over.
 nsresult nsMsgDBView::ReverseThreads()
 {
-    printf("XXX same sort type, just different sort order.  just reverse threads\n");
+    nsUInt32Array *newFlagArray = new nsUInt32Array;
+    if (!newFlagArray) {
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+    nsMsgKeyArray *newKeyArray = new nsMsgKeyArray;
+    if (!newKeyArray) {
+        delete newFlagArray;
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+    nsUint8Array *newLevelArray = new nsUint8Array;
+    if (!newLevelArray) {
+        delete newFlagArray;
+        delete newKeyArray;
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    PRInt32 sourceIndex, destIndex;
+    PRInt32 viewSize = GetSize();
+
+    newKeyArray->SetSize(m_keys.GetSize());
+    newFlagArray->SetSize(m_flags.GetSize());
+    newLevelArray->SetSize(m_levels.GetSize());
+
+    for (sourceIndex = 0, destIndex = viewSize - 1; sourceIndex < viewSize;) {
+        PRInt32 endThread;  // find end of current thread.
+        PRBool inExpandedThread = PR_FALSE;
+        for (endThread = sourceIndex; endThread < viewSize; endThread++) {
+            PRUint32 flags = m_flags.GetAt(endThread);
+            if (!inExpandedThread && (flags & (MSG_VIEW_FLAG_ISTHREAD|MSG_VIEW_FLAG_HASCHILDREN)) && !(flags & MSG_FLAG_ELIDED))
+                inExpandedThread = PR_TRUE;
+            else if (flags & MSG_VIEW_FLAG_ISTHREAD) {
+                if (inExpandedThread)
+                    endThread--;
+                break;
+            }
+        }
+
+        if (endThread == viewSize)
+            endThread--;
+        PRInt32 saveEndThread = endThread;
+        while (endThread >= sourceIndex)
+        {
+            newKeyArray->SetAt(destIndex, m_keys.GetAt(endThread));
+            newFlagArray->SetAt(destIndex, m_flags.GetAt(endThread));
+            newLevelArray->SetAt(destIndex, m_levels.GetAt(endThread));
+            endThread--;
+            destIndex--;
+        }
+        sourceIndex = saveEndThread + 1;
+    }
+    // this copies the contents of both arrays - it would be cheaper to
+    // just assign the new data ptrs to the old arrays and "forget" the new
+    // arrays' data ptrs, so they won't be freed when the arrays are deleted.
+    m_keys.RemoveAll();
+    m_flags.RemoveAll();
+    m_levels.RemoveAll();
+    m_keys.InsertAt(0, newKeyArray);
+    m_flags.InsertAt(0, newFlagArray);
+    m_levels.InsertAt(0, newLevelArray);
+
+    // if we swizzle data pointers for these arrays, this won't be right.
+    delete newFlagArray;
+    delete newKeyArray;
+    delete newLevelArray;
+
     return NS_OK;
 }
 
@@ -123,11 +190,33 @@ nsresult nsMsgDBView::ReverseSort()
 
 NS_IMETHODIMP nsMsgDBView::DumpView()
 {
-    PRUint32 i;
+    PRUint32 i,j;
+    nsresult rv;
     PRUint32 num = GetSize();
-    printf("#:  (key,flag,level)\n");
+    printf("[row]\t(key,flag,level,subject)\n");
     for (i = 0; i < num; i++) {
-        printf("%d:  (%d,%d,%d)\n",i,m_keys.GetAt(i),m_flags.GetAt(i),m_levels.GetAt(i));
+        PRUint32 flags = m_flags.GetAt(i);
+        printf("[%d]\t",i);
+        if (flags | MSG_FLAG_ELIDED) {
+            printf("+");
+        }
+        else {
+            printf(" ");
+        }
+        
+        PRUint32 level = m_levels.GetAt(i);
+        for (j=0;j<level;j++) {
+            printf(".");
+        }
+        nsMsgKey key = m_keys.GetAt(i);
+        nsCOMPtr <nsIMsgDBHdr> msgHdr;
+        rv = m_db->GetMsgHdrForKey(key, getter_AddRefs(msgHdr));
+        NS_ENSURE_SUCCESS(rv,rv);
+
+        nsXPIDLCString subject;
+        rv = msgHdr->GetSubject(getter_Copies(subject));
+        NS_ENSURE_SUCCESS(rv,rv);
+        printf("(%d,%d,%d,%s)\n",key,flags,level,(const char *)subject);
     }
     printf("\n");
     return NS_OK;
