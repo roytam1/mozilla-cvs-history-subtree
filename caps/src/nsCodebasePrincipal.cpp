@@ -30,7 +30,7 @@ NS_IMETHODIMP
 nsCodebasePrincipal::ToJSPrincipal(JSPrincipals * * jsprin)
 {
     if (itsJSPrincipals.refcount == 0) {
-        this->AddRef();
+        NS_ADDREF(this);
     }
     *jsprin = &itsJSPrincipals;
     return NS_OK;
@@ -94,44 +94,43 @@ nsCodebasePrincipal::ToString(char * * result)
 NS_IMETHODIMP
 nsCodebasePrincipal::HashCode(PRUint32 * code)
 {
-	code=0;
+	(* code) = 0;
 	return NS_OK;
 }
 
 NS_IMETHODIMP
 nsCodebasePrincipal::Equals(nsIPrincipal * other, PRBool * result)
 {
-	PRInt16 oType = 0;
-//	char ** oCodeBase;
-	other->GetType(& oType);
-	* result = (itsType == oType) ? PR_TRUE : PR_FALSE;	
-//XXXariel fix this
-//	if (* result) {
-//		nsICodebasePrincipal * cbother = (nsCodebasePrincipal)other;
-//		cbother->GetURL(& oCodeBase);
-//	}
-//	* result = (itsCodebase == oCodeBase) ? PR_TRUE : PR_FALSE;	
-	return NS_OK;
+  PRInt16 oType = 0;
+  other->GetType(& oType);
+  (* result) = (itsType == oType) ? PR_TRUE : PR_FALSE;	
+  if ((* result) != PR_TRUE) return NS_OK;
+  nsICodebasePrincipal * cbother;
+  char * oCodebase = nsnull, * myCodebase = nsnull;
+  other->QueryInterface(NS_GET_IID(nsICodebasePrincipal),(void * *)& cbother);
+  cbother->GetURLString(& oCodebase);
+  this->GetURLString(& myCodebase);
+  (* result) = (PL_strcmp(myCodebase, oCodebase) == 0) ? PR_TRUE : PR_FALSE;	
+  return NS_OK;
 }
 
 nsCodebasePrincipal::nsCodebasePrincipal()
 {
-    NS_INIT_REFCNT();
+  NS_INIT_ISUPPORTS();
 }
 
 NS_IMETHODIMP
 nsCodebasePrincipal::Init(PRInt16 type, nsIURI *uri)
 {
-    nsresult result;
-    NS_ADDREF(this);
-    this->itsType = type;
-    if (!NS_SUCCEEDED(result = uri->Clone(&itsURL)))
-        return result;
-    if (!NS_SUCCEEDED(result = itsJSPrincipals.Init(this))) {
-        NS_RELEASE(itsURL);
-        return result;
-    }
-    return NS_OK;
+  nsresult result;
+  NS_ADDREF(this);
+  this->itsType = type;
+  if (!NS_SUCCEEDED(result = uri->Clone(&itsURL))) return result;
+  if (!NS_SUCCEEDED(result = itsJSPrincipals.Init(this))) {
+    NS_RELEASE(itsURL);
+    return result;
+  }
+  return NS_OK;
 }
 
 nsCodebasePrincipal::~nsCodebasePrincipal(void)

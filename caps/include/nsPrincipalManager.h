@@ -30,10 +30,12 @@ class nsPrincipalManager : public nsIPrincipalManager {
 
 public:
 
+  NS_DEFINE_STATIC_CID_ACCESSOR(NS_PRINCIPALMANAGER_CID)
+
 	NS_DECL_ISUPPORTS
 
-	static nsPrincipalManager *
-	GetPrincipalManager();
+	static nsresult
+	GetPrincipalManager(nsPrincipalManager * * prinMan);
 
 	virtual ~nsPrincipalManager(void);
 
@@ -99,7 +101,9 @@ public:
 
 
 private:
-	nsPrincipalManager(void);
+  nsPrincipalManager(void);
+  NS_IMETHODIMP
+  Init();
 	nsHashtable * itsPrinNameToPrincipalTable;
 };
 

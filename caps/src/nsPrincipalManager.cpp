@@ -213,7 +213,8 @@ nsPrincipalManager::GetMyPrincipals(PRInt32 callerDepth)
 nsIPrincipalArray *
 nsPrincipalManager::GetMyPrincipals(nsIScriptContext * context, PRInt32 callerDepth)
 {
-	return nsPrincipalManager::GetPrincipalManager()->GetClassPrincipalsFromStack(context, callerDepth);
+//	return this->GetClassPrincipalsFromStack(context, callerDepth);
+  return NULL;
 }
 
 nsIPrincipal * 
@@ -348,39 +349,53 @@ nsPrincipalManager::UnregisterPrincipal(nsIPrincipal * prin, PRBool * result)
 NS_IMETHODIMP
 nsPrincipalManager::NewPrincipalArray(PRUint32 count, nsIPrincipalArray * * result)
 {
-	* result = (nsIPrincipalArray *) new nsPrincipalArray(count);
-	return NS_OK;
+  * result = (nsIPrincipalArray *) new nsPrincipalArray(count);
+  return NS_OK;
 }
-
-
 
 nsPrincipalManager::nsPrincipalManager(void)
 {
-	NS_INIT_REFCNT();
-	NS_ADDREF(this);
-	nsCaps_lock();
-	itsPrinNameToPrincipalTable = new nsHashtable();
-	theUnsignedPrincipal = new nsCertificatePrincipal(nsIPrincipal::PrincipalType_Certificate, UNSIGNED_PRINCIPAL_KEY);
-	theUnsignedPrincipalArray = new nsPrincipalArray();
-	theUnsignedPrincipalArray->AddPrincipalArrayElement(theUnsignedPrincipal);
-	theUnknownPrincipal = new nsCertificatePrincipal(nsIPrincipal::PrincipalType_Certificate, UNKNOWN_PRINCIPAL_KEY);
-	theUnknownPrincipalArray = new nsPrincipalArray();
-	theUnknownPrincipalArray->AddPrincipalArrayElement(theUnknownPrincipal);
-	nsCaps_unlock();
+  NS_INIT_ISUPPORTS();
+}
+
+NS_IMETHODIMP
+nsPrincipalManager::Init()
+{
+  nsresult rv;
+  NS_ADDREF(this);
+  itsPrinNameToPrincipalTable = new nsHashtable();
+  if(itsPrinNameToPrincipalTable == NULL) return NS_ERROR_OUT_OF_MEMORY;
+  NS_WITH_SERVICE1(nsIComponentManager, compMgr, nsnull, kComponentManagerCID,& rv);
+  if (NS_FAILED(rv)) return rv;
+  rv = compMgr->CreateInstance(NS_PRINCIPALARRAY_PROGID, nsnull,NS_GET_IID(nsIPrincipalArray), (void * *)& theUnsignedPrincipalArray);
+  if(NS_FAILED(rv)) return rv;
+  rv = compMgr->CreateInstance(NS_PRINCIPALARRAY_PROGID, nsnull,NS_GET_IID(nsIPrincipalArray), (void * *)& theUnknownPrincipalArray);
+  if(NS_FAILED(rv)) return rv;
+  theUnsignedPrincipal = new nsCertificatePrincipal(nsIPrincipal::PrincipalType_Certificate, UNSIGNED_PRINCIPAL_KEY);
+  theUnsignedPrincipalArray->AddPrincipalArrayElement(theUnsignedPrincipal);
+  theUnknownPrincipal = new nsCertificatePrincipal(nsIPrincipal::PrincipalType_Certificate, UNKNOWN_PRINCIPAL_KEY);
+  theUnknownPrincipalArray->AddPrincipalArrayElement(theUnknownPrincipal);
+  return NS_OK;
 }
 
 nsPrincipalManager::~nsPrincipalManager(void) {
-	nsCaps_lock();
-	if (itsPrinNameToPrincipalTable) delete itsPrinNameToPrincipalTable;
-	nsCaps_unlock();
+  if (itsPrinNameToPrincipalTable) delete itsPrinNameToPrincipalTable;
 }
 
-nsPrincipalManager *
-nsPrincipalManager::GetPrincipalManager()
+nsresult
+nsPrincipalManager::GetPrincipalManager(nsPrincipalManager * * result)
 {
-	static nsPrincipalManager * prinMan = NULL;
-	if(!prinMan) prinMan = new nsPrincipalManager();
-	return prinMan;
+  static nsPrincipalManager * prinMan = NULL;
+  if(!prinMan) 
+  {
+    prinMan = new nsPrincipalManager();
+    if(prinMan == NULL) return NS_ERROR_OUT_OF_MEMORY;
+    nsresult rv = prinMan->Init();
+    (* result) = prinMan;
+    return rv;
+  }
+  (* result) = prinMan;
+  return NS_OK;
 }
 
 static PRBool 

@@ -28,6 +28,9 @@
 
 class nsCertificatePrincipal : public nsICertificatePrincipal {
 public:
+
+  NS_DEFINE_STATIC_CID_ACCESSOR(NS_CERTIFICATEPRINCIPALMANAGER_CID)
+
 	NS_DECL_ISUPPORTS
 
 	NS_IMETHOD

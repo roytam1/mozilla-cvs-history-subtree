@@ -33,7 +33,9 @@ class nsScriptSecurityManager : public nsIScriptSecurityManager {
 public:
   nsScriptSecurityManager();
   virtual ~nsScriptSecurityManager();
-
+  
+  NS_DEFINE_STATIC_CID_ACCESSOR(NS_SCRIPTSECURITYMANAGER_CID)
+  
   NS_DECL_ISUPPORTS
   
   static nsScriptSecurityManager *

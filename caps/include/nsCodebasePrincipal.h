@@ -31,6 +31,8 @@
 class nsCodebasePrincipal : public nsICodebasePrincipal {
 public:
 
+  NS_DEFINE_STATIC_CID_ACCESSOR(NS_CODEBASEPRINCIPAL_CID)
+
   NS_DECL_ISUPPORTS
 
   nsCodebasePrincipal();
