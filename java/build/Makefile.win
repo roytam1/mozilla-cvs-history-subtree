@@ -112,6 +112,7 @@ buildRunems:
 	copy $(DIST)\bin\webclient.dll $(PACKAGE_LIB)\webclient.dll
 	copy $(DIST)\lib\wc_share.lib $(PACKAGE_LIB)\wc_share.lib
 	copy $(DIST)\bin\components\bcorb.dll $(PACKAGE_LIB)\bcorb.dll
+	copy $(DIST)\bin\blackconnectjni.dll $(PACKAGE_LIB)\blackconnectjni.dll
 	copy $(DIST)\bin\components\bcjavastubs.dll $(PACKAGE_LIB)\bcjavastubs.dll
 	copy $(DIST)\bin\components\bcjavaloader.dll $(PACKAGE_LIB)\bcjavaloader.dll
 	copy $(DIST)\bin\components\bcxpcomstubs.dll $(PACKAGE_LIB)\bcxpcomstubs.dll

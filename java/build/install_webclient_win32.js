@@ -54,6 +54,8 @@ logComment("Starting Install Process");
    err = File.copy(src, fComponents);
    src = getFolder(fJavadev, "lib/bcorb.dll");
    err = File.copy(src, fComponents);
+   src = getFolder(fJavadev, "lib/blackconnectjni.dll");
+   err = File.copy(src, fProgram);
    src = getFolder(fJavadev, "lib/bcjavastubs.dll");
    err = File.copy(src, fComponents);
    src = getFolder(fJavadev, "lib/bcjavaloader.dll");
