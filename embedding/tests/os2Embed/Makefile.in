@@ -93,6 +93,7 @@ endif
 
 ifdef BUILD_STATIC_LIBS
 
+OS_LIBS += -lpmwinx
 
 include $(topsrcdir)/config/static-config.mk
 
