@@ -306,7 +306,7 @@ public:
 
   nsIDocument* mDocument;
   nsIHTMLDocument* mHTMLDocument;
-  nsINodeInfoManager* mNodeInfoManager;
+  nsCOMPtr<nsINodeInfoManager> mNodeInfoManager;
   nsIURI* mDocumentURI;
   nsIURI* mDocumentBaseURL;
   nsCOMPtr<nsIURI> mScriptURI;
@@ -2201,7 +2201,6 @@ HTMLContentSink::HTMLContentSink() {
   mInNotification = 0;
   mInMonolithicContainer = 0;
   mInsideNoXXXTag  = 0;
-  mNodeInfoManager = nsnull;
 }
 
 HTMLContentSink::~HTMLContentSink()
@@ -2224,8 +2223,6 @@ HTMLContentSink::~HTMLContentSink()
 
   NS_IF_RELEASE(mCurrentForm);
   NS_IF_RELEASE(mCurrentMap);
-
-  NS_IF_RELEASE(mNodeInfoManager);
 
   if (mNotificationTimer) {
     mNotificationTimer->Cancel();
@@ -2297,7 +2294,7 @@ HTMLContentSink::Init(nsIDocument* aDoc,
   NS_ADDREF(aDoc);
   aDoc->AddObserver(this);
   aDoc->QueryInterface(NS_GET_IID(nsIHTMLDocument), (void**)&mHTMLDocument);
-  rv = mDocument->GetNodeInfoManager(mNodeInfoManager);
+  rv = mDocument->GetNodeInfoManager(*getter_AddRefs(mNodeInfoManager));
   NS_ENSURE_SUCCESS(rv, rv);
   mDocumentURI = aURL;
   NS_ADDREF(aURL);

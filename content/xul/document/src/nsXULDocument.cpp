@@ -501,6 +501,10 @@ nsXULDocument::~nsXULDocument()
             gXULCache = nsnull;
         }
     }
+
+    if (mNodeInfoManager) {
+        mNodeInfoManager->DropDocumentReference();
+    }
 }
 
 
@@ -3658,7 +3662,7 @@ nsXULDocument::Init()
 
     if (NS_FAILED(rv)) return rv;
 
-    mNodeInfoManager->Init(mNameSpaceManager);
+    mNodeInfoManager->Init(this, mNameSpaceManager);
 
     // Create our command dispatcher and hook it up.
     rv = nsXULCommandDispatcher::Create(this, getter_AddRefs(mCommandDispatcher));

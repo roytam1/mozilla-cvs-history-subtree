@@ -394,6 +394,14 @@ nsNodeInfo::PrefixChanged(nsIAtom *aPrefix, nsINodeInfo*& aResult)
                                     aResult);
 }
 
+NS_IMETHODIMP
+nsNodeInfo::GetDocument(nsIDocument*& aDocument)
+{
+  NS_ENSURE_TRUE(mOwnerManager, NS_ERROR_NOT_INITIALIZED);
+
+  return mOwnerManager->GetDocument(aDocument);
+}
+
 
 PLHashNumber
 nsNodeInfoInner::GetHashValue(const void *key)

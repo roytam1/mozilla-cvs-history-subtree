@@ -529,6 +529,10 @@ nsDocument::~nsDocument()
   NS_IF_RELEASE(mDTD);
     
   delete mBoxObjectTable;
+
+  if (mNodeInfoManager) {
+    mNodeInfoManager->DropDocumentReference();
+  }
 }
 
 NS_INTERFACE_MAP_BEGIN(nsDocument)
@@ -573,7 +577,7 @@ nsresult nsDocument::Init()
   mNodeInfoManager = new nsNodeInfoManager();
   NS_ENSURE_TRUE(mNodeInfoManager, NS_ERROR_OUT_OF_MEMORY);
 
-  mNodeInfoManager->Init(mNameSpaceManager);
+  mNodeInfoManager->Init(this, mNameSpaceManager);
 
   return rv;
 }
