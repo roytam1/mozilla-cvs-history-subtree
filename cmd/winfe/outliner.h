@@ -310,6 +310,8 @@ public:
 	virtual void SetTotalLines( int );
 	virtual int GetTotalLines();
 
+	virtual void DestroyColumns();
+
 protected:
 
 	//

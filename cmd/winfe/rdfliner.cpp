@@ -992,6 +992,16 @@ void CRDFOutliner::OnSelDblClk(int iLine)
 	}
 }
 
+void CRDFOutliner::SetHTView(HT_View v)
+{ 
+	m_Pane = HT_GetPane(v); 
+	m_View = v; 
+	m_iSelection = m_iFocus = -1;
+	int newCount = HT_GetItemListCount(m_View);
+	SetTotalLines(newCount);  // Update the outliner's visible lines
+	m_iTopLine = 0;
+}
+
 void CRDFOutliner::DisplayURL()
 {
 	char* url = HT_GetNodeURL(m_Node);
@@ -2538,6 +2548,12 @@ void CRDFOutliner::ColumnsSwapped()
 	SetImageColumn(m_pColumn[0]->iCommand);
 }
 
+void CRDFOutliner::DestroyColumns()
+{
+	m_Parent->DestroyColumns();
+	COutliner::DestroyColumns();
+}
+
 CRect CRDFOutliner::GetColumnRect(int iLine, int column)
 {
 	CRect rectColumn;
@@ -3643,7 +3659,7 @@ void CRDFOutlinerParent::CreateColumns ( void )
 	}
 	HT_DeleteColumnCursor(columnCursor);
 	m_pOutliner->SetVisibleColumns(1); // For now... TODO: Get visible/invisible info!
-	m_pOutliner->SetImageColumn(0);
+	m_pOutliner->SetImageColumn(m_pOutliner->m_pColumn[0]->iCommand);
 
 	// Make it so
 	RECT rcClient;
@@ -3722,9 +3738,7 @@ BOOL CRDFOutlinerParent::ColumnCommand( int iColumn )
 	if (enSortType == HT_SORT_ASCENDING)
 		sort = FALSE;
 
-	pOutliner->SetSelectedColumn(pOutliner->m_pColumn[ iColumn ]->iCommand);
-
-	Invalidate();
+	pOutliner->SetSelectedColumn(iColumn);
 
 	HT_SetSortColumn(pOutliner->GetHTView(), 
 		             enSortType == HT_NO_SORT ? NULL : theColumn->GetToken(), 
@@ -3860,6 +3874,7 @@ void CRDFContentView::OnSetFocus ( CWnd * pOldWnd )
 void CRDFContentView::SwitchHTViews(HT_View newView)
 {
 	m_pOutlinerParent->SetHTView(newView);
+	m_pOutlinerParent->GetOutliner()->DestroyColumns();
 	CreateColumns();
 }
 

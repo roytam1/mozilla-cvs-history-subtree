@@ -139,8 +139,8 @@ public:
 	int GetSortColumn() { return m_nSortColumn; }
 	int GetSortType() { return m_nSortType; }
 	
-	void SetHTView(HT_View v) { m_Pane = HT_GetPane(v); m_View = v; }
-
+	void SetHTView(HT_View v); 
+	
 	// Setters
 	void SetSortType(int sortType) { m_nSortType = sortType; }
 	void SetSortColumn(int sortColumn) { m_nSortColumn = sortColumn; }
@@ -151,6 +151,9 @@ public:
 // overridden.  That is, unless I state otherwise, all virtual functions
 // are overridden versions of COutliner functions.
 	
+	virtual void DestroyColumns();
+		// Overridden to destroy the outliner's columns and clear our RDF column command map.
+
 	virtual void InitializeItemHeight(int iDesiredSize) { m_itemHeight = 19; }
 		// Overridden to place a pixel of padding on either side of the line and to add a pixel for the
 		// divider that is drawn between lines.
@@ -379,6 +382,8 @@ public:
 	BOOL PreCreateWindow(CREATESTRUCT& cs);
 	COutliner* GetOutliner();
 	void CreateColumns();
+	void DestroyColumns() { columnMap.Clear(); }
+
 	BOOL RenderData( int iColumn, CRect & rect, CDC &dc, LPCTSTR text );
 	BOOL ColumnCommand( int iColumn );
 	void Initialize();

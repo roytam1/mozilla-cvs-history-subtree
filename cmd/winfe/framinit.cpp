@@ -260,6 +260,21 @@ int colorCubeSize = 216;
 #define TEXT_WIDTH      49
 #endif
 
+// The Event Handler for the top-level bookmarks menu in a frame.
+static void qfNotifyProcedure (HT_Notification ns, HT_Resource n, HT_Event whatHappened) 
+{
+	if (whatHappened == HT_EVENT_NODE_OPENCLOSE_CHANGED)
+	{
+		// The node was opened.
+		PRBool openState;
+		HT_GetOpenState(n, &openState);
+		if (openState)
+		{
+			CGenericFrame* pFrame = (CGenericFrame*)ns->data;
+			pFrame->FinishMenuExpansion(n);
+		}
+	}
+}
 
 int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 {
@@ -275,6 +290,16 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		if ( pIStatusBar ) {
 			pIStatusBar->Create( this );
 			pIStatusBar->Release();
+		}
+
+		if (!theApp.m_bInGetCriticalFiles)
+		{
+			// Get the top level menu going.
+			// Construct the notification struct used by HT
+			HT_Notification ns = new HT_NotificationStruct;
+			ns->notifyProc = qfNotifyProcedure;
+			ns->data = this;
+			m_BookmarkMenuPane = theApp.m_bInGetCriticalFiles ? NULL : HT_NewQuickFilePane(ns);
 		}
     } else {
 
@@ -470,22 +495,6 @@ int CMainFrame::CreateMainToolbar(void)
 	RecalcLayout();
 
 	return TRUE;
-}
-
-// The Event Handler for the top-level bookmarks menu in a frame.
-static void qfNotifyProcedure (HT_Notification ns, HT_Resource n, HT_Event whatHappened) 
-{
-	if (whatHappened == HT_EVENT_NODE_OPENCLOSE_CHANGED)
-	{
-		// The node was opened.
-		PRBool openState;
-		HT_GetOpenState(n, &openState);
-		if (openState)
-		{
-			CGenericFrame* pFrame = (CGenericFrame*)ns->data;
-			pFrame->FinishMenuExpansion(n);
-		}
-	}
 }
 
 void CMainFrame::BeginStreamingOfRDFToolbars()
