@@ -47,6 +47,9 @@ include $(topsrcdir)/config/rules.mk
 libs::
 	$(INSTALL) $(srcdir)/nsKillAll.js $(DIST)/bin/components
 
+install::
+	$(SYSINSTALL) $(IFLAGS1) $(srcdir)/nsKillAll.js $(DESTDIR)$(mozappdir)/components
+
 clean::
 	rm -f $(DIST)/bin/components/nsKillAll.js
 
