@@ -60,7 +60,7 @@
 #include "nsIExtensionManager.h"
 #include "nsIPrincipal.h"
 
-#define XPINSTALL_BUNDLE_URL "chrome://communicator/locale/xpinstall/xpinstall.properties"
+#define XPINSTALL_BUNDLE_URL "chrome://global/locale/xpinstall/xpinstall.properties"
 
 //file and directory name length maximums
 #ifdef XP_MAC

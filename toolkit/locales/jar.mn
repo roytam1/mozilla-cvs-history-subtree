@@ -1,6 +1,8 @@
 #filter substitution
 
 @AB_CD@.jar:
+  locale/en-US/global/plugins.properties             (@AB_CD@/chrome/global/plugins.properties)
+  locale/en-US/global/xpinstall/xpinstall.properties (@AB_CD@/chrome/global/xpinstall/xpinstall.properties)
 * locale/necko/contents.rdf        (@AB_CD@/chrome/necko/contents.rdf)
   locale/necko/necko.properties    (@AB_CD@/chrome/necko/necko.properties)
   locale/necko/redirect_loop.dtd   (@AB_CD@/chrome/necko/redirect_loop.dtd)

@@ -64,7 +64,7 @@
   <stringbundleset id="extensionsSet">
     <stringbundle id="brandStrings" src="chrome://global/locale/brand.properties"/>
     <stringbundle id="extensionsStrings" src="chrome://mozapps/locale/extensions/extensions.properties"/>
-    <stringbundle id="xpinstallStrings" src="chrome://communicator/locale/xpinstall/xpinstall.properties"/>
+    <stringbundle id="xpinstallStrings" src="chrome://global/locale/xpinstall/xpinstall.properties"/>
   </stringbundleset>
     
   <keyset id="extensionsKeys">
