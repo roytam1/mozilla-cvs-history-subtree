@@ -1026,7 +1026,11 @@ nsHTMLInputElement::Blur()
 NS_IMETHODIMP
 nsHTMLInputElement::Focus()
 {
-  return SetElementFocus(PR_TRUE);
+  if (ShouldFocus(this)) {
+    return SetElementFocus(PR_TRUE);
+  }
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -1174,7 +1178,9 @@ nsHTMLInputElement::Select()
     // If the DOM event was not canceled (e.g. by a JS event handler
     // returning false)
     if (status == nsEventStatus_eIgnore) {
-      if (presContext) {
+      PRBool shouldFocus = ShouldFocus(this);
+
+      if (presContext && shouldFocus) {
         nsCOMPtr<nsIEventStateManager> esm;
         presContext->GetEventStateManager(getter_AddRefs(esm));
         if (esm) {
@@ -1193,7 +1199,9 @@ nsHTMLInputElement::Select()
       nsIFormControlFrame* formControlFrame = GetFormControlFrame(PR_TRUE);
 
       if (formControlFrame) {
-        formControlFrame->SetFocus(PR_TRUE, PR_TRUE);
+        if (shouldFocus) {
+          formControlFrame->SetFocus(PR_TRUE, PR_TRUE);
+        }
 
         // Now Select all the text!
         SelectAll(presContext);
@@ -1524,7 +1532,8 @@ nsHTMLInputElement::HandleDOMEvent(nsIPresContext* aPresContext,
           // child textfield or button.  If that's the case, don't focus
           // this parent file control -- leave focus on the child.
           nsIFormControlFrame* formControlFrame = GetFormControlFrame(PR_FALSE);
-          if (formControlFrame && !(aFlags & NS_EVENT_FLAG_BUBBLE))
+          if (formControlFrame && !(aFlags & NS_EVENT_FLAG_BUBBLE) &&
+              ShouldFocus(this))
             formControlFrame->SetFocus(PR_TRUE, PR_TRUE);
         }                                                                         
         break; // NS_FOCUS_CONTENT

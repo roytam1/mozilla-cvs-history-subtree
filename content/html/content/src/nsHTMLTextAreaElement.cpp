@@ -269,7 +269,11 @@ nsHTMLTextAreaElement::Blur()
 NS_IMETHODIMP
 nsHTMLTextAreaElement::Focus() 
 {
-  return SetElementFocus(PR_TRUE);
+  if (ShouldFocus(this)) {
+    return SetElementFocus(PR_TRUE);
+  }
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -369,18 +373,24 @@ nsHTMLTextAreaElement::Select()
   // If the DOM event was not canceled (e.g. by a JS event handler
   // returning false)
   if (status == nsEventStatus_eIgnore) {
-    nsCOMPtr<nsIEventStateManager> esm;
+    PRBool shouldFocus = ShouldFocus(this);
 
-    presContext->GetEventStateManager(getter_AddRefs(esm));
+    if (shouldFocus) {
+      nsCOMPtr<nsIEventStateManager> esm;
 
-    if (esm) {
-      esm->SetContentState(this, NS_EVENT_STATE_FOCUS);
+      presContext->GetEventStateManager(getter_AddRefs(esm));
+
+      if (esm) {
+        esm->SetContentState(this, NS_EVENT_STATE_FOCUS);
+      }
     }
 
     nsIFormControlFrame* formControlFrame = GetFormControlFrame(PR_TRUE);
 
     if (formControlFrame) {
-      formControlFrame->SetFocus(PR_TRUE, PR_TRUE);
+      if (shouldFocus) {
+        formControlFrame->SetFocus(PR_TRUE, PR_TRUE);
+      }
 
       // Now Select all the text!
       SelectAll(presContext);

@@ -85,6 +85,8 @@
 #include "nsIBoxObject.h"
 #include "nsPIBoxObject.h"
 #include "nsIDOMNSDocument.h"
+#include "nsIBaseWindow.h"
+#include "nsIWebNavigation.h"
 
 #include "nsLayoutAtoms.h"
 #include "nsHTMLAtoms.h"
@@ -2279,6 +2281,36 @@ nsGenericElement::SetFocus(nsIPresContext* aPresContext)
   }
   
   return NS_OK;
+}
+
+// static
+PRBool
+nsGenericElement::ShouldFocus(nsIContent *aContent)
+{
+  PRBool visible = PR_TRUE;
+
+  // Figure out if we're focusing an element in an inactive (hidden)
+  // tab (whose docshell is not visible), if so, drop this focus
+  // request on the floor
+
+  nsCOMPtr<nsIDocument> document;
+  aContent->GetDocument(*getter_AddRefs(document));
+
+  if (document) {
+    nsCOMPtr<nsIScriptGlobalObject> sgo;
+    document->GetScriptGlobalObject(getter_AddRefs(sgo));
+
+    if (sgo) {
+      nsCOMPtr<nsIWebNavigation> webNav(do_GetInterface(sgo));
+      nsCOMPtr<nsIBaseWindow> baseWin(do_QueryInterface(webNav));
+
+      if (baseWin) {
+        baseWin->GetVisibility(&visible);
+      }
+    }
+  }
+
+  return visible;
 }
 
 nsresult

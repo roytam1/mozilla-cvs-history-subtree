@@ -375,8 +375,11 @@ nsHTMLLabelElement::HandleDOMEvent(nsIPresContext* aPresContext,
     mHandlingEvent = PR_TRUE;
     switch (aEvent->message) {
       case NS_MOUSE_LEFT_CLICK:
-        // Focus the for content.
-        rv = content->SetFocus(aPresContext);
+        if (ShouldFocus(this)) {
+          // Focus the for content.
+          content->SetFocus(aPresContext);
+        }
+
         // This sends the event twice down parts of its path.  Oh well.
         // This is needed for:
         //  * Making radio buttons and checkboxes get checked.
