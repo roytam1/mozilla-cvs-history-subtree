@@ -141,10 +141,10 @@ pref("browser.shell.checkDefaultBrowser", true);
 // 0 = blank, 1 = home (browser.startup.homepage), 2 = last
 // XXXBlake Remove this stupid pref
 pref("browser.startup.page",                1);
-pref("browser.startup.homepage",	          "chrome://browser/content/browserconfig.properties");
+pref("browser.startup.homepage",	          "resource:/browserconfig.properties");
 
 // These values are deliberately non-localizable for official builds.
-pref("browser.startup.homepage_reset",      "chrome://browser/content/browserconfig.properties");
+pref("browser.startup.homepage_reset",      "resource:/browserconfig.properties");
 pref("browser.update.resetHomepage",        false);
 // "browser.startup.homepage_override" was for 4.x
 pref("browser.startup.homepage_override.1", false);

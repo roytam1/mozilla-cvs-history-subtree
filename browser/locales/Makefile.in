@@ -137,10 +137,15 @@ clean-l10n:
 	@$(PERL) -pi -e '$$_ = "" if m~^locale,install,url,jar:resource:/chrome/[a-z]{2,3}-[A-Z]{2,3}\.jar~' $(DIST)/bin/chrome/installed-chrome.txt
 
 installers-%: % clean-l10n
-	@$(MAKE) -C ../app export                          # remake firefox.js
 	@$(MAKE) -C ../../toolkit/locales AB_CD=$*
 	@$(MAKE) AB_CD=$*                                  # build/register the chrome
+ifdef MOZ_USE_OFFICIAL_BRANDING
+	@$(MAKE) -C ../../other-licenses/branding/firefox/content locale AB_CD=$*
+else
+	@$(MAKE) -C ../base locale AB_CD=$*
+endif
 	@$(MAKE) xpi-$*                                    # build the langpack
+
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 	@$(MAKE) -C ../app repackage AB_CD=$*
 endif
