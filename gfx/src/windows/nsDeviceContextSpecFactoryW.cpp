@@ -484,8 +484,8 @@ NS_IMETHODIMP nsDeviceContextSpecFactoryWin :: CreateDeviceContextSpec(nsIWidget
     }
   }
 
-  prntdlg.nFromPage           = 0xFFFF;
-  prntdlg.nToPage             = 0xFFFF;
+  prntdlg.nFromPage           = 1;
+  prntdlg.nToPage             = 1;
   prntdlg.nMinPage            = 1;
   prntdlg.nMaxPage            = 0xFFFF;
   prntdlg.nCopies             = 1;
