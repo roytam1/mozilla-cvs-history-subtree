@@ -40,36 +40,16 @@
 #include "dom.h"
 #include "txAtoms.h"
 
-txNamespaceMap::txNamespaceMap()
-{
-}
-
-txNamespaceMap::txNamespaceMap(const txNamespaceMap& aOther)
-{
-    txListIterator iter(&mPrefixes);
-    
-    while (iter.hasNext()) {
-        TX_IF_ADDREF_ATOM((txAtom*)iter.next());
-    }
-}
-
-txNamespaceMap::~txNamespaceMap()
-{
-    txListIterator iter(&mPrefixes);
-    
-    while (iter.hasNext()) {
-        txAtom* prefix = (txAtom*)iter.next();
-        TX_IF_RELEASE_ATOM(prefix);
-    }
-}
-
 nsresult
-txNamespaceMap::addNamespace(txAtom* aPrefix, const String& aNamespaceURI)
+txNamespaceMap::addNamespace(nsIAtom* aPrefix, const nsAString& aNamespaceURI)
 {
-    txAtom* prefix = aPrefix == txXMLAtoms::_empty ? 0 : aPrefix;
+    nsIAtom* prefix = aPrefix == txXMLAtoms::_empty ? 0 : aPrefix;
 
     PRInt32 nsId;
-    if (!prefix && aNamespaceURI.isEmpty()) {
+    if (!prefix && aNamespaceURI.IsEmpty()) {
+        nsId = kNameSpaceID_None;
+    }
+    else {
 #ifdef TX_EXE
         nsId = txNamespaceManager::getNamespaceID(aNamespaceURI);
 #else
@@ -77,83 +57,65 @@ txNamespaceMap::addNamespace(txAtom* aPrefix, const String& aNamespaceURI)
         gTxNameSpaceManager->RegisterNameSpace(aNamespaceURI, nsId);
 #endif
     }
-    else {
-        nsId = kNameSpaceID_None;
-    }
 
     // Check if the mapping already exists
-    txListIterator preIter(&mPrefixes);
-    txListIterator nsIter(&mNamespaces);
-    while (preIter.hasNext()) {
-        nsIter.next();
-        if (preIter.next() == prefix) {
-            nsIter.setValue(NS_INT32_TO_PTR(nsId));
+    PRInt32 index = mPrefixes.IndexOf(prefix);
+    if (index >= 0) {
+        mNamespaces.ReplaceElementAt(NS_INT32_TO_PTR(nsId), index);
 
-            return NS_OK;
-        }
+        return NS_OK;
     }
     
     // New mapping
-    nsresult rv = mPrefixes.add(prefix);
-    NS_ENSURE_SUCCESS(rv, rv);
-    
-    rv = mNamespaces.add(NS_INT32_TO_PTR(nsId));
-    if (NS_FAILED(rv)) {
-        mPrefixes.remove(prefix);
-
-        return rv;
+    if (!mPrefixes.AppendObject(prefix)) {
+        return NS_ERROR_OUT_OF_MEMORY;
     }
+    
+    if (!mNamespaces.AppendElement(NS_INT32_TO_PTR(nsId))) {
+        mPrefixes.RemoveObjectAt(mPrefixes.Count() - 1);
 
-    TX_IF_ADDREF_ATOM(prefix);
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
 
     return NS_OK;
 }
 
 PRInt32
-txNamespaceMap::lookupNamespace(txAtom* aPrefix)
+txNamespaceMap::lookupNamespace(nsIAtom* aPrefix)
 {
     if (aPrefix == txXMLAtoms::xml) {
         return kNameSpaceID_XML;
     }
 
-    txAtom* prefix = aPrefix == txXMLAtoms::_empty ? 0 : aPrefix;
+    nsIAtom* prefix = aPrefix == txXMLAtoms::_empty ? 0 : aPrefix;
 
-    txListIterator preIter(&mPrefixes);
-    txListIterator nsIter(&mNamespaces);
-    while (preIter.hasNext()) {
-        PRInt32 nsId = NS_PTR_TO_INT32(nsIter.next());
-        if (preIter.next() == prefix) {
-            return nsId;
-        }
+    PRInt32 index = mPrefixes.IndexOf(prefix);
+    if (index >= 0) {
+        return NS_PTR_TO_INT32(mNamespaces.SafeElementAt(index));
     }
 
     if (!prefix) {
         return kNameSpaceID_None;
     }
-    
+
     return kNameSpaceID_Unknown;
 }
 
 PRInt32
-txNamespaceMap::lookupNamespace(const String& aPrefix)
+txNamespaceMap::lookupNamespace(const nsAString& aPrefix)
 {
-    txAtom* prefix = TX_GET_ATOM(aPrefix);
-    PRInt32 nsId = lookupNamespace(prefix);
-    TX_IF_RELEASE_ATOM(prefix);
-    return nsId;
+    nsCOMPtr<nsIAtom> prefix = do_GetAtom(aPrefix);
+
+    return lookupNamespace(prefix);
 }
 
 PRInt32
-txNamespaceMap::lookupNamespaceWithDefault(const String& aPrefix)
+txNamespaceMap::lookupNamespaceWithDefault(const nsAString& aPrefix)
 {
-    txAtom* prefix = TX_GET_ATOM(aPrefix);
-    PRInt32 nsId;
+    nsCOMPtr<nsIAtom> prefix = do_GetAtom(aPrefix);
     if (prefix != txXSLTAtoms::_poundDefault) {
-        nsId = lookupNamespace(prefix);
+        return lookupNamespace(prefix);
     }
-    else {
-        nsId = lookupNamespace(0);
-    }
-    TX_IF_RELEASE_ATOM(prefix);
-    return nsId;
+
+    return lookupNamespace(nsnull);
 }

@@ -41,23 +41,21 @@
 
 #include "txError.h"
 #include "baseutils.h"
-#include "txAtom.h"
+#include "nsIAtom.h"
 #include "List.h"
+#include "nsCOMArray.h"
 
 class txNamespaceMap
 {
 public:
-    txNamespaceMap();
-    txNamespaceMap(const txNamespaceMap& aOther);
-    ~txNamespaceMap();
-    nsresult addNamespace(txAtom* aPrefix, const String& aNamespaceURI);
-    PRInt32 lookupNamespace(txAtom* aPrefix);
-    PRInt32 lookupNamespace(const String& aPrefix);
-    PRInt32 lookupNamespaceWithDefault(const String& aPrefix);
+    nsresult addNamespace(nsIAtom* aPrefix, const nsAString& aNamespaceURI);
+    PRInt32 lookupNamespace(nsIAtom* aPrefix);
+    PRInt32 lookupNamespace(const nsAString& aPrefix);
+    PRInt32 lookupNamespaceWithDefault(const nsAString& aPrefix);
 
 private:
-    txList mPrefixes;
-    txList mNamespaces;
+    nsCOMArray<nsIAtom> mPrefixes;
+    nsVoidArray mNamespaces;
 };
 
 #endif //TRANSFRMX_TXNAMESPACEMAP_H
