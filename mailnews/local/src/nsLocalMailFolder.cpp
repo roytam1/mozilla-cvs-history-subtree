@@ -1661,6 +1661,14 @@ nsMsgLocalMailFolder::InitCopyState(nsISupports* aSupport,
   if (mCopyState) 
     return NS_ERROR_FAILURE; // already has a  copy in progress
 
+  // get mDatabase set, so we can use it to add new hdrs to this db.
+  // calling GetDatabaseWOReparse will set mDatabase - we use the comptr
+  // here to avoid doubling the refcnt on mDatabase. We don't care if this
+  // fails - we just want to give it a chance. It will definitely fail in
+  // nsLocalMailFolder::EndCopy because we will have written data to the folder
+  // and changed its size.
+  nsCOMPtr <nsIMsgDatabase> msgDB;
+  GetDatabaseWOReparse(getter_AddRefs(msgDB));
 	PRBool isLocked;
 
 	GetLocked(&isLocked);
@@ -2343,6 +2351,7 @@ NS_IMETHODIMP nsMsgLocalMailFolder::BeginCopy(nsIMsgDBHdr *message)
 {
   if (!mCopyState) 
     return NS_ERROR_NULL_POINTER;
+
   nsresult rv = NS_OK;
   mCopyState->m_fileStream->seek(PR_SEEK_END, 0);
  
@@ -2547,10 +2556,7 @@ NS_IMETHODIMP nsMsgLocalMailFolder::EndCopy(PRBool copySucceeded)
     
     if(!mCopyState->m_parseMsgState)
     {
-      nsCOMPtr<nsIMsgDatabase> msgDatabase;
-      GetDatabaseWOReparse(getter_AddRefs(msgDatabase));
-      
-      if(msgDatabase)
+      if(mDatabase)
       {
         rv = mDatabase->CopyHdrFromExistingHdr(mCopyState->m_curDstKey,
                                                mCopyState->m_message, PR_TRUE,
