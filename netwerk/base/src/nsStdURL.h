@@ -165,7 +165,9 @@ inline NS_METHOD
 nsStdURL::SetScheme(const char* i_Scheme)
 {
     CRTFREEIF(mScheme);
-    return DupString(&mScheme, i_Scheme);
+    nsresult rv = DupString(&mScheme, i_Scheme);
+    ToLowerCase(mScheme);
+    return rv;
 }
 
 inline NS_METHOD
@@ -186,7 +188,9 @@ inline NS_METHOD
 nsStdURL::SetHost(const char* i_Host)
 {
     CRTFREEIF(mHost);
-    return DupString(&mHost, i_Host);
+    nsresult rv = DupString(&mHost, i_Host);
+    ToLowerCase(mHost);
+    return rv;
 }
 
 inline NS_METHOD

@@ -70,6 +70,7 @@ nsAuthURLParser::ParseAtScheme(const char* i_Spec, char* *o_Scheme,
     if (!brk) // everything is a host
     {
         rv = ExtractString((char*)i_Spec, o_Host, len);
+        ToLowerCase(*o_Host);
         return rv;
     } else
         len = PL_strlen(brk);
@@ -89,6 +90,7 @@ nsAuthURLParser::ParseAtScheme(const char* i_Spec, char* *o_Scheme,
             rv = ExtractString((char*)i_Spec, o_Host, (brk - i_Spec));
             if (NS_FAILED(rv))
                 return rv;
+            ToLowerCase(*o_Host);
             rv = ParseAtPath(brk, o_Path);
             return rv;
         }
@@ -111,6 +113,7 @@ nsAuthURLParser::ParseAtScheme(const char* i_Spec, char* *o_Scheme,
                 rv = ExtractString((char*)i_Spec, o_Host, (brk - i_Spec));
                 if (NS_FAILED(rv))
                     return rv;
+                ToLowerCase(*o_Host);
                 rv = ParseAtPort(brk+1, o_Port, o_Path);
                 return rv;
             } else {
@@ -187,6 +190,7 @@ nsAuthURLParser::ParseAtHost(const char* i_Spec, char* *o_Host,
     if (!brk) // everything is a host
     {
         rv = ExtractString((char*)i_Spec, o_Host, len);
+        ToLowerCase(*o_Host);
         return rv;
     }
 
@@ -198,6 +202,7 @@ nsAuthURLParser::ParseAtHost(const char* i_Spec, char* *o_Host,
         rv = ExtractString((char*)i_Spec, o_Host, (brk - i_Spec));
         if (NS_FAILED(rv))
             return rv;
+        ToLowerCase(*o_Host);
         rv = ParseAtPath(brk, o_Path);
         return rv;
         break;
@@ -206,6 +211,7 @@ nsAuthURLParser::ParseAtHost(const char* i_Spec, char* *o_Host,
         rv = ExtractString((char*)i_Spec, o_Host, (brk - i_Spec));
         if (NS_FAILED(rv))
             return rv;
+        ToLowerCase(*o_Host);
         rv = ParseAtPort(brk+1, o_Port, o_Path);
         return rv;
         break;
