@@ -2425,13 +2425,18 @@ nsNSSCertificateDB::ImportCertificate(nsIX509Cert *cert,
     nick = CERT_MakeCANickname(tmpCert);
   }
   PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("Created nick \"%s\"\n", nick));
-  /* XXX check to see if cert is perm (it shouldn't be, but NSS asserts if
-     it is */
+  /* XXX check to see if cert is perm (it shouldn't be, but NSS asserts if it is */
   /* XXX this is an ugly peek into NSS */
+
+  //Check moved to PSMContentDownloader::OnStopRequest in nsNSSComponent.cpp
+  //so that the user can be informed before downloading, if cert exists
+
+  /*
   if (tmpCert->isperm) {
     PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("Cert was already in db %s\n", nick));
     return NS_ERROR_FAILURE;
   }
+  */
   srv = CERT_AddTempCertToPerm(tmpCert, nick, trust.GetTrust());
 done:
   if (tmpCert) 
