@@ -18,7 +18,7 @@
 
 #include "mjava.h"
 
-#ifdef JAVA
+#if defined (JAVA)
 
 extern "C" {
 #include "native.h"

@@ -20,7 +20,7 @@
 #include "mplugin.h"
 #pragma once
 
-#ifdef JAVA
+#if defined (JAVA)
 
 class CJavaView : public CPluginView {
 
