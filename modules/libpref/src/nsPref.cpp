@@ -112,6 +112,7 @@ public:
     NS_DECL_NSIOBSERVER
 
 protected:
+
     nsPref();
     virtual ~nsPref();
 
@@ -224,7 +225,6 @@ nsPref::nsPref()
     if (observerService) {
         // Our refcnt must be > 0 when we call this, or we'll get deleted!
         ++mRefCnt;
-        rv = observerService->AddObserver(this, PROFILE_BEFORE_CHANGE_TOPIC);
         rv = observerService->AddObserver(this, PROFILE_DO_CHANGE_TOPIC);
         --mRefCnt;
     }
@@ -541,7 +541,7 @@ nsresult nsPref::SecurePrefCheck(const char* aPrefName)
     return NS_OK;
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS4(nsPref, nsIPref, nsISecurityPref, nsIObserver, nsSupportsWeakReference);
+NS_IMPL_THREADSAFE_ISUPPORTS4(nsPref, nsIPref, nsISecurityPref, nsIObserver, nsISupportsWeakReference);
 
 //========================================================================================
 // nsIPref Implementation
@@ -1399,12 +1399,7 @@ NS_IMETHODIMP nsPref::Observe(nsISupports *aSubject, const PRUnichar *aTopic, co
 {
     nsresult rv = NS_OK;
 
-    if (nsCRT::strcmp(aTopic, PROFILE_BEFORE_CHANGE_TOPIC) == 0)
-    {
-        // Don't think we need to do this - the app should be in control of when prefs are saved
-        //rv = SavePrefFile();
-    }
-    else if (nsCRT::strcmp(aTopic, PROFILE_DO_CHANGE_TOPIC) == 0)
+    if (nsCRT::strcmp(aTopic, PROFILE_DO_CHANGE_TOPIC) == 0)
     {
         rv = ReadUserPrefs();
     }
@@ -1865,19 +1860,16 @@ CreateNewPref(nsISupports *aDelegate, REFNSIID aIID, void **aResult)
 {
     if (aDelegate != NULL)
         return NS_ERROR_NO_AGGREGATION;
-    if (aResult == NULL)
-        return NS_ERROR_NULL_POINTER;
-    
-    *aResult = NULL;
 
     nsPref *t = nsPref::GetInstance();
     
     if (t == NULL)
         return NS_ERROR_OUT_OF_MEMORY;
     
-    nsresult res;
+    nsresult res = t->QueryInterface(aIID, aResult);
     
-    res = t->QueryInterface(aIID, aResult);        
+    if (NS_FAILED(res))
+        *aResult = NULL;
 
     return res;
 }
