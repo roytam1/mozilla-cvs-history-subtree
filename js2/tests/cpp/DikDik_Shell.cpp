@@ -126,7 +126,7 @@ static JSValue debug(Context *cx, const JSValue& /*thisValue*/, JSValue * /*argv
     return kUndefinedValue;
 }
 
-static JSValue trace(Context */*cx*/, const JSValue& /*thisValue*/, JSValue * /*argv*/, uint32 /*argc*/)
+static JSValue trace(Context * /*cx*/, const JSValue& /*thisValue*/, JSValue * /*argv*/, uint32 /*argc*/)
 {
     gTraceFlag = true;
     stdOut << "Will report allocation stats\n";

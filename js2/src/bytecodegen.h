@@ -71,7 +71,7 @@ LoadFunctionOp,         // <pointer>        XXX !!! XXX
 LoadTypeOp,             // <pointer>        XXX !!! XXX
 InvokeOp,               // <argc> <thisflag>        <function> <args>  --> [<result>]
 GetTypeOp,              //                          <object> --> <type of object>
-CastOp,                 //                          <type> <object> --> <object>
+CastOp,                 //                          <object> <type> --> <object>
 DoUnaryOp,              // <operation>              <object> --> <result>
 DoOperatorOp,           // <operation>              <object> <object> --> <result>
 PushNullOp,             //                          --> <Object(null)>
@@ -172,6 +172,7 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
 #endif
 
         uint32 getLong(int index) const             { return *((uint32 *)&mCodeBase[index]); }
+        uint16 getShort(int index) const            { return *((uint16 *)&mCodeBase[index]); }
         int32 getOffset(int index) const            { return *((int32 *)&mCodeBase[index]); }
         const String *getString(uint32 index) const { return &mStringPoolContents[index]; }
         float64 getNumber(uint32 index) const       { return mNumberPoolContents[index]; }
@@ -273,8 +274,8 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
 
         NamespaceList *mNamespaceList;
 
-        int32 mStackTop;
-        int32 mStackMax;
+        int32 mStackTop;        // keep these as signed so as to
+        int32 mStackMax;        // track if they go negative.
 
         bool hasContent()
         {
@@ -320,7 +321,10 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
                                     { addByte(op); mStackTop = depth; ASSERT(mStackTop >= 0); }
 
         void addByte(uint8 v)       { mBuffer->push_back(v); }
-        void addPointer(void *v)    { addLong((uint32)v); }
+        void addShort(uint16 v)     { mBuffer->push_back(v >> 8); mBuffer->push_back(v); }
+
+        void addPointer(void *v)    { ASSERT(sizeof(void *) == sizeof(uint32)); addLong((uint32)(v)); }   // XXX Pointer size dependant !!!
+        
         void addLong(uint32 v)     
             { mBuffer->insert(mBuffer->end(), (uint8 *)&v, (uint8 *)(&v) + sizeof(uint32)); }
         void addOffset(int32 v)     
@@ -365,7 +369,7 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
     };
 
 
-    int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm);
+    uint32 printInstruction(Formatter &f, uint32 i, const ByteCodeModule& bcm);
 }
 }
 #endif /* bytecodegen_h___ */

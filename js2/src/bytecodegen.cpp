@@ -65,7 +65,7 @@ void Reference::emitDelete(ByteCodeGen *bcg)
     bcg->addOp(LoadConstantFalseOp);
 }
 
-void AccessorReference::emitCodeSequence(ByteCodeGen */*bcg*/) 
+void AccessorReference::emitCodeSequence(ByteCodeGen * /*bcg*/) 
 { 
     ASSERT(false);      // NYI
 //    bcg->addOp(InvokeOp); 
@@ -405,7 +405,7 @@ ByteCodeModule::ByteCodeModule(ByteCodeGen *bcg)
         mNumberPoolContents[index] = *f_i;
 
     mLocalsCount = bcg->mScopeChain->countVars();
-    mStackDepth = bcg->mStackMax;
+    mStackDepth = toUInt32(bcg->mStackMax);
 }
 
 size_t ByteCodeModule::getPositionForPC(uint32 pc)
@@ -1024,7 +1024,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
     breakLabel:
 */
             uint32 breakLabel = getLabel(Label::BreakLabel);
-            uint32 defaultLabel = (uint32)(-1);
+            uint32 defaultLabel = toUInt32(-1);
 
             Reference *switchTempReadRef, *switchTempWriteRef;
             mScopeChain->defineTempVariable(switchTempReadRef, switchTempWriteRef, Object_Type);
@@ -1053,7 +1053,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
                 s = s->next;
             }
             addOp(JumpOp);
-            if (defaultLabel != (uint32)(-1))
+            if (defaultLabel != toUInt32(-1))
                 addFixup(defaultLabel);
             else
                 addFixup(breakLabel);          
@@ -1196,8 +1196,8 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
 */
             TryStmtNode *t = static_cast<TryStmtNode *>(p);
 
-            uint32 catchClauseLabel = (t->catches) ? getLabel() : (uint32)(-1);
-            uint32 finallyInvokerLabel = (t->finally) ? getLabel() : (uint32)(-1);
+            uint32 catchClauseLabel = (t->catches) ? getLabel() : toUInt32(-1);
+            uint32 finallyInvokerLabel = (t->finally) ? getLabel() : toUInt32(-1);
             uint32 finishedLabel = getLabel();
 
             addOp(TryOp);
@@ -1613,9 +1613,10 @@ PreXcrement:
             genReferencePair(u->op, readRef, writeRef);
             int32 baseDepth = readRef->baseExpressionDepth();
             if (baseDepth) {         // duplicate the base expression
+                ASSERT(baseDepth <= MAX_UINT16);
                 if (baseDepth > 1) {
                     addOpAdjustDepth(DupNOp, -baseDepth);
-                    addByte(baseDepth);
+                    addShort((uint16)baseDepth);
                 }
                 else
                     addOp(DupOp);
@@ -1649,9 +1650,10 @@ PostXcrement:
             genReferencePair(u->op, readRef, writeRef);
             int32 baseDepth = readRef->baseExpressionDepth();
             if (baseDepth) {         // duplicate the base expression
+                ASSERT(baseDepth <= MAX_UINT16);
                 if (baseDepth > 1) {
                     addOpAdjustDepth(DupNOp, baseDepth);
-                    addByte(baseDepth);
+                    addShort((uint16)baseDepth);
                 }
                 else
                     addOp(DupOp);
@@ -1659,7 +1661,7 @@ PostXcrement:
                    // duplicate the value and bury it
                 if (baseDepth > 1) {
                     addOpAdjustDepth(DupInsertNOp, baseDepth);
-                    addByte(baseDepth);
+                    addShort((uint16)baseDepth);
                 }
                 else
                     addOp(DupInsertOp);
@@ -1720,9 +1722,10 @@ BinaryOpEquals:
 
             int32 baseDepth = readRef->baseExpressionDepth();
             if (baseDepth) {         // duplicate the base expression
+                ASSERT(baseDepth <= MAX_UINT16);
                 if (baseDepth > 1) {
                     addOp(DupNOp);
-                    addByte(baseDepth);
+                    addShort((uint16)baseDepth);
                 }
                 else
                     addOp(DupOp);
@@ -1733,6 +1736,13 @@ BinaryOpEquals:
             genExpr(b->op2);
             addOp(DoOperatorOp);
             addByte(op);
+
+            if (writeRef->mType != Object_Type) {
+                addOp(LoadTypeOp);
+                addPointer(writeRef->mType);
+                addOp(CastOp);
+            }
+
             writeRef->emitCodeSequence(this);
             delete readRef;
             delete writeRef;
@@ -1749,9 +1759,10 @@ BinaryOpEquals:
 
             int32 baseDepth = readRef->baseExpressionDepth();
             if (baseDepth) {         // duplicate the base expression
+                ASSERT(baseDepth <= MAX_UINT16);
                 if (baseDepth > 1) {
                     addOpAdjustDepth(DupNOp, -baseDepth);
-                    addByte(baseDepth);
+                    addShort((uint16)baseDepth);
                 }
                 else
                     addOp(DupOp);
@@ -1768,6 +1779,13 @@ BinaryOpEquals:
             addOp(PopOp);
             genExpr(b->op2);
             setLabel(labelAfterSecondExpr);    
+
+            if (writeRef->mType != Object_Type) {
+                addOp(LoadTypeOp);
+                addPointer(writeRef->mType);
+                addOp(CastOp);
+            }
+
             writeRef->emitCodeSequence(this);
             delete readRef;
             delete writeRef;
@@ -1783,9 +1801,10 @@ BinaryOpEquals:
 
             int32 baseDepth = readRef->baseExpressionDepth();
             if (baseDepth) {         // duplicate the base expression
+                ASSERT(baseDepth <= MAX_UINT16);
                 if (baseDepth > 1) {
                     addOpAdjustDepth(DupNOp, -baseDepth);
-                    addByte(baseDepth);
+                    addShort((uint16)baseDepth);
                 }
                 else
                     addOp(DupOp);
@@ -1802,6 +1821,13 @@ BinaryOpEquals:
             addOp(PopOp);
             genExpr(b->op2);
             setLabel(labelAfterSecondExpr);    
+
+            if (writeRef->mType != Object_Type) {
+                addOp(LoadTypeOp);
+                addPointer(writeRef->mType);
+                addOp(CastOp);
+            }
+
             writeRef->emitCodeSequence(this);
             delete readRef;
             delete writeRef;
@@ -1817,9 +1843,10 @@ BinaryOpEquals:
 
             int32 baseDepth = readRef->baseExpressionDepth();
             if (baseDepth) {         // duplicate the base expression
+                ASSERT(baseDepth <= MAX_UINT16);
                 if (baseDepth > 1) {
                     addOpAdjustDepth(DupNOp, -baseDepth);
-                    addByte(baseDepth);
+                    addShort((uint16)baseDepth);
                 }
                 else
                     addOp(DupOp);
@@ -1830,6 +1857,13 @@ BinaryOpEquals:
             readRef->emitCodeSequence(this);
             genExpr(b->op2);
             addOp(LogicalXorOp);
+
+            if (writeRef->mType != Object_Type) {
+                addOp(LoadTypeOp);
+                addPointer(writeRef->mType);
+                addOp(CastOp);
+            }
+
             writeRef->emitCodeSequence(this);
             delete readRef;
             delete writeRef;
@@ -1894,6 +1928,13 @@ BinaryOpEquals:
                 m_cx->reportError(Exception::semanticError, "incomprehensible assignment designate (and error message)", p->pos);
             ref->emitPreAssignment(this);
             genExpr(b->op2);
+
+            if (ref->mType != Object_Type) {
+                addOp(LoadTypeOp);
+                addPointer(ref->mType);
+                addOp(CastOp);
+            }
+
             ref->emitCodeSequence(this);
             delete ref;
             return Object_Type;
@@ -1951,7 +1992,7 @@ BinaryOpEquals:
             JSType *type = genExpr(i->op);
 
             ExprPairList *p = i->pairs;
-            int32 argCount = 0;
+            uint32 argCount = 0;
             while (p) {
                 genExpr(p->value);
                 argCount++;
@@ -1990,7 +2031,7 @@ BinaryOpEquals:
             ref->emitInvokeSequence(this);
 
             ExprPairList *p = i->pairs;
-            int32 argCount = 0;
+            uint32 argCount = 0;
             while (p) {
                 genExpr(p->value);
                 argCount++;
@@ -2153,7 +2194,7 @@ BinaryOpEquals:
             addPointer(currentClass->mSuperType->getDefaultConstructor());
 
             ExprPairList *p = i->pairs;
-            int32 argCount = 1;
+            uint32 argCount = 1;
             addOp(LoadThisOp);
             while (p) {
                 genExpr(p->value);
@@ -2189,7 +2230,7 @@ BinaryOpEquals:
     return NULL;
 }
 
-int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm)
+uint32 printInstruction(Formatter &f, uint32 i, const ByteCodeModule& bcm)
 {
     int32 offset;
     uint8 op = bcm.mCodeBase[i];
@@ -2235,13 +2276,17 @@ int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm)
         break;
 
     case DoUnaryOp:
-    case DupNOp:
-    case DupInsertNOp:
     case DoOperatorOp:
         f << bcm.mCodeBase[i];
         i++;
         break;
     
+    case DupNOp:
+    case DupInsertNOp:
+        f << bcm.getShort(i);
+        i += 2;
+        break;
+
     case JumpOp:
     case JumpTrueOp:
     case JumpFalseOp:

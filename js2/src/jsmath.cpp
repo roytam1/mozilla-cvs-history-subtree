@@ -172,7 +172,7 @@ static JSValue Math_pow(Context *cx, const JSValue& /*thisValue*/, JSValue *argv
         return kNaNValue;
     return JSValue(fd::pow(argv[0].toNumber(cx).f64, argv[1].toNumber(cx).f64));
 }
-static JSValue Math_random(Context */*cx*/, const JSValue& /*thisValue*/, JSValue */*argv*/, uint32 /*argc*/)
+static JSValue Math_random(Context * /*cx*/, const JSValue& /*thisValue*/, JSValue * /*argv*/, uint32 /*argc*/)
 {
     return JSValue(42.0);
 }

@@ -103,6 +103,7 @@ static const double two31 = 2147483648.0;
 
     extern JSType *Object_Type;         // the base type for all types
     extern JSType *Number_Type;
+    extern JSType *Integer_Type;
     extern JSStringType *String_Type;
     extern JSType *Type_Type;           // the type for variables that are types 
                                         // (e.g. the property 'C' from class C...
@@ -430,7 +431,7 @@ static const double two31 = 2147483648.0;
     // a setter function
     class SetterFunctionReference : public Reference {
     public:
-        SetterFunctionReference(JSFunction *f);
+        SetterFunctionReference(JSFunction *f, JSType *type);
         JSFunction *mFunction;
         void emitCodeSequence(ByteCodeGen *bcg);
         void emitImplicitLoad(ByteCodeGen *bcg);
@@ -1211,6 +1212,7 @@ static const double two31 = 2147483648.0;
                         mCode(NULL), 
                         mResultType(resultType), 
                         mExpectedArgs(argCount),
+                        mArgTypes(NULL),
                         mScopeChain(NULL), 
                         mIsPrototype(false),
                         mClass(NULL)
@@ -1229,6 +1231,7 @@ static const double two31 = 2147483648.0;
                         mCode(code), 
                         mResultType(resultType), 
                         mExpectedArgs(0),
+                        mArgTypes(NULL),
                         mScopeChain(NULL),
                         mIsPrototype(false),
                         mClass(NULL)
@@ -1245,7 +1248,8 @@ static const double two31 = 2147483648.0;
 
         void setByteCode(ByteCodeModule *b)     { ASSERT(!isNative()); mByteCode = b; }
         void setResultType(JSType *r)           { mResultType = r; }
-        void setExpectedArgs(uint32 e)          { mExpectedArgs = e; }
+        void setExpectedArgs(uint32 e)          { mExpectedArgs = e; mArgTypes = new JSType *[mExpectedArgs]; }
+        void setArgType(uint32 a, JSType *t)    { ASSERT(mArgTypes && (a < mExpectedArgs)); mArgTypes[a] = t; }
         void setIsPrototype(bool i)             { mIsPrototype = i; }
         void setFunctionName(const String &n)   { mFunctionName = n; }
         void setClass(JSType *c)                { mClass = c; }
@@ -1258,6 +1262,7 @@ static const double two31 = 2147483648.0;
 
         virtual JSType *getResultType()         { return mResultType; }
         virtual uint32 getExpectedArgs()        { return mExpectedArgs; }
+        virtual JSType *getArgType(uint32 a)    { ASSERT(mArgTypes && (a < mExpectedArgs)); return mArgTypes[a]; }
         virtual ScopeChain *getScopeChain()     { return mScopeChain; }
         virtual JSValue getThisValue()          { return kNullValue; }         
         virtual JSType *getClass()              { return mClass; }
@@ -1271,6 +1276,7 @@ static const double two31 = 2147483648.0;
         NativeCode *mCode;
         JSType *mResultType;
         uint32 mExpectedArgs;
+        JSType **mArgTypes;
         ScopeChain *mScopeChain;
         bool mIsPrototype;                      // set for functions with prototype attribute
         JSType *mClass;                         // pointer to owning class if this function is a method
@@ -1295,6 +1301,7 @@ static const double two31 = 2147483648.0;
 
         JSType *getResultType()         { return mFunction->getResultType(); }
         uint32 getExpectedArgs()        { return mFunction->getExpectedArgs(); }
+        JSType *getArgType(uint32 a)    { return mFunction->getArgType(a); }
         ScopeChain *getScopeChain()     { return mFunction->getScopeChain(); }
         JSValue getThisValue()          { return JSValue(mThis); }         
         JSType *getClass()              { return mFunction->getClass(); }
@@ -1411,9 +1418,8 @@ static const double two31 = 2147483648.0;
         JSType *getExtendArg(JSObject *attributeValue);
         JSArrayInstance *getNamesArray(JSObject *attributeValue);
 
-        JSFunction *getOperator(Operator which, JSType *t1, JSType *t2);
-
         bool executeOperator(Operator op, JSType *t1, JSType *t2);
+        JSValue mapValueToType(JSValue v, JSType *t);
 
         JSValue invokeFunction(JSFunction *target, const JSValue& thisValue, JSValue *argv, uint32 argc);
 
@@ -1473,6 +1479,16 @@ static const double two31 = 2147483648.0;
         {
             ASSERT(n < mStackTop);
             return mStack[n];
+        }
+
+        // put the value in at 'index', lifting everything above that up by one
+        void insertValue(JSValue v, uint32 index)
+        {
+            ASSERT((mStackTop + 1) < mStackMax);
+            for (uint32 i = mStackTop - 1; i >= index; i--)
+                mStack[i + 1] = mStack[i];
+            mStack[index] = v;
+            mStackTop++;
         }
 /*
         void setValue(uint32 n, JSValue v)
@@ -1595,8 +1611,8 @@ static const double two31 = 2147483648.0;
     {
     }
 
-    inline SetterFunctionReference::SetterFunctionReference(JSFunction *f) 
-            : Reference(f->getResultType()), mFunction(f)
+    inline SetterFunctionReference::SetterFunctionReference(JSFunction *f, JSType *type) 
+            : Reference(type), mFunction(f)
     {
     }
 

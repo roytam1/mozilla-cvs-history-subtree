@@ -63,7 +63,7 @@ JSValue Array_Constructor(Context *cx, const JSValue& thisValue, JSValue *argv, 
     JSArrayInstance *arrInst = (JSArrayInstance *)thisObj;
     if (argc > 0) {
         if (argc == 1) {
-            arrInst->mLength = (uint32)(argv[0].toNumber(cx).f64);
+            arrInst->mLength = toUInt32(argv[0].toNumber(cx).f64);
         }
         else {
             arrInst->mLength = argc;
@@ -78,7 +78,7 @@ JSValue Array_Constructor(Context *cx, const JSValue& thisValue, JSValue *argv, 
 }
 
 
-static JSValue Array_toString(Context *cx, const JSValue& thisValue, JSValue */*argv*/, uint32 /*argc*/)
+static JSValue Array_toString(Context *cx, const JSValue& thisValue, JSValue * /*argv*/, uint32 /*argc*/)
 {
     ASSERT(thisValue.isObject());
     JSObject *thisObj = thisValue.object;
@@ -104,7 +104,7 @@ static JSValue Array_toString(Context *cx, const JSValue& thisValue, JSValue */*
     
 }
 
-static JSValue Array_toSource(Context *cx, const JSValue& thisValue, JSValue */*argv*/, uint32 /*argc*/)
+static JSValue Array_toSource(Context *cx, const JSValue& thisValue, JSValue * /*argv*/, uint32 /*argc*/)
 {
     ASSERT(thisValue.isObject());
     JSObject *thisObj = thisValue.object;
@@ -148,7 +148,7 @@ static JSValue Array_push(Context *cx, const JSValue& thisValue, JSValue *argv, 
     return JSValue((float64)arrInst->mLength);
 }
               
-static JSValue Array_pop(Context *cx, const JSValue& thisValue, JSValue */*argv*/, uint32 /*argc*/)
+static JSValue Array_pop(Context *cx, const JSValue& thisValue, JSValue * /*argv*/, uint32 /*argc*/)
 {
     ASSERT(thisValue.isObject());
     JSObject *thisObj = thisValue.object;
@@ -211,7 +211,7 @@ static JSValue Array_join(Context *cx, const JSValue& thisValue, JSValue *argv, 
 
     thisObj->getProperty(cx, widenCString("length"), CURRENT_ATTR);
     JSValue result = cx->popValue();
-    uint32 length = (uint32)(result.toUInt32(cx).f64);    
+    uint32 length = toUInt32(result.toUInt32(cx).f64);    
 
     const String *separator;
     if (argc == 0)
@@ -237,7 +237,7 @@ static JSValue Array_join(Context *cx, const JSValue& thisValue, JSValue *argv, 
     return JSValue(S);
 }
 
-static JSValue Array_reverse(Context *cx, const JSValue& thisValue, JSValue */*argv*/, uint32 /*argc*/)
+static JSValue Array_reverse(Context *cx, const JSValue& thisValue, JSValue * /*argv*/, uint32 /*argc*/)
 {
     ContextStackReplacement csr(cx);
 
@@ -246,7 +246,7 @@ static JSValue Array_reverse(Context *cx, const JSValue& thisValue, JSValue */*a
 
     thisObj->getProperty(cx, widenCString("length"), CURRENT_ATTR);
     JSValue result = cx->popValue();
-    uint32 length = (uint32)(result.toUInt32(cx).f64);    
+    uint32 length = toUInt32(result.toUInt32(cx).f64);    
 
     uint32 halfway = length / 2;
 
@@ -284,7 +284,7 @@ static JSValue Array_reverse(Context *cx, const JSValue& thisValue, JSValue */*a
     return thisValue;
 }
 
-static JSValue Array_shift(Context *cx, const JSValue& thisValue, JSValue */*argv*/, uint32 /*argc*/)
+static JSValue Array_shift(Context *cx, const JSValue& thisValue, JSValue * /*argv*/, uint32 /*argc*/)
 {
     ContextStackReplacement csr(cx);
 
@@ -293,7 +293,7 @@ static JSValue Array_shift(Context *cx, const JSValue& thisValue, JSValue */*arg
 
     thisObj->getProperty(cx, widenCString("length"), CURRENT_ATTR);
     JSValue result = cx->popValue();
-    uint32 length = (uint32)(result.toUInt32(cx).f64);    
+    uint32 length = toUInt32(result.toUInt32(cx).f64);    
 
     if (length == 0) {
         thisObj->setProperty(cx, widenCString("length"), CURRENT_ATTR, result);
@@ -333,7 +333,7 @@ static JSValue Array_slice(Context *cx, const JSValue& thisValue, JSValue *argv,
 
     thisObj->getProperty(cx, widenCString("length"), CURRENT_ATTR);
     JSValue result = cx->popValue();
-    uint32 length = (uint32)(result.toUInt32(cx).f64);    
+    uint32 length = toUInt32(result.toUInt32(cx).f64);    
 
     int32 start, end;
     if (argc < 1) 
@@ -346,7 +346,7 @@ static JSValue Array_slice(Context *cx, const JSValue& thisValue, JSValue *argv,
                 start = 0;
         }
         else {
-            if ((uint32)start >= length)    // cast ok since > 0
+            if (toUInt32(start) >= length)    // cast ok since > 0
                 start = length;
         }
     }
@@ -360,7 +360,7 @@ static JSValue Array_slice(Context *cx, const JSValue& thisValue, JSValue *argv,
                 end = 0;
         }
         else {
-            if ((uint32)end >= length)
+            if (toUInt32(end) >= length)
                 end = length;
         }
     }
@@ -381,7 +381,7 @@ static JSValue Array_slice(Context *cx, const JSValue& thisValue, JSValue *argv,
     return JSValue(A);
 }
 
-static JSValue Array_sort(Context */*cx*/, const JSValue& /*thisValue*/, JSValue */*argv*/, uint32 /*argc*/)
+static JSValue Array_sort(Context * /*cx*/, const JSValue& /*thisValue*/, JSValue * /*argv*/, uint32 /*argc*/)
 {
     return kUndefinedValue;
 }
@@ -396,7 +396,7 @@ static JSValue Array_splice(Context *cx, const JSValue& thisValue, JSValue *argv
         JSObject *thisObj = thisValue.object;
         thisObj->getProperty(cx, widenCString("length"), CURRENT_ATTR);
         JSValue result = cx->popValue();
-        uint32 length = (uint32)(result.toUInt32(cx).f64);    
+        uint32 length = toUInt32(result.toUInt32(cx).f64);    
 
         JSArrayInstance *A = (JSArrayInstance *)Array_Type->newInstance(cx);
 
@@ -407,17 +407,17 @@ static JSValue Array_splice(Context *cx, const JSValue& thisValue, JSValue *argv
                 start = 0;
         }
         else {
-            if ((uint32)start >= length)
+            if (toUInt32(start) >= length)
                 start = length;
         }
 
         int32 deleteCount = (int32)(argv[1].toInt32(cx).f64);
         if (deleteCount < 0)
             deleteCount = 0;
-        if ((uint32)deleteCount >= (length - start))
+        if (toUInt32(deleteCount) >= (length - start))
             deleteCount = length - start;
         
-        for (k = 0; k < (uint32)deleteCount; k++) {
+        for (k = 0; k < toUInt32(deleteCount); k++) {
             String *id1 = numberToString(start + k);
             PropertyIterator it;
             if (thisObj->hasOwnProperty(*id1, CURRENT_ATTR, Read, &it)) {
@@ -429,7 +429,7 @@ static JSValue Array_splice(Context *cx, const JSValue& thisValue, JSValue *argv
         A->setProperty(cx, widenCString("length"), CURRENT_ATTR, JSValue((float64)deleteCount) );
 
         uint32 newItemCount = argc - 2;
-        if (newItemCount < (uint32)deleteCount) {
+        if (newItemCount < toUInt32(deleteCount)) {
             for (k = start; k < (length - deleteCount); k++) {
                 String *id1 = numberToString(k + deleteCount);
                 String *id2 = numberToString(k + newItemCount);
@@ -447,8 +447,8 @@ static JSValue Array_splice(Context *cx, const JSValue& thisValue, JSValue *argv
             }
         }
         else {
-            if (newItemCount > (uint32)deleteCount) {
-                for (k = length - deleteCount; k > (uint32)start; k--) {
+            if (newItemCount > toUInt32(deleteCount)) {
+                for (k = length - deleteCount; k > toUInt32(start); k--) {
                     String *id1 = numberToString(k + deleteCount - 1);
                     String *id2 = numberToString(k + newItemCount - 1);
                     PropertyIterator it;
@@ -481,7 +481,7 @@ static JSValue Array_unshift(Context *cx, const JSValue& thisValue, JSValue *arg
     JSObject *thisObj = thisValue.object;
     thisObj->getProperty(cx, widenCString("length"), CURRENT_ATTR);
     JSValue result = cx->popValue();
-    uint32 length = (uint32)(result.toUInt32(cx).f64);
+    uint32 length = toUInt32(result.toUInt32(cx).f64);
     uint32 k;
 
     for (k = length; k > 0; k--) {

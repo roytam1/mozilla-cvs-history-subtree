@@ -78,7 +78,7 @@ JSValue String_fromCharCode(Context *cx, const JSValue& /*thisValue*/, JSValue *
     return JSValue(resultStr);
 }
 
-static JSValue String_toString(Context */*cx*/, const JSValue& thisValue, JSValue */*argv*/, uint32 /*argc*/)
+static JSValue String_toString(Context * /*cx*/, const JSValue& thisValue, JSValue * /*argv*/, uint32 /*argc*/)
 {
     ASSERT(thisValue.isObject());
     JSObject *thisObj = thisValue.object;
@@ -121,9 +121,9 @@ static JSValue String_split(Context *cx, const JSValue& thisValue, JSValue *argv
     JSValue limitV = (argc > 1) ? argv[1] : kUndefinedValue;
         
     if (limitV.isUndefined())
-        lim = (uint32)two32minus1;
+        lim = toUInt32(two32minus1);
     else
-        lim = (uint32)(limitV.toUInt32(cx).f64);
+        lim = toUInt32(limitV.toUInt32(cx).f64);
 
     uint32 s = S.string->size();
     uint32 p = 0;
@@ -180,7 +180,7 @@ step11:
 
 }
 
-static JSValue String_valueOf(Context */*cx*/, const JSValue& thisValue, JSValue */*argv*/, uint32 /*argc*/)
+static JSValue String_valueOf(Context * /*cx*/, const JSValue& thisValue, JSValue * /*argv*/, uint32 /*argc*/)
 {
     ASSERT(thisValue.isObject());
     if (thisValue.isString())
@@ -197,7 +197,7 @@ static JSValue String_charAt(Context *cx, const JSValue& thisValue, JSValue *arg
 
     uint32 pos = 0;
     if (argc > 0)
-        pos = (uint32)(argv[0].toInt32(cx).f64);
+        pos = toUInt32(argv[0].toInt32(cx).f64);
 
     if ((pos < 0) || (pos >= str->size()))
         return JSValue(new String());       // have an empty string kValue somewhere?
@@ -213,7 +213,7 @@ static JSValue String_charCodeAt(Context *cx, const JSValue& thisValue, JSValue 
 
     uint32 pos = 0;
     if (argc > 0)
-        pos = (uint32)(argv[0].toInt32(cx).f64);
+        pos = toUInt32(argv[0].toInt32(cx).f64);
 
     if ((pos < 0) || (pos >= str->size()))
         return kNaNValue;
@@ -249,11 +249,11 @@ static JSValue String_indexOf(Context *cx, const JSValue& thisValue, JSValue *ar
         if (pos < 0)
             pos = 0;
         else
-            if ((uint32)pos >= str->size()) 
+            if (toUInt32(pos) >= str->size()) 
                 pos = str->size();
     }
     pos = str->find(*searchStr, pos);
-    if ((uint32)pos == String::npos)
+    if (toUInt32(pos) == String::npos)
         return JSValue(-1.0);
     return JSValue((float64)pos);
 }
@@ -276,22 +276,22 @@ static JSValue String_lastIndexOf(Context *cx, const JSValue& thisValue, JSValue
             if (pos < 0) 
                 pos = 0;
             else
-                if ((uint32)pos >= str->size()) 
+                if (toUInt32(pos) >= str->size()) 
                     pos = str->size();
         }
     }
     pos = str->rfind(*searchStr, pos);
-    if ((uint32)pos == String::npos)
+    if (toUInt32(pos) == String::npos)
         return JSValue(-1.0);
     return JSValue((float64)pos);
 }
 
-static JSValue String_localeCompare(Context */*cx*/, const JSValue& /*thisValue*/, JSValue */*argv*/, uint32 /*argc*/)
+static JSValue String_localeCompare(Context * /*cx*/, const JSValue& /*thisValue*/, JSValue * /*argv*/, uint32 /*argc*/)
 {
     return kUndefinedValue;
 }
 
-static JSValue String_toLowerCase(Context *cx, const JSValue& thisValue, JSValue */*argv*/, uint32 /*argc*/)
+static JSValue String_toLowerCase(Context *cx, const JSValue& thisValue, JSValue * /*argv*/, uint32 /*argc*/)
 {
     ASSERT(thisValue.isObject());
     JSValue S = thisValue.toString(cx);
@@ -303,7 +303,7 @@ static JSValue String_toLowerCase(Context *cx, const JSValue& thisValue, JSValue
     return JSValue(result);
 }
 
-static JSValue String_toUpperCase(Context *cx, const JSValue& thisValue, JSValue */*argv*/, uint32 /*argc*/)
+static JSValue String_toUpperCase(Context *cx, const JSValue& thisValue, JSValue * /*argv*/, uint32 /*argc*/)
 {
     ASSERT(thisValue.isObject());
     JSValue S = thisValue.toString(cx);
@@ -330,7 +330,7 @@ static JSValue String_slice(Context *cx, const JSValue& thisValue, JSValue *argv
             start = 0;
     }
     else {
-        if ((uint32)start >= sourceLength)
+        if (toUInt32(start) >= sourceLength)
             start = sourceLength;
     }
     if (end < 0) {
@@ -339,7 +339,7 @@ static JSValue String_slice(Context *cx, const JSValue& thisValue, JSValue *argv
             end = 0;
     }
     else {
-        if ((uint32)end >= sourceLength)
+        if (toUInt32(end) >= sourceLength)
             end = sourceLength;
     }    
     if (start > end)
@@ -359,13 +359,13 @@ static JSValue String_substring(Context *cx, const JSValue& thisValue, JSValue *
     if (start < 0)
         start = 0;
     else {
-        if ((uint32)start >= sourceLength)
+        if (toUInt32(start) >= sourceLength)
             start = sourceLength;
     }
     if (end < 0)
         end = 0;
     else {
-        if ((uint32)end >= sourceLength)
+        if (toUInt32(end) >= sourceLength)
             end = sourceLength;
     }
 

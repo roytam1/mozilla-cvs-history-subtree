@@ -68,6 +68,7 @@ namespace JS2Runtime {
 //
 JSType *Object_Type = NULL;
 JSType *Number_Type;
+JSType *Integer_Type;
 JSType *Function_Type;
 JSStringType *String_Type;
 JSType *Boolean_Type;
@@ -187,8 +188,8 @@ bool JSObject::hasOwnProperty(const String &name, NamespaceList *names, Access a
                                  : (prop->mData.fPair.setterF != NULL);
         else
             if (prop->mFlag == IndexPair)
-                return (acc == Read) ? (prop->mData.iPair.getterI != (uint32)(-1))
-                                     : (prop->mData.iPair.setterI != (uint32)(-1));
+                return (acc == Read) ? (prop->mData.iPair.getterI != toUInt32(-1))
+                                     : (prop->mData.iPair.setterI != toUInt32(-1));
             else
                 return true;
     }
@@ -233,6 +234,7 @@ void JSObject::defineGetterMethod(Context *cx, const String &name, AttributeStmt
 }
 void JSObject::defineSetterMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f)
 {
+    JSType *type = Object_Type; // XXX should it be the 0'th argument type?
     NamespaceList *names = cx->buildNamespaceList(attr);
     PropertyIterator i;
     if (hasProperty(name, names, Read, &i)) {
@@ -254,7 +256,7 @@ Property *JSObject::defineVariable(Context *cx, const String &name, AttributeStm
     mProperties.insert(e);
     return prop;
 }
-Property *JSObject::defineVariable(Context */*cx*/, const String &name, NamespaceList *names, JSType *type)
+Property *JSObject::defineVariable(Context * /*cx*/, const String &name, NamespaceList *names, JSType *type)
 {
     Property *prop = new Property(new JSValue(), type);
     const PropertyMap::value_type e(name, new NamespacedProperty(prop, names));
@@ -270,7 +272,7 @@ Property *JSObject::defineVariable(Context *cx, const String &name, AttributeStm
     mProperties.insert(e);
     return prop;
 }
-Property *JSObject::defineVariable(Context */*cx*/, const String &name, NamespaceList *names, JSType *type, JSValue v)
+Property *JSObject::defineVariable(Context * /*cx*/, const String &name, NamespaceList *names, JSType *type, JSValue v)
 {
     Property *prop = new Property(new JSValue(v), type);
     const PropertyMap::value_type e(name, new NamespacedProperty(prop, names));
@@ -291,8 +293,10 @@ Reference *JSObject::genReference(const String& name, NamespaceList *names, Acce
         case FunctionPair:
             if (acc == Read)
                 return new GetterFunctionReference(prop->mData.fPair.getterF);
-            else
-                return new SetterFunctionReference(prop->mData.fPair.setterF);
+            else {
+                JSFunction *f = prop->mData.fPair.setterF;
+                return new SetterFunctionReference(f, f->getArgType(0));
+            }
         default:
             NOT_REACHED("bad storage kind");
             return NULL;
@@ -441,7 +445,7 @@ void JSArrayInstance::getProperty(Context *cx, const String &name, NamespaceList
 void JSArrayInstance::setProperty(Context *cx, const String &name, NamespaceList *names, const JSValue &v)
 {
     if (name.compare(widenCString("length")) == 0) {
-        uint32 newLength = (uint32)(v.toUInt32(cx).f64);
+        uint32 newLength = toUInt32(v.toUInt32(cx).f64);
         if (newLength != v.toNumber(cx).f64)
             cx->reportError(Exception::rangeError, "out of range value for length"); 
         
@@ -463,7 +467,7 @@ void JSArrayInstance::setProperty(Context *cx, const String &name, NamespaceList
         JSValue v_int = v.toUInt32(cx);
         if ((v_int.f64 != two32minus1) && (v_int.toString(cx).string->compare(name) == 0)) {
             if (v_int.f64 >= mLength)
-                mLength = (uint32)v_int.f64 + 1;
+                mLength = toUInt32(v_int.f64) + 1;
         }
     }
 }
@@ -1134,19 +1138,25 @@ Reference *JSType::genReference(const String& name, NamespaceList *names, Access
         case FunctionPair:
             if (acc == Read)
                 return new GetterFunctionReference(prop->mData.fPair.getterF);
-            else
-                return new SetterFunctionReference(prop->mData.fPair.setterF);
+            else {
+                JSFunction *f = prop->mData.fPair.setterF;
+                return new SetterFunctionReference(f, f->getArgType(0));
+            }
         case IndexPair:
             if (mStatics == NULL)   // i.e. this is a static method
                 if (acc == Read)
                     return new StaticGetterMethodReference(prop->mData.iPair.getterI, prop->mType);
-                else
-                    return new StaticSetterMethodReference(prop->mData.iPair.setterI, prop->mType);
+                else {
+                    JSFunction *f = mMethods[prop->mData.iPair.setterI];
+                    return new StaticSetterMethodReference(prop->mData.iPair.setterI, f->getArgType(0));
+                }
             else
                 if (acc == Read)
                     return new GetterMethodReference(prop->mData.iPair.getterI, this, prop->mType);
-                else
-                    return new SetterMethodReference(prop->mData.iPair.setterI, this, prop->mType);
+                else {
+                    JSFunction *f = mMethods[prop->mData.iPair.setterI];
+                    return new SetterMethodReference(prop->mData.iPair.setterI, this, f->getArgType(0));
+                }
         case Slot:
             if (mStatics == NULL)   // i.e. this is a static method
                 return new StaticFieldReference(prop->mData.index, acc, mSuperType, prop->mType);
@@ -1294,7 +1304,7 @@ void Context::setAttributeValue(AttributeStmtNode *s)
     attributeValue->getProperty(this, widenCString("trueFlags"), (NamespaceList *)(NULL));
     JSValue flags = popValue();
     ASSERT(flags.isNumber());
-    s->attributeFlags = (uint32)(flags.f64);
+    s->attributeFlags = toUInt32(flags.f64);
     s->attributeValue = attributeValue;
 }
 
@@ -1375,7 +1385,15 @@ void Context::buildRuntimeForStmt(StmtNode *p)
             JSType *resultType = mScopeChain->extractType(f->function.resultType);
             JSFunction *fnc = f->mFunction;
             fnc->setResultType(resultType);
- 
+            
+            fnc->setExpectedArgs(getParameterCount(f->function));
+            VariableBinding *v = f->function.parameters;
+            uint32 index = 0;
+            while (v) {
+                fnc->setArgType(index++, mScopeChain->extractType(v->type));
+                v = v->next;
+            }
+
             if (isOperator) {
                 if (f->function.prefix != FunctionName::op) {
                     NOT_REACHED("***** Implement me -- signal an error here because the user entered an unquoted operator name");
@@ -1544,6 +1562,34 @@ static JSValue Number_toString(Context *, const JSValue& thisValue, JSValue * /*
 
 
 
+static JSValue Integer_Constructor(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+{
+    JSValue v = thisValue;
+    if (v.isNull())
+        v = Integer_Type->newInstance(cx);
+    ASSERT(v.isObject());
+    JSObject *thisObj = v.object;
+    if (argc > 0) {
+        float64 d = argv[0].toNumber(cx).f64;
+        bool neg = (d < 0);
+        d = fd::floor(neg ? -d : d);
+        d = neg ? -d : d;
+        thisObj->mPrivate = (void *)(new double(d));
+    }
+    else
+        thisObj->mPrivate = (void *)(new double(0.0));
+    return v;
+}
+
+static JSValue Integer_toString(Context *, const JSValue& thisValue, JSValue * /*argv*/, uint32 /*argc*/)
+{
+    ASSERT(thisValue.isObject());
+    JSObject *thisObj = thisValue.object;
+    return JSValue(numberToString(*((double *)(thisObj->mPrivate))));
+}
+
+
+
 static JSValue Boolean_Constructor(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     JSValue v = thisValue;
@@ -1584,6 +1630,8 @@ static JSValue ExtendAttribute_Invoke(Context *cx, const JSValue& /*thisValue*/,
               
 
 
+
+
 // Initialize a built-in class - setting the functions into the prototype object
 void Context::initClass(JSType *type, JSType *super, ClassDef *cdef, PrototypeFunctions *pdef)
 {
@@ -1619,6 +1667,7 @@ void Context::initBuiltins()
         { "Type",       NULL,                  &kNullValue    },
         { "Function",   Function_Constructor,  &kNullValue    },
         { "Number",     Number_Constructor,    &kPositiveZero },
+        { "Integer",    Integer_Constructor,   &kPositiveZero },
         { "String",     String_Constructor,    &kNullValue    },
         { "Array",      Array_Constructor,     &kNullValue    },
         { "Boolean",    Boolean_Constructor,   &kFalseValue   },
@@ -1634,12 +1683,13 @@ void Context::initBuiltins()
     Type_Type      = new JSType(this, widenCString(builtInClasses[1].name), Object_Type);
     Function_Type  = new JSType(this, widenCString(builtInClasses[2].name), Object_Type);
     Number_Type    = new JSType(this, widenCString(builtInClasses[3].name), Object_Type);
-    String_Type    = new JSStringType(this, widenCString(builtInClasses[4].name), Object_Type);
-    Array_Type     = new JSArrayType(this, widenCString(builtInClasses[5].name), Object_Type);
-    Boolean_Type   = new JSType(this, widenCString(builtInClasses[6].name), Object_Type);
-    Void_Type      = new JSType(this, widenCString(builtInClasses[7].name), Object_Type);
-    Unit_Type      = new JSType(this, widenCString(builtInClasses[8].name), Object_Type);
-    Attribute_Type = new JSType(this, widenCString(builtInClasses[9].name), Object_Type);
+    Integer_Type   = new JSType(this, widenCString(builtInClasses[4].name), Object_Type);
+    String_Type    = new JSStringType(this, widenCString(builtInClasses[5].name), Object_Type);
+    Array_Type     = new JSArrayType(this, widenCString(builtInClasses[6].name), Object_Type);
+    Boolean_Type   = new JSType(this, widenCString(builtInClasses[7].name), Object_Type);
+    Void_Type      = new JSType(this, widenCString(builtInClasses[8].name), Object_Type);
+    Unit_Type      = new JSType(this, widenCString(builtInClasses[9].name), Object_Type);
+    Attribute_Type = new JSType(this, widenCString(builtInClasses[10].name), Object_Type);
 
 
     String_Type->defineVariable(this, widenCString("fromCharCode"), NULL, String_Type, JSValue(new JSFunction(this, String_fromCharCode, String_Type)));
@@ -1664,7 +1714,12 @@ void Context::initBuiltins()
         { "toSource", String_Type, 0, Number_toString },
         { NULL }
     };
-
+    ProtoFunDef integerProtos[] = 
+    {
+        { "toString", String_Type, 0, Number_toString },
+        { "toSource", String_Type, 0, Number_toString },
+        { NULL }
+    };
     ProtoFunDef booleanProtos[] = 
     {
         { "toString", String_Type, 0, Boolean_toString },
@@ -1679,15 +1734,16 @@ void Context::initBuiltins()
     // pull up them bootstraps 
     (*mGlobal)->mPrototype = Object_Type->mPrototype;
 
-    initClass(Type_Type,        Object_Type,  &builtInClasses[1], NULL );
-    initClass(Function_Type,    Object_Type,  &builtInClasses[2], new PrototypeFunctions(&functionProtos[0]) );
-    initClass(Number_Type,      Object_Type,  &builtInClasses[3], new PrototypeFunctions(&numberProtos[0]) );
-    initClass(String_Type,      Object_Type,  &builtInClasses[4], getStringProtos() );
-    initClass(Array_Type,       Object_Type,  &builtInClasses[5], getArrayProtos() );
-    initClass(Boolean_Type,     Object_Type,  &builtInClasses[6], new PrototypeFunctions(&booleanProtos[0]) );
-    initClass(Void_Type,        Object_Type,  &builtInClasses[7], NULL);
-    initClass(Unit_Type,        Object_Type,  &builtInClasses[8], NULL);
-    initClass(Attribute_Type,   Object_Type,  &builtInClasses[9], NULL);
+    initClass(Type_Type,        Object_Type,  &builtInClasses[1],  NULL );
+    initClass(Function_Type,    Object_Type,  &builtInClasses[2],  new PrototypeFunctions(&functionProtos[0]) );
+    initClass(Number_Type,      Object_Type,  &builtInClasses[3],  new PrototypeFunctions(&numberProtos[0]) );
+    initClass(Integer_Type,     Object_Type,  &builtInClasses[4],  new PrototypeFunctions(&integerProtos[0]) );
+    initClass(String_Type,      Object_Type,  &builtInClasses[5],  getStringProtos() );
+    initClass(Array_Type,       Object_Type,  &builtInClasses[6],  getArrayProtos() );
+    initClass(Boolean_Type,     Object_Type,  &builtInClasses[7],  new PrototypeFunctions(&booleanProtos[0]) );
+    initClass(Void_Type,        Object_Type,  &builtInClasses[8],  NULL);
+    initClass(Unit_Type,        Object_Type,  &builtInClasses[9],  NULL);
+    initClass(Attribute_Type,   Object_Type,  &builtInClasses[10], NULL);
 }
 
 void Context::initAttributeValue(char *name, uint32 trueFlags, uint32 falseFlags)
@@ -1758,12 +1814,10 @@ Context::Context(JSObject **global, World &world, Arena &a, Pragma::Flags flags)
     JSFunction *x = new JSFunction(this, ExtendAttribute_Invoke, Attribute_Type);
     getGlobalObject()->defineVariable(this, widenCString("extend"), (NamespaceList *)(NULL), Attribute_Type, JSValue(x));
 
-
     NullAttribute = Attribute_Type->newInstance(this);
     NullAttribute->setProperty(this, widenCString("trueFlags"), (NamespaceList *)(NULL), kPositiveZero);
     NullAttribute->setProperty(this, widenCString("falseFlags"), (NamespaceList *)(NULL), kPositiveZero);
     NullAttribute->setProperty(this, widenCString("names"), (NamespaceList *)(NULL), JSValue(Array_Type->newInstance(this)));
-
 
 }
 
@@ -1790,7 +1844,7 @@ void Context::reportError(Exception::Kind, char *message, size_t pos)
 // to dispatch to whatever routine invoked this error reporter
 void Context::reportError(Exception::Kind kind, char *message)
 {
-    reportError(kind, message, mCurModule->getPositionForPC(mPC - mCurModule->mCodeBase));
+    reportError(kind, message, mCurModule->getPositionForPC(toUInt32(mPC - mCurModule->mCodeBase)));
 }
 
 
@@ -1835,7 +1889,7 @@ Formatter& operator<<(Formatter& f, const JSValue& value)
 void JSType::printSlotsNStuff(Formatter& f) const
 {
     f << "var. count = " << mVariableCount << "\n";
-    f << "method count = " << (uint32)(mMethods.size()) << "\n";
+    f << "method count = " << toUInt32(mMethods.size()) << "\n";
     uint32 index = 0;
     for (MethodList::const_iterator i = mMethods.begin(), end = mMethods.end(); (i != end); i++) {
         f << "[#" << index++ << "]";

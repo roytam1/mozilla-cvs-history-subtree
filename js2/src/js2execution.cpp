@@ -233,6 +233,7 @@ bool Context::executeOperator(Operator op, JSType *t1, JSType *t2)
     }
 }
 
+/*
 JSFunction *Context::getOperator(Operator which, JSType *t1, JSType *t2)
 {
     for (OperatorList::iterator oi = mOperatorTable[which].begin(),
@@ -244,6 +245,7 @@ JSFunction *Context::getOperator(Operator which, JSType *t1, JSType *t2)
     NOT_REACHED("operator gone missing");
     return NULL;
 }
+*/
 
 // Invokes either the native or bytecode implementation. Causes another interpreter loop
 // to begin execution, and does nothing to clean up the incoming arguments (which need
@@ -304,7 +306,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
         try {
             if (mDebugFlag) {
                 printFormat(stdOut, "                                  %d        ", stackSize());
-                printInstruction(stdOut, (pc - mCurModule->mCodeBase), *mCurModule);
+                printInstruction(stdOut, toUInt32(pc - mCurModule->mCodeBase), *mCurModule);
             }
             switch ((ByteCodeOp)(*pc++)) {
             case PopOp:
@@ -325,6 +327,24 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     pushValue(v1);
                     pushValue(v2);
                     pushValue(v1);
+                }
+                break;
+            case DupNOp:
+                {
+                    JSValue v = topValue();
+                    uint16 count = *((uint16 *)pc);
+                    pc += sizeof(uint16);
+                    while (count--)
+                        pushValue(v);
+                }
+                break;
+            // <object> {xN} <object2> --> <object2> <object> {xN} <object2>
+            case DupInsertNOp:
+                {
+                    JSValue v2 = topValue();
+                    uint16 count = *((uint16 *)pc);
+                    pc += sizeof(uint16);
+                    insertValue(v2, mStackTop - (count + 1));
                 }
                 break;
             case SwapOp:   // XXX something more efficient than pop/push?
@@ -1199,11 +1219,11 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                 {
                     Activation *curAct = (mActivationStack.size() > 0) ? mActivationStack.top() : NULL;
                     uint32 handler = *((uint32 *)pc);
-                    if (handler != (uint32)(-1))
+                    if (handler != toUInt32(-1))
                         mTryStack.push(new HandlerData(pc + handler, stackSize(), curAct));
                     pc += sizeof(uint32);
                     handler = *((uint32 *)pc);
-                    if (handler != (uint32)(-1))
+                    if (handler != toUInt32(-1))
                         mTryStack.push(new HandlerData(pc + handler, stackSize(), curAct));
                     pc += sizeof(uint32);
                 }
@@ -1263,25 +1283,25 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     a1.object->getProperty(this, widenCString("trueFlags"), NULL);
                     JSValue f = popValue();
                     ASSERT(f.isNumber());
-                    uint32 a1TrueFlags = (uint32)(f.f64);
+                    uint32 a1TrueFlags = toUInt32(f.f64);
 
                     a1.object->getProperty(this, widenCString("falseFlags"), NULL);
                     f = popValue();
                     ASSERT(f.isNumber());
-                    uint32 a1FalseFlags = (uint32)(f.f64);
+                    uint32 a1FalseFlags = toUInt32(f.f64);
 
                     a2.object->getProperty(this, widenCString("trueFlags"), NULL);
                     f = popValue();
                     ASSERT(f.isNumber());
-                    uint32 a2TrueFlags = (uint32)(f.f64);
+                    uint32 a2TrueFlags = toUInt32(f.f64);
 
                     a2.object->getProperty(this, widenCString("falseFlags"), NULL);
                     f = popValue();
                     ASSERT(f.isNumber());
-                    uint32 a2FalseFlags = (uint32)(f.f64);
+                    uint32 a2FalseFlags = toUInt32(f.f64);
 
                     if ((a1TrueFlags & a2FalseFlags) != 0)
-                        reportError(Exception::semanticError, "Mismatched attributes");
+                        reportError(Exception::semanticError, "Mismatched attributes"); // XXX could supply more detail
                     if ((a1FalseFlags & a2TrueFlags) != 0)
                         reportError(Exception::semanticError, "Mismatched attributes");
 
@@ -1295,17 +1315,37 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     
                     JSValue xNames = Array_concat(this, a1names, &a1names, 1);
                     
-
+                    // Now build the result attribute and set it's values
                     JSInstance *x = Attribute_Type->newInstance(this);
                     x->setProperty(this, widenCString("trueFlags"), (NamespaceList *)(NULL), JSValue((float64)(a1TrueFlags | a2TrueFlags)));
                     x->setProperty(this, widenCString("falseFlags"), (NamespaceList *)(NULL), JSValue((float64)(a1FalseFlags | a2FalseFlags)));
                     x->setProperty(this, widenCString("names"), (NamespaceList *)(NULL), xNames);
+                    
+                    PropertyIterator it;
+                    if (a1.object->hasProperty(widenCString("extendArg"), (NamespaceList *)(NULL), Read, &it)) {
+                        JSValue v = a1.object->getPropertyValue(it);
+                        x->setProperty(this, widenCString("extendArg"), (NamespaceList *)(NULL), v);
+                    }
+                    else {
+                        if (a2.object->hasProperty(widenCString("extendArg"), (NamespaceList *)(NULL), Read, &it)) {
+                            JSValue v = a1.object->getPropertyValue(it);
+                            x->setProperty(this, widenCString("extendArg"), (NamespaceList *)(NULL), v);
+                        }
+                    }
 
                     pushValue(JSValue(x));
-
                 }
                 break;
+            case CastOp:
+                {
+                    JSValue t = popValue();
+                    ASSERT(t.isType());
+                    JSType *toType = t.type;
+                    JSValue v = popValue();
 
+                    pushValue(mapValueToType(v, toType));
+                }
+                break;
 
             default:
                 reportError(Exception::internalError, "Bad Opcode");
@@ -1321,12 +1361,16 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
 
 static JSValue numberPlus(Context *, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
-    return JSValue(argv[0].f64 + argv[1].f64);
+    JSValue &r1 = argv[0];
+    JSValue &r2 = argv[1];
+    return JSValue(r1.f64 + r2.f64);
 }
 
-static JSValue numberMinus(Context *, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue integerPlus(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
-    return JSValue(argv[0].f64 - argv[1].f64);
+    JSValue &r1 = argv[0];
+    JSValue &r2 = argv[1];
+    return JSValue(r1.f64 + r2.f64);
 }
 
 static JSValue objectPlus(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
@@ -1371,6 +1415,22 @@ static JSValue objectPlus(Context *cx, const JSValue& /*thisValue*/, JSValue *ar
     }
 }
 
+
+
+static JSValue integerMinus(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+{
+    JSValue &r1 = argv[0];
+    JSValue &r2 = argv[1];
+    return JSValue(r1.f64 - r2.f64);
+}
+
+static JSValue numberMinus(Context *, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+{
+    JSValue &r1 = argv[0];
+    JSValue &r2 = argv[1];
+    return JSValue(r1.f64 - r2.f64);
+}
+
 static JSValue objectMinus(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
@@ -1378,11 +1438,33 @@ static JSValue objectMinus(Context *cx, const JSValue& /*thisValue*/, JSValue *a
     return JSValue(r1.toNumber(cx).f64 - r2.toNumber(cx).f64);
 }
 
+
+
+static JSValue integerMultiply(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+{
+    JSValue &r1 = argv[0];
+    JSValue &r2 = argv[1];
+    return JSValue(r1.f64 * r2.f64);
+}
+
 static JSValue objectMultiply(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
-    return JSValue(r1.toNumber(cx).f64 * r2.toNumber(cx).f64);
+    return JSValue(r1.f64 * r2.f64);
+}
+
+
+
+static JSValue integerDivide(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+{
+    JSValue &r1 = argv[0];
+    JSValue &r2 = argv[1];
+    float64 d = r1.f64 / r2.f64;
+    bool neg = (d < 0);
+    d = fd::floor(neg ? -d : d);
+    d = neg ? -d : d;
+    return JSValue(d);
 }
 
 static JSValue objectDivide(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
@@ -1390,6 +1472,19 @@ static JSValue objectDivide(Context *cx, const JSValue& /*thisValue*/, JSValue *
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
     return JSValue(r1.toNumber(cx).f64 / r2.toNumber(cx).f64);
+}
+
+
+
+static JSValue integerRemainder(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+{
+    JSValue &r1 = argv[0];
+    JSValue &r2 = argv[1];
+    float64 d = fd::fmod(r1.f64, r2.f64);
+    bool neg = (d < 0);
+    d = fd::floor(neg ? -d : d);
+    d = neg ? -d : d;
+    return JSValue(d);
 }
 
 static JSValue objectRemainder(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
@@ -1401,25 +1496,59 @@ static JSValue objectRemainder(Context *cx, const JSValue& /*thisValue*/, JSValu
 
 
 
+static JSValue integerShiftLeft(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+{
+    JSValue &r1 = argv[0];
+    JSValue &r2 = argv[1];
+    return JSValue((float64)( (int32)(r1.f64) << ( toUInt32(r2.f64) & 0x1F)) );
+}
+
 static JSValue objectShiftLeft(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
-    return JSValue((float64)( (int32)(r1.toInt32(cx).f64) << ( (uint32)(r2.toUInt32(cx).f64) & 0x1F)) );
+    return JSValue((float64)( (int32)(r1.toInt32(cx).f64) << ( toUInt32(r2.toUInt32(cx).f64) & 0x1F)) );
+}
+
+
+
+static JSValue integerShiftRight(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+{
+    JSValue &r1 = argv[0];
+    JSValue &r2 = argv[1];
+    return JSValue((float64) ( (int32)(r1.f64) >> ( toUInt32(r2.f64) & 0x1F)) );
 }
 
 static JSValue objectShiftRight(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
-    return JSValue((float64) ( (int32)(r1.toInt32(cx).f64) >> ( (uint32)(r2.toUInt32(cx).f64) & 0x1F)) );
+    return JSValue((float64) ( (int32)(r1.toInt32(cx).f64) >> ( toUInt32(r2.toUInt32(cx).f64) & 0x1F)) );
+}
+
+
+
+static JSValue integerUShiftRight(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+{
+    JSValue &r1 = argv[0];
+    JSValue &r2 = argv[1];
+    return JSValue((float64) ( (uint32)(r1.f64) >> ( toUInt32(r2.f64) & 0x1F)) );
 }
 
 static JSValue objectUShiftRight(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
-    return JSValue((float64) ( (uint32)(r1.toUInt32(cx).f64) >> ( (uint32)(r2.toUInt32(cx).f64) & 0x1F)) );
+    return JSValue((float64) ( (uint32)(r1.toUInt32(cx).f64) >> ( toUInt32(r2.toUInt32(cx).f64) & 0x1F)) );
+}
+
+
+
+static JSValue integerBitAnd(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+{
+    JSValue &r1 = argv[0];
+    JSValue &r2 = argv[1];
+    return JSValue((float64)( (int32)(r1.f64) & (int32)(r2.f64) ));
 }
 
 static JSValue objectBitAnd(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
@@ -1429,11 +1558,29 @@ static JSValue objectBitAnd(Context *cx, const JSValue& /*thisValue*/, JSValue *
     return JSValue((float64)( (int32)(r1.toInt32(cx).f64) & (int32)(r2.toInt32(cx).f64) ));
 }
 
+
+
+static JSValue integerBitXor(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+{
+    JSValue &r1 = argv[0];
+    JSValue &r2 = argv[1];
+    return JSValue((float64)( (int32)(r1.f64) ^ (int32)(r2.f64) ));
+}
+
 static JSValue objectBitXor(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
     return JSValue((float64)( (int32)(r1.toInt32(cx).f64) ^ (int32)(r2.toInt32(cx).f64) ));
+}
+
+
+
+static JSValue integerBitOr(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+{
+    JSValue &r1 = argv[0];
+    JSValue &r2 = argv[1];
+    return JSValue((float64)( (int32)(r1.f64) | (int32)(r2.f64) ));
 }
 
 static JSValue objectBitOr(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
@@ -1442,6 +1589,8 @@ static JSValue objectBitOr(Context *cx, const JSValue& /*thisValue*/, JSValue *a
     JSValue &r2 = argv[1];
     return JSValue((float64)( (int32)(r1.toInt32(cx).f64) | (int32)(r2.toInt32(cx).f64) ));
 }
+
+
 
 //
 // implements r1 < r2, returning true or false or undefined
@@ -1556,19 +1705,37 @@ void Context::initOperators()
     } OpTable[] = {
         { Plus,  Object_Type, Object_Type, objectPlus,  Object_Type },
         { Plus,  Number_Type, Number_Type, numberPlus,  Number_Type },
+        { Plus,  Integer_Type, Integer_Type, integerPlus,  Integer_Type },
 
         { Minus, Object_Type, Object_Type, objectMinus, Number_Type },
         { Minus, Number_Type, Number_Type, numberMinus, Number_Type },
+        { Minus,  Integer_Type, Integer_Type, integerPlus,  Integer_Type },
 
+        { ShiftLeft, Integer_Type, Integer_Type, integerShiftLeft, Integer_Type },
         { ShiftLeft, Object_Type, Object_Type, objectShiftLeft, Number_Type },
+
+        { ShiftRight, Integer_Type, Integer_Type, integerShiftRight, Integer_Type },
         { ShiftRight, Object_Type, Object_Type, objectShiftRight, Number_Type },
+
+        { UShiftRight, Integer_Type, Integer_Type, integerUShiftRight, Integer_Type },
         { UShiftRight, Object_Type, Object_Type, objectUShiftRight, Number_Type },
+        
+        { BitAnd, Integer_Type, Integer_Type, integerBitAnd, Integer_Type },
         { BitAnd, Object_Type, Object_Type, objectBitAnd, Number_Type },
+        
+        { BitXor, Integer_Type, Integer_Type, integerBitXor, Integer_Type },
         { BitXor, Object_Type, Object_Type, objectBitXor, Number_Type },
+
+        { BitOr, Integer_Type, Integer_Type, integerBitOr, Integer_Type },
         { BitOr, Object_Type, Object_Type, objectBitOr, Number_Type },
 
+        { Multiply, Integer_Type, Integer_Type, integerMultiply, Integer_Type },
         { Multiply, Object_Type, Object_Type, objectMultiply, Number_Type },
+        
+        { Divide, Integer_Type, Integer_Type, integerDivide, Integer_Type },
         { Divide, Object_Type, Object_Type, objectDivide, Number_Type },
+
+        { Remainder, Integer_Type, Integer_Type, integerRemainder, Integer_Type },
         { Remainder, Object_Type, Object_Type, objectRemainder, Number_Type },
 
         { Less, Object_Type, Object_Type, objectLess, Boolean_Type },
@@ -1993,6 +2160,44 @@ JSValue JSValue::valueToBoolean(Context *cx, const JSValue& value)
     }
     throw new Exception(Exception::runtimeError, "toBoolean");    // XXX
 }
+
+
+// See if 'v' can be represented as a 't' - works for
+// the built-ins by falling back to the ECMA3 behaviour
+JSValue Context::mapValueToType(JSValue v, JSType *t)
+{
+    // user conversions?
+    
+    if (t == Number_Type) {
+        return v.toNumber(this);
+    }
+    else
+    if (t == Integer_Type) {
+        float64 d = v.toNumber(this).f64;
+        bool neg = (d < 0);
+        d = fd::floor(neg ? -d : d);
+        d = neg ? -d : d;
+        return JSValue(d);
+    }
+    else
+    if (t == String_Type) {
+        return v.toString(this);
+    }
+    else
+    if (t == Boolean_Type) {
+        return v.toBoolean(this);
+    }
+
+    if (v.isUndefined())
+        return v;
+
+    if (v.getType()->derivesFrom(t))
+        return v;
+
+    reportError(Exception::typeError, "Invalid type cast");
+    return kUndefinedValue;
+}
+
 
     
 }
