@@ -1007,22 +1007,6 @@ NET_StreamClass * SU_NewStream (int format_out, void * registration,
     return NULL;
 }
 
-
-/*
- *---------------------------------------------------------------------------
- * From ns/modules/libpref/src/prefapi.c
- *---------------------------------------------------------------------------
- */
-
-/* This is more recent than the below 3 routines which should be obsoleted */
-PR_IMPLEMENT(JSBool)
-PREF_EvaluateConfigScript(const char * js_buffer, size_t length,
-                          const char* filename, XP_Bool bGlobalContext, XP_Bool bCallbacks)
-{
-    MOZ_FUNCTION_STUB;
-    return JS_FALSE;
-}
-
-
+char **fe_encoding_extensions = NULL;
 
 }; /* end of extern "C" */

@@ -24,9 +24,7 @@
  */
 
 /* #define USE_JS_STUBS */
-/* #define USE_PREF_STUBS */
 #include "depend.h"
-
 
 #include "nspr.h"
 #include "net.h"
@@ -232,117 +230,6 @@ PC_RegisterDataInterpretFunc(char *module, PCDataInterpretFunc *func)
     MOZ_FUNCTION_STUB;
     return -1;
 }
-
-
-
-#if defined(USE_PREF_STUBS)
-/*
- *---------------------------------------------------------------------------
- * From ns/modules/libpref/src/prefapi.c
- *---------------------------------------------------------------------------
- */
-
-PR_IMPLEMENT(int)
-PREF_GetIntPref(const char *pref_name,int32 * return_int)
-{
-    MOZ_FUNCTION_STUB;
-    return PREF_ERROR;
-}
-
-
-PR_IMPLEMENT(int)
-PREF_GetBoolPref(const char *pref_name, XP_Bool * return_value)
-{
-    MOZ_FUNCTION_STUB;
-    return PREF_ERROR;
-}
-
-
-PR_IMPLEMENT(int)
-PREF_GetCharPref(const char *pref_name, char * return_buffer, int * length)
-{
-    MOZ_FUNCTION_STUB;
-    return PREF_ERROR;
-}
-
-
-PR_IMPLEMENT(int)
-PREF_SetIntPref(const char *pref_name, int32 value)
-{
-    MOZ_FUNCTION_STUB;
-    return PREF_NOT_INITIALIZED;
-}
-
-
-/* Adds a node to the beginning of the callback list. */
-PR_IMPLEMENT(void)
-PREF_RegisterCallback(const char *pref_node,
-                      PrefChangedFunc callback,
-                      void * instance_data)
-{
-    MOZ_FUNCTION_STUB;
-}
-
-
-PR_IMPLEMENT(int)
-PREF_GetConfigInt(const char *obj_name, int32 *return_int)
-{
-    MOZ_FUNCTION_STUB;
-    return PREF_ERROR;
-}
-
-
-PR_IMPLEMENT(int)
-PREF_GetConfigContext(JSContext **js_context)
-{
-    MOZ_FUNCTION_STUB;
-    return FALSE;
-}
-
-
-/*
- * Administration Kit support 
- */
-PR_IMPLEMENT(int)
-PREF_CopyConfigString(const char *obj_name, char **return_buffer)
-{
-    MOZ_FUNCTION_STUB;
-    return PREF_ERROR;
-}
-
-
-PR_IMPLEMENT(int)
-PREF_CopyCharPref(const char *pref_name, char ** return_buffer)
-{
-    MOZ_FUNCTION_STUB;
-    return PREF_ERROR;
-}
-
-
-PR_IMPLEMENT(int)
-PREF_GetGlobalConfigObject(JSObject **js_object)
-{
-    MOZ_FUNCTION_STUB;
-    return FALSE;
-}
-
-
-PR_IMPLEMENT(char *)
-PREF_AboutConfig()
-{
-    MOZ_FUNCTION_STUB;
-    return NULL;
-}
-
-
-PR_IMPLEMENT(int)
-PREF_EvaluateJSBuffer(const char * js_buffer, size_t length)
-{
-    MOZ_FUNCTION_STUB;
-    return 0; /* really a JSBool */
-}
-
-#endif /* USE_PREF_STUBS */
 
 /*
  *---------------------------------------------------------------------------

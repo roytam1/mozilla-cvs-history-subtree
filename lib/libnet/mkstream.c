@@ -118,7 +118,7 @@ net_compare_mime_types(char * absolute, char * partial)
    return(0); /* no match */
 }
 
-PUBLIC XP_Bool
+PUBLIC PRBool
 NET_HaveConverterForMimeType(char *content_type)
 {
     net_ConverterStruct * cs_ptr;
