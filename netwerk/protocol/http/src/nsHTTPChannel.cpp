@@ -246,6 +246,7 @@ nsHTTPChannel::Cancel(nsresult status)
 {
     nsresult rv;
 
+    printf(">>>> nsHTTPChannel::Cancel [this=%x]\n", this);
     LOG(("nsHTTPChannel::Cancel [this=%x status=%x]\n", this, status));
 
     //
@@ -1116,6 +1117,25 @@ nsHTTPChannel::CheckCache()
         return NS_OK;
     }
 
+    // If the cached content-length is set and it does not match the data size
+    // of the cached content, then refetch.
+    //
+    // XXX this logic may be horked by decoders inserted in the listener chain.
+    PRInt32 contentLength;
+    rv = mCachedResponse->GetContentLength(&contentLength);
+    if (NS_SUCCEEDED(rv)) {
+        PRUint32 size;
+        rv = mCacheEntry->GetDataSize(&size);
+        if (NS_FAILED(rv)) return rv;
+
+        LOG(("Content-length=%d, CacheEntryDataSize=%u\n", contentLength, size));
+
+        if (size != contentLength) {
+            NS_WARNING("Cached data size does not match the Content-Length header");
+            return NS_OK; // must re-fetch
+        }
+    }
+
     // If validation is inhibited, we'll just use whatever data is in
     // the cache, regardless of whether or not it has expired.
     if (mLoadAttributes & nsIChannel::VALIDATE_NEVER) {
@@ -1148,6 +1168,7 @@ nsHTTPChannel::CheckCache()
     // If the FORCE_VALIDATION flag is set, any cached data won't be used until
     // it's revalidated with the server.
     if (mLoadAttributes & nsIChannel::FORCE_VALIDATION) {
+        LOG(("honoring nsIChannel::FORCE_VALIDATION\n"));
         doIfModifiedSince = PR_TRUE;
         goto end;
     }
@@ -1171,6 +1192,7 @@ nsHTTPChannel::CheckCache()
         if ((haystack.Find("*", PR_TRUE) != kNotFound) || 
             (haystack.Find("accept-charset", PR_TRUE) != kNotFound) ||
             (haystack.Find("accept-language", PR_TRUE) != kNotFound)) {
+            LOG(("Need to validate content based on Vary header\n"));
             doIfModifiedSince = PR_TRUE;
             goto end;
         }
@@ -1190,6 +1212,8 @@ nsHTTPChannel::CheckCache()
 
         sessionStartTime = PRTimeToSeconds(mHandler->GetSessionStartTime());
         firstAccessThisSession = (sessionStartTime > lastWritten);
+
+        LOG(("firstAccessThisSession = %u\n", firstAccessThisSession));
 
         // Check to see if we can use the cache data without revalidating 
         // it with the server.
@@ -2290,6 +2314,7 @@ nsresult nsHTTPChannel::ResponseCompleted(nsIStreamListener *aListener,
 {
     nsresult rv = NS_OK;
 
+    printf(">>>> nsHTTPChannel::ResponseCompleted [this=%x]\n", this);
     LOG(("nsHTTPChannel::ResponseComplete() [this=%x] "
          "mDataListenet=%x, Status=%o\n",
          this, (void*)mResponseDataListener, aStatus));
