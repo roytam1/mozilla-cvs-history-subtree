@@ -61,13 +61,7 @@ interface nsIOutlinerView : nsISupports
   boolean isContainer(in long index);
   boolean isContainerOpen(in long index);
   boolean isContainerEmpty(in long index);
-  
-  // These APIS are used by the outliner to paint vertical connecting lines
-  // using the -moz-outliner-line pseudoelement.
-  long getParentIndex(in long index);
-  boolean hasNextSibling(in long index);
-  boolean hasPreviousSibling(in long index);
-
+ 
   // The level is an integer value that represents
   // the level of indentation.  It is multiplied by the width specified in the 
   // :moz-outliner-indentation pseudoelement to compute the exact indendation.
