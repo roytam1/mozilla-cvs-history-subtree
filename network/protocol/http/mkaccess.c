@@ -1329,11 +1329,12 @@ NET_SetCookieBehaviorPref(NET_CookieBehaviorEnum x)
 	net_CookieBehavior = x;
 
 	HG83330
-	if(net_CookieBehavior == NET_DontUse)
+	if(net_CookieBehavior == NET_DontUse) {
 		XP_FileRemove("", xpHTTPCookie);
 #if defined(CookieManagement)
-            XP_FileRemove("", xpHTTPCookiePermission);
+		XP_FileRemove("", xpHTTPCookiePermission);
 #endif
+	}
 }
 
 PRIVATE void
