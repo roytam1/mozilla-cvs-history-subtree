@@ -124,7 +124,7 @@ public:
      * The result into the destination String.
      * @return the given dest string
     **/
-    static String& Double::toString(double value, String& dest);
+    static String& toString(double value, String& dest);
 
 
 private:
@@ -158,7 +158,7 @@ public:
     /**
      * Creates a new Integer based on the value of the given String
     **/
-    Integer::Integer(const String& str);
+    Integer(const String& str);
 
     /**
      * Returns the int value of this Integer
