@@ -748,7 +748,7 @@ np_destroystream(np_stream *stream, NPError reason)
             nsPluginStreamPeer* peerStream = (nsPluginStreamPeer*)stream->pstream->pdata;
             nsIPluginStream* userStream = peerStream->GetUserStream();
             peerStream->SetReason((nsPluginReason)reason);
-            userStream->Release();      // must be released before peer
+            userStream->Close();
             peerStream->Release();
         }
         else if (ISFUNCPTR(stream->handle->f->destroystream)) {
