@@ -255,9 +255,11 @@ nsUConvModule::RegisterSelf(nsIComponentManager *aCompMgr,
   Components* cp = gComponents;
   Components* end = cp + NUM_COMPONENTS;
   while (cp < end) {
-    rv = aCompMgr->RegisterComponentSpec(cp->info.mCID, cp->info.mDescription,
-                                         cp->info.mContractID, aPath, PR_TRUE,
-                                         PR_TRUE);
+    rv = aCompMgr->RegisterComponentWithType(cp->info.mCID, 
+                                             cp->info.mDescription,
+                                             cp->info.mContractID, aPath, 
+                                             registryLocation, PR_TRUE,
+                                             PR_TRUE, componentType);
     if (NS_FAILED(rv)) {
 #ifdef DEBUG
       printf("nsUConvModule: unable to register %s component => %x\n",
@@ -343,8 +345,8 @@ static nsUConvModule *gModule = NULL;
 
 extern "C" NS_EXPORT 
 nsresult NSGETMODULE_ENTRY_POINT(nsUConvModule)(nsIComponentManager *servMgr,
-                             nsIFile* aPath,
-                             nsIModule** return_cobj)
+                                                nsIFile* aPath,
+                                                nsIModule** return_cobj)
 {
   nsresult rv = NS_OK;
 

@@ -255,9 +255,10 @@ nsLocaleModule::RegisterSelf(nsIComponentManager *aCompMgr,
   Components* cp = gComponents;
   Components* end = cp + NUM_COMPONENTS;
   while (cp < end) {
-    rv = aCompMgr->RegisterComponentSpec(*cp->mCID, cp->mDescription,
-                                         cp->mContractID, aPath, PR_TRUE,
-                                         PR_TRUE);
+    rv = aCompMgr->RegisterComponentWithType(*cp->mCID, cp->mDescription,
+                                             cp->mContractID, aPath, 
+                                             registryLocation, PR_TRUE,
+                                             PR_TRUE, componentType);
     if (NS_FAILED(rv)) {
 #ifdef DEBUG
       printf("nsLocaleModule: unable to register %s component => %x\n",
@@ -311,8 +312,8 @@ static nsLocaleModule *gModule = NULL;
 
 extern "C" NS_EXPORT 
 nsresult NSGETMODULE_ENTRY_POINT(nsLocaleModule)(nsIComponentManager *servMgr,
-                                          nsIFile* location,
-                                          nsIModule** return_cobj)
+                                                 nsIFile* location,
+                                                 nsIModule** return_cobj)
 {
   nsresult rv = NS_OK;
 
