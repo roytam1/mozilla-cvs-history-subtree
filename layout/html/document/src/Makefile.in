@@ -40,6 +40,8 @@ REQUIRES	= xpcom \
 		  js \
 		  webshell \
 		  docshell \
+		  editor \
+		  composer \
 		  caps \
 		  pref \
 		  uriloader \

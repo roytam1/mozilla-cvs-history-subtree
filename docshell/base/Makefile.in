@@ -51,6 +51,8 @@ REQUIRES	= xpcom \
 		  chardet \
 		  uconv \
 		  appcomps \
+		  editor \
+		  composer \
 		  xuldoc \
 		  find \
 		  nkcache \
