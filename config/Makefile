@@ -105,7 +105,7 @@ endif
 ## we can turn on the file selection hack which only works with motif
 ## (not lesstif)
 ##
-ifeq ($(shell $(DEPTH)/config/xmversion.sh --is-lesstif),True)
+ifneq ($(shell $(DEPTH)/config/xmversion.sh -t),True)
 	@echo "MOZ_XFE_USE_WINNING_FILE_SELECTION = 1" >> $@
 endif
 
