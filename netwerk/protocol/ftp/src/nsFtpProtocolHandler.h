@@ -27,7 +27,6 @@
 #include "nsIProtocolHandler.h"
 #include "nsHashtable.h"
 #include "nsIConnectionCache.h"
-#include "nsConnectionCacheObj.h"
 #include "nsIThreadPool.h"
 #include "nsIObserverService.h"
 #include "nsIProtocolProxyService.h"
@@ -44,7 +43,6 @@ class nsFtpProtocolHandler : public nsIProtocolHandler,
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIPROTOCOLHANDLER
-    NS_DECL_NSICONNECTIONCACHE
     NS_DECL_NSIOBSERVER
     
     // nsFtpProtocolHandler methods:
@@ -54,9 +52,13 @@ public:
     // Define a Create method to be used with a factory:
     static NS_METHOD Create(nsISupports* aOuter, const nsIID& aIID, void* *aResult);
     nsresult Init();
+
+    // FTP Connection list access
+    static nsresult InsertConnection(nsIURI *aKey, nsISupports *aConn);
+    static nsresult RemoveConnection(nsIURI *aKey, nsISupports **_retval);
+    static nsSupportsHashtable* mRootConnectionList;
     
 protected:
-    nsSupportsHashtable*                mRootConnectionList;  // hash of FTP connections
     nsCOMPtr<nsIProtocolProxyService>   mProxySvc;
 };
 

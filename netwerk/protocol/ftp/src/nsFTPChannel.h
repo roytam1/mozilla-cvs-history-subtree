@@ -66,11 +66,8 @@ public:
     static NS_METHOD
     Create(nsISupports* aOuter, const nsIID& aIID, void* *aResult);
     
-    // initializes the channel. creates the FTP connection thread
-    // and returns it so the protocol handler can cache it and
-    // join() it on shutdown.
-    nsresult Init(nsIURI* uri, 
-                  nsIProtocolHandler* aHandler);
+    // initializes the channel. 
+    nsresult Init(nsIURI* uri);
     
     nsresult SetProxyChannel(nsIChannel *aChannel);
     
@@ -94,8 +91,7 @@ protected:
     nsCOMPtr<nsIStreamListener>     mListener;
     nsCOMPtr<nsIStreamObserver>     mObserver;
 
-    nsCOMPtr<nsIProtocolHandler>    mHandler;
-    nsFtpConnectionThread*          mConnThread;   
+    nsFtpState*                     mFTPState;   
     PRUint32                        mBufferSegmentSize;
     PRUint32                        mBufferMaxSize;
     nsCOMPtr<nsIChannel>            mProxyChannel; // a proxy channel

@@ -20,8 +20,8 @@
  * Contributor(s): 
  */
 
-#ifndef __nsftpconnectionthread__h_
-#define __nsftpconnectionthread__h_
+#ifndef __nsFtpState__h_
+#define __nsFtpState__h_
 
 #include "nsIThread.h"
 #include "nsIRunnable.h"
@@ -33,7 +33,6 @@
 #include "nsString.h"
 #include "nsIFTPChannel.h"
 #include "nsIConnectionCache.h"
-#include "nsConnectionCacheObj.h"
 #include "nsIProtocolHandler.h"
 #include "nsCOMPtr.h"
 #include "nsXPIDLString.h"
@@ -42,6 +41,8 @@
 #include "nsAutoLock.h"
 #include "nsIEventQueueService.h"
 #include "nsIPrompt.h"
+
+#include "nsFtpControlConnection.h"
 
 // ftp server types
 #define FTP_GENERIC_TYPE     0
@@ -84,7 +85,7 @@ typedef enum _FTP_STATE {
 // higher level ftp actions
 typedef enum _FTP_ACTION { GET, PUT, MKDIR, DEL} FTP_ACTION;
 
-class nsFtpConnectionThread : public nsIStreamListener,
+class nsFtpState : public nsIStreamListener,
                               public nsIRequest {
 public:
     NS_DECL_ISUPPORTS
@@ -92,11 +93,10 @@ public:
     NS_DECL_NSISTREAMOBSERVER
     NS_DECL_NSIREQUEST
 
-    nsFtpConnectionThread();
-    virtual ~nsFtpConnectionThread();
+    nsFtpState();
+    virtual ~nsFtpState();
 
-    nsresult Init(nsIProtocolHandler    *aHandler,
-                  nsIFTPChannel         *aChannel,
+    nsresult Init(nsIFTPChannel         *aChannel,
                   nsIPrompt             *aPrompter,
                   PRUint32              bufferSegmentSize,
                   PRUint32              bufferMaxSize);
@@ -163,8 +163,9 @@ private:
     nsCAutoString       mResponseMsg;       // the last command response text
 
         // ****** channel/transport/stream vars 
-    nsCOMPtr<nsIChannel>         mCPipe;            // the command channel transport
-    nsCOMPtr<nsIChannel>         mDPipe;            // the data channel transport
+    nsFtpControlConnection*         mControlConnection;// cacheable control connection (owns mCPipe)
+    nsCOMPtr<nsIChannel>            mCPipe;            // the control channel transport
+    nsCOMPtr<nsIChannel>            mDPipe;            // the data channel transport
 
         // ****** consumer vars
     nsCOMPtr<nsIStreamListener>     mListener;        // the consumer of our read events
@@ -178,9 +179,6 @@ private:
     PRBool              mList;          // Use LIST instead of NLST
     nsCAutoString       mCwd;           // Our current working dir.
     nsCAutoString       mCwdAttempt;    // The dir we're trying to get into.
-    nsCAutoString       mCacheKey;      // the key into the cache hash.
-    PRBool              mCachedConn;    // is this connection from the cache
-    nsCOMPtr<nsIConnectionCache> mConnCache;// the nsISupports proxy ptr to our connection cache
 
         // ****** protocol interpretation related state vars
     nsAutoString        mUsername;      // username
@@ -221,4 +219,4 @@ private:
 #define NS_FTP_BUFFER_READ_SIZE             (8*1024)
 #define NS_FTP_BUFFER_WRITE_SIZE            (8*1024)
 
-#endif //__nsftpconnectionthread__h_
+#endif //__nsFtpState__h_

@@ -70,6 +70,7 @@ static NS_DEFINE_CID(kProtocolProxyServiceCID, NS_PROTOCOLPROXYSERVICE_CID);
 static NS_DEFINE_CID(kHTTPHandlerCID, NS_IHTTPHANDLER_CID);
 static NS_DEFINE_CID(kErrorServiceCID, NS_ERRORSERVICE_CID);
 
+nsSupportsHashtable* nsFtpProtocolHandler::mRootConnectionList = nsnull;
 ////////////////////////////////////////////////////////////////////////////////
 nsFtpProtocolHandler::nsFtpProtocolHandler() {
         NS_INIT_REFCNT();
@@ -79,9 +80,8 @@ nsFtpProtocolHandler::~nsFtpProtocolHandler() {
     PR_LOG(gFTPLog, PR_LOG_ALWAYS, ("~nsFtpProtocolHandler() called"));
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS3(nsFtpProtocolHandler, 
+NS_IMPL_THREADSAFE_ISUPPORTS2(nsFtpProtocolHandler, 
                               nsIProtocolHandler, 
-                              nsIConnectionCache, 
                               nsIObserver);
 
 nsresult
@@ -161,16 +161,10 @@ nsFtpProtocolHandler::NewChannel(nsIURI* url, nsIChannel* *result)
     PRBool useProxy = PR_FALSE;
 
     nsFTPChannel* channel = nsnull;
-    rv = RemoveConn(url, (nsIFTPChannel**)&channel);
+    rv = nsFTPChannel::Create(nsnull, NS_GET_IID(nsIChannel), (void**)&channel);
+    if (NS_FAILED(rv)) return rv;
     
-    /* check to see if we have a channel that can be reused */
-    if (NS_FAILED(rv) || !channel)
-    {
-        rv = nsFTPChannel::Create(nsnull, NS_GET_IID(nsIChannel), (void**)&channel);
-        if (NS_FAILED(rv)) return rv;
-    }
-
-    rv = channel->Init(url, this);
+    rv = channel->Init(url);
     if (NS_FAILED(rv)) {
         PR_LOG(gFTPLog, PR_LOG_DEBUG, ("nsFtpProtocolHandler::NewChannel() FAILED\n"));
         return rv;
@@ -239,11 +233,12 @@ nsFtpProtocolHandler::NewChannel(nsIURI* url, nsIChannel* *result)
     return rv;
 }
 
-// nsIConnectionCache methods
-NS_IMETHODIMP
-nsFtpProtocolHandler::RemoveConn(nsIURI *aKey, nsIFTPChannel* *_retval) {
+// connection cache methods
+nsresult
+nsFtpProtocolHandler::RemoveConnection(nsIURI *aKey, nsISupports* *_retval) {
     NS_ASSERTION(_retval, "null pointer");
     NS_ASSERTION(aKey, "null pointer");
+    NS_ASSERTION(mRootConnectionList, "null pointer");
     
     *_retval = nsnull;
 
@@ -252,23 +247,31 @@ nsFtpProtocolHandler::RemoveConn(nsIURI *aKey, nsIFTPChannel* *_retval) {
     
     nsCStringKey stringKey(spec);
     
-    nsISupports* supports;
-    if (mRootConnectionList->Remove(&stringKey, ((nsISupports**)&supports)))
-        NS_ADDREF(*_retval = (nsIFTPChannel*) supports);
-    
-    return NS_OK;
+    // Do not have to addRef since there is only one connection (with this key)
+    // in this hash table at any time and that one has been addRef'ed
+    // by the Put().  If we change connection caching, we will have 
+    // to re-address this.
+    if (mRootConnectionList)
+        mRootConnectionList->Remove(&stringKey, (nsISupports**)_retval);
+
+    if (*_retval)
+        return NS_OK;
+
+    return NS_ERROR_FAILURE;
 }
 
-NS_IMETHODIMP
-nsFtpProtocolHandler::InsertConn(nsIURI *aKey, nsIFTPChannel *aConn) {
+nsresult
+nsFtpProtocolHandler::InsertConnection(nsIURI *aKey, nsISupports *aConn) {
     NS_ASSERTION(aConn, "null pointer");
     NS_ASSERTION(aKey, "null pointer");
+    NS_ASSERTION(mRootConnectionList, "null pointer");
 
     nsXPIDLCString spec;
     aKey->GetPrePath(getter_Copies(spec));
     nsCStringKey stringKey(spec);
-
-    mRootConnectionList->Put(&stringKey, aConn);
+    
+    if (mRootConnectionList)
+        mRootConnectionList->Put(&stringKey, aConn);
     return NS_OK;
 }
 

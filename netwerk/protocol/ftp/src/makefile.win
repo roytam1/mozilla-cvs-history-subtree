@@ -33,6 +33,7 @@ CPP_OBJS =                                        \
         .\$(OBJDIR)\nsFtpProtocolHandler.obj      \
         .\$(OBJDIR)\nsFTPChannel.obj              \
         .\$(OBJDIR)\nsFtpConnectionThread.obj	  \
+        .\$(OBJDIR)\nsFtpControlConnection.obj	  \
         $(NULL)
 
 include <$(DEPTH)\config\rules.mak> 
