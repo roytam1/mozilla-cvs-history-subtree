@@ -1,4 +1,4 @@
-# 
+#
 # The contents of this file are subject to the Mozilla Public
 # License Version 1.1 (the "License"); you may not use this file
 # except in compliance with the License. You may obtain a copy of
@@ -30,29 +30,15 @@
 # may use your version of this file under either the MPL or the
 # GPL.
 #
-CONFIG_CVS_ID = "@(#) $RCSfile$ $Revision$ $Date$ $Name$"
-
-#
-#  Override TARGETS variable so that only shared libraries
-#  are specifed as dependencies within rules.mk.
+# Config stuff for SunOS5.10
 #
 
-TARGETS        = $(SHARED_LIBRARY)
-LIBRARY        =
-IMPORT_LIBRARY =
-PROGRAM        =
+SOL_CFLAGS += -D_SVID_GETTOD
 
-ifeq (,$(filter-out OS2 WINNT,$(OS_ARCH)))
-	SHARED_LIBRARY = $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION).dll
+include $(CORE_DEPTH)/coreconf/SunOS5.mk
+
+ifeq ($(OS_RELEASE),5.10)
+	OS_DEFINES += -DSOLARIS2_10
 endif
 
-ifdef BUILD_IDG
-DEFINES += -DNSSDEBUG
-endif
-
-#
-# To create a loadable module on Darwin, we must use -bundle.
-#
-ifeq ($(OS_ARCH),Darwin)
-DSO_LDOPTS := $(subst -dynamiclib,-bundle,$(DSO_LDOPTS))
-endif
+OS_LIBS += -lthread -lnsl -lsocket -lposix4 -ldl -lc 
