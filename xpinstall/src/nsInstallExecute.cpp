@@ -26,6 +26,9 @@
 
 
 #include "prmem.h"
+
+#include "nsFileSpec.h"
+
 #include "VerReg.h"
 #include "nsInstallExecute.h"
 #include "nsInstallResources.h"

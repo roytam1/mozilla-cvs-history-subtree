@@ -14,7 +14,7 @@
  *
  * The Original Code is mozilla.org code.
  *
- * The Initial Developer of the Original Code is
+ * The Initial Developer of the Original Code is 
  * Netscape Communications Corporation.
  * Portions created by the Initial Developer are Copyright (C) 1998
  * the Initial Developer. All Rights Reserved.
@@ -22,7 +22,7 @@
  * Contributor(s):
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * either the GNU General Public License Version 2 or later (the "GPL"), or 
  * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
@@ -44,7 +44,7 @@
 
 MOZ_DECL_CTOR_COUNTER(nsWinProfileItem)
 
-nsWinProfileItem::nsWinProfileItem(nsWinProfile* profileObj,
+nsWinProfileItem::nsWinProfileItem(nsWinProfile* profileObj, 
                                    nsString sectionName,
                                    nsString keyName,
                                    nsString val,
@@ -78,17 +78,17 @@ nsWinProfileItem::~nsWinProfileItem()
 
 PRInt32 nsWinProfileItem::Complete()
 {
-    if (mProfile)
+	if (mProfile) 
         mProfile->FinalWriteString(*mSection, *mKey, *mValue);
-
+	
     return NS_OK;
 }
-
+  
 char* nsWinProfileItem::toString()
 {
   char*     resultCString;
-
-  nsString* filename = new nsString(mProfile->GetFilename());
+  
+  nsString* filename = new nsString(*mProfile->GetFilename());
   nsString* result = new nsString;
   result->Assign(NS_LITERAL_STRING("Write "));
 
@@ -106,7 +106,7 @@ char* nsWinProfileItem::toString()
   resultCString = new char[result->Length() + 1];
   if(resultCString != nsnull)
       result->ToCString(resultCString, result->Length() + 1);
-
+  
   if (result)   delete result;
   if (filename) delete filename;
 
@@ -119,15 +119,15 @@ void nsWinProfileItem::Abort()
 
 PRInt32 nsWinProfileItem::Prepare()
 {
-    return nsnull;
+	return nsnull;
 }
 
 
 /* CanUninstall
 * WinProfileItem() does not install any files which can be uninstalled,
-* hence this function returns false.
+* hence this function returns false. 
 */
-PRBool
+PRBool 
 nsWinProfileItem::CanUninstall()
 {
     return PR_FALSE;

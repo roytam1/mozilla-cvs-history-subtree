@@ -35,73 +35,10 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsWinRegItem_h__
-#define nsWinRegItem_h__
-
-#include "prtypes.h"
-
-#include "nsSoftwareUpdate.h"
-#include "nsInstallObject.h"
-#include "nsWinReg.h"
+#include "nsWinRegValue.h"
 
 PR_BEGIN_EXTERN_C
 
-class nsWinRegItem : public nsInstallObject {
-
-public:
-
-  /* Public Fields */
-
-  /* Public Methods */
-  nsWinRegItem(nsWinReg*        regObj,
-               PRInt32          root,
-               PRInt32          action,
-               const nsAString&  sub,
-               const nsAString&  valname,
-               const nsAString&  val,
-               PRInt32*         aReturn);
-  
-  nsWinRegItem(nsWinReg*        regObj,
-               PRInt32          root,
-               PRInt32          action,
-               const nsAString&  sub,
-               const nsAString&  valname,
-               PRInt32          val,
-               PRInt32*         aReturn);
-  
-  virtual ~nsWinRegItem();
-
-  PRInt32 Prepare(void);
-
-  PRInt32 Complete();
-  
-  char* toString();
-  
-  void Abort();
-  
-/* should these be protected? */
-  PRBool CanUninstall();
-  PRBool RegisterPackageNode();
-	  
-private:
-  
-  /* Private Fields */
-  
-  nsWinReg* mReg;        // initiating WinReg object
-  PRInt32   mRootkey;
-  PRInt32   mCommand;
-  nsString* mSubkey;     // Name of section
-  nsString* mName;       // Name of key
-  void*     mValue;      // data to write
-  
-  /* Private Methods */
-
-  nsString* keystr(PRInt32 root, nsString* subkey, nsString* name);
-
-  char* itoa(PRInt32 n);
-  void reverseString(char* s);
-};
 
 PR_END_EXTERN_C
 
-#endif /* nsWinRegItem_h__ */

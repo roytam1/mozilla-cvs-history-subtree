@@ -14,7 +14,7 @@
  *
  * The Original Code is mozilla.org code.
  *
- * The Initial Developer of the Original Code is
+ * The Initial Developer of the Original Code is 
  * Netscape Communications Corporation.
  * Portions created by the Initial Developer are Copyright (C) 1998
  * the Initial Developer. All Rights Reserved.
@@ -22,7 +22,7 @@
  * Contributor(s):
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * either the GNU General Public License Version 2 or later (the "GPL"), or 
  * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
@@ -114,7 +114,7 @@ InstallFileOpDirCreate(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
   }
 
   folder = (nsInstallFolder*)JS_GetPrivate(cx, jsObj);
-
+  
   if(!folder || NS_OK != nativeThis->FileOpDirCreate(*folder, &nativeRet))
   {
     return JS_TRUE;
@@ -173,14 +173,14 @@ InstallFileOpDirGetParent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     JSObject *fileSpecObject;
 
     fileSpecObject = JS_NewObject(cx, &FileSpecObjectClass, gFileSpecProto, NULL);
-    if (fileSpecObject)
-    {
-      JS_SetPrivate(cx, fileSpecObject, parentFolder);
-      if (fileSpecObject)
-      {
-        *rval = OBJECT_TO_JSVAL(fileSpecObject);
-      }
-    }
+    if (fileSpecObject == NULL)
+      return JS_FALSE;
+
+    JS_SetPrivate(cx, fileSpecObject, parentFolder);
+    if (fileSpecObject == NULL)
+      return JS_FALSE;
+
+    *rval = OBJECT_TO_JSVAL(fileSpecObject);
   }
 
   return JS_TRUE;
@@ -273,7 +273,7 @@ InstallFileOpDirRename(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
 //      This is a bug with nsFileSpec.  A char* will be used until
 //      nsFileSpec if fixed.
 //    nsFileSpec fsB1(b1);
-
+    
     if (argv[0] == JSVAL_NULL || !JSVAL_IS_OBJECT(argv[0])) //argv[0] MUST be a jsval
     {
       *rval = INT_TO_JSVAL(nsInstall::INVALID_ARGUMENTS);
@@ -540,7 +540,7 @@ InstallFileOpFileExecute(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, 
   saveDepth = JS_SuspendRequest(cx);//Need to suspend use of thread or deadlock occurs
   nsresult rv = nativeThis->FileOpFileExecute(*folder, b1, blocking, &nativeRet);
   JS_ResumeRequest(cx, saveDepth);
-  if(NS_FAILED(rv))
+  if(NS_FAILED(rv)) 
      return JS_TRUE;
 
   *rval = INT_TO_JSVAL(nativeRet);
@@ -637,7 +637,7 @@ InstallFileOpFileGetDiskSpaceAvailable(JSContext *cx, JSObject *obj, uintN argc,
   {
     return JS_TRUE;
   }
-
+  
   double d;
   LL_L2D(d, nativeRet);
   JS_NewDoubleValue( cx, d, rval );
@@ -733,12 +733,12 @@ InstallFileOpFileGetSize(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, 
   {
     return JS_TRUE;
   }
-
+   
   PRFloat64 f; /* jsdouble's *are* PRFloat64's */
-
+  
   LL_L2F( f, nativeRet ); /* make float which is same type for js and nspr (native double) */
   JS_NewDoubleValue( cx, f, rval );
-
+  
   return JS_TRUE;
 }
 
@@ -1163,15 +1163,15 @@ InstallFileOpFileWindowsShortcut(JSContext *cx, JSObject *obj, uintN argc, jsval
 
 
     ConvertJSValToStr(b0, cx, argv[0]);
-    NS_NewUnicodeLocalFile(b0.get(), PR_TRUE, getter_AddRefs(nsfsB0));
+    NS_NewLocalFile(NS_LossyConvertUCS2toASCII(b0).get(), PR_TRUE, getter_AddRefs(nsfsB0));
     ConvertJSValToStr(b1, cx, argv[1]);
-    NS_NewUnicodeLocalFile(b1.get(), PR_TRUE, getter_AddRefs(nsfsB1));
+    NS_NewLocalFile(NS_LossyConvertUCS2toASCII(b1).get(), PR_TRUE, getter_AddRefs(nsfsB1));
     ConvertJSValToStr(b2, cx, argv[2]);
     ConvertJSValToStr(b3, cx, argv[3]);
-    NS_NewUnicodeLocalFile(b3.get(), PR_TRUE, getter_AddRefs(nsfsB3));
+    NS_NewLocalFile(NS_LossyConvertUCS2toASCII(b3).get(), PR_TRUE, getter_AddRefs(nsfsB3));
     ConvertJSValToStr(b4, cx, argv[4]);
     ConvertJSValToStr(b5, cx, argv[5]);
-    NS_NewUnicodeLocalFile(b5.get(), PR_TRUE, getter_AddRefs(nsfsB5));
+    NS_NewLocalFile(NS_LossyConvertUCS2toASCII(b5).get(), PR_TRUE, getter_AddRefs(nsfsB5));
 
     if(JSVAL_IS_NULL(argv[6]))
     {
@@ -1210,7 +1210,7 @@ InstallFileOpFileMacAlias(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
   JSObject         *jsoSourceFolder, *jsoAliasFolder;
   nsInstallFolder  *nsifSourceFolder, *nsifAliasFolder;
   nsresult         rv1 = NS_OK, rv2 = NS_OK;
-
+  
   *rval = JSVAL_NULL;
 
   // If there's no private data, this must be the prototype, so ignore
@@ -1229,12 +1229,12 @@ InstallFileOpFileMacAlias(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     //      aSourceName   -- the installed file's name
     //      aAliasFolder  -- the folder of the new alias from Get*Folder() APIs
     //
-    // NOTE:
-    //      The destination alias name is aSourceName + " alias" (Mac-like behavior).
-    //
+    // NOTE: 
+    //      The destination alias name is aSourceName + " alias" (Mac-like behavior). 
+    //      
     //      returns SUCCESS for successful scheduling of operation
     //              UNEXPECTED_ERROR for failure
-
+    
     if (argv[0] == JSVAL_NULL || !JSVAL_IS_OBJECT(argv[0]) ||  // InstallFolder aSourceFolder
         argv[2] == JSVAL_NULL || !JSVAL_IS_OBJECT(argv[2]))    // InstallFolder aAliasFolder
     {
@@ -1260,7 +1260,7 @@ InstallFileOpFileMacAlias(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     }
 
     // make copies of the InstallFolders leaving originals uncontaminated
-    nsCOMPtr<nsIFile> iFileSourceOrig = nsifSourceFolder->GetFileSpec();
+    nsCOMPtr<nsIFile> iFileSourceOrig = nsifSourceFolder->GetFileSpec(); 
     nsCOMPtr<nsIFile> iFileAliasOrig  = nsifAliasFolder->GetFileSpec();
     nsCOMPtr<nsIFile> iFileSource;
     nsCOMPtr<nsIFile> iFileAlias;
@@ -1271,10 +1271,10 @@ InstallFileOpFileMacAlias(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
         *rval = INT_TO_JSVAL(nsInstall::UNEXPECTED_ERROR);
         return JS_TRUE;
     }
-
+    
     ConvertJSValToStr(sourceLeaf, cx, argv[1]);
-    rv1 = iFileSource->AppendUnicode(sourceLeaf.get());
-
+    rv1 = iFileSource->Append(NS_LossyConvertUCS2toASCII(sourceLeaf).get());
+        
     // public int FileMacAlias( InstallFolder aSourceFolder,
     //                          String        aSourceFileName,
     //                          InstallFolder aAliasFolder,
@@ -1284,26 +1284,26 @@ InstallFileOpFileMacAlias(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     //      aSourceName   -- the installed file's name
     //      aAliasFolder  -- the folder of the new alias from Get*Folder() APIs
     //      aAliasName    -- the actual name of the new alias
-    //
+    //      
     //      returns SUCCESS for successful scheduling of operation
     //              UNEXPECTED_ERROR for failure
-
-    if (argc >= 4)
+    
+    if (argc >= 4) 
     {
         ConvertJSValToStr(aliasLeaf, cx, argv[3]);
     }
     else
     {
-        aliasLeaf = sourceLeaf;
+    	aliasLeaf = sourceLeaf;
         aliasLeaf.Append(NS_LITERAL_STRING(" alias"));   // XXX use GetResourcedString(id)
     }
-
-    rv2 = iFileAlias->AppendUnicode(aliasLeaf.get());
-    if (NS_FAILED(rv1) || NS_FAILED(rv2))
-    {
-        *rval = INT_TO_JSVAL(nsInstall::UNEXPECTED_ERROR);
-        return JS_TRUE;
-    }
+    
+    rv2 = iFileAlias->Append(NS_LossyConvertUCS2toASCII(aliasLeaf).get());
+	if (NS_FAILED(rv1) || NS_FAILED(rv2))
+	{
+		*rval = INT_TO_JSVAL(nsInstall::UNEXPECTED_ERROR);
+		return JS_TRUE;
+	}
 
     if(NS_OK != nativeThis->FileOpFileMacAlias(iFileSource, iFileAlias, &nativeRet))
     {
@@ -1417,7 +1417,7 @@ InstallFileOpWinRegisterServer(JSContext *cx, JSObject *obj, uintN argc, jsval *
   }
 
   folder = (nsInstallFolder*)JS_GetPrivate(cx, jsObj);
-
+  
   if(!folder || NS_OK != nativeThis->FileOpWinRegisterServer(*folder, &nativeRet))
   {
     return JS_TRUE;
@@ -1456,7 +1456,7 @@ SetFileProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 // class for FileOp operations
 //
 JSClass FileOpClass = {
-  "File",
+  "File", 
   JSCLASS_HAS_PRIVATE,
   JS_PropertyStub,
   JS_PropertyStub,
@@ -1472,7 +1472,7 @@ JSClass FileOpClass = {
 //
 // File class methods
 //
-static JSFunctionSpec FileOpMethods[] =
+static JSFunctionSpec FileOpMethods[] = 
 {
   {"dirCreate",                 InstallFileOpDirCreate,                1},
   {"dirGetParent",              InstallFileOpDirGetParent,             1},
@@ -1503,7 +1503,7 @@ static JSFunctionSpec FileOpMethods[] =
 
 
 
-PRInt32 InitXPFileOpObjectPrototype(JSContext *jscontext,
+PRInt32 InitXPFileOpObjectPrototype(JSContext *jscontext, 
                                     JSObject *global,
                                     JSObject **fileOpObjectPrototype)
 
@@ -1515,7 +1515,7 @@ PRInt32 InitXPFileOpObjectPrototype(JSContext *jscontext,
 
     *fileOpObjectPrototype  =  JS_InitClass( jscontext,  // context
                                  global,            // global object
-                                 nsnull,            // parent proto
+                                 nsnull,            // parent proto 
                                  &FileOpClass,      // JSClass
                                  nsnull,            // JSNative ctor
                                  0,                 // ctor args
@@ -1524,7 +1524,7 @@ PRInt32 InitXPFileOpObjectPrototype(JSContext *jscontext,
                                  nsnull,            // ctor props (static)
                                  FileOpMethods);    // ctor funcs (static)
 
-  if (nsnull == fileOpObjectPrototype)
+  if (nsnull == fileOpObjectPrototype) 
   {
       return NS_ERROR_FAILURE;
   }

@@ -93,8 +93,8 @@ WinProfileGetString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
 
   if(argc >= 2)                             
   {
-    //  public string getString ( String section,
-    //                            String key);
+    //  public int getString ( String section,
+    //                         String key);
 
     ConvertJSValToStr(b0, cx, argv[0]);
     ConvertJSValToStr(b1, cx, argv[1]);
@@ -105,7 +105,8 @@ WinProfileGetString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
   }
   else
   {
-    JS_ReportWarning(cx, "WinProfile.getString() parameters error");
+    JS_ReportError(cx, "WinProfile.getString() parameters error");
+    return JS_FALSE;
   }
 
   return JS_TRUE;
@@ -123,7 +124,7 @@ WinProfileWriteString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsv
   nsAutoString b1;
   nsAutoString b2;
 
-  *rval = JSVAL_ZERO;
+  *rval = JSVAL_NULL;
 
   // If there's no private data, this must be the prototype, so ignore
   if(nsnull == nativeThis)
@@ -141,14 +142,17 @@ WinProfileWriteString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsv
     ConvertJSValToStr(b1, cx, argv[1]);
     ConvertJSValToStr(b2, cx, argv[2]);
 
-    if(NS_OK == nativeThis->WriteString(b0, b1, b2, &nativeRet))
+    if(NS_OK != nativeThis->WriteString(b0, b1, b2, &nativeRet))
     {
-      *rval = INT_TO_JSVAL(nativeRet);
+      return JS_FALSE;
     }
+
+    *rval = INT_TO_JSVAL(nativeRet);
   }
   else
   {
-    JS_ReportWarning(cx, "WinProfile.writeString() parameters error");
+    JS_ReportError(cx, "WinProfile.writeString() parameters error");
+    return JS_FALSE;
   }
 
   return JS_TRUE;

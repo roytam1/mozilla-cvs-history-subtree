@@ -14,7 +14,7 @@
  *
  * The Original Code is mozilla.org code.
  *
- * The Initial Developer of the Original Code is
+ * The Initial Developer of the Original Code is 
  * Netscape Communications Corporation.
  * Portions created by the Initial Developer are Copyright (C) 1998
  * the Initial Developer. All Rights Reserved.
@@ -22,7 +22,7 @@
  * Contributor(s):
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * either the GNU General Public License Version 2 or later (the "GPL"), or 
  * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
@@ -49,7 +49,7 @@ class nsInstallFileOpItem : public nsInstallObject
 {
   public:
     /* Public Fields */
-    enum
+    enum 
     {
       ACTION_NONE                 = -401,
       ACTION_SUCCESS              = -402,
@@ -114,31 +114,31 @@ class nsInstallFileOpItem : public nsInstallObject
     PRInt32       Complete();
     char*         toString();
     void          Abort();
-
+    
   /* should these be protected? */
     PRBool        CanUninstall();
     PRBool        RegisterPackageNode();
-
+      
   private:
-
+    
     /* Private Fields */
-
+    
     nsInstall*          mIObj;        // initiating Install object
     nsCOMPtr<nsIFile>   mSrc;
     nsCOMPtr<nsIFile>   mTarget;
     nsCOMPtr<nsIFile>   mShortcutPath;
     nsCOMPtr<nsIFile>   mWorkingPath;
     nsCOMPtr<nsIFile>   mIcon;
-    nsString            mDescription;
+    nsString*           mDescription;
     nsString*           mStrTarget;
-    nsString            mParams;
+    nsString*           mParams;
     long                mFStat;
     PRInt32             mFlags;
     PRInt32             mIconId;
     PRInt32             mCommand;
     PRInt32             mAction;
     PRBool              mBlocking;
-
+    
     /* Private Methods */
 
     PRInt32       NativeFileOpDirCreatePrepare();

@@ -57,6 +57,7 @@
 
 #include "nsIRegistry.h"
 #include "nsBuildID.h"
+#include "nsSpecialSystemDirectory.h"
 #include "nsProcess.h"
 
 /* For Javascript Namespace Access */

@@ -14,7 +14,7 @@
  *
  * The Original Code is mozilla.org code.
  *
- * The Initial Developer of the Original Code is
+ * The Initial Developer of the Original Code is 
  * Netscape Communications Corporation.
  * Portions created by the Initial Developer are Copyright (C) 1998
  * the Initial Developer. All Rights Reserved.
@@ -22,7 +22,7 @@
  * Contributor(s):
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * either the GNU General Public License Version 2 or later (the "GPL"), or 
  * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
@@ -35,7 +35,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsWinReg.h"
 #include "nsWinProfile.h"
 #include "nsWinProfileItem.h"
 #include "nspr.h"
@@ -47,22 +46,30 @@
 MOZ_DECL_CTOR_COUNTER(nsWinProfile)
 
 nsWinProfile::nsWinProfile( nsInstall* suObj, const nsString& folder, const nsString& file )
-  : mFilename(folder)
 {
-    MOZ_COUNT_CTOR(nsWinProfile);
+  MOZ_COUNT_CTOR(nsWinProfile);
 
-    if(mFilename.Last() != '\\')
+  mFilename = new nsString(folder);
+    
+  if (mFilename)
+  {
+    if(mFilename->Last() != '\\')
     {
-        mFilename.Append(NS_LITERAL_STRING("\\"));
+        mFilename->Append(NS_LITERAL_STRING("\\"));
     }
-    mFilename.Append(file);
+    mFilename->Append(file);
 
-    mInstallObject = suObj;
+	mInstallObject = suObj;
+  }
 }
 
 nsWinProfile::~nsWinProfile()
 {
+  if (mFilename)
+      delete mFilename;
+
   MOZ_COUNT_DTOR(nsWinProfile);
+
 }
 
 PRInt32
@@ -75,7 +82,7 @@ PRInt32
 nsWinProfile::WriteString(nsString section, nsString key, nsString value, PRInt32* aReturn)
 {
   *aReturn = NS_OK;
-
+  
   nsWinProfileItem* wi = new nsWinProfileItem(this, section, key, value, aReturn);
 
   if(wi == nsnull)
@@ -95,82 +102,82 @@ nsWinProfile::WriteString(nsString section, nsString key, nsString value, PRInt3
 
   if (mInstallObject)
     mInstallObject->ScheduleForInstall(wi);
-
+  
   return NS_OK;
 }
 
-nsString& nsWinProfile::GetFilename()
+nsString* nsWinProfile::GetFilename()
 {
-    return mFilename;
+	return mFilename;
 }
 
 nsInstall* nsWinProfile::InstallObject()
 {
-    return mInstallObject;
+	return mInstallObject;
 }
 
 PRInt32
 nsWinProfile::FinalWriteString( nsString section, nsString key, nsString value )
 {
-    /* do we need another security check here? */
-    return NativeWriteString(section, key, value);
+	/* do we need another security check here? */
+	return NativeWriteString(section, key, value);
 }
 
 /* Private Methods */
 
 #define STRBUFLEN 255
-
+  
 PRInt32
-nsWinProfile::NativeGetString(nsString aSection, nsString aKey, nsString* aReturn )
+nsWinProfile::NativeGetString(nsString section, nsString key, nsString* aReturn )
 {
-  int       numChars = 0;
+  int       numChars;
   char      valbuf[STRBUFLEN];
+  char*     sectionCString;
+  char*     keyCString;
+  char*     filenameCString;
 
   /* make sure conversions worked */
-  if(aSection.First() != '\0' && aKey.First() != '\0' && mFilename.First() != '\0')
+  if(section.First() != '\0' && key.First() != '\0' && mFilename->First() != '\0')
   {
-    nsXPIDLCString section;
-    nsXPIDLCString key;
-    nsXPIDLCString filename;
+    sectionCString  = ToNewCString(section);
+    keyCString      = ToNewCString(key);
+    filenameCString = ToNewCString(*mFilename);
 
-    if (NS_FAILED(UCS2toFS( aSection.get(), getter_Copies(section) )) ||
-        NS_FAILED(UCS2toFS( aKey.get(), getter_Copies(key) )) ||
-        NS_FAILED(UCS2toFS( mFilename.get(), getter_Copies(filename) )) )
-      return 0;
+    numChars        = GetPrivateProfileString(sectionCString, keyCString, "", valbuf, STRBUFLEN, filenameCString);
 
-    valbuf[0] = 0;
-    numChars = GetPrivateProfileString( section.get(), key.get(), "", valbuf,
-                                        STRBUFLEN, filename.get());
+    aReturn->AssignWithConversion(valbuf);
 
-    nsXPIDLString value;
-    if (NS_SUCCEEDED(FStoUCS2( valbuf, getter_Copies(value) )))
-        aReturn->Assign(value);
-
+    if (sectionCString)   Recycle(sectionCString);
+    if (keyCString)       Recycle(keyCString);
+    if (filenameCString)  Recycle(filenameCString);
   }
 
   return numChars;
 }
 
 PRInt32
-nsWinProfile::NativeWriteString( nsString aSection, nsString aKey, nsString aValue )
+nsWinProfile::NativeWriteString( nsString section, nsString key, nsString value )
 {
+  char* sectionCString;
+  char* keyCString;
+  char* valueCString;
+  char* filenameCString;
   int   success = 0;
 
-  /* make sure conversions worked */
-  if(aSection.First() != '\0' && aKey.First() != '\0' && mFilename.First() != '\0')
+	/* make sure conversions worked */
+  if(section.First() != '\0' && key.First() != '\0' && mFilename->First() != '\0')
   {
-    nsXPIDLCString section;
-    nsXPIDLCString key;
-    nsXPIDLCString value;
-    nsXPIDLCString filename;
+    sectionCString  = ToNewCString(section);
+    keyCString      = ToNewCString(key);
+    valueCString    = ToNewCString(value);
+    filenameCString = ToNewCString(*mFilename);
 
-    if (NS_FAILED(UCS2toFS( aSection.get(), getter_Copies(section) )) ||
-        NS_FAILED(UCS2toFS( aKey.get(), getter_Copies(key) )) ||
-        NS_FAILED(UCS2toFS( aValue.get(), getter_Copies(value) )) ||
-        NS_FAILED(UCS2toFS( mFilename.get(), getter_Copies(filename) )) )
-      return 0;
+    success = WritePrivateProfileString( sectionCString, keyCString, valueCString, filenameCString );
 
-    success = WritePrivateProfileString( section.get(), key.get(), value.get(), filename.get() );
+    if (sectionCString)   Recycle(sectionCString);
+    if (keyCString)       Recycle(keyCString);
+    if (valueCString)     Recycle(valueCString);
+    if (filenameCString)  Recycle(filenameCString);
   }
 
   return success;

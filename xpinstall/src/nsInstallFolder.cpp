@@ -10,15 +10,15 @@
  * implied. See the License for the specific language governing
  * rights and limitations under the License.
  *
- * The Original Code is Mozilla Communicator client code,
- * released March 31, 1998.
+ * The Original Code is Mozilla Communicator client code, 
+ * released March 31, 1998. 
  *
- * The Initial Developer of the Original Code is Netscape Communications
+ * The Initial Developer of the Original Code is Netscape Communications 
  * Corporation.  Portions created by Netscape are
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s):
+ * Contributor(s): 
  *     Daniel Veditz <dveditz@netscape.com>
  *     Douglas Turner <dougt@netscape.com>
  */
@@ -37,69 +37,53 @@
 #include "nsIFile.h"
 #include "nsILocalFile.h"
 #include "nsDirectoryService.h"
+#include "nsSpecialSystemDirectory.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsAppDirectoryServiceDefs.h"
 
-#ifdef XP_WIN
-#include <winbase.h>
-#include <winreg.h>
-
-extern nsresult UCS2toFS(const PRUnichar *aBuffer, char **aResult);
-#endif
 
 struct DirectoryTable
 {
-    const char * directoryName;     /* The formal directory name */
-    PRInt32 folderEnum;             /* Directory ID */
+	const char * directoryName;		/* The formal directory name */
+	PRInt32 folderEnum;		        /* Directory ID */
 };
 
-struct DirectoryTable DirectoryTable[] =
+struct DirectoryTable DirectoryTable[] = 
 {
-    {"Plugins",             PLUGIN_DIR           },
-    {"Program",             PROGRAM_DIR          },
-    {"Communicator",        PROGRAM_DIR          }, // "Communicator" is deprecated
+    {"Plugins",             100 },
+	{"Program",             101 },
+	{"Communicator",        101 }, // "Communicator" is deprecated
 
-    {"Temporary",           TEMP_DIR             },
-    {"OS Home",             OS_HOME_DIR          },
-    {"Profile",             PROFILE_DIR          },
-    {"Current User",        PROFILE_DIR          }, // "Current User" is deprecated
-    {"Preferences",         PREFERENCES_DIR      },
-    {"OS Drive",            OS_DRIVE             },
-    {"file:///",            FILE_TARGET          },
+	{"Temporary",           104 },
 
-    {"Components",          COMPONENTS_DIR       },
-    {"Chrome",              CHROME_DIR           },
+	{"Profile",             106 },
+	{"Current User",        106 }, // "Current User" is deprecated
+	{"Preferences",         107 },
+	{"OS Drive",            108 },
+	{"file:///",            109 },
 
-    {"Win System",          WIN_SYS_DIR          },
-    {"Windows",             WINDOWS_DIR          },
-    {"Win Desktop",         WIN_DESKTOP_DIR      },
-    {"Win Desktop Common",  WIN_DESKTOP_COMMON   },
-    {"Win StartMenu",       WIN_STARTMENU        },
-    {"Win StartMenu Common",WIN_STARTMENU_COMMON },
-    {"Win Programs",        WIN_PROGRAMS_DIR     },
-    {"Win Programs Common", WIN_PROGRAMS_COMMON  },
-    {"Win Startup",         WIN_STARTUP_DIR      },
-    {"Win Startup Common",  WIN_STARTUP_COMMON   },
-    {"Win AppData",         WIN_APPDATA_DIR      },
-    {"Win Program Files",   WIN_PROGRAM_FILES    },
-    {"Win Common Files",    WIN_COMMON_FILES     },
+    {"Components",          110 },
+    {"Chrome",              111 },
 
-    {"Mac System",          MAC_SYSTEM           },
-    {"Mac Desktop",         MAC_DESKTOP          },
-    {"Mac Trash",           MAC_TRASH            },
-    {"Mac Startup",         MAC_STARTUP          },
-    {"Mac Shutdown",        MAC_SHUTDOWN         },
-    {"Mac Apple Menu",      MAC_APPLE_MENU       },
-    {"Mac Control Panel",   MAC_CONTROL_PANEL    },
-    {"Mac Extension",       MAC_EXTENSION        },
-    {"Mac Fonts",           MAC_FONTS            },
-    {"Mac Preferences",     MAC_PREFERENCES      },
-    {"Mac Documents",       MAC_DOCUMENTS        },
+	{"Win System",          200 },
+	{"Windows",             201 },
 
-    {"Unix Local",          UNIX_LOCAL           },
-    {"Unix Lib",            UNIX_LIB             },
+	{"Mac System",          300 },
+	{"Mac Desktop",         301 },
+	{"Mac Trash",           302 },
+	{"Mac Startup",         303 },
+	{"Mac Shutdown",        304 },
+	{"Mac Apple Menu",      305 },
+	{"Mac Control Panel",   306 },
+	{"Mac Extension",       307 },
+	{"Mac Fonts",           308 },
+	{"Mac Preferences",     309 },
+    {"Mac Documents",       310 },
 
-    {"",                    -1  }
+	{"Unix Local",          400 },
+	{"Unix Lib",            401 },
+
+	{"",                    -1  }
 };
 
 
@@ -111,13 +95,9 @@ nsInstallFolder::nsInstallFolder()
 }
 
 nsresult
-nsInstallFolder::Init(nsIFile* rawIFile, const nsString& aRelativePath)
+nsInstallFolder::Init(nsIFile* rawIFile)
 {
     mFileSpec = rawIFile;
-
-    if (!aRelativePath.IsEmpty())
-        AppendXPPath(aRelativePath);
-
     return NS_OK;
 }
 
@@ -139,7 +119,7 @@ nsInstallFolder::Init(nsInstallFolder& inFolder, const nsString& subString)
         return NS_ERROR_NULL_POINTER;
 
     inFolder.mFileSpec->Clone(getter_AddRefs(mFileSpec));
-
+    
     if (!mFileSpec)
         return NS_ERROR_FAILURE;
 
@@ -155,12 +135,12 @@ nsInstallFolder::~nsInstallFolder()
    MOZ_COUNT_DTOR(nsInstallFolder);
 }
 
-void
+void 
 nsInstallFolder::GetDirectoryPath(nsCString& aDirectoryPath)
 {
   PRBool flagIsDir;
   nsXPIDLCString  thePath;
-
+  
   aDirectoryPath.SetLength(0);
 
     if (mFileSpec != nsnull)
@@ -185,17 +165,16 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
 
     // reset mFileSpec in case of error
     mFileSpec = nsnull;
-
-    nsCOMPtr<nsIProperties> directoryService(do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID));
-    if (!directoryService)
-        return;
-
-    PRInt32 dirID = MapNameToEnum(aFolderID);
-    switch ( dirID )
+    
+    switch ( MapNameToEnum(aFolderID) ) 
     {
-        case PLUGIN_DIR:
+        case 100: ///////////////////////////////////////////////////////////  Plugins
             if (!nsSoftwareUpdate::GetProgramDirectory())
             {
+                nsCOMPtr<nsIProperties> directoryService = 
+                         do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
+                if (!directoryService) return;
+
                 directoryService->Get(NS_APP_PLUGINS_DIR, NS_GET_IID(nsIFile), getter_AddRefs(mFileSpec));
             }
             else
@@ -203,66 +182,77 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
                 rv = nsSoftwareUpdate::GetProgramDirectory()->Clone(getter_AddRefs(mFileSpec));
 
                 if (NS_SUCCEEDED(rv))
+                {
                     mFileSpec->Append(INSTALL_PLUGINS_DIR);
+                }
                 else
                     mFileSpec = nsnull;
             }
-            break;
+            break; 
 
-        case PROGRAM_DIR:
+
+        case 101: ///////////////////////////////////////////////////////////  Program
             if (!nsSoftwareUpdate::GetProgramDirectory())  //Not in stub installer
             {
+                nsCOMPtr<nsIProperties> directoryService = 
+                         do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
+                if (!directoryService) return;
                 directoryService->Get(NS_OS_CURRENT_PROCESS_DIR, NS_GET_IID(nsIFile), getter_AddRefs(mFileSpec));
             }
-            else //In stub installer.  mProgram has been set so
+            else //In stub installer.  mProgram has been set so 
             {
                 rv = nsSoftwareUpdate::GetProgramDirectory()->Clone(getter_AddRefs(mFileSpec));
             }
             break;
 
-        case TEMP_DIR:
+        
+        case 104: ///////////////////////////////////////////////////////////  Temporary
+          {
+            nsCOMPtr<nsIProperties> directoryService = 
+                     do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
+            if (!directoryService) return;
             directoryService->Get(NS_OS_TEMP_DIR, NS_GET_IID(nsIFile), getter_AddRefs(mFileSpec));
+          }
+          break;
+
+
+        case 106: ///////////////////////////////////////////////////////////  Current User
+            {
+                nsCOMPtr<nsIProperties> directoryService = 
+                         do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
+                if (!directoryService) return;
+                directoryService->Get(NS_APP_USER_PROFILE_50_DIR, NS_GET_IID(nsIFile), getter_AddRefs(mFileSpec));
+            }   
+            break;
+            
+        case 107: ///////////////////////////////////////////////////////////  Preferences
+            {
+                nsCOMPtr<nsIProperties> directoryService = 
+                         do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
+                if (!directoryService) return;
+                directoryService->Get(NS_APP_PREFS_50_DIR, NS_GET_IID(nsIFile), getter_AddRefs(mFileSpec));
+            }
             break;
 
-        case OS_HOME_DIR:
-            directoryService->Get(NS_OS_HOME_DIR, NS_GET_IID(nsIFile), getter_AddRefs(mFileSpec));
+        case 108: ///////////////////////////////////////////////////////////  OS Drive
+          {
+              nsCOMPtr<nsIProperties> directoryService = 
+                       do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
+              if (!directoryService) return;
+              directoryService->Get(NS_OS_DRIVE_DIR, NS_GET_IID(nsIFile), getter_AddRefs(mFileSpec));
+          }
             break;
 
-        case PROFILE_DIR:
-            directoryService->Get(NS_APP_USER_PROFILE_50_DIR, NS_GET_IID(nsIFile), getter_AddRefs(mFileSpec));
-            break;
-
-        case PREFERENCES_DIR:
-            directoryService->Get(NS_APP_PREFS_50_DIR, NS_GET_IID(nsIFile), getter_AddRefs(mFileSpec));
-            break;
-
-        case OS_DRIVE:
-            directoryService->Get(NS_OS_DRIVE_DIR, NS_GET_IID(nsIFile), getter_AddRefs(mFileSpec));
-            break;
-
-        case FILE_TARGET:
+        case 109: ///////////////////////////////////////////////////////////  File URL
             {
                 if (!aRelativePath.IsEmpty())
                 {
                     nsFileSpec             tmpSpec;
-                    nsCAutoString          tmpPath("file:///");
+                    nsAutoString           tmpPath(aFolderID);
                     nsCOMPtr<nsILocalFile> localFile;
 
-#ifdef XP_WIN
-                    nsXPIDLCString fsPath;
-                    rv = UCS2toFS(aRelativePath.get(), getter_Copies(fsPath));
-                    if (NS_SUCCEEDED(rv))
-                        tmpPath.Append(fsPath);
-                    else
-                    {
-                        NS_WARNING("nsInstallFolder UCS2toFS conversion failed--using bogus ASCII!");
-                        tmpPath.Append(NS_LossyConvertUCS2toASCII(aRelativePath));
-                    }
-#else
-                    // XXX: Need to fix non-Windows conversions too
-                    tmpPath.Append(NS_LossyConvertUCS2toASCII(aRelativePath));
-#endif
-                    tmpSpec =  nsFileURL(tmpPath.get());
+                    tmpPath += aRelativePath;
+                    tmpSpec =  nsFileURL(tmpPath);
 
                     rv = NS_FileSpecToIFile( &tmpSpec, getter_AddRefs(localFile) );
                     if (NS_SUCCEEDED(rv))
@@ -280,214 +270,219 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
             }
             break;
 
-        case COMPONENTS_DIR:
+        case 110: ///////////////////////////////////////////////////////////  Components
             if (!nsSoftwareUpdate::GetProgramDirectory())
             {
-                directoryService->Get( NS_XPCOM_COMPONENT_DIR,
-                                       NS_GET_IID(nsIFile),
-                                       getter_AddRefs(mFileSpec) );
+                nsCOMPtr<nsIProperties> directoryService = 
+                         do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
+                if (!directoryService) return;
+                directoryService->Get(NS_XPCOM_COMPONENT_DIR, 
+                                       NS_GET_IID(nsIFile), 
+                                       getter_AddRefs(mFileSpec));
             }
             else
             {
                 rv = nsSoftwareUpdate::GetProgramDirectory()->Clone(getter_AddRefs(mFileSpec));
 
                 if (NS_SUCCEEDED(rv))
+                {
                     mFileSpec->Append(INSTALL_COMPONENTS_DIR);
+                }
                 else
-                    mFileSpec = nsnull;
+                  mFileSpec = nsnull;
             }
             break;
-
-        case CHROME_DIR:
+        
+        case 111: ///////////////////////////////////////////////////////////  Chrome
             if (!nsSoftwareUpdate::GetProgramDirectory())
-            {
-                directoryService->Get( NS_APP_CHROME_DIR,
-                                       NS_GET_IID(nsIFile),
-                                       getter_AddRefs(mFileSpec) );
+            { 
+                nsCOMPtr<nsIProperties> directoryService = 
+                         do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
+                if (!directoryService) return;
+                directoryService->Get(NS_APP_CHROME_DIR, 
+                                       NS_GET_IID(nsIFile), 
+                                       getter_AddRefs(mFileSpec));
             }
             else
             {
                 rv = nsSoftwareUpdate::GetProgramDirectory()->Clone(getter_AddRefs(mFileSpec));
 
                 if (NS_SUCCEEDED(rv))
+                {
                     mFileSpec->Append(INSTALL_CHROME_DIR);
+                }
             }
             break;
 
 #if defined(XP_PC) && !defined(XP_OS2)
-        case WIN_SYS_DIR:
-            directoryService->Get( NS_OS_SYSTEM_DIR,
-                                   NS_GET_IID(nsIFile),
-                                   getter_AddRefs(mFileSpec) );
-            break;
+        case 200: ///////////////////////////////////////////////////////////  Win System
+          {  
+              nsCOMPtr<nsIProperties> directoryService = 
+                       do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
+              if (!directoryService) return;
+              directoryService->Get(NS_OS_SYSTEM_DIR, 
+                                     NS_GET_IID(nsIFile), 
+                                     getter_AddRefs(mFileSpec));
 
-        case WINDOWS_DIR:
-            directoryService->Get( NS_WIN_WINDOWS_DIR,
-                                   NS_GET_IID(nsIFile),
-                                   getter_AddRefs(mFileSpec) );
-            break;
+          }
+              break;
 
-        case WIN_DESKTOP_DIR:
-            directoryService->Get( NS_WIN_DESKTOP_DIRECTORY,
-                                   NS_GET_IID(nsIFile),
-                                   getter_AddRefs(mFileSpec) );
-            break;
-
-        case WIN_DESKTOP_COMMON:
-            directoryService->Get( NS_WIN_COMMON_DESKTOP_DIRECTORY,
-                                   NS_GET_IID(nsIFile),
-                                   getter_AddRefs(mFileSpec) );
-            break;
-
-        case WIN_STARTMENU:
-            directoryService->Get( NS_WIN_STARTMENU_DIR,
-                                   NS_GET_IID(nsIFile),
-                                   getter_AddRefs(mFileSpec) );
-            break;
-
-        case WIN_STARTMENU_COMMON:
-            directoryService->Get( NS_WIN_COMMON_STARTMENU_DIR,
-                                   NS_GET_IID(nsIFile),
-                                   getter_AddRefs(mFileSpec) );
-            break;
-
-        case WIN_PROGRAMS_DIR:
-            directoryService->Get( NS_WIN_PROGRAMS_DIR,
-                                   NS_GET_IID(nsIFile),
-                                   getter_AddRefs(mFileSpec) );
-            break;
-
-        case WIN_PROGRAMS_COMMON:
-            directoryService->Get( NS_WIN_COMMON_PROGRAMS_DIR,
-                                   NS_GET_IID(nsIFile),
-                                   getter_AddRefs(mFileSpec) );
-            break;
-
-        case WIN_STARTUP_DIR:
-            directoryService->Get( NS_WIN_STARTUP_DIR,
-                                   NS_GET_IID(nsIFile),
-                                   getter_AddRefs(mFileSpec) );
-            break;
-
-        case WIN_STARTUP_COMMON:
-            directoryService->Get( NS_WIN_COMMON_STARTUP_DIR,
-                                   NS_GET_IID(nsIFile),
-                                   getter_AddRefs(mFileSpec) );
-            break;
-
-        case WIN_APPDATA_DIR:
-            directoryService->Get( NS_WIN_APPDATA_DIR,
-                                   NS_GET_IID(nsIFile),
-                                   getter_AddRefs(mFileSpec) );
-            break;
-
-        case WIN_PROGRAM_FILES:
-        case WIN_COMMON_FILES:
-            {
-                HKEY key;
-                LONG result = RegOpenKeyEx( HKEY_LOCAL_MACHINE,
-                    "SOFTWARE\\Microsoft\\Windows\\CurrentVersion",
-                    0, KEY_QUERY_VALUE, &key );
-
-                if ( result != ERROR_SUCCESS )
-                    break;
-
-                BYTE path[ 2 * _MAX_PATH ] = { 0 };
-                DWORD type;
-                DWORD pathlen = sizeof(path);
-                char *value = (dirID==WIN_PROGRAM_FILES) ?
-                                "ProgramFilesDir" :
-                                "CommonFilesDir";
-                result = RegQueryValueEx( key, value, 0, &type, path, &pathlen );
-                if ( result == ERROR_SUCCESS && type == REG_SZ )
-                {
-                    nsCOMPtr<nsILocalFile> tmp;
-                    NS_NewLocalFile( (char*)path, PR_FALSE, getter_AddRefs(tmp) ); // native path
-                    mFileSpec = do_QueryInterface(tmp);
-                }
-            }
+        case 201: ///////////////////////////////////////////////////////////  Windows
+          {
+               nsCOMPtr<nsIProperties> directoryService = 
+                        do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
+               if (!directoryService) return;
+               directoryService->Get(NS_WIN_WINDOWS_DIR, 
+                                      NS_GET_IID(nsIFile), 
+                                      getter_AddRefs(mFileSpec));
+          }
             break;
 #endif
 
 #ifdef XP_MAC
-        case MAC_SYSTEM:
-            directoryService->Get( NS_OS_SYSTEM_DIR,
-                                   NS_GET_IID(nsIFile),
-                                   getter_AddRefs(mFileSpec) );
+        case 300: ///////////////////////////////////////////////////////////  Mac System
+          {   
+                nsCOMPtr<nsIProperties> directoryService = 
+                         do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
+                if (!directoryService) return;
+                directoryService->Get(NS_OS_SYSTEM_DIR, 
+                                       NS_GET_IID(nsIFile), 
+                                       getter_AddRefs(mFileSpec));
+          }
             break;
 
-        case MAC_DESKTOP:
-            directoryService->Get( NS_MAC_DESKTOP_DIR,
-                                   NS_GET_IID(nsIFile),
-                                   getter_AddRefs(mFileSpec) );
+        case 301: ///////////////////////////////////////////////////////////  Mac Desktop
+          {  
+                nsCOMPtr<nsIProperties> directoryService = 
+                         do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
+                if (!directoryService) return;
+                directoryService->Get(NS_MAC_DESKTOP_DIR, 
+                                       NS_GET_IID(nsIFile), 
+                                       getter_AddRefs(mFileSpec));
+          }
             break;
 
-        case MAC_TRASH:
-            directoryService->Get( NS_MAC_TRASH_DIR,
-                                   NS_GET_IID(nsIFile),
-                                   getter_AddRefs(mFileSpec) );
+        case 302: ///////////////////////////////////////////////////////////  Mac Trash
+          {  
+                nsCOMPtr<nsIProperties> directoryService = 
+                         do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
+                if (!directoryService) return;
+                directoryService->Get(NS_MAC_TRASH_DIR, 
+                                       NS_GET_IID(nsIFile), 
+                                       getter_AddRefs(mFileSpec));
+          }
             break;
 
-        case MAC_STARTUP:
-            directoryService->Get( NS_MAC_STARTUP_DIR,
-                                   NS_GET_IID(nsIFile),
-                                   getter_AddRefs(mFileSpec) );
+        case 303: ///////////////////////////////////////////////////////////  Mac Startup
+          {  
+                nsCOMPtr<nsIProperties> directoryService = 
+                         do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
+                if (!directoryService) return;
+                directoryService->Get(NS_MAC_STARTUP_DIR, 
+                                       NS_GET_IID(nsIFile), 
+                                       getter_AddRefs(mFileSpec));
+          }
             break;
 
-        case MAC_SHUTDOWN:
-            directoryService->Get( NS_MAC_SHUTDOWN_DIR,
-                                   NS_GET_IID(nsIFile),
-                                   getter_AddRefs(mFileSpec) );
+        case 304: ///////////////////////////////////////////////////////////  Mac Shutdown
+          {  
+                nsCOMPtr<nsIProperties> directoryService = 
+                         do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
+                if (!directoryService) return;
+                directoryService->Get(NS_MAC_SHUTDOWN_DIR, 
+                                       NS_GET_IID(nsIFile), 
+                                       getter_AddRefs(mFileSpec));
+          }
             break;
 
-        case MAC_APPLE_MENU:
-            directoryService->Get( NS_MAC_APPLE_MENU_DIR,
-                                   NS_GET_IID(nsIFile),
-                                   getter_AddRefs(mFileSpec) );
+        case 305: ///////////////////////////////////////////////////////////  Mac Apple Menu
+          {  
+                nsCOMPtr<nsIProperties> directoryService = 
+                         do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
+                if (!directoryService) return;
+                directoryService->Get(NS_MAC_APPLE_MENU_DIR, 
+                                       NS_GET_IID(nsIFile), 
+                                       getter_AddRefs(mFileSpec));
+          }
             break;
 
-        case MAC_CONTROL_PANEL:
-            directoryService->Get( NS_MAC_CONTROL_PANELS_DIR,
-                                   NS_GET_IID(nsIFile),
-                                   getter_AddRefs(mFileSpec) );
+        case 306: ///////////////////////////////////////////////////////////  Mac Control Panel
+          {  
+                nsCOMPtr<nsIProperties> directoryService = 
+                         do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
+                if (!directoryService) return;
+                directoryService->Get(NS_MAC_CONTROL_PANELS_DIR, 
+                                       NS_GET_IID(nsIFile), 
+                                       getter_AddRefs(mFileSpec));
+          }
             break;
 
-        case MAC_EXTENSION:
-            directoryService->Get( NS_MAC_EXTENSIONS_DIR,
-                                   NS_GET_IID(nsIFile),
-                                   getter_AddRefs(mFileSpec) );
+        case 307: ///////////////////////////////////////////////////////////  Mac Extension
+          {  
+                nsCOMPtr<nsIProperties> directoryService = 
+                         do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
+                if (!directoryService) return;
+                directoryService->Get(NS_MAC_EXTENSIONS_DIR, 
+                                       NS_GET_IID(nsIFile), 
+                                       getter_AddRefs(mFileSpec));
+          }
             break;
 
-        case MAC_FONTS:
-            directoryService->Get( NS_MAC_FONTS_DIR,
-                                   NS_GET_IID(nsIFile),
-                                   getter_AddRefs(mFileSpec) );
+        case 308: ///////////////////////////////////////////////////////////  Mac Fonts
+          {  
+                nsCOMPtr<nsIProperties> directoryService = 
+                         do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
+                if (!directoryService) return;
+                directoryService->Get(NS_MAC_FONTS_DIR, 
+                                       NS_GET_IID(nsIFile), 
+                                       getter_AddRefs(mFileSpec));
+          }
             break;
 
-        case MAC_PREFERENCES:
-            directoryService->Get( NS_MAC_PREFS_DIR,
-                                   NS_GET_IID(nsIFile),
-                                   getter_AddRefs(mFileSpec) );
+        case 309: ///////////////////////////////////////////////////////////  Mac Preferences
+          {  
+                nsCOMPtr<nsIProperties> directoryService = 
+                         do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
+                if (!directoryService) return;
+                directoryService->Get(NS_MAC_PREFS_DIR, 
+                                       NS_GET_IID(nsIFile), 
+                                       getter_AddRefs(mFileSpec));
+          }
             break;
-
-        case MAC_DOCUMENTS:
-            directoryService->Get( NS_MAC_DOCUMENTS_DIR,
-                                   NS_GET_IID(nsIFile),
-                                   getter_AddRefs(mFileSpec) );
+                
+        case 310: ///////////////////////////////////////////////////////////  Mac Documents
+          {  
+                nsCOMPtr<nsIProperties> directoryService = 
+                         do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
+                if (!directoryService) return;
+                directoryService->Get(NS_MAC_DOCUMENTS_DIR, 
+                                       NS_GET_IID(nsIFile), 
+                                       getter_AddRefs(mFileSpec));
+          }
             break;
 #endif
 
-#ifdef XP_UNIX
-        case UNIX_LOCAL:
-            directoryService->Get( NS_UNIX_LOCAL_DIR,
-                                   NS_GET_IID(nsIFile),
-                                   getter_AddRefs(mFileSpec) );
+#ifdef XP_UNIX                
+        case 400: ///////////////////////////////////////////////////////////  Unix Local
+          {  
+                nsCOMPtr<nsIProperties> directoryService = 
+                         do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
+                if (!directoryService) return;
+                directoryService->Get(NS_UNIX_LOCAL_DIR, 
+                                       NS_GET_IID(nsIFile), 
+                                       getter_AddRefs(mFileSpec));
+          }
             break;
 
-        case UNIX_LIB:
-            directoryService->Get( NS_UNIX_LIB_DIR,
-                                   NS_GET_IID(nsIFile),
-                                   getter_AddRefs(mFileSpec) );
+        case 401: ///////////////////////////////////////////////////////////  Unix Lib
+          {  
+                nsCOMPtr<nsIProperties> directoryService = 
+                         do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
+                if (!directoryService) return;
+                directoryService->Get(NS_UNIX_LIB_DIR, 
+                                       NS_GET_IID(nsIFile), 
+                                       getter_AddRefs(mFileSpec));
+          }
             break;
 #endif
 
@@ -532,14 +527,15 @@ nsInstallFolder::AppendXPPath(const nsString& aRelativePath)
             aRelativePath.Mid(segment,start,curr-start);
             start = curr+1;
         }
-
+            
         nsresult rv = mFileSpec->AppendUnicode(segment.get());
         if (NS_FAILED(rv))
         {
             // Unicode converters not present (likely wizard case)
             // so do our best with the vanilla conversion.
-            NS_WARNING("nsInstallFolder: unicode conversion failed");
-            mFileSpec->Append(NS_LossyConvertUCS2toASCII(segment).get());
+            nsCAutoString tmp;
+            tmp.AssignWithConversion(segment);
+            mFileSpec->Append(tmp.get());
         }
     } while ( start < aRelativePath.Length() );
 }
@@ -547,22 +543,23 @@ nsInstallFolder::AppendXPPath(const nsString& aRelativePath)
 
 /* MapNameToEnum
  * maps name from the directory table to its enum */
-PRInt32
+PRInt32 
 nsInstallFolder::MapNameToEnum(const nsString& name)
 {
-    int i = 0;
+	int i = 0;
 
-    if ( name.IsEmpty())
+	if ( name.IsEmpty())
         return -1;
 
-    while ( DirectoryTable[i].directoryName[0] != 0 )
-    {
-        // safe compare because all strings in DirectoryTable are ASCII
-        if ( name.EqualsIgnoreCase(DirectoryTable[i].directoryName) )
-            return DirectoryTable[i].folderEnum;
-        i++;
-    }
-    return -1;
+	// safe because all strings in DirectoryTable are ASCII
+	NS_LossyConvertUCS2toASCII asciiName(name);
+	while ( DirectoryTable[i].directoryName[0] != 0 )
+	{
+		if ( asciiName.EqualsIgnoreCase(DirectoryTable[i].directoryName) )
+			return DirectoryTable[i].folderEnum;
+		i++;
+	}
+	return -1;
 }
 
 
@@ -595,17 +592,14 @@ nsInstallFolder::ToString(nsAutoString* outString)
       // converters not present, most likely in wizard case;
       // do best we can with stock ASCII conversion
 
-      // Since bug 100676 was fixed we should never get here
-
       // XXX NOTE we can make sure our filenames are ASCII, but we have no
       // control over the directory name which might be localized!!!
-      NS_WARNING("Couldn't get Unicode path, using broken conversion!");
       nsXPIDLCString temp;
       rv = mFileSpec->GetPath(getter_Copies(temp));
-      outString->Assign(NS_ConvertASCIItoUCS2(temp));
+      outString->AssignWithConversion(temp);
   }
 
-  PRBool flagIsFile = PR_FALSE;
+  PRBool flagIsFile;
   mFileSpec->IsFile(&flagIsFile);
   if (!flagIsFile)
   {

@@ -27,6 +27,8 @@
 #include "prmem.h"
 #include "prprf.h"
 
+#include "nsFileSpec.h"
+
 #include "VerReg.h"
 #include "ScheduledTasks.h"
 #include "nsInstallLogComment.h"
@@ -47,7 +49,6 @@ nsInstallLogComment::nsInstallLogComment( nsInstall* inInstall,
 {
     MOZ_COUNT_CTOR(nsInstallLogComment);
 
-    *error = nsInstall::SUCCESS;
     if (inInstall == NULL) 
     {
         *error = nsInstall::INVALID_ARGUMENTS;
@@ -89,12 +90,24 @@ char* nsInstallLogComment::toString()
     if (buffer == nsnull || !mInstall)
         return nsnull;
 
-    rsrcVal = mInstall->GetResourcedString(mFileOpCommand);
+    char* cstrFileOpCommand = ToNewCString(mFileOpCommand);
+    char* cstrComment       = ToNewCString(mComment);
+
+    if((cstrFileOpCommand == nsnull) || (cstrComment == nsnull))
+        return nsnull;
+
+    rsrcVal = mInstall->GetResourcedString(NS_ConvertASCIItoUCS2(cstrFileOpCommand));
     if (rsrcVal)
     {
-        PR_snprintf(buffer, 1024, rsrcVal, NS_LossyConvertUCS2toASCII(mComment).get());
+        PR_snprintf(buffer, 1024, rsrcVal, cstrComment);
         nsCRT::free(rsrcVal);
     }
+
+    if (cstrFileOpCommand)
+        Recycle(cstrFileOpCommand);
+
+    if (cstrComment)
+        Recycle(cstrComment);
 
     return buffer;
 }

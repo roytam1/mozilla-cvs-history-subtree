@@ -26,6 +26,7 @@
 #define __NSINSTALLBITWISE_H__
 
 #include "NSReg.h"
+#include "nsFileSpec.h"
 #include "nsIFile.h"
 
 PR_BEGIN_EXTERN_C

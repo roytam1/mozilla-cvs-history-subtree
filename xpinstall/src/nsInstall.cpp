@@ -36,7 +36,9 @@
 #include "nsIServiceManager.h"
 
 #include "nsHashtable.h"
+#include "nsFileStream.h"
 #include "nsIFileChannel.h"
+#include "nsSpecialSystemDirectory.h"
 #include "nsDirectoryService.h"
 #include "nsDirectoryServiceDefs.h"
 
@@ -320,8 +322,6 @@ nsInstall::InternalAbort(PRInt32 errcode)
     nsInstallObject* ie;
     if (mInstalledFiles != nsnull)
     {
-        // abort must work backwards through the list so cleanup can
-        // happen in the correct order
         for (PRInt32 i = mInstalledFiles->Count()-1; i >= 0; i--)
         {
             ie = (nsInstallObject *)mInstalledFiles->ElementAt(i);
@@ -708,7 +708,7 @@ nsInstall::DiskSpaceAvailable(const nsString& aFolder, PRInt64* aReturn)
         return NS_OK;
     }
     nsCOMPtr<nsILocalFile> folder;
-    NS_NewUnicodeLocalFile(aFolder.get(), PR_TRUE,
+    NS_NewLocalFile(NS_LossyConvertUCS2toASCII(aFolder).get(), PR_TRUE,
                     getter_AddRefs(folder));
 
     result = folder->GetDiskSpaceAvailable(aReturn);
@@ -915,10 +915,11 @@ nsInstall::GetComponentFolder(const nsString& aComponentName, const nsString& aS
 {
     long        err;
     char        dir[MAXREGPATHLEN];
+    nsFileSpec  nsfsDir;
     nsresult    res = NS_OK;
 
     if(!aNewFolder)
-        return INVALID_ARGUMENTS;
+      return INVALID_ARGUMENTS;
 
     *aNewFolder = nsnull;
 
@@ -934,42 +935,44 @@ nsInstall::GetComponentFolder(const nsString& aComponentName, const nsString& aS
 
     if((err = VR_GetDefaultDirectory( NS_CONST_CAST(char *, componentCString.get()), sizeof(dir), dir )) != REGERR_OK)
     {
-        // if there's not a default directory, try to see if the component
-        // is registered as a file and then strip the filename off the path
-        if((err = VR_GetPath( NS_CONST_CAST(char *, componentCString.get()), sizeof(dir), dir )) != REGERR_OK)
+        if((err = VR_GetPath( NS_CONST_CAST(char *, componentCString.get()), sizeof(dir), dir )) == REGERR_OK)
         {
-            // no path, either
+            int i;
+
+            nsString dirStr; dirStr.AssignWithConversion(dir);
+            if (  (i = dirStr.RFindChar(FILESEP)) > 0 )
+            {
+                // i is the index in the string, not the total number of
+                // characters in the string.  ToCString() requires the
+                // total number of characters in the string to copy,
+                // therefore add 1 to it.
+                dirStr.Truncate(i + 1);
+                dirStr.ToCString(dir, MAXREGPATHLEN);
+            }
+        }
+        else
+        {
             *dir = '\0';
         }
     }
-
-    nsCOMPtr<nsILocalFile> componentDir;
-    nsCOMPtr<nsIFile> componentIFile;
-    if(*dir != '\0')
-        NS_NewLocalFile( dir, PR_FALSE, getter_AddRefs(componentDir) ); // native path from registry
-
-    if ( componentDir )
+    else
     {
-        PRBool isFile;
-        res = componentDir->IsFile(&isFile);
-        if (NS_SUCCEEDED(res) && isFile)
-            componentDir->GetParent(getter_AddRefs(componentIFile));
-        else
-            componentIFile = do_QueryInterface(componentDir);
+        *dir = '\0';
+    }
 
-        nsInstallFolder * folder = new nsInstallFolder();
-        if (!folder) 
-            return NS_ERROR_OUT_OF_MEMORY;
-
-        res = folder->Init(componentIFile, aSubdirectory);
-        if (NS_FAILED(res))
-        {
-            delete folder;
-        }
-        else
-        {
-            *aNewFolder = folder;
-        }
+    if(*dir != '\0')
+    {
+      nsInstallFolder * folder = new nsInstallFolder();
+      if (!folder) return NS_ERROR_OUT_OF_MEMORY;
+      res = folder->Init(NS_ConvertASCIItoUCS2(dir), aSubdirectory);
+      if (NS_FAILED(res))
+      {
+        delete folder;
+      }
+      else
+      {
+        *aNewFolder = folder;
+      }
     }
 
     return res;
@@ -1213,11 +1216,14 @@ nsInstall::LoadResources(JSContext* cx, const nsString& aBaseName, jsval* aRetur
         if (NS_FAILED(ret))
             goto cleanup;
 
-        if (!pKey.IsEmpty() && !pVal.IsEmpty())
+        nsXPIDLCString keyCStr;
+        keyCStr.Adopt(ToNewCString(pKey));
+
+        if (keyCStr.get() && pVal.get())
         {
             JSString* propValJSStr = JS_NewUCStringCopyZ(cx, NS_REINTERPRET_CAST(const jschar*, pVal.get()));
             jsval propValJSVal = STRING_TO_JSVAL(propValJSStr);
-            JS_SetUCProperty(cx, res, NS_REINTERPRET_CAST(const jschar*, pKey.get()), pKey.Length(), &propValJSVal);
+            JS_SetProperty(cx, res, keyCStr.get(), &propValJSVal);
         }
     }
 
@@ -1434,12 +1440,11 @@ nsInstall::StartInstall(const nsString& aUserPackageName, const nsString& aRegis
     {
         // found one saved in the registry
         mPackageFolder = new nsInstallFolder();
-        nsCOMPtr<nsILocalFile> packageDir;
-        NS_NewLocalFile( szRegPackagePath, PR_FALSE, getter_AddRefs(packageDir) ); // native path
-
-        if (mPackageFolder && packageDir)
+        if (mPackageFolder)
         {
-            if (NS_FAILED( mPackageFolder->Init(packageDir, nsString()) ))
+            if (NS_FAILED( mPackageFolder->Init(
+                                NS_ConvertASCIItoUCS2(szRegPackagePath),
+                                nsAutoString() ) ))
             {
                 delete mPackageFolder;
                 mPackageFolder = nsnull;
@@ -1454,7 +1459,7 @@ nsInstall::StartInstall(const nsString& aUserPackageName, const nsString& aRegis
     mStartInstallCompleted = PR_TRUE;
     mFinalStatus = MALFORMED_INSTALL;
     if (mListener)
-        mListener->OnPackageNameSet(mInstallURL.get(), mUIName.get(), aVersion.get());
+        mListener->OnPackageNameSet(mInstallURL.get(), mUIName.get());
 
     return NS_OK;
 }
@@ -1579,7 +1584,7 @@ nsInstall::FileOpDirGetParent(nsInstallFolder& aTarget, nsInstallFolder** thePar
     {
         return NS_ERROR_OUT_OF_MEMORY;
     }
-      folder->Init(parent,nsString());
+      folder->Init(parent);
       *theParentFolder = folder;
   }
   else
@@ -2029,7 +2034,6 @@ nsInstall::FileOpFileWindowsGetShortName(nsInstallFolder& aTarget, nsString& aSh
   PRBool              flagExists;
   nsString            tmpNsString;
   nsXPIDLCString      nativeTargetPath;
-  nsXPIDLString       unicodePath;
   char                nativeShortPathName[MAX_PATH];
   nsCOMPtr<nsIFile>   localTarget(aTarget.GetFileSpec());
 
@@ -2058,18 +2062,15 @@ nsInstall::FileOpFileWindowsGetShortName(nsInstallFolder& aTarget, nsString& aSh
 
       // if err is 0, it's not a buffer size problem.  It's something else unexpected.
       if(err != 0)
-        FStoUCS2( nativeShortPathNameTmp, getter_Copies(unicodePath) );
+        aShortPathName.AssignWithConversion(nativeShortPathNameTmp);
 
       if(nativeShortPathNameTmp)
         delete [] nativeShortPathNameTmp;
     }
     else if(err != 0)
       // if err is 0, it's not a buffer size problem.  It's something else unexpected.
-      FStoUCS2( nativeShortPathName, getter_Copies(unicodePath) );
+      aShortPathName.AssignWithConversion(nativeShortPathName);
   }
-
-  if (!unicodePath.IsEmpty())
-      aShortPathName = unicodePath;
 
 #endif
 
@@ -2428,6 +2429,9 @@ nsInstall::BadRegName(const nsString& regName)
     if ( regName.Find("/ ") != -1  )
         return PR_TRUE;
 
+    if ( regName.Find("=") != -1 )
+        return PR_TRUE;
+
     return PR_FALSE;
 }
 
@@ -2583,7 +2587,7 @@ nsInstall::ExtractFileFromJar(const nsString& aJarfile, nsIFile* aSuggestedName,
             aJarfile.Right(extension, (aJarfile.Length() - extpos) );
             tempFileName += extension;
         }
-        tempFile->AppendUnicode(tempFileName.get());
+        tempFile->Append(NS_LossyConvertUCS2toASCII(tempFileName).get());
 
         // Create a temporary file to extract to
         MakeUnique(tempFile);
@@ -2612,9 +2616,9 @@ nsInstall::ExtractFileFromJar(const nsString& aJarfile, nsIFile* aSuggestedName,
                 return nsInstall::OUT_OF_MEMORY;
 
             //get the leafname so we can convert its extension to .new
-            nsXPIDLString leafName;
-            tempFile->GetUnicodeLeafName(getter_Copies(leafName));
-            nsString newLeafName (leafName);
+            nsXPIDLCString leafName;
+            tempFile->GetLeafName(getter_Copies(leafName));
+            nsCString newLeafName (leafName);
 
             PRInt32 extpos = newLeafName.RFindChar('.');
             if (extpos != -1)
@@ -2622,10 +2626,10 @@ nsInstall::ExtractFileFromJar(const nsString& aJarfile, nsIFile* aSuggestedName,
                 // We found the extension;
                 newLeafName.Truncate(extpos + 1); //strip off the old extension
             }
-            newLeafName.Append(NS_LITERAL_STRING("new"));
+            newLeafName.Append("new");
 
             //Now reset the leafname
-            tempFile->SetUnicodeLeafName(newLeafName.get());
+            tempFile->SetLeafName(newLeafName.get());
 
             MakeUnique(tempFile);
             extractHereSpec = tempFile;
@@ -2829,11 +2833,9 @@ nsresult MakeUnique(nsILocalFile* file)
         file->SetLeafName(newName);
 
         rv = file->Exists(&flagExists);
-        if (NS_FAILED(rv))
-            break;
+        if (NS_FAILED(rv)) return rv;
     }
-    Recycle(leafName);
-    return rv;
+    return NS_OK;
 }
 
 

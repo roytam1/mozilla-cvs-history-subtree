@@ -14,7 +14,7 @@
  *
  * The Original Code is mozilla.org code.
  *
- * The Initial Developer of the Original Code is
+ * The Initial Developer of the Original Code is 
  * Netscape Communications Corporation.
  * Portions created by the Initial Developer are Copyright (C) 1998
  * the Initial Developer. All Rights Reserved.
@@ -22,7 +22,7 @@
  * Contributor(s):
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * either the GNU General Public License Version 2 or later (the "GPL"), or 
  * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
@@ -52,22 +52,22 @@ nsWinRegItem::nsWinRegItem(nsWinReg* regObj, PRInt32 root, PRInt32 action, const
     MOZ_COUNT_CTOR(nsWinRegItem);
 
     mReg     = regObj;
-    mCommand = action;
-    mRootkey = root;
+	mCommand = action;
+	mRootkey = root;
 
-    *aReturn = nsInstall::SUCCESS;
+  *aReturn = nsInstall::SUCCESS;
 
-    /* I'm assuming we need to copy these */
-    mSubkey  = new nsString(sub);
-    mName    = new nsString(valname);
-    mValue   = new nsString(val);
+  /* I'm assuming we need to copy these */
+	mSubkey  = new nsString(sub);
+	mName    = new nsString(valname);
+	mValue   = new nsString(val);
 
-    if((mSubkey == nsnull) ||
-       (mName   == nsnull) ||
-       (mValue  == nsnull))
-    {
-      *aReturn = nsInstall::OUT_OF_MEMORY;
-    }
+  if((mSubkey == nsnull) ||
+     (mName   == nsnull) ||
+     (mValue  == nsnull))
+  {
+    *aReturn = nsInstall::OUT_OF_MEMORY;
+  }
 }
 
 nsWinRegItem::nsWinRegItem(nsWinReg* regObj, PRInt32 root, PRInt32 action, const nsAString& sub, const nsAString& valname, PRInt32 val, PRInt32 *aReturn)
@@ -75,23 +75,23 @@ nsWinRegItem::nsWinRegItem(nsWinReg* regObj, PRInt32 root, PRInt32 action, const
 {
     MOZ_COUNT_CTOR(nsWinRegItem);
 
-    mReg     = regObj;
-    mCommand = action;
-    mRootkey = root;
+	mReg     = regObj;
+	mCommand = action;
+	mRootkey = root;
 
-    *aReturn = nsInstall::SUCCESS;
+  *aReturn = nsInstall::SUCCESS;
 
-    /* I'm assuming we need to copy these */
-    mSubkey  = new nsString(sub);
-    mName    = new nsString(valname);
-    mValue   = new PRInt32(val);
+  /* I'm assuming we need to copy these */
+	mSubkey  = new nsString(sub);
+	mName    = new nsString(valname);
+	mValue   = new PRInt32(val);
 
-    if((mSubkey == nsnull) ||
-       (mName   == nsnull) ||
-       (mValue  == nsnull))
-    {
-      *aReturn = nsInstall::OUT_OF_MEMORY;
-    }
+  if((mSubkey == nsnull) ||
+     (mName   == nsnull) ||
+     (mValue  == nsnull))
+  {
+    *aReturn = nsInstall::OUT_OF_MEMORY;
+  }
 }
 
 nsWinRegItem::~nsWinRegItem()
@@ -105,7 +105,7 @@ nsWinRegItem::~nsWinRegItem()
 PRInt32 nsWinRegItem::Complete()
 {
   PRInt32 aReturn = NS_OK;
-
+  
   if (mReg == nsnull)
       return nsInstall::OUT_OF_MEMORY;
 
@@ -114,15 +114,15 @@ PRInt32 nsWinRegItem::Complete()
     case NS_WIN_REG_CREATE:
         mReg->FinalCreateKey(mRootkey, *mSubkey, *mName, &aReturn);
         break;
-
+    
     case NS_WIN_REG_DELETE:
         mReg->FinalDeleteKey(mRootkey, *mSubkey, &aReturn);
         break;
-
+    
     case NS_WIN_REG_DELETE_VAL:
         mReg->FinalDeleteValue(mRootkey, *mSubkey, *mName, &aReturn);
         break;
-
+    
     case NS_WIN_REG_SET_VAL_STRING:
         mReg->FinalSetValueString(mRootkey, *mSubkey, *mName, *(nsString*)mValue, &aReturn);
         break;
@@ -130,14 +130,14 @@ PRInt32 nsWinRegItem::Complete()
     case NS_WIN_REG_SET_VAL_NUMBER:
         mReg->FinalSetValueNumber(mRootkey, *mSubkey, *mName, *(PRInt32*)mValue, &aReturn);
         break;
-
+    
     case NS_WIN_REG_SET_VAL:
         mReg->FinalSetValue(mRootkey, *mSubkey, *mName, (nsWinRegValue*)mValue, &aReturn);
         break;
   }
-  return aReturn;
+	return aReturn;
 }
-
+  
 #define kCRK  "Create Registry Key: "
 #define kDRK  "Delete Registry Key: "
 #define kDRV  "Delete Registry Value: "
@@ -148,12 +148,12 @@ PRInt32 nsWinRegItem::Complete()
 
 char* nsWinRegItem::toString()
 {
-    nsString*  keyString     = nsnull;
-    nsString*  result        = nsnull;
-    char*      resultCString = nsnull;
+	nsString*  keyString     = nsnull;
+	nsString*  result        = nsnull;
+  char*      resultCString = nsnull;
 
-    switch(mCommand)
-    {
+	switch(mCommand)
+	{
     case NS_WIN_REG_CREATE:
       keyString = keystr(mRootkey, mSubkey, nsnull);
       result    = new nsString;
@@ -195,26 +195,26 @@ char* nsWinRegItem::toString()
       result    = new nsString;
       result->AssignWithConversion(kUNK);
       break;
-    }
-
-    if (result)
-    {
+	}
+    
+  if (result)
+  {
       result->Append(*keyString);
       resultCString = new char[result->Length() + 1];
       if(resultCString != nsnull)
           result->ToCString(resultCString, result->Length() + 1);
-    }
-
-   if (keyString) delete keyString;
-   if (result)    delete result;
-
-   return resultCString;
+  }
+  
+  if (keyString) delete keyString;
+  if (result)    delete result;
+  
+  return resultCString;
 }
 
 PRInt32 nsWinRegItem::Prepare()
 {
   PRInt32 aReturn = NS_OK;
-
+  
   if (mReg == nsnull)
       return nsInstall::OUT_OF_MEMORY;
 
@@ -223,15 +223,15 @@ PRInt32 nsWinRegItem::Prepare()
     case NS_WIN_REG_CREATE:
         mReg->PrepareCreateKey(mRootkey, *mSubkey, &aReturn);
         break;
-
+    
     case NS_WIN_REG_DELETE:
         mReg->PrepareDeleteKey(mRootkey, *mSubkey, &aReturn);
         break;
-
+    
     case NS_WIN_REG_DELETE_VAL:
         mReg->PrepareDeleteValue(mRootkey, *mSubkey, *mName, &aReturn);
         break;
-
+    
     case NS_WIN_REG_SET_VAL_STRING:
         mReg->PrepareSetValueString(mRootkey, *mSubkey, &aReturn);
         break;
@@ -239,7 +239,7 @@ PRInt32 nsWinRegItem::Prepare()
     case NS_WIN_REG_SET_VAL_NUMBER:
         mReg->PrepareSetValueNumber(mRootkey, *mSubkey, &aReturn);
         break;
-
+    
     case NS_WIN_REG_SET_VAL:
         mReg->PrepareSetValue(mRootkey, *mSubkey, &aReturn);
         break;
@@ -247,7 +247,7 @@ PRInt32 nsWinRegItem::Prepare()
     default:
         break;
   }
-  return aReturn;
+	return aReturn;
 }
 
 void nsWinRegItem::Abort()
@@ -258,27 +258,27 @@ void nsWinRegItem::Abort()
 
 nsString* nsWinRegItem::keystr(PRInt32 root, nsString* mSubkey, nsString* mName)
 {
-    nsString  rootstr;
-    nsString* finalstr = nsnull;
-    char*     istr     = nsnull;
+	nsString  rootstr;
+	nsString* finalstr = nsnull;
+  char*     istr     = nsnull;
 
-    switch(root)
-    {
-      case (int)(HKEY_CLASSES_ROOT) :
-          rootstr.Assign(NS_LITERAL_STRING("HKEY_CLASSES_ROOT\\"));
-          break;
+	switch(root)
+	{
+	  case (int)(HKEY_CLASSES_ROOT) :
+		  rootstr.Assign(NS_LITERAL_STRING("HKEY_CLASSES_ROOT\\"));
+		  break;
 
-      case (int)(HKEY_CURRENT_USER) :
-          rootstr.Assign(NS_LITERAL_STRING("HKEY_CURRENT_USER\\"));
-          break;
+	  case (int)(HKEY_CURRENT_USER) :
+		  rootstr.Assign(NS_LITERAL_STRING("HKEY_CURRENT_USER\\"));
+		  break;
 
-      case (int)(HKEY_LOCAL_MACHINE) :
-          rootstr.Assign(NS_LITERAL_STRING("HKEY_LOCAL_MACHINE\\"));
-          break;
+	  case (int)(HKEY_LOCAL_MACHINE) :
+		  rootstr.Assign(NS_LITERAL_STRING("HKEY_LOCAL_MACHINE\\"));
+		  break;
 
-      case (int)(HKEY_USERS) :
-          rootstr.Assign(NS_LITERAL_STRING("HKEY_USERS\\"));
-          break;
+	  case (int)(HKEY_USERS) :
+		  rootstr.Assign(NS_LITERAL_STRING("HKEY_USERS\\"));
+		  break;
 
     default:
       istr = itoa(root);
@@ -287,70 +287,70 @@ nsString* nsWinRegItem::keystr(PRInt32 root, nsString* mSubkey, nsString* mName)
         rootstr.Assign(NS_LITERAL_STRING("#"));
         rootstr.AppendWithConversion(istr);
         rootstr.Append(NS_LITERAL_STRING("\\"));
-
+        
         PR_DELETE(istr);
       }
       break;
-    }
+	}
 
-    finalstr = new nsString(rootstr);
-    if(finalstr != nsnull)
-    {
-      finalstr->Append(*mSubkey);
-      finalstr->Append(NS_LITERAL_STRING(" ["));
+  finalstr = new nsString(rootstr);
+	if(finalstr != nsnull)
+	{
+    finalstr->Append(*mSubkey);
+    finalstr->Append(NS_LITERAL_STRING(" ["));
 
-      if(mName != nsnull)
-        finalstr->Append(*mName);
+    if(mName != nsnull)
+      finalstr->Append(*mName);
 
-      finalstr->Append(NS_LITERAL_STRING("]"));
-    }
+    finalstr->Append(NS_LITERAL_STRING("]"));
+	}
 
-    return finalstr;
+  return finalstr;
 }
 
 
 char* nsWinRegItem::itoa(PRInt32 n)
 {
-    char* s;
-    int i, sign;
-    if((sign = n) < 0)
-        n = -n;
-    i = 0;
+	char* s;
+	int i, sign;
+	if((sign = n) < 0)
+		n = -n;
+	i = 0;
+	
+	s = (char*)PR_CALLOC(sizeof(char));
 
-    s = (char*)PR_CALLOC(sizeof(char));
-
-    do
-    {
-        s = (char*)PR_REALLOC(s, (i+1)*sizeof(char));
-        s[i++] = n%10 + '0';
-        s[i] = '\0';
-    } while ((n/=10) > 0);
-
-    if(sign < 0)
-    {
-        s = (char*)PR_REALLOC(s, (i+1)*sizeof(char));
-        s[i++] = '-';
-    }
-    s[i]  = '\0';
-    reverseString(s);
-    return s;
+	do
+		{
+		s = (char*)PR_REALLOC(s, (i+1)*sizeof(char));
+		s[i++] = n%10 + '0';
+		s[i] = '\0';
+		} while ((n/=10) > 0);
+		
+	if(sign < 0)
+	{
+		s = (char*)PR_REALLOC(s, (i+1)*sizeof(char));
+		s[i++] = '-';
+	}
+	s[i]  = '\0';
+	reverseString(s);
+	return s;
 }
 
 void nsWinRegItem::reverseString(char* s)
 {
-    int c, i, j;
-
-    for(i=0, j=strlen(s)-1; i<j; i++, j--)
-    {
-        c = s[i];
-        s[i] = s[j];
-        s[j] = c;
-    }
+	int c, i, j;
+	
+	for(i=0, j=strlen(s)-1; i<j; i++, j--)
+		{
+		c = s[i];
+		s[i] = s[j];
+		s[j] = c;
+		}
 }
 
 /* CanUninstall
 * WinRegItem() does not install any files which can be uninstalled,
-* hence this function returns false.
+* hence this function returns false. 
 */
 PRBool
 nsWinRegItem:: CanUninstall()

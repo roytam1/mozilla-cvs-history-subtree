@@ -14,7 +14,7 @@
  *
  * The Original Code is mozilla.org code.
  *
- * The Initial Developer of the Original Code is
+ * The Initial Developer of the Original Code is 
  * Netscape Communications Corporation.
  * Portions created by the Initial Developer are Copyright (C) 1998
  * the Initial Developer. All Rights Reserved.
@@ -22,7 +22,7 @@
  * Contributor(s):
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * either the GNU General Public License Version 2 or later (the "GPL"), or 
  * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
@@ -68,27 +68,27 @@ public:
    */
   PRInt32 Complete();
   char* toString();
-
+  
   // no need for special clean-up
   void Abort();
-
+  
   // no need for set-up
   PRInt32 Prepare();
-
+  
   /* should these be protected? */
   PRBool CanUninstall();
   PRBool RegisterPackageNode();
-
+  
 private:
-
+  
   /* Private Fields */
   nsWinProfile* mProfile;     // initiating profile object
   nsString*     mSection;     // Name of section
   nsString*     mKey;         // Name of key
   nsString*     mValue;       // data to write
-
+  
   /* Private Methods */
-
+ 
 };
 
 PR_END_EXTERN_C

@@ -99,6 +99,7 @@ OBJS =                                          \
        .\$(OBJDIR)\nsWinReg.obj                 \
        .\$(OBJDIR)\nsJSWinReg.obj               \
        .\$(OBJDIR)\nsWinRegItem.obj             \
+       .\$(OBJDIR)\nsWinRegValue.obj            \
        .\$(OBJDIR)\nsWinProfile.obj             \
        .\$(OBJDIR)\nsJSWinProfile.obj           \
        .\$(OBJDIR)\nsWinProfileItem.obj         \
