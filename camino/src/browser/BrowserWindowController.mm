@@ -807,7 +807,7 @@ static NSArray* sToolbarDefaults = nil;
   else if (action == @selector(newTab:))
     return [self newTabsAllowed];
   else if (action == @selector(closeCurrentTab:))
-    return [mTabBrowser numberOfTabViewItems] > 0;
+    return ([mTabBrowser numberOfTabViewItems] > 1);
   else if (action == @selector(sendURL:))
   {
     NSString* curURL = [[self getBrowserWrapper] getCurrentURLSpec];
