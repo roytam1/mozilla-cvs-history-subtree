@@ -56,7 +56,7 @@ class nsIRequestObserver;
 class nsIParserFilter;
 class nsString;
 class nsIURI;
-
+class nsIChannel;
 
 enum eParserCommands {
   eViewNormal,
@@ -85,12 +85,12 @@ typedef enum {
    kCharsetFromWeakDocTypeDefault,
    kCharsetFromUserDefault ,
    kCharsetFromDocTypeDefault,
+   kCharsetFromCache,
    kCharsetFromParentFrame,
    kCharsetFromBookmarks,
    kCharsetFromAutoDetection,
    kCharsetFromMetaTag,
    kCharsetFromByteOrderMark,
-   kCharsetFromCache,
    kCharsetFromHTTPHeader,
    kCharsetFromUserForced,
    kCharsetFromOtherComponent,
@@ -203,6 +203,13 @@ class nsIParser : public nsISupports {
      */
     virtual nsresult  CreateTagStack(nsITagStack** aTagStack)=0;
 
+    /** 
+     * Get the channel associated with this parser
+     * @update harishd,gagan 07/17/01
+     * @param aChannel out param that will contain the result
+     * @return NS_OK if successful
+     */
+    NS_IMETHOD GetChannel(nsIChannel** aChannel) = 0;
 
     /** 
      * Get the DTD associated with this parser

@@ -3541,7 +3541,6 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
         aDocElement->GetNameSpaceID(nameSpaceID);
 #endif
 #ifdef INCLUDE_XUL
-        PRInt32 nameSpaceID;
         if (NS_SUCCEEDED(aDocElement->GetNameSpaceID(nameSpaceID)) &&
             nameSpaceID == nsXULAtoms::nameSpaceID) {
           rv = NS_NewDocElementBoxFrame(aPresShell, &contentFrame);
@@ -3822,22 +3821,15 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
 
   // --------- IF SCROLLABLE WRAP IN SCROLLFRAME --------
 
-      // If the device supports scrolling (e.g., in galley mode on the screen and
+  // If the device supports scrolling (e.g., in galley mode on the screen and
   // for print-preview, but not when printing), then create a scroll frame that
   // will act as the scrolling mechanism for the viewport. 
   // XXX Do we even need a viewport when printing to a printer?
-  // XXX It would be nice to have a better way to query for whether the device
-  // is scrollable
   PRBool  isScrollable = PR_TRUE;
   if (aPresContext) {
-    nsIDeviceContext* dc;
-    aPresContext->GetDeviceContext(&dc);
-    if (dc) {
-      PRBool  supportsWidgets;
-      if (NS_SUCCEEDED(dc->SupportsNativeWidgets(supportsWidgets))) {
-        isScrollable = supportsWidgets;
-      }
-      NS_RELEASE(dc);
+    PRBool  isPaginated = PR_FALSE;
+    if (NS_SUCCEEDED(aPresContext->IsPaginated(&isPaginated))) {
+      isScrollable = !isPaginated;
     }
   }
 
