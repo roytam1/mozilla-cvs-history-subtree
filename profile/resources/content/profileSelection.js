@@ -115,8 +115,8 @@ function highlightCurrentProfile()
     var currentProfileItem = document.getElementById( ( "profileName_" + currentProfile ) );
     var profileList = document.getElementById( "profiles" );
     if( currentProfileItem ) {
-      profileList.selectItem( currentProfileItem );
       profileList.ensureElementIsVisible( currentProfileItem );
+      profileList.selectItem( currentProfileItem );
     }
   }
   catch(e) {

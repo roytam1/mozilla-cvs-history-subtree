@@ -40,12 +40,12 @@ function CreateProfileWizard()
 // update the display to show the additional profile
 function CreateProfile( aProfName, aProfDir )
 {
-  var profile = new Profile( aProfName, aProfDir, "yes" );
+  var profile = new Profile( aProfName, "yes" );
   var item = AddItem( "profiles", profile );
   var profileList = document.getElementById( "profiles" );
   if( item ) {
-    profileList.selectItem( item );
     profileList.ensureElementIsVisible( item );
+    profileList.selectItem( item );
   }
 }
 
@@ -194,8 +194,8 @@ function DeleteProfile( deleteFiles )
     catch (ex) {
     }
     if( firstAdjacent ) {
-      profileList.selectItem( firstAdjacent );
       profileList.ensureElementIsVisible( firstAdjacent );
+      profileList.selectItem( firstAdjacent );
     }
     // set the button state
     DoEnabling();
