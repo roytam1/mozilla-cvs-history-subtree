@@ -199,20 +199,22 @@ XPCWrappedNativeScope::FinishedFinalizationPhaseOfGC(JSContext* cx)
     KillDyingScopes();
 }
 
-JS_STATIC_DLL_CALLBACK(intN)
-WrappedNativeSetMarker(JSHashEntry *he, intN i, void *arg)
+JS_STATIC_DLL_CALLBACK(JSDHashOperator)
+WrappedNativeSetMarker(JSDHashTable *table, JSDHashEntryHdr *hdr,
+                       uint32 number, void *arg)
 {
-    ((XPCWrappedNative*) he->value)->MarkSets();
-    return HT_ENUMERATE_NEXT;
+    ((Native2WrappedNativeMap::Entry*)hdr)->value->MarkSets();
+    return JS_DHASH_NEXT;
 }
 
 // We need to explicitly mark all the protos too because some protos may be
 // alive in the hashtable but not currently in use by any wrapper
-JS_STATIC_DLL_CALLBACK(intN)
-WrappedNativeProtoSetMarker(JSHashEntry *he, intN i, void *arg)
+JS_STATIC_DLL_CALLBACK(JSDHashOperator)
+WrappedNativeProtoSetMarker(JSDHashTable *table, JSDHashEntryHdr *hdr,
+                            uint32 number, void *arg)
 {
-    ((XPCWrappedNativeProto*) he->value)->MarkSet();
-    return HT_ENUMERATE_NEXT;
+    ((ClassInfo2WrappedNativeProtoMap::Entry*)hdr)->value->MarkSet();
+    return JS_DHASH_NEXT;
 }
 
 // static
@@ -227,18 +229,20 @@ XPCWrappedNativeScope::MarkAllInterfaceSets()
 }
 
 #ifdef DEBUG
-JS_STATIC_DLL_CALLBACK(intN)
-ASSERT_WrappedNativeSetNotMarked(JSHashEntry *he, intN i, void *arg)
+JS_STATIC_DLL_CALLBACK(JSDHashOperator)
+ASSERT_WrappedNativeSetNotMarked(JSDHashTable *table, JSDHashEntryHdr *hdr,
+                                 uint32 number, void *arg)
 {
-    ((XPCWrappedNative*) he->value)->ASSERT_SetsNotMarked();
-    return HT_ENUMERATE_NEXT;
+    ((Native2WrappedNativeMap::Entry*)hdr)->value->ASSERT_SetsNotMarked();
+    return JS_DHASH_NEXT;
 }
 
-JS_STATIC_DLL_CALLBACK(intN)
-ASSERT_WrappedNativeProtoSetNotMarked(JSHashEntry *he, intN i, void *arg)
+JS_STATIC_DLL_CALLBACK(JSDHashOperator)
+ASSERT_WrappedNativeProtoSetNotMarked(JSDHashTable *table, JSDHashEntryHdr *hdr,
+                                      uint32 number, void *arg)
 {
-    ((XPCWrappedNativeProto*) he->value)->ASSERT_SetNotMarked();
-    return HT_ENUMERATE_NEXT;
+    ((ClassInfo2WrappedNativeProtoMap::Entry*)hdr)->value->ASSERT_SetNotMarked();
+    return JS_DHASH_NEXT;
 }
 
 // static
@@ -255,11 +259,12 @@ XPCWrappedNativeScope::ASSERT_NoInterfaceSetsAreMarked()
 }
 #endif
 
-JS_STATIC_DLL_CALLBACK(intN)
-WrappedNativeTearoffSweeper(JSHashEntry *he, intN i, void *arg)
+JS_STATIC_DLL_CALLBACK(JSDHashOperator)
+WrappedNativeTearoffSweeper(JSDHashTable *table, JSDHashEntryHdr *hdr,
+                            uint32 number, void *arg)
 {
-    ((XPCWrappedNative*) he->value)->SweepTearOffs();
-    return HT_ENUMERATE_NEXT;
+    ((Native2WrappedNativeMap::Entry*)hdr)->value->SweepTearOffs();
+    return JS_DHASH_NEXT;
 }
 
 // static
@@ -294,11 +299,12 @@ struct ShutdownData
     int protoCount;
 };
 
-JS_STATIC_DLL_CALLBACK(intN)
-WrappedNativeShutdownEnumerator(JSHashEntry *he, intN i, void *arg)
+JS_STATIC_DLL_CALLBACK(JSDHashOperator)
+WrappedNativeShutdownEnumerator(JSDHashTable *table, JSDHashEntryHdr *hdr,
+                                uint32 number, void *arg)
 {
     ShutdownData* data = (ShutdownData*) arg;
-    XPCWrappedNative* wrapper = (XPCWrappedNative*) he->value;
+    XPCWrappedNative* wrapper = ((Native2WrappedNativeMap::Entry*)hdr)->value;
 
     if(wrapper->IsValid())
     {
@@ -307,18 +313,18 @@ WrappedNativeShutdownEnumerator(JSHashEntry *he, intN i, void *arg)
         wrapper->SystemIsBeingShutDown(data->ccx);
         data->wrapperCount++;
     }
-    return HT_ENUMERATE_REMOVE;
+    return JS_DHASH_REMOVE;
 }
 
-JS_STATIC_DLL_CALLBACK(intN)
-WrappedNativeProtoShutdownEnumerator(JSHashEntry *he, intN i, void *arg)
+JS_STATIC_DLL_CALLBACK(JSDHashOperator)
+WrappedNativeProtoShutdownEnumerator(JSDHashTable *table, JSDHashEntryHdr *hdr,
+                                     uint32 number, void *arg)
 {
     ShutdownData* data = (ShutdownData*) arg;
-    XPCWrappedNativeProto* proto = (XPCWrappedNativeProto*) he->value;
-
-    proto->SystemIsBeingShutDown(data->ccx);
+    ((ClassInfo2WrappedNativeProtoMap::Entry*)hdr)->value->
+        SystemIsBeingShutDown(data->ccx);
     data->protoCount++;
-    return HT_ENUMERATE_REMOVE;
+    return JS_DHASH_REMOVE;
 }
 
 //static
@@ -508,17 +514,19 @@ XPCWrappedNativeScope::DebugDumpAllScopes(PRInt16 depth)
 }
 
 #ifdef DEBUG
-JS_STATIC_DLL_CALLBACK(intN)
-WrappedNativeMapDumpEnumerator(JSHashEntry *he, intN i, void *arg)
+JS_STATIC_DLL_CALLBACK(JSDHashOperator)
+WrappedNativeMapDumpEnumerator(JSDHashTable *table, JSDHashEntryHdr *hdr,
+                               uint32 number, void *arg)
 {
-    ((XPCWrappedNative*)he->value)->DebugDump(*(PRInt16*)arg);
-    return HT_ENUMERATE_NEXT;
+    ((Native2WrappedNativeMap::Entry*)hdr)->value->DebugDump(*(PRInt16*)arg);
+    return JS_DHASH_NEXT;
 }
-JS_STATIC_DLL_CALLBACK(intN)
-WrappedNativeProtoMapDumpEnumerator(JSHashEntry *he, intN i, void *arg)
+JS_STATIC_DLL_CALLBACK(JSDHashOperator)
+WrappedNativeProtoMapDumpEnumerator(JSDHashTable *table, JSDHashEntryHdr *hdr,
+                                    uint32 number, void *arg)
 {
-    ((XPCWrappedNativeProto*)he->value)->DebugDump(*(PRInt16*)arg);
-    return HT_ENUMERATE_NEXT;
+    ((ClassInfo2WrappedNativeProtoMap::Entry*)hdr)->value->DebugDump(*(PRInt16*)arg);
+    return JS_DHASH_NEXT;
 }
 #endif
 

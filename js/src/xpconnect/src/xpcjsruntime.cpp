@@ -67,11 +67,13 @@ struct JSDyingJSObjectData
     nsVoidArray* array;
 };
 
-JS_STATIC_DLL_CALLBACK(intN)
-WrappedJSDyingJSObjectFinder(JSHashEntry *he, intN i, void *arg)
+
+JS_STATIC_DLL_CALLBACK(JSDHashOperator)
+WrappedJSDyingJSObjectFinder(JSDHashTable *table, JSDHashEntryHdr *hdr,
+                uint32 number, void *arg)
 {
     JSDyingJSObjectData* data = (JSDyingJSObjectData*) arg;
-    nsXPCWrappedJS* wrapper = (nsXPCWrappedJS*)he->value;
+    nsXPCWrappedJS* wrapper = ((JSObject2WrappedJSMap::Entry*)hdr)->value;
     NS_ASSERTION(wrapper, "found a null JS wrapper!");
 
     // walk the wrapper chain and find any whose JSObject is to be finalized
@@ -84,7 +86,7 @@ WrappedJSDyingJSObjectFinder(JSHashEntry *he, intN i, void *arg)
         }
         wrapper = wrapper->GetNextWrapper();
     }
-    return HT_ENUMERATE_NEXT;
+    return JS_DHASH_NEXT;
 }
 
 struct CX_AND_XPCRT_Data
@@ -93,23 +95,26 @@ struct CX_AND_XPCRT_Data
     XPCJSRuntime* rt;
 };
 
-JS_STATIC_DLL_CALLBACK(intN)
-NativeInterfaceGC(JSHashEntry *he, intN i, void *arg)
+JS_STATIC_DLL_CALLBACK(JSDHashOperator)
+NativeInterfaceGC(JSDHashTable *table, JSDHashEntryHdr *hdr,
+                  uint32 number, void *arg)
 {
     CX_AND_XPCRT_Data* data = (CX_AND_XPCRT_Data*) arg;
-    ((XPCNativeInterface*)he->value)->DealWithDyingGCThings(data->cx, data->rt);
-    return HT_ENUMERATE_NEXT;
+    ((IID2NativeInterfaceMap::Entry*)hdr)->value->
+            DealWithDyingGCThings(data->cx, data->rt);
+    return JS_DHASH_NEXT;
 }
 
-JS_STATIC_DLL_CALLBACK(intN)
-NativeInterfaceSweeper(JSHashEntry *he, intN i, void *arg)
+JS_STATIC_DLL_CALLBACK(JSDHashOperator)
+NativeInterfaceSweeper(JSDHashTable *table, JSDHashEntryHdr *hdr,
+                       uint32 number, void *arg)
 {
     CX_AND_XPCRT_Data* data = (CX_AND_XPCRT_Data*) arg;
-    XPCNativeInterface* iface = (XPCNativeInterface*) he->value;
+    XPCNativeInterface* iface = ((IID2NativeInterfaceMap::Entry*)hdr)->value;
     if(iface->IsMarked())
     {
         iface->Unmark();
-        return HT_ENUMERATE_NEXT;
+        return JS_DHASH_NEXT;
     }
 
 #ifdef XPC_REPORT_NATIVE_INTERFACE_AND_SET_FLUSHING
@@ -118,7 +123,7 @@ NativeInterfaceSweeper(JSHashEntry *he, intN i, void *arg)
 #endif
 
     XPCNativeInterface::DestroyInstance(data->cx, data->rt, iface);
-    return HT_ENUMERATE_REMOVE;
+    return JS_DHASH_REMOVE;
 }
 
 // *Some* NativeSets are referenced from mClassInfo2NativeSetMap.
@@ -126,23 +131,25 @@ NativeInterfaceSweeper(JSHashEntry *he, intN i, void *arg)
 // So, in mClassInfo2NativeSetMap we just clear references to the unmarked.
 // In mNativeSetMap we clear the references to the unmarked *and* delete them.
 
-JS_STATIC_DLL_CALLBACK(intN)
-NativeUnMarkedSetRemover(JSHashEntry *he, intN i, void *arg)
+JS_STATIC_DLL_CALLBACK(JSDHashOperator)
+NativeUnMarkedSetRemover(JSDHashTable *table, JSDHashEntryHdr *hdr,
+                         uint32 number, void *arg)
 {
-    XPCNativeSet* set = (XPCNativeSet*) he->value;
+    XPCNativeSet* set = ((ClassInfo2NativeSetMap::Entry*)hdr)->value;
     if(set->IsMarked())
-        return HT_ENUMERATE_NEXT;
-    return HT_ENUMERATE_REMOVE;
+        return JS_DHASH_NEXT;
+    return JS_DHASH_REMOVE;
 }
 
-JS_STATIC_DLL_CALLBACK(intN)
-NativeSetSweeper(JSHashEntry *he, intN i, void *arg)
+JS_STATIC_DLL_CALLBACK(JSDHashOperator)
+NativeSetSweeper(JSDHashTable *table, JSDHashEntryHdr *hdr,
+                 uint32 number, void *arg)
 {
-    XPCNativeSet* set = (XPCNativeSet*) he->value;
+    XPCNativeSet* set = ((NativeSetMap::Entry*)hdr)->key_value;
     if(set->IsMarked())
     {
         set->Unmark();
-        return HT_ENUMERATE_NEXT;
+        return JS_DHASH_NEXT;
     }
 
 #ifdef XPC_REPORT_NATIVE_INTERFACE_AND_SET_FLUSHING
@@ -156,7 +163,7 @@ NativeSetSweeper(JSHashEntry *he, intN i, void *arg)
 #endif
 
     XPCNativeSet::DestroyInstance(set);
-    return HT_ENUMERATE_REMOVE;
+    return JS_DHASH_REMOVE;
 }
 
 // static
@@ -372,30 +379,27 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
 /***************************************************************************/
 
 #ifdef XPC_CHECK_WRAPPERS_AT_SHUTDOWN
-JS_STATIC_DLL_CALLBACK(JSHashNumber)
-hash_root(const void *key)
+JS_STATIC_DLL_CALLBACK(JSDHashOperator)
+DEBUG_WrapperChecker(JSDHashTable *table, JSDHashEntryHdr *hdr,
+                     uint32 number, void *arg)
 {
-    return ((JSHashNumber) key) >> 2; /* help lame MSVC1.5 on Win16 */
-}
-
-JS_STATIC_DLL_CALLBACK(intN)
-DEBUG_WrapperChecker(JSHashEntry *he, intN i, void *arg)
-{
-    NS_ASSERTION(!((XPCWrappedNative*)he->value)->IsValid(), "found a 'valid' wrapper!");
+    XPCWrappedNative* wrapper = (XPCWrappedNative*)((JSDHashEntryStub*)hdr)->key;
+    NS_ASSERTION(!wrapper->IsValid(), "found a 'valid' wrapper!");
     ++ *((int*)arg);
-    return HT_ENUMERATE_NEXT;
+    return JS_DHASH_NEXT;
 }
 #endif
 
-JS_STATIC_DLL_CALLBACK(intN)
-WrappedJSShutdownMarker(JSHashEntry *he, intN i, void *arg)
+JS_STATIC_DLL_CALLBACK(JSDHashOperator)
+WrappedJSShutdownMarker(JSDHashTable *table, JSDHashEntryHdr *hdr,
+                        uint32 number, void *arg)
 {
     JSRuntime* rt = (JSRuntime*) arg;
-    nsXPCWrappedJS* wrapper = (nsXPCWrappedJS*)he->value;
+    nsXPCWrappedJS* wrapper = ((JSObject2WrappedJSMap::Entry*)hdr)->value;
     NS_ASSERTION(wrapper, "found a null JS wrapper!");
     NS_ASSERTION(wrapper->IsValid(), "found an invalid JS wrapper!");
     wrapper->SystemIsBeingShutDown(rt);
-    return HT_ENUMERATE_NEXT;
+    return JS_DHASH_NEXT;
 }
 
 XPCJSRuntime::~XPCJSRuntime()
@@ -480,11 +484,11 @@ XPCJSRuntime::~XPCJSRuntime()
 
 #ifdef XPC_CHECK_WRAPPERS_AT_SHUTDOWN
     int LiveWrapperCount = 0;
-    JS_HashTableEnumerateEntries(DEBUG_WrappedNativeHashtable,
-                                 DEBUG_WrapperChecker, &LiveWrapperCount);
+    JS_DHashTableEnumerate(DEBUG_WrappedNativeHashtable,
+                           DEBUG_WrapperChecker, &LiveWrapperCount);
     if(LiveWrapperCount)
         printf("deleting XPCJSRuntime with %d live nsXPCWrappedNative (found in wrapper check)\n", (int)LiveWrapperCount);
-    JS_HashTableDestroy(DEBUG_WrappedNativeHashtable);
+    JS_DHashTableDestroy(DEBUG_WrappedNativeHashtable);
 #endif
 
     delete mThisTranslatorMap;
@@ -510,10 +514,9 @@ XPCJSRuntime::XPCJSRuntime(nsXPConnect* aXPConnect,
 {
 
 #ifdef XPC_CHECK_WRAPPERS_AT_SHUTDOWN
-   DEBUG_WrappedNativeHashtable = JS_NewHashTable(128, hash_root,
-                                                  JS_CompareValues,
-                                                  JS_CompareValues,
-                                                  nsnull, nsnull);
+    DEBUG_WrappedNativeHashtable = 
+        JS_NewDHashTable(JS_DHashGetStubOps(), nsnull, 
+                         sizeof(JSDHashEntryStub), 128);
 #endif
 
     // these jsids filled in later when we have a JSContext to work with.
@@ -585,11 +588,12 @@ XPCJSRuntime::GetXPCContext(JSContext* cx)
 }
 
 
-JS_STATIC_DLL_CALLBACK(intN)
-KillDeadContextsCB(JSHashEntry *he, intN i, void *arg)
+JS_STATIC_DLL_CALLBACK(JSDHashOperator)
+KillDeadContextsCB(JSDHashTable *table, JSDHashEntryHdr *hdr,
+                   uint32 number, void *arg)
 {
     JSRuntime* rt = (JSRuntime*) arg;
-    XPCContext* xpcc = (XPCContext*) he->value;
+    XPCContext* xpcc = ((JSContext2XPCContextMap::Entry*)hdr)->value;
     JSContext* cx = xpcc->GetJSContext();
     JSContext* iter = nsnull;
     JSContext* cur;
@@ -598,12 +602,12 @@ KillDeadContextsCB(JSHashEntry *he, intN i, void *arg)
     while(nsnull != (cur = JS_ContextIterator(rt, &iter)))
     {
         if(cur == cx)
-            return HT_ENUMERATE_NEXT;
+            return JS_DHASH_NEXT;
     }
 
     // this XPCContext represents a dead JSContext - delete it
     delete xpcc;
-    return HT_ENUMERATE_REMOVE;
+    return JS_DHASH_REMOVE;
 }
 
 XPCContext*
@@ -640,11 +644,13 @@ XPCJSRuntime::SyncXPCContextList(JSContext* cx /* = nsnull */)
     return found;
 }
 
-JS_STATIC_DLL_CALLBACK(intN)
-PurgeContextsCB(JSHashEntry *he, intN i, void *arg)
+
+JS_STATIC_DLL_CALLBACK(JSDHashOperator)
+PurgeContextsCB(JSDHashTable *table, JSDHashEntryHdr *hdr,
+                uint32 number, void *arg)
 {
-    delete (XPCContext*) he->value;
-    return HT_ENUMERATE_REMOVE;
+    delete ((JSContext2XPCContextMap::Entry*)hdr)->value;
+    return JS_DHASH_REMOVE;
 }
 
 void
@@ -676,29 +682,33 @@ XPCJSRuntime::GenerateStringIDs(JSContext* cx)
 }
 
 #ifdef DEBUG
-JS_STATIC_DLL_CALLBACK(intN)
-ContextMapDumpEnumerator(JSHashEntry *he, intN i, void *arg)
+JS_STATIC_DLL_CALLBACK(JSDHashOperator)
+ContextMapDumpEnumerator(JSDHashTable *table, JSDHashEntryHdr *hdr,
+                         uint32 number, void *arg)
 {
-    ((XPCContext*)he->value)->DebugDump(*(PRInt16*)arg);
-    return HT_ENUMERATE_NEXT;
+    ((JSContext2XPCContextMap::Entry*)hdr)->value->DebugDump(*(PRInt16*)arg);
+    return JS_DHASH_NEXT;
 }
-JS_STATIC_DLL_CALLBACK(intN)
-WrappedJSClassMapDumpEnumerator(JSHashEntry *he, intN i, void *arg)
+JS_STATIC_DLL_CALLBACK(JSDHashOperator)
+WrappedJSClassMapDumpEnumerator(JSDHashTable *table, JSDHashEntryHdr *hdr,
+                                uint32 number, void *arg)
 {
-    ((nsXPCWrappedJSClass*)he->value)->DebugDump(*(PRInt16*)arg);
-    return HT_ENUMERATE_NEXT;
+    ((IID2WrappedJSClassMap::Entry*)hdr)->value->DebugDump(*(PRInt16*)arg);
+    return JS_DHASH_NEXT;
 }
-JS_STATIC_DLL_CALLBACK(intN)
-WrappedJSMapDumpEnumerator(JSHashEntry *he, intN i, void *arg)
+JS_STATIC_DLL_CALLBACK(JSDHashOperator)
+WrappedJSMapDumpEnumerator(JSDHashTable *table, JSDHashEntryHdr *hdr,
+                           uint32 number, void *arg)
 {
-    ((nsXPCWrappedJS*)he->value)->DebugDump(*(PRInt16*)arg);
-    return HT_ENUMERATE_NEXT;
+    ((JSObject2WrappedJSMap::Entry*)hdr)->value->DebugDump(*(PRInt16*)arg);
+    return JS_DHASH_NEXT;
 }
-JS_STATIC_DLL_CALLBACK(intN)
-NativeSetDumpEnumerator(JSHashEntry *he, intN i, void *arg)
+JS_STATIC_DLL_CALLBACK(JSDHashOperator)
+NativeSetDumpEnumerator(JSDHashTable *table, JSDHashEntryHdr *hdr,
+                        uint32 number, void *arg)
 {
-    ((XPCNativeSet*)he->value)->DebugDump(*(PRInt16*)arg);
-    return HT_ENUMERATE_NEXT;
+    ((NativeSetMap::Entry*)hdr)->key_value->DebugDump(*(PRInt16*)arg);
+    return JS_DHASH_NEXT;
 }
 #endif
 

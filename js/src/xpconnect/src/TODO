@@ -2,7 +2,6 @@
 
 - FIX these things:
     ! FIX resolve in setProperty brendan bug 72354
-    ! FIX Soap stuff in xmlextras needs fix for nsIXPCScriptable usage
     - FIX nested enumerate with scriptable helper
     - FIX xpccomponets.cpp use of scriptable to deal better with prototype use
 
@@ -21,7 +20,6 @@
     - VERIFY cleanup of unused stuff
 
 - FOORPRINT & PERFORMANCE
-    - convert maps to use jsdhash
     ? look into optional hashtable in interface sets
 
 - CODE MAINTAINABILITY
@@ -31,8 +29,7 @@
 - CODE INSTRUMENTATION
     - improve DebugDump stuff
     - stats gathering/reporting code
-    - FINISH debug code to point out shadowed members in interface sets
-    - debug code to point out *use* of potentially shadowed members
+    ? debug code to point out *use* of potentially shadowed members
     - add code to discover QIable interfaces not mentioned in nsIClassInfo
 
 - TESTS - we need tests for:

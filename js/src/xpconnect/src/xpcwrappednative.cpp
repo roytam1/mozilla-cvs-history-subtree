@@ -271,6 +271,10 @@ XPCWrappedNative::XPCWrappedNative(nsISupports* aIdentity,
 {
     NS_INIT_ISUPPORTS();
     NS_ADDREF(mIdentity);
+
+#ifdef XPC_CHECK_WRAPPERS_AT_SHUTDOWN
+    mProto->GetRuntime()->DEBUG_AddWrappedNative(this);
+#endif
 }
 
 XPCWrappedNative::~XPCWrappedNative()
@@ -280,6 +284,9 @@ XPCWrappedNative::~XPCWrappedNative()
 
     if(mProto)
     {
+#ifdef XPC_CHECK_WRAPPERS_AT_SHUTDOWN
+    mProto->GetRuntime()->DEBUG_RemoveWrappedNative(this);
+#endif
         Native2WrappedNativeMap* map = mProto->GetScope()->GetWrappedNativeMap();
         {   // scoped lock
             XPCAutoLock lock(mProto->GetScope()->GetRuntime()->GetMapLock());

@@ -48,7 +48,6 @@
  */
 
 #include "xpcprivate.h"
-#include "nscore.h"
 
 /*
  * We require that STRING_TO_JSVAL(s) != (jsval)s, for tracking rootedness.

@@ -62,7 +62,7 @@
 #include "nsAutoLock.h"
 #include "xptcall.h"
 #include "jsapi.h"
-#include "jshash.h"
+#include "jsdhash.h"
 #include "jsprf.h"
 #include "prprf.h"
 #include "jsinterp.h"
@@ -427,14 +427,17 @@ public:
 #ifdef XPC_CHECK_WRAPPERS_AT_SHUTDOWN
    void DEBUG_AddWrappedNative(nsIXPConnectWrappedNative* wrapper)
         {XPCAutoLock lock(GetMapLock());
-         JS_HashTableAdd(DEBUG_WrappedNativeHashtable, wrapper, wrapper);}
+         JSDHashEntryHdr *entry =
+            JS_DHashTableOperate(DEBUG_WrappedNativeHashtable, 
+                                 wrapper, JS_DHASH_ADD);
+         if(entry) ((JSDHashEntryStub *)entry)->key = wrapper;}
 
    void DEBUG_RemoveWrappedNative(nsIXPConnectWrappedNative* wrapper)
         {XPCAutoLock lock(GetMapLock());
-         JS_HashTableRemove(DEBUG_WrappedNativeHashtable, wrapper);}
-
+         JS_DHashTableOperate(DEBUG_WrappedNativeHashtable, 
+                              wrapper, JS_DHASH_REMOVE);}
 private:
-   JSHashTable *DEBUG_WrappedNativeHashtable;
+   JSDHashTable* DEBUG_WrappedNativeHashtable;
 public:
 #endif
 
