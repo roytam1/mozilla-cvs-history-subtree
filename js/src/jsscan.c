@@ -1062,6 +1062,8 @@ skipline:
 		    flags |= JSREG_GLOB;
 		else if (MatchChar(ts, 'i'))
 		    flags |= JSREG_FOLD;
+		else if (MatchChar(ts, 'm'))
+		    flags |= JSREG_MULTILINE;
 		else
 		    break;
 	    }
