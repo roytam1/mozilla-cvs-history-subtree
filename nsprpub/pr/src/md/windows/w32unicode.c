@@ -299,4 +299,34 @@ _MD_DeleteFileA(
     return retval;
 }
 
+BOOL
+WINAPI
+_MD_MoveFileA(
+    LPCSTR lpExistingFileName,
+    LPCSTR lpNewFileName
+    )
+{
+    BOOL retval = FALSE;
+    LPWSTR wideStr = NULL;
+    WCHAR widePath[MAX_PATH + 1];
+    LPWSTR wideNewStr = NULL;
+    WCHAR wideNewPath[MAX_PATH + 1];
+
+    wideStr = _PR_MD_A2W(lpExistingFileName, widePath, sizeof(widePath) / sizeof(WCHAR));
+    wideNewStr = _PR_MD_A2W(lpNewFileName, wideNewPath, sizeof(wideNewPath) / sizeof(WCHAR));
+    if(NULL != wideStr && NULL != wideNewStr)
+    {
+        retval = MoveFileW(
+            wideStr,
+            wideNewStr
+            );
+    }
+    else
+    {
+        PR_SetError(PR_NAME_TOO_LONG_ERROR, 0);
+    }
+
+    return retval;
+}
+
 #endif /* WINCE */

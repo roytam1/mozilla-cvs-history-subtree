@@ -87,6 +87,13 @@ _MD_DeleteFileA(
     LPCSTR lpFileName
     );
 
+BOOL
+WINAPI
+_MD_MoveFileA(
+    LPCSTR lpExistingFileName,
+    LPCSTR lpNewFileName
+    );
+
 #endif /* WINCE */
 
 #endif /* nspr_win32_unicode_h___ */

@@ -1162,7 +1162,7 @@ _PR_MD_RENAME(const char *from, const char *to)
 #if !defined(WINCE)
         MoveFile(from, to)
 #else
-        MoveFileA(from, to)
+        _MD_MoveFileA(from, to)
 #endif
         ) {
         return 0;
