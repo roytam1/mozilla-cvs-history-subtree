@@ -151,6 +151,9 @@ GetLine(JSContext *cx, char *bufp, FILE *fh, const char *prompt) {
             add_history(linep);
         strcpy(bufp, linep);
         JS_free(cx, linep);
+        bufp += strlen(bufp);
+        *bufp++ = '\n';
+        *bufp = '\0';
     } else
 #endif
     {
@@ -160,9 +163,6 @@ GetLine(JSContext *cx, char *bufp, FILE *fh, const char *prompt) {
             return JS_FALSE;
         strcpy(bufp, line);
     }        
-    bufp += strlen(bufp);
-    *bufp++ = '\n';
-    *bufp = '\0';
     return JS_TRUE;
 }
 
@@ -1187,9 +1187,9 @@ SendSourceToJSDebugger(const char *filename, uintN lineno,
 {
     JSDSourceText *jsdsrc = (JSDSourceText *) *listenerTSData;
 
+    if (!filename)
+        return;
     if (!jsdsrc) {
-        if (!filename)
-            filename = "typein";
 	if (1 == lineno) {
 	    jsdsrc = JSD_NewSourceText(jsdc, filename);
 	} else {
