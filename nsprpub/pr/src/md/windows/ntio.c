@@ -2302,8 +2302,9 @@ _PR_MD_READ(PRFileDesc *fd, void *buf, PRInt32 len)
 {
     PRInt32 f = fd->secret->md.osfd;
     PRUint32 bytes;
-    int rv, err, rc;
+    int rv, err;
     LONG hiOffset = 0;
+    LONG loOffset;
 
     if (_nt_use_async && !fd->secret->md.sync_file_io) {
         PRThread *me = _PR_MD_CURRENT_THREAD();
@@ -2316,7 +2317,7 @@ _PR_MD_READ(PRFileDesc *fd, void *buf, PRInt32 len)
         memset(&(me->md.overlapped.overlapped), 0, sizeof(OVERLAPPED));
 
         me->md.overlapped.overlapped.Offset = SetFilePointer((HANDLE)f, 0, &me->md.overlapped.overlapped.OffsetHigh, FILE_CURRENT);
-        PR_ASSERT((me->md.overlapped.overlapped.Offset != 0xffffffff) || (GetLastError() != NO_ERROR));
+        PR_ASSERT((me->md.overlapped.overlapped.Offset != 0xffffffff) || (GetLastError() == NO_ERROR));
 
         if (fd->secret->inheritable) {
             rv = ReadFile((HANDLE)f, 
@@ -2325,8 +2326,8 @@ _PR_MD_READ(PRFileDesc *fd, void *buf, PRInt32 len)
                           &bytes, 
                           &me->md.overlapped.overlapped);
             if (rv != 0) {
-                rc = SetFilePointer((HANDLE)f, bytes, &hiOffset, FILE_CURRENT);
-                PR_ASSERT((rc != 0xffffffff) || (GetLastError() != NO_ERROR));
+                loOffset = SetFilePointer((HANDLE)f, bytes, &hiOffset, FILE_CURRENT);
+                PR_ASSERT((loOffset != 0xffffffff) || (GetLastError() == NO_ERROR));
                 return bytes;
             }
             err = GetLastError();
@@ -2334,8 +2335,8 @@ _PR_MD_READ(PRFileDesc *fd, void *buf, PRInt32 len)
                 rv = GetOverlappedResult((HANDLE)f,
                         &me->md.overlapped.overlapped, &bytes, TRUE);
                 if (rv != 0) {
-                    rc = SetFilePointer((HANDLE)f, bytes, &hiOffset, FILE_CURRENT);
-                    PR_ASSERT((rc != 0xffffffff) || (GetLastError() != NO_ERROR));
+                    loOffset = SetFilePointer((HANDLE)f, bytes, &hiOffset, FILE_CURRENT);
+                    PR_ASSERT((loOffset != 0xffffffff) || (GetLastError() == NO_ERROR));
                     return bytes;
                 }
                 err = GetLastError();
@@ -2452,8 +2453,9 @@ _PR_MD_WRITE(PRFileDesc *fd, void *buf, PRInt32 len)
 {
     PRInt32 f = fd->secret->md.osfd;
     PRInt32 bytes;
-    int rv, err, rc;
+    int rv, err;
     LONG hiOffset = 0;
+    LONG loOffset;
 
     if (_nt_use_async && !fd->secret->md.sync_file_io) {
         PRThread *me = _PR_MD_CURRENT_THREAD();
@@ -2466,7 +2468,7 @@ _PR_MD_WRITE(PRFileDesc *fd, void *buf, PRInt32 len)
         memset(&(me->md.overlapped.overlapped), 0, sizeof(OVERLAPPED));
 
         me->md.overlapped.overlapped.Offset = SetFilePointer((HANDLE)f, 0, &me->md.overlapped.overlapped.OffsetHigh, FILE_CURRENT);
-        PR_ASSERT((me->md.overlapped.overlapped.Offset != 0xffffffff) || (GetLastError() != NO_ERROR));
+        PR_ASSERT((me->md.overlapped.overlapped.Offset != 0xffffffff) || (GetLastError() == NO_ERROR));
 
         if (fd->secret->inheritable) {
             rv = WriteFile((HANDLE)f, 
@@ -2475,8 +2477,8 @@ _PR_MD_WRITE(PRFileDesc *fd, void *buf, PRInt32 len)
                           &bytes, 
                           &me->md.overlapped.overlapped);
             if (rv != 0) {
-                rc = SetFilePointer((HANDLE)f, bytes, &hiOffset, FILE_CURRENT);
-                PR_ASSERT((rc != 0xffffffff) || (GetLastError() != NO_ERROR));
+                loOffset = SetFilePointer((HANDLE)f, bytes, &hiOffset, FILE_CURRENT);
+                PR_ASSERT((loOffset != 0xffffffff) || (GetLastError() == NO_ERROR));
                 return bytes;
             }
             err = GetLastError();
@@ -2484,8 +2486,8 @@ _PR_MD_WRITE(PRFileDesc *fd, void *buf, PRInt32 len)
                 rv = GetOverlappedResult((HANDLE)f,
                         &me->md.overlapped.overlapped, &bytes, TRUE);
                 if (rv != 0) {
-                    rc = SetFilePointer((HANDLE)f, bytes, &hiOffset, FILE_CURRENT);
-                    PR_ASSERT((rc != 0xffffffff) || (GetLastError() != NO_ERROR));
+                    loOffset = SetFilePointer((HANDLE)f, bytes, &hiOffset, FILE_CURRENT);
+                    PR_ASSERT((loOffset != 0xffffffff) || (GetLastError() == NO_ERROR));
                     return bytes;
                 }
                 err = GetLastError();
