@@ -27,6 +27,7 @@ DIRS=             	\
 	base            \
         exthandler\win  \
 	exthandler	\
+	prefetch	\
 	build     	\
         $(NULL)
 

@@ -40,6 +40,7 @@
 #include "nsDocLoader.h"
 #include "nsOSHelperAppService.h"
 #include "nsExternalProtocolHandler.h"
+#include "nsPrefetchService.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Define the contructor function for the objects
@@ -50,6 +51,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsURILoader)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsDocLoaderImpl, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsOSHelperAppService)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsExternalProtocolHandler)
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsPrefetchService, Init)
 
 ////////////////////////////////////////////////////////////////////////
 // Define a table of CIDs implemented by this module along with other
@@ -68,7 +70,9 @@ static const nsModuleComponentInfo components[] = {
   { "Netscape Mime Mapping Service", NS_EXTERNALHELPERAPPSERVICE_CID, NS_MIMESERVICE_CONTRACTID, 
      nsOSHelperAppServiceConstructor, },
   { "Netscape Default Protocol Handler", NS_EXTERNALPROTOCOLHANDLER_CID, NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX"default", 
-     nsExternalProtocolHandlerConstructor, } 
+     nsExternalProtocolHandlerConstructor, },
+  {  NS_PREFETCHSERVICE_CLASSNAME, NS_PREFETCHSERVICE_CID, NS_PREFETCHSERVICE_CONTRACTID,
+     nsPrefetchServiceConstructor, },
 };
 
 

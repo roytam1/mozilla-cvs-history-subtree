@@ -24,6 +24,7 @@ REQUIRES	= xpcom \
 		  necko \
 		  mimetype \
 		  exthandler \
+		  prefetch \
 		  rdf \
 		  helperAppDlg \
 		  dom \
@@ -38,6 +39,7 @@ MODULE_NAME	= nsURILoaderModule
 LINCS=-I..\base                           \
       -I..\exthandler                     \
       -I..\exthandler\win                 \
+      -I..\prefetch                       \
       $(NULL)
 
 CPP_OBJS=                                   \

@@ -893,6 +893,8 @@ sub BuildClientDist()
     #URILOADER
     InstallFromManifest(":mozilla:uriloader:base:MANIFEST_IDL",                    "$distdirectory:idl:");
     InstallFromManifest(":mozilla:uriloader:exthandler:MANIFEST_IDL",              "$distdirectory:idl:");
+    InstallFromManifest(":mozilla:uriloader:prefetch:MANIFEST_IDL",                "$distdirectory:idl:");
+    InstallFromManifest(":mozilla:uriloader:prefetch:MANIFEST",                    "$distdirectory:uriloader:");
     
     #NETWERK
     InstallFromManifest(":mozilla:netwerk:build:MANIFEST",                         "$distdirectory:netwerk:");

@@ -37,6 +37,7 @@ REQUIRES	= xpcom \
 		  necko \
 		  mimetype \
 		  exthandler \
+		  prefetch \
 		  rdf \
 		  helperAppDlg \
 		  dom \
@@ -48,6 +49,11 @@ CPPSRCS		= nsURILoaderModule.cpp
 SHARED_LIBRARY_LIBS = \
 		$(DIST)/lib/$(LIB_PREFIX)uriloaderbase_s.$(LIB_SUFFIX) \
 		$(DIST)/lib/$(LIB_PREFIX)exthandler_s.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)prefetch_s.$(LIB_SUFFIX) \
+		$(NULL)
+
+LOCAL_INCLUDES	= \
+		-I$(srcdir)/../prefetch \
 		$(NULL)
 
 EXTRA_DSO_LDOPTS = \
