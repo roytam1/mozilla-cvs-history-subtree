@@ -524,8 +524,6 @@ TestOffsetWrites(nsINetDataCache *cache)
     rv = cache->GetCachedNetData(cacheKey, sizeof cacheKey, getter_AddRefs(record));
     NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't access record via opaque cache key");
 
-    rv = record->NewChannel(0, getter_AddRefs(channel));
-    NS_ASSERTION(NS_SUCCEEDED(rv), " ");
 
     // Write buffer-fulls of data at random offsets into the cache entry.
     // Data written is (offset % 0xff)
@@ -534,6 +532,9 @@ TestOffsetWrites(nsINetDataCache *cache)
     CounterStream *counterStream;
     int i;
     for (i = 0; i < 100; i++) {
+        rv = record->NewChannel(0, getter_AddRefs(channel));
+        NS_ASSERTION(NS_SUCCEEDED(rv), " ");
+
         startingOffset = streamLength ? streamLength - (randomStream->Next() % sizeof buf): 0;
         rv = channel->OpenOutputStream(startingOffset, getter_AddRefs(outStream));
         NS_ASSERTION(NS_SUCCEEDED(rv), " ");
