@@ -18,10 +18,10 @@
 #include "nsID.h"
 #include "prprf.h"
 
-const static char gIDFormat[] = 
+static const char gIDFormat[] = 
   "{%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x}";
 
-const static char gIDFormat2[] = 
+static const char gIDFormat2[] = 
   "%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x";
 
 /* 
