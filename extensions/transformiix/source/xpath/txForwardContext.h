@@ -49,9 +49,10 @@ class txForwardContext : public txIEvalContext
 public:
     txForwardContext(txIMatchContext* aContext,
                      const txXPathNode& aContextNode,
-                     txNodeSet* aContextNodeSet) : mInner(aContext),
-                                                   mContextNode(aContextNode),
-                                                   mContextSet(aContextNodeSet)
+                     txNodeSet* aContextNodeSet)
+        : mInner(aContext),
+          mContextNode(aContextNode),
+          mContextSet(aContextNodeSet)
     {}
     ~txForwardContext()
     {}
