@@ -143,9 +143,11 @@ public:
   NS_IMETHOD GetTitle(PRUnichar** aResult);
 
   // nsIWebShellContainer
-  NS_IMETHOD WillLoadURL(nsIWebShell* aShell, const PRUnichar* aURL);
+  NS_IMETHOD WillLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, nsLoadType aReason);
   NS_IMETHOD BeginLoadURL(nsIWebShell* aShell, const PRUnichar* aURL);
-  NS_IMETHOD EndLoadURL(nsIWebShell* aShell, const PRUnichar* aURL);
+  NS_IMETHOD ProgressLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, PRInt32 aProgress, PRInt32 aProgressMax);
+  NS_IMETHOD EndLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, PRInt32 aStatus);
+  NS_IMETHOD OverLink(nsIWebShell* aShell, const PRUnichar* aURLSpec, const PRUnichar* aTargetSpec);
 
   // nsILinkHandler
   NS_IMETHOD OnLinkClick(nsIFrame* aFrame, 
@@ -850,7 +852,7 @@ nsWebShell::LoadURL(const PRUnichar* aURLSpec,
 
   // Give web-shell-container right of refusal
   if (nsnull != mContainer) {
-    rv = mContainer->WillLoadURL(this, urlSpec);
+    rv = mContainer->WillLoadURL(this, urlSpec, nsLoadURL);
     if (NS_OK != rv) {
       return rv;
     }
@@ -948,7 +950,7 @@ nsWebShell::GoTo(PRInt32 aHistoryIndex)
     // Give web-shell-container right of refusal
     nsAutoString urlSpec(*s);
     if (nsnull != mContainer) {
-      rv = mContainer->WillLoadURL(this, urlSpec);
+      rv = mContainer->WillLoadURL(this, urlSpec, nsLoadHistory);
       if (NS_OK != rv) {
         return rv;
       }
@@ -1054,10 +1056,10 @@ nsWebShell::GetTitle(PRUnichar** aResult)
 // WebShell container implementation
 
 NS_IMETHODIMP
-nsWebShell::WillLoadURL(nsIWebShell* aShell, const PRUnichar* aURL)
+nsWebShell::WillLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, nsLoadType aReason)
 {
   if (nsnull != mContainer) {
-    return mContainer->WillLoadURL(aShell, aURL);
+    return mContainer->WillLoadURL(aShell, aURL, aReason);
   }
   return NS_OK;
 }
@@ -1072,13 +1074,35 @@ nsWebShell::BeginLoadURL(nsIWebShell* aShell, const PRUnichar* aURL)
 }
 
 NS_IMETHODIMP
-nsWebShell::EndLoadURL(nsIWebShell* aShell, const PRUnichar* aURL)
+nsWebShell::ProgressLoadURL(nsIWebShell* aShell, 
+                            const PRUnichar* aURL, 
+                            PRInt32 aProgress, 
+                            PRInt32 aProgressMax)
 {
   if (nsnull != mContainer) {
-    return mContainer->EndLoadURL(aShell, aURL);
+    return mContainer->ProgressLoadURL(aShell, aURL, aProgress, aProgressMax);
   }
   return NS_OK;
 }
+
+NS_IMETHODIMP
+nsWebShell::EndLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, PRInt32 aStatus)
+{
+  if (nsnull != mContainer) {
+    return mContainer->EndLoadURL(aShell, aURL, aStatus);
+  }
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsWebShell::OverLink(nsIWebShell* aShell, const PRUnichar* aURLSpec, const PRUnichar* aTargetSpec)
+{
+  if (nsnull != mContainer) {
+    return mContainer->OverLink(aShell, aURLSpec, aTargetSpec);
+  }
+  return NS_OK;
+}
+
 
 //----------------------------------------------------------------------
 

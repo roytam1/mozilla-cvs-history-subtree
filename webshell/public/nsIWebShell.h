@@ -46,6 +46,13 @@ class nsIPref;
 
 //----------------------------------------------------------------------
 
+typedef enum {
+  nsLoadURL,
+  nsLoadHistory,
+  nsLoadLink,
+  nsLoadRefresh
+} nsLoadType;
+
 // Container for web shell's
 class nsIWebShellContainer : public nsISupports {
 public:
@@ -54,11 +61,14 @@ public:
   NS_IMETHOD GetTitle(PRUnichar** aResult) = 0;
 
   // History control
-  NS_IMETHOD WillLoadURL(nsIWebShell* aShell, const PRUnichar* aURL) = 0;
+  NS_IMETHOD WillLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, nsLoadType aReason) = 0;
   NS_IMETHOD BeginLoadURL(nsIWebShell* aShell, const PRUnichar* aURL) = 0;
 
   // XXX not yet implemented; should we?
-  NS_IMETHOD EndLoadURL(nsIWebShell* aShell, const PRUnichar* aURL) = 0;
+  NS_IMETHOD ProgressLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, PRInt32 aProgress, PRInt32 aProgressMax) = 0;
+  NS_IMETHOD EndLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, PRInt32 aStatus) = 0;
+
+  NS_IMETHOD OverLink(nsIWebShell* aShell, const PRUnichar* aURLSpec, const PRUnichar* aTargetSpec) = 0;
 
   // Chrome control
 // NS_IMETHOD SetHistoryIndex(PRInt32 aIndex, PRInt32 aMaxIndex) = 0;

@@ -838,7 +838,7 @@ nsBrowserWindow::GetStatus(PRUnichar** aResult)
 }
 
 NS_IMETHODIMP
-nsBrowserWindow::WillLoadURL(nsIWebShell* aShell, const PRUnichar* aURL)
+nsBrowserWindow::WillLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, nsLoadType aReason)
 {
   if (mStatus) {
     nsAutoString url("Connecting to ");
@@ -859,11 +859,23 @@ nsBrowserWindow::BeginLoadURL(nsIWebShell* aShell, const PRUnichar* aURL)
 }
 
 NS_IMETHODIMP
-nsBrowserWindow::EndLoadURL(nsIWebShell* aShell, const PRUnichar* aURL)
+nsBrowserWindow::ProgressLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, PRInt32 aProgress, PRInt32 aProgressMax)
+{
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsBrowserWindow::EndLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, PRInt32 aStatus)
 {
   if (mThrobber) {
     mThrobber->Stop();
   }
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsBrowserWindow::OverLink(nsIWebShell* aShell, const PRUnichar* aURLSpec, const PRUnichar* aTargetSpec)
+{
   return NS_OK;
 }
 

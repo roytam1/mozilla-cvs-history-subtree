@@ -83,9 +83,11 @@ public:
   NS_IMETHOD OnStopBinding(nsIURL* aURL, PRInt32 status, const nsString &aMsg);
 
   // nsIWebShellContainer
-  NS_IMETHOD WillLoadURL(nsIWebShell* aShell, const PRUnichar* aURL);
+  NS_IMETHOD WillLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, nsLoadType aReason);
   NS_IMETHOD BeginLoadURL(nsIWebShell* aShell, const PRUnichar* aURL);
-  NS_IMETHOD EndLoadURL(nsIWebShell* aShell, const PRUnichar* aURL);
+  NS_IMETHOD ProgressLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, PRInt32 aProgress, PRInt32 aProgressMax);
+  NS_IMETHOD EndLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, PRInt32 aStatus);
+  NS_IMETHOD OverLink(nsIWebShell* aShell, const PRUnichar* aURLSpec, const PRUnichar* aTargetSpec);
 
   // nsINetSupport
   NS_IMETHOD_(void) Alert(const nsString &aText);
