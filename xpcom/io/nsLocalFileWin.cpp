@@ -1208,16 +1208,34 @@ nsLocalFile::SetModDate(PRInt64 aLastModificationDate, PRBool resolveTerminal)
         return ConvertWinError(GetLastError());
     }
 
-    FILETIME time;
-    PRInt64 windowsTime = (aLastModificationDate * 10000000) + 116444736000000000;
-    time.dwLowDateTime  = (DWORD)windowsTime;
-    time.dwHighDateTime = (DWORD)(windowsTime >> 32);
+    FILETIME lft, ft;
+    SYSTEMTIME st;
+    PRExplodedTime pret;
 
-    if ( 0 == SetFileTime(file, NULL, NULL, &time) )
+    PR_ExplodedTime(aLastModificationDate, PR_LocalTimeParameters, &pret);
+    st.wYear             = pret.tm_year;
+    st.wMonth            = pret.tm_month + 1; //Convert start offset -- Win32: Jan=1; NSPR: Jan=0
+    st.wDayOfWeek        = pret.tm_wday;
+    st.wDay              = pret.tm_mday;
+    st.wHour             = pret.tm_hour;
+    st.wMinute           = pret.tm_minute;
+    st.wSecond           = pret.tm_sec;
+    st.wMilliseconds     = pret.tm_usec/1000;
+
+    if ( 0 == SystemTimeToFileTime(&st, &lft) )
+    {
+        rv = ConvertWinError(GetLastError());
+    }
+    else if ( 0 == LocalFileTimeToFileTime(&lft, &ft) )
+    {
+        rv = ConvertWinError(GetLastError());
+    }
+    else if ( 0 == SetFileTime(file, NULL, &ft, &ft) )
     {
         // could not set time
         rv = ConvertWinError(GetLastError());
     }
+
     CloseHandle( file );
     return rv;
 
@@ -1447,6 +1465,9 @@ NS_IMETHODIMP
 nsLocalFile::Exists(PRBool *_retval)
 {
     NS_ENSURE_ARG(_retval);
+    
+    // exists must restat.
+    MakeDirty();
 
     nsresult rv = ResolveAndStat( PR_TRUE );
     

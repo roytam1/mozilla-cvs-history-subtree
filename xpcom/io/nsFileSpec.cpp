@@ -1387,3 +1387,33 @@ nsNSPRPath::~nsNSPRPath()
         nsCRT::free(modifiedNSPRPath);
 #endif
 }
+
+
+nsresult 
+NS_FileSpecToIFile(nsFileSpec* fileSpec, nsILocalFile* *result)
+{
+    nsresult rv;
+
+    nsCOMPtr<nsILocalFile> file(do_CreateInstance(NS_LOCAL_FILE_PROGID));
+
+    if (!file) return NS_ERROR_FAILURE;
+
+#if defined(XP_MAC) || defined(RHAPSODY)
+    {
+        FSSpec spec  = file->GetFSSpec();
+        nsCOMPtr<nsILocalFileMac> psmAppMacFile = do_QueryInterface(file, &rv);
+        if (NS_FAILED(rv)) return rv;
+        rv = psmAppMacFile->InitWithFSSpec(&spec);
+    }
+#else
+    rv = file->InitWithPath(fileSpec->GetNativePathCString());
+#endif
+    if (NS_FAILED(rv)) return rv;
+
+    *result = file;
+    NS_ADDREF(*result);
+    return NS_OK;
+}
+
+
+

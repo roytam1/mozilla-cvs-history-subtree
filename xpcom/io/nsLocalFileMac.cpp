@@ -1260,6 +1260,49 @@ nsLocalFile::GetPath(char **_retval)
 	return NS_OK;
 }
 
+nsresult nsLocalFile::MoveCopy( nsIFile* newParentDir, const char* newName, PRBool isCopy )
+{
+		nsresult  rv = ResolveAndStat( PR_TRUE );
+	if ( NS_FAILED( rv ) )
+		return rv;
+	nsCOMPtr<nsILocalFileMac> destDir( do_QueryInterface( newParentDir ));
+	
+	PRBool isDirectory;
+	rv = newParentDir->IsDirectory( &isDirectory );
+	if ( NS_FAILED( rv ) )
+		return rv;
+	FSSpec srcSpec;
+	FSSpec destSpec;
+	srcSpec = mResolvedSpec;
+	rv = destDir->GetResolvedFSSpec( &destSpec );
+	if ( NS_FAILED( rv ) )
+		return rv;		
+
+	OSErr macErr;
+	Str255 newPascalName;
+	if ( newName )
+		myPLstrncpy( newPascalName, newName, 255);
+	if ( isCopy )
+	{
+		if ( mResolvedWasFolder )
+			macErr = MacFSpDirectoryCopyRename( &srcSpec, &destSpec, newPascalName, NULL, 0, true, NULL );
+		else
+			macErr = ::FSpFileCopy( &srcSpec, &destSpec, newPascalName, NULL, 0, true );
+	}
+	else
+	{
+		macErr= ::FSpMoveRenameCompat(&srcSpec, &destSpec, newPascalName);
+		if ( macErr == diffVolErr)
+		{
+				// On a different Volume so go for Copy and then delete
+				rv = CopyTo( newParentDir, newName );
+				if ( NS_FAILED ( rv ) )
+					return rv;
+				return Delete( PR_TRUE );
+		}
+	}	
+	return MacErrorMapper( macErr );
+}
 
 NS_IMETHODIMP  
 nsLocalFile::CopyTo(nsIFile *newParentDir, const char *newName)
@@ -1630,6 +1673,9 @@ nsLocalFile::Exists(PRBool *_retval)
 {
 	NS_ENSURE_ARG(_retval);
 	*_retval = PR_FALSE;		// Assume failure
+
+  MakeDirty();
+
 	nsresult rv = ResolveAndStat(PR_TRUE);
 	if ( rv == NS_ERROR_FILE_NOT_FOUND )
 		return NS_OK;
