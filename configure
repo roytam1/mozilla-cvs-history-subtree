@@ -13743,6 +13743,18 @@ EOF
 
 fi
 
+if test "$MOZ_MINOTAUR"; then
+   cat >> confdefs.h <<\EOF
+#define MOZ_MINOTAUR 1
+EOF
+
+fi
+
+if test "$MOZ_XRE_APP"; then
+   cat >> confdefs.h <<\EOF
+#define MOZ_XRE_APP 1
+EOF
+fi
 
 if test "$_WIN32_MSVC"; then
     XPCOM_GLUE_LIBS='$(DIST)/lib/$(LIB_PREFIX)xpcomglue.$(LIB_SUFFIX) $(DIST)/lib/$(LIB_PREFIX)string_s.$(LIB_SUFFIX) $(DIST)/lib/$(LIB_PREFIX)string_obsolete_s.$(LIB_SUFFIX)'
