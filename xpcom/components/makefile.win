@@ -63,7 +63,7 @@ LINCS =                    \
 	$(NULL)
 
 !ifdef MOZ_STATIC_COMPONENT_LIBS
-LCFLAGS = -DUSE_NSREG -D_IMPL_NS_COM -D_IMPL_NS_BASE -DWIN32_LEAN_AND_MEAN -DMOZ_STATIC_COMPONENT_LIBS -DXPCOM_TRANSLATE_NSGM_ENTRY_POINT
+LCFLAGS = -DUSE_NSREG -D_IMPL_NS_COM -D_IMPL_NS_BASE -DWIN32_LEAN_AND_MEAN -DMOZ_STATIC_COMPONENT_LIBS -DENABLE_STATIC_COMPONENT_LOADER
 !else
 LCFLAGS = -DUSE_NSREG -D_IMPL_NS_COM -D_IMPL_NS_BASE -DWIN32_LEAN_AND_MEAN
 !endif
@@ -72,6 +72,7 @@ CPP_OBJS =                                 \
         .\$(OBJDIR)\nsComponentManager.obj \
         .\$(OBJDIR)\nsGenericFactory.obj   \
         .\$(OBJDIR)\nsNativeComponentLoader.obj \
+		.\$(OBJDIR)\nsStaticComponentLoader.obj \
         .\$(OBJDIR)\nsRegistry.obj         \
         .\$(OBJDIR)\nsRepository.obj       \
         .\$(OBJDIR)\nsServiceManager.obj   \
