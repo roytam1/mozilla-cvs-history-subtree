@@ -83,6 +83,7 @@ components/dom_stylesheets.xpt
 components/dom_views.xpt
 components/dom_xbl.xpt
 components/dom_xul.xpt
+components/dom_traversal.xpt
 
 ; editor
 components/libeditor.so                   
