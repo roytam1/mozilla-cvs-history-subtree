@@ -63,6 +63,14 @@
 #include "nsIDOMKeyEvent.h"
 #include "nsIDOMMutationEvent.h"
 
+#ifdef MOZ_SVG
+#include "nsIDOMSVGElement.h"
+#include "nsIDOMSVGMatrix.h"
+#include "nsIDOMSVGSVGElement.h"
+#include "nsIDOMSVGPoint.h"
+#include "nsIDOMSVGLocatable.h"
+#endif
+
 static const char* const mEventNames[] = {
   "mousedown", "mouseup", "click", "dblclick", "mouseover",
   "mouseout", "mousemove", "contextmenu", "keydown", "keyup", "keypress",
@@ -630,6 +638,90 @@ NS_METHOD nsDOMEvent::GetClientX(PRInt32* aClientX)
     return NS_OK;
   }
 
+#ifdef MOZ_SVG
+  // Special casing for SVG
+  // <<SVG 1.0 Specification,
+  // http://www.w3.org/TR/2001/REC-SVG-20010904/svgdom.html#RelationShipWithDOM2Events>>:
+  //   "clientX and clientY parameters for mouse events represent
+  //   viewport coordinates for the corresponding 'svg'
+  //   element."
+  {
+    nsCOMPtr<nsIDOMSVGElement> svgElement = do_QueryInterface(mTarget);
+    if (svgElement) {
+      
+      nsCOMPtr<nsIDOMSVGSVGElement> svgSvgElement;
+      svgElement->GetOwnerSVGElement(getter_AddRefs(svgSvgElement));
+      if (!svgSvgElement) {
+        NS_ERROR("could not get svg:svg element");
+        return NS_ERROR_FAILURE;
+      }
+
+      // get the screenToViewportTransform:
+      
+      nsCOMPtr<nsIDOMSVGMatrix> screenToViewportTransform;
+      {
+        nsCOMPtr<nsIDOMSVGMatrix> screenCTM;
+        {
+          nsCOMPtr<nsIDOMSVGLocatable> viewportLocatable;
+          viewportLocatable = do_QueryInterface(svgSvgElement);
+          if (!viewportLocatable) {
+            NS_ERROR("nsIDOMSVGLocatable interface missing on svg viewport");
+            return NS_ERROR_FAILURE;
+          }
+  
+          viewportLocatable->GetScreenCTM(getter_AddRefs(screenCTM));
+          if (!screenCTM) {
+            NS_ERROR("could not get screenCTM");
+            return NS_ERROR_FAILURE;
+          }
+        }
+        // XXX It's insane that we have to invert a matrix here. What
+        // we need is nsIDOMSVGLocatable::GetScreenToViewportCTM()
+        screenCTM->Inverse(getter_AddRefs(screenToViewportTransform));
+        if (!screenToViewportTransform) {
+          NS_ERROR("could not invert ctm");
+          return NS_ERROR_FAILURE;
+        }
+      }
+
+      // now we've got the transformation matrix, use it to transform
+      // the screen coords into viewport coords:
+      
+      // XXX This is lunacy. We need
+      // nsIDOMSVGMatrix::Transform(float,float)
+      nsCOMPtr<nsIDOMSVGPoint> viewportPoint;
+      {
+        nsCOMPtr<nsIDOMSVGPoint> screenPoint;
+        svgSvgElement->CreateSVGPoint(getter_AddRefs(screenPoint));
+        if (!screenPoint) {
+          NS_ERROR("could not create point");
+          return NS_ERROR_FAILURE;
+        }
+        
+        PRInt32 val;
+        GetScreenX(&val);
+        screenPoint->SetX(val);
+        GetScreenY(&val);
+        screenPoint->SetY(val);
+        screenPoint->MatrixTransform(screenToViewportTransform,
+                                     getter_AddRefs(viewportPoint));
+        
+        if (!viewportPoint) {
+          NS_ERROR("could not transform point");
+          return NS_ERROR_FAILURE;
+        }
+      }
+
+      // hooray! we've finally got the viewport coords 
+      
+      float val;
+      viewportPoint->GetX(&val);
+      *aClientX = (nscoord)val;
+      return NS_OK;
+    }
+  }
+#endif
+  
   //My god, man, there *must* be a better way to do this.
   nsCOMPtr<nsIPresShell> presShell;
   nsIWidget* rootWidget = nsnull;
@@ -681,6 +773,90 @@ NS_METHOD nsDOMEvent::GetClientY(PRInt32* aClientY)
     return NS_OK;
   }
 
+#ifdef MOZ_SVG
+  // Special casing for SVG
+  // <<SVG 1.0 Specification,
+  // http://www.w3.org/TR/2001/REC-SVG-20010904/svgdom.html#RelationShipWithDOM2Events>>:
+  //   "clientX and clientY parameters for mouse events represent
+  //   viewport coordinates for the corresponding 'svg'
+  //   element."
+  {
+    nsCOMPtr<nsIDOMSVGElement> svgElement = do_QueryInterface(mTarget);
+    if (svgElement) {
+      
+      nsCOMPtr<nsIDOMSVGSVGElement> svgSvgElement;
+      svgElement->GetOwnerSVGElement(getter_AddRefs(svgSvgElement));
+      if (!svgSvgElement) {
+        NS_ERROR("could not get svg:svg element");
+        return NS_ERROR_FAILURE;
+      }
+
+      // get the screenToViewportTransform:
+      
+      nsCOMPtr<nsIDOMSVGMatrix> screenToViewportTransform;
+      {
+        nsCOMPtr<nsIDOMSVGMatrix> screenCTM;
+        {
+          nsCOMPtr<nsIDOMSVGLocatable> viewportLocatable;
+          viewportLocatable = do_QueryInterface(svgSvgElement);
+          if (!viewportLocatable) {
+            NS_ERROR("nsIDOMSVGLocatable interface missing on svg viewport");
+            return NS_ERROR_FAILURE;
+          }
+  
+          viewportLocatable->GetScreenCTM(getter_AddRefs(screenCTM));
+          if (!screenCTM) {
+            NS_ERROR("could not get screenCTM");
+            return NS_ERROR_FAILURE;
+          }
+        }
+        // XXX It's insane that we have to invert a matrix here. What
+        // we need is nsIDOMSVGLocatable::GetScreenToViewportCTM()
+        screenCTM->Inverse(getter_AddRefs(screenToViewportTransform));
+        if (!screenToViewportTransform) {
+          NS_ERROR("could not invert ctm");
+          return NS_ERROR_FAILURE;
+        }
+      }
+
+      // now we've got the transformation matrix, use it to transform
+      // the screen coords into viewport coords:
+      
+      // XXX This is lunacy. We need
+      // nsIDOMSVGMatrix::Transform(float,float)
+      nsCOMPtr<nsIDOMSVGPoint> viewportPoint;
+      {
+        nsCOMPtr<nsIDOMSVGPoint> screenPoint;
+        svgSvgElement->CreateSVGPoint(getter_AddRefs(screenPoint));
+        if (!screenPoint) {
+          NS_ERROR("could not create point");
+          return NS_ERROR_FAILURE;
+        }
+        
+        PRInt32 val;
+        GetScreenX(&val);
+        screenPoint->SetX(val);
+        GetScreenY(&val);
+        screenPoint->SetY(val);
+        screenPoint->MatrixTransform(screenToViewportTransform,
+                                     getter_AddRefs(viewportPoint));
+        
+        if (!viewportPoint) {
+          NS_ERROR("could not transform point");
+          return NS_ERROR_FAILURE;
+        }
+      }
+
+      // hooray! we've finally got the viewport coords 
+      
+      float val;
+      viewportPoint->GetY(&val);
+      *aClientY = (nscoord)val;
+      return NS_OK;
+    }
+  }
+#endif
+    
   //My god, man, there *must* be a better way to do this.
   nsCOMPtr<nsIPresShell> presShell;
   nsIWidget* rootWidget = nsnull;
