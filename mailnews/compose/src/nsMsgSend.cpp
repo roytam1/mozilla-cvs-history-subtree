@@ -45,7 +45,7 @@
 #include "nsIMsgCopyServiceListener.h"
 #include "nsIFileSpec.h"
 #include "nsMsgCopy.h"
-
+#include "nsXPIDLString.h"
 #include "nsMsgPrompts.h"
 
 // RICHIE - StringBundle Converstion Place Holder ////////////////////////////
@@ -703,8 +703,8 @@ nsMsgComposeAndSend::GatherMimeAttachments()
 			if (status < 0)
 				goto FAIL;
 
-      char *turl;
-      ma->mURL->GetSpec(&turl);
+      nsXPIDLCString turl;
+      ma->mURL->GetSpec(getter_Copies(turl));
 	  hdrs = mime_generate_attachment_headers (ma->m_type, ma->m_encoding,
 												   ma->m_description,
 												   ma->m_x_mac_type,
@@ -714,7 +714,6 @@ nsMsgComposeAndSend::GatherMimeAttachments()
 												   m_digest_p,
 												   ma,
 												   mCompFields->GetCharacterSet());
-	  nsCRT::free(turl);
 			if (!hdrs)
 				goto FAILMEM;
 
@@ -1002,8 +1001,8 @@ int nsMsgComposeAndSend::HackAttachments(
 
 			/* Count up attachments which are going to come from mail folders
 			and from NNTP servers. */
-      char *turl;
-      m_attachments[i].mURL->GetSpec(&turl);
+      nsXPIDLCString turl;
+      m_attachments[i].mURL->GetSpec(getter_Copies(turl));
 			if (PL_strncasecmp(turl, "mailbox:",8) ||
 					PL_strncasecmp(turl, "IMAP:",5))
 				mailbox_count++;
@@ -1013,7 +1012,6 @@ int nsMsgComposeAndSend::HackAttachments(
 					news_count++;
 
 			msg_pick_real_name(&m_attachments[i], mCompFields->GetCharacterSet());
-			nsCRT::free(turl);
 		}
 
 		/* If there is more than one mailbox URL, or more than one NNTP url,
@@ -2128,7 +2126,7 @@ BuildURLAttachmentData(nsIURI *url)
   int                 attachCount = 2;  // one entry and one empty entry
   nsMsgAttachmentData *attachments = nsnull;
   char                *theName = nsnull;
-  char          *spec = nsnull;
+  nsXPIDLCString spec;
 
   if (!url)
     return nsnull;    
@@ -2138,7 +2136,7 @@ BuildURLAttachmentData(nsIURI *url)
     return nsnull;
 
   // Now get a readable name...
-  url->GetSpec(&spec);
+  url->GetSpec(getter_Copies(spec));
   if (spec)
   {
     theName = PL_strrchr(spec, '/');
@@ -2154,7 +2152,6 @@ BuildURLAttachmentData(nsIURI *url)
   attachments[0].real_name = (char *)PL_strdup(theName);	// The original name of this document, which will eventually show up in the 
 
   NS_IF_ADDREF(url);
-  nsCRT::free(spec);
   return attachments;
 }
 
@@ -2182,11 +2179,11 @@ nsMsgComposeAndSend::SendWebPage(nsIMsgIdentity                    *aUserIndenti
   /* string GetBody(); */
   PRInt32       bodyLen;
   const char    *msgBody = ((nsMsgCompFields*)fields)->GetBody();
-  char *body = nsnull;
+  nsXPIDLCString body;
   if (!msgBody)
   {
-    url->GetSpec(&body);
-    msgBody = (char *)body;
+    url->GetSpec(getter_Copies(body));
+    msgBody = (const char *)body;
   }
 
   bodyLen = PL_strlen(msgBody);
@@ -2204,7 +2201,6 @@ nsMsgComposeAndSend::SendWebPage(nsIMsgIdentity                    *aUserIndenti
 						  nsnull,  // const struct nsMsgAttachedFile    *preloaded_attachments,
 						  nsnull, // void                              *relatedPart,
               aListenerArray);  
-  nsCRT::free(body);
   return rv;
 }
 
