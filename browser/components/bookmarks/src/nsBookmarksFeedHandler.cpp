@@ -79,6 +79,8 @@ extern nsIRDFResource       *kRSS10_items;
 extern nsIRDFResource       *kRSS10_title;
 extern nsIRDFResource       *kRSS10_link;
 
+extern nsIRDFResource       *kDC_date;
+
 extern nsIRDFLiteral        *kTrueLiteral;
 
 extern nsIRDFService        *gRDF;
@@ -138,7 +140,7 @@ protected:
     // helpers
     NS_METHOD HandleRDFItem (nsIRDFDataSource *aDS, nsIRDFResource *itemResource,
                              nsIRDFResource *aLinkResource, nsIRDFResource *aTitleResource);
-    NS_METHOD FindTextNode (nsIDOMNode *aParentNode, nsIDOMNode **aTextNode);
+    NS_METHOD FindTextInNode (nsIDOMNode *aParentNode, nsAString &aString);
 
     nsBookmarksService *mBMSVC;
     nsCOMPtr<nsIRDFDataSource> mInnerBMDataSource;
@@ -415,14 +417,11 @@ nsFeedLoadListener::TryParseAsRDF ()
 // and return it
 //
 nsresult
-nsFeedLoadListener::FindTextNode (nsIDOMNode *aParentNode, nsIDOMNode **aTextNode)
+nsFeedLoadListener::FindTextInNode (nsIDOMNode *aParentNode, nsAString &aString)
 {
     NS_ENSURE_ARG(aParentNode);
-    NS_ENSURE_ARG(aTextNode);
 
     nsresult rv;
-
-    *aTextNode = nsnull;
 
     nsCOMPtr<nsIDOMNode> childNode;
     rv = aParentNode->GetFirstChild(getter_AddRefs(childNode));
@@ -432,7 +431,8 @@ nsFeedLoadListener::FindTextNode (nsIDOMNode *aParentNode, nsIDOMNode **aTextNod
     PRUint16 nodeType = 0;
     do {
         rv = childNode->GetNodeType(&nodeType);
-        if (nodeType == nsIDOMNode::TEXT_NODE)
+        if (nodeType == nsIDOMNode::TEXT_NODE ||
+            nodeType == nsIDOMNode::CDATA_SECTION_NODE)
             break;
 
         nsCOMPtr<nsIDOMNode> temp;
@@ -441,12 +441,15 @@ nsFeedLoadListener::FindTextNode (nsIDOMNode *aParentNode, nsIDOMNode **aTextNod
         childNode = temp;
     } while (childNode);
 
-    if (nodeType == nsIDOMNode::TEXT_NODE) {
-        *aTextNode = childNode.get();
-        NS_ADDREF(*aTextNode);
+    if (nodeType == nsIDOMNode::TEXT_NODE ||
+        nodeType == nsIDOMNode::CDATA_SECTION_NODE)
+    {
+        nsCOMPtr<nsIDOMCharacterData> charTextNode = do_QueryInterface(childNode);
+        if (charTextNode)
+            return charTextNode->GetData(aString);
     }
 
-    return NS_OK;
+    return NS_ERROR_FAILURE;
 }
 
 nsresult
@@ -463,6 +466,9 @@ nsFeedLoadListener::HandleRDFItem (nsIRDFDataSource *aDS, nsIRDFResource *aItem,
 
     nsCOMPtr<nsIRDFNode> titleNode;
     rv = aDS->GetTarget (aItem, aTitleResource, PR_TRUE, getter_AddRefs(titleNode));
+    if (rv == NS_RDF_NO_VALUE) {
+        rv = aDS->GetTarget (aItem, kDC_date, PR_TRUE, getter_AddRefs(titleNode));
+    }
     if (NS_FAILED(rv) || rv == NS_RDF_NO_VALUE) return NS_ERROR_FAILURE;
 
     nsCOMPtr<nsIRDFLiteral> linkLiteral(do_QueryInterface(linkNode));
@@ -592,6 +598,7 @@ nsFeedLoadListener::TryParseAsSimpleRSS ()
                 /* We need to pull out the <title> and <link> children */
                 nsAutoString titleStr;
                 nsAutoString linkStr;
+                nsAutoString dateStr;
 
                 nsCOMPtr<nsIDOMNode> childNode;
                 rv = node->GetFirstChild(getter_AddRefs(childNode));
@@ -607,13 +614,13 @@ nsFeedLoadListener::TryParseAsSimpleRSS ()
                         rv = childNode->GetNodeName (childNname);
 
                         if (childNname.Equals(NS_LITERAL_STRING("title"))) {
-                            nsCOMPtr<nsIDOMNode> textNode;
-
-                            rv = FindTextNode (childNode, getter_AddRefs(textNode));
-                            if (!textNode || NS_FAILED(rv)) break;
-
-                            nsCOMPtr<nsIDOMCharacterData> charTextNode = do_QueryInterface(textNode);
-                            charTextNode->GetData(titleStr);
+                            rv = FindTextInNode (childNode, titleStr);
+                            if (NS_FAILED(rv)) break;
+                        } else if (childNname.Equals(NS_LITERAL_STRING("pubDate")) ||
+                                   childNname.Equals(NS_LITERAL_STRING("updated")))
+                        {
+                            rv = FindTextInNode (childNode, dateStr);
+                            if (NS_FAILED(rv)) break;
                         } else if (!isAtom && childNname.Equals(NS_LITERAL_STRING("guid"))) {
                             nsCOMPtr<nsIDOMElement> linkElem = do_QueryInterface(childNode);
                             if (!linkElem) break; // out of while(childNode) loop
@@ -623,13 +630,8 @@ nsFeedLoadListener::TryParseAsSimpleRSS ()
                             // Ignore failures. isPermaLink defaults to true.
                             if (!isPermaLink.Equals(NS_LITERAL_STRING("false"))) {
                                 // in node's TEXT
-                                nsCOMPtr<nsIDOMNode> textNode;
-
-                                rv = FindTextNode (childNode, getter_AddRefs(textNode));
-                                if (!textNode || NS_FAILED(rv)) break;
-
-                                nsCOMPtr<nsIDOMCharacterData> charTextNode = do_QueryInterface(textNode);
-                                charTextNode->GetData(linkStr);
+                                rv = FindTextInNode (childNode, linkStr);
+                                if (NS_FAILED(rv)) break;
                             }
                         } else if (childNname.Equals(NS_LITERAL_STRING("link"))) {
                             if (isAtom) { 
@@ -645,13 +647,8 @@ nsFeedLoadListener::TryParseAsSimpleRSS ()
                                 }
                             } else if (linkStr.IsEmpty()) {
                                 // in node's TEXT
-                                nsCOMPtr<nsIDOMNode> textNode;
-
-                                rv = FindTextNode (childNode, getter_AddRefs(textNode));
-                                if (!textNode || NS_FAILED(rv)) break;
-
-                                nsCOMPtr<nsIDOMCharacterData> charTextNode = do_QueryInterface(textNode);
-                                charTextNode->GetData(linkStr);
+                                rv = FindTextInNode (childNode, linkStr);
+                                if (NS_FAILED(rv)) break;
                             }
                         }
                     }
@@ -664,6 +661,9 @@ nsFeedLoadListener::TryParseAsSimpleRSS ()
                     childNode = temp;
                     if (!childNode || NS_FAILED(rv)) break;
                 }
+
+                if (titleStr.IsEmpty() && !dateStr.IsEmpty())
+                    titleStr.Assign(dateStr);
 
                 if (!titleStr.IsEmpty() && !linkStr.IsEmpty()) {
                     nsCOMPtr<nsIRDFResource> newBM;

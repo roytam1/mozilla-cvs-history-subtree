@@ -162,6 +162,12 @@ nsIRDFResource      *kRSS10_items;
 nsIRDFResource      *kRSS10_title;
 nsIRDFResource      *kRSS10_link;
 
+#ifndef DC_NAMESPACE_URI
+#define DC_NAMESPACE_URI "http://purl.org/dc/elements/1.1/"
+#endif 
+
+nsIRDFResource      *kDC_date;
+
 #define BOOKMARK_TIMEOUT        15000       // fire every 15 seconds
 // #define  DEBUG_BOOKMARK_PING_OUTPUT  1
 #define MAX_LAST_MODIFIED_FOLDERS 5
@@ -349,6 +355,9 @@ bm_AddRefGlobals()
                           &kRSS10_title);
         gRDF->GetResource(NS_LITERAL_CSTRING(RSS10_NAMESPACE_URI "link"),
                           &kRSS10_link);
+
+        gRDF->GetResource(NS_LITERAL_CSTRING(DC_NAMESPACE_URI "date"),
+                          &kDC_date);
     }
     return NS_OK;
 }
@@ -437,6 +446,8 @@ bm_ReleaseGlobals()
         NS_IF_RELEASE(kRSS10_items);
         NS_IF_RELEASE(kRSS10_title);
         NS_IF_RELEASE(kRSS10_link);
+
+        NS_IF_RELEASE(kDC_date);
     }
 }
 
