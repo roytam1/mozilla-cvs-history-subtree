@@ -319,7 +319,7 @@ score LOW_PAYMENT                    2.472
 score LOW_PRICE                      -1.162
 score LUXURY_CAR                     2.473
 score LYING_EYES                     3.060
-score MAILER_DAEMON                  2.536
+score MAILER_DAEMON                  -0.536
 score MAILTO_LINK                    -0.583
 score MAILTO_TO_REMOVE               0.710
 score MAILTO_TO_SPAM_ADDR            1.032
@@ -814,84 +814,84 @@ score YR_MEMBERSHIP_EXCH             1.2
 
 # End of GA-evolved scores.
 
-# some non-GA-generated scores: either network tests, occuring with
-# very low frequency, or very frequently causing false positives.
+# Scores for tests that are scored manually or with isolated GA runs.  Most
+# are net tests, userconf tests, tests occuring with very low frequency, or
+# tests with many false positives.
+#
+# The scores from isolated GA runs have two digits after the decimal point.
 
-score BAD_HELO_WARNING               2.5
-score NO_MX_FOR_FROM                 0.5
-score RAZOR_CHECK		     3.0
-score RAZOR2_CHECK		     3.5
-score DCC_CHECK                      2.0
-score PYZOR_CHECK                    3.0
+# miscellaneous network tests
 
-score RCVD_IN_RELAYS_ORDB_ORG	     2.5
-score RCVD_IN_OSIRUSOFT_COM	     0.5
-score X_OSIRU_DUL                    1.5
-score X_OSIRU_DUL_FH		    -1.5
-score X_OSIRU_OPEN_RELAY	     3.5
-score X_OSIRU_SPAM_SRC		     3.5
-score X_OSIRU_SPAMWARE_SITE	     5.5
-score RCVD_IN_RFCI		     0.5
-score RCVD_IN_ORBS                   3.0
-score RCVD_IN_DSBL                   3.0
-score RCVD_IN_MULTIHOP_DSBL          1.0
-score RCVD_IN_SBL                    3.0
-score RCVD_IN_UNCONFIRMED_DSBL       0.5
-score RCVD_IN_VISI                   2.0
-score HABEAS_HIL                     4.0
-score HABEAS_VIOLATOR                8.0
+score BAD_HELO_WARNING               2.29
+score NO_MX_FOR_FROM                 3.09
+score ROUND_THE_WORLD                2.80
+
+# message digest tests
+
+score RAZOR_CHECK                    2.64
+score RAZOR2_CHECK                   3.91
+score DCC_CHECK                      2.66
+score PYZOR_CHECK                    2.5
+
+# DNS blacklists
+
+score RCVD_IN_RELAYS_ORDB_ORG        0.61
+score RCVD_IN_OSIRUSOFT_COM          0.38
+score X_OSIRU_DUL                    0.62
+score X_OSIRU_DUL_FH                 0.36
+score X_OSIRU_OPEN_RELAY             2.72
+score X_OSIRU_SPAMWARE_SITE          0.30
+score X_OSIRU_SPAM_SRC               2.73
+score RCVD_IN_RFCI                   2.28
+score RCVD_IN_ORBS                   2.25
+score RCVD_IN_DSBL                   3.25
+score RCVD_IN_MULTIHOP_DSBL          0.81
+score RCVD_IN_SBL                    3.18
+score RCVD_IN_UNCONFIRMED_DSBL       0.77
+score RCVD_IN_VISI                   2.62
 score RCVD_IN_BONDEDSENDER         -10.0
 
-# The fudge scores below expect that you use the following scores for MAPS
-#score RCVD_IN_VARBL		     4.5
-#score RCVD_IN_RSS		     2.0
-#score RCVD_IN_DUL		     2.0
-score RCVD_IN_DUL_FH		    -1.5
+# ok_languages and ok_locales
 
-score FUDGE_DUL_OSIRU_FH            -1.0
-score FUDGE_DUL_MAPS_OSIRU          -2.0
-score FUDGE_RELAY_OSIRU		    -2.0
-score FUDGE_MULTIHOP_RELAY	    -1.0
-
-score ROUND_THE_WORLD		     3.0
-
-# the ok_language configuration option will need to be set correctly
-# across each corpus for this score to be GA evolved
-
-score UNDESIRED_LANGUAGE_BODY        2.0
-score CHARSET_FARAWAY                2.2
-score CHARSET_FARAWAY_BODY           2.3
-score CHARSET_FARAWAY_HEADERS        3.1
+score UNDESIRED_LANGUAGE_BODY        3.97
+score CHARSET_FARAWAY                3.20
+score CHARSET_FARAWAY_BODY           2.45
+score CHARSET_FARAWAY_HEADERS        2.06
 
 # highly generic tests for viruses that are scored just high enough to run
 
 score MICROSOFT_EXECUTABLE           0.1
 score MIME_SUSPECT_NAME              0.1
 
-# speculative score for the Habeas warrant mark (move to GA section once
-# it has sufficiently high frequency)
+# Habeas scores
 
 score HABEAS_SWE                    -4.0
+score HABEAS_HIL                     4.0
+score HABEAS_VIOLATOR                8.0
 
 # unscored by default -- commercial services.  If you pay for these,
 # give them a score so they will be checked.
+#
+# 0.5 to 1.0 is probably good for the DUL scores
+# 1.5 to 2.0 is probably good for the rest
 
-score RCVD_IN_RBL		     0.0
-score RCVD_IN_RSS		     0.0
-score RCVD_IN_DUL		     0.0
-score RCVD_IN_BL_SPAMCOP_NET	     0.0
+score RCVD_IN_BL_SPAMCOP_NET         0.0
+score RCVD_IN_DUL                    0.0
+score RCVD_IN_DUL_FH                 0.0
+score RCVD_IN_RBL                    0.0
+score RCVD_IN_RSS                    0.0
 
 ###########################################################################
 # Compensation for common false positives.
 
-score EVITE			     -10
+score EVITE                          -10
 score NMS_CGI_NOT_BUGGY              -10
 
 # GA never changes the whitelist/blacklist scores
 
-score USER_IN_BLACKLIST		     100.0
+score USER_IN_BLACKLIST              100.0
 
-score USER_IN_WHITELIST		     -100.0
+score USER_IN_WHITELIST              -100.0
 
 # Not really false positives but the user wants spam!
 

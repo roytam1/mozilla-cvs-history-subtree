@@ -8,7 +8,7 @@
 # search times.
 ###########################################################################
 
-require_version 2.40
+require_version 2.41
 
 # some tests that will trigger FPs on ISO-2022-JP mails.
 
