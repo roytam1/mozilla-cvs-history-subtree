@@ -22,18 +22,13 @@
 
 #include "nsISupports.idl"
 #include "nsrootidl.idl"
-#include "domstubs.idl"
-#include "xulstubs.idl"
 #include "nsIRDFCompositeDataSource.idl"
 #include "nsIMsgWindow.idl"
 #include "nsIMsgIdentity.idl"
 #include "nsIMsgThread.idl"
 #include "nsIMsgFolder.idl"
 
-%{C++
-#include "nsIDOMWindowInternal.h"
-%}
-
+interface nsIDOMWindowInternal;
 interface nsITransactionManager;
 
 [scriptable, uuid(4f7966d0-c14f-11d2-b7f2-00805f05ffa5)]

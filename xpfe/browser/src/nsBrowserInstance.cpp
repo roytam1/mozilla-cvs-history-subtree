@@ -446,8 +446,8 @@ nsBrowserInstance::ReinitializeContentWindow()
 {
   nsresult rv;
 
-  nsCOMPtr<nsIDOMWindowInternal> contentWindow;
-  mDOMWindow->Get_content(getter_AddRefs(contentWindow));
+  nsCOMPtr<nsIDOMWindow> contentWindow;
+  mDOMWindow->GetContent(getter_AddRefs(contentWindow));
 
   nsCOMPtr<nsIScriptGlobalObject> globalObj(do_QueryInterface(contentWindow));
 
@@ -524,10 +524,11 @@ nsBrowserInstance::ReinitializeContentVariables()
       nsCOMPtr<nsIDOMElement> button;
       rv = doc->GetElementById(NS_LITERAL_STRING("security-button"), getter_AddRefs(button));
       if (NS_SUCCEEDED(rv)) {
-        nsCOMPtr<nsIDOMWindowInternal> contentWindow;
-        mDOMWindow->Get_content(getter_AddRefs(contentWindow));
+        nsCOMPtr<nsIDOMWindow> contentWindow;
+        mDOMWindow->GetContent(getter_AddRefs(contentWindow));
 
-        security->Init(contentWindow, button);
+        nsCOMPtr<nsIDOMWindowInternal> w(do_QueryInterface(contentWindow));
+        security->Init(w, button);
       }
     }
   }
@@ -558,15 +559,20 @@ nsresult nsBrowserInstance::GetContentAreaDocShell(nsIDocShell** outDocShell)
 
 nsresult nsBrowserInstance::GetContentWindow(nsIDOMWindowInternal** outDOMWindow)
 {
-  nsCOMPtr<nsIDOMWindowInternal> contentWindow;
-  mDOMWindow->Get_content(getter_AddRefs(contentWindow));
-  NS_IF_ADDREF(*outDOMWindow = contentWindow);
+  nsCOMPtr<nsIDOMWindow> contentWindow;
+  mDOMWindow->GetContent(getter_AddRefs(contentWindow));
+
+  if (contentWindow) {
+    return contentWindow->QueryInterface(NS_GET_IID(nsIDOMWindowInternal),
+                                         (void **)outDOMWindow);
+  }
+
   return NS_OK;
 }
 
 nsresult nsBrowserInstance::GetFocussedContentWindow(nsIDOMWindowInternal** outFocussedWindow)
 {
-  nsCOMPtr<nsIDOMWindowInternal> focussedWindow;
+  nsCOMPtr<nsIDOMWindow> focussedWindow;
   
   // get the window that has focus (e.g. framesets)
   if (mDocShell)
@@ -592,9 +598,13 @@ nsresult nsBrowserInstance::GetFocussedContentWindow(nsIDOMWindowInternal** outF
   }
   
   if (!focussedWindow)
-    GetContentWindow(getter_AddRefs(focussedWindow));   // default to content window
+    return GetContentWindow(outFocussedWindow);   // default to content window
 
-  NS_IF_ADDREF(*outFocussedWindow = focussedWindow);
+  if (focussedWindow) {
+    return focussedWindow->QueryInterface(NS_GET_IID(nsIDOMWindowInternal),
+                                          (void **)outFocussedWindow);
+  }
+
   return NS_OK;
 }
 
@@ -1536,28 +1546,25 @@ NS_IMETHODIMP nsBrowserContentHandler::HandleContent(const char * aContentType,
   nsXPIDLCString spec;
   uri->GetSpec(getter_Copies(spec));
 
-  void* mark;
-  jsval* argv;
-
   nsAutoString value;
   value.AssignWithConversion(spec);
 
   // we only want to pass in the window target name if it isn't something like _new or _blank....
   // i.e. only real names like "my window", etc...
-  const char * windowTarget = aWindowTarget;
+  nsAutoString windowTarget;
+  windowTarget.AssignWithConversion(aWindowTarget);
+
   if (!aWindowTarget || !nsCRT::strcasecmp(aWindowTarget, "_new") ||
                         !nsCRT::strcasecmp(aWindowTarget, "_blank") ||
                         !nsCRT::strcasecmp(aWindowTarget, "_top") ||
                         !nsCRT::strcasecmp(aWindowTarget, "_parent") ||
                         !nsCRT::strcasecmp(aWindowTarget, "_content"))
-    windowTarget = "";
+    windowTarget.Truncate();
 
-  argv = JS_PushArguments(jsContext, &mark, "Ws", value.GetUnicode(), windowTarget);
-  NS_ENSURE_TRUE(argv, NS_ERROR_FAILURE);
+  nsCOMPtr<nsIDOMWindow> newWindow;
 
-  nsCOMPtr<nsIDOMWindowInternal> newWindow;
-  parentWindow->Open(jsContext, argv, 2, getter_AddRefs(newWindow));
-  JS_PopArguments(jsContext, mark);
+  parentWindow->Open(value, windowTarget, NS_LITERAL_STRING(""),
+                     getter_AddRefs(newWindow));
 
   // now abort the current channel load...
   aRequest->Cancel(NS_BINDING_ABORTED);

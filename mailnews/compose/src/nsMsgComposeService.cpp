@@ -35,6 +35,8 @@
 #include "nsIMsgDraft.h"
 #include "nsIMsgComposeParams.h"
 #include "nsEscape.h"
+#include "nsIDOMWindowInternal.h"
+#include "jsapi.h"
 
 static NS_DEFINE_CID(kAppShellServiceCID, NS_APPSHELL_SERVICE_CID);
 static NS_DEFINE_CID(kMsgComposeCID, NS_MSGCOMPOSE_CID);
@@ -52,39 +54,37 @@ nsMsgComposeService::~nsMsgComposeService()
 }
 
 // Utility function to open a message compose window and pass an nsIMsgComposeParams parameter to it.
-static nsresult openWindow( const PRUnichar *chrome, nsIMsgComposeParams *params )
+static nsresult openWindow( const PRUnichar *chrome,
+                            nsIMsgComposeParams *params )
 {
   nsCOMPtr<nsIDOMWindowInternal> hiddenWindow;
-  JSContext *jsContext;
   nsresult rv;
 
   nsCOMPtr<nsIAppShellService> appShell (do_GetService(kAppShellServiceCID));
   if (appShell)
   {
-    rv = appShell->GetHiddenWindowAndJSContext(getter_AddRefs(hiddenWindow), &jsContext);
+    rv = appShell->GetHiddenDOMWindow(getter_AddRefs(hiddenWindow));
+
+    nsCOMPtr<nsIDOMWindowInternalEx> win(do_QueryInterface(hiddenWindow));
+    NS_ENSURE_TRUE(win, NS_ERROR_FAILURE);
+
     if (NS_SUCCEEDED(rv))
     {
-      // Set up arguments for "window.openDialog"
-      void *stackPtr;
-      jsval *argv = JS_PushArguments( jsContext,
-                                      &stackPtr,
-                                      "Wss%ip",
-                                      chrome,
-                                      "_blank",
-                                      "chrome,dialog=no,all",
-                                      (const nsIID*) (&NS_GET_IID(nsIMsgComposeParams)),
-                                      (nsISupports*) params);
-      if (argv)
-      {
-        nsCOMPtr<nsIDOMWindowInternal> newWindow;
-        rv = hiddenWindow->OpenDialog(jsContext,
-                                      argv,
-                                      4,
-                                      getter_AddRefs(newWindow));
-                                      JS_PopArguments(jsContext, stackPtr);
-      }
+      nsCOMPtr<nsIDOMWindow> newWindow;
+      nsCOMPtr<nsISupportsArray> array;
+
+      rv = NS_NewISupportsArray(getter_AddRefs(array));
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      array->AppendElement(params);
+
+      rv = win->OpenDialog(nsLiteralString(chrome),
+                           NS_LITERAL_STRING("_blank"),
+                           NS_LITERAL_STRING("chrome,dialog=no,all"),
+                           array, getter_AddRefs(newWindow));
     }
   }
+
   return rv;
 }
 

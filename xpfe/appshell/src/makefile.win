@@ -39,12 +39,12 @@ CPP_OBJS=                               \
  .\$(OBJDIR)\nsJSXPConnectFactory.obj  \
  .\$(OBJDIR)\nsAppShellNameSet.obj     \
  .\$(OBJDIR)\nsFileLocations.obj        \
-  .\$(OBJDIR)\nsNetSupportDialog.obj        \
-     .\$(OBJDIR)\nsWindowMediator.obj        \
-    .\$(OBJDIR)\nsDialogParamBlock.obj \
-	.\$(OBJDIR)\nsCommonDialogs.obj \
-	.\$(OBJDIR)\nsAbout.obj \
-	.\$(OBJDIR)\nsUserInfoWin.obj \
+ .\$(OBJDIR)\nsNetSupportDialog.obj        \
+ .\$(OBJDIR)\nsWindowMediator.obj        \
+ .\$(OBJDIR)\nsDialogParamBlock.obj \
+ .\$(OBJDIR)\nsCommonDialogs.obj \
+ .\$(OBJDIR)\nsAbout.obj \
+ .\$(OBJDIR)\nsUserInfoWin.obj \
  $(NULL)
 
 LINCS=-I$(PUBLIC)\raptor                \
@@ -84,7 +84,6 @@ LLIBS=                          \
  $(DIST)\lib\gkgfxwin.lib   \
  $(DIST)\lib\js3250.lib        \
  $(DIST)\lib\jsdombase_s.lib   \
- $(DIST)\lib\jsdomevents_s.lib   \
  $(LIBNSPR)                     \
 !ifdef MOZ_FULLCIRCLE
  $(MOZ_TOOLS)\lib\fulls32.lib \

@@ -21,16 +21,12 @@
  */
  
 #include "nsISupports.idl"
-#include "xulstubs.idl"
-#include "domstubs.idl"
 #include "nsIRDFService.idl"
 
-%{C++
-#include "nsIDOMXULTreeElement.h"
-#include "nsIDOMXULElement.h"
-#include "nsIDOMXULDocument.h"
-#include "nsIDOMNode.h"
-%}
+interface nsIDOMXULTreeElement;
+interface nsIDOMXULElement;
+interface nsIDOMXULDocument;
+interface nsIDOMNode;
 
 [scriptable, uuid(BDD872B6-D02C-11d3-8B2E-0060B0FC04D2)]
 interface nsIMsgViewNavigationService : nsISupports {

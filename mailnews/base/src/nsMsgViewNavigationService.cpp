@@ -24,6 +24,8 @@
 #include "nsMsgViewNavigationService.h"
 #include "nsCOMPtr.h"
 #include "nsIDOMNodeList.h"
+#include "nsIDOMXULTreeElement.h"
+#include "nsIDOMXULDocument.h"
 #include "nsIRDFCompositeDataSource.h"
 #include "nsXPIDLString.h"
 #include "nsIMessage.h"

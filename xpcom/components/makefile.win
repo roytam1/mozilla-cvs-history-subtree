@@ -41,12 +41,13 @@ EXPORTS =                     \
 XPIDLSRCS =               \
 	.\nsICategoryHandler.idl \
 	.\nsICategoryManager.idl \
-        .\nsIComponentLoader.idl \
+	.\nsIClassInfo.idl \
+	.\nsIComponentLoader.idl \
 	.\nsIComponentManager.idl \
 	.\nsIFactory.idl	\
-        .\nsIModule.idl	  \
+	.\nsIModule.idl	  \
 	.\nsIRegistry.idl \
-        $(NULL)
+	$(NULL)
 
 ################################################################################
 ## library
