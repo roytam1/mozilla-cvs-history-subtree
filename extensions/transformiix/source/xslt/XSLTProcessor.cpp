@@ -1568,7 +1568,17 @@ void XSLTProcessor::xslCopyOf(ExprResult* exprResult, ProcessorState* ps) {
             NodeSet* nodes = (NodeSet*)exprResult;
             for (int i = 0; i < nodes->size();i++) {
                 Node* node = nodes->get(i);
-                ps->addToResultTree(XMLDOMUtils::copyNode(node, resultDoc));
+                //-- handle special case of copying another document into
+                //-- the result tree
+                if (node->getNodeType() == Node::DOCUMENT_NODE) {
+                    Node* child = node->getFirstChild();
+                    while (child) {
+                        ps->addToResultTree(XMLDOMUtils::copyNode(child, resultDoc));
+                        child = child->getNextSibling();
+                    }
+                }
+                //-- otherwise just copy node
+                else ps->addToResultTree(XMLDOMUtils::copyNode(node, resultDoc));
             }
             break;
         }
