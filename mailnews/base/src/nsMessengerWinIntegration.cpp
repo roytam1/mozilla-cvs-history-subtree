@@ -178,12 +178,10 @@ static long CALLBACK MessageWindowProc( HWND msgWindow, UINT msg, WPARAM wp, LPA
   return TRUE;
 }
 
-static HWND msgWindow;
-
 // Create: Register class and create window.
-static nsresult Create() 
+nsresult nsMessengerWinIntegration::CreateMailNotificationWindow() 
 {
-  if (msgWindow)
+  if (mMailNotificationWindow)
     return NS_OK;
 
   WNDCLASS classStruct = { 0,                          // style
@@ -200,7 +198,7 @@ static nsresult Create()
   // Register the window class.
   NS_ENSURE_TRUE( ::RegisterClass( &classStruct ), NS_ERROR_FAILURE );
   // Create the window.
-  NS_ENSURE_TRUE( msgWindow = ::CreateWindow( NOTIFICATIONCLASSNAME,
+  NS_ENSURE_TRUE( mMailNotificationWindow = ::CreateWindow( NOTIFICATIONCLASSNAME,
                                               0,          // title
                                               WS_CAPTION, // style
                                               0,0,0,0,    // x, y, cx, cy
@@ -231,6 +229,8 @@ nsMessengerWinIntegration::nsMessengerWinIntegration()
   mBiffIconInitialized = PR_FALSE;
   mUseWideCharBiffIcon = PR_FALSE;
   NS_NewISupportsArray(getter_AddRefs(mFoldersWithNewMail));
+
+  mMailNotificationWindow = NULL;
 }
 
 nsMessengerWinIntegration::~nsMessengerWinIntegration()
@@ -292,7 +292,7 @@ NOTIFYICONDATAW nsMessengerWinIntegration::mWideBiffIconData = { sizeof(NOTIFYIC
 
 #ifdef MOZ_THUNDERBIRD
 #ifdef MOZ_STATIC_BUILD
-#define MAIL_DLL_NAME "thunderbird.exe"
+#define MAIL_DLL_NAME NULL
 #else
 #define MAIL_DLL_NAME "mail.dll"
 #endif
@@ -303,17 +303,17 @@ NOTIFYICONDATAW nsMessengerWinIntegration::mWideBiffIconData = { sizeof(NOTIFYIC
 void nsMessengerWinIntegration::InitializeBiffStatusIcon()
 {
   // initialize our biff status bar icon 
-  Create();
+  CreateMailNotificationWindow();
 
   if (mUseWideCharBiffIcon)
   {
-    mWideBiffIconData.hWnd = (HWND) msgWindow;
+    mWideBiffIconData.hWnd = (HWND) mMailNotificationWindow;
     mWideBiffIconData.hIcon =  ::LoadIcon( ::GetModuleHandle( MAIL_DLL_NAME ), MAKEINTRESOURCE(IDI_MAILBIFF) );
     mWideBiffIconData.szTip[0] = 0;
   }
   else
   {
-    mAsciiBiffIconData.hWnd = (HWND) msgWindow;
+    mAsciiBiffIconData.hWnd = (HWND) mMailNotificationWindow;
     mAsciiBiffIconData.hIcon =  ::LoadIcon( ::GetModuleHandle( MAIL_DLL_NAME ), MAKEINTRESOURCE(IDI_MAILBIFF) );
     mAsciiBiffIconData.szTip[0] = 0;
   }
@@ -650,6 +650,8 @@ nsresult nsMessengerWinIntegration::GetFirstFolderWithNewMail(char ** aFolderURI
 void nsMessengerWinIntegration::DestroyBiffIcon()
 {
   GenericShellNotify(NIM_DELETE); 
+
+  DestroyWindow(mMailNotificationWindow);
   // Don't call DestroyIcon().  see http://bugzilla.mozilla.org/show_bug.cgi?id=134745
 }
 
@@ -688,7 +690,7 @@ void nsMessengerWinIntegration::GenericShellNotify(DWORD aMessage)
   if (mUseWideCharBiffIcon)
   {
     BOOL res = mShellNotifyWideChar( aMessage, &mWideBiffIconData );
-    if (!res)
+    if (!res && aMessage != NIM_DELETE)
       RevertToNonUnicodeShellAPI(); // oops we don't really implement the unicode shell apis...fall back.
     else
       return; 
