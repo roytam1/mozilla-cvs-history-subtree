@@ -81,15 +81,6 @@ public:
 ////////////////////////////////////////////////////////////////////////
 // classes implementing this interface:
 
-// nsSVGLibartBitmapDefault: an implementation based on nsIImage that
-// should work on all platforms but doesn't support obtaining
-// RenderingContexts with Lock/UnlockRenderingContext
-nsresult
-NS_NewSVGLibartBitmapDefault(nsISVGLibartBitmap **result,
-                             nsIRenderingContext *ctx,
-                             nsIPresContext* presContext,
-                             const nsRect & rect);
-
 // nsSVGLibartBitmapWindows
 // XXX
 
@@ -98,5 +89,23 @@ NS_NewSVGLibartBitmapDefault(nsISVGLibartBitmap **result,
 
 // nsSVGLibartBitmapMac
 // XXX
+
+#if defined(MOZ_ENABLE_GTK) || defined(MOZ_ENABLE_GTK2)
+nsresult
+NS_NewSVGLibartBitmapGdk(nsISVGLibartBitmap **result,
+                         nsIRenderingContext *ctx,
+                         nsIPresContext *presContext,
+                         const nsRect & rect);
+#else
+// nsSVGLibartBitmapDefault: an implementation based on nsIImage that
+// should work on all platforms but doesn't support obtaining
+// RenderingContexts with Lock/UnlockRenderingContext
+nsresult
+NS_NewSVGLibartBitmapDefault(nsISVGLibartBitmap **result,
+                             nsIRenderingContext *ctx,
+                             nsIPresContext* presContext,
+                             const nsRect & rect);
+#endif
+
 
 #endif // __NS_ISVGLIBART_BITMAP_H__

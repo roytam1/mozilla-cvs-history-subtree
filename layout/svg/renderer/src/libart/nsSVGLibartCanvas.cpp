@@ -100,9 +100,13 @@ nsSVGLibartCanvas::Init(nsIRenderingContext* ctx,
   NS_ASSERTION(mRenderingContext, "empty rendering context");
 
   mDirtyRect = dirtyRect;
-
+#if defined(MOZ_ENABLE_GTK2)
+  NS_NewSVGLibartBitmapGdk(getter_AddRefs(mBitmap), ctx, presContext,
+                           dirtyRect);
+#else
   NS_NewSVGLibartBitmapDefault(getter_AddRefs(mBitmap), ctx, presContext,
                                dirtyRect);
+#endif
   if (!mBitmap) {
     NS_ERROR("could not construct bitmap");
     return NS_ERROR_FAILURE;

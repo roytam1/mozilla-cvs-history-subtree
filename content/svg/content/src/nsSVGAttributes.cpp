@@ -575,12 +575,13 @@ nsSVGAttributes::UpdateContentStyleRule()
     nsCOMPtr<nsISVGValue> svgvalue;
     attr->GetSVGValue(getter_AddRefs(svgvalue));
     svgvalue->GetValueString(value);
-    
+
+    PRBool changed;
     parser->ParseProperty(name,
                           value,
                           baseURL,
                           declaration,
-                          nsnull);
+                          &changed);
   }
   
   NS_NewCSSStyleRule(getter_AddRefs(mContentStyleRule), nsnull, declaration);

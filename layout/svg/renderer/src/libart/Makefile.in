@@ -65,10 +65,17 @@ CPPSRCS = \
 	nsSVGRenderItem.cpp \
 	nsSVGFill.cpp \
 	nsSVGStroke.cpp \
-	nsSVGLibartBitmapDefault.cpp \
 	nsSVGLibartGlyphGeometry.cpp \
 	nsSVGLibartGlyphMetrics.cpp \
 	$(NULL)
+
+ifdef MOZ_ENABLE_GTK2
+CPPSRCS += nsSVGLibartBitmapGdk.cpp
+endif
+ifeq (,$(filter gtk2,$(MOZ_GFX_TOOLKIT)))
+CPPSRCS += nsSVGLibartBitmapDefault.cpp
+endif
+
 
 #LOCAL_INCLUDES	= \
 #		-I$(topsrcdir)/gfx/src/windows \
