@@ -262,6 +262,15 @@ OS_CFLAGS += $(DEBUG_FLAGS)
 OS_CXXFLAGS += $(DEBUG_FLAGS)
 
 #
+# -ffunction-sections is needed to reorder functions using a GNU ld
+# script.
+#
+ifeq ($(MOZ_REORDER),1)
+  OS_CFLAGS += -ffunction-sections
+  OS_CXXFLAGS += -ffunction-sections
+endif
+
+#
 # List known meta modules and their dependent libs
 #
 _ALL_META_COMPONENTS=mail crypto
