@@ -176,7 +176,7 @@ TxObject* txExpandedNameMap::remove(const txExpandedName& aKey)
             }
             --mItemCount;
             if (i != mItemCount) {
-                memmove(&mItems[i], &mItems[mItemCount], sizeof(MapItem));
+                memcpy(&mItems[i], &mItems[mItemCount], sizeof(MapItem));
             }
         }
     }
