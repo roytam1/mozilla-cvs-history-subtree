@@ -192,8 +192,6 @@ function InitEditCard()
     try {
       editCard.displayLastNameFirst = prefs.getBoolPref("mail.addr_book.displayName.lastnamefirst");
       editCard.generateDisplayName = prefs.getBoolPref("mail.addr_book.displayName.autoGeneration");
-      editCard.lastFirstSeparator = gAddressBookBundle.getString("lastFirstSeparator");
-      editCard.firstLastSeparator = gAddressBookBundle.getString("firstLastSeparator");
     }
     catch (ex) {
       dump("ex: failed to get pref" + ex + "\n");
@@ -365,19 +363,16 @@ function GenerateDisplayName()
     var lastNameField = document.getElementById('LastName');
     var displayNameField = document.getElementById('DisplayName');
 
-    var separator = "";
-    if ( lastNameField.value && firstNameField.value )
-    {
+    if (lastNameField.value && firstNameField.value) {
       if ( editCard.displayLastNameFirst )
-        separator = editCard.lastFirstSeparator; // comes from addressBook.properties
+        displayName = gAddressBookBundle.getFormattedString("lastFirstFormat",[ lastNameField.value, firstNameField.value ]);
       else
-        separator = editCard.firstLastSeparator; // comes from addressBook.properties
+        displayName = gAddressBookBundle.getFormattedString("firstLastFormat",[ firstNameField.value, lastNameField.value ]);
     }
-
-    if ( editCard.displayLastNameFirst )
-      displayName = lastNameField.value + separator + firstNameField.value;
-    else
-      displayName = firstNameField.value + separator + lastNameField.value;
+    else {
+      // one (or both) of these is empty, so this works.
+      displayName = firstNameField.value + lastNameField.value;
+    }
 
     displayNameField.value = displayName;
         top.window.title = gAddressBookBundle.getFormattedString(editCard.titleProperty,
