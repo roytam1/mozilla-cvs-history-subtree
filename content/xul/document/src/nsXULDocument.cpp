@@ -428,6 +428,13 @@ nsXULDocument::~nsXULDocument()
     // decls never got resolved.
     DestroyForwardReferences();
 
+    // Notify observer that we're about to go away
+    PRInt32 i;
+    for (i = mObservers.Count() - 1; i >= 0; --i) {
+        nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers.ElementAt(i);
+        observer->DocumentWillBeDestroyed(this);
+    }
+
     // mParentDocument is never refcounted
     // Delete references to sub-documents
     {
@@ -460,12 +467,6 @@ nsXULDocument::~nsXULDocument()
 
     delete mTemplateBuilderTable;
     delete mBoxObjectTable;
-
-    PRInt32 i;
-    for (i = mObservers.Count() - 1; i >= 0; --i) {
-        nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers.ElementAt(i);
-        observer->DocumentWillBeDestroyed(this);
-    }
 
     if (--gRefCnt == 0) {
         if (gRDFService) {
@@ -5355,7 +5356,10 @@ nsXULDocument::CheckTemplateBuilder(nsIContent* aElement)
     if ((nameSpaceID == kNameSpaceID_XUL) &&
         (baseTag.get() == nsXULAtoms::outlinerbody)) {
         nsCOMPtr<nsIXULTemplateBuilder> builder =
-            do_CreateInstance(kXULOutlinerBuilderCID, &rv);
+            do_CreateInstance("@mozilla.org/xul/xul-outliner-builder;1");
+
+        if (! builder)
+            return NS_ERROR_FAILURE;
 
         // Because the outliner box object won't be created until the
         // frame is available, we need to tuck the template builder
@@ -5367,7 +5371,10 @@ nsXULDocument::CheckTemplateBuilder(nsIContent* aElement)
     }
     else {
         nsCOMPtr<nsIRDFContentModelBuilder> builder
-            = do_CreateInstance(kXULTemplateBuilderCID, &rv);
+            = do_CreateInstance("@mozilla.org/xul/xul-template-builder;1");
+
+        if (! builder)
+            return NS_ERROR_FAILURE;
 
         builder->SetRootContent(aElement);
 
