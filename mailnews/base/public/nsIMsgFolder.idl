@@ -331,6 +331,8 @@ const nsMsgBiffState nsMsgBiffState_Unknown = 2; // We dunno whether there is ne
    */
 	attribute nsIFileSpec path;
 
+	readonly attribute string baseMessageURI;
+
 	const nsMsgDispositionState nsMsgDispositionState_Replied = 0;
 	const nsMsgDispositionState nsMsgDispositionState_Forwarded = 1;	
 	void addMessageDispositionState(in nsIMessage aMessage, in nsMsgDispositionState aDispositionFlag);
