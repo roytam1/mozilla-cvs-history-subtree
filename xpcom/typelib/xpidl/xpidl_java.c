@@ -31,6 +31,14 @@
 #include <glib.h>
 
 
+#if defined(WINCE)
+#if defined(interface)
+#undef interface
+#endif
+#define interface not_keyword_interface
+#endif
+
+
 struct java_priv_data {
     GHashTable *typedefTable;
 };

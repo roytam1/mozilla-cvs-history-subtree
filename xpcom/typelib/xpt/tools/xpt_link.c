@@ -50,6 +50,10 @@
 #include <string.h>
 #include "prlong.h"
 
+#if defined(WINCE)
+#include "nspr.h"
+#endif
+
 #ifndef NULL
 #define NULL (void *) 0
 #endif
@@ -110,12 +114,24 @@ extern size_t mac_get_file_length(const char* filename);
 
 static size_t get_file_length(const char* filename)
 {
+#if !defined(WINCE)
     struct stat file_stat;
     if (stat(filename, &file_stat) != 0) {
         perror("FAILED: get_file_length");
         exit(1);
     }
     return file_stat.st_size;
+#else
+    PRFileInfo prInfo;
+
+    if(PR_FAILURE == PR_GetFileInfo(filename, &prInfo))
+    {
+        perror("FAILED: get_file_length");
+        exit(1);
+    }
+
+    return (size_t)prInfo.size;
+#endif
 }
 
 #endif /* XP_MAC && XPIDL_PLUGIN */

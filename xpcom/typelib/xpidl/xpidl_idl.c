@@ -46,6 +46,10 @@
 #include <stat.h>
 #endif
 
+#if defined(WINCE)
+#include "nspr.h"
+#endif
+
 static gboolean parsed_empty_file;
 
 /*
@@ -792,8 +796,13 @@ xpidl_process_idl(char *filename, IncludePathEntry *include_path,
          * driver code, if the compiler returns failure.)
          */
 #if defined(XP_UNIX) || defined(XP_WIN)
-        if (!ok)
+        if (!ok) {
+#if !defined(WINCE)
             unlink(real_outname);
+#else
+            PR_Delete(real_outname);
+#endif
+        }
 #endif
         g_free(real_outname);
     }

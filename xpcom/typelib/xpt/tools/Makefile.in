@@ -48,6 +48,10 @@ endif
 
 LIBS		= $(DIST)/lib/$(LIB_PREFIX)xpt.$(LIB_SUFFIX)
 
+ifeq ($(OS_TARGET),WINCE)
+LIBS += $(NSPR_LIBS) wince_console.lib
+endif
+
 # Tell the $(SIMPLE_PROGRAMS) target that we need to be recompiled
 # when libxpt changes.
 EXTRA_DEPS	= $(wildcard $(DIST)/lib/$(LIB_PREFIX)xpt.*)

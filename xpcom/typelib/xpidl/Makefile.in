@@ -57,12 +57,18 @@ CFLAGS		+= $(LIBIDL_CFLAGS)
 # without the shared library path being set.
 ifeq (_WINNT,$(GNU_CC)_$(OS_ARCH))
 DEFINES		+= -DEXPORT_XPT_API
+ifneq ($(OS_TARGET),WINCE)
 LDFLAGS		+= -SUBSYSTEM:CONSOLE -NODEFAULTLIB:MSVCRTD
+endif
 endif
 
 # Tell the $(PROGRAM) target that we need to be recompiled when libxpt changes.
 LIBS		= $(DIST)/lib/$(LIB_PREFIX)xpt.$(LIB_SUFFIX) $(LIBIDL_LIBS)
 EXTRA_DEPS	= $(wildcard $(DIST)/lib/$(LIB_PREFIX)xpt.*)
+
+ifeq ($(OS_TARGET),WINCE)
+LIBS += $(NSPR_LIBS) wince_console.lib
+endif
 
 ifdef CROSS_COMPILE
 HOST_CFLAGS	+= $(HOST_LIBIDL_CFLAGS)

@@ -42,6 +42,15 @@
 #include "xpidl.h"
 #include <ctype.h>
 
+
+#if defined(WINCE)
+#if defined(interface)
+#undef interface
+#endif
+#define interface not_keyword_interface
+#endif
+
+
 #define AS_DECL 0
 #define AS_CALL 1
 #define AS_IMPL 2
