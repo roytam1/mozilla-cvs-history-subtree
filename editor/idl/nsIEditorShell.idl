@@ -63,7 +63,8 @@ interface nsIEditorShell : nsISupports
   attribute wstring              editorType;
   attribute string               contentsMIMEType;
            
-  readonly attribute nsIEditor editor;
+  /* should really be readonly. transition to embedding requires write access*/         
+  attribute nsIEditor editor;
   
 %{C++
 
