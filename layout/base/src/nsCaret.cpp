@@ -287,7 +287,16 @@ NS_IMETHODIMP nsCaret::GetWindowRelativeCoordinates(nsRect& outCoordinates, PRBo
   nsPoint   viewOffset(0, 0);
   nsRect    clipRect;
   nsIView   *drawingView;     // views are not refcounted
-  GetViewForRendering(theFrame, eTopLevelWindowCoordinates, viewOffset, clipRect, drawingView);
+
+  // cursor position return for windows and unix need to be lowest level native
+  // window related. On mac, there is no child-parent relation between windows,
+  // top level window has to be used.
+  #ifdef XP_MAC
+    GetViewForRendering(theFrame, eTopLevelWindowCoordinates, viewOffset, clipRect, drawingView);
+  #else
+    GetViewForRendering(theFrame, eViewCoordinates, viewOffset, clipRect, drawingView);
+  #endif
+
   if (!drawingView)
     return NS_ERROR_UNEXPECTED;
 
