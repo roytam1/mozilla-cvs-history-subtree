@@ -69,6 +69,11 @@ public:
     virtual type getType() = 0;
 };
 
+#define TX_DECL_TOPLEVELITEM virtual type getType();
+#define TX_IMPL_GETTYPE(_class, _type) \
+txToplevelItem::type \
+_class##::getType() { return _type;}
+
 class txInstructionContainer : public txToplevelItem
 {
 public:
@@ -83,10 +88,7 @@ public:
     {
     }
 
-    virtual txToplevelItem::type getType()
-    {
-        return txToplevelItem::attributeSet;
-    }
+    TX_DECL_TOPLEVELITEM
 
     txExpandedName mName;
 };
@@ -95,10 +97,7 @@ public:
 class txImportItem : public txToplevelItem
 {
 public:
-    virtual txToplevelItem::type getType()
-    {
-        return txToplevelItem::import;
-    }
+    TX_DECL_TOPLEVELITEM
 
     nsAutoPtr<txStylesheet::ImportFrame> mFrame;
 };
@@ -107,10 +106,7 @@ public:
 class txOutputItem : public txToplevelItem
 {
 public:
-    virtual txToplevelItem::type getType()
-    {
-        return txToplevelItem::output;
-    }
+    TX_DECL_TOPLEVELITEM
 
     txOutputFormat mFormat;
 };
@@ -119,10 +115,7 @@ public:
 class txDummyItem : public txToplevelItem
 {
 public:
-    virtual txToplevelItem::type getType()
-    {
-        return txToplevelItem::dummy;
-    }
+    TX_DECL_TOPLEVELITEM
 };
 
 // xsl:strip-space and xsl:preserve-space
@@ -131,10 +124,7 @@ class txStripSpaceItem : public txToplevelItem
 public:
     virtual ~txStripSpaceItem();
 
-    virtual txToplevelItem::type getType()
-    {
-        return txToplevelItem::stripSpace;
-    }
+    TX_DECL_TOPLEVELITEM
 
     nsresult addStripSpaceTest(txStripSpaceTest* aStripSpaceTest);
 
@@ -148,10 +138,7 @@ public:
     txTemplateItem(nsAutoPtr<txPattern> aMatch, const txExpandedName& aName,
                    const txExpandedName& aMode, double aPrio);
 
-    virtual txToplevelItem::type getType()
-    {
-        return txToplevelItem::templ;
-    }
+    TX_DECL_TOPLEVELITEM
 
     nsAutoPtr<txPattern> mMatch;
     txExpandedName mName;
@@ -166,10 +153,7 @@ public:
     txVariableItem(const txExpandedName& aName, nsAutoPtr<Expr> aValue,
                    PRBool aIsParam);
     
-    virtual txToplevelItem::type getType()
-    {
-        return txToplevelItem::variable;
-    }
+    TX_DECL_TOPLEVELITEM
 
     txExpandedName mName;
     nsAutoPtr<Expr> mValue;
