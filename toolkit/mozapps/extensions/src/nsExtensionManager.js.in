@@ -486,6 +486,7 @@ nsInstallLogReader.prototype = {
   
     var fis = Components.classes["@mozilla.org/network/file-input-stream;1"]
                         .createInstance(Components.interfaces.nsIFileInputStream);
+    dumpFile(this.uninstallLog);
     fis.init(this.uninstallLog, -1, -1, false);
     var lis = fis.QueryInterface(Components.interfaces.nsILineInputStream);
     var line = { value: "" };
@@ -534,16 +535,31 @@ nsInstallLogReader.prototype = {
       var filePD = aLine.substr(prefix.length, aLine.length);
       var lf = Components.classes["@mozilla.org/file/local;1"]
                          .createInstance(Components.interfaces.nsILocalFile);
-      lf.persistentDescriptor = filePD;
-      this._listener.onAddFile(lf);
+      try {
+        lf.persistentDescriptor = filePD;
+        this._listener.onAddFile(lf);
+      }
+      catch (e) { 
+        dump("*** nsInstallLogReader::_parseLine - failed to remove file\n"); 
+      }
       break;
     case this.TOKEN_REGISTER_CHROME:
       var isProfile = parts[1] == this.TOKEN_PROFILE;
-      this._listener.onRegisterChrome(parts[3], lf, parts[2], isProfile);
+      try {
+        this._listener.onRegisterChrome(parts[3], lf, parts[2], isProfile);
+      } 
+      catch (e) {
+        dump("*** nsInstallLogReader::_parseLine - failed to deregister chrome\n"); 
+      }
       break;
     case this.TOKEN_SKIN:
       var isProfile = parts[1] == this.TOKEN_PROFILE;
-      this._listener.onInstallSkin(parts[2], isProfile);
+      try {
+        this._listener.onInstallSkin(parts[2], isProfile);
+      } 
+      catch (e) {
+        dump("*** nsInstallLogReader::_parseLine - failed to uninstall skin\n"); 
+      }
       break;
     }
   }
