@@ -421,6 +421,7 @@ URLImpl::URLImpl()
 URLImpl::URLImpl(URL_Struct *urls)
 {
     NS_INIT_REFCNT();
+    mReader = NULL;
     mURLS = urls;
     urls->fe_data = this;
 }
