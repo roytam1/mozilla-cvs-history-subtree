@@ -43,6 +43,7 @@
 #include "prtypes.h"
 #include "cert.h"
 #include "secitem.h"
+#include "nsString.h"
 
 class nsINSSComponent;
 

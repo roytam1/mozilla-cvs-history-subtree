@@ -632,6 +632,8 @@ nsNSSCertificate::nsNSSCertificate(char *certDER, int derLen) :
   NS_INIT_ISUPPORTS();
 
   mCert = CERT_DecodeCertFromPackage(certDER, derLen);
+  if (mCert->dbhandle == nsnull)
+    mCert->dbhandle = CERT_GetDefaultCertDB();
 }
 
 nsNSSCertificate::nsNSSCertificate(CERTCertificate *cert) : 
