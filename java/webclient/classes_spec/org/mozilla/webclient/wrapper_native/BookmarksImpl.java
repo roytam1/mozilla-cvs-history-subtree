@@ -18,6 +18,8 @@
  * Rights Reserved.
  *
  * Contributor(s):  Ed Burns <edburns@acm.org>
+ *      Jason Mawdsley <jason@macadamian.com>
+ *      Louis-Philippe Gagnon <louisphilippe@macadamian.com>
  */
 
 package org.mozilla.webclient.wrapper_native;
@@ -177,7 +179,8 @@ public BookmarkEntry newBookmarkEntry(String url)
     System.out.println("debug: edburns: BookmarksImpl.newBookmarkEntry: url:" + url);
     if (-1 != (newNode = nativeNewRDFNode(url, false))) {
         result = new BookmarkEntryImpl(newNode, null);
-        result.getProperties().setProperty(BookmarkEntry.URL, url);
+        // use put instead of setProperty for jdk1.1.x compatibility.
+        result.getProperties().put(BookmarkEntry.URL, url);
     }
     
     return result;
@@ -193,7 +196,7 @@ public BookmarkEntry newBookmarkFolder(String name)
     System.out.println("debug: edburns: BookmarksImpl.newBookmarkFolder: name:" + name);
     if (-1 != (newNode = nativeNewRDFNode(name, true))) {
         result = new BookmarkEntryImpl(newNode, null);
-        result.getProperties().setProperty(BookmarkEntry.NAME, name);
+        result.getProperties().put(BookmarkEntry.NAME, name);
     }
     
     return result;

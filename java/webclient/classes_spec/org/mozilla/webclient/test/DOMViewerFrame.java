@@ -21,6 +21,8 @@
  *               Ian Wilkinson <iw@ennoble.com>
  *               Mark Goddard
  *               Ed Burns <edburns@acm.org>
+ *      Jason Mawdsley <jason@macadamian.com>
+ *      Louis-Philippe Gagnon <louisphilippe@macadamian.com>
  */
 
 package org.mozilla.webclient.test;
@@ -188,7 +190,8 @@ protected void selectNodeInTree(Node node)
     }
 
     if (null != pathStack) {
-        pathStack.clear();
+        // use removeAllElements instead of clear for jdk1.1.x compatibility.
+        pathStack.removeAllElements();
     }
     populatePathStackFromNode(node);
     if (null == pathStack || pathStack.isEmpty()) {

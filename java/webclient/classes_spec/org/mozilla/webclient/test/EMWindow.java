@@ -220,7 +220,6 @@ public class EMWindow extends Frame implements DialogClient, ActionListener, Doc
 		    }
 		});
 	 
-        //		pack();
 		show();
 		toFront();
 
