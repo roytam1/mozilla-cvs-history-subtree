@@ -3430,7 +3430,7 @@ DocumentViewerImpl::DoPrint(PrintObject * aPO, PRBool aDoSyncPrinting, PRBool& a
       nsIFrame* rootFrame;
       poPresShell->GetRootFrame(&rootFrame);
 
-#if defined(DEBUG_rodsX) || defined(DEBUG_dconeX)
+#if defined(DEBUG_rods) || defined(DEBUG_dconeX)
       DumpLayoutData(poPresContext, mPrt->mPrintDocDC, rootFrame, webShell);
 #endif
 
@@ -4424,7 +4424,7 @@ nsresult rv;
           // if there is a frameset and we are printing silently then
           // the default must be reset kFramesAsIs
           if (printService && mPrt->mIsParentAFrameSet && aSilent) {
-            mPrt->mPrintFrameType = nsIPrintOptions::kFramesAsIs;
+            mPrt->mPrintFrameType = nsIPrintOptions::kEachFrameSep;
             printService->SetPrintFrameType(mPrt->mPrintFrameType);
           }
           
