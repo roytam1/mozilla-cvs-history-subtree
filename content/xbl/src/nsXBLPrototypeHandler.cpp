@@ -368,7 +368,7 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
 
   nsCOMPtr<nsIDOMEventListener> eventListener;
 
-  factory->NewJSEventListener(boundContext, boundGlobal,
+  factory->NewJSEventListener(boundContext, aReceiver,
                               getter_AddRefs(eventListener));
 
   nsCOMPtr<nsIJSEventListener> jsListener(do_QueryInterface(eventListener));
