@@ -119,6 +119,7 @@
 #include "nsIImageLoadingContent.h"
 #include "nsIFocusController.h"
 #include "nsPIDOMWindow.h"
+#include "nsIStringBundle.h"
 
 // headers for plugin scriptability
 #include "nsIScriptGlobalObject.h"
@@ -1707,7 +1708,27 @@ nsObjectFrame::CreateDefaultFrames(nsIPresContext *aPresContext,
   nsCOMPtr<nsIImageLoadingContent> imageLoader = do_QueryInterface(img);
   imageLoader->ImageURIChanged(src);
 
-  text->SetText(NS_LITERAL_STRING("Click here to download plugin"), PR_FALSE);
+  // get the localized text
+  nsXPIDLString missingPluginLabel;
+
+  nsCOMPtr<nsIStringBundleService> stringBundleService =
+    do_GetService(NS_STRINGBUNDLE_CONTRACTID);
+
+  if (stringBundleService) {
+    nsCOMPtr<nsIStringBundle> stringBundle;
+    rv = stringBundleService->CreateBundle(
+      "chrome://mozapps/locale/plugins/plugins.properties", 
+      getter_AddRefs(stringBundle));
+
+    if (NS_SUCCEEDED(rv))
+      rv = stringBundle->GetStringFromName(NS_LITERAL_STRING("missingPlugin.label").get(), 
+                                getter_Copies(missingPluginLabel));
+  }
+
+  if (!stringBundleService || NS_FAILED(rv))
+    missingPluginLabel = NS_LITERAL_STRING("Click here to download plugin.");
+
+  text->SetText(missingPluginLabel, PR_FALSE);
 
   // Resolve style for the div, img, and text nodes.
   nsRefPtr<nsStyleContext> divStyleContext =
