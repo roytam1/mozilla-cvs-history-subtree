@@ -38,10 +38,10 @@ interface nsIObjectOutputStream : nsIBinaryOutputStream
     void writeSingleRefObject(in nsISupports aObject,
                               in nsCIDRef aCID);
 
-    void writeAggregatedObject(in nsISupports aObject,
-                               in nsCIDRef aCID,
-                               in nsIIDRef aIID,
-                               in PRBool aIsStrongRef);
+    void writeCompoundObject(in nsISupports aObject,
+                             in nsCIDRef aCID,
+                             in nsIIDRef aIID,
+                             in PRBool aIsStrongRef);
 
     [notxpcom] charPtr getBuffer(in PRUint32 aLength, in PRUint32 aAlign);
 

@@ -314,8 +314,8 @@ class NS_COM nsFastLoadFileWriter
     NS_IMETHOD WriteObject(nsISupports* aObject, const nsCID& aCID,
                            PRBool aIsStrongRef);
     NS_IMETHOD WriteSingleRefObject(nsISupports* aObject, const nsCID& aCID);
-    NS_IMETHOD WriteAggregatedObject(nsISupports* aObject, const nsCID& aCID,
-                                     const nsIID& aIID, PRBool aIsStrongRef);
+    NS_IMETHOD WriteCompoundObject(nsISupports* aObject, const nsCID& aCID,
+                                   const nsIID& aIID, PRBool aIsStrongRef);
 
     // nsISeekableStream methods
     NS_DECL_NSISEEKABLESTREAM

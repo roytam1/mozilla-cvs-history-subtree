@@ -263,12 +263,12 @@ nsBinaryOutputStream::WriteSingleRefObject(nsISupports* aObject,
 }
 
 NS_IMETHODIMP
-nsBinaryOutputStream::WriteAggregatedObject(nsISupports* aObject,
-                                            const nsCID& aCID,
-                                            const nsIID& aIID,
-                                            PRBool aIsStrongRef)
+nsBinaryOutputStream::WriteCompoundObject(nsISupports* aObject,
+                                          const nsCID& aCID,
+                                          const nsIID& aIID,
+                                          PRBool aIsStrongRef)
 {
-    NS_NOTREACHED("WriteAggregatedObject");
+    NS_NOTREACHED("WriteCompoundObject");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 

@@ -789,7 +789,7 @@ nsFastLoadFileWriter::WriteObject(nsISupports* aObject,
     nsCOMPtr<nsISupports> rootObject(do_QueryInterface(aObject));
 
     NS_ASSERTION(rootObject.get() == aObject,
-                 "bad call to WriteObject -- call WriteAggregatedObject!");
+                 "bad call to WriteObject -- call WriteCompoundObject!");
 #endif
 
     return WriteObjectCommon(aObject, aCID, aIsStrongRef, 0);
@@ -803,17 +803,17 @@ nsFastLoadFileWriter::WriteSingleRefObject(nsISupports* aObject,
     nsCOMPtr<nsISupports> rootObject(do_QueryInterface(aObject));
 
     NS_ASSERTION(rootObject.get() == aObject,
-                 "bad call to WriteObject -- call WriteAggregatedObject!");
+                 "bad call to WriteObject -- call WriteCompoundObject!");
 #endif
 
     return WriteObjectCommon(aObject, aCID, PR_TRUE, MFL_SINGLE_REF_PSEUDO_TAG);
 }
 
 NS_IMETHODIMP
-nsFastLoadFileWriter::WriteAggregatedObject(nsISupports* aObject,
-                                            const nsCID& aCID,
-                                            const nsIID& aIID,
-                                            PRBool aIsStrongRef)
+nsFastLoadFileWriter::WriteCompoundObject(nsISupports* aObject,
+                                          const nsCID& aCID,
+                                          const nsIID& aIID,
+                                          PRBool aIsStrongRef)
 {
     nsresult rv;
     nsCOMPtr<nsISupports> rootObject(do_QueryInterface(aObject));
@@ -823,9 +823,9 @@ nsFastLoadFileWriter::WriteAggregatedObject(nsISupports* aObject,
     rootObject->QueryInterface(aIID, getter_AddRefs(roundtrip));
 
     NS_ASSERTION(rootObject.get() != aObject,
-                 "wasteful call to WriteAggregatedObject -- call WriteObject!");
+                 "wasteful call to WriteCompoundObject -- call WriteObject!");
     NS_ASSERTION(roundtrip.get() == aObject,
-                 "bad aggregation detected by call to WriteAggregatedObject!");
+                 "bad aggregation or multiple inheritance detected by call to WriteCompoundObject!");
 #endif
 
     rv = WriteObjectCommon(rootObject, aCID, aIsStrongRef,
