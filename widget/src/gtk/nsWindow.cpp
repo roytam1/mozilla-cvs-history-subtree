@@ -2318,7 +2318,8 @@ nsWindow::HandleXlibConfigureNotifyEvent(XEvent *event)
                                 &config_event) == True) {
     // make sure that we don't get other types of events.  
     // StructureNotifyMask includes other kinds of events, too.
-    gdk_superwin_clear_translate_queue(mSuperWin, event->xany.serial);
+    // g_print("clearing xlate queue from widget handler, serial is %ld\n", event->xany.serial);
+    //    gdk_superwin_clear_translate_queue(mSuperWin, event->xany.serial);
     *event = config_event;
     // make sure that if we remove a configure event from the queue
     // that it gets pulled out of the superwin tranlate queue,
