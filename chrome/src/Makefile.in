@@ -38,6 +38,7 @@ PACKAGE_FILE = chrome.pkg
 REQUIRES	= xpcom \
 		  string \
 		  rdf \
+		  content \
 		  xuldoc \
 		  gfx \
 		  layout \
