@@ -52,6 +52,7 @@ txHandlerTable* gTxTopHandler = 0;
 txHandlerTable* gTxTemplateHandler = 0;
 txHandlerTable* gTxTextHandler = 0;
 txHandlerTable* gTxApplyTemplatesHandler = 0;
+txHandlerTable* gTxCallTemplateHandler = 0;
 
 
 txStylesheetAttr*
@@ -88,7 +89,7 @@ getStyleAttr(txStylesheetAttr* aAttributes,
 #define TX_RETURN_IF_WHITESPACE(_str, _state)                               \
     do {                                                                    \
       if (!_state.mElementContext->mPreserveWhitespace &&                   \
-          XMLUtils::isWhitespace(_str)) {                                   \
+          XMLUtils::isWhitespace(PromiseFlatString(_str))) {                \
           return NS_OK;                                                     \
       }                                                                     \
     } while(0)
@@ -105,7 +106,7 @@ txFnTextIgnore(const nsAString& aStr, txStylesheetCompilerState& aState)
 nsresult
 txFnTextError(const nsAString& aStr, txStylesheetCompilerState& aState)
 {
-    TX_RETURN_IF_WHITESPACE(PromiseFlatString(aStr), aState);
+    TX_RETURN_IF_WHITESPACE(aStr, aState);
 
     return NS_ERROR_XSLT_PARSE_FAILURE;
 }
@@ -427,7 +428,7 @@ txFnEndLRE(txStylesheetCompilerState& aState)
 nsresult
 txFnText(const nsAString& aStr, txStylesheetCompilerState& aState)
 {
-    TX_RETURN_IF_WHITESPACE(PromiseFlatString(aStr), aState);
+    TX_RETURN_IF_WHITESPACE(aStr, aState);
 
     txInstruction* instr = new txText(aStr, MB_FALSE);
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
@@ -497,6 +498,46 @@ txFnEndApplyTemplates(txStylesheetCompilerState& aState)
 
     // txApplyTemplates
     rv = aState.addInstruction((txInstruction*)aState.popObject());
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return NS_OK;
+}
+
+// xsl:call-template
+nsresult
+txFnStartCallTemplate(PRInt32 aNamespaceID,
+                      nsIAtom* aLocalName,
+                      nsIAtom* aPrefix,
+                      txStylesheetAttr* aAttributes,
+                      PRInt32 aAttrCount,
+                      txStylesheetCompilerState& aState)
+{
+    nsresult rv = NS_OK;
+    txStylesheetAttr* attr = 0;
+
+    txExpandedName name;
+    attr = getStyleAttr(aAttributes, aAttrCount, txXSLTAtoms::name);
+    NS_ENSURE_TRUE(attr, NS_ERROR_XSLT_PARSE_FAILURE);
+
+    rv = aState.parseQName(attr->mValue, name, MB_FALSE);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    txInstruction* callTempl = new txCallTemplate(name);
+    NS_ENSURE_TRUE(callTempl, NS_ERROR_OUT_OF_MEMORY);
+
+    rv = aState.pushObject(callTempl);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return aState.pushHandlerTable(gTxCallTemplateHandler);
+}
+
+nsresult
+txFnEndCallTemplate(txStylesheetCompilerState& aState)
+{
+    aState.popHandlerTable();
+
+    // txCallTemplate
+    nsresult rv = aState.addInstruction((txInstruction*)aState.popObject());
     NS_ENSURE_SUCCESS(rv, rv);
 
     return NS_OK;
@@ -686,6 +727,7 @@ txHandlerTableData gTxTemplateTableData = {
     { kNameSpaceID_XSLT, "value-of", txFnStartValueOf, txFnEndValueOf },
     { kNameSpaceID_XSLT, "if", txFnStartIf, txFnEndIf },
     { kNameSpaceID_XSLT, "apply-templates", txFnStartApplyTemplates, txFnEndApplyTemplates },
+    { kNameSpaceID_XSLT, "call-template", txFnStartCallTemplate, txFnEndCallTemplate },
     { 0, 0, 0, 0 } },
   // Other
   { 0, 0, txFnStartElementIgnore, txFnEndElementIgnore },
@@ -707,6 +749,17 @@ txHandlerTableData gTxTextTableData = {
 };
 
 txHandlerTableData gTxApplyTemplatesTableData = {
+  // Handlers
+  { { 0, 0, 0, 0 } },
+  // Other
+  { 0, 0, txFnStartElementSetIgnore, txFnEndElementSetIgnore }, // should this be error?
+  // LRE
+  { 0, 0, txFnStartElementSetIgnore, txFnEndElementSetIgnore },
+  // Text
+  txFnTextIgnore
+};
+
+txHandlerTableData gTxCallTemplateTableData = {
   // Handlers
   { { 0, 0, 0, 0 } },
   // Other

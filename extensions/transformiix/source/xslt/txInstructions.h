@@ -194,4 +194,14 @@ class txReturn : public txInstruction
     TX_DECL_TXINSTRUCTION
 };
 
+class txCallTemplate : public txInstruction
+{
+public:
+    txCallTemplate(const txExpandedName& aName);
+
+    TX_DECL_TXINSTRUCTION
+
+    txExpandedName mName;
+};
+
 #endif //TRANSFRMX_TXINSTRUCTIONS_H

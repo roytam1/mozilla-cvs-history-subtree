@@ -226,6 +226,12 @@ txStylesheet::getAttributeSet(const txExpandedName& aName)
     return (txInstruction*)mAttributeSets.get(aName);
 }
 
+txInstruction*
+txStylesheet::getNamedTemplate(const txExpandedName& aName)
+{
+    return (txInstruction*)mNamedTemplates.get(aName);
+}
+
 txOutputFormat*
 txStylesheet::getOutputFormat()
 {

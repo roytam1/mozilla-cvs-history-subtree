@@ -307,3 +307,21 @@ txReturn::execute(txExecutionState& aEs)
 
     return NS_OK;
 }
+
+txCallTemplate::txCallTemplate(const txExpandedName& aName)
+    : mName(aName)
+{
+}
+
+nsresult
+txCallTemplate::execute(txExecutionState& aEs)
+{
+    txInstruction* instr = aEs.mStylesheet->getNamedTemplate(mName);
+    NS_ENSURE_TRUE(instr, NS_ERROR_XSLT_EXECUTION_FAILURE);
+
+    nsresult rv = aEs.runTemplate(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    return NS_OK;
+}
+

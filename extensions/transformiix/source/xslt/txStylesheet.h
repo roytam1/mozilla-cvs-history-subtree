@@ -69,6 +69,7 @@ public:
                                 ImportFrame** aImportFrame);
     txDecimalFormat* getDecimalFormat(const txExpandedName& aName);
     txInstruction* getAttributeSet(const txExpandedName& aName);
+    txInstruction* getNamedTemplate(const txExpandedName& aName);
     txOutputFormat* getOutputFormat();
 
     /**
