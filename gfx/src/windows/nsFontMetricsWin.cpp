@@ -354,6 +354,7 @@ nsFontMetricsWin :: nsFontMetricsWin()
 {
   NS_INIT_REFCNT();
   mSpaceWidth = 0;
+  mLoadedFontsCount = 0;
 }
   
 nsFontMetricsWin :: ~nsFontMetricsWin()
