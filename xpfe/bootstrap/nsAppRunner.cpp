@@ -1320,3 +1320,176 @@ int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR args, int )
     return main( __argc, __argv );
 }
 #endif // XP_PC && WIN32
+
+typedef nsresult NSGetModule_type(nsIComponentManager *, nsIFile *, nsIModule **);
+
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsGfx2Module;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsGIFModule2;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsJPEGDecoderModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsPNGDecoderModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsPPMDecoderModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsImageLib2Module;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsGIFModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsJPGModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsMNGModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsPNGModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsJarModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsJarModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsPrefModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsCJVMManagerModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsPluginModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsEditorModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsTransactionManagerModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsTextServicesModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsCookieModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsWalletViewerModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsWalletModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsXMLExtrasModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsSecurityManagerModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsMorkModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_docshell_provider;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_Browser_Embedding_Module;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_embedcomponents;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsCharDetModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsLocaleModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsLWBrkModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsStringBundleModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsUConvModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsUCvCnModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsUCvIBMModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsUCvJAModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsUCvKoModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsUCvLatinModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsUCvTWModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsUCvTW2Module;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_UcharUtil;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_JS_component_loader;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_xpconnect;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_necko_core_and_primary_protocols;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_necko_secondary_protocols;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_cacheservice;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsProfileModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsPrefMigrationModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsRDFModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsChromeModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsURILoaderModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsSoftwareUpdate;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsContentModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_javascript__protocol;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsGfxGTKModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsGfxPSModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsParserModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsLayoutModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsViewFactory;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsWidgetGTKModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_XRemoteClientModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsGtkTimerModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_appshell;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsBrowserModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_application;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsFindComponentModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsRegistryViewerModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_Session_History_Module;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsUnknownContentTypeHandler;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsStreamTransferModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsAbSyncModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsAbModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsMsgBaseModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsMsgComposeModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsMsgDBModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_IMAP_factory;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsImportServiceModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsTextImportModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_local_mail_services;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_mime_services;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsVCardModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsMimeEmitterModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsMsgNewsModule;
+extern "C" NS_EXPORT NSGetModule_type NSGetModule_nsAccessibilityModule;
+
+NSGetModule_type *Static_Module_References[] = {
+	NSGetModule_nsGfx2Module,
+	NSGetModule_nsGIFModule2,
+	NSGetModule_nsJPEGDecoderModule,
+	NSGetModule_nsPNGDecoderModule,
+	NSGetModule_nsPPMDecoderModule,
+	NSGetModule_nsImageLib2Module,
+	NSGetModule_nsGIFModule,
+	NSGetModule_nsJPGModule,
+	NSGetModule_nsMNGModule,
+	NSGetModule_nsPNGModule,
+	NSGetModule_nsJarModule,
+	NSGetModule_nsJarModule,
+	NSGetModule_nsPrefModule,
+	NSGetModule_nsCJVMManagerModule,
+	NSGetModule_nsPluginModule,
+	NSGetModule_nsEditorModule,
+	NSGetModule_nsTransactionManagerModule,
+	NSGetModule_nsTextServicesModule,
+	NSGetModule_nsCookieModule,
+	NSGetModule_nsWalletViewerModule,
+	NSGetModule_nsWalletModule,
+	NSGetModule_nsXMLExtrasModule,
+	NSGetModule_nsSecurityManagerModule,
+	NSGetModule_nsMorkModule,
+	NSGetModule_docshell_provider,
+	NSGetModule_Browser_Embedding_Module,
+	NSGetModule_embedcomponents,
+	NSGetModule_nsCharDetModule,
+	NSGetModule_nsLocaleModule,
+	NSGetModule_nsLWBrkModule,
+	NSGetModule_nsStringBundleModule,
+	NSGetModule_nsUConvModule,
+	NSGetModule_nsUCvCnModule,
+	NSGetModule_nsUCvIBMModule,
+	NSGetModule_nsUCvJAModule,
+	NSGetModule_nsUCvKoModule,
+	NSGetModule_nsUCvLatinModule,
+	NSGetModule_nsUCvTWModule,
+	NSGetModule_nsUCvTW2Module,
+	NSGetModule_UcharUtil,
+	NSGetModule_JS_component_loader,
+	NSGetModule_xpconnect,
+	NSGetModule_necko_core_and_primary_protocols,
+	NSGetModule_necko_secondary_protocols,
+	NSGetModule_cacheservice,
+	NSGetModule_nsProfileModule,
+	NSGetModule_nsPrefMigrationModule,
+	NSGetModule_nsRDFModule,
+	NSGetModule_nsChromeModule,
+	NSGetModule_nsURILoaderModule,
+	NSGetModule_nsSoftwareUpdate,
+	NSGetModule_nsContentModule,
+	NSGetModule_javascript__protocol,
+	NSGetModule_nsGfxGTKModule,
+	NSGetModule_nsGfxPSModule,
+	NSGetModule_nsParserModule,
+	NSGetModule_nsLayoutModule,
+	NSGetModule_nsViewFactory,
+	NSGetModule_nsWidgetGTKModule,
+	NSGetModule_XRemoteClientModule,
+	NSGetModule_nsGtkTimerModule,
+	NSGetModule_appshell,
+	NSGetModule_nsBrowserModule,
+	NSGetModule_application,
+	NSGetModule_nsFindComponentModule,
+	NSGetModule_nsRegistryViewerModule,
+	NSGetModule_Session_History_Module,
+	NSGetModule_nsUnknownContentTypeHandler,
+	NSGetModule_nsStreamTransferModule,
+	NSGetModule_nsAbSyncModule,
+	NSGetModule_nsAbModule,
+	NSGetModule_nsMsgBaseModule,
+	NSGetModule_nsMsgComposeModule,
+	NSGetModule_nsMsgDBModule,
+	NSGetModule_IMAP_factory,
+	NSGetModule_nsImportServiceModule,
+	NSGetModule_nsTextImportModule,
+	NSGetModule_local_mail_services,
+	NSGetModule_mime_services,
+	NSGetModule_nsVCardModule,
+	NSGetModule_nsMimeEmitterModule,
+	NSGetModule_nsMsgNewsModule,
+	NSGetModule_nsAccessibilityModule,
+	0 };
+
