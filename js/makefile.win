@@ -17,7 +17,7 @@ DEPTH=..
 
 DIRS=src \
 !ifndef MOZ_OJI
-  	jsj
+  	jsj \
 !endif
 $(NULL)
 
