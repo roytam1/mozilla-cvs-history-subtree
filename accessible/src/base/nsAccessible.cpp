@@ -37,6 +37,9 @@
 #include "nsILink.h"
 #include "nsHTMLLinkAccessible.h"
 #include "nsIDOMHTMLAreaElement.h"
+#include "nsIServiceManager.h"
+#include "nsIStringBundle.h"
+#include "nsXPIDLString.h"
 
 // IFrame Helpers
 #include "nsIDocShell.h"
@@ -57,6 +60,7 @@
 static gnsAccessibles = 0;
 #endif
 
+static NS_DEFINE_CID(kStringBundleServiceCID,  NS_STRINGBUNDLESERVICE_CID);
 
 class nsFrameTreeWalker {
 public:
@@ -924,13 +928,53 @@ NS_IMETHODIMP nsAccessible::GetAccNumActions(PRUint8 *_retval)
   return NS_OK;
 }
 
+
+nsresult nsAccessible::GetTranslatedString(PRUnichar *aKey, nsAWritableString *aStringOut)
+{
+  static nsCOMPtr<nsIStringBundle> stringBundle;
+  static PRBool firstTime = PR_TRUE;
+
+  if (firstTime) {
+    firstTime = PR_FALSE;
+    nsresult rv;
+    NS_WITH_SERVICE(nsIStringBundleService, stringBundleService, kStringBundleServiceCID, &rv);
+    // nsCOMPtr<nsIStringBundleService> stringBundleService(do_GetService(kStringBundleServiceCID, &rv));
+    if (!stringBundleService) { 
+      NS_WARNING("ERROR: Failed to get StringBundle Service instance.\n");
+      return NS_ERROR_FAILURE;;
+    }
+    nsCOMPtr<nsILocale> locale(nsnull);
+    stringBundleService->CreateBundle(ACCESSIBLE_BUNDLE_URL, locale, getter_AddRefs(stringBundle));
+  }
+
+  nsXPIDLString xsValue;
+  if (!stringBundle || 
+    NS_FAILED(stringBundle->GetStringFromName(aKey, getter_Copies(xsValue)))) 
+    return NS_ERROR_FAILURE;
+
+  aStringOut->Assign(xsValue);
+  return NS_OK;
+}
+
+
 /* wstring getAccActionName (in PRUint8 index); */
 NS_IMETHODIMP nsAccessible::GetAccActionName(PRUint8 index, PRUnichar **_retval)
 {
   PRUint8 numActions;
   *_retval = 0;
-  return (mAccessible && NS_SUCCEEDED(GetAccNumActions(&numActions)) && index<numActions)?
-    mAccessible->GetAccActionName(index, _retval): NS_ERROR_NOT_IMPLEMENTED;
+  if (mAccessible && NS_SUCCEEDED(GetAccNumActions(&numActions)) && index<numActions) {
+    nsresult rv = mAccessible->GetAccActionName(index, _retval);
+    if (**_retval && NS_SUCCEEDED(rv)) {
+      nsAutoString newString;
+      rv = GetTranslatedString(*_retval, &newString);
+      if (NS_SUCCEEDED(rv)) {
+        delete *_retval;
+        *_retval = newString.ToNewUnicode();
+      }
+    }
+    return NS_OK;  // keep key for name if can't get translated version
+  }
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* void accDoAction (in PRUint8 index); */

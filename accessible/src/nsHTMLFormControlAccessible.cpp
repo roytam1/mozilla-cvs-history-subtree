@@ -166,7 +166,7 @@ NS_IMETHODIMP nsHTMLCheckboxAccessible::GetAccActionName(PRUint8 index, PRUnicha
     PRBool checked = PR_FALSE;
     if (element) 
       element->GetChecked(&checked);
-    *_retval = ToNewUnicode(checked? NS_LITERAL_STRING("Uncheck"): NS_LITERAL_STRING("Check"));
+    *_retval = ToNewUnicode(checked? NS_LITERAL_STRING("uncheck"): NS_LITERAL_STRING("check"));
     return NS_OK;
   }
   return NS_ERROR_NOT_IMPLEMENTED;
@@ -204,7 +204,7 @@ NS_IMETHODIMP nsHTMLRadioButtonAccessible::GetAccNumActions(PRUint8 *_retval)
 NS_IMETHODIMP nsHTMLRadioButtonAccessible::GetAccActionName(PRUint8 index, PRUnichar **_retval)
 {
   if (index == 0) {
-    *_retval = ToNewUnicode(NS_LITERAL_STRING("Select"));
+    *_retval = ToNewUnicode(NS_LITERAL_STRING("select"));
     return NS_OK;
   }
   return NS_ERROR_NOT_IMPLEMENTED;
@@ -248,7 +248,7 @@ NS_IMETHODIMP nsHTMLButtonAccessible::GetAccNumActions(PRUint8 *_retval)
 NS_IMETHODIMP nsHTMLButtonAccessible::GetAccActionName(PRUint8 index, PRUnichar **_retval)
 {
   if (index == 0) {
-    *_retval = ToNewUnicode(NS_LITERAL_STRING("Press"));
+    *_retval = ToNewUnicode(NS_LITERAL_STRING("press"));
     return NS_OK;
   }
   return NS_ERROR_NOT_IMPLEMENTED;
@@ -309,7 +309,7 @@ NS_IMETHODIMP nsHTML4ButtonAccessible::GetAccNumActions(PRUint8 *_retval)
 NS_IMETHODIMP nsHTML4ButtonAccessible::GetAccActionName(PRUint8 index, PRUnichar **_retval)
 {
   if (index == 0) {
-    *_retval = ToNewUnicode(NS_LITERAL_STRING("Press"));
+    *_retval = ToNewUnicode(NS_LITERAL_STRING("press"));
     return NS_OK;
   }
   return NS_ERROR_NOT_IMPLEMENTED;

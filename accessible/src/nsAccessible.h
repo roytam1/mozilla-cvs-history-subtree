@@ -35,6 +35,8 @@
 #include "nsRect.h"
 #include "nsPoint.h"
 
+#define ACCESSIBLE_BUNDLE_URL "chrome://global/locale/accessible.properties"
+
 class nsIFrame;
 class nsIDocShell;
 class nsIWebShell;
@@ -81,6 +83,7 @@ class nsAccessible : public nsIAccessible
                                       nsIFrame *aFrame, 
                                       nsRect& aAbsoluteTwipsRect, 
                                       nsRect& aAbsolutePixelRect);
+    static nsresult GetTranslatedString(PRUnichar *aKey, nsAWritableString *aStringOut);
 protected:
   virtual nsIFrame* GetFrame();
   virtual nsIFrame* GetBoundsFrame();
