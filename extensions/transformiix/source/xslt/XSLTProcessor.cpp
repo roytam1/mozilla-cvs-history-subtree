@@ -59,6 +59,7 @@
 #ifndef TX_EXE
 #include "nsContentCID.h"
 #include "nsIConsoleService.h"
+#include "nsIDOMDocument.h"
 #include "nsIServiceManagerUtils.h"
 
 static NS_DEFINE_CID(kXMLDocumentCID, NS_XMLDOCUMENT_CID);
@@ -166,8 +167,9 @@ txXSLTProcessor::copyNode(Node* aSourceNode, ProcessorState* aPs)
                 for (i = 0; i < attList->getLength(); i++) {
                     Attr* attr = (Attr*)attList->item(i);
                     NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
-                    aPs->mResultHandler->attribute(attr->getName(), attr->getNamespaceID(),
-                                              attr->getValue());
+                    aPs->mResultHandler->attribute(attr->getNodeName(),
+                                                   attr->getNamespaceID(),
+                                                   attr->getNodeValue());
                 }
             }
 
@@ -282,9 +284,9 @@ txXSLTProcessor::processAction(Node* aAction,
                     continue;
                 // Process Attribute Value Templates
                 String value;
-                aPs->processAttrValueTemplate(attr->getValue(), actionElement, value);
+                aPs->processAttrValueTemplate(attr->getNodeValue(), actionElement, value);
                 NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
-                aPs->mResultHandler->attribute(attr->getName(), attr->getNamespaceID(), value);
+                aPs->mResultHandler->attribute(attr->getNodeName(), attr->getNamespaceID(), value);
             }
         }
 
@@ -1030,7 +1032,7 @@ txXSLTProcessor::processInclude(String& aHref,
     aPs->getEnteredStylesheets()->push(&aHref);
 
     // Load XSL document
-    Node* stylesheet = aPs->retrieveDocument(aHref, NULL_STRING);
+    Node* stylesheet = aPs->retrieveDocument(aHref, String());
     if (!stylesheet) {
         String err("Unable to load included stylesheet ");
         err.append(aHref);
