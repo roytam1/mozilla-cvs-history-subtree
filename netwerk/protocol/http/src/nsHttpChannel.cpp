@@ -143,7 +143,7 @@ nsHttpChannel::Init(nsIURI *uri,
     //
     nsCString hostLine;
     hostLine.Assign(host.get());
-    if (port != -1 && port != 80) { //mConnectionInfo->DefaultPort()) {
+    if (port != -1) {
         hostLine.Append(':');
         hostLine.AppendInt(port);
     }
