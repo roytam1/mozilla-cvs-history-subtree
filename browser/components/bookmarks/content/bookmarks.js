@@ -285,7 +285,7 @@ var BookmarksCommand = {
     // bm_properties
     switch (type) {
     case "BookmarkSeparator":
-      commands = ["bm_newfolder", "bm_separator", 
+      commands = ["bm_newbookmark", "bm_newfolder", "bm_newseparator", "bm_separator",
                   "cut", "copy", "paste", "bm_separator",
                   "delete", "bm_separator",
                   "bm_properties"];
