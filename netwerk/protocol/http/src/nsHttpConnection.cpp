@@ -123,28 +123,28 @@ nsHttpConnection::SetTransaction(nsHttpTransaction *transaction)
     mTransaction = transaction;
     NS_ADDREF(mTransaction);
 
-    mProgressSink = 0;
-    if (mTransaction->Callbacks()) {
-        // build a proxy for the progress event sink
-        nsCOMPtr<nsIProgressEventSink> temp = do_GetInterface(mTransaction->Callbacks());
-        if (temp) {
-            nsCOMPtr<nsIProxyObjectManager> mgr;
-            nsHttpHandler::get()->GetProxyObjectManager(getter_AddRefs(mgr));
-            if (mgr)
-                mgr->GetProxyForObject(NS_CURRENT_EVENTQ,
-                                       NS_GET_IID(nsIProgressEventSink),
-                                       temp,
-                                       PROXY_ASYNC | PROXY_ALWAYS,
-                                       getter_AddRefs(mProgressSink));
-        }
-    }
-
     // grab a reference to the calling thread's event queue.
     mEventQ = 0;
     nsCOMPtr<nsIEventQueueService> eqs;
     nsHttpHandler::get()->GetEventQueueService(getter_AddRefs(eqs));
     if (eqs)
         eqs->ResolveEventQueue(NS_CURRENT_EVENTQ, getter_AddRefs(mEventQ));
+
+    // build a proxy for the progress event sink
+    mProgressSink = 0;
+    if (mTransaction->Callbacks()) {
+        nsCOMPtr<nsIProgressEventSink> temp = do_GetInterface(mTransaction->Callbacks());
+        if (temp) {
+            nsCOMPtr<nsIProxyObjectManager> mgr;
+            nsHttpHandler::get()->GetProxyObjectManager(getter_AddRefs(mgr));
+            if (mgr)
+                mgr->GetProxyForObject(mEventQ,
+                                       NS_GET_IID(nsIProgressEventSink),
+                                       temp,
+                                       PROXY_ASYNC | PROXY_ALWAYS,
+                                       getter_AddRefs(mProgressSink));
+        }
+    }
 
     // assign ourselves to the transaction
     mTransaction->SetConnection(this);
@@ -355,8 +355,9 @@ nsHttpConnection::CreateTransport()
                                      getter_AddRefs(transport));
     if (NS_FAILED(rv)) return rv;
 
-    // QI for the nsISocketTransport iface
+    // the transport has better be a socket transport !!
     mSocketTransport = do_QueryInterface(transport, &rv);
+    if (NS_FAILED(rv)) return rv;
 
     rv = mSocketTransport->SetReuseConnection(PR_TRUE);
     if (NS_FAILED(rv)) return rv;
@@ -399,7 +400,7 @@ nsHttpConnection::SetupSSLProxyConnect()
     // CONNECT host:port HTTP/1.1
     nsHttpRequestHead request;
     request.SetMethod(nsHttp::Connect);
-    request.SetVersion(NS_HTTP_VERSION_1_1);
+    request.SetVersion(nsHttpHandler::get()->DefaultVersion());
     request.SetRequestURI(buf.get());
 
     // the listener's job will be to call SetTransaction on "this"

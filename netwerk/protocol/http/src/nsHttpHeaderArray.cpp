@@ -85,12 +85,8 @@ nsHttpHeaderArray::PeekHeader(nsHttpAtom header)
 nsresult
 nsHttpHeaderArray::GetHeader(nsHttpAtom header, char **result)
 {
-    nsEntry *entry = nsnull;
-
-    LookupEntry(header, &entry);
-    if (!entry) return NS_ERROR_NOT_AVAILABLE;
-
-    return DupString(entry->value.get(), result);
+    const char *val = PeekHeader(header);
+    return val ? DupString(val, result) : NS_ERROR_NOT_AVAILABLE;
 }
 
 nsresult

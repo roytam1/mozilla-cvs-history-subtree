@@ -193,8 +193,6 @@ nsHttpTransaction::OnStopTransaction(nsresult status)
 nsresult
 nsHttpTransaction::ParseLine(char *line)
 {
-    nsresult rv;
-
     NS_PRECONDITION(!mHaveAllHeaders, "already have all headers");
 
     LOG(("nsHttpTransaction::ParseLine [%s]\n", line));
@@ -207,18 +205,14 @@ nsHttpTransaction::ParseLine(char *line)
     }
 
     if (!mHaveStatusLine) {
-        rv = mResponseHead->ParseStatusLine(line);
-        if (NS_SUCCEEDED(rv))
-            mHaveStatusLine = PR_TRUE;
-        return rv;
+        mResponseHead->ParseStatusLine(line);
+        mHaveStatusLine = PR_TRUE;
     }
-
-    if (*line == '\0') {
+    else if (*line == '\0')
         mHaveAllHeaders = PR_TRUE;
-        return NS_OK;
-    }
-
-    return mResponseHead->ParseHeaderLine(line);
+    else
+        mResponseHead->ParseHeaderLine(line);
+    return NS_OK;
 }
 
 nsresult
@@ -507,11 +501,11 @@ nsHttpTransaction::Available(PRUint32 *result)
 }
 
 NS_IMETHODIMP
-nsHttpTransaction::Read(char *buf, PRUint32 bufSize, PRUint32 *bytesWritten)
+nsHttpTransaction::Read(char *buf, PRUint32 count, PRUint32 *bytesWritten)
 {
     nsresult rv;
 
-    LOG(("nsHttpTransaction::Read [this=%x bufSize=%u]\n", this, bufSize));
+    LOG(("nsHttpTransaction::Read [this=%x count=%u]\n", this, count));
 
     NS_ENSURE_TRUE(mSource, NS_ERROR_NOT_INITIALIZED);
 
@@ -519,43 +513,47 @@ nsHttpTransaction::Read(char *buf, PRUint32 bufSize, PRUint32 *bytesWritten)
         return NS_BASE_STREAM_CLOSED;
 
     // read some data from our source and put it in the given buf
-    rv = mSource->Read(buf, bufSize, bytesWritten);
+    rv = mSource->Read(buf, count, bytesWritten);
     if (NS_FAILED(rv) || (*bytesWritten == 0)) return rv;
 
     // pretend that no bytes were written (since we're just borrowing the
     // given buf anyways).
-    bufSize = *bytesWritten;
+    count = *bytesWritten;
     *bytesWritten = 0;
 
-    if (mHaveAllHeaders)
-        return HandleContent(buf, bufSize, bytesWritten);
+    // we may not have read all of the headers yet...
+    if (!mHaveAllHeaders) {
+        PRUint32 offset = 0, bytesConsumed;
 
-    PRUint32 offset = 0, count = bufSize, bytesConsumed;
+        while (count) {
+            bytesConsumed = 0;
 
-    while (count) {
-        bytesConsumed = 0;
+            rv = ParseHead(buf + offset, count, &bytesConsumed);
+            if (NS_FAILED(rv)) return rv;
 
-        rv = ParseHead(buf + offset, count, &bytesConsumed);
-        if (NS_FAILED(rv)) return rv;
+            count -= bytesConsumed;
+            offset += bytesConsumed;
 
-        count -= bytesConsumed;
-        offset += bytesConsumed;
+            // see if we're done reading headers
+            if (mHaveAllHeaders) {
+                LOG(("have all response headers\n"));
+                break;
+            }
+        }
 
-        // see if we're done reading headers
-        if (mHaveAllHeaders) {
-            LOG(("have all response headers\n"));
-            break;
+        if (count) {
+            // buf has some content in it; shift bytes to top of buf.
+            memmove(buf, buf + offset, count);
         }
     }
 
-    if (count) {
-        // buf has some content in it; shift bytes to top of buf.
-        memmove(buf, buf + offset, count);
-    }
-
     // even though count may be 0, we still want to call HandleContent
-    // so it can complete the transaction if this is a "no body" response.
-    return HandleContent(buf, count, bytesWritten);
+    // so it can complete the transaction if this is a "no-content" response.
+    if (mHaveAllHeaders)
+        return HandleContent(buf, count, bytesWritten);
+
+    // wait for more data
+    return NS_OK;
 }
 
 NS_IMETHODIMP

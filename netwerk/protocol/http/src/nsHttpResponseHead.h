@@ -36,7 +36,9 @@
 class nsHttpResponseHead
 {
 public:
-    nsHttpResponseHead() : mStatus(200), mContentLength(-1) {}
+    nsHttpResponseHead() : mVersion(NS_HTTP_VERSION_1_1)
+                         , mStatus(200)
+                         , mContentLength(-1) {}
    ~nsHttpResponseHead() {}
     
     nsHttpHeaderArray &Headers()        { return mHeaders; }
@@ -58,10 +60,10 @@ public:
     nsresult Parse(char *block);
 
     // parse the status line. line must be null terminated.
-    nsresult ParseStatusLine(char *line);
+    void     ParseStatusLine(char *line);
 
     // parse a header line. line must be null terminated. parsing is destructive.
-    nsresult ParseHeaderLine(char *line);
+    void     ParseHeaderLine(char *line);
 
     // cache validation support methods
     nsresult ComputeFreshnessLifetime(PRUint32 *);
@@ -71,7 +73,7 @@ public:
     nsresult UpdateHeaders(nsHttpHeaderArray &headers); 
 
 private:
-    nsresult ParseVersion(const char *);
+    void     ParseVersion(const char *);
     nsresult ParseContentType(char *);
 
     // these return failure if the header does not exist.

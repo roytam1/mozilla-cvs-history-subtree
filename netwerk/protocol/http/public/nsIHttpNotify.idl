@@ -32,7 +32,7 @@
 
 interface nsIHttpChannel;
 
-[scriptable, uuid(8D9430E0-0FB4-11d3-9DE6-0010A4053FD0)]
+[scriptable, uuid(5a6dec35-fb37-4460-85bb-1c572521d0cf)]
 interface nsIHttpNotify : nsINetNotify
 {
     /**

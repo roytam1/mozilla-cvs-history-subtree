@@ -76,7 +76,7 @@ nsHttpHandler *nsHttpHandler::mGlobalInstance = 0;
 nsHttpHandler::nsHttpHandler()
     : mAuthCache(nsnull)
     , mHttpVersion(NS_HTTP_VERSION_1_1)
-    , mSendReferrer(0)
+    , mReferrerLevel(PRUint32(-1)) // by default we always send a referrer
     , mCapabilities(ALLOW_KEEPALIVE)
     , mProxyCapabilities(ALLOW_KEEPALIVE)
     , mProxySSLConnectAllowed(PR_TRUE)
@@ -903,8 +903,11 @@ nsHttpHandler::PrefsChanged(const char *pref)
     if (bChangedAll || PL_strcmp(pref, "network.http.max-connections") == 0)
         mPrefs->GetIntPref("network.http.max-connections", &mMaxConnections);
 
-    if (bChangedAll || PL_strcmp(pref, "network.http.send-referrer") == 0)
-        mPrefs->GetIntPref("network.http.send-referrer", &mSendReferrer);
+    if (bChangedAll || PL_strcmp(pref, "network.http.max-connections-per-server") == 0)
+        mPrefs->GetIntPref("network.http.max-connections-per-server", &mMaxConnectionsPerServer);
+
+    if (bChangedAll || PL_strcmp(pref, "network.http.sendRefererHeader") == 0)
+        mPrefs->GetIntPref("network.http.sendRefererHeader", (PRInt32 *) &mReferrerLevel);
 
     if (bChangedAll || PL_strcmp(pref, "network.http.version") == 0) {
         nsXPIDLCString httpVersion;

@@ -56,7 +56,6 @@ nsHttpResponseHead::Flatten(nsACString &buf)
 nsresult
 nsHttpResponseHead::Parse(char *block)
 {
-    nsresult rv;
 
     LOG(("nsHttpResponseHead::Parse [this=%x]\n", this));
 
@@ -68,8 +67,7 @@ nsHttpResponseHead::Parse(char *block)
         return NS_ERROR_UNEXPECTED;
 
     *p = 0;
-    rv = ParseStatusLine(block);
-    if (NS_FAILED(rv)) return rv;
+    ParseStatusLine(block);
 
     do {
         block = p + 2;
@@ -82,30 +80,28 @@ nsHttpResponseHead::Parse(char *block)
             return NS_ERROR_UNEXPECTED;
 
         *p = 0;
-        rv = ParseHeaderLine(block);
-        if (NS_FAILED(rv)) return rv;
+        ParseHeaderLine(block);
 
     } while (1);
 
     return NS_OK;
 }
 
-nsresult
+void
 nsHttpResponseHead::ParseStatusLine(char *line)
 {
     //
     // Parse Status-Line:: HTTP-Version SP Status-Code SP Reason-Phrase CRLF
     //
-    nsresult rv;
  
     // HTTP-Version
-    rv = ParseVersion(line);
-    if (NS_FAILED(rv)) return rv;
+    ParseVersion(line);
     
     if ((mVersion == NS_HTTP_VERSION_0_9) || !(line = PL_strchr(line, ' '))) {
         mStatus = 200;
         mStatusText = "OK";
-        goto end;
+        LOG(("Have status line [version=%d status=%d statusText=%s]\n",
+            mVersion, mStatus, mStatusText.get()));
     }
     
     // Status-Code
@@ -123,13 +119,11 @@ nsHttpResponseHead::ParseStatusLine(char *line)
     else
         mStatusText = ++line;
 
-end:
     LOG(("Have status line [version=%d status=%d statusText=%s]\n",
         mVersion, mStatus, mStatusText.get()));
-    return NS_OK;
 }
 
-nsresult
+void
 nsHttpResponseHead::ParseHeaderLine(char *line)
 {
     char *p = PL_strchr(line, ':');
@@ -173,7 +167,6 @@ nsHttpResponseHead::ParseHeaderLine(char *line)
 
     // We ignore mal-formed headers in the hope that we'll still be able
     // to do something useful with the response.
-    return NS_OK;
 }
 
 // From section 13.2.3 of RFC2616, we compute the current age of a cached
@@ -321,7 +314,7 @@ nsHttpResponseHead::UpdateHeaders(nsHttpHeaderArray &headers)
 // nsHttpResponseHead <private>
 //-----------------------------------------------------------------------------
 
-nsresult
+void
 nsHttpResponseHead::ParseVersion(const char *str)
 {
     // Parse HTTP-Version:: "HTTP" "/" 1*DIGIT "." 1*DIGIT
@@ -330,7 +323,7 @@ nsHttpResponseHead::ParseVersion(const char *str)
     if (PL_strncmp(str, "HTTP", 4) != 0) {
         LOG(("looks like a HTTP/0.9 response\n"));
         mVersion = NS_HTTP_VERSION_0_9;
-        return NS_OK;
+        return;
     }
     str += 4;
 
@@ -339,14 +332,14 @@ nsHttpResponseHead::ParseVersion(const char *str)
         // NCSA/1.5.2 has a bug in which it fails to send a version number
         // if the request version is HTTP/1.1, so we fall back on HTTP/1.0
         mVersion = NS_HTTP_VERSION_1_0;
-        return NS_OK;
+        return;
     }
 
     char *p = PL_strchr(str, '.');
     if (p == nsnull) {
         LOG(("mal-formed server version; assuming HTTP/1.0\n"));
         mVersion = NS_HTTP_VERSION_1_0;
-        return NS_OK;
+        return;
     }
 
     ++p; // let b point to the minor version
@@ -360,8 +353,6 @@ nsHttpResponseHead::ParseVersion(const char *str)
     else
         // treat anything else as version 1.0
         mVersion = NS_HTTP_VERSION_1_0;
-
-    return NS_OK;
 }
 
 nsresult

@@ -53,6 +53,7 @@ nsHttpChannel::nsHttpChannel()
     , mLoadFlags(LOAD_NORMAL)
     , mCapabilities(0)
     , mStatus(NS_OK)
+    , mReferrerType(REFERRER_NONE)
     , mCachedResponseHead(nsnull)
     , mCacheAccess(0)
     , mPostID(0)
@@ -66,6 +67,10 @@ nsHttpChannel::nsHttpChannel()
     LOG(("Creating nsHttpChannel @%x\n", this));
 
     NS_INIT_ISUPPORTS();
+
+    // grab a reference to the handler to ensure that it doesn't go away.
+    nsHttpHandler *handler = nsHttpHandler::get();
+    NS_ADDREF(handler);
 }
 
 nsHttpChannel::~nsHttpChannel()
@@ -84,6 +89,10 @@ nsHttpChannel::~nsHttpChannel()
     NS_IF_RELEASE(mConnectionInfo);
     NS_IF_RELEASE(mTransaction);
     NS_IF_RELEASE(mPrevTransaction);
+
+    // release our reference to the handler
+    nsHttpHandler *handler = nsHttpHandler::get();
+    NS_RELEASE(handler);
 }
 
 nsresult
@@ -278,7 +287,7 @@ nsHttpChannel::SetupTransaction()
         if (NS_FAILED(rv)) return rv;
     }
 
-    mRequestHead.SetVersion(NS_HTTP_VERSION_1_1);
+    mRequestHead.SetVersion(nsHttpHandler::get()->DefaultVersion());
     mRequestHead.SetRequestURI(path ? path : mSpec);
 
     // set the request time for cache expiration calculations
@@ -1020,7 +1029,7 @@ nsHttpChannel::ProcessRedirection(PRUint32 redirectType)
     if (mReferrer) {
         nsCOMPtr<nsIHttpChannel> httpChannel = do_QueryInterface(newChannel);
         if (httpChannel)
-            httpChannel->SetReferrer(mReferrer);
+            httpChannel->SetReferrer(mReferrer, mReferrerType);
     }
 
     // call out to the event sink to notify it of this redirection.
@@ -1652,6 +1661,7 @@ nsHttpChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *context)
 {
     LOG(("nsHttpChannel::AsyncOpen [this=%x]\n", this));
 
+    NS_ENSURE_ARG_POINTER(listener);
     NS_ENSURE_TRUE(!mIsPending, NS_ERROR_IN_PROGRESS);
 
     mIsPending = PR_TRUE;
@@ -1709,15 +1719,18 @@ nsHttpChannel::GetReferrer(nsIURI **referrer)
     return NS_OK;
 }
 NS_IMETHODIMP
-nsHttpChannel::SetReferrer(nsIURI *referrer)
+nsHttpChannel::SetReferrer(nsIURI *referrer, PRUint32 referrerType)
 {
     NS_ENSURE_TRUE(!mIsPending, NS_ERROR_IN_PROGRESS);
 
-    if (nsHttpHandler::get()->SendReferrer())
+    if (nsHttpHandler::get()->ReferrerLevel() < referrerType)
         return NS_OK;
 
     // save a copy of the referrer so we can return it if requested
     mReferrer = referrer;
+
+    // save a copy of the referrer type for redirects
+    mReferrerType = referrerType;
 
     nsXPIDLCString spec;
     referrer->GetSpec(getter_Copies(spec));

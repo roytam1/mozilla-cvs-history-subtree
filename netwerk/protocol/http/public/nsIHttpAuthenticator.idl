@@ -33,7 +33,7 @@ interface nsIHttpAuthenticator : nsISupports
      * server/proxy challenge.
      */
     string generateCredentials(in nsIHttpChannel channel,
-                               in string callenge,
+                               in string challenge,
                                in wstring username,
                                in wstring password);
 };

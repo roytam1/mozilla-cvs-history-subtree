@@ -24,6 +24,7 @@
 #ifndef nsHttpHandler_h__
 #define nsHttpHandler_h__
 
+#include "nsHttp.h"
 #include "nsIHttpProtocolHandler.h"
 #include "nsIProtocolProxyService.h"
 #include "nsIPref.h"
@@ -80,7 +81,8 @@ public:
     nsresult AddStandardRequestHeaders(nsHttpHeaderArray *,
                                        PRUint32 capabilities);
 
-    PRBool SendReferrer() { return mSendReferrer; }
+    nsHttpVersion DefaultVersion() { return (nsHttpVersion) mHttpVersion; }
+    PRUint32      ReferrerLevel()  { return mReferrerLevel; }
 
     nsHttpAuthCache *AuthCache() { return mAuthCache; }
 
@@ -193,7 +195,7 @@ private:
     //
 
     PRUint32 mHttpVersion;
-    PRInt32  mSendReferrer;
+    PRUint32 mReferrerLevel;
     PRUint32 mCapabilities;
     PRUint32 mProxyCapabilities;
     PRBool   mProxySSLConnectAllowed;

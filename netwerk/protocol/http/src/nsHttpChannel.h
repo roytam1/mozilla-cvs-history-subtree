@@ -117,8 +117,8 @@ private:
     nsCOMPtr<nsIInterfaceRequestor>   mCallbacks;
     nsCOMPtr<nsIProgressEventSink>    mProgressSink;
     nsCOMPtr<nsIHttpEventSink>        mHttpEventSink;
-    nsCOMPtr<nsIURI>                  mReferrer;
     nsCOMPtr<nsIInputStream>          mUploadStream;
+    nsCOMPtr<nsIURI>                  mReferrer;
 
     nsHttpRequestHead                 mRequestHead;
     nsHttpResponseHead               *mResponseHead;
@@ -132,6 +132,7 @@ private:
     PRUint32                          mLoadFlags;
     PRUint32                          mCapabilities;
     PRUint32                          mStatus;
+    PRUint32                          mReferrerType;
 
     // cache specific data
     nsCOMPtr<nsICacheEntryDescriptor> mCacheEntry;
