@@ -252,7 +252,7 @@ CHBrowserListener::ShowAsModal()
     return NS_ERROR_FAILURE;
   }
 
-  NSWindow* window = [mView window];
+  NSWindow* window = [mView getNativeWindow];
 
   if (!window) {
     return NS_ERROR_FAILURE;
@@ -300,6 +300,8 @@ CHBrowserListener::SetDimensions(PRUint32 flags, PRInt32 x, PRInt32 y, PRInt32 c
   if (!mView)
     return NS_ERROR_FAILURE;
 
+  // use -window here and not -getNativeWindow because we don't want to allow bg tabs
+  // (which aren't in the window hierarchy) to resize the window.
   NSWindow* window = [mView window];
   if (!window)
     return NS_ERROR_FAILURE;
@@ -354,7 +356,7 @@ CHBrowserListener::GetDimensions(PRUint32 flags,  PRInt32 *x,  PRInt32 *y, PRInt
   if (!mView)
     return NS_ERROR_FAILURE;
 
-  NSWindow* window = [mView window];
+  NSWindow* window = [mView getNativeWindow];
   if (!window)
     return NS_ERROR_FAILURE;
 
@@ -394,6 +396,7 @@ CHBrowserListener::GetDimensions(PRUint32 flags,  PRInt32 *x,  PRInt32 *y, PRInt
 NS_IMETHODIMP 
 CHBrowserListener::SetFocus()
 {
+  // don't use -getNativeWindow here so tabs in the bg can't take focus
   NSWindow* window = [mView window];
   if (!window) 
     return NS_ERROR_FAILURE;
@@ -424,7 +427,7 @@ CHBrowserListener::GetVisibility(PRBool *aVisibility)
     return NS_ERROR_FAILURE;
   }
 
-  NSWindow* window = [mView window];
+  NSWindow* window = [mView getNativeWindow];
   if (!window) {
     return NS_ERROR_FAILURE;
   }
@@ -437,6 +440,8 @@ CHBrowserListener::GetVisibility(PRBool *aVisibility)
 NS_IMETHODIMP 
 CHBrowserListener::SetVisibility(PRBool aVisibility)
 {
+  // use -window instead of -getNativeWindow to prevent bg tabs from being able to
+  // change the visibility
   NSWindow* window = [mView window];
   if (!window)
     return NS_ERROR_FAILURE;
@@ -503,7 +508,7 @@ CHBrowserListener::GetSiteWindow(void * *aSiteWindow)
     return NS_ERROR_FAILURE;
   }
 
-  NSWindow* window = [mView window];
+  NSWindow* window = [mView getNativeWindow];
   if (!window) {
     return NS_ERROR_FAILURE;
   }
