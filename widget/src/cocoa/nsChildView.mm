@@ -2540,6 +2540,11 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
     delete[] bufPtr;
 }
 
+- (void)insertNewline:(id)sender
+{
+  // dummy impl, does nothing (other than stop the beeping when hitting return)
+}
+
 - (void) doCommandBySelector:(SEL)aSelector;
 {
   [super doCommandBySelector:aSelector];
