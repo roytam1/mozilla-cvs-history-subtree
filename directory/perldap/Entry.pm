@@ -35,7 +35,7 @@ use strict;
 use vars qw($VERSION @ISA);
 
 @ISA = ('Tie::StdHash');
-$VERSION = "1.4";
+$VERSION = "1.41";
 
 
 #############################################################################
