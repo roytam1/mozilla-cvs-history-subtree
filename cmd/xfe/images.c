@@ -428,6 +428,161 @@ _IMGCB_DestroyPixmap(IMGCB* img_cb, jint op, void* dpy_cx, IL_Pixmap* pixmap)
     }
 }
 
+/*	ebb - begin */
+/************************ ICC Profile & ColorSync Support ************************/
+/*	******************************************************************************
+	OpenICCProfileFromMem
+	
+	Desc:		This is the most common way of 'opening' an icc profile,
+				which really means loading it's table of contents and
+				indexing its tags.  If the passed memory doesn't contain
+				a valid profile, we'll retun NULL.
+*/
+JMC_PUBLIC_API(void*)
+_IMGCB_OpenICCProfileFromMem(	struct IMGCB*	/*self*/,
+								jint			/*op*/,
+								void*			a,
+								unsigned char*	profile_data )
+{
+	return ((void*) 0);
+}
+
+/*	******************************************************************************
+	OpenICCProfileFromDisk
+	
+	Desc:		This is the most efficient (in terms of memory) way of 'opening'
+	 			an icc profile, vs. having ColorSync create an in-memory copy
+	 			of some of the contents.  The filename param must contain a full
+	 			path name, wehich will be converted internally to a Mac FSSpec.
+				If the resulting FSSpec isn't valid or the file doesn't contain
+				a valid profile, we'll retun NULL.
+*/
+JMC_PUBLIC_API(void*)
+_IMGCB_OpenICCProfileFromDisk(	struct IMGCB*	/*self*/,
+								jint			/*op*/,
+								void*			a,
+								char*			filename )
+{
+	return ((void*) 0);
+}
+
+/*	******************************************************************************
+	CloneICCProfileRef
+	
+	Desc:		If more than one 'client' wants to have a profile open, the
+				profile reference can be cloned, rather than having two
+				separate instances of the profile's data loaded in memory.
+				ColorSync bumps an internal reference count and will only
+				actually close the profile when it reaches zero.
+*/
+JMC_PUBLIC_API(void)
+_IMGCB_CloneICCProfileRef(	struct IMGCB*	/*self*/,
+							jint			/*op*/,
+							void*			a,
+							void*			profile_ref )
+{
+}
+
+/*	******************************************************************************
+	CloneICCProfileRef
+	
+	Desc:		Releases the internal memory allocated when a profile is opened.
+				ColorSync will close the profile when there are no more clients
+				referencing the opened profile.				
+*/
+JMC_PUBLIC_API(void)
+_IMGCB_CloseICCProfileRef(	struct IMGCB*	/*self*/,
+							jint			/*op*/,
+							void*			a,
+							void*			profile_ref )
+{
+}
+
+/*	******************************************************************************
+	SetupICCColorMatching
+	
+	Desc:		Given two profiles, a color matching session can be established
+				which moves colors from one device space (specified in the
+				profile) to another.  This is done by moving the colors through
+				a device independent space, the instructions on how to do this
+				inherent in the profile.
+				
+				ColorSync supports the specification of a special "system space"
+				by accepting NULL in either the source or dest profile ref
+				(but not both).  In this case - we require the caller to pass a
+				special value "kICCProfileRef_SystemProfile" to designate this.
+				
+				If a color matching session can be established (may fail due to
+				memory requirements, components not being installed, bad profile
+				references, etc)  it is returned to the caller - who then may
+				close the profile references if no more matching sessions using
+				them are required.
+*/
+JMC_PUBLIC_API(void*)
+_IMGCB_SetupICCColorMatching(	struct IMGCB*	/*self*/,
+								jint			/*op*/,
+								void*			a,
+								void*			src_profile_ref,
+								void*			dst_profile_ref )
+{
+	return ((void*) 0);
+}
+
+/*	******************************************************************************
+	ColorMatchRGBPixels
+	
+	Desc:		This is the pixel matching interface.  It is NOT generalized,
+				rather it expects the following:
+				
+			¥	pixels are in RGB 888 format (8 bits per channel - 24 bits total)
+			¥	pixels are in a consecutive buffer - no padding at intervals
+			
+				This happens to be the way the imagelib sends pixels to the
+				front end for display.  If in the future this changes we can
+				generalize the interface or create new entrypoints. 			
+*/
+JMC_PUBLIC_API(void)
+_IMGCB_ColorMatchRGBPixels(	struct IMGCB*	/*self*/,
+							jint			/*op*/,
+							void*			a,
+							void*			color_world,
+							const uint8*	pixels,
+							int				column_pixels )
+/*							uint32			rows ) */
+{
+}
+
+/*	******************************************************************************
+	DisposeICCColorMatching
+	
+	Desc:		Releases the memory (may be upwards of 200K) used by a color
+				matching session - previously created by SetupICCColorMatching.
+				
+*/
+JMC_PUBLIC_API(void)
+_IMGCB_DisposeICCColorMatching(	struct IMGCB*	/*self*/,
+								jint			/*op*/,
+								void*			a,
+								void* color_world )
+{
+}
+
+/*	******************************************************************************
+	IsColorSyncAvailable
+	
+	Desc:		This simply looks for the existence of a known symbol - which
+				will have been resolved by CFM at load time.  If we find it
+				we return TRUE.
+				
+*/
+JMC_PUBLIC_API(jbool)
+_IMGCB_IsColorSyncAvailable(	struct IMGCB*	/*self*/,
+								jint			/*op*/,
+								void*			a )
+{
+	return (false);
+}
+/*	ebb - end */
 
 /**************************** Pixmap display *********************************/
 typedef struct 
