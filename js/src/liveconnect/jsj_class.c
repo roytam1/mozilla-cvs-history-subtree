@@ -413,7 +413,7 @@ jsj_DiscardJavaClassReflections(JNIEnv *jEnv)
         if (JSJ_callbacks->map_jsj_thread_to_js_context) {
 #ifdef OJI
             cx = JSJ_callbacks->map_jsj_thread_to_js_context(jsj_env,
-                                                             NULL /* FIXME: What should this argument be ? */
+                                                             NULL, /* FIXME: What should this argument be ? */
                                                              jEnv, &err_msg);
 #else
             cx = JSJ_callbacks->map_jsj_thread_to_js_context(jsj_env,
