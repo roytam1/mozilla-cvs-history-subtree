@@ -105,9 +105,17 @@ ifndef MOZ_NATIVE_ZLIB
 tier_1_dirs	+= modules/zlib/src
 endif
 
+ifndef MOZ_NATIVE_PNG
+tier_1_dirs	+= modules/libimg/png
+endif
+
+ifndef MOZ_NATIVE_MNG
+tier_1_dirs	+= modules/libimg/mng
+endif
+
 # Installer needs standalone libjar, hence standalone zlib
 ifdef MOZ_INSTALLER
-tier_1_dirs	+= modules/zlib/standalone modules/libjar/standalone
+tier_1_dirs	+= modules/zlib/standalone
 endif
 
 ifdef MOZ_INTERNAL_LIBART_LGPL
@@ -140,6 +148,11 @@ tier_9_dirs += \
 		modules/libjar \
 		$(NULL)
 
+ifdef MOZ_INSTALLER
+tier_9_dirs	+= modules/libjar/standalone
+endif
+
+
 ifdef MOZ_OJI
 tier_9_dirs	+= js/src/liveconnect
 endif
@@ -166,7 +179,6 @@ tier_9_dirs	+= \
 		modules/mpfilelocprovider \
 		uriloader \
 		modules/libpref \
-		modules/libimg \
 		modules/oji \
 		caps \
 		rdf \
