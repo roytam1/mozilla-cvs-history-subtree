@@ -28,10 +28,10 @@
 #include "nsXPIDLString.h"
 
 // Interfaces Needed
-#include "nsIGenericFactory.h"
 #include "nsString.h"
 #include "nsIAutoCompleteResults.h"
 #include "nsISimpleEnumerator.h"
+#include "nsIServiceManager.h"
 
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
 

@@ -26,20 +26,15 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE		= autocomplete
-LIBRARY_NAME	= autocomplete
+MODULE=appcomps
+LIBRARY_NAME	= autocomplete_s
 IS_COMPONENT	= 1
 SHORT_LIBNAME	= autocomp
 
 CPPSRCS		= nsAutoComplete.cpp
 
-EXTRA_DSO_LDOPTS = \
-		-L$(DIST)/bin \
-		-L$(DIST)/lib \
-		$(XPCOM_LIBS) \
-		$(MOZ_JS_LIBS) \
-		$(NSPR_LIBS) \
-		$(NULL)
+override NO_SHARED_LIB=1
+override NO_STATIC_LIB=
 
 include $(topsrcdir)/config/rules.mk
 
