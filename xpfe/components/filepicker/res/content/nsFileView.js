@@ -17,7 +17,8 @@
  * Copyright (C) 2000 Netscape Communications Corporation.  All
  * Rights Reserved.
  *
- * Contributor(s): Brian Ryner <bryner@netscape.com>
+ * Contributor(s):
+ *  Brian Ryner <bryner@netscape.com>
  *
  */
 
