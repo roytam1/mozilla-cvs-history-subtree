@@ -2389,7 +2389,7 @@ nsresult nsMsgDatabase::ThreadNewHdr(nsMsgHdr* newHdr, PRBool &newThread)
 	// try subject threading if we couldn't find a reference and the subject starts with Re:
 	nsAutoString subject (eOneByte);
 
-	newHdr->GetSubject(subject);
+	newHdr->GetSubject(&subject);
 	if ((ThreadBySubjectWithoutRe() || (newHdrFlags & MSG_FLAG_HAS_RE)) && (!thread))
 	{
 		thread = getter_AddRefs(GetThreadForSubject(subject));
@@ -2558,7 +2558,7 @@ nsresult nsMsgDatabase::AddNewThread(nsMsgHdr *msgHdr)
 	
 	nsString2 subject(eOneByte);
 
-	nsresult err = msgHdr->GetSubject(subject);
+	nsresult err = msgHdr->GetSubject(&subject);
 
 	err = CreateNewThread(msgHdr->m_messageKey, subject.GetBuffer(), &threadHdr);
 	msgHdr->SetThreadId(msgHdr->m_messageKey);
@@ -2686,8 +2686,8 @@ nsresult nsMsgDatabase::DumpContents()
             nsAutoString subject;
 
 			msgHdr->GetMessageKey(&key);
-			msgHdr->GetAuthor(author);
-			msgHdr->GetSubject(subject);
+			msgHdr->GetAuthor(&author);
+			msgHdr->GetSubject(&subject);
 			char *authorStr = author.ToNewCString();
 			char *subjectStr = subject.ToNewCString();
 			printf("hdr key = %u, author = %s subject = %s\n", key, (authorStr) ? authorStr : "", (subjectStr) ? subjectStr : "");
@@ -2741,7 +2741,7 @@ nsresult	nsMsgDatabase::DumpThread(nsMsgKey threadId)
 					nsMsgKey key;
 					nsString subject;
 					(void)pMessage->GetMessageKey(&key);
-					pMessage->GetSubject(subject);
+					pMessage->GetSubject(&subject);
 
 					printf("message in thread %u %s\n", key, (const char *) nsAutoCString(subject));
 				}
