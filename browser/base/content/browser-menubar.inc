@@ -399,9 +399,14 @@
                 accesskey="&helpMenu.accesskey;">
 #endif
             <menupopup id="menu_HelpPopup">
-              <menuitem accesskey="&releaseCmd.accesskey;"
-                        label="&releaseCmd.label;"
-                        oncommand="openUILink('&releaseURL;', event, false, true);"
+              <menuseparator/>
+              <menuitem accesskey="&tellAFriend.accesskey;"
+                        label="&tellAFriend.label;"
+                        oncommand="openUILink(getUILink('tellAFriend'), event, false, true);"
+                        onclick="checkForMiddleClick(this, event);"/>
+              <menuitem accesskey="&promote.accesskey;"
+                        label="&promote.label;"
+                        oncommand="openUILink(getUILink('promote'), event, false, true);"
                         onclick="checkForMiddleClick(this, event);"/>
               <menuseparator/>
               <menuitem id="aboutName"

@@ -5674,3 +5674,16 @@ function updatePageFavIcon(aBrowser) {
     BookmarksUtils.loadFavIcon(uri.spec, aBrowser.mFavIconURL);
   }
 }
+
+function getUILink(item)
+{
+  var regionBundle = document.getElementById("bundle_browser_region");
+
+  if (item == "tellAFriend")
+    return regionBundle.getString("tellAFriendURL");
+  
+  if (item == "promote")
+    return regionBundle.getString("promoteURL");
+  
+  return "";
+}

@@ -190,8 +190,6 @@
 <!ENTITY helpMenuWin.label      "Help"> 
 <!ENTITY helpMenuWin.accesskey  "H"> 
 
-<!ENTITY releaseCmd.label       "Release Notes">
-<!ENTITY releaseCmd.accesskey       "R">
 <!ENTITY aboutCmd.label         "About &brandFullName;">
 <!ENTITY aboutCmd.accesskey       "A">
 
@@ -342,3 +340,7 @@
 <!ENTITY editPopupSettings.accesskey "E">
 <!ENTITY dontShowMessage.accesskey "D">
 
+<!ENTITY tellAFriend.label "Tell a Friend">
+<!ENTITY tellAFriend.accesskey "T">
+<!ENTITY promote.label "Promote &brandShortName;">
+<!ENTITY promote.accesskey "P">
