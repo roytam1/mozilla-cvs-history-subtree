@@ -29,7 +29,7 @@
 
 #include "nsRepeatService.h"
 
-#if XP_MAC
+#if (XP_MAC || XP_PC)
 #define INITAL_REPEAT_DELAY 250
 #define REPEAT_DELAY        10
 #else
