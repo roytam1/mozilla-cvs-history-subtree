@@ -918,7 +918,12 @@ static NSArray* sToolbarDefaults = nil;
 
 - (IBAction)reload:(id)aSender
 {
-  [[mBrowserView getBrowserView] reload: 0];
+  unsigned int reloadFlags = NSLoadFlagsNone;
+  
+  if (([[NSApp currentEvent] modifierFlags] & NSShiftKeyMask) != 0)
+    reloadFlags = NSLoadFlagsBypassCacheAndProxy;
+  
+  [[mBrowserView getBrowserView] reload: reloadFlags];
 }
 
 - (IBAction)stop:(id)aSender
