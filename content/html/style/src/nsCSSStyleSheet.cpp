@@ -2654,7 +2654,8 @@ SelectorMatchesData::SelectorMatchesData(nsIPresContext* aPresContext, nsIConten
     // if not an HTML link, check for a simple xlink (cannot be both HTML link and xlink)
     // NOTE: optimization: cannot be an XLink if no attributes (since it needs an 
     if(PR_FALSE == mIsHTMLLink &&
-       mHasAttributes &&
+       mHasAttributes && 
+       !(aContent->IsContentOfType(nsIContent::eHTML) || aContent->IsContentOfType(nsIContent::eXUL)) && 
        nsStyleUtil::IsSimpleXlink(aContent, mPresContext, &mLinkState)) {
       mIsSimpleXLink = PR_TRUE;
     } 
