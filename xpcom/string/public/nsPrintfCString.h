@@ -78,7 +78,7 @@ class NS_COM nsPrintfCString : public nsCString
     public:
       // XXX don't these need to be declared CDECL ??
       explicit nsPrintfCString( const char_type* format, ... );
-      nsPrintfCString( size_t n, const char_type* format, ...);
+      nsPrintfCString( size_type n, const char_type* format, ...);
 
     private:
       char_type  mLocalBuffer[ kLocalBufferSize + 1 ];

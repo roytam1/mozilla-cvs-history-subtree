@@ -53,21 +53,21 @@ nsPrintfCString::nsPrintfCString( const char_type* format, ... )
   {
     va_list ap;
 
-    size_t logical_capacity = kLocalBufferSize;
-    size_t physical_capacity = logical_capacity + 1;
+    size_type logical_capacity = kLocalBufferSize;
+    size_type physical_capacity = logical_capacity + 1;
 
     va_start(ap, format);
     mLength = PR_vsnprintf(mData, physical_capacity, format, ap);
     va_end(ap);
   }
 
-nsPrintfCString::nsPrintfCString( size_t n, const char_type* format, ... )
+nsPrintfCString::nsPrintfCString( size_type n, const char_type* format, ... )
   : string_type(mLocalBuffer, 0, F_TERMINATED)
   {
     va_list ap;
 
       // make sure there's at least |n| space
-    size_t logical_capacity = kLocalBufferSize;
+    size_type logical_capacity = kLocalBufferSize;
     if ( n > logical_capacity )
       {
         SetCapacity(n);
@@ -75,7 +75,7 @@ nsPrintfCString::nsPrintfCString( size_t n, const char_type* format, ... )
           return; // out of memory !!
         logical_capacity = n;
       }
-    size_t physical_capacity = logical_capacity + 1;
+    size_type physical_capacity = logical_capacity + 1;
 
     va_start(ap, format);
     mLength = PR_vsnprintf(mData, physical_capacity, format, ap);

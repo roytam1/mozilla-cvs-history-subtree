@@ -44,21 +44,13 @@
 nsTSubstringTuple_CharT::size_type
 nsTSubstringTuple_CharT::Length() const
   {
-    // fragments are enumerated right to left
-
-    const substring_type& b = TO_SUBSTRING(mFragB);
-
-    PRUint32 len = b.Length();
+    PRUint32 len;
     if (mHead)
-      {
-        len += mHead->Length();
-      }
+      len = mHead->Length();
     else
-      {
-        const substring_type& a = TO_SUBSTRING(mFragA);
-        len += a.Length();
-      }
-    return len;
+      len = TO_SUBSTRING(mFragA).Length();
+
+    return len + TO_SUBSTRING(mFragB).Length();
   }
 
 
@@ -71,12 +63,32 @@ nsTSubstringTuple_CharT::Length() const
 void
 nsTSubstringTuple_CharT::WriteTo( char_type *buf, PRUint32 bufLen ) const
   {
-    // we need to write out data into buf, ending at end.  so our data
-    // needs to preceed |end| exactly.  we trust that the buffer was
-    // properly sized!
+    const substring_type& b = TO_SUBSTRING(mFragB);
+
+    NS_ASSERTION(bufLen >= b.Length(), "buffer too small");
+    PRUint32 headLen = bufLen - b.Length();
+    if (mHead)
+      {
+        mHead->WriteTo(buf, headLen);
+      }
+    else
+      {
+        const substring_type& a = TO_SUBSTRING(mFragA);
+
+        NS_ASSERTION(a.Length() == headLen, "buffer incorrectly sized");
+        char_traits::copy(buf, a.Data(), a.Length());
+      }
+
+    char_traits::copy(buf + headLen, b.Data(), b.Length());
+
+#if 0
+    // we need to write out data into |buf|, ending at |buf+bufLen|.  so our
+    // data needs to precede |buf+bufLen| exactly.  we trust that the buffer
+    // was properly sized!
 
     const substring_type& b = TO_SUBSTRING(mFragB);
 
+    NS_ASSERTION(bufLen >= b.Length(), "buffer is too small");
     char_traits::copy(buf + bufLen - b.Length(), b.Data(), b.Length());
 
     bufLen -= b.Length();
@@ -88,8 +100,10 @@ nsTSubstringTuple_CharT::WriteTo( char_type *buf, PRUint32 bufLen ) const
     else
       {
         const substring_type& a = TO_SUBSTRING(mFragA);
-        char_traits::copy(buf + bufLen - a.Length(), a.Data(), a.Length());
+        NS_ASSERTION(bufLen == a.Length(), "buffer is too small");
+        char_traits::copy(buf, a.Data(), a.Length());
       }
+#endif
   }
 
 
@@ -101,22 +115,13 @@ nsTSubstringTuple_CharT::WriteTo( char_type *buf, PRUint32 bufLen ) const
 PRBool
 nsTSubstringTuple_CharT::IsDependentOn( const char_type *start, const char_type *end ) const
   {
-    // fragments are enumerated right to left
+    // we start with the right-most fragment since it is faster to check.
 
-    const substring_type& b = TO_SUBSTRING(mFragB);
+    if (TO_SUBSTRING(mFragB).IsDependentOn(start, end))
+      return PR_TRUE;
 
-    PRBool dependent = b.IsDependentOn(start, end);
-    if (!dependent)
-    {
-      if (mHead)
-        {
-          dependent = mHead->IsDependentOn(start, end);
-        }
-      else
-        {
-          const substring_type& a = TO_SUBSTRING(mFragA);
-          dependent = a.IsDependentOn(start ,end);
-        }
-    }
-    return dependent;
+    if (mHead)
+      return mHead->IsDependentOn(start, end);
+
+    return TO_SUBSTRING(mFragA).IsDependentOn(start, end);
   }

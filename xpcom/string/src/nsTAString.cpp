@@ -54,7 +54,7 @@
 nsTAString_CharT::~nsTAString_CharT()
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      AsSubstring()->ReleaseData();
+      AsSubstring()->Finalize();
     else
       AsObsoleteString()->~nsTObsoleteAString_CharT();
   }

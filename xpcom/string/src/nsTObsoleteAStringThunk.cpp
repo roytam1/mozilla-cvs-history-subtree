@@ -70,7 +70,7 @@ class nsTObsoleteAStringThunk_CharT : public nsTObsoleteAString_CharT
 
       virtual ~nsTObsoleteAStringThunk_CharT()
         {
-          concrete_self()->ReleaseData();
+          concrete_self()->Finalize();
         }
 
       virtual PRUint32 GetImplementationFlags() const

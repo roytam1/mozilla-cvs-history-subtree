@@ -313,59 +313,128 @@ class nsTSubstring_CharT : public nsTAString_CharT
         : abstract_string_type(
               str.mData, str.mLength, str.mFlags & (F_TERMINATED | F_VOIDED)) {}
 
-      void      ReleaseData();
-      PRBool    MutatePrep( size_type, char_type**, PRUint32* );
-      void      ReplacePrep( index_type cutStart, size_type cutLength, size_type newLength);
+        /**
+         * this function releases mData and does not change the value of
+         * any of its member variables.  inotherwords, this function acts
+         * like a destructor.
+         */
+      void Finalize();
+
+        /**
+         * this function prepares mData to be mutated.
+         *
+         * @param capacity     specifies the required capacity of mData  
+         * @param old_data     returns null or the old value of mData
+         * @param old_flags    returns 0 or the old value of mFlags
+         *
+         * if mData is already mutable and of sufficient capacity, then this
+         * function will return immediately.  otherwise, it will either resize
+         * mData or allocate a new shared buffer.  if it needs to allocate a
+         * new buffer, then it will return the old buffer and the corresponding
+         * flags.  this allows the caller to decide when to free the old data.
+         *
+         * XXX we should expose a way for subclasses to free old_data.
+         */
+      PRBool MutatePrep( size_type capacity, char_type** old_data, PRUint32* old_flags );
+
+        /**
+         * this function prepares a section of mData to be modified.  if
+         * necessary, this function will reallocate mData and possibly move
+         * existing data to open up the specified section.
+         *
+         * @param cutStart     specifies the starting offset of the section
+         * @param cutLength    specifies the length of the section to be replaced
+         * @param newLength    specifies the length of the new section
+         *
+         * for example, suppose mData contains the string "abcdef" then
+         * 
+         *   ReplacePrep(2, 3, 4);
+         *
+         * would cause mData to look like "ab____f" where the characters
+         * indicated by '_' have an unspecified value and can be freely
+         * modified.  this function will null-terminate mData upon return.
+         */
+      void ReplacePrep( index_type cutStart, size_type cutLength, size_type newLength );
+
+        /**
+         * returns the number of writable storage units starting at mData.
+         * the value does not include space for the null-terminator character.
+         *
+         * NOTE: this function returns size_type(-1) if mData is immutable.
+         */
       size_type Capacity() const;
 
+        /**
+         * this helper function can be called prior to directly manipulating
+         * the contents of mData.  see, for example, BeginWriting.
+         */
       NS_COM void EnsureMutable();
 
         /**
          * returns true if this string overlaps with the given string fragment.
          */
-      PRBool IsDependentOn(const char_type *start, const char_type *end) const
+      PRBool IsDependentOn( const char_type *start, const char_type *end ) const
         {
           /**
            * if it _isn't_ the case that one fragment starts after the other ends,
            * or ends before the other starts, then, they conflict:
            * 
-           *   !(f2.mStart>=f1.mEnd || f2.mEnd<=f1.mStart)
+           *   !(f2.begin >= f1.end || f2.end <= f1.begin)
            * 
            * Simplified, that gives us:
            */
           return ( start < (mData + mLength) && end > mData );
         }
 
-      PRBool IsShared() const
-        {
-          return mFlags & F_SHARED;
-        }
-
-      PRBool IsOwned() const
-        {
-          return mFlags & F_OWNED;
-        }
-
-      PRBool IsFixed() const
-        {
-          return mFlags & F_FIXED;
-        }
-
-      PRBool IsMutable() const
-        {
-          return mFlags & (F_SHARED | F_OWNED | F_FIXED);
-        }
-
     public:
 
-      // mFlags is a bitwise combination of the following flags
+      // mFlags is a bitwise combination of the following flags.  the meaning
+      // and interpretation of these flags is an implementation detail.
+      // 
+      // NOTE: these flags are declared public _only_ for convenience inside
+      // the string implementation.
+      
       enum
         {
           F_NONE       = 0,       // no flags
           F_TERMINATED = 1 << 0,  // IsTerminated returns true
           F_VOIDED     = 1 << 1,  // IsVoid returns true
-          F_SHARED     = 1 << 2,  // mData[0] is prefixed with additional fields
-          F_OWNED      = 1 << 3,  // mData is owned by this class
-          F_FIXED      = 1 << 4   // mData is pointing at a fixed-size writable buffer
+          F_SHARED     = 1 << 2,  // mData points to a heap-allocated, shared buffer
+          F_OWNED      = 1 << 3,  // mData points to a heap-allocated, raw buffer
+          F_FIXED      = 1 << 4   // mData points to a fixed-size writable, dependent buffer
         };
+
+      //
+      // Some terminology:
+      //
+      //   "dependent buffer"    A dependent buffer is one that the string class
+      //                         does not own.  The string class relies on some
+      //                         external code to ensure the lifetime of the
+      //                         dependent buffer.
+      //
+      //   "shared buffer"       A shared buffer is one that the string class
+      //                         allocates.  When it allocates a shared string
+      //                         buffer, it allocates some additional space at
+      //                         the beginning of the buffer for additional 
+      //                         fields, including a reference count and a 
+      //                         buffer length.  See nsStringHeader.
+      //                         
+      //   "adopted buffer"      An adopted buffer is a raw string buffer
+      //                         allocated on the heap (using nsMemory::Alloc)
+      //                         of which the string class subsumes ownership.
+      //
+      // Some comments about the string flags:
+      //
+      //   F_SHARED, F_OWNED, and F_FIXED are all mutually exlusive.  They
+      //   indicate the allocation type of mData.  If none of these flags
+      //   are set, then the string buffer is dependent.
+      //
+      //   F_SHARED, F_OWNED, or F_FIXED imply F_TERMINATED.  This is because
+      //   the string classes always allocate null-terminated buffers, and
+      //   non-terminated substrings are always dependent.
+      //
+      //   F_VOIDED implies F_TERMINATED, and moreover it implies that mData
+      //   points to char_traits::sEmptyBuffer.  Therefore, F_VOIDED is
+      //   mutually exclusive with F_SHARED, F_OWNED, and F_FIXED.
+      //
   };

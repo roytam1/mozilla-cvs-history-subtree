@@ -94,7 +94,7 @@ static nsStringStats gStringStats;
 // ---------------------------------------------------------------------------
 
   /**
-   * This structure preceeds the string buffers "we" allocate.  It may be the
+   * This structure precedes the string buffers "we" allocate.  It may be the
    * case that nsTSubstring::mData does not point to one of these special
    * buffers.  The mFlags member variable distinguishes the buffer type.
    *
@@ -132,6 +132,8 @@ class nsStringHeader
       static nsStringHeader* Alloc(size_t size)
         {
           STRING_STAT_INCREMENT(Alloc);
+ 
+          NS_ASSERTION(size != 0, "zero capacity allocation not allowed");
 
           nsStringHeader *hdr =
               (nsStringHeader *) malloc(sizeof(nsStringHeader) + size);
@@ -146,6 +148,8 @@ class nsStringHeader
       static nsStringHeader* Realloc(nsStringHeader* hdr, size_t size)
         {
           STRING_STAT_INCREMENT(Realloc);
+
+          NS_ASSERTION(size != 0, "zero capacity allocation not allowed");
 
           // no point in trying to save ourselves if we hit this assertion
           NS_ASSERTION(!hdr->IsReadonly(), "|Realloc| attempted on readonly string");
@@ -176,8 +180,9 @@ class nsStringHeader
          * Because nsTSubstring allows only single threaded access, if this
          * method returns FALSE, then the caller can be sure that it has
          * exclusive access to the nsStringHeader and associated data.
-         * However, if this function returns TRUE, then there is no telling
-         * how many other threads may be accessing this object simultaneously.
+         * However, if this function returns TRUE, then other strings may
+         * rely on the data in this buffer being constant and other threads
+         * may access this buffer simultaneously.
          */
       PRBool IsReadonly() const
         {
