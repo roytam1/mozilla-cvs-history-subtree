@@ -486,13 +486,13 @@ pa_check_for_new_doc(MWContext *window_id, pa_DocData *doc_data)
 	if (LO_CheckForUnload(window_id) ||
             doc_data->url_struct->resize_reload)
 	{
-		NET_StreamClass *s=NET_NewStream("Place holder",
+		NET_VoidStreamClass *s=NET_CStreamToVoidStream(NET_NewStream("Place holder",
                         NULL,
                         NULL,
                         NULL,
                         NULL,
                         doc_data,
-                        window_id);
+                        window_id));
 		/* don't let netlib pass any data up to us yet */
 	  /*		doc_data->overflow = 1;*/
 		PA_PushOverflow(doc_data);
