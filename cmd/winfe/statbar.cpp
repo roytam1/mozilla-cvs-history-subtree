@@ -217,7 +217,7 @@ BOOL CNetscapeStatusBar::Create( CWnd *pParent, BOOL bSecurityStatus /*=TRUE*/, 
     pParentSubclass = new CNetscapeStatusBar::CParentSubclass( pParent, this );
     ASSERT( pParentSubclass );
     
-#ifndef MOZ_TASKBAR
+#ifdef MOZ_TASKBAR
     if( m_bTaskbar )
     {    
         //
