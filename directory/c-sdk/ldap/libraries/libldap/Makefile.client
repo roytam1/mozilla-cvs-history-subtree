@@ -157,7 +157,7 @@ endif # USE_DLL_EXPORTS_FILE
 
 ifeq ($(OS_ARCH), SunOS)
 EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LBER_LIBNAME)
-EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR)
+EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib
 endif
 
 ifeq ($(OS_ARCH), WINNT)
@@ -170,19 +170,19 @@ endif
 
 ifeq ($(OS_ARCH), OSF1)
 EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LBER_LIBNAME)
-EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR)
+EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib
 EXTRA_LIBS += -L/usr/lib -lcxx -lpthread -lrt -lmach -lexc
 endif
 
 ifeq ($(OS_ARCH), AIX)
 EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LBER_LIBNAME)
-EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR)
+EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib
 EXTRA_LIBS += -ldl -brtl -lpthreads -lc_r -lm
 endif
 
 ifeq ($(OS_ARCH), HP-UX)
 EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LBER_LIBNAME)
-EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR)
+EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib
 EXTRA_LIBS += -ldld -lm -lpthread
 endif
 
