@@ -4635,26 +4635,11 @@ nsXULDocument::CreateOverlayElement(nsXULPrototypeElement* aPrototype, nsIConten
 {
     nsresult rv;
 
-    nsCOMPtr<nsIXMLContent> xml;
-    rv = gXMLElementFactory->CreateInstanceByTag(nsAutoString("overlay"), getter_AddRefs(xml));
-    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create overlay element");
-    if (NS_FAILED(rv)) return rv;
-
-    nsCOMPtr<nsIContent> element = do_QueryInterface(xml);
-    NS_ASSERTION(element != nsnull, "xml element is not an nsIXMLContent");
-    if (! xml)
-        return NS_ERROR_UNEXPECTED;
-
-    // Initialize the overlay element
-    rv = element->SetDocument(this, PR_FALSE);
-    if (NS_FAILED(rv)) return rv;
-            
-    // Set up namespace junk so that subsequent parsing won't
-    // freak out.
-    rv = xml->SetContainingNameSpace(aPrototype->mNameSpace);
-    if (NS_FAILED(rv)) return rv;
-
-    rv = AddAttributes(aPrototype, element);
+    // This doesn't really do anything except create a placeholder
+    // element. I'd use an XML element, but it gets its knickers in a
+    // knot with DOM ranges when you try to remove its children.
+    nsCOMPtr<nsIContent> element;
+    rv = nsXULElement::Create(aPrototype, this, getter_AddRefs(element));
     if (NS_FAILED(rv)) return rv;
 
     OverlayForwardReference* fwdref = new OverlayForwardReference(element);
@@ -4887,7 +4872,10 @@ nsXULDocument::OverlayForwardReference::Merge(nsIContent* aTargetNode,
 
         for (PRInt32 i = 0; i < count; ++i) {
             nsCOMPtr<nsIContent> child;
-            rv = aOverlayNode->ChildAt(i, *getter_AddRefs(child));
+            rv = aOverlayNode->ChildAt(0, *getter_AddRefs(child));
+            if (NS_FAILED(rv)) return rv;
+
+            rv = aOverlayNode->RemoveChildAt(0, PR_FALSE);
             if (NS_FAILED(rv)) return rv;
 
             rv = InsertElement(aTargetNode, child);
@@ -5096,9 +5084,10 @@ nsXULDocument::InsertElement(nsIContent* aParent, nsIContent* aChild)
     PRBool wasInserted = PR_FALSE;
 
     if (rv == NS_CONTENT_ATTR_HAS_VALUE) {
+        // Positions are one-indexed.
         PRInt32 pos = posStr.ToInteger(NS_REINTERPRET_CAST(PRInt32*, &rv));
         if (NS_SUCCEEDED(rv)) {
-            rv = aParent->InsertChildAt(aChild, pos, PR_FALSE);
+            rv = aParent->InsertChildAt(aChild, pos - 1, PR_FALSE);
             if (NS_FAILED(rv)) return rv;
 
             wasInserted = PR_TRUE;
