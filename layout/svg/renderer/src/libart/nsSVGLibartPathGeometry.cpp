@@ -414,11 +414,13 @@ nsSVGLibartPathGeometry::ContainsPoint(float x, float y, PRBool *_retval)
   mSource->GetHittestMask(&mask);
 
   if (mask & nsISVGPathGeometrySource::HITTEST_MASK_FILL &&
+      GetFill() &&
       mFill.Contains(x,y)) {
     *_retval = PR_TRUE;
     return NS_OK;
   }
   if (mask & nsISVGPathGeometrySource::HITTEST_MASK_STROKE &&
+      GetStroke() &&
       mStroke.Contains(x,y)) {
     *_retval = PR_TRUE;
   }
