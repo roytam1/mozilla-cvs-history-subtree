@@ -7,13 +7,13 @@
 #   mozilla/gc, , 10/25/2000 12:00:00
 #
 
-mozilla/nsprpub,        NSPRPUB_CLIENT_BRANCH
-mozilla/security/nss,   NSS_CLIENT_TAG
-mozilla/security/psm,   
-mozilla/security/manager,
-mozilla/accessible,
-DirectorySDKSourceC,    LDAPCSDK_40_BRANCH
-mozilla/lib/mac/Instrumentation
-mozilla/gfx2
-mozilla/modules/libpr0n
-SeaMonkeyAll
+mozilla/nsprpub,        REPLY_PERF_20010608_BRANCH
+mozilla/security/nss,   REPLY_PERF_20010608_BRANCH
+mozilla/security/psm,   REPLY_PERF_20010608_BRANCH
+mozilla/security/manager, REPLY_PERF_20010608_BRANCH
+mozilla/accessible, REPLY_PERF_20010608_BRANCH
+DirectorySDKSourceC, REPLY_PERF_20010608_BRANCH
+mozilla/lib/mac/Instrumentation, REPLY_PERF_20010608_BRANCH
+mozilla/gfx2, REPLY_PERF_20010608_BRANCH
+mozilla/modules/libpr0n, REPLY_PERF_20010608_BRANCH
+SeaMonkeyAll, REPLY_PERF_20010608_BRANCH
