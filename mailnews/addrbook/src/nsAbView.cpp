@@ -424,6 +424,7 @@ nsresult nsAbView::GetCardValue(nsIAbCard *card, const PRUnichar *colID, PRUnich
   // "_" == generic column (like _AimScreenName)
   // else, standard column (like PrimaryEmail)
   if (colID[0] == 'G') {
+    // XXX cache this?
     nsCOMPtr<nsIAddrBookSession> abSession = do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv);
     NS_ENSURE_SUCCESS(rv,rv);
  

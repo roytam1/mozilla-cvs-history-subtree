@@ -42,3 +42,9 @@
   margin-left: 1px;
 }
 
+.ab-directory-icon[IsRemote="true"] {
+  list-style-image: url("chrome://messenger/skin/addressbook/remote-abook.gif");
+  margin-right: 1px;
+  margin-left: 1px;
+}
+

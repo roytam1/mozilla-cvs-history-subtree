@@ -37,3 +37,7 @@
 .ab-directory-icon[IsMailList="true"] {
   list-style-image: url("chrome://messenger/skin/addressbook/icons/list.gif");
 }
+
+.ab-directory-icon[IsRemote="true"] {
+  list-style-image: url("chrome://messenger/skin/addressbook/icons/directory.gif");
+}
