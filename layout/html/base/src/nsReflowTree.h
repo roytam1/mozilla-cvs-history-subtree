@@ -53,9 +53,7 @@
 
 #include "nscore.h"
 #include "pldhash.h"
-#ifdef DEBUG
 #include <stdio.h>
-#endif
 
 class nsIFrame;
 class nsHTMLReflowCommand;
@@ -130,7 +128,7 @@ public:
 
         void MakeTarget();
         PRBool IsTarget() { return mFlags & NODE_IS_TARGET; }
-        void Dump(int depth);
+        void Dump(FILE *f, int depth);
                 
     private:
         Node() { }

@@ -37,10 +37,12 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#include <stdio.h>
+#include "pldhash.h"
+#include "prenv.h"
 #include "nsReflowTree.h"
 #include "nsIFrame.h"
 #include "nsHTMLReflowCommand.h"
-#include "pldhash.h"
 
 // binary and semantically compatible with PLDHashEntryStub
 struct FrameEntry : PLDHashEntryHdr
@@ -356,11 +358,11 @@ nsReflowTree::FrameIsTarget(const nsIFrame *frame)
 }
 
 void
-nsReflowTree::Node::Dump(int depth)
+nsReflowTree::Node::Dump(FILE *f, int depth)
 {
-    fprintf(stderr, "%*s|-- %p", depth, "", (void *)mFrame);
+    fprintf(f, "%*s|-- %8p", depth, "", (void *)mFrame);
     if (IsTarget())
-        fprintf(stderr, " (T: %d)", mTargetCount);
+        fprintf(f, " (%d)", mTargetCount);
 
     nsCOMPtr<nsIAtom> typeAtom;
     mFrame->GetFrameType(getter_AddRefs(typeAtom));
@@ -368,20 +370,44 @@ nsReflowTree::Node::Dump(int depth)
     if (typeAtom) {
         const PRUnichar *unibuf;
         typeAtom->GetUnicode(&unibuf);
-        fprintf(stderr, " [%s]\n", NS_LossyConvertUCS2toASCII(unibuf).get());
+        fprintf(f, " [%s] ", NS_LossyConvertUCS2toASCII(unibuf).get());
     } else {
-        putc('\n', stderr);
+        fputs(" [unknown] ", f);
     }
+
+    nsFrameState state;
+    mFrame->GetFrameState(&state);
+    if (state & NS_FRAME_IS_DIRTY)
+        putc('D', f);
+    if (state & NS_FRAME_HAS_DIRTY_CHILDREN)
+        putc('C', f);
+    putc('\n', f);
 
     Iterator iter(this);
     Node *child;
     while ((child = iter.NextChild()))
-        child->Dump(depth + 2);
+        child->Dump(f, depth + 2);
 }
 
 void
 nsReflowTree::Dump()
 {
-    fprintf(stderr, "Tree dump:\n");
-    mRoot->Dump(0);
+    static FILE *f;
+    static PRBool haveCheckedEnv;
+    if (!haveCheckedEnv) {
+        char *file = PR_GetEnv("MOZILLA_REFLOW_TREE_LOG");
+        if (file) {
+            if (!strcmp(file, "stderr"))
+                f = stderr;
+            else if (!strcmp(file, "stdout"))
+                f = stdout;
+            else
+                f = fopen(file, "w");
+        }
+        haveCheckedEnv = PR_TRUE;
+    }
+    if (f) {
+        fputs("Reflow tree dump:\n", f);
+        mRoot->Dump(f, 0);
+    }
 }
