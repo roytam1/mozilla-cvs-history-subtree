@@ -196,18 +196,23 @@ NS_IMETHODIMP nsMsgDBView::DumpView()
     printf("[row]\t(key,flag,level,subject)\n");
     for (i = 0; i < num; i++) {
         PRUint32 flags = m_flags.GetAt(i);
+        PRUint32 level = m_levels.GetAt(i);
         printf("[%d]\t",i);
-        if (flags | MSG_FLAG_ELIDED) {
-            printf("+");
+        if (m_sortType == nsMsgViewSortType::byThread) {
+            if (flags | MSG_FLAG_ELIDED) {
+                printf("+");
+            }
+            else {
+                printf(" ");
+            }
+            for (j=0;j<level;j++) {
+                printf(".");
+            }
         }
         else {
             printf(" ");
         }
         
-        PRUint32 level = m_levels.GetAt(i);
-        for (j=0;j<level;j++) {
-            printf(".");
-        }
         nsMsgKey key = m_keys.GetAt(i);
         nsCOMPtr <nsIMsgDBHdr> msgHdr;
         rv = m_db->GetMsgHdrForKey(key, getter_AddRefs(msgHdr));
