@@ -5708,6 +5708,12 @@
 			settings = {
 			};
 		};
+		F5A30033034B8B1A01A96660 = {
+			fileRef = F5B34B01034A505F01A80166;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
 		F5A3669302CCFAF601DC3354 = {
 			isa = PBXFileReference;
 			name = BookmarksDataSource.h;
@@ -6078,12 +6084,6 @@
 			name = "NSPasteboard+Utils.mm";
 			path = "src/extensions/NSPasteboard+Utils.mm";
 			refType = 2;
-		};
-		F5B34B03034A505F01A80166 = {
-			fileRef = F5B34B01034A505F01A80166;
-			isa = PBXBuildFile;
-			settings = {
-			};
 		};
 		F5B34B04034A50C901A80166 = {
 			isa = PBXFileReference;
@@ -6558,7 +6558,6 @@
 				F5CA1A1C02D3957001F34900,
 				F5EB9378030C92450100010C,
 				F5949A49030D58A2014E8430,
-				F5B34B03034A505F01A80166,
 			);
 			isa = PBXResourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -6622,6 +6621,7 @@
 				F5FDF16B031AF47401DE816D,
 				F53C1CDB032FF3B301A96654,
 				F5F94B950332532901026D5D,
+				F5A30033034B8B1A01A96660,
 			);
 			isa = PBXSourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
