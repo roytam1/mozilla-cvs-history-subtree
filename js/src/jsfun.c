@@ -1588,7 +1588,7 @@ Function(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 	return JS_FALSE;
     if (argv) {
 	/* Use the last arg (or this if argc == 0) as a local GC root. */
-	argv[argc-1] = STRING_TO_JSVAL(str);
+	argv[(intn)(argc-1)] = STRING_TO_JSVAL(str);
     }
 
     if ((fp = cx->fp) != NULL && (fp = fp->down) != NULL && fp->script) {
