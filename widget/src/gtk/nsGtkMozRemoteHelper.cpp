@@ -913,12 +913,10 @@ NS_METHOD nsGtkMozRemoteHelper::OpenXULWindow (const char *aChromeURL, nsIDOMWin
   NS_ENSURE_SUCCESS(rv, rv);
   urlWrapper->SetData(url);
   
-  nsCOMPtr<nsIDOMWindowInternalEx> parentEx = do_QueryInterface(aParent, &rv);
-  NS_ENSURE_SUCCESS(rv, rv);
-  rv = parentEx->OpenDialog(NS_ConvertASCIItoUCS2(aChromeURL),
-                            nsAutoString(name),
-                            NS_ConvertASCIItoUCS2(aWindowFeatures),
-                            urlWrapper, getter_AddRefs(returnedWindow));
+  rv = aParent->OpenDialog(NS_ConvertASCIItoUCS2(aChromeURL),
+			   nsLiteralString(name),
+			   NS_ConvertASCIItoUCS2(aWindowFeatures),
+			   urlWrapper, getter_AddRefs(returnedWindow));
   if (NS_FAILED(rv))
     return NS_ERROR_FAILURE;
   return NS_OK;
