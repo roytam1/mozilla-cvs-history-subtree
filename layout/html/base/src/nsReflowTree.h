@@ -77,6 +77,7 @@ public:
         Node *GetChild(nsIFrame *forFrame);                
 
         nsIFrame *GetFrame() { return mFrame; }
+        void SetFrame(nsIFrame *aFrame) { mFrame = aFrame; }
 
         class Iterator;
 
