@@ -47,7 +47,7 @@
 
 #ifndef NS_EXPORT
 #  ifdef XP_OS2
-#    define NS_EXPORT _Export
+#    define NS_EXPORT
 #  elif defined(XP_PC)
 #    define NS_EXPORT           _declspec(dllexport)
 #  else  // !XP_PC

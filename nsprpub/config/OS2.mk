@@ -119,8 +119,8 @@ OS_LIBS     		= -lsocket -lemxio
 
 DEFINES += -DXP_OS2_EMX
 
-OS_CFLAGS     		= $(OMF_FLAG) -I. -Wall -Zmt $(DEFINES)
-OS_EXE_CFLAGS 		= $(OMF_FLAG) -I. -Wall -Zmt $(DEFINES)
+OS_CFLAGS     		= $(OMF_FLAG) -I. -Wall -Zmt
+OS_EXE_CFLAGS 		= $(OMF_FLAG) -I. -Wall -Zmt
 OS_DLLFLAGS 		= $(OMF_FLAG) -Zmt -Zdll -Zcrtdll -o $@
 
 ifdef BUILD_OPT

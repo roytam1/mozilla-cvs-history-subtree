@@ -2644,10 +2644,6 @@ lo_LayoutFormattedText(MWContext *context, lo_DocState *state, LO_TextBlock * bl
 	Bool multi_byte;
 	LO_TextStruct text_data;
 	char * text;
-	
-	/* start at the current text position in this text block */
-	text = (char *) &block->text_buffer[ block->buffer_read_index ];
-	
 
 #ifdef XP_OS2                  /* performance                            */
    int32 maxw;            /* performance - max char width for font  */
@@ -2656,6 +2652,10 @@ lo_LayoutFormattedText(MWContext *context, lo_DocState *state, LO_TextBlock * bl
    maxw  = 0;
    textsw = 0;            /* performance - need to mark no width taken */
 #endif
+
+	/* start at the current text position in this text block */
+	text = (char *) &block->text_buffer[ block->buffer_read_index ];
+	 
 
 
 	/*

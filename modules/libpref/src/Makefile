@@ -22,19 +22,19 @@ LIBRARY_NAME	= pref
 
 REQUIRES	= libxp js pref nspr dbm security ldap java img layer util
 
-ifneq ($(subst /,_,$(shell uname -s)),OS2)
+ifneq ($(subst /,,$(shell uname -s)),OS2)
 CSRCS		= unix/unixpref.c
 else
 MAKE_DLL 	= 1
-FREE_SECLIB	= $(DIST)/lib/libsecfree.lib
-SECLIB		= $(DIST)/lib/secutil.lib
-HASHLIB		= $(DIST)/lib/hash.lib
+FREE_SECLIB	= $(DIST)/lib/libsecfree.$(LIB_SUFFIX)
+SECLIB		= $(DIST)/lib/secutil.$(LIB_SUFFIX)
+HASHLIB		= $(DIST)/lib/hash.$(LIB_SUFFIX)
 ifdef NO_SECURITY
 EXTRA_LIBS	= $(FREE_SECLIB)
 else
 EXTRA_LIBS	= $(SECLIB) $(HASHLIB)
 endif
-EXTRA_LIBS 	+= $(LIBNSPR) $(DIST)/lib/libjs.lib
+EXTRA_LIBS 	+= $(LIBNSPR) $(DIST)/lib/libjs.$(LIB_SUFFIX)
 endif
 
 CSRCS		+= prefapi.c

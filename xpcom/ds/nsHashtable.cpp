@@ -62,6 +62,18 @@ static PR_CALLBACK void _hashFreeEntry(void *pool, PLHashEntry *entry,
   }
 }
 
+#ifdef XP_OS2_VACPP
+/* VACPP on OS/2 requires explicit _Optlink on the declaration, or a cast. */
+/* We fake out the cast by redefining the function names.                  */
+#define _hashValue        (PLHashNumber(*_Optlink)(const void*))(_hashValue)
+#define _hashKeyCompare   (PRIntn(*_Optlink)(const void*,const void*))(_hashKeyCompare)
+#define _hashValueCompare (PRIntn(*_Optlink)(const void*,const void*))(_hashValueCompare)
+#define _hashAllocTable (void*(*_Optlink)(void*,PRSize))(_hashAllocTable)
+#define _hashFreeTable  (void(*_Optlink)(void*,void*))(_hashFreeTable)
+#define _hashAllocEntry (PLHashEntry*(*_Optlink)(void*,const void*))(_hashAllocEntry)
+#define _hashFreeEntry (void(*_Optlink)(void*,PLHashEntry*,PRUintn))(_hashFreeEntry)
+#endif
+
 static PLHashAllocOps _hashAllocOps = {
     _hashAllocTable, _hashFreeTable,
     _hashAllocEntry, _hashFreeEntry
@@ -77,6 +89,11 @@ static PR_CALLBACK PRIntn _hashEnumerate(PLHashEntry *he, PRIntn i, void *arg)
     HT_ENUMERATE_NEXT : 
     HT_ENUMERATE_STOP;
 }
+
+#ifdef XP_OS2_VACPP
+/* See comment above. */
+#define _hashEnumerate (PRIntn(*_Optlink)(PLHashEntry*,PRIntn,void*))(_hashEnumerate)
+#endif
 
 nsHashtable::nsHashtable(PRUint32 aInitSize) {
   hashtable = PL_NewHashTable(aInitSize,

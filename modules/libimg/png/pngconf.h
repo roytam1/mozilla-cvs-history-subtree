@@ -103,7 +103,7 @@
 #undef _PNG_SAVE_BSD_SOURCE
 #endif
 
-#ifdef BSD
+#if defined(BSD) && !defined(XP_OS2_VACPP)
 #include <strings.h>
 #else
 #include <string.h>
