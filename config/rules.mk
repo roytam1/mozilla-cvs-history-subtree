@@ -1525,16 +1525,27 @@ export:: FORCE
 	@echo; sleep 2; false
 endif
 
+_XPIDL_GEN_SUBDIRS = $(sort $(addsuffix .done,$(addprefix $(XPIDL_GEN_DIR)/,$(dir $(XPIDLSRCS) $(SDK_XPIDLSRCS)))))
+_GEN_XPIDL_SDK_HEADERS = $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.h,$(SDK_XPIDLSRCS))
+_GEN_XPIDL_HEADERS = $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.h,$(XPIDLSRCS)) $(_GEN_XPIDL_SDK_HEADERS)
+_GEN_XPIDL_XPTS = $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.xpt,$(XPIDLSRCS) $(SDK_XPIDLSRCS)) 
+
 # generate .h files from into $(XPIDL_GEN_DIR), then export to $(PUBLIC);
 # warn against overriding existing .h file. 
 $(XPIDL_GEN_DIR)/.done:
 	@if test ! -d $(XPIDL_GEN_DIR); then echo Creating $(XPIDL_GEN_DIR)/.done; rm -rf $(XPIDL_GEN_DIR); mkdir $(XPIDL_GEN_DIR); fi
 	@touch $@
 
+ifneq (,$(strip $(_XPIDL_GEN_SUBDIRS)))
+$(_XPIDL_GEN_SUBDIRS): $(XPIDL_GEN_DIR)/.done
+	@if test ! -d $(@D); then echo "Creating $(@D)/.done" && rm -rf $(@D) && mkdir $(@D); fi
+	@touch $@
+endif
+
 # don't depend on $(XPIDL_GEN_DIR), because the modification date changes
 # with any addition to the directory, regenerating all .h files -> everything.
 
-$(XPIDL_GEN_DIR)/%.h: %.idl $(XPIDL_COMPILE) $(XPIDL_GEN_DIR)/.done
+$(XPIDL_GEN_DIR)/%.h: %.idl $(XPIDL_COMPILE) $(_XPIDL_GEN_SUBDIRS)
 	$(REPORT_BUILD)
 ifdef _NO_AUTO_VARS
 	$(ELOG) $(XPIDL_COMPILE) -m header -w -I $(IDL_DIR) -I$(srcdir) -o $(XPIDL_GEN_DIR)/$* $(srcdir)/$*.idl
@@ -1555,8 +1566,8 @@ else
 	$(ELOG) $(XPIDL_COMPILE) -m typelib -w -I $(IDL_DIR) -I$(srcdir) -o $(XPIDL_GEN_DIR)/$* $<
 endif
 
-$(XPIDL_GEN_DIR)/$(XPIDL_MODULE).xpt: $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.xpt,$(XPIDLSRCS) $(SDK_XPIDLSRCS)) Makefile.in Makefile
-	$(XPIDL_LINK) $(XPIDL_GEN_DIR)/$(XPIDL_MODULE).xpt $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.xpt,$(XPIDLSRCS) $(SDK_XPIDLSRCS)) 
+$(XPIDL_GEN_DIR)/$(XPIDL_MODULE).xpt: $(_GEN_XPIDL_XPTS) Makefile.in Makefile
+	$(XPIDL_LINK) $(XPIDL_GEN_DIR)/$(XPIDL_MODULE).xpt $(_GEN_XPIDL_XPTS)
 
 endif # XPIDLSRCS || SDK_XPIDLSRCS
 
@@ -1565,14 +1576,16 @@ endif # XPIDLSRCS || SDK_XPIDLSRCS
 #
 ifneq ($(XPIDLSRCS)$(SDK_XPIDLSRCS),)
 # export .idl files to $(IDL_DIR)
-export:: $(XPIDLSRCS) $(SDK_XPIDLSRCS)$(IDL_DIR)
+export:: $(XPIDLSRCS) $(SDK_XPIDLSRCS) $(IDL_DIR)
 ifndef NO_DIST_INSTALL
 	$(INSTALL) $(IFLAGS1) $^
 endif
 
+ifdef SDK_XPIDLSRCS
 export:: $(SDK_XPIDLSRCS) $(SDK_IDL_DIR)
 ifndef NO_DIST_INSTALL
 	$(INSTALL) $(IFLAGS1) $^
+endif
 endif
 
 install:: $(XPIDLSRCS) $(SDK_XPIDLSRCS)
@@ -1589,19 +1602,19 @@ endif # XPIDLSRCS || SDK_XPIDLSRCS
 
 ifneq ($(XPIDLSRCS)$(SDK_XPIDLSRCS),)
 
-export:: $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.h, $(XPIDLSRCS) $(SDK_XPIDLSRCS)) $(PUBLIC)
+export:: $(_GEN_XPIDL_HEADERS) $(PUBLIC)
 ifndef NO_DIST_INSTALL
 	$(INSTALL) $(IFLAGS1) $^
 	$(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/build-list.pl $(PUBLIC)/.headerlist $(notdir $(filter-out $(PUBLIC),$^))
 endif
 
-install:: $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.h, $(XPIDLSRCS) $(SDK_XPIDLSRCS))
+install:: $(_GEN_XPIDL_HEADERS)
 ifndef NO_INSTALL
 	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(includedir)/$(MODULE)
 endif
 
 ifneq ($(SDK_XPIDLSRCS),)
-export:: $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.h, $(SDK_XPIDLSRCS))
+export:: $(_GEN_XPIDL_SDK_HEADERS)
 ifndef NO_DIST_INSTALL
 	$(INSTALL) $(IFLAGS1) $^ $(SDK_PUBLIC)
 	$(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/build-list.pl $(PUBLIC)/.headerlist $(notdir $(filter-out $(SDK_PUBLIC),$^))
