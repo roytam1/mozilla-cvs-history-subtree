@@ -144,11 +144,13 @@ extern const String NODE_FNAME;
 extern const String IDENTITY_OP;
 extern const String PARENT_OP;
 
-//-- XSLT extension functions
+//-- XSLT additional functions
 extern const String CURRENT_FN;
 extern const String FORMAT_NUMBER_FN;
 extern const String GENERATE_ID_FN;
 extern const String SYSTEM_PROPERTY_FN;
+extern const String DOCUMENT_FN;
+
 
 //-- MISC
 extern const String WILD_CARD;

@@ -149,11 +149,12 @@ const String NODE_FNAME              = "node";
 const String IDENTITY_OP             = ".";
 const String PARENT_OP               = "..";
 
-//-- XSLT extension functions
+//-- XSLT additional functions
 const String CURRENT_FN              = "current";
 const String FORMAT_NUMBER_FN        = "format-number";
 const String GENERATE_ID_FN          = "generate-id";
 const String SYSTEM_PROPERTY_FN      = "system-property";
+const String DOCUMENT_FN             = "document";
 
 //-- MISC
 const String WILD_CARD               = "*";
