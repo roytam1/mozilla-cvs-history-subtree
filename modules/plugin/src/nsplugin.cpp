@@ -132,7 +132,8 @@ nsPluginManager::~nsPluginManager(void)
 #if 0
 NS_IMPL_AGGREGATED(nsPluginManager);
 #else
-//NS_IMPL_ISUPPORTS(nsPluginManager, kIPluginManagerIID);
+NS_IMPL_ADDREF(nsPluginManager)
+NS_IMPL_RELEASE(nsPluginManager)
 #endif
 
 NS_METHOD
