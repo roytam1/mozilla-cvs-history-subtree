@@ -71,9 +71,7 @@ public:
   NS_IMETHOD Abort(nsIDOMEvent* aEvent);
   NS_IMETHOD Error(nsIDOMEvent* aEvent);
 
-  NS_HIDDEN_(nsresult) DispatchEvent(const char *aEvent,
-                                     PRBool aCanBubble, PRBool aCanCancel,
-                                     PRBool *aDefaultPrevented);
+  NS_HIDDEN_(nsresult) DispatchEvent(unsigned int aEvent);
 
   // Called after nsXFormsAtoms is registered
   static NS_HIDDEN_(void) Startup();

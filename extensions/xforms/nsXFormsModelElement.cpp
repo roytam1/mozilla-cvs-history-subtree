@@ -57,6 +57,9 @@
 #include "nsIDOMXPathEvaluator.h"
 #include "nsIDOMXPathNSResolver.h"
 #include "nsIDOMXPathExpression.h"
+#include "nsIDOM3EventTarget.h"
+#include "nsIDOMEventGroup.h"
+#include "nsIDOMNSUIEvent.h"
 
 #include "nsISchemaLoader.h"
 #include "nsAutoPtr.h"
@@ -68,42 +71,44 @@ static const nsIID sScriptingIIDs[] = {
   NS_IXFORMSMODELELEMENT_IID
 };
 
-// non-cancellable event
-#define EVENT_HELPER_NC(name, event, bubble) \
-inline nsresult \
-Dispatch##name##Event(nsXFormsModelElement *elt) \
-{ \
-  PRBool defaultPrevented; \
-  return elt->DispatchEvent("xforms-" event, bubble, PR_FALSE, &defaultPrevented); \
-}
+struct EventData
+{
+  const char *name;
+  PRBool      canCancel;
+  PRBool      canBubble;
+};
 
-// cancellable event
-#define EVENT_HELPER(name, event, bubble) \
-inline nsresult \
-Dispatch##name##Event(nsXFormsModelElement *elt, PRBool *aDefaultPrevented) \
-{ return elt->DispatchEvent("xforms-" event, bubble, PR_TRUE, aDefaultPrevented); }
+enum {
+  eEvent_ModelConstruct,
+  eEvent_ModelConstructDone,
+  eEvent_Ready,
+  eEvent_ModelDestruct,
+  eEvent_Rebuild,
+  eEvent_Refresh,
+  eEvent_Revalidate,
+  eEvent_Recalculate,
+  eEvent_Reset,
+  eEvent_BindingException,
+  eEvent_LinkException,
+  eEvent_LinkError,
+  eEvent_ComputeExeception
+};
 
-// Initialization events
-EVENT_HELPER_NC(ModelConstruct, "model-construct", PR_TRUE)
-EVENT_HELPER_NC(ModelConstructDone, "model-construct-done", PR_TRUE)
-EVENT_HELPER_NC(Ready, "ready", PR_TRUE)
-EVENT_HELPER_NC(ModelDestruct, "model-destruct", PR_TRUE)
-
-// Interaction events
-EVENT_HELPER(Rebuild, "rebuild", PR_TRUE)
-EVENT_HELPER(Refresh, "refresh", PR_TRUE)
-EVENT_HELPER(Revalidate, "revalidate", PR_TRUE)
-EVENT_HELPER(Recalculate, "recalculate", PR_TRUE)
-EVENT_HELPER(Reset, "reset", PR_TRUE)
-
-// Notification events
-EVENT_HELPER_NC(SubmitError, "submit-error", PR_TRUE)
-
-// Error events
-EVENT_HELPER_NC(BindingException, "binding-exception", PR_TRUE)
-EVENT_HELPER_NC(LinkException, "link-exception", PR_TRUE)
-EVENT_HELPER_NC(LinkError, "link-error", PR_TRUE)
-EVENT_HELPER_NC(ComputeException, "compute-exception", PR_TRUE)
+static const EventData sModelEvents[] = {
+  { "xforms-model-construct",      PR_FALSE, PR_TRUE },
+  { "xforms-model-construct-done", PR_FALSE, PR_TRUE },
+  { "xforms-ready",                PR_FALSE, PR_TRUE },
+  { "xforms-model-destruct",       PR_FALSE, PR_TRUE },
+  { "xforms-rebuild",              PR_TRUE,  PR_TRUE },
+  { "xforms-refresh",              PR_TRUE,  PR_TRUE },
+  { "xforms-revalidate",           PR_TRUE,  PR_TRUE },
+  { "xforms-recalculate",          PR_TRUE,  PR_TRUE },
+  { "xforms-reset",                PR_TRUE,  PR_TRUE },
+  { "xforms-binding-exception",    PR_FALSE, PR_TRUE },
+  { "xforms-link-exception",       PR_FALSE, PR_TRUE },
+  { "xforms-link-error",           PR_FALSE, PR_TRUE },
+  { "xforms-compute-exception",    PR_FALSE, PR_TRUE }
+};
 
 enum ModelItemPropName
 {
@@ -146,6 +151,19 @@ NS_INTERFACE_MAP_END
 NS_IMETHODIMP
 nsXFormsModelElement::OnDestroyed()
 {
+  nsCOMPtr<nsIDOMEventReceiver> receiver = do_QueryInterface(mContent);
+  NS_ASSERTION(receiver, "xml elements must be event receivers");
+
+  nsCOMPtr<nsIDOMEventGroup> systemGroup;
+  receiver->GetSystemEventGroup(getter_AddRefs(systemGroup));
+  NS_ASSERTION(systemGroup, "system event group must exist");
+  
+  nsCOMPtr<nsIDOM3EventTarget> targ = do_QueryInterface(mContent);
+  for (unsigned int i = 0; i < NS_ARRAY_LENGTH(sModelEvents); ++i) {
+    targ->RemoveGroupedEventListener(NS_ConvertUTF8toUTF16(sModelEvents[i].name),
+                                     this, PR_FALSE, systemGroup);
+  }
+    
   return NS_OK;
 }
 
@@ -289,10 +307,13 @@ nsXFormsModelElement::DoneAddingChildren()
   // We wait until all children are added to dispatch xforms-model-construct,
   // since the model may have an action handler for this event.
 
-  nsresult rv = DispatchModelConstructEvent(this);
+  nsresult rv = DispatchEvent(eEvent_ModelConstruct);
   NS_ENSURE_SUCCESS(rv, rv);
 
   // xforms-model-construct is not cancellable, so always proceed.
+  // We continue here rather than doing this in HandleEvent since we know
+  // it only makes sense to perform this default action once.
+
   // (XForms 4.2.1)
   // 1. load xml schemas
 
@@ -312,7 +333,7 @@ nsXFormsModelElement::DoneAddingChildren()
       rv = loader->LoadAsync(Substring(schemaList, offset, index - offset),
                              baseURI, this);
       if (NS_FAILED(rv)) {
-        DispatchLinkExceptionEvent(this);  // this is a fatal error
+        DispatchEvent(eEvent_LinkException);  // this is a fatal error
         return NS_OK;
       }
       if (index == -1)
@@ -394,7 +415,7 @@ nsXFormsModelElement::DoneAddingChildren()
         PRBool success;
         xmlDoc->Load(src, &success);
         if (!success) {
-          DispatchLinkExceptionEvent(this);
+          DispatchEvent(eEvent_LinkException);
           return NS_OK;
         }
       }
@@ -476,7 +497,7 @@ nsXFormsModelElement::OnLoad(nsISchema* aSchema)
 NS_IMETHODIMP
 nsXFormsModelElement::OnError(PRInt32 aStatus, const nsAString &aStatusMessage)
 {
-  DispatchLinkExceptionEvent(this);
+  DispatchEvent(eEvent_LinkException);
   return NS_OK;
 }
 
@@ -485,6 +506,29 @@ nsXFormsModelElement::OnError(PRInt32 aStatus, const nsAString &aStatusMessage)
 NS_IMETHODIMP
 nsXFormsModelElement::HandleEvent(nsIDOMEvent* aEvent)
 {
+  nsCOMPtr<nsIDOMNSUIEvent> evt = do_QueryInterface(aEvent);
+  NS_ASSERTION(evt, "event should implement nsIDOMNSUIEvent");
+
+  PRBool defaultPrevented;
+  evt->GetPreventDefault(&defaultPrevented);
+  if (defaultPrevented)
+    return NS_OK;
+
+  nsAutoString type;
+  aEvent->GetType(type);
+
+  if (type.EqualsASCII("xforms-refresh")) {
+    // refresh
+  } else if (type.EqualsASCII("xforms-revalidate")) {
+    // revalidate
+  } else if (type.EqualsASCII("xforms-recalculate")) {
+    // recalculate
+  } else if (type.EqualsASCII("xforms-rebuild")) {
+    // rebuild
+  } else if (type.EqualsASCII("xforms-reset")) {
+    // reset
+  }
+
   return NS_OK;
 }
 
@@ -514,14 +558,14 @@ nsXFormsModelElement::Unload(nsIDOMEvent* aEvent)
 NS_IMETHODIMP
 nsXFormsModelElement::Abort(nsIDOMEvent* aEvent)
 {
-  DispatchLinkExceptionEvent(this);
+  DispatchEvent(eEvent_LinkException);
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsXFormsModelElement::Error(nsIDOMEvent* aEvent)
 {
-  DispatchLinkExceptionEvent(this);
+  DispatchEvent(eEvent_LinkException);
   return NS_OK;
 }
 
@@ -546,13 +590,34 @@ nsXFormsModelElement::FinishConstruction()
 
     if (ni && ni->Equals(nsXFormsAtoms::bind, kNameSpaceID_XForms)) {
       if (!ProcessBind(xpath, child)) {
-        DispatchBindingExceptionEvent(this);
+        DispatchEvent(eEvent_BindingException);
         return NS_OK;
       }
     }
   }
 
   // 5. dispatch xforms-rebuild, xforms-recalculate, xforms-revalidate
+
+  // First hook up our event listener so we invoke the default action for
+  // these events.  We listen on the system event group so that we can check
+  // whether preventDefault() was called by any content listeners.
+
+  nsCOMPtr<nsIDOMEventReceiver> receiver = do_QueryInterface(mContent);
+  NS_ASSERTION(receiver, "xml elements must be event receivers");
+
+  nsCOMPtr<nsIDOMEventGroup> systemGroup;
+  receiver->GetSystemEventGroup(getter_AddRefs(systemGroup));
+  NS_ASSERTION(systemGroup, "system event group must exist");
+  
+  nsCOMPtr<nsIDOM3EventTarget> targ = do_QueryInterface(mContent);
+  for (unsigned int i = 0; i < NS_ARRAY_LENGTH(sModelEvents); ++i) {
+    targ->AddGroupedEventListener(NS_ConvertUTF8toUTF16(sModelEvents[i].name),
+                                  this, PR_FALSE, systemGroup);
+  }
+
+  DispatchEvent(eEvent_Rebuild);
+  DispatchEvent(eEvent_Recalculate);
+  DispatchEvent(eEvent_Revalidate);
 
   // mark this model as initialized
 
@@ -636,19 +701,20 @@ nsXFormsModelElement::ProcessBind(nsIDOMXPathEvaluator *aEvaluator,
 }
 
 nsresult
-nsXFormsModelElement::DispatchEvent(const char *aEvent,
-                                    PRBool aCanBubble, PRBool aCanCancel,
-                                    PRBool *aDefaultPrevented)
+nsXFormsModelElement::DispatchEvent(unsigned int aEvent)
 {
+  const EventData *data = &sModelEvents[aEvent];
   nsCOMPtr<nsIDOMEvent> event;
   nsCOMPtr<nsIDOMDocumentEvent> doc = do_QueryInterface(mContent->GetDocument());
   doc->CreateEvent(NS_LITERAL_STRING("Events"), getter_AddRefs(event));
   NS_ENSURE_TRUE(event, NS_ERROR_OUT_OF_MEMORY);
 
-  event->InitEvent(NS_ConvertUTF8toUTF16(aEvent), aCanBubble, aCanCancel);
+  event->InitEvent(NS_ConvertUTF8toUTF16(data->name),
+                   data->canBubble, data->canCancel);
 
   nsCOMPtr<nsIDOMEventTarget> target = do_QueryInterface(mContent);
-  return target->DispatchEvent(event, aDefaultPrevented);
+  PRBool cancelled;
+  return target->DispatchEvent(event, &cancelled);
 }
 
 /* static */ void
