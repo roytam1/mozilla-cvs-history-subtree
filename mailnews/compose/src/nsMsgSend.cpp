@@ -1710,6 +1710,32 @@ nsMsgComposeAndSend::ProcessMultipartRelated(PRInt32 *aMailboxCount, PRInt32 *aN
     }
     
     // 
+    // Before going further, check if we are dealing with a local file and
+    // if it's the case be sure the file exist!
+    nsCOMPtr<nsIFileURL> fileUrl (do_QueryInterface(attachment.url));
+    if (fileUrl)
+    {
+      PRBool isAValidFile = PR_FALSE;
+
+      nsCOMPtr<nsIFile> aFile;
+      rv = fileUrl->GetFile(getter_AddRefs(aFile));
+      if (NS_SUCCEEDED(rv) && aFile)
+      {
+        nsCOMPtr<nsILocalFile> aLocalFile (do_QueryInterface(aFile));
+        if (aLocalFile)
+        {
+          rv = aLocalFile->IsFile(&isAValidFile);
+          if (NS_FAILED(rv))
+            isAValidFile = PR_FALSE;
+        }
+      }
+      
+      if (! isAValidFile)
+        continue;
+    }  
+    
+    
+    // 
     // Now we have to get all of the interesting information from
     // the nsIDOMNode we have in hand...
     
