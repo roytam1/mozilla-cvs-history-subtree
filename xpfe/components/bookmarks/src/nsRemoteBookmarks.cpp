@@ -47,7 +47,7 @@
 #include "nsCRT.h"
 #include "nsString.h"
 #include "nsXPIDLString.h"
-#include "RDF.h"
+#include "rdf.h"
 #include "nsIRDFContainer.h"
 #include "nsIRDFContainerUtils.h"
 #include "nsIRDFService.h"
