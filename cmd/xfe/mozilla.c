@@ -1917,10 +1917,6 @@ build_user_agent_string(char *versionLocale)
 
     strcpy (buf, fe_version);
 
-#ifdef GOLD
-    strcat(buf, "Gold");
-#endif
-
     if ( ekit_Enabled() && ekit_UserAgent() ) { 
         strcat(buf, "C-");
         strcat(buf, ekit_UserAgent());
