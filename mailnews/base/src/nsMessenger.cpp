@@ -645,7 +645,7 @@ nsMessenger::LoadURL(nsIDOMWindowInternal *aWin, const char *aURL)
 
 nsresult
 nsMessenger::SaveAttachment(nsIFileSpec * fileSpec,
-                            const char * unescapedUrl,
+                            const char * url,
                             const char * messageUri,
                             const char * contentType,
                             void *closure)
@@ -671,7 +671,7 @@ nsMessenger::SaveAttachment(nsIFileSpec * fileSpec,
   if (saveState)
       saveListener->m_saveAllAttachmentsState = saveState;
 
-  urlString = unescapedUrl;
+  urlString = url;
   urlString.ReplaceSubstring("/;section", "?section");
   nsresult rv = CreateStartupUrl(urlString.get(), getter_AddRefs(URL));
 
@@ -759,11 +759,7 @@ nsMessenger::SaveAttachmentToFolder(const char * contentType, const char * url, 
   fileSpec->SetLeafName(unescapedFileName);
 
   // ok now we have a file spec for the destination
-  nsCAutoString unescapedUrl;
-  unescapedUrl.Assign(url);
-
-  nsUnescape(unescapedUrl.BeginWriting());
-  rv = SaveAttachment(fileSpec, unescapedUrl.get(), messageUri, contentType, nsnull);
+  rv = SaveAttachment(fileSpec, url, messageUri, contentType, nsnull);
 
   // before we return, we need to convert our file spec back to a nsIFile to return to the caller
   nsCOMPtr<nsILocalFile> outputFile;
@@ -787,7 +783,6 @@ nsMessenger::SaveAttachment(const char * contentType, const char * url,
 #endif    
 
   nsresult rv = NS_ERROR_OUT_OF_MEMORY;
-  char *unescapedUrl = nsnull;
   nsCOMPtr<nsIFilePicker> filePicker =
       do_CreateInstance("@mozilla.org/filepicker;1", &rv);
   NS_ENSURE_SUCCESS(rv, rv);
@@ -799,11 +794,6 @@ nsMessenger::SaveAttachment(const char * contentType, const char * url,
   nsXPIDLCString filePath;
   nsXPIDLString defaultDisplayString;
 
-  unescapedUrl = PL_strdup(url);
-  if (!unescapedUrl)
-    return NS_ERROR_OUT_OF_MEMORY;
-
-  nsUnescape(unescapedUrl);
   
   rv = ConvertAndSanitizeFileName(displayName, getter_Copies(defaultDisplayString), nsnull);
   if (NS_FAILED(rv)) goto done;
@@ -830,10 +820,9 @@ nsMessenger::SaveAttachment(const char * contentType, const char * url,
   rv = NS_NewFileSpecFromIFile(localFile, getter_AddRefs(fileSpec));
   if (NS_FAILED(rv)) goto done;
 
-  rv = SaveAttachment(fileSpec, unescapedUrl, messageUri, contentType, nsnull);
+  rv = SaveAttachment(fileSpec, url, messageUri, contentType, nsnull);
 
 done:
-  PR_FREEIF(unescapedUrl);
   return rv;
 }
 
@@ -852,7 +841,7 @@ nsMessenger::SaveAllAttachments(PRUint32 count,
     nsCOMPtr<nsILocalFile> lastSaveDir;
     nsCOMPtr<nsIFileSpec> fileSpec;
     nsXPIDLCString dirName;
-    char *unescapedUrl = nsnull, *unescapedName = nsnull;
+    char *unescapedName = nsnull;
     nsSaveAllAttachmentsState *saveState = nsnull;
     PRInt16 dialogResult;
 
@@ -891,8 +880,6 @@ nsMessenger::SaveAllAttachments(PRUint32 count,
                                               (const char*) dirName);
     {
         nsFileSpec aFileSpec((const char *) dirName);
-        unescapedUrl = PL_strdup(urlArray[0]);
-        nsUnescape(unescapedUrl);
 
         rv = ConvertAndSanitizeFileName(displayNameArray[0], nsnull, &unescapedName);
         if (NS_FAILED(rv))
@@ -902,13 +889,12 @@ nsMessenger::SaveAllAttachments(PRUint32 count,
         rv = PromptIfFileExists(aFileSpec);
         if (NS_FAILED(rv)) return rv;
         fileSpec->SetFromFileSpec(aFileSpec);
-        rv = SaveAttachment(fileSpec, unescapedUrl, messageUriArray[0], 
+        rv = SaveAttachment(fileSpec,  urlArray[0], messageUriArray[0], 
                             contentTypeArray[0], (void *)saveState);
         if (NS_FAILED(rv)) goto done;
     }
 done:
 
-    PR_FREEIF (unescapedUrl);
     PR_FREEIF (unescapedName);
 
     return rv;
@@ -1952,7 +1938,7 @@ nsSaveMsgListener::OnStopRequest(nsIRequest* request, nsISupports* aSupport,
       if (m_saveAllAttachmentsState->m_curIndex <
           m_saveAllAttachmentsState->m_count)
       {
-          char * unescapedUrl = nsnull, * unescapedName = nsnull;
+          char * unescapedName = nsnull;
           nsSaveAllAttachmentsState *state = m_saveAllAttachmentsState;
           PRUint32 i = state->m_curIndex;
           nsCOMPtr<nsIFileSpec> fileSpec;
@@ -1960,8 +1946,6 @@ nsSaveMsgListener::OnStopRequest(nsIRequest* request, nsISupports* aSupport,
 
           rv = NS_NewFileSpec(getter_AddRefs(fileSpec));
           if (NS_FAILED(rv)) goto done;
-          unescapedUrl = PL_strdup(state->m_urlArray[i]);
-          nsUnescape(unescapedUrl);
  
           rv = ConvertAndSanitizeFileName(state->m_displayNameArray[i], nsnull, &unescapedName);
           if (NS_FAILED(rv))
@@ -1972,7 +1956,7 @@ nsSaveMsgListener::OnStopRequest(nsIRequest* request, nsISupports* aSupport,
           if (NS_FAILED(rv)) goto done;
           fileSpec->SetFromFileSpec(aFileSpec);
           rv = m_messenger->SaveAttachment(fileSpec,
-                                           unescapedUrl,
+                                           state->m_urlArray[i],
                                            state->m_messageUriArray[i],
                                            state->m_contentTypeArray[i],
                                            (void *)state);
@@ -1982,7 +1966,6 @@ nsSaveMsgListener::OnStopRequest(nsIRequest* request, nsISupports* aSupport,
               delete state;
               m_saveAllAttachmentsState = nsnull;
           }
-          PR_FREEIF(unescapedUrl);
           PR_FREEIF(unescapedName);
       }
       else
