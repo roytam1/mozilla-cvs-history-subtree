@@ -51,6 +51,7 @@ var gPrivacyPane = {
     var itemPreferences = document.getElementById("itemPreferences");
     itemPreferences.setAttribute("selectedIndex", itemList.selectedIndex);
     itemList.setAttribute("lastSelected", itemList.selectedIndex);
+    dump("*** selindex = " + itemList.selectedIndex + "\n");
     document.persist("itemList", "lastSelected");
   },
   

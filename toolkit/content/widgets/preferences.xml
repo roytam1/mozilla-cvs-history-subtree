@@ -109,8 +109,13 @@
           this._value = aValue;
           if (this.instantApply && aUpdate)
             this.valueFromPreferences = aValue;
-          else
+          else {
+            // I wonder if we should synthesize a change event handler here. 
+            // As it stands we only fire onpreferenceread when UE calls 
+            // setElementValue. That's enough to reinit the UI element but
+            // may be counter intuitive.
             this.updateElements();
+          }
           return aValue;
         ]]>
         </body>
@@ -153,6 +158,12 @@
           return this.preferences.rootBranch.prefHasUserValue(this.name);
         </getter>
       </property>
+      
+      <method name="reset">
+        <body>
+          this.preferences.rootBranch.clearUserPref(this.name);
+        </body>
+      </method>
 
       <field name="_useDefault">false</field>      
       <property name="defaultValue" readonly="true">
@@ -202,6 +213,7 @@
         </getter>
         <setter>
         <![CDATA[
+          dump("*** writing " + this.name +"\n");
           if (this.valueFromPreferences == val)
             return val;
             
@@ -386,7 +398,7 @@
             this._selector.selectedItem = button;
           if (panes[i].loaded) {
             // Inline pane content, fire load event to force initialization.
-            this._firePaneLoadEvent(panes[i]);
+            this._fireEvent("paneload", panes[i]);
           }
         }
         this.showPane(lastPane);
@@ -445,7 +457,7 @@
               observe: function (aSubject, aTopic, aData) 
               {
                 this._pane.loaded = true;
-                this._outer._firePaneLoadEvent(this._pane);
+                this._outer._fireEvent("paneload", this._pane);
                 this._outer._selectPane(aPaneElement);
               }
             };
@@ -459,16 +471,21 @@
         </body>
       </method>
       
-      <method name="_firePaneLoadEvent">
-        <parameter name="aPaneElement"/>
+      <method name="_fireEvent">
+        <parameter name="aEventName"/>
+        <parameter name="aTarget"/>
         <body>
         <![CDATA[
           // Panel loaded, synthesize a load event. 
           var event = document.createEvent("Events");
-          event.initEvent("paneload", false, true);
-          aPaneElement.dispatchEvent(event);
-          if (aPaneElement.hasAttribute("onpaneload"))
-            (new Function ("event", aPaneElement.getAttribute("onpaneload")))(event);
+          event.initEvent(aEventName, false, true);
+          var cancel = !aTarget.dispatchEvent(event);
+          if (aTarget.hasAttribute("on" + aEventName)) {
+            var rv = (new Function ("event", aTarget.getAttribute("on" + aEventName)))(event);
+            if (rv == false)
+              cancel = true;
+          }
+          return !cancel;  
         ]]>
         </body>
       </method>
@@ -632,6 +649,9 @@
     <handlers>
       <handler event="dialogaccept">
       <![CDATA[
+        if (!this._fireEvent("beforeaccept", this)) 
+          return;
+        
         if (this.type == "child") {
           var psvc = Components.classes["@mozilla.org/preferences-service;1"]
                                .getService(Components.interfaces.nsIPrefBranch);
@@ -675,9 +695,9 @@
         <body>
         <![CDATA[
           // Write all values to preferences.
-          var elements = this.preferenceElements;
-          for (var i = 0; i < elements.length; ++i) {
-            var preference = this.preferenceForElement(elements[i]);
+          var preferences = this.preferences;
+          for (var i = 0; i < preferences.length; ++i) {
+            var preference = preferences[i];
             preference.batching = true;
             preference.valueFromPreferences = preference.value;
             preference.batching = false;
@@ -704,6 +724,8 @@
       
       <property name="preferenceElements" readonly="true"
                 onget="return this.getElementsByAttribute('preference', '*');"/>
+      <property name="preferences" readonly="true"
+                onget="return this.getElementsByTagName('preference');"/>
 
       <field name="_loaded">false</field>
       <property name="loaded" 

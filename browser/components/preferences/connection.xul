@@ -42,9 +42,9 @@
 
 <prefwindow id="ConnectionsDialog" type="child"
             xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-            onload="gConnectionsDialog.init();"
             title="&connectionsDialog.title;"
             dlgbuttons="accept,cancel"
+            onbeforeaccept="return gConnectionsDialog.beforeAccept();"
             style="width: 32em !important;">
 
   <prefpane id="ConnectionsDialogPane">
@@ -65,12 +65,20 @@
       <preference id="network.proxy.autoconfig_url" name="network.proxy.autoconfig_url" type="string"/>
       <preference id="network.proxy.share_proxy_settings"
                   name="network.proxy.share_proxy_settings"
-                  type="bool"
-                  onchange="gConnectionsDialog.shareSettingsChanged();"/>
+                  type="bool"/>
       
       <preference id="pref.advanced.proxies.disable_button.reload"
                   name="pref.advanced.proxies.disable_button.reload"
                   type="bool"/>
+
+      <preference id="network.proxy.backup.ftp"          name="network.proxy.backup.ftp"          type="string"/>
+      <preference id="network.proxy.backup.ftp_port"     name="network.proxy.backup.ftp_port"     type="int"/>
+      <preference id="network.proxy.backup.ssl"          name="network.proxy.backup.ssl"          type="string"/>
+      <preference id="network.proxy.backup.ssl_port"     name="network.proxy.backup.ssl_port"     type="int"/>
+      <preference id="network.proxy.backup.socks"        name="network.proxy.backup.socks"        type="string"/>
+      <preference id="network.proxy.backup.socks_port"   name="network.proxy.backup.socks_port"   type="int"/>
+      <preference id="network.proxy.backup.gopher"       name="network.proxy.backup.gopher"       type="string"/>
+      <preference id="network.proxy.backup.gopher_port"  name="network.proxy.backup.gopher_port"  type="int"/>
     </preferences>
     
     <script type="application/x-javascript" src="chrome://browser/content/preferences/connection.js"/>
@@ -108,7 +116,7 @@
               <hbox>
                 <checkbox id="shareAllProxies" label="&shareproxy.label;" accesskey="&shareproxy.accesskey;"
                           preference="network.proxy.share_proxy_settings"
-                          onpreferenceread=""/>
+                          onpreferenceread="return gConnectionsDialog.updateProtocolPrefs();"/>
               </hbox>
             </row>
             <row align="center">
