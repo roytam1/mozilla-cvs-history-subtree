@@ -57,7 +57,7 @@ public:
   NS_IMETHOD GetCharPref(const char *pref, 
 			 char * return_buf, int * buf_length);
   NS_IMETHOD GetIntPref(const char *pref, int32 * return_int);	
-  NS_IMETHOD GetBoolPref(const char *pref, PRBool * return_val);	
+  NS_IMETHOD GetBoolPref(const char *pref, XP_Bool * return_val);	
   NS_IMETHOD GetBinaryPref(const char *pref, 
 			   void * return_val, int * buf_length);	
   NS_IMETHOD GetColorPref(const char *pref,
@@ -82,7 +82,7 @@ public:
   NS_IMETHOD GetDefaultCharPref(const char *pref, 
 				char * return_buf, int * buf_length);
   NS_IMETHOD GetDefaultIntPref(const char *pref, int32 * return_int);
-  NS_IMETHOD GetDefaultBoolPref(const char *pref, PRBool * return_val);
+  NS_IMETHOD GetDefaultBoolPref(const char *pref, XP_Bool * return_val);
   NS_IMETHOD GetDefaultBinaryPref(const char *pref, 
 				  void * return_val, int * buf_length);
   NS_IMETHOD GetDefaultColorPref(const char *pref, 
@@ -121,7 +121,7 @@ public:
 			 const char *path, PRBool set_default);
 
   // Pref info
-  NS_IMETHOD PrefIsLocked(const char *pref, PRBool *res);
+  NS_IMETHOD PrefIsLocked(const char *pref, XP_Bool *res);
 
   // Save pref files
   NS_IMETHOD SavePrefFile(void);
@@ -269,7 +269,7 @@ NS_IMETHODIMP nsPref::GetIntPref(const char *pref, int32 * return_int)
   return _convertRes(PREF_GetIntPref(pref, return_int));
 }
 
-NS_IMETHODIMP nsPref::GetBoolPref(const char *pref, PRBool * return_val)
+NS_IMETHODIMP nsPref::GetBoolPref(const char *pref, XP_Bool * return_val)
 {
   return _convertRes(PREF_GetBoolPref(pref, return_val));
 }
@@ -360,7 +360,7 @@ NS_IMETHODIMP nsPref::GetDefaultIntPref(const char *pref,
 }
 
 NS_IMETHODIMP nsPref::GetDefaultBoolPref(const char *pref,
-					 PRBool * return_val)
+					 XP_Bool * return_val)
 {
   return _convertRes(PREF_GetDefaultBoolPref(pref, return_val));
 }
@@ -477,7 +477,7 @@ NS_IMETHODIMP nsPref::SetPathPref(const char *pref,
  * Pref info
  */
 
-NS_IMETHODIMP nsPref::PrefIsLocked(const char *pref, PRBool *res)
+NS_IMETHODIMP nsPref::PrefIsLocked(const char *pref, XP_Bool *res)
 {
   if (res == NULL) {
     return NS_ERROR_INVALID_POINTER;

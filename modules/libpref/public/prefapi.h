@@ -22,21 +22,18 @@
 #ifndef PREFAPI_H
 #define PREFAPI_H
 
+#include "xp_core.h"
 #include "prtypes.h"
 #include "jscompat.h"
 #include "jspubtd.h"
 
 #ifdef XP_WIN
-#ifndef NSPR20
-#include "prhash.h"
-#else
 #include "plhash.h"
-#endif
 #endif
 
 NSPR_BEGIN_EXTERN_C
 
-#if defined(XP_WIN) || defined(XP_OS2)
+#ifdef XP_PC
 // horrible pre-declaration...so kill me.
 int pref_InitInitialObjects(JSContext *js_context,JSObject *js_object);
 PR_EXTERN(int) pref_savePref(PRHashEntry *he, int i, void *arg);
@@ -212,7 +209,7 @@ PR_EXTERN(int) PREF_SetDefaultRectPref(const char *pref_name, int16 left, int16 
 */
 PR_EXTERN(int) PREF_GetCharPref(const char *pref, char * return_buf, int * buf_length);
 PR_EXTERN(int) PREF_GetIntPref(const char *pref, int32 * return_int);	
-PR_EXTERN(int) PREF_GetBoolPref(const char *pref, PRBool * return_val);	
+PR_EXTERN(int) PREF_GetBoolPref(const char *pref, XP_Bool * return_val);	
 PR_EXTERN(int) PREF_GetBinaryPref(const char *pref, void * return_val, int * buf_length);	
 PR_EXTERN(int) PREF_GetColorPref(const char *pref_name, uint8 *red, uint8 *green, uint8 *blue);
 PR_EXTERN(int) PREF_GetColorPrefDWord(const char *pref_name, uint32 *colorref);
@@ -253,7 +250,7 @@ PR_EXTERN(int) PREF_SetPathPref(const char *pref_name, const char *path, PRBool 
 */
 PR_EXTERN(int) PREF_GetDefaultCharPref(const char *pref, char * return_buf, int * buf_length);
 PR_EXTERN(int) PREF_GetDefaultIntPref(const char *pref, int32 * return_int);	
-PR_EXTERN(int) PREF_GetDefaultBoolPref(const char *pref, PRBool * return_val);	
+PR_EXTERN(int) PREF_GetDefaultBoolPref(const char *pref, XP_Bool * return_val);	
 PR_EXTERN(int) PREF_GetDefaultBinaryPref(const char *pref, void * return_val, int * buf_length);	
 PR_EXTERN(int) PREF_GetDefaultColorPref(const char *pref_name, uint8 *red, uint8 *green, uint8 *blue);
 PR_EXTERN(int) PREF_GetDefaultColorPrefDWord(const char *pref_name, uint32 *colorref);
@@ -277,7 +274,7 @@ PR_EXTERN(int) PREF_CopyConfigString(const char *obj_name, char **return_buffer)
 PR_EXTERN(int) PREF_CopyIndexConfigString(const char *obj_name, int index,
 	const char *field, char **return_buffer);
 PR_EXTERN(int) PREF_GetConfigInt(const char *obj_name, int32 *return_int);
-PR_EXTERN(int) PREF_GetConfigBool(const char *obj_name, PRBool *return_bool);
+PR_EXTERN(int) PREF_GetConfigBool(const char *obj_name, XP_Bool *return_bool);
 
 /* OLD:: */PR_EXTERN(int) PREF_GetConfigString(const char *obj_name, char * return_buffer, int size,
 	int index, const char *field);

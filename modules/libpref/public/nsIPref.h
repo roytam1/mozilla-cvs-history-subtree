@@ -19,6 +19,7 @@
 #ifndef nsIPref_h__
 #define nsIPref_h__
 
+#include "xp_core.h"
 #include "nsISupports.h"
 
 typedef int (*PrefChangedFunc) (const char *, void *); 
@@ -60,7 +61,7 @@ class nsIPref: public nsISupports {
   NS_IMETHOD GetCharPref(const char *pref, 
 			 char * return_buf, int * buf_length) = 0;
   NS_IMETHOD GetIntPref(const char *pref, int32 * return_int) = 0;	
-  NS_IMETHOD GetBoolPref(const char *pref, PRBool * return_val) = 0;	
+  NS_IMETHOD GetBoolPref(const char *pref, XP_Bool *return_val) = 0;	
   NS_IMETHOD GetBinaryPref(const char *pref, 
 			 void * return_val, int * buf_length) = 0;	
   NS_IMETHOD GetColorPref(const char *pref_name,
@@ -85,7 +86,7 @@ class nsIPref: public nsISupports {
   NS_IMETHOD GetDefaultCharPref(const char *pref, 
 				char * return_buf, int * buf_length) = 0;
   NS_IMETHOD GetDefaultIntPref(const char *pref, int32 * return_int) = 0;
-  NS_IMETHOD GetDefaultBoolPref(const char *pref, PRBool * return_val) = 0;
+  NS_IMETHOD GetDefaultBoolPref(const char *pref, XP_Bool *return_val) = 0;
   NS_IMETHOD GetDefaultBinaryPref(const char *pref, 
 				  void * return_val, int * buf_length) = 0;
   NS_IMETHOD GetDefaultColorPref(const char *pref_name, 
@@ -124,7 +125,7 @@ class nsIPref: public nsISupports {
 			 const char *path, PRBool set_default) = 0;
 
   // Pref info
-  NS_IMETHOD PrefIsLocked(const char *pref_name, PRBool *res) = 0;
+  NS_IMETHOD PrefIsLocked(const char *pref_name, XP_Bool *res) = 0;
 
   // Save pref files
   NS_IMETHOD SavePrefFile(void) = 0;

@@ -154,7 +154,7 @@ PRBool pref_VerifyLockFile(char* buf, long buflen);
 int pref_GetCharPref(const char *pref_name, char * return_buffer, int * length, PRBool get_default);
 int pref_CopyCharPref(const char *pref_name, char ** return_buffer, PRBool get_default);
 int pref_GetIntPref(const char *pref_name,int32 * return_int, PRBool get_default);
-int pref_GetBoolPref(const char *pref_name, PRBool * return_value, PRBool get_default);
+int pref_GetBoolPref(const char *pref_name, XP_Bool * return_value, PRBool get_default);
 
 JSBool PR_CALLBACK pref_BranchCallback(JSContext *cx, JSScript *script);
 void pref_ErrorReporter(JSContext *cx, const char *message,JSErrorReport *report);
@@ -1014,7 +1014,7 @@ int pref_GetIntPref(const char *pref_name,int32 * return_int, PRBool get_default
 	return result;
 }
 
-int pref_GetBoolPref(const char *pref_name, PRBool * return_value, PRBool get_default)
+int pref_GetBoolPref(const char *pref_name, XP_Bool * return_value, PRBool get_default)
 {
 	int result = PREF_ERROR;
 	PrefNode* pref;
@@ -1053,7 +1053,7 @@ PREF_GetIntPref(const char *pref_name,int32 * return_int)
 }
 
 PR_IMPLEMENT(int)
-PREF_GetBoolPref(const char *pref_name, PRBool * return_value)
+PREF_GetBoolPref(const char *pref_name, XP_Bool * return_value)
 {
 	return pref_GetBoolPref(pref_name, return_value, FALSE);
 }
@@ -1216,7 +1216,7 @@ PREF_GetDefaultIntPref(const char *pref_name, int32 * return_int)
 }
 
 PR_IMPLEMENT(int)
-PREF_GetDefaultBoolPref(const char *pref_name, PRBool * return_value)
+PREF_GetDefaultBoolPref(const char *pref_name, XP_Bool * return_value)
 {
 	return pref_GetBoolPref(pref_name, return_value, TRUE);
 }
@@ -1403,7 +1403,7 @@ PREF_GetConfigInt(const char *obj_name, int32 *return_int)
 }
 
 PR_IMPLEMENT(int)
-PREF_GetConfigBool(const char *obj_name, PRBool *return_bool)
+PREF_GetConfigBool(const char *obj_name, XP_Bool *return_bool)
 {
 	int success = PREF_ERROR;
 	
