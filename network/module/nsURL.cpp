@@ -18,9 +18,17 @@
  */
 
 #include "nsURL.h"
+#include <stdlib.h>
 #include "plstr.h"
 
 static const PRInt32 DEFAULT_PORT = -1;
+
+#define SET_POSITION(__part,__start,__length)   \
+{                                               \
+    m_Position[__part][0] = __start;            \
+    m_Position[__part][1] = __length;           \
+}
+
 
 NS_NET
 nsICoolURL* CreateURL(const char* i_URL)
@@ -90,7 +98,7 @@ nsURL::Extract(const char* *o_OutputString, nsURL::Part i_id) const
 
 		for (int j=0; j<m_Position[i][1]; ++j)
 		{
-            *dest++ = *src++;
+            *dest++ = *src++; 
 		}
         *dest = '\0';
         return NS_OK;
@@ -116,7 +124,103 @@ nsresult nsURL::OpenStream(nsIInputStream* *o_InputStream)
 nsresult nsURL::Parse(void)
 {
     NS_PRECONDITION( (0 != m_URL), "Parse called on empty url!");
+    if (!m_URL)
+        return NS_OK; //TODO change to error
 
+    int len = PL_strlen(m_URL);
+    char* colon = PL_strchr(m_URL, ':');
+    char* at = PL_strchr(m_URL, '@');
+    char* slash = PL_strchr (m_URL, '/');
+
+    if (colon)
+    {
+        // If the first colon is followed by // then its definitely a spec
+        if ((*++colon == '/') && (*++colon == '/'))
+        {
+            SET_POSITION(SCHEME, 0, (colon -2 - m_URL));
+            ++colon; // Now points to start of anything after ://
+            slash = PL_strchr(colon, '/');
+
+            if (at)
+            {
+                SET_POSITION(PREHOST, (colon - m_URL), (at - colon));
+                ++at; // at now points to start of anything after @
+                colon = PL_strchr(at, ':'); // possible port number
+                if (colon)
+                {
+                    SET_POSITION(HOST, (at - m_URL), (colon - at));
+                    if (slash)
+                    {
+                        ++colon;
+                        int portLen = slash - colon;
+                        char* port = new char[portLen +1];
+                        if (!port)
+                            return NS_OK; //TODO error.
+                        PL_strncpy(port, colon, portLen);
+                        *(port + portLen) = '\0';
+                        m_Port = atoi(port);
+                        delete[] port;
+
+                        SET_POSITION(PATH, (slash - m_URL), len - (slash - m_URL));
+                    }
+                }
+                else 
+                {
+                    if (slash)
+                    {
+                        SET_POSITION(HOST, (at - m_URL), (slash - at));
+                        SET_POSITION(PATH, (slash - m_URL), len - (slash - m_URL));
+                    }
+                    else //everything past the @ is the host
+                    {
+                        SET_POSITION(HOST, (at - m_URL), len - (at - m_URL));
+                    }
+                }
+            }
+
+        }
+        else 
+        {
+            // If an @ is present then there has to be a username with an optional password
+            // before the colon. 
+            if (at > colon)
+            {
+                SET_POSITION(SCHEME, 0, (colon - m_URL));
+            }
+            // If there is a . before the colon than this might be the port colon
+            // and hence all the stuff in the beginning is host (with maybe prehost)
+            // I am thinking foo.com:80/path or user@foo.com:80/path
+            char* dot = PL_strchr(m_URL, '.');
+            if ((dot) && (dot < colon))
+            {
+                //Check for prehost stuff
+                char* at = PL_strchr(m_URL, '@');
+                if ((at) && (at < dot))
+                {
+                    SET_POSITION(PREHOST, 0, (at - m_URL));
+                }
+            }
+            else // its just the host
+            {
+                SET_POSITION(SCHEME, 0, (colon - m_URL));
+            }
+        }
+    }
+    else // No colons, so its probably just a prehost,host/path format
+    {
+        if (at) 
+        {
+            SET_POSITION(PREHOST, 0, (at - m_URL));
+        }
+        else
+        {
+            if (slash)
+            {
+                SET_POSITION(HOST, 0, (slash - m_URL));
+                SET_POSITION(PATH, (slash - m_URL), (len - (slash - m_URL)));
+            }
+        }
+    }
     return NS_OK;
 }
 
@@ -129,7 +233,7 @@ nsURL::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 
     *aInstancePtr = NULL;
     
-    static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);                 \
+    static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 
     if (aIID.Equals(NS_ICOOLURL_IID)) {
         *aInstancePtr = (void*) ((nsICoolURL*)this);

@@ -36,6 +36,8 @@
 #include "nsXPComCIID.h"
 #include "nsString.h"
 
+#include "nsICoolURL.h"
+
 
 int urlLoaded;
 PRBool bTraceEnabled;
@@ -221,7 +223,7 @@ nsresult ReadStreamSynchronously(nsIInputStream* aIn)
     return NS_OK;
 }
 
-
+int testURL();
 
 int main(int argc, char **argv)
 {
@@ -234,7 +236,7 @@ int main(int argc, char **argv)
     int i;
 
     if (argc < 2) {
-        printf("test: [-trace] [-sync] <URL>\n");
+        printf("nettest: [[-trace] [-sync] <URL> | -urltest]\n");
         return 0;
     }
 
@@ -267,6 +269,11 @@ int main(int argc, char **argv)
             continue;
         }
 
+        if (PL_strcasecmp(argv[i], "-urltest") == 0) 
+        {
+            testURL();
+            return 0;
+        }
         urlLoaded = 0;
 
         url_address = argv[i];
@@ -340,5 +347,35 @@ int main(int argc, char **argv)
         pEventQService->DestroyThreadEventQueue();
         nsServiceManager::ReleaseService(kEventQueueServiceCID, pEventQService);
     }
+    return 0;
+}
+
+
+int testURL()
+{
+    char* fooURL1 = "http://username:password@hostname.com:80/pathname/./more/stuff/../path";
+    nsICoolURL* pURL1 = CreateURL(fooURL1);
+
+    const char* tempBuff = 0;
+
+    cout << "Starting with " << fooURL1 << endl;
+    pURL1->GetScheme(&tempBuff);
+    cout << "SCHEME= " << tempBuff << endl;
+    pURL1->GetPreHost(&tempBuff);
+    cout << "PREHOST= " << tempBuff << endl;
+    //if (tempBuff) delete[] tempBuff;
+    pURL1->GetHost(&tempBuff);
+    cout << "HOST= " << tempBuff << endl;
+    //if (tempBuff) delete[] tempBuff;
+    cout << "PORT= " << pURL1->GetPort() << endl;
+    pURL1->GetPath(&tempBuff);
+    cout << "PATH= " << tempBuff << endl;
+    //if (tempBuff) delete[] tempBuff;
+
+    char* fooURL2 = "username:password@hostname.edu:80/pathname";
+    nsICoolURL* pURL2 = CreateURL(fooURL2);
+    char* fooURL3 = "http:username:password@hostname:80/pathname";
+    nsICoolURL* pURL3 = CreateURL(fooURL3);
+    
     return 0;
 }
