@@ -32,7 +32,7 @@ interface nsGUIEvent;
  * @author Stuart Parmenter <pavlov@netscape.com>
  * @version 0.0
  * @see nsIWindow
- **/
+ */
 [scriptable, uuid(bf8f42e6-1dd1-11b2-ae64-f8bf62d5f75e)]
 interface nsIGUIEventListener : nsISupports
 {
