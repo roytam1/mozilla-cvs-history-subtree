@@ -1397,10 +1397,11 @@ nsBoxFrameInner::GetDebugPref(nsIPresContext* aPresContext)
 }
 
 NS_IMETHODIMP
-nsBoxFrame::Paint(nsIPresContext* aPresContext,
-                            nsIRenderingContext& aRenderingContext,
-                            const nsRect& aDirtyRect,
-                            nsFramePaintLayer aWhichLayer)
+nsBoxFrame::Paint(nsIPresContext*      aPresContext,
+                  nsIRenderingContext& aRenderingContext,
+                  const nsRect&        aDirtyRect,
+                  nsFramePaintLayer    aWhichLayer,
+                  PRUint32             aFlags)
 {
 
   const nsStyleVisibility* vis = 
@@ -1479,10 +1480,11 @@ nsBoxFrame::Paint(nsIPresContext* aPresContext,
  */
 void
 nsBoxFrame::PaintChild(nsIPresContext*      aPresContext,
-                             nsIRenderingContext& aRenderingContext,
-                             const nsRect&        aDirtyRect,
-                             nsIFrame*            aFrame,
-                             nsFramePaintLayer    aWhichLayer)
+                       nsIRenderingContext& aRenderingContext,
+                       const nsRect&        aDirtyRect,
+                       nsIFrame*            aFrame,
+                       nsFramePaintLayer    aWhichLayer,
+                       PRUint32             aFlags)
 {
   const nsStyleVisibility* vis;
   aFrame->GetStyleData(eStyleStruct_Visibility, ((const nsStyleStruct *&)vis));
@@ -1523,9 +1525,10 @@ nsBoxFrame::PaintChild(nsIPresContext*      aPresContext,
 
 void
 nsBoxFrame::PaintChildren(nsIPresContext*      aPresContext,
-                                nsIRenderingContext& aRenderingContext,
-                                const nsRect&        aDirtyRect,
-                                nsFramePaintLayer    aWhichLayer)
+                          nsIRenderingContext& aRenderingContext,
+                          const nsRect&        aDirtyRect,
+                          nsFramePaintLayer    aWhichLayer,
+                          PRUint32             aFlags)
 {
   nsMargin debugBorder;
   nsMargin debugMargin;

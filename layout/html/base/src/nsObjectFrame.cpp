@@ -1492,10 +1492,11 @@ nsObjectFrame::DidReflow(nsIPresContext* aPresContext,
 }
 
 NS_IMETHODIMP
-nsObjectFrame::Paint(nsIPresContext* aPresContext,
+nsObjectFrame::Paint(nsIPresContext*      aPresContext,
                      nsIRenderingContext& aRenderingContext,
-                     const nsRect& aDirtyRect,
-                     nsFramePaintLayer aWhichLayer)
+                     const nsRect&        aDirtyRect,
+                     nsFramePaintLayer    aWhichLayer,
+                     PRUint32             aFlags)
 {
   // determine if we are a printcontext
   nsCOMPtr<nsIPrintContext> thePrinterContext = do_QueryInterface(aPresContext);

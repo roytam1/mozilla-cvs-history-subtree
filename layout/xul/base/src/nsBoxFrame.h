@@ -171,10 +171,11 @@ public:
                                    nsIStyleContext* aStyleContext,
                                    PRBool aForce);
 
-  NS_IMETHOD  Paint(nsIPresContext* aPresContext,
+  NS_IMETHOD  Paint(nsIPresContext*      aPresContext,
                     nsIRenderingContext& aRenderingContext,
-                    const nsRect& aDirtyRect,
-                    nsFramePaintLayer aWhichLayer);
+                    const nsRect&        aDirtyRect,
+                    nsFramePaintLayer    aWhichLayer,
+                    PRUint32             aFlags = 0);
 
 protected:
     virtual void GetBoxName(nsAutoString& aName);
@@ -187,16 +188,18 @@ protected:
 
 
     // Paint one child frame
-    virtual void PaintChild(nsIPresContext*      aPresContext,
+    virtual void PaintChild(nsIPresContext*       aPresContext,
                              nsIRenderingContext& aRenderingContext,
                              const nsRect&        aDirtyRect,
                              nsIFrame*            aFrame,
-                             nsFramePaintLayer    aWhichLayer);
+                             nsFramePaintLayer    aWhichLayer,
+                             PRUint32             aFlags = 0);
 
-    virtual void PaintChildren(nsIPresContext*      aPresContext,
+    virtual void PaintChildren(nsIPresContext*    aPresContext,
                              nsIRenderingContext& aRenderingContext,
                              const nsRect&        aDirtyRect,
-                             nsFramePaintLayer    aWhichLayer);
+                             nsFramePaintLayer    aWhichLayer,
+                             PRUint32             aFlags = 0);
 
     virtual PRIntn GetSkipSides() const { return 0; }
 
