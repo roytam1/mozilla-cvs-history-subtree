@@ -77,6 +77,7 @@ CSRCS = \
     w95dllmain.c \
     w32time.c \
     w32unicode.c \
+    w32netdb.c \
     $(NULL)
 else
 ifeq ($(OS_TARGET), WIN95)

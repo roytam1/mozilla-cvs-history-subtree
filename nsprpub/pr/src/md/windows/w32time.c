@@ -112,3 +112,41 @@ struct tm* Winlocaltime(const time_t* inTimeT)
 
     return retval;
 }
+
+/*
+ *  Winmktime
+ *
+ *  As LIBCs mktime
+ */
+time_t Winmktime(struct tm* inTM)
+{
+    time_t retval = (time_t)-1;
+
+    /*
+    ** FIXME TODO
+    **
+    ** More here
+    */
+
+    return retval;
+}
+
+/*
+ *  Winstrftime
+ *
+ *  As LIBCs strftime
+ */
+size_t Winstrftime(char *strDest, size_t maxsize, const char *format, const struct tm *timeptr)
+{
+    size_t retval = 0;
+
+    /*
+    ** FIXME TODO
+    **
+    ** More here.
+    **
+    ** Use GetTimeFormat and GetDateFormat
+    */
+
+    return retval;
+}

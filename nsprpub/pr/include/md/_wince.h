@@ -506,7 +506,9 @@ extern PRStatus _MD_CloseFileMap(struct PRFileMap *fmap);
 typedef long _off_t; /* file offset value */
 
 /*
- * Missing structs that are assumed by nspr.
+ * struct stat
+ *
+ * Assumed by NSPR in a place or two.
  */
 struct stat {
     unsigned short st_mode;
@@ -532,5 +534,40 @@ struct stat {
 #define _S_IREAD    0000400 /* stat, can read */
 #define _S_IWRITE   0000200 /* stat, can write */
 #define ENOMEM 12 /* errno, out of memory */
+
+/*
+ * struct tm
+ *
+ * And related windows specific functions to mimic LIBC's tm funcs.
+ */
+struct tm {
+    int tm_sec;
+    int tm_min;
+    int tm_hour;
+    int tm_mday;
+    int tm_mon;
+    int tm_year;
+    int tm_wday;
+    int tm_yday;
+    int tm_isdst;
+};
+extern struct tm* Winlocaltime(const time_t* inTimeT);
+extern time_t Winmktime(struct tm* inTM);
+extern size_t Winstrftime(char *strDest, size_t maxsize, const char *format, const struct tm *timeptr);
+
+/*
+ * struct protoent is actually defined, but the functions that use it are not.
+ *
+ * And related windows specific functions to mimic these absent sockets funcs.
+ */
+#if 0
+struct protoent {
+    char* p_name;
+    char** p_aliases;
+    short p_proto;
+};
+#endif
+extern struct protoent* Wingetprotobyname(const char* inName);
+extern struct protoent* Wingetprotobynumber(int inNumber);
 
 #endif /* nspr_wince_defs_h___ */

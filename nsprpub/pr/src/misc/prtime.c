@@ -571,7 +571,6 @@ PR_NormalizeTime(PRExplodedTime *time, PRTimeParamFn params)
 extern struct tm *Maclocaltime(const time_t * t);
 #endif
 #if defined(WINCE)
-extern struct tm* Winlocaltime(const time_t* inTimeT);
 #endif
 
 static PRLock *monitor = NULL;
@@ -1590,7 +1589,11 @@ PR_ParseTimeString(
                      date you are handing it is in daylight savings mode or not;
                      and if you're wrong, it will "fix" it for you. */
                   localTime.tm_isdst = -1;
+#if !defined(WINCE)
                   secs = mktime(&localTime);
+#else
+                  secs = Winmktime(&localTime);
+#endif
                   if (secs != (time_t) -1)
                     {
 #if defined(XP_MAC) && (__MSL__ < 0x6000)
@@ -1683,7 +1686,11 @@ PR_FormatTime(char *buf, int buflen, const char *fmt, const PRExplodedTime *tm)
     }
 #endif
 
+#if !defined(WINCE)
     return strftime(buf, buflen, fmt, &a);
+#else
+    return Winstrftime(buf, buflen, fmt, &a);
+#endif
 }
 
 

@@ -64,7 +64,8 @@ CSRCS =	ntmisc.c \
 	w32shm.c \
 	w95dllmain.c \
 	w32time.c \
-	w32unicode.c
+	w32unicode.c \
+	w32netdb.c
 else
 ifeq ($(OS_TARGET),WIN95)
 CSRCS =	ntmisc.c \
