@@ -70,7 +70,7 @@ moz_pis_startstop_scripts()
 }
 
 #uncomment for debugging
-set -x
+#set -x
 
 moz_libdir=%MOZAPPDIR%
 MRE_HOME=%MREDIR%
