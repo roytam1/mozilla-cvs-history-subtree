@@ -218,7 +218,6 @@ void DisplayNoDefaultPluginDialog(const char *mimeType)
   nsCOMPtr<nsIStringBundle> bundle;
   nsCOMPtr<nsIStringBundle> regionalBundle;
   nsCOMPtr<nsIURI> uri;
-  char *spec = nsnull;
   PRBool displayDialogPrefValue = PR_FALSE, checkboxState = PR_FALSE;
 
   if (!prefs || !prompt || !io || !strings) {
@@ -2176,9 +2175,8 @@ NS_IMETHODIMP nsPluginHostImpl::FindProxyForURL(const char* url, char* *result)
   nsCOMPtr<nsIURI> uriIn;
   nsCOMPtr<nsIProtocolProxyService> proxyService;
   nsCOMPtr<nsIIOService> ioService;
-  nsPluginProxyImpl protocolProxy;
   PRBool isProxyEnabled;
-  nsXPIDLCString proxyHost;
+  nsXPIDLCString proxyHost, proxyType;
   PRInt32 proxyPort;
 
   proxyService = do_GetService(kProtocolProxyServiceCID, &res);
@@ -2209,24 +2207,19 @@ NS_IMETHODIMP nsPluginHostImpl::FindProxyForURL(const char* url, char* *result)
     return res;
   }
 
-  res = proxyService->ExamineForProxy(uriIn, &protocolProxy);
+  res = proxyService->ExamineForProxy(uriIn, 
+                                      getter_Copies(proxyHost), 
+                                      &proxyPort, 
+                                      getter_Copies(proxyType));
   if (NS_FAILED(res)) {
     return res;
   }
 
-  // set this to false as default, set to true if proxy successfully
-  // obtained.
-  isProxyEnabled = PR_FALSE;
-  if (NS_SUCCEEDED(protocolProxy.GetProxyHost(getter_Copies(proxyHost)))) {
-    if (NS_SUCCEEDED(protocolProxy.GetProxyPort(&proxyPort))) {
-      *result = PR_smprintf("PROXY %s:%d", (const char *) proxyHost,
-                            proxyPort);
-      isProxyEnabled = PR_TRUE;
-    }
-  }
-
   if (!isProxyEnabled) {
     *result = PL_strdup("DIRECT");
+  }
+  else {
+    *result = PR_smprintf("PROXY %s:%d", (const char *) proxyHost, proxyPort);
   }
 
   if (nsnull == *result) {
