@@ -73,7 +73,10 @@ public:
     /*
      * Adds the simple Patterns to the List.
      * For union patterns, add all sub patterns,
-     * all other (simple) patterns just add themselves
+     * all other (simple) patterns just add themselves.
+     * This cuts the ownership of the union pattern and it's
+     * simple patterns, leaving union patterns empty after a call
+     * to this function.
      */
     virtual nsresult getSimplePatterns(txList &aList);
 };

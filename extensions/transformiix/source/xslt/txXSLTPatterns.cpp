@@ -123,6 +123,7 @@ nsresult txUnionPattern::getSimplePatterns(txList& aList)
     ListIterator iter(&mLocPathPatterns);
     while (iter.hasNext()) {
         aList.add(iter.next());
+        iter.remove();
     }
     return NS_OK;
 }

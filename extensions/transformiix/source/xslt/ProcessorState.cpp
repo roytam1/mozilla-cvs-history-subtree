@@ -218,6 +218,12 @@ void ProcessorState::addTemplate(Element* aXslTemplate,
     txListIterator simples(&simpleMatches);
     while (simples.hasNext()) {
         txPattern* simple = (txPattern*)simples.next();
+        if (simple != pattern && pattern) {
+            // txUnionPattern, it doesn't own the txLocPathPatterns no more,
+            // so delete it. (only once, of course)
+            delete pattern;
+            pattern = 0;
+        }
         if (!hasPriority) {
             priority = simple->getDefaultPriority();
         }
