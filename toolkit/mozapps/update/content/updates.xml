@@ -29,10 +29,18 @@
         <parameter name="aSourceEvent"/>
         <body>
         <![CDATA[
+          dump("*** checked\n");
           var updates = Components.classes["@mozilla.org/updates/update-service;1"]
                                   .getService(Components.interfaces.nsIUpdateService);
           this.severity     = updates.updateSeverity;
           this.updateCount  = updates.updateCount;
+          
+          var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
+                              .getService(Components.interfaces.nsIStringBundleService);
+          var updateStrings = sbs.createBundle("chrome://mozapps/locale/update/update.properties");
+          var key = "updatesAvailableTooltip-" + this.severity;
+          var tooltip = updateStrings.GetStringFromName(key);
+          this.setAttribute("tooltiptext", tooltip);
         ]]>
         </body>
       </method>

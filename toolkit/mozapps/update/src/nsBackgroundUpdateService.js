@@ -62,6 +62,7 @@ function nsUpdateService()
 {
   this._pref = Components.classes["@mozilla.org/preferences-service;1"]
                          .getService(Components.interfaces.nsIPrefBranch);
+  this.watchForUpdates();
 }
 
 nsUpdateService.prototype = {
@@ -93,7 +94,7 @@ nsUpdateService.prototype = {
       
     var interval = this._pref.getIntPref(PREF_UPDATE_INTERVAL);
     var lastUpdateTime = this._pref.getIntPref(PREF_UPDATE_LASTUPDATEDATE);
-    var timeSinceLastCheck = Date.UTC() - lastUpdateTime;
+    var timeSinceLastCheck = lastUpdateTime ? Math.abs(Date.UTC() - lastUpdateTime) : 0;
     if (timeSinceLastCheck > interval) {
       // if (!this.updating)
         this.checkForUpdatesInternal([], 0, nsIUpdateItem.TYPE_ANY, 
@@ -135,7 +136,6 @@ nsUpdateService.prototype = {
 
       // If this was a background update, reset timer. 
       this._makeTimer(this._pref.getIntPref(PREF_UPDATE_INTERVAL));
-      this._pref.setIntPref(PREF_UPDATE_LASTUPDATEDATE, Date.UTC());
 
       break;
     }  
@@ -173,6 +173,9 @@ nsUpdateService.prototype = {
                          .getService(Components.interfaces.nsIExtensionManager);
       em.update(aItems, aItems.length);      
     }
+    
+    if (aSourceEvent == nsIUpdateService.SOURCE_EVENT_BACKGROUND)
+      this._pref.setIntPref(PREF_UPDATE_LASTUPDATEDATE, Math.abs(Date.UTC()));
   },
   
   _rdf: null,
@@ -291,7 +294,6 @@ nsUpdateService.prototype = {
   notify: function (aTimer)
   {
     // if (this.updating) return;
-    
     this.checkForUpdatesInternal([], 0, nsIUpdateItem.TYPE_ANY, 
                                  nsIUpdateService.SOURCE_EVENT_BACKGROUND);
     this._makeTimer(this._pref.getIntPref(PREF_UPDATE_INTERVAL));

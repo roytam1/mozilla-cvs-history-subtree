@@ -65,7 +65,7 @@ updateitem {
 }
 
 .updateIcon {
-  list-style-image: url("chrome://mozapps/skin/update/update.png"); 
+  list-style-image: url("chrome://mozapps/skin/update/extensionalert.png"); 
   -moz-image-region: rect(0px 16px 16px 0px);
   width: 16px;
   height: 16px;

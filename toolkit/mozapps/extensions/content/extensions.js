@@ -92,10 +92,9 @@ function Startup()
                        .getService(Components.interfaces.nsIPrefBranch);
   if (!isExtensions) {
     gExtensionsView.addEventListener("richview-select", onThemeSelect, false);
-    try {
-      gCurrentTheme = pref.getCharPref(PREF_GENERAL_SKINS_SELECTEDSKIN);
-    }
-    catch (e) { gCurrentTheme = "classic/1.0"; } 
+    var cr = Components.classes["@mozilla.org/chrome/chrome-registry;1"]
+                       .getService(Components.interfaces.nsIXULChromeRegistry);
+    gCurrentTheme = cr.getSelectedSkin("global");
     
     var useThemeButton = document.getElementById("useThemeButton");
     useThemeButton.hidden = false;
@@ -604,9 +603,9 @@ var gExtensionsViewController = {
     cmd_useTheme: function ()
     {
       var cr = Components.classes["@mozilla.org/chrome/chrome-registry;1"]
-                        .getService(Components.interfaces.nsIXULChromeRegistry);
+                         .getService(Components.interfaces.nsIXULChromeRegistry);
       var pref = Components.classes["@mozilla.org/preferences-service;1"]
-                          .getService(Components.interfaces.nsIPrefBranch);
+                           .getService(Components.interfaces.nsIPrefBranch);
       gCurrentTheme = gExtensionsView.selected.getAttribute("internalName");
       var inUse = cr.isSkinSelected(gCurrentTheme , true);
       if (inUse == Components.interfaces.nsIChromeRegistry.FULL)
