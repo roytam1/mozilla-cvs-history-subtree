@@ -295,12 +295,7 @@ CanvasFrame::AppendFrames(nsPresContext* aPresContext,
 #endif
     mFrames.AppendFrame(nsnull, aFrameList);
 
-    // Generate a reflow command to reflow the newly inserted frame
-    nsHTMLReflowCommand* reflowCmd;
-    rv = NS_NewHTMLReflowCommand(&reflowCmd, this, eReflowType_ReflowDirty);
-    if (NS_SUCCEEDED(rv)) {
-      aPresShell.AppendReflowCommand(reflowCmd);
-    }
+    aPresShell.FrameNeedsReflow(this, PR_TRUE);
   }
 
   return rv;
@@ -350,13 +345,7 @@ CanvasFrame::RemoveFrame(nsPresContext* aPresContext,
     // Remove the frame and destroy it
     mFrames.DestroyFrame(aPresContext, aOldFrame);
 
-    // Generate a reflow command so we get reflowed
-    nsHTMLReflowCommand* reflowCmd;
-    rv = NS_NewHTMLReflowCommand(&reflowCmd, this, eReflowType_ReflowDirty);
-    if (NS_SUCCEEDED(rv)) {
-      aPresShell.AppendReflowCommand(reflowCmd);
-    }
-
+    aPresShell.FrameNeedsReflow(this, PR_TRUE);
   } else {
     rv = NS_ERROR_FAILURE;
   }

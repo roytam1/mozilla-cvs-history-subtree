@@ -235,13 +235,9 @@ nsTableOuterFrame::AppendFrames(nsPresContext* aPresContext,
       // Insert the caption frame into the child list
       mCaptionFrame = aFrameList;
 
-      // Reflow the new caption frame. It's already marked dirty, so generate a reflow
-      // command that tells us to reflow our dirty child frames
-      nsHTMLReflowCommand* reflowCmd;
-  
-      rv = NS_NewHTMLReflowCommand(&reflowCmd, this, eReflowType_ReflowDirty);
-      if (NS_SUCCEEDED(rv))
-        aPresShell.AppendReflowCommand(reflowCmd);
+      // Reflow the new caption frame. It's already marked dirty, so
+      // just tell the pres shell.
+      aPresShell.FrameNeedsReflow(mCaptionFrame, PR_TRUE);
     }
   }
   else {
@@ -295,11 +291,8 @@ nsTableOuterFrame::RemoveFrame(nsPresContext* aPresContext,
   }
 
   // Generate a reflow command so we get reflowed
-  nsHTMLReflowCommand* reflowCmd;
-
-  rv = NS_NewHTMLReflowCommand(&reflowCmd, this, eReflowType_ReflowDirty);
-  if (NS_SUCCEEDED(rv))
-    aPresShell.AppendReflowCommand(reflowCmd);
+  AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN); // is this right?
+  aPresShell.FrameNeedsReflow(this);
 
   return NS_OK;
 }

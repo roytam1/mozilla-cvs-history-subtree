@@ -1085,15 +1085,7 @@ void nsSVGOuterSVGFrame::InitiateReflow()
 {
   mNeedsReflow = PR_FALSE;
   
-  // Generate a reflow command to reflow ourselves
-  nsHTMLReflowCommand *reflowCmd;
-  NS_NewHTMLReflowCommand(&reflowCmd, this, eReflowType_ReflowDirty);
-  if (!reflowCmd) {
-    NS_ERROR("error creating reflow command object");
-    return;
-  }
-  
-  mPresShell->AppendReflowCommand(reflowCmd);
+  mPresShell->FrameNeedsReflow(this, PR_TRUE);
   // XXXbz why is this synchronously flushing reflows, exactly?  If it
   // needs to, why is it not using the presshell's reflow batching
   // instead of hacking its own?

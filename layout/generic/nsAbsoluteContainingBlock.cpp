@@ -87,13 +87,8 @@ nsAbsoluteContainingBlock::AppendFrames(nsIFrame*       aDelegatingFrame,
 #endif
   mAbsoluteFrames.AppendFrames(nsnull, aFrameList);
 
-  // Generate a reflow command to reflow the dirty frames
-  nsHTMLReflowCommand* reflowCmd;
-  rv = NS_NewHTMLReflowCommand(&reflowCmd, aDelegatingFrame, eReflowType_ReflowDirty);
-  if (NS_SUCCEEDED(rv)) {
-    reflowCmd->SetChildListName(GetChildListName());
-    aPresShell.AppendReflowCommand(reflowCmd);
-  }
+  aDelegatingFrame->AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
+  aPresShell.FrameNeedsReflow(aDelegatingFrame, PR_FALSE);
 
   return rv;
 }
@@ -114,13 +109,8 @@ nsAbsoluteContainingBlock::InsertFrames(nsIFrame*       aDelegatingFrame,
 #endif
   mAbsoluteFrames.InsertFrames(nsnull, aPrevFrame, aFrameList);
 
-  // Generate a reflow command to reflow the dirty frames
-  nsHTMLReflowCommand* reflowCmd;
-  rv = NS_NewHTMLReflowCommand(&reflowCmd, aDelegatingFrame, eReflowType_ReflowDirty);
-  if (NS_SUCCEEDED(rv)) {
-    reflowCmd->SetChildListName(GetChildListName());
-    aPresShell.AppendReflowCommand(reflowCmd);
-  }
+  aDelegatingFrame->AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
+  aPresShell.FrameNeedsReflow(aDelegatingFrame, PR_FALSE);
 
   return rv;
 }

@@ -345,15 +345,7 @@ nsTableFrame::AppendDirtyReflowCommand(nsIPresShell* aPresShell,
 
   aFrame->AddStateBits(NS_FRAME_IS_DIRTY);  // mark the table frame as dirty
 
-  nsHTMLReflowCommand* reflowCmd;
-  nsresult rv = NS_NewHTMLReflowCommand(&reflowCmd, aFrame,
-                                        eReflowType_ReflowDirty);
-  if (NS_SUCCEEDED(rv)) {
-    // Add the reflow command
-    rv = aPresShell->AppendReflowCommand(reflowCmd);
-  }
-
-  return rv;
+  return aPresShell->FrameNeedsReflow(aFrame, PR_TRUE);
 }
 
 // Make sure any views are positioned properly

@@ -2436,13 +2436,7 @@ nsBlockFrame::AttributeChanged(nsIContent*     aChild,
     // XXX Not sure if this is necessary anymore
     RenumberLists(presContext);
 
-    nsHTMLReflowCommand* reflowCmd;
-    rv = NS_NewHTMLReflowCommand(&reflowCmd, this,
-                                 eReflowType_ContentChanged,
-                                 nsnull,
-                                 aAttribute);
-    if (NS_SUCCEEDED(rv))
-      presContext->PresShell()->AppendReflowCommand(reflowCmd);
+    presContext->PresShell()->FrameNeedsReflow(this, PR_TRUE);
   }
   else if (nsHTMLAtoms::value == aAttribute) {
     const nsStyleDisplay* styleDisplay = GetStyleDisplay();
@@ -2469,13 +2463,7 @@ nsBlockFrame::AttributeChanged(nsIContent*     aChild,
         // XXX Not sure if this is necessary anymore
         blockParent->RenumberLists(presContext);
 
-        nsHTMLReflowCommand* reflowCmd;
-        rv = NS_NewHTMLReflowCommand(&reflowCmd, blockParent,
-                                     eReflowType_ContentChanged,
-                                     nsnull,
-                                     aAttribute);
-        if (NS_SUCCEEDED(rv))
-          presContext->PresShell()->AppendReflowCommand(reflowCmd);
+        presContext->PresShell()->FrameNeedsReflow(blockParent, PR_TRUE);
       }
     }
   }
@@ -6233,7 +6221,8 @@ nsBlockFrame::RenumberLists(nsPresContext* aPresContext)
 
   // Get to first-in-flow
   nsBlockFrame* block = (nsBlockFrame*) GetFirstInFlow();
-  RenumberListsInBlock(aPresContext, block, &ordinal, 0);
+  if (RenumberListsInBlock(aPresContext, block, &ordinal, 0))
+    AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
 }
 
 PRBool
