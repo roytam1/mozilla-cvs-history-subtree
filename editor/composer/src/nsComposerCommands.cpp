@@ -121,7 +121,9 @@ nsBaseStateUpdatingCommand::IsCommandEnabled(const nsAReadableString & aCommandN
  
   // Enable commands only if not in HTML source edit mode
   PRBool sourceMode = PR_FALSE;
+#ifdef XP_MAC
 #warning fix me
+#endif
 //  editorShell->IsHTMLSourceMode(&sourceMode);
   *outCmdEnabled = !sourceMode;
     
