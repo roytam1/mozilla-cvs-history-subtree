@@ -42,15 +42,28 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-CONFIG_DIR = $(shell pwd)
+CONFIG_DIR = $(shell pwd)/instgen
 ABS_topsrcdir = $(shell cd $(topsrcdir) && pwd)
 ABS_depth = $(shell cd $(DEPTH) && pwd)
 
-installer: installer.cfg
-ifneq ($(ABS_topsrcdir),$(ABS_depth))
-	ln -sf $(srcdir)/*.jst $(srcdir)/*.it $(srcdir)/packages* .
-endif
-	$(PERL) $(topsrcdir)/toolkit/mozapps/installer/build_static.pl -config $(CONFIG_DIR) -objdir $(ABS_depth) -srcdir $(ABS_topsrcdir)
+LOCALIZED_FILES = \
+	install.it \
+	$(NULL)
+
+PP_LOCALIZED_FILES = \
+	packages-static \
+	installer.cfg \
+	config.it \
+	$(NULL)
+
+INSTALLER_FILES = \
+	abe.jst \
+	adt.jst \
+	browser.jst \
+	help.jst \
+	talkback.jst \
+	xpcom.jst \
+	$(NULL)
 
 ifeq ($(OS_ARCH)_$(TARGET_CPU)_$(MOZ_WIDGET_TOOLKIT)_$(MOZ_ENABLE_XFT), Linux_i686_gtk2_1)
 INSTALLER_NAME = firefox-i686-linux-gtk2+xft-installer
@@ -58,7 +71,18 @@ else
 INSTALLER_NAME = firefox-$(TARGET_CPU)-$(TARGET_VENDOR)-$(TARGET_OS)-installer
 endif
 
-installer.cfg: installer.cfg.in
-	sed -e 's/\$$INSTALLER_NAME\$$/$(INSTALLER_NAME)/' $^ > $@
+AB_CD = $(MOZ_UI_LOCALE)
+
+DEFINES += -DAB_CD=$(AB_CD) -DINSTALLER_NAME=$(INSTALLER_NAME)
+
+installer:
+	$(NSINSTALL) -D instgen
+	$(INSTALL) $(addprefix $(topsrcdir)/toolkit/locales/$(AB_CD)/installer/unix/,$(LOCALIZED_FILES)) $(addprefix $(srcdir)/,$(INSTALLER_FILES)) instgen
+	$(EXIT_ON_ERROR) \
+	for i in $(PP_LOCALIZED_FILES); do \
+	  $(PERL) $(topsrcdir)/config/preprocessor.pl $(DEFINES) $(ACDEFINES) -I$(topsrcdir)/browser/locales/$(AB_CD)/defines.inc $(srcdir)/$$i > instgen/$$i; \
+	done
+	$(PERL) $(topsrcdir)/config/preprocessor.pl $(DEFINES) $(ACDEFINES) -I$(topsrcdir)/browser/locales/$(AB_CD)/defines.inc $(srcdir)/ab-CD.jst > instgen/$(AB_CD).jst
+	$(PERL) $(topsrcdir)/toolkit/mozapps/installer/build_static.pl -config $(CONFIG_DIR) -objdir $(ABS_depth) -srcdir $(ABS_topsrcdir)
 
 include $(topsrcdir)/config/rules.mk

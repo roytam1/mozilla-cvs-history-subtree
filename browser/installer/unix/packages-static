@@ -8,15 +8,14 @@
 ; ; file comment
 ;
 
+#filter substitution
+
 bin/.autoreg
 
-[langenus]
-; en-US 
-bin/chrome/en-US.jar
-; US
-; If you add a new directory you must explicitly call addDirectory in regus.jst
+[@AB_CD@]
+bin/chrome/@AB_CD@.jar
+; If you add a new directory you must explicitly call addDirectory in ab-CD.jst
 bin/searchplugins/*
-; Default files for US
 bin/defaults/profile/bookmarks.html
 bin/defaults/profile/localstore.rdf
 bin/defaults/profile/prefs.js

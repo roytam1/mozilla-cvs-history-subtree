@@ -207,7 +207,7 @@ foreach $_ (@wizard_files) {
   chmod $mode, "$gDirDistInstall/setup/$_";
 }
 
-foreach $_ ("config.ini", @extra_ini_files) {
+foreach $_ ("config.ini", "install.ini") {
     copy ("$gDirDistInstall/$_", "$gDirDistInstall/setup") ||
 	die "copy $gDirDistInstall/$_ $gDirDistInstall/setup: $!\n";
 }
@@ -323,7 +323,7 @@ sub MakeConfigFile
 {
   # Make config.ini and other ini files
   chdir($gDirDistInstall);
-  foreach $_ ("config.ini", @extra_ini_files) {
+  foreach $_ ("config.ini", "install.ini") {
       $itFile = $_;
       $itFile =~ s/\.ini$/\.it/;
       copy("$inConfigFiles/$itFile", "$gDirDistInstall/$itFile") || die "copy $inConfigFiles/$itFile $gDirDistInstall/$itFile";

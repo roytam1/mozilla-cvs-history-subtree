@@ -1,3 +1,4 @@
+#filter substitution
 // main
 var srDest;
 var err;
@@ -14,16 +15,14 @@ logComment("initInstall: platformNode=" + platformNode);
 // end
 // end - OS type detection
 
-// ----LOCALIZATION NOTE: translate only these ------
-var prettyName = "English (US) Language Pack";
-var chromeNode = "en-US";
-// --- END CHANGEABLE STUFF ---
+var chromeNode = "@AB_CD@";
+
 var regName    = "locales/mozilla/" + chromeNode;
 var chromeName = chromeNode + ".jar";
 var localeName = "locale/" + chromeNode + "/";
 
 srDest = $SpaceRequired$:bin;
-err    = initInstall(prettyName, "en-US", "$Version$"); 
+err    = initInstall("@AB_CD@ Langpack", "@AB_CD@", "$Version$"); 
 logComment("initInstall: " + err);
 
 fProgram = getFolder("Program");
