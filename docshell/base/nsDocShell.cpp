@@ -261,7 +261,7 @@ NS_INTERFACE_MAP_END_THREADSAFE
 //*****************************************************************************   
 NS_IMETHODIMP nsDocShell::GetInterface(const nsIID & aIID, void **aSink)
 {
-   NS_ENSURE_ARG_POINTER(aSink);
+    NS_PRECONDITION(aSink, "null out param");
 
     if (aIID.Equals(NS_GET_IID(nsIURIContentListener)) &&
         NS_SUCCEEDED(EnsureContentListener())) {
@@ -288,6 +288,7 @@ NS_IMETHODIMP nsDocShell::GetInterface(const nsIID & aIID, void **aSink)
     else if (aIID.Equals(NS_GET_IID(nsIDOMDocument)) &&
              NS_SUCCEEDED(EnsureContentViewer())) {
         mContentViewer->GetDOMDocument((nsIDOMDocument **) aSink);
+        return NS_OK;
     }
     else if (aIID.Equals(NS_GET_IID(nsIPrompt))) {
         nsCOMPtr<nsIPrompt> prompter(do_GetInterface(mTreeOwner));
