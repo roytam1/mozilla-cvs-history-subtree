@@ -23,7 +23,6 @@ void STARTUP_np(void);
 void SHUTDOWN_np(void);
 void STARTUP_cvffc(void);
 void SHUTDOWN_cvffc(void);
-<<<<<<< mozilla.cpp
 #ifdef MOZ_LOC_INDEP
 void STARTUP_li(void);
 void SHUTDOWN_li(void);
@@ -32,9 +31,6 @@ void SHUTDOWN_li(void);
 #if defined(OJI)
 #include "jvmmgr.h"
 #elif defined(JAVA)
-=======
-
->>>>>>> 3.1.18.3
 #include "jri.h"
 #endif
 
@@ -1158,16 +1154,11 @@ BOOL CNetscapeApp::InitInstance()
 	bTurnOffDiskCache = TRUE;
     }
 
-<<<<<<< mozilla.cpp
 #ifdef JEM
     // Initialize the network module
     /* NET_InitNetLib handles socks initialization. */
     NET_InitNetLib(nTCPBuff, sysInfo.m_iMaxSockets);
 #endif
-=======
-    // finish Initialize the network module
-    NET_FinishInitNetLib();
->>>>>>> 3.1.18.3
 
 #ifdef MOZ_LOC_INDEP
 	STARTUP_li();
@@ -1690,13 +1681,8 @@ BOOL CNetscapeApp::InitInstance()
 
 	if(m_bAutomated == FALSE && m_bEmbedded == FALSE  && csPrintCommand.IsEmpty())
 	{
-<<<<<<< mozilla.cpp
-		int iStartupMode=0;
+		long iStartupMode=0;
 	    PRBool bStartMode = FALSE;
-=======
-		int32 iStartupMode=0;
-	    BOOL bStartMode = FALSE;
->>>>>>> 3.1.18.3
 
 		PREF_GetBoolPref("general.startup.browser", &bStartMode);
 		if (bStartMode)

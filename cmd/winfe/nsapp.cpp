@@ -65,7 +65,6 @@
 extern "C"      {
 #include "cookies.h"
 };
-<<<<<<< nsapp.cpp
 #ifdef MOZ_LOC_INDEP
 #include "li_public.h"
 #endif /* MOZ_LOC_INDEP */
@@ -75,8 +74,6 @@ extern "C"      {
 #include "nsDebug.h"
 #include "prlink.h"
 #endif
-=======
->>>>>>> 3.2.20.3
 
 #ifdef _DEBUG
 #undef THIS_FILE
@@ -1500,25 +1497,11 @@ void CNetscapeApp::OnAppExit()
 
 void CNetscapeApp::CommonAppExit()
 {
-<<<<<<< nsapp.cpp
 	// Make sure each frame window really does want to close
     for (CGenericFrame *pFrame = m_pFrameList; NULL != pFrame; pFrame = pFrame->m_pNext) {
 		CDocument*	pDocument = pFrame->GetActiveDocument();
-=======
-	CGenericFrame *pFrame;
->>>>>>> 3.2.20.3
+    }
 
-<<<<<<< nsapp.cpp
-	if (pDocument && !pDocument->CanCloseFrame(pFrame)) {
-                        // Document doesn't want to close so don't close any of the frames
-
-	    // Clear the flags previously set
-	    //	so we prompt to save edit changes next time we try to close
-	    CGenericFrame *pCurrentFrame = pFrame;
-	    for (pFrame = m_pFrameList; pCurrentFrame != pFrame; pFrame = pFrame->m_pNext) {
-		 pFrame->m_bSkipSaveEditChanges = FALSE;
-	    }
-=======
 #ifdef MOZ_OFFLINE
 	//if we are synchronizing on exit then we've already checked this.
 	if(!m_bSynchronizingExit)
@@ -1537,7 +1520,6 @@ void CNetscapeApp::CommonAppExit()
 			for (pFrame = m_pFrameList; pCurrentFrame != pFrame; pFrame = pFrame->m_pNext) {
 			 pFrame->m_bSkipSaveEditChanges = FALSE;
 			}
->>>>>>> 3.2.20.3
 
 				// We aren't going to close -- get out!
 			return;
