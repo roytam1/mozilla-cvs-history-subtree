@@ -317,8 +317,6 @@ public:
 
 protected:
   virtual PRUint32 BaseSizeOf(nsISizeOfHandler *aSizer) const;
-  //  virtual PRBool InternalRegisterCompileEventHandler(JSContext* aContext, jsval aPropName,
-  //                                                     jsval *aVp, PRBool aCompile);
 
   nsDOMSlots *GetDOMSlots();
   void MaybeClearDOMSlots();
