@@ -43,7 +43,7 @@ dnl ========================================================
 dnl = Defaults
 dnl ========================================================
 MOD_MAJOR_VERSION=4
-MOD_MINOR_VERSION=2
+MOD_MINOR_VERSION=3
 MOD_REVISION_VERSION=0
 NSPR_MODNAME=nspr20
 _HAVE_PTHREADS=
@@ -728,7 +728,7 @@ case "$target" in
     aix4.3*)
         AC_DEFINE(AIX_TIMERS)
         AC_DEFINE(_PR_HAVE_OFF64_T)
-        AC_DEFINE(AIX4_3)
+        AC_DEFINE(AIX4_3_PLUS)
         AC_DEFINE(HAVE_SOCKLEN_T)
         AC_DEFINE(HAVE_FCNTL_FILE_LOCKING)
         USE_IPV6=1
@@ -737,6 +737,7 @@ case "$target" in
     *)
         AC_DEFINE(AIX_TIMERS)
         AC_DEFINE(_PR_HAVE_OFF64_T)
+        AC_DEFINE(AIX4_3_PLUS)
         AC_DEFINE(HAVE_SOCKLEN_T)
         AC_DEFINE(HAVE_FCNTL_FILE_LOCKING)
         USE_IPV6=1
@@ -1221,7 +1222,6 @@ case "$target" in
         AC_DEFINE(NONAMELESSUNION)
         MKSHLIB='$(DLLTOOL) --as=$(AS) -k --dllname $*.dll --output-lib $@'
     else
-        topsrcdir=$srcdir
         CYGWIN_WRAPPER='sh $(topsrcdir)/build/cygwin-wrapper'
         CC='$(CYGWIN_WRAPPER) cl'
         CXX='$(CYGWIN_WRAPPER) cl'
@@ -1630,7 +1630,8 @@ mips-sony-newsos*)
     fi
     PR_MD_CSRCS=solaris.c
     LD=/usr/ccs/bin/ld
-    DSO_LDOPTS='-G -h $(notdir $@)'
+    DSO_LDOPTS='-G -h $(notdir $@) -z combreloc -z defs'
+    RESOLVE_LINK_SYMBOLS=1
     if test -n "$GNU_CC"; then
         DSO_CFLAGS=-fPIC
     else
@@ -1700,9 +1701,7 @@ mips-sony-newsos*)
         # 64-bit Solaris requires SPARC V9 architecture, so the following
         # is not needed.
         if test -z "$USE_64"; then
-            ULTRASPARC_LIBRARY=ultrasparc
-            ULTRASPARC_FILTER_LIBRARY=libatomic.so
-            DSO_LDOPTS="$DSO_LDOPTS -f "'$(ULTRASPARC_FILTER_LIBRARY)'
+            ULTRASPARC_LIBRARY=nspr_flt
         fi
     fi
     # Purify requires that binaries linked against nspr also
@@ -2177,6 +2176,14 @@ case "$target" in
             AC_DEFINE(_PR_HAVE_THREADSAFE_GETHOST)
         fi
         ;;
+    *)
+        if test -z "$USE_NSPR_THREADS"; then
+            AC_DEFINE(HAVE_POINTER_LOCALTIME_R)
+        fi
+        if test -n "$USE_PTHREADS"; then
+            AC_DEFINE(_PR_HAVE_THREADSAFE_GETHOST)
+        fi
+        ;;
     esac
     ;;
 *-bsdi*)
@@ -2382,7 +2389,6 @@ AC_SUBST(AIX_LINK_OPTS)
 AC_SUBST(NOSUCHFILE)
 AC_SUBST(MOZ_OBJFORMAT)
 AC_SUBST(ULTRASPARC_LIBRARY)
-AC_SUBST(ULTRASPARC_FILTER_LIBRARY)
 
 AC_SUBST(OBJDIR)
 AC_SUBST(OBJDIR_NAME)
@@ -2411,6 +2417,9 @@ lib/libc/Makefile
 lib/libc/include/Makefile 
 lib/libc/src/Makefile 
 lib/tests/Makefile
+pkg/solaris/Makefile
+pkg/solaris/SUNWpr/Makefile
+pkg/solaris/SUNWprx/Makefile
 pr/Makefile 
 pr/include/Makefile 
 pr/include/md/Makefile 
@@ -2443,6 +2452,12 @@ fi
 
 if test -n "$USE_CPLUS"; then
     MAKEFILES="$MAKEFILES pr/src/cplus/Makefile pr/src/cplus/tests/Makefile"
+fi
+
+dnl There is no pkg/Makefile.in, so AC_OUTPUT won't create the pkg directory
+dnl for us.
+if test ! -d pkg; then
+    mkdir pkg
 fi
 
 AC_OUTPUT([$MAKEFILES], [chmod +x config/nspr-config])
