@@ -1985,7 +1985,7 @@ nsRenderingContextGTK::my_gdk_draw_text (GdkDrawable *drawable,
 
 
 #include "nsIImageContainer.h"
-#include "nsPIImageContainerXlib.h"
+#include "nsPIImageContainerGtk.h"
 
 /* [noscript] void drawImage (in nsIImageContainer aImage, [const] in nsRect aSrcRect, [const] in nsPoint aDestPoint); */
 NS_IMETHODIMP nsRenderingContextGTK::DrawImage(nsIImageContainer *aImage, const nsRect * aSrcRect, const nsPoint * aDestPoint)
@@ -2003,7 +2003,7 @@ NS_IMETHODIMP nsRenderingContextGTK::DrawImage(nsIImageContainer *aImage, const 
   sr.y = aSrcRect->y;
   mTranMatrix->TransformNoXLateCoord(&sr.x, &sr.y);
 
-  nsCOMPtr<nsPIImageContainerXlib> cx(do_QueryInterface(aImage));
+  nsCOMPtr<nsPIImageContainerGtk> cx(do_QueryInterface(aImage));
   if (!cx) return NS_ERROR_FAILURE;
 
   return cx->DrawImage(mSurface->GetDrawable(), NS_CONST_CAST(const GdkGC *, mGC), &sr, &pt);
@@ -2012,7 +2012,23 @@ NS_IMETHODIMP nsRenderingContextGTK::DrawImage(nsIImageContainer *aImage, const 
 /* [noscript] void drawScaledImage (in nsIImageContainer aImage, [const] in nsRect aSrcRect, [const] in nsRect aDestRect); */
 NS_IMETHODIMP nsRenderingContextGTK::DrawScaledImage(nsIImageContainer *aImage, const nsRect * aSrcRect, const nsRect * aDestRect)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  nsRect dr;
+  nsRect sr;
+
+	dr = *aDestRect;
+  mTranMatrix->TransformCoord(&dr.x, &dr.y, &dr.width, &dr.height);
+
+  sr = *aSrcRect;
+  mTranMatrix->TransformCoord(&sr.x, &sr.y, &sr.width, &sr.height);
+
+  sr.x = aSrcRect->x;
+  sr.y = aSrcRect->y;
+  mTranMatrix->TransformNoXLateCoord(&sr.x, &sr.y);
+
+  nsCOMPtr<nsPIImageContainerGtk> cg(do_QueryInterface(aImage));
+  if (!cg) return NS_ERROR_FAILURE;
+
+  return cg->DrawScaledImage(mSurface->GetDrawable(), NS_CONST_CAST(const GdkGC *, mGC), &sr, &dr);
 }
 
 /* [noscript] void drawTile (in nsIImageContainer aImage, in gfx_coord aXOffset, in gfx_coord aYOffset, [const] in nsRect aTargetRect); */
