@@ -840,7 +840,7 @@ sub BuildIt {
                                             $full_embed_binary_name,
                                             $build_dir);
             } else {
-              print_log "Skipping tests.\n";
+              print_log "Skipping Mozilla tests.\n";
               $build_status = 'success';
             }
           }
