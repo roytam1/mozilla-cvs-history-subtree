@@ -621,15 +621,6 @@ function DirPaneClick(event)
     event.preventBubble();
     return;
   }
-
-  var searchInput = document.getElementById("searchInput");
-  // if there is a searchInput element, and it's not blank 
-  // then we need to act like the user cleared the
-  // search text
-  if (searchInput && searchInput.value) {
-    searchInput.value = "";
-    onEnterInSearchBar();
-  }
 }
 
 function DirPaneDoubleClick(event)
@@ -651,6 +642,8 @@ function DirPaneDoubleClick(event)
 
 function DirPaneSelectionChange()
 {
+  // clear out the search box when changing folders...
+  onClearSearch();
   if (dirTree && dirTree.treeBoxObject.selection && dirTree.treeBoxObject.selection.count == 1)
     ChangeDirectoryByURI(GetSelectedDirectory());
 }
@@ -952,6 +945,9 @@ function onAbSearchKeyPress(event)
     
 function onAbSearchInput(returnKeyHit)
 {
+  if (gSearchInput.showingSearchCriteria && !(returnKeyHit && gSearchInput.value == ""))
+    return;
+
   SearchInputChanged();
 
   if (gSearchTimer) {
@@ -990,4 +986,55 @@ function AbSwapFirstNameLastName()
 {
   if (gAbView)
     gAbView.swapFirstNameLastName();
+}
+
+
+function onSearchInputFocus(event)
+{
+  // search bar has focus, ...clear the showing search criteria flag
+  if (gSearchInput.showingSearchCriteria)
+  {
+    gSearchInput.value = "";
+    gSearchInput.showingSearchCriteria = false;
+  }
+
+  gSearchInput.select();
+}
+
+// sets focus into the quick search box
+function QuickSearchFocus()
+{
+  gSearchInput.focus();
+}
+
+function onSearchInputBlur(event)
+{ 
+//  if (gQuickSearchFocusEl && gQuickSearchFocusEl.id == 'searchInput') // ignore the blur if we are in the middle of processing the clear button
+//    return;
+
+  if (!gSearchInput.value)
+    gSearchInput.showingSearchCriteria = true;
+    
+  if (gSearchInput.showingSearchCriteria)
+    gSearchInput.setSearchCriteriaText();
+}
+
+var gQuickSearchFocusEl = null; 
+
+function onClearSearch()
+{
+  if (!gSearchInput.showingSearchCriteria) // ignore the text box value if it's just showing the search criteria string
+  {
+//     gQuickSearchFocusEl = gLastFocusedElement;  //save of the last focused element so that focus can be restored
+     onAbClearSearch();
+     // this needs to be on a timer otherwise we end up messing up the focus while the Search("") is still happening
+     setTimeout("restoreSearchFocusAfterClear();", 0); 
+  }
+}
+
+function restoreSearchFocusAfterClear()
+{
+//  gQuickSearchFocusEl.focus();
+  gSearchInput.clearButtonHidden = 'true';
+  gQuickSearchFocusEl = null;
 }
