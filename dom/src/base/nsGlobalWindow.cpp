@@ -393,22 +393,15 @@ nsDOMScriptableHelper::GetProperty(nsIXPConnectWrappedNative *wrapper,
                                    JSContext * cx, JSObject * obj, jsval id,
                                    jsval * vp, PRBool *_retval)
 {
-  *_retval = PR_TRUE;
-
-  if (!DidDefineStaticJSIds()) {
-    DefineStaticJSIds(cx);
-  }
-
   if (JSVAL_IS_STRING(id)) {
+    if (!DidDefineStaticJSIds()) {
+      DefineStaticJSIds(cx);
+    }
+
     // Look for a child frame with the name of the property we're
     // getting, if we find one we'll return that child frame.
 
     NS_ENSURE_TRUE(sXPConnect, NS_ERROR_NOT_AVAILABLE);
-
-
-
-    // This code really needs to be in ::Resolve(), this will suck ass
-    // performace wise
 
     nsCOMPtr<nsISupports> native;
     wrapper->GetNative(getter_AddRefs(native));
@@ -454,11 +447,6 @@ nsDOMScriptableHelper::GetProperty(nsIXPConnectWrappedNative *wrapper,
         NS_ENSURE_SUCCESS(rv, rv);
 
         *vp = OBJECT_TO_JSVAL(child_obj);
-
-        if (!::JS_DefineUCProperty(cx, obj, chars, ::JS_GetStringLength(str),
-                                   *vp, nsnull, nsnull, 0)) {
-          return NS_ERROR_OUT_OF_MEMORY;
-        }
 
         return NS_OK;
       }
@@ -726,11 +714,83 @@ nsDOMScriptableHelper::GlobalResolve(nsIXPConnectWrappedNative *wrapper,
 
 NS_IMETHODIMP
 nsDOMScriptableHelper::NewResolve(nsIXPConnectWrappedNative *wrapper,
-                                  JSContext * cx, JSObject * obj, jsval id,
-                                  PRUint32 flags, JSObject * *objp,
+                                  JSContext *cx, JSObject *obj, jsval id,
+                                  PRUint32 flags, JSObject **objp,
                                   PRBool *_retval)
 {
-  return GlobalResolve(wrapper, cx, obj, id, flags, objp, _retval);
+  if (JSVAL_IS_STRING(id)) {
+    NS_ENSURE_TRUE(sXPConnect, NS_ERROR_NOT_AVAILABLE);
+
+    if (!DidDefineStaticJSIds()) {
+      DefineStaticJSIds(cx);
+    }
+
+    JSString *str = JSVAL_TO_STRING(id);
+
+    nsCOMPtr<nsISupports> native;
+    wrapper->GetNative(getter_AddRefs(native));
+    NS_ENSURE_TRUE(native, NS_ERROR_UNEXPECTED);
+
+    nsCOMPtr<nsIScriptGlobalObject> global(do_QueryInterface(native));
+    NS_ENSURE_TRUE(global, NS_ERROR_UNEXPECTED);
+
+    nsCOMPtr<nsIDocShell> docShell;
+
+    global->GetDocShell(getter_AddRefs(docShell));
+
+    nsCOMPtr<nsIDocShellTreeNode> dsn(do_QueryInterface(docShell));
+    NS_ENSURE_TRUE(dsn, NS_ERROR_UNEXPECTED);
+
+    PRInt32 count = 0;
+
+    dsn->GetChildCount(&count);
+
+    if (count > 0) {
+      nsCOMPtr<nsIDocShellTreeItem> child;
+
+      const jschar *chars = ::JS_GetStringChars(str);
+
+      dsn->FindChildWithName(NS_REINTERPRET_CAST(const PRUnichar*, chars),
+                             PR_FALSE, PR_FALSE, nsnull,
+                             getter_AddRefs(child));
+
+      if (child) {
+        // We found a subframe of the right name, define the property
+        // on the wrapper so that ::NewResolve() doesn't get called
+        // for again for this property name.
+
+        if (!::JS_DefineUCProperty(cx, obj, chars, ::JS_GetStringLength(str),
+                                   JSVAL_VOID, nsnull, nsnull, 0)) {
+          return NS_ERROR_FAILURE;
+        }
+
+        *objp = obj;
+
+        return NS_OK;
+      }
+    }
+
+    JSObject *o = *objp;
+
+    nsresult rv = GlobalResolve(wrapper, cx, obj, id, flags, objp, _retval);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    if (o == *objp && JSVAL_TO_STRING(id) == s_content_id) {
+      // Map window._content to window.content for backwards
+      // compatibility, this should spit out an message on the JS
+      // console.
+
+      if (!::JS_DefineUCProperty(cx, obj, ::JS_GetStringChars(s_content_id),
+                                 ::JS_GetStringLength(s_content_id),
+                                 JSVAL_VOID, nsnull, nsnull, 0)) {
+        return NS_ERROR_FAILURE;
+      }
+
+      *objp = obj;
+    }
+  }
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -4378,7 +4438,7 @@ GlobalWindowImpl::OpenInternal(const nsAReadableString& aUrl,
   JSContext *ccx = GetCurrentContext();
 
   nsCOMPtr<nsIScriptSecurityManager> secMan;
-  if (uriToLoad) {
+  if (uriToLoad && ccx) {
     // Get security manager, check to see if URI is allowed.
     // Don't call CheckLoadURI for dialogs - see bug 56851
     // The security of this function depends on window.openDialog being 
