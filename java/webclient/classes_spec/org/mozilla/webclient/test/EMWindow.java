@@ -316,7 +316,7 @@ public void delete()
 		currentPage.findNextInPage(false);
 	      }
 	      else if (command.equals("View Page Source")) {
-		currentPage.getSourceBytes(viewMode);
+		// currentPage.getSourceBytes(viewMode);
 		viewMode = !viewMode;
 	      }
 	    }
