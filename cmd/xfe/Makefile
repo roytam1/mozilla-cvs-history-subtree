@@ -104,6 +104,7 @@ REQUIRES	=\
 		  java \
 		  ldap \
 		  xfeicons \
+		  progress \
 		  $(NULL)
 
 CSRCS		= \
@@ -134,6 +135,7 @@ CSRCS		= \
 		  mozilla.c \
 		  prefs.c \
 		  prefdialogs.c \
+		  progress.c \
 		  remote-s.c \
 		  scroll.c \
 		  selection.c \
@@ -276,6 +278,7 @@ endif
 
 BASIC_LIBS	+= \
 		  $(DIST)/lib/libmisc.a \
+		  $(DIST)/lib/libprgrss.a \
 		  $(NULL)
 
 ifdef MOZ_MAIL_NEWS
@@ -293,6 +296,10 @@ endif
 ifdef MOZ_MAIL_NEWS
 BASIC_LIBS	+= \
 		  $(DIST)/lib/libmime.a \
+		  $(DIST)/lib/libjulian.a \
+		  $(DIST)/lib/libnscnv30.a \
+		  $(DIST)/lib/libnsuni30.a \
+		  $(DIST)/lib/libnsfmt30.a \
 		  $(NULL)
 endif
 
@@ -486,7 +493,11 @@ DSO_EX_LIBS	= $(EXPORT_LDFLAGS:$(DIST)/lib/lib%.a=-l%)
 ifeq ($(OS_ARCH),AIX)
 CCLD		= svxlC -+
 #LDFLAGS		= -bGhooksyslibs -bGlibpathexec -bGnoproc
-LDFLAGS		=  -bGnoproc
+#LDFLAGS		=  -bGnoproc
+#
+# ??? need to double check
+#
+LDFLAGS		= -bE:aix_exports -bGhooksyslibs -bGlibpathexec -bGnoproc -bmaxdata:20000000
 OTHER_LIBS	= $(MOTIFLIB) -lXt -lXmu -lX11 $(OS_LIBS)
 US_LDFLAGS	+= $(AIX_NSPR_LINK)
 EXPORT_LDFLAGS	+= $(AIX_NSPR_LINK)
@@ -615,7 +626,9 @@ ifeq ($(OS_RELEASE),2.0)
 ifeq ($(CPU_ARCH),ppc)
 MOTIFLIB	= /usr/local/lib/libXm.a
 else
-
+#
+# Ramiro: pls double check this block
+#
 MOTIFLIB	=\
 			$(MOTIFPATCH_LIB) \
 			$(MOZILLA_XM_2_1_BROKEN_LOCALE_FLAGS) \
@@ -968,6 +981,17 @@ $(OBJDIR)/strids.o:	xfe_err.h
 $(OBJDIR)/strings.o:	xfe_err.h
 
 ifeq ($(OS_ARCH),AIX)
+
+#
+# In first. Need to double check
+#
+# This fixes a 4.5-specific problem caused by including /usr/include/strings.h unnecessarily.
+$(OBJDIR)/mozilla.o: mozilla.c
+	@$(MAKE_OBJDIR)
+	$(CC) -o $@ -c $(CFLAGS) -D_H_STRINGS $<
+#
+# end 
+#
 AIX_HACK	:= $(notdir $(AIX_NSPR))
 
 # Install nspr dynamic library for AIX.
