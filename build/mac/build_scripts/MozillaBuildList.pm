@@ -1035,155 +1035,155 @@ sub BuildIDLProjects()
     StartBuildModule("idl");
 
     # XPCOM
-    BuildIDLProject(":mozilla:xpcom:macbuild:XPCOMIDL.mcp",                         "xpcom");
+    BuildIDLProject(":mozilla:xpcom:macbuild:XPCOMIDL.xml",                         "xpcom");
 
     # necko
-    BuildIDLProject(":mozilla:netwerk:macbuild:netwerkIDL.mcp","necko");
-    BuildIDLProject(":mozilla:uriloader:macbuild:uriLoaderIDL.mcp",                 "uriLoader");
+    BuildIDLProject(":mozilla:netwerk:macbuild:netwerkIDL.xml","necko");
+    BuildIDLProject(":mozilla:uriloader:macbuild:uriLoaderIDL.xml",                 "uriLoader");
 
     if ($main::options{cache})
     {
-        BuildIDLProject(":mozilla:netwerk:macbuild:cacheIDL.mcp", "cache");
+        BuildIDLProject(":mozilla:netwerk:macbuild:cacheIDL.xml", "cache");
     }
     if ($main::options{psm}) {
     	# psm glue
-    	BuildIDLProject(":mozilla:extensions:psm-glue:macbuild:psmglueIDL.mcp",         "psmglue");
+    	BuildIDLProject(":mozilla:extensions:psm-glue:macbuild:psmglueIDL.xml",         "psmglue");
 	} 
 	
 	if ($main::options{psm2}) {
-    	BuildIDLProject(":mozilla:security:manager:ssl:macbuild:pipnssIDL.mcp",         "pipnss");
-    	BuildIDLProject(":mozilla:security:manager:pki:macbuild:pippkiIDL.mcp",         "pippki");    	
+    	BuildIDLProject(":mozilla:security:manager:ssl:macbuild:pipnssIDL.xml",         "pipnss");
+    	BuildIDLProject(":mozilla:security:manager:pki:macbuild:pippkiIDL.xml",         "pippki");    	
 	}
     
-    BuildIDLProject(":mozilla:modules:libpref:macbuild:libprefIDL.mcp",             "libpref");
-    BuildIDLProject(":mozilla:modules:libutil:macbuild:libutilIDL.mcp",             "libutil");
-    BuildIDLProject(":mozilla:modules:libjar:macbuild:libjarIDL.mcp",               "libjar");
+    BuildIDLProject(":mozilla:modules:libpref:macbuild:libprefIDL.xml",             "libpref");
+    BuildIDLProject(":mozilla:modules:libutil:macbuild:libutilIDL.xml",             "libutil");
+    BuildIDLProject(":mozilla:modules:libjar:macbuild:libjarIDL.xml",               "libjar");
     
 	if ($main::options{useimg2}) {
-	    BuildIDLProject(":mozilla:gfx2:macbuild:gfx2IDL.mcp",                       "gfx2");      
-	    BuildIDLProject(":mozilla:modules:libpr0n:macbuild:libimg2IDL.mcp",         "libimg2");
-	    BuildIDLProject(":mozilla:modules:libpr0n:macbuild:icondecoderIDL.mcp",         "icondecoder");
+	    BuildIDLProject(":mozilla:gfx2:macbuild:gfx2IDL.xml",                       "gfx2");      
+	    BuildIDLProject(":mozilla:modules:libpr0n:macbuild:libimg2IDL.xml",         "libimg2");
+	    BuildIDLProject(":mozilla:modules:libpr0n:macbuild:icondecoderIDL.xml",         "icondecoder");
     }
     
-    BuildIDLProject(":mozilla:modules:plugin:macbuild:pluginIDL.mcp",               "plugin");
-    BuildIDLProject(":mozilla:modules:oji:macbuild:ojiIDL.mcp",                     "oji");
-    BuildIDLProject(":mozilla:js:macbuild:XPConnectIDL.mcp",                        "xpconnect");
-    BuildIDLProject(":mozilla:dom:macbuild:domIDL.mcp",                             "dom");
-    BuildIDLProject(":mozilla:dom:macbuild:dom_baseIDL.mcp",                        "dom_base");
-    BuildIDLProject(":mozilla:dom:macbuild:dom_coreIDL.mcp",                        "dom_core");
-    BuildIDLProject(":mozilla:dom:macbuild:dom_cssIDL.mcp",                         "dom_css");
-    BuildIDLProject(":mozilla:dom:macbuild:dom_eventsIDL.mcp",                      "dom_events");
-    BuildIDLProject(":mozilla:dom:macbuild:dom_htmlIDL.mcp",                        "dom_html");
-    BuildIDLProject(":mozilla:dom:macbuild:dom_rangeIDL.mcp",                       "dom_range");
-    BuildIDLProject(":mozilla:dom:macbuild:dom_stylesheetsIDL.mcp",                 "dom_stylesheets");
-    BuildIDLProject(":mozilla:dom:macbuild:dom_viewsIDL.mcp",                       "dom_views");
-    BuildIDLProject(":mozilla:dom:macbuild:dom_xblIDL.mcp",                         "dom_xbl");
-    BuildIDLProject(":mozilla:dom:macbuild:dom_xulIDL.mcp",                         "dom_xul");
+    BuildIDLProject(":mozilla:modules:plugin:macbuild:pluginIDL.xml",               "plugin");
+    BuildIDLProject(":mozilla:modules:oji:macbuild:ojiIDL.xml",                     "oji");
+    BuildIDLProject(":mozilla:js:macbuild:XPConnectIDL.xml",                        "xpconnect");
+    BuildIDLProject(":mozilla:dom:macbuild:domIDL.xml",                             "dom");
+    BuildIDLProject(":mozilla:dom:macbuild:dom_baseIDL.xml",                        "dom_base");
+    BuildIDLProject(":mozilla:dom:macbuild:dom_coreIDL.xml",                        "dom_core");
+    BuildIDLProject(":mozilla:dom:macbuild:dom_cssIDL.xml",                         "dom_css");
+    BuildIDLProject(":mozilla:dom:macbuild:dom_eventsIDL.xml",                      "dom_events");
+    BuildIDLProject(":mozilla:dom:macbuild:dom_htmlIDL.xml",                        "dom_html");
+    BuildIDLProject(":mozilla:dom:macbuild:dom_rangeIDL.xml",                       "dom_range");
+    BuildIDLProject(":mozilla:dom:macbuild:dom_stylesheetsIDL.xml",                 "dom_stylesheets");
+    BuildIDLProject(":mozilla:dom:macbuild:dom_viewsIDL.xml",                       "dom_views");
+    BuildIDLProject(":mozilla:dom:macbuild:dom_xblIDL.xml",                         "dom_xbl");
+    BuildIDLProject(":mozilla:dom:macbuild:dom_xulIDL.xml",                         "dom_xul");
 
-    BuildIDLProject(":mozilla:dom:src:jsurl:macbuild:JSUrlDL.mcp",                  "jsurl");
+    BuildIDLProject(":mozilla:dom:src:jsurl:macbuild:JSUrlDL.xml",                  "jsurl");
     
-    BuildIDLProject(":mozilla:gfx:macbuild:gfxIDL.mcp",                             "gfx");
-    BuildIDLProject(":mozilla:widget:macbuild:widgetIDL.mcp",                       "widget");
-    BuildIDLProject(":mozilla:editor:macbuild:EditorIDL.mcp",                       "editor");
-    BuildIDLProject(":mozilla:editor:txmgr:macbuild:txmgrIDL.mcp",                  "txmgr");
-    BuildIDLProject(":mozilla:editor:txtsvc:macbuild:txtsvcIDL.mcp",                "txtsvc");
-    BuildIDLProject(":mozilla:profile:macbuild:ProfileServicesIDL.mcp", "profileservices");
-    BuildIDLProject(":mozilla:profile:pref-migrator:macbuild:prefmigratorIDL.mcp",  "prefm");
+    BuildIDLProject(":mozilla:gfx:macbuild:gfxIDL.xml",                             "gfx");
+    BuildIDLProject(":mozilla:widget:macbuild:widgetIDL.xml",                       "widget");
+    BuildIDLProject(":mozilla:editor:macbuild:EditorIDL.xml",                       "editor");
+    BuildIDLProject(":mozilla:editor:txmgr:macbuild:txmgrIDL.xml",                  "txmgr");
+    BuildIDLProject(":mozilla:editor:txtsvc:macbuild:txtsvcIDL.xml",                "txtsvc");
+    BuildIDLProject(":mozilla:profile:macbuild:ProfileServicesIDL.xml", "profileservices");
+    BuildIDLProject(":mozilla:profile:pref-migrator:macbuild:prefmigratorIDL.xml",  "prefm");
         
-    BuildIDLProject(":mozilla:content:macbuild:contentIDL.mcp",                       "content");
+    BuildIDLProject(":mozilla:content:macbuild:contentIDL.xml",                       "content");
 
-    BuildIDLProject(":mozilla:layout:macbuild:layoutIDL.mcp",                       "layout");
+    BuildIDLProject(":mozilla:layout:macbuild:layoutIDL.xml",                       "layout");
 
-    BuildIDLProject(":mozilla:accessible:macbuild:accessibleIDL.mcp",               "accessible"); 
+    BuildIDLProject(":mozilla:accessible:macbuild:accessibleIDL.xml",               "accessible"); 
 
-    BuildIDLProject(":mozilla:rdf:macbuild:RDFIDL.mcp",                             "rdf");
+    BuildIDLProject(":mozilla:rdf:macbuild:RDFIDL.xml",                             "rdf");
 
-    BuildIDLProject(":mozilla:rdf:chrome:build:chromeIDL.mcp",                      "chrome");
+    BuildIDLProject(":mozilla:rdf:chrome:build:chromeIDL.xml",                      "chrome");
         
-    BuildIDLProject(":mozilla:webshell:macbuild:webshellIDL.mcp",                   "webshell");
-    BuildIDLProject(":mozilla:docshell:macbuild:docshellIDL.mcp",                   "docshell");
-    BuildIDLProject(":mozilla:embedding:base:macbuild:EmbedIDL.mcp",                "EmbedBase");
-    BuildIDLProject(":mozilla:embedding:browser:macbuild:browserIDL.mcp",           "embeddingbrowser");
-    BuildIDLProject(":mozilla:embedding:components:build:macbuild:EmbedComponentsIDL.mcp", "EmbedComponents");
+    BuildIDLProject(":mozilla:webshell:macbuild:webshellIDL.xml",                   "webshell");
+    BuildIDLProject(":mozilla:docshell:macbuild:docshellIDL.xml",                   "docshell");
+    BuildIDLProject(":mozilla:embedding:base:macbuild:EmbedIDL.xml",                "EmbedBase");
+    BuildIDLProject(":mozilla:embedding:browser:macbuild:browserIDL.xml",           "embeddingbrowser");
+    BuildIDLProject(":mozilla:embedding:components:build:macbuild:EmbedComponentsIDL.xml", "EmbedComponents");
 
-    BuildIDLProject(":mozilla:extensions:cookie:macbuild:cookieIDL.mcp",						"cookie");
-    BuildIDLProject(":mozilla:extensions:wallet:macbuild:walletIDL.mcp","wallet");
-    BuildIDLProject(":mozilla:extensions:xml-rpc:macbuild:xml-rpcIDL.mcp","xml-rpc");
-    BuildIDLProject(":mozilla:xpfe:components:bookmarks:macbuild:BookmarksIDL.mcp", "bookmarks");
-    BuildIDLProject(":mozilla:xpfe:components:directory:DirectoryIDL.mcp",          "Directory");
-    BuildIDLProject(":mozilla:xpfe:components:regviewer:RegViewerIDL.mcp",          "RegViewer");
-    BuildIDLProject(":mozilla:xpfe:components:history:macbuild:historyIDL.mcp",     "history");
-    BuildIDLProject(":mozilla:xpfe:components:shistory:macbuild:shistoryIDL.mcp",   "shistory");
-    BuildIDLProject(":mozilla:xpfe:components:related:macbuild:RelatedIDL.mcp",     "related");
-    BuildIDLProject(":mozilla:xpfe:components:search:macbuild:SearchIDL.mcp",       "search");
-    BuildIDLProject(":mozilla:xpfe:components:macbuild:mozcompsIDL.mcp",            "mozcomps");
-    BuildIDLProject(":mozilla:xpfe:components:timebomb:macbuild:timebombIDL.mcp",   "tmbm");
-    BuildIDLProject(":mozilla:xpfe:components:urlbarhistory:macbuild:urlbarhistoryIDL.mcp", "urlbarhistory");
-    BuildIDLProject(":mozilla:xpfe:components:autocomplete:macbuild:AutoCompleteIDL.mcp", "autocomplete");
+    BuildIDLProject(":mozilla:extensions:cookie:macbuild:cookieIDL.xml",						"cookie");
+    BuildIDLProject(":mozilla:extensions:wallet:macbuild:walletIDL.xml","wallet");
+    BuildIDLProject(":mozilla:extensions:xml-rpc:macbuild:xml-rpcIDL.xml","xml-rpc");
+    BuildIDLProject(":mozilla:xpfe:components:bookmarks:macbuild:BookmarksIDL.xml", "bookmarks");
+    BuildIDLProject(":mozilla:xpfe:components:directory:DirectoryIDL.xml",          "Directory");
+    BuildIDLProject(":mozilla:xpfe:components:regviewer:RegViewerIDL.xml",          "RegViewer");
+    BuildIDLProject(":mozilla:xpfe:components:history:macbuild:historyIDL.xml",     "history");
+    BuildIDLProject(":mozilla:xpfe:components:shistory:macbuild:shistoryIDL.xml",   "shistory");
+    BuildIDLProject(":mozilla:xpfe:components:related:macbuild:RelatedIDL.xml",     "related");
+    BuildIDLProject(":mozilla:xpfe:components:search:macbuild:SearchIDL.xml",       "search");
+    BuildIDLProject(":mozilla:xpfe:components:macbuild:mozcompsIDL.xml",            "mozcomps");
+    BuildIDLProject(":mozilla:xpfe:components:timebomb:macbuild:timebombIDL.xml",   "tmbm");
+    BuildIDLProject(":mozilla:xpfe:components:urlbarhistory:macbuild:urlbarhistoryIDL.xml", "urlbarhistory");
+    BuildIDLProject(":mozilla:xpfe:components:autocomplete:macbuild:AutoCompleteIDL.xml", "autocomplete");
 
-    BuildIDLProject(":mozilla:xpfe:appshell:macbuild:appshellIDL.mcp",              "appshell");
+    BuildIDLProject(":mozilla:xpfe:appshell:macbuild:appshellIDL.xml",              "appshell");
     
-    BuildIDLProject(":mozilla:xpfe:browser:macbuild:mozBrowserIDL.mcp",             "mozBrowser");
+    BuildIDLProject(":mozilla:xpfe:browser:macbuild:mozBrowserIDL.xml",             "mozBrowser");
     
-    BuildIDLProject(":mozilla:xpinstall:macbuild:xpinstallIDL.mcp",                 "xpinstall");
+    BuildIDLProject(":mozilla:xpinstall:macbuild:xpinstallIDL.xml",                 "xpinstall");
 
-    BuildIDLProject(":mozilla:mailnews:base:macbuild:msgCoreIDL.mcp",               "mailnews");
-    BuildIDLProject(":mozilla:mailnews:compose:macbuild:msgComposeIDL.mcp",         "MsgCompose");
-    BuildIDLProject(":mozilla:mailnews:local:macbuild:msglocalIDL.mcp",             "MsgLocal");
-    BuildIDLProject(":mozilla:mailnews:news:macbuild:msgnewsIDL.mcp",               "MsgNews");
-    BuildIDLProject(":mozilla:mailnews:addrbook:macbuild:msgAddrbookIDL.mcp",       "MsgAddrbook");
-    BuildIDLProject(":mozilla:mailnews:absync:macbuild:abSyncIDL.mcp",              "AbSyncSvc");
-    BuildIDLProject(":mozilla:mailnews:db:macbuild:msgDBIDL.mcp",                   "MsgDB");
-    BuildIDLProject(":mozilla:mailnews:imap:macbuild:msgimapIDL.mcp",               "MsgImap");
-    BuildIDLProject(":mozilla:mailnews:mime:macbuild:mimeIDL.mcp",                  "Mime");
-    BuildIDLProject(":mozilla:mailnews:import:macbuild:msgImportIDL.mcp",           "msgImport");
+    BuildIDLProject(":mozilla:mailnews:base:macbuild:msgCoreIDL.xml",               "mailnews");
+    BuildIDLProject(":mozilla:mailnews:compose:macbuild:msgComposeIDL.xml",         "MsgCompose");
+    BuildIDLProject(":mozilla:mailnews:local:macbuild:msglocalIDL.xml",             "MsgLocal");
+    BuildIDLProject(":mozilla:mailnews:news:macbuild:msgnewsIDL.xml",               "MsgNews");
+    BuildIDLProject(":mozilla:mailnews:addrbook:macbuild:msgAddrbookIDL.xml",       "MsgAddrbook");
+    BuildIDLProject(":mozilla:mailnews:absync:macbuild:abSyncIDL.xml",              "AbSyncSvc");
+    BuildIDLProject(":mozilla:mailnews:db:macbuild:msgDBIDL.xml",                   "MsgDB");
+    BuildIDLProject(":mozilla:mailnews:imap:macbuild:msgimapIDL.xml",               "MsgImap");
+    BuildIDLProject(":mozilla:mailnews:mime:macbuild:mimeIDL.xml",                  "Mime");
+    BuildIDLProject(":mozilla:mailnews:import:macbuild:msgImportIDL.xml",           "msgImport");
 
-    BuildIDLProject(":mozilla:caps:macbuild:CapsIDL.mcp",                           "caps");
+    BuildIDLProject(":mozilla:caps:macbuild:CapsIDL.xml",                           "caps");
 
-    BuildIDLProject(":mozilla:intl:locale:macbuild:nsLocaleIDL.mcp",                "nsLocale");
-    BuildIDLProject(":mozilla:intl:strres:macbuild:strresIDL.mcp",                  "nsIStringBundle");
-    BuildIDLProject(":mozilla:intl:unicharutil:macbuild:unicharutilIDL.mcp",        "unicharutil");
-    BuildIDLProject(":mozilla:intl:uconv:macbuild:uconvIDL.mcp",                    "uconv");
-    BuildIDLProject(":mozilla:intl:chardet:macbuild:chardetIDL.mcp",                "chardet");
+    BuildIDLProject(":mozilla:intl:locale:macbuild:nsLocaleIDL.xml",                "nsLocale");
+    BuildIDLProject(":mozilla:intl:strres:macbuild:strresIDL.xml",                  "nsIStringBundle");
+    BuildIDLProject(":mozilla:intl:unicharutil:macbuild:unicharutilIDL.xml",        "unicharutil");
+    BuildIDLProject(":mozilla:intl:uconv:macbuild:uconvIDL.xml",                    "uconv");
+    BuildIDLProject(":mozilla:intl:chardet:macbuild:chardetIDL.xml",                "chardet");
 
     if ($main::options{transformiix})
     {
-        BuildIDLProject(":mozilla:extensions:transformiix:macbuild:transformiixIDL.mcp", "transformiix");
+        BuildIDLProject(":mozilla:extensions:transformiix:macbuild:transformiixIDL.xml", "transformiix");
     }
 
     if ($main::options{ldap})
     {
-        BuildIDLProject(":mozilla:directory:xpcom:macbuild:mozldapIDL.mcp", "mozldap");
-        BuildIDLProject(":mozilla:xpfe:components:autocomplete:macbuild:ldapAutoCompleteIDL.mcp", "ldapAutoComplete");
+        BuildIDLProject(":mozilla:directory:xpcom:macbuild:mozldapIDL.xml", "mozldap");
+        BuildIDLProject(":mozilla:xpfe:components:autocomplete:macbuild:ldapAutoCompleteIDL.xml", "ldapAutoComplete");
     }
 
     if ($main::options{xmlextras})
     {
-        BuildIDLProject(":mozilla:extensions:xmlextras:macbuild:xmlextrasIDL.mcp", "xmlextras");
+        BuildIDLProject(":mozilla:extensions:xmlextras:macbuild:xmlextrasIDL.xml", "xmlextras");
     }
     if ($main::options{soap})
     {
-        BuildIDLProject(":mozilla:extensions:xmlextras:macbuild:xmlsoapIDL.mcp", "xmlsoap");
+        BuildIDLProject(":mozilla:extensions:xmlextras:macbuild:xmlsoapIDL.xml", "xmlsoap");
     }
 
     if ($main::options{vixen})
     {
-        BuildIDLProject(":mozilla:extensions:vixen:macbuild:vixenIDL.mcp", "vixen");
+        BuildIDLProject(":mozilla:extensions:vixen:macbuild:vixenIDL.xml", "vixen");
     }
 
     if ($main::options{inspector})
     {
-        BuildIDLProject(":mozilla:extensions:inspector:macbuild:inspectorIDL.mcp", "inspector");
+        BuildIDLProject(":mozilla:extensions:inspector:macbuild:inspectorIDL.xml", "inspector");
     }
 
     if ($main::options{p3p})
     {
-        BuildIDLProject(":mozilla:extensions:p3p:macbuild:p3pIDL.mcp", "p3p");
+        BuildIDLProject(":mozilla:extensions:p3p:macbuild:p3pIDL.xml", "p3p");
     }
 
     if ($main::options{jsdebugger})
     {
-        BuildIDLProject(":mozilla:js:jsd:macbuild:jsdIDL.mcp", "jsdservice");
+        BuildIDLProject(":mozilla:js:jsd:macbuild:jsdIDL.xml", "jsdservice");
     }
 
     EndBuildModule("idl");
