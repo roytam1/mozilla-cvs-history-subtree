@@ -7,6 +7,8 @@ var gDownloadListener;
 function onDownloadCancel(aEvent)
 {
   gDownloadManager.cancelDownload(aEvent.target.id);
+
+  setRDFProperty(aEvent.target.id, "DownloadAnimated", "false");
 }
 
 function onDownloadPause(aEvent)
@@ -23,6 +25,8 @@ function onDownloadResume(aEvent)
 
 function onDownloadRemove(aEvent)
 {
+  if (canRemoveDownload(aEvent.target))
+    gDownloadManager.removeDownload(aEvent.target.id);
 }
 
 function onDownloadShow(aEvent)
@@ -312,14 +316,18 @@ function cleanUpDownloads()
   var downloadView = document.getElementById("downloadView");
   for (var i = downloadView.childNodes.length - 1; i >= 0; --i) {
     var currItem = downloadView.childNodes[i];
-    if (currItem.getAttribute("state") == "1" ||
-        currItem.getAttribute("state") == "2" ||
-        currItem.getAttribute("state") == "3" ||
-        currItem.getAttribute("state") == "4" )
+    if (canRemoveDownload(currItem))
       gDownloadManager.removeDownload(currItem.id);
   }
   
   gDownloadManager.endBatchUpdate();
 }
 
+function canRemoveDownload(aDownload)
+{
+  return aDownload.getAttribute("state") == "1" ||
+         aDownload.getAttribute("state") == "2" ||
+         aDownload.getAttribute("state") == "3" ||
+         aDownload.getAttribute("state") == "4";
+}
 
