@@ -28,7 +28,7 @@
 //mailWindowOverlay.js.  This is currently being done.
 
 //NOTE: gMessengerBundle must be defined and set or this Overlay won't work
-   //test
+
 /* not used
 function ConvertDOMListToResourceArray(nodeList)
 {
