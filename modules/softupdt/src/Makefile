@@ -17,10 +17,18 @@
 
 DEPTH		= ../../..
 
+include $(DEPTH)/config/config.mk
+
 MODULE		= softupdate
 LIBRARY_NAME	= softupdate
 
-REQUIRES	= softupdt js java net dbm nspr img util layer pref jar security applet lay style libreg
+REQUIRES	= softupdt js java net dbm nspr img util layer pref jar security  \
+#if defined(MOZ_OJI)
+		  oji npj
+#elseif defined(MOZ_JAVA)
+		  applet \
+#endif
+		  lay style libreg
 
 JRI_GEN		= netscape.softupdate.FolderSpec \
           netscape.softupdate.InstallObject \
@@ -63,7 +71,7 @@ EXPORTS		= ../include/softupdt.h \
 		  $(JRI_GEN_DIR)/netscape_softupdate_SoftwareUpdate.h \
 		  $(JRI_GEN_DIR)/netscape_softupdate_SoftUpdateException.h \
 		  $(JRI_GEN_DIR)/netscape_softupdate_VersionInfo.h \
-          	  $(JRI_GEN_DIR)/netscape_softupdate_VersionRegistry.h \
+		  $(JRI_GEN_DIR)/netscape_softupdate_VersionRegistry.h \
 		  $(JRI_GEN_DIR)/netscape_softupdate_VerRegEnumerator.h \
 		  $(JRI_GEN_DIR)/netscape_softupdate_Registry.h \
 		  $(JRI_GEN_DIR)/netscape_softupdate_RegistryNode.h \
@@ -105,4 +113,3 @@ $(OBJDIR)/vr_java.o: $(JRI_GEN_DIR)/netscape_softupdate_VersionInfo.h \
 		  $(JRI_GEN_DIR)/netscape_softupdate_RegistryException.h \
 		  $(JRI_GEN_DIR)/netscape_softupdate_RegKeyEnumerator.h \
 		  $(JRI_GEN_DIR)/netscape_softupdate_RegEntryEnumerator.h
-
