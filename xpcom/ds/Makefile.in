@@ -110,6 +110,7 @@ XPIDLSRCS	= \
 		nsIPersistentProperties2.idl \
 		nsIProperties.idl \
 		nsISerializable.idl \
+                nsIStopwatch.idl \
 		nsISupportsArray.idl \
 		nsISupportsIterators.idl \
 		nsISupportsPrimitives.idl \
