@@ -2169,20 +2169,20 @@ static JSFunctionSpec InstallMethods[] =
 //
 static JSFunctionSpec WinRegMethods[] = 
 {
-  {"SetRootKey",                WinRegSetRootKey,               1},
-  {"CreateKey",                 WinRegCreateKey,                2},
-  {"DeleteKey",                 WinRegDeleteKey,                1},
-  {"DeleteValue",               WinRegDeleteValue,              2},
-  {"SetValueString",            WinRegSetValueString,           3},
-  {"GetValueString",            WinRegGetValueString,           2},
-  {"SetValue",                  WinRegSetValue,                 3},
-  {"GetValue",                  WinRegGetValue,                 2},
-  {"InstallObject",             WinRegInstallObject,            0},
-  {"FinalCreateKey",            WinRegFinalCreateKey,           3},
-  {"FinalDeleteKey",            WinRegFinalDeleteKey,           3},
-  {"FinalDeleteValue",          WinRegFinalDeleteValue,         3},
-  {"FinalSetValueString",       WinRegFinalSetValueString,      4},
-  {"FinalSetValue",             WinRegFinalSetValue,            4},
+  {"setRootKey",                WinRegSetRootKey,               1},
+  {"createKey",                 WinRegCreateKey,                2},
+  {"deleteKey",                 WinRegDeleteKey,                1},
+  {"deleteValue",               WinRegDeleteValue,              2},
+  {"setValueString",            WinRegSetValueString,           3},
+  {"getValueString",            WinRegGetValueString,           2},
+  {"setValue",                  WinRegSetValue,                 3},
+  {"getValue",                  WinRegGetValue,                 2},
+  {"installObject",             WinRegInstallObject,            0},
+  {"finalCreateKey",            WinRegFinalCreateKey,           3},
+  {"finalDeleteKey",            WinRegFinalDeleteKey,           3},
+  {"finalDeleteValue",          WinRegFinalDeleteValue,         3},
+  {"finalSetValueString",       WinRegFinalSetValueString,      4},
+  {"finalSetValue",             WinRegFinalSetValue,            4},
   {0}
 };
 
