@@ -463,7 +463,204 @@ nsLocalFile::GetPath(char **_retval)
 NS_IMETHODIMP
 nsLocalFile::CopyTo(nsIFile *newParent, const char *newName)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    nsresult rv;
+
+    // check to make sure that we have a new parent
+    // or have a new name
+    if (newParent == nsnull && newName == nsnull)
+        return NS_ERROR_FILE_TARGET_DOES_NOT_EXIST;
+
+    // check to make sure that this has been initialized properly
+    CHECK_mPath();
+
+    // check to see if we are a directory or if we are a file
+    PRBool isDirectory;
+    IsDirectory(&isDirectory);
+
+    if (isDirectory)
+    {
+        // XXX
+        return NS_ERROR_NOT_IMPLEMENTED;
+    }
+    else
+    {
+        // ok, we're a file so this should be easy as pie.
+        // check to see if our target exists
+        PRBool targetExists;
+        newParent->Exists(&targetExists);
+        // check to see if we need to create it
+        if (targetExists == PR_FALSE)
+        {
+            // XXX create the new directory with some permissions
+            rv = newParent->Create(DIRECTORY_TYPE, 0755);
+            if (NS_FAILED(rv))
+                return rv;
+        }
+        // make sure that the target is actually a directory
+        PRBool targetIsDirectory;
+        newParent->IsDirectory(&targetIsDirectory);
+        if (targetIsDirectory == PR_FALSE)
+            return NS_ERROR_FILE_DESTINATION_NOT_DIR;
+        // ok, we got this far.  create the name of the new file.
+        nsXPIDLCString leafName;
+        nsXPIDLCString newPath;
+        const char *tmpConstChar;
+        char       *tmpChar;
+        // get the leaf name of the new file if a name isn't supplied.
+        if (newName == nsnull)
+        {
+            if (NS_FAILED(rv = GetLeafNameRaw(&tmpConstChar)))
+                return rv;
+            leafName = tmpConstChar;
+        }
+        else 
+        {
+            leafName = newName;
+        }
+        // get the path name
+        if (NS_FAILED(rv = newParent->GetPath(&tmpChar)))
+            return rv;
+
+        // this is the full path to the dir of the new file
+        newPath = tmpChar;
+        nsAllocator::Free(tmpChar);
+
+        // create the final name
+        char *newPathName;
+        newPathName = (char *)nsAllocator::Alloc(strlen(newPath) + strlen(leafName) + 2);
+        if (!newPathName)
+            return NS_ERROR_OUT_OF_MEMORY;
+        
+        strcpy(newPathName, newPath);
+        strcat(newPathName, "/");
+        strcat(newPathName, leafName);
+
+#ifdef DEBUG_blizzard
+        printf("nsLocalFile::CopyTo() %s -> %s\n", (const char *)mPath, newPathName);
+#endif
+
+        nsXPIDLCString newPathNameAuto;
+        newPathNameAuto = newPathName;
+        nsAllocator::Free(newPathName);
+
+        // actually create the file.
+
+        nsLocalFile *newFile = new nsLocalFile();
+        newFile->AddRef(); // we own this.
+        if (newFile == nsnull)
+        {
+            return NS_ERROR_OUT_OF_MEMORY;
+        }
+
+        rv = newFile->InitWithPath(newPathNameAuto);
+
+        if (NS_FAILED(rv))
+        {
+            NS_RELEASE(newFile);
+            return rv;
+        }
+
+        // get the old permissions
+        PRUint32 myPerms;
+        GetPermissions(&myPerms);
+        // create the new file with the same permissions
+        rv = newFile->Create(NORMAL_FILE_TYPE, myPerms);
+        if (NS_FAILED(rv))
+        {
+            NS_RELEASE(newFile);
+            return rv;
+        }
+
+        // open the new file.
+
+        PRInt32     openFlags = PR_RDWR | PR_CREATE_FILE | PR_TRUNCATE;
+        PRInt32     modeFlags = myPerms;
+        PRFileDesc *newFD = nsnull;
+
+        rv = newFile->OpenNSPRFileDesc(openFlags, modeFlags, &newFD);
+        if (NS_FAILED(rv))
+        {
+            NS_RELEASE(newFile);
+            return rv;
+        }
+        if (newFD == nsnull)
+        {
+            NS_RELEASE(newFile);
+            NSRESULT_FOR_ERRNO();
+        }
+
+        // open the old file, too
+
+        openFlags = PR_RDONLY;
+        PRFileDesc *oldFD = nsnull;
+
+        rv = OpenNSPRFileDesc(openFlags, modeFlags, &oldFD);
+        // make sure to clean up properly
+        if (NS_FAILED(rv))
+        {
+            NS_RELEASE(newFile);
+            PR_Close(newFD);
+            return rv;
+        }
+        if (newFD == nsnull)
+        {
+            NS_RELEASE(newFile);
+            PR_Close(newFD);
+            NSRESULT_FOR_ERRNO();
+        }
+
+        // get the length of the file
+        
+        PRStatus status;
+        PRFileInfo fileInfo;
+        status = PR_GetFileInfo(mPath, &fileInfo);
+        if (status != PR_SUCCESS)
+        {
+            NS_RELEASE(newFile);
+            PR_Close(newFD);
+            NSRESULT_FOR_ERRNO();
+        }
+        
+        // get the size of the file.
+
+        PROffset32 fileSize;
+        fileSize = fileInfo.size;
+        PRInt32 bytesRead = 0;
+        PRInt32 bytesWritten = 0;
+        PRInt32 totalRead = 0;
+        PRInt32 totalWritten = 0;
+
+        char buf[BUFSIZ];
+
+        while(1)
+        {
+            bytesRead = PR_Read(oldFD, &buf, BUFSIZ);
+            if (bytesRead == 0)
+                break;
+            if (bytesRead == -1)
+                return NS_ERROR_FAILURE;
+            totalRead += bytesRead;
+            bytesWritten = PR_Write(newFD, &buf, bytesRead);
+            if (bytesWritten == -1)
+                return NS_ERROR_FAILURE;
+            totalWritten += bytesWritten;
+        } 
+
+#ifdef DEBUG_blizzard
+        printf("read %d bytes, wrote %d bytes\n",
+               totalRead, totalWritten);
+#endif
+        
+        // close the files
+        PR_Close(newFD);
+        PR_Close(oldFD);
+
+        // free our resources
+        NS_RELEASE(newFile);
+
+    }
+           
+    return rv;
 }
 
 NS_IMETHODIMP
