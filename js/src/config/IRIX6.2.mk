@@ -16,7 +16,7 @@
 #
 
 #
-# Config stuff for IRIX6.2
+# Config stuff for IRIX6.3
 #
 
-include config/IRIX.mk
+include $(DEPTH)/config/IRIX.mk
