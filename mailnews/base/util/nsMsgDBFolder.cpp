@@ -1101,6 +1101,12 @@ nsresult nsMsgDBFolder::GetFolderCacheKey(nsIFileSpec **aFileSpec)
 			nsLocalFolderSummarySpec	summarySpec(folderName);
 
 			dbPath->SetFromFileSpec(summarySpec);
+
+	  	        // create the .msf file
+			// see bug #244217 for details
+			PRBool exists;
+			if (NS_SUCCEEDED(dbPath->Exists(&exists)) && !exists)
+			dbPath->Touch();
 		}
 	}
 	return rv;
