@@ -129,6 +129,7 @@ typedef	struct HT_ColumnStruct {
 	uint32				width;
 	uint32				tokenType;
 	void				*token;
+	void				*feData;
 	PRBool				isHiddenFlag;
 } HT_ColumnStruct, *HT_Column;
 

@@ -2047,6 +2047,7 @@ HT_DeleteView (HT_View view)
 	while (column != NULL)
 	{
 		nextColumn = column->next;
+		sendColumnNotification (view, column->token, column->tokenType, HT_EVENT_COLUMN_DELETE);
 		if (column->name != NULL)
 		{
 			freeMem(column->name);
@@ -2906,6 +2907,56 @@ HT_SetSortColumn(HT_View view, void *token, uint32 tokenType, PRBool descendingF
 	view->sortTokenType = tokenType;
 	view->descendingFlag = descendingFlag;
 	sendColumnNotification(view, token, tokenType, HT_EVENT_VIEW_SORTING_CHANGED);
+}
+
+
+
+PR_PUBLIC_API(void)
+HT_SetColumnFEData(HT_View view, void *token, void *data)
+{
+	HT_Column	*columnList;
+
+	XP_ASSERT(view != NULL);
+	XP_ASSERT(token != NULL);
+
+	if ((columnList = &(view->columns)) != NULL)
+	{
+		while ((*columnList) != NULL)
+		{
+			if ((*columnList)->token == token)
+			{
+				(*columnList)->feData = data;
+				break;
+			}
+			columnList = &((*columnList)->next);
+		}
+	}
+}
+
+
+
+PR_PUBLIC_API(void *)
+HT_GetColumnFEData (HT_View view, void *token)
+{
+	HT_Column	*columnList;
+	void		*data = NULL;
+
+	XP_ASSERT(view != NULL);
+	XP_ASSERT(token != NULL);
+
+	if ((columnList = &(view->columns)) != NULL)
+	{
+		while ((*columnList) != NULL)
+		{
+			if ((*columnList)->token == token)
+			{
+				data = (*columnList)->feData;
+				break;
+			}
+			columnList = &((*columnList)->next);
+		}
+	}
+	return(data);
 }
 
 
@@ -7572,7 +7623,7 @@ HT_RemoveChild (HT_Resource parent, HT_Resource child)
 
 
 
-PR_PUBLIC_API(void*)
+PR_PUBLIC_API(void *)
 HT_GetViewFEData (HT_View view)
 {
 	return view->pdata;
@@ -7581,7 +7632,7 @@ HT_GetViewFEData (HT_View view)
 
 
 PR_PUBLIC_API(void)
-HT_SetViewFEData(HT_View view, void* data)
+HT_SetViewFEData(HT_View view, void *data)
 {
 	view->pdata = data;
 }

@@ -322,6 +322,8 @@ PR_PUBLIC_API(PRBool)		HT_GetColumnVisibility(HT_View view, void *token, uint32 
 PR_PUBLIC_API(void)		HT_ShowColumn(HT_View view, void *token, uint32 tokenType);
 PR_PUBLIC_API(void)		HT_HideColumn(HT_View view, void *token, uint32 tokenType);
 PR_PUBLIC_API(PRBool)		HT_ContainerSupportsNaturalOrderSort(HT_Resource container);
+PR_PUBLIC_API(void)		HT_SetColumnFEData(HT_View view, void *token, void *data);
+PR_PUBLIC_API(void *)		HT_GetColumnFEData (HT_View view, void *token);
 
 
 /*
