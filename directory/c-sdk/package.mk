@@ -20,6 +20,7 @@
 # Contributor(s): 
 #
 
+DEPTH	= ../..
 NSPR_TREE = .
 MOD_DEPTH = .
 
