@@ -315,7 +315,7 @@ function viewCookieExceptions()
                    allowVisible   : true,
                    prefilledHost  : "",
                    permissionType : "cookie" };
-    window.openDialog("chrome://browser/content/cookieviewer/CookieExceptions.xul?permission=cookie",
+    window.openDialog("chrome://browser/content/cookieviewer/CookieExceptions.xul",
                       "_blank", "chrome,modal,resizable=yes", params);
   }
 }

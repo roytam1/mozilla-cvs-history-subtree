@@ -44,7 +44,7 @@ var gImagesPref, gImagesEnabled, gImagesRestricted;
 
 function Startup()
 {
-  javascriptEnabledChange()
+  updateButtons('popup', 'install', 'javascript');
   
   gImagesPref = document.getElementById("enableImagePref");
   gImagesEnabled = document.getElementById("enableImages");
@@ -81,17 +81,35 @@ function advancedJavaScript()
              "chrome,modal");
 }
 
-function javascriptEnabledChange()
+function updateButtons()
 {
-  var isEnabled = document.getElementById("enableJavaScript").checked;
-  var advancedButton = document.getElementById("advancedJavascript");
-  advancedButton.disabled = !isEnabled;
+  var i;
+  var checkbox;
+  var button;
+
+  for (i=0; i < arguments.length; ++i) {
+    switch (arguments[i]) {
+    case "popup":
+      checkbox = document.getElementById("popupPolicy");
+      button   = document.getElementById("popupPolicyButton");
+      break;
+    case "install":
+      checkbox = document.getElementById("enableSoftwareInstall");
+      button   = document.getElementById("enableSoftwareInstallButton");
+      break;
+    case "javascript":
+      checkbox = document.getElementById("enableJavaScript");
+      button   = document.getElementById("advancedJavascript");
+      break;
+    }
+    button.disabled = !checkbox.checked;
+  }
 }
 
 var gExceptionsParams = {
   install: { blockVisible: false, allowVisible: true, prefilledHost: "", permissionType: "install" },
   popup:   { blockVisible: false, allowVisible: true, prefilledHost: "", permissionType: "popup"   },
-  image:   { blockVisible: true,  allowVisible: true, prefilledHost: "", permissionType: "image"   },
+  image:   { blockVisible: true,  allowVisible: true, prefilledHost: "", permissionType: "image"   }
 };
 
 function showExceptions(aEvent)
@@ -104,10 +122,9 @@ function showExceptions(aEvent)
     existingWindow.focus();
   }
   else {
-    const kURL = "chrome://browser/content/cookieviewer/CookieExceptions.xul?permission=";
+    const kURL = "chrome://browser/content/cookieviewer/CookieExceptions.xul";
     var params = gExceptionsParams[aEvent.target.getAttribute("permissiontype")];
-    window.openDialog(kURL + params.type,
-                      "_blank", "chrome,modal,resizable=yes", params);
+    window.openDialog(kURL, "_blank", "chrome,modal,resizable=yes", params);
   }
 }
 

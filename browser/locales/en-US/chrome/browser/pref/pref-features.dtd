@@ -16,4 +16,5 @@
 <!ENTITY  enableSoftwareUpdate.label        "Allow web sites to install software">
 <!ENTITY  enableSoftwareUpdate.accesskey    "i">
 
+<!ENTITY  allowedSites.label                "Allowed Sites">
 <!ENTITY  exceptions.label                  "Exceptions">

@@ -59,21 +59,23 @@
       <rows>
         <row>
           <vbox align="start">
-            <checkbox label="&popupReject.label;"
+            <checkbox id="popupPolicy"
+                      label="&popupReject.label;"
+                      oncommand="updateButtons('popup')"
                       prefstring="dom.disable_open_during_load"
-                      accesskey="&popupReject.accesskey;"
-                      id="popupPolicy"/>
+                      accesskey="&popupReject.accesskey;"/>
           </vbox>
-          <button label="&exceptions.label;"
+          <button id="popupPolicyButton" label="&allowedSites.label;"
                   permissiontype="popup" oncommand="showExceptions(event);"/>
         </row>
         <row>
           <vbox align="start">
             <checkbox id="enableSoftwareInstall" label="&enableSoftwareUpdate.label;"
+                      oncommand="updateButtons('install')"
                       accesskey="&enableSoftwareUpdate.accesskey;"
                       prefstring="xpinstall.enabled"/>
           </vbox>
-          <button label="&exceptions.label;"
+          <button id="enableSoftwareInstallButton" label="&allowedSites.label;"
                   permissiontype="install" oncommand="showExceptions(event);"/>
         </row>
         <row>
@@ -106,7 +108,7 @@
           <vbox align="start">
             <checkbox id="enableJavaScript" label="&enableJavaScript.label;" accesskey="&enableJavaScript.accesskey;"
                       prefstring="javascript.enabled"
-                      oncommand="javascriptEnabledChange();"/>
+                      oncommand="updateButtons('javascript');"/>
             <spring flex="1"/>
             
             <checkbox id="allowWindowMoveResize" hidden="true"
