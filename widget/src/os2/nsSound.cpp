@@ -53,6 +53,7 @@ InitGlobals(void)
   if (ulrc == NO_ERROR) {
     gMMPMInstalled = PR_TRUE;
   }
+  DosFreeModule(hmod);
   gInitialized = 1;
 }
 
@@ -99,10 +100,9 @@ NS_IMETHODIMP nsSound::OnStreamComplete(nsIStreamLoader *aLoader,
   }
 
   if (PL_strncmp(string, "RIFF", 4) || (!gMMPMInstalled)) {
-#ifdef DEBUG
-    printf("We only support WAV files currently.\n");
-#endif
-    return NS_ERROR_FAILURE;
+    NS_WARNING("We only support WAV files currently.\n");
+    Beep();
+    return NS_OK;
   }
 
   nsresult rv;
@@ -116,10 +116,15 @@ NS_IMETHODIMP nsSound::OnStreamComplete(nsIStreamLoader *aLoader,
   nsCAutoString soundFilename;
   (void) soundTmp->GetNativePath(soundFilename);
   FILE *fp = fopen(soundFilename.get(), "wb+");
-  fwrite(string, stringLen, 1, fp);
-  fclose(fp);
-  HOBJECT hobject = WinQueryObject(soundFilename.get());
-  WinSetObjectData(hobject, "OPEN=DEFAULT");
+  if (fp) {
+    fwrite(data, dataLen, 1, fp);
+    fclose(fp);
+    HOBJECT hobject = WinQueryObject(soundFilename.get());
+    WinSetObjectData(hobject, "OPEN=DEFAULT");
+  } else {
+    NS_WARNING("Could not open WAV file for binary writing.\n");
+    Beep();
+  }
 
   return NS_OK;
 
