@@ -135,6 +135,7 @@ typedef struct UIEvent {
 } UIEvent;
 
 extern CMTMessageTemplate UIEventTemplate[];
+extern CMTMessageTemplate OldUIEventTemplate[];
 
 typedef struct TaskCompletedEvent {
   CMInt32 resourceID;
