@@ -30,11 +30,11 @@
   TO DO
   -----
 
-  1. Persistence.
+  1. Factor merging code out into a subroutine so that the tricky pos
+     junk isn't typed in two places.
 
-  2. Overlays. This is gonna be kinda tricky because we'll need to
-     deal with the fact that overlays may be out of order. "Forward
-     definition" n' stuff.
+  2. Make sure that forward references add their children to the
+     document-to-element map.
 
 */
 
@@ -165,7 +165,7 @@ protected:
     static nsIAtom* kIdAtom;
     static nsIAtom* kKeysetAtom;
     static nsIAtom* kOverlayAtom;
-    static nsIAtom* kPosAtom;
+    static nsIAtom* kPositionAtom;
     static nsIAtom* kScriptAtom;
     static nsIAtom* kTemplateAtom;
 
@@ -308,7 +308,7 @@ nsIAtom* XULContentSinkImpl::kDataSourcesAtom;
 nsIAtom* XULContentSinkImpl::kIdAtom;
 nsIAtom* XULContentSinkImpl::kKeysetAtom;
 nsIAtom* XULContentSinkImpl::kOverlayAtom;
-nsIAtom* XULContentSinkImpl::kPosAtom;
+nsIAtom* XULContentSinkImpl::kPositionAtom;
 nsIAtom* XULContentSinkImpl::kScriptAtom;
 nsIAtom* XULContentSinkImpl::kTemplateAtom;
 
@@ -492,7 +492,7 @@ XULContentSinkImpl::XULContentSinkImpl(nsresult& rv)
         kIdAtom          = NS_NewAtom("id");
         kKeysetAtom      = NS_NewAtom("keyset");
         kOverlayAtom     = NS_NewAtom("overlay");
-        kPosAtom         = NS_NewAtom("pos");
+        kPositionAtom    = NS_NewAtom("position");
         kScriptAtom      = NS_NewAtom("script");
         kTemplateAtom    = NS_NewAtom("template");
     }
@@ -576,7 +576,7 @@ XULContentSinkImpl::~XULContentSinkImpl()
         NS_IF_RELEASE(kIdAtom);
         NS_IF_RELEASE(kKeysetAtom);
         NS_IF_RELEASE(kOverlayAtom);
-        NS_IF_RELEASE(kPosAtom);
+        NS_IF_RELEASE(kPositionAtom);
         NS_IF_RELEASE(kScriptAtom);
         NS_IF_RELEASE(kTemplateAtom);
     }
@@ -1430,8 +1430,6 @@ XULContentSinkImpl::AddAttributes(const nsIParserNode& aNode, nsIContent* aEleme
         aElement->SetAttribute(nameSpaceID, attr, valueStr, PR_FALSE);
     }
 
-    // XXXwaterson now apply persistence?
-
     return NS_OK;
 }
 
@@ -1560,7 +1558,7 @@ XULContentSinkImpl::CreateXULElement(PRInt32 aNameSpaceID, nsIAtom* aTag, nsCOMP
 
     // We also need to pay special attention to the keyset tag to set up a listener
     //
-    // XXXwaterson shouldn't this be done in SetAttribute() or something?
+    // XXX shouldn't this be done in SetAttribute() or something?
     if((aNameSpaceID == kNameSpaceID_XUL) && (aTag == kKeysetAtom)) {
         // Create our nsXULKeyListener and hook it up.
         nsCOMPtr<nsIXULKeyListener> keyListener;
@@ -1862,7 +1860,7 @@ XULContentSinkImpl::OpenTag(const nsIParserNode& aNode, PRInt32 aNameSpaceID, ns
     if (NS_FAILED(rv)) return rv;
 
     nsAutoString posStr;
-    rv = element->GetAttribute(kNameSpaceID_None, kPosAtom, posStr);
+    rv = element->GetAttribute(kNameSpaceID_None, kPositionAtom, posStr);
     if (NS_FAILED(rv)) return rv;
 
     PRBool wasInserted = PR_FALSE;
@@ -1935,6 +1933,9 @@ XULContentSinkImpl::OpenOverlayTag(const nsIParserNode& aNode, PRInt32 aNameSpac
     if (NS_FAILED(rv)) return rv;
 
     if (id.Length() == 0) {
+        // XXX We will probably get our context stack screwed up
+        // because we haven't pushed something here...
+
         PR_LOG(gLog, PR_LOG_ALWAYS,
                ("xul: overlay element at line %d has no 'id' attribute",
                 aNode.GetSourceLineNumber()));
@@ -2060,7 +2061,7 @@ XULContentSinkImpl::Merge(nsIContent* aOriginalNode, nsIContent* aOverlayNode)
             if (NS_FAILED(rv)) return rv;
 
             nsAutoString posStr;
-            rv = child->GetAttribute(kNameSpaceID_None, kPosAtom, posStr);
+            rv = child->GetAttribute(kNameSpaceID_None, kPositionAtom, posStr);
             if (NS_FAILED(rv)) return rv;
 
             PRBool wasInserted = PR_FALSE;
@@ -2081,8 +2082,9 @@ XULContentSinkImpl::Merge(nsIContent* aOriginalNode, nsIContent* aOverlayNode)
             }
         }
 
-        // XXXwaterson add me and all my subkids to the id-to-element
-        // map, if necessary
+        // Ok, now we _don't_ need to add these to the
+        // document-to-element map because normal construction of the
+        // nodes in OpenTag() will have done this.
     }
 
     return NS_OK;
