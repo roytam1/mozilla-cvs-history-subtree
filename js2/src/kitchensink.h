@@ -49,13 +49,6 @@
 
 
 namespace JavaScript {
-//
-// Numerics
-//
-
-        template<class N> N min(N v1, N v2) {return v1 <= v2 ? v1 : v2;}
-        template<class N> N max(N v1, N v2) {return v1 >= v2 ? v1 : v2;}
-
 
 //
 // Alignment
