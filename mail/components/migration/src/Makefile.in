@@ -51,7 +51,10 @@ CPPSRCS += \
 endif
 
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
-CPPSRCS += nsEudoraProfileMigrator.cpp
+CPPSRCS += \
+	nsProfileMigratorBase.cpp \
+	nsEudoraProfileMigrator.cpp \
+        $(NULL)
 endif
 
 EXTRA_DSO_LDOPTS += \
