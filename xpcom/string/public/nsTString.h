@@ -427,6 +427,7 @@ class NS_COM nsTString_CharT : public nsTStringBase_CharT
 
     protected:
 
+      explicit
       nsTString_CharT( PRUint32 flags )
         : string_base_type(flags) {}
 

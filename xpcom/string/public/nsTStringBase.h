@@ -309,6 +309,7 @@ class NS_COM nsTStringBase_CharT : public nsTAString_CharT
         : abstract_string_type(data, length, flags) {}
 
         // version of constructor that leaves mData and mLength uninitialized
+      explicit
       nsTStringBase_CharT( PRUint32 flags )
         : abstract_string_type(flags) {}
 
