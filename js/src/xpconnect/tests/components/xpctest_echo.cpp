@@ -510,6 +510,13 @@ xpctestEcho::CallFunction(nsITestXPCFunctionCallback *callback, const char *s)
     return callback->Call(s);
 }
 
+/* void callFunction (in nsITestXPCFunctionCallback callback, in string s); */
+NS_IMETHODIMP 
+xpctestEcho::CallFunctionWithThis(nsITestXPCFunctionCallback *callback, nsISupports* self, const char *s)
+{
+    return callback->CallWithThis(self, s);
+}
+
 /***************************************************/
 
 /***************************************************************************/

@@ -444,3 +444,70 @@ NativeSetMap::~NativeSetMap()
         JS_HashTableDestroy(mTable);
 }
 
+/***************************************************************************/
+// implement IID2ThisTranslatorMap...
+
+
+JS_STATIC_DLL_CALLBACK(void *)
+AllocSpace(void *priv, size_t size)
+{
+    return malloc(size);
+}
+
+JS_STATIC_DLL_CALLBACK(void)
+FreeSpace(void *priv, void *item)
+{
+    free(item);
+}
+
+JS_STATIC_DLL_CALLBACK(JSHashEntry *)
+AllocEntry(void *priv, const void *key)
+{
+    return (JSHashEntry*) malloc(sizeof(JSHashEntry));
+}
+
+JS_STATIC_DLL_CALLBACK(void)
+FreeEntry(void *priv, JSHashEntry *he, uintN flag)
+{
+    nsIXPCFunctionThisTranslator* obj = 
+        (nsIXPCFunctionThisTranslator*) he->value;
+    NS_IF_RELEASE(obj);
+
+    if (flag != HT_FREE_ENTRY)
+        return;
+
+    nsMemory::Free((char*)he->key);
+    free(he);
+}
+
+static JSHashAllocOps IID2ThisTranslatorOps = {
+    AllocSpace,    FreeSpace,
+    AllocEntry,    FreeEntry
+};
+
+
+// static
+IID2ThisTranslatorMap*
+IID2ThisTranslatorMap::newMap(int size)
+{
+    IID2ThisTranslatorMap* map = new IID2ThisTranslatorMap(size);
+    if(map && map->mTable)
+        return map;
+    delete map;
+    return nsnull;
+}
+
+IID2ThisTranslatorMap::IID2ThisTranslatorMap(int size)
+{
+    mTable = JS_NewHashTable(size, hash_IID,
+                             compare_IIDs, JS_CompareValues,
+                             &IID2ThisTranslatorOps, nsnull);
+}
+
+IID2ThisTranslatorMap::~IID2ThisTranslatorMap()
+{
+    if(mTable)
+        JS_HashTableDestroy(mTable);
+}
+
+

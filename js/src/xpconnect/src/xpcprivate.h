@@ -131,7 +131,7 @@
 #define XPC_DUMP_AT_SHUTDOWN
 #define XPC_CHECK_WRAPPERS_AT_SHUTDOWN
 //#define DEBUG_stats_jband 1
-#define XPC_REPORT_NATIVE_INTERFACE_AND_SET_FLUSHING
+//#define XPC_REPORT_NATIVE_INTERFACE_AND_SET_FLUSHING
 #endif
 
 /***************************************************************************/
@@ -169,6 +169,7 @@ void DEBUG_ReportShadowedMembers(XPCNativeSet* set,
 #define XPC_NATIVE_PROTO_MAP_SIZE        16
 #define XPC_NATIVE_INTERFACE_MAP_SIZE   128
 #define XPC_NATIVE_SET_MAP_SIZE         128
+#define XPC_THIS_TRANSLATOR_MAP_SIZE      8
 
 /***************************************************************************/
 // data declarations...
@@ -273,6 +274,9 @@ public:
     NativeSetMap* GetNativeSetMap() const
         {return mNativeSetMap;}
 
+    IID2ThisTranslatorMap* GetThisTraslatorMap() const
+        {return mThisTranslatorMap;}
+
     PRLock* GetMapLock() const {return mMapLock;}
     PRLock* GetContextMapLock() const {return mContextMapLock;}
 
@@ -359,9 +363,11 @@ private:
     IID2NativeInterfaceMap*  mIID2NativeInterfaceMap;
     ClassInfo2NativeSetMap*  mClassInfo2NativeSetMap;
     NativeSetMap*            mNativeSetMap;
+    IID2ThisTranslatorMap*   mThisTranslatorMap;
     PRLock* mMapLock;
     PRLock* mContextMapLock;
     nsVoidArray mWrappedJSToReleaseArray;
+
 };
 
 /***************************************************************************/

@@ -765,6 +765,55 @@ NS_IMETHODIMP TestGlobal::Squawk() {return NS_OK;}
 
 #endif
 
+#define TEST_TranslateThis
+
+#ifdef TEST_TranslateThis
+
+#include "xpctest.h"
+
+class nsXPCFunctionThisTranslator : public nsIXPCFunctionThisTranslator
+{
+public:
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIXPCFUNCTIONTHISTRANSLATOR
+
+  nsXPCFunctionThisTranslator();
+  virtual ~nsXPCFunctionThisTranslator();
+  /* additional members */
+};
+
+/* Implementation file */
+NS_IMPL_ISUPPORTS1(nsXPCFunctionThisTranslator, nsIXPCFunctionThisTranslator)
+
+nsXPCFunctionThisTranslator::nsXPCFunctionThisTranslator()
+{
+  NS_INIT_ISUPPORTS();
+  /* member initializers and constructor code */
+}
+
+nsXPCFunctionThisTranslator::~nsXPCFunctionThisTranslator()
+{
+  /* destructor code */
+}
+
+/* nsISupports TranslateThis (in nsISupports aInitialThis, in nsIInterfaceInfo aInterfaceInfo, in PRUint16 aMethodIndex, out PRBool aHideFirstParamFromJS, out nsIIDPtr aIIDOfResult); */
+NS_IMETHODIMP 
+nsXPCFunctionThisTranslator::TranslateThis(nsISupports *aInitialThis, 
+                                           nsIInterfaceInfo *aInterfaceInfo, 
+                                           PRUint16 aMethodIndex, 
+                                           PRBool *aHideFirstParamFromJS, 
+                                           nsIID * *aIIDOfResult, 
+                                           nsISupports **_retval)
+{
+    NS_IF_ADDREF(aInitialThis);
+    *_retval = aInitialThis;
+    *aHideFirstParamFromJS = JS_FALSE;
+    *aIIDOfResult = nsnull;
+    return NS_OK;
+}
+
+#endif
+
 int
 main(int argc, char **argv)
 {
@@ -823,6 +872,13 @@ main(int argc, char **argv)
     nsCOMPtr<nsIXPCSecurityManager> secman = 
         NS_STATIC_CAST(nsIXPCSecurityManager*, new FullTrustSecMan());
     xpc->SetSecurityManagerForJSContext(jscontext, secman, 0);
+
+
+#ifdef TEST_TranslateThis
+    nsCOMPtr<nsIXPCFunctionThisTranslator> 
+        translator(new nsXPCFunctionThisTranslator);
+    xpc->SetFunctionThisTranslator(NS_GET_IID(nsITestXPCFunctionCallback), translator, nsnull);
+#endif
     
     nsCOMPtr<nsIJSContextStack> cxstack = do_GetService("@mozilla.org/js/xpc/ContextStack;1");
     if (!cxstack) {

@@ -467,6 +467,7 @@ XPCJSRuntime::XPCJSRuntime(nsXPConnect* aXPConnect,
    mIID2NativeInterfaceMap(IID2NativeInterfaceMap::newMap(XPC_NATIVE_INTERFACE_MAP_SIZE)),
    mClassInfo2NativeSetMap(ClassInfo2NativeSetMap::newMap(XPC_NATIVE_SET_MAP_SIZE)),
    mNativeSetMap(NativeSetMap::newMap(XPC_NATIVE_SET_MAP_SIZE)),
+   mThisTranslatorMap(IID2ThisTranslatorMap::newMap(XPC_THIS_TRANSLATOR_MAP_SIZE)),
    mMapLock(PR_NewLock()),
    mContextMapLock(PR_NewLock()),
    mWrappedJSToReleaseArray()
@@ -520,6 +521,7 @@ XPCJSRuntime::newXPCJSRuntime(nsXPConnect* aXPConnect,
        self->GetIID2NativeInterfaceMap() &&
        self->GetClassInfo2NativeSetMap() &&
        self->GetNativeSetMap()           &&
+       self->GetThisTraslatorMap()       &&
        self->GetMapLock()                &&
        self->GetContextMapLock())
     {
@@ -724,6 +726,11 @@ XPCJSRuntime::DebugDump(PRInt16 depth)
         XPC_LOG_ALWAYS(("mNativeSetMap @ %x with %d sets(s)", \
                          mNativeSetMap, mNativeSetMap ? \
                                     mNativeSetMap->Count() : 0));
+
+        XPC_LOG_ALWAYS(("mThisTranslatorMap @ %x with %d sets(s)", \
+                         mThisTranslatorMap, mThisTranslatorMap ? \
+                                    mThisTranslatorMap->Count() : 0));
+
         // iterate sets...
         if(depth && mNativeSetMap && mNativeSetMap->Count())
         {

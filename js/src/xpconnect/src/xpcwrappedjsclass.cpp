@@ -567,7 +567,7 @@ nsXPCWrappedJSClass::CallMethod(nsXPCWrappedJS* wrapper, uint16 methodIndex,
     nsID* conditional_iid = nsnull;
     JSBool iidIsOwned = JS_FALSE;
     uint8 outConversionFailedIndex;
-    JSObject* obj = wrapper->GetJSObject();
+    JSObject* obj;
     const char* name = info->GetName();
     jsval fval;
     nsIXPCException* xpc_exception;
@@ -577,7 +577,8 @@ nsXPCWrappedJSClass::CallMethod(nsXPCWrappedJS* wrapper, uint16 methodIndex,
     XPCContext* xpcc;
     nsXPConnect* xpc;
     JSContext* cx;
- 
+    JSObject* thisObj;
+
     XPCCallContext ccx(NATIVE_CALLER);
     if(ccx.IsValid())
     {
@@ -604,6 +605,8 @@ nsXPCWrappedJSClass::CallMethod(nsXPCWrappedJS* wrapper, uint16 methodIndex,
     if(0 == (++count % interval))
         printf("<<<<<<<< %d calls on nsXPCWrappedJSs made.  (%d)\n", count, PR_IntervalToMilliseconds(totalTime));
 #endif
+
+    obj = thisObj = wrapper->GetJSObject();
 
     // XXX ASSUMES that retval is last arg.
     paramCount = info->GetParamCount();
@@ -651,8 +654,77 @@ nsXPCWrappedJSClass::CallMethod(nsXPCWrappedJS* wrapper, uint16 methodIndex,
             goto pre_call_clean_up;
         
         // later we will check to see if fval might really be callable
+        
+        
+        
         if(isFunction)
+        {
             fval = OBJECT_TO_JSVAL(obj);
+
+            // We may need to translate the 'this' for the function object.
+
+            if(paramCount)
+            {
+                const nsXPTParamInfo& firstParam = info->GetParam(0);
+                if(firstParam.IsIn())
+                {
+                    const nsXPTType& firstType = firstParam.GetType();
+                    if(firstType.IsPointer() && firstType.IsInterfacePointer())
+                    {
+                        nsIXPCFunctionThisTranslator* translator;
+                        
+                        IID2ThisTranslatorMap* map = 
+                            mRuntime->GetThisTraslatorMap();
+
+                        {
+                            nsAutoLock lock(mRuntime->GetMapLock()); // scoped lock
+                            translator = map->Find(mIID);
+                        }
+
+                        if(translator)
+                        {
+                            PRBool hideFirstParamFromJS = PR_FALSE;
+                            nsIID* newWrapperIID = nsnull;
+                            nsCOMPtr<nsISupports> newThis;
+
+                            if(NS_FAILED(translator->
+                              TranslateThis((nsISupports*)nativeParams[0].val.p,
+                                            mInfo, methodIndex,  
+                                            &hideFirstParamFromJS,
+                                            &newWrapperIID,
+                                            getter_AddRefs(newThis))))
+                            {
+                                goto pre_call_clean_up;
+                            }   
+                            if(hideFirstParamFromJS)
+                            {
+                                NS_ERROR("HideFirstParamFromJS not supported");   
+                                goto pre_call_clean_up;
+                            }
+                            if(newThis)
+                            {
+                                if(!newWrapperIID)
+                                    newWrapperIID = 
+                                        NS_CONST_CAST(nsIID*,
+                                                      &NS_GET_IID(nsISupports));
+                                nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
+                                JSBool ok = 
+                                  XPCConvert::NativeInterface2JSObject(ccx, 
+                                        getter_AddRefs(holder), newThis,
+                                        newWrapperIID, obj, nsnull);
+                                if(newWrapperIID != &NS_GET_IID(nsISupports))
+                                    nsMemory::Free(newWrapperIID);
+                                if(!ok ||
+                                    NS_FAILED(holder->GetJSObject(&thisObj)))
+                                {
+                                    goto pre_call_clean_up;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
         else if(!JS_GetProperty(cx, obj, name, &fval))
         {
             // XXX We really want to factor out the error reporting better and 
@@ -677,7 +749,7 @@ nsXPCWrappedJSClass::CallMethod(nsXPCWrappedJS* wrapper, uint16 methodIndex,
     if(stack_size != argc)
     {
         *sp++ = fval;
-        *sp++ = OBJECT_TO_JSVAL(obj);
+        *sp++ = OBJECT_TO_JSVAL(thisObj);
     }
 
     // make certain we leave no garbage in the stack

@@ -355,4 +355,58 @@ private:
     JSHashTable*        mTable;
 };
 
+/***************************************************************************/
+
+class IID2ThisTranslatorMap
+{
+public:
+    static IID2ThisTranslatorMap* newMap(int size);
+
+    inline nsIXPCFunctionThisTranslator* Find(REFNSIID iid)
+    {
+        return (nsIXPCFunctionThisTranslator*) JS_HashTableLookup(mTable, &iid);
+    }
+
+    inline nsIXPCFunctionThisTranslator* Add(REFNSIID iid, 
+                                             nsIXPCFunctionThisTranslator* Obj)
+    {
+        nsID* newID = (nsID*) nsMemory::Clone(&iid, sizeof(nsID));
+        NS_IF_ADDREF(Obj);
+
+        JSHashEntry* he = JS_HashTableAdd(mTable, newID, Obj);
+        if(!he)
+            return nsnull;
+
+        nsIXPCFunctionThisTranslator* current = 
+            (nsIXPCFunctionThisTranslator*) he->value;
+
+        // We have recycled the hash entry, our key was not absorbed.
+        if(current != Obj)
+        {    
+            NS_IF_RELEASE(Obj);
+            nsMemory::Free(newID);
+        }
+
+        return current;
+    }
+
+    inline void Remove(REFNSIID iid)
+    {
+        JS_HashTableRemove(mTable, &iid);
+    }
+
+    inline uint32 Count() {return mTable->nentries;}
+    inline intN Enumerate(JSHashEnumerator f, void *arg)
+        {return JS_HashTableEnumerateEntries(mTable, f, arg);}
+
+    ~IID2ThisTranslatorMap();
+private:
+    IID2ThisTranslatorMap();    // no implementation
+    IID2ThisTranslatorMap(int size);
+private:
+    JSHashTable *mTable;
+};
+
+
+
 #endif /* xpcmaps_h___ */

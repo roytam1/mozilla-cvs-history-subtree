@@ -1680,17 +1680,19 @@ nsXPCComponents::AttachNewComponentsObject(XPCCallContext& ccx,
     if(!iface)
         return JS_FALSE;
 
-    nsCOMPtr<XPCWrappedNative> wrapper(dont_AddRef(
-        XPCWrappedNative::GetNewOrUsed(ccx, cholder, aScope, iface, nsnull)));
+    nsCOMPtr<XPCWrappedNative> wrapper = 
+        dont_AddRef(XPCWrappedNative::
+            GetNewOrUsed(ccx, cholder, aScope, iface, nsnull));
     if(!wrapper)
         return JS_FALSE;
 
     aScope->SetComponents(components);
 
     jsid id = ccx.GetRuntime()->GetStringID(XPCJSRuntime::IDX_COMPONENTS);
-    JSObject* obj = wrapper->GetFlatJSObject();
+    JSObject* obj;
 
-    return obj && OBJ_DEFINE_PROPERTY(ccx,
+    return NS_SUCCEEDED(wrapper->GetJSObject(&obj)) &&
+           obj && OBJ_DEFINE_PROPERTY(ccx,
                                       aGlobal, id, OBJECT_TO_JSVAL(obj),
                                       nsnull, nsnull,
                                       JSPROP_PERMANENT | JSPROP_READONLY,

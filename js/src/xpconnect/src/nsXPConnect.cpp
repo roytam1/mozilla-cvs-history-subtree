@@ -192,16 +192,13 @@ nsXPConnect::ReleaseXPConnectSingleton()
 
 #ifdef GC_MARK_DEBUG
         // force a dump of the JavaScript gc heap if JS is still alive
-        if(GetRuntime() && GetRuntime()->GetJSRuntime())
+        XPCCallContext ccx(NATIVE_CALLER);
+        if(ccx.IsValid())
         {
-            AutoPushCompatibleJSContext a(GetRuntime()->GetJSRuntime());
-            if(a.GetJSContext())
-            {
-                FILE* oldFileHandle = js_DumpGCHeap;
-                js_DumpGCHeap = stdout;
-                js_ForceGC(a.GetJSContext());
-                js_DumpGCHeap = oldFileHandle;
-            }
+            FILE* oldFileHandle = js_DumpGCHeap;
+            js_DumpGCHeap = stdout;
+            js_ForceGC(cxx);
+            js_DumpGCHeap = oldFileHandle;
         }
 #endif
 #ifdef XPC_DUMP_AT_SHUTDOWN
@@ -740,6 +737,50 @@ nsXPConnect::SyncJSContexts(void)
         mRuntime->SyncXPCContextList();
     return NS_OK;
 }        
+
+/* nsIXPCFunctionThisTranslator setFunctionThisTranslator (in nsIIDRef aIID, in nsIXPCFunctionThisTranslator aTranslator); */
+NS_IMETHODIMP 
+nsXPConnect::SetFunctionThisTranslator(const nsIID & aIID, nsIXPCFunctionThisTranslator *aTranslator, nsIXPCFunctionThisTranslator **_retval)
+{
+    XPCJSRuntime* rt = GetRuntime(this);
+    if(!rt)
+        return NS_ERROR_UNEXPECTED;
+    
+    nsIXPCFunctionThisTranslator* old;
+    IID2ThisTranslatorMap* map = rt->GetThisTraslatorMap();
+
+    {
+        nsAutoLock lock(rt->GetMapLock()); // scoped lock
+        if(_retval)
+        {
+            old = map->Find(aIID);
+            NS_IF_ADDREF(old);
+            *_retval = old;
+        }
+        map->Add(aIID, aTranslator);
+    }
+    return NS_OK;
+}
+
+/* nsIXPCFunctionThisTranslator getFunctionThisTranslator (in nsIIDRef aIID); */
+NS_IMETHODIMP 
+nsXPConnect::GetFunctionThisTranslator(const nsIID & aIID, nsIXPCFunctionThisTranslator **_retval)
+{
+    XPCJSRuntime* rt = GetRuntime(this);
+    if(!rt)
+        return NS_ERROR_UNEXPECTED;
+    
+    nsIXPCFunctionThisTranslator* old;
+    IID2ThisTranslatorMap* map = rt->GetThisTraslatorMap();
+
+    {
+        nsAutoLock lock(rt->GetMapLock()); // scoped lock
+        old = map->Find(aIID);
+        NS_IF_ADDREF(old);
+        *_retval = old;
+    }
+    return NS_OK;
+}
 
 /* void debugDump (in short depth); */
 NS_IMETHODIMP
