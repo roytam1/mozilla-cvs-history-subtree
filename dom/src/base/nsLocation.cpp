@@ -339,31 +339,44 @@ NS_IMETHODIMP
 LocationImpl::SetHref(const nsAReadableString& aHref)
 {
   nsAutoString oldHref;
-  nsresult result = NS_OK;
+  nsresult rv = NS_OK;
 
-  result = GetHref(oldHref);
+  // Get JSContext from stack.
+  nsCOMPtr<nsIJSContextStack>
+    stack(do_GetService("@mozilla.org/js/xpc/ContextStack;1", &rv));
 
-  if (NS_SUCCEEDED(result)) {
-    nsCOMPtr<nsIURI> oldUri;
+  if (NS_FAILED(rv))
+    return NS_ERROR_FAILURE;
 
-    result = NS_NewURI(getter_AddRefs(oldUri), oldHref);
+  JSContext *cx;
 
-    if (oldUri) {
-      result = SetHrefWithBase(aHref, oldUri, PR_FALSE);
+  if (NS_FAILED(stack->Peek(&cx)))
+    return NS_ERROR_FAILURE;
+
+  if (cx) {
+    rv = SetHrefWithContext(cx, aHref);
+  } else {
+    rv = GetHref(oldHref);
+
+    if (NS_SUCCEEDED(rv)) {
+      nsCOMPtr<nsIURI> oldUri;
+
+      rv = NS_NewURI(getter_AddRefs(oldUri), oldHref);
+
+      if (oldUri) {
+        rv = SetHrefWithBase(aHref, oldUri, PR_FALSE);
+      }
     }
   }
 
-  return result;
+  return rv;
 }
 
 nsresult
-LocationImpl::SetHrefWithContext(JSContext* cx, jsval val)
+LocationImpl::SetHrefWithContext(JSContext* cx,
+                                 const nsAReadableString& aHref)
 {
   nsCOMPtr<nsIURI> base;
-  nsAutoString href;
-
-  // Get the parameter passed in
-  nsJSUtils::nsConvertJSValToString(href, cx, val);
 
   // Get the source of the caller
   nsresult result = GetSourceURL(cx, getter_AddRefs(base));
@@ -372,7 +385,7 @@ LocationImpl::SetHrefWithContext(JSContext* cx, jsval val)
     return result;
   }
 
-  return SetHrefWithBase(href, base, PR_FALSE);
+  return SetHrefWithBase(aHref, base, PR_FALSE);
 }
 
 nsresult
@@ -711,8 +724,7 @@ LocationImpl::ToString(nsAWritableString& aReturn)
 }
 
 nsresult
-LocationImpl::GetSourceURL(JSContext* cx,
-                           nsIURI** sourceURI)
+LocationImpl::GetSourceURL(JSContext* cx, nsIURI** sourceURI)
 {
   // XXX Code duplicated from nsHTMLDocument
   // XXX Tom said this reminded him of the "Six Degrees of
