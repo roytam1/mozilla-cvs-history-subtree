@@ -170,6 +170,7 @@ messenger.jar:
     content/messenger/messengercompose/sendProgress.xul                        (compose/resources/content/sendProgress.xul)
     content/messenger/messengercompose/sendProgress.js                         (compose/resources/content/sendProgress.js)
     content/messenger/messengercompose/mailComposeBindings.xml                 (compose/resources/content/mailComposeBindings.xml)
+    content/messenger/messengercompose/mailComposeExtrasOverlay.xul            (compose/resources/content/mailComposeExtrasOverlay.xul)
     content/messenger/importDialog.js                                          (import/resources/content/importDialog.js)
     content/messenger/importDialog.xul                                         (import/resources/content/importDialog.xul)
     content/messenger/importProgress.xul                                       (import/resources/content/importProgress.xul)
