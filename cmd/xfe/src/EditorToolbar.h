@@ -73,7 +73,7 @@ class XFE_AbstractMenuItem : public XFE_Component
 {
 public:
 	// methods
-	virtual void update() { };
+	virtual void update(XFE_Component* /*dispatcher*/ = 0) { };
 	virtual CommandType getCmdId() = 0;
 	virtual XP_Bool showsUpdate() { return TRUE; };
 };
@@ -155,7 +155,7 @@ public:
 	XFE_EditorToolbarPushButton(Widget         parent,
 								ToolbarSpec*   spec,
 								XFE_Component* tb);
-	void update();
+	void update(XFE_Component* dispatcher=0);
 };
 
 class XFE_EditorToolbarToggleButton : public XFE_EditorToolbarItem
@@ -165,7 +165,7 @@ public:
 								  ToolbarSpec* spec,
 								  XFE_Component* tb);
 								  
-	void update();
+	void update(XFE_Component* dispatcher=0);
 };
 
 class XFE_EditorToolbarRadioButton : public XFE_EditorToolbarToggleButton
