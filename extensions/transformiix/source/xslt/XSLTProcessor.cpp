@@ -46,7 +46,7 @@
 #include "Numbering.h"
 #include "Tokenizer.h"
 #include "txAtoms.h"
-#include "txLog.h"
+#include "TxLog.h"
 #include "txNodeSetContext.h"
 #include "txNodeSorter.h"
 #include "txRtfHandler.h"
