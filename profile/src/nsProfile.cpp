@@ -275,10 +275,6 @@ nsProfile::Init()
         gProfileDataAccess = new nsProfileAccess;
         if (!gProfileDataAccess)
             return NS_ERROR_OUT_OF_MEMORY;
-        rv = gProfileDataAccess->Init();
-        if (NS_FAILED(rv)) 
-            return rv;
-
         gLocaleProfiles = new nsHashtable();
         if (!gLocaleProfiles)
             return NS_ERROR_OUT_OF_MEMORY;

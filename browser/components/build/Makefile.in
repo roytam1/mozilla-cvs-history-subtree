@@ -17,6 +17,7 @@ REQUIRES = \
 	string \
 	autocomplete \
 	mork \
+	profile \
 	pref \
 	rdf \
 	intl \

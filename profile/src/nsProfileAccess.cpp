@@ -115,6 +115,12 @@ nsProfileAccess::nsProfileAccess()
     m4xProfilesAdded     =  PR_FALSE;
     mStartWithLastProfile = PR_FALSE;
     mProfiles            =  new nsVoidArray();
+
+    // Get the profile registry path
+    NS_GetSpecialDirectory(NS_APP_APPLICATION_REGISTRY_FILE, getter_AddRefs(mNewRegFile));
+
+    // Read the data into internal data structure....
+    FillProfileInfo(mNewRegFile);
 }
 
 // On the way out, close the registry if it is
@@ -124,25 +130,6 @@ nsProfileAccess::~nsProfileAccess()
     // Release all resources.
     mNewRegFile = nsnull;
     FreeProfileMembers(mProfiles);
-}
-
-nsresult
-nsProfileAccess::Init()
-{
-    // Get the profile registry path
-    NS_GetSpecialDirectory(NS_APP_APPLICATION_REGISTRY_FILE, getter_AddRefs(mNewRegFile));
-
-    // Read the data into internal data structure....
-    return FillProfileInfo(mNewRegFile);
-}
-
-nsresult
-nsProfileAccess::Init(nsIFile* aRegistryFile)
-{
-    mNewRegFile = aRegistryFile;
-
-    // Read the data into internal data structure....
-    return FillProfileInfo(aRegistryFile);
 }
 
 // A wrapper function to call the interface to get a platform file charset.

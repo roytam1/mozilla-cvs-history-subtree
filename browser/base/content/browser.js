@@ -283,6 +283,11 @@ function Startup()
       }
     }
   }
+
+  // Certain kinds of automigration rely on this notification to complete their
+  // tasks BEFORE the browser window is shown.   
+  var obs = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
+  obs.notifyObservers(null, "browser-window-before-show", "");
   
   setTimeout(delayedStartup, 0);
 }

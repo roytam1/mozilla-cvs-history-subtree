@@ -38,12 +38,13 @@
 #include "nsCOMPtr.h"
 #include "nsCRT.h"
 #include "nsBrowserCompsCID.h"
+#include "nsIBookmarksService.h"
 #include "nsIBrowserProfileMigrator.h"
 #include "nsIComponentManager.h"
 #include "nsIDOMWindowInternal.h"
+#include "nsIObserverService.h"
 #include "nsIServiceManager.h"
 #include "nsISupportsArray.h"
-#include "nsISupportsPrimitives.h"
 #include "nsIWindowWatcher.h"
 #include "nsProfileMigrator.h"
 #include "nsReadableUtils.h"
@@ -60,16 +61,60 @@
 NS_IMETHODIMP
 nsProfileMigrator::Migrate()
 {
-  nsCOMPtr<nsISupportsString> key;
-  GetDefaultBrowserMigratorKey(getter_AddRefs(mMigrator), getter_AddRefs(key));
+  PRBool needsActiveProfile = PR_TRUE;
+  GetDefaultBrowserMigratorKey(getter_AddRefs(mMigrator), 
+                               getter_AddRefs(mSourceKey),
+                               &needsActiveProfile);
 
-  if (key && mMigrator) {
+  nsresult rv = NS_OK;
+  if (!needsActiveProfile)
+    rv = OpenMigrationWizard();
+  else {
+    nsCOMPtr<nsIObserverService> obs(do_GetService("@mozilla.org/observer-service;1"));
+    rv = obs->AddObserver(this, "browser-window-before-show", PR_FALSE);
+  }
+  return rv;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// nsIObserver
+
+NS_IMETHODIMP
+nsProfileMigrator::Observe(nsISupports* aSubject, const char* aTopic, const PRUnichar* aData)
+{
+  if (nsCRT::strcmp(aTopic, "browser-window-before-show") == 0) {
+    // Remove ourselves so we only run the migration wizard once. 
+    nsCOMPtr<nsIObserverService> obs(do_GetService("@mozilla.org/observer-service;1"));
+    obs->RemoveObserver(this, "browser-window-before-show");
+
+    // Spin up Bookmarks
+    nsCOMPtr<nsIBookmarksService> bms(do_GetService("@mozilla.org/browser/bookmarks-service;1"));
+    if (bms) {
+      PRBool loaded;
+      bms->ReadBookmarks(&loaded);
+    }
+
+    return OpenMigrationWizard();
+  }
+
+  return NS_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// nsProfileMigrator
+
+NS_IMPL_ISUPPORTS2(nsProfileMigrator, nsIProfileMigrator, nsIObserver)
+
+nsresult
+nsProfileMigrator::OpenMigrationWizard()
+{
+  if (mSourceKey && mMigrator) {
     // By opening the Migration FE with a supplied bpm, it will automatically
     // migrate from it. 
     nsCOMPtr<nsIWindowWatcher> ww(do_GetService(NS_WINDOWWATCHER_CONTRACTID));
     nsCOMPtr<nsISupportsArray> params;
     NS_NewISupportsArray(getter_AddRefs(params));
-    params->AppendElement(key);
+    params->AppendElement(mSourceKey);
     params->AppendElement(mMigrator);
     nsCOMPtr<nsIDOMWindow> migrateWizard;
     return ww->OpenWindow(nsnull, 
@@ -81,20 +126,6 @@ nsProfileMigrator::Migrate()
   }
   return NS_OK;
 }
-
-///////////////////////////////////////////////////////////////////////////////
-// nsIObserver
-
-NS_IMETHODIMP
-nsProfileMigrator::Observe(nsISupports* aSubject, const char* aTopic, const PRUnichar* aData)
-{
-  return NS_OK;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// nsProfileMigrator
-
-NS_IMPL_ISUPPORTS2(nsProfileMigrator, nsIProfileMigrator, nsIObserver)
 
 #ifdef XP_WIN
 typedef struct {
@@ -110,7 +141,9 @@ typedef struct {
 #endif
 
 nsresult
-nsProfileMigrator::GetDefaultBrowserMigratorKey(nsIBrowserProfileMigrator** aMigrator, nsISupportsString** aKey)
+nsProfileMigrator::GetDefaultBrowserMigratorKey(nsIBrowserProfileMigrator** aMigrator, 
+                                                nsISupportsString** aKey,
+                                                PRBool* aNeedsActiveProfile)
 {
   *aMigrator = nsnull;
   *aKey = nsnull;
@@ -179,22 +212,27 @@ nsProfileMigrator::GetDefaultBrowserMigratorKey(nsIBrowserProfileMigrator** aMig
             nsCOMPtr<nsISupportsString> key(do_CreateInstance("@mozilla.org/supports-string;1"));
             nsCOMPtr<nsIBrowserProfileMigrator> bpm;
             if (!nsCRT::strcasecmp((char*)internalName, INTERNAL_NAME_IEXPLORE)) {
+              *aNeedsActiveProfile = PR_TRUE;
               key->SetData(NS_LITERAL_STRING("ie"));
               bpm = do_CreateInstance(NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "ie");
             }
             else if (!nsCRT::strcasecmp((char*)internalName, INTERNAL_NAME_SEAMONKEY)) {
+              *aNeedsActiveProfile = PR_FALSE;
               key->SetData(NS_LITERAL_STRING("seamonkey"));
               bpm = do_CreateInstance(NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "seamonkey");
             }
             else if (!nsCRT::strcasecmp((char*)internalName, INTERNAL_NAME_DOGBERT)) {
+              *aNeedsActiveProfile = PR_FALSE;
               key->SetData(NS_LITERAL_STRING("dogbert"));
               bpm = do_CreateInstance(NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "dogbert");
             }
             else if (!nsCRT::strcasecmp((char*)internalName, INTERNAL_NAME_FIREBIRD)) {
-              key->SetData(NS_LITERAL_STRING("opera"));
-              bpm = do_CreateInstance(NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "seamonkey");
+              *aNeedsActiveProfile = PR_TRUE;
+              key->SetData(NS_LITERAL_STRING("ie"));
+              bpm = do_CreateInstance(NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "ie");
             }
             else if (!nsCRT::strcasecmp((char*)internalName, INTERNAL_NAME_OPERA)) {
+              *aNeedsActiveProfile = PR_TRUE;
               key->SetData(NS_LITERAL_STRING("opera"));
               bpm = do_CreateInstance(NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "opera");
             }
