@@ -71,8 +71,8 @@ public:
                     nsHTMLReflowMetrics& aMetrics,
                     const nsHTMLReflowState& aReflowState,
                     nsReflowStatus& aStatus);
-  virtual nscoord GetMinWidth();
-  virtual nscoord GetPrefWidth();
+  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
+  virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
 
   // nsBulletFrame
   PRInt32 SetListItemOrdinal(PRInt32 aNextOrdinal, PRBool* aChanged);

@@ -894,7 +894,7 @@ public:
    * Note that many frames will cache the result of this function call
    * unless MarkIntrinsicWidthsDirty is called.
    */
-  virtual nscoord GetMinWidth() = 0;
+  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext) = 0;
 
   /**
    * Get the intrinsic width of the frame.
@@ -909,7 +909,7 @@ public:
    * Note that many frames will cache the result of this function call
    * unless MarkIntrinsicWidthsDirty is called.
    */
-  virtual nscoord GetPrefWidth() = 0;
+  virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext) = 0;
 
   /**
    * Pre-reflow hook. Before a frame is reflowed this method will be called.

@@ -2074,14 +2074,14 @@ nsFrame::MarkIntrinsicWidthsDirty()
 }
 
 virtual nscoord
-nsFrame::GetMinWidth()
+nsFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
   NS_NOTREACHED("frame didn't implement GetMinWidth");
   return 0;
 }
 
 virtual nscoord
-nsFrame::GetPrefWidth()
+nsFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
   NS_NOTREACHED("frame didn't implement GetPrefWidth");
   return 0;

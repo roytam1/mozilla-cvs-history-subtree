@@ -473,7 +473,8 @@ static nscoord GetCoord(const nsStyleCoord& aCoord, nscoord aIfNotCoord)
 }
 
 /* static */ nscoord
-nsLayoutUtils::IntrinsicForContainer(nsIFrame *aFrame,
+nsLayoutUtils::IntrinsicForContainer(nsIRenderingContext *aRenderingContext,
+                                     nsIFrame *aFrame,
                                      IntrinsicWidthType aType)
 {
   NS_PRECONDITION(aFrame, "null frame");
@@ -490,9 +491,9 @@ nsLayoutUtils::IntrinsicForContainer(nsIFrame *aFrame,
       result = styleWidth.GetCoordValue();
     } else {
       if (aType == MIN_WIDTH)
-        result = aFrame->GetMinWidth();
+        result = aFrame->GetMinWidth(aRenderingContext);
       else
-        result = aFrame->GetPrefWidth();
+        result = aFrame->GetPrefWidth(aRenderingContext);
     }
 
     if (result > max)

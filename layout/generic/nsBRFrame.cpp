@@ -74,8 +74,8 @@ public:
                     nsHTMLReflowMetrics& aDesiredSize,
                     const nsHTMLReflowState& aReflowState,
                     nsReflowStatus& aStatus);
-  virtual nscoord GetMinWidth();
-  virtual nscoord GetPrefWidth();
+  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
+  virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
   virtual nsIAtom* GetType() const;
 protected:
   virtual ~BRFrame();
@@ -207,13 +207,13 @@ BRFrame::Reflow(nsPresContext* aPresContext,
 }
 
 /* virtual */ nscoord
-BRFrame::GetMinWidth()
+BRFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
   return 0;
 }
 
 /* virtual */ nscoord
-BRFrame::GetPrefWidth()
+BRFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
   return 0;
 }

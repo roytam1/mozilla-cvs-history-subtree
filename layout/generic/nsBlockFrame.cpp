@@ -551,7 +551,7 @@ nsBlockFrame::MarkIntrinsicWidthsDirty()
 }
 
 /* virtual */ nscoord
-nsBlockFrame::GetMinWidth()
+nsBlockFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
   if (mMinWidth != NS_INTRINSIC_WIDTH_UNKNOWN)
     return mMinWidth;
@@ -565,8 +565,8 @@ nsBlockFrame::GetMinWidth()
   {
     nscoord line_result;
     if (line->IsBlock()) {
-      line_result = nsLayoutUtils::IntrinsicForContainer(line->mFirstChild,
-                        nsLayoutUtils::MIN_WIDTH);
+      line_result = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
+                        line->mFirstChild, nsLayoutUtils::MIN_WIDTH);
     } else {
       // XXX WRITE ME
       // Refactor nsLineLayout::VerticalAlignLine's computation of
@@ -580,7 +580,7 @@ nsBlockFrame::GetMinWidth()
 }
 
 /* virtual */ nscoord
-nsBlockFrame::GetPrefWidth()
+nsBlockFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
   if (mPrefWidth != NS_INTRINSIC_WIDTH_UNKNOWN)
     return mPrefWidth;
@@ -594,8 +594,8 @@ nsBlockFrame::GetPrefWidth()
   {
     nscoord line_result;
     if (line->IsBlock()) {
-      line_result = nsLayoutUtils::IntrinsicForContainer(line->mFirstChild,
-                        nsLayoutUtils::PREF_WIDTH);
+      line_result = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
+                        line->mFirstChild, nsLayoutUtils::PREF_WIDTH);
     } else {
       // XXX WRITE ME
     }

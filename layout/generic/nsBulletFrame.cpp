@@ -1520,7 +1520,7 @@ nsBulletFrame::Reflow(nsPresContext* aPresContext,
 }
 
 /* virtual */ nscoord
-nsBulletFrame::GetMinWidth()
+nsBulletFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
   nsHTMLReflowMetrics metrics;
   GetDesiredSize(GetPresContext(), aRenderingContext, metrics);
@@ -1528,7 +1528,7 @@ nsBulletFrame::GetMinWidth()
 }
 
 /* virtual */ nscoord
-nsBulletFrame::GetPrefWidth()
+nsBulletFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
   nsHTMLReflowMetrics metrics;
   GetDesiredSize(GetPresContext(), aRenderingContext, metrics);

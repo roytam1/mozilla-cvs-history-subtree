@@ -198,8 +198,8 @@ public:
   virtual PRBool IsSelfEmpty();
 
   virtual void MarkIntrinsicWidthsDirty();
-  virtual nscoord GetMinWidth();
-  virtual nscoord GetPrefWidth();
+  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
+  virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
 
   NS_IMETHOD Reflow(nsPresContext*          aPresContext,
                     nsHTMLReflowMetrics&     aDesiredSize,

@@ -958,11 +958,11 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
           mComputedWidth = NS_INTRINSICSIZE;
         } else {
           // The width is shrink-to-fit
-          nscoord prefWidth = frame->GetPrefWidth();
+          nscoord prefWidth = frame->GetPrefWidth(rendContext);
           if (prefWidth < availWidth) {
             mComputedWidth = prefWidth;
           } else {
-            nscoord minWidth = frame->GetMinWidth();
+            nscoord minWidth = frame->GetMinWidth(rendContext);
             mComputedWidth = PR_MAX(minWidth, availWidth);
           }
           AdjustComputedWidth(PR_FALSE);
@@ -1620,11 +1620,11 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
                              mComputedMargin.right;
         if (availWidth < 0)
           availWidth = 0;
-        nscoord prefWidth = frame->GetPrefWidth();
+        nscoord prefWidth = frame->GetPrefWidth(rendContext);
         if (prefWidth < availWidth) {
           mComputedWidth = prefWidth;
         } else {
-          nscoord minWidth = frame->GetMinWidth();
+          nscoord minWidth = frame->GetMinWidth(rendContext);
           mComputedWidth = PR_MAX(minWidth, availWidth);
         }
       } else {
