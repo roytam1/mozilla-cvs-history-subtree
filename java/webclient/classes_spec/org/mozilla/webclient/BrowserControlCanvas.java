@@ -56,7 +56,7 @@ import java.awt.*;
 
  * @see	org.mozilla.webclient.win32.Win32BrowserControlCanvas
 
- * @see	org.mozilla.webclient.motif.MotifBrowserControlCanvas
+ * @see	org.mozilla.webclient.gtk.GtkBrowserControlCanvas
 
  */
 

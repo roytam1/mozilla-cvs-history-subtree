@@ -197,7 +197,7 @@ public static void deleteBrowserControl(BrowserControl toDelete)
  * figures out the proper name for the class that is the
  * BrowserControlCanvas. 
 
- * @return  "org.mozilla.webclient.wrapper_native.win32.Win32BrowserControlCanvas" or "org.mozilla.webclient.wrapper_native.motif.MotifBrowserControlCanvas"
+ * @return  "org.mozilla.webclient.wrapper_native.win32.Win32BrowserControlCanvas" or "org.mozilla.webclient.wrapper_native.gtk.GtkBrowserControlCanvas"
 
  */
 
@@ -225,7 +225,7 @@ private static String determinePlatformCanvasClassName()
            result = "org.mozilla.webclient.wrapper_native.win32.Win32BrowserControlCanvas";
        }
        else {
-           result = "org.mozilla.webclient.wrapper_native.motif.MotifBrowserControlCanvas";
+           result = "org.mozilla.webclient.wrapper_native.gtk.GtkBrowserControlCanvas";
        }
     }
     
