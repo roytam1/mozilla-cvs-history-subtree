@@ -3247,12 +3247,12 @@ nsBookmarksService::ParseFavoritesFolder(nsIFile* aDirectory, nsIRDFResource* aP
     nsCOMPtr<nsIFileURL> fileURL(do_QueryInterface(uri));
     fileURL->SetFile(currFile);
 
-    PRBool isDir = PR_FALSE;
-    currFile->IsDirectory(&isDir);
-    if (isDir) {
       nsXPIDLString bookmarkName;
       currFile->GetUnicodeLeafName(getter_Copies(bookmarkName));
 
+    PRBool isDir = PR_FALSE;
+    currFile->IsDirectory(&isDir);
+    if (isDir) {
       nsCOMPtr<nsIRDFResource> folder;
       rv = CreateFolder(bookmarkName.get(), aParentResource, getter_AddRefs(folder));
       if (NS_FAILED(rv)) 
@@ -3280,12 +3280,11 @@ nsBookmarksService::ParseFavoritesFolder(nsIFile* aDirectory, nsIRDFResource* aP
 
       // convert baseName to UCS-2 w/ ASCII chars unescaped; 
       // non-ASCII escaped chars remain escaped.
-      nsCAutoString buf;
-      NS_ConvertUTF8toUCS2 bookmarkName(
-                           NS_UnescapeURL(baseName, esc_OnlyASCII, buf));
-
+      nsAutoString name(Substring(bookmarkName, 0, 
+                                  bookmarkName.Length() - extension.Length() - 1));
+      
       nsCOMPtr<nsIRDFResource> bookmark;
-      rv = CreateBookmark(bookmarkName.get(), url.get(), aParentResource, getter_AddRefs(bookmark));
+      rv = CreateBookmark(name.get(), url.get(), aParentResource, getter_AddRefs(bookmark));
       if (NS_FAILED(rv)) 
         continue;
     }
