@@ -153,7 +153,7 @@ nsDirectoryService::GetCurrentProcessDirectory(nsILocalFile** aFile)
 
 #ifdef XP_WIN
     char buf[MAX_PATH];
-    if ( ::GetModuleFileName(0, buf, sizeof(buf)) ) {
+    if ( ::GetModuleFileNameA(0, buf, sizeof(buf)) ) {
         // chop of the executable name by finding the rightmost backslash
         char* lastSlash = PL_strrchr(buf, '\\');
         if (lastSlash)
@@ -163,7 +163,6 @@ nsDirectoryService::GetCurrentProcessDirectory(nsILocalFile** aFile)
         *aFile = localFile;
         return NS_OK;
     }
-
 #elif defined(XP_MAC)
     // get info for the the current process to determine the directory
     // its located in

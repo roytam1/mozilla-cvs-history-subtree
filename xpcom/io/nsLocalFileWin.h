@@ -44,7 +44,9 @@ DEFINE_OLEGUID(IID_IPersistFile, 0x0000010BL, 0, 0);
 
 #include "shlobj.h"
 
+#if !defined(WINCE)
 #include <sys/stat.h>
+#endif
 
 class nsLocalFile : public nsILocalFile
 {

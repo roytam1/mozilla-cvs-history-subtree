@@ -38,12 +38,15 @@
 //	This file is included by nsFileSpec.cp, and includes the Windows-specific
 //	implementations.
 
+#if !defined(WINCE)
 #include <sys/stat.h>
 #include <direct.h>
+#endif
 #include <limits.h>
 #include <stdlib.h>
 #include "prio.h"
 #include "nsError.h"
+#include "prlog.h"
 
 #include "windows.h"
 
@@ -83,6 +86,12 @@ void nsFileSpecHelpers::Canonify(nsSimpleCharString& ioPath, PRBool inMakeDirs)
         nsFileSpecHelpers::NativeToUnix(unixStylePath);
         nsFileSpecHelpers::MakeAllDirectories((const char*)unixStylePath, mode);
     }
+
+    //
+    // WINCE uses full paths all the time.
+    // This may break stuff, may need revisitation rights.
+    //
+#if !defined(WINCE)
     char buffer[_MAX_PATH];
     errno = 0;
     *buffer = '\0';
@@ -95,6 +104,7 @@ void nsFileSpecHelpers::Canonify(nsSimpleCharString& ioPath, PRBool inMakeDirs)
 			return;
 	}
     ioPath = canonicalPath;
+#endif
 } // nsFileSpecHelpers::Canonify
 
 //----------------------------------------------------------------------------------------
@@ -224,45 +234,75 @@ char* nsFileSpec::GetLeafName() const
 PRBool nsFileSpec::Exists() const
 //----------------------------------------------------------------------------------------
 {
+#if !defined(WINCE)
 	struct stat st;
 	return !mPath.IsEmpty() && 0 == stat(nsNSPRPath(*this), &st); 
+#else
+	return !mPath.IsEmpty() && PR_SUCCESS == PR_Access(nsNSPRPath(*this), PR_ACCESS_EXISTS); 
+#endif
 } // nsFileSpec::Exists
 
 //----------------------------------------------------------------------------------------
 void nsFileSpec::GetModDate(TimeStamp& outStamp) const
 //----------------------------------------------------------------------------------------
 {
+#if !defined(WINCE)
 	struct stat st;
     if (!mPath.IsEmpty() && stat(nsNSPRPath(*this), &st) == 0) 
         outStamp = st.st_mtime; 
     else
         outStamp = 0;
+#else
+    PRFileInfo prfi;
+    if (!mPath.IsEmpty() && PR_SUCCESS == PR_GetFileInfo(nsNSPRPath(*this), &prfi)) 
+        outStamp = (TimeStamp)(prfi.modifyTime / PR_USEC_PER_SEC);
+    else
+        outStamp = 0;
+#endif
 } // nsFileSpec::GetModDate
 
 //----------------------------------------------------------------------------------------
 PRUint32 nsFileSpec::GetFileSize() const
 //----------------------------------------------------------------------------------------
 {
+#if !defined(WINCE)
 	struct stat st;
     if (!mPath.IsEmpty() && stat(nsNSPRPath(*this), &st) == 0) 
         return (PRUint32)st.st_size; 
     return 0;
+#else
+    PRFileInfo prfi;
+    if (!mPath.IsEmpty() && PR_SUCCESS == PR_GetFileInfo(nsNSPRPath(*this), &prfi)) 
+        return prfi.size;
+    else
+        return 0;
+#endif
 } // nsFileSpec::GetFileSize
 
 //----------------------------------------------------------------------------------------
 PRBool nsFileSpec::IsFile() const
 //----------------------------------------------------------------------------------------
 {
+#if !defined(WINCE)
   struct stat st;
   return !mPath.IsEmpty() && 0 == stat(nsNSPRPath(*this), &st) && (_S_IFREG & st.st_mode);
+#else
+    PRFileInfo prfi;
+    return !mPath.IsEmpty() && PR_SUCCESS == PR_GetFileInfo(nsNSPRPath(*this), &prfi) && (PR_FILE_FILE == prfi.type);
+#endif
 } // nsFileSpec::IsFile
 
 //----------------------------------------------------------------------------------------
 PRBool nsFileSpec::IsDirectory() const
 //----------------------------------------------------------------------------------------
 {
+#if !defined(WINCE)
 	struct stat st;
 	return !mPath.IsEmpty() && 0 == stat(nsNSPRPath(*this), &st) && (_S_IFDIR & st.st_mode);
+#else
+    PRFileInfo prfi;
+    return !mPath.IsEmpty() && PR_SUCCESS == PR_GetFileInfo(nsNSPRPath(*this), &prfi) && (PR_FILE_DIRECTORY == prfi.type);
+#endif
 } // nsFileSpec::IsDirectory
 
 //----------------------------------------------------------------------------------------
@@ -272,7 +312,7 @@ PRBool nsFileSpec::IsHidden() const
     PRBool hidden = PR_FALSE;
     if (!mPath.IsEmpty())
     {
-        DWORD attr = GetFileAttributes(mPath);
+        DWORD attr = GetFileAttributesA(mPath);
         if (FILE_ATTRIBUTE_HIDDEN & attr)
             hidden = PR_TRUE;
     }
@@ -284,6 +324,7 @@ PRBool nsFileSpec::IsHidden() const
 PRBool nsFileSpec::IsSymlink() const
 //----------------------------------------------------------------------------------------
 {
+#if !defined(WINCE)
     HRESULT hres; 
     IShellLink* psl; 
     
@@ -323,6 +364,16 @@ PRBool nsFileSpec::IsSymlink() const
     CoUninitialize();
 
     return isSymlink;
+#else
+    WCHAR wsz[MAX_PATH];
+    WCHAR wtz[MAX_PATH];
+
+    if(MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, mPath, -1, wsz, MAX_PATH))
+    {
+        return SHGetShortcutTarget(wsz, wtz, MAX_PATH);
+    }
+    return FALSE;
+#endif
 }
 
 
@@ -335,7 +386,7 @@ nsresult nsFileSpec::ResolveSymlink(PRBool& wasSymlink)
 	if (Exists())
 		return NS_OK;
 
-
+#if !defined(WINCE)
     HRESULT hres; 
     IShellLink* psl; 
 
@@ -398,6 +449,28 @@ nsresult nsFileSpec::ResolveSymlink(PRBool& wasSymlink)
         return NS_OK;
 
     return NS_FILE_FAILURE;
+#else
+    WCHAR wsz[MAX_PATH];
+    
+    if(MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, mPath, -1, wsz, MAX_PATH))
+    {
+        WCHAR wtz[MAX_PATH];
+        wasSymlink = SHGetShortcutTarget(wsz, wtz, MAX_PATH);
+        if(FALSE != wasSymlink)
+        {
+            char wcz[MAX_PATH];
+            
+            if(WideCharToMultiByte(CP_ACP, WC_COMPOSITECHECK, wtz, -1, wcz, sizeof(wcz), NULL, NULL))
+            {
+                mPath = wcz;
+                mError = NS_OK; // ???
+                
+                return NS_OK;
+            }
+        }
+    }
+    return NS_FILE_FAILURE;
+#endif
 }
 
 
@@ -439,8 +512,13 @@ void nsFileSpec::CreateDirectory(int /*mode*/)
 //----------------------------------------------------------------------------------------
 {
 	// Note that mPath is canonical!
+#if !defined(WINCE)
 	if (!mPath.IsEmpty())
 	    mkdir(nsNSPRPath(*this));
+#else
+    if (!mPath.IsEmpty())
+        PR_MkDir(nsNSPRPath(*this), 0777);
+#endif
 } // nsFileSpec::CreateDirectory
 
 //----------------------------------------------------------------------------------------
@@ -457,11 +535,19 @@ void nsFileSpec::Delete(PRBool inRecursive) const
                     child.Delete(inRecursive);
                 }		
         }
+#if !defined(WINCE)
 	    rmdir(nsNSPRPath(*this));
+#else
+        PR_RmDir(nsNSPRPath(*this));
+#endif
     }
 	else if (!mPath.IsEmpty())
     {
+#if !defined(WINCE)
         remove(nsNSPRPath(*this));
+#else
+        PR_Delete(nsNSPRPath(*this));
+#endif
     }
 } // nsFileSpec::Delete
 
@@ -516,11 +602,11 @@ nsFileSpec::Truncate(PRInt32 aNewFileLength) const
 //----------------------------------------------------------------------------------------
 {
     DWORD status;
-    HANDLE hFile;
+    HANDLE hFile = INVALID_HANDLE_VALUE;
 
     // Leave it to Microsoft to open an existing file with a function
     // named "CreateFile".
-    hFile = CreateFile(mPath,
+    hFile = CreateFileA(mPath,
                        GENERIC_WRITE, 
                        FILE_SHARE_READ, 
                        NULL, 
@@ -590,7 +676,7 @@ nsresult nsFileSpec::CopyToDir(const nsFileSpec& inParentDirectory) const
         nsCRT::free(leafname);
         
         // CopyFile returns non-zero if succeeds
-        int copyOK = CopyFile(GetCString(), destPath, PR_TRUE);
+        int copyOK = CopyFileA(GetCString(), destPath, PR_TRUE);
         if (copyOK)
             return NS_OK;
     }
@@ -611,7 +697,7 @@ nsresult nsFileSpec::MoveToDir(const nsFileSpec& inNewParentDirectory)
         nsCRT::free(leafname);
 
         // MoveFile returns non-zero if succeeds
-        int copyOK = MoveFile(GetCString(), destPath);
+        int copyOK = MoveFileA(GetCString(), destPath);
 
         if (copyOK)
         {
@@ -629,11 +715,35 @@ nsresult nsFileSpec::Execute(const char* inArgs ) const
 {    
     if (!IsDirectory())
     {
+#if !defined(WINCE)
         nsSimpleCharString fileNameWithArgs = "\"";
         fileNameWithArgs += mPath + "\" " + inArgs;
         int execResult = WinExec( fileNameWithArgs, SW_NORMAL );     
         if (execResult > 31)
             return NS_OK;
+#else
+        WCHAR wPath[MAX_PATH];
+        if(MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, mPath, -1, wPath, sizeof(wPath) / sizeof(WCHAR)))
+        {
+            WCHAR wArgs[MAX_PATH] = { L'\0' };
+            if(NULL == inArgs || MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, inArgs, -1, wArgs, sizeof(wArgs) / sizeof(WCHAR)))
+            {
+                SHELLEXECUTEINFO execInfo;
+                
+                memset(&execInfo, 0, sizeof(execInfo));
+                
+                execInfo.cbSize = sizeof(execInfo);
+                execInfo.lpFile = wPath;
+                execInfo.lpParameters = wArgs;
+                execInfo.nShow = SW_SHOWNORMAL;
+                
+                BOOL started = ShellExecuteEx(&execInfo);
+                
+                return FALSE != started ? NS_OK : NS_FILE_FAILURE;
+            }
+        }
+
+#endif
     }
     return NS_FILE_FAILURE;
 } // nsFileSpec::Execute
@@ -643,6 +753,7 @@ nsresult nsFileSpec::Execute(const char* inArgs ) const
 PRInt64 nsFileSpec::GetDiskSpaceAvailable() const
 //----------------------------------------------------------------------------------------
 {
+#if !defined(WINCE)
     PRInt64 int64;
     
     LL_I2L(int64 , LONG_MAX);
@@ -703,6 +814,20 @@ PRInt64 nsFileSpec::GetDiskSpaceAvailable() const
         nBytes = (double)dwFreeClus*(double)dwSecPerClus*(double) dwBytesPerSec;
     }
     return (PRInt64)nBytes;
+#else
+    ULARGE_INTEGER freeBytesAvailableToCaller;
+    ULARGE_INTEGER totalNumberOfBytes;
+    ULARGE_INTEGER totalNumberOfFreeBytes;
+
+    //
+    // This will only target the object store (NULL path).
+    // There could be UNC paths to memory cards, remote UNC paths, whatever.
+    // May need to be fixed one day.
+    //
+    BOOL gotten = GetDiskFreeSpaceEx(NULL, &freeBytesAvailableToCaller, &totalNumberOfBytes, &totalNumberOfFreeBytes);
+
+    return (PRInt64)freeBytesAvailableToCaller.QuadPart;
+#endif
 }
 
 

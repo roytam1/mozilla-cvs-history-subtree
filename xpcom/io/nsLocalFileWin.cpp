@@ -36,16 +36,22 @@
 #include "nsXPIDLString.h"
 #include "nsReadableUtils.h"
 
+#if !defined(WINCE)
 #include <direct.h>
+#endif
 #include <windows.h>
 
 #include "shellapi.h"
 #include "shlguid.h"
 
+#if !defined(WINCE)
 #include  <io.h>
+#endif
 #include  <stdio.h>
 #include  <stdlib.h>
+#if !defined(WINCE)
 #include  <mbstring.h>
+#endif
 
 #include "nsXPIDLString.h"
 #include "prproces.h"
@@ -64,22 +70,27 @@ public:
     nsresult Resolve(const unsigned short* in, char* out);
 
 private:
+#if !defined(WINCE)
     PRLock*       mLock;
     IPersistFile* mPersistFile; 
     IShellLink*   mShellLink;
+#endif
 };
 
 
 ShortcutResolver::ShortcutResolver()
 {
+#if !defined(WINCE)
     mLock = nsnull;
     mPersistFile = nsnull;
     mShellLink   = nsnull;
+#endif
 }
 
 
 ShortcutResolver::~ShortcutResolver()
 {
+#if !defined(WINCE)
     if (mLock)
         PR_DestroyLock(mLock);
 
@@ -92,11 +103,13 @@ ShortcutResolver::~ShortcutResolver()
         mShellLink->Release();
 
     CoUninitialize();
+#endif
 }
 
 nsresult
 ShortcutResolver::Init()
 {
+#if !defined(WINCE)
     CoInitialize(NULL);  // FIX: we should probably move somewhere higher up during startup
 
     mLock = PR_NewLock();
@@ -116,7 +129,7 @@ ShortcutResolver::Init()
     
     if (mPersistFile == nsnull || mShellLink == nsnull)
         return NS_ERROR_FAILURE;
-
+#endif
     return NS_OK;
 }
 
@@ -124,6 +137,7 @@ ShortcutResolver::Init()
 nsresult 
 ShortcutResolver::Resolve(const unsigned short* in, char* out)
 {
+#if !defined(WINCE)
     nsAutoLock lock(mLock);
     
     // see if we can Load the path.
@@ -144,6 +158,17 @@ ShortcutResolver::Resolve(const unsigned short* in, char* out)
     if (FAILED(hres)) 
         return NS_ERROR_FAILURE;
     return NS_OK;
+#else
+        WCHAR wtz[MAX_PATH];
+        if(FALSE != SHGetShortcutTarget(in, wtz, MAX_PATH))
+        {
+            if(WideCharToMultiByte(CP_ACP, WC_COMPOSITECHECK, wtz, -1, out, MAX_PATH, NULL, NULL))
+            {
+                return NS_OK;
+            }
+        }
+    return NS_ERROR_FAILURE;
+#endif
 }
 
 static ShortcutResolver * gResolver = nsnull;
@@ -523,12 +548,19 @@ nsLocalFile::ResolvePath(const char* workingPath, PRBool resolveTerminal, char**
             // addend a slash on it since it does not come out of GetPath()
             // with one only if it is a directory.  If it is not a directory
             // and there is more to append, than we have a problem.
-            
+#if !defined(WINCE)            
             struct stat st;
             int statrv = stat(temp, &st);
             
             if (0 == statrv && (_S_IFDIR & st.st_mode))
                 strcat(temp, "\\");
+#else
+            PRFileInfo prfi;
+            PRStatus gfirv = PR_GetFileInfo(temp, &prfi);
+
+            if (PR_FAILURE != gfirv && PR_FILE_DIRECTORY == prfi.type)
+                strcat(temp, "\\");
+#endif
             
             if (slash)
             {
@@ -778,13 +810,21 @@ nsLocalFile::Create(PRUint32 type, PRUint32 attributes)
         return rv;  
     
    // create nested directories to target
+#if !defined(WINCE)
     unsigned char* slash = _mbschr((const unsigned char*) mResolvedPath.get(), '\\');
+#else
+    char* slash = strchr(mResolvedPath.get(), '\\');
+#endif
 
     if (slash)
     {
         // skip the first '\\'
         ++slash;
+#if !defined(WINCE)
         slash = _mbschr(slash, '\\');
+#else
+        slash = strchr(slash, '\\');
+#endif
     
         while (slash)
         {
@@ -796,7 +836,11 @@ nsLocalFile::Create(PRUint32 type, PRUint32 attributes)
                 }
                 *slash = '\\';
                 ++slash;
+#if !defined(WINCE)
                 slash = _mbschr(slash, '\\');
+#else
+                slash = strchr(slash, '\\');
+#endif
         }
     }
 
@@ -824,7 +868,13 @@ NS_IMETHODIMP
 nsLocalFile::Append(const char *node)
 {
     // Append only one component. Check for subdirs.
-    if (!node || (_mbschr((const unsigned char*) node, '\\') != nsnull))
+    if (!node ||
+#if !defined(WINCE)
+        (_mbschr((const unsigned char*) node, '\\') != nsnull)
+#else
+        (strchr(node, '\\') != nsnull)
+#endif
+        )
     {
         return NS_ERROR_FILE_UNRECOGNIZED_PATH;
     }
@@ -860,7 +910,11 @@ nsLocalFile::GetLeafName(char * *aLeafName)
     if(temp == nsnull)
         return NS_ERROR_FILE_UNRECOGNIZED_PATH;
 
+#if !defined(WINCE)
     const char* leaf = (const char*) _mbsrchr((const unsigned char*) temp, '\\');
+#else
+    const char* leaf = strrchr(temp, '\\');
+#endif
     
     // if the working path is just a node without any lashes.
     if (leaf == nsnull)
@@ -882,7 +936,11 @@ nsLocalFile::SetLeafName(const char * aLeafName)
         return NS_ERROR_FILE_UNRECOGNIZED_PATH;
 
     // cannot use nsCString::RFindChar() due to 0x5c problem
+#if !defined(WINCE)
     PRInt32 offset = (PRInt32) (_mbsrchr(temp, '\\') - temp);
+#else
+    PRInt32 offset = (PRInt32) (strrchr(temp, '\\') - temp);
+#endif
     if (offset)
     {
         mWorkingPath.Truncate(offset+1);

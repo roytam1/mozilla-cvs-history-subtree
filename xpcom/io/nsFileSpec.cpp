@@ -52,7 +52,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#if defined(XP_WIN)
+#if defined(XP_WIN) && !defined(WINCE)
 #include <mbstring.h>
 #endif
 
@@ -331,7 +331,7 @@ void nsSimpleCharString::LeafReplace(char inSeparator, const char* inLeafName)
         return;
     }
     char* chars = mData->mString;
-#if defined(XP_WIN) || defined(XP_OS2)
+#if (defined(XP_WIN) && !defined(WINCE)) || defined(XP_OS2)
     char* lastSeparator = (char*) _mbsrchr((const unsigned char*) chars, inSeparator);
 #else
     char* lastSeparator = strrchr(chars, inSeparator);
@@ -343,7 +343,7 @@ void nsSimpleCharString::LeafReplace(char inSeparator, const char* inLeafName)
         char savedCh = *lastSeparator;
         char *savedLastSeparator = lastSeparator;
         *lastSeparator = '\0';
-#if defined(XP_WIN) || defined(XP_OS2)
+#if (defined(XP_WIN) && !defined(WINCE)) || defined(XP_OS2)
         lastSeparator = (char*) _mbsrchr((const unsigned char*) chars, inSeparator);
 #else
         lastSeparator = strrchr(chars, inSeparator);
@@ -382,7 +382,7 @@ char* nsSimpleCharString::GetLeaf(char inSeparator) const
         return nsnull;
 
     char* chars = mData->mString;
-#if defined(XP_WIN) || defined(XP_OS2)
+#if (defined(XP_WIN) && !defined(WINCE)) || defined(XP_OS2)
     const char* lastSeparator = (const char*) _mbsrchr((const unsigned char *) chars, inSeparator);
 #else
     const char* lastSeparator = strrchr(chars, inSeparator);
@@ -399,7 +399,7 @@ char* nsSimpleCharString::GetLeaf(char inSeparator) const
 
     // So now, separator was the last character. Poke in a null instead.
     *(char*)lastSeparator = '\0'; // Should use const_cast, but Unix has old compiler.
-#if defined(XP_WIN) || defined(XP_OS2)
+#if (defined(XP_WIN) && !defined(WINCE)) || defined(XP_OS2)
     leafPointer = (const char*) _mbsrchr((const unsigned char *) chars, inSeparator);
 #else
     leafPointer = strrchr(chars, inSeparator);
