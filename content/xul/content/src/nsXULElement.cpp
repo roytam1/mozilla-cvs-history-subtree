@@ -98,7 +98,7 @@ static const char kXULNameSpaceURI[] = XUL_NAMESPACE_URI;
 static const char kRDFNameSpaceURI[] = RDF_NAMESPACE_URI;
 // End of XUL interface includes
 
-////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------
 
 static NS_DEFINE_IID(kIContentIID,                NS_ICONTENT_IID);
 static NS_DEFINE_IID(kIDOMElementIID,             NS_IDOMELEMENT_IID);
@@ -128,7 +128,7 @@ static NS_DEFINE_CID(kXULPopupListenerCID, NS_XULPOPUPLISTENER_CID);
 
 static NS_DEFINE_CID(kXULControllersCID,          NS_XULCONTROLLERS_CID);
 
-////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------
 
 struct XULBroadcastListener
 {
@@ -212,7 +212,7 @@ struct XULBroadcastListener
   }
 };
 
-////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------
 
 nsrefcnt             nsXULElement::gRefCnt;
 nsIRDFService*       nsXULElement::gRDFService;
@@ -240,7 +240,7 @@ nsIAtom*             nsXULElement::kTreeRowAtom;
 nsIAtom*             nsXULElement::kEditorAtom;
 nsIAtom*             nsXULElement::kWindowAtom;
 
-////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------
 // nsXULElement
 
 
@@ -428,7 +428,7 @@ nsXULElement::Create(PRInt32 aNameSpaceID, nsIAtom* aTag, nsIContent** aResult)
     return NS_OK;
 }
 
-////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------
 // nsISupports interface
 
 NS_IMPL_ADDREF(nsXULElement);
@@ -517,7 +517,7 @@ nsXULElement::QueryInterface(REFNSIID iid, void** result)
     return NS_OK;
 }
 
-////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------
 // nsIDOMNode interface
 
 NS_IMETHODIMP
@@ -907,7 +907,7 @@ nsXULElement::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
 }
 
 
-////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------
 // nsIDOMElement interface
 
 NS_IMETHODIMP
@@ -1089,7 +1089,7 @@ nsXULElement::Normalize()
 }
 
 
-////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------
 // nsIXMLContent interface
 
 NS_IMETHODIMP
@@ -1181,7 +1181,7 @@ nsXULElement::SetNameSpaceID(PRInt32 aNameSpaceID)
 }
 
 
-////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------
 // nsIXULContent interface
 
 NS_IMETHODIMP
@@ -1296,7 +1296,7 @@ nsXULElement::ForceElementToOwnResource(PRBool aForce)
     return NS_OK;
 }
 
-////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------
 // nsIDOMEventReceiver interface
 
 NS_IMETHODIMP
@@ -1386,7 +1386,7 @@ nsXULElement::GetNewListenerManager(nsIEventListenerManager **aResult)
 
 
 
-////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------
 // nsIScriptObjectOwner interface
 
 NS_IMETHODIMP 
@@ -1450,7 +1450,7 @@ nsXULElement::SetScriptObject(void *aScriptObject)
 }
 
 
-////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------
 // nsIJSScriptObject interface
 
 PRBool
@@ -1510,7 +1510,7 @@ nsXULElement::Finalize(JSContext *aContext)
 }
 
 
-////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------
 // nsIContent interface
 //
 //   Just to say this again (I said it in the header file), none of
@@ -2624,7 +2624,7 @@ nsXULElement::GetRangeList(nsVoidArray*& aResult) const
 }
 
 
-////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------
 // nsIDOMXULElement interface
 
 NS_IMETHODIMP
@@ -2791,7 +2791,7 @@ nsXULElement::SetDatabase(nsIRDFCompositeDataSource* aDatabase)
 }
 
 
-////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------
 // Implementation methods
 
 nsresult
@@ -3396,7 +3396,7 @@ nsXULElement::ParseNumericValue(const nsString& aString,
   return PR_FALSE;
 }
 
-////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------
 
 nsresult
 nsXULElement::EnsureSlots()
@@ -3435,13 +3435,11 @@ nsXULElement::EnsureSlots()
 
         // Create a CBufDescriptor to avoid copying the attribute's
         // value just to set it.
-        CBufDescriptor desc(proto->mValue, PR_FALSE, nsCRT::strlen(proto->mValue), 0);
-
         nsXULAttribute* attr;
         rv = nsXULAttribute::Create(NS_STATIC_CAST(nsIStyledContent*, this),
                                     proto->mNameSpaceID,
                                     proto->mName,
-                                    nsAutoString(desc),
+                                    proto->mValue,
                                     &attr);
 
         if (NS_FAILED(rv)) return rv;
@@ -3453,7 +3451,7 @@ nsXULElement::EnsureSlots()
     return NS_OK;
 }
 
-////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------
 
 nsXULElement::Slots::Slots(nsXULElement* aElement)
     : mElement(aElement),
@@ -3488,3 +3486,21 @@ nsXULElement::Slots::~Slots()
     // Delete the aggregated interface, if one exists.
     delete mInnerXULElement;
 }
+
+
+//----------------------------------------------------------------------
+
+nsresult
+nsXULPrototypeElement::GetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName, nsString& aValue)
+{
+    for (PRInt32 i = 0; i < mNumAttributes; ++i) {
+        if ((mAttributes[i].mName.get() == aName) &&
+            (mAttributes[i].mNameSpaceID == aNameSpaceID)) {
+            aValue = mAttributes[i].mValue;
+            return aValue.Length() ? NS_CONTENT_ATTR_HAS_VALUE : NS_CONTENT_ATTR_NO_VALUE;
+        }
+        
+    }
+    return NS_CONTENT_ATTR_NOT_THERE;
+}
+

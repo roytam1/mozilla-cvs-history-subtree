@@ -49,17 +49,17 @@
 #include "nsIStyledContent.h"
 #include "nsIXMLContent.h"
 #include "nsIXULContent.h"
+#include "nsXULAttributes.h"
 
-class nsClassList;
 class nsIDocument;
 class nsIRDFService;
 class nsISupportsArray;
 class nsIXULContentUtils;
+class nsIXULPrototypeDocument;
 class nsRDFDOMNodeList;
 class nsString;
 class nsVoidArray;
 class nsXULAttributes;
-class nsXULPrototypeDocument;
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -69,11 +69,14 @@ class nsXULPrototypeDocument;
 
  */
 
-struct nsXULPrototypeAttribute
+class nsXULPrototypeAttribute
 {
-    PRInt32     mNameSpaceID;
-    nsIAtom*    mName;
-    PRUnichar*  mValue;
+public:
+    nsXULPrototypeAttribute() : mNameSpaceID(kNameSpaceID_Unknown) {}
+
+    PRInt32           mNameSpaceID;
+    nsCOMPtr<nsIAtom> mName;
+    nsString          mValue;
 };
 
 
@@ -86,42 +89,79 @@ struct nsXULPrototypeAttribute
 
  */
 
-struct nsXULPrototypeNode
+class nsXULPrototypeElement;
+
+class nsXULPrototypeNode
 {
+public:
     enum Type { eType_Element, eType_Script, eType_Text };
+
     Type                     mType;
     PRInt32                  mLineNo;
+    nsXULPrototypeElement*   mParent;             // [WEAK]
+
+protected:
+    nsXULPrototypeNode(Type aType, PRInt32 aLineNo)
+        : mType(aType), mLineNo(aLineNo), mParent(nsnull) {}
+
+    virtual ~nsXULPrototypeNode() {}
 };
 
-struct nsXULPrototypeElement : public nsXULPrototypeNode
+class nsXULPrototypeElement : public nsXULPrototypeNode
 {
-    nsXULPrototypeDocument*  mDocument;           // [OWNER] because doc is refcounted
+public:
+    nsXULPrototypeElement(PRInt32 aLineNo)
+        : nsXULPrototypeNode(eType_Element, aLineNo),
+          mDocument(nsnull),
+          mNumChildren(0),
+          mChildren(nsnull),
+          mNumAttributes(0),
+          mAttributes(nsnull),
+          mClassList(nsnull)
+    {}
+
+    virtual ~nsXULPrototypeElement() {
+        delete[] mAttributes;
+        delete mClassList;
+        delete[] mChildren; // XXX
+    }
+
+
+    nsIXULPrototypeDocument* mDocument;           // [WEAK] because doc is refcounted
     PRInt32                  mNumChildren;
     nsXULPrototypeNode**     mChildren;           // [OWNER]
 
-    nsINameSpace*            mNameSpace;          // [OWNER]
-    nsIAtom*                 mNameSpacePrefix;    // [OWNER]
+    nsCOMPtr<nsINameSpace>   mNameSpace;          // [OWNER]
+    nsCOMPtr<nsIAtom>        mNameSpacePrefix;    // [OWNER]
     PRInt32                  mNameSpaceID;
-    nsIAtom*                 mTag;                // [OWNER]
+    nsCOMPtr<nsIAtom>        mTag;                // [OWNER]
 
     PRInt32                  mNumAttributes;
     nsXULPrototypeAttribute* mAttributes;         // [OWNER]
 
-    nsIStyleRule*            mInlineStyleRule;    // [OWNER]
+    nsCOMPtr<nsIStyleRule>   mInlineStyleRule;    // [OWNER]
     nsClassList*             mClassList;
+
+    nsresult GetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName, nsString& aValue);
 };
 
-struct nsXULPrototypeScript : public nsXULPrototypeNode
+class nsXULPrototypeScript : public nsXULPrototypeNode
 {
-    char*                    mSrcURI;
-    PRUnichar*               mInlineScript;
-    PRInt32                  mLength;
+public:
+    nsXULPrototypeScript(PRInt32 aLineNo)
+        : nsXULPrototypeNode(eType_Script, aLineNo) {}
+
+    nsCOMPtr<nsIURI>         mSrcURI;
+    nsString                 mInlineScript;
 };
 
-struct nsXULPrototypeText : public nsXULPrototypeNode
+class nsXULPrototypeText : public nsXULPrototypeNode
 {
-    PRUnichar*               mValue;
-    PRInt32                  mLength;
+public:
+    nsXULPrototypeText(PRInt32 aLineNo)
+        : nsXULPrototypeNode(eType_Text, aLineNo) {}
+
+    nsString                 mValue;
 };
 
 

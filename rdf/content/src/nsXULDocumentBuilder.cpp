@@ -19,26 +19,36 @@
 
 #include "nsXULDocument.h"
 #include "nsIComponentManager.h"
+#include "nsIDOMEventListener.h"
+#include "nsIFormControl.h"
 #include "nsIHTMLContent.h"
 #include "nsIHTMLElementFactory.h"
+#include "nsIRDFContentModelBuilder.h"
+#include "nsIRDFService.h"
 #include "nsIScriptContextOwner.h"
 #include "nsITextContent.h"
 #include "nsIUnicharStreamLoader.h"
 #include "nsIXMLElementFactory.h"
 #include "nsIXULContentUtils.h"
+#include "nsIXULKeyListener.h"
 #include "nsIXULPrototypeCache.h"
 #include "nsLayoutCID.h"
 #include "nsNeckoUtil.h"
 #include "nsXPIDLString.h"
 #include "nsXULElement.h"
+#include "nsRDFCID.h"
 #include "prlog.h"
+#include "rdfutil.h"
 
 //----------------------------------------------------------------------
 //
 // CIDs
 //
 
+static NS_DEFINE_CID(kRDFCompositeDataSourceCID, NS_RDFCOMPOSITEDATASOURCE_CID);
 static NS_DEFINE_CID(kTextNodeCID,               NS_TEXTNODE_CID);
+static NS_DEFINE_CID(kXULKeyListenerCID,         NS_XULKEYLISTENER_CID);
+static NS_DEFINE_CID(kXULTemplateBuilderCID,     NS_XULTEMPLATEBUILDER_CID);
 
 //----------------------------------------------------------------------
 //
@@ -199,6 +209,39 @@ nsXULDocument::Builder::Start()
     rv = mContextStack.Push(proto, root);
     if (NS_FAILED(rv)) return rv;
 
+    // Create the document's "hidden form" element which will wrap all
+    // HTML form elements that turn up.
+    nsCOMPtr<nsIHTMLContent> form;
+    rv = gHTMLElementFactory->CreateInstanceByTag(nsAutoString("form"),
+                                                  getter_AddRefs(form));
+    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create form element");
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsIDOMHTMLFormElement> htmlFormElement = do_QueryInterface(form);
+    NS_ASSERTION(htmlFormElement != nsnull, "not an nSIDOMHTMLFormElement");
+    if (! htmlFormElement)
+        return NS_ERROR_UNEXPECTED;
+
+    rv = mDocument->SetForm(htmlFormElement);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to set form element");
+    if (NS_FAILED(rv)) return NS_ERROR_UNEXPECTED;
+
+    nsCOMPtr<nsIContent> content = do_QueryInterface(form);
+    NS_ASSERTION(content != nsnull, "not an nsIContent");
+    if (! content)
+        return NS_ERROR_UNEXPECTED;
+
+    // XXX Would like to make this anonymous, but still need the
+    // form's frame to get built. For now make it explicit.
+    rv = root->InsertChildAt(content, 0, PR_FALSE); 
+    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to add anonymous form element");
+    if (NS_FAILED(rv)) return rv;
+
+    // Add the root element to the XUL document's ID-to-element map.
+    rv = mDocument->AddElementToMap(root);
+    if (NS_FAILED(rv)) return rv;
+
+    // Now build the rest of the content from the prototype
     rv = Build();
     if (NS_FAILED(rv)) return rv;
     
@@ -277,7 +320,9 @@ nsXULDocument::Builder::Build()
                     if (NS_FAILED(rv)) return rv;
                 }
                 else {
-                    // We're at the root of an overlay document.
+                    // We're at the root of an overlay document. Just
+                    // fall through and allow the context stack 'push'
+                    // to happen normally.
                 }
 
                 // If it has children, push the element onto the context
@@ -285,6 +330,26 @@ nsXULDocument::Builder::Build()
                 if (protoele->mNumChildren > 0) {
                     rv = mContextStack.Push(protoele, child);
                     if (NS_FAILED(rv)) return rv;
+                }
+
+                // Check for a 'datasources' tag, in which case we'll
+                // create a template builder.
+                if (child) {
+                    nsAutoString datasources;
+                    rv = element->GetAttribute(kNameSpaceID_None, kDataSourcesAtom, datasources);
+
+                    if (rv == NS_CONTENT_ATTR_HAS_VALUE) {
+                        nsCOMPtr<nsIRDFContentModelBuilder> builder;
+                        rv = CreateTemplateBuilder(element, datasources, &builder);
+                        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to add datasources");
+                        if (NS_SUCCEEDED(rv)) {
+                            // Force construction of immediate template sub-content _now_.
+                            rv = builder->CreateContents(element);
+                            NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create template contents");
+                        }
+                    }
+
+                    if (NS_FAILED(rv)) return NS_OK;
                 }
             }
             break;
@@ -295,18 +360,13 @@ nsXULDocument::Builder::Build()
                 nsXULPrototypeScript* scriptproto =
                     NS_REINTERPRET_CAST(nsXULPrototypeScript*, childproto);
 
-                if (scriptproto->mInlineScript) {
+                if (scriptproto->mInlineScript.Length()) {
                     // An inline script
                     nsCOMPtr<nsIURI> url = dont_AddRef(mDocument->GetDocumentURL());
                     if (! url)
                         return NS_ERROR_UNEXPECTED;
 
-                    // Use CBufDescriptor to avoid copying script text
-                    CBufDescriptor desc(scriptproto->mInlineScript, PR_TRUE,
-                                        scriptproto->mLength,
-                                        scriptproto->mLength);
-
-                    rv = EvaluateScript(url, nsAutoString(desc), scriptproto->mLineNo);
+                    rv = EvaluateScript(url, scriptproto->mInlineScript, scriptproto->mLineNo);
                     if (NS_FAILED(rv)) return rv;
                 }
 
@@ -337,7 +397,10 @@ nsXULDocument::Builder::Build()
                 nsXULPrototypeText* textproto =
                     NS_REINTERPRET_CAST(nsXULPrototypeText*, childproto);
 
-                rv = text->SetText(textproto->mValue, textproto->mLength, PR_FALSE);
+                rv = text->SetText(textproto->mValue.GetUnicode(),
+                                   textproto->mValue.Length(),
+                                   PR_FALSE);
+
                 if (NS_FAILED(rv)) return rv;
 
                 nsCOMPtr<nsIContent> child = do_QueryInterface(text);
@@ -381,16 +444,10 @@ nsXULDocument::Builder::Build()
 
 
 nsresult
-nsXULDocument::Builder::LoadScript(const char* aURI, PRBool* aBlock)
+nsXULDocument::Builder::LoadScript(nsIURI* aURI, PRBool* aBlock)
 {
     // Load a transcluded script
     nsresult rv;
-
-    nsCOMPtr<nsIURI> baseurl = dont_AddRef(mDocument->GetDocumentURL());
-
-    nsCOMPtr<nsIURI> url;
-    rv = NS_NewURI(getter_AddRefs(url), aURI, baseurl);
-    if (NS_FAILED(rv)) return rv;
 
     // XXX Look in a script cache to see if we already have it
 
@@ -403,7 +460,7 @@ nsXULDocument::Builder::LoadScript(const char* aURI, PRBool* aBlock)
         // Set the current script URL so that the DoneLoadingScript()
         // call can get report the right file if there are errors in
         // the script.
-        mCurrentScriptURL = url;
+        mCurrentScriptURL = aURI;
 
         nsCOMPtr<nsILoadGroup> group;
         rv = mDocument->GetDocumentLoadGroup(getter_AddRefs(group));
@@ -412,7 +469,7 @@ nsXULDocument::Builder::LoadScript(const char* aURI, PRBool* aBlock)
         // N.B., the loader will be released in DoneLoadingScript()
         nsIUnicharStreamLoader* loader;
         rv = NS_NewUnicharStreamLoader(&loader,
-                                       url, 
+                                       aURI, 
                                        group,
                                        (nsStreamCompleteFunc)DoneLoadingScript, 
                                        this);
@@ -498,22 +555,62 @@ nsXULDocument::Builder::CreateElement(nsXULPrototypeElement* aPrototype, nsICont
         gHTMLElementFactory->CreateInstanceByTag(tagStr.GetUnicode(), getter_AddRefs(element));
         if (NS_FAILED(rv)) return rv;
 
+        rv = result->SetDocument(mDocument, PR_FALSE);
+        if (NS_FAILED(rv)) return rv;
+
         result = do_QueryInterface(element);
         if (! result)
             return NS_ERROR_UNEXPECTED;
 
         rv = AddAttributes(aPrototype, result);
         if (NS_FAILED(rv)) return rv;
+
+        nsCOMPtr<nsIFormControl> htmlformctrl = do_QueryInterface(element);
+        if (htmlformctrl) {
+            nsCOMPtr<nsIDOMHTMLFormElement> docform;
+            rv = mDocument->GetForm(getter_AddRefs(docform));
+            if (NS_FAILED(rv)) return rv;
+
+            NS_ASSERTION(docform != nsnull, "no document form");
+            if (! docform)
+                return NS_ERROR_UNEXPECTED;
+
+            htmlformctrl->SetForm(docform);
+        }
     }
     else {
         // If it's a XUL element, it'll be lightweight until somebody
         // monkeys with it.
         rv = nsXULElement::Create(aPrototype, getter_AddRefs(result));
         if (NS_FAILED(rv)) return rv;
-    }
 
-    rv = result->SetDocument(mDocument, PR_FALSE);
-    if (NS_FAILED(rv)) return rv;
+        rv = result->SetDocument(mDocument, PR_FALSE);
+        if (NS_FAILED(rv)) return rv;
+
+        // We also need to pay special attention to the keyset tag to set up a listener
+        if ((aPrototype->mNameSpaceID == kNameSpaceID_XUL) &&
+            (aPrototype->mTag == kKeysetAtom)) {
+            // Create our nsXULKeyListener and hook it up.
+            nsCOMPtr<nsIXULKeyListener> keyListener;
+            rv = nsComponentManager::CreateInstance(kXULKeyListenerCID,
+                                                    nsnull,
+                                                    NS_GET_IID(nsIXULKeyListener),
+                                                    getter_AddRefs(keyListener));
+            NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create a key listener");
+            if (NS_FAILED(rv)) return rv;
+        
+            nsCOMPtr<nsIDOMEventListener> domEventListener = do_QueryInterface(keyListener);
+            if (domEventListener) {
+                // Init the listener with the keyset node
+                nsCOMPtr<nsIDOMElement> domElement = do_QueryInterface(result);
+                keyListener->Init(domElement, mDocument);
+            
+                mDocument->AddEventListener("keypress", domEventListener, PR_TRUE); 
+                mDocument->AddEventListener("keydown",  domEventListener, PR_TRUE);  
+                mDocument->AddEventListener("keyup",    domEventListener, PR_TRUE);   
+            }
+        }
+    }
 
     *aResult = result;
     NS_ADDREF(*aResult);
@@ -569,18 +666,123 @@ nsXULDocument::Builder::AddAttributes(nsXULPrototypeElement* aPrototype, nsICont
     for (PRInt32 i = 0; i < aPrototype->mNumAttributes; ++i) {
         nsXULPrototypeAttribute* protoattr = &(aPrototype->mAttributes[i]);
 
-        PRInt32 len = nsCRT::strlen(protoattr->mValue);
-        CBufDescriptor desc(protoattr->mValue, PR_TRUE, len, len);
-
         rv = aElement->SetAttribute(protoattr->mNameSpaceID,
                                     protoattr->mName,
-                                    nsAutoString(desc),
+                                    protoattr->mValue,
                                     PR_FALSE);
         if (NS_FAILED(rv)) return rv;
     }
 
     return NS_OK;
 }
+
+
+nsresult
+nsXULDocument::Builder::CreateTemplateBuilder(nsIContent* aElement,
+                                              const nsString& aDataSources,
+                                              nsCOMPtr<nsIRDFContentModelBuilder>* aResult)
+{
+    nsresult rv;
+
+    // construct a new builder
+    nsCOMPtr<nsIRDFContentModelBuilder> builder;
+    rv = nsComponentManager::CreateInstance(kXULTemplateBuilderCID,
+                                            nsnull,
+                                            NS_GET_IID(nsIRDFContentModelBuilder),
+                                            getter_AddRefs(builder));
+    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create tree content model builder");
+    if (NS_FAILED(rv)) return rv;
+
+    rv = builder->SetRootContent(aElement);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to set builder's root content element");
+    if (NS_FAILED(rv)) return rv;
+
+    // create a database for the builder
+    nsCOMPtr<nsIRDFCompositeDataSource> db;
+    rv = nsComponentManager::CreateInstance(kRDFCompositeDataSourceCID,
+                                            nsnull,
+                                            NS_GET_IID(nsIRDFCompositeDataSource),
+                                            getter_AddRefs(db));
+
+    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to construct new composite data source");
+    if (NS_FAILED(rv)) return rv;
+
+    // Add the local store as the first data source in the db. Note
+    // that we _might_ not be able to get a local store if we haven't
+    // got a profile to read from yet.
+    nsCOMPtr<nsIRDFDataSource> localstore;
+    rv = gRDFService->GetDataSource("rdf:local-store", getter_AddRefs(localstore));
+    if (NS_SUCCEEDED(rv)) {
+        rv = db->AddDataSource(localstore);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to add local store to db");
+        if (NS_FAILED(rv)) return rv;
+    }
+
+    // Parse datasources: they are assumed to be a whitespace
+    // separated list of URIs; e.g.,
+    //
+    //     rdf:bookmarks rdf:history http://foo.bar.com/blah.cgi?baz=9
+    //
+    PRInt32 first = 0;
+
+    while(1) {
+        while (first < aDataSources.Length() && nsString::IsSpace(aDataSources.CharAt(first)))
+            ++first;
+
+        if (first >= aDataSources.Length())
+            break;
+
+        PRInt32 last = first;
+        while (last < aDataSources.Length() && !nsString::IsSpace(aDataSources.CharAt(last)))
+            ++last;
+
+        nsAutoString uri;
+        aDataSources.Mid(uri, first, last - first);
+        first = last + 1;
+
+        // A special 'dummy' datasource
+        if (uri.Equals("rdf:null"))
+            continue;
+
+        rv = rdf_MakeAbsoluteURI(mDocument->mDocumentURL, uri);
+        if (NS_FAILED(rv)) return rv;
+
+        nsCOMPtr<nsIRDFDataSource> ds;
+        rv = gRDFService->GetDataSource(nsCAutoString(uri), getter_AddRefs(ds));
+
+        if (NS_FAILED(rv)) {
+            // This is only a warning because the data source may not
+            // be accessable for any number of reasons, including
+            // security, a bad URL, etc.
+#ifdef DEBUG
+            nsCAutoString msg;
+            msg += "unable to load datasource '";
+            msg += nsCAutoString(uri);
+            msg += '\'';
+            NS_WARNING((const char*) msg);
+#endif
+            continue;
+        }
+
+        rv = db->AddDataSource(ds);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to add datasource to composite data source");
+        if (NS_FAILED(rv)) return rv;
+    }
+
+    // add it to the set of builders in use by the document
+    rv = mDocument->AddContentModelBuilder(builder);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to add builder to the document");
+    if (NS_FAILED(rv)) return rv;
+
+    rv = builder->SetDataBase(db);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to set builder's database");
+    if (NS_FAILED(rv)) return rv;
+
+    *aResult = builder;
+    return NS_OK;
+}
+
+
 
 nsresult
 nsXULDocument::Builder::Stop()

@@ -164,8 +164,10 @@ PRInt32 nsXULDocument::gRefCnt = 0;
 
 nsIAtom* nsXULDocument::kAttributeAtom;
 nsIAtom* nsXULDocument::kCommandUpdaterAtom;
+nsIAtom* nsXULDocument::kDataSourcesAtom;
 nsIAtom* nsXULDocument::kElementAtom;
 nsIAtom* nsXULDocument::kIdAtom;
+nsIAtom* nsXULDocument::kKeysetAtom;
 nsIAtom* nsXULDocument::kObservesAtom;
 nsIAtom* nsXULDocument::kOpenAtom;
 nsIAtom* nsXULDocument::kOverlayAtom;
@@ -290,8 +292,10 @@ nsXULDocument::~nsXULDocument()
     if (--gRefCnt == 0) {
         NS_IF_RELEASE(kAttributeAtom);
         NS_IF_RELEASE(kCommandUpdaterAtom);
+        NS_IF_RELEASE(kDataSourcesAtom);
         NS_IF_RELEASE(kElementAtom);
         NS_IF_RELEASE(kIdAtom);
+        NS_IF_RELEASE(kKeysetAtom);
         NS_IF_RELEASE(kObservesAtom);
         NS_IF_RELEASE(kOpenAtom);
         NS_IF_RELEASE(kOverlayAtom);
@@ -437,10 +441,10 @@ nsXULDocument::GetContentType(nsString& aContentType) const
 
 nsresult
 nsXULDocument::PrepareToLoad(nsCOMPtr<nsIParser>* created_parser,
-                               nsIContentViewerContainer* aContainer,
-                               const char* aCommand,
-                               nsIChannel* aChannel,
-                               nsILoadGroup* aLoadGroup)
+                             nsIContentViewerContainer* aContainer,
+                             const char* aCommand,
+                             nsIChannel* aChannel,
+                             nsILoadGroup* aLoadGroup)
 {
     nsresult rv;
 
@@ -483,6 +487,15 @@ nsXULDocument::PrepareToLoad(nsCOMPtr<nsIParser>* created_parser,
     rv = PrepareStyleSheets(mDocumentURL);
     if (NS_FAILED(rv)) return rv;
 
+    // Create a prototype document that we can give to the content
+    // sink.
+    nsCOMPtr<nsIXULPrototypeDocument> protodoc;
+    rv = NS_NewXULPrototypeDocument(nsnull, NS_GET_IID(nsIXULPrototypeDocument),
+                                    getter_AddRefs(protodoc));
+
+    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create prototype document");
+    if (NS_FAILED(rv)) return rv;
+
     // Create a XUL content sink, a parser, and kick off the load.
     nsCOMPtr<nsIXULContentSink> sink;
     rv = nsComponentManager::CreateInstance(kXULContentSinkCID,
@@ -492,7 +505,7 @@ nsXULDocument::PrepareToLoad(nsCOMPtr<nsIParser>* created_parser,
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create XUL content sink");
     if (NS_FAILED(rv)) return rv;
 
-    rv = sink->Init(this);
+    rv = sink->Init(protodoc);
     NS_ASSERTION(NS_SUCCEEDED(rv), "Unable to initialize datasource sink");
     if (NS_FAILED(rv)) return rv;
 
@@ -755,7 +768,7 @@ nsXULDocument::GetHeaderData(nsIAtom* aHeaderField, nsString& aData) const
 }
 
 NS_IMETHODIMP
-nsXULDocument:: SetHeaderData(nsIAtom* aheaderField, const nsString& aData)
+nsXULDocument:: SetHeaderData(nsIAtom* aHeaderField, const nsString& aData)
 {
   return NS_OK;
 }
@@ -3186,8 +3199,10 @@ nsXULDocument::Init(void)
     if (gRefCnt++ == 0) {
         kAttributeAtom      = NS_NewAtom("attribute");
         kCommandUpdaterAtom = NS_NewAtom("commandupdater");
+        kDataSourcesAtom    = NS_NewAtom("datasources");
         kElementAtom        = NS_NewAtom("element");
         kIdAtom             = NS_NewAtom("id");
+        kKeysetAtom         = NS_NewAtom("keyset");
         kObservesAtom       = NS_NewAtom("observes");
         kOpenAtom           = NS_NewAtom("open");
         kOverlayAtom        = NS_NewAtom("overlay");

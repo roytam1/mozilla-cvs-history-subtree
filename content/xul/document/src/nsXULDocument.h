@@ -438,8 +438,10 @@ protected:
 
     static nsIAtom*  kAttributeAtom;
     static nsIAtom*  kCommandUpdaterAtom;
+    static nsIAtom*  kDataSourcesAtom;
     static nsIAtom*  kElementAtom;
     static nsIAtom*  kIdAtom;
+    static nsIAtom*  kKeysetAtom;
     static nsIAtom*  kObservesAtom;
     static nsIAtom*  kOpenAtom;
     static nsIAtom*  kOverlayAtom;
@@ -589,7 +591,7 @@ protected:
          * prototype construction must 'block' until the load has
          * completed, aBlock will be set to true.
          */
-        nsresult LoadScript(const char* aURI, PRBool* aBlock);
+        nsresult LoadScript(nsIURI* aURI, PRBool* aBlock);
 
         /**
          * Evaluate the script text in aScript. aURL and aLineNo
@@ -627,6 +629,14 @@ protected:
          * The URL of the current transcluded script that is being loaded
          */
         nsCOMPtr<nsIURI> mCurrentScriptURL;
+
+        /**
+         * Create a XUL template builder on the specified node.
+         * @return The template builder.
+         */
+        nsresult CreateTemplateBuilder(nsIContent* aElement,
+                                       const nsString& aDataSources,
+                                       nsCOMPtr<nsIRDFContentModelBuilder>* aResult);
 
         /**
          * Used to resolve broadcaster references
