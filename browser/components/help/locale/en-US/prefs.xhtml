@@ -484,15 +484,44 @@ Contributors:
 
   <h3 id="certificates">Certificates</h3>
 
-  <p>The Certificates section is provisional and will be changed or removed in
-    future releases. It is not covered in this document.</p>
+  <p>Certificates help perform encryption and decryption of connections to
+    <a href="glossary.xhtml#secure_site">secure sites</a>.</p>
+
+  <p><em>Client Certificate Selection</em><br/>When a web site requests a
+    secure connection, &brandShortName; will by default automatically use
+    an appropriate certificate.  If you wish to manually choose a certificate
+    (for example, if you wish to use a certain type of encryption instead of
+    what is automatically selected), select the option "Ask Every Time" and
+    you'll be in complete control of what certificates you use while
+    browsing.</p>
+
+  <p><em>Manage Certificates</em><br/>Click the <em>Manage Certificates...</em>
+    button to view stored certificates, import new certificates, and
+    back up or delete old certificates in &brandShortName;.</p>
+
+  <p><em>Manage Security Devices</em><br/>Security devices can encrypt and
+    decrypt connections and store certificates and passwords.  If you need
+    to use a security device other than the one in &brandShortName; or need
+    to change your master password, click the <em>Manage Security
+    Devices...</em> button.</p>
 
   <h3 id="validation">Validation</h3>
 
-  <p>The Validation section is provisional and will be changed or removed in
-    future releases. It is not covered in this document.</p>
+  <p>Validation ensures that certificates used by &brandShortName; are not
+    obsolete.</p>
 
-<div class="contentsBox"><em>17 July 2004</em></div>
+  <p><em>CRL</em><br/>&brandShortName; can use CRLs (also known as Certificate
+    Revocation Lists) to ensure that your certificates are not invalid.  If you
+    need to add a CRL to &brandShortName; or wish to view information about CRLs
+    you have installed, click the <em>Manage CRLs...</em> button.</p>
+
+  <p><em>OCSP</em><br/>OCSP (Online Certificate Status Protocol) is a way to
+    validate your certificates every time they are viewed or used.
+    &brandShortName; does not use OCSP by default, but if you want to enable it,
+    you can do so here.  You will most likely only need to change this if your
+    Internet environment requires it.</p>
+
+<div class="contentsBox"><em>14 August 2004</em></div>
 <p>Copyright &copy; 2003-2004 Contributors to the Mozilla Help Viewer Project.</p>
 </body>
 </html>
