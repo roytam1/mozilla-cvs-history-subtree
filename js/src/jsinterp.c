@@ -1085,6 +1085,13 @@ js_Interpret(JSContext *cx, jsval *result)
 		  case JSTRAP_RETURN:
 		    fp->rval = rval;
 		    goto out;
+#if JS_HAS_EXCEPTIONS
+		  case JSTRAP_THROW:
+                    cx->throwing = JS_TRUE;
+                    cx->exception = rval;
+                    ok = JS_FALSE;
+		    goto out;
+#endif /* JS_HAS_EXCEPTIONS */
 		  default:;
 		}
 	    }
@@ -2517,6 +2524,13 @@ js_Interpret(JSContext *cx, jsval *result)
 	      case JSTRAP_RETURN:
 		fp->rval = rval;
 		goto out;
+#if JS_HAS_EXCEPTIONS
+	      case JSTRAP_THROW:
+                cx->throwing = JS_TRUE;
+                cx->exception = rval;
+                ok = JS_FALSE;
+	        goto out;
+#endif /* JS_HAS_EXCEPTIONS */
 	      default:;
 	    }
 	    break;
@@ -2722,6 +2736,13 @@ js_Interpret(JSContext *cx, jsval *result)
 		      case JSTRAP_RETURN:
 			fp->rval = rval;
 			goto out;
+#if JS_HAS_EXCEPTIONS
+		      case JSTRAP_THROW:
+                        cx->throwing = JS_TRUE;
+                        cx->exception = rval;
+                        ok = JS_FALSE;
+		        goto out;
+#endif /* JS_HAS_EXCEPTIONS */
 		      default:;
 		    }
 		}
