@@ -401,7 +401,7 @@ nsHttpChannel::SetupTransaction()
         requestURI = mSpec.get();
 
     // trim off the #ref portion if any...
-    char *p = strchr(requestURI, '#');
+    char *p = (char *)strchr(requestURI, '#');
     if (p) *p = 0;
 
     mRequestHead.SetVersion(nsHttpHandler::get()->DefaultVersion());
@@ -1213,7 +1213,7 @@ nsHttpChannel::ProcessRedirection(PRUint32 redirectType)
         PRInt32 proxyPort;
         
         // location is of the form "host:port"
-        char *p = strchr(location, ':');
+        char *p = (char *)strchr(location, ':');
         if (p) {
             *p = 0;
             proxyPort = atoi(p+1);
