@@ -298,9 +298,9 @@ destroy_class_descriptor(JSContext *cx, JNIEnv *jEnv, JavaClassDescriptor *class
 {
     JS_FREE_IF(cx, (char *)class_descriptor->name);
     if (class_descriptor->java_class) {
-        (*jEnv)->DeleteGlobalRef(jEnv, class_descriptor->java_class);
         JSJ_HashTableRemove(java_class_reflections,
                             class_descriptor->java_class, (void*)jEnv);
+        (*jEnv)->DeleteGlobalRef(jEnv, class_descriptor->java_class);
     }
 
     if (class_descriptor->array_component_signature)
