@@ -892,6 +892,8 @@ nsSVGOuterSVGFrame::InvalidateRegion(nsISVGRendererRegion* region, PRBool bRedra
 {
 //  NS_ASSERTION(mView, "need a view!");
 //  if (!mView) return NS_ERROR_FAILURE;
+  
+  if (!region && !bRedraw) return NS_OK;
 
   NS_ENSURE_TRUE(mPresShell, NS_ERROR_FAILURE);
 
@@ -903,19 +905,8 @@ nsSVGOuterSVGFrame::InvalidateRegion(nsISVGRendererRegion* region, PRBool bRedra
   nsCOMPtr<nsIPresContext> presCtx;
   mPresShell->GetPresContext(getter_AddRefs(presCtx));
   NS_ENSURE_TRUE(presCtx, NS_ERROR_FAILURE);
-  
-  nsIView* view = nsnull;
-  GetView(presCtx, &view);
-  if (!view) {
-    nsIFrame* frame;
-    GetParentWithView(presCtx, &frame);
-    if (frame)
-      frame->GetView(presCtx, &view);
-  }
+  nsIView* view = GetClosestView(presCtx);
   NS_ENSURE_TRUE(view, NS_ERROR_FAILURE);
-    
-  
-  if (!region && !bRedraw) return NS_OK;
 
   nsCOMPtr<nsIViewManager> vm;
   view->GetViewManager(*getter_AddRefs(vm));
@@ -945,21 +936,8 @@ nsSVGOuterSVGFrame::SuspendRedraw()
  // get the view manager, so that we can wrap this up in a batch
   // update.
   NS_ENSURE_TRUE(mPresShell, NS_ERROR_FAILURE);
-  nsCOMPtr<nsIPresContext> presCtx;
-  mPresShell->GetPresContext(getter_AddRefs(presCtx));
-  NS_ENSURE_TRUE(presCtx, NS_ERROR_FAILURE);
-  nsIView* view = nsnull;
-  GetView(presCtx, &view);
-  if (!view) {
-    nsIFrame* frame;
-    GetParentWithView(presCtx, &frame);
-    if (frame)
-      frame->GetView(presCtx, &view);
-  }
-  NS_ENSURE_TRUE(view, NS_ERROR_FAILURE);
-      
   nsCOMPtr<nsIViewManager> vm;
-  view->GetViewManager(*getter_AddRefs(vm));
+  mPresShell->GetViewManager(getter_AddRefs(vm));
 
   vm->BeginUpdateViewBatch();
  
@@ -995,22 +973,8 @@ nsSVGOuterSVGFrame::UnsuspendRedraw()
   // get the view manager, so that we can wrap this up in a batch
   // update.
   NS_ENSURE_TRUE(mPresShell, NS_ERROR_FAILURE);
-  nsCOMPtr<nsIPresContext> presCtx;
-  mPresShell->GetPresContext(getter_AddRefs(presCtx));
-  NS_ENSURE_TRUE(presCtx, NS_ERROR_FAILURE);
-  nsIView* view = nsnull;
-  GetView(presCtx, &view);
-  if (!view) {
-    nsIFrame* frame;
-    GetParentWithView(presCtx, &frame);
-    if (frame)
-      frame->GetView(presCtx, &view);
-  }
-  NS_ENSURE_TRUE(view, NS_ERROR_FAILURE);
-      
   nsCOMPtr<nsIViewManager> vm;
-  view->GetViewManager(*getter_AddRefs(vm));
-
+  mPresShell->GetViewManager(getter_AddRefs(vm));
   
   nsIFrame* kid = mFrames.FirstChild();
   while (kid) {
