@@ -419,8 +419,10 @@
   </hbox>
   <toolbar id="FindToolbar" hidden="true" align="center" fullscreentoolbar="true">
     <label value="&find.label;"/>
-    <textbox id="find-field" oninput="find(this.value);" onfocus="onFindBarFocus();"
-             onkeypress="onFindBarKeyPress(event);" onblur="onFindBarBlur();"/>
+    <hbox id="find-field-container">
+      <textbox id="find-field" oninput="find(this.value);" onfocus="onFindBarFocus();"
+              onkeypress="onFindBarKeyPress(event);" onblur="onFindBarBlur();"/>
+    </hbox>
     <toolbarbutton id="find-next" label="&findNext.label;" tooltiptext="&findNext.tooltip;"
                    command="cmd_findAgain" disabled="true"/>
     <toolbarbutton id="find-previous" label="&findPrevious.label;" tooltiptext="&findPrevious.tooltip;"

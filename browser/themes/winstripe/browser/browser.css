@@ -890,15 +890,23 @@ toolbar[mode="text"] > #window-controls > toolbarbutton > .toolbarbutton-text {
 #find-field
 {
   -moz-appearance: none;
+  border: none;
+  margin: 0px;
 }
 
 #find-field[status="notfound"]
 {
   background-color: #FF6666;
+  color: #FFFFFF;
 }
 
 #find-status-icon[status="wrapped"]
 {
   list-style-image: url("chrome://browser/skin/wrap.png");
+}
+
+#find-field-container
+{
+  -moz-appearance: textfield;
 }
 
