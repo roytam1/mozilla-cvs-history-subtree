@@ -5144,26 +5144,23 @@ nsCSSFrameConstructor::CreateAnonymousFrames(nsIPresShell*            aPresShell
         continue;
 
       content->SetNativeAnonymous(PR_TRUE);
+      content->SetParent(aParent);
       content->SetDocument(aDocument, PR_TRUE, PR_TRUE);
-      // Set the binding parent first, since setting the parent may cause
-      // relative URIs to change (due to xml:base) and |child| may need to be
-      // able to tell that it's anonymous content as it recomputes its base
-      // URI.
-      nsIContent* bindingParent = content;
+
 #ifdef MOZ_XUL
       // Only cut XUL scrollbars off if they're not in a XUL document.  This allows
       // scrollbars to be styled from XUL (although not from XML or HTML).
       nsCOMPtr<nsIAtom> tag;
       content->GetTag(getter_AddRefs(tag));
-      if (tag == nsXULAtoms::scrollbar) {
+      if (tag.get() == nsXULAtoms::scrollbar) {
         nsCOMPtr<nsIDOMXULDocument> xulDoc(do_QueryInterface(aDocument));
-        if (xulDoc) {
-          bindingParent = aParent;
-        }
+        if (xulDoc)
+          content->SetBindingParent(aParent);
+        else content->SetBindingParent(content);
       }
+      else
 #endif
-      content->SetBindingParent(bindingParent);
-      content->SetParent(aParent);
+        content->SetBindingParent(content);
     
       nsIFrame * newFrame = nsnull;
       nsresult rv = creator->CreateFrameFor(aPresContext, content, &newFrame);
@@ -8675,6 +8672,83 @@ nsCSSFrameConstructor::NeedSpecialFrameReframe(nsIPresShell*   aPresShell,
   return PR_FALSE;
 }
 
+#ifdef MOZ_XUL
+
+enum content_operation
+{
+    CONTENT_INSERTED,
+    CONTENT_REMOVED
+};
+
+// Helper function to lookup the listbox body frame and send a notification
+// for insertion or removal of content
+static
+PRBool NotifyListBoxBody(nsIPresContext*    aPresContext,
+                         nsIContent*        aContainer,
+                         nsIContent*        aChild,
+                         PRInt32            aIndexInContainer,
+                         nsIDocument*       aDocument,                         
+                         nsIFrame*          aChildFrame,
+                         PRBool             aUseXBLForms,
+                         content_operation  aOperation)
+{
+  if (!aContainer)
+    return PR_FALSE;
+
+  nsCOMPtr<nsIBindingManager> bindingManager;
+  aDocument->GetBindingManager(getter_AddRefs(bindingManager));
+
+  nsCOMPtr<nsIAtom> tag;
+  aChild->GetTag(getter_AddRefs(tag));
+
+  if (tag == nsXULAtoms::listitem) {
+    nsListBoxBodyFrame* listBoxBody = nsnull;
+    if (aChildFrame) {
+      // There is a frame for the removed content, so its parent frame is the listboxbody
+      nsIFrame* parentFrame = aChildFrame->GetParent();
+      if (parentFrame)
+        listBoxBody = (nsListBoxBodyFrame*)parentFrame;
+    } else {
+      // There is no frame for the removed/inserted content, so we need to dig
+      // further for the body frame. XBL insertion may not yet have taken
+      // place here (in the case of replacements), so our only connection
+      // to the listbox content is through aContainer.  Use the boxObject
+      // to get to the listboxbody frame so we can notify it of the removal or
+      // insertion.
+      nsCOMPtr<nsIDOMXULElement> xulEl(do_QueryInterface(aContainer));
+      if (xulEl) {
+        nsCOMPtr<nsIBoxObject> boxObject;
+        xulEl->GetBoxObject(getter_AddRefs(boxObject));
+        nsCOMPtr<nsIListBoxObject> listBoxObject(do_QueryInterface(boxObject));
+        nsIListBoxObject* bodyBoxObject = nsnull;
+        listBoxObject->GetListboxBody(&bodyBoxObject);
+        listBoxBody = NS_STATIC_CAST(nsListBoxBodyFrame*, bodyBoxObject);
+        NS_IF_RELEASE(bodyBoxObject);
+      }
+    }
+
+    if (listBoxBody)
+      if (aOperation == CONTENT_REMOVED)
+          listBoxBody->OnContentRemoved(aPresContext, aChildFrame, aIndexInContainer);
+      else
+          listBoxBody->OnContentInserted(aPresContext, aChild);
+    return PR_TRUE;
+  }
+
+  PRInt32 namespaceID;
+  bindingManager->ResolveTag(aContainer, &namespaceID, getter_AddRefs(tag));
+
+  // Just ignore tree tags, anyway we don't create any frames for them.
+  if (tag == nsXULAtoms::treechildren ||
+      tag == nsXULAtoms::treeitem ||
+      tag == nsXULAtoms::treerow ||
+      (aUseXBLForms && ShouldIgnoreSelectChild(aContainer)))
+    return PR_TRUE;
+
+  return PR_FALSE;
+}
+#endif // MOZ_XUL
+
 NS_IMETHODIMP
 nsCSSFrameConstructor::ContentInserted(nsIPresContext*        aPresContext,
                                        nsIContent*            aContainer,
@@ -8703,45 +8777,9 @@ nsCSSFrameConstructor::ContentInserted(nsIPresContext*        aPresContext,
   nsresult rv = NS_OK;
 
 #ifdef MOZ_XUL
-  if (aContainer) {
-    nsCOMPtr<nsIBindingManager> bindingManager;
-    mDocument->GetBindingManager(getter_AddRefs(bindingManager));
-
-    nsCOMPtr<nsIAtom> tag;
-    aChild->GetTag(getter_AddRefs(tag));
-
-    PRBool listitem = tag && tag.get() == nsXULAtoms::listitem;
-    if (listitem) {
-      // XBL insertion may not yet have taken place here (in the case of 
-      // replacements), so our only connection to the listbox content is
-      // through aContainer.  Use the boxObject to get to the listboxbody
-      // frame so we can notify it of the insertion
-      nsCOMPtr<nsIDOMXULElement> xulEl(do_QueryInterface(aContainer));
-      if (xulEl) {
-        nsCOMPtr<nsIBoxObject> boxObject;
-        xulEl->GetBoxObject(getter_AddRefs(boxObject));
-        nsCOMPtr<nsIListBoxObject> listBoxObject(do_QueryInterface(boxObject));
-        nsIListBoxObject* bodyBoxObject = nsnull;
-        listBoxObject->GetListboxBody(&bodyBoxObject);
-        nsListBoxBodyFrame* listBoxBody = NS_STATIC_CAST(nsListBoxBodyFrame*, bodyBoxObject);
-        NS_IF_RELEASE(bodyBoxObject);
-        if (listBoxBody)
-          listBoxBody->OnContentInserted(aPresContext, aChild);
-      }
-      return NS_OK;
-    }
-
-    PRInt32 namespaceID;
-    bindingManager->ResolveTag(aContainer, &namespaceID, getter_AddRefs(tag));
-
-    // Just ignore tree tags, anyway we don't create any frames for them.
-    if (tag == nsXULAtoms::treechildren ||
-        tag == nsXULAtoms::treeitem ||
-        tag == nsXULAtoms::treerow ||
-        (UseXBLForms() && ShouldIgnoreSelectChild(aContainer)))
-      return NS_OK;
-
-  }
+  if (NotifyListBoxBody(aPresContext, aContainer, aChild, aIndexInContainer, 
+                        mDocument, nsnull, UseXBLForms(), CONTENT_INSERTED))
+    return NS_OK;
 #endif // MOZ_XUL
   
   // If we have a null parent, then this must be the document element
@@ -9415,55 +9453,10 @@ nsCSSFrameConstructor::ContentRemoved(nsIPresContext* aPresContext,
   }
 
 #ifdef MOZ_XUL
-  if (aContainer) {
-    nsCOMPtr<nsIBindingManager> bindingManager;
-    mDocument->GetBindingManager(getter_AddRefs(bindingManager));
+  if (NotifyListBoxBody(aPresContext, aContainer, aChild, aIndexInContainer, 
+                        mDocument, childFrame, UseXBLForms(), CONTENT_REMOVED))
+    return NS_OK;
 
-    nsCOMPtr<nsIAtom> tag;
-    aChild->GetTag(getter_AddRefs(tag));
-
-    PRBool listitem = tag && tag.get() == nsXULAtoms::listitem;
-    if (listitem) {
-      nsListBoxBodyFrame* listBoxBody = nsnull;
-      if (childFrame) {
-        // There is a frame for the removed content, so its parent frame is the listboxbody
-        nsIFrame* parentFrame = childFrame->GetParent();
-        if (parentFrame)
-          listBoxBody = (nsListBoxBodyFrame*)parentFrame;
-      } else {
-        // There is no frame for the removed content, so we need to dig
-        // further for the body frame. XBL insertion may not yet have taken
-        // place here (in the case of  replacements), so our only connection
-        // to the listbox content is through aContainer.  Use the boxObject
-        // to get to the listboxbody frame so we can notify it of the removal.
-        nsCOMPtr<nsIDOMXULElement> xulEl(do_QueryInterface(aContainer));
-        if (xulEl) {
-          nsCOMPtr<nsIBoxObject> boxObject;
-          xulEl->GetBoxObject(getter_AddRefs(boxObject));
-          nsCOMPtr<nsIListBoxObject> listBoxObject(do_QueryInterface(boxObject));
-          nsIListBoxObject* bodyBoxObject = nsnull;
-          listBoxObject->GetListboxBody(&bodyBoxObject);
-          listBoxBody = NS_STATIC_CAST(nsListBoxBodyFrame*, bodyBoxObject);
-          NS_RELEASE(bodyBoxObject);
-        }
-      }
-
-      if (listBoxBody)
-        listBoxBody->OnContentRemoved(aPresContext, childFrame, aIndexInContainer);
-      return NS_OK;
-    }
-
-    PRInt32 namespaceID;
-    bindingManager->ResolveTag(aContainer, &namespaceID, getter_AddRefs(tag));
-
-    // Just ignore tree tags, anyway we don't create any frames for them.
-    if (tag == nsXULAtoms::treechildren ||
-        tag == nsXULAtoms::treeitem ||
-        tag == nsXULAtoms::treerow ||
-        (UseXBLForms() && ShouldIgnoreSelectChild(aContainer)))
-      return NS_OK;
-
-  }
 #endif // MOZ_XUL
 
   if (childFrame) {
