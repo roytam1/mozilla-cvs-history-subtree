@@ -850,7 +850,7 @@ nsJVMPluginTagInfo::GetCodeBase(void)
     PA_LOCK(codebase, const char*, docBase);
 
     if ((fSimulatedCodebase = PL_strdup(codebase)) != NULL) {
-        char* lastSlash = PL_strrchr(codebase, '/');
+        char* lastSlash = PL_strrchr(fSimulatedCodebase, '/');
 
         // chop of the filename from the original document base URL to
         // generate the codebase.
