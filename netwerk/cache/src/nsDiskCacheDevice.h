@@ -43,9 +43,10 @@ public:
     nsDiskCacheDevice();
     virtual ~nsDiskCacheDevice();
 
-    nsresult  Init();
+    static nsresult         Create(nsCacheDevice **result);
 
-    static nsresult  Create(nsCacheDevice **result);
+    virtual nsresult        Init();
+    virtual nsresult        Shutdown();
 
     virtual const char *    GetDeviceID(void);
     virtual nsCacheEntry *  FindEntry(nsCString * key);
@@ -99,6 +100,7 @@ public:
     nsresult writeDiskCacheMap();
 
 private:
+    PRBool                      mInitialized;
     nsCOMPtr<nsIObserver>       mPrefsObserver;
     nsCOMPtr<nsILocalFile>      mCacheDirectory;
     nsDiskCacheEntryHashTable   mBoundEntries;
