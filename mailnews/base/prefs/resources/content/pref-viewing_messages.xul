@@ -11,7 +11,7 @@
 
   <script type="application/x-javascript">
   <![CDATA[
-    var _elementIDs = ["mailFixedWidthMessages", "mailQuotedStyle", "mailQuotedSize", "wrapLongLines", "displayGlyph", "mailCitationColor", "foregroundText", "background", "browserUseDocumentColors"];
+    var _elementIDs = ["mailFixedWidthMessages", "mailQuotedStyle", "mailQuotedSize", "wrapLongLines", "displayGlyph", "mailCitationColor", "foregroundText", "background"];
 
     function Startup()
     {
@@ -96,17 +96,16 @@
 
   <groupbox>
     <caption label="&htmlColors.label;"/>
-      <checkbox id="browserUseDocumentColors" label="&overrideSender.label;" preftype="bool" 
-                checked="false" prefstring="browser.display.use_system_colors" accesskey="&overrideSender.accesskey;"/>
-      <hbox align="center">
-        <label value="&textColor.label;" accesskey="&textColor.accesskey;" control="foregroundtextmenu"/>
+    <description>&overrideSender.label;</description>
+    <hbox align="center">
+      <label value="&textColor.label;" accesskey="&textColor.accesskey;" control="foregroundtextmenu"/>
 
-        <colorpicker type="button" id="foregroundtextmenu" palettename="standard" onchange="setColorWell(this)"/> 
-        <data id="foregroundText" preftype="color" prefstring="browser.display.foreground_color" prefattribute="value" wsm_attributes="value"/>
+      <colorpicker type="button" id="foregroundtextmenu" palettename="standard" onchange="setColorWell(this)"/> 
+      <data id="foregroundText" preftype="color" prefstring="browser.display.foreground_color" prefattribute="value" wsm_attributes="value"/>
 
-        <label value="&backgroundColor.label;" accesskey="&backgroundColor.accesskey;" control="backgroundmenu"/>
-        <colorpicker type="button" id="backgroundmenu" palettename="standard" onchange="setColorWell(this)"/> 
-        <data id="background" preftype="color" prefstring="browser.display.background_color" prefattribute="value" wsm_attributes="value"/>
-      </hbox>
+      <label value="&backgroundColor.label;" accesskey="&backgroundColor.accesskey;" control="backgroundmenu"/>
+      <colorpicker type="button" id="backgroundmenu" palettename="standard" onchange="setColorWell(this)"/> 
+      <data id="background" preftype="color" prefstring="browser.display.background_color" prefattribute="value" wsm_attributes="value"/>
+    </hbox>
   </groupbox>
 </page>

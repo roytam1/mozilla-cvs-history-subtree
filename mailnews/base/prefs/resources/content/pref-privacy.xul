@@ -65,10 +65,10 @@
       <checkbox id="networkImageDisableImagesInMailNews" 
               label="&disableImageInMailNews.label;" accesskey="&disableImageInMailNews.accesskey;"
               pref="true" preftype="bool" prefstring="mailnews.message_display.disable_remote_image"
-              prefattribute="checked"/>
+              prefinverted="true" prefattribute="checked"/>
       <checkbox id="networkDisableCookieForMailNews"
               label="&disableCookieForMailNews.label;" accesskey="&disableCookieForMailNews.accesskey;"
-              preftype="bool" prefstring="network.cookie.disableCookieForMailNews"/>
+              preftype="bool" prefinverted="true" prefstring="network.cookie.disableCookieForMailNews"/>
     </vbox>
 
     <separator class="thin"/>

@@ -232,7 +232,9 @@ nsPrefWindow.prototype =
                               if( value == "true" && typeof(value) == "string" )
                                 value = true;
                               else if( value == "false" && typeof(value) == "string" )
-                                value = false;
+                                value = false;                              
+                              if ( "prefinverted" in itemObject && itemObject.prefinverted )
+                                value = !value; 
                               break;
                             case "int":
                               value = parseInt(value);                              
@@ -346,6 +348,8 @@ nsPrefWindow.prototype =
                       {
                         case "bool":
                           prefvalue = this.getPref( preftype, prefstring );
+                          if (prefElements[i].getAttribute( "prefinverted" ) == "true")
+                            prefvalue = !prefvalue;
                           break;
                         case "int":
                           prefvalue = this.getPref( preftype, prefstring );
