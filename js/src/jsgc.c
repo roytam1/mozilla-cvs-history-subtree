@@ -30,17 +30,9 @@
 #include <stdlib.h>     /* for free, called by PR_ARENA_DESTROY */
 #include <string.h>	/* for memset, called by prarena.h macros if DEBUG */
 #include "prtypes.h"
-#ifndef NSPR20
-#include "prarena.h"
-#else
 #include "plarena.h"
-#endif
 #include "prlog.h"
-#ifndef NSPR20
-#include "prhash.h"
-#else
 #include "plhash.h"
-#endif
 #include "jsapi.h"
 #include "jsatom.h"
 #include "jscntxt.h"

@@ -30,11 +30,7 @@
 #include "jspubtd.h"
 
 #ifdef XP_WIN
-#ifndef NSPR20
-#include "prhash.h"
-#else
 #include "plhash.h"
-#endif
 #endif
 
 NSPR_BEGIN_EXTERN_C

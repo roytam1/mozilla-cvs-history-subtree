@@ -428,7 +428,7 @@ extern "C++"    {
 #include "md/_unixos.h"
 #endif
 
-#endif
+#endif /* NLS_WIN */
 #else
 #ifdef NLS_UNIX
 #include "prunixos.h"

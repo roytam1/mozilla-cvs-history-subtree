@@ -25,11 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "prtypes.h"
-#ifndef NSPR20
-#include "prarena.h"
-#else
 #include "plarena.h"
-#endif
 #include "prlog.h"
 #include "prclist.h"
 #include "jsapi.h"
@@ -762,11 +758,7 @@ JS_AddNamedRoot(JSContext *cx, void *rp, const char *name)
 
 #ifdef DEBUG
 
-#ifndef NSPR20
-#include "prhash.h"
-#else
 #include "plhash.h"
-#endif
 
 typedef struct NamedRootDumpArgs {
     void (*dump)(const char *name, void *rp, void *data);

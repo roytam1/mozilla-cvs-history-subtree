@@ -82,11 +82,7 @@ PREF_AlterSplashIcon(struct fe_icon_data* icon)
     if ( PREF_IsAutoAdminEnabled() && 
          icon && 
          (splash_screen = (struct fe_icon_type*)
-#ifndef NSPR20
-          PR_FindSymbol("_POLARIS_SplashPro", m_AutoAdminLib)) != NULL ) {
-#else
           PR_FindSymbol(m_AutoAdminLib, "_POLARIS_SplashPro")) != NULL ) {
-#endif
 
         memcpy(icon, splash_screen, sizeof(*icon));
     }

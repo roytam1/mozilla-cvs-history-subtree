@@ -21,12 +21,10 @@
 */
 
 #include "jsd.h"
-#ifdef NSPR20
 #ifdef XP_MAC
 #include "prpriv.h"
 #else
 #include "private/prpriv.h"
-#endif
 #endif
 
 #ifdef DEBUG
@@ -128,21 +126,13 @@ jsd_DestroyThreadState(JSDContext* jsdc, JSDThreadState* jsdthreadstate)
     PRCList* list;
     int64 i;
 
-#ifndef NSPR20
-    LL_I2L(i,100);
-#endif
-
     /* we need to wait if someone else is using the threadstate */
 
     jsd_LockThreadsStates(jsdc);
     while( jsdthreadstate->wait )
     {
         jsd_UnlockThreadStates(jsdc);
-#ifndef NSPR20
         PR_Sleep(i);
-#else
-        PR_Sleep(PR_MicrosecondsToInterval(100));
-#endif
         jsd_LockThreadsStates(jsdc);
     }
     PR_REMOVE_LINK(&jsdthreadstate->links);

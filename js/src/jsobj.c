@@ -23,17 +23,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include "prtypes.h"
-#ifndef NSPR20
-#include "prarena.h"
-#else
 #include "plarena.h"
-#endif
 #include "prlog.h"
-#ifndef NSPR20
-#include "prhash.h"
-#else
 #include "plhash.h"
-#endif
 #include "prprf.h"
 #include "jsapi.h"
 #include "jsatom.h"

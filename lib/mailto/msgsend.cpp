@@ -2754,24 +2754,11 @@ mime_generate_headers (MSG_CompositionFields *fields,
 #endif /* GENERATE_MESSAGE_ID */
 
   {
-#if 0
-  /* Use strftime() to format the date, then figure out what our local
-	 GMT offset it, and append that (since strftime() can't do that.)
-	 Generate four digit years as per RFC 1123 (superceding RFC 822.)
-   */
-	time_t now = time ((time_t *) 0);
+
 	int gmtoffset = XP_LocalZoneOffset();
-	strftime (buffer_tail, 100, "Date: %a, %d %b %Y %H:%M:%S ",
-			  localtime (&now));
-#else
-	int gmtoffset = XP_LocalZoneOffset();
-#ifndef NSPR20
-    PRTime now;
-    PR_ExplodeTime(&now, PR_Now());
-#else
+
     PRExplodedTime now;
     PR_ExplodeTime(PR_Now(), PR_LocalTimeParameters, &now);
-#endif /* NSPR20 */
 
 	/* Use PR_FormatTimeUSEnglish() to format the date in US English format,
 	   then figure out what our local GMT offset is, and append it (since
@@ -2781,7 +2768,6 @@ mime_generate_headers (MSG_CompositionFields *fields,
 	PR_FormatTimeUSEnglish(buffer_tail, 100,
 						   "Date: %a, %d %b %Y %H:%M:%S ",
 						   &now);
-#endif
 
 	buffer_tail += XP_STRLEN (buffer_tail);
 	PR_snprintf(buffer_tail, buffer + size - buffer_tail,

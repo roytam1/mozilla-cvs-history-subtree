@@ -26,11 +26,7 @@
 #include "ntypes.h"
 #include "fe_proto.h"
 
-#ifdef NSPR20
 #include "prinit.h"
-#else
-#include "prglobal.h"
-#endif
 
 #ifdef XP_UNIX
 #include <sys/fcntl.h>

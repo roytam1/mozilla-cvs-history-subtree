@@ -21,11 +21,7 @@
 /*
  * JS execution context.
  */
-#ifndef NSPR20
-#include "prarena.h"
-#else
 #include "plarena.h"
-#endif
 #include "prclist.h"
 #include "prlong.h"
 #include "jsatom.h"

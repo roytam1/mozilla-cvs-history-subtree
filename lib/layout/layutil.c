@@ -27,13 +27,11 @@
 #include "stystruc.h"
 #include "stystack.h"
 #include "layers.h"
-#ifdef NSPR20
 #ifdef XP_MAC
 #include "prpriv.h"
 #else
 #include "private/prpriv.h"		/* for PR_NewNamedMonitor */
 #endif
-#endif /* NSPR20 */
 #include "intl_csi.h"
 
 #ifdef DOM

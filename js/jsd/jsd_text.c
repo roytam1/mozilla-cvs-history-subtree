@@ -21,12 +21,10 @@
 */
 
 #include "jsd.h"
-#ifdef NSPR20
 #ifdef XP_MAC
 #include "prpriv.h"
 #else
 #include "private/prpriv.h"
-#endif
 #endif
 
 /**

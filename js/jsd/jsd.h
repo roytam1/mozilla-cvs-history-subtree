@@ -30,11 +30,7 @@
 #include "prmon.h"
 #include "prtypes.h"
 #include "prlog.h"	/* for PR_ASSERT */
-#ifndef NSPR20
-#include "prhash.h"
-#else
 #include "plhash.h"
-#endif
 #include "prclist.h"
 #include "prthread.h"
 /* #include "xp.h" */

@@ -31,13 +31,7 @@
 
 #include <stdio.h>
 
-#ifndef	NSPR20
-#include "prosdep.h"	/* for IS_LITTLE_ENDIAN / IS_BIG_ENDIAN */
-#else
 #include "prtypes.h"
-#endif
-
-
 
 #if !defined(IS_LITTLE_ENDIAN) && !defined(IS_BIG_ENDIAN)
 #error Must have a byte order

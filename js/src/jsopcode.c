@@ -26,11 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "prtypes.h"
-#ifndef NSPR20
-#include "prarena.h"
-#else
 #include "plarena.h"
-#endif
 #include "prlog.h"
 #include "prdtoa.h"
 #include "prprf.h"

@@ -24,11 +24,7 @@
 #define jsdebug_h___
 
 #include "ntypes.h"
-#ifndef NSPR20
-#include "prmacros.h"
-#else
 #include "prtypes.h"
-#endif
 #include "jsapi.h"
 
 NSPR_BEGIN_EXTERN_C

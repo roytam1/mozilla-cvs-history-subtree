@@ -43,10 +43,8 @@
 #endif
 
 
-#ifdef NSPR20
 extern PRLogModuleInfo* Moja;
 #define debug	PR_LOG_DEBUG
-#endif /* NSPR20 */
 
 #define JAVA_JS_STACK_SIZE 8192
 

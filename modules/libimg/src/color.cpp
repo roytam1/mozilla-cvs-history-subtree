@@ -32,11 +32,6 @@
 #include "xp_qsort.h"
 #endif
 
-#ifndef NSPR20
-#if defined(__sun)
-# include "sunos4.h"
-#endif /* __sun */
-#endif /* NSPR20 */
 
 #ifdef PROFILE
 #pragma profile on

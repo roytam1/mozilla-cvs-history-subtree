@@ -1922,11 +1922,7 @@ npn_memfree (void *ptr)
 
 #ifdef XP_MAC
 /* For the definition of CallCacheFlushers() */
-#ifndef NSPR20
-#include "prmacos.h"
-#else
 #include "MacMemAllocator.h"
-#endif
 #endif
 
 uint32 NP_EXPORT

@@ -24,11 +24,7 @@
 #include <string.h>
 #include "prtypes.h"
 #include "prlog.h"
-#ifndef NSPR20
-#include "prhash.h"
-#else
 #include "plhash.h"
-#endif
 #include "jsapi.h"
 #include "jsatom.h"
 #include "jscntxt.h"

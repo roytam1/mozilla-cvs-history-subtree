@@ -194,15 +194,7 @@ static JSJCallbacks *jsj_callbacks = NULL;
  */
 JSRuntime *finalizeRuntime = 0;
 
-#ifndef NSPR20
-#ifdef MOZILLA_CLIENT
-PR_LOG_DEFINE(MojaSrc);
-#else
-PRLogModuleInfo *MojaSrc;
-#endif
-#else
 PRLogModuleInfo *MojaSrc = NULL;
-#endif
 
 /* lazy initialization */
 static void jsj_FinishInit(JSContext *cx, JRIEnv *env);
@@ -3796,9 +3788,7 @@ jsj_FinishInit(JSContext *cx, JRIEnv *env)
       PR_NewHashTable(256, (PRHashFunction) java_hashHandle,
 		      (PRHashComparator) java_pointerEq,
 		      (PRHashComparator) java_pointerEq, 0, 0);
-#ifdef NSPR20
     PR_RegisterGCLockHook((GCLockHookFunc*) PrepareJSLocksForGC, 0);
-#endif
     PR_RegisterRootFinder(scanJSJavaReflections,
                           "scan JS reflections of java objects",
 			  JS_GetRuntime(cx));

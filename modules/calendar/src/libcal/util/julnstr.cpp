@@ -28,14 +28,8 @@
 #endif
 
 #include "nspr.h"
-#ifdef NSPR20
 #include "plstr.h"
-#endif
 
-#if 0
-/* Breaks SINIX5.4 build */
-#include <npapi.h>
-#endif
 #include "jdefines.h"
 #include "julnstr.h"
 

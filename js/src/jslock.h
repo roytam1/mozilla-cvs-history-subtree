@@ -23,11 +23,7 @@
 #include "prtypes.h"
 #include "prlock.h"
 #include "prcvar.h"
-#ifndef NSPR20
-#include "prhash.h"
-#else
 #include "plhash.h"
-#endif
 
 #define Thin_GetWait(W) ((prword)(W) & 0x1)
 #define Thin_SetWait(W) ((prword)(W) | 0x1)
