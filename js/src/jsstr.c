@@ -102,6 +102,7 @@ str_escape(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     const char digits[] = {'0', '1', '2', '3', '4', '5', '6', '7',
 			   '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
+    mask = URL_XALPHAS | URL_XPALPHAS | URL_PATH;
     if (argc > 1) {
 	if (!js_ValueToNumber(cx, argv[1], &d))
 	    return JS_FALSE;
@@ -115,8 +116,6 @@ str_escape(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 				 JSMSG_BAD_STRING_MASK, numBuf);
 	    return JS_FALSE;
 	}
-    } else {
-	mask = URL_XALPHAS | URL_XPALPHAS | URL_PATH;
     }
 
     str = js_ValueToString(cx, argv[0]);
@@ -1451,6 +1450,7 @@ str_split(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 	/* Use the second argument as the split limit, if given. */
 	/* XXX our v2 ecma spec checks against given, undefined. */
 	limited = (argc > 1);
+        limit = 0; /* Avoid warning. */
 	if (limited) {
 	    if (!js_ValueToNumber(cx, argv[1], &d))
 		return JS_FALSE;
@@ -1756,6 +1756,7 @@ tagify(JSContext *cx, JSObject *obj, jsval *argv,
 
     beglen = strlen(begin);
     taglen = 1 + beglen + 1;			/* '<begin' + '>' */
+    parlen = 0; /* Avoid warning. */
     if (param) {
 	parlen = js_strlen(param);
 	taglen += 2 + parlen + 1;		/* '="param"' */
