@@ -724,8 +724,8 @@ const PRInt32 nsCSSProps::kBoxPackKTable[] = {
 #ifdef MOZ_SVG
 // keyword tables for SVG properties
 const PRInt32 nsCSSProps::kFillRuleKTable[] = {
-  eCSSKeyword_butt, NS_STYLE_FILL_RULE_NONZERO,
-  eCSSKeyword_butt, NS_STYLE_FILL_RULE_EVENODD,
+  eCSSKeyword_nonzero, NS_STYLE_FILL_RULE_NONZERO,
+  eCSSKeyword_evenodd, NS_STYLE_FILL_RULE_EVENODD,
   -1, -1
 };
 
@@ -739,7 +739,7 @@ const PRInt32 nsCSSProps::kStrokeLinecapKTable[] = {
 const PRInt32 nsCSSProps::kStrokeLinejoinKTable[] = {
   eCSSKeyword_butt, NS_STYLE_STROKE_LINEJOIN_MITER,
   eCSSKeyword_round, NS_STYLE_STROKE_LINEJOIN_ROUND,
-  eCSSKeyword_square, NS_STYLE_STROKE_LINEJOIN_BEVEL,
+  eCSSKeyword_bevel, NS_STYLE_STROKE_LINEJOIN_BEVEL,
   -1, -1
 };
 #endif
