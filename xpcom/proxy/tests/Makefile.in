@@ -28,7 +28,6 @@ CPPSRCS         = proxytests.cpp
 LIBS		=     \
         -L$(DIST)/bin \
 	-lxpcom       \
-	-lreg       \
 	-l$(MOZ_LIB_UTIL_PREFIX)util    \
 	$(NSPR_LIBS) 	\
 	$(NULL)
