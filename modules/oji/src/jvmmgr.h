@@ -189,6 +189,12 @@ PR_EXTERN(struct nsJVMMgr*)
 JVM_GetJVMMgr(void);
 
 PR_EXTERN(nsJVMStatus)
+JVM_StartupJVM(void);
+
+PR_EXTERN(nsJVMStatus)
+JVM_ShutdownJVM(void);
+
+PR_EXTERN(nsJVMStatus)
 JVM_GetJVMStatus(void);
 
 PR_EXTERN(PRBool)
@@ -229,9 +235,6 @@ JVM_MaybeShutdownLiveConnect(void);
 
 PR_EXTERN(PRBool)
 JVM_IsLiveConnectEnabled(void);
-
-PR_EXTERN(nsJVMStatus)
-JVM_ShutdownJVM(void);
 
 PR_END_EXTERN_C
 

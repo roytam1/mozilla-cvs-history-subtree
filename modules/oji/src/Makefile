@@ -14,6 +14,7 @@ ifdef MOZ_OJI
 LIBRARY_NAME	= oji
 
 CPPSRCS         = jvmmgr.cpp \
+                  lcglue.cpp \
                   scd.cpp
 
 REQUIRES	= img java js lay layer plugin plugimpl pref style util xpcom raptor oji caps
