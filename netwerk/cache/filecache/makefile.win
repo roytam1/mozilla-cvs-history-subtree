@@ -35,6 +35,7 @@ OBJS=                                        \
         .\$(OBJDIR)\nsDBEnumerator.obj       \
         .\$(OBJDIR)\nsNetDiskCache.obj       \
         .\$(OBJDIR)\nsDiskCacheRecord.obj    \
+        .\$(OBJDIR)\nsDiskCacheRecordChannel.obj    \
         .\$(OBJDIR)\nsDiskCacheFactory.obj   \
 	$(NULL)
 
