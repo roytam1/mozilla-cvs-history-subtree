@@ -27,6 +27,7 @@ const kCustomItemValue = "8"; // from msgViewPickerOveraly.xul, <menuitem id="cr
 var gMailViewList = null;
 var gCurrentViewValue = "0"; // initialize to the first view ("All")
 var gCurrentViewLabel = "";
+var gSaveDefaultSVTerms;
 
 var nsMsgSearchScope = Components.interfaces.nsMsgSearchScope;
 var nsMsgSearchAttrib = Components.interfaces.nsMsgSearchAttrib;
@@ -46,6 +47,7 @@ function viewChange(aMenuList, val)
   // bail out early if the user picked the same view
   if (val == gCurrentViewValue)
     return; 
+  viewDebug("viewChange to " + val + "\n");
   var oldViewValue = gCurrentViewValue;
   gCurrentViewValue = val;
   switch (val)
@@ -75,6 +77,7 @@ function viewChange(aMenuList, val)
      break;
   } //      
 
+  gSaveDefaultSVTerms = gDefaultSearchViewTerms;
   // store this, to persist across sessions
   if (val != "-1" && val != -1)
   {
@@ -84,8 +87,10 @@ function viewChange(aMenuList, val)
   }
   // if we're switching to -1 (virtual folder), don't do a search 
   if (val != "-1" && val != -1)
+  {
     onEnterInSearchBar();
-  gQSViewIsDirty = true;
+    gQSViewIsDirty = true;
+  }
 }
 
 function CreateVFFromView(newName, origFolderURI)
@@ -93,7 +98,7 @@ function CreateVFFromView(newName, origFolderURI)
   var selectedFolder = GetResourceFromUri(origFolderURI);
   var folderToSearch = selectedFolder.QueryInterface(Components.interfaces.nsIMsgFolder);
 
-  CreateVirtualFolder(newName, folderToSearch.parent, origFolderURI, gDefaultSearchViewTerms);
+  CreateVirtualFolder(newName, folderToSearch.parent, origFolderURI, gSaveDefaultSVTerms);
 }
 
 const kLabelPrefs = "mailnews.labels.description.";
