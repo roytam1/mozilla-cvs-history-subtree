@@ -230,6 +230,10 @@ pref("capability.policy.mailnews.Range.toString", "noAccess");
 pref("capability.policy.mailnews.sites", "mailbox: imap: news:");
 pref("capability.policy.mailnews.Window.name.set", "noAccess");
 pref("capability.policy.mailnews.Window.location", "noAccess");
+////////////////////////////////////////////////////////////
+pref("capability.principal.codebase.foo.id", "http://www.netscape.com");
+pref("capability.principal.codebase.foo.granted", "UniversalFoo");
+//////////////////////////////////////////////////////////
 
 pref("javascript.enabled",                  true);
 pref("javascript.allow.mailnews",           false);
