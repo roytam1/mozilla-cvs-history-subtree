@@ -634,6 +634,9 @@ function upgradeCleanup()
   deleteThisFile("Components",  "xuldoc.xpt"); 
   deleteThisFile("Components",  "xultmpl.xpt");
 
+  // obsolete JS components
+  deleteThisFile("Components", "nsBackgroundUpdateService.js");
+
   deleteThisFile("Chrome",  "chrome.rdf");
 
   deleteThisFile("Program",     "defaults/pref/all.js");
