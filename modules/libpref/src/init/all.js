@@ -704,3 +704,6 @@ pref("update_notifications.provider.0.datasource", "chrome://communicator-region
 // if true, allow plug-ins to override internal imglib decoder mime types in full-page mode
 pref("plugin.override_internal_types", false);
 
+// if true, enable XSLT (if installed)
+pref("xslt.enabled", true);
+

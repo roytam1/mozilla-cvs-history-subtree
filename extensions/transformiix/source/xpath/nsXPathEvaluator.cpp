@@ -114,3 +114,12 @@ nsXPathEvaluator::Evaluate(const nsAString & aExpression,
 
     return expression->Evaluate(aContextNode, aType, aInResult, aResult);
 }
+
+// From build/XSLTProcessorModule.cpp
+nsresult XSLT_CheckMasterXSLTPref();
+
+nsresult
+nsXPathEvaluator::CheckMasterXSLTPref()
+{
+    return XSLT_CheckMasterXSLTPref();
+}

@@ -404,3 +404,12 @@ nsSyncLoader::GetInterface(const nsIID & aIID,
 {
     return QueryInterface(aIID, aResult);
 }
+
+// From build/XSLTProcessorModule.cpp
+nsresult XSLT_CheckMasterXSLTPref();
+
+nsresult
+nsSyncLoader::CheckMasterXSLTPref()
+{
+    return XSLT_CheckMasterXSLTPref();
+}

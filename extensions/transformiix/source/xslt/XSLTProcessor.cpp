@@ -1010,6 +1010,17 @@ void XSLTProcessor::process
 
 #endif // ifdef TX_EXE
 
+#ifndef TX_EXE
+
+nsresult XSLT_CheckMasterXSLTPref();
+
+nsresult
+XSLTProcessor::CheckMasterXSLTPref()
+{
+    return XSLT_CheckMasterXSLTPref();
+}
+#endif
+
   //-------------------/
  //- Private Methods -/
 //-------------------/

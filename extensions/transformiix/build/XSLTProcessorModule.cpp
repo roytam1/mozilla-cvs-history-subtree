@@ -27,6 +27,8 @@
 #include "nsIDOMClassInfo.h"
 #include "nsIExceptionService.h"
 #include "nsIGenericFactory.h"
+#include "nsIPrefService.h"
+#include "nsIPrefBranchInternal.h"
 #include "nsIScriptNameSpaceManager.h"
 #include "nsIServiceManager.h"
 #include "nsSyncLoader.h"
@@ -84,9 +86,9 @@ NS_DOMCI_EXTENSION(Transformiix)
 NS_DOMCI_EXTENSION_END
 
 // Factory Constructor
-NS_GENERIC_FACTORY_CONSTRUCTOR(XSLTProcessor)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsXPathEvaluator)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsSyncLoader)
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(XSLTProcessor, CheckMasterXSLTPref)
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsXPathEvaluator, CheckMasterXSLTPref)
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsSyncLoader, CheckMasterXSLTPref)
 
 NS_DECL_DOM_CLASSINFO(XSLTProcessor)
 NS_DECL_DOM_CLASSINFO(XPathEvaluator)
@@ -224,6 +226,85 @@ Shutdown(nsIModule* aSelf)
     txHTMLAtoms::shutdown();
 }
 
+// Check the master "xslt.enabled" pref.  Returns a success code if the
+// pref indicates that XSLT is enabled, otherwise a failure code.
+//
+// Called from nsSyncLoader, XSLTProcessor and nsXPathEvaluator.
+static PRBool sXSLTEnabled;
+static const char XSLT_ENABLED_PREF[] = "xslt.enabled";
+
+class XSLTPrefWatcher : public nsIObserver
+{
+    NS_DECL_ISUPPORTS
+public:
+    NS_DECL_NSIOBSERVER
+    XSLTPrefWatcher();
+};
+
+NS_IMPL_ISUPPORTS1(XSLTPrefWatcher, nsIObserver);
+
+XSLTPrefWatcher::XSLTPrefWatcher()
+{
+    NS_INIT_ISUPPORTS();
+}
+
+nsresult
+XSLTPrefWatcher::Observe(nsISupports *subject, const char *topic,
+                         const PRUnichar *data)
+{
+    if (strcmp(topic, NS_PREFBRANCH_PREFCHANGE_TOPIC_ID) ||
+        strcmp(NS_ConvertUCS2toUTF8(data).get(), XSLT_ENABLED_PREF)) {
+        return NS_OK;           // we don't care
+    }
+
+    nsCOMPtr<nsIPrefBranch> branch = do_QueryInterface(subject);
+    if (!branch)
+        return NS_OK;           // *whistle*
+
+    branch->GetBoolPref(XSLT_ENABLED_PREF, &sXSLTEnabled);
+    return NS_OK;
+}
+
+nsresult
+XSLT_CheckMasterXSLTPref()
+{
+    static PRBool checkedPref = PR_FALSE;
+
+    if (checkedPref)
+        return sXSLTEnabled ? NS_OK : NS_ERROR_FAILURE; // NS_ERROR_DISABLED?
+
+    nsCOMPtr<nsIPrefService> prefs = do_GetService(NS_PREFSERVICE_CONTRACTID);
+    nsCOMPtr<nsIPrefBranch> branch;
+    if (!prefs || NS_FAILED(prefs->GetBranch(nsnull, getter_AddRefs(branch))))
+        return NS_ERROR_FAILURE;
+
+    if (NS_FAILED(branch->GetBoolPref(XSLT_ENABLED_PREF, &sXSLTEnabled)))
+        return NS_ERROR_FAILURE;
+
+    // install update callback
+    nsCOMPtr<nsIPrefBranchInternal> pbi = do_QueryInterface(branch);
+    if (!pbi)
+        return NS_ERROR_FAILURE;
+    
+    XSLTPrefWatcher *watcher;
+
+    NS_NEWXPCOM(watcher, XSLTPrefWatcher);
+    if (!watcher)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    NS_ADDREF(watcher);
+    nsCOMPtr<nsIObserver> obs = do_QueryInterface(watcher);
+    if (obs)
+        pbi->AddObserver(XSLT_ENABLED_PREF, obs, PR_FALSE);
+
+    NS_RELEASE(watcher);
+    // The pref-service observer list now owns our watcher object.
+
+    checkedPref = PR_TRUE;
+    
+    return sXSLTEnabled ? NS_OK : NS_ERROR_FAILURE; // NS_ERROR_DISABLED?
+}
+
 // Component Table
 static const nsModuleComponentInfo gComponents[] = {
     { "XSLTProcessor",
@@ -247,3 +328,4 @@ static const nsModuleComponentInfo gComponents[] = {
 
 NS_IMPL_NSGETMODULE_WITH_CTOR_DTOR(TransformiixModule, gComponents,
                                    Initialize, Shutdown)
+

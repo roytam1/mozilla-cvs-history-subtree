@@ -58,6 +58,9 @@ public:
     // nsIDOMXPathEvaluator interface
     NS_DECL_NSIDOMXPATHEVALUATOR
 
+    // Check the master "xslt.enabled" pref.  Returns a success code if the
+    // pref indicates that XSLT is enabled, otherwise a failure code.
+    nsresult CheckMasterXSLTPref();
 private:
     ExprParser mParser;
 };

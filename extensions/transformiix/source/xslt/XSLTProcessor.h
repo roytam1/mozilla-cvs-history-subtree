@@ -222,6 +222,14 @@ public:
 
 #endif
 
+#ifndef TX_EXE
+    /**
+     * Check the master "xslt.enabled" pref.  Returns a success code if the
+     * pref indicates that XSLT is enabled, otherwise a failure code.
+    **/
+    nsresult CheckMasterXSLTPref();
+#endif
+
 private:
 
 
