@@ -296,7 +296,7 @@ IL_ShrinkCache(void);
 /* Remove as many images as possible from the image cache. The only
    images not removed are those that are in use. */
 IL_EXTERN(void)
-IL_FlushCache(void);
+IL_FlushCache(PRUint8 img_catagory);
 
 /* Return the approximate storage consumed by the imagelib cache, in bytes */
 IL_EXTERN(PRUint32)
