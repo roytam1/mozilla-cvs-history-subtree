@@ -392,7 +392,7 @@ NS_IMPL_ISUPPORTS2(nsFastLoadFileWriter,
                    nsISeekableStream)
 
 struct nsIDMapEntry : public PLDHashEntryHdr {
-    NSFastLoadID    mFastID;
+    NSFastLoadID    mFastID;            // 1 + nsFastLoadFooter::mIDMap index
     nsID            mSlowID;            // key, used by PLDHashTableOps below
 };
 
@@ -548,10 +548,11 @@ nsFastLoadFileWriter::IDMapEnumerate(PLDHashTable *aTable,
                                      void *aData)
 {
     nsIDMapEntry* entry = NS_STATIC_CAST(nsIDMapEntry*, aHdr);
+    PRUint32 index = entry->mFastID - 1;
     nsID* vector = NS_REINTERPRET_CAST(nsID*, aData);
 
-    NS_ASSERTION(entry->mFastID < aTable->entryCount, "bad nsIDMap index!");
-    vector[entry->mFastID] = entry->mSlowID;
+    NS_ASSERTION(index < aTable->entryCount, "bad nsIDMap index!");
+    vector[index] = entry->mSlowID;
     return PL_DHASH_NEXT;
 }
 
