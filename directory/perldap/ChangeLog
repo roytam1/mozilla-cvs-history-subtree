@@ -1,3 +1,12 @@
+1999-08-17  Leif Hedstrom  <leif@netscape.com>
+
+	* Makefile.PL: Fixes for Windows/NT, cleaned out some code etc.
+	(MY::postamble): Support for "make html".
+
+	* MANIFEST: Updated with all new files etc.
+
+	* test.pl: Renamed to oldtest.pl, to avoid "make test" to fail.
+
 1999-08-16  Kevin McCarthy  <kmccarth@perldap.org> and Leif Hedstrom
 
 	* API.xs: Cleaned most all the memory allocation changes, we are

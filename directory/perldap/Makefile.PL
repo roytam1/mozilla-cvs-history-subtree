@@ -174,3 +174,21 @@ WriteMakefile(
 	      'XSOPT'		=>	"-nolinenumbers",
 	      @extras
 );
+
+
+#
+# Generate a "make HTML" target
+#
+sub MY::postamble
+{
+  '
+.SUFFIXES: .pm .html
+.PHONY: html
+
+.pm.html:
+	pod2html --netscape $< > $@
+
+html:	Entry.html Conn.html Utils.html API.html LDIF.html $(FIRST_MAKEFILE)
+	@rm -f pod2html-itemcache pod2html-dircache
+'
+}
