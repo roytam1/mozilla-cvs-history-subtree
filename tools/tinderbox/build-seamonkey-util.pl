@@ -889,6 +889,11 @@ sub BuildIt {
         my $build_status = 'none';
         my $binary_url   = '';
 
+        my $external_build = "$Settings::BaseDir/post-mozilla.pl";
+        if (-e $external_build) {
+            PostMozilla::PreBuild();
+        }
+
         # Allow skipping of mozilla phase.
         unless ($Settings::SkipMozilla) {
           
@@ -1022,7 +1027,6 @@ sub BuildIt {
         #
         #  Run (optional) external, post-mozilla build here.
         #
-        my $external_build = "$Settings::BaseDir/post-mozilla.pl";
         if (((-e $external_build) and ($build_status eq 'success')) || 
             ($Settings::SkipMozilla)) {
             ($build_status, $binary_url) = PostMozilla::main($build_dir);
