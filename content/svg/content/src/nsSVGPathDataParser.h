@@ -19,7 +19,7 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
@@ -144,7 +144,6 @@ protected:
   
   nsresult matchWsp();
   PRBool isTokenWspStarter();
-
   
 };
 

@@ -19,7 +19,7 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
@@ -33,7 +33,6 @@
 #include "nsIDOMSVGRect.h"
 #include "nsSVGValue.h"
 #include "nsIWeakReference.h"
-
 #include <math.h>
 
 ////////////////////////////////////////////////////////////////////////
@@ -512,8 +511,11 @@ float nsSVGLength::ViewportDimension()
       break;
     }
   }
+
+  NS_ASSERTION(d!=0.0f, "zero viewport w/h?");
   
-  if (d == 0.0f) d = 1e-20f;
+  if (d == 0.0f)
+    d = 1e-20f;
   return d;
 }
 

@@ -19,12 +19,13 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
 #include "nsSVGValue.h"
 #include "nsISVGStyleValue.h"
+#include "nsSVGStyleValue.h"
 #include "nsIStyleRule.h"
 #include "nsIDocument.h"
 #include "nsIURI.h"
@@ -39,7 +40,7 @@ class nsSVGStyleValue : public nsSVGValue,
 {
 protected:
   friend nsresult
-  NS_CreateSVGStyleValue(nsISVGStyleValue** aResult);
+  NS_NewSVGStyleValue(nsISVGStyleValue** aResult);
   
   nsSVGStyleValue();
   
@@ -65,7 +66,7 @@ protected:
 // Implementation:
 
 nsresult
-NS_CreateSVGStyleValue(nsISVGStyleValue** aResult)
+NS_NewSVGStyleValue(nsISVGStyleValue** aResult)
 {
   NS_PRECONDITION(aResult != nsnull, "null ptr");
   if (! aResult) return NS_ERROR_NULL_POINTER;

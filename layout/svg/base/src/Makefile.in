@@ -31,20 +31,21 @@ LIBRARY_NAME	= gksvgbase_s
 REQUIRES	= xpcom string widget dom js locale htmlparser view pref necko webshell
 
 CPPSRCS		= \
+		nsSVGBPathBuilder.cpp \
+		nsSVGCircleFrame.cpp \
 		nsSVGFill.cpp \
 		nsSVGForeignObjectFrame.cpp \
 		nsSVGGFrame.cpp \
+		nsSVGGenericContainerFrame.cpp \
+		nsSVGGraphic.cpp \
 		nsSVGGraphicFrame.cpp \
 		nsSVGOuterSVGFrame.cpp \
-		nsSVGPath.cpp \
 		nsSVGPathFrame.cpp \
 		nsSVGPolygonFrame.cpp \
 		nsSVGPolylineFrame.cpp \
-		nsSVGCircleFrame.cpp \
-		nsSVGRenderingContext.cpp \
 		nsSVGRenderItem.cpp \
+		nsSVGRenderingContext.cpp \
 		nsSVGStroke.cpp \
-		nsSVGGenericContainerFrame.cpp \
 		$(NULL)
 
 include $(topsrcdir)/config/config.mk
@@ -65,7 +66,7 @@ INCLUDES	+= \
 		-I$(srcdir)/../../../html/style/src \
 		-I$(srcdir)/../../../html/base/src \
 		-I$(srcdir)/../../../html/forms/src \
-		-I$(srcdir)/../../../../content/svg/src \
+		-I$(srcdir)/../../../../content/svg/content/src \
 		-I$(srcdir)/../../../html/content/src \
 		-I$(srcdir)/../../../xml/content/src \
 		-I$(srcdir)/../../../base/public \

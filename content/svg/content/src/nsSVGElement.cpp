@@ -19,7 +19,7 @@
  *
  * Contributor(s):
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com>
  *
  */
 
@@ -43,6 +43,7 @@
 #include "nsIStyleRule.h"
 #include "nsIDOMSVGSVGElement.h"
 #include "nsIRuleWalker.h"
+#include "nsSVGStyleValue.h"
 
 nsSVGElement::nsSVGElement()
     : mAttributes(nsnull)
@@ -74,16 +75,21 @@ NS_CLASSINFO_MAP_END
 //----------------------------------------------------------------------
 // nsISupports methods
 
-NS_IMPL_ADDREF_INHERITED(nsSVGElement,nsXMLElement)
-NS_IMPL_RELEASE_INHERITED(nsSVGElement,nsXMLElement)
+NS_IMPL_ADDREF_INHERITED(nsSVGElement,nsGenericElement)
+NS_IMPL_RELEASE_INHERITED(nsSVGElement,nsGenericElement)
 
 NS_INTERFACE_MAP_BEGIN(nsSVGElement)
   NS_INTERFACE_MAP_ENTRY(nsIXMLContent)
   NS_INTERFACE_MAP_ENTRY(nsIDOMSVGElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMNode)
   NS_INTERFACE_MAP_ENTRY_TEAROFF(nsIDOM3Node, nsNode3Tearoff(this))
   NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
   NS_INTERFACE_MAP_ENTRY(nsISVGValueObserver)
-NS_INTERFACE_MAP_END_INHERITING(nsXMLElement)
+// provided by nsGenericElement:
+//  NS_INTERFACE_MAP_ENTRY(nsIStyledContent)
+//  NS_INTERFACE_MAP_ENTRY(nsIContent)
+NS_INTERFACE_MAP_END_INHERITING(nsGenericElement)
 
 //----------------------------------------------------------------------
 // Implementation
@@ -105,7 +111,7 @@ nsSVGElement::Init()
   // Create mapped properties:
   
   // style #IMPLIED
-  rv = NS_CreateSVGStyleValue(getter_AddRefs(mStyle));
+  rv = NS_NewSVGStyleValue(getter_AddRefs(mStyle));
   NS_ENSURE_SUCCESS(rv,rv);
   rv = mAttributes->AddMappedSVGValue(nsSVGAtoms::style, mStyle);
   NS_ENSURE_SUCCESS(rv,rv);
@@ -170,7 +176,7 @@ nsSVGElement::InsertChildAt(nsIContent* aKid, PRInt32 aIndex,
         doc->ContentInserted(this, aKid, aIndex);
       }
 
-      if (nsXMLElement::HasMutationListeners(this, NS_EVENT_BITS_MUTATION_NODEINSERTED)) {
+      if (nsGenericElement::HasMutationListeners(this, NS_EVENT_BITS_MUTATION_NODEINSERTED)) {
         nsCOMPtr<nsIDOMEventTarget> node(do_QueryInterface(aKid));
         nsMutationEvent mutation;
         mutation.eventStructType = NS_MUTATION_EVENT;
@@ -244,7 +250,7 @@ nsSVGElement::AppendChildTo(nsIContent* aKid, PRBool aNotify,
         doc->ContentAppended(this, mChildren.Count() - 1);
       }
 
-      if (nsXMLElement::HasMutationListeners(this, NS_EVENT_BITS_MUTATION_NODEINSERTED)) {
+      if (nsGenericElement::HasMutationListeners(this, NS_EVENT_BITS_MUTATION_NODEINSERTED)) {
         nsCOMPtr<nsIDOMEventTarget> node(do_QueryInterface(aKid));
         nsMutationEvent mutation;
         mutation.eventStructType = NS_MUTATION_EVENT;
@@ -276,7 +282,7 @@ nsSVGElement::RemoveChildAt(PRInt32 aIndex, PRBool aNotify)
   nsIContent* oldKid = (nsIContent *)mChildren.ElementAt(aIndex);
   if (nsnull != oldKid ) {
 
-    if (nsXMLElement::HasMutationListeners(this, NS_EVENT_BITS_MUTATION_NODEREMOVED)) {
+    if (nsGenericElement::HasMutationListeners(this, NS_EVENT_BITS_MUTATION_NODEREMOVED)) {
       nsCOMPtr<nsIDOMEventTarget> node(do_QueryInterface(oldKid));
       nsMutationEvent mutation;
       mutation.eventStructType = NS_MUTATION_EVENT;
@@ -444,14 +450,12 @@ nsSVGElement::GetID(nsIAtom*& aId)const
 NS_IMETHODIMP
 nsSVGElement::WalkContentStyleRules(nsIRuleWalker* aRuleWalker)
 {
-//  printf("SVGElement(%p): WalkContentStyleRules()\n", this);
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsSVGElement::WalkInlineStyleRules(nsIRuleWalker* aRuleWalker)
 {
-//  printf("SVGElement(%p): WalkInlineStyleRules()\n", this);
   nsCOMPtr<nsIStyleRule> rule;
   mStyle->GetStyleRule(mDocument, getter_AddRefs(rule));
   if (aRuleWalker && rule) {
@@ -464,8 +468,6 @@ NS_IMETHODIMP
 nsSVGElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
                                        PRInt32& aHint) const
 {
-//  printf("SVGElement(%p): GetMappedAttributeImpact()\n");
-
   // we don't rely on the cssframeconstructor to map attribute changes
   // to changes in our frames. an exception is css.
   // style_hint_content will trigger a re-resolve of the style context
@@ -475,6 +477,7 @@ nsSVGElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
   // ... and we special case the style attribute
   if (aAttribute == nsSVGAtoms::style) {
     aHint = NS_STYLE_HINT_VISUAL;
+//    aHint = NS_STYLE_HINT_FRAMECHANGE;
   }
   
   return NS_OK;
@@ -575,13 +578,13 @@ nsSVGElement::GetLastChild(nsIDOMNode** aNode)
 NS_IMETHODIMP
 nsSVGElement::GetPreviousSibling(nsIDOMNode** aPreviousSibling)
 {
-  return nsXMLElement::GetPreviousSibling(aPreviousSibling);
+  return nsGenericElement::GetPreviousSibling(aPreviousSibling);
 }
 
 NS_IMETHODIMP
 nsSVGElement::GetNextSibling(nsIDOMNode** aNextSibling)
 {
-  return nsXMLElement::GetNextSibling(aNextSibling);
+  return nsGenericElement::GetNextSibling(aNextSibling);
 }
 
 NS_IMETHODIMP
@@ -595,7 +598,7 @@ nsSVGElement::GetAttributes(nsIDOMNamedNodeMap** aAttributes)
 NS_IMETHODIMP
 nsSVGElement::GetOwnerDocument(nsIDOMDocument** aOwnerDocument)
 {
-  return nsXMLElement::GetOwnerDocument(aOwnerDocument);
+  return nsGenericElement::GetOwnerDocument(aOwnerDocument);
 }
 
 NS_IMETHODIMP
@@ -607,43 +610,43 @@ nsSVGElement::GetNamespaceURI(nsAWritableString& aNamespaceURI)
 NS_IMETHODIMP
 nsSVGElement::GetPrefix(nsAWritableString& aPrefix)
 {
-  return nsXMLElement::GetPrefix(aPrefix);
+  return nsGenericElement::GetPrefix(aPrefix);
 }
 
 NS_IMETHODIMP
 nsSVGElement::SetPrefix(const nsAReadableString& aPrefix)
 {
-  return nsXMLElement::SetPrefix(aPrefix);
+  return nsGenericElement::SetPrefix(aPrefix);
 }
 
 NS_IMETHODIMP
 nsSVGElement::GetLocalName(nsAWritableString& aLocalName)
 {
-  return nsXMLElement::GetLocalName(aLocalName);
+  return nsGenericElement::GetLocalName(aLocalName);
 }
 
 NS_IMETHODIMP
 nsSVGElement::InsertBefore(nsIDOMNode* aNewChild, nsIDOMNode* aRefChild, nsIDOMNode** aReturn)
 {
-  return nsXMLElement::doInsertBefore(aNewChild, aRefChild, aReturn);
+  return nsGenericElement::doInsertBefore(aNewChild, aRefChild, aReturn);
 }
 
 NS_IMETHODIMP
 nsSVGElement::ReplaceChild(nsIDOMNode* aNewChild, nsIDOMNode* aOldChild, nsIDOMNode** aReturn)
 {
-  return nsXMLElement::doReplaceChild(aNewChild, aOldChild, aReturn);
+  return nsGenericElement::doReplaceChild(aNewChild, aOldChild, aReturn);
 }
 
 NS_IMETHODIMP
 nsSVGElement::RemoveChild(nsIDOMNode* aOldChild, nsIDOMNode** aReturn)
 {
-  return nsXMLElement::doRemoveChild(aOldChild, aReturn);
+  return nsGenericElement::doRemoveChild(aOldChild, aReturn);
 }
 
 NS_IMETHODIMP
 nsSVGElement::AppendChild(nsIDOMNode* aNewChild, nsIDOMNode** aReturn)
 {
-  return nsXMLElement::doInsertBefore(aNewChild, nsnull, aReturn);
+  return nsGenericElement::doInsertBefore(aNewChild, nsnull, aReturn);
 }
 
 NS_IMETHODIMP
@@ -668,7 +671,7 @@ nsSVGElement::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
 NS_IMETHODIMP
 nsSVGElement::Normalize()
 {
-  return nsXMLElement::Normalize();
+  return nsGenericElement::Normalize();
 }
 
 NS_IMETHODIMP
@@ -695,7 +698,7 @@ nsSVGElement::HasAttributes(PRBool* aReturn)
 //----------------------------------------------------------------------
 // nsIDOMElement methods
 
-// forwarded to nsXMLElement implementations
+// forwarded to nsGenericElement implementations
 
 
 //----------------------------------------------------------------------
@@ -718,7 +721,24 @@ nsSVGElement::GetOwnerSVGElement(nsIDOMSVGSVGElement * *aOwnerSVGElement)
 {
   *aOwnerSVGElement = nsnull;
 
-  nsCOMPtr<nsIContent> parent = mParent;
+  nsCOMPtr<nsIBindingManager> bindingManager;
+  if (mDocument) {
+    mDocument->GetBindingManager(getter_AddRefs(bindingManager));
+  }
+
+  nsCOMPtr<nsIContent> parent;
+  
+  if (bindingManager) {
+    // we have a binding manager -- do we have an anonymous parent?
+    bindingManager->GetInsertionParent(this, getter_AddRefs(parent));
+  }
+
+  if (!parent) {
+    // if we didn't find an anonymous parent, use the explicit one,
+    // whether it's null or not...
+    parent = mParent;
+  }
+
   while (parent) {    
     nsCOMPtr<nsIDOMSVGSVGElement> SVGSVGElement = do_QueryInterface(parent);
     if (SVGSVGElement) {
@@ -726,13 +746,23 @@ nsSVGElement::GetOwnerSVGElement(nsIDOMSVGSVGElement * *aOwnerSVGElement)
       NS_ADDREF(*aOwnerSVGElement);
       return NS_OK;
     }
-	nsCOMPtr<nsIContent> next;
-    parent->GetParent(*getter_AddRefs(next));
-	parent = next;
+    nsCOMPtr<nsIContent> next;
+
+    if (bindingManager) {
+      bindingManager->GetInsertionParent(parent, getter_AddRefs(next));
+    }
+
+    if (!next) {
+      // no anonymous parent, so use explicit one
+      parent->GetParent(*getter_AddRefs(next));
+    }
+    
+    parent = next;
   }
+
   // we don't have a parent SVG element...
 
-  // are we the outermost SVG element?
+  // are _we_ the outermost SVG element? If yes, return nsnull, but don't fail
   nsCOMPtr<nsIDOMSVGSVGElement> SVGSVGElement = do_QueryInterface((nsIDOMSVGElement*)this);
   NS_ENSURE_TRUE(SVGSVGElement, NS_ERROR_FAILURE);
   return NS_OK; 
@@ -746,8 +776,11 @@ nsSVGElement::GetViewportElement(nsIDOMSVGElement * *aViewportElement)
   nsCOMPtr<nsIDOMSVGSVGElement> SVGSVGElement;
   nsresult rv = GetOwnerSVGElement(getter_AddRefs(SVGSVGElement));
   NS_ENSURE_SUCCESS(rv,rv);
-  *aViewportElement = SVGSVGElement;
-  NS_IF_ADDREF(*aViewportElement);
+  if (SVGSVGElement) {
+    nsCOMPtr<nsIDOMSVGElement> SVGElement = do_QueryInterface(SVGSVGElement);
+    *aViewportElement = SVGElement;
+    NS_IF_ADDREF(*aViewportElement);
+  }
   return NS_OK;
 }
 

@@ -19,7 +19,7 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
@@ -169,12 +169,26 @@ nsSVGGenericContainerFrame::Init(nsIPresContext*  aPresContext,
 
 NS_IMETHODIMP
 nsSVGGenericContainerFrame::AppendFrames(nsIPresContext* aPresContext,
-                      nsIPresShell&   aPresShell,
-                      nsIAtom*        aListName,
-                      nsIFrame*       aFrameList)
+                                         nsIPresShell&   aPresShell,
+                                         nsIAtom*        aListName,
+                                         nsIFrame*       aFrameList)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+  nsresult  rv = NS_OK;
+
+  // Insert the new frames
+  mFrames.AppendFrames(this, aFrameList);
+
+  nsIFrame* kid = mFrames.FirstChild();
+  while (kid) {
+    nsISVGFrame* SVGFrame=0;
+    kid->QueryInterface(NS_GET_IID(nsISVGFrame),(void**)&SVGFrame);
+    if (SVGFrame) {
+      SVGFrame->NotifyCTMChanged(); //XXX use different function
+    }
+    kid->GetNextSibling(&kid);
+  }
+
+  return rv;
 }
 
 NS_IMETHODIMP
@@ -192,14 +206,15 @@ nsSVGGenericContainerFrame::InsertFrames(nsIPresContext* aPresContext,
 #endif
   mFrames.InsertFrames(nsnull, aPrevFrame, aFrameList);
 
-  // Generate a reflow command to reflow the dirty frames
-  //nsIReflowCommand* reflowCmd;
-  //rv = NS_NewHTMLReflowCommand(&reflowCmd, aDelegatingFrame, nsIReflowCommand::ReflowDirty);
-  //if (NS_SUCCEEDED(rv)) {
-  //  reflowCmd->SetChildListName(nsLayoutAtoms::absoluteList);
-  //  aPresShell.AppendReflowCommand(reflowCmd);
-  //  NS_RELEASE(reflowCmd);
-  //}
+  nsIFrame* kid = mFrames.FirstChild();
+  while (kid) {
+    nsISVGFrame* SVGFrame=0;
+    kid->QueryInterface(NS_GET_IID(nsISVGFrame),(void**)&SVGFrame);
+    if (SVGFrame) {
+      SVGFrame->NotifyCTMChanged(); //XXX use different function
+    }
+    kid->GetNextSibling(&kid);
+  }
   
   return rv;
 }

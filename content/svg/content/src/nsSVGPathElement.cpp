@@ -19,7 +19,7 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
@@ -68,7 +68,7 @@ nsresult NS_NewSVGPathElement(nsIContent **aResult, nsINodeInfo *aNodeInfo)
   if (!it) return NS_ERROR_OUT_OF_MEMORY;
   NS_ADDREF(it);
 
-  nsresult rv = NS_STATIC_CAST(nsXMLElement*,it)->Init(aNodeInfo);
+  nsresult rv = NS_STATIC_CAST(nsGenericElement*,it)->Init(aNodeInfo);
 
   if (NS_FAILED(rv)) {
     it->Release();
@@ -133,7 +133,7 @@ nsSVGPathElement::Init()
   NS_ENSURE_SUCCESS(rv,rv);
 
   // Create mapped properties:
-  
+
   // d #REQUIRED
   rv = NS_NewSVGPathSegList(getter_AddRefs(mSegments));
   NS_ENSURE_SUCCESS(rv,rv);
@@ -156,7 +156,7 @@ nsSVGPathElement::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
   if (!it) return NS_ERROR_OUT_OF_MEMORY;
   NS_ADDREF(it);
 
-  nsresult rv = NS_STATIC_CAST(nsXMLElement*,it)->Init(mNodeInfo);
+  nsresult rv = NS_STATIC_CAST(nsGenericElement*,it)->Init(mNodeInfo);
 
   if (NS_FAILED(rv)) {
     it->Release();
@@ -176,8 +176,10 @@ nsSVGPathElement::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
     it->Release();
     return rv;
   }
+ 
+  *aReturn = NS_STATIC_CAST(nsSVGPathElementBase*, it);
 
-  return it->QueryInterface(NS_GET_IID(nsIDOMNode), (void**)aReturn);
+  return NS_OK; 
 }
 
 

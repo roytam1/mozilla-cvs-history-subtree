@@ -19,7 +19,7 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
@@ -35,13 +35,6 @@
 static NS_DEFINE_IID(kCImage, NS_IMAGE_CID);
 #endif
 
-//#define DUMP_SVG_IMAGE
-
-#ifdef DUMP_SVG_IMAGE
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#endif
 
 ////////////////////////////////////////////////////////////////////////
 // nsSVGRenderingContext
@@ -49,27 +42,18 @@ static NS_DEFINE_IID(kCImage, NS_IMAGE_CID);
 nsSVGRenderingContext::nsSVGRenderingContext(nsIPresContext* presContext,
                                              nsIRenderingContext *renderingContext,
                                              const nsRect& dirtyRectTwips)
-  : mRenderingContext(renderingContext),
-    mPresContext(presContext),
-    mDirtyRect(dirtyRectTwips),
-    mDirtyRectTwips(dirtyRectTwips)
+    : mRenderingContext(renderingContext),
+      mPresContext(presContext),
 #ifdef SVG_USE_SURFACE
-    , mTempBuffer(nsnull)
+      mTempBuffer(nsnull),
 #endif
+      mDirtyRectTwips(dirtyRectTwips),
+      mDirtyRect(dirtyRectTwips)
 {
-//  printf("------->rect=%d %d %d %d\n",mDirtyRect.x,
-//         mDirtyRect.y, mDirtyRect.width, mDirtyRect.height);
-  
   float twipsPerPx;
   mPresContext->GetPixelsToTwips(&twipsPerPx);
   NS_ASSERTION(twipsPerPx!=0.0f, "invalid twips/px");
   mDirtyRect *= 1.0f/twipsPerPx;
-
-  
-  
-//  printf("------->rect=%d %d %d %d\n",mDirtyRect.x,
-//         mDirtyRect.y, mDirtyRect.width, mDirtyRect.height);
-
 }
 
 nsSVGRenderingContext::~nsSVGRenderingContext()
@@ -103,12 +87,6 @@ nsSVGRenderingContext::PaintSVGRenderItem(nsSVGRenderItem* item)
   col[2] = ART_PIX_MAX_FROM_8(NS_GET_B(rgb));
 #endif
   
-  //printf("Rendering color R=%d, G=%d, B=%d, a=%f\n",
-  //       NS_GET_R(rgb),
-  //       NS_GET_G(rgb),
-  //       NS_GET_B(rgb),
-  //       item->GetOpacity());
-  
   art_render_image_solid(render, col);
   
   InvokeRender(render);
@@ -117,7 +95,15 @@ nsSVGRenderingContext::PaintSVGRenderItem(nsSVGRenderItem* item)
 void nsSVGRenderingContext::ClearBuffer(nscolor color)
 {
 
-#ifndef SVG_USE_SURFACE
+#ifdef SVG_USE_SURFACE
+  nsIRenderingContext* ctx = LockMozRenderingContext();
+  ctx->PushState();
+  ctx->SetColor(color);
+  ctx->FillRect(mDirtyRectTwips);
+  PRBool aClipEmpty;
+  ctx->PopState(aClipEmpty); 
+  UnlockMozRenderingContext();
+#else
   InitializeBuffer();
 
   PRUint8 red   = NS_GET_R(color);
@@ -139,26 +125,12 @@ void nsSVGRenderingContext::ClearBuffer(nscolor color)
   mRenderingContext->GetDeviceContext(*getter_AddRefs(ctx));
   nsRect r(0,0,mBuffer->GetWidth(),mBuffer->GetHeight());
   mBuffer->ImageUpdated(ctx, nsImageUpdateFlags_kBitsChanged,&r);
-#else
-  nsIRenderingContext* ctx = LockMozRenderingContext();
-  ctx->PushState();
-  ctx->SetColor(color);
-  ctx->FillRect(mDirtyRectTwips);
-//  ctx->SetColor(NS_RGB(100,100,100));
-//  ctx->DrawRect(mDirtyRectTwips);
-  PRBool aClipEmpty;
-  ctx->PopState(aClipEmpty); 
-  UnlockMozRenderingContext();
 #endif
 }
 
 nsIRenderingContext* nsSVGRenderingContext::LockMozRenderingContext()
 {
-#ifndef SVG_USE_SURFACE
-  NS_ASSERTION(0, "Can't select correct target into rendering context. \n"
-               "Set 'SVG_USE_SURFACE' in layout/svg/base/src/nsSVGRenderingContext.h.");
-  return mRenderingContext;
-#else
+#ifdef SVG_USE_SURFACE
   InitializeBuffer();
   NS_ASSERTION(mTempBuffer==0, "nested LockMozRenderingContext() calls?");
   mRenderingContext->GetDrawingSurface(&mTempBuffer);
@@ -182,19 +154,21 @@ nsIRenderingContext* nsSVGRenderingContext::LockMozRenderingContext()
   mRenderingContext->SetClipRect(mDirtyRectTwips, nsClipCombine_kReplace, aClipEmpty);
   
   return mRenderingContext;
+#else
+  NS_ERROR("Can't select correct target into rendering context. \n"
+           "Set 'SVG_USE_SURFACE' in layout/svg/base/src/nsSVGRenderingContext.h.");
+  return mRenderingContext;
 #endif
 }
 
 void nsSVGRenderingContext::UnlockMozRenderingContext()
 {
-#ifndef SVG_USE_SURFACE
-/* */
-#else
+#ifdef SVG_USE_SURFACE
   NS_ASSERTION(mTempBuffer, "no drawing surface to restore");
   PRBool aClipEmpty;
   mRenderingContext->PopState(aClipEmpty);
   mRenderingContext->SelectOffScreenDrawingSurface(mTempBuffer);
-  mTempBuffer = 0;
+  mTempBuffer = nsnull;
 #endif
 }
 
@@ -202,7 +176,11 @@ void nsSVGRenderingContext::Render()
 {
   if (!mBuffer) return;
 
-#ifndef SVG_USE_SURFACE
+#ifdef SVG_USE_SURFACE
+  mRenderingContext->CopyOffScreenBits(mBuffer, 0, 0, mDirtyRectTwips,
+                                       NS_COPYBITS_TO_BACK_BUFFER |
+                                       NS_COPYBITS_XFORM_DEST_VALUES);
+#else
   if (!mBuffer->GetIsRowOrderTopToBottom()) { // need to flip image
     // XXX I know this is silly. Blt should take care of it.
     int stride = mBuffer->GetLineStride();
@@ -222,58 +200,20 @@ void nsSVGRenderingContext::Render()
   mBuffer->SetNaturalHeight(mDirtyRect.height);
 
   mRenderingContext->DrawImage(mBuffer, mDirtyRectTwips);
-  
-#else
-  mRenderingContext->CopyOffScreenBits(mBuffer, 0, 0, mDirtyRectTwips,
-                                       NS_COPYBITS_TO_BACK_BUFFER |
-                                       NS_COPYBITS_XFORM_DEST_VALUES);
 #endif
 }
 
 //----------------------------------------------------------------------
 // implementation helpers:
 
-void nsSVGRenderingContext::DumpImage() {
-#ifdef DUMP_SVG_IMAGE
-  static int numOut=0;
-  char buf[30];
-  sprintf(buf,"svg%d.ppm",numOut);
-  ++numOut;
-
-  printf("dumping %s\n",buf);
-
-  FILE* f = fopen(buf, "wb");
-  
-  PRUint32 width = mDirtyRect.width;
-  PRUint32 height = mDirtyRect.height;
-
-  fprintf(f,"P6\n%d %d\n255\n",width,height);
-
-  int stride = mBuffer->GetLineStride();
-  PRUint8* bits = mBuffer->GetBits();
-  for(int row=0; row < mDirtyRect.height;++row) {
-    fwrite(bits+row*stride,3,width,f);
-  }
-
-  fclose(f);
-#endif
-}
 
 ArtRender* nsSVGRenderingContext::NewRender()
 {
   InitializeBuffer();
 
-  ArtRender* render=0;
+  ArtRender* render=nsnull;
   
-#ifndef SVG_USE_SURFACE
-  mBuffer->LockImagePixels(PR_FALSE);
-
-  render = art_render_new(mDirtyRect.x, mDirtyRect.y,
-                          mDirtyRect.x+ mDirtyRect.width,
-                          mDirtyRect.y+ mDirtyRect.height,
-                          mBuffer->GetBits(), mBuffer->GetLineStride(),
-                          3, 8, ART_ALPHA_NONE, NULL);
-#else
+#ifdef SVG_USE_SURFACE
   PRInt32 stride;
   PRUint8* buf;  
   PRInt32 bytesPerWidth;
@@ -286,8 +226,10 @@ ArtRender* nsSVGRenderingContext::NewRender()
   PRInt32 bbp = format.mRedCount + format.mGreenCount + format.mBlueCount + format.mAlphaCount;
 
   NS_ASSERTION(bbp == 24,
-               "The SVG rendering backend currenly only supports 24bit color depths...");
-  if (bbp != 24) return 0;
+               "The SVG rendering backend currenly only supports 24bit color depths...\n"
+               "Try compiling nsSVGRenderingContext.cpp with SVG_USE_SURFACE unset!");
+
+  if (bbp != 24) return nsnull;
     
   render = art_render_new(mDirtyRect.x, mDirtyRect.y,
                           mDirtyRect.x+ mDirtyRect.width,
@@ -298,6 +240,14 @@ ArtRender* nsSVGRenderingContext::NewRender()
                           8, // bits per channel
                           ART_ALPHA_NONE, // alpha
                           NULL);
+#else
+  mBuffer->LockImagePixels(PR_FALSE);
+
+  render = art_render_new(mDirtyRect.x, mDirtyRect.y,
+                          mDirtyRect.x+ mDirtyRect.width,
+                          mDirtyRect.y+ mDirtyRect.height,
+                          mBuffer->GetBits(), mBuffer->GetLineStride(),
+                          3, 8, ART_ALPHA_NONE, NULL);
 #endif
 
   return render;
@@ -307,7 +257,9 @@ void nsSVGRenderingContext::InvokeRender(ArtRender* render)
 {
   art_render_invoke(render); // also frees the render
 
-#ifndef SVG_USE_SURFACE
+#ifdef SVG_USE_SURFACE
+  mBuffer->Unlock();
+#else
   mBuffer->UnlockImagePixels(PR_FALSE);
 
   // and tell the image that we've changed it...
@@ -316,11 +268,6 @@ void nsSVGRenderingContext::InvokeRender(ArtRender* render)
   mRenderingContext->GetDeviceContext(*getter_AddRefs(ctx));
   nsRect r(0,0,mBuffer->GetWidth(),mBuffer->GetHeight());
   mBuffer->ImageUpdated(ctx, nsImageUpdateFlags_kBitsChanged,&r);
-  #ifdef DUMP_SVG_IMAGE
-    DumpImage();
-  #endif
-#else
-  mBuffer->Unlock();
 #endif
 }
 
@@ -329,122 +276,18 @@ void nsSVGRenderingContext::InitializeBuffer()
 {
   if (mBuffer) return;
 
-#ifndef SVG_USE_SURFACE
-  mBuffer = do_CreateInstance(kCImage);
-  mBuffer->Init(mDirtyRect.width, mDirtyRect.height, 24,
-                nsMaskRequirements_kNoMask);
-#else
+#ifdef SVG_USE_SURFACE
    mRenderingContext->CreateDrawingSurface(&mDirtyRect,
                                            NS_CREATEDRAWINGSURFACE_FOR_PIXEL_ACCESS |
                                            NS_CREATEDRAWINGSURFACE_24BIT,
                                            (void*&)*getter_AddRefs(mBuffer));
+#else
+  mBuffer = do_CreateInstance(kCImage);
+  mBuffer->Init(mDirtyRect.width, mDirtyRect.height, 24,
+                nsMaskRequirements_kNoMask);
 #endif
 }
 
 
 
 
-//----------------------------------------------------------------------
-// Test stuff
-
-ArtVpath * testpath(int n)
-{
-  ArtVpath *vec;
-  int i;
-  double r, th;
-
-  vec = art_new (ArtVpath, n + 2);
-  for (i = 0; i < n; i++)
-    {
-      vec[i].code = i ? ART_LINETO : ART_MOVETO;
-      r = rand () * (250.0 / RAND_MAX);
-#if 0
-      r = r + 0.9 * (250 - r);
-#endif
-      th = i * 2 * M_PI / n;
-      vec[i].x = 250 + r * cos (th);
-      vec[i].y = 250 - r * sin (th);
-    }
-  vec[i].code = ART_LINETO;
-  vec[i].x = vec[0].x;
-  vec[i].y = vec[0].y;
-  i++;
-  vec[i].code = ART_END;
-  vec[i].x = 0;
-  vec[i].y = 0;
-  return vec;
-}
-
-
-// XXX
-ArtSVP* svp=0;  
-ArtSVP* svp2=0;
-
-
-
-void nsSVGRenderingContext::Test()
-{
-  if (!svp) {
-    ArtVpath* vpath = testpath(30);
-    svp = art_svp_vpath_stroke (vpath,
-                                ART_PATH_STROKE_JOIN_ROUND,
-                                ART_PATH_STROKE_CAP_BUTT,
-                                15,
-                                4,
-                                0.5);
-    
-    art_free(vpath);
-
-    vpath = testpath(30);
-    svp2 = art_svp_vpath_stroke (vpath,
-                                ART_PATH_STROKE_JOIN_MITER,
-                                ART_PATH_STROKE_CAP_BUTT,
-                                20,
-                                4,
-                                0.5);
-    
-    art_free(vpath);
-
-  }
-
-  InitializeBuffer();
-  
-  
-  
-//  mContext->GetDrawingSurface((void**)&surface);
-
-//  PRInt32 stride;
-//  PRInt32 bytesPerWidth;
-//  surface->Lock(0,0,bounds.width,bounds.height,(void **)&buf,
-//                &stride, &bytesPerWidth,0);
-
-//  nsPixelFormat format;
-//  surface->GetPixelFormat(&format);
-//  printf("r:%d g:%d b:%d a:%d\n", (int)format.mRedCount,
-//         (int)format.mGreenCount, (int)format.mBlueCount, (int)format.mAlphaCount);
-
-  ClearBuffer(NS_RGB(0,255,0));
-  
-  ArtRender* render;
-  render = NewRender();
-    
-//  art_render_clear_rgb(render, 0xFFFFFF);
-
-  art_render_svp(render,svp);
-
-  art_render_mask_solid(render, 0x10000);
-  
-  ArtPixMaxDepth red[3] = {0xFFFF, 0x0000, 0x0000 };
-  art_render_image_solid(render,red);  
-  InvokeRender(render);
-  
-  render = NewRender();
-    
-  art_render_mask_solid(render, 0x08000);
-
-  art_render_svp(render,svp2);
-  
-  ArtPixMaxDepth blue[3] = {0x0000, 0x0000, 0xFFFF };
-  art_render_image_solid(render,blue);  
-  InvokeRender(render);
-}

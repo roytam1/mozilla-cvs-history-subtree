@@ -19,7 +19,7 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
@@ -28,7 +28,6 @@
 #define __NS_ISVGSTYLEVALUE_H__
 
 #include "nsISupports.h"
-#include "nsString.h"
 
 class nsIStyleRule;
 class nsIDocument;
@@ -44,9 +43,6 @@ public:
   
   NS_IMETHOD GetStyleRule(nsIDocument* baseDocument, nsIStyleRule** rule)=0;
 };
-
-extern nsresult
-NS_CreateSVGStyleValue(nsISVGStyleValue** aResult);
 
 #endif // __NS_ISVGSTYLEVALUE_H__
 

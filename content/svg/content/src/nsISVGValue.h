@@ -19,7 +19,7 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
@@ -33,7 +33,7 @@
 class nsISVGValueObserver;
 
 ////////////////////////////////////////////////////////////////////////
-// nsSVGValue: private interface for svg values
+// nsISVGValue: private interface for svg values
 
 /* This interface is implemented by all value-types (e.g. coords,
   pointlists, matrices) that can be parsed from/to strings. This is

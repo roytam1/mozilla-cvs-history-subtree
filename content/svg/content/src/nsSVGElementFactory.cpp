@@ -19,7 +19,7 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
@@ -30,7 +30,6 @@
 #include "nsSVGAtoms.h"
 #include "nsIXMLContent.h"
 
-extern nsresult NS_NewSVGElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
 extern nsresult NS_NewSVGPolylineElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
 extern nsresult NS_NewSVGPolygonElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
 extern nsresult NS_NewSVGCircleElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);

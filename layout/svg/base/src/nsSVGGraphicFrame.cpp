@@ -19,16 +19,13 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
 #include "nsSVGGraphicFrame.h"
 #include "nsIPresContext.h"
 #include "nsISVGFrame.h"
-#include "nsSVGPath.h"
-#include "nsSVGStroke.h"
-#include "nsSVGFill.h"
 #include "nsSVGRenderingContext.h"
 #include "nsSVGAtoms.h"
 #include "nsIDOMSVGTransformable.h"
@@ -42,9 +39,11 @@
 // nsSVGGraphicFrame
 
 nsSVGGraphicFrame::nsSVGGraphicFrame()
-    : mPath(nsnull), mStroke(nsnull), mFill(nsnull), mDirty(PR_FALSE)
+    : mUpdateFlags(0)
 {
-//  printf("nsSVGGraphicFrame CTOR\n");
+#ifdef DEBUG
+  printf("nsSVGGraphicFrame %p CTOR\n", this);
+#endif
 }
 
 nsSVGGraphicFrame::~nsSVGGraphicFrame()
@@ -58,12 +57,9 @@ nsSVGGraphicFrame::~nsSVGGraphicFrame()
   if (value)
     value->RemoveObserver(this);
 
-
-  if (mPath) delete mPath;
-  if (mStroke) delete mStroke;
-  if (mFill) delete mFill;
-  
-  printf("~nsSVGGraphicFrame\n");
+#ifdef DEBUG
+  printf("~nsSVGGraphicFrame %p\n", this);
+#endif
 }
 
 
@@ -76,21 +72,6 @@ NS_INTERFACE_MAP_BEGIN(nsSVGGraphicFrame)
   NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
   NS_INTERFACE_MAP_ENTRY(nsISVGValueObserver)
 NS_INTERFACE_MAP_END_INHERITING(nsSVGGraphicFrameBase)
-
-// NS_IMETHODIMP
-// nsSVGGraphicFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
-// {
-//   NS_PRECONDITION(0 != aInstancePtr, "null ptr");
-//   if (NULL == aInstancePtr) {
-//     return NS_ERROR_NULL_POINTER;
-//   }
-
-//   if (aIID.Equals(NS_GET_IID(nsISVGFrame))) {
-//     *aInstancePtr = (void*) ((nsISVGFrame*) this);
-//     return NS_OK;
-//   }
-//   return nsSVGGraphicFrameBase::QueryInterface(aIID, aInstancePtr);
-// }
 
 //----------------------------------------------------------------------
 // nsIFrame methods
@@ -123,6 +104,8 @@ nsSVGGraphicFrame::AttributeChanged(nsIPresContext* aPresContext,
                                     nsIAtom*        aAttribute,
                                     PRInt32         aHint)
 {
+  // we don't use this notification mechanism
+  
 #ifdef DEBUG
   printf("** nsSVGGraphicFrame::AttributeChanged(");
   nsAutoString str;
@@ -132,13 +115,6 @@ nsSVGGraphicFrame::AttributeChanged(nsIPresContext* aPresContext,
   printf(cstr.get());
   printf(")\n");
 #endif
-  
-  // XXX is this still needed? does it even work?
-  if (aAttribute == nsSVGAtoms::style) {
-    InvalidateRegion(GetUta(), PR_FALSE);  
-    BuildRenderItems();
-    InvalidateRegion(GetUta(), PR_TRUE);
-  }
   
   return NS_OK;
 }
@@ -151,9 +127,9 @@ nsSVGGraphicFrame::DidSetStyleContext(nsIPresContext* aPresContext)
   // to get slightly finer granularity, but unfortunately the
   // style_hints don't map very well onto svg. Here seems to be the
   // best place to deal with style changes:
-  InvalidateRegion(GetUta(), PR_FALSE);
-  BuildRenderItems();
-  InvalidateRegion(GetUta(), PR_TRUE);
+
+  UpdateGraphic(NS_SVGGRAPHIC_UPDATE_FLAGS_STYLECHANGE);
+
   return NS_OK;
 }
 
@@ -164,7 +140,6 @@ nsSVGGraphicFrame::DidSetStyleContext(nsIPresContext* aPresContext)
 NS_IMETHODIMP
 nsSVGGraphicFrame::WillModifySVGObservable(nsISVGValue* observable)
 {
-  InvalidateRegion(GetUta(), PR_FALSE);
   return NS_OK;
 }
 
@@ -172,14 +147,11 @@ nsSVGGraphicFrame::WillModifySVGObservable(nsISVGValue* observable)
 NS_IMETHODIMP
 nsSVGGraphicFrame::DidModifySVGObservable (nsISVGValue* observable)
 {
-  PRBool suspended;
-  IsRedrawSuspended(&suspended);
-  if (!suspended) {
-    Build();
-    InvalidateRegion(GetUta(), PR_TRUE);
-  }
-  else
-    mDirty = PR_TRUE;
+  // the observables we're listening in on affect the path by default.
+  // We can specialize in the subclasses when needed.
+  
+  UpdateGraphic(NS_SVGGRAPHIC_UPDATE_FLAGS_PATHCHANGE);
+  
   return NS_OK;
 }
 
@@ -190,14 +162,60 @@ nsSVGGraphicFrame::DidModifySVGObservable (nsISVGValue* observable)
 NS_IMETHODIMP
 nsSVGGraphicFrame::Paint(nsSVGRenderingContext* renderingContext)
 {
-  if (mFill && !mFill->IsEmpty()) {
-    renderingContext->PaintSVGRenderItem(mFill);
+  mGraphic.Paint(renderingContext);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSVGGraphicFrame::GetFrameForPoint(float x, float y, nsIFrame** hit)
+{
+  *hit = nsnull;
+  if (mGraphic.IsMouseHit(x, y)) {
+    *hit = this;
   }
-  
-  if (mStroke && !mStroke->IsEmpty())
-    renderingContext->PaintSVGRenderItem(mStroke);
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSVGGraphicFrame::NotifyCTMChanged()
+{
+  UpdateGraphic(NS_SVGGRAPHIC_UPDATE_FLAGS_CTMCHANGE);
   
   return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSVGGraphicFrame::NotifyRedrawSuspended()
+{
+  // XXX should we cache the fact that redraw is suspended?
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSVGGraphicFrame::NotifyRedrawUnsuspended()
+{
+  if (mUpdateFlags != 0) {
+    ArtUta* uta = nsnull;
+    uta = mGraphic.Update(mUpdateFlags, this);
+    if (uta)
+      InvalidateRegion(uta, PR_TRUE);
+    mUpdateFlags = 0;
+  }
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSVGGraphicFrame::IsRedrawSuspended(PRBool* isSuspended)
+{
+  nsCOMPtr<nsISVGFrame> SVGFrame = do_QueryInterface(mParent);
+  if (!SVGFrame) {
+    NS_ASSERTION(SVGFrame, "no parent frame");
+    *isSuspended = PR_FALSE;
+    return NS_OK;
+  }
+
+  return SVGFrame->IsRedrawSuspended(isSuspended);  
 }
 
 NS_IMETHODIMP
@@ -223,91 +241,28 @@ nsSVGGraphicFrame::InvalidateRegion(ArtUta* uta, PRBool bRedraw)
   return SVGFrame->InvalidateRegion(uta, bRedraw);
 }
 
-NS_IMETHODIMP
-nsSVGGraphicFrame::GetFrameForPoint(float x, float y, nsIFrame** hit)
+//----------------------------------------------------------------------
+// nsASVGGraphicSource methods:
+
+void nsSVGGraphicFrame::GetCTM(nsIDOMSVGMatrix** ctm)
 {
-  *hit = nsnull;
-
-  if (mStroke && !mStroke->IsEmpty()) {
-    int wind = art_svp_point_wind(mStroke->GetSvp(), x, y);
-    if (wind) {
-      *hit = this;
-      return NS_OK;
-    }
-  }
-
-  if (mFill && !mFill->IsEmpty()) {
-    int wind = art_svp_point_wind(mFill->GetSvp(), x, y);
-    if (wind) {
-      *hit = this;
-      return NS_OK;
-    }
-  }
-
+  *ctm = nsnull;
   
-  return NS_OK;
+  nsCOMPtr<nsIDOMSVGTransformable> transformable = do_QueryInterface(mContent);
+  NS_ASSERTION(transformable, "wrong content type");
+  
+  transformable->GetScreenCTM(ctm);  
 }
 
-NS_IMETHODIMP
-nsSVGGraphicFrame::NotifyCTMChanged()
+
+const nsStyleSVG* nsSVGGraphicFrame::GetStyle()
 {
-  // XXX complete rebuild is wasteful. transform our path & visuals
-  // instead
-
-  InvalidateRegion(GetUta(), PR_FALSE);
-  PRBool suspended;
-  IsRedrawSuspended(&suspended);
-  if (!suspended) {
-    Build();
-    InvalidateRegion(GetUta(), PR_TRUE);
-  }
-  else
-    mDirty = PR_TRUE;
-
-  return NS_OK;
+  return (const nsStyleSVG*) mStyleContext->GetStyleData(eStyleStruct_SVG);
 }
 
-NS_IMETHODIMP
-nsSVGGraphicFrame::NotifyRedrawSuspended()
-{
-#ifdef DEBUG
-  printf("nsSVGGraphicFrame %p::NotifyRedrawSuspended()\n",this);
-#endif
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSVGGraphicFrame::NotifyRedrawUnsuspended()
-{
-#ifdef DEBUG
-  printf("nsSVGGraphicFrame %p::NotifyRedrawUnsuspended()\n",this);
-#endif
-  if (mDirty) {
-    mDirty = PR_FALSE;
-    Build();
-    InvalidateRegion(GetUta(), PR_TRUE);
-   }
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSVGGraphicFrame::IsRedrawSuspended(PRBool* isSuspended)
-{
-#ifdef DEBUG
-  printf("nsSVGGraphicFrame %p::IsRedrawSuspended()\n",this);
-#endif
-  nsCOMPtr<nsISVGFrame> SVGFrame = do_QueryInterface(mParent);
-  if (!SVGFrame) {
-    NS_ASSERTION(SVGFrame, "no parent frame");
-    *isSuspended = PR_FALSE;
-    return NS_OK;
-  }
-
-  return SVGFrame->IsRedrawSuspended(isSuspended);  
-}
 
 //----------------------------------------------------------------------
-//
+// 
 
 nsresult nsSVGGraphicFrame::Init()
 {
@@ -323,123 +278,18 @@ nsresult nsSVGGraphicFrame::Init()
   return NS_OK;
 }
 
-void nsSVGGraphicFrame::Build()
+void nsSVGGraphicFrame::UpdateGraphic(nsSVGGraphicUpdateFlags flags)
 {
-#ifdef DEBUG
-  printf("nsSVGGraphicFrame(%p)::Build()\n",this);
-#endif
-  BuildPath();
-  BuildRenderItems();
+  mUpdateFlags |= flags;
+  
+  PRBool suspended;
+  IsRedrawSuspended(&suspended);
+  if (!suspended) {
+    ArtUta* uta = nsnull;
+    uta = mGraphic.Update(mUpdateFlags, this);
+    if (uta)
+      InvalidateRegion(uta, PR_TRUE);
+    mUpdateFlags = 0;
+  }  
 }
 
-void nsSVGGraphicFrame::BuildRenderItems()
-{
-  if (!mPath) {
-    PRBool suspended;
-    IsRedrawSuspended(&suspended);
-    if (suspended) {
-      mDirty = PR_TRUE;
-      return;
-    }
-    BuildPath();
-  }
-  
-  if (mFill) {
-    delete mFill;
-    mFill = nsnull;
-  }
-  if (mStroke) {
-    delete mStroke;
-    mStroke = nsnull;
-  }
-
-  if (!mPath || mPath->IsEmpty()) return;
-
-  const nsStyleSVG* svgStyle = (const nsStyleSVG*)
-    mStyleContext->GetStyleData(eStyleStruct_SVG);
-
-  if (svgStyle->mStroke.mType == eStyleSVGPaintType_Color) {
-    nsSVGStrokeStyle strokeStyle;
-    strokeStyle.color   = svgStyle->mStroke.mColor;
-    strokeStyle.opacity = svgStyle->mStrokeOpacity;
-    strokeStyle.width   = svgStyle->mStrokeWidth;
-    mStroke = new nsSVGStroke();
-    mStroke->Build(mPath, strokeStyle);
-    if (mStroke->IsEmpty()) {
-      delete mStroke;
-      mStroke = nsnull;
-    }
-  }
-
-  if (svgStyle->mFill.mType == eStyleSVGPaintType_Color) {
-    nsSVGFillStyle fillStyle;
-    fillStyle.color   = svgStyle->mFill.mColor;
-    fillStyle.opacity = svgStyle->mFillOpacity;
-    mFill = new nsSVGFill();
-    mFill->Build(mPath, fillStyle);
-    if (mFill->IsEmpty()) {
-      delete mFill;
-      mFill = nsnull;
-    }
-  }
-  
-}
-
-ArtUta*
-nsSVGGraphicFrame::GetUta()
-{
-  if (!mFill && !mStroke) {
-    return nsnull;
-  }
-  
-  ArtUta* f = mFill ? mFill->GetUta() : nsnull;
-  ArtUta* s = mStroke ? mStroke->GetUta() : nsnull;
-
-  if (f == nsnull)
-    return s;
-  if (s == nsnull)
-    return f;
-
-  ArtUta* u = art_uta_union(f, s);
-  art_free(f);
-  art_free(s);
-  
-  return u;
-}
-
-void nsSVGGraphicFrame::GetCTM(nsIDOMSVGMatrix** ctm)
-{
-  *ctm = nsnull;
-  
-  nsCOMPtr<nsIDOMSVGTransformable> transformable = do_QueryInterface(mContent);
-  NS_ASSERTION(transformable, "wrong content type");
-  
-  transformable->GetScreenCTM(ctm);  
-}
-
-void nsSVGGraphicFrame::TransformPoint(float& x, float& y)
-{
-  nsCOMPtr<nsIDOMSVGMatrix> ctm;
-  GetCTM(getter_AddRefs(ctm));
-  if (!ctm) return;
-
-  // XXX this is absurd! we need to add another method (interface
-  // even?) to nsIDOMSVGMatrix to make this easier. (something like
-  // nsIDOMSVGMatrix::Transform(float*x,float*y))
-  
-  nsCOMPtr<nsIDOMSVGElement> el = do_QueryInterface(mContent);
-  nsCOMPtr<nsIDOMSVGSVGElement> svg_el;
-  el->GetOwnerSVGElement(getter_AddRefs(svg_el));
-  if (!svg_el) return;
-  nsCOMPtr<nsIDOMSVGPoint> point;
-  svg_el->CreateSVGPoint(getter_AddRefs(point));
-  NS_ASSERTION(point, "couldn't create point!");
-  if (!point) return;
-  
-  point->SetX(x);
-  point->SetY(y);
-  nsCOMPtr<nsIDOMSVGPoint> xfpoint;
-  point->MatrixTransform(ctm, getter_AddRefs(xfpoint));
-  xfpoint->GetX(&x);
-  xfpoint->GetY(&y);
-}

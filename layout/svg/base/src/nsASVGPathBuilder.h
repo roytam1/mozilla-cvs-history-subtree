@@ -23,18 +23,24 @@
  *
  */
 
-#ifndef __NS_SVGRECT_H__
-#define __NS_SVGRECT_H__
+#ifndef __NS_ASVGPATHBUILDER_H__
+#define __NS_ASVGPATHBUILDER_H__
 
-#include "nsIDOMSVGRect.h"
+#include "nscore.h"
 
-nsresult
-NS_NewSVGRect(nsIDOMSVGRect** result,
-              float x=0.0f, float y=0.0f,
-              float width=0.0f, float height=0.0f);
+// abstract path builder 'interface' class.
+// XXX one day this will become a proper interface
 
-nsresult
-NS_NewSVGRect(nsIDOMSVGRect** result, nsIDOMSVGRect* prototype);
+class nsASVGPathBuilder 
+{
+public:
+  virtual void Moveto(float x, float y)=0;
+  virtual void Lineto(float x, float y)=0;
+  virtual void Curveto(float x, float y, float x1, float y1, float x2, float y2)=0;
+  virtual void Arcto(float x, float y, float r1, float r2, float angle,
+                     PRBool largeArcFlag, PRBool sweepFlag)=0;
+  virtual void ClosePath()=0;    
+};
 
 
-#endif //__NS_SVGRECT_H__
+#endif // __NS_ASVGPATHBUILDER_H__

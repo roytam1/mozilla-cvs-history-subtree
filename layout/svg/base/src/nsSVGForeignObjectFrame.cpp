@@ -19,7 +19,7 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
@@ -36,6 +36,9 @@
 #include "nsIDOMSVGAnimatedLength.h"
 #include "nsIDOMSVGLength.h"
 #include "nsIDOMSVGForeignObjectElem.h"
+#include "nsIDOMSVGMatrix.h"
+#include "nsIDOMSVGSVGElement.h"
+#include "nsIDOMSVGPoint.h"
 
 typedef nsBlockFrame nsSVGForeignObjectFrameBase;
 
@@ -90,7 +93,10 @@ protected:
   // implementation helpers:
   float GetPxPerTwips();
   float GetTwipsPerPx();
-  
+  void TransformPoint(float& x, float& y);
+  void TransformVector(float& x, float& y);
+  void GetCTM(nsIDOMSVGMatrix** ctm);
+
   nsIPresShell* mPresShell; // XXX is a non-owning ref ok?
 
   nsCOMPtr<nsIDOMSVGLength> mX;
@@ -260,6 +266,17 @@ nsSVGForeignObjectFrame::Reflow(nsIPresContext*          aPresContext,
   mWidth->GetValue(&width);
   mHeight->GetValue(&height);
 
+  // transform x,y,width,height according to the current ctm:
+  // XXX we're ignoring rotation at the moment
+
+  TransformPoint(x, y);
+  
+  float e1x = 1, e1y = 0, e2x = 0, e2y = 1;
+  TransformVector(e1x, e1y);
+  TransformVector(e2x, e2y);
+  width  *= (float)sqrt(e1x*e1x + e1y*e1y);
+  height *= (float)sqrt(e2x*e2x + e2y*e2y);
+  
   // move ourselves to (x,y):
   MoveTo(aPresContext, (nscoord) (x*twipsPerPx), (nscoord) (y*twipsPerPx));
   // XXX: if we have a view, move that 
@@ -443,4 +460,53 @@ float nsSVGForeignObjectFrame::GetTwipsPerPx()
     presContext->GetScaledPixelsToTwips(&twipsPerPx);
   }
   return twipsPerPx;
+}
+
+void nsSVGForeignObjectFrame::TransformPoint(float& x, float& y)
+{
+  nsCOMPtr<nsIDOMSVGMatrix> ctm;
+  GetCTM(getter_AddRefs(ctm));
+  if (!ctm) return;
+
+  // XXX this is absurd! we need to add another method (interface
+  // even?) to nsIDOMSVGMatrix to make this easier. (something like
+  // nsIDOMSVGMatrix::TransformPoint(float*x,float*y))
+  
+  nsCOMPtr<nsIDOMSVGElement> el = do_QueryInterface(mContent);
+  nsCOMPtr<nsIDOMSVGSVGElement> svg_el;
+  el->GetOwnerSVGElement(getter_AddRefs(svg_el));
+  if (!svg_el) return;
+  nsCOMPtr<nsIDOMSVGPoint> point;
+  svg_el->CreateSVGPoint(getter_AddRefs(point));
+  NS_ASSERTION(point, "couldn't create point!");
+  if (!point) return;
+  
+  point->SetX(x);
+  point->SetY(y);
+  nsCOMPtr<nsIDOMSVGPoint> xfpoint;
+  point->MatrixTransform(ctm, getter_AddRefs(xfpoint));
+  xfpoint->GetX(&x);
+  xfpoint->GetY(&y);
+}
+
+void nsSVGForeignObjectFrame::TransformVector(float& x, float& y)
+{
+  // XXX This is crazy. What we really want is
+  // nsIDOMSVGMatrix::TransformVector(x,y);
+  
+  float x0,y0;
+  TransformPoint(x0, y0);
+  TransformPoint(x,y);
+  x -= x0;
+  y -= y0;
+}
+
+void nsSVGForeignObjectFrame::GetCTM(nsIDOMSVGMatrix** ctm)
+{
+  *ctm = nsnull;
+  
+  nsCOMPtr<nsIDOMSVGTransformable> transformable = do_QueryInterface(mContent);
+  NS_ASSERTION(transformable, "wrong content type");
+  
+  transformable->GetScreenCTM(ctm);  
 }

@@ -23,18 +23,14 @@
  *
  */
 
-#ifndef __NS_SVGRECT_H__
-#define __NS_SVGRECT_H__
 
-#include "nsIDOMSVGRect.h"
+#ifndef __NS_SVGSTYLEVALUE_H__
+#define __NS_SVGSTYLEVALUE_H__
 
-nsresult
-NS_NewSVGRect(nsIDOMSVGRect** result,
-              float x=0.0f, float y=0.0f,
-              float width=0.0f, float height=0.0f);
+class nsISVGStyleValue;
 
 nsresult
-NS_NewSVGRect(nsIDOMSVGRect** result, nsIDOMSVGRect* prototype);
+NS_NewSVGStyleValue(nsISVGStyleValue** aResult);
 
+#endif // __NS_SVGSTYLEVALUE_H__
 
-#endif //__NS_SVGRECT_H__

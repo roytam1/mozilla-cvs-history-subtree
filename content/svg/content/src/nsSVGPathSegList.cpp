@@ -19,7 +19,7 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
@@ -30,8 +30,6 @@
 #include "nsVoidArray.h"
 #include "nsDOMError.h"
 #include "nsSVGPathDataParser.h"
-
-
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -147,7 +145,28 @@ nsSVGPathSegList::SetValueString(const nsAReadableString& aValue)
 NS_IMETHODIMP
 nsSVGPathSegList::GetValueString(nsAWritableString& aValue)
 {
-  // XXX
+  aValue.Truncate();
+
+  PRInt32 count = mSegments.Count();
+
+  if (count<=0) return NS_OK;
+
+  PRInt32 i = 0;
+  
+  while (1) {
+    nsIDOMSVGPathSeg* seg = ElementAt(i);
+    nsCOMPtr<nsISVGValue> val = do_QueryInterface(seg);
+    NS_ASSERTION(val, "path segment doesn't implement required interface");
+    if (!val) continue;
+    nsAutoString str;
+    val->GetValueString(str);
+    aValue.Append(str);
+
+    if (++i >= count) break;
+
+    aValue.Append(NS_LITERAL_STRING(" "));
+  }
+  
   return NS_OK;
 }
 

@@ -19,7 +19,7 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
@@ -33,10 +33,8 @@
 
 #include "nsString.h"
 #include "nsCOMPtr.h"
-// XXX: remove next line XXX
-#include "nsIDOMElement.h"
 #include "nsIDOMSVGElement.h"
-#include "nsXMLElement.h"
+#include "nsGenericElement.h"
 #include "nsSVGAttributes.h"
 #include "nsISVGValue.h"
 #include "nsISVGValueObserver.h"
@@ -46,14 +44,12 @@
 
 extern void GetSVGElementIIDs(nsVoidArray& aArray);
 
-class nsSVGElement : public nsXMLElement,    // :nsIHTMLContent:nsIStyledContent:nsIContent
+class nsSVGElement : public nsGenericElement,    // :nsIHTMLContent:nsIStyledContent:nsIContent
                      public nsIDOMSVGElement,    // :nsIDOMElement:nsIDOMNode
                      public nsISVGValueObserver, 
                      public nsSupportsWeakReference // :nsISupportsWeakReference
 {
 protected:
-//  friend nsresult NS_NewSVGElement(nsIContent **aResult,
-//                                   nsINodeInfo *aNodeInfo);
   nsSVGElement();
   virtual ~nsSVGElement();
 
@@ -148,7 +144,7 @@ public:
   
   // nsIDOMElement
   // NS_DECL_IDOMELEMENT
-  NS_FORWARD_NSIDOMELEMENT(nsXMLElement::)
+  NS_FORWARD_NSIDOMELEMENT(nsGenericElement::)
   
   // nsIDOMSVGElement
   NS_DECL_NSIDOMSVGELEMENT

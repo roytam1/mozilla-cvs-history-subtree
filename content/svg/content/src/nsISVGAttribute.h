@@ -23,18 +23,28 @@
  *
  */
 
-#ifndef __NS_SVGRECT_H__
-#define __NS_SVGRECT_H__
 
-#include "nsIDOMSVGRect.h"
+#ifndef __NS_ISVGATTRIBUTE_H__
+#define __NS_ISVGATTRIBUTE_H__
 
-nsresult
-NS_NewSVGRect(nsIDOMSVGRect** result,
-              float x=0.0f, float y=0.0f,
-              float width=0.0f, float height=0.0f);
+#include "nsIDOMAttr.h"
 
-nsresult
-NS_NewSVGRect(nsIDOMSVGRect** result, nsIDOMSVGRect* prototype);
+class nsISVGValue;
 
+////////////////////////////////////////////////////////////////////////
+// nsISVGAttribute: private interface for svg attributes
 
-#endif //__NS_SVGRECT_H__
+// {6557CCDF-7252-481d-8AB0-7E083E7E7AB0}
+#define NS_ISVGATTRIBUTE_IID \
+{ 0x6557ccdf, 0x7252, 0x481d, { 0x8a, 0xb0, 0x7e, 0x8, 0x3e, 0x7e, 0x7a, 0xb0 } }
+
+class nsISVGAttribute : public nsIDOMAttr
+{
+public:
+  static const nsIID& GetIID() { static nsIID iid = NS_ISVGATTRIBUTE_IID; return iid; }
+
+  NS_IMETHOD GetSVGValue(nsISVGValue** value) = 0;
+};
+
+#endif // __NS_ISVGATTRIBUTE_H__
+

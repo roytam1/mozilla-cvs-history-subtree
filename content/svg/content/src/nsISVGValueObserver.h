@@ -19,7 +19,7 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
@@ -40,7 +40,7 @@ class nsISVGValue;
   refs.
 */
 
-// {33E46ADB-9AA4-4903-9EDE-699FAE1107D8}
+// {33e46adb-9aa4-4903-9ede-699fae1107d8}
 #define NS_ISVGVALUEOBSERVER_IID \
 { 0x33e46adb, 0x9aa4, 0x4903, { 0x9e, 0xde, 0x69, 0x9f, 0xae, 0x11, 0x7, 0xd8 } }
 

@@ -19,33 +19,45 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
 #include "nsSVGFill.h"
-#include "nsSVGPath.h"
 
+// static helper functions 
 
+static PRBool ContainsOpenSubPaths(ArtVpath* path)
+{
+  // XXX
+  return PR_FALSE;
+}
+
+static ArtVpath* ConstructClosedPath(ArtVpath* path)
+{
+  // XXX
+  return nsnull;
+}
+
+// nsSVGFill members
+  
 void
-nsSVGFill::Build(nsSVGPath* path, const nsSVGFillStyle& style)
+nsSVGFill::Build(ArtVpath* path, const nsSVGFillStyle& style)
 {
   if (mSvp) {
     art_free(mSvp);
     mSvp = nsnull;
   }
   
-  mStyle = style;
+  PRBool bNeedsClosing = ContainsOpenSubPaths(path);
+  if (bNeedsClosing) 
+    path = ConstructClosedPath(path);
+  
+  ArtVpath* perturbedVP = art_vpath_perturb(path);
 
-
-  if (!path->IsClosed()) {
-    NS_ASSERTION(1==0, "filling open paths not implemented yet!");
-    // XXX create a closed path
-    return;
-  }
-
-  ArtVpath* perturbedVP = art_vpath_perturb(path->GetVPath());
-
+  if (bNeedsClosing)
+    art_free(path);
+  
   ArtSVP* svp = art_svp_from_vpath(perturbedVP);
   art_free(perturbedVP);
   
@@ -56,3 +68,4 @@ nsSVGFill::Build(nsSVGPath* path, const nsSVGFillStyle& style)
   mSvp = art_svp_rewind_uncrossed (uncrossedSVP, wind);
   art_svp_free (uncrossedSVP);
 }
+

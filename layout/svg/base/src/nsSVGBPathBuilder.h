@@ -23,38 +23,40 @@
  *
  */
 
-#ifndef __NS_SVGRENDERITEM_H__
-#define __NS_SVGRENDERITEM_H__
+#ifndef __NS_SVGBPATHBUILDER_H__
+#define __NS_SVGBPATHBUILDER_H__
 
-#include "prtypes.h"
-#include "nsColor.h"
+#include "nscore.h"
 #include "libart-incs.h"
+#include "nsASVGPathBuilder.h"
 
-class nsSVGRenderItem
+class nsSVGBPathBuilder : public nsASVGPathBuilder
 {
 public:
-  nsSVGRenderItem();
-  virtual ~nsSVGRenderItem();
+  nsSVGBPathBuilder();
 
-  void Clear();
+  PRBool IsEmpty();
+  ArtBpath* GetBPath();
   
-  ArtSVP* GetSvp() { return mSvp; }
-  ArtUta* GetUta(); // calculates micro-tile array
-
-  PRBool IsEmpty() { return (mSvp == nsnull); }
-
-  void  SetOpacity(float opacity) { mOpacity=opacity; }
-  float GetOpacity() { return mOpacity; }
-
-  void    SetColor(nscolor color) { mColor = color; }
-  nscolor GetColor() { return mColor; }
-
-  PRBool Contains(float x, float y);
-  
+  // nsASVGPathBuilder methods:
+  virtual void Moveto(float x, float y);
+  virtual void Lineto(float x, float y);
+  virtual void Curveto(float x, float y, float x1, float y1, float x2, float y2);
+  virtual void Arcto(float x, float y, float r1, float r2, float angle,
+                     PRBool largeArcFlag, PRBool sweepFlag);
+  virtual void ClosePath();
+    
 protected:
-  ArtSVP* mSvp;
-  float   mOpacity;
-  nscolor mColor;
-};
 
-#endif // __NS_SVGRENDERITEM_H__
+  // helpers
+  void EnsureBPathSpace(PRUint32 space=1);
+  void EnsureBPathTerminated();
+  PRInt32 GetLastOpenBPath();
+  double CalcVectorAngle(double ux, double uy, double vx, double vy);
+  
+  ArtBpath* mBPath;
+  PRUint32  mBPathSize;
+  PRUint32  mBPathEnd; // one-past-the-end
+  
+};
+#endif // __NS_SVGBPATHBUILDER_H__

@@ -31,36 +31,39 @@ DEFINES=-D_IMPL_NS_HTML -DWIN32_LEAN_AND_MEAN
 
 
 CPP_OBJS=					                 \
-  .\$(OBJDIR)\nsSVGElementFactory.obj        \
-  .\$(OBJDIR)\nsSVGElement.obj               \
-  .\$(OBJDIR)\nsSVGPolylineElement.obj       \
-  .\$(OBJDIR)\nsSVGPolygonElement.obj        \
-  .\$(OBJDIR)\nsSVGCircleElement.obj         \
-  .\$(OBJDIR)\nsSVGGraphicElement.obj        \
+  .\$(OBJDIR)\nsSVGAnimatedLength.obj        \
+  .\$(OBJDIR)\nsSVGAnimatedRect.obj          \
+  .\$(OBJDIR)\nsSVGAnimatedTransformList.obj \
   .\$(OBJDIR)\nsSVGAttributes.obj            \
+  .\$(OBJDIR)\nsSVGCircleElement.obj         \
+  .\$(OBJDIR)\nsSVGElement.obj               \
+  .\$(OBJDIR)\nsSVGElementFactory.obj        \
+  .\$(OBJDIR)\nsSVGForeignObjectElement.obj  \
+  .\$(OBJDIR)\nsSVGGElement.obj              \
   .\$(OBJDIR)\nsSVGGenericStringValue.obj    \
-  .\$(OBJDIR)\nsSVGPoint.obj                 \
-  .\$(OBJDIR)\nsSVGPointList.obj             \
-  .\$(OBJDIR)\nsSVGValue.obj                 \
+  .\$(OBJDIR)\nsSVGGraphicElement.obj        \
   .\$(OBJDIR)\nsSVGLength.obj                \
   .\$(OBJDIR)\nsSVGMatrix.obj                \
-  .\$(OBJDIR)\nsSVGAnimatedLength.obj        \
+  .\$(OBJDIR)\nsSVGPathDataParser.obj        \
+  .\$(OBJDIR)\nsSVGPathElement.obj           \
+  .\$(OBJDIR)\nsSVGPathSeg.obj               \
+  .\$(OBJDIR)\nsSVGPathSegList.obj           \
+  .\$(OBJDIR)\nsSVGPoint.obj                 \
+  .\$(OBJDIR)\nsSVGPointList.obj             \
+  .\$(OBJDIR)\nsSVGPolygonElement.obj        \
+  .\$(OBJDIR)\nsSVGPolylineElement.obj       \
+  .\$(OBJDIR)\nsSVGRect.obj                  \
   .\$(OBJDIR)\nsSVGSVGElement.obj            \
   .\$(OBJDIR)\nsSVGStyleValue.obj            \
-  .\$(OBJDIR)\nsSVGRect.obj                  \
-  .\$(OBJDIR)\nsSVGAnimatedRect.obj          \
-  .\$(OBJDIR)\nsSVGGElement.obj              \
-  .\$(OBJDIR)\nsSVGAnimatedTransformList.obj \
-  .\$(OBJDIR)\nsSVGTransformList.obj         \
   .\$(OBJDIR)\nsSVGTransform.obj             \
-  .\$(OBJDIR)\nsSVGPathElement.obj           \
-  .\$(OBJDIR)\nsSVGForeignObjectElement.obj  \
-  .\$(OBJDIR)\nsSVGPathSegList.obj           \
-  .\$(OBJDIR)\nsSVGPathSeg.obj               \
-  .\$(OBJDIR)\nsSVGPathDataParser.obj        \
+  .\$(OBJDIR)\nsSVGTransformList.obj         \
+  .\$(OBJDIR)\nsSVGValue.obj                 \
 	$(NULL)
 
-EXPORTS =					\
+EXPORTS =  					\
+    nsISVGAttribute.h       \
+    nsISVGValue.h           \
+    nsISVGStyleValue.h      \
 	$(NULL)
 
 LINCS=-I$(PUBLIC)\xpcom -I$(PUBLIC)\raptor -I$(PUBLIC)\js \

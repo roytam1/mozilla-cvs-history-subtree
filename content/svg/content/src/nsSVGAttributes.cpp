@@ -19,7 +19,7 @@
  *
  * Contributor(s):
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
@@ -82,7 +82,6 @@ nsSVGAttribute::nsSVGAttribute(nsINodeInfo* aNodeInfo,
       mNodeInfo(aNodeInfo),
       mValue(value)
 {
-//  printf("SVG attrib ctor %p\n",this);
   NS_INIT_ISUPPORTS();
 }
 
@@ -90,17 +89,22 @@ nsSVGAttribute::~nsSVGAttribute()
 {
   if (mValue)
     mValue->RemoveObserver(this);
-//  printf("SVG attrib dtor %p\n",this);
 }
 
 //----------------------------------------------------------------------
 // nsISupports interface
 
-NS_IMPL_ISUPPORTS4(nsSVGAttribute,
-                   nsIDOMAttr,
-                   nsIDOMNode,
-                   nsISupportsWeakReference,
-                   nsISVGValueObserver);
+NS_IMPL_ADDREF(nsSVGAttribute)
+NS_IMPL_RELEASE(nsSVGAttribute)
+
+NS_INTERFACE_MAP_BEGIN(nsSVGAttribute)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMNode)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMAttr)
+  NS_INTERFACE_MAP_ENTRY(nsISVGAttribute)
+  NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
+  NS_INTERFACE_MAP_ENTRY(nsISVGValueObserver)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMNode)
+NS_INTERFACE_MAP_END
 
 //----------------------------------------------------------------------
 // nsIDOMNode interface
@@ -337,6 +341,18 @@ nsSVGAttribute::GetOwnerElement(nsIDOMElement** aOwnerElement)
 }
 
 //----------------------------------------------------------------------
+// nsISVGAttribute methods
+
+NS_IMETHODIMP
+nsSVGAttribute::GetSVGValue(nsISVGValue** value)
+{
+  *value = mValue;
+  NS_IF_ADDREF(*value);
+  return NS_OK;
+}
+
+
+//----------------------------------------------------------------------
 // nsISVGValueObserver methods
 
 NS_IMETHODIMP
@@ -348,7 +364,6 @@ nsSVGAttribute::WillModifySVGObservable(nsISVGValue* observable)
 NS_IMETHODIMP
 nsSVGAttribute::DidModifySVGObservable (nsISVGValue* observable)
 {
-//  printf("%p informed that %p *was* modified\n",this,observable);
   if (!mOwner) return NS_OK;
   
   mOwner->AttributeWasModified(this);
@@ -376,7 +391,6 @@ nsSVGAttributes::nsSVGAttributes(nsIContent* aContent)
     : mContent(aContent)
 {
   NS_INIT_ISUPPORTS();
-//  printf("nsSVGAttributes(%p) CTOR\n",this);
 }
 
 
@@ -384,7 +398,6 @@ nsSVGAttributes::~nsSVGAttributes()
 {
   ReleaseAttributes();
   ReleaseMappedAttributes();
-//  printf("nsSVGAttributes(%p) DTOR\n",this);  
 }
 
 

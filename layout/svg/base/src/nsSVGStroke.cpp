@@ -19,29 +19,27 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
 #include "nsSVGStroke.h"
-#include "nsSVGPath.h"
+#include "nsCOMPtr.h"
 #include "nsIServiceManager.h"
 #include "nsIPref.h"
 #include "prdtoa.h"
 #include "nsMemory.h"
 
 void
-nsSVGStroke::Build(nsSVGPath* path, const nsSVGStrokeStyle& style)
+nsSVGStroke::Build(ArtVpath* path, const nsSVGStrokeStyle& style)
 {
   if (mSvp)
     art_free(mSvp);
-  
-  mStyle = style;
-    
-  mSvp = art_svp_vpath_stroke (path->GetVPath(),
+      
+  mSvp = art_svp_vpath_stroke (path,
                                ART_PATH_STROKE_JOIN_MITER,
                                ART_PATH_STROKE_CAP_BUTT,
-                               mStyle.width,
+                               style.width,
                                4, // miter limit
                                getFlatness());
 }
@@ -50,17 +48,14 @@ double nsSVGStroke::getFlatness()
 {
   double flatness = 0.5;
   
-  nsresult rv;
-  nsCOMPtr<nsIPref> prefs = do_GetService(NS_PREF_CONTRACTID, &rv);
-  if (NS_SUCCEEDED(rv) && prefs)
-	{
-    // XXX: wouldn't it be great if nsIPref had a 'GetFloatPref()'-function?
-		char	*valuestr = nsnull;
-		if (NS_SUCCEEDED(prefs->CopyCharPref("svg.stroke_flatness",&valuestr)) && (valuestr))
-		{
-      flatness = PR_strtod(valuestr, nsnull);
-      nsMemory::Free(valuestr);
-		}
+  nsCOMPtr<nsIPref> prefs(do_GetService(NS_PREF_CONTRACTID));
+	if (!prefs) return flatness;
+
+  // XXX: wouldn't it be great if nsIPref had a 'GetFloatPref()'-function?
+  char	*valuestr = nsnull;
+  if (NS_SUCCEEDED(prefs->CopyCharPref("svg.stroke_flatness",&valuestr)) && (valuestr)) {
+    flatness = PR_strtod(valuestr, nsnull);
+    nsMemory::Free(valuestr);
   }
   return flatness;
 }

@@ -19,7 +19,7 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
@@ -27,28 +27,20 @@
 #define __NS_SVGSTROKE_H__
 
 #include "nsSVGRenderItem.h"
-
-class nsSVGPath;
+#include "libart-incs.h"
 
 struct nsSVGStrokeStyle 
 {
-  nscolor color;
-  float   opacity;
-  float   width;
+  float width;
 };
 
 class nsSVGStroke : public nsSVGRenderItem
 {
 public:
-  void Build(nsSVGPath* path, const nsSVGStrokeStyle& style);
-  
-  virtual float GetOpacity() { return mStyle.opacity; }
-  virtual nscolor GetColor() { return mStyle.color; }
+  void Build(ArtVpath* path, const nsSVGStrokeStyle& style);
   
 protected:
-  double getFlatness();
-  
-  nsSVGStrokeStyle mStyle;
+  double getFlatness();  
 };
 
 #endif // __NS_SVGSTROKE_H__

@@ -19,7 +19,7 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
@@ -27,25 +27,17 @@
 #define __NS_SVGFILL_H__
 
 #include "nsSVGRenderItem.h"
+#include "libart-incs.h"
 
-class nsSVGPath;
 
 struct nsSVGFillStyle 
 {
-  nscolor color;
-  float   opacity;
 };
 
 class nsSVGFill : public nsSVGRenderItem
 {
 public:
-  void Build(nsSVGPath* path, const nsSVGFillStyle& style);
-  
-  virtual float GetOpacity() { return mStyle.opacity; }
-  virtual nscolor GetColor() { return mStyle.color; }
-  
-protected:
-  nsSVGFillStyle mStyle;
+  void Build(ArtVpath* path, const nsSVGFillStyle& style);  
 };
 
 #endif // __NS_SVGFILL_H__

@@ -19,7 +19,7 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
@@ -153,12 +153,16 @@ NS_NewSVGOuterSVGFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame*
 nsSVGOuterSVGFrame::nsSVGOuterSVGFrame()
     : mRedrawSuspended(PR_FALSE)
 {
-  printf("nsSVGOuterSVGFrame CTOR\n");
+#ifdef DEBUG
+  printf("nsSVGOuterSVGFrame %p CTOR\n", this);
+#endif
 }
 
 nsSVGOuterSVGFrame::~nsSVGOuterSVGFrame()
 {
-  printf("~nsSVGOuterSVGFrame\n");
+#ifdef DEBUG
+  printf("~nsSVGOuterSVGFrame %p\n", this);
+#endif
 }
 
 //----------------------------------------------------------------------
@@ -319,8 +323,50 @@ NS_IMETHODIMP
 nsSVGOuterSVGFrame::DidReflow(nsIPresContext*   aPresContext,
                               nsDidReflowStatus aStatus)
 {
-  // XXX
-  // set the viewport from mRect
+  // Set the viewport. We want the x, y coords relative to the
+  // document element, so that we can use them (in conjunction with
+  // scrollX, scrollY) to transform mouse event coords into the svg
+  // element's viewport coord system.
+
+  NS_ENSURE_TRUE(mContent, NS_ERROR_FAILURE);
+
+  nsCOMPtr<nsIDOMSVGSVGElement> SVGElement = do_QueryInterface(mContent);
+  NS_ENSURE_TRUE(SVGElement, NS_ERROR_FAILURE);
+  
+  nsCOMPtr<nsIDOMSVGRect> viewport;
+  SVGElement->GetViewport(getter_AddRefs(viewport));
+  NS_ENSURE_TRUE(viewport, NS_ERROR_FAILURE);
+  
+  nsIFrame* frame = this;
+  nsPoint origin(0,0);
+  do {
+    nsPoint tmpOrigin;
+    frame->GetOrigin(tmpOrigin);
+    origin += tmpOrigin;
+
+    nsFrameState state;
+    frame->GetFrameState(&state);
+    if(state & NS_FRAME_OUT_OF_FLOW)
+      break;
+
+    frame->GetParent(&frame);
+  } while(frame);
+  
+  float pxPerTwips = GetPxPerTwips();
+  
+  viewport->SetX(origin.x * pxPerTwips);
+  viewport->SetY(origin.y * pxPerTwips);
+  viewport->SetWidth(mRect.width   * pxPerTwips);
+  viewport->SetHeight(mRect.height * pxPerTwips);
+
+#ifdef DEBUG
+  printf("reflowed nsSVGOuterSVGFrame viewport: (%f, %f, %f, %f)",
+         origin.x * pxPerTwips,
+         origin.y * pxPerTwips,
+         mRect.width  * pxPerTwips,
+         mRect.height * pxPerTwips);
+#endif
+  
   return NS_OK;
 }
 
@@ -333,8 +379,58 @@ nsSVGOuterSVGFrame::AppendFrames(nsIPresContext* aPresContext,
                       nsIAtom*        aListName,
                       nsIFrame*       aFrameList)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+  nsresult  rv = NS_OK;
+
+  // Insert the new frames
+  mFrames.AppendFrames(this, aFrameList);
+
+  // XXX Get all new frames updated. Should really have a separate
+  // function for this and not use NotifyCTMChanged(). For now this
+  // will do the trick though:
+
+  // get the view manager, so that we can wrap this up in a batch
+  // update.
+  NS_ENSURE_TRUE(mPresShell, NS_ERROR_FAILURE);
+  nsCOMPtr<nsIPresContext> presCtx;
+  mPresShell->GetPresContext(getter_AddRefs(presCtx));
+  NS_ENSURE_TRUE(presCtx, NS_ERROR_FAILURE);
+  nsIView* view = nsnull;
+  GetView(presCtx, &view);
+  if (!view) {
+    nsIFrame* frame;
+    GetParentWithView(presCtx, &frame);
+    if (frame)
+      frame->GetView(presCtx, &view);
+  }
+  NS_ENSURE_TRUE(view, NS_ERROR_FAILURE);
+      
+  nsCOMPtr<nsIViewManager> vm;
+  view->GetViewManager(*getter_AddRefs(vm));
+
+  vm->BeginUpdateViewBatch();
+
+  nsIFrame* kid = mFrames.FirstChild();
+  while (kid) {
+    nsISVGFrame* SVGFrame=0;
+    kid->QueryInterface(NS_GET_IID(nsISVGFrame),(void**)&SVGFrame);
+    if (SVGFrame) {
+      SVGFrame->NotifyCTMChanged(); //XXX use different function
+    }
+    kid->GetNextSibling(&kid);
+  }
+
+  vm->EndUpdateViewBatch(NS_VMREFRESH_IMMEDIATE);
+  
+  // Generate a reflow command to reflow the dirty frames
+  //nsIReflowCommand* reflowCmd;
+  //rv = NS_NewHTMLReflowCommand(&reflowCmd, aDelegatingFrame, nsIReflowCommand::ReflowDirty);
+  //if (NS_SUCCEEDED(rv)) {
+  //  reflowCmd->SetChildListName(nsLayoutAtoms::absoluteList);
+  //  aPresShell.AppendReflowCommand(reflowCmd);
+  //  NS_RELEASE(reflowCmd);
+  //}
+  
+  return rv;
 }
 
 NS_IMETHODIMP
@@ -347,11 +443,7 @@ nsSVGOuterSVGFrame::InsertFrames(nsIPresContext* aPresContext,
   nsresult  rv = NS_OK;
 
   // Insert the new frames
-#ifdef NS_DEBUG
-  nsFrame::VerifyDirtyBitSet(aFrameList);
-  printf("Frame inserted: %p \n",aFrameList);
-#endif
-  mFrames.InsertFrames(nsnull, aPrevFrame, aFrameList);
+  mFrames.InsertFrames(this, aPrevFrame, aFrameList);
 
   // XXX Get all new frames updated. Should really have a separate
   // function for this and not use NotifyCTMChanged(). For now this
@@ -408,13 +500,57 @@ nsSVGOuterSVGFrame::RemoveFrame(nsIPresContext* aPresContext,
                      nsIAtom*        aListName,
                      nsIFrame*       aOldFrame)
 {
-  PRBool result = mFrames.DestroyFrame(aPresContext, aOldFrame);
-  NS_ASSERTION(result, "didn't find frame to delete");
-  // Because positioned frames aren't part of a flow, there's no
-  // additional work to do, e.g. reflowing sibling frames. And because
-  // positioned frames have a view, we don't need to repaint
-  return result ? NS_OK : NS_ERROR_FAILURE;
+  PRBool rv = mFrames.DestroyFrame(aPresContext, aOldFrame);
+  NS_ASSERTION(rv, "didn't find frame to delete");
+  if (NS_FAILED(rv)) return rv;
+  
+  // XXX Get all new frames updated. Should really have a separate
+  // function for this and not use NotifyCTMChanged(). For now this
+  // will do the trick though:
 
+  // get the view manager, so that we can wrap this up in a batch
+  // update.
+  NS_ENSURE_TRUE(mPresShell, NS_ERROR_FAILURE);
+  nsCOMPtr<nsIPresContext> presCtx;
+  mPresShell->GetPresContext(getter_AddRefs(presCtx));
+  NS_ENSURE_TRUE(presCtx, NS_ERROR_FAILURE);
+  nsIView* view = nsnull;
+  GetView(presCtx, &view);
+  if (!view) {
+    nsIFrame* frame;
+    GetParentWithView(presCtx, &frame);
+    if (frame)
+      frame->GetView(presCtx, &view);
+  }
+  NS_ENSURE_TRUE(view, NS_ERROR_FAILURE);
+      
+  nsCOMPtr<nsIViewManager> vm;
+  view->GetViewManager(*getter_AddRefs(vm));
+
+  vm->BeginUpdateViewBatch();
+
+  nsIFrame* kid = mFrames.FirstChild();
+  while (kid) {
+    nsISVGFrame* SVGFrame=0;
+    kid->QueryInterface(NS_GET_IID(nsISVGFrame),(void**)&SVGFrame);
+    if (SVGFrame) {
+      SVGFrame->NotifyCTMChanged(); //XXX use different function
+    }
+    kid->GetNextSibling(&kid);
+  }
+
+  vm->EndUpdateViewBatch(NS_VMREFRESH_IMMEDIATE);
+  
+  // Generate a reflow command to reflow the dirty frames
+  //nsIReflowCommand* reflowCmd;
+  //rv = NS_NewHTMLReflowCommand(&reflowCmd, aDelegatingFrame, nsIReflowCommand::ReflowDirty);
+  //if (NS_SUCCEEDED(rv)) {
+  //  reflowCmd->SetChildListName(nsLayoutAtoms::absoluteList);
+  //  aPresShell.AppendReflowCommand(reflowCmd);
+  //  NS_RELEASE(reflowCmd);
+  //}
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP

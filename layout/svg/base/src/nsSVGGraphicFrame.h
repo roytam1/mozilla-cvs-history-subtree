@@ -19,7 +19,7 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
@@ -31,12 +31,12 @@
 #include "nsWeakReference.h"
 #include "nsISVGValue.h"
 #include "nsISVGValueObserver.h"
+#include "nsASVGGraphicSource.h"
+#include "nsSVGGraphic.h"
+#include "libart-incs.h"
 
 class nsIPresContext;
 class nsSVGRenderingContext;
-class nsSVGPath;
-class nsSVGStroke;
-class nsSVGFill;
 class nsIDOMSVGMatrix;
 
 typedef nsFrame nsSVGGraphicFrameBase;
@@ -44,7 +44,8 @@ typedef nsFrame nsSVGGraphicFrameBase;
 class nsSVGGraphicFrame : public nsSVGGraphicFrameBase,
                           public nsISVGFrame,
                           public nsISVGValueObserver,
-                          public nsSupportsWeakReference
+                          public nsSupportsWeakReference,
+                          public nsASVGGraphicSource
 {
 protected:
   nsSVGGraphicFrame();
@@ -90,22 +91,20 @@ public:
   NS_IMETHOD NotifyRedrawUnsuspended();
   NS_IMETHOD IsRedrawSuspended(PRBool* isSuspended);
   NS_IMETHOD InvalidateRegion(ArtUta* uta, PRBool bRedraw);
+
+  // nsASVGGraphicSource methods:
+  virtual void GetCTM(nsIDOMSVGMatrix** ctm);
+  virtual const nsStyleSVG* GetStyle();
+  // to be implemented by subclass:
+  //virtual void ConstructPath(nsASVGPathBuilder* pathBuilder)=0;
   
 protected:
   virtual nsresult Init();
-  virtual void BuildPath()=0;
+  void UpdateGraphic(nsSVGGraphicUpdateFlags flags);
 
-  // helpers:
-  void Build();
-  void BuildRenderItems();
-  ArtUta* GetUta();
-  void GetCTM(nsIDOMSVGMatrix** ctm);
-  void TransformPoint(float &x, float &y);
-  
-  nsSVGPath*   mPath;
-  nsSVGStroke* mStroke;
-  nsSVGFill*   mFill;
-  PRBool       mDirty;
+private:
+  nsSVGGraphicUpdateFlags mUpdateFlags;
+  nsSVGGraphic mGraphic;
 };
 
 #endif // __NS_SVGGRAPHICFRAME_H__

@@ -23,18 +23,25 @@
  *
  */
 
-#ifndef __NS_SVGRECT_H__
-#define __NS_SVGRECT_H__
+#ifndef __NS_ASVGGRAPHICSOURCE_H__
+#define __NS_ASVGGRAPHICSOURCE_H__
 
-#include "nsIDOMSVGRect.h"
+#include "nscore.h"
 
-nsresult
-NS_NewSVGRect(nsIDOMSVGRect** result,
-              float x=0.0f, float y=0.0f,
-              float width=0.0f, float height=0.0f);
+class nsASVGPathBuilder;
+class nsIDOMSVGMatrix;
+struct nsStyleSVG;
 
-nsresult
-NS_NewSVGRect(nsIDOMSVGRect** result, nsIDOMSVGRect* prototype);
+// abstract svg graphic source 'interface' class.
+// XXX one day this will become a proper interface
+
+class nsASVGGraphicSource
+{
+public:
+  virtual void ConstructPath(nsASVGPathBuilder* pathBuilder)=0;
+  virtual void GetCTM(nsIDOMSVGMatrix** ctm)=0;
+  virtual const nsStyleSVG* GetStyle()=0;
+};
 
 
-#endif //__NS_SVGRECT_H__
+#endif // __NS_ASVGGRAPHICSOURCE_H__

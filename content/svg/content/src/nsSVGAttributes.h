@@ -19,7 +19,7 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
@@ -28,7 +28,7 @@
 #define __NS_SVGATTRIBUTES_H__
 
 #include "nsCOMPtr.h"
-#include "nsIDOMAttr.h"
+#include "nsISVGAttribute.h"
 #include "nsIDOMNamedNodeMap.h"
 #include "nsString.h"
 #include "nsIAtom.h"
@@ -48,7 +48,7 @@ class nsSVGAttributes;
 
 typedef PRUint32 nsSVGAttributeFlags;
 
-// This is a #REQUIRED-attribute. Shoudl not be allowed to unset
+// This is a #REQUIRED-attribute. Should not be allowed to unset
 #define NS_SVGATTRIBUTE_FLAGS_REQUIRED 0x0001
 
 // This is a #FIXED-attribute. Should not be allowed to set/unset
@@ -61,7 +61,7 @@ typedef PRUint32 nsSVGAttributeFlags;
 ////////////////////////////////////////////////////////////////////////
 // nsSVGAttribute
 
-class nsSVGAttribute : public nsIDOMAttr,
+class nsSVGAttribute : public nsISVGAttribute, // :nsIDOMAttr
                        public nsISVGValueObserver,
                        public nsSupportsWeakReference
 {
@@ -95,6 +95,9 @@ public:
   
   // nsIDOMAttr interface
   NS_DECL_NSIDOMATTR
+
+  // nsISVGAttribute interface
+  NS_IMETHOD GetSVGValue(nsISVGValue** value);
 
   // nsISVGValueObserver
   NS_IMETHOD WillModifySVGObservable(nsISVGValue* observable);

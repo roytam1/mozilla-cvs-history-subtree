@@ -19,7 +19,7 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
@@ -33,9 +33,15 @@ nsSVGRenderItem::nsSVGRenderItem()
 
 nsSVGRenderItem::~nsSVGRenderItem()
 {
+  Clear();
+}
+
+void nsSVGRenderItem::Clear()
+{
   if (mSvp)
     art_free(mSvp);
-}
+  mSvp = nsnull;
+}  
 
 ArtUta*
 nsSVGRenderItem::GetUta()
@@ -44,3 +50,9 @@ nsSVGRenderItem::GetUta()
   return art_uta_from_svp(mSvp);
 }
 
+PRBool
+nsSVGRenderItem::Contains(float x, float y)
+{
+  if (!mSvp) return PR_FALSE;
+  return (art_svp_point_wind(GetSvp(), x, y) != 0);
+}

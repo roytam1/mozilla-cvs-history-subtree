@@ -19,7 +19,7 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
@@ -72,6 +72,9 @@ protected:
   nsCOMPtr<nsIDOMSVGAnimatedLength> mHeight;
   nsCOMPtr<nsIDOMSVGRect>           mViewport;
   nsCOMPtr<nsIDOMSVGAnimatedRect>   mViewBox;
+  nsCOMPtr<nsIDOMSVGAnimatedLength> mX;
+  nsCOMPtr<nsIDOMSVGAnimatedLength> mY;
+  
   PRInt32 mRedrawSuspendCount;
 };
 
@@ -84,7 +87,7 @@ nsresult NS_NewSVGSVGElement(nsIContent **aResult, nsINodeInfo *aNodeInfo)
   if (!it) return NS_ERROR_OUT_OF_MEMORY;
   NS_ADDREF(it);
 
-  nsresult rv = NS_STATIC_CAST(nsXMLElement*,it)->Init(aNodeInfo);
+  nsresult rv = NS_STATIC_CAST(nsGenericElement*,it)->Init(aNodeInfo);
 
   if (NS_FAILED(rv)) {
     it->Release();
@@ -175,6 +178,33 @@ nsSVGSVGElement::Init()
     rv = NS_NewSVGRect(getter_AddRefs(mViewport));
     NS_ENSURE_SUCCESS(rv,rv);
   }
+
+  // DOM property: x ,  #IMPLIED attrib: x
+  {
+    nsCOMPtr<nsIDOMSVGLength> length;
+    rv = NS_NewSVGLength(getter_AddRefs(length),
+                         (nsSVGElement*)this, eXDirection,
+                         0.0f);
+    NS_ENSURE_SUCCESS(rv,rv);
+    rv = NS_NewSVGAnimatedLength(getter_AddRefs(mX), length);
+    NS_ENSURE_SUCCESS(rv,rv);
+    rv = mAttributes->AddMappedSVGValue(nsSVGAtoms::x, mX);
+    NS_ENSURE_SUCCESS(rv,rv);
+  }
+
+  // DOM property: y ,  #IMPLIED attrib: y
+  {
+    nsCOMPtr<nsIDOMSVGLength> length;
+    rv = NS_NewSVGLength(getter_AddRefs(length),
+                         (nsSVGElement*)this, eYDirection,
+                         0.0f);
+    NS_ENSURE_SUCCESS(rv,rv);
+    rv = NS_NewSVGAnimatedLength(getter_AddRefs(mY), length);
+    NS_ENSURE_SUCCESS(rv,rv);
+    rv = mAttributes->AddMappedSVGValue(nsSVGAtoms::y, mY);
+    NS_ENSURE_SUCCESS(rv,rv);
+  }
+  
   // nsIDOMSVGFitToViewBox attributes ------:
   
   // DOM property: viewBox , #IMPLIED attrib: viewBox
@@ -202,7 +232,7 @@ nsSVGSVGElement::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
   if (!it) return NS_ERROR_OUT_OF_MEMORY;
   NS_ADDREF(it);
 
-  nsresult rv = NS_STATIC_CAST(nsXMLElement*,it)->Init(mNodeInfo);
+  nsresult rv = NS_STATIC_CAST(nsGenericElement*,it)->Init(mNodeInfo);
 
   if (NS_FAILED(rv)) {
     it->Release();
@@ -222,8 +252,10 @@ nsSVGSVGElement::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
     it->Release();
     return rv;
   }
+ 
+  *aReturn = NS_STATIC_CAST(nsSVGElement*, it);
 
-  return it->QueryInterface(NS_GET_IID(nsIDOMNode), (void**)aReturn);
+  return NS_OK; 
 }
 
 
@@ -234,14 +266,18 @@ nsSVGSVGElement::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
 NS_IMETHODIMP
 nsSVGSVGElement::GetX(nsIDOMSVGAnimatedLength * *aX)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  *aX = mX;
+  NS_ADDREF(*aX);
+  return NS_OK;
 }
 
 /* readonly attribute nsIDOMSVGAnimatedLength y; */
 NS_IMETHODIMP
 nsSVGSVGElement::GetY(nsIDOMSVGAnimatedLength * *aY)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  *aY = mY;
+  NS_ADDREF(*aY);
+  return NS_OK;
 }
 
 /* readonly attribute nsIDOMSVGAnimatedLength width; */
@@ -307,7 +343,7 @@ nsSVGSVGElement::GetPixelUnitToMillimeterX(float *aPixelUnitToMillimeterX)
   if (!mDocument) return NS_OK;
     // Get Presentation shell 0
   nsCOMPtr<nsIPresShell> presShell;
-  mDocument->GetShellAt(0, getter_AddRefs(presShell));
+  mDocument->GetShellAt(0,getter_AddRefs(presShell));
   if (!presShell) return NS_OK;
   
   // Get the Presentation Context from the Shell
@@ -410,13 +446,22 @@ nsSVGSVGElement::SuspendRedraw(PRUint32 max_wait_milliseconds, PRUint32 *_retval
   
   if (!mDocument) return NS_ERROR_FAILURE;
   nsCOMPtr<nsIPresShell> presShell;
-  mDocument->GetShellAt(0, getter_AddRefs(presShell));
+    mDocument->GetShellAt(0, getter_AddRefs(presShell));
   NS_ASSERTION(presShell, "need presShell to suspend redraw");
   if (!presShell) return NS_ERROR_FAILURE;
 
   nsIFrame* frame;
   presShell->GetPrimaryFrameFor(NS_STATIC_CAST(nsIStyledContent*, this), &frame);
-  NS_ASSERTION(frame, "suspending redraw w/o frame");
+#ifdef DEBUG
+  // XXX We sometimes hit this assertion when the svg:svg element is
+  // in a binding and svg children are inserted underneath it using
+  // <children/>. If the svg children then call suspendRedraw, the
+  // above function call fails although the svg:svg's frame has been
+  // build. Strange...
+  
+//  NS_ASSERTION(frame, "suspending redraw w/o frame");
+  printf("suspending redraw w/o frame\n");
+#endif
   if (frame) {
     nsISVGFrame* svgframe;
     frame->QueryInterface(NS_GET_IID(nsISVGFrame),(void**)&svgframe);
@@ -460,7 +505,10 @@ nsSVGSVGElement::UnsuspendRedrawAll()
 
   nsIFrame* frame;
   presShell->GetPrimaryFrameFor(NS_STATIC_CAST(nsIStyledContent*, this), &frame);
-  NS_ASSERTION(frame, "unsuspending redraw w/o frame");
+#ifdef DEBUG
+//  NS_ASSERTION(frame, "unsuspending redraw w/o frame");
+  printf("unsuspending redraw w/o frame\n");
+#endif
   if (frame) {
     nsISVGFrame* svgframe;
     frame->QueryInterface(NS_GET_IID(nsISVGFrame),(void**)&svgframe);

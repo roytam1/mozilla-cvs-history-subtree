@@ -25,7 +25,7 @@ include $(DEPTH)/config/autoconf.mk
 
 MODULE		= content
 LIBRARY_NAME	= gkcontentsvg_s
-REQUIRES	= xpcom string widget dom js locale htmlparser view pref necko webshell libart_lgpl
+REQUIRES	= xpcom string widget dom js locale htmlparser view pref necko webshell
 
 CPPSRCS		= \
 		nsSVGAnimatedLength.cpp \
@@ -50,8 +50,8 @@ CPPSRCS		= \
 		nsSVGPolygonElement.cpp \
 		nsSVGPolylineElement.cpp \
 		nsSVGRect.cpp \
-		nsSVGStyleValue.cpp \
 		nsSVGSVGElement.cpp \
+		nsSVGStyleValue.cpp \
 		nsSVGTransform.cpp \
 		nsSVGTransformList.cpp \
 		nsSVGValue.cpp \
@@ -62,12 +62,19 @@ include $(topsrcdir)/config/config.mk
 # we don't want the shared lib, but we want to force the creation of a static lib.
 FORCE_STATIC_LIB = 1
 
+EXPORTS =  			\
+	nsISVGAttribute.h       \
+	nsISVGValue.h           \
+	nsISVGStyleValue.h      \
+	$(NULL)
+
 CFLAGS		+= $(MOZ_LIBART_CFLAGS)
 CXXFLAGS	+= $(MOZ_LIBART_CFLAGS)
 
 include $(topsrcdir)/config/rules.mk
 
 DEFINES		+= -D_IMPL_NS_HTML
+
 
 INCLUDES += 	\
 		-I$(srcdir)/../../../html/style/src \

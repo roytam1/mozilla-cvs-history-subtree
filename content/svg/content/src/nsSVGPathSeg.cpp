@@ -19,7 +19,7 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
@@ -120,8 +120,10 @@ nsSVGPathSegClosePath::SetValueString(const nsAReadableString& aValue)
 NS_IMETHODIMP
 nsSVGPathSegClosePath::GetValueString(nsAWritableString& aValue)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+  aValue.Truncate();
+  aValue.Append(NS_LITERAL_STRING("z"));
+  
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
@@ -192,8 +194,13 @@ nsSVGPathSegMovetoAbs::SetValueString(const nsAReadableString& aValue)
 NS_IMETHODIMP
 nsSVGPathSegMovetoAbs::GetValueString(nsAWritableString& aValue)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+  aValue.Truncate();
+
+  char buf[80];
+  sprintf(buf, "M%g,%g", mX, mY);
+  aValue.Append(NS_ConvertASCIItoUCS2(buf));
+
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
@@ -296,8 +303,13 @@ nsSVGPathSegMovetoRel::SetValueString(const nsAReadableString& aValue)
 NS_IMETHODIMP
 nsSVGPathSegMovetoRel::GetValueString(nsAWritableString& aValue)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+  aValue.Truncate();
+
+  char buf[80];
+  sprintf(buf, "m%g,%g", mX, mY);
+  aValue.Append(NS_ConvertASCIItoUCS2(buf));
+
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
@@ -399,8 +411,13 @@ nsSVGPathSegLinetoAbs::SetValueString(const nsAReadableString& aValue)
 NS_IMETHODIMP
 nsSVGPathSegLinetoAbs::GetValueString(nsAWritableString& aValue)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+  aValue.Truncate();
+
+  char buf[80];
+  sprintf(buf, "L%g,%g", mX, mY);
+  aValue.Append(NS_ConvertASCIItoUCS2(buf));
+
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
@@ -503,8 +520,13 @@ nsSVGPathSegLinetoRel::SetValueString(const nsAReadableString& aValue)
 NS_IMETHODIMP
 nsSVGPathSegLinetoRel::GetValueString(nsAWritableString& aValue)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+  aValue.Truncate();
+
+  char buf[80];
+  sprintf(buf, "l%g,%g", mX, mY);
+  aValue.Append(NS_ConvertASCIItoUCS2(buf));
+
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
@@ -613,8 +635,13 @@ nsSVGPathSegCurvetoCubicAbs::SetValueString(const nsAReadableString& aValue)
 NS_IMETHODIMP
 nsSVGPathSegCurvetoCubicAbs::GetValueString(nsAWritableString& aValue)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+  aValue.Truncate();
+
+  char buf[200];
+  sprintf(buf, "C%g,%g %g,%g %g,%g", mX1, mY1, mX2, mY2, mX, mY);
+  aValue.Append(NS_ConvertASCIItoUCS2(buf));
+
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
@@ -779,8 +806,13 @@ nsSVGPathSegCurvetoCubicRel::SetValueString(const nsAReadableString& aValue)
 NS_IMETHODIMP
 nsSVGPathSegCurvetoCubicRel::GetValueString(nsAWritableString& aValue)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+  aValue.Truncate();
+
+  char buf[200];
+  sprintf(buf, "c%g,%g %g,%g %g,%g", mX1, mY1, mX2, mY2, mX, mY);
+  aValue.Append(NS_ConvertASCIItoUCS2(buf));
+
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
@@ -941,8 +973,13 @@ nsSVGPathSegCurvetoQuadraticAbs::SetValueString(const nsAReadableString& aValue)
 NS_IMETHODIMP
 nsSVGPathSegCurvetoQuadraticAbs::GetValueString(nsAWritableString& aValue)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+  aValue.Truncate();
+
+  char buf[200];
+  sprintf(buf, "Q%g,%g %g,%g", mX1, mY1, mX, mY);
+  aValue.Append(NS_ConvertASCIItoUCS2(buf));
+
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
@@ -1076,8 +1113,13 @@ nsSVGPathSegCurvetoQuadraticRel::SetValueString(const nsAReadableString& aValue)
 NS_IMETHODIMP
 nsSVGPathSegCurvetoQuadraticRel::GetValueString(nsAWritableString& aValue)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+  aValue.Truncate();
+
+  char buf[200];
+  sprintf(buf, "q%g,%g %g,%g", mX1, mY1, mX, mY);
+  aValue.Append(NS_ConvertASCIItoUCS2(buf));
+
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
@@ -1217,8 +1259,14 @@ nsSVGPathSegArcAbs::SetValueString(const nsAReadableString& aValue)
 NS_IMETHODIMP
 nsSVGPathSegArcAbs::GetValueString(nsAWritableString& aValue)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+  aValue.Truncate();
+
+  char buf[200];
+  sprintf(buf, "A%g,%g %g %d,%d %g,%g", mR1, mR2,
+          mAngle, mLargeArcFlag, mSweepFlag, mX, mY);
+  aValue.Append(NS_ConvertASCIItoUCS2(buf));
+
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
@@ -1401,8 +1449,14 @@ nsSVGPathSegArcRel::SetValueString(const nsAReadableString& aValue)
 NS_IMETHODIMP
 nsSVGPathSegArcRel::GetValueString(nsAWritableString& aValue)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+  aValue.Truncate();
+
+  char buf[200];
+  sprintf(buf, "a%g,%g %g %d,%d %g,%g", mR1, mR2,
+          mAngle, mLargeArcFlag, mSweepFlag, mX, mY);
+  aValue.Append(NS_ConvertASCIItoUCS2(buf));
+
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
@@ -1574,8 +1628,13 @@ nsSVGPathSegLinetoHorizontalAbs::SetValueString(const nsAReadableString& aValue)
 NS_IMETHODIMP
 nsSVGPathSegLinetoHorizontalAbs::GetValueString(nsAWritableString& aValue)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+  aValue.Truncate();
+
+  char buf[200];
+  sprintf(buf, "H%g", mX);
+  aValue.Append(NS_ConvertASCIItoUCS2(buf));
+
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
@@ -1662,8 +1721,13 @@ nsSVGPathSegLinetoHorizontalRel::SetValueString(const nsAReadableString& aValue)
 NS_IMETHODIMP
 nsSVGPathSegLinetoHorizontalRel::GetValueString(nsAWritableString& aValue)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+  aValue.Truncate();
+
+  char buf[200];
+  sprintf(buf, "h%g", mX);
+  aValue.Append(NS_ConvertASCIItoUCS2(buf));
+
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
@@ -1750,8 +1814,13 @@ nsSVGPathSegLinetoVerticalAbs::SetValueString(const nsAReadableString& aValue)
 NS_IMETHODIMP
 nsSVGPathSegLinetoVerticalAbs::GetValueString(nsAWritableString& aValue)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+  aValue.Truncate();
+
+  char buf[200];
+  sprintf(buf, "V%g", mY);
+  aValue.Append(NS_ConvertASCIItoUCS2(buf));
+
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
@@ -1838,8 +1907,13 @@ nsSVGPathSegLinetoVerticalRel::SetValueString(const nsAReadableString& aValue)
 NS_IMETHODIMP
 nsSVGPathSegLinetoVerticalRel::GetValueString(nsAWritableString& aValue)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+  aValue.Truncate();
+
+  char buf[200];
+  sprintf(buf, "v%g", mY);
+  aValue.Append(NS_ConvertASCIItoUCS2(buf));
+
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
@@ -1930,8 +2004,13 @@ nsSVGPathSegCurvetoCubicSmoothAbs::SetValueString(const nsAReadableString& aValu
 NS_IMETHODIMP
 nsSVGPathSegCurvetoCubicSmoothAbs::GetValueString(nsAWritableString& aValue)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+  aValue.Truncate();
+
+  char buf[200];
+  sprintf(buf, "S%g,%g %g,%g", mX2, mY2, mX, mY);
+  aValue.Append(NS_ConvertASCIItoUCS2(buf));
+
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
@@ -2064,8 +2143,13 @@ nsSVGPathSegCurvetoCubicSmoothRel::SetValueString(const nsAReadableString& aValu
 NS_IMETHODIMP
 nsSVGPathSegCurvetoCubicSmoothRel::GetValueString(nsAWritableString& aValue)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+  aValue.Truncate();
+
+  char buf[200];
+  sprintf(buf, "s%g,%g %g,%g", mX2, mY2, mX, mY);
+  aValue.Append(NS_ConvertASCIItoUCS2(buf));
+
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
@@ -2195,8 +2279,13 @@ nsSVGPathSegCurvetoQuadraticSmoothAbs::SetValueString(const nsAReadableString& a
 NS_IMETHODIMP
 nsSVGPathSegCurvetoQuadraticSmoothAbs::GetValueString(nsAWritableString& aValue)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+  aValue.Truncate();
+
+  char buf[200];
+  sprintf(buf, "T%g,%g", mX, mY);
+  aValue.Append(NS_ConvertASCIItoUCS2(buf));
+
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
@@ -2298,8 +2387,13 @@ nsSVGPathSegCurvetoQuadraticSmoothRel::SetValueString(const nsAReadableString& a
 NS_IMETHODIMP
 nsSVGPathSegCurvetoQuadraticSmoothRel::GetValueString(nsAWritableString& aValue)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+  aValue.Truncate();
+
+  char buf[200];
+  sprintf(buf, "t%g,%g", mX, mY);
+  aValue.Append(NS_ConvertASCIItoUCS2(buf));
+
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------

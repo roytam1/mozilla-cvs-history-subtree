@@ -19,7 +19,7 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
@@ -27,8 +27,7 @@
 #include "nsIDOMSVGAnimatedPoints.h"
 #include "nsIDOMSVGPointList.h"
 #include "nsIDOMSVGPoint.h"
-#include "nsSVGPath.h"
-#include "nsIDOMSVGMatrix.h"
+#include "nsASVGPathBuilder.h"
 
 class nsSVGPolygonFrame : public nsSVGGraphicFrame
 {
@@ -38,7 +37,7 @@ class nsSVGPolygonFrame : public nsSVGGraphicFrame
   ~nsSVGPolygonFrame();
 
   virtual nsresult Init();
-  virtual void BuildPath();
+  void ConstructPath(nsASVGPathBuilder* pathBuilder);
 
   nsCOMPtr<nsIDOMSVGPointList> mPoints;
 };
@@ -52,7 +51,7 @@ NS_NewSVGPolygonFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame**
   nsCOMPtr<nsIDOMSVGAnimatedPoints> anim_points = do_QueryInterface(aContent);
   if (!anim_points) {
 #ifdef DEBUG
-    printf("warning: trying to contruct an SVGPolygonFrame for a content element that doesn't support the right interfaces\n");
+    printf("warning: trying to construct an SVGPolygonFrame for a content element that doesn't support the right interfaces\n");
 #endif
     return NS_ERROR_FAILURE;
   }
@@ -85,18 +84,28 @@ nsresult nsSVGPolygonFrame::Init()
   return nsSVGGraphicFrame::Init();
 }  
 
-void nsSVGPolygonFrame::BuildPath()
+void nsSVGPolygonFrame::ConstructPath(nsASVGPathBuilder* pathBuilder)
 {
-  if (mPath) {
-    delete mPath;
-    mPath = nsnull;
-  }
-
   if (!mPoints) return;
 
-  nsCOMPtr<nsIDOMSVGMatrix> ctm;
-  GetCTM(getter_AddRefs(ctm));
+  PRUint32 count;
+  mPoints->GetNumberOfItems(&count);
+  if (count == 0) return;
   
-  mPath = new nsSVGPath();
-  mPath->Build(mPoints, ctm, PR_TRUE);
+  PRUint32 i;
+  for (i = 0; i < count; ++i) {
+    nsCOMPtr<nsIDOMSVGPoint> point;
+    mPoints->GetItem(i, getter_AddRefs(point));
+
+    float x, y;
+    point->GetX(&x);
+    point->GetY(&y);
+    if (i == 0)
+      pathBuilder->Moveto(x, y);
+    else
+      pathBuilder->Lineto(x, y);
+  }
+  // the difference between a polyline and a polygon is that the
+  // polygon is closed:
+  pathBuilder->ClosePath();
 }

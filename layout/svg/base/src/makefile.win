@@ -28,20 +28,21 @@ DEFINES= -D_IMPL_NS_HTML -DWIN32_LEAN_AND_MEAN
 
 
 CPP_OBJS=					                 \
-  .\$(OBJDIR)\nsSVGOuterSVGFrame.obj         \
-  .\$(OBJDIR)\nsSVGGraphicFrame.obj          \
-  .\$(OBJDIR)\nsSVGPolylineFrame.obj         \
-  .\$(OBJDIR)\nsSVGPolygonFrame.obj          \
+  .\$(OBJDIR)\nsSVGBPathBuilder.obj          \
   .\$(OBJDIR)\nsSVGCircleFrame.obj           \
-  .\$(OBJDIR)\nsSVGGFrame.obj                \
-  .\$(OBJDIR)\nsSVGRenderingContext.obj      \
-  .\$(OBJDIR)\nsSVGPath.obj                  \
-  .\$(OBJDIR)\nsSVGRenderItem.obj            \
-  .\$(OBJDIR)\nsSVGStroke.obj                \
   .\$(OBJDIR)\nsSVGFill.obj                  \
-  .\$(OBJDIR)\nsSVGGenericContainerFrame.obj \
   .\$(OBJDIR)\nsSVGForeignObjectFrame.obj    \
+  .\$(OBJDIR)\nsSVGGFrame.obj                \
+  .\$(OBJDIR)\nsSVGGenericContainerFrame.obj \
+  .\$(OBJDIR)\nsSVGGraphic.obj               \
+  .\$(OBJDIR)\nsSVGGraphicFrame.obj          \
+  .\$(OBJDIR)\nsSVGOuterSVGFrame.obj         \
   .\$(OBJDIR)\nsSVGPathFrame.obj             \
+  .\$(OBJDIR)\nsSVGPolygonFrame.obj          \
+  .\$(OBJDIR)\nsSVGPolylineFrame.obj         \
+  .\$(OBJDIR)\nsSVGRenderItem.obj            \
+  .\$(OBJDIR)\nsSVGRenderingContext.obj      \
+  .\$(OBJDIR)\nsSVGStroke.obj                \
 	$(NULL)
 
 EXPORTS =					\
@@ -54,7 +55,7 @@ LINCS=-I$(PUBLIC)\xpcom -I$(PUBLIC)\raptor -I$(PUBLIC)\js \
   -I$(PUBLIC)\netlib -I..\..\..\base\src -I$(PUBLIC)\pref \
   -I..\..\..\xml\content\src \
   -I..\..\..\base\public \
-  -I..\..\..\..\content\svg\src 
+  -I..\..\..\..\content\svg\content\src 
 
 
 
@@ -64,7 +65,7 @@ LCFLAGS = \
         $(NULL)
 
 LLIBS=					\
- $(DIST)\lib\mozart.lib	
+ $(DIST)\lib\libart.lib	
 
 
 include <$(DEPTH)\config\rules.mak>
@@ -76,4 +77,4 @@ install:: $(LIBRARY)
 
 clobber::
 	rm -f $(DIST)\lib\$(LIBRARY_NAME).lib
-	rm -f $(DIST)\bin\res\mathml.css
+	rm -f $(DIST)\bin\res\svg.css

@@ -19,7 +19,7 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
@@ -69,7 +69,7 @@ nsresult NS_NewSVGForeignObjectElement(nsIContent **aResult, nsINodeInfo *aNodeI
   if (!it) return NS_ERROR_OUT_OF_MEMORY;
   NS_ADDREF(it);
 
-  nsresult rv = NS_STATIC_CAST(nsXMLElement*,it)->Init(aNodeInfo);
+  nsresult rv = NS_STATIC_CAST(nsGenericElement*,it)->Init(aNodeInfo);
 
   if (NS_FAILED(rv)) {
     it->Release();
@@ -216,7 +216,7 @@ nsSVGForeignObjectElement::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
   if (!it) return NS_ERROR_OUT_OF_MEMORY;
   NS_ADDREF(it);
 
-  nsresult rv = NS_STATIC_CAST(nsXMLElement*,it)->Init(mNodeInfo);
+  nsresult rv = NS_STATIC_CAST(nsGenericElement*,it)->Init(mNodeInfo);
 
   if (NS_FAILED(rv)) {
     it->Release();
@@ -237,7 +237,9 @@ nsSVGForeignObjectElement::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
     return rv;
   }
  
-  return it->QueryInterface(NS_GET_IID(nsIDOMNode), (void**)aReturn);
+  *aReturn = NS_STATIC_CAST(nsSVGForeignObjectElementBase*, it);
+
+  return NS_OK; 
 }
 
 

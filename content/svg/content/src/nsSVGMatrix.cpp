@@ -19,12 +19,11 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
 #include "nsSVGMatrix.h"
-
 #include <math.h>
 
 const double radPerDegree = 2.0*3.1415926535 / 360.0;

@@ -19,7 +19,7 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
@@ -27,11 +27,10 @@
 #include "nsIDOMSVGAnimatedLength.h"
 #include "nsIDOMSVGLength.h"
 #include "nsIDOMSVGPoint.h"
-#include "nsSVGPath.h"
-#include "nsIDOMSVGMatrix.h"
 #include "nsIDOMSVGCircleElement.h"
 #include "nsIDOMSVGElement.h"
 #include "nsIDOMSVGSVGElement.h"
+#include "nsASVGPathBuilder.h"
 
 class nsSVGCircleFrame : public nsSVGGraphicFrame
 {
@@ -41,7 +40,7 @@ class nsSVGCircleFrame : public nsSVGGraphicFrame
   virtual ~nsSVGCircleFrame();
 
   virtual nsresult Init();
-  virtual void BuildPath();
+  virtual void ConstructPath(nsASVGPathBuilder* pathBuilder);
 
   nsCOMPtr<nsIDOMSVGLength> mCx;
   nsCOMPtr<nsIDOMSVGLength> mCy;
@@ -59,7 +58,7 @@ NS_NewSVGCircleFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** 
   nsCOMPtr<nsIDOMSVGCircleElement> circle = do_QueryInterface(aContent);
   if (!circle) {
 #ifdef DEBUG
-    printf("warning: trying to contruct an SVGCircleFrame for a content element that doesn't support the right interfaces\n");
+    printf("warning: trying to construct an SVGCircleFrame for a content element that doesn't support the right interfaces\n");
 #endif
     return NS_ERROR_FAILURE;
   }
@@ -120,84 +119,23 @@ nsresult nsSVGCircleFrame::Init()
     if (value)
       value->AddObserver(this);
   }
-
   
-    return nsSVGGraphicFrame::Init();
+  return nsSVGGraphicFrame::Init();
 }  
 
-void nsSVGCircleFrame::BuildPath()
+void nsSVGCircleFrame::ConstructPath(nsASVGPathBuilder* pathBuilder)
 {
-  if (mPath) {
-    delete mPath;
-    mPath = nsnull;
-  }
-
-  nsCOMPtr<nsIDOMSVGMatrix> ctm;
-  GetCTM(getter_AddRefs(ctm));
-
   float x,y,r;
 
-  // XXX this would be nice: 
-  // mCx->GetTransformedValue(ctm, &x);
-  // mCy->GetTransformedValue(ctm, &y);
-  // mR->GetTransformedValue(ctm, &r);
-
-  // XXX but instead we do this. how verbose can it get? - sigh -
-  
   mCx->GetValue(&x);
   mCy->GetValue(&y);
   mR->GetValue(&r);
 
-  nsCOMPtr<nsIDOMSVGElement> el = do_QueryInterface(mContent);
-  nsCOMPtr<nsIDOMSVGSVGElement> svg_el;
-  el->GetOwnerSVGElement(getter_AddRefs(svg_el));
-  if (!svg_el) return;
-  nsCOMPtr<nsIDOMSVGPoint> point;
-  svg_el->CreateSVGPoint(getter_AddRefs(point));
-  NS_ASSERTION(point, "couldn't create point!");
-  if (!point) return;
-  
-  {  // coordinates transform like points (XXX)
-    point->SetX(x);
-    point->SetY(y);
-    nsCOMPtr<nsIDOMSVGPoint> xfpoint;
-    point->MatrixTransform(ctm, getter_AddRefs(xfpoint));
-    xfpoint->GetX(&x);
-    xfpoint->GetY(&y);
-  }
-
-  
-  {  // lengths transform like vectors (XXX)
-    const float inv_root_2 = 0.707106781188f;
-    point->SetX(inv_root_2*r);
-    point->SetY(inv_root_2*r);
-    nsCOMPtr<nsIDOMSVGPoint> xfpoint;
-    point->MatrixTransform(ctm, getter_AddRefs(xfpoint));
-    float r1,r2;
-    xfpoint->GetX(&r1);
-    xfpoint->GetY(&r2);
-
-    point->SetX(0.0f);
-    point->SetY(0.0f);
-    point->MatrixTransform(ctm, getter_AddRefs(xfpoint));
-    float o1,o2;
-    xfpoint->GetX(&o1);
-    xfpoint->GetY(&o2);
-    
-    float dr1, dr2;
-    dr1 = r1 - o1;
-    dr2 = r2 - o2;
-    
-    r = (float) sqrt( dr1*dr1 + dr2*dr2 );
-  }
-  
-  nsCOMPtr<nsIDOMSVGPoint> radius;
-  
-  nsCOMPtr<nsIDOMSVGPoint> xFormedPoint;
-  
-    
-  mPath = new nsSVGPath();
-
-  
-  mPath->SetCircle(x,y,r);
+  // we should be able to build this as a single arc with startpoints
+  // and endpoints infinitesimally separated. Let's use two arcs
+  // though, so that the builder doesn't get confused:
+  pathBuilder->Moveto(x, y-r);
+  pathBuilder->Arcto(x-r, y  , r, r, 0.0, 0, 0);
+  pathBuilder->Arcto(x  , y-r, r, r, 0.0, 1, 0);
+  pathBuilder->ClosePath();  
 }

@@ -19,7 +19,7 @@
  *
  * Contributor(s): 
  *
- *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  *
  */
 
@@ -30,6 +30,8 @@
 #include "nsSVGMatrix.h"
 #include "nsIDOMSVGSVGElement.h"
 #include "nsIDOMEventTarget.h"
+#include "nsIBindingManager.h"
+#include "nsIDocument.h"
 
 //----------------------------------------------------------------------
 // XPConnect interface list
@@ -114,8 +116,25 @@ NS_IMETHODIMP nsSVGGraphicElement::GetCTM(nsIDOMSVGMatrix **_retval)
 NS_IMETHODIMP nsSVGGraphicElement::GetScreenCTM(nsIDOMSVGMatrix **_retval)
 {
   nsCOMPtr<nsIDOMSVGMatrix> screenCTM;
+
+  nsCOMPtr<nsIBindingManager> bindingManager;
+  if (mDocument) {
+    mDocument->GetBindingManager(getter_AddRefs(bindingManager));
+  }
+
+  nsCOMPtr<nsIContent> parent;
   
-  nsCOMPtr<nsIContent> parent = mParent;
+  if (bindingManager) {
+    // we have a binding manager -- do we have an anonymous parent?
+    bindingManager->GetInsertionParent(this, getter_AddRefs(parent));
+  }
+
+  if (!parent) {
+    // if we didn't find an anonymous parent, use the explicit one,
+    // whether it's null or not...
+    parent = mParent;
+  }
+  
   while (parent) {    
     nsCOMPtr<nsIDOMSVGLocatable> locatableElement = do_QueryInterface(parent);
     if (locatableElement) {
@@ -127,7 +146,16 @@ NS_IMETHODIMP nsSVGGraphicElement::GetScreenCTM(nsIDOMSVGMatrix **_retval)
       break; // XXX check whether it's the outermost owner before breaking
 
     nsCOMPtr<nsIContent> next;
-    parent->GetParent(*getter_AddRefs(next));
+
+    if (bindingManager) {
+      bindingManager->GetInsertionParent(parent, getter_AddRefs(next));
+    }
+
+    if (!next) {
+      // no anonymous parent, so use explicit one
+      parent->GetParent(*getter_AddRefs(next));
+    }
+
     parent = next;
   }
 
