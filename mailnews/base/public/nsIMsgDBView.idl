@@ -28,6 +28,7 @@ interface nsIMsgWindow;
 interface nsIDOMElement;
 interface nsIMessenger;
 interface nsIMsgDBHdr;
+interface nsIMsgDBViewCommandUpdater;
 
 typedef long nsMsgViewSortOrderValue;
 typedef long nsMsgViewSortTypeValue;
@@ -216,7 +217,7 @@ interface nsIMsgDBView : nsISupports
     void open(in nsIMsgFolder folder, in nsMsgViewSortTypeValue sortType, in nsMsgViewSortOrderValue sortOrder, in nsMsgViewFlagsTypeValue viewFlags, out long count);
     void close();
 
-    void init(in nsIMessenger aMessengerInstance, in nsIMsgWindow aMsgWindow);
+    void init(in nsIMessenger aMessengerInstance, in nsIMsgWindow aMsgWindow, in nsIMsgDBViewCommandUpdater aCommandUpdater);
     void addKeys(out nsMsgKey pKeys, out long pFlags, in string pLevels, in nsMsgViewSortTypeValue sortType, in long numKeysToAdd);
 
     void sort(in nsMsgViewSortTypeValue sortType, in nsMsgViewSortOrderValue sortOrder);
@@ -263,3 +264,15 @@ interface nsIMsgDBView : nsISupports
     void dumpView();
 };
 
+[scriptable, uuid(65FC9AD5-0912-11d5-9901-001083010E9B)]
+interface nsIMsgDBViewCommandUpdater : nsISupports
+{
+	/* Eventually we'll flush this out into some kind of rich interface
+	   which may take specifc selection changed type notifications like
+	   no selections, single selection, multi-selection, etc. For starters,
+	   we are going to keep it generic. The back end will only push an update
+	   command status when the # of selected items changes.
+	*/
+
+	void updateCommandStatus();
+};
