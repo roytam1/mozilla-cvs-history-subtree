@@ -354,6 +354,8 @@ nsTreeBodyFrame::~nsTreeBodyFrame()
     mImageCache->Enumerate(CancelImageRequest);
     delete mImageCache;
   }
+  if (mTimer)
+    mTimer->Cancel();
 }
 
 NS_IMETHODIMP_(nsrefcnt) 
