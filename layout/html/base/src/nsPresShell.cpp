@@ -4455,10 +4455,19 @@ NS_IMETHODIMP PresShell::DoCopyImageLocation(nsIDOMNode* aNode)
 // DoCopyImageContents: copy image contents to clipboard
 NS_IMETHODIMP PresShell::DoCopyImageContents(nsIDOMNode* aNode)
 {
-  // XXX dr: platform-specific widget code works on windows and mac.
-  // when linux copy image contents works, this should get written
-  // and hooked up to the front end, similarly to cmd_copyImageLocation.
-  return NS_ERROR_NOT_IMPLEMENTED;
+  NS_ENSURE_ARG_POINTER(aNode);
+
+  nsresult rv;
+  // are we an image?
+  nsCOMPtr<nsIDOMHTMLImageElement> img(do_QueryInterface(aNode, &rv));
+  NS_ENSURE_SUCCESS(rv, rv);
+  if (img) {
+    // call the copy code
+    return nsCopySupport::ImageCopy(img, nsIClipboard::kGlobalClipboard);
+  }
+
+  // if no image, fail.
+  return NS_ERROR_FAILURE;
 }
 
 

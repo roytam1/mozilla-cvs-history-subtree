@@ -64,6 +64,16 @@
 //static NS_DEFINE_CID(kUBidiUtilCID, NS_UNICHARBIDIUTIL_CID);
 #endif
 
+// image copy stuff
+#include "nsIDOMHTMLImageElement.h"
+#include "nsLayoutAtoms.h"
+#include "imgIContainer.h"
+#include "imgIRequest.h"
+#include "nsIImageFrame.h"
+#include "nsIInterfaceRequestor.h"
+#include "gfxIImageFrame.h"
+#include "nsIImage.h"
+
 static NS_DEFINE_CID(kCClipboardCID,           NS_CLIPBOARD_CID);
 static NS_DEFINE_CID(kCTransferableCID,        NS_TRANSFERABLE_CID);
 static NS_DEFINE_CID(kHTMLConverterCID,        NS_HTMLFORMATCONVERTER_CID);
@@ -365,4 +375,144 @@ nsCopySupport::GetContents(const nsAString& aMimeType, PRUint32 aFlags, nsISelec
   // encode the selection
   return docEncoder->EncodeToString(outdata);
 }
+
+
+nsresult
+nsCopySupport::ImageCopy(nsIDOMHTMLImageElement* imageElement, PRInt16 aClipboardID)
+{
+  nsresult rv;
+  
+  nsCOMPtr<nsIDOMNode> imageNode = do_QueryInterface(imageElement, &rv);
+  if (NS_FAILED(rv)) return rv;
+  if (!imageNode) return NS_ERROR_FAILURE;
+  
+  nsCOMPtr<nsIImage> image;
+  rv = GetImageFromDOMNode(imageNode, getter_AddRefs(image));
+  if (NS_FAILED(rv)) return rv;
+  if (!image) return NS_ERROR_FAILURE;
+
+  // Get the Clipboard
+  nsCOMPtr<nsIClipboard> clipboard(do_GetService(kCClipboardCID, &rv));
+  if (NS_FAILED(rv)) return rv;
+  if (!clipboard) return NS_ERROR_FAILURE;
+
+  // Create a transferable for putting data on the Clipboard
+  nsCOMPtr<nsITransferable> trans = do_CreateInstance(kCTransferableCID, &rv);
+  if (NS_FAILED(rv)) return rv;
+  if (!trans) return NS_ERROR_FAILURE;
+
+  nsCOMPtr<nsISupportsInterfacePointer> ptrPrimitive(do_CreateInstance(NS_SUPPORTS_INTERFACE_POINTER_CONTRACTID, &rv));
+  if (NS_FAILED(rv)) return rv;
+  if (!ptrPrimitive)  return NS_ERROR_FAILURE;
+  ptrPrimitive->SetData(image);
+
+  trans->SetTransferData(kNativeImageMime, ptrPrimitive, sizeof(nsISupports*));
+
+  // put the transferable on the clipboard
+  return clipboard->SetData(trans, nsnull, aClipboardID);
+}
+
+
+//
+// GetImageFrame
+//
+// Finds the image from from a content node
+//
+nsresult 
+nsCopySupport::GetImageFrame(nsIContent* aContent, nsIDocument *aDocument, nsIPresContext *aPresContext,
+                                        nsIPresShell *aPresShell, nsIImageFrame** aImageFrame)
+{
+	NS_ENSURE_ARG_POINTER(aImageFrame); 
+	*aImageFrame = nsnull;
+
+	nsresult rv = NS_ERROR_FAILURE;
+
+	if (aDocument) {
+		// Make sure the presentation is up-to-date
+		rv = aDocument->FlushPendingNotifications();
+		if (NS_FAILED(rv))
+			return rv;
+	}
+
+	if (aContent && aDocument && aPresContext && aPresShell) {
+		nsIFrame* frame = nsnull;
+		rv = aPresShell->GetPrimaryFrameFor(aContent, &frame);
+		if (NS_SUCCEEDED(rv) && frame) {
+			nsCOMPtr<nsIAtom> type;
+			frame->GetFrameType(getter_AddRefs(type));
+			if (type.get() == nsLayoutAtoms::imageFrame) {
+				nsIImageFrame* imageFrame;
+				rv = frame->QueryInterface(NS_GET_IID(nsIImageFrame), (void**)&imageFrame);
+				if (NS_FAILED(rv)) {
+					NS_WARNING("Should not happen - frame is not image frame even though type is nsLayoutAtoms::imageFrame");
+					return rv;
+				}
+				*aImageFrame = imageFrame;
+			}
+			else
+				return NS_ERROR_FAILURE;
+		}
+		else
+			rv = NS_OK;
+	}
+	return rv;
+}
+
+
+//
+// GetImage
+//
+// Given a dom node that's an image, finds the nsIImage associated with it.
+//
+nsresult
+nsCopySupport::GetImageFromDOMNode(nsIDOMNode* inNode, nsIImage**outImage)
+{
+	NS_ENSURE_ARG_POINTER(outImage);
+	*outImage = nsnull;
+
+	nsresult rv = NS_ERROR_NOT_AVAILABLE;
+
+	nsCOMPtr<nsIContent> content(do_QueryInterface(inNode));
+	if ( content ) {
+		nsCOMPtr<nsIDocument> document;
+		content->GetDocument(*getter_AddRefs(document));
+		if ( document ) {
+		  nsCOMPtr<nsIPresShell> presShell;
+			document->GetShellAt(0, getter_AddRefs(presShell));
+			if ( presShell ) {
+			  nsCOMPtr<nsIPresContext> presContext;
+				presShell->GetPresContext(getter_AddRefs(presContext));
+				if (presContext) {
+					nsCOMPtr<imgIContainer> imgContainer;
+					
+					nsIImageFrame* imageFrame = nsnull;
+					if ( NS_SUCCEEDED(GetImageFrame(content, document, presContext, presShell, &imageFrame)) && imageFrame ) {
+						nsCOMPtr<imgIRequest> imgRequest;
+						imageFrame->GetImageRequest(getter_AddRefs(imgRequest));
+						if (imgRequest)
+							imgRequest->GetImage(getter_AddRefs(imgContainer));
+					}
+					else {
+						// We could try the background image, but we really don't want to be dragging
+						// the bg image in any case.
+					}
+
+					if (imgContainer) {
+						nsCOMPtr<gfxIImageFrame> imgFrame;
+						imgContainer->GetFrameAt(0, getter_AddRefs(imgFrame));
+						if ( imgFrame )	{
+							nsCOMPtr<nsIInterfaceRequestor> ir = do_QueryInterface(imgFrame);
+							if ( ir )
+								rv = ir->GetInterface(NS_GET_IID(nsIImage), (void**)outImage);      // will addreff
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return rv;
+}
+
+
 
