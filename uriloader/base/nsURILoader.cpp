@@ -401,16 +401,20 @@ nsresult nsDocumentOpenInfo::DispatchContent(nsIRequest *request, nsISupports * 
     // to a content listener that is different from the one that
     // originated the request....if so, set
     // LOAD_RETARGETED_DOCUMENT_URI on the channel.
-    
+
+    // Set this flag to indicate that the channel has been targeted at a final
+    // consumer.  This load flag is tested in nsDocLoader::OnProgress.
+    nsLoadFlags loadFlags = nsIChannel::LOAD_TARGETED;
+    nsLoadFlags newLoadFlags = 0;
     if (contentListener != m_contentListener)
     {
       // we must be retargeting...so set an appropriate flag on
       // the channel
-      nsLoadFlags loadFlags = 0;
-      aChannel->GetLoadFlags(&loadFlags);
-      loadFlags |= nsIChannel::LOAD_RETARGETED_DOCUMENT_URI;
-      aChannel->SetLoadFlags(loadFlags);
+      aChannel->GetLoadFlags(&newLoadFlags);
+      newLoadFlags |= nsIChannel::LOAD_RETARGETED_DOCUMENT_URI;
     }
+
+    aChannel->SetLoadFlags(loadFlags | newLoadFlags);
 
     const char* contentTypeToUse;
     if (desiredContentType)
@@ -446,6 +450,13 @@ nsresult nsDocumentOpenInfo::DispatchContent(nsIRequest *request, nsISupports * 
       do_GetService(NS_EXTERNALHELPERAPPSERVICE_CONTRACTID, &rv);
     if (helperAppService)
     {
+      // Set these flags to indicate that the channel has been targeted and that
+      // we are not using the original consumer.
+      nsLoadFlags loadFlags = 0;
+      request->GetLoadFlags(&loadFlags);
+      request->SetLoadFlags(loadFlags | nsIChannel::LOAD_RETARGETED_DOCUMENT_URI
+                                    | nsIChannel::LOAD_TARGETED);
+
       rv = helperAppService->DoContent(contentType.get(),
                                        request,
                                        m_originalContext,
@@ -454,9 +465,12 @@ nsresult nsDocumentOpenInfo::DispatchContent(nsIRequest *request, nsISupports * 
         m_targetStreamListener = contentStreamListener;
         return NS_OK;
       }
+
+      request->SetLoadFlags(loadFlags);
+      m_targetStreamListener = nsnull;
     }
   }
-      
+
   if (!contentStreamListener) {
     // Something failed somewhere.... Otherwise the helper app service would
     // have taken over by now.

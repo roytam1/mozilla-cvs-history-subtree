@@ -1128,7 +1128,7 @@ nsresult nsExternalAppHandler::RetargetLoadNotifications(nsIRequest *request)
     origContextLoader->GetDocumentChannel(getter_AddRefs(mOriginalChannel));
 
   if(oldLoadGroup)
-     oldLoadGroup->RemoveRequest(request, nsnull, NS_OK);
+     oldLoadGroup->RemoveRequest(request, nsnull, NS_BINDING_RETARGETED);
       
    aChannel->SetLoadGroup(newLoadGroup);
    nsCOMPtr<nsIInterfaceRequestor> req (do_QueryInterface(mLoadCookie));

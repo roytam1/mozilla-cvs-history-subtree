@@ -507,7 +507,7 @@ nsDocLoaderImpl::OnStartRequest(nsIRequest *request, nsISupports *aCtxt)
 #endif /* PR_LOGGING */
   PRBool bJustStartedLoading = PR_FALSE;
 
-  PRUint32 loadFlags = 0;
+  nsLoadFlags loadFlags = 0;
   request->GetLoadFlags(&loadFlags);
 
   if (!mIsLoadingDocument && (loadFlags & nsIChannel::LOAD_DOCUMENT_URI)) {
@@ -640,10 +640,11 @@ nsDocLoaderImpl::OnStopRequest(nsIRequest *aRequest,
           } 
           //
           // If the request failed (for any reason other than being
-          // redirected), the TRANSFERRING notification can still be fired
-          // if a HTTP connection was established to a server.
+          // redirected or retargeted), the TRANSFERRING notification can
+          // still be fired if a HTTP connection was established to a server.
           //
-          else if (aStatus != NS_BINDING_REDIRECTED) {
+          else if (aStatus != NS_BINDING_REDIRECTED &&
+                   aStatus != NS_BINDING_RETARGETED) {
             nsCOMPtr<nsIHttpChannel> httpChannel(do_QueryInterface(aRequest));
 
             if (httpChannel) {
@@ -1018,6 +1019,20 @@ NS_IMETHODIMP nsDocLoaderImpl::OnProgress(nsIRequest *aRequest, nsISupports* ctx
   if (info) {
     // suppress sending STATE_TRANSFERRING if this is upload progress (see bug 240053)
     if (!info->mUploading && (0 == info->mCurrentProgress) && (0 == info->mMaxProgress)) {
+      //
+      // If we receive an OnProgress event from a toplevel channel that the URI Loader
+      // has not yet targeted, then we must suppress the event.  This is necessary to
+      // ensure that webprogresslisteners do not get confused when the channel is
+      // finally targeted.  See bug 257308.
+      //
+      nsLoadFlags lf = 0;
+      aRequest->GetLoadFlags(&lf);
+      if ((lf & nsIChannel::LOAD_DOCUMENT_URI) && !(lf & nsIChannel::LOAD_TARGETED)) {
+        PR_LOG(gDocLoaderLog, PR_LOG_DEBUG, 
+            ("DocLoader:%p Ignoring OnProgress while load is not targeted\n", this));
+        return NS_OK;
+      }
+
       //
       // This is the first progress notification for the entry.  If
       // (aMaxProgress > 0) then the content-length of the data is known,
