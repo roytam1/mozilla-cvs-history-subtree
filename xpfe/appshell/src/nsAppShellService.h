@@ -50,6 +50,11 @@
 #include "nsPIWindowWatcher.h"
 #include "nsISplashScreen.h"
 
+#ifdef MOZ_THUNDERBIRD
+#include "nsIURIContentListener.h"
+#include "nsIInterfaceRequestor.h"
+#endif
+
 class nsAppShellService : public nsIAppShellService,
                           public nsIObserver,
                           public nsSupportsWeakReference
@@ -110,7 +115,23 @@ private:
                       PRInt32 aWidth, PRInt32 aHeight);
                       
   nsresult OpenBrowserWindow(PRInt32 height, PRInt32 width);
-
 };
+
+#ifdef MOZ_THUNDERBIRD
+class nsAppShellServiceContentListener : public nsIURIContentListener,
+                                         public nsIInterfaceRequestor
+{
+public:
+  nsAppShellServiceContentListener();
+  virtual ~nsAppShellServiceContentListener();
+ 
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIURICONTENTLISTENER
+  NS_DECL_NSIINTERFACEREQUESTOR
+ 
+private:
+  nsCOMPtr<nsISupports> mLoadCookie;
+};
+#endif
 
 #endif

@@ -375,6 +375,17 @@ OSErr nsMacCommandLine::DispatchURLToNewBrowser(const char* url)
 //----------------------------------------------------------------------------------------
 {
   OSErr err = errAEEventNotHandled;
+#ifdef MOZ_THUNDERBIRD
+  // we should be able to remove this ifdef and make the call to app shell's open URL
+  // the default for all apps
+  nsresult rv;
+  nsCOMPtr<nsIAppShellService> appShell(do_GetService("@mozilla.org/appshell/appShellService;1", &rv));
+  if (NS_FAILED(rv)) return;
+
+  appShell->OpenURL(nsDependentCString(url));
+  return noErr;
+#endif
+
   if (mStartedUp)
     return OpenURL(url);
   else {
