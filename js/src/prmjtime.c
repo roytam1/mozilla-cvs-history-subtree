@@ -49,21 +49,72 @@
 #endif /* XP_UNIX */
 
 #ifdef XP_MAC
-extern UnsignedWide		dstLocalBaseMicroseconds;
-extern JSUintn			gJanuaryFirst1970Seconds;
+static UnsignedWide		dstLocalBaseMicroseconds;
+static unsigned long	gJanuaryFirst1970Seconds;
+
+static void MacintoshInitializeTime(void)
+{
+	UnsignedWide			upTime;
+	unsigned long			currentLocalTimeSeconds,
+							startupTimeSeconds;
+	uint64					startupTimeMicroSeconds;
+	uint32					upTimeSeconds;
+	uint64					oneMillion, upTimeSecondsLong, microSecondsToSeconds;
+	DateTimeRec				firstSecondOfUnixTime;
+
+	//	Figure out in local time what time the machine
+	//	started up.  This information can be added to
+	//	upTime to figure out the current local time
+	//	as well as GMT.
+
+	Microseconds(&upTime);
+
+	GetDateTime(&currentLocalTimeSeconds);
+
+	LL_I2L(microSecondsToSeconds, PR_USEC_PER_SEC);
+	LL_DIV(upTimeSecondsLong,  *((uint64 *)&upTime), microSecondsToSeconds);
+	LL_L2I(upTimeSeconds, upTimeSecondsLong);
+
+	startupTimeSeconds = currentLocalTimeSeconds - upTimeSeconds;
+
+	//	Make sure that we normalize the macintosh base seconds
+	//	to the unix base of January 1, 1970.
+
+	firstSecondOfUnixTime.year = 1970;
+	firstSecondOfUnixTime.month = 1;
+	firstSecondOfUnixTime.day = 1;
+	firstSecondOfUnixTime.hour = 0;
+	firstSecondOfUnixTime.minute = 0;
+	firstSecondOfUnixTime.second = 0;
+	firstSecondOfUnixTime.dayOfWeek = 0;
+
+	DateToSeconds(&firstSecondOfUnixTime, &gJanuaryFirst1970Seconds);
+
+	startupTimeSeconds -= gJanuaryFirst1970Seconds;
+
+	//	Now convert the startup time into a wide so that we
+	//	can figure out GMT and DST.
+
+	LL_I2L(startupTimeMicroSeconds, startupTimeSeconds);
+	LL_I2L(oneMillion, PR_USEC_PER_SEC);
+	LL_MUL(dstLocalBaseMicroseconds, oneMillion, startupTimeMicroSeconds);
+}
+
+// Because serial port and SLIP conflict with ReadXPram calls,
+// we cache the call here
 
 static void MyReadLocation(MachineLocation * loc)
 {
 	static MachineLocation storedLoc;	// InsideMac, OSUtilities, page 4-20
-	static Boolean didReadLocation = FALSE;
+	static PRBool didReadLocation = PR_FALSE;
 	if (!didReadLocation)
-	{	
+	{
+		MacintoshInitializeTime();
 		ReadLocation(&storedLoc);
-		didReadLocation = TRUE;
+		didReadLocation = PR_TRUE;
 	}
 	*loc = storedLoc;
 }
-
 #endif /* XP_MAC */
 
 #define IS_LEAP(year) \
