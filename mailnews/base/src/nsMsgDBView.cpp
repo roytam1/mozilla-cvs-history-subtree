@@ -394,6 +394,8 @@ NS_IMETHODIMP nsMsgDBView::SetSelection(nsIOutlinerSelection * aSelection)
 
 NS_IMETHODIMP nsMsgDBView::SelectionChanged()
 {
+  // outliner seems to be handling selection fine by itself
+#ifdef NEEDED
   // if the currentSelection changed then we have a message to display
   PRInt32 selectionCount; 
   nsresult rv = mOutlinerSelection->GetRangeCount(&selectionCount);
@@ -421,7 +423,7 @@ NS_IMETHODIMP nsMsgDBView::SelectionChanged()
       }
     }
   }
-
+#endif // NEEDED
   return NS_OK;
 }
 
