@@ -55,9 +55,10 @@ NS_IMPL_ISUPPORTS1(nsMapiRegistry, nsIMapiRegistry)
 
 nsMapiRegistry::nsMapiRegistry() {
     m_DefaultMailClient = m_registryUtils.IsDefaultMailClient();
+    m_DefaultNewsClient = m_registryUtils.IsDefaultNewsClient();
     // m_ShowDialog should be initialized to false 
     // if we are the default mail client.
-    m_ShowDialog = !m_registryUtils.verifyRestrictedAccess() && !m_DefaultMailClient;
+    m_ShowDialog = !m_registryUtils.HasRestrictedRegistryAccess() && !m_DefaultMailClient;
 }
 
 nsMapiRegistry::~nsMapiRegistry() {
@@ -69,6 +70,15 @@ nsMapiRegistry::GetIsDefaultMailClient(PRBool * retval) {
     // because the registry settings can be changed from
     // other mail applications.
     *retval = m_registryUtils.IsDefaultMailClient();
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsMapiRegistry::GetIsDefaultNewsClient(PRBool * retval) {
+    // we need to get the value from registry everytime
+    // because the registry settings can be changed from
+    // other mail applications.
+    *retval = m_registryUtils.IsDefaultNewsClient();
     return NS_OK;
 }
 
@@ -90,7 +100,7 @@ nsMapiRegistry::SetIsDefaultMailClient(PRBool aIsDefaultMailClient)
         if (NS_SUCCEEDED(rv))
             m_DefaultMailClient = PR_TRUE;
         else
-            m_registryUtils.ShowMapiErrorDialog();
+            m_registryUtils.ShowMapiErrorDialog(PR_TRUE);
     }
     else
     {
@@ -98,10 +108,42 @@ nsMapiRegistry::SetIsDefaultMailClient(PRBool aIsDefaultMailClient)
         if (NS_SUCCEEDED(rv))
             m_DefaultMailClient = PR_FALSE;
         else
-            m_registryUtils.ShowMapiErrorDialog();
+            m_registryUtils.ShowMapiErrorDialog(PR_TRUE);
     }
 
     return rv ;
+}
+
+NS_IMETHODIMP
+nsMapiRegistry::SetIsDefaultNewsClient(PRBool aIsDefaultNewsClient) 
+{
+    nsresult rv = NS_OK ;
+
+    if (aIsDefaultNewsClient)
+    {
+        rv = m_registryUtils.setDefaultNewsClient();
+        if (NS_SUCCEEDED(rv))
+            m_DefaultNewsClient = PR_TRUE;
+        else
+            m_registryUtils.ShowMapiErrorDialog(PR_FALSE);
+    }
+    else
+    {
+        rv = m_registryUtils.unsetDefaultNewsClient();
+        if (NS_SUCCEEDED(rv))
+            m_DefaultNewsClient = PR_FALSE;
+        else
+            m_registryUtils.ShowMapiErrorDialog(PR_FALSE);
+    }
+
+    return rv ;
+}
+
+NS_IMETHODIMP nsMapiRegistry::RegisterMailAndNewsClient()
+{
+  m_registryUtils.registerNewsApp(PR_FALSE);
+  m_registryUtils.registerMailApp(PR_FALSE);
+  return NS_OK;
 }
 
 /** This will bring up the dialog box only once per session and 
@@ -158,7 +200,7 @@ nsMapiRegistry::ShowMailIntegrationDialog(nsIDOMWindow *aParentWindow) {
                                       &checkValue,
                                       &buttonPressed);
         if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
-        rv = m_registryUtils.SetRegistryKey(HKEY_LOCAL_MACHINE, "Software\\Mozilla\\Desktop", 
+        rv = m_registryUtils.SetRegistryKey(HKEY_LOCAL_MACHINE, kAppDesktopKey, 
                                 "showMapiDialog", (checkValue) ? "0" : "1");
         if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
 

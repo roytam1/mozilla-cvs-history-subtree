@@ -27,15 +27,29 @@ function mailnewsOverlayStartup() {
         parent.mapiPref = new Object;
         parent.mapiPref.isDefaultMailClient = 
                document.getElementById("mailnewsEnableMapi").checked;
+        
+        var mailnewsEnableNews = document.getElementById("mailnewsEnableNews"); 
+        if (mailnewsEnableNews)
+          parent.mapiPref.isDefaultNewsClient = mailnewsEnableNews.checked;
     }
     else { 
         // when we switch between different panes
         // set the checkbox based on the saved state
         var mailnewsEnableMapi = document.getElementById("mailnewsEnableMapi");
+        var mailnewsEnableNews = document.getElementById("mailnewsEnableNews"); 
+        
         if (parent.mapiPref.isDefaultMailClient)
             mailnewsEnableMapi.setAttribute("checked", "true");
         else
             mailnewsEnableMapi.setAttribute("checked", "false");
+        
+        if (mailnewsEnableNews)
+        {
+          if (parent.mapiPref.isDefaultNewsClient)
+             mailnewsEnableNews.setAttribute("checked", "true");
+          else
+             mailnewsEnableNews.setAttribute("checked", "false");
+        }
     }
 }
 
@@ -59,6 +73,8 @@ function mailnewsOverlayInit() {
 
     const prefbase = "system.windows.lock_ui.";
     var mailnewsEnableMapi = document.getElementById("mailnewsEnableMapi");
+    var mailnewsEnableNews = document.getElementById("mailnewsEnableNews");
+    
     if (mapiRegistry) {
     // initialise preference component.
     // While the data is coming from the system registry, we use a set
@@ -74,13 +90,17 @@ function mailnewsOverlayInit() {
            }
         }
         catch(ex) {}
-        if (mapiRegistry.isDefaultMailClient)
-            mailnewsEnableMapi.setAttribute("checked", "true");
-        else
-            mailnewsEnableMapi.setAttribute("checked", "false");
+
+        mailnewsEnableMapi.setAttribute("checked", mapiRegistry.isDefaultMailClient ? "true" : "false");
+        if (mailnewsEnableNews)
+          mailnewsEnableNews.setAttribute("checked", mapiRegistry.isDefaultNewsClient ? "true" : "false");
     }
     else
+    {
         mailnewsEnableMapi.setAttribute("disabled", "true");
+        if (mailnewsEnableNews)
+          mailnewsEnableNews.setAttribute("disabled", "true");
+    }
 }
 
 function onEnableMapi() {
@@ -90,19 +110,30 @@ function onEnableMapi() {
                document.getElementById("mailnewsEnableMapi").checked;
 }
 
+function onEnableNews() {
+    // save the state of the checkbox
+    if ("mapiPref" in parent)
+        parent.mapiPref.isDefaultNewsClient = document.getElementById("mailnewsEnableNews").checked;
+}
+
 function onOK()
 {
     try {
-        var mapiRegistry = Components.classes[ "@mozilla.org/mapiregistry;1" ].
-                   getService( Components.interfaces.nsIMapiRegistry );
+        var mapiRegistry = Components.classes[ "@mozilla.org/mapiregistry;1" ].getService( Components.interfaces.nsIMapiRegistry );
     }
     catch(ex){
         mapiRegistry = null;
     } 
-    if (mapiRegistry &&
-        ("mapiPref" in parent) && 
-        (mapiRegistry.isDefaultMailClient != parent.mapiPref.isDefaultMailClient)) { 
+
+    if (mapiRegistry && ("mapiPref" in parent)) {
+      if (mapiRegistry.isDefaultMailClient != parent.mapiPref.isDefaultMailClient)
         mapiRegistry.isDefaultMailClient = parent.mapiPref.isDefaultMailClient ;
+      
+      if ("isDefaultNewsClient" in parent.mapiPref)
+      {
+        if (mapiRegistry.isDefaultNewsClient != parent.mapiPref.isDefaultNewsClient)
+          mapiRegistry.isDefaultNewsClient = parent.mapiPref.isDefaultNewsClient;
+      }
     }
 }
 

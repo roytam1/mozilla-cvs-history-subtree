@@ -24,7 +24,9 @@
 <?xml-stylesheet href="chrome://communicator/skin/pref/pref.css" type="text/css"?>
 <?xml-stylesheet href="chrome://communicator/skin/" type="text/css"?>
 
+
 <!DOCTYPE overlay [
+  <!ENTITY % brandDTD SYSTEM "chrome://global/locale/brand.dtd" > %brandDTD;
   <!ENTITY % dtd1 SYSTEM "chrome://messenger/locale/pref-mailnews.dtd" > %dtd1;
   <!ENTITY % dtd2 SYSTEM "chrome://messenger/locale/pref-notifications.dtd" > %dtd2;
 ]>
@@ -41,20 +43,32 @@
     var _elementIDs = ["mailnewsStartPageEnabled", "mailnewsStartPageUrl", "mailPaneConfig", "mailnewsDoubleClick2NewWindow", "mailRememberLastMsg",
                        "mailnewsSoundFileUrl", "newMailNotification", "newMailNotificationType",
                        "newMailNotificationAlert"];
+#ifdef XP_WIN
+    _elementIDs.push("mailnewsEnableMapi");
+    _elementIDs.push("mailnewsEnableNews");
+#endif
+
   ]]>
   </script>
   
   <groupbox align="start">
     <caption label="&generalSettings.label;"/>
     
-    <hbox id="mapi"/>
+#ifdef XP_WIN
+      <checkbox id="mailnewsEnableMapi" label="&setDefaultMailClient.label;"
+              accesskey="&setDefaultMailClient.accesskey;" 
+              oncommand="onEnableMapi();"
+              startupFunc="registerCallback();"/>
 
+      <checkbox id="mailnewsEnableNews" label="&setDefaultNewsClient.label;"
+              accesskey="&setDefaultNewsClient.accesskey;" 
+              oncommand="onEnableNews();"/>
+#endif
+    <separator class="thin"/>
     <checkbox id="mailRememberLastMsg" label="&rememberLastMsg.label;"
               prefstring="mailnews.remember_selected_message"
               accesskey="&rememberLastMsg.accesskey;"/>
 
-    <separator class="thin"/>
-    
   </groupbox>
   
   <hbox>

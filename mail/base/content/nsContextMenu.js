@@ -142,12 +142,11 @@ nsContextMenu.prototype = {
         }
 
         // View Image depends on whether an image was clicked on.
-        this.showItem( "context-viewimage", this.onImage && !this.onStandaloneImage);
+        this.showItem( "context-viewimage", false); // never show view image for thunderbird
 
         // View background image depends on whether there is one.
-        this.showItem( "context-viewbgimage", !( this.inDirList || this.onImage || this.isTextSelected || this.onLink || this.onTextInput ) );
-        this.showItem( "context-sep-viewbgimage", !( this.inDirList || this.onImage || this.isTextSelected || this.onLink || this.onTextInput ) );
-        this.setItemAttr( "context-viewbgimage", "disabled", this.hasBGImage ? null : "true");
+        this.showItem( "context-viewbgimage", false );
+        this.showItem( "context-sep-viewbgimage", false );
     },
     initMiscItems : function () {
         // Use "Bookmark This Link" if on a link.
@@ -206,8 +205,8 @@ nsContextMenu.prototype = {
         this.showItem( "context-sep-copylink", this.onLink );
 
         // Copy image location depends on whether we're on an image.
-        this.showItem( "context-copyimage", this.onImage );
-        this.showItem( "context-sep-copyimage", this.onImage );
+        this.showItem( "context-copyimage", false );
+        this.showItem( "context-sep-copyimage", false );
     },
     initMetadataItems : function () {
         // Show if user clicked on something which has metadata.
