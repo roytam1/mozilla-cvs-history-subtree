@@ -1232,7 +1232,7 @@ ProcessSerialNumberDER(SECItem         *serialItem,
     return rv;
 
   nsXPIDLCString serialNumber;
-  serialNumber = CERT_Hexify(serialItem, 1);
+  serialNumber.Adopt(CERT_Hexify(serialItem, 1));
   if (serialNumber == nsnull)
     return NS_ERROR_OUT_OF_MEMORY;
 
