@@ -67,27 +67,27 @@ AECoreClass::AECoreClass(Boolean suspendEvents)
 	OSErr	err = ::AEObjectInit();
 	ThrowIfOSErr(err);
 	
-	mSuspendEventHandlerUPP = NewAEEventHandlerProc(AECoreClass::SuspendEventHandler);
+	mSuspendEventHandlerUPP = NewAEEventHandlerUPP(AECoreClass::SuspendEventHandler);
 	ThrowIfNil(mSuspendEventHandlerUPP);
 
-	mRequiredSuiteHandlerUPP = NewAEEventHandlerProc(AECoreClass::RequiredSuiteHandler);
+	mRequiredSuiteHandlerUPP = NewAEEventHandlerUPP(AECoreClass::RequiredSuiteHandler);
 	ThrowIfNil(mRequiredSuiteHandlerUPP);
 
-	mStandardSuiteHandlerUPP = NewAEEventHandlerProc(AECoreClass::CoreSuiteHandler);
+	mStandardSuiteHandlerUPP = NewAEEventHandlerUPP(AECoreClass::CoreSuiteHandler);
 	ThrowIfNil(mStandardSuiteHandlerUPP);
 
-	mMozillaSuiteHandlerUPP = NewAEEventHandlerProc(AECoreClass::MozillaSuiteHandler);
+	mMozillaSuiteHandlerUPP = NewAEEventHandlerUPP(AECoreClass::MozillaSuiteHandler);
 	ThrowIfNil(mMozillaSuiteHandlerUPP);
 
-	mGetURLSuiteHandlerUPP = NewAEEventHandlerProc(AECoreClass::GetURLSuiteHandler);
+	mGetURLSuiteHandlerUPP = NewAEEventHandlerUPP(AECoreClass::GetURLSuiteHandler);
 	ThrowIfNil(mGetURLSuiteHandlerUPP);
 
-	mSpyGlassSuiteHandlerUPP = NewAEEventHandlerProc(AECoreClass::SpyglassSuiteHandler);
+	mSpyGlassSuiteHandlerUPP = NewAEEventHandlerUPP(AECoreClass::SpyglassSuiteHandler);
 	ThrowIfNil(mSpyGlassSuiteHandlerUPP);
 
 	InstallSuiteHandlers(suspendEvents);
 
-	mCreateElementHandlerUPP = NewAEEventHandlerProc(AECoreClass::CreateElementHandler);
+	mCreateElementHandlerUPP = NewAEEventHandlerUPP(AECoreClass::CreateElementHandler);
 	ThrowIfNil(mCreateElementHandlerUPP);
 	
 	// Special handler for StandardSuite Make (CreateElement) event
@@ -107,7 +107,7 @@ AECoreClass::AECoreClass(Boolean suspendEvents)
 		from cWindow handler).
 	*/
 	// Install a generic handler to get an item from the app
-	mAnythingFromAppAccessor = NewOSLAccessorProc(AECoreClass::AnythingFromAppAccessor);
+	mAnythingFromAppAccessor = NewOSLAccessorUPP(AECoreClass::AnythingFromAppAccessor);
 	ThrowIfNil(mAnythingFromAppAccessor);
 	
 	// Install a handler to get properties from anything.
@@ -115,7 +115,7 @@ AECoreClass::AECoreClass(Boolean suspendEvents)
 	ThrowIfOSErr(err);
 	
 	// Install a generic handler to get a property from a typeAEList of tokens
-	mPropertyFromListAccessor = NewOSLAccessorProc(AECoreClass::PropertyTokenFromAnything);
+	mPropertyFromListAccessor = NewOSLAccessorUPP(AECoreClass::PropertyTokenFromAnything);
 	ThrowIfNil(mPropertyFromListAccessor);
 	
 	// Install a handler to get properties from anything.
@@ -123,10 +123,10 @@ AECoreClass::AECoreClass(Boolean suspendEvents)
 	ThrowIfOSErr(err);
 
 	// Install the OSL object callbacks, use for compare and count
-	mCountItemsCallback = NewOSLCountProc(AECoreClass::CountObjectsCallback);
+	mCountItemsCallback = NewOSLCountUPP(AECoreClass::CountObjectsCallback);
 	ThrowIfNil(mCountItemsCallback);
 
-	mCompareItemsCallback = NewOSLCompareProc(AECoreClass::CompareObjectsCallback);
+	mCompareItemsCallback = NewOSLCompareUPP(AECoreClass::CompareObjectsCallback);
 	ThrowIfNil(mCompareItemsCallback);
 	
 	err = ::AESetObjectCallbacks(
@@ -484,7 +484,7 @@ void AECoreClass::GetAnythingFromApp(				DescType			desiredClass,
 
 ----------------------------------------------------------------------------*/
 
-pascal OSErr AECoreClass::SuspendEventHandler(const AppleEvent *appleEvent, AppleEvent *reply, UInt32 refCon)
+pascal OSErr AECoreClass::SuspendEventHandler(const AppleEvent *appleEvent, AppleEvent *reply, SInt32 refCon)
 {
 	AECoreClass*	coreClass = reinterpret_cast<AECoreClass *>(refCon);
 	OSErr		err = noErr;
@@ -519,7 +519,7 @@ pascal OSErr AECoreClass::SuspendEventHandler(const AppleEvent *appleEvent, Appl
 
 ----------------------------------------------------------------------------*/
 
-pascal OSErr AECoreClass::RequiredSuiteHandler(const AppleEvent *appleEvent, AppleEvent *reply, UInt32 refCon)
+pascal OSErr AECoreClass::RequiredSuiteHandler(const AppleEvent *appleEvent, AppleEvent *reply, SInt32 refCon)
 {
 	AECoreClass*	coreClass = reinterpret_cast<AECoreClass *>(refCon);
 	OSErr		err = noErr;
@@ -554,7 +554,7 @@ pascal OSErr AECoreClass::RequiredSuiteHandler(const AppleEvent *appleEvent, App
 
 ----------------------------------------------------------------------------*/
 
-pascal OSErr AECoreClass::CoreSuiteHandler(const AppleEvent *appleEvent, AppleEvent *reply, UInt32 refCon)
+pascal OSErr AECoreClass::CoreSuiteHandler(const AppleEvent *appleEvent, AppleEvent *reply, SInt32 refCon)
 {
 	AECoreClass*	coreClass = reinterpret_cast<AECoreClass *>(refCon);
 	OSErr		err = noErr;
@@ -583,7 +583,7 @@ pascal OSErr AECoreClass::CoreSuiteHandler(const AppleEvent *appleEvent, AppleEv
 	
 ----------------------------------------------------------------------------*/
 
-pascal OSErr AECoreClass::CreateElementHandler(const AppleEvent *appleEvent, AppleEvent *reply, UInt32 refCon)
+pascal OSErr AECoreClass::CreateElementHandler(const AppleEvent *appleEvent, AppleEvent *reply, SInt32 refCon)
 {
 	AECoreClass*	coreClass = reinterpret_cast<AECoreClass *>(refCon);
 	OSErr		err = noErr;
@@ -613,7 +613,7 @@ pascal OSErr AECoreClass::CreateElementHandler(const AppleEvent *appleEvent, App
 	MozillaSuiteHandler 
 	
 ----------------------------------------------------------------------------*/
-pascal OSErr AECoreClass::MozillaSuiteHandler(const AppleEvent *appleEvent, AppleEvent *reply, UInt32 refCon)
+pascal OSErr AECoreClass::MozillaSuiteHandler(const AppleEvent *appleEvent, AppleEvent *reply, SInt32 refCon)
 {
 	AECoreClass*	coreClass = reinterpret_cast<AECoreClass *>(refCon);
 	OSErr		err = noErr;
@@ -643,7 +643,7 @@ pascal OSErr AECoreClass::MozillaSuiteHandler(const AppleEvent *appleEvent, Appl
 	
 
 ----------------------------------------------------------------------------*/
-pascal OSErr AECoreClass::GetURLSuiteHandler(const AppleEvent *appleEvent, AppleEvent *reply, UInt32 refCon)
+pascal OSErr AECoreClass::GetURLSuiteHandler(const AppleEvent *appleEvent, AppleEvent *reply, SInt32 refCon)
 {
 	AECoreClass*	coreClass = reinterpret_cast<AECoreClass *>(refCon);
 	OSErr		err = noErr;
@@ -673,7 +673,7 @@ pascal OSErr AECoreClass::GetURLSuiteHandler(const AppleEvent *appleEvent, Apple
 
 ----------------------------------------------------------------------------*/
 
-pascal OSErr AECoreClass::SpyglassSuiteHandler(const AppleEvent *appleEvent, AppleEvent *reply, UInt32 refCon)
+pascal OSErr AECoreClass::SpyglassSuiteHandler(const AppleEvent *appleEvent, AppleEvent *reply, SInt32 refCon)
 {
 	AECoreClass*	coreClass = reinterpret_cast<AECoreClass *>(refCon);
 	OSErr		err = noErr;
