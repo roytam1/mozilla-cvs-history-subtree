@@ -805,7 +805,7 @@ void su_HandleCompleteJavaScript (su_DownloadStream* realStream)
 			goto fail;
 		}
 
-/*        ET_StartSoftUpdate(context, codebase); */
+        ET_StartSoftUpdate(context, codebase);
 
 		/* Execute the mocha script, result will be reported in the callback */
 		realStream->fContext = context;
