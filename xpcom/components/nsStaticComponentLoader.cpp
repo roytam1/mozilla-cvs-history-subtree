@@ -29,7 +29,9 @@ public:
     NS_DECL_NSICOMPONENTLOADER
 
     nsStaticComponentLoader() : 
-        mInfo(0), mAutoRegistered(PR_FALSE) { };
+        mInfo(0), mAutoRegistered(PR_FALSE) {
+		NS_INIT_REFCNT(); 
+	}
 
     virtual ~nsStaticComponentLoader() {
         if (mInfo)
