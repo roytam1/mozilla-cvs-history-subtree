@@ -117,7 +117,7 @@ EXPORTS		= \
 		nsIHTMLContent.h \
 		nsILineIterator.h \
 		nsHTMLParts.h \
-                nsReflowTree.h \
+		nsReflowTree.h \
 		$(NULL)
 
 ifdef IBMBIDI
