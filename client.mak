@@ -415,12 +415,11 @@ clobber_seamonkey:
 	set CLIENT_DIRS=1
 	nmake -f makefile.win clobber_all 
 
-depend:
+depend: export
 	@cd $(MOZ_SRC)\$(MOZ_TOP)\.
 	set DIST_DIRS=1
 	set LAYOUT_DIRS=1
 	set CLIENT_DIRS=1
-	nmake -f makefile.win export
 	nmake -f makefile.win depend 
 
 depend_xpconnect:
@@ -489,8 +488,6 @@ install:
 export:
 	@cd $(MOZ_SRC)\$(MOZ_TOP)\nsprpub
 	gmake -f gmakefile.win MOZ_SRC_FLIPPED=$(MOZ_SRC_FLIPPED)
-	@cd $(MOZ_SRC)\$(MOZ_TOP)\security
-	nmake -f makefile.win export
 	@cd $(MOZ_SRC)\$(MOZ_TOP)\.
 	set DIST_DIRS=1
 	set LAYOUT_DIRS=1

@@ -43,6 +43,7 @@
 #include "nsCOMPtr.h"
 #include "nsIFileChannel.h"
 #include "nsXPIDLString.h"
+#include "nsReadableUtils.h"
 #include "nsHTMLDocument.h"
 #include "nsIParser.h"
 #include "nsIParserFilter.h"
@@ -500,7 +501,7 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
 
             if (NS_SUCCEEDED(rv)) {
 #ifdef DEBUG_charset
- 							char* cCharset = charset.ToNewCString();
+ 							char* cCharset = ToNewCString(charset);
 							printf("From HTTP Header, charset = %s\n", cCharset);
  							Recycle(cCharset);
  #endif
@@ -582,22 +583,6 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
   NS_PRECONDITION(nsnull != aContainer, "No content viewer container");
   nsCOMPtr<nsIDocShell> docShell(do_QueryInterface(aContainer));
 
-  if(mParser) {
-    nsCOMPtr<nsISupportsParserBundle> parserBundle;
-    nsresult result;
-    
-    parserBundle = do_QueryInterface(mParser, &result);
-    
-    if(NS_SUCCEEDED(result)) {
-      // We do this to help consumers who don't have access to the webshell.
-      nsAutoString theDocShell,theChannel;
-      theDocShell.AssignWithConversion("docshell");
-      theChannel.AssignWithConversion("channel");
-      parserBundle->SetDataIntoBundle(theDocShell,docShell);
-      parserBundle->SetDataIntoBundle(theChannel,aChannel);
-    }
-  }
-
   nsCOMPtr<nsIDocumentCharsetInfo> dcInfo;
   docShell->GetDocumentCharsetInfo(getter_AddRefs(dcInfo));  
 #ifdef IBMBIDI
@@ -665,7 +650,7 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
       {
 #ifdef DEBUG_charset
 				nsAutoString d(requestCharset);
-			  char* cCharset = d.ToNewCString();
+			  char* cCharset = ToNewCString(d);
 			  printf("From request charset, charset = %s req=%d->%d\n", 
 			  		cCharset, charsetSource, requestCharsetSource);
 			  Recycle(cCharset);
@@ -684,7 +669,7 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
       {
 #ifdef DEBUG_charset
 				nsAutoString d(forceCharsetFromWebShell);
-			  char* cCharset = d.ToNewCString();
+			  char* cCharset = ToNewCString(d);
 			  printf("From force, charset = %s \n", cCharset);
 			  Recycle(cCharset);
 #endif
@@ -782,7 +767,7 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
           csAtom->ToString(charset);
           charsetSource = kCharsetFromParentFrame;  
 
-          // printf("### 0 >>> Having parent CS = %s\n", charset.ToNewCString());
+          // printf("### 0 >>> Having parent CS = %s\n", NS_LossyConvertUCS2toASCII(charset).get());
         }
       }
     }
@@ -864,7 +849,7 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
       nsCOMPtr<nsIParserFilter> oldFilter = getter_AddRefs(mParser->SetParserFilter(cdetflt));
 
 #ifdef DEBUG_charset
-	  char* cCharset = charset.ToNewCString();
+	  char* cCharset = ToNewCString(charset);
 	  printf("set to parser charset = %s source %d\n", 
 		  		cCharset, charsetSource);
 				  Recycle(cCharset);

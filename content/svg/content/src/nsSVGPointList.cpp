@@ -27,6 +27,7 @@
 #include "nsSVGPoint.h"
 #include "nsDOMError.h"
 #include "prdtoa.h"
+#include "nsReadableUtils.h"
 
 nsresult
 nsSVGPointList::Create(const nsAReadableString& aValue,
@@ -154,7 +155,7 @@ nsSVGPointList::SetValueString(const nsAReadableString& aValue)
   char* str;
   {
     nsAutoString temp(aValue);
-    str = temp.ToNewCString();
+    str = ToNewCString(temp);
   }
   
   char* rest = str;

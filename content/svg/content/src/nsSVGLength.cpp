@@ -33,6 +33,7 @@
 #include "nsIDOMSVGRect.h"
 #include "nsSVGValue.h"
 #include "nsIWeakReference.h"
+#include "nsReadableUtils.h"
 #include <math.h>
 
 ////////////////////////////////////////////////////////////////////////
@@ -287,7 +288,7 @@ nsSVGLength::SetValueAsString(const nsAReadableString & aValueAsString)
   char* str;
   {
     nsAutoString temp(aValueAsString);
-    str = temp.ToNewCString();
+    str = ToNewCString(temp);
   }
 
   char* number = str;

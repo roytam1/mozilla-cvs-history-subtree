@@ -29,6 +29,7 @@
 #include "nsDOMError.h"
 #include "prdtoa.h"
 #include "nsSVGAtoms.h"
+#include "nsReadableUtils.h"
 
 nsresult
 nsSVGTransformList::Create(const nsAReadableString& aValue,
@@ -164,7 +165,7 @@ nsSVGTransformList::SetValueString(const nsAReadableString& aValue)
   char* str;
   {
     nsAutoString temp(aValue);
-    str = temp.ToNewCString();
+    str = ToNewCString(temp);
   }
   
   char* rest = str;

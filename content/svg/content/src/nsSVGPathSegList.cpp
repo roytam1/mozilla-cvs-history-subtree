@@ -30,7 +30,7 @@
 #include "nsVoidArray.h"
 #include "nsDOMError.h"
 #include "nsSVGPathDataParser.h"
-
+#include "nsReadableUtils.h"
 
 ////////////////////////////////////////////////////////////////////////
 // nsSVGPathSegList
@@ -123,7 +123,7 @@ nsSVGPathSegList::SetValueString(const nsAReadableString& aValue)
   char* str;
   {
     nsAutoString temp(aValue);
-    str = temp.ToNewCString();
+    str = ToNewCString(temp);
   }
 
   nsSVGPathDataParser parser(this);
