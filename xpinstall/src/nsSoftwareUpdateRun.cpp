@@ -427,6 +427,8 @@ extern "C" void RunInstallOnThread(void *data)
             if ( ownRuntime ) 
                 JS_DestroyRuntime(rt);
         }
+        // force zip archive closed before other cleanup
+        hZip = 0;
     }
     else 
     {
