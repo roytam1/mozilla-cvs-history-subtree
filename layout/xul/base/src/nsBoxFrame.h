@@ -131,8 +131,6 @@ public:
                        nsIFrame::Cursor& aCursor);
 
 
-  virtual PRBool ChildIsDirty(nsIFrame* aChild);
-
   NS_IMETHOD  Init(nsPresContext*  aPresContext,
                    nsIContent*      aContent,
                    nsIFrame*        aParent,

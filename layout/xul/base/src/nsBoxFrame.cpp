@@ -668,32 +668,6 @@ nsBoxFrame::GetInitialAutoStretch(PRBool& aStretch)
   return PR_TRUE;
 }
 
-
-/* virtual */ PRBool
-nsBoxFrame::ChildIsDirty(nsIFrame* aChild)
-{
-#error "This code needs to be rewritten."
-   // if we receive a ReflowDirtyChild it is because there is an HTML frame 
-   // just inside us. So must find the adaptor that contains the child and
-   // tell it that things are dirty.
-   nsBoxLayoutState state(GetPresContext());
-
-   nsIBox* box = nsnull;
-   GetChildBox(&box);
-   while (box)
-   {
-     if (box == aChild) {
-       box->MarkDirty(state);
-       return RelayoutDirtyChild(state, box);
-     }
-
-     box->GetNextBox(&box);
-   }
-
-   NS_ERROR("Could not find an adaptor!");
-   return NS_OK;
-}
-
 NS_IMETHODIMP
 nsBoxFrame::DidReflow(nsPresContext*           aPresContext,
                       const nsHTMLReflowState*  aReflowState,
