@@ -247,7 +247,6 @@ function searchOnLoad()
   HideSearchColumn("unreadCol"); // since you can't thread search results
   HideSearchColumn("unreadButtonColHeader");
   HideSearchColumn("statusCol");
-  HideSearchColumn("sizeCol");
   HideSearchColumn("flaggedCol");
   HideSearchColumn("idCol");
   HideSearchColumn("junkStatusCol");
