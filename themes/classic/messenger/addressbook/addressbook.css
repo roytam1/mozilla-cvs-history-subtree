@@ -228,6 +228,7 @@ html|p {
 /* ::::: Search Bar  ::::: */
 
 #searchBox {
+  background: #3398cc;
   border-top: 1px solid ThreeDHighlight;
   border-bottom: 1px solid ThreeDShadow;
 }
