@@ -1656,6 +1656,30 @@ void splitMatch(const String *S, uint32 q, const String *R, MatchResult &result)
 }
 
 
+JSValue String_toLowerCase(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+{
+    ASSERT(thisValue->isObject());
+    JSValue S = thisValue->toString(cx);
+
+    String *result = new String(*S.string);
+    for (String::iterator i = result->begin(), end = result->end(); i != end; i++)
+        *i = toLower(*i);
+
+    return JSValue(result);
+}
+
+JSValue String_toUpperCase(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+{
+    ASSERT(thisValue->isObject());
+    JSValue S = thisValue->toString(cx);
+
+    String *result = new String(*S.string);
+    for (String::iterator i = result->begin(), end = result->end(); i != end; i++)
+        *i = toUpper(*i);
+
+    return JSValue(result);
+}
+
 JSValue String_split(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
     ASSERT(thisValue->isObject());
@@ -1806,6 +1830,20 @@ JSValue Array_pop(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
     else
         return kUndefinedValue;
 }
+
+JSValue Boolean_Constructor(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+{
+    ASSERT(thisValue->isObject());
+    JSObject *thisObj = thisValue->object;
+    return *thisValue;
+}
+
+JSValue Boolean_toString(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+{
+    return kUndefinedValue;
+}
+
+
               
 JSValue JSValue::valueToObject(Context *cx, JSValue& value)
 {
@@ -2162,6 +2200,97 @@ JSValue JSValue::valueToBoolean(Context *cx, JSValue& value)
     }
     throw new Exception(Exception::runtimeError, "toBoolean");    // XXX
 }
+
+    
+
+
+void Context::initClass(JSType *type, JSType *super, ClassDef *cdef, ProtoFunDef *pdef)
+{
+    mScopeChain->addScope(type);
+    type->createStaticComponent(this);
+    type->setDefaultConstructor(new JSFunction(this, cdef->defCon, Object_Type));
+    while (pdef && pdef->name) {
+        type->mPrototype->defineVariable(widenCString(pdef->name), 
+                                           NULL, 
+                                           pdef->result, 
+                                           JSValue(new JSFunction(this, pdef->imp, pdef->result)));
+        pdef++;
+    }
+    type->completeClass(this, mScopeChain, super);
+    type->setStaticInitializer(this, NULL);
+    mGlobal->defineVariable(widenCString(cdef->name), NULL, Type_Type, JSValue(type));
+    mScopeChain->popScope();
+}
+
+void Context::initBuiltins()
+{
+    ClassDef builtInClasses[] =
+    {
+        { "Object",     Object_Constructor  },
+        { "Number",     Number_Constructor  },
+        { "String",     String_Constructor  },
+        { "Array",      Array_Constructor   },
+        { "Boolean",    Boolean_Constructor },
+        { "Void",       NULL                },
+    };
+
+    Object_Type  = new JSType(this, widenCString(builtInClasses[0].name), NULL);
+    Number_Type  = new JSType(this, widenCString(builtInClasses[1].name), Object_Type);
+    String_Type  = new JSType(this, widenCString(builtInClasses[2].name), Object_Type);
+    Array_Type   = new JSArrayType(this, widenCString(builtInClasses[3].name), Object_Type);
+    Boolean_Type = new JSType(this, widenCString(builtInClasses[4].name), Object_Type);
+    Void_Type    = new JSType(this, widenCString(builtInClasses[5].name), Object_Type);
+
+    ProtoFunDef objectProtos[] = 
+    {
+        { "toString", String_Type, Object_toString },
+        { NULL }
+    };
+    ProtoFunDef numberProtos[] = 
+    {
+        { "toString", String_Type, Number_toString },
+        { NULL }
+    };
+    ProtoFunDef stringProtos[] = 
+    {
+        { "toString",       String_Type, String_toString },
+        { "split",          Array_Type,  String_split },
+        { "length",         Number_Type, String_length },
+        { "toUpperCase",    String_Type, String_toUpperCase },
+        { "toLowerCase",    String_Type, String_toLowerCase },
+        { NULL }
+    };
+    ProtoFunDef arrayProtos[] = 
+    {
+        { "toString", String_Type, Array_toString },
+        { "push",     Number_Type, Array_push },
+        { "pop",      Object_Type, Array_pop },
+        { NULL }
+    };
+    ProtoFunDef booleanProtos[] = 
+    {
+        { "toString", String_Type, Boolean_toString },
+        { NULL }
+    };
+
+
+    initClass(Object_Type,  NULL,         &builtInClasses[0], &objectProtos[0]);
+    initClass(Number_Type,  Object_Type,  &builtInClasses[1], &numberProtos[0]);
+    initClass(String_Type,  Object_Type,  &builtInClasses[2], &stringProtos[0]);
+    initClass(Array_Type,   Object_Type,  &builtInClasses[3], &arrayProtos[0]);
+    initClass(Boolean_Type, Object_Type,  &builtInClasses[4], &booleanProtos[0]);
+    initClass(Void_Type,    Object_Type,  &builtInClasses[5], NULL);
+
+}
+
+
+
+
+
+
+
+
+
 
 
 

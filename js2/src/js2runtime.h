@@ -1412,25 +1412,20 @@ static const double two31 = 2147483648.0;
 
     };
 
-    JSValue Object_Constructor(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc);
-    JSValue Object_toString(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc);
-
-    JSValue Number_Constructor(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc);
-    JSValue Number_toString(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc);
-
-    JSValue String_Constructor(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc);
-    JSValue String_toString(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc);
-    JSValue String_split(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc);
-    JSValue String_length(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc);
-
-    JSValue Array_Constructor(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc);
-    JSValue Array_toString(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc);
-    JSValue Array_push(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc);
-    JSValue Array_pop(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc);
 
     
     class Context {
     public:
+        struct ProtoFunDef {
+            char *name;
+            JSType *result;
+            JSFunction::NativeCode *imp;
+        };
+
+        struct ClassDef {
+            char *name;
+            JSFunction::NativeCode *defCon;
+        };
 
         Context(JSObject *global, World &world) 
             : mGlobal(global), 
@@ -1439,66 +1434,17 @@ static const double two31 = 2147483648.0;
               mDebugFlag(false)
         {
             mScopeChain = new ScopeChain(this, mWorld);
-            if (Object_Type == NULL) {
-                Object_Type = new JSType(this, widenCString("Object"), NULL);
-                mScopeChain->addScope(Object_Type);
-                Object_Type->createStaticComponent(this);
-                Object_Type->setDefaultConstructor(new JSFunction(this, &Object_Constructor, Object_Type));
-                Object_Type->mPrototype->defineVariable(widenCString("toString"), NULL, String_Type, JSValue(new JSFunction(this, &Object_toString, String_Type)));
-                Object_Type->completeClass(this, mScopeChain, Object_Type);
-                Object_Type->setStaticInitializer(this, NULL);
-                global->defineVariable(widenCString("Object"), NULL, Type_Type, JSValue(Object_Type));
-                mScopeChain->popScope();
-
+            if (Object_Type == NULL) {                
+                initBuiltins();
                 global->defineVariable(widenCString("undefined"), NULL, Void_Type, kUndefinedValue);
                 global->defineVariable(widenCString("NaN"), NULL, Void_Type, kNaNValue);
-                global->defineVariable(widenCString("Infinity"), NULL, Void_Type, kPositiveInfinity);
-
-                
-                Number_Type = new JSType(this, widenCString("Number"), Object_Type);
-                mScopeChain->addScope(Number_Type);
-                Number_Type->createStaticComponent(this);
-                Number_Type->setDefaultConstructor(new JSFunction(this, &Number_Constructor, Object_Type));
-                Number_Type->addMethod(widenCString("toString"), NULL, new JSFunction(this, &Number_toString, String_Type));
-                Number_Type->completeClass(this, mScopeChain, Object_Type);
-                Number_Type->setStaticInitializer(this, NULL);
-                global->defineVariable(widenCString("Number"), NULL, Type_Type, JSValue(Number_Type));
-                mScopeChain->popScope();
-
-                Void_Type = new JSType(this, NULL);
-                global->defineVariable(widenCString("Void"), NULL, Type_Type, JSValue(Void_Type));
-
-
-                String_Type = new JSType(this, widenCString("String"), Object_Type);
-                mScopeChain->addScope(Number_Type);
-                String_Type->createStaticComponent(this);
-                String_Type->setDefaultConstructor(new JSFunction(this, &String_Constructor, Object_Type));
-                String_Type->mPrototype->defineVariable(widenCString("toString"), NULL, String_Type, JSValue(new JSFunction(this, &String_toString, String_Type)));
-                String_Type->mPrototype->defineVariable(widenCString("split"), NULL, Array_Type, JSValue(new JSFunction(this, &String_split, Array_Type)));
-                String_Type->addMethod(widenCString("length"), NULL, new JSFunction(this, &String_length, Number_Type));
-                String_Type->completeClass(this, mScopeChain, Object_Type);
-                String_Type->setStaticInitializer(this, NULL);
-                global->defineVariable(widenCString("String"), NULL, Type_Type, JSValue(Number_Type));
-                mScopeChain->popScope();
-
-                Array_Type = new JSArrayType(this, widenCString("Array"), Object_Type);
-                mScopeChain->addScope(Number_Type);
-                Array_Type->createStaticComponent(this);
-                Array_Type->setDefaultConstructor(new JSFunction(this, &Array_Constructor, Object_Type));
-                Array_Type->addMethod(widenCString("toString"), NULL, new JSFunction(this, &Array_toString, String_Type));
-                Array_Type->mPrototype->defineVariable(widenCString("push"), NULL, Number_Type, JSValue(new JSFunction(this, &Array_push, Number_Type)));
-                Array_Type->mPrototype->defineVariable(widenCString("pop"), NULL, Object_Type, JSValue(new JSFunction(this, &Array_pop, Object_Type)));
-                Array_Type->completeClass(this, mScopeChain, Object_Type);
-                Array_Type->setStaticInitializer(this, NULL);
-                global->defineVariable(widenCString("Array"), NULL, Type_Type, JSValue(Array_Type));
-                mScopeChain->popScope();
-
-                Boolean_Type = new JSType(this, Object_Type);
-                Type_Type = new JSType(this, Object_Type);        
+                global->defineVariable(widenCString("Infinity"), NULL, Void_Type, kPositiveInfinity);                
             }
             initOperators();
         }
 
+        void initBuiltins();
+        void initClass(JSType *type, JSType *super, ClassDef *cdef, ProtoFunDef *pdef);
         void initOperators();
         
         void defineOperator(Operator which, JSType *t1, JSType *t2, JSFunction *imp)
