@@ -80,7 +80,7 @@ NSRegisterSelf(nsISupports* aServMgr, const char* aPath)
 
   rv = compMgr->RegisterComponent(kRDFDOMResourceFactoryCID,
                                   "DOM element resource factory",
-                                  NS_RDF_RESOURCE_FACTORY_PROGID_PREFIX "dom",
+                                  NS_RDF_RESOURCE_FACTORY_PROGID_PREFIX "object",
                                   aPath, PR_TRUE, PR_TRUE);
   return rv;
 

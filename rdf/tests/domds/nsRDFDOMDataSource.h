@@ -27,6 +27,7 @@
 #include "nsIRDFService.h"
 #include "nsVoidArray.h"
 #include "nsCOMPtr.h"
+#include "nsHashtable.h"
 
 #include "nsIDOMNode.h"
 #include "nsIDOMDocument.h"
@@ -65,20 +66,27 @@ class nsRDFDOMDataSource : public nsIRDFDataSource,
  private:
 
     nsresult createDOMNodeArcs(nsIDOMNode *node,
-                               const char *baseID,
                                nsISupportsArray *arcs);
     nsresult createDOMAttributeArcs(nsIDOMNode *node,
-                               const char *baseID,
                                nsISupportsArray *arcs);
     nsresult createDOMChildArcs(nsIDOMNode *node,
-                                const char *baseID,
                                 nsISupportsArray *arcs);
+
+    nsresult createDOMNodeListArcs(nsIDOMNodeList *nodelist,
+                                   nsISupportsArray *arcs);
+    nsresult createDOMNamedNodeMapArcs(nsIDOMNamedNodeMap *nodelist,
+                                       nsISupportsArray *arcs);
+    
+    nsresult getResourceForObject(nsISupports *object,
+                                  nsIRDFResource **resource);
     
     PRBool init;
     nsIRDFService *mRDFService;
     PRInt32 mMode;
     nsVoidArray *mObservers;
 
+    nsSupportsHashtable objectTable;
+    
     nsCOMPtr<nsIDOMDocument> mDocument;
 
     nsIRDFResource* kNC_Name;
