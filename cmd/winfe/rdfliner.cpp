@@ -56,7 +56,7 @@ extern int XP_BKMKS_HOURS_AGO;
 #define IDT_DRAGRECT 16414
 
 #define EDIT_DELAY 500
-#define SPRINGLOAD_DELAY 300
+#define SPRINGLOAD_DELAY 500
 #define RDF_DRAG_HEARTBEAT 125 // Faster than COutliner's DRAG_HEARTBEAT
 
 // Click location stuff
