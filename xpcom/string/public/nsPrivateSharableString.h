@@ -44,6 +44,7 @@ class nsPrivateSharableString
       virtual ~nsPrivateSharableString() {}
 
       virtual PRUint32                            GetImplementationFlags() const;
+      virtual const nsBufferHandle<CharT>*        GetFlatBufferHandle() const;
       virtual const nsBufferHandle<CharT>*        GetBufferHandle() const;
       virtual const nsSharedBufferHandle<CharT>*  GetSharedBufferHandle() const;
 
@@ -60,6 +61,13 @@ const nsSharedBufferHandle<CharT>*
 nsPrivateSharableString<CharT>::GetSharedBufferHandle() const
   {
     return 0;
+  }
+
+template <class CharT>
+const nsBufferHandle<CharT>*
+nsPrivateSharableString<CharT>::GetFlatBufferHandle() const
+  {
+    return GetSharedBufferHandle();
   }
 
 template <class CharT>

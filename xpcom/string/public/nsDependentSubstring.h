@@ -28,10 +28,6 @@
 #include "nsAString.h"
 #endif
 
-#ifndef nsAPromiseString_h___
-#include "nsAPromiseString.h"
-#endif
-
 #ifndef nsStringTraits_h___
 #include "nsStringTraits.h"
 #endif

@@ -70,6 +70,7 @@ class NS_COM nsCString :
   public nsStr {
 
 protected:
+  virtual const nsBufferHandle<char>* GetFlatBufferHandle() const;
   virtual const char* GetReadableFragment( nsReadableFragment<char>&, nsFragmentRequest, PRUint32 ) const;
   virtual char* GetWritableFragment( nsWritableFragment<char>&, nsFragmentRequest, PRUint32 );
 

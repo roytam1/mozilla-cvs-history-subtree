@@ -24,4 +24,35 @@
 //-------1---------2---------3---------4---------5---------6---------7---------8
 
 #include "nsCommonString.h"
+// #include "nsBufferHandleUtils.h"
+
+void
+nsCommonString::assign( const string_type& aReadable )
+  {
+    const nsSharedBufferHandle<char_type>* handle = aReadable.GetSharedBufferHandle();
+    if ( !handle )
+      handle = NS_AllocateContiguousHandleWithData(handle, aReadable, 1);
+    mBuffer = handle;
+  }
+
+const nsSharedBufferHandle<PRUnichar>*
+nsCommonString::GetSharedBufferHandle() const
+  {
+    return mBuffer.get();
+  }
+
+void
+nsCommonCString::assign( const string_type& aReadable )
+  {
+    const nsSharedBufferHandle<char_type>* handle = aReadable.GetSharedBufferHandle();
+    if ( !handle )
+      handle = NS_AllocateContiguousHandleWithData(handle, aReadable, 1);
+    mBuffer = handle;
+  }
+
+const nsSharedBufferHandle<char>*
+nsCommonCString::GetSharedBufferHandle() const
+  {
+    return mBuffer.get();
+  }
 

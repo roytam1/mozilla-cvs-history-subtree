@@ -30,6 +30,10 @@
 #include "nsStringFwd.h"
 #endif
 
+#ifndef nscore_h___
+#include "nscore.h"
+#endif
+
 
 
 

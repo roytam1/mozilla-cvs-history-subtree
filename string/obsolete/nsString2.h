@@ -73,6 +73,7 @@ class NS_COM nsString :
   public nsStr {
 
 protected:
+  virtual const nsBufferHandle<PRUnichar>* GetFlatBufferHandle() const;
   virtual const PRUnichar* GetReadableFragment( nsReadableFragment<PRUnichar>&, nsFragmentRequest, PRUint32 ) const;
   virtual PRUnichar* GetWritableFragment( nsWritableFragment<PRUnichar>&, nsFragmentRequest, PRUint32 );
 

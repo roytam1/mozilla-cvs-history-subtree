@@ -73,7 +73,8 @@ class NS_COM nsLocalString
       // nsLocalString( const nsLocalString& );  // auto-generated copy-constructor OK
       // ~nsLocalString();                       // auto-generated destructor OK
 
-      virtual const nsBufferHandle<PRUnichar>* GetBufferHandle() const  { return &mHandle; }
+      virtual const nsBufferHandle<PRUnichar>* GetFlatBufferHandle() const  { return &mHandle; }
+      virtual const nsBufferHandle<PRUnichar>* GetBufferHandle() const      { return &mHandle; }
 
     private:
       nsBufferHandle<PRUnichar> mHandle;
@@ -112,7 +113,8 @@ class NS_COM nsLocalCString
       // nsLocalCString( const nsLocalCString& );   // auto-generated copy-constructor OK
       // ~nsLocalCString();                         // auto-generated destructor OK
 
-      virtual const nsBufferHandle<char>* GetBufferHandle() const  { return &mHandle; }
+      virtual const nsBufferHandle<char>* GetFlatBufferHandle() const   { return &mHandle; }
+      virtual const nsBufferHandle<char>* GetBufferHandle() const       { return &mHandle; }
 
     private:
       nsBufferHandle<char> mHandle;

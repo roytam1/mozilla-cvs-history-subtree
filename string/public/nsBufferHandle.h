@@ -180,6 +180,14 @@ class nsSharedBufferHandle
           mFlags = kIsShared;
         }
 
+      nsSharedBufferHandle( CharT* aDataStart, CharT* aDataEnd, CharT*, CharT*, PRBool isSingleAllocation )
+          : nsBufferHandle<CharT>(aDataStart, aDataEnd)
+        {
+          mFlags = kIsShared;
+          if ( isSingleAllocation )
+            mFlags |= kIsSingleAllocationWithBuffer;
+        }
+
       ~nsSharedBufferHandle();
 
       void

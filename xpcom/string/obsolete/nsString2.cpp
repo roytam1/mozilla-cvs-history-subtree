@@ -39,6 +39,13 @@ static const char* kPossibleNull = "Error: possible unintended null in string";
 static const char* kNullPointerError = "Error: unexpected null ptr";
 static const char* kWhitespace="\b\t\r\n ";
 
+const nsBufferHandle<PRUnichar>*
+nsString::GetFlatBufferHandle() const
+  {
+    return NS_REINTERPRET_CAST(const nsBufferHandle<PRUnichar>*, 1);
+  }
+
+
 
 static void Subsume(nsStr& aDest,nsStr& aSource){
   if(aSource.mStr && aSource.mLength) {

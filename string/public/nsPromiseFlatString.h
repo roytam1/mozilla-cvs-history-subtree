@@ -24,120 +24,127 @@
 #ifndef nsPromiseFlatString_h___
 #define nsPromiseFlatString_h___
 
-#ifndef nsStringTraits_h___
-#include "nsStringTraits.h"
+#ifndef nsCommonString_h___
+#include "nsCommonString.h"
 #endif
 
-#ifndef nsAPromiseString_h___
-#include "nsAPromiseString.h"
-#endif
+  /**
+   * WARNING:
+   *
+   * Try to avoid flat strings.  |PromiseFlat[C]String| will help you as a last resort,
+   * and this may be necessary when dealing with legacy or OS calls, but in general,
+   * requiring a zero-terminated contiguous hunk of characters kills many of the performance
+   * wins the string classes offer.  Write your own code to use |nsA[C]String&|s for parameters.
+   * Write your string proccessing algorithms to exploit iterators.  If you do this, you
+   * will benefit from being able to chain operations without copying or allocating and your
+   * code will be significantly more efficient.  Remember, a function that takes an
+   * |const nsA[C]String&| can always be passed a raw character pointer by wrapping it (for free)
+   * in a |nsLocal[C]String|.  But a function that takes a character pointer always has the
+   * potential to force allocation and copying.
+   *
+   *
+   * How to use it:
+   *
+   * Like all `promises', a |nsPromiseFlat[C]String| doesn't own the characters it promises.
+   * You must never use it to promise characters out of a string with a shorter lifespan.
+   * The typical use will be something like this
+   *
+   *   SomeOSFunction( PromiseFlatCString(aCString).get() ); // GOOD
+   *
+   * Here's a BAD use:
+   *
+   *  const char* buffer = PromiseFlatCString(aCString).get();
+   *  SomeOSFunction(buffer); // BAD!! |buffer| is a dangling pointer
+   *
+   * A |nsPromiseFlat[C]String| doesn't support non-|const| access (you can't use it to make
+   * changes back into the original string).  To help you avoid that, the only way to make
+   * one is with the function |PromiseFlat[C]String|, which produce a |const| instance.
+   * ``What if I need to keep a promise around for a little while?'' you might ask.
+   * In that case, you can keep a reference, like so
+   *
+   *   const nsPromiseFlatString& flat = PromiseFlatString(aString);
+   *     // this reference holds the anonymous temporary alive, but remember, it must _still_
+   *     //   have a lifetime shorter than that of |aString|
+   *
+   *  SomeOSFunction(flat.get());
+   *  SomeOtherOSFunction(flat.get());
+   *
+   *
+   * How does it work?
+   *
+   * A |nsPromiseFlat[C]String| is just a wrapper for another string.  If you apply it to
+   * a string that happens to be flat, your promise is just a reference to that other string
+   * and all calls are forwarded through to it.  If you apply it to a non-flat string,
+   * then a temporary flat string is created for you, by allocating and copying.  In the unlikely
+   * event that you end up assigning the result into a sharing string (e.g., |nsCommon[C]String|),
+   * the right thing happens.
+   */
 
-//-------1---------2---------3---------4---------5---------6---------7---------8
-
-#define kDefaultFlatStringSize 64
-
-template <class CharT>
-class basic_nsPromiseFlatString
-    : public nsStringTraits<CharT>::abstract_flat_type
+class NS_COM nsPromiseFlatString
+    : public nsAFlatString /* , public nsAPromiseString */
   {
-    typedef typename nsStringTraits<CharT>::abstract_string_type  string_type;
-    typedef string_type::const_iterator                           const_iterator;
+    friend const nsPromiseFlatString PromiseFlatString( const nsAString& );
 
     public:
-      explicit basic_nsPromiseFlatString( const string_type& );
-
-      virtual
-     ~basic_nsPromiseFlatString( )
-        {
-          if (mOwnsBuffer)
-            nsMemory::Free((void*)mBuffer);
-        }
-
-      virtual PRUint32  Length() const { return mLength; }
-
-      virtual const CharT* GetReadableFragment( nsReadableFragment<CharT>&, nsFragmentRequest, PRUint32 = 0 ) const;
-      virtual       CharT* GetWritableFragment( nsWritableFragment<CharT>&, nsFragmentRequest, PRUint32 = 0 ) { return 0; }
-
-      virtual const CharT* get() const { return mBuffer; }
-        // eliminate this function after we correctly implement |GetBufferHandle|
+      nsPromiseFlatString( const nsPromiseFlatString& );
+      virtual const PRUnichar* get() const; // this will be gone after we fix obsolete/nsString
 
     protected:
-      PRUint32      mLength;
-      const CharT*  mBuffer;
-      PRBool        mOwnsBuffer;
-      CharT         mInlineBuffer[kDefaultFlatStringSize];
+      nsPromiseFlatString() : mPromisedString(&mFlattenedString) { }
+      explicit nsPromiseFlatString( const nsAString& aString );
+
+      virtual const nsBufferHandle<char_type>*        GetFlatBufferHandle() const;
+      virtual const nsBufferHandle<char_type>*        GetBufferHandle() const;
+      virtual const nsSharedBufferHandle<char_type>*  GetSharedBufferHandle() const;
+
+    private:
+        // NOT TO BE IMPLEMENTED
+      void operator=( const nsPromiseFlatString& );
+
+    private:
+      nsCommonString        mFlattenedString;
+      const nsAFlatString*  mPromisedString;
   };
 
-template <class CharT>
-basic_nsPromiseFlatString<CharT>::basic_nsPromiseFlatString( const string_type& aString )
-    : mLength(aString.Length()),
-      mOwnsBuffer(PR_FALSE)
+class NS_COM nsPromiseFlatCString
+    : public nsAFlatCString /* , public nsAPromiseCString */
   {
-    typedef nsReadingIterator<CharT> iterator;
+    friend const nsPromiseFlatCString PromiseFlatCString( const nsACString& );
 
-    iterator start;
-    iterator end;
-    
-    aString.BeginReading(start);
-    aString.EndReading(end);
+    public:
+      nsPromiseFlatCString( const nsPromiseFlatCString& );
+      virtual const char* get() const; // this will be gone after we fix obsolete/nsString
 
-    // First count the number of buffers
-    PRInt32 buffer_count = 0;
-    while ( start != end )
-      {
-        buffer_count++;
-        start.advance(start.size_forward());
-      }
+    protected:
+      nsPromiseFlatCString() : mPromisedString(&mFlattenedString) { }
+      explicit nsPromiseFlatCString( const nsACString& aString );
 
-    // Now figure out what we want to do with the string
-    aString.BeginReading(start);
-    // XXX Not guaranteed null-termination in the first case
-    // If it's a single buffer, we just use the implementation's buffer
-    if ( buffer_count == 1 ) 
-      mBuffer = start.get();
-    // If it's too big for our inline buffer, we allocate a new one
-    else if ( mLength > kDefaultFlatStringSize-1 )
-      {
-        CharT* result = NS_STATIC_CAST(CharT*, nsMemory::Alloc((mLength+1) * sizeof(CharT)));
-    		CharT* toBegin = result;
-        *copy_string(start, end, toBegin) = CharT(0);
+      virtual const nsBufferHandle<char_type>*        GetFlatBufferHandle() const;
+      virtual const nsBufferHandle<char_type>*        GetBufferHandle() const;
+      virtual const nsSharedBufferHandle<char_type>*  GetSharedBufferHandle() const;
 
-        mBuffer = result;
-        mOwnsBuffer = PR_TRUE;
-      }
-    // Otherwise copy into our internal buffer
-    else
-      {
-        mBuffer = mInlineBuffer;
-        CharT* toBegin = &mInlineBuffer[0];
-        copy_string( start, end, toBegin);
-        mInlineBuffer[mLength] = 0;
-      }
+    private:
+        // NOT TO BE IMPLEMENTED
+      void operator=( const nsPromiseFlatCString& );
+
+    private:
+      nsCommonCString       mFlattenedString;
+      const nsAFlatCString* mPromisedString;
+  };
+
+
+inline
+const nsPromiseFlatString
+PromiseFlatString( const nsAString& aString )
+  {
+    return nsPromiseFlatString(aString);
   }
 
-
-template <class CharT>
-const CharT* 
-basic_nsPromiseFlatString<CharT>::GetReadableFragment( nsReadableFragment<CharT>& aFragment, 
-						 nsFragmentRequest aRequest, 
-						 PRUint32 aOffset ) const 
+inline
+const nsPromiseFlatCString
+PromiseFlatCString( const nsACString& aString )
   {
-    switch ( aRequest )
-      {
-        case kFirstFragment:
-        case kLastFragment:
-        case kFragmentAt:
-          aFragment.mEnd = (aFragment.mStart = mBuffer) + mLength;
-          return aFragment.mStart + aOffset;
-        
-        case kPrevFragment:
-        case kNextFragment:
-        default:
-          return 0;
-      }
+    return nsPromiseFlatCString(aString);
   }
-
-typedef basic_nsPromiseFlatString<PRUnichar>  nsPromiseFlatString;
-typedef basic_nsPromiseFlatString<char>       nsPromiseFlatCString;
 
 #endif /* !defined(nsPromiseFlatString_h___) */

@@ -21,6 +21,9 @@
  *   Scott Collins <scc@mozilla.org> (original author)
  */
 
+/* nsCommonString.h --- a string implementation that shares its underlying storage */
+
+
 #ifndef nsCommonString_h___
 #define nsCommonString_h___
 
@@ -28,29 +31,72 @@
 #include "nsAFlatString.h"
 #endif
 
+#ifndef nsBufferHandleUtils_h___
+#include "nsBufferHandleUtils.h"
+#endif
 
 //-------1---------2---------3---------4---------5---------6---------7---------8
 
   /**
-   *
+   * Not yet ready for non-|const| access
    */
 
-class nsCommonString
+class NS_COM nsCommonString
     : public nsAFlatString
   {
     public:
-      // ...
+      typedef nsCommonString    self_type;
+      typedef PRUnichar         char_type;
+      typedef nsAString         string_type;
+
+    public:
+      nsCommonString() { }
+      nsCommonString( const self_type& aOther ) : mBuffer(aOther.mBuffer) { }
+      nsCommonString( const string_type& aReadable ) { assign(aReadable); }
+
+      self_type&
+      operator=( const string_type& aReadable )
+        {
+          assign(aReadable);
+          return *this;
+        }
+
+    protected:
+      void assign( const string_type& );
+      virtual const nsSharedBufferHandle<char_type>*  GetSharedBufferHandle() const;
+
+    private:
+      nsAutoBufferHandle<char_type> mBuffer;
   };
 
 
-#if 0
-class nsCommonCString
+class NS_COM nsCommonCString
     : public nsAFlatCString
   {
     public:
-      // ...
+      typedef nsCommonCString   self_type;
+      typedef char              char_type;
+      typedef nsACString        string_type;
+
+    public:
+      nsCommonCString() { }
+      nsCommonCString( const self_type& aOther ) : mBuffer(aOther.mBuffer) { }
+      nsCommonCString( const string_type& aReadable ) { assign(aReadable); }
+
+      self_type&
+      operator=( const string_type& aReadable )
+        {
+          assign(aReadable);
+          return *this;
+        }
+
+    protected:
+      void assign( const string_type& );
+      virtual const nsSharedBufferHandle<char_type>*  GetSharedBufferHandle() const;
+
+    private:
+      nsAutoBufferHandle<char_type> mBuffer;
   };
-#endif
 
 
 #endif /* !defined(nsCommonString_h___) */

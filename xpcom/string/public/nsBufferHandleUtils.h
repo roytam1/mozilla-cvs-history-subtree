@@ -37,6 +37,71 @@
   // for placement |new|
 
 
+template <class CharT>
+class nsAutoBufferHandle
+  {
+    public:
+      nsAutoBufferHandle() : mHandle(0) { }
+
+      nsAutoBufferHandle( const nsAutoBufferHandle<CharT>& aOther )
+          : mHandle(aOther.get())
+        {
+          if ( mHandle)
+            mHandle->AcquireReference();
+        }
+
+      explicit
+      nsAutoBufferHandle( const nsSharedBufferHandle<CharT>* aHandle )
+          : mHandle(aHandle)
+        {
+          if ( mHandle)
+            mHandle->AcquireReference();
+        }
+
+     ~nsAutoBufferHandle()
+        {
+          if ( mHandle )
+            mHandle->ReleaseReference();
+        }
+
+      nsAutoBufferHandle<CharT>&
+      operator=( const nsSharedBufferHandle<CharT>* rhs )
+        {
+          nsSharedBufferHandle<CharT>* old_handle = mHandle;
+          if ( (mHandle = NS_CONST_CAST(nsSharedBufferHandle<CharT>*, rhs)) )
+            mHandle->AcquireReference();
+          if ( old_handle )
+            old_handle->ReleaseReference();
+          return *this;
+        }
+
+      nsAutoBufferHandle<CharT>&
+      operator=( const nsAutoBufferHandle<CharT>& rhs )
+        {
+          return operator=(rhs.get());
+        }
+
+      nsSharedBufferHandle<CharT>*
+      get() const
+        {
+          return mHandle;
+        }
+
+      operator nsSharedBufferHandle<CharT>*() const
+        {
+          return get();
+        }
+
+      nsSharedBufferHandle<CharT>*
+      operator->() const
+        {
+          return get();
+        }
+
+    private:
+      nsSharedBufferHandle<CharT>*  mHandle;
+  };
+
 
 template <class HandleT, class CharT>
 inline

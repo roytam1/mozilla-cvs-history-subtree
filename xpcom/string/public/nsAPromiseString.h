@@ -26,12 +26,10 @@
 #ifndef nsAPromiseString_h___
 #define nsAPromiseString_h___
 
-#ifndef nsAString_h___
-#include "nsAString.h"
-#endif
-
   /**
+   * Don't |#include| this file yourself.  You will get it automatically if you need it.
    *
+   * Why is it a separate file?  To make it easier to find the classes in your local tree.
    */
 
 class NS_COM nsAPromiseString : public nsAString { };
