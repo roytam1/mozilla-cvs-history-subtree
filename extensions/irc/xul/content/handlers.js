@@ -142,18 +142,22 @@ function onMouseOver (e)
 {
     var i = 0;
     var target = e.target;
-    while (target && i < 5)
+    var status = "";
+    while (!status && target && i < 5)
     {
-        if (target.nodeName == "html:a")
-            break;
-        target = target.parentNode;
+        if ("getAttribute" in target)
+        {
+            status = target.getAttribute("href");
+            if (!status)
+                status = target.getAttribute ("statusText");
+        }
         ++i;
+        target = target.parentNode;
     }
         
-    if (target && i < 5)
+    if (status)
     {
-        var href = target.getAttribute ("href");
-        client.status = href;
+        client.status = status;
     }
     else
     {
@@ -254,10 +258,15 @@ function createPopupContext(event, target)
                 targetType="weburl";
             break;
             
-        case "html:td":            
-            client._popupContext.user = target.getAttribute("msg-user");
-            if (client._popupContext.user.indexOf("ME!") != 0)
-                client._popupContext.user = "ME!";
+        case "html:td":
+            var user = target.getAttribute("msg-user");
+            if (user)
+            {
+                if (user.indexOf("ME!") != -1)
+                    client._popupContext.user = "ME!";
+                else
+                    client._popupContext.user = user;
+            }
             targetType = target.getAttribute("msg-type");
             break;            
     }
@@ -1384,7 +1393,7 @@ function cli_iserver (e)
 client.onInputQuit =
 function cli_quit (e)
 {
-    if (!e.server)
+    if (!("server" in e))
     {
         client.currentObject.display (getMsg("cli_quitMsg"), "ERROR");
         return false;
@@ -1589,22 +1598,18 @@ function cli_iquery (e)
         client.currentObject.display (getMsg("cli_imsgMsg2"), "ERROR");
         return false;
     }
-    
-    var usr = e.network.primServ.addUser(ary[1].toLowerCase());
 
-    if (!("messages" in usr))
-        usr.displayHere (getMsg("cli_imsgMsg3", usr.properNick), "INFO");
-    setCurrentObject (usr);
-    onSimulateCommand ("/who " + usr.properNick);
+    var tab = openQueryTab (e.server, ary[1]);
+    setCurrentObject (tab);
     
     if (ary[2])
     {
         var msg = filterOutput(ary[2], "PRIVMSG", "ME!");
-        usr.display (msg, "PRIVMSG", "ME!", usr);
-        usr.say (ary[2]);
+        tab.display (msg, "PRIVMSG", "ME!", usr);
+        tab.say (ary[2]);
     }
     
-    e.user = usr;
+    e.user = tab;
 
     return true;
 }
@@ -3102,13 +3107,22 @@ function my_cquit (e)
 CIRCUser.prototype.onPrivmsg =
 function my_cprivmsg (e)
 {
+    if ("messages" in this)
+    {
+        playSounds(client.QUERY_BEEP);
+    }
+    else
+    {        
+        playSounds(client.MSG_BEEP);
+        if (client.NEW_TAB_THRESHOLD == 0 ||
+            client.viewsArray.length < client.NEW_TAB_THRESHOLD)
+        {
+            var tab = openQueryTab (e.server, e.user.nick);
+            if (client.FOCUS_NEW_TAB)
+                setCurrentObject(tab);
+        }    
+    }
     this.display (e.meat, "PRIVMSG", e.user, e.server.me);
-    if (client.sound)
-        if ("BEEP_URL" in client)
-            client.sound.play (client.BEEP_URL);
-        else
-            client.sound.beep ();
-
 }
 
 CIRCUser.prototype.onNick =

@@ -496,7 +496,7 @@ a.chatzilla-link:hover {
     content: "to(";
 }
 .msg-user[msg-dest$="ME!"]:before {
-    content: "from(" !important;
+    content: "from(";
 }
 .msg-user[dest-type="IRCUser"]:after {
     content: ")";

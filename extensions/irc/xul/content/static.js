@@ -36,7 +36,7 @@ const MSG_UNKNOWN   = getMsg ("unknown");
 
 client.defaultNick = getMsg( "defaultNick" );
 
-client.version = "0.8.5-pre15";
+client.version = "0.8.5-pre18";
 
 client.TYPE = "IRCClient";
 client.COMMAND_CHAR = "/";
@@ -564,7 +564,10 @@ function mircToggleBold (colorInfo, containerTag, data)
     if (!client.enableColors)
         return;
 
-    data.isBold = !data.isBold;
+    if ("isBold" in data)
+        delete data.isBold;
+    else
+        data.isBold = true;
     data.hasColorInfo = true;
 }
 
@@ -574,13 +577,17 @@ function mircToggleUnder (colorInfo, containerTag, data)
         return;
 
     data.isUnderline = !data.isUnderline;
+    if ("isUnderline" in data)
+        delete data.isUnderline;
+    else
+        data.isUnderline = true; 
     data.hasColorInfo = true;
 }
 
 function mircResetColor (text, containerTag, data)
 {
-    if (!client.enableColors || !data.hasColorInfo)
-        return;
+    if (!client.enableColors || !("hasColorInfo" in data))
+         return;
 
     delete data.currFgColor;
     delete data.currBgColor;
@@ -599,10 +606,7 @@ function mircReverseColor (text, containerTag, data)
         data.currFgColor = data.currBgColor;
     else
         data.currFgColor = "00";
-    if (tempColor)
-        data.currBgColor = tempColor;
-    else
-        data.currBgColor = "01";
+    data.currBgColor = tempColor;
     data.hasColorInfo = true;
 }
 
@@ -642,9 +646,40 @@ function msgIsImportant (msg, sourceNick, myNick)
     var str = "(^|[\\W\\s])" + sv + "([\\W\\s]|$)";
     var re = new RegExp(str, "i");
     if (msg.search(re) != -1 || sourceNick && sourceNick.search(re) != -1)
+    {
+        playSounds(client.STALK_BEEP);
         return true;
+    }
 
     return false;    
+}
+
+function playSounds (list)
+{
+    ary = list.split (" ");
+    if (ary.length == 0)
+        return;
+    playSound (ary[1]);
+    for (var i = 1; i < ary.length; ++i)
+        setTimeout (playSound, 250 * i, ary[i]);
+}
+
+function playSound (file)
+{
+    if (!client.sound || !file)
+        return;
+    
+    if (file == "beep")
+    {
+        client.sound.beep();
+    }
+    else
+    {
+        var uri = Components.classes["@mozilla.org/network/standard-url;1"];
+        uri = uri.createInstance(Components.interfaces.nsIURI);
+        uri.spec = file;
+        client.sound.play (uri);
+    }
 }
 
 function fillInTooltip(tipElement, id)
@@ -744,6 +779,15 @@ function getMsg (msgName)
             "\n" + getStackTrace());
         return msgName;
     }
+}
+
+function openQueryTab (server, nick)
+{    
+    var usr = server.addUser(nick.toLowerCase());
+    if (!("messages" in usr))
+        usr.displayHere (getMsg("cli_imsgMsg3", usr.properNick), "INFO");
+    server.sendData ("WHO " + nick + "\n");
+    return usr;
 }
 
 function arraySpeak (ary, single, plural)
@@ -1828,8 +1872,6 @@ function getTabForObject (source, create)
         tb.setAttribute ("ondraggesture",
                          "nsDragAndDrop.startDrag(event, tabDNDObserver);");
         tb.setAttribute ("href", source.getURL());
-        tb.setAttribute ("tooltip", "aTabTooltip");
-        tb.setAttribute ("title", source.getURL());
         tb.setAttribute ("name", source.name);
         tb.setAttribute ("onclick", "onTabClick('" + id + "');");
         tb.setAttribute ("crop", "right");
@@ -2129,13 +2171,7 @@ function __display(message, msgtype, sourceObj, destObj)
 {            
     var canMergeData = false;
     var canCollapseRow = false;
-    var d = new Date();
-    var mins = d.getMinutes();
-    if (mins < 10)
-        mins = "0" + mins;
-    var dateString = getMsg("cli_dateString", [d.getMonth() + 1, d.getDate(),
-                                               d.getHours(), mins]);
- 
+
     function setAttribs (obj, c, attrs)
     {
         for (var a in attrs)
@@ -2146,7 +2182,10 @@ function __display(message, msgtype, sourceObj, destObj)
         obj.setAttribute ("dest-type", toType);
         obj.setAttribute ("view-type", viewType); 
         if (fromAttr)
-            obj.setAttribute ("msg-user", fromAttr);
+            if (fromUser)
+                obj.setAttribute ("msg-user", fromAttr);
+            else
+                obj.setAttribute ("msg-source", fromAttr);
    }
 
     var blockLevel = false; /* true if this row should be rendered at block
@@ -2162,11 +2201,11 @@ function __display(message, msgtype, sourceObj, destObj)
     if (destObj == "ME!") destObj = me;       /* substitute the actual object */
 
     var fromType = (sourceObj && sourceObj.TYPE) ? sourceObj.TYPE : "unk";
-    
+    var fromUser = (fromType.search(/IRC.*User/) != -1);    
     var fromAttr;
-    if      (sourceObj && sourceObj == me)       fromAttr = me.nick + " ME!";
-    else if (fromType.search(/IRC.*User/) != -1) fromAttr = sourceObj.nick;
-    else if (typeof sourceObj == "object")       fromAttr = sourceObj.name;
+    if      (fromUser && sourceObj == me)  fromAttr = me.nick + " ME!";
+    else if (fromUser)                     fromAttr = sourceObj.nick;
+    else if (typeof sourceObj == "object") fromAttr = sourceObj.name;
         
     var toType = (destObj) ? destObj.TYPE : "unk";
     var toAttr;
@@ -2188,6 +2227,27 @@ function __display(message, msgtype, sourceObj, destObj)
     setAttribs(msgRow, "msg");
 
     //dd ("fromType is " + fromType + ", fromAttr is " + fromAttr);
+    var d = new Date();
+    var mins = d.getMinutes();
+    if (mins < 10)
+        mins = "0" + mins;
+    var statusString;
+    
+    if (fromUser)
+    {
+        statusString =
+            getMsg("cli_statusString", [d.getMonth() + 1, d.getDate(),
+                                        d.getHours(), mins,
+                                        sourceObj.nick + "!" + 
+                                        sourceObj.name + "@" + sourceObj.host]);
+    }
+    else
+    {
+        statusString =
+            getMsg("cli_statusString", [d.getMonth() + 1, d.getDate(),
+                                        d.getHours(), mins,
+                                        sourceObj ? sourceObj.name : this.name]);
+    }
     
     if (fromType.search(/IRC.*User/) != -1 &&
         msgtype.search(/PRIVMSG|ACTION|NOTICE/) != -1)
@@ -2232,7 +2292,8 @@ function __display(message, msgtype, sourceObj, destObj)
         if (!("mark" in this))
             this.mark = "odd";
         
-        if ("lastNickDisplayed" in this && this.lastNickDisplayed != nick)
+        if (!("lastNickDisplayed" in this) ||
+            this.lastNickDisplayed != nick)
         {
             this.lastNickDisplayed = nick;
             this.mark = (this.mark == "even") ? "odd" : "even";
@@ -2240,7 +2301,7 @@ function __display(message, msgtype, sourceObj, destObj)
 
         var msgSource = document.createElementNS("http://www.w3.org/1999/xhtml",
                                                  "html:td");
-        setAttribs (msgSource, "msg-user", {title: dateString});
+        setAttribs (msgSource, "msg-user", {statusText: statusString});
         if (isImportant)
             msgSource.setAttribute ("important", "true");
         if (nick.length > client.MAX_NICK_DISPLAY)
@@ -2281,7 +2342,7 @@ function __display(message, msgtype, sourceObj, destObj)
         /* Display the message code */
         var msgType = document.createElementNS("http://www.w3.org/1999/xhtml",
                                                "html:td");
-        setAttribs (msgType, "msg-type", {title: dateString});
+        setAttribs (msgType, "msg-type", {statusText: statusString});
 
         msgType.appendChild (newInlineText (code));
         msgRow.appendChild (msgType);
@@ -2291,7 +2352,7 @@ function __display(message, msgtype, sourceObj, destObj)
     {
         var msgData = document.createElementNS("http://www.w3.org/1999/xhtml",
                                                "html:td");
-        setAttribs (msgData, "msg-data", {title: dateString, 
+        setAttribs (msgData, "msg-data", {statusText: statusString, 
                                           colspan: client.INITIAL_COLSPAN});
         if (isImportant)
             msgData.setAttribute ("important", "true");

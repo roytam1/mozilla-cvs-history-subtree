@@ -153,7 +153,7 @@
           accesskey="&PopupTakeVoice.aKey;"
           observes="cmd_popup_takevoice"
           showfor="iAmOp is 'yes' and targetIsVoice is 'yes'"/>
-        <menuitem label="&PopupKick.label;" accesskey="&PopupKick.aKey;"
+        <menuitem format="&PopupKick.label;" accesskey="&PopupKick.aKey;"
           observes="cmd_popup_kick"
           showfor="iAmOp is 'yes' and targetUser != 'undefined'"/>
   

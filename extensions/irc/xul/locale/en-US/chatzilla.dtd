@@ -83,7 +83,7 @@
 <!ENTITY PopupGiveVoice.aKey         "V">
 <!ENTITY PopupTakeVoice.label        "Revoke Voiced Status">
 <!ENTITY PopupTakeVoice.aKey         "V">
-<!ENTITY PopupKick.label             "Kick">
+<!ENTITY PopupKick.label             "Kick ``$nick''">
 <!ENTITY PopupKick.aKey              "K">
 
 <!ENTITY StatusText.label "Welcome to ChatZilla!">

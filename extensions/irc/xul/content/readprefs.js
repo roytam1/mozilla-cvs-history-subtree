@@ -35,6 +35,12 @@
  *   |                       seperated
  *   +- initialScripts (String) urls for scripts to run at startup,
  *   |                          semicolon seperated
+ *   +- newTabThreshold (Number) max number of tabs to have open before disabling
+ *   |                           automatic tab creation for private messages.
+ *   |                           use 0 for unlimited new tabs, or 1 to disable
+ *   |                           automatic tab creation.
+ *   +- focusNewTab (Boolean) bring new tabs created in response to a private
+ *   |                        message to the front.
  *   +- munger   (Boolean) send output through text->html munger
  *   |  +- colorCodes (Boolean) enable color code handling
  *   |  +- <various>  (Boolean) enable specific munger entry
@@ -47,6 +53,12 @@
  *   |                      semicolon seperated (see the /stalk command)
  *   +- deleteOnPart (Boolean) Delete channel window automatically after a /part
  *   |
+ *   |  The following beep prefs can be set to the text "beep" to use the
+ *   |  system beep, or "" to disable the beep.
+ *   +- msgBeep   (String) url to sound to play when a /msg is recieved
+ *   +- stalkBeep (String) url to sound to play when a /stalk matches
+ *   +- queryBeep (String) url to sound to play for new msgs in a /query
+ *   |
  *   +- notify
  *   |  +- aggressive (Boolean) flash trayicon/ bring window to top when
  *   |                          your nickname is mentioned.
@@ -58,13 +70,13 @@
  *   |  +- collapseMsgs (Boolean) Collapse consecutive messages from same
  *   |  |                         user
  *   |  +- client
- *   |  |  +- maxlines (Number) max lines to keep in *client* view
+ *   |  |  +- maxlines  (Number) max lines to keep in *client* view
  *   |  +- network
- *   |  |  +- maxlines (Number) max lines to keep in network views
+ *   |  |  +- maxlines  (Number) max lines to keep in network views
  *   |  +- channel
- *   |  |  +- maxlines (Number) max lines to keep in channel views
+ *   |  |  +- maxlines  (Number) max lines to keep in channel views
  *   |  +- chanuser
- *   |     +- maxlines (Number) max lines to keep in /msg views
+ *   |     +- maxlines  (Number) max lines to keep in /msg views
  *   +- debug
  *      +- tracer (Boolean) enable/disable debug message tracing
  */
@@ -99,6 +111,10 @@ function readIRCPrefs (rootNode)
         getCharPref (pref, rootNode + "initialURLs", "");
     client.INITIAL_SCRIPTS =
         getCharPref (pref, rootNode + "initialScripts", "");
+    client.NEW_TAB_THRESHOLD =
+        getIntPref (pref, rootNode + "newTabThreshold", 15);
+    client.FOCUS_NEW_TAB =
+        getIntPref (pref, rootNode + "focusNewTab", false);
     client.ADDRESSED_NICK_SEP =
         getCharPref (pref, rootNode + "nickCompleteStr",
                      client.ADDRESSED_NICK_SEP).replace(/\s*$/, "");
@@ -107,6 +123,13 @@ function readIRCPrefs (rootNode)
     
     client.DELETE_ON_PART =
         getCharPref (pref, rootNode + "deleteOnPart", true);
+
+    client.STALK_BEEP =
+        getCharPref (pref, rootNode + "stalkBeep", "beep");
+    client.MSG_BEEP =
+        getCharPref (pref, rootNode + "msgBeep", "beep beep");
+    client.QUERY_BEEP =
+        getCharPref (pref, rootNode + "queryBeep", "beep");
     
     client.munger.enabled =
         getBoolPref (pref, rootNode + "munger", client.munger.enabled);
@@ -183,9 +206,16 @@ function writeIRCPrefs (rootNode)
                       CIRCNetwork.prototype.INITIAL_NAME);
     pref.SetCharPref (rootNode + "desc", CIRCNetwork.prototype.INITIAL_DESC);
     pref.SetCharPref (rootNode + "nickCompleteStr", client.ADDRESSED_NICK_SEP);
+    pref.SetCharPref (rootNode + "initialURLs", client.INITIAL_URLS);
+    pref.SetCharPref (rootNode + "initialScripts", client.INITIAL_SCRIPTS);
+    pref.SetCharPref (rootNode + "newTabThreshold", client.NEW_TAB_THRESHOLD);
+    pref.SetCharPref (rootNode + "focusNewTab", client.FOCUS_NEW_TAB);
     pref.SetCharPref (rootNode + "style.default", client.DEFAULT_STYLE);
     pref.SetCharPref (rootNode + "stalkWords",
                       client.stalkingVictims.join ("; "));
+    pref.SetCharPref (rootNode + "stalkBeep", client.STALK_BEEP);
+    pref.SetCharPref (rootNode + "msgBeep", client.MSG_BEEP);
+    pref.SetCharPref (rootNode + "queryBeep", client.QUERY_BEEP);    
     pref.SetBoolPref (rootNode + "munger", client.munger.enabled);
     pref.SetBoolPref (rootNode + "munger.colorCodes", client.enableColors);
     pref.SetBoolPref (rootNode + "munger.smileyText", client.smileyText);

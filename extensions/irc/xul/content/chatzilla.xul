@@ -38,7 +38,7 @@
   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
   orient="vertical" onload="onLoad();" onunload="onUnload();"
-  onclose="return onClose();"
+  onclose="return onClose();" onmouseover="onMouseOver(event);"
   persist="width height" windowtype="irc:chatzilla">
 
   <overlaytarget id="scripts-overlay-target"/>
@@ -157,7 +157,7 @@
           <iframe id="output-iframe" class="output-container" type="content"
             flex="1" tooltip="aHTMLTooltip" context="outputContext"
             onload="scrollDown();"
-            onmouseover="onMouseOver(event);"
+            onclick="focusInput()"
             ondragover="nsDragAndDrop.dragOver(event, contentDropObserver);"
             ondragdrop="nsDragAndDrop.drop(event, contentDropObserver);"
             ondraggesture="nsDragAndDrop.startDrag(event, contentAreaDNDObserver);"
@@ -171,8 +171,7 @@
           flex="1">
   
           <hbox>
-          <tabs class="tabs-bottom" id="views-tbar-inner" flex="1"
-            crop="right">
+          <tabs class="tabs-bottom" id="views-tbar-inner" flex="1" crop="right">
             <tab collapsed="true"/> <!-- dummy tab to keep the freaking xbl from 
                                          causing an exception -->
           </tabs>
@@ -196,7 +195,7 @@
   
   </vbox> <!-- outer-box -->
   
-  <statusbar id="status-bar">
+  <statusbar id="status-bar" persist="collapsed">
     <hbox id="component-bar"/>
     <statusbarpanel id="status-text" label="&StatusText.label;" flex="1"
       crop="right"/>
