@@ -651,6 +651,12 @@ void ExprLexer::parse(const String& pattern) {
                 case ASTERIX:
                     matchToken(tokenBuffer, ch);
                     switch ( prevToken->type ) {
+                        //-- temporary fix for Namespace wild-cards - KV
+                        case Token::CNAME :
+                            prevToken->value.append(ch);
+                            break;
+                        //-- end temporary fix for Namespace wild-cards
+
                         //-- Fix: make sure check for axis identifier wild cards, such as
                         //-- ancestor::* - Marina M.
                         case Token::AXIS_IDENTIFIER :
