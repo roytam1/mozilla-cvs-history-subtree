@@ -31,3 +31,5 @@ nsjvm.h
 nsISecureJNI2.h
 ProxyJNI.h
 nsIThreadManager.h
+nsIJVMWindow.h
+nsIJVMPrefsWindow.h
