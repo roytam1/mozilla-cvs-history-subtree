@@ -85,6 +85,11 @@ ifeq (,$(filter-out B.10.30 B.11.%,$(OS_RELEASE)))
 OS_CFLAGS		+= -DHAVE_POINTER_LOCALTIME_R
 endif
 
+# HP-UX B.11.11 or higher has the IPv6 socket interface.
+ifeq (B.11.11,$(firstword $(sort B.11.11 $(OS_RELEASE))))
+USE_IPV6 = 1
+endif
+
 #
 # XXX
 # Temporary define for the Client; to be removed when binary release is used
