@@ -32,9 +32,9 @@ ifdef USE_NSS
 DIRS		+= libssldap
 endif
 
-ifeq ($(OS_ARCH),WINNT)
-DIRS		+= libutil
-endif
+# ifeq ($(OS_ARCH),WINNT)
+# DIRS		+= libutil
+# endif
 
 all:: export install
 
