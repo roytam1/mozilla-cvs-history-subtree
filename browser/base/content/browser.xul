@@ -121,7 +121,7 @@
 #ifdef XP_MACOSX
              defaultset="menubar-items"
 #else
-             defaultset="menubar-items,spring,updates-item,throbber-box"
+             defaultset="menubar-items,spring,throbber-box"
 #endif
              mode="icons" context="toolbar-context-menu">
       <toolbaritem id="menubar-items" align="center">
@@ -130,6 +130,9 @@
 # hiddenWindow.xul.
 #include browser-menubar.inc
 #endif
+      </toolbaritem>
+      <toolbaritem id="softwareupdate-item" title="&updatesItem.title;" align="center" pack="center">
+        <toolbarbutton type="updates" id="softwareupdate"/>
       </toolbaritem>
     </toolbar>
 
@@ -228,10 +231,6 @@
       <toolbarbutton id="print-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
                      label="&printButton.label;" command="cmd_print"
                      tooltiptext="&printButton.tooltip;"/>
-
-      <toolbaritem id="updates-item" title="&updatesItem.title;" align="center" pack="center">
-        <toolbarbutton type="updates" id="updates"/>
-      </toolbaritem>
 
       <toolbaritem id="throbber-box" title="&throbberItem.title;" align="center" pack="center">
         <button id="navigator-throbber" 
@@ -352,7 +351,7 @@
              fullscreentoolbar="true" mode="icons" 
              customizable="true"
 #ifdef XP_MACOSX
-             defaultset="back-button,forward-button,reload-button,stop-button,home-button,urlbar-container,go-container,search-container,updates-item,throbber-box,window-controls"
+             defaultset="back-button,forward-button,reload-button,stop-button,home-button,urlbar-container,go-container,search-container,throbber-box,window-controls"
 #else
              defaultset="back-button,forward-button,reload-button,stop-button,home-button,urlbar-container,go-container,search-container,window-controls"
 #endif
