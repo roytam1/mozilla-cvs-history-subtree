@@ -2165,6 +2165,18 @@ nsXULElement::SetParent(nsIContent* aParent)
     return NS_OK;
 }
 
+NS_IMETHODIMP_(PRBool)
+nsXULElement::IsAnonymous() const
+{
+  return PR_FALSE;
+}
+
+NS_IMETHODIMP_(void)
+nsXULElement::SetAnonymous(PRBool aAnonymous)
+{
+  NS_ERROR("XUL elements just can't be anonymous, maaan");
+}
+
 NS_IMETHODIMP
 nsXULElement::CanContainChildren(PRBool& aResult) const
 {
