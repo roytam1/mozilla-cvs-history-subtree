@@ -1547,18 +1547,22 @@ nsresult ConsumeAttributeValueText(nsString& aString,
                                    const nsReadEndCondition& aEndCondition,
                                    PRInt32 aFlag)
 {
-  nsresult result=aScanner.ReadUntil(aString,aEndCondition,PR_FALSE);
- 
-  if(NS_SUCCEEDED(result)) {
-    PRUnichar ch;
-    aScanner.Peek(ch);
-    if(ch==kAmpersand) {
-      result=ConsumeAttributeEntity(aString,aScanner,aFlag);
-      if (NS_SUCCEEDED(result)) {
-        result=ConsumeAttributeValueText(aString,aScanner,aEndCondition,aFlag);
+  nsresult result = NS_OK;
+  PRBool   done = PR_FALSE;
+  
+  do {
+    result = aScanner.ReadUntil(aString,aEndCondition,PR_FALSE);
+    if(NS_SUCCEEDED(result)) {
+      PRUnichar ch;
+      aScanner.Peek(ch);
+      if(ch == kAmpersand) {
+        result = ConsumeAttributeEntity(aString,aScanner,aFlag);
+      }
+      else {
+        done = PR_TRUE;
       }
     }
-  }
+  } while (NS_SUCCEEDED(result) && !done);
 
   return result;
 }
@@ -1935,7 +1939,10 @@ CEntityToken::ConsumeEntity(PRUnichar aChar,
 
     do {
       result=aScanner.GetChar(aChar);
-      NS_ENSURE_SUCCESS(result,result);
+      
+      if (NS_FAILED(result)) {
+        return result;
+      }
 
       aString.Append(aChar);
       if(aChar==kRightBrace)
@@ -1948,7 +1955,10 @@ CEntityToken::ConsumeEntity(PRUnichar aChar,
     PRUnichar theChar=0;
     if (kHashsign==aChar) {
       result = aScanner.Peek(theChar,2);
-      NS_ENSURE_SUCCESS(result,result);
+       
+      if (NS_FAILED(result)) {
+        return result;
+      }
 
       if (nsCRT::IsAsciiDigit(theChar)) {
         aScanner.GetChar(aChar); // Consume &
@@ -1970,7 +1980,10 @@ CEntityToken::ConsumeEntity(PRUnichar aChar,
     }
     else {
       result = aScanner.Peek(theChar,1);
-      NS_ENSURE_SUCCESS(result,result);
+       
+      if (NS_FAILED(result)) {
+        return result;
+      }
 
       if(nsCRT::IsAsciiAlpha(theChar) || 
         theChar == '_' ||
@@ -1984,10 +1997,15 @@ CEntityToken::ConsumeEntity(PRUnichar aChar,
     }
   }
     
-  NS_ENSURE_SUCCESS(result,result);
+  if (NS_FAILED(result)) {
+    return result;
+  }
     
   result=aScanner.Peek(aChar);
-  NS_ENSURE_SUCCESS(result,result);
+  
+  if (NS_FAILED(result)) {
+    return result;
+  }
 
   if (aChar == kSemicolon) {
     // consume semicolon that stopped the scan
