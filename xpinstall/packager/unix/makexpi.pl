@@ -21,6 +21,7 @@
 # Contributor(s): 
 # Sean Su <ssu@netscape.com>
 # Samir Gehani <sgehani@netscape.com>
+# Chase Phillips <cmp@mozilla.org>
 # 
 
 #
