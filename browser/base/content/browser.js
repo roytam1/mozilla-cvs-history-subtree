@@ -2586,6 +2586,9 @@ var proxyIconDNDObserver = {
       aXferData.data.addDataForFlavour("text/x-moz-url", urlString);
       aXferData.data.addDataForFlavour("text/unicode", value);
       aXferData.data.addDataForFlavour("text/html", htmlString);
+
+      // we're copying the URL from the proxy icon, not moving
+      aDragAction.action = Components.interfaces.nsIDragService.DRAGDROP_ACTION_COPY;
     }
 }
 
