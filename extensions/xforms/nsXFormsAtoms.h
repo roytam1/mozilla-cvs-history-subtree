@@ -41,24 +41,24 @@
 class nsXFormsAtoms
 {
  public:
-  static nsIAtom *schema;
-  static nsIAtom *instance;
-  static nsIAtom *src;
-  static nsIAtom *bind;
-  static nsIAtom *nodeset;
-  static nsIAtom *type;
-  static nsIAtom *readonly;
-  static nsIAtom *required;
-  static nsIAtom *relevant;
-  static nsIAtom *calculate;
-  static nsIAtom *constraint;
-  static nsIAtom *p3ptype;
-  static nsIAtom *model;
-  static nsIAtom *modelListProperty;
-  static nsIAtom *ref;
+  static NS_HIDDEN_(nsIAtom *) schema;
+  static NS_HIDDEN_(nsIAtom *) instance;
+  static NS_HIDDEN_(nsIAtom *) src;
+  static NS_HIDDEN_(nsIAtom *) bind;
+  static NS_HIDDEN_(nsIAtom *) nodeset;
+  static NS_HIDDEN_(nsIAtom *) type;
+  static NS_HIDDEN_(nsIAtom *) readonly;
+  static NS_HIDDEN_(nsIAtom *) required;
+  static NS_HIDDEN_(nsIAtom *) relevant;
+  static NS_HIDDEN_(nsIAtom *) calculate;
+  static NS_HIDDEN_(nsIAtom *) constraint;
+  static NS_HIDDEN_(nsIAtom *) p3ptype;
+  static NS_HIDDEN_(nsIAtom *) model;
+  static NS_HIDDEN_(nsIAtom *) modelListProperty;
+  static NS_HIDDEN_(nsIAtom *) ref;
 
   static NS_HIDDEN_(void) InitAtoms();
 
  private:
-  static const nsStaticAtom Atoms_info[];
+  static NS_HIDDEN_(const nsStaticAtom) Atoms_info[];
 };
