@@ -1085,6 +1085,78 @@ JSValue objectPlus(Context *cx, JSValue *argv, uint32 argc)
     }
 }
 
+JSValue objectMinus(Context *cx, JSValue *argv, uint32 argc)
+{
+    JSValue &r1 = argv[0];
+    JSValue &r2 = argv[1];
+    return JSValue(r1.toNumber(cx).f64 + r2.toNumber(cx).f64);
+}
+
+JSValue objectMultiply(Context *cx, JSValue *argv, uint32 argc)
+{
+    JSValue &r1 = argv[0];
+    JSValue &r2 = argv[1];
+    return JSValue(r1.toNumber(cx).f64 * r2.toNumber(cx).f64);
+}
+
+JSValue objectDivide(Context *cx, JSValue *argv, uint32 argc)
+{
+    JSValue &r1 = argv[0];
+    JSValue &r2 = argv[1];
+    return JSValue(r1.toNumber(cx).f64 / r2.toNumber(cx).f64);
+}
+
+JSValue objectRemainder(Context *cx, JSValue *argv, uint32 argc)
+{
+    JSValue &r1 = argv[0];
+    JSValue &r2 = argv[1];
+    return JSValue(fmod(r1.toNumber(cx).f64, r2.toNumber(cx).f64));
+}
+
+
+
+JSValue objectShiftLeft(Context *cx, JSValue *argv, uint32 argc)
+{
+    JSValue &r1 = argv[0];
+    JSValue &r2 = argv[1];
+    return JSValue((float64)( (int32)(r1.toInt32(cx).f64) << ( (uint32)(r2.toUInt32(cx).f64) & 0x1F)) );
+}
+
+JSValue objectShiftRight(Context *cx, JSValue *argv, uint32 argc)
+{
+    JSValue &r1 = argv[0];
+    JSValue &r2 = argv[1];
+    return JSValue((float64) ( (int32)(r1.toInt32(cx).f64) >> ( (uint32)(r2.toUInt32(cx).f64) & 0x1F)) );
+}
+
+JSValue objectUShiftRight(Context *cx, JSValue *argv, uint32 argc)
+{
+    JSValue &r1 = argv[0];
+    JSValue &r2 = argv[1];
+    return JSValue((float64) ( (uint32)(r1.toUInt32(cx).f64) >> ( (uint32)(r2.toUInt32(cx).f64) & 0x1F)) );
+}
+
+JSValue objectBitAnd(Context *cx, JSValue *argv, uint32 argc)
+{
+    JSValue &r1 = argv[0];
+    JSValue &r2 = argv[1];
+    return JSValue((float64)( (int32)(r1.toInt32(cx).f64) & (int32)(r2.toInt32(cx).f64) ));
+}
+
+JSValue objectBitXor(Context *cx, JSValue *argv, uint32 argc)
+{
+    JSValue &r1 = argv[0];
+    JSValue &r2 = argv[1];
+    return JSValue((float64)( (int32)(r1.toInt32(cx).f64) ^ (int32)(r2.toInt32(cx).f64) ));
+}
+
+JSValue objectBitOr(Context *cx, JSValue *argv, uint32 argc)
+{
+    JSValue &r1 = argv[0];
+    JSValue &r2 = argv[1];
+    return JSValue((float64)( (int32)(r1.toInt32(cx).f64) | (int32)(r2.toInt32(cx).f64) ));
+}
+
 struct OpTableEntry {
     Operator which;
     JSType *op1;
@@ -1095,7 +1167,20 @@ struct OpTableEntry {
     { Plus,  Object_Type, Object_Type, objectPlus,  Object_Type },
     { Plus,  Number_Type, Number_Type, numberPlus,  Number_Type },
 
+    { Minus, Object_Type, Object_Type, objectMinus, Number_Type },
     { Minus, Number_Type, Number_Type, numberMinus, Number_Type },
+
+    { ShiftLeft, Object_Type, Object_Type, objectShiftLeft, Number_Type },
+    { ShiftRight, Object_Type, Object_Type, objectShiftRight, Number_Type },
+    { UShiftRight, Object_Type, Object_Type, objectUShiftRight, Number_Type },
+    { BitAnd, Object_Type, Object_Type, objectBitAnd, Number_Type },
+    { BitXor, Object_Type, Object_Type, objectBitXor, Number_Type },
+    { BitOr, Object_Type, Object_Type, objectBitOr, Number_Type },
+
+    { Multiply, Object_Type, Object_Type, objectMultiply, Number_Type },
+    { Divide, Object_Type, Object_Type, objectDivide, Number_Type },
+    { Remainder, Object_Type, Object_Type, objectRemainder, Number_Type },
+
 };
 
 void Context::initOperators()
@@ -1411,6 +1496,76 @@ int JSValue::operator==(const JSValue& value) const
     }
     return 0;
 }
+
+static const double two32 = 4294967296.0;
+static const double two31 = 2147483648.0;
+
+JSValue JSValue::valueToInt32(Context *cx, JSValue& value)
+{
+    float64 d;
+    switch (value.tag) {
+    case f64_tag:
+        d = value.f64;
+        break;
+    case string_tag: 
+        {
+            const char16 *numEnd;
+	    d = stringToDouble(value.string->begin(), value.string->end(), numEnd);
+        }
+        break;
+    case boolean_tag:
+        return JSValue((float64)((value.boolean) ? 1 : 0));
+    case object_tag:
+    case undefined_tag:
+        // toNumber(toPrimitive(hint Number))
+        return kUndefinedValue;
+    default:
+        NOT_REACHED("Bad tag");
+        return kUndefinedValue;
+    }
+    if ((d == 0.0) || !JSDOUBLE_IS_FINITE(d) )
+        return JSValue((float64)0);
+    d = fmod(d, two32);
+    d = (d >= 0) ? d : d + two32;
+    if (d >= two31)
+	return JSValue((float64)(d - two32));
+    else
+	return JSValue((float64)d);    
+}
+
+JSValue JSValue::valueToUInt32(Context *cx, JSValue& value)
+{
+    float64 d;
+    switch (value.tag) {
+    case f64_tag:
+        d = value.f64;
+        break;
+    case string_tag: 
+        {
+            const char16 *numEnd;
+	    d = stringToDouble(value.string->begin(), value.string->end(), numEnd);
+        }
+        break;
+    case boolean_tag:
+        return JSValue((float64)((value.boolean) ? 1 : 0));
+    case object_tag:
+    case undefined_tag:
+        // toNumber(toPrimitive(hint Number))
+        return kUndefinedValue;
+    default:
+        NOT_REACHED("Bad tag");
+        return kUndefinedValue;
+    }
+    if ((d == 0.0) || !JSDOUBLE_IS_FINITE(d))
+        return JSValue((float64)0);
+    bool neg = (d < 0);
+    d = floor(neg ? -d : d);
+    d = neg ? -d : d;
+    d = fmod(d, two32);
+    d = (d >= 0) ? d : d + two32;
+    return JSValue((float64)d);
+}
+
 
 
 Formatter& operator<<(Formatter& f, const JSValue& value)

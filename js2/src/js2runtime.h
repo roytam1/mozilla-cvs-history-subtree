@@ -156,6 +156,8 @@ namespace JS2Runtime {
 
         JSValue toString(Context *cx)             { return (isString() ? *this : valueToString(cx, *this)); }
         JSValue toNumber(Context *cx)             { return (isNumber() ? *this : valueToNumber(cx, *this)); }
+        JSValue toUInt32(Context *cx)             { return valueToUInt32(cx, *this); }
+        JSValue toInt32(Context *cx)              { return valueToInt32(cx, *this); }
         JSValue toObject(Context *cx)             { return ((isObject() || isType() || isFunction()) ?
                                                                 *this : valueToObject(cx, *this)); }
 
@@ -168,6 +170,8 @@ namespace JS2Runtime {
         static JSValue valueToNumber(Context *cx, JSValue& value);
         static JSValue valueToString(Context *cx, JSValue& value);
         static JSValue valueToObject(Context *cx, JSValue& value);
+        static JSValue valueToUInt32(Context *cx, JSValue& value);
+        static JSValue valueToInt32(Context *cx, JSValue& value);
         
         int operator==(const JSValue& value) const;
 
