@@ -22,7 +22,7 @@
 #ifndef MOZILLA
 #include "standalone/dom.h"
 #else
-#include "mozImpl/dom.h"
+#include "mozImpl/mozilladom.h"
 #endif
 
 
