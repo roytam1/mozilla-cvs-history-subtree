@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
  * The contents of this file are subject to the Netscape Public
  * License Version 1.1 (the "License"); you may not use this file
@@ -33,27 +33,28 @@ interface nsIRDFResource;
 [scriptable, uuid(a82e9300-e4af-11d2-8fdf-0008c70adc7b)]
 interface nsIBookmarksService : nsISupports
 {
-    const unsigned long BOOKMARK_DEFAULT_TYPE   = 0;
-    const unsigned long BOOKMARK_SEARCH_TYPE    = 1;
-    const unsigned long BOOKMARK_FIND_TYPE      = 2;
+  const unsigned long BOOKMARK_DEFAULT_TYPE   = 0;
+  const unsigned long BOOKMARK_SEARCH_TYPE    = 1;
+  const unsigned long BOOKMARK_FIND_TYPE      = 2;
 
-    void ReadBookmarks();
-    boolean IsBookmarked(in string aURI);
+  void ReadBookmarks();
+  boolean IsBookmarked(in string aURI);
 
-    void AddBookmark(in string aURI, in wstring aTitle, in long bmType, in wstring docCharset);
-        
-    void AddBookmarkToFolder(in string aURI, in nsIRDFResource aFolder, 
-                             in wstring aTitle, in wstring docCharSet);
+  void AddBookmark(in string aURI, in wstring aTitle, in long bmType, in wstring docCharset);
+      
+  void AddBookmarkToFolder(in string aURI, in nsIRDFResource aFolder, 
+                           in wstring aTitle, in wstring docCharSet);
 
-    void insertBookmarkInFolder(in string aURI, in wstring aTitle, in wstring docCharSet, 
-                                in nsIRDFResource aFolder, in long aIndex);
+  void insertBookmarkInFolder(in string aURI, in wstring aTitle, in wstring docCharSet, 
+                              in nsIRDFResource aFolder, in long aIndex);
 
-    void UpdateBookmarkLastVisitedDate(in string aURL, in wstring docCharset);
-    
-    string FindShortcut(in wstring aName);
-    
-    wstring GetLastCharset(in string aURI);
+  void UpdateBookmarkLastVisitedDate(in string aURL, in wstring docCharset);
+  
+  string FindShortcut(in wstring aName);
+  
+  wstring GetLastCharset(in string aURI);
 
+  nsIRDFResource GetAnonymousResource();                                      
 };
 
 %{C++
