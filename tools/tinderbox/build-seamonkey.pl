@@ -463,8 +463,8 @@ sub BuildIt {
 		close MAKEDEPEND;
 	  } else {
 		# Building clobber
-        print LOG "$Make -f client.mk checkout clean build 2>&1 |\n";
-        open MAKECLOBBER, "$Make -f client.mk checkout clean build 2>&1 |";
+        print LOG "$Make -f client.mk checkout realclean build 2>&1 |\n";
+        open MAKECLOBBER, "$Make -f client.mk checkout realclean build 2>&1 |";
         while (<MAKECLOBBER>) {
           print $_;
           print LOG $_;
