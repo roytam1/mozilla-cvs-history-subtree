@@ -459,6 +459,7 @@ nsHelpStatusHandler.prototype = {
     },
     onProgressChange : function(aWebProgress, aRequest, aCurSelfProgress,
         aMaxSelfProgress, aCurTotalProgress, aMaxTotalProgress) {},
+    onStatusChange : function(aWebProgress, aRequest, aStatus, aMessage) {},
     onSecurityChange : function(aWebProgress, aRequest, state) {},
     onLocationChange : function(aWebProgress, aRequest, aLocation) {
         UpdateBackForwardButtons();
