@@ -34,7 +34,7 @@
 
 #include "mcom_db.h"
 
-#define CHECK_INIT  \
+#define ENSURE_INIT  \
     if (!m_pDB)     \
     {               \
         nsDiskModule* pThis = (nsDiskModule*) this; \
@@ -63,15 +63,17 @@ nsDiskModule::~nsDiskModule()
 
 PRBool nsDiskModule::AddObject(nsCacheObject* io_pObject)
 {
-    if (!InitDB())
+	ENSURE_INIT;
+    
+    if (!m_pDB || !io_pObject)
     {   
         // Set some error state TODO
         return PR_FALSE;
     }   
 
-    if (io_pObject && io_pObject->Address())
+    if (io_pObject->Address())
     {
-        ModuleLocker ml(this);
+		MonitorLocker ml(this);
         // TODO optimize these further- make static - Gagan
         DBT* key = PR_NEW(DBT);
         DBT* data = PR_NEW(DBT);
@@ -79,7 +81,8 @@ PRBool nsDiskModule::AddObject(nsCacheObject* io_pObject)
         io_pObject->Module(nsCacheManager::DISK);
 
         
-        key->data = (void*)io_pObject->Address(); /* Later on change this to include post data- io_pObject->KeyData() */
+        key->data = (void*)io_pObject->Address(); 
+		/* Later on change this to include post data- io_pObject->KeyData() */
         key->size = PL_strlen(io_pObject->Address());
 
         data->data = io_pObject->Info();
@@ -101,8 +104,7 @@ PRBool nsDiskModule::AddObject(nsCacheObject* io_pObject)
 PRBool nsDiskModule::Contains(nsCacheObject* io_pObject) const
 {
 
-    CHECK_INIT;
-    ModuleLocker ml((nsDiskModule*)this);
+    ENSURE_INIT;
 
     if (!m_pDB || !io_pObject)
         return PR_FALSE;
@@ -119,8 +121,7 @@ PRBool nsDiskModule::Contains(nsCacheObject* io_pObject) const
 PRBool nsDiskModule::Contains(const char* i_url) const
 {
 
-    CHECK_INIT;
-    ModuleLocker ml((nsDiskModule*)this);
+    ENSURE_INIT;
 
     if (!m_pDB || !i_url || !*i_url)
         return PR_FALSE;
@@ -138,14 +139,12 @@ PRBool nsDiskModule::Contains(const char* i_url) const
 
 void nsDiskModule::GarbageCollect(void)
 {
-    ModuleLocker ml(this);
-    PR_ASSERT(PR_TRUE);
+	MonitorLocker ml(this);
 }
 
 nsCacheObject* nsDiskModule::GetObject(const PRUint32 i_index) const
 {
-    CHECK_INIT;
-    ModuleLocker ml((nsDiskModule*)this);
+    ENSURE_INIT;
     if (!m_pDB)
         return 0;
 
@@ -154,8 +153,7 @@ nsCacheObject* nsDiskModule::GetObject(const PRUint32 i_index) const
 
 nsCacheObject* nsDiskModule::GetObject(const char* i_url) const
 {
-    CHECK_INIT;
-    ModuleLocker ml((nsDiskModule*)this);
+    ENSURE_INIT;
 
     if (!m_pDB || !i_url || !*i_url)
         return 0;
@@ -177,6 +175,7 @@ nsCacheObject* nsDiskModule::GetObject(const char* i_url) const
 
 PRBool nsDiskModule::InitDB(void) 
 {
+	MonitorLocker ml(this);
 
     if (m_pDB)
         return PR_TRUE;
@@ -227,7 +226,7 @@ PRBool nsDiskModule::ReduceSizeTo(const PRUint32 i_NewSize)
 
 PRBool nsDiskModule::Remove(const char* i_url)
 {
-    CHECK_INIT;
+    ENSURE_INIT;
     //TODO
     // Also remove the file corresponding to this item. 
     return PR_FALSE;
@@ -235,7 +234,7 @@ PRBool nsDiskModule::Remove(const char* i_url)
 
 PRBool nsDiskModule::Remove(const PRUint32 i_index)
 {
-    CHECK_INIT;
+    ENSURE_INIT;
     //TODO
     // Also remove the file corresponding to this item. 
     return PR_FALSE;
@@ -243,14 +242,14 @@ PRBool nsDiskModule::Remove(const PRUint32 i_index)
 
 PRBool nsDiskModule::Revalidate(void)
 {
-    CHECK_INIT;
+    ENSURE_INIT;
     //TODO - This will add a dependency on HTTP lib
     return PR_FALSE;
 }
 
 void nsDiskModule::SetSize(const PRUint32 i_Size)
 {
-    ModuleLocker ml(this);
+	MonitorLocker ml(this);
     m_Size = i_Size;
     if (m_Size >0)
     {
@@ -262,4 +261,4 @@ void nsDiskModule::SetSize(const PRUint32 i_Size)
     }
 }
 
-#undef CHECK_INIT
+#undef ENSURE_INIT

@@ -28,7 +28,8 @@
 //#include <nsISupports.h>
 #include "nsCacheObject.h"
 #include "nsEnumeration.h"
-#include "prmon.h"
+#include "nsMonitorable.h"
+
 /* Why in the world is forward decl. not working? */
 //class nsCacheObject;
 
@@ -39,7 +40,7 @@ static const NS_CACHEMODULE_ID =
 */
 
 class nsCacheIterator;
-class nsCacheModule /*: public nsISupports */
+class nsCacheModule : public nsMonitorable /*: public nsISupports */
 {
 
 public:
@@ -106,9 +107,6 @@ public:
 
 protected:
 
-    PRBool              Lock(void);
-    void                Unlock(void);
-
     PRUint32            m_Entries;
     PRUint32            m_Size;
     PRUint32            m_SizeInUse;
@@ -117,20 +115,9 @@ protected:
     nsCacheIterator*    m_pIterator;
     nsCacheModule*      m_pNext;
 
-    class ModuleLocker
-    {
-    public:
-        ModuleLocker(nsCacheModule* pThis): m_pModule(pThis) { if (m_pModule) m_pModule->Lock();}
-        ~ModuleLocker() { if (m_pModule) m_pModule->Unlock();}
-    private:
-        nsCacheModule* m_pModule;
-    };
-
-    friend ModuleLocker;
 private:
     nsCacheModule(const nsCacheModule& cm);
     nsCacheModule& operator=(const nsCacheModule& cm);
-    PRMonitor*          m_pMonitor;
 };
 
 inline void nsCacheModule::Enable(PRBool i_Enable)
@@ -146,6 +133,7 @@ inline const PRUint32 nsCacheModule::Entries() const
 inline 
 nsEnumeration* nsCacheModule::Enumeration(void) const
 {
+	MonitorLocker ml((nsMonitorable*)this);
     if (!m_pEnumeration)
     {
         PR_ASSERT(m_pIterator);
@@ -166,19 +154,6 @@ inline PRBool nsCacheModule::IsReadOnly(void) const
     return PR_FALSE;
 }
 
-inline
-PRBool nsCacheModule::Lock(void)
-{
-    if (!m_pMonitor)
-    {
-        m_pMonitor = PR_NewMonitor();
-        if (!m_pMonitor)
-            return PR_FALSE;
-    }
-    PR_EnterMonitor(m_pMonitor);
-    return PR_TRUE;
-}
-
 inline nsCacheModule* nsCacheModule::Next(void) const 
 {
     return m_pNext;
@@ -186,6 +161,12 @@ inline nsCacheModule* nsCacheModule::Next(void) const
 
 inline void nsCacheModule::Next(nsCacheModule* pNext) 
 {
+	/* No overwriting */
+	PR_ASSERT(m_pNext == 0);
+	if (m_pNext)
+	{
+		/* ERROR */
+	}
     m_pNext = pNext;
 }
 
@@ -202,14 +183,6 @@ inline void nsCacheModule::SetSize(const PRUint32 size)
 inline PRUint32 nsCacheModule::SizeInUse(void) const
 {
     return m_SizeInUse;
-}
-
-inline
-void nsCacheModule::Unlock(void)
-{
-    PR_ASSERT(m_pMonitor);
-    if (m_pMonitor)
-        PR_ExitMonitor(m_pMonitor);
 }
 
 #endif // nsCacheModule_h__

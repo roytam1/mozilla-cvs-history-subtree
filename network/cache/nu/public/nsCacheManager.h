@@ -31,6 +31,7 @@
 
 #include <prlog.h>
 
+#include "nsMonitorable.h"
 #include "nsCacheModule.h"
 #include "nsCacheObject.h"
 
@@ -39,7 +40,7 @@ class nsDiskModule;
 class nsCachePref;
 class nsCacheBkgThd;
 
-class nsCacheManager //: public nsISupports
+class nsCacheManager : public nsMonitorable //: public nsISupports
 {
 
 public:

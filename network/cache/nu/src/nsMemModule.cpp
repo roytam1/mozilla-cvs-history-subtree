@@ -61,7 +61,7 @@ PRBool nsMemModule::AddObject(nsCacheObject* io_pObject)
 
     if (io_pObject)
 	{
-        ModuleLocker ml(this);
+        MonitorLocker ml(this);
 		if (m_pFirstObject) 
 		{
 			LastObject()->Next(new nsMemCacheObject(io_pObject)); 
@@ -81,7 +81,7 @@ PRBool nsMemModule::AddObject(nsCacheObject* io_pObject)
 
 PRBool nsMemModule::Contains(const char* i_url) const
 {
-    ModuleLocker ml((nsMemModule*)this);
+    MonitorLocker ml((nsMonitorable*)this);
 
     if (m_pFirstObject && i_url && *i_url)
     {
@@ -100,6 +100,8 @@ PRBool nsMemModule::Contains(const char* i_url) const
 
 PRBool nsMemModule::Contains(nsCacheObject* i_pObject) const
 {
+    MonitorLocker ml((nsMonitorable*)this);
+
     if (i_pObject && *i_pObject->Address())
     {
         return this->Contains(i_pObject->Address());
@@ -109,7 +111,8 @@ PRBool nsMemModule::Contains(nsCacheObject* i_pObject) const
 
 void nsMemModule::GarbageCollect(void)
 {
-    ModuleLocker ml(this);
+    MonitorLocker ml(this);
+
     if (m_Entries > 0)
     {
         nsEnumeration* pEnum = Enumeration();
@@ -130,7 +133,7 @@ void nsMemModule::GarbageCollect(void)
 
 nsCacheObject* nsMemModule::GetObject(const PRUint32 i_index) const
 {
-    ModuleLocker ml((nsMemModule*)this);
+    MonitorLocker ml((nsMonitorable*)this);
 	nsMemCacheObject* pNth = 0;
 	if (m_pFirstObject)
 	{
@@ -146,7 +149,7 @@ nsCacheObject* nsMemModule::GetObject(const PRUint32 i_index) const
 
 nsCacheObject* nsMemModule::GetObject(const char* i_url) const
 {
-	ModuleLocker ml((nsMemModule*)this);
+	MonitorLocker ml((nsMonitorable*)this);
     if (m_pFirstObject && i_url && *i_url)
 	{
 		nsMemCacheObject* pObj = m_pFirstObject;
@@ -164,7 +167,8 @@ nsCacheObject* nsMemModule::GetObject(const char* i_url) const
 
 nsMemCacheObject* nsMemModule::LastObject(void) const
 {
-	ModuleLocker ml((nsMemModule*)this);
+	MonitorLocker ml((nsMonitorable*)this);
+	
     nsMemCacheObject* pLast = 0;
 	if (m_pFirstObject)
 	{
