@@ -59,6 +59,7 @@ REQUIRES	= xpcom \
 		  webbrwsr \
 		  plugin \
 		  prefetch \
+		  mimetype \
 		  $(NULL)
 
 EXPORTS		= \

@@ -244,12 +244,17 @@ public:
   static nsINameSpaceManager* GetNSManagerWeakRef()
   {
     return sNameSpaceManager;
-  };
+  }
 
   static nsIIOService* GetIOServiceWeakRef()
   {
     return sIOService;
-  };
+  }
+
+  static imgILoader* GetImgLoader()
+  {
+    return sImgLoader;
+  }
 
   static nsIScriptSecurityManager* GetSecurityManager()
   {

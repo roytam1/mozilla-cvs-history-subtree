@@ -68,17 +68,13 @@
 
 #include "nsContentUtils.h"
 
-// Statics
-imgILoader* nsImageLoadingContent::sImgLoader = nsnull;
-nsIIOService* nsImageLoadingContent::sIOService = nsnull;
-
 nsImageLoadingContent::nsImageLoadingContent()
   : mObserverList(nsnull),
     mLoadingEnabled(PR_TRUE),
     mImageIsBlocked(PR_FALSE),
     mHaveHadObserver(PR_FALSE)
 {
-  if (!sImgLoader)
+  if (!nsContentUtils::GetImgLoader())
     mLoadingEnabled = PR_FALSE;
 }
 
@@ -93,23 +89,6 @@ nsImageLoadingContent::~nsImageLoadingContent()
   }
   NS_ASSERTION(!mObserverList.mObserver && !mObserverList.mNext,
                "Observers still registered?");
-}
-
-void
-nsImageLoadingContent::Initialize()
-{
-  // If this fails, NS_NewURI will try to get the service itself
-  CallGetService("@mozilla.org/network/io-service;1", &sIOService);
-
-  // Ignore failure and just don't load images
-  CallGetService("@mozilla.org/image/loader;1", &sImgLoader);
-}
-
-void
-nsImageLoadingContent::Shutdown()
-{
-  NS_IF_RELEASE(sImgLoader);
-  NS_IF_RELEASE(sIOService);
 }
 
 // Macro to call some func on each observer.  This handles observers
@@ -227,7 +206,7 @@ nsImageLoadingContent::GetLoadingEnabled(PRBool *aLoadingEnabled)
 NS_IMETHODIMP
 nsImageLoadingContent::SetLoadingEnabled(PRBool aLoadingEnabled)
 {
-  if (sImgLoader)
+  if (nsContentUtils::GetImgLoader())
     mLoadingEnabled = aLoadingEnabled;
   return NS_OK;
 }
@@ -353,7 +332,7 @@ nsImageLoadingContent::LoadImageWithChannel(nsIChannel* aChannel,
   
   NS_ENSURE_ARG_POINTER(aChannel);
 
-  if (!sImgLoader)
+  if (!nsContentUtils::GetImgLoader())
     return NS_ERROR_NULL_POINTER;
 
   // XXX what should we do with content policies here, if anything?
@@ -369,7 +348,7 @@ nsImageLoadingContent::LoadImageWithChannel(nsIChannel* aChannel,
 
   nsCOMPtr<imgIRequest> & req = mCurrentRequest ? mPendingRequest : mCurrentRequest;
 
-  return sImgLoader->LoadImageWithChannel(aChannel, this, doc, aListener, getter_AddRefs(req));
+  return nsContentUtils::GetImgLoader()->LoadImageWithChannel(aChannel, this, doc, aListener, getter_AddRefs(req));
 }
 
 // XXX This should be a protected method, not an interface method!!!
@@ -542,7 +521,7 @@ nsImageLoadingContent::StringToURI(const nsACString& aSpec,
                    aSpec,
                    charset.IsEmpty() ? nsnull : PromiseFlatCString(charset).get(),
                    baseURL,
-                   sIOService);
+                   nsContentUtils::GetIOServiceWeakRef());
 }
 
 

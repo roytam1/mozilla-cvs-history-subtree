@@ -63,11 +63,6 @@ public:
   nsImageLoadingContent();
   virtual ~nsImageLoadingContent();
 
-  /** Called on layout startup to initialize statics */
-  static void Initialize();
-  /** Called on shutdown to free statics */
-  static void Shutdown();
-
   NS_DECL_IMGICONTAINEROBSERVER
   NS_DECL_IMGIDECODEROBSERVER
   NS_DECL_NSIIMAGELOADINGCONTENT
@@ -153,9 +148,6 @@ protected:
   nsCOMPtr<imgIRequest> mCurrentRequest;
   nsCOMPtr<imgIRequest> mPendingRequest;
 
-  // Cache for the io service and image loader
-  static imgILoader* sImgLoader;
-  static nsIIOService* sIOService;
 private:
   /**
    * Typically we will have only one observer (our frame in the screen
