@@ -21,7 +21,7 @@
 
 #include "nscore.h"
 #include "nsISupports.h"
-#include "nsIURL.h"
+#include "nsIURI.h"
 #include "nsIUrlListener.h"
 
 /* 6CFFCEB0-CB8C-11d2-8065-006008128C4E */
