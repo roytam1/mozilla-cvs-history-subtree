@@ -109,6 +109,8 @@ dom/public/idl/views/Makefile
 dom/public/idl/xbl/Makefile
 dom/public/idl/xpath/Makefile
 dom/public/idl/xul/Makefile
+dom/public/idl/webforms/Makefile
+dom/public/idl/xforms/Makefile
 dom/src/Makefile
 dom/src/base/Makefile
 dom/src/events/Makefile
