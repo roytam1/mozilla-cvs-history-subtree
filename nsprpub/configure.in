@@ -1275,6 +1275,11 @@ case "$target" in
                 DLLFLAGS="$DLLFLAGS -DEBUG -DEBUGTYPE:CV"
                 LDFLAGS="$LDFLAGS -DEBUG -DEBUGTYPE:CV"
             fi
+            if test -n "$MOZ_PDB"; then
+                _OPTIMIZE_FLAGS="$_OPTIMIZE_FLAGS -Z7"
+                DLLFLAGS="$DLLFLAGS -DEBUG"
+                LDFLAGS="$LDFLAGS -DEBUG"
+            fi
         else
             if test -n "$USE_DEBUG_RTL"; then
                 CFLAGS="$CFLAGS -MDd"
@@ -1330,7 +1335,9 @@ case "$target" in
         OBJDIR_SUFFIX=OBJD
     fi
 
-    OS_DLLFLAGS='-nologo -DLL -SUBSYSTEM:WINDOWS -PDB:NONE'
+    if test -z "$MOZ_PDB"; then
+        OS_DLLFLAGS='-nologo -DLL -SUBSYSTEM:WINDOWS -PDB:NONE'
+    fi
 
     case "$OS_TARGET" in
     WINNT)
