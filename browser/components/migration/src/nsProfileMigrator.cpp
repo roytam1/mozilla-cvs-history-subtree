@@ -368,7 +368,7 @@ nsProfileMigrator::ImportRegistryProfiles(const nsACString& aAppName)
     rv = profileFile->SetPersistentDescriptor(nsDependentCString(profilePath));
 #else
     NS_ConvertUTF8toUTF16 widePath(profilePath);
-    rv = profileFile->InitWith(widePath);
+    rv = profileFile->InitWithPath(widePath);
 #endif
     if (NS_FAILED(rv)) continue;
 
