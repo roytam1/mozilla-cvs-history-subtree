@@ -22,6 +22,7 @@
 
 #include "nsIServiceManager.h"
 #include "nsIComponentManager.h"
+#include "nsIGenericFactory.h"
 
 #include "nsIURI.h"
 #include "nsNetUtil.h"
