@@ -574,8 +574,8 @@ sub BuildIt {
         }
         $start_time = time();
 
-		# Set this each time, since post-mozilla.pl can reset this.
-		$ENV{MOZILLA_FIVE_HOME} = "$build_dir/${Settings::ObjDir}/mozilla/dist/bin";
+        # Set this each time, since post-mozilla.pl can reset this.
+        $ENV{MOZILLA_FIVE_HOME} = "$binary_dir";
         
         my $cvsco = '';
 		# Tack on pull by date if requested.  Don't pull by date on a branch,
