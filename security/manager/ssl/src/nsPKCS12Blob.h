@@ -41,6 +41,7 @@
 #include "nsILocalFile.h"
 #include "nsIPK11TokenDB.h"
 #include "nsNSSHelper.h"
+#include "nsIPK11Token.h"
 
 #include "nss.h"
 
@@ -48,6 +49,8 @@ extern "C" {
 #include "pkcs12.h"
 #include "p12plcy.h"
 }
+
+class nsIX509Cert;
 
 //
 // nsPKCS12Blob
