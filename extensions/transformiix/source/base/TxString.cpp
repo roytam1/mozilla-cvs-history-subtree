@@ -268,7 +268,7 @@ String& String::subString(const PRUint32 aStart, const PRUint32 aEnd, String& aD
     PRUint32 substrLength = end - aStart;
 
     if (!aDest.ensureCapacity(substrLength)) {
-      return;
+      return aDest;
     }
     memcpy(aDest.mBuffer, &mBuffer[aStart],
            substrLength * sizeof(UNICODE_CHAR));
@@ -312,7 +312,7 @@ MBool String::ensureCapacity(const PRUint32 aCapacity)
 {
   PRUint32 needed = aCapacity + mLength;
   NS_ASSERTION(needed < (PRUint32)-1, "Asked for too large a buffer.");
-  if (needed = (PRUint32)-1) {
+  if (needed == (PRUint32)-1) {
     return MB_FALSE;
   }
 
