@@ -42,10 +42,11 @@ void
 XPCCOMThrower::ThrowError(JSContext* cx, HRESULT COMErrorCode)
 {
 	IErrorInfo * pError;
+    // Get the current COM error object
     HRESULT result = GetErrorInfo(0, &pError);
 	if (SUCCEEDED(result) && pError)
 	{
-        JSBool success = JS_FALSE;
+        // Build an error message from the COM error object
         nsCAutoString msg;
         BSTR bstrDesc = nsnull;
         BSTR bstrSource = nsnull;

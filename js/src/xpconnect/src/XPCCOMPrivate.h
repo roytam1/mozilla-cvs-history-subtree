@@ -583,9 +583,7 @@ private:
 class XPCCOMThrower : public XPCThrower
 {
 public:
-#ifdef XPC_IDISPATCH_SUPPORT
     static void ThrowError(JSContext* cx, HRESULT COMErrorCode);
-#endif
 };
 
 #include "XPCCOMInlines.h"
