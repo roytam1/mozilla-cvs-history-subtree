@@ -113,7 +113,6 @@ if ($reqVersion == 1) {
 
     if (!array_key_exists('id', $_GET) ||
         !array_key_exists('version', $_GET) ||
-        !array_key_exists('minAppVersion', $_GET) ||
         !array_key_exists('maxAppVersion', $_GET) ||
         !array_key_exists('appID', $_GET) ||
         !array_key_exists('appVersion', $_GET))
@@ -121,7 +120,6 @@ if ($reqVersion == 1) {
 
     $reqItemGuid = $_GET['id'];
     $reqItemVersion = $_GET['version'];
-    $reqItemMinAppVersion = $_GET['minAppVersion'];
     $reqItemMaxAppVersion = $_GET['maxAppVersion'];
     $reqTargetAppGuid = $_GET['appID'];
     $reqTargetAppVersion = $_GET['appVersion'];
@@ -186,6 +184,7 @@ $highestVersionData = '';
 while ($line = mysql_fetch_array($result, MYSQL_ASSOC)) {
     // is this row for the current version?
     if ($line['extversion'] == $reqItemVersion) {
+        // if so
         $thisVersionData = $line;
     } else if (vercmp ($reqItemVersion, $line['extversion']) > 0) {
         // did we already see an update with a higher version than this?
