@@ -26,6 +26,7 @@
 #include "nsIWebShellServices.h"
 #include "nsIWebShell.h"
 #include "nsILinkHandler.h"
+#include "nsICommandManager.h"
 #include "nsIClipboardCommands.h"
 #include "nsDocShell.h"
 
@@ -132,6 +133,7 @@ protected:
     virtual nsresult GetControllerForCommand ( const nsAReadableString & inCommand, nsIController** outController );
     virtual nsresult IsCommandEnabled ( const nsAReadableString & inCommand, PRBool* outEnabled );
     virtual nsresult DoCommand ( const nsAReadableString & inCommand );
+    nsresult EnsureCommandHandler();
 
     //
     // Helper method that is called when a new document (including any
@@ -157,6 +159,8 @@ protected:
         const char* aCommand,
         nsIStreamListener** aResult);
 
+  nsCOMPtr<nsICommandManager> mCommandManager;
+  
 #ifdef DEBUG
 private:
     // We're counting the number of |nsWebShells| to help find leaks

@@ -40,11 +40,13 @@
 #include "nsIDeviceContext.h"
 
 #include "nsIDocumentLoader.h"
+#include "nsIEditorDocShell.h"
 
 #include "nsWeakReference.h"
 
 // Local Includes
 #include "nsDSURIContentListener.h"
+#include "nsDocShellEditorData.h"
 
 // Helper Classes
 #include "nsCOMPtr.h"
@@ -162,6 +164,7 @@ class nsDocShell : public nsIDocShell,
                    public nsIScriptGlobalObjectOwner,
                    public nsIRefreshURI,
                    public nsIWebProgressListener,
+                   public nsIEditorDocShell,
                    public nsSupportsWeakReference
 {
 friend class nsDSURIContentListener;
@@ -186,6 +189,7 @@ public:
     NS_DECL_NSIWEBPROGRESSLISTENER
     NS_DECL_NSIREFRESHURI
     NS_DECL_NSICONTENTVIEWERCONTAINER
+    NS_DECL_NSIEDITORDOCSHELL
 
     nsresult SetLoadCookie(nsISupports * aCookie);
     nsresult GetLoadCookie(nsISupports ** aResult);
@@ -257,6 +261,7 @@ protected:
     NS_IMETHOD GetRootScrollableView(nsIScrollableView ** aOutScrollView);
     NS_IMETHOD EnsureContentListener();
     NS_IMETHOD EnsureScriptEnvironment();
+    NS_IMETHOD EnsureEditorData();
     NS_IMETHOD EnsureFind();
 
     static  inline  PRUint32
@@ -355,6 +360,9 @@ protected:
     PRBool                     mValidateOrigin;
 
     PRBool                     mIsBeingDestroyed;
+
+    // Editor stuff
+    nsDocShellEditorData*      mEditorData;          // editor data, if any
 
     // WEAK REFERENCES BELOW HERE.
     // Note these are intentionally not addrefd.  Doing so will create a cycle.

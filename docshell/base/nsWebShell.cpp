@@ -57,6 +57,7 @@ typedef unsigned long HMTX;
 #include "nsIDocumentViewer.h"
 #include "nsIMarkupDocumentViewer.h"
 #include "nsIClipboardCommands.h"
+#include "nsPICommandUpdater.h"
 #include "nsILinkHandler.h"
 #include "nsIStreamListener.h"
 #include "nsIPrompt.h"
@@ -245,6 +246,26 @@ void nsWebShell::InitFrameData()
   SetMarginHeight(-1);
 }
 
+nsresult
+nsWebShell::EnsureCommandHandler()
+{
+  if (!mCommandManager)
+  {
+    mCommandManager = do_CreateInstance("@mozilla.org/embedcomp/command-manager;1");
+    if (!mCommandManager) return NS_ERROR_OUT_OF_MEMORY;
+    
+    nsCOMPtr<nsPICommandUpdater>	commandUpdater = do_QueryInterface(mCommandManager);
+    if (!commandUpdater) return NS_ERROR_FAILURE;
+    
+    nsCOMPtr<nsIDOMWindow> domWindow = do_GetInterface(NS_STATIC_CAST(nsIInterfaceRequestor *, this));
+    nsresult rv = commandUpdater->Init(domWindow);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "Initting command manager failed");
+  }
+  
+  return mCommandManager ? NS_OK : NS_ERROR_FAILURE;
+}
+
+
 NS_IMPL_ADDREF_INHERITED(nsWebShell, nsDocShell)
 NS_IMPL_RELEASE_INHERITED(nsWebShell, nsDocShell)
 
@@ -306,7 +327,14 @@ nsWebShell::GetInterface(const nsIID &aIID, void** aInstancePtr)
                         NS_ERROR_FAILURE);
       return NS_OK;
       }
-
+   else if(aIID.Equals(NS_GET_IID(nsICommandManager)))
+      {
+      NS_ENSURE_SUCCESS(EnsureCommandHandler(), NS_ERROR_FAILURE);
+      NS_ENSURE_SUCCESS(mCommandManager->QueryInterface(NS_GET_IID(nsICommandManager),
+         aInstancePtr), NS_ERROR_FAILURE);
+      return NS_OK;
+      }
+      
    if (!*aInstancePtr || NS_FAILED(rv))
      return nsDocShell::GetInterface(aIID,aInstancePtr);
    else

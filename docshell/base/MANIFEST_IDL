@@ -33,3 +33,4 @@ nsITextScroll.idl
 nsIContentViewer.idl
 nsIContentViewerEdit.idl
 nsIURIFixup.idl
+nsIEditorDocShell.idl
