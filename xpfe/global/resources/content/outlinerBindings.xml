@@ -21,12 +21,12 @@
                 readonly="true"/>
       <property name="currentIndex"
                 onget="return this.outlinerBoxObject.selection.currentIndex;"
-                readonly="true"/>
-      <property name="isUpSelection">
-        0
+                onset="return this.outlinerBoxObject.selection.currentIndex=val;"/>
+      <property name="selectionHead">
+        -1
       </property>
-      <property name="isDownSelection">
-        0
+      <property name="selectionTail">
+        -1
       </property>
     </implementation>
     <handlers>
@@ -69,10 +69,10 @@
       <handler event="keypress" keycode="vk_up">
         <![CDATA[
          var c = this.currentIndex;
-         this.isUpSelection=0;
-         this.isDownSelection=0;
          if (c == -1 || c == 0)
            return;
+         this.selectionHead = -1;
+         this.selectionTail = -1;
          this.outlinerBoxObject.selection.timedSelect(c-1, 500);
          this.outlinerBoxObject.ensureRowIsVisible(c-1);
         ]]>
@@ -80,53 +80,97 @@
       <handler event="keypress" keycode="vk_down">
         <![CDATA[
          var c = this.currentIndex;
-         this.isUpSelection=0;
-         this.isDownSelection=0;
          try { if (c+1 == this.outlinerBoxObject.view.rowCount)
            return;
          } catch (e) {}
+         this.selectionHead = -1;
+         this.selectionTail = -1;
          this.outlinerBoxObject.selection.timedSelect(c+1, 500);
          this.outlinerBoxObject.ensureRowIsVisible(c+1);
-         
+        ]]>
+      </handler>
+      <handler event="keypress" keycode="vk_up" modifiers="shift">
+        <![CDATA[
+         var c = this.currentIndex;
+         if (c == -1 || c == 0)
+           return;
+         if (c == this.selectionTail) {
+           if (this.selectionHead < this.selectionTail) {
+             this.outlinerBoxObject.selection.toggleSelect(c);
+             this.currentIndex = c - 1;
+           }
+           else {
+             this.outlinerBoxObject.selection.toggleSelect(c - 1);
+           }
+         }
+         else {
+           this.outlinerBoxObject.selection.clearSelection();
+           this.selectionHead = c;
+           this.outlinerBoxObject.selection.toggleSelect(c);
+           this.outlinerBoxObject.selection.toggleSelect(c - 1);
+         }
+         this.selectionTail = c - 1;
+         this.outlinerBoxObject.ensureRowIsVisible(c - 1);
+        ]]>
+      </handler>
+      <handler event="keypress" keycode="vk_down" modifiers="shift">
+        <![CDATA[
+         var c = this.currentIndex;
+         try { if (c+1 == this.outlinerBoxObject.view.rowCount)
+           return;
+         } catch (e) {}
+         if (c == this.selectionTail) {
+           if (this.selectionHead > this.selectionTail) {
+             this.outlinerBoxObject.selection.toggleSelect(c);
+             this.currentIndex = c + 1;
+           }
+           else
+             this.outlinerBoxObject.selection.toggleSelect(c + 1);
+         }
+         else {
+           this.outlinerBoxObject.selection.clearSelection();
+           this.selectionHead = c;
+           this.outlinerBoxObject.selection.toggleSelect(c);
+           this.outlinerBoxObject.selection.toggleSelect(c + 1);
+         }
+         this.selectionTail = c + 1;
+         this.outlinerBoxObject.ensureRowIsVisible(c + 1);
         ]]>
       </handler>
       <handler event="keypress" keycode="vk_up" modifiers="control">
         <![CDATA[
          var c = this.currentIndex;
-         this.isUpSelection=0;
-         this.isDownSelection=0;
          if (c == -1 || c == 0)
            return;
-         this.outlinerBoxObject.selection.currentIndex = c-1;
+         this.currentIndex = c-1;
          this.outlinerBoxObject.ensureRowIsVisible(c-1);
         ]]>
       </handler>
       <handler event="keypress" keycode="vk_down" modifiers="control">
         <![CDATA[
          var c = this.currentIndex;
-         this.isUpSelection=0;
-         this.isDownSelection=0;
          try { if (c+1 == this.outlinerBoxObject.view.rowCount)
            return;
          } catch (e) {}
-         this.outlinerBoxObject.selection.currentIndex = c+1;
+         this.currentIndex = c+1;
          this.outlinerBoxObject.ensureRowIsVisible(c+1);
          
         ]]>
       </handler>
       <handler event="keypress" keycode="vk_page_up">
         <![CDATA[
-         this.isUpSelection=0;
-         this.isDownSelection=0;
          var c = this.currentIndex;
          if (c == 0)
            return;
+         this.selectionHead = -1;
+         this.selectionTail = -1;
          var f = this.outlinerBoxObject.getFirstVisibleRow();
          var i = 0;
          if (f > 0) {
            var p = this.outlinerBoxObject.getPageCount();
-           i = c - p;
-           if (f - p < 0)
+           if (f - p >= 0)
+             i = c - p;
+           else
              i = c - f;
            this.outlinerBoxObject.scrollByPages(-1);
          }
@@ -135,19 +179,20 @@
       </handler>
       <handler event="keypress" keycode="vk_page_down">
         <![CDATA[
-         this.isUpSelection=0;
-         this.isDownSelection=0;
          var c = this.currentIndex;
          var l = this.outlinerBoxObject.view.rowCount - 1;
          if (c == l)
            return;
+         this.selectionHead = -1;
+         this.selectionTail = -1;
          var f = this.outlinerBoxObject.getFirstVisibleRow();
          var p = this.outlinerBoxObject.getPageCount();
          var i = l;
          var lastTopRowIndex = l - p;
          if (f <= lastTopRowIndex) {
-           i = c + p;
-           if (f + p > lastTopRowIndex)
+           if (f + p <= lastTopRowIndex)
+             i = c + p;
+           else
              i = lastTopRowIndex + c - f + 1;
            this.outlinerBoxObject.scrollByPages(1);
          }
@@ -156,8 +201,6 @@
       </handler>
       <handler event="keypress" keycode="vk_page_up" modifiers="control">
         <![CDATA[
-         this.isUpSelection=0;
-         this.isDownSelection=0;
          var c = this.currentIndex;
          if (c == 0)
            return;
@@ -165,18 +208,17 @@
          var i = 0;
          if (f > 0) {
            var p = this.outlinerBoxObject.getPageCount();
-           i = c - p;
-           if (f - p < 0)
+           if (f - p >= 0)
+             i = c - p;
+           else
              i = c - f;
            this.outlinerBoxObject.scrollByPages(-1);
          }
-         this.outlinerBoxObject.selection.currentIndex = i;
+         this.currentIndex = i;
         ]]>
       </handler>
       <handler event="keypress" keycode="vk_page_down" modifiers="control">
         <![CDATA[
-         this.isUpSelection=0;
-         this.isDownSelection=0;
          var c = this.currentIndex;
          var l = this.outlinerBoxObject.view.rowCount - 1;
          if (c == l)
@@ -186,53 +228,73 @@
          var i = l;
          var lastTopRowIndex = l - p;
          if (f <= lastTopRowIndex) {
-           i = c + p;
-           if (f + p > lastTopRowIndex)
+           if (f + p <= lastTopRowIndex)
+             i = c + p;
+           else
              i = lastTopRowIndex + c - f + 1;
            this.outlinerBoxObject.scrollByPages(1);
          }
-         this.outlinerBoxObject.selection.currentIndex = i;
+         this.currentIndex = i;
         ]]>
       </handler>
       <handler event="keypress" keycode="vk_home">
         <![CDATA[
-         this.isUpSelection=0;
-         this.isDownSelection=0;
          if (this.currentIndex == 0)
            return;
+         this.selectionHead = -1;
+         this.selectionTail = -1;
          this.outlinerBoxObject.selection.timedSelect(0, 500);
          this.outlinerBoxObject.ensureRowIsVisible(0);
         ]]>
       </handler>
       <handler event="keypress" keycode="vk_end">
         <![CDATA[
-         this.isUpSelection=0;
-         this.isDownSelection=0;
          var l = this.outlinerBoxObject.view.rowCount - 1;
          if (this.currentIndex == l)
            return;
+         this.selectionHead = -1;
+         this.selectionTail = -1;
          this.outlinerBoxObject.selection.timedSelect(l, 500);
+         this.outlinerBoxObject.ensureRowIsVisible(l);
+        ]]>
+      </handler>
+      <handler event="keypress" keycode="vk_home" modifiers="shift">
+        <![CDATA[
+         if (this.currentIndex == 0)
+           return;
+         this.selectionHead = this.currentIndex;
+         this.selectionTail = 0;
+         this.outlinerBoxObject.selection.rangedSelect(this.currentIndex, 0, true);
+         this.currentIndex = 0;
+         this.outlinerBoxObject.ensureRowIsVisible(0);
+        ]]>
+      </handler>
+      <handler event="keypress" keycode="vk_end" modifiers="shift">
+        <![CDATA[
+         var l = this.outlinerBoxObject.view.rowCount - 1;
+         if (this.currentIndex == l)
+           return;
+         this.selectionHead = this.currentIndex;
+         this.selectionTail = l;
+         this.outlinerBoxObject.selection.rangedSelect(this.currentIndex, l, true);
+         this.currentIndex = l;
          this.outlinerBoxObject.ensureRowIsVisible(l);
         ]]>
       </handler>
       <handler event="keypress" keycode="vk_home" modifiers="control">
         <![CDATA[
-         this.isUpSelection=0;
-         this.isDownSelection=0;
          if (this.currentIndex == 0)
            return;
-         this.outlinerBoxObject.selection.currentIndex = 0;
+         this.currentIndex = 0;
          this.outlinerBoxObject.ensureRowIsVisible(0);
         ]]>
       </handler>
       <handler event="keypress" keycode="vk_end" modifiers="control">
         <![CDATA[
-         this.isUpSelection=0;
-         this.isDownSelection=0;
          var l = this.outlinerBoxObject.view.rowCount - 1;
          if (this.currentIndex == l)
            return;
-         this.outlinerBoxObject.selection.currentIndex = l;
+         this.currentIndex = l;
          this.outlinerBoxObject.ensureRowIsVisible(l);
         ]]>
       </handler>
