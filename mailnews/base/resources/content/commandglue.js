@@ -168,11 +168,14 @@ function ChangeFolderByURI(uri, viewType, viewFlags, sortType, sortOrder)
 
   //if it's a server, clear the threadpane and don't bother trying to load.
   if(msgfolder.isServer) {
+    msgWindow.openFolder = null;
+
     ClearThreadPane();
 
     // Load AccountCentral page here.
     ShowAccountCentral();
-  return;
+
+    return;
   }
   else
   {
