@@ -23,6 +23,7 @@ nsHttpChannel::nsHttpChannel()
     , mCapabilities(0)
     , mStatus(NS_OK)
     , mIsPending(PR_FALSE)
+    , mApplyConversion(PR_TRUE)
 {
     NS_INIT_ISUPPORTS();
 }
@@ -78,6 +79,9 @@ nsHttpChannel::Init(nsIURI *uri,
                                                proxyType, usingSSL);
     if (!mConnectionInfo)
         return NS_ERROR_OUT_OF_MEMORY;
+
+    // Set default request method
+    mRequestHead.SetMethod(nsHttp::GET);
 
     //
     // Set request headers
@@ -141,11 +145,10 @@ nsHttpChannel::SetupTransaction()
         if (NS_FAILED(rv)) return rv;
     }
 
-    mRequestHead.SetMethod(nsHttp::GET);
     mRequestHead.SetVersion(HTTP_VERSION_1_1);
     mRequestHead.SetRequestURI(path ? path : mSpec);
 
-    return mTransaction->SetupRequest(&mRequestHead, nsnull);
+    return mTransaction->SetupRequest(&mRequestHead, mUploadStream);
 }
 
 nsresult
@@ -164,7 +167,7 @@ nsHttpChannel::BuildStreamListenerProxy(nsIStreamListener **result)
 }
 
 nsresult
-nsHttpChannel::ProcessServerResponse()
+nsHttpChannel::ProcessResponse()
 {
     NS_PRECONDITION(mResponseHead, "null response head");
 
@@ -467,7 +470,7 @@ nsHttpChannel::GetReferrer(nsIURI **referrer)
 {
     NS_ENSURE_ARG_POINTER(referrer);
     *referrer = mReferrer;
-    NS_ADDREF(*referrer);
+    NS_IF_ADDREF(*referrer);
     return NS_OK;
 }
 NS_IMETHODIMP
@@ -475,7 +478,7 @@ nsHttpChannel::SetReferrer(nsIURI *referrer)
 {
     NS_ENSURE_TRUE(!mIsPending, NS_ERROR_IN_PROGRESS);
 
-    if (nsHttpHandler::get()->BrowseAnonymously())
+    if (nsHttpHandler::get()->SendReferrer())
         return NS_OK;
 
     // save a copy of the referrer so we can return it if requested
@@ -526,6 +529,26 @@ nsHttpChannel::VisitRequestHeaders(nsIHttpHeaderVisitor *visitor)
 }
 
 NS_IMETHODIMP
+nsHttpChannel::GetUploadStream(nsIInputStream **stream)
+{
+    NS_ENSURE_ARG_POINTER(stream);
+    *stream = mUploadStream;
+    NS_IF_ADDREF(*stream);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::SetUploadStream(nsIInputStream *stream)
+{
+    mUploadStream = stream;
+    if (mUploadStream)
+        mRequestHead.SetMethod(nsHttp::POST);
+    else
+        mRequestHead.SetMethod(nsHttp::GET);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
 nsHttpChannel::GetResponseStatus(PRUint32 *value)
 {
     NS_ENSURE_TRUE(mResponseHead, NS_ERROR_NOT_AVAILABLE);
@@ -573,6 +596,21 @@ nsHttpChannel::GetCharset(char **value)
 {
     NS_ENSURE_TRUE(mResponseHead, NS_ERROR_NOT_AVAILABLE);
     return DupString(mResponseHead->ContentCharset(), value);
+}
+
+NS_IMETHODIMP
+nsHttpChannel::GetApplyConversion(PRBool *value)
+{
+    NS_ENSURE_ARG_POINTER(value);
+    *value = mApplyConversion;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::SetApplyConversion(PRBool value)
+{
+    mApplyConversion = value;
+    return NS_OK;
 }
 
 //-----------------------------------------------------------------------------
@@ -630,7 +668,8 @@ nsHttpChannel::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
     // of them from the transaction.
     mResponseHead = mTransaction->TakeResponseHead();
 
-    return ProcessServerResponse();
+    //return ProcessResponse();
+    return mListener->OnStartRequest(this, mListenerContext);
 }
 
 NS_IMETHODIMP

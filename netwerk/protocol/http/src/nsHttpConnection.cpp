@@ -6,6 +6,7 @@
 #include "nsIServiceManager.h"
 #include "netCore.h"
 #include "nsNetCID.h"
+#include "prmem.h"
 
 static NS_DEFINE_CID(kSocketTransportServiceCID, NS_SOCKETTRANSPORTSERVICE_CID);
 
@@ -16,6 +17,9 @@ static NS_DEFINE_CID(kSocketTransportServiceCID, NS_SOCKETTRANSPORTSERVICE_CID);
 nsHttpConnection::nsHttpConnection()
     : mTransaction(0)
     , mConnectionInfo(0)
+    , mBuf(nsnull)
+    , mBufCursor(nsnull)
+    , mBufUnread(0)
     , mState(IDLE)
     , mReuseCount(0)
     , mMaxReuseCount(0)
@@ -36,6 +40,9 @@ nsHttpConnection::~nsHttpConnection()
 
     // ensure that we're no longer part of any list
     PR_REMOVE_LINK(this);
+
+    if (mBuf)
+        PR_Free(mBuf);
 }
 
 nsresult
@@ -47,6 +54,13 @@ nsHttpConnection::Init(nsHttpConnectionInfo *info)
 
     mConnectionInfo = info;
     NS_ADDREF(mConnectionInfo);
+
+    // allocate the read buffer
+    if (!mBuf) {
+        mBuf = (char *) PR_Malloc(NS_HTTP_SEGMENT_SIZE);
+        if (!mBuf)
+            return NS_ERROR_OUT_OF_MEMORY;
+    }
 
     return NS_OK;
 }
@@ -224,6 +238,27 @@ nsHttpConnection::CreateTransport()
     return rv;
 }
 
+nsresult
+nsHttpConnection::FlushBuf()
+{
+    LOG(("nsHttpConnection::FlushBuf [this=%x]\n", this));
+
+    PRUint32 n;
+    nsresult rv;
+
+    while (mBufUnread) {
+        // notify the transaction that there is data to read
+        rv = mTransaction->OnDataReadable(mBufCursor, mBufUnread, &n);
+        if (NS_FAILED(rv) || !n) return rv;
+
+        mBufCursor += n;
+        mBufUnread -= n;
+    }
+
+    mBufCursor = mBuf;
+    return NS_OK;
+}
+
 //-----------------------------------------------------------------------------
 // nsHttpConnection::nsISupports
 //-----------------------------------------------------------------------------
@@ -267,6 +302,9 @@ nsHttpConnection::OnStopRequest(nsIRequest *request, nsISupports *ctxt,
         mWriteRequest = 0;
     } 
     else {
+        nsresult rv = FlushBuf();
+        NS_POSTCONDITION(NS_SUCCEEDED(rv), "FlushBuf failed");
+
         // Done reading, so signal transaction complete...
         mState = IDLE;
         mReadRequest = 0;
@@ -318,7 +356,16 @@ nsHttpConnection::OnDataAvailable(nsIRequest *request, nsISupports *context,
     LOG(("nsHttpConnection::OnDataAvailable [this=%x state=%d]\n",
         this, mState));
 
-    return mTransaction->OnDataAvailable(inputStream, count);
+    nsresult rv = FlushBuf();
+    if (NS_FAILED(rv)) return rv;
+
+    NS_ASSERTION(mBufCursor == mBuf, "wtf");
+    NS_ASSERTION(mBufUnread == 0, "wtf");
+
+    rv = inputStream->Read(mBuf, NS_HTTP_SEGMENT_SIZE, &mBufUnread);
+    if (NS_FAILED(rv) || !mBufUnread) return rv;
+
+    return FlushBuf();
 }
 
 //-----------------------------------------------------------------------------

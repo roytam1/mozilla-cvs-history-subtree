@@ -47,7 +47,7 @@ public:
     nsresult AddStandardRequestHeaders(nsHttpHeaderArray *,
                                        PRUint32 capabilities);
 
-    PRBool BrowseAnonymously() { return mBrowseAnonymously; }
+    PRBool SendReferrer() { return mSendReferrer; }
 
     //
     // Connection management methods:
@@ -123,7 +123,7 @@ private:
     // prefs
     PRInt32  mKeepAliveTimeout;
     PRInt32  mMaxConnections;
-    PRInt32  mBrowseAnonymously;
+    PRInt32  mSendReferrer;
     PRUint32 mHttpVersion;
     PRUint32 mCapabilities;
     PRUint32 mProxyCapabilities;

@@ -45,16 +45,16 @@ public:
     // Called to write data to the socket until return NS_BASE_STREAM_CLOSED
     nsresult OnDataWritable(nsIOutputStream *, PRUint32 count);
 
-    // Called to read data from the socket
-    nsresult OnDataAvailable(nsIInputStream *, PRUint32 count);
+    // Called to read data from the socket buffer
+    nsresult OnDataReadable(char *, PRUint32 count, PRUint32 *countRead);
 
-    // Called when the transaction completes, possibly prematurely with an error.
+    // Called when the transaction should stop, possibly prematurely with an error.
     nsresult OnStopTransaction(nsresult);
 
 private:
     nsresult ParseLine(char *line);
-    nsresult HandleSegment(char *segment, PRUint32 count, PRUint32 *countRead);
-    nsresult HandleContent(nsIInputStream *, PRUint32 count, PRBool fromSocket);
+    nsresult ParseHeaders(char *, PRUint32 count, PRUint32 *countRead);
+    nsresult HandleContent(char *, PRUint32 count, PRUint32 *countRead);
     nsresult InstallChunkedDecoder();
 
 private:
@@ -68,7 +68,7 @@ private:
 
     nsHttpResponseHead         *mResponseHead;
 
-    char                       *mReadBuf;         // read ahead buffer
+    //char                       *mReadBuf;         // read ahead buffer
     nsCString                   mLineBuf;         // may contain a partial line
 
     PRInt32                     mContentLength;   // equals -1 if unknown

@@ -25,7 +25,7 @@ nsHttpTransaction::nsHttpTransaction(nsIStreamListener *listener)
     : mListener(listener)
     , mConnection(nsnull)
     , mResponseHead(nsnull)
-    , mReadBuf(0)
+    //, mReadBuf(0)
     , mContentLength(-1)
     , mContentRead(0)
     , mChunkConvCtx(0)
@@ -116,79 +116,40 @@ nsHttpTransaction::OnDataWritable(nsIOutputStream *os, PRUint32 count)
 
 // called on the socket transport thread
 nsresult
-nsHttpTransaction::OnDataAvailable(nsIInputStream *is, PRUint32 count)
+nsHttpTransaction::OnDataReadable(char *buf, PRUint32 count, PRUint32 *countRead)
 {
-    LOG(("nsHttpTransaction::OnDataAvailable [this=%x count=%u]\n",
+    LOG(("nsHttpTransaction::OnDataReadable [this=%x count=%u]\n",
         this, count));
 
-    if (mHaveAllHeaders)
-        // simply pipe the data over to the channel's thread
-        return HandleContent(is, count, PR_TRUE);
+    *countRead = 0;
 
-    //
-    // need to parse status line and headers
-    //
-    
-    // allocate the read ahead buffer if necessary
-    if (!mReadBuf) {
-        mReadBuf = (char *) PR_Malloc(NS_HTTP_SEGMENT_SIZE);
-        if (!mReadBuf)
-            return NS_ERROR_OUT_OF_MEMORY;
-    }
+    if (mHaveAllHeaders)
+        return HandleContent(buf, count, countRead);
 
     nsresult rv;
-    PRUint32 bufCount, offset;
+    PRUint32 offset = 0, bytesConsumed;
 
     while (count) {
-        PRUint32 amount;
+        bytesConsumed = 0;
 
-        // don't exceed the buffer size
-        amount = PR_MIN(count, NS_HTTP_SEGMENT_SIZE);
-
-        bufCount = 0;
-        offset = 0;
-
-        rv = is->Read(mReadBuf, amount, &bufCount);
+        rv = ParseHeaders(buf + offset, count, &bytesConsumed);
         if (NS_FAILED(rv)) return rv;
 
-        while (bufCount) {
-            PRUint32 bytesConsumed = 0;
-            rv = HandleSegment(mReadBuf + offset, bufCount, &bytesConsumed);
-            if (NS_FAILED(rv)) return rv;
+        count -= bytesConsumed;
+        offset += bytesConsumed;
+        *countRead += bytesConsumed;
 
-            bufCount -= bytesConsumed;
-            count -= bytesConsumed;
-            offset += bytesConsumed;
-
-            // see if we're done reading headers
-            if (mHaveAllHeaders)
-                goto done;
-        }
+        // see if we're done reading headers
+        if (mHaveAllHeaders)
+            break;
     }
 
-done:
-    if (mHaveAllHeaders) {
-        if (bufCount) {
-            nsCOMPtr<nsISupports> sup;
-            // the read ahead buffer still has some data in it which we need
-            // to send up stream before reading any more from the socket.
-            rv = NS_NewByteInputStream(getter_AddRefs(sup),
-                                       mReadBuf + offset,
-                                       bufCount);
-            if (NS_FAILED(rv)) return rv;
+    if (count) {
+        // try to read some more from the socket
+        rv = HandleContent(buf + offset, count, &bytesConsumed);
+        if (NS_FAILED(rv)) return rv;
 
-            nsCOMPtr<nsIInputStream> stream = do_QueryInterface(sup, &rv);
-            if (NS_FAILED(rv)) return rv;
-
-            rv = HandleContent(stream, bufCount, PR_FALSE);
-            // the stream listener proxy should have room for all of the data
-            // in this stream.
-            NS_POSTCONDITION(rv != NS_BASE_STREAM_WOULD_BLOCK, "bad listener");
-            bufCount = 0;
-            if (NS_FAILED(rv)) return rv;
-        }
-        if (count) // try to read some more from the socket
-            return HandleContent(is, count, PR_TRUE);
+        *countRead += bytesConsumed;
     }
     return NS_OK;
 }
@@ -200,10 +161,12 @@ nsHttpTransaction::OnStopTransaction(nsresult status)
     LOG(("nsHttpTransaction::OnStopTransaction [this=%x status=%x]\n",
         this, status));
 
+    /*
     if (mReadBuf) {
         PR_Free(mReadBuf);
         mReadBuf = 0;
     }
+    */
 
     if (!mFiredOnStart) {
         mFiredOnStart = PR_TRUE;
@@ -245,9 +208,9 @@ nsHttpTransaction::ParseLine(char *line)
 }
 
 nsresult
-nsHttpTransaction::HandleSegment(char *segment,
-                                 PRUint32 count,
-                                 PRUint32 *countRead)
+nsHttpTransaction::ParseHeaders(char *buf,
+                                PRUint32 count,
+                                PRUint32 *countRead)
 {
     char *eol;
 
@@ -255,24 +218,24 @@ nsHttpTransaction::HandleSegment(char *segment,
 
     NS_PRECONDITION(!mHaveAllHeaders, "oops");
 
-    while ((eol = PL_strstr(segment, "\r\n")) != nsnull) {
-        // found line in range [segment:eol]
+    while ((eol = PL_strstr(buf, "\r\n")) != nsnull) {
+        // found line in range [buf:eol]
         *eol = 0;
 
         // we may have a partial line to complete...
         if (!mLineBuf.IsEmpty()) {
-            mLineBuf.Append(segment);
+            mLineBuf.Append(buf);
             ParseLine((char *) mLineBuf.get());
             mLineBuf.SetLength(0);
         }
         else
-            ParseLine(segment);
+            ParseLine(buf);
 
-        *countRead += (eol + 2 - segment);
+        *countRead += (eol + 2 - buf);
         NS_ASSERTION(*countRead <= count, "oops");
 
         // skip over line
-        segment = eol + 2;
+        buf = eol + 2;
 
         if (mHaveAllHeaders)
             break;
@@ -280,7 +243,7 @@ nsHttpTransaction::HandleSegment(char *segment,
 
     if (!mHaveAllHeaders && (count > *countRead)) {
         // remember this partial line
-        mLineBuf.Assign(segment, count - *countRead);
+        mLineBuf.Assign(buf, count - *countRead);
     }
 
     // read something
@@ -288,9 +251,9 @@ nsHttpTransaction::HandleSegment(char *segment,
 }
 
 nsresult
-nsHttpTransaction::HandleContent(nsIInputStream *stream,
+nsHttpTransaction::HandleContent(char *buf,
                                  PRUint32 count,
-                                 PRBool fromSocket)
+                                 PRUint32 *countRead)
 {
     nsresult rv;
 
@@ -328,36 +291,36 @@ nsHttpTransaction::HandleContent(nsIInputStream *stream,
             mResponseHead->PeekHeader(nsHttp::Transfer_Encoding);
         if (val) {
             // we only support the "chunked" transfer encoding right now.
+            /*
             rv = InstallChunkedDecoder();
             if (NS_FAILED(rv)) {
                 LOG(("InstallChunkedDecoder failed with [rv=%x]\n", rv));
                 return rv;
             }
+            */
         }
     }
 
-    // we cannot trust that all of "count" data will be read, so we have to
-    // interogate the stream for the number of bytes read.
-    PRUint32 before = 0, after = 0;
-    nsCOMPtr<nsISeekableStream> seekable = do_QueryInterface(stream);
-    if (seekable)
-        seekable->Tell(&before);
+    // get an input stream to the buffer
+    nsCOMPtr<nsISupports> sup;
+    rv = NS_NewByteInputStream(getter_AddRefs(sup), buf, count);
+    if (NS_FAILED(rv)) return rv;
+    nsCOMPtr<nsIInputStream> stream = do_QueryInterface(sup, &rv);
+    if (NS_FAILED(rv)) return rv;
 
     rv = mListener->OnDataAvailable(this, nsnull, stream, mContentRead, count);
     if (NS_FAILED(rv)) return rv;
 
-    // get the stream position now to see how much was read.
-    if (seekable)
-        seekable->Tell(&after);
-    else
-        after = count;
+    // figure out how much was read
+    rv = stream->Available(countRead);
+    if (NS_FAILED(rv)) return rv;
+    *countRead = (count - *countRead);
 
     // update count of content bytes read..
-    NS_ASSERTION(after >= before, "invalid stream offset!");
-    mContentRead += (after - before);
+    mContentRead += *countRead;
 
     LOG(("nsHttpTransaction [this=%x count=%u read=%u mContentRead=%u mContentLength=%d]\n",
-        this, count, after - before, mContentRead, mContentLength));
+        this, count, *countRead, mContentRead, mContentLength));
 
     // check for end-of-file
     if ((mContentRead == PRUint32(mContentLength)) ||

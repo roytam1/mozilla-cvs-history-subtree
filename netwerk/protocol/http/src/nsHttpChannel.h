@@ -7,6 +7,7 @@
 #include "nsIURI.h"
 #include "nsILoadGroup.h"
 #include "nsIInterfaceRequestor.h"
+#include "nsIInputStream.h"
 #include "nsCOMPtr.h"
 #include "nsXPIDLString.h"
 
@@ -43,7 +44,7 @@ private:
     nsresult SetupTransaction();
     nsresult BuildConnectionInfo(nsHttpConnectionInfo **);
     nsresult BuildStreamListenerProxy(nsIStreamListener **);
-    nsresult ProcessServerResponse();
+    nsresult ProcessResponse();
     nsresult ProcessNormal();
     nsresult ProcessNotModified();
     nsresult ProcessRedirection(PRUint32 httpStatus);
@@ -57,6 +58,7 @@ private:
     nsCOMPtr<nsISupports>           mOwner;
     nsCOMPtr<nsIInterfaceRequestor> mCallbacks;
     nsCOMPtr<nsIURI>                mReferrer;
+    nsCOMPtr<nsIInputStream>        mUploadStream;
 
     nsHttpRequestHead               mRequestHead;
     nsHttpResponseHead             *mResponseHead;
@@ -71,6 +73,7 @@ private:
     PRUint32                        mStatus;
 
     PRPackedBool                    mIsPending;
+    PRPackedBool                    mApplyConversion;
 };
 
 #endif

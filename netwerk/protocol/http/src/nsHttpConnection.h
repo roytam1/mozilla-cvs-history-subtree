@@ -48,9 +48,9 @@ public:
 
     PRBool   CanReuse(); // can this connection be reused?
     PRBool   IsAlive();
-    PRUint32 ReuseCount() { return mReuseCount; }
+    PRUint32 ReuseCount()    { return mReuseCount; }
     PRUint32 MaxReuseCount() { return mMaxReuseCount; }
-    PRUint32 IdleTimeout() { return mIdleTimeout; }
+    PRUint32 IdleTimeout()   { return mIdleTimeout; }
 
     //nsISocketTransport   *SocketTransport() { return mTransport.get(); }
     nsHttpTransaction    *Transaction()     { return mTransaction; }
@@ -67,17 +67,26 @@ private:
 
     nsresult ActivateConnection();
     nsresult CreateTransport();
+    nsresult FlushBuf();
 
 private:
     nsCOMPtr<nsISocketTransport> mSocketTransport;
     nsCOMPtr<nsIRequest>         mWriteRequest;
     nsCOMPtr<nsIRequest>         mReadRequest;
+
     nsHttpTransaction           *mTransaction;    // hard ref
     nsHttpConnectionInfo        *mConnectionInfo; // hard ref
+
+    // read buffer
+    char                        *mBuf;
+    char                        *mBufCursor;
+    PRUint32                     mBufUnread;
+
     PRUint32                     mState;
     PRUint32                     mReuseCount;
     PRUint32                     mMaxReuseCount; // value of keep-alive: max=
     PRUint32                     mIdleTimeout;   // value of keep-alive: timeout=
+
     PRPackedBool                 mKeepAlive;
 };
 

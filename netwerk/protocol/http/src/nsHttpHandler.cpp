@@ -44,7 +44,7 @@ nsHttpHandler *nsHttpHandler::mGlobalInstance = 0;
 nsHttpHandler::nsHttpHandler()
     : mKeepAliveTimeout(10)
     , mMaxConnections(10)
-    , mBrowseAnonymously(0)
+    , mSendReferrer(0)
     , mHttpVersion(HTTP_VERSION_1_1)
     , mCapabilities(ALLOW_KEEPALIVE)
     , mProxyCapabilities(ALLOW_KEEPALIVE)
@@ -604,8 +604,8 @@ nsHttpHandler::PrefsChanged(const char *pref)
     if (bChangedAll || PL_strcmp(pref, "network.http.max-connections") == 0)
         mPrefs->GetIntPref("network.http.max-connections", &mMaxConnections);
 
-    if (bChangedAll || PL_strcmp(pref, "network.http.browse-anonymously") == 0)
-        mPrefs->GetIntPref("network.http.browse-anonymously", &mBrowseAnonymously);
+    if (bChangedAll || PL_strcmp(pref, "network.http.send-referrer") == 0)
+        mPrefs->GetIntPref("network.http.send-referrer", &mSendReferrer);
 
     if (bChangedAll || PL_strcmp(pref, "network.http.version") == 0) {
         nsXPIDLCString httpVersion;
