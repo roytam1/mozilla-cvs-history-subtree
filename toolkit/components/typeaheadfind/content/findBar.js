@@ -241,7 +241,7 @@ function highlight(range, node)
   return node;
 }
 
-function getSelectionController(ds)
+function getSelectionControllerForFindToolbar(ds)
 {
   var display = ds.QueryInterface(Components.interfaces.nsIInterfaceRequestor).getInterface(Components.interfaces.nsISelectionDisplay);
   if (!display)
@@ -265,7 +265,7 @@ function changeSelectionColor(aAttention)
                                         Components.interfaces.nsIDocShell.ENUMERATE_FORWARDS);
   while (dsEnum.hasMoreElements()) {
     ds = dsEnum.getNext().QueryInterface(Components.interfaces.nsIDocShell);
-    var controller = getSelectionController(ds);
+    var controller = getSelectionControllerForFindToolbar(ds);
     if (!controller)
       continue;
     const selCon = Components.interfaces.nsISelectionController;
