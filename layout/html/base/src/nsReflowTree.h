@@ -58,6 +58,8 @@
 class nsIFrame;
 class nsHTMLReflowCommand;
 
+#define NS_FRAME_TRACE_TREE 0x10
+
 class nsReflowTree
 {
 public:
@@ -101,7 +103,7 @@ public:
         public:
             Iterator(Node *node) : mNode(node), mPos(nsnull) { }
             ~Iterator() { }
-#ifdef DEBUG
+#ifdef NS_DEBUG
             void AssertFrame(nsIFrame *aIFrame);
 #endif
             Node *NextChild();
@@ -110,15 +112,19 @@ public:
             Node *SelectChild(nsIFrame *aChildIFrame);
             Node *CurrentChild() { return mPos ? *mPos : nsnull; }
             Node *CurrentNode()  { return mNode; }
-            PRBool IsTarget()
+#ifdef NS_DEBUG
+            // tricky stuff so we can log IsTarget
+            PRBool IsTarget();
+            PRBool RealIsTarget()
                 {
-#ifdef DEBUG
-                    fprintf(stderr,"IsTarget(%p) = %d\n",
-                            mNode ? mNode->mFrame : nsnull,
-                            mNode ? mNode->IsTarget() : PR_FALSE);
-#endif
                     return mNode ? mNode->IsTarget() : PR_FALSE;
                 }
+#else
+            PRBool IsTarget()
+                {
+                    return mNode ? mNode->IsTarget() : PR_FALSE;
+                }
+#endif
         private:
             Node *mNode;
             Node **mPos;

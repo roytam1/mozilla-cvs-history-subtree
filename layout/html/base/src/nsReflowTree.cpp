@@ -41,8 +41,48 @@
 #include "pldhash.h"
 #include "prenv.h"
 #include "nsReflowTree.h"
+#include "nsFrame.h"
 #include "nsIFrame.h"
 #include "nsHTMLReflowCommand.h"
+
+#ifdef NS_DEBUG
+#define ITERATOR_FRAME_TRACE(_bit,_args)                              \
+  PR_BEGIN_MACRO                                                \
+    if (NS_FRAME_LOG_TEST(nsIFrameDebug::GetLogModuleInfo(),_bit)) { \
+      if (mNode && mNode->GetFrame()) \
+         (NS_REINTERPRET_CAST(nsFrame*,mNode->GetFrame()))->TraceMsg _args ;  \
+    }                                                           \
+  PR_END_MACRO
+
+#define NODE_FRAME_TRACE(_bit,_args)                              \
+  PR_BEGIN_MACRO                                                \
+    if (NS_FRAME_LOG_TEST(nsIFrameDebug::GetLogModuleInfo(),_bit)) { \
+      if (mFrame) \
+         (NS_REINTERPRET_CAST(nsFrame*,mFrame))->TraceMsg _args ;  \
+    }                                                           \
+  PR_END_MACRO
+
+#define TREE_FRAME_TRACE(_bit,_args)                              \
+  PR_BEGIN_MACRO                                                \
+    if (NS_FRAME_LOG_TEST(nsIFrameDebug::GetLogModuleInfo(),_bit)) { \
+      if (mRoot && mRoot->GetFrame()) \
+         (NS_REINTERPRET_CAST(nsFrame*,mRoot->GetFrame()))->TraceMsg _args ;  \
+    }                                                           \
+  PR_END_MACRO
+
+#define TREE_FRAME_DUMP(_bit,_cmd)                              \
+  PR_BEGIN_MACRO                                                \
+    if (NS_FRAME_LOG_TEST(nsIFrameDebug::GetLogModuleInfo(),_bit)) { \
+       _cmd; \
+    }                                                           \
+  PR_END_MACRO
+
+#else
+#define ITERATOR_FRAME_TRACE(_bit,_args)
+#define NODE_FRAME_TRACE(_bit,_args)
+#define TREE_FRAME_TRACE(_bit,_args)
+#define TREE_FRAME_DUMP(_bit,_cmd)
+#endif
 
 // binary and semantically compatible with PLDHashEntryStub
 struct FrameEntry : PLDHashEntryHdr
@@ -263,9 +303,8 @@ nsReflowTree::Node::Iterator::NextChild(nsIFrame **aChildIFrame)
   *aChildIFrame = (mPos && *mPos) ?
       NS_STATIC_CAST(nsReflowTree::Node*, *mPos)->GetFrame() : nsnull;
 
-#ifdef DEBUG
-  fprintf(stderr,"NextChild() = %p\n",result ? result->mFrame : nsnull);
-#endif
+  ITERATOR_FRAME_TRACE(NS_FRAME_TRACE_TREE,
+                 ("NextChild() = %p",result ? result->mFrame : nsnull));
   return result;
 }
 
@@ -276,9 +315,8 @@ nsReflowTree::Node::Iterator::SelectChild(nsIFrame *aChildIFrame)
     ChildChunk *aCurrentChunk;
 
     if (!mNode) {
-#ifdef DEBUG
-        fprintf(stderr,"SelectChild() = %p\n",nsnull);
-#endif
+        ITERATOR_FRAME_TRACE(NS_FRAME_TRACE_TREE,
+                       ("SelectChild() = %p",nsnull));
         return nsnull;
     }
     
@@ -290,9 +328,8 @@ nsReflowTree::Node::Iterator::SelectChild(nsIFrame *aChildIFrame)
     }
     if (*aPos && (*aPos)->mFrame == aChildIFrame)
     {
-#ifdef DEBUG
-        fprintf(stderr,"SelectChild() = %p\n",(*aPos)->mFrame);
-#endif
+        ITERATOR_FRAME_TRACE(NS_FRAME_TRACE_TREE,
+                       ("SelectChild() = %p",(*aPos)->mFrame));
         return *aPos;
     }
 
@@ -302,35 +339,42 @@ nsReflowTree::Node::Iterator::SelectChild(nsIFrame *aChildIFrame)
         } else {
             aCurrentChunk = aCurrentChunk->mNext;
             if (!aCurrentChunk) {
-#ifdef DEBUG
-                fprintf(stderr,"SelectChild() = %p\n",nsnull);
-#endif
+                ITERATOR_FRAME_TRACE(NS_FRAME_TRACE_TREE,
+                               ("SelectChild() = %p",nsnull));
                 return nsnull;
             } else {
                 aPos = &mCurrentChunk->mKids[0];
             }
         }
         if ((*aPos)->mFrame == aChildIFrame) {
-#ifdef DEBUG
-            fprintf(stderr,"SelectChild() = %p\n",(*aPos)->mFrame);
-#endif
+            ITERATOR_FRAME_TRACE(NS_FRAME_TRACE_TREE,
+                           ("SelectChild() = %p",(*aPos)->mFrame));
             return *aPos;
         }
     }
 
-#ifdef DEBUG
-    fprintf(stderr,"SelectChild() = %p\n",nsnull);
-#endif
+    ITERATOR_FRAME_TRACE(NS_FRAME_TRACE_TREE,
+                   ("SelectChild() = %p",nsnull));
     return nsnull;
 }
 
-#ifdef DEBUG
+#ifdef NS_DEBUG
 void
 nsReflowTree::Node::Iterator::AssertFrame(nsIFrame *aIFrame)
 {
     if (mNode) {
         NS_ASSERTION(mNode->mFrame == aIFrame,"Reflow tree out of sync!");
     }
+}
+
+PRBool
+nsReflowTree::Node::Iterator::IsTarget()
+{
+    ITERATOR_FRAME_TRACE(NS_FRAME_TRACE_TREE,
+                   ("IsTarget(%p) = %d\n",
+                    mNode ? mNode->mFrame : nsnull,
+                    mNode ? mNode->IsTarget() : PR_FALSE));
+    return RealIsTarget();
 }
 #endif
 
@@ -360,9 +404,16 @@ nsReflowTree::FrameIsTarget(const nsIFrame *frame)
 void
 nsReflowTree::Node::Dump(FILE *f, int depth)
 {
-    fprintf(f, "%*s|-- %8p", depth, "", (void *)mFrame);
+    char buf[200];
+    char *bufptr;
+
+    sprintf(buf, "%*s|-- %p", depth, "", (void *)mFrame);
+    bufptr = buf + strlen(buf);
     if (IsTarget())
-        fprintf(f, " (%d)", mTargetCount);
+    {
+        sprintf(bufptr, " (%d)", mTargetCount);
+        bufptr += strlen(bufptr);
+    }
 
     nsCOMPtr<nsIAtom> typeAtom;
     mFrame->GetFrameType(getter_AddRefs(typeAtom));
@@ -370,18 +421,28 @@ nsReflowTree::Node::Dump(FILE *f, int depth)
     if (typeAtom) {
         const PRUnichar *unibuf;
         typeAtom->GetUnicode(&unibuf);
-        fprintf(f, " [%s] ", NS_LossyConvertUCS2toASCII(unibuf).get());
+        sprintf(bufptr, " [%s]", NS_LossyConvertUCS2toASCII(unibuf).get());
+        bufptr += strlen(bufptr);
     } else {
-        fputs(" [unknown] ", f);
+        sprintf(bufptr," [unknown] ");
+        bufptr += strlen(bufptr);
     }
 
     nsFrameState state;
     mFrame->GetFrameState(&state);
     if (state & NS_FRAME_IS_DIRTY)
-        putc('D', f);
+    {
+        *bufptr++ = 'D';
+        *bufptr = '\0';
+    }
     if (state & NS_FRAME_HAS_DIRTY_CHILDREN)
-        putc('C', f);
-    putc('\n', f);
+    {
+        *bufptr++ = 'C';
+        *bufptr = '\0';
+    }
+    if (f)
+        fprintf(f,"%s\n",buf);
+    NODE_FRAME_TRACE(NS_FRAME_TRACE_TREE,("%s",buf));
 
     Iterator iter(this);
     Node *child;
@@ -392,6 +453,7 @@ nsReflowTree::Node::Dump(FILE *f, int depth)
 void
 nsReflowTree::Dump()
 {
+    TREE_FRAME_TRACE(NS_FRAME_TRACE_TREE,( "Reflow tree dump:"));
     static FILE *f;
     static PRBool haveCheckedEnv;
     if (!haveCheckedEnv) {
@@ -409,5 +471,8 @@ nsReflowTree::Dump()
     if (f) {
         fputs("Reflow tree dump:\n", f);
         mRoot->Dump(f, 0);
+    }
+    else {
+        TREE_FRAME_DUMP(NS_FRAME_TRACE_TREE,mRoot->Dump(f,0));
     }
 }

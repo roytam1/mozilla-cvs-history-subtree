@@ -934,6 +934,7 @@ nsBoxToBlockAdaptor::Reflow(nsBoxLayoutState& aState,
   return NS_OK;
 }
 
+// XXX FIX!!! shouldn't that be &aReflowState????
 void
 nsBoxToBlockAdaptor::HandleIncrementalReflow(nsBoxLayoutState& aState, 
                                           const nsHTMLReflowState aReflowState,
