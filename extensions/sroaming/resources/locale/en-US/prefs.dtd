@@ -1,20 +1,19 @@
 <!ENTITY sroaming-header.label    "Roaming User">
 <!ENTITY sroamingFiles-header.label "Item Selection">
-<!ENTITY generic.label            "All XXX">
 <!ENTITY descr.label              "Roaming Access allows you to retrieve and store your user profile information from/on a Roaming Access server. Your profile information will then be retrieved from the server on startup and transferred to it on shutdown.">
 <!ENTITY descrFiles.label         "If Roaming Access is enabled (in the Roaming User pane), the following parts of your profile will be transferred to and from the Roaming Access server.">
 <!ENTITY enabled.label            "Enable remote profile storage">
 <!ENTITY enabled.accesskey        "e">
-<!ENTITY protocol.label           "Server Information">
-<!ENTITY protocolSelect.label     "Transfer Method">
-<!ENTITY protocolSelect.accesskey "m">
+<!ENTITY method.label             "Server Information">
+<!ENTITY methodSelect.label       "Transfer Method">
+<!ENTITY methodSelect.accesskey   "m">
 <!ENTITY files.label              "Item Selection">
 <!ENTITY filesDescr.label         "User profile items selected below will be transferred to/from the server.">
 <!ENTITY filesList.accesskey      "i">
 
 
-<!ENTITY protocolCopy.label       "File copy">
-<!ENTITY protocolStream.label     "HTTP / FTP">
+<!ENTITY methodCopy.label         "File copy">
+<!ENTITY methodStream.label       "HTTP / FTP">
 
 <!ENTITY streamURL.label          "Base URL">
 <!ENTITY streamURL.accesskey      "u">

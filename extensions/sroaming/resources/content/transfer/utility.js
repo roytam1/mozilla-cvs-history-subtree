@@ -26,11 +26,11 @@
    of the file transfer.
 */
 
+
+
 ////////////////////////////////////////////////////////////////////////////
 // UI
 ////////////////////////////////////////////////////////////////////////////
-
-
 
 var gStringBundle;
 function GetString(name)
@@ -38,27 +38,49 @@ function GetString(name)
   if (!gStringBundle)
   {
     try {
-      var strBundleService =
-          Components.classes["@mozilla.org/intl/stringbundle;1"].getService(); 
-      strBundleService = 
-          strBundleService.QueryInterface(Components.interfaces.nsIStringBundleService);
-
-      gStringBundle = strBundleService.createBundle("chrome://sroaming/locale/transfer.properties");
-
-    } catch (ex) {}
+      gStringBundle =
+                Components.classes["@mozilla.org/intl/stringbundle;1"]
+                .getService(Components.interfaces.nsIStringBundleService)
+                .createBundle("chrome://sroaming/locale/transfer.properties");
+    } catch (e) {
+      return null;
+    }
   }
-  if (gStringBundle)
-  {
-    try {
-      return gStringBundle.GetStringFromName(name);
-    } catch (e) {}
+  try {
+    return gStringBundle.GetStringFromName(name);
+  } catch (e) {
+    return null;
   }
-  return null;
 }
 
 function GetStringWithFile(stringname, filename)
 {
   return GetString(stringname).replace(/%file%/, filename);
+}
+
+
+
+////////////////////////////////////////////////////////////////////////////
+// Error handling (UI)
+////////////////////////////////////////////////////////////////////////////
+// These functions return a string for display to the user.
+
+/* Accepts either
+   - XPCOM exceptions (with nsresult codes in e.result)
+   - our own errors (e.prop is the name of the error in our string bundle)
+   - objects convertable to string, will be shown to user verbatim.
+     (Only for unexpected errors, because not localized.)
+*/
+function ErrorMessageForException(e)
+{
+  if (!e)
+    return "null";
+  else if (e.result)
+    return ErrorMessageForStatusCode(e.result);
+  else if (e.prop)
+    return GetString(e.prop);
+  else
+    return e.toString();
 }
 
 /* Translates the result of a file transfer into a String for display
@@ -109,14 +131,17 @@ function ErrorMessageForStatusCode(aStatusCode, aFilename)
         statusMessage = statusMessage.replace(/%file%/, aFilename);
 
         // Remove directory from saved prefs
-        // XXX Note that if subdir is good, 
-        //     but filename = next level subdirectory name, 
-        //     we really shouldn't remove subdirectory, 
+        // XXX Note that if subdir is good,
+        //     but filename = next level subdirectory name,
+        //     we really shouldn't remove subdirectory,
         //     but it's impossible to differentiate this case!
         RemoveTransferSubdirectoryFromPrefs(gTransferData, dir);
       }
       else
         statusMessage = GetStringWithFile("FilenameIsSubdir", aFilename);
+      break;
+    case kErrorMalformedURI:
+      statusMessage = GetString("MalformedURI");
       break;
     case kNotConnected:
     case kConnectionRefused:
@@ -138,7 +163,7 @@ function ErrorMessageForStatusCode(aStatusCode, aFilename)
     case kAccessDenied:
       statusMessage = GetStringWithFile("AccessDenied", aFilename);
       break;
-    case kFTPCWD:
+    case kStatusFTPCWD:
       statusMessage = GetStringWithFile("FTPCWD", aFilename);
       break;
     case kErrorAbort:
@@ -154,9 +179,11 @@ function ErrorMessageForStatusCode(aStatusCode, aFilename)
 }
 
 
+
 ////////////////////////////////////////////////////////////////////////////
 // Error handling (general)
 ////////////////////////////////////////////////////////////////////////////
+// Internal, backend, debugging stuff
 
 /*
   This is bad. We should have this in a central place, but I don't know
@@ -168,8 +195,8 @@ function ErrorMessageForStatusCode(aStatusCode, aFilename)
 //   These are translated from C++ error code strings like this:
 //   kFileNotFound = "NS_FILE_NOT_FOUND",
 const kNS_OK = 0;
-const kNetBase = 2152398848;
-const kFilesBase = 2152857600;
+const kNetBase = 2152398848; // 0x804B0000
+const kFilesBase = 2152857600; // 0x80520000
 const kUnknownType = kFilesBase + 04; // nsError.h
 const kDiskFull = kFilesBase + 10; // nsError.h
 const kNoDeviceSpace = kFilesBase + 16; // nsError.h
@@ -177,6 +204,7 @@ const kNameTooLong = kFilesBase + 17; // nsError.h
 const kFileNotFound = kFilesBase + 18; // nsError.h, 0x80520012
 const kAccessDenied = kFilesBase + 21; // nsError.h
 const kNetReset = kNetBase + 20;
+const kErrorMalformedURI = kNetBase + 10; // netCore.h
 const kNotConnected = kNetBase + 12; // netCore.h
 const kConnectionRefused = kNetBase + 13;
 const kNetTimeout = kNetBase + 14;
@@ -214,130 +242,124 @@ const kErrorFTPAuthNeeded = 0x4B001B; // XXX not sure what exactly this is or
    // where it comes from (grep doesn't find it in dec or hex notation), but
    // that's what I get when the credentials are not accepted by the FTP server
 const kErrorFTPAuthFailed = 0x4B001C; // dito
-const kStatusHTTP = 500; // XXX
+const kStatusHTTP = 500; // XXX Hack
 
 // Translates an XPCOM result code into a String similar to the C++ constant.
 function NameForStatusCode(aStatusCode)
 {
-  if (aStatusCode == 0)
-    return "NS_OK";
-  else if (aStatusCode == kStatusReadFrom)
-    return "NET_STATUS_READ_FROM";
-  else if (aStatusCode == kStatusRecievingFrom)
-    return "NET_STATUS_RECEIVING_FROM";
-  else if (aStatusCode == kStatusSendingTo)
-    return "NET_STATUS_SENDING_TO";
-  else if (aStatusCode == kStatusWaitingFor)
-    return "NET_STATUS_WAITING_FOR";
-  else if (aStatusCode == kStatusHTTP)
-    return "See HTTP response";
-  else if (aStatusCode == kStatusResolvingHost)
-    return "NET_STATUS_RESOLVING_HOST";
-  else if (aStatusCode == kStatusConnectedTo)
-    return "NET_STATUS_CONNECTED_TO";
-  else if (aStatusCode == kStatusConnectingTo)
-    return "NET_STATUS_CONNECTING_TO";
-  else if (aStatusCode == kErrorBindingFailed)
-    return "BINDING_FAILED";
-  else if (aStatusCode == kErrorBindingAborted)
-    return "BINDING_ABORTED";
-  else if (aStatusCode == kErrorBindingRedirected)
-    return "BINDING_REDIRECTED";
-  else if (aStatusCode == kErrorBindingRetargeted)
-    return "BINDING_RETARGETED";
-  else if (aStatusCode == kNetBase + 10) // netCore.h
-    return "MALFORMED_URI";
-  else if (aStatusCode == kNetBase + 11) // netCore.h
-    return "ALREADY_CONNECTED";
-  else if (aStatusCode == kNotConnected)
-    return "NOT_CONNECTED";
-  else if (aStatusCode == kConnectionRefused)
-    return "CONNECTION_REFUSED";
-  else if (aStatusCode == kNetTimeout)
-    return "NET_TIMEOUT";
-  else if (aStatusCode == kInProgress)
-    return "IN_PROGRESS";
-  else if (aStatusCode == kOffline)
-    return "OFFLINE";
-  else if (aStatusCode == kNetBase + 17) // netCore.h
-    return "NO_CONTENT";
-  else if (aStatusCode == kNetBase + 18) // netCore.h
-    return "UNKNOWN_PROTOCOL";
-  else if (aStatusCode == kPortAccessNotAllowed)
-    return "PORT_ACCESS_NOT_ALLOWED";
-  else if (aStatusCode == kNetReset)
-    return "NET_RESET";
-  else if (aStatusCode == kStatusFTPLogin)
-    return "FTP_LOGIN";
-  else if (aStatusCode == kStatusFTPCWD)
-    return "FTP_CWD";
-  else if (aStatusCode == kStatusFTPPassive)
-    return "FTP_PASV";
-  else if (aStatusCode == kStatusFTPPWD)
-    return "FTP_PWD";
-  else if (aStatusCode == kStatusBeginFTPTransaction)
-    return "NET_STATUS_BEGIN_FTP_TRANSACTION";
-  else if (aStatusCode == kStatusEndFTPTransaction)
-    return "NET_STATUS_END_FTP_TRANSACTION";
-  else if (aStatusCode == kFilesBase + 1) // nsError.h
-    return "UNRECOGNIZED_PATH";
-  else if (aStatusCode == kFilesBase + 2) // nsError.h
-    return "UNRESOLABLE SYMLINK";
-  else if (aStatusCode == kFilesBase + 4) // nsError.h
-    return "UNKNOWN_TYPE";
-  else if (aStatusCode == kFilesBase + 5) // nsError.h
-    return "DESTINATION_NOT_DIR";
-  else if (aStatusCode == kFilesBase + 6) // nsError.h
-    return "TARGET_DOES_NOT_EXIST";
-  else if (aStatusCode == kFilesBase + 8) // nsError.h
-    return "ALREADY_EXISTS";
-  else if (aStatusCode == kFilesBase + 9) // nsError.h
-    return "INVALID_PATH";
-  else if (aStatusCode == kDiskFull)
-    return "DISK_FULL";
-  else if (aStatusCode == kFilesBase + 11) // nsError.h
-    return "FILE_CORRUPTED (justice department, too)";
-  else if (aStatusCode == kFilesBase + 12) // nsError.h
-    return "NOT_DIRECTORY";
-  else if (aStatusCode == kFilesBase + 13) // nsError.h
-    return "IS_DIRECTORY";
-  else if (aStatusCode == kFilesBase + 14) // nsError.h
-    return "IS_LOCKED";
-  else if (aStatusCode == kFilesBase + 15) // nsError.h
-    return "TOO_BIG";
-  else if (aStatusCode == kNoDeviceSpace)
-    return "NO_DEVICE_SPACE";
-  else if (aStatusCode == kNameTooLong)
-    return "NAME_TOO_LONG";
-  else if (aStatusCode == kFileNotFound)
-    return "FILE_NOT_FOUND";
-  else if (aStatusCode == kFilesBase + 19) // nsError.h
-    return "READ_ONLY";
-  else if (aStatusCode == kFilesBase + 20) // nsError.h
-    return "DIR_NOT_EMPTY";
-  else if (aStatusCode == kAccessDenied)
-    return "ACCESS_DENIED";
-  else if (aStatusCode == kNoConnectionOrTimeout)
-    return "NO_CONNECTION_OR_TIMEOUT";
-  else if (aStatusCode == kErrorFTPAuthNeeded)
-    return "FTP auth needed ?";
-  else if (aStatusCode == kErrorFTPAuthFailed)
-    return "FTP auth failed ?";
-  else
-    return prettyError(aStatusCode);
+  switch (aStatusCode)
+  {
+    case 0:
+      return "NS_OK";
+    case kStatusReadFrom:
+      return "NET_STATUS_READ_FROM";
+    case kStatusRecievingFrom:
+      return "NET_STATUS_RECEIVING_FROM";
+    case kStatusSendingTo:
+      return "NET_STATUS_SENDING_TO";
+    case kStatusWaitingFor:
+      return "NET_STATUS_WAITING_FOR";
+    case kStatusHTTP:
+      return "See HTTP response";
+    case kStatusResolvingHost:
+      return "NET_STATUS_RESOLVING_HOST";
+    case kStatusConnectedTo:
+      return "NET_STATUS_CONNECTED_TO";
+    case kStatusConnectingTo:
+      return "NET_STATUS_CONNECTING_TO";
+    case kErrorBindingFailed:
+      return "BINDING_FAILED";
+    case kErrorBindingAborted:
+      return "BINDING_ABORTED";
+    case kErrorBindingRedirected:
+      return "BINDING_REDIRECTED";
+    case kErrorBindingRetargeted:
+      return "BINDING_RETARGETED";
+    case kErrorMalformedURI:
+      return "MALFORMED_URI";
+    case kNetBase + 11: // netCore.h
+      return "ALREADY_CONNECTED";
+    case kNotConnected:
+      return "NOT_CONNECTED";
+    case kConnectionRefused:
+      return "CONNECTION_REFUSED";
+    case kNetTimeout:
+      return "NET_TIMEOUT";
+    case kInProgress:
+      return "IN_PROGRESS";
+    case kOffline:
+      return "OFFLINE";
+    case kNetBase + 17: // netCore.h
+      return "NO_CONTENT";
+    case kNetBase + 18: // netCore.h
+      return "UNKNOWN_PROTOCOL";
+    case kPortAccessNotAllowed:
+      return "PORT_ACCESS_NOT_ALLOWED";
+    case kNetReset:
+      return "NET_RESET";
+    case kStatusFTPLogin:
+      return "FTP_LOGIN";
+    case kStatusFTPCWD:
+      return "FTP_CWD";
+    case kStatusFTPPassive:
+      return "FTP_PASV";
+    case kStatusFTPPWD:
+      return "FTP_PWD";
+    case kStatusBeginFTPTransaction:
+      return "NET_STATUS_BEGIN_FTP_TRANSACTION";
+    case kStatusEndFTPTransaction:
+      return "NET_STATUS_END_FTP_TRANSACTION";
+    case kFilesBase + 1: // nsError.h
+      return "UNRECOGNIZED_PATH";
+    case kFilesBase + 2: // nsError.h
+      return "UNRESOLABLE SYMLINK";
+    case kFilesBase + 4: // nsError.h
+      return "UNKNOWN_TYPE";
+    case kFilesBase + 5: // nsError.h
+      return "DESTINATION_NOT_DIR";
+    case kFilesBase + 6: // nsError.h
+      return "TARGET_DOES_NOT_EXIST";
+    case kFilesBase + 8: // nsError.h
+      return "ALREADY_EXISTS";
+    case kFilesBase + 9: // nsError.h
+      return "INVALID_PATH";
+    case kDiskFull:
+      return "DISK_FULL";
+    case kFilesBase + 11: // nsError.h
+      return "FILE_CORRUPTED (justice department, too)";
+    case kFilesBase + 12: // nsError.h
+      return "NOT_DIRECTORY";
+    case kFilesBase + 13: // nsError.h
+      return "IS_DIRECTORY";
+    case kFilesBase + 14: // nsError.h
+      return "IS_LOCKED";
+    case kFilesBase + 15: // nsError.h
+      return "TOO_BIG";
+    case kNoDeviceSpace:
+      return "NO_DEVICE_SPACE";
+    case kNameTooLong:
+      return "NAME_TOO_LONG";
+    case kFileNotFound:
+      return "FILE_NOT_FOUND";
+    case kFilesBase + 19: // nsError.h
+      return "READ_ONLY";
+    case kFilesBase + 20: // nsError.h
+      return "DIR_NOT_EMPTY";
+    case kAccessDenied:
+      return "ACCESS_DENIED";
+    case kNoConnectionOrTimeout:
+      return "NO_CONNECTION_OR_TIMEOUT";
+    case kErrorFTPAuthNeeded:
+      return "FTP auth needed ?";
+    case kErrorFTPAuthFailed:
+      return "FTP auth failed ?";
+    default:
+      for (a in Components.results)
+        if (Components.results[a]==aStatusCode)
+          return a;
+      return String(aStatusCode);
+  }
 }
-
-function prettyError(num)
-{
-  for (a in Components.results)
-    if (Components.results[a]==num)
-      return a;
-  return String(num);
-}
-
-
-
-
 
 
 
@@ -345,29 +367,30 @@ function prettyError(num)
 // Debugging (backend and UI)
 ////////////////////////////////////////////////////////////////////////////
 
-
-
-
 // Turn this on to get debug output.
 const debugOutput = true;
-function ddump(text) {
-  if (debugOutput) {
+function ddump(text)
+{
+  if (debugOutput)
     dump(text + "\n");
-  }
 }
-function ddumpCont(text) {
-  if (debugOutput) {
+function ddumpCont(text)
+{
+  if (debugOutput)
     dump(text);
-  }
 }
-function dumpObject(obj, name, maxDepth, curDepth) {
+function dumpObject(obj, name, maxDepth, curDepth)
+{
+  if (!debugOutput)
+    return;
   if (curDepth == undefined)
     curDepth = 0;
   if (maxDepth != undefined && curDepth > maxDepth)
     return;
 
   var i = 0;
-  for (prop in obj) {
+  for (prop in obj)
+  {
     i++;
     if (typeof(obj[prop]) == "object")
     {
@@ -386,6 +409,7 @@ function dumpObject(obj, name, maxDepth, curDepth) {
   if (!i)
     ddump(name + " is empty");    
 }
-function dumpError(text) {
+function dumpError(text)
+{
   dump(text + "\n");
 }

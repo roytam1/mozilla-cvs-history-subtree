@@ -60,12 +60,12 @@ static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 
 #define kRegTreeRoaming (NS_LITERAL_STRING("Roaming"))
 #define kRegKeyEnabled (NS_LITERAL_CSTRING("Enabled"))
-#define kRegKeyProtocol (NS_LITERAL_STRING("Protocol"))
+#define kRegKeyMethod (NS_LITERAL_STRING("Method"))
 #define kRegKeyFiles (NS_LITERAL_STRING("Files"))
-#define kRegValProtocolStream (NS_LITERAL_STRING("stream"))
-#define kRegValProtocolCopy (NS_LITERAL_STRING("copy"))
+#define kRegValMethodStream (NS_LITERAL_STRING("stream"))
+#define kRegValMethodCopy (NS_LITERAL_STRING("copy"))
 
-#define kConflDlg "chrome://sroaming/content/transfer/conflictresolve.xul"
+#define kConflDlg "chrome://sroaming/content/transfer/conflictResolve.xul"
 
 
 NS_IMPL_ISUPPORTS1(mozSRoaming,
@@ -77,7 +77,7 @@ mozSRoaming::mozSRoaming()
     printf("mozSRoaming ctor\n");
     mHavePrefs = PR_FALSE;
     mIsRoaming = PR_FALSE;
-    mProtocol = 0;
+    mMethod = 0;
 }
 
 mozSRoaming::~mozSRoaming()
@@ -105,7 +105,7 @@ printf("\n\n\n!!!! beginsession\n\n\n\n");
     if (!mIsRoaming)
         return NS_OK;
 
-    mozSRoamingProtocol* proto = CreateProtocolHandler();
+    mozSRoamingProtocol* proto = CreateMethodHandler();
     if (!proto)
         return NS_ERROR_ABORT;
 
@@ -143,7 +143,7 @@ printf("\n\n\n!!!! endsession\n\n\n\n");
     if (!mIsRoaming)
         return NS_OK;
 
-    mozSRoamingProtocol* proto = CreateProtocolHandler();
+    mozSRoamingProtocol* proto = CreateMethodHandler();
     if (!proto)
         return NS_ERROR_ABORT;
 
@@ -202,9 +202,9 @@ nsCOMPtr<nsIFile> mozSRoaming::ProfileDir()
     return result;
 }
 
-PRInt32 mozSRoaming::Protocol()
+PRInt32 mozSRoaming::Method()
 {
-    return mProtocol;
+    return mMethod;
 }
 
 nsresult
@@ -377,20 +377,20 @@ nsresult mozSRoaming::ReadRoamingPrefs()
     if (!mIsRoaming)
       return rv;
 
-    // Protocol
+    // Method
     nsXPIDLString proto;
-    rv = registry->GetString(regkey, kRegKeyProtocol.get(),
+    rv = registry->GetString(regkey, kRegKeyMethod.get(),
                              getter_Copies(proto));
     if (NS_FAILED(rv))
     {
-        printf("registry read of Protocol failed: error 0x%x\n", rv);
+        printf("registry read of Method failed: error 0x%x\n", rv);
         return rv;
     }
-    if (proto == kRegValProtocolStream)
-        mProtocol = 1;
-    else if (proto == kRegValProtocolCopy)
-        mProtocol = 2;
-    printf("protocol: %d\n", mProtocol);
+    if (proto == kRegValMethodStream)
+        mMethod = 1;
+    else if (proto == kRegValMethodCopy)
+        mMethod = 2;
+    printf("method: %d\n", mMethod);
 
     // Files
     nsXPIDLString files_reg;
@@ -423,12 +423,12 @@ void mozSRoaming::PrefsDone()
 }
 
 
-mozSRoamingProtocol* mozSRoaming::CreateProtocolHandler()
+mozSRoamingProtocol* mozSRoaming::CreateMethodHandler()
 {
-    printf("mozSRoaming::CreateProtocolHandler\n");
-    if (mProtocol == 1)
+    printf("mozSRoaming::CreateMethodHandler\n");
+    if (mMethod == 1)
         return new mozSRoamingStream;
-    else if (mProtocol == 2)
+    else if (mMethod == 2)
         return new mozSRoamingCopy;
     else // 0=unknown, e.g. prefs not yet read, or invalid
         return 0;

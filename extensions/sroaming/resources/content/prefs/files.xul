@@ -7,9 +7,15 @@
 <page id="winPref"
       xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
       onload="parent.initPanel('chrome://sroaming/content/prefs/files.xul');"
+      onunload="Unload();"
       headertitle="&sroamingFiles-header.label;">
 
-  <script type="application/x-javascript" src="chrome://sroaming/content/prefs/files.js"/>
+  <script type="application/x-javascript"
+          src="chrome://sroaming/content/transfer/utility.js"/>
+  <script type="application/x-javascript"
+          src="chrome://sroaming/content/prefs/all.js"/>
+  <script type="application/x-javascript"
+          src="chrome://sroaming/content/prefs/files.js"/>
 
   <description>&descrFiles.label;</description>
   <vbox id="roamingSettings" flex="1">
@@ -23,21 +29,19 @@
         accesskey="&filesList.accesskey;" />
 -->
 <!--
-  Defaults should be marked checked here (should move that to a pref one day).
+  Defaults are set in the default pref "roaming.default.files".
   If you want to hide something from the normal user, don't mark it hidden,
-  but comment it out. if the user added it manually (in prefs.js), it will
-  then still show up as expected, otherwise not.
+  but comment it out. Otherwise it will not show up as expected, if the user
+  added it manually (in prefs.js).
 -->
       <listbox id="filesList" flex="1">
         <listitem type="checkbox"
           id="bookmarks"
           filename="bookmarks.html"
-          checked="true"
           label="&bookmarks.label;" />
         <listitem type="checkbox"
           id="addressbook"
           filename="abook.mab"
-          checked="true"
           label="&addressbook.label;" />
         <listitem type="checkbox"
           id="ab-history"
@@ -46,12 +50,10 @@
         <listitem type="checkbox"
           id="cookies"
           filename="cookies.txt"
-          checked="true"
           label="&cookies.label;" />
         <listitem type="checkbox"
           id="cookperm"
           filename="cookperm.txt"
-          checked="true"
           label="&cookperm.label;" />
         <listitem type="checkbox"
           id="passwords"
@@ -68,7 +70,6 @@
         <listitem type="checkbox"
           id="sidebar"
           filename="panels.rdf"
-          checked="true"
           label="&sidebar.label;" />
         <listitem type="checkbox"
           id="localstorerdf"
@@ -77,7 +78,8 @@
         <listitem type="checkbox"
           id="userstuff"
           filename="user.js"
-          morefilenames="user.js, chrome/userChrome.css, chrome/userContent.css - doesn't work, duh"
+          morefilenames="user.js,chrome/userChrome.css,chrome/userContent.css
+                         - doesn't work, duh"
           label="&userstuff.label;" />
         <listitem type="checkbox"
           id="mailViews"
@@ -86,12 +88,12 @@
 <!--
         <listitem type="checkbox"
           id="filters"
-          filename="mailserver/rules.dat and mailserver/msgFilterRules.dat - crap"
+          filename="mailserver/rules.dat and mailserver/msgFilterRules.dat
+                    - crap"
           label="&filters.label;" />
         <listitem type="checkbox"
           id="newsrc"
           filename="newsserver/*.rc - dito"
-          hidden="true"
           label="&newsrc.label;" />
 -->
         <listitem type="checkbox"

@@ -7,44 +7,47 @@
 <page id="winPref"
       xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
       onload="parent.initPanel('chrome://sroaming/content/prefs/top.xul');"
+      onunload="Unload();"
       headertitle="&sroaming-header.label;">
 
-  <script type="application/x-javascript" src="chrome://sroaming/content/prefs/top.js"/>
+  <script type="application/x-javascript"
+          src="chrome://sroaming/content/transfer/utility.js"/>
+  <script type="application/x-javascript"
+          src="chrome://sroaming/content/prefs/all.js"/>
+  <script type="application/x-javascript"
+          src="chrome://sroaming/content/prefs/top.js"/>
 
   <description>&descr.label;</description>
 
-<!-- <groupbox id="generic">
-    <caption label="&generic.label;" />
--->
   <checkbox id="enabled"
-    oncommand="EnableTree(this.checked, E('roamingSettings'));
-               parent.roaming.enabled = this.checked;"
-    class="indent"
-    label="&enabled.label;"
-    accesskey="&enabled.accesskey;" />
-<!--  </groupbox>-->
-  <vbox id="roamingSettings" flex="1">
+            aoncommand="EnableTree(this.checked, E('roamingSettings'));
+                        parent.roaming.enabled = this.checked;"
+            oncommand="SwitchChanged();"
+            class="indent"
+            label="&enabled.label;"
+            accesskey="&enabled.accesskey;"
+            />
 
-  <groupbox id="protocol">
-    <caption label="&protocol.label;" />
+  <groupbox id="method">
+    <caption label="&method.label;" />
     <vbox>
-      <menulist id="protocolSelect"
-         oncommand="SwitchDeck(this.selectedItem.value,
-                               'protocolSettingsDeck');">
+      <menulist id="methodSelect"
+                oncommand="SwitchChanged();"
+                >
          <menupopup>
            <menuitem
-             value="0"
-             regVal="stream"
-             label="&protocolStream.label;" />
-         <menuitem
-            value="1"
-            regVal="copy"
-            label="&protocolCopy.label;" />
+               value="0"
+               label="&methodStream.label;"
+               />
+           <menuitem
+               value="1"
+               label="&methodCopy.label;"
+               />
          </menupopup>
       </menulist>
    </vbox>
 
-   <deck id="protocolSettingsDeck">
+   <deck id="methodSettingsDeck">
       <vbox id="streamSettings">
          <grid flex="1">
             <columns>
@@ -55,32 +58,35 @@
                <row>
                   <hbox align="center">
                     <label control="streamURL"
-                      value="&streamURL.label;"
-                      accesskey="&streamURL.accesskey;" />
+                           value="&streamURL.label;"
+                           accesskey="&streamURL.accesskey;"
+                           />
                   </hbox>
                   <textbox id="streamURL" />
                </row>
                <row>
                   <hbox align="center">
                     <label control="streamUsername"
-                      value="&streamUsername.label;"
-                      accesskey="&streamUsername.accesskey;" />
+                           value="&streamUsername.label;"
+                           accesskey="&streamUsername.accesskey;"
+                           />
                   </hbox>
                   <textbox id="streamUsername" />
                </row>
                <row>
                   <hbox />
                   <checkbox id="streamSavePW"
-                    oncommand="EnableElement(this.checked, this,
-                                             'streamPassword');"
-                    label="&streamSavePW.label;"
-                    accesskey="&streamSavePW.accesskey;" />
+                            oncommand="SwitchChanged();"
+                            label="&streamSavePW.label;"
+                            accesskey="&streamSavePW.accesskey;"
+                            />
                </row>
                <row>
                   <hbox align="center">
                     <label control="streamPassword"
-                      value="&streamPassword.label;"
-                      accesskey="&streamPassword.accesskey;" />
+                           value="&streamPassword.label;"
+                           accesskey="&streamPassword.accesskey;"
+                           />
                   </hbox>
                   <textbox type="password" id="streamPassword" />
                </row>
@@ -89,13 +95,12 @@
       </vbox>
       <vbox id="copySettings">
         <label control="copyDir"
-          value="&copyDir.label;"
-          accesskey="&copyDir.accesskey;" />
+               value="&copyDir.label;"
+               accesskey="&copyDir.accesskey;"
+               />
         <textbox id="copyDir" />
       </vbox>
     </deck>
   </groupbox>
-
-  </vbox>
 
 </page>

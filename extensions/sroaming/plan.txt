@@ -1,29 +1,19 @@
-now
-- pref
-- conflict
-- rewrite dialog
-
-
-- XXXs
-  - pref dialog loses state
-  - pref dialog saves (only) "," as files pref
-  - small stuff
+- rework
+  - conflict
+  - rewrite dialog
+- Bugs
   - no upload at switch profile
 - error handling
-  - empty pref
   - ftp
+    - trunk: offline
     - malformed url (or cancelled auth?) stops and then goes back to busy.
       reports success, but failed.
-    - offline (trunk)
   - http
-    m wrong path in url (but working server)
+    - trunk: upload fails on trunk with "not initialized"
+    m wrong path in url (but working server) vv
     - test same situations with ftp
-    - no user name (upload to <http://checker/roaming/ben/localstore.rdf>
-           gives NS_OK) v
   - ui: (error/success) messages
   - cancel by user in progress dialog: xpconnect errors
-  m if something fails horribly (e.g. a JS error in the prompt* functions),
-    then the UI reports success or is completely malfunctional.
   - pressing cancel after finished with failed, all files are set to abort
   - copy protocol
     - no remote files yet
@@ -36,6 +26,7 @@ Later:
 - license headers
 - nsresult for internal functions, clean up interfaces
 - warn before saving pw
+- XXXs
 - remove printfs
 - polish
   - conflict ui

@@ -44,9 +44,7 @@ var gCount = 0; // number of files
 function StartUp()
 {
   centerWindowOnScreen();
-
   LoadElements();
-
   ClearParam();
 }
 

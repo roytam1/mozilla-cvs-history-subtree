@@ -37,7 +37,7 @@
 
 /* Copies files from/to another place on the local filesystem */
 
-/* This is a very primitive implementation of a roaming protocol,
+/* This is a very primitive implementation of a roaming method,
    mostly intended for testing purposes. Some users might find it useful
    nevertheless, e.g. to
    - test, if roaming works at all for them

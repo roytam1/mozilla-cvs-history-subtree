@@ -84,7 +84,7 @@ mozSRoamingStream::~mozSRoamingStream()
 
 
 /*
- * nsSRoamingProtocol implementation
+ * nsSRoamingMethod implementation
  */
 
 nsresult mozSRoamingStream::Init(mozSRoaming* aController)
@@ -105,7 +105,7 @@ nsresult mozSRoamingStream::Init(mozSRoaming* aController)
                           &regkey);
     if (NS_FAILED(rv))
     {
-        printf("ERROR: Streaming (FTP, HTTP etc.) protocol for roaming "
+        printf("ERROR: Streaming (FTP, HTTP etc.) method for roaming "
                "not set up for this profile\n");
         return rv;
     }
@@ -229,7 +229,7 @@ nsresult mozSRoamingStream::DownUpLoad(PRBool download)
        That's what I do, and it seems to work. It's still a poor design.
 
        Actually, it's really crap. It destroys my whole design with the
-       pluggable "protocol"s (like stream, copy etc.). Basically everything
+       pluggable "method"s (like stream, copy etc.). Basically everything
        contacting remote servers (i.e. needing a progress dialog) now has to
        either mess around in sroamingTransfer.js or duplicate a certain
        portion of code.
@@ -253,7 +253,7 @@ nsresult mozSRoamingStream::DownUpLoad(PRBool download)
                    0 = false
          String array
            Item 0: unused
-           Item 1: URL of profile dir XXX no url
+           Item 1: URL of profile dir
            Item 2: URL of remote dir
            Item 3: Password
            Item 4..(n+3): filenames

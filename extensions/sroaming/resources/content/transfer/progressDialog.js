@@ -48,12 +48,16 @@ function Startup()
 {
   ddump("In sroaming/transfer/progressDialog::Startup()");
 
-  try {
+  try
+  {
     GetParams(); // also starts transfer
-  } catch (e) {
-  	dumpError("Got bad parameters. Are your Roaming prefs in the " +
-              "registry correct?\n" + e);
-    CloseDialog();
+  }
+  catch (e)
+  {
+    /* All kinds of exceptions should end up here, esp. from init, meaning
+       this is the main last backstop for unexpected or fatal errors,
+       esp. those not related to a certain file. */
+    SetGlobalStatusMessage(ErrorMessageForException(e));
   	return;
   }
 
@@ -110,7 +114,9 @@ function GetParams()
   // files count
   var count = params.GetInt(2);
   ddump("Passing in: Int 2 (files count) is " + count);
-  if (count < 1)
+  if (count == 0)
+    throw GetString("NoFilesSelected");
+  if (count < 0)
     throw "Error: Bad count param";
 
   // save pw
@@ -152,19 +158,12 @@ function GetParams()
     files[i].size = undefined;
   }
 
-  try
-  {
-    gTransfer = new Transfer(download, serial,
-                             profileDir, remoteDir,
-                             password, savepw,
-                             files,
-                             undefined, SetProgressStatus);
-    gTransfer.transfer();
-  }
-  catch (e)
-  {
-    dumpError(e);
-  }
+  gTransfer = new Transfer(download, serial,
+                           profileDir, remoteDir,
+                           password, savepw,
+                           files,
+                           undefined, SetProgressStatus);
+  gTransfer.transfer();
 }
 
 function PassBackParams()
@@ -405,6 +404,8 @@ function onEnterKey()
 
 function SetGlobalStatusMessage(message)
 {
+  alert(message); // XXX
+  CloseDialog(); // XXX
   SetFileStatusMessage(-1, message)
 }
 

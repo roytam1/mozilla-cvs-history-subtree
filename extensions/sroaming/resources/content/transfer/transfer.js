@@ -37,6 +37,20 @@
  
  * ***** END LICENSE BLOCK ***** */
 
+/* Classes to transfer a list of files and to track the transfer progress.
+   It does not provide any UI.
+
+   You basically only need to create a Transfer object and call its transfer()
+   method. The callbacks will then be notified of the progress and possible
+   errors. In the callbacks, you can ask about the status (incl. errors)
+   of the files by reading the properties of the Transfer object
+   (see Transfer.dump() and TransferFile.dump() for a short explanation).
+   The functions in utility.js will help you with interpreting and
+   displaying possible errors.
+
+   The initial version/concept was stolen from Composer's publishing
+   functionality, but heavily modified (probably almost all lines changed). */
+
 const nsIChannel = Components.interfaces.nsIChannel;
 
   /*
@@ -68,6 +82,8 @@ const nsIChannel = Components.interfaces.nsIChannel;
                                we're done. |success|, if it seems that
                                all files have been transferred successfully
                                and completely.
+    @throws e.result==kMalformedURI  bad base URI
+    @throws e.prop=="NoUsername"  no username given
    */
 function Transfer(download, serial,
                   localDir, remoteDir,
@@ -75,15 +91,22 @@ function Transfer(download, serial,
                   files,
                   finishedCallback, progressCallback)
 {
+
+  // from caller
+
   this.download = download;
   this.serial = serial;
   this.localDir = localDir;
   this.remoteDir = remoteDir;
 
-  var ioserv = GetIOService();
-  var uri = ioserv.newURI(remoteDir, null, null);
+  var uri = GetIOService().newURI(remoteDir, null, null);
+             // this will throw an exception, if the user entered a bad URI.
+             // catch in caller
   this.username = uri.username;
+  if (!this.username && this.username == "")
+    throw {prop:"NoUsername"};
   this.password = password;
+  //this.password = this.username && this.username != "" ? password : undefined;
   this.savePassword = savepw; //savepw is when the user checked the checkbox
   this.saveLogin = false;     //savelogin is when we will write to disk
   this.sitename = uri.host;
@@ -97,6 +120,14 @@ function Transfer(download, serial,
                                      files[i].size);
   }
 
+
+  // internal management
+
+  this.cancelled = false; // user pressed cancel. Don't proceed.
+
+
+  // progress
+
   this.progressSizeAll = 0;
   for (var i = 0, l = this.files.length; i < l; i++)
     this.progressSizeAll += this.files[i].size;
@@ -105,12 +136,16 @@ function Transfer(download, serial,
     /* Cumulated size of the files which have been *completely* (not partially)
        transferred. Used to speed up processing of incremental updates. */
 
+
+  // callbacks
+
   if (finishedCallback == null)
     finishedCallback = undefined;
   if (progressCallback == null)
     progressCallback = undefined;
   this.finishedCallback = finishedCallback;
   this.progressCallback = progressCallback;
+
   this.dump();
 }
 Transfer.prototype =
@@ -122,6 +157,7 @@ Transfer.prototype =
   done : function(success)
   {
     ddump("Done(" + (success ? "without" : "with") + " errors)");
+    this.dump();
 
     if (this.finishedCallback)
       this.finishedCallback(success);
@@ -170,6 +206,10 @@ Transfer.prototype =
       }
     }
 
+    // all halted?
+    if (this.cancelled)
+      return 3;
+
     // find the next pending one
     for (var i = 0, l = this.files.length; i < l; i++)
     {
@@ -199,6 +239,8 @@ Transfer.prototype =
     {
       var ioserv = GetIOService();
       var baseURL = ioserv.newURI(this.remoteDir, null, null);
+      //if (this.savePassword && this.password && this.password != ""
+      //    && this.username && this.username != "")
       if (this.savePassword && this.password && this.password != "")
         baseURL.password = this.password;
       var localURL = ioserv.newURI(this.localDir, null, null);
@@ -225,7 +267,7 @@ Transfer.prototype =
                                    .nsISimpleStreamListener);
         var lf = ioserv.newURI(file.filename, null, localURL)
                        .QueryInterface(Components.interfaces.nsIFileURL)
-                       .file.clone();
+                       .file; // readonly
         ddump("to local file " + lf.path);
         try
         {
@@ -313,17 +355,22 @@ Transfer.prototype =
   cancel : function()
   {
     ddump("Canceling transfer");
+    this.cancelled = true;  /* needed so that file.setStatus doesn't start
+                               a next transfer in serial mode */
 
     // network stuff
     for (var i = 0, l = this.files.length; i < l; i++)
     {
-      var channel = this.files[i].channel;
-      if (channel && channel.isPending && this.files[i].status != "done")
+      if (this.files[i].status != "done")
       {
-        channel.cancel(kErrorAbort);
         this.files[i].setStatus("failed", kErrorAbort);
-        /* the above line sets all files in the UI to failed, but that does
-           not close the dialog. */
+        var channel = this.files[i].channel;
+        if (channel && channel.isPending)
+        {
+          channel.cancel(kErrorAbort);
+          /* the above line sets all files in the UI to failed, but that does
+             not close the dialog. */
+        }
       }
     }
     if(this.finishedCallback)
@@ -345,6 +392,8 @@ Transfer.prototype =
      and the overall progress this.progress.
      It will also call the owner's callbacks.
 
+     SLOW! :-(
+
      @param filei  int  index of the file whose progress changed
      @param aProgress  float 0..1  progress of that file
   */
@@ -355,18 +404,21 @@ Transfer.prototype =
 
     ddump("Transfer.progressChanged(" + filei + ", " + aProgress + ")");
 
-    this.files[filei].progress = aProgress;
+    var file = this.files[filei];
+    file.progress = aProgress;
+    //this.files[filei].progress = aProgress;
 
     if (this.progressSizeAll == 0) // undetermined mode
       return;
 
-    var file = this.files[filei]; // don't move up
+    //var file = this.files[filei]; // don't move up
 
     // avoid too many updates
     if (file.progress - file.progressPrevious < 0.01)
       return;
     else
-      this.files[filei].progressPrevious = file.progress;
+      //this.files[filei].progressPrevious = file.progress;
+      file.progressPrevious = file.progress;
 
 
     // calculate progress
@@ -513,8 +565,6 @@ Transfer.prototype =
       ddump("  File " + i + ":");
       this.files[i].dump();
     }
-    //ddump(" finished callback: " + this.finishedCallback);
-    //ddump(" progress callback: " + this.progressCallback);
     ddump(" finished callback: " + (this.finishedCallback ? "exists":"none"));
     ddump(" progress callback: " + (this.progressCallback ? "exists":"none"));
   }
@@ -632,6 +682,7 @@ function TransferProgressListener(transfer, filei)
 {
   this.transfer = transfer;  // this creates a cyclic reference :-(
   this.filei = filei;
+  this.file = this.transfer.files[this.filei];
 }
 TransferProgressListener.prototype =
 {
@@ -643,7 +694,7 @@ TransferProgressListener.prototype =
   onStartRequest : function(aRequest, aContext)
   {
     ddump("onStartRequest: " + aRequest.name);
-    this.transfer.files[this.filei].setStatus("busy");
+    this.file.setStatus("busy");
   },
 
   onStopRequest : function(aRequest, aContext, aStatusCode)
@@ -656,14 +707,14 @@ TransferProgressListener.prototype =
     {
       /* HTTP gives us NS_OK, although the request failed with an HTTP error
          code, so check for that */
-      var channel = this.transfer.files[this.filei].channel;
+      var channel = this.file.channel;
       if (!channel || !channel.URI)
-        this.transfer.files[this.filei].setStatus("failed", kErrorUnexpected);
+        this.file.setStatus("failed", kErrorUnexpected);
       else if (channel.URI.scheme == "http")
         this.privateHTTPResponse();
       else
-        // let's hope that the other protocol impl. are saner
-        this.transfer.files[this.filei].setStatus("done", aStatusCode);
+        // let's hope that the other protocol impl.s are saner
+        this.file.setStatus("done", aStatusCode);
     }
     else
       this.privateStatusChange(aStatusCode);
@@ -683,10 +734,12 @@ TransferProgressListener.prototype =
 
   onProgress : function(aRequest, aContext, aProgress, aProgressMax)
   {
-    ddumpCont("onProgress: " + aRequest.name + ", ");
-    ddump(aProgress + "/" + aProgressMax);
+    // ddumpCont("onProgress: " + aRequest.name + ", ");
+    // ddump(aProgress + "/" + aProgressMax);
+    ddump("onProgress: " + aProgress + "/" + aProgressMax);
 
-    if (aProgressMax > 0)  // Necko sometimes sends crap like 397/0
+    if (aProgressMax > 0 && aProgress > 0)
+                      // Necko sometimes sends crap like 397/0 or 0/4294967295
     {
       this.transfer.progressChanged(this.filei, aProgress / aProgressMax);
     }
@@ -737,7 +790,7 @@ TransferProgressListener.prototype =
     else
       status = "failed";
 
-    this.transfer.files[this.filei].setStatus(status, aStatusCode);
+    this.file.setStatus(status, aStatusCode);
   },
 
   /* Use this function to get and interpret HTTP status/error codes and
@@ -752,17 +805,17 @@ TransferProgressListener.prototype =
     var respText;
     try
     {
-      var httpchannel = this.transfer.files[this.filei].channel
+      var httpchannel = this.file.channel
                         .QueryInterface(Components.interfaces.nsIHttpChannel);
       responseCode = httpchannel.responseStatus;
-      this.transfer.files[this.filei].httpResponse = responseCode;
+      this.file.httpResponse = responseCode;
       respText = httpchannel.responseStatusText;
       ddump(responseCode);
     }
     catch(e)
     {
       ddump("  Error while trying to get HTTP response: " + e);
-      this.transfer.files[this.filei].setStatus("failed", kErrorNoInterface);
+      this.file.setStatus("failed", kErrorNoInterface);
       return;
     }
 
@@ -779,7 +832,7 @@ TransferProgressListener.prototype =
     else // what?
       return;
 
-    this.transfer.files[this.filei].setStatus(status, kStatusHTTP, respText);
+    this.file.setStatus(status, kStatusHTTP, respText);
   },
 
 
@@ -1112,6 +1165,11 @@ TransferProgressListener.prototype =
     this.transfer.username = username;
     this.transfer.password = password;
     this.transfer.savePassword = savePassword;
+
+    var uri = GetIOService().newURI(this.transfer.remoteDir, null, null);
+    uri.username = username;
+    this.transfer.remoteDir = uri.spec; // doesn't work, the spec isn't updated
+    this.transfer.dump();
   },
   makePWLabel : function (user, realm)
   {
@@ -1130,7 +1188,7 @@ TransferProgressListener.prototype =
 
   QueryInterface : function(aIID)
   {
-    //ddump("QI: " + aIID.toString() + "\n");
+    // ddump("QI: " + aIID.toString() + "\n");
     if (aIID.equals(Components.interfaces.nsIProgressEventSink)
      || aIID.equals(Components.interfaces.nsIRequestObserver)
      || aIID.equals(Components.interfaces.nsIStreamListener)
@@ -1157,43 +1215,20 @@ TransferProgressListener.prototype =
 
 function GetPromptService()
 {
-  var promptService = null;
-  try {
-    promptService = Components
-                     .classes["@mozilla.org/embedcomp/prompt-service;1"]
-                     .getService(Components.interfaces.nsIPromptService);
-  } catch(e) {}
-  return promptService;
+  // no caching, not worth it
+  // throw errors into caller
+  return Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
+                   .getService(Components.interfaces.nsIPromptService);
 }
 
-
+var gIOService;
 function GetIOService()
 {
-  var ioService;
-  try {
-    ioService = Components.classes["@mozilla.org/network/io-service;1"]
-                 .getService(Components.interfaces.nsIIOService);
-  } catch(e) {}
-  return ioService;
-}
+  if (gIOService)
+    return gIOService;
 
-
-/* Creates a new nsIFile instance from an URI.
-   Currently unused!
- @param  uristring  a (possibly relative) file: URI as string
- @param  baseuri    if uristring is a relative URI, baseuri is a file: URI
-                    to use as base. If baseuri is |null|, uristring is
-                    assumed to be an absolute URI.
- @return  a fresh nsIFile for ya ;-P
- @exception  may throw a few ;-)
-*/
-function GetFileFromURI(uristring, baseuri)
-{
-  var ioserv = GetIOService();
-  var ifile = Components.classes["@mozilla.org/file/local;1"]
-               .createInstance(Components.interfaces.nsIFile);
-  if (baseuri != null)
-    uristring = ioserv.resolveRelativePath(uristring, baseuri);
-  ioserv.initFileFromURLSpec(ifile, urlstring);
-  return ifile;
+  // throw errors into caller
+  gIOService = Components.classes["@mozilla.org/network/io-service;1"]
+               .getService(Components.interfaces.nsIIOService);
+  return gIOService;
 }

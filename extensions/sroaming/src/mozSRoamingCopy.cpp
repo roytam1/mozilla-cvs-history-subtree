@@ -148,7 +148,7 @@ nsresult mozSRoamingCopy::Init(mozSRoaming* aController)
                           &regkey);
     if (NS_FAILED(rv))
     {
-        printf("ERROR: File copy protocol for roaming "
+        printf("ERROR: File copy method for roaming "
                "not set up for this profile\n");
         return rv;
     }

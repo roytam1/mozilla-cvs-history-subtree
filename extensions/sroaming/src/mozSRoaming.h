@@ -73,9 +73,9 @@ public:
     // Local profile directory
     nsCOMPtr<nsIFile> ProfileDir();
 
-    // Protocol used to store remote files
+    // Method used to store remote files
     // 0=unknown, 1=HTTP, 2=Copy
-    PRInt32 Protocol();
+    PRInt32 Method();
 
     /* If we'd normally overwrite a newer file. Ask user, which file to keep.
      * @param download  direction: true = download, false = upload
@@ -94,7 +94,7 @@ public:
 
     /* These functions allow to conviently en/decrypt an arbitary string,
        usually a password or other credential. This makes it easier for the
-       protocols to store passwords more safer. This does not use the master
+       methods to store passwords more safer. This does not use the master
        password, though (the password manager is not really up yet,
        and there is not much point in entering a password to retrieve a single
        password), so it's not really secure.
@@ -105,7 +105,7 @@ public:
 protected:
     // Data (see getters above)
     PRBool mIsRoaming;
-    PRInt32 mProtocol;
+    PRInt32 mMethod;
     nsCStringArray mFiles;
 
     // Cache
@@ -117,12 +117,12 @@ protected:
     // Reads liprefs: is roaming profile?, files, server info etc.
     nsresult ReadRoamingPrefs();
 
-    // Factory method for a new protocol handler that can handle this protocol
+    // Factory method for a new method handler that can handle this method
     // We'll use a new object for down-/upload respectively
     // @return new object. you have to free it with delete.
-    mozSRoamingProtocol* CreateProtocolHandler();
+    mozSRoamingProtocol* CreateMethodHandler();
 
-    /* When all roaming prefs, including the protocol-specific ones, are read,
+    /* When all roaming prefs, including the method-specific ones, are read,
        this method must be called to close down the prefs system
        (otherwise, the main app will use the roaming prefs file) */ 
     void PrefsDone();
