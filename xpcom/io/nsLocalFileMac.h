@@ -31,12 +31,13 @@
 #include "nsCRT.h"
 #include "nsIFile.h"
 #include "nsILocalFile.h"
+#include "nsILocalFileMac.h"
 #include "nsIFactory.h"
 #include "nsLocalFile.h"
 
 #include <Files.h>
 
-class NS_COM nsLocalFile : public nsILocalFile
+class NS_COM nsLocalFile : public nsILocalFile, public nsILocalFileMac
 {
 public:
     NS_DEFINE_STATIC_CID_ACCESSOR(NS_LOCAL_FILE_CID)
@@ -54,6 +55,10 @@ public:
     
     // nsILocalFile interface
     NS_DECL_NSILOCALFILE
+
+  NS_IMETHOD InitWithFSSpec(const FSSpec *fileSpec);
+
+  NS_IMETHOD GetFSSpec(FSSpec *fileSpec);
 
 private:
 

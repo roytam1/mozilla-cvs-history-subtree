@@ -208,7 +208,8 @@ nsLocalFile::~nsLocalFile()
 }
 
 /* nsISupports interface implementation. */
-NS_IMPL_ISUPPORTS2(nsLocalFile, nsILocalFile, nsIFile)
+NS_IMPL_ISUPPORTS3(nsLocalFile, nsILocalFileMac, nsILocalFile, nsIFile)
+
 NS_METHOD
 nsLocalFile::nsLocalFileConstructor(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr)
 {
@@ -1122,3 +1123,13 @@ NS_COM nsresult NS_NewLocalFile(nsILocalFile** result)
         return NS_OK;
     return NS_ERROR_FAILURE;
 }
+
+
+NS_IMETHODIMP nsLocalFile::InitWithFSSpec(const FSSpec *fileSpec)
+{
+}
+
+NS_IMETHODIMP nsLocalFile::GetFSSpec(FSSpec *fileSpec)
+{
+}
+
