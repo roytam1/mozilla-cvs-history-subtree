@@ -47,6 +47,9 @@ var FolderPaneController =
 
 	isCommandEnabled: function(command)
 	{
+    if (IsFakeAccount()) 
+      return false;
+
 		switch ( command )
 		{
 			case "cmd_selectAll":
@@ -90,6 +93,7 @@ var FolderPaneController =
                                 }
 				else
 					return false;
+
 			default:
 				return false;
 		}
@@ -282,6 +286,9 @@ var DefaultController =
     enabled.value = false;
     var checkStatus = new Object();
     
+    if (IsFakeAccount()) 
+      return false;
+
     // note, all commands that get fired on a single key need to check MailAreaHasFocus() as well
     switch ( command )
     {
@@ -1082,4 +1089,15 @@ function isCommandEnabled(cmd)
     return folder.isCommandEnabled(cmd);
 
 }
+
+function IsFakeAccount() {
+  try {
+    var folderResource = GetSelectedFolderResource();
+    return (folderResource.Value == "http://home.netscape.com/NC-rdf#PageTitleFakeAccount");
+  }
+  catch(ex) {
+  }
+  return false;
+}
+
 
