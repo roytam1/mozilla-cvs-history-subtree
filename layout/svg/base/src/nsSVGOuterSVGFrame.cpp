@@ -293,21 +293,20 @@ nsSVGOuterSVGFrame::Reflow(nsIPresContext*          aPresContext,
   if (aReflowState.reflowCommand) {
     aReflowState.reflowCommand->GetTarget(target);
     if (target != this) {
-      // the actual target of this reflow is one of our child
-      // frames. Since SVG as such doesn't use reflow, this will
-      // probably be the child of a <foreignObject>. Some HTML|XUL
-      // content frames target reflow events at themselves when they
-      // need to be redrawn in response to e.g. a style change. For
-      // correct visual updating, we must make sure the reflow reaches
-      // its intended target:
       nsIFrame* nextFrame;
       // Get the next frame in the reflow chain
       aReflowState.reflowCommand->GetNext(nextFrame);
       
-      NS_ASSERTION(nextFrame, "no reflow target");
       if (nextFrame != nsnull)
       {
-        // There is another frame in the chain- reflow it        
+        // The actual target of this reflow is one of our child
+        // frames. Since SVG as such doesn't use reflow, this will
+        // probably be the child of a <foreignObject>. Some HTML|XUL
+        // content frames target reflow events at themselves when they
+        // need to be redrawn in response to e.g. a style change. For
+        // correct visual updating, we must make sure the reflow
+        // reaches its intended target.
+        
         // Since it is an svg frame (probably an nsSVGForeignObjectFrame),
         // we might as well pass in our aDesiredSize and aReflowState
         // objects - they are ignored by svg frames:
@@ -315,18 +314,18 @@ nsSVGOuterSVGFrame::Reflow(nsIPresContext*          aPresContext,
                            aDesiredSize,
                            aReflowState,
                            aStatus);
-      }
 
-      // XXX do we really have to return our metrics although we're
-      // not affected by the reflow? Is there a way of telling our
-      // parent that we don't want anything changed?
-      aDesiredSize.width  = mRect.width;
-      aDesiredSize.height = mRect.height;
-      aDesiredSize.ascent = aDesiredSize.height;
-      aDesiredSize.descent = 0;
+        // XXX do we really have to return our metrics although we're
+        // not affected by the reflow? Is there a way of telling our
+        // parent that we don't want anything changed?
+        aDesiredSize.width  = mRect.width;
+        aDesiredSize.height = mRect.height;
+        aDesiredSize.ascent = aDesiredSize.height;
+        aDesiredSize.descent = 0;
       
-      aStatus = NS_FRAME_COMPLETE;
-      return NS_OK;
+        aStatus = NS_FRAME_COMPLETE;
+        return NS_OK;
+      }
     }
   }
   
