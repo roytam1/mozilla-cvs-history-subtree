@@ -33,22 +33,9 @@ ifdef MOZ_OJI
 endif
 
 LIBS = \
-	-lmsgbaseutil \
-        -labouturl \
-        -lfileurl \
-        -lftpurl \
-        -lgophurl \
-        -lremoturl \
-        -lhttpurl \
-        -lsockstuburl \
-        -lnetcache \
-        -lmimetype \
-        -lnetcnvts \
-        -lnetwork \
-        -lnetlib \
+		-lmsgbaseutil \
         -lreg   \
         -lxpcom \
-        -lpwcac \
         -lmozdbm        \
         -lxp    \
         -lpref  \
@@ -62,6 +49,7 @@ LIBS = \
         -limg           \
         -lmozutil       \
         $(TK_LIBS) \
+		-lneckoutil_s \
         $(NULL)
 
 include $(topsrcdir)/config/config.mk
