@@ -506,16 +506,11 @@ nsWebShell::OnLinkClick(nsIContent* aContent,
     do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID);
   NS_ENSURE_TRUE(securityManager, NS_ERROR_UNEXPECTED);
 
-  nsIDocument *sourceDoc = aContent->GetDocument();
-
   nsCOMPtr<nsIPrincipal> principal;
+  securityManager->GetSubjectPrincipal(getter_AddRefs(principal));
 
-  if (sourceDoc) {
-    securityManager->GetSubjectPrincipal(getter_AddRefs(principal));
-
-    if (!principal && aContent && aContent->GetDocument()) {
-      principal = aContent->GetDocument()->GetPrincipal();
-    }
+  if (!principal && aContent && aContent->GetDocument()) {
+    principal = aContent->GetDocument()->GetPrincipal();
   }
 
   OnLinkClickEvent* ev =
@@ -553,16 +548,11 @@ nsWebShell::OnLinkClickSync(nsIContent *aContent,
     do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID);
   NS_ENSURE_TRUE(securityManager, NS_ERROR_UNEXPECTED);
 
-  nsIDocument *sourceDoc = aContent->GetDocument();
-
   nsCOMPtr<nsIPrincipal> principal;
+  securityManager->GetSubjectPrincipal(getter_AddRefs(principal));
 
-  if (sourceDoc) {
-    securityManager->GetSubjectPrincipal(getter_AddRefs(principal));
-
-    if (!principal && aContent && aContent->GetDocument()) {
-      principal = aContent->GetDocument()->GetPrincipal();
-    }
+  if (!principal && aContent && aContent->GetDocument()) {
+    principal = aContent->GetDocument()->GetPrincipal();
   }
 
   return OnLinkClickSyncInternal(aContent, aVerb, aURI, aTargetSpec,
