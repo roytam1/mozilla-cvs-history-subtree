@@ -178,8 +178,8 @@ PRCList *head;
 		while (PR_CLIST_IS_EMPTY(&tp->jobq.list) && (!tp->shutdown)) {
 			tp->idle_threads++;
 			PR_WaitCondVar(tp->jobq.cv, PR_INTERVAL_NO_TIMEOUT);
+			tp->idle_threads--;
 		}	
-		tp->idle_threads--;
 		if (tp->shutdown) {
 			PR_Unlock(tp->jobq.lock);
 			break;
@@ -237,7 +237,6 @@ add_to_jobq(PRThreadPool *tp, PRJob *jobp)
 	tp->jobq.cnt++;
 	if ((tp->idle_threads < tp->jobq.cnt) &&
 					(tp->current_threads < tp->max_threads)) {
-		PRThread *thr;
 		wthread *wthrp;
 		/*
 		 * increment thread count and unlock the jobq lock
@@ -245,15 +244,19 @@ add_to_jobq(PRThreadPool *tp, PRJob *jobp)
 		tp->current_threads++;
 		PR_Unlock(tp->jobq.lock);
 		/* create new worker thread */
-		thr = PR_CreateThread(PR_USER_THREAD, wstart,
+		wthrp = PR_NEWZAP(wthread);
+		if (wthrp) {
+			wthrp->thread = PR_CreateThread(PR_USER_THREAD, wstart,
 						tp, PR_PRIORITY_NORMAL,
 						PR_GLOBAL_THREAD,PR_JOINABLE_THREAD,tp->stacksize);
+			if (NULL == wthrp->thread) {
+				PR_DELETE(wthrp);  /* this sets wthrp to NULL */
+			}
+		}
 		PR_Lock(tp->jobq.lock);
-		if (NULL == thr) {
+		if (NULL == wthrp) {
 			tp->current_threads--;
 		} else {
-			wthrp = PR_NEWZAP(wthread);
-			wthrp->thread = thr;
 			PR_APPEND_LINK(&wthrp->links, &tp->jobq.wthreads);
 		}
 	}
@@ -405,7 +408,7 @@ PRIntervalTime now;
 					 * add to jobq
 					 */
 					add_to_jobq(tp, jobp);
-				} else if (revents & events) {
+				} else if (revents) {
 					/*
 					 * add to jobq
 					 */
@@ -700,7 +703,7 @@ PR_QueueJob(PRThreadPool *tpool, PRJobFn fn, void *arg, PRBool joinable)
 	return jobp;
 }
 
-/* queue a job, when a socket is readable */
+/* queue a job, when a socket is readable or writeable */
 static PRJob *
 queue_io_job(PRThreadPool *tpool, PRJobIoDesc *iod, PRJobFn fn, void * arg,
 				PRBool joinable, io_op_type op)
@@ -735,7 +738,7 @@ queue_io_job(PRThreadPool *tpool, PRJobIoDesc *iod, PRJobFn fn, void * arg,
 		jobp->io_poll_flags = PR_POLL_READ;
 	} else if (JOB_IO_CONNECT == op) {
 		jobp->io_op = JOB_IO_CONNECT;
-		jobp->io_poll_flags = PR_POLL_WRITE;
+		jobp->io_poll_flags = PR_POLL_WRITE|PR_POLL_EXCEPT;
 	} else {
 		delete_job(jobp);
 		PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
@@ -1014,9 +1017,7 @@ PRStatus rval_status;
 	/*
 	 * wakeup io thread(s)
 	 */
-	PR_Lock(tpool->ioq.lock);
 	notify_ioq(tpool);
-	PR_Unlock(tpool->ioq.lock);
 
 	/*
 	 * wakeup timer thread(s)
