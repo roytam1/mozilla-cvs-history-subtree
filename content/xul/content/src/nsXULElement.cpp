@@ -4524,6 +4524,12 @@ nsXULElement::SetBindingParent(nsIContent* aParent)
   return NS_OK;
 }
 
+NS_IMETHODIMP_(PRBool)
+nsXULElement::IsContentOfType(PRUint32 aFlags)
+{
+  return !(aFlags & ~eELEMENT);
+}
+
 void nsXULElement::SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize)
 {
   // XXX - implement this if you want the sizes of XUL style rules 

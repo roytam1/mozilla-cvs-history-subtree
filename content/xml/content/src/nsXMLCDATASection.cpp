@@ -247,3 +247,10 @@ nsXMLCDATASection::SetContentID(PRUint32 aID)
   mContentID = aID;
   return NS_OK;
 }
+
+
+NS_IMETHODIMP_(PRBool)
+nsXMLCDATASection::IsContentOfType(PRUint32 aFlags)
+{
+  return PR_FALSE;
+}

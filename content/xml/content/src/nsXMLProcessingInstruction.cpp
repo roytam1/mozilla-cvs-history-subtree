@@ -360,3 +360,9 @@ nsXMLProcessingInstruction::SizeOf(nsISizeOfHandler* aSizer,
 #endif
   return NS_OK;
 }
+
+NS_IMETHODIMP_(PRBool)
+nsXMLProcessingInstruction::IsContentOfType(PRUint32 aFlags)
+{
+  return PR_FALSE;
+}

@@ -178,6 +178,10 @@ public:
     return mInner.SetBindingParent(aParent);
   }
 
+  NS_IMETHOD_(PRBool) IsContentOfType(PRUint32 aFlags) {
+    return PR_FALSE;
+  }
+
   NS_IMETHOD SizeOf(nsISizeOfHandler* aSizer, PRUint32* aResult) const {
     if (!aResult) {
       return NS_ERROR_NULL_POINTER;

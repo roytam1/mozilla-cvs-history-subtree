@@ -519,11 +519,12 @@ struct nsGenericDOMDataNode {
     return _g.RemoveFocus(aPresContext);                                   \
   }                                                                        \
   NS_IMETHOD GetBindingParent(nsIContent** aContent) {                     \
-    return _g.GetBindingParent(aContent);                              \
+    return _g.GetBindingParent(aContent);                                  \
   }                                                                        \
-  NS_IMETHOD SetBindingParent(nsIContent* aParent) { \
-    return _g.SetBindingParent(aParent); \
-  }        
+  NS_IMETHOD SetBindingParent(nsIContent* aParent) {                       \
+    return _g.SetBindingParent(aParent);                                   \
+  }                                                                        \
+  NS_IMETHOD_(PRBool) IsContentOfType(PRUint32 aFlags);
 
 /**
  * Implement the nsIDOMText API by forwarding the methods to a

@@ -382,7 +382,8 @@ public:
 
     NS_IMETHOD GetBindingParent(nsIContent** aContent);
     NS_IMETHOD SetBindingParent(nsIContent* aParent);
-  
+    NS_IMETHOD_(PRBool) IsContentOfType(PRUint32 aFlags);
+
     // nsIXMLContent
     NS_IMETHOD SetContainingNameSpace(nsINameSpace* aNameSpace);
     NS_IMETHOD GetContainingNameSpace(nsINameSpace*& aNameSpace) const;

@@ -136,6 +136,7 @@ public:
   NS_IMETHOD GetAttributeCount(PRInt32& aResult) const;
   NS_IMETHOD List(FILE* out, PRInt32 aIndent) const;
   NS_IMETHOD DumpContent(FILE* out, PRInt32 aIndent,PRBool aDumpAll) const;
+  NS_IMETHOD_(PRBool) IsContentOfType(PRUint32 aFlags);
 
   nsresult HandleDOMEventForAnchors(nsIContent* aOuter,
                                     nsIPresContext* aPresContext,
@@ -494,6 +495,8 @@ public:
 
   NS_IMETHOD QueryInterface(REFNSIID aIID, void** aInstancePtr);
 
+  NS_IMETHOD_(PRBool) IsContentOfType(PRUint32 aFlags);
+
   // nsIFormControl
   NS_IMETHOD GetForm(nsIDOMHTMLFormElement** aForm);
   NS_IMETHOD SetForm(nsIDOMHTMLFormElement* aForm,
@@ -526,6 +529,8 @@ public:
   ~nsGenericHTMLLeafFormElement();
 
   NS_IMETHOD QueryInterface(REFNSIID aIID, void** aInstancePtr);
+
+  NS_IMETHOD_(PRBool) IsContentOfType(PRUint32 aFlags);
 
   // nsIFormControl
   NS_IMETHOD GetForm(nsIDOMHTMLFormElement** aForm);

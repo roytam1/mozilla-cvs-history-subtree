@@ -1795,6 +1795,11 @@ nsGenericElement::SetBindingParent(nsIContent* aParent)
   return NS_OK;
 }
 
+NS_IMETHODIMP_(PRBool)
+nsGenericElement::IsContentOfType(PRUint32 aFlags)
+{
+  return !(aFlags & ~eELEMENT);
+}
 
 //----------------------------------------------------------------------
 

@@ -149,6 +149,7 @@ nsDOMDocumentType::GetSystemId(nsAWritableString& aSystemId)
 NS_IMETHODIMP
 nsDOMDocumentType::GetInternalSubset(nsAWritableString& aInternalSubset)
 {
+  // XXX: null string
   aInternalSubset = mInternalSubset;
 
   return NS_OK;
@@ -277,4 +278,10 @@ nsDOMDocumentType::SizeOf(nsISizeOfHandler* aSizer, PRUint32* aResult) const
   }
 #endif
   return NS_OK;
+}
+
+NS_IMETHODIMP_(PRBool)
+nsDOMDocumentType::IsContentOfType(PRUint32 aFlags)
+{
+  return !(aFlags & ~eTEXT);
 }

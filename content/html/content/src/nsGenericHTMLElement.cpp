@@ -2103,6 +2103,13 @@ nsGenericHTMLElement::DumpContent(FILE* out, PRInt32 aIndent,PRBool aDumpAll) co
   return NS_OK;
 }
 
+
+NS_IMETHODIMP_(PRBool)
+nsGenericHTMLElement::IsContentOfType(PRUint32 aFlags)
+{
+  return !(aFlags & ~(eELEMENT | eHTML));
+}
+
 PRUint32
 nsGenericHTMLElement::BaseSizeOf(nsISizeOfHandler* aSizer) const
 {
@@ -3678,6 +3685,12 @@ nsGenericHTMLContainerFormElement::QueryInterface(REFNSIID aIID,
   return NS_OK;
 }
 
+NS_IMETHODIMP_(PRBool)
+nsGenericHTMLContainerFormElement::IsContentOfType(PRUint32 aFlags)
+{
+  return !(aFlags & ~(eELEMENT | eHTML | eHTML_FORM_CONTROL));
+}
+
 NS_IMETHODIMP
 nsGenericHTMLContainerFormElement::SetForm(nsIDOMHTMLFormElement* aForm,
                                            PRBool aRemoveFromForm)
@@ -3902,6 +3915,12 @@ nsGenericHTMLLeafFormElement::QueryInterface(REFNSIID aIID,
   *aInstancePtr = inst;
 
   return NS_OK;
+}
+
+NS_IMETHODIMP_(PRBool)
+nsGenericHTMLLeafFormElement::IsContentOfType(PRUint32 aFlags)
+{
+  return !(aFlags & ~(eELEMENT | eHTML | eHTML_FORM_CONTROL));
 }
 
 NS_IMETHODIMP

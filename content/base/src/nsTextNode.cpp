@@ -262,3 +262,8 @@ nsTextNode::SetContentID(PRUint32 aID)
   return NS_OK;
 }
 
+NS_IMETHODIMP_(PRBool)
+nsTextNode::IsContentOfType(PRUint32 aFlags)
+{
+  return !(aFlags & ~eTEXT);
+}

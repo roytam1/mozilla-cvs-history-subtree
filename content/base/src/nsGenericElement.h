@@ -209,6 +209,7 @@ public:
   NS_IMETHOD RemoveFocus(nsIPresContext* aContext);
   NS_IMETHOD GetBindingParent(nsIContent** aContent);
   NS_IMETHOD SetBindingParent(nsIContent* aParent);
+  NS_IMETHOD_(PRBool) IsContentOfType(PRUint32 aFlags);
 
   // nsIStyledContent interface methods
   NS_IMETHOD GetID(nsIAtom*& aResult) const;
@@ -242,7 +243,6 @@ public:
                                nsHTMLValue& aResult);
   NS_IMETHOD GetBaseURL(nsIURI*& aBaseURL) const;
   NS_IMETHOD GetBaseTarget(nsAWritableString& aBaseTarget) const;
-
 
   // nsIDOMNode method implementation
   NS_IMETHOD GetNodeName(nsAWritableString& aNodeName);
