@@ -1832,7 +1832,12 @@ void invisible()
 					strAttributes.Replace("SELECTED", "UNSELECTED");
 			}
 
-			WritePrivateProfileString(Components[i].compname, "Attributes", 
+			if (strcmp(strAttributes, "SELECTED") == 0)
+			// Include INVISIBLE attribute for AOD component
+				WritePrivateProfileString(Components[i].compname, "Attributes", 
+				"SELECTED|INVISIBLE", iniDstPath);
+			else
+				WritePrivateProfileString(Components[i].compname, "Attributes", 
 				strAttributes, iniDstPath);
 			 componentOrder++;
 		}
