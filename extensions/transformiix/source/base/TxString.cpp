@@ -267,12 +267,26 @@ char* String::toCharArray() const
 {
   char* tmpBuffer = new char[mLength + 1];
   NS_ASSERTION(tmpBuffer, "out of memory");
-  return toCharArray(tmpBuffer);
+  if (tmpBuffer) {
+    PRUint32 conversionLoop;
+
+    for (conversionLoop = 0; conversionLoop < mLength; ++conversionLoop) {
+      tmpBuffer[conversionLoop] = (char)mBuffer[conversionLoop];
+    }
+    tmpBuffer[mLength] = 0;
+  }
+  return tmpBuffer;
 }
 
 const UNICODE_CHAR* String::toUnicode() const
 {
-  return mBuffer;
+  UNICODE_CHAR* tmpBuffer = new UNICODE_CHAR[mLength + 1];
+  NS_ASSERTION(tmpBuffer, "out of memory");
+  if (tmpBuffer) {
+    memcpy(tmpBuffer, mBuffer, mLength);
+    tmpBuffer[mLength] = 0;
+  }
+  return tmpBuffer;
 }
 
 void String::toLowerCase()

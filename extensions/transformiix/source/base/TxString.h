@@ -118,10 +118,6 @@ public:
     **/
     String& subString(const PRUint32 aStart, const PRUint32 aEnd, String& aDest) const;
 
-    // Copy the string buffer to aDest
-    char* toCharArray() const;
-    UNICODE_CHAR* toUnicode() const;
-
     // Convert string to lowercase
     void toLowerCase();
 
@@ -154,6 +150,7 @@ public:
     PRInt32 indexOf(char aData, const PRUint32 aOffset = 0) const;
     PRInt32 lastIndexOf(const char aData, const PRUint32 aOffset = 0) const;
     MBool isEqual(const char* aData) const;
+    char* toCharArray() const;
 private:
 #ifdef TX_EXE
     //Translate UNICODE_CHARs to Chars and output to the provided stream

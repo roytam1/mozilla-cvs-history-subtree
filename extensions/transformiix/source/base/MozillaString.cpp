@@ -159,16 +159,6 @@ String& String::subString(const PRUint32 aStart, const PRUint32 aEnd, String& aD
   return aDest;
 }
 
-char* String::toCharArray() const
-{
-  return ToNewCString(mString);
-}
-
-UNICODE_CHAR* String::toUnicode() const
-{
-  return ToNewUnicode(mString);
-}
-
 void String::toLowerCase()
 {
   ToLowerCase(mString);
@@ -229,4 +219,9 @@ PRInt32 String::lastIndexOf(const char aData, const PRUint32 aOffset) const
 MBool String::isEqual(const char* aData) const
 {
   return mString.EqualsWithConversion(aData);
+}
+
+char* String::toCharArray() const
+{
+  return ToNewCString(mString);
 }
