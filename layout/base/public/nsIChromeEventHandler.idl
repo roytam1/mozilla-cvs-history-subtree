@@ -21,18 +21,17 @@
  */
 
 #include "nsISupports.idl"
-#include "domstubs.idl"
 
 %{ C++
 #include "nsIPresContext.h"
-#include "nsIDOMEvent.h"
 %}
 
 [ptr] native nsIPresContext(nsIPresContext);
-[ptr] native nsIDOMEvent(nsIDOMEvent);
 native nsEvent(nsEvent);
 [ptr] native nsEventPtr(nsEvent);
 native nsEventStatus(nsEventStatus);
+
+interface nsIDOMEvent;
 
 /**
  * The nsIChromeEventHandler
