@@ -334,8 +334,12 @@ ReleaseLock()
 // main
 //-----------------------------------------------------------------------------
 
+#ifdef DEBUG
 int
-main(int argc, char **argv)
+main()
+#else
+int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
+#endif
 {
     IPC_InitLog("###");
 
@@ -362,8 +366,12 @@ main(int argc, char **argv)
     if (!ipcHwnd)
         return -1;
 
-    // load modules
-    IPC_InitModuleReg(argv[0]);
+    // load modules relative to the location of the executable...
+    {
+        char path[MAX_PATH];
+        GetModuleFileName(NULL, path, sizeof(path));
+        IPC_InitModuleReg(path);
+    }
 
     LOG(("entering message loop...\n"));
     MSG msg;
