@@ -2649,9 +2649,9 @@ MatchRegExp(MatchState *state, jsbytecode *pc, const jschar *cp)
           case REOP_STARMIN:
   	    op = (REOp) *++pc;
 	    oplen = reopsize[op];
-            pc += oplen;
+            pc2 = pc + oplen;
             do {
-                cp3 = MatchRegExp(state, pc, cp);
+                cp3 = MatchRegExp(state, pc2, cp);
                 if (cp3) return cp3;
                 cp2 = cp;
                 switch (op) {
