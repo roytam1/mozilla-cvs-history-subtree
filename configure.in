@@ -562,6 +562,7 @@ DIRENT_INO=d_ino
 CYGWIN_WRAPPER=
 MOZ_USER_DIR=".mozilla"
 MOZ_APP_NAME=mozilla
+MOZ_APP_DISPLAYNAME=Mozilla
 
 MOZ_JPEG_CFLAGS=
 MOZ_JPEG_LIBS='-L$(DIST)/lib -lmozjpeg'
@@ -3385,6 +3386,7 @@ if test "$MOZ_PHOENIX"; then
    MOZ_XUL_APP=1
    AC_DEFINE(MOZ_XUL_APP)
    MOZ_APP_NAME=firefox
+   MOZ_APP_DISPLAYNAME=Firefox
    MOZ_APP_VERSION=`cat $topsrcdir/browser/config/version.txt`
 fi
 
@@ -3402,6 +3404,7 @@ if test "$MOZ_THUNDERBIRD"; then
    MOZ_XUL_APP=1
    AC_DEFINE(MOZ_XUL_APP)
    MOZ_APP_NAME=thunderbird
+   MOZ_APP_DISPLAYNAME=Thunderbird
    MOZ_APP_VERSION=`cat $topsrcdir/mail/config/version.txt`
 fi
 
@@ -3417,6 +3420,7 @@ if test "$MOZ_STANDALONE_COMPOSER"; then
    MOZ_XUL_APP=1
    AC_DEFINE(MOZ_XUL_APP)
    MOZ_APP_NAME=nvu
+   MOZ_APP_DISPLAYNAME=NVU
    MOZ_APP_VERSION=0.17+
 fi
 
@@ -5562,6 +5566,7 @@ AC_SUBST(MOZ_TIMELINE)
 
 AC_SUBST(MOZ_APP_NAME)
 AC_SUBST(MOZ_APP_VERSION)
+AC_SUBST(MOZ_APP_DISPLAYNAME)
 
 dnl win32 options
 AC_SUBST(MOZ_PROFILE)

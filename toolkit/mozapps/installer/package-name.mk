@@ -11,15 +11,15 @@
 # for the specific language governing rights and limitations under the
 # License.
 #
-# The Original Code is the Mozilla Browser code.
+# The Original Code is Mozilla toolkit packaging scripts.
 #
 # The Initial Developer of the Original Code is
-# IBM Corporation.
+# Benjamin Smedberg <bsmedberg@covad.net>
+# 
 # Portions created by the Initial Developer are Copyright (C) 2004
 # the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
-#  Brian Ryner <bryner@brianryner.com>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -35,50 +35,49 @@
 #
 # ***** END LICENSE BLOCK *****
 
-DEPTH		= ../../..
-topsrcdir	= @top_srcdir@
-srcdir		= @srcdir@
-VPATH		= @srcdir@
-
-include $(DEPTH)/config/autoconf.mk
-
-include $(topsrcdir)/toolkit/mozapps/installer/package-name.mk
-
-CONFIG_DIR = $(shell pwd)/instgen
-ABS_topsrcdir = $(shell cd $(topsrcdir) && pwd)
-ABS_depth = $(shell cd $(DEPTH) && pwd)
-
-LOCALIZED_FILES = \
-	install.it \
-	$(NULL)
-
-PP_LOCALIZED_FILES = \
-	packages-static \
-	installer.cfg \
-	config.it \
-	$(NULL)
-
-INSTALLER_FILES = \
-	abe.jst \
-	adt.jst \
-	browser.jst \
-	help.jst \
-	talkback.jst \
-	xpcom.jst \
-	$(NULL)
-
+ifndef AB_CD
 AB_CD = $(MOZ_UI_LOCALE)
+endif
 
-DEFINES += -DAB_CD=$(AB_CD) -DPKG_BASENAME=$(PKG_BASENAME)
+ifndef MOZ_PKG_APPNAME
+MOZ_PKG_APPNAME = $(MOZ_APP_NAME)
+endif
 
-installer:
-	$(NSINSTALL) -D instgen
-	$(INSTALL) $(addprefix $(topsrcdir)/toolkit/locales/$(AB_CD)/installer/unix/,$(LOCALIZED_FILES)) $(addprefix $(srcdir)/,$(INSTALLER_FILES)) instgen
-	$(EXIT_ON_ERROR) \
-	for i in $(PP_LOCALIZED_FILES); do \
-	  $(PERL) $(topsrcdir)/config/preprocessor.pl $(DEFINES) $(ACDEFINES) -I$(topsrcdir)/browser/locales/$(AB_CD)/installer/installer.inc $(srcdir)/$$i > instgen/$$i; \
-	done
-	$(PERL) $(topsrcdir)/config/preprocessor.pl $(DEFINES) $(ACDEFINES) -I$(topsrcdir)/browser/locales/$(AB_CD)/defines.inc $(srcdir)/ab-CD.jst > instgen/$(AB_CD).jst
-	$(PERL) $(topsrcdir)/toolkit/mozapps/installer/build_static.pl -config $(CONFIG_DIR) -objdir $(ABS_depth) -srcdir $(ABS_topsrcdir)
+ifndef MOZ_PKG_VERSION
+MOZ_PKG_VERSION = $(MOZ_APP_VERSION)
+endif
 
-include $(topsrcdir)/config/rules.mk
+ifndef MOZ_PKG_PLATFORM
+MOZ_PKG_PLATFORM = $(TARGET_OS)-$(TARGET_CPU)
+
+# TARGET_OS/TARGET_CPU may be unintuitive, so we hardcode some special formats
+ifeq ($(OS_ARCH),WINNT)
+MOZ_PKG_PLATFORM = win$(MOZ_BITS)
+endif
+ifeq ($(OS_ARCH),Darwin)
+MOZ_PKG_PLATFORM = mac
+endif
+ifeq ($(TARGET_OS),linux-gnu)
+MOZ_PKG_PLATFORM = linux-$(TARGET_CPU)
+endif
+
+# GTK2 is the default, so we mark gtk1 builds
+ifeq ($(MOZ_WIDGET_TOOLKIT),gtk)
+MOZ_PKG_PLATFORM += -gtk1
+endif
+
+ifdef MOZ_SVG
+MOZ_PKG_PLATFORM += -svg
+ifdef MOZ_SVG_RENDERER_GDIPLUG
+MOZ_PKG_PLATFORM += -gdiplus
+endif
+ifdef MOZ_SVG_RENDERER_LIBART
+MOZ_PKG_PLATFORM += -libart
+endif
+ifdef MOZ_SVG_RENDERER_CAIRO
+MOZ_PKG_PLATFORM += -cairo
+endif
+endif #MOZ_SVG
+endif #MOZ_PKG_PLATFORM
+
+PKG_BASENAME := $(MOZ_PKG_APPNAME)-$(MOZ_PKG_VERSION).$(AB_CD).$(MOZ_PKG_PLATFORM)

@@ -88,6 +88,13 @@ if (verifyDiskSpace(fProgram, srDest))
         registerChrome(chromeType, cf, "locale/pipnss/");
         registerChrome(chromeType, cf, "locale/pippki/");
 
+#ifdef LOCALE_HAS_HELP
+        registerChrome(chromeType, cf, "locale/help/");
+#endif
+#ifdef LOCALE_HAS_DOMI
+        registerChrome(chromeType, cf, "locale/inspector/");
+#endif
+
         err = performInstall(); 
         logComment("performInstall() returned: " + err);
     }
