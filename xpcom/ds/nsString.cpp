@@ -902,7 +902,7 @@ nsCString& nsCString::Append(const char* aCString,PRInt32 aCount) {
       // If this assertion fires, the caller is probably lying about the length of
       //   the passed-in string.  File a bug on the caller.
 
-#ifdef NS_DEBUG
+#if 0
       PRInt32 len=nsStr::FindChar(temp,0,PR_FALSE,0);
       NS_WARN_IF_FALSE(kNotFound==len,"possible embedded null in append(char*)");
 #endif
