@@ -105,8 +105,6 @@ class NS_COM nsAString
       typedef nsReadingIterator<char_type>      const_iterator;
       typedef nsWritingIterator<char_type>      iterator;
 
-      typedef nsAPromiseString                  promise_type;
-
       typedef PRUint32                          size_type;
       typedef PRUint32                          index_type;
 
@@ -260,8 +258,7 @@ class NS_COM nsAString
          * the buffer into their own buffer.
          */
 
-      void Assign( const self_type& aReadable )                                                     { AssignFromReadable(aReadable); }
-      inline void Assign( const promise_type& aReadable );
+      void Assign( const self_type& aReadable )                                                     { do_AssignFromReadable(aReadable); }
       void Assign( const char_type* aPtr )                                                          { aPtr ? do_AssignFromElementPtr(aPtr) : SetLength(0); }
       void Assign( const char_type* aPtr, size_type aLength )                                       { do_AssignFromElementPtrLength(aPtr, aLength); }
       void Assign( char_type aChar )                                                                { do_AssignFromElement(aChar); }
@@ -269,7 +266,6 @@ class NS_COM nsAString
         // copy-assignment operator.  I must define my own if I don't want the compiler to make me one
       self_type& operator=( const self_type& aReadable )                                            { Assign(aReadable); return *this; }
 
-      self_type& operator=( const promise_type& aReadable )                                         { Assign(aReadable); return *this; }
       self_type& operator=( const char_type* aPtr )                                                 { Assign(aPtr); return *this; }
       self_type& operator=( char_type aChar )                                                       { Assign(aChar); return *this; }
 
@@ -279,14 +275,12 @@ class NS_COM nsAString
         // |Append()|, |operator+=()|
         //
 
-      void Append( const self_type& aReadable )                                                     { AppendFromReadable(aReadable); }
-      inline void Append( const promise_type& aReadable );
+      void Append( const self_type& aReadable )                                                     { do_AppendFromReadable(aReadable); }
       void Append( const char_type* aPtr )                                                          { if (aPtr) do_AppendFromElementPtr(aPtr); }
       void Append( const char_type* aPtr, size_type aLength )                                       { do_AppendFromElementPtrLength(aPtr, aLength); }
       void Append( char_type aChar )                                                                { do_AppendFromElement(aChar); }
 
       self_type& operator+=( const self_type& aReadable )                                           { Append(aReadable); return *this; }
-      self_type& operator+=( const promise_type& aReadable )                                        { Append(aReadable); return *this; }
       self_type& operator+=( const char_type* aPtr )                                                { Append(aPtr); return *this; }
       self_type& operator+=( char_type aChar )                                                      { Append(aChar); return *this; }
 
@@ -301,8 +295,7 @@ class NS_COM nsAString
         //  Note: I would really like to move the |atPosition| parameter to the front of the argument list
         //
 
-      void Insert( const self_type& aReadable, index_type atPosition )                              { InsertFromReadable(aReadable, atPosition); }
-      inline void Insert( const promise_type& aReadable, index_type atPosition );
+      void Insert( const self_type& aReadable, index_type atPosition )                              { do_InsertFromReadable(aReadable, atPosition); }
       void Insert( const char_type* aPtr, index_type atPosition )                                   { if (aPtr) do_InsertFromElementPtr(aPtr, atPosition); }
       void Insert( const char_type* aPtr, index_type atPosition, size_type aLength )                { do_InsertFromElementPtrLength(aPtr, atPosition, aLength); }
       void Insert( char_type aChar, index_type atPosition )                                         { do_InsertFromElement(aChar, atPosition); }
@@ -313,8 +306,7 @@ class NS_COM nsAString
 
 
 
-      void Replace( index_type cutStart, size_type cutLength, const self_type& aReadable )          { ReplaceFromReadable(cutStart, cutLength, aReadable); }
-//    void Replace( index_type cutStart, size_type cutLength, const promise_type& aReadable )       { ReplaceFromPromise(cutStart, cutLength, aReadable); }
+      void Replace( index_type cutStart, size_type cutLength, const self_type& aReadable )          { do_ReplaceFromReadable(cutStart, cutLength, aReadable); }
 
     private:
         // NOT TO BE IMPLEMENTED
@@ -327,29 +319,25 @@ class NS_COM nsAString
       
 
     protected:
-              void AssignFromReadable( const self_type& );
-              void AssignFromPromise( const self_type& );
+              void UncheckedAssignFromReadable( const self_type& );
       virtual void do_AssignFromReadable( const self_type& );
       virtual void do_AssignFromElementPtr( const char_type* );
       virtual void do_AssignFromElementPtrLength( const char_type*, size_type );
       virtual void do_AssignFromElement( char_type );
 
-              void AppendFromReadable( const self_type& );
-              void AppendFromPromise( const self_type& );
+              void UncheckedAppendFromReadable( const self_type& );
       virtual void do_AppendFromReadable( const self_type& );
       virtual void do_AppendFromElementPtr( const char_type* );
       virtual void do_AppendFromElementPtrLength( const char_type*, size_type );
       virtual void do_AppendFromElement( char_type );
 
-              void InsertFromReadable( const self_type&, index_type );
-              void InsertFromPromise( const self_type&, index_type );
+              void UncheckedInsertFromReadable( const self_type&, index_type );
       virtual void do_InsertFromReadable( const self_type&, index_type );
       virtual void do_InsertFromElementPtr( const char_type*, index_type );
       virtual void do_InsertFromElementPtrLength( const char_type*, index_type, size_type );
       virtual void do_InsertFromElement( char_type, index_type );
 
-              void ReplaceFromReadable( index_type, size_type, const self_type& );
-              void ReplaceFromPromise( index_type, size_type, const self_type& );
+              void UncheckedReplaceFromReadable( index_type, size_type, const self_type& );
       virtual void do_ReplaceFromReadable( index_type, size_type, const self_type& );
 
 
@@ -357,7 +345,8 @@ class NS_COM nsAString
     public:
       virtual const char_type* GetReadableFragment( const_fragment_type&, nsFragmentRequest, PRUint32 = 0 ) const = 0;
       virtual       char_type* GetWritableFragment(       fragment_type&, nsFragmentRequest, PRUint32 = 0 ) = 0;
-      virtual PRBool IsDependentOn( const self_type& aString ) const { return &aString == this; }
+
+      PRBool IsDependentOn( const self_type& aString ) const;
   };
 
 class NS_COM nsACString
@@ -378,8 +367,6 @@ class NS_COM nsACString
 
       typedef nsReadingIterator<char_type>      const_iterator;
       typedef nsWritingIterator<char_type>      iterator;
-
-      typedef nsAPromiseCString                 promise_type;
 
       typedef PRUint32                          size_type;
       typedef PRUint32                          index_type;
@@ -535,8 +522,7 @@ class NS_COM nsACString
          * the buffer into their own buffer.
          */
 
-      void Assign( const self_type& aReadable )                                                     { AssignFromReadable(aReadable); }
-      inline void Assign( const promise_type& aReadable );
+      void Assign( const self_type& aReadable )                                                     { do_AssignFromReadable(aReadable); }
       void Assign( const char_type* aPtr )                                                          { aPtr ? do_AssignFromElementPtr(aPtr) : SetLength(0); }
       void Assign( const char_type* aPtr, size_type aLength )                                       { do_AssignFromElementPtrLength(aPtr, aLength); }
       void Assign( char_type aChar )                                                                { do_AssignFromElement(aChar); }
@@ -544,7 +530,6 @@ class NS_COM nsACString
         // copy-assignment operator.  I must define my own if I don't want the compiler to make me one
       self_type& operator=( const self_type& aReadable )                                            { Assign(aReadable); return *this; }
 
-      self_type& operator=( const promise_type& aReadable )                                         { Assign(aReadable); return *this; }
       self_type& operator=( const char_type* aPtr )                                                 { Assign(aPtr); return *this; }
       self_type& operator=( char_type aChar )                                                       { Assign(aChar); return *this; }
 
@@ -554,14 +539,12 @@ class NS_COM nsACString
         // |Append()|, |operator+=()|
         //
 
-      void Append( const self_type& aReadable )                                                     { AppendFromReadable(aReadable); }
-      inline void Append( const promise_type& aReadable );
+      void Append( const self_type& aReadable )                                                     { do_AppendFromReadable(aReadable); }
       void Append( const char_type* aPtr )                                                          { if (aPtr) do_AppendFromElementPtr(aPtr); }
       void Append( const char_type* aPtr, size_type aLength )                                       { do_AppendFromElementPtrLength(aPtr, aLength); }
       void Append( char_type aChar )                                                                { do_AppendFromElement(aChar); }
 
       self_type& operator+=( const self_type& aReadable )                                           { Append(aReadable); return *this; }
-      self_type& operator+=( const promise_type& aReadable )                                        { Append(aReadable); return *this; }
       self_type& operator+=( const char_type* aPtr )                                                { Append(aPtr); return *this; }
       self_type& operator+=( char_type aChar )                                                      { Append(aChar); return *this; }
 
@@ -576,8 +559,7 @@ class NS_COM nsACString
         //  Note: I would really like to move the |atPosition| parameter to the front of the argument list
         //
 
-      void Insert( const self_type& aReadable, index_type atPosition )                              { InsertFromReadable(aReadable, atPosition); }
-      inline void Insert( const promise_type& aReadable, index_type atPosition );
+      void Insert( const self_type& aReadable, index_type atPosition )                              { do_InsertFromReadable(aReadable, atPosition); }
       void Insert( const char_type* aPtr, index_type atPosition )                                   { if (aPtr) do_InsertFromElementPtr(aPtr, atPosition); }
       void Insert( const char_type* aPtr, index_type atPosition, size_type aLength )                { do_InsertFromElementPtrLength(aPtr, atPosition, aLength); }
       void Insert( char_type aChar, index_type atPosition )                                         { do_InsertFromElement(aChar, atPosition); }
@@ -588,8 +570,7 @@ class NS_COM nsACString
 
 
 
-      void Replace( index_type cutStart, size_type cutLength, const self_type& aReadable )          { ReplaceFromReadable(cutStart, cutLength, aReadable); }
-//    void Replace( index_type cutStart, size_type cutLength, const promise_type& aReadable )       { ReplaceFromPromise(cutStart, cutLength, aReadable); }
+      void Replace( index_type cutStart, size_type cutLength, const self_type& aReadable )          { do_ReplaceFromReadable(cutStart, cutLength, aReadable); }
 
     private:
         // NOT TO BE IMPLEMENTED
@@ -602,29 +583,25 @@ class NS_COM nsACString
       
 
     protected:
-              void AssignFromReadable( const self_type& );
-              void AssignFromPromise( const self_type& );
+              void UncheckedAssignFromReadable( const self_type& );
       virtual void do_AssignFromReadable( const self_type& );
       virtual void do_AssignFromElementPtr( const char_type* );
       virtual void do_AssignFromElementPtrLength( const char_type*, size_type );
       virtual void do_AssignFromElement( char_type );
 
-              void AppendFromReadable( const self_type& );
-              void AppendFromPromise( const self_type& );
+              void UncheckedAppendFromReadable( const self_type& );
       virtual void do_AppendFromReadable( const self_type& );
       virtual void do_AppendFromElementPtr( const char_type* );
       virtual void do_AppendFromElementPtrLength( const char_type*, size_type );
       virtual void do_AppendFromElement( char_type );
 
-              void InsertFromReadable( const self_type&, index_type );
-              void InsertFromPromise( const self_type&, index_type );
+              void UncheckedInsertFromReadable( const self_type&, index_type );
       virtual void do_InsertFromReadable( const self_type&, index_type );
       virtual void do_InsertFromElementPtr( const char_type*, index_type );
       virtual void do_InsertFromElementPtrLength( const char_type*, index_type, size_type );
       virtual void do_InsertFromElement( char_type, index_type );
 
-              void ReplaceFromReadable( index_type, size_type, const self_type& );
-              void ReplaceFromPromise( index_type, size_type, const self_type& );
+              void UncheckedReplaceFromReadable( index_type, size_type, const self_type& );
       virtual void do_ReplaceFromReadable( index_type, size_type, const self_type& );
 
 
@@ -632,53 +609,9 @@ class NS_COM nsACString
     public:
       virtual const char_type* GetReadableFragment( const_fragment_type&, nsFragmentRequest, PRUint32 = 0 ) const = 0;
       virtual       char_type* GetWritableFragment(       fragment_type&, nsFragmentRequest, PRUint32 = 0 ) = 0;
-      virtual PRBool IsDependentOn( const self_type& aString ) const { return &aString == this; }
+
+      PRBool IsDependentOn( const abstract_string_type& aString ) const;
   };
-
-#include "nsAPromiseString.h"
-
-inline
-void
-nsAString::Assign( const nsAPromiseString& aReadable )
-  {
-    AssignFromPromise(aReadable);
-  }
-
-inline
-void
-nsAString::Append( const nsAPromiseString& aReadable )
-  {
-    AppendFromPromise(aReadable);
-  }
-
-inline
-void
-nsAString::Insert( const nsAPromiseString& aReadable, index_type atPosition )
-  {
-    InsertFromPromise(aReadable, atPosition);
-  }
-
-inline
-void
-nsACString::Assign( const nsAPromiseCString& aReadable )
-  {
-    AssignFromPromise(aReadable);
-  }
-
-inline
-void
-nsACString::Append( const nsAPromiseCString& aReadable )
-  {
-    AppendFromPromise(aReadable);
-  }
-
-inline
-void
-nsACString::Insert( const nsAPromiseCString& aReadable, index_type atPosition )
-  {
-    InsertFromPromise(aReadable, atPosition);
-  }
-
 
   /**
    * Note: measure -- should the |Begin...| and |End...| be |inline|?
