@@ -1204,7 +1204,7 @@ static const jschar *matchGreedyKid(MatchState *state, RENode *ren,
         }
     }
     else {
-        if (kidMatch == cp) return kidMatch;    // no point pursuing an empty match forever  
+        if (kidMatch == cp) return kidMatch;    /* no point pursuing an empty match forever */
         if ((maxKid == 0) || (++kidCount < maxKid)) {
             match = matchGreedyKid(state, ren, kidCount, maxKid, kidMatch, cp);
             if (match != NULL) return match;
@@ -1232,7 +1232,7 @@ static const jschar *matchNonGreedyKid(MatchState *state, RENode *ren,
     if (kidMatch == NULL)
         return NULL;
     else {
-        if (kidMatch == cp) return kidMatch;    // no point pursuing an empty match forever 
+        if (kidMatch == cp) return kidMatch;    /* no point pursuing an empty match forever */
         return matchNonGreedyKid(state, ren, kidCount, maxKid, kidMatch);
     }
 }
