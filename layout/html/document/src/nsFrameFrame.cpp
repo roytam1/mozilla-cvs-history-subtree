@@ -76,7 +76,6 @@ class nsHTMLFrame;
 
 static NS_DEFINE_CID(kWebShellCID, NS_WEB_SHELL_CID);
 static NS_DEFINE_CID(kCViewCID, NS_VIEW_CID);
-static NS_DEFINE_CID(kCChildCID, NS_CHILD_CID);
 
 /*******************************************************************************
  * FrameLoadingInfo 
@@ -247,8 +246,6 @@ nsHTMLFrameOuterFrame::GetDesiredSize(nsIPresContext* aPresContext,
                                       nsHTMLReflowMetrics& aDesiredSize)
 {
   // <frame> processing does not use this routine, only <iframe>
-  float p2t;
-  aPresContext->GetScaledPixelsToTwips(&p2t);
 
   // If no width/height was specified, use 300/150.
   // This is for compatability with IE.
@@ -256,13 +253,13 @@ nsHTMLFrameOuterFrame::GetDesiredSize(nsIPresContext* aPresContext,
     aDesiredSize.width = aReflowState.mComputedWidth;
   }
   else {
-    aDesiredSize.width = NSIntPixelsToTwips(300, p2t);
+    aDesiredSize.width = 300;
   }
   if (NS_UNCONSTRAINEDSIZE != aReflowState.mComputedHeight) {
     aDesiredSize.height = aReflowState.mComputedHeight;
   }
   else {
-    aDesiredSize.height = NSIntPixelsToTwips(150, p2t);
+    aDesiredSize.height = 150;
   }
   aDesiredSize.ascent = aDesiredSize.height;
   aDesiredSize.descent = 0;
@@ -591,16 +588,14 @@ nsFrameborder nsHTMLFrameInnerFrame::GetFrameBorder(PRBool aStandardMode)
 
 PRInt32 nsHTMLFrameInnerFrame::GetMarginWidth(nsIPresContext* aPresContext, nsIContent* aContent)
 {
-  PRInt32 marginWidth = -1;
+  gfx_dimension marginWidth = -1;
   nsresult rv = NS_OK;
   nsCOMPtr<nsIHTMLContent> content = do_QueryInterface(mContent, &rv);
   if (NS_SUCCEEDED(rv) && content) {
-    float p2t;
-    aPresContext->GetScaledPixelsToTwips(&p2t);
     nsHTMLValue value;
     content->GetHTMLAttribute(nsHTMLAtoms::marginwidth, value);
     if (eHTMLUnit_Pixel == value.GetUnit()) { 
-      marginWidth = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
+      marginWidth = value.GetPixelValue();
       if (marginWidth < 0) {
         marginWidth = 0;
       }
@@ -611,16 +606,14 @@ PRInt32 nsHTMLFrameInnerFrame::GetMarginWidth(nsIPresContext* aPresContext, nsIC
 
 PRInt32 nsHTMLFrameInnerFrame::GetMarginHeight(nsIPresContext* aPresContext, nsIContent* aContent)
 {
-  PRInt32 marginHeight = -1;
+  gfx_dimension marginHeight = -1;
   nsresult rv = NS_OK;
   nsCOMPtr<nsIHTMLContent> content = do_QueryInterface(mContent, &rv);
   if (NS_SUCCEEDED(rv) && content) {
-    float p2t;
-    aPresContext->GetScaledPixelsToTwips(&p2t);
     nsHTMLValue value;
     content->GetHTMLAttribute(nsHTMLAtoms::marginheight, value);
     if (eHTMLUnit_Pixel == value.GetUnit()) { 
-      marginHeight = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
+      marginHeight = value.GetPixelValue();
       if (marginHeight < 0) {
         marginHeight = 0;
       }
@@ -824,9 +817,6 @@ nsHTMLFrameInnerFrame::CreateDocShell(nsIPresContext* aPresContext,
     }
   }
 
-  float t2p;
-  aPresContext->GetTwipsToPixels(&t2p);
-
   // create, init, set the parent of the view
   nsIView* view;
   rv = nsComponentManager::CreateInstance(kCViewCID, nsnull, NS_GET_IID(nsIView),
@@ -859,10 +849,10 @@ nsHTMLFrameInnerFrame::CreateDocShell(nsIPresContext* aPresContext,
   }
 
   nsCOMPtr<nsIWindow> window;
-  view->GetWidget(*getter_AddRefs(window));
+  view->GetWidget(getter_AddRefs(window));
 
-  mSubShell->InitWindow(nsnull, window, 0, 0, NSToCoordRound(aSize.width * t2p),
-                        NSToCoordRound(aSize.height * t2p));
+  mSubShell->InitWindow(nsnull, window, 0, 0, aSize.width,
+                        aSize.height);
   mSubShell->Create();
 
   mSubShell->SetVisibility(PR_TRUE);
@@ -1034,15 +1024,12 @@ nsHTMLFrameInnerFrame::Reflow(nsIPresContext*          aPresContext,
 
   // resize the sub document
   if(mSubShell) {
-    float t2p;
-    aPresContext->GetTwipsToPixels(&t2p);
-
     PRInt32 x = 0;
     PRInt32 y = 0;
 
     mSubShell->GetPositionAndSize(&x, &y, nsnull, nsnull);
-    PRInt32 cx  = NSToCoordRound(aDesiredSize.width * t2p);
-    PRInt32 cy = NSToCoordRound(aDesiredSize.height * t2p);
+    PRInt32 cx  = aDesiredSize.width;
+    PRInt32 cy = aDesiredSize.height;
     mSubShell->SetPositionAndSize(x, y, cx, cy, PR_FALSE);
 
     NS_FRAME_TRACE(NS_FRAME_TRACE_CALLS,

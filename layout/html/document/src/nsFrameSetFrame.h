@@ -168,7 +168,7 @@ protected:
              PRInt32  aNumIndicies, 
              PRInt32* aIndicies, 
              PRInt32  aNumItems,
-             PRInt32* aItems);
+             nscoord* aItems);
 
   void CalculateRowCol(nsIPresContext* aPresContext, 
                        nscoord         aSize, 

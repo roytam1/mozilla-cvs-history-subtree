@@ -29,6 +29,7 @@
 #include "nsIPresShell.h"
 #include "nsHTMLIIDs.h"
 #include "nsIComponentManager.h"
+#include "nsIServiceManager.h"
 #include "nsIStreamListener.h"
 #include "nsIURL.h"
 #include "nsIDocument.h"
@@ -44,8 +45,7 @@
 #include "nsIDocumentLoader.h"
 #include "nsGenericHTMLElement.h"
 #include "nsHTMLParts.h"
-#include "nsILookAndFeel.h"
-#include "nsWidgetsCID.h"
+#include "nsISystemLook.h"
 #include "nsIComponentManager.h"
 // masks for mEdgeVisibility
 #define LEFT_VIS   0x0001
@@ -56,8 +56,6 @@
 #define NONE_VIS   0x0000
 
 static NS_DEFINE_IID(kIFramesetFrameIID, NS_IFRAMESETFRAME_IID);
-static NS_DEFINE_IID(kLookAndFeelCID, NS_LOOKANDFEEL_CID);
-static NS_DEFINE_IID(kILookAndFeelIID, NS_ILOOKANDFEEL_IID);
 
 /*******************************************************************************
  * nsFramesetDrag
@@ -287,7 +285,7 @@ void nsHTMLFramesetFrame::Scale(nscoord  aDesired,
                                 PRInt32  aNumIndicies, 
                                 PRInt32* aIndicies, 
                                 PRInt32  aNumItems,
-                                PRInt32* aItems)
+                                nscoord* aItems)
 {
   PRInt32 actual = 0;
   PRInt32 i, j;
@@ -302,7 +300,7 @@ void nsHTMLFramesetFrame::Scale(nscoord  aDesired,
   // scale the items up or down
   for (i = 0; i < aNumIndicies; i++) {
     j = aIndicies[i];
-    aItems[j] = NSToCoordRound((float)aItems[j] * factor);
+    aItems[j] *= factor;
     actual += aItems[j];
   }
 
@@ -340,8 +338,6 @@ void nsHTMLFramesetFrame::CalculateRowCol(nsIPresContext* aPresContext,
   PRInt32  numRelative = 0;
   PRInt32* relative= new PRInt32[aNumSpecs];
 
-  float p2t;
-  aPresContext->GetScaledPixelsToTwips(&p2t);
   PRInt32 i, j;
  
   // initialize the fixed, percent, relative indices, allocate the fixed sizes and zero the others
@@ -349,7 +345,7 @@ void nsHTMLFramesetFrame::CalculateRowCol(nsIPresContext* aPresContext,
     aValues[i] = 0;
     switch (aSpecs[i].mUnit) {
       case eFramesetUnit_Fixed:
-        aValues[i] = NSToCoordRound(p2t * aSpecs[i].mValue);
+        aValues[i] = aSpecs[i].mValue;
         fixedTotal += aValues[i];
         fixed[numFixed] = i;
         numFixed++;
@@ -378,7 +374,7 @@ void nsHTMLFramesetFrame::CalculateRowCol(nsIPresContext* aPresContext,
   // allocate the percentage sizes from what is left over from the fixed allocation
   for (i = 0; i < numPercent; i++) {
     j = percent[i];
-    aValues[j] = NSToCoordRound((float)aSpecs[j].mValue * (float)aSize / 100.0f);
+    aValues[j] = GFXCoordRound((float)aSpecs[j].mValue * (float)aSize / 100.0f);
     percentTotal += aValues[j];
   }
 
@@ -394,7 +390,7 @@ void nsHTMLFramesetFrame::CalculateRowCol(nsIPresContext* aPresContext,
   // allocate the relative sizes from what is left over from the percent allocation
   for (i = 0; i < numRelative; i++) {
     j = relative[i];
-    aValues[j] = NSToCoordRound((float)aSpecs[j].mValue * (float)relativeMax / (float)relativeSums);
+    aValues[j] = GFXCoordRound((float)aSpecs[j].mValue * (float)relativeMax / (float)relativeSums);
     relativeTotal += aValues[j];
   }
 
@@ -418,14 +414,12 @@ void nsHTMLFramesetFrame::GenerateRowCol(nsIPresContext* aPresContext,
                                           nsFramesetSpec* aSpecs, 
                                           nscoord*        aValues)
 {
-  float t2p;
-  aPresContext->GetTwipsToPixels(&t2p);
   PRInt32 i;
  
   for (i = 0; i < aNumSpecs; i++) {   
     switch (aSpecs[i].mUnit) {
       case eFramesetUnit_Fixed:
-        aSpecs[i].mValue = NSToCoordRound(t2p * aValues[i]);
+        aSpecs[i].mValue = aValues[i];
         break;
       case eFramesetUnit_Percent: // XXX Only accurate to 1%, need 1 pixel
         aSpecs[i].mValue = (100*aValues[i])/aSize;
@@ -440,8 +434,6 @@ void nsHTMLFramesetFrame::GenerateRowCol(nsIPresContext* aPresContext,
 
 PRInt32 nsHTMLFramesetFrame::GetBorderWidth(nsIPresContext* aPresContext) 
 {
-  float p2t;
-  aPresContext->GetScaledPixelsToTwips(&p2t);
   nsHTMLValue htmlVal;
   nsIHTMLContent* content = nsnull;
   mContent->QueryInterface(kIHTMLContentIID, (void**)&content);
@@ -458,7 +450,7 @@ PRInt32 nsHTMLFramesetFrame::GetBorderWidth(nsIPresContext* aPresContext)
         intVal = 0;
       }
       NS_RELEASE(content);
-      return NSIntPixelsToTwips(intVal, p2t);
+      return intVal;
     }
     NS_RELEASE(content);
   }
@@ -467,7 +459,7 @@ PRInt32 nsHTMLFramesetFrame::GetBorderWidth(nsIPresContext* aPresContext)
     return mParentBorderWidth;
   }
 
-  return NSIntPixelsToTwips(6, p2t);
+  return 6;
 }
 
 
@@ -933,6 +925,9 @@ nsHTMLFramesetFrame::Reflow(nsIPresContext*          aPresContext,
                             const nsHTMLReflowState& aReflowState,
                             nsReflowStatus&          aStatus)
 {
+#if 0
+  // XXX pav -- this code does some weird stuff that ends up now trying to use floats as indexes of arrays.  so this whole function is commented out :)
+
   DO_GLOBAL_REFLOW_COUNT("nsHTMLFramesetFrame", aReflowState.reason);
   nsCOMPtr<nsIPresShell> shell;
   aPresContext->GetShell(getter_AddRefs(shell));
@@ -1301,6 +1296,7 @@ nsHTMLFramesetFrame::Reflow(nsIPresContext*          aPresContext,
 
   aStatus = NS_FRAME_COMPLETE;
   mDrag.UnSet();
+#endif
   return NS_OK;
 }
 
@@ -1423,9 +1419,7 @@ nsHTMLFramesetFrame::StartMouseDrag(nsIPresContext*            aPresContext,
                                     nsGUIEvent*                aEvent)
 {
   if (mMinDrag == 0) {
-    float p2t;
-    aPresContext->GetPixelsToTwips(&p2t);
-    mMinDrag = NSIntPixelsToTwips(2, p2t);  // set min drag and min frame size to 2 pixels
+    mMinDrag = 2;  // set min drag and min frame size to 2 pixels
   }
 
 #if 0
@@ -1619,25 +1613,17 @@ nsHTMLFramesetBorderFrame::Paint(nsIPresContext*      aPresContext,
   nscolor hltColor = NS_RGB(255,255,255);
   nscolor sdwColor = NS_RGB(128,128,128);
 
+  nsresult rv;
 
-  // XXX pav use nsISystemLook
-#if 0
-  nsILookAndFeel * lookAndFeel;
-  if (NS_OK == nsComponentManager::CreateInstance(kLookAndFeelCID, nsnull, kILookAndFeelIID, (void**)&lookAndFeel)) {
-   lookAndFeel->GetColor(nsILookAndFeel::eColor_WidgetBackground,  bgColor);
-   lookAndFeel->GetColor(nsILookAndFeel::eColor_WidgetForeground,  fgColor);
-   lookAndFeel->GetColor(nsILookAndFeel::eColor_Widget3DShadow,    sdwColor);
-   lookAndFeel->GetColor(nsILookAndFeel::eColor_Widget3DHighlight, hltColor);
-   NS_RELEASE(lookAndFeel);
-  }
-#endif
+  nsCOMPtr<nsISystemLook> systemLook(do_GetService("@mozilla.org/gfx/systemlook;2", &rv));
+  systemLook->GetColor(nsISystemLook::color_WidgetBackground,  &bgColor);
+  systemLook->GetColor(nsISystemLook::color_WidgetForeground,  &fgColor);
+  systemLook->GetColor(nsISystemLook::color_Widget3DShadow,    &sdwColor);
+  systemLook->GetColor(nsISystemLook::color_Widget3DHighlight, &hltColor);
 
-  float t2p;
-  aPresContext->GetTwipsToPixels(&t2p);
-  nscoord widthInPixels = NSTwipsToIntPixels(mWidth, t2p);
-  float p2t;
-  aPresContext->GetPixelsToTwips(&p2t);
-  nscoord pixelWidth    = NSIntPixelsToTwips(1, p2t);
+  nscoord widthInPixels = mWidth;
+  // XXX pav -- 1 px?
+  nscoord pixelWidth    = 1;
 
   if (widthInPixels <= 0) {
     return NS_OK;
@@ -1807,18 +1793,15 @@ nsHTMLFramesetBlankFrame::Paint(nsIPresContext*      aPresContext,
 
   // XXX pav use setlinewidth??
 
-  float p2t;
-  aPresContext->GetPixelsToTwips(&p2t);
   nscoord x0 = 0;
   nscoord y0 = 0;
   nscoord x1 = x0;
   nscoord y1 = mRect.height;
-  nscoord pixel = NSIntPixelsToTwips(1, p2t);
 
   aDrawable->SetForegroundColor(white);
-  for (int i = 0; i < mRect.width; i += pixel) {
+  for (int i = 0; i < mRect.width; i += 1) {
     aDrawable->DrawLine (x0, y0, x1, y1);
-    x0 += NSIntPixelsToTwips(1, p2t);
+    x0 += 1;
     x1 =  x0;
   }
 

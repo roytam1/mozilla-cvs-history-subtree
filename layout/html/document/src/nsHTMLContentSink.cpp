@@ -227,7 +227,7 @@ public:
   NS_IMETHOD DoFragment(PRBool aFlag);
 
   // nsITimerCallback
-  NS_IMETHOD_(void) Notify(nsITimer *timer);
+  NS_IMETHOD Notify(nsITimer *timer);
   
   // nsICSSLoaderObserver
   NS_IMETHOD StyleSheetLoaded(nsICSSStyleSheet*aSheet, PRBool aNotify);
@@ -2413,7 +2413,7 @@ HTMLContentSink::DidBuildModel(PRInt32 aQualityLevel)
   return NS_OK;
 }
 
-NS_IMETHODIMP_(void)
+NS_IMETHODIMP
 HTMLContentSink::Notify(nsITimer *timer)
 {
   MOZ_TIMER_DEBUGLOG(("Start: nsHTMLContentSink::Notify()\n"));
@@ -2440,6 +2440,7 @@ HTMLContentSink::Notify(nsITimer *timer)
   mNotificationTimer = 0;
   MOZ_TIMER_DEBUGLOG(("Stop: nsHTMLContentSink::Notify()\n"));
   MOZ_TIMER_STOP(mWatch);
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -2496,7 +2497,7 @@ HTMLContentSink::WillInterrupt()
           SINK_TRACE(SINK_TRACE_REFLOW,
                      ("HTMLContentSink::WillInterrupt: setting up timer with delay %d", delay));
           
-          result = mNotificationTimer->Init(this, delay);
+          result = mNotificationTimer->Init(this, delay, nsITimer::NS_PRIORITY_NORMAL, nsITimer::NS_TYPE_ONE_SHOT);
         }
       }
     }

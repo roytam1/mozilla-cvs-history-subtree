@@ -28,7 +28,7 @@
 #ifndef nsButtonFrameRenderer_h___
 #define nsButtonFrameRenderer_h___
 
-#include "nsCoord.h"
+#include "gfxtypes.h"
 #include "nsIStyleContext.h"
 #include "nsCOMPtr.h"
 #include "nsFrame.h"

@@ -32,7 +32,7 @@
 #include "nsHTMLIIDs.h"
 #include "nsIView.h"
 #include "nsIViewManager.h"
-#include "nsCoord.h"
+#include "gfxtypes.h"
 #include "nsWidgetsCID.h"
 #include "nsViewsCID.h"
 #include "nsIComponentManager.h"
