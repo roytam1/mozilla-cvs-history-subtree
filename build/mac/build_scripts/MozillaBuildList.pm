@@ -1508,7 +1508,11 @@ sub CreateNSSExportList($$)
 {
   my ($source_def_file, $final_exp_file) = @_;
   
-  my($def_mod_time) = (-e $source_def_file ? GetFileModDate($source_def_file) : 0);
+  if (! -e $source_def_file) {
+  	die "NSS file $source_def_file does not exist";
+  }
+  
+  my($def_mod_time) = GetFileModDate($source_def_file);
   my($exp_mod_time) = (-e $final_exp_file ? GetFileModDate($final_exp_file) : 0);
   
   if ($exp_mod_time > $def_mod_time) {
@@ -1556,26 +1560,25 @@ sub BuildSecurityProjects()
 
     StartBuildModule("security");
 
-    #BuildProject(":mozilla:security:nss:macbuild:NSS.xml","NSS$D.o");
     #First we need to build all of the NSS shared libraries now.  
     #The order is important because they link against each other.
     BuildProject(":mozilla:security:nss:macbuild:util.xml","util$D.o");
     BuildProject(":mozilla:security:nss:macbuild:crmf.xml","crmf$D.o");
     
     CreateNSSExportList(":mozilla:security:nss:lib:softoken:softokn.def",
-                        ":mozilla:security:nss:macbuild:_softoken.mcp.exp");                        
+                        ":mozilla:security:nss:macbuild:softoken.mcp.exp");                        
     BuildOneProjectWithOutput(":mozilla:security:nss:macbuild:softoken.xml","Softoken3$D.shlb","Softoken3$D.shlb",1, $main::ALIAS_SYM_FILES, 0);
     
     CreateNSSExportList(":mozilla:security:nss:lib:nss:nss.def",
-                        ":mozilla:security:nss:macbuild:_NSS.mcp.exp"); 
+                        ":mozilla:security:nss:macbuild:NSS.mcp.exp"); 
     BuildOneProjectWithOutput(":mozilla:security:nss:macbuild:NSS.xml","NSS3$D.shlb","NSS3$D.shlb",1, $main::ALIAS_SYM_FILES, 0);
     
     CreateNSSExportList(":mozilla:security:nss:lib:ssl:ssl.def",
-                        ":mozilla:security:nss:macbuild:_ssl.mcp.exp");
+                        ":mozilla:security:nss:macbuild:ssl.mcp.exp");
     BuildOneProjectWithOutput(":mozilla:security:nss:macbuild:ssl.xml","SSL3$D.shlb","SSL3$D.shlb",1, $main::ALIAS_SYM_FILES, 0);
     
     CreateNSSExportList(":mozilla:security:nss:lib:smime:smime.def",
-                        ":mozilla:security:nss:macbuild:_smime.mcp.exp");
+                        ":mozilla:security:nss:macbuild:smime.mcp.exp");
     BuildOneProjectWithOutput(":mozilla:security:nss:macbuild:smime.xml","SMIME3$D.shlb","SMIME3$D.shlb",1, $main::ALIAS_SYM_FILES, 0);
     
     
