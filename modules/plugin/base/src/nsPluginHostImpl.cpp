@@ -4344,6 +4344,24 @@ static PRInt64 getFileLastModifiedTime(char * aPath)
   return lastModifiedTime;
 }
 
+// callback for comparing the modification time of two files
+// if the times are the same, compare the filesname
+static int PR_CALLBACK ComparePluginModificationTime (const void *v1, const void *v2, void *)
+{
+  // QuickSort callback to compare array values
+  char * f1 = (char *)v1;
+  char * f2 = (char *)v2; 
+  PRInt64 t1 = getFileLastModifiedTime(f1);
+  PRInt64 t2 = getFileLastModifiedTime(f2);
+
+  if (LL_EQ(t1, t2))
+    return PL_strcasecmp(f2, f1);
+  else if(LL_CMP(t1, >, t2))
+    return -1;
+  else 
+    return 1;
+}
+
 ////////////////////////////////////////////////////////////////////////
 nsresult nsPluginHostImpl::ScanPluginsDirectory(nsIFile * pluginsDir, 
                                                 nsIComponentManager * compManager, 
@@ -4364,6 +4382,10 @@ nsresult nsPluginHostImpl::ScanPluginsDirectory(nsIFile * pluginsDir,
   if (NS_FAILED(rv))
     return rv;
 
+  nsAutoVoidArray pluginFilesArray;  // array for sorting files in this directory
+
+  // Collect all the files in this directory in a void array we can sort later
+  // See bug 119966
   PRBool hasMore;
   while (NS_SUCCEEDED(iter->HasMoreElements(&hasMore)) && hasMore)  
   {
@@ -4378,6 +4400,17 @@ nsresult nsPluginHostImpl::ScanPluginsDirectory(nsIFile * pluginsDir,
     rv = dirEntry->GetPath(getter_Copies(filePath));
     if (NS_FAILED(rv))
       continue;
+
+    pluginFilesArray.AppendElement(ToNewCString(filePath));  // adopted below
+  }
+    
+  // sort the array by file modification time or filename
+  pluginFilesArray.Sort(ComparePluginModificationTime, nsnull);
+
+  // now go through the array, looking at each file
+  for (PRInt32 i = 0; i < pluginFilesArray.Count(); i++) {   
+    nsXPIDLCString filePath; 
+    filePath.Adopt((char *)pluginFilesArray[i]);  // adopoted from above
     
     nsFileSpec file(filePath);
     PRBool wasSymlink;  
@@ -4452,6 +4485,7 @@ nsresult nsPluginHostImpl::ScanPluginsDirectory(nsIFile * pluginsDir,
         delete pluginTag;
     }
   }
+
   return NS_OK;
 }
 
