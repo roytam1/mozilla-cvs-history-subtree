@@ -1174,7 +1174,7 @@ PRUint32                  i;
       // Create the URI
       if (NS_FAILED(image->GetSrc(tUrl)))
         return MK_MIME_MPART_ATTACHMENT_ERROR;
-      if (NS_FAILED(nsMsgNewURL(&attachment.url, tUrl)))
+      if (NS_FAILED(nsMsgNewURL(&attachment.url, nsCAutoString(tUrl))))
         return NS_ERROR_OUT_OF_MEMORY;
 
       NS_ADDREF(attachment.url);
@@ -1195,7 +1195,7 @@ PRUint32                  i;
       // Create the URI
       if (NS_FAILED(link->GetHref(tUrl)))
         return MK_MIME_MPART_ATTACHMENT_ERROR;
-      if (NS_FAILED(nsMsgNewURL(&attachment.url, tUrl)))
+      if (NS_FAILED(nsMsgNewURL(&attachment.url, nsCAutoString(tUrl))))
         return NS_ERROR_OUT_OF_MEMORY;
 
       NS_ADDREF(attachment.url);
@@ -1208,7 +1208,7 @@ PRUint32                  i;
       // Create the URI
       if (NS_FAILED(anchor->GetHref(tUrl)))
         return MK_MIME_MPART_ATTACHMENT_ERROR;
-      if (NS_FAILED(nsMsgNewURL(&attachment.url, tUrl)))
+      if (NS_FAILED(nsMsgNewURL(&attachment.url, nsCAutoString(tUrl))))
         return NS_ERROR_OUT_OF_MEMORY;
 
       NS_ADDREF(attachment.url);
@@ -1273,8 +1273,8 @@ PRUint32                  i;
 		// Start counting the attachments which are going to come from mail folders
 		// and from NNTP servers.
     //
-    const char    *turl;
-    m_attachments[i].mURL->GetSpec(&turl);
+    nsXPIDLCString    turl;
+    m_attachments[i].mURL->GetSpec(getter_Copies(turl));
 		if (PL_strncasecmp(turl, "mailbox:",8) || PL_strncasecmp(turl, "IMAP:",5))
 			(*aMailboxCount)++;
 		else if (PL_strncasecmp(turl, "news:",5) || PL_strncasecmp(turl, "snews:",6))
