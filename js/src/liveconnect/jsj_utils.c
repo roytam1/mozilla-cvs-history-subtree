@@ -214,7 +214,7 @@ vreport_java_error(JSContext *cx, JNIEnv *jEnv, const char *format, va_list ap)
        
     /* Get the exception out of the java environment. */
     java_obj = NULL;
-    java_error_msg = NULL;
+    java_error_msg = error_msg = NULL;
     java_exception = (*jEnv)->ExceptionOccurred(jEnv);
     if (java_exception) {
 
@@ -331,7 +331,8 @@ done:
         (*jEnv)->DeleteLocalRef(jEnv, java_obj);
     if (java_exception)
         (*jEnv)->DeleteLocalRef(jEnv, java_exception);
-    free(error_msg);
+    if (error_msg)
+	free(error_msg);
 }
 
 void
