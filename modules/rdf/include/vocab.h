@@ -89,6 +89,7 @@ typedef struct _RDF_NCVocabStruct {
   RDF_Resource RDF_Password;
   RDF_Resource RDF_SBProviders;
   RDF_Resource RDF_WorkspacePos;
+  RDF_Resource RDF_ItemPos;
   RDF_Resource RDF_Locks;
   RDF_Resource RDF_AddLock;
   RDF_Resource RDF_DeleteLock;

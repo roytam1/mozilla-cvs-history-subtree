@@ -33,7 +33,6 @@
 #include "rdfparse.h"
 #include "remstore.h"
 
-HT_Resource		crap = NULL;
 
 	/* globals */
 HT_Icon			urlList = NULL;
@@ -696,6 +695,7 @@ nodeCompareRtn(HT_Resource *node1, HT_Resource *node2)
 	uint32		sortTokenType;
 	PRBool		descendingFlag;
 	char		*node1Name = NULL, *node2Name = NULL;
+	char		*pos1 = NULL, *pos2 = NULL;
 	time_t		date1, date2;
 
 	XP_ASSERT(node1 != NULL);
@@ -799,11 +799,23 @@ nodeCompareRtn(HT_Resource *node1, HT_Resource *node2)
 	}
 	else	/* natural order */
 	{
-		node1Index = (*node1)->unsortedIndex;
-		node2Index = (*node2)->unsortedIndex;
-		if (node1Index < node2Index)		retVal=-1;
-		else if (node1Index > node2Index)	retVal=1;
-		else					retVal=0;
+		HT_GetNodeData ((*node1), gNavCenter->RDF_ItemPos, HT_COLUMN_STRING, &pos1);
+		HT_GetNodeData ((*node2), gNavCenter->RDF_ItemPos, HT_COLUMN_STRING, &pos2);
+
+		if ((pos1 != NULL) && (pos2 == NULL))		retVal=-1;
+		else if ((pos1 == NULL) && (pos2 != NULL))	retVal=1;
+		else if ((pos1 !=NULL) && (pos2 != NULL))
+		{
+			retVal = compareStrings(pos1, pos2);
+		}
+		else
+		{
+			node1Index = (*node1)->unsortedIndex;
+			node2Index = (*node2)->unsortedIndex;
+			if (node1Index < node2Index)		retVal=-1;
+			else if (node1Index > node2Index)	retVal=1;
+			else					retVal=0;
+		}
 	}
 	return(retVal);
 }
@@ -7253,9 +7265,6 @@ HT_Launch(HT_Resource node, MWContext *context)
 
 	if (node != NULL)
 	{
-
-		if (crap == NULL)	crap = node;
-
 		if ( (!HT_IsContainer(node)) && (!HT_IsSeparator(node)) )
 		{
 			dropAction = htLaunchSmartNode(node, NULL);
