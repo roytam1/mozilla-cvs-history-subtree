@@ -149,6 +149,9 @@ nsHttpTransaction::OnDataReadable(nsIInputStream *is)
 
     LOG(("nsHttpTransaction::OnDataReadable [this=%x]\n", this));
 
+    if (!mListener)
+        return NS_BASE_STREAM_CLOSED;
+
     mSource = is;
 
     // let our listener try to read up to NS_HTTP_BUFFER_SIZE from us.

@@ -606,11 +606,22 @@ nsHttpHandler::CountIdleConnections(nsHttpConnectionInfo *ci)
 {
     PRUint32 count = 0;
 
+    LOG(("nsHttpHandler::CountIdleConnections [host=%s:%d]\n",
+        ci->Host(), ci->Port()));
+
     nsHttpConnection *conn = 0;
     PRCList *node = PR_LIST_HEAD(&mIdleConnections);
     while (node != &mIdleConnections) {
         conn = (nsHttpConnection *) node; 
+
+        if (node == PR_NEXT_LINK(node)) {
+            NS_NOTREACHED("infinite loop detected");
+            break;
+        }
+            
         node = PR_NEXT_LINK(node);
+
+        LOG(("checking conn @%x\n", conn));
 
         // only include a matching connection in the count if it
         // can still be reused.
