@@ -173,7 +173,12 @@ js_ReportErrorVA(JSContext *cx, uintN flags, const char *format, va_list ap)
 	/* XXX should fetch line somehow */
 	report.linebuf = NULL;
 	report.tokenptr = NULL;
+        report.uclinebuf = NULL;
+        report.uctokenptr = NULL;
 	report.flags = flags;
+        report.errorNumber = 0;
+        report.ucmessage = NULL;
+        report.messageArgs = NULL;
 	reportp = &report;
     } else {
 	/* XXXshaver still fill out report here for flags? */
@@ -349,6 +354,15 @@ js_ReportErrorNumberVA(JSContext *cx, uintN flags, JSErrorCallback callback,
     report.tokenptr = NULL;
     report.flags = flags;
     report.errorNumber = errorNumber;
+
+    /*
+     * js_ExpandErrorArguments only sometimes fills these in, so we
+     * initialize them to clear garbage.
+     */
+    report.uclinebuf = NULL;
+    report.uctokenptr = NULL;
+    report.ucmessage = NULL;
+    report.messageArgs = NULL;
 
     if (!js_ExpandErrorArguments(cx, callback, userRef, errorNumber,
 				 &message, &report, charArgs, ap))
