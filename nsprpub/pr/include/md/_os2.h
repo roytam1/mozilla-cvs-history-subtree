@@ -199,6 +199,7 @@ extern PRInt32 _MD_CloseFile(PRInt32 osfd);
 #define _MD_ACCESS                    (_PR_MD_ACCESS)
 #define _MD_DELETE                    (_PR_MD_DELETE)
 #define _MD_MKDIR                     (_PR_MD_MKDIR)
+#define _MD_MAKE_DIR                  (_PR_MD_MKDIR)
 #define _MD_RMDIR                     (_PR_MD_RMDIR)
 #define _MD_LOCKFILE                  (_PR_MD_LOCKFILE)
 #define _MD_TLOCKFILE                 (_PR_MD_TLOCKFILE)

@@ -302,6 +302,7 @@ struct protoent* getprotobynumber(int number);
 #define _MD_ACCESS _MD_access
 #define _MD_STAT stat
 #define _MD_MKDIR _MD_mkdir
+#define _MD_MAKE_DIR _MD_mkdir
 #define _MD_RMDIR _MD_rmdir
 #define _MD_PR_POLL _MD_pr_poll
 

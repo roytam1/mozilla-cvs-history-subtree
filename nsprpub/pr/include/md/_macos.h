@@ -369,6 +369,7 @@ extern char* _MD_ReadDir(struct _MDDir *md,PRIntn flags);
 #define	_MD_CLOSE_DIR 		_MD_CloseDir
 
 #define	_MD_MKDIR 			_MD_MkDir
+#define	_MD_MAKE_DIR		_MD_MkDir
 #define	_MD_RMDIR 			_MD_Delete
 
 /*

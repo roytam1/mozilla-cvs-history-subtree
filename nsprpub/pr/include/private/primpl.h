@@ -1065,6 +1065,9 @@ extern PRInt32 _PR_MD_STAT(const char *name, struct stat *buf);
 extern PRInt32 _PR_MD_MKDIR(const char *name, PRIntn mode);
 #define _PR_MD_MKDIR _MD_MKDIR
 
+extern PRInt32 _PR_MD_MAKE_DIR(const char *name, PRIntn mode);
+#define _PR_MD_MAKE_DIR _MD_MAKE_DIR
+
 extern PRInt32 _PR_MD_RMDIR(const char *name);
 #define _PR_MD_RMDIR _MD_RMDIR
 

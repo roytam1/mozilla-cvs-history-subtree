@@ -348,6 +348,7 @@ extern PRInt32 _MD_write(PRFileDesc *fd, const void *buf, PRInt32 amount);
 #define _MD_RENAME(from, to)		    _MD_rename(from, to)
 #define _MD_ACCESS(name, how)		    _MD_access(name, how)
 #define _MD_MKDIR(name, mode)		    _MD_mkdir(name, mode)
+#define _MD_MAKE_DIR(name, mode)		_MD_mkdir(name, mode)
 #define _MD_RMDIR(name)			        _MD_rmdir(name)
 #define _MD_ACCEPT_READ(sock, newSock, raddr, buf, amount)	_MD_accept_read(sock, newSock, raddr, buf, amount)
 

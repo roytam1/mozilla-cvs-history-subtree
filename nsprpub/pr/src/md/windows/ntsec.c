@@ -129,10 +129,15 @@ _PR_NT_FreeSids(void)
  * and everyone are obtained from the global _pr_nt_sids structure.
  * Both the security descriptor and access-control list are returned
  * and should be freed by a _PR_NT_FreeSecurityDescriptorACL call.
+ *
+ * The accessTable array maps NSPR's read, write, and execute access
+ * rights to the corresponding NT access rights for the securable
+ * object.
  */
 PRStatus
 _PR_NT_MakeSecurityDescriptorACL(
     PRIntn mode,
+    DWORD accessTable[],
     PSECURITY_DESCRIPTOR *resultSD,
     PACL *resultACL)
 {
@@ -182,27 +187,27 @@ _PR_NT_MakeSecurityDescriptorACL(
         goto failed;
     }
     accessMask = 0;
-    if (mode & 00400) accessMask |= GENERIC_READ;
-    if (mode & 00200) accessMask |= GENERIC_WRITE;
-    if (mode & 00100) accessMask |= GENERIC_EXECUTE;
+    if (mode & 00400) accessMask |= accessTable[0];
+    if (mode & 00200) accessMask |= accessTable[1];
+    if (mode & 00100) accessMask |= accessTable[2];
     if (accessMask && !AddAccessAllowedAce(pACL, ACL_REVISION, accessMask,
             _pr_nt_sids.owner)) {
         _PR_MD_MAP_DEFAULT_ERROR(GetLastError());
         goto failed;
     }
     accessMask = 0;
-    if (mode & 00040) accessMask |= GENERIC_READ;
-    if (mode & 00020) accessMask |= GENERIC_WRITE;
-    if (mode & 00010) accessMask |= GENERIC_EXECUTE;
+    if (mode & 00040) accessMask |= accessTable[0];
+    if (mode & 00020) accessMask |= accessTable[1];
+    if (mode & 00010) accessMask |= accessTable[2];
     if (accessMask && !AddAccessAllowedAce(pACL, ACL_REVISION, accessMask,
             _pr_nt_sids.group)) {
         _PR_MD_MAP_DEFAULT_ERROR(GetLastError());
         goto failed;
     }
     accessMask = 0;
-    if (mode & 00004) accessMask |= GENERIC_READ;
-    if (mode & 00002) accessMask |= GENERIC_WRITE;
-    if (mode & 00001) accessMask |= GENERIC_EXECUTE;
+    if (mode & 00004) accessMask |= accessTable[0];
+    if (mode & 00002) accessMask |= accessTable[1];
+    if (mode & 00001) accessMask |= accessTable[2];
     if (accessMask && !AddAccessAllowedAce(pACL, ACL_REVISION, accessMask,
             _pr_nt_sids.everyone)) {
         _PR_MD_MAP_DEFAULT_ERROR(GetLastError());

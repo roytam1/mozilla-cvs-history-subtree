@@ -1065,6 +1065,8 @@ NSPR_API(PRStatus) PR_CloseDir(PRDir *dir);
 
 NSPR_API(PRStatus) PR_MkDir(const char *name, PRIntn mode);
 
+NSPR_API(PRStatus) PR_MakeDir(const char *name, PRIntn mode);
+
 /*
  *************************************************************************
  * FUNCTION: PR_RmDir

@@ -205,7 +205,11 @@ struct _MDProcess {
 extern void _PR_NT_InitSids(void);
 extern void _PR_NT_FreeSids(void);
 extern PRStatus _PR_NT_MakeSecurityDescriptorACL(
-    PRIntn mode, PSECURITY_DESCRIPTOR *resultSD, PACL *resultACL);
+    PRIntn mode,
+    DWORD accessTable[],
+    PSECURITY_DESCRIPTOR *resultSD,
+    PACL *resultACL
+);
 extern void _PR_NT_FreeSecurityDescriptorACL(
     PSECURITY_DESCRIPTOR pSD, PACL pACL);
 
@@ -231,6 +235,7 @@ extern PRInt32 _PR_MD_CLOSE(PRInt32 osfd, PRBool socket);
 #define _MD_ACCESS                    _PR_MD_ACCESS     
 #define _MD_DELETE                    _PR_MD_DELETE     
 #define _MD_MKDIR                     _PR_MD_MKDIR      
+#define _MD_MAKE_DIR                  _PR_MD_MAKE_DIR
 #define _MD_RMDIR                     _PR_MD_RMDIR      
 #define _MD_LOCKFILE                  _PR_MD_LOCKFILE
 #define _MD_TLOCKFILE                 _PR_MD_TLOCKFILE

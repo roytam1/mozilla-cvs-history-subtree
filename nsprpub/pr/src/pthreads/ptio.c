@@ -2904,7 +2904,7 @@ PR_IMPLEMENT(PRStatus) PR_CloseDir(PRDir *dir)
     return PR_SUCCESS;
 }  /* PR_CloseDir */
 
-PR_IMPLEMENT(PRStatus) PR_MkDir(const char *name, PRIntn mode)
+PR_IMPLEMENT(PRStatus) PR_MakeDir(const char *name, PRIntn mode)
 {
     PRInt32 rv = -1;
 
@@ -2923,6 +2923,11 @@ PR_IMPLEMENT(PRStatus) PR_MkDir(const char *name, PRIntn mode)
         PR_Unlock(_pr_rename_lock);
 
     return (-1 == rv) ? PR_FAILURE : PR_SUCCESS;
+}  /* PR_Makedir */
+
+PR_IMPLEMENT(PRStatus) PR_MkDir(const char *name, PRIntn mode)
+{
+    return PR_MakeDir(name, mode);
 }  /* PR_Mkdir */
 
 PR_IMPLEMENT(PRStatus) PR_RmDir(const char *name)

@@ -60,6 +60,15 @@ extern PRUint32              _nt_idleCount;
 #define CLOSE_TIMEOUT   PR_SecondsToInterval(5)
 
 /*
+ * NSPR-to-NT access right mapping table for files and directories.
+ */
+static DWORD fileAccessTable[] = {
+    GENERIC_READ,
+    GENERIC_WRITE,
+    GENERIC_EXECUTE
+};
+
+/*
  * The NSPR epoch (00:00:00 1 Jan 1970 UTC) in FILETIME.
  * We store the value in a PRTime variable for convenience.
  * This constant is used by _PR_FileTimeToPRTime().
@@ -2200,8 +2209,8 @@ _PR_MD_OPEN_FILE(const char *name, PRIntn osflags, PRIntn mode)
     PACL pACL = NULL;
 
     if (osflags & PR_CREATE_FILE) {
-        if (_PR_NT_MakeSecurityDescriptorACL(mode, &pSD, &pACL)
-                == PR_SUCCESS) {
+        if (_PR_NT_MakeSecurityDescriptorACL(mode, fileAccessTable,
+                &pSD, &pACL) == PR_SUCCESS) {
             sa.nLength = sizeof(sa);
             sa.lpSecurityDescriptor = pSD;
             sa.bInheritHandle = FALSE;
@@ -3266,6 +3275,34 @@ _PR_MD_MKDIR(const char *name, PRIntn mode)
 {
     /* XXXMB - how to translate the "mode"??? */
     if (CreateDirectory(name, NULL)) {
+        return 0;
+    } else {
+        _PR_MD_MAP_MKDIR_ERROR(GetLastError());
+        return -1;
+    }
+}
+
+PRInt32
+_PR_MD_MAKE_DIR(const char *name, PRIntn mode)
+{
+    BOOL rv;
+    SECURITY_ATTRIBUTES sa;
+    LPSECURITY_ATTRIBUTES lpSA = NULL;
+    PSECURITY_DESCRIPTOR pSD = NULL;
+    PACL pACL = NULL;
+
+    if (_PR_NT_MakeSecurityDescriptorACL(mode, fileAccessTable,
+            &pSD, &pACL) == PR_SUCCESS) {
+        sa.nLength = sizeof(sa);
+        sa.lpSecurityDescriptor = pSD;
+        sa.bInheritHandle = FALSE;
+        lpSA = &sa;
+    }
+    rv = CreateDirectory(name, lpSA);
+    if (lpSA != NULL) {
+        _PR_NT_FreeSecurityDescriptorACL(pSD, pACL);
+    }
+    if (rv) {
         return 0;
     } else {
         _PR_MD_MAP_MKDIR_ERROR(GetLastError());

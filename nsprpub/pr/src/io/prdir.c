@@ -70,6 +70,17 @@ PRInt32 rv;
 		return PR_SUCCESS;
 }
 
+PR_IMPLEMENT(PRStatus) PR_MakeDir(const char *name, PRIntn mode)
+{
+PRInt32 rv;
+
+	rv = _PR_MD_MAKE_DIR(name, mode);
+	if (rv < 0) {
+		return PR_FAILURE;
+	} else
+		return PR_SUCCESS;
+}
+
 PR_IMPLEMENT(PRStatus) PR_RmDir(const char *name)
 {
 PRInt32 rv;
