@@ -82,7 +82,7 @@ NS_IMPL_QUERY_INTERFACE2(InputTestConsumer,
 
 
 NS_IMETHODIMP
-InputTestConsumer::OnStartRequest(nsIChannel* channel, nsISupports* context)
+InputTestConsumer::OnStartRequest(nsIRequest *request, nsISupports* context)
 {
   printf("\n+++ InputTestConsumer::OnStartRequest +++\n");
   return NS_OK;
@@ -90,7 +90,7 @@ InputTestConsumer::OnStartRequest(nsIChannel* channel, nsISupports* context)
 
 
 NS_IMETHODIMP
-InputTestConsumer::OnDataAvailable(nsIChannel* channel,
+InputTestConsumer::OnDataAvailable(nsIRequest *request,
                                    nsISupports* context,
                                    nsIInputStream *aIStream, 
                                    PRUint32 aSourceOffset,
@@ -110,7 +110,7 @@ InputTestConsumer::OnDataAvailable(nsIChannel* channel,
 
 
 NS_IMETHODIMP
-InputTestConsumer::OnStopRequest(nsIChannel* channel, nsISupports* context,
+InputTestConsumer::OnStopRequest(nsIRequest *request, nsISupports* context,
                                  nsresult aStatus, const PRUnichar* aStatusArg)
 {
   gKeepRunning = 0;
@@ -152,7 +152,7 @@ NS_IMPL_ISUPPORTS(TestWriteObserver,NS_GET_IID(nsIStreamObserver));
 
 
 NS_IMETHODIMP
-TestWriteObserver::OnStartRequest(nsIChannel* channel, nsISupports* context)
+TestWriteObserver::OnStartRequest(nsIRequest *request, nsISupports* context)
 {
   printf("\n+++ TestWriteObserver::OnStartRequest +++\n");
   return NS_OK;
@@ -160,13 +160,14 @@ TestWriteObserver::OnStartRequest(nsIChannel* channel, nsISupports* context)
 
 
 NS_IMETHODIMP
-TestWriteObserver::OnStopRequest(nsIChannel* channel, nsISupports* context,
+TestWriteObserver::OnStopRequest(nsIRequest *request, nsISupports* context,
                                  nsresult aStatus, const PRUnichar* aStatusArg)
 {
   printf("\n+++ TestWriteObserver::OnStopRequest (status = %x) +++\n", aStatus);
 
   if (NS_SUCCEEDED(aStatus)) {
-    mTransport->AsyncRead(nsnull, new InputTestConsumer);
+    nsCOMPtr<nsIRequest> request;
+    mTransport->AsyncRead(nsnull, new InputTestConsumer, 0, -1, getter_AddRefs(request));
   } else {
     gKeepRunning = 0;
   }
@@ -246,9 +247,9 @@ main(int argc, char* argv[])
     TestWriteObserver* observer = new TestWriteObserver(transport);
 
     gElapsedTime = PR_Now();
-    rv = transport->SetTransferCount(bytesWritten);
     if (NS_SUCCEEDED(rv)) {
-      rv = transport->AsyncWrite(stream, nsnull, observer);
+      nsCOMPtr<nsIRequest> request;
+      rv = transport->AsyncWrite(stream, nsnull, observer, 0, bytesWritten, getter_AddRefs(request));
     }
 
     NS_RELEASE(transport);

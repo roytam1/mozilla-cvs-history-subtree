@@ -24,6 +24,7 @@
 
 interface nsIEventQueue;
 interface nsIChannel;
+interface nsIRequest;
 
 [scriptable, uuid(fd91e2e0-1481-11d3-9333-00104ba0fd40)]
 interface nsIStreamObserver : nsISupports
@@ -31,7 +32,7 @@ interface nsIStreamObserver : nsISupports
     /**
      * Called to signify the beginning of an asyncronous request.
      */
-    void onStartRequest(in nsIChannel channel,
+    void onStartRequest(in nsIRequest request,
                         in nsISupports ctxt);
 
     /**
@@ -39,7 +40,7 @@ interface nsIStreamObserver : nsISupports
      * @param notif - a notification object containing any error code and error parameters
      *                (may be null if the notification status is NS_OK)
      */
-    void onStopRequest(in nsIChannel channel,
+    void onStopRequest(in nsIRequest request,
                        in nsISupports ctxt,
                        in nsresult status,
                        in wstring statusArg);

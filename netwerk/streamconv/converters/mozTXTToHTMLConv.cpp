@@ -1089,7 +1089,7 @@ mozTXTToHTMLConv::AsyncConvertData(const PRUnichar *aFromType,
 }
 
 NS_IMETHODIMP
-mozTXTToHTMLConv::OnDataAvailable(nsIChannel *channel, nsISupports *ctxt,
+mozTXTToHTMLConv::OnDataAvailable(nsIRequest* request, nsISupports *ctxt,
                                      nsIInputStream *inStr, PRUint32 sourceOffset,
                                      PRUint32 count)
 {
@@ -1097,13 +1097,13 @@ mozTXTToHTMLConv::OnDataAvailable(nsIChannel *channel, nsISupports *ctxt,
 }
 
 NS_IMETHODIMP
-mozTXTToHTMLConv::OnStartRequest(nsIChannel *channel, nsISupports *ctxt)
+mozTXTToHTMLConv::OnStartRequest(nsIRequest* request, nsISupports *ctxt)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-mozTXTToHTMLConv::OnStopRequest(nsIChannel *channel, nsISupports *ctxt,
+mozTXTToHTMLConv::OnStopRequest(nsIRequest* request, nsISupports *ctxt,
                                 nsresult aStatus, const PRUnichar* aStatusArg)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
@@ -1158,24 +1158,4 @@ mozTXTToHTMLConv::ScanHTML(const PRUnichar *text, PRUint32 whattodo,
   ScanHTML(inString, whattodo, outString);
   *_retval = outString.ToNewUnicode();
   return *_retval ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
-}
-
-
-/**************************************************************************
-  Global functions
-***************************************************************************/
-nsresult
-MOZ_NewTXTToHTMLConv(mozTXTToHTMLConv** aConv)
-{
-    NS_PRECONDITION(aConv != nsnull, "null ptr");
-    if (!aConv)
-      return NS_ERROR_NULL_POINTER;
-
-    *aConv = new mozTXTToHTMLConv();
-    if (!*aConv)
-      return NS_ERROR_OUT_OF_MEMORY;
-
-    NS_ADDREF(*aConv);
-    //    return (*aConv)->Init();
-    return NS_OK;
 }

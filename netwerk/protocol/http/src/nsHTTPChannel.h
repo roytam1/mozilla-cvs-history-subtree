@@ -43,6 +43,8 @@
 #include "nsIPrompt.h"
 #include "nsIHTTPEventSink.h"
 #include "nsIStreamAsFile.h"
+#include "nsIStreamContentInfo.h"
+
 class nsIFile;
 
 class nsHTTPRequest;
@@ -66,6 +68,8 @@ DupString(char* *o_Dest, const char* i_Src);
     -Gagan Saksena 02/25/99
 */
 class nsHTTPChannel : public nsIHTTPChannel,
+                      public nsIRequest,
+                      public nsIStreamContentInfo,
                       public nsIInterfaceRequestor,
                       public nsIProgressEventSink,
                       public nsIProxy,
@@ -81,6 +85,7 @@ public:
 
     NS_DECL_ISUPPORTS
     NS_DECL_NSIREQUEST
+    NS_DECL_NSISTREAMCONTENTINFO
     NS_DECL_NSICHANNEL
     NS_DECL_NSIHTTPCHANNEL
     NS_DECL_NSIINTERFACEREQUESTOR
@@ -190,8 +195,6 @@ protected:
     // (such as socks) we want to reverse conditional proxy behavior
     PRBool                              mProxyTransparent;
    
-    PRUint32                            mBufferSegmentSize;
-    PRUint32                            mBufferMaxSize;
     nsresult                            mStatus;
 
     nsCOMPtr<nsIChannel>                mCacheTransport;

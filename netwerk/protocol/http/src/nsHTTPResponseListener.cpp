@@ -136,7 +136,7 @@ nsHTTPCacheListener::~nsHTTPCacheListener()
 // nsIStreamObserver methods:
 
 NS_IMETHODIMP
-nsHTTPCacheListener::OnStartRequest(nsIChannel *aChannel,
+nsHTTPCacheListener::OnStartRequest(nsIRequest *request,
                                     nsISupports *aContext) 
 {
     PR_LOG(gHTTPLog, PR_LOG_DEBUG,
@@ -145,12 +145,15 @@ nsHTTPCacheListener::OnStartRequest(nsIChannel *aChannel,
     
     // get and store the content length which will be used in ODA for computing
     // progress information. 
-    aChannel->GetContentLength(&mContentLength) ;
+    nsCOMPtr<nsIStreamContentInfo> cr = do_QueryInterface(request);
+    if (!cr) return NS_ERROR_FAILURE;
+    
+    cr->GetContentLength(&mContentLength) ;
     return mResponseDataListener->OnStartRequest(mChannel, aContext) ;
 }
 
 NS_IMETHODIMP
-nsHTTPCacheListener::OnStopRequest(nsIChannel *aChannel, nsISupports *aContext,
+nsHTTPCacheListener::OnStopRequest(nsIRequest *request, nsISupports *aContext,
                                    nsresult aStatus, const PRUnichar* aStatusArg) 
 {
     PR_LOG(gHTTPLog, PR_LOG_DEBUG,
@@ -170,7 +173,7 @@ nsHTTPCacheListener::OnStopRequest(nsIChannel *aChannel, nsISupports *aContext,
 // nsIStreamListener methods:
 
 NS_IMETHODIMP
-nsHTTPCacheListener::OnDataAvailable(nsIChannel *aChannel,
+nsHTTPCacheListener::OnDataAvailable(nsIRequest *request,
                                      nsISupports *aContext,
                                      nsIInputStream *aStream,
                                      PRUint32 aSourceOffset,
@@ -274,7 +277,7 @@ nsHTTPServerListener::~nsHTTPServerListener()
 // nsIStreamListener methods:
 
 NS_IMETHODIMP
-nsHTTPServerListener::OnDataAvailable(nsIChannel* channel,
+nsHTTPServerListener::OnDataAvailable(nsIRequest *request,
                                       nsISupports* context,
                                       nsIInputStream *i_pStream, 
                                       PRUint32 i_SourceOffset,
@@ -372,7 +375,9 @@ nsHTTPServerListener::OnDataAvailable(nsIChannel* channel,
                 {
                     mHandler->ReleasePipelinedRequest(mPipelinedRequest) ;
                     mPipelinedRequest = nsnull;
-
+                    nsCOMPtr<nsIChannel> channel = do_QueryInterface(request, &rv);
+                    if (NS_FAILED(rv)) return rv;
+                    
                     nsCOMPtr<nsISocketTransport> trans = do_QueryInterface(channel, &rv) ;
 
                     // XXX/ruslan: will be replaced with the new Cancel(code) 
@@ -487,7 +492,7 @@ nsHTTPServerListener::OnDataAvailable(nsIChannel* channel,
                         fromStr.GetUnicode() , 
                         toStr.GetUnicode() , 
                         mResponseDataListener, 
-                        channel, 
+                        request, 
                         getter_AddRefs(converterListener)) ;
                 if (NS_FAILED(rv)) return rv;
                 mResponseDataListener = converterListener;
@@ -589,6 +594,8 @@ nsHTTPServerListener::OnDataAvailable(nsIChannel* channel,
                 mHandler->ReleasePipelinedRequest(mPipelinedRequest) ;
                 mPipelinedRequest = nsnull;
 
+                nsCOMPtr<nsIChannel> channel = do_QueryInterface(request, &rv);
+                if (NS_FAILED(rv)) return rv;
                 nsCOMPtr<nsISocketTransport> trans = do_QueryInterface(channel, &rv1) ;
 
                 // XXX/ruslan: will be replaced with the new Cancel(code) 
@@ -614,7 +621,7 @@ nsHTTPServerListener::OnDataAvailable(nsIChannel* channel,
                 i_pStream->Available(&streamLen) ;
 
                 if (streamLen > 0) 
-                    OnDataAvailable(channel, context, i_pStream, 0, streamLen) ;
+                    OnDataAvailable(request, context, i_pStream, 0, streamLen) ;
             }
         }
     }
@@ -623,7 +630,7 @@ nsHTTPServerListener::OnDataAvailable(nsIChannel* channel,
 
 
 NS_IMETHODIMP
-nsHTTPServerListener::OnStartRequest(nsIChannel* channel, nsISupports* i_pContext) 
+nsHTTPServerListener::OnStartRequest(nsIRequest *request, nsISupports* i_pContext) 
 {
     PR_LOG(gHTTPLog, PR_LOG_ALWAYS, 
 ("nsHTTPServerListener::OnStartRequest [this=%x].\n", this)) ;
@@ -665,7 +672,7 @@ nsHTTPServerListener::OnStartRequest(nsIChannel* channel, nsISupports* i_pContex
 }
 
 NS_IMETHODIMP
-nsHTTPServerListener::OnStopRequest(nsIChannel* channel, nsISupports* i_pContext, 
+nsHTTPServerListener::OnStopRequest(nsIRequest *request, nsISupports* i_pContext, 
                                     nsresult i_Status, const PRUnichar* aStatusArg) 
 {
     nsresult rv = i_Status, channelStatus = NS_OK;
@@ -735,7 +742,7 @@ nsHTTPServerListener::OnStopRequest(nsIChannel* channel, nsISupports* i_pContext
         PRUint32 keepAliveTimeout = 0;
         PRInt32  keepAliveMaxCon = -1;
 
-        if (mResponse && channel) // this is the actual response from the transport
+        if (mResponse && request) // this is the actual response from the transport
         {
             HTTPVersion ver;
             rv = mResponse->GetServerVersion(&ver) ;
@@ -802,6 +809,9 @@ nsHTTPServerListener::OnStopRequest(nsIChannel* channel, nsISupports* i_pContext
             mHandler->ReleasePipelinedRequest(mPipelinedRequest) ;
             mPipelinedRequest = nsnull;
         }
+
+        nsCOMPtr<nsIChannel> channel = do_QueryInterface(request, &rv);
+        if (NS_FAILED(rv)) return rv;
 
         if (channel) 
             mHandler->ReleaseTransport(channel, capabilities, PR_FALSE, keepAliveTimeout, keepAliveMaxCon) ;
@@ -1116,7 +1126,7 @@ nsHTTPFinalListener::~nsHTTPFinalListener()
 // nsIStreamObserver methods:
 
 NS_IMETHODIMP
-nsHTTPFinalListener::OnStartRequest(nsIChannel *aChannel,
+nsHTTPFinalListener::OnStartRequest(nsIRequest *request,
                                     nsISupports *aContext) 
 {
     PR_LOG(gHTTPLog, PR_LOG_DEBUG,
@@ -1127,11 +1137,11 @@ nsHTTPFinalListener::OnStartRequest(nsIChannel *aChannel,
         return NS_OK;
 
     mOnStartFired = PR_TRUE;
-    return mListener->OnStartRequest(aChannel, aContext) ;
+    return mListener->OnStartRequest(request, aContext) ;
 }
 
 NS_IMETHODIMP
-nsHTTPFinalListener::OnStopRequest(nsIChannel *aChannel, nsISupports *aContext,
+nsHTTPFinalListener::OnStopRequest(nsIRequest *request, nsISupports *aContext,
                                    nsresult aStatus, const PRUnichar* aStatusArg) 
 {
     PR_LOG(gHTTPLog, PR_LOG_DEBUG,
@@ -1164,7 +1174,7 @@ nsHTTPFinalListener::OnStopRequest(nsIChannel *aChannel, nsISupports *aContext,
     }
 
     mOnStopFired = PR_TRUE;
-    nsresult rv = mListener->OnStopRequest(aChannel, aContext, aStatus, aStatusArg) ;
+    nsresult rv = mListener->OnStopRequest(request, aContext, aStatus, aStatusArg) ;
 
     return rv;
 }
@@ -1173,7 +1183,7 @@ nsHTTPFinalListener::OnStopRequest(nsIChannel *aChannel, nsISupports *aContext,
 // nsIStreamListener methods:
 
 NS_IMETHODIMP
-nsHTTPFinalListener::OnDataAvailable(nsIChannel *aChannel,
+nsHTTPFinalListener::OnDataAvailable(nsIRequest *request,
                                      nsISupports *aContext,
                                      nsIInputStream *aStream,
                                      PRUint32 aSourceOffset,
@@ -1196,7 +1206,7 @@ nsHTTPFinalListener::OnDataAvailable(nsIChannel *aChannel,
                 return NS_OK;
 
             mBusy = PR_TRUE;
-            nsresult rv = mListener->OnDataAvailable(aChannel, aContext, 
+            nsresult rv = mListener->OnDataAvailable(request, aContext, 
                                 aStream, aSourceOffset, aCount) ;
             
             mBusy = PR_FALSE;

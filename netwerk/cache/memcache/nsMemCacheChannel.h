@@ -30,7 +30,7 @@
 
 class AsyncReadStreamAdaptor;
 
-class nsMemCacheChannel : public nsIChannel
+class nsMemCacheChannel : public nsIChannel, public nsIRequest
 {
 public:
     // Constructors and Destructor
@@ -52,6 +52,7 @@ protected:
     nsCOMPtr<nsMemCacheRecord>   mRecord;
     nsCOMPtr<nsIInputStream>     mInputStream;
     nsCOMPtr<nsISupports>        mOwner;
+    nsCOMPtr<nsIRequest>         mCurrentReadRequest;
     AsyncReadStreamAdaptor*      mAsyncReadStream; // non-owning pointer
     PRUint32                     mStartOffset;
     nsresult                     mStatus;

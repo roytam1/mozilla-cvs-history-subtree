@@ -44,6 +44,7 @@
 class nsIInterfaceRequestor;
 
 class nsFileTransport : public nsIChannel, 
+                        public nsIRequest,
                         public nsIRunnable,
                         public nsIInputStreamObserver,
                         public nsIOutputStreamObserver

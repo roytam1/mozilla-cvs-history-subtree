@@ -120,9 +120,7 @@ TestSyncWrite(char* filename, PRUint32 startPosition, PRInt32 length)
                               getter_AddRefs(transport)) ;
     if (NS_FAILED(rv)) return rv ;
  
-    rv = transport->SetTransferOffset(startPosition);
-    if (NS_FAILED(rv)) return rv;
-    rv = transport->OpenOutputStream(getter_AddRefs(outStream)) ;
+    rv = transport->OpenOutputStream(startPosition, -1, getter_AddRefs(outStream)) ;
     if (NS_FAILED(rv)) return rv;
     
     PRIntervalTime startTime = PR_IntervalNow();

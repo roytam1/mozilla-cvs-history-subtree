@@ -26,11 +26,12 @@ interface nsIInputStream;
 interface nsIInputStream;
 interface nsIOutputStream;
 interface nsIEventQueue;
+interface nsIRequest;
 
 [scriptable, uuid(1a637020-1482-11d3-9333-00104ba0fd40)]
 interface nsIStreamListener : nsIStreamObserver
 {
-    void onDataAvailable(in nsIChannel channel,
+    void onDataAvailable(in nsIRequest request,
                          in nsISupports ctxt, 
                          in nsIInputStream inStr,
                          in unsigned long sourceOffset,

@@ -860,8 +860,6 @@ nsHTTPHandler::~nsHTTPHandler()
 
 nsresult nsHTTPHandler::RequestTransport(nsIURI* i_Uri,
                                          nsHTTPChannel* i_Channel,
-                                         PRUint32 bufferSegmentSize,
-                                         PRUint32 bufferMaxSize,
                                          nsIChannel** o_pTrans,
                                          PRUint32 flags)
 {
@@ -1006,16 +1004,12 @@ nsresult nsHTTPHandler::RequestTransport(nsIURI* i_Uri,
                                         port, 
                                         proxy, 
                                         proxyPort, 
-                                        bufferSegmentSize, 
-                                        bufferMaxSize, 
                                         getter_AddRefs(trans) );
         } else {
             rv = CreateTransport( host, 
                                   port, 
                                   proxy, 
                                   proxyPort, 
-                                  bufferSegmentSize, 
-                                  bufferMaxSize, 
                                   getter_AddRefs(trans) );
         }
        
@@ -1049,12 +1043,9 @@ nsresult nsHTTPHandler::CreateTransport(const char* host,
                                         PRInt32 port, 
                                         const char* proxyHost,
                                         PRInt32 proxyPort,
-                                        PRUint32 bufferSegmentSize,
-                                        PRUint32 bufferMaxSize,
                                         nsIChannel** o_pTrans)
 {
-    return CreateTransportOfType(nsnull, host, port, proxyHost, proxyPort,
-                                 bufferSegmentSize, bufferMaxSize, o_pTrans);
+    return CreateTransportOfType(nsnull, host, port, proxyHost, proxyPort, o_pTrans);
 }
 
 nsresult nsHTTPHandler::CreateTransportOfType(const char* type,
@@ -1062,8 +1053,6 @@ nsresult nsHTTPHandler::CreateTransportOfType(const char* type,
                                               PRInt32 port, 
                                               const char* proxyHost,
                                               PRInt32 proxyPort,
-                                              PRUint32 bufferSegmentSize,
-                                              PRUint32 bufferMaxSize,
                                               nsIChannel** o_pTrans)
 {
     nsresult rv;
@@ -1077,8 +1066,8 @@ nsresult nsHTTPHandler::CreateTransportOfType(const char* type,
                                     port, 
                                     proxyHost, 
                                     proxyPort, 
-                                    bufferSegmentSize, 
-                                    bufferMaxSize, 
+                                    HTTP_DEFAULT_SEGMENT_SIZE, 
+                                    HTTP_DEFAULT_BUFFER_SIZE, 
                                     o_pTrans);
     
     return rv;

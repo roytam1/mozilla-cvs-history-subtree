@@ -25,6 +25,7 @@
 #define _ns_DiskCacheRecordChannel_h_
 
 #include "nsIChannel.h"
+#include "nsIStreamContentInfo.h"
 #include "nsCOMPtr.h"
 #include "nsDiskCacheRecord.h"
 #include "nsIStreamListener.h"
@@ -33,7 +34,9 @@
  * This class is plagiarized from nsMemCacheChannel
  */
 
-class nsDiskCacheRecordChannel : public nsIChannel,
+class nsDiskCacheRecordChannel : public nsIFileChannel,
+                                 public nsIRequest,
+                                 public nsIStreamContentInfo,
                                  public nsIStreamListener 
 {
   public:
@@ -47,9 +50,12 @@ class nsDiskCacheRecordChannel : public nsIChannel,
   // Declare nsIRequest methods
   NS_DECL_NSIREQUEST
 
+  // Declare nsIStreamContentInfo methods
+  NS_DECL_NSISTREAMCONTENTINFO
+  
   // Declare nsIChannel methods
   NS_DECL_NSICHANNEL
-
+  NS_DECL_NSIFILECHANNEL
   // Declare nsIStreamObserver methods
   NS_DECL_NSISTREAMOBSERVER
 
@@ -67,6 +73,7 @@ class nsDiskCacheRecordChannel : public nsIChannel,
   nsLoadFlags                           mLoadAttributes;
   nsCOMPtr<nsISupports>                 mOwner ;
   nsCOMPtr<nsIChannel>                  mFileTransport ;
+  nsCOMPtr<nsIRequest>                  mCurrentReadRequest;
   nsCOMPtr< nsIFile >                   mSpec ;
   nsCOMPtr<nsIStreamListener>           mRealListener;
   nsresult                              mStatus;

@@ -33,12 +33,18 @@
 #include "nsIURI.h"
 #include "nsFingerHandler.h"
 #include "nsIStreamListener.h"
+#include "nsIStreamContentInfo.h"
 
+class nsFingerChannel 
+: public nsIChannel, 
+  public nsIRequest, 
+  public nsIStreamContentInfo, 
+  public nsIStreamListener {
 
-class nsFingerChannel : public nsIChannel, public nsIStreamListener {
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIREQUEST
+    NS_DECL_NSISTREAMCONTENTINFO
     NS_DECL_NSICHANNEL
     NS_DECL_NSISTREAMLISTENER
     NS_DECL_NSISTREAMOBSERVER
@@ -75,6 +81,7 @@ protected:
 
     nsCOMPtr<nsISupports>               mResponseContext;
     nsCOMPtr<nsIChannel>                mTransport;
+    nsCOMPtr<nsIRequest>                mTransportRequest;
     nsresult                            mStatus;
 
 protected:

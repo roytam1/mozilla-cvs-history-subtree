@@ -37,12 +37,19 @@
 #include "nsIURI.h"
 #include "nsDateTimeHandler.h"
 #include "nsIStreamListener.h"
+#include "nsIStreamContentInfo.h"
 
 
-class nsDateTimeChannel : public nsIChannel, public nsIStreamListener {
+class nsDateTimeChannel 
+: public nsIChannel, 
+  public nsIRequest, 
+  public nsIStreamContentInfo, 
+  public nsIStreamListener {
+
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIREQUEST
+    NS_DECL_NSISTREAMCONTENTINFO
     NS_DECL_NSICHANNEL
     NS_DECL_NSISTREAMLISTENER
     NS_DECL_NSISTREAMOBSERVER
@@ -67,8 +74,6 @@ protected:
     nsCString                           mContentType;
     PRInt32                             mContentLength;
     nsCOMPtr<nsISupports>               mOwner; 
-    PRUint32                            mBufferSegmentSize;
-    PRUint32                            mBufferMaxSize;
 
     PRInt32                             mPort;
     nsXPIDLCString                      mHost;

@@ -96,21 +96,21 @@ nsHTTPChunkConv::AsyncConvertData (
 } 
 
 NS_IMETHODIMP
-nsHTTPChunkConv::OnStartRequest (nsIChannel *aChannel, nsISupports *aContext)
+nsHTTPChunkConv::OnStartRequest (nsIRequest* request, nsISupports *aContext)
 {
-    return mListener -> OnStartRequest (aChannel, aContext);
+    return mListener->OnStartRequest (request, aContext);
 } 
 
 NS_IMETHODIMP
-nsHTTPChunkConv::OnStopRequest(nsIChannel *aChannel, nsISupports *aContext, 
+nsHTTPChunkConv::OnStopRequest(nsIRequest* request, nsISupports *aContext, 
                                nsresult aStatus, const PRUnichar* aStatusArg)
 {
-    return mListener->OnStopRequest(aChannel, aContext, aStatus, aStatusArg);
+    return mListener->OnStopRequest(request, aContext, aStatus, aStatusArg);
 } 
 
 NS_IMETHODIMP
 nsHTTPChunkConv::OnDataAvailable ( 
-                              nsIChannel *aChannel, 
+                              nsIRequest* request, 
                               nsISupports *aContext, 
                               nsIInputStream *iStr, 
                               PRUint32 aSourceOffset, 
@@ -160,7 +160,7 @@ nsHTTPChunkConv::OnDataAvailable (
         if (NS_FAILED (rv)) 
             return rv;
 
-        rv = mListener -> OnDataAvailable (aChannel, aContext, convertedStream, aSourceOffset, mChunkBufferLength);
+        rv = mListener -> OnDataAvailable (request, aContext, convertedStream, aSourceOffset, mChunkBufferLength);
         
         if (NS_FAILED (rv))
             return rv;
@@ -208,7 +208,7 @@ nsHTTPChunkConv::OnDataAvailable (
                             if (NS_FAILED (rv))
                                 return rv;
 
-                            rv = mListener -> OnDataAvailable (aChannel, aContext, convertedStream, aSourceOffset, mChunkBufferLength);
+                            rv = mListener -> OnDataAvailable (request, aContext, convertedStream, aSourceOffset, mChunkBufferLength);
 
                             if (NS_FAILED (rv))
                                 return rv;
@@ -423,21 +423,5 @@ nsHTTPChunkConv::Convert (
     return NS_ERROR_NOT_IMPLEMENTED;
 } 
 
-nsresult
-NS_NewHTTPChunkConv (nsHTTPChunkConv ** aHTTPChunkConv)
-{
-    NS_PRECONDITION(aHTTPChunkConv != nsnull, "null ptr");
-
-    if (! aHTTPChunkConv)
-        return NS_ERROR_NULL_POINTER;
-
-    *aHTTPChunkConv = new nsHTTPChunkConv ();
-
-    if (! *aHTTPChunkConv)
-        return NS_ERROR_OUT_OF_MEMORY;
-
-    NS_ADDREF(*aHTTPChunkConv);
-    return NS_OK;
-}
 
 

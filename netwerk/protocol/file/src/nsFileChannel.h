@@ -38,15 +38,19 @@
 #include "nsCOMPtr.h"
 #include "nsIFile.h"        /* Solaris/gcc needed this here. */
 #include "nsIProgressEventSink.h"
+#include "nsIStreamContentInfo.h"
 
 class nsFileChannel : public nsIFileChannel,
+                      public nsIRequest, 
                       public nsIInterfaceRequestor,
                       public nsIStreamListener,
-                      public nsIProgressEventSink
+                      public nsIProgressEventSink,
+                      public nsIStreamContentInfo
 {
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIREQUEST
+    NS_DECL_NSISTREAMCONTENTINFO
     NS_DECL_NSICHANNEL
     NS_DECL_NSIFILECHANNEL
     NS_DECL_NSIINTERFACEREQUESTOR
@@ -84,6 +88,7 @@ protected:
     PRUint32                            mBufferMaxSize;
     nsresult                            mStatus;
     nsCOMPtr<nsIProgressEventSink>      mProgress;
+    nsCOMPtr<nsIRequest>                mCurrentRequest;
 #ifdef DEBUG
     PRThread*                           mInitiator;
 #endif

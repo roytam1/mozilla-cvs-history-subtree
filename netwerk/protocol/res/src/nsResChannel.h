@@ -33,17 +33,23 @@
 #include "nsISupportsArray.h"
 #include "nsCOMPtr.h"
 #include "nsAutoLock.h"
+#include "nsIStreamContentInfo.h"
 #ifdef DEBUG
 #include "prthread.h"
 #endif
 
 class nsResChannel : public nsIResChannel,
-                     public nsIStreamListener
+                     public nsIFileChannel,
+                     public nsIStreamListener,
+                     public nsIRequest,
+                     public nsIStreamContentInfo
 {
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIREQUEST
+    NS_DECL_NSISTREAMCONTENTINFO
     NS_DECL_NSICHANNEL
+    NS_DECL_NSIFILECHANNEL
     NS_DECL_NSIRESCHANNEL
     NS_DECL_NSISTREAMOBSERVER
     NS_DECL_NSISTREAMLISTENER
@@ -103,15 +109,12 @@ protected:
 
     nsCOMPtr<nsIResProtocolHandler>     mHandler;
     nsCOMPtr<nsIChannel>                mResolvedChannel;
+    nsCOMPtr<nsIRequest>                mResolvedRequest;
     State                               mState;
     Substitutions                       mSubstitutions;
     nsCOMPtr<nsIStreamObserver>         mUserObserver;
     nsCOMPtr<nsISupports>               mUserContext;
     nsCOMPtr<nsIInputStream>            mFromStream;
-    PRUint32                            mStartPosition;
-    PRInt32                             mCount;
-    PRUint32                            mBufferSegmentSize;
-    PRUint32                            mBufferMaxSize;
     nsresult                            mStatus;
 #ifdef DEBUG
     PRThread*                           mInitiator;

@@ -38,6 +38,7 @@
 #include "prmon.h"
 #include "nsIDownloader.h"
 #include "nsIInputStream.h"
+#include "nsIStreamContentInfo.h"
 
 class nsIFileChannel;
 class nsJARChannel;
@@ -51,6 +52,8 @@ class nsJARChannel;
 }
 
 class nsJARChannel : public nsIJARChannel, 
+                     public nsIRequest,
+                     public nsIStreamContentInfo,
                      public nsIStreamListener,
                      public nsIStreamIO,
                      public nsIDownloadObserver
@@ -58,6 +61,7 @@ class nsJARChannel : public nsIJARChannel,
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIREQUEST
+    NS_DECL_NSISTREAMCONTENTINFO
     NS_DECL_NSICHANNEL
     NS_DECL_NSIJARCHANNEL
     NS_DECL_NSISTREAMOBSERVER
@@ -89,8 +93,6 @@ protected:
     nsLoadFlags                         mLoadAttributes;
     nsCOMPtr<nsISupports>               mOwner;
 
-    PRUint32                            mStartPosition;
-    PRInt32                             mReadCount;
     nsCOMPtr<nsISupports>               mUserContext;
     nsCOMPtr<nsIStreamListener>         mUserListener;
 
@@ -100,15 +102,13 @@ protected:
     char*                               mJAREntry;
     nsCOMPtr<nsIZipReader>              mJAR;
     nsCOMPtr<nsIFile>                   mDownloadedJARFile;
-    PRUint32                            mBufferSegmentSize;
-    PRUint32                            mBufferMaxSize;
     nsresult                            mStatus;
     PRBool                              mSynchronousRead;
     nsCOMPtr<nsIInputStream>            mSynchronousInputStream;
 
     PRMonitor*                          mMonitor;
     nsCOMPtr<nsIDownloader>             mDownloader;
-    nsCOMPtr<nsIChannel>                mJarExtractionTransport;
+    nsCOMPtr<nsIRequest>                mJarExtractionTransport;
 
 };
 

@@ -76,7 +76,7 @@ TestOpenInputStream(const char* url)
     if (NS_FAILED(rv)) return rv;
 
     nsCOMPtr<nsIInputStream> in;
-    rv = channel->OpenInputStream(getter_AddRefs(in));
+    rv = channel->OpenInputStream(0, -1, getter_AddRefs(in));
     if (NS_FAILED(rv)) {
         fprintf(stdout, "failed to OpenInputStream for %s\n", url);
         return NS_OK;
@@ -127,9 +127,12 @@ public:
     Listener() { NS_INIT_REFCNT(); }
     virtual ~Listener() {}
 
-    NS_IMETHOD OnStartRequest(nsIChannel *channel, nsISupports *ctxt) {
+    NS_IMETHOD OnStartRequest(nsIRequest *request, nsISupports *ctxt) {
         nsresult rv;
         nsCOMPtr<nsIURI> uri;
+        nsCOMPtr<nsIChannel> channel;
+        request->GetParent(getter_AddRefs(channel));
+        
         rv = channel->GetURI(getter_AddRefs(uri));
         if (NS_SUCCEEDED(rv)) {
             char* str;
@@ -142,10 +145,13 @@ public:
         return NS_OK;
     }
     
-    NS_IMETHOD OnStopRequest(nsIChannel *channel, nsISupports *ctxt, 
+    NS_IMETHOD OnStopRequest(nsIRequest *request, nsISupports *ctxt, 
                              nsresult aStatus, const PRUnichar* aStatusArg) {
         nsresult rv;
         nsCOMPtr<nsIURI> uri;
+        nsCOMPtr<nsIChannel> channel;
+        request->GetParent(getter_AddRefs(channel));
+        
         rv = channel->GetURI(getter_AddRefs(uri));
         if (NS_SUCCEEDED(rv)) {
             char* str;
@@ -159,7 +165,7 @@ public:
         return NS_OK;
     }
 
-    NS_IMETHOD OnDataAvailable(nsIChannel *channel, nsISupports *ctxt, 
+    NS_IMETHOD OnDataAvailable(nsIRequest *request, nsISupports *ctxt, 
                                nsIInputStream *inStr,
                                PRUint32 sourceOffset, PRUint32 count) {
         nsresult rv;
@@ -205,8 +211,8 @@ TestAsyncRead(const char* url)
     nsCOMPtr<nsIStreamListener> listener = new Listener();
     if (listener == nsnull)
         return NS_ERROR_OUT_OF_MEMORY;
-
-    rv = channel->AsyncRead(nsnull, listener);
+    nsCOMPtr<nsIRequest> request;
+    rv = channel->AsyncRead(nsnull, listener, 0, -1, getter_AddRefs(request));
     if (NS_FAILED(rv)) return rv;
 
     while (!gDone) {

@@ -76,9 +76,10 @@ static NS_DEFINE_CID(kMultiMixedConverterCID,          NS_MULTIMIXEDCONVERTER_CI
 //  
 //
 
-class nsMultiMixedConv : public nsIStreamConverter {
+class nsMultiMixedConv : public nsIStreamConverter, public nsIRequest {
 public:
     NS_DECL_ISUPPORTS
+    NS_DECL_NSIREQUEST
     NS_DECL_NSISTREAMCONVERTER
     NS_DECL_NSISTREAMLISTENER
     NS_DECL_NSISTREAMOBSERVER

@@ -102,11 +102,18 @@ nsFtpControlConnection::Connect()
     // to indicate between the read and the write transport.  We will be passing the a non-null
     // context for the write, and a null context for the read.  
 
-    rv = mCPipe->AsyncWrite(inStream, NS_STATIC_CAST(nsIStreamObserver*, this), NS_STATIC_CAST(nsISupports*, this));
+    rv = mCPipe->AsyncWrite(inStream, 
+                            NS_STATIC_CAST(nsIStreamObserver*, this), 
+                            NS_STATIC_CAST(nsISupports*, this),
+                            0, -1, 
+                            getter_AddRefs(mWriteRequest));
     if (NS_FAILED(rv)) return rv;
 
     // get the ball rolling by reading on the control socket.
-    rv = mCPipe->AsyncRead(NS_STATIC_CAST(nsIStreamListener*, this), nsnull);
+    rv = mCPipe->AsyncRead(NS_STATIC_CAST(nsIStreamListener*, this), 
+                           nsnull, 0, -1, 
+                           getter_AddRefs(mReadRequest));
+
     if (NS_FAILED(rv)) return rv;
 
     mConnected = PR_TRUE;
@@ -120,7 +127,8 @@ nsFtpControlConnection::Disconnect()
     
     PR_LOG(gFTPLog, PR_LOG_ALWAYS, ("(%x) nsFtpControlConnection disconnecting", this));
     mConnected = PR_FALSE;
-    if (mCPipe) mCPipe->Cancel(NS_BINDING_ABORTED);
+    if (mWriteRequest) mWriteRequest->Cancel(NS_BINDING_ABORTED);
+    if (mReadRequest) mReadRequest->Cancel(NS_BINDING_ABORTED);
     return NS_OK;
 }
 
@@ -129,11 +137,6 @@ nsFtpControlConnection::Write(nsCString& command)
 {
     if (!mConnected)
         return NS_ERROR_FAILURE;
-#if defined(PR_LOGGING)
-    nsCString logString(command);
-    logString.ReplaceChar(CRLF, ' ');
-    PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) Writing \"%s\"\n", this, logString.GetBuffer()));
-#endif
 
     PRUint32 len = command.Length();
     PRUint32 cnt;
@@ -161,7 +164,7 @@ nsFtpControlConnection::SetStreamListener(nsIStreamListener *aListener)
 }
 
 NS_IMETHODIMP
-nsFtpControlConnection::OnStartRequest(nsIChannel *aChannel, nsISupports *aContext)
+nsFtpControlConnection::OnStartRequest(nsIRequest *request, nsISupports *aContext)
 {
     if (!mConnected)
         return NS_OK;
@@ -178,11 +181,11 @@ nsFtpControlConnection::OnStartRequest(nsIChannel *aChannel, nsISupports *aConte
     if (!myListener)
         return NS_OK;
     
-    return myListener->OnStartRequest(aChannel, aContext);
+    return myListener->OnStartRequest(request, aContext);
 }
 
 NS_IMETHODIMP
-nsFtpControlConnection::OnStopRequest(nsIChannel *aChannel, nsISupports *aContext,
+nsFtpControlConnection::OnStopRequest(nsIRequest *request, nsISupports *aContext,
                             nsresult aStatus, const PRUnichar* aStatusArg)
 {
     
@@ -201,12 +204,12 @@ nsFtpControlConnection::OnStopRequest(nsIChannel *aChannel, nsISupports *aContex
     if (!myListener)
         return NS_OK;
 
-    return myListener->OnStopRequest(aChannel, aContext, aStatus, aStatusArg);
+    return myListener->OnStopRequest(request, aContext, aStatus, aStatusArg);
 }
 
 
 NS_IMETHODIMP
-nsFtpControlConnection::OnDataAvailable(nsIChannel *aChannel,
+nsFtpControlConnection::OnDataAvailable(nsIRequest *request,
                                        nsISupports *aContext,
                                        nsIInputStream *aInStream,
                                        PRUint32 aOffset, 
@@ -222,6 +225,6 @@ nsFtpControlConnection::OnDataAvailable(nsIChannel *aChannel,
     if (!myListener)
         return NS_OK;
 
-    return myListener->OnDataAvailable(aChannel, aContext, aInStream,
+    return myListener->OnDataAvailable(request, aContext, aInStream,
                                       aOffset,  aCount);
 }

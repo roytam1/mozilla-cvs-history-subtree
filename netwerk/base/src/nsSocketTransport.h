@@ -118,6 +118,7 @@ class nsIInterfaceRequestor;
 
 class nsSocketTransport : public nsISocketTransport,
                           public nsIChannel, 
+                          public nsIRequest,
                           public nsIDNSListener,
                           public nsIInputStreamObserver,
                           public nsIOutputStreamObserver

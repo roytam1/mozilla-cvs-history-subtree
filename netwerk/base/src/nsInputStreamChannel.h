@@ -24,6 +24,7 @@
 #define nsInputStreamChannel_h__
 
 #include "nsIChannel.h"
+#include "nsIStreamContentInfo.h"
 #include "nsIInputStream.h"
 #include "nsIURI.h"
 #include "nsCRT.h"
@@ -56,11 +57,14 @@ protected:
 ////////////////////////////////////////////////////////////////////////////////
 
 class nsStreamIOChannel : public nsIStreamIOChannel, 
-                          public nsIStreamListener
+                          public nsIStreamListener,
+                          public nsIRequest,
+                          public nsIStreamContentInfo
 {
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIREQUEST
+    NS_DECL_NSISTREAMCONTENTINFO
     NS_DECL_NSICHANNEL
     NS_DECL_NSISTREAMIOCHANNEL
     NS_DECL_NSISTREAMOBSERVER
@@ -86,6 +90,7 @@ protected:
     nsCOMPtr<nsILoadGroup>              mLoadGroup;
     nsCOMPtr<nsISupports>               mOwner;
     nsCOMPtr<nsIChannel>                mFileTransport;
+    nsCOMPtr<nsIRequest>                mRequest;
     nsCOMPtr<nsIStreamObserver>         mUserObserver;
     PRUint32                            mBufferSegmentSize;
     PRUint32                            mBufferMaxSize;

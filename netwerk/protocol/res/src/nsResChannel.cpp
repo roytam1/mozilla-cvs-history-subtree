@@ -52,12 +52,8 @@ PRLogModuleInfo* gResChannelLog = nsnull;
 ////////////////////////////////////////////////////////////////////////////////
 
 nsResChannel::nsResChannel()
-    : mLoadAttributes(LOAD_NORMAL),
+: mLoadAttributes(nsIResChannel::LOAD_NORMAL),
       mState(QUIESCENT),
-      mStartPosition(0),
-      mCount(-1),
-      mBufferSegmentSize(0),
-      mBufferMaxSize(0),
       mStatus(NS_OK)
 #ifdef DEBUG
       ,mInitiator(nsnull)
@@ -87,10 +83,11 @@ nsResChannel::~nsResChannel()
 {
 }
 
-NS_IMPL_ISUPPORTS5(nsResChannel,
+NS_IMPL_ISUPPORTS6(nsResChannel,
                    nsIResChannel,
-                   nsIChannel,
+                   nsIFileChannel,
                    nsIRequest,
+                   nsIStreamContentInfo,
                    nsIStreamListener,
                    nsIStreamObserver)
 
@@ -177,8 +174,8 @@ nsResChannel::GetName(PRUnichar* *result)
 NS_IMETHODIMP
 nsResChannel::IsPending(PRBool *result)
 {
-    if (mResolvedChannel)
-        return mResolvedChannel->IsPending(result);
+    if (mResolvedRequest)
+        return mResolvedRequest->IsPending(result);
     *result = PR_FALSE;
     return NS_OK;
 }
@@ -199,11 +196,11 @@ nsResChannel::Cancel(nsresult status)
                  "wrong thread calling this routine");
 #endif
     nsresult rv = NS_OK;
-    if (mResolvedChannel) {
-        rv = mResolvedChannel->Cancel(status);
+    if (mResolvedRequest) {
+        rv = mResolvedRequest->Cancel(status);
     }
     mStatus = status;
-    mResolvedChannel = nsnull;        // remove the resolution
+    mResolvedRequest = nsnull;        // remove the resolution
     return rv;
 }
 
@@ -214,8 +211,8 @@ nsResChannel::Suspend()
     NS_ASSERTION(mInitiator == PR_CurrentThread(),
                  "wrong thread calling this routine");
 #endif
-    if (mResolvedChannel)
-        return mResolvedChannel->Suspend();
+    if (mResolvedRequest)
+        return mResolvedRequest->Suspend();
     return NS_OK;
 }
 
@@ -226,9 +223,20 @@ nsResChannel::Resume()
     NS_ASSERTION(mInitiator == PR_CurrentThread(),
                  "wrong thread calling this routine");
 #endif
-    if (mResolvedChannel)
-        return mResolvedChannel->Resume();
+    if (mResolvedRequest)
+        return mResolvedRequest->Resume();
     return NS_OK;
+}
+
+/* attribute nsISupports parent; */
+NS_IMETHODIMP nsResChannel::GetParent(nsISupports * *aParent)
+{
+    NS_ADDREF(*aParent=(nsISupports*)(nsIResChannel*)this);
+    return NS_OK;
+}
+NS_IMETHODIMP nsResChannel::SetParent(nsISupports * aParent)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -294,31 +302,15 @@ nsResChannel::EnsureNextResolvedChannel()
         rv = mResolvedChannel->SetLoadGroup(mLoadGroup);
         if (NS_FAILED(rv)) goto done;
     }
-    if (mLoadAttributes != LOAD_NORMAL) {
+    if (mLoadAttributes != nsIResChannel::LOAD_NORMAL) {
         rv = mResolvedChannel->SetLoadAttributes(mLoadAttributes);
-        if (NS_FAILED(rv)) goto done;
-    }
-    if (mBufferSegmentSize) {
-        rv = mResolvedChannel->SetBufferSegmentSize(mBufferSegmentSize);
-        if (NS_FAILED(rv)) goto done;
-    }
-    if (mBufferMaxSize) {
-        rv = mResolvedChannel->SetBufferMaxSize(mBufferMaxSize);
         if (NS_FAILED(rv)) goto done;
     }
     if (mCallbacks) {
         rv = mResolvedChannel->SetNotificationCallbacks(mCallbacks);
         if (NS_FAILED(rv)) goto done;
     }
-    if (mStartPosition) {
-        rv = mResolvedChannel->SetTransferOffset(mStartPosition);
-        if (NS_FAILED(rv)) goto done;
-    }
-    if (mCount >= 0) {
-        rv = mResolvedChannel->SetTransferCount(mCount);
-        if (NS_FAILED(rv)) goto done;
-    }
-
+    
   done:
 #if defined(PR_LOGGING)
     nsXPIDLCString resURI;
@@ -334,11 +326,11 @@ nsResChannel::EnsureNextResolvedChannel()
 }
 
 NS_IMETHODIMP
-nsResChannel::OpenInputStream(nsIInputStream **result)
+nsResChannel::OpenInputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIInputStream **result)
 {
     nsresult rv;
 
-    if (mResolvedChannel)
+    if (mResolvedRequest)
         return NS_ERROR_IN_PROGRESS;
 
     rv = mSubstitutions.Init();
@@ -349,18 +341,18 @@ nsResChannel::OpenInputStream(nsIInputStream **result)
         if (NS_FAILED(rv)) break;
 
         if (mResolvedChannel)
-            rv = mResolvedChannel->OpenInputStream(result);
+            rv = mResolvedChannel->OpenInputStream(transferOffset, transferCount, result);
     } while (NS_FAILED(rv));
 
     return rv;
 }
 
 NS_IMETHODIMP
-nsResChannel::OpenOutputStream(nsIOutputStream **result)
+nsResChannel::OpenOutputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIOutputStream **result)
 {
     nsresult rv;
 
-    if (mResolvedChannel)
+    if (mResolvedRequest)
         return NS_ERROR_IN_PROGRESS;
 
     rv = mSubstitutions.Init();
@@ -371,14 +363,15 @@ nsResChannel::OpenOutputStream(nsIOutputStream **result)
         if (NS_FAILED(rv)) break;
 
         if (mResolvedChannel)
-            rv = mResolvedChannel->OpenOutputStream(result);
+            rv = mResolvedChannel->OpenOutputStream(transferOffset, transferCount, result);
     } while (NS_FAILED(rv));
 
     return rv;
 }
 
 NS_IMETHODIMP
-nsResChannel::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt)
+nsResChannel::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt,
+                        PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
 {
     nsresult rv;
 
@@ -390,7 +383,7 @@ nsResChannel::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt)
 
     switch (mState) {
       case QUIESCENT:
-        if (mResolvedChannel)
+        if (mResolvedRequest)
             return NS_ERROR_IN_PROGRESS;
 
         // first time through
@@ -415,13 +408,15 @@ nsResChannel::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt)
         if (NS_FAILED(rv)) break;
 
         if (mResolvedChannel)
-            rv = mResolvedChannel->AsyncRead(this, nsnull);
+            rv = mResolvedChannel->AsyncRead(this, nsnull, transferOffset, transferCount, getter_AddRefs(mResolvedRequest));
         // Later, this AsyncRead will call back our OnStopRequest
         // method. The action resumes there...
     } while (NS_FAILED(rv));
 
     if (NS_FAILED(rv)) {
         (void)EndRequest(rv, nsnull);
+    } else {
+        NS_ADDREF(*_retval = this);
     }
 
     return rv;
@@ -430,7 +425,8 @@ nsResChannel::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt)
 NS_IMETHODIMP
 nsResChannel::AsyncWrite(nsIInputStream *fromStream,
                          nsIStreamObserver *observer,
-                         nsISupports *ctxt)
+                         nsISupports *ctxt,
+                        PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
 {
     nsresult rv;
 
@@ -442,7 +438,7 @@ nsResChannel::AsyncWrite(nsIInputStream *fromStream,
 
     switch (mState) {
       case QUIESCENT:
-        if (mResolvedChannel)
+        if (mResolvedRequest)
             return NS_ERROR_IN_PROGRESS;
 
         // first time through
@@ -468,13 +464,17 @@ nsResChannel::AsyncWrite(nsIInputStream *fromStream,
         if (NS_FAILED(rv)) break;
 
         if (mResolvedChannel)
-            rv = mResolvedChannel->AsyncWrite(fromStream, this, nsnull);
+            rv = mResolvedChannel->AsyncWrite(fromStream, this, nsnull, 
+                                              transferOffset, transferCount, 
+                                              getter_AddRefs(mResolvedRequest));
         // Later, this AsyncWrite will call back our OnStopRequest
         // method. The action resumes there...
     } while (NS_FAILED(rv));
 
     if (NS_FAILED(rv)) {
         (void)EndRequest(rv, nsnull);
+    } else {
+        NS_ADDREF(*_retval = this);
     }
 
     return rv;
@@ -497,24 +497,30 @@ nsResChannel::SetLoadAttributes(PRUint32 aLoadAttributes)
 NS_IMETHODIMP
 nsResChannel::GetContentType(char * *aContentType)
 {
-    if (mResolvedChannel)
-        return mResolvedChannel->GetContentType(aContentType);
+    if (mResolvedRequest) {
+        nsCOMPtr<nsIStreamContentInfo> cr = do_QueryInterface(mResolvedRequest);
+        if (cr) return cr->GetContentType(aContentType);
+    }
     return NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP
 nsResChannel::SetContentType(const char *aContentType)
 {
-    if (mResolvedChannel)
-        return mResolvedChannel->SetContentType(aContentType);
+    if (mResolvedRequest) {
+        nsCOMPtr<nsIStreamContentInfo> cr = do_QueryInterface(mResolvedRequest);
+        if (cr) return cr->SetContentType(aContentType);
+    }
     return NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP
 nsResChannel::GetContentLength(PRInt32 *aContentLength)
 {
-    if (mResolvedChannel)
-        return mResolvedChannel->GetContentLength(aContentLength);
+    if (mResolvedRequest) {
+        nsCOMPtr<nsIStreamContentInfo> cr = do_QueryInterface(mResolvedRequest);
+        if (cr) return cr->GetContentLength(aContentLength);
+    }
     return NS_ERROR_FAILURE;
 }
 
@@ -522,104 +528,6 @@ NS_IMETHODIMP
 nsResChannel::SetContentLength(PRInt32 aContentLength)
 {
     NS_NOTREACHED("nsResChannel::SetContentLength");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsResChannel::GetTransferOffset(PRUint32 *aTransferOffset)
-{
-    *aTransferOffset = mStartPosition;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsResChannel::SetTransferOffset(PRUint32 aTransferOffset)
-{
-    mStartPosition = aTransferOffset;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsResChannel::GetTransferCount(PRInt32 *aTransferCount)
-{
-    *aTransferCount = mCount;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsResChannel::SetTransferCount(PRInt32 aTransferCount)
-{
-    mCount = aTransferCount;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsResChannel::GetBufferSegmentSize(PRUint32 *aBufferSegmentSize)
-{
-    *aBufferSegmentSize = mBufferSegmentSize;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsResChannel::SetBufferSegmentSize(PRUint32 aBufferSegmentSize)
-{
-    mBufferSegmentSize = aBufferSegmentSize;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsResChannel::GetBufferMaxSize(PRUint32 *aBufferMaxSize)
-{
-    *aBufferMaxSize = mBufferMaxSize;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsResChannel::SetBufferMaxSize(PRUint32 aBufferMaxSize)
-{
-    mBufferMaxSize = aBufferMaxSize;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsResChannel::GetLocalFile(nsIFile* *result)
-{
-    nsresult rv;
-    rv = mSubstitutions.Init();
-    if (NS_FAILED(rv)) return rv;
-
-    nsCOMPtr<nsIFile> file;
-    do {
-        rv = EnsureNextResolvedChannel();
-        if (NS_FAILED(rv)) break;
-
-        if (mResolvedChannel) {
-            rv = mResolvedChannel->GetLocalFile(getter_AddRefs(file));
-            PRBool exists;
-            rv = file->Exists(&exists);
-            if (NS_SUCCEEDED(rv) && exists) {
-                *result = file;
-                NS_ADDREF(*result);
-                return NS_OK;
-            }
-        }
-    } while (NS_FAILED(rv));
-
-    *result = nsnull;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsResChannel::GetPipeliningAllowed(PRBool *aPipeliningAllowed)
-{
-    *aPipeliningAllowed = PR_FALSE;
-    return NS_OK;
-}
- 
-NS_IMETHODIMP
-nsResChannel::SetPipeliningAllowed(PRBool aPipeliningAllowed)
-{
-    NS_NOTREACHED("SetPipeliningAllowed");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -680,7 +588,7 @@ nsResChannel::GetSecurityInfo(nsISupports * *aSecurityInfo)
 ////////////////////////////////////////////////////////////////////////////////
 
 NS_IMETHODIMP
-nsResChannel::OnStartRequest(nsIChannel* transportChannel, nsISupports* context)
+nsResChannel::OnStartRequest(nsIRequest* request, nsISupports* context)
 {
 #ifdef DEBUG
     NS_ASSERTION(mInitiator == PR_CurrentThread(),
@@ -691,7 +599,7 @@ nsResChannel::OnStartRequest(nsIChannel* transportChannel, nsISupports* context)
 }
 
 NS_IMETHODIMP
-nsResChannel::OnStopRequest(nsIChannel* transportChannel, nsISupports* context,
+nsResChannel::OnStopRequest(nsIRequest* request, nsISupports* context,
                             nsresult aStatus, const PRUnichar* aStatusArg)
 {
 #ifdef DEBUG
@@ -699,12 +607,16 @@ nsResChannel::OnStopRequest(nsIChannel* transportChannel, nsISupports* context,
                  "wrong thread calling this routine");
 #endif
     if (NS_FAILED(aStatus) && aStatus != NS_BINDING_ABORTED) {
+        nsCOMPtr<nsIRequest> dummyRequest; 
+
+        // fix dougt.  we will lose the offset and the bytes to read here..
+
         // if we failed to process this channel, then try the next one:
         switch (mState) {
           case ASYNC_READ: 
-            return AsyncRead(GetUserListener(), mUserContext);
+            return AsyncRead(GetUserListener(), mUserContext, 0, -1, getter_AddRefs(dummyRequest));
           case ASYNC_WRITE:
-            return AsyncWrite(mFromStream, mUserObserver, mUserContext);
+            return AsyncWrite(mFromStream, mUserObserver, mUserContext, 0, -1, getter_AddRefs(dummyRequest));
           default:
             break;
         }
@@ -733,7 +645,7 @@ nsResChannel::EndRequest(nsresult aStatus, const PRUnichar* aStatusArg)
 }
 
 NS_IMETHODIMP
-nsResChannel::OnDataAvailable(nsIChannel* transportChannel, nsISupports* context,
+nsResChannel::OnDataAvailable(nsIRequest* request, nsISupports* context,
                                nsIInputStream *aIStream, PRUint32 aSourceOffset,
                                PRUint32 aLength)
 {
@@ -746,3 +658,63 @@ nsResChannel::OnDataAvailable(nsIChannel* transportChannel, nsISupports* context
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+
+
+/* void init (in nsIFile file, in long ioFlags, in long perm); */
+NS_IMETHODIMP nsResChannel::Init(nsIFile *file, PRInt32 ioFlags, PRInt32 perm)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* readonly attribute nsIFile file; */
+NS_IMETHODIMP nsResChannel::GetFile(nsIFile * *result)
+{
+    nsresult rv;
+    rv = mSubstitutions.Init();
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsIFile> file;
+    do {
+        rv = EnsureNextResolvedChannel();
+        if (NS_FAILED(rv)) break;
+
+        if (mResolvedChannel) {
+            nsCOMPtr<nsIFileChannel> fc(do_QueryInterface(mResolvedChannel));
+            if (fc) {
+                rv = fc->GetFile(getter_AddRefs(file));
+                if (file) {
+                    PRBool exists;
+                    rv = file->Exists(&exists);
+                    if (NS_SUCCEEDED(rv) && exists) {
+                        *result = file;
+                        NS_ADDREF(*result);
+                        return NS_OK;
+                    }
+                }
+            }
+        }
+    } while (NS_FAILED(rv));
+
+    *result = nsnull;
+    return NS_OK;
+}
+
+/* attribute long ioFlags; */
+NS_IMETHODIMP nsResChannel::GetIoFlags(PRInt32 *aIoFlags)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsResChannel::SetIoFlags(PRInt32 aIoFlags)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute long permissions; */
+NS_IMETHODIMP nsResChannel::GetPermissions(PRInt32 *aPermissions)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsResChannel::SetPermissions(PRInt32 aPermissions)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}

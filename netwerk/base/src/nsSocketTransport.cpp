@@ -1890,8 +1890,25 @@ nsSocketTransport::SetURI(nsIURI* aURL)
 }
 
 NS_IMETHODIMP
-nsSocketTransport::AsyncRead(nsIStreamListener* aListener,
-                             nsISupports* aContext)
+nsSocketTransport::GetLoadAttributes(PRUint32 *aLoadAttributes)
+{
+  *aLoadAttributes = mLoadAttributes;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSocketTransport::SetLoadAttributes(PRUint32 aLoadAttributes)
+{
+  mLoadAttributes = aLoadAttributes;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSocketTransport::AsyncRead(nsIStreamListener *aListener, 
+		                     nsISupports *aContext, 
+		                     PRUint32 transferOffset, 
+		                     PRUint32 transferCount, 
+		                     nsIRequest **_retval)
 {
     nsresult rv = NS_OK;
     
@@ -1945,6 +1962,7 @@ nsSocketTransport::AsyncRead(nsIStreamListener* aListener,
         ("--- Leaving nsSocketTransport::AsyncRead() [%s:%d %x]. rv = %x.\n",
         mHostName, mPort, this, rv));
     
+    NS_ADDREF(*_retval = this);
     return rv;
 }
 
@@ -1952,7 +1970,10 @@ nsSocketTransport::AsyncRead(nsIStreamListener* aListener,
 NS_IMETHODIMP
 nsSocketTransport::AsyncWrite(nsIInputStream* aFromStream, 
                               nsIStreamObserver* aObserver,
-                              nsISupports* aContext)
+                              nsISupports* aContext,
+                              PRUint32 transferOffset, 
+                              PRUint32 transferCount, 
+                              nsIRequest **_retval)
 {
     nsresult rv = NS_OK;
     
@@ -2018,13 +2039,14 @@ nsSocketTransport::AsyncWrite(nsIInputStream* aFromStream,
     PR_LOG(gSocketLog, PR_LOG_DEBUG, 
         ("--- Leaving nsSocketTransport::AsyncWrite() [%s:%d %x]. rv = %x.\n",
         mHostName, mPort, this, rv));
-    
+
+    NS_ADDREF(*_retval = this);
     return rv;
 }
 
 
 NS_IMETHODIMP
-nsSocketTransport::OpenInputStream(nsIInputStream* *result)
+nsSocketTransport::OpenInputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIInputStream **result)
 {
   nsresult rv = NS_OK;
 
@@ -2080,7 +2102,7 @@ nsSocketTransport::OpenInputStream(nsIInputStream* *result)
 
 
 NS_IMETHODIMP
-nsSocketTransport::OpenOutputStream(nsIOutputStream* *result)
+nsSocketTransport::OpenOutputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIOutputStream **result)
 {
   nsresult rv = NS_OK;
 
@@ -2142,125 +2164,6 @@ nsSocketTransport::OpenOutputStream(nsIOutputStream* *result)
           mHostName, mPort, this, rv));
 
   return rv;
-}
-
-NS_IMETHODIMP
-nsSocketTransport::GetLoadAttributes(PRUint32 *aLoadAttributes)
-{
-  *aLoadAttributes = mLoadAttributes;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSocketTransport::SetLoadAttributes(PRUint32 aLoadAttributes)
-{
-  mLoadAttributes = aLoadAttributes;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSocketTransport::GetContentType(char * *aContentType)
-{
-  *aContentType = nsnull;
-  return NS_ERROR_FAILURE;    // XXX doesn't make sense for transports
-}
-
-NS_IMETHODIMP
-nsSocketTransport::SetContentType(const char *aContentType)
-{
-  return NS_ERROR_FAILURE;    // XXX doesn't make sense for transports
-}
-
-NS_IMETHODIMP
-nsSocketTransport::GetContentLength(PRInt32 *aContentLength)
-{
-  // The content length is always unknown for transports...
-  *aContentLength = -1;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSocketTransport::SetContentLength(PRInt32 aContentLength)
-{
-  NS_NOTREACHED("SetContentLength");
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsSocketTransport::GetTransferOffset(PRUint32 *aTransferOffset)
-{
-  NS_NOTREACHED("GetTransferOffset");
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsSocketTransport::SetTransferOffset(PRUint32 aTransferOffset)
-{
-  NS_NOTREACHED("SetTransferOffset");
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsSocketTransport::GetTransferCount(PRInt32 *aTransferCount)
-{
-    *aTransferCount = mWriteCount;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSocketTransport::SetTransferCount(PRInt32 aTransferCount)
-{
-    mWriteCount = aTransferCount;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSocketTransport::GetBufferSegmentSize(PRUint32 *aBufferSegmentSize)
-{
-  NS_NOTREACHED("GetBufferSegmentSize");
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsSocketTransport::SetBufferSegmentSize(PRUint32 aBufferSegmentSize)
-{
-  NS_NOTREACHED("SetBufferSegmentSize");
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsSocketTransport::GetBufferMaxSize(PRUint32 *aBufferMaxSize)
-{
-  NS_NOTREACHED("GetBufferMaxSize");
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsSocketTransport::SetBufferMaxSize(PRUint32 aBufferMaxSize)
-{
-  NS_NOTREACHED("SetBufferMaxSize");
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsSocketTransport::GetLocalFile(nsIFile* *file)
-{
-  *file = nsnull;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSocketTransport::GetPipeliningAllowed(PRBool *aPipeliningAllowed)
-{
-  *aPipeliningAllowed = PR_FALSE;
-  return NS_OK;
-}
- 
-NS_IMETHODIMP
-nsSocketTransport::SetPipeliningAllowed(PRBool aPipeliningAllowed)
-{
-  NS_NOTREACHED("SetPipeliningAllowed");
-  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
@@ -2477,4 +2380,16 @@ nsSocketTransport::fireStatus(PRUint32 aCode)
 
     nsAutoString host; host.AssignWithConversion(mHostName);
     return mEventSink->OnStatus(this, mReadContext, status, host.GetUnicode());
+}
+
+
+/* attribute nsISupports parent; */
+NS_IMETHODIMP nsSocketTransport::GetParent(nsISupports * *aParent)
+{
+    NS_ADDREF(*aParent=(nsISupports*)(nsIChannel*)this);
+    return NS_OK;
+}
+NS_IMETHODIMP nsSocketTransport::SetParent(nsISupports * aParent)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
 }

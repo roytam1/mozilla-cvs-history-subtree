@@ -46,7 +46,10 @@ public:
     nsresult Disconnect();
     nsresult Write(nsCString& command);
     PRBool   IsConnected() { return mConnected; }
-
+    
+    void     GetReadRequest(nsIRequest** request) { NS_ADDREF(*request=mReadRequest); }
+    void     GetWriteRequest(nsIRequest** request) { NS_ADDREF(*request=mWriteRequest); }
+    
     nsresult GetChannel(nsIChannel** controlChannel);
     nsresult SetStreamListener(nsIStreamListener *aListener);
 
@@ -58,6 +61,9 @@ public:
 private:
 	PRLock* mLock;  // protects mListener.
 
+    
+    nsCOMPtr<nsIRequest> mReadRequest;
+    nsCOMPtr<nsIRequest> mWriteRequest;
     nsCOMPtr<nsIChannel> mCPipe;
     nsCOMPtr<nsIOutputStream> mOutStream;
     nsCOMPtr<nsIStreamListener> mListener;

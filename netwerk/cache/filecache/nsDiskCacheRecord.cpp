@@ -561,3 +561,4 @@ nsDiskCacheRecord::UpdateFileInfo()
     mFile = spec;
   return rv;
 }
+

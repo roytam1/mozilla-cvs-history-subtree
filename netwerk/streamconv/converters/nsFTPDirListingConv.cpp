@@ -60,7 +60,8 @@ PRLogModuleInfo* gFTPDirListConvLog = nsnull;
 #endif /* PR_LOGGING */
 
 // nsISupports implementation
-NS_IMPL_THREADSAFE_ISUPPORTS3(nsFTPDirListingConv, nsIStreamConverter, nsIStreamListener, nsIStreamObserver);
+NS_IMPL_THREADSAFE_ISUPPORTS4(nsFTPDirListingConv, nsIStreamConverter, nsIStreamListener, 
+                                                   nsIStreamObserver, nsIRequest);
 
 // nsIStreamConverter implementation
 
@@ -245,9 +246,14 @@ nsFTPDirListingConv::AsyncConvertData(const PRUnichar *aFromType, const PRUnicha
 
 // nsIStreamListener implementation
 NS_IMETHODIMP
-nsFTPDirListingConv::OnDataAvailable(nsIChannel *channel, nsISupports *ctxt,
+nsFTPDirListingConv::OnDataAvailable(nsIRequest* request, nsISupports *ctxt,
                                   nsIInputStream *inStr, PRUint32 sourceOffset, PRUint32 count) {
-    NS_ASSERTION(channel, "FTP dir listing stream converter needs a channel");
+    NS_ASSERTION(request, "FTP dir listing stream converter needs a request");
+    
+    nsCOMPtr<nsIChannel> channel;
+    (void) request->GetParent(getter_AddRefs(channel));
+    if (!channel) return NS_ERROR_NULL_POINTER;
+    
     nsresult rv;
     PRUint32 read, streamLen;
     nsCAutoString indexFormat;
@@ -263,7 +269,7 @@ nsFTPDirListingConv::OnDataAvailable(nsIChannel *channel, nsISupports *ctxt,
     // the dir listings are ascii text, null terminate this sucker.
     buffer[streamLen] = '\0';
 
-    PR_LOG(gFTPDirListConvLog, PR_LOG_DEBUG, ("nsFTPDirListingConv::OnData(channel = %x, ctxt = %x, inStr = %x, sourceOffset = %d, count = %d)\n", channel, ctxt, inStr, sourceOffset, count));
+    PR_LOG(gFTPDirListConvLog, PR_LOG_DEBUG, ("nsFTPDirListingConv::OnData(request = %x, ctxt = %x, inStr = %x, sourceOffset = %d, count = %d)\n", request, ctxt, inStr, sourceOffset, count));
 
     if (!mBuffer.IsEmpty()) {
         // we have data left over from a previous OnDataAvailable() call.
@@ -337,7 +343,7 @@ nsFTPDirListingConv::OnDataAvailable(nsIChannel *channel, nsISupports *ctxt,
     inputData = do_QueryInterface(inputDataSup, &rv);
     if (NS_FAILED(rv)) return rv;
 
-    rv = mFinalListener->OnDataAvailable(mPartChannel, ctxt, inputData, 0, indexFormat.Length());
+    rv = mFinalListener->OnDataAvailable(this, ctxt, inputData, 0, indexFormat.Length());
     if (NS_FAILED(rv)) return rv;
 
     return NS_OK;
@@ -346,24 +352,30 @@ nsFTPDirListingConv::OnDataAvailable(nsIChannel *channel, nsISupports *ctxt,
 
 // nsIStreamObserver implementation
 NS_IMETHODIMP
-nsFTPDirListingConv::OnStartRequest(nsIChannel *channel, nsISupports *ctxt) {
+nsFTPDirListingConv::OnStartRequest(nsIRequest* request, nsISupports *ctxt) {
     // we don't care about start. move along... but start masqeurading 
     // as the http-index channel now.
-    return mFinalListener->OnStartRequest(mPartChannel, ctxt);
+    return mFinalListener->OnStartRequest(this, ctxt);
 }
 
 NS_IMETHODIMP
-nsFTPDirListingConv::OnStopRequest(nsIChannel *channel, nsISupports *ctxt,
+nsFTPDirListingConv::OnStopRequest(nsIRequest* request, nsISupports *ctxt,
                                    nsresult aStatus, const PRUnichar* aStatusArg) {
     // we don't care about stop. move along...
+
+    nsCOMPtr<nsIChannel> channel;
+    (void) request->GetParent(getter_AddRefs(channel));
+    if (!channel) return NS_ERROR_NULL_POINTER;
+
+
     nsCOMPtr<nsILoadGroup> loadgroup;
-    nsresult rv = mPartChannel->GetLoadGroup(getter_AddRefs(loadgroup));
+    nsresult rv = channel->GetLoadGroup(getter_AddRefs(loadgroup));
     if (NS_FAILED(rv)) return rv;
 
     if (loadgroup)
-        (void)loadgroup->RemoveChannel(mPartChannel, nsnull, aStatus, aStatusArg);
+        (void)loadgroup->RemoveRequest(this, nsnull, aStatus, aStatusArg);
 
-    return mFinalListener->OnStopRequest(mPartChannel, ctxt, aStatus, aStatusArg);
+    return mFinalListener->OnStopRequest(this, ctxt, aStatus, aStatusArg);
 }
 
 
@@ -734,6 +746,9 @@ nsFTPDirListingConv::DigestBufferLines(char *aBuffer, nsCAutoString &aString) {
         if (NT == mServerType && !nsCRT::IsAsciiSpace(line[8]))
             mServerType = UNIX;
 
+        // check for an eplf response
+        if (line[0] == '+')
+            mServerType = EPLF;
 
         char *escName = nsnull;
         switch (mServerType) {
@@ -845,6 +860,64 @@ nsFTPDirListingConv::DigestBufferLines(char *aBuffer, nsCAutoString &aString) {
             nsMemory::Free(escName);
             break; // END NT
         }
+        case EPLF:
+        {
+            
+            int flagcwd = 0;
+            int when = 0;
+            int flagsize = 0;
+            unsigned long size;
+            PRBool processing = PR_TRUE;
+            while (*line && processing)
+                switch (*line) {
+                  case '\t':
+                  {
+                      if (flagcwd) {
+                          thisEntry->mType = Dir;
+                          thisEntry->mContentLen = 0;
+                      } else {
+                          thisEntry->mType = File;
+                          thisEntry->mContentLen = size;
+                      }
+
+                      escName = nsEscape(line+1, url_Path);
+                      thisEntry->mName = escName;
+                      
+                      if (flagsize) {
+                        thisEntry->mSupressSize = PR_FALSE;
+                        // Mutiply what the last modification date to get usecs.  
+                        PRInt64 usecs = LL_Zero();
+                        PRInt64 seconds = LL_Zero();
+                        PRInt64 multiplier = LL_Zero();
+                        LL_I2L(seconds, when);
+                        LL_I2L(multiplier, PR_USEC_PER_SEC);
+                        LL_MUL(usecs, seconds, multiplier);
+                        PR_ExplodeTime(usecs, PR_LocalTimeParameters, &thisEntry->mMDTM);
+                      } else {
+                          thisEntry->mSupressSize = PR_TRUE;
+                      }
+
+                      processing = PR_FALSE;
+                    }
+                    break;
+                    case 's':
+                      flagsize = 1;
+                      size = 0;
+                      while (*++line && (*line != ','))
+                          size = size * 10 + (*line - '0');
+                      break;
+                    case 'm':
+                      while (*++line && (*line != ','))
+                          when = when * 10 + (*line - '0');
+                      break;
+                    case '/':
+                      flagcwd = 1;
+                    default:
+                      while (*line) if (*line++ == ',') break;
+            }
+            break; //END EPLF
+        }
+
         default:
         {
             escName = nsEscape(line, url_Path);
@@ -907,17 +980,52 @@ nsFTPDirListingConv::DigestBufferLines(char *aBuffer, nsCAutoString &aString) {
     return line;
 }
 
-nsresult
-NS_NewFTPDirListingConv(nsFTPDirListingConv** aFTPDirListingConv)
+
+// dummy request
+
+/* readonly attribute wstring name; */
+NS_IMETHODIMP nsFTPDirListingConv::GetName(PRUnichar * *aName)
 {
-    NS_PRECONDITION(aFTPDirListingConv != nsnull, "null ptr");
-    if (! aFTPDirListingConv)
-        return NS_ERROR_NULL_POINTER;
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
 
-    *aFTPDirListingConv = new nsFTPDirListingConv();
-    if (! *aFTPDirListingConv)
-        return NS_ERROR_OUT_OF_MEMORY;
+/* boolean isPending (); */
+NS_IMETHODIMP nsFTPDirListingConv::IsPending(PRBool *_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
 
-    NS_ADDREF(*aFTPDirListingConv);
-    return (*aFTPDirListingConv)->Init();
+/* readonly attribute nsresult status; */
+NS_IMETHODIMP nsFTPDirListingConv::GetStatus(nsresult *aStatus)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* void cancel (in nsresult status); */
+NS_IMETHODIMP nsFTPDirListingConv::Cancel(nsresult status)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* void suspend (); */
+NS_IMETHODIMP nsFTPDirListingConv::Suspend()
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* void resume (); */
+NS_IMETHODIMP nsFTPDirListingConv::Resume()
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute nsISupports parent; */
+NS_IMETHODIMP nsFTPDirListingConv::GetParent(nsISupports * *aParent)
+{
+    NS_IF_ADDREF(*aParent = mPartChannel);
+    return NS_OK;
+}
+NS_IMETHODIMP nsFTPDirListingConv::SetParent(nsISupports * aParent)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
 }

@@ -32,40 +32,12 @@
 
 class nsIStreamListener;
 
-// A proxy for an nsIChannel, useful when only a few nsIChannel
-// methods must be overridden
-class nsChannelProxy : public nsIChannel {
-
-public:
-    NS_FORWARD_NSICHANNEL(mChannel->)
-    NS_FORWARD_NSIREQUEST(mChannel->)
-
-protected:
-    nsChannelProxy(nsIChannel* aChannel):mChannel(aChannel) {};
-    virtual ~nsChannelProxy() {};
-    nsCOMPtr<nsIChannel>      mChannel;
-};
-
 // Override several nsIChannel methods so that they interact with the cache manager
-class nsCacheEntryChannel : public nsChannelProxy {
+class nsCacheEntryChannel : public nsIChannel{
 
 public:
     NS_DECL_ISUPPORTS
-
-    NS_IMETHOD GetTransferOffset(PRUint32 *aStartPosition);
-    NS_IMETHOD SetTransferOffset(PRUint32 aStartPosition);
-    NS_IMETHOD GetTransferCount(PRInt32 *aReadCount);
-    NS_IMETHOD SetTransferCount(PRInt32 aReadCount);
-    NS_IMETHOD OpenOutputStream(nsIOutputStream* *aOutputStream);
-    NS_IMETHOD OpenInputStream(nsIInputStream* *aInputStream);
-    NS_IMETHOD AsyncRead(nsIStreamListener *aListener, nsISupports *aContext);
-    NS_IMETHOD AsyncWrite(nsIInputStream *aFromStream,
-                          nsIStreamObserver *aObserver, nsISupports *aContext);
-    NS_IMETHOD GetLoadAttributes(nsLoadFlags *aLoadAttributes);
-    NS_IMETHOD SetLoadAttributes(nsLoadFlags aLoadAttributes);
-    NS_IMETHOD GetLoadGroup(nsILoadGroup* *aLoadGroup);
-    NS_IMETHOD GetURI(nsIURI * *aURI);
-    NS_IMETHOD GetOriginalURI(nsIURI * *aURI);
+    NS_DECL_NSICHANNEL
 
 protected:
     nsCacheEntryChannel(nsCachedNetData* aCacheEntry, nsIChannel* aChannel, nsILoadGroup* aLoadGroup);
@@ -76,6 +48,7 @@ protected:
 private:
     nsCOMPtr<nsCachedNetData>    mCacheEntry;
     nsCOMPtr<nsILoadGroup>       mLoadGroup;
+    nsCOMPtr<nsIChannel>         mChannel;
 };
 
 #endif // _nsCacheEntryChannel_h_

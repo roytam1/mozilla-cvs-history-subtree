@@ -300,7 +300,7 @@ nsXMLMIMEDataSource::Serialize() {
   
   // we don't need to worry about notification callbacks
   nsCOMPtr<nsIOutputStream> stream;
-  rv = channel->OpenOutputStream(  getter_AddRefs( stream ) ) ;
+  rv = channel->OpenOutputStream(0, -1, getter_AddRefs( stream ) ) ;
 	if(NS_FAILED(rv))
     return rv ;
 	nsCOMPtr<nsISimpleEnumerator> enumerator;	
@@ -696,7 +696,7 @@ nsXMLMIMEDataSource::InitFromFile( nsIFile*  aFile  )
   
   // we don't need to worry about notification callbacks
  nsCOMPtr<nsIInputStream> stream;
- rv = channel->OpenInputStream( getter_AddRefs( stream ) ) ;
+ rv = channel->OpenInputStream(0, -1, getter_AddRefs( stream ) ) ;
  if(NS_FAILED(rv))  return rv ;
     
  PRUint32 streamLength;

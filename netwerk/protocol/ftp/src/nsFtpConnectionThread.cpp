@@ -19,6 +19,7 @@
  *
  * Contributor(s): 
  */
+#include "nsFTPChannel.h"
 #include "nsFtpConnectionThread.h"
 #include "nsFtpControlConnection.h"
 #include "nsFtpProtocolHandler.h"
@@ -47,13 +48,6 @@ static NS_DEFINE_CID(kStreamConverterServiceCID,    NS_STREAMCONVERTERSERVICE_CI
 static NS_DEFINE_CID(kSocketTransportServiceCID, NS_SOCKETTRANSPORTSERVICE_CID);
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
-#define FTP_COMMAND_CHANNEL_SEG_SIZE 64
-#define FTP_COMMAND_CHANNEL_MAX_SIZE 512
-
-#define FTP_CACHE_CONTROL_CONNECTION 1
-//#define FTP_NO_HTTP_INDEX_FORMAT
-//#define FTP_SIMULATE_DROPPED_CONTROL_CONNECTION
-
 #if defined(PR_LOGGING)
 extern PRLogModuleInfo* gFTPLog;
 #endif /* PR_LOGGING */
@@ -81,9 +75,7 @@ nsFtpState::nsFtpState() {
 
     mLastModified = LL_ZERO;
     mWriteCount = 0;
-    mBufferSegmentSize = 0;
-    mBufferMaxSize = 0;
-
+    
     mControlReadContinue = PR_FALSE;
     mControlReadBrokenLine = PR_FALSE;
 
@@ -102,7 +94,7 @@ nsFtpState::~nsFtpState()
 
 // nsIStreamListener implementation
 NS_IMETHODIMP
-nsFtpState::OnDataAvailable(nsIChannel *aChannel,
+nsFtpState::OnDataAvailable(nsIRequest *request,
                                        nsISupports *aContext,
                                        nsIInputStream *aInStream,
                                        PRUint32 aOffset, 
@@ -127,6 +119,11 @@ nsFtpState::OnDataAvailable(nsIChannel *aChannel,
     nsCString logString(buffer);
     logString.ReplaceChar(CRLF, ' ');
     PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) reading %d bytes: \"%s\"", this, aCount, logString.GetBuffer()));
+
+#ifdef DEBUG_dougt
+//printf("@@@ %s\n", logString.GetBuffer());
+#endif
+
 #endif
     
     // get the response code out.
@@ -217,7 +214,7 @@ nsFtpState::OnDataAvailable(nsIChannel *aChannel,
 
 // nsIStreamObserver implementation
 NS_IMETHODIMP
-nsFtpState::OnStartRequest(nsIChannel *aChannel, nsISupports *aContext)
+nsFtpState::OnStartRequest(nsIRequest *request, nsISupports *aContext)
 {
 #if defined(PR_LOGGING)
     nsXPIDLCString spec;
@@ -230,7 +227,7 @@ nsFtpState::OnStartRequest(nsIChannel *aChannel, nsISupports *aContext)
 }
 
 NS_IMETHODIMP
-nsFtpState::OnStopRequest(nsIChannel *aChannel, nsISupports *aContext,
+nsFtpState::OnStopRequest(nsIRequest *request, nsISupports *aContext,
                             nsresult aStatus, const PRUnichar* aStatusArg)
 {
     PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) nsFtpState::OnStopRequest() rv=%d\n", this, aStatus));
@@ -280,10 +277,7 @@ nsFtpState::EstablishControlConnection()
         
     nsCOMPtr<nsIChannel> channel;
     // build our own
-    rv = CreateTransport(host, mPort, 
-                         FTP_COMMAND_CHANNEL_SEG_SIZE,
-                         FTP_COMMAND_CHANNEL_MAX_SIZE,
-                         getter_AddRefs(channel)); // the command channel
+    rv = CreateTransport(host, mPort, getter_AddRefs(channel)); // the command channel
     if (NS_FAILED(rv)) return rv;
         
     mState = FTP_READ_BUF;
@@ -1126,11 +1120,12 @@ nsFtpState::R_cwd() {
 
         // update
         mURL->SetPath(mCwd);
-
+        nsCOMPtr<nsIStreamContentInfo> cr = do_QueryInterface(mChannel);
+        if (!cr) return FTP_ERROR;
 #ifdef FTP_NO_HTTP_INDEX_FORMAT
-        nsresult rv = mChannel->SetContentType("text/html");
+        nsresult rv = cr->SetContentType("text/html");
 #else
-        nsresult rv = mChannel->SetContentType("application/http-index-format");
+        nsresult rv = cr->SetContentType("application/http-index-format");
 #endif        
         if (NS_FAILED(rv)) return FTP_ERROR;
 
@@ -1162,7 +1157,9 @@ nsFtpState::R_size() {
     if (mResponseCode/100 == 2) {
         PRInt32 conversionError;
         PRInt32 length = mResponseMsg.ToInteger(&conversionError);
-		if (NS_FAILED(mChannel->SetContentLength(length))) return FTP_ERROR;
+        nsCOMPtr<nsIStreamContentInfo> cr = do_QueryInterface(mChannel);
+        if (!cr) return FTP_ERROR;
+        if (NS_FAILED(cr->SetContentLength(length))) return FTP_ERROR;
     }
 
     return FTP_S_MDTM;
@@ -1253,9 +1250,9 @@ nsFtpState::S_list() {
     mFireCallbacks = PR_FALSE; // listener callbacks will be handled by the transport.
 
 #ifdef FTP_NO_HTTP_INDEX_FORMAT
-    return mDPipe->AsyncRead(mListener, nsnull);
+    return mDPipe->AsyncRead(mListener, nsnull, 0, -1, getter_AddRefs(mDPipeRequest));
 #else
-     return mDPipe->AsyncRead(converterListener, mListenerContext);
+    return mDPipe->AsyncRead(converterListener, mListenerContext, 0, -1, getter_AddRefs(mDPipeRequest));
 #endif
 
 }
@@ -1280,8 +1277,7 @@ nsFtpState::S_retr() {
     if (NS_FAILED(rv)) return rv;
 
     mFireCallbacks = PR_FALSE; // listener callbacks will be handled by the transport.
-    
-    return mDPipe->AsyncRead(mListener, mListenerContext);
+    return mDPipe->AsyncRead(mListener, mListenerContext, 0, -1, getter_AddRefs(mDPipeRequest));
 }
 
 FTP_STATE
@@ -1323,12 +1319,11 @@ nsFtpState::S_stor() {
 
     NS_ASSERTION(mWriteStream, "we're trying to upload without any data");
     
-    rv = mDPipe->SetTransferCount(mWriteCount);
     if (NS_FAILED(rv)) return rv;
     mFireCallbacks = PR_FALSE; // observer callbacks will be handled by the transport.
     
     PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) writing on Data Transport\n", this));
-    return mDPipe->AsyncWrite(mWriteStream, mObserver, mObserverContext);
+    return mDPipe->AsyncWrite(mWriteStream, mObserver, mObserverContext, 0, mWriteCount, getter_AddRefs(mDPipeRequest));
 }
 
 FTP_STATE
@@ -1460,8 +1455,7 @@ nsFtpState::R_pasv() {
     const char* hostStr = mIPv6ServerAddress ? mIPv6ServerAddress : host.GetBuffer();
 
     // now we know where to connect our data channel
-    rv = CreateTransport(hostStr, port, mBufferSegmentSize, mBufferMaxSize,
-                         getter_AddRefs(mDPipe)); // the data channel
+    rv = CreateTransport(hostStr, port, getter_AddRefs(mDPipe)); // the data channel
     if (NS_FAILED(rv)) return FTP_ERROR;
 
     PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) Created Data Transport (%s:%d)\n", this, hostStr, port));
@@ -1478,7 +1472,10 @@ nsFtpState::R_pasv() {
 
     // we're connected figure out what type of transfer we're doing (ascii or binary)
     nsXPIDLCString type;
-    rv = mChannel->GetContentType(getter_Copies(type));
+    nsCOMPtr<nsIStreamContentInfo> cr = do_QueryInterface(mChannel);
+    if (!cr) return FTP_ERROR;
+
+    rv = cr->GetContentType(getter_Copies(type));
     nsCAutoString typeStr;
     if (NS_FAILED(rv) || !type) 
         typeStr = "bin";
@@ -1570,15 +1567,11 @@ nsFtpState::IsPending(PRBool *result)
     nsresult rv = NS_OK;
     *result = PR_FALSE;
     
-    nsCOMPtr<nsIChannel> controlSocket;
-    mControlConnection->GetChannel(getter_AddRefs(controlSocket));
+    nsCOMPtr<nsIRequest> request;
+    mControlConnection->GetReadRequest(getter_AddRefs(request));
 
-    if (controlSocket) {
-        rv = controlSocket->IsPending(result);
-        if (NS_FAILED(rv)) return rv;
-    }
-    if (mDPipe) {
-        rv = mDPipe->IsPending(result);
+    if (request) {
+        rv = request->IsPending(result);
         if (NS_FAILED(rv)) return rv;
     }
     return rv;
@@ -1607,8 +1600,8 @@ nsFtpState::Cancel(nsresult status)
     mCanceled = PR_TRUE;
 
     // kill the data connection immediately. 
-    if (mDPipe) {
-        mDPipe->Cancel(status);
+    if (mDPipeRequest) {
+        mDPipeRequest->Cancel(status);
     }
     
     return NS_OK;
@@ -1625,15 +1618,18 @@ nsFtpState::Suspend(void)
     // enough.
     if (mSuspendCount < 1) {
         mSuspendCount++;
-        nsCOMPtr<nsIChannel> controlSocket;
-        mControlConnection->GetChannel(getter_AddRefs(controlSocket));
 
-        if (controlSocket) {
-            rv = controlSocket->Suspend();
+        // only worry about the read request.
+        nsCOMPtr<nsIRequest> request;
+        mControlConnection->GetReadRequest(getter_AddRefs(request));
+
+        if (request) {
+            rv = request->Suspend();
             if (NS_FAILED(rv)) return rv;
         }
-        if (mDPipe) {
-            rv = mDPipe->Suspend();
+
+        if (mDPipeRequest) {
+            rv = mDPipeRequest->Suspend();
             if (NS_FAILED(rv)) return rv;
         }
     }
@@ -1650,16 +1646,16 @@ nsFtpState::Resume(void)
     // cause the FTP state machine to unblock and 
     // go on about it's business.
     if (mSuspendCount) {
-        // only a suspended thread can be resumed
-        nsCOMPtr<nsIChannel> controlSocket;
-        mControlConnection->GetChannel(getter_AddRefs(controlSocket));
-    
-        if (controlSocket) {
-            rv = controlSocket->Resume();
+        // only worry about the read request.
+        nsCOMPtr<nsIRequest> request;
+        mControlConnection->GetReadRequest(getter_AddRefs(request));
+
+        if (request) {
+            rv = request->Resume();
             if (NS_FAILED(rv)) return rv;
         }
-        if (mDPipe) {
-            rv = mDPipe->Resume();
+        if (mDPipeRequest) {
+            rv = mDPipeRequest->Resume();
             if (NS_FAILED(rv)) return rv;
         }
         rv = NS_OK;
@@ -1668,24 +1664,35 @@ nsFtpState::Resume(void)
     return rv;
 }
 
+/* attribute nsISupports parent; */
+NS_IMETHODIMP
+nsFtpState::GetParent(nsISupports * *aParent)
+{
+    NS_ADDREF(*aParent=(nsISupports*)(nsIChannel*)this);
+    return NS_OK;
+}
+NS_IMETHODIMP
+nsFtpState::SetParent(nsISupports * aParent)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
 nsresult
 nsFtpState::Init(nsIFTPChannel* aChannel,
-                 nsIPrompt*  aPrompter,
-                 PRUint32 bufferSegmentSize,
-                 PRUint32 bufferMaxSize) {
+                 nsIPrompt*  aPrompter) {
     nsresult rv = NS_OK;
 
     mKeepRunning = PR_TRUE;
     
     mPrompter = aPrompter;
 
-    mBufferSegmentSize = bufferSegmentSize;
-    mBufferMaxSize = bufferMaxSize;
-
     // parameter validation
-    NS_ASSERTION(aChannel, "FTP: thread needs a channel");
+    NS_ASSERTION(aChannel, "FTP: needs a channel");
 
     mChannel = aChannel; // a straight com ptr to the channel
+
+    nsCOMPtr<nsIStreamContentInfo> cr = do_QueryInterface(mChannel);
+    NS_ASSERTION(cr, "FTP: needs a channel which is also a content request!");
 
     rv = aChannel->GetURI(getter_AddRefs(mURL));
     if (NS_FAILED(rv)) return rv;
@@ -1770,6 +1777,7 @@ nsFtpState::KillControlConnnection() {
     if (mDPipe) {
         mDPipe->SetNotificationCallbacks(nsnull);
         mDPipe = 0;
+        mDPipeRequest = 0;
     }
 
     mIPv6Checked = PR_FALSE;
@@ -1823,9 +1831,12 @@ nsFtpState::StopProcessing() {
     
     // Clean up the event loop
     mKeepRunning = PR_FALSE;
-
-    if (NS_FAILED(mInternalError) && mChannel) {
-        mChannel->Cancel(mInternalError);
+    
+    nsCOMPtr<nsIRequest> request = do_QueryInterface(mChannel);
+        
+    if (NS_FAILED(mInternalError) && mChannel  && request) {
+        if (request)
+            request->Cancel(mInternalError);
     }
 
     KillControlConnnection();
@@ -1839,7 +1850,7 @@ nsFtpState::StopProcessing() {
 
              // we only want to fire OnStop. No OnStart has been fired, and
              // we only want to propagate an error.
-             rv = asyncObserver->OnStopRequest(mChannel, mObserverContext, mInternalError, nsnull);
+             rv = asyncObserver->OnStopRequest(request, mObserverContext, mInternalError, nsnull);
              if (NS_FAILED(rv)) return rv;
          }
 
@@ -1850,7 +1861,7 @@ nsFtpState::StopProcessing() {
 
              // we only want to fire OnStop. No OnStart has been fired, and
              // we only want to propagate an error.
-             rv = asyncListener->OnStopRequest(mChannel, mListenerContext, mInternalError, nsnull);
+             rv = asyncListener->OnStopRequest(request, mListenerContext, mInternalError, nsnull);
              if (NS_FAILED(rv)) return rv;
          }
     }
@@ -1909,10 +1920,7 @@ nsFtpState::SetDirMIMEType(nsString& aString) {
 }
 
 nsresult
-nsFtpState::CreateTransport(const char * host, PRInt32 port,
-                                       PRUint32 bufferSegmentSize,
-                                       PRUint32 bufferMaxSize,
-                                       nsIChannel** o_pTrans)
+nsFtpState::CreateTransport(const char * host, PRInt32 port, nsIChannel** o_pTrans)
 {
     nsresult rv;
     
@@ -1939,29 +1947,40 @@ nsFtpState::CreateTransport(const char * host, PRInt32 port,
             
             rv = channelProxy->GetProxyPort(&proxyPort);
             if (NS_FAILED(rv)) return rv;
-            
+
             rv = channelProxy->GetProxyType(getter_Copies(proxyType));
             if (NS_SUCCEEDED(rv) && nsCRT::strcasecmp(proxyType, "socks") == 0) {
                 
-                return sts->CreateTransportOfType("socks", host, port, proxyHost, proxyPort, bufferSegmentSize,
-                                                   bufferMaxSize, o_pTrans);
+                return sts->CreateTransportOfType("socks", host, port, proxyHost, proxyPort, FTP_COMMAND_CHANNEL_SEG_SIZE,
+                                                   FTP_COMMAND_CHANNEL_MAX_SIZE, o_pTrans);
                 
             }
                 
-            return sts->CreateTransport(host, port, proxyHost, proxyPort, bufferSegmentSize,
-                                         bufferMaxSize, o_pTrans);
+            return sts->CreateTransport(host, port, proxyHost, proxyPort, FTP_COMMAND_CHANNEL_SEG_SIZE,
+                                         FTP_COMMAND_CHANNEL_MAX_SIZE, o_pTrans);
                 
         }
     }
     
-    return sts->CreateTransport(host, port, nsnull, -1, bufferSegmentSize,
-                                 bufferMaxSize, o_pTrans);
+    return sts->CreateTransport(host, port, nsnull, -1, FTP_COMMAND_CHANNEL_SEG_SIZE,
+                                 FTP_COMMAND_CHANNEL_MAX_SIZE, o_pTrans);
 }
 
 nsresult 
 nsFtpState::ControlAsyncWrite(nsCString& command)
 {
     NS_ASSERTION(mControlConnection, "null control connection");
+
+#if defined(PR_LOGGING)
+    nsCString logString(command);
+    logString.ReplaceChar(CRLF, ' ');
+    PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) Writing \"%s\"\n", this, logString.GetBuffer()));
+
+#ifdef DEBUG_dougt
+//printf("!!! %s\n", logString.GetBuffer());
+#endif
+
+#endif
 
     if (mControlConnection)
         return mControlConnection->Write(command);

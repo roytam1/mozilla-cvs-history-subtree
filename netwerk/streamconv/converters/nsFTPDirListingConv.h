@@ -54,7 +54,8 @@ static NS_DEFINE_CID(kFTPDirListingConverterCID, NS_FTPDIRLISTINGCONVERTER_CID);
 // tcpc
 // vms
 // nt
-// 
+// eplf
+//
 // nsFTPDirListingConv converts the raw ascii text directory generated via a FTP
 // LIST or NLST command, to the application/http-index-format MIME-type.
 // For more info see: http://www.area.com/~roeber/file_format.html
@@ -69,7 +70,8 @@ typedef enum _FTP_Server_Type {
     CMS,
     TCPC,
     VMS,
-    NT
+    NT,
+    EPLF
 } FTP_Server_Type;
 
 typedef enum _FTPentryType {
@@ -92,7 +94,7 @@ public:
     PRBool          mSupressSize;       // supress the size info from display
 };
 
-class nsFTPDirListingConv : public nsIStreamConverter {
+class nsFTPDirListingConv : public nsIStreamConverter, public nsIRequest {
 public:
     // nsISupports methods
     NS_DECL_ISUPPORTS
@@ -105,6 +107,9 @@ public:
 
     // nsIStreamObserver methods
     NS_DECL_NSISTREAMOBSERVER
+
+    // nsIRequest
+    NS_DECL_NSIREQUEST
 
     // nsFTPDirListingConv methods
     nsFTPDirListingConv();

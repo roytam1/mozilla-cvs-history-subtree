@@ -87,10 +87,11 @@ nsFileChannel::~nsFileChannel()
 {
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS7(nsFileChannel,
+NS_IMPL_THREADSAFE_ISUPPORTS8(nsFileChannel,
                    nsIFileChannel,
                    nsIChannel,
                    nsIRequest,
+                   nsIStreamContentInfo,
                    nsIStreamListener,
                    nsIStreamObserver,
                    nsIProgressEventSink,
@@ -118,8 +119,8 @@ nsFileChannel::Create(nsISupports* aOuter, const nsIID& aIID, void* *aResult)
 NS_IMETHODIMP
 nsFileChannel::GetName(PRUnichar* *result)
 {
-    if (mFileTransport)
-        return mFileTransport->GetName(result);
+    if (mCurrentRequest)
+        return mCurrentRequest->GetName(result);
     nsresult rv;
     nsXPIDLCString urlStr;
     rv = mURI->GetSpec(getter_Copies(urlStr));
@@ -133,8 +134,8 @@ nsFileChannel::GetName(PRUnichar* *result)
 NS_IMETHODIMP
 nsFileChannel::IsPending(PRBool *result)
 {
-    if (mFileTransport)
-        return mFileTransport->IsPending(result);
+    if (mCurrentRequest)
+        return mCurrentRequest->IsPending(result);
     *result = PR_FALSE;
     return NS_OK;
 }
@@ -155,8 +156,8 @@ nsFileChannel::Cancel(nsresult status)
                  "wrong thread calling this routine");
 #endif
     mStatus = status;
-    if (mFileTransport)
-        return mFileTransport->Cancel(status);
+    if (mCurrentRequest)
+        return mCurrentRequest->Cancel(status);
     return NS_OK;
 }
 
@@ -167,8 +168,8 @@ nsFileChannel::Suspend()
     NS_ASSERTION(mInitiator == PR_CurrentThread(),
                  "wrong thread calling this routine");
 #endif
-    if (mFileTransport)
-        return mFileTransport->Suspend();
+    if (mCurrentRequest)
+        return mCurrentRequest->Suspend();
     return NS_OK;
 }
 
@@ -179,11 +180,23 @@ nsFileChannel::Resume()
     NS_ASSERTION(mInitiator == PR_CurrentThread(),
                  "wrong thread calling this routine");
 #endif
-    if (mFileTransport)
-        return mFileTransport->Resume();
+    if (mCurrentRequest)
+        return mCurrentRequest->Resume();
     return NS_OK;
 }
 
+
+
+/* attribute nsISupports parent; */
+NS_IMETHODIMP nsFileChannel::GetParent(nsISupports * *aParent)
+{
+    NS_ADDREF(*aParent=(nsISupports*)(nsIChannel*)this);
+    return NS_OK;
+}
+NS_IMETHODIMP nsFileChannel::SetParent(nsISupports * aParent)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
 ////////////////////////////////////////////////////////////////////////////////
 // From nsIChannel
 ////////////////////////////////////////////////////////////////////////////////
@@ -234,55 +247,40 @@ nsFileChannel::EnsureTransport()
         rv = mFileTransport->SetLoadAttributes(mLoadAttributes);
         if (NS_FAILED(rv)) return rv;
     }
-    if (mBufferSegmentSize) {
-        rv = mFileTransport->SetBufferSegmentSize(mBufferSegmentSize);
-        if (NS_FAILED(rv)) return rv;
-    }
-    if (mBufferMaxSize) {
-        rv = mFileTransport->SetBufferMaxSize(mBufferMaxSize);
-        if (NS_FAILED(rv)) return rv;
-    }
     if (mCallbacks) {
         rv = mFileTransport->SetNotificationCallbacks(this);
-        if (NS_FAILED(rv)) return rv;
-    }
-    if (mTransferOffset) {
-        rv = mFileTransport->SetTransferOffset(mTransferOffset);
-        if (NS_FAILED(rv)) return rv;
-    }
-    if (mTransferCount >= 0) {
-        rv = mFileTransport->SetTransferCount(mTransferCount);
         if (NS_FAILED(rv)) return rv;
     }
     return rv;
 }
 
 NS_IMETHODIMP
-nsFileChannel::OpenInputStream(nsIInputStream **result)
+nsFileChannel::OpenInputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIInputStream **result)
 {
     nsresult rv;
 
-    if (mFileTransport)
+    if (mCurrentRequest)
         return NS_ERROR_IN_PROGRESS;
 
     rv = EnsureTransport();
     if (NS_FAILED(rv)) goto done;
 
-    rv = mFileTransport->OpenInputStream(result);
+    rv = mFileTransport->OpenInputStream(transferOffset, transferCount, result);
   done:
     if (NS_FAILED(rv)) {
         // release the transport so that we don't think we're in progress
         mFileTransport = nsnull;
+        mCurrentRequest = nsnull;
     }
     return rv;
 }
 
 NS_IMETHODIMP
-nsFileChannel::OpenOutputStream(nsIOutputStream **result)
+nsFileChannel::OpenOutputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIOutputStream **result)
 {
     nsresult rv;
 
-    if (mFileTransport)
+    if (mCurrentRequest)
         return NS_ERROR_IN_PROGRESS;
 
     mIOFlags |= PR_WRONLY;
@@ -290,18 +288,20 @@ nsFileChannel::OpenOutputStream(nsIOutputStream **result)
     rv = EnsureTransport();
     if (NS_FAILED(rv)) goto done;
 
-    rv = mFileTransport->OpenOutputStream(result);
+    rv = mFileTransport->OpenOutputStream(transferOffset, transferCount, result);
   done:
     if (NS_FAILED(rv)) {
         // release the transport so that we don't think we're in progress
         mFileTransport = nsnull;
+        mCurrentRequest = nsnull;
     }
     return rv;
 }
 
 NS_IMETHODIMP
 nsFileChannel::AsyncRead(nsIStreamListener *listener,
-                         nsISupports *ctxt)
+                         nsISupports *ctxt,
+                         PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
 {
     nsresult rv;
 
@@ -311,7 +311,7 @@ nsFileChannel::AsyncRead(nsIStreamListener *listener,
     mInitiator = PR_CurrentThread();
 #endif
 
-    if (mFileTransport)
+    if (mCurrentRequest)
         return NS_ERROR_IN_PROGRESS;
 
     NS_ASSERTION(listener, "null listener");
@@ -333,34 +333,40 @@ nsFileChannel::AsyncRead(nsIStreamListener *listener,
             }
         }
 
-        rv = mLoadGroup->AddChannel(this, nsnull);
+        rv = mLoadGroup->AddRequest(this, nsnull);
         if (NS_FAILED(rv)) return rv;
     }
 
     rv = EnsureTransport();
     if (NS_FAILED(rv)) goto done;
-
-    rv = mFileTransport->AsyncRead(tempListener, ctxt);
+    
+    rv = mFileTransport->AsyncRead(tempListener, ctxt, transferOffset, 
+                                   transferCount, getter_AddRefs(mCurrentRequest));
 
   done:
     if (NS_FAILED(rv)) {
-        nsresult rv2 = mLoadGroup->RemoveChannel(this, ctxt, rv, nsnull);       // XXX fix error message
-        NS_ASSERTION(NS_SUCCEEDED(rv2), "RemoveChannel failed");
+        nsresult rv2 = mLoadGroup->RemoveRequest(this, ctxt, rv, nsnull);       // XXX fix error message
+        NS_ASSERTION(NS_SUCCEEDED(rv2), "RemoveRequest failed");
         // release the transport so that we don't think we're in progress
         mFileTransport = nsnull;
+        mCurrentRequest = nsnull;
     }
     return rv;
 }
 
 NS_IMETHODIMP
-nsFileChannel::AsyncWrite(nsIInputStream *fromStream,
-                          nsIStreamObserver *observer,
-                          nsISupports *ctxt)
+nsFileChannel::AsyncWrite(nsIInputStream *fromStream, 
+                          nsIStreamObserver *observer, 
+                          nsISupports *ctxt, 
+                          PRUint32 transferOffset, 
+                          PRUint32 transferCount, 
+                          nsIRequest **_retval)
+
 {
     nsresult rv;
 
 #ifdef DEBUG
-    NS_ASSERTION(mInitiator == nsnull || mInitiator == PR_CurrentThread(),
+   NS_ASSERTION(mInitiator == nsnull || mInitiator == PR_CurrentThread(),
                  "wrong thread calling this routine");
     mInitiator = PR_CurrentThread();
 #endif
@@ -385,21 +391,24 @@ nsFileChannel::AsyncWrite(nsIInputStream *fromStream,
             }
         }
 
-        rv = mLoadGroup->AddChannel(this, nsnull);
+        rv = mLoadGroup->AddRequest(this, nsnull);
         if (NS_FAILED(rv)) return rv;
     }
 
     rv = EnsureTransport();
     if (NS_FAILED(rv)) goto done;
 
-    rv = mFileTransport->AsyncWrite(fromStream, observer, ctxt);
+    rv = mFileTransport->AsyncWrite(fromStream, observer, ctxt, 
+                                    transferOffset, transferCount, 
+                                    getter_AddRefs(mCurrentRequest));
 
   done:
     if (NS_FAILED(rv)) {
-        nsresult rv2 = mLoadGroup->RemoveChannel(this, ctxt, rv, nsnull);       // XXX fix error message
+        nsresult rv2 = mLoadGroup->RemoveRequest(this, ctxt, rv, nsnull);       // XXX fix error message
         NS_ASSERTION(NS_SUCCEEDED(rv2), "RemoveChannel failed");
         // release the transport so that we don't think we're in progress
         mFileTransport = nsnull;
+        mCurrentRequest = nsnull;
     }
     return rv;
 }
@@ -483,84 +492,6 @@ nsFileChannel::SetContentLength(PRInt32 aContentLength)
 }
 
 NS_IMETHODIMP
-nsFileChannel::GetTransferOffset(PRUint32 *aTransferOffset)
-{
-    *aTransferOffset = mTransferOffset;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileChannel::SetTransferOffset(PRUint32 aTransferOffset)
-{
-    mTransferOffset = aTransferOffset;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileChannel::GetTransferCount(PRInt32 *aTransferCount)
-{
-    *aTransferCount = mTransferCount;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileChannel::SetTransferCount(PRInt32 aTransferCount)
-{
-    mTransferCount = aTransferCount;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileChannel::GetBufferSegmentSize(PRUint32 *aBufferSegmentSize)
-{
-    *aBufferSegmentSize = mBufferSegmentSize;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileChannel::SetBufferSegmentSize(PRUint32 aBufferSegmentSize)
-{
-    mBufferSegmentSize = aBufferSegmentSize;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileChannel::GetBufferMaxSize(PRUint32 *aBufferMaxSize)
-{
-    *aBufferMaxSize = mBufferMaxSize;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileChannel::SetBufferMaxSize(PRUint32 aBufferMaxSize)
-{
-    mBufferMaxSize = aBufferMaxSize;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileChannel::GetLocalFile(nsIFile* *file)
-{
-    *file = mFile;
-    NS_ADDREF(*file);
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileChannel::GetPipeliningAllowed(PRBool *aPipeliningAllowed)
-{
-    *aPipeliningAllowed = PR_FALSE;
-    return NS_OK;
-}
- 
-NS_IMETHODIMP
-nsFileChannel::SetPipeliningAllowed(PRBool aPipeliningAllowed)
-{
-    NS_NOTREACHED("SetPipeliningAllowed");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
 nsFileChannel::GetLoadGroup(nsILoadGroup* *aLoadGroup)
 {
     *aLoadGroup = mLoadGroup;
@@ -624,7 +555,7 @@ nsFileChannel::GetSecurityInfo(nsISupports * *aSecurityInfo)
 ////////////////////////////////////////////////////////////////////////////////
 
 NS_IMETHODIMP
-nsFileChannel::OnStartRequest(nsIChannel* transportChannel, nsISupports* context)
+nsFileChannel::OnStartRequest(nsIRequest* request, nsISupports* context)
 {
 #ifdef DEBUG
     NS_ASSERTION(mInitiator == PR_CurrentThread(),
@@ -639,7 +570,7 @@ nsFileChannel::OnStartRequest(nsIChannel* transportChannel, nsISupports* context
 }
 
 NS_IMETHODIMP
-nsFileChannel::OnStopRequest(nsIChannel* transportChannel, nsISupports* context,
+nsFileChannel::OnStopRequest(nsIRequest* request, nsISupports* context,
                              nsresult aStatus, const PRUnichar* aStatusArg)
 {
 #ifdef DEBUG
@@ -654,18 +585,19 @@ nsFileChannel::OnStopRequest(nsIChannel* transportChannel, nsISupports* context,
     
     if (mLoadGroup) {
         if (NS_SUCCEEDED(rv)) {
-            mLoadGroup->RemoveChannel(this, context, aStatus, aStatusArg);
+            mLoadGroup->RemoveRequest(this, context, aStatus, aStatusArg);
         }
     }
 
     // Release the reference to the consumer stream listener...
     mRealListener = null_nsCOMPtr();
     mFileTransport = null_nsCOMPtr();
+    mCurrentRequest = null_nsCOMPtr();
     return rv;
 }
 
 NS_IMETHODIMP
-nsFileChannel::OnDataAvailable(nsIChannel* transportChannel, nsISupports* context,
+nsFileChannel::OnDataAvailable(nsIRequest* request, nsISupports* context,
                                nsIInputStream *aIStream, PRUint32 aSourceOffset,
                                PRUint32 aLength)
 {
@@ -684,8 +616,8 @@ nsFileChannel::OnDataAvailable(nsIChannel* transportChannel, nsISupports* contex
     // insure that the transport will go away even if it is blocked waiting
     // for the consumer to empty the pipe...
     //
-    if (NS_FAILED(rv)) {
-        mFileTransport->Cancel(rv);
+    if (NS_FAILED(rv) && mCurrentRequest) {
+        mCurrentRequest->Cancel(rv);
     }
     return rv;
 }
@@ -714,7 +646,7 @@ nsFileChannel::GetInterface(const nsIID &anIID, void **aResult )
 ////////////////////////////////////////////////////////////////////////////////
 
 NS_IMETHODIMP
-nsFileChannel::OnStatus(nsIChannel *aChannel, nsISupports* ctxt, 
+nsFileChannel::OnStatus(nsIRequest *request, nsISupports* ctxt, 
                         nsresult aStatus, const PRUnichar* aStatusArg)
 {
     nsresult rv = NS_OK;
@@ -725,7 +657,7 @@ nsFileChannel::OnStatus(nsIChannel *aChannel, nsISupports* ctxt,
 }
 
 NS_IMETHODIMP
-nsFileChannel::OnProgress(nsIChannel* aChannel,
+nsFileChannel::OnProgress(nsIRequest *request,
                           nsISupports* aContext,
                           PRUint32 aProgress,
                           PRUint32 aProgressMax)

@@ -22,6 +22,8 @@
 
 #include "nsISupports.idl"
 
+interface nsILoadGroup;
+
 [scriptable, uuid(F2CAABA0-2F25-11d3-A164-0050041CAF44)]
 interface nsIRequest : nsISupports
 {
@@ -65,4 +67,14 @@ interface nsIRequest : nsISupports
      * any open streams. 
      */
     void resume();
+
+    /**
+     * Accesses the parent corresponding to the entity that is 
+     * responsible for this request. 
+	 *
+     * Note: This is a strong reference to the parent, so if the parent is also
+     * holding a pointer to the request, care must be taken to explicitly drop
+     * its reference to the request -- otherwise a leak will result.
+     */
+    attribute nsISupports parent;
 };

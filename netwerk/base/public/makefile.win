@@ -55,6 +55,7 @@ XPIDLSRCS =                             \
         .\nsIStreamIO.idl               \
         .\nsIStreamListener.idl         \
         .\nsIStreamLoader.idl           \
+		.\nsIStreamContentInfo.idl      \
         .\nsIDownloader.idl             \
         .\nsIStreamObserver.idl         \
         .\nsIURI.idl                    \

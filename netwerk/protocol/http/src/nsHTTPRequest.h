@@ -70,7 +70,7 @@ class nsHTTPRequest : public nsIRequest
 public:
 
     // Constructor
-    nsHTTPRequest(nsIURI* i_URL, nsHTTPHandler* i_Handler, PRUint32 bufferSegmentSize, PRUint32 bufferMaxSize);
+    nsHTTPRequest(nsIURI* i_URL, nsHTTPHandler* i_Handler);
 
     NS_DECL_ISUPPORTS
     NS_DECL_NSIREQUEST
@@ -118,9 +118,6 @@ public:
 
     nsresult            SetOverrideRequestSpec(const char* i_Spec);
     nsresult            GetOverrideRequestSpec(char** o_Spec);
-
-    PRUint32            mBufferSegmentSize;
-    PRUint32            mBufferMaxSize;
 
     // for POST or PUT data...
     nsCOMPtr<nsIInputStream>    mInputStream;
@@ -219,6 +216,8 @@ protected:
     PRUint32                mCapabilities;
     PRUint32                mAttempts;
     nsCOMPtr<nsIChannel>    mTransport;
+    nsCOMPtr<nsIRequest>    mCurrentWriteRequest;
+    nsCOMPtr<nsIRequest>    mCurrentReadRequest;
 
     PRUint32                mBufferSegmentSize;
     PRUint32                mBufferMaxSize;

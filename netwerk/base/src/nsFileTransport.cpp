@@ -248,17 +248,19 @@ nsFileTransport::Resume()
 ////////////////////////////////////////////////////////////////////////////////
 
 NS_IMETHODIMP
-nsFileTransport::OpenInputStream(nsIInputStream **result)
+nsFileTransport::OpenInputStream(PRUint32 transferOffset, 
+                                 PRUint32 transferCount, 
+                                 nsIInputStream **result)
 {
     nsresult rv;
     nsCOMPtr<nsIInputStream> in;
     rv = mStreamIO->GetInputStream(getter_AddRefs(in));
     if (NS_FAILED(rv)) return rv;
-    NS_ASSERTION(mTransferAmount == -1, "need to wrap input stream in one that truncates");
-    if (mOffset > 0) {
+    NS_ASSERTION(transferCount == -1, "need to wrap input stream in one that truncates");
+    if (transferOffset > 0) {
         nsCOMPtr<nsISeekableStream> seekable = do_QueryInterface(in, &rv);
         if (NS_FAILED(rv)) return rv;
-        rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET, mOffset);
+        rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET, transferOffset);
         if (NS_FAILED(rv)) return rv;
     }
     *result = in;
@@ -267,13 +269,19 @@ nsFileTransport::OpenInputStream(nsIInputStream **result)
 }
 
 NS_IMETHODIMP
-nsFileTransport::OpenOutputStream(nsIOutputStream **result)
+nsFileTransport::OpenOutputStream(PRUint32 transferOffset, 
+                                  PRUint32 transferCount, 
+                                  nsIOutputStream **result)
 {
     return mStreamIO->GetOutputStream(result);
 }
 
 NS_IMETHODIMP
-nsFileTransport::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt)
+nsFileTransport::AsyncRead(nsIStreamListener *listener, 
+		   nsISupports *ctxt, 
+		   PRUint32 transferOffset, 
+		   PRUint32 transferCount, 
+		   nsIRequest **_retval)
 {
     nsresult rv = NS_OK;
 
@@ -307,13 +315,18 @@ nsFileTransport::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt)
     rv = mService->DispatchRequest(this);
     if (NS_FAILED(rv)) return rv;
 
+    NS_ADDREF(*_retval = this);
+
     return NS_OK;
 }
 
 NS_IMETHODIMP
 nsFileTransport::AsyncWrite(nsIInputStream *fromStream,
                             nsIStreamObserver *observer,
-                            nsISupports *ctxt)
+                            nsISupports *ctxt,
+                            PRUint32 transferOffset, 
+			                PRUint32 transferCount, 
+			                nsIRequest **_retval)
 {
     nsresult rv = NS_OK;
 
@@ -337,6 +350,8 @@ nsFileTransport::AsyncWrite(nsIInputStream *fromStream,
 
     rv = mService->DispatchRequest(this);
     if (NS_FAILED(rv)) return rv;
+
+    NS_ADDREF(*_retval = this);
 
     return NS_OK;
 }
@@ -770,6 +785,20 @@ nsFileTransport::OnClose(nsIInputStream* in)
 ////////////////////////////////////////////////////////////////////////////////
 
 NS_IMETHODIMP
+nsFileTransport::GetLoadAttributes(nsLoadFlags *aLoadAttributes)
+{
+    *aLoadAttributes = mLoadAttributes;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsFileTransport::SetLoadAttributes(nsLoadFlags aLoadAttributes)
+{
+    mLoadAttributes = aLoadAttributes;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
 nsFileTransport::GetOriginalURI(nsIURI* *aURI)
 {
     NS_NOTREACHED("GetOriginalURI");
@@ -794,139 +823,6 @@ NS_IMETHODIMP
 nsFileTransport::SetURI(nsIURI* aURI)
 {
     NS_NOTREACHED("SetURI");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsFileTransport::GetLoadAttributes(nsLoadFlags *aLoadAttributes)
-{
-    *aLoadAttributes = mLoadAttributes;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileTransport::SetLoadAttributes(nsLoadFlags aLoadAttributes)
-{
-    mLoadAttributes = aLoadAttributes;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileTransport::GetContentType(char * *aContentType)
-{
-    *aContentType = nsCRT::strdup(mContentType);
-    if (*aContentType == nsnull)
-        return NS_ERROR_OUT_OF_MEMORY;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileTransport::SetContentType(const char *aContentType)
-{
-    if (mContentType) {
-      nsCRT::free(mContentType);
-    }
-    mContentType = nsCRT::strdup(aContentType);
-    if (!mContentType) return NS_ERROR_OUT_OF_MEMORY;
-
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileTransport::GetContentLength(PRInt32 *aContentLength)
-{
-    *aContentLength = mTotalAmount;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileTransport::SetContentLength(PRInt32 aContentLength)
-{
-    NS_NOTREACHED("SetContentLength");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsFileTransport::GetTransferOffset(PRUint32 *aTransferOffset)
-{
-    *aTransferOffset = mOffset;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileTransport::SetTransferOffset(PRUint32 aTransferOffset)
-{
-    mOffset = aTransferOffset;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileTransport::GetTransferCount(PRInt32 *aTransferCount)
-{
-    *aTransferCount = mTransferAmount;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileTransport::SetTransferCount(PRInt32 aTransferCount)
-{
-    mTransferAmount = aTransferCount;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileTransport::GetBufferSegmentSize(PRUint32 *aBufferSegmentSize)
-{
-    *aBufferSegmentSize = mBufferSegmentSize;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileTransport::SetBufferSegmentSize(PRUint32 aBufferSegmentSize)
-{
-    mBufferSegmentSize = aBufferSegmentSize;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileTransport::GetBufferMaxSize(PRUint32 *aBufferMaxSize)
-{
-    *aBufferMaxSize = mBufferMaxSize;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileTransport::SetBufferMaxSize(PRUint32 aBufferMaxSize)
-{
-    mBufferMaxSize = aBufferMaxSize;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileTransport::GetLocalFile(nsIFile* *file)
-{
-    nsresult rv;
-    nsCOMPtr<nsIFileIO> fileIO = do_QueryInterface(mStreamIO, &rv);
-    if (NS_FAILED(rv)) return rv;
-
-    rv = fileIO->GetFile(file);
-    if (NS_FAILED(rv)) {
-        *file = nsnull;
-    }
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileTransport::GetPipeliningAllowed(PRBool *aPipeliningAllowed)
-{
-    *aPipeliningAllowed = PR_FALSE;
-    return NS_OK;
-}
- 
-NS_IMETHODIMP
-nsFileTransport::SetPipeliningAllowed(PRBool aPipeliningAllowed)
-{
-    NS_NOTREACHED("SetPipeliningAllowed");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -1000,3 +896,14 @@ nsFileTransport::GetSecurityInfo(nsISupports * *aSecurityInfo)
     return NS_OK;
 }
 ////////////////////////////////////////////////////////////////////////////////
+
+/* attribute nsISupports parent; */
+NS_IMETHODIMP nsFileTransport::GetParent(nsISupports * *aParent)
+{
+    NS_ADDREF(*aParent=(nsISupports*)(nsIChannel*)this);
+    return NS_OK;
+}
+NS_IMETHODIMP nsFileTransport::SetParent(nsISupports * aParent)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}

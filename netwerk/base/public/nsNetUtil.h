@@ -89,9 +89,7 @@ NS_OpenURI(nsIChannel* *result,
            nsIIOService* ioService = nsnull,    // pass in nsIIOService to optimize callers
            nsILoadGroup* loadGroup = nsnull,
            nsIInterfaceRequestor* notificationCallbacks = nsnull,
-           nsLoadFlags loadAttributes = NS_STATIC_CAST(nsLoadFlags, nsIChannel::LOAD_NORMAL),
-           PRUint32 bufferSegmentSize = 0, 
-           PRUint32 bufferMaxSize = 0)
+           nsLoadFlags loadAttributes = NS_STATIC_CAST(nsLoadFlags, nsIChannel::LOAD_NORMAL))
 {
     nsresult rv;
 
@@ -114,19 +112,12 @@ NS_OpenURI(nsIChannel* *result,
         rv = channel->SetNotificationCallbacks(notificationCallbacks);
         if (NS_FAILED(rv)) return rv;
     }
+
     if (loadAttributes != nsIChannel::LOAD_NORMAL) {
         rv = channel->SetLoadAttributes(loadAttributes);
         if (NS_FAILED(rv)) return rv;
-    }
-    if (bufferSegmentSize != 0) {
-        rv = channel->SetBufferSegmentSize(bufferSegmentSize);
-        if (NS_FAILED(rv)) return rv;
-    }
-    if (bufferMaxSize != 0) {
-        rv = channel->SetBufferMaxSize(bufferMaxSize);
-        if (NS_FAILED(rv)) return rv;
-    }
-
+     }
+    
     *result = channel;
     return rv;
 }
@@ -143,20 +134,17 @@ NS_OpenURI(nsIInputStream* *result,
            nsIIOService* ioService = nsnull,     // pass in nsIIOService to optimize callers
            nsILoadGroup* loadGroup = nsnull,
            nsIInterfaceRequestor* notificationCallbacks = nsnull,
-           nsLoadFlags loadAttributes = NS_STATIC_CAST(nsLoadFlags, nsIChannel::LOAD_NORMAL),
-           PRUint32 bufferSegmentSize = 0, 
-           PRUint32 bufferMaxSize = 0)
+           nsLoadFlags loadAttributes = NS_STATIC_CAST(nsLoadFlags, nsIChannel::LOAD_NORMAL))
 {
     nsresult rv;
     nsCOMPtr<nsIChannel> channel;
 
     rv = NS_OpenURI(getter_AddRefs(channel), uri, ioService,
-                    loadGroup, notificationCallbacks, loadAttributes,
-                    bufferSegmentSize, bufferMaxSize);
+                    loadGroup, notificationCallbacks);
     if (NS_FAILED(rv)) return rv;
 
     nsIInputStream* inStr;
-    rv = channel->OpenInputStream(&inStr);
+    rv = channel->OpenInputStream(0, -1, &inStr);
     if (NS_FAILED(rv)) return rv;
 
     *result = inStr;
@@ -170,19 +158,21 @@ NS_OpenURI(nsIStreamListener* aConsumer,
            nsIIOService* ioService = nsnull,     // pass in nsIIOService to optimize callers
            nsILoadGroup* loadGroup = nsnull,
            nsIInterfaceRequestor* notificationCallbacks = nsnull,
-           nsLoadFlags loadAttributes = NS_STATIC_CAST(nsLoadFlags, nsIChannel::LOAD_NORMAL),
-           PRUint32 bufferSegmentSize = 0, 
-           PRUint32 bufferMaxSize = 0)
+           nsLoadFlags loadAttributes = NS_STATIC_CAST(nsLoadFlags, nsIChannel::LOAD_NORMAL))
 {
     nsresult rv;
     nsCOMPtr<nsIChannel> channel;
 
     rv = NS_OpenURI(getter_AddRefs(channel), uri, ioService,
-                    loadGroup, notificationCallbacks, loadAttributes,
-                    bufferSegmentSize, bufferMaxSize);
+                    loadGroup, notificationCallbacks);
     if (NS_FAILED(rv)) return rv;
 
-    rv = channel->AsyncRead(aConsumer, context);
+    nsCOMPtr<nsIRequest> request;
+    rv = channel->AsyncRead(aConsumer, 
+                            context, 
+                            0, 
+                            -1, 
+                            getter_AddRefs(request));
     return rv;
 }
 
@@ -260,6 +250,7 @@ NS_NewStreamIOChannel(nsIStreamIOChannel **result,
                                             NS_GET_IID(nsIStreamIOChannel),
                                             getter_AddRefs(channel));
     if (NS_FAILED(rv)) return rv;
+
     rv = channel->Init(uri, io);
     if (NS_FAILED(rv)) return rv;
 
@@ -284,7 +275,6 @@ NS_NewInputStreamChannel(nsIChannel **result,
     rv = NS_NewInputStreamIO(getter_AddRefs(io), spec, inStr, 
                              contentType, contentLength);
     if (NS_FAILED(rv)) return rv;
-
     nsCOMPtr<nsIStreamIOChannel> channel;
     rv = NS_NewStreamIOChannel(getter_AddRefs(channel), uri, io);
     if (NS_FAILED(rv)) return rv;
@@ -321,9 +311,7 @@ NS_NewDownloader(nsIDownloader* *result,
                    PRBool synchronous = PR_FALSE,
                    nsILoadGroup* loadGroup = nsnull,
                    nsIInterfaceRequestor* notificationCallbacks = nsnull,
-                   nsLoadFlags loadAttributes = NS_STATIC_CAST(nsLoadFlags, nsIChannel::LOAD_NORMAL),
-                   PRUint32 bufferSegmentSize = 0, 
-                   PRUint32 bufferMaxSize = 0)
+                   nsLoadFlags loadAttributes = NS_STATIC_CAST(nsLoadFlags, nsIChannel::LOAD_NORMAL))
 {
     nsresult rv;
     nsCOMPtr<nsIDownloader> downloader;
@@ -334,7 +322,7 @@ NS_NewDownloader(nsIDownloader* *result,
                                             getter_AddRefs(downloader));
     if (NS_FAILED(rv)) return rv;
     rv = downloader->Init(uri, observer, context, synchronous, loadGroup, notificationCallbacks,
-                          loadAttributes, bufferSegmentSize, bufferMaxSize);
+                          loadAttributes);
     if (NS_FAILED(rv)) return rv;
     *result = downloader;
     NS_ADDREF(*result);
@@ -348,9 +336,7 @@ NS_NewStreamLoader(nsIStreamLoader* *result,
                    nsISupports* context = nsnull,
                    nsILoadGroup* loadGroup = nsnull,
                    nsIInterfaceRequestor* notificationCallbacks = nsnull,
-                   nsLoadFlags loadAttributes = NS_STATIC_CAST(nsLoadFlags, nsIChannel::LOAD_NORMAL),
-                   PRUint32 bufferSegmentSize = 0, 
-                   PRUint32 bufferMaxSize = 0)
+                   nsLoadFlags loadAttributes = NS_STATIC_CAST(nsLoadFlags, nsIChannel::LOAD_NORMAL))
 {
     nsresult rv;
     nsCOMPtr<nsIStreamLoader> loader;
@@ -360,8 +346,7 @@ NS_NewStreamLoader(nsIStreamLoader* *result,
                                             NS_GET_IID(nsIStreamLoader),
                                             getter_AddRefs(loader));
     if (NS_FAILED(rv)) return rv;
-    rv = loader->Init(uri, observer, context, loadGroup, notificationCallbacks, loadAttributes,
-                      bufferSegmentSize, bufferMaxSize);
+    rv = loader->Init(uri, observer, context, loadGroup, notificationCallbacks, loadAttributes);
     if (NS_FAILED(rv)) return rv;
     *result = loader;
     NS_ADDREF(*result);

@@ -43,6 +43,7 @@
 #include "nsIInputStream.h"
 #include "nsCRT.h"
 #include "nsIChannel.h"
+#include "nsIStreamContentInfo.h"
 #include "nsIURL.h"
 #include "nsIHTTPChannel.h"
 #include "nsIHTTPEventSink.h" 
@@ -65,6 +66,8 @@ static NS_DEFINE_CID(kIOServiceCID,              NS_IOSERVICE_CID);
 static int gKeepRunning = 0;
 static PRBool gVerbose = PR_FALSE;
 static nsIEventQueue* gEventQ = nsnull;
+static PRBool gAskUserForInput = PR_FALSE;
+
 
 class URLLoadInfo : public nsISupports
 {
@@ -135,13 +138,14 @@ TestHTTPEventSink::OnHeadersAvailable(nsISupports* context)
 {
     nsCOMPtr<nsISimpleEnumerator> enumerator;
     nsCOMPtr<nsIHTTPChannel> pHTTPCon(do_QueryInterface(context));
+    nsCOMPtr<nsIStreamContentInfo> pContentRequest(do_QueryInterface(pHTTPCon));
     PRBool bMoreHeaders;
 
     if (pHTTPCon) {
         nsXPIDLCString value;
 
         printf("Channel Info:\n");
-        pHTTPCon->GetContentType(getter_Copies(value));
+        pContentRequest->GetContentType(getter_Copies(value));
         printf("\tContent-Type: %s\n", (const char*)value);
 
         pHTTPCon->GetCharset(getter_Copies(value));
@@ -210,7 +214,7 @@ TestHTTPEventSink::OnHeadersAvailable(nsISupports* context)
         if (pHTTPCon) {
             char* type;
             //optimize later TODO allow atoms here...! intead of just the header strings
-            pHTTPCon->GetContentType(&type);
+            pContentRequest->GetContentType(&type);
             if (type) {
                 printf("\nReceiving ... %s\n", type);
                 nsCRT::free(type);
@@ -262,16 +266,17 @@ protected:
 NS_IMPL_ISUPPORTS1(OpenObserver, nsIStreamObserver);
 
 NS_IMETHODIMP
-OpenObserver::OnStartRequest(nsIChannel* channel, nsISupports* context)
+OpenObserver::OnStartRequest(nsIRequest *request, nsISupports* context)
 {
     printf("\n+++ OpenObserver::OnStartRequest +++. Context = %p\n", context);
 
     char* type;
     PRInt32 length = -1;
     nsresult rv;
-    rv = channel->GetContentType(&type);
+    nsCOMPtr<nsIStreamContentInfo> pContentRequest(do_QueryInterface(context));
+    rv = pContentRequest->GetContentType(&type);
     NS_ASSERTION(NS_SUCCEEDED(rv), "GetContentType failed");
-    rv = channel->GetContentLength(&length);
+    rv = pContentRequest->GetContentLength(&length);
     NS_ASSERTION(NS_SUCCEEDED(rv), "GetContentLength failed");
     printf("    contentType = %s length = %d\n", type, length);
     nsCRT::free(type);
@@ -280,7 +285,7 @@ OpenObserver::OnStartRequest(nsIChannel* channel, nsISupports* context)
 }
 
 NS_IMETHODIMP
-OpenObserver::OnStopRequest(nsIChannel* channel, nsISupports* context,
+OpenObserver::OnStopRequest(nsIRequest *request, nsISupports* context,
                             nsresult aStatus, const PRUnichar* aStatusArg)
 {
     printf("\n+++ OpenObserver::OnStopRequest (status = %x) +++."
@@ -305,7 +310,7 @@ NS_IMPL_ISUPPORTS(InputTestConsumer,NS_GET_IID(nsIStreamListener));
 
 
 NS_IMETHODIMP
-InputTestConsumer::OnStartRequest(nsIChannel* channel, nsISupports* context)
+InputTestConsumer::OnStartRequest(nsIRequest *request, nsISupports* context)
 {
   URLLoadInfo* info = (URLLoadInfo*)context;
   if (info) {
@@ -333,7 +338,7 @@ InputTestConsumer::OnStartRequest(nsIChannel* channel, nsISupports* context)
 
 
 NS_IMETHODIMP
-InputTestConsumer::OnDataAvailable(nsIChannel* channel, 
+InputTestConsumer::OnDataAvailable(nsIRequest *request, 
                                    nsISupports* context,
                                    nsIInputStream *aIStream, 
                                    PRUint32 aSourceOffset,
@@ -367,9 +372,31 @@ InputTestConsumer::OnDataAvailable(nsIChannel* channel,
   return NS_OK;
 }
 
+static void DecrementDestroyHandler(PLEvent *self) 
+{
+    PR_DELETE(self);
+}
+
+
+static void* DecrementEventHandler(PLEvent *self) 
+{
+    gKeepRunning--;
+    return nsnull;
+}
+
+void FireDecrement()
+{
+    PLEvent *event = PR_NEW(PLEvent);
+    PL_InitEvent(event, 
+               nsnull,
+               DecrementEventHandler,
+               DecrementDestroyHandler);
+
+    gEventQ->PostEvent(event);
+}
 
 NS_IMETHODIMP
-InputTestConsumer::OnStopRequest(nsIChannel* channel, nsISupports* context,
+InputTestConsumer::OnStopRequest(nsIRequest *request, nsISupports* context,
                                  nsresult aStatus, const PRUnichar* aStatusArg)
 {
   URLLoadInfo* info = (URLLoadInfo*)context;
@@ -385,7 +412,7 @@ InputTestConsumer::OnStopRequest(nsIChannel* channel, nsISupports* context,
     connectTime = (info->mConnectTime/1000.0)/1000.0;
     readTime    = ((info->mTotalTime-info->mConnectTime)/1000.0)/1000.0;
 
-    nsCOMPtr<nsIHTTPChannel> pHTTPCon(do_QueryInterface(channel));
+    nsCOMPtr<nsIHTTPChannel> pHTTPCon(do_QueryInterface(request));
     if (pHTTPCon) {
         pHTTPCon->GetResponseStatus(&httpStatus);
         bHTTPURL = PR_TRUE;
@@ -422,7 +449,8 @@ InputTestConsumer::OnStopRequest(nsIChannel* channel, nsISupports* context,
     nsCRT::free(location);
   }
 */
-  gKeepRunning -= 1;
+  FireDecrement();
+
   return NS_OK;
 }
 
@@ -521,9 +549,9 @@ nsresult StartLoadingURL(const char* aUrlString)
             return NS_ERROR_OUT_OF_MEMORY;
         }
         
-
+        nsCOMPtr<nsIRequest> request;
         rv = pChannel->AsyncRead(listener,  // IStreamListener consumer
-                                 info);     // ISupports context
+                                 info, 0, -1, getter_AddRefs(request));     // ISupports context
 
         if (NS_SUCCEEDED(rv)) {
             gKeepRunning += 1;
@@ -580,6 +608,19 @@ nsresult LoadURLsFromFile(char *aFileName)
     return NS_OK;
 }
 
+
+nsresult LoadURLFromConsole()
+{
+    char buffer[1024];
+    printf("Enter URL (\"q\" to start): ");
+    scanf("%s", &buffer);
+    if (buffer[0]=='q') 
+        gAskUserForInput = PR_FALSE;
+    else
+        StartLoadingURL(buffer);
+    return NS_OK;
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -616,6 +657,7 @@ main(int argc, char* argv[])
     if (NS_FAILED(rv)) return rv;
 #endif // NECKO
 
+
     int i;
     printf("\nTrying to load:\n");
     for (i=1; i<argc; i++) {
@@ -630,32 +672,24 @@ main(int argc, char* argv[])
             LoadURLsFromFile(argv[++i]);
             continue;
         } 
-
+        
+        if (PL_strcasecmp(argv[i], "-console") == 0) {
+            gAskUserForInput = PR_TRUE;
+            continue;
+        } 
+           
         printf("\t%s\n", argv[i]);
         rv = StartLoadingURL(argv[i]);
     }
-
   // Enter the message pump to allow the URL load to proceed.
-    while ( gKeepRunning ) {
-#ifdef WIN32
-        MSG msg;
+    do {
+        if (gAskUserForInput)
+            LoadURLFromConsole();
+        gEventQ->ProcessPendingEvents();
+    } while ( gKeepRunning || gAskUserForInput) ;
 
-        if (GetMessage(&msg, NULL, 0, 0)) {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        } else {
-            gKeepRunning = 0;
-    }
-#else
-#ifdef XP_MAC
-    /* Mac stuff is missing here! */
-#else
-    PLEvent *gEvent;
-    rv = gEventQ->GetEvent(&gEvent);
-    rv = gEventQ->HandleEvent(gEvent);
-#endif /* XP_UNIX */
-#endif /* !WIN32 */
-    }
+    PR_Sleep(PR_SecondsToInterval(2));
+    gEventQ->ProcessPendingEvents();
 
     NS_ShutdownXPCOM(nsnull);
     return rv;

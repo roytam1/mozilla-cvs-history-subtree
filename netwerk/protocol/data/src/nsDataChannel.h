@@ -34,11 +34,13 @@
 #include "nsIInputStream.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsCOMPtr.h"
+#include "nsIStreamContentInfo.h"
 
-class nsDataChannel : public nsIDataChannel {
+class nsDataChannel : public nsIDataChannel, public nsIRequest, public nsIStreamContentInfo{
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIREQUEST
+    NS_DECL_NSISTREAMCONTENTINFO
     NS_DECL_NSICHANNEL
     NS_DECL_NSIDATACHANNEL
 
@@ -63,8 +65,6 @@ protected:
     nsCString                           mContentType;
     PRInt32                             mContentLength;
     nsCOMPtr<nsISupports>               mOwner; 
-    PRUint32                            mBufferSegmentSize;
-    PRUint32                            mBufferMaxSize;
 };
 
 #endif /* nsFTPChannel_h___ */

@@ -98,8 +98,6 @@ nsHTTPChannel::nsHTTPChannel(nsIURI* i_URL, nsHTTPHandler* i_Handler):
     mProxyPort(-1),
     mProxyType(nsnull),
     mProxyTransparent(PR_FALSE),
-    mBufferSegmentSize(0),
-    mBufferMaxSize(0),
     mStatus(NS_OK),
     mPipeliningAllowed (PR_TRUE),
     mPipelinedRequest (nsnull),
@@ -145,13 +143,14 @@ nsHTTPChannel::~nsHTTPChannel()
     CRTFREEIF(mProxyType);
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS7(nsHTTPChannel,
+NS_IMPL_THREADSAFE_ISUPPORTS8(nsHTTPChannel,
                               nsIHTTPChannel,
                               nsIChannel,
                               nsIInterfaceRequestor,
                               nsIProgressEventSink,
                               nsIProxy,
                               nsIRequest,
+                              nsIStreamContentInfo,
                               nsIStreamAsFile);
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -213,6 +212,19 @@ nsHTTPChannel::Resume(void)
   return mRequest->Resume();
 }
 
+
+/* attribute nsISupports parent; */
+NS_IMETHODIMP nsHTTPChannel::GetParent(nsISupports * *aParent)
+{
+    NS_ADDREF(*aParent=(nsISupports*)(nsIChannel*)this);
+    return NS_OK;
+}
+NS_IMETHODIMP nsHTTPChannel::SetParent(nsISupports * aParent)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////
 // nsIChannel methods:
 
@@ -265,7 +277,7 @@ nsHTTPChannel::SetOpenInputStreamHasEventQueue (PRBool hasEventQueue)
 }
 
 NS_IMETHODIMP
-nsHTTPChannel::OpenInputStream(nsIInputStream **o_Stream)
+nsHTTPChannel::OpenInputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIInputStream **o_Stream)
 {
     nsresult rv;
     if (mConnected) return NS_ERROR_ALREADY_CONNECTED;
@@ -281,7 +293,8 @@ nsHTTPChannel::OpenInputStream(nsIInputStream **o_Stream)
 
     if (mOpenInputStreamHasEventQueue)
     {
-        rv = AsyncRead (listener, nsnull);
+        nsCOMPtr<nsIRequest> request;
+        rv = AsyncRead(listener, nsnull, transferOffset, transferCount, getter_AddRefs(request));
         return rv;
     }
 
@@ -299,14 +312,15 @@ nsHTTPChannel::OpenInputStream(nsIInputStream **o_Stream)
 }
 
 NS_IMETHODIMP
-nsHTTPChannel::OpenOutputStream(nsIOutputStream **_retval)
+nsHTTPChannel::OpenOutputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIOutputStream **_retval)
 {
     NS_NOTREACHED("nsHTTPChannel::OpenOutputStream");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsHTTPChannel::AsyncRead(nsIStreamListener *listener, nsISupports *aContext)
+nsHTTPChannel::AsyncRead(nsIStreamListener *listener, nsISupports *aContext,
+                         PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
 {
     nsresult rv = NS_OK;
 
@@ -340,13 +354,15 @@ nsHTTPChannel::AsyncRead(nsIStreamListener *listener, nsISupports *aContext)
         ReadFromCache();
     }
 
+    NS_ADDREF(*_retval=this);
     return rv;
 }
 
 NS_IMETHODIMP
 nsHTTPChannel::AsyncWrite(nsIInputStream *fromStream,
                           nsIStreamObserver *observer,
-                          nsISupports *ctxt)
+                          nsISupports *ctxt,
+                          PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
 {
     nsresult rv = NS_OK;
 
@@ -363,7 +379,8 @@ nsHTTPChannel::AsyncWrite(nsIInputStream *fromStream,
     mWriteObserver = observer;
 
     Open();
-
+    
+    NS_ADDREF(*_retval=this);
     return rv;
 }
 
@@ -474,89 +491,6 @@ nsHTTPChannel::SetContentLength(PRInt32 aContentLength)
 {
     NS_NOTREACHED("nsHTTPChannel::SetContentLength");
     return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsHTTPChannel::GetTransferOffset(PRUint32 *aTransferOffset)
-{
-    NS_NOTREACHED("nsHTTPChannel::GetTransferOffset");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsHTTPChannel::SetTransferOffset(PRUint32 aTransferOffset)
-{
-    NS_NOTREACHED("nsHTTPChannel::SetTransferOffset");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsHTTPChannel::GetTransferCount(PRInt32 *aTransferCount)
-{
-    NS_NOTREACHED("nsHTTPChannel::GetTransferCount");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsHTTPChannel::SetTransferCount(PRInt32 aTransferCount)
-{
-    NS_NOTREACHED("nsHTTPChannel::SetTransferCount");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsHTTPChannel::GetBufferSegmentSize(PRUint32 *aBufferSegmentSize)
-{
-    *aBufferSegmentSize = mBufferSegmentSize;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsHTTPChannel::SetBufferSegmentSize(PRUint32 aBufferSegmentSize)
-{
-    mBufferSegmentSize = aBufferSegmentSize;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsHTTPChannel::GetBufferMaxSize(PRUint32 *aBufferMaxSize)
-{
-    *aBufferMaxSize = mBufferMaxSize;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsHTTPChannel::SetBufferMaxSize(PRUint32 aBufferMaxSize)
-{
-    mBufferMaxSize = aBufferMaxSize;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsHTTPChannel::GetLocalFile(nsIFile* *file)
-{
-    nsresult rv;
-    rv = GetFile(file);
-    if (NS_FAILED(rv)) 
-        *file = nsnull;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsHTTPChannel::GetPipeliningAllowed(PRBool *aPipeliningAllowed)
-{
-    if (aPipeliningAllowed == NULL)
-        return NS_ERROR_NULL_POINTER;
-
-    *aPipeliningAllowed = mPipeliningAllowed;
-    return NS_OK;
-}
- 
-NS_IMETHODIMP
-nsHTTPChannel::SetPipeliningAllowed(PRBool aPipeliningAllowed)
-{
-    mPipeliningAllowed = aPipeliningAllowed;
-    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -890,7 +824,7 @@ nsHTTPChannel::GetInterface(const nsIID &anIID, void **aResult )
 
 // nsIProgressEventSink methods
 NS_IMETHODIMP
-nsHTTPChannel::OnStatus(nsIChannel *aChannel, nsISupports *aContext, 
+nsHTTPChannel::OnStatus(nsIRequest *request, nsISupports *aContext, 
                         nsresult aStatus, const PRUnichar* aStatusArg)
 {
     nsresult rv = NS_OK;
@@ -901,7 +835,7 @@ nsHTTPChannel::OnStatus(nsIChannel *aChannel, nsISupports *aContext,
 }
 
 NS_IMETHODIMP
-nsHTTPChannel::OnProgress(nsIChannel* aChannel, nsISupports* aContext,
+nsHTTPChannel::OnProgress(nsIRequest *request, nsISupports* aContext,
                                   PRUint32 aProgress, PRUint32 aProgressMax) {
   // These progreess notifications are coming from the raw socket and are not
   // as interesting as the progress of HTTP channel (pushing the real data
@@ -921,7 +855,7 @@ nsresult nsHTTPChannel::Init()
     Set up a request object - later set to a clone of a default 
     request from the handler. TODO
   */
-  mRequest = new nsHTTPRequest(mURI, mHandler, mBufferSegmentSize, mBufferMaxSize);
+  mRequest = new nsHTTPRequest(mURI, mHandler);
   if (!mRequest) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
@@ -1258,7 +1192,8 @@ nsHTTPChannel::ReadFromCache()
     FinishedResponseHeaders();
 
     // Pump the cache data downstream
-    rv = mCacheTransport->AsyncRead(listener, mResponseContext);
+    nsCOMPtr<nsIRequest> request;
+    rv = mCacheTransport->AsyncRead(listener, mResponseContext, 0, -1, getter_AddRefs(request));
     NS_RELEASE(listener);
     if (NS_FAILED(rv)) {
         ResponseCompleted(nsnull, rv, nsnull);
@@ -1464,7 +1399,7 @@ nsHTTPChannel::Open(PRBool bIgnoreCache)
     // If this is the first time, then add the channel to its load group
     if (mState == HS_IDLE) {
         if (mLoadGroup)
-            mLoadGroup->AddChannel(this, nsnull);
+            mLoadGroup->AddRequest(this, nsnull);
 
         // See if there's a cache entry for the given URL
         if (!bIgnoreCache) 
@@ -1760,18 +1695,19 @@ nsresult nsHTTPChannel::Redirect(const char *aNewLocation,
   loadFlags |= nsIChannel::LOAD_REPLACE;
 
   rv = NS_OpenURI(getter_AddRefs(channel), newURI, serv, mLoadGroup,
-                  mCallbacks, loadFlags,
-                  mBufferSegmentSize, mBufferMaxSize);
+                  mCallbacks, loadFlags);
   if (NS_FAILED(rv)) return rv;
   rv = channel->SetOriginalURI(mOriginalURI);
   if (NS_FAILED(rv)) return rv;
 
  if (mLoadGroup) {
-    nsCOMPtr<nsIChannel> tempChannel;
-    rv = mLoadGroup->GetDefaultLoadChannel(getter_AddRefs(tempChannel));
+    nsCOMPtr<nsIRequest> tempRequest;
+    rv = mLoadGroup->GetDefaultLoadRequest(getter_AddRefs(tempRequest));
     if (NS_SUCCEEDED(rv)) {
+      nsCOMPtr<nsIChannel> tempChannel;
+      tempRequest->GetParent(getter_AddRefs(tempChannel));  
       if (tempChannel == this) {
-        mLoadGroup->SetDefaultLoadChannel(channel);
+        mLoadGroup->SetDefaultLoadRequest(tempRequest);
       }
     }
   }
@@ -1800,7 +1736,8 @@ nsresult nsHTTPChannel::Redirect(const char *aNewLocation,
       // Start the redirect...
       nsIStreamListener   *sl = mResponseDataListener;
       nsHTTPFinalListener *fl = NS_STATIC_CAST (nsHTTPFinalListener*, sl);
-      rv = channel->AsyncRead(fl -> GetListener (), mResponseContext);
+      nsCOMPtr<nsIRequest> request;
+      rv = channel->AsyncRead(fl->GetListener (), mResponseContext, 0, -1, getter_AddRefs(request));
       fl -> Shutdown ();
   }
   else
@@ -1942,7 +1879,7 @@ nsresult nsHTTPChannel::ResponseCompleted(nsIStreamListener *aListener,
     //
     
     if (mLoadGroup)
-        mLoadGroup->RemoveChannel(this, nsnull, aStatus, aStatusArg);
+        mLoadGroup->RemoveRequest(this, nsnull, aStatus, aStatusArg);
 
 
     // Null out pointers that are no longer needed...
@@ -2271,8 +2208,7 @@ nsHTTPChannel::Authenticate(const char *iChallenge, PRBool iProxyAuth)
     // This smells like a clone function... maybe there is a 
     // benefit in doing that, think. TODO.
     rv = NS_OpenURI(&channel, // delibrately...
-                    mURI, serv, mLoadGroup, mCallbacks, 
-                    mLoadAttributes, mBufferSegmentSize, mBufferMaxSize);
+                    mURI, serv, mLoadGroup, mCallbacks, mLoadAttributes);
     if (NS_FAILED(rv)) return rv; 
     rv = channel->SetOriginalURI(mOriginalURI);
     if (NS_FAILED(rv)) return rv;
@@ -2299,7 +2235,8 @@ nsHTTPChannel::Authenticate(const char *iChallenge, PRBool iProxyAuth)
         // Fire the new request...
         nsIStreamListener   *sl = mResponseDataListener;
         nsHTTPFinalListener *fl = NS_STATIC_CAST (nsHTTPFinalListener*, sl);
-        rv = channel->AsyncRead(fl -> GetListener (), mResponseContext);
+        nsCOMPtr<nsIRequest> request;
+        rv = channel->AsyncRead(fl->GetListener (), mResponseContext, 0, -1, getter_AddRefs(request));
     }
     else
         rv = NS_ERROR_FAILURE;
@@ -2612,7 +2549,9 @@ nsHTTPChannel::ProcessNotModifiedResponse(nsIStreamListener *aListener)
     cacheListener->SetListener(aListener);
     mResponseDataListener = 0/* aListener */;
 
-    rv = mCacheTransport->AsyncRead(cacheListener, mResponseContext);
+    nsCOMPtr<nsIRequest> request;
+    rv = mCacheTransport->AsyncRead(cacheListener, mResponseContext, 
+                                    0, -1, getter_AddRefs(request));
     if (NS_FAILED(rv)) {
       ResponseCompleted(cacheListener, rv, nsnull);
     }
@@ -2954,7 +2893,9 @@ nsSyncHelper::Run()
         
     // initiate the AsyncRead from this thread so events are
     // sent here for processing.
-    rv = mChannel->AsyncRead(this, nsnull);
+    
+    nsCOMPtr<nsIRequest> request;
+    rv = mChannel->AsyncRead(this, nsnull, 0, -1, getter_AddRefs(request));
     if (NS_FAILED(rv)) return rv;
 
     // process events until we're finished.
@@ -2976,29 +2917,29 @@ nsSyncHelper::Run()
 
 // nsIStreamListener implementation
 NS_IMETHODIMP
-nsSyncHelper::OnDataAvailable(nsIChannel *aChannel,
+nsSyncHelper::OnDataAvailable(nsIRequest *request,
                               nsISupports *aContext,
                               nsIInputStream *aInStream,
                               PRUint32 aOffset, PRUint32 aCount)
 {    
-    return mListener->OnDataAvailable(aChannel, aContext, aInStream,
+    return mListener->OnDataAvailable(request, aContext, aInStream,
                                       aOffset, aCount);
 }
 
 
 // nsIStreamObserver implementation
 NS_IMETHODIMP
-nsSyncHelper::OnStartRequest(nsIChannel *aChannel, nsISupports *aContext)
+nsSyncHelper::OnStartRequest(nsIRequest *request, nsISupports *aContext)
 {
-    return mListener->OnStartRequest(aChannel, aContext);
+    return mListener->OnStartRequest(request, aContext);
 }
 
 NS_IMETHODIMP
-nsSyncHelper::OnStopRequest(nsIChannel *aChannel, nsISupports *aContext,
+nsSyncHelper::OnStopRequest(nsIRequest *request, nsISupports *aContext,
                             nsresult aStatus, const PRUnichar* aStatusArg)
 {
     mProcessing = PR_FALSE;
-    return mListener->OnStopRequest(aChannel, aContext, aStatus, aStatusArg);
+    return mListener->OnStopRequest(request, aContext, aStatus, aStatusArg);
 }
 
 
@@ -3010,7 +2951,7 @@ nsSyncHelper::nsSyncHelper()
 }
 
 nsresult
-nsSyncHelper::Init (nsIChannel *aChannel,
+nsSyncHelper::Init (nsIChannel* aChannel,
                    nsIStreamListener* aListener) 
 {
     if (!aChannel || !aListener) 
