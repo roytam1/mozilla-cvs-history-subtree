@@ -27,8 +27,12 @@ outlinerbody:-moz-outliner-image(folderNameCol) {
   list-style-image      : url("chrome://messenger/skin/folder-closed.gif");
 }
 
-outlinerbody:-moz-outliner-image(folderNameCol, open) {
-  list-style-image      : url("chrome://messenger/skin/folder-open.gif");
+outlinerbody:-moz-outliner-image(folderNameCol, newMessages-true) {
+  list-style-image: url("chrome://messenger/skin/folder-new-closed.gif");
+}
+
+outlinerbody:-moz-outliner-cell-text(folderNameCol, newMessages-true) {
+  font-weight: bold;
 }
 
 /* Special folders */
@@ -36,6 +40,10 @@ outlinerbody:-moz-outliner-image(folderNameCol, open) {
 
 outlinerbody:-moz-outliner-image(folderNameCol, specialFolder-Inbox) {
   list-style-image      : url("chrome://messenger/skin/folder-inbox.gif");
+}
+
+outlinerbody:-moz-outliner-image(folderNameCol, specialFolder-Inbox, newMessages-true) {
+  list-style-image: url("chrome://messenger/skin/folder-inbox-new.gif");
 }
 
 /* ..... Sent ..... */
@@ -74,42 +82,8 @@ outlinerbody:-moz-outliner-image(folderNameCol, isServer-true) {
   list-style-image: url("chrome://messenger/skin/server-mail.gif");
 }
 
-outlinerbody:-moz-outliner-image(folderNameCol, isServer-true, open) {
-  list-style-image: url("chrome://messenger/skin/server-mail.gif");
-}
-
 outlinerbody:-moz-outliner-image(folderNameCol, biffState-NewMail, isServer-true) {
   list-style-image: url("chrome://messenger/skin/server-mail-new.gif");
-}
-
-outlinerbody:-moz-outliner-image(folderNameCol, biffState-NewMail, isServer-true, open) {
-  list-style-image: url("chrome://messenger/skin/server-mail-new.gif");
-}
-
-/* differentiate new messages on inbox/folders from biff on the server */
-outlinerbody:-moz-outliner-image(folderNameCol, newMessages-true) {
-  list-style-image: url("chrome://messenger/skin/folder-new-closed.gif");
-}
-
-outlinerbody:-moz-outliner-cell-text(folderNameCol, newMessages-true) {
-  font-weight: bold;
-}
-
-outlinerbody:-moz-outliner-image(folderNameCol, newMessages-true, specialFolder-Inbox) {
-  list-style-image: url("chrome://messenger/skin/folder-inbox-new.gif");
-}
-
-outlinerbody:-moz-outliner-cell-text(folderNameCol, newMessages-true, specialFolder-Inbox) {
-  font-weight: bold;
-}
-
-outlinerbody:-moz-outliner-image(folderNameCol, newMessages-true, open)
-{
-  list-style-image: url("chrome://messenger/skin/folder-new-open.gif");
-}
-
-outlinerbody:-moz-outliner-cell-text(folderNameCol, newMessages-true, open) {
-  font-weight: bold;
 }
 
 /* IMAP folders */
@@ -118,16 +92,8 @@ outlinerbody:-moz-outliner-image(folderNameCol, isServer-true, serverType-imap, 
   list-style-image: url("chrome://messenger/skin/server-remote-lock.gif");
 }
 
-outlinerbody:-moz-outliner-image(folderNameCol, open, isServer-true, serverType-imap, isSecure-true) {
-  list-style-image: url("chrome://messenger/skin/server-remote-lock.gif");
-}
-
 /* Local servers */
 outlinerbody:-moz-outliner-image(folderNameCol, isServer-true, serverType-none) {
-  list-style-image: url("chrome://messenger/skin/server-local.gif");
-}
-
-outlinerbody:-moz-outliner-image(folderNameCol, isServer-true, serverType-none, open) {
   list-style-image: url("chrome://messenger/skin/server-local.gif");
 }
 
@@ -141,15 +107,7 @@ outlinerbody:-moz-outliner-image(folderNameCol, isServer-true, serverType-nntp, 
   list-style-image: url("chrome://messenger/skin/server-news-lock.gif");
 }
 
-outlinerbody:-moz-outliner-image(folderNameCol, isServer-true, serverType-nntp, isSecure-true, open) {
-  list-style-image: url("chrome://messenger/skin/server-news-lock.gif");
-}
-
 outlinerbody:-moz-outliner-image(folderNameCol, isServer-true, serverType-nntp) {
-  list-style-image: url("chrome://messenger/skin/server-news.gif");
-}
-
-outlinerbody:-moz-outliner-image(folderNameCol, isServer-true, serverType-nntp, open) {
   list-style-image: url("chrome://messenger/skin/server-news.gif");
 }
 
