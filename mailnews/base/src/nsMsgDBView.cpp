@@ -129,6 +129,23 @@ nsresult nsMsgDBView::FetchAuthor(nsIMsgHdr * aHdr, PRUnichar ** aSenderString)
   return NS_OK;
 }
 
+nsresult nsMsgDBView::FetchSubject(nsIMsgHdr * aMsgHdr, PRUint32 aFlags, PRUnichar ** aValue)
+{
+  if (aFlags & MSG_FLAG_HAS_RE)
+  {
+    nsXPIDLString subject;
+    aMsgHdr->GetMime2DecodedSubject(getter_Copies(subject));
+    nsAutoString reSubject;
+    reSubject.Assign(NS_LITERAL_STRING("Re: "));
+    reSubject.Append(subject);
+    *aValue = reSubject.ToNewUnicode();
+  }
+  else
+    aMsgHdr->GetMime2DecodedSubject(aValue);
+
+  return NS_OK;
+}
+
 // in case we want to play around with the date string, I've broken it out into
 // a separate routine. 
 nsresult nsMsgDBView::FetchDate(nsIMsgHdr * aHdr, PRUnichar ** aDateString)
@@ -552,7 +569,7 @@ NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, const PRUnichar * aColID, P
   {
   case 's':
     if (aColID[1] == 'u') // subject
-      rv = msgHdr->GetMime2DecodedSubject(aValue);
+      rv = FetchSubject(msgHdr, m_flags[aRow], aValue);
     else if (aColID[1] == 'e') // sender
       rv = FetchAuthor(msgHdr, aValue);
     else if (aColID[1] == 'i') // size

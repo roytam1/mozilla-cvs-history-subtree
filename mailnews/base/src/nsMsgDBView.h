@@ -81,6 +81,7 @@ protected:
   nsCOMPtr<nsIOutlinerBoxObject> mOutliner;
   nsCOMPtr<nsIOutlinerSelection> mOutlinerSelection;
   nsresult FetchAuthor(nsIMsgHdr * aHdr, PRUnichar ** aAuthorString);
+  nsresult FetchSubject(nsIMsgHdr * aMsgHdr, PRUint32 aFlags, PRUnichar ** aValue);
   nsresult FetchDate(nsIMsgHdr * aHdr, PRUnichar ** aDateString);
   nsresult FetchStatus(PRUint32 aFlags, PRUnichar ** aStatusString);
   nsresult FetchSize(nsIMsgHdr * aHdr, PRUnichar ** aSizeString);
