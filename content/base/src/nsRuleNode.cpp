@@ -4310,6 +4310,18 @@ nsRuleNode::ComputeSVGData(nsStyleStruct* aStartStruct,
     svg->mPointerEvents = parentSVG->mPointerEvents;
   }
 
+  // shape-rendering: enum, auto, inherit
+  if (eCSSUnit_Enumerated == SVGData.mShapeRendering.GetUnit()) {
+    svg->mShapeRendering = SVGData.mShapeRendering.GetIntValue();
+  }
+  else if (eCSSUnit_Auto == SVGData.mShapeRendering.GetUnit()) {
+    svg->mShapeRendering = NS_STYLE_SHAPE_RENDERING_AUTO;
+  }
+  else if (eCSSUnit_Inherit == SVGData.mShapeRendering.GetUnit()) {
+    inherited = PR_TRUE;
+    svg->mShapeRendering = parentSVG->mShapeRendering;
+  }
+
   // stroke: 
   SetSVGPaint(SVGData.mStroke, parentSVG->mStroke, mPresContext, svg->mStroke, inherited);
 

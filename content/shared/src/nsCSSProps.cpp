@@ -902,6 +902,13 @@ const PRInt32 nsCSSProps::kPointerEventsKTable[] = {
   -1, -1
 };
 
+const PRInt32 nsCSSProps::kShapeRenderingKTable[] = {
+  eCSSKeyword_optimizespeed, NS_STYLE_SHAPE_RENDERING_OPTIMIZESPEED,
+  eCSSKeyword_optimizelegibility, NS_STYLE_SHAPE_RENDERING_CRISPEDGES,
+  eCSSKeyword_geometricprecision, NS_STYLE_SHAPE_RENDERING_GEOMETRICPRECISION,
+  -1, -1
+};
+
 const PRInt32 nsCSSProps::kStrokeLinecapKTable[] = {
   eCSSKeyword_butt, NS_STYLE_STROKE_LINECAP_BUTT,
   eCSSKeyword_round, NS_STYLE_STROKE_LINECAP_ROUND,
@@ -1071,6 +1078,8 @@ static const PRInt32 kBackgroundYPositionKTable[] = {
     return SearchKeywordTable(aValue, kFillRuleKTable);
   case eCSSProperty_pointer_events:
     return SearchKeywordTable(aValue, kPointerEventsKTable);
+  case eCSSProperty_shape_rendering:
+    return SearchKeywordTable(aValue, kShapeRenderingKTable);
   case eCSSProperty_stroke_linecap:
     return SearchKeywordTable(aValue, kStrokeLinecapKTable);
   case eCSSProperty_stroke_linejoin:

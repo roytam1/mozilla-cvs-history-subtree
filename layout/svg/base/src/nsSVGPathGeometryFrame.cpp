@@ -470,6 +470,14 @@ nsSVGPathGeometryFrame::GetHittestMask(PRUint16 *aHittestMask)
   return NS_OK;
 }
 
+/* readonly attribute unsigned short shapeRendering; */
+NS_IMETHODIMP
+nsSVGPathGeometryFrame::GetShapeRendering(PRUint16 *aShapeRendering)
+{
+  *aShapeRendering = ((const nsStyleSVG*) mStyleContext->GetStyleData(eStyleStruct_SVG))->mShapeRendering;
+  return NS_OK;
+}
+
 //---------------------------------------------------------------------- 
 
 nsresult

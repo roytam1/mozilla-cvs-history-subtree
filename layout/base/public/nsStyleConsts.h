@@ -663,6 +663,13 @@
 #define NS_STYLE_POINTER_EVENTS_STROKE          7
 #define NS_STYLE_POINTER_EVENTS_ALL             8
 
+// shape-rendering
+#define NS_STYLE_SHAPE_RENDERING_AUTO               0 /* == nsISVGPathGeometrySource::SHAPE_RENDERING_AUTO */
+#define NS_STYLE_SHAPE_RENDERING_OPTIMIZESPEED      1 /* == nsISVGPathGeometrySource::SHAPE_RENDERING_OPTIMIZESPEED */
+#define NS_STYLE_SHAPE_RENDERING_CRISPEDGES         2 /* == nsISVGPathGeometrySource::SHAPE_RENDERING_CRISPEDGES */
+#define NS_STYLE_SHAPE_RENDERING_GEOMETRICPRECISION 3 /* == nsISVGPathGeometrySource::SHAPE_RENDERING_GEOMETRICPRECISION */
+
+
 // stroke-linecap
 #define NS_STYLE_STROKE_LINECAP_BUTT            0 /* == nsISVGGeometrySource::STROKE_LINECAP_BUTT */
 #define NS_STYLE_STROKE_LINECAP_ROUND           1 /* == nsISVGGeometrySource::STROKE_LINECAP_ROUND */

@@ -784,6 +784,7 @@ nsStyleSVG::nsStyleSVG()
     mFillOpacity      = 1.0f;
     mFillRule         = NS_STYLE_FILL_RULE_NONZERO;
     mPointerEvents    = NS_STYLE_POINTER_EVENTS_VISIBLEPAINTED;
+    mShapeRendering   = NS_STYLE_SHAPE_RENDERING_AUTO;
     mStroke.mType     = eStyleSVGPaintType_None;
     mStroke.mColor    = NS_RGB(0,0,0);
     mStrokeDasharray.Truncate();
@@ -811,6 +812,7 @@ nsStyleSVG::nsStyleSVG(const nsStyleSVG& aSource)
   mFillOpacity = aSource.mFillOpacity;
   mFillRule = aSource.mFillRule;
   mPointerEvents = aSource.mPointerEvents;
+  mShapeRendering = aSource.mShapeRendering;
   mStroke.mType = aSource.mStroke.mType;
   if (mStroke.mType == eStyleSVGPaintType_Color)
     mStroke.mColor = aSource.mStroke.mColor;
@@ -831,6 +833,7 @@ nsChangeHint nsStyleSVG::CalcDifference(const nsStyleSVG& aOther) const
        mFillOpacity      != aOther.mFillOpacity      ||
        mFillRule         != aOther.mFillRule         ||
        mPointerEvents    != aOther.mPointerEvents    ||
+       mShapeRendering   != aOther.mShapeRendering   ||
        mStroke.mType     != aOther.mStroke.mType     ||
        mStrokeDasharray  != aOther.mStrokeDasharray  ||
        mStrokeDashoffset != aOther.mStrokeDashoffset ||

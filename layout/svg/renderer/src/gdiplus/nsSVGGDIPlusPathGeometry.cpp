@@ -372,7 +372,19 @@ nsSVGGDIPlusPathGeometry::Render(nsISVGRendererCanvas *canvas)
   nsCOMPtr<nsISVGGDIPlusCanvas> gdiplusCanvas = do_QueryInterface(canvas);
   NS_ASSERTION(gdiplusCanvas, "wrong svg render context for geometry!");
   if (!gdiplusCanvas) return NS_ERROR_FAILURE;
-  gdiplusCanvas->GetGraphics()->SetSmoothingMode(SmoothingModeAntiAlias);
+
+  PRUint16 renderingMode;
+  mSource->GetShapeRendering(&renderingMode);
+  switch (renderingMode) {
+    case nsISVGPathGeometrySource::SHAPE_RENDERING_OPTIMIZESPEED:
+    case nsISVGPathGeometrySource::SHAPE_RENDERING_CRISPEDGES:
+      gdiplusCanvas->GetGraphics()->SetSmoothingMode(SmoothingModeNone);
+      break;
+    default:
+      gdiplusCanvas->GetGraphics()->SetSmoothingMode(SmoothingModeAntiAlias);
+      break;
+  }
+  
   gdiplusCanvas->GetGraphics()->SetCompositingQuality(CompositingQualityHighSpeed);
 //  gdiplusCanvas->GetGraphics()->SetPixelOffsetMode(PixelOffsetModeHalf);
 

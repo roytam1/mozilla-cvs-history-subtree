@@ -90,12 +90,26 @@ interface nsISVGPathGeometrySource : nsISVGGeometrySource
 
   /**
    * Determines mode of operation expected of the
-   * nsISVGRendererPathGeometry::containsPoint() method.  One of the
-   * 'HITTEST_MASK_*' constants defined in this interface.
+   * nsISVGRendererPathGeometry::containsPoint() method.  A
+   * combination of the 'HITTEST_MASK_*' constants defined in this
+   * interface.
    */
   readonly attribute unsigned short hittestMask;
   
   const unsigned long UPDATEMASK_HITTEST_MASK = 0x00010000;
+  /** @} */
+
+  /**
+   * @name Shape rendering hints
+   * @{
+   */
+
+  const unsigned short SHAPE_RENDERING_AUTO               = 0;
+  const unsigned short SHAPE_RENDERING_OPTIMIZESPEED      = 1;
+  const unsigned short SHAPE_RENDERING_CRISPEDGES         = 2;
+  const unsigned short SHAPE_RENDERING_GEOMETRICPRECISION = 3;
+
+  readonly attribute unsigned short shapeRendering;
   /** @} */
 };
 

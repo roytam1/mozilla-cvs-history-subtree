@@ -109,6 +109,7 @@ public:
   
   // nsISVGPathGeometrySource interface:
   NS_IMETHOD GetHittestMask(PRUint16 *aHittestMask);
+  NS_IMETHOD GetShapeRendering(PRUint16 *aShapeRendering);
   // to be implemented by subclass:
   //NS_IMETHOD ConstructPath(nsISVGRendererPathBuilder *pathBuilder) = 0;
   
