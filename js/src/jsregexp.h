@@ -66,13 +66,11 @@ struct JSRegExpStatics {
      : &js_EmptySubString)
 
 struct JSRegExp {
-    jsrefcount      nrefs;
-    JSString        *source;        /* locked source string, sans // */
-    uintN           lastIndex;      /* index after last match (perl4 compat) */
-    JSHashTable     *lastIndexMap;  /* string to lastIndex map (perl5 compat) */
-    uintN           parenCount;     /* number of parenthesized submatches */
-    uint8           flags;          /* flags, see jsapi.h */
-    struct RENode   *ren;           /* regular expression tree root */
+    JSString    *source;        /* locked source string, sans // */
+    uintN       lastIndex;      /* index after last match, for //g iterator */
+    uintN       parenCount;     /* number of parenthesized submatches */
+    uint8       flags;          /* flags, see jsapi.h */
+    struct RENode *ren;         /* regular expression tree root */
 };
 
 extern JSRegExp *

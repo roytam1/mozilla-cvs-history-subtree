@@ -1059,8 +1059,6 @@ skipline:
 		    flags |= JSREG_FOLD;
 		else if (MatchChar(ts, 'm'))
 		    flags |= JSREG_MULTILINE;
-		else if (MatchChar(ts, 'l'))
-		    flags |= JSREG_LASTINDEX;
 		else
 		    break;
 	    }

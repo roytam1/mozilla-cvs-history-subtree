@@ -2072,12 +2072,9 @@ static JSFunctionSpec string_static_methods[] = {
     {0,0,0,0,0}
 };
 
-static JSHashTable *string_finalize_observers;
 static JSHashTable *deflated_string_cache;
 static uint32 deflated_string_cache_bytes;
-
 #ifdef JS_THREADSAFE
-static JSLock *string_finalize_observers_lock;
 static JSLock *deflated_string_cache_lock;
 #endif
 
@@ -2086,11 +2083,6 @@ js_InitStringGlobals(void)
 {
 #ifdef JS_THREADSAFE
     /* Must come through here once in primordial thread to init safely! */
-    if (!string_finalize_observers_lock) {
-	string_finalize_observers_lock = JS_NEW_LOCK();
-	if (!string_finalize_observers_lock)
-	    return JS_FALSE;
-    }
     if (!deflated_string_cache_lock) {
 	deflated_string_cache_lock = JS_NEW_LOCK();
 	if (!deflated_string_cache_lock)
@@ -2103,19 +2095,11 @@ js_InitStringGlobals(void)
 void
 js_FreeStringGlobals()
 {
-    if (string_finalize_observers) {
-	JS_HashTableDestroy(string_finalize_observers);
-	string_finalize_observers = NULL;
-    }
     if (deflated_string_cache) {
 	JS_HashTableDestroy(deflated_string_cache);
 	deflated_string_cache = NULL;
     }
 #ifdef JS_THREADSAFE
-    if (string_finalize_observers_lock) {
-	JS_DESTROY_LOCK(string_finalize_observers_lock);
-	string_finalize_observers_lock = NULL;
-    }
     if (deflated_string_cache_lock) {
 	JS_DESTROY_LOCK(deflated_string_cache_lock);
 	deflated_string_cache_lock = NULL;
@@ -2202,108 +2186,10 @@ js_NewStringCopyZ(JSContext *cx, const jschar *s, uintN gcflag)
     return str;
 }
 
-JSHashNumber JS_DLL_CALLBACK
+JS_STATIC_DLL_CALLBACK(JSHashNumber)
 js_hash_string_pointer(const void *key)
 {
     return (JSHashNumber)key >> JSVAL_TAGBITS;
-}
-
-typedef struct JSStringFinalizeObserver JSStringFinalizeObserver;
-
-struct JSStringFinalizeObserver {
-    JSStringFinalizeCallback cb;
-    void                     *arg;
-    JSStringFinalizeObserver *next;
-};
-
-JS_FRIEND_API(JSBool)
-js_AddStringFinalizeObserver(JSContext *cx, const JSString *str,
-                             JSStringFinalizeCallback cb, void *arg)
-{
-    JSHashTable *table;
-    JSHashNumber hash;
-    JSHashEntry *he, **hep;
-    JSStringFinalizeObserver **sfop, *sfo;
-    JSBool ok;
-
-    JS_ACQUIRE_LOCK(string_finalize_observers_lock);
-    table = string_finalize_observers;
-    if (!table) {
-        table = JS_NewHashTable(8, js_hash_string_pointer,
-                                JS_CompareValues, JS_CompareValues,
-                                NULL, NULL);
-        if (!table) {
-            JS_ReportOutOfMemory(cx);
-            ok = JS_FALSE;
-            goto out;
-        }
-        string_finalize_observers = table;
-    }
-
-    hash = js_hash_string_pointer(str);
-    hep = JS_HashTableRawLookup(table, hash, str);
-    he = *hep;
-    if (!he) {
-        he = JS_HashTableRawAdd(table, hep, hash, str, NULL);
-        if (!he) {
-            JS_ReportOutOfMemory(cx);
-            ok = JS_FALSE;
-            goto out;
-        }
-    }
-
-    sfop = (JSStringFinalizeObserver **)&he->value;
-    while ((sfo = *sfop) != NULL) {
-        if (sfo->cb == cb && sfo->arg == arg) {
-            ok = JS_TRUE;
-            goto out;
-        }
-    }
-
-    sfo = JS_malloc(cx, sizeof *sfo);
-    if (!sfo) {
-        ok = JS_FALSE;
-        goto out;
-    }
-    sfo->cb = cb;
-    sfo->arg = arg;
-    sfo->next = NULL;
-    *sfop = sfo;
-
-out:
-    JS_RELEASE_LOCK(string_finalize_observers_lock);
-    return ok;
-}
-
-JS_FRIEND_API(void)
-js_RemoveStringFinalizeObserver(JSContext *cx, const JSString *str,
-                                JSStringFinalizeCallback cb, void *arg)
-{
-    JSHashTable *table;
-    JSHashNumber hash;
-    JSHashEntry *he, **hep;
-    JSStringFinalizeObserver **sfop, *sfo;
-
-    JS_ACQUIRE_LOCK(string_finalize_observers_lock);
-    table = string_finalize_observers;
-    if (table) {
-        hash = js_hash_string_pointer(str);
-        hep = JS_HashTableRawLookup(table, hash, str);
-        he = *hep;
-        if (he) {
-            sfop = (JSStringFinalizeObserver **)&he->value;
-            while ((sfo = *sfop) != NULL) {
-                if (sfo->cb == cb && sfo->arg == arg) {
-                    *sfop = sfo->next;
-                    JS_free(cx, sfo);
-                    break;
-                }
-            }
-            if (!he->value)
-                JS_HashTableRawRemove(table, hep, he);
-        }
-    }
-    JS_RELEASE_LOCK(string_finalize_observers_lock);
 }
 
 void
@@ -2311,35 +2197,10 @@ js_FinalizeString(JSContext *cx, JSString *str)
 {
     JSHashNumber hash;
     JSHashEntry *he, **hep;
-    JSStringFinalizeObserver *todo, *sfo;
 
     if (str->chars) {
-        if (string_finalize_observers) {
-            hash = js_hash_string_pointer(str);
-
-            JS_ACQUIRE_LOCK(string_finalize_observers_lock);
-            hep = JS_HashTableRawLookup(string_finalize_observers, hash, str);
-            he = *hep;
-            if (!he) {
-                todo = NULL;
-            } else {
-                todo = he->value;
-                he->value = NULL;
-                JS_HashTableRawRemove(string_finalize_observers, hep, he);
-            }
-            JS_RELEASE_LOCK(string_finalize_observers_lock);
-
-            /* Avoid calling while holding string_finalize_observers_lock. */
-            while ((sfo = todo) != NULL) {
-                sfo->cb(cx, str, sfo->arg);
-                todo = sfo->next;
-                JS_free(cx, sfo);
-            }
-        }
-
 	JS_free(cx, str->chars);
 	str->chars = NULL;
-
 	if (deflated_string_cache) {
 	    hash = js_hash_string_pointer(str);
 	    JS_ACQUIRE_LOCK(deflated_string_cache_lock);

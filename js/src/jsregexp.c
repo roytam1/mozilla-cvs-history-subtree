@@ -1186,10 +1186,8 @@ js_NewRegExp(JSContext *cx, JSString *str, uintN flags, JSBool flat)
     re = JS_malloc(cx, JS_ROUNDUP(resize, sizeof(jsword)));
     if (!re)
 	goto out;
-    re->nrefs = 0;
     re->source = str;
     re->lastIndex = 0;
-    re->lastIndexMap = NULL;
     re->parenCount = state.parenCount;
     re->flags = flags;
 
@@ -1267,46 +1265,10 @@ static void freeRENtree(JSContext *cx, RENode *ren,  RENode *stop)
     }
 }
 
-/* Imported from jsstr.c for use in regexp_exec_sub. */
-extern JSHashNumber JS_DLL_CALLBACK
-js_hash_string_pointer(const void *key);
-
-JS_STATIC_DLL_CALLBACK(void)
-js_purge_str(JSContext *cx, JSString *str, void *arg)
-{
-    JSRegExp *re = arg;
-
-    JS_HashTableRemove(re->lastIndexMap, str);
-}
-
-typedef struct JSPurgeArgs {
-    JSContext *cx;
-    JSRegExp  *re;
-} JSPurgeArgs;
-
-JS_STATIC_DLL_CALLBACK(intN)
-js_purge_observer(JSHashEntry *he, intN i, void *arg)
-{
-    const JSString *str = he->key;
-    JSPurgeArgs *args = arg;
-
-    js_RemoveStringFinalizeObserver(args->cx, str, js_purge_str, args->re);
-    return HT_ENUMERATE_NEXT;
-}
-
 void
 js_DestroyRegExp(JSContext *cx, JSRegExp *re)
 {
-    JS_ASSERT(re->nrefs == 0);
     js_UnlockGCThing(cx, re->source);
-    if (re->lastIndexMap) {
-        JSPurgeArgs args;
-        args.cx = cx;
-        args.re = re;
-        JS_HashTableEnumerateEntries(re->lastIndexMap, js_purge_observer,
-                                     &args);
-        JS_HashTableDestroy(re->lastIndexMap);
-    }
     freeRENtree(cx, re->ren, NULL);
     JS_free(cx, re);
 }
@@ -2246,7 +2208,6 @@ regexp_setProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 	if (!js_ValueToNumber(cx, *vp, &d))
 	    return JS_FALSE;
 	re->lastIndex = (uintN)d;
-        re->flags |= JSREG_LASTINDEX;
     }
     JS_UNLOCK_OBJ(cx, obj);
     return JS_TRUE;
@@ -2407,9 +2368,7 @@ regexp_finalize(JSContext *cx, JSObject *obj)
     re = JS_GetPrivate(cx, obj);
     if (!re)
 	return;
-    JS_ATOMIC_ADDREF(&re->nrefs, -1);
-    if (re->nrefs == 0)
-        js_DestroyRegExp(cx, re);
+    js_DestroyRegExp(cx, re);
 }
 
 /* Forward static prototype. */
@@ -2456,7 +2415,6 @@ regexp_xdrObject(JSXDRState *xdr, JSObject **objp)
 	    js_DestroyRegExp(xdr->cx, re);
 	    return JS_FALSE;
 	}
-        re->nrefs = 1;
     }
     return JS_TRUE;
 }
@@ -2568,19 +2526,14 @@ regexp_compile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 	ok = JS_FALSE;
 	goto out;
     }
-    re->nrefs = 1;
     oldre = JS_GetPrivate(cx, obj);
     ok = JS_SetPrivate(cx, obj, re);
     if (!ok) {
-        re->nrefs = 0;
 	js_DestroyRegExp(cx, re);
 	goto out;
     }
-    if (oldre) {
-        JS_ATOMIC_ADDREF(&oldre->nrefs, -1);
-        if (oldre->nrefs == 0)
-            js_DestroyRegExp(cx, oldre);
-    }
+    if (oldre)
+	js_DestroyRegExp(cx, oldre);
     *rval = OBJECT_TO_JSVAL(obj);
 out:
     JS_UNLOCK_OBJ(cx, obj);
@@ -2594,8 +2547,6 @@ regexp_exec_sub(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     JSBool ok, locked;
     JSRegExp *re;
     JSString *str;
-    JSHashEntry **hep, *he;
-    JSHashNumber hash;
     size_t i;
 
     if (!JS_InstanceOf(cx, obj, &js_RegExpClass, argv))
@@ -2603,7 +2554,6 @@ regexp_exec_sub(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     re = JS_GetPrivate(cx, obj);
     if (!re)
 	return JS_TRUE;
-
     ok = locked = JS_FALSE;
     if (argc == 0) {
 	str = cx->regExpStatics.input;
@@ -2622,59 +2572,16 @@ regexp_exec_sub(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 	    goto out;
 	argv[0] = STRING_TO_JSVAL(str);
     }
-
-    he = NULL;
     if (re->flags & JSREG_GLOB) {
         JS_LOCK_OBJ(cx, obj);
         locked = JS_TRUE;
-        if (re->flags & JSREG_LASTINDEX) {
-            i = (size_t) re->lastIndex;
-        } else {
-            if (!re->lastIndexMap) {
-                re->lastIndexMap = JS_NewHashTable(8, js_hash_string_pointer,
-                                                   JS_CompareValues,
-                                                   JS_CompareValues,
-                                                   NULL, NULL);
-                if (!re->lastIndexMap) {
-                    JS_ReportOutOfMemory(cx);
-                    ok = JS_FALSE;
-                    goto out;
-                }
-            }
-
-            hash = js_hash_string_pointer(str);
-            hep = JS_HashTableRawLookup(re->lastIndexMap, hash, str);
-            he = *hep;
-            if (!he) {
-                he = JS_HashTableRawAdd(re->lastIndexMap, hep, hash, str, 0);
-                if (!he) {
-                    JS_ReportOutOfMemory(cx);
-                    ok = JS_FALSE;
-                    goto out;
-                }
-                ok = js_AddStringFinalizeObserver(cx, str, js_purge_str, re);
-                if (!ok) {
-                    JS_HashTableRawRemove(re->lastIndexMap, hep, he);
-                    goto out;
-                }
-            }
-
-            i = (size_t) he->value;
-        }
+        i = re->lastIndex;
     } else {
         i = 0;
     }
-
     ok = js_ExecuteRegExp(cx, re, str, &i, test, rval);
-
-    if (re->flags & JSREG_GLOB) {
-        if (*rval == JSVAL_NULL)
-            i = 0;
-        if (he)
-            he->value = (void *) i;
-        re->lastIndex = (uintN) i;
-    }
-
+    if (re->flags & JSREG_GLOB)
+	re->lastIndex = (*rval == JSVAL_NULL) ? 0 : i;
 out:
     if (locked)
 	JS_UNLOCK_OBJ(cx, obj);
@@ -2764,7 +2671,6 @@ js_NewRegExpObject(JSContext *cx, jschar *chars, size_t length, uintN flags)
 	js_DestroyRegExp(cx, re);
 	return NULL;
     }
-    re->nrefs = 1;
     return obj;
 }
 
