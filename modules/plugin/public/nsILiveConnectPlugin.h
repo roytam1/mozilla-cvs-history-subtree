@@ -34,7 +34,7 @@
 #ifndef nsILiveConnectPlugin_h__
 #define nsILiveConnectPlugin_h__
 
-#include "nsplugindefs.h"
+#include "nsIPlugin.h"
 #include "jni.h"        // standard JVM API
 
 ////////////////////////////////////////////////////////////////////////////////

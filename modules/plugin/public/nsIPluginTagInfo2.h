@@ -34,7 +34,7 @@
 #ifndef nsIPluginTagInfo2_h___
 #define nsIPluginTagInfo2_h___
 
-#include "nsplugindefs.h"
+#include "nsIPluginTagInfo.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Plugin Tag Info Interface

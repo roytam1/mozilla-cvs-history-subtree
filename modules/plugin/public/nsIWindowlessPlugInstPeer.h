@@ -35,6 +35,7 @@
 #define nsIWindowlessPluginInstancePeer_h___
 
 #include "nsplugindefs.h"
+#include "nsISupports.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Windowless Plugin Instance Peer Interface

@@ -35,6 +35,7 @@
 #define nsIPluginStreamPeer_h___
 
 #include "nsplugindefs.h"
+#include "nsISupports.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Plugin Stream Peer Interface

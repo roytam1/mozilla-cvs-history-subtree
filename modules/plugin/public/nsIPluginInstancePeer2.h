@@ -34,7 +34,7 @@
 #ifndef nsIPluginInstancePeer2_h___
 #define nsIPluginInstancePeer2_h___
 
-#include "nsplugindefs.h"
+#include "nsIPluginInstancePeer.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Plugin Instance Peer 2 Interface

@@ -35,6 +35,7 @@
 #define nsIJRILiveConnectPluginInstancePeer_h__
 
 #include "nsplugindefs.h"
+#include "nsISupports.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // JRI-Based LiveConnect Classes

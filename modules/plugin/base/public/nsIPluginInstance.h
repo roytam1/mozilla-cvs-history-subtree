@@ -35,6 +35,7 @@
 #define nsIPluginInstance_h___
 
 #include "nsplugindefs.h"
+#include "nsISupports.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Plugin Instance Interface

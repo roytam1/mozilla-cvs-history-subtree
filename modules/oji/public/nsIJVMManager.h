@@ -29,7 +29,7 @@
 #ifndef nsIJVMManager_h___
 #define nsIJVMManager_h___
 
-#include "nsplugin.h"
+#include "nsISupports.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 

@@ -35,6 +35,7 @@
 #define nsISeekablePluginStreamPeer_h___
 
 #include "nsplugindefs.h"
+#include "nsISupports.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Seekable Plugin Stream Peer Interface

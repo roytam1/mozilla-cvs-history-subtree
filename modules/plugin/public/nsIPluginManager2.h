@@ -34,7 +34,7 @@
 #ifndef nsIPluginManager2_h___
 #define nsIPluginManager2_h___
 
-#include "nsplugindefs.h"
+#include "nsIPluginManager.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Plugin Manager 2 Interface

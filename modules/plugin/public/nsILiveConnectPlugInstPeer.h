@@ -35,6 +35,7 @@
 #define nsILiveConnectPluginInstancePeer_h___
 
 #include "nsplugindefs.h"
+#include "nsISupports.h"
 #include "jni.h"        // standard JVM API
 
 ////////////////////////////////////////////////////////////////////////////////

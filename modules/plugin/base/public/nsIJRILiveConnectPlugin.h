@@ -34,7 +34,7 @@
 #ifndef nsIJRILiveConnectPlugin_h__
 #define nsIJRILiveConnectPlugin_h__
 
-#include "nsplugindefs.h"
+#include "nsIPlugin.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // JRI-Based LiveConnect Classes

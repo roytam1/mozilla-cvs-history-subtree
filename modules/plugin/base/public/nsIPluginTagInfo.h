@@ -35,6 +35,7 @@
 #define nsIPluginTagInfo_h___
 
 #include "nsplugindefs.h"
+#include "nsISupports.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Plugin Tag Info Interface
