@@ -707,6 +707,8 @@ JSJ_ConvertJavaObjectToJSValue(JSContext *cx, jobject java_obj, jsval *vp)
 
 /*===========================================================================*/
 
+#ifndef MOZILLA_CLIENT
+
 /* The convenience functions below present a complete, but simplified
    LiveConnect API which is designed to handle the special case of a single 
    Java-VM, single-threaded operation, and use of only one JSContext. */
@@ -796,3 +798,4 @@ JSJ_SimpleShutdown()
     the_jsj_thread = NULL;
 }
 
+#endif /* MOZILLA_CLIENT */
