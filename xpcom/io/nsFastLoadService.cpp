@@ -86,8 +86,9 @@ nsFastLoadService::Init()
 }
 
 NS_IMETHODIMP
-nsFastLoadService::SetInputStream(nsIInputStream* aSrcStream,
-                                  PRUint32 *aCheckSum)
+nsFastLoadService::NewInputStream(nsIInputStream* aSrcStream,
+                                  PRUint32 *aCheckSum,
+                                  nsIObjectInputStream* *aResult)
 {
     nsresult rv;
     nsAutoLock lock(mLock);
@@ -101,12 +102,15 @@ nsFastLoadService::SetInputStream(nsIInputStream* aSrcStream,
     nsIObjectInputStream* stream = mObjectInputStream.get();
     nsFastLoadFileReader* reader = NS_STATIC_CAST(nsFastLoadFileReader*,
                                                   stream);
+
     *aCheckSum = reader->GetChecksum();
+    NS_ADDREF(*aResult = stream);
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsFastLoadService::SetOutputStream(nsIOutputStream* aDestStream)
+nsFastLoadService::NewOutputStream(nsIOutputStream* aDestStream,
+                                   nsIObjectOutputStream* *aResult)
 {
     nsresult rv;
     nsAutoLock lock(mLock);
@@ -116,6 +120,8 @@ nsFastLoadService::SetOutputStream(nsIOutputStream* aDestStream)
     if (NS_FAILED(rv)) return rv;
 
     mObjectInputStream = nsnull;
+
+    NS_ADDREF(*aResult = mObjectOutputStream);
     return NS_OK;
 }
 
@@ -316,7 +322,7 @@ nsFastLoadService::WriteFastLoadPtr(nsIObjectOutputStream* aOutputStream,
                                     nsISupports* aObject,
                                     const nsCID& aCID)
 {
-    NS_ASSERTION(aObject != nsnull, "writing an unread nsFastPtr?!");
+    NS_ASSERTION(aObject != nsnull, "writing an unread nsFastLoadPtr?!");
     if (!aObject)
         return NS_ERROR_UNEXPECTED;
 

@@ -267,16 +267,17 @@ nsFastLoadFileReader::Open()
 NS_IMETHODIMP
 nsFastLoadFileReader::Close()
 {
-#ifdef NS_DEBUG
+    // Give up any dangling strong refs, after asserting there aren't any.
     for (PRUint32 i = 0, n = mFooter.mNumSharpObjects; i < n; i++) {
-        const nsFastLoadSharpObjectEntry& entry = mFooter.mSharpObjectMap[i];
+        nsFastLoadSharpObjectEntry* entry = &mFooter.mSharpObjectMap[i];
 
-        NS_ASSERTION(entry.mStrongRefCnt == 0,
+        NS_ASSERTION(entry->mStrongRefCnt == 0,
                      "failed to deserialize all strong refs!");
-        NS_ASSERTION(entry.mWeakRefCnt == 0,
+        NS_ASSERTION(entry->mWeakRefCnt == 0,
                      "failed to deserialize all weak refs!");
+
+        entry->mObject = nsnull;
     }
-#endif
 
     return mInputStream->Close();
 }
@@ -314,24 +315,23 @@ nsFastLoadFileReader::ReadObject(PRBool aIsStrongRef, nsISupports* *aObject)
     rv = Read32(&oid);
     if (NS_FAILED(rv)) return rv;
 
-    NS_ASSERTION((oid & MFL_WEAK_REF_TAG) ==
-                 (aIsStrongRef ? 0 : MFL_WEAK_REF_TAG),
-                 "strong vs. weak ref deserialization mismatch!");
-
-    nsFastLoadSharpObjectEntry* entry = nsnull;
+    nsFastLoadSharpObjectEntry* entry = (oid != MFL_DULL_OBJECT_OID)
+                                        ? &mFooter.GetSharpObjectEntry(oid)
+                                        : nsnull;
     nsCOMPtr<nsISupports> object;
 
-    if (oid & MFL_OBJECT_DEF_TAG) {
+    if (!entry) {
+        // A very dull object, defined at point of single (strong) reference.
+        NS_ASSERTION(aIsStrongRef, "dull object read via weak ref!");
+
         rv = DeserializeObject(getter_AddRefs(object));
         if (NS_FAILED(rv)) return rv;
-
-        if (oid != MFL_DULL_OBJECT_OID) {
-            // Save object until all refs have been deserialized.
-            entry = &mFooter.GetSharpObjectEntry(oid);
-            entry->mObject = object;
-        }
     } else {
-        entry = &mFooter.GetSharpObjectEntry(oid);
+        NS_ASSERTION((oid & MFL_WEAK_REF_TAG) ==
+                     (aIsStrongRef ? 0 : MFL_WEAK_REF_TAG),
+                     "strong vs. weak ref deserialization mismatch!");
+
+        // Check whether we've already deserialized the object for this OID.
         object = entry->mObject;
 
         if (!object) {
@@ -346,7 +346,8 @@ nsFastLoadFileReader::ReadObject(PRBool aIsStrongRef, nsISupports* *aObject)
             if (NS_FAILED(rv)) return rv;
             NS_ASSERTION(entry->mCIDOffset < saveOffset, "out of order object?!");
 
-            rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET, entry->mCIDOffset);
+            rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET,
+                                entry->mCIDOffset);
             if (NS_FAILED(rv)) return rv;
 
             rv = DeserializeObject(getter_AddRefs(object));
@@ -358,9 +359,7 @@ nsFastLoadFileReader::ReadObject(PRBool aIsStrongRef, nsISupports* *aObject)
             // Save object until all refs have been deserialized.
             entry->mObject = object;
         }
-    }
 
-    if (entry) {
         if (aIsStrongRef) {
             NS_ASSERTION(entry->mStrongRefCnt != 0, "mStrongRefCnt underflow!");
             entry->mStrongRefCnt--;

@@ -31,14 +31,6 @@
  * startup.  You must be willing to tolerate the null mRawPtr test on every
  * dereference of this member pointer, or else copy it to a local to optimize
  * away the cost.
- *
- * In an object graph that's serialized and deserialized via nsISerializable,
- * nsIObjectOutputStream, and nsIObjectInputStream, if any object reference is
- * made via an nsFastLoadPtr, then all references to that object in the stream
- * must be made via nsFastLoadPtrs (no weak refs allowed).  Otherwise a slow
- * reference will cause a duplicate object to be deserialized.
- *
- * XXXbe fix this, or at least add duplicate detection
  */
 
 #ifndef nsCOMPtr_h___
