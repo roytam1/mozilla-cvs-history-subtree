@@ -31,17 +31,14 @@
 #include "nsWidgetsCID.h"
 #include "nsIComponentManager.h"
 #include "nsComponentManagerUtils.h"
-#include "nsIImageGroup.h"
 #include "nsIDeviceContext.h"
 #include "nsITimer.h"
-#include "nsIImageRequest.h"
 #include "nsFont.h"
 #include "nsIFontMetrics.h"
 #include "prprf.h"
 
 // CIDs
 static NS_DEFINE_IID(kChildCID,          NS_CHILD_CID);
-static NS_DEFINE_IID(kIImageObserverIID, NS_IIMAGEREQUESTOBSERVER_IID);
 static NS_DEFINE_IID(kISupportsIID,      NS_ISUPPORTS_IID);
 
 // Static variables
