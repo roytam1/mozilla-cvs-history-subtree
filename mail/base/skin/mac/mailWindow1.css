@@ -442,7 +442,11 @@ treechildren::-moz-tree-row(dummy)  {
 	margin-left: 1px;
 }
 
-treechildren::-moz-tree-row(dummy, focus, selected)  {	background-color: #3874d1;        border-color: #3874d1;        background-image: none !important;	margin: 0px;
+treechildren::-moz-tree-row(dummy, focus, selected)  {
+	background-color: #3874d1;
+	border-color: #3874d1;
+	background-image: none !important;
+	margin: 0px;
 	padding-right: 1px;
 	padding-left: 1px;
 }
