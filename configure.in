@@ -3446,6 +3446,17 @@ if test "$MOZ_JSLOADER"; then
     AC_DEFINE(MOZ_JSLOADER)
 fi
 
+dnl ========================================================
+dnl use native unicode converters
+dnl ========================================================
+MOZ_USE_NATIVE_UCONV=
+MOZ_ARG_ENABLE_BOOL(native-uconv,
+[  --enable-native-uconv enable iconv support],
+    MOZ_USE_NATIVE_UCONV=1 )
+if test "$MOZ_USE_NATIVE_UCONV"; then
+    AC_DEFINE(MOZ_USE_NATIVE_UCONV)
+fi
+
 
 dnl ========================================================
 dnl Libeditor can be build as plaintext-only,
@@ -4801,6 +4812,7 @@ AC_SUBST(MOZ_LEAKY)
 AC_SUBST(MOZ_JPROF)
 AC_SUBST(MOZ_XPCTOOLS)
 AC_SUBST(MOZ_JSLOADER)
+AC_SUBST(MOZ_USE_NATIVE_UCONV)
 AC_SUBST(MOZ_INSURE)
 AC_SUBST(MOZ_INSURE_DIRS)
 AC_SUBST(MOZ_INSURE_EXCLUDE_DIRS)
