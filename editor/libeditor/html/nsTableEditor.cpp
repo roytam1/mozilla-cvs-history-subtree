@@ -2111,6 +2111,10 @@ nsHTMLEditor::JoinTableCells(PRBool aMergeNonContiguousContents)
                             actualRowSpan2, actualColSpan2, isSelected2);
         if (NS_FAILED(res)) return res;
         
+        // If this is 0, we are past last cell in row, so just exit from loop
+        if (actualColSpan2 == 0)
+          break;
+          
         // Merge only selected cells (skip cell we're merging into, of course)
         if (isSelected2 && cell2 != firstCell)
         {
