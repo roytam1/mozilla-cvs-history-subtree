@@ -13,6 +13,7 @@
 # Copyright (C) 1998 Netscape Communications Corporation.  All Rights
 # Reserved.
 
+# This is a test
 
 # Enable builds on any drive if defined.
 !if !defined(MOZ_SRC)
