@@ -460,7 +460,10 @@ endif
 endif
 
 
+ifndef PERL
 PERL = perl
+endif
+
 #
 # shared library symbol export definitions
 #
