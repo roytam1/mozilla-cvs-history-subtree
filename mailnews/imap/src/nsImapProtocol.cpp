@@ -2255,7 +2255,7 @@ void nsImapProtocol::ProcessSelectedStateURL()
               (m_imapAction == nsIImapUrl::nsImapOnlineMove) &&
               !GetServerStateParser().ServerIsAOLServer())
             {
-              Store(messageIdString, "+FLAGS (\\Deleted)",
+              Store(messageIdString, "+FLAGS (\\Deleted \\Seen)",
                 bMessageIdsAreUids); 
               PRBool storeSuccessful = GetServerStateParser().LastCommandSuccessful();
               
@@ -2298,7 +2298,7 @@ void nsImapProtocol::ProcessSelectedStateURL()
               if (GetServerStateParser().LastCommandSuccessful() &&
                 (m_imapAction == nsIImapUrl::nsImapOnlineToOfflineMove))
               {
-                Store(messageIdString, "+FLAGS (\\Deleted)",bMessageIdsAreUids); 
+                Store(messageIdString, "+FLAGS (\\Deleted \\Seen)",bMessageIdsAreUids); 
                 if (GetServerStateParser().LastCommandSuccessful())
                   copyStatus = ImapOnlineCopyStateType::kSuccessfulDelete;
                 else
