@@ -179,6 +179,22 @@ PRBool test_cbufdesc()
     return PR_FALSE;
   }
 
+PRBool test_concat()
+  {
+    nsCString bar("bar");
+    const nsACString& barRef = bar;
+
+    const nsPromiseFlatCString& result =
+        PromiseFlatCString(NS_LITERAL_CSTRING("foo") +
+                           NS_LITERAL_CSTRING(",") +
+                           barRef);
+    if (strcmp(result.get(), "foo,bar") == 0)
+      return PR_TRUE;
+
+    printf("[result=%s]\n", result.get());
+    return PR_FALSE;
+  }
+
 //----
 
 typedef PRBool (*TestFunc)();
@@ -204,6 +220,7 @@ tests[] =
     { "test_strip_ws", test_strip_ws },
     { "test_equals_ic", test_equals_ic },
     { "test_cbufdesc", test_cbufdesc },
+    { "test_concat", test_concat },
     { nsnull, nsnull }
   };
 
