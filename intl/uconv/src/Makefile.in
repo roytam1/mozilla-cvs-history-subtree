@@ -44,7 +44,6 @@ CPPSRCS		= \
 		nsTextToSubURI.cpp \
 		nsUnicodeDecodeHelper.cpp \
 		nsUnicodeEncodeHelper.cpp \
-		nsUnicodeHelperDefs.cpp \
 		nsCharsetAliasImp.cpp \
 		nsURLProperties.cpp \
 		nsMappingCache.cpp \
