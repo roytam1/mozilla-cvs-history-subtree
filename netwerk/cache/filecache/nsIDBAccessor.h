@@ -1,4 +1,5 @@
-/*
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+ *
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
@@ -53,6 +54,11 @@ class nsIDBAccessor : public nsISupports
   NS_IMETHOD GetID(const char* key, PRUint32 length, PRInt32* aID) = 0 ;
 
   NS_IMETHOD EnumEntry(void* *anEntry, PRUint32* aLength, PRBool bReset) = 0 ;
+  
+  NS_IMETHOD GetDBFilesize(PRUint32* aSize) = 0 ;
+    
+  NS_IMETHOD GetSpecialEntry(void** anEntry, PRUint32 *aLength) = 0 ;
+  NS_IMETHOD SetSpecialEntry(void* anEntry, PRUint32 aLength) = 0 ;
 
 } ;
 

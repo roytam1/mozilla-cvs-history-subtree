@@ -1,4 +1,5 @@
-/*
+/*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+ *
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
@@ -20,20 +21,35 @@
  *                 Carl Wong <carl.wong@intel.com>
  */
 
-// FUR - Add overall description comment here
+/*
+ * This file is part of filecache implementation.
+ * 
+ * nsIDBAccessor is a interface that shields all the direct database access 
+ * method from nsNetDiskCache. 
+ * 
+ * nsDBAccessor is a implementation of the nsIDBAccessor interface. It
+ * uses dbm(Berkely) as the database. 
+ *
+ */
 
 #ifndef _NSIDBACCESSOR_H_
 #define _NSIDBACCESSOR_H_
 
 #include "nsIDBAccessor.h"
 #include "mcom_db.h"
+#include "prinrval.h"
+#include "nsCOMPtr.h"
 
 // bogus string for the key of session id 
-// FUR - suggest "SK" instead of "^^"
-static const char * const SessionKey = "^^" ;
+static const char * const SessionKey = "SK" ;
+
+// bogus string for the size 
+static const char * const SpecialEntry = "SE" ;
 
 // initial session id number 
 static const PRInt16 ini_sessionID = 0xff ;
+
+static const PRUint16 SyncInterval = 1000 ;
 
 class nsDBAccessor : public nsIDBAccessor
 {
@@ -55,14 +71,23 @@ class nsDBAccessor : public nsIDBAccessor
   NS_IMETHOD GetID(const char* key, PRUint32 length, PRInt32* aID) ;
 
   NS_IMETHOD EnumEntry(void* *anEntry, PRUint32* aLength, PRBool bReset) ;
+  
+  NS_IMETHOD GetDBFilesize(PRUint32* aSize) ;
+  
+  NS_IMETHOD GetSpecialEntry(void** anEntry, PRUint32 *aLength) ;
+  NS_IMETHOD SetSpecialEntry(void* anEntry, PRUint32 aLength) ;
 
   protected:
+  nsresult Sync(void) ;
 
   private:
   DB *                          mDB ;
+  nsCOMPtr<nsIFileSpec>         mDBFile ;
   PRInt16                       mSessionID ;
   PRInt16                       mSessionCntr ;
-  PRLock *                      m_Lock ;
+  PRIntervalTime                mLastSyncTime ;
+  PRUint32                      mDBFilesize ; // cached DB filesize, 
+                                              // updated on every sync for now
 } ;
 
 #endif // _NSIDBACCESSOR_H_
