@@ -29,6 +29,7 @@ REQUIRES	= xpcom \
 		  xpconnect \
 		  caps \
 		  content \
+		  pref \
 		  necko \
 		  docshell \
 		  webBrowser_core \

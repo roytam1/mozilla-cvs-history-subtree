@@ -35,6 +35,7 @@ REQUIRES	= xpcom \
 		  xpconnect \
 		  caps \
 		  content \
+		  pref \
 		  necko \
 		  docshell \
 		  webbrwsr \

@@ -356,6 +356,8 @@ pref("dom.disable_window_flip",             false);
 pref("dom.disable_window_move_resize",      false);
 pref("dom.disable_window_status_change",    false);
 
+pref("dom.disable_window_open_feature.status",      false);
+
 pref("javascript.enabled",                  true);
 pref("javascript.allow.mailnews",           false);
 pref("javascript.options.strict",           false);

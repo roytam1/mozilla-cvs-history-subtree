@@ -76,6 +76,9 @@
 #include "nsIXPConnect.h"
 #include "nsPIDOMWindow.h"
 
+#include "nsIPrefBranch.h"
+#include "nsIPrefService.h"
+
 #ifdef XP_UNIX
 // please see bug 78421 for the eventual "right" fix for this
 #define HAVE_LAME_APPSHELL
@@ -1082,6 +1085,16 @@ void nsWindowWatcher::CheckWindowName(nsString& aName)
     }
 }
 
+#define NS_CALCULATE_CHROME_FLAG_FOR(feature, flag)               \
+    prefBranch->GetBoolPref(feature, &forceEnable);               \
+    if (forceEnable && !isChrome) {                               \
+      chromeFlags |= flag;                                        \
+    } else {                                                      \
+      chromeFlags |= WinHasOption(aFeatures, feature,             \
+                                  0, &presenceFlag)               \
+                     ? flag : 0;                                  \
+    }
+
 /**
  * Calculate the chrome bitmask from a string list of features.
  * @param aFeatures a string containing a list of named chrome features
@@ -1120,6 +1133,23 @@ PRUint32 nsWindowWatcher::CalculateChromeFlags(const char *aFeatures,
 
   /* Next, allow explicitly named options to override the initial settings */
 
+  nsCOMPtr<nsIScriptSecurityManager>
+    securityManager(do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID));
+  NS_ENSURE_TRUE(securityManager, NS_ERROR_FAILURE);
+
+  PRBool isChrome = PR_FALSE;
+  securityManager->SubjectPrincipalIsSystem(&isChrome);
+
+  nsCOMPtr<nsIPrefBranch> prefBranch;
+  nsresult rv;
+  nsCOMPtr<nsIPrefService> prefs = do_GetService(NS_PREFSERVICE_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv, PR_TRUE);
+
+  rv = prefs->GetBranch("dom.disable_window_open_feature.", getter_AddRefs(prefBranch));
+  NS_ENSURE_SUCCESS(rv, PR_TRUE);
+
+  PRBool forceEnable = PR_FALSE;
+
   chromeFlags |= WinHasOption(aFeatures, "titlebar", 0, &presenceFlag)
                  ? nsIWebBrowserChrome::CHROME_TITLEBAR : 0;
   chromeFlags |= WinHasOption(aFeatures, "close", 0, &presenceFlag)
@@ -1131,8 +1161,8 @@ PRUint32 nsWindowWatcher::CalculateChromeFlags(const char *aFeatures,
   chromeFlags |= (WinHasOption(aFeatures, "directories", 0, &presenceFlag) ||
                   WinHasOption(aFeatures, "personalbar", 0, &presenceFlag))
                  ? nsIWebBrowserChrome::CHROME_PERSONAL_TOOLBAR : 0;
-  chromeFlags |= WinHasOption(aFeatures, "status", 0, &presenceFlag)
-                 ? nsIWebBrowserChrome::CHROME_STATUSBAR : 0;
+  NS_CALCULATE_CHROME_FLAG_FOR("status",
+                               nsIWebBrowserChrome::CHROME_STATUSBAR);
   chromeFlags |= WinHasOption(aFeatures, "menubar", 0, &presenceFlag)
                  ? nsIWebBrowserChrome::CHROME_MENUBAR : 0;
   chromeFlags |= WinHasOption(aFeatures, "scrollbars", 0, &presenceFlag)
@@ -1197,16 +1227,10 @@ PRUint32 nsWindowWatcher::CalculateChromeFlags(const char *aFeatures,
      chromeFlags->copy_history
    */
 
-  //Check security state for use in determing window dimensions
-  nsCOMPtr<nsIScriptSecurityManager>
-    securityManager(do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID));
-  NS_ENSURE_TRUE(securityManager, NS_ERROR_FAILURE);
-
+  // Check security state for use in determing window dimensions
   PRBool enabled;
   nsresult res =
     securityManager->IsCapabilityEnabled("UniversalBrowserWrite", &enabled);
-
-   res = securityManager->IsCapabilityEnabled("UniversalBrowserWrite", &enabled);
  
   if (NS_FAILED(res) || !enabled) {
     //If priv check fails, set all elements to minimum reqs., else leave them alone.
@@ -1235,7 +1259,7 @@ nsWindowWatcher::WinHasOption(const char *aOptions, const char *aName,
 
   while (PR_TRUE) {
     while (nsCRT::IsAsciiSpace(*aOptions))
-      aOptions++;
+      ++aOptions;
 
     comma = PL_strchr(aOptions, ',');
     if (comma)
