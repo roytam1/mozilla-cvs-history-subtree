@@ -414,7 +414,7 @@ static int
 nsldapi_os_ioctl( LBER_SOCKET s, int option, int *statusp )
 {
 	int		err;
-#ifdef _WINDOWS
+#if defined(_WINDOWS) || defined(XP_OS2)
 	u_long		iostatus;
 #endif
 
@@ -426,7 +426,11 @@ nsldapi_os_ioctl( LBER_SOCKET s, int option, int *statusp )
 	iostatus = *(u_long *)statusp;
 	err = ioctlsocket( s, FIONBIO, &iostatus );
 #else
+#ifdef XP_OS2
+	err = ioctl( s, FIONBIO, (caddr_t)&iostatus, sizeof(iostatus) );
+#else
 	err = ioctl( s, FIONBIO, (caddr_t)statusp );
+#endif
 #endif
 
 	return( err );
