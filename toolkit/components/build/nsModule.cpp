@@ -51,6 +51,7 @@
 #include "nsGlobalHistory.h"
 #include "nsPasswordManager.h"
 #include "nsSingleSignonPrompt.h"
+#include "nsTypeAheadFind.h"
 
 /////////////////////////////////////////////////////////////////////////////
 
@@ -59,6 +60,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsAlertsService)
 #endif
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAutoCompleteController)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAutoCompleteMdbResult)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsTypeAheadFind)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDownloadProxy)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsDownloadManager, Init)
 NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(nsFormHistory, nsFormHistory::GetInstance)
@@ -147,6 +149,10 @@ static const nsModuleComponentInfo components[] =
     NS_SINGLE_SIGNON_PROMPT_CID,
     "@mozilla.org/wallet/single-sign-on-prompt;1",
     nsSingleSignonPromptConstructor },
+  
+  { "TypeAheadFind Component", NS_TYPEAHEADFIND_CID,
+    NS_TYPEAHEADFIND_CONTRACTID, nsTypeAheadFindConstructor
+  },
 };
 
 NS_IMPL_NSGETMODULE_WITH_DTOR(nsToolkitCompsModule, components, nsToolkitCompModuleDtor)

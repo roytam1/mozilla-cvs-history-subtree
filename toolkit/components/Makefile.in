@@ -57,6 +57,7 @@ DIRS = 		\
 	passwordmgr \
 	printing \
 	satchel \
+	typeaheadfind \
 	viewconfig \
 	viewsource \
 	$(NULL)

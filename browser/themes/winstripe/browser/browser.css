@@ -651,55 +651,71 @@ statusbarpanel#statusbar-display {
   color: #555566;
 }
 
-/* ::::: go button ::::: */
-
-#go-button,
-#go-container {
-  -moz-appearance: none;
-  background-color: transparent;
-  margin: 0;
-  padding: 0;
-  min-width: 0;
-  list-style-image: url("chrome://browser/skin/Go.png");
-  -moz-image-region: rect(0px, 20px, 20px, 0px);
+#find-previous 
+{
+  list-style-image: url("chrome://browser/skin/find.png");
+  -moz-image-region: rect(0px 16px 16px 0px);
 }
 
+#find-previous[disabled="true"]
+{
+  -moz-image-region: rect(0px 48px 16px 32px) !important;
+}
+	
+#find-previous:hover
+{
+  -moz-image-region: rect(0px 32px 16px 16px);
+}
+
+#find-next 
+{
+  list-style-image: url("chrome://browser/skin/find.png");
+  -moz-image-region: rect(16px 16px 32px 0px);
+}
+
+#find-next[disabled="true"]
+{
+  -moz-image-region: rect(16px 48px 32px 32px) !important;
+}
+
+#find-next:hover
+{
+  -moz-image-region: rect(16px 32px 32px 16px);
+}
+
+#highlight
+{
+  list-style-image: url("chrome://browser/skin/highlight.png");
+  -moz-image-region: rect(0px 16px 16px 0px);
+}
+
+#highlight:hover
+{
+  -moz-image-region: rect(0px 32px 16px 16px);
+}
+
+#highlight[disabled="true"]
+{
+  -moz-image-region: rect(0px 48px 16px 32px) !important;
+}
+
+/* ::::: go button ::::: */
+
 #go-button {
-  -moz-appearance: toolbarbutton;
-  border-width: 1px !important;
-  -moz-border-top-colors: transparent;
-  -moz-border-right-colors: transparent;
-  -moz-border-bottom-colors: transparent;
-  -moz-border-left-colors: transparent;
-  -moz-appearance: toolbarbutton;
+  list-style-image: url("chrome://browser/skin/Go.png");
+  -moz-image-region: rect(0px 20px 20px 0px);  
 }
 
 #go-button:hover {
-  -moz-border-top-colors: ThreeDHighlight;
-  -moz-border-right-colors: ThreeDShadow;
-  -moz-border-bottom-colors: ThreeDShadow;
-  -moz-border-left-colors: ThreeDHighlight;
-  -moz-image-region: rect(0px, 40px, 20px, 20px);
-}
-
-#go-button:hover:active {
-  -moz-border-top-colors: ThreeDShadow;
-  -moz-border-right-colors: ThreeDHighlight;
-  -moz-border-bottom-colors: ThreeDHighlight;
-  -moz-border-left-colors: ThreeDShadow;
+  -moz-image-region: rect(0px 40px 20px 20px);
 }
 
 #go-button[disabled="true"] {
-  -moz-image-region: rect(0px, 60px, 20px, 40px);
-  border-color: transparent;
+  -moz-image-region: rect(0px 60px 20px 40px);
 }
 
-#go-button > .button-box > .button-text {
-  margin-left: 5px !important;
-}
-
-#go-button > .button-box {
-  border: none;
+#go-button > .toolbarbutton-text {
+  display: -moz-box !important;
 }
 
 #sidebar {

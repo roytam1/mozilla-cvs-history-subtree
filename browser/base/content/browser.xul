@@ -235,15 +235,15 @@
       </toolbaritem>
       
       <toolbaritem id="go-container" align="center" class="chromeclass-location">
-        <button id="go-button" class="button-toolbar"
-                label="&goButton.label;"
-                oncommand="handleURLBarCommand(event);"
-                ondragover="nsDragAndDrop.dragOver(event, goButtonObserver);"
-                ondragdrop="nsDragAndDrop.drop(event, goButtonObserver);"
-                ondragexit="nsDragAndDrop.dragExit(event, goButtonObserver);"
-                tooltiptext="&goButton.tooltip;"/> 
+        <toolbarbutton id="go-button"
+                       label="&goButton.label;"
+                       oncommand="handleURLBarCommand(event);"
+                       ondragover="nsDragAndDrop.dragOver(event, goButtonObserver);"
+                       ondragdrop="nsDragAndDrop.drop(event, goButtonObserver);"
+                       ondragexit="nsDragAndDrop.dragExit(event, goButtonObserver);"
+                       tooltiptext="&goButton.tooltip;"/> 
       </toolbaritem>
-
+      
       <toolbarbutton id="print-button" class="toolbarbutton-1"
                      label="&printButton.label;" command="cmd_print"
                      tooltiptext="&printButton.tooltip;"/>
@@ -395,6 +395,20 @@
              toolbarname="&personalbarCmd.label;" accesskey="&personalbarCmd.accesskey;"
              context="toolbar-context-menu"/>
     
+    <toolbar id="FindToolbar" hidden="true" align="center">
+      <label value="&find.label;"/>
+      <textbox id="find-field" oninput="BrowserFind(this.value);" onkeydown="BrowserFindKeydown(event);"
+               onblur="BrowserFindBlur();"/>
+      <toolbarbutton id="find-next" label="&findNext.label;" tooltiptext="&findNext.tooltip;"
+                     command="cmd_findAgain" disabled="true"/>
+      <toolbarbutton id="find-previous" label="&findPrevious.label;" tooltiptext="&findPrevious.tooltip;"
+                     command="cmd_findPrevious" disabled="true"/>
+      <toolbarbutton id="highlight" label="&highlight.label;" tooltiptext="&highlight.tooltip;"
+                     oncommand="BrowserHighlight(!this.checked);" type="checkbox" disabled="true"/>
+      <spacer flex="1"/>
+      <toolbarbutton class="tabs-closebutton" tooltiptext="&findCloseButton.tooltip;" oncommand="BrowserCloseFindBar();"/>
+    </toolbar>
+    
   </toolbox>
   
   <hbox flex="1" id="browser">
@@ -413,7 +427,7 @@
       <tabbrowser id="content" disablehistory="true"
                   flex="1" contenttooltip="aHTMLTooltip"
                   contentcontextmenu="contentAreaContextMenu"
-                  onnewtab="BrowserOpenTab();"
+                  onnewtab="BrowserOpenTab();" onkeypress="BrowserKeyPress(event);"
                   autocompleteenabled="true"
                   autocompletepopup="PopupAutoComplete"
                   ondragdrop="nsDragAndDrop.drop(event, contentAreaDNDObserver);"

@@ -20,7 +20,7 @@
 # the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
-#   Blake Ross <blaker@netscape.com>
+#   Blake Ross <blake@cs.stanford.edu>
 #   David Hyatt <hyatt@mozilla.org>
 #   Peter Annema <disttsc@bart.nl>
 #   Dean Tessman <dean_tessman@hotmail.com>
@@ -82,6 +82,11 @@ var gProgressCollapseTimer = null;
 var gPrefService = null;
 var appCore = null;
 var gBrowser = null;
+var gQuickFindMode = false;
+var gQuickFindTimeout = null;
+var gQuickFindTimeoutLength = 0;
+var gHighlightTimeout = null;
+var gLinksMode = false;
 
 // Global variable that holds the nsContextMenu instance.
 var gContextMenu = null;
@@ -144,6 +149,272 @@ function HandleBookmarkIcon(iconURL, addFlag)
     else
       BMSVC.removeBookmarkIcon(url, iconURL);
   }
+}
+
+// DOMRange used during highlighting
+var searchRange;
+var startPt;
+var endPt;
+
+function BrowserHighlight(aHighlight)
+{
+  var word = document.getElementById("find-field").value;
+  if (aHighlight)
+    highlightDoc('yellow', word);
+  else
+    highlightDoc(null, null); 
+}
+
+function highlightDoc(color, word, win)
+{
+  if (!win)
+    win = window._content; 
+
+  for (var i = 0; win.frames && i < win.frames.length; i++) {
+    highlightDoc(word, color, win.frames[i]);
+  }
+
+  var doc = win.document;
+  if (!document)
+    return;
+
+  // Remove highlighting
+  if (!color) {
+    var elem = null;
+    while ((elem = doc.getElementById("__firefox-findbar-search-id"))) {
+      var child = null;
+      var docfrag = doc.createDocumentFragment();
+      var next = elem.nextSibling;
+      var parent = elem.parentNode;
+      while((child = elem.firstChild)) {
+        docfrag.appendChild(child);
+      }
+      parent.removeChild(elem);
+      parent.insertBefore(docfrag, next);
+    }
+    return;
+  }
+
+  if (!("body" in doc))
+    return;
+
+  var body = doc.body;
+  
+  var count = body.childNodes.length;
+  searchRange = doc.createRange();
+  startPt = doc.createRange();
+  endPt = doc.createRange();
+
+  var baseNode = doc.createElement("span");
+  baseNode.setAttribute("style", "background-color: " + color + ";");
+  baseNode.setAttribute("id", "__firefox-findbar-search-id");
+
+  searchRange.setStart(body, 0);
+  searchRange.setEnd(body, count);
+
+  startPt.setStart(body, 0);
+  startPt.setEnd(body, 0);
+  endPt.setStart(body, count);
+  endPt.setEnd(body, count);
+  highlightText(word, baseNode);
+}
+
+function highlightText(word, baseNode)
+{
+  var retRange = null;
+  var finder = Components.classes["@mozilla.org/embedcomp/rangefind;1"].createInstance()
+                         .QueryInterface(Components.interfaces.nsIFind);
+
+  while((retRange = finder.Find(word, searchRange, startPt, endPt))) {
+    // Highlight
+    var nodeSurround = baseNode.cloneNode(true);
+    var node = highlight(retRange, nodeSurround);
+    startPt = node.ownerDocument.createRange();
+    startPt.setStart(node, node.childNodes.length);
+    startPt.setEnd(node, node.childNodes.length);
+  }
+}
+
+function highlight(range, node)
+{
+  var startContainer = range.startContainer;
+  var startOffset = range.startOffset;
+  var endOffset = range.endOffset;
+  var docfrag = range.extractContents();
+  var before = startContainer.splitText(startOffset);
+  var parent = before.parentNode;
+  node.appendChild(docfrag);
+  parent.insertBefore(node, before);
+  return node;
+}
+
+function getSelectionController(ds)
+{
+  return ds.QueryInterface(Components.interfaces.nsIInterfaceRequestor)
+    .getInterface(Components.interfaces.nsISelectionDisplay)
+    .QueryInterface(Components.interfaces.nsISelectionController);
+}
+
+function changeSelectionColor(aAttention)
+{
+  var ds = getBrowser().docShell;
+  var dsEnum = ds.getDocShellEnumerator(Components.interfaces.nsIDocShellTreeItem.typeContent,
+                                        Components.interfaces.nsIDocShell.ENUMERATE_FORWARDS);
+  while (dsEnum.hasMoreElements()) {
+    ds = dsEnum.getNext().QueryInterface(Components.interfaces.nsIDocShell);
+    var controller = getSelectionController(ds);
+    const selCon = Components.interfaces.nsISelectionController;
+    controller.setDisplaySelection(aAttention? selCon.SELECTION_ATTENTION : selCon.SELECTION_ON);
+  }                                      
+}
+
+function BrowserOpenFindBar(aSelect)
+{
+  var findToolbar = document.getElementById("FindToolbar");
+  findToolbar.hidden = false;
+  
+  var findField = document.getElementById("find-field");
+  if (gLinksMode)
+    findField.value = "";
+  else if (aSelect) {
+    findField.focus();
+    findField.select();
+  }
+}
+
+function BrowserCloseFindBar()
+{
+  var findToolbar = document.getElementById("FindToolbar");
+  findToolbar.hidden = true;
+  _content.focus();
+}
+
+function shouldFastFind(evt)
+{
+  if (evt.ctrlKey || evt.altKey || evt.metaKey)
+    return false;
+    
+  var elt = document.commandDispatcher.focusedElement;
+  if (elt) {
+    var ln = elt.localName.toLowerCase();
+    if (ln == "input" || ln == "textarea" || ln == "select" || ln == "button")
+      return false;
+  }  
+  return true;
+}
+
+function isPrintable(c)
+{
+  return (c >= 32 && c <= 126);
+}
+
+function BrowserFindBlur()
+{
+  changeSelectionColor(false);
+  if (gQuickFindMode || gLinksMode) {
+    gQuickFindMode = false;
+    gLinksMode = false;
+    BrowserCloseFindBar();
+  }
+}
+
+function BrowserKeyPress(evt)
+{  
+  // Check focused elt
+  if (!shouldFastFind(evt))
+    return;
+  
+  if (gLinksMode) {    
+    var findField = document.getElementById("find-field");
+    if (evt.keyCode == 8) {
+      if (findField.value) {
+        findField.value = findField.value.substr(0, findField.value.length - 1);
+        evt.preventDefault();
+      }
+    }
+    else if (evt.keyCode == 27) {
+      BrowserFindBlur();
+      return;
+    }
+    else if (isPrintable(evt.charCode)) {
+      findField.value += String.fromCharCode(evt.charCode);
+    }
+    BrowserFind(findField.value);
+    return;
+  }
+  
+  if (evt.charCode == 47) {
+    BrowserOpenFindBar(true);  
+    gQuickFindMode = true;
+    BrowserFindFixTimeout();
+  }
+  else if (evt.charCode == 39) {
+    gLinksMode = true;
+    BrowserOpenFindBar();
+    BrowserFindFixTimeout();
+  }
+}
+
+function BrowserFindKeydown(evt)
+{
+  var fastFind = getBrowser().fastFind;
+  if (evt.keyCode == KeyEvent.DOM_VK_RETURN) {
+    if (evt.shiftKey)
+      BrowserFindPrevious();
+    else
+      BrowserFindNext();
+  }
+  else if (evt.keyCode == KeyEvent.DOM_VK_ESCAPE) {
+    BrowserCloseFindBar();
+  }
+}
+
+function BrowserFind(val)
+{
+  if (!val)
+    val = document.getElementById("find-field").value;
+    
+  var findNext = document.getElementById("find-next");
+  var findPrev = document.getElementById("find-previous");  
+  var highlight = document.getElementById("highlight");
+  findNext.disabled = findPrev.disabled = highlight.disabled = !val;  
+  
+  var highlightBtn = document.getElementById("highlight");
+  if (highlightBtn.checked) {
+    if (gHighlightTimeout)
+      clearTimeout(gHighlightTimeout);
+    gHighlightTimeout = setTimeout(function() { BrowserHighlight(false); BrowserHighlight(true); }, 500);    
+  }
+    
+  changeSelectionColor(true);
+  var fastFind = getBrowser().fastFind;
+  fastFind.find(val, gLinksMode);
+  if (gQuickFindMode || gLinksMode)
+    BrowserFindFixTimeout();
+}
+
+function BrowserFindNext()
+{
+  var fastFind = getBrowser().fastFind;
+  fastFind.findNext();
+  if (gQuickFindMode || gLinksMode)
+    BrowserFindFixTimeout();
+}
+
+function BrowserFindPrevious()
+{
+  var fastFind = getBrowser().fastFind;
+  fastFind.findPrevious();
+  if (gQuickFindMode)
+    BrowserFindFixTimeout();
+}
+
+function BrowserFindFixTimeout()
+{
+  gCloseFindBar = false;
+  if (gQuickFindTimeout)
+    clearTimeout(gQuickFindTimeout);
+  gQuickFindTimeout = setTimeout(BrowserFindBlur, gQuickFindTimeoutLength);
 }
 
 function UpdateBackForwardButtons()
@@ -226,6 +497,7 @@ function Startup()
   // Check for window.arguments[0]. If present, use that for uriToLoad.
   if ("arguments" in window && window.arguments.length >= 1 && window.arguments[0])
     uriToLoad = window.arguments[0];
+    
   gIsLoadingBlank = uriToLoad == "about:blank";
 
   if (!gIsLoadingBlank)
@@ -258,6 +530,10 @@ function Startup()
 
   var sidebarSplitter;
   if (window.opener) {
+    var openerFindBar = window.opener.document.getElementById("FindToolbar");
+    if (!openerFindBar.hidden)
+      BrowserOpenFindBar(false);
+      
     var openerSidebarBox = window.opener.document.getElementById("sidebar-box");
     // The opener can be the hidden window too, if we're coming from the state
     // where no windows are open, and the hidden window has no sidebar box. 
@@ -511,6 +787,8 @@ function delayedStartup()
   gClickSelectsAll = gPrefService.getBoolPref("browser.urlbar.clickSelectsAll");
 
   clearObsoletePrefs();
+ 
+  gQuickFindTimeoutLength = gPrefService.getIntPref("accessibility.typeaheadfind.timeout");
 
 #ifdef XP_WIN
   // Perform default browser checking (after window opens).
@@ -783,23 +1061,7 @@ function BrowserBack(aEvent, aIgnoreAlt)
 #ifndef XP_MACOSX
 function BrowserHandleBackspace()
 {
-  // The order of seeing keystrokes is this:
-  // 1) Chrome, 2) Typeahead, 3) [platform]HTMLBindings.xml
-  // Rather than have typeaheadfind responsible for making VK_BACK 
-  // go back in history, we handle backspace it here as follows:
-  // When backspace is pressed, it might mean back
-  // in typeaheadfind if that's active, or it might mean back in history
-
-  var typeAhead = null;
-  const TYPE_AHEAD_FIND_CONTRACTID = "@mozilla.org/typeaheadfind;1";
-  if (TYPE_AHEAD_FIND_CONTRACTID in Components.classes) {
-    typeAhead = Components.classes[TYPE_AHEAD_FIND_CONTRACTID]
-                .getService(Components.interfaces.nsITypeAheadFind);
-  }
-  
-  if (!typeAhead || !typeAhead.backOneChar()) {
-    BrowserBack();
-  }
+  BrowserBack();
 }
 #endif
 
@@ -1603,29 +1865,6 @@ function showSearchEnginePopup()
   var searchEnginePopup = document.getElementById("SearchBarPopup");
   var searchEngineButton = document.getElementById("search-proxy-button");
   searchEnginePopup.showPopup(searchEngineButton);
-}
-
-
-function quickFindInPage(aValue)
-{
-  var focusedWindow = document.commandDispatcher.focusedWindow;
-  if (!focusedWindow || focusedWindow == window)
-    focusedWindow = window._content;
-      
-  var findInst = gBrowser.webBrowserFind;
-  var findInFrames = findInst.QueryInterface(Components.interfaces.nsIWebBrowserFindInFrames);
-  findInFrames.rootSearchFrame = _content;
-  findInFrames.currentSearchFrame = focusedWindow;
-
-  var findService = Components.classes["@mozilla.org/find/find_service;1"]
-                          .getService(Components.interfaces.nsIFindService);
-  findInst.searchString  = aValue;
-  findInst.matchCase     = findService.matchCase;
-  findInst.wrapFind      = true;
-  findInst.entireWord    = findService.entireWord;
-  findInst.findBackwards = false;
-
-  findInst.findNext();
 }
 
 function updateToolbarStates(toolbarMenuElt)
@@ -2487,7 +2726,7 @@ nsBrowserStatusHandler.prototype =
 
     if (location == "about:blank")
       location = "";
-
+    
     // We should probably not do this if the value has changed since the user
     // searched
     // Update urlbar only if a new page was loaded on the primary content area
@@ -2495,6 +2734,10 @@ nsBrowserStatusHandler.prototype =
 
     var browser = getBrowser().selectedBrowser;
     if (aWebProgress.DOMWindow == content) {
+      var findField = document.getElementById("find-field");
+      if (findField)
+        setTimeout(function() { findField.value = browser.findString; }, 0, findField, browser); 
+      
       //XXXBlake don't we have to reinit this.urlBar, etc.
       //         when the toolbar changes?
       var userTypedValue = browser.userTypedValue;
@@ -2582,6 +2825,7 @@ nsBrowserStatusHandler.prototype =
       observerService.notifyObservers(_content, notification, urlStr);
     } catch (e) {
     }
+    setTimeout(function() { if (document.getElementById("highlight").checked) BrowserHighlight(true); }, 0);
   }
 }
 

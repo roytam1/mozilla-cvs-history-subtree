@@ -232,6 +232,29 @@
         </getter>
       </property>
 
+      <field name="_fastFind">null</field>
+      <property name="fastFind"
+                readonly="true">
+        <getter>
+        <![CDATA[
+          if (!this._fastFind) {
+            this._fastFind = Components.classes["@mozilla.org/typeaheadfind;1"]
+                                       .createInstance(Components.interfaces.nsITypeAheadFind);                                
+            this._fastFind.init(this.docShell);
+          }
+          return this._fastFind;
+        ]]>
+        </getter>
+      </property>
+      
+      <property name="findString" readonly="true">
+        <getter>
+        <![CDATA[
+          return this.fastFind.searchString;
+        ]]>
+        </getter>
+      </property>
+      
       <property name="webProgress"
                 readonly="true"
                 onget="return this.docShell.QueryInterface(Components.interfaces.nsIInterfaceRequestor).getInterface(Components.interfaces.nsIWebProgress);"/>
@@ -491,6 +514,7 @@
           this.detachFormFill();
           
           this.securityUI = null;
+          this._fastFind = null;
 
           this.removeEventListener("unload", this.onUnload, true);
           this.removeEventListener("DOMPopupBlocked", this.onPopupBlocked, true);

@@ -4,6 +4,8 @@ classic.jar:
         skin/classic/browser/browser.xml
         skin/classic/browser/Close-tab.png
         skin/classic/browser/contents.rdf
+        skin/classic/browser/find.png
+        skin/classic/browser/highlight.png
         skin/classic/browser/Go.png
         skin/classic/browser/Info.png
         skin/classic/browser/pageInfo.css

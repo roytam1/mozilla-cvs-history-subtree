@@ -1257,7 +1257,15 @@
       <property name="currentURI"
                 onget="return this.mCurrentBrowser.currentURI;"
                 readonly="true"/>
-
+                
+      <property name="fastFind"
+                onget="return this.mCurrentBrowser.fastFind;"
+                readonly="true"/>    
+                
+      <property name="findString"
+                onget="return this.mCurrentBrowser.fastFindString;"
+                readonly="true"/>
+                
       <property name="docShell"
                 onget="return this.mCurrentBrowser.docShell"
                 readonly="true"/>

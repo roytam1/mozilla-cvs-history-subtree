@@ -90,6 +90,7 @@ bin\components\downloads.xpt
 bin\components\editor.xpt
 bin\components\embed_base.xpt
 bin\components\exthandler.xpt
+bin\components\fastfind.xpt
 bin\components\find.xpt
 bin\components\gfx.xpt
 bin\components\helperAppDlg.xpt
@@ -146,7 +147,6 @@ bin\components\signonviewer.xpt
 bin\components\toolkitprofile.xpt
 bin\components\txtsvc.xpt
 bin\components\txmgr.xpt
-bin\components\typeaheadfind.xpt
 bin\components\ucnative.xpt
 bin\components\uconv.xpt
 bin\components\unicharutil.xpt
