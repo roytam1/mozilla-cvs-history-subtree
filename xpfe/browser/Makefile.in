@@ -32,6 +32,7 @@ DIRS		= src samples resources
 
 include $(topsrcdir)/config/rules.mk
 
+ifndef MOZ_XUL_APP
 ifeq (mac,$(MOZ_WIDGET_TOOLKIT))
 CHROME_PLATFORM = mac
 else
@@ -47,3 +48,4 @@ libs::
 
 install::
 	@$(REGCHROME_INSTALL) locale en-US/navigator-platform en-$(CHROME_PLATFORM).jar
+endif

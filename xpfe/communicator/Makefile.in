@@ -30,6 +30,7 @@ DIRS		= resources
 
 include $(topsrcdir)/config/rules.mk
 
+ifndef MOZ_XUL_APP
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 CHROME_PLATFORM = mac
 else
@@ -45,3 +46,4 @@ libs::
 
 install::
 	@$(REGCHROME_INSTALL) locale en-US/communicator-platform en-$(CHROME_PLATFORM).jar
+endif

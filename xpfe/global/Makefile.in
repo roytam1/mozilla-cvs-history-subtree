@@ -48,8 +48,10 @@ build.dtd: build.dtd.in $(DEPTH)/config/build_number
 	@$(RM) -f $@
 	$(PERL) -I$(topsrcdir)/config $(topsrcdir)/config/aboutime.pl $@ $(DEPTH)/config/build_number $(srcdir)/build.dtd.in
 
+ifndef MOZ_XUL_APP
 libs::
 	@$(REGCHROME) locale en-US/global-platform en-$(CHROME_PLATFORM).jar
 
 install::
 	@$(REGCHROME_INSTALL) locale en-US/global-platform en-$(CHROME_PLATFORM).jar
+endif
