@@ -47,6 +47,16 @@
 
 #include "nsGtkUtils.h" // for nsGtkUtils::gdk_window_flash()
 
+gint handle_toplevel_focus_in(
+    GtkWidget *      aWidget, 
+    GdkEventFocus *  aGdkFocusEvent, 
+    gpointer         aData);
+    
+gint handle_toplevel_focus_out(
+    GtkWidget *      aWidget, 
+    GdkEventFocus *  aGdkFocusEvent, 
+    gpointer         aData);
+
 // this is the nsWindow with the focus
 nsWindow  *nsWindow::focusWindow = NULL;
 
@@ -984,6 +994,18 @@ NS_METHOD nsWindow::CreateNative(GtkObject *parentWidget)
     GTK_WIDGET_SET_FLAGS(mMozArea, GTK_CAN_FOCUS);
     InstallFocusInSignal(mMozArea);
     InstallFocusOutSignal(mMozArea);
+  }
+
+  // track focus in and focus out events for the shell
+  if (mShell) {
+    gtk_signal_connect(GTK_OBJECT(mShell),
+                       "focus_in_event",
+                       GTK_SIGNAL_FUNC(handle_toplevel_focus_in),
+                       this);
+    gtk_signal_connect(GTK_OBJECT(mShell),
+                       "focus_out_event",
+                       GTK_SIGNAL_FUNC(handle_toplevel_focus_out),
+                       this);
   }
 
   // XXX fix this later...
@@ -2161,6 +2183,86 @@ nsWindow::OnRealize(GtkWidget *aWidget)
         gdk_window_set_decorations(mShell->window, (GdkWMDecoration)wmd);
     }
   }
+}
+
+gint handle_toplevel_focus_in(GtkWidget *      aWidget, 
+                              GdkEventFocus *  aGdkFocusEvent, 
+                              gpointer         aData)
+{
+
+  if(!aWidget) {
+    return PR_TRUE;
+  }
+
+  if(!aGdkFocusEvent) {
+    return PR_TRUE;
+  }
+
+  nsWidget * widget = (nsWidget *) aData;
+
+  if(!widget) {
+    return PR_TRUE;
+  }
+
+  nsGUIEvent event;
+  
+  event.message = NS_ACTIVATE;
+  event.widget  = widget;
+
+  event.eventStructType = NS_GUI_EVENT;
+
+  event.time = 0;
+  event.point.x = 0;
+  event.point.y = 0;
+ 
+  NS_ADDREF(widget);
+ 
+  nsEventStatus status;
+  widget->DispatchEvent(&event, status);
+  
+  NS_RELEASE(widget);
+  
+  return PR_TRUE;
+}
+
+gint handle_toplevel_focus_out(GtkWidget *      aWidget, 
+                               GdkEventFocus *  aGdkFocusEvent, 
+                               gpointer         aData)
+{
+  if(!aWidget) {
+    return PR_TRUE;
+  }
+  
+  if(!aGdkFocusEvent) {
+    return PR_TRUE;
+  }
+
+  nsWidget * widget = (nsWidget *) aData;
+
+  if(!widget) {
+    return PR_TRUE;
+  }
+
+  // Dispatch NS_DEACTIVATE
+  nsGUIEvent event;
+  
+  event.message = NS_DEACTIVATE;
+  event.widget  = widget;
+
+  event.eventStructType = NS_GUI_EVENT;
+
+  event.time = 0;
+  event.point.x = 0;
+  event.point.y = 0;
+
+  NS_ADDREF(widget);
+
+  nsEventStatus status;
+  widget->DispatchEvent(&event, status);
+  
+  NS_RELEASE(widget);
+  
+  return PR_TRUE;
 }
 
 void
