@@ -1,4 +1,8 @@
 #include "nsXULAppAPI.h"
+#ifdef XP_WIN
+#include <windows.h>
+#include <stdlib.h>
+#endif
 
 int main(int argc, char* argv[])
 {
