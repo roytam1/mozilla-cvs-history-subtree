@@ -7,15 +7,15 @@
 #   mozilla/gc, , 10/25/2000 12:00:00
 #
 
-mozilla/nsprpub,        NSPRPUB_PRE_4_2_CLIENT_BRANCH
-mozilla/security/nss,   NSS_CLIENT_TAG
-mozilla/security/manager,
-mozilla/accessible,
-mozilla/directory/c-sdk,    ldapcsdk_50_client_branch
-mozilla/lib/mac/Instrumentation
-mozilla/gfx2
-mozilla/modules/libpr0n
-SeaMonkeyAll
+mozilla/nsprpub,        MAIL_05312002_BRANCH
+mozilla/security/nss,   MAIL_05312002_BRANCH
+mozilla/security/manager, MAIL_05312002_BRANCH
+mozilla/accessible,     MAIL_05312002_BRANCH
+mozilla/directory/c-sdk,    MAIL_05312002_BRANCH
+mozilla/lib/mac/Instrumentation, MAIL_05312002_BRANCH
+mozilla/gfx2,           MAIL_05312002_BRANCH
+mozilla/modules/libpr0n, MAIL_05312002_BRANCH
+SeaMonkeyAll,           MAIL_05312002_BRANCH
 ## You need this if you want to be able to use SVG
 ## Note that this library is under the LGPL, not the MPL
 #mozilla/other-licenses/libart_lgpl
