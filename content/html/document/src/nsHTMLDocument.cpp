@@ -1067,13 +1067,12 @@ nsHTMLDocument::InternalInsertStyleSheetAt(nsIStyleSheet* aSheet, PRInt32 aIndex
   mStyleSheets.InsertElementAt(aSheet, aIndex + 1); // offset one for the attr style sheet
 }
 
-
 NS_IMETHODIMP
 nsHTMLDocument::GetBaseURL(nsIURI*& aURL) const
 {
-  if (nsnull != mBaseURL) {
-    NS_ADDREF(mBaseURL);
-    aURL = mBaseURL;
+  if (mDocumentBaseURL) {    
+    aURL = mDocumentBaseURL.get();
+    NS_ADDREF(aURL);
   }
   else {
     aURL = GetDocumentURL();
@@ -1082,21 +1081,7 @@ nsHTMLDocument::GetBaseURL(nsIURI*& aURL) const
 }
 
 NS_IMETHODIMP
-nsHTMLDocument::SetBaseURL(const nsAReadableString& aURLSpec)
-{
-  nsresult result = NS_OK;
-
-  NS_IF_RELEASE(mBaseURL);
-  if (0 < aURLSpec.Length()) {
-    {
-        result = NS_NewURI(&mBaseURL, aURLSpec, mDocumentURL);
-    }
-  }
-  return result;
-}
-
-NS_IMETHODIMP
-nsHTMLDocument::GetBaseTarget(nsAWritableString& aTarget) const
+nsHTMLDocument::GetBaseTarget(nsAWritableString& aTarget)
 {
   if (nsnull != mBaseTarget) {
     aTarget.Assign(*mBaseTarget);
