@@ -262,7 +262,8 @@ nsOutlinerBodyFrame::Destroy(nsIPresContext* aPresContext)
   mColumns = nsnull;
 
   // Drop our ref to the view.
-  mView->SetOutliner(nsnull);
+  if (mView)
+    mView->SetOutliner(nsnull);
   mView = nsnull;
 
   return nsLeafBoxFrame::Destroy(aPresContext);
