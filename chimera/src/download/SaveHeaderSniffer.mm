@@ -336,7 +336,9 @@ nsresult nsHeaderSniffer::InitiateDownload(nsISupports* inSourceData, nsString& 
     flags |= nsIWebBrowserPersist::PERSIST_FLAGS_BYPASS_CACHE;
   else
     flags |= nsIWebBrowserPersist::PERSIST_FLAGS_FROM_CACHE;
-    
+  
+  webPersist->SetPersistFlags(flags);
+  
   if (sourceURI)
   {
     rv = webPersist->SaveURI(sourceURI, mPostData, destFile);
