@@ -312,6 +312,12 @@ nsresult nsAutoConfig::downloadAutoConfig()
     // It is not needed with the repeating timer.
     if (firstTime) {
 
+        service = do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
+        if (NS_FAILED(rv)) 
+            return rv;
+        rv = service->PushThreadEventQueue(getter_AddRefs(currentThreadQ));
+        if (NS_FAILED(rv)) 
+            return rv;
     }
     
     // create a new url 
@@ -342,12 +348,6 @@ nsresult nsAutoConfig::downloadAutoConfig()
     // This is to be done only once.
     if (firstTime) {
     
-        service = do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
-        if (NS_FAILED(rv)) 
-            return rv;
-        rv = service->PushThreadEventQueue(getter_AddRefs(currentThreadQ));
-        if (NS_FAILED(rv)) 
-            return rv;
         /* process events until we're finished. AutoConfig.jsc reading needs
            to be finished before the browser starts loading up
            We are waiting for the mLoaded which will be set through 
