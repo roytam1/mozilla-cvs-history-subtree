@@ -739,6 +739,7 @@ NET_InitNetLib(int socket_buffer_size, int max_number_of_connections)
 
     net_EntryList = XP_ListNew();
 
+#ifndef XP_WIN
 #ifdef MOZILLA_CLIENT
     NET_ReadCacheFAT("", TRUE);
 
@@ -746,6 +747,7 @@ NET_InitNetLib(int socket_buffer_size, int max_number_of_connections)
 
 	
 #endif /* MOZILLA_CLIENT */
+#endif /* XP_WIN */
 
 	NET_TotalNumberOfProcessingURLs=0; /* reset */
 
