@@ -20,10 +20,10 @@
  * Contributor(s):
  */
 
-/* ldap-iplanet.h - iPlanet extensions to the ldap standard */
+/* ldap-extension.h - extensions to the ldap c api specification */
 
-#ifndef _LDAP_IPLANET_H
-#define _LDAP_IPLANET_H
+#ifndef _LDAP_EXTENSION_H
+#define _LDAP_EXTENSION_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -97,6 +97,13 @@ extern "C" {
 /* Password information sent back to client */
 #define LDAP_CONTROL_PWEXPIRED          "2.16.840.1.113730.3.4.4"
 #define LDAP_CONTROL_PWEXPIRING         "2.16.840.1.113730.3.4.5"
+
+/* Suppress virtual/inherited attribute values (iPlanet DS 5.0 and later) */
+#define LDAP_CONTROL_REAL_ATTRS_ONLY	"2.16.840.1.113730.3.4.17"
+
+/* Only return virtual/inherited attribute values (iPlanet DS 5.1 and later) */
+#define LDAP_CONTROL_VIRTUAL_ATTRS_ONLY	"2.16.840.1.113730.3.4.19"
+
 
 LDAP_API(void) LDAP_CALL ldap_ber_free( BerElement *ber, int freebuf );
 
@@ -218,6 +225,7 @@ typedef struct ldap_url_desc {
 #define LDAP_URL_ERR_BADSCOPE   3       /* URL scope string is invalid */
 #define LDAP_URL_ERR_MEM        4       /* can't allocate memory space */
 #define LDAP_URL_ERR_PARAM      5       /* bad parameter to an URL function */
+#define LDAP_URL_UNRECOGNIZED_CRITICAL_EXTENSION	6
 
 /*
  * URL functions:
@@ -644,5 +652,5 @@ LDAP_API(int) LDAP_CALL ldap_utf8isspace( char* s );
 #ifdef __cplusplus
 }
 #endif
-#endif /* _LDAP_IPLANET_H */
+#endif /* _LDAP_EXTENSION_H */
 
