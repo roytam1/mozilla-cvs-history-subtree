@@ -50,7 +50,7 @@
 
 /* bmk2mcf.c function prototypes */
 
-XP_BEGIN_PROTOS
+
 
 RDF_Resource		createSeparator(void);
 RDF_Resource		createContainer (char* id);
@@ -67,6 +67,6 @@ char *			numericDate(char *url);
 void			HT_WriteOutAsBookmarks1 (RDF rdf, PRFileDesc *fp, RDF_Resource u, RDF_Resource top, int indent);
 void			flushBookmarks();
 
-XP_END_PROTOS
+
 
 #endif

@@ -49,7 +49,7 @@
 
 /* nlcstore.c data structures and defines */
 
-extern	int		RDF_PERSONAL_TOOLBAR_NAME;
+
 
 #ifdef	XP_MAC
 #pragma options align=packed

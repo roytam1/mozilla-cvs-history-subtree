@@ -46,13 +46,6 @@ extern	char		*gDefaultNavcntr;
 extern	RDF		gNCDB;
 
 
-/* globals */
-char			*profileDirURL = NULL;
-char			*gLocalStoreURL = NULL;
-char			*gBookmarkURL = NULL;
-char			*gGlobalHistoryURL = NULL;
-void			*timerID = NULL;
-char                    *gRLForbiddenDomains = NULL;
 
 
 
@@ -143,6 +136,19 @@ PR_PUBLIC_API(NET_StreamClass *)
 PUBLIC NET_StreamClass *
 #endif
 
+
+int
+parseNextRDFXMLBlob (NET_StreamClass *stream, char* blob, int32 size)
+{
+  RDFFile f;
+
+  f = (RDFFile)stream->data_object;
+  if ((f == NULL) || (size < 0)) {
+    return MK_INTERRUPTED;
+  }
+  return parseNextRDFXMLBlobInt(f, blob, size);
+}
+
 rdf_Converter(FO_Present_Types format_out, void *client_data,
 		URL_Struct *urls, MWContext *cx)
 {
@@ -158,15 +164,11 @@ rdf_Converter(FO_Present_Types format_out, void *client_data,
 	rdfFile = urls->fe_data;
 	switch(rdfFile->fileType)
 	{
-		case	ES_RT:
+          /*    case	ES_RT:
 		case	FTP_RT:
 		writeFunc = (MKStreamWriteFunc)parseNextESFTPBlob;
 		break;
-
-		case	RDF_MCF:
-		writeFunc = (MKStreamWriteFunc)parseNextMCFBlob;
-		break;
-
+                */
 		default:
 		writeFunc = (MKStreamWriteFunc)parseNextRDFXMLBlob;
 		break;
@@ -412,184 +414,6 @@ beginReadingRDFFile (RDFFile file)
 
 #endif
 }
-
-
-
-/* Returns a new string with inURL unescaped. */
-/* We return a new string because NET_UnEscape unescapes */
-/* string in place */
-char *
-unescapeURL(char *inURL)
-{
-	char *escapedPath = copyString(inURL);
-
-#ifdef MOZILLA_CLIENT
-#ifdef XP_WIN
-	replacePipeWithColon(escapedPath);
-#endif
-
-	NET_UnEscape(escapedPath);
-#endif
-
-	return (escapedPath);
-}
-
-
-
-/* Given a file URL of form "file:///", return substring */
-/* that can be used as a path for PR_Open. */
-/* NOTE: This routine DOESN'T allocate a new string */
-
-
-char *
-convertFileURLToNSPRCopaceticPath(char* inURL)
-{
-#ifdef	XP_WIN
-	if (startsWith("file://", inURL))	return (inURL + 8);
-	else if (startsWith("mailbox:/", inURL))	return (inURL + 9);
-	else if (startsWith("IMAP:/", inURL))	return (inURL + 6);
-	else return (inURL);
-#else
-	/* For Mac & Unix, need preceeding '/' so that NSPR */
-	/* interprets path as full path */
-	if (startsWith("file://", inURL))	return (inURL + 7);
-	else if (startsWith("mailbox:/", inURL))	return (inURL + 8);
-	else if (startsWith("IMAP:/", inURL))	return (inURL + 5);
-	else return (inURL);
-#endif
-}
-
-char* MCDepFileURL (char* url) {
-	char* furl;  
-	int32 len;   
-	char* baz = "\\";
-	int32 n = 0; 
-	furl = convertFileURLToNSPRCopaceticPath(unescapeURL(url));
-	len = strlen(furl);
-#ifdef XP_WIN
-	while (n < len) {
-		if (furl[n] == '/') furl[n] = baz[0];
-		n++;
-	}
-#endif
-	return furl;
-}
-
-PRFileDesc *
-CallPROpenUsingFileURL(char *fileURL, PRIntn flags, PRIntn mode)
-{
-	PRFileDesc* result = NULL;
-	const char *path;
-
-	char *escapedPath = unescapeURL(fileURL);
-	path = convertFileURLToNSPRCopaceticPath(escapedPath);
-
-	if (path != NULL)	{
-		result = PR_Open(path, flags, mode);
-	}
-
-	if (escapedPath != NULL)	freeMem(escapedPath);
-
-	return result;
-}
-
-
-
-PRDir *
-CallPROpenDirUsingFileURL(char *fileURL)
-{
-	PRDir* result = NULL;
-	const char *path;
-	char *escapedPath = unescapeURL(fileURL);
-	path = convertFileURLToNSPRCopaceticPath(escapedPath);
-
-	if (path != NULL)	{
-		result = PR_OpenDir(path);
-	}
-
-	if (escapedPath != NULL)	freeMem(escapedPath);
-
-	return result;
-}
-
-
-
-int32
-CallPRWriteAccessFileUsingFileURL(char *fileURL)
-{
-	int32 result = -1;
-	const char *path;
-	char *escapedPath = unescapeURL(fileURL);
-	path = convertFileURLToNSPRCopaceticPath(escapedPath);
-
-	if (path != NULL)	{
-		result = PR_Access(path, PR_ACCESS_WRITE_OK);
-	}
-
-	if (escapedPath != NULL)	freeMem(escapedPath);
-
-	return result;
-}
-
-
-
-int32
-CallPRDeleteFileUsingFileURL(char *fileURL)
-{
-	int32 result = -1;
-	const char *path;
-	char *escapedPath = unescapeURL(fileURL);
-	path = convertFileURLToNSPRCopaceticPath(escapedPath);
-
-	if (path != NULL)	{
-		result = PR_Delete(path);
-	}
-
-	if (escapedPath != NULL)	freeMem(escapedPath);
-
-	return result;
-}
-
-
-
-int
-CallPR_RmDirUsingFileURL(char *dirURL)
-{
-	int32 result=-1;
-	const char *path;
-
-	char *escapedPath = unescapeURL(dirURL);
-	path = convertFileURLToNSPRCopaceticPath(escapedPath);
-
-	if (path != NULL)	{
-		result = PR_RmDir(path);
-	}
-
-	if (escapedPath != NULL)	freeMem(escapedPath);
-
-	return result;
-}
-
-
-
-int32
-CallPRMkDirUsingFileURL(char *dirURL, int mode)
-{
-	int32 result=-1;
-	const char *path;
-
-	char *escapedPath = unescapeURL(dirURL);
-	path = convertFileURLToNSPRCopaceticPath(escapedPath);
-
-	if (path != NULL)	{
-		result = PR_MkDir(path,mode);
-	}
-
-	if (escapedPath != NULL)	freeMem(escapedPath);
-
-	return result;
-}
-
 
 
 #ifdef MOZILLA_CLIENT

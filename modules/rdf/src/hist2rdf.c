@@ -116,7 +116,7 @@ collateOneHist (RDFT r, RDF_Resource u, char* url, char* title, time_t lastAcces
   uint32      oldNumAccess = 0;
   if (startsWith("404", title)) return;
   urlUnit  = HistCreate(url, 1);
-  existingName = nlocalStoreGetSlotValue(gLocalStore, urlUnit, gCoreVocab->RDF_name, RDF_STRING_TYPE, 0, 1);
+  existingName = remoteStoreGetSlotValue(gLocalStore, urlUnit, gCoreVocab->RDF_name, RDF_STRING_TYPE, 0, 1);
 
   XP_ASSERT( IsUTF8String((const char* )existingName));
 

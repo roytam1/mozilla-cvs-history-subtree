@@ -24,18 +24,6 @@
 */
 
 #include "mcf.h"
-#include "columns.h"
-#include "find2rdf.h"
-#include "fs2rdf.h"
-#include "hist2rdf.h"
-#include "nlcstore.h"
-#include "remstore.h"
-#include "es2mcf.h"
-#include "pm2rdf.h"
-#include "scook.h"
-#include "atalk.h"
-#include "ht.h"
-#include "utils.h"
 
 #ifdef DEBUG_guha
 #define SMART_MAIL 1
@@ -52,29 +40,12 @@ getTranslator (char* url)
 {
   RDFT ans = PL_HashTableLookup(dataSourceHash, url);
   if (ans) return ans;
-#ifdef MOZILLA_CLIENT
   if (startsWith(url, "rdf:localStore")) {
     ans = MakeLocalStore(url);
-  } else
-#endif
-  if (startsWith(url, "rdf:remoteStore")) {
+  } else if (startsWith(url, "rdf:remoteStore")) {
     ans =  MakeRemoteStore(url);
-  } 
-#ifdef MOZILLA_CLIENT  
-  else if (startsWith(url, "rdf:history")) {
-    ans = MakeHistoryStore(url);
-  } else if (startsWith(url, "rdf:esftp")) {
-    ans = MakeESFTPStore(url);
-    /*  } else if (startsWith(url, "rdf:mail")) {
-    ans = MakeMailStore(url); */
-  } else if (startsWith(url, "rdf:lfs")) {
-    ans = MakeLFSStore(url);
-
-#ifdef	XP_MAC
-  } else if (startsWith(url, "rdf:appletalk")) {
-    ans = MakeAtalkStore(url);
-#endif
-
+  } else if (startsWith(url, "rdf:bookmarks")) {
+    ans = MakeBMKStore(url);
   } else if (strstr(url, ".rdf") || strstr(url, ".RDF") || 
 		     strstr(url, ".mcf") || strstr(url, ".MCF")) {
     ans = MakeFileDB(url);
@@ -84,39 +55,11 @@ getTranslator (char* url)
     ans = MakeSCookDB(url);
   } else if (startsWith("rdf:CookieStore", url)) {
     ans = MakeCookieStore(url);
-  } else if (startsWith("rdf:find", url)) {
-    ans = MakeFindStore(url);
-  } 
-#endif
-
-    else if (startsWith("http://", url)) {
+  } else if (startsWith("http://", url)) {
 	  ans = MakeFileDB(url); 
-    } else if (startsWith("mailbox://", url)){
-#ifdef SMART_MAIL 
-      ans = MakePopDB(url);
-#else
-      ans = NULL;
-#endif
-    } else if (startsWith("mailaccount://", url)) {
-#ifdef SMART_MAIL
-      ans = MakeMailAccountDB(url);
-#else
-      ans = NULL;
-#endif
-    } else {
-	  ans = NULL;
+  } else {
+    ans = NULL;
   }
-#ifdef MOZILLA_CLIENT
-#ifdef DEBUG
-  {
-    char* traceLine = getMem(500);
-    sprintf(traceLine, "\nCreated %s \n", url);
-    FE_Trace(traceLine);
-    freeMem(traceLine);
-  }
-#endif
-#endif
-
   if (ans) PL_HashTableAdd(dataSourceHash, ans->url, ans);
   return ans;
 }
@@ -170,16 +113,6 @@ RDF_AddDataSource(RDF rdf, char* dataSource)
   while (((next = rdf->translators[n++]) != NULL) && (n < rdf->numTranslators)) {
     if (strcmp(next->url, dataSource) == 0) return next;
   }
-#ifdef MOZILLA_CLIENT
-#ifdef DEBUG
-  {
-    char* traceLine = getMem(500);
-    sprintf(traceLine, "\nAdding %s \n", dataSource);
-    FE_Trace(traceLine);
-    freeMem(traceLine);
-  }
-#endif
-#endif
   if (rdf->numTranslators >= rdf->translatorArraySize) {
     RDFT* tmp = (RDFT*)getMem((rdf->numTranslators+5)*(sizeof(RDFT)));
     memcpy(tmp, rdf->translators, (rdf->numTranslators * sizeof(RDFT)));
@@ -317,8 +250,6 @@ rdfassert(RDF rdf, RDF_Resource u, RDF_Resource  s, void* value,
 {
    int32 size =  rdf->numTranslators;
    int32 n = size -1;
-
-   XP_ASSERT( (type != RDF_STRING_TYPE ) || IsUTF8String((const char*)value));
    
    /* XXX - what happens here if there is no local store? */     
    if ((size > 1) && (callHasAssertions(0, rdf, u, s, value, type, (!tv)))) {
@@ -357,7 +288,6 @@ PR_PUBLIC_API(PRBool)
 RDF_CanAssert(RDF r, RDF_Resource u, RDF_Resource s, 
 		    void* v, RDF_ValueType type)
 {
-	XP_ASSERT( (type != RDF_STRING_TYPE ) || IsUTF8String((const char*)v));
 	return true;
 }
 
@@ -366,7 +296,6 @@ RDF_CanAssert(RDF r, RDF_Resource u, RDF_Resource s,
 PR_PUBLIC_API(PRBool)
 RDF_CanAssertFalse(RDF r, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType type)
 {
-	XP_ASSERT( (type != RDF_STRING_TYPE ) || IsUTF8String((const char*)v));
 	return true;
 }
 
@@ -375,7 +304,6 @@ RDF_CanAssertFalse(RDF r, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType
 PR_PUBLIC_API(PRBool)
 RDF_CanUnassert(RDF r, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType type)
 {
-	XP_ASSERT( (type != RDF_STRING_TYPE ) || IsUTF8String((const char*)v));
 	return true;
 }
 
@@ -388,7 +316,6 @@ RDF_Unassert (RDF rdf, RDF_Resource u, RDF_Resource s, void* value, RDF_ValueTyp
   int32 size =  rdf->numTranslators;
   int32 n = 0;
   
-   XP_ASSERT( (type != RDF_STRING_TYPE ) || IsUTF8String((const char*)value));
   setLockedp(u, 1);
   while (allok && (n < size)) {
     if (callHasAssertions(n, rdf, u, s, value, type, 1)) {
@@ -460,7 +387,7 @@ iscontainerp (RDF_Resource u)
   } 
 #ifdef MOZILLA_CLIENT  
   else if (startsWith("file:", id)) {
-    return (endsWith("/", id) || fileDirectoryp(u));
+    return (endsWith("/", id) /* || fileDirectoryp(u) */);
   } else if (startsWith("ftp:", id) && (endsWith("/", id))) {
     return 1;
   } else if (startsWith("cache:container", id)) {
@@ -579,9 +506,6 @@ RDF_DeleteAllArcs (RDF rdf, RDF_Resource u)
     remoteStoreRemove(gRemoteStore, as->u, as->s, as->value, as->type);
     as = next;
   }
-#if defined(DBMTEST) && defined(MOZILLA_CLIENT)
- nlclStoreKill(gLocalStore, u);
-#endif
   return 0;
 }
 
@@ -603,7 +527,6 @@ RDF_HasAssertion (RDF rdf, RDF_Resource u, RDF_Resource s,
 {
   int32 size = rdf->numTranslators;
   int32 n = 0;
-  XP_ASSERT( (type != RDF_STRING_TYPE ) || IsUTF8String((const char*)v));
   if (callHasAssertions(0, rdf, u, s, v, type, !tv)) return 0;
   while (n < size) {
     if (callHasAssertions(n, rdf, u, s, v, type, tv)) return 1;
@@ -627,8 +550,6 @@ RDF_GetSlotValue (RDF rdf, RDF_Resource u, RDF_Resource s,
     void*  ans = callGetSlotValue(n, rdf, u, s, type, inversep, tv);
     if ((ans != NULL) && ((n == 0)||(!callHasAssertions(0, rdf, u, s, ans, type, !tv))))
     {
-
-    	XP_ASSERT( (type != RDF_STRING_TYPE ) || IsUTF8String((const char*)ans));
 
     	if (type == RDF_RESOURCE_TYPE) {
       		return addDep(rdf, ans) ;
@@ -905,7 +826,6 @@ PR_PUBLIC_API(RDF_Cursor)
 RDF_Find (RDF_Resource s, RDF_Resource match, void* v, RDF_ValueType type)
 {
   RDF_Cursor c = (RDF_Cursor) getMem(sizeof(struct RDF_CursorStruct));
-  XP_ASSERT( (type != RDF_STRING_TYPE ) || IsUTF8String((const char*)v));
   c->s = s;
   c->match = match;
   c->value = v;
@@ -1161,7 +1081,7 @@ sendNotifications2 (RDFT r, RDF_EventType opType, RDF_Resource u, RDF_Resource s
   RDFL rl = r->rdf;
 
   if ((opType == RDF_ASSERT_NOTIFY) && gLocalStore &&
-      (nlocalStoreHasAssertion(gLocalStore, u, s, v, type, !tv))) {
+      (remoteStoreHasAssertion(gLocalStore, u, s, v, type, !tv))) {
 	  return;
   }
 

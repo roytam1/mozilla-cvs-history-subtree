@@ -21,13 +21,6 @@
 
 
 #include "rdf-int.h"
-#include "mcom_ndbm.h"
-#include "time.h"
-#include "xp_mcom.h"
-#include "xp_mem.h"
-#include "xp_str.h"
-#include "xpgetstr.h"
-#include "glhist.h"
 
 #include <stdio.h>
 

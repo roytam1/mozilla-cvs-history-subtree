@@ -50,12 +50,6 @@ extern	int	RDF_VOLUME_DESC_STR, RDF_DIRECTORY_DESC_STR, RDF_FILE_DESC_STR;
 #define XP_DIRECTORY_SEPARATOR '/'
 
 
-#ifdef	XP_WIN
-#define	FS_URL_OFFSET		8
-#else
-#define	FS_URL_OFFSET		7
-#endif
-
 
 
 /* fs2rdf.c function prototypes */

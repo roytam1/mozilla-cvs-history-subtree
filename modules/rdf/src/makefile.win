@@ -25,12 +25,7 @@ LIBRARY_SUFFIX=$(MOZ_BITS)
 !ifndef MAKE_OBJ_TYPE
 MAKE_OBJ_TYPE=DLL
 !else
-!ifdef MAKE_SPF
-OBJS= $(OBJS) .\$(OBJDIR)\spf2ldif.obj \
-              .\$(OBJDIR)\hashtable.obj
-!else
 OBJS= $(OBJS) .\$(OBJDIR)\test.obj
-!endif
 # LLIBS=$(LIBNSPR) 
 # !endif
 !ifndef	MOZ_DEBUG
@@ -52,15 +47,9 @@ C_OBJS=.\$(OBJDIR)\vocab.obj \
        .\$(OBJDIR)\remstore.obj \
        .\$(OBJDIR)\utils.obj \
        .\$(OBJDIR)\rdfparse.obj \
-       .\$(OBJDIR)\ldap2rdf.obj \
-       .\$(OBJDIR)\mcff2mcf.obj \
-       .\$(OBJDIR)\bmk2mcf.obj \
-       .\$(OBJDIR)\glue.obj \
-       .\$(OBJDIR)\rdfht.obj \
-!ifdef SMART_MAIL
-       .\$(OBJDIR)\pm2rdf.obj \
-!endif
        .\$(OBJDIR)\jsec2rdf.obj \
+       .\$(OBJDIR)\bmk2mcf.obj \
+       .\$(OBJDIR)\rdfht.obj \
        $(NULL)
 
        
@@ -73,12 +62,7 @@ EXTRA_OBJS =  \
 !else
 C_OBJS = $(C_OBJS) \
        .\$(OBJDIR)\ht.obj \
-       .\$(OBJDIR)\find2rdf.obj \
-       .\$(OBJDIR)\fs2rdf.obj \
-       .\$(OBJDIR)\hist2rdf.obj \
-       .\$(OBJDIR)\es2mcf.obj \
-       .\$(OBJDIR)\columns.obj \
-       .\$(OBJDIR)\nlcstore.obj
+       .\$(OBJDIR)\columns.obj
 !endif
        
 !if "$(MOZ_BITS)" != "16"

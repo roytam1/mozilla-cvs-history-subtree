@@ -24,7 +24,7 @@
 
 #include "rdfparse.h"
 #include "mcf.h"
-#include "mcff2mcf.h"
+
 
 #define wsCharp(c) ((c == '\r') || (c == '\t') || (c == ' ') || (c == '\n'))
 
@@ -133,18 +133,6 @@ int parseNextRDFXMLBlobInt(RDFFile f, char* blob, int32 size) {
   return(size);
 }
 
-int
-parseNextRDFXMLBlob (NET_StreamClass *stream, char* blob, int32 size)
-{
-  RDFFile f;
-
-  f = (RDFFile)stream->data_object;
-  if ((f == NULL) || (size < 0)) {
-    return MK_INTERRUPTED;
-  }
-  return parseNextRDFXMLBlobInt(f, blob, size);
-}
-
 
 void
 parseRDFProcessingInstruction (RDFFile f, char* token)
@@ -158,11 +146,11 @@ parseRDFProcessingInstruction (RDFFile f, char* token)
     if ((as != NULL) && (url != NULL)) {
       XMLNameSpace ns = (XMLNameSpace)getMem(sizeof(struct XMLNameSpaceStruct));
       size_t urln = strlen(url);
-      XP_Bool addSlash = (url[urln-1] != '/');
+      PRBool addSlash = (url[urln-1] != '/');
       if(addSlash) urln++;
       ns->url = (char*)getMem(sizeof(char) * (urln + 1));
       sprintf(ns->url, "%s%s", url, addSlash ? "/" : "");
-      ns->as = XP_STRDUP(as);
+      ns->as = copyString(as);
       ns->next = f->namespaces;
       f->namespaces = ns;
     }

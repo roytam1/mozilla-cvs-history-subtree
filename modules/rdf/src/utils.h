@@ -23,8 +23,6 @@
 #include "rdf-int.h"
 #include "htrdf.h"
 #include "prprf.h"
-#include "xp.h"
-#include "glue.h"
 #include <stdarg.h>
 #include <ctype.h>
 
@@ -40,7 +38,7 @@
 
 /* utils.c function prototypes */
 
-XP_BEGIN_PROTOS
+
 
 RDF_Resource	getMCFFrtop (char* furl);
 void		addToResourceList (RDFFile f, RDF_Resource u);
@@ -85,6 +83,7 @@ RDF_Error	CookieDisposeCursor(RDFT rdf, RDF_Cursor c);
 PRBool		CookieAssert(RDFT rdf, RDF_Resource u, RDF_Resource s, void *v, RDF_ValueType type, PRBool tv);
 void *		CookieGetSlotValue(RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type, PRBool inversep, PRBool tv);
 
-XP_END_PROTOS
+
 
 #endif
+

@@ -22,9 +22,8 @@
    For more information on RDF, look at the RDF section of www.mozilla.org
 */
 
-#include "fs2rdf.h"
+
 #include "utils.h"
-#include "nlcstore.h"
 #include "vocabint.h"
 
 
@@ -51,6 +50,26 @@ compareStrings(char *s1, char *s2)
 }
 
 
+char *
+makeRDFDBURL(char* directory, char* name)
+{
+  char		*ans;
+  size_t		s;
+  
+  if (profileDirURL == NULL) return NULL;
+  if ((ans = (char*) getMem(strlen(profileDirURL) + strlen(directory) + strlen(name) + 3)) != NULL) {
+    s = strlen(profileDirURL);
+    memcpy(ans, profileDirURL, s);
+    if (ans[s-1] != '/') {
+      ans[s++] = '/';
+    }
+    stringAppend(ans, directory);
+    stringAppend(ans, "/");
+    stringAppend(ans, name);
+  }
+  return(ans);
+}
+
 
 RDF_Resource
 getMCFFrtop (char* furl)
@@ -60,6 +79,16 @@ getMCFFrtop (char* furl)
   r = RDF_GetResource(NULL, url, 1);
   freeMem(url);
   return r;
+}
+
+char*
+copyString (const char* url) {
+  int32 len = strlen(url);
+  char* newStr = (char*)getMem(len+1);
+  if (newStr != NULL) {
+    memcpy(newStr, url, len);
+  } 
+  return newStr;
 }
 
 
@@ -228,18 +257,6 @@ append2Strings (const char* str1, const char* str2)
   memcpy(ans, str1, l1);
   memcpy(&ans[l1], str2, len-l1);
   return ans;
-}
-
-
-
-char *
-convertString2UTF8AndAppend (int16 charSetID, const char* str1, const char* str2)
-{
-  char* utf8str1 = (char*) INTL_ConvertLineWithoutAutoDetect(charSetID,
-		CS_UTF8, (unsigned char*) str1, strlen(str1));
-  char* newString = append2Strings( utf8str1, str2);
-  XP_FREEIF(utf8str1);
-  return newString;
 }
 
 
@@ -470,124 +487,28 @@ makeResourceName (RDF_Resource node)
 	name =  resourceID(node);
 	if (startsWith("http:", resourceID(node)))
 	{
-		name = &name[7];
+      name = &name[7];
 	}
 	else if (startsWith("file:", resourceID(node)))
 	{
-		name = &name[FS_URL_OFFSET];
+      name = &name[FS_URL_OFFSET];
 	}
 	else
 	{
-		if ((name = getResourceDefaultName(node)) == NULL)
-		{
-			name = resourceID(node);
-		}
+      name = resourceID(node);
+
 	}
 	return ((name != NULL) ? copyString(name) : NULL);
 }
 
-
-#define kLeft1BitMask  0x80
-#define kLeft2BitsMask 0xC0
-#define kLeft3BitsMask 0xE0
-#define kLeft4BitsMask 0xF0
-#define kLeft5BitsMask 0xF8
-#define kLeft6BitsMask 0xFC
-#define kLeft7BitsMask 0xFE
-
-#define k2BytesLeadByte kLeft2BitsMask
-#define k3BytesLeadByte kLeft3BitsMask
-#define k4BytesLeadByte kLeft4BitsMask
-#define k5BytesLeadByte kLeft5BitsMask
-#define k6BytesLeadByte kLeft6BitsMask
-#define kTrialByte      kLeft1BitMask
-
-#define UTF8_1Byte(c) ( 0 == ((c) & kLeft1BitMask))
-#define UTF8_2Bytes(c) ( k2BytesLeadByte == ((c) & kLeft3BitsMask))
-#define UTF8_3Bytes(c) ( k3BytesLeadByte == ((c) & kLeft4BitsMask))
-#define UTF8_4Bytes(c) ( k4BytesLeadByte == ((c) & kLeft5BitsMask))
-#define UTF8_5Bytes(c) ( k5BytesLeadByte == ((c) & kLeft6BitsMask))
-#define UTF8_6Bytes(c) ( k6BytesLeadByte == ((c) & kLeft7BitsMask))
-#define UTF8_ValidTrialByte(c) ( kTrialByte == ((c) & kLeft2BitsMask))
-
-
-PRBool IsUTF8String(const char* utf8)
-{
-	if(NULL == utf8)
-		return TRUE;
-	return IsUTF8Text(utf8, strlen(utf8));
-}
-PRBool IsUTF8Text(const char* utf8, int32 len)
-{
-   int32 i;
-   int32 j;
-   int32 clen;
-   for(i =0; i < len; i += clen)
-   {
-      if(UTF8_1Byte(utf8[i]))
-      {
-        clen = 1;
-      } else if(UTF8_2Bytes(utf8[i])) {
-        clen = 2;
-	/* No enough trail bytes */
-        if( (i + clen) > len) 
-	  return FALSE;
-	/* 0000 0000 - 0000 007F : should encode in less bytes */
-        if(0 ==  (utf8[i] & 0x1E )) 
-          return FALSE;
-      } else if(UTF8_3Bytes(utf8[i])) {
-        clen = 3;
-	/* No enough trail bytes */
-        if( (i + clen) > len) 
-	  return FALSE;
-	/* 0000 0000 - 0000 07FF : should encode in less bytes */
-        if((0 ==  (utf8[i] & 0x0F )) && (0 ==  (utf8[i+1] & 0x20 ) )) 
-          return FALSE;
-      } else if(UTF8_4Bytes(utf8[i])) {
-        clen = 4;
-	/* No enough trail bytes */
-        if( (i + clen) > len) 
-	  return FALSE;
-	/* 0000 0000 - 0000 FFFF : should encode in less bytes */
-        if((0 ==  (utf8[i] & 0x07 )) && (0 ==  (utf8[i+1] & 0x30 )) ) 
-          return FALSE;
-      } else if(UTF8_5Bytes(utf8[i])) {
-        clen = 5;
-	/* No enough trail bytes */
-        if( (i + clen) > len) 
-	  return FALSE;
-	/* 0000 0000 - 001F FFFF : should encode in less bytes */
-        if((0 ==  (utf8[i] & 0x03 )) && (0 ==  (utf8[i+1] & 0x38 )) ) 
-          return FALSE;
-      } else if(UTF8_6Bytes(utf8[i])) {
-        clen = 6;
-	/* No enough trail bytes */
-        if( (i + clen) > len) 
-	  return FALSE;
-	/* 0000 0000 - 03FF FFFF : should encode in less bytes */
-        if((0 ==  (utf8[i] & 0x01 )) && (0 ==  (utf8[i+1] & 0x3E )) ) 
-          return FALSE;
-      } else {
-        return FALSE;
-      }
-      for(j = 1; j<clen ;j++)
-      {
-	if(! UTF8_ValidTrialByte(utf8[i+j])) /* Trail bytes invalid */
-	  return FALSE;
-      }
-   }
-   return TRUE;
-}
 
 
 PR_PUBLIC_API(char *)
 RDF_GetResourceName(RDF rdf, RDF_Resource node)
 {
   char* name = RDF_GetSlotValue(rdf, node, gCoreVocab->RDF_name, RDF_STRING_TYPE, false, true);
-  XP_ASSERT( IsUTF8String(name));
   if (name != NULL) return name;
   name = makeResourceName(node);
-  XP_ASSERT( IsUTF8String(name));
   return name;
 }
 
@@ -597,13 +518,13 @@ PR_PUBLIC_API(RDF_Resource)
 RDFUtil_GetFirstInstance (RDF_Resource type, char* defaultURL)
 {
 
-  RDF_Resource bmk = nlocalStoreGetSlotValue(gLocalStore, type,
+  RDF_Resource bmk = remoteStoreGetSlotValue(gLocalStore, type,
 					     gCoreVocab->RDF_instanceOf,
 					     RDF_RESOURCE_TYPE, true, true);
   if (bmk == NULL) {
     /* bmk = RDF_GetResource(NULL, defaultURL, 1); */
     bmk = createContainer(defaultURL);
-    nlocalStoreAssert(gLocalStore, bmk, gCoreVocab->RDF_instanceOf, 
+    remoteAssert(gLocalStore, bmk, gCoreVocab->RDF_instanceOf, 
 		      type, RDF_RESOURCE_TYPE, 1);
   }
   return bmk;
@@ -613,15 +534,15 @@ RDFUtil_GetFirstInstance (RDF_Resource type, char* defaultURL)
 PR_PUBLIC_API(void)
 RDFUtil_SetFirstInstance (RDF_Resource type, RDF_Resource item)
 {
-  RDF_Resource bmk = nlocalStoreGetSlotValue(gLocalStore, type,
+  RDF_Resource bmk = remoteStoreGetSlotValue(gLocalStore, type,
 					     gCoreVocab->RDF_instanceOf,
 					     RDF_RESOURCE_TYPE, true, true);
   if (bmk) {
-    nlocalStoreUnassert(gLocalStore, bmk,  gCoreVocab->RDF_instanceOf, 
+    remoteUnassert(gLocalStore, bmk,  gCoreVocab->RDF_instanceOf, 
 			type,	 RDF_RESOURCE_TYPE);
   }
   if (item) {
-    nlocalStoreAssert(gLocalStore, item, gCoreVocab->RDF_instanceOf, 
+    remoteAssert(gLocalStore, item, gCoreVocab->RDF_instanceOf, 
 			type, RDF_RESOURCE_TYPE, true);
   }
 }
@@ -906,4 +827,184 @@ MakeCookieStore (char* url)
     } else return gCookieStore;
   } else return NULL;
 }
+
+
+
+/* Returns a new string with inURL unescaped. */
+/* We return a new string because NET_UnEscape unescapes */
+/* string in place */
+char *
+unescapeURL(char *inURL)
+{
+	char *escapedPath = copyString(inURL);
+
+#ifdef MOZILLA_CLIENT
+#ifdef XP_WIN
+	replacePipeWithColon(escapedPath);
+#endif
+
+	NET_UnEscape(escapedPath);
+#endif
+
+	return (escapedPath);
+}
+
+
+
+/* Given a file URL of form "file:///", return substring */
+/* that can be used as a path for PR_Open. */
+/* NOTE: This routine DOESN'T allocate a new string */
+
+
+char *
+convertFileURLToNSPRCopaceticPath(char* inURL)
+{
+#ifdef	XP_WIN
+	if (startsWith("file://", inURL))	return (inURL + 8);
+	else if (startsWith("mailbox:/", inURL))	return (inURL + 9);
+	else if (startsWith("IMAP:/", inURL))	return (inURL + 6);
+	else return (inURL);
+#else
+	/* For Mac & Unix, need preceeding '/' so that NSPR */
+	/* interprets path as full path */
+	if (startsWith("file://", inURL))	return (inURL + 7);
+	else if (startsWith("mailbox:/", inURL))	return (inURL + 8);
+	else if (startsWith("IMAP:/", inURL))	return (inURL + 5);
+	else return (inURL);
+#endif
+}
+
+char* MCDepFileURL (char* url) {
+	char* furl;  
+	int32 len;   
+	char* baz = "\\";
+	int32 n = 0; 
+	furl = convertFileURLToNSPRCopaceticPath(unescapeURL(url));
+	len = strlen(furl);
+#ifdef XP_WIN
+	while (n < len) {
+		if (furl[n] == '/') furl[n] = baz[0];
+		n++;
+	}
+#endif
+	return furl;
+}
+
+PRFileDesc *
+CallPROpenUsingFileURL(char *fileURL, PRIntn flags, PRIntn mode)
+{
+	PRFileDesc* result = NULL;
+	const char *path;
+
+	char *escapedPath = unescapeURL(fileURL);
+	path = convertFileURLToNSPRCopaceticPath(escapedPath);
+
+	if (path != NULL)	{
+		result = PR_Open(path, flags, mode);
+	}
+
+	if (escapedPath != NULL)	freeMem(escapedPath);
+
+	return result;
+}
+
+
+
+PRDir *
+CallPROpenDirUsingFileURL(char *fileURL)
+{
+	PRDir* result = NULL;
+	const char *path;
+	char *escapedPath = unescapeURL(fileURL);
+	path = convertFileURLToNSPRCopaceticPath(escapedPath);
+
+	if (path != NULL)	{
+		result = PR_OpenDir(path);
+	}
+
+	if (escapedPath != NULL)	freeMem(escapedPath);
+
+	return result;
+}
+
+
+
+int32
+CallPRWriteAccessFileUsingFileURL(char *fileURL)
+{
+	int32 result = -1;
+	const char *path;
+	char *escapedPath = unescapeURL(fileURL);
+	path = convertFileURLToNSPRCopaceticPath(escapedPath);
+
+	if (path != NULL)	{
+		result = PR_Access(path, PR_ACCESS_WRITE_OK);
+	}
+
+	if (escapedPath != NULL)	freeMem(escapedPath);
+
+	return result;
+}
+
+
+
+int32
+CallPRDeleteFileUsingFileURL(char *fileURL)
+{
+	int32 result = -1;
+	const char *path;
+	char *escapedPath = unescapeURL(fileURL);
+	path = convertFileURLToNSPRCopaceticPath(escapedPath);
+
+	if (path != NULL)	{
+		result = PR_Delete(path);
+	}
+
+	if (escapedPath != NULL)	freeMem(escapedPath);
+
+	return result;
+}
+
+
+
+int
+CallPR_RmDirUsingFileURL(char *dirURL)
+{
+	int32 result=-1;
+	const char *path;
+
+	char *escapedPath = unescapeURL(dirURL);
+	path = convertFileURLToNSPRCopaceticPath(escapedPath);
+
+	if (path != NULL)	{
+		result = PR_RmDir(path);
+	}
+
+	if (escapedPath != NULL)	freeMem(escapedPath);
+
+	return result;
+}
+
+
+
+int32
+CallPRMkDirUsingFileURL(char *dirURL, int mode)
+{
+	int32 result=-1;
+	const char *path;
+
+	char *escapedPath = unescapeURL(dirURL);
+	path = convertFileURLToNSPRCopaceticPath(escapedPath);
+
+	if (path != NULL)	{
+		result = PR_MkDir(path,mode);
+	}
+
+	if (escapedPath != NULL)	freeMem(escapedPath);
+
+	return result;
+}
+
+
+
 #endif /* MOZILLA_CLIENT */

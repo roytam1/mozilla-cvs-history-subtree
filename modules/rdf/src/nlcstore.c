@@ -32,7 +32,7 @@
 	/* globals */
 PRBool doingFirstTimeInitp = 0;
 RDFT gOPSStore = 0;
-RDFT gLocalStore = 0;
+
 
 
 	/* externs */
@@ -60,70 +60,6 @@ compareUnalignedUINT32Ptrs(void *v1, void *v2)
 }
 
 
-
-char *
-makeRDFDBURL(char* directory, char* name)
-{
-  char		*ans;
-  size_t		s;
-  
-  if (profileDirURL == NULL) return NULL;
-  if ((ans = (char*) getMem(strlen(profileDirURL) + strlen(directory) + strlen(name) + 3)) != NULL) {
-    s = strlen(profileDirURL);
-    memcpy(ans, profileDirURL, s);
-    if (ans[s-1] != '/') {
-      ans[s++] = '/';
-    }
-    stringAppend(ans, directory);
-    stringAppend(ans, "/");
-    stringAppend(ans, name);
-  }
-  return(ans);
-}
-
-
-
-void
-readInBookmarksOnInit(RDFFile f)
-{
-  /* RDF_Resource ptFolder; */
-  PRFileDesc *fp;
-  int32 len;
-  char buf[512];
-  fp = CallPROpenUsingFileURL(f->url, PR_RDONLY|PR_CREATE_FILE, 0644);
-  if (fp == NULL) return;
-  while((len=PR_Read(fp, buf, sizeof(buf))) >0) {
-    parseNextBkBlob(f, buf, len);
-  }
-
-  if (f->db == gLocalStore)
-  {
-	/* if no personal toolbar was specified in bookmark file, create one */
-
-	/*
-	ptFolder = nlocalStoreGetSlotValue(f->db, gNavCenter->RDF_PersonalToolbarFolderCategory,
-	gCoreVocab->RDF_instanceOf, RDF_RESOURCE_TYPE, true, true);
-
-	if (ptFolder == NULL)
-	{
-	if ((ptFolder = createContainer("personaltoolbar.rdf")) != NULL)
-	{
-	addSlotValue(f, ptFolder, gCoreVocab->RDF_parent,
-		gNavCenter->RDF_BookmarkFolderCategory,
-		RDF_RESOURCE_TYPE, true);
-	addSlotValue(f, ptFolder, gCoreVocab->RDF_name,
-		copyString(XP_GetString(RDF_PERSONAL_TOOLBAR_NAME)),
-		RDF_STRING_TYPE, true );
-	RDFUtil_SetPTFolder(ptFolder);
-	}
-	}
-	*/
-  }
-  PR_Close(fp);
-  freeMem(f->line);
-  freeMem(f->currentSlot);
-  freeMem(f->holdOver);
-}
 
 
 void
@@ -171,25 +107,8 @@ DBM_OpenDBMStore (DBMRDF store, char* directory)
   CHECK_VAR1(store->invPropDB);
   
   if (strcmp(directory, "NavCen") == 0) {
-    RDF_Resource bmk = RDF_GetResource(NULL, "NC:Bookmarks", true);
-    if (createp) {
-      PRBool nlocalStoreAssert1 (RDFFile f, RDFT rdf, RDF_Resource u, RDF_Resource s, void* v, 
-                                 RDF_ValueType type, PRBool tv) ;
-      RDFFile newFile;
-      doingFirstTimeInitp = 1;
-      newFile = makeRDFFile(gBookmarkURL, bmk, true);
-      newFile->fileType = RDF_BOOKMARKS;
-      newFile->db = gLocalStore;
-      newFile->assert = nlocalStoreAssert1;
-      readInBookmarksOnInit(newFile);
-
-      doingFirstTimeInitp = 0;
-      (*store->propDB->sync)(store->propDB, 0);
-      (*store->invPropDB->sync)(store->invPropDB, 0);
-      (*store->nameDB->sync)(store->nameDB, 0);
-      (*store->childrenDB->sync)(store->childrenDB, 0); 
-    } 
-  }
+  } 
+  
 }
 
 
@@ -870,7 +789,7 @@ nlcStoreArcsInOutNextValue (RDFT rdf, RDF_Cursor c)
 }
 
 
-
+/*
 RDFT
 MakeLocalStore (char* url)
 {
@@ -906,4 +825,5 @@ MakeLocalStore (char* url)
     return ntr;
   } 
   else return NULL;
-}
+  
+} */

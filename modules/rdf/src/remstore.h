@@ -41,7 +41,7 @@ typedef struct RDFTOutStruct	*RDFTOut;
 
 /* remstore.c function prototypes */
 
-XP_BEGIN_PROTOS
+
 
 RDFT		MakeRemoteStore (char* url);
 RDFT		existingRDFFileDB (char* url);
@@ -80,6 +80,6 @@ static RDFFile	leastRecentlyUsedRDFFile (RDF mcf);
 static PRBool	freeSomeRDFSpace (RDF mcf);
 RDFFile  reReadRDFFile (char* url, RDF_Resource top, PRBool localp, RDFT db);
 
-XP_END_PROTOS
+
 
 #endif

@@ -331,72 +331,7 @@ getResourceDefaultName(RDF_Resource node)
 {
 	int			strID = 0;
 	char			*defaultName = NULL;
-
-#ifdef MOZILLA_CLIENT
-	/* if a vocabulary resource doesn't have a name specified in the graph, get a default */
-
-	if (node == gCoreVocab->RDF_stringEquals)			strID = RDF_IS_STR;
-	else if (node == gCoreVocab->RDF_stringNotEquals)		strID = RDF_IS_NOT_STR;
-	else if (node == gCoreVocab->RDF_substring)			strID = RDF_CONTAINS_STR;
-	else if (node == gCoreVocab->RDF_stringStartsWith)		strID = RDF_STARTS_WITH_STR;
-	else if (node == gCoreVocab->RDF_stringEndsWith)		strID = RDF_ENDS_WITH_STR;
-	else if (node == gNavCenter->RDF_bookmarkAddDate)		strID = RDF_ADDED_ON_STR;
-	else if (node == gNavCenter->RDF_smallIcon)			strID = RDF_ICON_URL_STR;
-	else if (node == gNavCenter->RDF_largeIcon)			strID = RDF_LARGE_ICON_URL_STR;
-	else if (node == gNavCenter->RDF_HTMLURL)			strID = RDF_HTML_URL_STR;
-	else if (node == gNavCenter->RDF_HTMLHeight)			strID = RDF_HTML_HEIGHT_STR;
-	else if (node == gNavCenter->RDF_FTP)				strID = RDF_FTP_NAME_STR;
-	else if (node == gNavCenter->RDF_Appletalk)			strID = RDF_APPLETALK_TOP_NAME;
-	else if (node == gWebData->RDF_URL)				strID = RDF_URL_STR;
-	else if (node == gWebData->RDF_description)			strID = RDF_DESCRIPTION_STR;
-	else if (node == gWebData->RDF_firstVisitDate)			strID = RDF_FIRST_VISIT_STR;
-	else if (node == gWebData->RDF_lastVisitDate)			strID = RDF_LAST_VISIT_STR;
-	else if (node == gWebData->RDF_numAccesses)			strID = RDF_NUM_ACCESSES_STR;
-	else if (node == gWebData->RDF_creationDate)			strID = RDF_CREATED_ON_STR;
-	else if (node == gWebData->RDF_lastModifiedDate)		strID = RDF_LAST_MOD_STR;
-	else if (node == gWebData->RDF_size)				strID =	RDF_SIZE_STR;
-	else if (node == gNavCenter->viewFGColor)			strID = RDF_FOREGROUND_COLOR_STR;
-	else if (node == gNavCenter->viewBGColor)			strID = RDF_BACKGROUND_COLOR_STR;
-	else if (node == gNavCenter->viewBGURL)				strID = RDF_BACKGROUND_IMAGE_STR;
-	else if (node == gNavCenter->showTreeConnections)		strID = RDF_SHOW_TREE_CONNECTIONS_STR;
-	else if (node == gNavCenter->treeConnectionFGColor)		strID = RDF_CONNECTION_FG_COLOR_STR;
-	else if (node == gNavCenter->treeOpenTriggerIconURL)		strID = RDF_OPEN_TRIGGER_IMAGE_STR;
-	else if (node == gNavCenter->treeClosedTriggerIconURL)		strID = RDF_CLOSED_TRIGGER_IMAGE_STR;
-	else if (node == gNavCenter->selectionFGColor)			strID = RDF_FOREGROUND_COLOR_STR;
-	else if (node == gNavCenter->selectionBGColor)			strID = RDF_BACKGROUND_COLOR_STR;
-	else if (node == gNavCenter->columnHeaderFGColor)		strID = RDF_FOREGROUND_COLOR_STR;
-	else if (node == gNavCenter->columnHeaderBGColor)		strID = RDF_BACKGROUND_COLOR_STR;
-	else if (node == gNavCenter->columnHeaderBGURL)			strID = RDF_BACKGROUND_IMAGE_STR;
-	else if (node == gNavCenter->showColumnHeaders)			strID = RDF_SHOW_HEADERS_STR;
-	else if (node == gNavCenter->showColumnHeaderDividers)		strID = RDF_SHOW_HEADER_DIVIDERS_STR;
-	else if (node == gNavCenter->sortColumnFGColor)			strID = RDF_SORT_COLUMN_FG_COLOR_STR;
-	else if (node == gNavCenter->sortColumnBGColor)			strID = RDF_SORT_COLUMN_BG_COLOR_STR;
-	else if (node == gNavCenter->titleBarFGColor)			strID = RDF_FOREGROUND_COLOR_STR;
-	else if (node == gNavCenter->titleBarBGColor)			strID = RDF_BACKGROUND_COLOR_STR;
-	else if (node == gNavCenter->titleBarBGURL)			strID = RDF_BACKGROUND_IMAGE_STR;
-	else if (node == gNavCenter->dividerColor)			strID = RDF_DIVIDER_COLOR_STR;
-	else if (node == gNavCenter->showDivider)			strID = RDF_SHOW_COLUMN_DIVIDERS_STR;
-	else if (node == gNavCenter->selectedColumnHeaderFGColor)	strID = RDF_SELECTED_HEADER_FG_COLOR_STR;
-	else if (node == gNavCenter->selectedColumnHeaderBGColor)	strID = RDF_SELECTED_HEADER_BG_COLOR_STR;
-	else if (node == gNavCenter->showColumnHilite)			strID = RDF_SHOW_COLUMN_HILITING_STR;
-	else if (node == gNavCenter->triggerPlacement)			strID = RDF_TRIGGER_PLACEMENT_STR;
-
-	if (strID != 0)
-	{
-		defaultName = XP_GetString(strID);
-	}
-		/* XXX localization !!! */
-	else if (node == gNavCenter->RDF_IEBookmarkFolderCategory)
-	{
-		defaultName = "Your IE Favorites";
-	}
-	else if (node == gNavCenter->RDF_IEHistory)
-	{
-		defaultName = "Your IE History";
-	}
-
-#endif /* MOZILLA_CLIENT */
-	return(defaultName);
+    return resourceID(node);
 }
 
 char	*gDefaultNavcntr =

@@ -33,18 +33,23 @@
 #include "mcf.h"
 
 
-	/* externs */
-extern	char	*profileDirURL;
-extern	char	*gBookmarkURL;
+/* globals */
+char			*profileDirURL = NULL;
+char			*gLocalStoreURL = NULL;
+char			*gBookmarkURL = NULL;
+char			*gGlobalHistoryURL = NULL;
+void			*timerID = NULL;
+char                    *gRLForbiddenDomains = NULL;
+
 extern	RDF	gNCDB ;
-extern	char	*gGlobalHistoryURL;
+
 
 static PRBool sRDFInitedB = PR_FALSE;
 char*  gNavCntrUrl;
 
 
 char * gNavCenterDataSources[15] = 
-{"rdf:localStore", "rdf:remoteStore", "rdf:remoteStore", "rdf:history",
+{"rdf:localStore",   "rdf:remoteStore", "rdf:bookmarks", "rdf:remoteStore", "rdf:history",
  /* "rdf:ldap", */
  "rdf:esftp",
  "rdf:lfs", "rdf:CookieStore",
@@ -91,9 +96,6 @@ RDF_Init(RDF_InitParams params)
     return -1;
 
 #ifdef MOZILLA_CLIENT
-  XP_ASSERT(params->profileURL != NULL);
-  XP_ASSERT(params->bookmarksURL != NULL);
-  XP_ASSERT(params->globalHistoryURL != NULL);
 
   /*
      copy init params out before doing anything else (such as creating vocabulary)
@@ -128,7 +130,7 @@ RDF_Init(RDF_InitParams params)
 
   HT_Startup();
 
-  GuessIEBookmarks();
+  /*  GuessIEBookmarks(); */
 
 #endif
   walkThroughAllBookmarks(RDF_GetResource(NULL, "NC:Bookmarks", true));

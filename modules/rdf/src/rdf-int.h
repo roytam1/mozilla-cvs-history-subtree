@@ -38,18 +38,10 @@
 #include "rdf.h"
 #include "nspr.h"
 #include "plhash.h"
-#include "ntypes.h"
-#include "net.h"
-#include "xp.h"
-#include "xp_str.h"
-#include "libi18n.h"
-#include "csid.h"
 
-XP_BEGIN_PROTOS
 
-#ifndef XP_WIN32
-#include "prefapi.h"
-#endif
+
+
 
 #ifndef true
 #define true PR_TRUE
@@ -83,14 +75,20 @@ XP_BEGIN_PROTOS
 #define JSEC_RT 15
 #define PMF_RT  16
 
-#define CHECK_VAR(var, return_value) {if (var == NULL) {XP_ASSERT(var); return return_value;}}
-#define CHECK_VAR1(var) {if (var == NULL) {XP_ASSERT(var); return;}}
+#define CHECK_VAR(var, return_value) {if (var == NULL) {/*xxx XP_ASSERT(var); */ return return_value;}}
+#define CHECK_VAR1(var) {if (var == NULL) {/*xxx XP_ASSERT(var);*/ return;}}
 
+
+#ifdef	XP_WIN
+#define	FS_URL_OFFSET		8
+#else
+#define	FS_URL_OFFSET		7
+#endif
 
 
 #define MAX_URL_SIZE 300
 
-#define copyString(source) (source != NULL ? XP_STRDUP(source) : NULL)
+
 #define convertString2UTF8(charsetid, s) 	\
    (s != NULL ? 				\
     INTL_ConvertLineWithoutAutoDetect( 		\
@@ -327,6 +325,8 @@ void readResourceFile(RDF rdf, RDF_Resource u);
 void possiblyGCResource(RDF_Resource u);
 PLHashNumber idenHash(const void* key);
 
+RDFT MakeBMKStore (char* url);
+
 /* string utilities */
 
 int16 charSearch(const char c,const  char* string);
@@ -364,8 +364,9 @@ char* unescapeURL(char* inURL);
 #endif
 char* convertFileURLToNSPRCopaceticPath(char* inURL);
 PRFileDesc* CallPROpenUsingFileURL(char *fileURL, PRIntn flags, PRIntn mode);
-DB *CallDBOpenUsingFileURL(char *fileURL, int flags,int mode, DBTYPE type, const void *openinfo);
+/* DB *CallDBOpenUsingFileURL(char *fileURL, int flags,int mode, DBTYPE type, const void *openinfo); */
 
+char* copyString (char* url);
 PRBool nlocalStoreAssert (RDFT rdf, RDF_Resource u, RDF_Resource s, void* v, 
 			 RDF_ValueType type, PRBool tv) ;
 char* MCDepFileURL (char* url) ;
@@ -389,7 +390,7 @@ void basicAssertions (void) ;
 char* makeResourceName (RDF_Resource node) ;
 char* makeDBURL (char* name);
 
-int rdf_GetURL (MWContext *cx, int method, Net_GetUrlExitFunc *exit_routine, RDFFile rdfFile);
+/* int rdf_GetURL (MWContext *cx, int method, Net_GetUrlExitFunc *exit_routine, RDFFile rdfFile); */
 
 RDFT MakePopDB (char* url) ;
 PRBool nlocalStoreAssert (RDFT mcf, RDF_Resource u, RDF_Resource s, void* v, 
@@ -419,6 +420,8 @@ void* remoteStoreGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_Val
 RDF_Cursor remoteStoreGetSlotValues (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type,  PRBool inversep, PRBool tv) ;
 RDF_Cursor remoteStoreGetSlotValuesInt (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type,  PRBool inversep, PRBool tv) ;
 RDF_Resource createSeparator(void);
+PRBool
+remoteAssert (RDFT mcf, RDF_Resource u, RDF_Resource s, void* v,  RDF_ValueType type, PRBool tv);
 
 void* remoteStoreNextValue (RDFT mcf, RDF_Cursor c) ;
 RDF_Error remoteStoreDisposeCursor (RDFT mcf, RDF_Cursor c) ;
@@ -443,6 +446,6 @@ extern RDF_WDVocab gWebData;
 extern RDF_NCVocab gNavCenter;
 extern RDF_CoreVocab gCoreVocab;
 
-XP_END_PROTOS
+
       
 #endif

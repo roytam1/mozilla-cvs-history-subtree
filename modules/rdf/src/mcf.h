@@ -56,7 +56,7 @@ struct RDF_NotificationStruct {
 
 /* mcf.c function prototypes */
 
-XP_BEGIN_PROTOS
+
 
 RDFT			getTranslator (char* url);
 RDFL			deleteFromRDFList (RDFL xrl, RDF db);
@@ -88,6 +88,6 @@ PRIntn			findEnumerator (PLHashEntry *he, PRIntn i, void *arg);
 void			disposeAllDBs ();
 
 
-XP_END_PROTOS
+
 
 #endif

@@ -23,17 +23,13 @@
 */
    
 #include "remstore.h"
-#include "hist2rdf.h"
-#include "fs2rdf.h"
-#include "pm2rdf.h"
-#include "rdf-int.h"
-#include "bmk2mcf.h"
-#include "utils.h"
-#include "plstr.h"
+
 
 	/* globals */
 
-
+extern char *profileDirURL;
+extern char *gBookmarkURL;
+RDFT gLocalStore = 0;
 
 RDFT
 MakeRemoteStore (char* url)
@@ -66,7 +62,6 @@ PRBool
 asEqual(RDFT r, Assertion as, RDF_Resource u, RDF_Resource s, void* v, 
 	       RDF_ValueType type)
 {
-  XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
   return ((as->db == r) && (as->u == u) && (as->s == s) && (as->type == type) && 
 	  ((as->value == v) || 
 	   ((type == RDF_STRING_TYPE) && ((strcmp(v, as->value) == 0) || (((char *)v)[0] =='\0')))));
@@ -79,7 +74,6 @@ makeNewAssertion (RDFT r, RDF_Resource u, RDF_Resource s, void* v,
 			    RDF_ValueType type, PRBool tv)
 {
   Assertion newAs = (Assertion) getMem(sizeof(struct RDF_AssertionStruct));
-  XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
   newAs->u = u;
   newAs->s = s;
   newAs->value = v;
@@ -104,13 +98,27 @@ freeAssertion (Assertion as)
 }
 
 
+PRBool
+remoteAssert (RDFT mcf, RDF_Resource u, RDF_Resource s, void* v, 
+		     RDF_ValueType type, PRBool tv)
+{
+  return (remoteStoreAdd(mcf, u, s, v, type, tv) != NULL);
+}
+
+
+PRBool
+remoteUnassert (RDFT mcf, RDF_Resource u, RDF_Resource s, void* v, 
+		     RDF_ValueType type)
+{
+  return (remoteStoreRemove(mcf, u, s, v, type) != NULL);
+}
+
 
 PRBool
 remoteAssert3 (RDFFile fi, RDFT mcf, RDF_Resource u, RDF_Resource s, void* v, 
 		     RDF_ValueType type, PRBool tv)
 {
   Assertion as = remoteStoreAdd(mcf, u, s, v, type, tv);
-  XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
   if (as != NULL) {
     addToAssertionList(fi, as);
     return 1;
@@ -124,7 +132,6 @@ remoteUnassert3 (RDFFile fi, RDFT mcf, RDF_Resource u, RDF_Resource s, void* v,
 		     RDF_ValueType type)
 {
   Assertion as = remoteStoreRemove(mcf, u, s, v, type);
-  XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
   if (as != NULL) {
     removeFromAssertionList(fi, as);
     return 1;
@@ -186,7 +193,6 @@ remoteStoreAdd (RDFT mcf, RDF_Resource u, RDF_Resource s, void* v,
 			  RDF_ValueType type, PRBool tv)
 {
   Assertion nextAs, prevAs, newAs; 
-  XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
   nextAs = prevAs = u->rarg1;
 
   if (s == gNavCenter->RDF_Command)
@@ -235,7 +241,6 @@ remoteStoreRemove (RDFT mcf, RDF_Resource u, RDF_Resource s,
 {
   Assertion nextAs, prevAs, ans;
   PRBool found = false;
-  XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
   nextAs = prevAs = u->rarg1;
   while (nextAs != null) {
     if (asEqual(mcf, nextAs, u, s, v, type)) {
@@ -316,8 +321,6 @@ PRBool
 remoteStoreHasAssertion (RDFT mcf, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType type, PRBool tv)
 {
   Assertion nextAs;
-  XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )v)));
-  
   if ((s == gNavCenter->RDF_Command) && (type == RDF_RESOURCE_TYPE) && (tv) && (v == gNavCenter->RDF_Command_Refresh))
   {
   	return true;
@@ -340,9 +343,7 @@ remoteStoreGetSlotValue (RDFT mcf, RDF_Resource u, RDF_Resource s, RDF_ValueType
   Assertion nextAs;
 
   if ((s == gWebData->RDF_URL) && (tv) && (!inversep) && (type == RDF_STRING_TYPE))
-  {	
-	
-    XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )resourceID(u))));
+  {		
     return copyString(resourceID(u));         
   }	
 
@@ -351,7 +352,6 @@ remoteStoreGetSlotValue (RDFT mcf, RDF_Resource u, RDF_Resource s, RDF_ValueType
     if ((nextAs->db == mcf) && (nextAs->s == s) && (nextAs->tv == tv) && (nextAs->type == type)) {
       void* ans = (inversep ? nextAs->u : nextAs->value);
       if (type == RDF_STRING_TYPE) {
-        XP_ASSERT( (RDF_STRING_TYPE != type) || ( IsUTF8String((const char* )ans)));
 	return copyString((char*)ans); 
       } else return ans;
     }
@@ -745,6 +745,18 @@ MakeSCookDB (char* url)
     ntr->possiblyAccessFile = SCookPossiblyAccessFile;
     return ntr;
   } else return NULL;
+}
+
+
+RDFT
+MakeLocalStore (char* url)
+{
+  char* file = makeRDFDBURL(profileDirURL, "localStore.rdf");
+  RDFT ntr = NewRemoteStore(file);
+  gLocalStore = ntr;
+  ntr->assert = remoteAssert;
+  ntr->unassert = remoteUnassert;
+  return ntr;
 }
 
 

@@ -59,8 +59,8 @@ extern	RDF	gNCDB;
 	/* globals */
 uint16 separatorCounter = 0;
 static char* gBkFolderDate;
-
-
+static RDFT gBMKStore = 0;
+extern	int		RDF_PERSONAL_TOOLBAR_NAME;
 
 RDF_Resource
 createSeparator(void)
@@ -191,12 +191,12 @@ parseNextBkToken (RDFFile f, char* token)
 	      addSlotValue(f, f->lastItem, gCoreVocab->RDF_name, 
 			   convertString2UTF8(GetBmCharSetID(),token), RDF_STRING_TYPE, NULL);
 	}
-/*
-      if (startsWith("Personal Toolbar", token) && (containerp(f->lastItem)))
-	nlocalStoreAssert(gLocalStore, f->lastItem, gCoreVocab->RDF_instanceOf, 
+
+	if (startsWith("Personal Toolbar", token) && (containerp(f->lastItem))) 
+		addSlotValue(f, f->lastItem, gCoreVocab->RDF_instanceOf,	
 			  gNavCenter->RDF_PersonalToolbarFolderCategory, 
-			  RDF_RESOURCE_TYPE, true);
-*/
+			  RDF_RESOURCE_TYPE, "true");
+
     } else if (f->status == IN_ITEM_DESCRIPTION) {
       addDescription(f, f->lastItem, token);
     }
@@ -208,15 +208,15 @@ parseNextBkToken (RDFFile f, char* token)
 void
 addDescription (RDFFile f, RDF_Resource r, char* token)
 {
-  char* desc = (char*)  nlocalStoreGetSlotValue(gLocalStore, r, gWebData->RDF_description, 
+  char* desc = (char*)  remoteStoreGetSlotValue(gLocalStore, r, gWebData->RDF_description, 
 				       RDF_STRING_TYPE, false, true);
   if (desc == NULL) {
     addSlotValue(f, f->lastItem, gWebData->RDF_description, convertString2UTF8(GetBmCharSetID(), token),
 		 RDF_STRING_TYPE, NULL);
   } else {
    addSlotValue(f, f->lastItem, gWebData->RDF_description, 
-		 convertString2UTF8AndAppend(GetBmCharSetID(),desc, token), RDF_STRING_TYPE, NULL); 
-    nlocalStoreUnassert(gLocalStore, f->lastItem, gWebData->RDF_description, desc, RDF_STRING_TYPE);
+		 append2Strings(desc, token), RDF_STRING_TYPE, NULL); 
+    remoteUnassert(gLocalStore, f->lastItem, gWebData->RDF_description, desc, RDF_STRING_TYPE);
   }
 }
 
@@ -236,7 +236,7 @@ bkStateTransition (RDFFile f, char* token)
   } else if (startsWith(OPEN_H3_STRING, token)) {
     f->status = IN_H3;
   } else if (startsWith(DD_STRING, token)) {
-    if (nlocalStoreGetSlotValue(gLocalStore, f->lastItem, gWebData->RDF_description, 
+    if (remoteStoreGetSlotValue(gLocalStore, f->lastItem, gWebData->RDF_description, 
 				RDF_STRING_TYPE, false, true) 
 		== NULL) f->status = IN_ITEM_DESCRIPTION;
   } else if (startsWith(OPEN_DL_STRING, token)) {
@@ -501,5 +501,108 @@ flushBookmarks()
 		}
 	}
 }
+
+
+PRBool 
+ResourceBelongsToBookmarksp (RDF_Resource r, int32 depth) {
+  if (depth > 20) {
+    return false;
+  } else if (r == gNavCenter->RDF_BookmarkFolderCategory) {
+    return 1;
+  } else if (containerp(r)) {
+    Assertion as = r->rarg1;
+    while (as) {
+      if ((as->db == gBMKStore) &&
+          (as->s == gCoreVocab->RDF_parent) &&
+          (as->tv == 1) &&
+          (ResourceBelongsToBookmarksp((RDF_Resource)as->value, depth+1))) return 1;
+      as = as->next;
+    }
+    return 0;
+  } else return 0;
+}
+
+
+
+PRBool remoteAssert3 (RDFFile fi, RDFT mcf, RDF_Resource u, RDF_Resource s, void* v, 
+		     RDF_ValueType type, PRBool tv);
+PRBool remoteUnassert3 (RDFFile fi, RDFT mcf, RDF_Resource u, RDF_Resource s, void* v, 
+		     RDF_ValueType type);
+
+
+PRBool 
+bmkUnassert  (RDFT mcf, RDF_Resource u, RDF_Resource s,
+              void* v, RDF_ValueType type) {
+  if (ResourceBelongsToBookmarksp(u, 0)) {
+    return (remoteStoreRemove(mcf, u, s, v, type) != NULL);
+  } else return 0;
+}
+
+
+PRBool
+bmkAssert (RDFT mcf, RDF_Resource u, RDF_Resource s, void* v, 
+                RDF_ValueType type, PRBool tv) {
+  if (ResourceBelongsToBookmarksp(u, 0)) {
+    return (remoteStoreAdd(mcf, u, s, v, type, tv) != NULL);
+  } else return 0;
+}
+        
+extern RDF_Resource gPTFolder;
+void
+readInBookmarks()
+{
+  /* RDF_Resource ptFolder; */
+    RDF_Resource bmk = RDF_GetResource(NULL, "NC:Bookmarks", true);
+    RDFFile f = makeRDFFile(gBookmarkURL, bmk, true);
+    PRFileDesc *fp;
+    int32 len;
+    char buf[512]; 
+    f->fileType = RDF_BOOKMARKS;
+    f->db = gBMKStore;
+    f->assert = remoteAssert3;
+ 
+    fp = CallPROpenUsingFileURL(f->url, PR_RDONLY|PR_CREATE_FILE, 0644);
+    if (fp == NULL) return;
+    while((len=PR_Read(fp, buf, sizeof(buf))) >0) {
+      parseNextBkBlob(f, buf, len);
+    }
+
+	gPTFolder = remoteStoreGetSlotValue(f->db, 
+                                            gNavCenter->RDF_PersonalToolbarFolderCategory,
+                                            gCoreVocab->RDF_instanceOf, RDF_RESOURCE_TYPE, true, true);
+
+	if (gPTFolder == NULL) {
+      if ((gPTFolder = createContainer("personaltoolbar.rdf")) != NULL) {
+        addSlotValue(f, gPTFolder, gCoreVocab->RDF_instanceOf,
+                     gNavCenter->RDF_PersonalToolbarFolderCategory,
+                     RDF_RESOURCE_TYPE, "true");
+        addSlotValue(f, gPTFolder, gCoreVocab->RDF_name,
+                     copyString(XP_GetString(RDF_PERSONAL_TOOLBAR_NAME)),
+                     RDF_STRING_TYPE, "true");
+        RDFUtil_SetPTFolder(gPTFolder);
+      }
+	}
+	
+    PR_Close(fp);
+    freeMem(f->line);
+    freeMem(f->currentSlot);
+    freeMem(f->holdOver);
+}
+
+
+RDFT
+MakeBMKStore (char* url)
+{
+  if (startsWith("rdf:bookmarks", url)) {
+    if (gBMKStore == 0) {
+      RDFT ntr = gBMKStore = NewRemoteStore(url);
+      ntr->assert = bmkAssert;
+      ntr->unassert = bmkUnassert;
+      readInBookmarks();
+      return ntr;
+    } else return gBMKStore;
+  } else return NULL;
+}
+
 
 #endif

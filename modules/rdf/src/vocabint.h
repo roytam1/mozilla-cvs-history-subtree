@@ -22,8 +22,6 @@
 
 #include "rdf-int.h"
 #include "htrdf.h"
-#include "xpgetstr.h"
-
 
 
 /* vocab.c data structures */

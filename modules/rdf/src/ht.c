@@ -58,7 +58,7 @@ HT_Pane			gChromeTemplate = NULL;
 HT_Pane			gManagementTemplate = NULL;
 
 char *			gNavCenterDataSources1[15] = {
-			"rdf:localStore", "rdf:remoteStore", "rdf:remoteStore", "rdf:history",
+			"rdf:localStore",   "rdf:remoteStore", "rdf:bookmarks", "rdf:remoteStore", "rdf:history",
 			 /* "rdf:ldap", */ "rdf:esftp", /* "rdf:mail", */
 #ifdef	XP_MAC
 			"rdf:appletalk",
@@ -2441,7 +2441,7 @@ destroyViewInt (HT_Resource r, PRBool saveOpenState)
 		/* save container's open/closed state */
 		if (HT_IsContainer(child) && (child->view->pane->special == PR_FALSE))
 		{
-			openState = nlocalStoreHasAssertion(gLocalStore, child->node,
+			openState = remoteStoreHasAssertion(gLocalStore, child->node,
                                                             gNavCenter->RDF_AutoOpen, "yes",
 				RDF_STRING_TYPE, 1);
 			if ((!openState) && (HT_IsContainerOpen(child)) &&
@@ -2450,14 +2450,14 @@ destroyViewInt (HT_Resource r, PRBool saveOpenState)
 				(!startsWith("ldap:", resourceID(child->node))))
 			{
 				/* make assertion */
-				nlocalStoreAssert(gLocalStore, child->node,
+				remoteAssert(gLocalStore, child->node,
 				gNavCenter->RDF_AutoOpen, "yes",
 				RDF_STRING_TYPE, 1);
 			}
 			else if (openState && (!HT_IsContainerOpen(child)))
 			{
 				/* remove assertion */
-				nlocalStoreUnassert(gLocalStore, child->node,
+				remoteUnassert(gLocalStore, child->node,
 				gNavCenter->RDF_AutoOpen, "yes",
 				RDF_STRING_TYPE);
 			}
@@ -3561,7 +3561,7 @@ HT_ContainerSupportsNaturalOrderSort(HT_Resource container)
 				parent = container->parent;
 				if (parent != NULL)
 				{
-					naturalOrder = nlocalStoreHasAssertion(gLocalStore, container->node,
+					naturalOrder = remoteStoreHasAssertion(gLocalStore, container->node,
 						gCoreVocab->RDF_parent, parent->node, RDF_RESOURCE_TYPE, 1);
 				}
 			}
@@ -7976,7 +7976,7 @@ htSetFindResourceName(RDF db, RDF_Resource u)
 					((method != NULL) ? method : ""),
 					name)) != NULL)
 				{
-					nlocalStoreAssert(*(db->translators), u,
+					remoteAssert(*(db->translators), u,
 						gCoreVocab->RDF_name, id,
 						RDF_STRING_TYPE, PR_TRUE);
 					XP_FREE(id);
@@ -8449,7 +8449,7 @@ HT_CanDropHTRAtPos(HT_Resource dropTarget, HT_Resource obj, PRBool before)
 	else
 	{	
 		action = dropOn(dropParent, obj, 1);
-		if (action && nlocalStoreHasAssertion(gLocalStore, dropTarget->node,
+		if (action && remoteStoreHasAssertion(gLocalStore, dropTarget->node,
 			gCoreVocab->RDF_parent, dropParent->node, RDF_RESOURCE_TYPE, 1))
 		{
 		}
@@ -8477,7 +8477,7 @@ HT_CanDropURLAtPos(HT_Resource dropTarget, char *url, PRBool before)
 	dropParent = dropTarget->parent;
 	action = dropURLOn(dropParent, url, NULL, 1);
 	/*
-	if (action &&  nlocalStoreHasAssertion(gLocalStore, dropTarget->node,
+	if (action &&  remoteStoreHasAssertion(gLocalStore, dropTarget->node,
 		gCoreVocab->RDF_parent, dropParent->node, RDF_RESOURCE_TYPE, 1))
 	{
 	}
@@ -8633,7 +8633,7 @@ htRemoveChild(HT_Resource parent, HT_Resource child, PRBool moveToTrash)
 				hack type so that the object can be unasserted
 				without the actual file/folder being deleted
 			*/
-			nlocalStoreUnassert (gLocalStore, child->node,
+			remoteUnassert (gLocalStore, child->node,
 				gCoreVocab->RDF_parent, parent->node, RDF_RESOURCE_TYPE);
 			return(false);
 		}
@@ -9599,8 +9599,8 @@ copyMoveRDFLinkAtPos (HT_Resource dropx, HT_Resource dropObject, PRBool before)
 	{
 		RDF_Unassert(db, obj, gCoreVocab->RDF_parent, old, RDF_RESOURCE_TYPE);
 	}
-/*	nlocalStoreUnassert(gLocalStore, obj, gCoreVocab->RDF_parent, parent, RDF_RESOURCE_TYPE);
-	nlocalStoreAddChildAt(gLocalStore, parent, dropx->node, obj, before);
+/*	remoteUnassert(gLocalStore, obj, gCoreVocab->RDF_parent, parent, RDF_RESOURCE_TYPE);
+	remoteAddChildAt(gLocalStore, parent, dropx->node, obj, before);
 */
 	if (!RDF_HasAssertion(db, obj, gCoreVocab->RDF_parent, parent, RDF_RESOURCE_TYPE, PR_TRUE))
 	{
@@ -9615,34 +9615,34 @@ copyMoveRDFLinkAtPos (HT_Resource dropx, HT_Resource dropObject, PRBool before)
 		child = dropTarget->child;
 		while (child != NULL)
 		{
-			pos = nlocalStoreGetSlotValue(gLocalStore, child->node, posResource, RDF_STRING_TYPE, PR_FALSE, PR_TRUE);
+			pos = remoteStoreGetSlotValue(gLocalStore, child->node, posResource, RDF_STRING_TYPE, PR_FALSE, PR_TRUE);
 			if (pos != NULL)
 			{
-				nlocalStoreUnassert(gLocalStore, child->node, posResource, pos, RDF_STRING_TYPE);
+				remoteUnassert(gLocalStore, child->node, posResource, pos, RDF_STRING_TYPE);
 				freeMem(pos);
 			}
 			if ((child == dropx) && (before))
 			{
 				itemPos = itemNum++;
 				sprintf(posString, "%lu", itemNum++);
-				nlocalStoreAssert(gLocalStore, child->node, posResource, posString, RDF_STRING_TYPE, PR_TRUE);
+				remoteAssert(gLocalStore, child->node, posResource, posString, RDF_STRING_TYPE, PR_TRUE);
 			}
 			else if ((prev == dropx) && (!before))
 			{
 				sprintf(posString, "%lu", itemNum++);
-				nlocalStoreAssert(gLocalStore, child->node, posResource, posString, RDF_STRING_TYPE, PR_TRUE);
+				remoteAssert(gLocalStore, child->node, posResource, posString, RDF_STRING_TYPE, PR_TRUE);
 				itemPos = itemNum++;
 			}
 			else if (child->node != obj)
 			{
 				sprintf(posString, "%lu", itemNum++);
-				nlocalStoreAssert(gLocalStore, child->node, posResource, posString, RDF_STRING_TYPE, PR_TRUE);
+				remoteAssert(gLocalStore, child->node, posResource, posString, RDF_STRING_TYPE, PR_TRUE);
 			}			
 			prev = child;
 			child = child->next;
 		}	
 		sprintf(posString, "%lu", (itemPos > 0) ? itemPos : dropx->parent->numChildren + 1);
-		nlocalStoreAssert(gLocalStore, obj, posResource, posString, RDF_STRING_TYPE, PR_TRUE);
+		remoteAssert(gLocalStore, obj, posResource, posString, RDF_STRING_TYPE, PR_TRUE);
 		XP_FREE(id);
 	}
 	return COPY_MOVE_LINK;      
@@ -9852,7 +9852,7 @@ copyRDFLinkURLAt (HT_Resource dropx, char* objURL, char *objTitle, PRBool before
 		RDF_Assert(db, obj, gCoreVocab->RDF_name, objTitle, RDF_STRING_TYPE);
 	}
 
-	nlocalStoreUnassert(gLocalStore, obj, gCoreVocab->RDF_parent, parent, RDF_RESOURCE_TYPE);
+	remoteUnassert(gLocalStore, obj, gCoreVocab->RDF_parent, parent, RDF_RESOURCE_TYPE);
 	/* renumber item positions, leaving an open slot for the node being added */
 	if ((id = PR_smprintf("pos(%s)", resourceID(parent))) != NULL)
 	{

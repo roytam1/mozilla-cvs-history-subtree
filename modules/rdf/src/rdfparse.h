@@ -37,12 +37,11 @@
 
 /* rdfparse.c function prototypes */
 
-XP_BEGIN_PROTOS
+
 
 char		decodeEntityRef (char* string, int32* stringIndexPtr, int32 len);
 char *		copyStringIgnoreWhiteSpace(char* string);
 char *		getHref(char** attlist);
-int		parseNextRDFXMLBlob (NET_StreamClass *stream, char* blob, int32 size);
 void		parseRDFProcessingInstruction (RDFFile f, char* token);
 PR_PUBLIC_API(char *)		getAttributeValue (char** attlist, char* elName);
 PRBool		tagEquals (RDFFile f, char* tag1, char* tag2);
@@ -56,6 +55,6 @@ void		tokenizeElement (char* attr, char** attlist, char** elementName);
 void		outputRDFTreeInt (RDF rdf, PRFileDesc *fp, RDF_Resource node, uint32 depth, PRBool localOnly);
 void		outputRDFTree (RDF rdf, PRFileDesc *fp, RDF_Resource node);
 
-XP_END_PROTOS
+
 
 #endif
