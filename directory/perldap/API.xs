@@ -365,6 +365,7 @@ int LDAP_CALL internal_rebind_proc(LDAP *ld, char **dnp, char **pwp,
 }
 
 MODULE = Mozilla::LDAP::API		PACKAGE = Mozilla::LDAP::API
+PROTOTYPES: ENABLE
 
 double
 constant(name,arg)
