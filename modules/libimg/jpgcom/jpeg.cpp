@@ -23,14 +23,10 @@
 
 
 
-#include "if_struct.h"
-
+#include "nsIImgDecoder.h" // include if_struct.h Needs to be first
+#include "nsIImgDCallbk.h"
 #include "dllcompat.h"
-#include "nsIImgDecoder.h"
-#include "nsImgDecCID.h"
 #include "nsJPGDecoder.h"
-#include "nsJPGCallback.h"
-
 #include "jpeg.h"
 #include "merrors.h"
 #include "il.h"
