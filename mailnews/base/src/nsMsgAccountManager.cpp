@@ -1542,6 +1542,14 @@ nsMsgAccountManager::UnloadAccounts()
   m_accountsLoaded = PR_FALSE;
   mAccountKeyList.Truncate(0);
   SetLastServerFound(nsnull,"","","");
+
+  /*nsresult rv;
+  nsCOMPtr<nsIObserverService> observerService = 
+      do_GetService("@mozilla.org/observer-service;1", &rv);
+
+  if (NS_SUCCEEDED(rv))
+    observerService->NotifyObservers(nsnull,"mail-unloaded",nsnull);
+*/
   return NS_OK;
 }
 

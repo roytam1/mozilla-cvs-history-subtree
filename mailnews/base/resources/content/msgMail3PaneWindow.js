@@ -51,6 +51,7 @@ var gNextMessageViewIndexAfterDelete = -2;
 var gCurrentlyDisplayedMessage=nsMsgViewIndex_None;
 var gStartFolderUri = null;
 var gStartMsgKey = -1;
+var gEmailAddress = null;
 var gRightMouseButtonDown = false;
 // Global var to keep track of which row in the thread pane has been selected
 // This is used to make sure that the row with the currentIndex has the selection
@@ -180,6 +181,13 @@ var folderListener = {
                }
                SetBusyCursor(window, false);
              }
+             //folder loading is over, now issue quick search if there is an email address
+             if (gEmailAddress)
+             {
+               dump ("gEmailAddress " + gEmailAddress + "\n");
+               Search(gEmailAddress);
+               gEmailAddress = null;
+             } 
            }
          }
        } 
@@ -475,16 +483,19 @@ function OnLoadMessenger()
   //set up correctly.
   // argument[0] --> folder uri
   // argument[1] --> optional message key
+  // argument[2] --> optional email address; //will come from aim; needs to show msgs from buddy's email address
 
   if ("arguments" in window && window.arguments[0])
   {
     gStartFolderUri = window.arguments[0];
     gStartMsgKey = window.arguments[1];
+    gEmailAddress = window.arguments[2];
   }
   else
   {
     gStartFolderUri = null;
     gStartMsgKey = -1;
+    gEmailAddress = null;
   }
 
   setTimeout("loadStartFolder(gStartFolderUri);", 0);
@@ -496,6 +507,7 @@ function OnLoadMessenger()
 
   //Set focus to the Thread Pane the first time the window is opened.
   SetFocusThreadPane();
+  NotifyObservers("mail3paneWindow-loaded");
 }
 
 function OnUnloadMessenger()
@@ -506,8 +518,15 @@ function OnUnloadMessenger()
   OnUnloadMsgHeaderPane();
 
   OnMailWindowUnload();
+  NotifyObservers("mail3paneWindow-unloaded")
 }
 
+function NotifyObservers(aTopic)
+{
+  var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
+  observerService.notifyObservers(null, aTopic, null);
+}
+  
 function Create3PaneGlobals()
 {
 }
