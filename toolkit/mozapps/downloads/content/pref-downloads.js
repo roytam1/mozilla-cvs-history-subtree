@@ -287,7 +287,7 @@ function getSpecialFolderKey(aFolderType)
   return aFolderType == "Desktop" ? "DeskV" : "Pers";
 #endif
 #ifdef XP_MACOSX
-  return aFolderType == "Desktop" ? "Desk" : "UsrDocs";
+  return aFolderType == "Desktop" ? "UsrDsk" : "UsrDocs";
 #endif
   return "Home";
 }
