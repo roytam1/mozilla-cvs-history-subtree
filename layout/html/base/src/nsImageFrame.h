@@ -27,11 +27,12 @@
 #include "nsIPresContext.h"
 #include "nsHTMLImageLoader.h"
 
-//#define USE_IMG2
+#define USE_IMG2
 
 
 #ifdef USE_IMG2
 #include "nsIImageRequest.h"
+#include "nsIImageDecoderObserver.h"
 #endif
 
 class nsIFrame;
@@ -41,9 +42,27 @@ struct nsHTMLReflowState;
 struct nsHTMLReflowMetrics;
 struct nsSize;
 
+class nsImageFrame;
+
+class nsImageListener : nsIImageDecoderObserver
+{
+public:
+  nsImageListener();
+  virtual ~nsImageListener();
+
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIIMAGEDECODEROBSERVER
+
+  SetFrame(nsImageFrame *frame) { mFrame = frame; }
+
+private:
+  nsImageFrame *mFrame;
+};
+
 #define ImageFrameSuper nsLeafFrame
 
-class nsImageFrame : public ImageFrameSuper {
+class nsImageFrame : public ImageFrameSuper
+{
 public:
   nsImageFrame();
 
@@ -85,6 +104,16 @@ public:
 
 #ifdef DEBUG
   NS_IMETHOD SizeOf(nsISizeOfHandler* aHandler, PRUint32* aResult) const;
+#endif
+
+#ifdef USE_IMG2
+  NS_IMETHOD OnStartDecode(nsIImageRequest *request, nsISupports *cx);
+  NS_IMETHOD OnStartContainer(nsIImageRequest *request, nsISupports *cx, nsIImageContainer *image);
+  NS_IMETHOD OnStartFrame(nsIImageRequest *request, nsISupports *cx, nsIImageFrame *frame);
+  NS_IMETHOD OnDataAvailable(nsIImageRequest *request, nsISupports *cx, nsIImageFrame *frame, const nsRect2 * rect);
+  NS_IMETHOD OnStopFrame(nsIImageRequest *request, nsISupports *cx, nsIImageFrame *frame);
+  NS_IMETHOD OnStopContainer(nsIImageRequest *request, nsISupports *cx, nsIImageContainer *image);
+  NS_IMETHOD OnStopDecode(nsIImageRequest *request, nsISupports *cx, nsresult status, const PRUnichar *statusArg);
 #endif
 
 protected:
@@ -137,11 +166,19 @@ protected:
                                    void* aClosure,
                                    PRUint32 aStatus);
 
+  void GetBaseURI(nsIURI **uri);
+
+
   nsHTMLImageLoader   mImageLoader;
   nsHTMLImageLoader * mLowSrcImageLoader;
 #ifdef USE_IMG2
   nsCOMPtr<nsIImageRequest> mImageRequest;
   nsCOMPtr<nsIImageRequest> mLowImageRequest;
+
+  nsCOMPtr<nsIImageDecoderObserver> mListener;
+
+  nsSize mNaturalSize;
+  nsSize mComputedSize;
 #endif
   nsImageMap*         mImageMap;
   PRPackedBool        mSizeFrozen;
