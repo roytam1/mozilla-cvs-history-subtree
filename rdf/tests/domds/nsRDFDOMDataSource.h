@@ -34,6 +34,8 @@
 // 
 #include "nsIDOMNode.h"
 #include "nsIContent.h"
+#include "nsIStyledContent.h"
+#include "nsICSSStyleRule.h"
 
 /* {c7cf77e8-245a-11d3-80f0-006008948010} */
 #define NS_RDF_DOMDATASOURCE_CID \
@@ -84,7 +86,7 @@ class nsRDFDOMDataSource : public nsIRDFDataSource,
 
     nsresult createDOMNodeTarget(nsIDOMNode *node,
                                  nsIRDFResource *property,
-                                 nsString& result);
+                                 nsIRDFNode **aResult);
     // nsIContent stuff
     nsresult createContentArcs(nsIContent *content,
                                nsISupportsArray *arcs);
@@ -92,20 +94,58 @@ class nsRDFDOMDataSource : public nsIRDFDataSource,
                                     nsISupportsArray *arcs);
     nsresult createContentAttributeArcs(nsIContent *content,
                                         nsISupportsArray *arcs);
-                                        
+    nsresult createContentMiscArcs(nsIContent* content,
+                                   nsISupportsArray *arcs);
     nsresult createContentTarget(nsIContent *content,
                                  nsIRDFResource *property,
-                                 nsString& result);
-    // helper routine
+                                 nsIRDFNode **aResult);
+    
+    
+    // nsIStyledContent stuff
+    nsresult createStyledContentArcs(nsIStyledContent *content,
+                                     nsISupportsArray *arcs);
+    nsresult createStyledContentClassArcs(nsIStyledContent *content,
+                                          nsISupportsArray *arcs);
+
+    nsresult createStyledContentTarget(nsIStyledContent *content,
+                                       nsIRDFResource *property,
+                                       nsIRDFNode **aResult);
+
+    nsresult getStyleRuleTarget(nsIStyleRule *rule,
+                                   nsIRDFResource *property,
+                                   nsIRDFNode **result);
+    nsresult getCSSRuleTarget(nsICSSStyleRule *rule,
+                              nsIRDFResource *property,
+                              nsIRDFNode **result);
+    
+    // helper routines
+    nsresult createArcsFromSupportsArray(nsISupportsArray *rules,
+                                          nsISupportsArray *arcs);
     nsresult getResourceForObject(nsISupports *object,
                                   nsIRDFResource **resource);
+
+    nsresult appendLeafObject(nsString& name,
+                              nsString& value,
+                              nsISupportsArray *arcs);
+
+    nsresult getTargetForKnownObject(nsISupports *object,
+                                     nsIRDFResource* aProperty,
+                                     nsIRDFNode **result);
     
+    nsresult getTargetsForKnownObject(nsISupports *object,
+                                      nsIRDFResource *aProperty,
+                                      PRBool useDOM,
+                                      nsISupportsArray *arcs);
+    
+    nsresult createLiteral(nsString& str, nsIRDFNode **result);
+    // member variables
     PRBool init;
     nsIRDFService *mRDFService;
     PRInt32 mMode;
     nsVoidArray *mObservers;
 
     nsSupportsHashtable objectTable;
+    nsHashtable mModeTable;
     
     nsCOMPtr<nsIDOMDocument> mDocument;
 

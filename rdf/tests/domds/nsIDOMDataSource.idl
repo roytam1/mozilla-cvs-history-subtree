@@ -29,13 +29,9 @@
 [scriptable, uuid(0b96297e-2459-11d3-8aad-006008948010)]
 interface nsIDOMDataSource : nsISupports {
     
-    const long modeDOM = 0;
-    const long modeContent = 1;
-    const long modeHTML = 2;
-    
-    attribute long mode;
-    
-    void SetWindow(in nsIDOMWindow window);
+    void setMode(in string mode, in boolean active);
+    boolean getMode(in string mode);
+    void setWindow(in nsIDOMWindow window);
     
 };
 
