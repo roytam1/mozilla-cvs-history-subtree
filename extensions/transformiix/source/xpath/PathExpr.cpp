@@ -101,33 +101,25 @@ void PathExpr::addExpr(Expr* expr, PathOperator pathOp)
 ExprResult* PathExpr::evaluate(txIEvalContext* aContext)
 {
     if (!aContext || (expressions.getLength() == 0)) {
-        NS_ASSERTION(aContext, "malformed PathExpr");
-        return new NodeSet();
+        NS_ASSERTION(0, "internal error");
+        return new StringResult("error");
     }
 
-    NodeSet* nodes = new NodeSet(aContext->getContextNode());
-    if (!nodes) {
-        // XXX ErrorReport: out of memory
-        NS_ASSERTION(0, "out of memory");
-        return 0;
-    }
+    NodeSet nodes(aContext->getContextNode());
     NodeSet* resNodes = new NodeSet();
     if (!resNodes) {
-        delete nodes;
         // XXX ErrorReport: out of memory
         NS_ASSERTION(0, "out of memory");
         return 0;
     }
 
     ListIterator iter(&expressions);
-    nsresult rv = evalStep(iter, aContext, nodes, *resNodes);
+    nsresult rv = evalStep(iter, aContext, &nodes, *resNodes);
     if (NS_FAILED(rv)) {
         NS_ASSERTION(0, "report an error");
-        delete nodes;
         delete resNodes;
         return 0;
     }
-    delete nodes;
     return resNodes;
 } //-- evaluate
 

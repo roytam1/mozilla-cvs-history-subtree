@@ -320,10 +320,10 @@ Expr* ExprParser::createFilterExpr(ExprLexer& lexer) {
         case Token::VAR_REFERENCE :
             {
                 String prefix, lName;
-                nsresult res = NS_OK;
+                nsresult rv = NS_OK;
                 PRInt32 nspace;
-                res = resolveQName(tok->value, prefix, lName, nspace);
-                if (NS_FAILED(res)) {
+                rv = resolveQName(tok->value, prefix, lName, nspace);
+                if (NS_FAILED(rv)) {
                     // XXX error report namespace resolve failed
                     return 0;
                 }
@@ -379,7 +379,7 @@ Expr* ExprParser::createFilterExpr(ExprLexer& lexer) {
 FunctionCall* ExprParser::createFunctionCall(ExprLexer& lexer) {
 
     FunctionCall* fnCall = 0;
-    nsresult res = NS_OK;
+    nsresult rv = NS_OK;
 
     Token* tok = lexer.nextToken();
     if (tok->type != Token::FUNCTION_NAME) {
@@ -484,7 +484,7 @@ FunctionCall* ExprParser::createFunctionCall(ExprLexer& lexer) {
 
             tok->value.subString(0, idx, prefixStr);
             txAtom* prefix = TX_GET_ATOM(prefixStr);
-            res = mContext->resolveNamespacePrefix(prefix, namespaceID);
+            rv = mContext->resolveNamespacePrefix(prefix, namespaceID);
             // XXX report error
             TX_IF_RELEASE_ATOM(prefix);
         }
@@ -493,7 +493,7 @@ FunctionCall* ExprParser::createFunctionCall(ExprLexer& lexer) {
             namespaceID = kNameSpaceID_None;
         }
 
-        res = mContext->resolveFunctionCall(name, namespaceID, fnCall);
+        rv = mContext->resolveFunctionCall(name, namespaceID, fnCall);
         // XXX report error
         TX_IF_RELEASE_ATOM(name);
     }
@@ -606,10 +606,10 @@ LocationStep* ExprParser::createLocationStep(ExprLexer& lexer) {
                 {
                     // resolve QName
                     String prefix, lName;
-                    nsresult res = NS_OK;
+                    nsresult rv = NS_OK;
                     PRInt32 nspace;
-                    res = resolveQName(tok->value, prefix, lName, nspace);
-                    if (NS_FAILED(res)) {
+                    rv = resolveQName(tok->value, prefix, lName, nspace);
+                    if (NS_FAILED(rv)) {
                         // XXX error report namespace resolve failed
                         return 0;
                     }
@@ -969,7 +969,7 @@ nsresult ExprParser::resolveQName(const String& aQName,
                                   String& aPrefix, String& aLocalName,
                                   PRInt32& aNamespace)
 {
-    nsresult res = NS_OK;
+    nsresult rv = NS_OK;
     aNamespace = kNameSpaceID_None;
     int idx = aQName.indexOf(':');
     if (idx > 0) {
@@ -978,10 +978,10 @@ nsresult ExprParser::resolveQName(const String& aQName,
         if (!prefix) {
             return NS_ERROR_OUT_OF_MEMORY;
         }
-        res = mContext->resolveNamespacePrefix(prefix, aNamespace);
+        rv = mContext->resolveNamespacePrefix(prefix, aNamespace);
         TX_RELEASE_ATOM(prefix);
-        if (NS_FAILED(res)) {
-            return res;
+        if (NS_FAILED(rv)) {
+            return rv;
         }
         aQName.subString(idx+1, aLocalName);
     }
@@ -989,5 +989,5 @@ nsresult ExprParser::resolveQName(const String& aQName,
         // the lexer dealt with idx == 0 
         aLocalName.append(aQName);
     }
-    return res;
+    return rv;
 }

@@ -604,11 +604,10 @@ private:
     nsresult evalStep(txListIterator& aIter, txIMatchContext* aContext,
                       NodeSet* aNodes, NodeSet& aResult);
 
-    /**
+    /*
      * Selects from the descendants of the context node
      * all nodes that match the Expr
-     * -- this will be moving to a Utility class
-     **/
+     */
     void evalDescendants(Expr* aStep, Node* aNode,
                          txIEvalContext* aContext,
                          NodeSet* resNodes);

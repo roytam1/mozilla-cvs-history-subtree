@@ -58,9 +58,9 @@ VariableRefExpr::~VariableRefExpr()
 ExprResult* VariableRefExpr::evaluate(txIEvalContext* aContext)
 {
     ExprResult* exprResult = 0;
-    nsresult res = NS_OK;
-    res = aContext->getVariable(mNamespace, mLocalName, exprResult);
-    if (NS_FAILED(res)) {
+    nsresult rv = NS_OK;
+    rv = aContext->getVariable(mNamespace, mLocalName, exprResult);
+    if (NS_FAILED(rv)) {
       // XXX report error, undefined variable
       return 0;
     }
