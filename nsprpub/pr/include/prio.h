@@ -597,7 +597,6 @@ NSPR_API(PRFileDesc*) PR_PopIOLayer(PRFileDesc *fd_stack, PRDescIdentity id);
  **************************************************************************
  */
 
-NSPR_API(PRFileDesc*) PR_Open(const char *name, PRIntn flags, PRIntn mode);
 /* Open flags */
 #define PR_RDONLY       0x01
 #define PR_WRONLY       0x02
@@ -611,8 +610,8 @@ NSPR_API(PRFileDesc*) PR_Open(const char *name, PRIntn flags, PRIntn mode);
 /*
 ** File modes ....
 **
-** CAVEAT: 'mode' is currently only applicable on UNIX platforms. We are
-** still in the process of seeing how these apply to other file systems.
+** CAVEAT: 'mode' is currently only applicable on UNIX platforms.
+** The 'mode' argument may be ignored by PR_Open on other platforms.
 **
 **   00400   Read by owner.
 **   00200   Write by owner.
@@ -625,6 +624,32 @@ NSPR_API(PRFileDesc*) PR_Open(const char *name, PRIntn flags, PRIntn mode);
 **   00001   Execute by others.
 **
 */
+
+NSPR_API(PRFileDesc*) PR_Open(const char *name, PRIntn flags, PRIntn mode);
+
+/*
+ **************************************************************************
+ * FUNCTION: PR_OpenFile
+ * DESCRIPTION:
+ *     Open a file for reading, writing, or both.
+ *     PR_OpenFile has the same prototype as PR_Open but implements
+ *     the specified file mode where possible.
+ **************************************************************************
+ */
+
+/* File mode bits */
+#define PR_IRWXU 00700  /* read, write, execute/search by owner */
+#define PR_IRUSR 00400  /* read permission, owner */
+#define PR_IWUSR 00200  /* write permission, owner */
+#define PR_IXUSR 00100  /* execute/search permission, owner */
+#define PR_IRWXG 00070  /* read, write, execute/search by group */
+#define PR_IRGRP 00040  /* read permission, group */
+#define PR_IWGRP 00020  /* write permission, group */
+#define PR_IXGRP 00010  /* execute/search permission, group */
+#define PR_IRWXO 00007  /* read, write, execute/search by others */
+#define PR_IROTH 00004  /* read permission, others */
+#define PR_IWOTH 00002  /* write permission, others */
+#define PR_IXOTH 00001  /* execute/search permission, others */
 
 NSPR_API(PRFileDesc*) PR_OpenFile(
     const char *name, PRIntn flags, PRIntn mode);
@@ -1062,6 +1087,16 @@ NSPR_API(PRStatus) PR_CloseDir(PRDir *dir);
  */
 
 NSPR_API(PRStatus) PR_MkDir(const char *name, PRIntn mode);
+
+/*
+ *************************************************************************
+ * FUNCTION: PR_MakeDir
+ * DESCRIPTION:
+ *     Create a new directory with the given name and access mode.
+ *     PR_MakeDir has the same prototype as PR_MkDir but implements
+ *     the specified access mode where possible.
+ *************************************************************************
+ */
 
 NSPR_API(PRStatus) PR_MakeDir(const char *name, PRIntn mode);
 
