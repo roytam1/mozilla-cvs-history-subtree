@@ -27,7 +27,6 @@
 #include "libi18n.h"
 #ifdef MOZ_LDAP
 	#include "ldap.h"
-HG82168
 #else
 	#define LDAP_PORT 389
 	#define LDAPS_PORT 636
@@ -2210,6 +2209,13 @@ static void dir_PushStringToPrefs (DIR_Server *s, char **curVal, const char *new
 
 }
 
+/* XXX FreeMail - jsw removed for src331 ... need to find a home and proper code */
+#ifndef NO_SECURITY
+int DIR_SetupSecureConnection (LDAP *ld, void *pw_arg)
+{
+  return -1;
+}
+#endif
 
 void DIR_SetAuthDN (DIR_Server *s, const char *dn)
 {
@@ -2336,8 +2342,6 @@ char *DIR_Unescape (const char *src, XP_Bool makeHtml)
  */
 
 #ifdef MOZ_LDAP
-
-HG29989
 
 int DIR_ValidateRootDSE (DIR_Server *server, int32 gen, int32 first, int32 last)
 {

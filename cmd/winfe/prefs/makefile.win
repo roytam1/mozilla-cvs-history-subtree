@@ -23,9 +23,6 @@ DIRS    = prefuuid nsdlg nsprefui brpref \
 !ifdef EDITOR
     edpref \
 !endif
-!ifdef MOZ_MAIL_NEWS
-    mnpref \
-!endif
 !ifdef MOZ_LOC_INDEP
     lipref \
 !endif

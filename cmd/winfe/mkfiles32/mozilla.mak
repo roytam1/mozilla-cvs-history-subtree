@@ -252,15 +252,9 @@ CFLAGS_DEFAULT=\
 POLICY  = moz40p3
 
 
-NEOFLAGS=/DqNeoThreads /DqNeoStandAlone /I$(DEPTH)\lib\libneo ^
-    /I$(DEPTH)\lib\libneo\ibmpc ^
-    /I$(DEPTH)\lib\libneo\ibmpc\alone 
-
-
 #
 # If you add a file in a new directory, you must add flags for that directory
 #
-CFLAGS_LIBMSG_C=        $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/msgc.pch" /YX"msg.h"
 CFLAGS_LIBMIME_C=       $(CFLAGS_DEFAULT)
 CFLAGS_LIBI18N_C=       $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/intlpriv.pch" /YX"intlpriv.h"
 CFLAGS_LIBIMG_C=        $(CFLAGS_DEFAULT) /I$(DEPTH)\jpeg /Fp"$(OUTDIR)/xp.pch" /YX"xp.h"
@@ -284,10 +278,6 @@ CFLAGS_PLUGIN_C=        $(CFLAGS_DEBUG)
 CFLAGS_APPLET_C=        $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/lj.pch" /YX"lj.h"
 CFLAGS_EDTPLUG_C=       $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/le.pch" /YX"le.h"
 CFLAGS_LIBMOCHA_C=      $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/lm.pch" /YX"lm.h"
-CFLAGS_LIBMSG_CPP=      $(CFLAGS_DEFAULT) $(NEOFLAGS) /Fp"$(OUTDIR)/msgcpp.pch" /YX"msg.h"
-CFLAGS_LIBADDR_CPP=     $(CFLAGS_DEFAULT) $(NEOFLAGS) /Fp"$(OUTDIR)/addr.pch" /YX"neohdrsa.h"
-CFLAGS_LIBADDR_C=       $(CFLAGS_DEFAULT) $(NEOFLAGS)
-CFLAGS_LIBNEO_CPP=      $(CFLAGS_DEFAULT) $(NEOFLAGS) 
 CFLAGS_LAYOUT_CPP=      $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/editor.pch" /YX"editor.h"
 CFLAGS_PLUGIN_CPP=      $(CFLAGS_DEBUG) /I$(DEPTH)\cmd\winfe /Fp"$(OUTDIR)/stdafx.pch" /YX"stdafx.h"
 CFLAGS_LIBPREF_C=                 $(CFLAGS_DEBUG)
@@ -399,6 +389,13 @@ LINK_LIBS= \
 !endif
 !ifdef MOZ_LOC_INDEP
     $(DIST)\lib\li32.lib \
+!endif
+!ifdef MOZ_MAIL_NEWS
+    $(DIST)\lib\mime.lib \
+    $(DIST)\lib\net.lib \
+    $(DIST)\lib\msg.lib \
+    $(DIST)\lib\addr.lib \
+    $(DIST)\lib\neo.lib \
 !endif
     $(DIST)\lib\prgrss32.lib \
     $(DIST)\lib\sched32.lib \
@@ -515,11 +512,6 @@ CINCLUDES= \
     /I$(DEPTH)\lib\libi18n \
     /I$(DEPTH)\lib\libparse \
     /I$(DEPTH)\lib\plugin \
-!ifdef MOZ_MAIL_NEWS
-    /I$(DEPTH)\lib\libmsg \
-    /I$(DEPTH)\lib\libaddr \
-    /I$(DEPTH)\lib\libneo \
-!endif
 !else
     /I$(EXPORTINC)
 !endif
@@ -556,6 +548,10 @@ CDISTINCLUDES= \
 	/I$(XPDIST)\public\progress \
     /I$(XPDIST)\public\schedulr \
     /I$(XPDIST)\public\xpcom \
+!ifdef MOZ_MAIL_NEWS
+	/I$(XPDIST)\public\mime \
+	/I$(XPDIST)\public\net \
+!endif
 #!ifdef EDITOR
 !ifdef MOZ_JAVA
     /I$(XPDIST)\public\edtplug \
@@ -714,30 +710,6 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\layout\ptinpoly.c
 	$(DEPTH)\lib\layout\layrelay.c 
 	$(DEPTH)\lib\layout\laytrav.c 
-
-!ifdef MOZ_MAIL_NEWS
-	$(DEPTH)\lib\libaddr\line64.c
-	$(DEPTH)\lib\libaddr\vobject.c
-	$(DEPTH)\lib\libaddr\vcc.c
-	$(DEPTH)\lib\libaddr\ab.cpp  
-	$(DEPTH)\lib\libaddr\abcntxt.cpp  
-	$(DEPTH)\lib\libaddr\abentry.cpp  
-	$(DEPTH)\lib\libaddr\abinfo.cpp  
-	$(DEPTH)\lib\libaddr\ablist.cpp  
-	$(DEPTH)\lib\libaddr\addbook.cpp  
-	$(DEPTH)\lib\libaddr\abpane.cpp  
-	$(DEPTH)\lib\libaddr\nickindx.cpp  
-	$(DEPTH)\lib\libaddr\tyindex.cpp  
-	$(DEPTH)\lib\libaddr\import.cpp
-	$(DEPTH)\lib\libaddr\export.cpp
-	$(DEPTH)\lib\libaddr\abundoac.cpp
-	$(DEPTH)\lib\libaddr\abglue.cpp
-	$(DEPTH)\lib\libaddr\abcinfo.cpp
-	$(DEPTH)\lib\libaddr\abcpane.cpp
-	$(DEPTH)\lib\libaddr\abpane2.cpp
-	$(DEPTH)\lib\libaddr\abntfy.cpp
-!endif
-
 	$(DEPTH)\lib\libi18n\detectu2.c
 	$(DEPTH)\lib\libi18n\metatag.c
 	$(DEPTH)\lib\libi18n\autokr.c
@@ -787,7 +759,6 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 
 !ifdef MOZ_MAIL_NEWS
 	$(DEPTH)\lib\libmime\mimecont.c
-	$(DEPTH)\lib\libmime\mimecryp.c
 	$(DEPTH)\lib\libmime\mimeebod.c
 	$(DEPTH)\lib\libmime\mimeenc.c
 	$(DEPTH)\lib\libmime\mimeeobj.c
@@ -801,18 +772,12 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\libmime\mimemmix.c
 	$(DEPTH)\lib\libmime\mimemoz.c
 	$(DEPTH)\lib\libmime\mimempar.c
-!ifndef NO_SECURITY
-	$(DEPTH)\lib\libmime\mimempkc.c
-!endif
 	$(DEPTH)\lib\libmime\mimemrel.c
 	$(DEPTH)\lib\libmime\mimemsg.c
 	$(DEPTH)\lib\libmime\mimemsig.c
 	$(DEPTH)\lib\libmime\mimemult.c
 	$(DEPTH)\lib\libmime\mimeobj.c
 	$(DEPTH)\lib\libmime\mimepbuf.c
-!ifndef NO_SECURITY
-	$(DEPTH)\lib\libmime\mimepkcs.c
-!endif
 	$(DEPTH)\lib\libmime\mimesun.c
 	$(DEPTH)\lib\libmime\mimetenr.c
 	$(DEPTH)\lib\libmime\mimetext.c
@@ -862,139 +827,6 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 !endif
 
 !ifdef MOZ_MAIL_NEWS
-	$(DEPTH)\lib\libmsg\ad_strm.c 
-	$(DEPTH)\lib\libmsg\msgppane.cpp 
-	$(DEPTH)\lib\libmsg\addr.c
-	$(DEPTH)\lib\libmsg\ap_decod.c
-	$(DEPTH)\lib\libmsg\ap_encod.c
-	$(DEPTH)\lib\libmsg\appledbl.c
-	$(DEPTH)\lib\libmsg\bh_strm.c 
-	$(DEPTH)\lib\libmsg\bytearr.cpp
-	$(DEPTH)\lib\libmsg\chngntfy.cpp
-!ifndef NO_SECURITY
-	$(DEPTH)\lib\libmsg\composec.c
-!endif
-	$(DEPTH)\lib\libmsg\dwordarr.cpp
-	$(DEPTH)\lib\libmsg\eneoidar.cpp
-	$(DEPTH)\lib\libmsg\filters.cpp
-	$(DEPTH)\lib\libmsg\grec.cpp
-	$(DEPTH)\lib\libmsg\grpinfo.cpp
-	$(DEPTH)\lib\libmsg\hashtbl.cpp
-	$(DEPTH)\lib\libmsg\hosttbl.cpp
-	$(DEPTH)\lib\libmsg\idarray.cpp
-	$(DEPTH)\lib\libmsg\imaphost.cpp
-	$(DEPTH)\lib\libmsg\jsmsg.cpp
-	$(DEPTH)\lib\libmsg\listngst.cpp
-	$(DEPTH)\lib\libmsg\m_binhex.c
-	$(DEPTH)\lib\libmsg\maildb.cpp
-	$(DEPTH)\lib\libmsg\mailhdr.cpp
-	$(DEPTH)\lib\libmsg\mhtmlstm.cpp
-	$(DEPTH)\lib\libmsg\msgbg.cpp
-	$(DEPTH)\lib\libmsg\msgbgcln.cpp
-	$(DEPTH)\lib\libmsg\msgbiff.c
-	$(DEPTH)\lib\libmsg\msgcpane.cpp
-	$(DEPTH)\lib\libmsg\msgccach.cpp
-	$(DEPTH)\lib\libmsg\msgcflds.cpp
-	$(DEPTH)\lib\libmsg\msgcmfld.cpp 
-	$(DEPTH)\lib\libmsg\msgdb.cpp
-	$(DEPTH)\lib\libmsg\msgdbini.cpp
-	$(DEPTH)\lib\libmsg\msgdbvw.cpp
-	$(DEPTH)\lib\libmsg\msgdoc.cpp
-	$(DEPTH)\lib\libmsg\msgdwnof.cpp
-	$(DEPTH)\lib\libmsg\msgdlqml.cpp
-	$(DEPTH)\lib\libmsg\msgfcach.cpp
-	$(DEPTH)\lib\libmsg\msgfinfo.cpp
-	$(DEPTH)\lib\libmsg\imapoff.cpp
-	$(DEPTH)\lib\libmsg\msgimap.cpp
-	$(DEPTH)\lib\libmsg\msgfpane.cpp
-	$(DEPTH)\lib\libmsg\msgglue.cpp
-	$(DEPTH)\lib\libmsg\msghdr.cpp
-	$(DEPTH)\lib\libmsg\msglpane.cpp
-	$(DEPTH)\lib\libmsg\msglsrch.cpp
-	$(DEPTH)\lib\libmsg\msgmast.cpp
-	$(DEPTH)\lib\libmsg\msgmapi.cpp
-	$(DEPTH)\lib\libmsg\msgmpane.cpp
-	$(DEPTH)\lib\libmsg\msgmsrch.cpp
-	$(DEPTH)\lib\libmsg\msgnsrch.cpp
-	$(DEPTH)\lib\libmsg\msgoffnw.cpp
-	$(DEPTH)\lib\libmsg\msgpane.cpp
-	$(DEPTH)\lib\libmsg\msgppane.cpp
-	$(DEPTH)\lib\libmsg\msgprefs.cpp
-	$(DEPTH)\lib\libmsg\msgpurge.cpp
-	$(DEPTH)\lib\libmsg\msgrulet.cpp
-	$(DEPTH)\lib\libmsg\msgsec.cpp
-	$(DEPTH)\lib\libmsg\msgsend.cpp
-	$(DEPTH)\lib\libmsg\msgsendp.cpp
-	$(DEPTH)\lib\libmsg\msgspane.cpp
-	$(DEPTH)\lib\libmsg\msgtpane.cpp
-	$(DEPTH)\lib\libmsg\msgundmg.cpp
-	$(DEPTH)\lib\libmsg\msgundac.cpp
-	$(DEPTH)\lib\libmsg\msgurlq.cpp
-	$(DEPTH)\lib\libmsg\msgutils.c
-	$(DEPTH)\lib\libmsg\msgzap.cpp
-	$(DEPTH)\lib\libmsg\msgmdn.cpp
-	$(DEPTH)\lib\libmsg\newsdb.cpp
-	$(DEPTH)\lib\libmsg\newshdr.cpp 
-	$(DEPTH)\lib\libmsg\newshost.cpp 
-	$(DEPTH)\lib\libmsg\newspane.cpp 
-	$(DEPTH)\lib\libmsg\newsset.cpp 
-	$(DEPTH)\lib\libmsg\nwsartst.cpp 
-	$(DEPTH)\lib\libmsg\prsembst.cpp 
-	$(DEPTH)\lib\libmsg\ptrarray.cpp
-	$(DEPTH)\lib\libmsg\search.cpp
-	$(DEPTH)\lib\libmsg\subline.cpp
-	$(DEPTH)\lib\libmsg\subpane.cpp
-	$(DEPTH)\lib\libmsg\thrdbvw.cpp
-	$(DEPTH)\lib\libmsg\thrhead.cpp
-	$(DEPTH)\lib\libmsg\thrlstst.cpp
-	$(DEPTH)\lib\libmsg\thrnewvw.cpp
-	$(DEPTH)\lib\libmsg\mozdb.cpp
-
-	$(DEPTH)\lib\libneo\enstring.cpp
-	$(DEPTH)\lib\libneo\enswizz.cpp
-	$(DEPTH)\lib\libneo\nappl.cpp
-	$(DEPTH)\lib\libneo\nappsa.cpp
-	$(DEPTH)\lib\libneo\narray.cpp
-	$(DEPTH)\lib\libneo\nblob.cpp
-	$(DEPTH)\lib\libneo\nclass.cpp
-	$(DEPTH)\lib\libneo\ncstream.cpp
-	$(DEPTH)\lib\libneo\ndata.cpp
-	$(DEPTH)\lib\libneo\ndblndx.cpp
-	$(DEPTH)\lib\libneo\ndoc.cpp
-	$(DEPTH)\lib\libneo\nfltndx.cpp
-	$(DEPTH)\lib\libneo\nformat.cpp
-	$(DEPTH)\lib\libneo\nfree.cpp
-	$(DEPTH)\lib\libneo\nfstream.cpp
-	$(DEPTH)\lib\libneo\nidindex.cpp
-	$(DEPTH)\lib\libneo\nidlist.cpp
-	$(DEPTH)\lib\libneo\nindexit.cpp
-	$(DEPTH)\lib\libneo\ninode.cpp
-	$(DEPTH)\lib\libneo\nioblock.cpp
-	$(DEPTH)\lib\libneo\niter.cpp
-	$(DEPTH)\lib\libneo\nlaundry.cpp
-	$(DEPTH)\lib\libneo\nlongndx.cpp
-	$(DEPTH)\lib\libneo\nmeta.cpp
-	$(DEPTH)\lib\libneo\nmrswsem.cpp
-	$(DEPTH)\lib\libneo\nmsem.cpp
-	$(DEPTH)\lib\libneo\nnode.cpp
-	$(DEPTH)\lib\libneo\nnstrndx.cpp
-	$(DEPTH)\lib\libneo\noffsprn.cpp
-	$(DEPTH)\lib\libneo\npartmgr.cpp
-	$(DEPTH)\lib\libneo\npersist.cpp
-	$(DEPTH)\lib\libneo\npliter.cpp
-	$(DEPTH)\lib\libneo\nquery.cpp
-	$(DEPTH)\lib\libneo\nselect.cpp
-	$(DEPTH)\lib\libneo\nsselect.cpp
-	$(DEPTH)\lib\libneo\nstream.cpp
-	$(DEPTH)\lib\libneo\nstrndx.cpp
-	$(DEPTH)\lib\libneo\nsub.cpp
-	$(DEPTH)\lib\libneo\nthread.cpp
-	$(DEPTH)\lib\libneo\ntrans.cpp
-	$(DEPTH)\lib\libneo\nulngndx.cpp
-	$(DEPTH)\lib\libneo\nutils.cpp
-	$(DEPTH)\lib\libneo\nwselect.cpp
-	$(DEPTH)\lib\libneo\semnspr.cpp
-	$(DEPTH)\lib\libneo\thrnspr.cpp
 	$(DEPTH)\lib\libnet\mkabook.cpp
 !endif
 
@@ -1029,13 +861,6 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\libnet\cvsimple.c
 !ifdef MOZ_MAIL_NEWS
 	$(DEPTH)\lib\libnet\mkcertld.c
-	$(DEPTH)\lib\libnet\imap4url.c
-	$(DEPTH)\lib\libnet\imapearl.cpp
-	$(DEPTH)\lib\libnet\imaphier.cpp
-	$(DEPTH)\lib\libnet\imappars.cpp
-	$(DEPTH)\lib\libnet\imapbody.cpp
-	$(DEPTH)\lib\libnet\mkimap4.cpp 
-	$(DEPTH)\lib\libnet\mkldap.cpp  
 	$(DEPTH)\lib\libnet\mkmailbx.c
 	$(DEPTH)\lib\libnet\mknews.c  
 	$(DEPTH)\lib\libnet\mknewsgr.c
@@ -1112,6 +937,9 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\xp\xp_file.c 
 	$(DEPTH)\lib\xp\xp_hash.c
 	$(DEPTH)\lib\xp\xp_mesg.c 
+!ifdef MOZ_MAIL_NEWS
+	$(DEPTH)\lib\xp\xp_md5.c 
+!endif
 	$(DEPTH)\lib\xp\xp_ncent.c
 	$(DEPTH)\lib\xp\xp_reg.c  
 	$(DEPTH)\lib\xp\xp_rgb.c  
@@ -2129,7 +1957,6 @@ $(OUTDIR)\spellchk\pfn2s311.dat:   $(SPELLCHK_DATA)\pfn2s311.dat
 BATCH_BUILD_1:          \
 	BATCH_LIBI18N_C         \
 	BATCH_LIBLAYER_C                \
-	BATCH_LIBMSG_CPP                \
 	BATCH_PLUGIN_CPP                \
 	BATCH_LIBNET_CPP                \
 	BATCH_LIBDBM_C          \
@@ -2142,21 +1969,17 @@ BATCH_BUILD_1:          \
 
 
 BATCH_BUILD_2:             \
-	BATCH_LIBADDR_C         \
 	BATCH_LIBMIME_C         \
 	BATCH_LIBNET_C          \
 	BATCH_LIBPARSE_C                \
-	BATCH_LIBMSG_C          \
 	BATCH_LIBMISC_C         \
 	BATCH_LIBSTYLE_C                \
 	BATCH_XP_C              \
 	BATCH_PICS_C              \
 	BATCH_WINFE_C           \
 	BATCH_PLUGIN_C          \
-	BATCH_LIBADDR_CPP               \
 	BATCH_LAYOUT_C          \
 	BATCH_JPEG_C            \
-	BATCH_LIBNEO_CPP                \
 	BATCH_LIBMOCHA_C                
     echo Done >$(TMP)\bb2.sem
     echo BATCH BUILD 2 Successful and complete
@@ -2579,11 +2402,6 @@ exports:
     -xcopy $(DEPTH)\lib\libjar\*.h $(EXPORTINC) $(XCF)
     -xcopy $(DEPTH)\lib\libparse\*.h $(EXPORTINC) $(XCF)
     -xcopy $(DEPTH)\lib\libnet\*.h $(EXPORTINC) $(XCF)
-!ifdef MOZ_MAIL_NEWS
-    -xcopy $(DEPTH)\lib\libaddr\*.h $(EXPORTINC) $(XCF)
-    -xcopy $(DEPTH)\lib\libmsg\*.h $(EXPORTINC) $(XCF)
-    -xcopy $(DEPTH)\lib\libneo\*.h $(EXPORTINC) $(XCF)
-!endif
 !ifdef MOZ_LDAP
     -xcopy $(DEPTH)\netsite\ldap\include\*.h $(EXPORTINC) $(XCF)
     -xcopy $(XPDIST)\public\ldap\*.h $(EXPORTINC) $(XCF)

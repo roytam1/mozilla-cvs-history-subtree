@@ -27,6 +27,7 @@
 
 #include "tooltip.h"
 
+#include "rdfacc.h"
 
 #define SHOW_ALL_CHARACTERS -1
 

@@ -20,7 +20,7 @@
 //
 
 #include "stdafx.h"
-#include "netscape.h"
+#include "mozilla.h"
 #include "edhdrdlg.h"
 #include "wfemsg.h"
 #include "prefapi.h"

@@ -46,66 +46,7 @@
 # define LOCK_LAST_CACHED_MESSAGE
 #endif
 
-/* Interface between netlib and the top-level message/rfc822 parser:
-   MIME_MessageConverter()
- */
-
-struct mime_stream_data {           /* This struct is the state we pass around
-                                       amongst the various stream functions
-                                       used by MIME_MessageConverter().
-                                     */
-
-  URL_Struct *url;                  /* The URL this is all coming from. */
-  int format_out;
-  MWContext *context;
-  NET_StreamClass *stream;          /* The stream to which we write output */
-  NET_StreamClass *istream;   /* The stream we're writing out image data,
-                                                                  if any. */
-  MimeObject *obj;                  /* The root parser object */
-  MimeDisplayOptions *options;      /* Data for communicating with libmime.a */
-
-  /* These are used by FO_QUOTE_HTML_MESSAGE stuff only: */
-  int16 lastcsid;                   /* csid corresponding to above. */
-  int16 outcsid;                    /* csid passed to EDT_PasteQuoteINTL */
-
-#ifndef MOZILLA_30
-  uint8 rand_buf[6];                /* Random number used in the MATCH
-                                       attribute of the ILAYER tag
-                                       pair that encapsulates a
-                                       text/html part.  (The
-                                       attributes must match on the
-                                       ILAYER and the closing
-                                       /ILAYER.)  This is used to
-                                       prevent stray layer tags (or
-                                       maliciously placed ones) inside
-                                       an email message allowing the
-                                       message to escape from its
-                                       encapsulated environment. */
-#endif /* MOZILLA_30 */
-    
-#ifdef DEBUG_terry
-    XP_File logit;              /* Temp file to put generated HTML into. */
-#endif
-};
-
-
-struct MimeDisplayData {            /* This struct is what we hang off of
-                                       MWContext->mime_data, to remember info
-                                       about the last MIME object we've
-                                       parsed and displayed.  See
-                                       MimeGuessURLContentName() below.
-                                     */
-  MimeObject *last_parsed_object;
-  char *last_parsed_url;
-
-#ifdef LOCK_LAST_CACHED_MESSAGE
-  char *previous_locked_url;
-#endif /* LOCK_LAST_CACHED_MESSAGE */
-
-#ifndef MOZILLA_30
-  MSG_Pane* last_pane;
-#endif /* MOZILLA_30 */
-};
+#include "mimedisp.h"
 
 
 #ifndef MOZILLA_30
@@ -1475,7 +1416,7 @@ mime_image_write_buffer(char *buf, int32 size, void *image_closure)
    be returned.  (This string will be relative to the URL in the window.)
    Else, returns NULL.
  */
-static char *
+char *
 mime_extract_relative_part_address(MWContext *context, const char *url)
 {
   char *url1 = 0, *url2 = 0, *part = 0, *result = 0;    /* free these */

@@ -582,7 +582,7 @@ mime_crypto_object_p(MimeHeaders *hdrs, XP_Bool clearsigned_counts)
   XP_FREE(ct);
 
 #ifndef NO_SECURITY
-  return mime_is_sec_class_p(class);
+  return mime_is_sec_class_p(class, clearsigned_counts);
 #endif /* NO_SECURITY */
 }
 
