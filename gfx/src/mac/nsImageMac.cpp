@@ -827,13 +827,13 @@ void nsImageMac::CopyBitsWithMask(const BitMap* srcBits, const BitMap* maskBits,
   if (maskBits)
   {
 
-    StRegionFromPool    origClipRegion;
+    StRegionFromPool    clipRegion;
     
     if (inDrawingToPort)
     {
       // We need to pass in the clip region, even if it doesn't intersect the image, to avoid a bug
       // on Mac OS X that causes bad image drawing (see bug 137295).
-      ::GetClip(origClipRegion);
+      ::GetClip(clipRegion);
       
       // There is a bug in the OS that causes bad image drawing if the clip region in
       // the destination port is complex (has holes in??), which hits us on pages with iframes.
@@ -842,7 +842,7 @@ void nsImageMac::CopyBitsWithMask(const BitMap* srcBits, const BitMap* maskBits,
       
       StRegionFromPool newClip;
       ::RectRgn(newClip, &destRect);
-      ::SectRgn(newClip, origClipRegion, newClip);
+      ::SectRgn(newClip, clipRegion, newClip);
       ::SetClip(newClip);
     }
 
@@ -851,7 +851,7 @@ void nsImageMac::CopyBitsWithMask(const BitMap* srcBits, const BitMap* maskBits,
 
     if (inDrawingToPort)
     {
-      ::SetClip(origClipRegion);
+      ::SetClip(clipRegion);
     }    
   }
   else
