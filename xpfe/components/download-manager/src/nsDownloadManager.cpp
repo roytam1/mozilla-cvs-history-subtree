@@ -138,8 +138,6 @@ nsDownloadManager::Init()
   nsCOMPtr<nsIObserverService> obsService = do_GetService("@mozilla.org/observer-service;1", &rv);
   if (NS_FAILED(rv)) return rv;
   
-  obsService->AddObserver(this, "profile-before-change", PR_FALSE);
-  obsService->AddObserver(this, "profile-approve-change", PR_FALSE);
 
   rv = CallGetService(kRDFServiceCID, &gRDFService);
   if (NS_FAILED(rv)) return rv;                                                 
@@ -167,7 +165,15 @@ nsDownloadManager::Init()
   nsCOMPtr<nsIStringBundleService> bundleService = do_GetService(kStringBundleServiceCID, &rv);
   if (NS_FAILED(rv)) return rv;
   
-  return bundleService->CreateBundle(DOWNLOAD_MANAGER_BUNDLE, getter_AddRefs(mBundle));
+  rv =  bundleService->CreateBundle(DOWNLOAD_MANAGER_BUNDLE, getter_AddRefs(mBundle));
+  if (NS_FAILED(rv))
+    return rv;
+
+  // failure to add an observer is not critical
+  obsService->AddObserver(this, "profile-before-change", PR_FALSE);
+  obsService->AddObserver(this, "profile-approve-change", PR_FALSE);
+
+  return NS_OK;
 }
 
 nsresult
