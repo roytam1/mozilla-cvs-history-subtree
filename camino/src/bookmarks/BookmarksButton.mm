@@ -22,6 +22,8 @@
 */
 
 #import "NSString+Utils.h"
+#import "NSPasteboard+Utils.h"
+
 #import "BookmarksButton.h"
 
 #include "nsCOMPtr.h"
@@ -284,7 +286,7 @@
   mElement->GetAttribute(NS_LITERAL_STRING("name"), titleStr);
   
   NSPasteboard *pboard = [NSPasteboard pasteboardWithName:NSDragPboard];
-  [pboard declareTypes:[NSArray arrayWithObjects:@"MozBookmarkType", @"MozURLType", NSURLPboardType, NSStringPboardType, nil] owner:self];
+  [pboard declareURLPasteboardWithAdditionalTypes:[NSArray arrayWithObjects:@"MozBookmarkType", nil] owner:self];
 
   NSString     *url = [NSString stringWith_nsAString: hrefStr];
   NSString     *title = [NSString stringWith_nsAString: titleStr];
@@ -300,17 +302,7 @@
     [pboard setPropertyList: itemsArray forType: @"MozBookmarkType"];  
   }
   
-  // MozURLType data
-  NSArray      *dataVals = [NSArray arrayWithObjects: url, cleanedTitle, nil];
-  NSArray      *dataKeys = [NSArray arrayWithObjects: @"url", @"title", nil];
-  NSDictionary *data = [NSDictionary dictionaryWithObjects:dataVals forKeys:dataKeys];
-  [pboard setPropertyList:data forType: @"MozURLType"];
-  
-  // NSURLPboardType data
-  [[NSURL URLWithString:url] writeToPasteboard: pboard];
-  
-  // NSStringPboardType data
-  [pboard setString:url forType: NSStringPboardType];
+  [pboard setDataForURL:url title:cleanedTitle];
 
   [self dragImage: [MainController createImageForDragging:[self image] title:title]
                     at: NSMakePoint(0,NSHeight([self bounds])) offset: NSMakeSize(0,0)

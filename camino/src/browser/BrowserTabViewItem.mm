@@ -38,6 +38,7 @@
 
 #import "NSString+Utils.h"
 #import "NSBezierPath+Utils.h"
+#import "NSPasteboard+Utils.h"
 
 #import "BrowserTabViewItem.h"
 
@@ -391,22 +392,11 @@
   
   NSString     *url = [browserView getCurrentURLSpec];
   NSString     *title = [mLabelCell stringValue];
-
   NSString     *cleanedTitle = [title stringByReplacingCharactersInSet:[NSCharacterSet controlCharacterSet] withString:@" "];
 
-  NSArray      *dataVals = [NSArray arrayWithObjects: url, cleanedTitle, nil];
-  NSArray      *dataKeys = [NSArray arrayWithObjects: @"url", @"title", nil];
-  NSDictionary *data = [NSDictionary dictionaryWithObjects:dataVals forKeys:dataKeys];
-
   NSPasteboard *pboard = [NSPasteboard pasteboardWithName:NSDragPboard];
-  [pboard declareTypes:[NSArray arrayWithObjects:@"MozURLType", NSURLPboardType, NSStringPboardType, nil] owner:self];
-  
-  // MozURLType
-  [pboard setPropertyList:data forType: @"MozURLType"];
-  // NSURLPboardType type
-  [[NSURL URLWithString:url] writeToPasteboard: pboard];
-  // NSStringPboardType
-  [pboard setString:url forType: NSStringPboardType];
+  [pboard declareURLPasteboardWithAdditionalTypes:[NSArray array] owner:self];
+  [pboard setDataForURL:url title:cleanedTitle];
   
   NSPoint dragOrigin = [self frame].origin;
   dragOrigin.y += [self frame].size.height;

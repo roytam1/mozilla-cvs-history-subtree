@@ -22,6 +22,7 @@
 */
 
 #import "NSString+Utils.h"
+#import "NSPasteboard+Utils.h"
 
 #import "PageProxyIcon.h"
 
@@ -45,22 +46,20 @@
 
 - (void) resetCursorRects
 {
-    NSCursor* cursor;
-    
-    // XXX provide image for drag-hand cursor
-    cursor = [NSCursor arrowCursor];
-    [self addCursorRect:NSMakeRect(0,0,[self frame].size.width,[self frame].size.height) cursor:cursor];
-    [cursor setOnMouseEntered:YES];
+  // XXX provide image for drag-hand cursor
+  NSCursor* cursor = [NSCursor arrowCursor];
+  [self addCursorRect:NSMakeRect(0,0,[self frame].size.width,[self frame].size.height) cursor:cursor];
+  [cursor setOnMouseEntered:YES];
 }
 
 - (unsigned int)draggingSourceOperationMaskForLocal:(BOOL)flag
 {
-    return NSDragOperationGeneric;
+  return NSDragOperationGeneric;
 }
 
 - (void)mouseDown:(NSEvent *)theEvent
 {
-    // need to implement this or else mouseDragged isn't called
+  // need to implement this or else mouseDragged isn't called
 }
 
 - (void) mouseDragged: (NSEvent*) event
@@ -74,15 +73,10 @@
 
   NSString     *cleanedTitle = [title stringByReplacingCharactersInSet:[NSCharacterSet controlCharacterSet] withString:@" "];
 
-  NSArray      *dataVals = [NSArray arrayWithObjects: url, cleanedTitle, nil];
-  NSArray      *dataKeys = [NSArray arrayWithObjects: @"url", @"title", nil];
-  NSDictionary *data = [NSDictionary dictionaryWithObjects:dataVals forKeys:dataKeys];
-
   NSPasteboard *pboard = [NSPasteboard pasteboardWithName:NSDragPboard];
-  [pboard declareTypes:[NSArray arrayWithObjects:@"MozURLType", NSURLPboardType, NSStringPboardType, nil] owner:self];
-  [pboard setPropertyList:data forType: @"MozURLType"];
-  [[NSURL URLWithString:url] writeToPasteboard: pboard];
-  [pboard setString:url forType: NSStringPboardType];
+
+  [pboard declareURLPasteboardWithAdditionalTypes:[NSArray array] owner:self];
+  [pboard setDataForURL:url title:cleanedTitle];
   
   [self dragImage: [MainController createImageForDragging:[self image] title:title]
                     at: NSMakePoint(0,0) offset: NSMakeSize(0,0)
