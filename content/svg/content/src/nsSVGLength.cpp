@@ -66,7 +66,7 @@ protected:
                                   const nsAString &value);
   
   nsSVGLength(float value, PRUint16 unit);
-  nsSVGLength(const nsAString &value);
+  nsSVGLength();
   virtual ~nsSVGLength();
 
 public:
@@ -127,9 +127,14 @@ nsresult
 NS_NewSVGLength(nsISVGLength** result,
                 const nsAString &value)
 {
-  nsSVGLength *pl = new nsSVGLength(value);
+  *result = nsnull;
+  nsSVGLength *pl = new nsSVGLength();
   NS_ENSURE_TRUE(pl, NS_ERROR_OUT_OF_MEMORY);
   NS_ADDREF(pl);
+  if (NS_FAILED(pl->SetValueAsString(value))) {
+    NS_RELEASE(pl);
+    return NS_ERROR_FAILURE;
+  }
   *result = pl;
   return NS_OK;
 }  
@@ -143,9 +148,8 @@ nsSVGLength::nsSVGLength(float value,
   MaybeAddAsObserver();
 }
 
-nsSVGLength::nsSVGLength(const nsAString &value)
+nsSVGLength::nsSVGLength()
 {
-  SetValueAsString(value);
 }
 
 nsSVGLength::~nsSVGLength()
@@ -357,13 +361,13 @@ nsSVGLength::SetValueAsString(const nsAString & aValueAsString)
       }
       else { // parse error
         // not a valid unit type
-        // rv = ???
+        rv = NS_ERROR_FAILURE;
         NS_ERROR("invalid length type");
       }
     }
     else { // parse error
-    // no number
-    // rv = NS_ERROR_???;
+      // no number
+      rv = NS_ERROR_FAILURE;
     }
   }
   

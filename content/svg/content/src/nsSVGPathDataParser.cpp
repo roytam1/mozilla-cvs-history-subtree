@@ -48,8 +48,8 @@
 //----------------------------------------------------------------------
 // public interface
 
-nsSVGPathDataParser::nsSVGPathDataParser(nsIDOMSVGPathSegList* segList)
-    : mSegList(segList)
+nsSVGPathDataParser::nsSVGPathDataParser(nsVoidArray* data)
+    : mData(data)
 {
 }
 
@@ -69,8 +69,9 @@ nsresult nsSVGPathDataParser::Parse(const char* str)
 // helpers
 nsresult nsSVGPathDataParser::AppendSegment(nsIDOMSVGPathSeg* seg)
 {
-  nsCOMPtr<nsIDOMSVGPathSeg> dummy;
-  return mSegList->AppendItem(seg, getter_AddRefs(dummy));
+  NS_ADDREF(seg);
+  mData->AppendElement((void*)seg);
+  return NS_OK;
 }
 
 

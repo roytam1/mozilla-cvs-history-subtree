@@ -44,6 +44,7 @@
 #include "nsSVGAtoms.h"
 #include "nsReadableUtils.h"
 #include "nsCRT.h"
+#include "nsCOMArray.h"
 
 nsresult
 nsSVGTransformList::Create(const nsAString& aValue,
@@ -167,10 +168,6 @@ nsSVGTransformList::SetValueString(const nsAString& aValue)
   // XXX: we don't implement the _exact_ BNF given in the
   // specs. 
   
-  WillModify();
-  
-  ReleaseTransforms();
-
   nsresult rv = NS_OK;
 
   char *str = ToNewCString(aValue);
@@ -181,15 +178,17 @@ nsSVGTransformList::SetValueString(const nsAString& aValue)
   const char* delimiters1 = "\x20\x9\xD\xA,(";
   const char* delimiters2 = "()";
   const char* delimiters3 = "\x20\x9\xD\xA,";
-
+  nsCOMArray<nsIDOMSVGTransform> xforms;
+    
   while ((keyword = nsCRT::strtok(rest, delimiters1, &rest))) {
 
     while (rest && isspace(*rest))
       ++rest;
 
-    if (!(args = nsCRT::strtok(rest, delimiters2, &rest)))
+    if (!(args = nsCRT::strtok(rest, delimiters2, &rest))) {
+      rv = NS_ERROR_FAILURE;
       break; // parse error
-    
+    }
     nsCOMPtr<nsIDOMSVGTransform> transform;
     NS_NewSVGTransform(getter_AddRefs(transform));
     if (!transform) {
@@ -201,7 +200,10 @@ nsSVGTransformList::SetValueString(const nsAString& aValue)
     
     if (keyatom == nsSVGAtoms::translate) {
       char* arg1 = nsCRT::strtok(args, delimiters3, &args);
-      if (!arg1) break; // parse error
+      if (!arg1) {
+        rv = NS_ERROR_FAILURE;
+        break; // parse error
+      }
       char* arg2 = nsCRT::strtok(args, delimiters3, &args);
       char* end;
       float tx = (float) PR_strtod(arg1, &end);
@@ -210,7 +212,10 @@ nsSVGTransformList::SetValueString(const nsAString& aValue)
     }
     else if (keyatom == nsSVGAtoms::scale) { 
       char* arg1 = nsCRT::strtok(args, delimiters3, &args);
-      if (!arg1) break; // parse error
+      if (!arg1) {
+        rv = NS_ERROR_FAILURE;
+        break; // parse error
+      }
       char* arg2 = nsCRT::strtok(args, delimiters3, &args);
       char* end;
       float sx = (float) PR_strtod(arg1, &end);
@@ -219,11 +224,16 @@ nsSVGTransformList::SetValueString(const nsAString& aValue)
     }      
     else if (keyatom == nsSVGAtoms::rotate) {
       char* arg1 = nsCRT::strtok(args, delimiters3, &args);
-      if (!arg1) break; // parse error
+      if (!arg1) {
+        rv = NS_ERROR_FAILURE;
+        break; // parse error
+      }
       char* arg2 = nsCRT::strtok(args, delimiters3, &args);
       char* arg3 = arg2 ? nsCRT::strtok(args, delimiters3, &args) : nsnull;
-      if (arg2 && !arg3) break; // parse error
-      
+      if (arg2 && !arg3) {
+        rv = NS_ERROR_FAILURE;
+        break; // parse error
+      }
       char* end;
       float angle = (float) PR_strtod(arg1, &end);
       float cx = arg2 ? (float) PR_strtod(arg2, &end) : 0.0f;
@@ -232,16 +242,21 @@ nsSVGTransformList::SetValueString(const nsAString& aValue)
     }      
     else if (keyatom == nsSVGAtoms::skewX) {
       char* arg1 = nsCRT::strtok(args, delimiters3, &args);
-      if (!arg1) break; // parse error
-
+      if (!arg1) {
+        rv = NS_ERROR_FAILURE;
+        break; // parse error
+      }
+      
       char* end;
       float angle = (float) PR_strtod(arg1, &end);
       transform->SetSkewX(angle);
     }  
     else if (keyatom == nsSVGAtoms::skewY) {
       char* arg1 = nsCRT::strtok(args, delimiters3, &args);
-      if (!arg1) break; // parse error
-
+      if (!arg1) {
+        rv = NS_ERROR_FAILURE;
+        break; // parse error
+      }
       char* end;
       float angle = (float) PR_strtod(arg1, &end);
       transform->SetSkewY(angle);
@@ -250,27 +265,45 @@ nsSVGTransformList::SetValueString(const nsAString& aValue)
       char *arg, *end;
 
       arg = nsCRT::strtok(args, delimiters3, &args);
-      if (!arg) break; // parse error
+      if (!arg) {
+        rv = NS_ERROR_FAILURE;
+        break; // parse error
+      }
       float a = (float) PR_strtod(arg, &end);
 
       arg = nsCRT::strtok(args, delimiters3, &args);
-      if (!arg) break; // parse error
+      if (!arg) {
+        rv = NS_ERROR_FAILURE;
+        break; // parse error
+      }
       float b = (float) PR_strtod(arg, &end);
 
       arg = nsCRT::strtok(args, delimiters3, &args);
-      if (!arg) break; // parse error
+      if (!arg) {
+        rv = NS_ERROR_FAILURE;
+        break; // parse error
+      }
       float c = (float) PR_strtod(arg, &end);
 
       arg = nsCRT::strtok(args, delimiters3, &args);
-      if (!arg) break; // parse error
+      if (!arg) {
+        rv = NS_ERROR_FAILURE;
+        break; // parse error
+      }
       float d = (float) PR_strtod(arg, &end);
 
       arg = nsCRT::strtok(args, delimiters3, &args);
-      if (!arg) break; // parse error
+      if (!arg) {
+        rv = NS_ERROR_FAILURE;
+        break; // parse error
+      }
       float e = (float) PR_strtod(arg, &end);
 
       arg = nsCRT::strtok(args, delimiters3, &args);
-      if (!arg) break; // parse error
+      if (!arg) {
+        rv = NS_ERROR_FAILURE;
+        break; // parse error
+      }
       float f = (float) PR_strtod(arg, &end);
 
       nsCOMPtr<nsIDOMSVGMatrix> matrix;
@@ -280,22 +313,29 @@ nsSVGTransformList::SetValueString(const nsAString& aValue)
       transform->SetMatrix(matrix);
     }
     else { // parse error
+      rv = NS_ERROR_FAILURE;
       break;
     }    
-    AppendElement(transform);
+    xforms.AppendObject(transform);
   }
 
-  if (keyword) { 
-    // there was a parse error. should we return an error?
-    // rv = NS_ERROR_???;
-#ifdef DEBUG
-    printf("transform-attribute parse error\n");
-#endif
+  if (keyword || NS_FAILED(rv)) { 
+    // there was a parse error. 
+    rv = NS_ERROR_FAILURE;
+    NS_ERROR("transform-attribute parse error");
+  }
+  else {
+    WillModify();
+    ReleaseTransforms();
+    PRInt32 count = xforms.Count();
+    for (PRInt32 i=0; i<count; ++i) {
+      AppendElement(xforms.ObjectAt(i));
+    }
+    DidModify();
   }
 
   nsMemory::Free(str);
   
-  DidModify();
   return rv;
 }
 

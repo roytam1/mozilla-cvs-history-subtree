@@ -80,5 +80,8 @@ public:
 nsresult
 NS_CreateSVGGenericStringValue(const nsAString& aValue, nsISVGValue** aResult);
 
+nsresult
+NS_CreateSVGStringProxyValue(nsISVGValue* proxiedValue, nsISVGValue** aResult);
+                             
 #endif // __NS_ISVGVALUE_H__
 

@@ -70,6 +70,7 @@ CPPSRCS		= \
 		nsSVGPointList.cpp \
 		nsSVGPolygonElement.cpp \
 		nsSVGPolylineElement.cpp \
+		nsSVGStringProxyValue.cpp \
 		nsSVGRect.cpp \
 		nsSVGRectElement.cpp \
 		nsSVGSVGElement.cpp \

@@ -358,7 +358,8 @@ nsSVGAttribute::SetValue(const nsAString& aValue)
                            mName.GetPrefix(), aValue, PR_TRUE);
   }
 
-  return GetValue()->SetValueString(aValue);
+  SetValueString(aValue);
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -416,6 +417,25 @@ nsSVGAttribute::GetQualifiedName(nsAString& aQualifiedName)const
   mName.GetQualifiedName(aQualifiedName);
 }
 
+void
+nsSVGAttribute::SetValueString(const nsAString& aValue)
+{
+  if (NS_FAILED(mValue->SetValueString(aValue))) {
+    // The value was rejected. This happens e.g. in a XUL template
+    // when trying to set a value like "?x" on a value object that
+    // expects a length.
+    // To accomodate this "erronous" value, we'll insert a proxy
+    // object between ourselves and the actual value object:
+    nsCOMPtr<nsISVGValue> proxy;
+    NS_CreateSVGStringProxyValue(mValue, getter_AddRefs(proxy));
+    NS_ASSERTION(proxy, "failed to create proxy object");
+
+    mValue->RemoveObserver(this);
+    mValue = proxy;
+    proxy->AddObserver(this);
+    proxy->SetValueString(aValue);
+  }
+}
 
 ////////////////////////////////////////////////////////////////////////
 // nsSVGAttributes
@@ -659,13 +679,13 @@ nsSVGAttributes::SetAttr(PRInt32 aNamespaceID, nsIAtom* aName,
                          PRBool aNotify)
 {
 #ifdef DEBUG
-//   nsAutoString str;
-//   aName->ToString(str);
-//   printf("%p :: SetAttr(",this);
-//   printf(NS_ConvertUCS2toUTF8(str).get());
-//   printf("->");
-//   printf(NS_ConvertUCS2toUTF8(aValue).get());
-//   printf(")\n");
+//    nsAutoString str;
+//    aName->ToString(str);
+//    printf("%p :: SetAttr(",this);
+//    printf(NS_ConvertUCS2toUTF8(str).get());
+//    printf("->");
+//    printf(NS_ConvertUCS2toUTF8(aValue).get());
+//    printf(")\n");
 #endif
   
   NS_ENSURE_ARG_POINTER(aName);
@@ -707,13 +727,13 @@ nsSVGAttributes::SetAttr(PRInt32 aNamespaceID, nsIAtom* aName,
   if (index < count) {  // found the attr in the list
     NS_ASSERTION(attr, "How did we get here with a null attr pointer?");
     modification = PR_TRUE;
-    attr->GetValue()->SetValueString(aValue);
+    attr->SetValueString(aValue);
   } else  { // didn't find it
     // GetMappedAttribute and nsSVGAttribute::Create both addref, so we release
     // after this if block.  It's safe to use attr after the Release(), since
     // AppendElement also addrefs it.
     if (GetMappedAttribute(aNamespaceID, aName, &attr)) {
-      attr->GetValue()->SetValueString(aValue);
+      attr->SetValueString(aValue);
     }
     else {
       if (aNamespaceID == kNameSpaceID_None) {

@@ -109,6 +109,7 @@ SVG_BRANCH_MODIFIED_FILES = \
 	content/svg/content/src/nsSVGMatrix.cpp               \
 	content/svg/content/src/nsSVGMatrix.h                 \
 	content/svg/content/src/nsSVGPathDataParser.cpp       \
+	content/svg/content/src/nsSVGPathDataParser.h         \
 	content/svg/content/src/nsSVGPathElement.cpp          \
 	content/svg/content/src/nsSVGPathSeg.cpp              \
 	content/svg/content/src/nsSVGPathSeg.h                \
@@ -263,6 +264,7 @@ SVG_BRANCH_NEW_FILES = \
 	content/svg/content/src/nsSVGLengthList.h             \
 	content/svg/content/src/nsSVGNumber.cpp               \
 	content/svg/content/src/nsSVGNumber.h                 \
+	content/svg/content/src/nsSVGStringProxyValue.cpp     \
 	content/svg/content/src/nsSVGTextElement.cpp          \
 	content/svg/content/src/nsSVGTSpanElement.cpp         \
 	content/svg/content/src/nsSVGTypeCIDs.h               \

@@ -110,8 +110,6 @@ NS_INTERFACE_MAP_END
 NS_IMETHODIMP
 nsSVGRect::SetValueString(const nsAString& aValue)
 {
-  WillModify();
-
   nsresult rv = NS_OK;
 
   char* str = ToNewCString(aValue);
@@ -131,14 +129,15 @@ nsSVGRect::SetValueString(const nsAString& aValue)
   }
   if (i!=4 || (nsCRT::strtok(rest, delimiters, &rest)!=0)) {
     // there was a parse error.
-    // xxx is this the right thing to do?
     rv = NS_ERROR_FAILURE;
   }
   else {
+    WillModify();
     mX      = (double)vals[0];
     mY      = (double)vals[1];
     mWidth  = (double)vals[2];
     mHeight = (double)vals[3];
+    DidModify();
   }
   
   return rv;

@@ -129,6 +129,8 @@ public:
 
   nsISVGValue* GetValue() { return mValue; }
 
+  void SetValueString(const nsAString& aValue);
+  
   nsSVGAttributeFlags GetFlags()const { return mFlags; }
   PRBool IsRequired()const { return mFlags & NS_SVGATTRIBUTE_FLAGS_REQUIRED; }
   PRBool IsFixed()const    { return mFlags & NS_SVGATTRIBUTE_FLAGS_FIXED;    }

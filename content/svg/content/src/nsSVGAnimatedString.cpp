@@ -105,7 +105,9 @@ NS_INTERFACE_MAP_END
 NS_IMETHODIMP
 nsSVGAnimatedString::SetValueString(const nsAString& aValue)
 {
+  WillModify();
   mBaseVal = aValue;
+  DidModify();
   return NS_OK;
 }
 
