@@ -172,8 +172,8 @@ public:
 
     NS_DECL_ISUPPORTS
 
-    nsIServiceManager* GetServiceManager(void) { return mServMgr; }
-    void Cleanup(void);
+    nsIPluginManager* GetPluginManager(void);
+    nsresult Cleanup(void);
 
     // This counter is used to keep track of the number of outstanding objects.
     // It is used to determine whether the plugin's DLL can be unloaded.
@@ -188,6 +188,7 @@ public:
 
 protected:
     nsIServiceManager* mServMgr;
+    nsIPluginManager* mPluginMgr;
 
 };
 
@@ -198,11 +199,16 @@ protected:
 class SimplePluginShutdownListener : public nsIShutdownListener {
 public:
 
+    NS_DECL_ISUPPORTS
+
     NS_IMETHOD
     OnShutdown(const nsCID& aClass, nsISupports* service);
 
     SimplePluginShutdownListener(SimplePlugin* plugin);
     virtual ~SimplePluginShutdownListener(void);
+
+protected:
+    SimplePlugin* mPlugin;
 
 };
 
@@ -478,7 +484,7 @@ SimplePlugin::SimplePlugin(nsIServiceManager* servMgr)
 SimplePlugin::~SimplePlugin(void)
 {
     gPluginObjectCount--;
-    Cleanup();
+    (void)Cleanup();
 }
 
 // These macros produce simple version of QueryInterface and AddRef.
@@ -579,14 +585,31 @@ SimplePlugin::LockFactory(PRBool aLock)
     return NS_OK;
 }
 
-void 
+nsresult
 SimplePlugin::Cleanup(void)
 {
     if (gEnv) {
         Simple::_unuse(gEnv);
-        mServMgr->ReleaseService(kJRIEnvCID, gEnv);
+        mServMgr->ReleaseService(kJRIEnvCID, (nsISupports*)gEnv);
         gEnv = NULL;
     }
+    if (mPluginMgr) {
+        mServMgr->ReleaseService(kPluginManagerCID, mPluginMgr);
+        mPluginMgr = NULL;
+    }
+    return NS_OK;
+}
+
+nsIPluginManager*
+SimplePlugin::GetPluginManager(void)
+{
+    if (mPluginMgr == NULL) {
+        nsresult err = mServMgr->GetService(kPluginManagerCID, kIPluginManagerIID, 
+                                            (nsISupports**)&mPluginMgr,
+                                            new SimplePluginShutdownListener(this));
+        if (err != NS_OK) return NULL;
+    }
+    return mPluginMgr;
 }
 
 /*+++++++++++++++++++++++++++++++++++++++++++++++++
@@ -636,11 +659,14 @@ NS_METHOD
 SimplePlugin::GetJavaClass(jref *result)
 {
     struct java_lang_Class* myClass;
-    nsIPluginManager* mgr = NULL;
-    nsresult err = mServMgr->GetService(kJRIEnvCID, kIJRIEnvIID, 
-                                        (nsISupports**)&gEnv,
-                                        new SimplePluginShutdownListener(this));
-    if (err != NS_OK) return err;
+    if (gEnv == NULL) {
+        nsIPluginManager* mgr = NULL;
+        nsresult err = mServMgr->GetService(kJRIEnvCID, kIJRIEnvIID, 
+                                            (nsISupports**)&gEnv,
+                                            new SimplePluginShutdownListener(this));
+        if (err != NS_OK) return err;
+    }
+    PR_ASSERT(gEnv);
 
     myClass = Simple::_use(gEnv);
 
@@ -658,6 +684,9 @@ SimplePlugin::GetJavaClass(jref *result)
 ////////////////////////////////////////////////////////////////////////////////
 // SimplePluginShutdownListener: handles requests to shutdown the plugin
 
+static NS_DEFINE_IID(kIShutdownListenerIID, NS_ISHUTDOWNLISTENER_IID);
+NS_IMPL_ISUPPORTS(SimplePluginShutdownListener, kIShutdownListenerIID);
+
 SimplePluginShutdownListener::SimplePluginShutdownListener(SimplePlugin* plugin)
     : mPlugin(plugin)
 {
@@ -670,7 +699,7 @@ SimplePluginShutdownListener::~SimplePluginShutdownListener(void)
 NS_METHOD
 SimplePluginShutdownListener::OnShutdown(const nsCID& aClass, nsISupports* service)
 {
-    mPlugin->Cleanup();
+    return mPlugin->Cleanup();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -732,7 +761,7 @@ NS_METHOD
 SimplePluginInstance::Start(void)
 {
     /* Show off some of that Java functionality: */
-    if (gEnv) {
+    if (SimplePlugin::gEnv) {
         jint v;
         char factString[60];
 
@@ -747,7 +776,7 @@ SimplePluginInstance::Start(void)
         ** method, so we'll need to use the class object in order to call
         ** it:
         */
-        v = Simple::fact(gEnv, Simple::_class(gEnv), 10);
+        v = Simple::fact(SimplePlugin::gEnv, Simple::_class(SimplePlugin::gEnv), 10);
         sprintf(factString, "my favorite function returned %d\n", v);
         DisplayJavaMessage(factString, -1);
     }
@@ -1169,7 +1198,7 @@ SimplePluginInstance::DisplayJavaMessage(char* msg, int len)
     Simple* javaPeer;   // instance of the java class (there's no package qualifier)
     java_lang_String* str;
 
-    if (!gEnv) { /* Java failed to initialize, so do nothing. */
+    if (!SimplePlugin::gEnv) { /* Java failed to initialize, so do nothing. */
         return;
     }
 
@@ -1186,7 +1215,7 @@ SimplePluginInstance::DisplayJavaMessage(char* msg, int len)
     ** Use the JRI (see jri.h) to create a Java string from the input
     ** message:
     */
-    str = JRI_NewStringUTF(gEnv, msg, len);
+    str = JRI_NewStringUTF(SimplePlugin::gEnv, msg, len);
 
     /*
     ** Use the GetJavaPeer operation to get the Java instance that
@@ -1200,7 +1229,7 @@ SimplePluginInstance::DisplayJavaMessage(char* msg, int len)
     ** passing the execution environment, the object, and the java
     ** string:
     */
-    javaPeer->doit(gEnv, str);
+    javaPeer->doit(SimplePlugin::gEnv, str);
 }
 
 
