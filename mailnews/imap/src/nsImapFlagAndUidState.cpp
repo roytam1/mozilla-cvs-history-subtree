@@ -365,8 +365,19 @@ NS_IMETHODIMP nsImapFlagAndUidState::AddUidCustomFlagPair(PRUint32 uid, const ch
   if (oldValue)
   {
   // we'll store multiple keys as space-delimited since space is not
-  // a valid character in a keyword
-    ourCustomFlags = (char *) PR_Malloc(strlen(oldValue) + strlen(customFlag) + 2);
+  // a valid character in a keyword. First, we need to look for the
+    // customFlag in the existing flags;
+    char *existingCustomFlagPtr = PL_strstr(oldValue, customFlag);
+    PRUint32 customFlagLen = strlen(customFlag);
+    while (existingCustomFlagPtr)
+    {
+      // if existing flags ends with this exact flag, or flag + ' ', we have this flag already;
+      if (strlen(existingCustomFlagPtr) == customFlagLen || existingCustomFlagPtr[customFlagLen] == ' ')
+        return NS_OK;
+      // else, advance to next flag
+      existingCustomFlagPtr = PL_strstr(existingCustomFlagPtr + 1, customFlag);
+    }
+    ourCustomFlags = (char *) PR_Malloc(strlen(oldValue) + customFlagLen + 2);
     strcpy(ourCustomFlags, oldValue);
     strcat(ourCustomFlags, " ");
     strcat(ourCustomFlags, customFlag);
