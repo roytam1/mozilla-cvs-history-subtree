@@ -89,6 +89,7 @@ nsAbSync::nsAbSync()
   mStringBundle = nsnull;
   mRootDocShell = nsnull;
   mUserName = nsnull;
+  mDoingResync = PR_FALSE;
 
   InternalInit();
   InitSchemaColumns();
@@ -176,6 +177,9 @@ nsresult
 nsAbSync::InternalCleanup(nsresult aResult)
 {
   /* cleanup code */
+
+  mDoingResync = PR_FALSE;
+
   DeleteListeners();
 
   PR_FREEIF(mAbSyncAddressBook);
@@ -622,13 +626,22 @@ NS_IMETHODIMP nsAbSync::OnStopOperation(PRInt32 aTransactionID, nsresult aStatus
   //
   // Now, figure out what the server told us to do with the sync operation.
   //
+  PRBool needResync =  PR_FALSE;
   if ( (aProtocolResponse) && (NS_SUCCEEDED(aStatus)) )
-    rv = ProcessServerResponse(aProtocolResponse);
+    rv = ProcessServerResponse(aProtocolResponse, &needResync);
 
   NotifyListenersOnStopSync(aTransactionID, rv, aMsg);
   InternalCleanup(aStatus);
 
   mCurrentState = nsIAbSyncState::nsIAbSyncIdle;
+
+  // We're done with the current sync. See if the server tells us
+  // that we need to resync (ie, data out of sync for some reason).
+  if (needResync)
+  {
+    mDoingResync = PR_TRUE;
+    ReSyncLocalData();
+  }
 
 #ifdef DEBUG_ABSYNC
   printf("ABSYNC: OnStopOperation: Status = %d\n", aStatus);
@@ -721,7 +734,8 @@ NS_IMETHODIMP nsAbSync::PerformAbSync(nsIDOMWindowInternal *aDOMWindow, PRInt32 
   }
 
 #if DEBUG_OFFLINE_TEST // this is added for loop back test
-  rv = ProcessServerResponse("a test response");
+  PRBool needResync;
+  rv = ProcessServerResponse("a test response", &needResync);
   return NS_ERROR_FAILURE;
 #endif
 
@@ -744,8 +758,11 @@ NS_IMETHODIMP nsAbSync::PerformAbSync(nsIDOMWindowInternal *aDOMWindow, PRInt32 
     return rv;
   }
 
+  // Append "&dupDetect=on" to the prefix if doing resync.
   if (mPostString.IsEmpty())
     prefixStr = PR_smprintf("last=%u&protocol=%s&client=%s&ver=%s", mLastChangeNum, ABSYNC_PROTOCOL, clientIDStr.get(), ABSYNC_VERSION);
+  else if (mDoingResync)
+    prefixStr = PR_smprintf("last=%u&protocol=%s&client=%s&ver=%s&%s&", mLastChangeNum, ABSYNC_PROTOCOL, clientIDStr.get(), ABSYNC_VERSION, SYNC_DUP_DETECTION);
   else
     prefixStr = PR_smprintf("last=%u&protocol=%s&client=%s&ver=%s&", mLastChangeNum, ABSYNC_PROTOCOL, clientIDStr.get(), ABSYNC_VERSION);
 
@@ -757,6 +774,7 @@ NS_IMETHODIMP nsAbSync::PerformAbSync(nsIDOMWindowInternal *aDOMWindow, PRInt32 
     return rv;
   }
 
+  Log("  Protocol prefix:", prefixStr); // logging
   mPostString.Insert(NS_ConvertASCIItoUCS2(prefixStr), 0);
   nsCRT::free(prefixStr);
 
@@ -822,19 +840,15 @@ nsAbSync::GenerateProtocolForList(nsIAbCard *aCard, PRBool aAddId, nsString &pro
 
   if (aAddId)
   {
-    PRUint32    aKey;
+    PRUint32    key;
 
     nsCOMPtr<nsIAbMDBCard> dbcard(do_QueryInterface(aCard, &rv)); 
     NS_ENSURE_SUCCESS(rv, rv);
-    if (NS_FAILED(dbcard->GetKey(&aKey)))
+    if (NS_FAILED(dbcard->GetKey(&key)))
       return NS_ERROR_FAILURE;
 
-    char *tVal = PR_smprintf("%d", (aKey * -1));
-    if (tVal)
-    {
-      tProtLine.Append(NS_LITERAL_STRING("%26cid%3D") + NS_ConvertASCIItoUCS2(tVal));
-      nsCRT::free(tVal);
-    }
+    tProtLine.Append(NS_LITERAL_STRING("%26cid%3D"));
+    tProtLine.AppendInt((key * -1));
   }
  
   if (NS_SUCCEEDED(aCard->GetCardValue(kDisplayNameColumn, getter_Copies(nameStr))))
@@ -874,24 +888,19 @@ nsAbSync::GenerateProtocolForCard(nsIAbCard *aCard, PRBool aAddId, nsString &pro
 
   if (aAddId)
   {
-    PRUint32    aKey;
+    PRUint32    key;
 	  nsresult rv = NS_OK;
 
     nsCOMPtr<nsIAbMDBCard> dbcard(do_QueryInterface(aCard, &rv)); 
     NS_ENSURE_SUCCESS(rv, rv);
-    if (NS_FAILED(dbcard->GetKey(&aKey)))
+    if (NS_FAILED(dbcard->GetKey(&key)))
       return NS_ERROR_FAILURE;
 
 #ifdef DEBUG_ABSYNC
-  printf("ABSYNC: GENERATING PROTOCOL FOR CARD - Address Book Card Key: %d\n", aKey);
+  printf("ABSYNC: GENERATING PROTOCOL FOR CARD - Address Book Card Key: %d\n", key);
 #endif
-
-    char *tVal = PR_smprintf("%d", (aKey * -1));
-    if (tVal)
-    {
-      tProtLine.Append(NS_LITERAL_STRING("%26cid%3D") + NS_ConvertASCIItoUCS2(tVal));
-      nsCRT::free(tVal);
-    }
+    tProtLine.Append(NS_LITERAL_STRING("%26cid%3D"));
+    tProtLine.AppendInt((key * -1));
   }
 
   nsString birthday, anniversary; // for birthday & anniversary
@@ -974,19 +983,17 @@ nsAbSync::GenerateProtocolForCard(nsIAbCard *aCard, PRBool aAddId, nsString &pro
 
     if (foundPhone)
     {
-      char *pVal = PR_smprintf("phone%d", phoneCount);
-      if (pVal)
-      {
-        tProtLine.Append(NS_LITERAL_STRING("&") + NS_ConvertASCIItoUCS2(pVal) + NS_LITERAL_STRING("="));
+      tProtLine.Append(NS_LITERAL_STRING("&")); 
+      tProtLine.AppendInt(phoneCount);
+      tProtLine.Append(NS_LITERAL_STRING("="));
 
         AddValueToProtocolLine(nameStr.get(), tProtLine);
 
-        tProtLine.Append(NS_LITERAL_STRING("&") + NS_ConvertASCIItoUCS2(pVal) + 
-                         NS_LITERAL_STRING("_type=") + NS_ConvertASCIItoUCS2(phoneType));
-        PR_FREEIF(pVal);
+      tProtLine.Append(NS_LITERAL_STRING("&"));
+      tProtLine.AppendInt(phoneCount);
+      tProtLine.Append(NS_LITERAL_STRING("_type=") + NS_ConvertASCIItoUCS2(phoneType));
         phoneCount++;
       }
-    }
     else    // Good ole' normal tag...
     {
       tProtLine.Append(NS_LITERAL_STRING("&") + mSchemaMappingList[i].serverField + NS_LITERAL_STRING("="));
@@ -1132,7 +1139,7 @@ nsAbSync::ThisCardHasChanged(nsIAbCard *aCard, syncMappingRecord *newSyncRecord,
   //
   if ( (!historyRecord) || (historyRecord->CRC != newSyncRecord->CRC) )
   {      
-    PRUint32    aKey;
+    PRUint32    key;
 
     if (!historyRecord)
     {
@@ -1141,41 +1148,29 @@ nsAbSync::ThisCardHasChanged(nsIAbCard *aCard, syncMappingRecord *newSyncRecord,
       nsresult rv = NS_OK;
       nsCOMPtr<nsIAbMDBCard> dbcard(do_QueryInterface(aCard, &rv)); 
       NS_ENSURE_SUCCESS(rv, rv);
-      if (NS_FAILED(dbcard->GetKey(&aKey)))
+      if (NS_FAILED(dbcard->GetKey(&key)))
         return PR_FALSE;
       
       // Ugh...this should never happen...BUT??
-      if (aKey <= 0)
+      if (key <= 0)
         return PR_FALSE;
 
       // Needs to be negative, so make it so!
-      char *tVal = PR_smprintf("%d", (aKey * -1));
-      if (tVal)
-      {
-        protLine.Append(NS_LITERAL_STRING("%26cid%3D") +
-                        NS_ConvertASCIItoUCS2(tVal) +
-                        tempProtocolLine);
-        nsCRT::free(tVal);
-      }
-      else
-        return PR_FALSE;
+      protLine.Append(NS_LITERAL_STRING("%26cid%3D"));
+      protLine.AppendInt((key * -1));
+      protLine.Append(tempProtocolLine);
     }
     else
     {
       // If 'aCard' is a mailing list then use 'list_id' instead of 'id' for the protocol.
       newSyncRecord->flags |= SYNC_MODIFIED;
 
-      char *tVal2 = PR_smprintf("%d", historyRecord->serverID);
-      if (tVal2)
-      {
         if (cardIsUser)
-          protLine.Append(NS_LITERAL_STRING("%26id%3D") + NS_ConvertASCIItoUCS2(tVal2) + tempProtocolLine);
+        protLine.Append(NS_LITERAL_STRING("%26id%3D"));
         else
-          protLine.Append(NS_LITERAL_STRING("%26list_id%3D") + NS_ConvertASCIItoUCS2(tVal2) + tempProtocolLine);
-        nsCRT::free(tVal2);
-      }
-      else
-        return PR_FALSE;
+        protLine.Append(NS_LITERAL_STRING("%26list_id%3D"));
+      protLine.AppendInt(historyRecord->serverID);
+      protLine.Append(tempProtocolLine);
     }
 
     return PR_TRUE;
@@ -1214,11 +1209,11 @@ BuildSyncTimestamp(void)
 }
 
 NS_IMETHODIMP
-nsAbSync::AnalyzeAllRecords(nsIAddrDatabase *aDatabase, nsIAbDirectory *directory, PRBool analyzeUser)
+nsAbSync::AnalyzeAllRecords(nsIAddrDatabase *aDatabase, nsIAbDirectory *directory)
 {
   nsresult                rv = NS_OK;
-  nsIEnumerator           *cardEnum = nsnull;
-  nsCOMPtr<nsISupports>   obj = nsnull;
+  nsCOMPtr<nsIEnumerator> cardEnum;
+  nsCOMPtr<nsISupports>   obj;
   PRBool                  exists = PR_FALSE;
   PRUint32                readCount = 0;
   PRInt32                 readSize = 0;
@@ -1282,14 +1277,18 @@ nsAbSync::AnalyzeAllRecords(nsIAddrDatabase *aDatabase, nsIAbDirectory *director
     goto GetOut;
   }
 
-  // Now see if we actually have an old table to work with?
-  // If not, this is the first sync operation.
-  //
-  //mOldSyncMapingTable = nsnull;
-  //mNewSyncMapingTable = nsnull;
+  // If we're doing a resync operation then remove all the history files before
+  // generating the protocol data (which makes all cards/lists as NEW). Plus,
+  // we MUST set last change number to 1 and append "&dupDetect=on" to the protocol.
+  if (mDoingResync)
+  {
+    mLastChangeNum = 1;
+    mHistoryFile->Delete(PR_FALSE);
+    mListHistoryFile->Delete(PR_FALSE);
+  }
   
   // Do this here to be used in case of a crash recovery situation...
-  rv = aDatabase->EnumerateCards(directory, &cardEnum);
+  rv = aDatabase->EnumerateCards(directory, getter_AddRefs(cardEnum));
   if (NS_FAILED(rv) || (!cardEnum))
   {
     rv = NS_ERROR_FAILURE;
@@ -1358,7 +1357,7 @@ nsAbSync::AnalyzeAllRecords(nsIAddrDatabase *aDatabase, nsIAbDirectory *director
   {
     if (NS_FAILED(LoadUsersFromHistoryFile()))
     {
-      Log("Loading users from history file", "FAILED!");
+      Log("Loading users from history file:", "FAILED!");
       goto GetOut;
     }
   }
@@ -1369,7 +1368,7 @@ nsAbSync::AnalyzeAllRecords(nsIAddrDatabase *aDatabase, nsIAbDirectory *director
   {
     if (NS_FAILED(LoadListsFromHistoryFile()))
     {
-        Log("Loading lists from history file", "FAILED!");
+        Log("Loading lists from history file:", "FAILED!");
         goto GetOut;
     }
   }
@@ -1414,19 +1413,19 @@ nsAbSync::AnalyzeAllRecords(nsIAddrDatabase *aDatabase, nsIAbDirectory *director
           // First, we need to fill out the localID for this entry. This should
           // be the ID from the local database for this card entry
           //
-          PRUint32    aKey;
+          PRUint32    key;
           nsresult rv = NS_OK;
           nsCOMPtr<nsIAbMDBCard> dbcard(do_QueryInterface(card, &rv)); 
           if (NS_FAILED(rv) || !dbcard)
             continue;
-          if (NS_FAILED(dbcard->GetKey(&aKey)))
+          if (NS_FAILED(dbcard->GetKey(&key)))
             continue;
 
           // Ugh...this should never happen...BUT??
-          if (aKey <= 0)
+          if (key <= 0)
             continue;
 
-          mNewSyncMapingTable[workCounter].localID = aKey;
+          mNewSyncMapingTable[workCounter].localID = key;
           // Store proper flag in the table. This flag is used when processing the deleted records.
           // Since the cards were already removed from the addrbook there's no way to find out if
           // the deleted cards were normal cards, aol groups, or aol additional email addresses. We
@@ -1524,9 +1523,6 @@ nsAbSync::AnalyzeAllRecords(nsIAddrDatabase *aDatabase, nsIAbDirectory *director
   CheckDeletedRecords();
 
 GetOut:
-  if (cardEnum)
-    delete cardEnum;
-
   if (NS_FAILED(rv))
   {
     mOldTableCount = 0;
@@ -1543,10 +1539,10 @@ GetOut:
     nsCAutoString str;
     str.AssignWithConversion(mPostString.get());
     char *unescapedStr = nsUnescape((char *)str.get());
-    Log("  Protocol data sent to server", unescapedStr);
+    Log("  Protocol data sent to server:", unescapedStr);
   }
   else
-    Log("  Protocol data sent to server", "Nothing has changed!");
+    Log("  Protocol data sent to server:", "Nothing has changed!");
 
   // Ok, get out!
   return rv;
@@ -1565,7 +1561,7 @@ nsAbSync::AnalyzeTheLocalAddressBook()
   nsCOMPtr <nsIAbDirectory>     directory = nsnull;
 
   // Log current time
-  Log("Analyzing local addressbook at", BuildSyncTimestamp());
+  Log("Analyzing local addressbook at:", BuildSyncTimestamp());
 
   // Init to null...
   mPostString.Truncate();
@@ -1597,7 +1593,7 @@ nsAbSync::AnalyzeTheLocalAddressBook()
   // then we need to create the mPostString protocol stuff to make 
   // the changes
   //
-  rv = AnalyzeAllRecords(aDatabase, directory, PR_TRUE);
+  rv = AnalyzeAllRecords(aDatabase, directory);
 
 EarlyExit:
   // Database is open...make sure to close it
@@ -1607,13 +1603,28 @@ EarlyExit:
   }
   NS_IF_RELEASE(aDatabase);
 
-  Log("Finish analyzing local addressbook at", BuildSyncTimestamp());
+  Log("Finish analyzing local addressbook at:", BuildSyncTimestamp());
   return rv;
 }
 
 nsresult
 nsAbSync::PatchHistoryTableWithNewID(PRInt32 clientID, PRInt32 serverID, PRInt32 aMultiplier, ulong crc)
 {
+  // If patching a new card, see if the server id already exists on our side. 
+  // If it does then it's a dup of other card and we need to remove the card.
+  if (aMultiplier == -1)
+  {
+    PRInt32 cID;
+    if (NS_SUCCEEDED(LocateClientIDFromServerID(serverID, &cID)) && cID)
+    {
+      // Delete the local card and return. The server id is left 0 
+      // in the table so it won't get saved to the history file.
+      PR_LOG(ABSYNC, PR_LOG_DEBUG, ("%s: client id=%d, server id=%d", "  *** Deleting duplicate entry", clientID, serverID));
+      DeleteCardByClientID(clientID*aMultiplier);
+      return NS_OK;
+    }
+  }
+
   for (PRUint32 i = 0; i < mNewTableCount; i++)
   {
     if (mNewSyncMapingTable[i].localID == (clientID * aMultiplier))
@@ -1868,6 +1879,14 @@ PRUint32 nsAbSync::GetCardTypeByMemberId(PRUint32 aClientID)
   for (i=0; i<mOldTableCount; i++)
     if (mOldSyncMapingTable[i].localID == (PRInt32) aClientID)
       return mOldSyncMapingTable[i].flags;
+
+  // Look in the new table too just in case we are in resync mode
+  // which has nothing in the old table (ie, everything is new).
+  if (mDoingResync)
+    for (i=0; i<mNewTableCount; i++)
+    if (mNewSyncMapingTable[i].localID == (PRInt32) aClientID)
+      return mNewSyncMapingTable[i].flags;
+
   return 0;
 }
 
@@ -1962,18 +1981,22 @@ void nsAbSync::MarkDeletedInSyncTable(PRInt32 clientID)
 nsresult
 nsAbSync::DeleteCardByServerID(PRInt32 aServerID)
 {
-  nsIEnumerator           *cardEnum = nsnull;
-  nsCOMPtr<nsISupports>   obj = nsnull;
-  PRUint32                aKey;
 
-  // First off, find the aServerID in the history database and find
-  // the local client ID for this server ID
+  // Find the local client ID for this server ID.
   //
   PRInt32   clientID;
-  if (NS_FAILED(LocateClientIDFromServerID(aServerID, &clientID)))
-  {
-    return NS_ERROR_FAILURE;
+  nsresult rv = LocateClientIDFromServerID(aServerID, &clientID);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  return (DeleteCardByClientID(clientID));
   }
+
+nsresult
+nsAbSync::DeleteCardByClientID(PRInt32 aClientID)
+{
+  nsCOMPtr<nsIEnumerator> cardEnum;
+  nsCOMPtr<nsISupports>   obj;
+  PRUint32                key;
 
   // Time to find the entry to delete!
   //
@@ -2006,7 +2029,7 @@ nsAbSync::DeleteCardByServerID(PRInt32 aServerID)
   if (NS_FAILED(rv)) 
     goto EarlyExit;
 
-  rv = aDatabase->EnumerateCards(directory, &cardEnum);
+  rv = aDatabase->EnumerateCards(directory, getter_AddRefs(cardEnum));
   if (NS_FAILED(rv) || (!cardEnum))
   {
     rv = NS_ERROR_FAILURE;
@@ -2030,15 +2053,15 @@ nsAbSync::DeleteCardByServerID(PRInt32 aServerID)
       nsCOMPtr<nsIAbMDBCard> dbcard(do_QueryInterface(card, &rv)); 
       if (NS_FAILED(rv) || !dbcard)
         continue;
-      if (NS_FAILED(dbcard->GetKey(&aKey)))
+      if (NS_FAILED(dbcard->GetKey(&key)))
         continue;
 
-      if ((PRInt32) aKey == clientID)
+      if ((PRInt32) key == aClientID)
       {
         rv = aDatabase->DeleteCard(card, PR_TRUE);
         // Mark deleted in the user sync table as well.
         if (NS_SUCCEEDED(rv))
-          MarkDeletedInSyncTable(clientID);
+          MarkDeletedInSyncTable(aClientID);
         break;
       }
     }
@@ -2046,9 +2069,6 @@ nsAbSync::DeleteCardByServerID(PRInt32 aServerID)
   } while (NS_SUCCEEDED(cardEnum->Next()));
 
 EarlyExit:
-  if (cardEnum)
-    delete cardEnum;
-
   // Database is open...make sure to close it
   if (aDatabase)
   {
@@ -2212,7 +2232,6 @@ nsresult
 nsAbSync::AdvanceToNextSection()
 {
   // If we are sitting on a section...bump past it...
-  mProtocolOffset++;
   while (!EndOfStream() && *mProtocolOffset != '~')
     AdvanceToNextLine();
   return NS_OK;
@@ -2282,8 +2301,11 @@ nsAbSync::ParseNextSection()
 // This is the response side of getting things back from the server
 //
 nsresult
-nsAbSync::ProcessServerResponse(const char *aProtocolResponse)
+nsAbSync::ProcessServerResponse(const char *aProtocolResponse, PRBool *needResync)
 {
+  NS_ENSURE_ARG_POINTER(needResync);
+  *needResync = PR_FALSE;
+
   nsresult        rv = NS_OK;
   PRUint32        writeCount = 0;
   PRInt32         writeSize = 0;
@@ -2296,12 +2318,12 @@ nsAbSync::ProcessServerResponse(const char *aProtocolResponse)
     PRUnichar   *outValue = GetString(NS_LITERAL_STRING("syncInvalidResponse").get());
     DisplayErrorMessage(outValue);
     PR_FREEIF(outValue);
-    Log("Processing server data", "Invalid server response received!");
+    Log("Processing server data:", "Invalid server response received!");
     return NS_ERROR_FAILURE;
   }
 
   // Log current event/time
-  Log("Processing server data at", BuildSyncTimestamp());
+  Log("Processing server data at:", BuildSyncTimestamp());
 
   // Assign the vars...
   mProtocolResponse = (char *)aProtocolResponse;
@@ -2346,6 +2368,7 @@ nsAbSync::ProcessServerResponse(const char *aProtocolResponse)
     return NS_ERROR_FAILURE;
   }
 
+  PRInt32 saveLastChangeNum = mLastChangeNum;
   while ( (!EndOfStream()) && (parseOk) )
   {
     parseOk = ParseNextSection();
@@ -2353,14 +2376,20 @@ nsAbSync::ProcessServerResponse(const char *aProtocolResponse)
 
   // Write current existing users to user history file.
   if (NS_FAILED(SaveCurrentUsersToHistoryFile()))
-    Log("Saving current users to history file", "FAILED!");
+    Log("Saving current users to history file failed", "");
 
   // Write current existing lists to list history file.
   if (NS_FAILED(SaveCurrentListsToHistoryFile()))
-    Log("Saving current lists to history file", "FAILED!");
+    Log("Saving current lists to history file failed", "");
 
   if (mLastChangeNum > 1)
   {
+    // If the server is telling us that its data and ours are ouf of sync then set the
+    // resync flag as we need to resync all the existing cards and lists with servers.
+    if (mLastChangeNum < saveLastChangeNum)
+      *needResync = PR_TRUE;
+    else
+    {
     nsCOMPtr<nsIPref> prefs(do_GetService(NS_PREF_CONTRACTID, &rv)); 
     if (NS_SUCCEEDED(rv) && prefs) 
     {
@@ -2368,8 +2397,11 @@ nsAbSync::ProcessServerResponse(const char *aProtocolResponse)
       prefs->SavePrefFile(nsnull);
     }
   }
+  }
 
-  Log("Finish processing server data at", BuildSyncTimestamp());
+  Log("Finish processing server data at:", BuildSyncTimestamp());
+  // Put a blank line at the end of a sync session to improve readability.
+  Log("", "");
   return NS_OK;
 }
 
@@ -2538,9 +2570,9 @@ nsAbSync::FindCardByClientID(PRInt32           aClientID,
                              nsIAbDirectory   *directory,
                              nsIAbCard        **aReturnCard)
 {
-  nsIEnumerator           *cardEnum = nsnull;
-  nsCOMPtr<nsISupports>   obj = nsnull;
-  PRUint32                aKey;
+  nsCOMPtr<nsIEnumerator> cardEnum;
+  nsCOMPtr<nsISupports>   obj;
+  PRUint32                key;
   nsresult                rv = NS_ERROR_FAILURE;
 
   // Time to find the entry to play with!
@@ -2550,12 +2582,9 @@ nsAbSync::FindCardByClientID(PRInt32           aClientID,
   NS_ENSURE_ARG_POINTER(directory);
 
   *aReturnCard = nsnull;
-  rv = aDatabase->EnumerateCards(directory, &cardEnum);
+  rv = aDatabase->EnumerateCards(directory, getter_AddRefs(cardEnum));
   if (NS_FAILED(rv) || (!cardEnum))
-  {
-    rv = NS_ERROR_FAILURE;
-    goto EarlyExit;
-  }
+    return NS_ERROR_FAILURE;
 
   //
   // Now we have to find the entry and return it!
@@ -2574,11 +2603,11 @@ nsAbSync::FindCardByClientID(PRInt32           aClientID,
       nsCOMPtr<nsIAbMDBCard> dbcard(do_QueryInterface(card, &rv)); 
       if (NS_FAILED(rv) || !dbcard)
         continue;
-      if (NS_FAILED(dbcard->GetKey(&aKey)))
+      if (NS_FAILED(dbcard->GetKey(&key)))
         continue;
 
       // Found IT!
-      if ((PRInt32) aKey == aClientID)
+      if ((PRInt32) key == aClientID)
       {
         *aReturnCard = card;
         rv = NS_OK;
@@ -2587,10 +2616,6 @@ nsAbSync::FindCardByClientID(PRInt32           aClientID,
     }
 
   } while (NS_SUCCEEDED(cardEnum->Next()));
-
-EarlyExit:
-  if (cardEnum)
-    delete cardEnum;
 
   return rv;
 }
@@ -3272,20 +3297,20 @@ nsresult nsAbSync::RecoverUserSyncRecords(PRUint32 numOfCards, nsIEnumerator *ca
           // First, we need to fill out the localID for this entry. This should
           // be the ID from the local database for this card entry
           //
-          PRUint32    aKey;
+          PRUint32    key;
           nsresult rv = NS_OK;
           nsCOMPtr<nsIAbMDBCard> dbcard(do_QueryInterface(card, &rv)); 
           if (NS_FAILED(rv) || !dbcard)
             continue;
-          if (NS_FAILED(dbcard->GetKey(&aKey)))
+          if (NS_FAILED(dbcard->GetKey(&key)))
             continue;
 
           // Ugh...this should never happen...BUT??
-          if (aKey <= 0)
+          if (key <= 0)
             continue;
 
           // Ok, now get the data for this record....
-          mCrashTable[workCounter].localID = aKey;
+          mCrashTable[workCounter].localID = key;
           if (NS_SUCCEEDED(GenerateProtocolForCard(card, PR_FALSE, tProtLine)))
             mCrashTable[workCounter].CRC = GetCRC((char *)NS_ConvertUCS2toUTF8(tProtLine).get());
 
@@ -3358,8 +3383,12 @@ nsresult nsAbSync::SaveCurrentUsersToHistoryFile()
   PRUint32 writeCount = 0;
   while (writeCount < mNewTableCount)
   {
-    // Sanity one more time...
-    if (mNewSyncMapingTable[writeCount].serverID != 0)
+    // Since we never use the server id of "email address" type of cards,
+    // it's ok to save those in the history table even if the server ids
+    // are 0. This happens when resync occurred earlier and the servers
+    // never return the ids back to us for those cards.
+    if ((mNewSyncMapingTable[writeCount].serverID != 0) || 
+        (mNewSyncMapingTable[writeCount].flags & SYNC_IS_AOL_ADDITIONAL_EMAIL))
     {
       rv = mHistoryFile->Write((char *)&(mNewSyncMapingTable[writeCount]), sizeof(syncMappingRecord), &writeSize);
       if (NS_FAILED(rv) || (writeSize != sizeof(syncMappingRecord)))
@@ -3491,7 +3520,7 @@ void nsAbSync::ParseAndLogServerData(const char *logData)
     {
       // Found a line so log it.
       *pChar = 0;
-      Log("  Protocol data received from server", start);
+      Log("  Protocol data received from server:", start);
       pChar++;
       start = pChar;
     }
@@ -3499,10 +3528,21 @@ void nsAbSync::ParseAndLogServerData(const char *logData)
     {
       // Log the last line and we're done.
       *pChar = 0;
-      Log("  Protocol data received from server", start);
+      Log("  Protocol data received from server:", start);
       break;
     }
   }
+}
+
+void nsAbSync::ReSyncLocalData()
+{
+  // Kick off the resync operation with all existing cards/lists
+  // in the database. To do this we need to remove the history
+  // files for cards and lists so that they are treated as newly
+  // created ones. Also, the change number must be set to 1 and
+  // we need to append "&detectDup=1" to the protocol string.
+  Log("*** Resyncing data with servers ***", "");
+  PerformAbSync(nsnull, &mTransactionID);
 }
 
 #define LOG_LINE_BUF_SIZE 256
@@ -3527,19 +3567,19 @@ void nsAbSync::Log(const char *logSubName, char *logData)
       {
         saveChar = *(pChar + LOG_LINE_BUF_SIZE);
         *(pChar + LOG_LINE_BUF_SIZE) = 0;
-        PR_LOG(ABSYNC, PR_LOG_ALWAYS, ("%s: %s", logSubName, pChar));
+        PR_LOG(ABSYNC, PR_LOG_ALWAYS, ("%s %s", logSubName, pChar));
         *(pChar + LOG_LINE_BUF_SIZE) = saveChar;
         length -= LOG_LINE_BUF_SIZE;
         pChar = pChar + LOG_LINE_BUF_SIZE;
         if (length < LOG_LINE_BUF_SIZE)
         {
           // Last block of data
-          PR_LOG(ABSYNC, PR_LOG_ALWAYS, ("%s: %s", logSubName, pChar));
+          PR_LOG(ABSYNC, PR_LOG_ALWAYS, ("%s %s", logSubName, pChar));
           break;
         }
       }
     }
     else
-      PR_LOG(ABSYNC, PR_LOG_ALWAYS, ("%s: %s", logSubName, logData));
+      PR_LOG(ABSYNC, PR_LOG_ALWAYS, ("%s %s", logSubName, logData));
   }
 }

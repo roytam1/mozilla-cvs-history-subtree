@@ -146,6 +146,9 @@ typedef struct {
 // group
 #define SYNC_ESCAPE_DELGROUP            "op%3DgrpDel"
 
+// Duplicate detection (for resync)
+#define SYNC_DUP_DETECTION              "dupDetect=on"
+
 // Defines for what type of add this may be?
 #define SYNC_SINGLE_USER_TYPE            1
 #define SYNC_MAILLIST_TYPE               2
@@ -190,11 +193,11 @@ private:
   nsresult        NotifyListenersOnStopAuthOperation(nsresult aStatus, const PRUnichar *aMsg, const char *aCookie);
 
   nsresult        AnalyzeTheLocalAddressBook();
-  nsresult        ProcessServerResponse(const char *aProtocolResponse);
+  nsresult        ProcessServerResponse(const char *aProtocolResponse, PRBool *needResync);
   NS_IMETHOD      InitSchemaColumns();
 
   NS_IMETHOD      OpenAB(char *aAbName, nsIAddrDatabase **aDatabase);
-  NS_IMETHOD      AnalyzeAllRecords(nsIAddrDatabase *aDatabase, nsIAbDirectory *directory, PRBool analyzeUser);
+  NS_IMETHOD      AnalyzeAllRecords(nsIAddrDatabase *aDatabase, nsIAbDirectory *directory);
   NS_IMETHOD      GenerateProtocolForCard(nsIAbCard *aCard, PRBool  aAddId, nsString &protLine);
   PRBool          ThisCardHasChanged(nsIAbCard *aCard, syncMappingRecord *syncRecord, nsString &protLine, PRBool cardIsUser);
   void            InternalInit();
@@ -266,6 +269,7 @@ private:
   nsresult        DeleteGroups();
   nsresult        DeleteMailingListMembers();
   nsresult        DeleteCardByServerID(PRInt32 aServerID);
+  nsresult        DeleteCardByClientID(PRInt32 aClientID);
   nsresult        LocateClientIDFromServerID(PRInt32 aServerID, PRInt32 *aClientID);
   nsresult        LocateServerIDFromClientID(PRInt32 aClientID, PRInt32 *aServerID);
   PRInt32         DetermineTagType(nsStringArray *aArray);
@@ -353,6 +357,10 @@ private:
   void            Log(const char *logSubName, char *logData);
   void            ParseAndLogServerData(const char *logData);
 
+  // Resync (when new last change num from servers is less than what we have)
+  void ReSyncLocalData();
+
+  PRBool          mDoingResync;                           // If resync is needed...
   nsString        mLocale;                                // Charset of returned data!
   nsStringArray   *mDeletedRecordTags;                    // The deleted record tags from the server...
   nsStringArray   *mDeletedRecordValues;                  // The deleted record values from the server...

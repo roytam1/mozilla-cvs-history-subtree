@@ -448,18 +448,25 @@ void nsAbSync::ConvertListMappingEntryToString(syncListMappingRecord &listRecord
   sprintf(buf,"%lu", listRecord.CRC);
   idString.Append(buf);
   idString.Append("/");
-  idString.AppendInt(listRecord.localID,  10 /* base 10 */);
+  idString.AppendInt(listRecord.localID);
   idString.Append("/");
-  idString.AppendInt(listRecord.serverID, 10 /* base 10 */);
+  idString.AppendInt(listRecord.serverID);
 
+  // It's ok to list members whose card type is "email address" in the list 
+  // history table even the server id is 0 (since we don't care about the server
+  // id of this card type). We need the presence of these member entries so that
+  // we don't mistakenly think that they are NEW members that need to be synced
+  // to the servers. This happens when resync occurred earlier and we never got
+  // the server ids for cards whose card type is "email address".
   PRUint32 cnt = listRecord.memLocalID.GetSize();
   for (PRUint32 i = 0; i < cnt; i++)
-    if (listRecord.memServerID.GetAt(i) != 0)
+    if ( (listRecord.memServerID.GetAt(i) != 0) ||
+         (GetCardTypeByMemberId(listRecord.memLocalID.GetAt(i)) & SYNC_IS_AOL_ADDITIONAL_EMAIL) )
     {
       idString.Append(",");
-      idString.AppendInt(listRecord.memLocalID.GetAt(i), 10 /* base 10 */);
+      idString.AppendInt(listRecord.memLocalID.GetAt(i));
       idString.Append("/");
-      idString.AppendInt(listRecord.memServerID.GetAt(i), 10 /* base 10 */);
+      idString.AppendInt(listRecord.memServerID.GetAt(i));
     }
 
   idString.Append(CRLF);  // end with CRLF
@@ -505,16 +512,16 @@ nsresult nsAbSync::GenerateMemberProtocolForNewList(nsIAbCard *listCard, PRUint3
         if (NS_FAILED(rv) || !dbCard)
           break;
 
-        PRUint32 aKey;
-        if (NS_FAILED(dbCard->GetKey(&aKey)) || (aKey <=0))
+        PRUint32 key;
+        if (NS_FAILED(dbCard->GetKey(&key)) || (key <=0))
           continue;
 
         // This member may already has the server id so check it.
         PRInt32 serverID;
-        if (NS_FAILED(LocateServerIDFromClientID(aKey, &serverID)))
+        if (NS_FAILED(LocateServerIDFromClientID(key, &serverID)))
           continue;
 
-        mListNewSyncMapingTable[listIndex].memLocalID.Add(aKey);
+        mListNewSyncMapingTable[listIndex].memLocalID.Add(key);
         mListNewSyncMapingTable[listIndex].memServerID.Add(serverID);
         mListNewSyncMapingTable[listIndex].memFlags.Add(SYNC_ADD);  // may not need this
 
@@ -533,7 +540,7 @@ nsresult nsAbSync::GenerateMemberProtocolForNewList(nsIAbCard *listCard, PRUint3
           }
         }
         else
-          AddAListMememerToProtocolLine(listKey, aKey, i, protLine);
+          AddAListMememerToProtocolLine(listKey, key, i, protLine);
       }
 
       // If we have 'email addresss' members then add 'emailstringUpdate' cmd to the protocol.
@@ -668,7 +675,7 @@ nsresult nsAbSync::CheckCurrentListForChangedMember(nsIAbCard *listCard, PRUint3
       // Get the member info from the history file so we can tell the difference.
       // Note that the changed member is implemented by adding and deleting members.
       PRUint32 i;
-      PRUint32 aKey;
+      PRUint32 key;
       PRInt32 serverID;
       for (i = 0; i < total; i++)
       {
@@ -677,16 +684,17 @@ nsresult nsAbSync::CheckCurrentListForChangedMember(nsIAbCard *listCard, PRUint3
         if (NS_FAILED(rv) || !dbCard)
           continue; // should we continue here?
 
-        if (NS_FAILED(dbCard->GetKey(&aKey)) || (aKey <=0))
+        if (NS_FAILED(dbCard->GetKey(&key)) || (key <=0))
           continue; // should we continue here?
 
-        if (NS_FAILED(LocateServerIDFromClientID(aKey, &serverID)))
+        if (NS_FAILED(LocateServerIDFromClientID(key, &serverID)))
           continue; // should we continue here?
 
         // If it's an 'email address' card (type) then store the email address for later use.
+        PRUint32 cardType;
         nsXPIDLString email;
         nsCOMPtr<nsIAbCard> card = do_QueryInterface(dbCard, &rv);
-        if (WhichCardType(card) == SYNC_IS_AOL_ADDITIONAL_EMAIL)
+        if ((cardType = WhichCardType(card)) == SYNC_IS_AOL_ADDITIONAL_EMAIL)
         {
           card->GetPrimaryEmail(getter_Copies(email));
           if (email && !email.IsEmpty())
@@ -697,13 +705,16 @@ nsresult nsAbSync::CheckCurrentListForChangedMember(nsIAbCard *listCard, PRUint3
           }
         }
 
-        mListNewSyncMapingTable[listIndex].memLocalID.Add(aKey);
+        mListNewSyncMapingTable[listIndex].memLocalID.Add(key);
         mListNewSyncMapingTable[listIndex].memServerID.Add(serverID);
         mListNewSyncMapingTable[listIndex].memFlags.Add(SYNC_MODIFIED);  // may not need this
 
         // If this member not found in the list then add it to the protocol string.
-        if (MemberNotFoundInHistory(historyRecord, aKey))
-          AddAListMememerToProtocolLine(listKey, aKey, i, protLine);
+        // We'll never send new list members whose card type is "aditional email addr"
+        // to the servers because we only take these addresses from the servers (ie,
+        // we don't creat it loally), and this is not an error.
+        if (MemberNotFoundInHistory(historyRecord, key) && cardType != SYNC_IS_AOL_ADDITIONAL_EMAIL)
+          AddAListMememerToProtocolLine(listKey, key, i, protLine);
       }
     }
 
@@ -1310,10 +1321,10 @@ nsresult nsAbSync::DeleteMemberFromList(nsIAbCard *listCard, PRInt32 memberLocal
       nsCOMPtr<nsIAbMDBCard> dbcard = do_QueryInterface(item, &rv);
       if (NS_FAILED(rv) || !dbcard)
         continue;
-      PRUint32 aKey;
-      if (NS_FAILED(dbcard->GetKey(&aKey)) || (aKey <=0))
+      PRUint32 key;
+      if (NS_FAILED(dbcard->GetKey(&key)) || (key <=0))
         continue;
-      if (aKey == (PRUint32)memberLocalID)
+      if (key == (PRUint32)memberLocalID)
       {
         members->DeleteElementAt(i);
         rv = mailList->EditMailListToDatabase(mailListURI.get(), listCard);
