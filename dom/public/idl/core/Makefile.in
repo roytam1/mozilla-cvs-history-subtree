@@ -26,7 +26,8 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE		= dom_core
+MODULE		= dom
+XPIDL_MODULE	= dom_core
 
 XPIDLSRCS =                                     \
 	nsIDOMAttr.idl				\

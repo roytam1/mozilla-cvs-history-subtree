@@ -26,7 +26,8 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE		= dom_xbl
+MODULE		= dom
+XPIDL_MODULE	= dom_xbl
 
 XPIDLSRCS =                                     \
 	nsIDOMDocumentXBL.idl			\
