@@ -231,6 +231,9 @@ void CAddressBookTableView::AddRowDataToDrag(TableIndexT inRow, DragReference in
 		XP_FREEIF( fullName );
 		FailOSErr_(err);
 	}
+#else
+#pragma unused(inRow)
+#pragma unused(inDragRef)
 #endif
 }
 
@@ -1053,7 +1056,7 @@ void CAddressBookContainerView::DrawCellContents( const STableCell& inCell, cons
 //	CStandardflexTable applies an undesired transform when the row is selected
 //
 void CAddressBookContainerView::DrawIconsSelf(
-	const STableCell& inCell, IconTransformType inTransformType, const Rect& inIconRect) const
+	const STableCell& inCell, IconTransformType /*inTransformType*/, const Rect& inIconRect) const
 {
 	ResIDT iconID = GetIconID(inCell.row);
 	if (iconID)
