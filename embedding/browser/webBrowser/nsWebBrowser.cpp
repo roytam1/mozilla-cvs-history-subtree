@@ -914,12 +914,17 @@ NS_IMETHODIMP nsWebBrowser::Create()
 
 NS_IMETHODIMP nsWebBrowser::Destroy()
 {
-   InternalDestroy();
+  // Stop any activity within the webBrowser...
+  if (mDocShellAsNav) {
+    mDocShellAsNav->Stop(nsIWebNavigation::STOP_ALL);
+  }
 
-   if(!mInitInfo)
-      mInitInfo = new nsWebBrowserInitInfo();
+  InternalDestroy();
 
-   return NS_OK;
+  if(!mInitInfo)
+    mInitInfo = new nsWebBrowserInitInfo();
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsWebBrowser::SetPosition(PRInt32 aX, PRInt32 aY)
@@ -1403,6 +1408,11 @@ NS_IMETHODIMP nsWebBrowser::Activate(void)
   domWindow = do_QueryInterface(domWindowExternal);
   nsCOMPtr<nsPIDOMWindow> piWin(do_QueryInterface(domWindow));
   nsCOMPtr<nsIFocusController> focusController;
+
+  // Do nothing if there is no DOMWindow.
+  if (!piWin) {
+    return NS_ERROR_FAILURE;
+  }
   piWin->GetRootFocusController(getter_AddRefs(focusController));
   PRBool needToFocus = PR_TRUE;
   if (focusController) {

@@ -272,22 +272,6 @@ nsWebShell::GetInterface(const nsIID &aIID, void** aInstancePtr)
       NS_ADDREF((nsISupports*)*aInstancePtr);
       return NS_OK;
       }
-   else if(aIID.Equals(NS_GET_IID(nsIScriptGlobalObject)))
-      {
-      NS_ENSURE_SUCCESS(EnsureScriptEnvironment(), NS_ERROR_FAILURE);
-      *aInstancePtr = mScriptGlobal;
-      NS_ADDREF((nsISupports*)*aInstancePtr);
-      return NS_OK;
-      }
-   else if(aIID.Equals(NS_GET_IID(nsIDOMWindowInternal)) ||
-           aIID.Equals(NS_GET_IID(nsIDOMWindow)))
-
-      {
-      NS_ENSURE_SUCCESS(EnsureScriptEnvironment(), NS_ERROR_FAILURE);
-      NS_ENSURE_SUCCESS(mScriptGlobal->QueryInterface(aIID, aInstancePtr),
-                        NS_ERROR_FAILURE);
-      return NS_OK;
-      }
 
    if (!*aInstancePtr || NS_FAILED(rv))
      return nsDocShell::GetInterface(aIID,aInstancePtr);
