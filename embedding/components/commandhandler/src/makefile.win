@@ -20,8 +20,8 @@
 
 DEPTH=..\..\..\..
 
-MODULE=embedcomponents
-LIBRARY_NAME=commandhandler_s
+MODULE=commandhandler
+
 REQUIRES	= string \
 		  xpcom \
 		  dom \
@@ -32,6 +32,8 @@ REQUIRES	= string \
 		  content_xul \
 		  commandhandler \
 		  $(NULL)
+
+LIBRARY_NAME=commandhandler_s
 
 CPP_OBJS= \
 	.\$(OBJDIR)\nsCommandGroup.obj \

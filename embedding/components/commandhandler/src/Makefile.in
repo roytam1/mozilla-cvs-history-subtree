@@ -24,8 +24,7 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE		= embedcomponents
-LIBRARY_NAME	= commandhandler_s
+MODULE		= commandhandler
 REQUIRES	= string \
 		  xpcom \
 		  dom \
@@ -37,8 +36,10 @@ REQUIRES	= string \
 		  commandhandler \
 		  $(NULL)
 
+LIBRARY_NAME	= commandhandler_s
+
 CPPSRCS		= \
-      nsCommandGroup.cp \
+      nsCommandGroup.cpp \
       nsCommandManager.cpp \
       nsCommandParams.cpp \
       nsControllerCommandManager.cpp \
