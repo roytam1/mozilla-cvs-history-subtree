@@ -83,7 +83,7 @@ nsDBAccessor::Init(nsIFileSpec* dbfile)
   PRUint32 len = PL_strlen(SessionKey)+1 ;
   DBT db_key, db_data ;
 
-  db_key.data = NS_REINTERPRET_CAST(void*, SessionKey) ;
+  db_key.data = NS_CONST_CAST(char*, SessionKey) ;
   db_key.size = len ;
 
   int status = (*mDB->get)(mDB, &db_key, &db_data, 0) ;
@@ -241,7 +241,7 @@ nsDBAccessor::GetID(const char* key, PRUint32 length, PRInt32* aID)
 
   DBT db_key, db_data ;
 
-  db_key.data = NS_REINTERPRET_CAST(void*, key) ;
+  db_key.data = NS_CONST_CAST(char*, key) ;
   db_key.size = length ;
 
   int status = (*mDB->get)(mDB, &db_key, &db_data, 0) ;
