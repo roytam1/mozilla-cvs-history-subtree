@@ -56,6 +56,18 @@ static const char* kShortElementName = "short";
 static const char* kByteElementName = "byte";
 static const char* kArrayElementName = "Array";
 
+/* nsISupports marshall (in nsISOAPMessage aMessage, in nsISupports aSource, in DOMString aEncodingStyleURI, in DOMString aTypeID, in DOMString aSchemaID, in nsISupports aConfiguration); */
+NS_IMETHODIMP nsDefaultSOAPEncoder::Marshall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aTypeID, const nsAReadableString & aSchemaID, nsISupports *aConfiguration, nsISupports **_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* nsISupports unmarshall (in nsISOAPMessage aMessage, in nsISupports aSource, in DOMString aEncodingStyleURI, in DOMString aSchemaID, in DOMString aTypeID, in nsISupports aConfiguration); */
+NS_IMETHODIMP nsDefaultSOAPEncoder::Unmarshall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aSchemaID, const nsAReadableString & aTypeID, nsISupports *aConfiguration, nsISupports **_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
 #if 0
 
 static void
