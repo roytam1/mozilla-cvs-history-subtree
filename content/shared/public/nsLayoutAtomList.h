@@ -86,6 +86,7 @@ LAYOUT_ATOM(areaFrame, "AreaFrame")
 LAYOUT_ATOM(blockFrame, "BlockFrame")
 LAYOUT_ATOM(brFrame, "BRFrame")
 LAYOUT_ATOM(bulletFrame, "BulletFrame")
+LAYOUT_ATOM(gfxButtonControlFrame, "gfxButtonControlFrame")
 LAYOUT_ATOM(hrFrame, "HRFrame")
 LAYOUT_ATOM(htmlFrameInnerFrame, "htmlFrameInnerFrame")
 LAYOUT_ATOM(htmlFrameOuterFrame, "htmlFrameOuterFrame")
@@ -93,6 +94,7 @@ LAYOUT_ATOM(imageFrame, "ImageFrame")
 LAYOUT_ATOM(inlineFrame, "InlineFrame")
 LAYOUT_ATOM(letterFrame, "LetterFrame")
 LAYOUT_ATOM(lineFrame, "LineFrame")
+LAYOUT_ATOM(listControlFrame,"ListControlFrame")
 LAYOUT_ATOM(objectFrame, "ObjectFrame")
 LAYOUT_ATOM(pageFrame, "PageFrame")
 LAYOUT_ATOM(placeholderFrame, "PlaceholderFrame")
@@ -184,7 +186,6 @@ LAYOUT_ATOM(mozdirty, "_moz_dirty")
 
 #ifdef IBMBIDI
 LAYOUT_ATOM(directionalFrame, "DirectionalFrame")
-LAYOUT_ATOM(listControlFrame,"ListControlFrame")
 LAYOUT_ATOM(baseLevel, "BaseLevel")                            // PRUint8
 LAYOUT_ATOM(embeddingLevel, "EmbeddingLevel")                  // PRUint8
 LAYOUT_ATOM(endsInDiacritic, "EndsInDiacritic")                // PRUint32

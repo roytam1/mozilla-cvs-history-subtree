@@ -199,14 +199,12 @@ public:
                    const nsRect& aDirtyRect,
                    nsFramePaintLayer aWhichLayer);
 
-#ifdef IBMBIDI
   /**
    * Get the "type" of the frame
    *
    * @see nsLayoutAtoms::scrollFrame
    */
   NS_IMETHOD GetFrameType(nsIAtom** aType) const;
-#endif // IBMBIDI
 
     // nsIFormControlFrame
   NS_IMETHOD GetType(PRInt32* aType) const;
@@ -235,6 +233,9 @@ public:
                                              nscoord aInnerWidth,
                                              nscoord aCharWidth) const;
   virtual nsresult RequiresWidget(PRBool &aRequiresWidget);
+
+    // for accessibility purposes
+  NS_IMETHOD GetAccessible(nsIAccessible** aAccessible);
 
     // nsHTMLContainerFrame
   virtual PRIntn GetSkipSides() const;
