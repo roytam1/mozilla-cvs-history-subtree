@@ -59,6 +59,14 @@ nsXmlRpcFault.prototype = {
     toString: function() {
         return '<XML-RPC Fault: (' + this.faultCode + ') ' +
             this.faultString + '>';
+    },
+
+    // nsISupports interface
+    QueryInterface: function(iid) {
+        if (!iid.equals(Components.interfaces.nsISupports) &&
+            !iid.equals(XMLRPCFAULT_IID))
+            throw Components.results.NS_ERROR_NO_INTERFACE;
+        return this;
     }
 };
 
