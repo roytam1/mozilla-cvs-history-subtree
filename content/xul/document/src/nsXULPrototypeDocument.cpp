@@ -172,11 +172,17 @@ nsXULPrototypeDocument::Init()
 
 nsXULPrototypeDocument::~nsXULPrototypeDocument()
 {
+    // Delete the root node and all it's children before tearing down
+    // the global object since deleting the root may cause unrooting
+    // of JSObjects and we want the GC that happens while tearing down
+    // the global object to collect those object
+
+    delete mRoot;
+
     if (mGlobalObject) {
       mGlobalObject->SetContext(nsnull); // remove circular reference
       mGlobalObject->SetGlobalObjectOwner(nsnull); // just in case
     }
-    delete mRoot;
 }
 
 NS_IMPL_ADDREF(nsXULPrototypeDocument)
