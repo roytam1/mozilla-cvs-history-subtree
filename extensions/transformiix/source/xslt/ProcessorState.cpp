@@ -180,7 +180,7 @@ MBool ProcessorState::addToResultTree(Node* node) {
             Attr* attr = (Attr*)node;
 #ifdef MOZ_XSL
             String nameSpaceURI;
-            getNameSpaceURI(attr->getName(), nameSpaceURI);
+	    getNameSpaceURI(attr->getName() , nameSpaceURI);
             element->setAttributeNS(nameSpaceURI, attr->getName(), attr->getValue());
 #else
             element->setAttribute(attr->getName(),attr->getValue());
@@ -405,7 +405,7 @@ Element* ProcessorState::getNamedTemplate(String& name) {
 /**
  * Returns the namespace URI for the given name
 **/
-void ProcessorState::getNameSpaceURI(String& name, String& nameSpaceURI) {
+void ProcessorState::getNameSpaceURI(const String& name, String& nameSpaceURI) {
     String prefix;
 
     XMLUtils::getNameSpace(name, prefix);

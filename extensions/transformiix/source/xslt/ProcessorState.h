@@ -291,7 +291,7 @@ public:
     /**
      * Returns the namespace URI for the given name
     **/ 
-    void getNameSpaceURI(String& name, String& nameSpaceURI);
+    void getNameSpaceURI(const String& name, String& nameSpaceURI);
 
 private:
 
