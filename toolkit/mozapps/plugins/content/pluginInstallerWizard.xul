@@ -49,7 +49,7 @@
 
 <wizard id="plugin-installer-wizard" title="&pluginWizard.title;"
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-        buttons="accept,cancel"
+        persist="width height screenX screenY sizeMode"
         onload="wizardInit()"
         onwizardfinish="return wizardFinish();">
 
