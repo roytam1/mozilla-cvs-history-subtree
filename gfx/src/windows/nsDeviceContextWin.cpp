@@ -52,6 +52,10 @@
 #include "nsString.h"
 static NS_DEFINE_CID(kPrintOptionsCID, NS_PRINTOPTIONS_CID);
 
+#if defined(UNICODE)
+#include "a2ww2a.h"
+#endif
+
 // Size of the color cube
 #define COLOR_CUBE_SIZE       216
 #define DOC_TITLE_LENGTH      64
@@ -422,6 +426,7 @@ nsresult nsDeviceContextWin::CopyLogFontToNSFont(HDC* aHDC, const LOGFONT* ptrLo
 
 nsresult nsDeviceContextWin :: GetSysFontInfo(HDC aHDC, nsSystemFontID anID, nsFont* aFont) const
 {
+#if !defined(WINCE)
   NONCLIENTMETRICS ncm;
   HGDIOBJ hGDI;
 
@@ -508,6 +513,26 @@ nsresult nsDeviceContextWin :: GetSysFontInfo(HDC aHDC, nsSystemFontID anID, nsF
   }
 
   return CopyLogFontToNSFont(&aHDC, ptrLogFont, aFont);
+#else
+  LOGFONT logFont;
+  LOGFONT* ptrLogFont = NULL;
+  
+  HGDIOBJ hGDI = ::GetStockObject(SYSTEM_FONT);
+  if (hGDI != NULL)
+  {
+      if (::GetObject(hGDI, sizeof(logFont), &logFont) > 0)
+      { 
+          ptrLogFont = &logFont;
+      }
+  }
+  
+  if (nsnull == ptrLogFont)
+  {
+      return NS_ERROR_FAILURE;
+  }
+  
+  return CopyLogFontToNSFont(&aHDC, ptrLogFont, aFont);
+#endif
 }
 
 NS_IMETHODIMP nsDeviceContextWin :: GetSystemFont(nsSystemFontID anID, nsFont *aFont) const
@@ -583,10 +608,11 @@ NS_IMETHODIMP nsDeviceContextWin :: CheckFontExistence(const nsString& aFontName
   HDC     hdc = ::GetDC(hwnd);
   PRBool  isthere = PR_FALSE;
 
-  char    fontName[LF_FACESIZE];
 
   const PRUnichar* unicodefontname = aFontName.get();
 
+#if !defined(UNICODE)
+  char    fontName[LF_FACESIZE];
   int outlen = ::WideCharToMultiByte(CP_ACP, 0, aFontName.get(), aFontName.Length(), 
                                    fontName, LF_FACESIZE, NULL, NULL);
   if(outlen > 0)
@@ -597,6 +623,9 @@ NS_IMETHODIMP nsDeviceContextWin :: CheckFontExistence(const nsString& aFontName
     aFontName.ToCString(fontName, LF_FACESIZE);
 
   ::EnumFontFamilies(hdc, fontName, (FONTENUMPROC)fontcallback, (LPARAM)&isthere);
+#else
+  ::EnumFontFamilies(hdc, unicodefontname, (FONTENUMPROC)fontcallback, (LPARAM)&isthere);
+#endif
 
   ::ReleaseDC(hwnd, hdc);
 
@@ -972,7 +1001,21 @@ NS_IMETHODIMP nsDeviceContextWin :: GetDeviceContextFor(nsIDeviceContextSpec *aD
   devSpecWin->GetDevMode(devmode);
   NS_ASSERTION(devmode, "DevMode can't be NULL here");
   if (devmode) {
+#if !defined(UNICODE)
     dc = ::CreateDC(drivername, devicename, NULL, devmode);
+#else
+    LPWSTR wdrivername = a2w_malloc(drivername, -1, NULL);
+    LPWSTR wdevicename = a2w_malloc(devicename, -1, NULL);
+    dc = ::CreateDC(wdrivername, wdevicename, NULL, devmode);
+    if(NULL != wdrivername)
+    {
+        free(wdrivername);
+    }
+    if(NULL != wdevicename)
+    {
+        free(wdevicename);
+    }
+#endif
   }
   devSpecWin->UnlockDevMode();
 
@@ -1006,6 +1049,7 @@ static void DisplayLastError()
 
 NS_IMETHODIMP nsDeviceContextWin :: BeginDocument(PRUnichar * aTitle)
 {
+#if !defined(UNICODE)
   nsresult rv = NS_ERROR_GFX_PRINTER_STARTDOC;
 
   if (NULL != mDC) {
@@ -1060,6 +1104,46 @@ NS_IMETHODIMP nsDeviceContextWin :: BeginDocument(PRUnichar * aTitle)
   }
 
   return rv;
+#else
+  nsresult rv = NS_ERROR_GFX_PRINTER_STARTDOC;
+
+  if (NULL != mDC) {
+    DOCINFO docinfo;
+
+    nsString titleStr;
+    titleStr = aTitle;
+    if (titleStr.Length() > DOC_TITLE_LENGTH) {
+      titleStr.SetLength(DOC_TITLE_LENGTH-3);
+      titleStr.AppendWithConversion("...");
+    }
+    LPCTSTR title = PromiseFlatString(titleStr).get();
+
+    LPTSTR docName = nsnull;
+    nsCOMPtr<nsIPrintOptions> printService = do_GetService(kPrintOptionsCID, &rv);
+    if (printService) {
+      PRBool printToFile = PR_FALSE;
+      printService->GetPrintToFile(&printToFile);
+      if (printToFile) {
+        printService->GetToFileName(&docName);
+      }
+    }
+    docinfo.cbSize = sizeof(docinfo);
+    docinfo.lpszDocName = title != nsnull ? title : _T("Mozilla Document");
+    docinfo.lpszDatatype = NULL;
+    docinfo.fwType = 0;
+
+    if (::StartDoc(mDC, &docinfo) > 0) {
+      rv = NS_OK;
+    } else {
+      DISPLAY_LAST_ERROR
+      rv = NS_ERROR_GFX_PRINTER_STARTDOC;
+    }
+
+    if (docName != nsnull) nsMemory::Free(docName);
+  }
+
+  return rv;
+#endif
 }
 
 NS_IMETHODIMP nsDeviceContextWin :: EndDocument(void)
