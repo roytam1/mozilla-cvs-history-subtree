@@ -76,7 +76,7 @@ OBJDIR_TAG = _OPT
 
 # Add symbolic information for use by a profiler
 ifdef MOZ_PROFILE
-OPTIMIZER += -Z7
+OPTIMIZER += -Zi
 DLLFLAGS += -DEBUG -DEBUGTYPE:CV
 LDFLAGS += -DEBUG -DEBUGTYPE:CV
 endif
@@ -91,7 +91,7 @@ OS_CFLAGS += -MDd
 else
 OS_CFLAGS += -MD
 endif
-OPTIMIZER = -Od -Z7
+OPTIMIZER = -Od -Zi
 #OPTIMIZER = -Zi -Fd$(OBJDIR)/ -Od
 DEFINES = -DDEBUG -D_DEBUG -UNDEBUG
 
