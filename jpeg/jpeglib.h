@@ -33,6 +33,13 @@
 #ifdef RGB_BLUE
 	#undef RGB_BLUE
 #endif
+/*
+ * Tweak for jconfig for OS/2 (rather than replicate all the rest of it in jos2fig.h).
+ */
+#ifdef XP_OS2_VACPP
+#undef INLINE
+#define INLINE
+#endif
 #endif
 
 /*

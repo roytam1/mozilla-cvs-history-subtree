@@ -21,6 +21,10 @@ LIBRARY_NAME	= js
 ifeq ($(subst /,,$(shell uname -s)),OS2)
 EXTRA_LIBS	= $(LIBNSPR)
 MAKE_DLL	= 1
+ifeq ($(MOZ_OS2_TOOLS),EMX)
+# Hack to turn off -ansi here (so jsnum compiles).
+LOCAL_INCLUDES = -U__STRICT_ANSI__
+endif
 else
 EXTRA_LIBS	= $(LIBNSPR) $(LIBNSJAVA) $(OBJDIR)/libjs.lib
 endif

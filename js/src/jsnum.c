@@ -251,13 +251,13 @@ js_InitNumberClass(JSContext *cx, JSObject *obj)
     rt = cx->runtime;
     if (!rt->jsNaN) {
 #if defined(XP_PC)
-#ifdef XP_OS2_VACPP
+#ifdef XP_OS2
 	/*DSR071597 - I have no idea what this really does other than mucking with the floating     */
 	/*point unit, but it does fix a "floating point underflow" exception I am getting, and there*/
 	/*is similar code in the Hursley java. Making sure we have the same code in Javascript      */
 	/*where Netscape was calling control87 on Windows...                                        */
 	_control87(MCW_EM+PC_53+RC_NEAR,MCW_EM+MCW_PC+MCW_RC);
-#elif !defined(XP_OS2_EMX)
+#else
 	_control87(MCW_EM, MCW_EM);
 #endif
 #endif

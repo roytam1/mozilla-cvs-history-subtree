@@ -21,8 +21,6 @@
 # include "jconfig-mac-cw.h"
 #elif defined(_WINDOWS)
 # include "jwinfig.h"
-#elif defined(XP_OS2)
-# include "jos2fig.h"
 #else
 # include "jconfig.h"         /* auto configuration options */
 #endif
