@@ -163,6 +163,8 @@ static void InitializeDisplayInfo(Widget widget)
 
 // globally useful utilities
 
+#if defined(MOZ_MAIL_NEWS)
+
 char *XFE_DragBase::guessUrlMimeType(const char *data)
 {    
     // try to determine type of attachment
@@ -185,7 +187,6 @@ char *XFE_DragBase::guessUrlMimeType(const char *data)
     else if (XP_STRNCASECMP(data,"addbook:",8)==0)
         return "text/x-vcard";
 
-#ifdef MOZ_MAIL_NEWS
     // mail or news message
     else if (MSG_RequiresMailMsgWindow(data) || MSG_RequiresNewsMsgWindow(data))
         return "message/rfc822";
@@ -193,13 +194,14 @@ char *XFE_DragBase::guessUrlMimeType(const char *data)
     // document URL - use internal id, since there's no URL mime type
     else if (MSG_RequiresBrowserWindow(data))
         return "_url";
-#endif
+
 
     // fallback to generic type
     else
         return UNKNOWN_CONTENT_TYPE;
 }
 
+#endif  /* MOZ_MAIL_NEWS */
 
 // callback wrappers
 void XFE_DragBase::ButtonPressCb(Widget w,XtPointer cd,XEvent *event,Boolean*)
