@@ -20,6 +20,7 @@
 // the address book
 //
 #include "stdafx.h"
+#include "rosetta.h"
 #include "addrprop.h"
 #include "msgnet.h"
 
@@ -129,8 +130,7 @@ void CAddrEditProperties::OnHelp()
 			NetHelp(HELP_ADD_USER_PROPS);
 		else if (GetActivePage() == m_pContact)
 			NetHelp(HELP_ADD_USER_CONTACT);
-		else if (GetActivePage() == m_pSecurity)
-			NetHelp(HELP_ADD_USER_SECURITY);
+		HG21511
 		else if (GetActivePage() == m_pCooltalk)
 			NetHelp(HELP_ADD_USER_NETSCAPE_COOLTALK);
 	}
@@ -140,8 +140,7 @@ void CAddrEditProperties::OnHelp()
 			NetHelp(HELP_EDIT_USER);
 		else if (GetActivePage() == m_pContact)
 			NetHelp(HELP_EDIT_USER_CONTACT);
-		else if (GetActivePage() == m_pSecurity)
-			NetHelp(HELP_EDIT_USER_SECURITY);
+		HG19721
 		else if (GetActivePage() == m_pCooltalk)
 			NetHelp(HELP_EDIT_USER_CALLPOINT);
 	}
@@ -1282,7 +1281,7 @@ BOOL CServerDialog::OnInitDialog()
 			SetDlgItemText(IDC_EDIT_ROOT, m_pExistServer->searchBase);
 			SetDlgItemInt(IDC_EDIT_PORT_NO, m_pExistServer->port);
 			SetDlgItemInt(IDC_EDIT_MAX_HITS, m_pExistServer->maxHits);
-			CheckDlgButton(IDC_SECURE, m_pExistServer->isSecure);
+			HG19511
 			CheckDlgButton(IDC_SAVE_PASSWORD, m_pExistServer->savePassword);
 			CheckDlgButton(IDC_LOGIN_LDAP, m_pExistServer->enableAuth);
 		}
@@ -1292,7 +1291,7 @@ BOOL CServerDialog::OnInitDialog()
 			GetDlgItem(IDC_EDIT_ROOT)->EnableWindow(FALSE);
 			GetDlgItem(IDC_EDIT_PORT_NO)->EnableWindow(FALSE);
 			GetDlgItem(IDC_EDIT_MAX_HITS)->EnableWindow(FALSE);
-			GetDlgItem(IDC_SECURE)->EnableWindow(FALSE);
+			HG17271
 			GetDlgItem(IDC_SAVE_PASSWORD)->EnableWindow(FALSE);
 			GetDlgItem(IDC_LOGIN_LDAP)->EnableWindow(FALSE);
 			GetDlgItem(IDC_STATIC_SERVER)->EnableWindow(FALSE);
@@ -1313,8 +1312,7 @@ BOOL CServerDialog::OnInitDialog()
 	((CEdit*)GetDlgItem(IDC_EDIT_DESCRIPTION))->LimitText(MAX_DESCRIPTION_LEN - 1);
 	((CEdit*)GetDlgItem(IDC_EDIT_SERVER))->LimitText(MAX_HOSTNAME_LEN - 1);
 	// we aren't doing secure ldap on win16 so hide the checkbox
-	GetDlgItem(IDC_SECURE)->ShowWindow(SW_HIDE);
-	GetDlgItem(IDC_SECURE)->EnableWindow(FALSE);
+	HG18671
 #endif
 	((CEdit*)GetDlgItem(IDC_EDIT_DESCRIPTION))->SetFocus();
 	OnEnableLoginLDAP();
@@ -1366,10 +1364,7 @@ void CServerDialog::OnOK()
 		}
 		m_pExistServer->port = (int)GetDlgItemInt(IDC_EDIT_PORT_NO);
 		m_pExistServer->maxHits = (int)GetDlgItemInt(IDC_EDIT_MAX_HITS);
-		if (IsDlgButtonChecked(IDC_SECURE))
-			m_pExistServer->isSecure = TRUE;
-		else
-			m_pExistServer->isSecure = FALSE;
+		HG19616
 		if (IsDlgButtonChecked(IDC_SAVE_PASSWORD))
 			m_pExistServer->savePassword = TRUE;
 		else
@@ -1388,17 +1383,12 @@ void CServerDialog::OnOK()
 			m_serverInfo->serverName = XP_STRDUP(text);
 		if (GetDlgItemText(IDC_EDIT_ROOT, text, MAX_DESCRIPTION_LEN))
 			m_serverInfo->searchBase = XP_STRDUP(text);
-		if (IsDlgButtonChecked(IDC_SECURE))
-			m_serverInfo->isSecure = TRUE;
-		else
-			m_serverInfo->isSecure = FALSE;
+		HG19879
 		if (GetDlgItemText(IDC_EDIT_PORT_NO, port, 16) > 0)
 			m_serverInfo->port = atoi(port);
 		else
 		{
-			if (m_serverInfo->isSecure)
-				m_serverInfo->port = LDAPS_PORT;
-			else
+			HG17922
 				m_serverInfo->port = LDAP_PORT;
 		}
 		m_serverInfo->maxHits = (int)GetDlgItemInt(IDC_EDIT_MAX_HITS);
@@ -1415,27 +1405,7 @@ void CServerDialog::OnOK()
 
 void CServerDialog::OnCheckSecure() 
 {
-	char port[16];
-	if (IsDlgButtonChecked(IDC_SECURE))
-		m_serverInfo->isSecure = TRUE;
-	else
-		m_serverInfo->isSecure = FALSE;
-	if (GetDlgItemText(IDC_EDIT_PORT_NO, port, 16) == 0)
-	{
-		if (m_serverInfo->isSecure)
-			SetDlgItemInt(IDC_EDIT_PORT_NO, LDAPS_PORT);
-		else
-			SetDlgItemInt(IDC_EDIT_PORT_NO, LDAP_PORT);
-	}
-	else
-	{
-		int nPort = GetDlgItemInt(IDC_EDIT_PORT_NO);
-
-		if (m_serverInfo->isSecure && nPort == LDAP_PORT)
-			SetDlgItemInt(IDC_EDIT_PORT_NO, LDAPS_PORT);
-		else  if (!m_serverInfo->isSecure && nPort == LDAPS_PORT)
-			SetDlgItemInt(IDC_EDIT_PORT_NO, LDAP_PORT);
-	}
+	HG98219
 }
 
 void CServerDialog::OnEnableLoginLDAP() 
@@ -1723,8 +1693,7 @@ void CAddrEditProperties::OnHelp()
 			NetHelp(HELP_ADD_USER_PROPS);
 		else if (GetActivePage() == m_pContact)
 			NetHelp(HELP_ADD_USER_CONTACT);
-		else if (GetActivePage() == m_pSecurity)
-			NetHelp(HELP_ADD_USER_SECURITY);
+		HG92710
 		else if (GetActivePage() == m_pCooltalk)
 			NetHelp(HELP_ADD_USER_NETSCAPE_COOLTALK);
 	}
@@ -1734,8 +1703,7 @@ void CAddrEditProperties::OnHelp()
 			NetHelp(HELP_EDIT_USER);
 		else if (GetActivePage() == m_pContact)
 			NetHelp(HELP_EDIT_USER_CONTACT);
-		else if (GetActivePage() == m_pSecurity)
-			NetHelp(HELP_EDIT_USER_SECURITY);
+		HG27626
 		else if (GetActivePage() == m_pCooltalk)
 			NetHelp(HELP_EDIT_USER_CALLPOINT);
 	}
@@ -2642,7 +2610,7 @@ BOOL CServerDialog::OnInitDialog()
 			SetDlgItemText(IDC_EDIT_ROOT, m_pExistServer->searchBase);
 			SetDlgItemInt(IDC_EDIT_PORT_NO, m_pExistServer->port);
 			SetDlgItemInt(IDC_EDIT_MAX_HITS, m_pExistServer->maxHits);
-			CheckDlgButton(IDC_SECURE, m_pExistServer->isSecure);
+			HG28981
 			CheckDlgButton(IDC_SAVE_PASSWORD, m_pExistServer->savePassword);
 			CheckDlgButton(IDC_LOGIN_LDAP, m_pExistServer->enableAuth);
 		}
@@ -2652,7 +2620,7 @@ BOOL CServerDialog::OnInitDialog()
 			GetDlgItem(IDC_EDIT_ROOT)->EnableWindow(FALSE);
 			GetDlgItem(IDC_EDIT_PORT_NO)->EnableWindow(FALSE);
 			GetDlgItem(IDC_EDIT_MAX_HITS)->EnableWindow(FALSE);
-			GetDlgItem(IDC_SECURE)->EnableWindow(FALSE);
+			HG72186
 			GetDlgItem(IDC_SAVE_PASSWORD)->EnableWindow(FALSE);
 			GetDlgItem(IDC_LOGIN_LDAP)->EnableWindow(FALSE);
 			GetDlgItem(IDC_STATIC_SERVER)->EnableWindow(FALSE);
@@ -2673,8 +2641,7 @@ BOOL CServerDialog::OnInitDialog()
 	((CEdit*)GetDlgItem(IDC_EDIT_DESCRIPTION))->LimitText(MAX_DESCRIPTION_LEN - 1);
 	((CEdit*)GetDlgItem(IDC_EDIT_SERVER))->LimitText(MAX_HOSTNAME_LEN - 1);
 	// we aren't doing secure ldap on win16 so hide the checkbox
-	GetDlgItem(IDC_SECURE)->ShowWindow(SW_HIDE);
-	GetDlgItem(IDC_SECURE)->EnableWindow(FALSE);
+	
 #endif
 	((CEdit*)GetDlgItem(IDC_EDIT_DESCRIPTION))->SetFocus();
 	OnEnableLoginLDAP();
@@ -2727,10 +2694,7 @@ void CServerDialog::OnOK()
 		}
 		m_pExistServer->port = (int)GetDlgItemInt(IDC_EDIT_PORT_NO);
 		m_pExistServer->maxHits = (int)GetDlgItemInt(IDC_EDIT_MAX_HITS);
-		if (IsDlgButtonChecked(IDC_SECURE))
-			m_pExistServer->isSecure = TRUE;
-		else
-			m_pExistServer->isSecure = FALSE;
+		HG90271
 		if (IsDlgButtonChecked(IDC_SAVE_PASSWORD))
 			m_pExistServer->savePassword = TRUE;
 		else
@@ -2749,17 +2713,12 @@ void CServerDialog::OnOK()
 			m_serverInfo->serverName = XP_STRDUP(text);
 		if (GetDlgItemText(IDC_EDIT_ROOT, text, MAX_DESCRIPTION_LEN))
 			m_serverInfo->searchBase = XP_STRDUP(text);
-		if (IsDlgButtonChecked(IDC_SECURE))
-			m_serverInfo->isSecure = TRUE;
-		else
-			m_serverInfo->isSecure = FALSE;
+		HG92177
 		if (GetDlgItemText(IDC_EDIT_PORT_NO, port, 16) > 0)
 			m_serverInfo->port = atoi(port);
 		else
 		{
-			if (m_serverInfo->isSecure)
-				m_serverInfo->port = LDAPS_PORT;
-			else
+			HG98216
 				m_serverInfo->port = LDAP_PORT;
 		}
 		m_serverInfo->maxHits = (int)GetDlgItemInt(IDC_EDIT_MAX_HITS);
@@ -2776,27 +2735,7 @@ void CServerDialog::OnOK()
 
 void CServerDialog::OnCheckSecure() 
 {
-	char port[16];
-	if (IsDlgButtonChecked(IDC_SECURE))
-		m_serverInfo->isSecure = TRUE;
-	else
-		m_serverInfo->isSecure = FALSE;
-	if (GetDlgItemText(IDC_EDIT_PORT_NO, port, 16) == 0)
-	{
-		if (m_serverInfo->isSecure)
-			SetDlgItemInt(IDC_EDIT_PORT_NO, LDAPS_PORT);
-		else
-			SetDlgItemInt(IDC_EDIT_PORT_NO, LDAP_PORT);
-	}
-	else
-	{
-		int nPort = GetDlgItemInt(IDC_EDIT_PORT_NO);
-
-		if (m_serverInfo->isSecure && nPort == LDAP_PORT)
-			SetDlgItemInt(IDC_EDIT_PORT_NO, LDAPS_PORT);
-		else  if (!m_serverInfo->isSecure && nPort == LDAPS_PORT)
-			SetDlgItemInt(IDC_EDIT_PORT_NO, LDAP_PORT);
-	}
+	HG91761
 }
 
 void CServerDialog::OnEnableLoginLDAP() 
