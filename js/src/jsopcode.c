@@ -322,27 +322,35 @@ jschar js_EscapeMap[] = {
     '\t', 't',
     '\v', 'v',
     '"',  '"',
-    '\'', '\''
+    '\'', '\'',
+    0
 };
 
 static char *
 QuoteString(Sprinter *sp, JSString *str, jschar quote)
 {
     ptrdiff_t off, len, nb;
-    const jschar *s, *t, *u;
+    const jschar *s, *t, *u, *z;
     char *bp;
     jschar c;
     JSBool ok;
 
+    /* Sample off first for later return value pointer computation. */
     off = sp->offset;
-    s = str->chars;
-    t = s;
-    c = *t;
     if (Sprint(sp, "%c", (char)quote) < 0)
 	return NULL;
-    do {
-	while (JS_ISPRINT(c) && c != quote && !(c >> 8))
+
+    /* Loop control variables: z points at end of string sentinel. */
+    s = str->chars;
+    z = s + str->length;
+    for (t = s; t < z; s = ++t) {
+	/* Move t forward from s past un-quote-worthy characters. */
+	c = *t;
+	while (JS_ISPRINT(c) && c != quote && !(c >> 8)) {
 	    c = *++t;
+	    if (t == z)
+		break;
+	}
 	len = PTRDIFF(t, s, jschar);
 
 	/* Allocate space for s, including the '\0' at the end. */
@@ -357,17 +365,19 @@ QuoteString(Sprinter *sp, JSString *str, jschar quote)
 	    *bp++ = (char) *s++;
 	*bp = '\0';
 
-	if (c == 0)
+	if (t == z)
 	    break;
+
+	/* Use js_EscapeMap, \u, or \x only if necessary. */
 	if ((u = js_strchr(js_EscapeMap, c)) != NULL)
 	    ok = Sprint(sp, "\\%c", (char)u[1]) >= 0;
 	else
 	    ok = Sprint(sp, (c >> 8) ? "\\u%04X" : "\\x%02X", c) >= 0;
 	if (!ok)
 	    return NULL;
-	s = ++t;
-	c = *t;
-    } while (c != 0);
+    }
+
+    /* Sprint the closing quote and return the quoted string. */
     if (Sprint(sp, "%c", (char)quote) < 0)
 	return NULL;
     return OFF2STR(sp, off);
