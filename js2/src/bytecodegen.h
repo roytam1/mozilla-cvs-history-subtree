@@ -256,14 +256,19 @@ namespace ByteCode {
             return result;
         }
 
-        uint32 getTopLabel(const StringAtom *name)
+        uint32 getTopLabel(Label::LabelKind kind, const StringAtom *name)
         {
+            uint32 result;
             for (std::vector<uint32>::reverse_iterator i = mLabelStack.rbegin(),
                                 end = mLabelStack.rend();
                                 (i != end); i++)
             {
-                if (mLabelList[*i].matches(name))
-                    return *i;
+                // find the closest kind of label
+                if (mLabelList[*i].matches(kind))
+                    result = *i;
+                else // and return it when we get the name
+                    if (mLabelList[*i].matches(name))
+                        return result;
             }
             NOT_REACHED("label not found");
             return false;

@@ -98,6 +98,7 @@ namespace JS2Runtime {
                                         // (e.g. the property 'C' from class C...
                                         // has this type).
     extern JSType *Boolean_Type;
+    extern JSType *Void_Type;
 
     class JSValue {
     public:
@@ -674,7 +675,7 @@ namespace JS2Runtime {
         case f64_tag: return Number_Type;
         case string_tag: return String_Type;
         case object_tag: return object->getType();
-        case undefined_tag: return Object_Type;
+        case undefined_tag: return Void_Type;
         default: NOT_REACHED("bad type"); return NULL;
         }
     }
@@ -1403,6 +1404,7 @@ namespace JS2Runtime {
         {
             if (Object_Type == NULL) {
                 Object_Type = new JSType(NULL);
+                global->defineVariable(widenCString("Object"), Type_Type, JSValue(Object_Type));
 
                 Number_Type = new JSType(widenCString("Number"), Object_Type);
                 Number_Type->createStaticComponent();
@@ -1412,6 +1414,10 @@ namespace JS2Runtime {
                 Number_Type->createStaticInstance();
                 global->defineVariable(widenCString("Number"), Type_Type, JSValue(Number_Type));
                 
+                Void_Type = new JSType(NULL);
+                global->defineVariable(widenCString("Void"), Type_Type, JSValue(Void_Type));
+
+
                 String_Type = new JSType(Object_Type);
                 Boolean_Type = new JSType(Object_Type);
                 Type_Type = new JSType(Object_Type);        

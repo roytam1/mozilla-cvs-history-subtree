@@ -401,6 +401,13 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             FunctionStmtNode *f = static_cast<FunctionStmtNode *>(p);
             bool isConstructor = hasAttribute(f->attributes, mScopeChain->ConstructorKeyWord);
             JSFunction *fnc = f->mFunction;    
+
+            if (f->function.name->getKind() == ExprNode::identifier) {
+                const StringAtom& name = (static_cast<IdentifierExprNode *>(f->function.name))->name;
+                if (mScopeChain->topClass() 
+                            && (mScopeChain->topClass()->mClassName.compare(name) == 0))
+                    isConstructor = true;
+            }
 /*            
             bool isStatic = hasAttribute(f->attributes, Token::Static);
             bool isOperator = hasAttribute(f->attributes, mScopeChain->OperatorKeyWord);
@@ -473,8 +480,7 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
     case StmtNode::label:
         {
             LabelStmtNode *l = static_cast<LabelStmtNode *>(p);
-            uint32 label = getLabel(l);
-            mLabelStack.push_back(label);
+            mLabelStack.push_back(getLabel(l));
             genCodeForStatement(l->stmt, static_cg);
             mLabelStack.pop_back();
         }
@@ -484,7 +490,7 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             GoStmtNode *g = static_cast<GoStmtNode *>(p);
             addByte(JumpOp);
             if (g->name)
-                addFixup(getTopLabel(g->name));
+                addFixup(getTopLabel(Label::BreakLabel, g->name));
             else
                 addFixup(getTopLabel(Label::BreakLabel));
         }
@@ -494,7 +500,7 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             GoStmtNode *g = static_cast<GoStmtNode *>(p);
             addByte(JumpOp);
             if (g->name)
-                addFixup(getTopLabel(g->name));
+                addFixup(getTopLabel(Label::ContinueLabel, g->name));
             else
                 addFixup(getTopLabel(Label::ContinueLabel));
         }
@@ -970,6 +976,12 @@ PostXcrement:
             delete ref;
             return type;
         }
+    case ExprNode::parentheses:
+        {
+            UnaryExprNode *u = static_cast<UnaryExprNode *>(p);
+            return genExpr(u->op);
+        }
+
     default:
         NOT_REACHED("Not Implemented Yet");
     }

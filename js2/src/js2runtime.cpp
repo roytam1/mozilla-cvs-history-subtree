@@ -61,6 +61,7 @@ JSType *Number_Type;
 JSType *String_Type;
 JSType *Boolean_Type;
 JSType *Type_Type;
+JSType *Void_Type;
 
 bool hasAttribute(const IdentifierList* identifiers, Token::Kind tokenKind)
 {
@@ -240,9 +241,8 @@ JSValue Context::readEvalFile(const String& fileName)
             Arena a;
             Parser p(mWorld, a, buffer, fileName);
             StmtNode *parsedStatements = p.parseProgram();
-
-    /*******/
 	    ASSERT(p.lexer.peek(true).hasKind(Token::end));
+            if (mDebugFlag)
             {
                 PrettyPrinter f(stdOut, 30);
                 {
@@ -252,9 +252,8 @@ JSValue Context::readEvalFile(const String& fileName)
                     StmtNode::printStatements(f, parsedStatements);
                 }
                 f.end();
+    	        stdOut << '\n';
             }
-    	    stdOut << '\n';
-    /*******/
 /*
             Context cx(mGlobal, mWorld);        // the file is compiled into
                                                 // the current global object, not
@@ -541,6 +540,15 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     pc += sizeof(uint32);
                     mStack.push_back(JSValue(mCurModule->getNumber(index)));
                 }
+                break;
+            case LoadConstantTrueOp:
+                mStack.push_back(kTrueValue);
+                break;
+            case LoadConstantFalseOp:
+                mStack.push_back(kFalseValue);
+                break;
+            case LoadConstantNullOp:
+                mStack.push_back(kNullValue);
                 break;
             case GetNameOp:
                 {
@@ -1300,6 +1308,64 @@ JSValue objectLessEqual(Context *cx, JSValue *argv, uint32 argc)
         return kTrueValue;
 }
 
+JSValue compareEqual(Context *cx, JSValue &r1, JSValue &r2)
+{
+    if (r1.getType() != r2.getType()) {
+        if (r1.isNull() && r2.isUndefined())
+            return kTrueValue;
+        if (r1.isUndefined() && r2.isNull())
+            return kTrueValue;
+        if (r1.isNumber() && r2.isString())
+            return compareEqual(cx, r1, r2.toNumber(cx));
+        if (r1.isString() && r2.isNumber())
+            return compareEqual(cx, r1.toNumber(cx), r2.toString(cx));
+        if (r1.isBool())
+            return compareEqual(cx, r1.toNumber(cx), r2);
+        if (r2.isBool())
+            return compareEqual(cx, r1, r2.toNumber(cx));
+        if ( (r1.isString() || r1.isNumber()) && (r2.isObject()) )
+            return compareEqual(cx, r1, r2.toPrimitive(cx));
+        if ( (r1.isObject()) && (r2.isString() || r2.isNumber()) )
+            return compareEqual(cx, r1.toPrimitive(cx), r2);
+        return kFalseValue;
+    }
+    else {
+        if (r1.isUndefined())
+            return kTrueValue;
+        if (r1.isNull())
+            return kTrueValue;
+        if (r1.isNumber()) {
+            if (r1.isNaN())
+                return kFalseValue;
+            if (r2.isNaN())
+                return kFalseValue;
+            return JSValue(r1.f64 == r2.f64);
+        }
+        else {
+            if (r1.isString())
+                return JSValue(bool(r1.string->compare(*r2.string) == 0));
+            if (r1.isBool())
+                return JSValue(r1.boolean == r2.boolean);
+            if (r1.isObject())
+                return JSValue(r1.object == r2.object);
+            if (r1.isType())
+                return JSValue(r1.type == r2.type);
+            if (r1.isFunction())
+                return JSValue(r1.function == r2.function);
+            NOT_REACHED("unhandled type");
+            return kFalseValue;
+        }
+    }
+}
+
+JSValue objectEqual(Context *cx, JSValue *argv, uint32 argc)
+{
+    JSValue &r1 = argv[0];
+    JSValue &r2 = argv[1];
+    
+    return compareEqual(cx, r1, r2);
+}
+
 
 void Context::initOperators()
 {
@@ -1330,6 +1396,7 @@ void Context::initOperators()
         { Less, Object_Type, Object_Type, objectLess, Boolean_Type },
         { LessEqual, Object_Type, Object_Type, objectLessEqual, Boolean_Type },
 
+        { Equal, Object_Type, Object_Type, objectEqual, Boolean_Type },
     };
 
     for (int i = 0; i < sizeof(OpTable) / sizeof(OpTableEntry); i++) {
