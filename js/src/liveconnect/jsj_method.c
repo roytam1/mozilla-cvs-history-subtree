@@ -1397,7 +1397,7 @@ invoke_java_method(JSContext *cx, JSJavaThreadState *jsj_env,
     /* Prevent deadlocking if we re-enter JS on another thread as a result of a Java
        method call and that new thread wants to perform a GC. */
 #ifdef JSJ_THREADSAFE
-    JS_SuspendRequest(cx);
+    JS_EndRequest(cx);
 #endif
 
 #define CALL_JAVA_METHOD(type, member)                                       \
@@ -1489,7 +1489,7 @@ out:
        JS_free(cx, jargv);
 
 #ifdef JSJ_THREADSAFE
-    JS_ResumeRequest(cx);
+    JS_BeginRequest(cx);
 #endif
 
     if (!error_occurred) {
@@ -1571,14 +1571,14 @@ invoke_java_constructor(JSContext *cx,
     /* Prevent deadlocking if we re-enter JS on another thread as a result of a Java
        method call and that new thread wants to perform a GC. */
 #ifdef JSJ_THREADSAFE
-    JS_SuspendRequest(cx);
+    JS_EndRequest(cx);
 #endif
 
     /* Call the constructor */
     java_object = (*jEnv)->NewObjectA(jEnv, java_class, methodID, jargv);
 
 #ifdef JSJ_THREADSAFE
-    JS_ResumeRequest(cx);
+    JS_BeginRequest(cx);
 #endif
 
     JSJ_SetDefaultJSContextForJavaThread(old_cx, jsj_env);
