@@ -521,9 +521,13 @@ nsHTMLFormElement::ResolveName(const nsAReadableString& aName,
 NS_IMETHODIMP
 nsHTMLFormElement::GetEncoding(nsAWritableString& aEncoding)
 {
-  return nsGenericHTMLContainerElement::GetAttribute(kNameSpaceID_HTML,
-                                                     nsHTMLAtoms::enctype,
-                                                     aEncoding);
+  return GetEnctype(aEncoding);
+}
+ 
+NS_IMETHODIMP
+nsHTMLFormElement::SetEncoding(const nsAReadableString& aEncoding)
+{
+  return SetEnctype(aEncoding);
 }
  
 NS_IMETHODIMP    

@@ -24,7 +24,7 @@
 [scriptable, uuid(a6cf90c6-15b3-11d2-932e-00805f8add32)]
 interface nsIDOMNSHTMLFormElement : nsISupports
 {
-  readonly attribute DOMString        encoding;
+           attribute DOMString        encoding;
 
   nsISupports               namedItem(in DOMString name);
   nsIDOMHTMLElement         item(in unsigned long index);
