@@ -212,12 +212,10 @@ nsListBoxLayout::LayoutInternal(nsIBox* aBox, nsBoxLayoutState& aState)
     box->HasDirtyChildren(dirtyChildren);
        
     nsRect childRect;
-    box->GetBounds(childRect);
     box->GetMargin(margin);
     
     // relayout if we must or we are dirty or some of our children are dirty
-    //   or the client area is wider than us
-    if (relayout || dirty || dirtyChildren || childRect.width < clientRect.width) {
+    if (relayout || dirty || dirtyChildren) {      
       childRect.x = 0;
       childRect.y = yOffset;
       childRect.width = clientRect.width;
@@ -234,6 +232,7 @@ nsListBoxLayout::LayoutInternal(nsIBox* aBox, nsBoxLayoutState& aState)
     } else {
       // if the child did not need to be relayed out. Then its easy.
       // Place the child by just grabbing its rect and adjusting the y.
+      box->GetBounds(childRect);
       PRInt32 newPos = yOffset+margin.top;
 
       // are we pushing down or pulling up any rows?
