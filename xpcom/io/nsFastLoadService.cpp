@@ -158,6 +158,7 @@ nsFastLoadService::GetCurrentInputStream(nsIObjectInputStream* *aResult)
 NS_IMETHODIMP
 nsFastLoadService::SetCurrentInputStream(nsIObjectInputStream* aStream)
 {
+    nsAutoLock lock(mLock);
     mObjectInputStream = aStream;
     return NS_OK;
 }
@@ -172,6 +173,7 @@ nsFastLoadService::GetCurrentOutputStream(nsIObjectOutputStream* *aResult)
 NS_IMETHODIMP
 nsFastLoadService::SetCurrentOutputStream(nsIObjectOutputStream* aStream)
 {
+    nsAutoLock lock(mLock);
     mObjectOutputStream = aStream;
     return NS_OK;
 }
