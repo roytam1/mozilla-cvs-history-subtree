@@ -3896,9 +3896,9 @@ nsNSSCertificateDB::GetCertByEmailAddress(nsIPK11Token *aToken, const char *aEma
     if (nssCert == nsnull) {
       rv = NS_ERROR_OUT_OF_MEMORY;
       goto loser;
-      NS_ADDREF(nssCert);
-      *_retval = NS_STATIC_CAST(nsIX509Cert*, nssCert);
     }
+    NS_ADDREF(nssCert);
+    *_retval = NS_STATIC_CAST(nsIX509Cert*, nssCert);
   }
 loser:
   if (certList) {
