@@ -19,18 +19,59 @@
 # Contributor(s): 
 #
 
-DEPTH		= ..
+DEPTH		= ../../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
 VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS		= public base db/msgdb news local mime compose imap addrbook import absync extensions
+MODULE		= absyncsvc
+XPIDL_MODULE	= absync
+LIBRARY_NAME	= absync_s
+META_COMPONENT = mail
+REQUIRES	= xpcom \
+		  string \
+		  necko \
+		  mime \
+		  docshell \
+		  uriloader \
+		  pref \
+		  widget \
+		  msgbase \
+		  msgbaseutil \
+		  dom \
+		  rdf \
+		  addrbook \
+		  intl \
+		  mork \
+		  mimetype \
+		  windowwatcher \
+		  unicharutil \
+		  $(NULL)
 
-ifeq ($(OS_ARCH),WINNT)
-DIRS		+= mapi
-endif
+CPPSRCS		= \
+		nsAbSyncPostEngine.cpp \
+		nsAbSync.cpp \
+		nsAbSyncCRCModel.cpp \
+		nsABSyncDriver.cpp \
+		nsSyncDecoderRing.cpp	\
+		$(NULL)
+
+EXPORTS		= \
+		nsAbSyncPostEngine.h \
+		nsAbSync.h \
+		nsAbSyncCRCModel.h \
+		nsABSyncDriver.h \
+		nsSyncDecoderRing.h	\
+		$(NULL)
+
+# we don't want the shared lib, but we want to force the creation of a static lib.
+FORCE_STATIC_LIB = 1
 
 include $(topsrcdir)/config/rules.mk
+
+ifeq ($(OS_ARCH), Linux)
+DEFINES		+= -D_BSD_SOURCE
+endif
 

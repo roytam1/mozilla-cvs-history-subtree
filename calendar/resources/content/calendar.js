@@ -1075,11 +1075,7 @@ function publishEntireCalendarDialogResponse( CalendarPublishObject )
 
    gCalendarWindow.calendarManager.rdf.flush();
       
-   calendarUploadFile(node.getAttribute( "http://home.netscape.com/NC-rdf#path" ), 
-                      CalendarPublishObject.remotePath, 
-                      CalendarPublishObject.username, 
-                      CalendarPublishObject.password, 
-                      "text/calendar");
+   gCalendarWindow.calendarManager.publishCalendar( );
 
    return( false );
 }
