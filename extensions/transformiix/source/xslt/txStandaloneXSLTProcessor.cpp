@@ -259,7 +259,8 @@ void txStandaloneXSLTProcessor::getHrefFromStylesheetPI(Document& xmlDocument,
     while (node) {
         if (node->getNodeType() == Node::PROCESSING_INSTRUCTION_NODE) {
             String target = ((ProcessingInstruction*)node)->getTarget();
-            if (STYLESHEET_PI.isEqual(target) || STYLESHEET_PI_OLD.isEqual(target)) {
+            if (STYLESHEET_PI.isEqual(target) ||
+                STYLESHEET_PI_OLD.isEqual(target)) {
                 String data = ((ProcessingInstruction*)node)->getData();
                 type.clear();
                 tmpHref.clear();

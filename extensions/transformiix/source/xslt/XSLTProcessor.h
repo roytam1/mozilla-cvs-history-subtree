@@ -72,7 +72,8 @@ public:
     /**
      * Transforms a node.
      *
-     * @param aPs the current ProcessorState
+     * @param aPs the current ProcessorState with the node
+     *            as current node and the desired templates
      */
     static void transform(ProcessorState* aPs);
 
@@ -88,8 +89,9 @@ private:
     /**
      * Create the document we will use to create result tree fragments.
      *
-     * @param aMethod YYY
-     * @returns YYY
+     * @param aMethod the output method indicating which type of 
+     *        document to create
+     * @returns a document to create RTF nodes
      */
     static Document* createRTFDocument(txOutputMethod aMethod);
 
@@ -184,7 +186,7 @@ private:
                                        ProcessorState::ImportFrame* aFrame,
                                        ProcessorState* aPs);
 
-    /***
+    /**
      * Processes the xsl:with-param child elements of the given xsl action.
      *
      * @param aAction  the action node that takes parameters (xsl:call-template
@@ -242,18 +244,6 @@ private:
      */
     static ExprResult* processVariable(Element* aVariable,
                                        ProcessorState* aPs);
-
-    /**
-     * Start a new element in the result. Handles the default html
-     * output method.
-     *
-     * @param aName local name of the result element
-     * @param aNsID namespace ID of the result element
-     * @param aPs the current ProcessorState
-     */
-    static void startElement(const String& aName,
-                             const PRInt32 aNsID,
-                             ProcessorState* aPs);
 
     /**
      * Performs the xsl:copy action as specified in the XSLT specification.

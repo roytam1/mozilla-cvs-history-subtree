@@ -663,10 +663,12 @@ nsresult ProcessorState::addGlobalVariable(const txExpandedName& aVarName,
                                            ImportFrame* aImportFrame,
                                            ExprResult* aDefaultValue)
 {
-    // If we know the value we don't need the variable, only the value
+    // If we don't know the value, it's a plain global var, add it
+    // to the import frame for late evaluation.
     if (!aDefaultValue) {
         return aImportFrame->mVariables.add(aVarName, aVarElem);
     }
+    // Otherwise, add a GlobalVariableValue not owning the value.
     GlobalVariableValue* var =
         (GlobalVariableValue*)mGlobalVariableValues.get(aVarName);
     if (var) {
