@@ -788,7 +788,9 @@ nsresult nsMapiRegistryUtils::registerMailApp(PRBool aForceRegistration)
           nsXPIDLString optionsTitle;
           bundle->FormatStringFromName(NS_LITERAL_STRING("optionsLabel").get(),
                                        brandNameStrings, 1, getter_Copies(optionsTitle));
-          SetRegistryKey(HKEY_LOCAL_MACHINE, appKeyName.get(), "", (char *) NS_ConvertUCS2toUTF8(optionsTitle).get());
+          nsCAutoString nativeOptionsTitle;
+          NS_CopyUnicodeToNative(optionsTitle, nativeOptionsTitle);
+          SetRegistryKey(HKEY_LOCAL_MACHINE, appKeyName.get(), "", (char *) nativeOptionsTitle.get());
         }
 #endif
                         
@@ -910,7 +912,7 @@ nsresult nsMapiRegistryUtils::setDefaultNewsClient()
 
     // copy our protocol handlers out to HKEY_LOCAL_MACHINE\Classes\<protocol>
     nsCAutoString keyName("Software\\Clients\\News\\");
-    keyName.Append(NS_ConvertUCS2toUTF8(vendorName()).get());
+    keyName.Append(appName);
     keyName.Append("\\Protocols\\");
 
     rv = setProtocolHandler(keyName.get(), "news"); 
@@ -962,7 +964,7 @@ nsresult nsMapiRegistryUtils::setDefaultMailClient()
         // if we succeeded in setting ourselves as the default mapi client, then 
         // make sure we also set ourselves as the mailto protocol handler for the user...
      nsCAutoString keyName("Software\\Clients\\Mail\\");
-     keyName.Append(NS_ConvertUCS2toUTF8(vendorName()).get());
+     keyName.Append(appName);
      keyName.Append("\\Protocols\\");
         
     // delete the existing mail related protocol keys from HKEY_LOCAL_MACHINE\Software\Classes
