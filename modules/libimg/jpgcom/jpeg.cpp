@@ -469,6 +469,10 @@ il_jpeg_COM_handler (j_decompress_ptr cinfo)
 
     /* Get 16-bit comment length word. */
     INPUT_2BYTES(cinfo, length, return FALSE);
+    if (length < 2) {
+       cinfo->err->msg_code = JERR_BAD_LENGTH;
+       il_error_exit((j_common_ptr)cinfo);
+    }
     length -= 2;            /* discount the length word itself */
   
     PR_FREEIF(ic->comment);
