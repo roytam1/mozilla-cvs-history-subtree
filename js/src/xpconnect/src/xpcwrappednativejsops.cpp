@@ -200,9 +200,11 @@ DefinePropertyIfFound(XPCCallContext& ccx,
                       XPCWrappedNativeScope* scope,
                       JSBool reflectToStringAndToSource,
                       XPCWrappedNative* wrapperToReflectInterfaceNames,
+                      XPCNativeScriptableInfo* scriptableInfo,
                       uintN propFlags) 
 {
     JSContext* cx = ccx.GetJSContext();
+    XPCJSRuntime* rt = ccx.GetRuntime();
     XPCNativeMember* member;
     JSBool found;
     jsid id;
@@ -220,7 +222,6 @@ DefinePropertyIfFound(XPCCallContext& ccx,
         {
             JSNative call;
             const char* name;
-            XPCJSRuntime* rt = ccx.GetRuntime();
 
             if(idval == rt->GetStringJSVal(XPCJSRuntime::IDX_TO_STRING))
             {
@@ -318,6 +319,10 @@ DefinePropertyIfFound(XPCCallContext& ccx,
                OBJ_DEFINE_PROPERTY(cx, obj, id, val, nsnull, nsnull,
                                    propFlags, nsnull);
     }
+
+    if(scriptableInfo && scriptableInfo->HideQueryInterface() &&
+       idval == rt->GetStringJSVal(XPCJSRuntime::IDX_QUERY_INTERFACE))
+        propFlags &= ~JSPROP_ENUMERATE;
 
     jsval funval;
     if(!member->GetValue(ccx, iface, &funval))
@@ -468,6 +473,7 @@ XPC_WN_Shared_Enumerate(JSContext *cx, JSObject *obj)
 
     // Since we might be using this in the helper case, we check to
     // see if this is all avoidable.
+    
     if(wrapper->GetScriptableInfo() &&
        wrapper->GetScriptableInfo()->DontEnumStaticProps())
         return JS_TRUE;
@@ -536,7 +542,7 @@ XPC_WN_NoHelper_Resolve(JSContext *cx, JSObject *obj, jsval idval)
 
     return DefinePropertyIfFound(ccx, obj, idval, 
                                  set, nsnull, wrapper->GetScope(),
-                                 JS_TRUE, wrapper,
+                                 JS_TRUE, wrapper, nsnull,
                                  JSPROP_ENUMERATE |
                                  JSPROP_READONLY |
                                  JSPROP_PERMANENT);
@@ -1124,14 +1130,12 @@ XPC_WN_ModsAllowed_Proto_Resolve(JSContext *cx, JSObject *obj, jsval idval)
     if(!ccx.IsValid())
         return JS_FALSE;
 
-    uintN enumFlag = self->GetScriptableInfo() &&
-                     self->GetScriptableInfo()->DontEnumStaticProps() ?
-                        0 : JSPROP_ENUMERATE;
-
+    XPCNativeScriptableInfo* si = self->GetScriptableInfo();
+    uintN enumFlag = si && si->DontEnumStaticProps() ? 0 : JSPROP_ENUMERATE;
 
     return DefinePropertyIfFound(ccx, obj, idval, 
                                  self->GetSet(), nsnull, self->GetScope(),
-                                 JS_TRUE, nsnull,
+                                 JS_TRUE, nsnull, si,
                                  enumFlag);
 }
 
@@ -1204,13 +1208,12 @@ XPC_WN_NoMods_Proto_Resolve(JSContext *cx, JSObject *obj, jsval idval)
     if(!ccx.IsValid())
         return JS_FALSE;
 
-    uintN enumFlag = self->GetScriptableInfo() &&
-                     self->GetScriptableInfo()->DontEnumStaticProps() ?
-                        0 : JSPROP_ENUMERATE;
+    XPCNativeScriptableInfo* si = self->GetScriptableInfo();
+    uintN enumFlag = si && si->DontEnumStaticProps() ? 0 : JSPROP_ENUMERATE;
 
     return DefinePropertyIfFound(ccx, obj, idval, 
                                  self->GetSet(), nsnull, self->GetScope(),
-                                 JS_TRUE, nsnull,
+                                 JS_TRUE, nsnull, si,
                                  JSPROP_READONLY |
                                  JSPROP_PERMANENT |
                                  enumFlag);
@@ -1294,7 +1297,7 @@ XPC_WN_TearOff_Resolve(JSContext *cx, JSObject *obj, jsval idval)
 
     return DefinePropertyIfFound(ccx, obj, idval, nsnull, iface, 
                                  wrapper->GetScope(),
-                                 JS_TRUE, nsnull,
+                                 JS_TRUE, nsnull, nsnull,
                                  JSPROP_READONLY |
                                  JSPROP_PERMANENT |
                                  JSPROP_ENUMERATE);

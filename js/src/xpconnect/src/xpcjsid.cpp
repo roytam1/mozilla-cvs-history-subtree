@@ -465,6 +465,16 @@ nsJSIID::HasInstance(nsIXPConnectWrappedNative *wrapper,
         if(!other_wrapper)
             return NS_OK;
 
+        // We'll trust the interface set of the wrapper if this is known
+        // to be an interface that the objects *expects* to be able to
+        // handle.
+        if(other_wrapper->HasInterfaceNoQI(*mDetails.GetID()))
+        {
+            *bp = JS_TRUE;
+            return NS_OK;
+        }
+
+        // Otherwise, we'll end up Querying the native object to be sure.
         XPCCallContext ccx(JS_CALLER, cx);
 
         XPCNativeInterface* iface =

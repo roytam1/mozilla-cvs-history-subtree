@@ -1710,32 +1710,38 @@ public:
     JSUint32          GetFlags() const       {return mFlags;}
     JSClass*          GetJSClass()           {return &mJSClass;}
 
+#ifdef GET_IT
+#undef GET_IT
+#endif
+#define GET_IT(f_) const {return (JSBool)(mFlags & nsIXPCScriptable:: f_ );}
 
-    JSBool WantPreCreate()                const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_PRECREATE);}
-    JSBool WantCreate()                   const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_CREATE);}
-    JSBool WantAddProperty()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_ADDPROPERTY);}
-    JSBool WantDelProperty()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_DELPROPERTY);}
-    JSBool WantGetProperty()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_GETPROPERTY);}
-    JSBool WantSetProperty()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_SETPROPERTY);}
-    JSBool WantEnumerate()                const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_ENUMERATE);}
-    JSBool WantNewEnumerate()             const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_NEWENUMERATE);}
-    JSBool WantNewResolve()               const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_NEWRESOLVE);}
-    JSBool WantConvert()                  const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_CONVERT);}
-    JSBool WantFinalize()                 const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_FINALIZE);}
-    JSBool WantCheckAccess()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_CHECKACCESS);}
-    JSBool WantCall()                     const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_CALL);}
-    JSBool WantConstruct()                const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_CONSTRUCT);}
-    JSBool WantHasInstance()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_HASINSTANCE);}
-    JSBool WantMark()                     const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_MARK);}
-    JSBool UseJSStubForAddProperty()      const {return (JSBool)(mFlags & nsIXPCScriptable::USE_JSSTUB_FOR_ADDPROPERTY);}
-    JSBool UseJSStubForDelProperty()      const {return (JSBool)(mFlags & nsIXPCScriptable::USE_JSSTUB_FOR_DELPROPERTY);}
-    JSBool UseJSStubForSetProperty()      const {return (JSBool)(mFlags & nsIXPCScriptable::USE_JSSTUB_FOR_SETPROPERTY);}
-    JSBool DontEnumStaticProps()          const {return (JSBool)(mFlags & nsIXPCScriptable::DONT_ENUM_STATIC_PROPS);}
-    JSBool DontAskInstanceForScriptable() const {return (JSBool)(mFlags & nsIXPCScriptable::DONT_ASK_INSTANCE_FOR_SCRIPTABLE);}
-    JSBool HideQueryInterface()           const {return (JSBool)(mFlags & nsIXPCScriptable::HIDE_QUERY_INTERFACE);}
-    JSBool ClassInfoInterfacesOnly()      const {return (JSBool)(mFlags & nsIXPCScriptable::CLASSINFO_INTERFACES_ONLY);}
-    JSBool AllowPropModsDuringResolve()   const {return (JSBool)(mFlags & nsIXPCScriptable::ALLOW_PROP_MODS_DURING_RESOLVE);}
-    JSBool AllowPropModsToPrototype()     const {return (JSBool)(mFlags & nsIXPCScriptable::ALLOW_PROP_MODS_TO_PROTOTYPE);}
+    JSBool WantPreCreate()                GET_IT(WANT_PRECREATE)
+    JSBool WantCreate()                   GET_IT(WANT_CREATE)
+    JSBool WantAddProperty()              GET_IT(WANT_ADDPROPERTY)
+    JSBool WantDelProperty()              GET_IT(WANT_DELPROPERTY)
+    JSBool WantGetProperty()              GET_IT(WANT_GETPROPERTY)
+    JSBool WantSetProperty()              GET_IT(WANT_SETPROPERTY)
+    JSBool WantEnumerate()                GET_IT(WANT_ENUMERATE)
+    JSBool WantNewEnumerate()             GET_IT(WANT_NEWENUMERATE)
+    JSBool WantNewResolve()               GET_IT(WANT_NEWRESOLVE)
+    JSBool WantConvert()                  GET_IT(WANT_CONVERT)
+    JSBool WantFinalize()                 GET_IT(WANT_FINALIZE)
+    JSBool WantCheckAccess()              GET_IT(WANT_CHECKACCESS)
+    JSBool WantCall()                     GET_IT(WANT_CALL)
+    JSBool WantConstruct()                GET_IT(WANT_CONSTRUCT)
+    JSBool WantHasInstance()              GET_IT(WANT_HASINSTANCE)
+    JSBool WantMark()                     GET_IT(WANT_MARK)
+    JSBool UseJSStubForAddProperty()      GET_IT(USE_JSSTUB_FOR_ADDPROPERTY)
+    JSBool UseJSStubForDelProperty()      GET_IT(USE_JSSTUB_FOR_DELPROPERTY)
+    JSBool UseJSStubForSetProperty()      GET_IT(USE_JSSTUB_FOR_SETPROPERTY)
+    JSBool DontEnumStaticProps()          GET_IT(DONT_ENUM_STATIC_PROPS)
+    JSBool DontAskInstanceForScriptable() GET_IT(DONT_ASK_INSTANCE_FOR_SCRIPTABLE)
+    JSBool HideQueryInterface()           GET_IT(HIDE_QUERY_INTERFACE)
+    JSBool ClassInfoInterfacesOnly()      GET_IT(CLASSINFO_INTERFACES_ONLY)
+    JSBool AllowPropModsDuringResolve()   GET_IT(ALLOW_PROP_MODS_DURING_RESOLVE)
+    JSBool AllowPropModsToPrototype()     GET_IT(ALLOW_PROP_MODS_TO_PROTOTYPE)
+
+#undef GET_IT
 
     ~XPCNativeScriptableInfo();
 

@@ -549,6 +549,15 @@ XPCWrappedNative::InitTearOff(XPCCallContext& ccx,
     const nsIID* iid = aInterface->GetIID();
     nsISupports* identity = GetIdentityObject();
     nsISupports* obj;
+    JSBool foundInSet = GetSet()->HasInterface(aInterface);
+
+    // If the scriptable helper forbids us from reflecting additional 
+    // interfaces, then don't even try the QI, just fail.
+    if(mScriptableInfo && mScriptableInfo->ClassInfoInterfacesOnly() &&
+       !foundInSet)
+    {
+        return JS_FALSE;
+    }
 
     if(NS_FAILED(identity->QueryInterface(*iid, (void**)&obj)) || !obj)
         return JS_FALSE;
@@ -565,7 +574,7 @@ XPCWrappedNative::InitTearOff(XPCCallContext& ccx,
     }
 
     // If this is not already in our set we need to extend our set.
-    if(!GetSet()->HasInterface(aInterface) && !ExtendSet(ccx, aInterface))
+    if(!foundInSet && !ExtendSet(ccx, aInterface))
     {
         NS_RELEASE(obj);
         return JS_FALSE;
