@@ -1311,7 +1311,7 @@ nsWindow::SetFocus(PRBool aRaise)
   // toplevel window has focus
   if (gRaiseWindows && aRaise && toplevel && top_mozarea &&
       (!GTK_WIDGET_HAS_FOCUS(top_mozarea) && !GTK_WIDGET_HAS_FOCUS(toplevel)))
-    GetAttention();
+    GetAttention(-1);
 
 #ifdef DEBUG_FOCUS
   printf("top moz area is %p\n", NS_STATIC_CAST(void *, top_mozarea));
@@ -2886,7 +2886,7 @@ NS_IMETHODIMP nsWindow::Resize(PRInt32 aX, PRInt32 aY, PRInt32 aWidth,
   return NS_OK;
 }
 
-NS_IMETHODIMP nsWindow::GetAttention(void)
+NS_IMETHODIMP nsWindow::GetAttention(PRInt32 aCycleCount)
 {
   // get the next up moz area
   GtkWidget *top_mozarea = GetOwningWidget();

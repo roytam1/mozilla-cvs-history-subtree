@@ -42,6 +42,7 @@
 #include "nsIRDFLiteral.h"
 #include "rdf.h"
 #include "nsNetUtil.h"
+#include "nsIDOMChromeWindow.h"
 #include "nsIDOMWindow.h"
 #include "nsIDOMWindowInternal.h"
 #include "nsIDOMEvent.h"
@@ -78,7 +79,9 @@ static PRBool gStoppingDownloads = PR_FALSE;
 #define PREF_BDM_SHOWALERTINTERVAL "browser.download.manager.showAlertInterval"
 #define PREF_BDM_RETENTION "browser.download.manager.retention"
 #define PREF_BDM_OPENDELAY "browser.download.manager.openDelay"
+#define PREF_BDM_SHOWWHENSTARTING "browser.download.manager.showWhenStarting"
 #define PREF_BDM_FOCUSWHENSTARTING "browser.download.manager.focusWhenStarting"
+#define PREF_BDM_FLASHCOUNT "browser.download.manager.flashCount"
 #define INTERVAL 500
 
 static nsIRDFResource* gNC_DownloadsRoot = nsnull;
@@ -1115,11 +1118,21 @@ nsDownloadManager::OpenTimerCallback(nsITimer* aTimer, void* aClosure)
   // amount of time to complete. 
   if (complete < 100) {
     PRBool focusDM = PR_FALSE;
+    PRBool showDM = PR_TRUE;
+    PRInt32 flashCount = -1;
     nsCOMPtr<nsIPrefBranch> pref(do_GetService(NS_PREFSERVICE_CONTRACTID));
-    if (pref)
+    if (pref) {
       pref->GetBoolPref(PREF_BDM_FOCUSWHENSTARTING, &focusDM);
 
-    nsDownloadManager::OpenDownloadManager(focusDM, download, parent);
+      // We only flash the download manager if the user has the download manager show
+      pref->GetBoolPref(PREF_BDM_SHOWWHENSTARTING, &showDM);
+      if (showDM) 
+        pref->GetIntPref(PREF_BDM_FLASHCOUNT, &flashCount);
+      else
+        flashCount = 0;
+    }
+
+    nsDownloadManager::OpenDownloadManager(focusDM, flashCount, download, parent);
   }
 
   NS_RELEASE(download);
@@ -1129,7 +1142,7 @@ nsDownloadManager::OpenTimerCallback(nsITimer* aTimer, void* aClosure)
 }
 
 nsresult
-nsDownloadManager::OpenDownloadManager(PRBool aShouldFocus, nsIDownload* aDownload, nsIDOMWindow* aParent)
+nsDownloadManager::OpenDownloadManager(PRBool aShouldFocus, PRInt32 aFlashCount, nsIDownload* aDownload, nsIDOMWindow* aParent)
 {
   nsresult rv = NS_OK;
 
@@ -1144,6 +1157,10 @@ nsDownloadManager::OpenDownloadManager(PRBool aShouldFocus, nsIDownload* aDownlo
     
     if (aShouldFocus)
       recentWindow->Focus();
+    else {
+      nsCOMPtr<nsIDOMChromeWindow> chromeWindow(do_QueryInterface(recentWindow));
+      chromeWindow->GetAttentionWithCycleCount(aFlashCount);
+    }
   }
   else {
     // If we ever have the capability to display the UI of third party dl managers,
@@ -1386,7 +1403,7 @@ nsDownloadManager::OnAlertClickCallback(const PRUnichar* aAlertCookie)
   if (wm)
     wm->GetMostRecentWindow(NS_LITERAL_STRING("navigator:browser").get(), getter_AddRefs(browserWindow));
 
-  return OpenDownloadManager(PR_TRUE, nsnull, browserWindow);
+  return OpenDownloadManager(PR_TRUE, -1, nsnull, browserWindow);
 }
 #endif
 
@@ -1398,6 +1415,7 @@ NS_IMPL_ISUPPORTS1(nsXPIProgressListener, nsIXPIProgressDialog)
 nsXPIProgressListener::nsXPIProgressListener(nsDownloadManager* aDownloadManager)
 {
   NS_NewISupportsArray(getter_AddRefs(mDownloads));
+  NS_NewISupportsArray(getter_AddRefs(mDownloadsPersistent));
 
   mDownloadManager = aDownloadManager;
 }
@@ -1406,6 +1424,7 @@ nsXPIProgressListener::~nsXPIProgressListener()
 {
   // Release any remaining references to objects held by the downloads array
   mDownloads->Clear();
+  mDownloadsPersistent->Clear();
 
   mDownloadManager = nsnull;
 }
@@ -1427,8 +1446,10 @@ nsXPIProgressListener::AddDownload(nsIDownload* aDownload)
     if (foundMatch)
       break;
   }
-  if (!foundMatch)
+  if (!foundMatch) {
     mDownloads->AppendElement(aDownload);
+    mDownloadsPersistent->AppendElement(aDownload);
+  }
 }
 
 void 
@@ -1450,7 +1471,7 @@ nsXPIProgressListener::HasActiveXPIOperations()
 NS_IMETHODIMP
 nsXPIProgressListener::OnStateChange(PRUint32 aIndex, PRInt16 aState, PRInt32 aValue)
 {
-  nsCOMPtr<nsIWebProgressListener> wpl(do_QueryElementAt(mDownloads, aIndex));
+  nsCOMPtr<nsIWebProgressListener> wpl(do_QueryElementAt(mDownloadsPersistent, aIndex));
   nsIWebProgressListener* temp = wpl.get();
   nsDownload* dl = NS_STATIC_CAST(nsDownload*, temp);
   // Sometimes we get XPInstall progress notifications after everything is done, and there's
@@ -1476,7 +1497,7 @@ nsXPIProgressListener::OnStateChange(PRUint32 aIndex, PRInt16 aState, PRInt32 aV
     
     dl->SetDownloadState(nsIXPInstallManagerUI::INSTALL_FINISHED);
     AssertProgressInfoForDownload(dl);
-    
+
     // Now, remove it from our internal bookkeeping list. 
     RemoveDownloadAtIndex(aIndex);
     break;
@@ -1509,7 +1530,7 @@ nsXPIProgressListener::OnStateChange(PRUint32 aIndex, PRInt16 aState, PRInt32 aV
 NS_IMETHODIMP
 nsXPIProgressListener::OnProgress(PRUint32 aIndex, PRUint32 aValue, PRUint32 aMaxValue)
 {
-  nsCOMPtr<nsIWebProgressListener> wpl(do_QueryElementAt(mDownloads, aIndex));
+  nsCOMPtr<nsIWebProgressListener> wpl(do_QueryElementAt(mDownloadsPersistent, aIndex));
   if (wpl) 
     return wpl->OnProgressChange(nsnull, nsnull, 0, 0, aValue, aMaxValue);
   return NS_OK;

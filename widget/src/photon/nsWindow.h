@@ -98,7 +98,7 @@ public:
                                            PRBool aDoCapture,
                                            PRBool aConsumeRollupEvent);
 
-  inline NS_IMETHOD    GetAttention(void)
+  inline NS_IMETHOD    GetAttention(PRInt32 aCycleCount)
 		{
 /* ATENTIE */ printf( "\n\n\n!!!!!!!!!!!!! GetAttention !!!!!!!!!!!!!!!!!!!!!!\n\n\n\n" );
 		if( mWidget ) PtWindowToFront( mWidget );
