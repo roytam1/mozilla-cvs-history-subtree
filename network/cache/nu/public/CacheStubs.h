@@ -46,6 +46,7 @@ PR_BEGIN_EXTERN_C
     extern void*            CacheManager_GetObject(const char* i_url);
     extern PRBool           CacheManager_IsOffline(void);
     extern void             CacheManager_Offline(PRBool bSet);
+    extern PRBool           CacheManager_Remove(const char* i_url);
     extern PRUint32         CacheManager_WorstCaseTime(void);
 
     /* Cache Object- check nsCacheObject.h for details on these functions */
@@ -58,6 +59,7 @@ PR_BEGIN_EXTERN_C
     extern PRUint32         CacheObject_GetSize(const void* pThis);
     extern PRUint32         CacheObject_Hits(const void* pThis);
     extern PRBool           CacheObject_IsExpired(const void* pThis);
+    extern PRBool           CacheObject_IsPartial(const void* pThis);
     extern void             CacheObject_SetAddress(void* pThis, const char* i_Address);
     extern void             CacheObject_SetEtag(void* pThis, const char* i_Etag);
     extern void             CacheObject_SetExpires(void *pThis, const PRIntervalTime i_Time);

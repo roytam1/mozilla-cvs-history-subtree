@@ -31,15 +31,14 @@
 void
 Cache_Init(void)
 {
-    /* todo */
-    PR_ASSERT(0);
+    /* Most of the initilization gets done in the constructor for the 
+     * nsCacheManager class. */ 
 }
 
 void 
 Cache_Shutdown(void)
 {
-    /* todo */
-    PR_ASSERT(0);
+    /* todo- Should the destructor for nsCacheManager object be forced here?*/
 }
 
 /* CacheManager functions */
@@ -71,6 +70,12 @@ void
 CacheManager_Offline(PRBool bSet)
 {
     CACHEMGR->Offline(bSet);
+}
+
+PRBool
+CacheManager_Remove(const char* i_url)
+{
+    return CACHEMGR->Remove(i_url);
 }
 
 PRUint32
@@ -132,6 +137,12 @@ PRBool
 CacheObject_IsExpired(const void* pThis)
 {
     return pThis ? ((nsCacheObject*)pThis)->IsExpired() : PR_FALSE;
+}
+
+PRBool
+CacheObject_IsPartial(const void* pThis)
+{
+    return pThis ? ((nsCacheObject*)pThis)->IsPartial() : PR_FALSE;
 }
 
 void

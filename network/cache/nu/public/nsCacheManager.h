@@ -76,13 +76,19 @@ public:
 
     void            Offline(PRBool bSet);
 
+    PRBool          Remove(const char* i_url);
+
     const char*     Trace() const;
 
     /* Performance measure- microseconds */
     PRUint32        WorstCaseTime(void) const;
 
 protected:
+    
+    PRBool          ContainsExactly(const char* i_url) const;
+
     void            Init();
+    
     nsCacheModule*
                     LastModule() const;
 

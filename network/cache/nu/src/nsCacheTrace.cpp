@@ -27,7 +27,7 @@
 
 static nsCacheTrace TheTrace;
 
-nsCacheTrace::nsCacheTrace():m_bEnabled(PR_TRUE)
+nsCacheTrace::nsCacheTrace():m_bEnabled(PR_FALSE)
 {
 
 }

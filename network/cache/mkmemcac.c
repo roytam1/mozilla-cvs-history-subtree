@@ -51,6 +51,10 @@ extern void IL_SetCacheSize(uint32 new_size);
 #include "shist.h"
 #include "secnav.h"
 
+#ifdef NU_CACHE
+#include "CacheStubs.h"
+#endif
+
 /* exported error ints */
 extern int MK_OUT_OF_MEMORY;
 
@@ -1686,6 +1690,17 @@ net_InterruptMemoryCache (ActiveEntry * cur_entry)
  */
 MODULE_PRIVATE void 
 NET_DisplayMemCacheInfoAsHTML(ActiveEntry * cur_entry)
+#ifdef NU_CACHE
+{
+    if (cur_entry)
+    {
+        cur_entry->status = MK_UNABLE_TO_CONVERT;
+        return;
+    }
+    PR_ASSERT(0);
+    /* Todo - Gagan */
+}
+#else
 {
 	char *buffer = (char*)PR_Malloc(2048);
 	char *address;
@@ -1707,9 +1722,17 @@ NET_DisplayMemCacheInfoAsHTML(ActiveEntry * cur_entry)
 	if(PL_strcasestr(cur_entry->URL_s->address, "?long"))
 		long_form = TRUE;
 	else if(PL_strcasestr(cur_entry->URL_s->address, "?traceon"))
+#ifdef NU_CACHE
+        CacheTrace_Enable(TRUE);
+#else
 		NET_CacheTraceOn = TRUE;
+#endif
 	else if(PL_strcasestr(cur_entry->URL_s->address, "?traceoff"))
+#ifdef NU_CACHE
+        CacheTrace_Enable(TRUE);
+#else
 		NET_CacheTraceOn = FALSE;
+#endif
 
 	StrAllocCopy(cur_entry->URL_s->content_type, TEXT_HTML);
 
@@ -1894,6 +1917,7 @@ END:
 
 	return;
 }
+#endif
 
 /*Accessor for use by Cache Browser */
 PUBLIC net_CacheObject* 

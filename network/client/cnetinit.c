@@ -1,5 +1,3 @@
-
-
 #include "xp.h"
 #include "netutils.h"
 #include "mkselect.h"
@@ -28,7 +26,11 @@ NET_ClientProtocolInitialize(void)
 
         NET_InitFileProtocol();
         NET_InitHTTPProtocol();
+#ifdef NU_CACHE
+        NET_InitNuCacheProtocol();
+#else
         NET_InitMemCacProtocol();
+#endif
         NET_InitFTPProtocol();
         NET_InitAboutProtocol();
         NET_InitGopherProtocol();

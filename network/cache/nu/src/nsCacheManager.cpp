@@ -94,6 +94,21 @@ nsCacheManager::AddModule(nsCacheModule* pModule)
 PRBool 
 nsCacheManager::Contains(const char* i_url) const
 {
+    // Add logic to check for IMAP type URLs, byteranges, and search with / appended as well...
+    // TODO 
+    PRBool bStatus = ContainsExactly(i_url);
+    if (!bStatus)
+    {
+        // try alternate stuff
+        char* extraBytes;
+        char extraBytesSeparator;
+    }
+    return bStatus;
+}
+
+PRBool
+nsCacheManager::ContainsExactly(const char* i_url) const
+{
     if (m_pFirstModule)
     {
         nsCacheModule* pModule = m_pFirstModule;
@@ -185,6 +200,25 @@ nsCacheManager::LastModule() const
         return pModule;
     }
     return 0;
+}
+
+PRBool
+nsCacheManager::Remove(const char* i_url)
+{
+    PRBool bStatus = PR_FALSE;
+    if (m_pFirstModule)
+    {
+        nsCacheModule* pModule = m_pFirstModule;
+        bStatus |= pModule->Remove(i_url);
+        if (bStatus)
+            return bStatus;
+        while(pModule->Next()) {
+            pModule = pModule->Next();
+            if (bStatus)
+                return bStatus;
+        }
+    }
+    return bStatus;
 }
 
 PRUint32 

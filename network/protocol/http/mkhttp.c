@@ -2182,8 +2182,7 @@ net_parse_first_http_line (ActiveEntry *ce)
 
               case 2:   /* Succesful reply */
 
-				/* Since we
-			 	 * are getting a new copy, delete the old one
+				/* Since we are getting a new copy, delete the old one
 			 	 * from the cache
 			 	 */
 #ifdef MOZILLA_CLIENT
@@ -2307,8 +2306,7 @@ net_parse_first_http_line (ActiveEntry *ce)
                      */
                     CD_AUTH_REQUIRED = TRUE;
 
-					/* Since we
-					 * are getting a new copy, delete the old one
+					/* Since we are getting a new copy, delete the old one
 					 * from the cache
 					 */
 #ifdef MOZILLA_CLIENT

@@ -130,7 +130,11 @@ HG87325
 PUBLIC PRBool
 NET_IsCacheTraceOn(void)
 {
+#ifdef NU_CACHE
+    return CacheTrace_IsEnabled();
+#else
     return NET_CacheTraceOn;
+#endif
 }
 
 /* return the size of the file on
@@ -2020,6 +2024,20 @@ NET_ChangeCacheFileLock(URL_Struct *URL_s, XP_Bool set)
 }
 
 MODULE_PRIVATE void NET_RefreshCacheFileExpiration(URL_Struct * URL_s)
+#ifdef NU_CACHE
+{
+	/* only update if the server status is 304 
+	 * The other cases involve a new cache object
+	 * and all the info will automatically get updated
+	 */
+    if (URL_s->server_status != 304)
+        return;
+
+    /*TODO -Gagan*/
+    PR_ASSERT(0);
+    return;
+}
+#else
 {
     net_CacheObject *found_cache_obj;
     int  status;
@@ -2142,6 +2160,7 @@ MODULE_PRIVATE void NET_RefreshCacheFileExpiration(URL_Struct * URL_s)
 	return;
 #endif
 }
+#endif /* NU_CACHE */
 
 /* returns TRUE if the url is in the disk cache
  */
@@ -2176,6 +2195,14 @@ NET_IsURLInDiskCache(URL_Struct *URL_s)
  */
 MODULE_PRIVATE void
 NET_RemoveURLFromCache(URL_Struct *URL_s)
+#ifdef NU_CACHE
+{
+    if (!URL_s || !URL_s->address)
+        return;
+
+    CacheManager_Remove(URL_s->address);
+}
+#else
 {
 
 	int status;
@@ -2252,12 +2279,25 @@ NET_RemoveURLFromCache(URL_Struct *URL_s)
 
 	net_FreeCacheDBTdata(key);
 }
+#endif /* NU_CACHE */
 
 /* return TRUE if the URL is in the cache and
- * is a partial cache file
+ * is a partial cache file- check clients TODO - Gagan
  */
 MODULE_PRIVATE PRBool
 NET_IsPartialCacheFile(URL_Struct *URL_s)
+#ifdef NU_CACHE
+{
+    if (!URL_s || !URL_s->address)
+        return PR_FALSE;
+    /* Todo change this to just getObject, if null then... - Gagan */    
+    if (CacheManager_Contains(URL_s->address))
+    {
+        return CacheObject_IsPartial(CacheManager_GetObject(URL_s->address));
+    }
+    return PR_FALSE;
+}
+#else
 {
 	net_CacheObject *found_cache_obj;
 	int  status;
@@ -2288,9 +2328,33 @@ NET_IsPartialCacheFile(URL_Struct *URL_s)
 	else
 		return(0);
 }
+#endif
 
 PUBLIC int
 NET_FindURLInCache(URL_Struct * URL_s, MWContext *ctxt)
+#ifdef NU_CACHE
+{
+    if (!URL_s || !URL_s->address)
+        return 0;
+    
+	/* zero the last modified date so that we don't
+	 * screw up the If-modified-since header by
+     * having it in even when the document isn't
+	 * cached.
+	 */
+    URL_s->last_modified = 0;
+
+    if (!CacheManager_Contains(URL_s->address))
+        return 0;
+    else
+    {
+        /* TODO- mkabout.c relies on updating the URL_struct with the found info */
+        void* pObject = CacheManager_GetObject(URL_s->address);
+        /* Copy all the stuff from CacheObject to URL_struct */
+        /* TODO */
+    }
+}
+#else
 {
 	net_CacheObject *found_cache_obj;
     XP_StatStruct    stat_entry;
@@ -2634,6 +2698,7 @@ NET_FindURLInCache(URL_Struct * URL_s, MWContext *ctxt)
 
 	return(FILE_CACHE_TYPE_URL);
 }
+#endif /* NU_CACHE */
 
 
 /* read the Cache File allocation table.
@@ -2686,7 +2751,7 @@ NET_WriteCacheFAT(char *filename, XP_Bool final_call)
 }
 
 MODULE_PRIVATE void
-NET_CleanupCache (char * filename)
+NET_CleanupCache ()
 {
 #ifdef NU_CACHE
     Cache_Shutdown();
@@ -3068,6 +3133,17 @@ NET_DestroyCacheDirectory(char * dir_name, char * prefix)
  */
 MODULE_PRIVATE void 
 NET_DisplayCacheInfoAsHTML(ActiveEntry * cur_entry)
+#ifdef NU_CACHE
+{
+    if (cur_entry)
+    {
+        cur_entry->status = MK_UNABLE_TO_CONVERT;
+        return;
+    }
+    PR_ASSERT(0);
+    /* Todo - Gagan */
+}
+#else
 {
 	char *buffer = (char*)PR_Malloc(2048);
 	char *address;
@@ -3346,6 +3422,7 @@ END:
 
 	return;
 }
+#endif
 
 #define SANE_BUFLEN	1024
 

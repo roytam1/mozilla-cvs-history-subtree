@@ -32,6 +32,9 @@
 #include "mkstream.h"
 #include "mkpadpac.h"
 #include "netcache.h"
+#ifdef NU_CACHE
+#include "CacheStubs.h"
+#endif
 #include "nslocks.h"
 #include "cookies.h"
 #include "httpauth.h"
@@ -300,7 +303,7 @@ PRIVATE NET_ProxyStyle MKproxy_style = PROXY_STYLE_UNSET;
 PRIVATE char * MKglobal_config_url = 0;
 
 PRIVATE XP_List * net_EntryList=0;
-
+/* Todo */
 MODULE_PRIVATE CacheUseEnum NET_CacheUseMethod=CU_CHECK_PER_SESSION;
 
 #ifdef XP_WIN16
@@ -611,12 +614,13 @@ NET_SetupPrefs(const char * prefChanged)
 	if (bSetupAll || !PL_strcmp(prefChanged,"browser.cache.disk_cache_size")) {
 		int32 nDiskCache;
 		PREF_GetIntPref("browser.cache.disk_cache_size",&nDiskCache);
-	    NET_SetDiskCacheSize(nDiskCache * 1024);
+        NET_SetDiskCacheSize(nDiskCache * 1024);
 	}
 
 	if (bSetupAll || !PL_strcmp(prefChanged, "browser.cache.check_doc_frequency")) {
 		int32 nDocReqFreq;
 		PREF_GetIntPref("browser.cache.check_doc_frequency" ,&nDocReqFreq);
+/*TODO- Gagan */
 		NET_SetCacheUseMethod((CacheUseEnum)nDocReqFreq);
 	}
 	
@@ -672,7 +676,7 @@ NET_FinishInitNetLib()
 	NET_SetupPrefs(NULL);  /* setup initial proxy, socks, dnsExpiration and cache preference info */
 
     PREF_RegisterCallback("network.proxy",NET_PrefChangedFunc,NULL);
-	PREF_RegisterCallback("browser.cache",NET_PrefChangedFunc,NULL);
+	PREF_RegisterCallback("browser.cache",NET_PrefChangedFunc,NULL); /* TODO move to nu-cache stuff -Gagan */
 	PREF_RegisterCallback("network.hosts.socks_server",NET_PrefChangedFunc,NULL);
 	PREF_RegisterCallback("network.hosts.socks_serverport",NET_PrefChangedFunc,NULL);
 	PREF_RegisterCallback("network.dnsCacheExpiration",NET_DNSExpirationPrefChanged,NULL);
@@ -1711,9 +1715,8 @@ NET_ShutdownNetLib(void)
     NET_CleanupTCP();
 
 #ifdef MOZILLA_CLIENT
-    NET_CleanupCache("");
+    NET_CleanupCache(); 
 	NET_SetMemoryCacheSize(0); /* free memory cache */
-
 #endif /* MOZILLA_CLIENT */
 
 #ifdef XP_UNIX
@@ -2471,9 +2474,9 @@ NET_GetURL (URL_Struct *URL_s,
       {
 		if(URL_s->use_local_copy || output_format & FO_ONLY_FROM_CACHE)
 		  {
-	    /* the cached file is valid so use it unilaterally
-	     */
-	    type = cache_method;
+	        /* the cached file is valid so use it unilaterally
+	         */
+	        type = cache_method;
 		  }
 		else if(URL_s->real_content_length > URL_s->content_length)
 		  {
@@ -2491,63 +2494,63 @@ NET_GetURL (URL_Struct *URL_s,
 	    cache_method = 0;
 	    TRACEMSG(("Getting the rest of a partial cache file"));
 		  }
-	else if (URL_s->force_reload != NET_DONT_RELOAD)
-	  {
-	    TRACEMSG(("Force reload flag set.  Checking server to see if modified"));
-	    /* cache testing stuff */
-	    if(NET_IsCacheTraceOn())
+	    else if (URL_s->force_reload != NET_DONT_RELOAD)
 	      {
-		char *buf = 0;
-		StrAllocCopy(buf, XP_GetString(XP_CHECKING_SERVER__FORCE_RELOAD));
-		StrAllocCat(buf, URL_s->address);
-		FE_Alert(window_id, buf);
-		FREE(buf);
-	      }
-
-	    /* strip the cache file and
-	     * memory pointer
-	     */
-	    if (type == WYSIWYG_TYPE_URL)
-		type = cache_method;
-	    else
-	      {
-		FREE_AND_CLEAR(URL_s->cache_file);
-		URL_s->memory_copy = 0;
-		cache_method = 0;
-	      }
-	  }
-	else if(URL_s->expires)         
-	  {
-	    time_t cur_time = time(NULL);
-
-	    if(cur_time > URL_s->expires)
-	      {
-		FREE_AND_CLEAR(URL_s->cache_file);
-		URL_s->memory_copy = 0;
-		URL_s->expires = 0;  /* remove cache reference */
-		cache_method = 0;
-
-		/* cache testing stuff */
-		if(NET_IsCacheTraceOn())
-		  {
+	        TRACEMSG(("Force reload flag set.  Checking server to see if modified"));
+	        /* cache testing stuff */
+	        if(NET_IsCacheTraceOn())
+	          {
 		    char *buf = 0;
-		    StrAllocCopy(buf, XP_GetString(XP_OBJECT_HAS_EXPIRED));
+		    StrAllocCopy(buf, XP_GetString(XP_CHECKING_SERVER__FORCE_RELOAD));
 		    StrAllocCat(buf, URL_s->address);
 		    FE_Alert(window_id, buf);
 		    FREE(buf);
-		  }
+	          }
+
+	        /* strip the cache file and
+	         * memory pointer
+	         */
+	        if (type == WYSIWYG_TYPE_URL)
+    		    type = cache_method;
+	        else
+	          {
+		        FREE_AND_CLEAR(URL_s->cache_file);
+		        URL_s->memory_copy = 0;
+		        cache_method = 0;
+	          }
 	      }
-			else
-			  {
-			/* the cached file is valid so use it unilaterally
-			 */
-		type = cache_method;
-			  }
+	    else if(URL_s->expires)         
+	      {
+	        time_t cur_time = time(NULL);
+
+	        if(cur_time > URL_s->expires)
+	          {
+		        FREE_AND_CLEAR(URL_s->cache_file);
+		        URL_s->memory_copy = 0;
+		        URL_s->expires = 0;  /* remove cache reference */
+		        cache_method = 0;
+
+		        /* cache testing stuff */
+		        if(NET_IsCacheTraceOn())
+		          {
+		            char *buf = 0;
+		            StrAllocCopy(buf, XP_GetString(XP_OBJECT_HAS_EXPIRED));
+		            StrAllocCat(buf, URL_s->address);
+		            FE_Alert(window_id, buf);
+		            FREE(buf);
+		          }
+	          }
+            else
+            {
+                /* the cached file is valid so use it unilaterally
+                 */
+                type = cache_method;
+            }
 		  }
 		else if((NET_CacheUseMethod == CU_NEVER_CHECK || URL_s->history_num)
 				  && !URL_s->expires)
 		  {
-	    type = cache_method;
+    	    type = cache_method;
 		  }
 		else if(NET_CacheUseMethod == CU_CHECK_ALL_THE_TIME
 			    && CLEAR_CACHE_BIT(output_format) == FO_PRESENT
@@ -2570,22 +2573,22 @@ NET_GetURL (URL_Struct *URL_s,
 			  * and it doesn't have an expiration date...
 			  * FORCE Reload it
 			  */
-	    TRACEMSG(("Non history http file found. Force reloading it "));
-	    /* strip the cache file and
-	     * memory pointer
-	     */
-	    FREE_AND_CLEAR(URL_s->cache_file);
-	    URL_s->memory_copy = 0;
-	    cache_method = 0;
+	        TRACEMSG(("Non history http file found. Force reloading it "));
+	        /* strip the cache file and
+	         * memory pointer
+	         */
+	        FREE_AND_CLEAR(URL_s->cache_file);
+	        URL_s->memory_copy = 0;
+	        cache_method = 0;
 
 		  }
 		else if(!URL_s->last_modified
 				&& CLEAR_CACHE_BIT(output_format) == FO_PRESENT
 				&& (type == HTTP_TYPE_URL HG62522) 
 #ifdef MOZ_OFFLINE            
-	    && !NET_IsOffline() 
+	      && !NET_IsOffline() 
 #endif /* MOZ_OFFLINE */
-	    )  /* *X* check for is offline */
+	        )  /* *X* check for is offline */
 		  {
 			TRACEMSG(("Non history cgi script found (probably)."
 					  " Force reloading it "));
@@ -2599,19 +2602,19 @@ NET_GetURL (URL_Struct *URL_s,
 				FREE(buf);
 			  }
 
-	    /* strip the cache file and
-	     * memory pointer
-	     */
-	    FREE_AND_CLEAR(URL_s->cache_file);
-	    URL_s->memory_copy = 0;
-		URL_s->expires = 0;  /* remove cache reference */
-	    cache_method = 0;
+	        /* strip the cache file and
+	         * memory pointer
+	         */
+	        FREE_AND_CLEAR(URL_s->cache_file);
+	        URL_s->memory_copy = 0;
+		    URL_s->expires = 0;  /* remove cache reference */
+	        cache_method = 0;
 		  }
 		else
 		  {
 		    /* the cached file is valid so use it unilaterally
 		     */
-	    type = cache_method;
+    	    type = cache_method;
 		  }
       }
 #endif /* MOZILLA_CLIENT */

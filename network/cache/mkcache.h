@@ -25,8 +25,10 @@
 #include "extcache.h"
 #endif
 
+#ifndef NU_CACHE
 /* trace variable for cache testing */
 extern PRBool NET_CacheTraceOn;
+#endif /* This is handled by CacheTrace_Enable() and CacheTrace_IsEnabled() in the NU world */
 
 PR_BEGIN_EXTERN_C
 
