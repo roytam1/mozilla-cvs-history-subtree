@@ -28,6 +28,7 @@
 #include "nsToolkit.h"
 #include "nsWidgetsCID.h"
 #include <gdk/gdkx.h>
+#include "gtk_moz_window.h"
 
 #undef DEBUG_pavlov
 
@@ -280,19 +281,18 @@ NS_METHOD nsWidget::IsVisible(PRBool &aState)
 
 NS_METHOD nsWidget::Move(PRUint32 aX, PRUint32 aY)
 {
+  printf("nsWidget::Move(%d, %d)\n", aX, aY);
   if (mWidget) {
-    ::gtk_layout_move(GTK_LAYOUT(mWidget->parent), mWidget, aX, aY);
+    ::gtk_moz_window_move(GTK_MOZ_WINDOW(mWidget->parent), mWidget, aX, aY);
   }
   return NS_OK;
 }
 
 NS_METHOD nsWidget::Resize(PRUint32 aWidth, PRUint32 aHeight, PRBool aRepaint)
 {
-#if 0
   printf("nsWidget::Resize %s (%p) to %d %d\n",
          mWidget ? gtk_widget_get_name(mWidget) : "(no-widget)", this,
          aWidth, aHeight);
-#endif
   mBounds.width  = aWidth;
   mBounds.height = aHeight;
   if (mWidget) {
@@ -830,7 +830,7 @@ nsresult nsWidget::CreateWidget(nsIWidget *aParent,
   Resize(aRect.width, aRect.height, PR_FALSE);
   /* place the widget in its parent */
   if (parentWidget)
-    gtk_layout_put(GTK_LAYOUT(parentWidget), mWidget, aRect.x, aRect.y);
+    gtk_moz_window_put(GTK_MOZ_WINDOW(parentWidget), mWidget, aRect.x, aRect.y);
 
   gtk_widget_pop_colormap();
   gtk_widget_pop_visual();
@@ -1598,9 +1598,9 @@ nsWidget::DropEvent(GtkWidget * aWidget,
 #if 0
   static int count = 0;
 
-  if (GTK_IS_LAYOUT(aWidget))
+  if (GTK_IS_MOZ_WINDOW(aWidget))
   {
-	GtkLayout * layout = GTK_LAYOUT(aWidget);
+	GtkMozWindow * moz_window = GTK_MOZ_WINDOW(aWidget);
 
 	printf("%4d DropEvent(this=%p,widget=%p,event_win=%p,wid_win=%p,bin_win=%p)\n",
 		   count++,
@@ -1608,7 +1608,7 @@ nsWidget::DropEvent(GtkWidget * aWidget,
 		   aWidget,
 		   aEventWindow,
 		   aWidget->window,
-		   layout->bin_window);
+		   moz_window->window);
   }
   else
   {
@@ -1626,11 +1626,11 @@ nsWidget::DropEvent(GtkWidget * aWidget,
   // that occur in the sub windows.  Check the window member
   // of the GdkEvent, if it is not the gtklayout's bin_window,
   // drop the event.
-  if (GTK_IS_LAYOUT(aWidget))
+  if (GTK_IS_MOZ_WINDOW(aWidget))
   {
-	GtkLayout * layout = GTK_LAYOUT(aWidget);
+	GtkMozWindow * moz_window = GTK_MOZ_WINDOW(aWidget);
 
-	if (aEventWindow != layout->bin_window)
+	if (aEventWindow != GTK_WIDGET(moz_window)->window)
 	{
 	  return PR_TRUE;
 	}
