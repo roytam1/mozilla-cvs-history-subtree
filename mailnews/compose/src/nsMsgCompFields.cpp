@@ -50,8 +50,8 @@ nsMsgCompFields::nsMsgCompFields()
   m_useMultipartAlternative = PR_FALSE;
   m_uuEncodeAttachments = PR_FALSE;
 	m_returnReceipt = PR_FALSE;
-  m_signed = PR_FALSE;
-  m_encrypted = PR_TRUE;
+  m_signed = PR_TRUE;
+  m_encrypted = PR_FALSE;
 	m_receiptType = 0;
 
   nsCOMPtr<nsIPref> prefs (do_GetService(NS_PREF_CONTRACTID));

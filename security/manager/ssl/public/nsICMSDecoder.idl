@@ -22,6 +22,7 @@
 
 #include "nsISupports.idl"
 interface nsISupportsArray;
+interface nsIX509Cert;
 
 %{ C++
 typedef void (*NSSCMSContentCallback)(void *arg, const char *buf, unsigned long len);
@@ -63,7 +64,7 @@ interface nsICMSMessage : nsISupports
   void verifySignature();
   void verifyDetachedSignature();
   void CreateEncrypted(in nsISupportsArray aRecipientCerts);
-  void CreateSigned();
+  void CreateSigned(in nsIX509Cert scert, in nsIX509Cert ecert);
 };
 
 /**

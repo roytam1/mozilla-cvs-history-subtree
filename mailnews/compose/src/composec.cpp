@@ -449,6 +449,7 @@ mime_finish_multipart_signed (mime_crypto_closure *state, PRBool outer_p)
   nsCOMPtr<nsICMSMessage> cinfo = do_CreateInstance(NS_CMSMESSAGE_CONTRACTID, &rv);
   nsCOMPtr<nsICMSEncoder> encoder = do_CreateInstance(NS_CMSENCODER_CONTRACTID, &rv);
   PRStatus ds_status = PR_FAILURE;
+  char * header = nsnull;
 
   /* Compute the hash...
    */
@@ -474,9 +475,8 @@ mime_finish_multipart_signed (mime_crypto_closure *state, PRBool outer_p)
 
   /* Write out the headers for the signature.
    */
-  {
 	PRInt32 L;
-	char *header =
+	header =
 	  PR_smprintf(CRLF
 				  "--%s" CRLF
 				  "Content-Type: " APPLICATION_XPKCS7_SIGNATURE
@@ -498,15 +498,14 @@ mime_finish_multipart_signed (mime_crypto_closure *state, PRBool outer_p)
 		/* If this is the outer block, write it to the file. */
     if (PRInt32(state->file->write(header, L)) < L) {
 		  status = MK_MIME_ERROR_WRITING_FILE;
-    } else {
-		  /* If this is an inner block, feed it through the crypto stream. */
-		  status = mime_crypto_write_block (state, header, L);
-	  }
+    } 
+  } else {
+    /* If this is an inner block, feed it through the crypto stream. */
+		status = mime_crypto_write_block (state, header, L);
   }
 
 	PR_Free(header);
 	if (status < 0) goto FAIL;
-  }
 
   /* Create the signature...
    */
@@ -515,7 +514,7 @@ mime_finish_multipart_signed (mime_crypto_closure *state, PRBool outer_p)
 
   PR_ASSERT (state->self_signing_cert);
   PR_SetError(0,0);
-  rv = cinfo->CreateSigned();
+  rv = cinfo->CreateSigned(state->self_signing_cert, state->self_encryption_cert);
   if (NS_FAILED(rv))	{
 	  status = PR_GetError();
 	  PR_ASSERT(status < 0);
@@ -539,7 +538,21 @@ mime_finish_multipart_signed (mime_crypto_closure *state, PRBool outer_p)
   /* Write out the signature.
    */
   PR_SetError(0,0);
-  rv = encoder->Encode (cinfo);
+  rv = encoder->Start(cinfo, mime_crypto_write_base64, state->sig_encoder_data);
+  if (NS_FAILED(rv)) {
+	  status = PR_GetError();
+	  PR_ASSERT(status < 0);
+	  if (status >= 0) status = -1;
+	  goto FAIL;
+	}
+  rv = encoder->Update((const char*)sec_item_data, sec_item_len);
+  if (NS_FAILED(rv)) {
+	  status = PR_GetError();
+	  PR_ASSERT(status < 0);
+	  if (status >= 0) status = -1;
+	  goto FAIL;
+	}
+  rv = encoder->Finish();
   if (NS_FAILED(rv)) {
 	  status = PR_GetError();
 	  PR_ASSERT(status < 0);

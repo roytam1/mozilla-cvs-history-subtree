@@ -117,7 +117,11 @@ NS_IMETHODIMP nsCMSMessage::ContentIsSigned(int *)
 
 NS_IMETHODIMP nsCMSMessage::VerifyDetachedSignature()
 {
-  return  NS_ERROR_NOT_IMPLEMENTED;
+  if (NSS_CMSMessage_IsSigned(m_cmsMsg) == PR_TRUE) {
+    return NS_OK;
+  } else {
+    return NS_ERROR_FAILURE;
+  }
 }
 
 NS_IMETHODIMP nsCMSMessage::CreateEncrypted(nsISupportsArray * aRecipientCerts)
@@ -204,9 +208,86 @@ loser:
   return NS_ERROR_FAILURE;
 }
 
-NS_IMETHODIMP nsCMSMessage::CreateSigned()
+NS_IMETHODIMP nsCMSMessage::CreateSigned(nsIX509Cert* aSigningCert, nsIX509Cert* aEncryptCert)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  NSSCMSContentInfo *cinfo;
+  NSSCMSSignedData *sigd;
+  NSSCMSSignerInfo *signerinfo;
+  CERTCertificate *scert, *ecert;
+
+  /* Get the certs */
+  scert = NS_STATIC_CAST(nsNSSCertificate*, aSigningCert)->GetCert();
+  ecert = NS_STATIC_CAST(nsNSSCertificate*, aEncryptCert)->GetCert();
+
+  /*
+   * create the message object
+   */
+  m_cmsMsg = NSS_CMSMessage_Create(NULL); /* create a message on its own pool */
+  if (m_cmsMsg == NULL) {
+    goto loser;
+  }
+
+  /*
+   * build chain of objects: message->signedData->data
+   */
+  if ((sigd = NSS_CMSSignedData_Create(m_cmsMsg)) == NULL) {
+  	goto loser;
+  }
+  cinfo = NSS_CMSMessage_GetContentInfo(m_cmsMsg);
+  if (NSS_CMSContentInfo_SetContent_SignedData(m_cmsMsg, cinfo, sigd) 
+          != SECSuccess) {
+  	goto loser;
+  }
+
+  cinfo = NSS_CMSSignedData_GetContentInfo(sigd);
+
+  /* we're always passing data in and detaching optionally */
+  if (NSS_CMSContentInfo_SetContent_Data(m_cmsMsg, cinfo, nsnull, PR_TRUE) 
+          != SECSuccess) {
+  	goto loser;
+  }
+
+  /* 
+   * create & attach signer information
+   */
+  if ((signerinfo = NSS_CMSSignerInfo_Create(m_cmsMsg, scert, SEC_OID_SHA1)) 
+          == NULL) {
+    goto loser;
+  }
+
+  /* we want the cert chain included for this one */
+  if (NSS_CMSSignerInfo_IncludeCerts(signerinfo, NSSCMSCM_CertChain, 
+                                       certUsageEmailSigner) 
+          != SECSuccess) {
+    goto loser;
+  }
+
+  if (NSS_CMSSignerInfo_AddSigningTime(signerinfo, PR_Now()) 
+	      != SECSuccess) {
+    goto loser;
+  }
+
+	if (NSS_CMSSignerInfo_AddSMIMECaps(signerinfo) != SECSuccess) {
+	    goto loser;
+	}
+
+	if (NSS_CMSSignerInfo_AddSMIMEEncKeyPrefs(signerinfo, ecert, 
+	                                        CERT_GetDefaultCertDB())
+	      != SECSuccess) {
+	    goto loser;
+	}
+	if (NSS_CMSSignedData_AddCertificate(sigd, ecert) != SECSuccess) {
+	    goto loser;
+	}
+
+  if (NSS_CMSSignedData_AddSignerInfo(sigd, signerinfo) != SECSuccess) {
+    goto loser;
+  }
+
+  return NS_OK;
+loser:
+  NSS_CMSMessage_Destroy(m_cmsMsg);
+  return NS_ERROR_FAILURE;
 }
 
 NS_IMPL_ISUPPORTS1(nsCMSDecoder, nsICMSDecoder)

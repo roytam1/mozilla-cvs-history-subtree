@@ -370,6 +370,7 @@ MimeMultCMS_generate (void *crypto_closure)
   PRBool good_p = PR_TRUE;
   PRBool encrypted_p;
   PRBool unverified_p = PR_FALSE;
+  nsresult rv;
 
   PR_ASSERT(data);
   if (!data) return 0;
@@ -377,25 +378,14 @@ MimeMultCMS_generate (void *crypto_closure)
 
   if (data->content_info)
 	{
-	  good_p =
-		data->content_info->VerifyDetachedSignature();
-#if 0
-		content_info->VerifyDetachedSignature(data->content_info,
-										 certUsageEmailSigner,
-										 &data->item,
-										 data->hash_type,
-										 PR_TRUE);  /* #### keepcerts */
-#endif
-	  if (!good_p)
-		{
-		  if (!data->verify_error)
-			data->verify_error = PR_GetError();
-		  PR_ASSERT(data->verify_error < 0);
-		  if (data->verify_error >= 0)
-			data->verify_error = -1;
-		}
-	  else
-		{
+	  rv = data->content_info->VerifyDetachedSignature();
+	  if (NS_FAILED(rv)) {
+      if (!data->verify_error)
+        data->verify_error = PR_GetError();
+      PR_ASSERT(data->verify_error < 0);
+      if (data->verify_error >= 0)
+        data->verify_error = -1;
+		} else {
 		  good_p = MimeCMSHeadersAndCertsMatch(data->self,
 												 data->content_info,
 												 &data->sender_addr);

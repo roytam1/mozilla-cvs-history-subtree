@@ -64,6 +64,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsCMSSecureMessage)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsCMSDecoder)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsCMSEncoder)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsCMSMessage)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsHash)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsCertPicker)
 
 static nsModuleComponentInfo components[] =
@@ -227,6 +228,13 @@ static nsModuleComponentInfo components[] =
     NS_CMSMESSAGE_CID,
     NS_CMSMESSAGE_CONTRACTID,
     nsCMSMessageConstructor
+  },
+
+  {
+    NS_HASH_CLASSNAME,
+    NS_HASH_CID,
+    NS_HASH_CONTRACTID,
+    nsHashConstructor
   },
 
   {
