@@ -202,7 +202,7 @@ typedef short int16;
 #endif
 
 #ifndef _INT32
-#    if defined(__alpha) || defined(__amd64__) defined(__x86_64__)
+#    if defined(__alpha) || defined(__amd64__) || defined(__x86_64__)
 typedef int int32;
 #    else  /* __alpha */
 typedef long int32;
