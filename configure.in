@@ -1011,7 +1011,7 @@ case "$target" in
         MOZ_DEBUG_LDFLAGS='/DEBUG /DEBUGTYPE:CV'
     	MOZ_OPTIMIZE_FLAGS='-O1'
         MOZ_JPEG_LIBS='$(DIST)/lib/jpeg$(MOZ_BITS)$(VERSION_NUMBER).lib'
-        MOZ_ZLIB_LIBS='$(DIST)/lib/zlib.lib'
+        MOZ_ZLIB_LIBS='$(DIST)/lib/mozz.lib'
         MOZ_PNG_LIBS='$(DIST)/lib/png.lib'
         MOZ_MNG_LIBS='$(DIST)/lib/mng.lib'
         MOZ_JS_LIBS='$(DIST)/lib/js$(MOZ_BITS)$(VERSION_NUMBER).lib'
@@ -1273,10 +1273,10 @@ case "$target" in
         CFLAGS="/Q /qlibansi /Gm+ /Su4 /Mp /Tl9"
         CXXFLAGS="/Q /qlibansi /Gm+ /Su4 /Mp /Tl9 /Gx+"
         MOZ_DEBUG_FLAGS="/Ti+"
-        MOZ_OPTIMIZE_FLAGS="/O+ /qtune=pentium /qarch=pentium"
+        MOZ_OPTIMIZE_FLAGS="/O+ /Gl+ /G5 /qarch=pentium"
         LDFLAGS="/NOL /M"
         MOZ_DEBUG_LDFLAGS="/DE"
-        MOZ_OPTIMIZE_LDFLAGS="/EXEPACK:2 /PACKCODE /PACKDATA"
+        MOZ_OPTIMIZE_LDFLAGS="/OPTFUNC /EXEPACK:2 /PACKCODE /PACKDATA"
         DSO_LDOPTS=''
         IMPLIB='implib /NOL /NOI'
         FILTER='cppfilt -q -B -P'
