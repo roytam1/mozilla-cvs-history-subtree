@@ -47,7 +47,7 @@ static void  *	pthread_mutex_alloc( void );
 int		pthread_mutex_destroy( LDAP_MUTEX_T *mp );
 static void	pthread_mutex_free( void *mutexp );
 int		pthread_mutex_lock( LDAP_MUTEX_T *mp );
-int		Pthread_mutex_unlock( LDAP_MUTEX_T *mp );
+int		pthread_mutex_unlock( LDAP_MUTEX_T *mp );
 
 #endif /* _WINDOWS */
 
