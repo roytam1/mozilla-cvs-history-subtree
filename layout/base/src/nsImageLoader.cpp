@@ -86,9 +86,6 @@ nsImageLoader::Load(const nsAReadableString &aURI)
   if (!mFrame)
     return NS_ERROR_NOT_INITIALIZED;
 
-  if (mRequest)
-    return NS_OK;
-
   nsCOMPtr<nsILoadGroup> loadGroup;
   nsCOMPtr<nsIURI> uri;
   nsCOMPtr<nsIURI> baseURI;
@@ -107,6 +104,16 @@ nsImageLoader::Load(const nsAReadableString &aURI)
   doc->GetBaseURL(*getter_AddRefs(baseURI));
 
   NS_NewURI(getter_AddRefs(uri), aURI, baseURI);
+
+  if (mRequest) {
+    nsCOMPtr<nsIURI> oldURI;
+    mRequest->GetURI(getter_AddRefs(oldURI));
+    PRBool eq = PR_FALSE;
+    uri->Equals(oldURI, &eq);
+    if (eq) {
+      return NS_OK;
+    }
+  }
 
   nsCOMPtr<imgILoader> il(do_GetService("@mozilla.org/image/loader;1", &rv));
   if (NS_FAILED(rv)) return rv;
