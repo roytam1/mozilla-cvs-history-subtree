@@ -1319,7 +1319,7 @@ nsTableOuterFrame::OuterReflowChild(nsIPresContext*            aPresContext,
   }
   // see if we need to reflow the caption in addition
   if (aNeedToReflowCaption && !*aNeedToReflowCaption &&
-      mInnerTableFrame == aChildFrame) {
+      mInnerTableFrame == aChildFrame && childRS.reason == eReflowReason_Incremental) {
     nsHTMLReflowCommand* command = childRS.path->mReflowCommand;
     if (command) {
       nsReflowType type;
