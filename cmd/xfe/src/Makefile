@@ -226,6 +226,10 @@ CPPSRCS		+= \
 		  PrefsPageNServer.cpp \
 		  ProgressFrame.cpp \
 		  SubUpgradeDialog.cpp \
+		  TabView.cpp \
+		  XmLFolderDialog.cpp \
+		  XmLFolderView.cpp \
+		  ViewDashBDlg.cpp \
 		  $(NULL)
 endif
 
