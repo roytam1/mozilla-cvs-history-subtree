@@ -162,9 +162,8 @@ public void removeFocus()
 {
     myFactory.throwExceptionIfNotInitialized();
     
-    synchronized(myBrowserControl) {
-        nativeRemoveFocus(nativeWebShell);
-    }
+    throw new UnimplementedException("\nUnimplementedException -----\n API Function WindowControl::removeFocus has not yet been implemented.\n");
+
 }
     
 public void repaint(boolean forceRepaint)
@@ -189,9 +188,7 @@ public void setFocus()
 {
     myFactory.throwExceptionIfNotInitialized();
 
-    synchronized(myBrowserControl) {
-        nativeSetFocus(nativeWebShell);
-    }
+    throw new UnimplementedException("\nUnimplementedException -----\n API Function WindowControl::setFocus has not yet been implemented.\n");
 }
 
 
