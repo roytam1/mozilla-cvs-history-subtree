@@ -192,7 +192,7 @@ PRInt32 String::lastIndexOf(UNICODE_CHAR aData, const PRUint32 aOffset) const
 
     PRUint32 searchIndex = aOffset + 1;
     while (--searchIndex > 0) {
-        if (mBuffer[searchIndex] == data)
+        if (mBuffer[searchIndex] == aData)
           return searchIndex;
     }
     return NOT_FOUND;
@@ -202,7 +202,14 @@ MBool String::isEqual(const String& aData) const
 {
   if (mLength != aData.mLength)
     return MB_FALSE;
-  return isEqual(mBuffer, aData.mBuffer, aData.mLength);
+
+  PRUint32 compLoop = 0;
+  while (compLoop < mLength) {
+    if (mBuffer[compLoop] != aData.mBuffer[compLoop])
+      return MB_FALSE;
+    ++compLoop;
+  }
+  return MB_TRUE;
 }
 
 MBool String::isEqualIgnoreCase(const String& aData) const
@@ -210,14 +217,13 @@ MBool String::isEqualIgnoreCase(const String& aData) const
   if (mLength != aData.mLength)
     return MB_FALSE;
 
-  const UNICODE_CHAR* otherBuffer = aData.mBuffer;
   UNICODE_CHAR thisChar, otherChar;
   PRUint32 compLoop = 0;
   while (compLoop < mLength) {
     thisChar = mBuffer[compLoop];
     if ((thisChar >= 'A') && (thisChar <= 'Z'))
       thisChar += 32;
-    otherChar = otherBuffer[compLoop];
+    otherChar = aData.mBuffer[compLoop];
     if ((otherChar >= 'A') && (otherChar <= 'Z'))
       otherChar += 32;
     if (thisChar != otherChar)
@@ -237,9 +243,9 @@ PRUint32 String::length() const
   return mLength;
 }
 
-void String::setLength(const PRUint32 length)
+void String::setLength(const PRUint32 aLength)
 {
-    setLength(length, '\0');
+    mLength = aLength;
 }
 
 String& String::subString(const PRUint32 aStart, String& aDest) const
@@ -278,7 +284,7 @@ char* String::toCharArray() const
   return tmpBuffer;
 }
 
-const UNICODE_CHAR* String::toUnicode() const
+UNICODE_CHAR* String::toUnicode() const
 {
   UNICODE_CHAR* tmpBuffer = new UNICODE_CHAR[mLength + 1];
   NS_ASSERTION(tmpBuffer, "out of memory");

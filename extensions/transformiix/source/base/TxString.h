@@ -104,7 +104,7 @@ public:
      * and padded with '\0' null characters. Otherwise the String
      * will be truncated
     **/
-    void setLength(const PRUint32 length);
+    void setLength(const PRUint32 aLength);
 
     /**
      * Returns a substring starting at start
@@ -153,6 +153,7 @@ public:
     char* toCharArray() const;
 private:
 #ifdef TX_EXE
+    UNICODE_CHAR* toUnicode() const;
     //Translate UNICODE_CHARs to Chars and output to the provided stream
     friend ostream& operator<<(ostream& output, const String& source);
 #endif
