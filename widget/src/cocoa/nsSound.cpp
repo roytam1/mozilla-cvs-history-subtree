@@ -64,6 +64,7 @@
 #include <QuickTimeComponents.h>
 
 #include "nsSound.h"
+#include "nsCRT.h"
 
 //#define SOUND_DEBUG
 

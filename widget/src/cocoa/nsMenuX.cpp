@@ -69,7 +69,7 @@
 #include <UnicodeConverter.h>
 
 #include "nsGUIEvent.h"
-
+#include "nsCRT.h"
 
 static OSStatus InstallMyMenuEventHandler(MenuRef menuRef, void* userData, EventHandlerRef* outHandler) ;
 
