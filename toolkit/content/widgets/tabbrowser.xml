@@ -1507,6 +1507,11 @@
       <![CDATA[({
         tabbrowser: this,
         handleEvent: function handleEvent(aEvent) {
+	  if (!aEvent.isTrusted) {
+	    // Don't let untrusted events mess with tabs.
+	    return;
+	  }
+
           if (aEvent.ctrlKey && aEvent.keyCode == KeyEvent.DOM_VK_F4 && this.tabbrowser.mTabBox.handleCtrlPageUpDown)
             this.tabbrowser.removeCurrentTab();
         }
