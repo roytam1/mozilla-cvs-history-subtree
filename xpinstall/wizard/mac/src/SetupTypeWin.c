@@ -45,7 +45,17 @@ ShowSetupTypeWin(void)
 	long				txtSize;
 	Str255				instLocTitle, selectFolder;
 	GrafPtr				oldPort;
+	ProcessSerialNumber thePSN;
+	
 	GetPort(&oldPort);
+	
+	/* Short term fix for #58928 - prevent install if Mozilla or Netscape running */
+	if (FindRunningAppBySignature('MOSS', nil, &thePSN) == noErr ||
+		FindRunningAppBySignature('MOZZ', nil, &thePSN) == noErr)
+	{
+		ShowWelcomeWin();
+		return;
+	}
 	
 	if (gWPtr != NULL)
 	{
