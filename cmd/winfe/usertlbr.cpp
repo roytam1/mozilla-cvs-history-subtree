@@ -2194,6 +2194,8 @@ void CRDFToolbar::OnPaint(void)
 		::FillRect(dcPaint.m_hDC, &rcClient, hRegBrush);
 	}
 
+	VERIFY(::DeleteObject(hRegbrush));
+
 	for (int i = 0; i < m_nNumButtons; i++)
 	{
 		m_pButtonArray[i]->GetClientRect(&buttonRect);
