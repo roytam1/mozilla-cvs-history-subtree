@@ -127,6 +127,8 @@ function goEditCardDialog(abURI, card, okCallback, abCardURI)
 function goPreferences(containerID, paneURL, itemID)
 {
   var resizable;
+  var pref = Components.classes["@mozilla.org/preferences;1"].getService(Components.interfaces.nsIPref);
+  
   try {
     // We are resizable ONLY if in box debugging mode, because in
     // this special debug mode it is often impossible to see the 
@@ -137,7 +139,6 @@ function goPreferences(containerID, paneURL, itemID)
     resizable = false;
   }
 
-  var modality = modal ? "yes" : "no";
   var resizability = "yes"; // resizable ? "yes" : "no";
   var features = "chrome,titlebar,resizable=" + resizability;
   openDialog("chrome://communicator/content/pref/pref.xul","PrefWindow", 
