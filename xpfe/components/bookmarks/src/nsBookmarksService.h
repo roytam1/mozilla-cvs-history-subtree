@@ -41,10 +41,6 @@
 #endif
 #endif
 
-#ifdef XP_MAC
-nsIRDFResource		*kNC_IEFavoritesRoot;
-#endif
-
 class nsBookmarksService : public nsIBookmarksService,
 			   public nsIRDFDataSource,
 			   public nsIRDFRemoteDataSource,
@@ -162,87 +158,28 @@ public:
 			nsIRDFResource* aNewSource,
 			nsIRDFResource* aProperty,
 			nsIRDFNode* aTarget);
-
+			
 	NS_IMETHOD HasAssertion(nsIRDFResource* source,
 				nsIRDFResource* property,
 				nsIRDFNode* target,
 				PRBool tv,
-				PRBool* hasAssertion)
-	{
-#ifdef	XP_MAC
-	    // on the Mac, IE favorites are stored in an HTML file.
-	    // Defer importing this files contents until necessary.
-
-	    if ((source == kNC_IEFavoritesRoot) && (mIEFavoritesAvailable == PR_FALSE))
-	    {
-		    ReadFavorites();
-	    }
-#endif
-		return mInner->HasAssertion(source, property, target, tv, hasAssertion);
-	}
+				PRBool* hasAssertion);
 
 	NS_IMETHOD AddObserver(nsIRDFObserver* aObserver);
 	NS_IMETHOD RemoveObserver(nsIRDFObserver* aObserver);
 
-        NS_IMETHOD HasArcIn(nsIRDFNode *aNode, nsIRDFResource *aArc, PRBool *_retval)
-    {
-#ifdef	XP_MAC
-	    // on the Mac, IE favorites are stored in an HTML file.
-	    // Defer importing this files contents until necessary.
-
-	    if ((aNode == kNC_IEFavoritesRoot) && (mIEFavoritesAvailable == PR_FALSE))
-	    {
-		    ReadFavorites();
-	    }
-#endif
-	    return mInner->HasArcIn(aNode, aArc, _retval);
-	}
-
-        NS_IMETHOD HasArcOut(nsIRDFResource *aSource, nsIRDFResource *aArc, PRBool *_retval) {
-#ifdef	XP_MAC
-	    // on the Mac, IE favorites are stored in an HTML file.
-	    // Defer importing this files contents until necessary.
-
-	    if ((aSource == kNC_IEFavoritesRoot) && (mIEFavoritesAvailable == PR_FALSE))
-	    {
-		    ReadFavorites();
-	    }
-#endif
-	    return mInner->HasArcOut(aSource, aArc, _retval);
-	}
+	NS_IMETHOD HasArcIn(nsIRDFNode *aNode, nsIRDFResource *aArc, PRBool *_retval);
+	NS_IMETHOD HasArcOut(nsIRDFResource *aSource, nsIRDFResource *aArc, PRBool *_retval);
 
 	NS_IMETHOD ArcLabelsIn(nsIRDFNode* node,
 			       nsISimpleEnumerator** labels) {
 		return mInner->ArcLabelsIn(node, labels);
 	}
 
-	NS_IMETHOD ArcLabelsOut(nsIRDFResource* source,
-				nsISimpleEnumerator** labels)
-	{
-#ifdef	XP_MAC
+    NS_IMETHOD ArcLabelsOut(nsIRDFResource* source,
+				nsISimpleEnumerator** labels);
 
-		// on the Mac, IE favorites are stored in an HTML file.
-		// Defer importing this files contents until necessary.
-
-		if ((source == kNC_IEFavoritesRoot) && (mIEFavoritesAvailable == PR_FALSE))
-		{
-			ReadFavorites();
-		}
-#endif
-
-		return mInner->ArcLabelsOut(source, labels);
-	}
-
-	NS_IMETHOD GetAllResources(nsISimpleEnumerator** aResult)
-	{
-#ifdef	XP_MAC
-		if (mIEFavoritesAvailable == PR_FALSE)
-		{
-			ReadFavorites();
-		}
-#endif
-		return mInner->GetAllResources(aResult);
-	}
+	NS_IMETHOD GetAllResources(nsISimpleEnumerator** aResult);
 
 	NS_IMETHOD GetAllCommands(nsIRDFResource* source,
 				  nsIEnumerator/*<nsIRDFResource>*/** commands);
