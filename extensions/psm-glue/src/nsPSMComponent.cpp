@@ -153,7 +153,7 @@ nsPSMComponent::RegisterCertContentListener()
 }
 
 /* nsISupports Implementation for the class */
-NS_IMPL_THREADSAFE_ISUPPORTS4(nsPSMComponent, 
+NS_IMPL_THREADSAFE_ISUPPORTS5(nsPSMComponent, 
                               nsIPSMComponent, 
                               nsISecurityManagerComponent,
                               nsIContentHandler,
