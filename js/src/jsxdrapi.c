@@ -65,7 +65,6 @@ typedef struct JSXDRMemState {
 #define MEM_COUNT(xdr)  (MEM_PRIV(xdr)->count)
 #define MEM_LIMIT(xdr)  (MEM_PRIV(xdr)->limit)
 
-
 #define MEM_LEFT(xdr, bytes)                                                  \
     JS_BEGIN_MACRO                                                            \
         if ((xdr)->mode == JSXDR_DECODE &&                                    \
@@ -264,7 +263,15 @@ JS_XDRMemSetData(JSXDRState *xdr, void *data, uint32 len)
         return;
     MEM_PRIV(xdr)->limit = len;
     MEM_BASE(xdr) = data;
-    MEM_PRIV(xdr)->count = 0;
+    MEM_COUNT(xdr) = 0;
+}
+
+JS_PUBLIC_API(void)
+JS_XDRMemResetData(JSXDRState *xdr)
+{
+    if (xdr->ops != &xdrmem_ops)
+        return;
+    MEM_COUNT(xdr) = 0;
 }
 
 JS_PUBLIC_API(void)

@@ -124,6 +124,9 @@ extern JS_PUBLIC_API(void)
 JS_XDRMemSetData(JSXDRState *xdr, void *data, uint32 len);
 
 extern JS_PUBLIC_API(void)
+JS_XDRMemResetData(JSXDRState *xdr);
+
+extern JS_PUBLIC_API(void)
 JS_XDRDestroy(JSXDRState *xdr);
 
 extern JS_PUBLIC_API(JSBool)
