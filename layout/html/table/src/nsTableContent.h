@@ -60,6 +60,8 @@ public:
     */
   nsTableContent (nsIAtom* aTag, PRBool aImplicit);
 
+  virtual ~nsTableContent();
+
   /** supports implementation */
   NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtrResult);
 
