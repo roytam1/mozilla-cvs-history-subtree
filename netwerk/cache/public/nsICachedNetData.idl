@@ -201,5 +201,6 @@ interface nsICachedNetData : nsISupports
      * method implicitly sets the updateInProgress flag, if it has not already
      * been set.
      */
-    nsIStreamListener interceptAsyncRead(in nsIStreamListener aOriginalListener);
+    nsIStreamListener interceptAsyncRead(in nsIStreamListener aOriginalListener,
+                                         in PRUint32 aStartOffset);
 };
