@@ -57,7 +57,7 @@
 #include "nsTextFormatter.h"
 #include "nsAutoLock.h"
 #include "nsIDNSService.h"
-
+#include "nsIMsgHdr.h"
 // for the memory cache...
 #include "nsICachedNetData.h"
 

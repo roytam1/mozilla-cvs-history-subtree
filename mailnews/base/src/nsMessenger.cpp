@@ -71,7 +71,6 @@
 #include "nsIMsgIncomingServer.h"
 
 #include "nsIMsgMessageService.h"
-#include "nsIMessage.h"
 
 #include "nsIMsgStatusFeedback.h"
 #include "nsMsgRDFUtils.h"

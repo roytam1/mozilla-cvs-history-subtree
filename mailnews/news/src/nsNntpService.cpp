@@ -38,7 +38,6 @@
 #include "nsNNTPNewsgroup.h"
 #include "nsMsgBaseCID.h"
 #include "nsMsgNewsCID.h"
-#include "nsIMessage.h"
 #include "nsIPref.h"
 #include "nsCRT.h"  // for nsCRT::strtok
 #include "nsNntpService.h"

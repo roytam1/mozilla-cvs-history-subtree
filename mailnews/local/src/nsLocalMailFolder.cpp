@@ -42,7 +42,6 @@
 #include "nsIServiceManager.h"
 #include "nsIEnumerator.h"
 #include "nsIMailboxService.h"
-#include "nsIMessage.h"
 #include "nsParseMailbox.h"
 #include "nsIMsgAccountManager.h"
 #include "nsIMsgWindow.h"
@@ -593,15 +592,7 @@ nsMsgLocalMailFolder::GetMessages(nsIMsgWindow *aMsgWindow, nsISimpleEnumerator*
 	nsresult rv = GetDatabase(aMsgWindow);
 
 	if(NS_SUCCEEDED(rv))
-	{
-		nsCOMPtr<nsISimpleEnumerator> msgHdrEnumerator;
-		nsMessageFromMsgHdrEnumerator *messageEnumerator = nsnull;
-		rv = mDatabase->EnumerateMessages(getter_AddRefs(msgHdrEnumerator));
-		if(NS_SUCCEEDED(rv))
-			rv = NS_NewMessageFromMsgHdrEnumerator(msgHdrEnumerator,
-												   this, &messageEnumerator);
-		*result = messageEnumerator;
-	}
+		return mDatabase->EnumerateMessages(result);
 	return rv;
 }
 
@@ -2007,44 +1998,6 @@ nsresult nsMsgLocalMailFolder::DeleteMessage(nsISupports *message,
 	return rv;
 }
 
-NS_IMETHODIMP
-nsMsgLocalMailFolder::CreateMessageFromMsgDBHdr(nsIMsgDBHdr *msgDBHdr,
-                                                nsIMessage **message)
-{
-	
-    nsresult rv; 
-    NS_WITH_SERVICE(nsIRDFService, rdfService, kRDFServiceCID, &rv); 
-    if (NS_FAILED(rv)) return rv;
-
-	nsCAutoString msgURI;
-	nsMsgKey key;
-    nsCOMPtr<nsIRDFResource> resource;
-
-	rv = msgDBHdr->GetMessageKey(&key);
-  
-	if(NS_SUCCEEDED(rv))
-		rv = nsBuildLocalMessageURI(mBaseMessageURI, key, msgURI);
-  
-	if(NS_SUCCEEDED(rv))
-	{
-		rv = rdfService->GetResource(msgURI.GetBuffer(), getter_AddRefs(resource));
-    }
-
-	if(NS_SUCCEEDED(rv))
-	{
-		nsCOMPtr<nsIDBMessage> dbMessage(do_QueryInterface(resource, &rv));
-		if(NS_SUCCEEDED(rv))
-		{
-			//We know from our factory that mailbox message resources are going to be
-			//nsLocalMessages.
-			dbMessage->SetMsgDBHdr(msgDBHdr);
-      dbMessage->SetMessageType(nsIMessage::MailMessage);
-			*message = dbMessage;
-			NS_IF_ADDREF(*message);
-		}
-	}
-	return rv;
-}
 
 NS_IMETHODIMP nsMsgLocalMailFolder::GetNewMessages(nsIMsgWindow *aWindow)
 {
@@ -2100,7 +2053,7 @@ nsresult nsMsgLocalMailFolder::WriteStartOfNewMessage()
     // *** jt - hard code status line for now; come back later
 
     nsresult rv;
-    nsCOMPtr <nsIMessage> curSourceMessage; 
+    nsCOMPtr <nsIMsgDBHdr> curSourceMessage; 
     nsCOMPtr<nsISupports> aSupport =
         getter_AddRefs(mCopyState->m_messages->ElementAt(mCopyState->m_curCopyIndex));
     curSourceMessage = do_QueryInterface(aSupport, &rv);
@@ -2565,7 +2518,7 @@ nsresult nsMsgLocalMailFolder::CopyMessagesTo(nsISupportsArray *messages,
 		msgSupport = getter_AddRefs(messages->ElementAt(i));
 		if (msgSupport)
 		{
-		  nsCOMPtr<nsIMessage> aMessage = do_QueryInterface(msgSupport, &rv);
+		  nsCOMPtr<nsIMsgDBHdr> aMessage = do_QueryInterface(msgSupport, &rv);
 		  if(NS_SUCCEEDED(rv) && aMessage)
 		  {
 			  nsMsgKey key;
@@ -2712,19 +2665,14 @@ nsresult nsMsgLocalMailFolder::DeleteMsgsOnPop3Server(nsISupportsArray *messages
 	{
 		/* get uidl for this message */
 		uidl = nsnull;
-    nsCOMPtr <nsIMessage> curSourceMessage; 
     nsCOMPtr<nsISupports> aSupport =
         getter_AddRefs(messages->ElementAt(i));
-
-    nsCOMPtr<nsIDBMessage> dbMessage(do_QueryInterface(aSupport, &rv));
     
-    nsCOMPtr<nsIMsgDBHdr> msgDBHdr;
-    rv = dbMessage->GetMsgDBHdr(getter_AddRefs(msgDBHdr));
+    nsCOMPtr<nsIMsgDBHdr> msgDBHdr (do_QueryInterface(aSupport, &rv));;
 
-    curSourceMessage = do_QueryInterface(aSupport, &rv);
     PRUint32 flags = 0;
 
-		if (curSourceMessage && ((curSourceMessage->GetFlags(&flags), flags & MSG_FLAG_PARTIAL) || leaveOnServer))
+		if (msgDBHdr && ((msgDBHdr->GetFlags(&flags), flags & MSG_FLAG_PARTIAL) || leaveOnServer))
 		{
 			len = 0;
       PRUint32 messageOffset;
@@ -2909,27 +2857,11 @@ nsMsgLocalMailFolder::OnStopRunningUrl(nsIURI * aUrl, nsresult aExitCode)
           NS_WITH_SERVICE(nsIRDFService, rdfService, kRDFServiceCID, &rv); 
           if(NS_SUCCEEDED(rv))
           {
-            nsCOMPtr<nsIRDFResource> msgResource;
-            nsCOMPtr<nsIMessage> message;
-            rv = rdfService->GetResource(messageuri,
-                                         getter_AddRefs(msgResource));
+            nsCOMPtr <nsIMsgDBHdr> msgDBHdr;
+            rv = GetMsgDBHdrFromURI(messageuri, getter_AddRefs(msgDBHdr));
             if(NS_SUCCEEDED(rv))
-              rv = msgResource->QueryInterface(NS_GET_IID(nsIMessage),
-                                               getter_AddRefs(message));
-            if (NS_SUCCEEDED(rv))
-            {
-              nsCOMPtr <nsIMsgDBHdr> msgDBHdr;
-              nsCOMPtr<nsIDBMessage> dbMessage(do_QueryInterface(message,
-                                                                 &rv));
-
-              if(NS_SUCCEEDED(rv))
-              {
-                rv = dbMessage->GetMsgDBHdr(getter_AddRefs(msgDBHdr));
-                if(NS_SUCCEEDED(rv))
-                  rv = mDatabase->DeleteHeader(msgDBHdr, nsnull, PR_TRUE,
-                                               PR_TRUE);
-              }
-            }
+                rv = mDatabase->DeleteHeader(msgDBHdr, nsnull, PR_TRUE,
+                                             PR_TRUE);
             nsCOMPtr<nsIPop3Sink> pop3sink;
             nsXPIDLCString newMessageUri;
             rv = popurl->GetPop3Sink(getter_AddRefs(pop3sink));

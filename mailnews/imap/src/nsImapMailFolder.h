@@ -24,7 +24,6 @@
 
 #include "nsImapCore.h"
 #include "nsMsgDBFolder.h"
-#include "nsIMessage.h"
 #include "nsIImapMailFolderSink.h"
 #include "nsIImapMessageSink.h"
 #include "nsIImapExtensionSink.h"
@@ -176,8 +175,6 @@ public:
                                PRBool isDraftOrTemplate,
                                nsIMsgWindow *msgWindow,
                                nsIMsgCopyServiceListener* listener);
-	NS_IMETHOD CreateMessageFromMsgDBHdr(nsIMsgDBHdr *msgHdr, nsIMessage
-                                         **message);
   NS_IMETHOD GetNewMessages(nsIMsgWindow *aWindow);
 
   NS_IMETHOD GetPath(nsIFileSpec** aPathName);

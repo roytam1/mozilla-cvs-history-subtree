@@ -43,7 +43,6 @@
 #include "nsIRDFService.h"
 #include "rdf.h"
 #include "nsIMsgFolder.h"
-#include "nsIMessage.h"
 
 
 static NS_DEFINE_CID(kCNewsDB, NS_NEWSDB_CID);

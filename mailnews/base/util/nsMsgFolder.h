@@ -71,8 +71,7 @@ public:
   NS_IMETHOD StartFolderLoading(void);
   NS_IMETHOD EndFolderLoading(void);
   NS_IMETHOD UpdateFolder(nsIMsgWindow *window);
-  NS_IMETHOD GetThreadForMessage(nsIMessage *message, nsIMsgThread **_retval);
-  NS_IMETHOD HasMessage(nsIMessage *message, PRBool *_retval);
+  NS_IMETHOD GetFirstNewMessage(nsIMsgDBHdr **firstNewMessage);
   NS_IMETHOD GetVisibleSubFolders(nsIEnumerator **_retval);
   NS_IMETHOD GetPrettiestName(PRUnichar * *aPrettiestName);
   NS_IMETHOD GetFolderURL(char * *aFolderURL);
@@ -107,7 +106,6 @@ public:
   NS_IMETHOD GetTotalMessages(PRBool deep, PRInt32 *_retval);
   NS_IMETHOD GetHasNewMessages(PRBool *hasNewMessages);
   NS_IMETHOD SetHasNewMessages(PRBool hasNewMessages);
-  NS_IMETHOD GetFirstNewMessage(nsIMessage **firstNewMessage);
   NS_IMETHOD ClearNewMessages();
   NS_IMETHOD GetExpungedBytes(PRUint32 *aExpungedBytesCount);
   NS_IMETHOD GetDeletable(PRBool *aDeletable);
@@ -143,7 +141,6 @@ public:
   NS_IMETHOD ReleaseSemaphore(nsISupports *semHolder);
   NS_IMETHOD TestSemaphore(nsISupports *semHolder, PRBool *_retval);
   NS_IMETHOD GetLocked(PRBool *aLocked);
-  // NS_IMETHOD CreateMessageFromMsgDBHdr(nsIMsgDBHdr *msgDBHdr, nsIMessage **_retval);
   NS_IMETHOD GetNewMessages(nsIMsgWindow *window);
   // NS_IMETHOD WriteToFolderCache(nsIMsgFolderCache *folderCache);
   // NS_IMETHOD GetCharset(PRUnichar * *aCharset);

@@ -27,7 +27,6 @@
 #include "nsMsgFolder.h" 
 #include "nsIDBFolderInfo.h"
 #include "nsIMsgDatabase.h"
-#include "nsIMessage.h"
 #include "nsCOMPtr.h"
 #include "nsIDBChangeListener.h"
 #include "nsIUrlListener.h"
@@ -52,14 +51,11 @@ public:
   
 	NS_IMETHOD StartFolderLoading(void);
 	NS_IMETHOD EndFolderLoading(void);
-	NS_IMETHOD GetThreadForMessage(nsIMessage *message, nsIMsgThread **thread);
-	NS_IMETHOD HasMessage(nsIMessage *message, PRBool *hasMessage);
 	NS_IMETHOD GetCharset(PRUnichar * *aCharset);
 	NS_IMETHOD SetCharset(const PRUnichar * aCharset);
 	NS_IMETHOD GetCharsetOverride(PRBool *aCharsetOverride);
 	NS_IMETHOD SetCharsetOverride(PRBool aCharsetOverride);
-	//NS_IMETHOD HasNewMessages(PRBool *hasNewMessages);
-	NS_IMETHOD GetFirstNewMessage(nsIMessage **firstNewMessage);
+	NS_IMETHOD GetFirstNewMessage(nsIMsgDBHdr **firstNewMessage);
 	NS_IMETHOD ClearNewMessages();
   NS_IMETHOD GetFlags(PRUint32 *aFlags);
   NS_IMETHOD GetExpungedBytes(PRUint32 *count);

@@ -22,7 +22,6 @@
  */
 
 #include "msgCore.h"
-#include "nsIMessage.h"
 #include "nsIMsgHdr.h"
 #include "nsMsgUtils.h"
 #include "nsString.h"
@@ -101,6 +100,15 @@ nsresult ReleaseMessageServiceFromURI(const char *uri, nsIMsgMessageService *mes
 	return rv;
 }
 
+nsresult GetMsgDBHdrFromURI(const char *uri, nsIMsgDBHdr **msgHdr)
+{
+  nsCOMPtr <nsIMsgMessageService> msgMessageService;
+  nsresult rv = GetMessageServiceFromURI(uri, getter_AddRefs(msgMessageService));
+  NS_ENSURE_SUCCESS(rv,rv);
+  if (!msgMessageService) return NS_ERROR_FAILURE;
+
+  return msgMessageService->MessageURIToMsgHdr(uri, msgHdr);
+}
 
 nsresult CreateStartupUrl(char *uri, nsIURI** aUrl)
 {
@@ -142,75 +150,6 @@ nsresult CreateStartupUrl(char *uri, nsIURI** aUrl)
     return rv;
 }
 
-
-NS_IMPL_ISUPPORTS1(nsMessageFromMsgHdrEnumerator, nsISimpleEnumerator)
-
-nsMessageFromMsgHdrEnumerator::nsMessageFromMsgHdrEnumerator(nsISimpleEnumerator *srcEnumerator,
-															 nsIMsgFolder *folder)
-{
-    NS_INIT_REFCNT();
-
-	mSrcEnumerator = dont_QueryInterface(srcEnumerator);
-	mFolder = dont_QueryInterface(folder);
-
-}
-
-nsMessageFromMsgHdrEnumerator::~nsMessageFromMsgHdrEnumerator()
-{
-	//member variables are nsCOMPtr's
-}
-
-
-NS_IMETHODIMP nsMessageFromMsgHdrEnumerator::GetNext(nsISupports **aItem)
-{
-	nsCOMPtr<nsISupports> currentItem;
-	nsCOMPtr<nsIMsgDBHdr> msgDBHdr;
-	nsCOMPtr<nsIMessage> message;
-	nsresult rv;
-
-	rv = mSrcEnumerator->GetNext(getter_AddRefs(currentItem));
-	if(NS_SUCCEEDED(rv))
-	{
-		msgDBHdr = do_QueryInterface(currentItem, &rv);
-	}
-
-	if(NS_SUCCEEDED(rv))
-	{
-		rv = mFolder->CreateMessageFromMsgDBHdr(msgDBHdr, getter_AddRefs(message));
-	}
-
-	if(NS_SUCCEEDED(rv))
-	{
-		currentItem = do_QueryInterface(message, &rv);
-		*aItem = currentItem;
-		NS_IF_ADDREF(*aItem);
-	}
-
-	NS_ASSERTION(NS_SUCCEEDED(rv),"getnext shouldn't fail");
-	return rv;
-}
-
-NS_IMETHODIMP nsMessageFromMsgHdrEnumerator::HasMoreElements(PRBool *aResult)
-{
-	return mSrcEnumerator->HasMoreElements(aResult);
-}
-
-nsresult NS_NewMessageFromMsgHdrEnumerator(nsISimpleEnumerator *srcEnumerator,
-										   nsIMsgFolder *folder,	
-										   nsMessageFromMsgHdrEnumerator **messageEnumerator)
-{
-	if(!messageEnumerator)
-		return NS_ERROR_NULL_POINTER;
-
-	*messageEnumerator =	new nsMessageFromMsgHdrEnumerator(srcEnumerator, folder);
-
-	if(!messageEnumerator)
-		return NS_ERROR_OUT_OF_MEMORY;
-
-	NS_ADDREF(*messageEnumerator);
-	return NS_OK;
-
-}
 
 // Where should this live? It's a utility used to convert a string priority, e.g., "High, Low, Normal" to an enum.
 // Perhaps we should have an interface that groups together all these utilities...

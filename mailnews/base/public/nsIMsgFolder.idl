@@ -35,7 +35,6 @@
 #include "nsMsgKeyArray.h"
 %}
 
-interface nsIMessage;
 interface nsIMsgDBHdr;
 interface nsIMsgWindow;
 interface nsIMsgDatabase;
@@ -75,9 +74,6 @@ const nsMsgBiffState nsMsgBiffState_Unknown = 2; // We dunno whether there is ne
   
 	/* get new headers for db */
 	void updateFolder(in nsIMsgWindow aWindow);
-  
-	nsIMsgThread getThreadForMessage(in nsIMessage message);
-	boolean hasMessage(in nsIMessage message);
   
   nsIEnumerator getVisibleSubFolders();
 	readonly attribute wstring prettiestName;
@@ -199,7 +195,7 @@ const nsMsgBiffState nsMsgBiffState_Unknown = 2; // We dunno whether there is ne
    * return the first new message in the folder
    *
    */
-    readonly attribute nsIMessage firstNewMessage;
+    readonly attribute nsIMsgDBHdr firstNewMessage;
 
   /**
    * clear new status flag of all of the new messages
@@ -298,7 +294,6 @@ const nsMsgBiffState nsMsgBiffState_Unknown = 2; // We dunno whether there is ne
   boolean testSemaphore (in nsISupports semHolder);
   readonly attribute boolean locked;
 
-	nsIMessage createMessageFromMsgDBHdr(in nsIMsgDBHdr msgDBHdr);
 	void getNewMessages(in nsIMsgWindow aWindow);
 
   /**

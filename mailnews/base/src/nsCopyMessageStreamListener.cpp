@@ -25,7 +25,6 @@
 #include "nsIMsgMailNewsUrl.h"
 #include "nsIMailboxUrl.h"
 #include "nsIMsgHdr.h"
-#include "nsIMessage.h"
 #include "nsIRDFService.h"
 #include "nsIRDFNode.h"
 #include "nsRDFCID.h"

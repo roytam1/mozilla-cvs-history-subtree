@@ -22,7 +22,6 @@
  */
 
 #include "msgCore.h"
-#include "nsIMessage.h"
 #include "nsMsgDBFolder.h"
 #include "nsMsgFolderFlags.h"
 #include "nsIPref.h"
@@ -169,25 +168,6 @@ NS_IMETHODIMP nsMsgDBFolder::EndFolderLoading(void)
 	return NS_OK;
 }
 
-NS_IMETHODIMP
-nsMsgDBFolder::GetThreadForMessage(nsIMessage *message, nsIMsgThread **thread)
-{
-	nsresult rv = GetDatabase(nsnull);
-	if(NS_SUCCEEDED(rv))
-	{
-		nsCOMPtr<nsIMsgDBHdr> msgDBHdr;
-		nsCOMPtr<nsIDBMessage> dbMessage(do_QueryInterface(message, &rv));
-		if(NS_SUCCEEDED(rv))
-			rv = dbMessage->GetMsgDBHdr(getter_AddRefs(msgDBHdr));
-		if(NS_SUCCEEDED(rv))
-		{
-			rv = mDatabase->GetThreadContainingMsgHdr(msgDBHdr, thread);
-		}
-	}
-	return rv;
-
-}
-
 
 NS_IMETHODIMP
 nsMsgDBFolder::GetExpungedBytes(PRUint32 *count)
@@ -214,31 +194,6 @@ nsMsgDBFolder::GetExpungedBytes(PRUint32 *count)
 	return NS_OK;
 }
 
-
-NS_IMETHODIMP
-nsMsgDBFolder::HasMessage(nsIMessage *message, PRBool *hasMessage)
-{
-	if(!hasMessage)
-		return NS_ERROR_NULL_POINTER;
-
-	nsresult rv = GetDatabase(nsnull);
-
-	if(NS_SUCCEEDED(rv))
-	{
-		nsCOMPtr<nsIMsgDBHdr> msgDBHdr, msgDBHdrForKey;
-		nsCOMPtr<nsIDBMessage> dbMessage(do_QueryInterface(message, &rv));
-		nsMsgKey key;
-		if(NS_SUCCEEDED(rv))
-			rv = dbMessage->GetMsgDBHdr(getter_AddRefs(msgDBHdr));
-		if(NS_SUCCEEDED(rv))
-			rv = msgDBHdr->GetMessageKey(&key);
-		if(NS_SUCCEEDED(rv))
-			rv = mDatabase->ContainsKey(key, hasMessage);
-		
-	}
-	return rv;
-
-}
 
 NS_IMETHODIMP nsMsgDBFolder::GetCharset(PRUnichar * *aCharset)
 {
@@ -357,7 +312,7 @@ NS_IMETHODIMP nsMsgDBFolder::SetGettingNewMessages(PRBool gettingNewMessages)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgDBFolder::GetFirstNewMessage(nsIMessage **firstNewMessage)
+NS_IMETHODIMP nsMsgDBFolder::GetFirstNewMessage(nsIMsgDBHdr **firstNewMessage)
 {
 	//If there's not a db then there can't be new messages.  Return failure since you
 	//should use HasNewMessages first.
@@ -370,21 +325,7 @@ NS_IMETHODIMP nsMsgDBFolder::GetFirstNewMessage(nsIMessage **firstNewMessage)
 	if(NS_FAILED(rv))
 		return rv;
 
-	nsCOMPtr<nsIMsgDBHdr> hdr;
-	rv = mDatabase->GetMsgHdrForKey(key, getter_AddRefs(hdr));
-	if(NS_FAILED(rv))
-		return rv;
-
-  if (!hdr)
-  {
-    *firstNewMessage = nsnull;
-    return NS_ERROR_FAILURE;
-  }
-	rv = CreateMessageFromMsgDBHdr(hdr, firstNewMessage);
-	if(NS_FAILED(rv))
-		return rv;
-
-	return rv;
+	return  mDatabase->GetMsgHdrForKey(key, firstNewMessage);
 }
 
 NS_IMETHODIMP nsMsgDBFolder::ClearNewMessages()
@@ -1255,27 +1196,7 @@ NS_IMETHODIMP nsMsgDBFolder::SetRetentionSettings(nsIMsgRetentionSettings *setti
 
 nsresult nsMsgDBFolder::NotifyStoreClosedAllHeaders()
 {
-  nsCOMPtr <nsISimpleEnumerator> enumerator;
-
-  GetMessages(nsnull, getter_AddRefs(enumerator));
-	nsCOMPtr<nsISupports> folderSupports;
-	nsresult rv = QueryInterface(NS_GET_IID(nsISupports), getter_AddRefs(folderSupports));
-  if (enumerator)
-  {
-		PRBool hasMoreElements;
-		while(NS_SUCCEEDED(enumerator->HasMoreElements(&hasMoreElements)) && hasMoreElements)
-		{
-			nsCOMPtr<nsISupports> childSupports;
-			rv = enumerator->GetNext(getter_AddRefs(childSupports));
-			if(NS_FAILED(rv))
-				return rv;
-
-      // clear out db hdr, because it won't be valid when we get rid of the .msf file
-		  nsCOMPtr<nsIDBMessage> dbMessage(do_QueryInterface(childSupports, &rv));
-		  if(NS_SUCCEEDED(rv) && dbMessage)
-			  dbMessage->SetMsgDBHdr(nsnull);
-    }
-  }
+  // don't need this anymore.
   return NS_OK;
 }
 

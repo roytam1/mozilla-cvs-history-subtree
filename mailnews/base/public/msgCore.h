@@ -42,7 +42,7 @@
 
 #include "nsTime.h"
 
-class nsIMessage;
+class nsIMsgDBHdr;
 class nsIMsgFolder;
 
 // include common interfaces such as the service manager and the repository....

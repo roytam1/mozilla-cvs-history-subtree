@@ -42,20 +42,6 @@
 }
 
 //
-// nsMsgMessageDataSource
-//
-#define NS_MAILNEWSMESSAGEDATASOURCE_CONTRACTID \
-  NS_RDF_DATASOURCE_CONTRACTID_PREFIX "mailnewsmessages"
-
-#define NS_MAILNEWSMESSAGEDATASOURCE_CID                    \
-{ /* 2B8ED4A5-F684-11d2-8A5D-0060B0FC04D2 */         \
-    0x2b8ed4a5,                                      \
-    0xf684,                                          \
-    0x11d2,                                          \
-    {0x8a, 0x5d, 0x0, 0x60, 0xb0, 0xfc, 0x4, 0xd2} \
-}
-
-//
 // nsMsgAccountManager
 // 
 #define NS_MSGACCOUNTMANAGER_CONTRACTID \

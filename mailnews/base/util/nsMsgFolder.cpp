@@ -35,7 +35,6 @@
 
 #include "nsMsgFolder.h"
 #include "nsMsgFolderFlags.h"
-#include "nsIMessage.h"
 #include "nsMsgKeyArray.h"
 #include "nsMsgDatabase.h"
 #include "nsIDBFolderInfo.h"
@@ -456,18 +455,6 @@ NS_IMETHODIMP
 nsMsgFolder::UpdateFolder(nsIMsgWindow *)
 {
   return NS_OK;
-}
-
-NS_IMETHODIMP
-nsMsgFolder::GetThreadForMessage(nsIMessage *message, nsIMsgThread **thread)
-{
-	return NS_ERROR_FAILURE;	
-}
-
-NS_IMETHODIMP
-nsMsgFolder::HasMessage(nsIMessage *message, PRBool *hasMessage)
-{
-	return NS_ERROR_FAILURE;	
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1378,7 +1365,7 @@ NS_IMETHODIMP nsMsgFolder::SetHasNewMessages(PRBool hasNewMessages)
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgFolder::GetFirstNewMessage(nsIMessage **firstNewMessage)
+NS_IMETHODIMP nsMsgFolder::GetFirstNewMessage(nsIMsgDBHdr **firstNewMessage)
 {
 	//we don't support this
 	return NS_OK;
@@ -2074,7 +2061,7 @@ nsMsgFolder::MarkMessagesRead(nsISupportsArray *messages, PRBool markRead)
 	for(PRUint32 i = 0; i < count; i++)
 	{
 		nsCOMPtr<nsISupports> msgSupports = getter_AddRefs(messages->ElementAt(i));
-		nsCOMPtr<nsIMessage> message = do_QueryInterface(msgSupports);
+		nsCOMPtr<nsIMsgDBHdr> message = do_QueryInterface(msgSupports);
 
 		if(message)
 			rv = message->MarkRead(markRead);
@@ -2099,7 +2086,7 @@ nsMsgFolder::MarkMessagesFlagged(nsISupportsArray *messages, PRBool markFlagged)
 	for(PRUint32 i = 0; i < count; i++)
 	{
 		nsCOMPtr<nsISupports> msgSupports = getter_AddRefs(messages->ElementAt(i));
-		nsCOMPtr<nsIMessage> message = do_QueryInterface(msgSupports);
+		nsCOMPtr<nsIMsgDBHdr> message = do_QueryInterface(msgSupports);
 
 		if(message)
 			rv = message->MarkFlagged(markFlagged);

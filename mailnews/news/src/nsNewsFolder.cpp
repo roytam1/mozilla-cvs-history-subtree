@@ -459,16 +459,10 @@ nsMsgNewsFolder::GetMessages(nsIMsgWindow *aMsgWindow, nsISimpleEnumerator* *res
   nsresult rv = NS_OK;
 
   rv = GetDatabase(aMsgWindow);
-    *result = nsnull;
+  *result = nsnull;
     
-  if(NS_SUCCEEDED(rv)) {
-		nsCOMPtr<nsISimpleEnumerator> msgHdrEnumerator;
-		nsMessageFromMsgHdrEnumerator *messageEnumerator = nsnull;
-		rv = mDatabase->EnumerateMessages(getter_AddRefs(msgHdrEnumerator));
-		if(NS_SUCCEEDED(rv))
-		  rv = NS_NewMessageFromMsgHdrEnumerator(msgHdrEnumerator, this, &messageEnumerator);
-		*result = messageEnumerator;
-  }
+  if(NS_SUCCEEDED(rv))
+		rv = mDatabase->EnumerateMessages(result);
 
   return rv;
 }
@@ -978,39 +972,6 @@ nsresult nsMsgNewsFolder::GetNewsMessages(nsIMsgWindow *aMsgWindow, PRBool aGetO
   return rv;
 }
 
-NS_IMETHODIMP nsMsgNewsFolder::CreateMessageFromMsgDBHdr(nsIMsgDBHdr *msgDBHdr, nsIMessage **message)
-{
-  nsresult rv; 
-  NS_WITH_SERVICE(nsIRDFService, rdfService, kRDFServiceCID, &rv); 
-  if (NS_FAILED(rv)) return rv;
-
-	nsFileSpec path;
-	nsMsgKey key;
-	nsCOMPtr <nsIRDFResource> res;
-
-	rv = msgDBHdr->GetMessageKey(&key);
-  if (NS_FAILED(rv)) return rv;
-  
-  nsCAutoString msgURI;
-
-  rv = nsBuildNewsMessageURI(mBaseMessageURI, key, msgURI);
-  if (NS_FAILED(rv)) return rv;
-  
-  rv = rdfService->GetResource(msgURI.GetBuffer(), getter_AddRefs(res));
-  
-  
-  if (NS_FAILED(rv)) return rv;
-  
-  nsCOMPtr<nsIDBMessage> messageResource = do_QueryInterface(res);
-  if(messageResource) {
-    messageResource->SetMsgDBHdr(msgDBHdr);
-    messageResource->SetMessageType(nsIMessage::NewsMessage);
-    *message = messageResource;
-    NS_IF_ADDREF(*message);
-  }
-  
-	return rv;
-}
 
 nsresult 
 nsMsgNewsFolder::LoadNewsrcFileAndCreateNewsgroups()
@@ -1673,8 +1634,6 @@ nsMsgNewsFolder::GetNntpServer(nsINntpIncomingServer **result)
 // it removes the cancelled message from the db
 NS_IMETHODIMP nsMsgNewsFolder::RemoveMessage(nsMsgKey key)
 {
-  nsresult rv;
-
   return mDatabase->DeleteMessage(key, nsnull, PR_TRUE);
 }
 

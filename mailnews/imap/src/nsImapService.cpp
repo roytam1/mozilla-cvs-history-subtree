@@ -51,14 +51,14 @@
 #include "nsMsgBaseCID.h"
 #include "nsMsgFolderFlags.h"
 #include "nsISubscribableServer.h"
-#include "nsIMessage.h"
 #include "nsIDirectoryService.h"
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsIWebNavigation.h"
 #include "nsImapStringBundle.h"
 #include "plbase64.h"
 #include "nsImapOfflineSync.h"
-
+#include "nsIMsgHdr.h"
+#include "nsMsgUtils.h"
 #define PREF_MAIL_ROOT_IMAP "mail.root.imap"
 
 static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
@@ -536,25 +536,13 @@ NS_IMETHODIMP nsImapService::DisplayMessage(const char* aMessageURI,
               rv = NS_NewISupportsArray(getter_AddRefs(messages));
               if (NS_FAILED(rv)) 
                 return rv;
-              NS_WITH_SERVICE(nsIRDFService, rdfService, kRDFServiceCID, &rv); 
-              if (NS_FAILED(rv)) return rv;
-              nsCOMPtr<nsIRDFResource> msgResource;
-              nsCOMPtr<nsIMessage> message;
-              rv = rdfService->GetResource(aMessageURI,
-                                           getter_AddRefs(msgResource));
-              if(NS_SUCCEEDED(rv))
+              nsCOMPtr<nsIMsgDBHdr> message;
+              GetMsgDBHdrFromURI(aMessageURI, getter_AddRefs(message));
+              nsCOMPtr<nsISupports> msgSupport(do_QueryInterface(message, &rv));
+              if (msgSupport)
               {
-                rv = msgResource->QueryInterface(NS_GET_IID(nsIMessage),
-                                                 getter_AddRefs(message));
-                if (NS_SUCCEEDED(rv) && message)
-                {
-                  nsCOMPtr<nsISupports> msgSupport(do_QueryInterface(message, &rv));
-                  if (msgSupport)
-                  {
-                    messages->AppendElement(msgSupport);
-                    folder->MarkMessagesRead(messages, PR_TRUE);
-                  }
-                }
+                messages->AppendElement(msgSupport);
+                folder->MarkMessagesRead(messages, PR_TRUE);
               }
             }
           }

@@ -24,7 +24,6 @@
 #include "msgCore.h"
 
 #include "nsMsgImapCID.h"
-#include "nsIMessage.h"
 #include "nsImapMailFolder.h"
 #include "nsIEnumerator.h"
 #include "nsIFolderListener.h"
@@ -619,18 +618,9 @@ NS_IMETHODIMP nsImapMailFolder::GetMessages(nsIMsgWindow *aMsgWindow, nsISimpleE
 {
   if (result)
     *result = nsnull;
-  nsresult rv;
-  nsCOMPtr<nsISimpleEnumerator> msgHdrEnumerator;
-  nsMessageFromMsgHdrEnumerator *messageEnumerator = nsnull;
-  rv = NS_ERROR_UNEXPECTED;
   if (mDatabase)
-      rv = mDatabase->EnumerateMessages(getter_AddRefs(msgHdrEnumerator));
-  if(NS_SUCCEEDED(rv))
-      rv = NS_NewMessageFromMsgHdrEnumerator(msgHdrEnumerator,
-                                             this,
-                                             &messageEnumerator);
-  *result = messageEnumerator;
-  return rv;
+		return mDatabase->EnumerateMessages(result);
+  return NS_ERROR_UNEXPECTED;
 }
 
 NS_IMETHODIMP nsImapMailFolder::CreateSubfolder(const PRUnichar* folderName, nsIMsgWindow *msgWindow )
@@ -1658,7 +1648,6 @@ nsImapMailFolder::BuildIdsAndKeyArray(nsISupportsArray* messages,
     PRUint32 count = 0;
     PRUint32 i;
     nsCOMPtr<nsISupports> msgSupports;
-    nsCOMPtr<nsIMessage> message;
 
     if (!messages) return rv;
 
@@ -1669,18 +1658,10 @@ nsImapMailFolder::BuildIdsAndKeyArray(nsISupportsArray* messages,
     for (i = 0; i < count; i++)
     {
       msgSupports = getter_AddRefs(messages->ElementAt(i));
-      message = do_QueryInterface(msgSupports);
       nsMsgKey key;
-      if (message)
-      {
-        rv = message->GetMessageKey(&key);
-      }
-      else
-      {
-        nsCOMPtr <nsIMsgDBHdr> msgDBHdr = do_QueryInterface(msgSupports, &rv);
-        if (msgDBHdr)
-          rv = msgDBHdr->GetMessageKey(&key);
-      }
+      nsCOMPtr <nsIMsgDBHdr> msgDBHdr = do_QueryInterface(msgSupports, &rv);
+      if (msgDBHdr)
+        rv = msgDBHdr->GetMessageKey(&key);
       if (NS_SUCCEEDED(rv))
         keyArray.Add(key);
     }
@@ -2421,44 +2402,6 @@ NS_IMETHODIMP nsImapMailFolder::AbortHeaderParseStream(nsIImapProtocol*
     return rv;
 }
  
-NS_IMETHODIMP nsImapMailFolder::CreateMessageFromMsgDBHdr(nsIMsgDBHdr *msgDBHdr, nsIMessage **message)
-{
-  
-    nsresult rv; 
-    NS_WITH_SERVICE(nsIRDFService, rdfService, kRDFServiceCID, &rv); 
-    if (NS_FAILED(rv)) return rv;
-
-  nsFileSpec path;
-  nsMsgKey key;
-    nsCOMPtr<nsIRDFResource> res;
-
-	NS_ASSERTION(msgDBHdr,"msgDBHdr is null.  can you reproduce this?  add info to bug #35567");
-  if (!msgDBHdr) return NS_ERROR_NULL_POINTER;
-  rv = msgDBHdr->GetMessageKey(&key);
-
-  nsCAutoString msgURI;
-
-  if(NS_SUCCEEDED(rv))
-    rv = nsBuildImapMessageURI(mBaseMessageURI, key, msgURI);
-
-
-  if(NS_SUCCEEDED(rv))
-    rv = rdfService->GetResource(msgURI.GetBuffer(), getter_AddRefs(res));
-
-  if(NS_SUCCEEDED(rv))
-  {
-    nsCOMPtr<nsIDBMessage> messageResource = do_QueryInterface(res);
-    if(messageResource)
-    {
-      messageResource->SetMsgDBHdr(msgDBHdr);
-      messageResource->SetMessageType(nsIMessage::MailMessage);
-      *message = messageResource;
-      NS_IF_ADDREF(*message);
-    }
-  }
-  return rv;
-}
-
   
 NS_IMETHODIMP nsImapMailFolder::BeginCopy(nsIMsgDBHdr *message)
 {
@@ -3880,7 +3823,7 @@ void nsImapMailFolder::UpdatePendingCounts(PRBool countUnread, PRBool missingAre
       nsCOMPtr <nsIMsgFolder> srcFolder = do_QueryInterface(m_copyState->m_srcSupport);
       for (PRUint32 keyIndex=0; keyIndex < m_copyState->m_totalCount; keyIndex++)
       {
-        nsCOMPtr<nsIMessage> message;
+        nsCOMPtr<nsIMsgDBHdr> message;
 
         nsCOMPtr<nsISupports> aSupport =
           getter_AddRefs(m_copyState->m_messages->ElementAt(keyIndex));
@@ -4645,7 +4588,7 @@ nsresult nsImapMailFolder::CopyMessagesOffline(nsIMsgFolder* srcFolder,
         nsXPIDLCString originalSrcFolderURI;
         originalSrcFolderURI = sourceFolderURI.get();
         nsCOMPtr<nsISupports> msgSupports;
-        nsCOMPtr<nsIMessage> message;
+        nsCOMPtr<nsIMsgDBHdr> message;
 
         msgSupports = getter_AddRefs(messages->ElementAt(sourceKeyIndex));
         message = do_QueryInterface(msgSupports);

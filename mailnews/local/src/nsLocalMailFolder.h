@@ -31,7 +31,6 @@
 
 #include "nsMsgDBFolder.h" /* include the interface we are going to support */
 #include "nsFileSpec.h"
-#include "nsIMessage.h"
 #include "nsICopyMessageListener.h"
 #include "nsFileStream.h"
 #include "nsIPop3IncomingServer.h"  // need this for an interface ID
@@ -142,7 +141,6 @@ public:
                              PRBool isDraftOrTemplate, 
                              nsIMsgWindow *msgWindow,
                              nsIMsgCopyServiceListener* listener);
-	NS_IMETHOD CreateMessageFromMsgDBHdr(nsIMsgDBHdr *msgDBHdr, nsIMessage **message);
 	NS_IMETHOD GetNewMessages(nsIMsgWindow *aWindow);
 
 

@@ -52,7 +52,6 @@
 #include "nsMsgIdentity.h"
 #include "nsMsgIncomingServer.h"
 #include "nsMsgFolderDataSource.h"
-#include "nsMsgMessageDataSource.h"
 
 #include "nsMsgAccountManagerDS.h"
 
@@ -98,7 +97,6 @@ NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMessengerMigrator, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgAccount)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgIdentity)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMsgFolderDataSource, Init)
-NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMsgMessageDataSource, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMsgAccountManagerDataSource, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgSearchSession)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgSearchValidityManager)
@@ -174,10 +172,6 @@ static nsModuleComponentInfo gComponents[] = {
     { "Mail/News Folder Data Source", NS_MAILNEWSFOLDERDATASOURCE_CID,
       NS_MAILNEWSFOLDERDATASOURCE_CONTRACTID,
       nsMsgFolderDataSourceConstructor,
-    },
-    { "Mail/News Message Data Source", NS_MAILNEWSMESSAGEDATASOURCE_CID,
-      NS_MAILNEWSMESSAGEDATASOURCE_CONTRACTID,
-      nsMsgMessageDataSourceConstructor,
     },
     { "Mail/News Account Manager Data Source", NS_MSGACCOUNTMANAGERDATASOURCE_CID,
       NS_RDF_DATASOURCE_CONTRACTID_PREFIX "msgaccountmanager",
