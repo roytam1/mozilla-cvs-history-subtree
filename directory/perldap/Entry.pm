@@ -109,6 +109,56 @@ sub DELETE
 
 
 #############################################################################
+# See if an attribute/key exists in the entry (could still be undefined).
+#
+sub EXISTS
+{
+  my ($self, $attr) = ($_[$[], lc $_[$[ + 1]);
+
+  return 0 unless (defined($attr) && ($attr ne ""));
+  return 0 if $self->{"_${attr}_deleted_"};
+  return exists $self->{$attr};
+}
+
+
+#############################################################################
+# Reset the each()/key() session, and return the first key.
+#
+sub FIRSTKEY
+{
+  my $self = $_[$[];
+  my $tmp = keys %{$self};
+  my $key = scalar each %{$self};
+
+  while ($key && (($key =~ /^_.+_$/) || $self->{"_${key}_deleted_"} ||
+		  lc $key eq "dn"))
+    {
+      $key = scalar each %{$self};
+    }
+
+  return $key;
+}
+
+
+#############################################################################
+# Get the next key, if appropriate.
+#
+sub NEXTKEY
+{
+  my $self = $_[$[];
+  my $key = scalar each %{$self};
+
+  while ($key && (($key =~ /^_.+_$/) || $self->{"_${key}_deleted_"} ||
+		  lc $key eq "dn"))
+    {
+      $key = scalar each %{$self};
+    }
+
+  return $key;
+}
+
+
+#############################################################################
 # Mark an attribute as changed. Normally you shouldn't have to use this,
 # unless you're doing something really weird...
 #
@@ -138,6 +188,34 @@ sub isModified
   return 0 unless (defined($attr) && ($attr ne ""));
   return 0 unless defined($self->{$attr});
   return $self->{"_self_obj_"}->{"_${attr}_modified_"};
+}
+
+
+#############################################################################
+# Ask if a particular attribute has been deleted already. Return True or
+# false depending on the internal status of the attribute.
+#
+sub isDeleted
+{
+  my ($self, $attr) = ($_[$[], lc $_[$[ + 1]);
+
+  return 0 unless (defined($attr) && ($attr ne ""));
+  return 0 unless defined($self->{$attr});
+  return $self->{"_self_obj_"}->{"_${attr}_deleted_"};
+}
+
+
+#############################################################################
+# Test if a attribute name is actually a real attribute, and not part of
+# the internal structures.
+#
+sub isAttr
+{
+  my ($self, $attr) = ($_[$[], lc $_[$[ + 1]);
+
+  return 0 unless (defined($attr) && ($attr ne ""));
+  return 0 unless defined($self->{$attr});
+  return ($attr !~ /^_.+_$/);
 }
 
 
@@ -412,10 +490,12 @@ easy to write LDAP clients that needs to update/modify entries, since
 you'll just do the changes, and this object class will take care of the
 rest.
 
-We define local functions for STORE, FETCH and DELETE in this object
-class, and inherit the rest from the super class. Overloading these
-specific functions is how we can keep track of what is changing in the
-entry, which turns out to be very convenient.
+We define local functions for STORE, FETCH, DELETE, EXISTS, FIRSTKEY and
+NEXTKEY in this object class, and inherit the rest from the super
+class. Overloading these specific functions is how we can keep track of
+what is changing in the entry, which turns out to be very convenient. We
+can also easily "loop" over the attribute types, ignoring internal data,
+or deleted attributes.
 
 Most of the methods here either return the requested LDAP value, or a
 status code. The status code (either 0 or 1) indicates the failure or
@@ -495,6 +575,28 @@ been modified, in any way, we return True (1), otherwise we return False
 (0). For example:
 
     if ($entry->isModified("cn")) { # do something }
+
+=item B<isDeleted>
+
+This is almost identical to B<isModified>, except it tests if an attribute
+has been deleted. You use it the same way as above, like
+
+    if (! $entry->isDeleted("cn")) { # do something }
+
+=item B<isAttr>
+
+This method can be used to decide if an attribute name really is a valid
+LDAP attribute in the current entry. Use of this method is fairly limited,
+but could potentially be useful. Usage is like previous examples, like
+
+    if ($entry->isAttr("cn")) { # do something }
+
+The code section will only be executed if these criterias are true:
+
+    1. The name of the attribute is a non-empty string.
+    2. The name of the attribute does not begin, and end, with an
+       underscore character (_).
+    2. The attribute has one or more values in the entry.
 
 =item B<remove>
 
