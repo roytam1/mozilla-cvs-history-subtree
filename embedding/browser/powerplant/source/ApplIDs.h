@@ -111,9 +111,17 @@ enum {
     str_No,
     str_Save,
     str_DontSave,
-    str_Revert
+    str_Revert,
+    str_Allow,
+    str_DenyAll
 };
 
+enum {
+    STRx_StdAlertStrings        = 5002,
+    
+    str_OpeningPopupWindow      = 1,
+    str_OpeningPopupWindowExp
+ };
 
 // Icons
 enum {
@@ -162,6 +170,15 @@ enum {
     
     cmd_ManageProfiles          = 'MPrf',
     cmd_Logout                  = 'LOut'
+};
+
+//*****************************************************************************
+//***    Apple Events
+//*****************************************************************************
+
+enum {
+    // A key that we use internally with kAEGetURL
+    keyGetURLReferrer           = 'refe'
 };
 
 #endif // __ApplIDs__

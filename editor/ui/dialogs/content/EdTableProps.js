@@ -223,8 +223,6 @@ function Startup()
     }
   }
 
-  doSetOKCancel(onAccept, onCancel, 0, onApply);
-
   // Note: we must use TableElement, not globalTableElement for these,
   //  thus we should not put this in InitDialog.
   // Instead, monitor desired counts with separate globals
@@ -266,12 +264,12 @@ function Startup()
 
 function InitDialog()
 {
-// turn on Button3 to be "apply"
-  var applyButton = document.getElementById("Button3");
+// turn on extra1 to be "apply"
+  var applyButton = document.documentElement.getButton("extra1");
   if (applyButton)
   {
     applyButton.label = GetString("Apply");
-    applyButton.removeAttribute("collapsed");
+    applyButton.setAttribute("accesskey", GetString("ApplyAccessKey"));
   }
   
   // Get Table attributes
@@ -909,7 +907,7 @@ function ValidateCellData()
   if (gDialog.TextWrapCheckbox.checked)
   {
     if (gDialog.TextWrapList.selectedIndex == 1)
-      globalCellElement.setAttribute("nowrap","true");
+      globalCellElement.setAttribute("nowrap","nowrap");
     else
       globalCellElement.removeAttribute("nowrap");
   }
@@ -1250,15 +1248,9 @@ function SetCloseButton()
   // Change text on "Cancel" button after Apply is used
   if (!ApplyUsed)
   {
-    document.getElementById("cancel").setAttribute("label",GetString("Close"));
+    document.documentElement.getButton("cancel").setAttribute("label",GetString("Close"));
     ApplyUsed = true;
   }
-}
-
-function onApply()
-{
-  Apply();
-  return false; // don't close window
 }
 
 function Apply()

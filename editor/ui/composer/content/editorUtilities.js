@@ -851,3 +851,18 @@ function GetHTMLOrCSSStyleValue(element, attrName, cssPropertyName)
 
   return value;
 }
+
+/************* Miscellaneous ***************/
+// Clone simple JS objects
+function Clone(obj) 
+{ 
+  var clone = {};
+  for (var i in obj)
+  {
+    if( typeof obj[i] == 'object')
+      clone[i] = Clone(obj[i]);
+    else
+      clone[i] = obj[i];
+  }
+  return clone;
+}

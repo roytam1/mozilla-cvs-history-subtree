@@ -406,7 +406,7 @@
 <!ENTITY formatremovestyles.keybinding "y">
 <!ENTITY formatremovelinks.keybinding "k">
 <!ENTITY formatRemoveNamedAnchors.label "Remove Named Anchors">
-<!ENTITY formatRemoveNamedAnchors.accesskey "d">
+<!ENTITY formatRemoveNamedAnchors.accesskey "R">
 <!ENTITY formatremovenamedanchors.keybinding "a">
 
 <!ENTITY formatindent.keybinding "]">
@@ -545,7 +545,7 @@
 <!ENTITY tablecellafter.accesskey "f">
 <!-- Delete SubMenu -->
 <!ENTITY tableDeleteMenu.label "Delete">
-<!ENTITY tabledeletemenu.accesskey "d">
+<!ENTITY tabledeletemenu.accesskey "e">
 
 <!ENTITY tableFix.label "Fix Table Layout">
 <!ENTITY tablefix.accesskey "f">
@@ -669,6 +669,13 @@
 <!ENTITY PreviewMode.label "Preview">
 <!ENTITY PreviewMode.accesskey "p">
 <!ENTITY PreviewMode.tooltip "Display as WYSIWYG (as in Navigator)">
+
+<!-- LOCALIZATION NOTE: Do NOT translate text for 'SourceTabDirection'
+     Use latin "ltr" if you want the <html> image to left of text
+     or use latin "rtl" if you want this image to the right of text
+     This is the value of the HTML 'dir' attribute
+-->
+<!ENTITY SourceTabDirection "ltr">
 
 <!-- Smiley Menu items -->
 <!ENTITY smiley1Cmd.label "Smile">
