@@ -11255,7 +11255,7 @@ fi
 
 
 
-MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs pref transformiix irc spellcheck"
+MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs pref transformiix inspector irc spellcheck"
 
 if test -n "$SUNCTL"; then
   MOZ_EXTENSIONS_DEFAULT="$MOZ_EXTENSIONS_DEFAULT ctl"
