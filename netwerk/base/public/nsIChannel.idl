@@ -123,10 +123,10 @@ interface nsIChannel : nsISupports
      */
     attribute nsIInterfaceRequestor notificationCallbacks;
 
-    /** 
-     * Any security information about this channel.  This can be null.
-     */
-    readonly attribute nsISupports securityInfo;
+    nsIInputStream open();
+
+    void asyncOpen(in nsIStreamListener listener,
+                   in nsISupports ctxt);
 
     ////////////////////////////////////////////////////////////////////////////
     // Load attribute flags. These may be or'd together.
@@ -228,63 +228,6 @@ interface nsIChannel : nsISupports
 	 */
 	const unsigned long LOAD_REPLACE			   = 1 << 16;
 
-    ////////////////////////////////////////////////////////////////////////////
-    // nsIChannel operations
-    ////////////////////////////////////////////////////////////////////////////
-    
-    /**
-     * Opens a blocking input stream to the URI's specified source. This
-     * call may block until the input stream is available.
-     *
-     * @param transferOffset - the offset from which to read.
-     * @param transferCount - the number of bytes to read. If -1, everything
-     *   up to the end of the data is read. If greater than the end of the
-     *   data, the amount available is returned in the stream.
-     */
-    nsIInputStream openInputStream(in unsigned long transferOffset,
-                                   in unsigned long transferCount);
-
-    /**
-     * Opens a blocking output stream to the URI's specified destination. This
-     * call may block until the output stream is available.
-     *
-     * @param transferOffset - the offset from which to write.
-     * @param transferCount - the number of bytes to write. If -1, the amount
-     *   is determined by the number of bytes written to the stream.
-     */
-    nsIOutputStream openOutputStream(in unsigned long transferOffset,
-                                     in unsigned long transferCount);
-
-    /**
-     * Reads asynchronously from the URI's specified source. Notifications
-     * are provided to the stream listener on the calling thread.
-     *
-     * @param listener - notification handler.
-     * @param ctxt - application context passed to methods invoked on listener.
-     * @param transferOffset - the offset from which to read.
-     * @param transferCount - the number of bytes to read. If -1, everything
-     *   up to the end of the data is read. If greater than the end of the
-     *   data, the amount available is returned in the stream.
-     */
-    nsIRequest asyncRead(in nsIStreamListener listener,
-                         in nsISupports ctxt,
-                         in unsigned long transferOffset,
-                         in unsigned long transferCount);
-
-    /**
-     * Writes asynchronously to the URI's specified destination. Notifications
-     * are provided to the stream provider on the calling thread.
-     *
-     * @param provider - notification handler.
-     * @param ctxt - application context passed to methods invoked on provider.
-     * @param transferOffset - the offset from which to write.
-     * @param transferCount - the number of bytes to write. If -1, the amount
-     *   is determined by the number of bytes written to the stream.
-     */
-    nsIRequest asyncWrite(in nsIStreamProvider provider,
-                          in nsISupports ctxt,
-                          in unsigned long transferOffset,
-                          in unsigned long transferCount);
 };
 
 ////////////////////////////////////////////////////////////////////////////////
