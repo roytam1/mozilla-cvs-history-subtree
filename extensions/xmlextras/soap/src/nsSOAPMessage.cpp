@@ -20,6 +20,9 @@
  * Contributor(s): 
  */
 
+#include "nsIServiceManager.h"
+#include "nsIComponentManager.h"
+#include "nsIXPConnect.h"
 #include "nsSOAPUtils.h"
 #include "nsSOAPMessage.h"
 #include "nsISOAPParameter.h"
@@ -247,8 +250,30 @@ MarshallJSParameters(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
   nsAutoString type;
   nsresult rc = nsSOAPJSValue::ConvertJSArgsToValue(cx, argc, argv, PR_TRUE, getter_AddRefs(value), type);
   if (NS_FAILED(rc))
-    return rc;
-// QI to nsISupportsArray and call original function
+    return JS_FALSE;
+
+//  Unwrap "this" pointer to call original function
+
+  NS_WITH_SERVICE(nsIXPConnect, xpc, nsIXPConnect::GetCID(), &rc); 
+  if (NS_FAILED(rc))
+    return JS_FALSE;
+  nsCOMPtr<nsIXPConnectWrappedNative> wrapper;
+  xpc->GetWrappedNativeOfJSObject(cx, obj, getter_AddRefs(wrapper));
+  if (wrapper) {
+    nsCOMPtr<nsISupports> native;
+    wrapper->GetNative(getter_AddRefs(native));
+    if (native) {
+      nsCOMPtr<nsISOAPMessage> message;
+      nsCOMPtr<nsISupportsArray> array;
+      message = do_QueryInterface(native);
+      if (message) {
+        array = do_QueryInterface(value);
+        nsresult rc = message->MarshallParameters(array);
+        if (!NS_FAILED(rc))
+          return JS_TRUE;
+      }
+    }
+  }
   return JS_FALSE;
 }
 
@@ -257,11 +282,33 @@ UnmarshallJSParameters(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
                 jsval *rval)
 {
   nsCOMPtr<nsISupportsArray> value;
-// Call original function and recieve result into value
-  return JS_FALSE;
-//  result rc = nsSOAPJSValue::ConvertValueToJSVal(cx, value, kArrayType, jsval);
-//  if (NS_FAILED(rc))
-//    return rc;
+
+//  Unwrap "this" pointer to call original function
+
+  nsresult rc;
+  NS_WITH_SERVICE(nsIXPConnect, xpc, nsIXPConnect::GetCID(), &rc); 
+  if (NS_FAILED(rc))
+    return JS_FALSE;
+  nsCOMPtr<nsIXPConnectWrappedNative> wrapper;
+  xpc->GetWrappedNativeOfJSObject(cx, obj, getter_AddRefs(wrapper));
+  rc = NS_ERROR_FAILURE;
+  if (wrapper) {
+    nsCOMPtr<nsISupports> native;
+    wrapper->GetNative(getter_AddRefs(native));
+    if (native) {
+      nsCOMPtr<nsISOAPMessage> message;
+      message = do_QueryInterface(native);
+      if (message) {
+        rc = message->UnmarshallParameters(getter_AddRefs(value));
+      }
+    }
+  }
+  if (NS_FAILED(rc))
+    return JS_FALSE;
+  rc = nsSOAPJSValue::ConvertValueToJSVal(cx, value, nsSOAPUtils::kArrayType, rval);
+  if (NS_FAILED(rc))
+    return JS_FALSE;
+  return JS_TRUE;
 }
 
 NS_IMETHODIMP
