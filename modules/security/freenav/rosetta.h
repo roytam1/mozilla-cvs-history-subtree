@@ -86,6 +86,7 @@
 #define HG65241
 #define HG73530
 #define HG72523
+#define HG09275
 #define HG24327
 #define HG24326
 #define HG23258
