@@ -758,17 +758,33 @@ endif
 ifeq ($(OS_ARCH),OS2)
 # This rule displays build configuration information (for OS/2 builds).
 display_os2_config:
-	@echo OS/2 Build Configuration Info
+	@echo $(shell uname -s) Build Configuration Info
 	@echo =============================
-	@set
-	-@which which
-	-@which uname
-	-@which gmake
+	@cmd.exe /c set HOSTNAME
+	@cmd.exe /c set CVSROOT
+	@cmd.exe /c set PATH
+	@cmd.exe /c set BEGINLIBPATH
+	@cmd.exe /c set ENDLIBPATH
+	@cmd.exe /c set MOZ_DEBUG
+	@cmd.exe /c set MOZ_SRC
+	@cmd.exe /c set MOZ_TOOLS
+	@cmd.exe /c set MOZ_OS2_TOOLS
+	@cmd.exe /c set NO_SECURITY
 ifdef XP_OS2_EMX
-	-@which gcc
+	@cmd.exe /c set MOZ_OS2_EMX_OBJECTFORMAT
+	@cmd.exe /c set C_INCLUDE_PATH
+	@cmd.exe /c set CPLUS_INCLUDE_PATH
+	@cmd.exe /c set LIBRARY_PATH
+	@cmd.exe /c set PROTODIR
+	@cmd.exe /c set GCCLOAD
+	@cmd.exe /c set EMXOPT
+	-@gcc -v
 	-@emxrev
 else
-	-@which icc
+	@cmd.exe /c set INCLUDE
+	@cmd.exe /c set LIB
+	@cmd.exe /c set ICC
+	@cmd.exe /c set NO_DEFAULT_EXT
 	-@cmd.exe /c type $(subst \,\\,$(subst bin\ICC.EXE,syslevel\syslevel.ct3,$(word $(words $(shell which icc)),$(shell which icc))))
 endif
 endif
