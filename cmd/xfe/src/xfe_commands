@@ -173,6 +173,7 @@ xfeCmdFileBookmark                                                 fileBookmark
 xfeCmdEditBookmark                                                 editBookmark
 xfeCmdNetscapeDirectory                                            netscapeDirectory
 xfeCmdDestinations                                                 destinations
+xfeCmdStopReload                                                   stopReload
 xfeCmdEdit                                                         edit
 
 # HTML View stuff
