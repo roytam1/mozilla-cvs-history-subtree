@@ -156,7 +156,7 @@ MWContext*
 XFE_ABComplPickerDlg::cloneCntxtNcreatePane(MWContext  *context, 
 											MSG_Pane  **pane)
 {
-	MWContext *pickerContext = XP_NEW_ZAP(MWContext);
+	MWContext *pickerContext = XP_NewContext();
 	if (!pickerContext)
 		return NULL;
 	  
