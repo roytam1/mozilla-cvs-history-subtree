@@ -25,6 +25,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "npglue.h" 
+#include "np.h" 
 
 #ifdef OJI
 #include "nsplugin.h"
@@ -459,24 +460,21 @@ nsPluginManager::HasAllocatedMenuID(nsIEventHandler* handler, PRInt16 menuID, PR
 #endif
 }
 
-typedef int (* nsn_TickleHookProcPtr)(void);
+static NPL_ProcessNextEventProc npl_ProcessNextEventProc = NULL;
+static void* npl_ProcessNextEventData = NULL;
 
-extern JRI_PUBLIC_API(void)
-nsn_InstallTickleHookProc(nsn_TickleHookProcPtr newProc);
-
-nsn_TickleHookProcPtr	g_nsn_TickleHookProc = NULL;
-
-JRI_PUBLIC_API(void) nsn_InstallTickleHookProc(nsn_TickleHookProcPtr newProc)
+PR_IMPLEMENT(void) 
+NPL_InstallProcessNextEventProc(NPL_ProcessNextEventProc proc, void* data)
 {
-    g_nsn_TickleHookProc = newProc;
+    npl_ProcessNextEventProc = proc;
+    npl_ProcessNextEventData = data;
 }
 
 NS_METHOD
 nsPluginManager::ProcessNextEvent(PRBool *result)
 {
 #ifdef XP_MAC
-    *result = !g_nsn_TickleHookProc();
-    return NS_OK;
+    return npl_ProcessNextEventProc(npl_ProcessNextEventData, result);
 #else 
     return NS_ERROR_NOT_IMPLEMENTED;
 #endif

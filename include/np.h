@@ -127,6 +127,16 @@ extern NPError			NPL_RegisterAppletType(NPMIMEType type);
 PR_EXTERN(void)         NPL_SetPluginWindow(void *data);
 PR_EXTERN(struct nsIPlugin*) NPL_LoadPluginByType(const char* typeAttribute);
 
+/*
+ * This callback is installed by the FE to handle the nsIPluginManager2::ProcessNextEvent
+ * operation. The result parameter should return PR_TRUE if called on the mozilla thread
+ * (unlike the old nsn_TickleHookProcPtr which returned false (I think)).
+ */
+typedef PRBool (PR_CALLBACK* NPL_ProcessNextEventProc)(void* data);
+
+PR_EXTERN(void) 
+NPL_InstallProcessNextEventProc(NPL_ProcessNextEventProc proc, void* data);
+
 XP_END_PROTOS
 
 #endif /* _NP_H */
