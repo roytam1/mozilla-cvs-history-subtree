@@ -39,7 +39,7 @@ CPP_OBJS=.\$(OBJDIR)\nsMetaModule_mail.obj
 
 LLIBS=          $(DIST)\lib\xpcom.lib           \
                 $(DIST)\lib\rdfutil_s.lib       \
-                $(DIST)\lib\gkgfxwin.lib        \
+                $(DIST)\lib\gkgfx.lib        \
                 $(LIBNSPR)                      \
                 $(NULL)
 

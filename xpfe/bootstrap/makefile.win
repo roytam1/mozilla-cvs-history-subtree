@@ -114,7 +114,7 @@ LLIBS=                               \
  $(DIST)\lib\nsldap32v40.lib         \
  $(DIST)\lib\js3250.lib              \
  $(DIST)\lib\util.lib                \
- $(DIST)\lib\gkgfxwin.lib            \
+ $(DIST)\lib\gkgfx.lib            \
  $(DIST)\lib\expat.lib               \
  $(DIST)\lib\png.lib                 \
  $(DIST)\lib\mng.lib                 \

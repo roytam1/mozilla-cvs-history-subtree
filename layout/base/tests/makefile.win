@@ -28,7 +28,7 @@ PROGRAMS = $(PROG1)
 LINCS=-I$(PUBLIC)\xpcom -I$(PUBLIC)\raptor -I..\src
 LLIBS=				\
  $(DIST)\lib\layoutbase_s.lib	\
- $(DIST)\lib\gkgfxwin.lib	\
+ $(DIST)\lib\gkgfx.lib	\
  $(DIST)\lib\xpcom.lib	\
  $(LIBNSPR)
 

@@ -91,7 +91,7 @@ LINCS=  \
   $(NULL)
 
 LLIBS=                         \
- $(DIST)\lib\gkgfxwin.lib   \
+ $(DIST)\lib\gkgfx.lib   \
  $(DIST)\lib\timer_s.lib \
  $(DIST)\lib\util.lib \
  $(DIST)\lib\raptornativewidgets_s.lib     \

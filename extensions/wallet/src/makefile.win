@@ -73,9 +73,6 @@ LCFLAGS = \
 
 include <$(DEPTH)\config\rules.mak>
 
-install:: $(LIBRARY)
-	$(MAKE_INSTALL) $(LIBRARY) $(DIST)\lib
-
 clobber::
 	rm -f $(DIST)\bin\defaults\wallet\DistinguishedSchema.tbl
 	rm -f $(DIST)\bin\defaults\wallet\FieldSchema.tbl

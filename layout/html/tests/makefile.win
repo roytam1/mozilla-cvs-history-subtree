@@ -51,7 +51,7 @@ LLIBS=				\
  $(DIST)\lib\layouthtmlstyle_s.lib	\
  $(DIST)\lib\layouthtmltable_s.lib	\
  $(DIST)\lib\layoutbase_s.lib	\
- $(DIST)\lib\gkgfxwin.lib	\
+ $(DIST)\lib\gkgfx.lib	\
  $(DIST)\lib\layoutxulbase_s.lib \
  $(DIST)\lib\contentshared_s.lib \
 !ifdef MOZ_MATHML

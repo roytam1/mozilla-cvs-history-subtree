@@ -33,7 +33,7 @@ class nsIImageRequest;
 class nsHashtable;
 class nsFontCache;
 
-class DeviceContextImpl : public nsIDeviceContext
+class NS_GFX DeviceContextImpl : public nsIDeviceContext
 {
 public:
   DeviceContextImpl();

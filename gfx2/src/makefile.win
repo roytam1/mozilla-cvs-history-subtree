@@ -37,7 +37,7 @@ CPP_OBJS = \
 	$(NULL)
 
 LLIBS	= \
-	$(DIST)\lib\gkgfxwin.lib \
+	$(DIST)\lib\gkgfx.lib \
  	$(DIST)\lib\xpcom.lib
 
 include <$(DEPTH)\config\rules.mak>

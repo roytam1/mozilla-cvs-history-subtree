@@ -76,7 +76,7 @@ CACHELIBNAME=netcache.lib
 !endif
 
 LLIBS = \
- $(DIST)\lib\gkgfxwin.lib \
+ $(DIST)\lib\gkgfx.lib \
  $(DIST)\lib\xpcom.lib \
  $(LIBNSPR)  
 

@@ -26,8 +26,8 @@ DIRS = windows
 include <$(DEPTH)\config\config.mak>
 
 MODULE=gfx
-LIBRARY_NAME=gkgfxwin
-COMPONENT_NAME=nsGfxModule
+LIBRARY_NAME=gkgfx
+EXPORT_LIBRARY=1
 
 #RESFILE = $(DLLNAME).res
 
@@ -67,47 +67,13 @@ LCFLAGS = \
         $(DEFINES) \
         $(NULL)
 
-SUB_LIBRARIES=\
- $(DIST)\lib\raptorgfxwin_s.lib \
- $(NULL)
+LLIBS=				                \
+        $(DIST)\lib\img32$(VERSION_NUMBER).lib  \
+        $(DIST)\lib\util.lib                    \
+        $(DIST)\lib\xpcom.lib	                \
+        $(LIBNSPR)  
 
-LLIBS=				\
- $(DIST)\lib\xpcom.lib	\
- $(DIST)\lib\img32$(VERSION_NUMBER).lib        \
- $(DIST)\lib\util.lib           \
- $(DIST)\lib\timer_s.lib \
-!if defined(NGLAYOUT_DDRAW)
- $(NGLAYOUT_DDRAW)\lib\ddraw.lib \
-!endif
- $(LIBNSPR)  
-
-WIN_LIBS=   \
-!if defined(NGLAYOUT_DDRAW)
- ole32.lib \
-!endif
- comdlg32.lib
-
-LLFLAGS = \
-		$(LLFLAGS) \
-		/INCLUDE:_NS_HexToRGB@8 \
-		/INCLUDE:_NS_ColorNameToRGB@8 \
-		/INCLUDE:_NS_NewImageGroup@4 \
-		/INCLUDE:_NS_NewImageRenderer@4 \
-		/INCLUDE:_NS_NewImageSystemServices@4 \
-		/INCLUDE:_NS_NewImageManager@4
-		 
 include <$(DEPTH)\config\rules.mak>
-
-!ifndef MOZ_STATIC_COMPONENT_LIBS
-# XXX It's evil for us to be installing the library, because this is
-# supposed to be a component. Unfortunately, people need to get to all
-# the |nsRect| stuff, which should probably be in its own little
-# static library...
-
-install:: $(LIBRARY)
-        $(MAKE_INSTALL) $(LIBRARY) $(DIST)\lib
-
-!endif
 
 install::
 	$(MAKE_INSTALL) icon_0.gif $(DIST)\bin\res\gfx
