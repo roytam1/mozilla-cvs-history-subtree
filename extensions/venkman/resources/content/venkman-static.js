@@ -33,7 +33,7 @@
  *
  */
 
-const __vnk_version        = "0.9.21";
+const __vnk_version        = "0.9.22";
 const __vnk_requiredLocale = "0.9.x";
 var   __vnk_versionSuffix  = "";
 
@@ -123,6 +123,12 @@ function disableDebugCommands()
     cmds = console.commandManager.list ("", CMD_NO_STACK);
     for (i in cmds)
         cmds[i].enabled = true;
+}
+
+function isURLVenkman (url)
+{
+    return (url.search (/^chrome:\/\/venkman/) == 0 &&
+            url.search (/test/) == -1);
 }
 
 function isURLFiltered (url)
@@ -1315,7 +1321,7 @@ function st_loadsrc (cb)
     {
         sourceText.onSourceLoaded (data, url, status);
     };
-    
+
     if (this.isLoaded)
     {
         /* if we're loaded, callback right now, and return. */
@@ -1343,7 +1349,10 @@ function st_loadsrc (cb)
     var url = this.url;
     try
     {
-        src = loadURLNow(url);
+        if (url.search (/^javascript:/i) == 0)
+            src = url;
+        else
+            src = loadURLNow(url);
         delete this.isLoading;
     }
     catch (ex)

@@ -46,6 +46,21 @@ function initRecords()
     FrameRecord.prototype.property    = atomsvc.getAtom("item-frame");
     FrameRecord.prototype.atomCurrent = atomsvc.getAtom("current-frame-flag");
 
+    console.addPref ("valueRecord.brokenObjects", "^JavaPackage$");
+    try
+    {
+        ValueRecord.prototype.brokenObjects = 
+            new RegExp (console.prefs["valueRecord.brokenObjects"]);
+    }
+    catch (ex)
+    {
+        display (MSN_ERR_INVALID_PREF,
+                 ["valueRecord.brokenObjects",
+                  console.prefs["valueRecord.brokenObjects"]], MT_ERROR);
+        display (formatException(ex), MT_ERROR);
+        ValueRecord.prototype.brokenObjects = /^JavaPackage$/;
+    }
+                  
     ValueRecord.prototype.atomVoid      = atomsvc.getAtom("item-void");
     ValueRecord.prototype.atomNull      = atomsvc.getAtom("item-null");
     ValueRecord.prototype.atomBool      = atomsvc.getAtom("item-bool");
@@ -617,8 +632,20 @@ function vr_refresh ()
 
             if (ctor != "String")
             {
+                var propCount;
+                if (this.brokenObjects.test(ctor))
+                {
+                    /* XXX these objects do Bad Things when you enumerate
+                     * over them. */
+                    propCount = 0;
+                }
+                else
+                {
+                    propCount = this.countProperties();
+                }
+                
                 this.displayValue = getMsg (MSN_FMT_OBJECT_VALUE,
-                                            [ctor, this.countProperties()]);
+                                            [ctor, propCount]);
             }
             else
             {
@@ -792,7 +819,6 @@ function vr_preopen()
 {
     try
     {
-        
         if (!ASSERT(this.value.jsType == TYPE_OBJECT || 
                     this.value.jsType == TYPE_FUNCTION,
                     "onPreOpen called for non object?"))

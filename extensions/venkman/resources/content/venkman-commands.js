@@ -293,6 +293,10 @@ function cmdChromeFilter (e)
                 scriptWrapper.jsdScript.flags = scriptWrapper.lastFlags;
                 delete scriptWrapper.lastFlags;
             }
+            else if (isURLVenkman(scriptWrapper.jsdScript.fileName))
+            {
+                scriptWrapper.jsdScript.flags |= FLAGS;
+            }
             else
             {
                 scriptWrapper.jsdScript.flags &= ~(FLAGS);
@@ -315,9 +319,8 @@ function cmdChromeFilter (e)
             {
                 if (url.search (/^chrome:/) == -1)
                     continue;
-                //                    break next_url;
 
-                dd ("setting chrome filter " + e.toggle + " for " + url);
+                //dd ("setting chrome filter " + e.toggle + " for " + url);
                 
                 var mgr = console.scriptManagers[url];
                 if (e.toggle)
@@ -1111,7 +1114,7 @@ function cmdProfile(e)
 function cmdProps (e)
 {
     var v;
-    var debuggerScope = (e.command.name == "evald");
+    var debuggerScope = (e.command.name == "propsd");
 
     if (debuggerScope)
         v = evalInDebuggerScope (e.scriptText);

@@ -205,10 +205,29 @@ function getChildById (element, id)
     return nl.item(0);
 }
 
+function openTopWin (url)
+{
+    var window = getWindowByType ("navigator:browser");
+    if (window)
+    {
+        var base = getBaseWindowFromWindow (window);
+        if (base.enabled)
+        {
+            window.focus();
+            window._content.location.href = url;
+            return window;
+        }
+    }
+
+    return window.openDialog (getBrowserURL(), "_blank", "chrome,all,dialog=no",
+                              url);
+}
+    
 function getWindowByType (windowType)
 {
     const MEDIATOR_CONTRACTID =
-        "@mozilla.org/rdf/datasource;1?name=window-mediator";
+        "@mozilla.org/appshell/window-mediator;1";
+    //"@mozilla.org/rdf/datasource;1?name=window-mediator";
     const nsIWindowMediator  = Components.interfaces.nsIWindowMediator;
 
     var windowManager =
@@ -392,7 +411,8 @@ function Clone (obj)
 
 function getXULWindowFromWindow (win)
 {
-    var ex;
+    var rv;
+    //dd ("getXULWindowFromWindow: before: getInterface is " + win.getInterface);
     try
     {
         var requestor = win.QueryInterface(nsIInterfaceRequestor);
@@ -400,20 +420,23 @@ function getXULWindowFromWindow (win)
         var dsti = nav.QueryInterface(nsIDocShellTreeItem);
         var owner = dsti.treeOwner;
         requestor = owner.QueryInterface(nsIInterfaceRequestor);
-        return requestor.getInterface(nsIXULWindow);
+        rv = requestor.getInterface(nsIXULWindow);
     }
     catch (ex)
     {
+        rv = null;
         //dd ("not a nsIXULWindow: " + formatException(ex));
         /* ignore no-interface exception */
     }
 
-    return null;
+    //dd ("getXULWindowFromWindow: after: getInterface is " + win.getInterface);
+    return rv;
 }
 
 function getBaseWindowFromWindow (win)
 {
-    var ex;
+    var rv;
+    //dd ("getBaseWindowFromWindow: before: getInterface is " + win.getInterface);
     try
     {
         var requestor = win.QueryInterface(nsIInterfaceRequestor);
@@ -421,15 +444,17 @@ function getBaseWindowFromWindow (win)
         var dsti = nav.QueryInterface(nsIDocShellTreeItem);
         var owner = dsti.treeOwner;
         requestor = owner.QueryInterface(nsIInterfaceRequestor);
-        return requestor.getInterface(nsIBaseWindow);
+        rv = requestor.getInterface(nsIBaseWindow);
     }
     catch (ex)
     {
+        rv = null;
         //dd ("not a nsIXULWindow: " + formatException(ex));
         /* ignore no-interface exception */
     }
 
-    return null;
+    //dd ("getBaseWindowFromWindow: after: getInterface is " + win.getInterface);
+    return rv;
 }
 
 function getPathFromURL (url)

@@ -50,7 +50,7 @@ function initJSDURL()
                      "chrome://venkman/locale/venkman-help.tpl");
     console.addPref ("services.source.css",
                      "chrome://venkman/skin/venkman-source.css");
-    console.addPref ("services.source.sourceColoring", "true");
+    console.addPref ("services.source.sourceColoring", "false");
 }
 
 /*
@@ -292,7 +292,7 @@ function svc_help (response, parsedURL)
                         (p1 in console.commandManager.commands))
                     {
                         return ("<a class='command-name' " +
-                                "href='" + JSD_URL_SCHEME + ":help?search=" +
+                                "href='" + JSD_URL_SCHEME + "help?search=" +
                                 p1 + "'>" + p1 + "</a>");
                     }
 

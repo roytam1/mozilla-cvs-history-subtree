@@ -40,7 +40,7 @@ venkman.jar:
   locale/en-US/venkman/venkman.dtd      (locale/en-US/venkman.dtd)
   locale/en-US/venkman/venkman.properties    (locale/en-US/venkman.properties)
   locale/en-US/venkman/venkman-overlay.dtd   (locale/en-US/venkman-overlay.dtd)
-  content/locale/en-US/venkman-help.tpl      (locale/en-US/venkman-help.tpl)
+  locale/en-US/venkman/venkman-help.tpl      (locale/en-US/venkman-help.tpl)
   content/venkman/venkman-output-window.html (content/venkman-output-window.html)
   content/venkman/profile.csv.tpl              (content/profile.csv.tpl)
   content/venkman/profile.txt.tpl              (content/profile.txt.tpl)

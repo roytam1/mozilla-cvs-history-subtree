@@ -248,12 +248,12 @@ function getCommandContext (id, event)
             cx = console.menuSpecs[id].getContext(cx);
         else if ("cx" in console.menuManager) 
         {
-            dd ("using existing context");
+            //dd ("using existing context");
             cx = console.menuManager.cx;
         }
         else
         {
-            dd ("no context at all");
+            //dd ("no context at all");
         }
     }
     else

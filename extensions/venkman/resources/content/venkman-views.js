@@ -1959,7 +1959,7 @@ function s2v_getcontext (cx)
         var target = document.popupNode;
         while (target)
         {
-            if (target.localName == "LINE")
+            if (target.localName == "line")
                 break;
             target = target.parentNode;
         }
