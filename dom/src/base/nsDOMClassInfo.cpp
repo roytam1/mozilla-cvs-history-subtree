@@ -491,7 +491,7 @@ nsDOMClassInfo::Init()
   NS_DEFINE_CLASSINFO_DATA(HTMLFontElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLFormElement, nsHTMLFormElementSH::Create,
-                           ELEMENT_SCRIPTABLE_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS | WANT_GETPROPERTY);
   NS_DEFINE_CLASSINFO_DATA(HTMLFrameElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLFrameSetElement, nsElementSH::Create,
