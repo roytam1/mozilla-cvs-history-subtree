@@ -119,7 +119,7 @@
 <!ENTITY downloads.label              "Downloads">
 <!ENTITY downloads.tooltip            "Display the progress of ongoing downloads">
 <!ENTITY downloads.accesskey          "D">
-<!ENTITY downloads.commandkey         "y">
+<!ENTITY downloads.commandkey         "E">
 <!ENTITY extensions.label             "Extensions">
 <!ENTITY extensions.tooltip           "Show and Manage installed Extensions">
 <!ENTITY extensions.accesskey         "E">

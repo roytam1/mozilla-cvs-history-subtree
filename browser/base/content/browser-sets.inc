@@ -280,7 +280,7 @@
     <key id="key_gotoHistory"  key="&historySidebarCmd.commandKey;"  command="viewHistorySidebar" modifiers="accel"/>
 #endif
 
-    <key id="key_openDownloads"   key="&downloads.commandkey;"           command="Tools:Downloads" modifiers="accel"/>
+    <key id="key_openDownloads"   key="&downloads.commandkey;"           command="Tools:Downloads" modifiers="accel,shift"/>
 
     <key id="key_newMessage" key="&sendMessage.commandkey;" command="Browser:NewMessage" modifiers="accel"/>
 
