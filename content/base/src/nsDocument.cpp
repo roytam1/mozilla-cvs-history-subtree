@@ -498,6 +498,7 @@ nsDocument::nsDocument() : mIsGoingAway(PR_FALSE),
   mChildNodes = nsnull;
   mModCount = 0;
   mPrincipal = nsnull;
+  mLoadFlags = nsIRequest::LOAD_NORMAL;
   mNextContentID = NS_CONTENT_ID_COUNTER_BASE;
   mDTD = 0;
   mBoxObjectTable = nsnull;
@@ -535,6 +536,7 @@ nsDocument::~nsDocument()
   }
 
   NS_IF_RELEASE(mPrincipal);
+  mLoadFlags = nsIRequest::LOAD_NORMAL;
   mDocumentLoadGroup = nsnull;
 
   mParentDocument = nsnull;
@@ -718,6 +720,7 @@ nsDocument::Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup)
     aChannel->GetOwner(getter_AddRefs(owner));
     if (owner)
       owner->QueryInterface(NS_GET_IID(nsIPrincipal), (void**)&mPrincipal);
+    aChannel->GetLoadFlags(&mLoadFlags);
   }
 
   return rv;
@@ -732,6 +735,7 @@ nsDocument::ResetToURI(nsIURI *aURI, nsILoadGroup *aLoadGroup)
 
   NS_IF_RELEASE(mDocumentURL);
   NS_IF_RELEASE(mPrincipal);
+  mLoadFlags = nsIRequest::LOAD_NORMAL;
   mDocumentLoadGroup = nsnull;
 
   // Delete references to sub-documents
