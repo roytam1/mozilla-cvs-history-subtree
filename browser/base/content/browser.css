@@ -17,3 +17,8 @@ toolbar[printpreview="true"] {
   -moz-binding: url("chrome://mozapps/content/update/updates.xml#updateStatusbarNotification");
 }
 
+#noPreviewAvailable 
+{
+  background-color: white !important;
+  font-size: 12px !important;
+}
