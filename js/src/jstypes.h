@@ -350,7 +350,11 @@ typedef double          JSFloat64;
 ** DESCRIPTION:
 **  A type for representing the size of objects. 
 ************************************************************************/
+#if !defined(WINCE)
 typedef size_t JSSize;
+#else
+typedef unsigned int JSSize;
+#endif
 
 /************************************************************************
 ** TYPES:       JSPtrDiff
@@ -358,7 +362,11 @@ typedef size_t JSSize;
 **  A type for pointer difference. Variables of this type are suitable
 **      for storing a pointer or pointer sutraction. 
 ************************************************************************/
+#if !defined(WINCE)
 typedef ptrdiff_t JSPtrdiff;
+#else
+typedef int JSPtrdiff;
+#endif
 
 /************************************************************************
 ** TYPES:       JSUptrdiff

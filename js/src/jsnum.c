@@ -47,7 +47,9 @@
  * JS number type and wrapper class.
  */
 #include "jsstddef.h"
+#if !defined(WINCE)
 #include <errno.h>
+#endif
 #ifdef XP_PC
 #include <float.h>
 #endif
@@ -439,7 +441,7 @@ static JSConstDoubleSpec number_constants[] = {
 
 static jsdouble NaN;
 
-#if !defined __MWERKS__ && defined XP_PC && (defined _M_IX86 || defined __GNUC__)
+#if !defined __MWERKS__ && defined XP_PC && !defined WINCE && (defined _M_IX86 || defined __GNUC__)
 
 /*
  * On Alpha platform this is handled via Compiler option.

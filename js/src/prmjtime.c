@@ -43,7 +43,11 @@
 #define _REENTRANT 1
 #endif
 #include <string.h>
+#if !defined(WINCE)
 #include <time.h>
+#else
+#include "prtypes.h"
+#endif
 #include "jstypes.h"
 #include "jsutil.h"
 
@@ -53,7 +57,7 @@
 #define PRMJ_DO_MILLISECONDS 1
 
 #ifdef XP_PC
-#ifndef __MWERKS__
+#if !(defined(__MWERKS__) || defined(WINCE))
 #include <sys/timeb.h>
 #else
 #include <WINDEF.H>
@@ -301,11 +305,11 @@ PRMJ_Now(void)
 {
 #ifdef XP_PC
     JSInt64 s, us, ms2us, s2us;
-#ifndef __MWERKS__
+#if !(defined(__MWERKS__) || defined(WINCE))
     struct timeb b;
 #else
     SYSTEMTIME time;
-#endif /* __MWERKS__ */
+#endif /* __MWERKS__ || WINCE */
 #endif /* XP_PC */
 #if defined(XP_UNIX) || defined(XP_BEOS)
     struct timeval tv;
@@ -321,7 +325,7 @@ PRMJ_Now(void)
 #endif /* XP_MAC */
 
 #ifdef XP_PC
-#ifndef __MWERKS__
+#if !(defined(__MWERKS__) || defined(WINCE))
     ftime(&b);
     JSLL_UI2L(ms2us, PRMJ_USEC_PER_MSEC);
     JSLL_UI2L(s2us, PRMJ_USEC_PER_SEC);
@@ -341,7 +345,7 @@ PRMJ_Now(void)
     JSLL_MUL(s, s, s2us);
     JSLL_ADD(s, s, us);
     return s;
-#endif /* __MWERKS__ */
+#endif /* __MWERKS__ || WINCE */
 #endif
 
 #if defined(XP_UNIX) || defined(XP_BEOS)

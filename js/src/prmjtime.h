@@ -38,7 +38,9 @@
  * PR date stuff for mocha and java. Placed here temporarily not to break
  * Navigator and localize changes to mocha.
  */
+#if !defined(WINCE)
 #include <time.h>
+#endif
 #include "jslong.h"
 #ifdef MOZILLA_CLIENT
 #include "jscompat.h"

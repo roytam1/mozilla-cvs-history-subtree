@@ -414,10 +414,13 @@ static struct NumArgState* BuildArgArray( const char *fmt, va_list ap, int* rv, 
     */
     if( !l10n_debug_init ){
 	l10n_debug_init = JS_TRUE;
+#if !defined(WINCE)
+        /* WINCE does NOT support the NETSCAPE_LOCALIZATION_DEBUG flag! */
 	p = getenv( "NETSCAPE_LOCALIZATION_DEBUG" );
 	if( ( p != NULL ) && ( *p == '1' ) ){
 	    l10n_debug = JS_TRUE;
 	}
+#endif /* !WINCE */
     }
 
 
@@ -1068,7 +1071,7 @@ JS_PUBLIC_API(JSUint32) JS_vsxprintf(JSStuffFunc func, void *arg,
 */
 static int GrowStuff(SprintfState *ss, const char *sp, JSUint32 len)
 {
-    ptrdiff_t off;
+    JSPtrdiff off;
     char *newbase;
     JSUint32 newlen;
 

@@ -169,7 +169,7 @@ JS_PUBLIC_API(void) JS_Assert(const char *s, const char *file, JSIntn ln)
 #if defined(WIN32) || defined(XP_OS2)
     DebugBreak();
 #endif
-#ifndef XP_MAC
+#if !(defined(XP_MAC) || defined(WINCE))
     abort();
 #endif
 }

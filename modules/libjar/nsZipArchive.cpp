@@ -88,7 +88,7 @@ char * strdup(const char *src)
     #include <sys/stat.h>
     #include <limits.h>
     #include <unistd.h>
-#elif defined(XP_PC)
+#elif defined(XP_PC) && !defined(WINCE)
     #include <io.h>
 #endif
 

@@ -25,7 +25,9 @@
 
 #include <stdio.h>
 #include <string.h>
+#if !defined(WINCE)
 #include <assert.h>
+#endif
 #ifdef XP_MAC
 #include <stdlib.h>
 #else

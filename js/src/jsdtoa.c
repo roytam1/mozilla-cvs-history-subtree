@@ -205,7 +205,9 @@ extern void *MALLOC(size_t);
 static double private_mem[PRIVATE_mem], *pmem_next = private_mem;
 #endif
 
+#if !defined(WINCE)
 #include "errno.h"
+#endif
 #ifdef Bad_float_h
 #undef __STDC__
 

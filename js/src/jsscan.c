@@ -37,7 +37,9 @@
  */
 #include "jsstddef.h"
 #include <stdio.h>	/* first to avoid trouble on some systems */
+#if !defined(WINCE)
 #include <errno.h>
+#endif
 #include <limits.h>
 #include <math.h>
 #ifdef HAVE_MEMORY_H

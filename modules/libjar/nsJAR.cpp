@@ -37,7 +37,7 @@
 
 #ifdef XP_UNIX
   #include <sys/stat.h>
-#elif defined (XP_PC)
+#elif defined (XP_PC) && !defined(WINCE)
   #include <io.h>
 #endif
 

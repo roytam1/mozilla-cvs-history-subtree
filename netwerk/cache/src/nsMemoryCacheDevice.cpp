@@ -32,7 +32,10 @@
 #include "nsIPref.h"
 #include "nsICacheVisitor.h"
 #include "nsITransport.h"
+#if !defined(WINCE)
+/* XXX: Is this include needed? */
 #include <signal.h>
+#endif
 
 
 static NS_DEFINE_CID(kStorageTransportCID, NS_STORAGETRANSPORT_CID);
