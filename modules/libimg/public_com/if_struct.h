@@ -42,10 +42,6 @@
 #include "ntypes.h"             /* typedefs for commonly used Netscape data
                                    structures */
 
-#ifndef STANDALONE_IMAGE_LIB
-#include "net.h"
-#endif /* STANDALONE_IMAGE_LIB */
-
 typedef struct _IL_GroupContext IL_GroupContext;
 typedef struct _IL_ImageReq IL_ImageReq;
 typedef struct il_context_list il_context_list;
@@ -60,20 +56,6 @@ typedef struct il_container_struct il_container;
 #include "ilIURL.h"
 #include "ilINetReader.h"
 #include "ilIImageRenderer.h"
-
-/***************************** also in dllcompat.h ***********************/
-#ifndef STANDALONE_IMAGE_LIB
-PR_BEGIN_EXTERN_C
-typedef void
-(*TimeoutCallbackFunction) (void * closure);
-
-extern void * 
-FE_SetTimeout(TimeoutCallbackFunction func, void * closure, uint32 msecs);
-extern void
-FE_ClearTimeout(void *timer_id);
-PR_END_EXTERN_C
-#endif
-/********************************* in dllcompat.h *************************************/
 
 #include "il.h"
 

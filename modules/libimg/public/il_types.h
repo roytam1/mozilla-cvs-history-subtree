@@ -27,13 +27,8 @@
 
 #include "prtypes.h"
 
-#ifdef STANDALONE_IMAGE_LIB
 #define IL_EXTERN(__type) PR_EXTERN(__type)
 #define IL_IMPLEMENT(__type) PR_IMPLEMENT(__type)
-#else
-#define IL_EXTERN(__type) __type
-#define IL_IMPLEMENT(__type) __type
-#endif /* STANDALONE_IMAGE_LIB */
 
 /************************** Notes ********************************************
 * 1. Required #defines:
