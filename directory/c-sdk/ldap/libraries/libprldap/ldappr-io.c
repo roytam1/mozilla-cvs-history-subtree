@@ -410,7 +410,7 @@ prldap_close( int s, struct lextiof_socket_private *socketarg )
  * LDAP session handle creation callback.
  *
  * Allocate a session argument if not already done, and then call the
- * threads new handle function.
+ * thread's new handle function.
  */
 static int LDAP_CALLBACK
 prldap_newhandle( LDAP *ld, struct lextiof_session_private *sessionarg )
