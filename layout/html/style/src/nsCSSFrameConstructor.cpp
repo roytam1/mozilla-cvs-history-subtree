@@ -1817,6 +1817,16 @@ ProcessPseudoFrames(nsIPresContext* aPresContext,
   aHighestFrame = nsnull;
 
   if (nsLayoutAtoms::tableFrame == aPseudoFrames.mLowestType) {
+    // if the processing should be limited to the colgroup frame and the
+    // table frame is the lowest type of created pseudo frames that
+    // can have pseudo frame children, process only the colgroup pseudo frames
+    // and leave the table frame untouched.
+    if (nsLayoutAtoms::tableColGroupFrame == aHighestType) {
+      if (aPseudoFrames.mColGroup.mFrame) {
+        rv = ProcessPseudoFrame(aPresContext, aPseudoFrames.mColGroup, aHighestFrame);
+      }
+      return rv;
+    }
     rv = ProcessPseudoTableFrame(aPresContext, aPseudoFrames, aHighestFrame);
     if (nsLayoutAtoms::tableOuterFrame == aHighestType) return rv;
     
