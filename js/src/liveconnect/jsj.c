@@ -600,14 +600,14 @@ new_jsjava_thread_state(JSJavaVM *jsjava_vm, const char *thread_name, JNIEnv *jE
     if (thread_name)
         jsj_env->name = strdup(thread_name);
 
-#ifdef JSJ_THREAD_SAFE
+#ifdef JSJ_THREADSAFE
     PR_EnterMonitor(thread_list_monitor);
 #endif
 
     jsj_env->next = thread_list;
     thread_list = jsj_env;
 
-#ifdef JSJ_THREAD_SAFE
+#ifdef JSJ_THREADSAFE
     PR_ExitMonitor(thread_list_monitor);
 #endif
 
@@ -620,6 +620,10 @@ find_jsjava_thread(JNIEnv *jEnv)
     JSJavaThreadState *e, **p, *jsj_env;
     jsj_env = NULL;
 
+#ifdef JSJ_THREADSAFE
+        PR_EnterMonitor(thread_list_monitor);
+#endif
+
     /* Search for the thread state among the list of all created
        LiveConnect threads */
     for (p = &thread_list; (e = *p) != NULL; p = &(e->next)) {
@@ -631,19 +635,17 @@ find_jsjava_thread(JNIEnv *jEnv)
 
     /* Move a found thread to head of list for faster search next time. */
     if (jsj_env && p != &thread_list) {
-#ifdef JSJ_THREAD_SAFE
-        PR_EnterMonitor(thread_list_monitor);
-#endif
         /* First, check to make sure list hasn't mutated since we searched */
         if (*p == jsj_env) {
             *p = jsj_env->next;
             thread_list = jsj_env;
         }
-#ifdef JSJ_THREAD_SAFE
-        PR_ExitMonitor(thread_list_monitor);
-#endif
     }
     
+#ifdef JSJ_THREADSAFE
+        PR_ExitMonitor(thread_list_monitor);
+#endif
+
     return jsj_env;
 }
 
@@ -760,15 +762,22 @@ JSJ_DetachCurrentThreadFromJava(JSJavaThreadState *jsj_env)
     /* Disassociate the current native thread from its corresponding Java thread */
     java_vm = jsj_env->jsjava_vm->java_vm;
     jEnv = jsj_env->jEnv;
-    if (!JSJ_callbacks->detach_current_thread(java_vm, jEnv))
-        return JS_FALSE;
-
-    /* Destroy the LiveConnect execution environment passed in */
-    jsj_ClearPendingJSErrors(jsj_env);
 
 #ifdef JSJ_THREADSAFE
     PR_EnterMonitor(thread_list_monitor);
 #endif	/* JSJ_THREADSAFE */
+
+    if (!JSJ_callbacks->detach_current_thread(java_vm, jEnv)) {
+
+#ifdef JSJ_THREADSAFE
+        PR_ExitMonitor(thread_list_monitor);
+#endif	/* JSJ_THREADSAFE */
+
+        return JS_FALSE;
+    }
+
+    /* Destroy the LiveConnect execution environment passed in */
+    jsj_ClearPendingJSErrors(jsj_env);
 
     for (p = &thread_list; (e = *p) != NULL; p = &(e->next)) {
         if (e == jsj_env) {
