@@ -148,16 +148,16 @@ var ThreadPaneController =
 		switch ( command )
 		{
 			case "cmd_selectAll":
-				var threadTree = GetThreadTree();
-				if ( threadTree )
-				{
-					//if we're threaded we need to expand everything before selecting all
-//					if(messageView.showThreads)
-//						ExpandOrCollapseThreads(true);
-					threadTree.selectAll();
-					if ( threadTree.selectedItems && threadTree.selectedItems.length != 1 )
-						ClearMessagePane();
-				}
+                if (gDBView) {
+                    // if in threaded mode, we need to expand all before selecting all
+                    if (gDBView.sortType == nsMsgViewSortType.byThread) {
+                        gDBView.doCommand(nsMsgViewCommandType.expandAll)
+                    }
+                    gDBView.doCommand(nsMsgViewCommandType.selectAll)
+                    if (gDBView.numSelected != 1) {
+                        ClearMessagePane();
+                    }
+                }
 				break;
 		}
 	},
@@ -422,9 +422,8 @@ var DefaultController =
         gdbView.doCommand(nsMsgViewCommandType.toggleThreadWatched);
         break;
 			case "cmd_editDraft":
-				var threadTree = GetThreadTree();
-				if (threadTree && threadTree.selectedItems)
-					MsgComposeDraftMessage();
+                if (gDBView.numSelected >= 0)
+                    MsgComposeDraftMessage();
 				break;
 			case "cmd_nextUnreadMsg":
 				MsgNextUnreadMessage();
@@ -726,9 +725,9 @@ function SetupCommandUpdateHandlers()
 		widget.controllers.appendController(FolderPaneController);
 	
 	// thread pane
-//	widget = GetThreadTree();
-	//if ( widget )
-//		widget.controllers.appendController(ThreadPaneController);
+	widget = GetThreadOutliner();
+	if ( widget )
+        widget.controllers.appendController(ThreadPaneController);
 		
 	top.controllers.insertControllerAt(0, DefaultController);
 }
