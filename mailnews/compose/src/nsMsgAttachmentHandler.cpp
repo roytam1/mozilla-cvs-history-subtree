@@ -25,6 +25,7 @@
 #include "nsMsgEncoders.h"
 #include "nsMsgI18N.h"
 #include "nsURLFetcher.h"
+#include "nsXPIDLString.h"
 
 static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
 
@@ -294,11 +295,11 @@ nsMsgAttachmentHandler::PickEncoding(const char *charset)
   else if (!PL_strcasecmp(m_encoding, ENCODING_UUENCODE))
   {
     char        *tailName = NULL;
-    char  *turl;
+    nsXPIDLCString turl;
     
     if (mURL)
     {
-      mURL->GetSpec(&turl);
+      mURL->GetSpec(getter_Copies(turl));
       
       tailName = PL_strrchr(turl, '/');
       if (tailName) 
@@ -320,7 +321,6 @@ nsMsgAttachmentHandler::PickEncoding(const char *charset)
       }
     }
 
-    nsCRT::free(turl);
     m_encoder_data = MIME_UUEncoderInit((char *)(tailName ? tailName : ""),
       mime_encoder_output_fn,
       m_mime_delivery_state);
@@ -402,7 +402,7 @@ nsresult
 nsMsgAttachmentHandler::SnarfAttachment(nsMsgCompFields *compFields)
 {
   nsresult      status = 0;
-  char    *url_string = nsnull;
+  nsXPIDLCString url_string;
 
   NS_ASSERTION (! m_done, "Already done");
 
@@ -425,7 +425,7 @@ nsMsgAttachmentHandler::SnarfAttachment(nsMsgCompFields *compFields)
     return NS_ERROR_FAILURE;
   }
 
-  mURL->GetSpec(&url_string);
+  mURL->GetSpec(getter_Copies(url_string));
 
 #ifdef XP_MAC
   // do we need to add IMAP: to this list? NET_IsLocalFileURL returns PR_FALSE always for IMAP 
@@ -554,7 +554,6 @@ nsMsgAttachmentHandler::SnarfAttachment(nsMsgCompFields *compFields)
   // Ok, here we are, we need to fire the URL off and get the data
   // in the temp file
   //
-  nsCRT::free(url_string);
   // Create a fetcher for the URL attachment...
   mFetcher = new nsURLFetcher();
   if (!mFetcher)
