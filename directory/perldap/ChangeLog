@@ -1,5 +1,13 @@
 1998-12-16  Leif Hedstrom  <leif@netscape.com>
 
+	* Entry.pm (FIRSTKEY): Modified to honor the oc_order.
+	(NEXTKEY): Dito.
+	(markModified): Made as an alias for attrModified().
+
+	* Conn.pm (nextEntry): Added code to handle internal counters for
+	number of attributes in oc_order. This is used/needed for the
+	FIRSTKEY and NEXTKEY methods in the Entry/Tie::Hash object.
+
 	* Entry.pm (isAttr): New method, to make sure an attribute name
 	really is a valid LDAP attribute.
 	(FIRSTKEY): Now we'll handle each() and keys() properly, whooohoo!
