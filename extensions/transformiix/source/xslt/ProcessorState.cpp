@@ -44,7 +44,7 @@
 #include "VariableBinding.h"
 #include "ExprResult.h"
 #include "Names.h"
-#ifndef TX_EXE
+#ifdef MOZ_XSL
 //  #include "nslog.h"
 //  #define PRINTF NS_LOG_PRINTF(XPATH)
 //  #define FLUSH  NS_LOG_FLUSH(XPATH)
@@ -208,7 +208,7 @@ void ProcessorState::addTemplate(Element* xslTemplate) {
 MBool ProcessorState::addToResultTree(Node* node) {
 
     Node* current = resultNodeStack->peek();
-#ifndef TX_EXE
+#ifdef MOZ_XSL
     String nameSpaceURI, name, localName;
 #endif
 
@@ -219,7 +219,7 @@ MBool ProcessorState::addToResultTree(Node* node) {
             if (current->getNodeType() != Node::ELEMENT_NODE) return MB_FALSE;
             Element* element = (Element*)current;
             Attr* attr = (Attr*)node;
-#ifndef TX_EXE
+#ifdef MOZ_XSL
             name = attr->getName();
             getResultNameSpaceURI(name, nameSpaceURI);
             // XXX HACK (pvdb) Workaround for BUG 51656 Html rendered as xhtml
@@ -246,7 +246,7 @@ MBool ProcessorState::addToResultTree(Node* node) {
                     current->appendChild(wrapper);
                     current = wrapper;
                 }
-#ifndef TX_EXE
+#ifdef MOZ_XSL
                 else {
                     // Checking if we should set the output method to HTML
                     name = node->getNodeName();
