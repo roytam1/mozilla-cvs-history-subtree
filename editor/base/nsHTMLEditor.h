@@ -307,6 +307,11 @@ public:
   NS_IMETHOD StyleSheetLoaded(nsICSSStyleSheet*aSheet, PRBool aNotify);
 
   /* ------------ Utility Routines, not part of public API -------------- */
+  nsresult InsertNodeAtPoint(nsIDOMNode *aNode, 
+                                nsIDOMNode *aParent, 
+                                PRInt32 aOffset, 
+                                PRBool aNoEmptyNodes);
+                                
   NS_IMETHOD GetBodyStyleContext(nsIStyleContext** aStyleContext);
 
   /** returns the absolute position of the end points of aSelection
@@ -499,8 +504,21 @@ protected:
 
   // factored methods for handling insertion of data from transferables (drag&drop or clipboard)
   NS_IMETHOD PrepareTransferable(nsITransferable **transferable);
-  NS_IMETHOD InsertFromTransferable(nsITransferable *transferable);
-  
+  NS_IMETHOD InsertFromTransferable(nsITransferable *transferable,
+                                    PRInt32 aSelectionType = nsnull);
+  nsresult   InsertHTMLWithContext(const nsString& aInputString, 
+                                   const nsString& aContextStr, 
+                                   const nsString& aInfoStr);
+  nsresult   InsertHTMLWithCharsetAndContext(const nsString& aInputString,
+                                             const nsString& aCharset,
+                                             const nsString& aContextStr,
+                                             const nsString& aInfoStr);
+  nsresult   StripFormattingNodes(nsIDOMNode *aNode);
+  nsresult   GetPasteNodeParent(nsIDOMNode *aNode, 
+                                nsIDOMNode *aFragAsNode,
+                                nsIDOMNode *aContextLeaf,
+                                nsCOMPtr<nsIDOMNode> *outParentNode);
+
   /** simple utility to handle any error with event listener allocation or registration */
   void HandleEventListenerError();
 
