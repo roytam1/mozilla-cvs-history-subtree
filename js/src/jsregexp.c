@@ -799,6 +799,8 @@ ParseAtom(CompilerState *state)
 
     cp = ocp = state->cp;
     switch (*cp) {
+      /* handle /|a/ by returning an empty node for the leftside */
+      case '|':
       case 0:
 	ren = NewRENode(state, REOP_EMPTY, NULL);
 	break;
@@ -1279,8 +1281,7 @@ AnchorRegExp(CompilerState *state, RENode *ren)
 	 */
 	JS_ASSERT(REOP(ren2) != REOP_ANCHOR);
 	JS_ASSERT(!(ren2->flags & RENODE_ISNEXT));
-	if ((ren2->flags & (RENODE_ANCHORED | RENODE_NONEMPTY))
-	    == RENODE_NONEMPTY) {
+        if (!(ren2->flags & RENODE_ANCHORED)) {
 	    ren2 = NewRENode(state, REOP(ren), ren->kid);
 	    if (!ren2)
 		return JS_FALSE;
@@ -1706,7 +1707,7 @@ EmitRegExp(CompilerState *state, RENode *ren, JSRegExp *re)
 		    pc[i] = fill;
 		nchars = n * JS_BITS_PER_BYTE;
 	    }
-
+            pc[0] &= 0xFE;  /* 0 never matches */
 /* Split ops up into statements to keep MSVC1.52 from crashing. */
 #define MATCH_BIT(c)    { i = (c) >> 3; b = (c) & 7; b = 1 << b;              \
 			  if (fill) pc[i] &= ~b; else pc[i] |= b; }
@@ -2200,18 +2201,24 @@ MatchRegExp(MatchState *state, jsbytecode *pc, const jschar *cp)
 		}
 	    }
 
-	    /* Try matches from min to max, or forever if max == 0. */
-	    for (; !max || num < max; num++) {
-		cp2 = MatchRegExp(state, pc2, cp);
-		if (!cp2)
-		    break;
-		cp = cp2;
-	    }
-
-	    /* Restore state->pcend and set match and matchlen. */
-	    state->pcend = pcend;
-	    matched = (min <= num && (!max || num <= max));
-	    matchlen = 0;
+            state->pcend = pcend;
+            cp2 = NULL;
+            for (;;) {
+                /* can we match the rest of the r.e. from here ? */
+                cp3 = MatchRegExp(state, pc + oplen, cp);
+                /* record the greediest success, and keep going */
+                if (cp3) cp2 = cp3;
+                if (!max || num < max) {
+                    state->pcend = pc + oplen;
+                    cp = MatchRegExp(state, pc2, cp);
+                    state->pcend = pcend;
+                    /* couldn't grab one more, so bail */
+                    if (!cp) return cp2;
+                    num++;
+                }
+                else /* return our best case */
+                    return cp2;
+            }
 	    break;
 
 	  case REOP_LPAREN:
@@ -2316,7 +2323,7 @@ MatchRegExp(MatchState *state, jsbytecode *pc, const jschar *cp)
 	    break;                                                            \
 									      \
 	  case REOP_NONDIGIT:                                                 \
-	    matched = !JS_ISDIGIT(*cp);                                       \
+	    matched = *cp && !JS_ISDIGIT(*cp);                                \
 	    matchlen = 1;                                                     \
 	    break;                                                            \
 									      \
@@ -2326,7 +2333,7 @@ MatchRegExp(MatchState *state, jsbytecode *pc, const jschar *cp)
 	    break;                                                            \
 									      \
 	  case REOP_NONALNUM:                                                 \
-	    matched = !JS_ISWORD(*cp);                                        \
+	    matched = *cp && !JS_ISWORD(*cp);                                 \
 	    matchlen = 1;                                                     \
 	    break;                                                            \
 									      \
@@ -2336,7 +2343,7 @@ MatchRegExp(MatchState *state, jsbytecode *pc, const jschar *cp)
 	    break;                                                            \
 									      \
 	  case REOP_NONSPACE:                                                 \
-	    matched = !JS_ISSPACE(*cp);                                       \
+	    matched = *cp && !JS_ISSPACE(*cp);                                \
 	    matchlen = 1;                                                     \
 	    break;                                                            \
 									      \
