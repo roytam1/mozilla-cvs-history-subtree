@@ -68,22 +68,15 @@ ifeq ($(OBJECT_FMT),ELF)
 DLL_SUFFIX		= so
 else
 DLL_SUFFIX		= so.1.0
-# XXX work around a bug in the a.out ld(1).
-OS_LIBS			=
 endif
 
 DSO_CFLAGS		= -fPIC -DPIC
-DSO_LDOPTS		= -shared
-ifeq ($(OBJECT_FMT),ELF)
-DSO_LDOPTS		+=-Wl,-soname,lib$(LIBRARY_NAME)$(LIBRARY_VERSION).$(DLL_SUFFIX)
-endif
+DSO_LDOPTS		= -x -shared
 
 ifdef LIBRUNPATH
-#DSO_LDOPTS		+= -R$(LIBRUNPATH)
-DSO_LDOPTS		+= -Wl,-R$(LIBRUNPATH)
+DSO_LDOPTS		+= -R$(LIBRUNPATH)
 endif
 
-#MKSHLIB		= $(LD) $(DSO_LDOPTS)
-MKSHLIB			= $(CC) $(DSO_LDOPTS)
+MKSHLIB			= $(LD) $(DSO_LDOPTS)
 
 G++INCLUDES		= -I/usr/include/g++

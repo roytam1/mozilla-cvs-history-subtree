@@ -95,6 +95,10 @@ endif
 endif
 endif
 
+ifdef BUILD_OPT
+OPTIMIZER		= -xO4
+endif
+
 ifeq ($(USE_64),1)
 ifndef INTERNAL_TOOLS
 ifndef NS_USE_GCC
@@ -160,7 +164,7 @@ MKSHLIB			= $(LD) $(DSO_LDOPTS)
 # ld options:
 # -G: produce a shared object
 # -z defs: no unresolved symbols allowed
-DSO_LDOPTS		= -G -h $(notdir $@)
+DSO_LDOPTS		= -G -h $(notdir $@) -z combreloc -z defs
 
 # -KPIC generates position independent code for use in shared libraries.
 # (Similarly for -fPIC in case of gcc.)
@@ -172,6 +176,18 @@ endif
 
 NOSUCHFILE		= /no-such-file
 
+ifeq ($(BUILD_SUN_PKG),1)
+#
+# There is an assembly language implementation of the NSPR atomic functions
+# available for UltraSparc systems.  On Solaris, these are used by setting up a
+# "filtee" which contains those routines.  The "filter" (libnspr.so, for
+# instance) loads the filtee if it can find it, based on what's passed in
+# through the -f option to ld.  See the nspr Makefile for how this is used.
+#
+ifeq ($(OS_TEST),sun4u)
+ULTRASPARC_LIBRARY = nspr_flt
+endif
+else
 #
 # Library of atomic functions for UltraSparc systems
 #
@@ -193,4 +209,5 @@ ifeq ($(OS_TEST),sun4u)
 ULTRASPARC_LIBRARY = ultrasparc
 ULTRASPARC_FILTER_LIBRARY = libatomic.so
 DSO_LDOPTS		+= -f $(ULTRASPARC_FILTER_LIBRARY)
+endif
 endif

@@ -113,7 +113,7 @@ typedef enum { SSLAppOpRead = 0,
 #define SSL_MIN_MASTER_KEY_BYTES	5
 #define SSL_MAX_MASTER_KEY_BYTES	64
 
-#define SSL2_SESSIONID_BYTES		16
+#define SSL_SESSIONID_BYTES		16
 #define SSL3_SESSIONID_BYTES		32
 
 #define SSL_MIN_CHALLENGE_BYTES		16
@@ -208,7 +208,7 @@ struct sslBufferStr {
 ** SSL3 cipher suite policy and preference struct.
 */
 typedef struct {
-#if !defined(_WIN32)
+#ifdef AIX
     unsigned int    cipher_suite : 16;
     unsigned int    policy       :  8;
     unsigned int    enabled      :  1;
@@ -221,7 +221,7 @@ typedef struct {
 #endif
 } ssl3CipherSuiteCfg;
 
-#define ssl_V3_SUITES_IMPLEMENTED 19
+#define ssl_V3_SUITES_IMPLEMENTED 25
 
 typedef struct sslOptionsStr {
     unsigned int useSecurity		: 1;  /*  1 */
@@ -599,6 +599,8 @@ typedef enum {
     cipher_des40,
     cipher_idea, 
     cipher_fortezza,
+    cipher_aes_128,
+    cipher_aes_256,
     cipher_missing              /* reserved for no such supported cipher */
 } SSL3BulkCipher;
 
@@ -612,6 +614,7 @@ typedef enum {
     calg_3des     = CKM_DES3_CBC, 
     calg_idea     = CKM_IDEA_CBC,
     calg_fortezza = CKM_SKIPJACK_CBC64, 
+    calg_aes      = CKM_AES_CBC,
     calg_init     = (int) 0x7fffffffL
 } CipherAlgorithm;
 
@@ -711,7 +714,7 @@ struct sslSessionIDStr {
     union {
 	struct {
 	    /* the V2 code depends upon the size of sessionID.  */
-	    unsigned char         sessionID[SSL2_SESSIONID_BYTES];
+	    unsigned char         sessionID[SSL_SESSIONID_BYTES];
 
 	    /* Stuff used to recreate key and read/write cipher objects */
 	    SECItem               masterKey;
@@ -1247,11 +1250,8 @@ void ssl_Trace(const char *format, ...);
 SEC_END_PROTOS
 
 
-#if defined(XP_UNIX)
+#ifdef XP_UNIX
 #define SSL_GETPID() getpid()
-#elif defined(WIN32)
-/* #define SSL_GETPID() GetCurrentProcessId() */
-#define SSL_GETPID() _getpid()
 #else
 #define SSL_GETPID() 0
 #endif

@@ -216,22 +216,13 @@ typedef struct PTDebug
     PRUintn cvars_notified, delayed_cv_deletes;
 } PTDebug;
 
-NSPR_API(void) PT_GetStats(PTDebug* here);
-NSPR_API(void) PT_FPrintStats(PRFileDesc *fd, const char *msg);
-
-#else
-
-typedef PRUintn PTDebug;
-#define PT_GetStats(_p)
-#define PT_FPrintStats(_fd, _msg)
-
 #endif /* defined(DEBUG) */
+
+NSPR_API(void) PT_FPrintStats(PRFileDesc *fd, const char *msg);
 
 #else /* defined(_PR_PTHREADS) */
 
-typedef PRUintn PTDebug;
-#define PT_GetStats(_p)
-#define PT_FPrintStats(_fd, _msg)
+NSPR_API(void) PT_FPrintStats(PRFileDesc *fd, const char *msg);
 
 /*
 ** This section is contains those parts needed to implement NSPR on
@@ -881,8 +872,7 @@ NSPR_API(void) _PR_MD_FREE_LOCK(_MDLock *md);
 NSPR_API(void) _PR_MD_LOCK(_MDLock *md);
 #define    _PR_MD_LOCK _MD_LOCK
 
-/* Return 0 on success, a nonzero value on failure. */
-NSPR_API(PRIntn) _PR_MD_TEST_AND_LOCK(_MDLock *md);
+NSPR_API(PRBool) _PR_MD_TEST_AND_LOCK(_MDLock *md);
 #define    _PR_MD_TEST_AND_LOCK _MD_TEST_AND_LOCK
 
 NSPR_API(void) _PR_MD_UNLOCK(_MDLock *md);
@@ -1411,8 +1401,7 @@ struct PRLock {
 #if defined(_PR_PTHREADS)
     pthread_mutex_t mutex;          /* the underlying lock */
     _PT_Notified notified;          /* array of conditions notified */
-    PRBool locked;                  /* whether the mutex is locked */
-    pthread_t owner;                /* if locked, current lock owner */
+    pthread_t owner;                /* current lock owner */
 #elif defined(_PR_BTHREADS)
     sem_id	semaphoreID;	    /* the underlying lock */
     int32	benaphoreCount;	    /* number of people in lock */
@@ -1449,8 +1438,8 @@ struct PRCondVar {
 struct PRMonitor {
     const char* name;           /* monitor name for debugging */
 #if defined(_PR_PTHREADS)
-    PRLock lock;                /* the lock structure */
-    PRThread *owner;            /* the owner of the lock or NULL */
+    PRLock lock;                /* the lock struture structure */
+    pthread_t owner;            /* the owner of the lock or zero */
     PRCondVar *cvar;            /* condition variable queue */
 #else  /* defined(_PR_PTHREADS) */
     PRCondVar *cvar;            /* associated lock and condition variable queue */

@@ -44,6 +44,10 @@
 #include <pk11util.h>
 #include "jssl.h"
 
+#ifdef WINNT
+#include <private/pprio.h>
+#endif 
+
 JNIEXPORT void JNICALL
 Java_org_mozilla_jss_ssl_SSLServerSocket_socketListen
     (JNIEnv *env, jobject self, jint backlog)
@@ -53,7 +57,7 @@ Java_org_mozilla_jss_ssl_SSLServerSocket_socketListen
     if( JSSL_getSockData(env, self, &sock) != PR_SUCCESS) goto finish;
 
     if( PR_Listen(sock->fd, backlog) != PR_SUCCESS ) {
-        JSS_throwMsg(env, SOCKET_EXCEPTION,
+        JSS_throwMsgPrErr(env, SOCKET_EXCEPTION,
             "Failed to set listen backlog on socket");
         goto finish;
     }
@@ -83,7 +87,7 @@ Java_org_mozilla_jss_ssl_SSLServerSocket_socketAccept
     if( handshakeAsClient ) {
         status = SSL_OptionSet(sock->fd, SSL_HANDSHAKE_AS_CLIENT, PR_TRUE);
         if( status != SECSuccess ) {
-            JSS_throwMsg(env, SOCKET_EXCEPTION,
+            JSS_throwMsgPrErr(env, SOCKET_EXCEPTION,
                 "Failed to set option to handshake as client");
             goto finish;
         }
@@ -100,8 +104,20 @@ Java_org_mozilla_jss_ssl_SSLServerSocket_socketAccept
               case PR_PENDING_INTERRUPT_ERROR:
               case PR_IO_PENDING_ERROR:
                 break; /* out of the switch and loop again */
+#ifdef WINNT
+              case PR_IO_TIMEOUT_ERROR:
+                    /*
+                     * if timeout was set, and the PR_Accept() timed out,
+                     * then cancel the I/O on the port, otherwise PR_Accept()
+                     * will always return PR_IO_PENDING_ERROR on subsequent
+                     * calls
+                     */
+                      PR_NT_CancelIo(sock->fd);
+               /* don't break here, let it fall through */
+#endif 
+
               default:
-                JSS_throwMsg(env, SOCKET_EXCEPTION,
+                JSS_throwMsgPrErr(env, SOCKET_EXCEPTION,
                     "Failed to accept new connection");
                 goto finish;
             }
@@ -118,7 +134,7 @@ Java_org_mozilla_jss_ssl_SSLServerSocket_socketAccept
     status = SSL_HandshakeCallback(newSD->fd, JSSL_HandshakeCallback,
                                     newSD);
     if( status != SECSuccess ) {
-        JSS_throwMsg(env, SOCKET_EXCEPTION,
+        JSS_throwMsgPrErr(env, SOCKET_EXCEPTION,
             "Unable to install handshake callback");
     }
 
@@ -163,7 +179,7 @@ Java_org_mozilla_jss_ssl_SSLServerSocket_configServerSessionIDCache(
     status = SSL_ConfigServerSessionIDCache(
                 maxEntries, ssl2Timeout, ssl3Timeout, dirName);
     if (status != SECSuccess) {
-        JSS_throwMsg(env, SOCKET_EXCEPTION,
+        JSS_throwMsgPrErr(env, SOCKET_EXCEPTION,
                        "Failed to configure server session ID cache");
         goto finish;
     }
@@ -198,16 +214,16 @@ Java_org_mozilla_jss_ssl_SSLServerSocket_setServerCertNickname(
         if (privKey != NULL) {
             status = SSL_ConfigSecureServer(sock->fd, cert, privKey, kt_rsa);
             if( status != SECSuccess) {
-                JSS_throwMsg(env, SOCKET_EXCEPTION,
+                JSS_throwMsgPrErr(env, SOCKET_EXCEPTION,
                     "Failed to configure secure server certificate and key");
                 goto finish;
             }
         } else {
-            JSS_throwMsg(env, SOCKET_EXCEPTION, "Failed to locate private key");
+            JSS_throwMsgPrErr(env, SOCKET_EXCEPTION, "Failed to locate private key");
             goto finish;
         }
     } else {
-        JSS_throwMsg(env, SOCKET_EXCEPTION, "Failed to locate private key");
+        JSS_throwMsgPrErr(env, SOCKET_EXCEPTION, "Failed to locate private key");
         goto finish;
     }
 
@@ -221,4 +237,52 @@ finish:
     if( nickname != NULL ) {
         (*env)->ReleaseStringUTFChars(env, nicknameStr, nickname);
     }
+}
+
+JNIEXPORT void JNICALL
+Java_org_mozilla_jss_ssl_SSLServerSocket_setReuseAddress(
+    JNIEnv *env, jobject self, jboolean reuse)
+{
+    JSSL_SocketData *sock;
+    PRStatus status;
+    PRSocketOptionData sockOptData;
+
+    if( JSSL_getSockData(env, self, &sock) != PR_SUCCESS) goto finish;
+
+    sockOptData.option = PR_SockOpt_Reuseaddr;
+    sockOptData.value.reuse_addr = ((reuse == JNI_TRUE) ? PR_TRUE : PR_FALSE );
+
+    status = PR_SetSocketOption(sock->fd, &sockOptData);
+    if( status != PR_SUCCESS ) {
+        JSS_throwMsgPrErr(env, SOCKET_EXCEPTION, "PR_SetSocketOption failed");
+        goto finish;
+    }
+
+finish:
+    return;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_org_mozilla_jss_ssl_SSLServerSocket_getReuseAddress(
+    JNIEnv *env, jobject self)
+{
+    JSSL_SocketData *sock;
+    PRStatus status;
+    PRSocketOptionData sockOptData;
+
+    if( JSSL_getSockData(env, self, &sock) != PR_SUCCESS) goto finish;
+
+    sockOptData.option = PR_SockOpt_Reuseaddr;
+
+    status = PR_GetSocketOption(sock->fd, &sockOptData);
+    if( status != PR_SUCCESS ) {
+        JSS_throwMsgPrErr(env, SOCKET_EXCEPTION, "PR_SetSocketOption failed");
+        goto finish;
+    }
+
+finish:
+    /* If we got here via failure, reuse_addr might be uninitialized. But in
+     * that case we're throwing an exception, so the return value doesn't
+     * matter. */
+    return ((sockOptData.value.reuse_addr == PR_TRUE) ? JNI_TRUE : JNI_FALSE);
 }

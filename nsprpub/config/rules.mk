@@ -105,7 +105,7 @@ ifeq (,$(filter-out WINNT OS2,$(OS_ARCH)))
 # Win95, Win16, and OS/2 require library names conforming to the 8.3 rule.
 # other platforms do not.
 #
-ifeq (,$(filter-out WIN95 OS2,$(OS_TARGET)))
+ifeq (,$(filter-out WIN95 WIN16 OS2,$(OS_TARGET)))
 LIBRARY		= $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION)_s.$(LIB_SUFFIX)
 SHARED_LIBRARY	= $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION).$(DLL_SUFFIX)
 IMPORT_LIBRARY	= $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION).$(LIB_SUFFIX)
@@ -145,15 +145,27 @@ endif
 
 ifndef OBJS
 OBJS		= $(addprefix $(OBJDIR)/,$(CSRCS:.c=.$(OBJ_SUFFIX))) \
-		  $(addprefix $(OBJDIR)/,$(ASFILES:.$(ASM_SUFFIX)=.$(OBJ_SUFFIX)))
+		  $(addprefix $(OBJDIR)/,$(ASFILES:.s=.$(OBJ_SUFFIX)))
+endif
+
+ifeq ($(OS_TARGET), WIN16)
+	comma := ,
+	empty :=
+	space := $(empty) $(empty)
+	W16OBJS = $(subst $(space),$(comma)$(space),$(strip $(OBJS)))
+	W16TEMP =$(OS_LIBS) $(EXTRA_LIBS)
+    ifeq ($(strip $(W16TEMP)),)
+		W16LIBS =
+    else
+		W16LIBS = library $(subst $(space),$(comma)$(space),$(strip $(W16TEMP)))
+    endif
+	W16DEF = $(notdir $(basename $(SHARED_LIBRARY))).DEF
 endif
 
 ifeq ($(OS_ARCH), WINNT)
+ifneq ($(OS_TARGET), WIN16)
 OBJS += $(RES)
 endif
-
-ifeq ($(MOZ_OS2_TOOLS),VACPP)
-EXTRA_LIBS := $(patsubst -l%,$(DIST)/lib/%.$(LIB_SUFFIX),$(EXTRA_LIBS))
 endif
 
 ALL_TRASH		= $(TARGETS) $(OBJS) $(filter-out . .., $(OBJDIR)) LOGS TAGS $(GARBAGE) \
@@ -176,14 +188,16 @@ endif
 
 ################################################################################
 
-all:: export
+all:: export libs install
 
 export::
 	+$(LOOP_OVER_DIRS)
 
-libs:: export
+libs::
+	+$(LOOP_OVER_DIRS)
 
-install:: export
+install::
+	+$(LOOP_OVER_DIRS)
 
 clean::
 	rm -rf $(OBJS) so_locations $(NOSUCHFILE) $(GARBAGE)
@@ -199,18 +213,6 @@ realclean clobber_all::
 
 distclean::
 	rm -rf $(wildcard *.OBJ *.OBJD) dist $(ALL_TRASH) $(DIST_GARBAGE)
-	+$(LOOP_OVER_DIRS)
-
-real_install:: $(RELEASE_BINS) $(RELEASE_HEADERS) $(RELEASE_LIBS)
-ifdef RELEASE_BINS
-	$(NSINSTALL) -t -m 0755 $(RELEASE_BINS) $(DESTDIR)$(bindir)
-endif
-ifdef RELEASE_HEADERS
-	$(NSINSTALL) -t -m 0644 $(RELEASE_HEADERS) $(DESTDIR)$(includedir)
-endif
-ifdef RELEASE_LIBS
-	$(NSINSTALL) -t -m 0755 $(RELEASE_LIBS) $(DESTDIR)$(libdir)
-endif
 	+$(LOOP_OVER_DIRS)
 
 release:: export
@@ -283,28 +285,37 @@ else
 	$(CC) -o $@ $(CFLAGS) $(OBJS) $(LDFLAGS)
 endif
 endif
-ifdef BUILD_OPT
-	$(STRIP) $@
-endif
 
 $(LIBRARY): $(OBJS)
 	@$(MAKE_OBJDIR)
 	rm -f $@
 ifeq ($(MOZ_OS2_TOOLS),VACPP)
-	$(AR) $(subst /,\\,$(OBJS)) $(AR_FLAGS)
+	$(AR) $(subst /,\\,$(OBJS)) $(AR_EXTRA_ARGS)
 else
+ifdef USE_AUTOCONF
 	$(AR) $(AR_FLAGS) $(OBJS) $(AR_EXTRA_ARGS)
+else
+	$(AR) $(OBJS) $(AR_EXTRA_ARGS)
+endif # USE_AUTOCONF
 endif
 	$(RANLIB) $@
+
+ifeq ($(OS_TARGET), WIN16)
+$(IMPORT_LIBRARY): $(SHARED_LIBRARY)
+	wlib $(OS_LIB_FLAGS) $@ +$(SHARED_LIBRARY)
+endif
 
 ifeq ($(OS_TARGET), OS2)
 $(IMPORT_LIBRARY): $(SHARED_LIBRARY)
 	$(IMPLIB) $@ $(SHARED_LIBRARY).def
 endif
     
-$(SHARED_LIBRARY): $(OBJS)
+$(SHARED_LIBRARY): $(OBJS) $(MAPFILE)
 	@$(MAKE_OBJDIR)
 	rm -f $@
+ifdef USE_AUTOCONF
+	$(MKSHLIB) $(OBJS) $(EXTRA_LIBS) $(OS_LIBS)
+else
 ifeq ($(OS_ARCH)$(OS_RELEASE), AIX4.1)
 	echo "#!" > $(OBJDIR)/lib$(LIBRARY_NAME)_syms
 	nm -B -C -g $(OBJS) \
@@ -315,7 +326,25 @@ ifeq ($(OS_ARCH)$(OS_RELEASE), AIX4.1)
 		-bM:SRE -bnoentry $(OS_LIBS) $(EXTRA_LIBS)
 else	# AIX 4.1
 ifeq ($(OS_ARCH), WINNT)
-	$(LINK_DLL) -MAP $(DLLBASE) $(DLL_LIBS) $(EXTRA_LIBS) $(OBJS)
+ifeq ($(OS_TARGET), WIN16)
+	echo system windows dll initinstance >w16link
+	echo option map >>w16link
+	echo option oneautodata >>w16link
+	echo option heapsize=32K >>w16link
+	echo option $(OS_DLL_OPTION) >>w16link
+	echo debug $(DEBUGTYPE) all >>w16link
+	echo name $@ >>w16link
+	echo file >>w16link
+	echo $(W16OBJS) >>w16link
+	echo $(W16IMPORTS) >>w16link
+	echo $(W16LIBS) >>w16link
+	echo $(W16_EXPORTS) >>w16link
+	echo libfile libentry >>w16link
+	$(LINK) @w16link.
+	rm w16link
+else	# WIN16
+	$(LINK_DLL) -MAP $(DLLBASE) $(OS_LIBS) $(EXTRA_LIBS) $(OBJS)
+endif # WINNT
 else
 ifeq ($(OS_ARCH),OS2)
 # append ( >> ) doesn't seem to be working under OS/2 gmake. Run through OS/2 shell instead.	
@@ -331,29 +360,36 @@ ifeq ($(OS_TARGET), OpenVMS)
 	@if test ! -f $(OBJDIR)/VMSuni.opt; then \
 	    echo "Creating universal symbol option file $(OBJDIR)/VMSuni.opt";\
 	    create_opt_uni $(OBJS); \
+	    mv VMSuni.opt $(OBJDIR); \
 	fi
-	$(MKSHLIB) -o $@ $(OBJS) $(EXTRA_LIBS) $(OBJDIR)/VMSuni.opt
+	$(MKSHLIB) -o $@ $(OBJS) $(EXTRA_LIBS) $(OS_LIBS) $(OBJDIR)/VMSuni.opt
+	@echo "`translate $@`" > $(@:.$(DLL_SUFFIX)=.vms)
 else	# OpenVMS
-	$(MKSHLIB) $(OBJS) $(EXTRA_LIBS)
+	$(MKSHLIB) -o $@ $(OBJS) $(EXTRA_LIBS) $(OS_LIBS)
 endif	# OpenVMS
 endif   # OS2
 endif	# WINNT
 endif	# AIX 4.1
-ifdef BUILD_OPT
-	$(STRIP) $@
-endif
+endif   # USE_AUTOCONF
 
 
 ifeq (,$(filter-out WINNT OS2,$(OS_ARCH)))
 $(RES): $(RESNAME)
 	@$(MAKE_OBJDIR)
 ifeq ($(OS_TARGET),OS2)
-	$(RC) -DOS2 -r $< $@
+	$(RC) -DOS2 -r $(RESNAME) $(RES)
 else
 # The resource compiler does not understand the -U option.
-	$(RC) $(filter-out -U%,$(DEFINES)) $(INCLUDES) -Fo$@ $<
+	$(RC) $(filter-out -U%,$(DEFINES)) $(INCLUDES) -Fo$(RES) $(RESNAME)
 endif
 	@echo $(RES) finished
+endif
+
+$(MAPFILE): $(LIBRARY_NAME).def
+	@$(MAKE_OBJDIR)
+ifeq ($(OS_ARCH),SunOS)
+	grep -v ';-' $(LIBRARY_NAME).def | \
+	 sed -e 's,;+,,' -e 's; DATA ;;' -e 's,;;,,' -e 's,;.*,;,' > $@
 endif
 
 $(OBJDIR)/%.$(OBJ_SUFFIX): %.cpp
@@ -374,7 +410,14 @@ WCCFLAGS3 = $(subst -D,-d,$(WCCFLAGS2))
 $(OBJDIR)/%.$(OBJ_SUFFIX): %.c
 	@$(MAKE_OBJDIR)
 ifeq ($(OS_ARCH), WINNT)
+ifeq ($(OS_TARGET), WIN16)
+#	$(MOD_DEPTH)/config/w16opt $(WCCFLAGS3)
+	echo $(WCCFLAGS3) >w16wccf
+	$(CC) -zq -fo$(OBJDIR)\\$*.$(OBJ_SUFFIX)  @w16wccf $*.c
+	rm w16wccf
+else
 	$(CC) -Fo$@ -c $(CFLAGS) $<
+endif
 else
 ifeq ($(MOZ_OS2_TOOLS),VACPP)
 	$(CC) -Fo$@ -c $(CFLAGS) $<
@@ -387,12 +430,6 @@ endif
 $(OBJDIR)/%.$(OBJ_SUFFIX): %.s
 	@$(MAKE_OBJDIR)
 	$(AS) -o $@ $(ASFLAGS) -c $<
-
-ifeq ($(MOZ_OS2_TOOLS),VACPP)
-$(OBJDIR)/%.$(OBJ_SUFFIX): %.asm
-	@$(MAKE_OBJDIR)
-	$(AS) -Fdo:./$(OBJDIR) $(ASFLAGS) $<
-endif
 
 %.i: %.c
 	$(CC) -C -E $(CFLAGS) $< > $*.i

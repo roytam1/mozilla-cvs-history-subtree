@@ -93,18 +93,24 @@ static SECStatus Null_Cipher(void *ctx, unsigned char *output, int *outputLen,
  */
 static ssl3CipherSuiteCfg cipherSuites[ssl_V3_SUITES_IMPLEMENTED] = {
    /*      cipher_suite                         policy      enabled is_present*/
+ { TLS_DHE_DSS_WITH_AES_256_CBC_SHA, 	   SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
+ { TLS_DHE_RSA_WITH_AES_256_CBC_SHA, 	   SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
+ { TLS_RSA_WITH_AES_256_CBC_SHA,     	   SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
+ { TLS_DHE_DSS_WITH_AES_128_CBC_SHA, 	   SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
+ { TLS_DHE_RSA_WITH_AES_128_CBC_SHA,       SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
  { TLS_DHE_DSS_WITH_RC4_128_SHA,           SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
  { SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA,      SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
  { SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA,      SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
  { SSL_FORTEZZA_DMS_WITH_FORTEZZA_CBC_SHA, SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
  { SSL_FORTEZZA_DMS_WITH_RC4_128_SHA,      SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
+ { TLS_RSA_WITH_AES_128_CBC_SHA,     	   SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
  { SSL_RSA_WITH_RC4_128_SHA,               SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
  { SSL_RSA_WITH_RC4_128_MD5,               SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
  { SSL_RSA_FIPS_WITH_3DES_EDE_CBC_SHA,     SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
  { SSL_RSA_WITH_3DES_EDE_CBC_SHA,          SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
  { SSL_RSA_FIPS_WITH_DES_CBC_SHA,          SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
- { SSL_DHE_RSA_WITH_DES_CBC_SHA,           SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
- { SSL_DHE_DSS_WITH_DES_CBC_SHA,           SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
+ { SSL_DHE_RSA_WITH_DES_CBC_SHA,           SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
+ { SSL_DHE_DSS_WITH_DES_CBC_SHA,           SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
  { SSL_RSA_WITH_DES_CBC_SHA,               SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
  { TLS_RSA_EXPORT1024_WITH_RC4_56_SHA,     SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
  { TLS_RSA_EXPORT1024_WITH_DES_CBC_SHA,    SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
@@ -168,6 +174,8 @@ static const ssl3BulkCipherDef bulk_cipher_defs[] = {
     {cipher_des40,     calg_des,       8,  5, type_block,   8, 8, kg_export},
     {cipher_idea,      calg_idea,     16, 16, type_block,   8, 8, kg_strong},
     {cipher_fortezza,  calg_fortezza, 10, 10, type_block,  24, 8, kg_null},
+    {cipher_aes_128,   calg_aes,      16, 16, type_block,  16,16, kg_strong},
+    {cipher_aes_256,   calg_aes,      32, 32, type_block,  16,16, kg_strong},
     {cipher_missing,   calg_null,      0,  0, type_stream,  0, 0, kg_null},
 };
 
@@ -262,6 +270,22 @@ static const ssl3CipherSuiteDef cipher_suite_defs[] = {
                                   cipher_fortezza, mac_sha, kea_fortezza},
     {SSL_FORTEZZA_DMS_WITH_RC4_128_SHA, cipher_rc4, mac_sha, kea_fortezza},
 
+/* New TLS cipher suites */
+    {TLS_RSA_WITH_AES_128_CBC_SHA,     	cipher_aes_128, mac_sha, kea_rsa},
+    {TLS_DHE_DSS_WITH_AES_128_CBC_SHA, 	cipher_aes_128, mac_sha, kea_dhe_dss},
+    {TLS_DHE_RSA_WITH_AES_128_CBC_SHA, 	cipher_aes_128, mac_sha, kea_dhe_rsa},
+    {TLS_RSA_WITH_AES_256_CBC_SHA,     	cipher_aes_256, mac_sha, kea_rsa},
+    {TLS_DHE_DSS_WITH_AES_256_CBC_SHA, 	cipher_aes_256, mac_sha, kea_dhe_dss},
+    {TLS_DHE_RSA_WITH_AES_256_CBC_SHA, 	cipher_aes_256, mac_sha, kea_dhe_rsa},
+#if 0
+    {TLS_DH_DSS_WITH_AES_128_CBC_SHA,  	cipher_aes_128, mac_sha, kea_dh_dss},
+    {TLS_DH_RSA_WITH_AES_128_CBC_SHA,  	cipher_aes_128, mac_sha, kea_dh_rsa},
+    {TLS_DH_ANON_WITH_AES_128_CBC_SHA, 	cipher_aes_128, mac_sha, kea_dh_anon},
+    {TLS_DH_DSS_WITH_AES_256_CBC_SHA,  	cipher_aes_256, mac_sha, kea_dh_dss},
+    {TLS_DH_RSA_WITH_AES_256_CBC_SHA,  	cipher_aes_256, mac_sha, kea_dh_rsa},
+    {TLS_DH_ANON_WITH_AES_256_CBC_SHA, 	cipher_aes_256, mac_sha, kea_dh_anon},
+#endif
+
     {TLS_RSA_EXPORT1024_WITH_DES_CBC_SHA,
                                     cipher_des,    mac_sha,kea_rsa_export_1024},
     {TLS_RSA_EXPORT1024_WITH_RC4_56_SHA,
@@ -285,6 +309,8 @@ const char * const ssl3_cipherName[] = {
     "DES-CBC-40",
     "IDEA-CBC",
     "FORTEZZA",
+    "AES-128",
+    "AES-256",
     "missing"
 };
 
@@ -2605,7 +2631,8 @@ ssl3_SendClientHello(sslSocket *ss)
 	        !PK11_IsPresent(slot) ||
 		sid->u.ssl3.clAuthSeries     != PK11_GetSlotSeries(slot) ||
 		sid->u.ssl3.clAuthSlotID     != PK11_GetSlotID(slot)     ||
-		sid->u.ssl3.clAuthModuleID   != PK11_GetModuleID(slot)   ) {
+		sid->u.ssl3.clAuthModuleID   != PK11_GetModuleID(slot)   ||
+                !PK11_IsLoggedIn(slot, NULL)) {
 	        sidOK = PR_FALSE;
 	    }
 	    if (slot) {
@@ -7207,9 +7234,10 @@ const ssl3BulkCipherDef *cipher_def;
     ssl3State *          ssl3 			= ss->ssl3;
     ssl3CipherSpec *     crSpec;
     SECStatus            rv;
-    unsigned int         hashBytes;
+    unsigned int         hashBytes		= MAX_MAC_LENGTH + 1;
     unsigned int         padding_length;
     PRBool               isTLS;
+    PRBool               padIsBad               = PR_FALSE;
     SSL3ContentType      rType;
     SSL3Opaque           hash[MAX_MAC_LENGTH];
 
@@ -7244,6 +7272,7 @@ const ssl3BulkCipherDef *cipher_def;
 	    SSL_DBG(("%d: SSL3[%d]: HandleRecord, tried to get %d bytes",
 		     SSL_GETPID(), ss->fd, MAX_FRAGMENT_LENGTH + 2048));
 	    /* sslBuffer_Grow has set a memory error code. */
+	    /* Perhaps we should send an alert. (but we have no memory!) */
 	    return SECFailure;
 	}
     }
@@ -7269,11 +7298,11 @@ const ssl3BulkCipherDef *cipher_def;
 
     PRINT_BUF(80, (ss, "cleartext:", databuf->buf, databuf->len));
     if (rv != SECSuccess) {
+	int err = ssl_MapLowLevelError(SSL_ERROR_DECRYPTION_FAILURE);
 	ssl_ReleaseSpecReadLock(ss);
-	ssl_MapLowLevelError(SSL_ERROR_DECRYPTION_FAILURE);
-	if (isTLS)
-	    (void)SSL3_SendAlert(ss, alert_fatal, decryption_failed);
-	ssl_MapLowLevelError(SSL_ERROR_DECRYPTION_FAILURE);
+	SSL3_SendAlert(ss, alert_fatal,
+	               isTLS ? decryption_failed : bad_record_mac);
+	PORT_SetError(err);
 	return SECFailure;
     }
 
@@ -7281,49 +7310,45 @@ const ssl3BulkCipherDef *cipher_def;
     if (cipher_def->type == type_block) {
 	padding_length = *(databuf->buf + databuf->len - 1);
 	/* TLS permits padding to exceed the block size, up to 255 bytes. */
-	if (padding_length + crSpec->mac_size >= databuf->len)
-	    goto bad_pad;
+	if (padding_length + 1 + crSpec->mac_size > databuf->len)
+	    padIsBad = PR_TRUE;
 	/* if TLS, check value of first padding byte. */
-	if (padding_length && isTLS && padding_length != 
-		*(databuf->buf + databuf->len - 1 - padding_length))
-	    goto bad_pad;
-	databuf->len -= padding_length + 1;
-	if (databuf->len <= 0) {
-bad_pad:
-	    /* must not hold spec lock when calling SSL3_SendAlert. */
-	    ssl_ReleaseSpecReadLock(ss);
-	    /* SSL3 doesn't have an alert for bad padding, so use bad mac. */
-	    SSL3_SendAlert(ss, alert_fatal, 
-			   isTLS ? decryption_failed : bad_record_mac);
-	    PORT_SetError(SSL_ERROR_BAD_BLOCK_PADDING);
-	    return SECFailure;
-	}
+	else if (padding_length && isTLS && 
+	         padding_length != 
+	                 *(databuf->buf + databuf->len - (padding_length + 1)))
+	    padIsBad = PR_TRUE;
+	else
+	    databuf->len -= padding_length + 1;
     }
 
-    /* Check the MAC. */
-    if (databuf->len < crSpec->mac_size) {
-    	/* record is too short to have a valid mac. */
-	goto bad_mac;
-    }
-    databuf->len -= crSpec->mac_size;
+    /* Remove the MAC. */
+    if (databuf->len >= crSpec->mac_size)
+	databuf->len -= crSpec->mac_size;
+    else
+    	padIsBad = PR_TRUE;	/* really macIsBad */
+
+    /* compute the MAC */
     rType = cText->type;
     rv = ssl3_ComputeRecordMAC(
-    	crSpec, (ss->sec->isServer) ? crSpec->client.write_mac_context
+	crSpec, (ss->sec->isServer) ? crSpec->client.write_mac_context
 				    : crSpec->server.write_mac_context,
 	rType, cText->version, crSpec->read_seq_num, 
 	databuf->buf, databuf->len, hash, &hashBytes);
     if (rv != SECSuccess) {
+	int err = ssl_MapLowLevelError(SSL_ERROR_MAC_COMPUTATION_FAILURE);
 	ssl_ReleaseSpecReadLock(ss);
-	ssl_MapLowLevelError(SSL_ERROR_MAC_COMPUTATION_FAILURE);
+	SSL3_SendAlert(ss, alert_fatal, bad_record_mac);
+	PORT_SetError(err);
 	return rv;
     }
 
-    if (hashBytes != (unsigned)crSpec->mac_size ||
+    /* Check the MAC */
+    if (hashBytes != (unsigned)crSpec->mac_size || padIsBad || 
 	PORT_Memcmp(databuf->buf + databuf->len, hash, crSpec->mac_size) != 0) {
-bad_mac:
 	/* must not hold spec lock when calling SSL3_SendAlert. */
 	ssl_ReleaseSpecReadLock(ss);
 	SSL3_SendAlert(ss, alert_fatal, bad_record_mac);
+	/* always log mac error, in case attacker can read server logs. */
 	PORT_SetError(SSL_ERROR_BAD_MAC_READ);
 
 	SSL_DBG(("%d: SSL3[%d]: mac check failed", SSL_GETPID(), ss->fd));
