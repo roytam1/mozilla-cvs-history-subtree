@@ -277,7 +277,7 @@ ipcTransport::ProxyToMainThread(PLHandleEventProc proc)
         PLEvent *ev = new PLEvent();
         PL_InitEvent(ev, this, proc, Generic_EventCleanup);
         NS_ADDREF_THIS();
-        if (eq->PostEvent(ev) == PR_FAILURE) {
+        if (NS_FAILED(eq->PostEvent(ev))) {
             LOG(("  PostEvent failed"));
             NS_RELEASE_THIS();
             delete ev;
@@ -338,8 +338,4 @@ ipcTransport::OnConnectFailure()
     return NS_OK;
 }
 
-#if defined(XP_UNIX) || defined(XP_OS2)
-NS_IMPL_THREADSAFE_ISUPPORTS1(ipcTransport, nsISocketEventHandler)
-#else
 NS_IMPL_THREADSAFE_ISUPPORTS0(ipcTransport)
-#endif

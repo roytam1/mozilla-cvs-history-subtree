@@ -52,11 +52,11 @@ class ipcTransport;
 // ipcReceiver
 //-----------------------------------------------------------------------------
 
-class ipcReceiver : public nsIInputStreamNotify
+class ipcReceiver : public nsIInputStreamCallback
 {
 public:
     NS_DECL_ISUPPORTS
-    NS_DECL_NSIINPUTSTREAMNOTIFY
+    NS_DECL_NSIINPUTSTREAMCALLBACK
 
     ipcReceiver(ipcTransport *transport)
         : mTransport(transport)
