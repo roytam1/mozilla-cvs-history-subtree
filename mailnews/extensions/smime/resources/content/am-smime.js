@@ -31,11 +31,11 @@ var gSignMessages  = null;
 function onInit() 
 {
   // initialize all of our elements based on the current identity values....
-  gEncryptionCertName = document.getElementById("encryption.certificateName");
-  gEncryptIfPossible  =  document.getElementById("encryption.ifPossibleEncryptMessage");
-  gEncryptAlways      = document.getElementById("encryption.alwaysEncryptMessage");
-  gSignCertName       = document.getElementById("signing.certificateName");
-  gSignMessages       = document.getElementById("signing.signMessage");
+  gEncryptionCertName = document.getElementById("identity.encryption_cert_name");
+  gEncryptIfPossible  =  document.getElementById("identity.encrypt_mail_if_possible");
+  gEncryptAlways      = document.getElementById("identity.encrypt_mail_always");
+  gSignCertName       = document.getElementById("identity.signing_cert_name");
+  gSignMessages       = document.getElementById("identity.sign_mail");
 
   gEncryptionCertName.value = gIdentity.getUnicharAttribute("encryption_cert_name");
   gEncryptIfPossible.checked = gIdentity.getBoolAttribute("encrypt_mail_if_possible");
@@ -100,9 +100,9 @@ function smimeSelectCert(smime_cert)
   var x509cert = 0;
   var certUsage;
 
-  if (smime_cert == "encryption.certificateName") {
+  if (smime_cert == "identity.encryption_cert_name") {
     certUsage = 5;
-  } else if (smime_cert == "signing.certificateName") {
+  } else if (smime_cert == "identity.signing_cert_name") {
     certUsage = 4;
   }
 
@@ -123,7 +123,7 @@ function smimeSelectCert(smime_cert)
       certInfo.setAttribute("disabled", "false");
       certInfo.value = x509cert.nickname;
 
-      if (smime_cert == "encryption.certificateName") {
+      if (smime_cert == "identity.encryption_cert_name") {
         gEncryptAlways.removeAttribute("disabled");
       } else {
         gSignMessages.removeAttribute("disabled");
