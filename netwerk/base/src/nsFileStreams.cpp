@@ -365,6 +365,7 @@ nsFileInputStream::IsNonBlocking(PRBool *aNonBlocking)
 NS_IMETHODIMP
 nsFileInputStream::Seek(PRInt32 aWhence, PRInt32 aOffset)
 {
+    PR_FREEIF(mLineBuffer); // this invalidates the line buffer
     if (!mFD) {
         if (mBehaviorFlags & REOPEN_ON_REWIND) {
             nsresult rv = Reopen();
