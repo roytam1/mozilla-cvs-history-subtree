@@ -43,6 +43,8 @@
 #include "nsIPtr.h"
 #include "nsISizeOfHandler.h"
 #include "nsIFrameManager.h"
+#include "nsIAccessibilityService.h"
+#include "nsIAccessible.h"
 
 #include "nsIDOMText.h"
 #include "nsIDeviceContext.h"
@@ -792,6 +794,22 @@ nsFrame::HandleEvent(nsIPresContext* aPresContext,
     {
       if (NS_SUCCEEDED(rv))
         HandleRelease(aPresContext, aEvent, aEventStatus);
+    } break;
+  case NS_GETACCESSIBLE:
+    {
+      // get the accessible
+     // if(content) {
+         //nsCOMPtr<nsIDOMNode> node = do_QueryInterface(content);
+         nsresult rv = NS_OK;
+         NS_WITH_SERVICE(nsIAccessibilityService, accService, "@mozilla.org/accessibilityService;1", &rv);
+         if (accService) {
+           // get an accessible for the dom node
+           nsISupports* f = (nsISupports*)(nsIFrame*)this;
+           nsIAccessible* acc;
+           accService->CreateRootAccessible(aPresContext,mParent ? f : nsnull,&acc);
+           NS_STATIC_CAST(nsAccessibleEvent*, aEvent)->accessible = acc;
+         }
+      //}
     }
     break;
   default:
@@ -1994,6 +2012,27 @@ NS_IMETHODIMP nsFrame::SetView(nsIPresContext* aPresContext, nsIView* aView)
 
     // Set the frame state bit that says the frame has a view
     mState |= NS_FRAME_HAS_VIEW;
+
+     
+    // Let all of the containing frames know they have a child 
+    // with a view until a frame is hit that has the 
+    // NS_FRAME_HAS_CHILD_WITH_VIEW bit set already or a we
+    // reached the top of the frame tree.
+    PRBool isSet = PR_FALSE;
+    nsIFrame* parent = nsnull;
+    GetParent(&parent);
+    
+    while ((parent != nsnull) && (! isSet)) {
+      nsFrameState frameState;
+      parent->GetFrameState(&frameState);
+      isSet = ((frameState & NS_FRAME_HAS_CHILD_WITH_VIEW) == NS_FRAME_HAS_CHILD_WITH_VIEW
+);
+      if (! isSet) {
+        frameState |= NS_FRAME_HAS_CHILD_WITH_VIEW;
+        parent->SetFrameState(frameState);
+      }
+      parent->GetParent(&parent);
+    }
   }
 
   return NS_OK;
@@ -3259,7 +3298,7 @@ nsFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
     }break;
     case eSelectLine :
     {
-      nsCOMPtr<nsILineIteratorNavigator> it; 
+      nsCOMPtr<nsILineIteratorNavigator> iter; 
       nsIFrame *blockFrame = this;
       nsIFrame *thisBlock = this;
       PRInt32   thisLine;
@@ -3269,36 +3308,36 @@ nsFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
         result = blockFrame->GetParent(&blockFrame);
         if (NS_FAILED(result) || !blockFrame) //if at line 0 then nothing to do
           return result;
-        result = blockFrame->QueryInterface(NS_GET_IID(nsILineIteratorNavigator),getter_AddRefs(it));
+        result = blockFrame->QueryInterface(NS_GET_IID(nsILineIteratorNavigator),getter_AddRefs(iter));
         while (NS_FAILED(result) && blockFrame)
         {
           thisBlock = blockFrame;
           result = blockFrame->GetParent(&blockFrame);
           if (NS_SUCCEEDED(result) && blockFrame){
-            result = blockFrame->QueryInterface(NS_GET_IID(nsILineIteratorNavigator),getter_AddRefs(it));
+            result = blockFrame->QueryInterface(NS_GET_IID(nsILineIteratorNavigator),getter_AddRefs(iter));
           }
         }
         //this block is now one child down from blockframe
-        if (NS_FAILED(result) || !it || !blockFrame || !thisBlock)
+        if (NS_FAILED(result) || !iter || !blockFrame || !thisBlock)
         {
           return ((result) ? result : NS_ERROR_FAILURE);
         }
-        result = it->FindLineContaining(thisBlock, &thisLine);
+        result = iter->FindLineContaining(thisBlock, &thisLine);
         if (NS_FAILED(result) || thisLine <0)
           return result;
         int edgeCase = 0;//no edge case. this should look at thisLine
         PRBool doneLooping = PR_FALSE;//tells us when no more block frames hit.
         //this part will find a frame or a block frame. if its a block frame
         //it will "drill down" to find a viable frame or it will return an error.
+        nsIFrame *lastFrame = this;
         do {
-
           result = GetNextPrevLineFromeBlockFrame(aPresContext,
-                                        aPos, 
-                                        blockFrame, 
-                                        thisLine, 
-                                        edgeCase //start from thisLine
-                                        );
-          if (aPos->mResultFrame == this)//we came back to same spot! keep going
+                                                  aPos, 
+                                                  blockFrame, 
+                                                  thisLine, 
+                                                  edgeCase //start from thisLine
+            );
+          if (NS_SUCCEEDED(result) && (!aPos->mResultFrame || aPos->mResultFrame == lastFrame))//we came back to same spot! keep going
           {
             aPos->mResultFrame = nsnull;
             if (aPos->mDirection == eDirPrevious)
@@ -3306,12 +3345,17 @@ nsFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
             else
               thisLine++;
           }
-          else
+          else //if failure or success with different frame.
             doneLooping = PR_TRUE; //do not continue with while loop
-          if (NS_SUCCEEDED(result) && aPos->mResultFrame && blockFrame != aPos->mResultFrame)// make sure block element is not the same as the one we had before.
+
+          lastFrame = aPos->mResultFrame; //set last frame 
+
+          if (NS_SUCCEEDED(result) && aPos->mResultFrame 
+            && blockFrame != aPos->mResultFrame)// make sure block element is not the same as the one we had before
           {
-            result = aPos->mResultFrame->QueryInterface(NS_GET_IID(nsILineIteratorNavigator),getter_AddRefs(it));
-            if (NS_SUCCEEDED(result) && it)//we have struck another block element!
+            result = aPos->mResultFrame->QueryInterface(NS_GET_IID(nsILineIterator),
+                                                        getter_AddRefs(iter));
+            if (NS_SUCCEEDED(result) && iter)//we've struck another block element!
             {
               doneLooping = PR_FALSE;
               if (aPos->mDirection == eDirPrevious)
@@ -3324,10 +3368,12 @@ nsFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
 
             }
             else
+            {
               result = NS_OK;//THIS is to mean that everything is ok to the containing while loop
+              break;
+            }
           }
-        }while(!doneLooping);
-
+        } while (!doneLooping);
       }
       break;
     }

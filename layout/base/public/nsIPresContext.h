@@ -267,6 +267,12 @@ public:
   NS_IMETHOD GetDefaultBackgroundImageAttachment(PRUint8* aRepeat) = 0;
   NS_IMETHOD GetDefaultLinkColor(nscolor* aColor) = 0;
   NS_IMETHOD GetDefaultVisitedLinkColor(nscolor* aColor) = 0;
+  NS_IMETHOD GetFocusBackgroundColor(nscolor* aColor) = 0;
+  NS_IMETHOD GetFocusTextColor(nscolor* aColor) = 0; 
+  NS_IMETHOD GetUseFocusColors(PRBool& useFocusColors) = 0;
+  NS_IMETHOD GetFocusRingWidth(PRUint8 *focusRingWidth) = 0;
+  NS_IMETHOD GetFocusRingOnAnything(PRBool& focusRingOnAnything) = 0;
+ 
 
   NS_IMETHOD SetDefaultColor(nscolor aColor) = 0;
   NS_IMETHOD SetDefaultBackgroundColor(nscolor aColor) = 0;
@@ -343,14 +349,24 @@ public:
   NS_IMETHOD IsPaginated(PRBool* aResult) = 0;
 
   /**
-   * Return the page width if this is a paginated context.
+   * Gets the rect for the page Dimimensions, 
+   * this includes X,Y Offsets which are used to determine 
+   * the inclusion of margins
+   * Also, indicates whether the size has been overridden
+   *
+   * @param aActualRect returns the size of the actual device/surface
+   * @param aRect returns the adjusted size 
    */
-  NS_IMETHOD GetPageWidth(nscoord* aResult) = 0;
+  NS_IMETHOD GetPageDim(nsRect* aActualRect, nsRect* aAdjRect) = 0;
 
   /**
-   * Return the page height if this is a paginated context
+   * Sets the "adjusted" rect for the page Dimimensions, 
+   * this includes X,Y Offsets which are used to determine 
+   * the inclusion of margins
+   *
+   * @param aRect returns the adjusted size 
    */
-  NS_IMETHOD GetPageHeight(nscoord* aResult) = 0;
+  NS_IMETHOD SetPageDim(nsRect* aRect) = 0;
 
   NS_IMETHOD GetPixelsToTwips(float* aResult) const = 0;
 
@@ -432,12 +448,12 @@ public:
   /**
    * Set the Bidi options for the presentation context
    */  
-  NS_IMETHOD SetBidi(nsBidiOptions Source, PRBool aForceReflow = PR_FALSE) = 0;
+  NS_IMETHOD SetBidi(PRUint32 aBidiOptions, PRBool aForceReflow = PR_FALSE) = 0;
 
   /**
    * Get the Bidi options for the presentation context
    */  
-  NS_IMETHOD GetBidi(nsBidiOptions * Dist) = 0;
+  NS_IMETHOD GetBidi(PRUint32* aBidiOptions) = 0;
 //ahmed
 
   /**

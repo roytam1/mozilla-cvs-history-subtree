@@ -28,7 +28,7 @@ include $(DEPTH)/config/autoconf.mk
 
 MODULE		= layout
 LIBRARY_NAME	= gkhtmlbase_s
-REQUIRES	= xpcom string dom widget locale view necko js caps pref htmlparser webshell plugin timer docshell mimetype webbrwsr oji util uriloader unicharutil lwbrk
+REQUIRES	= xpcom string dom widget locale view necko js caps pref htmlparser webshell plugin timer docshell mimetype webbrwsr oji util uriloader unicharutil lwbrk gfx2 imglib2 accessibility
 
 CPPSRCS		= \
 		nsSelectsAreaFrame.cpp \
@@ -71,12 +71,24 @@ CPPSRCS		= \
 		nsGfxScrollFrame.cpp \
 		nsScrollPortFrame.cpp \
 		$(NULL)
+ifdef IBMBIDI
+CPPSRCS		+= \
+		nsBidiFrames.cpp \
+		$(NULL)
+endif
 
 EXPORTS		= \
 		nsIHTMLContent.h \
 		nsILineIterator.h \
 		nsHTMLParts.h \
 		$(NULL)
+
+ifdef IBMBIDI
+EXPORTS		+= \
+		nsTextTransformer.h \
+		nsBidiFrames.h      \
+		$(NULL)
+endif
 
 EXPORTS		:= $(addprefix $(srcdir)/, $(EXPORTS))
 

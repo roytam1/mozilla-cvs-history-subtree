@@ -234,7 +234,10 @@ nsImageBoxFrame::Init(nsIPresContext*  aPresContext,
     // check to see if the uri we are about to load is the same as the
     // one the image request came from.
     nsCOMPtr<nsIURI> requestURI;
-    mImageRequest->GetURI(getter_AddRefs(requestURI));
+    rv = mImageRequest->GetURI(getter_AddRefs(requestURI));
+    NS_ASSERTION(NS_SUCCEEDED(rv) && requestURI,"no request URI");
+    if (NS_FAILED(rv) || !requestURI) return NS_ERROR_UNEXPECTED;
+
     PRBool eq;
     requestURI->Equals(srcURI, &eq);
 
@@ -328,7 +331,10 @@ nsImageBoxFrame::UpdateImage(nsIPresContext*  aPresContext, PRBool& aResize)
 
   if (mImageRequest) {
     nsCOMPtr<nsIURI> requestURI;
-    mImageRequest->GetURI(getter_AddRefs(requestURI));
+    nsresult rv = mImageRequest->GetURI(getter_AddRefs(requestURI));
+    NS_ASSERTION(NS_SUCCEEDED(rv) && requestURI,"no request URI");
+    if (NS_FAILED(rv) || !requestURI) return;
+
     PRBool eq;
     requestURI->Equals(srcURI, &eq);
     // if the source uri and the current one are the same, return
@@ -426,11 +432,15 @@ nsImageBoxFrame::PaintImage(nsIPresContext* aPresContext,
     return NS_OK;
 
 #ifdef USE_IMG2
+  if (!mImageRequest) return NS_ERROR_UNEXPECTED;
+
   nsCOMPtr<imgIContainer> imgCon;
   mImageRequest->GetImage(getter_AddRefs(imgCon));
 
   if (imgCon) {
     nsPoint p(rect.x, rect.y);
+    rect.x = 0;
+    rect.y = 0;
     aRenderingContext.DrawImage(imgCon, &rect, &p);
   }
 
@@ -625,9 +635,12 @@ NS_IMETHODIMP nsImageBoxFrame::OnStartDecode(imgIRequest *request, nsIPresContex
 }
 
 NS_IMETHODIMP nsImageBoxFrame::OnStartContainer(imgIRequest *request, nsIPresContext *aPresContext, imgIContainer *image)
-{ 
-  nsCOMPtr<nsIPresShell> presShell;
-  aPresContext->GetShell(getter_AddRefs(presShell));
+{
+#ifdef DEBUG_pavlov
+  NS_ENSURE_ARG(image);
+#else
+  if (!image) return NS_ERROR_INVALID_ARG; 
+#endif  
 
   mHasImage = PR_TRUE;
   mSizeFrozen = PR_FALSE;
@@ -655,24 +668,8 @@ NS_IMETHODIMP nsImageBoxFrame::OnStartFrame(imgIRequest *request, nsIPresContext
 
 NS_IMETHODIMP nsImageBoxFrame::OnDataAvailable(imgIRequest *request, nsIPresContext *aPresContext, gfxIImageFrame *frame, const nsRect * rect)
 {
-  nsCOMPtr<nsIPresShell> presShell;
-  aPresContext->GetShell(getter_AddRefs(presShell));
-
   nsBoxLayoutState state(aPresContext);
   this->Redraw(state);
-
-#if 0
-
-  // XXX we need to make sure that the reflow from the OnContainerStart has been
-  // processed before we start calling invalidate
-
-  float p2t;
-  aPresContext->GetPixelsToTwips(&p2t);
-  nsRect r(*rect);
-  r *= p2t; // convert to twips
-
-  Invalidate(aPresContext, nsRect(r.x, r.y, r.width, r.height), PR_FALSE);
-#endif
 
   return NS_OK;
 }
@@ -695,9 +692,6 @@ NS_IMETHODIMP nsImageBoxFrame::OnStopDecode(imgIRequest *request, nsIPresContext
 
 NS_IMETHODIMP nsImageBoxFrame::FrameChanged(imgIContainer *container, nsIPresContext *aPresContext, gfxIImageFrame *newframe, nsRect * dirtyRect)
 {
-  nsCOMPtr<nsIPresShell> presShell;
-  aPresContext->GetShell(getter_AddRefs(presShell));
-
   nsBoxLayoutState state(aPresContext);
   this->Redraw(state);
 

@@ -46,6 +46,11 @@
 #include "nsCOMPtr.h"
 #include "nsIHTMLTableCellElement.h"
 #include "nsIDOMHTMLTableCellElement.h"
+#include "nsIMutableAccessible.h"
+#include "nsIAccessibilityService.h"
+#include "nsIServiceManager.h"
+#include "nsIDOMNode.h"
+
 
 //TABLECELL SELECTION
 #include "nsIFrameSelection.h"
@@ -91,6 +96,35 @@ nsTableCellFrame::Init(nsIPresContext*  aPresContext,
   }
 
   return rv;
+}
+
+nsresult 
+nsTableCellFrame::GetRowIndex(PRInt32 &aRowIndex) const
+{
+  nsresult result;
+  nsTableRowFrame * row;
+  GetParent((nsIFrame **)&row);
+  if (row) {
+    aRowIndex = row->GetRowIndex();
+    result = NS_OK;
+  }
+  else {
+    aRowIndex = 0;
+    result = NS_ERROR_NOT_INITIALIZED;
+  }
+  return result;
+}
+
+nsresult 
+nsTableCellFrame::GetColIndex(PRInt32 &aColIndex) const
+{  
+  if (mPrevInFlow) {
+    return ((nsTableCellFrame*)GetFirstInFlow())->GetColIndex(aColIndex);
+  }
+  else {
+    aColIndex = mColIndex;
+    return  NS_OK;
+  }
 }
 
 NS_IMETHODIMP
@@ -258,19 +292,14 @@ NS_METHOD nsTableCellFrame::Paint(nsIPresContext* aPresContext,
       GetStyleData(eStyleStruct_Table, ((const nsStyleStruct *&)cellTableStyle)); 
       nsRect  rect(0, 0, mRect.width, mRect.height);
 
-      // only non empty cells render their background
-      if (PR_FALSE == GetContentEmpty()) {
+
+      // bug #8113
+      // as of the CSS2-errata http://www.w3.org/Style/css2-updates/REC-CSS2-19980512-errata.html
+      // always draw the background and border except when the cell is empty and 'empty-cells: hide' is set
+      if ( !(GetContentEmpty() && NS_STYLE_TABLE_EMPTY_CELLS_HIDE == cellTableStyle->mEmptyCells) ) {
         nsCSSRendering::PaintBackground(aPresContext, aRenderingContext, this,
                                         aDirtyRect, rect, *myColor, *myBorder, 0, 0);
-      }
-    
-      // empty cells do not render their border
-      PRBool renderBorder = PR_TRUE;
-      if (GetContentEmpty()) {
-        if (NS_STYLE_TABLE_EMPTY_CELLS_HIDE == cellTableStyle->mEmptyCells)
-          renderBorder=PR_FALSE;
-      }
-      if (renderBorder) {
+
         PRIntn skipSides = GetSkipSides();
         nsTableFrame* tableFrame = nsnull;  // I should be checking my own style context, but border-collapse isn't inheriting correctly
         nsresult rv = nsTableFrame::GetTableFrame(this, tableFrame);
@@ -417,6 +446,7 @@ PRBool nsTableCellFrame::ParentDisablesSelection() const //override default beha
 
 
 // Align the cell's child frame within the cell
+
 void nsTableCellFrame::VerticallyAlignChild(nsIPresContext*          aPresContext,
                                             const nsHTMLReflowState& aReflowState,
                                             nscoord                  aMaxAscent)
@@ -1038,9 +1068,24 @@ nsresult nsTableCellFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr
   if (NULL == aInstancePtr) {
     return NS_ERROR_NULL_POINTER;
   }
+
   if (aIID.Equals(NS_GET_IID(nsITableCellLayout))) {
     *aInstancePtr = (void*) (nsITableCellLayout *)this;
     return NS_OK;
+  } else if (aIID.Equals(NS_GET_IID(nsIAccessible))) {
+    nsresult rv = NS_OK;
+    NS_WITH_SERVICE(nsIAccessibilityService, accService, "@mozilla.org/accessibilityService;1", &rv);
+    if (accService) {
+     nsCOMPtr<nsIDOMNode> node = do_QueryInterface(mContent);
+     nsIMutableAccessible* acc = nsnull;
+     accService->CreateMutableAccessible(node,&acc);
+     nsAutoString name;
+     acc->SetName(NS_LITERAL_STRING("Cell").get());
+     acc->SetRole(NS_LITERAL_STRING("cell").get());
+     *aInstancePtr = acc;
+     return NS_OK;
+    }
+    return NS_ERROR_FAILURE;
   } else {
     return nsHTMLContainerFrame::QueryInterface(aIID, aInstancePtr);
   }
@@ -1126,7 +1171,6 @@ NS_NewTableCellFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 
 
 /* ----- methods from CellLayoutData ----- */
-
 
 void 
 nsTableCellFrame::GetCellBorder(nsMargin&     aBorder, 

@@ -22,6 +22,7 @@
 #include "nsCOMPtr.h"
 #include "nsLayoutModule.h"
 #include "nsIComponentManager.h"
+#include "nsICategoryManager.h"
 #include "nsIDocumentLoader.h"
 #include "nsIDocumentLoaderFactory.h"
 #include "nsIDocument.h"
@@ -47,6 +48,8 @@ static NS_DEFINE_CID(kCSSLoaderCID, NS_CSS_LOADER_CID);
 
 // URL for the "user agent" style sheet
 #define UA_CSS_URL "resource:/res/ua.css"
+// URL for the "view source" style sheet
+#define VIEW_SOURCE_CSS_URL "resource:/res/viewsource.css"
 
 // Factory code for creating variations on html documents
 
@@ -63,12 +66,14 @@ static char* gHTMLTypes[] = {
   "text/rtf",
   "text/cpp",
   "text/css",
+  "text/html; x-view-type=view-source",
   0
 };
   
 static char* gXMLTypes[] = {
   "text/xml",
   "application/xml",
+  "text/xml; x-view-type=view-source",
   0
 };
 
@@ -179,38 +184,8 @@ nsLayoutDLF::~nsLayoutDLF()
 {
 }
 
-NS_IMPL_ADDREF(nsLayoutDLF)
-NS_IMPL_RELEASE(nsLayoutDLF)
-
-NS_IMETHODIMP
-nsLayoutDLF::QueryInterface(REFNSIID aIID, void** aInstancePtrResult)
-{
-  if (NULL == aInstancePtrResult) {
-    return NS_ERROR_NULL_POINTER;
-  }
-
-  static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
-  if (aIID.Equals(NS_GET_IID(nsIDocumentLoaderFactory))) {
-    nsIDocumentLoaderFactory *tmp = this;
-    *aInstancePtrResult = (void*) tmp;
-    AddRef();
-    return NS_OK;
-  }
-  if (aIID.Equals(NS_GET_IID(nsIDocStreamLoaderFactory))) {
-    nsIDocStreamLoaderFactory *tmp = this;
-    *aInstancePtrResult = (void*) tmp;
-    AddRef();
-    return NS_OK;
-  }
-  if (aIID.Equals(kISupportsIID)) {
-    nsIDocumentLoaderFactory *tmp = this;
-    nsISupports *tmp2 = tmp;
-    *aInstancePtrResult = (void*) tmp2;
-    AddRef();
-    return NS_OK;
-  }
-  return NS_NOINTERFACE;
-}
+NS_IMPL_ISUPPORTS2(nsLayoutDLF, nsIDocumentLoaderFactory,
+                                nsIDocStreamLoaderFactory);
 
 NS_IMETHODIMP
 nsLayoutDLF::CreateInstance(const char *aCommand,
@@ -225,14 +200,28 @@ nsLayoutDLF::CreateInstance(const char *aCommand,
   nsresult rv = NS_OK;
   if (!GetUAStyleSheet()) {
     // Load the UA style sheet
-    nsCOMPtr<nsIURI> uaURL;
-    rv = NS_NewURI(getter_AddRefs(uaURL), UA_CSS_URL);
+    nsCOMPtr<nsIURI> uri;
+    rv = NS_NewURI(getter_AddRefs(uri), UA_CSS_URL);
     if (NS_SUCCEEDED(rv)) {
       nsCOMPtr<nsICSSLoader> cssLoader(do_CreateInstance(kCSSLoaderCID,&rv));
       if (cssLoader) {
         PRBool complete;
-        rv = cssLoader->LoadAgentSheet(uaURL, nsLayoutModule::gUAStyleSheet, complete,
-                                       nsnull);
+        rv = cssLoader->LoadAgentSheet(uri, nsLayoutModule::gUAStyleSheet,
+                                       complete, nsnull);
+        if (NS_SUCCEEDED(rv)) {
+          // also cache the view source stylesheet
+          if (NS_SUCCEEDED(NS_NewURI(getter_AddRefs(uri), VIEW_SOURCE_CSS_URL))) {
+            PRBool bHasSheet = PR_FALSE;
+            nsLayoutModule::gUAStyleSheet->
+                            ContainsStyleSheet(uri,
+                                               bHasSheet,
+                                               &nsLayoutModule::gViewSourceStyleSheet);
+            // assert if we found a stylesheet but it's nsnull -- should not happen
+            NS_ASSERTION(!bHasSheet || nsLayoutModule::gViewSourceStyleSheet,
+                         "gViewSourceStyleSheet must be set: ContainsStyleSheet is hosed");
+              
+          }
+        }
       }
     }
     if (NS_FAILED(rv)) {
@@ -243,8 +232,40 @@ nsLayoutDLF::CreateInstance(const char *aCommand,
     }
   }
 
+  // Check aContentType to see if it's a view-source type
+  //
+  // If it's a "view-source:", aContentType will be of the form
+  //
+  //    <orig_type>; x-view-type=view-source
+  //
+  //  where <orig_type> can be text/html, text/xml etc.
+  //
+
+  nsCAutoString strContentType; strContentType.Append(aContentType);
+  PRInt32 idx = strContentType.Find("; x-view-type=view-source", PR_TRUE, 0, -1);
+  if(idx != -1)
+  { // Found "; x-view-type=view-source" param in content type. 
+
+      // Set aCommand to view-source
+
+      aCommand = "view-source";
+
+     // Null terminate at the ";" in "text/html; x-view-type=view-source"
+     // The idea is to end up with the original content type i.e. without 
+     // the x-view-type param was added to it.
+
+     strContentType.SetCharAt('\0', idx);
+
+     aContentType = strContentType.get(); //This will point to the "original" mime type
+  }
+
   if(0==PL_strcmp(aCommand,"view-source")) {
 #ifdef VIEW_SOURCE_HTML
+    NS_ENSURE_ARG(aChannel);
+    // It's a view-source. Reset channel's content type to the original 
+    // type so as not to choke the parser when it asks the channel 
+    // for the content type during the parse phase
+    aChannel->SetContentType(aContentType);
     aContentType=gHTMLTypes[0];    
 #else
     if(0==PL_strcmp(aContentType,gHTMLTypes[1])) {
@@ -256,6 +277,20 @@ nsLayoutDLF::CreateInstance(const char *aCommand,
     else 
       aContentType=gXMLTypes[0];
 #endif
+
+    if (nsLayoutModule::gViewSourceStyleSheet) {
+#ifdef DEBUG
+      printf( "Enabling View Source StyleSheet\n");
+#endif
+      nsLayoutModule::gViewSourceStyleSheet->SetEnabled(PR_TRUE);
+    }
+  } else {
+    if (nsLayoutModule::gViewSourceStyleSheet) {
+#ifdef DEBUG
+      printf( "Disabling View Source StyleSheet\n");
+#endif
+      nsLayoutModule::gViewSourceStyleSheet->SetEnabled(PR_FALSE);
+    }
   }
 
   // Try html
@@ -516,6 +551,7 @@ static NS_DEFINE_IID(kDocumentFactoryImplCID, NS_LAYOUT_DOCUMENT_LOADER_FACTORY_
 
 static nsresult
 RegisterTypes(nsIComponentManager* aCompMgr,
+              nsICategoryManager* aCatMgr,
               const char* aCommand,
               nsIFile* aPath,
               char** aTypes)
@@ -532,9 +568,16 @@ RegisterTypes(nsIComponentManager* aCompMgr,
 #endif
     rv = aCompMgr->RegisterComponentSpec(kDocumentFactoryImplCID, "Layout",
                                          contractid, aPath, PR_TRUE, PR_TRUE);
-    if (NS_FAILED(rv)) {
-      break;
-    }
+    if (NS_FAILED(rv)) break;
+
+    // add the MIME types layotu can handle to the handlers category.
+    // this allows users of layout's viewers (the docshell for example)
+    // to query the types of viewers layout can create.
+    nsXPIDLCString previous;
+    rv = aCatMgr->AddCategoryEntry("Gecko-Content-Viewers", contentType,
+			                    contractid,
+                                PR_TRUE, PR_TRUE, getter_Copies(previous));
+    if (NS_FAILED(rv)) break;
   }
   return rv;
 }
@@ -545,26 +588,29 @@ nsLayoutModule::RegisterDocumentFactories(nsIComponentManager* aCompMgr,
 {
   nsresult rv;
 
+  nsCOMPtr<nsICategoryManager> catmgr(do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv));
+  if (NS_FAILED(rv)) return rv;
+
   do {
-    rv = RegisterTypes(aCompMgr, "view", aPath, gHTMLTypes);
+    rv = RegisterTypes(aCompMgr, catmgr, "view", aPath, gHTMLTypes);
     if (NS_FAILED(rv))
       break;
-    rv = RegisterTypes(aCompMgr, "view-source", aPath, gHTMLTypes);
+    rv = RegisterTypes(aCompMgr, catmgr, "view-source", aPath, gHTMLTypes);
     if (NS_FAILED(rv))
       break;
-    rv = RegisterTypes(aCompMgr, "view", aPath, gXMLTypes);
+    rv = RegisterTypes(aCompMgr, catmgr, "view", aPath, gXMLTypes);
     if (NS_FAILED(rv))
       break;
-    rv = RegisterTypes(aCompMgr, "view-source", aPath, gXMLTypes);
+    rv = RegisterTypes(aCompMgr, catmgr, "view-source", aPath, gXMLTypes);
     if (NS_FAILED(rv))
       break;
-    rv = RegisterTypes(aCompMgr, "view", aPath, gImageTypes);
+    rv = RegisterTypes(aCompMgr, catmgr, "view", aPath, gImageTypes);
     if (NS_FAILED(rv))
       break;
-    rv = RegisterTypes(aCompMgr, "view", aPath, gRDFTypes);
+    rv = RegisterTypes(aCompMgr, catmgr, "view", aPath, gRDFTypes);
     if (NS_FAILED(rv))
       break;
-    rv = RegisterTypes(aCompMgr, "view-source", aPath, gRDFTypes);
+    rv = RegisterTypes(aCompMgr, catmgr, "view-source", aPath, gRDFTypes);
     if (NS_FAILED(rv))
       break;
   } while (PR_FALSE);

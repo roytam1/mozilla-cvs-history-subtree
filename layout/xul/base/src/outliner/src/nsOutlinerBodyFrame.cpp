@@ -58,6 +58,7 @@
 #include "nsBoxObject.h"
 #include "nsIURL.h"
 #include "nsNetUtil.h"
+#include "nsBoxLayoutState.h"
 
 #ifdef USE_IMG2
 #include "imgIRequest.h"
@@ -86,7 +87,8 @@ nsOutlinerStyleCache::GetStyleContext(nsICSSPseudoComparator* aComparator,
   // Go ahead and init the transition table.
   if (!mTransitionTable) {
     // Automatic miss. Build the table
-    mTransitionTable = new nsHashtable;
+    mTransitionTable =
+      new nsObjectHashtable(nsnull, nsnull, DeleteDFAState, nsnull);
   }
 
   // The first transition is always made off the supplied pseudo-element.
@@ -131,6 +133,16 @@ nsOutlinerStyleCache::GetStyleContext(nsICSSPseudoComparator* aComparator,
   }
 
   return NS_OK;
+}
+
+/* static */ PRBool PR_CALLBACK
+nsOutlinerStyleCache::DeleteDFAState(nsHashKey *aKey,
+                                     void *aData,
+                                     void *closure)
+{
+  nsDFAState* entry = NS_STATIC_CAST(nsDFAState*, aData);
+  delete entry;
+  return PR_TRUE;
 }
 
 // Column class that caches all the info about our column.
@@ -215,8 +227,8 @@ NS_NewOutlinerBodyFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 
 // Constructor
 nsOutlinerBodyFrame::nsOutlinerBodyFrame(nsIPresShell* aPresShell)
-:nsLeafBoxFrame(aPresShell), mPresContext(nsnull), mImageCache(nsnull), mOutlinerBoxObject(nsnull), mFocused(PR_FALSE),
- mTopRowIndex(0), mRowHeight(0), mIndentation(0), mColumns(nsnull), mScrollbar(nsnull)
+:nsLeafBoxFrame(aPresShell), mPresContext(nsnull), mOutlinerBoxObject(nsnull), mFocused(PR_FALSE), mImageCache(nsnull),
+ mColumns(nsnull), mScrollbar(nsnull), mTopRowIndex(0), mRowHeight(0), mIndentation(0)
 {
   NS_NewISupportsArray(getter_AddRefs(mScratchArray));
 }
@@ -274,20 +286,6 @@ static NS_DEFINE_IID(kWidgetCID, NS_CHILD_CID);
 
   ourView->CreateWidget(kWidgetCID);
   ourView->GetWidget(*getter_AddRefs(mOutlinerWidget));
-
-  // See if there is a XUL outliner builder associated with the
-  // element. If so, try to make *it* be the view.
-  nsCOMPtr<nsIDOMXULElement> xulele = do_QueryInterface(aContent);
-  if (xulele) {
-    nsCOMPtr<nsIXULTemplateBuilder> builder;
-    xulele->GetBuilder(getter_AddRefs(builder));
-    if (builder) {
-      nsCOMPtr<nsIOutlinerView> view = do_QueryInterface(builder);
-      if (view)
-        SetView(view);
-    }
-  }
-
   return rv;
 }
 
@@ -297,10 +295,31 @@ nsOutlinerBodyFrame::Destroy(nsIPresContext* aPresContext)
   // Delete our column structures.
   delete mColumns;
   mColumns = nsnull;
-
+  
   // Drop our ref to the view.
   if (mView)
     mView->SetOutliner(nsnull);
+
+  // Save off our info into the box object.
+  if (mOutlinerBoxObject) {
+    nsCOMPtr<nsIBoxObject> box(do_QueryInterface(mOutlinerBoxObject));
+    nsAutoString view; view.AssignWithConversion("view");
+    box->SetPropertyAsSupports(view.GetUnicode(), mView);
+
+    if (mTopRowIndex > 0) {
+      nsAutoString topRowStr; topRowStr.AssignWithConversion("topRow");
+      nsAutoString topRow;
+      topRow.AppendInt(mTopRowIndex);
+      box->SetProperty(topRowStr.GetUnicode(), topRow.GetUnicode());
+    }
+
+    // Always null out the cached outliner body frame.
+    nsAutoString outlinerBody; outlinerBody.AssignWithConversion("outlinerbody");
+    box->RemoveProperty(outlinerBody.GetUnicode());
+
+    mOutlinerBoxObject = nsnull; // Drop our ref here.
+  }
+
   mView = nsnull;
 
   return nsLeafBoxFrame::Destroy(aPresContext);
@@ -311,7 +330,63 @@ NS_IMETHODIMP nsOutlinerBodyFrame::Reflow(nsIPresContext* aPresContext,
                                           const nsHTMLReflowState& aReflowState,
                                           nsReflowStatus& aStatus)
 {
-  if ( mView && mRowHeight && aReflowState.reason == eReflowReason_Resize) {
+  if (aReflowState.reason == eReflowReason_Initial) {
+    // We might have a box object with some properties already cached.  If so,
+    // pull them out of the box object and restore them here.
+    mRowHeight = GetRowHeight();
+    nsCOMPtr<nsIContent> parent;
+    mContent->GetParent(*getter_AddRefs(parent));
+    nsCOMPtr<nsIDOMXULElement> parentXUL(do_QueryInterface(parent));
+    if (parentXUL) {
+      nsCOMPtr<nsIBoxObject> box;
+      parentXUL->GetBoxObject(getter_AddRefs(box));
+      if (box) {
+        nsCOMPtr<nsIOutlinerBoxObject> outlinerBox(do_QueryInterface(box));
+        SetBoxObject(outlinerBox);
+
+        nsAutoString view; view.AssignWithConversion("view");
+        nsCOMPtr<nsISupports> suppView;
+        box->GetPropertyAsSupports(view.GetUnicode(), getter_AddRefs(suppView));
+        nsCOMPtr<nsIOutlinerView> outlinerView(do_QueryInterface(suppView));
+
+        if (outlinerView) {
+          nsAutoString topRow; topRow.AssignWithConversion("topRow");
+          nsXPIDLString rowStr;
+          box->GetProperty(topRow.GetUnicode(), getter_Copies(rowStr));
+          nsAutoString rowStr2(rowStr);
+          PRInt32 error;
+          PRInt32 rowIndex = rowStr2.ToInteger(&error);
+      
+          // Set our view.
+          SetView(outlinerView);
+
+          // Scroll to the given row.
+          ScrollToRow(rowIndex);
+
+          // Clear out the property info.
+          box->RemoveProperty(view.GetUnicode());
+          box->RemoveProperty(topRow.GetUnicode());
+
+          return nsLeafBoxFrame::Reflow(aPresContext, aReflowMetrics, aReflowState, aStatus);
+        }
+      }
+    }
+
+    // See if there is a XUL outliner builder associated with the
+    // element. If so, try to make *it* be the view.
+    nsCOMPtr<nsIDOMXULElement> xulele = do_QueryInterface(mContent);
+    if (xulele) {
+      nsCOMPtr<nsIXULTemplateBuilder> builder;
+      xulele->GetBuilder(getter_AddRefs(builder));
+      if (builder) {
+        nsCOMPtr<nsIOutlinerView> view = do_QueryInterface(builder);
+        if (view)
+          SetView(view);
+      }
+    }
+  }
+
+  if (mView && mRowHeight && aReflowState.reason == eReflowReason_Resize) {
     mInnerBox = GetInnerBox();
     mPageCount = mInnerBox.height / mRowHeight;
 
@@ -324,9 +399,7 @@ NS_IMETHODIMP nsOutlinerBodyFrame::Reflow(nsIPresContext* aPresContext,
     InvalidateScrollbar();
   }
 
-//  nsLeafBoxFrame::Reflow(aPresContext, aReflowMetrics, aReflowState, aStatus);
-
-  return NS_OK;
+  return nsLeafBoxFrame::Reflow(aPresContext, aReflowMetrics, aReflowState, aStatus);
 }
 
 static void 
@@ -352,6 +425,11 @@ NS_IMETHODIMP nsOutlinerBodyFrame::SetView(nsIOutlinerView * aView)
   if (mView) {
     mView->SetOutliner(nsnull);
     mView = nsnull;
+
+    // Only reset the top row index and delete the columns if we had an old non-null view.
+    mTopRowIndex = 0;
+    delete mColumns;
+    mColumns = nsnull;
   }
 
   // Outliner, meet the view.
@@ -359,26 +437,20 @@ NS_IMETHODIMP nsOutlinerBodyFrame::SetView(nsIOutlinerView * aView)
  
   // Changing the view causes us to refetch our data.  This will
   // necessarily entail a full invalidation of the outliner.
-  mTopRowIndex = 0;
-  delete mColumns;
-  mColumns = nsnull;
   Invalidate();
  
   if (mView) {
     // View, meet the outliner.
-#if 1 // XXX Waaah! HYATT, SPANK ME!
-    nsCOMPtr<nsIXULTemplateBuilder> builder = do_QueryInterface(mView);
-    if (builder)
-      mView->SetOutliner(this);
-    else
-#endif
     mView->SetOutliner(mOutlinerBoxObject);
     
-    // Give the view a new empty selection object to play with.
+    // Give the view a new empty selection object to play with, but only if it
+    // doesn't have one already.
     nsCOMPtr<nsIOutlinerSelection> sel;
-    NS_NewOutlinerSelection(this, getter_AddRefs(sel));
-
-    mView->SetSelection(sel);
+    mView->GetSelection(getter_AddRefs(sel));
+    if (!sel) {
+      NS_NewOutlinerSelection(this, getter_AddRefs(sel));
+      mView->SetSelection(sel);
+    }
 
     // The scrollbar will need to be updated.
     InvalidateScrollbar();
@@ -697,7 +769,7 @@ nsOutlinerBodyFrame::GetItemWithinCellAt(PRInt32 aX, const nsRect& aCellRect,
     // We will treat a click as hitting the twisty if it happens on the margins, borders, padding,
     // or content of the twisty object.  By allowing a "slop" into the margin, we make it a little
     // bit easier for a user to hit the twisty.  (We don't want to be too picky here.)
-    nsRect imageSize = GetImageSize(twistyContext);
+    nsRect imageSize = GetImageSize(aRowIndex, aColumn->GetID(), twistyContext);
     const nsStyleMargin* twistyMarginData = (const nsStyleMargin*)twistyContext->GetStyleData(eStyleStruct_Margin);
     nsMargin twistyMargin;
     twistyMarginData->GetMargin(twistyMargin);
@@ -730,7 +802,7 @@ nsOutlinerBodyFrame::GetItemWithinCellAt(PRInt32 aX, const nsRect& aCellRect,
   nsCOMPtr<nsIStyleContext> imageContext;
   GetPseudoStyleContext(nsXULAtoms::mozoutlinerimage, getter_AddRefs(imageContext));
 
-  nsRect iconSize = GetImageSize(imageContext);
+  nsRect iconSize = GetImageSize(aRowIndex, aColumn->GetID(), imageContext);
   const nsStyleMargin* imageMarginData = (const nsStyleMargin*)imageContext->GetStyleData(eStyleStruct_Margin);
   nsMargin imageMargin;
   imageMarginData->GetMargin(imageMargin);
@@ -827,17 +899,22 @@ nsOutlinerBodyFrame::PrefillPropertyArray(PRInt32 aRowIndex, nsOutlinerColumn* a
     if (aRowIndex == currentIndex)
       mScratchArray->AppendElement(nsXULAtoms::current);
 
-    // container
+    // container or leaf
     PRBool isContainer = PR_FALSE;
     mView->IsContainer(aRowIndex, &isContainer);
     if (isContainer) {
       mScratchArray->AppendElement(nsXULAtoms::container);
 
-      // open
+      // open or closed
       PRBool isOpen = PR_FALSE;
       mView->IsContainerOpen(aRowIndex, &isOpen);
       if (isOpen)
         mScratchArray->AppendElement(nsXULAtoms::open);
+      else
+        mScratchArray->AppendElement(nsXULAtoms::closed);
+    }
+    else {
+      mScratchArray->AppendElement(nsXULAtoms::leaf);
     }
   }
 
@@ -921,7 +998,8 @@ nsOutlinerBodyFrame::GetImage(PRInt32 aRowIndex, const PRUnichar* aColID,
 }
 #endif
 
-nsRect nsOutlinerBodyFrame::GetImageSize(nsIStyleContext* aStyleContext)
+nsRect nsOutlinerBodyFrame::GetImageSize(PRInt32 aRowIndex, const PRUnichar* aColID, 
+                                         nsIStyleContext* aStyleContext)
 {
   // XXX We should respond to visibility rules for collapsed vs. hidden.
 
@@ -959,35 +1037,24 @@ nsRect nsOutlinerBodyFrame::GetImageSize(nsIStyleContext* aStyleContext)
 
   if (needWidth || needHeight) {
 #ifdef USE_IMG2
+    nsCOMPtr<imgIContainer> image;
+    GetImage(aRowIndex, aColID, aStyleContext, getter_AddRefs(image));
     // Get the natural image size.
-    if (mImageCache) {
-      nsISupportsKey key(aStyleContext);
-      nsCOMPtr<imgIRequest> imgReq = getter_AddRefs(NS_STATIC_CAST(imgIRequest*, mImageCache->Get(&key)));
-      if (imgReq) {
-        PRUint32 status;
-        imgReq->GetImageStatus(&status);
-        if (status & imgIRequest::STATUS_SIZE_AVAILABLE) {
-          // Use the size we find here.
-          nsCOMPtr<imgIContainer> image;
-          imgReq->GetImage(getter_AddRefs(image));
-          if (image) {
-            float p2t;
-            mPresContext->GetPixelsToTwips(&p2t);
+    if (image) {
+      float p2t;
+      mPresContext->GetPixelsToTwips(&p2t);
 
-            if (needWidth) {
-              // Get the size from the image.
-              nscoord width;
-              image->GetWidth(&width);
-              r.width += NSIntPixelsToTwips(width, p2t); 
-            }
-            
-            if (needHeight) {
-              nscoord height;
-              image->GetHeight(&height);
-              r.height += NSIntPixelsToTwips(height, p2t); 
-            }
-          }
-        }
+      if (needWidth) {
+        // Get the size from the image.
+        nscoord width;
+        image->GetWidth(&width);
+        r.width += NSIntPixelsToTwips(width, p2t); 
+      }
+    
+      if (needHeight) {
+        nscoord height;
+        image->GetHeight(&height);
+        r.height += NSIntPixelsToTwips(height, p2t); 
       }
     }
 #endif
@@ -1063,6 +1130,10 @@ NS_IMETHODIMP nsOutlinerBodyFrame::Paint(nsIPresContext*      aPresContext,
   if (aDirtyRect.width == 1)
     return NS_OK;
 
+  if (aWhichLayer != NS_FRAME_PAINT_LAYER_BACKGROUND &&
+      aWhichLayer != NS_FRAME_PAINT_LAYER_FOREGROUND)
+    return NS_OK;
+
   const nsStyleDisplay* disp = (const nsStyleDisplay*)
       mStyleContext->GetStyleData(eStyleStruct_Display);
   if (!disp->IsVisibleOrCollapsed())
@@ -1085,8 +1156,11 @@ NS_IMETHODIMP nsOutlinerBodyFrame::Paint(nsIPresContext*      aPresContext,
   mInnerBox = GetInnerBox();
   mPageCount = mInnerBox.height/mRowHeight;
 
-  if (mRowHeight != oldRowHeight || oldPageCount != mPageCount)
-    InvalidateScrollbar();
+  if (mRowHeight != oldRowHeight || oldPageCount != mPageCount) {
+    // Schedule a ResizeReflow that will update our page count properly.
+    nsBoxLayoutState state(mPresContext);
+    MarkDirty(state);
+  }
 
   PRInt32 rowCount = 0;
   mView->GetRowCount(&rowCount);
@@ -1149,7 +1223,7 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintColumn(nsOutlinerColumn*    aColumn,
     return NS_OK; // Don't paint hidden columns.
 
   // Now obtain the properties for our cell.
-  // XXX Automatically fill in the following props: open, container, selected, focused, and the col ID.
+  // XXX Automatically fill in the following props: open, closed, container, leaf, selected, focused, and the col ID.
   PrefillPropertyArray(-1, aColumn);
   nsCOMPtr<nsIDOMElement> elt(do_QueryInterface(aColumn->GetElement()));
   mView->GetColumnProperties(aColumn->GetID(), elt, mScratchArray);
@@ -1186,7 +1260,7 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintRow(int aRowIndex, const nsRect& aRowRec
     return NS_OK;
 
   // Now obtain the properties for our row.
-  // XXX Automatically fill in the following props: open, container, selected, focused
+  // XXX Automatically fill in the following props: open, closed, container, leaf, selected, focused
   PrefillPropertyArray(aRowIndex, nsnull);
   mView->GetRowProperties(aRowIndex, mScratchArray);
 
@@ -1241,7 +1315,7 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintCell(int                  aRowIndex,
     return NS_OK; // Don't paint cells in hidden columns.
 
   // Now obtain the properties for our cell.
-  // XXX Automatically fill in the following props: open, container, selected, focused, and the col ID.
+  // XXX Automatically fill in the following props: open, closed, container, leaf, selected, focused, and the col ID.
   PrefillPropertyArray(aRowIndex, aColumn);
   mView->GetCellProperties(aRowIndex, aColumn->GetID(), mScratchArray);
 
@@ -1396,7 +1470,7 @@ nsOutlinerBodyFrame::PaintTwisty(int                  aRowIndex,
   // determine the twisty rect's true width.  This is done by examining the style context for
   // a width first.  If it has one, we use that.  If it doesn't, we use the image's natural width.
   // If the image hasn't loaded and if no width is specified, then we just bail.
-  nsRect imageSize = GetImageSize(twistyContext);
+  nsRect imageSize = GetImageSize(aRowIndex, aColumn->GetID(), twistyContext);
   twistyRect.width = imageSize.width;
 
   // Subtract out the remaining width.  This is done even when we don't actually paint a twisty in 
@@ -1469,7 +1543,7 @@ nsOutlinerBodyFrame::PaintImage(int                  aRowIndex,
   // examining the style context for a width first.  If it has one, we use that.  If it doesn't, 
   // we use the image's natural width.
   // If the image hasn't loaded and if no width is specified, then we just bail.
-  nsRect imageSize = GetImageSize(imageContext);
+  nsRect imageSize = GetImageSize(aRowIndex, aColumn->GetID(), imageContext);
   if (!aColumn->IsCycler())
    imageRect.width = imageSize.width;
 
@@ -1669,8 +1743,6 @@ nsOutlinerBodyFrame::PaintBackgroundLayer(nsIStyleContext* aStyleContext, nsIPre
                                           const nsRect& aRect, const nsRect& aDirtyRect)
 {
 
-  const nsStyleDisplay* disp = (const nsStyleDisplay*)
-      aStyleContext->GetStyleData(eStyleStruct_Display);
   const nsStyleColor* myColor = (const nsStyleColor*)
       aStyleContext->GetStyleData(eStyleStruct_Color);
   const nsStyleBorder* myBorder = (const nsStyleBorder*)
@@ -1962,9 +2034,6 @@ NS_IMETHODIMP nsOutlinerImageListener::OnStopFrame(imgIRequest *aRequest, nsISup
 
 NS_IMETHODIMP nsOutlinerImageListener::OnStopContainer(imgIRequest *aRequest, nsISupports *aContext, imgIContainer *aImage)
 {
-  // XXX This invalidate can go away once libpr0n starts properly firing an onDataAvailable
-  // to me for cached images.
-  Invalidate();
   return NS_OK;
 }
 

@@ -32,6 +32,10 @@
 #include "nsCSSRendering.h"
 #include "nsIPresState.h"
 #include "nsINameSpaceManager.h"
+#include "nsIMutableAccessible.h"
+#include "nsIAccessibilityService.h"
+#include "nsIServiceManager.h"
+#include "nsIDOMNode.h"
 
 
 nsresult
@@ -77,7 +81,20 @@ nsGfxRadioControlFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
     *aInstancePtr = (void*) ((nsIStatefulFrame*) this);
     return NS_OK;
   }
- 
+  
+  if (aIID.Equals(NS_GET_IID(nsIAccessible))) {
+    nsresult rv = NS_OK;
+    NS_WITH_SERVICE(nsIAccessibilityService, accService, "@mozilla.org/accessibilityService;1", &rv);
+    if (accService) {
+     nsCOMPtr<nsIDOMNode> node = do_QueryInterface(mContent);
+     nsIAccessible* acc = nsnull;
+     accService->CreateHTMLRadioButtonAccessible(NS_STATIC_CAST(nsIFrame*, this), &acc);
+     *aInstancePtr = acc;
+     return NS_OK;
+    }
+    return NS_ERROR_FAILURE;
+  } 
+
   return nsFormControlFrame::QueryInterface(aIID, aInstancePtr);
 }
 

@@ -24,6 +24,7 @@
 
 #include "nsLeafFrame.h"
 #include "nsString.h"
+#include "nsAReadableString.h"
 #include "nsIPresContext.h"
 #include "nsHTMLImageLoader.h"
 #include "nsIImageFrame.h"
@@ -49,7 +50,7 @@ class nsImageFrame;
 class nsImageListener : imgIDecoderObserver
 {
 public:
-  nsImageListener();
+  nsImageListener(nsImageFrame *aFrame);
   virtual ~nsImageListener();
 
   NS_DECL_ISUPPORTS
@@ -152,7 +153,7 @@ protected:
                             const nsPoint& aPoint,
                             nsPoint& aResult);
 
-  PRBool GetAnchorHREF(nsString& aResult);
+  PRBool GetAnchorHREFAndTarget(nsString& aHref, nsString& aTarget);
 
   PRIntn GetSuppress();
 
@@ -182,8 +183,11 @@ protected:
                                    PRUint32 aStatus);
 #endif
 
-  void GetBaseURI(nsIURI **uri);
-  void GetLoadGroup(nsIPresContext *aPresContext, nsILoadGroup **aLoadGroup);
+  PRBool CanLoadImage(nsIURI *aURI);
+
+  inline void GetURI(const nsAReadableString& aSpec, nsIURI **aURI);
+  inline void GetBaseURI(nsIURI **uri);
+  inline void GetLoadGroup(nsIPresContext *aPresContext, nsILoadGroup **aLoadGroup);
 
   nsHTMLImageLoader   mImageLoader;
   nsHTMLImageLoader * mLowSrcImageLoader;

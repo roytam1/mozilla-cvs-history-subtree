@@ -125,7 +125,7 @@ struct nsTableReflowState {
 
     availSize.height = aAvailHeight;
     if (NS_UNCONSTRAINEDSIZE != availSize.height) {
-      availSize.height -= borderPadding.top + borderPadding.bottom;
+      availSize.height -= borderPadding.top + borderPadding.bottom + (2 * table->GetCellSpacingY());
     }
 
     footerFrame      = nsnull;
@@ -1802,7 +1802,10 @@ NS_METHOD nsTableFrame::Reflow(nsIPresContext*          aPresContext,
       break;
     case eReflowReason_Resize:
       // do the resize reflow below
-      NS_ASSERTION(HadInitialReflow(), "intial reflow not called");
+      if (!HadInitialReflow()) {
+        // NS_ASSERTION(HadInitialReflow(), "intial reflow not called");
+        nextReason = eReflowReason_Initial;
+      }
       NS_ASSERTION(NS_UNCONSTRAINEDSIZE != aReflowState.availableWidth, "this doesn't do anything");
       SetNeedStrategyBalance(PR_TRUE); 
       break; 
@@ -1828,6 +1831,7 @@ NS_METHOD nsTableFrame::Reflow(nsIPresContext*          aPresContext,
       haveReflowedColGroups = HaveReflowedColGroups();
     }
     // Constrain our reflow width to the computed table width (of the 1st in flow).
+    // and our reflow height to our avail height minus border, padding, cellspacing
     aDesiredSize.width = GetDesiredWidth();
     nsTableReflowState reflowState(aReflowState, *this, nextReason, 
                                    aDesiredSize.width, aReflowState.availableHeight);
@@ -2001,7 +2005,7 @@ nsTableFrame::MoveOverflowToChildList(nsIPresContext* aPresContext)
       for (nsIFrame* f = prevOverflowFrames; f; f->GetNextSibling(&f)) {
         nsHTMLContainerFrame::ReparentFrameView(aPresContext, f, prevInFlow, this);
       }
-      mFrames.InsertFrames(this, nsnull, prevOverflowFrames);
+      mFrames.AppendFrames(this, prevOverflowFrames);
       result = PR_TRUE;
     }
   }
@@ -2743,16 +2747,20 @@ void nsTableFrame::PlaceChild(nsIPresContext*      aPresContext,
 }
 
 void
-nsTableFrame::OrderRowGroups(nsVoidArray& aChildren,
-                             PRUint32&    aNumRowGroups,
-                             nsIFrame**   aFirstBody)
+nsTableFrame::OrderRowGroups(nsVoidArray&           aChildren,
+                             PRUint32&              aNumRowGroups,
+                             nsIFrame**             aFirstBody,
+                             nsTableRowGroupFrame** aHead,
+                             nsTableRowGroupFrame** aFoot)
 {
   aChildren.Clear();
   nsIFrame* head = nsnull;
   nsIFrame* foot = nsnull;
-  if (aFirstBody) {
-    *aFirstBody = nsnull;
-  }
+  // initialize out parameters, if present
+  if (aFirstBody) *aFirstBody = nsnull;
+  if (aHead)      *aHead      = nsnull;
+  if (aFoot)      *aFoot      = nsnull;
+  
   nsIFrame* kidFrame = mFrames.FirstChild();
   nsVoidArray nonRowGroups;
   // put the tbodies first, and the non row groups last
@@ -2767,6 +2775,9 @@ nsTableFrame::OrderRowGroups(nsVoidArray& aChildren,
         }
         else {
           head = kidFrame;
+          if (aHead) {
+            *aHead = (nsTableRowGroupFrame*)head;
+          }
         }
         break;
       case NS_STYLE_DISPLAY_TABLE_FOOTER_GROUP:
@@ -2775,6 +2786,9 @@ nsTableFrame::OrderRowGroups(nsVoidArray& aChildren,
         }
         else {
           foot = kidFrame;
+          if (aFoot) {
+            *aFoot = (nsTableRowGroupFrame*)foot;
+          }
         }
         break;
       default:
@@ -2808,6 +2822,16 @@ nsTableFrame::OrderRowGroups(nsVoidArray& aChildren,
   }
 }
 
+static PRBool
+IsRepeatable(nsTableRowGroupFrame& aHeaderOrFooter,
+             nscoord               aPageHeight)
+{
+  nsRect rect;
+  aHeaderOrFooter.GetRect(rect);
+
+  return (rect.height < (aPageHeight / 4));
+}
+
 // Reflow the children based on the avail size and reason in aReflowState
 // update aReflowMetrics a aStatus
 NS_METHOD 
@@ -2829,7 +2853,8 @@ nsTableFrame::ReflowChildren(nsIPresContext*      aPresContext,
 
   nsVoidArray rowGroups;
   PRUint32 numRowGroups;
-  OrderRowGroups(rowGroups, numRowGroups, &aReflowState.firstBodySection);
+  nsTableRowGroupFrame *thead, *tfoot;
+  OrderRowGroups(rowGroups, numRowGroups, &aReflowState.firstBodySection, &thead, &tfoot);
   PRBool haveReflowedRowGroup = PR_FALSE;
 
   for (PRUint32 childX = 0; ((PRInt32)childX) < rowGroups.Count(); childX++) {
@@ -2846,7 +2871,7 @@ nsTableFrame::ReflowChildren(nsIPresContext*      aPresContext,
 
     if (doReflowChild) {
       nsSize kidAvailSize(aReflowState.availSize);
-      // if this is a tbody in paginated mode reduce the height by a repeated footer
+      // if the child is a tbody in paginated mode reduce the height by a repeated footer
       nsIFrame* repeatedFooter = nsnull;
       nscoord repeatedFooterHeight = 0;
       if (isPaginated && (NS_UNCONSTRAINEDSIZE != kidAvailSize.height)) {
@@ -2982,6 +3007,21 @@ nsTableFrame::ReflowChildren(nsIPresContext*      aPresContext,
       FinishReflowChild(kidFrame, aPresContext, kidMet, 0, 0, 0);
     }
     SetHaveReflowedColGroups(PR_TRUE);
+  }
+
+  // set the repeatablility of headers and footers in the original table during its first reflow
+  // the repeatability of header and footers on continued tables is handled when they are created
+  if (isPaginated && !mPrevInFlow && (NS_UNCONSTRAINEDSIZE == aReflowState.availSize.height)) {
+    nsRect actualRect;
+    nsRect adjRect;
+    aPresContext->GetPageDim(&actualRect, &adjRect);
+    // don't repeat the thead or tfoot unless it is < 25% of the page height
+    if (thead) {
+      thead->SetRepeatable(IsRepeatable(*thead, actualRect.height));
+    }
+    if (tfoot) {
+      tfoot->SetRepeatable(IsRepeatable(*tfoot, actualRect.height));
+    }
   }
 
   if (aReflowedAtLeastOne) {
@@ -4405,7 +4445,17 @@ void nsTableFrame::DebugReflow(nsIFrame*            aFrame,
     printf("r=%d a=%s,%s ", aState.reason, width, height); 
     PrettyUC(aState.mComputedWidth, width);
     PrettyUC(aState.mComputedHeight, height);
-    printf("c=%s,%s cnt=%d \n", width, height, gRflCount);
+    printf("c=%s,%s ", width, height);
+    nsIFrame* inFlow;
+    aFrame->GetPrevInFlow(&inFlow);
+    if (inFlow) {
+      printf("pif=%p ", inFlow);
+    }
+    aFrame->GetNextInFlow(&inFlow);
+    if (inFlow) {
+      printf("nif=%p ", inFlow);
+    }
+    printf("cnt=%d \n", gRflCount);
     gRflCount++;
     //if (32 == gRflCount) {
     //  NS_ASSERTION(PR_FALSE, "stop");

@@ -18,8 +18,9 @@
  * Rights Reserved.
  *
  * Contributor(s): 
- * Steve Clark (buster@netscape.com)
- * Håkan Waara (hwaara@chello.se)
+ *   Steve Clark <buster@netscape.com>
+ *   Håkan Waara <hwaara@chello.se>
+ *   Dan Rosen <dr@netscape.com>
  *
  *   IBM Corporation
  *
@@ -34,7 +35,7 @@
  * Date         Modified by     Description of modification
  * 05/03/2000   IBM Corp.       Observer events for reflow states
  */ 
-  
+
 #define PL_ARENA_CONST_ALIGN_MASK 3
 #include "nsIPresShell.h"
 #include "nsISpaceManager.h"
@@ -132,6 +133,9 @@
 #include "prlong.h"
 #include "nsIDragService.h"
 #include "nsCopySupport.h"
+#include "nsIDOMHTMLAnchorElement.h"
+#include "nsIDOMHTMLImageElement.h"
+#include "nsITimer.h"
 
 // Dummy layout request
 #include "nsIChannel.h"
@@ -693,7 +697,8 @@ public:
 
 	// nsIRequest
   NS_IMETHOD GetName(PRUnichar* *result) { 
-    return NS_ERROR_NOT_IMPLEMENTED;
+    *result = ToNewUnicode(NS_LITERAL_STRING("about:layout-dummy-request"));
+    return NS_OK;
   }
   NS_IMETHOD IsPending(PRBool *_retval) { *_retval = PR_TRUE; return NS_OK; }
   NS_IMETHOD GetStatus(nsresult *status) { *status = NS_OK; return NS_OK; } 
@@ -708,8 +713,8 @@ public:
   NS_IMETHOD SetURI(nsIURI* aURI) { gURI = aURI; NS_ADDREF(gURI); return NS_OK; }
   NS_IMETHOD Open(nsIInputStream **_retval) { *_retval = nsnull; return NS_OK; }
   NS_IMETHOD AsyncOpen(nsIStreamListener *listener, nsISupports *ctxt) { return NS_OK; }
-  NS_IMETHOD GetLoadAttributes(nsLoadFlags *aLoadAttributes) { *aLoadAttributes = nsIChannel::LOAD_NORMAL; return NS_OK; }
-  NS_IMETHOD SetLoadAttributes(nsLoadFlags aLoadAttributes) { return NS_OK; }
+  NS_IMETHOD GetLoadFlags(nsLoadFlags *aLoadFlags) { *aLoadFlags = nsIRequest::LOAD_NORMAL; return NS_OK; }
+  NS_IMETHOD SetLoadFlags(nsLoadFlags aLoadFlags) { return NS_OK; }
   NS_IMETHOD GetOwner(nsISupports * *aOwner) { *aOwner = nsnull; return NS_OK; }
   NS_IMETHOD SetOwner(nsISupports * aOwner) { return NS_OK; }
   NS_IMETHOD GetLoadGroup(nsILoadGroup * *aLoadGroup) { *aLoadGroup = mLoadGroup; NS_IF_ADDREF(*aLoadGroup); return NS_OK; }
@@ -897,6 +902,9 @@ public:
   NS_IMETHOD GetFrameManager(nsIFrameManager** aFrameManager) const;
 
   NS_IMETHOD DoCopy();
+  NS_IMETHOD DoCopyLinkLocation(nsIDOMNode* aNode);
+  NS_IMETHOD DoCopyImageLocation(nsIDOMNode* aNode);
+  NS_IMETHOD DoCopyImageContents(nsIDOMNode* aNode);
 
   NS_IMETHOD CaptureHistoryState(nsILayoutHistoryState** aLayoutHistoryState, PRBool aLeavingPage);
   NS_IMETHOD GetHistoryState(nsILayoutHistoryState** aLayoutHistoryState);
@@ -1030,6 +1038,10 @@ public:
   
 #endif
 
+#ifdef PR_LOGGING
+  static PRLogModuleInfo* gLog;
+#endif
+
 protected:
   virtual ~PresShell();
 
@@ -1091,6 +1103,7 @@ protected:
   nsresult CreatePreferenceStyleSheet(void);
   nsresult SetPrefColorRules(void);
   nsresult SetPrefLinkRules(void);
+  nsresult SetPrefFocusRules(void);
 
   nsresult SelectContent(nsIContent *aContent);
 
@@ -1165,7 +1178,13 @@ protected:
   ReflowCountMgr * mReflowCountMgr;
 #endif
 
-private:  
+private:
+
+  // copy string to clipboard methods
+  static nsresult CopyStringToClipboard(nsString& aString,
+                                        PRInt32 aClipboardID);
+  static nsresult CopyStringToClipboard(nsString& aString);
+
   void FreeDynamicStack();
 
   //helper funcs for disabing autoscrolling
@@ -1178,7 +1197,18 @@ private:
   void PushCurrentEventInfo(nsIFrame* aFrame, nsIContent* aContent);
   void PopCurrentEventInfo();
   nsresult HandleEventInternal(nsEvent* aEvent, nsIView* aView, PRUint32 aFlags, nsEventStatus *aStatus);
+
+  //help funcs for resize events
+  void CreateResizeEventTimer();
+  void KillResizeEventTimer();
+  void FireResizeEvent();
+  static void sResizeEventCallback(nsITimer* aTimer, void* aPresShell) ;
+  nsCOMPtr<nsITimer> mResizeEventTimer;
 };
+
+#ifdef PR_LOGGING
+PRLogModuleInfo* PresShell::gLog;
+#endif
 
 #ifdef NS_DEBUG
 static void
@@ -1311,6 +1341,10 @@ PresShell::PresShell():mAnonymousContentTable(nsnull),
 #ifdef IBMBIDI
   mBidiLevel = BIDI_LEVEL_UNDEFINED;
 #endif
+#ifdef PR_LOGGING
+  if (! gLog)
+    gLog = PR_NewLogModule("PresShell");
+#endif
 }
 
 NS_IMPL_ADDREF(PresShell)
@@ -1434,6 +1468,7 @@ PresShell::~PresShell()
     mEventQueue->RevokeEvents(this);
   }
 
+  KillResizeEventTimer();
 }
 
 /**
@@ -1856,6 +1891,10 @@ PresShell::SetPreferenceStyleRules(PRBool aForceReflow)
       if (NS_SUCCEEDED(result)) {
         result = SetPrefLinkRules();
       }
+      if (NS_SUCCEEDED(result)) {
+        result = SetPrefFocusRules();
+      }
+ 
 
       // update the styleset now that we are done inserting our rules
       if (NS_SUCCEEDED(result)) {
@@ -2136,6 +2175,78 @@ nsresult PresShell::SetPrefLinkRules(void)
   }
 }
 
+nsresult PresShell::SetPrefFocusRules(void)
+{
+  NS_ASSERTION(mPresContext,"null prescontext not allowed");
+  nsresult result = NS_OK;
+
+  if (!mPresContext)
+    result = NS_ERROR_FAILURE;
+
+  if (NS_SUCCEEDED(result) && !mPrefStyleSheet)
+    result = CreatePreferenceStyleSheet();
+
+  if (NS_SUCCEEDED(result)) {
+    NS_ASSERTION(mPrefStyleSheet, "prefstylesheet should not be null");
+
+    // get the DOM interface to the stylesheet
+    nsCOMPtr<nsIDOMCSSStyleSheet> sheet(do_QueryInterface(mPrefStyleSheet,&result));
+    if (NS_SUCCEEDED(result)) {
+      PRBool useFocusColors;
+      mPresContext->GetUseFocusColors(useFocusColors);
+      nscolor focusBackground, focusText;
+      result = mPresContext->GetFocusBackgroundColor(&focusBackground);
+      nsresult result2 = mPresContext->GetFocusTextColor(&focusText);
+      if (useFocusColors && NS_SUCCEEDED(result) && NS_SUCCEEDED(result2)) {
+        // insert a rule to make focus the preferred color
+        PRUint32 index = 0;
+        nsAutoString strRule, strColor;
+
+        ///////////////////////////////////////////////////////////////
+        // - focus: '*:focus
+        ColorToString(focusText,strColor);
+        strRule.Append(NS_LITERAL_STRING("*:focus,*:focus>font {color: "));
+        strRule.Append(strColor);
+        strRule.Append(NS_LITERAL_STRING(" !important; background-color: "));
+        ColorToString(focusBackground,strColor);
+        strRule.Append(strColor);
+        strRule.Append(NS_LITERAL_STRING(" !important; } "));
+        // insert the rules
+        result = sheet->InsertRule(strRule,0,&index);
+      }
+      PRUint8 focusRingWidth = 1;
+      result = mPresContext->GetFocusRingWidth(&focusRingWidth);
+      PRBool focusRingOnAnything;
+      mPresContext->GetFocusRingOnAnything(focusRingOnAnything);
+
+      if ((NS_SUCCEEDED(result) && focusRingWidth != 1 && focusRingWidth <= 4 ) || focusRingOnAnything) {
+        PRUint32 index = 0;
+        nsAutoString strRule;
+        if (!focusRingOnAnything)
+          strRule.Append(NS_LITERAL_STRING(":link:focus, :visited"));    // If we only want focus rings on the normal things like links
+        strRule.Append(NS_LITERAL_STRING(":focus {-moz-outline: "));     // For example 3px dotted WindowText (maximum 4)
+        strRule.AppendInt(focusRingWidth);
+        strRule.Append(NS_LITERAL_STRING("px dotted WindowText !important; } "));     // For example 3px dotted WindowText
+        // insert the rules
+        if (focusRingWidth != 1) {
+          // If the focus ring width is different from the default, fix buttons with rings
+          strRule.Append(NS_LITERAL_STRING("button:-moz-focus-inner, input[type=\"reset\"]:-moz-focus-inner,"));
+          strRule.Append(NS_LITERAL_STRING("input[type=\"button\"]:-moz-focus-inner, "));
+          strRule.Append(NS_LITERAL_STRING("input[type=\"submit\"]:-moz-focus-inner { padding: 1px 2px 1px 2px; border: "));
+          strRule.AppendInt(focusRingWidth);
+          strRule.Append(NS_LITERAL_STRING("px dotted transparent !important; } "));
+          strRule.Append(NS_LITERAL_STRING("button:focus:-moz-focus-inner, input[type=\"reset\"]:focus:-moz-focus-inner,"));
+          strRule.Append(NS_LITERAL_STRING("input[type=\"button\"]:focus:-moz-focus-inner, input[type=\"submit\"]:focus:-moz-focus-inner {"));
+          strRule.Append(NS_LITERAL_STRING("border-color: ButtonText !important; }"));
+          }
+        result     = sheet->InsertRule(strRule,0,&index);
+      }
+    }
+  }
+  return result;
+}
+
+
 NS_IMETHODIMP
 PresShell::SetDisplaySelection(PRInt16 aToggle)
 {
@@ -2233,7 +2344,7 @@ static void CheckForFocus(nsIDocument* aDocument)
 
   if (focusController) {
     // Suppress the command dispatcher.
-    focusController->SetSuppressFocus(PR_TRUE);
+    focusController->SetSuppressFocus(PR_TRUE, "PresShell suppression on Web page loads");
     nsCOMPtr<nsIDOMWindowInternal> focusedWindow;
     focusController->GetFocusedWindow(getter_AddRefs(focusedWindow));
     
@@ -2262,7 +2373,7 @@ static void CheckForFocus(nsIDocument* aDocument)
         domWindow->Focus();
       }
     }
-    focusController->SetSuppressFocus(PR_FALSE);
+    focusController->SetSuppressFocus(PR_FALSE, "PresShell suppression on Web page loads");
   }
 }
 
@@ -2346,7 +2457,7 @@ PresShell::InitialReflow(nscoord aWidth, nscoord aHeight)
       if (uri) {
         char* url = nsnull;
         uri->GetSpec(&url);
-        printf("*** PresShell::InitialReflow (this=%p, url='%s')\n", this, url);
+        printf("*** PresShell::InitialReflow (this=%p, url='%s')\n", (void*)this, url);
         Recycle(url);
       }
     }
@@ -2588,6 +2699,46 @@ PresShell::ResizeReflow(nscoord aWidth, nscoord aHeight)
   HandlePostedAttributeChanges();
   HandlePostedReflowCallbacks();
 
+  //Set resize event timer
+  CreateResizeEventTimer();
+  
+  return NS_OK; //XXX this needs to be real. MMP
+}
+
+#define RESIZE_EVENT_DELAY 200
+
+void
+PresShell::CreateResizeEventTimer ()
+{
+  KillResizeEventTimer();
+
+  mResizeEventTimer = do_CreateInstance("@mozilla.org/timer;1");
+  if (mResizeEventTimer) {
+    mResizeEventTimer->Init(sResizeEventCallback, this, RESIZE_EVENT_DELAY, NS_PRIORITY_HIGH);  
+  }
+}
+
+void
+PresShell::KillResizeEventTimer()
+{
+  if(mResizeEventTimer) {
+    mResizeEventTimer->Cancel();
+    mResizeEventTimer = nsnull;
+  }
+}
+
+void
+PresShell::sResizeEventCallback(nsITimer *aTimer, void* aPresShell)
+{
+  PresShell* self = NS_STATIC_CAST(PresShell*, aPresShell);
+  if (self) {
+    self->FireResizeEvent();  
+  }
+}
+
+void
+PresShell::FireResizeEvent()
+{
   //Send resize event from here.
   nsEvent event;
   nsEventStatus status = nsEventStatus_eIgnore;
@@ -2598,8 +2749,6 @@ PresShell::ResizeReflow(nscoord aWidth, nscoord aHeight)
   nsCOMPtr<nsIScriptGlobalObject> globalObj;
 	mDocument->GetScriptGlobalObject(getter_AddRefs(globalObj));
   globalObj->HandleDOMEvent(mPresContext, &event, nsnull, NS_EVENT_FLAG_INIT, &status);
-  
-  return NS_OK; //XXX this needs to be real. MMP
 }
 
 NS_IMETHODIMP
@@ -3162,7 +3311,7 @@ PresShell::AlreadyInQueue(nsIReflowCommand* aReflowCommand,
             RCType == queuedRCType) {            
 #ifdef DEBUG
             if (VERIFY_REFLOW_NOISY_RC & gVerifyReflowFlags) {
-              printf("*** PresShell::AlreadyInQueue(): Discarding reflow command: this=%p\n", this);
+              printf("*** PresShell::AlreadyInQueue(): Discarding reflow command: this=%p\n", (void*)this);
               aReflowCommand->List(stdout);
             }
 #endif
@@ -3206,7 +3355,7 @@ PresShell::AppendReflowCommandInternal(nsIReflowCommand* aReflowCommand,
     return NS_OK;
   }  
   if (VERIFY_REFLOW_NOISY_RC & gVerifyReflowFlags) {
-    printf("\nPresShell@%p: adding reflow command\n", this);
+    printf("\nPresShell@%p: adding reflow command\n", (void*)this);
     aReflowCommand->List(stdout);
     if (VERIFY_REFLOW_REALLY_NOISY_RC & gVerifyReflowFlags) {
       printf("Current content model:\n");
@@ -3296,7 +3445,7 @@ PresShell::CancelReflowCommandInternal(nsIFrame* aTargetFrame,
           }
 #ifdef DEBUG
           if (VERIFY_REFLOW_NOISY_RC & gVerifyReflowFlags) {
-            printf("PresShell: removing rc=%p for frame ", rc);
+            printf("PresShell: removing rc=%p for frame ", (void*)rc);
             nsFrame::ListTag(stdout, aTargetFrame);
             printf("\n");
           }
@@ -3767,6 +3916,137 @@ PresShell::ScrollFrameIntoView(nsIFrame *aFrame,
   return rv;
 }
 
+// CopyStringToClipboard: copy simple string to clipboard
+nsresult PresShell::CopyStringToClipboard(nsString& aString,
+                                          PRInt32 aClipboardID)
+{
+  nsresult rv;
+
+  // get the clipboard
+  nsCOMPtr<nsIClipboard>
+    clipboard(do_GetService("@mozilla.org/widget/clipboard;1", &rv));
+  NS_ENSURE_SUCCESS(rv, rv);
+  NS_ENSURE_TRUE(clipboard, NS_ERROR_FAILURE);
+
+  // create a transferable for putting data on the clipboard
+  nsCOMPtr<nsITransferable>
+    trans(do_CreateInstance("@mozilla.org/widget/transferable;1", &rv));
+  NS_ENSURE_SUCCESS(rv, rv);
+  NS_ENSURE_TRUE(trans, NS_ERROR_FAILURE);
+
+  // Add the text data flavor to the transferable
+  rv = trans->AddDataFlavor(kUnicodeMime);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // get wStrings to hold clip data
+  nsCOMPtr<nsISupportsWString>
+    data(do_CreateInstance("@mozilla.org/supports-wstring;1", &rv));
+  NS_ENSURE_SUCCESS(rv, rv);
+  NS_ENSURE_TRUE(data, NS_ERROR_FAILURE);
+
+  // populate the string
+  rv = data->SetData(NS_CONST_CAST(PRUnichar*, aString.GetUnicode()));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // qi the data object an |nsISupports| so that when the transferable holds
+  // onto it, it will addref the correct interface.
+  nsCOMPtr<nsISupports> genericData(do_QueryInterface(data, &rv));
+  NS_ENSURE_SUCCESS(rv, rv);
+  NS_ENSURE_TRUE(genericData, NS_ERROR_FAILURE);
+
+  // set the transfer data
+  rv = trans->SetTransferData(kUnicodeMime, genericData,
+                              aString.Length() * 2);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // put the transferable on the clipboard
+  rv = clipboard->SetData(trans, nsnull, aClipboardID);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  return NS_OK;
+}
+
+// CopyStringToClipboard: copy string to clipboard(s) for platform
+nsresult PresShell::CopyStringToClipboard(nsString& aString)
+{
+#ifdef DEBUG_dr
+  printf("dr :: CopyStringToClipboard: %s\n",
+         NS_ConvertUCS2toUTF8(aString).get());
+#endif
+
+  nsresult rv;
+
+  // copy to the global clipboard
+  rv = CopyStringToClipboard(aString, nsIClipboard::kGlobalClipboard);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+#ifdef XP_UNIX
+  // unix also needs us to copy to the selection clipboard
+  rv = CopyStringToClipboard(aString, nsIClipboard::kSelectionClipboard);
+  NS_ENSURE_SUCCESS(rv, rv);
+#endif
+
+  return NS_OK;
+}
+
+// DoCopyLinkLocation: copy link location to clipboard
+NS_IMETHODIMP PresShell::DoCopyLinkLocation(nsIDOMNode* aNode)
+{
+#ifdef DEBUG_dr
+  printf("dr :: PresShell::DoCopyLinkLocation\n");
+#endif
+
+  NS_ENSURE_ARG_POINTER(aNode);
+  nsresult rv;
+
+  // are we an anchor?
+  nsCOMPtr<nsIDOMHTMLAnchorElement> anchor(do_QueryInterface(aNode, &rv));
+  NS_ENSURE_SUCCESS(rv, rv);
+  if (anchor) {
+    // if so, copy the link:
+    nsAutoString anchorText;
+    rv = anchor->GetHref(anchorText);
+    NS_ENSURE_SUCCESS(rv, rv);
+    return CopyStringToClipboard(anchorText);
+  }
+
+  // if no link, fail.
+  return NS_ERROR_FAILURE;
+}
+
+// DoCopyImageLocation: copy image location to clipboard
+NS_IMETHODIMP PresShell::DoCopyImageLocation(nsIDOMNode* aNode)
+{
+#ifdef DEBUG_dr
+  printf("dr :: PresShell::DoCopyImageLocation\n");
+#endif
+
+  NS_ENSURE_ARG_POINTER(aNode);
+  nsresult rv;
+
+  // are we an image?
+  nsCOMPtr<nsIDOMHTMLImageElement> img(do_QueryInterface(aNode, &rv));
+  NS_ENSURE_SUCCESS(rv, rv);
+  if (img) {
+    // if so, copy the location:
+    nsAutoString srcText;
+    rv = img->GetSrc(srcText);
+    NS_ENSURE_SUCCESS(rv, rv);
+    return CopyStringToClipboard(srcText);
+  }
+
+  // if no image, fail.
+  return NS_ERROR_FAILURE;
+}
+
+// DoCopyImageContents: copy image contents to clipboard
+NS_IMETHODIMP PresShell::DoCopyImageContents(nsIDOMNode* aNode)
+{
+  // XXX dr: platform-specific widget code works on windows and mac.
+  // when linux copy image contents works, this should get written
+  // and hooked up to the front end, similarly to cmd_copyImageLocation.
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
 
 NS_IMETHODIMP
 PresShell::DoCopy()
@@ -4451,10 +4731,24 @@ PresShell::ContentAppended(nsIDocument *aDocument,
     // If history state has been set by session history, ask the frame manager 
     // to restore frame state for the frame hierarchy created for the chunk of
     // content that just came in.
-    nsIFrame* frame;
-    rv = GetPrimaryFrameFor(aContainer, &frame);
-    if (NS_SUCCEEDED(rv) && nsnull != frame)
-      mFrameManager->RestoreFrameState(mPresContext, frame, mHistoryState);
+    // That is the frames with numbers after aNewIndexInContainer.
+    PRInt32 count = 0;
+    aContainer->ChildCount(count);
+
+    PRInt32 i;
+    nsCOMPtr<nsIContent> newChild;
+    for (i = aNewIndexInContainer; i < count; ++i) {
+      aContainer->ChildAt(i, *getter_AddRefs(newChild));
+      if (!newChild) {
+        // We should never get here.
+        NS_ERROR("Got a null child when restoring state!");
+        continue;
+      }
+      nsIFrame* frame;
+      rv = GetPrimaryFrameFor(newChild, &frame);
+      if (NS_SUCCEEDED(rv) && nsnull != frame)
+        mFrameManager->RestoreFrameState(mPresContext, frame, mHistoryState);
+    }
   }
 
   MOZ_TIMER_DEBUGLOG(("Stop: Frame Creation: PresShell::ContentAppended(), this=%p\n", this));
@@ -4941,6 +5235,10 @@ PresShell::HandleEvent(nsIView         *aView,
     return NS_OK;
   }
 
+  if (aEvent->eventStructType == NS_ACCESSIBLE_EVENT)
+    return HandleEventInternal(aEvent, aView, NS_EVENT_FLAG_INIT, aEventStatus);
+
+
   aView->GetClientData(clientData);
   frame = (nsIFrame *)clientData;
 
@@ -5088,6 +5386,14 @@ PresShell::HandleEventWithTarget(nsEvent* aEvent, nsIFrame* aFrame, nsIContent* 
 nsresult
 PresShell::HandleEventInternal(nsEvent* aEvent, nsIView *aView, PRUint32 aFlags, nsEventStatus* aStatus)
 {
+  if (aEvent->eventStructType == NS_ACCESSIBLE_EVENT)
+  {
+    void*     clientData;
+    aView->GetClientData(clientData);
+    nsIFrame* frame = (nsIFrame *)clientData;
+    return frame->HandleEvent(mPresContext, (nsGUIEvent*)aEvent, aStatus);
+  }
+
   nsresult rv = NS_OK;
 
   nsIEventStateManager *manager;
@@ -5194,7 +5500,7 @@ struct ReflowEvent : public PLEvent {
     if (presShell) {
 #ifdef DEBUG
       if (VERIFY_REFLOW_NOISY_RC & gVerifyReflowFlags) {
-         printf("\n*** Handling reflow event: PresShell=%p, event=%p\n", presShell.get(), this);
+         printf("\n*** Handling reflow event: PresShell=%p, event=%p\n", (void*)presShell.get(), (void*)this);
       }
 #endif
       // XXX Statically cast the pres shell pointer so that we can call
@@ -5257,7 +5563,7 @@ PresShell::PostReflowEvent()
     mPendingReflowEvent = PR_TRUE;
 #ifdef DEBUG
     if (VERIFY_REFLOW_NOISY_RC & gVerifyReflowFlags) {
-      printf("\n*** PresShell::PostReflowEvent(), this=%p, event=%p\n", this, ev);
+      printf("\n*** PresShell::PostReflowEvent(), this=%p, event=%p\n", (void*)this, (void*)ev);
     }
 #endif    
   }
@@ -5341,7 +5647,7 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
     }
     if (VERIFY_REFLOW_DUMP_COMMANDS & gVerifyReflowFlags) {   
       PRInt32 i, n = mReflowCommands.Count();
-      printf("\nPresShell::ProcessReflowCommands: this=%p, count=%d\n", this, n);
+      printf("\nPresShell::ProcessReflowCommands: this=%p, count=%d\n", (void*)this, n);
       for (i = 0; i < n; i++) {
         nsIReflowCommand* rc = (nsIReflowCommand*)
           mReflowCommands.ElementAt(i);
@@ -5379,7 +5685,7 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
 #ifdef DEBUG
       if (VERIFY_REFLOW_DUMP_COMMANDS & gVerifyReflowFlags) {        
         printf("Time spent in PresShell::ProcessReflowCommands(), this=%p, time=%d micro seconds\n", 
-          this, mAccumulatedReflowTime);
+               (void*)this, mAccumulatedReflowTime);
       }
 #endif
       mAccumulatedReflowTime = 0;
@@ -5388,7 +5694,7 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
     
 #ifdef DEBUG
     if (VERIFY_REFLOW_DUMP_COMMANDS & gVerifyReflowFlags) {
-      printf("\nPresShell::ProcessReflowCommands() finished: this=%p\n", this);
+      printf("\nPresShell::ProcessReflowCommands() finished: this=%p\n", (void*)this);
     }
 
     if (nsIFrameDebug::GetVerifyTreeEnable()) {
@@ -5531,13 +5837,26 @@ PresShell::ReflowCommandAdded(nsIReflowCommand* aRC)
       aRC->SetFlags(flags);    
       mRCCreatedDuringLoad++;
 
+#ifdef PR_LOGGING
+      if (PR_LOG_TEST(gLog, PR_LOG_DEBUG)) {
+        nsIFrame* target;
+        aRC->GetTarget(target);
+
+        nsCOMPtr<nsIAtom> type;
+        target->GetFrameType(getter_AddRefs(type));
+
+        nsAutoString typeStr;
+        type->ToString(typeStr);
+
+        PR_LOG(gLog, PR_LOG_DEBUG,
+               ("presshell=%p, ReflowCommandAdded(%p) target=%p[%s] mRCCreatedDuringLoad=%d\n",
+                this, aRC, target, NS_ConvertUCS2toUTF8(typeStr).get(), mRCCreatedDuringLoad));
+      }
+#endif
+
       if (!mDummyLayoutRequest) {
         AddDummyLayoutRequest();
       }
-
-  #ifdef DEBUG_nisheeth
-      printf("presshell=%p, mRCCreatedDuringLoad=%d\n", this, mRCCreatedDuringLoad);
-  #endif
     }
   }
   return NS_OK;
@@ -5552,9 +5871,10 @@ PresShell::ReflowCommandRemoved(nsIReflowCommand* aRC)
     aRC->GetFlags(&flags);
     if (flags & NS_RC_CREATED_DURING_DOCUMENT_LOAD) {
       mRCCreatedDuringLoad--;
-  #ifdef DEBUG_nisheeth
-      printf("presshell=%p, mRCCreatedDuringLoad=%d\n", this, mRCCreatedDuringLoad);
-  #endif
+
+      PR_LOG(gLog, PR_LOG_DEBUG,
+             ("presshell=%p, ReflowCommandRemoved(%p) mRCCreatedDuringLoad=%d\n",
+              this, aRC, mRCCreatedDuringLoad));
     }
   }
   return NS_OK;
@@ -5563,7 +5883,7 @@ PresShell::ReflowCommandRemoved(nsIReflowCommand* aRC)
 void
 PresShell::DoneRemovingReflowCommands()
 {
-  if (mRCCreatedDuringLoad == 0 && !mDocumentLoading && mDummyLayoutRequest) {
+  if (mRCCreatedDuringLoad == 0 && mDummyLayoutRequest) {
     RemoveDummyLayoutRequest();
   }
 }
@@ -5589,11 +5909,10 @@ PresShell::AddDummyLayoutRequest(void)
       if (NS_FAILED(rv)) return rv;
       rv = loadGroup->AddRequest(mDummyLayoutRequest, nsnull);
       if (NS_FAILED(rv)) return rv;
-    }
 
-#ifdef DEBUG_nisheeth
-    printf("presshell=%p, Added dummy layout request.\n", this);
-#endif
+      PR_LOG(gLog, PR_LOG_ALWAYS,
+             ("presshell=%p, Added dummy layout request %p", this, mDummyLayoutRequest.get()));
+    }
   }
   return rv;
 }
@@ -5611,15 +5930,14 @@ PresShell::RemoveDummyLayoutRequest(void)
     }
 
     if (loadGroup && mDummyLayoutRequest) {
-      rv = loadGroup->RemoveRequest(mDummyLayoutRequest, nsnull, NS_OK, nsnull);
+      rv = loadGroup->RemoveRequest(mDummyLayoutRequest, nsnull, NS_OK);
       if (NS_FAILED(rv)) return rv;
+
+      PR_LOG(gLog, PR_LOG_ALWAYS,
+             ("presshell=%p, Removed dummy layout request %p", this, mDummyLayoutRequest.get()));
 
       mDummyLayoutRequest = nsnull;
     }
-
-#ifdef DEBUG_nisheeth
-    printf("presshell=%p, Removed dummy layout request.\n", this);
-#endif
   }
   return rv;
 }
@@ -5691,7 +6009,7 @@ LogVerifyMessage(nsIFrame* k1, nsIFrame* k2, const char* aMsg,
     fprintf(stdout, "  ");
     frameDebug->GetFrameName(name);
     fputs(name, stdout);
-    fprintf(stdout, " %p ", k1);
+    fprintf(stdout, " %p ", (void*)k1);
   }
   printf("{%d, %d, %d, %d}", r1.x, r1.y, r1.width, r1.height);
 
@@ -5702,7 +6020,7 @@ LogVerifyMessage(nsIFrame* k1, nsIFrame* k2, const char* aMsg,
     fprintf(stdout, "  ");
     frameDebug->GetFrameName(name);
     fputs(name, stdout);
-    fprintf(stdout, " %p ", k2);
+    fprintf(stdout, " %p ", (void*)k2);
   }
   printf("{%d, %d, %d, %d}\n", r2.x, r2.y, r2.width, r2.height);
 

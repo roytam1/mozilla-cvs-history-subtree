@@ -22,7 +22,6 @@
  *   Blake Ross <blakeross@telocity.com>
  */
 
-#ifdef ENDER_LITE
 
 #include "nsCOMPtr.h"
 #include "nsGfxTextControlFrame2.h"
@@ -92,9 +91,15 @@
 #include "nsIScriptGlobalObject.h" //needed for notify selection changed to update the menus ect.
 #include "nsIDOMWindowInternal.h" //needed for notify selection changed to update the menus ect.
 #include "nsITextContent.h" //needed to create initial text control content
+#include "nsIMutableAccessible.h"
+#include "nsIAccessibilityService.h"
+#include "nsIServiceManager.h"
+#include "nsIDOMNode.h"
 
 #include "nsITransactionManager.h"
 #include "nsITransactionListener.h"
+#include "nsIDOMText.h" //for multiline getselection
+
 
 #ifdef IBMBIDI
 #include "nsIBidiKeyboard.h"
@@ -930,7 +935,7 @@ NS_IMETHODIMP
 nsTextInputSelectionImpl::HandleTableSelection(nsIContent *aParentContent, PRInt32 aContentOffset, PRInt32 aTarget, nsMouseEvent *aMouseEvent)
 {
   // We should never have a table inside a text control frame!
-  NS_ASSERTION(PR_TRUE, "Calling HandleTableSelection inside nsGfxTextControlFrame!");
+  NS_ASSERTION(PR_TRUE, "Calling HandleTableSelection inside nsGfxTextControlFrame2!");
   return NS_OK;
 }
 
@@ -1077,7 +1082,6 @@ NS_IMETHODIMP nsTextInputSelectionImpl::GetFrameFromLevel(nsIPresContext *aPresC
 }
 #endif // IBMBIDI
 
-
 // END   nsTextInputSelectionImpl
 
 
@@ -1127,6 +1131,22 @@ nsGfxTextControlFrame2::QueryInterface(const nsIID& aIID, void** aInstancePtr)
     *aInstancePtr = (void*)(nsIScrollableViewProvider*) this;
     return NS_OK;
   }
+
+  if (aIID.Equals(NS_GET_IID(nsIAccessible))) {
+    nsresult rv = NS_OK;
+    NS_WITH_SERVICE(nsIAccessibilityService, accService, "@mozilla.org/accessibilityService;1", &rv);
+    if (accService) {
+     nsCOMPtr<nsIDOMNode> node = do_QueryInterface(mContent);
+     nsIMutableAccessible* acc = nsnull;
+     accService->CreateMutableAccessible(node,&acc);
+     acc->SetName(NS_LITERAL_STRING("Text Field").get());
+     acc->SetRole(NS_LITERAL_STRING("text").get());
+     acc->SetIsLeaf(PR_TRUE);
+     *aInstancePtr = acc;
+     return NS_OK;
+    }
+     return NS_ERROR_FAILURE;
+  } 
   return nsBoxFrame::QueryInterface(aIID, aInstancePtr);
 }
 
@@ -1191,11 +1211,7 @@ nsGfxTextControlFrame2::Destroy(nsIPresContext* aPresContext)
   mSelCon = 0;
   mEditor = 0;
   
-  if (mCachedState)
-  {
-    delete mCachedState;
-    mCachedState = nsnull;
-  }
+  InvalidateCachedState();
 
 //unregister self from content
   mTextListener->SetFrame(nsnull);
@@ -1696,13 +1712,8 @@ nsGfxTextControlFrame2::SetInitialValue()
   }
 
   // Free mCachedState since we don't need it anymore!
+  InvalidateCachedState();
 
-  if (mCachedState)
-  {
-    delete mCachedState;
-    mCachedState = nsnull;
-  }
-   
   return NS_OK;
 }
 
@@ -2399,7 +2410,7 @@ NS_IMETHODIMP nsGfxTextControlFrame2::SetProperty(nsIPresContext* aPresContext, 
     else if (nsHTMLAtoms::select == aName && mSelCon)
     {
       // select all the text
-      mSelCon->SelectAll();
+      SelectAllContents();
     }
     mIsProcessing = PR_FALSE;
   }
@@ -2434,13 +2445,22 @@ NS_IMETHODIMP
 nsGfxTextControlFrame2::GetTextLength(PRInt32* aTextLength)
 {
   NS_ENSURE_ARG_POINTER(aTextLength);
+
+  // We should probably invalidate the cached string on more
+  // than just selection changes; maybe we should listen
+  // for editor transactions etc.
   nsString *str = GetCachedString();
   if (str)
   {
     *aTextLength = str->Length();
     return NS_OK;
   }
-  return NS_ERROR_FAILURE;
+  
+  // otherwise, do it the long way
+  nsAutoString   textContents;
+  GetTextControlFrameState(textContents);   // this is expensive!
+  *aTextLength = textContents.Length();
+  return NS_OK;
 }
 
 
@@ -2647,42 +2667,97 @@ nsGfxTextControlFrame2::SetSelectionEnd(PRInt32 aSelectionEnd)
 NS_IMETHODIMP
 nsGfxTextControlFrame2::GetSelectionRange(PRInt32* aSelectionStart, PRInt32* aSelectionEnd)
 {
-  if (!IsSingleLineTextControl()) return NS_ERROR_NOT_IMPLEMENTED;
+    NS_ENSURE_ARG_POINTER((aSelectionStart && aSelectionEnd));
 
-  NS_ENSURE_ARG_POINTER((aSelectionStart && aSelectionEnd));
+    // make sure we have an editor
+    if (!mEditor) 
+      return NS_ERROR_NOT_INITIALIZED;
 
-  // make sure we have an editor
-  if (!mEditor) 
-    return NS_ERROR_NOT_INITIALIZED;
-  
-  nsCOMPtr<nsISelection> selection;
-  mTextSelImpl->GetSelection(nsISelectionController::SELECTION_NORMAL,getter_AddRefs(selection));  
-  if (!selection) return NS_ERROR_FAILURE;
-
-  // we should have only zero or one range
-  PRInt32 numRanges = 0;
-  selection->GetRangeCount(&numRanges);
-  if (numRanges > 1)
-  {
-    NS_ASSERTION(0, "Found more than on range in GetSelectionRange");
-  }
-  
-  if (numRanges == 0)
-  {
     *aSelectionStart = 0;
     *aSelectionEnd = 0;
-  }
-  else
-  {
-    nsCOMPtr<nsIDOMRange> firstRange;
-    selection->GetRangeAt(0, getter_AddRefs(firstRange));
-    if (!firstRange) 
-      return NS_ERROR_FAILURE;
-    firstRange->GetStartOffset(aSelectionStart);
-    firstRange->GetEndOffset(aSelectionEnd);
-  }
+
+    nsCOMPtr<nsISelection> selection;
+    mTextSelImpl->GetSelection(nsISelectionController::SELECTION_NORMAL,getter_AddRefs(selection));  
+    if (!selection) return NS_ERROR_FAILURE;
+
+    // we should have only zero or one range
+    PRInt32 numRanges = 0;
+    selection->GetRangeCount(&numRanges);
+    if (numRanges > 1)
+    {
+      NS_ASSERTION(0, "Found more than on range in GetSelectionRange");
+    }
   
-  return NS_OK;
+    if (numRanges != 0)
+    {
+      nsCOMPtr<nsIDOMRange> firstRange;
+      selection->GetRangeAt(0, getter_AddRefs(firstRange));
+      if (!firstRange) 
+        return NS_ERROR_FAILURE;
+
+      if (IsSingleLineTextControl())
+      {
+        firstRange->GetStartOffset(aSelectionStart);
+        firstRange->GetEndOffset(aSelectionEnd);
+      }
+      else//multiline
+      {
+        //mContent = parent. iterate over each child. 
+        //when text nodes are reached add text length. 
+        //if you find range-startoffset,startnode then mark aSelecitonStart
+        nsresult rv = NS_ERROR_FAILURE;
+        nsCOMPtr<nsIDOMNode> contentNode;
+        nsCOMPtr<nsIDOMNode> curNode;
+        contentNode = do_QueryInterface(mContent);
+        if (!contentNode || NS_FAILED(rv = contentNode->GetFirstChild(getter_AddRefs(curNode))) || !curNode)
+          return rv;
+        nsCOMPtr<nsIDOMNode> startParent;
+        nsCOMPtr<nsIDOMNode> endParent;
+        PRInt32 startOffset;
+        PRInt32 endOffset;
+
+        firstRange->GetStartContainer(getter_AddRefs(startParent));
+        firstRange->GetStartOffset(&startOffset);
+        firstRange->GetEndContainer(getter_AddRefs(endParent));
+        firstRange->GetEndOffset(&endOffset);
+
+        PRInt32 currentTextOffset = 0;
+        
+        while(curNode)
+        {
+          nsCOMPtr<nsIDOMText> domText;
+          domText = do_QueryInterface(curNode);
+          if (contentNode == startParent)
+          {
+            if (domText)
+              *aSelectionStart = currentTextOffset + startOffset;
+            else
+              *aSelectionStart = currentTextOffset;
+          }
+          if (curNode == endParent)
+          {
+            if (domText)
+              *aSelectionEnd = currentTextOffset + endOffset;
+            else
+              *aSelectionEnd = currentTextOffset;
+            break;
+          }
+          if (domText)
+          {
+            PRUint32 length;
+            if (NS_SUCCEEDED(domText->GetLength(&length)))
+              currentTextOffset += length;
+          }
+          else
+            ++currentTextOffset;
+        }
+        if (!curNode) //something went very wrong...
+        {
+          *aSelectionEnd = *aSelectionStart;//couldnt find the end
+        }
+      }
+    }
+    return NS_OK;
 }
 
 
@@ -2782,9 +2857,7 @@ nsGfxTextControlFrame2::AttributeChanged(nsIPresContext* aPresContext,
       flags &= ~(nsIPlaintextEditor::eEditorDisabledMask);
       if (mSelCon)
       {
-        if (! (flags & nsIPlaintextEditor::eEditorReadonlyMask))
-          mSelCon->SetCaretEnabled(PR_TRUE);
-        mSelCon->SetDisplaySelection(nsISelectionController::SELECTION_ON);
+        mSelCon->SetDisplaySelection(nsISelectionController::SELECTION_HIDDEN);
       }
     }    
     mEditor->SetFlags(flags);
@@ -2929,6 +3002,8 @@ nsGfxTextControlFrame2::InternalContentChanged()
 
   if (!mContent) { return NS_ERROR_NULL_POINTER; }
 
+  InvalidateCachedState();
+  
   if (PR_FALSE==mNotifyOnInput) { 
     return NS_OK; // if notification is turned off, just return ok
   } 
@@ -2998,6 +3073,16 @@ nsGfxTextControlFrame2::GetCachedString()
     GetTextControlFrameState(*mCachedState);  
   }
   return mCachedState;
+}
+
+void
+nsGfxTextControlFrame2::InvalidateCachedState()
+{
+  if (mCachedState)
+  {
+    delete mCachedState;
+    mCachedState = nsnull;
+  }
 }
 
 void nsGfxTextControlFrame2::GetTextControlFrameState(nsAWritableString& aValue)
@@ -3080,7 +3165,7 @@ nsGfxTextControlFrame2::SetTextControlFrameState(const nsAReadableString& aValue
       else {
         nsCOMPtr<nsIPlaintextEditor> textEditor = do_QueryInterface(mEditor);
         if (textEditor)
-          textEditor->InsertText(currentValue.GetUnicode());
+          textEditor->InsertText(currentValue);
       }
       mEditor->SetFlags(savedFlags);
       if (selPriv)
@@ -3286,4 +3371,3 @@ nsGfxTextControlFrame2::IsScrollable() const
   return PR_FALSE;
 }
 
-#endif

@@ -100,6 +100,7 @@ extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,
 //----------------------------------------------------------------------
 
 nsICSSStyleSheet* nsLayoutModule::gUAStyleSheet = nsnull;
+nsIStyleSheet* nsLayoutModule::gViewSourceStyleSheet = nsnull;
 
 nsLayoutModule::nsLayoutModule()
   : mInitialized(PR_FALSE)
@@ -193,6 +194,7 @@ nsLayoutModule::Shutdown()
   nsTextTransformer::Shutdown();
 
   NS_IF_RELEASE(gUAStyleSheet);
+  NS_IF_RELEASE(gViewSourceStyleSheet);
 }
 
 NS_IMETHODIMP

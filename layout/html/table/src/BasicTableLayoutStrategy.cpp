@@ -517,11 +517,48 @@ BasicTableLayoutStrategy::ComputeNonPctColspanWidths(const nsHTMLReflowState& aR
   // Adjust the cols that each cell spans if necessary. Iterate backwards 
   // so that nested and/or overlaping col spans handle the inner ones first, 
   // ensuring more accurated calculations.
+  //if more than one  colspan originate in one column, resort the access to 
+  //the rows so that the inner colspans are handled first
   PRInt32 numRows = mTableFrame->GetRowCount();
+  PRInt32* numColSpans = new PRInt32[numRows];
+  if(!numColSpans)
+    return;
+  PRInt32* rowIndices = new PRInt32[numRows];
+  if(!rowIndices) {
+    delete [] numColSpans;
+    return;
+  }
   for (colX = numCols - 1; colX >= 0; colX--) { 
-    for (PRInt32 rowX = 0; rowX < numRows; rowX++) {
+    PRInt32 rowX;
+    for (rowX = 0; rowX < numRows; rowX++) {
+      numColSpans[rowX] = 0;
+      rowIndices[rowX] = 0;
+    } 
+    PRInt32 biggestColspan=0;
+    for (rowX = 0; rowX < numRows; rowX++) {
       PRBool originates;
       PRInt32 colSpan;
+      nsTableCellFrame* cellFrame = mTableFrame->GetCellInfoAt(rowX, colX, &originates, &colSpan);
+      if (!originates || (1 == colSpan)) {
+        continue;
+      }
+      numColSpans[rowX]=colSpan;
+      if(colSpan > biggestColspan)
+        biggestColspan = colSpan;
+    }
+    PRInt32 index = 0;
+    for( PRInt32 j=2;j <= biggestColspan;j++) {
+      for( PRInt32 k = 0; k < numRows; k++) {
+        if( numColSpans[k] == j) {
+          rowIndices[index]=k;
+          index++;
+        }
+      }
+    }   
+    for (PRInt32 i = 0; i < index; i++) {
+      PRBool originates;
+      PRInt32 colSpan;
+      PRInt32 rowX= rowIndices[i];
       nsTableCellFrame* cellFrame = mTableFrame->GetCellInfoAt(rowX, colX, &originates, &colSpan);
       if (!originates || (1 == colSpan)) {
         continue;
@@ -570,6 +607,8 @@ BasicTableLayoutStrategy::ComputeNonPctColspanWidths(const nsHTMLReflowState& aR
       }
     }
   }
+  delete [] numColSpans;
+  delete [] rowIndices;
 #ifdef DEBUG_TABLE_REFLOW_TIMING
   nsTableFrame::DebugTimeMethod(nsTableFrame::eNonPctColspans, *mTableFrame, (nsHTMLReflowState&)aReflowState, PR_FALSE);
 #endif
@@ -672,12 +711,17 @@ BasicTableLayoutStrategy::ComputeNonPctColspanWidths(PRInt32           aWidthInd
     fixLimitTotal = ((fixTotal - fixMinTotal) < availWidth) ? fixTotal - fixMinTotal : availWidth;
     desLimitTotal = ((autoDesTotal - autoMinTotal) < availWidth) ? autoDesTotal - autoMinTotal : availWidth;
   }
-  else {
-    if (autoDesTotal > 0) {
-      availWidth -= pctTotal + fixTotal; // the pct and fix cols already reached their values
+  else { // FIX or DES_CON with LIMIT_NONE
+    if (FIX == aWidthIndex) {
+      if (autoDesTotal > 0) {
+        availWidth -= pctTotal + fixTotal;
+      }
+      else if (fixTotal > 0) {
+        availWidth -= pctTotal;
+      }
     }
-    else if (fixTotal > 0) {
-      availWidth -= pctTotal; // the pct already reached their values
+    else if (DES_CON == aWidthIndex) {
+      availWidth -= pctTotal + fixTotal; 
     }
   }
 

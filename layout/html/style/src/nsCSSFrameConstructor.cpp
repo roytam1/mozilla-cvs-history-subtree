@@ -82,6 +82,7 @@
 #include "nsIXBLBinding.h"
 #include "nsIElementFactory.h"
 #include "nsContentCID.h"
+#include "nsFormControlHelper.h"
 
 static NS_DEFINE_CID(kTextNodeCID,   NS_TEXTNODE_CID);
 static NS_DEFINE_CID(kHTMLElementFactoryCID,   NS_HTML_ELEMENT_FACTORY_CID);
@@ -107,7 +108,6 @@ static NS_DEFINE_CID(kAttributeContentCID, NS_ATTRIBUTECONTENT_CID);
 #include "nsInlineFrame.h"
 #include "nsBlockFrame.h"
 
-#include "nsGfxTextControlFrame.h"
 #include "nsIScrollableFrame.h"
 
 #include "nsIServiceManager.h"
@@ -3395,6 +3395,13 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
     if (NS_FAILED(rv))
       return NS_OK; // Binding will load asynchronously.
 
+    if (binding) {
+      nsCOMPtr<nsIBindingManager> bm;
+      mDocument->GetBindingManager(getter_AddRefs(bm));
+      if (bm)
+        bm->AddToAttachedQueue(binding);
+    }
+
     if (resolveStyle) {
       nsCOMPtr<nsIAtom> tag;
       aDocElement->GetTag(*getter_AddRefs(tag));
@@ -4097,12 +4104,6 @@ nsCSSFrameConstructor::ConstructTextControlFrame(nsIPresShell*        aPresShell
     rv = NS_NewGfxTextControlFrame(aPresShell, &aNewFrame);
     if (NS_FAILED(rv)) {
       aNewFrame = nsnull;
-    }
-    if (aNewFrame)
-    {
-#ifndef ENDER_LITE
-      ((nsGfxTextControlFrame*)aNewFrame)->SetFrameConstructor(this);
-#endif
     }
   }
   if (!aNewFrame)
@@ -5181,7 +5182,21 @@ nsCSSFrameConstructor::CreateAnonymousFrames(nsIPresShell*        aPresShell,
 
       content->SetParent(aParent);
       content->SetDocument(aDocument, PR_TRUE, PR_TRUE);
-      content->SetBindingParent(content);
+
+#ifdef INCLUDE_XUL
+      // Only cut XUL scrollbars off if they're not in a XUL document.  This allows
+      // scrollbars to be styled from XUL (although not from XML or HTML).
+      nsCOMPtr<nsIAtom> tag;
+      content->GetTag(*getter_AddRefs(tag));
+      if (tag.get() == nsXULAtoms::scrollbar) {
+        nsCOMPtr<nsIDOMXULDocument> xulDoc(do_QueryInterface(aDocument));
+        if (xulDoc)
+          content->SetBindingParent(aParent);
+        else content->SetBindingParent(content);
+      }
+      else
+#endif
+        content->SetBindingParent(content);
     
       nsIFrame * newFrame = nsnull;
       nsresult rv = creator->CreateFrameFor(aPresContext, content, &newFrame);
@@ -8059,7 +8074,9 @@ nsCSSFrameConstructor::ContentAppended(nsIPresContext* aPresContext,
           }
         }
       }
-      else {
+      // Don't create child frames for iframes/frames, they should not
+      // display any content that they contain.
+      else if (nsLayoutAtoms::htmlFrameOuterFrame != frameType.get()) {
         // Construct a child frame (that does not have a table as parent)
         ConstructFrame(shell, aPresContext, state, childContent, parentFrame, frameItems);
       }
@@ -10520,6 +10537,7 @@ nsCSSFrameConstructor::CreateContinuingTableFrame(nsIPresShell* aPresShell,
           NS_ASSERTION(!state.mFloatedItems.childList, "unexpected floated element");
           NS_RELEASE(headerFooter);
           headerFooterFrame->SetInitialChildList(aPresContext, nsnull, childItems.childList);
+          ((nsTableRowGroupFrame*)headerFooterFrame)->SetRepeatable(PR_TRUE);
 
           // Table specific initialization
           ((nsTableRowGroupFrame*)headerFooterFrame)->InitRepeatedFrame
@@ -10532,13 +10550,6 @@ nsCSSFrameConstructor::CreateContinuingTableFrame(nsIPresShell* aPresShell,
 
       NS_RELEASE(rowGroupStyle);
       
-      // Header and footer must be first, and then the body row groups.
-      // So if we found a body row group, then stop looking for header and
-      // footer elements
-      if (NS_STYLE_DISPLAY_TABLE_ROW_GROUP == display->mDisplay) {
-        break;
-      }
-
       // Get the next row group frame
       rowGroupFrame->GetNextSibling(&rowGroupFrame);
     }
@@ -10811,28 +10822,31 @@ keepLooking:
         }
       }
 
-      // We search the immediate children only, but if the child frame has
-      // the same content pointer as its parent then we need to search its
-      // child frames, too.
-      // We also need to search the child frame's children if the child frame
-      // is a "special" frame
-      // We also need to search if the child content is anonymous and scoped
-      // to the parent content.
-      nsCOMPtr<nsIContent> parentScope;
-      kidContent->GetBindingParent(getter_AddRefs(parentScope));
-      if (parentContent == kidContent || IsFrameSpecial(kidFrame) || 
-          (parentContent && (parentContent == parentScope))) 
-      {
-#ifdef NOISY_FINDFRAME
-        FFWC_recursions++;
-        printf("  recursing with new parent set to kidframe=%p, parentContent=%p\n", 
-               kidFrame, parentContent.get());
-#endif
-        nsIFrame* matchingFrame = FindFrameWithContent(aPresContext, kidFrame, parentContent,
-                                                       aContent, nsnull);
+      // only do this if there is content
+      if (kidContent) {
+        // We search the immediate children only, but if the child frame has
+        // the same content pointer as its parent then we need to search its
+        // child frames, too.
+        // We also need to search the child frame's children if the child frame
+        // is a "special" frame
+        // We also need to search if the child content is anonymous and scoped
+        // to the parent content.
+        nsCOMPtr<nsIContent> parentScope;
+        kidContent->GetBindingParent(getter_AddRefs(parentScope));
+        if (parentContent == kidContent || IsFrameSpecial(kidFrame) || 
+            (parentContent && (parentContent == parentScope))) 
+        {
+  #ifdef NOISY_FINDFRAME
+          FFWC_recursions++;
+          printf("  recursing with new parent set to kidframe=%p, parentContent=%p\n", 
+                 kidFrame, parentContent.get());
+  #endif
+          nsIFrame* matchingFrame = FindFrameWithContent(aPresContext, kidFrame, parentContent,
+                                                         aContent, nsnull);
 
-        if (matchingFrame) {
-          return matchingFrame;
+          if (matchingFrame) {
+            return matchingFrame;
+          }
         }
       }
 
@@ -11030,10 +11044,32 @@ nsresult
 nsCSSFrameConstructor::RecreateFramesForContent(nsIPresContext* aPresContext,
                                                 nsIContent* aContent)                                   
 {
+  // Is the frame `special'? If so, we need to reframe the containing
+  // block *here*, rather than trying to remove and re-insert the
+  // content (which would otherwise result in *two* nested reframe
+  // containing block from ContentRemoved() and ContentInserted(),
+  // below!)
+  nsCOMPtr<nsIPresShell> shell;
+  aPresContext->GetShell(getter_AddRefs(shell));
+
+  nsIFrame* frame;
+  shell->GetPrimaryFrameFor(aContent, &frame);
+
+  if (frame && IsFrameSpecial(frame)) {
+#ifdef DEBUG
+    if (gNoisyContentUpdates) {
+      printf("nsCSSFrameConstructor::RecreateFramesForContent: frame=");
+      nsFrame::ListTag(stdout, frame);
+      printf(" is special\n");
+    }
+#endif
+    return ReframeContainingBlock(aPresContext, frame);
+  }
+
   nsresult rv = NS_OK;
-  nsIContent* container;
-  rv = aContent->GetParent(container);
-  if (NS_SUCCEEDED(rv) && container) {
+  nsCOMPtr<nsIContent> container;
+  aContent->GetParent(*getter_AddRefs(container));
+  if (container) {
     PRInt32 indexInContainer;    
     rv = container->IndexOf(aContent, indexInContainer);
     if (NS_SUCCEEDED(rv)) {
@@ -11050,7 +11086,6 @@ nsCSSFrameConstructor::RecreateFramesForContent(nsIPresContext* aPresContext,
         rv = ContentInserted(aPresContext, container, aContent, indexInContainer, mTempFrameTreeState);
       }      
     }
-    NS_RELEASE(container);
   }
   return rv;
 }
@@ -12804,6 +12839,7 @@ nsCSSFrameConstructor::WipeContainingBlock(nsIPresContext* aPresContext,
   return PR_FALSE;
 }
 
+
 /*
  * Recursively split an inline frame until we reach a block frame.
  * Below is an example of how SplitToContainingBlock() works.
@@ -12829,7 +12865,7 @@ nsCSSFrameConstructor::WipeContainingBlock(nsIPresContext* aPresContext,
  *
  *             .--------.
  *            /          \
- *       b-->2   2*  2'   b'
+ *       b-->2==>2*=>2'   b'
  *           |   |   |
  *           o   O   o'
  *
@@ -12838,14 +12874,18 @@ nsCSSFrameConstructor::WipeContainingBlock(nsIPresContext* aPresContext,
  *    note that 2 still refers to b' as its next sibling, and that 2'
  *    does not.
  *
+ *    The double-arrow line indicates that an annotation is made in
+ *    the frame manager that indicates 2* is the `special sibling' of
+ *    2, and that 2' is the `special sibling' of 2*.
+ *
  * 4. We recurse again to split 1. At this point, we'll break the
  *    link between 2 and b', and make b' be the next sibling of 2'.
  *
  *             .-----------.
  *            /             \
- *       a-->1      1*  1'   a'
+ *       a-->1=====>1*=>1'   a'
  *           |      |   |
- *           b-->2  2*  2'-->b'
+ *           b-->2=>2*=>2'-->b'
  *               |  |   |
  *               o  O   o'
  *
@@ -12858,14 +12898,17 @@ nsCSSFrameConstructor::WipeContainingBlock(nsIPresContext* aPresContext,
  *
  *     A-->B-->C
  *         |
- *         a-->1------>1*-->1'-->a'      
+ *         a-->1-=-=-=>1*-=>1'-->a'      
  *             |       |    |
- *             b-->2   2*   2'-->b'
+ *             b-->2==>2*==>2'-->b'
  *                 |   |    |
  *                 o   O    o'
  *
  *    Since B is a block, it is allowed to contain both block and
  *    inline frames, so we can let 1* and 1' be "real siblings" of 1.
+ *
+ *    Note that 1* is both the `normal' sibling and `special' sibling
+ *    of 1, and 1' is both the `normal' and `special sibling of 1*.
  */
 nsresult
 nsCSSFrameConstructor::SplitToContainingBlock(nsIPresContext* aPresContext,

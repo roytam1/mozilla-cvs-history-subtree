@@ -33,6 +33,7 @@
 #include "nsIFrame.h"
 #include "nsIDOMNode.h"
 #include "nsIDOMRange.h"
+#include "nsIFontMetrics.h"
 #include "nsISelection.h"
 #include "nsISelectionPrivate.h"
 #include "nsIDOMCharacterData.h"
@@ -77,7 +78,7 @@ nsCaret::nsCaret()
 , mVisible(PR_FALSE)
 , mDrawn(PR_FALSE)
 , mReadOnly(PR_FALSE)
-, mShowWhenSelection(PR_FALSE)
+, mShowDuringSelection(PR_FALSE)
 , mLastCaretFrame(nsnull)
 , mLastCaretView(nsnull)
 , mLastContentOffset(0)
@@ -109,8 +110,8 @@ NS_IMETHODIMP nsCaret::Init(nsIPresShell *inPresShell)
       mCaretTwipsWidth = (nscoord)tempInt;
     if (NS_SUCCEEDED(touchyFeely->GetMetric(nsILookAndFeel::eMetric_CaretBlinkTime, tempInt)))
       mBlinkRate = (PRUint32)tempInt;
-    if (NS_SUCCEEDED(touchyFeely->GetMetric(nsILookAndFeel::eMetric_ShowCaretWhenSelection, tempInt)))
-      mShowWhenSelection = tempInt ? PR_TRUE : PR_FALSE;
+    if (NS_SUCCEEDED(touchyFeely->GetMetric(nsILookAndFeel::eMetric_ShowCaretDuringSelection, tempInt)))
+      mShowDuringSelection = tempInt ? PR_TRUE : PR_FALSE;
     
     NS_RELEASE(touchyFeely);
   }
@@ -304,6 +305,15 @@ NS_IMETHODIMP nsCaret::GetCaretCoordinates(EViewCoordinates aRelativeToType, nsI
   nsPoint   viewOffset(0, 0);
   nsRect    clipRect;
   nsIView   *drawingView;     // views are not refcounted
+
+  //#59405, on windows and unix, the coordinate for IME need to be view (nearest native window) related.
+  if (aRelativeToType == eIMECoordinates)
+#ifdef XP_MAC
+   aRelativeToType = eTopLevelWindowCoordinates; 
+#else
+   aRelativeToType = eRenderingViewCoordinates; 
+#endif
+
   GetViewForRendering(theFrame, aRelativeToType, viewOffset, clipRect, drawingView);
   if (!drawingView)
     return NS_ERROR_UNEXPECTED;
@@ -474,7 +484,7 @@ PRBool nsCaret::SetupDrawingFrameAndOffset()
   
   PRBool isCollapsed = PR_FALSE;
   domSelection->GetIsCollapsed(&isCollapsed);
-  if (!mShowWhenSelection && !isCollapsed) return PR_FALSE;
+  if (!mShowDuringSelection && !isCollapsed) return PR_FALSE;
 
   // start and end parent should be the same since we are collapsed
   nsCOMPtr<nsIDOMNode>  focusNode;
@@ -846,7 +856,7 @@ PRBool nsCaret::MustDrawCaret()
   if (NS_FAILED(domSelection->GetIsCollapsed(&isCollapsed)))
     return PR_FALSE;
 
-  if (mShowWhenSelection)
+  if (mShowDuringSelection)
     return PR_TRUE;      // show the caret even in selections
 
   return isCollapsed;
@@ -876,14 +886,9 @@ void nsCaret::DrawCaret()
   
   nsRect    frameRect;
   mLastCaretFrame->GetRect(frameRect);
+  
   frameRect.x = 0;      // the origin is accounted for in GetViewForRendering()
   frameRect.y = 0;
-  
-  if (frameRect.height == 0)    // we're in a BR frame which has zero height.
-  {
-    frameRect.height = 200;
-    frameRect.y -= 200;
-  }
   
   nsPoint   viewOffset(0, 0);
   nsRect    clipRect;
@@ -923,6 +928,27 @@ void nsCaret::DrawCaret()
   // push a known good state
   mRendContext->PushState();
 
+  // if we got a zero-height frame, it's probably a BR frame at the end of a non-empty line
+  // (see BRFrame::Reflow). In that case, figure out a height. We have to do this
+  // after we've got an RC.
+  if (frameRect.height == 0)
+  {
+      const nsStyleFont* fontStyle;
+      mLastCaretFrame->GetStyleData(eStyleStruct_Font, (const nsStyleStruct*&)fontStyle);
+      mRendContext->SetFont(fontStyle->mFont);
+      nsCOMPtr<nsIFontMetrics> fm;
+      mRendContext->GetFontMetrics(*getter_AddRefs(fm));
+      if (fm)
+      {
+        nscoord ascent, descent;
+        fm->GetMaxAscent(ascent);
+        fm->GetMaxDescent(descent);
+        frameRect.height = ascent + descent;
+        frameRect.y -= ascent; // BR frames sit on the baseline of the text, so we need to subtract
+                               // the ascent to account for the frame height.
+      }
+  }
+  
   // views are not refcounted
   mLastCaretView = drawingView;
 
@@ -1061,4 +1087,8 @@ NS_IMETHODIMP nsCaret::SetCaretWidth(nscoord aPixels)
     mCaretTwipsWidth = -1;
   }
   return NS_OK;
+}
+
+void nsCaret::SetVisibilityDuringSelection(PRBool aVisibility) {
+  mShowDuringSelection = aVisibility;
 }

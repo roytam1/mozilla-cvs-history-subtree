@@ -57,6 +57,27 @@ nsContainerFrame::~nsContainerFrame()
 }
 
 NS_IMETHODIMP
+nsContainerFrame::Init(nsIPresContext*  aPresContext,
+                       nsIContent*      aContent,
+                       nsIFrame*        aParent,
+                       nsIStyleContext* aContext,
+                       nsIFrame*        aPrevInFlow)
+{
+  nsresult rv;
+  rv = nsSplittableFrame::Init(aPresContext, aContent, aParent, aContext, aPrevInFlow);
+  if (aPrevInFlow) {
+    // Make sure we copy bits from our prev-in-flow that will affect
+    // us. A continuation for a container frame needs to know if it
+    // has a child with a view so that we'll properly reposition it.
+    nsFrameState state;
+    aPrevInFlow->GetFrameState(&state);
+    if (state & NS_FRAME_HAS_CHILD_WITH_VIEW)
+      mState |= NS_FRAME_HAS_CHILD_WITH_VIEW;
+  }
+  return rv;
+}
+
+NS_IMETHODIMP
 nsContainerFrame::SetInitialChildList(nsIPresContext* aPresContext,
                                       nsIAtom*        aListName,
                                       nsIFrame*       aChildList)
@@ -303,12 +324,12 @@ nsContainerFrame::ReflowDirtyChild(nsIPresShell* aPresShell, nsIFrame* aChild)
 {
   // The container frame always generates a reflow command
   // targeted at its child
-  if (!(mState & NS_FRAME_HAS_DIRTY_CHILDREN)) {    
-    mState |= NS_FRAME_HAS_DIRTY_CHILDREN;
+  // Note that even if this flag is already set, we still need to reflow the
+  // child because the frame may have more than one child
+  mState |= NS_FRAME_HAS_DIRTY_CHILDREN;
 
-    nsFrame::CreateAndPostReflowCommand(aPresShell, aChild, 
-      nsIReflowCommand::ReflowDirty, nsnull, nsnull, nsnull);
-  }
+  nsFrame::CreateAndPostReflowCommand(aPresShell, aChild, 
+    nsIReflowCommand::ReflowDirty, nsnull, nsnull, nsnull);
 
   return NS_OK;
 }
@@ -463,7 +484,16 @@ nsContainerFrame::SyncFrameViewAfterReflow(nsIPresContext* aPresContext,
         vm->ResizeView(aView, aCombinedArea->XMost(), aCombinedArea->YMost());
 
       } else {
-        vm->ResizeView(aView, frameSize.width, frameSize.height);
+        nscoord width, height;
+        aView->GetDimensions(&width, &height);
+        // If only the height has changed then repaint only the newly exposed or
+        // contracted area, otherwise repaint the union of the old and new areas
+
+        // XXX:  We currently invalidate the newly exposed areas only when the 
+        // container changes  height because some frames do not invalidate themselves 
+        // properly. see bug 73825.
+        // Once bug 73825 is fixed, we should always pass PR_TRUE instead of frameSize.width == width.
+        vm->ResizeView(aView, frameSize.width, frameSize.height, frameSize.width == width);
       }
     }
   
@@ -728,84 +758,47 @@ nsContainerFrame::ReflowChild(nsIFrame*                aKidFrame,
   return result;
 }
 
-PRBool nsContainerFrame::IsDescendant(nsIFrame* aAncestor, 
-                                      nsIFrame *aFrame, 
-                                      nsIFrame *aStopFrame) 
-{
-  // Walk up the frame's parent's until either aAncestor or aStopFrame is found
-  // If aAncestor is found return PR_TRUE, otherwide return PR_FALSE.
-  nsIFrame* currentFrame = aFrame;
-  while (currentFrame != nsnull) {
-    if (currentFrame == aStopFrame) {
-      return PR_FALSE;
-    }
-
-    if (currentFrame == aAncestor) {
-      return PR_TRUE;
-    }
-    currentFrame->GetParent(&currentFrame);
-  }
-  // Neither aAncestor or aStopFrame was found.
-  return PR_FALSE;
-}
-
-
 
 void
 nsContainerFrame::PositionChildViews(nsIPresContext* aPresContext,
                                      nsIFrame*       aFrame)
 {
-  // Look at only the views which are direct descendants of the frame's view.
-  // If the frame owns a view then all we need to do is reposition the frame's
-  // associated with the view children. If the frame does not own the view then
-  // we also need to check to see if the child view's frame is a descendant of this
-  // frame. In most cases the view will have no children at all and this method returns
-  // almost immediately.
-
-  // Check to see if this frame owns a view
-  nsIFrame* frameWithView = aFrame;
-  nsIView* framesView = nsnull;
-  aFrame->GetView(aPresContext, &framesView);
-  if (nsnull == framesView) {
-    // this frame doesn't own a view so we need to find the ancestor frame that
-    // has a view. 
-    aFrame->GetParentWithView(aPresContext, &frameWithView);
-    if (frameWithView) {
-      frameWithView->GetView(aPresContext, &framesView);
-    }
-  }
-
-  if (nsnull == framesView ) {
-    NS_ASSERTION(PR_FALSE, "Could not find any view");
+  nsFrameState frameState;
+  aFrame->GetFrameState(&frameState);
+  if (! ((frameState & NS_FRAME_HAS_CHILD_WITH_VIEW) == NS_FRAME_HAS_CHILD_WITH_VIEW)) {
     return;
   }
 
-  // Cycle through all of the children of the frame's view.
-  nsIView * childView = nsnull;
-  for (framesView->GetChild(0, childView); nsnull != childView; childView->GetNextSibling(childView))
-  {
-    void *data = nsnull;
-    nsIFrame *childFrame = nsnull;
-    childView->GetClientData(data);
-    NS_ASSERTION(data != nsnull, "The view does not contain a frame pointer");
-    childFrame = (nsIFrame*) data;
-    if (childFrame) {
-      nsFrameState kidState;
-      childFrame->GetFrameState(&kidState);
-      // Position the frame only if flag is set to synchronize them.
-      if (NS_FRAME_SYNC_FRAME_AND_VIEW & kidState) {
-        if (aFrame == frameWithView) {
-          PositionFrameView(aPresContext, childFrame, childView);   
-        } else {
-          // Need to check to see if the view's frame is a
-          // descendant of this frame.
-          if (IsDescendant(aFrame, childFrame, frameWithView)) {
-            PositionFrameView(aPresContext, childFrame, childView);      
-          }
-        }
+  nsIAtom*  childListName = nsnull;
+  PRInt32   childListIndex = 0;
+
+  do {
+    // Recursively walk aFrame's child frames
+    nsIFrame* childFrame;
+    aFrame->FirstChild(aPresContext, childListName, &childFrame);
+    while (childFrame) {
+      nsIView*  view;
+
+      // See if the child frame has a view
+      childFrame->GetView(aPresContext, &view);
+
+      if (view) {
+        // Position the view. Because any child views are relative to their
+        // parent, there's no need to recurse
+        PositionFrameView(aPresContext, childFrame, view);
+
+      } else {
+        // Recursively examine its child frames
+        PositionChildViews(aPresContext, childFrame);
       }
+
+      // Get the next sibling child frame
+      childFrame->GetNextSibling(&childFrame);
     }
-  }
+
+    NS_IF_RELEASE(childListName);
+    aFrame->GetAdditionalChildListName(childListIndex++, &childListName);
+  } while (childListName); 
 }
 
 /**

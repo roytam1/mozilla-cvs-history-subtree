@@ -79,6 +79,7 @@
 
 class nsHTMLFrame;
 
+static NS_DEFINE_IID(kIFramesetFrameIID, NS_IFRAMESETFRAME_IID);
 static NS_DEFINE_CID(kWebShellCID, NS_WEB_SHELL_CID);
 static NS_DEFINE_CID(kCViewCID, NS_VIEW_CID);
 static NS_DEFINE_CID(kCChildCID, NS_CHILD_CID);
@@ -296,6 +297,11 @@ nsHTMLFrameOuterFrame::Paint(nsIPresContext* aPresContext,
                              const nsRect& aDirtyRect,
                              nsFramePaintLayer aWhichLayer)
 {
+  PRBool isVisible;
+  if (NS_SUCCEEDED(IsVisibleForPainting(aPresContext, aRenderingContext, PR_TRUE, &isVisible)) && !isVisible) {
+    return NS_OK;
+  }
+
   //printf("outer paint %X (%d,%d,%d,%d) \n", this, aDirtyRect.x, aDirtyRect.y, aDirtyRect.width, aDirtyRect.height);
   nsIFrame* firstChild = mFrames.FirstChild();
   if (nsnull != firstChild) {
@@ -443,6 +449,29 @@ nsHTMLFrameOuterFrame::AttributeChanged(nsIPresContext* aPresContext,
                                         mFrames.FirstChild());
     if (firstChild) {
       firstChild->ReloadURL(aPresContext);
+    }
+  }
+  // If the noResize attribute changes, dis/allow frame to be resized
+  else if (nsHTMLAtoms::noresize == aAttribute) {
+    nsCOMPtr<nsIContent> parentContent;
+    mContent->GetParent(*getter_AddRefs(parentContent));
+
+    nsCOMPtr<nsIAtom> parentTag;
+    parentContent->GetTag(*getter_AddRefs(parentTag));
+
+    if (nsHTMLAtoms::frameset == parentTag) {
+      nsIFrame* parentFrame = nsnull;
+      GetParent(&parentFrame);
+
+      if (parentFrame) {
+        // There is no interface for kIFramesetFrameIID
+        // so QI'ing to concrete class, yay!
+        nsHTMLFramesetFrame* framesetFrame = nsnull;
+        parentFrame->QueryInterface(kIFramesetFrameIID, (void **)&framesetFrame);
+        if (framesetFrame) {
+          framesetFrame->RecalculateBorderResize();
+        }
+      }
     }
   }
   return NS_OK;
@@ -668,7 +697,12 @@ nsHTMLFrameInnerFrame::Paint(nsIPresContext*      aPresContext,
   //printf("inner paint %X (%d,%d,%d,%d) \n", this, aDirtyRect.x, aDirtyRect.y, aDirtyRect.width, aDirtyRect.height);
   // if there is not web shell paint based on our background color, 
   // otherwise let the web shell paint the sub document 
-  if (!mSubShell) {
+
+  // isPaginated is a temporary fix for Bug 75737 
+  // and this should all be fixed correctly by Bug 75739
+  PRBool isPaginated;
+  aPresContext->IsPaginated(&isPaginated);
+   if (!mSubShell && !isPaginated) {
     const nsStyleColor* color =
       (const nsStyleColor*)mStyleContext->GetStyleData(eStyleStruct_Color);
     aRenderingContext.SetColor(color->mBackgroundColor);

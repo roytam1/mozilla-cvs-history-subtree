@@ -24,10 +24,10 @@
  * Netscape.
  */
 
-#include <Types.h>
+#include <MacTypes.h>
 #include <Traps.h>
 #include <OSUtils.h>
-#include <Errors.h>
+#include <MacErrors.h>
 #include <Files.h>
 #include <Devices.h>
 #include <Finder.h>
@@ -647,7 +647,6 @@ pascal	OSErr	FindDrive(ConstStr255Param pathname,
 	return ( result );
 }
 
-#endif /* CALL_NOT_IN_CARBON */
 
 /*****************************************************************************/
 
@@ -786,6 +785,8 @@ pascal	OSErr	GetDiskBlocks(ConstStr255Param pathname,
 	
 	return ( result );
 }
+
+#endif /* CALL_NOT_IN_CARBON */
 
 /*****************************************************************************/
 
@@ -1044,6 +1045,8 @@ pascal	OSErr SetDefault(short newVRefNum,
 
 /*****************************************************************************/
 
+#if CALL_NOT_IN_CARBON
+
 pascal	OSErr RestoreDefault(short oldVRefNum,
 							 long oldDirID)
 {
@@ -1071,6 +1074,8 @@ pascal	OSErr RestoreDefault(short oldVRefNum,
 	
 	return ( error );
 }
+
+#endif
 
 /*****************************************************************************/
 

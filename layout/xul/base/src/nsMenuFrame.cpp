@@ -358,7 +358,7 @@ nsMenuFrame::HandleEvent(nsIPresContext* aPresContext,
 #else
             aEvent->message == NS_CONTEXTMENU &&
 #endif
-            mMenuParent && !IsDisabled()) {
+            mMenuParent && !IsMenu() && !IsDisabled()) {
     // if this menu is a context menu it accepts right-clicks...fire away!
     // Make sure we cancel default processing of the context menu event so
     // that it doesn't bubble and get seen again by the popuplistener and show
@@ -1336,7 +1336,7 @@ nsMenuFrame::BuildAcceleratorText(nsString& aAccelString)
       switch (accelKey)
       {
         case nsIDOMKeyEvent::DOM_VK_META:
-          aAccelString += NS_LITERAL_STRING("Ctrl");
+          aAccelString += NS_LITERAL_STRING("Meta");
           break;
 
         case nsIDOMKeyEvent::DOM_VK_ALT:
@@ -1416,6 +1416,8 @@ nsMenuFrame::Execute()
       nsCOMPtr<nsIContent> commandContent(do_QueryInterface(commandElt));
       if (commandContent)
         shell->HandleDOMEventWithTarget(commandContent, &event, &status);
+      else
+        NS_ASSERTION(PR_FALSE, "A XUL <menuitem> is attached to a command that doesn't exist! Unable to execute menu item!\n");
     }
     else
       shell->HandleDOMEventWithTarget(mContent, &event, &status);

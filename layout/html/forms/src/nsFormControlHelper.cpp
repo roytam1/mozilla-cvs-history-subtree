@@ -53,6 +53,7 @@
 #include "nsStyleUtil.h"
 #include "nsINameSpaceManager.h"
 #include "nsIDOMHTMLInputElement.h"
+#include "nsNetCID.h"
 
 // Needed for Localization
 #include "nsIServiceManager.h"
@@ -970,7 +971,6 @@ nsFormControlHelper::DoManualSubmitOrReset(nsIPresContext* aPresContext,
     aFormControlFrame->GetContent(getter_AddRefs(controlContent));
   }
 
-  nsEventStatus status = nsEventStatus_eIgnore;
   if (formContent) {
     //Either use the PresShell passed in or go get it from the PresContext
     nsCOMPtr<nsIPresShell> shell; // this will do our clean up
@@ -981,34 +981,20 @@ nsFormControlHelper::DoManualSubmitOrReset(nsIPresContext* aPresContext,
 
     // With a valid PreShell handle the event
     if (NS_SUCCEEDED(result) && nsnull != aPresShell) {
-      nsEvent event;
-      event.eventStructType = NS_EVENT;
+
+      // Get originator for event (failure is non-fatal)
+      nsCOMPtr<nsIContent> formControl;
+      aFormControlFrame->GetContent(getter_AddRefs(formControl));
+
+      nsFormEvent event;
+      event.eventStructType = NS_FORM_EVENT;
       event.message         = aDoSubmit?NS_FORM_SUBMIT:NS_FORM_RESET;
+      event.originator      = formControl;
+      nsEventStatus status  = nsEventStatus_eIgnore;
       if (aDoDOMEvent) {
         aPresShell->HandleDOMEventWithTarget(formContent, &event, &status);
       } else {
         aPresShell->HandleEventWithTarget(&event, nsnull, formContent, NS_EVENT_FLAG_INIT, &status);
-      }
-    }
-  }
-
-  // Check status after handling event to make sure we should continue
-  if (nsEventStatus_eConsumeNoDefault != status) {
-    // get the form manager interface
-    nsIFormManager* formMan = nsnull; // weak reference, not refcounted
-    result = aFormFrame->QueryInterface(NS_GET_IID(nsIFormManager), (void**)&formMan);
-    if (NS_SUCCEEDED(result) && formMan) {
-      // now do the Submit or Reset
-      if (aDoSubmit) {
-        // Now go back and get the frame for the control's content 
-        // to make sure it is still valid
-        nsIFrame* controlFrame;
-        aPresShell->GetPrimaryFrameFor(controlContent, &controlFrame);
-        if (controlFrame != nsnull) {
-          formMan->OnSubmit(aPresContext, controlFrame);
-        }
-      } else {
-        formMan->OnReset(aPresContext);
       }
     }
   }

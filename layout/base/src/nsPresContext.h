@@ -119,6 +119,11 @@ public:
   NS_IMETHOD GetDefaultLinkColor(nscolor* aColor);
   NS_IMETHOD GetDefaultVisitedLinkColor(nscolor* aColor);
 
+  NS_IMETHOD GetFocusBackgroundColor(nscolor* aColor);
+  NS_IMETHOD GetFocusTextColor(nscolor* aColor);
+  NS_IMETHOD GetUseFocusColors(PRBool& useFocusColors);
+  NS_IMETHOD GetFocusRingWidth(PRUint8 *focusRingWidth);
+  NS_IMETHOD GetFocusRingOnAnything(PRBool& focusRingOnAnything);
   NS_IMETHOD SetDefaultColor(nscolor aColor);
   NS_IMETHOD SetDefaultBackgroundColor(nscolor aColor);
   NS_IMETHOD SetDefaultBackgroundImage(const nsString& aImage);
@@ -146,8 +151,8 @@ public:
   NS_IMETHOD GetVisibleArea(nsRect& aResult);
   NS_IMETHOD SetVisibleArea(const nsRect& r);
   NS_IMETHOD IsPaginated(PRBool* aResult) = 0;
-  NS_IMETHOD GetPageWidth(nscoord* aResult) = 0;
-  NS_IMETHOD GetPageHeight(nscoord* aResult) = 0;
+  NS_IMETHOD GetPageDim(nsRect* aActualRect, nsRect* aAdjRect) = 0;
+  NS_IMETHOD SetPageDim(nsRect* aRect) = 0;
   NS_IMETHOD GetPixelsToTwips(float* aResult) const;
   NS_IMETHOD GetTwipsToPixels(float* aResult) const;
   NS_IMETHOD GetScaledPixelsToTwips(float* aScale) const;
@@ -177,8 +182,8 @@ public:
   NS_IMETHOD IsVisualMode(PRBool& aIsVisual) const;
   NS_IMETHOD SetVisualMode(PRBool aIsVisual);
   NS_IMETHOD GetBidiUtils(nsBidiPresUtils** aBidiUtils);
-  NS_IMETHOD SetBidi(nsBidiOptions aSource, PRBool aForceReflow = PR_FALSE);
-  NS_IMETHOD GetBidi(nsBidiOptions * aDest);
+  NS_IMETHOD SetBidi(PRUint32 aSource, PRBool aForceReflow = PR_FALSE);
+  NS_IMETHOD GetBidi(PRUint32* aDest);
  //ahmed
   NS_IMETHOD IsVisRTL(PRBool &aResult);
   NS_IMETHOD IsArabicEncoding(PRBool &aResult);
@@ -221,6 +226,11 @@ protected:
   nscolor               mLinkColor;               // set in GetUserPrefs
   nscolor               mVisitedLinkColor;        // set in GetUserPrefs
   PRPackedBool          mUnderlineLinks;          // set in GetUserPrefs
+  PRPackedBool          mUseFocusColors;          // set in GetUserPrefs
+  nscolor               mFocusTextColor;          // set in GetUserPrefs
+  nscolor               mFocusBackgroundColor;    // set in GetUserPrefs
+  PRUint8               mFocusRingWidth;          // set in GetUserPrefs
+  PRPackedBool          mFocusRingOnAnything;     // set in GetUserPrefs
   nsString              mDefaultBackgroundImage;
   PRUint8               mDefaultBackgroundImageRepeat;
   nscoord               mDefaultBackgroundImageOffsetX;
@@ -245,7 +255,7 @@ protected:
 
 #ifdef IBMBIDI
   nsBidiPresUtils*      mBidiUtils;
-  nsBidiOptions         mBidi;
+  PRUint32              mBidi;
   nsAutoString          mCharset;                 // the charset we are using
 #endif // IBMBIDI
 

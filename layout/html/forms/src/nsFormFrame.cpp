@@ -19,6 +19,7 @@
  *
  * Contributor(s): 
  *   Pierre Phaneuf <pp@ludusdesign.com>
+ *   Adrian Havill <havill@redhat.com>
  */
 
 
@@ -713,7 +714,7 @@ nsFormFrame::OnSubmit(nsIPresContext* aPresContext, nsIFrame* aFrame)
 
 //ahmed
 #ifdef IBMBIDI
-  nsBidiOptions bidiOptions;
+  PRUint32 bidiOptions;
   aPresContext->GetBidi(&bidiOptions);
   mCtrlsModAtSubmit = GET_BIDI_OPTION_CONTROLSTEXTMODE(bidiOptions);
   mTextDir          = GET_BIDI_OPTION_DIRECTION(bidiOptions);
@@ -913,36 +914,31 @@ nsFormFrame::OnSubmit(nsIPresContext* aPresContext, nsIFrame* aFrame)
     }
 
     // Now pass on absolute url to the click handler
-    nsIInputStream* postDataStream = nsnull;
+    nsCOMPtr<nsIInputStream> postDataStream;
     if (isPost) {
-      nsresult rv;
-      nsCAutoString postBuffer;
-      postBuffer.AssignWithConversion(data);
-
       if (isURLEncoded) {
-        rv = NS_NewPostDataStream(&postDataStream, !isURLEncoded, postBuffer.get(), 0);
+        nsCAutoString postBuffer;
+        postBuffer.AssignWithConversion(data);
+        NS_NewPostDataStream(getter_AddRefs(postDataStream), !isURLEncoded,
+                             postBuffer.get(), 0);
       } else {
-// Cut-and-paste of NS_NewPostDataStream
-        NS_WITH_SERVICE(nsIIOService, serv, kIOServiceCID, &rv);
-        if (NS_FAILED(rv)) return rv;
-	nsCOMPtr<nsIProtocolHandler> pHandler;
-	rv = serv->GetProtocolHandler("http", getter_AddRefs(pHandler));
-	if (NS_FAILED(rv)) return rv;
-	
-	nsCOMPtr<nsIHTTPProtocolHandler> http = do_QueryInterface(pHandler, &rv);
-	if (NS_FAILED(rv)) return rv;
-	
-// Cut-and-paste of nsHTTPHandler::NewPostDataStream inside if(isFile)
-        nsIInputStream* rawStream = nsnull; // Strong
-        rv = multipartDataFile->GetInputStream(&rawStream); // AddRef
-	if (NS_FAILED(rv)) return rv;
-	
-	rv = http->NewEncodeStream(rawStream, nsIHTTPProtocolHandler::ENCODE_NORMAL, &postDataStream);
-        NS_RELEASE(rawStream);
-// End Cut-and-pastisms
-      }
+        // Cut-and-paste of NS_NewPostDataStream
+        nsCOMPtr<nsIIOService> serv(do_GetService(kIOServiceCID));
+        if (serv && multipartDataFile) {
 
-      /* The postBuffer is now owned by the IPostData instance */
+          nsCOMPtr<nsIProtocolHandler> pHandler;
+          serv->GetProtocolHandler("http", getter_AddRefs(pHandler));
+          nsCOMPtr<nsIHTTPProtocolHandler> http(do_QueryInterface(pHandler));
+
+          nsCOMPtr<nsIInputStream> rawStream;
+          multipartDataFile->GetInputStream(getter_AddRefs(rawStream));
+
+          if (http && rawStream) {
+            http->NewEncodeStream(rawStream, nsIHTTPProtocolHandler::ENCODE_NORMAL,
+                                  getter_AddRefs(postDataStream));
+          }
+        }
+      }
     }    
     if (handler) {
 #if defined(DEBUG_rods) || defined(DEBUG_pollmann)
@@ -974,13 +970,6 @@ nsFormFrame::OnSubmit(nsIPresContext* aPresContext, nsIFrame* aFrame)
 //        mdf.Delete(PR_FALSE);
 //      }
 //    }
-// XXX DON'T NS_IF_RELEASE(postDataStream), this happens in Necko!
-
-// If you need these for debugging...
-// wrap them in DEBUG_<username>
-// Printing the data and url prints the contents of passwords
-//DebugPrint("url", absURLSpec);
-//DebugPrint("data", data);
   }
   return result;
 }
@@ -1306,28 +1295,6 @@ nsresult nsFormFrame::ProcessAsURLEncoded(nsIFormProcessor* aFormProcessor, PRBo
   return rv;
 }
 
-// include the file name without the directory
-const char*
-nsFormFrame::GetFileNameWithinPath(char* aPathName)
-{
-#ifdef XP_MAC
-  // On a Mac the only invalid character in a file name is a : so we have to avoid
-  // the test for '\'
-  char* fileNameStart = PL_strrchr(aPathName, ':');
-#else
-  char* fileNameStart = PL_strrchr(aPathName, '\\'); // windows
-  if (!fileNameStart) { // try unix
-    fileNameStart = PL_strrchr(aPathName, '/');
-  }
-#endif
-  if (fileNameStart) { 
-    return fileNameStart+1;
-  }
-  else {
-    return aPathName;
-  }
-}
-
 nsresult
 nsFormFrame::GetContentType(char* aPathName, char** aContentType)
 {
@@ -1356,6 +1323,8 @@ nsFormFrame::GetContentType(char* aPathName, char** aContentType)
 #define FILENAME "\"; filename=\""
 #define CONTENT_TYPE "Content-Type: "
 #define CONTENT_ENCODING "Content-Encoding: "
+#define CONTENT_TRANSFER "Content-Transfer-Encoding: "
+#define BINARY_CONTENT "binary"
 #define BUFSIZE 1024
 #define MULTIPART "multipart/form-data"
 #define SEP "--"
@@ -1467,11 +1436,20 @@ nsresult nsFormFrame::ProcessAsMultipart(nsIFormProcessor* aFormProcessor,nsIFil
           // File inputs also list filename on Content-Disp line
           if (NS_FORM_INPUT_FILE == type) { 
             contentLen += PL_strlen(FILENAME);
-            const char* fileNameStart = GetFileNameWithinPath(value);
-	          contentLen += PL_strlen(fileNameStart);
+            contentLen += PL_strlen(value);
           }
           // End Content-Disp Line (quote plus CRLF)
           contentLen += 1 + crlfLen;  // ending name quote plus CRLF
+
+          // File inputs should include Content-Transfer-Encoding
+          if (NS_FORM_INPUT_FILE == type) {
+            contentLen += PL_strlen(CONTENT_TRANSFER);
+            // XXX is there any way to tell when "8bit" or "7bit" etc may be more appropriate than
+            // always using "binary"?
+            contentLen += PL_strlen(BINARY_CONTENT);
+            contentLen += crlfLen;
+          }
+          // End Content-Transfer-Encoding line
 
           // File inputs add Content-Type line
           if (NS_FORM_INPUT_FILE == type) {
@@ -1602,8 +1580,7 @@ nsresult nsFormFrame::ProcessAsMultipart(nsIFormProcessor* aFormProcessor,nsIFil
             if (NS_FORM_INPUT_FILE == type) {
               rv = postDataFile->Write(FILENAME, wantbytes = PL_strlen(FILENAME), &gotbytes);
               if (NS_FAILED(rv) || (wantbytes != gotbytes)) break;
-              const char* fileNameStart = GetFileNameWithinPath(value);
-              rv = postDataFile->Write(fileNameStart, wantbytes = PL_strlen(fileNameStart), &gotbytes);
+              rv = postDataFile->Write(value, wantbytes = PL_strlen(value), &gotbytes);
               if (NS_FAILED(rv) || (wantbytes != gotbytes)) break;
             }
 
@@ -1625,6 +1602,23 @@ nsresult nsFormFrame::ProcessAsMultipart(nsIFormProcessor* aFormProcessor,nsIFil
               if (NS_FAILED(rv) || (wantbytes != gotbytes)) break;
               // end content-type header
 	          }
+
+            // File inputs should include Content-Transfer-Encoding to prep server side
+            // MIME decoders
+
+            if (NS_FORM_INPUT_FILE == type) {
+              rv = postDataFile->Write(CONTENT_TRANSFER, wantbytes = PL_strlen(CONTENT_TRANSFER), &gotbytes);
+              if (NS_FAILED(rv) || (wantbytes != gotbytes)) break;
+
+              // XXX is there any way to tell when "8bit" or "7bit" etc may be more appropriate than
+              // always using "binary"?
+
+              rv = postDataFile->Write(BINARY_CONTENT, wantbytes = PL_strlen(BINARY_CONTENT), &gotbytes);
+              if (NS_FAILED(rv) || (wantbytes != gotbytes)) break;
+
+              rv = postDataFile->Write(CRLF, wantbytes = PL_strlen(CRLF), &gotbytes);
+              if (NS_FAILED(rv) || (wantbytes != gotbytes)) break;
+            }
 
             // Blank line before value
             rv = postDataFile->Write(CRLF, wantbytes = PL_strlen(CRLF), &gotbytes);
