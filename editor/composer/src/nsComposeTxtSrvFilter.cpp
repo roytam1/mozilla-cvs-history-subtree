@@ -48,6 +48,7 @@ nsComposeTxtSrvFilter::nsComposeTxtSrvFilter() :
   NS_INIT_ISUPPORTS();
 
   mBlockQuoteAtom  = getter_AddRefs(do_GetAtom("blockquote"));
+  mDivAtom         = getter_AddRefs(do_GetAtom("div"));
   mTypeAtom        = getter_AddRefs(do_GetAtom("type"));
   mScriptAtom      = getter_AddRefs(do_GetAtom("script"));
   mTextAreaAtom    = getter_AddRefs(do_GetAtom("textarea"));
@@ -70,7 +71,8 @@ nsComposeTxtSrvFilter::Skip(nsIDOMNode* aNode, PRBool *_retval)
     nsCOMPtr<nsIAtom> tag;
     content->GetTag(*getter_AddRefs(tag));
     if (tag) {
-      if (tag == mBlockQuoteAtom) {
+      if (tag == mBlockQuoteAtom ||
+          tag == mDivAtom) {
         if (mIsForMail) {
           nsAutoString cite;
           if (NS_SUCCEEDED(content->GetAttr(kNameSpaceID_None, mTypeAtom, cite))) {
