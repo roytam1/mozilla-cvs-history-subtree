@@ -13,7 +13,7 @@
  * Portions created by ActiveState Tool Corp. are Copyright (C) 2000, 2001
  * ActiveState Tool Corp.  All Rights Reserved.
  *
- * Contributor(s): Mark Hammond <MarkH@ActiveState.com> (original author)
+ * Contributor(s): Mark Hammond <mhammond@skippinet.com.au> (original author)
  *
  */
 
@@ -32,7 +32,9 @@
 #include "nsDirectoryServiceDefs.h"
 #include "nsILocalFile.h"
 #include "nsXPIDLString.h"
- 
+#include "stdlib.h"
+#include "stdarg.h"
+
 #include <nsFileStream.h> // For console logging.
 
 #ifdef HAVE_LONG_LONG
