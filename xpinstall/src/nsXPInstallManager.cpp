@@ -346,7 +346,7 @@ PRBool nsXPInstallManager::ConfirmChromeInstall(nsIScriptGlobalObject* aGlobalOb
                 rv = dlgService->ConfirmCheck( parentWindow,
                                                nsnull,
                                                confirmText, 
-                                               applyNowText, 
+                                               nsnull, 
                                                &mSelectChrome, 
                                                &bInstall );
             }
@@ -489,7 +489,7 @@ NS_IMETHODIMP nsXPInstallManager::DownloadNext()
                                                 mItem->mFile,
                                                 mItem->mURL.get(),
                                                 mItem->mName.get(),
-                                                mSelectChrome,
+                                                PR_FALSE,
                                                 this );
                     }
 
