@@ -307,7 +307,6 @@ pref("browser.urlbar.clickSelectsAll", false);
 pref("accessibility.typeaheadfind", false);
 pref("accessibility.typeaheadfind.timeout", 5000);
 pref("accessibility.typeaheadfind.linksonly", false);
-pref("accessibility.typeaheadfind.startlinksonly", false);
 pref("accessibility.typeaheadfind.flashBar", 1);
 
 // Disable the default plugin for firefox

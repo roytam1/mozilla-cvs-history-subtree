@@ -56,6 +56,7 @@ var gFlashFindBar = 0;
 var gFlashFindBarCount = 6;
 var gFlashFindBarTimeout = null;
 var gLastHighlightString = "";
+var gTypeAheadLinksOnly = false;
 
 // DOMRange used during highlighting
 var searchRange;
@@ -63,16 +64,19 @@ var startPt;
 var endPt;
 
 var gTypeAheadFind = {
-  prefDomain: "accessibility.typeaheadfind",
+  useTAFPref: "accessibility.typeaheadfind",
+  searchLinksPref: "accessibility.typeaheadfind.linksonly",
+  
   observe: function(aSubject, aTopic, aPrefName)
   {
-    if (aTopic != "nsPref:changed" || aPrefName != this.prefDomain)
+    if (aTopic != "nsPref:changed" || (aPrefName != this.useTAFPref && aPrefName != this.searchLinksPref))
       return;
 
     var prefService = Components.classes["@mozilla.org/preferences-service;1"]
                                 .getService(Components.interfaces.nsIPrefBranch);
       
     gUseTypeAheadFind = prefService.getBoolPref("accessibility.typeaheadfind");
+    gTypeAheadLinksOnly = gPrefService.getBoolPref("accessibility.typeaheadfind.linksonly");
   }
 };
 
@@ -89,8 +93,10 @@ function initFindBar()
   gQuickFindTimeoutLength = prefService.getIntPref("accessibility.typeaheadfind.timeout");
   gFlashFindBar = prefService.getIntPref("accessibility.typeaheadfind.flashBar");
 
-  pbi.addObserver(gTypeAheadFind.prefDomain, gTypeAheadFind, false);
+  pbi.addObserver(gTypeAheadFind.useTAFPref, gTypeAheadFind, false);
+  pbi.addObserver(gTypeAheadFind.searchLinksPref, gTypeAheadFind, false);
   gUseTypeAheadFind = prefService.getBoolPref("accessibility.typeaheadfind");
+  gTypeAheadLinksOnly = prefService.getBoolPref("accessibility.typeaheadfind.linksonly");
 }
 
 function uninitFindBar()
@@ -99,7 +105,8 @@ function uninitFindBar()
                                .getService(Components.interfaces.nsIPrefBranch);
 
    var pbi = prefService.QueryInterface(Components.interfaces.nsIPrefBranchInternal);
-   pbi.removeObserver(gTypeAheadFind.prefDomain, gTypeAheadFind);
+   pbi.removeObserver(gTypeAheadFind.useTAFPref, gTypeAheadFind);
+   pbi.removeObserver(gTypeAheadFind.searchLinksPref, gTypeAheadFind);
 }
 
 function toggleHighlight(aHighlight)
@@ -385,7 +392,7 @@ function onBrowserKeyPress(evt)
   }
   
   if (evt.charCode == 39 /* ' */ || evt.charCode == 47 /* / */ || (gUseTypeAheadFind && evt.charCode && evt.charCode != 32)) {   
-    gFindMode = (evt.charCode == 39) ? FIND_LINKS : FIND_TYPEAHEAD;
+    gFindMode = (evt.charCode == 39 || (gTypeAheadLinksOnly && evt.charCode != 47)) ? FIND_LINKS : FIND_TYPEAHEAD;
     toggleLinkFocus(true);
     if (openFindBar()) {      
       setFindCloseTimeout();      
