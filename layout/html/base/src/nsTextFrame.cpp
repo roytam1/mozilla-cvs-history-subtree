@@ -394,7 +394,6 @@ nsresult nsBlinkTimer::RemoveBlinkFrame(nsIFrame* aFrame)
   return NS_OK;
 }
 
-
 //----------------------------------------------------------------------
 
 #ifdef IBMBIDI
@@ -3401,22 +3400,7 @@ nsTextFrame::GetPosition(nsIPresContext* aCX,
       }
 
       // Find the font metrics for this text
-      nsIStyleContext* styleContext;
-      GetStyleContext(&styleContext);
-      const nsStyleFont *font = (const nsStyleFont*)
-        styleContext->GetStyleData(eStyleStruct_Font);
-      const nsStyleVisibility* visibility = (const nsStyleVisibility*) 
-        styleContext->GetStyleData(eStyleStruct_Visibility);
-      NS_RELEASE(styleContext);
-      nsCOMPtr<nsIAtom> langGroup;
-      if (visibility && visibility->mLanguage) {
-        visibility->mLanguage->GetLanguageGroup(getter_AddRefs(langGroup));
-      }
-      nsCOMPtr<nsIFontMetrics> fm;
-      nsCOMPtr<nsIDeviceContext> dx;
-      aCX->GetDeviceContext(getter_AddRefs(dx));
-      dx->GetMetricsFor(font->mFont, langGroup, *getter_AddRefs(fm));
-      acx->SetFont(fm);
+      SetFontFromStyle(acx, mStyleContext);
 
       // Get the renderable form of the text
       nsCOMPtr<nsIDocument> doc(getter_AddRefs(GetDocument(aCX)));
@@ -5419,8 +5403,7 @@ nsTextFrame::Reflow(nsIPresContext*          aPresContext,
       aData.Mid(aText, mContentOffset, mContentLength);
 
       // Set the font
-      const nsStyleFont* font = (const nsStyleFont*)mStyleContext->GetStyleData(eStyleStruct_Font);
-      aReflowState.rendContext->SetFont(font->mFont);
+      SetFontFromStyle(aReflowState.rendContext, mStyleContext);
 
       // Now get the exact bounding metrics of the text
       nsBoundingMetrics bm;
@@ -5536,9 +5519,8 @@ nsTextFrame::TrimTrailingWhiteSpace(nsIPresContext* aPresContext,
         if (XP_IS_SPACE(ch)) {
           // Get font metrics for a space so we can adjust the width by the
           // right amount.
-          const nsStyleFont* fontStyle = (const nsStyleFont*)
-            mStyleContext->GetStyleData(eStyleStruct_Font);
-          aRC.SetFont(fontStyle->mFont);
+          SetFontFromStyle(&aRC, mStyleContext);
+
           aRC.GetWidth(' ', dw);
           // NOTE: Trailing whitespace includes word and letter spacing!
           nsStyleUnit unit;
