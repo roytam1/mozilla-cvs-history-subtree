@@ -3810,26 +3810,12 @@ static PRBool isUnwantedPlugin(nsPluginTag * tag)
 
     if(nsnull == PL_strcasecmp(tag->mMimeTypeArray[i],"application/x-director"))
       return PR_FALSE;
-
-    // these are Quicktime-only types so that wav and midi will register indirectly on QT4
-    if(nsnull == PL_strcasecmp(tag->mMimeTypeArray[i],"image/x-quicktime"))
-      return PR_FALSE;
-
-    if(nsnull == PL_strcasecmp(tag->mMimeTypeArray[i],"image/x-macpaint"))
-      return PR_FALSE;
-
-    if(nsnull == PL_strcasecmp(tag->mMimeTypeArray[i],"video/quicktime"))
-      return PR_FALSE;
-
-    // Quicktime 5 puts seperates mpeg and midi in their own files
-    // XXX indirectly include MPEG by including this MIME-type in the same DLL
-    if(nsnull == PL_strcasecmp(tag->mMimeTypeArray[i],"audio/vnd.qcelp"))
-      return PR_FALSE;
-    // XXX indirectly include MIDI, WAV, and AIF by including this MIME-type in the same DLL
-    if(nsnull == PL_strcasecmp(tag->mMimeTypeArray[i],"audio/basic"))
-      return PR_FALSE;
-
   }
+
+  // On Windows, we also want to include the Quicktime plugin from the 4.x directory
+  // But because it spans several DLL's, the best check for now is by filename
+  if (nsnull != PL_strcasestr(tag->mFileName,"npqtplugin"))
+    return PR_FALSE;
 
   return PR_TRUE;
 }
