@@ -42,13 +42,14 @@
 static NS_DEFINE_CID(kLookAndFeelCID, NS_LOOKANDFEEL_CID);
 static NS_DEFINE_CID(kRegionCID, NS_REGION_CID);
 
-nsILookAndFeel *nsWidget::sLookAndFeel = nsnull;
-PRUint32 nsWidget::sWidgetCount = 0;
+nsILookAndFeel    *nsWidget::sLookAndFeel = nsnull;
+PRUint32           nsWidget::sWidgetCount = 0;
+
+nsIRollupListener *nsWidget::gRollupListener = nsnull;
+nsIWidget         *nsWidget::gRollupWidget = nsnull;
+PRBool             nsWidget::gRollupConsumeRollupEvent = PR_FALSE;
 
 
-static nsIRollupListener *gRollupListener = nsnull;
-static nsIWidget *gRollupWidget = nsnull;
-static PRBool gRollupConsumeRollupEvent = PR_FALSE;
 
 //
 // Keep track of the last widget being "dragged"
@@ -118,6 +119,7 @@ nsWidget::nsWidget()
   }
   
   sWidgetCount++;
+  mMozBox = 0;
 
 
 
@@ -250,8 +252,11 @@ NS_IMETHODIMP nsWidget::Destroy(void)
     }
     // prevent the widget from causing additional events
     mEventCallback = nsnull;
-    ::gtk_widget_destroy(mWidget);
+    // destroying the moz box will destroy the widget contained in it.
+    // such is the wonder of a container widget
+    ::gtk_widget_destroy(mMozBox);
     mWidget = nsnull;
+    mMozBox = nsnull;
     if (PR_FALSE == mOnDestroyCalled)
       OnDestroy();
   }
@@ -317,10 +322,14 @@ NS_IMETHODIMP nsWidget::Show(PRBool bState)
   if (!mWidget)
     return NS_OK; // Will be null durring printing
 
-  if (bState)
+  if (bState) {
     gtk_widget_show(mWidget);
-  else
+    gtk_widget_show(mMozBox);
+  }
+  else {
+    gtk_widget_hide(mMozBox);
     gtk_widget_hide(mWidget);
+  }
 
   mShown = bState;
 
@@ -330,65 +339,6 @@ NS_IMETHODIMP nsWidget::Show(PRBool bState)
 
 NS_IMETHODIMP nsWidget::CaptureRollupEvents(nsIRollupListener * aListener, PRBool aDoCapture, PRBool aConsumeRollupEvent)
 {
-#ifdef DEBUG_pavlov
-  printf("nsWindow::CaptureRollupEvents() this = %p , doCapture = %i\n", this, aDoCapture);
-#endif
-  GtkWidget *grabWidget;
-
-  grabWidget = mWidget;
-  // XXX we need a visible widget!!
-
-  if (aDoCapture)
-  {
-#ifdef DEBUG_pavlov
-    printf("grabbing widget\n");
-#endif
-    GdkCursor *cursor = gdk_cursor_new (GDK_ARROW);
-    if (!GTK_LAYOUT(mWidget)->bin_window)
-    {
-#ifdef DEBUG_pavlov
-      printf("no window for the widget\n");
-#endif
-      //      gtk_widget_show_now(mWidget);
-    }
-    else
-    {
-      int ret = gdk_pointer_grab (GTK_LAYOUT(mWidget)->bin_window, PR_TRUE,(GdkEventMask)
-                                  (GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK |
-                                   GDK_ENTER_NOTIFY_MASK | GDK_LEAVE_NOTIFY_MASK |
-                                   GDK_POINTER_MOTION_MASK),
-                                  (GdkWindow*)NULL, cursor, GDK_CURRENT_TIME);
-#ifdef DEBUG_pavlov
-      printf("pointer grab returned %i\n", ret);
-#endif
-      gdk_cursor_destroy(cursor);
-    }
-  }
-  else
-  {
-#ifdef DEBUG_pavlov
-    printf("ungrabbing widget\n");
-#endif
-    gdk_pointer_ungrab(GDK_CURRENT_TIME);
-    //    gtk_grab_remove(grabWidget);
-  }
-
-  if (aDoCapture) {
-    //    gtk_grab_add(mWidget);
-    NS_IF_RELEASE(gRollupListener);
-    NS_IF_RELEASE(gRollupWidget);
-    gRollupConsumeRollupEvent = PR_TRUE;
-    gRollupListener = aListener;
-    NS_ADDREF(aListener);
-    gRollupWidget = this;
-    NS_ADDREF(this);
-  } else {
-    //    gtk_grab_remove(mWidget);
-    NS_IF_RELEASE(gRollupListener);
-    //gRollupListener = nsnull;
-    NS_IF_RELEASE(gRollupWidget);
-  }
-
   return NS_OK;
 }
 
@@ -430,43 +380,7 @@ NS_IMETHODIMP nsWidget::Move(PRInt32 aX, PRInt32 aY)
 {
   if (mWidget) 
   {
-    GtkWidget *    layout = mWidget->parent;
-
-    GtkAdjustment* ha = gtk_layout_get_hadjustment(GTK_LAYOUT(layout));
-    GtkAdjustment* va = gtk_layout_get_vadjustment(GTK_LAYOUT(layout));
-
-    // This correction is needed because the view manager code in
-    // gecko assumes that the implementation of scrolling happens
-    // only in one window (as is the case in win32 and mac).  The
-    // GtkLayout widget uses 2 windows to do arbitrarily long scrolling
-    // (beyond the 16 bit dimension hard limit of X windows)
-    //
-    // The first window is the base.
-    // 
-    // The second window is a clip window (called the bin_window).
-    //
-    // The position of the bin_window is controlled by 2 GtkAdjustment
-    // data structures.
-    // 
-    // What happens is that the view manager computes offsets for 
-    // widgets from the viewport's origin.  
-    //
-    // The GtkLayout widget scrolls the bin_window (which is the true
-    // parent window of the widgets we are trying to Move) from
-    // its own origin.
-    // 
-    // So, the widgets end up being positioned off by the amount of
-    // offset between the viewport's origin, and the position of
-    // the GtkLayout's clip window and hence the correction...
-    //
-    // Simple...
-    PRInt32        x_correction = (PRInt32) ha->value;
-    PRInt32        y_correction = (PRInt32) va->value;
-    
-    gtk_layout_move(GTK_LAYOUT(layout), 
-                    mWidget, 
-                    aX + x_correction, 
-                    aY + y_correction);
+    gtk_mozbox_set_position(GTK_MOZBOX(mMozBox), aX, aY);
   }
 
   return NS_OK;
@@ -505,29 +419,6 @@ NS_IMETHODIMP nsWidget::Resize(PRInt32 aX, PRInt32 aY, PRInt32 aWidth,
 PRBool nsWidget::OnResize(nsSizeEvent event)
 {
   return DispatchWindowEvent(&event);
-}
-
-
-PRBool nsWidget::OnResize(nsRect &aRect)
-{
-  nsSizeEvent event;
-
-  InitEvent(event, NS_SIZE);
-  event.eventStructType = NS_SIZE_EVENT;
-
-  nsRect *foo = new nsRect(0, 0, aRect.width, aRect.height);
-  event.windowSize = foo;
-
-  event.point.x = 0;
-  event.point.y = 0;
-  event.mWinWidth = aRect.width;
-  event.mWinHeight = aRect.height;
-  
-  NS_ADDREF_THIS();
-  PRBool result = OnResize(event);
-  NS_RELEASE_THIS();
-
-  return result;
 }
 
 
@@ -752,8 +643,8 @@ NS_IMETHODIMP nsWidget::Invalidate(PRBool aIsSynchronous)
                          this,
                          nsnull,
                          aIsSynchronous,
-                         debug_GetName(mWidget),
-                         debug_GetRenderXID(mWidget));
+                         debug_GetName(GTK_OBJECT(mWidget)),
+                         debug_GetRenderXID(GTK_OBJECT(mWidget)));
   }
 #endif // NS_DEBUG
 
@@ -788,8 +679,8 @@ NS_IMETHODIMP nsWidget::Invalidate(const nsRect & aRect, PRBool aIsSynchronous)
                          this,
                          &aRect,
                          aIsSynchronous,
-                         debug_GetName(mWidget),
-                         debug_GetRenderXID(mWidget));
+                         debug_GetName(GTK_OBJECT(mWidget)),
+                         debug_GetRenderXID(GTK_OBJECT(mWidget)));
   }
 #endif // NS_DEBUG
 
@@ -848,8 +739,8 @@ NS_IMETHODIMP nsWidget::InvalidateRegion(const nsIRegion *aRegion, PRBool aIsSyn
                            this,
                            &rect,
                            aIsSynchronous,
-                           debug_GetName(mWidget),
-                           debug_GetRenderXID(mWidget));
+                           debug_GetName(GTK_OBJECT(mWidget)),
+                           debug_GetRenderXID(GTK_OBJECT(mWidget)));
     }
 #endif // NS_DEBUG
 
@@ -978,7 +869,7 @@ nsresult nsWidget::CreateWidget(nsIWidget *aParent,
                                 nsWidgetInitData *aInitData,
                                 nsNativeWidget aNativeParent)
 {
-  GtkWidget *parentWidget = nsnull;
+  GtkObject *parentWidget = nsnull;
 
 #ifdef NOISY_DESTROY
   if (aParent)
@@ -1005,10 +896,10 @@ nsresult nsWidget::CreateWidget(nsIWidget *aParent,
   NS_IF_ADDREF(mParent);
 
   if (aNativeParent) {
-    parentWidget = GTK_WIDGET(aNativeParent);
+    parentWidget = GTK_OBJECT(aNativeParent);
   } else if (aParent) {
     // this ups the refcount of the gtk widget, we must unref later.
-    parentWidget = GTK_WIDGET(aParent->GetNativeData(NS_NATIVE_WIDGET));
+    parentWidget = GTK_OBJECT(aParent->GetNativeData(NS_NATIVE_WIDGET));
   }
 
   mBounds = aRect;
@@ -1016,60 +907,47 @@ nsresult nsWidget::CreateWidget(nsIWidget *aParent,
 
   Resize(aRect.width, aRect.height, PR_FALSE);
 
-  /* place the widget in its parent if it isn't a toplevel window*/
-  if (mIsToplevel)
-  {
-    if (parentWidget)
-    {
-      // set transient properties
-    }
-  }
-  else
-  {
-    if (parentWidget)
-    {
-      gtk_layout_put(GTK_LAYOUT(parentWidget), mWidget, aRect.x, aRect.y);
-    }
-  }
-
   gtk_widget_pop_colormap();
   gtk_widget_pop_visual();
 
-  InstallButtonPressSignal(mWidget);
-  InstallButtonReleaseSignal(mWidget);
+  if (mWidget) {
+    InstallButtonPressSignal(mWidget);
+    InstallButtonReleaseSignal(mWidget);
+    
+    InstallMotionNotifySignal(mWidget);
+    
+    InstallEnterNotifySignal(mWidget);
+    InstallLeaveNotifySignal(mWidget);
+    
+    // Initialize this window instance as a drag target.
+    gtk_drag_dest_set (mWidget,
+                       GTK_DEST_DEFAULT_ALL,
+                       target_table, n_targets - 1, /* no rootwin */
+                       GdkDragAction(GDK_ACTION_COPY | GDK_ACTION_MOVE));
+    
+    
+    // Drag & Drop events.
+    InstallDragBeginSignal(mWidget);
+    InstallDragLeaveSignal(mWidget);
+    InstallDragMotionSignal(mWidget);
+    InstallDragDropSignal(mWidget);
 
-  InstallMotionNotifySignal(mWidget);
-
-  InstallEnterNotifySignal(mWidget);
-  InstallLeaveNotifySignal(mWidget);
-
-  // Initialize this window instance as a drag target.
-  gtk_drag_dest_set (mWidget,
-                     GTK_DEST_DEFAULT_ALL,
-                     target_table, n_targets - 1, /* no rootwin */
-                     GdkDragAction(GDK_ACTION_COPY | GDK_ACTION_MOVE));
-
-  // Drag & Drop events.
-  InstallDragBeginSignal(mWidget);
-  InstallDragLeaveSignal(mWidget);
-  InstallDragMotionSignal(mWidget);
-  InstallDragDropSignal(mWidget);
-
-
-  // Focus
-  InstallFocusInSignal(mWidget);
-  InstallFocusOutSignal(mWidget);
-
-
+    
+    // Focus
+    InstallFocusInSignal(mWidget);
+    InstallFocusOutSignal(mWidget);
+  }
 
   DispatchStandardEvent(NS_CREATE);
   InitCallbacks();
 
-  // Add in destroy callback
-  gtk_signal_connect(GTK_OBJECT(mWidget),
-                     "destroy",
-                     GTK_SIGNAL_FUNC(DestroySignal),
-                     this);
+  if (mWidget) {
+    // Add in destroy callback
+    gtk_signal_connect(GTK_OBJECT(mWidget),
+                       "destroy",
+                       GTK_SIGNAL_FUNC(DestroySignal),
+                       this);
+  }
 
   return NS_OK;
 }
@@ -1156,6 +1034,25 @@ void nsWidget::InitEvent(nsGUIEvent& event, PRUint32 aEventType, nsPoint* aPoint
   //    mLastPoint.y = event.point.y;
 }
 
+void 
+nsWidget::HandleEvent(GdkEvent *event)
+{
+  switch (event->any.type)
+    {
+    case GDK_MOTION_NOTIFY:
+      OnMotionNotifySignal (&event->motion);
+      break;
+    case GDK_BUTTON_PRESS:
+      OnButtonPressSignal (&event->button);
+      break;
+    case GDK_BUTTON_RELEASE:
+      OnButtonReleaseSignal (&event->button);
+      break;
+    default:
+      break;
+    }
+}
+
 PRBool nsWidget::ConvertStatus(nsEventStatus aStatus)
 {
   switch(aStatus) {
@@ -1210,7 +1107,7 @@ PRBool nsWidget::DispatchFocus(nsGUIEvent &aEvent)
 
 #ifdef NS_DEBUG
 PRInt32
-nsWidget::debug_GetRenderXID(GtkWidget * aGtkWidget)
+nsWidget::debug_GetRenderXID(GtkObject * aGtkWidget)
 {
   GdkWindow * renderWindow = GetRenderWindow(aGtkWidget);
   
@@ -1220,10 +1117,10 @@ nsWidget::debug_GetRenderXID(GtkWidget * aGtkWidget)
 }
 
 nsCAutoString
-nsWidget::debug_GetName(GtkWidget * aGtkWidget)
+nsWidget::debug_GetName(GtkObject * aGtkWidget)
 {
-  if (nsnull != aGtkWidget)
-    return nsCAutoString(gtk_widget_get_name(aGtkWidget));
+  if (nsnull != aGtkWidget && GTK_IS_WIDGET(aGtkWidget))
+    return nsCAutoString(gtk_widget_get_name(GTK_WIDGET(aGtkWidget)));
   
   return nsCAutoString("null");
 }
@@ -1245,7 +1142,7 @@ NS_IMETHODIMP nsWidget::DispatchEvent(nsGUIEvent *aEvent,
   NS_ADDREF(aEvent->widget);
 
 #ifdef NS_DEBUG
-  GtkWidget * gw = (GtkWidget *) aEvent->widget->GetNativeData(NS_NATIVE_WIDGET);
+  GtkObject * gw = (GtkObject *) aEvent->widget->GetNativeData(NS_NATIVE_WIDGET);
 
   if (CAPS_LOCK_IS_ON)
   {
@@ -2436,7 +2333,7 @@ nsWidget::GetWindowForSetBackground()
 }
 
 /* virtual */ GdkWindow *
-nsWidget::GetRenderWindow(GtkWidget * aGtkWidget)
+nsWidget::GetRenderWindow(GtkObject * aGtkWidget)
 {
   GdkWindow * renderWindow = nsnull;
 
@@ -2448,7 +2345,7 @@ nsWidget::GetRenderWindow(GtkWidget * aGtkWidget)
     }
     else
     {
-      renderWindow = aGtkWidget->window;
+      renderWindow = GTK_WIDGET(aGtkWidget)->window;
     }
   }
 
