@@ -1779,11 +1779,11 @@ function cli_ictcp (e)
         return false;
     }
 
-    var ary = e.inputData.match(/^(\S+) (\S+)$/);
+    var ary = e.inputData.match(/^(\S+) (\S+)\s?(.*)$/);
     if (ary == null)
         return false;
     
-    e.server.ctcpTo (ary[1], ary[2]);
+    e.server.ctcpTo (ary[1], ary[2], ary[3]);
     
     return true;
     
