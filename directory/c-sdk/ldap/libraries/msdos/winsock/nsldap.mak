@@ -332,7 +332,7 @@ LFLAGS=$(LINKFLAGS_RELEASE)
 
 DIST_XP = $(MOZ_SRC:/=\)\mozilla\dist
 DIST=$(DIST_XP)\$(DISTBASE)
-DIST_PUBLIC=$(DIST_XP)\include
+DIST_PUBLIC=$(DIST_XP)\include\ldap
 
 #
 #       Edit these in order to control 16 bit
