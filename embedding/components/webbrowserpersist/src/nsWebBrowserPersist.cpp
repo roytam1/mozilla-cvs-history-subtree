@@ -69,7 +69,9 @@
 #include "nsIDOMHTMLInputElement.h"
 #include "nsIDOMHTMLDocument.h"
 
+#ifndef MOZ_MINOTAUR
 #include "ftpCore.h"
+#endif
 #include "nsISocketTransportService.h"
 #include "nsIStringBundle.h"
 
@@ -848,8 +850,10 @@ NS_IMETHODIMP nsWebBrowserPersist::OnStatus(
         switch ( status )
         {
         case NS_NET_STATUS_RESOLVING_HOST:
+#ifndef MOZ_MINOTAUR
         case NS_NET_STATUS_BEGIN_FTP_TRANSACTION:
         case NS_NET_STATUS_END_FTP_TRANSACTION:
+#endif
         case NS_NET_STATUS_CONNECTING_TO:
         case NS_NET_STATUS_CONNECTED_TO:
         case NS_NET_STATUS_SENDING_TO:
