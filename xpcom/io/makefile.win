@@ -63,6 +63,7 @@ XPIDLSRCS =                             \
         .\nsIPipe.idl                   \
         .\nsIScriptableInputStream.idl  \
         .\nsISeekableStream.idl         \
+        .\nsISerializable.idl           \
         .\nsIStorageStream.idl          \
         .\nsIStreamBufferAccess.idl     \
         $(NULL)
