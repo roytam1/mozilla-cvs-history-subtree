@@ -66,6 +66,7 @@ REQUIRES	= \
 		js \
 		layout \
 		transformiix \
+		schemavalidation \
 		$(NULL)
 
 XPIDLSRCS	= \
@@ -128,6 +129,7 @@ CPPSRCS		= \
 		nsXFormsChoicesElement.cpp \
 		nsXFormsItemSetElement.cpp \
  		nsXFormsUtilitiesService.cpp \
+		nsXFormsSchemaValidator.cpp \
 		$(NULL)
 
 EXTRA_DSO_LDOPTS = $(MOZ_COMPONENT_LIBS)
