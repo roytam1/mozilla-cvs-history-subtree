@@ -22,11 +22,92 @@
 DEPTH		= ../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
-VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
+VPATH		= @srcdir@$(VPS)@srcdir@/public
 
-DIRS		= public src
+MODULE		= pref
+LIBRARY_NAME	= pref
+EXPORT_LIBRARY	= 1
+IS_COMPONENT	= 1
+MODULE_NAME	= nsPrefModule
+ifeq ($(OS_ARCH),WINNT)
+LIBRARY_NAME	= xppref$(MOZ_BITS)
+endif
+
+REQUIRES	= xpcom \
+		  string \
+		  js \
+		  xpconnect \
+		  caps \
+		  intl \
+		  necko \
+		  $(NULL)
+
+CPPSRCS		= \
+		src/nsPref.cpp \
+		src/nsPrefBranch.cpp \
+		src/nsPrefService.cpp \
+		src/nsPrefsFactory.cpp \
+		src/nsSafeSaveFile.cpp \
+		src/prefapi.cpp \
+		$(NULL)
+
+SDK_XPIDLSRCS   = \
+              nsIPrefService.idl \
+              nsIPrefBranch.idl \
+              nsIPrefLocalizedString.idl \
+              $(NULL)
+
+XPIDLSRCS	= \
+              nsIPref.idl \
+              nsIPrefBranchInternal.idl \
+              nsISecurityPref.idl \
+              nsIRelativeFilePref.idl \
+              $(NULL)
+
+PREF_JS_EXPORTS	= \
+		$(srcdir)/src/init/all.js \
+		$(srcdir)/src/init/mailnews.js \
+		$(srcdir)/src/init/editor.js \
+		$(NULL)
+
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+PREF_JS_EXPORTS += $(srcdir)/src/mac/macprefs.js
+else
+ifeq ($(MOZ_WIDGET_TOOLKIT),windows)
+PREF_JS_EXPORTS += $(srcdir)/src/win/winpref.js
+else
+ifeq ($(MOZ_WIDGET_TOOLKIT),os2)
+PREF_JS_EXPORTS	+= $(srcdir)/src/os2/os2pref.js
+else
+ifeq ($(MOZ_WIDGET_TOOLKIT),beos)
+PREF_JS_EXPORTS	+= $(srcdir)/src/beos/beos.js
+else
+ifeq ($(MOZ_WIDGET_TOOLKIT),photon)
+PREF_JS_EXPORTS += $(srcdir)/src/unix/photon.js
+endif
+PREF_JS_EXPORTS	+= $(srcdir)/src/unix/unix.js
+endif
+endif
+endif
+endif
+
+ifeq ($(OS_ARCH),OpenVMS)
+PREF_JS_EXPORTS	+= $(srcdir)/src/unix/openvms.js
+endif
+
+EXTRA_DSO_LDOPTS = \
+		$(LIBS_DIR) \
+		$(MOZ_JS_LIBS) \
+		$(MOZ_COMPONENT_LIBS) \
+		$(NULL)
+
+GARBAGE		+= $(addprefix $(DIST)/bin/defaults/pref/, \
+			all.js mailnews.js editor.js \
+			beos.js unix.js winpref.js os2prefs.js \
+			openvms.js photon.js)
 
 include $(topsrcdir)/config/rules.mk
+
 
