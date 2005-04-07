@@ -1400,6 +1400,29 @@ nsJSContext::GetNativeContext()
   return mContext;
 }
 
+JS_STATIC_DLL_CALLBACK(JSPrincipals *)
+ObjectPrincipalFinder(JSContext *cx, JSObject *obj)
+{
+  nsCOMPtr<nsIPrincipal> principal;
+  nsresult rv =
+    sSecurityManager->GetObjectPrincipal(cx, obj,
+                                         getter_AddRefs(principal));
+
+  if (NS_FAILED(rv) || !principal) {
+    return nsnull;
+  }
+
+  JSPrincipals *jsPrincipals = nsnull;
+  principal->GetJSPrincipals(cx, &jsPrincipals);
+
+  // nsIPrincipal::GetJSPrincipals() returns a strong reference to the
+  // JS principals, but the caller of this function expects a weak
+  // reference. So we need to release here.
+
+  JSPRINCIPALS_DROP(cx, jsPrincipals);
+
+  return jsPrincipals;
+}
 
 nsresult
 nsJSContext::InitContext(nsIScriptGlobalObject *aGlobalObject)
@@ -1420,6 +1443,8 @@ nsJSContext::InitContext(nsIScriptGlobalObject *aGlobalObject)
   }
 
   ::JS_SetErrorReporter(mContext, NS_ScriptErrorReporter);
+
+  ::JS_SetObjectPrincipalsFinder(mContext, ObjectPrincipalFinder);
 
   if (!aGlobalObject) {
     // If we don't get a global object then there's nothing more to do here.
