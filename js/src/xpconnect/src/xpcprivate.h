@@ -3220,6 +3220,8 @@ protected:
 
 JSBool xpc_IsReportableErrorCode(nsresult code);
 
+void XPC_WN_JSOps_Shutdown();
+
 /***************************************************************************/
 // Inlined utilities.
 
