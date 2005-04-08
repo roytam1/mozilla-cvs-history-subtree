@@ -1055,7 +1055,7 @@ out:
     return ok;
 }
 
-JSBool
+extern JS_FRIEND_API(JSBool)
 js_InternalGetOrSet(JSContext *cx, JSObject *obj, jsid id, jsval fval,
                     JSAccessMode mode, uintN argc, jsval *argv, jsval *rval)
 {
