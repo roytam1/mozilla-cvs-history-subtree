@@ -1087,15 +1087,10 @@ NewSafeGetterSetterThunk(JSContext *cx, JSObject *obj, jsid id,
                          JSPropertyOp gsop, uintN attrs, uintN nargs)
 {
     JSObject *unsafe_gsobj = (JSObject *) gsop;
-    JSFunction *unsafe_gsfun = JS_ObjectIsFunction(cx, unsafe_gsobj)
-                               ? (JSFunction *) JS_GetPrivate(cx, unsafe_gsobj)
-                               : NULL;
 
     JSFunction *safe_gsfun = JS_NewFunction(cx,
                                             XPC_WN_Safe_GetterSetterThunkNative,
-                                            nargs, attrs, obj,
-                                            JS_GetFunctionName(unsafe_gsfun));
-
+                                            nargs, attrs, obj, NULL);
     if(!safe_gsfun)
         return NULL;
 
