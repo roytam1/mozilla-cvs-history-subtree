@@ -815,24 +815,9 @@ XPC_WN_Helper_DelProperty(JSContext *cx, JSObject *obj, jsval idval, jsval *vp)
 static nsIScriptSecurityManager *sSecMan;
 static nsIPrincipal *sSystemPrincipal;
 
-void
-XPC_WN_JSOps_Shutdown()
-{
-    NS_IF_RELEASE(sSecMan);
-}
-
-// XXXbe this actually checks IsSystemCallingContent, but perhaps it should
-//       check what its name implies: any trust-domain boundary crossing.
 static PRBool
-IsCrossTrustDomainCall(JSContext *cx, XPCWrappedNative *wrapper)
+EnsureSecMan()
 {
-    // No frame pointer, or a scope chain that's the same as the
-    // global object in the wrappers scope means we're not in a cross
-    // trust domain call.
-    if(!cx->fp ||
-       (cx->fp->scopeChain == wrapper->GetScope()->GetGlobalJSObject()))
-        return PR_FALSE;
-
     if(!sSecMan)
     {
         CallGetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID, &sSecMan);
@@ -853,13 +838,123 @@ IsCrossTrustDomainCall(JSContext *cx, XPCWrappedNative *wrapper)
             return PR_FALSE;
         }
     }
+    return PR_TRUE;
+}
+
+void
+XPC_WN_JSOps_Shutdown()
+{
+    NS_IF_RELEASE(sSecMan);
+}
+
+class XPCWrappedNativeOrProto
+{
+public:
+#define XPC_PROTO_TAG     ((jsword)0x1)
+#define XPC_PROTO_WORD(p) ((jsword)(p))
+
+    static JSBool
+    IsTaggedProto(XPCWrappedNativeProto* p)
+        {return XPC_PROTO_WORD(p) & XPC_PROTO_TAG;}
+
+    static XPCWrappedNativeProto*
+    TagProto(XPCWrappedNativeProto* s)
+        {NS_ASSERTION(!IsTaggedProto(s), "bad pointer!");
+         return (XPCWrappedNativeProto*)(XPC_PROTO_WORD(s) | XPC_PROTO_TAG);}
+
+    static XPCWrappedNativeProto*
+    UntagProto(XPCWrappedNativeProto* s)
+        {return (XPCWrappedNativeProto*)(XPC_PROTO_WORD(s) & ~XPC_PROTO_TAG);}
+
+    JSBool
+    IsWrapper() const {return !IsTaggedProto(mMaybeProto);}
+
+    XPCWrappedNativeOrProto(XPCWrappedNative *wrapper)
+    {
+        NS_ASSERTION(wrapper, "oops, null wrapper");
+        mMaybeWrapper = wrapper;
+    }
+
+    XPCWrappedNativeOrProto(XPCWrappedNativeProto *proto)
+    {
+        NS_ASSERTION(proto, "oops, null proto");
+        mMaybeProto = TagProto(proto);
+    }
+
+    operator void*()
+        {return UntagProto(mMaybeProto);}
+
+    XPCWrappedNative* GetWrapper()
+        {NS_ASSERTION(IsWrapper(), "d'oh!"); return mMaybeWrapper;}
+
+    XPCWrappedNativeProto* GetProto()
+        {NS_ASSERTION(!IsWrapper(), "D'OH!"); return UntagProto(mMaybeProto);}
+
+    XPCWrappedNativeScope* GetScope()
+        {return IsWrapper()
+                ? mMaybeWrapper->GetScope()
+                : UntagProto(mMaybeProto)->GetScope();}
+
+    JSObject* GetFlatJSObject()
+        {return IsWrapper()
+                ? mMaybeWrapper->GetFlatJSObject()
+                : UntagProto(mMaybeProto)->GetJSProtoObject();}
+
+    XPCNativeScriptableInfo* GetScriptableInfo()
+        {return IsWrapper()
+                ? mMaybeWrapper->GetScriptableInfo()
+                : UntagProto(mMaybeProto)->GetScriptableInfo();}
+
+    static XPCWrappedNativeOrProto
+    GetWrappedNativeOfJSObject(JSContext *cx, JSObject *obj,
+                               JSObject *funobj = nsnull)
+    {
+        if(JS_InstanceOf(cx, obj, &XPC_WN_ModsAllowed_Proto_JSClass, nsnull))
+            return (XPCWrappedNativeProto*) JS_GetPrivate(cx, obj);
+
+        XPCWrappedNative* wrapper =
+            XPCWrappedNative::GetWrappedNativeOfJSObject(cx, obj, funobj);
+
+        // Inline and specialize THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
+        if(!wrapper)
+            Throw(NS_ERROR_XPC_BAD_OP_ON_WN_PROTO, cx);
+        else if(!wrapper->IsValid())
+        {
+            Throw(NS_ERROR_XPC_HAS_BEEN_SHUTDOWN, cx);
+            wrapper = nsnull;
+        }
+        return wrapper;
+    }
+
+private:
+    union
+    {
+        XPCWrappedNative*       mMaybeWrapper;
+        XPCWrappedNativeProto*  mMaybeProto;
+    };
+};
+
+// XXXbe this actually checks IsSystemCallingContent, but perhaps it should
+//       check what its name implies: any trust-domain boundary crossing.
+static PRBool
+IsCrossTrustDomainCall(JSContext *cx, XPCWrappedNativeOrProto wrapper_or_proto)
+{
+    // Provided script is active on cx, a scope chain that's the same as the
+    // global object in the wrappers scope means we're not in a cross-trust-
+    // domain call.
+    if(cx->fp &&
+       (cx->fp->scopeChain == wrapper_or_proto.GetScope()->GetGlobalJSObject()))
+        return PR_FALSE;
+
+    if(!EnsureSecMan())
+        return PR_FALSE;
 
     PRBool isCallerChrome = PR_FALSE;
     if(NS_SUCCEEDED(sSecMan->SubjectPrincipalIsSystem(&isCallerChrome)))
     {
         nsCOMPtr<nsIPrincipal> objectPrincipal;
 
-        sSecMan->GetObjectPrincipal(cx, wrapper->GetFlatJSObject(),
+        sSecMan->GetObjectPrincipal(cx, wrapper_or_proto.GetFlatJSObject(),
                                     getter_AddRefs(objectPrincipal));
 
         return objectPrincipal != sSystemPrincipal;
@@ -869,10 +964,18 @@ IsCrossTrustDomainCall(JSContext *cx, XPCWrappedNative *wrapper)
 }
 
 static JSBool
-GetOrSetUnshadowedMemberValue(JSContext *cx, XPCWrappedNative* wrapper,
+GetOrSetUnshadowedMemberValue(JSContext *cx,
+                              XPCWrappedNativeOrProto wrapper_or_proto,
                               jsval idval, uintN argc, jsval *argv, jsval *vp,
                               JSBool *foundMember)
 {
+    // Ok, we know chrome is getting a content-defined property on a
+    // wrapped native prototype.  We're done -- no way can we let this
+    // madness go further.
+    if(!wrapper_or_proto.IsWrapper())
+        return Throw(NS_ERROR_XPC_BAD_OP_ON_WN_PROTO, cx);
+
+    XPCWrappedNative* wrapper = wrapper_or_proto.GetWrapper();
     JSObject *obj = wrapper->GetFlatJSObject();
 
     // this will do verification and the method lookup for us
@@ -971,24 +1074,14 @@ XPC_WN_Helper_GetProperty(JSContext *cx, JSObject *obj, jsval idval, jsval *vp)
 JS_STATIC_DLL_CALLBACK(JSBool)
 XPC_WN_Safe_PropertyStub(JSContext *cx, JSObject *obj, jsval idval, jsval *vp)
 {
-    XPCWrappedNative* wrapper =
-        XPCWrappedNative::GetWrappedNativeOfJSObject(cx, obj);
+    XPCWrappedNativeOrProto wrapper_or_proto =
+        XPCWrappedNativeOrProto::GetWrappedNativeOfJSObject(cx, obj);
 
-    // XXXbe and XXXjst
-    // Can't use THROW_AND_RETURN_IF_BAD_WRAPPER here since this
-    // hook gets called from what looks like prototype wrappers,
-    // and for those JSObjects we don't find a wrapper (when
-    // called through someobj.__proto__.somefunction.call). Let
-    // those calls fall through to the stub for now.
-
-    if(wrapper && IsCrossTrustDomainCall(cx, wrapper))
+    if(wrapper_or_proto && IsCrossTrustDomainCall(cx, wrapper_or_proto))
     {
-        if(!wrapper->IsValid())
-            return Throw(NS_ERROR_XPC_HAS_BEEN_SHUTDOWN, cx);
-
         JSBool foundMember;
-        if(!GetOrSetUnshadowedMemberValue(cx, wrapper, idval, 0, nsnull, vp,
-                                          &foundMember))
+        if(!GetOrSetUnshadowedMemberValue(cx, wrapper_or_proto, idval,
+                                          0, nsnull, vp, &foundMember))
             return JS_FALSE;
 
         if(foundMember)
@@ -1020,54 +1113,60 @@ XPC_WN_Safe_GetterSetterThunkNative(JSContext *cx, JSObject *obj, uintN argc,
     if(!JS_ValueToId(cx, idval, &id))
         return JS_FALSE;
 
-    XPCWrappedNative* wrapper =
-        XPCWrappedNative::GetWrappedNativeOfJSObject(cx, obj, safe_gsobj);
+    XPCWrappedNativeOrProto wrapper_or_proto =
+        XPCWrappedNativeOrProto::GetWrappedNativeOfJSObject(cx, obj,
+                                                            safe_gsobj);
 
-    if(wrapper && IsCrossTrustDomainCall(cx, wrapper))
+    if(wrapper_or_proto && IsCrossTrustDomainCall(cx, wrapper_or_proto))
     {
         JSBool foundMember;
-        if(!GetOrSetUnshadowedMemberValue(cx, wrapper, ID_TO_VALUE(id), argc,
-                                          argv, rval, &foundMember))
+        if(!GetOrSetUnshadowedMemberValue(cx, wrapper_or_proto,
+                                          ID_TO_VALUE(id), argc, argv, rval,
+                                          &foundMember))
             return JS_FALSE;
 
         if(foundMember)
             return JS_TRUE;
 
+        XPCWrappedNative* wrapper = wrapper_or_proto.GetWrapper();
         XPCNativeScriptableInfo* si = wrapper->GetScriptableInfo();
-        if(argc == 0 && si && si->GetFlags().WantGetProperty())
+        if(si)
         {
-            // wrapper wants GetProperty() calls, call it, to prevent
-            // user defined getters from shadowing things from chrome
-            // code.
-            JSBool ok = PR_TRUE;
-            nsresult rv =
-                si->GetCallback()->GetProperty(wrapper, cx,
-                                               wrapper->GetFlatJSObject(), id,
-                                               rval, &ok);
+            if(argc == 0 && si->GetFlags().WantGetProperty())
+            {
+                // wrapper wants GetProperty() calls, call it, to prevent
+                // user defined getters from shadowing things from chrome
+                // code.
+                JSBool ok = PR_TRUE;
+                nsresult rv =
+                    si->GetCallback()->GetProperty(wrapper, cx,
+                                                   wrapper->GetFlatJSObject(),
+                                                   id, rval, &ok);
 
-            if(NS_FAILED(rv))
-                return Throw(rv, cx);
+                if(NS_FAILED(rv))
+                    return Throw(rv, cx);
 
-            return ok;
-        }
+                return ok;
+            }
 
-        if (argc == 1 && si && si->GetFlags().WantSetProperty())
-        {
-            // wrapper wants SetProperty() calls, call it, to prevent
-            // user defined setters from shadowing things from chrome
-            // code.
-            JSBool ok = PR_TRUE;
-            jsval v = argv[0];
+            if(argc == 1 && si->GetFlags().WantSetProperty())
+            {
+                // wrapper wants SetProperty() calls, call it, to prevent
+                // user defined setters from shadowing things from chrome
+                // code.
+                JSBool ok = PR_TRUE;
+                jsval v = argv[0];
 
-            nsresult rv =
-                si->GetCallback()->SetProperty(wrapper, cx,
-                                               wrapper->GetFlatJSObject(), id,
-                                               &v, &ok);
+                nsresult rv =
+                    si->GetCallback()->SetProperty(wrapper, cx,
+                                                   wrapper->GetFlatJSObject(),
+                                                   id, &v, &ok);
 
-            if(NS_FAILED(rv))
-                return Throw(rv, cx);
+                if(NS_FAILED(rv))
+                    return Throw(rv, cx);
 
-            return ok;
+                return ok;
+            }
         }
 
         // Fall through
@@ -1082,12 +1181,36 @@ XPC_WN_Safe_GetterSetterThunkNative(JSContext *cx, JSObject *obj, uintN argc,
                                argc, argv, rval);
 }
 
+#include "jsfun.h"      // XXXbe should have a JS_GetFunctionNative API
+
 static JSPropertyOp
-NewSafeGetterSetterThunk(JSContext *cx, JSObject *obj, jsid id,
-                         JSPropertyOp gsop, uintN attrs, uintN nargs)
+NewSafeGetterOrSetterThunk(JSContext *cx, JSObject *obj, jsid id,
+                           JSPropertyOp gsop, uintN attrs, uintN nargs)
 {
     JSObject *unsafe_gsobj = (JSObject *) gsop;
 
+    // If called from native code, no need for a thunk: gsop is trusted.
+    if(!cx->fp)
+        return gsop;
+
+    // Similarly, check whether the caller is a chrome script we must trust.
+    if(!EnsureSecMan())
+        return NULL;
+    PRBool isCallerChrome = PR_FALSE;
+    if(NS_SUCCEEDED(sSecMan->SubjectPrincipalIsSystem(&isCallerChrome)) &&
+       isCallerChrome)
+        return gsop;
+
+    // Don't double-thunk if we can help it.
+    if(JS_ObjectIsFunction(cx, unsafe_gsobj))
+    {
+        JSFunction *unsafe_gsfun =
+            (JSFunction *) JS_GetPrivate(cx, unsafe_gsobj);
+        if(unsafe_gsfun->native == XPC_WN_Safe_GetterSetterThunkNative)
+            return gsop;
+    }
+
+    // Make a thunk to check cross-trust-domain access before calling gsop.
     JSFunction *safe_gsfun = JS_NewFunction(cx,
                                             XPC_WN_Safe_GetterSetterThunkNative,
                                             nargs, attrs, obj, NULL);
@@ -1120,13 +1243,13 @@ XPC_WN_JSOp_Safe_DefineProperty(JSContext *cx, JSObject *obj,
     {
         if(attrs & JSPROP_GETTER)
         {
-            getter = NewSafeGetterSetterThunk(cx, obj, id, getter, attrs, 0);
+            getter = NewSafeGetterOrSetterThunk(cx, obj, id, getter, attrs, 0);
             if(!getter)
                 return JS_FALSE;
         }
         if(attrs & JSPROP_SETTER)
         {
-            setter = NewSafeGetterSetterThunk(cx, obj, id, setter, attrs, 1);
+            setter = NewSafeGetterOrSetterThunk(cx, obj, id, setter, attrs, 1);
             if(!setter)
                 return JS_FALSE;
         }
@@ -1139,15 +1262,15 @@ XPC_WN_JSOp_Safe_DefineProperty(JSContext *cx, JSObject *obj,
 JS_STATIC_DLL_CALLBACK(JSBool)
 XPC_WN_JSOp_Safe_GetProperty(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
 {
-    XPCWrappedNative* wrapper =
-        XPCWrappedNative::GetWrappedNativeOfJSObject(cx, obj);
-    THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
+    XPCWrappedNativeOrProto wrapper_or_proto =
+        XPCWrappedNativeOrProto::GetWrappedNativeOfJSObject(cx, obj);
 
-    if(IsCrossTrustDomainCall(cx, wrapper))
+    if(IsCrossTrustDomainCall(cx, wrapper_or_proto))
     {
         JSBool foundMember;
-        if(!GetOrSetUnshadowedMemberValue(cx, wrapper, ID_TO_VALUE(id), 0,
-                                          nsnull, vp, &foundMember))
+        if(!GetOrSetUnshadowedMemberValue(cx, wrapper_or_proto,
+                                          ID_TO_VALUE(id), 0, nsnull, vp,
+                                          &foundMember))
             return JS_FALSE;
 
         if(foundMember)
@@ -1338,6 +1461,7 @@ extern "C" JS_IMPORT_DATA(JSObjectOps) js_ObjectOps;
 
 static JSObjectOps XPC_WN_WithCall_JSOps;
 static JSObjectOps XPC_WN_NoCall_JSOps;
+static JSObjectOps XPC_WN_ModsAllowed_JSOps;
 
 /*
     Here are the enumerator cases:
@@ -1469,6 +1593,10 @@ JSBool xpc_InitWrappedNativeJSOps()
         XPC_WN_WithCall_JSOps.enumerate = XPC_WN_JSOp_Enumerate;
         XPC_WN_WithCall_JSOps.defineProperty = XPC_WN_JSOp_Safe_DefineProperty;
         XPC_WN_WithCall_JSOps.getProperty = XPC_WN_JSOp_Safe_GetProperty;
+
+        memcpy(&XPC_WN_ModsAllowed_JSOps, &js_ObjectOps, sizeof(JSObjectOps));
+        XPC_WN_ModsAllowed_JSOps.defineProperty = XPC_WN_JSOp_Safe_DefineProperty;
+        XPC_WN_ModsAllowed_JSOps.getProperty = XPC_WN_JSOp_Safe_GetProperty;
 
         XPC_WN_NoCall_JSOps.call = nsnull;
         XPC_WN_NoCall_JSOps.construct = nsnull;
@@ -1766,6 +1894,12 @@ XPC_WN_ModsAllowed_Proto_Resolve(JSContext *cx, JSObject *obj, jsval idval)
                                  enumFlag, nsnull);
 }
 
+JS_STATIC_DLL_CALLBACK(JSObjectOps *)
+XPC_WN_ModsAllowed_Proto_GetObjectOps(JSContext *cx, JSClass *clasp)
+{
+    return &XPC_WN_ModsAllowed_JSOps;
+}
+
 
 JSClass XPC_WN_ModsAllowed_Proto_JSClass = {
     "XPC_WN_ModsAllowed_Proto_JSClass", // name;
@@ -1782,7 +1916,7 @@ JSClass XPC_WN_ModsAllowed_Proto_JSClass = {
     XPC_WN_Shared_Proto_Finalize,          // finalize;
 
     /* Optionally non-null members start here. */
-    nsnull,                         // getObjectOps;
+    XPC_WN_ModsAllowed_Proto_GetObjectOps, // getObjectOps;
     nsnull,                         // checkAccess;
     nsnull,                         // call;
     nsnull,                         // construct;

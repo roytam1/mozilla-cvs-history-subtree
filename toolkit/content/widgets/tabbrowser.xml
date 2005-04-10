@@ -795,7 +795,7 @@
           <![CDATA[
             var browser = this.getBrowserForTab(aTab);
             var crop = "end";
-            var title = browser.contentDocument.__proto__.__lookupGetter__('title').call(browser.contentDocument);
+            var title = browser.contentTitle;
             
             if (!title) {
               if (browser.currentURI.spec) {
