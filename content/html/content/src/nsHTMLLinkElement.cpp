@@ -57,6 +57,7 @@
 #include "nsIDOMDocumentEvent.h"
 #include "nsIDOMEventTarget.h"
 #include "nsParserUtils.h"
+#include "nsIPrivateDOMEvent.h"
 
 class nsHTMLLinkElement : public nsGenericHTMLElement,
                           public nsIDOMHTMLLinkElement,
@@ -284,6 +285,8 @@ nsHTMLLinkElement::CreateAndDispatchEvent(nsIDocument* aDoc,
   docEvent->CreateEvent(NS_LITERAL_STRING("Events"), getter_AddRefs(event));
   if (event) {
     event->InitEvent(aEventName, PR_TRUE, PR_TRUE);
+    nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(event));
+    privateEvent->SetTrusted(PR_TRUE);
     PRBool noDefault;
     nsCOMPtr<nsIDOMEventTarget> target =
       do_QueryInterface(NS_STATIC_CAST(nsIDOMNode*, this));

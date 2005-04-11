@@ -610,6 +610,9 @@
         <parameter name="event"/>
         <body>
           <![CDATA[
+            if (!event.isTrusted)
+              return;
+
             if (!this.mPrefs.getBoolPref("browser.chrome.site_icons"))
               return;
 
