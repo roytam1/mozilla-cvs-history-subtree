@@ -5383,6 +5383,9 @@ function AddKeywordForSearchField()
 // the actual event.
 function livemarkOnLinkAdded(event)
 {
+  if (!event.isTrusted)
+    return;
+
   if (!gLivemarksButton)
     gLivemarksButton = document.getElementById("livemark-button");
 

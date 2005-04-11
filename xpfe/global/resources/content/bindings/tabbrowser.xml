@@ -610,6 +610,9 @@
         <parameter name="event"/>
         <body>
           <![CDATA[
+            if (!event.isTrusted)
+              return;
+
             // mechanism for reading properties of the underlying XPCOM object
             // (ignoring potential getters/setters added by malicious content)
             var safeGetProperty = function(obj, propname) {
