@@ -43,7 +43,7 @@
 #include "xpcprivate.h"
 
 // Pull in nsIScriptSecurityManager.h temporarily until we can do
-// IsCrossTrustDomainCall() w/o a direct caps dependency.
+// IsSystemCallingContent() w/o a direct caps dependency.
 #include "nsIScriptSecurityManager.h"
 
 /***************************************************************************/
@@ -934,14 +934,16 @@ private:
     };
 };
 
-// XXXbe this actually checks IsSystemCallingContent, but perhaps it should
-//       check what its name implies: any trust-domain boundary crossing.
+// XXXbe, XXXjst this checks if our chrome code is calling into
+// content code, but perhaps it should check for any trust-domain
+// boundary crossing.
 static PRBool
-IsCrossTrustDomainCall(JSContext *cx, XPCWrappedNativeOrProto wrapper_or_proto)
+IsSystemCallingContent(JSContext *cx, XPCWrappedNativeOrProto wrapper_or_proto)
 {
-    // Provided script is active on cx, a scope chain that's the same as the
-    // global object in the wrappers scope means we're not in a cross-trust-
-    // domain call.
+    // Provided script is active on cx, a scope chain that's the same
+    // as the global object in the wrappers scope means we're not in a
+    // cross-trust- domain call (i.e. our system code is not calling
+    // content etc).
     if(cx->fp &&
        (cx->fp->scopeChain == wrapper_or_proto.GetScope()->GetGlobalJSObject()))
         return PR_FALSE;
@@ -950,7 +952,8 @@ IsCrossTrustDomainCall(JSContext *cx, XPCWrappedNativeOrProto wrapper_or_proto)
         return PR_FALSE;
 
     PRBool isCallerChrome = PR_FALSE;
-    if(NS_SUCCEEDED(sSecMan->SubjectPrincipalIsSystem(&isCallerChrome)))
+    if(NS_SUCCEEDED(sSecMan->SubjectPrincipalIsSystem(&isCallerChrome)) &&
+       isCallerChrome)
     {
         nsCOMPtr<nsIPrincipal> objectPrincipal;
 
@@ -960,7 +963,7 @@ IsCrossTrustDomainCall(JSContext *cx, XPCWrappedNativeOrProto wrapper_or_proto)
         return objectPrincipal != sSystemPrincipal;
     }
 
-    return PR_TRUE;
+    return PR_FALSE;
 }
 
 static JSBool
@@ -1054,7 +1057,7 @@ XPC_WN_Helper_GetProperty(JSContext *cx, JSObject *obj, jsval idval, jsval *vp)
         XPCWrappedNative::GetWrappedNativeOfJSObject(cx, obj);
     THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
 
-    if(IsCrossTrustDomainCall(cx, wrapper))
+    if(IsSystemCallingContent(cx, wrapper))
     {
         JSBool foundMember;
         if(!GetOrSetUnshadowedMemberValue(cx, wrapper, idval, 0, nsnull, vp,
@@ -1077,7 +1080,7 @@ XPC_WN_Safe_PropertyStub(JSContext *cx, JSObject *obj, jsval idval, jsval *vp)
     XPCWrappedNativeOrProto wrapper_or_proto =
         XPCWrappedNativeOrProto::GetWrappedNativeOfJSObject(cx, obj);
 
-    if(wrapper_or_proto && IsCrossTrustDomainCall(cx, wrapper_or_proto))
+    if(wrapper_or_proto && IsSystemCallingContent(cx, wrapper_or_proto))
     {
         JSBool foundMember;
         if(!GetOrSetUnshadowedMemberValue(cx, wrapper_or_proto, idval,
@@ -1117,7 +1120,7 @@ XPC_WN_Safe_GetterSetterThunkNative(JSContext *cx, JSObject *obj, uintN argc,
         XPCWrappedNativeOrProto::GetWrappedNativeOfJSObject(cx, obj,
                                                             safe_gsobj);
 
-    if(wrapper_or_proto && IsCrossTrustDomainCall(cx, wrapper_or_proto))
+    if(wrapper_or_proto && IsSystemCallingContent(cx, wrapper_or_proto))
     {
         JSBool foundMember;
         if(!GetOrSetUnshadowedMemberValue(cx, wrapper_or_proto,
@@ -1265,7 +1268,7 @@ XPC_WN_JSOp_Safe_GetProperty(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
     XPCWrappedNativeOrProto wrapper_or_proto =
         XPCWrappedNativeOrProto::GetWrappedNativeOfJSObject(cx, obj);
 
-    if(IsCrossTrustDomainCall(cx, wrapper_or_proto))
+    if(IsSystemCallingContent(cx, wrapper_or_proto))
     {
         JSBool foundMember;
         if(!GetOrSetUnshadowedMemberValue(cx, wrapper_or_proto,
