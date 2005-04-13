@@ -71,6 +71,26 @@ extern PRBool ConvertJSValToObj(nsISupports** aSupports,
                                JSContext* aContext,
                                jsval aValue);
 
+PR_STATIC_CALLBACK(void)
+FinalizeInstallTriggerGlobal(JSContext *cx, JSObject *obj);
+
+/***********************************************************************/
+//
+// class for InstallTriggerGlobal
+//
+JSClass InstallTriggerGlobalClass = {
+  "InstallTrigger",
+  JSCLASS_HAS_PRIVATE,
+  JS_PropertyStub,
+  JS_PropertyStub,
+  JS_PropertyStub,
+  JS_PropertyStub,
+  JS_EnumerateStub,
+  JS_ResolveStub,
+  JS_ConvertStub,
+  FinalizeInstallTriggerGlobal
+};
+
 //
 // InstallTriggerGlobal finalizer
 //
@@ -133,7 +153,10 @@ static JSBool CreateNativeObject(JSContext *cx, JSObject *obj, nsIDOMInstallTrig
 PR_STATIC_CALLBACK(JSBool)
 InstallTriggerGlobalUpdateEnabled(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
-  nsIDOMInstallTriggerGlobal *nativeThis = (nsIDOMInstallTriggerGlobal*)JS_GetPrivate(cx, obj);
+  nsIDOMInstallTriggerGlobal *nativeThis = (nsIDOMInstallTriggerGlobal*)
+    JS_GetInstancePrivate(cx, obj, &InstallTriggerGlobalClass, argv);
+  if (!nativeThis)
+    return JS_FALSE;
 
   *rval = JSVAL_FALSE;
 
@@ -158,8 +181,11 @@ InstallTriggerGlobalUpdateEnabled(JSContext *cx, JSObject *obj, uintN argc, jsva
 //
 PR_STATIC_CALLBACK(JSBool)
 InstallTriggerGlobalInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
-{
-  nsIDOMInstallTriggerGlobal *nativeThis = (nsIDOMInstallTriggerGlobal*)JS_GetPrivate(cx, obj);
+{ 
+  nsIDOMInstallTriggerGlobal *nativeThis = (nsIDOMInstallTriggerGlobal*)
+    JS_GetInstancePrivate(cx, obj, &InstallTriggerGlobalClass, argv);
+  if (!nativeThis)
+    return JS_FALSE;
 
   *rval = JSVAL_FALSE;
 
@@ -311,7 +337,11 @@ InstallTriggerGlobalInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *arg
 PR_STATIC_CALLBACK(JSBool)
 InstallTriggerGlobalInstallChrome(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
-  nsIDOMInstallTriggerGlobal *nativeThis = (nsIDOMInstallTriggerGlobal*)JS_GetPrivate(cx, obj);
+  nsIDOMInstallTriggerGlobal *nativeThis = (nsIDOMInstallTriggerGlobal*)
+    JS_GetInstancePrivate(cx, obj, &InstallTriggerGlobalClass, argv);
+  if (!nativeThis)
+    return JS_FALSE;
+
   uint32       chromeType = NOT_CHROME;
   nsAutoString sourceURL;
   nsAutoString name;
@@ -404,7 +434,11 @@ InstallTriggerGlobalInstallChrome(JSContext *cx, JSObject *obj, uintN argc, jsva
 PR_STATIC_CALLBACK(JSBool)
 InstallTriggerGlobalStartSoftwareUpdate(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
-  nsIDOMInstallTriggerGlobal *nativeThis = (nsIDOMInstallTriggerGlobal*)JS_GetPrivate(cx, obj);
+  nsIDOMInstallTriggerGlobal *nativeThis = (nsIDOMInstallTriggerGlobal*)
+    JS_GetInstancePrivate(cx, obj, &InstallTriggerGlobalClass, argv);
+  if (!nativeThis)
+    return JS_FALSE;
+
   PRBool       nativeRet;
   PRInt32      flags = 0;
 
@@ -493,7 +527,11 @@ InstallTriggerGlobalStartSoftwareUpdate(JSContext *cx, JSObject *obj, uintN argc
 PR_STATIC_CALLBACK(JSBool)
 InstallTriggerGlobalCompareVersion(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
-  nsIDOMInstallTriggerGlobal *nativeThis = (nsIDOMInstallTriggerGlobal*)JS_GetPrivate(cx, obj);
+  nsIDOMInstallTriggerGlobal *nativeThis = (nsIDOMInstallTriggerGlobal*)
+    JS_GetInstancePrivate(cx, obj, &InstallTriggerGlobalClass, argv);
+  if (!nativeThis)
+    return JS_FALSE;
+
   nsAutoString regname;
   nsAutoString version;
   int32        major,minor,release,build;
@@ -592,7 +630,10 @@ InstallTriggerGlobalCompareVersion(JSContext *cx, JSObject *obj, uintN argc, jsv
 PR_STATIC_CALLBACK(JSBool)
 InstallTriggerGlobalGetVersion(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
-  nsIDOMInstallTriggerGlobal *nativeThis = (nsIDOMInstallTriggerGlobal*)JS_GetPrivate(cx, obj);
+  nsIDOMInstallTriggerGlobal *nativeThis = (nsIDOMInstallTriggerGlobal*)
+    JS_GetInstancePrivate(cx, obj, &InstallTriggerGlobalClass, argv);
+  if (!nativeThis)
+    return JS_FALSE;
 
   nsAutoString regname;
   nsAutoString version;
@@ -626,23 +667,6 @@ InstallTriggerGlobalGetVersion(JSContext *cx, JSObject *obj, uintN argc, jsval *
 
   return JS_TRUE;
 }
-
-/***********************************************************************/
-//
-// class for InstallTriggerGlobal
-//
-JSClass InstallTriggerGlobalClass = {
-  "InstallTrigger",
-  JSCLASS_HAS_PRIVATE,
-  JS_PropertyStub,
-  JS_PropertyStub,
-  JS_PropertyStub,
-  JS_PropertyStub,
-  JS_EnumerateStub,
-  JS_ResolveStub,
-  JS_ConvertStub,
-  FinalizeInstallTriggerGlobal
-};
 
 //
 // InstallTriggerGlobal class methods
