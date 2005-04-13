@@ -60,6 +60,8 @@ var contentAreaDNDObserver = {
           /^\s*(javascript|data):/.test(url))
         return;
 
+      DragDropSecurityCheck(aEvent, aDragSession, url);
+
       switch (document.firstChild.getAttribute('windowtype')) {
         case "navigator:browser":
           loadURI(getShortcutOrURI(url));
