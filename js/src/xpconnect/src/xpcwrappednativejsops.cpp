@@ -1028,24 +1028,34 @@ GetOrSetUnshadowedMemberValue(JSContext *cx,
         if(!funobj)
             return Throw(NS_ERROR_XPC_BAD_CONVERT_JS, cx);
 
-        // Call the getter function if the member is an attribute
-        if(member->IsAttribute())
+        // Extra scope just to be able to use AUTO_MARK_JSVAL once
+        // more for funval below. W/o the extra scope we get name
+        // collisions from the macro.
         {
-            jsid id;
-            if(!JS_ValueToId(cx, idval, &id))
-                return JS_FALSE;
+            jsval funval = OBJECT_TO_JSVAL(funobj);
 
-            NS_ASSERTION(argc == 0 || member->IsWritableAttribute(),
-                         "Huh, setter called for readonly attribute!");
+            // protect funobj until it is actually attached
+            AUTO_MARK_JSVAL(ccx, funval);
 
-            // Do the actual call to the getter or setter.
-            return js_InternalGetOrSet(cx, obj, id, OBJECT_TO_JSVAL(funobj),
-                                       (argc == 0) ? JSACC_READ : JSACC_WRITE,
-                                       argc, argv, vp);
+            // Call the getter function if the member is an attribute
+            if(member->IsAttribute())
+            {
+                jsid id;
+                if(!JS_ValueToId(cx, idval, &id))
+                    return JS_FALSE;
+
+                NS_ASSERTION(argc == 0 || member->IsWritableAttribute(),
+                             "Huh, setter called for readonly attribute!");
+
+                // Do the actual call to the getter or setter.
+                return js_InternalGetOrSet(cx, obj, id, funval,
+                                           (argc == 0) ? JSACC_READ : JSACC_WRITE,
+                                           argc, argv, vp);
+            }
+
+            // return the function
+            *vp = OBJECT_TO_JSVAL(funobj);
         }
-
-        // return the function
-        *vp = OBJECT_TO_JSVAL(funobj);
     } else
         *foundMember = JS_FALSE;
 
