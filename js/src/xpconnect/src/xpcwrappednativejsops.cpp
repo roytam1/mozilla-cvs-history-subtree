@@ -1010,6 +1010,10 @@ GetOrSetUnshadowedMemberValue(JSContext *cx,
             return JS_TRUE;
         }
 
+        // Make sure val doesn't get collected during any of the JS
+        // engine calls in this scope from here on.
+        AUTO_MARK_JSVAL(ccx, val);
+
         // XXXbe why did jband add this?  It's not strictly necessary in core
         // JS native objects, e.g. d = new Date; y = d.getFullYear() does not
         // clone Date.prototype.getFullYear solely in order to make
