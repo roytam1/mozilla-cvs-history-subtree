@@ -506,8 +506,17 @@
 
 - (void)syncFontPanel
 {
-  NSString 	*fontType = [[matrixChooseFont selectedCell] alternateTitle];
-  NSFont		*newFont	= [[self getFontSampleForType:fontType] font];
+  NSString* fontType;
+  switch([[matrixChooseFont selectedCell] tag]) {
+    case 0:
+      fontType = [NSString stringWithString:defaultFontType];
+      break;
+    case 1:
+    default:
+      fontType = @"monospace";
+      break;
+  }
+  NSFont *newFont = [[self getFontSampleForType:fontType] font];
   
   [[NSFontManager sharedFontManager] setSelectedFont:newFont isMultiple:NO];
 }
@@ -518,7 +527,7 @@
   if (selectedRegion == -1)
     return;
 
-  NSDictionary	*regionDict = [regionMappingTable objectAtIndex:selectedRegion];
+  NSDictionary *regionDict = [regionMappingTable objectAtIndex:selectedRegion];
 
   [[matrixChooseFont cellWithTag:0] setAlternateTitle:defaultFontType];
 
@@ -718,7 +727,16 @@ const int kMissingFontPopupItemTag = 9999;
 
 - (void)changeFont:(id)sender
 {
-  NSString 	*fontType = [[matrixChooseFont selectedCell] alternateTitle];
+  NSString* fontType;
+  switch([[matrixChooseFont selectedCell] tag]) {
+    case 0:
+      fontType = [NSString stringWithString:defaultFontType];
+      break;
+    case 1:
+    default:
+      fontType = @"monospace";
+      break;
+  }
   [self updateFontSampleOfType:fontType];
 }
 
