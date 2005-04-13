@@ -84,6 +84,8 @@
 #include "nsIPrefBranch.h"
 #include "nsIPrefService.h"
 
+#include "jsinterp.h" // for js_AllocStack() and js_FreeStack()
+
 #ifdef XP_UNIX
 // please see bug 78421 for the eventual "right" fix for this
 #define HAVE_LAME_APPSHELL
@@ -448,16 +450,21 @@ nsWindowWatcher::OpenWindow(nsIDOMWindow *aParent,
 {
   PRUint32  argc;
   jsval    *argv = nsnull;
+  JSContext *cx;
+  void *mark;
   nsresult  rv;
 
-  rv = ConvertSupportsTojsvals(aParent, aArguments, &argc, &argv);
+  rv = ConvertSupportsTojsvals(aParent, aArguments, &argc, &argv, &cx, &mark);
   if (NS_SUCCEEDED(rv)) {
     PRBool dialog = argc == 0 ? PR_FALSE : PR_TRUE;
     rv = OpenWindowJS(aParent, aUrl, aName, aFeatures, dialog, argc, argv,
                       _retval);
+
+    if (argv) {
+      js_FreeStack(cx, mark);
+    }
   }
-  if (argv) // Free goes to libc free(). so i'm assuming a bad libc.
-    nsMemory::Free(argv);
+
   return rv;
 }
 
@@ -1685,7 +1692,9 @@ nsWindowWatcher::AttachArguments(nsIDOMWindow *aWindow,
 nsresult
 nsWindowWatcher::ConvertSupportsTojsvals(nsIDOMWindow *aWindow,
                                          nsISupports *aArgs,
-                                         PRUint32 *aArgc, jsval **aArgv)
+                                         PRUint32 *aArgc, jsval **aArgv,
+                                         JSContext **aUsedContext,
+                                         void **aMarkp)
 {
   nsresult rv = NS_OK;
 
@@ -1708,11 +1717,6 @@ nsWindowWatcher::ConvertSupportsTojsvals(nsIDOMWindow *aWindow,
   } else
     argCount = 1; // the nsISupports which is not an array
 
-  jsval *argv = NS_STATIC_CAST(jsval *, nsMemory::Alloc(argCount * sizeof(jsval)));
-  NS_ENSURE_TRUE(argv, NS_ERROR_OUT_OF_MEMORY);
-
-  AutoFree             argvGuard(argv);
-
   JSContext           *cx;
   JSContextAutoPopper  contextGuard;
 
@@ -1726,6 +1730,9 @@ nsWindowWatcher::ConvertSupportsTojsvals(nsIDOMWindow *aWindow,
     cx = contextGuard.get();
   }
 
+  jsval *argv = js_AllocStack(cx, argCount, aMarkp);
+  NS_ENSURE_TRUE(argv, NS_ERROR_OUT_OF_MEMORY);
+
   if (argsArray)
     for (argCtr = 0; argCtr < argCount && NS_SUCCEEDED(rv); argCtr++) {
       nsCOMPtr<nsISupports> s(dont_AddRef(argsArray->ElementAt(argCtr)));
@@ -1734,11 +1741,13 @@ nsWindowWatcher::ConvertSupportsTojsvals(nsIDOMWindow *aWindow,
   else
     rv = AddSupportsTojsvals(aArgs, cx, argv);
 
-  if (NS_FAILED(rv))
+  if (NS_FAILED(rv)) {
+    js_FreeStack(cx, *aMarkp);
+
     return rv;
+  }
 
-  argvGuard.Invalidate();
-
+  *aUsedContext = cx;
   *aArgv = argv;
   *aArgc = argCount;
   return NS_OK;
