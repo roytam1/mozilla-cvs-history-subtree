@@ -121,7 +121,5 @@
   locale/pippki/pref-masterpass.dtd  (@AB_CD@/chrome/pippki/pref-masterpass.dtd)
 * locale/pipnss/contents.rdf         (generic/chrome/pipnss/contents.rdf)
   locale/pipnss/pipnss.properties    (@AB_CD@/chrome/pipnss/pipnss.properties)
-#ifdef EXTENSION_PREF
 * locale/autoconfig/contents.rdf          (generic/chrome/autoconfig/contents.rdf)
   locale/autoconfig/autoconfig.properties (@AB_CD@/chrome/autoconfig/autoconfig.properties)
-#endif
