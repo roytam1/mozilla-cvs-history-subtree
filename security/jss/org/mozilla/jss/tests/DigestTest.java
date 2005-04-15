@@ -30,12 +30,12 @@
  * may use your version of this file under either the MPL or the
  * GPL.
  */
-package org.mozilla.jss.crypto;
+package org.mozilla.jss.tests;
 
 import java.io.*;
 import org.mozilla.jss.CryptoManager;
-import org.mozilla.jss.util.Password;
-import org.mozilla.jss.util.Debug;
+import org.mozilla.jss.util.*;
+import org.mozilla.jss.crypto.*;
 import java.security.MessageDigest;
 
 public class DigestTest {
@@ -43,8 +43,6 @@ public class DigestTest {
     public static void main(String []argv) {
 
       try {
-
-        Debug.setLevel(Debug.OBNOXIOUS);
 
         if( argv.length != 2 ) {
             System.out.println("Usage: DigestTest <dbdir> <infile>");
@@ -60,6 +58,8 @@ public class DigestTest {
 
         CryptoManager.initialize(dbdir);
 
+        Debug.setLevel(Debug.OBNOXIOUS);
+
         /////////////////////////////////////////////////////////////
         // Install SUN provider
         java.security.Security.addProvider(new sun.security.provider.Sun() );
@@ -68,7 +68,7 @@ public class DigestTest {
         // Test SHA-1
         /////////////////////////////////////////////////////////////
         java.security.MessageDigest nsdigest =
-                java.security.MessageDigest.getInstance("SHA-1", "Netscape");
+                java.security.MessageDigest.getInstance("SHA-1", "Mozilla-JSS");
         java.security.MessageDigest sundigest =
                 java.security.MessageDigest.getInstance("SHA-1", "SUN");
 
@@ -76,25 +76,25 @@ public class DigestTest {
         sundigestOut = sundigest.digest(toBeDigested);
 
         if( MessageDigest.isEqual(nsdigestOut, sundigestOut) ) {
-            System.out.println("Sun and Netscape give same SHA-1 hash");
+            System.out.println("Sun and Mozilla give same SHA-1 hash");
         } else {
-            System.out.println("ERROR: Sun and Netscape give different"+
+            System.out.println("ERROR: Sun and Mozilla give different"+
                 " SHA-1 hashes");
         }
 
         /////////////////////////////////////////////////////////////
         // Test MD5
         /////////////////////////////////////////////////////////////
-        nsdigest = java.security.MessageDigest.getInstance("MD5", "Netscape");
+        nsdigest = java.security.MessageDigest.getInstance("MD5", "Mozilla-JSS");
         sundigest = java.security.MessageDigest.getInstance("MD5", "SUN");
 
         nsdigestOut = nsdigest.digest(toBeDigested);
         sundigestOut = sundigest.digest(toBeDigested);
 
         if( MessageDigest.isEqual(nsdigestOut, sundigestOut) ) {
-            System.out.println("Sun and Netscape give same MD5 hash");
+            System.out.println("Sun and Mozilla give same MD5 hash");
         } else {
-            System.out.println("ERROR: Sun and Netscape give different"+
+            System.out.println("ERROR: Sun and Mozilla give different"+
                 " MD5 hashes");
         }
 

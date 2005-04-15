@@ -38,7 +38,12 @@ import java.net.SocketException;
 import java.io.*;
 import java.io.IOException;
 import java.util.Vector;
-
+import java.util.Enumeration;
+import java.lang.reflect.Constructor;
+import org.mozilla.jss.util.Assert;
+import org.mozilla.jss.CryptoManager;
+import org.mozilla.jss.crypto.ObjectNotFoundException;
+import org.mozilla.jss.crypto.TokenException;
 
 class SocketBase {
 
@@ -61,34 +66,47 @@ class SocketBase {
 
     native byte[] socketCreate(Object socketObject,
         SSLCertificateApprovalCallback certApprovalCallback,
-        SSLClientCertificateSelectionCallback clientCertSelectionCallback)
+        SSLClientCertificateSelectionCallback clientCertSelectionCallback,
+        java.net.Socket javaSock, String host)
             throws SocketException;
+
+    byte[] socketCreate(Object socketObject,
+        SSLCertificateApprovalCallback certApprovalCallback,
+        SSLClientCertificateSelectionCallback clientCertSelectionCallback)
+            throws SocketException
+    {
+        return socketCreate(socketObject, certApprovalCallback,
+            clientCertSelectionCallback, null, null);
+    }
 
     native void socketBind(byte[] addrBA, int port) throws SocketException;
 
     /**
-     * Enums. These must match the enums table in SSLSocket.c. This is
+     * Enums. These must match the enums table in common.c. This is
      * safer than copying the values of the C constants, which are subject
      * to change, into Java code.
      */
     static final int SSL_ENABLE_SSL2 = 0;
     static final int SSL_ENABLE_SSL3 = 1;
-    static final int TCP_NODELAY = 2;
-    static final int SO_KEEPALIVE = 3;
-    static final int PR_SHUTDOWN_RCV = 4;
-    static final int PR_SHUTDOWN_SEND = 5;
-    static final int SSL_REQUIRE_CERTIFICATE = 6;
-    static final int SSL_REQUEST_CERTIFICATE = 7;
-    static final int SSL_NO_CACHE = 8;
-    static final int SSL_POLICY_DOMESTIC = 9;
-    static final int SSL_POLICY_EXPORT = 10;
-    static final int SSL_POLICY_FRANCE = 11;
+    static final int SSL_ENABLE_TLS = 2;
+    static final int TCP_NODELAY = 3;
+    static final int SO_KEEPALIVE = 4;
+    static final int PR_SHUTDOWN_RCV = 5;
+    static final int PR_SHUTDOWN_SEND = 6;
+    static final int SSL_REQUIRE_CERTIFICATE = 7;
+    static final int SSL_REQUEST_CERTIFICATE = 8;
+    static final int SSL_NO_CACHE = 9;
+    static final int SSL_POLICY_DOMESTIC = 10;
+    static final int SSL_POLICY_EXPORT = 11;
+    static final int SSL_POLICY_FRANCE = 12;
 
     void close() throws IOException {
         socketClose();
-        sockProxy = null;
     }
 
+    // SSLServerSocket and SSLSocket close methods
+    // have their own synchronization control that 
+    // protects SocketBase.socketClose.
     native void socketClose() throws IOException;
 
     private boolean requestingClientAuth = false;
@@ -116,6 +134,10 @@ class SocketBase {
         setSSLOption(SSL_ENABLE_SSL3, enable);
     }
 
+    void enableTLS(boolean enable) throws SocketException {
+        setSSLOption(SSL_ENABLE_TLS, enable);
+    }
+
     void setSSLOption(int option, boolean on)
         throws SocketException
     {
@@ -125,36 +147,60 @@ class SocketBase {
     native void setSSLOption(int option, int on)
         throws SocketException;
 
+    /**
+     * Converts a host-ordered 4-byte internet address into an InetAddress.
+     * Unfortunately InetAddress provides no more efficient means
+     * of construction than getByName(), and it is final.
+     *
+     * @return The InetAddress corresponding to the given integer,
+     *      or <tt>null</tt> if the InetAddress could not be constructed.
+     */
+    private static InetAddress
+    convertIntToInetAddress(int intAddr) {
+        InetAddress in;
+        int[] addr = new int[4];
+        addr[0] = ((intAddr >>> 24) & 0xff);
+        addr[1] = ((intAddr >>> 16) & 0xff);
+        addr[2] = ((intAddr >>>  8) & 0xff);
+        addr[3] = ((intAddr       ) & 0xff);
+        try {
+            in = InetAddress.getByName(
+                addr[0] + "." + addr[1] + "." + addr[2] + "." + addr[3] );
+        } catch (java.net.UnknownHostException e) {
+            in = null;
+        }
+        return in;
+    }
+
+    /**
+     * @return the InetAddress of the peer end of the socket.
+     */
     InetAddress getInetAddress()
     {
         try {
-            int intAddr = getPeerAddressNative();
-            InetAddress in;
-            byte[] addr = new byte[4];
-            addr[0] = (byte)((intAddr >>> 24) & 0xff);
-            addr[1] = (byte)((intAddr >>> 16) & 0xff);
-            addr[2] = (byte)((intAddr >>>  8) & 0xff);
-            addr[3] = (byte)((intAddr       ) & 0xff);
-            try {
-            in = InetAddress.getByName(
-                addr[0] + "." + addr[1] + "." + addr[2] + "." + addr[3] );
-            } catch (java.net.UnknownHostException e) {
-                in = null;
-            }
-            return in;
+            return convertIntToInetAddress( getPeerAddressNative() );
         } catch(SocketException e) {
-            e.printStackTrace();
             return null;
         }
     }
-
     private native int getPeerAddressNative() throws SocketException;
+
+    /**
+     * @return The local IP address.
+     */
+    InetAddress getLocalAddress() {
+        try {
+            return convertIntToInetAddress( getLocalAddressNative() );
+        } catch(SocketException e) {
+            return null;
+        }
+    }
+    private native int getLocalAddressNative() throws SocketException;
 
     public int getLocalPort() {
         try {
             return getLocalPortNative();
         } catch(SocketException e) {
-            e.printStackTrace();
             return 0;
         }
     }
@@ -170,16 +216,48 @@ class SocketBase {
         setSSLOption(SSL_REQUIRE_CERTIFICATE, require ? (onRedo ? 1 : 2) : 0);
     }
 
-    void setClientCertNickname(String nick) throws SocketException {
-        if( nick != null && nick.length() > 0 ) {
-            setClientCertNicknameNative(nick);
-        }
+    /**
+     * Sets the nickname of the certificate to use for client authentication.
+     */
+    public void setClientCertNickname(String nick) throws SocketException {
+      try {
+        setClientCert( CryptoManager.getInstance().findCertByNickname(nick) );
+      } catch(CryptoManager.NotInitializedException nie) {
+        throw new SocketException("CryptoManager not initialized");
+      } catch(ObjectNotFoundException onfe) {
+        throw new SocketException("Object not found: " + onfe);
+      } catch(TokenException te) {
+        throw new SocketException("Token Exception: " + te);
+      }
     }
 
-    private native void setClientCertNicknameNative(String nick)
+    native void setClientCert(org.mozilla.jss.crypto.X509Certificate cert)
         throws SocketException;
 
     void useCache(boolean b) throws SocketException {
         setSSLOption(SSL_NO_CACHE, !b);
+    }
+
+    static Throwable processExceptions(Throwable topException,
+        Throwable bottomException)
+    {
+      try {
+        StringBuffer strBuf;
+        strBuf = new StringBuffer( topException.toString() );
+
+        if( bottomException != null ) {
+            strBuf.append(" --> ");
+            strBuf.append( bottomException.toString() );
+        }
+
+        Class excepClass = topException.getClass();
+        Class stringClass = java.lang.String.class;
+        Constructor cons = excepClass.getConstructor(new Class[] {stringClass});
+
+        return (Throwable) cons.newInstance(new Object[] { strBuf.toString() });
+      } catch(Exception e ) {
+        Assert.notReached("Problem constructing exception container");
+        return topException;
+      }
     }
 }

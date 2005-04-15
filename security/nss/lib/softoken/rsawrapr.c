@@ -240,6 +240,10 @@ RSA_FormatOneBlock(unsigned modulusLen, RSA_BlockType blockType,
 	 */
 	padLen = modulusLen - data->len - 3;
 	PORT_Assert (padLen >= RSA_BLOCK_MIN_PAD_LEN);
+	if (padLen < RSA_BLOCK_MIN_PAD_LEN) {
+	    PORT_Free(block);
+	    return NULL;
+	}
 	for (i = 0; i < padLen; i++) {
 	    /* Pad with non-zero random data. */
 	    do {
@@ -632,7 +636,7 @@ RSA_Sign(SECKEYLowPrivateKey *key,
     if (rv != SECSuccess) 
     	goto done;
 
-    rv = RSA_PrivateKeyOp(&key->u.rsa, output, formatted.data);
+    rv = RSA_PrivateKeyOpDoubleChecked(&key->u.rsa, output, formatted.data);
     *output_len = modulus_len;
 
     goto done;
@@ -776,6 +780,8 @@ RSA_EncryptBlock(SECKEYLowPublicKey *key,
     SECItem       unformatted;
 
     formatted.data = NULL;
+    if (modulus_len == 0)
+	goto failure;
     if (max_output_len < modulus_len) 
     	goto failure;
     PORT_Assert(key->keyType == rsaKey);
@@ -888,7 +894,7 @@ RSA_SignRaw(SECKEYLowPrivateKey *key,
     if (rv != SECSuccess) 
     	goto done;
 
-    rv = RSA_PrivateKeyOp(&key->u.rsa, output, formatted.data);
+    rv = RSA_PrivateKeyOpDoubleChecked(&key->u.rsa, output, formatted.data);
     *output_len = modulus_len;
 
 done:

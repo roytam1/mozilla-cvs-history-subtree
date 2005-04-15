@@ -37,12 +37,31 @@ import java.net.InetAddress;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketException;
+import org.mozilla.jss.CryptoManager;
+import org.mozilla.jss.crypto.ObjectNotFoundException;
+import org.mozilla.jss.crypto.TokenException;
 
 /**
  * SSL server socket.
  */
 public class SSLServerSocket extends java.net.ServerSocket {
 
+    /*
+     * Locking rules of SSLServerSocket
+     *
+     * isClosed and inAccept must be accessed with the object locked.
+     *
+     * acceptLock must be locked throughout the accept method.  It is
+     * used to serialize accept calls on the object.
+     */
+
+    private SocketProxy sockProxy = null;
+    private boolean handshakeAsClient = false;
+    private SocketBase base = new SocketBase();
+    private boolean isClosed = false;
+    private boolean inAccept = false;
+    private java.lang.Object acceptLock = new java.lang.Object();
+    
     /**
      * The default size of the listen queue.
      */
@@ -88,6 +107,26 @@ public class SSLServerSocket extends java.net.ServerSocket {
                 SSLCertificateApprovalCallback certApprovalCallback)
         throws IOException 
     {
+        this(port,backlog, bindAddr, certApprovalCallback, false);
+    }
+
+    /**
+     * Creates a server socket listening on the given port.
+     * @param backlog The size of the socket's listen queue.
+     * @param bindAddr The local address to which to bind. If null, an
+     *      unspecified local address will be bound to.
+     * @param certApprovalCallback Will get called to approve any certificate
+     *      presented by the client.
+     * @param reuseAddr Reuse the local bind port; this parameter sets
+     *      the <tt>SO_REUSEADDR</tt> option on the socket before calling
+     *      <tt>bind()</tt>. The default is <tt>false</tt> for backward
+     *      compatibility.
+     */
+    public SSLServerSocket(int port, int backlog, InetAddress bindAddr,
+                SSLCertificateApprovalCallback certApprovalCallback,
+                boolean reuseAddr)
+        throws IOException 
+    {
         // Dance the dance of fools.  The superclass doesn't have a default
         // constructor, so we have to trick it here. This is an example
         // of WHY WE SHOULDN'T BE EXTENDING SERVERSOCKET.
@@ -100,6 +139,8 @@ public class SSLServerSocket extends java.net.ServerSocket {
 
         base.setProxy(sockProxy);
 
+        setReuseAddress(reuseAddr);
+
         // bind it to the local address and port
         if( bindAddr == null ) {
             bindAddr = anyLocalAddr;
@@ -111,10 +152,6 @@ public class SSLServerSocket extends java.net.ServerSocket {
         base.socketBind(bindAddrBA, port);
         socketListen(backlog);
     }
-
-    private SocketProxy sockProxy;
-    private boolean handshakeAsClient=false;
-    private SocketBase base = new SocketBase();
 
     private native void socketListen(int backlog) throws SocketException;
 
@@ -130,14 +167,42 @@ public class SSLServerSocket extends java.net.ServerSocket {
      *   or the timeout is reached.
      */
     public Socket accept() throws IOException {
-        SSLSocket s = new SSLSocket();
-        s.setSockProxy( new SocketProxy(
-            socketAccept(s, base.getTimeout(), handshakeAsClient) ) );
-        return s;
+        synchronized (acceptLock) {
+            synchronized (this) {
+                if (isClosed) {
+                    throw new IOException(
+                    "SSLServerSocket has been closed, and cannot be reused."); 
+                }
+                inAccept = true;
+            }
+            SSLSocket s = new SSLSocket();
+            try {
+                /*
+                 * socketAccept can throw an exception for timeouts,
+                 * IO errors, or PR_Interrupt called by abortAccept.
+                 * So first get a socket pointer, and if successful
+                 * create the SocketProxy.
+                 */
+                byte[] socketPointer = null;
+                socketPointer = socketAccept(s, base.getTimeout(),
+                    handshakeAsClient);
+                SocketProxy sp = new SocketProxy(socketPointer);
+                s.setSockProxy(sp);
+            } catch (Exception e) {
+                /* unnessary to do a s.close() since exception thrown*/
+                throw new IOException("accept method failed");
+            } finally {
+                synchronized (this) {
+                    inAccept=false;
+                }
+            }
+            return s;
+        }
     }
 
     /**
      * Sets the SO_TIMEOUT socket option.
+     * @param timeout The timeout time in milliseconds.
      */
     public void setSoTimeout(int timeout) {
         base.setTimeout(timeout);
@@ -145,11 +210,15 @@ public class SSLServerSocket extends java.net.ServerSocket {
 
     /**
      * Returns the current value of the SO_TIMEOUT socket option.
+     * @return The timeout time in milliseconds.
      */
     public int getSoTimeout() {
         return base.getTimeout();
     }
 
+    public native void setReuseAddress(boolean reuse) throws SocketException;
+    public native boolean getReuseAddress() throws SocketException;
+    private native void abortAccept() throws SocketException;
     private native byte[] socketAccept(SSLSocket s, int timeout,
         boolean handshakeAsClient) throws SocketException;
 
@@ -159,16 +228,40 @@ public class SSLServerSocket extends java.net.ServerSocket {
     public static native void clearSessionCache();
 
     protected void finalize() throws Throwable {
-        close();
+        close(); /* in case user never called close */
+    }
+
+
+    /**
+     * @return The local port.
+     */
+    public int getLocalPort() {
+        return base.getLocalPort();
     }
 
     /**
      * Closes this socket.
      */
     public void close() throws IOException {
-        if( sockProxy != null ) {
+        synchronized (this) {
+            if( isClosed ) {
+                /* finalize calls close or user calls close more than once */
+                return;
+            }
+            isClosed = true;
+            if( sockProxy == null ) {
+                /* nothing to do */
+                return;
+            }
+            if( inAccept ) {
+                abortAccept();
+            }
+        }
+        /* Lock acceptLock to ensure that accept has been aborted. */
+        synchronized (acceptLock) {
             base.close();
-            sockProxy = null;
+            sockProxy = null; 
+            base.setProxy(null);
         }
     }
 
@@ -193,13 +286,31 @@ public class SSLServerSocket extends java.net.ServerSocket {
      *  is used: <code>/tmp</code> on Unix and <code>\\temp</code> on Windows.
      */
     public static native void configServerSessionIDCache(int maxSidEntries,
-        int ssl2EntryTimeout, int ssl3EntryTimeout, String cacheFileDirectory);
+        int ssl2EntryTimeout, int ssl3EntryTimeout, String cacheFileDirectory)
+        throws SocketException;
 
     /**
      * Sets the certificate to use for server authentication.
      */
-    public native void setServerCertNickname(String nickname)
-            throws SocketException;
+    public void setServerCertNickname(String nick) throws SocketException
+    {
+      try {
+        setServerCert( CryptoManager.getInstance().findCertByNickname(nick) );
+      } catch(CryptoManager.NotInitializedException nie) {
+        throw new SocketException("CryptoManager not initialized");
+      } catch(ObjectNotFoundException onfe) {
+        throw new SocketException("Object not found: " + onfe);
+      } catch(TokenException te) {
+        throw new SocketException("Token Exception: " + te);
+      }
+    }
+
+    /**
+     * Sets the certificate to use for server authentication.
+     */
+    public native void setServerCert(
+        org.mozilla.jss.crypto.X509Certificate certnickname)
+        throws SocketException;
 
     /**
      * Enables/disables the request of client authentication. This is only
@@ -259,10 +370,18 @@ public class SSLServerSocket extends java.net.ServerSocket {
     }
 
     /**
-     * @return The remote peer's IP address.
+     * Enables TLS on this socket. It is enabled by default, unless the
+     *  default has been changed with <code>SSLSocket.enableTLSDefault</code>.
+     */
+    public void enableTLS(boolean enable) throws SocketException {
+        base.enableTLS(enable);
+    }
+
+    /**
+     * @return the local address of this server socket.
      */
     public InetAddress getInetAddress() {
-        return base.getInetAddress();
+        return base.getLocalAddress();
     }
 
     /**
@@ -285,6 +404,15 @@ public class SSLServerSocket extends java.net.ServerSocket {
     }
 
     /**
+     * Sets the certificate to use for client authentication.
+     */
+    public void setClientCert(org.mozilla.jss.crypto.X509Certificate cert)
+        throws SocketException
+    {
+        base.setClientCert(cert);
+    }
+
+    /**
      * Determines whether this end of the socket is the client or the server
      *  for purposes of the SSL protocol. By default, it is the server.
      * @param b true if this end of the socket is the SSL slient, false
@@ -300,5 +428,18 @@ public class SSLServerSocket extends java.net.ServerSocket {
      */
     public void useCache(boolean b) throws SocketException {
         base.useCache(b);
+    }
+
+    /**
+     * Returns the addresses and ports of this socket.
+     */
+    public String toString() {
+        StringBuffer buf = new StringBuffer();
+        buf.append("SSLServerSocket[addr=");
+        buf.append(getInetAddress());
+        buf.append(",port=0,localport=");
+        buf.append(getLocalPort());
+        buf.append("]");
+        return buf.toString();
     }
 }

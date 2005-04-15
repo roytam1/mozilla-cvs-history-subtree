@@ -33,7 +33,6 @@
  */
 
 #include <kernel/OS.h>
-#include <support/TLS.h>
 
 #include "prlog.h"
 #include "primpl.h"
@@ -44,63 +43,67 @@
 #include <string.h>
 #include <signal.h>
 
-/* values for PRThread.state */
 #define BT_THREAD_PRIMORD   0x01    /* this is the primordial thread */
 #define BT_THREAD_SYSTEM    0x02    /* this is a system thread */
-#define BT_THREAD_JOINABLE  0x04	/* this is a joinable thread */
 
 struct _BT_Bookeeping
 {
     PRLock *ml;                 /* a lock to protect ourselves */
-	sem_id cleanUpSem;		/* the primoridal thread will block on this
-							   sem while waiting for the user threads */
+    PRCondVar *cv;              /* used to signal global things */
     PRInt32 threadCount;	/* user thred count */
 
-} bt_book = { NULL, B_ERROR, 0 };
+} bt_book = { 0 };
 
+/*
+** A structure at the root of the thread private data.  Each member of
+** the array keys[] points to a hash table based on the thread's ID.
+*/
 
-#define BT_TPD_LIMIT 128	/* number of TPD slots we'll provide (arbitrary) */
+struct _BT_PrivateData
+{
+    PRLock *lock;		/* A lock to coordinate access */
+    struct _BT_PrivateHash *keys[128];	/* Up to 128 keys, pointing to a hash table */
 
-/* these will be used to map an index returned by PR_NewThreadPrivateIndex()
-   to the corresponding beos native TLS slot number, and to the destructor
-   for that slot - note that, because it is allocated globally, this data
-   will be automatically zeroed for us when the program begins */
-static int32 tpd_beosTLSSlots[BT_TPD_LIMIT];
-static PRThreadPrivateDTOR tpd_dtors[BT_TPD_LIMIT];
+} bt_privateRoot = { 0 };
 
-static vint32 tpd_slotsUsed=0;	/* number of currently-allocated TPD slots */
-static int32 tls_prThreadSlot;	/* TLS slot in which PRThread will be stored */
+/*
+** A dynamically allocated structure that contains 256 hash buckets that
+** contain a linked list of thread IDs.  The hash is simply the last 8 bits
+** of the thread_id.  ( current thread_id & 0x000000FF )
+*/
 
-/* this mutex will be used to synchronize access to every
-   PRThread.md.joinSem and PRThread.md.is_joining (we could
-   actually allocate one per thread, but that seems a bit excessive,
-   especially considering that there will probably be little
-   contention, PR_JoinThread() is allowed to block anyway, and the code
-   protected by the mutex is short/fast) */
-static PRLock *joinSemLock;
+struct _BT_PrivateHash
+{
+    void (PR_CALLBACK *destructor)(void *arg);	/* The destructor */
+    struct _BT_PrivateEntry *next[256]; /* Pointer to the first element in the list */
+};
 
-static PRUint32 _bt_MapNSPRToNativePriority( PRThreadPriority priority );
-static PRThreadPriority _bt_MapNativeToNSPRPriority( PRUint32 priority );
-static void _bt_CleanupThread(void *arg);
-static PRThread *_bt_AttachThread();
+/*
+** A dynamically allocated structure that is a member of a linked list of
+** thread IDs.
+*/
+
+struct _BT_PrivateEntry
+{
+    struct _BT_PrivateEntry *next;		/* Pointer to the next thread */
+    thread_id threadID;			/* The BeOS thread ID */
+    void *data;				/* The data */
+};
+
+PRUint32 _bt_mapPriority( PRThreadPriority priority );
+PR_IMPLEMENT(void *) _bt_getThreadPrivate(PRUintn index);
 
 void
 _PR_InitThreads (PRThreadType type, PRThreadPriority priority,
                  PRUintn maxPTDs)
 {
     PRThread *primordialThread;
+    PRLock   *tempLock;
+    PRUintn   tempKey;
     PRUint32  beThreadPriority;
 
-	/* allocate joinSem mutex */
-	joinSemLock = PR_NewLock();
-	if (joinSemLock == NULL)
-	{
-		PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
-		return;
-    }
-
     /*
-    ** Create and initialize NSPR structure for our primordial thread.
+    ** Create a NSPR structure for our primordial thread.
     */
     
     primordialThread = PR_NEWZAP(PRThread);
@@ -110,75 +113,82 @@ _PR_InitThreads (PRThreadType type, PRThreadPriority priority,
         return;
     }
 
-	primordialThread->md.joinSem = B_ERROR;
-
     /*
     ** Set the priority to the desired level.
     */
 
-    beThreadPriority = _bt_MapNSPRToNativePriority( priority );
+    beThreadPriority = _bt_mapPriority( priority );
     
     set_thread_priority( find_thread( NULL ), beThreadPriority );
     
+    primordialThread->state |= BT_THREAD_PRIMORD;
     primordialThread->priority = priority;
 
+    /*
+    ** Initialize the thread tracking data structures
+    */
 
-	/* set the thread's state - note that the thread is not joinable */
-    primordialThread->state |= BT_THREAD_PRIMORD;
-	if (type == PR_SYSTEM_THREAD)
-		primordialThread->state |= BT_THREAD_SYSTEM;
+    bt_privateRoot.lock = PR_NewLock();
+    if( NULL == bt_privateRoot.lock )
+    {
+	PR_SetError( PR_OUT_OF_MEMORY_ERROR, 0 );
+	return;
+    }
 
     /*
-    ** Allocate a TLS slot for the PRThread structure (just using
-    ** native TLS, as opposed to NSPR TPD, will make PR_GetCurrentThread()
-    ** somewhat faster, and will leave one more TPD slot for our client)
+    ** Grab a key.  We're guaranteed to be key #0, since we are
+    ** always the first one in.
     */
+
+    if( PR_NewThreadPrivateIndex( &tempKey, NULL ) != PR_SUCCESS )
+    {
+	PR_SetError( PR_OUT_OF_MEMORY_ERROR, 0 );
+	return;
+    }
 	
-	tls_prThreadSlot = tls_allocate();
+    PR_ASSERT( tempKey == 0 );
 
     /*
     ** Stuff our new PRThread structure into our thread specific
     ** slot.
     */
-
-	tls_set(tls_prThreadSlot, primordialThread);
     
-	/* allocate lock for bt_book */
+    if( PR_SetThreadPrivate( (PRUint8) 0, (void *) primordialThread ) == PR_FAILURE )
+    {
+    	PR_SetError( PR_OUT_OF_MEMORY_ERROR, 0 );
+    	return;
+    }
+
+    /*
+    ** Allocate some memory to hold our global lock.  We never clean it
+    ** up later, but BeOS automatically frees memory when the thread
+    ** dies.
+    */
+    
     bt_book.ml = PR_NewLock();
     if( NULL == bt_book.ml )
     {
     	PR_SetError( PR_OUT_OF_MEMORY_ERROR, 0 );
 	return;
     }
-}
 
-PRUint32
-_bt_MapNSPRToNativePriority( PRThreadPriority priority )
+    tempLock = PR_NewLock();
+    if( NULL == tempLock )
     {
-    switch( priority )
+    	PR_SetError( PR_OUT_OF_MEMORY_ERROR, 0 );
+	return;
+    }
+
+    bt_book.cv = PR_NewCondVar( tempLock );
+    if( NULL == bt_book.cv )
     {
-    	case PR_PRIORITY_LOW:	 return( B_LOW_PRIORITY );
-	case PR_PRIORITY_NORMAL: return( B_NORMAL_PRIORITY );
-	case PR_PRIORITY_HIGH:	 return( B_DISPLAY_PRIORITY );
-	case PR_PRIORITY_URGENT: return( B_URGENT_DISPLAY_PRIORITY );
-	default:		 return( B_NORMAL_PRIORITY );
+	PR_SetError( PR_OUT_OF_MEMORY_ERROR, 0 );
+	return;
     }
 }
 
-PRThreadPriority
-_bt_MapNativeToNSPRPriority(PRUint32 priority)
-    {
-	if (priority < B_NORMAL_PRIORITY)
-		return PR_PRIORITY_LOW;
-	if (priority < B_DISPLAY_PRIORITY)
-		return PR_PRIORITY_NORMAL;
-	if (priority < B_URGENT_DISPLAY_PRIORITY)
-		return PR_PRIORITY_HIGH;
-	return PR_PRIORITY_URGENT;
-}
-
 PRUint32
-_bt_mapNativeToNSPRPriority( int32 priority )
+_bt_mapPriority( PRThreadPriority priority )
 {
     switch( priority )
     {
@@ -188,74 +198,6 @@ _bt_mapNativeToNSPRPriority( int32 priority )
 	case PR_PRIORITY_URGENT: return( B_URGENT_DISPLAY_PRIORITY );
 	default:		 return( B_NORMAL_PRIORITY );
     }
-}
-
-/* This method is called by all NSPR threads as they exit */
-void _bt_CleanupThread(void *arg)
-{
-	PRThread *me = PR_GetCurrentThread();
-	int32 i;
-
-	/* first, clean up all thread-private data */
-	for (i = 0; i < tpd_slotsUsed; i++)
-	{
-		void *oldValue = tls_get(tpd_beosTLSSlots[i]);
-		if ( oldValue != NULL && tpd_dtors[i] != NULL )
-			(*tpd_dtors[i])(oldValue);
-	}
-
-	/* if this thread is joinable, wait for someone to join it */
-	if (me->state & BT_THREAD_JOINABLE)
-	{
-		/* protect access to our joinSem */
-		PR_Lock(joinSemLock);
-
-		if (me->md.is_joining)
-		{
-			/* someone is already waiting to join us (they've
-			   allocated a joinSem for us) - let them know we're
-			   ready */
-			delete_sem(me->md.joinSem);
-
-			PR_Unlock(joinSemLock);
-
-		}
-		else
-    {
-			/* noone is currently waiting for our demise - it
-			   is our responsibility to allocate the joinSem
-			   and block on it */
-			me->md.joinSem = create_sem(0, "join sem");
-
-			/* we're done accessing our joinSem */
-			PR_Unlock(joinSemLock);
-
-			/* wait for someone to join us */
-			while (acquire_sem(me->md.joinSem) == B_INTERRUPTED);
-	    }
-	}
-
-	/* if this is a user thread, we must update our books */
-	if ((me->state & BT_THREAD_SYSTEM) == 0)
-	{
-		/* synchronize access to bt_book */
-    PR_Lock( bt_book.ml );
-
-		/* decrement the number of currently-alive user threads */
-	bt_book.threadCount--;
-
-		if (bt_book.threadCount == 0 && bt_book.cleanUpSem != B_ERROR) {
-			/* we are the last user thread, and the primordial thread is
-			   blocked in PR_Cleanup() waiting for us to finish - notify
-			   it */
-			delete_sem(bt_book.cleanUpSem);
-	}
-
-    PR_Unlock( bt_book.ml );
-	}
-
-	/* finally, delete this thread's PRThread */
-	PR_DELETE(me);
 }
 
 /**
@@ -265,22 +207,90 @@ void _bt_CleanupThread(void *arg)
  */
 static void*
 _bt_root (void* arg)
-	{
+{
     PRThread *thred = (PRThread*)arg;
     PRIntn rv;
     void *privData;
     status_t result;
     int i;
 
-	/* save our PRThread object into our TLS */
-	tls_set(tls_prThreadSlot, thred);
+    struct _BT_PrivateHash *hashTable;
+
+    /* Set within the current thread the pointer to our object. This
+       object will be deleted when the thread termintates.  */
+
+    result = PR_SetThreadPrivate( 0, (void *) thred );
+    PR_ASSERT( result == PR_SUCCESS );
 
     thred->startFunc(thred->arg);  /* run the dang thing */
 
-	/* clean up */
-	_bt_CleanupThread(NULL);
+    /*
+    ** Call the destructor, if available.
+    */
 
-	return 0;
+    PR_Lock( bt_privateRoot.lock );
+
+    for( i = 0; i < 128; i++ )
+    {
+	hashTable = bt_privateRoot.keys[i];
+
+	if( hashTable != NULL )
+	{
+	    if( hashTable->destructor != NULL )
+	    {
+		privData = _bt_getThreadPrivate( i );
+
+		if( privData != NULL )
+		{
+		    PR_Unlock( bt_privateRoot.lock );
+		    hashTable->destructor( privData );
+		    PR_Lock( bt_privateRoot.lock );
+		}
+	    }
+	}
+    }
+
+    PR_Unlock( bt_privateRoot.lock );
+
+    /* decrement our thread counters */
+
+    PR_Lock( bt_book.ml );
+
+    if (thred->state & BT_THREAD_SYSTEM) {
+#if 0
+        bt_book.system -= 1;
+#endif
+    } else 
+    {
+	bt_book.threadCount--;
+
+	if( 0 == bt_book.threadCount )
+	{
+            PR_NotifyAllCondVar(bt_book.cv);
+	}
+    }
+
+    PR_Unlock( bt_book.ml );
+
+    if( thred->md.is_joinable == 1 )
+    {
+	/*
+	** This is a joinable thread.  Keep suspending
+	** until is_joining is set to 1
+	*/
+
+	if( thred->md.is_joining == 0 )
+	{
+	    suspend_thread( thred->md.tid );
+	}
+    }
+
+    /* delete the thread object */
+    PR_DELETE(thred);
+
+    result = PR_SetThreadPrivate( (PRUint8) 0, (void *) NULL );
+    PR_ASSERT( result == PR_SUCCESS );
+    exit_thread( NULL );
 }
 
 PR_IMPLEMENT(PRThread*)
@@ -290,70 +300,62 @@ PR_IMPLEMENT(PRThread*)
 {
     PRUint32 bePriority;
 
-    PRThread* thred;
+    PRThread* thred = PR_NEWZAP(PRThread);
 
     if (!_pr_initialized) _PR_ImplicitInitialization();
 
-	thred = PR_NEWZAP(PRThread);
- 	if (thred == NULL)
-	{
-        PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
-        return NULL;
-    }
-
-    thred->md.joinSem = B_ERROR;
-
+    if (thred != NULL) {
         thred->arg = arg;
         thred->startFunc = start;
         thred->priority = priority;
 
 	if( state == PR_JOINABLE_THREAD )
 	{
-	    thred->state |= BT_THREAD_JOINABLE;
+	    thred->md.is_joinable = 1;
 	}
+	else
+	{
+	    thred->md.is_joinable = 0;
+	}
+
+	thred->md.is_joining = 0;
 
         /* keep some books */
 
 	PR_Lock( bt_book.ml );
 
-	if (type == PR_USER_THREAD)
-	{
+        if (PR_SYSTEM_THREAD == type) {
+            thred->state |= BT_THREAD_SYSTEM;
+#if 0
+            bt_book.system += 1;
+#endif
+        } else {
 	    bt_book.threadCount++;
         }
 
 	PR_Unlock( bt_book.ml );
 
-	bePriority = _bt_MapNSPRToNativePriority( priority );
+	bePriority = _bt_mapPriority( priority );
 
         thred->md.tid = spawn_thread((thread_func)_bt_root, "moz-thread",
                                      bePriority, thred);
         if (thred->md.tid < B_OK) {
             PR_SetError(PR_UNKNOWN_ERROR, thred->md.tid);
             PR_DELETE(thred);
-			return NULL;
+            thred = NULL;
         }
 
         if (resume_thread(thred->md.tid) < B_OK) {
             PR_SetError(PR_UNKNOWN_ERROR, 0);
             PR_DELETE(thred);
-			return NULL;
+            thred = NULL;
         }
 
-    return thred;
+    } else {
+        PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
     }
 
-PR_IMPLEMENT(PRThread*)
-	PR_AttachThread(PRThreadType type, PRThreadPriority priority,
-					PRThreadStack *stack)
-{
-	/* PR_GetCurrentThread() will attach a thread if necessary */
-	return PR_GetCurrentThread();
-}
-
-PR_IMPLEMENT(void)
-	PR_DetachThread()
-{
-	/* we don't support detaching */
+    return thred;
 }
 
 PR_IMPLEMENT(PRStatus)
@@ -363,50 +365,21 @@ PR_IMPLEMENT(PRStatus)
 
     PR_ASSERT(thred != NULL);
 
-	if ((thred->state & BT_THREAD_JOINABLE) == 0)
+    if( thred->md.is_joinable != 1 )
     {
-	PR_SetError( PR_INVALID_ARGUMENT_ERROR, 0 );
+	PR_SetError( PR_UNKNOWN_ERROR, 0 );
 	return( PR_FAILURE );
     }
 
-	/* synchronize access to the thread's joinSem */
-	PR_Lock(joinSemLock);
-	
-	if (thred->md.is_joining)
-	{
-		/* another thread is already waiting to join the specified
-		   thread - we must fail */
-		PR_Unlock(joinSemLock);
-		return PR_FAILURE;
-	}
+    thred->md.is_joining = 1;
 
-	/* let others know we are waiting to join */
-	thred->md.is_joining = PR_TRUE;
+    status = wait_for_thread(thred->md.tid, &eval);
 
-	if (thred->md.joinSem == B_ERROR)
-	{
-		/* the thread hasn't finished yet - it is our responsibility to
-		   allocate a joinSem and wait on it */
-		thred->md.joinSem = create_sem(0, "join sem");
+    if (status < B_NO_ERROR) {
 
-		/* we're done changing the joinSem now */
-		PR_Unlock(joinSemLock);
-
-		/* wait for the thread to finish */
-		while (acquire_sem(thred->md.joinSem) == B_INTERRUPTED);
-
-	}
-	else
-	{
-		/* the thread has already finished, and has allocated the
-		   joinSem itself - let it know it can finally die */
-		delete_sem(thred->md.joinSem);
-		
-		PR_Unlock(joinSemLock);
+        PR_SetError(PR_UNKNOWN_ERROR, status);
+        return PR_FAILURE;
     }
-
-	/* make sure the thread is dead */
-    wait_for_thread(thred->md.tid, &eval);
 
     return PR_SUCCESS;
 }
@@ -414,20 +387,14 @@ PR_IMPLEMENT(PRStatus)
 PR_IMPLEMENT(PRThread*)
     PR_GetCurrentThread ()
 {
-    PRThread* thred;
+    void* thred;
 
     if (!_pr_initialized) _PR_ImplicitInitialization();
 
-    thred = (PRThread *)tls_get( tls_prThreadSlot);
-	if (thred == NULL)
-	{
-		/* this thread doesn't have a PRThread structure (it must be
-		   a native thread not created by the NSPR) - assimilate it */
-		thred = _bt_AttachThread();
-	}
+    thred = PR_GetThreadPrivate( (PRUint8) 0 );
     PR_ASSERT(NULL != thred);
 
-    return thred;
+    return (PRThread*)thred;
 }
 
 PR_IMPLEMENT(PRThreadScope)
@@ -449,8 +416,7 @@ PR_IMPLEMENT(PRThreadState)
     PR_GetThreadState (const PRThread* thred)
 {
     PR_ASSERT(thred != NULL);
-    return (thred->state & BT_THREAD_JOINABLE)?
-    					PR_JOINABLE_THREAD: PR_UNJOINABLE_THREAD;
+    return PR_JOINABLE_THREAD;
 }
 
 PR_IMPLEMENT(PRThreadPriority)
@@ -468,7 +434,7 @@ PR_IMPLEMENT(void) PR_SetThreadPriority(PRThread *thred,
     PR_ASSERT( thred != NULL );
 
     thred->priority = newPri;
-    bePriority = _bt_MapNSPRToNativePriority( newPri );
+    bePriority = _bt_mapPriority( newPri );
     set_thread_priority( thred->md.tid, bePriority );
 }
 
@@ -476,28 +442,56 @@ PR_IMPLEMENT(PRStatus)
     PR_NewThreadPrivateIndex (PRUintn* newIndex,
                               PRThreadPrivateDTOR destructor)
 {
-	int32    index;
+    PRUintn  index;
+    struct _BT_PrivateHash *tempPointer;
 
     if (!_pr_initialized) _PR_ImplicitInitialization();
 
-	/* reserve the next available tpd slot */
-	index = atomic_add( &tpd_slotsUsed, 1 );
-	if (index >= BT_TPD_LIMIT)
+    /*
+    ** Grab the lock, or hang until it is free.  This is critical code,
+    ** and only one thread at a time should be going through it.
+    */
+
+    PR_Lock( bt_privateRoot.lock );
+
+    /*
+    ** Run through the array of keys, find the first one that's zero.
+    ** Exit if we hit the top of the array.
+    */
+
+    index = 0;
+
+    while( bt_privateRoot.keys[index] != 0 )
+    {
+	index++;
+
+	if( 128 == index )
 	{
-		/* no slots left - decrement value, then fail */
-		atomic_add( &tpd_slotsUsed, -1 );
-		PR_SetError( PR_TPD_RANGE_ERROR, 0 );
+	    PR_Unlock( bt_privateRoot.lock );
 	    return( PR_FAILURE );
 	}
+    }
 
-	/* allocate a beos-native TLS slot for this index (the new slot
-	   automatically contains NULL) */
-	tpd_beosTLSSlots[index] = tls_allocate();
+    /*
+    ** Index has the first available zeroed slot.  Allocate a
+    ** _BT_PrivateHash structure, all zeroed.  Assuming that goes
+    ** well, return the index.
+    */
 
-	/* remember the destructor */
-	tpd_dtors[index] = destructor;
+    tempPointer = PR_NEWZAP( struct _BT_PrivateHash );
 
-    *newIndex = (PRUintn)index;
+    if( 0 == tempPointer ) {
+
+	PR_Unlock( bt_privateRoot.lock );
+	return( PR_FAILURE );
+    }
+
+    bt_privateRoot.keys[index] = tempPointer;
+    tempPointer->destructor = destructor;
+
+    PR_Unlock( bt_privateRoot.lock );
+
+    *newIndex = index;
 
     return( PR_SUCCESS );
 }
@@ -505,43 +499,194 @@ PR_IMPLEMENT(PRStatus)
 PR_IMPLEMENT(PRStatus)
     PR_SetThreadPrivate (PRUintn index, void* priv)
 {
-	void *oldValue;
+    thread_id	currentThread;
+    PRUint8	hashBucket;
+    void       *tempPointer;
+
+    struct _BT_PrivateHash  *hashTable;
+    struct _BT_PrivateEntry *currentEntry;
+    struct _BT_PrivateEntry *previousEntry;
 
     /*
     ** Sanity checking
     */
 
-    if(index < 0 || index >= tpd_slotsUsed || index >= BT_TPD_LIMIT)
+    if( index < 0 || index > 127 ) return( PR_FAILURE );
+
+    /*
+    ** Grab the thread ID for this thread.  Assign it to a hash bucket.
+    */
+
+    currentThread = find_thread( NULL );
+    hashBucket = currentThread & 0x000000FF;
+
+    /*
+    ** Lock out all other threads then grab the proper hash table based
+    ** on the passed index.
+    */
+
+    PR_Lock( bt_privateRoot.lock );
+
+    hashTable = bt_privateRoot.keys[index];
+
+    if( 0 == hashTable )
     {
-		PR_SetError( PR_TPD_RANGE_ERROR, 0 );
+	PR_Unlock( bt_privateRoot.lock );
 	return( PR_FAILURE );
     }
 
-	/* if the old value isn't NULL, and the dtor for this slot isn't
-	   NULL, we must destroy the data */
-	oldValue = tls_get(tpd_beosTLSSlots[index]);
-	if (oldValue != NULL && tpd_dtors[index] != NULL)
-		(*tpd_dtors[index])(oldValue);
+    /*
+    ** Search through the linked list the end is reached or an existing
+    ** entry is found.
+    */
 
-	/* save new value */
-	tls_set(tpd_beosTLSSlots[index], priv);
+    currentEntry = hashTable->next[ hashBucket ];
+    previousEntry = NULL;
 
+    while( currentEntry != 0 )
+    {
+	if( currentEntry->threadID == currentThread )
+	{
+	    /*
+	    ** Found a structure previously created for this thread.
+	    ** Is there a destructor to be called?
+	    */
+
+	    if( hashTable->destructor != NULL )
+	    {
+		if( currentEntry->data != NULL )
+		{
+		    PR_Unlock( bt_privateRoot.lock );
+		    hashTable->destructor( currentEntry->data );
+		    PR_Lock( bt_privateRoot.lock );
+		}
+	    }
+
+	    /*
+	    ** If the data was not NULL, and there was a destructor,
+	    ** it has already been called.  Overwrite the existing
+	    ** data and return with success.
+	    */
+
+	    currentEntry->data = priv;
+	    PR_Unlock( bt_privateRoot.lock );
 	    return( PR_SUCCESS );
 	}
+
+	previousEntry = currentEntry;
+	currentEntry  = previousEntry->next;
+    }
+
+    /*
+    ** If we're here, we didn't find an entry for this thread.  Create
+    ** one and attach it to the end of the list.
+    */
+
+    currentEntry = PR_NEWZAP( struct _BT_PrivateEntry );
+
+    if( 0 == currentEntry )
+    {
+	PR_Unlock( bt_privateRoot.lock );
+	return( PR_FAILURE );
+    }
+
+    currentEntry->threadID = currentThread;
+    currentEntry->data     = priv;
+
+    if( 0 == previousEntry )
+    {
+	/*
+	** This is a special case.  This is the first entry in the list
+	** so set the hash table to point to this entry.
+	*/
+
+	hashTable->next[ hashBucket ] = currentEntry;
+    }
+    else
+    {
+	previousEntry->next = currentEntry;
+    }
+
+    PR_Unlock( bt_privateRoot.lock );
+
+    return( PR_SUCCESS );
+}
+
+PR_IMPLEMENT(void*)
+    _bt_getThreadPrivate(PRUintn index)
+{
+    thread_id	currentThread;
+    PRUint8	hashBucket;
+    void       *tempPointer;
+
+    struct _BT_PrivateHash  *hashTable;
+    struct _BT_PrivateEntry *currentEntry;
+
+    /*
+    ** Sanity checking
+    */
+
+    if( index < 0 || index > 127 ) return( NULL );
+
+    /*
+    ** Grab the thread ID for this thread.  Assign it to a hash bucket.
+    */
+
+    currentThread = find_thread( NULL );
+    hashBucket = currentThread & 0x000000FF;
+
+    /*
+    ** Grab the proper hash table based on the passed index.
+    */
+
+    hashTable = bt_privateRoot.keys[index];
+
+    if( 0 == hashTable )
+    {   
+	return( NULL );
+    }
+
+    /*
+    ** Search through the linked list the end is reached or an existing
+    ** entry is found.
+    */
+
+    currentEntry = hashTable->next[ hashBucket ];
+
+    while( currentEntry != 0 )
+    {   
+	if( currentEntry->threadID == currentThread )
+	{   
+	    /*
+	    ** Found a structure previously created for this thread.
+	    ** Copy out the data, unlock, and return.
+	    */
+
+	    tempPointer = currentEntry->data;
+	    return( tempPointer );
+	}
+
+	currentEntry  = currentEntry->next;
+    }
+
+    /*
+    ** Ooops, we ran out of entries.  This thread isn't listed.
+    */
+
+    return( NULL );
+}
 
 PR_IMPLEMENT(void*)
     PR_GetThreadPrivate (PRUintn index)
 {
-	/* make sure the index is valid */
-	if (index < 0 || index >= tpd_slotsUsed || index >= BT_TPD_LIMIT)
-    {   
-		PR_SetError( PR_TPD_RANGE_ERROR, 0 );
-		return NULL;
-    }
+    void *returnValue;
 
-	/* return the value */
-	return tls_get( tpd_beosTLSSlots[index] );
-	}
+    PR_Lock( bt_privateRoot.lock );
+    returnValue = _bt_getThreadPrivate( index );
+    PR_Unlock( bt_privateRoot.lock );
+
+    return( returnValue );
+}
 
 
 PR_IMPLEMENT(PRStatus)
@@ -624,19 +769,25 @@ PR_IMPLEMENT(PRStatus)
 
     PR_Lock( bt_book.ml );
 
-	if (bt_book.threadCount != 0)
+    while( bt_book.threadCount > 0 )
     {
-		/* we'll have to wait for some threads to finish - create a
-		   sem to block on */
-		bt_book.cleanUpSem = create_sem(0, "cleanup sem");
+	PR_Unlock( bt_book.ml );
+        PR_WaitCondVar(bt_book.cv, PR_INTERVAL_NO_TIMEOUT);
+	PR_Lock( bt_book.ml );
     }
 
     PR_Unlock( bt_book.ml );
 
-	/* note that, if all the user threads were already dead, we
-	   wouldn't have created a sem above, so this acquire_sem()
-	   will fail immediately */
-	while (acquire_sem(bt_book.cleanUpSem) == B_INTERRUPTED);
+#if 0
+    /* I am not sure if it's safe to delete the cv and lock here, since
+     * there may still be "system" threads around. If this call isn't
+     * immediately prior to exiting, then there's a problem. */
+    if (0 == bt_book.system) {
+        PR_DestroyCondVar(bt_book.cv); bt_book.cv = NULL;
+        PR_DestroyLock(bt_book.ml); bt_book.ml = NULL;
+    }
+    PR_DELETE(me);
+#endif
 
     return PR_SUCCESS;
 }
@@ -645,47 +796,4 @@ PR_IMPLEMENT(void)
     PR_ProcessExit (PRIntn status)
 {
     exit(status);
-}
-
-PRThread *_bt_AttachThread()
-{
-	PRThread *thread;
-	thread_info tInfo;
-
-	/* make sure this thread doesn't already have a PRThread structure */
-	PR_ASSERT(tls_get(tls_prThreadSlot) == NULL);
-
-	/* allocate a PRThread structure for this thread */
-	thread = PR_NEWZAP(PRThread);
-	if (thread == NULL)
-	{
-		PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
-		return NULL;
-	}
-
-	/* get the native thread's current state */
-	get_thread_info(find_thread(NULL), &tInfo);
-
-	/* initialize new PRThread */
-	thread->md.tid = tInfo.thread;
-	thread->md.joinSem = B_ERROR;
-	thread->priority = _bt_MapNativeToNSPRPriority(tInfo.priority);
-
-	/* attached threads are always non-joinable user threads */
-	thread->state = 0;
-
-	/* increment user thread count */
-	PR_Lock(bt_book.ml);
-	bt_book.threadCount++;
-	PR_Unlock(bt_book.ml);
-
-	/* store this thread's PRThread */
-	tls_set(tls_prThreadSlot, thread);
-	
-	/* the thread must call _bt_CleanupThread() before it dies, in order
-	   to clean up its PRThread, synchronize with the primordial thread,
-	   etc. */
-	on_exit_thread(_bt_CleanupThread, NULL);
-	
-	return thread;
 }

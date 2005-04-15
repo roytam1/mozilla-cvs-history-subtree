@@ -52,9 +52,7 @@
 ** and requires array notation.
 */
 #if (defined(LINUX) && defined(__powerpc__)) || defined(WIN16) || \
-    defined(QNX) || \
-    (defined(__NetBSD__) && defined(__powerpc__) && \
-    __NetBSD_Version__ < 105000000)
+    defined(QNX) || (defined(__NetBSD__) && defined(__powerpc__))
 #define VARARGS_ASSIGN(foo, bar) foo[0] = bar[0]
 #else
 #define VARARGS_ASSIGN(foo, bar) (foo) = (bar)

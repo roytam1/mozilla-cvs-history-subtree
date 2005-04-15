@@ -45,6 +45,53 @@
 
 /***********************************************************************
 **
+** J S S _ t h r o w M s g P r E r r A r g
+**
+** Throw an exception in native code.  You should return right after
+** calling this function.
+**
+** throwableClassName is the name of the throwable you are throwing in
+** JNI class name format (xxx/xx/xxx/xxx). It must not be NULL.
+**
+** message is the message parameter of the throwable. It must not be NULL.
+** If you don't have a message, call JSS_throw.
+**
+** errCode is a PRErrorCode returned from PR_GetError().
+**
+** Example:
+**      JSS_throwMsg(env, ILLEGAL_ARGUMENT_EXCEPTION, PR_GetError());
+**      return -1;
+*/
+void
+JSS_throwMsgPrErrArg(JNIEnv *env, char *throwableClassName, char *message,
+    PRErrorCode errCode)
+{
+    const char *errStr = JSS_strerror(errCode);
+    char *msg = NULL;
+    int msgLen;
+
+    if( errStr == NULL ) {
+        errStr = "Unknown error";
+    }
+
+    msgLen = strlen(message) + strlen(errStr) + 40;
+    msg = PR_Malloc(msgLen);
+    if( msg == NULL ) {
+        JSS_throw(env, OUT_OF_MEMORY_ERROR);
+        goto finish;
+    }
+    PR_snprintf(msg, msgLen, "%s: (%ld) %s", message, errCode, errStr);
+
+    JSS_throwMsg(env, throwableClassName, msg);
+
+finish:
+    if(msg != NULL) {
+        PR_Free(msg);
+    }
+}
+
+/***********************************************************************
+**
 ** J S S _ t h r o w M s g
 **
 ** Throw an exception in native code.  You should return right after
@@ -103,9 +150,9 @@ JSS_throwMsg(JNIEnv *env, char *throwableClassName, char *message) {
 void
 JSS_throw(JNIEnv *env, char *throwableClassName)
 {
-    jclass throwableClass;
+    jclass throwableClass = NULL;
     jobject throwable;
-    jmethodID constructor;
+    jmethodID constructor = NULL;
     jint result;
     
     PR_ASSERT( (*env)->ExceptionOccurred(env) == NULL );
@@ -123,6 +170,9 @@ JSS_throw(JNIEnv *env, char *throwableClassName)
     }
     PR_ASSERT(throwableClass != NULL);
 
+    if (!throwableClass) {
+        return;
+    }
     /* Lookup up the plain vanilla constructor */
     constructor = (*env)->GetMethodID(
 									env,
@@ -182,6 +232,9 @@ JSS_getPtrFromProxy(JNIEnv *env, jobject nativeProxy, void **ptr)
 
 	proxyClass = (*env)->GetObjectClass(env, nativeProxy);
 	PR_ASSERT(proxyClass != NULL);
+        if (!proxyClass) {
+            return PR_FAILURE;
+        }
 
 #ifdef DEBUG
     nativeProxyClass = (*env)->FindClass(
@@ -209,6 +262,9 @@ JSS_getPtrFromProxy(JNIEnv *env, jobject nativeProxy, void **ptr)
     byteArray = (jbyteArray) (*env)->GetObjectField(env, nativeProxy,
                         byteArrayField);
     PR_ASSERT(byteArray != NULL);
+    if (!byteArray) {
+        return PR_FAILURE;
+    }
 
     size = sizeof(*ptr);
     PR_ASSERT((*env)->GetArrayLength(env, byteArray) == size);
@@ -266,6 +322,9 @@ JSS_getPtrFromProxyOwner(JNIEnv *env, jobject proxyOwner, char* proxyFieldName,
      * Get proxy object
      */
     ownerClass = (*env)->GetObjectClass(env, proxyOwner);
+    if (!ownerClass) {
+        return PR_FAILURE;
+    }
     proxyField = (*env)->GetFieldID(env, ownerClass, proxyFieldName,
 							proxyFieldSig);
     if(proxyField == NULL) {
@@ -273,6 +332,9 @@ JSS_getPtrFromProxyOwner(JNIEnv *env, jobject proxyOwner, char* proxyFieldName,
     }
     proxyObject = (*env)->GetObjectField(env, proxyOwner, proxyField);
     PR_ASSERT(proxyObject != NULL);
+    if (!proxyObject) {
+        return PR_FAILURE;
+    }
 
     /*
      * Get the pointer from the Native Reference object
@@ -326,11 +388,14 @@ JSS_ptrToByteArray(JNIEnv *env, void *ptr)
 jbyteArray
 JSS_OctetStringToByteArray(JNIEnv *env, SECItem *item)
 {
-    jbyteArray array;
+    jbyteArray array = NULL;
     jbyte *bytes;
     int size;    /* size of the resulting byte array */
 
-    PR_ASSERT(env != NULL && item->len>0);
+    PR_ASSERT(env != NULL && item != NULL && item->len>0);
+    if (!env || !item || !item->len || !item->data) {
+        return NULL;
+    }
 
     /* allow space for extra zero byte */
     size = item->len+1;
@@ -694,6 +759,9 @@ JSS_assertOutOfMem(JNIEnv *env)
     /* Make sure an exception has been thrown, and save it */
     excep = (*env)->ExceptionOccurred(env);
     PR_ASSERT(excep != NULL);
+    if (!excep) {
+        return;
+    }
 
     /* Clear the exception so we can call JNI exceptions */
     (*env)->ExceptionClear(env);

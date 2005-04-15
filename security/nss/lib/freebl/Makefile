@@ -136,20 +136,11 @@ endif
 ifeq ($(OS_TARGET),SunOS)
 ifeq ($(CPU_ARCH),sparc)
 ifndef NS_USE_GCC
-ifndef USE_PURE_32
+ifdef USE_HYBRID
     OS_CFLAGS += -xchip=ultra2
 endif
 endif
-ifeq ($(OS_RELEASE),5.5.1)
-    SYSV_SPARC = 1
-endif
-ifeq ($(OS_RELEASE),5.6)
-    SYSV_SPARC = 1
-endif
-ifeq ($(OS_RELEASE),5.7)
-    SYSV_SPARC = 1
-endif
-ifeq ($(OS_RELEASE),5.8)
+ifeq (5.5.1,$(firstword $(sort 5.5.1 $(OS_RELEASE))))
     SYSV_SPARC = 1
 endif
 ifeq ($(SYSV_SPARC),1)
@@ -187,6 +178,7 @@ endif
 endif
 else
 # Solaris x86
+    DEFINES += -D_X86_
     DEFINES += -DMP_USE_UINT_DIGIT
     DEFINES += -DMP_ASSEMBLY_MULTIPLY -DMP_ASSEMBLY_SQUARE -DMP_ASSEMBLY_DIV_2DX1D
     ASFILES  = mpi_i86pc.s

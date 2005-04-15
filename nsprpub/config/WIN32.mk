@@ -42,7 +42,7 @@
 # flipped, so that gmake won't interpret them as escape characters.
 #
 ifdef PR_CLIENT_BUILD_WINDOWS
-SHELL := $(MOZ_TOOLS_FLIPPED)/bin/shmsdos.exe
+SHELL = $(MOZ_TOOLS_FLIPPED)/bin/shmsdos.exe
 endif
 
 CC = cl
@@ -51,7 +51,6 @@ LINK = link
 AR = lib -NOLOGO -OUT:"$@"
 RANLIB = echo
 BSDECHO = echo
-STRIP = echo
 NSINSTALL = nsinstall
 INSTALL	= $(NSINSTALL)
 define MAKE_OBJDIR

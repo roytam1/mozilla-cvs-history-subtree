@@ -31,7 +31,7 @@
  * GPL.
  */
 
-package org.mozilla.jss;
+package org.mozilla.jss.tests;
 
 import org.mozilla.jss.crypto.*;
 import org.mozilla.jss.CryptoManager;
@@ -46,7 +46,7 @@ public class KeyWrapping {
 
       try {
 
-        CryptoManager.initialize("dbdir");
+        CryptoManager.initialize(".");
         CryptoManager cm = CryptoManager.getInstance();
         CryptoToken token = cm.getInternalCryptoToken();
         CryptoToken keyToken = cm.getInternalKeyStorageToken();

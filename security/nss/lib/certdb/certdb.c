@@ -877,6 +877,11 @@ SECStatus
 CERT_GetCertTimes(CERTCertificate *c, PRTime *notBefore, PRTime *notAfter)
 {
     int rv;
+
+    if (!c) {
+        PORT_SetError(SEC_ERROR_INVALID_ARGS);
+        return SECFailure;
+    }
     
     /* convert DER not-before time */
     rv = DER_UTCTimeToTime(notBefore, &c->validity.notBefore);
@@ -901,6 +906,11 @@ CERT_CheckCertValidTimes(CERTCertificate *c, PRTime t, PRBool allowOverride)
 {
     PRTime notBefore, notAfter, llPendingSlop, tmp1;
     SECStatus rv;
+
+    if (!c) {
+        PORT_SetError(SEC_ERROR_INVALID_ARGS);
+        return(secCertTimeUndetermined);
+    }
 
     /* if cert is already marked OK, then don't bother to check */
     if ( allowOverride && c->timeOK ) {
@@ -1128,6 +1138,7 @@ CERT_CheckKeyUsage(CERTCertificate *cert, unsigned int requiredUsage)
      */
     if ( requiredUsage & KU_KEY_AGREEMENT_OR_ENCIPHERMENT ) {
 	key = CERT_ExtractPublicKey(cert);
+	if (!key) return SECFailure;
 	if ( ( key->keyType == keaKey ) || ( key->keyType == fortezzaKey ) ||
 	     ( key->keyType == dhKey ) ) {
 	    requiredUsage |= KU_KEY_AGREEMENT;

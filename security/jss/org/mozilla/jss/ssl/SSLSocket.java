@@ -46,6 +46,31 @@ import java.security.AccessController;
  */
 public class SSLSocket extends java.net.Socket {
 
+    /*
+     * Locking strategy of SSLSocket
+     *
+     * isClosed, inRead, and inWrite must be accessed with the object
+     * locked.
+     *
+     * readLock must be locked throughout the read method.  It is used
+     * to serialize read calls.
+     *
+     * writeLock must be locked throughout the write method. It is used
+     * to serialize write calls.
+     */
+
+    private java.lang.Object readLock = new java.lang.Object();
+    private java.lang.Object writeLock = new java.lang.Object();
+    private boolean isClosed = false;
+    private boolean inRead = false;
+    private boolean inWrite = false;
+    private InetAddress inetAddress;
+    private int port;
+    private SocketProxy sockProxy = null;
+    private boolean open = false;
+    private boolean handshakeAsClient = true;
+    private SocketBase base = new SocketBase();
+
     /**
      * For sockets that get created by accept().
      */
@@ -231,6 +256,35 @@ public class SSLSocket extends java.net.Socket {
     }
 
     /**
+     * Creates an SSL client socket using the given Java socket for underlying
+     *  I/O. Installs the given callbacks for certificate approval and
+     *  client certificate selection.
+     *
+     * @param s The Java socket to use for underlying I/O.
+     * @param host The hostname of the remote side of the connection.
+     *      This name is used to verify the server's certificate.
+     * @param certApprovalCallback A callback that can be used to override
+     *      approval of the peer's certificate.
+     * @param clientCertSelectionCallback A callback to select the client
+     *      certificate to present to the peer.
+     */
+    public SSLSocket(java.net.Socket s, String host,
+        SSLCertificateApprovalCallback certApprovalCallback,
+        SSLClientCertificateSelectionCallback clientCertSelectionCallback)
+            throws IOException
+    {
+        // create the socket
+        sockProxy =
+            new SocketProxy(
+                base.socketCreate(
+                    this, certApprovalCallback, clientCertSelectionCallback,
+                    s, host ) );
+
+        base.setProxy(sockProxy);
+        resetHandshake();
+    }
+
+    /**
      * @return The remote peer's IP address.
      */
     public InetAddress getInetAddress() {
@@ -241,27 +295,8 @@ public class SSLSocket extends java.net.Socket {
      * @return The local IP address.
      */
     public InetAddress getLocalAddress() {
-        try {
-            int intAddr = getLocalAddressNative();
-            InetAddress in;
-            byte[] addr = new byte[4];
-            addr[0] = (byte)((intAddr >>> 24) & 0xff);
-            addr[1] = (byte)((intAddr >>> 16) & 0xff);
-            addr[2] = (byte)((intAddr >>>  8) & 0xff);
-            addr[3] = (byte)((intAddr       ) & 0xff);
-            try {
-            in = InetAddress.getByName(
-                addr[0] + "." + addr[1] + "." + addr[2] + "." + addr[3] );
-            } catch (java.net.UnknownHostException e) {
-                in = null;
-            }
-            return in;
-        } catch(SocketException e) {
-            e.printStackTrace();
-            return null;
-        }
+        return base.getLocalAddress();
     }
-    private native int getLocalAddressNative() throws SocketException;
 
     /**
      * @return The local port.
@@ -325,10 +360,10 @@ public class SSLSocket extends java.net.Socket {
     }
 
     private native void shutdownNative(int how) throws IOException;
-
+    private native void abortReadWrite() throws IOException;
     /**
      * Sets the SO_LINGER socket option.
-     * param linger The time (in hundredths of a second) to linger for.
+     * param linger The time (in seconds) to linger for.
      */
     public native void setSoLinger(boolean on, int linger)
         throws SocketException;
@@ -340,6 +375,7 @@ public class SSLSocket extends java.net.Socket {
 
     /**
      * Sets the SO_TIMEOUT socket option.
+     * @param timeout The timeout time in milliseconds.
      */
     public void setSoTimeout(int timeout) throws SocketException {
         base.setTimeout(timeout);
@@ -347,6 +383,7 @@ public class SSLSocket extends java.net.Socket {
 
     /**
      * Returns the current value of the SO_TIMEOUT socket option.
+     * @return The timeout time in milliseconds.
      */
     public int getSoTimeout() throws SocketException {
         return base.getTimeout();
@@ -376,9 +413,35 @@ public class SSLSocket extends java.net.Socket {
      * Closes this socket.
      */
     public void close() throws IOException {
-        if( sockProxy != null ) {
-            base.close();
-            sockProxy = null;
+        synchronized (this) {
+            if( isClosed ) {
+                /* finalize calls close or user calls close more than once */
+                return;
+            }
+            isClosed = true;
+            if( sockProxy == null ) {
+                /* nothing to do */
+                return;
+            }
+            /*
+             * If a read or write is occuring, abort the I/O.  Any
+             * further attempts to read/write will fail since isClosed
+             * is true
+             */
+            if ( inRead || inWrite ) {
+                abortReadWrite();
+            }
+        }
+        /*
+         * Lock readLock and writeLock to ensure that read and write
+         * have been aborted.
+         */
+        synchronized (readLock) {
+            synchronized (writeLock) {
+                base.close();
+                sockProxy = null;
+                base.setProxy(null);
+            }
         }
     }
 
@@ -444,10 +507,25 @@ public class SSLSocket extends java.net.Socket {
     }
 
     /**
-     * Sets the default for SSL v2 for all new sockets.
+     * Sets the default for SSL v3 for all new sockets.
      */
     static public void enableSSL3Default(boolean enable) throws SocketException{
         setSSLDefaultOption(SocketBase.SSL_ENABLE_SSL3, enable);
+    }
+
+    /**
+     * Enables TLS on this socket.  It is enabled by default, unless the
+     * default has been changed with <code>enableTLSDefault</code>.
+     */
+    public void enableTLS(boolean enable) throws SocketException {
+        base.enableTLS(enable);
+    }
+
+    /**
+     * Sets the default for TLS for all new sockets.
+     */
+    static public void enableTLSDefault(boolean enable) throws SocketException{
+        setSSLDefaultOption(SocketBase.SSL_ENABLE_TLS, enable);
     }
 
     /**
@@ -514,10 +592,28 @@ public class SSLSocket extends java.net.Socket {
 
     /**
      * Sets the nickname of the certificate to use for client authentication.
+     * Alternately, you can specify an SSLClientCertificateSelectionCallback,
+     * which will receive a list of certificates that are valid for client
+     * authentication.
+     * @see org.mozilla.jss.ssl.SSLClientCertificateSelectionCallback
      */
     public void setClientCertNickname(String nick) throws SocketException {
         base.setClientCertNickname(nick);
     }
+
+    /**
+     * Sets the certificate to use for client authentication.
+     * Alternately, you can specify an SSLClientCertificateSelectionCallback,
+     * which will receive a list of certificates that are valid for client
+     * authentication.
+     * @see org.mozilla.jss.ssl.SSLClientCertificateSelectionCallback
+     */
+    public void setClientCert( org.mozilla.jss.crypto.X509Certificate cert)
+        throws SocketException
+    {
+        base.setClientCert(cert);
+    }
+
 
     /**
      * Enables/disables the request of client authentication. This is only
@@ -575,12 +671,6 @@ public class SSLSocket extends java.net.Socket {
         setSSLDefaultOption(SocketBase.SSL_NO_CACHE, !b);
     }
 
-    private InetAddress inetAddress;
-    private int port;
-    private SocketProxy sockProxy;
-    private boolean open = false;
-    private boolean handshakeAsClient=true;
-    private SocketBase base = new SocketBase();
 
     private static void setSSLDefaultOption(int option, boolean on)
         throws SocketException
@@ -591,20 +681,74 @@ public class SSLSocket extends java.net.Socket {
         throws SocketException;
 
     /**
-     * Enables/disables the given cipher on this socket.
+     * Enables/disables the cipher on this socket.
      */
-    public static native void setCipherPreference( int cipher,
-        boolean enable);
+    public static native void setCipherPreference(int cipher, boolean enable);
+
+    /**
+     * Returns whether this cipher is enabled or disabled on this socket.
+     */
+    public static native boolean getCipherPreference( int cipher);
+
+    /**
+     * Sets the default for whether this cipher is enabled or disabled.
+     */
+    public static native void setCipherPreferenceDefault(int cipher,
+        boolean enable) throws SocketException;
+
+    /**
+     * Returns the default for whether this cipher is enabled or disabled.
+     */
+    public static native boolean getCipherPreferenceDefault(int cipher)
+        throws SocketException;
 
     native int socketAvailable()
         throws IOException;
 
     int read(byte[] b, int off, int len) throws IOException {
-        return socketRead(b, off, len, base.getTimeout());
+        synchronized (readLock) {
+            synchronized (this) {
+                if ( isClosed ) { /* abort read if socket is closed */
+                    throw new IOException(
+                        "Socket has been closed, and cannot be reused."); 
+                }
+                inRead = true;            
+            }
+            int iRet;
+            try {
+                iRet = socketRead(b, off, len, base.getTimeout()); 
+            } catch (IOException ioe) {
+                throw new IOException(
+                    "SocketException cannot read on socket");
+            } finally {
+                synchronized (this) {
+                    inRead = false;
+                }
+            }
+            return iRet;
+        }
     }
 
     void write(byte[] b, int off, int len) throws IOException {
-        socketWrite(b, off, len, base.getTimeout());
+        synchronized (writeLock) {
+            synchronized (this) {
+                if ( isClosed ) { /* abort write if socket is closed */
+                    throw new IOException(
+                        "Socket has been closed, and cannot be reused."); 
+                }
+                inWrite = true;
+            }
+            try {
+                socketWrite(b, off, len, base.getTimeout());
+            } catch (IOException ioe) {
+                throw new IOException(
+                    "SocketException cannot write on socket");
+            } finally {
+                synchronized (this) {
+                    inWrite = false;
+                }
+            }
+        }
     }
 
     private native int socketRead(byte[] b, int off, int len, int timeout)
@@ -639,14 +783,14 @@ public class SSLSocket extends java.net.Socket {
     public native void redoHandshake(boolean flushCache) throws SocketException;
 
     protected void finalize() throws Throwable {
-        close();
+        close(); /* in case user did not call close */
     }
 
     public static class CipherPolicy {
-        private int enum;
-        private CipherPolicy(int enum) { }
+        private int _enum;
+        private CipherPolicy(int _enum) { }
 
-        int getEnum() { return enum; }
+        int getEnum() { return _enum; }
 
         public static final CipherPolicy DOMESTIC =
             new CipherPolicy(SocketBase.SSL_POLICY_DOMESTIC);
@@ -668,51 +812,75 @@ public class SSLSocket extends java.net.Socket {
     private static native void setCipherPolicyNative(int policyEnum)
         throws SocketException;
 
+    /**
+     * Returns the addresses and ports of this socket.
+     */
+    public String toString() {
+        StringBuffer buf = new StringBuffer();
+        buf.append("SSLSocket[addr=");
+        buf.append(getInetAddress());
+        buf.append(getLocalAddress());
+        buf.append(",port=");
+        buf.append(getPort());
+        buf.append(",localport=");
+        buf.append(getLocalPort());
+        buf.append("]");
+        return buf.toString();
+    }
+
+    /**
+     * Returns a list of cipher suites that are implemented by NSS.
+     * Each element in the array will be one of the cipher suite constants
+     * defined in this class (for example,
+     * <tt>TLS_RSA_WITH_AES_128_CBC_SHA</tt>).
+     */
+    public static native int[] getImplementedCipherSuites();
+
     public final static int SSL2_RC4_128_WITH_MD5                  = 0xFF01;
     public final static int SSL2_RC4_128_EXPORT40_WITH_MD5         = 0xFF02;
     public final static int SSL2_RC2_128_CBC_WITH_MD5              = 0xFF03;
     public final static int SSL2_RC2_128_CBC_EXPORT40_WITH_MD5     = 0xFF04;
-//  public final static int SSL2_IDEA_128_CBC_WITH_MD5             = 0xFF05;
+    public final static int SSL2_IDEA_128_CBC_WITH_MD5             = 0xFF05;
     public final static int SSL2_DES_64_CBC_WITH_MD5               = 0xFF06;
     public final static int SSL2_DES_192_EDE3_CBC_WITH_MD5         = 0xFF07;
 
     public final static int SSL3_RSA_WITH_NULL_MD5                 = 0x0001;
-//  public final static int SSL3_RSA_WITH_NULL_SHA                 = 0x0002;
+    public final static int SSL3_RSA_WITH_NULL_SHA                 = 0x0002;
     public final static int SSL3_RSA_EXPORT_WITH_RC4_40_MD5        = 0x0003;
     public final static int SSL3_RSA_WITH_RC4_128_MD5              = 0x0004;
     public final static int SSL3_RSA_WITH_RC4_128_SHA              = 0x0005;
     public final static int SSL3_RSA_EXPORT_WITH_RC2_CBC_40_MD5    = 0x0006;
-//  public final static int SSL3_RSA_WITH_IDEA_CBC_SHA             = 0x0007;
-//  public final static int SSL3_RSA_EXPORT_WITH_DES40_CBC_SHA     = 0x0008;
+    public final static int SSL3_RSA_WITH_IDEA_CBC_SHA             = 0x0007;
+    public final static int SSL3_RSA_EXPORT_WITH_DES40_CBC_SHA     = 0x0008;
     public final static int SSL3_RSA_WITH_DES_CBC_SHA              = 0x0009;
     public final static int SSL3_RSA_WITH_3DES_EDE_CBC_SHA         = 0x000a;
 
-//  public final static int SSL3_DH_DSS_EXPORT_WITH_DES40_CBC_SHA  = 0x000b;
-//  public final static int SSL3_DH_DSS_WITH_DES_CBC_SHA           = 0x000c;
-//  public final static int SSL3_DH_DSS_WITH_3DES_EDE_CBC_SHA      = 0x000d;
-//  public final static int SSL3_DH_RSA_EXPORT_WITH_DES40_CBC_SHA  = 0x000e;
-//  public final static int SSL3_DH_RSA_WITH_DES_CBC_SHA           = 0x000f;
-//  public final static int SSL3_DH_RSA_WITH_3DES_EDE_CBC_SHA      = 0x0010;
+    public final static int SSL3_DH_DSS_EXPORT_WITH_DES40_CBC_SHA  = 0x000b;
+    public final static int SSL3_DH_DSS_WITH_DES_CBC_SHA           = 0x000c;
+    public final static int SSL3_DH_DSS_WITH_3DES_EDE_CBC_SHA      = 0x000d;
+    public final static int SSL3_DH_RSA_EXPORT_WITH_DES40_CBC_SHA  = 0x000e;
+    public final static int SSL3_DH_RSA_WITH_DES_CBC_SHA           = 0x000f;
+    public final static int SSL3_DH_RSA_WITH_3DES_EDE_CBC_SHA      = 0x0010;
 
-//  public final static int SSL3_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA = 0x0011;
-//  public final static int SSL3_DHE_DSS_WITH_DES_CBC_SHA          = 0x0012;
-//  public final static int SSL3_DHE_DSS_WITH_3DES_EDE_CBC_SHA     = 0x0013;
-//  public final static int SSL3_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA = 0x0014;
-//  public final static int SSL3_DHE_RSA_WITH_DES_CBC_SHA          = 0x0015;
-//  public final static int SSL3_DHE_RSA_WITH_3DES_EDE_CBC_SHA     = 0x0016;
+    public final static int SSL3_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA = 0x0011;
+    public final static int SSL3_DHE_DSS_WITH_DES_CBC_SHA          = 0x0012;
+    public final static int SSL3_DHE_DSS_WITH_3DES_EDE_CBC_SHA     = 0x0013;
+    public final static int SSL3_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA = 0x0014;
+    public final static int SSL3_DHE_RSA_WITH_DES_CBC_SHA          = 0x0015;
+    public final static int SSL3_DHE_RSA_WITH_3DES_EDE_CBC_SHA     = 0x0016;
 
-//  public final static int SSL3_DH_ANON_EXPORT_WITH_RC4_40_MD5    = 0x0017;
-//  public final static int SSL3_DH_ANON_WITH_RC4_128_MD5          = 0x0018;
-//  public final static int SSL3_DH_ANON_EXPORT_WITH_DES40_CBC_SHA = 0x0019;
-//  public final static int SSL3_DH_ANON_WITH_DES_CBC_SHA          = 0x001a;
-//  public final static int SSL3_DH_ANON_WITH_3DES_EDE_CBC_SHA     = 0x001b;
+    public final static int SSL3_DH_ANON_EXPORT_WITH_RC4_40_MD5    = 0x0017;
+    public final static int SSL3_DH_ANON_WITH_RC4_128_MD5          = 0x0018;
+    public final static int SSL3_DH_ANON_EXPORT_WITH_DES40_CBC_SHA = 0x0019;
+    public final static int SSL3_DH_ANON_WITH_DES_CBC_SHA          = 0x001a;
+    public final static int SSL3_DH_ANON_WITH_3DES_EDE_CBC_SHA     = 0x001b;
 
     public final static int SSL3_FORTEZZA_DMS_WITH_NULL_SHA        = 0x001c;
     public final static int SSL3_FORTEZZA_DMS_WITH_FORTEZZA_CBC_SHA= 0x001d;
     public final static int SSL3_FORTEZZA_DMS_WITH_RC4_128_SHA     = 0x001e;
 
-    public final static int SSL_RSA_FIPS_WITH_3DES_EDE_CBC_SHA     = 0xffe0;
-    public final static int SSL_RSA_FIPS_WITH_DES_CBC_SHA          = 0xffe1;
+    public final static int SSL_RSA_FIPS_WITH_3DES_EDE_CBC_SHA     = 0xfeff;
+    public final static int SSL_RSA_FIPS_WITH_DES_CBC_SHA          = 0xfefe;
 
     public final static int TLS_RSA_EXPORT1024_WITH_DES_CBC_SHA    = 0x0062;
     public final static int TLS_RSA_EXPORT1024_WITH_RC4_56_SHA     = 0x0064;
@@ -720,6 +888,21 @@ public class SSLSocket extends java.net.Socket {
     public final static int TLS_DHE_DSS_EXPORT1024_WITH_DES_CBC_SHA = 0x0063;
     public final static int TLS_DHE_DSS_EXPORT1024_WITH_RC4_56_SHA  = 0x0065;
     public final static int TLS_DHE_DSS_WITH_RC4_128_SHA            = 0x0066;
+
+// New TLS cipher suites in NSS 3.4 
+    public final static int TLS_RSA_WITH_AES_128_CBC_SHA          =  0x002F;
+    public final static int TLS_DH_DSS_WITH_AES_128_CBC_SHA       =  0x0030;
+    public final static int TLS_DH_RSA_WITH_AES_128_CBC_SHA       =  0x0031;
+    public final static int TLS_DHE_DSS_WITH_AES_128_CBC_SHA      =  0x0032;
+    public final static int TLS_DHE_RSA_WITH_AES_128_CBC_SHA      =  0x0033;
+    public final static int TLS_DH_ANON_WITH_AES_128_CBC_SHA      =  0x0034;
+
+    public final static int TLS_RSA_WITH_AES_256_CBC_SHA          =  0x0035;
+    public final static int TLS_DH_DSS_WITH_AES_256_CBC_SHA       =  0x0036;
+    public final static int TLS_DH_RSA_WITH_AES_256_CBC_SHA       =  0x0037;
+    public final static int TLS_DHE_DSS_WITH_AES_256_CBC_SHA      =  0x0038;
+    public final static int TLS_DHE_RSA_WITH_AES_256_CBC_SHA      =  0x0039;
+    public final static int TLS_DH_ANON_WITH_AES_256_CBC_SHA      =  0x003A;
 
 }
 

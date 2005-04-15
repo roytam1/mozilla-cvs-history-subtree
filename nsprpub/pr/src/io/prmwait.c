@@ -472,7 +472,7 @@ static PRStatus _MW_PollInternal(PRWaitGroup *group)
 {
     PRRecvWait **waiter;
     PRStatus rv = PR_FAILURE;
-    PRInt32 count, count_ready;
+    PRUintn count, count_ready;
     PRIntervalTime polling_interval;
 
     group->poller = PR_GetCurrentThread();

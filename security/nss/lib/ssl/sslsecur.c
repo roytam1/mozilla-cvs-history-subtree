@@ -935,12 +935,6 @@ ssl_SecureClose(sslSocket *ss)
 	!ss->recvdCloseNotify                   &&
 	(ss->ssl3 != NULL)) {
 
-	/* We don't want the final alert to be Nagle delayed. */
-	if (!ss->delayDisabled) {
-	    ssl_EnableNagleDelay(ss, PR_FALSE);
-	    ss->delayDisabled = 1;
-	}
-
 	(void) SSL3_SendAlert(ss, alert_warning, close_notify);
     }
     rv = ssl_DefClose(ss);
@@ -1061,7 +1055,7 @@ ssl_SecureSend(sslSocket *ss, const unsigned char *buf, int len, int flags)
     if (ss->pendingBuf.len != 0) {
 	PORT_Assert(ss->pendingBuf.len > 0);
 	rv = ssl_SendSavedWriteData(ss, &ss->pendingBuf, ssl_DefSend);
-	if (ss->pendingBuf.len != 0) {
+	if (rv >= 0 && ss->pendingBuf.len != 0) {
 	    PORT_Assert(ss->pendingBuf.len > 0);
 	    PORT_SetError(PR_WOULD_BLOCK_ERROR);
 	    rv = SECFailure;
@@ -1239,7 +1233,7 @@ SSL_GetSessionID(PRFileDesc *fd)
 	    sid = ss->sec->ci.sid;
 	    item = (SECItem *)PORT_Alloc(sizeof(SECItem));
 	    if (sid->version < SSL_LIBRARY_VERSION_3_0) {
-		item->len = SSL2_SESSIONID_BYTES;
+		item->len = SSL_SESSIONID_BYTES;
 		item->data = (unsigned char*)PORT_Alloc(item->len);
 		PORT_Memcpy(item->data, sid->u.ssl2.sessionID, item->len);
 	    } else {

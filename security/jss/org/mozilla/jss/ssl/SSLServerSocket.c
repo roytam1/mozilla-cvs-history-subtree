@@ -44,6 +44,10 @@
 #include <pk11util.h>
 #include "jssl.h"
 
+#ifdef WINNT
+#include <private/pprio.h>
+#endif 
+
 JNIEXPORT void JNICALL
 Java_org_mozilla_jss_ssl_SSLServerSocket_socketListen
     (JNIEnv *env, jobject self, jint backlog)
@@ -53,7 +57,7 @@ Java_org_mozilla_jss_ssl_SSLServerSocket_socketListen
     if( JSSL_getSockData(env, self, &sock) != PR_SUCCESS) goto finish;
 
     if( PR_Listen(sock->fd, backlog) != PR_SUCCESS ) {
-        JSS_throwMsg(env, SOCKET_EXCEPTION,
+        JSSL_throwSSLSocketException(env,
             "Failed to set listen backlog on socket");
         goto finish;
     }
@@ -74,6 +78,7 @@ Java_org_mozilla_jss_ssl_SSLServerSocket_socketAccept
     JSSL_SocketData *newSD=NULL;
     jbyteArray sdArray = NULL;
     SECStatus status;
+    PRThread *me;
 
     if( JSSL_getSockData(env, self, &sock) != PR_SUCCESS) goto finish;
 
@@ -83,43 +88,51 @@ Java_org_mozilla_jss_ssl_SSLServerSocket_socketAccept
     if( handshakeAsClient ) {
         status = SSL_OptionSet(sock->fd, SSL_HANDSHAKE_AS_CLIENT, PR_TRUE);
         if( status != SECSuccess ) {
-            JSS_throwMsg(env, SOCKET_EXCEPTION,
+            JSSL_throwSSLSocketException(env,
                 "Failed to set option to handshake as client");
             goto finish;
         }
     }
 
-    for(;;) {
-        newFD = PR_Accept(sock->fd, &addr, ivtimeout);
+    /* Set the current thread doing the accept. */
+    me = PR_GetCurrentThread();
+    PR_Lock(sock->lock);
+    PR_ASSERT(sock->accepter == NULL);
+    sock->accepter = me;
+    PR_Unlock(sock->lock);
 
-        if( newFD != NULL ) {
-            /* success! */
-            break;
-        } else {
-            switch( PR_GetError() ) {
-              case PR_PENDING_INTERRUPT_ERROR:
-              case PR_IO_PENDING_ERROR:
-                break; /* out of the switch and loop again */
-              default:
-                JSS_throwMsg(env, SOCKET_EXCEPTION,
-                    "Failed to accept new connection");
-                goto finish;
-            }
+    newFD = PR_Accept(sock->fd, &addr, ivtimeout);
+
+    PR_Lock(sock->lock);
+    PR_ASSERT(sock->accepter == me);
+    sock->accepter = NULL;
+    PR_Unlock(sock->lock);
+    if( newFD == NULL ) {
+#ifdef WINNT
+        PRErrorCode err = PR_GetError();
+        if( err == PR_PENDING_INTERRUPT_ERROR ||
+            err == PR_IO_TIMEOUT_ERROR ) {
+            PR_NT_CancelIo(sock->fd);
         }
+#endif
+        JSSL_throwSSLSocketException(env,
+            "Failed to accept new connection");
+        goto finish;
     }
 
-    newSD = JSSL_CreateSocketData(env, newSock, newFD);
-    newFD = NULL;
+    newSD = JSSL_CreateSocketData(env, newSock, newFD, NULL /* priv */);
     if( newSD == NULL ) {
         goto finish;
     }
+    newFD = NULL;
 
     /* setup the handshake callback */
     status = SSL_HandshakeCallback(newSD->fd, JSSL_HandshakeCallback,
                                     newSD);
     if( status != SECSuccess ) {
-        JSS_throwMsg(env, SOCKET_EXCEPTION,
+        JSSL_throwSSLSocketException(env,
             "Unable to install handshake callback");
+        goto finish;
     }
 
     /* pass the pointer back to Java */
@@ -139,6 +152,30 @@ finish:
         }
     }
     return sdArray;
+}
+
+JNIEXPORT void JNICALL
+Java_org_mozilla_jss_ssl_SSLServerSocket_abortAccept(
+    JNIEnv *env, jobject self)
+{
+    JSSL_SocketData *sock = NULL;
+
+    if( JSSL_getSockData(env, self, &sock) != PR_SUCCESS) goto finish;
+
+    /*
+     * The java layer prevents I/O once close has been 
+     * called but if an accept is in progress then abort it.
+     * For WINNT the accept method must check for
+     * PR_PENDING_INTERRUPT_ERROR and call PR_NT_CancelIo.
+     */
+    PR_Lock(sock->lock);
+    if ( sock->accepter ) {
+        PR_Interrupt(sock->accepter); 
+    }
+    PR_Unlock(sock->lock);
+finish:
+    EXCEPTION_CHECK(env, sock)
+    return;
 }
 
 JNIEXPORT void JNICALL
@@ -163,7 +200,7 @@ Java_org_mozilla_jss_ssl_SSLServerSocket_configServerSessionIDCache(
     status = SSL_ConfigServerSessionIDCache(
                 maxEntries, ssl2Timeout, ssl3Timeout, dirName);
     if (status != SECSuccess) {
-        JSS_throwMsg(env, SOCKET_EXCEPTION,
+        JSSL_throwSSLSocketException(env,
                        "Failed to configure server session ID cache");
         goto finish;
     }
@@ -174,40 +211,51 @@ finish:
     }
 }
 
+/*
+ * This is here for backwards binary compatibility: I didn't want to remove
+ * the symbol from the DLL. This would only get called if someone were using
+ * a pre-3.2 version of the JSS classes with this post-3.2 library. Using
+ * different versions of the classes and the C code is not supported.
+ */
 JNIEXPORT void JNICALL
 Java_org_mozilla_jss_ssl_SSLServerSocket_setServerCertNickname(
-    JNIEnv *env, jobject self, jstring nicknameStr)
+    JNIEnv *env, jobject self, jstring nick)
+{
+    PR_ASSERT(0);
+    JSS_throwMsg(env, SOCKET_EXCEPTION, "JSS JAR/DLL version mismatch");
+}
+
+JNIEXPORT void JNICALL
+Java_org_mozilla_jss_ssl_SSLServerSocket_setServerCert(
+    JNIEnv *env, jobject self, jobject certObj)
 {
     JSSL_SocketData *sock;
-    const char *nickname=NULL;
     CERTCertificate* cert=NULL;
     SECKEYPrivateKey* privKey=NULL;
     SECStatus status;
 
-    if(nicknameStr == NULL) {
+    if( certObj == NULL ) {
+        JSS_throw(env, NULL_POINTER_EXCEPTION);
         goto finish;
     }
+
     if( JSSL_getSockData(env, self, &sock) != PR_SUCCESS) goto finish;
 
-    nickname = (*env)->GetStringUTFChars(env, nicknameStr, NULL);
-    if( nickname == NULL ) goto finish;
+    if( JSS_PK11_getCertPtr(env, certObj, &cert) != PR_SUCCESS ) {
+        goto finish;
+    }
+    PR_ASSERT(cert!=NULL); /* shouldn't happen */
 
-    cert = PK11_FindCertFromNickname((char *)nickname, NULL);   /* CONST */
-    if (cert != NULL) {
-        privKey = PK11_FindKeyByAnyCert(cert, NULL);
-        if (privKey != NULL) {
-            status = SSL_ConfigSecureServer(sock->fd, cert, privKey, kt_rsa);
-            if( status != SECSuccess) {
-                JSS_throwMsg(env, SOCKET_EXCEPTION,
-                    "Failed to configure secure server certificate and key");
-                goto finish;
-            }
-        } else {
-            JSS_throwMsg(env, SOCKET_EXCEPTION, "Failed to locate private key");
+    privKey = PK11_FindKeyByAnyCert(cert, NULL);
+    if (privKey != NULL) {
+        status = SSL_ConfigSecureServer(sock->fd, cert, privKey, kt_rsa);
+        if( status != SECSuccess) {
+            JSSL_throwSSLSocketException(env,
+                "Failed to configure secure server certificate and key");
             goto finish;
         }
     } else {
-        JSS_throwMsg(env, SOCKET_EXCEPTION, "Failed to locate private key");
+        JSSL_throwSSLSocketException(env, "Failed to locate private key");
         goto finish;
     }
 
@@ -215,10 +263,52 @@ finish:
     if(privKey!=NULL) {
         SECKEY_DestroyPrivateKey(privKey);
     }
-    if(cert!=NULL) {
-        CERT_DestroyCertificate(cert);
+}
+
+JNIEXPORT void JNICALL
+Java_org_mozilla_jss_ssl_SSLServerSocket_setReuseAddress(
+    JNIEnv *env, jobject self, jboolean reuse)
+{
+    JSSL_SocketData *sock;
+    PRStatus status;
+    PRSocketOptionData sockOptData;
+
+    if( JSSL_getSockData(env, self, &sock) != PR_SUCCESS) goto finish;
+
+    sockOptData.option = PR_SockOpt_Reuseaddr;
+    sockOptData.value.reuse_addr = ((reuse == JNI_TRUE) ? PR_TRUE : PR_FALSE );
+
+    status = PR_SetSocketOption(sock->fd, &sockOptData);
+    if( status != PR_SUCCESS ) {
+        JSSL_throwSSLSocketException(env, "PR_SetSocketOption failed");
+        goto finish;
     }
-    if( nickname != NULL ) {
-        (*env)->ReleaseStringUTFChars(env, nicknameStr, nickname);
+
+finish:
+    return;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_org_mozilla_jss_ssl_SSLServerSocket_getReuseAddress(
+    JNIEnv *env, jobject self)
+{
+    JSSL_SocketData *sock;
+    PRStatus status;
+    PRSocketOptionData sockOptData;
+
+    if( JSSL_getSockData(env, self, &sock) != PR_SUCCESS) goto finish;
+
+    sockOptData.option = PR_SockOpt_Reuseaddr;
+
+    status = PR_GetSocketOption(sock->fd, &sockOptData);
+    if( status != PR_SUCCESS ) {
+        JSSL_throwSSLSocketException(env, "PR_SetSocketOption failed");
+        goto finish;
     }
+
+finish:
+    /* If we got here via failure, reuse_addr might be uninitialized. But in
+     * that case we're throwing an exception, so the return value doesn't
+     * matter. */
+    return ((sockOptData.value.reuse_addr == PR_TRUE) ? JNI_TRUE : JNI_FALSE);
 }
