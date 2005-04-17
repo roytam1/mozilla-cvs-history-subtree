@@ -497,7 +497,7 @@ public class CurrentPageTest extends WebclientTestCase implements ClipboardOwner
 	BrowserControlFactory.deleteBrowserControl(firstBrowserControl);
     }
 
-    public void NOTtestGetSource() throws Exception {
+    public void testGetSource() throws Exception {
 	BrowserControl firstBrowserControl = null;
 	DocumentLoadListenerImpl listener = null;
 	Selection selection = null;
@@ -543,8 +543,7 @@ public class CurrentPageTest extends WebclientTestCase implements ClipboardOwner
 	}
 
 	String source = currentPage.getSource();
-	assertTrue(-1 != source.indexOf("<HTML>"));
-	assertTrue(-1 != source.indexOf("</HTML>"));
+	assertEquals("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\"><html><head><title>View Source Test</title></head><body><h1>View Source Test</h1></body></html>", source);
 		   
 	frame.setVisible(false);
 	BrowserControlFactory.deleteBrowserControl(firstBrowserControl);
