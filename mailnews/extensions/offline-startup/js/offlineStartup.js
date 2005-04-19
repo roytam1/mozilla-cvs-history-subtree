@@ -14,9 +14,13 @@
  *
  * The Original Code is the Offline Startup Handler
  *
+ * The Initial Developer of the Original Code is
+ * David Bienvenu.
+ * Portions created by the Initial Developer are Copyright (C) 2004
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *  David Bienvenu <bienvenu@nventure.com> (Original Author) 
+ *  David Bienvenu <bienvenu@nventure.com> (Original Author)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -34,13 +38,14 @@
 const kDebug               = false;
 const kBundleURI         = "chrome://messenger/locale/offlineStartup.properties";
 const kOfflineStartupPref = "offline.startup_state";
-var gShuttingDown = false;
+var gStartingUp = true;
 var gOfflineStartupMode; //0 = remember last state, 1 = ask me, 2 == online, 3 == offline
 const kRememberLastState = 0;
 const kAskForOnlineState = 1;
+const kAlwaysOffline = 3;
 ////////////////////////////////////////////////////////////////////////
-// 
-//   nsOfflineStartup : nsIProfileStartupListener, nsIObserver
+//
+//   nsOfflineStartup : nsIObserver
 //
 //   Check if the user has set the pref to be prompted for
 //   online/offline startup mode. If so, prompt the user. Also,
@@ -49,47 +54,42 @@ const kAskForOnlineState = 1;
 //
 ////////////////////////////////////////////////////////////////////////
 
-var nsOfflineStartup = 
+var nsOfflineStartup =
 {
   onProfileStartup: function()
   {
     debug("onProfileStartup");
 
-      var prefs = Components.classes["@mozilla.org/preferences-service;1"].
-        getService(Components.interfaces.nsIPrefBranch);
-      var ioService = Components.classes["@mozilla.org/network/io-service;1"].getService(Components.interfaces.nsIIOService);
-  
-      gOfflineStartupMode = prefs.getIntPref(kOfflineStartupPref);
+    var ioService = Components.classes["@mozilla.org/network/io-service;1"]
+                              .getService(Components.interfaces.nsIIOService);
+    if (gStartingUp)
+    {
+      gStartingUp = false;
+      // if checked, the "work offline" checkbox overrides
+      if (ioService.offline) {
+        debug("already offline!");
+        return;
+      }
+    }
 
-    if (gOfflineStartupMode == kRememberLastState)
-    {    
-      var offline = !prefs.getBoolPref("network.online");
-      // if the user checked "work offline" in the profile mgr UI
-      // and forced us offline, remember that in prefs
-      // if checked, the "work offline" checkbox overrides our 
-      // persisted state
-      if (ioService.offline)
-        prefs.setBoolPref("network.online", false);
-       else
-       {
-         // if user did not check "work offline" in the profile manager UI
-         // use the persisted online state pref to restore our offline state
-      ioService.offline = offline;
-       }
+    var prefs = Components.classes["@mozilla.org/preferences-service;1"]
+                          .getService(Components.interfaces.nsIPrefBranch);
+    gOfflineStartupMode = prefs.getIntPref(kOfflineStartupPref);
 
-      var observerService = Components.
-        classes["@mozilla.org/observer-service;1"].
-        getService(Components.interfaces.nsIObserverService);
-      observerService.addObserver(this, "network:offline-status-changed", false);
-      observerService.addObserver(this, "quit-application", false);
-      observerService.addObserver(this, "xpcom-shutdown", false);
+    if (gOfflineStartupMode == kAlwaysOffline)
+    {
+      ioService.offline = true;
+    }
+    else if (gOfflineStartupMode == kRememberLastState)
+    {
+      ioService.offline = !prefs.getBoolPref("network.online");
     }
     else if (gOfflineStartupMode == kAskForOnlineState)
     {
       var promptService = Components.
         classes["@mozilla.org/embedcomp/prompt-service;1"].
         getService(Components.interfaces.nsIPromptService);
-      
+
       var bundle = getBundle(kBundleURI);
       if (!bundle)
         return;
@@ -100,7 +100,7 @@ var nsOfflineStartup =
       var button1Text = bundle.GetStringFromName("workOffline");
       var checkVal = {value:0};
 
-      var result = promptService.confirmEx(null, title, desc, 
+      var result = promptService.confirmEx(null, title, desc,
         (promptService.BUTTON_POS_0 * promptService.BUTTON_TITLE_IS_STRING) +
         (promptService.BUTTON_POS_1 * promptService.BUTTON_TITLE_IS_STRING),
         button0Text, button1Text, null, null, checkVal);
@@ -114,29 +114,21 @@ var nsOfflineStartup =
   {
     debug("observe: " + aTopic);
 
-    if (aTopic == "network:offline-status-changed")
+    if (aTopic == "profile-approve-change")
     {
-      debug("network:offline-status-changed: " + aData);
-      // if we're not shutting down, and startup mode is "remember online state"
-      if (!gShuttingDown && gOfflineStartupMode == kRememberLastState)
-      {
-        debug("remembering offline state: ");
-        var prefs = Components.classes["@mozilla.org/preferences-service;1"].
-          getService(Components.interfaces.nsIPrefBranch);
-        prefs.setBoolPref("network.online", aData == "online");
-      }
-
+      debug("remembering offline state");
+      var prefs = Components.classes["@mozilla.org/preferences-service;1"]
+                            .getService(Components.interfaces.nsIPrefBranch);
+      var ioService = Components.classes["@mozilla.org/network/io-service;1"]
+                                .getService(Components.interfaces.nsIIOService);
+      prefs.setBoolPref("network.online", !ioService.offline);
     }
     else if (aTopic == "app-startup")
     {
-      var observerService = Components.
-        classes["@mozilla.org/observer-service;1"].
-        getService(Components.interfaces.nsIObserverService);
+      var observerService = Components.classes["@mozilla.org/observer-service;1"]
+                                      .getService(Components.interfaces.nsIObserverService);
       observerService.addObserver(this, "profile-after-change", false);
-    }
-    else if (aTopic == "xpcom-shutdown" || aTopic == "quit-application")
-    {
-      gShuttingDown = true;
+      observerService.addObserver(this, "profile-approve-change", false);
     }
     else if (aTopic == "profile-after-change")
     {
@@ -147,16 +139,17 @@ var nsOfflineStartup =
 
   QueryInterface: function(aIID)
   {
-    if (!aIID.equals(Components.interfaces.nsIObserver) &&
-        !aIID.equals(Components.interfaces.nsISupports))
-      throw Components.results.NS_ERROR_NO_INTERFACE;
+    if (aIID.equals(Components.interfaces.nsIObserver) ||
+        aIID.equals(Components.interfaces.nsISupports))
+      return this;
 
-    return this;
+    Components.returnCode = Components.results.NS_ERROR_NO_INTERFACE;
+    return null;
   }
 }
 
 
-var nsOfflineStartupModule = 
+var nsOfflineStartupModule =
 {
   mClassName:     "Offline Startup",
   mContractID:    "@mozilla.org/offline-startup;1",
@@ -179,12 +172,12 @@ var nsOfflineStartupModule =
 
     aCompMgr = aCompMgr.QueryInterface(
                  Components.interfaces.nsIComponentRegistrar);
-    aCompMgr.registerFactoryLocation(this.mClassID, this.mClassName, 
+    aCompMgr.registerFactoryLocation(this.mClassID, this.mClassName,
       this.mContractID, aFileSpec, aLocation, aType);
 
     // Receive startup notification.
     // We are |getService()|d at app-startup (before profile selection)
-    this.getCategoryManager().addCategoryEntry("app-startup", 
+    this.getCategoryManager().addCategoryEntry("app-startup",
       "Offline-startup", "service," + this.mContractID, true, true);
   },
 
@@ -194,7 +187,7 @@ var nsOfflineStartupModule =
                  Components.interfaces.nsIComponentRegistrar);
     aCompMgr.unregisterFactoryLocation(this.mClassID, aFileSpec);
 
-    this.getCategoryManager().deleteCategoryEntry("app-startup", 
+    this.getCategoryManager().deleteCategoryEntry("app-startup",
       "Offline-startup", true);
   },
 
@@ -220,6 +213,7 @@ var nsOfflineStartupModule =
     {
       if (aOuter != null)
         throw Components.results.NS_ERROR_NO_AGGREGATION;
+
       // return the singleton 
       return nsOfflineStartup.QueryInterface(aIID);
     },
