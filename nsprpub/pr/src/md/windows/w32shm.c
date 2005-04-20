@@ -120,7 +120,9 @@ extern PRSharedMemory * _MD_OpenSharedMemory(
             sa.bInheritHandle = FALSE;
             lpSA = &sa;
         }
-        shm->handle = CreateFileMapping(
+        shm->handle =
+            CreateFileMapping
+            (
             (HANDLE)-1 ,
             lpSA,
             flProtect,
@@ -157,6 +159,7 @@ extern PRSharedMemory * _MD_OpenSharedMemory(
             }
         }
     } else {
+#if !defined(WINCE)
         shm->handle = OpenFileMapping( FILE_MAP_WRITE, TRUE, shm->ipcname );
         if ( NULL == shm->handle ) {
             _PR_MD_MAP_DEFAULT_ERROR( GetLastError());
@@ -172,6 +175,62 @@ extern PRSharedMemory * _MD_OpenSharedMemory(
                     shm->ipcname, shm->handle )); 
                 return(shm);
         }
+#else
+        dwHi = 0;
+        dwLo = shm->size;
+
+        /*
+         * WinCE has odd sematics regarding opening of an existing file
+         *   mapping.  We use CreateFileMapping and must use GetLastError
+         *   to determine if the the mapping already existed.
+         */
+        shm->handle = CreateFileMappingA(
+            (HANDLE)INVALID_HANDLE_VALUE,
+            NULL,
+            flProtect,
+            dwHi,
+            dwLo,
+            shm->ipcname);
+
+        if(NULL == shm->handle)
+        {
+            PR_LOG(_pr_shm_lm, PR_LOG_DEBUG, 
+                ( "PR_OpenSharedMemory: CreateFileMapping() failed: %s",
+                    shm->ipcname ));
+            _PR_MD_MAP_DEFAULT_ERROR(GetLastError());
+            PR_FREEIF(shm->ipcname);
+            PR_DELETE(shm);
+            return NULL;
+        }
+        else
+        {
+            DWORD dwError = GetLastError();
+
+            /*
+             * Must have existed previously.
+             */
+            if(ERROR_ALREADY_EXISTS != dwError)
+            {
+                CloseHandle(shm->handle);
+                shm->handle = NULL;
+
+                PR_LOG(_pr_shm_lm, PR_LOG_DEBUG, 
+                    ( "PR_OpenSharedMemory: CreateFileMapping() failed: %s",
+                        shm->ipcname ));
+                _PR_MD_MAP_DEFAULT_ERROR(dwError);
+                PR_FREEIF(shm->ipcname);
+                PR_DELETE(shm);
+                return NULL;
+            }
+            else
+            {
+                PR_LOG(_pr_shm_lm, PR_LOG_DEBUG, 
+                    ( "PR_OpenSharedMemory: CreateFileMapping() success: %s, handle: %d",
+                        shm->ipcname, shm->handle )); 
+                return shm;
+            }
+        }
+#endif
     }
     /* returns from separate paths */
 }
@@ -259,6 +318,7 @@ extern PRFileMap* _md_OpenAnonFileMap(
     PRFileMapProtect prot
 )
 {
+#if !defined(WINCE)
     PRFileMap   *fm;
     HANDLE      hFileMap;
 
@@ -291,6 +351,14 @@ extern PRFileMap* _md_OpenAnonFileMap(
 
 Finished:    
     return(fm);
+#else
+    /*
+    ** WinCE does not have inheritable handles.
+    ** Unsure if this should fail, but here it is....
+    */
+    PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
+    return NULL;
+#endif
 } /* end md_OpenAnonFileMap() */
 
 /*

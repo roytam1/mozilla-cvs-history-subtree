@@ -52,6 +52,12 @@ PR_IMPLEMENT(PRInt32) PR_GetOSError(void)
     return thread->osErrorCode;
 }
 
+PR_IMPLEMENT(PRInt32 *) PR_GetOSErrorAddress(void)
+{
+    PRThread *thread = PR_GetCurrentThread();
+    return &thread->osErrorCode;
+}
+
 PR_IMPLEMENT(void) PR_SetError(PRErrorCode code, PRInt32 osErr)
 {
     PRThread *thread = PR_GetCurrentThread();

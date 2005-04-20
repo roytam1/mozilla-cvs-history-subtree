@@ -48,10 +48,18 @@ endif
 
 MOZ_DIST_FLIPPED = $(MOZ_SRC_FLIPPED)/mozilla/dist
 
+ifeq ($(OS_TARGET),WINCE)
+ifdef MOZ_DEBUG
+MOZ_OBJDIR = $(OSVERSION)$(TARGETCPU)_D.OBJ
+else
+MOZ_OBJDIR = $(OSVERSION)$(TARGETCPU)_O.OBJ
+endif
+else
 ifdef MOZ_DEBUG
 MOZ_OBJDIR = WIN32_D.OBJ
 else
 MOZ_OBJDIR = WIN32_O.OBJ
+endif
 endif
 
 NSPR_CONFIGURE := ../configure \
@@ -87,7 +95,7 @@ clobber_all: $(MOZ_OBJDIR)/config.status check_old
 	gmake -C $(MOZ_OBJDIR) clobber_all
 
 distclean: check_old
-	rm -rf WIN32_D.OBJ WIN32_O.OBJ
+	rm -rf WIN32_D.OBJ WIN32_O.OBJ WINCE_D.OBJ WINCE_O.OBJ
 
 check_old:
 	@if test -f Makefile; then gmake distclean; fi

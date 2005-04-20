@@ -58,13 +58,16 @@ RELEASE_BINS	= nspr-config
 
 include $(topsrcdir)/config/config.mk
 
+ifneq ($(OS_TARGET),WINCE)
 CSRCS	= now.c
 
 # This version hasn't been ported for us; the one in mozilla/config has
 ifneq ($(OS_ARCH),OS2)
 CSRCS  += nsinstall.c
- 
+
 PLSRCS	= nfspwd.pl
+endif
+
 endif
 
 ifeq (,$(CROSS_COMPILE)$(filter-out WINNT OS2,$(OS_ARCH)))
@@ -116,6 +119,7 @@ endif
 
 include $(topsrcdir)/config/rules.mk
 
+ifneq ($(OS_TARGET),WINCE)
 PROGS	= $(OBJDIR)/now$(PROG_SUFFIX)
 
 ifeq (,$(CROSS_COMPILE)$(filter-out OS2 WINNT,$(OS_ARCH)))
@@ -125,8 +129,10 @@ PROGS	+= $(OBJDIR)/nsinstall$(PROG_SUFFIX)
 TARGETS = $(PROGS) $(PLSRCS:.pl=)
 endif
 
+endif
+
 OUTOPTION = -o # end of the line
-ifeq (,$(filter-out WINNT WIN95,$(OS_TARGET)))
+ifeq (,$(filter-out WINNT WIN95 WINCE,$(OS_TARGET)))
 ifndef NS_USE_GCC
 OUTOPTION = /Fe
 endif

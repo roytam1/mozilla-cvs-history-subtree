@@ -953,7 +953,11 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
     HINSTANCE h;
 
     h = LoadLibrary(name);
+#ifndef WINCE
     if (h < (HINSTANCE)HINSTANCE_ERROR) {
+#else
+    if (h < (HINSTANCE)0) {
+#endif
         oserr = _MD_ERRNO();
         PR_DELETE(lm);
         goto unlock;

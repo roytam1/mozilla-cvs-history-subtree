@@ -135,6 +135,12 @@ NSPR_API(void) PR_ShowStatus(void);
 */
 NSPR_API(void) PR_SetThreadRecycleMode(PRUint32 flag);
 
+/*
+** Return the address of thread's last os error variable.
+** Used to implement errno on platforms that lack it.
+*/
+NSPR_API(PRInt32 *) PR_GetOSErrorAddress(void);
+
 
 /*---------------------------------------------------------------------------
 ** THREAD PRIVATE FUNCTIONS FOR GARBAGE COLLECTIBLE THREADS           

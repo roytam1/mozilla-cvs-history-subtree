@@ -123,7 +123,11 @@ int WINAPI WinMain(
     wndclass.cbClsExtra = 0;
     wndclass.cbWndExtra = 0;
     wndclass.hInstance = hInstance;
+#if !defined(WINCE)
     wndclass.hIcon = LoadIcon( NULL, IDI_APPLICATION );
+#else
+    wndclass.hIcon = NULL;
+#endif
     wndclass.hCursor = LoadCursor( NULL, IDC_ARROW );
     wndclass.hbrBackground = (HBRUSH)GetStockObject( WHITE_BRUSH );
     wndclass.lpszMenuName = NULL;
