@@ -1228,6 +1228,7 @@ NewSafeGetterOrSetterThunk(JSContext *cx, JSObject *obj, jsid id,
     }
 
     // Make a thunk to check cross-trust-domain access before calling gsop.
+    attrs &= ~JSFUN_BOUND_METHOD;
     JSFunction *safe_gsfun = JS_NewFunction(cx,
                                             XPC_WN_Safe_GetterSetterThunkNative,
                                             nargs, attrs, obj, NULL);
