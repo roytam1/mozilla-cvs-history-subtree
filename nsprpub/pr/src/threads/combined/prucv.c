@@ -43,7 +43,7 @@
 #if defined(WIN95)
 /*
 ** Some local variables report warnings on Win95 because the code paths 
-** using them are conditioned on HAVE_CUSTOME_USER_THREADS.
+** using them are conditioned on HAVE_CUSTOM_USER_THREADS.
 ** The pragma suppresses the warning.
 ** 
 */

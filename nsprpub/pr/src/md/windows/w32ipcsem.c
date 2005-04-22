@@ -148,6 +148,7 @@ PRSem *_PR_MD_OPEN_SEMAPHORE(
             lpSA = &sa;
         }
         sem->sem = CreateSemaphore(lpSA, value, 0x7fffffff, osname);
+
         if (lpSA != NULL) {
             _PR_NT_FreeSecurityDescriptorACL(pSD, pACL);
         }
@@ -163,6 +164,7 @@ PRSem *_PR_MD_OPEN_SEMAPHORE(
             return NULL;
         }
     } else {
+#if !defined(WINCE)
         sem->sem = OpenSemaphore(
                 SEMAPHORE_MODIFY_STATE|SYNCHRONIZE, FALSE, osname);
         if (sem->sem == NULL) {
@@ -181,6 +183,36 @@ PRSem *_PR_MD_OPEN_SEMAPHORE(
             PR_DELETE(sem);
             return NULL;
         }
+#else
+        /*
+         * WinCE has odd sematics regarding opening a semaphore.
+         * We create the semaphore.  If it existed previouisly, the
+         *  state is signaled by GetLastError....
+         */
+        sem->sem = CreateSemaphoreA(lpSA, 0, 0x7fffffff, osname);
+        if(NULL != sem->sem)
+        {
+            DWORD lastErr = GetLastError();
+
+            if(ERROR_ALREADY_EXISTS != lastErr)
+            {
+                /*
+                 * We created, not opened.
+                 * Fail....
+                 */
+                CloseHandle(sem->sem);
+                PR_DELETE(sem);
+                PR_SetError(PR_FILE_NOT_FOUND_ERROR, 0);
+                return NULL;
+            }
+        }
+        else
+        {
+            _PR_MD_MAP_DEFAULT_ERROR(GetLastError());
+            PR_DELETE(sem);
+            return NULL;
+        }
+#endif
     }
     return sem;
 }

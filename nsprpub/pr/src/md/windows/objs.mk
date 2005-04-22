@@ -51,6 +51,25 @@ CSRCS = ntmisc.c \
 	w32rng.c \
 	w32shm.c
 else
+ifeq ($(OS_TARGET),WINCE)
+CSRCS =	ntmisc.c \
+	ntsec.c \
+	ntsem.c \
+	ntinrval.c \
+	ntgc.c \
+	w95thred.c \
+	w95io.c \
+	w95cv.c \
+	w95sock.c \
+	win32_errors.c \
+	w32ipcsem.c \
+	w32poll.c \
+	w32rng.c \
+	w32shm.c \
+	w95dllmain.c \
+	w32unicode.c \
+	w32netdb.c
+else
 ifeq ($(OS_TARGET),WIN95)
 CSRCS =	ntmisc.c \
 	ntsec.c \
@@ -83,6 +102,7 @@ CSRCS =	w16null.c \
 	ntinrval.c
 endif # win16
 endif # win95
+endif # wince
 endif # winnt
 
 CSRCS	+= $(PR_MD_CSRCS)

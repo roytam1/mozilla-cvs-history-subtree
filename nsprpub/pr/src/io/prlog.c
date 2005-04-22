@@ -385,9 +385,10 @@ PR_IMPLEMENT(PRBool) PR_SetLogFile(const char *file)
         newLogFile = fopen(file, "w");
         if (!newLogFile)
             return PR_FALSE;
-
+#ifndef WINCE
         /* We do buffering ourselves. */
         setvbuf(newLogFile, NULL, _IONBF, 0);
+#endif
     }
     if (logFile
         && logFile != stdout

@@ -148,7 +148,7 @@ PR_ErrorToString(PRErrorCode code, PRLanguageCode language)
     }
 
     if (code >= 0 && code < 256) {
-	return strerror(code);
+      return strerror(code);
     }
 
     offset = (int) (code & ((1<<ERRCODE_RANGE)-1));
@@ -204,7 +204,7 @@ PR_ErrorInstallTable(const struct PRErrorTable *table)
     new_et = (struct PRErrorTableList *)
 					PR_Malloc(sizeof(struct PRErrorTableList));
     if (!new_et)
-	return errno;	/* oops */
+      return errno;	/* oops */
     new_et->table = table;
     if (callback_newtable) {
 	new_et->table_private = callback_newtable(table, callback_private);

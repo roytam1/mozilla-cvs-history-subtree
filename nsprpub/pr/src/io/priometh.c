@@ -365,7 +365,7 @@ PR_IMPLEMENT(PRInt32) PR_EmulateSendFile(
         goto done;
     }
     if (sfd->file_nbytes &&
-            (info.size < (sfd->file_offset + sfd->file_nbytes))) {
+            ((PRUint32)info.size < (sfd->file_offset + sfd->file_nbytes))) {
         /*
          * there are fewer bytes in file to send than specified
          */

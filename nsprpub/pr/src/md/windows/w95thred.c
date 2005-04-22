@@ -91,6 +91,7 @@ _PR_MD_INIT_THREAD(PRThread *thread)
         ** suspending).  Therefore, get a real handle from
         ** the pseudo handle via DuplicateHandle(...)
         */
+#if !defined(WINCE)
         DuplicateHandle(
                 GetCurrentProcess(),     /* Process of source handle */
                 GetCurrentThread(),      /* Pseudo Handle to dup */
@@ -99,6 +100,13 @@ _PR_MD_INIT_THREAD(PRThread *thread)
                 0L,                      /* access flags */
                 FALSE,                   /* Inheritable */
                 DUPLICATE_SAME_ACCESS);  /* Options */
+#else
+        /*
+        ** On WinCE the thread ID is the same as the real thread handle.
+        */
+        thread->md.handle = (HANDLE)GetCurrentThreadId();
+        thread->md.noCloseHandle = PR_TRUE;
+#endif
     }
 
     /* Create the blocking IO semaphore */
@@ -126,14 +134,23 @@ _PR_MD_CREATE_THREAD(PRThread *thread,
                   PRUint32 stackSize)
 {
 
-    thread->md.start = start;
-    thread->md.handle = (HANDLE) _beginthreadex(
-                    NULL,
-                    thread->stack->stackSize,
-                    pr_root,
-                    (void *)thread,
-                    CREATE_SUSPENDED,
-                    &(thread->id));
+#if !defined(WINCE)
+  thread->md.start = start;
+  thread->md.handle = (HANDLE) _beginthreadex(NULL,
+                                              thread->stack->stackSize,
+                                              pr_root,
+                                              (void *)thread,
+                                              CREATE_SUSPENDED,
+                                              &(thread->id));
+#else
+  thread->md.handle = CreateThread(NULL,
+                                   (DWORD)thread->stack->stackSize,
+                                   (LPTHREAD_START_ROUTINE)start,
+                                   (LPVOID)thread,
+                                   (DWORD)CREATE_SUSPENDED,
+                                   (LPDWORD)&(thread->id));
+#endif /* !WINCE */
+
     if(!thread->md.handle) {
         return PR_FAILURE;
     }
@@ -144,13 +161,13 @@ _PR_MD_CREATE_THREAD(PRThread *thread,
      * THREAD_PRIORITY_NORMAL.
      */
     if (priority != PR_PRIORITY_NORMAL) {
-        _PR_MD_SET_PRIORITY(&(thread->md), priority);
+      _PR_MD_SET_PRIORITY(&(thread->md), priority);
     }
-
+    
     /* Activate the thread */
     if ( ResumeThread( thread->md.handle ) != -1)
-        return PR_SUCCESS;
-
+      return PR_SUCCESS;
+    
     return PR_FAILURE;
 }
 
@@ -206,8 +223,18 @@ _PR_MD_CLEAN_THREAD(PRThread *thread)
     }
 
     if (thread->md.handle) {
+#if !defined(WINCE)
         rv = CloseHandle(thread->md.handle);
         PR_ASSERT(rv);
+#else
+        if(PR_FALSE == thread->md.noCloseHandle) {
+            rv = CloseHandle(thread->md.handle);
+            PR_ASSERT(rv);
+        }
+        else {
+            thread->md.noCloseHandle = PR_FALSE; /* reused? insurance.... */
+        }
+#endif
         thread->md.handle = 0;
     }
 }
@@ -223,25 +250,37 @@ _PR_MD_EXIT_THREAD(PRThread *thread)
 void
 _PR_MD_EXIT(PRIntn status)
 {
+#if !defined(WINCE)
     _exit(status);
+#else
+    TerminateProcess(GetCurrentProcess(), status);
+#endif
 }
 
 PRInt32 _PR_MD_SETTHREADAFFINITYMASK(PRThread *thread, PRUint32 mask )
 {
+#if !defined(WINCE)
     int rv;
 
     rv = SetThreadAffinityMask(thread->md.handle, mask);
 
     return rv?0:-1;
+#else
+    return -1;
+#endif
 }
 
 PRInt32 _PR_MD_GETTHREADAFFINITYMASK(PRThread *thread, PRUint32 *mask)
 {
+#if !defined(WINCE)
     PRInt32 rv, system_mask;
 
     rv = GetProcessAffinityMask(GetCurrentProcess(), mask, &system_mask);
     
     return rv?0:-1;
+#else
+    return -1;
+#endif
 }
 
 void 

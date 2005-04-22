@@ -953,12 +953,14 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
     HINSTANCE h;
 
     h = LoadLibrary(name);
-    if (h < (HINSTANCE)HINSTANCE_ERROR) {
+    if (h == NULL) {
         oserr = _MD_ERRNO();
         PR_DELETE(lm);
         goto unlock;
     }
+#ifndef WINCE
     lm->name = strdup(name);
+#endif
     lm->dlh = h;
     lm->next = pr_loadmap;
     pr_loadmap = lm;
@@ -972,10 +974,12 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
 
     static const macLibraryLoadProc loadProcs[] = {
 #if defined(XP_MACOSX)
+#ifndef WINCE
         pr_LoadViaDyld, pr_LoadCFBundle, pr_LoadViaCFM
 #elif TARGET_CARBON
         pr_LoadViaCFM, pr_LoadCFBundle
 #else
+#endif
         pr_LoadViaCFM
 #endif
     };
@@ -1164,7 +1168,6 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
     PR_ExitMonitor(pr_linker_lock);
     return result;
 }
-
 
 #ifdef XP_MAC
 

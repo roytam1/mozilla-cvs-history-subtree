@@ -55,6 +55,7 @@ void _PR_InitIO(void)
     _pr_flock_cv = PR_NewCondVar(_pr_flock_lock);
 
 #ifdef WIN32
+#if !defined(WINCE)
     _pr_stdin = PR_AllocFileDesc((PRInt32)GetStdHandle(STD_INPUT_HANDLE),
             methods);
     _pr_stdout = PR_AllocFileDesc((PRInt32)GetStdHandle(STD_OUTPUT_HANDLE),
@@ -65,6 +66,17 @@ void _PR_InitIO(void)
     _pr_stdin->secret->md.sync_file_io = PR_TRUE;
     _pr_stdout->secret->md.sync_file_io = PR_TRUE;
     _pr_stderr->secret->md.sync_file_io = PR_TRUE;
+#endif
+#else
+    /*
+     * WINCE has some oddity of _getstdfilex to determine stdin, et. al.
+     * As unsure what that code actually does, just get fileno here.
+     *
+     * How odd, _fileno returns a void*, so cast it...
+     */
+    _pr_stdin = PR_AllocFileDesc((PRInt32)_fileno(stdin), methods);
+    _pr_stdout = PR_AllocFileDesc((PRInt32)_fileno(stdout), methods);
+    _pr_stderr = PR_AllocFileDesc((PRInt32)_fileno(stderr), methods);
 #endif
 #else
     _pr_stdin = PR_AllocFileDesc(0, methods);

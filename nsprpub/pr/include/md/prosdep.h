@@ -37,7 +37,6 @@
 
 #ifndef prosdep_h___
 #define prosdep_h___
-
 /*
 ** Get OS specific header information
 */
@@ -53,6 +52,9 @@ PR_BEGIN_EXTERN_C
 #include "md/_win32_errors.h"
 #elif defined(WIN95)
 #include "md/_win95.h"
+#include "md/_win32_errors.h"
+#elif defined(WINCE)
+#include "md/_wince.h"
 #include "md/_win32_errors.h"
 #elif defined(WIN16)
 #include "md/_win16.h"

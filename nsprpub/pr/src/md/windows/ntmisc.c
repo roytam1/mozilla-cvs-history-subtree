@@ -87,12 +87,24 @@ PRIntn _PR_MD_PUT_ENV(const char *name)
 PR_IMPLEMENT(PRTime)
 PR_Now(void)
 {
-    PRTime prt;
-    FILETIME ft;
-
-    GetSystemTimeAsFileTime(&ft);
-    _PR_FileTimeToPRTime(&ft, &prt);
-    return prt;       
+    PRInt64 s;
+#if !defined(WINCE)
+    PRInt64 ms, ms2us, s2us;
+    struct timeb b;
+    ftime(&b);
+    LL_I2L(ms2us, PR_USEC_PER_MSEC);
+    LL_I2L(s2us, PR_USEC_PER_SEC);
+    LL_I2L(s, b.time);
+    LL_I2L(ms, b.millitm);
+    LL_MUL(ms, ms, ms2us);
+    LL_MUL(s, s, s2us);
+    LL_ADD(s, s, ms);
+#else
+    SYSTEMTIME sysTime;
+    GetSystemTime(&sysTime);
+    _MD_SYSTEMTIME_2_PRTime(s, sysTime);
+#endif
+    return s;
 }
 
 /*
@@ -118,6 +130,7 @@ PR_Now(void)
 void
 _PR_Win32InitTimeZone(void)
 {
+#if !defined(WINCE)
     OSVERSIONINFO version;
     TIME_ZONE_INFORMATION tzinfo;
 
@@ -158,6 +171,7 @@ _PR_Win32InitTimeZone(void)
     _timezone = tzinfo.Bias * 60;
     _daylight = tzinfo.DaylightBias ? 1 : 0;
     return;
+#endif
 }
 
 /*
@@ -366,6 +380,7 @@ PRProcess * _PR_CreateWindowsProcess(
     char *const *envp,
     const PRProcessAttr *attr)
 {
+#if !defined(WINCE)
     STARTUPINFO startupInfo;
     PROCESS_INFORMATION procInfo;
     BOOL retVal;
@@ -506,6 +521,57 @@ errorExit:
         PR_DELETE(proc);
     }
     return NULL;
+#else
+    PROCESS_INFORMATION procInfo;
+    BOOL retVal;
+    char *cmdLine = NULL;
+    PRProcess *proc = NULL;
+
+    proc = PR_NEW(PRProcess);
+    if (!proc) {
+        PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
+        goto errorExit;
+    }
+
+    if (assembleCmdLine(argv, &cmdLine) == -1) {
+        PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
+        goto errorExit;
+    }
+
+    retVal =
+             CreateProcess(path,
+                           cmdLine,
+                           NULL,  /* not supported */
+                           NULL,  /* not supported */
+                           FALSE, /* not supported */
+                           0,     /* creation flags */
+                           NULL,  /* not supported */
+                           NULL,  /* not supported */
+                           NULL,  /* not supported */
+                           &procInfo
+                          );
+    if (retVal == FALSE) {
+        /* XXX what error code? */
+        PR_SetError(PR_UNKNOWN_ERROR, GetLastError());
+        goto errorExit;
+    }
+
+    CloseHandle(procInfo.hThread);
+    proc->md.handle = procInfo.hProcess;
+    proc->md.id = procInfo.dwProcessId;
+
+    PR_DELETE(cmdLine);
+    return proc;
+
+errorExit:
+    if (cmdLine) {
+        PR_DELETE(cmdLine);
+    }
+    if (proc) {
+        PR_DELETE(proc);
+    }
+    return NULL;
+#endif
 }  /* _PR_CreateWindowsProcess */
 
 PRStatus _PR_DetachWindowsProcess(PRProcess *process)
@@ -665,8 +731,13 @@ PRStatus _MD_CreateFileMap(PRFileMap *fmap, PRInt64 size)
         fmap->md.dwAccess = FILE_MAP_WRITE;
     } else {
         PR_ASSERT(fmap->prot == PR_PROT_WRITECOPY);
+#if !defined(WINCE)
         flProtect = PAGE_WRITECOPY;
         fmap->md.dwAccess = FILE_MAP_COPY;
+#else
+        PR_SetError(PR_OPERATION_NOT_SUPPORTED_ERROR, GetLastError());
+        return PR_FAILURE;
+#endif
     }
 
     fmap->md.hFileMap = CreateFileMapping(

@@ -80,6 +80,7 @@
 **
 **
 ***********************************************************************/
+
 #if defined(WIN32)
 
 #define PR_EXPORT(__type) extern __declspec(dllexport) __type

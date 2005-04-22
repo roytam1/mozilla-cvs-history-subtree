@@ -70,6 +70,9 @@ DLLBASE=/BASE:0x30000000
 endif # GCC
 RES=$(OBJDIR)/plds.res
 RESNAME=plds.rc
+ifneq ($(OS_TARGET), WINCE)
+OS_LIBS = user32.lib
+endif
 endif # WINNT
 
 ifeq ($(OS_ARCH), AIX)

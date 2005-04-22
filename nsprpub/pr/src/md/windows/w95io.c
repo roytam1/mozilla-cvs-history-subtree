@@ -218,13 +218,14 @@ _PR_MD_OPEN(const char *name, PRIntn osflags, int mode)
             flags = OPEN_EXISTING;
     }
 
-    file = CreateFile(name,
-                      access,
-                      FILE_SHARE_READ|FILE_SHARE_WRITE,
-                      NULL,
-                      flags,
-                      flag6,
-                      NULL);
+    file =
+           CreateFile( name,
+                       access,
+                       FILE_SHARE_READ|FILE_SHARE_WRITE,
+                       NULL,
+                       flags,
+                       flag6,
+                       NULL);
     if (file == INVALID_HANDLE_VALUE) {
 		_PR_MD_MAP_OPEN_ERROR(GetLastError());
         return -1; 
@@ -460,7 +461,18 @@ _MD_CloseFile(PRInt32 osfd)
 
 
 /* --- DIR IO ------------------------------------------------------------ */
+#if !defined(WINCE)
 #define GetFileFromDIR(d)       (d)->d_entry.cFileName
+#else
+char* GetFileFromDIR(_MDDir* d)
+{
+    char* retval = NULL;
+
+    retval = _PR_MD_W2A(d->d_entry.cFileName, d->cFileNameA, sizeof(d->cFileNameA));
+
+    return retval;
+}
+#endif
 #define FileIsHidden(d)	((d)->d_entry.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN)
 
 void FlipSlashes(char *cp, int len)
@@ -485,6 +497,16 @@ PRStatus
 _PR_MD_CLOSE_DIR(_MDDir *d)
 {
     if ( d ) {
+#if defined(WINCE)
+        /*
+        ** Handle case where we faked no more files.
+        ** FindFirstFile likes to return ERROR_NO_MORE_FILES itself.
+        */
+        if (NULL == d->d_hdl) {
+            d->magic = (PRUint32)-1;
+            return PR_SUCCESS;
+        } else
+#endif /* WINCE */
         if (FindClose(d->d_hdl)) {
         d->magic = (PRUint32)-1;
         return PR_SUCCESS;
@@ -522,12 +544,49 @@ _PR_MD_OPEN_DIR(_MDDir *d, const char *name)
     strcpy(&filename[len], "\\*.*");
     FlipSlashes( filename, strlen(filename) );
 
+#if !defined(WINCE)
     d->d_hdl = FindFirstFile( filename, &(d->d_entry) );
+#else
+    {
+        WCHAR ceFileName[MAX_PATH];
+        LPWSTR ceResult = _PR_MD_A2W(filename, ceFileName, MAX_PATH);
+
+        if(NULL != ceResult)
+        {
+            d->d_hdl = FindFirstFile( ceFileName, &(d->d_entry) );
+
+            /*
+            ** WINCE likes to report no files on the first call....
+            */
+            if(INVALID_HANDLE_VALUE == d->d_hdl && ERROR_NO_MORE_FILES == GetLastError())
+            {
+                d->d_hdl = NULL;
+                SetLastError(NO_ERROR);
+            }
+        }
+        else
+        {
+            d->d_hdl = INVALID_HANDLE_VALUE;
+        }
+    }
+#endif
     if ( d->d_hdl == INVALID_HANDLE_VALUE ) {
 		_PR_MD_MAP_OPENDIR_ERROR(GetLastError());
         return PR_FAILURE;
     }
+#if !defined(WINCE)
     d->firstEntry = PR_TRUE;
+#else /* WINCE */
+    /*
+    **  If we are having to fake ERROR_NO_MORE_FILES on wince, make sure we
+    **    have _PR_MD_READ_DIR act correctly.
+    */
+    if (NULL != d->d_hdl) {
+        d->firstEntry = PR_TRUE;
+    } else {
+        d->firstEntry = PR_FALSE;
+    }
+#endif /* WINCE */
     d->magic = _MD_MAGIC_DIR;
     return PR_SUCCESS;
 }
@@ -545,11 +604,28 @@ _PR_MD_READ_DIR(_MDDir *d, PRIntn flags)
                 d->firstEntry = PR_FALSE;
                 rv = 1;
             } else {
+#if !defined(WINCE)
                 rv = FindNextFile(d->d_hdl, &(d->d_entry));
+#else /* WINCE */
+                if (NULL != d->d_hdl) {
+                    rv = FindNextFile(d->d_hdl, &(d->d_entry));
+                } else {
+                    /*
+                    ** Fake the no more files we'd normally expect.
+                    ** All of this magic started by setting d_hdl to NULL
+                    **   in _PR_MD_OPEN_DIR because FindFirstFile likes to
+                    **   return ERROR_NO_MORE_FILES itself.
+                    */
+                    rv = 0;
+                    SetLastError(ERROR_NO_MORE_FILES);
+                }
+#endif /* WINCE */
             }
             if (rv == 0) {
                 break;
             }
+            if ( (flags & PR_SKIP_HIDDEN) && FileIsHidden(d))
+                 continue;
             fileName = GetFileFromDIR(d);
             if ( (flags & PR_SKIP_DOT) &&
                  (fileName[0] == '.') && (fileName[1] == '\0'))
@@ -557,8 +633,6 @@ _PR_MD_READ_DIR(_MDDir *d, PRIntn flags)
             if ( (flags & PR_SKIP_DOT_DOT) &&
                  (fileName[0] == '.') && (fileName[1] == '.') &&
                  (fileName[2] == '\0'))
-                 continue;
-            if ( (flags & PR_SKIP_HIDDEN) && FileIsHidden(d))
                  continue;
             return fileName;
         }
@@ -666,6 +740,7 @@ _PR_MD_STAT(const char *fn, struct stat *info)
     if (-1 == rv) {
         _PR_MD_MAP_STAT_ERROR(errno);
     }
+
     return rv;
 }
 
@@ -700,11 +775,13 @@ IsRootDirectory(char *fn, size_t buflen)
         return PR_TRUE;
     }
 
+#if !defined(WINCE)
     if (isalpha(fn[0]) && fn[1] == ':' && _PR_IS_SLASH(fn[2])
             && fn[3] == '\0') {
         rv = GetDriveType(fn) > 1 ? PR_TRUE : PR_FALSE;
         return rv;
     }
+#endif
 
     /* The UNC root directory */
 
@@ -736,6 +813,7 @@ IsRootDirectory(char *fn, size_t buflen)
         if (_PR_IS_SLASH(*p) && p[1] != '\0') {
             return PR_FALSE;
         }
+#if !defined(WINCE)
         if (*p == '\0') {
             /*
              * GetDriveType() doesn't work correctly if the
@@ -755,6 +833,12 @@ IsRootDirectory(char *fn, size_t buflen)
         if (slashAdded) {
             *--p = '\0';
         }
+#else
+        /*
+         * Assume the path as root.
+         */
+        rv = PR_TRUE;
+#endif
     }
     return rv;
 }
@@ -780,10 +864,28 @@ _PR_MD_GETFILEINFO64(const char *fn, PRFileInfo64 *info)
         return -1;
     }
 
+#if !defined(WINCE)
     hFindFile = FindFirstFile(fn, &findFileData);
+#else
+    {
+        WCHAR ceFileName[MAX_PATH + 1];
+        LPWSTR ceResult = _PR_MD_A2W(fn, ceFileName, sizeof(ceFileName) / sizeof(WCHAR));
+
+        if(NULL != ceResult)
+        {
+            hFindFile = FindFirstFile(ceFileName, &findFileData);
+        }
+        else
+        {
+            hFindFile = INVALID_HANDLE_VALUE;
+        }
+    }
+#endif
     if (INVALID_HANDLE_VALUE == hFindFile) {
         DWORD len;
+#if !defined(WINCE)
         char *filePart;
+#endif
 
         /*
          * FindFirstFile() does not work correctly on root directories.
@@ -801,8 +903,13 @@ _PR_MD_GETFILEINFO64(const char *fn, PRFileInfo64 *info)
             _PR_MD_MAP_OPENDIR_ERROR(GetLastError());
             return -1;
         } 
+#if !defined(WINCE)
         len = GetFullPathName(fn, sizeof(pathbuf), pathbuf,
                 &filePart);
+#else
+        strncpy(pathbuf, fn, sizeof(pathbuf));
+        len = strlen(pathbuf);
+#endif
         if (0 == len) {
             _PR_MD_MAP_OPENDIR_ERROR(GetLastError());
             return -1;
@@ -826,7 +933,23 @@ _PR_MD_GETFILEINFO64(const char *fn, PRFileInfo64 *info)
             return -1;
         } else {
             pathbuf[len - 1] = '\0';
+#if !defined(WINCE)
             hFindFile = FindFirstFile(pathbuf, &findFileData);
+#else
+            {
+                WCHAR ceFileName[MAX_PATH + 1];
+                LPWSTR ceResult = _PR_MD_A2W(pathbuf, ceFileName, sizeof(ceFileName) / sizeof(WCHAR));
+                
+                if(NULL != ceResult)
+                {
+                    hFindFile = FindFirstFile(ceFileName, &findFileData);
+                }
+                else
+                {
+                    hFindFile = INVALID_HANDLE_VALUE;
+                }
+            }
+#endif
             if (INVALID_HANDLE_VALUE == hFindFile) {
                 _PR_MD_MAP_OPENDIR_ERROR(GetLastError());
                 return -1;
@@ -918,6 +1041,7 @@ _PR_MD_GETOPENFILEINFO(const PRFileDesc *fd, PRFileInfo *info)
 PRStatus
 _PR_MD_SET_FD_INHERITABLE(PRFileDesc *fd, PRBool inheritable)
 {
+#if !defined(WINCE)
     BOOL rv;
 
     /*
@@ -933,6 +1057,10 @@ _PR_MD_SET_FD_INHERITABLE(PRFileDesc *fd, PRBool inheritable)
         return PR_FAILURE;
     }
     return PR_SUCCESS;
+#else
+    _PR_MD_MAP_DEFAULT_ERROR(ERROR_CALL_NOT_IMPLEMENTED);
+    return PR_FAILURE;
+#endif
 } 
 
 void
@@ -948,6 +1076,7 @@ _PR_MD_INIT_FD_INHERITABLE(PRFileDesc *fd, PRBool imported)
 void
 _PR_MD_QUERY_FD_INHERITABLE(PRFileDesc *fd)
 {
+#if !defined(WINCE)
     DWORD flags;
 
     PR_ASSERT(_PR_TRI_UNKNOWN == fd->secret->inheritable);
@@ -958,6 +1087,9 @@ _PR_MD_QUERY_FD_INHERITABLE(PRFileDesc *fd)
             fd->secret->inheritable = _PR_TRI_FALSE;
         }
     }
+#else
+    fd->secret->inheritable = _PR_TRI_FALSE;
+#endif
 }
 
 PRInt32
@@ -975,7 +1107,9 @@ _PR_MD_RENAME(const char *from, const char *to)
 PRInt32
 _PR_MD_ACCESS(const char *name, PRAccessHow how)
 {
-PRInt32 rv;
+    PRInt32 rv = -1;
+
+#if !defined(WINCE)
     switch (how) {
       case PR_ACCESS_WRITE_OK:
         rv = _access(name, 02);
@@ -992,6 +1126,33 @@ PRInt32 rv;
     }
 	if (rv < 0)
 		_PR_MD_MAP_ACCESS_ERROR(errno);
+#else
+    DWORD attribs = 0;
+
+    attribs = GetFileAttributes(name);
+    if((DWORD)-1 != attribs)
+    {
+        switch(how)
+        {
+        case PR_ACCESS_WRITE_OK:
+            if(FILE_ATTRIBUTE_READONLY & attribs)
+            {
+                rv = 0;
+            }
+            break;
+        case PR_ACCESS_READ_OK:
+            rv = 0;
+            break;
+        case PR_ACCESS_EXISTS:
+            rv = 0;
+            break;
+        default:
+            PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
+            break;
+        }
+    }
+#endif
+
     return rv;
 }
 
@@ -1049,6 +1210,7 @@ _PR_MD_RMDIR(const char *name)
 PRStatus
 _PR_MD_LOCKFILE(PRInt32 f)
 {
+#if !defined(WINCE)
     PRStatus  rc = PR_SUCCESS;
 	DWORD     rv;
 
@@ -1063,6 +1225,10 @@ _PR_MD_LOCKFILE(PRInt32 f)
     }
 
     return rc;
+#else
+    PR_SetError( PR_NOT_IMPLEMENTED_ERROR, 0 );
+    return PR_FAILURE;
+#endif
 } /* end _PR_MD_LOCKFILE() */
 
 PRStatus
@@ -1076,6 +1242,7 @@ _PR_MD_TLOCKFILE(PRInt32 f)
 PRStatus
 _PR_MD_UNLOCKFILE(PRInt32 f)
 {
+#if !defined(WINCE)
 	PRInt32   rv;
     
     rv = UnlockFile( (HANDLE) f,
@@ -1091,6 +1258,10 @@ _PR_MD_UNLOCKFILE(PRInt32 f)
 		_PR_MD_MAP_DEFAULT_ERROR(GetLastError());
 		return PR_FAILURE;
     }
+#else
+    PR_SetError( PR_NOT_IMPLEMENTED_ERROR, 0 );
+    return PR_FAILURE;
+#endif
 } /* end _PR_MD_UNLOCKFILE() */
 
 PRInt32
