@@ -175,16 +175,12 @@ AC_ARG_ENABLE(optimize,
     	    _OPTIMIZE_FLAGS=`echo $enableval | sed -e 's|\\\ | |g'`
             _SAVE_OPTIMIZE_FLAGS=$_OPTIMIZE_FLAGS
         fi
-      else
-        MOZ_OPTIMIZE=
     fi ])
 
 AC_ARG_ENABLE(debug,
     [  --disable-debug         Do not compile in debugging symbols],
     [	if test "$enableval" = "no"; then
     	    MOZ_DEBUG=
-        else
-            MOZ_DEBUG=1
 	    fi])
 
 AC_ARG_ENABLE(win32-target,
@@ -1260,26 +1256,8 @@ case "$target" in
         OBJ_SUFFIX=obj
         LIB_SUFFIX=lib
         DLL_SUFFIX=dll
-
-        # Determine compiler version
-        CC_VERSION=`"${CC}" -v 2>&1 | grep Version | sed -e 's|.* Version ||' -e 's| .*||'`
-        _CC_MAJOR_VERSION=`echo $CC_VERSION | awk -F\. '{ print $1 }'`
-        _CC_MINOR_VERSION=`echo $CC_VERSION | awk -F\. '{ print $2 }'`
-        MSC_VER=${_CC_MAJOR_VERSION}${_CC_MINOR_VERSION}
         
         CFLAGS="$CFLAGS -W3 -nologo -GF -Gy"
-        DLLFLAGS='-OUT:"$@"'
-        _DEBUG_FLAGS=-Z7
-        _OPTIMIZE_FLAGS=-O2
-        if test -z "$MOZ_OPTIMIZE"; then
-            CFLAGS="$CFLAGS -Od"
-        fi
-
-        if test -n "$USE_DEBUG_RTL"; then
-            CFLAGS="$CFLAGS -MDd"
-        else
-            CFLAGS="$CFLAGS -MD"
-        fi
 
         if test -n "$MOZ_DEBUG"; then
             AC_DEFINE(_DEBUG)
@@ -1288,21 +1266,32 @@ case "$target" in
         fi
 
         if test -n "$MOZ_OPTIMIZE"; then
+            CFLAGS="$CFLAGS -MD"
+            _OPTIMIZE_FLAGS=-O2
+            DLLFLAGS='-OUT:"$@"'
+
             if test -n "$MOZ_PROFILE"; then
                 _OPTIMIZE_FLAGS="$_OPTIMIZE_FLAGS -Z7"
+                DLLFLAGS="$DLLFLAGS -DEBUG -DEBUGTYPE:CV"
+                LDFLAGS="$LDFLAGS -DEBUG -DEBUGTYPE:CV"
             fi
-            if test -n "$MOZ_DEBUG_SYMBOLS"; then
-                _OPTIMIZE_FLAGS="$_OPTIMIZE_FLAGS -Zi"
+        else
+            if test -n "$USE_DEBUG_RTL"; then
+                CFLAGS="$CFLAGS -MDd"
+            else
+                CFLAGS="$CFLAGS -MD"
             fi
-            if test -n "$MOZ_PROFILE" -o -n "$MOZ_DEBUG_SYMBOLS"; then
-                DLLFLAGS="$DLLFLAGS -DEBUG -OPT:REF"
-                LDFLAGS="$LDFLAGS -DEBUG -OPT:REF"
+            _DEBUG_FLAGS="-Od -Z7"
+            DLLFLAGS='-DEBUG -DEBUGTYPE:CV -OUT:"$@"'
+            if test -n "$GLOWCODE"; then
+                DLLFLAGS='-DEBUG -DEBUGTYPE:both -INCLUDE:_GlowCode -OUT:"$@"'
+                DLL_LIBS='$(GLOWDIR)/glowcode.lib'
             fi
-        fi
-
-        if test -n "$MOZ_DEBUG"; then
-            DLLFLAGS="$DLLFLAGS -DEBUG"
-            LDFLAGS="$LDFLAGS -DEBUG"
+            LDFLAGS="-DEBUG -DEBUGTYPE:CV"
+            if test -n "$PROFILE"; then
+                LDFLAGS="$LDFLAGS -PROFILE -MAP"
+                DLLFLAGS="$DLLFLAGS -PROFILE -MAP"
+            fi
         fi
         
         if test "$OS_TARGET" = "WINNT"; then
@@ -1341,10 +1330,7 @@ case "$target" in
         OBJDIR_SUFFIX=OBJD
     fi
 
-    OS_DLLFLAGS="-nologo -DLL -SUBSYSTEM:WINDOWS"
-    if test "$MSC_VER" -le "1200" -a -z "$MOZ_DEBUG_SYMBOLS"; then
-        OS_DLLFLAGS="$OS_DLLFLAGS -PDB:NONE"
-    fi
+    OS_DLLFLAGS='-nologo -DLL -SUBSYSTEM:WINDOWS -PDB:NONE'
 
     case "$OS_TARGET" in
     WINNT)
@@ -1505,9 +1491,7 @@ mips-sony-newsos*)
     DSO_CFLAGS=-fPIC
     MDCPUCFG_H=_openbsd.cfg
     PR_MD_CSRCS=openbsd.c
-    if test -z "$USE_NSPR_THREADS"; then
-        USE_PTHREADS=1
-    fi
+    USE_NSPR_THREADS=1
     DSO_LDOPTS='-shared -fPIC'
     MKSHLIB='$(CC) $(DSO_LDOPTS) -o $@'
     ;;
@@ -1693,7 +1677,7 @@ mips-sony-newsos*)
         fi
     else
         CFLAGS="$CFLAGS -xstrconst"
-        CXXFLAGS="$CXXFLAGS -Qoption cg -xstrconst -features=tmplife"
+        CXXFLAGS="$CXXFLAGS -Qoption cg -xstrconst"
         if test -z "$MOZ_OPTIMIZE"; then
             CFLAGS="$CFLAGS -xs"
             CXXFLAGS="$CXXFLAGS -xs"
@@ -1709,17 +1693,17 @@ mips-sony-newsos*)
             CXX="$CXX -m64"
         else
             if test "$OS_TEST" = "i86pc"; then
-                CC="$CC -xarch=amd64"
-                CXX="$CXX -xarch=amd64"
+               CC="$CC -xarch=amd64"
+               CXX="$CXX -xarch=amd64"
             else
-                CC="$CC -xarch=v9"
-                CXX="$CXX -xarch=v9"
+               CC="$CC -xarch=v9"
+               CXX="$CXX -xarch=v9"
             fi
         fi
     fi
     if test "$OS_TEST" = "i86pc"; then
         if test -z "$USE_64"; then
-            AC_DEFINE(i386)
+        AC_DEFINE(i386)
         fi
         CPU_ARCH_TAG=_$OS_TEST
         # The default debug format, DWARF (-g), is not supported by gcc
@@ -1812,8 +1796,6 @@ mips-sony-newsos*)
 *-os2*)
     AC_DEFINE(XP_OS2)
     AC_DEFINE(XP_PC)
-    AC_DEFINE(BSD_SELECT)
-    AC_DEFINE(TCPV40HDRS)
     LIB_SUFFIX=lib
     DLL_SUFFIX=dll
     RC=rc.exe
@@ -2227,6 +2209,7 @@ if test -n "$USE_PTHREADS"; then
 	    fi
 	    ;;
     *-openbsd*)
+        AC_DEFINE(_THREAD_SAFE)
         if test "$ac_cv_have_dash_pthread" = "yes"; then
             _PTHREAD_LDFLAGS=-pthread
         fi
@@ -2433,7 +2416,6 @@ AC_SUBST(HOST_CFLAGS)
 AC_SUBST(LDFLAGS)
 AC_SUBST(GNU_CC)
 AC_SUBST(GCC_USE_GNU_LD)
-AC_SUBST(MSC_VER)
 AC_SUBST(CROSS_COMPILE)
 
 AC_SUBST(MOZ_OPTIMIZE)
@@ -2531,7 +2513,9 @@ pkg/Makefile
 pkg/linux/Makefile
 pkg/solaris/Makefile
 pkg/solaris/SUNWpr/Makefile
+pkg/solaris/SUNWprx/Makefile
 pkg/solaris/SUNWprd/Makefile
+pkg/solaris/SUNWprdx/Makefile
 pr/Makefile 
 pr/include/Makefile 
 pr/include/md/Makefile 

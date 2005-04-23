@@ -1,39 +1,36 @@
 /* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- *
+/* 
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ * 
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ * 
  * The Original Code is the Netscape Portable Runtime (NSPR).
- *
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1998-2000
- * the Initial Developer. All Rights Reserved.
- *
+ * 
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation.  Portions created by Netscape are 
+ * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
+ * Rights Reserved.
+ * 
  * Contributor(s):
- *
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- *
- * ***** END LICENSE BLOCK ***** */
+ * 
+ * Alternatively, the contents of this file may be used under the
+ * terms of the GNU General Public License Version 2 or later (the
+ * "GPL"), in which case the provisions of the GPL are applicable 
+ * instead of those above.  If you wish to allow use of your 
+ * version of this file only under the terms of the GPL and not to
+ * allow others to use your version of this file under the MPL,
+ * indicate your decision by deleting the provisions above and
+ * replace them with the notice and other provisions required by
+ * the GPL.  If you do not delete the provisions above, a recipient
+ * may use your version of this file under either the MPL or the
+ * GPL.
+ */
 
 #include <kernel/OS.h>
 
@@ -141,7 +138,7 @@ PR_IMPLEMENT(PRStatus)
     cvar->nw += 1;
     if( atomic_add( &cvar->signalBenCount, -1 ) > 1 ) 
     {
-        release_sem_etc(cvar->signalSem, 1, B_DO_NOT_RESCHEDULE);
+        release_sem(cvar->signalSem);
     }
 
     PR_Unlock( cvar->lock );
@@ -161,13 +158,13 @@ PR_IMPLEMENT(PRStatus)
 
     if (cvar->ns > 0)
     {
-        release_sem_etc(cvar->handshakeSem, 1, B_DO_NOT_RESCHEDULE);
+        release_sem(cvar->handshakeSem);
         cvar->ns -= 1;
     }
     cvar->nw -= 1;
     if( atomic_add( &cvar->signalBenCount, -1 ) > 1 ) 
     {
-        release_sem_etc(cvar->signalSem, 1, B_DO_NOT_RESCHEDULE);
+        release_sem(cvar->signalSem);
     }
 
     PR_Lock( cvar->lock );
@@ -206,10 +203,10 @@ PR_IMPLEMENT(PRStatus)
     if (cvar->nw > cvar->ns)
     {
         cvar->ns += 1;
-        release_sem_etc(cvar->sem, 1, B_DO_NOT_RESCHEDULE);
+        release_sem(cvar->sem);
         if( atomic_add( &cvar->signalBenCount, -1 ) > 1 ) 
         {
-            release_sem_etc(cvar->signalSem, 1, B_DO_NOT_RESCHEDULE);
+            release_sem(cvar->signalSem);
         }
 
         while (acquire_sem(cvar->handshakeSem) == B_INTERRUPTED) 
@@ -221,7 +218,7 @@ PR_IMPLEMENT(PRStatus)
     {
         if( atomic_add( &cvar->signalBenCount, -1 ) > 1 )
         {
-            release_sem_etc(cvar->signalSem, 1, B_DO_NOT_RESCHEDULE);
+            release_sem(cvar->signalSem);
         }
     }
     return PR_SUCCESS; 
@@ -254,10 +251,10 @@ PR_IMPLEMENT(PRStatus)
     {
         handshakes = cvar->nw - cvar->ns;
         cvar->ns = cvar->nw;				
-        release_sem_etc(cvar->sem, handshakes, B_DO_NOT_RESCHEDULE);	
+        release_sem_etc(cvar->sem, handshakes, 0);	
         if( atomic_add( &cvar->signalBenCount, -1 ) > 1 ) 
         {
-            release_sem_etc(cvar->signalSem, 1, B_DO_NOT_RESCHEDULE);
+            release_sem(cvar->signalSem);
         }
 
         while (acquire_sem_etc(cvar->handshakeSem, handshakes, 0, 0) == B_INTERRUPTED) 
@@ -269,7 +266,7 @@ PR_IMPLEMENT(PRStatus)
     {
         if( atomic_add( &cvar->signalBenCount, -1 ) > 1 ) 
         {
-            release_sem_etc(cvar->signalSem, 1, B_DO_NOT_RESCHEDULE);
+            release_sem(cvar->signalSem);
         }
     }
     return PR_SUCCESS;

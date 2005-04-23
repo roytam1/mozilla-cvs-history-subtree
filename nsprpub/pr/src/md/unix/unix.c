@@ -133,7 +133,7 @@ _PRInterruptTable _pr_interruptTable[] = {
         0     }
 };
 
-void _MD_unix_init_running_cpu(_PRCPU *cpu)
+PR_IMPLEMENT(void) _MD_unix_init_running_cpu(_PRCPU *cpu)
 {
     PR_INIT_CLIST(&(cpu->md.md_unix.ioQ));
     cpu->md.md_unix.ioq_max_osfd = -1;
@@ -177,7 +177,6 @@ int err;
           * XXX: readdir() is not MT-safe. There is an MT-safe version
           * readdir_r() on some systems.
           */
-        _MD_ERRNO() = 0;
         de = readdir(d->d);
         if (!de) {
             err = _MD_ERRNO();
@@ -3338,7 +3337,7 @@ void PR_XNotifyAll(void)
 
 #if defined(HAVE_FCNTL_FILE_LOCKING)
 
-PRStatus
+PR_IMPLEMENT(PRStatus)
 _MD_LockFile(PRInt32 f)
 {
     PRInt32 rv;
@@ -3355,7 +3354,7 @@ _MD_LockFile(PRInt32 f)
     return PR_FAILURE;
 }
 
-PRStatus
+PR_IMPLEMENT(PRStatus)
 _MD_TLockFile(PRInt32 f)
 {
     PRInt32 rv;
@@ -3372,7 +3371,7 @@ _MD_TLockFile(PRInt32 f)
     return PR_FAILURE;
 }
 
-PRStatus
+PR_IMPLEMENT(PRStatus)
 _MD_UnlockFile(PRInt32 f)
 {
     PRInt32 rv;
@@ -3393,7 +3392,7 @@ _MD_UnlockFile(PRInt32 f)
 
 #include <sys/file.h>
 
-PRStatus
+PR_IMPLEMENT(PRStatus)
 _MD_LockFile(PRInt32 f)
 {
     PRInt32 rv;
@@ -3404,7 +3403,7 @@ _MD_LockFile(PRInt32 f)
     return PR_FAILURE;
 }
 
-PRStatus
+PR_IMPLEMENT(PRStatus)
 _MD_TLockFile(PRInt32 f)
 {
     PRInt32 rv;
@@ -3415,7 +3414,7 @@ _MD_TLockFile(PRInt32 f)
     return PR_FAILURE;
 }
 
-PRStatus
+PR_IMPLEMENT(PRStatus)
 _MD_UnlockFile(PRInt32 f)
 {
     PRInt32 rv;
@@ -3427,7 +3426,7 @@ _MD_UnlockFile(PRInt32 f)
 }
 #else
 
-PRStatus
+PR_IMPLEMENT(PRStatus)
 _MD_LockFile(PRInt32 f)
 {
     PRInt32 rv;
@@ -3438,7 +3437,7 @@ _MD_LockFile(PRInt32 f)
     return PR_FAILURE;
 }
 
-PRStatus
+PR_IMPLEMENT(PRStatus)
 _MD_TLockFile(PRInt32 f)
 {
     PRInt32 rv;
@@ -3449,7 +3448,7 @@ _MD_TLockFile(PRInt32 f)
     return PR_FAILURE;
 }
 
-PRStatus
+PR_IMPLEMENT(PRStatus)
 _MD_UnlockFile(PRInt32 f)
 {
     PRInt32 rv;
@@ -3461,7 +3460,7 @@ _MD_UnlockFile(PRInt32 f)
 }
 #endif
 
-PRStatus _MD_gethostname(char *name, PRUint32 namelen)
+PR_IMPLEMENT(PRStatus) _MD_gethostname(char *name, PRUint32 namelen)
 {
     PRIntn rv;
 
@@ -3473,7 +3472,7 @@ PRStatus _MD_gethostname(char *name, PRUint32 namelen)
     return PR_FAILURE;
 }
 
-PRStatus _MD_getsysinfo(PRSysInfo cmd, char *name, PRUint32 namelen)
+PR_IMPLEMENT(PRStatus) _MD_getsysinfo(PRSysInfo cmd, char *name, PRUint32 namelen)
 {
 	struct utsname info;
 

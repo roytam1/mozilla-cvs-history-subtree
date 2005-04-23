@@ -167,6 +167,10 @@ struct _imcb *IAC$GL_IMAGE_LIST = NULL;
 #define NEED_LEADING_UNDERSCORE
 #endif
 
+#ifdef XP_PC
+typedef PRStaticLinkTable *NODL_PROC(void);
+#endif
+
 /************************************************************************/
 
 struct PRLibrary {
@@ -951,6 +955,7 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
 #if defined(WIN32) || defined(WIN16)
     {
     HINSTANCE h;
+    NODL_PROC *pfn;
 
     h = LoadLibrary(name);
     if (h < (HINSTANCE)HINSTANCE_ERROR) {
@@ -962,6 +967,15 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
     lm->dlh = h;
     lm->next = pr_loadmap;
     pr_loadmap = lm;
+
+    /*
+    ** Try to load a table of "static functions" provided by the DLL
+    */
+
+    pfn = (NODL_PROC *)GetProcAddress(h, "NODL_TABLE");
+    if (pfn != NULL) {
+        lm->staticTable = (*pfn)();
+    }
     }
 #endif /* WIN32 || WIN16 */
 
@@ -1161,6 +1175,18 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
         PR_SetError(PR_LOAD_LIBRARY_ERROR, oserr);
         DLLErrorInternal(oserr);  /* sets error text */
     }
+    PR_ExitMonitor(pr_linker_lock);
+    return result;
+}
+
+PR_IMPLEMENT(PRLibrary*) 
+PR_FindLibrary(const char *name)
+{
+    PRLibrary* result;
+
+    if (!_pr_initialized) _PR_ImplicitInitialization();
+    PR_EnterMonitor(pr_linker_lock);
+    result = pr_UnlockedFindLibrary(name);
     PR_ExitMonitor(pr_linker_lock);
     return result;
 }
@@ -1690,7 +1716,7 @@ PR_LoadStaticLibrary(const char *name, const PRStaticLinkTable *slt)
 PR_IMPLEMENT(char *)
 PR_GetLibraryFilePathname(const char *name, PRFuncPtr addr)
 {
-#if defined(SOLARIS) || defined(LINUX) || defined(FREEBSD)
+#if defined(SOLARIS) || defined(LINUX)
     Dl_info dli;
     char *result;
 
@@ -1727,7 +1753,6 @@ PR_GetLibraryFilePathname(const char *name, PRFuncPtr addr)
     struct ld_info *info;
     unsigned int info_length = LD_INFO_INCREMENT * sizeof(struct ld_info);
     struct ld_info *infop;
-    int loadflags = L_GETINFO | L_IGNOREUNLOAD;
 
     for (;;) {
         info = PR_Malloc(info_length);
@@ -1735,21 +1760,8 @@ PR_GetLibraryFilePathname(const char *name, PRFuncPtr addr)
             return NULL;
         }
         /* If buffer is too small, loadquery fails with ENOMEM. */
-        if (loadquery(loadflags, info, info_length) != -1) {
+        if (loadquery(L_GETINFO, info, info_length) != -1) {
             break;
-        }
-        /*
-         * Calling loadquery when compiled for 64-bit with the
-         * L_IGNOREUNLOAD flag can cause an invalid argument error
-         * on AIX 5.1. Detect this error the first time that
-         * loadquery is called, and try calling it again without
-         * this flag set.
-         */
-        if (errno == EINVAL && (loadflags & L_IGNOREUNLOAD)) {
-            loadflags &= ~L_IGNOREUNLOAD;
-            if (loadquery(loadflags, info, info_length) != -1) {
-                break;
-            }
         }
         PR_Free(info);
         if (errno != ENOMEM) {
@@ -1764,9 +1776,7 @@ PR_GetLibraryFilePathname(const char *name, PRFuncPtr addr)
     for (infop = info;
          ;
          infop = (struct ld_info *)((char *)infop + infop->ldinfo_next)) {
-        unsigned long start = (unsigned long)infop->ldinfo_dataorg;
-        unsigned long end = start + infop->ldinfo_datasize;
-        if (start <= (unsigned long)addr && end > (unsigned long)addr) {
+        if (strstr(infop->ldinfo_filename, name) != NULL) {
             result = PR_Malloc(strlen(infop->ldinfo_filename)+1);
             if (result != NULL) {
                 strcpy(result, infop->ldinfo_filename);
