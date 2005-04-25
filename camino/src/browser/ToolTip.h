@@ -41,8 +41,9 @@
 
 @interface ToolTip : NSObject
 {
-	NSPanel* mPanel;
-	NSTextField* mTextField;
+  NSPanel* mPanel;
+  NSTextField* mTextField;
+  NSTextView* mTextView;
 }
 
 //  it expects a point relative to the top left coordinate of the screen
