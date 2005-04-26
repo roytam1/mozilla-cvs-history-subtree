@@ -190,6 +190,10 @@ const int kReuseWindowOnAE = 2;
   // initialize if we haven't already.
   PreferenceManager *pm = [PreferenceManager sharedInstance];
 
+  // To work around a bug on Tiger where the view hookup order has been changed from postfix to prefix
+  // order, we need to set a user default to return to the old behavior.
+  [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"NSViewSetAncestorsWindowFirst"];
+  
   // start bookmarks
   RunLoopMessenger *mainThreadRunLoopMessenger = [[RunLoopMessenger alloc] init];
   [NSThread detachNewThreadSelector:@selector(startBookmarksManager:) toTarget:[BookmarkManager class] withObject:mainThreadRunLoopMessenger];
