@@ -111,11 +111,11 @@ interface nsIUpdateItem : nsISupports
   /**
    * Initializes this Item object.
    */
-  void init(in AString aID, in AString aVersion, 
-            in AString aInstallLocationKey, in AString aMinAppVersion, 
-            in AString aMaxAppVersion, in AString aName,
-            in AString aUpdateURL, in AString aIconURL,
-            in AString aUpdateRDF, in long aType);
+  void init(in AString id, in AString version, 
+            in AString installLocationKey, in AString minAppVersion, 
+            in AString maxAppVersion, in AString name,
+            in AString downloadURL, in AString iconURL,
+            in AString updateURL, in long type);
 
   /**
    * Returns a JS Object source representing an nsIUpdateItem.
@@ -123,59 +123,15 @@ interface nsIUpdateItem : nsISupports
   readonly attribute AString objectSource;
 };
 
-[scriptable, uuid(24aee3ca-a274-4247-bd3b-d0acbb5a98aa)]
-interface nsIAppUpdateInfoItem : nsISupports
+[scriptable, uuid(9849c4bf-5197-4d22-baa8-e3b44a1703d2)]
+interface nsIApplicationUpdateService : nsISupports
 {
-  readonly attribute AString internalName;
-  readonly attribute AString name;
-  readonly attribute AString URL;
-  readonly attribute AString infoURL;
-  readonly attribute AString description;
-};
-
-[scriptable, uuid(2daab124-9bc7-4c35-bb7b-0fecdea03ce8)]
-interface nsIAppUpdateInfo : nsISupports
-{
-  readonly attribute AString updateVersion;
-  readonly attribute AString updateDisplayVersion;
-  readonly attribute AString updateInfoURL;
-
-  void getCollection(in AString aCollectionName, out unsigned long aItemCount,
-                     [retval, array, size_is(aItemCount)] out nsIAppUpdateInfoItem aItems);
-};
-
-[scriptable, uuid(c8a2339e-770a-417d-ab9c-efde1f23ba24)]
-interface nsIUpdateService : nsISupports
-{
-  void watchForUpdates();
-
   const unsigned short SOURCE_EVENT_USER        = 0x01;
   const unsigned short SOURCE_EVENT_BACKGROUND  = 0x02;
-  const unsigned short SOURCE_EVENT_MISMATCH    = 0x04;
 
-  void checkForUpdates([array, size_is(aItemCount)] in nsIUpdateItem aItems,
-                       in unsigned long aItemCount,
-                       in unsigned short aUpdateTypes, 
-                       in unsigned short aSourceEvent,
+  void checkForUpdates(in unsigned short aSourceEvent,
                        in nsIDOMWindowInternal aParentWindow);
-  void checkForUpdatesInternal([array, size_is(aItemCount)] in nsIUpdateItem aItems,
-                               in unsigned long aItemCount,
-                               in unsigned short aUpdateTypes, 
-                               in unsigned short aSourceEvent);
 
-  readonly attribute long updateCount;
-  readonly attribute unsigned short updateSeverity;
-
-  // these are per-session settings
-  attribute boolean appUpdatesAvailable;
-  attribute long extensionUpdatesAvailable;
-
-  readonly attribute nsIAppUpdateInfo newestVersion;
-  readonly attribute nsIAppUpdateInfo currentVersion;
-
-  const unsigned short SEVERITY_HIGH    = 2;
-  const unsigned short SEVERITY_MEDIUM  = 1;
-  const unsigned short SEVERITY_LOW     = 0;
 };
 
 [scriptable, uuid(22d35700-5765-42e1-914b-a0da7c911a8c)]
