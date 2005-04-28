@@ -231,7 +231,7 @@ XPTC_InvokeByIndex(nsISupports* that, PRUint32 methodIndex,
           "a" (invoke_copy_to_stack),
           "a" (that),
           "a" (method)
-        : "2", "3", "4", "5", "6", "7", "memory"
+        : "2", "3", "4", "5", "6", "7", "14", "cc", "memory", "%f0", "%f2"
     );
   
     return result;
