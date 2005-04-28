@@ -57,7 +57,9 @@ EXPORTS = \
 	$(NULL)
 
 PRIVATE_EXPORTS = \
+	alghmac.h \
 	pk11pars.h \
+	pkcs11i.h \
 	$(NULL)
 
 CSRCS = \

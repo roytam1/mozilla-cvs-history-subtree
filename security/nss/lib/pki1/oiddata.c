@@ -2000,7 +2000,7 @@ const NSSOID nss_builtin_oids[] = {
   {
 #ifdef DEBUG
     "id-ce-invalidityDate",
-    "Invalidity Date",
+    "Invalid Date",
 #endif /* DEBUG */
     { "\x55\x1d\x18", 3 }
   },

@@ -231,7 +231,7 @@ const SEC_ASN1Template CERT_CrlTemplateEntriesOnly[] = {
     { 0 }
 };
 
-const SEC_ASN1Template CERT_SignedCrlTemplate[] = {
+static const SEC_ASN1Template cert_SignedCrlTemplate[] = {
     { SEC_ASN1_SEQUENCE,
 	  0, NULL, sizeof(CERTSignedCrl) },
     { SEC_ASN1_SAVE,
@@ -264,7 +264,7 @@ static const SEC_ASN1Template cert_SignedCrlTemplateNoEntries[] = {
 };
 
 const SEC_ASN1Template CERT_SetOfSignedCrlTemplate[] = {
-    { SEC_ASN1_SET_OF, 0, CERT_SignedCrlTemplate },
+    { SEC_ASN1_SET_OF, 0, cert_SignedCrlTemplate },
 };
 
 /* get CRL version */
@@ -462,7 +462,7 @@ CERT_DecodeDERCrlWithFlags(PRArenaPool *narena, SECItem *derSignedCrl,
     CERTSignedCrl *crl;
     SECStatus rv;
     OpaqueCRLFields* extended = NULL;
-    const SEC_ASN1Template* crlTemplate = CERT_SignedCrlTemplate;
+    const SEC_ASN1Template* crlTemplate = cert_SignedCrlTemplate;
 
     if (!derSignedCrl ||
         ( (options & CRL_DECODE_ADOPT_HEAP_DER) && /* adopting DER requires
@@ -827,13 +827,10 @@ SEC_DestroyCrl(CERTSignedCrl *crl)
 	    if (crl->slot) {
 		PK11_FreeSlot(crl->slot);
 	    }
-            if (GetOpaqueCRLFields(crl) &&
-                PR_TRUE == GetOpaqueCRLFields(crl)->heapDER) {
+            if (PR_TRUE == GetOpaqueCRLFields(crl)->heapDER) {
                 SECITEM_FreeItem(crl->derCrl, PR_TRUE);
             }
-            if (crl->arena) {
-                PORT_FreeArena(crl->arena, PR_FALSE);
-            }
+	    PORT_FreeArena(crl->arena, PR_FALSE);
 	}
         return SECSuccess;
     } else {
@@ -882,7 +879,6 @@ SEC_LookupCrls(CERTCertDBHandle *handle, CERTCrlHeadNode **nodes, int type)
 */
 SEC_ASN1_CHOOSER_IMPLEMENT(CERT_IssuerAndSNTemplate)
 SEC_ASN1_CHOOSER_IMPLEMENT(CERT_CrlTemplate)
-SEC_ASN1_CHOOSER_IMPLEMENT(CERT_SignedCrlTemplate)
 SEC_ASN1_CHOOSER_IMPLEMENT(CERT_SetOfSignedCrlTemplate)
 
 /* CRL cache code starts here */
@@ -1066,16 +1062,19 @@ static CRLCache crlcache = { NULL, NULL };
 /* initial state is off */
 static PRBool crlcache_initialized = PR_FALSE;
 
-PRTime CRLCache_Empty_TokenFetch_Interval = 60 * 1000000; /* how often
-    to query the tokens for CRL objects, in order to discover new objects, if
-    the cache does not contain any token CRLs . In microseconds */
+PRIntervalTime oneminute = 0;
+PRIntervalTime tenminutes = 0;
 
-PRTime CRLCache_TokenRefetch_Interval = 600 * 1000000 ; /* how often
+PRIntervalTime CRLCache_Empty_TokenFetch_Interval; /* how often
     to query the tokens for CRL objects, in order to discover new objects, if
-    the cache already contains token CRLs In microseconds */
+    the cache does not contain any token CRLs */
 
-PRTime CRLCache_ExistenceCheck_Interval = 60 * 1000000; /* how often to check
-    if a token CRL object still exists. In microseconds */
+PRIntervalTime CRLCache_TokenRefetch_Interval; /* how often
+    to query the tokens for CRL objects, in order to discover new objects, if
+    the cache already contains token CRLs */
+
+PRIntervalTime CRLCache_ExistenceCheck_Interval; /* how often to check if
+    a token CRL object still exists */
 
 /* this function is called at NSS initialization time */
 SECStatus InitCRLCache(void)
@@ -1111,6 +1110,9 @@ SECStatus InitCRLCache(void)
             crlcache.lock = NULL;
             return SECFailure;
         }
+        CRLCache_Empty_TokenFetch_Interval = CRLCache_ExistenceCheck_Interval
+            = oneminute = PR_SecondsToInterval(60);
+        CRLCache_TokenRefetch_Interval = tenminutes = PR_SecondsToInterval(600);
         crlcache_initialized = PR_TRUE;
         return SECSuccess;
     }
@@ -1746,8 +1748,8 @@ static SECStatus DPCache_GetUpToDate(CRLDPCache* cache, CERTCertificate*
     PRBool dirty = PR_FALSE; /* whether something was changed in the
                                 cache state during this update cycle */
     PRBool hastokenCRLs = PR_FALSE;
-    PRTime now = 0;
-    PRTime lastfetch = 0;
+    PRIntervalTime now = 0;
+    PRIntervalTime lastfetch = 0;
 
     if (!cache)
     {
@@ -1757,12 +1759,11 @@ static SECStatus DPCache_GetUpToDate(CRLDPCache* cache, CERTCertificate*
 
     /* first, make sure we have obtained all the CRLs we need.
        We do an expensive token fetch in the following cases :
-       1) cache is empty because no fetch was ever performed yet
-       2) cache is explicitly set to refresh state
-       3) cache is in invalid state because last fetch failed
-       4) cache contains no token CRLs, and it's been more than one minute
+       1) cache is explicitly set to refresh state
+       2) cache is in invalid state because last fetch failed
+       3) cache contains no token CRLs, and it's been more than one minute
           since the last fetch
-       5) cache contains token CRLs, and it's been more than 10 minutes since
+       4) cache contains token CRLs, and it's been more than 10 minutes since
           the last fetch
     */
     forcedrefresh = cache->refresh;
@@ -1770,12 +1771,10 @@ static SECStatus DPCache_GetUpToDate(CRLDPCache* cache, CERTCertificate*
     if (PR_TRUE != forcedrefresh && 
         (!(cache->invalid & CRL_CACHE_LAST_FETCH_FAILED)))
     {
-        now = PR_Now();
+        now = PR_IntervalNow();
         hastokenCRLs = DPCache_HasTokenCRLs(cache);
     }
-    if ( (0 == lastfetch) ||
-
-         (PR_TRUE == forcedrefresh) ||
+    if ( (PR_TRUE == forcedrefresh) ||
 
          (cache->invalid & CRL_CACHE_LAST_FETCH_FAILED) ||
 
@@ -1800,7 +1799,7 @@ static SECStatus DPCache_GetUpToDate(CRLDPCache* cache, CERTCertificate*
                 cache->refresh = PR_FALSE; /* clear refresh state */
             }
             dirty = PR_TRUE;
-            cache->lastfetch = PR_Now();
+            cache->lastfetch = PR_IntervalNow();
         }
         DPCache_UnlockWrite();
     }
@@ -1811,14 +1810,14 @@ static SECStatus DPCache_GetUpToDate(CRLDPCache* cache, CERTCertificate*
        2) every minute */
     if (( PR_TRUE != dirty) && (!now) )
     {
-        now = PR_Now();
+        now = PR_IntervalNow();
     }
     if ( (PR_TRUE == dirty) ||
          ( (now - cache->lastcheck > CRLCache_ExistenceCheck_Interval) ||
            (now < cache->lastcheck)) )
     {
         PRBool mustunlock = PR_FALSE;
-        PRTime lastcheck = cache->lastcheck;
+        PRIntervalTime lastcheck = cache->lastcheck;
         /* check if all CRLs still exist */
         for (i = 0; (i < cache->ncrls) ; i++)
         {
@@ -1851,7 +1850,7 @@ static SECStatus DPCache_GetUpToDate(CRLDPCache* cache, CERTCertificate*
         }
         if (PR_TRUE == mustunlock)
         {
-            cache->lastcheck = PR_Now();
+            cache->lastcheck = PR_IntervalNow();
             DPCache_UnlockWrite();
             mustunlock = PR_FALSE;
         }
@@ -2998,6 +2997,4 @@ static SECStatus CachedCrl_Compare(CachedCrl* a, CachedCrl* b, PRBool* isDupe,
     }
     return SECSuccess;
 }
-
-
 

@@ -201,12 +201,12 @@ readCertFile(const char * fileName, PRBool isAscii)
     if (cc < 0)
     	return cert;
     if (!remaining || cc > 0) { /* file was too big. */
-	fprintf(stderr, "cert file %s was too big.\n", fileName);
+	fprintf(stderr, "cert file %s was too big.\n");
 	return cert;
     }
     total = pb - certBuf;
     if (!total) { /* file was empty */
-	fprintf(stderr, "cert file %s was empty.\n", fileName);
+	fprintf(stderr, "cert file %s was empty.\n");
 	return cert;
     }
     if (isAscii) {

@@ -110,15 +110,13 @@ GetGeneralName (PRArenaPool *arena)
 	    PORT_SetError(SEC_ERROR_INPUT_LEN);
             GEN_BREAK (SECFailure);
         }
-        /*
-         * Should use ZAlloc instead of Alloc to avoid problem with garbage
-         * initialized pointers in CERT_CopyName
-         */
 	if (intValue >= certOtherName || intValue <= certRegisterID) {
 	    if (namesList == NULL) {
-		namesList = current = tail = PORT_ArenaZNew(arena, CERTGeneralName);
+		namesList = current = tail = (CERTGeneralName *) PORT_ArenaAlloc 
+		                                  (arena, sizeof (CERTGeneralName));
 	    } else {
-		current = PORT_ArenaZNew(arena, CERTGeneralName);
+		current = (CERTGeneralName *) PORT_ArenaAlloc(arena, 
+							      sizeof (CERTGeneralName));
 	    }
 	    if (current == NULL) {
 		GEN_BREAK (SECFailure);
@@ -358,6 +356,53 @@ AddCert(PK11SlotInfo *slot, CERTCertDBHandle *handle, char *name, char *trusts,
     return rv;
 }
 
+/* This function belongs in libNSS somewhere. */
+static SECOidTag
+getSignatureOidTag(KeyType keyType, SECOidTag hashAlgTag)
+{
+    SECOidTag sigTag = SEC_OID_UNKNOWN;
+
+    switch (keyType) {
+    case rsaKey:
+	switch (hashAlgTag) {
+	case SEC_OID_MD2:
+	    sigTag = SEC_OID_PKCS1_MD2_WITH_RSA_ENCRYPTION;	break;
+	case SEC_OID_UNKNOWN:	/* default for RSA if not specified */
+	case SEC_OID_MD5:
+	    sigTag = SEC_OID_PKCS1_MD5_WITH_RSA_ENCRYPTION;	break;
+	case SEC_OID_SHA1:
+	    sigTag = SEC_OID_PKCS1_SHA1_WITH_RSA_ENCRYPTION;	break;
+	case SEC_OID_SHA256:
+	    sigTag = SEC_OID_PKCS1_SHA256_WITH_RSA_ENCRYPTION;	break;
+	case SEC_OID_SHA384:
+	    sigTag = SEC_OID_PKCS1_SHA384_WITH_RSA_ENCRYPTION;	break;
+	case SEC_OID_SHA512:
+	    sigTag = SEC_OID_PKCS1_SHA512_WITH_RSA_ENCRYPTION;	break;
+	default:
+	    break;
+	}
+	break;
+    case dsaKey:
+	switch (hashAlgTag) {
+	case SEC_OID_UNKNOWN:	/* default for DSA if not specified */
+	case SEC_OID_SHA1:
+	    sigTag = SEC_OID_ANSIX9_DSA_SIGNATURE_WITH_SHA1_DIGEST; break;
+	default:
+	    break;
+	}
+	break;
+#ifdef NSS_ENABLE_ECC
+    case ecKey:
+        /* XXX For now only ECDSA with SHA1 is supported */
+        sigTag = SEC_OID_ANSIX962_ECDSA_SIGNATURE_WITH_SHA1_DIGEST;
+	break;
+#endif /* NSS_ENABLE_ECC */
+    default:
+    	break;
+    }
+    return sigTag;
+}
+
 static SECStatus
 AddExtensions(void *, const char *, const char *, PRBool, PRBool, PRBool, PRBool,
               PRBool, PRBool);
@@ -427,7 +472,7 @@ CertReq(SECKEYPrivateKey *privk, SECKEYPublicKey *pubk, KeyType keyType,
     }
 
     /* Sign the request */
-    signAlgTag = SEC_GetSignatureAlgorithmOidTag(keyType, hashAlgTag);
+    signAlgTag = getSignatureOidTag(keyType, hashAlgTag);
     if (signAlgTag == SEC_OID_UNKNOWN) {
 	SECU_PrintError(progName, "unknown Key or Hash type");
 	return SECFailure;
@@ -1754,6 +1799,36 @@ AddDNSSubjectAlt(PRArenaPool *arena, CERTGeneralName **existingListp,
 }
 
 
+typedef SECStatus (* EXTEN_VALUE_ENCODER)
+		(PRArenaPool *extHandle, void *value, SECItem *encodedValue);
+
+static SECStatus 
+EncodeAndAddExtensionValue(
+	PRArenaPool *	arena, 
+	void *		extHandle, 
+	void *		value, 
+	PRBool 		criticality,
+	int 		extenType, 
+	EXTEN_VALUE_ENCODER EncodeValueFn)
+{
+    SECItem encodedValue;
+    SECStatus rv;
+	
+
+    encodedValue.data = NULL;
+    encodedValue.len = 0;
+    do {
+	rv = (*EncodeValueFn)(arena, value, &encodedValue);
+	if (rv != SECSuccess)
+	break;
+
+	rv = CERT_AddExtension
+	     (extHandle, extenType, &encodedValue, criticality,PR_TRUE);
+    } while (0);
+	
+    return (rv);
+}
+
 static SECStatus 
 AddBasicConstraint(void *extHandle)
 {
@@ -1823,7 +1898,7 @@ SignCert(CERTCertDBHandle *handle, CERTCertificate *cert, PRBool selfsign,
 	
     arena = cert->arena;
 
-    algID = SEC_GetSignatureAlgorithmOidTag(privKey->keyType, hashAlgTag);
+    algID = getSignatureOidTag(privKey->keyType, hashAlgTag);
     if (algID == SEC_OID_UNKNOWN) {
 	fprintf(stderr, "Unknown key or hash type for issuer.");
 	goto done;
@@ -1908,11 +1983,11 @@ AddAuthKeyID (void *extHandle)
 	puts ("Is this a critical extension [y/n]? ");
 	gets (buffer);	
 
-	rv = SECU_EncodeAndAddExtensionValue
+	rv = EncodeAndAddExtensionValue
 	    (arena, extHandle, authKeyID,
 	     (buffer[0] == 'y' || buffer[0] == 'Y') ? PR_TRUE : PR_FALSE,
 	     SEC_OID_X509_AUTH_KEY_ID, 
-	     (EXTEN_EXT_VALUE_ENCODER) CERT_EncodeAuthKeyID);
+	     (EXTEN_VALUE_ENCODER) CERT_EncodeAuthKeyID);
 	if (rv)
 	    break;
 	
@@ -2031,10 +2106,10 @@ AddCrlDistPoint(void *extHandle)
 	puts ("Is this a critical extension [y/n]? ");
 	gets (buffer);	
 	
-	rv = SECU_EncodeAndAddExtensionValue(arena, extHandle, crlDistPoints,
+	rv = EncodeAndAddExtensionValue(arena, extHandle, crlDistPoints,
 	      (buffer[0] == 'Y' || buffer[0] == 'y') ? PR_TRUE : PR_FALSE,
 	      SEC_OID_X509_CRL_DIST_POINTS,
-	      (EXTEN_EXT_VALUE_ENCODER)  CERT_EncodeCRLDistributionPoints);
+	      (EXTEN_VALUE_ENCODER)  CERT_EncodeCRLDistributionPoints);
     }
     if (arena)
 	PORT_FreeArena (arena, PR_FALSE);
@@ -2184,10 +2259,7 @@ CreateCert(
 	}
         
         if (certReq->attributes != NULL &&
-	    certReq->attributes[0] != NULL &&
-	    certReq->attributes[0]->attrType.data != NULL &&
-	    certReq->attributes[0]->attrType.len   > 0    &&
-            SECOID_FindOIDTag(&certReq->attributes[0]->attrType)
+            SECOID_FindOIDTag(&(*certReq->attributes)->attrType)
                 == SEC_OID_PKCS9_EXTENSION_REQUEST) {
             rv = CERT_GetCertificateRequestExtensions(certReq, &CRexts);
             if (rv != SECSuccess)
@@ -2442,8 +2514,21 @@ secuCommandFlag certutil_options[] =
     /*  -Z hash type  */
     if (certutil.options[opt_Hash].activated) {
 	char * arg = certutil.options[opt_Hash].arg;
-        hashAlgTag = SECU_StringToSignatureAlgTag(arg);
-        if (hashAlgTag == SEC_OID_UNKNOWN) {
+	if (!PL_strcmp(arg, "MD2")) {
+	    hashAlgTag = SEC_OID_MD2;
+	} else if (!PL_strcmp(arg, "MD4")) {
+	    hashAlgTag = SEC_OID_MD4;
+	} else if (!PL_strcmp(arg, "MD5")) {
+	    hashAlgTag = SEC_OID_MD5;
+	} else if (!PL_strcmp(arg, "SHA1")) {
+	    hashAlgTag = SEC_OID_SHA1;
+	} else if (!PL_strcmp(arg, "SHA256")) {
+	    hashAlgTag = SEC_OID_SHA256;
+	} else if (!PL_strcmp(arg, "SHA384")) {
+	    hashAlgTag = SEC_OID_SHA384;
+	} else if (!PL_strcmp(arg, "SHA512")) {
+	    hashAlgTag = SEC_OID_SHA512;
+	} else {
 	    PR_fprintf(PR_STDERR, "%s -Z:  %s is not a recognized type.\n",
 	               progName, arg);
 	    return 255;
