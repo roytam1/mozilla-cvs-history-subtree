@@ -42,7 +42,6 @@
 #include "nsIScrollableFrame.h"
 #include "nsIDeviceContext.h"
 #include "nsPresContext.h"
-#include "nsReflowPath.h"
 #include "nsIPresShell.h"
 
 nsresult
@@ -276,23 +275,8 @@ ViewportFrame::Reflow(nsPresContext*          aPresContext,
                "scrollbars in odd positions");
 #endif
 
-  nsReflowType reflowType = eReflowType_ContentChanged;
-  if (aReflowState.path) {
-    // XXXwaterson this is more restrictive than the previous code
-    // was: it insists that the UserDefined reflow be targeted at
-    // _this_ frame.
-    nsHTMLReflowCommand *command = aReflowState.path->mReflowCommand;
-    if (command)
-      command->GetType(reflowType);
-  }
-
-  if (reflowType != eReflowType_UserDefined &&
-      aReflowState.reason == eReflowReason_Incremental) {
-    // Incremental reflow
-     mFixedContainer.IncrementalReflow(this, aPresContext, reflowState,
-                                       reflowState.mComputedWidth,
-                                       reflowState.mComputedHeight);
-  }
+  // XXX this could be optimized
+  mFixedContainer.DirtyFramesDependingOnContainer(PR_TRUE, PR_TRUE);
 
   // Just reflow all the fixed-pos frames.
   rv = mFixedContainer.Reflow(this, aPresContext, reflowState,

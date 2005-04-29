@@ -120,6 +120,9 @@ public:
 
   NS_IMETHOD Destroy(nsPresContext* aPresContext);
 
+  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
+  virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
+
   NS_IMETHOD Reflow(nsPresContext*          aPresContext,
                     nsHTMLReflowMetrics&     aDesiredSize,
                     const nsHTMLReflowState& aReflowState,
@@ -332,18 +335,36 @@ nsSubDocumentFrame::GetType() const
   return nsLayoutAtoms::subDocumentFrame;
 }
 
+/* virtual */ nscoord
+nsSubDocumentFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
+{
+  return nsSubDocumentFrame::GetPrefWidth(aRenderingContext);
+}
+
+/* virtual */ nscoord
+nsSubDocumentFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
+{
+      // XUL frames don't have a default 300px width
+  if (mContent->IsContentOfType(nsIContent::eXUL) ||
+      // XXX Should we really treat percentages differently on iframes than
+      // other things?
+      GetStylePosition()->mWidth.GetUnit() == eStyleUnit_Percent)
+    return 0;
+  return NSIntPixelsToTwips(300, GetPresContext()->ScaledPixelsToTwips());
+}
+
 NS_IMETHODIMP
 nsSubDocumentFrame::Reflow(nsPresContext*          aPresContext,
                            nsHTMLReflowMetrics&     aDesiredSize,
                            const nsHTMLReflowState& aReflowState,
                            nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsSubDocumentFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsSubDocumentFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
   // printf("OuterFrame::Reflow %X (%d,%d) \n", this, aReflowState.availableWidth, aReflowState.availableHeight);
   NS_FRAME_TRACE(NS_FRAME_TRACE_CALLS,
-     ("enter nsSubDocumentFrame::Reflow: maxSize=%d,%d reason=%d",
-      aReflowState.availableWidth, aReflowState.availableHeight, aReflowState.reason));
+     ("enter nsSubDocumentFrame::Reflow: maxSize=%d,%d",
+      aReflowState.availableWidth, aReflowState.availableHeight));
 
   aStatus = NS_FRAME_COMPLETE;
 
@@ -369,33 +390,6 @@ nsSubDocumentFrame::Reflow(nsPresContext*          aPresContext,
     nsIViewManager* vm = mInnerView->GetViewManager();
     vm->MoveViewTo(mInnerView, offset.x, offset.y);
     vm->ResizeView(mInnerView, nsRect(0, 0, innerSize.width, innerSize.height), PR_TRUE);
-  }
-
-  if (aDesiredSize.mComputeMEW) {   
-    nscoord defaultAutoWidth = NSIntPixelsToTwips(300, aPresContext->ScaledPixelsToTwips());
-    if (mContent->IsContentOfType(nsIContent::eXUL)) {
-        // XUL frames don't have a default 300px width
-        defaultAutoWidth = 0;
-    }
-    nsStyleUnit widthUnit = GetStylePosition()->mWidth.GetUnit();
-    switch (widthUnit) {
-    case eStyleUnit_Percent:
-      // if our width is percentage, then we can shrink until
-      // there's nothing left but our borders
-      aDesiredSize.mMaxElementWidth = border.left + border.right;
-      break;
-    case eStyleUnit_Auto:
-      aDesiredSize.mMaxElementWidth = PR_MAX(PR_MIN(defaultAutoWidth,
-                                                    aReflowState.mComputedMaxWidth),
-                                             aReflowState.mComputedMinWidth) +
-                                      border.left + border.right;
-      break;
-    default:
-      // If our width is set by style to some fixed length,
-      // then our actual width is our minimum width
-      aDesiredSize.mMaxElementWidth = aDesiredSize.width;
-      break;
-    }
   }
 
   // Determine if we need to repaint our border, background or outline

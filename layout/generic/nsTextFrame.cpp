@@ -1474,11 +1474,8 @@ nsTextFrame::CharacterDataChanged(nsPresContext* aPresContext,
   }
 
   // Ask the parent frame to reflow me.  
-  nsIPresShell *shell = aPresContext->GetPresShell();
-  if (shell && mParent) {
-    mParent->ReflowDirtyChild(shell, targetTextFrame);
-  }
-  
+  aPresContext->GetPresShell()->FrameNeedsReflow(targetTextFrame,
+                                                 nsIPresShell::eStyleChange);
 
   return NS_OK;
 }

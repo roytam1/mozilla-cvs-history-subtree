@@ -38,7 +38,6 @@
 #include "nsCOMPtr.h"
 #include "nsHTMLParts.h"
 #include "nsPresContext.h"
-#include "nsReflowType.h"
 #include "nsIDeviceContext.h"
 #include "nsPageFrame.h"
 #include "nsViewsCID.h"
@@ -2122,7 +2121,6 @@ nsXULScrollFrame::Layout(nsBoxLayoutState& aState)
     // ok layout at the right size
     if (needsLayout) {
        nsBoxLayoutState resizeState(aState);
-       resizeState.SetLayoutReason(nsBoxLayoutState::Resize);
        PRBool setBack;
        AdjustReflowStateForPrintPreview(aState, setBack);
        LayoutScrollArea(resizeState, scrollAreaRect);
@@ -2169,7 +2167,6 @@ nsXULScrollFrame::Layout(nsBoxLayoutState& aState)
   // we only need to set the rect. The inner child stays the same size.
   if (needsLayout) {
      nsBoxLayoutState resizeState(aState);
-     resizeState.SetLayoutReason(nsBoxLayoutState::Resize);
      PRBool setBack;
      AdjustReflowStateForPrintPreview(aState, setBack);
      LayoutScrollArea(resizeState, scrollAreaRect);
@@ -2311,7 +2308,8 @@ nsGfxScrollFrameInner::LayoutScrollbars(nsBoxLayoutState& aState,
   // (if the reflow is initial or resize, the fixed children will
   // be re-laid out anyway)
   if (aOldScrollArea.Size() != aScrollArea.Size()
-      && nsBoxLayoutState::Dirty == aState.LayoutReason()) {
+#error "Is this now always true or always false?"
+      //&& nsBoxLayoutState::Dirty == aState.LayoutReason()) {
     nsIFrame* parentFrame = mOuter->GetParent();
     if (parentFrame) {
       if (parentFrame->GetType() == nsLayoutAtoms::viewportFrame) {

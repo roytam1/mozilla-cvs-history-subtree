@@ -46,7 +46,6 @@
 #include "nsTableFrame.h"
 #include "nsTableCellFrame.h"
 #include "nsIView.h"
-#include "nsReflowPath.h"
 #include "nsCSSRendering.h"
 #include "nsLayoutAtoms.h"
 #include "nsHTMLParts.h"

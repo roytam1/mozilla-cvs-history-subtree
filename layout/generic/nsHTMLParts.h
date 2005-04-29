@@ -39,8 +39,6 @@
 
 #include "nscore.h"
 #include "nsISupports.h"
-#include "nsReflowType.h"
-class nsHTMLReflowCommand;
 class nsIAtom;
 class nsINodeInfo;
 class nsIContent;

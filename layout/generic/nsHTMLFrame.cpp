@@ -39,7 +39,6 @@
 #include "nsHTMLContainerFrame.h"
 #include "nsCSSRendering.h"
 #include "nsIDocument.h"
-#include "nsReflowPath.h"
 #include "nsPresContext.h"
 #include "nsStyleContext.h"
 #include "nsViewsCID.h"
@@ -287,9 +286,7 @@ CanvasFrame::AppendFrames(nsIAtom*        aListName,
 #endif
     mFrames.AppendFrame(nsnull, aFrameList);
 
-    // Generate a reflow command to reflow the newly inserted frame
-    rv = GetPresContext()->PresShell()->
-          AppendReflowCommand(this, eReflowType_ReflowDirty, nsnull);
+    aPresShell.FrameNeedsReflow(this, nsIPresShell::eTreeChange);
   }
 
   return rv;
@@ -335,9 +332,7 @@ CanvasFrame::RemoveFrame(nsIAtom*        aListName,
     // Remove the frame and destroy it
     mFrames.DestroyFrame(GetPresContext(), aOldFrame);
 
-    // Generate a reflow command so we get reflowed
-    rv = GetPresContext()->PresShell()->
-          AppendReflowCommand(this, eReflowType_ReflowDirty, nsnull);
+    aPresShell.FrameNeedsReflow(this, nsIPresShell::eTreeChange);
   } else {
     rv = NS_ERROR_FAILURE;
   }

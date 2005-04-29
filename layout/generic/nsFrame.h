@@ -47,7 +47,6 @@
 #endif
 
 #include "nsIPresShell.h"
-#include "nsHTMLReflowCommand.h"
 #include "nsIFrameSelection.h"
 #include "nsHTMLReflowState.h"
 #include "nsHTMLReflowMetrics.h"
@@ -255,7 +254,7 @@ public:
   NS_IMETHOD  PeekOffsetParagraph(nsPresContext* aPresContext,
                                   nsPeekOffsetStruct *aPos);
   NS_IMETHOD  GetOffsets(PRInt32 &aStart, PRInt32 &aEnd) const;
-  NS_IMETHOD  ReflowDirtyChild(nsIPresShell* aPresShell, nsIFrame* aChild);
+  virtual PRBool ChildIsDirty(nsIFrame* aChild);
 
 #ifdef ACCESSIBILITY
   NS_IMETHOD  GetAccessible(nsIAccessible** aAccessible);
@@ -274,7 +273,10 @@ public:
   virtual PRBool IsEmpty();
   virtual PRBool IsSelfEmpty();
 
-  // nsIHTMLReflow
+  virtual void MarkIntrinsicWidthsDirty();
+  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
+  virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
+
   NS_IMETHOD  WillReflow(nsPresContext* aPresContext);
   NS_IMETHOD  Reflow(nsPresContext*          aPresContext,
                      nsHTMLReflowMetrics&     aDesiredSize,
@@ -331,7 +333,6 @@ public:
   NS_IMETHOD GetAscent(nsBoxLayoutState& aBoxLayoutState, nscoord& aAscent);
   NS_IMETHOD SetIncludeOverflow(PRBool aInclude);
   NS_IMETHOD GetOverflow(nsSize& aOverflow);
-  NS_IMETHOD NeedsRecalc();
 
   //--------------------------------------------------
   // Additional methods
@@ -513,8 +514,6 @@ protected:
 #ifdef DEBUG_LAYOUT
   virtual void GetBoxName(nsAutoString& aName);
 #endif
-  virtual PRBool HasStyleChange();
-  virtual void SetStyleChangeFlag(PRBool aDirty);
 
   virtual PRBool GetWasCollapsed(nsBoxLayoutState& aState);
   virtual void SetWasCollapsed(nsBoxLayoutState& aState, PRBool aWas);
@@ -533,19 +532,6 @@ private:
                      nscoord aWidth,
                      nscoord aHeight,
                      PRBool aMoveFrame = PR_TRUE);
-
-  void HandleIncrementalReflow(nsBoxLayoutState& aState, 
-                               const nsHTMLReflowState& aReflowState, 
-                               nsReflowReason& aReason,
-                               nsReflowPath** aReflowPath,
-                               PRBool& aRedrawNow,
-                               PRBool& aNeedReflow,
-                               PRBool& aRedrawAfterReflow,
-                               PRBool& aMoveFrame);
-
-  PRBool CanSetMaxElementWidth(nsBoxLayoutState& aState,
-                               nsReflowReason& aReason,
-                               nsReflowPath **aReflowPath);
 
   NS_IMETHODIMP RefreshSizeCache(nsBoxLayoutState& aState);
 

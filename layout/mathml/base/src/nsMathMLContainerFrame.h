@@ -147,10 +147,6 @@ public:
                nsIFrame*       aOldFrame,
                nsIFrame*       aNewFrame);
 
-  NS_IMETHODIMP
-  ReflowDirtyChild(nsIPresShell* aPresShell, 
-                   nsIFrame*     aChild);
-
   NS_IMETHOD
   Reflow(nsPresContext*          aPresContext,
          nsHTMLReflowMetrics&     aDesiredSize,

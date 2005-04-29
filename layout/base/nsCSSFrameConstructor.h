@@ -53,7 +53,6 @@ struct nsFrameItems;
 struct nsAbsoluteItems;
 struct nsTableCreator;
 class nsStyleContext;
-struct nsTableList;
 struct nsStyleContent;
 struct nsStyleDisplay;
 class nsIPresShell;
@@ -227,10 +226,12 @@ private:
                                     nsIFrame*                aParentFrame,
                                     nsIFrame**               aNewFrame);
 
+#ifdef CSS_TABLES
   nsresult ConstructDocElementTableFrame(nsIContent*            aDocElement,
                                          nsIFrame*              aParentFrame,
                                          nsIFrame**             aNewTableFrame,
                                          nsFrameConstructorState& aState);
+#endif
 
   nsresult CreateGeneratedFrameFor(nsIFrame*             aParentFrame,
                                    nsIContent*           aContent,
@@ -251,6 +252,7 @@ private:
                         nsIFrame*                      aParentFrame,
                         nsIFrame*                      aFrameList);
 
+#ifdef CSS_TABLES
   // BEGIN TABLE SECTION
   /**
    * ConstructTableFrame will construct the outer and inner table frames and
@@ -443,6 +445,7 @@ private:
   const nsStyleDisplay* GetDisplay(nsIFrame* aFrame);
 
   // END TABLE SECTION
+#endif
 
 protected:
   static nsresult CreatePlaceholderFrameFor(nsIPresShell*    aPresShell, 
@@ -461,6 +464,7 @@ private:
                                    nsIFrame*        aContentParent,
                                    nsIFrame*&       aFrame);
 
+#ifdef HTML_FORMS
   // @param OUT aNewFrame the new radio control frame
   nsresult ConstructRadioControlFrame(nsIFrame**         aNewFrame,
                                       nsIContent*        aContent,
@@ -494,6 +498,7 @@ private:
                                   nsFrameItems&            aFrameItems,
                                   const nsStyleDisplay*    aStyleDisplay,
                                   PRBool&                  aFrameHasBeenInitialized);
+#endif
 
   nsresult ConstructTextFrame(nsFrameConstructorState& aState,
                               nsIContent*              aContent,
@@ -635,6 +640,7 @@ private:
                             nsIFrame**       aFrame,
                             nsStyleContext*  aStyleContext);
 
+#ifdef HTML_FORMS
   nsresult AddDummyFrameToSelect(nsFrameConstructorState& aState,
                                  nsIFrame*                aListFrame,
                                  nsIFrame*                aParentFrame,
@@ -645,6 +651,7 @@ private:
   nsresult RemoveDummyFrameFromSelect(nsIContent*               aContainer,
                                       nsIContent*               aChild,
                                       nsIDOMHTMLSelectElement*  aSelectElement);
+#endif
 
   nsIFrame* GetFrameFor(nsIContent* aContent);
 
@@ -685,6 +692,7 @@ private:
   FinishBuildingScrollFrame(nsIFrame* aScrollFrame,
                             nsIFrame* aScrolledFrame);
 
+#ifdef HTML_FORMS
   // InitializeSelectFrame puts scrollFrame in aFrameItems if aBuildCombobox is false
   nsresult
   InitializeSelectFrame(nsFrameConstructorState& aState,
@@ -695,11 +703,13 @@ private:
                         nsStyleContext*          aStyleContext,
                         PRBool                   aBuildCombobox,
                         nsFrameItems&            aFrameItems);
+#endif
 
   nsresult MaybeRecreateFramesForContent(nsIContent*      aContent);
 
   nsresult RecreateFramesForContent(nsIContent*      aContent);
 
+#ifdef CSS_TABLES
   nsresult CreateContinuingOuterTableFrame(nsIPresShell*    aPresShell, 
                                            nsPresContext*  aPresContext,
                                            nsIFrame*        aFrame,
@@ -715,6 +725,7 @@ private:
                                       nsIContent*      aContent,
                                       nsStyleContext*  aStyleContext,
                                       nsIFrame**       aContinuingFrame);
+#endif
 
   //----------------------------------------
 

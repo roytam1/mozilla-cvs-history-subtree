@@ -78,23 +78,10 @@ enum eNormalLineHeightControl {
 static eNormalLineHeightControl sNormalLineHeightControl = eUninitialized;
 #endif
 
-#ifdef DEBUG
-const char*
-nsHTMLReflowState::ReasonToString(nsReflowReason aReason)
-{
-  static const char* reasons[] = {
-    "initial", "incremental", "resize", "style-change", "dirty"
-  };
-
-  return reasons[aReason];
-}
-#endif
-
 // Initialize a <b>root</b> reflow state with a rendering context to
 // use for measuring things.
-nsHTMLReflowState::nsHTMLReflowState(nsPresContext*      aPresContext,
+nsHTMLReflowState::nsHTMLReflowState(nsPresContext*       aPresContext,
                                      nsIFrame*            aFrame,
-                                     nsReflowReason       aReason,
                                      nsIRenderingContext* aRenderingContext,
                                      const nsSize&        aAvailableSpace)
   : mReflowDepth(0)
@@ -102,8 +89,6 @@ nsHTMLReflowState::nsHTMLReflowState(nsPresContext*      aPresContext,
   NS_PRECONDITION(nsnull != aRenderingContext, "no rendering context");
   parentReflowState = nsnull;
   frame = aFrame;
-  reason = aReason;
-  path = nsnull;
   availableWidth = aAvailableSpace.width;
   availableHeight = aAvailableSpace.height;
   rendContext = aRenderingContext;
@@ -121,40 +106,6 @@ nsHTMLReflowState::nsHTMLReflowState(nsPresContext*      aPresContext,
   mFlags.mVisualBidiFormControl = IsBidiFormControl(aPresContext);
   mRightEdge = NS_UNCONSTRAINEDSIZE;
 #endif
-}
-
-// Initialize a <b>root</b> reflow state for an <b>incremental</b>
-// reflow.
-nsHTMLReflowState::nsHTMLReflowState(nsPresContext*      aPresContext,
-                                     nsIFrame*            aFrame,
-                                     nsReflowPath*        aReflowPath,
-                                     nsIRenderingContext* aRenderingContext,
-                                     const nsSize&        aAvailableSpace)
-  : mReflowDepth(0)
-{
-  NS_PRECONDITION(nsnull != aRenderingContext, "no rendering context");  
-
-  reason = eReflowReason_Incremental;
-  path = aReflowPath;
-  parentReflowState = nsnull;
-  frame = aFrame;
-  availableWidth = aAvailableSpace.width;
-  availableHeight = aAvailableSpace.height;
-  rendContext = aRenderingContext;
-  mSpaceManager = nsnull;
-  mLineLayout = nsnull;
-  mFlags.mSpecialHeightReflow = PR_FALSE;
-  mFlags.mIsTopOfPage = PR_FALSE;
-  mFlags.mNextInFlowUntouched = PR_FALSE;
-  mFlags.mHasClearance = PR_FALSE;
-  mDiscoveredClearance = nsnull;
-  mPercentHeightObserver = nsnull;
-  mPercentHeightReflowInitiator = nsnull;
-  Init(aPresContext);
-#ifdef IBMBIDI
-  mFlags.mVisualBidiFormControl = IsBidiFormControl(aPresContext);
-  mRightEdge = NS_UNCONSTRAINEDSIZE;
-#endif // IBMBIDI
 }
 
 static PRBool CheckNextInFlowParenthood(nsIFrame* aFrame, nsIFrame* aParent)
@@ -167,27 +118,22 @@ static PRBool CheckNextInFlowParenthood(nsIFrame* aFrame, nsIFrame* aParent)
 // Initialize a reflow state for a child frames reflow. Some state
 // is copied from the parent reflow state; the remaining state is
 // computed.
-nsHTMLReflowState::nsHTMLReflowState(nsPresContext*          aPresContext,
+nsHTMLReflowState::nsHTMLReflowState(nsPresContext*           aPresContext,
                                      const nsHTMLReflowState& aParentReflowState,
                                      nsIFrame*                aFrame,
                                      const nsSize&            aAvailableSpace,
-                                     nsReflowReason           aReason,
+                                     nscoord                  aContainingBlockWidth,
+                                     nscoord                  aContainingBlockHeight,
                                      PRBool                   aInit)
   : mReflowDepth(aParentReflowState.mReflowDepth + 1),
     mFlags(aParentReflowState.mFlags)
 {
   parentReflowState = &aParentReflowState;
   frame = aFrame;
-  reason = aReason;
-  if (reason == eReflowReason_Incremental) {
-    // If the child frame isn't along the reflow path, then convert
-    // the incremental reflow to a dirty reflow.
-    path = aParentReflowState.path->GetSubtreeFor(aFrame);
-    if (! path)
-      reason = eReflowReason_Dirty;
-  }
-  else
-    path = nsnull;
+
+  // If the parent is dirty, then the child is as well.
+  frame->AddStateBits(parentReflowState->frame->GetStateBits() &
+                      NS_FRAME_IS_DIRTY);
 
   availableWidth = aAvailableSpace.width;
   availableHeight = aAvailableSpace.height;
@@ -206,108 +152,12 @@ nsHTMLReflowState::nsHTMLReflowState(nsPresContext*          aPresContext,
   mPercentHeightReflowInitiator = aParentReflowState.mPercentHeightReflowInitiator;
 
   if (aInit) {
-    Init(aPresContext);
+    Init(aPresContext, aContainingBlockWidth, aContainingBlockHeight);
   }
 
 #ifdef IBMBIDI
   mFlags.mVisualBidiFormControl = (aParentReflowState.mFlags.mVisualBidiFormControl) ?
                                   PR_TRUE : IsBidiFormControl(aPresContext);
-  mRightEdge = aParentReflowState.mRightEdge;
-#endif // IBMBIDI
-}
-
-// Same as the previous except that the reason is taken from the
-// parent's reflow state.
-nsHTMLReflowState::nsHTMLReflowState(nsPresContext*          aPresContext,
-                                     const nsHTMLReflowState& aParentReflowState,
-                                     nsIFrame*                aFrame,
-                                     const nsSize&            aAvailableSpace)
-  : mReflowDepth(aParentReflowState.mReflowDepth + 1),
-    mFlags(aParentReflowState.mFlags)
-{
-  parentReflowState = &aParentReflowState;
-  frame = aFrame;
-  reason = aParentReflowState.reason;
-  if (reason == eReflowReason_Incremental) {
-    // If the child frame isn't along the reflow path, then convert
-    // the incremental reflow to a dirty reflow.
-    path = aParentReflowState.path->GetSubtreeFor(aFrame);
-    if (! path)
-      reason = eReflowReason_Dirty;
-  }
-  else
-    path = nsnull;
-
-  availableWidth = aAvailableSpace.width;
-  availableHeight = aAvailableSpace.height;
-
-  rendContext = aParentReflowState.rendContext;
-  mSpaceManager = aParentReflowState.mSpaceManager;
-  mLineLayout = aParentReflowState.mLineLayout;
-  mFlags.mIsTopOfPage = aParentReflowState.mFlags.mIsTopOfPage;
-  mFlags.mNextInFlowUntouched = aParentReflowState.mFlags.mNextInFlowUntouched &&
-    CheckNextInFlowParenthood(aFrame, aParentReflowState.frame);
-  mFlags.mHasClearance = PR_FALSE;
-  mDiscoveredClearance = nsnull;
-  mPercentHeightObserver = (aParentReflowState.mPercentHeightObserver && 
-                            aParentReflowState.mPercentHeightObserver->NeedsToObserve(*this)) 
-                           ? aParentReflowState.mPercentHeightObserver : nsnull;
-  mPercentHeightReflowInitiator = aParentReflowState.mPercentHeightReflowInitiator;
-
-  Init(aPresContext);
-
-#ifdef IBMBIDI
-  mFlags.mVisualBidiFormControl = (aParentReflowState.mFlags.mVisualBidiFormControl) ?
-                                   PR_TRUE : IsBidiFormControl(aPresContext);
-  mRightEdge = aParentReflowState.mRightEdge;
-#endif // IBMBIDI
-}
-
-// Version that species the containing block width and height
-nsHTMLReflowState::nsHTMLReflowState(nsPresContext*          aPresContext,
-                                     const nsHTMLReflowState& aParentReflowState,
-                                     nsIFrame*                aFrame,
-                                     const nsSize&            aAvailableSpace,
-                                     nscoord                  aContainingBlockWidth,
-                                     nscoord                  aContainingBlockHeight,
-                                     nsReflowReason           aReason)
-  : mReflowDepth(aParentReflowState.mReflowDepth + 1),
-    mFlags(aParentReflowState.mFlags)
-{
-  parentReflowState = &aParentReflowState;
-  frame = aFrame;
-  reason = aReason;
-  if (reason == eReflowReason_Incremental) {
-    // If the child frame isn't along the reflow path, then convert
-    // the incremental reflow to a dirty reflow.
-    path = aParentReflowState.path->GetSubtreeFor(aFrame);
-    if (! path)
-      reason = eReflowReason_Dirty;
-  }
-  else
-    path = nsnull;
-
-  availableWidth = aAvailableSpace.width;
-  availableHeight = aAvailableSpace.height;
-
-  rendContext = aParentReflowState.rendContext;
-  mSpaceManager = aParentReflowState.mSpaceManager;
-  mLineLayout = aParentReflowState.mLineLayout;
-  mFlags.mIsTopOfPage = aParentReflowState.mFlags.mIsTopOfPage;
-  mFlags.mNextInFlowUntouched = aParentReflowState.mFlags.mNextInFlowUntouched &&
-    CheckNextInFlowParenthood(aFrame, aParentReflowState.frame);
-  mFlags.mHasClearance = PR_FALSE;
-  mDiscoveredClearance = nsnull;
-  mPercentHeightObserver = (aParentReflowState.mPercentHeightObserver && 
-                            aParentReflowState.mPercentHeightObserver->NeedsToObserve(*this)) 
-                           ? aParentReflowState.mPercentHeightObserver : nsnull;
-  mPercentHeightReflowInitiator = aParentReflowState.mPercentHeightReflowInitiator;
-
-  Init(aPresContext, aContainingBlockWidth, aContainingBlockHeight);
-
-#ifdef IBMBIDI
-  mFlags.mVisualBidiFormControl = (aParentReflowState.mFlags.mVisualBidiFormControl) ?
-                                   PR_TRUE : IsBidiFormControl(aPresContext);
   mRightEdge = aParentReflowState.mRightEdge;
 #endif // IBMBIDI
 }
@@ -689,6 +539,7 @@ nsHTMLReflowState::CalculateHorizBorderPaddingMargin(nscoord aContainingBlockWid
 
     // We have to compute the left and right values
     if (eStyleUnit_Auto == mStyleMargin->mMargin.GetLeftUnit()) {
+      // XXX FIXME (or does CalculateBlockSideMargins do this?)
       margin.left = 0;  // just ignore
     } else {
       ComputeHorizontalValue(aContainingBlockWidth,
@@ -697,6 +548,7 @@ nsHTMLReflowState::CalculateHorizBorderPaddingMargin(nscoord aContainingBlockWid
                              margin.left);
     }
     if (eStyleUnit_Auto == mStyleMargin->mMargin.GetRightUnit()) {
+      // XXX FIXME (or does CalculateBlockSideMargins do this?)
       margin.right = 0;  // just ignore
     } else {
       ComputeHorizontalValue(aContainingBlockWidth,
@@ -1108,13 +960,27 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
     // At this point we know that at least one of 'left', 'width', and 'right'
     // is 'auto', but not all three. Examine the various combinations
     if (widthIsAuto) {
+      nscoord availWidth = containingBlockWidth - mComputedOffsets.left -
+          mComputedMargin.left - mComputedBorderPadding.left -
+          mComputedBorderPadding.right -
+          mComputedMargin.right - mComputedOffsets.right;
+      if (availWidth < 0)
+        availWidth = 0;
+
       if (leftIsAuto || rightIsAuto) {
         if (NS_FRAME_IS_REPLACED(mFrameType)) {
           // For a replaced element we use the intrinsic size
           mComputedWidth = NS_INTRINSICSIZE;
         } else {
           // The width is shrink-to-fit
-          mComputedWidth = NS_SHRINKWRAPWIDTH;
+          nscoord prefWidth = frame->GetPrefWidth(rendContext);
+          if (prefWidth < availWidth) {
+            mComputedWidth = prefWidth;
+          } else {
+            nscoord minWidth = frame->GetMinWidth(rendContext);
+            mComputedWidth = PR_MAX(minWidth, availWidth);
+          }
+          AdjustComputedWidth(PR_FALSE);
         }
 
         if (leftIsAuto) {
@@ -1125,15 +991,7 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
 
       } else {
         // Only 'width' is 'auto' so just solve for 'width'
-        PRInt32 autoWidth = containingBlockWidth - mComputedOffsets.left -
-          mComputedMargin.left - mComputedBorderPadding.left -
-          mComputedBorderPadding.right -
-          mComputedMargin.right - mComputedOffsets.right;
-
-        if (autoWidth < 0) {
-          autoWidth = 0;
-        }
-        mComputedWidth = autoWidth;
+        mComputedWidth = availWidth;
 
         AdjustComputedWidth(PR_FALSE);
 
@@ -1814,48 +1672,29 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
     } else if (NS_CSS_FRAME_TYPE_FLOATING == mFrameType) {
       // Floating non-replaced element. First calculate the computed width
       if (eStyleUnit_Auto == widthUnit) {
-        if ((NS_UNCONSTRAINEDSIZE == aContainingBlockWidth) &&
-            (eStyleUnit_Percent == mStylePosition->mWidth.GetUnit())) {
-          // The element has a percentage width, but since the containing
-          // block width is unconstrained we set 'widthUnit' to 'auto'
-          // above. However, we want the element to be unconstrained, too
-          mComputedWidth = NS_UNCONSTRAINEDSIZE;
-
-        } else if (NS_STYLE_DISPLAY_TABLE == mStyleDisplay->mDisplay) {
-          // It's an outer table because an inner table is not positioned
-          // shrink wrap its width since the outer table is anonymous
-          mComputedWidth = NS_SHRINKWRAPWIDTH;
-
+        nscoord availWidth = ((eCompatibility_NavQuirks == aPresContext->CompatibilityMode())
+                               ? availableWidth
+                               : aContainingBlockWidth) - 
+                             mComputedMargin.left -
+                             mComputedBorderPadding.left -
+                             mComputedBorderPadding.right -
+                             mComputedMargin.right;
+        if (availWidth < 0)
+          availWidth = 0;
+        nscoord prefWidth = frame->GetPrefWidth(rendContext);
+        if (prefWidth < availWidth) {
+          mComputedWidth = prefWidth;
         } else {
-          NS_ASSERTION(eStyleUnit_Auto == mStylePosition->mWidth.GetUnit(),
-                       "How did we get here?");
-          // The CSS2 spec says the computed width should be 0; however, that's
-          // not what Nav and IE do and even the spec doesn't really want that
-          // to happen.
-          //
-          // Instead, have the element shrink wrap its width
-          mComputedWidth = NS_SHRINKWRAPWIDTH;
-
-          // Limit the width to the available width.  This factors in
-          // other floats that impact this float.
-          // XXX It's possible that this should be quirks-only.  Probable, in fact.
-          nscoord widthFromCB = availableWidth;
-          if (NS_UNCONSTRAINEDSIZE != widthFromCB) {
-            widthFromCB -= mComputedBorderPadding.left + mComputedBorderPadding.right +
-                           mComputedMargin.left + mComputedMargin.right;
-          }
-          if (mComputedMaxWidth > widthFromCB) {
-            mComputedMaxWidth = widthFromCB;
-          }
+          nscoord minWidth = frame->GetMinWidth(rendContext);
+          mComputedWidth = PR_MAX(minWidth, availWidth);
         }
-
       } else {
         ComputeHorizontalValue(aContainingBlockWidth, widthUnit,
                                mStylePosition->mWidth, mComputedWidth);
       }
 
       // Take into account minimum and maximum sizes
-      AdjustComputedWidth(PR_TRUE);
+      AdjustComputedWidth(eStyleUnit_Auto != widthUnit);
 
       // Now calculate the computed height
       if (eStyleUnit_Auto == heightUnit) {
@@ -1990,9 +1829,11 @@ nsHTMLReflowState::ComputeBlockBoxData(nsPresContext* aPresContext,
                    (nsLayoutAtoms::tableCaptionFrame == fType)) {
           mComputedWidth = NS_SHRINKWRAPWIDTH;
           if (eStyleUnit_Auto == mStyleMargin->mMargin.GetLeftUnit()) {
+            // XXX FIXME (or does CalculateBlockSideMargins do this?)
             mComputedMargin.left = NS_AUTOMARGIN;
           }
           if (eStyleUnit_Auto == mStyleMargin->mMargin.GetRightUnit()) {
+            // XXX FIXME (or does CalculateBlockSideMargins do this?)
             mComputedMargin.right = NS_AUTOMARGIN;
           }
         } else {

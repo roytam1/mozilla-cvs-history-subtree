@@ -53,7 +53,6 @@
 #include "nsISVGValue.h"
 #include "nsISVGValueObserver.h"
 #include "nsHTMLParts.h"
-#include "nsReflowPath.h"
 #include "nsISVGRenderer.h"
 #include "nsISVGRendererRegion.h"
 #include "nsIServiceManager.h"
@@ -1186,9 +1185,7 @@ void nsSVGOuterSVGFrame::InitiateReflow()
 {
   mNeedsReflow = PR_FALSE;
   
-  // Generate a reflow command to reflow ourselves
-  nsIPresShell* presShell = GetPresContext()->PresShell();
-  presShell->AppendReflowCommand(this, eReflowType_ReflowDirty, nsnull);
+  mPresShell->FrameNeedsReflow(this, nsIPresShell::eStyleChange);
   // XXXbz why is this synchronously flushing reflows, exactly?  If it
   // needs to, why is it not using the presshell's reflow batching
   // instead of hacking its own?

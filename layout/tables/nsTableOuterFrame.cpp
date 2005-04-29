@@ -37,7 +37,6 @@
  * ***** END LICENSE BLOCK ***** */
 #include "nsTableOuterFrame.h"
 #include "nsTableFrame.h"
-#include "nsHTMLReflowCommand.h"
 #include "nsStyleContext.h"
 #include "nsStyleConsts.h"
 #include "nsPresContext.h"
@@ -234,11 +233,9 @@ nsTableOuterFrame::AppendFrames(nsIAtom*        aListName,
       // Insert the caption frame into the child list
       mCaptionFrame = aFrameList;
 
-      // Reflow the new caption frame. It's already marked dirty, so generate a reflow
-      // command that tells us to reflow our dirty child frames
-      rv = GetPresContext()->
-          PresShell()->AppendReflowCommand(this, eReflowType_ReflowDirty,
-                                           nsnull);
+      // Reflow the new caption frame. It's already marked dirty, so
+      // just tell the pres shell.
+      aPresShell.FrameNeedsReflow(mCaptionFrame, nsIPresShell::eStyleChange);
     }
   }
   else {
@@ -286,9 +283,8 @@ nsTableOuterFrame::RemoveFrame(nsIAtom*        aListName,
   }
 
   // Generate a reflow command so we get reflowed
-  GetPresContext()->PresShell()->AppendReflowCommand(this,
-                                                     eReflowType_ReflowDirty,
-                                                     nsnull);
+  AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN); // is this right?
+  aPresShell.FrameNeedsReflow(this, nsIPresShell::eStyleChange);
 
   return NS_OK;
 }

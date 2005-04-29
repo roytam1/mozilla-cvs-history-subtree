@@ -42,7 +42,6 @@
 #include "nsHTMLParts.h"
 #include "nsAbsoluteContainingBlock.h"
 #include "nsLineBox.h"
-#include "nsReflowPath.h"
 #include "nsCSSPseudoElements.h"
 #include "nsStyleSet.h"
 
@@ -209,7 +208,7 @@ public:
   NS_IMETHOD HandleEvent(nsPresContext* aPresContext, 
                          nsGUIEvent*     aEvent,
                          nsEventStatus*  aEventStatus);
-  NS_IMETHOD ReflowDirtyChild(nsIPresShell* aPresShell, nsIFrame* aChild);
+  virtual PRBool ChildIsDirty(nsIFrame* aChild);
 
   NS_IMETHOD IsVisibleForPainting(nsPresContext *     aPresContext, 
                                   nsIRenderingContext& aRenderingContext,
@@ -219,7 +218,10 @@ public:
   virtual PRBool IsEmpty();
   virtual PRBool IsSelfEmpty();
 
-  // nsIHTMLReflow
+  virtual void MarkIntrinsicWidthsDirty();
+  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
+  virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
+
   NS_IMETHOD Reflow(nsPresContext*          aPresContext,
                     nsHTMLReflowMetrics&     aDesiredSize,
                     const nsHTMLReflowState& aReflowState,
@@ -341,6 +343,8 @@ protected:
     return 0 != (mState & NS_BLOCK_FRAME_HAS_OUTSIDE_BULLET);
   }
 
+  void CalcIntrinsicWidths(nsIRenderingContext* aRenderingContext);
+
   /** move the frames contained by aLine by aDY
     * if aLine is a block, it's child floats are added to the state manager
     */
@@ -394,49 +398,8 @@ protected:
   // Remove a float, abs, rel positioned frame from the appropriate block's list
   static void DoRemoveOutOfFlowFrame(nsIFrame* aFrame);
 
-  /** set up the conditions necessary for an initial reflow */
-  nsresult PrepareInitialReflow(nsBlockReflowState& aState);
-
-  /** set up the conditions necessary for an styleChanged reflow */
-  nsresult PrepareStyleChangedReflow(nsBlockReflowState& aState);
-
-  /** set up the conditions necessary for an incremental reflow.
-    * the primary task is to mark the minimumly sufficient lines dirty. 
-    */
-  nsresult PrepareChildIncrementalReflow(nsBlockReflowState& aState);
-
-  /**
-   * Retarget an inline incremental reflow from continuing frames that
-   * will be destroyed.
-   *
-   * @param aState |aState.mNextRCFrame| contains the next frame in
-   * the reflow path; this will be ``rewound'' to either the target
-   * frame's primary frame, or to the first continuation frame after a
-   * ``hard break''. In other words, it will be set to the closest
-   * continuation which will not be destroyed by the unconstrained
-   * reflow. The remaining frames in the reflow path for
-   * |aState.mReflowState.reflowCommand| will be altered similarly.
-   *
-   * @param aLine is initially the line box that contains the target
-   * frame. It will be ``rewound'' in lockstep with
-   * |aState.mNextRCFrame|.
-   *
-   * @param aPrevInFlow points to the target frame's prev-in-flow.
-   */
-  void RetargetInlineIncrementalReflow(nsReflowPath::iterator &aFrame,
-                                       line_iterator          &aLine,
-                                       nsIFrame               *aPrevInFlow);
-
-  /** set up the conditions necessary for an resize reflow
-    * the primary task is to mark the minimumly sufficient lines dirty. 
-    */
-  nsresult PrepareResizeReflow(nsBlockReflowState& aState);
-
-  /** reflow all lines that have been marked dirty.
-   * @param aTryPull set this to PR_TRUE if you want to try pulling content from
-   * our next in flow while there is room.
-   */
-  nsresult ReflowDirtyLines(nsBlockReflowState& aState, PRBool aTryPull);
+  /** reflow all lines that have been marked dirty */
+  nsresult ReflowDirtyLines(nsBlockReflowState& aState, PRBool* aALineWasDirty);
 
   //----------------------------------------
   // Methods for line reflow
@@ -446,31 +409,22 @@ protected:
    * @param aLine            the line to reflow.  can contain a single block frame
    *                         or contain 1 or more inline frames.
    * @param aKeepReflowGoing [OUT] indicates whether the caller should continue to reflow more lines
-   * @param aDamageDirtyArea if PR_TRUE, do extra work to mark the changed areas as damaged for painting
-   *                         this indicates that frames may have changed size, for example
    */
   nsresult ReflowLine(nsBlockReflowState& aState,
                       line_iterator aLine,
-                      PRBool* aKeepReflowGoing,
-                      PRBool aDamageDirtyArea = PR_FALSE);
+                      PRBool* aKeepReflowGoing);
 
   // Return PR_TRUE if aLine gets pushed.
   PRBool PlaceLine(nsBlockReflowState& aState,
                    nsLineLayout&       aLineLayout,
                    line_iterator       aLine,
-                   PRBool*             aKeepReflowGoing,
-                   PRBool              aUpdateMaximumWidth);
+                   PRBool*             aKeepReflowGoing);
 
   /**
    * Mark |aLine| dirty, and, if necessary because of possible
    * pull-up, mark the previous line dirty as well.
    */
   nsresult MarkLineDirty(line_iterator aLine);
-
-  // XXX blech
-  void PostPlaceLine(nsBlockReflowState& aState,
-                     nsLineBox* aLine,
-                     nscoord aMaxElementWidth);
 
   // XXX where to go
   PRBool ShouldJustifyLine(nsBlockReflowState& aState,
@@ -492,17 +446,13 @@ protected:
 
   nsresult ReflowInlineFrames(nsBlockReflowState& aState,
                               line_iterator aLine,
-                              PRBool* aKeepLineGoing,
-                              PRBool aDamageDirtyArea,
-                              PRBool aUpdateMaximumWidth = PR_FALSE);
+                              PRBool* aKeepLineGoing);
 
   nsresult DoReflowInlineFrames(nsBlockReflowState& aState,
                                 nsLineLayout& aLineLayout,
                                 line_iterator aLine,
                                 PRBool* aKeepReflowGoing,
-                                PRUint8* aLineReflowStatus,
-                                PRBool aUpdateMaximumWidth,
-                                PRBool aDamageDirtyArea);
+                                PRUint8* aLineReflowStatus);
 
   nsresult ReflowInlineFrame(nsBlockReflowState& aState,
                              nsLineLayout& aLineLayout,
@@ -539,7 +489,6 @@ protected:
 
   nsresult PullFrame(nsBlockReflowState& aState,
                      line_iterator aLine,
-                     PRBool     aDamageDeletedLine,
                      nsIFrame*& aFrameResult);
 
   PRBool PullFrameFrom(nsBlockReflowState& aState,
@@ -547,7 +496,6 @@ protected:
                        nsBlockFrame* aFromContainer,
                        PRBool aFromOverflowLine,
                        nsLineList::iterator aFromLine,
-                       PRBool aDamageDeletedLines,
                        nsIFrame*& aFrameResult);
 
   void PushLines(nsBlockReflowState& aState,
@@ -588,8 +536,6 @@ protected:
   PRBool RenumberListsFor(nsPresContext* aPresContext, nsIFrame* aKid, PRInt32* aOrdinal, PRInt32 aDepth);
 
   PRBool FrameStartsCounterScope(nsIFrame* aFrame);
-
-  nsresult UpdateBulletPosition(nsBlockReflowState& aState);
 
   void ReflowBullet(nsBlockReflowState& aState,
                     nsHTMLReflowMetrics& aMetrics);
@@ -641,6 +587,8 @@ protected:
 
   // Ascent of our first line to support 'vertical-align: baseline' in table-cells
   nscoord mAscent;
+
+  nscoord mMinWidth, mPrefWidth;
 
   nsLineList mLines;
 

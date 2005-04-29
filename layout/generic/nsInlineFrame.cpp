@@ -47,7 +47,6 @@
 #include "nsAbsoluteContainingBlock.h"
 #include "nsLayoutAtoms.h"
 #include "nsCSSAnonBoxes.h"
-#include "nsReflowPath.h"
 #include "nsAutoPtr.h"
 #include "nsFrameManager.h"
 #ifdef ACCESSIBILITY
@@ -195,7 +194,9 @@ nsInlineFrame::AppendFrames(nsIAtom*        aListName,
     mFrames.AppendFrames(this, aFrameList);
 
     // Ask the parent frame to reflow me.
-    ReflowDirtyChild(GetPresContext()->PresShell(), nsnull);
+    AddStateBits(NS_FRAME_IS_DIRTY);
+    GetPresContext()->PresShell()->
+      FrameNeedsReflow(this, nsIPresShell::eTreeChange);
   }
   return NS_OK;
 }
@@ -219,7 +220,9 @@ nsInlineFrame::InsertFrames(nsIAtom*        aListName,
     if (nsnull == aListName)
 #endif
     // Ask the parent frame to reflow me.
-    ReflowDirtyChild(GetPresContext()->PresShell(), nsnull);
+    AddStateBits(NS_FRAME_IS_DIRTY);
+    GetPresContext()->PresShell()->
+      FrameNeedsReflow(this, nsIPresShell::eTreeChange);
   }
   return NS_OK;
 }
@@ -271,7 +274,9 @@ nsInlineFrame::RemoveFrame(nsIAtom*        aListName,
 
     if (generateReflowCommand) {
       // Ask the parent frame to reflow me.
-      ReflowDirtyChild(GetPresContext()->PresShell(), nsnull);
+      AddStateBits(NS_FRAME_IS_DIRTY);
+      GetPresContext()->PresShell()->
+        FrameNeedsReflow(this, nsIPresShell::eTreeChange);
     }
   }
 
@@ -296,7 +301,9 @@ nsInlineFrame::ReplaceFrame(nsIAtom*        aListName,
     mFrames.ReplaceFrame(this, aOldFrame, aNewFrame, PR_TRUE);
   
   // Ask the parent frame to reflow me.
-  ReflowDirtyChild(GetPresContext()->PresShell(), nsnull);
+  AddStateBits(NS_FRAME_IS_DIRTY);
+  GetPresContext()->PresShell()->
+    FrameNeedsReflow(this, nsIPresShell::eTreeChange);
 
   return retval ? NS_OK : NS_ERROR_FAILURE;
 }
@@ -446,30 +453,6 @@ nsInlineFrame::CanContinueTextRun(PRBool& aContinueTextRun) const
 {
   // We can continue a text run through an inline frame
   aContinueTextRun = PR_TRUE;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsInlineFrame::ReflowDirtyChild(nsIPresShell* aPresShell, nsIFrame* aChild)
-{
-  // The inline container frame does not handle the reflow
-  // request.  It passes it up to its parent container.
-
-  // If you don't already have dirty children,
-  if (!(mState & NS_FRAME_HAS_DIRTY_CHILDREN)) {
-    if (mParent) {
-      // Record that you are dirty and have dirty children
-      mState |= NS_FRAME_IS_DIRTY;
-      mState |= NS_FRAME_HAS_DIRTY_CHILDREN; 
-
-      // Pass the reflow request up to the parent
-      mParent->ReflowDirtyChild(aPresShell, this);
-    }
-    else {
-      NS_ERROR("No parent to pass the reflow request up to.");
-    }
-  }
-
   return NS_OK;
 }
 
@@ -660,35 +643,6 @@ nsInlineFrame::ReflowFrames(nsPresContext* aPresContext,
   return rv;
 }
 
-static 
-void SetContainsPercentAwareChild(nsIFrame *aFrame)
-{
-  aFrame->AddStateBits(NS_INLINE_FRAME_CONTAINS_PERCENT_AWARE_CHILD);
-}
-
-static
-void MarkPercentAwareFrame(nsPresContext *aPresContext, 
-                           nsInlineFrame  *aInline,
-                           nsIFrame       *aFrame)
-{
-  if (aFrame->GetStateBits() & NS_FRAME_REPLACED_ELEMENT) 
-  { // aFrame is a replaced element, check it's style
-    if (nsLineLayout::IsPercentageAwareReplacedElement(aPresContext, aFrame)) {
-      SetContainsPercentAwareChild(aInline);
-    }
-  }
-  else
-  {
-    if (aFrame->GetFirstChild(nsnull))
-    { // aFrame is an inline container frame, check my frame state
-      if (aFrame->GetStateBits() & NS_INLINE_FRAME_CONTAINS_PERCENT_AWARE_CHILD) {
-        SetContainsPercentAwareChild(aInline); // if a child container is effected, so am I
-      }
-    }
-    // else frame is a leaf that we don't care about
-  }   
-}
-
 nsresult
 nsInlineFrame::ReflowInlineFrame(nsPresContext* aPresContext,
                                  const nsHTMLReflowState& aReflowState,
@@ -700,14 +654,6 @@ nsInlineFrame::ReflowInlineFrame(nsPresContext* aPresContext,
   PRBool reflowingFirstLetter = lineLayout->GetFirstLetterStyleOK();
   PRBool pushedFrame;
   nsresult rv = lineLayout->ReflowFrame(aFrame, aStatus, nsnull, pushedFrame);
-  /* This next block is for bug 28811
-     Test the child frame for %-awareness, 
-     and mark this frame with a bit if it is %-aware.
-     Don't bother if this frame is already marked
-  */
-  if (!(mState & NS_INLINE_FRAME_CONTAINS_PERCENT_AWARE_CHILD)) {  
-    MarkPercentAwareFrame(aPresContext, this, aFrame);
-  }
 
   if (NS_FAILED(rv)) {
     return rv;
@@ -1233,13 +1179,8 @@ nsPositionedInlineFrame::Reflow(nsPresContext*          aPresContext,
       (aReflowState.mComputedBorderPadding.top +
        aReflowState.mComputedBorderPadding.bottom);
 
-    // Do any incremental reflows ... would be nice to merge with
-    // the reflows below but that would be more work, and more risky
-    if (eReflowReason_Incremental == aReflowState.reason) {
-      mAbsoluteContainer.IncrementalReflow(this, aPresContext, aReflowState,
-                                           containingBlockWidth,
-                                           containingBlockHeight);
-    }
+    // XXX This could be optimized.
+    mAbsoluteContainer.DirtyFramesDependingOnContainer(PR_TRUE, PR_TRUE);
 
     // Factor the absolutely positioned child bounds into the overflow area
     // Don't include this frame's bounds, nor its inline descendants' bounds,

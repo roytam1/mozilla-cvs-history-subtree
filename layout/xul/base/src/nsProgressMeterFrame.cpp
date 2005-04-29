@@ -137,8 +137,10 @@ nsProgressMeterFrame::AttributeChanged(nsIContent* aChild,
     barChild->GetContent()->SetAttr(kNameSpaceID_None, nsXULAtoms::flex, leftFlex, PR_TRUE);
     remainderChild->GetContent()->SetAttr(kNameSpaceID_None, nsXULAtoms::flex, rightFlex, PR_TRUE);
 
-    nsBoxLayoutState state(GetPresContext());
-    MarkDirty(state);
+    AddStateBits(NS_FRAME_IS_DIRTY);
+    GetPresContext()->PresShell()->
+      FrameNeedsReflow(this, nsIPresShell::eTreeChange);
+
   }
   return NS_OK;
 }

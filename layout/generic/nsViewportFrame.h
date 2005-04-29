@@ -40,7 +40,6 @@
 #include "nsContainerFrame.h"
 #include "nsLayoutAtoms.h"
 #include "nsPresContext.h"
-#include "nsReflowPath.h"
 #include "nsIPresShell.h"
 #include "nsAbsoluteContainingBlock.h"
 

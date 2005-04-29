@@ -167,7 +167,7 @@ nsBoxFrame::nsBoxFrame(nsIPresShell* aPresShell, PRBool aIsRoot, nsIBoxLayout* a
 
   SetLayoutManager(layout);
 
-  NeedsRecalc();
+  MarkIntrinsicWidthsDirty();
 }
 
 nsBoxFrame::~nsBoxFrame()
@@ -669,31 +669,6 @@ nsBoxFrame::GetInitialAutoStretch(PRBool& aStretch)
   return PR_TRUE;
 }
 
-
-NS_IMETHODIMP
-nsBoxFrame::ReflowDirtyChild(nsIPresShell* aPresShell, nsIFrame* aChild)
-{
-   // if we receive a ReflowDirtyChild it is because there is an HTML frame 
-   // just inside us. So must find the adaptor that contains the child and
-   // tell it that things are dirty.
-   nsBoxLayoutState state(aPresShell->GetPresContext());
-
-   nsIBox* box = nsnull;
-   GetChildBox(&box);
-   while (box)
-   {
-     if (box == aChild) {
-       box->MarkDirty(state);
-       return RelayoutDirtyChild(state, box);
-     }
-
-     box->GetNextBox(&box);
-   }
-
-   NS_ERROR("Could not find an adaptor!");
-   return NS_OK;
-}
-
 NS_IMETHODIMP
 nsBoxFrame::DidReflow(nsPresContext*           aPresContext,
                       const nsHTMLReflowState*  aReflowState,
@@ -719,32 +694,26 @@ static void printSize(char * aDesc, nscoord aSize)
 }
 #endif
 
-/**
-  * Returns PR_TRUE when the reflow reason is "Initial" and doing Print Preview
-  *         when returning PR_FALSE aIsChrome's value is indeterminate
-  * aIsChrome - Returns PR_TRUE when document is chrome, otherwise PR_FALSE
-  */
-PRBool
-nsBoxFrame::IsInitialReflowForPrintPreview(nsBoxLayoutState& aState, 
-                                           PRBool& aIsChrome)
+/* virtual */ nscoord
+nsBoxFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
-  aIsChrome = PR_FALSE;
-  const nsHTMLReflowState* reflowState = aState.GetReflowState();
-  if (reflowState->reason == eReflowReason_Initial) {
-    // See if we are doing Print Preview
-    if (aState.PresContext()->Type() == nsPresContext::eContext_PrintPreview) {
-      // Now, get the current URI to see if we doing chrome
-      nsIPresShell *presShell = aState.PresShell();
-      if (!presShell) return PR_FALSE;
-      nsIDocument *doc = presShell->GetDocument();
-      if (!doc) return PR_FALSE;
-      nsIURI *uri = doc->GetDocumentURI();
-      if (!uri) return PR_FALSE;
-      uri->SchemeIs("chrome", &aIsChrome);
-      return PR_TRUE;
-    }
-  }
-  return PR_FALSE;
+  nsBoxLayoutState state(GetPresContext());
+  nsSize minSize(0,0);
+  // XXX should this really be doing the reverse of
+  // nsLayoutUtils::IntrinsicForContainer?
+  GetMinSize(state, minSize);
+  return minSize.width;
+}
+
+/* virtual */ nscoord
+nsBoxFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
+{
+  nsBoxLayoutState state(GetPresContext());
+  nsSize prefSize(0,0);
+  // XXX should this really be doing the reverse of
+  // nsLayoutUtils::IntrinsicForContainer?
+  GetPrefSize(state, prefSize);
+  return prefSize.width;
 }
 
 NS_IMETHODIMP
@@ -756,28 +725,14 @@ nsBoxFrame::Reflow(nsPresContext*          aPresContext,
   // If you make changes to this method, please keep nsLeafBoxFrame::Reflow
   // in sync, if the changes are applicable there.
 
-  DO_GLOBAL_REFLOW_COUNT("nsBoxFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsBoxFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
 
   NS_ASSERTION(aReflowState.mComputedWidth >=0 && aReflowState.mComputedHeight >= 0, "Computed Size < 0");
 
 #ifdef DO_NOISY_REFLOW
   printf("\n-------------Starting BoxFrame Reflow ----------------------------\n");
-  printf("%p ** nsBF::Reflow %d R: ", this, myCounter++);
-  switch (aReflowState.reason) {
-    case eReflowReason_Initial:
-      printf("Ini");break;
-    case eReflowReason_Incremental:
-      printf("Inc");break;
-    case eReflowReason_Resize:
-      printf("Rsz");break;
-    case eReflowReason_StyleChange:
-      printf("Sty");break;
-    case eReflowReason_Dirty:
-      printf("Drt ");
-      break;
-    default:printf("<unknown>%d", aReflowState.reason);break;
-  }
+  printf("%p ** nsBF::Reflow %d ", this, myCounter++);
   
   printSize("AW", aReflowState.availableWidth);
   printSize("AH", aReflowState.availableHeight);
@@ -793,9 +748,6 @@ nsBoxFrame::Reflow(nsPresContext*          aPresContext,
   // create the layout state
   nsBoxLayoutState state(aPresContext, aReflowState, aDesiredSize);
 
-  // coelesce reflows if we are root.
-  state.HandleReflow(this);
-  
   nsSize computedSize(aReflowState.mComputedWidth,aReflowState.mComputedHeight);
 
   nsMargin m;
@@ -856,15 +808,7 @@ nsBoxFrame::Reflow(nsPresContext*          aPresContext,
   // getting the ascent could be a lot of work. Don't get it if
   // we are the root. The viewport doesn't care about it.
   if (!(mState & NS_STATE_IS_ROOT)) {
-    // Only call GetAscent when not doing Initial reflow while in PP
-    // or when it is Initial reflow while in PP and a chrome doc
-    // If called again with initial reflow it crashes because the 
-    // frames are fully constructed (I think).
-    PRBool isChrome;
-    PRBool isInitialPP = IsInitialReflowForPrintPreview(state, isChrome);
-    if (!isInitialPP || (isInitialPP && isChrome)) {
-      GetAscent(state, ascent);
-    }
+    GetAscent(state, ascent);
   }
 
   aDesiredSize.width  = mRect.width;
@@ -879,24 +823,6 @@ nsBoxFrame::Reflow(nsPresContext*          aPresContext,
     aDesiredSize.mOverflowArea = *overflowArea;
   }
 
-  if(aDesiredSize.mFlags & NS_REFLOW_CALC_MAX_WIDTH) {
-    aDesiredSize.mMaximumWidth = prefSize.width;
-  }
-
-  // max sure the max element size reflects
-  // our min width
-  nscoord* maxElementWidth = state.GetMaxElementWidth();
-  if (maxElementWidth)
-  {
-     nsSize minSize(0,0);
-     GetMinSize(state,  minSize);
-       if (aReflowState.mStylePosition->mWidth.GetUnit() == eStyleUnit_Percent ||
-           (mRect.width > minSize.width &&
-           aReflowState.mComputedWidth == NS_INTRINSICSIZE))
-         *maxElementWidth = minSize.width;
-     else
-       *maxElementWidth = mRect.width;
-  }
 #ifdef DO_NOISY_REFLOW
   {
     printf("%p ** nsBF(done) W:%d H:%d  ", this, aDesiredSize.width, aDesiredSize.height);
@@ -1138,22 +1064,21 @@ nsBoxFrame::SetDebug(nsBoxLayoutState& aState, PRBool aDebug)
  
      SetDebugOnChildList(aState, mFirstChild, aDebug);
 
-     NeedsRecalc();
+    MarkIntrinsicWidthsDirty();
   }
 
   return NS_OK;
 }
 #endif
 
-NS_IMETHODIMP
-nsBoxFrame::NeedsRecalc()
+/* virtual */ void
+nsBoxFrame::MarkIntrinsicWidthsDirty()
 {
   SizeNeedsRecalc(mPrefSize);
   SizeNeedsRecalc(mMinSize);
   SizeNeedsRecalc(mMaxSize);
   CoordNeedsRecalc(mFlex);
   CoordNeedsRecalc(mAscent);
-  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -1175,8 +1100,9 @@ nsBoxFrame::RemoveFrame(nsIAtom*        aListName,
   aOldFrame->Destroy(presContext);
 
   // mark us dirty and generate a reflow command
-  MarkDirtyChildren(state);
-  MarkDirty(state);
+  mState |= NS_FRAME_HAS_DIRTY_CHILDREN;
+  GetPresContext()->PresShell()->
+    FrameNeedsReflow(this, nsIPresShell::eTreeChange);
   return NS_OK;
 }
 
@@ -1201,9 +1127,9 @@ nsBoxFrame::InsertFrames(nsIAtom*        aListName,
        SetDebugOnChildList(state, mFrames.FirstChild(), PR_TRUE);
 #endif
 
-   // mark us dirty and generate a reflow command
-   MarkDirtyChildren(state);
-   MarkDirty(state);
+   mState |= NS_FRAME_HAS_DIRTY_CHILDREN;
+   GetPresContext()->PresShell()->
+     FrameNeedsReflow(this, nsIPresShell::eTreeChange);
    return NS_OK;
 }
 
@@ -1228,8 +1154,9 @@ nsBoxFrame::AppendFrames(nsIAtom*        aListName,
        SetDebugOnChildList(state, mFrames.FirstChild(), PR_TRUE);
 #endif
 
-   MarkDirtyChildren(state);
-   MarkDirty(state);
+   mState |= NS_FRAME_HAS_DIRTY_CHILDREN;
+   GetPresContext()->PresShell()->
+     FrameNeedsReflow(this, nsIPresShell::eTreeChange);
    return NS_OK;
 }
 
@@ -1338,8 +1265,9 @@ nsBoxFrame::AttributeChanged(nsIContent* aChild,
       UpdateMouseThrough();
     }
 
-    nsBoxLayoutState state(GetPresContext());
-    MarkDirty(state);
+    mState |= NS_FRAME_IS_DIRTY;
+    GetPresContext()->PresShell()->
+      FrameNeedsReflow(this, nsIPresShell::eStyleChange);
   }
   else if (aAttribute == nsXULAtoms::ordinal) {
     nsBoxLayoutState state(GetPresContext()->PresShell());
@@ -1347,7 +1275,9 @@ nsBoxFrame::AttributeChanged(nsIContent* aChild,
     nsIBox* parent;
     GetParentBox(&parent);
     parent->RelayoutChildAtOrdinal(state, this);
-    parent->MarkDirty(state);
+    mState |= NS_FRAME_IS_DIRTY;
+    GetPresContext()->PresShell()->
+      FrameNeedsReflow(this, nsIPresShell::eStyleChange);
   }
   // If the accesskey changed, register for the new value
   // The old value has been unregistered in nsXULElement::SetAttr
@@ -1362,23 +1292,6 @@ nsBoxFrame::AttributeChanged(nsIContent* aChild,
 #ifdef DEBUG_COELESCED
 static PRInt32 StyleCoelesced = 0;
 #endif
-
-PRBool
-nsBoxFrame::HasStyleChange()
-{
-  return mState & NS_STATE_STYLE_CHANGE;
-}
-
-void
-nsBoxFrame::SetStyleChangeFlag(PRBool aDirty)
-{
-  nsBox::SetStyleChangeFlag(aDirty);
-
-  if (aDirty)
-     mState |= (NS_STATE_STYLE_CHANGE);
-  else 
-     mState &= ~NS_STATE_STYLE_CHANGE;
-}
 
 #ifdef DEBUG_LAYOUT
 void
@@ -1546,15 +1459,7 @@ nsBoxFrame::PaintChildren(nsPresContext*      aPresContext,
         
         // if we have dirty children or we are dirty 
         // place a green border around us.
-        PRBool dirty = PR_FALSE;
-        IsDirty(dirty);
-        PRBool dirtyc = PR_FALSE;
-        HasDirtyChildren(dirtyc);
-
-        if (dirty || dirtyc) {
-           IsDirty(dirty);
-           HasDirtyChildren(dirty);
-
+        if (GetStateBits & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)) {
            nsRect dirtyr(inner);
            aRenderingContext.SetColor(NS_RGB(0,255,0));
            aRenderingContext.DrawRect(dirtyr);
@@ -2015,12 +1920,7 @@ nsBoxFrame::PaintDebug(nsIBox*              aBox,
 
         // if we have dirty children or we are dirty 
         // place a green border around us.
-        PRBool dirty = PR_FALSE;
-        IsDirty(dirty);
-        PRBool dirtyc = PR_FALSE;
-        HasDirtyChildren(dirty);
-
-        if (dirty || dirtyc) {
+        if (GetStateBits & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)) {
            nsRect dirtyr(inner);
            aRenderingContext.SetColor(NS_RGB(0,255,0));
            aRenderingContext.DrawRect(dirtyr);
@@ -2668,14 +2568,7 @@ nsBoxFrame::LayoutChildAt(nsBoxLayoutState& aState, nsIBox* aBox, const nsRect& 
   nsRect oldRect(aBox->GetRect());
   aBox->SetBounds(aState, aRect);
 
-  PRBool dirty = PR_FALSE;
-  PRBool dirtyChildren = PR_FALSE;
-  aBox->IsDirty(dirty);
-  aBox->HasDirtyChildren(dirtyChildren);
-
-  PRBool layout = PR_TRUE;
-  if (!(dirty || dirtyChildren) && aState.LayoutReason() != nsBoxLayoutState::Initial) 
-     layout = PR_FALSE;
+  PRBool layout = (aBox->GetStateBits() & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)) != 0;
   
   if (layout || (oldRect.width != aRect.width || oldRect.height != aRect.height))  {
     return aBox->Layout(aState);

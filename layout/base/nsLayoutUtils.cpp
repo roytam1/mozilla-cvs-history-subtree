@@ -463,3 +463,60 @@ nsLayoutUtils::IsInitialContainingBlock(nsIFrame* aFrame)
   return aFrame ==
     aFrame->GetPresContext()->PresShell()->FrameConstructor()->GetInitialContainingBlock();
 }
+
+static nscoord GetCoord(const nsStyleCoord& aCoord, nscoord aIfNotCoord)
+{
+  return aCoord.GetUnit() == eStyleUnit_Coord
+           ? aCoord.GetCoordValue()
+           : aIfNotCoord;
+}
+
+/* static */ nscoord
+nsLayoutUtils::IntrinsicForContainer(nsIRenderingContext *aRenderingContext,
+                                     nsIFrame *aFrame,
+                                     IntrinsicWidthType aType)
+{
+  NS_PRECONDITION(aFrame, "null frame");
+  NS_PRECONDITION(aType == MIN_WIDTH || aType == PREF_WIDTH, "bad type");
+
+  const nsStylePosition *stylePos = aFrame->GetStylePosition();
+  nscoord min = GetCoord(stylePos->mMinWidth, 0),
+          max = GetCoord(stylePos->mMaxWidth, nscoord_MAX);
+
+  nscoord result;
+  if (min < max) {
+    const nsStyleCoord &styleWidth = stylePos->mWidth;
+    if (styleWidth.GetUnit() == eStyleUnit_Coord) {
+      result = styleWidth.GetCoordValue();
+    } else {
+      if (aType == MIN_WIDTH)
+        result = aFrame->GetMinWidth(aRenderingContext);
+      else
+        result = aFrame->GetPrefWidth(aRenderingContext);
+    }
+
+    if (result > max)
+      result = max;
+    if (result < min)
+      result = min;
+  } else {
+    // width is determined by 'max-width' and 'min-width'
+    result = min;
+  }
+
+  nsStyleCoord tmp;
+
+  const nsStylePadding *stylePadding = aFrame->GetStylePadding();
+  result += GetCoord(stylePadding->mPadding.GetLeft(tmp), 0);
+  result += GetCoord(stylePadding->mPadding.GetRight(tmp), 0);
+
+  const nsStyleBorder *styleBorder = aFrame->GetStyleBorder();
+  result += styleBorder->GetBorderWidth(NS_SIDE_LEFT);
+  result += styleBorder->GetBorderWidth(NS_SIDE_RIGHT);
+
+  const nsStyleMargin *styleMargin = aFrame->GetStyleMargin();
+  result += GetCoord(styleMargin->mMargin.GetLeft(tmp), 0);
+  result += GetCoord(styleMargin->mMargin.GetRight(tmp), 0);
+
+  return result;
+}

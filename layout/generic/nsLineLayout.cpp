@@ -55,7 +55,6 @@
 #include "nsIRenderingContext.h"
 #include "nsLayoutAtoms.h"
 #include "nsPlaceholderFrame.h"
-#include "nsReflowPath.h"
 #include "nsIDocument.h"
 #include "nsIHTMLDocument.h"
 #include "nsIContent.h"
@@ -151,16 +150,18 @@ MOZ_DECL_CTOR_COUNTER(nsLineLayout)
 nsLineLayout::nsLineLayout(nsPresContext* aPresContext,
                            nsSpaceManager* aSpaceManager,
                            const nsHTMLReflowState* aOuterReflowState,
-                           PRBool aComputeMaxElementWidth)
+                           PRBool aIntrinsicWidthPass)
   : mPresContext(aPresContext),
     mSpaceManager(aSpaceManager),
     mBlockReflowState(aOuterReflowState),
     mBlockRS(nsnull),/* XXX temporary */
     mMinLineHeight(0),
-    mComputeMaxElementWidth(aComputeMaxElementWidth),
+    mIntrinsicWidthPass(aIntrinsicWidthPass),
     mTextIndent(0),
     mWordFrames(0)
 {
+  NS_ASSERTION(!aSpaceManager == aIntrinsicWidthPass,
+    "space manager should be present iff not doing intrinsic widths");
   MOZ_COUNT_CTOR(nsLineLayout);
 
   // Stash away some style data that we need
@@ -969,19 +970,17 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
   // parents border/padding is <b>inside</b> the parent
   // frame. Therefore we have to subtract out the parents
   // border+padding before translating.
-  nsHTMLReflowMetrics metrics(mComputeMaxElementWidth);
+  nsHTMLReflowMetrics metrics;
 #ifdef DEBUG
   metrics.width = nscoord(0xdeadbeef);
   metrics.height = nscoord(0xdeadbeef);
   metrics.ascent = nscoord(0xdeadbeef);
   metrics.descent = nscoord(0xdeadbeef);
-  if (mComputeMaxElementWidth) {
-    metrics.mMaxElementWidth = nscoord(0xdeadbeef);
-  }
 #endif
   nscoord tx = x - psd->mReflowState->mComputedBorderPadding.left;
   nscoord ty = y - psd->mReflowState->mComputedBorderPadding.top;
-  mSpaceManager->Translate(tx, ty);
+  if (!mIntrinsicWidthPass)
+    mSpaceManager->Translate(tx, ty);
 
 #ifdef IBMBIDI
   PRInt32 start, end;
@@ -1066,7 +1065,8 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
     }
   }
 
-  mSpaceManager->Translate(-tx, -ty);
+  if (!mIntrinsicWidthPass)
+    mSpaceManager->Translate(-tx, -ty);
 
   NS_ASSERTION(metrics.width>=0, "bad width");
   NS_ASSERTION(metrics.height>=0,"bad height");
@@ -1082,24 +1082,6 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
       nsFrame::ListTag(stdout, aFrame);
       printf(" metrics=%d,%d!\n", metrics.width, metrics.height);
     }
-    if (mComputeMaxElementWidth &&
-        (nscoord(0xdeadbeef) == metrics.mMaxElementWidth)) {
-      printf("nsLineLayout: ");
-      nsFrame::ListTag(stdout, aFrame);
-      printf(" didn't set max-element-width!\n");
-    }
-#ifdef REALLY_NOISY_MAX_ELEMENT_SIZE
-    // Note: there are common reflow situations where this *correctly*
-    // occurs; so only enable this debug noise when you really need to
-    // analyze in detail.
-    if (mComputeMaxElementWidth &&
-        (metrics.mMaxElementWidth > metrics.width)) {
-      printf("nsLineLayout: ");
-      nsFrame::ListTag(stdout, aFrame);
-      printf(": WARNING: maxElementWidth=%d > metrics=%d\n",
-             metrics.mMaxElementWidth, metrics.width);
-    }
-#endif
     if ((metrics.width == nscoord(0xdeadbeef)) ||
         (metrics.height == nscoord(0xdeadbeef)) ||
         (metrics.ascent == nscoord(0xdeadbeef)) ||
@@ -1108,20 +1090,6 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
       nsFrame::ListTag(stdout, aFrame);
       printf(" didn't set whad %d,%d,%d,%d!\n", metrics.width, metrics.height,
              metrics.ascent, metrics.descent);
-    }
-  }
-#endif
-#ifdef DEBUG
-  if (nsBlockFrame::gNoisyMaxElementWidth) {
-    nsFrame::IndentBy(stdout, nsBlockFrame::gNoiseIndent);
-    if (!NS_INLINE_IS_BREAK_BEFORE(aReflowStatus)) {
-      if (mComputeMaxElementWidth) {
-        printf("  ");
-        nsFrame::ListTag(stdout, aFrame);
-        printf(": maxElementWidth=%d wh=%d,%d,\n",
-               metrics.mMaxElementWidth,
-               metrics.width, metrics.height);
-      }
     }
   }
 #endif
@@ -1135,9 +1103,6 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
 
   pfd->mBounds.width = metrics.width;
   pfd->mBounds.height = metrics.height;
-  if (mComputeMaxElementWidth) {
-    pfd->mMaxElementWidth = metrics.mMaxElementWidth;
-  }
 
   // Size the frame, but |RelativePositionFrames| will size the view.
   aFrame->SetSize(nsSize(metrics.width, metrics.height));
@@ -1516,9 +1481,6 @@ nsLineLayout::AddBulletFrame(nsIFrame* aFrame,
     // Note: y value will be updated during vertical alignment
     pfd->mBounds = aFrame->GetRect();
     pfd->mCombinedArea = aMetrics.mOverflowArea;
-    if (mComputeMaxElementWidth) {
-      pfd->mMaxElementWidth = aMetrics.width;
-    }
   }
   return rv;
 }
@@ -1548,78 +1510,8 @@ nsLineLayout::DumpPerSpanData(PerSpanData* psd, PRInt32 aIndent)
 #define VALIGN_TOP    1
 #define VALIGN_BOTTOM 2
 
-PRBool
-nsLineLayout::IsPercentageUnitSides(const nsStyleSides* aSides)
-{
-  return eStyleUnit_Percent == aSides->GetLeftUnit()
-      || eStyleUnit_Percent == aSides->GetRightUnit()
-      || eStyleUnit_Percent == aSides->GetTopUnit()
-      || eStyleUnit_Percent == aSides->GetBottomUnit();
-}
-
-PRBool
-nsLineLayout::IsPercentageAwareReplacedElement(nsPresContext *aPresContext, 
-                                               nsIFrame* aFrame)
-{
-  if (aFrame->GetStateBits() & NS_FRAME_REPLACED_ELEMENT)
-  {
-    nsIAtom* frameType = aFrame->GetType();
-    if (nsLayoutAtoms::brFrame != frameType && 
-        nsLayoutAtoms::textFrame != frameType)
-    {
-      const nsStyleMargin* margin = aFrame->GetStyleMargin();
-      if (IsPercentageUnitSides(&margin->mMargin)) {
-        return PR_TRUE;
-      }
-
-      const nsStylePadding* padding = aFrame->GetStylePadding();
-      if (IsPercentageUnitSides(&padding->mPadding)) {
-        return PR_TRUE;
-      }
-
-      // Borders aren't percentage aware
-
-      const nsStylePosition* pos = aFrame->GetStylePosition();
-      if (eStyleUnit_Percent == pos->mWidth.GetUnit()
-        || eStyleUnit_Percent == pos->mMaxWidth.GetUnit()
-        || eStyleUnit_Percent == pos->mMinWidth.GetUnit()
-        || eStyleUnit_Percent == pos->mHeight.GetUnit()
-        || eStyleUnit_Percent == pos->mMinHeight.GetUnit()
-        || eStyleUnit_Percent == pos->mMaxHeight.GetUnit()
-        || IsPercentageUnitSides(&pos->mOffset)) { // XXX need more here!!!
-        return PR_TRUE;
-      }
-    }
-  }
-
-  return PR_FALSE;
-}
-
-PRBool IsPercentageAwareFrame(nsPresContext *aPresContext, nsIFrame *aFrame)
-{
-  if (aFrame->GetStateBits() & NS_FRAME_REPLACED_ELEMENT) {
-    if (nsLineLayout::IsPercentageAwareReplacedElement(aPresContext, aFrame)) {
-      return PR_TRUE;
-    }
-  }
-  else
-  {
-    nsIFrame *child = aFrame->GetFirstChild(nsnull);
-    if (child)
-    { // aFrame is an inline container frame, check my frame state
-      if (aFrame->GetStateBits() & NS_INLINE_FRAME_CONTAINS_PERCENT_AWARE_CHILD) {
-        return PR_TRUE;
-      }
-    }
-    // else it's a frame we just don't care about
-  }  
-  return PR_FALSE;
-}
-
-
 void
-nsLineLayout::VerticalAlignLine(nsLineBox* aLineBox,
-                                nscoord* aMaxElementWidthResult)
+nsLineLayout::VerticalAlignLine(nsLineBox* aLineBox)
 {
   // Synthesize a PerFrameData for the block frame
   PerFrameData rootPFD;
@@ -1690,84 +1582,7 @@ nsLineLayout::VerticalAlignLine(nsLineBox* aLineBox,
   // frames we find.
   // XXX PERFORMANCE: set a bit per-span to avoid the extra work
   // (propagate it upward too)
-  PerFrameData* pfd = psd->mFirstFrame;
-  nscoord maxElementWidth = 0;
-  PRBool prevFrameAccumulates = PR_FALSE;
-  nscoord accumulatedWidth = 0;
-#ifdef HACK_MEW
-  PRBool strictMode = InStrictMode();
-  PRBool inUnconstrainedTable = InUnconstrainedTableCell(*mBlockReflowState);
-#endif
-#ifdef DEBUG
-  int frameCount = 0;
-#endif
-
-  nscoord indent = mTextIndent; // Used for the first frame.
-
-  while (nsnull != pfd) {
-
-    // Compute max-element-width if necessary
-    if (mComputeMaxElementWidth) {
-
-      nscoord mw = pfd->mMaxElementWidth +
-        pfd->mMargin.left + pfd->mMargin.right + indent;
-      // Zero |indent| after including the 'text-indent' only for the
-      // frame that is indented.
-      indent = 0;
-
-      if (psd->mNoWrap) {
-        maxElementWidth += mw;
-      }
-      else {
-
-#ifdef HACK_MEW
-
-#ifdef DEBUG
-      if (nsBlockFrame::gNoisyMaxElementWidth) 
-        frameCount++;
-#endif
-        // if in Quirks mode and in a table cell with an unconstrained width, then emulate an IE
-        // quirk to keep consecutive images from breaking the line
-        // - see bugs 54565, 32191, and their many dups
-        // XXX - reconsider how textFrame text measurement happens and have it take into account
-        //       image frames as well, thus eliminating the need for this code
-        if (!strictMode && inUnconstrainedTable ) {
-
-          nscoord imgSizes = AccumulateImageSizes(*mPresContext, *pfd->mFrame);
-          PRBool curFrameAccumulates = (imgSizes > 0) || 
-                                       (pfd->mMaxElementWidth == pfd->mBounds.width &&
-                                        pfd->GetFlag(PFD_ISNONWHITESPACETEXTFRAME));
-            // NOTE: we check for the maxElementWidth == the boundsWidth to detect when
-            //       a textframe has whitespace in it and thus should not be used as the basis
-            //       for accumulating the image width
-            // - this is to handle images in a text run
-
-          if(prevFrameAccumulates && curFrameAccumulates) {
-            accumulatedWidth += mw;
-          } else {
-            accumulatedWidth = mw;
-          } 
-          // now update the prevFrame
-          prevFrameAccumulates = curFrameAccumulates;
-        
-#ifdef DEBUG
-          if (nsBlockFrame::gNoisyMaxElementWidth) {
-            nsFrame::IndentBy(stdout, nsBlockFrame::gNoiseIndent);
-            printf("(%d) last frame's MEW=%d | Accumulated MEW=%d\n", frameCount, mw, accumulatedWidth);
-          }
-#endif 
-
-          mw = accumulatedWidth;
-        }
-
-#endif // HACK_MEW
-
-        // and finally reset the max element width
-        if (maxElementWidth < mw) {
-          maxElementWidth = mw;
-        }
-      }
-    }
+  for (PerFrameData* pfd = psd->mFirstFrame; pfd; pfd = pfd->mNext) {
     PerSpanData* span = pfd->mSpan;
 #ifdef DEBUG
     NS_ASSERTION(0xFF != pfd->mVerticalAlign, "umr");
@@ -1808,15 +1623,6 @@ nsLineLayout::VerticalAlignLine(nsLineBox* aLineBox,
       nscoord distanceFromTop = pfd->mBounds.y - mTopEdge;
       PlaceTopBottomFrames(span, distanceFromTop, lineHeight);
     }
-    // check to see if the frame is an inline replace element
-    // and if it is percent-aware.  If so, mark the line.
-    if ((PR_FALSE==aLineBox->ResizeReflowOptimizationDisabled()) &&
-         pfd->mFrameType & NS_CSS_FRAME_TYPE_INLINE)
-    {
-      if (IsPercentageAwareFrame(mPresContext, pfd->mFrame))
-        aLineBox->DisableResizeReflowOptimization();
-    }
-    pfd = pfd->mNext;
   }
 
   // Fill in returned line-box and max-element-width data
@@ -1825,20 +1631,95 @@ nsLineLayout::VerticalAlignLine(nsLineBox* aLineBox,
   aLineBox->mBounds.width = psd->mX - psd->mLeftEdge;
   aLineBox->mBounds.height = lineHeight;
   mFinalLineHeight = lineHeight;
-  *aMaxElementWidthResult = maxElementWidth;
   aLineBox->SetAscent(baselineY - mTopEdge);
 #ifdef NOISY_VERTICAL_ALIGN
   printf(
-    "  [line]==> bounds{x,y,w,h}={%d,%d,%d,%d} lh=%d a=%d mew=%d\n",
+    "  [line]==> bounds{x,y,w,h}={%d,%d,%d,%d} lh=%d a=%d\n",
     aLineBox->mBounds.x, aLineBox->mBounds.y,
     aLineBox->mBounds.width, aLineBox->mBounds.height,
-    mFinalLineHeight, aLineBox->GetAscent(),
-    *aMaxElementWidthResult);
+    mFinalLineHeight, aLineBox->GetAscent());
 #endif
 
   // Undo root-span mFrame pointer to prevent brane damage later on...
   mRootSpan->mFrame = nsnull;
   mLineBox = nsnull;
+}
+
+nscoord
+nsLineLayout::GetLineMaxElementWidth(nsLineBox* aLineBox)
+{
+  PRBool strictMode = InStrictMode();
+  PRBool inUnconstrainedTable = InUnconstrainedTableCell(*mBlockReflowState);
+  nscoord maxElementWidth = 0;
+  PRBool prevFrameAccumulates = PR_FALSE;
+  nscoord accumulatedWidth = 0;
+  nscoord indent = mTextIndent; // Used for the first frame.
+  PerSpanData* psd = mRootSpan;
+#ifdef DEBUG
+  int frameCount = 0;
+#endif
+
+  for (PerFrameData* pfd = psd->mFirstFrame; pfd; pfd = pfd->mNext) {
+    nscoord mw = pfd->mMaxElementWidth +
+      pfd->mMargin.left + pfd->mMargin.right + indent;
+    // Zero |indent| after including the 'text-indent' only for the
+    // frame that is indented.
+    indent = 0;
+
+    if (psd->mNoWrap) {
+      maxElementWidth += mw;
+    }
+    else {
+
+#ifdef HACK_MEW
+
+#ifdef DEBUG
+      if (nsBlockFrame::gNoisyMaxElementWidth) 
+        frameCount++;
+#endif
+      // if in Quirks mode and in a table cell with an unconstrained width, then emulate an IE
+      // quirk to keep consecutive images from breaking the line
+      // - see bugs 54565, 32191, and their many dups
+      // XXX - reconsider how textFrame text measurement happens and have it take into account
+      //       image frames as well, thus eliminating the need for this code
+      if (!strictMode && inUnconstrainedTable ) {
+
+        nscoord imgSizes = AccumulateImageSizes(*mPresContext, *pfd->mFrame);
+        PRBool curFrameAccumulates = (imgSizes > 0) || 
+                                     (pfd->mMaxElementWidth == pfd->mBounds.width &&
+                                      pfd->GetFlag(PFD_ISNONWHITESPACETEXTFRAME));
+          // NOTE: we check for the maxElementWidth == the boundsWidth to detect when
+          //       a textframe has whitespace in it and thus should not be used as the basis
+          //       for accumulating the image width
+          // - this is to handle images in a text run
+
+        if(prevFrameAccumulates && curFrameAccumulates) {
+          accumulatedWidth += mw;
+        } else {
+          accumulatedWidth = mw;
+        } 
+        // now update the prevFrame
+        prevFrameAccumulates = curFrameAccumulates;
+      
+#ifdef DEBUG
+        if (nsBlockFrame::gNoisyMaxElementWidth) {
+          nsFrame::IndentBy(stdout, nsBlockFrame::gNoiseIndent);
+          printf("(%d) last frame's MEW=%d | Accumulated MEW=%d\n", frameCount, mw, accumulatedWidth);
+        }
+#endif 
+
+        mw = accumulatedWidth;
+      }
+
+#endif // HACK_MEW
+
+      // and finally reset the max element width
+      if (maxElementWidth < mw) {
+        maxElementWidth = mw;
+      }
+    }
+  }
+  return maxElementWidth;
 }
 
 void
@@ -2762,20 +2643,20 @@ nsLineLayout::ApplyFrameJustification(PerSpanData* aPSD, FrameJustificationState
   return deltaX;
 }
 
-PRBool
+void
 nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
-                                    PRBool aAllowJustify,
-                                    PRBool aShrinkWrapWidth)
+                                    PRBool aAllowJustify)
 {
   PerSpanData* psd = mRootSpan;
   nscoord availWidth = psd->mRightEdge;
   if (NS_UNCONSTRAINEDSIZE == availWidth) {
+    NS_NOTREACHED("This shouldn't be called anymore");
     // Don't bother horizontal aligning on pass1 table reflow
 #ifdef NOISY_HORIZONTAL_ALIGN
     nsFrame::ListTag(stdout, mBlockReflowState->frame);
     printf(": skipping horizontal alignment in pass1 table reflow\n");
 #endif
-    return PR_TRUE;
+    return;
   }
   availWidth -= psd->mLeftEdge;
   nscoord remainingWidth = availWidth - aLineBounds.width;
@@ -2816,17 +2697,15 @@ nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
         // frames in the line. If it is the last line then if the
         // direction is right-to-left then we right-align the frames.
         if (aAllowJustify) {
-          if (!aShrinkWrapWidth) {
-            PRInt32 numSpaces;
-            PRInt32 numLetters;
+          PRInt32 numSpaces;
+          PRInt32 numLetters;
             
-            ComputeJustificationWeights(psd, &numSpaces, &numLetters);
+          ComputeJustificationWeights(psd, &numSpaces, &numLetters);
 
-            if (numSpaces > 0) {
-              FrameJustificationState state = { numSpaces, numLetters, remainingWidth, 0, 0, 0, 0, 0 };
+          if (numSpaces > 0) {
+            FrameJustificationState state = { numSpaces, numLetters, remainingWidth, 0, 0, 0, 0, 0 };
 
-              ApplyFrameJustification(psd, &state);
-            }
+            ApplyFrameJustification(psd, &state);
           }
         }
         else if (NS_STYLE_DIRECTION_RTL == psd->mDirection) {
@@ -2862,11 +2741,6 @@ nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
     if (0 != dx)
 #endif
     {
-      // If we need to move the frames but we're shrink wrapping, then
-      // we need to wait until the final width is known
-      if (aShrinkWrapWidth) {
-        return PR_FALSE;
-      }
       for (PerFrameData* pfd = psd->mFirstFrame; pfd
 #ifdef IBMBIDI
            && bulletPfd != pfd
@@ -2889,10 +2763,6 @@ nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
         !psd->mChangedFrameDirection) {
       psd->mChangedFrameDirection = PR_TRUE;
   
-      /* Assume that all frames have been right aligned.*/
-      if (aShrinkWrapWidth) {
-        return PR_FALSE;
-      }
       PerFrameData* pfd = psd->mFirstFrame;
       PRUint32 maxX = psd->mRightEdge;
       while (nsnull != pfd) {
@@ -2904,8 +2774,6 @@ nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
     }
 #endif // ndef IBMBIDI
   }
-
-  return PR_TRUE;
 }
 
 void

@@ -43,8 +43,10 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 MODULE		= layout
+ifdef HTML_FORMS
 LIBRARY_NAME	= gkforms_s
 LIBXUL_LIBRARY	= 1
+endif
 
 REQUIRES	= xpcom \
 		  string \
@@ -82,6 +84,7 @@ EXPORTS		= \
 		nsITextControlFrame.h \
 		$(NULL)
 
+ifdef HTML_FORMS
 CPPSRCS		= \
 		nsButtonFrameRenderer.cpp \
 		nsComboboxControlFrame.cpp \
@@ -100,6 +103,7 @@ CPPSRCS		= \
 		nsIsIndexFrame.cpp \
 		nsSelectsAreaFrame.cpp \
 		$(NULL)
+endif
 
 # we don't want the shared lib, but we want to force the creation of a static lib.
 FORCE_STATIC_LIB = 1

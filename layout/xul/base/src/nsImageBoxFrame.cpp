@@ -255,8 +255,8 @@ nsImageBoxFrame::AttributeChanged(nsIContent* aChild,
 
   if (aAttribute == nsHTMLAtoms::src) {
     UpdateImage();
-    nsBoxLayoutState state(GetPresContext());
-    MarkDirty(state);
+    mState |= NS_FRAME_IS_DIRTY;
+    aPresShell.FrameNeedsReflow(this, nsIPresShell::eStyleChange);
   }
   else if (aAttribute == nsXULAtoms::validate)
     UpdateLoadFlags();
@@ -271,7 +271,7 @@ nsImageBoxFrame::nsImageBoxFrame(nsIPresShell* aShell) :
   mIntrinsicSize(0,0),
   mLoadFlags(nsIRequest::LOAD_NORMAL)
 {
-  NeedsRecalc();
+  MarkIntrinsicWidthsDirty();
 }
 
 nsImageBoxFrame::~nsImageBoxFrame()
@@ -279,8 +279,8 @@ nsImageBoxFrame::~nsImageBoxFrame()
 }
 
 
-NS_IMETHODIMP
-nsImageBoxFrame::NeedsRecalc()
+/* virtual */ void
+nsImageBoxFrame::MarkIntrinsicWidthsDirty()
 {
   SizeNeedsRecalc(mImageSize);
   return NS_OK;
@@ -595,8 +595,8 @@ NS_IMETHODIMP nsImageBoxFrame::OnStartContainer(imgIRequest *request,
 
   mIntrinsicSize.SizeTo(NSIntPixelsToTwips(w, p2t), NSIntPixelsToTwips(h, p2t));
 
-  nsBoxLayoutState state(presContext);
-  this->MarkDirty(state);
+  mState |= NS_FRAME_IS_DIRTY;
+  aPresShell.FrameNeedsReflow(this, nsIPresShell::eStyleChange);
 
   return NS_OK;
 }
