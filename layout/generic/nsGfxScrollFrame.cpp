@@ -661,10 +661,16 @@ nsHTMLScrollFrame::Reflow(nsPresContext*           aPresContext,
   PRBool reflowVScrollbar = PR_TRUE;
   PRBool reflowScrollCorner = PR_TRUE;
   if (!(GetStateBits() & NS_FRAME_IS_DIRTY)) {
-    reflowContents = mInner.mScrolledFrame & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN) != 0;
-    reflowHScrollbar = mInner.mHScrollbarBox & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN) != 0;
-    reflowVScrollbar = mInner.mVScrollbarBox & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN) != 0;
-    reflowScrollCorner = mInner.mScrollCornerBox & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN) != 0;
+    #define NEEDS_REFLOW(frame_) \
+      (((frame_)->GetStateBits() & \
+        (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)) != 0)
+
+    reflowContents = NEEDS_REFLOW(mInner.mScrolledFrame);
+    reflowHScrollbar = NEEDS_REFLOW(mInner.mHScrollbarBox);
+    reflowVScrollbar = NEEDS_REFLOW(mInner.mVScrollbarBox);
+    reflowScrollCorner = NEEDS_REFLOW(mInner.mScrollCornerBox);
+
+    #undef NEEDS_REFLOW
   }
 
   nsRect oldScrollAreaBounds = mInner.mScrollableView->View()->GetBounds();
