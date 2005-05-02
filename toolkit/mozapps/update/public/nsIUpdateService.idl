@@ -133,6 +133,11 @@ interface nsIApplicationUpdateService : nsISupports
 
 };
 
+[scriptable, uuid(8cbceb6e-8e27-46f2-8808-444c6499f836)]
+interface nsIApplicationUpdateListener : nsISupports
+{
+}
+
 [scriptable, uuid(22d35700-5765-42e1-914b-a0da7c911a8c)]
 interface nsIVersionChecker : nsISupports
 {
