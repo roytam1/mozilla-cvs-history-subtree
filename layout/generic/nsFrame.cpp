@@ -6313,10 +6313,6 @@ void nsFrame::DisplayReflowExit(nsPresContext*      aPresContext,
       float p2t = aPresContext->ScaledPixelsToTwips();
       CheckPixelError(aMetrics.width, p2t);
       CheckPixelError(aMetrics.height, p2t);
-      if (aMetrics.mComputeMEW) 
-        CheckPixelError(aMetrics.mMaxElementWidth, p2t);
-      if (aMetrics.mFlags & NS_REFLOW_CALC_MAX_WIDTH) 
-        CheckPixelError(aMetrics.mMaximumWidth, p2t);
     }
   }
   DR_state->DeleteTreeNode(*treeNode);
