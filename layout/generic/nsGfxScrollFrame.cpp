@@ -253,7 +253,6 @@ struct ScrollReflowState {
   const nsHTMLReflowState& mReflowState;
   nsBoxLayoutState mBoxState;
   nsGfxScrollFrameInner::ScrollbarStyles mStyles;
-  nsReflowReason mNewReason;
 
   // === Filled in when TryLayout succeeds ===
   // The area of the scrollport, in coordinates relative to the scrollframe
@@ -447,10 +446,11 @@ nsHTMLScrollFrame::ReflowScrolledFrame(const ScrollReflowState& aState,
                                       vScrollbarMinSize);
     availWidth = PR_MAX(0, availWidth - vScrollbarMinSize.width);
   }
+  if (!aFirstPass)
+    mInner.mScrolledFrame->AddStateBits(NS_FRAME_IS_DIRTY);
   nsHTMLReflowState kidReflowState(GetPresContext(), aState.mReflowState,
                                    mInner.mScrolledFrame,
-                                   nsSize(availWidth, NS_UNCONSTRAINEDSIZE),
-                                   aFirstPass ? aState.mNewReason : eReflowReason_Resize);
+                                   nsSize(availWidth, NS_UNCONSTRAINEDSIZE));
   if (IsRTLTextControl()) {
     kidReflowState.mRightEdge = mInner.GetScrolledSize().width;
   }
@@ -630,7 +630,7 @@ nsHTMLScrollFrame::Reflow(nsPresContext*           aPresContext,
                           const nsHTMLReflowState& aReflowState,
                           nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsHTMLScrollFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsHTMLScrollFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
 
   ScrollReflowState state(this, aReflowState, aDesiredSize);
@@ -646,49 +646,12 @@ nsHTMLScrollFrame::Reflow(nsPresContext*           aPresContext,
   PRBool reflowHScrollbar = PR_TRUE;
   PRBool reflowVScrollbar = PR_TRUE;
   PRBool reflowScrollCorner = PR_TRUE;
-  nsReflowReason reason = aReflowState.reason;
-
-  if (reason == eReflowReason_Incremental) {
-      nsHTMLReflowCommand *command = aReflowState.path->mReflowCommand;
-      // See if it's targeted at us
-      if (command) {
-        nsReflowType  reflowType;
-        command->GetType(reflowType);
-
-        switch (reflowType) {
-          case eReflowType_StyleChanged:
-            reason = eReflowReason_StyleChange;
-            break;
-
-          case eReflowType_ReflowDirty: 
-            reason = eReflowReason_Dirty;
-            break;
-
-          default:
-            NS_ERROR("Unexpected Reflow Type");
-        }
-      } else {
-        reflowContents = PR_FALSE;
-        reflowHScrollbar = PR_FALSE;
-        reflowVScrollbar = PR_FALSE;
-        reflowScrollCorner = PR_FALSE;
-
-        nsReflowPath::iterator iter = aReflowState.path->FirstChild();
-        nsReflowPath::iterator end = aReflowState.path->EndChildren();
-        
-        for ( ; iter != end; ++iter) {
-          if (*iter == mInner.mScrolledFrame)
-            reflowContents = PR_TRUE;
-          else if (*iter == mInner.mHScrollbarBox)
-            reflowHScrollbar = PR_TRUE;
-          else if (*iter == mInner.mVScrollbarBox)
-            reflowVScrollbar = PR_TRUE;
-          else if (*iter == mInner.mScrollCornerBox)
-            reflowScrollCorner = PR_TRUE;
-        }
-      }
+  if (!(GetStateBits() & NS_FRAME_IS_DIRTY)) {
+    reflowContents = mInner.mScrolledFrame & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN) != 0;
+    reflowHScrollbar = mInner.mHScrollbarBox & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN) != 0;
+    reflowVScrollbar = mInner.mVScrollbarBox & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN) != 0;
+    reflowScrollCorner = mInner.mScrollCornerBox & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN) != 0;
   }
-  state.mNewReason = reason;
 
   nsRect oldScrollAreaBounds = mInner.mScrollableView->View()->GetBounds();
   nsRect oldScrolledAreaBounds = mInner.mScrolledFrame->GetView()->GetBounds();
