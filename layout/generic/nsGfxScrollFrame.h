@@ -196,6 +196,9 @@ public:
   PRBool IsRTLTextControl();
   void PlaceScrollArea(const ScrollReflowState& aState);
 
+  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
+  virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
+
    NS_IMETHOD Reflow(nsPresContext*          aPresContext,
                   nsHTMLReflowMetrics&     aDesiredSize,
                   const nsHTMLReflowState& aReflowState,
@@ -337,10 +340,8 @@ public:
                                  nsIAtom*        aListName,
                                  nsIFrame*       aChildList);
 
-  NS_IMETHOD Reflow(nsPresContext*          aPresContext,
-                  nsHTMLReflowMetrics&     aDesiredSize,
-                  const nsHTMLReflowState& aReflowState,
-                  nsReflowStatus&          aStatus);
+  // XXXldb Is this actually used?
+  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
 
   // Because there can be only one child frame, these two function return
   // NS_ERROR_FAILURE

@@ -624,6 +624,20 @@ nsHTMLScrollFrame::IsRTLTextControl()
   return PR_FALSE;
 }
 
+/* virtual */ nscoord
+nsHTMLScrollFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
+{
+  NS_NOTYETIMPLEMENTED("WRITE ME!!!");
+  return 0;
+}
+
+/* virtual */ nscoord
+nsHTMLScrollFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
+{
+  NS_NOTYETIMPLEMENTED("WRITE ME!!!");
+  return 0;
+}
+
 NS_IMETHODIMP
 nsHTMLScrollFrame::Reflow(nsPresContext*           aPresContext,
                           nsHTMLReflowMetrics&     aDesiredSize,
@@ -1103,41 +1117,25 @@ nsXULScrollFrame::GetMaxSize(nsBoxLayoutState& aState, nsSize& aSize)
   return NS_OK;
 }
 
-NS_IMETHODIMP
-nsXULScrollFrame::Reflow(nsPresContext*      aPresContext,
-                     nsHTMLReflowMetrics&     aDesiredSize,
-                     const nsHTMLReflowState& aReflowState,
-                     nsReflowStatus&          aStatus)
+/* virtual */ nscoord
+nsXULScrollFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsXULScrollFrame", aReflowState.reason);
-  DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
-
-  // if there is a max element request then set it to -1 so we can see if it gets set
-  if (aDesiredSize.mComputeMEW)
-  {
-    aDesiredSize.mMaxElementWidth = -1;
-  }
-
-  nsresult rv = nsBoxFrame::Reflow(aPresContext, aDesiredSize, aReflowState, aStatus);
-
-  if (aDesiredSize.mComputeMEW)
-  {
-    nsStyleUnit widthUnit = GetStylePosition()->mWidth.GetUnit();
-    if (widthUnit == eStyleUnit_Percent || widthUnit == eStyleUnit_Auto) {
-      nsMargin border = aReflowState.mComputedBorderPadding;
-      aDesiredSize.mMaxElementWidth = border.right + border.left;
+  nsStyleUnit widthUnit = GetStylePosition()->mWidth.GetUnit();
+  if (widthUnit == eStyleUnit_Percent || widthUnit == eStyleUnit_Auto) {
+    nsMargin border = aReflowState.mComputedBorderPadding;
+    aDesiredSize.mMaxElementWidth = border.right + border.left;
+    mMaxElementWidth = aDesiredSize.mMaxElementWidth;
+  } else {
+    NS_NOTYETIMPLEMENTED("Use the info from the scrolled frame");
+#if 0
+    // if not set then use the cached size. If set then set it.
+    if (aDesiredSize.mMaxElementWidth == -1)
+      aDesiredSize.mMaxElementWidth = mMaxElementWidth;
+    else
       mMaxElementWidth = aDesiredSize.mMaxElementWidth;
-    } else {
-      // if not set then use the cached size. If set then set it.
-      if (aDesiredSize.mMaxElementWidth == -1)
-        aDesiredSize.mMaxElementWidth = mMaxElementWidth;
-      else
-        mMaxElementWidth = aDesiredSize.mMaxElementWidth;
-    }
+#endif
   }
-  
-  NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aDesiredSize);
-  return rv;
+  return 0;
 }
 
 NS_IMETHODIMP_(nsrefcnt) 
