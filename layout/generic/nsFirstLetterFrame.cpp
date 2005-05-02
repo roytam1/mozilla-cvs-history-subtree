@@ -227,7 +227,7 @@ nsFirstLetterFrame::Reflow(nsPresContext*          aPresContext,
                            const nsHTMLReflowState& aReflowState,
                            nsReflowStatus&          aReflowStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsFirstLetterFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsFirstLetterFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aMetrics, aReflowStatus);
   nsresult rv = NS_OK;
 
@@ -254,8 +254,7 @@ nsFirstLetterFrame::Reflow(nsPresContext*          aPresContext,
     // only time that the first-letter-frame is not reflowing in a
     // line context is when its floating.
     nsHTMLReflowState rs(aPresContext, aReflowState, kid, availSize);
-    nsLineLayout ll(aPresContext, nsnull, &aReflowState,
-                    aMetrics.mComputeMEW);
+    nsLineLayout ll(aPresContext, nsnull, &aReflowState, PR_FALSE);
     ll.BeginLineReflow(0, 0, NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE,
                        PR_FALSE, PR_TRUE);
     rs.mLineLayout = &ll;
@@ -274,8 +273,7 @@ nsFirstLetterFrame::Reflow(nsPresContext*          aPresContext,
     ll->BeginSpan(this, &aReflowState, bp.left, availSize.width);
     ll->ReflowFrame(kid, aReflowStatus, &aMetrics, pushedFrame);
     nsSize size;
-    ll->EndSpan(this, size,
-                aMetrics.mComputeMEW ? &aMetrics.mMaxElementWidth : nsnull);
+    ll->EndSpan(this, size, nsnull);
   }
 
   // Place and size the child and update the output metrics
@@ -285,9 +283,6 @@ nsFirstLetterFrame::Reflow(nsPresContext*          aPresContext,
   aMetrics.height += tb;
   aMetrics.ascent += bp.top;
   aMetrics.descent += bp.bottom;
-  if (aMetrics.mComputeMEW) {
-    aMetrics.mMaxElementWidth += lr;
-  }
 
   // Create a continuation or remove existing continuations based on
   // the reflow completion status.
