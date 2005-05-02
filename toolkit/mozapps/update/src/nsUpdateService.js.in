@@ -19,7 +19,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *  Ben Goodger <ben@bengoodger.com>
+ *  Ben Goodger <ben@mozilla.org> (Original Author)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -35,6 +35,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+const NS_UPDATE_XMLNS = "http://www.mozilla.org/2005/app-update";
+
 const PREF_APP_UPDATE_ENABLED   = "app.update.enabled";
 const PREF_APP_UPDATE_MODE      = "app.update.mode";
 const PREF_APP_UPDATE_INTERVAL  = "app.update.interval";
@@ -46,6 +48,8 @@ const PREF_APP_UPDATE_LASTUPDATEDATE  = "app.update.lastUpdateDate";
 const nsIUpdateService        = Components.interfaces.nsIUpdateService;
 const nsIUpdateItem           = Components.interfaces.nsIUpdateItem;
 const nsIPrefLocalizedString  = Components.interfaces.nsIPrefLocalizedString;
+
+const Node = Components.interfaces.nsIDOMNode;
 
 function APP_NS(aProperty) {
   return "http://www.mozilla.org/2004/app-rdf#" + aProperty;
@@ -70,16 +74,15 @@ function UpdateService() {
   gApp  = Components.classes["@mozilla.org/xre/app-info;1"]
                     .getService(Components.interfaces.nsIXULAppInfo);
   gPref = Components.classes["@mozilla.org/preferences-service;1"]
-                    .getService(Components.interfaces.nsIPrefBranch);
+                    .getService(Components.interfaces.nsIPrefBranch2);
   gOS   = Components.classes["@mozilla.org/observer-service;1"]
                     .getService(Components.interfaces.nsIObserverService);
   gConsole = Components.classes["@mozilla.org/consoleservice;1"]
                        .getService(Components.interfaces.nsIConsoleService);  
   
-  this.watchForUpdates();
+  this._makeTimer();
 
-  var pbi = gPref.QueryInterface(Components.interfaces.nsIPrefBranch2);
-  pbi.addObserver(PREF_UPDATE_APP_AUTOUPDATEENABLED, this, false);
+  // gPref.addObserver(PREF_UPDATE_APP_AUTOUPDATEENABLED, this, false);
 
   // Observe xpcom-shutdown to unhook pref branch observers above to avoid 
   // shutdown leaks.
@@ -87,11 +90,53 @@ function UpdateService() {
 }
 
 UpdateService.prototype = {
+  
+  _timer: null,  
+  _makeTimer: function() {
+    if (!this._timer) 
+      this._timer = Components.classes["@mozilla.org/timer;1"]
+                              .createInstance(Components.interfaces.nsITimer);
+    this._timer.cancel();
+    this._timer.initWithCallback(this, 2000, 
+                                 Components.interfaces.nsITimer.TYPE_REPEATING_SLACK);
+    return this._timer;
+  },
+  
+  observe: function(subject, topic, data) {
+    if (topic == "app-startup")
+      dump("*** goats\n");  
+  },
+  
+  notify: function(timer) {
+    dump("*** timer fired\n");
+    this.checkForUpdates();
+  },
+
+  /**
+   * 
+   */
+  checkForUpdates: function() {
+    /**
+     * 
+     */
+    function checkerCallback(updates) {
+      dump("*** checker callback\n");
+      for (var i = 0; i < updates.length; ++i) {
+        dump("*** UPDATE " + i + " = " + updates[i].toSource() + "\n");
+      }
+    }
+    dump("*** checking for updates, creating checker...\n");
+    var checker = new Checker();
+    checker.findUpdates(checkerCallback);
+  },
+  
+  
   /**
    * See nsISupports.idl
    */
   QueryInterface: function(iid) {
     if (!iid.equals(Components.interfaces.nsIApplicationUpdateService) &&
+        !iid.equals(Components.interfaces.nsITimerCallback) && 
         !iid.equals(Components.interfaces.nsIObserver) && 
         !iid.equals(Components.interfaces.nsISupports))
       throw Components.results.NS_ERROR_NO_INTERFACE;
@@ -116,6 +161,28 @@ function getPref(func, preference) {
   }
   return undefined;
 }
+
+/**
+ * Update
+ */
+function Update(node) {
+  for (var i = 0; i < node.childNodes.length; ++i) {
+    var patchNode = node.childNodes[i];
+    if (patchNode.nodeType != Node.ELEMENT_NODE)
+      continue;
+    var obj = { };
+    for (var j = 0; j < patchNode.attributes.length; ++j)
+      obj[patchNode.attributes[j].name] = patchNode.attributes[j].value;
+    var collection = obj.type == "partial" ? this.partial : this.complete;
+    collection.patches.push(obj);
+    collection.size += parseInt(obj.size);
+  }
+}
+
+Update.prototype = {
+  partial : { patches: [], size: 0 },
+  complete: { patches: [], size: 0 }
+};
 
 /**
  * Checker
@@ -144,9 +211,12 @@ Checker.prototype = {
                               .createInstance(Components.interfaces.nsIXMLHttpRequest);
     this._request.open("GET", this._updateURL, true);
     this._request.overrideMimeType("text/xml");
-    this._request.onerror = this.onError;
-    this._request.onload = this.onLoad;
-    this._request.onprogress = this.onProgress;
+    
+    var self = this;
+    this._request.onerror     = function(event) { self.onError(event);    };
+    this._request.onload      = function(event) { self.onLoad(event);     };
+    this._request.onprogress  = function(event) { self.onProgress(event); };
+
     LOG("Checker.findUpdates: sending request to " + this._updateURL);
     this._request.send(null);
     
@@ -154,32 +224,67 @@ Checker.prototype = {
   },
   
   onProgress: function(event) {
+    dump("*** download progress: " + event.position + "/" + event.totalSize + "\n");
     if (this.observer)
       this.observer.onProgress(event.target, event.position, event.totalSize);
   },
   
   get _updates() {
     var updates = this._request.responseXML.documentElement;
-    if (!updates)
+    if (!updates) {
+      LOG("Checker.get_updates: empty updates document?!");
       return [];
+    }
     
-    var updates = [];  
-    for (var i = 0; i < updates.childNodes.length; ++i)
-      updates.push(new Update(updates.childNodes[i]));
+    var newestUpdate = { version: "0.0", update: null };
+    var partialPatches = [];
+    var sizeOfPartialPatches = 0;
+    for (var i = 0; i < updates.childNodes.length; ++i) {
+      var updateNode = updates.childNodes[i];
+      if (updateNode.nodeType != Node.ELEMENT_NODE)
+        continue;
+      dump("*** node = " + updateNode.nodeName + "\n");
+      if (updateNode.getAttribute("type") == "minor") {
+        var update = new Update(minorUpdateNodes[i]); goats
+        sizeOfPartialPatches += update.partial.size;
+        if (update.type == "partial")
+          partialPatches.push(update);
+        
+        var updateVersion = minorUpdateNodes[i].getAttribute("version");
+        var vc = new VersionChecker();
+        dump("*** newestUpdate.version = " + newestUpdate.version + ", uv = " + updateVersion + "\n");
+        if (vc.compare(newestUpdate.version, updateVersion) < 0)
+          newestUpdate = { version : updateVersion, update  : update };
+      }
+      else {
+        dump("*** HANDLE MAJOR UPDATE TO = " + updateNode.getAttribute("version") + "\n");
+      }
+    }
     
-    filterUpdates(updates);
-    
-    return updates;
+    if (newestUpdate.update && 
+        sizeOfPartialPatches > newestUpdate.update.complete.size) {
+      LOG("Checker.get_updates: size of " + partialPatches.length + " partial " + 
+          "patches (" + sizeOfPartialPatches + ") exceeds size of newest " + 
+          "full patch (" + newestUpdate.update.complete.size + "), " + 
+          "returning full patch instead.");
+      return [newestPartialUpdate.update];
+    }
+    LOG("Checker.get_updates: size of " + partialPatches.length + " partial " + 
+        "patches (" + sizeOfPartialPatches + ") is less than size of newest " + 
+        "full patch (" + newestUpdate.update.complete.size + "), " + 
+        "returning incremental patches.");
+    return partialPatches;
   },
   
   onLoad: function(event) {
+    LOG("Checker.onLoad: request completed downloading document");
+    
     // Notify the front end that we're complete
     if (this.observer)
       this.observer.onLoad(event.target);
 
     // Analyze the resulting DOM and determine the set of updates to install
-    
-    // Tell the Update Service about what we discovered.
+    // and tell the Update Service about what we discovered.
     this._callback(this._updates);
   },
   
@@ -306,18 +411,17 @@ Version.prototype = {
   }
 }
 
-function nsVersionChecker()
-{
+function VersionChecker() {
 }
 
-nsVersionChecker.prototype = {
+VersionChecker.prototype = {
   /////////////////////////////////////////////////////////////////////////////
   // nsIVersionChecker
   
   // -ve      if B is newer
   // equal    if A == B
   // +ve      if A is newer
-  compare: function nsVersionChecker_compare (aVersionA, aVersionB)
+  compare: function(aVersionA, aVersionB)
   {
     var a = this._decomposeVersion(aVersionA);
     var b = this._decomposeVersion(aVersionB);
@@ -325,7 +429,7 @@ nsVersionChecker.prototype = {
     return a.compare(b);
   },
   
-  _decomposeVersion: function nsVersionChecker__decomposeVersion (aVersion)
+  _decomposeVersion: function(aVersion)
   {
     var plus = 0;
     if (aVersion.charAt(aVersion.length-1) == "+") {
@@ -342,7 +446,7 @@ nsVersionChecker.prototype = {
                        plus);
   },
   
-  _getValidInt: function nsVersionChecker__getValidInt (aPartString)
+  _getValidInt: function(aPartString)
   {
     var integer = parseInt(aPartString);
     if (isNaN(integer))
@@ -350,14 +454,14 @@ nsVersionChecker.prototype = {
     return integer;
   },
   
-  isValidVersion: function nsVersionChecker_isValidVersion (aVersion)
+  isValidVersion: function(aVersion)
   {
     return /^([0-9]+\.){0,3}[0-9]+\+?$/.test(aVersion);
   },
 
   /////////////////////////////////////////////////////////////////////////////
   // nsISupports
-  QueryInterface: function nsVersionChecker_QueryInterface (aIID) 
+  QueryInterface: function(aIID) 
   {
     if (!aIID.equals(Components.interfaces.nsIVersionChecker) &&
         !aIID.equals(Components.interfaces.nsISupports))
@@ -375,6 +479,13 @@ var gModule = {
       componentManager.registerFactoryLocation(obj.CID, obj.className, obj.contractID,
                                                fileSpec, location, type);
     }
+
+    // Make the Update Service a startup observer
+    var categoryManager = Components.classes["@mozilla.org/categorymanager;1"]
+                                    .getService(Components.interfaces.nsICategoryManager);
+    categoryManager.addCategoryEntry("app-startup", this._objects.service.className,
+                                     "service," + this._objects.service.contractID, 
+                                     true, true, null);
   },
   
   getClassObject: function(componentManager, cid, iid) {

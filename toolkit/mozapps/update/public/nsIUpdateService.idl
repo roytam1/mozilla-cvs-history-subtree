@@ -129,8 +129,7 @@ interface nsIApplicationUpdateService : nsISupports
   const unsigned short SOURCE_EVENT_USER        = 0x01;
   const unsigned short SOURCE_EVENT_BACKGROUND  = 0x02;
 
-  void checkForUpdates(in unsigned short aSourceEvent,
-                       in nsIDOMWindowInternal aParentWindow);
+  void checkForUpdates();
 
 };
 
