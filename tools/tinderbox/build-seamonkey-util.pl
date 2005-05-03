@@ -1089,12 +1089,39 @@ sub get_profile_dir {
                 $profile_dir = $ENV{APPDATA} || "C:\\_UNKNOWN_";
             }
         }
+
+	# Doublecheck that we're still in possession of a directory
+	if ( ! -d $profile_dir ) {
+		die "ERROR: $profile_dir is not a directory!\n";
+	}
+
+	# Add $Settings::VendorName to the profile path
         if ($Settings::VendorName) {
           $profile_dir .= "\\$Settings::VendorName";
         }
+
+	# Doublecheck that we're still in possession of a directory
+	if ( ! -d $profile_dir ) {
+		die "ERROR: $profile_dir is not a directory!\n";
+	}
+
+	# Add $Settings::ProductName\Profiles to the profile path
         $profile_dir .= "\\$Settings::ProductName\\Profiles\\";
+
+	# Doublecheck that we're still in possession of a directory
+	if ( ! -d $profile_dir ) {
+		die "ERROR: $profile_dir is not a directory!\n";
+	}
+
+	# We should probably be using cygpath to do this but what we have works
         $profile_dir =~ s|\\|/|g;
-        ($profile_dir) = <"$profile_dir*$Settings::MozProfileName*">;
+
+	my $glob;
+        ($glob) = <"$profile_dir*$Settings::MozProfileName*">;
+
+	# If $glob is undefined, that's okay.  We'll catch it later on and
+	# create the profile then.
+	$profile_dir = $glob;
     } elsif ($Settings::OS eq "BeOS") {
         $profile_dir = "/boot/home/config/settings/Mozilla/$Settings::MozProfileName";
     } elsif ($Settings::OS eq "Darwin") {
