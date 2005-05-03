@@ -998,7 +998,7 @@ nsObjectFrame::Reflow(nsPresContext*           aPresContext,
                       const nsHTMLReflowState& aReflowState,
                       nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsObjectFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsObjectFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aMetrics, aStatus);
   nsresult rv = NS_OK;
 

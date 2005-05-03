@@ -94,7 +94,7 @@ SpacerFrame::Reflow(nsPresContext*          aPresContext,
                     const nsHTMLReflowState& aReflowState,
                     nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("SpacerFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("SpacerFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aMetrics, aStatus);
   aStatus = NS_FRAME_COMPLETE;
 
