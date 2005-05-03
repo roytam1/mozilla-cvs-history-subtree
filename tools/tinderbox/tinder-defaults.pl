@@ -1,3 +1,20 @@
+# $ENV{MOZ_PACKAGE_MSI}
+#-----------------------------------------------------------------------------
+#  Default: 0
+#   Values: 0 | 1
+#  Purpose: Controls whether a MSI package is made.
+# Requires: Windows and a local MakeMSI installation.
+$ENV{MOZ_PACKAGE_MSI} = 0;
+
+# $ENV{MOZ_SYMBOLS_TRANSFER_TYPE}
+#-----------------------------------------------------------------------------
+#  Default: scp
+#   Values: scp | rsync
+#  Purpose: Use scp or rsync to transfer symbols to the Talkback server.
+# Requires: The selected type requires the command be available both locally
+#           and on the Talkback server.
+$ENV{MOZ_SYMBOLS_TRANSFER_TYPE} = "scp"
+
 #- PLEASE FILL THIS IN WITH YOUR PROPER EMAIL ADDRESS
 #$BuildAdministrator = "$ENV{USER}\@$ENV{HOST}";
 $BuildAdministrator = ($ENV{USER} || "cltbld") . "\@" . ($ENV{HOST} || "dhcp");
@@ -16,6 +33,7 @@ $BuildOnce         = 0;      # Build once, don't send results to server
 $TestOnly          = 0;      # Only run tests, don't pull/build
 $BuildEmbed        = 0;      # After building seamonkey, go build embed app.
 $SkipMozilla       = 0;      # Use to debug post-mozilla.pl scripts.
+$BuildLocales      = 0;      # Do l10n packaging?
 
 # Tests
 $CleanProfile             = 0;
@@ -43,7 +61,15 @@ $XULWindowOpenTest        = 0;  # Txul
 $StartupPerformanceTest   = 0;  # Ts
 
 $TestsPhoneHome           = 0;  # Should test report back to server?
-$results_server           = "axolotl.mozilla.org"; # was tegu
+
+# $results_server
+#----------------------------------------------------------------------------
+# Server on which test results will be accessible.  This was originally tegu,
+# then became axolotl.  Once we moved services from axolotl, it was time
+# to give this service its own hostname to make future transitions easier.
+# - cmp@mozilla.org
+$results_server           = "build-graphs.mozilla.org";
+
 $pageload_server          = "spider";  # localhost
 
 #
@@ -67,7 +93,7 @@ $LayoutPerformanceTestTimeout     = 1200;  # entire test, seconds
 $DHTMLPerformanceTestTimeout      = 1200;  # entire test, seconds
 $QATestTimeout                    = 1200;   # entire test, seconds
 $LayoutPerformanceTestPageTimeout = 30000; # each page, ms
-$StartupPerformanceTestTimeout    = 60;    # seconds
+$StartupPerformanceTestTimeout    = 15;    # seconds
 $XULWindowOpenTestTimeout	      = 150;   # seconds
 
 
@@ -143,12 +169,11 @@ $Compiler = 'gcc';
 $NSPRArgs = '';
 $ShellOverride = '';
 
-# allow override of timezone value (for win32 POSIX::strftime)
-$Timezone = '';
-
 # Release build options
 $ReleaseBuild  = 1;
 $shiptalkback  = 1;
+$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
+$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = "8";
 $package_creation_path = "/xpinstall/packager";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
@@ -164,6 +189,7 @@ $notify_list   = "leaf\@mozilla.org";
 $stub_installer = 1;
 $sea_installer = 1;
 $archive       = 0;
+$push_raw_xpis = 1;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
