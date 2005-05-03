@@ -1843,54 +1843,6 @@ nsXULScrollFrame::AddRemoveScrollbar(PRBool& aHasScrollbar, nscoord& aXY,
    return PR_FALSE;
 }
 
-/**
- * When reflowing a HTML document where the content model is being created
- * The nsGfxScrollFrame will get an Initial reflow when the body is opened by the content sink.
- * But there isn't enough content to really reflow very much of the document
- * so it never needs to do layout for the scrollbars
- *
- * So later other reflows happen and these are Incremental reflows, and then the scrollbars
- * get reflowed. The important point here is that when they reflowed the ReflowState inside the 
- * BoxLayoutState contains an "Incremental" reason and never a "Initial" reason.
- *
- * When it reflows for Print Preview, the content model is already full constructed and it lays
- * out the entire document at that time. When it returns back here it discovers it needs scrollbars
- * and this is a problem because the ReflowState inside the BoxLayoutState still has a "Initial"
- * reason and if it does a Layout it is essentially asking everything to reflow yet again with
- * an "Initial" reason. This causes a lot of problems especially for tables.
- * 
- * The solution for this is to change the ReflowState's reason from Initial to Resize and let 
- * all the frames do what is necessary for a resize refow. Now, we only need to do this when 
- * it is doing PrintPreview and we need only do it for HTML documents and NOT chrome.
- *
- */
-void
-nsXULScrollFrame::AdjustReflowStateForPrintPreview(nsBoxLayoutState& aState, PRBool& aSetBack)
-{
-  aSetBack = PR_FALSE;
-  PRBool isChrome;
-  PRBool isInitialPP = nsBoxFrame::IsInitialReflowForPrintPreview(aState, isChrome);
-  if (isInitialPP && !isChrome) {
-    // I know you shouldn't, but we cast away the "const" here
-    nsHTMLReflowState* reflowState = (nsHTMLReflowState*)aState.GetReflowState();
-    reflowState->reason = eReflowReason_Resize;
-    aSetBack = PR_TRUE;
-  }
-}
-
-/**
- * Sets reflow state back to Initial when we are done.
- */
-void
-nsXULScrollFrame::AdjustReflowStateBack(nsBoxLayoutState& aState, PRBool aSetBack)
-{
-  // I know you shouldn't, but we cast away the "const" here
-  nsHTMLReflowState* reflowState = (nsHTMLReflowState*)aState.GetReflowState();
-  if (aSetBack && reflowState->reason == eReflowReason_Resize) {
-    reflowState->reason = eReflowReason_Initial;
-  }
-}
-
 void
 nsXULScrollFrame::LayoutScrollArea(nsBoxLayoutState& aState, const nsRect& aRect)
 {
@@ -2088,10 +2040,7 @@ nsXULScrollFrame::Layout(nsBoxLayoutState& aState)
     // ok layout at the right size
     if (needsLayout) {
        nsBoxLayoutState resizeState(aState);
-       PRBool setBack;
-       AdjustReflowStateForPrintPreview(aState, setBack);
        LayoutScrollArea(resizeState, scrollAreaRect);
-       AdjustReflowStateBack(aState, setBack);
        needsLayout = PR_FALSE;
     }
   }
@@ -2134,10 +2083,7 @@ nsXULScrollFrame::Layout(nsBoxLayoutState& aState)
   // we only need to set the rect. The inner child stays the same size.
   if (needsLayout) {
      nsBoxLayoutState resizeState(aState);
-     PRBool setBack;
-     AdjustReflowStateForPrintPreview(aState, setBack);
      LayoutScrollArea(resizeState, scrollAreaRect);
-     AdjustReflowStateBack(aState, setBack);
      needsLayout = PR_FALSE;
   }
     
