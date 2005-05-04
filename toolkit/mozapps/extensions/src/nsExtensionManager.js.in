@@ -3691,7 +3691,9 @@ ExtensionManager.prototype = {
    * See nsIExtensionManager.idl
    */
   getIncompatibleItemList: function(id, version, type, countRef) {
-    return this.datasource.getIncompatibleItemList(id, version, type, countRef);
+    var items = this.datasource.getIncompatibleItemList(id, version, type);
+    countRef.value = items.length;
+    return items;
   },
   
   /**
@@ -4634,6 +4636,8 @@ ExtensionsDataSource.prototype = {
       var maxVersion  = stringData(datasource.GetTarget(targetApp, maxVersionRes, true));
       if (id == appID) {
         var versionChecker = getVersionChecker();
+        var goat = ((versionChecker.compare(version, minVersion) >= 0) &&
+                (versionChecker.compare(version, maxVersion) <= 0));
         return ((versionChecker.compare(version, minVersion) >= 0) &&
                 (versionChecker.compare(version, maxVersion) <= 0));
       }

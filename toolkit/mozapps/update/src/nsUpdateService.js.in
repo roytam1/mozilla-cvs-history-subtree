@@ -46,6 +46,8 @@ const PREF_APP_UPDATE_INPROGRESS      = "app.update.inProgress";
 const PREF_APP_UPDATE_LASTUPDATEDATE  = "app.update.lastUpdateDate";
 const PREF_APP_EXTENSIONS_VERSION     = "app.extensions.version";
 
+const URI_UPDATE_PROMPT_DIALOG  = "chrome://mozapps/content/update/updateWizard.xul";
+
 const nsIUpdateService        = Components.interfaces.nsIUpdateService;
 const nsIUpdateItem           = Components.interfaces.nsIUpdateItem;
 const nsIPrefLocalizedString  = Components.interfaces.nsIPrefLocalizedString;
@@ -71,6 +73,49 @@ function LOG(string) {
   gConsole.logStringMessage(string);
 }
 
+/**
+ *
+ */
+function UpdatePrompt() {
+}
+UpdatePrompt.prototype = {
+  /**
+   * See nsIUpdateService.idl
+   */
+  showUpdateAvailable: function(type, updates, updateCount) {
+    var ary = Components.classes["@mozilla.org/supports-array;1"]
+                        .createInstance(Components.interfaces.nsISupportsArray);
+    for (var i = 0; i < updateCount; ++i)
+      ary.AppendElement(updates[i]);
+      
+    var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                       .getService(Components.interfaces.nsIWindowMediator);
+    var win = wm.getMostRecentWindow("Update:Wizard");
+    if (win) 
+      win.focus();
+    else {
+      var ww = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
+                         .getService(Components.interfaces.nsIWindowWatcher);
+      ww.openWindow(null, URI_UPDATE_PROMPT_DIALOG, 
+                    "", "chrome,centerscreen,dialog,titlebar", ary);
+    }
+  },
+  
+  /**
+   * See nsISupports.idl
+   */
+  QueryInterface: function(iid) {
+    if (!iid.equals(Components.interfaces.nsIUpdatePrompt) &&
+        !iid.equals(Components.interfaces.nsISupports))
+      throw Components.results.NS_ERROR_NO_INTERFACE;
+    return this;
+  }
+};
+
+/**
+ * UpdateService
+ * A Service for managing the discovery and installation of software updates.
+ */
 function UpdateService() {
   gApp  = Components.classes["@mozilla.org/xre/app-info;1"]
                     .getService(Components.interfaces.nsIXULAppInfo);
@@ -108,22 +153,41 @@ UpdateService.prototype = {
       dump("*** goats\n");  
   },
   
+  _needsToPromptForUpdate: function(updates) {
+//#ifdef MOZ_XULAPP  
+    // First, check for Extension incompatibilities. These trump any preference
+    // settings.
+    var em = Components.classes["@mozilla.org/extensions/manager;1"]
+                       .getService(Components.interfaces.nsIExtensionManager);
+    var incompatibleList = { };
+    for (var i = 0; i < updates.length; ++i) {
+      var count = {};
+      em.getIncompatibleItemList(gApp.ID, updates[i].extensionversion,
+                                 nsIUpdateItem.TYPE_ADDON, count);
+      if (count.value > 0)
+        return true;
+    }
+//#endif  
+
+    // Now, inspect user preferences.
+    
+    // No prompt necessary, silently update...
+    return false;
+  },
+  
   notify: function(timer) {
     var self = this;
     var listener = {
       onProgress: function() { },
       onCheckComplete: function(updates, updateCount) {
-        var aev = gPref.getCharPref(PREF_APP_EXTENSIONS_VERSION);
-        var em = Components.classes["@mozilla.org/extensions/manager;1"]
-                           .getService(Components.interfaces.nsIExtensionManager);
-        var incompatibleList = [];
-        for (var i = 0; i < updateCount; ++i) {
-          var items = em.getIncompatibleItemList(gApp.ID, updates[i].extensionversion,
-                                                 nsIUpdateItem.TYPE_ADDON, { });
-          incompatibleList = incompatibleList.concat(items);
+        if (self._needsToPromptForUpdate(updates)) {
+          var prompter = Components.classes["@mozilla.org/updates/update-prompt;1"]
+                                   .createInstance(Components.interfaces.nsIUpdatePrompt);
+          prompter.showUpdateAvailable(updates, updateCount);
         }
-        
-        dump("*** incompatibleList = " + incompatibleList.length + "\n");
+        else {
+          this.downloadUpdates(updates, updateCount);
+        }
         
         dump("*** checkComplete, there are " + updateCount + " updates.\n");
       },
@@ -139,7 +203,6 @@ UpdateService.prototype = {
     var checker = new Checker();
     checker.findUpdates(listener);
   },
-  
   
   /**
    * See nsISupports.idl
@@ -187,10 +250,11 @@ function UpdatePatch(type, url, hashfunction, hashvalue, size) {
  * Update
  * Implements nsIUpdate
  */
-function Update(type, version, extensionversion, patches) {
+function Update(type, version, extensionversion, detailsurl, patches) {
   this.type = type;
   this.version = version;
   this.extensionversion = extensionversion;
+  this.detailsurl = detailsurl;
   this._patches = patches;
 }
 
@@ -249,6 +313,7 @@ function UpdateNode(node) {
   this._type = node.getAttribute("type");
   this._version = node.getAttribute("version");
   this._extensionversion = node.getAttribute("extensionversion");
+  this._detailsurl = node.getAttribute("detailsurl");
 }
 
 UpdateNode.prototype = {
@@ -257,12 +322,12 @@ UpdateNode.prototype = {
   
   get completeUpdate() {
     return new Update(this._type, this._version, this._extensionversion,
-                      this.complete.patches);
+                      this._detailsurl, this.complete.patches);
   },
   
   get partialUpdate() {
     return new Update(this._type, this._version, this._extensionversion,
-                      this.partial.patches);
+                      this._detailsurl, this.partial.patches);
   },
 };
 
@@ -595,6 +660,11 @@ var gModule = {
                contractID : "@mozilla.org/updates/update-service;1",
                className  : "Update Service",
                factory    : #1#(UpdateService)
+             },
+    prompt:  { CID        : Components.ID("{27ABA825-35B5-4018-9FDD-F99250A0E722}"),
+               contractID : "@mozilla.org/updates/update-prompt;1",
+               className  : "Update Prompt",
+               factory    : #1#(UpdatePrompt)
              },
     version: { CID        : Components.ID("{9408E0A5-509E-45E7-80C1-0F35B99FF7A9}"),
                contractID : "@mozilla.org/updates/version-checker;1",

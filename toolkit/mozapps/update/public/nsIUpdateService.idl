@@ -80,6 +80,10 @@ interface nsIUpdate : nsISupports
    *
    */
   attribute AString extensionversion;
+  /**
+   *
+   */
+  attribute AString detailsurl;
 
   /**
    *
@@ -112,6 +116,13 @@ interface nsIUpdateCheckListener : nsISupports
   void onError();
 };
 
+[scriptable, uuid(22b00276-ec23-4034-a764-395da539b4be)]
+interface nsIUpdatePrompt : nsISupports
+{
+  void showUpdateAvailable([array, size_is(updateCount)] in nsIUpdate updates,
+                           in unsigned long updateCount);
+};
+
 [scriptable, uuid(9849c4bf-5197-4d22-baa8-e3b44a1703d2)]
 interface nsIApplicationUpdateService : nsISupports
 {
@@ -120,8 +131,11 @@ interface nsIApplicationUpdateService : nsISupports
    */
   void checkForUpdates(in nsIUpdateCheckListener listener);
 
-
-
+  /**
+   * 
+   */
+  void downloadUpdates([array, size_is(updateCount)] in nsIUpdate updates,
+                       in unsigned long updateCount);
 };
 
 /**
