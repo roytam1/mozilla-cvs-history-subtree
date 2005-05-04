@@ -41,6 +41,7 @@
 
 
 #include "nsAppRunner.h"
+#include "nsUpdateDriver.h"
 #include "nsBuildID.h"
 
 #ifdef XP_MACOSX
@@ -1675,6 +1676,9 @@ XRE_main(int argc, char* argv[], const nsXREAppData* aAppData)
     }
     return 0;
   }
+
+  // Check for and process any available updates
+  ProcessUpdates(dirProvider.GetAppDir(), gRestartArgc, gRestartArgv);
 
 #if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_GTK2)
   // setup for private colormap.  Ideally we'd like to do this
