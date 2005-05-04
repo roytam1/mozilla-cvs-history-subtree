@@ -109,23 +109,23 @@ UpdateService.prototype = {
   
   notify: function(timer) {
     dump("*** timer fired\n");
-    this.checkForUpdates();
+    
+    var listener = {
+      onProgress: function() { },
+      onCheckComplete: function(updates, updateCount) {
+        dump("*** checkComplete, there are " + updateCount + " updates.\n");
+      },
+      onError: function() { },
+    }
+    this.checkForUpdates(listener);
   },
 
   /**
    * 
    */
-  checkForUpdates: function() {
-    /**
-     * 
-     */
-    function checkerCallback(updates) {
-      for (var i = 0; i < updates.length; ++i) {
-        dump("*** UPDATE " + i + " = " + updates[i].toSource() + "\n");
-      }
-    }
+  checkForUpdates: function(listener) {
     var checker = new Checker();
-    checker.findUpdates(checkerCallback);
+    checker.findUpdates(listener);
   },
   
   
@@ -161,28 +161,97 @@ function getPref(func, preference) {
 }
 
 /**
- * Update
+ * Update Patch
  */
-function Update(node) {
+function UpdatePatch(type, url, hashfunction, hashvalue, size) {
+  this.type = type;
+  this.url = url;
+  this.hashfunction = hashfunction;
+  this.hashvalue = hashvalue;
+  this.size = size;
+}
+
+/**
+ * Update
+ * Implements nsIUpdate
+ */
+function Update(type, version, extensionversion, patches) {
+  this.type = type;
+  this.version = version;
+  this.extensionversion = extensionversion;
+  this._patches = patches;
+}
+
+Update.prototype = {
+  /**
+   * 
+   */
+  get patchCount() {
+    return this._patches.length;
+  },
+  
+  /**
+   *
+   */
+  getPatchAt: function(index) {
+    return this._patches[index];
+  },
+   
+  /**
+   * See nsISupports.idl
+   */
+  QueryInterface: function(iid) {
+    if (!iid.equals(Components.interfaces.nsIUpdate) &&
+        !iid.equals(Components.interfaces.nsISupports))
+      throw Components.results.NS_ERROR_NO_INTERFACE;
+    return this;
+  }
+}; 
+ 
+
+/**
+ * UpdateNode
+ * Parses an <update> element into a group of datastructures for the purpose
+ * of determining the best path to take when updating. 
+ */
+function UpdateNode(node) {
   this.partial = { patches: [], size: 0 };
   this.complete = { patches: [], size: 0 };
 
+  // Initialize the dependent patches
   for (var i = 0; i < node.childNodes.length; ++i) {
     var patchNode = node.childNodes[i];
     if (patchNode.nodeType != Node.ELEMENT_NODE)
       continue;
-    var obj = { };
-    for (var j = 0; j < patchNode.attributes.length; ++j)
-      obj[patchNode.attributes[j].name] = patchNode.attributes[j].value;
-    var collection = obj.type == "partial" ? this.partial : this.complete;
-    collection.patches.push(obj);
-    collection.size += parseInt(obj.size);
+    var patch = new UpdatePatch(patchNode.getAttribute("type"),
+                                patchNode.getAttribute("url"),
+                                patchNode.getAttribute("hashfunction"),
+                                patchNode.getAttribute("hashvalue"),
+                                parseInt(patchNode.getAttribute("size")));
+    var collection = patch.type == "partial" ? this.partial : this.complete;
+    collection.patches.push(patch);
+    collection.size += patch.size;
   }
+  
+  // Initialize this object
+  this._type = node.getAttribute("type");
+  this._version = node.getAttribute("version");
+  this._extensionversion = node.getAttribute("extensionversion");
 }
 
-Update.prototype = {
+UpdateNode.prototype = {
   partial : { patches: [], size: 0 },
-  complete: { patches: [], size: 0 }
+  complete: { patches: [], size: 0 },
+  
+  get completeUpdate() {
+    return new Update(this._type, this._version, this._extensionversion,
+                      this.complete.patches);
+  },
+  
+  get partialUpdate() {
+    return new Update(this._type, this._version, this._extensionversion,
+                      this.partial.patches);
+  },
 };
 
 /**
@@ -227,51 +296,52 @@ Checker.prototype = {
   
   onProgress: function(event) {
     dump("*** download progress: " + event.position + "/" + event.totalSize + "\n");
-    if (this.observer)
-      this.observer.onProgress(event.target, event.position, event.totalSize);
+    this._callback.onProgress(event.target, event.position, event.totalSize);
   },
   
   get _updates() {
-    var updates = this._request.responseXML.documentElement;
-    if (!updates) {
+    var updatesElement = this._request.responseXML.documentElement;
+    if (!updatesElement) {
       LOG("Checker.get_updates: empty updates document?!");
       return [];
     }
     
     var newestUpdate = { version: "0.0", update: null };
     var minorPartialPatches = [];
+    var updates = [];
     var sizeOfPartialPatches = 0;
-    for (var i = 0; i < updates.childNodes.length; ++i) {
-      var updateNode = updates.childNodes[i];
-      if (updateNode.nodeType != Node.ELEMENT_NODE)
+    for (var i = 0; i < updatesElement.childNodes.length; ++i) {
+      var updateElement = updatesElement.childNodes[i];
+      if (updateElement.nodeType != Node.ELEMENT_NODE)
         continue;
-      if (updateNode.getAttribute("type") == "minor") {
-        var update = new Update(updateNode); 
-        var updateVersion = updateNode.getAttribute("version");
+      if (updateElement.getAttribute("type") == "minor") {
+        var updateNode = new UpdateNode(updateElement); 
+        var updateVersion = updateElement.getAttribute("version");
         var vc = new VersionChecker();
         if (vc.compare(newestUpdate.version, updateVersion) < 0)
-          newestUpdate = { version : updateVersion, update  : update };
-        minorPartialPatches = minorPartialPatches.concat(update.partial.patches);
-        sizeOfPartialPatches += update.partial.size;
+          newestUpdate = { version: updateVersion, updateNode: updateNode };
+        minorPartialPatches = minorPartialPatches.concat(updateNode.partial.patches);
+        updates.push(updateNode.partialUpdate);
+        sizeOfPartialPatches += updateNode.partial.size;
       }
       else {
-        dump("*** HANDLE MAJOR UPDATE TO = " + updateNode.getAttribute("version") + "\n");
+        dump("*** HANDLE MAJOR UPDATE TO = " + updateElement.getAttribute("version") + "\n");
       }
     }
     
-    if (newestUpdate.update && 
-        sizeOfPartialPatches > newestUpdate.update.complete.size) {
+    if (newestUpdate.updateNode && 
+        sizeOfPartialPatches > newestUpdate.updateNode.complete.size) {
       LOG("Checker.get_updates: size of " + minorPartialPatches.length + " partial " + 
           "patches (" + sizeOfPartialPatches + ") exceeds size of newest " + 
-          "full patch (" + newestUpdate.update.complete.size + "), " + 
+          "full patch (" + newestUpdate.updateNode.complete.size + "), " + 
           "returning full patch instead.");
-      return [].concat(newestUpdate.update.complete.patches);
+      return [newestUpdate.completeUpdate];
     }
     LOG("Checker.get_updates: size of " + minorPartialPatches.length + " partial " + 
         "patches (" + sizeOfPartialPatches + ") is less than size of newest " + 
-        "full patch (" + newestUpdate.update.complete.size + "), " + 
+        "full patch (" + newestUpdate.updateNode.complete.size + "), " + 
         "returning incremental patches.");
-    return minorPartialPatches;
+    return updates;
   },
   
   onLoad: function(event) {
@@ -282,14 +352,15 @@ Checker.prototype = {
       this.observer.onLoad(event.target);
 
     // Analyze the resulting DOM and determine the set of updates to install
-    // and tell the Update Service about what we discovered.
-    this._callback(this._updates);
+    var updates = this._updates;
+    
+    // ... and tell the Update Service about what we discovered.
+    this._callback.onCheckComplete(updates, updates.length);
   },
   
   onError: function(event) {
     LOG("Checker.onError: error during load");
-    if (this.observer)
-      this.observer.onError(event.target);
+    this._callback.onError(event.target);
   }
 };
 
