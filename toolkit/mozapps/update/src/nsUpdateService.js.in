@@ -44,6 +44,7 @@ const PREF_APP_UPDATE_TIMER     = "app.update.timer";
 const PREF_APP_UPDATE_URL       = "app.update.url";
 const PREF_APP_UPDATE_INPROGRESS      = "app.update.inProgress";
 const PREF_APP_UPDATE_LASTUPDATEDATE  = "app.update.lastUpdateDate";
+const PREF_APP_EXTENSIONS_VERSION     = "app.extensions.version";
 
 const nsIUpdateService        = Components.interfaces.nsIUpdateService;
 const nsIUpdateItem           = Components.interfaces.nsIUpdateItem;
@@ -108,11 +109,22 @@ UpdateService.prototype = {
   },
   
   notify: function(timer) {
-    dump("*** timer fired\n");
-    
+    var self = this;
     var listener = {
       onProgress: function() { },
       onCheckComplete: function(updates, updateCount) {
+        var aev = gPref.getCharPref(PREF_APP_EXTENSIONS_VERSION);
+        var em = Components.classes["@mozilla.org/extensions/manager;1"]
+                           .getService(Components.interfaces.nsIExtensionManager);
+        var incompatibleList = [];
+        for (var i = 0; i < updateCount; ++i) {
+          var items = em.getIncompatibleItemList(gApp.ID, updates[i].extensionversion,
+                                                 nsIUpdateItem.TYPE_ADDON, { });
+          incompatibleList = incompatibleList.concat(items);
+        }
+        
+        dump("*** incompatibleList = " + incompatibleList.length + "\n");
+        
         dump("*** checkComplete, there are " + updateCount + " updates.\n");
       },
       onError: function() { },

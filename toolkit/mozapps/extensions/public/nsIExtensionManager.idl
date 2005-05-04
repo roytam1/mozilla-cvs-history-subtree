@@ -309,6 +309,25 @@ interface nsIExtensionManager : nsISupports
                    [retval, array, size_is(itemCount)] out nsIUpdateItem items);
 
   /**
+   * Retrieves a list of nsIUpdateItems of items that are incompatible
+   * with the supplied parameters.
+   * @param   id
+   *          The id of the application to check compatibility against
+   * @param   version
+   *          The version of the application to check compatibility against
+   * @param   type
+   *          The type of item to return
+   * @param   countRef
+   *          The XPCJS reference to the number of items returned.
+   * @returns An array of incompatible nsIUpdateItems.
+   */
+  void getIncompatibleItemList(in AString id, 
+                               in AString version,
+                               in unsigned long type,
+                               out unsigned long itemCount,
+                               [retval, array, size_is(itemCount)] out nsIUpdateItem items);
+
+  /**
    * The Extensions Datasource
    * XXXben - the datasource should be registered with the RDF system, so it 
    *          can be accessed via rdf:extensions, and not exposed through the API

@@ -2950,7 +2950,7 @@ ExtensionManager.prototype = {
     }
         
     // Check the target application range specified by the extension metadata.
-    if (!this.datasource.isCompatible(installManifest, gInstallManifestRoot))
+    if (!this.datasource.isCompatible(installManifest, gInstallManifestRoot, undefined))
       installData.error = INSTALLERROR_INCOMPATIBLE_VERSION;
     
     return installData;
@@ -3685,6 +3685,13 @@ ExtensionManager.prototype = {
    */
   getItemList: function(type, countRef) {
     return this.datasource.getItemList(type, countRef);
+  },
+  
+  /**
+   * See nsIExtensionManager.idl
+   */
+  getIncompatibleItemList: function(id, version, type, countRef) {
+    return this.datasource.getIncompatibleItemList(id, version, type, countRef);
   },
   
   /**
@@ -4598,16 +4605,22 @@ ExtensionsDataSource.prototype = {
    *          datasource or an Install Manifest.
    * @param   source
    *          The RDF Resource of the item to inspect for compatibility.
-   * @returns true if the item is compatible with this version of the application,
-   *          false, otherwise.
+   * @param   version
+   *          The version of the application we are checking for compatibility
+   *          against. If this parameter is undefined, the version of the running
+   *          application is used.
+   * @returns true if the item is compatible with this version of the 
+   *          application, false, otherwise.
    */
-  isCompatible: function (datasource, source) {
+  isCompatible: function (datasource, source, version) {
     // The Default Theme is always compatible. 
     if (source.EqualsNode(this._defaultTheme))
       return true;
-      
-    var appVersion = getCharPrefWithDefault(PREF_EM_APP_EXTENSIONS_VERSION,
-                                            gApp.version);
+    
+    if (version === undefined) {
+      version = getCharPrefWithDefault(PREF_EM_APP_EXTENSIONS_VERSION,
+                                       gApp.version);
+    }              
     var appID = gApp.ID;
     
     var targets = datasource.GetTargets(source, EM_R("targetApplication"), true);
@@ -4621,8 +4634,8 @@ ExtensionsDataSource.prototype = {
       var maxVersion  = stringData(datasource.GetTarget(targetApp, maxVersionRes, true));
       if (id == appID) {
         var versionChecker = getVersionChecker();
-        return ((versionChecker.compare(appVersion, minVersion) >= 0) &&
-                (versionChecker.compare(appVersion, maxVersion) <= 0));
+        return ((versionChecker.compare(version, minVersion) >= 0) &&
+                (versionChecker.compare(version, maxVersion) <= 0));
       }
     }
     return false;
@@ -4633,7 +4646,7 @@ ExtensionsDataSource.prototype = {
    * @param   appID
    *          The ID of the application - XXXben unused?
    * @param   appVersion
-   *          The Version of the application - XXXben - unused?
+   *          The Version of the application to check for incompatibility against.
    * @param   desiredType
    *          The nsIUpdateItem type of items to look for
    * @returns An array of nsIUpdateItems that are incompatible with the application
@@ -4647,7 +4660,7 @@ ExtensionsDataSource.prototype = {
       var item = elements.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
       var id = stripPrefix(item.Value, PREFIX_ITEM_URI);
       var type = this.getItemProperty(id, "type");
-      if (type != -1 && (type & desiredType) && !this.isCompatible(this, item))
+      if (type != -1 && (type & desiredType) && !this.isCompatible(this, item, appVersion))
         items.push(this.getItemForID(id));
     }
     return items;
