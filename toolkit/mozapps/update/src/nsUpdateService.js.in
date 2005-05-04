@@ -48,9 +48,29 @@ const PREF_APP_EXTENSIONS_VERSION     = "app.extensions.version";
 
 const URI_UPDATE_PROMPT_DIALOG  = "chrome://mozapps/content/update/updateWizard.xul";
 
+const KEY_APPDIR          = "XCurProcD";
+
+const DIR_UPDATES         = "updates";
+const FILE_UPDATE_STATUS  = "update.status";
+
+const MODE_WRONLY   = 0x02;
+const MODE_CREATE   = 0x08;
+const MODE_APPEND   = 0x10;
+const MODE_TRUNCATE = 0x20;
+
+const PERMS_FILE      = 0644;
+const PERMS_DIRECTORY = 0755;
+
+const STATE_PENDING   = "pending";
+const STATE_APPLYING  = "applying";
+const STATE_SUCCEEDED = "succeeded";
+const STATE_FAILED    = "failed";
+
+const nsILocalFile            = Components.interfaces.nsILocalFile;
 const nsIUpdateService        = Components.interfaces.nsIUpdateService;
 const nsIUpdateItem           = Components.interfaces.nsIUpdateItem;
 const nsIPrefLocalizedString  = Components.interfaces.nsIPrefLocalizedString;
+const nsIIncrementalDownload  = Components.interfaces.nsIIncrementalDownload;
 
 const Node = Components.interfaces.nsIDOMNode;
 
@@ -186,7 +206,7 @@ UpdateService.prototype = {
           prompter.showUpdateAvailable(updates, updateCount);
         }
         else {
-          this.downloadUpdates(updates, updateCount);
+          self.downloadUpdates(updates, updateCount);
         }
         
         dump("*** checkComplete, there are " + updateCount + " updates.\n");
@@ -202,6 +222,14 @@ UpdateService.prototype = {
   checkForUpdates: function(listener) {
     var checker = new Checker();
     checker.findUpdates(listener);
+  },
+  
+  /**
+   * 
+   */
+  downloadUpdates: function(updates, updateCount) {
+    var downloader = new Downloader();
+    downloader.downloadUpdates(updates);
   },
   
   /**
@@ -444,24 +472,264 @@ Checker.prototype = {
 function Downloader() {
 }
 Downloader.prototype = {
+  /**
+   * 
+   */
+  _getUpdatesDir: function() {
+    var fileLocator = Components.classes["@mozilla.org/file/directory_service;1"]
+                                .getService(Components.interfaces.nsIProperties);
+    var appDir = fileLocator.get(KEY_APPDIR, Components.interfaces.nsIFile);
+    appDir.append(DIR_UPDATES);
+    return appDir;
+  },
+  
+  /**
+   * Writes the current update operation/state to a file in the patch 
+   * directory, indicating to the patching system that operations need
+   * to be performed.
+   * @param   dir
+   *          The patch directory where the update.status file should be 
+   *          written.
+   * @param   state
+   *          The state value to write.
+   */
+  _writeStatusFile: function(dir, state) {
+    var fos = Components.classes["@mozilla.org/network/safe-file-output-stream;1"]
+                        .createInstance(Components.interfaces.nsIFileOutputStream);
+    var statusFile = dir.clone();
+    statusFile.append(FILE_UPDATE_STATUS);
+    var modeFlags = MODE_WRONLY | MODE_CREATE | MODE_TRUNCATE;
+    if (!statusFile.exists()) 
+      statusFile.create(nsILocalFile.NORMAL_FILE_TYPE, PERMS_FILE);
+    fos.init(statusFile, modeFlags, PERMS_FILE, 0);
+    fos.write(state, state.length);    
+    if (fos instanceof Components.interfaces.nsISafeOutputStream)
+      fos.finish();
+    else
+      fos.close();
+  },
+  
+  _downloads: { },
 
+  /**
+   * 
+   */
+  downloadUpdates: function(updates) {
+    var ios = Components.classes["@mozilla.org/network/io-service;1"]
+                        .getService(Components.interfaces.nsIIOService);
+    var updatesDir = this._getUpdatesDir();
+    var patchCount = 0;
+    for (var i = 0; i < updates.length; ++i) {
+      for (var j = 0; j < updates[i].patchCount; ++j) {
+        var id = Components.classes["@mozilla.org/network/incremental-download;1"]
+                           .createInstance(nsIIncrementalDownload);
+        var patchFile = updatesDir.clone();
+        patchFile.append(patchCount++);
+        if (!patchFile.exists())
+          patchFile.create(nsILocalFile.DIRECTORY_TYPE, PERMS_DIRECTORY);
+        
+        var uri = ios.newURI(updates[i].getPatchAt(j).url, null, null);
+        if (uri.spec in this._downloads)
+          continue;        
+        var url = uri.QueryInterface(Components.interfaces.nsIURL);
+        patchFile.append(url.fileName);
+        LOG("Downloader.downloadUpdates: Downloading from " + uri.spec + " to " + 
+            patchFile.path);
+        id.init(uri, patchFile, -1, -1);
+        id.begin(this, null);
+        this._downloads[uri.spec] = id;
+      }
+    }
+  },
+  
+  onStartRequest: function(request, context) {
+    if (request instanceof nsIIncrementalDownload)
+      LOG("Downloader.onStartRequest: " + request.URI.spec);
+  },
+  
+  onProgress: function(request, context, progress, maxProgress) {
+    if (request instanceof nsIIncrementalDownload)
+      LOG("Downloader.onProgress: " + request.URI.spec + ", " + progress + "/" + maxProgress);
+  },
+  
+  onStatus: function(request, context, status, statusText) {
+    if (request instanceof nsIIncrementalDownload)
+      LOG("Downloader.onStatus: " + request.URI.spec + " status = " + status + ", text = " + statusText);
+  },
+  
+  onStopRequest: function(request, context, status) {
+    if (request instanceof nsIIncrementalDownload) {
+      LOG("Downloader.onStopRequest: " + request.URI.spec + ", status = " + status);
+      var id = this._downloads[request.URI.spec];
+      LOG("Downloader.onStopRequest: updating status file: " + id.destination);
+      this._writeStatusFile(id.destination.parent, STATE_PENDING);
+    }
+  },
+   
+  /**
+   * See nsISupports.idl
+   */
+  QueryInterface: function(iid) {
+    if (!iid.equals(Components.interfaces.nsIRequestObserver) &&
+        !iid.equals(Components.interfaces.nsIProgressEventSink) &&
+        !iid.equals(Components.interfaces.nsISupports))
+      throw Components.results.NS_ERROR_NO_INTERFACE;
+    return this;
+  }
 };
 
 function Manager() {
 }
 Manager.prototype = {
+  load: function() {
+  },
+  
+  /////////////////////////////////////////////////////////////////////////////
+  // nsIRDFDataSource
+  get URI() {
+    return "rdf:updates";
+  },
+  
+  GetSource: function(property, target, truthValue) {
+    return this._inner.GetSource(property, target, truthValue);
+  },
+  
+  GetSources: function(property, target, truthValue) {
+    return this._inner.GetSources(property, target, truthValue);
+  },
+  
+  /**
+   * See nsIRDFDataSource.idl
+   */
+  GetTarget: function(source, property, truthValue) {
+    if (!source)
+      return null;
+  },
+  
+  /**
+   * See nsIRDFDataSource.idl
+   */
+  GetTargets: function(source, property, truthValue) {
+    if (!source)
+      return null;
+  },
+  
+  Assert: function(source, property, target, truthValue) {
+    this._inner.Assert(source, property, target, truthValue);
+  },
+  
+  Unassert: function(source, property, target) {
+    this._inner.Unassert(source, property, target);
+  },
+  
+  Change: function(source, property, oldTarget, newTarget) {
+    this._inner.Change(source, property, oldTarget, newTarget);
+  },
 
+  Move: function(oldSource, newSource, property, target) {
+    this._inner.Move(oldSource, newSource, property, target);
+  },
+  
+  HasAssertion: function(source, property, target, truthValue) {
+    if (!source || !property || !target)
+      return false;
+    return this._inner.HasAssertion(source, property, target, truthValue);
+  },
+  
+  _observers: [],
+  AddObserver: function(observer) {
+    for (var i = 0; i < this._observers.length; ++i) {
+      if (this._observers[i] == observer) 
+        return;
+    }
+    this._observers.push(observer);
+    this._inner.AddObserver(observer);
+  },
+  
+  RemoveObserver: function(observer) {
+    for (var i = 0; i < this._observers.length; ++i) {
+      if (this._observers[i] == observer) 
+        this._observers.splice(i, 1);
+    }
+    this._inner.RemoveObserver(observer);
+  },
+  
+  ArcLabelsIn: function(node) {
+    return this._inner.ArcLabelsIn(node);
+  },
+  
+  ArcLabelsOut: function(source) {
+    return this._inner.ArcLabelsOut(source);
+  },
+  
+  GetAllResources: function() {
+    return this._inner.GetAllResources();
+  },
+  
+  IsCommandEnabled: function(sources, command, arguments) {
+    return this._inner.IsCommandEnabled(sources, command, arguments);
+  },
+  
+  DoCommand: function(sources, command, arguments) {
+    this._inner.DoCommand(sources, command, arguments);
+  },
+  
+  GetAllCmds: function(source) {
+    return this._inner.GetAllCmds(source);
+  },
+  
+  hasArcIn: function(node, arc) {
+    return this._inner.hasArcIn(node, arc);
+  },
+  
+  hasArcOut: function(source, arc) {
+    return this._inner.hasArcOut(source, arc);
+  },
+  
+  beginUpdateBatch: function() {
+    return this._inner.beginUpdateBatch();
+  },
+  
+  endUpdateBatch: function() {
+    return this._inner.endUpdateBatch();
+  },
+  
+  /**
+   * See nsIRDFRemoteDataSource.idl
+   */
+  get loaded() {
+    throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
+  },
+  
+  Init: function(uri) {
+  },
+  
+  Refresh: function(blocking) {
+  },
+  
+  Flush: function() {
+    if (this._inner instanceof Components.interfaces.nsIRDFRemoteDataSource)
+      this._inner.Flush();
+  },
+  
+  FlushTo: function(uri) {
+  },
+  
+  /**
+   * See nsISupports.idl
+   */
+  QueryInterface: function(iid) {
+    if (!iid.equals(Components.interfaces.nsIRDFDataSource) &&
+        !iid.equals(Components.interfaces.nsIRDFRemoteDataSource) && 
+        !iid.equals(Components.interfaces.nsISupports))
+      throw Components.results.NS_ERROR_NO_INTERFACE;
+    return this;
+  }
 };
 
 function Verifier() {
 }
 Verifier.prototype = {
-
-};
-
-function Installer() {
-}
-Installer.prototype = {
 
 };
 
