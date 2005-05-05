@@ -47,9 +47,11 @@
 #include "prproces.h"
 #include "prlog.h"
 
-#ifdef XP_WIN
+#if defined(XP_WIN)
 # include <direct.h>
 # include <process.h>
+#elif defined(XP_UNIX)
+# include <unistd.h>
 #endif
 
 #ifdef PR_LOGGING
