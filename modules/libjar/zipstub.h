@@ -41,7 +41,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
-#ifdef XP_MAC
+#ifdef XP_MACOSX
 #include <stdlib.h>
 #else
 #include <malloc.h>
