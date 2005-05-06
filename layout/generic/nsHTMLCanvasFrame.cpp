@@ -90,6 +90,20 @@ nsHTMLCanvasFrame::Init(nsPresContext*   aPresContext,
   return rv;
 }
 
+/* virtual */ nscoord
+nsHTMLCanvasFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
+{
+  float p2t = GetPresContext()->PixelsToTwips();
+  return NSIntPixelsToTwips(mCanvasSize.width, p2t);
+}
+
+/* virtual */ nscoord
+nsHTMLCanvasFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
+{
+  float p2t = GetPresContext()->PixelsToTwips();
+  return NSIntPixelsToTwips(mCanvasSize.width, p2t);
+}
+
 NS_IMETHODIMP
 nsHTMLCanvasFrame::Reflow(nsPresContext*           aPresContext,
                           nsHTMLReflowMetrics&     aMetrics,
@@ -123,13 +137,6 @@ nsHTMLCanvasFrame::Reflow(nsPresContext*           aPresContext,
   aMetrics.ascent  = aMetrics.height;
   aMetrics.descent = 0;
 
-  if (aMetrics.mComputeMEW) {
-    aMetrics.SetMEWToActualWidth(aReflowState.mStylePosition->mWidth.GetUnit());
-  }
-  
-  if (aMetrics.mFlags & NS_REFLOW_CALC_MAX_WIDTH) {
-    aMetrics.mMaximumWidth = aMetrics.width;
-  }
   aMetrics.mOverflowArea.SetRect(0, 0, aMetrics.width, aMetrics.height);
   FinishAndStoreOverflow(&aMetrics);
 
