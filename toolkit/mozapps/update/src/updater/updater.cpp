@@ -826,7 +826,7 @@ threadfunc(void *param)
   // open ZIP archive and process...
 
   char dataFile[MAXPATHLEN];
-  snprintf(dataFile, MAXPATHLEN, "%s/update.dat", gSourcePath);
+  snprintf(dataFile, MAXPATHLEN, "%s/update.jar", gSourcePath);
 
   int rv = gZipReader.Open(dataFile);
   if (rv == OK) {
