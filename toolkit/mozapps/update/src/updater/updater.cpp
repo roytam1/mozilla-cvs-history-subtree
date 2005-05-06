@@ -110,7 +110,9 @@ static int RunOnBackgroundThread(ThreadFunc func, void *param);
 int
 RunOnBackgroundThread(ThreadFunc func, void *param)
 {
-  _beginthread(func, 0, param);
+  if (_beginthread(func, 0, param) == -1)
+    return MEM_ERROR;
+
   return 0;
 }
 
@@ -631,12 +633,12 @@ PatchFile::Parse(char *line)
   char *q;
 
   // format "<patchfile>" "<filetopatch>"
-  q = mstrtok(kWSQuote, &line);
-  if (!q)
+  mPatchFile = mstrtok(kWSQuote, &line);
+  if (!mPatchFile)
     return PARSE_ERROR;
 
-  mPatchFile = mstrtok(kQuote, &line);
-  if (!mPatchFile)
+  q = mstrtok(kQuote, &line);
+  if (!q)
     return PARSE_ERROR;
 
   mFile = mstrtok(kWSQuote, &line);
@@ -655,10 +657,9 @@ PatchFile::Prepare()
   char spath[MAXPATHLEN];
   snprintf(spath, MAXPATHLEN, "%s/%d.bspatch", gSourcePath, mPatchIndex);
 
-  int rv = remove(spath);
-  if (rv)
-    return IO_ERROR;
-  rv = gZipReader.ExtractFile(mPatchFile, spath);
+  remove(spath);
+
+  int rv = gZipReader.ExtractFile(mPatchFile, spath);
   if (rv)
     return rv;
 

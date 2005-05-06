@@ -93,7 +93,7 @@ int MBS_ApplyPatch(const MBSPatchHeader *header, int patchfd,
 struct MBSPatchTriple {
   PRUint32 x; /* add x bytes from oldfile to x bytes from the diff block */
   PRUint32 y; /* copy y bytes from the extra block */
-  PRUint32 z; /* seek forwards in oldfile by z bytes */
+  PRInt32  z; /* seek forwards in oldfile by z bytes */
 };
 
 #endif  // bspatch_h__

@@ -44,19 +44,15 @@
 # include <io.h>
 #endif
 
+#ifdef XP_WIN
+#include <winsock2.h>
+#else
+#include <arpa/inet.h>
+#endif
+
 #ifndef SSIZE_MAX
 # define SSIZE_MAX LONG_MAX
 #endif
-
-/**
- * This function de-endianizes a PRUint32 buffer.
- */
-static inline PRUint32
-read_uint32(PRUint32 *buf)
-{
-  return (PRUint32) *((PRUint16*) buf) << 16 |
-                    *((PRUint16*) buf + 1);
-}
 
 int
 MBS_ReadHeader(int fd, MBSPatchHeader *header)
@@ -65,12 +61,12 @@ MBS_ReadHeader(int fd, MBSPatchHeader *header)
   if (s != sizeof(MBSPatchHeader))
     return BSP_ERROR_IO;
 
-  header->slen      = read_uint32(&header->slen);
-  header->scrc32    = read_uint32(&header->scrc32);
-  header->dlen      = read_uint32(&header->dlen);
-  header->cblen     = read_uint32(&header->cblen);
-  header->difflen   = read_uint32(&header->difflen);
-  header->extralen  = read_uint32(&header->extralen);
+  header->slen      = ntohl(header->slen);
+  header->scrc32    = ntohl(header->scrc32);
+  header->dlen      = ntohl(header->dlen);
+  header->cblen     = ntohl(header->cblen);
+  header->difflen   = ntohl(header->difflen);
+  header->extralen  = ntohl(header->extralen);
 
   struct stat hs;
   s = fstat(fd, &hs);
@@ -130,9 +126,19 @@ MBS_ApplyPatch(const MBSPatchHeader *header, int patchfd,
     unsigned char *extraend = extrasrc + header->extralen;
 
     do {
-      ctrlsrc->x = read_uint32(&ctrlsrc->x);
-      ctrlsrc->y = read_uint32(&ctrlsrc->y);
-      ctrlsrc->z = read_uint32(&ctrlsrc->z);
+      ctrlsrc->x = ntohl(ctrlsrc->x);
+      ctrlsrc->y = ntohl(ctrlsrc->y);
+      ctrlsrc->z = ntohl(ctrlsrc->z);
+
+#ifdef DEBUG_bsmedberg
+      printf("Applying block:\n"
+	     " x: %u\n"
+	     " y: %u\n"
+	     " z: %i\n",
+	     ctrlsrc->x,
+	     ctrlsrc->y,
+	     ctrlsrc->z);
+#endif
 
       /* Add x bytes from oldfile to x bytes from the diff block */
 
@@ -142,9 +148,9 @@ MBS_ApplyPatch(const MBSPatchHeader *header, int patchfd,
         goto end;
       }
       for (PRUint32 i = 0; i < ctrlsrc->x; ++i) {
-        fbuffer[i] += diffsrc[i];
+        diffsrc[i] += fbuffer[i];
       }
-      if ((PRUint32) write(filefd, fbuffer, ctrlsrc->x) != ctrlsrc->x) {
+      if ((PRUint32) write(filefd, diffsrc, ctrlsrc->x) != ctrlsrc->x) {
         rv = BSP_ERROR_IO;
         goto end;
       }
@@ -167,10 +173,6 @@ MBS_ApplyPatch(const MBSPatchHeader *header, int patchfd,
 
       if (fbuffer + ctrlsrc->z > fbufend) {
         rv = BSP_ERROR_CORRUPT;
-        goto end;
-      }
-      if ((PRUint32) write(filefd, fbuffer, ctrlsrc->z) != ctrlsrc->z) {
-        rv = BSP_ERROR_IO;
         goto end;
       }
       fbuffer += ctrlsrc->z;

@@ -5,29 +5,48 @@
 
   For the terms under which this work may be distributed, please see
   the adjoining file "LICENSE".
+
+  ChangeLog:
+  2005-05-05 - Use the modified header struct from bspatch.h; use 32-bit
+               values throughout.
+                 --Benjamin Smedberg <benjamin@smedbergs.us>
 */
 
 #include "bspatch.h"
 
+#include "zlib.h" // for crc32
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <err.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <stdarg.h>
+#ifdef XP_WIN
+#include <winsock2.h>
+#else
+#include <arpa/inet.h>
+#endif
 
+#undef MIN
 #define MIN(x,y) (((x)<(y)) ? (x) : (y))
 
 static void
-write_uint32(PRUint32 v, PRUint32 *buf)
+reporterr(int e, const char *fmt, ...)
 {
-  * ((PRUint16*) buf)     = (PRUint16) (v >> 16);
-  * ((PRUint16*) buf + 1) = (PRUint16) v;
+	if (fmt) {
+		va_list args;
+		va_start(args, fmt);
+		vfprintf(stderr, fmt, args);
+		va_end(args);
+	}
+
+	exit(e);
 }
 
-void split(off_t *I,off_t *V,off_t start,off_t len,off_t h)
+void split(PROffset32 *I,PROffset32 *V,PROffset32 start,PROffset32 len,PROffset32 h)
 {
-	off_t i,j,k,x,tmp,jj,kk;
+	PROffset32 i,j,k,x,tmp,jj,kk;
 
 	if(len<16) {
 		for(k=start;k<start+len;k+=j) {
@@ -86,10 +105,10 @@ void split(off_t *I,off_t *V,off_t start,off_t len,off_t h)
 	if(start+len>kk) split(I,V,kk,start+len-kk,h);
 }
 
-void qsufsort(off_t *I,off_t *V,u_char *old,off_t oldsize)
+void qsufsort(PROffset32 *I,PROffset32 *V,unsigned char *old,PROffset32 oldsize)
 {
-	off_t buckets[256];
-	off_t i,h,len;
+	PROffset32 buckets[256];
+	PROffset32 i,h,len;
 
 	for(i=0;i<256;i++) buckets[i]=0;
 	for(i=0;i<oldsize;i++) buckets[old[i]]++;
@@ -124,24 +143,24 @@ void qsufsort(off_t *I,off_t *V,u_char *old,off_t oldsize)
 	for(i=0;i<oldsize+1;i++) I[V[i]]=i;
 }
 
-off_t matchlen(u_char *old,off_t oldsize,u_char *new,off_t newsize)
+PROffset32 matchlen(unsigned char *old,PROffset32 oldsize,unsigned char *newbuf,PROffset32 newsize)
 {
-	off_t i;
+	PROffset32 i;
 
 	for(i=0;(i<oldsize)&&(i<newsize);i++)
-		if(old[i]!=new[i]) break;
+		if(old[i]!=newbuf[i]) break;
 
 	return i;
 }
 
-off_t search(off_t *I,u_char *old,off_t oldsize,
-		u_char *new,off_t newsize,off_t st,off_t en,off_t *pos)
+PROffset32 search(PROffset32 *I,unsigned char *old,PROffset32 oldsize,
+									unsigned char *newbuf,PROffset32 newsize,PROffset32 st,PROffset32 en,PROffset32 *pos)
 {
-	off_t x,y;
+	PROffset32 x,y;
 
 	if(en-st<2) {
-		x=matchlen(old+I[st],oldsize-I[st],new,newsize);
-		y=matchlen(old+I[en],oldsize-I[en],new,newsize);
+		x=matchlen(old+I[st],oldsize-I[st],newbuf,newsize);
+		y=matchlen(old+I[en],oldsize-I[en],newbuf,newsize);
 
 		if(x>y) {
 			*pos=I[st];
@@ -153,48 +172,50 @@ off_t search(off_t *I,u_char *old,off_t oldsize,
 	};
 
 	x=st+(en-st)/2;
-	if(memcmp(old+I[x],new,MIN(oldsize-I[x],newsize))<0) {
-		return search(I,old,oldsize,new,newsize,x,en,pos);
+	if(memcmp(old+I[x],newbuf,MIN(oldsize-I[x],newsize))<0) {
+		return search(I,old,oldsize,newbuf,newsize,x,en,pos);
 	} else {
-		return search(I,old,oldsize,new,newsize,st,x,pos);
+		return search(I,old,oldsize,newbuf,newsize,st,x,pos);
 	};
 }
 
 int main(int argc,char *argv[])
 {
-	int fd,p[2];
-	pid_t pid;
-	u_char *old,*new;
-	off_t oldsize,newsize;
-	off_t *I,*V;
+	int fd;
+	unsigned char *old,*newbuf;
+	PROffset32 oldsize,newsize;
+	PROffset32 *I,*V;
 
-	off_t scan,pos,len;
-	off_t lastscan,lastpos,lastoffset;
-	off_t oldscore,scsc;
+	PROffset32 scan,pos,len;
+	PROffset32 lastscan,lastpos,lastoffset;
+	PROffset32 oldscore,scsc;
 
-	off_t s,Sf,lenf,Sb,lenb;
-	off_t overlap,Ss,lens;
-	off_t i;
+	PROffset32 s,Sf,lenf,Sb,lenb;
+	PROffset32 overlap,Ss,lens;
+	PROffset32 i;
 
-	off_t dblen,eblen;
-	u_char *db,*eb;
+	PROffset32 dblen,eblen;
+	unsigned char *db,*eb;
 
-	u_char buf[8];
-	u_char header[32];
-
-	if(argc!=4) errx(1,"usage: %s oldfile newfile patchfile\n",argv[0]);
+	if(argc!=4)
+		reporterr(1,"usage: %s <oldfile> <newfile> <patchfile>\n",argv[0]);
 
 	/* Allocate oldsize+1 bytes instead of oldsize bytes to ensure
 		that we never try to malloc(0) and get a NULL pointer */
 	if(((fd=open(argv[1],O_RDONLY,0))<0) ||
 		((oldsize=lseek(fd,0,SEEK_END))==-1) ||
-		((old=malloc(oldsize+1))==NULL) ||
+		((old=(unsigned char*) malloc(oldsize+1))==NULL) ||
 		(lseek(fd,0,SEEK_SET)!=0) ||
 		(read(fd,old,oldsize)!=oldsize) ||
-		(close(fd)==-1)) err(1,"%s",argv[1]);
+		(close(fd)==-1))
+		reporterr(1,"%s",argv[1]);
 
-	if(((I=malloc((oldsize+1)*sizeof(off_t)))==NULL) ||
-		((V=malloc((oldsize+1)*sizeof(off_t)))==NULL)) err(1,NULL);
+	PRUint32 scrc = crc32(0, NULL, 0);
+	scrc = crc32(scrc, old, oldsize);
+
+	if(((I=(PROffset32*) malloc((oldsize+1)*sizeof(PROffset32)))==NULL) ||
+		((V=(PROffset32*) malloc((oldsize+1)*sizeof(PROffset32)))==NULL))
+		reporterr(1,NULL);
 
 	qsufsort(I,V,old,oldsize);
 
@@ -204,70 +225,60 @@ int main(int argc,char *argv[])
 		that we never try to malloc(0) and get a NULL pointer */
 	if(((fd=open(argv[2],O_RDONLY,0))<0) ||
 		((newsize=lseek(fd,0,SEEK_END))==-1) ||
-		((new=malloc(newsize+1))==NULL) ||
+		((newbuf=(unsigned char*) malloc(newsize+1))==NULL) ||
 		(lseek(fd,0,SEEK_SET)!=0) ||
-		(read(fd,new,newsize)!=newsize) ||
-		(close(fd)==-1)) err(1,"%s",argv[2]);
+		(read(fd,newbuf,newsize)!=newsize) ||
+		(close(fd)==-1)) reporterr(1,"%s",argv[2]);
 
-	if(((db=malloc(newsize+1))==NULL) ||
-		((eb=malloc(newsize+1))==NULL)) err(1,NULL);
+	if(((db=(unsigned char*) malloc(newsize+1))==NULL) ||
+		((eb=(unsigned char*) malloc(newsize+1))==NULL))
+		reporterr(1,NULL);
+
 	dblen=0;
 	eblen=0;
 
 	if((fd=open(argv[3],O_CREAT|O_TRUNC|O_WRONLY,0666))<0)
-		err(1,"%s",argv[3]);
+		reporterr(1,"%s",argv[3]);
 
-	/* Header is
-		0	8	 "BSDIFF40"
-		8	8	length of bzip2ed ctrl block
-		16	8	length of bzip2ed diff block
-		24	8	length of new file */
-	/* File is
-		0	32	Header
-		32	??	Bzip2ed ctrl block
-		??	??	Bzip2ed diff block
-		??	??	Bzip2ed extra block */
-	memcpy(header,"BSDIFF40",8);
-	memset(header+8,0,24);
-	if(write(fd,header,32)!=32) err(1,"%s",argv[3]);
+	/* start writing here */
 
-	if((pipe(p)==-1) || ((pid=fork())==-1)) err(1,NULL);
-	if(pid==0) {
-		if((close(0)==-1) || (close(1)==-1) || (dup2(fd,1)==-1) ||
-			(dup2(p[0],0)==-1) || (close(fd)==-1) ||
-			(close(p[0])==-1) || (close(p[1])==-1))
-			err(1,NULL);
-		execl(BZIP2,BZIP2,"-zc",NULL);
-		err(1,"%s",BZIP2);
+	MBSPatchHeader header = {
+		{'M','B','D','I','F','F','1','0'},
+		0, 0, 0, 0, 0, 0
 	};
-	if(close(p[0])==-1) err(1,NULL);
+	/* We don't know the lengths yet, so we will write the header again
+		 at the end */
+
+	if(write(fd,&header,sizeof(MBSPatchHeader))!=sizeof(MBSPatchHeader))
+		reporterr(1,"%s",argv[3]);
 
 	scan=0;len=0;
 	lastscan=0;lastpos=0;lastoffset=0;
+	PRUint32 numtriples = 0;
 	while(scan<newsize) {
 		oldscore=0;
 
 		for(scsc=scan+=len;scan<newsize;scan++) {
-			len=search(I,old,oldsize,new+scan,newsize-scan,
+			len=search(I,old,oldsize,newbuf+scan,newsize-scan,
 					0,oldsize,&pos);
 
 			for(;scsc<scan+len;scsc++)
 			if((scsc+lastoffset<oldsize) &&
-				(old[scsc+lastoffset] == new[scsc]))
+				(old[scsc+lastoffset] == newbuf[scsc]))
 				oldscore++;
 
 			if(((len==oldscore) && (len!=0)) || 
 				(len>oldscore+8)) break;
 
 			if((scan+lastoffset<oldsize) &&
-				(old[scan+lastoffset] == new[scan]))
+				(old[scan+lastoffset] == newbuf[scan]))
 				oldscore--;
 		};
 
 		if((len!=oldscore) || (scan==newsize)) {
 			s=0;Sf=0;lenf=0;
 			for(i=0;(lastscan+i<scan)&&(lastpos+i<oldsize);) {
-				if(old[lastpos+i]==new[lastscan+i]) s++;
+				if(old[lastpos+i]==newbuf[lastscan+i]) s++;
 				i++;
 				if(s*2-i>Sf*2-lenf) { Sf=s; lenf=i; };
 			};
@@ -276,7 +287,7 @@ int main(int argc,char *argv[])
 			if(scan<newsize) {
 				s=0;Sb=0;
 				for(i=1;(scan>=lastscan+i)&&(pos>=i);i++) {
-					if(old[pos-i]==new[scan-i]) s++;
+					if(old[pos-i]==newbuf[scan-i]) s++;
 					if(s*2-i>Sb*2-lenb) { Sb=s; lenb=i; };
 				};
 			};
@@ -285,9 +296,9 @@ int main(int argc,char *argv[])
 				overlap=(lastscan+lenf)-(scan-lenb);
 				s=0;Ss=0;lens=0;
 				for(i=0;i<overlap;i++) {
-					if(new[lastscan+lenf-overlap+i]==
+					if(newbuf[lastscan+lenf-overlap+i]==
 					   old[lastpos+lenf-overlap+i]) s++;
-					if(new[scan-lenb+i]==
+					if(newbuf[scan-lenb+i]==
 					   old[pos-lenb+i]) s--;
 					if(s>Ss) { Ss=s; lens=i+1; };
 				};
@@ -297,19 +308,31 @@ int main(int argc,char *argv[])
 			};
 
 			for(i=0;i<lenf;i++)
-				db[dblen+i]=new[lastscan+i]-old[lastpos+i];
+				db[dblen+i]=newbuf[lastscan+i]-old[lastpos+i];
 			for(i=0;i<(scan-lenb)-(lastscan+lenf);i++)
-				eb[eblen+i]=new[lastscan+lenf+i];
+				eb[eblen+i]=newbuf[lastscan+lenf+i];
 
 			dblen+=lenf;
 			eblen+=(scan-lenb)-(lastscan+lenf);
 
-			offtout(lenf,buf);
-			if(write(p[1],buf,8)!=8) err(1,NULL);
-			offtout((scan-lenb)-(lastscan+lenf),buf);
-			if(write(p[1],buf,8)!=8) err(1,NULL);
-			offtout((pos-lenb)-(lastpos+lenf),buf);
-			if(write(p[1],buf,8)!=8) err(1,NULL);
+			MBSPatchTriple triple;
+			triple.x = htonl(lenf);
+			triple.y = htonl((scan-lenb)-(lastscan+lenf));
+			triple.z = htonl((pos-lenb)-(lastpos+lenf));
+			if (write(fd,&triple,sizeof(triple)) != sizeof(triple))
+				reporterr(1,NULL);
+
+#ifdef DEBUG_bsmedberg
+			printf("Writing a block:\n"
+			       "	X: %u\n"
+			       "	Y: %u\n"
+			       "	Z: %i\n",
+			       (PRUint32) lenf,
+			       (PRUint32) ((scan-lenb)-(lastscan+lenf)),
+			       (PRUint32) ((pos-lenb)-(lastpos+lenf)));
+#endif
+
+			++numtriples;
 
 			lastscan=scan-lenb;
 			lastpos=pos-lenb;
@@ -317,55 +340,29 @@ int main(int argc,char *argv[])
 		};
 	};
 
-	if((close(p[1])==-1) || (waitpid(pid,NULL,0)!=pid)) err(1,NULL);
+	if(write(fd,db,dblen)!=dblen)
+		reporterr(1,NULL);
 
-	if((len=lseek(fd,0,SEEK_END))==-1) err(1,"%s",argv[3]);
-	offtout(len-32,buf);
-	if((lseek(fd,8,SEEK_SET)!=8) || (write(fd,buf,8)!=8))
-		err(1,"%s",argv[3]);
-	offtout(newsize,buf);
-	if((lseek(fd,24,SEEK_SET)!=24) || (write(fd,buf,8)!=8))
-		err(1,"%s",argv[3]);
+	if(write(fd,eb,eblen)!=eblen)
+		reporterr(1,NULL);
 
-	if(lseek(fd,0,SEEK_END)==-1) err(1,"%s",argv[3]);
-	if((pipe(p)==-1) || ((pid=fork())==-1)) err(1,NULL);
-	if(pid==0) {
-		if((close(0)==-1) || (close(1)==-1) || (dup2(fd,1)==-1) ||
-			(dup2(p[0],0)==-1) || (close(fd)==-1) ||
-			(close(p[0])==-1) || (close(p[1])==-1))
-			err(1,NULL);
-		execl(BZIP2,BZIP2,"-zc",NULL);
-		err(1,"%s",BZIP2);
-	};
-	if(close(p[0])==-1) err(1,NULL);
-	if(write(p[1],db,dblen)!=dblen) err(1,NULL);
-	if((close(p[1])==-1) || (waitpid(pid,NULL,0)!=pid)) err(1,NULL);
+	header.slen	= htonl(oldsize);
+	header.scrc32	= htonl(scrc);
+	header.dlen	= htonl(newsize);
+	header.cblen	= htonl(numtriples * sizeof(MBSPatchTriple));
+	header.difflen	= htonl(dblen);
+	header.extralen = htonl(eblen);
 
-	if((newsize=lseek(fd,0,SEEK_END))==-1) err(1,"%s",argv[3]);
-	offtout(newsize-len,buf);
-	if((lseek(fd,16,SEEK_SET)!=16) || (write(fd,buf,8)!=8))
-		err(1,"%s",argv[3]);
-
-	if(lseek(fd,0,SEEK_END)==-1) err(1,"%s",argv[3]);
-	if((pipe(p)==-1) || ((pid=fork())==-1)) err(1,NULL);
-	if(pid==0) {
-		if((close(0)==-1) || (close(1)==-1) || (dup2(fd,1)==-1) ||
-			(dup2(p[0],0)==-1) || (close(fd)==-1) ||
-			(close(p[0])==-1) || (close(p[1])==-1))
-			err(1,NULL);
-		execl(BZIP2,BZIP2,"-zc",NULL);
-		err(1,"%s",BZIP2);
-	};
-	if(close(p[0])==-1) err(1,NULL);
-	if(write(p[1],eb,eblen)!=eblen) err(1,NULL);
-	if((close(p[1])==-1) || (waitpid(pid,NULL,0)!=pid)) err(1,NULL);
-	if(close(fd)==-1) err(1,"%s",argv[3]);
+	if (lseek(fd,0,SEEK_SET) == -1 ||
+	    write(fd,&header,sizeof(header)) != sizeof(header) ||
+	    close(fd) == -1)
+		reporterr(1,NULL);
 
 	free(db);
 	free(eb);
 	free(I);
 	free(old);
-	free(new);
+	free(newbuf);
 
 	return 0;
 }

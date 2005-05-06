@@ -88,6 +88,10 @@ OS_CXXFLAGS += $(TK_CFLAGS)
 OS_LIBS += $(TK_LIBS)
 endif
 
+ifeq (WINNT,$(OS_ARCH))
+LIBS += Ws2_32.lib
+endif
+
 include $(topsrcdir)/config/rules.mk
 
 libs:: updater.ini
