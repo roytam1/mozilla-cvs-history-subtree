@@ -995,7 +995,7 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
 
         AdjustComputedWidth(PR_FALSE);
 
-        if (autoWidth != mComputedWidth) {
+        if (availWidth != mComputedWidth) {
           // Re-calculate any 'auto' margin values since the computed width
           // was adjusted by a 'min-width' or 'max-width'.
           PRInt32 availMarginSpace = autoWidth - mComputedWidth;
