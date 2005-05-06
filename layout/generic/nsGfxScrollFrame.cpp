@@ -2237,11 +2237,13 @@ nsGfxScrollFrameInner::LayoutScrollbars(nsBoxLayoutState& aState,
       if (parentFrame->GetType() == nsLayoutAtoms::viewportFrame) {
         // Usually there are no fixed children, so don't do anything unless there's
         // at least one fixed child
-        if (parentFrame->GetFirstChild(nsLayoutAtoms::fixedList)) {
-          // force a reflow of the fixed children
+        for (nsIFrame *fixedChild =
+               parentFrame->GetFirstChild(nsLayoutAtoms::fixedList);
+             fixedChild; fixedChild = fixedChild->GetNextSibling()) {
+          // force a reflow of the fixed child
+          // XXX Will this work given where we currently are in reflow?
           mOuter->GetPresContext()->PresShell()->
-            AppendReflowCommand(parentFrame, eReflowType_UserDefined,
-                                nsLayoutAtoms::fixedList);
+            FrameNeedsReflow(fixedChild, nsIPresShell::eResize);
         }
       }
     }
