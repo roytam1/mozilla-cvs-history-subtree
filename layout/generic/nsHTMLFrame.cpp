@@ -104,6 +104,8 @@ public:
   NS_IMETHOD RemoveFrame(nsIAtom*        aListName,
                          nsIFrame*       aOldFrame);
 
+  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
+  virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
   NS_IMETHOD Reflow(nsPresContext*          aPresContext,
                     nsHTMLReflowMetrics&     aDesiredSize,
                     const nsHTMLReflowState& aReflowState,
@@ -286,7 +288,8 @@ CanvasFrame::AppendFrames(nsIAtom*        aListName,
 #endif
     mFrames.AppendFrame(nsnull, aFrameList);
 
-    aPresShell.FrameNeedsReflow(this, nsIPresShell::eTreeChange);
+    GetPresContext()->PresShell()->
+      FrameNeedsReflow(this, nsIPresShell::eTreeChange);
   }
 
   return rv;
@@ -332,7 +335,8 @@ CanvasFrame::RemoveFrame(nsIAtom*        aListName,
     // Remove the frame and destroy it
     mFrames.DestroyFrame(GetPresContext(), aOldFrame);
 
-    aPresShell.FrameNeedsReflow(this, nsIPresShell::eTreeChange);
+    GetPresContext()->PresShell()->
+      FrameNeedsReflow(this, nsIPresShell::eTreeChange);
   } else {
     rv = NS_ERROR_FAILURE;
   }
@@ -433,6 +437,20 @@ CanvasFrame::Paint(nsPresContext*      aPresContext,
   return rv;
 }
 
+/* virtual */ nscoord
+CanvasFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
+{
+  NS_NOTREACHED("This should never be called.");
+  return 0;
+}
+
+/* virtual */ nscoord
+CanvasFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
+{
+  NS_NOTREACHED("This should never be called.");
+  return 0;
+}
+
 NS_IMETHODIMP
 CanvasFrame::Reflow(nsPresContext*          aPresContext,
                     nsHTMLReflowMetrics&     aDesiredSize,
@@ -442,41 +460,9 @@ CanvasFrame::Reflow(nsPresContext*          aPresContext,
   DO_GLOBAL_REFLOW_COUNT("CanvasFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
   NS_FRAME_TRACE_REFLOW_IN("CanvasFrame::Reflow");
-  //NS_PRECONDITION(!aDesiredSize.mComputeMEW, "unexpected request");
 
   // Initialize OUT parameter
   aStatus = NS_FRAME_COMPLETE;
-
-  PRBool  isStyleChange = PR_FALSE;
-  PRBool  isDirtyChildReflow = PR_FALSE;
-
-  // Check for an incremental reflow
-  if (eReflowReason_Incremental == aReflowState.reason) {
-    // See if we're the target frame
-    nsHTMLReflowCommand *command = aReflowState.path->mReflowCommand;
-    if (command) {
-      // Get the reflow type
-      switch (command->Type()) {
-      case eReflowType_ReflowDirty:
-        isDirtyChildReflow = PR_TRUE;
-        break;
-
-      case eReflowType_StyleChanged:
-        // Remember it's a style change so we can set the reflow reason below
-        isStyleChange = PR_TRUE;
-        break;
-
-      default:
-        NS_ASSERTION(PR_FALSE, "unexpected reflow command type");
-      }
-    }
-    else {
-#ifdef DEBUG
-      nsReflowPath::iterator iter = aReflowState.path->FirstChild();
-      NS_ASSERTION(*iter == mFrames.FirstChild(), "unexpected next reflow command frame");
-#endif
-    }
-  }
 
   // Reflow our one and only child frame
   nsHTMLReflowMetrics kidDesiredSize(nsnull);
@@ -487,24 +473,13 @@ CanvasFrame::Reflow(nsPresContext*          aPresContext,
 
   } else {
     nsIFrame* kidFrame = mFrames.FirstChild();
-
-    nsReflowReason reason;
-    if (isDirtyChildReflow) {
-      // Note: the only reason the frame would be dirty would be if it had
-      // just been inserted or appended
-      reason = eReflowReason_Initial;
-    } else if (isStyleChange) {
-      reason = eReflowReason_StyleChange;
-    } else {
-      reason = aReflowState.reason;
-    }
+    PRBool kidDirty = (kidFrame->GetStateBits() & NS_FRAME_IS_DIRTY) != 0;
 
     // We must specify an unconstrained available height, because constrained
     // is only for when we're paginated...
     nsHTMLReflowState kidReflowState(aPresContext, aReflowState, kidFrame,
                                      nsSize(aReflowState.availableWidth,
-                                            NS_UNCONSTRAINEDSIZE),
-                                     reason);
+                                            NS_UNCONSTRAINEDSIZE));
 
     // Reflow the frame
     ReflowChild(kidFrame, aPresContext, kidDesiredSize, kidReflowState,
@@ -518,7 +493,7 @@ CanvasFrame::Reflow(nsPresContext*          aPresContext,
 
     // If the child frame was just inserted, then we're responsible for making sure
     // it repaints
-    if (isDirtyChildReflow) {
+    if (kidDirty) {
       // But we have a new child, which will affect our background, so
       // invalidate our whole rect.
       // Note: Even though we request to be sized to our child's size, our
