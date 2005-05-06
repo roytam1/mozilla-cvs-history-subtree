@@ -416,15 +416,6 @@ nsHTMLScrollFrame::TryLayout(ScrollReflowState* aState,
   }
   aState->mScrollPortRect = nsRect(scrollPortOrigin, scrollPortSize);
   aState->mAscent = aKidMetrics.ascent;
-  if (aKidMetrics.mComputeMEW) {
-    aState->mMaxElementWidth = aKidMetrics.mMaxElementWidth + vScrollbarActualWidth;
-  }
-  if (aKidMetrics.mFlags & NS_REFLOW_CALC_MAX_WIDTH) {
-    aState->mMaximumWidth = aKidMetrics.mMaximumWidth;
-    if (aState->mMaximumWidth != NS_UNCONSTRAINEDSIZE) {
-      aState->mMaximumWidth += vScrollbarActualWidth;
-    }
-  }
   return PR_TRUE;
 }
 
@@ -627,15 +618,37 @@ nsHTMLScrollFrame::IsRTLTextControl()
 /* virtual */ nscoord
 nsHTMLScrollFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
-  NS_NOTYETIMPLEMENTED("WRITE ME!!!");
-  return 0;
+  nscoord result = mInner.mScrolledFrame->GetMinWidth(aRenderingContext);
+
+  nsGfxScrollFrameInner::ScrollbarStyles ss = GetScrollbarStyles();
+  if (ss.mVertical == NS_STYLE_OVERFLOW_SCROLL && // ideal?
+      mInner.mVScrollbarBox) {
+    nsBoxLayoutState bls(GetPresContext());
+    nsSize vScrollbarMinSize(0, 0);
+    GetScrollbarMetrics(bls, mInner.mVScrollbarBox,
+                        &vScrollbarMinSize, PR_TRUE);
+    result += vScrollbarMinSize.width;
+  }
+
+  return result;
 }
 
 /* virtual */ nscoord
 nsHTMLScrollFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
-  NS_NOTYETIMPLEMENTED("WRITE ME!!!");
-  return 0;
+  nscoord result = mInner.mScrolledFrame->GetPrefWidth(aRenderingContext);
+
+  nsGfxScrollFrameInner::ScrollbarStyles ss = GetScrollbarStyles();
+  if (ss.mVertical != NS_STYLE_OVERFLOW_HIDDEN && // ideal?
+      mInner.mVScrollbarBox) {
+    nsBoxLayoutState bls(GetPresContext());
+    nsSize vScrollbarMinSize(0, 0);
+    GetScrollbarMetrics(bls, mInner.mVScrollbarBox,
+                        &vScrollbarMinSize, PR_TRUE);
+    result += vScrollbarMinSize.width;
+  }
+
+  return result;
 }
 
 NS_IMETHODIMP
