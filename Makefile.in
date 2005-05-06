@@ -120,10 +120,7 @@ ifndef MOZ_NATIVE_ZLIB
 tier_1_dirs	+= modules/zlib
 endif
 
-# Installer needs standalone libjar, hence standalone zlib
-ifdef MOZ_INSTALLER
 tier_1_dirs	+= modules/zlib/standalone
-endif
 
 ifdef MOZ_SVG_RENDERER_LIBART
 tier_1_dirs	+= other-licenses/libart_lgpl
