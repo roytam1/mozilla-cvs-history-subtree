@@ -368,7 +368,7 @@ nsInlineFrame::Reflow(nsPresContext*          aPresContext,
       nsHTMLContainerFrame::ReparentFrameViewList(aPresContext, prevOverflowFrames,
                                                   prevInFlow, this);
 
-      if (aReflowState.reason == eReflowReason_Initial) {
+      if (GetStateBits() & NS_FRAME_FIRST_REFLOW) {
         // If it's the initial reflow, then our child list must be empty, so
         // just set the child list rather than calling InsertFrame(). This avoids
         // having to get the last child frame in the list.
@@ -389,7 +389,7 @@ nsInlineFrame::Reflow(nsPresContext*          aPresContext,
 
   // It's also possible that we have an overflow list for ourselves
 #ifdef DEBUG
-  if (aReflowState.reason == eReflowReason_Initial) {
+  if (GetStateBits() & NS_FRAME_FIRST_REFLOW) {
     // If it's our initial reflow, then we should not have an overflow list.
     // However, add an assertion in case we get reflowed more than once with
     // the initial reflow reason
@@ -397,7 +397,7 @@ nsInlineFrame::Reflow(nsPresContext*          aPresContext,
     NS_ASSERTION(!overflowFrames, "overflow list is not empty for initial reflow");
   }
 #endif
-  if (aReflowState.reason != eReflowReason_Initial) {
+  if (!(GetStateBits() & NS_FRAME_FIRST_REFLOW)) {
     nsIFrame* overflowFrames = GetOverflowFrames(aPresContext, PR_TRUE);
     if (overflowFrames) {
       NS_ASSERTION(mFrames.NotEmpty(), "overflow list w/o frames");
