@@ -850,69 +850,9 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
     availSize.height = mBottomEdge - mTopEdge;
   }
 
-  // Get reflow reason set correctly. It's possible that a child was
-  // created and then it was decided that it could not be reflowed
-  // (for example, a block frame that isn't at the start of a
-  // line). In this case the reason will be wrong so we need to check
-  // the frame state.
-  const nsHTMLReflowState* rs = psd->mReflowState;
-  nsReflowReason reason = eReflowReason_Resize;
-  if (NS_FRAME_FIRST_REFLOW & aFrame->GetStateBits()) {
-    reason = eReflowReason_Initial;
-  }
-  else if (rs->reason == eReflowReason_Initial &&
-           mBlockReflowState->reason == eReflowReason_StyleChange) {
-    // The frame we're about to reflow is an _old_ frame that was
-    // pushed inside a _new_ parent (overflow).
-
-    // So we propagate the same 'style change' that led to creating
-    // the new overflow parent to which this frame is now the child
-    reason = eReflowReason_StyleChange;
-  }
-  else if (rs->reason == eReflowReason_Incremental) { // XXX
-    // XXXwaterson (above) previously used mBlockReflowState rather
-    // than psd->mReflowState.
-
-    // If the frame we're about to reflow is on the reflow path, then
-    // propagate the reflow as `incremental' so it unwinds correctly
-    // to the target frames below us.
-    PRBool frameIsOnReflowPath = rs->path->HasChild(aFrame);
-    if (frameIsOnReflowPath)
-      reason = eReflowReason_Incremental;
-
-    // But...if the incremental reflow command is a StyleChanged
-    // reflow and its target is the current span, change the reason
-    // to `style change', so that it propagates through the entire
-    // subtree.
-    nsHTMLReflowCommand* rc = rs->path->mReflowCommand;
-    if (rc) {
-      nsReflowType type = rc->Type();
-      if (type == eReflowType_StyleChanged) {
-        nsIFrame* parentFrame = psd->mFrame
-          ? psd->mFrame->mFrame
-          : mBlockReflowState->frame;
-        if (rc->GetTarget() == parentFrame) {
-          reason = eReflowReason_StyleChange;
-        }
-      }
-      else if (type == eReflowType_ReflowDirty &&
-               (aFrame->GetStateBits() & NS_FRAME_IS_DIRTY) &&
-               !frameIsOnReflowPath) {
-        reason = eReflowReason_Dirty;
-      }
-    }
-  }
-  else if (rs->reason == eReflowReason_StyleChange) {
-    reason = eReflowReason_StyleChange;
-  }
-  else if (rs->reason == eReflowReason_Dirty) {
-    if (aFrame->GetStateBits() & NS_FRAME_IS_DIRTY)
-      reason = eReflowReason_Dirty;
-  }
-
   // Setup reflow state for reflowing the frame
   nsHTMLReflowState reflowState(mPresContext, *psd->mReflowState,
-                                aFrame, availSize, reason);
+                                aFrame, availSize);
   reflowState.mLineLayout = this;
   reflowState.mFlags.mIsTopOfPage = GetFlag(LL_ISTOPOFPAGE);
   SetFlag(LL_UNDERSTANDSNWHITESPACE, PR_FALSE);
@@ -1012,7 +952,9 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
       if (outOfFlowFrame) {
         nsPlaceholderFrame* placeholder = NS_STATIC_CAST(nsPlaceholderFrame*, aFrame);
         PRBool didPlace;
-        if (eReflowReason_Incremental == reason) {
+        if (!(aFrame->GetStateBits() &
+              (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN))) {
+          // incremental reflow of child
           didPlace = InitFloat(placeholder, aReflowStatus);
         }
         else {
