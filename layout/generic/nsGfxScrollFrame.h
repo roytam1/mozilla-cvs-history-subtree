@@ -341,7 +341,9 @@ public:
                                  nsIFrame*       aChildList);
 
   // XXXldb Is this actually used?
+#if 0
   virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
+#endif
 
   // Because there can be only one child frame, these two function return
   // NS_ERROR_FAILURE

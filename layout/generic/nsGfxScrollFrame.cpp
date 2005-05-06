@@ -73,6 +73,7 @@
 #include "nsReflowPath.h"
 #include "nsAutoPtr.h"
 #include "nsPresState.h"
+#include "nsLayoutUtils.h"
 #ifdef ACCESSIBILITY
 #include "nsIAccessibilityService.h"
 #endif
@@ -474,7 +475,7 @@ nsHTMLScrollFrame::ReflowContents(ScrollReflowState* aState,
   // first. That will minimize the work we have to do.
   PRBool currentlyUsingVScrollbar = mInner.mHasVerticalScrollbar;
 
-  if (aState->mReflowState.reason == eReflowReason_Initial) {
+  if (GetStateBits() & NS_FRAME_FIRST_REFLOW) {
     // Set initial vertical scrollbar assumption.
     if (aState->mStyles.mVertical == NS_STYLE_OVERFLOW_SCROLL) {
       currentlyUsingVScrollbar = PR_TRUE;
@@ -496,7 +497,7 @@ nsHTMLScrollFrame::ReflowContents(ScrollReflowState* aState,
   if (!canHaveVerticalScrollbar)
     currentlyUsingVScrollbar = PR_FALSE;
 
-  nsHTMLReflowMetrics kidDesiredSize(aDesiredSize.mComputeMEW, aDesiredSize.mFlags);
+  nsHTMLReflowMetrics kidDesiredSize(aDesiredSize.mFlags);
   nsMargin kidPadding;
   nsresult rv = ReflowScrolledFrame(*aState, currentlyUsingVScrollbar,
                                     &kidDesiredSize, &kidPadding, PR_TRUE);
@@ -547,7 +548,7 @@ nsHTMLScrollFrame::ReflowContents(ScrollReflowState* aState,
   // That didn't work. Try the other setting for the vertical scrollbar.
   // But don't try to show a scrollbar if we know there can't be one.
   if (currentlyUsingVScrollbar || canHaveVerticalScrollbar) {
-    nsHTMLReflowMetrics kidRetrySize(aDesiredSize.mComputeMEW, aDesiredSize.mFlags);
+    nsHTMLReflowMetrics kidRetrySize(aDesiredSize.mFlags);
     rv = ReflowScrolledFrame(*aState, !currentlyUsingVScrollbar,
                              &kidRetrySize, &kidPadding, PR_FALSE);
     if (NS_FAILED(rv))
@@ -618,7 +619,9 @@ nsHTMLScrollFrame::IsRTLTextControl()
 /* virtual */ nscoord
 nsHTMLScrollFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
-  nscoord result = mInner.mScrolledFrame->GetMinWidth(aRenderingContext);
+  // XXX Might this make us count padding/border/margin twice?
+  nscoord result = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
+                              mInner.mScrolledFrame, nsLayoutUtils::MIN_WIDTH);
 
   nsGfxScrollFrameInner::ScrollbarStyles ss = GetScrollbarStyles();
   if (ss.mVertical == NS_STYLE_OVERFLOW_SCROLL && // ideal?
@@ -636,7 +639,9 @@ nsHTMLScrollFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 /* virtual */ nscoord
 nsHTMLScrollFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
-  nscoord result = mInner.mScrolledFrame->GetPrefWidth(aRenderingContext);
+  // XXX Might this make us count padding/border/margin twice?
+  nscoord result = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
+                             mInner.mScrolledFrame, nsLayoutUtils::PREF_WIDTH);
 
   nsGfxScrollFrameInner::ScrollbarStyles ss = GetScrollbarStyles();
   if (ss.mVertical != NS_STYLE_OVERFLOW_HIDDEN && // ideal?
@@ -706,7 +711,7 @@ nsHTMLScrollFrame::Reflow(nsPresContext*           aPresContext,
       // XXX the way this works, we can never get narrower even when content
       // is deleted, because the XMost of the frame's overflow area is always
       // at least the right edge. But it looks like it has always worked this way.
-      nsHTMLReflowMetrics kidDesiredSize(aDesiredSize.mComputeMEW, aDesiredSize.mFlags);
+      nsHTMLReflowMetrics kidDesiredSize(aDesiredSize.mFlags);
       nsMargin kidPadding;
       rv = ReflowScrolledFrame(state, state.mShowVScrollbar,
                                &kidDesiredSize, &kidPadding, PR_FALSE);
@@ -748,16 +753,6 @@ nsHTMLScrollFrame::Reflow(nsPresContext*           aPresContext,
   aDesiredSize.height = state.mInsideBorderSize.height +
     borderPadding.top + borderPadding.bottom;
   aDesiredSize.ascent = state.mAscent + borderPadding.top;
-  if (aDesiredSize.mComputeMEW) {
-    aDesiredSize.mMaxElementWidth = state.mMaxElementWidth +
-      borderPadding.left + borderPadding.right;
-  }
-  if (aDesiredSize.mFlags & NS_REFLOW_CALC_MAX_WIDTH) {
-    aDesiredSize.mMaximumWidth = state.mMaximumWidth;
-    if (aDesiredSize.mMaximumWidth != NS_UNCONSTRAINEDSIZE) {
-      aDesiredSize.mMaximumWidth += borderPadding.left + borderPadding.right;
-    }
-  }
 
   aDesiredSize.descent = aDesiredSize.height - aDesiredSize.ascent;
   aDesiredSize.mOverflowArea = nsRect(0, 0, aDesiredSize.width, aDesiredSize.height);
@@ -1136,6 +1131,7 @@ nsXULScrollFrame::GetMaxSize(nsBoxLayoutState& aState, nsSize& aSize)
   return NS_OK;
 }
 
+#if 0 // XXXldb I don't think this is even needed
 /* virtual */ nscoord
 nsXULScrollFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
@@ -1156,6 +1152,7 @@ nsXULScrollFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
   }
   return 0;
 }
+#endif
 
 NS_IMETHODIMP_(nsrefcnt) 
 nsXULScrollFrame::AddRef(void)
