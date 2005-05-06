@@ -1800,52 +1800,30 @@ nsHTMLReflowState::ComputeBlockBoxData(nsPresContext* aPresContext,
       // for margin-left and margin-right become 0, and the sum of the
       // areas must equal the width of the content-area of the parent
       // element.
-      if (NS_UNCONSTRAINEDSIZE == availableWidth) {
-        // During pass1 table reflow, auto side margin values are
-        // uncomputable (== 0).
-        mComputedWidth = NS_UNCONSTRAINEDSIZE;
-      } else if (NS_SHRINKWRAPWIDTH == aContainingBlockWidth) {
-        // The containing block should shrink wrap its width, so have
-        // the child block do the same
-        mComputedWidth = NS_UNCONSTRAINEDSIZE;
-
-        // Let its content area be as wide as the containing block's max width
-        // minus any margin and border/padding
-        nscoord maxWidth = cbrs->mComputedMaxWidth;
-        if (NS_UNCONSTRAINEDSIZE != maxWidth) {
-          maxWidth -= mComputedMargin.left + mComputedBorderPadding.left + 
-                      mComputedMargin.right + mComputedBorderPadding.right;
+      // tables act like replaced elements regarding mComputedWidth 
+      nsIAtom* fType = frame->GetType();
+      if (nsLayoutAtoms::tableOuterFrame == fType) {
+        mComputedWidth = 0; // XXX temp fix for trees
+      } else if ((nsLayoutAtoms::tableFrame == fType) ||
+                 (nsLayoutAtoms::tableCaptionFrame == fType)) {
+        mComputedWidth = NS_SHRINKWRAPWIDTH;
+        if (eStyleUnit_Auto == mStyleMargin->mMargin.GetLeftUnit()) {
+          // XXX FIXME (or does CalculateBlockSideMargins do this?)
+          mComputedMargin.left = NS_AUTOMARGIN;
         }
-        if (maxWidth < mComputedMaxWidth) {
-          mComputedMaxWidth = maxWidth;
+        if (eStyleUnit_Auto == mStyleMargin->mMargin.GetRightUnit()) {
+          // XXX FIXME (or does CalculateBlockSideMargins do this?)
+          mComputedMargin.right = NS_AUTOMARGIN;
         }
-
       } else {
-        // tables act like replaced elements regarding mComputedWidth 
-        nsIAtom* fType = frame->GetType();
-        if (nsLayoutAtoms::tableOuterFrame == fType) {
-          mComputedWidth = 0; // XXX temp fix for trees
-        } else if ((nsLayoutAtoms::tableFrame == fType) ||
-                   (nsLayoutAtoms::tableCaptionFrame == fType)) {
-          mComputedWidth = NS_SHRINKWRAPWIDTH;
-          if (eStyleUnit_Auto == mStyleMargin->mMargin.GetLeftUnit()) {
-            // XXX FIXME (or does CalculateBlockSideMargins do this?)
-            mComputedMargin.left = NS_AUTOMARGIN;
-          }
-          if (eStyleUnit_Auto == mStyleMargin->mMargin.GetRightUnit()) {
-            // XXX FIXME (or does CalculateBlockSideMargins do this?)
-            mComputedMargin.right = NS_AUTOMARGIN;
-          }
-        } else {
-          mComputedWidth = availableWidth - mComputedMargin.left -
-            mComputedMargin.right - mComputedBorderPadding.left -
-            mComputedBorderPadding.right;
-          mComputedWidth = PR_MAX(mComputedWidth, 0);
-        }
-
-        AdjustComputedWidth(PR_FALSE);
-        CalculateBlockSideMargins(cbrs->mComputedWidth, mComputedWidth);
+        mComputedWidth = availableWidth - mComputedMargin.left -
+          mComputedMargin.right - mComputedBorderPadding.left -
+          mComputedBorderPadding.right;
+        mComputedWidth = PR_MAX(mComputedWidth, 0);
       }
+
+      AdjustComputedWidth(PR_FALSE);
+      CalculateBlockSideMargins(cbrs->mComputedWidth, mComputedWidth);
     }
   } else {
     ComputeHorizontalValue(aContainingBlockWidth, aWidthUnit,
