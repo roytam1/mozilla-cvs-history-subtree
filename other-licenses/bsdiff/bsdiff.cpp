@@ -19,12 +19,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
 #include <fcntl.h>
 #include <stdarg.h>
 #ifdef XP_WIN
+#include <io.h>
 #include <winsock2.h>
 #else
+#include <unistd.h>
 #include <arpa/inet.h>
 #endif
 
