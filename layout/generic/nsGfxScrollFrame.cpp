@@ -730,7 +730,7 @@ nsHTMLScrollFrame::Reflow(nsPresContext*           aPresContext,
   nsRect newScrollAreaBounds = mInner.mScrollableView->View()->GetBounds();
   nsRect newScrolledAreaBounds = mInner.mScrolledFrame->GetView()->GetBounds();
   if (reflowHScrollbar || reflowVScrollbar || reflowScrollCorner ||
-      reason != eReflowReason_Incremental ||
+      (GetStateBits() & NS_FRAME_IS_DIRTY) ||
       didHaveHScrollbar != state.mShowHScrollbar ||
       didHaveVScrollbar != state.mShowVScrollbar ||
       oldScrollAreaBounds != newScrollAreaBounds ||
@@ -2129,7 +2129,7 @@ nsXULScrollFrame::Layout(nsBoxLayoutState& aState)
   // we only need to set the rect. The inner child stays the same size.
   if (needsLayout) {
     nsBoxLayoutState resizeState(aState);
-    resizeState.SetLayoutReason(nsBoxLayoutState::Resize);
+    mInner.mScrolledFrame->AddStateBits(NS_FRAME_IS_DIRTY);
     LayoutScrollArea(resizeState, scrollAreaRect);
   }
 
@@ -2227,12 +2227,11 @@ nsGfxScrollFrameInner::LayoutScrollbars(nsBoxLayoutState& aState,
   }
 
   // may need to update fixed position children of the viewport,
-  // if the client area changed size because of some dirty reflow
-  // (if the reflow is initial or resize, the fixed children will
-  // be re-laid out anyway)
-  if (aOldScrollArea.Size() != aScrollArea.Size()
-#error "Is this now always true or always false?"
-      //&& nsBoxLayoutState::Dirty == aState.LayoutReason()) {
+  // if the client area changed size because of an incremental
+  // reflow of a descendant.  (If the outer frame is dirty, the fixed
+  // children will be re-laid out anyway)
+  if (aOldScrollArea.Size() != aScrollArea.Size() && 
+      !(mOuter->GetStateBits() & NS_FRAME_IS_DIRTY)) {
     nsIFrame* parentFrame = mOuter->GetParent();
     if (parentFrame) {
       if (parentFrame->GetType() == nsLayoutAtoms::viewportFrame) {
