@@ -172,6 +172,8 @@ typedef PRUint32 nsFrameState;
 
 // If this bit is set, then the frame is dirty and needs to be reflowed.
 // This bit is set when the frame is first created.
+// This bit is cleared by DidReflow after the required call to Reflow has
+// finished.
 #define NS_FRAME_IS_DIRTY                             0x00000400
 
 // If this bit is set then the frame is unflowable.
@@ -183,6 +185,8 @@ typedef PRUint32 nsFrameState;
 //  2. the frame has had descendants removed.
 // It means that Reflow needs to be called, but that Reflow will not
 // do as much work as it would if NS_FRAME_IS_DIRTY were set.
+// This bit is cleared by DidReflow after the required call to Reflow has
+// finished.
 #define NS_FRAME_HAS_DIRTY_CHILDREN                   0x00001000
 
 // If this bit is set, the frame has an associated view
@@ -903,21 +907,24 @@ public:
    *
    * Note that many frames will cache the result of this function call
    * unless MarkIntrinsicWidthsDirty is called.
+   *
+   * It is currently acceptable for a frame to mark itself dirty when
+   * this method is called.  (This wouldn't be a good design if we were
+   * starting from scratch, but we're not.  We may eventually want to
+   * move to a world where this is not acceptable, but it requires a
+   * good bit of work on inline layout.)  This means that if a frame
+   * calls GetMinWidth during Reflow on a child that is not dirty
+   * (NS_FRAME_IS_DIRTY or NS_FRAME_HAS_DIRTY_CHILDREN), it is required
+   * to recheck those dirty bits before finishing Reflow; failing to do
+   * so would leave NS_FRAME_HAS_DIRTY_CHILDREN unset where it should be
+   * set.
    */
   virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext) = 0;
 
   /**
    * Get the intrinsic width of the frame.
    *
-   * This is *not* affected by the CSS 'min-width', 'width', and
-   * 'max-width' properties on this frame, but it is affected by the
-   * values of those properties on this frame's descendants.
-   *
-   * The value returned should **NOT** include the space required for
-   * padding and border.
-   *
-   * Note that many frames will cache the result of this function call
-   * unless MarkIntrinsicWidthsDirty is called.
+   * Otherwise, all the comments for |GetMinWidth| above apply.
    */
   virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext) = 0;
 
