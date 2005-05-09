@@ -1202,7 +1202,7 @@ XPC_WN_Safe_GetterSetterThunkNative(JSContext *cx, JSObject *obj, uintN argc,
 
 static JSPropertyOp
 NewSafeGetterOrSetterThunk(JSContext *cx, JSObject *obj, jsid id,
-                           JSPropertyOp gsop, uintN attrs, uintN nargs)
+                           JSPropertyOp gsop, uintN nargs)
 {
     JSObject *unsafe_gsobj = (JSObject *) gsop;
 
@@ -1228,10 +1228,9 @@ NewSafeGetterOrSetterThunk(JSContext *cx, JSObject *obj, jsid id,
     }
 
     // Make a thunk to check cross-trust-domain access before calling gsop.
-    attrs &= ~JSFUN_BOUND_METHOD;
     JSFunction *safe_gsfun = JS_NewFunction(cx,
                                             XPC_WN_Safe_GetterSetterThunkNative,
-                                            nargs, attrs, obj, NULL);
+                                            nargs, 0, obj, NULL);
     if(!safe_gsfun)
         return NULL;
 
@@ -1261,13 +1260,13 @@ XPC_WN_JSOp_Safe_DefineProperty(JSContext *cx, JSObject *obj,
     {
         if(attrs & JSPROP_GETTER)
         {
-            getter = NewSafeGetterOrSetterThunk(cx, obj, id, getter, attrs, 0);
+            getter = NewSafeGetterOrSetterThunk(cx, obj, id, getter, 0);
             if(!getter)
                 return JS_FALSE;
         }
         if(attrs & JSPROP_SETTER)
         {
-            setter = NewSafeGetterOrSetterThunk(cx, obj, id, setter, attrs, 1);
+            setter = NewSafeGetterOrSetterThunk(cx, obj, id, setter, 1);
             if(!setter)
                 return JS_FALSE;
         }
