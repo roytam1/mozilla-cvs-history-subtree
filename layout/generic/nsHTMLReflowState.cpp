@@ -1806,15 +1806,16 @@ nsHTMLReflowState::ComputeBlockBoxData(nsPresContext* aPresContext,
         mComputedWidth = 0; // XXX temp fix for trees
       } else if ((nsLayoutAtoms::tableFrame == fType) ||
                  (nsLayoutAtoms::tableCaptionFrame == fType)) {
-        mComputedWidth = NS_SHRINKWRAPWIDTH;
-        if (eStyleUnit_Auto == mStyleMargin->mMargin.GetLeftUnit()) {
-          // XXX FIXME (or does CalculateBlockSideMargins do this?)
-          mComputedMargin.left = NS_AUTOMARGIN;
+        // The width is shrink-to-fit
+        nscoord prefWidth = frame->GetPrefWidth(rendContext);
+        if (prefWidth < availableWidth) {
+          mComputedWidth = prefWidth;
+        } else {
+          nscoord minWidth = frame->GetMinWidth(rendContext);
+          mComputedWidth = PR_MAX(minWidth, availableWidth);
         }
-        if (eStyleUnit_Auto == mStyleMargin->mMargin.GetRightUnit()) {
-          // XXX FIXME (or does CalculateBlockSideMargins do this?)
-          mComputedMargin.right = NS_AUTOMARGIN;
-        }
+        // XXX This is probably quite wrong for captions and for tables
+        // with captions.  We need to do more of this on the outer frame.
       } else {
         mComputedWidth = availableWidth - mComputedMargin.left -
           mComputedMargin.right - mComputedBorderPadding.left -
@@ -1874,7 +1875,10 @@ nsHTMLReflowState::CalculateBlockSideMargins(nscoord aAvailWidth,
   // compute against...
   if (NS_UNCONSTRAINEDSIZE == aComputedWidth ||
       NS_UNCONSTRAINEDSIZE == aAvailWidth)
+  {
+    NS_NOTREACHED("this shouldn't happen anymore");
     return;
+  }
 
   nscoord sum = mComputedMargin.left + mComputedBorderPadding.left +
     aComputedWidth + mComputedBorderPadding.right + mComputedMargin.right;
@@ -1885,34 +1889,16 @@ nsHTMLReflowState::CalculateBlockSideMargins(nscoord aAvailWidth,
   // Determine the left and right margin values. The width value
   // remains constant while we do this.
 
-  PRBool isTable = mStyleDisplay->mDisplay == NS_STYLE_DISPLAY_TABLE ||
-                   mStyleDisplay->mDisplay == NS_STYLE_DISPLAY_TABLE_CAPTION;
-
   // Calculate how much space is available for margins
   nscoord availMarginSpace = aAvailWidth - sum;
-
-  // XXXldb Should this be quirks-mode only?  And why captions?
-  if (isTable)
-    // XXXldb Why does this break things so badly if this is changed to
-    // availMarginSpace += mComputedBorderPadding.left +
-    //                     mComputedBorderPadding.right;
-    availMarginSpace = aAvailWidth - aComputedWidth;
 
   // If the available margin space is negative, then don't follow the
   // usual overconstraint rules.
   if (availMarginSpace < 0) {
-    if (!isTable) {
-      if (mStyleVisibility->mDirection == NS_STYLE_DIRECTION_LTR) {
-        mComputedMargin.right += availMarginSpace;
-      } else {
-        mComputedMargin.left += availMarginSpace;
-      }
+    if (mStyleVisibility->mDirection == NS_STYLE_DIRECTION_LTR) {
+      mComputedMargin.right += availMarginSpace;
     } else {
-      mComputedMargin.left = 0;
-      mComputedMargin.right = 0;
-      if (mStyleVisibility->mDirection == NS_STYLE_DIRECTION_RTL) {
-        mComputedMargin.left = availMarginSpace;
-      }
+      mComputedMargin.left += availMarginSpace;
     }
     return;
   }
@@ -1923,7 +1909,7 @@ nsHTMLReflowState::CalculateBlockSideMargins(nscoord aAvailWidth,
     eStyleUnit_Auto == mStyleMargin->mMargin.GetLeftUnit();
   PRBool isAutoRightMargin =
     eStyleUnit_Auto == mStyleMargin->mMargin.GetRightUnit();
-  if (!isAutoLeftMargin && !isAutoRightMargin && !isTable) {
+  if (!isAutoLeftMargin && !isAutoRightMargin) {
     // Neither margin is 'auto' so we're over constrained. Use the
     // 'direction' property of the parent to tell which margin to
     // ignore
