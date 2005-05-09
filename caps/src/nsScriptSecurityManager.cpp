@@ -1188,6 +1188,15 @@ NS_IMETHODIMP
 nsScriptSecurityManager::CheckLoadURI(nsIURI *aSourceURI, nsIURI *aTargetURI,
                                       PRUint32 aFlags)
 {
+    // If someone passes a flag that we don't understand, we should
+    // fail, because they may need a security check that we don't
+    // provide.
+    NS_ENSURE_FALSE(aFlags & ~(nsIScriptSecurityManager::DISALLOW_FROM_MAIL |
+                               nsIScriptSecurityManager::ALLOW_CHROME |
+                               nsIScriptSecurityManager::DISALLOW_SCRIPT |
+                               nsIScriptSecurityManager::DISALLOW_SCRIPT_OR_DATA),
+                    NS_ERROR_UNEXPECTED);
+
     nsresult rv;
     //-- get the source scheme
     nsXPIDLCString sourceScheme;
@@ -1215,8 +1224,11 @@ nsScriptSecurityManager::CheckLoadURI(nsIURI *aSourceURI, nsIURI *aTargetURI,
     }
 
     //-- Some callers do not allow loading javascript: or data: URLs
-    if ((aFlags & nsIScriptSecurityManager::DISALLOW_SCRIPT_OR_DATA) &&
-        (targetScheme.Equals("javascript") || targetScheme.Equals("data")))
+    if (((aFlags & (nsIScriptSecurityManager::DISALLOW_SCRIPT |
+                    nsIScriptSecurityManager::DISALLOW_SCRIPT_OR_DATA)) &&
+         targetScheme.Equals("javascript")) ||
+        ((aFlags & nsIScriptSecurityManager::DISALLOW_SCRIPT_OR_DATA) &&
+         targetScheme.Equals("data")))
     {
        return NS_ERROR_DOM_BAD_URI;
     }
