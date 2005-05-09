@@ -60,6 +60,26 @@ nsLeafFrame::Paint(nsPresContext*      aPresContext,
   return NS_OK;
 }
 
+/* virtual */ nscoord
+nsLeafFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
+{
+  nsHTMLReflowState rs(GetPresContext(), this, aRenderingContext,
+                       nsSize(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE));
+  nsHTMLReflowMetrics metrics;
+  GetDesiredSize(GetPresContext(), rs, metrics);
+  return metrics.width;
+}
+
+/* virtual */ nscoord
+nsLeafFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
+{
+  nsHTMLReflowState rs(GetPresContext(), this, aRenderingContext,
+                       nsSize(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE));
+  nsHTMLReflowMetrics metrics;
+  GetDesiredSize(GetPresContext(), rs, metrics);
+  return metrics.width;
+}
+
 NS_IMETHODIMP
 nsLeafFrame::Reflow(nsPresContext* aPresContext,
                     nsHTMLReflowMetrics& aMetrics,
@@ -80,9 +100,6 @@ nsLeafFrame::Reflow(nsPresContext* aPresContext,
   GetDesiredSize(aPresContext, aReflowState, aMetrics);
   nsMargin borderPadding;
   AddBordersAndPadding(aPresContext, aReflowState, aMetrics, borderPadding);
-  if (aMetrics.mComputeMEW) {
-    aMetrics.SetMEWToActualWidth(aReflowState.mStylePosition->mWidth.GetUnit());
-  }
   aStatus = NS_FRAME_COMPLETE;
 
   NS_FRAME_TRACE(NS_FRAME_TRACE_CALLS,
