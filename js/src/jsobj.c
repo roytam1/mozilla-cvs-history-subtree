@@ -1081,8 +1081,11 @@ obj_eval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     /* Belt-and-braces: check that this eval callee has access to scopeobj. */
     if (cx->findObjectPrincipals) {
         scopePrincipals = cx->findObjectPrincipals(cx, scopeobj);
-        if (scopePrincipals != principals)
-            scopeobj = OBJ_GET_PARENT(cx, JSVAL_TO_OBJECT(argv[-2]));
+        if (scopePrincipals != principals) {
+            JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
+                                 JSMSG_BAD_INDIRECT_CALL, js_eval_str);
+            return JS_FALSE;
+        }
     }
 
     ok = js_Execute(cx, scopeobj, script, caller, JSFRAME_EVAL, rval);
