@@ -44,6 +44,9 @@
 #include "nsString.h"
 #include "nsIDOMInstallVersion.h"
 #include "nsIDOMInstallTriggerGlobal.h"
+#include "nsIDOMWindow.h"
+#include "nsIDOMDocument.h"
+#include "nsIDocument.h"
 #include "nsIDocShell.h"
 #include "nsIObserverService.h"
 #include "nsInstallTrigger.h"
@@ -153,7 +156,7 @@ static JSBool CreateNativeObject(JSContext *cx, JSObject *obj, nsIDOMInstallTrig
 // Helper function for URI verification
 //
 static nsresult
-InstallTriggerCheckLoadURIFromScript(const nsAString& uriStr)
+InstallTriggerCheckLoadURIFromScript(JSContext *cx, const nsAString& uriStr)
 {
     nsresult rv;
     nsCOMPtr<nsIScriptSecurityManager> secman(
@@ -170,6 +173,26 @@ InstallTriggerCheckLoadURIFromScript(const nsAString& uriStr)
 
     rv = principal->GetURI(getter_AddRefs(scriptURI));
     NS_ENSURE_SUCCESS(rv, rv);
+
+    if (!scriptURI) {
+      // No URI reachable from the principal, get one from the calling
+      // window.
+
+      nsIScriptContext *scx = GetScriptContextFromJSContext(cx);
+      NS_ENSURE_TRUE(scx, NS_ERROR_FAILURE);
+
+      nsCOMPtr<nsIDOMWindow> window =
+        do_QueryInterface(scx->GetGlobalObject());
+      NS_ENSURE_TRUE(window, NS_ERROR_FAILURE);
+
+      nsCOMPtr<nsIDOMDocument> domDoc;
+      window->GetDocument(getter_AddRefs(domDoc));
+
+      nsCOMPtr<nsIDocument> doc = do_QueryInterface(domDoc);
+      NS_ENSURE_TRUE(doc, NS_ERROR_FAILURE);
+
+      scriptURI = doc->GetDocumentURI();
+    }
 
     // convert the requested URL string to a URI
     nsCOMPtr<nsIURI> uri;
@@ -318,13 +341,13 @@ InstallTriggerGlobalInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *arg
             }
 
             // Make sure we're allowed to load this URL and the icon URL
-            nsresult rv = InstallTriggerCheckLoadURIFromScript(xpiURL);
+            nsresult rv = InstallTriggerCheckLoadURIFromScript(cx, xpiURL);
             if (NS_FAILED(rv))
                 abortLoad = PR_TRUE;
 
             if (!abortLoad && iconURL)
             {
-                rv = InstallTriggerCheckLoadURIFromScript(icon);
+                rv = InstallTriggerCheckLoadURIFromScript(cx, icon);
                 if (NS_FAILED(rv))
                     abortLoad = PR_TRUE;
             }
@@ -444,7 +467,7 @@ InstallTriggerGlobalInstallChrome(JSContext *cx, JSObject *obj, uintN argc, jsva
     }
 
     // Make sure caller is allowed to load this url.
-    nsresult rv = InstallTriggerCheckLoadURIFromScript(sourceURL);
+    nsresult rv = InstallTriggerCheckLoadURIFromScript(cx, sourceURL);
     if (NS_FAILED(rv))
         return JS_FALSE;
 
@@ -529,7 +552,7 @@ InstallTriggerGlobalStartSoftwareUpdate(JSContext *cx, JSObject *obj, uintN argc
     }
 
     // Make sure caller is allowed to load this url.
-    nsresult rv = InstallTriggerCheckLoadURIFromScript(xpiURL);
+    nsresult rv = InstallTriggerCheckLoadURIFromScript(cx, xpiURL);
     if (NS_FAILED(rv))
         return JS_FALSE;
 
