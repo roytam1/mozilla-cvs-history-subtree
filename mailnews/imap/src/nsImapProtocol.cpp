@@ -321,6 +321,7 @@ static PRBool gHideUnusedNamespaces = PR_TRUE;
 static PRBool gHideOtherUsersFromList = PR_FALSE;
 static PRBool gUseEnvelopeCmd = PR_FALSE;
 static PRBool gUseLiteralPlus = PR_TRUE;
+static PRBool gExpungeAfterDelete = PR_FALSE;
 
 nsresult nsImapProtocol::GlobalInitialization()
 {
@@ -343,6 +344,7 @@ nsresult nsImapProtocol::GlobalInitialization()
     prefBranch->GetBoolPref("mail.imap.use_envelope_cmd",
                             &gUseEnvelopeCmd);
     prefBranch->GetBoolPref("mail.imap.use_literal_plus", &gUseLiteralPlus);
+    prefBranch->GetBoolPref("mail.imap.expunge_after_delete", &gExpungeAfterDelete);
     return NS_OK;
 }
 
@@ -2400,6 +2402,8 @@ void nsImapProtocol::ProcessSelectedStateURL()
               Store(messageIdString, "+FLAGS (\\Deleted \\Seen)",
                 bMessageIdsAreUids); 
               PRBool storeSuccessful = GetServerStateParser().LastCommandSuccessful();
+              if (gExpungeAfterDelete && storeSuccessful) 
+                Expunge();
               
               if (m_imapMailFolderSink)
               {
@@ -2442,7 +2446,11 @@ void nsImapProtocol::ProcessSelectedStateURL()
               {
                 Store(messageIdString, "+FLAGS (\\Deleted \\Seen)",bMessageIdsAreUids); 
                 if (GetServerStateParser().LastCommandSuccessful())
+                {
                   copyStatus = ImapOnlineCopyStateType::kSuccessfulDelete;
+                  if (gExpungeAfterDelete) 
+                    Expunge();
+                }
                 else
                   copyStatus = ImapOnlineCopyStateType::kFailedDelete;
                 
