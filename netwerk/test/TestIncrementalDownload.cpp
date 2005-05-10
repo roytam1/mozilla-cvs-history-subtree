@@ -164,7 +164,7 @@ DoIncrementalFetch(const char *uriSpec, const char *resultPath, PRInt32 chunkSiz
   if (NS_FAILED(rv))
     return rv;
 
-  rv = download->Begin(observer, nsnull);
+  rv = download->Start(observer, nsnull);
   if (NS_FAILED(rv))
     return rv;
 

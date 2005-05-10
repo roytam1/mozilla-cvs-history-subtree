@@ -43,8 +43,8 @@ interface nsIFile;
 interface nsIRequestObserver;
 
 /**
- * A incremental download object attempts to fetch a file piecemeal over
- * time in an effort to minimize network bandwidth usage.
+ * An incremental download object attempts to fetch a file piecemeal over time
+ * in an effort to minimize network bandwidth usage.
  *
  * Canceling a background download does not cause the file on disk to be
  * deleted.
@@ -57,13 +57,25 @@ interface nsIIncrementalDownload : nsIRequest
    * already exists, then only the remaining portion of the file will be
    * fetched.
    *
+   * NOTE: The downloader will create the destination file if it does not
+   * already exist.  It will create the file with the permissions 0600 if
+   * needed.  To affect the permissions of the file, consumers of this
+   * interface may create an empty file at the specified destination prior to
+   * starting the incremental download.
+   *
+   * NOTE: Since this class may create a temporary file at the specified
+   * destination, it is advisable for the consumer of this interface to specify
+   * a file name for the destination that would not tempt the user into
+   * double-clicking it.  For example, it might be wise to append a file
+   * extension like ".part" to the end of the destination to protect users from
+   * accidentally running "blah.exe" before it is a complete file.
+   *
    * @param uri
    *        The URI to fetch.
    * @param destination
    *        The location where the file is to be stored.
    * @param chunkSize
-   *        The size of the chunks to fetch.  Pass -1 to use the default chunk
-   *        size.
+   *        The size of the chunks to fetch.
    * @param intervalInSeconds
    *        The amount of time to wait between fetching chunks.  Pass -1 to use
    *        the default interval, or 0 to fetch the remaining part of the file
@@ -79,8 +91,8 @@ interface nsIIncrementalDownload : nsIRequest
 
   /**
    * The URI being fetched after any redirects have been followed.  This
-   * attribute is only set after OnStartRequest has been called on the observer
-   * passed to the begin method.
+   * attribute is set just prior to calling OnStartRequest on the observer
+   * passed to the start method.
    */
   readonly attribute nsIURI finalURI;
 
@@ -90,17 +102,17 @@ interface nsIIncrementalDownload : nsIRequest
   readonly attribute nsIFile destination;
 
   /**
-   * The total number of bytes for the requested file.  This attribute is only
-   * set after OnStartRequest has been called on the observer passed to the
-   * begin method.
+   * The total number of bytes for the requested file.  This attribute is set
+   * just prior to calling OnStartRequest on the observer passed to the start
+   * method.
    *
    * This attribute has a value of -1 if the total size is unknown.
    */
   readonly attribute long long totalSize;
 
   /**
-   * The current number of bytes downloaded so far.  This attribute is only set
-   * after OnStartRequest has been called on the observer passed to the begin
+   * The current number of bytes downloaded so far.  This attribute is set just
+   * prior to calling OnStartRequest on the observer passed to the start
    * method.
    *
    * This attribute has a value of -1 if the current size is unknown.
@@ -108,7 +120,7 @@ interface nsIIncrementalDownload : nsIRequest
   readonly attribute long long currentSize;
 
   /**
-   * Begin the incremental download.
+   * Start the incremental download.
    *
    * @param observer
    *        An observer to be notified of various events.  OnStartRequest is
@@ -120,6 +132,6 @@ interface nsIIncrementalDownload : nsIRequest
    * @param ctxt
    *        User defined object forwarded to the observer's methods.
    */
-  void begin(in nsIRequestObserver observer,
+  void start(in nsIRequestObserver observer,
              in nsISupports ctxt);
 };

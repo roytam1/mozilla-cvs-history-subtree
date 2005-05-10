@@ -46,26 +46,27 @@
 #include "nsITimer.h"
 #include "nsInt64.h"
 #include "nsNetUtil.h"
+#include "nsAutoPtr.h"
 #include "nsWeakReference.h"
 #include "prio.h"
 #include "prprf.h"
 
-// Error code used internally to the incremental downloader
+// Error code used internally by the incremental downloader to cancel the
+// network channel when the download is already complete.
 #define NS_ERROR_DOWNLOAD_COMPLETE \
     NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_GENERAL, 1)
+
+// Default values used to initialize a nsIncrementalDownload object.
+#define DEFAULT_CHUNK_SIZE (4096 * 16)  // bytes
+#define DEFAULT_INTERVAL    60          // seconds
 
 //-----------------------------------------------------------------------------
 
 static nsresult
-WriteToFile(nsIFile *f, const char *data, PRUint32 len, PRInt32 flags)
+WriteToFile(nsILocalFile *lf, const char *data, PRUint32 len, PRInt32 flags)
 {
-  nsresult rv;
-  nsCOMPtr<nsILocalFile> lf = do_QueryInterface(f, &rv);
-  if (NS_FAILED(rv))
-    return rv;
-
   PRFileDesc *fd;
-  rv = lf->OpenNSPRFileDesc(flags, 0644, &fd);
+  nsresult rv = lf->OpenNSPRFileDesc(flags, 0600, &fd);
   if (NS_FAILED(rv))
     return rv;
 
@@ -76,10 +77,10 @@ WriteToFile(nsIFile *f, const char *data, PRUint32 len, PRInt32 flags)
 }
 
 static nsresult
-AppendToFile(nsIFile *f, const char *data, PRUint32 len)
+AppendToFile(nsILocalFile *lf, const char *data, PRUint32 len)
 {
   PRInt32 flags = PR_WRONLY | PR_CREATE_FILE | PR_APPEND;
-  return WriteToFile(f, data, len, flags);
+  return WriteToFile(lf, data, len, flags);
 }
 
 // maxSize may be -1 if unknown
@@ -133,10 +134,10 @@ private:
   nsCOMPtr<nsIProgressEventSink> mProgressSink;
   nsCOMPtr<nsIURI>               mURI;
   nsCOMPtr<nsIURI>               mFinalURI;
-  nsCOMPtr<nsIFile>              mDest;
+  nsCOMPtr<nsILocalFile>         mDest;
   nsCOMPtr<nsIChannel>           mChannel;
   nsCOMPtr<nsITimer>             mTimer;
-  char                          *mChunk;
+  nsAutoArrayPtr<char>           mChunk;
   PRInt32                        mChunkLen;
   PRInt32                        mChunkSize;
   PRInt32                        mInterval;
@@ -149,10 +150,9 @@ private:
 };
 
 nsIncrementalDownload::nsIncrementalDownload()
-  : mChunk(nsnull)
-  , mChunkLen(0)
-  , mChunkSize(4096 * 16)  // default value
-  , mInterval(2)           // default value
+  : mChunkLen(0)
+  , mChunkSize(DEFAULT_CHUNK_SIZE)
+  , mInterval(DEFAULT_INTERVAL)
   , mTotalSize(-1)
   , mCurrentSize(-1)
   , mLoadFlags(LOAD_NORMAL)
@@ -200,9 +200,12 @@ nsIncrementalDownload::CallOnStopRequest()
   if (!mObserver)
     return;
 
+  // Ensure that OnStartRequest is always called once before OnStopRequest.
   nsresult rv = CallOnStartRequest();
   if (NS_SUCCEEDED(mStatus))
     mStatus = rv;
+
+  mIsPending = PR_FALSE;
 
   mObserver->OnStopRequest(this, mObserverContext, mStatus);
   mObserver = nsnull;
@@ -296,6 +299,8 @@ NS_IMPL_ISUPPORTS6(nsIncrementalDownload,
 NS_IMETHODIMP
 nsIncrementalDownload::GetName(nsACString &name)
 {
+  NS_ENSURE_TRUE(mURI, NS_ERROR_NOT_INITIALIZED);
+
   return mURI->GetSpec(name);
 }
 
@@ -324,8 +329,12 @@ nsIncrementalDownload::Cancel(nsresult status)
 
   mStatus = status;
 
+  // Nothing more to do if callbacks aren't pending.
+  if (!mIsPending)
+    return NS_OK;
+
   if (mChannel) {
-    mChannel->Cancel(NS_BINDING_ABORTED);
+    mChannel->Cancel(mStatus);
     NS_ASSERTION(!mTimer, "what is this timer object doing here?");
   }
   else {
@@ -384,11 +393,14 @@ nsIncrementalDownload::Init(nsIURI *uri, nsIFile *dest,
                             PRInt32 chunkSize, PRInt32 interval)
 {
   // Keep it simple: only allow initialization once
-  NS_ENSURE_TRUE(!mURI, NS_ERROR_ALREADY_INITIALIZED);
+  NS_ENSURE_FALSE(mURI, NS_ERROR_ALREADY_INITIALIZED);
+
+  mDest = do_QueryInterface(dest);
+  NS_ENSURE_ARG(mDest);
 
   mURI = uri;
   mFinalURI = uri;
-  mDest = dest;
+
   if (chunkSize != -1)
     mChunkSize = chunkSize;
   if (interval != -1)
@@ -432,7 +444,7 @@ nsIncrementalDownload::GetCurrentSize(PRInt64 *result)
 }
 
 NS_IMETHODIMP
-nsIncrementalDownload::Begin(nsIRequestObserver *observer,
+nsIncrementalDownload::Start(nsIRequestObserver *observer,
                              nsISupports *context)
 {
   NS_ENSURE_ARG(observer);
@@ -525,7 +537,6 @@ nsIncrementalDownload::OnStartRequest(nsIRequest *request,
   if (diff < nsInt64(mChunkSize))
     mChunkSize = PRUint32(diff);
 
-  NS_ASSERTION(!mChunk, "leaking memory chunk");
   mChunk = new char[mChunkSize];
   if (!mChunk)
     rv = NS_ERROR_OUT_OF_MEMORY;
@@ -549,8 +560,7 @@ nsIncrementalDownload::OnStopRequest(nsIRequest *request,
     if (NS_SUCCEEDED(mStatus))
       mStatus = FlushChunk();
 
-    delete[] mChunk;
-    mChunk = nsnull;
+    mChunk = nsnull;  // deletes memory
     mChunkLen = 0;
   }
 
@@ -601,7 +611,12 @@ nsIncrementalDownload::Observe(nsISupports *subject, const char *topic,
                                const PRUnichar *data)
 {
   if (strcmp(topic, NS_XPCOM_SHUTDOWN_OBSERVER_ID) == 0) {
-    Cancel(NS_BINDING_ABORTED);
+    Cancel(NS_ERROR_ABORT);
+
+    // Since the app is shutting down, we need to go ahead and notify our
+    // observer here.  Otherwise, we would notify them after XPCOM has been
+    // shutdown or not at all.
+    CallOnStopRequest();
   }
   else if (strcmp(topic, NS_TIMER_CALLBACK_TOPIC) == 0) {
     mTimer = nsnull;
