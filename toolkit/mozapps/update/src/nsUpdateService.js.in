@@ -536,7 +536,7 @@ Downloader.prototype = {
         LOG("Downloader.downloadUpdates: Downloading from " + uri.spec + " to " + 
             patchFile.path);
         id.init(uri, patchFile, -1, -1);
-        id.begin(this, null);
+        id.start(this, null);
         this._downloads[uri.spec] = id;
       }
     }
