@@ -59,8 +59,6 @@
 #define _PR_SI_ARCHITECTURE "mips"
 #elif defined(__arm__)
 #define _PR_SI_ARCHITECTURE "arm"
-#elif defined(__hppa__)
-#define _PR_SI_ARCHITECTURE "hppa"
 #elif defined(__s390__)
 #define _PR_SI_ARCHITECTURE "s390"
 #elif defined(__s390x__)
@@ -126,7 +124,6 @@ extern PRInt32 _PR_ia64_AtomicSet(PRInt32 *val, PRInt32 newval);
 #define _PR_INET6
 #define _PR_HAVE_INET_NTOP
 #define _PR_HAVE_GETHOSTBYNAME2
-#define _PR_HAVE_GETADDRINFO
 #define _PR_INET6_PROBE
 #endif
 #define _PR_HAVE_SYSV_SEMAPHORES

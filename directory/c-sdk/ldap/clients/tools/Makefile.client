@@ -70,7 +70,7 @@ endif
 
 ifeq ($(LDAP_TOOL_ARGPIN),1)
 INCLUDES += -I../../../../../dist/public/svrcore
-CFLAGS+=-DLDAP_TOOL_ARGPIN -DLDAP_TOOL_PKCS11
+DEFS+=-DLDAP_TOOL_ARGPIN -DLDAP_TOOL_PKCS11
 SVRCORE_LINK=-l$(SVRCORE_LIBNAME) 
 endif
 
@@ -394,7 +394,7 @@ install:: $(OBJDEST) libdir $(BINS)
 #
 # Simple, local dependencies
 #
-LDAPTOOL_COMMON_DEPS = ldaptool.h Makefile
+LDAPTOOL_COMMON_DEPS = ldaptool.h Makefile.client
 $(LDAPTOOLCOMMON_OBJ):	$(LDAPTOOL_COMMON_DEPS)
 $(LDAPDELETE_OBJ):	$(LDAPTOOL_COMMON_DEPS)
 $(LDAPMODIFY_OBJ):	$(LDAPTOOL_COMMON_DEPS) fileurl.h

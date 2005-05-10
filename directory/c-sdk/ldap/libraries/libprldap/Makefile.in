@@ -74,7 +74,8 @@ GARBAGE 	+= $(LIBPRLDAP) $(DLLPRLDAP)
 
 LOCAL_INCLUDES  = -I$(PUBLIC)/nspr
 INCLUDES	+= -I$(DISTHDIR) -I$(HDIR) -I$(INSTALLDIR)/include \
-                   -I$(DIST)/include/nspr
+                   -I$(DIST)/include/nspr \
+		   -I$(DIST)/$(RELEASE_OBJDIR_NAME)/include
 DEFINES		+= $(DEFS)
 
 PLATFORMCFLAGS	= -DUSE_WAITPID -DNEEDPROTOS
@@ -116,7 +117,9 @@ endif
 
 ifeq ($(OS_ARCH), SunOS)
 EXTRA_LIBS = -L$(dist_libdir) -l$(LDAP_LIBNAME)
-EXTRA_LIBS += -L$(dist_libdir) $(DYNAMICNSPR)
+# NSPR, NSS, etc. other mozilla components do not put their shared libs
+# in dist_libdir but rather in $(DIST)/$(RELEASE_OBJDIR_NAME)/lib
+EXTRA_LIBS += -L$(DIST)/$(RELEASE_OBJDIR_NAME)/lib $(DYNAMICNSPR)
 endif
 
 ifeq ($(OS_ARCH), WINNT)
@@ -224,12 +227,6 @@ $(DLLPRLDAP): $(OBJS) $(LIBDIR) $(PRLDAP_EXPORT_DEFS)
 ifdef SO_FILES_TO_REMOVE
 	-$(RM) $(SO_FILES_TO_REMOVE)
 endif
-ifeq ($(OS_ARCH), OpenVMS)
-	@if test ! -f VMSuni.opt; then \
-	    echo "Creating universal symbol option file VMSuni.opt"; \
-	    create_opt_uni $(OBJS); \
-	fi
-endif
 	$(LINK_DLL) $(PRLDAP_EXPORT_FLAGS) $(EXTRA_LIBS)
 
 veryclean:: clean
@@ -240,7 +237,18 @@ $(OBJDEST):
 # the $(dist_bindir) line is for the mozilla client, which for reasons
 # unknown wants shared libraries in /bin also
 #
-export:: $(LIBPRLDAP) $(DLLPRLDAP)	
+# Set the default sources for the export target
+EXPDEPS2 = $(LIBPRLDAP) $(DLLPRLDAP)	
+# Remove the LIB source if on win32 and using MSVC
+# This avoids problems with -jX builds where 'link' will make both the
+# .dll and .lib files in one pass
+ifeq ($(OS_ARCH), WINNT)
+ifeq ($(LD),link)
+EXPDEPS2 = $(DLLPRLDAP)	
+endif
+endif
+
+export::	$(EXPDEPS2)
 ifeq ($(OS_ARCH), WINNT)
 	$(INSTALL) -m 555 $(LIBPRLDAP) $(dist_libdir)
 	$(INSTALL) -m 555 $(DLLPRLDAP) $(dist_libdir)

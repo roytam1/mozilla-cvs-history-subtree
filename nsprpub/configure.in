@@ -43,8 +43,8 @@ dnl ========================================================
 dnl = Defaults
 dnl ========================================================
 MOD_MAJOR_VERSION=4
-MOD_MINOR_VERSION=5
-MOD_PATCH_VERSION=0
+MOD_MINOR_VERSION=4
+MOD_PATCH_VERSION=1
 NSPR_MODNAME=nspr20
 _HAVE_PTHREADS=
 USE_PTHREADS=
@@ -252,9 +252,9 @@ if test -z "$CC"; then
 
     *-aix*)
         if test -z "$USE_NSPR_THREADS"; then
-            CC=xlc_r
+            CC=xlC_r
         else
-            CC=xlc
+            CC=xlC
         fi
     ;;
 
@@ -741,6 +741,9 @@ case "$target" in
         ;;
     esac
     CFLAGS="$CFLAGS -qro -qroconst"
+    if echo "$CC" | grep -c xlC_r; then
+        CFLAGS="$CFLAGS -qarch=com"
+    fi
     AIX_WRAP='$(DIST)/lib/aixwrap.o'
     AIX_TMP='./_aix_tmp.o'
     if test -n "$USE_64"; then
@@ -917,7 +920,6 @@ case "$target" in
     AC_DEFINE(XP_UNIX)
     AC_DEFINE(FREEBSD)
     AC_DEFINE(HAVE_BSD_FLOCK)
-    AC_DEFINE(HAVE_SOCKLEN_T)
     CFLAGS="$CFLAGS $(DSO_CFLAGS) -ansi -Wall"
     MOZ_OBJFORMAT=`test -x /usr/bin/objformat && /usr/bin/objformat || echo aout`
     if test "$MOZ_OBJFORMAT" = "elf"; then
@@ -1239,8 +1241,7 @@ case "$target" in
         DLL_SUFFIX=dll
         MKSHLIB='$(CC) -shared -Wl,--export-all-symbols -Wl,--out-implib -Wl,$(IMPORT_LIBRARY) $(DLLBASE) -o $(subst $(OBJDIR)/,,$(SHARED_LIBRARY))'
         RC=$WINDRES
-        # Use temp file for windres (bug 213281)
-        RCFLAGS='-O coff --use-temp-file'
+        RCFLAGS='-O coff'
     else
         CC=cl
         CXX=cl
@@ -1730,22 +1731,6 @@ mips-sony-newsos*)
         fi
         ;;
     esac
-    case "${target_os}" in
-    solaris2.3*)
-        ;;
-    solaris2.4*)
-        ;;
-    solaris2.5*)
-        ;;
-    solaris2.6*)
-        ;;
-    solaris2.7*)
-        ;;
-    *)
-        # Solaris 8 or higher has IPv6.
-        AC_DEFINE(_PR_INET6)
-        ;;
-    esac
     if test "$OS_TEST" = "sun4u"; then
         # 64-bit Solaris requires SPARC V9 architecture, so the following
         # is not needed.
@@ -1785,6 +1770,8 @@ mips-sony-newsos*)
 *-os2*)
     AC_DEFINE(XP_OS2)
     AC_DEFINE(XP_PC)
+    AC_DEFINE(BSD_SELECT)
+    AC_DEFINE(_PR_GLOBAL_THREADS_ONLY)
     LIB_SUFFIX=lib
     DLL_SUFFIX=dll
     RC=rc.exe
@@ -1799,20 +1786,25 @@ mips-sony-newsos*)
         AC_DEFINE(XP_OS2_EMX)
         AC_DEFINE(OS2)
         AR=emxomfar
-        AR_FLAGS='r $@'
-        CFLAGS="$CFLAGS -Wall -Zomf"
-        CXXFLAGS="$CFLAGS -Wall -Zomf"
+        AR_FLAGS='-p256 r $@'
+        CFLAGS="$CFLAGS -Wall -Zmtd -Zomf"
+        CXXFLAGS="$CFLAGS -Wall -Zmtd -Zomf"
         MKSHLIB='$(CC) $(DSO_LDOPTS) -o $@'
         DSO_CFLAGS=
-        DSO_LDOPTS='-Zomf -Zdll'
+        DSO_LDOPTS='-Zomf -Zdll -Zmtd'
         _OPTIMIZE_FLAGS="-O2 -s"
         _DEBUG_FLAGS="-g -fno-inline"
         if test -n "$MOZ_OPTIMIZE"; then
           DSO_LDOPTS="$DSO_LDOPTS -Zlinker /EXEPACK:2 -Zlinker /PACKCODE -Zlinker /PACKDATA"
         fi
-        OS_LIBS="-lsocket"
+        OS_LIBS="-lsocket -lemxio"
         IMPLIB='emximp -o'
         FILTER='emxexp -o'
+
+        if test -z "$EMXOMFLD_LINKER"; then
+          # using LINK386.EXE
+          DSO_LDOPTS="$DSO_LDOPTS -Zlinker /NOO"
+        fi
 
         # GCC for OS/2 currently predefines these, but we don't want them
         DEFINES="$DEFINES -Uunix -U__unix -U__unix__"
@@ -1821,6 +1813,7 @@ mips-sony-newsos*)
     elif test "$VACPP" = "yes"; then
         AC_DEFINE(XP_OS2_VACPP)
         AC_DEFINE(OS2,4)
+        AC_DEFINE(TCPV40HDRS)
         AC_DEFINE(_X86_)
         OBJ_SUFFIX=obj
         AS=alp

@@ -51,26 +51,6 @@
 
 #define HAVE_DLL
 #undef  HAVE_THREAD_AFFINITY
-#define _PR_HAVE_GETADDRINFO
-#define _PR_INET6_PROBE
-#ifndef _PR_INET6
-#define AF_INET6 23
-/* newer ws2tcpip.h provides these */
-#ifndef AI_CANONNAME
-#define AI_CANONNAME 0x2
-struct addrinfo {
-    int ai_flags;
-    int ai_family;
-    int ai_socktype;
-    int ai_protocol;
-    size_t ai_addrlen;
-    char *ai_canonname;
-    struct sockaddr *ai_addr;
-    struct addrinfo *ai_next;
-};
-#endif
-#endif
-#define _PR_HAVE_THREADSAFE_GETHOST
 #define _PR_HAVE_ATOMIC_OPS
 #define PR_HAVE_WIN32_NAMED_SHARED_MEMORY
 
@@ -112,9 +92,6 @@ struct _MDThread {
     struct PRThread *prev, *next;       /* used by the cvar wait queue to
                                          * chain the PRThread structures
                                          * together */
-    void (*start)(void *);              /* used by _PR_MD_CREATE_THREAD to
-                                         * pass its 'start' argument to
-                                         * pr_root. */
 };
 
 struct _MDThreadStack {
@@ -436,10 +413,7 @@ extern PRStatus _PR_WaitWindowsProcess(struct PRProcess *process,
 extern PRStatus _PR_KillWindowsProcess(struct PRProcess *process);
 
 #define _MD_CLEANUP_BEFORE_EXIT           _PR_MD_CLEANUP_BEFORE_EXIT
-#define _MD_INIT_CONTEXT(_thread, _sp, _main, status) \
-    PR_BEGIN_MACRO \
-    *status = PR_TRUE; \
-    PR_END_MACRO
+#define _MD_INIT_CONTEXT
 #define _MD_SWITCH_CONTEXT
 #define _MD_RESTORE_CONTEXT
 

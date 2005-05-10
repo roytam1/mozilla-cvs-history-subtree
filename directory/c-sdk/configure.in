@@ -156,12 +156,16 @@ AC_ARG_ENABLE(optimize,
     	    _OPTIMIZE_FLAGS=`echo $enableval | sed -e 's|\\\ | |g'`
             _SAVE_OPTIMIZE_FLAGS=$_OPTIMIZE_FLAGS
         fi
+      else
+        MOZ_OPTIMIZE=
     fi ])
 
 AC_ARG_ENABLE(debug,
     [  --disable-debug         Do not compile in debugging symbols],
     [	if test "$enableval" = "no"; then
     	    MOZ_DEBUG=
+        else
+            MOZ_DEBUG=1
 	    fi])
 
 AC_ARG_ENABLE(win32-target,
@@ -354,7 +358,7 @@ if test -n "$MOZ_DEBUG"; then
     beos*)
         DEFINES="$DEFINES -DDEBUG_${USER}"
         ;;
-    msvc*|mks*|cygwin*|mingw*)
+    msvc*|mks*|cygwin*|mingw*|os2*)
         DEFINES="$DEFINES -DDEBUG_`echo ${USERNAME} | sed -e 's| |_|g'`"
         ;;
     *) 
@@ -364,6 +368,11 @@ if test -n "$MOZ_DEBUG"; then
 else
     AC_DEFINE(NDEBUG)
     DEFINES="$DEFINES -UDEBUG"
+fi
+
+# Use mozilla's nsinstall
+if test -n "$MOZILLA_CLIENT"; then
+   NSINSTALL='$(dist_bindir)/nsinstall'
 fi
 
 if test -z "$SKIP_COMPILER_CHECKS"; then
@@ -379,12 +388,10 @@ if test "$target" != "$host"; then
     _SAVE_LDFLAGS="$LDFLAGS"
 
     AC_MSG_CHECKING([for $host compiler])
-    if test -z "$HOST_CC"; then
-	    AC_CHECK_PROGS(HOST_CC, gcc cc /usr/ucb/cc, "")
-	    if test -z "$HOST_CC"; then
-	        AC_MSG_ERROR([no acceptable cc found in \$PATH])
-	    fi
-    fi
+    AC_CHECK_PROGS(HOST_CC, gcc cc /usr/ucb/cc, "")
+	if test -z "$HOST_CC"; then
+	    AC_MSG_ERROR([no acceptable cc found in \$PATH])
+	fi
     AC_MSG_RESULT([$HOST_CC])
     if test -z "$HOST_CFLAGS"; then
 	    HOST_CFLAGS="$CFLAGS"
@@ -406,34 +413,18 @@ if test "$target" != "$host"; then
     CFLAGS=$_SAVE_CFLAGS
     LDFLAGS=$_SAVE_LDFLAGS
 
-    if test -z "$CC"; then
-	    AC_CHECK_PROGS(CC, "${target_alias}-gcc" "${target}-gcc", echo)
-    fi
+    AC_CHECK_PROGS(CC, $CC "${target_alias}-gcc" "${target}-gcc", echo)
     unset ac_cv_prog_CC
     AC_PROG_CC
-    if test -z "$CXX"; then
-	    AC_CHECK_PROGS(CXX, "${target_alias}-g++" "${target}-g++", echo)
-    fi
+    AC_CHECK_PROGS(CXX, $CXX "${target_alias}-g++" "${target}-g++", echo)
     unset ac_cv_prog_CXX
     AC_PROG_CXX
-    if test -z "$RANLIB"; then
-	    AC_CHECK_PROGS(RANLIB, "${target_alias}-ranlib" "${target}-ranlib", echo)
-    fi
-    if test -z "$AR"; then
-	    AC_CHECK_PROGS(AR, "${target_alias}-ar" "${target}-ar", echo)
-    fi
-    if test -z "$AS"; then
-	    AC_CHECK_PROGS(AS, "${target_alias}-as" "${target}-as", echo)
-    fi
-    if test -z "$LD"; then
-	    AC_CHECK_PROGS(LD, "${target_alias}-ld" "${target}-ld", echo)
-    fi
-    if test -z "$STRIP"; then
-	    AC_CHECK_PROGS(STRIP, "${target_alias}-strip" "${target}-strip", echo)
-    fi
-    if test -z "$WINDRES"; then
-	    AC_CHECK_PROGS(WINDRES, "${target_alias}-windres" "${target}-windres", echo)
-    fi
+    AC_CHECK_PROGS(RANLIB, $RANLIB "${target_alias}-ranlib" "${target}-ranlib", echo)
+    AC_CHECK_PROGS(AR, $AR "${target_alias}-ar" "${target}-ar", echo)
+    AC_CHECK_PROGS(AS, $AS "${target_alias}-as" "${target}-as", echo)
+    AC_CHECK_PROGS(LD, $LD "${target_alias}-ld" "${target}-ld", echo)
+    AC_CHECK_PROGS(STRIP, $STRIP "${target_alias}-strip" "${target}-strip", echo)
+    AC_CHECK_PROGS(WINDRES, $WINDRES "${target_alias}-windres" "${target}-windres", echo)
 
 else
     AC_PROG_CXX
@@ -463,7 +454,7 @@ fi
 if test "$GXX" = "yes"; then
     GNU_CXX=1
 fi
-if test "`echo | $AS -V 2>&1 | grep -c GNU`" != "0"; then
+if test "`echo | $AS -v 2>&1 | grep -c GNU`" != "0"; then
     GNU_AS=1
 fi
 rm -f a.out
@@ -537,9 +528,20 @@ AR_FLAGS='cr $@'
 AS='$(CC)'
 ASFLAGS='$(CFLAGS)'
 
-OS_ARCH=`uname -s | sed -e 's|/|_|g'`
-OS_RELEASE=`uname -r`
-OS_TEST=`uname -m`
+if test -n "$CROSS_COMPILE"; then
+    OS_ARCH=`echo $target_os | sed -e 's|/|_|g'`
+    OS_RELEASE=
+    OS_TEST="${target_cpu}"
+    case "${target_os}" in
+        linux*)       OS_ARCH=Linux ;;
+        solaris*)     OS_ARCH=SunOS OS_RELEASE=5 ;;
+        mingw*)     OS_ARCH=WINNT ;;
+    esac
+else
+    OS_ARCH=`uname -s | sed -e 's|/|_|g'`
+    OS_RELEASE=`uname -r`
+    OS_TEST=`uname -m`
+fi
 
 if test "$OS_ARCH" = "IRIX64"; then
     OS_ARCH=IRIX
@@ -547,10 +549,7 @@ fi
 
 if test "$OS_ARCH" = "Linux"; then
     OS_RELEASE=`echo $OS_RELEASE | sed 's/-.*//'`
-fi
-
-if test "$OS_ARCH" = "POSIX_for_OpenVMS_AXP"; then
-    OS_ARCH=OpenVMS
+    OS_RELEASE=`echo $OS_RELEASE | awk -F. '{ print $1 "." $2 }'`
 fi
 
 #######################################################################
@@ -681,6 +680,11 @@ dnl Override of system specific host options
 dnl ========================================================
 case "$host" in
 *-mingw*|*-cygwin*|*-msvc*|*-mks*)
+    CYGWIN_WRAPPER='sh $(topsrcdir)/config/cygwin-wrapper'
+    NSINSTALL='$(CYGWIN_WRAPPER) nsinstall'
+    if test "`${PERL} -v | grep -c cygwin  2>/dev/null`" = 0; then
+        PERL='$(CYGWIN_WRAPPER) perl'
+    fi
     ;;
 *-beos*)
     HOST_CFLAGS="$HOST_CFLAGS -DXP_BEOS -DBeOS -DBEOS -D_POSIX_SOURCE"
@@ -1196,8 +1200,6 @@ case "$target" in
     PR_MD_ARCH_DIR=windows
     RESOLVE_LINK_SYMBOLS=1
     PROG_SUFFIX=.exe
-    NSINSTALL=nsinstall
-
     if test -n "$GNU_CC"; then
         CC="$CC -mno-cygwin"
         CXX="$CXX -mno-cygwin"
@@ -1206,6 +1208,7 @@ case "$target" in
         # Use temp file for windres (bug 213281)
         RC="$WINDRES -O coff --use-temp-file"
     else
+        CYGWIN_WRAPPER='sh $(topsrcdir)/config/cygwin-wrapper'
         CC=cl
         CXX=cl
         LD=link
@@ -1213,7 +1216,7 @@ case "$target" in
         AR_FLAGS=
         RANLIB='echo not_ranlib'
         STRIP='echo not_strip'
-        RC=rc.exe
+        RC='$(CYGWIN_WRAPPER) rc.exe'
         GARBAGE='$(OBJDIR)/vc20.pdb $(OBJDIR)/vc40.pdb'
 	    OBJ_SUFFIX=obj
 	    LIB_SUFFIX=lib
@@ -1221,6 +1224,18 @@ case "$target" in
 	    DLL_SUFFIX=dll
         
         CFLAGS="$CFLAGS -W3 -nologo -GF -Gy"
+        DLLFLAGS='-OUT:"$@"'
+        _DEBUG_FLAGS=-Z7
+        _OPTIMIZE_FLAGS=-O2
+        if test -z "$MOZ_OPTIMIZE"; then
+            CFLAGS="$CFLAGS -Od"
+        fi
+
+        if test -n "$USE_DEBUG_RTL"; then
+            CFLAGS="$CFLAGS -MDd"
+        else
+            CFLAGS="$CFLAGS -MD"
+        fi
 
         if test -n "$MOZ_DEBUG"; then
             AC_DEFINE(_DEBUG)
@@ -1229,32 +1244,21 @@ case "$target" in
         fi
 
         if test -n "$MOZ_OPTIMIZE"; then
-            CFLAGS="$CFLAGS -MD"
-            _OPTIMIZE_FLAGS=-O2
-            DLLFLAGS='-OUT:"$@"'
-
             if test -n "$MOZ_PROFILE"; then
                 _OPTIMIZE_FLAGS="$_OPTIMIZE_FLAGS -Z7"
-                DLLFLAGS="$DLLFLAGS -DEBUG -DEBUGTYPE:CV"
-                LDFLAGS="$LDFLAGS -DEBUG -DEBUGTYPE:CV"
             fi
-        else
-            if test -n "$USE_DEBUG_RTL"; then
-                CFLAGS="$CFLAGS -MDd"
-            else
-                CFLAGS="$CFLAGS -MD"
+            if test -n "$MOZ_DEBUG_SYMBOLS"; then
+                _OPTIMIZE_FLAGS="$_OPTIMIZE_FLAGS -Zi"
             fi
-            _DEBUG_FLAGS="-Od -Z7"
-            DLLFLAGS='-DEBUG -DEBUGTYPE:CV -OUT:"$@"'
-            if test -n "$GLOWCODE"; then
-                DLLFLAGS='-DEBUG -DEBUGTYPE:both -INCLUDE:_GlowCode -OUT:"$@"'
-                DLL_LIBS='$(GLOWDIR)/glowcode.lib'
+            if test -n "$MOZ_PROFILE" -o -n "$MOZ_DEBUG_SYMBOLS"; then
+                DLLFLAGS="$DLLFLAGS -DEBUG -OPT:REF"
+                LDFLAGS="$LDFLAGS -DEBUG -OPT:REF"
             fi
-            LDFLAGS="-DEBUG -DEBUGTYPE:CV"
-            if test -n "$PROFILE"; then
-                LDFLAGS="$LDFLAGS -PROFILE -MAP"
-                DLLFLAGS="$DLLFLAGS -PROFILE -MAP"
-            fi
+        fi
+
+        if test -n "$MOZ_DEBUG"; then
+            DLLFLAGS="$DLLFLAGS -DEBUG -DEBUGTYPE:CV"
+            LDFLAGS="$LDFLAGS -DEBUG -DEBUGTYPE:CV"
         fi
         
         if test "$OS_TARGET" = "WINNT"; then
@@ -1459,24 +1463,94 @@ mips-sony-newsos*)
 
 *-openvms*)
     AC_DEFINE(XP_UNIX)
-    AC_DEFINE(VMS)
-    AC_DEFINE(VMS_AS_IS)
-    AC_DEFINE(_SOCKADDR_LEN)
-    AC_DEFINE(GENERIC_PTHREAD_REDEFINES)
     RESOLVE_LINK_SYMBOLS=1
-    CROSS_COMPILE=1
-    _HAVE_PTHREADS=1
-    HOST_CC=c89
-    HOST_CXX=cxx
-    HOST_CFLAGS=-O
-    HOST_CXXFLAGS=-O
-    CC=ccc
-    CXX=ccc
-    CFLAGS="$CFLAGS -Wc,names=\(short,as\)"
-    CXXFLAGS="$CXXFLAGS -Wc,names=\(short,as\)"
     MDCPUCFG_H=_openvms.cfg
     PR_MD_CSRCS=openvms.c
-    MKSHLIB='vmsld $(OPTIMIZER)'
+    AR_FLAGS='c $@'
+    DSO_LDOPTS='-shared -auto_symvec $(LDFLAGS) $(OPTIMIZER)'
+    ;;
+
+*-os2*)
+    AC_DEFINE(XP_OS2)
+    AC_DEFINE(XP_PC)
+    AC_DEFINE(BSD_SELECT)
+    AC_DEFINE(_PR_GLOBAL_THREADS_ONLY)
+    PR_MD_ARCH_DIR=os2
+    RESOLVE_LINK_SYMBOLS=1
+    NSINSTALL=nsinstall
+    LIB_PREFIX=
+    LIB_SUFFIX=lib
+    DLL_SUFFIX=dll
+    DLLTOOL=''
+    RC=rc.exe
+    PROG_SUFFIX=.exe
+    MDCPUCFG_H=_os2.cfg
+
+    # EMX/GCC build
+    if test -n "$GNU_CC"; then
+#        AC_DEFINE(USE_OS2_TOOLKIT_HEADERS)
+        AC_DEFINE(XP_OS2_EMX)
+        AC_DEFINE(OS2)
+        AC_DEFINE(TCPV40HDRS)
+        AR=emxomfar
+        AR_FLAGS='r $@'
+        LD='$(CC)'
+        CFLAGS="$CFLAGS -Wall -Zomf"
+        CXXFLAGS="$CFLAGS -Wall -Zomf"
+        MKSHLIB='$(CC) $(DSO_LDOPTS) -o $@'
+        DSO_CFLAGS=
+        DSO_LDOPTS='-Zomf -Zdll'
+        _OPTIMIZE_FLAGS=-O3
+        _DEBUG_FLAGS="-g -fno-inline"
+        if test -n "$MOZ_OPTIMIZE"; then
+          DSO_LDOPTS="$DSO_LDOPTS -Zlinker /EXEPACK:2 -Zlinker /PACKCODE -Zlinker /PACKDATA"
+        fi
+        OS_LIBS="-lsocket"
+        IMPLIB='emximp -o'
+        FILTER='emxexp -o'
+
+        # GCC for OS/2 currently predefines these, but we don't want them
+        DEFINES="$DEFINES -Uunix -U__unix -U__unix__"
+
+    # Visual Age C++ build
+    elif test "$VACPP" = "yes"; then
+        MOZ_BUILD_ROOT=`pwd -D`
+        AC_DEFINE(XP_OS2_VACPP)
+        AC_DEFINE(OS2,4)
+        AC_DEFINE(TCPV40HDRS)
+        AC_DEFINE(_X86_)
+        OBJ_SUFFIX=obj
+        AS=alp
+        ASFLAGS='-Mb'
+        ASM_SUFFIX=asm
+        AR=ilib
+        AR_FLAGS='/NOL /NOI /O:$(subst /,\\,$@)'
+        CFLAGS='/Q /qlibansi /Gd+ /Gm+ /Su4 /Mp /Tl9'
+        HOST_CFLAGS="$CFLAGS"
+        OS_CFLAGS='/Q /qlibansi /Gd+ /Gm+ /Su4 /Mp /Tl9'
+        OS_EXE_CFLAGS='/Q /qlibansi /Gd+ /Gm+ /Su4 /Mp /Tl9'
+        CXXFLAGS='/Q /qlibansi /Gd+ /Gm+ /Su4 /Mp /Tl9'
+        OS_LIBS='so32dll.lib tcp32dll.lib'
+        LD='-ilink'
+        MKSHLIB='$(LD) $(DSO_LDOPTS)'
+        IMPLIB='implib -nologo -noignorecase'
+        FILTER='cppfilt -q -B -P'
+        _OPTIMIZE_FLAGS='/O+ /Gl+ /Gx+ /qtune=pentium /qarch=pentium'
+        _DEBUG_FLAGS='/Ti+ '
+        LDFLAGS='/NOL /M /L'
+        DLLFLAGS='/O:$@ /DLL /INC:_dllentry /MAP:$(@:.dll=.map) /L /NOL'
+        EXEFLAGS='/OUT:$@ /PMTYPE:VIO /MAP:$(@:.exe=.map) /L /NOL'
+        if test -n "$MOZ_DEBUG"; then
+          LDFLAGS="$LDFLAGS /DE"
+          DLLFLAGS="$DLLFLAGS /DE"
+          EXEFLAGS="$EXEFLAGS /DE"
+        fi
+        if test -n "$MOZ_OPTIMIZE"; then
+          LDFLAGS="$LDFLAGS /OPTFUNC /EXEPACK:2 /PACKCODE /PACKDATA"
+          DLLFLAGS="$DLLFLAGS /OPTFUNC /EXEPACK:2 /PACKCODE /PACKDATA"
+          EXEFLAGS="$EXEFLAGS /OPTFUNC /EXEPACK:2 /PACKCODE /PACKDATA"
+        fi
+    fi
     ;;
 
 *-osf*)
@@ -1632,6 +1706,7 @@ mips-sony-newsos*)
             CFLAGS="$CFLAGS -MDupdate \$(DEPENDENCIES)"
             CXXFLAGS="$CXXFLAGS -MDupdate \$(DEPENDENCIES)"
         fi
+	COMPILER_TAG=_gcc
     else
         CC="$CC -xstrconst"
         CXX="$CXX -Qoption cg -xstrconst"
@@ -1643,6 +1718,10 @@ mips-sony-newsos*)
     if test -n "$USE_64" && test -z "$GNU_CC"; then
         CC="$CC -xarch=v9"
         CXX="$CXX -xarch=v9"
+    fi
+    if test -n "$USE_64" && test -n "$GNU_CC"; then
+        CC="$CC -m64"
+        CXX="$CXX -m64"
     fi
     if test "$OS_TEST" = "i86pc"; then
         AC_DEFINE(i386)
@@ -1713,88 +1792,6 @@ mips-sony-newsos*)
     PR_MD_CSRCS=unixware.c
     DSO_LDOPTS=-G
     CPU_ARCH=x86
-    ;;
-
-*-os2*)
-    AC_DEFINE(XP_OS2)
-    AC_DEFINE(BSD_SELECT)
-    AC_DEFINE(XP_PC)
-    AC_DEFINE(_PR_GLOBAL_THREADS_ONLY)
-    OBJ_SUFFIX=obj
-    LIB_SUFFIX=lib
-    LIB_PREFIX=
-    DLL_SUFFIX=dll
-    ASM_SUFFIX=asm
-    RC=rc.exe
-    PR_MD_ARCH_DIR=os2
-    PROG_SUFFIX=.exe
-    NSINSTALL=nsinstall
-    MDCPUCFG_H=_os2.cfg
-    RESOLVE_LINK_SYMBOLS=1
-
-    # EMX/GCC build
-    if test "$GNU_CC"; then
-        AC_DEFINE(XP_OS2_EMX)
-        AC_DEFINE(OS2)
-        AR=emxomfar
-        AR_FLAGS='-p256 r $@'
-        CFLAGS="-Zmtd -Zomf"
-        HOST_CFLAGS="$CFLAGS"
-        CXXFLAGS="-Zmtd -Zomf"
-        OS_LIBS="-lsocket -lemxio"
-        LD='$(CC)'
-        IMPLIB='emximp -o'
-        FILTER='emxexp'
-        OS_DLLFLAGS='$(DSO_LDOPTS) -o $@'
-        _OPTIMIZE_FLAGS="-O2 -s"
-        _DEBUG_FLAGS=-g
-        if test -n "$MOZ_DEBUG"; then
-          DLLFLAGS='-g'
-          EXEFLAGS='-g $(OMF_FLAG) -Zmtd -L$(DIST)/lib -o $@'
-          DSO_LDOPTS='-g -Zomf -Zdll -Zmt -Zcrtdll -Zlinker /NOO'
-        else
-          DLLFLAGS=
-          EXEFLAGS='-Zmtd -o $@'
-          DSO_LDOPTS='-Zomf -Zdll -Zmt -Zcrtdll -Zlinker /NOO'
-        fi
-    fi
-    
-    # Visual Age C++ build
-    if test "$VACPP" = "yes"; then
-        AC_DEFINE(XP_OS2_VACPP)
-        AC_DEFINE(OS2,4)
-        AC_DEFINE(TCPV40HDRS)
-        AC_DEFINE(_X86_)
-        AS=alp
-        ASFLAGS='-Mb'
-        AR=-ilib
-        AR_FLAGS='/NOL /NOI /O:$(subst /,\\,$@)'
-        CFLAGS='/Q /qlibansi /Gd+ /Gm+ /Su4 /Mp /Tl9'
-        HOST_CFLAGS="$CFLAGS"
-        OS_CFLAGS='/Q /qlibansi /Gd+ /Gm+ /Su4 /Mp /Tl9'
-        OS_EXE_CFLAGS='/Q /qlibansi /Gd+ /Gm+ /Su4 /Mp /Tl9'
-        CXXFLAGS='/Q /qlibansi /Gd+ /Gm+ /Su4 /Mp /Tl9'
-        OS_LIBS='so32dll.lib tcp32dll.lib'
-        LD='-ilink'
-        MKSHLIB='$(LD) $(DSO_LDOPTS)'
-        IMPLIB='implib -nologo -noignorecase'
-        FILTER='cppfilt -q -B -P -o'
-        _OPTIMIZE_FLAGS='/O+ /Gl+ /G5 /qarch=pentium'
-        _DEBUG_FLAGS='/Ti+ '
-        LDFLAGS='/NOL /M /L'
-        DLLFLAGS='/O:$@ /DLL /INC:_dllentry /MAP:$(@:.dll=.map) /L /NOL'
-        EXEFLAGS='/OUT:$@ /PMTYPE:VIO /MAP:$(@:.exe=.map) /L /NOL'
-        if test -n "$MOZ_DEBUG"; then
-          LDFLAGS="$LDFLAGS /DE"
-          DLLFLAGS="$DLLFLAGS /DE"
-          EXEFLAGS="$EXEFLAGS /DE"
-        fi
-        if test -n "$MOZ_OPTIMIZE"; then
-          LDFLAGS="$LDFLAGS /OPTFUNC /EXEPACK:2 /PACKCODE /PACKDATA"
-          DLLFLAGS="$DLLFLAGS /OPTFUNC /EXEPACK:2 /PACKCODE /PACKDATA"
-          EXEFLAGS="$EXEFLAGS /OPTFUNC /EXEPACK:2 /PACKCODE /PACKDATA"
-        fi
-    fi
     ;;
 
 *)
@@ -2224,10 +2221,21 @@ else
 fi
 
 if test -n "$USE_64"; then
-    COMPILER_TAG=_64
+    COMPILER_TAG=${COMPILER_TAG}_64
 fi
 
 RELEASE_OBJDIR_NAME="${OS_CONFIG}${CPU_ARCH_TAG}${COMPILER_TAG}${IMPL_STRATEGY}${OBJDIR_TAG}.${OBJDIR_SUFFIX}"
+
+dnl ========================================================
+dnl Use cygwin wrapper for win32 builds
+dnl ========================================================
+case "$target_os" in
+mingw*|cygwin*|msvc*|mksnt*)
+    CC="\$(CYGWIN_WRAPPER) $CC"
+    CXX="\$(CYGWIN_WRAPPER) $CXX"
+    RC="\$(CYGWIN_WRAPPER) $RC"
+    ;;
+esac
 
 dnl ========================================================
 dnl Substitution of found variables.
@@ -2316,6 +2324,7 @@ AC_SUBST(RC)
 AC_SUBST(DLLFLAGS)
 AC_SUBST(EXEFLAGS)
 AC_SUBST(OS_DLLFLAGS)
+AC_SUBST(CYGWIN_WRAPPER)
 
 dnl ========================================================
 dnl Generate output files.
