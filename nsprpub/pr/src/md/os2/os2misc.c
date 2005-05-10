@@ -380,9 +380,12 @@ errorExit:
 
 PRStatus _PR_DetachOS2Process(PRProcess *process)
 {
-    /* On OS/2, a process is either created as a child or not. 
-     * You can't 'detach' it later on.
+    /* This is basically what they did on Windows (CloseHandle)
+     * but I don't think it will do much on OS/2. A process is
+     * either created as a child or not.  You can't 'detach' it
+     * later on.
      */
+    DosClose(process->md.pid);
     PR_DELETE(process);
     return PR_SUCCESS;
 }

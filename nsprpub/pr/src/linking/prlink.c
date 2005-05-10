@@ -162,8 +162,8 @@ struct _imcb *IAC$GL_IMAGE_LIST = NULL;
  * On these platforms, symbols have a leading '_'.
  */
 #if defined(SUNOS4) || defined(DARWIN) || defined(NEXTSTEP) \
-    || defined(WIN16) || defined(XP_OS2) \
-    || ((defined(OPENBSD) || defined(NETBSD)) && !defined(__ELF__))
+    || defined(OPENBSD) || defined(WIN16) \
+    || (defined(NETBSD) && !defined(__ELF__))
 #define NEED_LEADING_UNDERSCORE
 #endif
 
@@ -266,7 +266,7 @@ static void DLLErrorInternal(PRIntn oserr)
 
 void _PR_InitLinker(void)
 {
-#if !defined(XP_MAC) && !defined(XP_BEOS)
+#ifndef XP_MAC
     PRLibrary *lm;
 #endif
 #if defined(XP_UNIX)
@@ -335,7 +335,7 @@ void _PR_InitLinker(void)
 #endif /* HAVE_DLL */
 #endif /* XP_UNIX */
 
-#if !defined(XP_MAC) && !defined(XP_BEOS)
+#ifndef XP_MAC
     PR_LOG(_pr_linker_lm, PR_LOG_MIN, ("Loaded library %s (init)", lm?lm->name:"NULL"));
 #endif
 
@@ -939,7 +939,8 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
         UCHAR pszError[_MAX_PATH];
         ULONG ulRc = NO_ERROR;
 
-          ulRc = DosLoadModule(pszError, _MAX_PATH, (PSZ) name, &h);
+        retry:
+              ulRc = DosLoadModule(pszError, _MAX_PATH, (PSZ) name, &h);
           if (ulRc != NO_ERROR) {
               oserr = ulRc;
               PR_DELETE(lm);
@@ -1016,9 +1017,6 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
 #ifdef NTO
     /* Neutrino needs RTLD_GROUP to load Netscape plugins. (bug 71179) */
     int dl_flags = RTLD_GROUP;
-#elif defined(AIX)
-    /* AIX needs RTLD_MEMBER to load an archive member.  (bug 228899) */
-    int dl_flags = RTLD_MEMBER;
 #else
     int dl_flags = 0;
 #endif
@@ -1129,14 +1127,14 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
 
                 cookie = 0;
                 while (get_next_image_info(0, &cookie, &info) == B_OK) {
-                    const char *endOfSystemName = strrchr(info.name, '/');
-                    const char *endOfPassedName = strrchr(name, '/');
+                    char *endOfSystemName = strrchr(info.name, '/');
+                    char *endOfPassedName = strrchr(name, '/');
                     if( 0 == endOfSystemName ) 
-                        endOfSystemName = info.name;
+                        endOfSystemName=info.name;
                     else
                         endOfSystemName++;
                     if( 0 == endOfPassedName )
-                        endOfPassedName = name;
+                        endOfPassedName=name;
                     else
                         endOfPassedName++;
                     if (strcmp(endOfSystemName, endOfPassedName) == 0) {
@@ -1434,9 +1432,6 @@ static void*
 pr_FindSymbolInLib(PRLibrary *lm, const char *name)
 {
     void *f = NULL;
-#ifdef XP_OS2
-    int rc;
-#endif
 
     if (lm->staticTable != NULL) {
         const PRStaticLinkTable* tp;
@@ -1456,17 +1451,7 @@ pr_FindSymbolInLib(PRLibrary *lm, const char *name)
     }
     
 #ifdef XP_OS2
-    rc = DosQueryProcAddr(lm->dlh, 0, (PSZ) name, (PFN *) &f);
-#if defined(NEED_LEADING_UNDERSCORE)
-    /*
-     * Older plugins (not built using GCC) will have symbols that are not
-     * underscore prefixed.  We check for that here.
-     */
-    if (rc != NO_ERROR) {
-        name++;
-        DosQueryProcAddr(lm->dlh, 0, (PSZ) name, (PFN *) &f);
-    }
-#endif
+    DosQueryProcAddr(lm->dlh, 0, (PSZ) name, (PFN *) &f);
 #endif  /* XP_OS2 */
 
 #if defined(WIN32) || defined(WIN16)

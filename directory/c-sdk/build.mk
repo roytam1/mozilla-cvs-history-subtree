@@ -45,7 +45,7 @@ COMPVERSIONDIR = $(DEPTH)/directory/c-sdk
 endif
 
 DEFAULT_VENDOR_NAME=mozilla.org
-DEFAULT_VENDOR_VERSION=500
+DEFAULT_VENDOR_VERSION=516
 
 ifndef VENDOR_NAME
 VENDOR_NAME	= $(DEFAULT_VENDOR_NAME)
@@ -287,6 +287,9 @@ endif
 
 ifeq ($(OS_ARCH),ReliantUNIX)
 DL=-ldl
+USE_LD_RUN_PATH=1
+USE_CCC_TO_LINK=1
+CCC=$(CXX)
 endif
 
 ifeq ($(OS_ARCH),UnixWare)
@@ -301,7 +304,17 @@ RPATHFLAG := \$$ORIGIN/../lib:\$$ORIGIN/../../lib:$(RPATHFLAG)
 
 # flag to pass to cc when linking to set runtime shared library search path
 # this is used like this, for example:   $(RPATHFLAG_PREFIX)../..
+# Also, use the C++ compiler to link for 64-bit builds.
+ifeq ($(USE_64), 1)
+USE_CCC_TO_LINK=1
+RPATHFLAG_PREFIX=-R:
+else
 RPATHFLAG_PREFIX=-Wl,-R,
+endif
+
+ifdef NS_USE_GCC
+USE_CCC_TO_LINK=1
+endif
 
 # flag to pass to ld when linking to set runtime shared library search path
 # this is used like this, for example:   $(LDRPATHFLAG_PREFIX)../..
@@ -312,6 +325,9 @@ PLATFORMLIBS+=-lresolv -lsocket -lnsl -lgen -ldl -lposix4
 endif
 
 ifeq ($(OS_ARCH), OSF1)
+# Use the C++ compiler to link
+USE_CCC_TO_LINK=1
+
 # flag to pass to cc when linking to set runtime shared library search path
 # this is used like this, for example:   $(RPATHFLAG_PREFIX)../..
 RPATHFLAG_PREFIX=-Wl,-rpath,
@@ -342,6 +358,9 @@ EXE_EXTRA_LIBS= -bI:/usr/lib/syscalls.exp -lsvld -lpthreads
 endif # AIX
 
 ifeq ($(OS_ARCH), HP-UX)
+# Use the C++ compiler to link
+USE_CCC_TO_LINK=1
+
 # flag to pass to cc when linking to set runtime shared library search path
 # this is used like this, for example:   $(RPATHFLAG_PREFIX)../..
 RPATHFLAG_PREFIX=-Wl,+s,+b,
@@ -357,6 +376,9 @@ PLATFORMCFLAGS=
 endif # HP-UX
 
 ifeq ($(OS_ARCH), Linux)
+# Use the C++ compiler to link
+USE_CCC_TO_LINK=1
+
 # flag to pass to cc when linking to set runtime shared library search path
 # this is used like this, for example:   $(RPATHFLAG_PREFIX)../..
 RPATHFLAG_PREFIX=-Wl,-rpath,
@@ -367,6 +389,15 @@ RPATHFLAG_PREFIX=-Wl,-rpath,
 LDRPATHFLAG_PREFIX=-rpath
 endif # Linux
 
+
+# Use the C++ compiler to link... or not.
+ifdef USE_CCC_TO_LINK
+CC_FOR_LINK=$(CCC)
+else
+CC_FOR_LINK=$(CC)
+endif
+
+
 #
 # XXX: does anyone know of a better way to solve the "LINK_LIB2" problem? -mcs
 #
@@ -376,22 +407,29 @@ endif # Linux
 ifeq ($(OS_ARCH), WINNT)
 
 ifdef NS_USE_GCC
-LINK_EXE	= $(CC) -o $@ $(LDFLAGS) $(LCFLAGS) $(DEPLIBS) $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
+LINK_EXE	= $(CC_FOR_LINK) -o $@ $(LDFLAGS) $(LCFLAGS) $(DEPLIBS) $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
 LINK_LIB	= $(AR) cr $@ $(OBJS)
-LINK_DLL	= $(CC) -shared -Wl,--export-all-symbols -Wl,--out-implib -Wl,$(@:.$(DLL_SUFFIX)=.$(LIB_SUFFIX)) $(LLFLAGS) $(DLL_LDFLAGS) -o $@ $(OBJS) $(EXTRA_LIBS) $(EXTRA_DLL_LIBS)
+LINK_DLL	= $(CC_FOR_LINK) -shared -Wl,--export-all-symbols -Wl,--out-implib -Wl,$(@:.$(DLL_SUFFIX)=.$(LIB_SUFFIX)) $(LLFLAGS) $(DLL_LDFLAGS) -o $@ $(OBJS) $(EXTRA_LIBS) $(EXTRA_DLL_LIBS)
 else
-DEBUG_LINK_OPT=/DEBUG:FULL
+DEBUG_LINK_OPT=/DEBUG
 ifeq ($(BUILD_OPT), 1)
-  DEBUG_LINK_OPT=
+  ifndef MOZ_DEBUG_SYMBOLS
+    DEBUG_LINK_OPT=
+  endif
+  DEBUG_LINK_OPT += -OPT:REF
 endif
 
 SUBSYSTEM=CONSOLE
-LINK_EXE        = link $(DEBUG_LINK_OPT) -OUT:"$@" /MAP $(ALDFLAGS) $(LDFLAGS) $(ML_DEBUG) \
-    $(LCFLAGS) /NOLOGO /PDB:NONE /DEBUGTYPE:BOTH /INCREMENTAL:NO \
+ifndef MOZ_DEBUG_SYMBOLS
+DEBUG_FLAGS=/PDB:NONE /DEBUGTYPE:BOTH
+endif
+
+LINK_EXE        = $(CYGWIN_WRAPPER) link $(DEBUG_LINK_OPT) -OUT:"$@" /MAP $(ALDFLAGS) $(LDFLAGS) $(ML_DEBUG) \
+    $(LCFLAGS) /NOLOGO $(DEBUG_FLAGS) /INCREMENTAL:NO \
     /NODEFAULTLIB:MSVCRTD /SUBSYSTEM:$(SUBSYSTEM) $(DEPLIBS) \
     $(EXTRA_LIBS) $(PLATFORMLIBS) $(OBJS)
-LINK_LIB        = lib -OUT:"$@"  $(OBJS)
-LINK_DLL        = link $(DEBUG_LINK_OPT) /nologo /MAP /DLL /PDB:NONE /DEBUGTYPE:BOTH \
+LINK_LIB        = $(CYGWIN_WRAPPER) lib -OUT:"$@"  $(OBJS)
+LINK_DLL        = $(CYGWIN_WRAPPER) link $(DEBUG_LINK_OPT) /nologo /MAP /DLL $(DEBUG_FLAGS) \
         $(ML_DEBUG) /SUBSYSTEM:$(SUBSYSTEM) $(LLFLAGS) $(DLL_LDFLAGS) \
         $(EXTRA_LIBS) /out:"$@" $(OBJS)
 endif # NS_USE_GCC
@@ -400,8 +438,14 @@ else # WINNT
 # UNIX link commands
 #
 ifeq ($(OS_ARCH),OS2)
-LINK_LIB        = $(AR) $(AR_FLAGS) $(OBJS) && $(RANLIB) $@
+LINK_LIB        = -$(RM) $@ && $(AR) $(AR_FLAGS) $(OBJS) && $(RANLIB) $@
+LINK_LIB2       = -$(RM) $@ && $(AR) $@ $(OBJS2) && $(RANLIB) $@
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
 LINK_DLL        = $(LD) $(OS_DLLFLAGS) $(DLLFLAGS) $(OBJS)
+else
+LINK_DLL        = $(LD) $(DSO_LDOPTS) $(ALDFLAGS) $(DLL_LDFLAGS) $(DLL_EXPORT_FLAGS) \
+                        -o $@ $(OBJS)
+endif
 
 else
 
@@ -427,14 +471,6 @@ ifneq (,$(filter BeOS Darwin NetBSD,$(OS_ARCH)))
 LINK_DLL	= $(MKSHLIB) $(OBJS)
 endif
 
-ifeq ($(OS_ARCH),OpenVMS)
-AR_EXTRACT = ar x
-AR_LIST = ar t
-SUB_LOBJS = $(shell for lib in $(SHARED_LIBRARY_LIBS); do $(AR_LIST) $${lib}; done;)
-LINK_DLL        = $(MKSHLIB) $(DSO_LDOPTS) $(ALDFLAGS) $(DLL_LDFLAGS) \
-		  $(DLL_EXPORT_FLAGS) -o $@ $(OBJS) VMSuni.opt
-endif
-
 ifeq ($(OS_ARCH), HP-UX)
 # On HPUX, we need a couple of changes:
 # 1) Use the C++ compiler for linking, which will pass the +eh flag on down to the
@@ -442,50 +478,31 @@ ifeq ($(OS_ARCH), HP-UX)
 #    needs this).
 # 2) Add a "-Wl,-E" option so the linker gets a "-E" flag.  This makes symbols
 #    in an executable visible to shared libraries loaded at runtime.
-LINK_EXE        = $(CCC) -Wl,-E $(ALDFLAGS) $(LDFLAGS) $(RPATHFLAG_PREFIX)$(RPATHFLAG) -o $@ $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
+LINK_EXE        = $(CC_FOR_LINK) -Wl,-E $(ALDFLAGS) $(LDFLAGS) $(RPATHFLAG_PREFIX)$(RPATHFLAG) -o $@ $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
 
 ifeq ($(USE_64), 1)
-LINK_EXE        = $(CCC) -DHPUX_ACC -D__STDC_EXT__ -D_POSIX_C_SOURCE=199506L  +DA2.0W +DS2.0 -Wl,-E $(ALDFLAGS) $(LDFLAGS) $(RPATHFLAG_PREFIX)$(RPATHFLAG) -o $@ $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
+LINK_EXE        = $(CC_FOR_LINK) -DHPUX_ACC -D__STDC_EXT__ -D_POSIX_C_SOURCE=199506L  +DA2.0W +DS2.0 -Wl,-E $(ALDFLAGS) $(LDFLAGS) $(RPATHFLAG_PREFIX)$(RPATHFLAG) -o $@ $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
 endif
 
 else # HP-UX
 # everything except HPUX
-ifeq ($(OS_ARCH), ReliantUNIX)
-# Use the C++ compiler for linking if at least ONE object is C++
-export LD_RUN_PATH=$(RPATHFLAG)
-LINK_EXE      = $(CXX) $(ALDFLAGS) $(LDFLAGS) -o $@ $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
 
-else # ReliantUNIX
 ifdef USE_LD_RUN_PATH
 #does RPATH differently.  instead we export RPATHFLAG as LD_RUN_PATH
 #see ns/netsite/ldap/clients/tools/Makefile for an example
 export LD_RUN_PATH=$(RPATHFLAG)
-LINK_EXE        = $(CC) $(ALDFLAGS) $(LDFLAGS) \
+LINK_EXE        = $(CC_FOR_LINK) $(ALDFLAGS) $(LDFLAGS) \
                         -o $@ $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
-LINK_EXE_NOLIBSOBJS     =  $(CC) $(ALDFLAGS) $(LDFLAGS) -o $@
+LINK_EXE_NOLIBSOBJS     =  $(CC_FOR_LINK) $(ALDFLAGS) $(LDFLAGS) -o $@
 else # USE_LD_RUN_PATH
-LINK_EXE        = $(CC) $(ALDFLAGS) $(LDFLAGS) \
+LINK_EXE        = $(CC_FOR_LINK) $(ALDFLAGS) $(LDFLAGS) \
                         $(RPATHFLAG_PREFIX)$(RPATHFLAG)$(RPATHFLAG_EXTRAS) \
                         -o $@ $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
-LINK_EXE_NOLIBSOBJS     = $(CC) $(ALDFLAGS) $(LDFLAGS) \
+LINK_EXE_NOLIBSOBJS     = $(CC_FOR_LINK) $(ALDFLAGS) $(LDFLAGS) \
                         $(RPATHFLAG_PREFIX)$(RPATHFLAG)$(RPATHFLAG_EXTRAS) -o $@
 endif # USE_LD_RUN_PATH
-endif # ReliantUNIX
 endif # HP-UX
 endif # WINNT
-
-ifeq ($(OS_ARCH), OSF1)
-LINK_EXE        = $(CCC) $(ALDFLAGS) $(LDFLAGS) $(RPATHFLAG_PREFIX)$(RPATHFLAG) \
-        -o $@ $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
-endif
-
-ifeq ($(OS_ARCH), SunOS)
-ifeq ($(USE_64), 1)
-LINK_EXE        = $(CCC) $(ALDFLAGS) $(LDFLAGS)  -R:$(RPATHFLAG)\
-        -o $@ $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
-endif
-endif
-
 
 ifndef PERL
 PERL = perl

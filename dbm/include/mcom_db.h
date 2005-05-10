@@ -190,7 +190,7 @@
 #define LITTLE_ENDIAN   1234
 #endif
 
-#if defined(_WINDOWS)
+#if defined(_WINDOWS) || defined(XP_OS2)
 #ifdef BYTE_ORDER
 #undef BYTE_ORDER
 #endif
@@ -245,7 +245,7 @@ int mkstemp(const char *path);
 PR_END_EXTERN_C
 #endif	/* MACINTOSH */
 
-#if !defined(_WINDOWS) && !defined(macintosh)
+#if !defined(_WINDOWS) && !defined(macintosh) && !defined(XP_OS2)
 #include <sys/stat.h>
 #include <errno.h>
 #endif

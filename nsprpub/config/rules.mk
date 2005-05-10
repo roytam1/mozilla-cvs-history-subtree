@@ -379,9 +379,7 @@ ifeq ($(OS_ARCH),OS2)
 	echo DATA    PRELOAD MOVEABLE MULTIPLE NONSHARED >> $@
 	echo EXPORTS >> $@
 	grep -v ';+' $< | grep -v ';-' | \
-	sed -e 's; DATA ;;' -e 's,;;,,' -e 's,;.*,,' -e 's,\([\t ]*\),\1_,' | \
-	awk 'BEGIN {ord=1;} { print($$0 " @" ord " RESIDENTNAME"); ord++;}'	>> $@
-	$(ADD_TO_DEF_FILE)
+	sed -e 's; DATA ;;' -e 's,;;,,' -e 's,;.*,,' >> $@
 endif
 
 #

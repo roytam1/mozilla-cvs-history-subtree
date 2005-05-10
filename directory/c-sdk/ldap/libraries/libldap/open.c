@@ -56,10 +56,6 @@ static char copyright[] = "@(#) Copyright (c) 1995 Regents of the University of 
 #define INADDR_LOOPBACK	((unsigned long) 0x7f000001)
 #endif
 
-#ifndef MAXHOSTNAMELEN
-#define MAXHOSTNAMELEN  64
-#endif
-
 #ifdef LDAP_DEBUG
 int	ldap_debug = 0;
 #endif
@@ -89,7 +85,7 @@ int				nsldapi_initialized = 0;
 */
 #undef pthread_self
 #define pthread_self PTHREAD_SELF
-extern pthread_t  _PTHREAD_CALL_  pthread_self (void);
+extern pthread_t pthread_self (void);
 #endif
 static pthread_key_t		nsldapi_key;
 

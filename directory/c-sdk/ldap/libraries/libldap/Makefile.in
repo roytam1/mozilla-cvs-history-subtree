@@ -200,10 +200,13 @@ EXTRA_LIBS += $(dist_libdir)/$(LBER_LIBNAME).lib
 endif
 endif
 
-ifeq ($(OS_ARCH),OS2)
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
 EXTRA_LIBS = $(dist_libdir)/$(LDIF_LIBNAME).lib
 EXTRA_LIBS += $(dist_libdir)/$(LBER_LIBNAME).lib
 EXTRA_LIBS += $(OS_LIBS)
+endif
+ifeq ($(MOZ_OS2_TOOLS),EMX)
+EXTRA_LIBS = -L$(dist_libdir) -l$(LBER_LIBNAME) $(OS_LIBS)
 endif
 
 ifeq ($(OS_ARCH), OSF1)
@@ -243,7 +246,7 @@ EXTRA_LIBS = -L$(dist_libdir) -l$(LBER_LIBNAME)
 endif
 
 ifeq ($(OS_ARCH), OpenBSD)
-EXTRA_LIBS = -L$(dist_libdir) -l$(LBER_LIBNAME) -lc_r
+EXTRA_LIBS = -L$(dist_libdir) -l$(LBER_LIBNAME) -pthread
 endif
 
 ###########################################################################
@@ -275,7 +278,18 @@ versiont.c:	Makefile.client Version.c
 	-e "s|%VERSION%|$${v}|" \
 	< Version.c > $@)
 
-export::    $(OBJDIR_NAME) $(LIBDIR) $(OBJS) $(LIBLDAP) $(DLLLDAP)
+# Set the default sources for the export target
+EXPDEPS = $(OBJDIR_NAME) $(LIBDIR) $(OBJS) $(LIBLDAP) $(DLLLDAP)
+# Remove the LIB source if on win32 and using MSVC
+# This avoids problems with -jX builds where 'link' will make both the
+# .dll and .lib files in one pass
+ifeq ($(OS_ARCH), WINNT)
+ifeq ($(LD),link)
+EXPDEPS = $(OBJDIR_NAME) $(LIBDIR) $(OBJS) $(DLLLDAP)
+endif
+endif
+
+export::	$(EXPDEPS)
 
 ltest::	$(LIBLDAP) test.o
 		$(LINK_EXE) test.o
@@ -305,15 +319,6 @@ $(DLLLDAP): $(OBJS) $(LIBDIR) $(LDAP_EXPORT_DEFS)
 ifdef SO_FILES_TO_REMOVE
 	-$(RM) $(SO_FILES_TO_REMOVE)
 endif
-ifeq ($(OS_ARCH), OpenVMS)
-	@touch no-such-file.vms; rm -f no-such-file.vms $(SUB_LOBJS)
-	@if test ! -f VMSuni.opt; then \
-	    echo "Creating universal symbol option file VMSuni.opt"; \
-	    for lib in $(SHARED_LIBRARY_LIBS); do $(AR_EXTRACT) $${lib}; done; \
-	    create_opt_uni $(OBJS) $(SUB_LOBJS); \
-	fi
-	@touch no-such-file.vms; rm -f no-such-file.vms $(SUB_LOBJS)
-endif
 	$(LINK_DLL) $(LDAP_EXPORT_FLAGS) $(EXTRA_LIBS)
 
 veryclean:: clean
@@ -321,7 +326,18 @@ veryclean:: clean
 # the $(dist_bindir) line is for the mozilla client, which for reasons
 # unknown wants shared libraries in /bin also
 #
-export::	$(LIBLDAP) $(DLLLDAP)
+# Set the default sources for the export target
+EXPDEPS2 = $(LIBLDAP) $(DLLLDAP)
+# Remove the LIB source if on win32 and using MSVC
+# This avoids problems with -jX builds where 'link' will make both the
+# .dll and .lib files in one pass
+ifeq ($(OS_ARCH), WINNT)
+ifeq ($(LD),link)
+EXPDEPS2 = $(DLLLDAP)
+endif
+endif
+
+export::	$(EXPDEPS2)
 ifdef MKSHLIB
 	$(INSTALL) -m 444 $(LIBLDAP) $(dist_libdir)
 	$(INSTALL) -m 444 $(DLLLDAP) $(dist_libdir)

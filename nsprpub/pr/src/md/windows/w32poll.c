@@ -262,7 +262,8 @@ PRInt32 _PR_MD_PR_POLL(PRPollDesc *pds, PRIntn npds, PRIntervalTime timeout)
     {
         PRInt32 ticksPerSecond = PR_TicksPerSecond();
         tv.tv_sec = timeout / ticksPerSecond;
-        tv.tv_usec = PR_IntervalToMicroseconds( timeout % ticksPerSecond );
+        tv.tv_usec = timeout - (ticksPerSecond * tv.tv_sec);
+        tv.tv_usec = (PR_USEC_PER_SEC * tv.tv_usec) / ticksPerSecond;
         tvp = &tv;
     }
 

@@ -51,6 +51,10 @@
 #include <stdlib.h>
 #include <time.h>	/* for time() and ctime() */
 
+#if defined(HPUX)
+#include <sys/termios.h>  /* for tcgetattr and tcsetattr */
+#endif /* HPUX */
+
 static LDAP_REBINDPROC_CALLBACK get_rebind_credentials;
 static void print_library_info( const LDAPAPIInfo *aip, FILE *fp );
 static int wait4result( LDAP *ld, int msgid, struct berval **servercredp,
@@ -65,7 +69,7 @@ static void *ldaptool_debug_realloc( void *ptr, size_t size );
 static void ldaptool_debug_free( void *ptr );
 #endif /* LDAPTOOL_DEBUG_MEMORY */
 
-#if defined(NET_SSL)
+#if defined(NET_SSL) && defined(LDAP_TOOL_PKCS11)
 static void ldaptool_setcallbacks( struct ldapssl_pkcs_fns *pfns);
 static char * buildTokenCertName( const char *tokenName, const char *certName);
 #ifdef FORTEZZA
@@ -108,6 +112,8 @@ ldaptool_common_usage( int two_hosts )
 	    "    -V n\tLDAP protocol version number (%d or %d; default: %d)\n",
 	    LDAP_VERSION2, LDAP_VERSION3, LDAP_VERSION3 );
 #if defined(NET_SSL)
+    fprintf( stderr, "    -ZZ\t\tstart TLS request\n" );
+    fprintf( stderr, "    -ZZZ\tenforce start TLS request (successful server response required)\n" );
     fprintf( stderr, "    -Z\t\tmake an SSL-encrypted connection\n" );
     fprintf( stderr, "    -P pathname\tpath to SSL certificate database (default: current directory)\n" );
     fprintf( stderr, "    -N\t\tname of certificate to use for SSL client authentication\n" );
@@ -199,6 +205,8 @@ static char		*cache_config_file = NULL;
 #if defined(NET_SSL)
 static int		secure = 0;
 static int		isZ = 0;
+static int		isZZ = 0;
+static int		isZZZ = 0;
 static int		isN = 0;
 static int		isW = 0;
 static int		isw = 0;
@@ -440,7 +448,10 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	    break;
 #if defined(NET_SSL)
 	case 'P':	/* path to security database */
-	    secure = 1; /* do SSL encryption */
+	    if ( (0 == isZ) && (0 == isZZ) )
+	    {
+		secure = 1; /* do SSL encryption */
+	    }
 	    ssl_certdbpath = strdup( optarg );
 	    if (NULL == ssl_certdbpath)
 	    {
@@ -449,8 +460,18 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	    }
 	    break;
 	case 'Z':	/* do SSL encryption */
-	    secure = 1;
-	    isZ = 1;
+		if ( (0 == isZ) && (0 == isZZ) )
+		{
+			secure = 1;
+	    		isZ = 1;
+		}
+		else {
+		    	secure = 0;
+		        isZ = 0;
+			/* -ZZZ for Server response required */
+			if (isZZ == 1)  isZZZ =1;
+	    		isZZ = 1; /* -ZZ : Start TLS request */
+	    	}
 	    break;
 	case 'N':	/* nickname of cert. to use for client auth. */
 	    ssl_certname = strdup( optarg );
@@ -615,8 +636,8 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 
     /* If '-Z' is specified, check if '-P' is specified too. */
     if ( isN || isW ) {
-	if ( !isZ ) {
-		fprintf( stderr, "%s: with -N, -W options, please specify -Z\n\n", ldaptool_progname ); 
+	if ( !(isZ || isZZ) ) {
+		fprintf( stderr, "%s: with -N, -W options, please specify either -Z , -ZZ or -ZZZ\n\n", ldaptool_progname ); 
 		return (-1);
 	}
     }
@@ -676,8 +697,46 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	/* 256 characters on Solaris */
 	passwd = getpassphrase(password_string);
 #else
+#if defined(HPUX)
+	/* HP-UX has deprecated their password asking function, so we have
+	 * to resort to doing it the hard way . . . */
+    char pbuf[257];
+    struct termios termstat;
+    tcflag_t savestat;
+
+    fputs(password_string, stdout);
+    fflush(stdout);
+
+    if(tcgetattr(fileno(stdin), &termstat) < 0) {
+        perror( "tcgetattr" );
+        exit( LDAP_LOCAL_ERROR );
+    }
+    savestat = termstat.c_lflag;
+    termstat.c_lflag &= ~(ECHO | ECHOE | ECHOK);
+    termstat.c_lflag |= (ICANON | ECHONL);
+    if(tcsetattr(fileno(stdin), TCSANOW, &termstat) < 0) {
+        perror( "tcgetattr" );
+        exit( LDAP_LOCAL_ERROR );
+    }
+    if (fgets(pbuf,256,stdin) == NULL) {
+        passwd = NULL;
+    } else {
+        char *tmp;
+        passwd = NULL;
+        tmp = strchr(pbuf,'\n');
+        if (tmp)
+            *tmp = '\0';
+        passwd = strdup(pbuf);
+    }
+    termstat.c_lflag = savestat;
+    if(tcsetattr(fileno(stdin), TCSANOW, &termstat) < 0) {
+        perror( "tcgetattr" );
+        exit( LDAP_LOCAL_ERROR );
+    }
+#else
 	/* limited to 16 chars on Tru64, 32 on AIX */
 	passwd = getpass(password_string);
+#endif
 #endif
 #endif
 
@@ -930,7 +989,7 @@ ldaptool_ldap_init( int second_host )
 #ifdef LDAP_TOOL_PKCS11
     ldaptool_setcallbacks( &local_pkcs_fns );
 
-    if ( !second_host 	&& secure  
+    if ( !second_host 	&& ( secure  || isZZ  )
 	 &&(rc = ldapssl_pkcs_init( &local_pkcs_fns))  < 0) {
 	    /* secure connection requested -- fail if no SSL */
 	    rc = PORT_GetError();
@@ -948,7 +1007,7 @@ ldaptool_ldap_init( int second_host )
 #endif /* LDAP_TOOL_ARGPIN */
 
 #else /* LDAP_TOOL_PKCS11 */
-    if ( !second_host 	&& secure  
+    if ( !second_host 	&& ( secure  || isZZ  )
 	 &&(rc = ldapssl_client_init( ssl_certdbpath, NULL )) < 0) {
 	    /* secure connection requested -- fail if no SSL */
 	    rc = PORT_GetError();
@@ -976,7 +1035,34 @@ ldaptool_ldap_init( int second_host )
 		exit ( ldaptool_print_lderror( ld, "ldapssl_enable_clientauth",
 		    LDAPTOOL_CHECK4SSL_ALWAYS ));
 	    }
-    } else {
+    } else if (isZZ)
+    {/* startTLS if -ZZ or -ZZZ option is used */
+    
+        if (( ld = prldap_init( host, port, 0 )) == NULL) {
+		perror("prldap_init failed");
+		exit( LDAP_LOCAL_ERROR );
+	}
+
+       /* Call to startTLS over the current clear-text connection */
+       if ( ( rc = ldap_start_tls_s( ld, NULL, NULL ) ) != LDAP_SUCCESS ) {
+		fprintf( stderr, "ldap_start_tls_s failed: (%s)\n",ldap_err2string(rc));
+		if( isZZZ ) {
+			ldap_unbind( ld );
+			exit( rc );
+		}
+	}
+	
+	/* Provide client authentication if -N option is used */
+       if ( ssl_certname != NULL ) {
+          if (ldapssl_enable_clientauth( ld, ssl_keydbpath, ssl_passwd,
+              ssl_certname ) < 0 ) {
+               exit ( ldaptool_print_lderror( ld, "ldapssl_enable_clientauth",
+		      LDAPTOOL_CHECK4SSL_ALWAYS ));
+	     }   
+       }
+        
+    } /* End startTLS case */
+    else {
 	/* In order to support IPv6, we use NSPR I/O */
 	ld = prldap_init( host, port, 0 /* not shared across threads */ );
     }
@@ -1155,14 +1241,19 @@ ldaptool_print_lderror( LDAP *ld, char *msg, int check4ssl )
     int		lderr = ldap_get_lderrno( ld, NULL, NULL );
 
     ldap_perror( ld, msg );
-    if ( secure && check4ssl != LDAPTOOL_CHECK4SSL_NEVER ) {
+    if ( ( secure || isZZ ) && check4ssl != LDAPTOOL_CHECK4SSL_NEVER ) {
 	if ( check4ssl == LDAPTOOL_CHECK4SSL_ALWAYS
 		|| ( lderr == LDAP_SERVER_DOWN )
 		|| ( lderr == LDAP_CONNECT_ERROR )) {
 	    int		sslerr = PORT_GetError();
-
-	    fprintf( stderr, "\tSSL error %d (%s)\n", sslerr,
+	    if ( isZZ ) {
+	    	fprintf( stderr, "\tTLS/SSL error %d (%s)\n", sslerr,
 		    ldapssl_err2string( sslerr ));
+	    }
+	    else {
+	    	fprintf( stderr, "\tSSL error %d (%s)\n", sslerr,
+		    ldapssl_err2string( sslerr ));
+	    }
 	}
     }
 
@@ -1501,7 +1592,9 @@ parse_result( LDAP *ld, LDAPMessage *res, struct berval **servercredp,
 	    if ( 0 == strcmp( ctrls[i]->ldctl_oid,
 		LDAP_X_CONTROL_PWPOLICY_RESPONSE )) {
 		unsigned long tag1=0, tag2=0, tag3=0;
-		int warnvalue=0, grclogins=-1, secsleft=-1, errvalue=-1;
+		long warnvalue=0;
+		int grclogins=-1, secsleft=-1;
+		long errvalue=-1;
 		static int err2str_size = sizeof(pwpolicy_err2str)/sizeof(pwpolicy_err2str[0]);
 
 		if ( ( ber = ber_init(&(ctrls[i]->ldctl_value)) ) == NULL ) {
@@ -1523,10 +1616,10 @@ parse_result( LDAP *ld, LDAPMessage *res, struct berval **servercredp,
 			}
 			switch (tag2) {
 			case LDAP_TAG_PWP_SECSLEFT:
-				secsleft = warnvalue;
+				secsleft = (int)warnvalue;
 				break;
 			case LDAP_TAG_PWP_GRCLOGINS:
-				grclogins = warnvalue;
+				grclogins = (int)warnvalue;
 				break;
 			default:
 				/* error */

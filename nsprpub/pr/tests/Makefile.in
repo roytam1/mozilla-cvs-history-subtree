@@ -75,9 +75,7 @@ CSRCS =             \
 	fileio.c		\
 	foreign.c	    \
 	forktest.c	    \
-	formattm.c	    \
 	fsync.c	        \
-	getai.c			\
 	gethost.c		\
 	getproto.c		\
 	i2l.c		    \
@@ -236,7 +234,7 @@ ifeq ($(MOZ_OS2_TOOLS),VACPP)
   LDOPTS = -NOE -DEBUG -nologo -PMTYPE:VIO
 else
   EXTRA_LIBS = $(OS_LIBS)
-  LDOPTS = -Zomf -Zlinker /PM:VIO -Zlinker /ST:0x64000
+  LDOPTS = -Zmtd -Zomf -Zlinker /PM:VIO -Zlinker /ST:0x30000
 endif
 endif
 
@@ -436,7 +434,7 @@ LIBPTHREAD = -lpthread
 ifeq ($(OS_ARCH),AIX)
 LIBPTHREAD = -lpthreads
 endif
-ifeq (,$(filter-out FreeBSD OpenBSD BSD_OS QNX Darwin OpenUNIX,$(OS_ARCH)))
+ifeq (,$(filter-out FreeBSD OpenBSD BSD_OS NTO Darwin OpenUNIX,$(OS_ARCH)))
 LIBPTHREAD =
 endif
 ifeq ($(OS_ARCH)$(basename $(OS_RELEASE)),HP-UXB.10)

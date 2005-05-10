@@ -122,7 +122,7 @@
  * some systems don't have the BSD re_comp and re_exec routines
  */
 #ifndef NEED_BSDREGEX
-#if ( defined( SYSV ) || defined( VMS ) || defined( NETBSD ) || defined( freebsd ) || defined( linux ) || defined( DARWIN )) && !defined(sgi)
+#if ( defined( SYSV ) || defined( NETBSD ) || defined( freebsd ) || defined( linux ) || defined( DARWIN )) && !defined(sgi)
 #define NEED_BSDREGEX
 #endif
 #endif
@@ -342,7 +342,10 @@ extern char *strdup();
 #define	BSD_TIME	1	/* for servers/slapd/log.h */
 #endif /* sunos4 || osf */
 
-#if !defined(_WINDOWS) && !defined(macintosh) && !defined(XP_OS2)
+#if defined(XP_OS2)
+#include <machine/endian.h>   /* for htonl, et.al. */
+#include <arpa/inet.h>	      /* for inet_addr() */
+#elif !defined(_WINDOWS) && !defined(macintosh)
 #include <netinet/in.h>
 #if !defined(XP_BEOS)
 #include <arpa/inet.h>	/* for inet_addr() */
@@ -436,7 +439,7 @@ int select(int, fd_set *, fd_set *, fd_set *, struct timeval *);
 
 #elif defined(XP_OS2)
 
-#define strcasecmp strcmpi
+#define strcasecmp stricmp
 #define strncasecmp strnicmp
 #define bzero(a, b) memset( a, 0, b )
 #include <string.h> /*for strcmpi()*/
