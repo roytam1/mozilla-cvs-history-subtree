@@ -6582,13 +6582,15 @@ nsDocShell::LoadHistoryEntry(nsISHEntry * aEntry, PRUint32 aLoadType)
                       NS_ERROR_FAILURE);
     NS_ENSURE_SUCCESS(aEntry->GetContentType(contentType), NS_ERROR_FAILURE);
 
-    PRBool isJavaScript, isData;
+    PRBool isJavaScript, isViewSource, isData;
     if ((NS_SUCCEEDED(uri->SchemeIs("javascript", &isJavaScript)) &&
          isJavaScript) ||
+        (NS_SUCCEEDED(uri->SchemeIs("view-source", &isViewSource)) &&
+         isViewSource) ||
         (NS_SUCCEEDED(uri->SchemeIs("data", &isData)) && isData)) {
-        // We're loading a javascript: or data: URL from session
-        // history. Replace the current document with about:blank to
-        // prevent anything from the current document from leaking
+        // We're loading a javascript:, view-source: or data: URL from
+        // session history. Replace the current document with about:blank
+        // to prevent anything from the current document from leaking
         // into any JavaScript code in the URL.
         rv = CreateAboutBlankContentViewer();
 
