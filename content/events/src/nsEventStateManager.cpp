@@ -2596,6 +2596,9 @@ nsEventStateManager::MaybeDispatchMouseEventToIframe(
   // If this is the first event in this window then mDocument might not be set
   // yet.  Call EnsureDocument to set it.
   EnsureDocument(aPresContext);
+  if (!mDocument) {
+    return;
+  }
   nsIDocument *parentDoc = mDocument->GetParentDocument();
   if (parentDoc) {
     nsIContent *docContent = parentDoc->FindContentForSubDocument(mDocument);
