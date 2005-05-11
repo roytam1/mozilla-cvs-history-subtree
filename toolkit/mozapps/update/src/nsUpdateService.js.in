@@ -52,6 +52,7 @@ const KEY_APPDIR          = "XCurProcD";
 
 const DIR_UPDATES         = "updates";
 const FILE_UPDATE_STATUS  = "update.status";
+const FILE_UPDATES        = "updates.manifest";
 
 const MODE_WRONLY   = 0x02;
 const MODE_CREATE   = 0x08;
@@ -66,6 +67,10 @@ const STATE_APPLYING  = "applying";
 const STATE_SUCCEEDED = "succeeded";
 const STATE_FAILED    = "failed";
 
+const PREFIX_APP_NS   = "http://www.mozilla.org/2004/app-rdf#";
+const PREFIX_UPDATES  = "urn:mozilla:updates:";
+const ROOT_UPDATES    = "urn:mozilla:updates:root";
+
 const nsILocalFile            = Components.interfaces.nsILocalFile;
 const nsIUpdateService        = Components.interfaces.nsIUpdateService;
 const nsIUpdateItem           = Components.interfaces.nsIUpdateItem;
@@ -75,13 +80,26 @@ const nsIIncrementalDownload  = Components.interfaces.nsIIncrementalDownload;
 const Node = Components.interfaces.nsIDOMNode;
 
 function APP_NS(aProperty) {
-  return "http://www.mozilla.org/2004/app-rdf#" + aProperty;
+  return PREFIX_APP_NS + aProperty;
 }
 
-var gApp    = null;
-var gPref   = null;
-var gOS     = null;
-var gConsole= null;
+var gApp      = null;
+var gPref     = null;
+var gOS       = null;
+var gConsole  = null;
+var gRDF      = null;
+
+function AUS_R(property) {
+  return gRDF.GetResource(EM_NS(property));
+}
+
+function AUS_L(literal) {
+  return gRDF.GetLiteral(literal);
+}
+
+function AUS_I(integer) {
+  return gRDF.GetIntLiteral(integer);
+}
 
 /**
  * Logs a string to the error console. 
@@ -91,6 +109,135 @@ var gConsole= null;
 function LOG(string) {
   dump("*** " + string + "\n");
   gConsole.logStringMessage(string);
+}
+
+/**
+ * Gets a File URL spec for a nsIFile
+ * @param   file
+ *          The file to get a file URL spec to
+ * @returns The file URL spec to the file
+ */
+function getURLSpecFromFile(file) {
+  var ioServ = Components.classes["@mozilla.org/network/io-service;1"]
+                         .getService(Components.interfaces.nsIIOService);
+  var fph = ioServ.getProtocolHandler("file")
+                  .QueryInterface(Components.interfaces.nsIFileProtocolHandler);
+  return fph.getURLSpecFromFile(file);
+}
+
+/**
+ * Gets the specified directory at the speciifed hierarchy under a 
+ * Directory Service key. 
+ * @param   key
+ *          The Directory Service Key to start from
+ * @param   pathArray
+ *          An array of path components to locate beneath the directory 
+ *          specified by |key|
+ * @return  nsIFile object for the location specified. If the directory
+ *          requested does not exist, it is created, along with any
+ *          parent directories that need to be created.
+ */
+function getDir(key, pathArray) {
+  return getDirInternal(key, pathArray, true);
+}
+
+/**
+ * Gets the specified directory at the speciifed hierarchy under a 
+ * Directory Service key. 
+ * @param   key
+ *          The Directory Service Key to start from
+ * @param   pathArray
+ *          An array of path components to locate beneath the directory 
+ *          specified by |key|
+ * @return  nsIFile object for the location specified. If the directory
+ *          requested does not exist, it is NOT created.
+ */
+function getDirNoCreate(key, pathArray) {
+  return getDirInternal(key, pathArray, false);
+}
+
+/**
+ * Gets the specified directory at the speciifed hierarchy under a 
+ * Directory Service key. 
+ * @param   key
+ *          The Directory Service Key to start from
+ * @param   pathArray
+ *          An array of path components to locate beneath the directory 
+ *          specified by |key|
+ * @param   shouldCreate
+ *          true if the directory hierarchy specified in |pathArray|
+ *          should be created if it does not exist,
+ *          false otherwise.
+ * @return  nsIFile object for the location specified. 
+ */
+function getDirInternal(key, pathArray, shouldCreate) {
+  var fileLocator = Components.classes["@mozilla.org/file/directory_service;1"]
+                              .getService(Components.interfaces.nsIProperties);
+  var dir = fileLocator.get(key, Components.interfaces.nsIFile);
+  for (var i = 0; i < pathArray.length; ++i) {
+    dir.append(pathArray[i]);
+    if (shouldCreate && !dir.exists())
+      dir.create(nsILocalFile.DIRECTORY_TYPE, PERMS_DIRECTORY);
+  }
+  return dir;
+}
+
+/**
+ * Gets the file at the speciifed hierarchy under a Directory Service key.
+ * @param   key
+ *          The Directory Service Key to start from
+ * @param   pathArray
+ *          An array of path components to locate beneath the directory 
+ *          specified by |key|. The last item in this array must be the
+ *          leaf name of a file.
+ * @return  nsIFile object for the file specified. The file is NOT created
+ *          if it does not exist, however all required directories along 
+ *          the way are.
+ */
+function getFile(key, pathArray) {
+  var file = getDir(key, pathArray.slice(0, -1));
+  file.append(pathArray[pathArray.length - 1]);
+  return file;
+}
+
+/**
+ * An enumeration of items in a JS array.
+ * @constructor
+ */
+function ArrayEnumerator(aItems) {
+  this._index = 0;
+  if (aItems) {
+    for (var i = 0; i < aItems.length; ++i) {
+      if (!aItems[i])
+        aItems.splice(i, 1);      
+    }
+  }
+  this._contents = aItems;
+}
+
+ArrayEnumerator.prototype = {
+  _index: 0,
+  _contents: [],
+  
+  hasMoreElements: function() {
+    return this._index < this._contents.length;
+  },
+  
+  getNext: function() {
+    return this._contents[this._index++];      
+  }
+};
+
+/**
+ * Trims a prefix from a string.
+ * @param   string
+ *          The source string
+ * @param   prefix
+ *          The prefix to remove.
+ * @returns The suffix (string - prefix)
+ */
+function stripPrefix(string, prefix) {
+  return string.substr(prefix.length);
 }
 
 /**
@@ -145,6 +292,8 @@ function UpdateService() {
                     .getService(Components.interfaces.nsIObserverService);
   gConsole = Components.classes["@mozilla.org/consoleservice;1"]
                        .getService(Components.interfaces.nsIConsoleService);  
+  gRDF = Components.classes["@mozilla.org/rdf/rdf-service;1"]
+                   .getService(Components.interfaces.nsIRDFService);
   
   this._makeTimer();
 
@@ -266,12 +415,13 @@ function getPref(func, preference) {
 /**
  * Update Patch
  */
-function UpdatePatch(type, url, hashfunction, hashvalue, size) {
+function UpdatePatch(type, url, hashfunction, hashvalue, currentSize, finalSize) {
   this.type = type;
   this.url = url;
   this.hashfunction = hashfunction;
   this.hashvalue = hashvalue;
-  this.size = size;
+  this.currentSize = currentSize;
+  this.finalSize = finalSize;
 }
 
 /**
@@ -334,7 +484,7 @@ function UpdateNode(node) {
                                 parseInt(patchNode.getAttribute("size")));
     var collection = patch.type == "partial" ? this.partial : this.complete;
     collection.patches.push(patch);
-    collection.size += patch.size;
+    collection.size += patch.finalSize;
   }
   
   // Initialize this object
@@ -578,10 +728,94 @@ Downloader.prototype = {
   }
 };
 
-function Manager() {
-}
-Manager.prototype = {
+var Manager = {
+  _request: null,
   load: function() {
+    // Don't initialize more than once
+    if (this._request)
+      return;
+      
+    var updatesFile  = getFile(KEY_APPDIR, [FILE_UPDATES]);
+    var updatesFileURL = getURLSpecFromFile(updatesFile);
+
+    this._request = Components.classes["@mozilla.org/xmlextras/xmlhttprequest;1"]
+                              .createInstance(Components.interfaces.nsIXMLHttpRequest);
+    this._request.open("GET", updatesFileURL, true);
+    this._request.overrideMimeType("text/xml");
+    this._request.setRequestHeader("Cache-Control", "no-cache");
+    
+    var self = this;
+    this._request.onerror     = function(event) { self.onError(event);    };
+    this._request.onload      = function(event) { self.onLoad(event);     };
+
+    LOG("Manager.load: sending request to " + updatesFileURL);
+    this._request.send(null);
+  },
+  
+  onLoad: function(event) {
+    this._parseUpdatesXML();
+  },
+  
+  save: function() {
+    // Serialize...
+  },
+  
+  updates: { },
+  patches: { },
+  
+  _parseUpdatesXML: function() {
+    var updatesElement = this._request.responseXML.documentElement;
+    if (!updatesElement) {
+      LOG("Manager._parseUpdatesXML: empty updates document?!");
+      return [];
+    }
+    
+    for (var i = 0; i < updatesElement.childNodes.length; ++i) {
+      var updateElement = updatesElement.childNodes[i];
+      if (updateElement.nodeType != Node.ELEMENT_NODE)
+        continue;
+      
+      var patches = [];
+      for (var j = 0; j < updateElement.childNodes.length; ++j) {
+        var patchElement = updateElement.childNodes[j];
+        var p = new UpdatePatch(patchElement.getAttribute("type"),
+                                patchElement.getAttribute("url"),
+                                patchElement.getAttribute("hashfunction"),
+                                patchElement.getAttribute("hashvalue"),
+                                parseInt(patchElement.getAttribute("currentSize")),
+                                parseInt(patchElement.getAttribute("finalSize")));
+        patches.push(p);
+        this.patches[p.url] = p;
+      }
+      
+      var update = new Update(updateElement.getAttribute("type"), 
+                              updateElement.getAttribute("version"),
+                              updateElement.getAttribute("extensionversion"),
+                              updateElement.getAttribute("detailsurl"),
+                              patches);
+      this.updates[update.version] = update;
+    }
+  },
+  
+  onError: function(event) {
+    LOG("Manager.onError: failed to load updates database!");
+  },
+  
+  addUpdates: function(updates) {
+    for (var i = 0; i < updates.length; ++i) {
+      var update = updates[i];
+      this.updates[update.version] = update;
+    }
+    this._updateChildCount();
+  },
+  
+  _updateChildCount: function() {
+    var value = this.GetTarget(AUS_R(ROOT_UPDATES), AUS_R("child"), true);
+    if (value) {
+      for (var i = 0; i < this._observers.length; ++i)
+        this._observers[i].onAssert(this, AUS_R(ROOT_UPDATES), AUS_R("child"), 
+                                    value);
+    }
   },
   
   /////////////////////////////////////////////////////////////////////////////
@@ -604,6 +838,13 @@ Manager.prototype = {
   GetTarget: function(source, property, truthValue) {
     if (!source)
       return null;
+    
+    var version = stripPrefix(source.Value, PREFIX_UPDATES);
+    var update = this.updates[version];
+    var property = stripPrefix(property.Value, PREFIX_APP_NS);
+    if (property in update)
+      return AUS_L(update[property]);
+    return AUS_L("");
   },
   
   /**
@@ -612,6 +853,18 @@ Manager.prototype = {
   GetTargets: function(source, property, truthValue) {
     if (!source)
       return null;
+    
+    var targets = [];
+    if (source.EqualsNode(gRDF.GetResource(ROOT_UPDATES)) &&
+        property.EqualsNode(AUS_R("child")) {
+      var updates = [];
+      for (var update in this.updates) {
+        targets.push(AUS_R(PREFIX_UPDATES + this.updates[update].version));
+      }
+    }
+    else
+      targets = [this.GetTarget(source, property, truthValue)];
+    return new ArrayEnumerator(targets);
   },
   
   Assert: function(source, property, target, truthValue) {
