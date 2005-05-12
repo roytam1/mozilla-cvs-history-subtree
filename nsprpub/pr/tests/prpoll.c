@@ -43,10 +43,6 @@
 #include <io.h>      /* for close() */
 #endif
 
-#ifdef XP_UNIX
-#include <unistd.h>  /* for close() */
-#endif
-
 #include "prinit.h"
 #include "prio.h"
 #include "prlog.h"
