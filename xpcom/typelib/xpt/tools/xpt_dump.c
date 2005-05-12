@@ -569,6 +569,12 @@ XPT_DumpMethodDescriptor(XPTHeader *header, XPTMethodDescriptor *md,
         else 
             fprintf(stdout, "FALSE\n");
         
+        fprintf(stdout, "%*sIs Secured?       ", indent, " ");
+        if (XPT_MD_IS_SECURED(md->flags))
+            fprintf(stdout, "TRUE\n");
+        else 
+            fprintf(stdout, "FALSE\n");
+
         fprintf(stdout, "%*s# of arguments:   %d\n", indent, " ", md->num_args);
         fprintf(stdout, "%*sParameter Descriptors:\n", indent, " ");
         
@@ -592,12 +598,13 @@ XPT_DumpMethodDescriptor(XPTHeader *header, XPTMethodDescriptor *md,
         if (!XPT_GetStringForType(header, &md->result->type, id, &param_type)) {
             return PR_FALSE;
         }
-        fprintf(stdout, "%*s%c%c%c%c%c %s %s(", indent - 6, " ",
+        fprintf(stdout, "%*s%c%c%c%c%c%c %s %s(", indent - 6, " ",
                 XPT_MD_IS_GETTER(md->flags) ? 'G' : ' ',
                 XPT_MD_IS_SETTER(md->flags) ? 'S' : ' ',
                 XPT_MD_IS_HIDDEN(md->flags) ? 'H' : ' ',
                 XPT_MD_IS_NOTXPCOM(md->flags) ? 'N' : ' ',
                 XPT_MD_IS_CTOR(md->flags) ? 'C' : ' ',
+                XPT_MD_IS_SECURED(md->flags) ? 'E' : ' ',
                 param_type, md->name);
         for (i=0; i<md->num_args; i++) {
             if (i!=0) {

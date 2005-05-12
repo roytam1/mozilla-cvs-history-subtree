@@ -1008,13 +1008,14 @@ fill_pd_as_nsresult(XPTParamDescriptor *pd)
 
 static gboolean
 typelib_attr_accessor(TreeState *state, XPTMethodDescriptor *meth,
-                      gboolean getter, gboolean hidden)
+                      gboolean getter, gboolean hidden, gboolean secured)
 {
     uint8 methflags = 0;
     uint8 pdflags = 0;
 
     methflags |= getter ? XPT_MD_GETTER : XPT_MD_SETTER;
     methflags |= hidden ? XPT_MD_HIDDEN : 0;
+    methflags |= secured ? XPT_MD_SECURED : 0;
     if (!XPT_FillMethodDescriptor(ARENA(state), meth, methflags,
                                   ATTR_IDENT(state->tree).str, 1))
         return FALSE;
@@ -1052,6 +1053,8 @@ typelib_attr_dcl(TreeState *state)
     /* If it's marked [noscript], mark it as hidden in the typelib. */
     gboolean hidden = (IDL_tree_property_get(ident, "noscript") != NULL);
 
+    gboolean secured = (IDL_tree_property_get(ident, "secured") != NULL);
+
     if (!verify_attribute_declaration(state->tree))
         return FALSE;
 
@@ -1061,8 +1064,9 @@ typelib_attr_dcl(TreeState *state)
 
     meth = &id->method_descriptors[NEXT_METH(state)];
 
-    return typelib_attr_accessor(state, meth, TRUE, hidden) &&
-        (read_only || typelib_attr_accessor(state, meth + 1, FALSE, hidden));
+    return typelib_attr_accessor(state, meth, TRUE, hidden, secured) &&
+        (read_only ||
+         typelib_attr_accessor(state, meth + 1, FALSE, hidden, secured));
 }
 
 static gboolean
@@ -1077,6 +1081,8 @@ typelib_op_dcl(TreeState *state)
     gboolean op_notxpcom = (IDL_tree_property_get(op->ident, "notxpcom")
                             != NULL);
     gboolean op_noscript = (IDL_tree_property_get(op->ident, "noscript")
+                            != NULL);
+    gboolean op_secured  = (IDL_tree_property_get(op->ident, "secured")
                             != NULL);
 
     if (!verify_method_declaration(state->tree))
@@ -1096,6 +1102,8 @@ typelib_op_dcl(TreeState *state)
         op_flags |= XPT_MD_HIDDEN;
     if (op_notxpcom)
         op_flags |= XPT_MD_NOTXPCOM;
+    if (op_secured)
+        op_flags |= XPT_MD_SECURED;
 
     /* XXXshaver constructor? */
 
