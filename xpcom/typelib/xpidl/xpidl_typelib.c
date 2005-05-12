@@ -520,6 +520,9 @@ typelib_interface(TreeState *state)
     if (IDL_tree_property_get(IDL_INTERFACE(iface).ident, "function"))
         interface_flags |= XPT_ID_FUNCTION;
 
+    if (IDL_tree_property_get(IDL_INTERFACE(iface).ident, "secured"))
+        interface_flags |= XPT_ID_SECURED;
+
     ide = FindInterfaceByName(HEADER(state)->interface_directory,
                               HEADER(state)->num_interfaces, name);
     if (!ide) {
@@ -1053,7 +1056,8 @@ typelib_attr_dcl(TreeState *state)
     /* If it's marked [noscript], mark it as hidden in the typelib. */
     gboolean hidden = (IDL_tree_property_get(ident, "noscript") != NULL);
 
-    gboolean secured = (IDL_tree_property_get(ident, "secured") != NULL);
+    gboolean secured = XPT_ID_IS_SECURED(id->flags) &&
+        IDL_tree_property_get(ident, "unsecured") == NULL;
 
     if (!verify_attribute_declaration(state->tree))
         return FALSE;
@@ -1082,8 +1086,9 @@ typelib_op_dcl(TreeState *state)
                             != NULL);
     gboolean op_noscript = (IDL_tree_property_get(op->ident, "noscript")
                             != NULL);
-    gboolean op_secured  = (IDL_tree_property_get(op->ident, "secured")
-                            != NULL);
+
+    gboolean op_secured = XPT_ID_IS_SECURED(id->flags) &&
+        IDL_tree_property_get(op->ident, "unsecured") == NULL;
 
     if (!verify_method_declaration(state->tree))
         return FALSE;

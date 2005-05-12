@@ -456,6 +456,9 @@ XPT_DumpInterfaceDescriptor(XPTCursor *cursor, XPTInterfaceDescriptor *id,
     fprintf(stdout, "%*sFunction: %s\n", new_indent, " ", 
             XPT_ID_IS_FUNCTION(id->flags) ? "TRUE" : "FALSE");
 
+    fprintf(stdout, "%*sSecured: %s\n", new_indent, " ",
+            XPT_ID_IS_SECURED(id->flags) ? "TRUE" : "FALSE");
+
     if (verbose_mode) {
         if (id->parent_interface) {
             fprintf(stdout, 
