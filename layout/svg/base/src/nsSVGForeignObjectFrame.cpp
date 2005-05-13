@@ -797,8 +797,7 @@ nsSVGForeignObjectFrame::DoReflow()
   NS_ASSERTION(presShell, "null presShell");
   presShell->CreateRenderingContext(this,getter_AddRefs(renderingContext));
   
-  // XXX we always pass this off as an initial reflow. is that a problem?
-  nsHTMLReflowState reflowState(presContext, this, eReflowReason_Initial,
+  nsHTMLReflowState reflowState(presContext, this,
                                 renderingContext, availableSpace);
 
   nsSpaceManager* spaceManager = new nsSpaceManager(presShell, this);
