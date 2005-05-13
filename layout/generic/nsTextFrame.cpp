@@ -5449,7 +5449,7 @@ nsTextFrame::MarkIntrinsicWidthsDirty()
 {
   // Clear the TEXT_OPTIMIZE_RESIZE for the next time around.  It'll get
   // reset late in Reflow.
-  mState &= ~nsFrameState(TEXT_OPTIMIZE_RESIZE);
+  RemoveStateBits(TEXT_OPTIMIZE_RESIZE);
 }
 
 NS_IMETHODIMP
@@ -5495,7 +5495,7 @@ nsTextFrame::Reflow(nsPresContext*          aPresContext,
     // prev-in-flow has changed the number of characters it maps and so we
     // need to measure text and not try and optimize a resize reflow
     if (startingOffset != mContentOffset) {
-      mState &= ~TEXT_OPTIMIZE_RESIZE;
+      RemoveStateBits(TEXT_OPTIMIZE_RESIZE);
     }
   }
   nsLineLayout& lineLayout = *aReflowState.mLineLayout;
@@ -5736,11 +5736,11 @@ nsTextFrame::Reflow(nsPresContext*          aPresContext,
   //   and our frame width won't get set
   if (NS_FRAME_IS_COMPLETE(aStatus) && !NS_INLINE_IS_BREAK(aStatus)  && 
       (aMetrics.width <= maxWidth)) {
-    mState |= TEXT_OPTIMIZE_RESIZE;
+    AddStateBits(TEXT_OPTIMIZE_RESIZE);
     mRect.width = aMetrics.width;
   }
   else {
-    mState &= ~TEXT_OPTIMIZE_RESIZE;
+    RemoveStateBits(TEXT_OPTIMIZE_RESIZE);
   }
  
   // If it's an incremental reflow command, then invalidate our existing
