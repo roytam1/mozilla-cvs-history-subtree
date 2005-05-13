@@ -207,7 +207,6 @@ ViewportFrame::Reflow(nsPresContext*          aPresContext,
   DO_GLOBAL_REFLOW_COUNT("ViewportFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
   NS_FRAME_TRACE_REFLOW_IN("ViewportFrame::Reflow");
-  NS_PRECONDITION(!aDesiredSize.mComputeMEW, "unexpected request");
 
   // Initialize OUT parameters
   aStatus = NS_FRAME_COMPLETE;
@@ -222,8 +221,8 @@ ViewportFrame::Reflow(nsPresContext*          aPresContext,
   if (mFrames.NotEmpty()) {
     // Deal with a non-incremental reflow or an incremental reflow
     // targeted at our one-and-only principal child frame.
-    if (eReflowReason_Incremental != aReflowState.reason ||
-        aReflowState.path->HasChild(mFrames.FirstChild())) {
+    if ((GetStateBits() & NS_FRAME_IS_DIRTY) ||
+        (mFrames.FirstChild()->GetStateBits() & NS_FRAME_IS_DIRTY)) {
       // Reflow our one-and-only principal child frame
       nsIFrame*           kidFrame = mFrames.FirstChild();
       nsHTMLReflowMetrics kidDesiredSize(nsnull);
@@ -243,24 +242,14 @@ ViewportFrame::Reflow(nsPresContext*          aPresContext,
     }
   }
 
-  // If we were flowed initially at both an unconstrained width and height, 
-  // this is a hint that we should return our child's intrinsic size.
-  if ((eReflowReason_Initial == aReflowState.reason ||
-       eReflowReason_Resize == aReflowState.reason) &&
-      aReflowState.availableWidth == NS_UNCONSTRAINEDSIZE &&
-      aReflowState.availableHeight == NS_UNCONSTRAINEDSIZE) {
-    aDesiredSize.width = kidRect.width;
-    aDesiredSize.height = kidRect.height;
-    aDesiredSize.ascent = kidRect.height;
-    aDesiredSize.descent = 0;
-  }
-  else {
-    // Return the max size as our desired size
-    aDesiredSize.width = aReflowState.availableWidth;
-    aDesiredSize.height = aReflowState.availableHeight;
-    aDesiredSize.ascent = aReflowState.availableHeight;
-    aDesiredSize.descent = 0;
-  }
+  NS_ASSERTION(aReflowState.availableWidth != NS_UNCONSTRAINEDSIZE,
+               "shouldn't happen anymore");
+
+  // Return the max size as our desired size
+  aDesiredSize.width = aReflowState.availableWidth;
+  aDesiredSize.height = aReflowState.availableHeight;
+  aDesiredSize.ascent = aReflowState.availableHeight;
+  aDesiredSize.descent = 0;
 
   // Make a copy of the reflow state and change the computed width and height
   // to reflect the available space for the fixed items
@@ -283,11 +272,8 @@ ViewportFrame::Reflow(nsPresContext*          aPresContext,
                               reflowState.mComputedWidth, 
                               reflowState.mComputedHeight);
 
-  // If this is an initial reflow, resize reflow, or style change reflow
-  // then do a repaint
-  if ((eReflowReason_Initial == aReflowState.reason) ||
-      (eReflowReason_Resize == aReflowState.reason) ||
-      (eReflowReason_StyleChange == aReflowState.reason)) {
+  // If we were dirty then do a repaint
+  if (GetStateBits() & NS_FRAME_IS_DIRTY) {
     nsRect damageRect(0, 0, aDesiredSize.width, aDesiredSize.height);
     Invalidate(damageRect, PR_FALSE);
   }
