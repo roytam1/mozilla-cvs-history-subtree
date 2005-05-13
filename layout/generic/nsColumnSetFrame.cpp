@@ -341,8 +341,12 @@ nsColumnSetFrame::ReflowChildren(nsHTMLReflowMetrics&     aDesiredSize,
                               PRBool                   aUnboundedLastColumn) {
   PRBool allFit = PR_TRUE;
   PRBool RTL = GetStyleVisibility()->mDirection == NS_STYLE_DIRECTION_RTL;
-  PRBool shrinkingHeightOnly = aKidReason == eReflowReason_Resize &&
-    mLastBalanceHeight > aConfig.mColMaxHeight;
+  PRBool shrinkingHeightOnly = mLastBalanceHeight > aConfig.mColMaxHeight;
+  for (nsIFrame* f = mFrames.FirstChild(); f && shrinkingHeightOnly;
+       f = f->GetNextSibling()) {
+    if (f->GetStateBits() & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN))
+      shrinkingHeightOnly = PR_FALSE;
+  }
   
 #ifdef DEBUG_roc
   printf("*** Doing column reflow pass: mLastBalanceHeight=%d, mColMaxHeight=%d, RTL=%d\n, mBalanceColCount=%d, mColWidth=%d, mColGap=%d\n",
@@ -359,8 +363,8 @@ nsColumnSetFrame::ReflowChildren(nsHTMLReflowMetrics&     aDesiredSize,
     // We need a way to do an incremental reflow and be sure availableHeight
     // changes are taken account of! Right now I think block frames with absolute
     // children might exit early.
-    NS_ASSERTION(aKidReason != eReflowReason_Incremental,
-                 "incremental reflow should not have changed the balance height");
+    //NS_ASSERTION(aKidReason != eReflowReason_Incremental,
+    //             "incremental reflow should not have changed the balance height");
   }
 
   // get our border and padding
@@ -396,7 +400,7 @@ nsColumnSetFrame::ReflowChildren(nsHTMLReflowMetrics&     aDesiredSize,
     // Try to skip reflowing the child. We can't skip if the child is dirty. We also can't
     // skip if the next column is dirty, because the next column's first line(s)
     // might be pullable back to this column.
-    PRBool skipIncremental = aKidReason == eReflowReason_Incremental
+    PRBool skipIncremental = !(GetStateBits() & NS_FRAME_IS_DIRTY)
       && !(child->GetStateBits() & NS_FRAME_IS_DIRTY)
       && (!child->GetNextSibling()
           || !(child->GetNextSibling()->GetStateBits() & NS_FRAME_IS_DIRTY));
@@ -441,7 +445,8 @@ nsColumnSetFrame::ReflowChildren(nsHTMLReflowMetrics&     aDesiredSize,
 
       // Note if the column's next in flow is not being changed by this incremental reflow.
       // This may allow the current column to avoid trying to pull lines from the next column.
-      if (child->GetNextSibling() && aKidReason == eReflowReason_Incremental &&
+      if (child->GetNextSibling() &&
+          !(GetStateBits() & NS_FRAME_IS_DIRTY) &&
         !(child->GetNextSibling()->GetStateBits() & NS_FRAME_IS_DIRTY)) {
         kidReflowState.mFlags.mNextInFlowUntouched = PR_TRUE;
       }
@@ -507,9 +512,6 @@ nsColumnSetFrame::ReflowChildren(nsHTMLReflowMetrics&     aDesiredSize,
         }
         
         kidNextInFlow->AddStateBits(NS_BLOCK_SPACE_MGR);
-
-        // Do an initial reflow if we're going to reflow this thing.
-        aKidReason = eReflowReason_Initial;
       }
         
       if (columnCount >= aConfig.mBalanceColCount) {
