@@ -492,6 +492,7 @@ public:
 #endif
 
   // nsIHTMLReflow
+  virtual void MarkIntrinsicWidthsDirty();
   NS_IMETHOD Reflow(nsPresContext* aPresContext,
                     nsHTMLReflowMetrics& aMetrics,
                     const nsHTMLReflowState& aReflowState,
@@ -5443,6 +5444,14 @@ nsTextFrame::MeasureText(nsPresContext*          aPresContext,
   return rs;
 }
 
+/* virtual */ void
+nsTextFrame::MarkIntrinsicWidthsDirty()
+{
+  // Clear the TEXT_OPTIMIZE_RESIZE for the next time around.  It'll get
+  // reset late in Reflow.
+  mState &= ~nsFrameState(TEXT_OPTIMIZE_RESIZE);
+}
+
 NS_IMETHODIMP
 nsTextFrame::Reflow(nsPresContext*          aPresContext,
                     nsHTMLReflowMetrics&     aMetrics,
@@ -5574,8 +5583,8 @@ nsTextFrame::Reflow(nsPresContext*          aPresContext,
   PRBool measureText = PR_TRUE;
   
   // We can avoid actually measuring the text if:
-  // - this is a resize reflow
-  // - we're not dirty (see CharacterDataChanged() function)
+  // - intrinsic widths haven't been marked dirty (which clears
+  //    TEXT_OPTIMIZE_RESIZE)
   // - we don't have a next in flow
   // - the previous reflow successfully reflowed all text in the
   //   available space
@@ -5587,36 +5596,32 @@ nsTextFrame::Reflow(nsPresContext*          aPresContext,
   //   we're not wrapping text and we're at the same column as before (this is
   //   an issue for preformatted tabbed text only)
   // - AND we aren't justified (in which case the frame width has already been tweaked and can't be used)
-  if ((eReflowReason_Resize == aReflowState.reason) &&
-      (0 == (mState & NS_FRAME_IS_DIRTY))) {
-
-    nscoord realWidth = mRect.width;
-    if (mState & TEXT_TRIMMED_WS) {
-      // NOTE: Trailing whitespace includes word and letter spacing!
-      realWidth += ts.mSpaceWidth + ts.mWordSpacing + ts.mLetterSpacing;
-    }
-    if (!mNextInFlow &&
-        (mState & TEXT_OPTIMIZE_RESIZE) &&
-        !lineLayout.GetIntrinsicWidthPass() &&
-        (lastTimeWeSkippedLeadingWS == skipWhitespace) &&
-        ((wrapping && (maxWidth >= realWidth)) ||
-         (!wrapping && (prevColumn == column))) &&
+  nscoord realWidth = mRect.width;
+  if (mState & TEXT_TRIMMED_WS) {
+    // NOTE: Trailing whitespace includes word and letter spacing!
+    realWidth += ts.mSpaceWidth + ts.mWordSpacing + ts.mLetterSpacing;
+  }
+  if (!mNextInFlow &&
+      (mState & TEXT_OPTIMIZE_RESIZE) &&
+      !lineLayout.GetIntrinsicWidthPass() &&
+      (lastTimeWeSkippedLeadingWS == skipWhitespace) &&
+      ((wrapping && (maxWidth >= realWidth)) ||
+       (!wrapping && (prevColumn == column))) &&
 #ifdef IBMBIDI
-        (0 == (mState & NS_FRAME_IS_BIDI) ) &&
+      (0 == (mState & NS_FRAME_IS_BIDI) ) &&
 #endif // IBMBIDI
-        !ts.mJustifying) {
-      // We can skip measuring of text and use the value from our
-      // previous reflow
-      measureText = PR_FALSE;
+      !ts.mJustifying) {
+    // We can skip measuring of text and use the value from our
+    // previous reflow
+    measureText = PR_FALSE;
 #ifdef NOISY_REFLOW
-      printf("  => measureText=%s wrapping=%s skipWhitespace=%s",
-             measureText ? "yes" : "no",
-             wrapping ? "yes" : "no",
-             skipWhitespace ? "yes" : "no");
-      printf(" realWidth=%d maxWidth=%d\n",
-             realWidth, maxWidth);
+    printf("  => measureText=%s wrapping=%s skipWhitespace=%s",
+           measureText ? "yes" : "no",
+           wrapping ? "yes" : "no",
+           skipWhitespace ? "yes" : "no");
+    printf(" realWidth=%d maxWidth=%d\n",
+           realWidth, maxWidth);
 #endif
-    }
   }
 
   // Local state passed to the routines that do the actual text measurement
