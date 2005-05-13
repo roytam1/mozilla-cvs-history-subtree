@@ -6708,7 +6708,26 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsFrameConstructorState& aSta
 #endif
   
     default:
+#ifdef CSS_TABLES
       NS_NOTREACHED("How did we get here?");
+#else
+      if (!aHasPseudoParent && !aState.mPseudoFrames.IsEmpty()) {
+        ProcessPseudoFrames(aState, aFrameItems); 
+      }
+      // Create the inline frame
+      rv = NS_NewInlineFrame(mPresShell, &newFrame);
+      if (NS_SUCCEEDED(rv)) { // That worked so construct the inline and its children
+        // Note that we want to insert the inline after processing kids, since
+        // processing of kids may split the inline.
+        rv = ConstructInline(aState, aDisplay, aContent,
+                             aParentFrame, aStyleContext, PR_FALSE, newFrame);
+      }
+
+      // To keep the hash table small don't add inline frames (they're
+      // typically things like FONT and B), because we can quickly
+      // find them if we need to
+      addToHashTable = PR_FALSE;
+#endif
       break;
     }
   }
