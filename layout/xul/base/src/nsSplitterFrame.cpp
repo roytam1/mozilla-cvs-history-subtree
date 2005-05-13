@@ -1010,9 +1010,9 @@ nsSplitterFrameInner::AdjustChildren(nsPresContext* aPresContext)
     aPresContext->PresShell()->FlushPendingNotifications(Flush_Display);
   }
   else {
-    AddStateBits(NS_FRAME_IS_DIRTY);
+    mOuter->AddStateBits(NS_FRAME_IS_DIRTY);
     aPresContext->PresShell()->
-      FrameNeedsReflow(this, nsIPresShell::eTreeChange);
+      FrameNeedsReflow(mOuter, nsIPresShell::eTreeChange);
   }
 }
 
