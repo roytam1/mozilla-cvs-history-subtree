@@ -273,7 +273,7 @@ nsFirstLetterFrame::Reflow(nsPresContext*          aPresContext,
     ll->BeginSpan(this, &aReflowState, bp.left, availSize.width);
     ll->ReflowFrame(kid, aReflowStatus, &aMetrics, pushedFrame);
     nsSize size;
-    ll->EndSpan(this, size, nsnull);
+    ll->EndSpan(this, size);
   }
 
   // Place and size the child and update the output metrics

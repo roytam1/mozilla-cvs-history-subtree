@@ -562,9 +562,7 @@ nsLineLayout::BeginSpan(nsIFrame* aFrame,
 }
 
 void
-nsLineLayout::EndSpan(nsIFrame* aFrame,
-                      nsSize& aSizeResult,
-                      nscoord* aMaxElementWidth)
+nsLineLayout::EndSpan(nsIFrame* aFrame, nsSize& aSizeResult)
 {
   NS_ASSERTION(mSpanDepth > 0, "end-span without begin-span");
 #ifdef NOISY_REFLOW
@@ -593,29 +591,12 @@ nsLineLayout::EndSpan(nsIFrame* aFrame,
         if (pfd->mBounds.height > maxHeight) maxHeight = pfd->mBounds.height;
 
         // Compute max-element-width if necessary
-        if (aMaxElementWidth) {
-          nscoord mw = pfd->mMaxElementWidth +
-            pfd->mMargin.left + pfd->mMargin.right;
-          if (maxElementWidth < mw) {
-            maxElementWidth = mw;
-          }
-        }
       }
       pfd = pfd->mNext;
     }
   }
   aSizeResult.width = width;
   aSizeResult.height = maxHeight;
-  if (aMaxElementWidth) {
-    if (psd->mNoWrap) {
-      // When we have a non-breakable span, it's max-element-width
-      // width is its entire width.
-      *aMaxElementWidth = width;
-    }
-    else {
-      *aMaxElementWidth = maxElementWidth;
-    }
-  }
 
   mSpanDepth--;
   mCurrentSpan->mReflowState = nsnull;  // no longer valid so null it out!

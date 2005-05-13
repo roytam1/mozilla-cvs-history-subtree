@@ -563,8 +563,7 @@ nsInlineFrame::ReflowFrames(nsPresContext* aPresContext,
   // that are empty we force to empty so that things like collapsed
   // whitespace in an inline element don't affect the line-height.
   nsSize size;
-  lineLayout->EndSpan(this, size,
-                    aMetrics.mComputeMEW ? &aMetrics.mMaxElementWidth : nsnull);
+  lineLayout->EndSpan(this, size);
   if ((0 == size.height) && (0 == size.width) &&
       ((nsnull != mPrevInFlow) || (nsnull != mNextInFlow))) {
     // This is a continuation of a previous inline. Therefore make
@@ -573,9 +572,6 @@ nsInlineFrame::ReflowFrames(nsPresContext* aPresContext,
     aMetrics.height = 0;
     aMetrics.ascent = 0;
     aMetrics.descent = 0;
-    if (aMetrics.mComputeMEW) {
-      aMetrics.mMaxElementWidth = 0;
-    }
   }
   else {
     // Compute final width
@@ -635,9 +631,6 @@ nsInlineFrame::ReflowFrames(nsPresContext* aPresContext,
   ListTag(stdout);
   printf(": metrics=%d,%d ascent=%d descent=%d\n",
          aMetrics.width, aMetrics.height, aMetrics.ascent, aMetrics.descent);
-  if (aMetrics.mComputeMEW) {
-    printf(" maxElementWidth %d\n", aMetrics.mMaxElementWidth);
-  }
 #endif
 
   return rv;
