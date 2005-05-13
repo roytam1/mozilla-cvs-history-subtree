@@ -1185,7 +1185,8 @@ void nsSVGOuterSVGFrame::InitiateReflow()
 {
   mNeedsReflow = PR_FALSE;
   
-  mPresShell->FrameNeedsReflow(this, nsIPresShell::eStyleChange);
+  nsIPresShell* presShell = GetPresContext()->PresShell();
+  presShell->FrameNeedsReflow(this, nsIPresShell::eStyleChange);
   // XXXbz why is this synchronously flushing reflows, exactly?  If it
   // needs to, why is it not using the presshell's reflow batching
   // instead of hacking its own?
