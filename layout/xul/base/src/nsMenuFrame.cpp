@@ -801,12 +801,13 @@ nsMenuFrame::OpenMenuInternal(PRBool aActivateFlag)
       if (mLastPref.height == -1)
       {
          menuPopup->AddStateBits(NS_FRAME_IS_DIRTY);
-         aPresShell.FrameNeedsReflow(menuPopup, nsIPresShell::eStyleChange);
-
+         mPresContext->PresShell()->
+           FrameNeedsReflow(menuPopup, nsIPresShell::eStyleChange);
          mPresContext->PresShell()->FlushPendingNotifications(Flush_OnlyReflow);
       }
 
       nsRect curRect(menuPopup->GetRect());
+      nsBoxLayoutState state(mPresContext);
       menuPopup->SetBounds(state, nsRect(0,0,mLastPref.width, mLastPref.height));
 
       nsIView* view = menuPopup->GetView();
@@ -821,7 +822,8 @@ nsMenuFrame::OpenMenuInternal(PRBool aActivateFlag)
       if (curRect.height != newHeight || mLastPref.height != newHeight)
       {
          menuPopup->AddStateBits(NS_FRAME_IS_DIRTY);
-         aPresShell.FrameNeedsReflow(menuPopup, nsIPresShell::eStyleChange);
+         mPresContext->PresShell()->
+           FrameNeedsReflow(menuPopup, nsIPresShell::eStyleChange);
          mPresContext->PresShell()->FlushPendingNotifications(Flush_OnlyReflow);
       }
 
@@ -1045,7 +1047,7 @@ nsMenuFrame::DoLayout(nsBoxLayoutState& aState)
   return rv;
 }
 
-1ifdef DEBUG_LAYOUT
+#ifdef DEBUG_LAYOUT
 NS_IMETHODIMP
 nsMenuFrame::SetDebug(nsBoxLayoutState& aState, PRBool aDebug)
 {
@@ -1811,9 +1813,10 @@ nsMenuFrame::RemoveFrame(nsIAtom*        aListName,
 
   if (mPopupFrames.ContainsFrame(aOldFrame)) {
     // Go ahead and remove this frame.
-    mPopupFrames.DestroyFrame(aPresContext, aOldFrame);
+    nsPresContext* presContext = GetPresContext();
+    mPopupFrames.DestroyFrame(presContext, aOldFrame);
     AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
-    aPresShell.FrameNeedsReflow(this, nsIPresShell::eTreeChange);
+    presContext->PresShell()->FrameNeedsReflow(this, nsIPresShell::eTreeChange);
     rv = NS_OK;
   } else {
     rv = nsBoxFrame::RemoveFrame(aListName, aOldFrame);
@@ -1839,7 +1842,8 @@ nsMenuFrame::InsertFrames(nsIAtom*        aListName,
     SetDebug(state, aFrameList, mState & NS_STATE_CURRENTLY_IN_DEBUG);
 #endif
     AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
-    aPresShell.FrameNeedsReflow(this, nsIPresShell::eTreeChange);
+    GetPresContext()->PresShell()->
+      FrameNeedsReflow(this, nsIPresShell::eTreeChange);
     rv = NS_OK;
   } else {
     rv = nsBoxFrame::InsertFrames(aListName, aPrevFrame, aFrameList);  
@@ -1867,7 +1871,8 @@ nsMenuFrame::AppendFrames(nsIAtom*        aListName,
     SetDebug(state, aFrameList, mState & NS_STATE_CURRENTLY_IN_DEBUG);
 #endif
     AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
-    aPresShell.FrameNeedsReflow(this, nsIPresShell::eTreeChange);
+    GetPresContext()->PresShell()->
+      FrameNeedsReflow(this, nsIPresShell::eTreeChange);
     rv = NS_OK;
   } else {
     rv = nsBoxFrame::AppendFrames(aListName, aFrameList); 
