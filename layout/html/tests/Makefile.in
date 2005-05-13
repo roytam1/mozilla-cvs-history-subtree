@@ -67,9 +67,7 @@ LIBS		= \
 		$(LIBS_DIR) \
 		$(DIST)/lib/$(LIB_PREFIX)gkconhtmlcon_s.$(LIB_SUFFIX) \
 		$(DIST)/lib/$(LIB_PREFIX)gkconhtmldoc_s.$(LIB_SUFFIX) \
-		$(DIST)/lib/$(LIB_PREFIX)gkforms_s.$(LIB_SUFFIX) \
 		$(DIST)/lib/$(LIB_PREFIX)gkstyle_s.$(LIB_SUFFIX) \
-		$(DIST)/lib/$(LIB_PREFIX)gktable_s.$(LIB_SUFFIX) \
 		$(DIST)/lib/$(LIB_PREFIX)gkprinting_s.$(LIB_SUFFIX) \
 		$(DIST)/lib/$(LIB_PREFIX)gkbase_s.$(LIB_SUFFIX) \
 		$(DIST)/lib/$(LIB_PREFIX)gkgeneric_s.$(LIB_SUFFIX) \
@@ -84,6 +82,14 @@ LIBS		= \
 		$(MOZ_UNICHARUTIL_LIBS) \
 		$(MOZ_COMPONENT_LIBS) \
 		$(NULL)
+
+ifdef CSS_TABLES
+LIBS +=		$(DIST)/lib/$(LIB_PREFIX)gktable_s.$(LIB_SUFFIX)
+endif
+
+ifdef HTML_FORMS
+LIBS +=		$(DIST)/lib/$(LIB_PREFIX)gkforms_s.$(LIB_SUFFIX)
+endif
 
 include $(topsrcdir)/config/config.mk
 
