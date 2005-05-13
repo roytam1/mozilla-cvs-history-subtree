@@ -4337,8 +4337,8 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsFrameConstructorState& aState,
 
   PRBool docElemIsTable = display->mDisplay == NS_STYLE_DISPLAY_TABLE;
 
-  if (docElemIsTable) {
 #ifdef CSS_TABLES
+  if (docElemIsTable) {
     // if the document is a table then just populate it.
     rv = ConstructDocElementTableFrame(aDocElement, aParentFrame, &contentFrame,
                                        aState);
@@ -4378,7 +4378,9 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsFrameConstructorState& aState,
     // initialize the child
     InitAndRestoreFrame(aState, aDocElement, aParentFrame, styleContext,
                         nsnull, contentFrame);
+#ifdef CSS_TABLES
   }
+#endif
 
   // set the primary frame
   aState.mFrameManager->SetPrimaryFrameFor(aDocElement, contentFrame);
