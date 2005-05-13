@@ -630,7 +630,6 @@ public:
     PRPackedBool        mInWord;              // IN
     PRPackedBool        mFirstLetterOK;       // IN
     PRPackedBool        mCanBreakBefore;         // IN
-    PRPackedBool        mComputeMaxWordWidth; // IN
     PRPackedBool        mTrailingSpaceTrimmed; // IN/OUT
   
     TextReflowData(PRInt32 aStartingOffset,
@@ -640,7 +639,6 @@ public:
                    PRBool  aInWord,
                    PRBool  aFirstLetterOK,
                    PRBool  aCanBreakBefore,
-                   PRBool  aComputeMaxWordWidth,
                    PRBool  aTrailingSpaceTrimmed)
       : mX(0),
         mOffset(aStartingOffset),
@@ -653,7 +651,6 @@ public:
         mInWord(aInWord),
         mFirstLetterOK(aFirstLetterOK),
         mCanBreakBefore(aCanBreakBefore),
-        mComputeMaxWordWidth(aComputeMaxWordWidth),
         mTrailingSpaceTrimmed(aTrailingSpaceTrimmed)
     {}
   };
@@ -4828,7 +4825,7 @@ nsTextFrame::MeasureText(nsPresContext*          aPresContext,
   PRUint32 hints = 0;
   aReflowState.rendContext->GetHints(hints);
   if (hints & NS_RENDERING_HINT_FAST_MEASURE) {
-    measureTextRuns = !aTextData.mComputeMaxWordWidth && !aTs.mPreformatted &&
+    measureTextRuns = !aTs.mPreformatted &&
                       !aTs.mSmallCaps && !aTs.mWordSpacing && !aTs.mLetterSpacing &&
                       aTextData.mWrapping;
   }
@@ -5471,9 +5468,6 @@ nsTextFrame::Reflow(nsPresContext*          aPresContext,
     aMetrics.height = 0;
     aMetrics.ascent = 0;
     aMetrics.descent = 0;
-    if (aMetrics.mComputeMEW) {
-      aMetrics.mMaxElementWidth = 0;
-    }
 #ifdef MOZ_MATHML
     if (NS_REFLOW_CALC_BOUNDING_METRICS & aMetrics.mFlags)
       aMetrics.mBoundingMetrics.Clear();
@@ -5603,7 +5597,7 @@ nsTextFrame::Reflow(nsPresContext*          aPresContext,
     }
     if (!mNextInFlow &&
         (mState & TEXT_OPTIMIZE_RESIZE) &&
-        !aMetrics.mComputeMEW &&
+        !lineLayout.GetIntrinsicWidthPass() &&
         (lastTimeWeSkippedLeadingWS == skipWhitespace) &&
         ((wrapping && (maxWidth >= realWidth)) ||
          (!wrapping && (prevColumn == column))) &&
@@ -5628,7 +5622,7 @@ nsTextFrame::Reflow(nsPresContext*          aPresContext,
   // Local state passed to the routines that do the actual text measurement
   TextReflowData  textData(startingOffset, wrapping, skipWhitespace, 
                            measureText, inWord, lineLayout.GetFirstLetterStyleOK(),
-                           lineLayout.LineIsBreakable(), aMetrics.mComputeMEW, 
+                           lineLayout.LineIsBreakable(),
                            PR_FALSE);
   
   // Measure the text
@@ -5665,9 +5659,6 @@ nsTextFrame::Reflow(nsPresContext*          aPresContext,
   mAscent = aMetrics.ascent;
   if (!wrapping) {
     textData.mMaxWordWidth = textData.mX;
-  }
-  if (aMetrics.mComputeMEW) {
-    aMetrics.mMaxElementWidth = textData.mMaxWordWidth;
   }
 
   // Set content offset and length
