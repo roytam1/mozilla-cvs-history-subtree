@@ -1595,11 +1595,6 @@ nsLineLayout::GetLineMaxElementWidth(nsLineBox* aLineBox)
     else {
 
 #ifdef HACK_MEW
-
-#ifdef DEBUG
-      if (nsBlockFrame::gNoisyMaxElementWidth) 
-        frameCount++;
-#endif
       // if in Quirks mode and in a table cell with an unconstrained width, then emulate an IE
       // quirk to keep consecutive images from breaking the line
       // - see bugs 54565, 32191, and their many dups
@@ -1624,13 +1619,6 @@ nsLineLayout::GetLineMaxElementWidth(nsLineBox* aLineBox)
         // now update the prevFrame
         prevFrameAccumulates = curFrameAccumulates;
       
-#ifdef DEBUG
-        if (nsBlockFrame::gNoisyMaxElementWidth) {
-          nsFrame::IndentBy(stdout, nsBlockFrame::gNoiseIndent);
-          printf("(%d) last frame's MEW=%d | Accumulated MEW=%d\n", frameCount, mw, accumulatedWidth);
-        }
-#endif 
-
         mw = accumulatedWidth;
       }
 
