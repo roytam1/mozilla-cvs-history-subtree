@@ -229,12 +229,9 @@ nsSimplePageSequenceFrame::Reflow(nsPresContext*          aPresContext,
 
   aStatus = NS_FRAME_COMPLETE;  // we're always complete
 
-  // absolutely ignore all other types of reflows
+  // absolutely ignore all other reflows
   // we only want to have done the Initial Reflow
-  if (eReflowReason_Resize == aReflowState.reason ||
-      eReflowReason_Incremental == aReflowState.reason ||
-      eReflowReason_StyleChange == aReflowState.reason ||
-      eReflowReason_Dirty == aReflowState.reason) {
+  if (!(GetStateBits() & NS_FRAME_FIRST_REFLOW)) {
     // Return our desired size
     aDesiredSize.height  = mSize.height;
     aDesiredSize.width   = mSize.width;
@@ -354,129 +351,119 @@ nsSimplePageSequenceFrame::Reflow(nsPresContext*          aPresContext,
 
   nsSize reflowPageSize(0,0);
 
-  // See if it's an incremental reflow command
-  if (eReflowReason_Incremental == aReflowState.reason) {
-    // XXX Skip Incremental reflow, 
-    // in fact, all we want is the initial reflow
-    y = mRect.height;
-  } else {
-    // XXX Part of Temporary fix for Bug 127263
-    nsPageFrame::SetCreateWidget(PR_TRUE);
+  // XXX Part of Temporary fix for Bug 127263
+  nsPageFrame::SetCreateWidget(PR_TRUE);
 
-    nsReflowReason  reflowReason = aReflowState.reason;
+  SetPageSizes(pageSize, margin);
 
-    SetPageSizes(pageSize, margin);
+  // Tile the pages vertically
+  nsHTMLReflowMetrics kidSize(nsnull);
+  for (nsIFrame* kidFrame = mFrames.FirstChild(); nsnull != kidFrame; ) {
+    // Reflow the page
+    // The availableHeight always comes in NS_UNCONSTRAINEDSIZE, so we need to check
+    // the "adjusted rect" to see if that is being reflowed NS_UNCONSTRAINEDSIZE or not
+    // When it is NS_UNCONSTRAINEDSIZE it means we are reflowing a single page
+    // to print selection. So this means we want to use NS_UNCONSTRAINEDSIZE without altering it
+    nsRect actualRect;
+    nsRect adjRect;
+    aPresContext->GetPageDim(&actualRect, &adjRect);
+    nscoord avHeight;
+    if (adjRect.height == NS_UNCONSTRAINEDSIZE) {
+      avHeight = NS_UNCONSTRAINEDSIZE;
+    } else {
+      avHeight = pageSize.height+deadSpaceMargin.top+deadSpaceMargin.bottom+shadowSize.height+extraMargin.top+extraMargin.bottom;
+    }
+    nsSize availSize(pageSize.width+deadSpaceMargin.right+deadSpaceMargin.left+shadowSize.width+extraMargin.right+extraMargin.left, 
+                     avHeight);
+    nsHTMLReflowState kidReflowState(aPresContext, aReflowState, kidFrame,
+                                     availSize);
+    nsReflowStatus  status;
 
-    // Tile the pages vertically
-    nsHTMLReflowMetrics kidSize(nsnull);
-    for (nsIFrame* kidFrame = mFrames.FirstChild(); nsnull != kidFrame; ) {
-      // Reflow the page
-      // The availableHeight always comes in NS_UNCONSTRAINEDSIZE, so we need to check
-      // the "adjusted rect" to see if that is being reflowed NS_UNCONSTRAINEDSIZE or not
-      // When it is NS_UNCONSTRAINEDSIZE it means we are reflowing a single page
-      // to print selection. So this means we want to use NS_UNCONSTRAINEDSIZE without altering it
-      nsRect actualRect;
-      nsRect adjRect;
-      aPresContext->GetPageDim(&actualRect, &adjRect);
-      nscoord avHeight;
-      if (adjRect.height == NS_UNCONSTRAINEDSIZE) {
-        avHeight = NS_UNCONSTRAINEDSIZE;
-      } else {
-        avHeight = pageSize.height+deadSpaceMargin.top+deadSpaceMargin.bottom+shadowSize.height+extraMargin.top+extraMargin.bottom;
-      }
-      nsSize availSize(pageSize.width+deadSpaceMargin.right+deadSpaceMargin.left+shadowSize.width+extraMargin.right+extraMargin.left, 
-                       avHeight);
-      nsHTMLReflowState kidReflowState(aPresContext, aReflowState, kidFrame,
-                                       availSize, reflowReason);
-      nsReflowStatus  status;
+    kidReflowState.mComputedWidth  = kidReflowState.availableWidth;
+    //kidReflowState.mComputedHeight = kidReflowState.availableHeight;
+    PR_PL(("AV W: %d   H: %d\n", kidReflowState.availableWidth, kidReflowState.availableHeight));
 
-      kidReflowState.mComputedWidth  = kidReflowState.availableWidth;
-      //kidReflowState.mComputedHeight = kidReflowState.availableHeight;
-      PR_PL(("AV W: %d   H: %d\n", kidReflowState.availableWidth, kidReflowState.availableHeight));
+    // Set the shared data into the page frame before reflow
+    nsPageFrame * pf = NS_STATIC_CAST(nsPageFrame*, kidFrame);
+    pf->SetSharedPageData(mPageData);
 
-      // Set the shared data into the page frame before reflow
-      nsPageFrame * pf = NS_STATIC_CAST(nsPageFrame*, kidFrame);
-      pf->SetSharedPageData(mPageData);
+    // Place and size the page. If the page is narrower than our
+    // max width then center it horizontally
+    ReflowChild(kidFrame, aPresContext, kidSize, kidReflowState, x, y, 0, status);
 
-      // Place and size the page. If the page is narrower than our
-      // max width then center it horizontally
-      ReflowChild(kidFrame, aPresContext, kidSize, kidReflowState, x, y, 0, status);
+    reflowPageSize.SizeTo(kidSize.width, kidSize.height);
 
-      reflowPageSize.SizeTo(kidSize.width, kidSize.height);
+    FinishReflowChild(kidFrame, aPresContext, nsnull, kidSize, x, y, 0);
+    y += kidSize.height;
 
-      FinishReflowChild(kidFrame, aPresContext, nsnull, kidSize, x, y, 0);
-      y += kidSize.height;
-
-      // XXX Temporary fix for Bug 127263
-      // This tells the nsPageFrame class to stop creating clipping widgets
-      // once we reach the 32k boundary for positioning
-      if (nsPageFrame::GetCreateWidget()) {
-        float t2p;
-        t2p = aPresContext->TwipsToPixels();
-        nscoord xp = NSTwipsToIntPixels(x, t2p);
-        nscoord yp = NSTwipsToIntPixels(y, t2p);
-        nsPageFrame::SetCreateWidget(xp < 0x8000 && yp < 0x8000);
-      }
-
-      // Leave a slight gap between the pages
-      y += deadSpaceGap;
-
-      // Is the page complete?
-      nsIFrame* kidNextInFlow = kidFrame->GetNextInFlow();
-
-      if (NS_FRAME_IS_COMPLETE(status)) {
-        NS_ASSERTION(nsnull == kidNextInFlow, "bad child flow list");
-      } else if (nsnull == kidNextInFlow) {
-        // The page isn't complete and it doesn't have a next-in-flow, so
-        // create a continuing page
-        nsIFrame*     continuingPage;
-        CreateContinuingPageFrame(aPresContext, kidFrame, &continuingPage);
-
-        // Add it to our child list
-        kidFrame->SetNextSibling(continuingPage);
-        reflowReason = eReflowReason_Initial;
-      }
-
-      // Get the next page
-      kidFrame = kidFrame->GetNextSibling();
+    // XXX Temporary fix for Bug 127263
+    // This tells the nsPageFrame class to stop creating clipping widgets
+    // once we reach the 32k boundary for positioning
+    if (nsPageFrame::GetCreateWidget()) {
+      float t2p;
+      t2p = aPresContext->TwipsToPixels();
+      nscoord xp = NSTwipsToIntPixels(x, t2p);
+      nscoord yp = NSTwipsToIntPixels(y, t2p);
+      nsPageFrame::SetCreateWidget(xp < 0x8000 && yp < 0x8000);
     }
 
-    // Get Total Page Count
-    nsIFrame* page;
-    PRInt32 pageTot = 0;
-    for (page = mFrames.FirstChild(); page; page = page->GetNextSibling()) {
-      pageTot++;
+    // Leave a slight gap between the pages
+    y += deadSpaceGap;
+
+    // Is the page complete?
+    nsIFrame* kidNextInFlow = kidFrame->GetNextInFlow();
+
+    if (NS_FRAME_IS_COMPLETE(status)) {
+      NS_ASSERTION(nsnull == kidNextInFlow, "bad child flow list");
+    } else if (nsnull == kidNextInFlow) {
+      // The page isn't complete and it doesn't have a next-in-flow, so
+      // create a continuing page
+      nsIFrame*     continuingPage;
+      CreateContinuingPageFrame(aPresContext, kidFrame, &continuingPage);
+
+      // Add it to our child list
+      kidFrame->SetNextSibling(continuingPage);
     }
 
-    // Set Page Number Info
-    PRInt32 pageNum = 1;
-    for (page = mFrames.FirstChild(); page; page = page->GetNextSibling()) {
-      nsPageFrame * pf = NS_STATIC_CAST(nsPageFrame*, page);
-      if (pf != nsnull) {
-        pf->SetPageNumInfo(pageNum, pageTot);
-      }
-      pageNum++;
-    }
-
-    // Create current Date/Time String
-    if (!mDateFormatter)
-      mDateFormatter = do_CreateInstance(kDateTimeFormatCID);
-#ifndef WINCE
-    NS_ENSURE_TRUE(mDateFormatter, NS_ERROR_FAILURE);
-
-    nsAutoString formattedDateString;
-    time_t ltime;
-    time( &ltime );
-    if (NS_SUCCEEDED(mDateFormatter->FormatTime(nsnull /* nsILocale* locale */,
-                                                kDateFormatShort,
-                                                kTimeFormatNoSeconds,
-                                                ltime,
-                                                formattedDateString))) {
-      PRUnichar * uStr = ToNewUnicode(formattedDateString);
-      SetDateTimeStr(uStr); // memory will be freed
-    }
-#endif
+    // Get the next page
+    kidFrame = kidFrame->GetNextSibling();
   }
+
+  // Get Total Page Count
+  nsIFrame* page;
+  PRInt32 pageTot = 0;
+  for (page = mFrames.FirstChild(); page; page = page->GetNextSibling()) {
+    pageTot++;
+  }
+
+  // Set Page Number Info
+  PRInt32 pageNum = 1;
+  for (page = mFrames.FirstChild(); page; page = page->GetNextSibling()) {
+    nsPageFrame * pf = NS_STATIC_CAST(nsPageFrame*, page);
+    if (pf != nsnull) {
+      pf->SetPageNumInfo(pageNum, pageTot);
+    }
+    pageNum++;
+  }
+
+  // Create current Date/Time String
+  if (!mDateFormatter)
+    mDateFormatter = do_CreateInstance(kDateTimeFormatCID);
+#ifndef WINCE
+  NS_ENSURE_TRUE(mDateFormatter, NS_ERROR_FAILURE);
+
+  nsAutoString formattedDateString;
+  time_t ltime;
+  time( &ltime );
+  if (NS_SUCCEEDED(mDateFormatter->FormatTime(nsnull /* nsILocale* locale */,
+                                              kDateFormatShort,
+                                              kTimeFormatNoSeconds,
+                                              ltime,
+                                              formattedDateString))) {
+    PRUnichar * uStr = ToNewUnicode(formattedDateString);
+    SetDateTimeStr(uStr); // memory will be freed
+  }
+#endif
 
   // Return our desired size
   aDesiredSize.height  = y;
