@@ -143,7 +143,7 @@ NS_IMETHODIMP nsPageFrame::Reflow(nsPresContext*          aPresContext,
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
   aStatus = NS_FRAME_COMPLETE;  // initialize out parameter
 
-  if (eReflowReason_Incremental != aReflowState.reason) {
+  if (GetStateBits() & NS_FRAME_IS_DIRTY) {
     // Do we have any children?
     // XXX We should use the overflow list instead...
     nsIFrame*           firstFrame  = mFrames.FirstChild();
@@ -795,9 +795,6 @@ nsPageBreakFrame::GetDesiredSize(nsPresContext*          aPresContext,
     aDesiredSize.height -= aDesiredSize.height % onePixel;
   }
 
-  if (aDesiredSize.mComputeMEW) {
-    aDesiredSize.mMaxElementWidth  = onePixel;
-  }
   aDesiredSize.ascent  = 0;
   aDesiredSize.descent = 0;
 }
