@@ -2084,7 +2084,7 @@ nsTreeBodyFrame::Paint(nsPresContext*      aPresContext,
     if (oldPageCount != mPageLength) {
       // Schedule a ResizeReflow that will update our page count properly.
       AddStateBits(NS_FRAME_IS_DIRTY);
-      state.PresShell()->FrameNeedsReflow(this, nsIPresShell::eResize);
+      aPresContext->PresShell()->FrameNeedsReflow(this, nsIPresShell::eResize);
     }
 
 #ifdef DEBUG
