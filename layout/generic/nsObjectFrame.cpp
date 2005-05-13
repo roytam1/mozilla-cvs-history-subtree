@@ -1053,15 +1053,6 @@ nsObjectFrame::Reflow(nsPresContext*           aPresContext,
       PRInt32 height = NSTwipsToIntPixels(aMetrics.height, t2p);
 
       SizeAnchor(child->GetContent(), width, height);
-
-      // SizeAnchor() is seriously evil as it ends up setting an
-      // attribute (through the style changes that it does) while
-      // we're in reflow. This is also seriously evil, as it pulls
-      // that reflow command out of the reflow queue, as leaving it
-      // there can get us into infinite loops while reflowing object
-      // frames for missing plugins.
-      nsReflowType reflowType(eReflowType_StyleChanged);
-      aPresContext->PresShell()->CancelReflowCommand(child, &reflowType);
     }
   }
 
