@@ -199,19 +199,6 @@ nsLeafBoxFrame::GetFrameForPoint(const nsPoint& aPoint,
   return NS_OK;
 }
 
-NS_IMETHODIMP
-nsLeafBoxFrame::DidReflow(nsPresContext*           aPresContext,
-                          const nsHTMLReflowState*  aReflowState,
-                          nsDidReflowStatus         aStatus)
-{
-#error "Should we really preserve these bits?"
-  nsFrameState preserveBits =
-    GetStateBits() & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN);
-  nsresult rv = nsFrame::DidReflow(aPresContext, aReflowState, aStatus);
-  AddStateBits(preserveBits);
-  return rv;
-}
-
 /* virtual */ nscoord
 nsLeafBoxFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
@@ -241,7 +228,7 @@ nsLeafBoxFrame::Reflow(nsPresContext*   aPresContext,
   // class hierarchy.  If you make changes here, please keep
   // nsBoxFrame::Reflow in sync.
 
-  DO_GLOBAL_REFLOW_COUNT("nsLeafBoxFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsLeafBoxFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
 
   NS_ASSERTION(aReflowState.mComputedWidth >=0 && aReflowState.mComputedHeight >= 0, "Computed Size < 0");

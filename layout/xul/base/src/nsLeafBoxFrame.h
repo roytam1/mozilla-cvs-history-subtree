@@ -76,10 +76,6 @@ public:
                                   nsIContent*     aChild,
                                   PRBool          aAppend);
 
-  NS_IMETHOD DidReflow(nsPresContext*           aPresContext,
-                       const nsHTMLReflowState*  aReflowState,
-                       nsDidReflowStatus         aStatus);
-
   NS_IMETHOD  Init(nsPresContext*  aPresContext,
                nsIContent*      aContent,
                nsIFrame*        aParent,
