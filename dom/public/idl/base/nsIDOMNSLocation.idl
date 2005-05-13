@@ -38,7 +38,7 @@
 
 #include "domstubs.idl"
 
-[scriptable, uuid(a6cf9108-15b3-11d2-932e-00805f8add32)]
+[scriptable, secured, uuid(a6cf9108-15b3-11d2-932e-00805f8add32)]
 interface nsIDOMNSLocation : nsISupports
 {
   void                      reload(/* ... */);

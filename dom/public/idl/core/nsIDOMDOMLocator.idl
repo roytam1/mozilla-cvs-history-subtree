@@ -45,7 +45,7 @@
  * http://www.w3.org/TR/2002/WD-DOM-Level-3-Core-20020409/core.html
  */
 
-[scriptable, uuid(8053a5cb-7266-45ec-a31d-788db55bcdef)]
+[scriptable, secured, uuid(8053a5cb-7266-45ec-a31d-788db55bcdef)]
 interface nsIDOMDOMLocator : nsISupports
 {
   readonly attribute long            lineNumber;

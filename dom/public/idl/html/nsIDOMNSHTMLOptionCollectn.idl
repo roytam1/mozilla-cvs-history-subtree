@@ -42,7 +42,7 @@
 interface nsIDOMHTMLOptionElement;
 interface nsIDOMHTMLSelectElement;
 
-[scriptable, uuid(1181207B-2337-41a7-8DDF-FBE96461256F)]
+[scriptable, secured, uuid(1181207B-2337-41a7-8DDF-FBE96461256F)]
 interface nsIDOMNSHTMLOptionCollection : nsISupports
 {
            attribute long             selectedIndex;

@@ -40,7 +40,7 @@
 
 interface nsIDOMSVGNumber;
 
-[scriptable, uuid(59364ec4-faf1-460f-bf58-e6a6a2769a3a)]
+[scriptable, secured, uuid(59364ec4-faf1-460f-bf58-e6a6a2769a3a)]
 interface nsIDOMSVGNumberList : nsISupports
 { 
   readonly attribute unsigned long numberOfItems;

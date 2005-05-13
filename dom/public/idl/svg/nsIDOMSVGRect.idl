@@ -38,7 +38,7 @@
 
 #include "domstubs.idl"
 
-[scriptable, uuid(5b912111-c10e-498f-a44c-c713c1843007)]
+[scriptable, secured, uuid(5b912111-c10e-498f-a44c-c713c1843007)]
 interface nsIDOMSVGRect : nsISupports
 {
   attribute float x;

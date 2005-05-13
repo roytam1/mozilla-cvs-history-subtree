@@ -40,7 +40,7 @@
 
 interface nsIDOMSVGAnimatedString;
 
-[scriptable, uuid(8092b5f3-dc8a-459c-94f1-92f8011f2438)]
+[scriptable, secured, uuid(8092b5f3-dc8a-459c-94f1-92f8011f2438)]
 interface nsIDOMSVGURIReference
   : nsISupports
 {

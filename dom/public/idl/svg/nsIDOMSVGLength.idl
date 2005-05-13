@@ -40,7 +40,7 @@
 
 interface nsIDOMSVGMatrix;
 
-[scriptable, uuid(10231b04-7482-4960-bada-3dced0d586fc)]
+[scriptable, secured, uuid(10231b04-7482-4960-bada-3dced0d586fc)]
 interface nsIDOMSVGLength : nsISupports
 { 
   // Length Unit Types

@@ -48,7 +48,7 @@
  * @status FROZEN
  */
 
-[scriptable, uuid(a6cf90ce-15b3-11d2-932e-00805f8add32)]
+[scriptable, secured, uuid(a6cf90ce-15b3-11d2-932e-00805f8add32)]
 interface nsIDOMRange : nsISupports
 {
   readonly attribute nsIDOMNode       startContainer;

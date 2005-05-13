@@ -48,7 +48,7 @@
  * @status FROZEN
  */
 
-[scriptable, uuid(F51EBADE-8B1A-11D3-AAE7-0010830123B4)]
+[scriptable, secured, uuid(F51EBADE-8B1A-11D3-AAE7-0010830123B4)]
 interface nsIDOMAbstractView : nsISupports
 {
   readonly attribute nsIDOMDocumentView     document;

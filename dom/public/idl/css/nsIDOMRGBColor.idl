@@ -38,7 +38,7 @@
 
 #include "domstubs.idl"
 
-[scriptable, uuid(6aff3102-320d-4986-9790-12316bb87cf9)]
+[scriptable, secured, uuid(6aff3102-320d-4986-9790-12316bb87cf9)]
 interface nsIDOMRGBColor : nsISupports
 {
   readonly attribute nsIDOMCSSPrimitiveValue  red;

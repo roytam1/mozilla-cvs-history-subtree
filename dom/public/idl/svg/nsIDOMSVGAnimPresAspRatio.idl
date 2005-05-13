@@ -40,7 +40,7 @@
 
 interface nsIDOMSVGPreserveAspectRatio;
 
-[scriptable, uuid(afcd7cd4-d74d-492f-b3b1-d71bfa36874f)]
+[scriptable, secured, uuid(afcd7cd4-d74d-492f-b3b1-d71bfa36874f)]
 interface nsIDOMSVGAnimatedPreserveAspectRatio : nsISupports
 {
   readonly attribute nsIDOMSVGPreserveAspectRatio baseVal;

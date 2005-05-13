@@ -39,7 +39,7 @@
 
 #include "domstubs.idl"
 
-[scriptable, uuid(d67bd267-f984-4993-b378-95851b71f0a3)]
+[scriptable, secured, uuid(d67bd267-f984-4993-b378-95851b71f0a3)]
 interface nsIDOMNSHTMLFrameElement : nsISupports
 {
   readonly attribute nsIDOMWindow     contentWindow;

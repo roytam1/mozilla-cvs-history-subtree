@@ -42,7 +42,7 @@
 
 #include "domstubs.idl"
 
-[scriptable, uuid(64e6f0e1-af99-4bb9-ab25-7e56012f0021)]
+[scriptable, secured, uuid(64e6f0e1-af99-4bb9-ab25-7e56012f0021)]
 interface nsIDOMSVGException : nsISupports
 {
   // SVGExceptionCode

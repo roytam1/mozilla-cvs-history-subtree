@@ -39,7 +39,7 @@
 
 #include "domstubs.idl"
 
-[scriptable, uuid(8758b72b-63d4-4685-b908-4275126410fb)]
+[scriptable, secured, uuid(8758b72b-63d4-4685-b908-4275126410fb)]
 interface nsIDOMNavigator : nsISupports
 {
   readonly attribute DOMString           appCodeName;

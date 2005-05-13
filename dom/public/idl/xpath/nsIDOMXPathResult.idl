@@ -44,7 +44,7 @@
 
 interface XPathException;
 
-[scriptable, uuid(75506f84-b504-11d5-a7f2-ca108ab8b6fc)]
+[scriptable, secured, uuid(75506f84-b504-11d5-a7f2-ca108ab8b6fc)]
 interface nsIDOMXPathResult : nsISupports
 {
   // XPathResultType

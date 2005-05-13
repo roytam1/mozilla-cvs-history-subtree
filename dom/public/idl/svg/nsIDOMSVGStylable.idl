@@ -42,7 +42,7 @@ interface nsIDOMSVGAnimatedString;
 interface nsIDOMCSSStyleDeclaration;
 interface nsIDOMCSSValue;
 
-[scriptable, uuid(ea8a6cb1-9176-45db-989d-d0e89f563d7e)]
+[scriptable, secured, uuid(ea8a6cb1-9176-45db-989d-d0e89f563d7e)]
 interface nsIDOMSVGStylable : nsISupports
 {
   readonly attribute nsIDOMSVGAnimatedString   className;

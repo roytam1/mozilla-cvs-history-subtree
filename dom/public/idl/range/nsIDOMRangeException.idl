@@ -44,7 +44,7 @@
 
 #include "nsISupports.idl"
 
-[scriptable, uuid(0f807301-39d2-11d6-a7f2-8f504ff870dc)]
+[scriptable, secured, uuid(0f807301-39d2-11d6-a7f2-8f504ff870dc)]
 interface nsIDOMRangeException : nsISupports
 {
   const unsigned short      BAD_BOUNDARYPOINTS_ERR         = 1;

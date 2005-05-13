@@ -47,7 +47,7 @@ interface nsIDOMSVGAngle;
  *
  */
 
-[scriptable, uuid(c6ab8b9e-32db-464a-ae33-8691d44bc60a)]
+[scriptable, secured, uuid(c6ab8b9e-32db-464a-ae33-8691d44bc60a)]
 interface nsIDOMSVGAnimatedAngle : nsISupports
 {
   readonly attribute nsIDOMSVGAngle baseVal;

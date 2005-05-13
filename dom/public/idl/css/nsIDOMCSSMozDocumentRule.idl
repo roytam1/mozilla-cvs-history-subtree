@@ -40,7 +40,7 @@
 /**
  * Modified version of nsIDOMCSSMediaRule for @-moz-document rules.
  */
-[scriptable, uuid(4eb9adac-afaf-4b8a-8640-7340863c1587)]
+[scriptable, secured, uuid(4eb9adac-afaf-4b8a-8640-7340863c1587)]
 interface nsIDOMCSSMozDocumentRule : nsIDOMCSSRule
 {
   readonly attribute nsIDOMCSSRuleList cssRules;

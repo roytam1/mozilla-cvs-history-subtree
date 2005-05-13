@@ -39,7 +39,7 @@
 
 #include "domstubs.idl"
 
-[scriptable, uuid(79beb289-3644-4b54-9432-9fb993945629)]
+[scriptable, secured, uuid(79beb289-3644-4b54-9432-9fb993945629)]
 interface nsIDOMNSHTMLDocument : nsISupports
 {
   readonly attribute long                 width;

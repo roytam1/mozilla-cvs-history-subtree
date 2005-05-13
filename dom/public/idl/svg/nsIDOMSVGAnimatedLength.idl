@@ -40,7 +40,7 @@
 
 interface nsIDOMSVGLength;
 
-[scriptable, uuid(a52f0322-7f4d-418d-af6d-a7b14abd5cdf)]
+[scriptable, secured, uuid(a52f0322-7f4d-418d-af6d-a7b14abd5cdf)]
 interface nsIDOMSVGAnimatedLength : nsISupports
 {
   readonly attribute nsIDOMSVGLength baseVal;

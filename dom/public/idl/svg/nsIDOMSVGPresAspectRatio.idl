@@ -38,7 +38,7 @@
 
 #include "domstubs.idl"
 
-[scriptable, uuid(7ae42f27-4799-4e7c-86c6-e1dae6ad5157)]
+[scriptable, secured, uuid(7ae42f27-4799-4e7c-86c6-e1dae6ad5157)]
 interface nsIDOMSVGPreserveAspectRatio : nsISupports
 { 
   // Alignment Types

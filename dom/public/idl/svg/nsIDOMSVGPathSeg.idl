@@ -38,7 +38,7 @@
 
 #include "domstubs.idl"
 
-[scriptable, uuid(b9022da7-e26d-4df3-8c94-b45c4aedda7c)]
+[scriptable, secured, uuid(b9022da7-e26d-4df3-8c94-b45c4aedda7c)]
 interface nsIDOMSVGPathSeg : nsISupports
 { 
   // Path Segment Types

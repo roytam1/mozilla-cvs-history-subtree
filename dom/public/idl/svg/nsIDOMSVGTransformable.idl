@@ -40,7 +40,7 @@
 
 interface nsIDOMSVGAnimatedTransformList;
 
-[scriptable, uuid(b81f6e37-1842-4534-a546-1ab86e59a3c6)]
+[scriptable, secured, uuid(b81f6e37-1842-4534-a546-1ab86e59a3c6)]
 interface nsIDOMSVGTransformable : nsIDOMSVGLocatable
 { 
   readonly attribute nsIDOMSVGAnimatedTransformList transform;

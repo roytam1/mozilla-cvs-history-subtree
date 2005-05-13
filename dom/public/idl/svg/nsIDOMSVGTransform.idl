@@ -40,7 +40,7 @@
 
 interface nsIDOMSVGMatrix;
 
-[scriptable, uuid(29cc2e14-6d18-4710-bda9-a88d9d3bc8dc)]
+[scriptable, secured, uuid(29cc2e14-6d18-4710-bda9-a88d9d3bc8dc)]
 interface nsIDOMSVGTransform : nsISupports
 {
     // Transform Types

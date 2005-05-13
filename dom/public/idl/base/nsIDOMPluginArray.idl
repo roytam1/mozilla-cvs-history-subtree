@@ -39,7 +39,7 @@
 
 #include "domstubs.idl"
 
-[scriptable, uuid(f6134680-f28b-11d2-8360-c90899049c3c)]
+[scriptable, secured, uuid(f6134680-f28b-11d2-8360-c90899049c3c)]
 interface nsIDOMPluginArray : nsISupports
 {
   readonly attribute unsigned long    length;
@@ -47,11 +47,11 @@ interface nsIDOMPluginArray : nsISupports
   nsIDOMPlugin              item(in unsigned long index);
   nsIDOMPlugin              namedItem(in DOMString name);
 
-  [noscript] void           refresh(in boolean reloadDocuments);
+  [noscript, unsecured] void refresh(in boolean reloadDocuments);
 };
 
 
-[scriptable, uuid(ee753352-1dd1-11b2-b18d-b0b7320a28c3)]
+[scriptable, secured, uuid(ee753352-1dd1-11b2-b18d-b0b7320a28c3)]
 interface nsIDOMJSPluginArray : nsISupports
 {
   void                      refresh();

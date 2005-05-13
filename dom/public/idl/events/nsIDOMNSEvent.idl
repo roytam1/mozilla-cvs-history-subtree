@@ -44,7 +44,7 @@
 #endif
 %}
 
-[scriptable, uuid(e565d518-4510-407f-a3d9-3b4107549c6d)]
+[scriptable, secured, uuid(e565d518-4510-407f-a3d9-3b4107549c6d)]
 interface nsIDOMNSEvent : nsISupports
 {
   const long MOUSEDOWN    = 0x00000001;
@@ -107,5 +107,6 @@ interface nsIDOMNSEvent : nsISupports
   void                      preventBubble();
   void                      preventCapture();
 
+  // XXXbsmedberg: probably want a principal or something here
   readonly attribute boolean isTrusted;
 };

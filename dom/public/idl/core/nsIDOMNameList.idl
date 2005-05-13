@@ -43,7 +43,7 @@
 
 #include "domstubs.idl"
 
-[scriptable, uuid(faaf1b80-1ddd-11d9-8c46-000a95dc234c)]
+[scriptable, secured, uuid(faaf1b80-1ddd-11d9-8c46-000a95dc234c)]
 interface nsIDOMNameList : nsISupports
 {
   DOMString          getName(in unsigned long index)

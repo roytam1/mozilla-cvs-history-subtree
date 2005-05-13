@@ -39,7 +39,7 @@
 
 #include "nsIDOMCSSRule.idl"
 
-[scriptable, uuid(a6cf90bf-15b3-11d2-932e-00805f8add32)]
+[scriptable, secured, uuid(a6cf90bf-15b3-11d2-932e-00805f8add32)]
 interface nsIDOMCSSStyleRule : nsIDOMCSSRule
 {
            attribute DOMString        selectorText;

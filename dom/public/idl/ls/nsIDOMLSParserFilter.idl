@@ -38,7 +38,7 @@
 
 #include "domstubs.idl"
 
-[scriptable, uuid(10e8893d-ddf5-45d1-8872-615d72065fb4)]
+[scriptable, secured, uuid(10e8893d-ddf5-45d1-8872-615d72065fb4)]
 interface nsIDOMLSParserFilter : nsISupports
 {
   // Constants returned by startElement and acceptNode

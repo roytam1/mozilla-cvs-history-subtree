@@ -45,7 +45,7 @@ interface nsIControllers;
 interface nsIDOMWindow;
 
 
-[scriptable, uuid(f3c50361-14fe-11d3-bf87-00105a1b0627)]
+[scriptable, secured, uuid(f3c50361-14fe-11d3-bf87-00105a1b0627)]
 interface nsIDOMXULCommandDispatcher : nsISupports
 {
             attribute nsIDOMElement    focusedElement;

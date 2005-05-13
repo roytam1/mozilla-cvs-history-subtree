@@ -48,7 +48,7 @@
  * @status FROZEN
  */
 
-[scriptable, uuid(e249031f-8df9-4e7a-b644-18946dce0019)]
+[scriptable, secured, uuid(e249031f-8df9-4e7a-b644-18946dce0019)]
 interface nsIDOMCSSPrimitiveValue : nsIDOMCSSValue
 {
   // UnitTypes

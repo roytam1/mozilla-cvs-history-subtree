@@ -44,7 +44,7 @@
  *
  */
 
-[scriptable, uuid(58b6190e-37b3-412a-ba02-1d5ad6c6ea7c)]
+[scriptable, secured, uuid(58b6190e-37b3-412a-ba02-1d5ad6c6ea7c)]
 interface nsIDOMSVGAngle : nsISupports
 {
   // Angle Unit Types

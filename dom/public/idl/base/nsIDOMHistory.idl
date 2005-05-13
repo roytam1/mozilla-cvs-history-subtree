@@ -39,7 +39,7 @@
 
 #include "domstubs.idl"
 
-[scriptable, uuid(896d1d20-b4c4-11d2-bd93-00805f8ae3f4)]
+[scriptable, secured, uuid(896d1d20-b4c4-11d2-bd93-00805f8ae3f4)]
 interface nsIDOMHistory : nsISupports
 {
   readonly attribute long             length;
@@ -51,6 +51,6 @@ interface nsIDOMHistory : nsISupports
   void                       forward();
 
   // go() gets special treatment in nsIDOMNSHistory
-  [noscript] void            go(in long aDelta);
+  [noscript, unsecured] void            go(in long aDelta);
   DOMString                  item(in unsigned long index);
 };

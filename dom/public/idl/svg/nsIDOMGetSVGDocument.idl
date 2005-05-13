@@ -40,7 +40,7 @@
 
 interface nsIDOMSVGDocument;
 
-[scriptable, uuid(0401f299-685b-43a1-82b4-ce1a0011598c)]
+[scriptable, secured, uuid(0401f299-685b-43a1-82b4-ce1a0011598c)]
 interface nsIDOMGetSVGDocument : nsISupports
 {
   nsIDOMSVGDocument getSVGDocument ( );

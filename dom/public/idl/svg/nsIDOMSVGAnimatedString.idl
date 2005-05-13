@@ -38,7 +38,7 @@
 
 #include "domstubs.idl"
 
-[scriptable, uuid(36f18f12-61a9-4529-8fa9-30050bd6ac00)]
+[scriptable, secured, uuid(36f18f12-61a9-4529-8fa9-30050bd6ac00)]
 interface nsIDOMSVGAnimatedString
   : nsISupports
 {

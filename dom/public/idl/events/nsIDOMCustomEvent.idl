@@ -47,7 +47,7 @@
  * http://www.w3.org/TR/DOM-Level-3-Events/
  */
 
-[scriptable, uuid(55c7af7b-1a64-40bf-87eb-2c2cbee0491b)]
+[scriptable, secured, uuid(55c7af7b-1a64-40bf-87eb-2c2cbee0491b)]
 interface nsIDOMCustomEvent : nsIDOMEvent
 {
   void               setCurrentTarget(in nsIDOMNode target);

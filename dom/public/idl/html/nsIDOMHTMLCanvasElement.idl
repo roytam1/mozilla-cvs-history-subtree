@@ -49,7 +49,7 @@
 
 // XXX This should inherit from nsIDOMHTMLImageElement instead,
 // and implement that interface as well.
-[scriptable, uuid(332dd7d0-97e2-44a0-af5b-1c3bafb0b1f2)]
+[scriptable, secured, uuid(332dd7d0-97e2-44a0-af5b-1c3bafb0b1f2)]
 interface nsIDOMHTMLCanvasElement : nsIDOMHTMLElement
 {
   attribute long width;

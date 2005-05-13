@@ -37,7 +37,7 @@
 
 #include "nsIDOMWindow.idl"
 
-[scriptable, uuid(65455132-b96a-40ec-adea-52fa22b1028c)]
+[scriptable, secured, uuid(65455132-b96a-40ec-adea-52fa22b1028c)]
 interface nsIDOMWindow2 : nsIDOMWindow
 {
   /**
@@ -45,5 +45,5 @@ interface nsIDOMWindow2 : nsIDOMWindow
    * up event listeners to this window and every other window nested
    * in the window root.
    */
-  [noscript] readonly attribute nsIDOMEventTarget windowRoot;
+  [unsecured] readonly attribute nsIDOMEventTarget windowRoot;
 };

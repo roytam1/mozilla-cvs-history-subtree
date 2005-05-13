@@ -41,7 +41,7 @@
 interface nsIDOMSVGTransform;
 interface nsIDOMSVGMatrix;
 
-[scriptable, uuid(df41474c-a4f8-4ec3-ae79-4342e6f56d8e)]
+[scriptable, secured, uuid(df41474c-a4f8-4ec3-ae79-4342e6f56d8e)]
 interface nsIDOMSVGTransformList : nsISupports
 { 
   readonly attribute unsigned long numberOfItems;

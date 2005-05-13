@@ -39,7 +39,7 @@
 
 #include "domstubs.idl"
 
-[scriptable, uuid(c7c0ae9b-a0ba-4f4e-9f2c-c18deb62ee8b)]
+[scriptable, secured, uuid(c7c0ae9b-a0ba-4f4e-9f2c-c18deb62ee8b)]
 interface nsIDOMDocumentXBL : nsISupports
 {
   nsIDOMNodeList        getAnonymousNodes(in nsIDOMElement elt);

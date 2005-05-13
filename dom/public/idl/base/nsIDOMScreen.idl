@@ -39,7 +39,7 @@
 
 #include "domstubs.idl"
 
-[scriptable, uuid(77947960-b4af-11d2-bd93-00805f8ae3f4)]
+[scriptable, secured, uuid(77947960-b4af-11d2-bd93-00805f8ae3f4)]
 interface nsIDOMScreen : nsISupports
 {
   readonly attribute long             top;

@@ -38,7 +38,7 @@
 
 #include "nsIDOMNodeFilter.idl"
 
-[scriptable, uuid(b9b6ec85-f69f-4a5a-a96a-8a7a8f07e2b4)]
+[scriptable, secured, uuid(b9b6ec85-f69f-4a5a-a96a-8a7a8f07e2b4)]
 interface nsIDOMLSSerializerFilter : nsIDOMNodeFilter
 {
   readonly attribute unsigned long   whatToShow;

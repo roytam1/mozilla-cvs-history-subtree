@@ -40,7 +40,7 @@
 
 interface nsIDOMLSInput;
 
-[scriptable, uuid(6c16a810-a37d-4859-b557-337341631aee)]
+[scriptable, secured, uuid(6c16a810-a37d-4859-b557-337341631aee)]
 interface nsIDOMLSLoadEvent : nsIDOMEvent
 {
   readonly attribute nsIDOMDocument        newDocument;

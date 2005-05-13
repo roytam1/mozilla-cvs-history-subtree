@@ -39,7 +39,7 @@
 
 #include "domstubs.idl"
 
-[scriptable, uuid(a6cf906d-15b3-11d2-932e-00805f8add32)]
+[scriptable, secured, uuid(a6cf906d-15b3-11d2-932e-00805f8add32)]
 interface nsIDOMLocation : nsISupports
 {
            /**
@@ -57,7 +57,7 @@ interface nsIDOMLocation : nsISupports
            attribute DOMString        search;
 
   // XXX is this needed?
-  [noscript] void           reload(in boolean forceget);
+  [noscript, unsecured] void           reload(in boolean forceget);
   void                      replace(in DOMString url);
   void                      assign(in DOMString url);
 

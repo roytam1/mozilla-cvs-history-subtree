@@ -49,7 +49,7 @@
  * @status FROZEN
  */
 
-[scriptable, uuid(ff751edc-8b02-aae7-0010-8301838a3123)]
+[scriptable, secured, uuid(ff751edc-8b02-aae7-0010-8301838a3123)]
 interface nsIDOMMouseEvent : nsIDOMUIEvent
 {
   readonly attribute long               screenX;

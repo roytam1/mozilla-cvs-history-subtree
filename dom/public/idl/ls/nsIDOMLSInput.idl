@@ -40,7 +40,7 @@
 
 interface nsIInputStream;
 
-[scriptable, uuid(165e7f61-5048-4c2c-b4bf-6b44bb617ee4)]
+[scriptable, secured, uuid(165e7f61-5048-4c2c-b4bf-6b44bb617ee4)]
 interface nsIDOMLSInput : nsISupports
 {
   // Depending on the language binding in use,

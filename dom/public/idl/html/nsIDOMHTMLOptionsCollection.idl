@@ -49,7 +49,7 @@
  */
 
 // Introduced in DOM Level 2:
-[scriptable, uuid(bce0213c-f70f-488f-b93f-688acca55d63)]
+[scriptable, secured, uuid(bce0213c-f70f-488f-b93f-688acca55d63)]
 interface nsIDOMHTMLOptionsCollection : nsISupports
 {
            attribute unsigned long   length;

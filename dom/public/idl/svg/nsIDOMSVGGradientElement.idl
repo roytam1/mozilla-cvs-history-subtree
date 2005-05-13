@@ -50,7 +50,7 @@
 interface nsIDOMSVGAnimatedEnumeration;
 interface nsIDOMSVGAnimatedTransformList;
 
-[scriptable, uuid(988b2de4-137b-4bb8-a15e-fe94038e9cf3)]
+[scriptable, secured, uuid(988b2de4-137b-4bb8-a15e-fe94038e9cf3)]
 interface nsIDOMSVGGradientElement
   : nsIDOMSVGElement
 /*

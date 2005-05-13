@@ -45,7 +45,7 @@
  * very much experimental.
  */
 
-[scriptable, uuid(4ecdf254-a21e-47b0-8d72-55da8208299f)]
+[scriptable, secured, uuid(4ecdf254-a21e-47b0-8d72-55da8208299f)]
 interface nsIDOMNSDocumentStyle : nsIDOMDocumentStyle
 {
   /**

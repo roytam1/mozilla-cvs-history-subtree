@@ -41,7 +41,7 @@
 
 interface nsIDOMSVGPointList;
 
-[scriptable, uuid(ebf334b3-86ef-4bf3-8a92-d775c72defa4)]
+[scriptable, secured, uuid(ebf334b3-86ef-4bf3-8a92-d775c72defa4)]
 interface nsIDOMSVGAnimatedPoints : nsISupports
 {
   readonly attribute nsIDOMSVGPointList   points;

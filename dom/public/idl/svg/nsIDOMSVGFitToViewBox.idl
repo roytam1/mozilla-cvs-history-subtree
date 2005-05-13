@@ -41,7 +41,7 @@
 interface nsIDOMSVGAnimatedRect;
 interface nsIDOMSVGAnimatedPreserveAspectRatio;
 
-[scriptable, uuid(089410F3-9777-44f1-A882-AB4225696434)]
+[scriptable, secured, uuid(089410F3-9777-44f1-A882-AB4225696434)]
 interface nsIDOMSVGFitToViewBox : nsISupports
 {
   readonly attribute nsIDOMSVGAnimatedRect                viewBox;

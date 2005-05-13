@@ -38,7 +38,7 @@
 
 #include "nsIDOMAbstractView.idl"
 
-[scriptable, uuid(0b9341f3-95d4-4fa4-adcd-e119e0db2889)]
+[scriptable, secured, uuid(0b9341f3-95d4-4fa4-adcd-e119e0db2889)]
 interface nsIDOMViewCSS : nsIDOMAbstractView
 {
   nsIDOMCSSStyleDeclaration getComputedStyle(in nsIDOMElement elt, 

@@ -40,7 +40,7 @@
 
 interface nsIDOMSVGMatrix;
 
-[scriptable, uuid(45f18f8f-1315-4447-a7d5-8aeca77bdcaf)]
+[scriptable, secured, uuid(45f18f8f-1315-4447-a7d5-8aeca77bdcaf)]
 interface nsIDOMSVGPoint : nsISupports
 {
   attribute float x;

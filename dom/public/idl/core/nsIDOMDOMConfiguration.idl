@@ -48,7 +48,7 @@ interface nsIVariant;
  */
 
 // Introduced in DOM Level 3:
-[scriptable, uuid(cfb5b821-9016-4a79-9d98-87b57c3ea0c7)]
+[scriptable, secured, uuid(cfb5b821-9016-4a79-9d98-87b57c3ea0c7)]
 interface nsIDOMDOMConfiguration : nsISupports
 {
   void               setParameter(in DOMString name, 

@@ -43,7 +43,7 @@ interface nsIVariant;
 interface nsIDOMUserDataHandler;
 
 
-[scriptable, uuid(29fb2a18-1dd2-11b2-8dd9-a6fd5d5ad12f)]
+[scriptable, secured, uuid(29fb2a18-1dd2-11b2-8dd9-a6fd5d5ad12f)]
 interface nsIDOM3Node : nsISupports
 {
   // Introduced in DOM Level 3:

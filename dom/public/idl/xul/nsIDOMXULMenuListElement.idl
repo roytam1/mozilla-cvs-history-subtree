@@ -40,7 +40,7 @@
 #include "nsIDOMXULSelectCntrlEl.idl"
 interface nsIDOMXULTextBoxElement;
 
-[scriptable, uuid(3D49950E-04F9-4e35-A9A0-FFD51356A674)]
+[scriptable, secured, uuid(3D49950E-04F9-4e35-A9A0-FFD51356A674)]
 interface nsIDOMXULMenuListElement : nsIDOMXULSelectControlElement {
   attribute boolean editable;
   attribute boolean open;

@@ -40,7 +40,7 @@
 
 interface nsIDOMSVGPathSegList;
 
-[scriptable, uuid(6ef2b400-dbf4-4c12-8787-fe15caac5648)]
+[scriptable, secured, uuid(6ef2b400-dbf4-4c12-8787-fe15caac5648)]
 interface nsIDOMSVGAnimatedPathData : nsISupports
 {   
   readonly attribute nsIDOMSVGPathSegList   pathSegList;

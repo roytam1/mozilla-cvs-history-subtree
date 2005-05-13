@@ -47,7 +47,7 @@
  * http://www.w3.org/TR/2002/WD-DOM-Level-3-Core-20020409/core.html
  */
 
-[scriptable, uuid(475790ce-d8fa-4e02-a167-e6308ba9b120)]
+[scriptable, secured, uuid(475790ce-d8fa-4e02-a167-e6308ba9b120)]
 interface nsIDOMDOMError : nsISupports
 {
   const unsigned short      SEVERITY_WARNING               = 0;

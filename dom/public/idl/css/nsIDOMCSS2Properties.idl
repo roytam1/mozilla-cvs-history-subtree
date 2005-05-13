@@ -39,7 +39,7 @@
 
 #include "domstubs.idl"
 
-[scriptable, uuid(529b987a-cb21-4d58-99d7-9586e7662801)]
+[scriptable, secured, uuid(529b987a-cb21-4d58-99d7-9586e7662801)]
 interface nsIDOMCSS2Properties : nsISupports
 {
            attribute DOMString        azimuth;

@@ -54,7 +54,7 @@
  * @status FROZEN
  */
 
-[scriptable, uuid(a6cf9075-15b3-11d2-932e-00805f8add32)]
+[scriptable, secured, uuid(a6cf9075-15b3-11d2-932e-00805f8add32)]
 interface nsIDOMDocument : nsIDOMNode
 {
   readonly attribute nsIDOMDocumentType         doctype;

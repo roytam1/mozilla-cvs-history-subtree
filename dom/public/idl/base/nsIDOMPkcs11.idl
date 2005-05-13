@@ -38,7 +38,7 @@
 
 #include "domstubs.idl"
 
-[scriptable, uuid(9fd42950-25e7-11d4-8a7d-006008c844c3)]
+[scriptable, secured, uuid(9fd42950-25e7-11d4-8a7d-006008c844c3)]
 interface nsIDOMPkcs11 : nsISupports
 {
   long                      deletemodule(in DOMString moduleName);

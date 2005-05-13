@@ -49,7 +49,7 @@
  * @status FROZEN
  */
 
-[scriptable, uuid(9b0c2ed7-111c-4824-adf9-ef0da6dad371)]
+[scriptable, secured, uuid(9b0c2ed7-111c-4824-adf9-ef0da6dad371)]
 interface nsIDOMMediaList : nsISupports
 {
            attribute DOMString        mediaText;

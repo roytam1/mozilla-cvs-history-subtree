@@ -47,7 +47,7 @@
  * @status FROZEN
  */
 
-[scriptable, uuid(8f09fa84-39b9-4dca-9b2f-db0eeb186286)]
+[scriptable, secured, uuid(8f09fa84-39b9-4dca-9b2f-db0eeb186286)]
 interface nsIDOMCSSValueList : nsIDOMCSSValue
 {
   readonly attribute unsigned long    length;

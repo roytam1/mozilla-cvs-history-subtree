@@ -44,7 +44,7 @@
  * the Document Object Model.
  */
 
-[scriptable, uuid(6cbbbf64-212f-4ef8-9ad4-7240dbb8d6ac)]
+[scriptable, secured, uuid(6cbbbf64-212f-4ef8-9ad4-7240dbb8d6ac)]
 interface nsIDOMNSEventTarget : nsISupports
 {
   /**

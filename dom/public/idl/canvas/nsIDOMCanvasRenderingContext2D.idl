@@ -41,18 +41,18 @@
 interface nsIDOMHTMLImageElement;
 interface nsIDOMHTMLCanvasElement;
 
-[scriptable, uuid(bbb20a59-524e-4662-981e-5e142814b20c)]
+[scriptable, secured, uuid(bbb20a59-524e-4662-981e-5e142814b20c)]
 interface nsIDOMCanvasGradient : nsISupports
 {
   void addColorStop(in float offset, in DOMString color);
 };
 
-[scriptable, uuid(21dea65c-5c08-4eb1-ac82-81fe95be77b8)]
+[scriptable, secured, uuid(21dea65c-5c08-4eb1-ac82-81fe95be77b8)]
 interface nsIDOMCanvasPattern : nsISupports
 {
 };
 
-[scriptable, uuid(785c1238-9f86-4da2-a7af-a960a2ce39a1)]
+[scriptable, secured, uuid(785c1238-9f86-4da2-a7af-a960a2ce39a1)]
 interface nsIDOMCanvasRenderingContext2D : nsISupports
 {
   // back-reference to the canvas element for which

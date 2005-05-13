@@ -49,7 +49,7 @@
  * @status FROZEN
  */
 
-[scriptable, function, uuid(df31c120-ded6-11d1-bd85-00805f8ae3f4)]
+[scriptable, function, secured, uuid(df31c120-ded6-11d1-bd85-00805f8ae3f4)]
 interface nsIDOMEventListener : nsISupports
 {
   /**

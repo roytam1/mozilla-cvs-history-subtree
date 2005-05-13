@@ -42,7 +42,7 @@
 
 #include "domstubs.idl"
 
-[scriptable, function, uuid(75506f83-b504-11d5-a7f2-ca108ab8b6fc)]
+[scriptable, secured, function, uuid(75506f83-b504-11d5-a7f2-ca108ab8b6fc)]
 interface nsIDOMXPathNSResolver : nsISupports
 {
   DOMString          lookupNamespaceURI(in DOMString prefix);

@@ -49,7 +49,7 @@
  * @status FROZEN
  */
 
-[scriptable, uuid(a6cf9099-15b3-11d2-932e-00805f8add32)]
+[scriptable, secured, uuid(a6cf9099-15b3-11d2-932e-00805f8add32)]
 interface nsIDOMHTMLUListElement : nsIDOMHTMLElement
 {
            attribute boolean          compact;

@@ -51,7 +51,7 @@ interface nsIDOMEventTarget;
  * @status FROZEN
  */
 
-[scriptable, uuid(a66b7b80-ff46-bd97-0080-5f8ae38add32)]
+[scriptable, secured, uuid(a66b7b80-ff46-bd97-0080-5f8ae38add32)]
 interface nsIDOMEvent : nsISupports
 {
   // PhaseType

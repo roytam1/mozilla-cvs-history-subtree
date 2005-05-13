@@ -38,7 +38,7 @@
 
 #include "nsIDOMHTMLElement.idl"
 
-[scriptable, uuid(e2dfc89c-7ae0-4651-8aee-7f5edc2aa626)]
+[scriptable, secured, uuid(e2dfc89c-7ae0-4651-8aee-7f5edc2aa626)]
 interface nsIDOMNSHTMLOptionElement : nsISupports
 {
   // Settable version of the text attribute.

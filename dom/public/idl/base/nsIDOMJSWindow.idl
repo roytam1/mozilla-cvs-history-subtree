@@ -38,7 +38,7 @@
 
 #include "domstubs.idl"
 
-[scriptable, uuid(c8188620-1dd1-11b2-bc88-df8440498add)]
+[scriptable, secured, uuid(c8188620-1dd1-11b2-bc88-df8440498add)]
 interface nsIDOMJSWindow : nsISupports
 {
   void                      dump(in DOMString str);

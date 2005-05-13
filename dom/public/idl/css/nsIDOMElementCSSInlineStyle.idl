@@ -48,7 +48,7 @@
  * @status FROZEN
  */
 
-[scriptable, uuid(99715845-95fc-4a56-aa53-214b65c26e22)]
+[scriptable, secured, uuid(99715845-95fc-4a56-aa53-214b65c26e22)]
 interface nsIDOMElementCSSInlineStyle : nsISupports
 {
   readonly attribute nsIDOMCSSStyleDeclaration  style;

@@ -40,7 +40,7 @@
 
 interface nsIDOMSVGNumberList;
 
-[scriptable, uuid(93ebb030-f82d-4f8e-b133-d1b5abb73cf3)]
+[scriptable, secured, uuid(93ebb030-f82d-4f8e-b133-d1b5abb73cf3)]
 interface nsIDOMSVGAnimatedNumberList : nsISupports
 { 
   readonly attribute nsIDOMSVGNumberList baseVal;

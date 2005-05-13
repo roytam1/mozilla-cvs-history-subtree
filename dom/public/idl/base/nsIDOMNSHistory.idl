@@ -38,7 +38,7 @@
 
 #include "domstubs.idl"
 
-[scriptable, uuid(5fb96f46-1dd2-11b2-a5dc-998ca8636ea9)]
+[scriptable, secured, uuid(5fb96f46-1dd2-11b2-a5dc-998ca8636ea9)]
 interface nsIDOMNSHistory : nsISupports
 {
   /**

@@ -39,7 +39,7 @@
 
 #include "nsIDOMCSSRule.idl"
 
-[scriptable, uuid(19fe78cc-65ff-4b1d-a5d7-9ea89692cec6)]
+[scriptable, secured, uuid(19fe78cc-65ff-4b1d-a5d7-9ea89692cec6)]
 interface nsIDOMCSSCharsetRule : nsIDOMCSSRule
 {
   attribute DOMString        encoding;

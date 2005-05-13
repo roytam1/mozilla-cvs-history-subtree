@@ -46,7 +46,7 @@
  * http://www.w3.org/TR/DOM-Level-3-Events/
  */
 
-[scriptable, uuid(3e9c01a7-de97-4c3b-8294-b4bd9d7056d1)]
+[scriptable, secured, uuid(3e9c01a7-de97-4c3b-8294-b4bd9d7056d1)]
 interface nsIDOM3EventTarget : nsISupports
 {
   // Introduced in DOM Level 3:

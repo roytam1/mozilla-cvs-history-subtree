@@ -49,7 +49,7 @@
  * @status FROZEN
  */
 
-[scriptable, uuid(123f90ab-15b3-11d2-456e-00805f8add32)]
+[scriptable, secured, uuid(123f90ab-15b3-11d2-456e-00805f8add32)]
 interface nsIDOMHTMLEmbedElement : nsIDOMHTMLElement
 {
            attribute DOMString        align;

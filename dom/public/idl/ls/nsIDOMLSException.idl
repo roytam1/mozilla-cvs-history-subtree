@@ -38,7 +38,7 @@
 
 #include "domstubs.idl"
 
-[scriptable, uuid(1cc8e4b3-1dbb-4adc-a913-1527bf67748c)]
+[scriptable, secured, uuid(1cc8e4b3-1dbb-4adc-a913-1527bf67748c)]
 interface nsIDOMLSException : nsISupports
 {
   const unsigned short      PARSE_ERR                      = 81;

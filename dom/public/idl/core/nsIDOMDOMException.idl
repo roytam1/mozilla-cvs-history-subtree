@@ -53,7 +53,7 @@
  * @status FROZEN
  */
 
-[scriptable, uuid(a6cf910a-15b3-11d2-932e-00805f8add32)]
+[scriptable, secured, uuid(a6cf910a-15b3-11d2-932e-00805f8add32)]
 interface nsIDOMDOMException : nsISupports
 {
   const unsigned short      INDEX_SIZE_ERR                 = 1;

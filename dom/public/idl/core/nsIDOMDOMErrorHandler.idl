@@ -46,7 +46,7 @@
  * http://www.w3.org/TR/2002/WD-DOM-Level-3-Core-20020409/core.html
  */
 
-[scriptable, uuid(2d958bdf-740d-43f4-9e5c-5d930f4f3876)]
+[scriptable, secured, uuid(2d958bdf-740d-43f4-9e5c-5d930f4f3876)]
 interface nsIDOMDOMErrorHandler : nsISupports
 {
   boolean            handleError(in nsIDOMDOMError error);

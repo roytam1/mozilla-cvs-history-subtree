@@ -49,7 +49,7 @@
 
 interface nsIDOMSVGNumber;
 
-[scriptable, uuid(716e3b11-b03b-49f7-b82d-5383922b0ab3)]
+[scriptable, secured, uuid(716e3b11-b03b-49f7-b82d-5383922b0ab3)]
 interface nsIDOMSVGAnimatedNumber : nsISupports
 {
   attribute float baseVal;

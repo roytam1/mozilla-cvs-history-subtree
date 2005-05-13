@@ -38,7 +38,7 @@
 
 #include "domstubs.idl"
 
-[scriptable, uuid(98575762-a936-4ecf-a226-b74c3a2981b4)]
+[scriptable, secured, uuid(98575762-a936-4ecf-a226-b74c3a2981b4)]
 interface nsIDOMSVGNumber : nsISupports
 { 
   attribute float value;

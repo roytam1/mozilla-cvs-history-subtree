@@ -40,7 +40,7 @@
 
 interface nsIDOMSVGPathSeg;
 
-[scriptable, uuid(94a6db98-3f34-4529-a35f-89ef49713795)]
+[scriptable, secured, uuid(94a6db98-3f34-4529-a35f-89ef49713795)]
 interface nsIDOMSVGPathSegList : nsISupports
 { 
   readonly attribute unsigned long numberOfItems;

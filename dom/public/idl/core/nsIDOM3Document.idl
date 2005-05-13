@@ -44,7 +44,7 @@ interface nsIDOMDOMConfiguration;
  * For more information on this interface, please see
  * http://www.w3.org/TR/DOM-Level-3-Core/
  */
-[scriptable, uuid(2e0e9ea1-72ab-4d9e-bdeb-ca64e1abeba4)]
+[scriptable, secured, uuid(2e0e9ea1-72ab-4d9e-bdeb-ca64e1abeba4)]
 interface nsIDOM3Document : nsIDOM3Node
 {
   // Introduced in DOM Level 3:
