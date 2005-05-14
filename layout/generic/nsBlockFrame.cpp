@@ -583,6 +583,7 @@ nsBlockFrame::MarkIntrinsicWidthsDirty()
 struct InlineReflowObjects {
   nsHTMLReflowState rs;
   nsHTMLReflowMetrics metrics;
+  nsSpaceManager spaceMan;
   nsBlockReflowState brs;
 
   InlineReflowObjects(nsBlockFrame *aBlockFrame,
@@ -590,7 +591,10 @@ struct InlineReflowObjects {
     : rs(aBlockFrame->GetPresContext(), aBlockFrame, aRenderingContext,
          nsSize(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE))
     , metrics()
-    , brs(rs, aBlockFrame->GetPresContext(), aBlockFrame, metrics,
+    // XXX this is the wrong frame:
+    , spaceMan(brs.mPresContext->GetPresShell(), aBlockFrame)
+    , brs((rs.mSpaceManager = &spaceMan, rs),
+          aBlockFrame->GetPresContext(), aBlockFrame, metrics,
           NS_BLOCK_MARGIN_ROOT & aBlockFrame->GetStateBits(),
           NS_BLOCK_MARGIN_ROOT & aBlockFrame->GetStateBits())
   {
