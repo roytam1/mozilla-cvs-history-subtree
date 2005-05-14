@@ -79,6 +79,7 @@
 #include "nsContentUtils.h"
 #include "nsISyncLoadDOMService.h"
 #include "nsIDOM3Node.h"
+#include "nsContentPolicyUtils.h"
 
 #include "nsIPrefBranch.h"
 #include "nsIPrefService.h"
@@ -576,6 +577,29 @@ nsXBLService::LoadBindings(nsIContent* aContent, nsIURI* aURL, PRBool aAugmentFl
     if (NS_FAILED(rv))
       return rv;
   }
+
+  // Content policy check.  We have to be careful to not pass aContent as the
+  // context here.  Otherwise, if there is a JS-implemented content policy, we
+  // will attempt to wrap the content node, which will try to load XBL bindings
+  // for it, if any.  Since we're not done loading this binding yet, that will
+  // reenter this method and we'll end up creating a binding and then
+  // immediately clobbering it in our table.  That makes things very confused,
+  // leading to misbehavior and crashes.
+  PRInt16 decision = nsIContentPolicy::ACCEPT;
+  rv = NS_CheckContentLoadPolicy(nsIContentPolicy::TYPE_OTHER,
+                                 aURL,
+                                 docURI,
+                                 document,        // context
+                                 EmptyCString(),  // mime guess
+                                 nsnull,          // extra
+                                 &decision);
+
+  if (NS_SUCCEEDED(rv) && !NS_CP_ACCEPTED(decision))
+    rv = NS_ERROR_NOT_AVAILABLE;
+
+  if (NS_FAILED(rv))
+    return rv;
+
   nsCOMPtr<nsIXBLBinding> newBinding;
   if (NS_FAILED(rv = GetBinding(aContent, aURL, getter_AddRefs(newBinding)))) {
     return rv;
