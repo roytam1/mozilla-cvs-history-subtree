@@ -182,7 +182,7 @@ MarFile *mar_open(const char *path) {
   MarFile *mar;
   FILE *fp;
 
-  fp = fopen(path, "r");
+  fp = fopen(path, "rb");
   if (!fp)
     return NULL;
 
@@ -261,6 +261,8 @@ int mar_read(MarFile *mar, const MarItem *item, int offset, char *buf,
   if (nr > bufsize)
     nr = bufsize;
 
-  fseek(mar->fp, item->offset + offset, SEEK_SET);
+  if (fseek(mar->fp, item->offset + offset, SEEK_SET))
+    return -1;
+
   return fread(buf, 1, nr, mar->fp);
 }

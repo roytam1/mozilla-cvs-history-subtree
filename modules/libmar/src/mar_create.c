@@ -110,7 +110,7 @@ static int mar_concat_file(FILE *fp, const char *path) {
   size_t len;
   int rv = 0;
 
-  in = fopen(path, "r");
+  in = fopen(path, "rb");
   if (!in)
     return -1;
 
@@ -134,7 +134,7 @@ int mar_create(const char *dest, int num_files, char **files) {
 
   memset(&stack, 0, sizeof(stack));
 
-  fp = fopen(dest, "w");
+  fp = fopen(dest, "wb");
   if (!fp) {
     fprintf(stderr, "ERROR: could not create target file: %s\n", dest);
     return -1;

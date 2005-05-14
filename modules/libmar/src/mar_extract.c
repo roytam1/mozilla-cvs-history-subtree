@@ -71,11 +71,15 @@ static int mar_test_callback(MarFile *mar, const MarItem *item, void *unused) {
   if (mar_ensure_parent_dir(item->name))
     return -1;
 
+#ifdef XP_WIN
+  fd = _open(item->name, _O_BINARY|_O_CREAT|_O_TRUNC|_O_WRONLY, item->flags);
+#else
   fd = creat(item->name, item->flags);
+#endif
   if (fd == -1)
     return -1;
 
-  fp = fdopen(fd, "w");
+  fp = fdopen(fd, "wb");
   if (!fp)
     return -1;
 
