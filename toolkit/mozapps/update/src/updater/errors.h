@@ -9,5 +9,6 @@
 #define PARSE_ERROR 5
 #define SOURCE_ERROR 6
 #define TARGET_ERROR 7
+#define UNEXPECTED_ERROR 8
 
 #endif  // Errors_h__

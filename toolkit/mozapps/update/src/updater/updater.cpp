@@ -50,7 +50,7 @@
 #include "zlib.h" // for crc32
 #include "bspatch.h"
 #include "progressui.h"
-#include "zipreader.h"
+#include "archivereader.h"
 #include "errors.h"
 
 #include <stdio.h>
@@ -139,7 +139,7 @@ RunOnBackgroundThread(ThreadFunc func, void *param)
 //-----------------------------------------------------------------------------
 
 static char* gSourcePath;
-static ZipReader gZipReader;
+static ArchiveReader gArchiveReader;
 
 static const char kWhitespace[] = " \t";
 static const char kNL[] = "\r\n";
@@ -537,8 +537,7 @@ AddFile::Execute()
       return rv;
   }
     
-  //return copy_file(spath, mFile);
-  return gZipReader.ExtractFile(mFile, mFile);
+  return gArchiveReader.ExtractFile(mFile, mFile);
 }
 
 void
@@ -659,7 +658,7 @@ PatchFile::Prepare()
 
   remove(spath);
 
-  int rv = gZipReader.ExtractFile(mPatchFile, spath);
+  int rv = gArchiveReader.ExtractFile(mPatchFile, spath);
   if (rv)
     return rv;
 
@@ -829,10 +828,10 @@ threadfunc(void *param)
   char dataFile[MAXPATHLEN];
   snprintf(dataFile, MAXPATHLEN, "%s/update.jar", gSourcePath);
 
-  int rv = gZipReader.Open(dataFile);
+  int rv = gArchiveReader.Open(dataFile);
   if (rv == OK) {
     rv = realmain();
-    gZipReader.Close();
+    gArchiveReader.Close();
   }
 
   if (rv)
@@ -974,7 +973,7 @@ int realmain()
   snprintf(manifest, MAXPATHLEN, "%s/update.manifest", gSourcePath);
 
   // extract the manifest
-  int rv = gZipReader.ExtractFile("update.manifest", manifest);
+  int rv = gArchiveReader.ExtractFile("update.manifest", manifest);
   if (rv)
     return rv;
 
