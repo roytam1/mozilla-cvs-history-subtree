@@ -39,6 +39,10 @@
 #ifndef MAR_H__
 #define MAR_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct MarItem_ {
   struct MarItem_ *next;
   unsigned int offset;  /* offset into archive */
@@ -85,5 +89,9 @@ int mar_test(const char *path);
 
 /* extract mar file to working directory (needs mar_extract.c) */
 int mar_extract(const char *path);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  /* MAR_H__ */
