@@ -440,15 +440,17 @@ CanvasFrame::Paint(nsPresContext*      aPresContext,
 /* virtual */ nscoord
 CanvasFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
-  NS_NOTREACHED("This should never be called.");
-  return 0;
+  if (mFrames.IsEmpty())
+    return 0;
+  return mFrames.FirstChild()->GetMinWidth(aRenderingContext);
 }
 
 /* virtual */ nscoord
 CanvasFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
-  NS_NOTREACHED("This should never be called.");
-  return 0;
+  if (mFrames.IsEmpty())
+    return 0;
+  return mFrames.FirstChild()->GetPrefWidth(aRenderingContext);
 }
 
 NS_IMETHODIMP
