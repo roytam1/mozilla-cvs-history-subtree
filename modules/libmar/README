@@ -1,0 +1,5 @@
+This directory contains code for a simple archive file format.
+
+The src directory builds a small library used to read an archive file,
+and the tool directory builds a command line utility that can be used
+to create, extract, and test archive files.
