@@ -79,6 +79,8 @@
 #include "nsContentUtils.h"
 #include "nsISyncLoadDOMService.h"
 #include "nsIDOM3Node.h"
+#include "nsContentPolicyUtils.h"
+#include "nsIDOMWindow.h"
 
 #include "nsIPrefBranch.h"
 #include "nsIPrefService.h"
@@ -576,6 +578,23 @@ nsXBLService::LoadBindings(nsIContent* aContent, nsIURI* aURL, PRBool aAugmentFl
     if (NS_FAILED(rv))
       return rv;
   }
+
+  // Content policy check
+  PRBool shouldLoad = PR_FALSE;
+  nsCOMPtr<nsIDOMWindow> window =
+    do_QueryInterface(document->GetScriptGlobalObject());
+  rv = NS_CheckContentLoadPolicy(nsIContentPolicy::OTHER,
+                                 aURL,
+                                 document,
+                                 window,
+                                 &shouldLoad);
+
+  if (NS_SUCCEEDED(rv) && !shouldLoad)
+    rv = NS_ERROR_NOT_AVAILABLE;
+
+  if (NS_FAILED(rv))
+    return rv;
+
   nsCOMPtr<nsIXBLBinding> newBinding;
   if (NS_FAILED(rv = GetBinding(aContent, aURL, getter_AddRefs(newBinding)))) {
     return rv;
