@@ -47,11 +47,11 @@
  *  LWS      = 1*( " " | "\t" )
  */
 
-#include "zlib.h" // for crc32 (XXX we should use the version provided by bzip2)
 #include "bspatch.h"
 #include "progressui.h"
 #include "archivereader.h"
 #include "errors.h"
+#include "bzlib.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -97,6 +97,25 @@
 #  define MAXPATHLEN 1024
 # endif
 #endif
+
+//-----------------------------------------------------------------------------
+
+// This variable lives in libbz2.  It's declared in bzlib_private.h, so we just
+// declare it here to avoid including that entire header file.
+extern "C" unsigned int BZ2_crc32Table[256];
+
+static unsigned int
+crc32(const unsigned char *buf, unsigned int len)
+{
+  unsigned int crc = 0xffffffffL;
+
+  const unsigned char *end = buf + len;
+  for (; buf != end; ++buf)
+    crc = (crc << 8) ^ BZ2_crc32Table[(crc >> 24) ^ *buf];
+
+  crc = ~crc;
+  return crc;
+}
 
 //-----------------------------------------------------------------------------
 
@@ -617,8 +636,7 @@ PatchFile::LoadSourceFile(int ofd)
 
   // Verify that the contents of the source file correspond to what we expect.
 
-  PRUint32 crc = crc32(0, NULL, 0);
-  crc = crc32(crc, buf, header.slen);
+  unsigned int crc = crc32(buf, header.slen);
 
   if (crc != header.scrc32)
     return BSP_ERROR_CORRUPT;
