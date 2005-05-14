@@ -176,6 +176,24 @@ ViewportFrame::GetFirstChild(nsIAtom* aListName) const
   return nsContainerFrame::GetFirstChild(aListName);
 }
 
+/* virtual */ nscoord
+ViewportFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
+{
+  if (mFrames.IsEmpty())
+    return 0;
+  // XXXldb Deal with mFixedContainer (matters for SizeToContent)!
+  return mFrames.FirstChild()->GetMinWidth(aRenderingContext);
+}
+
+/* virtual */ nscoord
+ViewportFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
+{
+  if (mFrames.IsEmpty())
+    return 0;
+  // XXXldb Deal with mFixedContainer (matters for SizeToContent)!
+  return mFrames.FirstChild()->GetPrefWidth(aRenderingContext);
+}
+
 nsPoint
  ViewportFrame::AdjustReflowStateForScrollbars(nsHTMLReflowState* aReflowState) const
 {
