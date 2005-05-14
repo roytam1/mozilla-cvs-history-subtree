@@ -56,9 +56,16 @@ ArchiveReader::ExtractItemToStream(const MarItem *item, FILE *fp)
     return UNEXPECTED_ERROR;
 
   offset = 0;
-  while ((inlen = mar_read(mArchive, item, offset, inbuf, BUFSIZ)) > 0) {
-    strm.next_in = inbuf;
-    strm.avail_in = inlen;
+  for (;;) {
+    if (offset < item->length && strm.avail_in == 0) {
+      inlen = mar_read(mArchive, item, offset, inbuf, BUFSIZ);
+      if (inlen <= 0)
+        return -1;
+      offset += inlen;
+      strm.next_in = inbuf;
+      strm.avail_in = inlen;
+    }
+
     strm.next_out = outbuf;
     strm.avail_out = BUFSIZ;
 
@@ -68,9 +75,11 @@ ArchiveReader::ExtractItemToStream(const MarItem *item, FILE *fp)
       break;
     }
 
-    if (fwrite(outbuf, BUFSIZ - strm.avail_out, 1, fp) != 1) {
-      ret = IO_ERROR;
-      break;
+    if (strm.avail_out < BUFSIZ) {
+      if (fwrite(outbuf, BUFSIZ - strm.avail_out, 1, fp) != 1) {
+        ret = IO_ERROR;
+        break;
+      }
     }
 
     if (ret == BZ_STREAM_END) {
