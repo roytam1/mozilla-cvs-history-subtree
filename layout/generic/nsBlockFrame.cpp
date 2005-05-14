@@ -631,7 +631,7 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
       PRBool keepGoing = PR_FALSE;
       PRUint8 lineReflowStatus = LINE_REFLOW_REDO;
       nsLineLayout ll(iro->brs.mPresContext, nsnull /* space manager */,
-                              &iro->rs, PR_TRUE);
+                      &iro->rs, PR_TRUE);
       ll.Init(&iro->brs, iro->brs.mMinLineHeight, lineNumber);
       nsresult rv = DoReflowInlineFrames(iro->brs, ll, line,
                                          &keepGoing, &lineReflowStatus);
