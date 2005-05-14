@@ -122,6 +122,9 @@ endif
 
 tier_1_dirs	+= modules/zlib/standalone
 
+tier_1_dirs += modules/libbz2
+tier_1_dirs += modules/libmar
+
 ifdef MOZ_SVG_RENDERER_LIBART
 tier_1_dirs	+= other-licenses/libart_lgpl
 endif
