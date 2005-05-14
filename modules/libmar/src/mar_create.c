@@ -38,14 +38,19 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <netinet/in.h>
 #include "mar.h"
 #include "mar_private.h"
+
+#ifdef XP_WIN
+#include <winsock2.h>
+#else
+#include <netinet/in.h>
+#include <unistd.h>
+#endif
 
 struct MarItemStack {
   void *head;

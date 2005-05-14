@@ -41,9 +41,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <netinet/in.h>
 #include "mar.h"
 #include "mar_private.h"
+
+#ifdef XP_WIN
+#include <winsock2.h>
+#else
+#include <netinet/in.h>
+#endif
 
 #define TABLESIZE 256
 

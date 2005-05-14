@@ -52,7 +52,9 @@ static int mar_test_callback(MarFile *mar, const MarItem *item, void *unused) {
   if (!fp)
     return -1;
 
+#ifndef XP_WIN
   fchmod(fileno(fp), item->flags);
+#endif
 
   while ((len = mar_read(mar, item, offset, buf, sizeof(buf))) > 0) {
     if (fwrite(buf, len, 1, fp) != 1)
