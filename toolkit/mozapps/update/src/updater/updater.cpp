@@ -47,7 +47,7 @@
  *  LWS      = 1*( " " | "\t" )
  */
 
-#include "zlib.h" // for crc32
+#include "zlib.h" // for crc32 (XXX we should use the version provided by bzip2)
 #include "bspatch.h"
 #include "progressui.h"
 #include "archivereader.h"
@@ -662,6 +662,14 @@ PatchFile::Prepare()
   if (rv)
     return rv;
 
+  // XXXdarin from here down should be moved into the Execute command.
+  //          no need to open all of the patch files and read all of 
+  //          the source files before applying any patches.
+
+  // XXXdarin we could easily replace the open and read calls on the
+  //          patch file with BZ2_bzopen and BZ2_bzread calls instead.
+  //          then we should be able to get good compression.
+
   pfd = open(spath, O_RDONLY);
   if (pfd < 0)
     return IO_ERROR;
@@ -826,7 +834,7 @@ threadfunc(void *param)
   // open ZIP archive and process...
 
   char dataFile[MAXPATHLEN];
-  snprintf(dataFile, MAXPATHLEN, "%s/update.jar", gSourcePath);
+  snprintf(dataFile, MAXPATHLEN, "%s/update.mar", gSourcePath);
 
   int rv = gArchiveReader.Open(dataFile);
   if (rv == OK) {

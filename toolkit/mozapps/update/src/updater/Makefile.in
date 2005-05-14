@@ -52,13 +52,14 @@ CPPSRCS = \
 
 PROGRAM = updater$(BIN_SUFFIX)
 
-REQUIRES = libmar libbz2
+REQUIRES = zlib libmar libbz2
 
 # nsZipArchive is not exported by libjar into dist/include/jar, so
 # we have to reach in and grab it directly.
 LOCAL_INCLUDES = -I$(topsrcdir)/modules/libjar
 
 LIBS += \
+	$(DIST)/lib/$(LIB_PREFIX)mozz.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)mar.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)bz2.$(LIB_SUFFIX) \
 	$(NULL)
