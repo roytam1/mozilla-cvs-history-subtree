@@ -639,14 +639,14 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
       ll.Init(&iro->brs, iro->brs.mMinLineHeight, lineNumber);
       nsresult rv = DoReflowInlineFrames(iro->brs, ll, line,
                                          &keepGoing, &lineReflowStatus);
-      ll.EndLineReflow();
       NS_ASSERTION(NS_SUCCEEDED(rv), "DoReflowInlineFrames failed");
-      NS_ASSERTION(keepGoing, "got !keepGoing on intrinsic width pass");
+      NS_ASSERTION(!keepGoing, "got keepGoing on intrinsic width pass");
       NS_ASSERTION(lineReflowStatus == LINE_REFLOW_OK,
                    "bad line reflow status for intrinsic width pass");
 
       line_min = ll.GetLineMaxElementWidth(line);
       line_pref = line->mBounds.XMost();
+      ll.EndLineReflow();
 
       // In the intrinsic width pass, we put all floats into
       // mBelowCurrentLineFloats (simply because the code to do so is
