@@ -573,7 +573,6 @@ nsLineLayout::EndSpan(nsIFrame* aFrame, nsSize& aSizeResult)
   PerSpanData* psd = mCurrentSpan;
   nscoord width = 0;
   nscoord maxHeight = 0;
-  nscoord maxElementWidth = 0;
   if (nsnull != psd->mLastFrame) {
     width = psd->mX - psd->mLeftEdge;
     PerFrameData* pfd = psd->mFirstFrame;
@@ -1578,9 +1577,6 @@ nsLineLayout::GetLineMaxElementWidth(nsLineBox* aLineBox)
   nscoord accumulatedWidth = 0;
   nscoord indent = mTextIndent; // Used for the first frame.
   PerSpanData* psd = mRootSpan;
-#ifdef DEBUG
-  int frameCount = 0;
-#endif
 
   for (PerFrameData* pfd = psd->mFirstFrame; pfd; pfd = pfd->mNext) {
     nscoord mw = pfd->mMaxElementWidth +
