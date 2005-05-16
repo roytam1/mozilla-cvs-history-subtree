@@ -655,6 +655,7 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
       }
 
       iro->brs.mLineNumber = lineNumber;
+      iro->brs.mCurrentLine = line;
 
       PRBool keepGoing = PR_FALSE;
       PRUint8 lineReflowStatus = LINE_REFLOW_REDO;
@@ -677,12 +678,10 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
       // simpler).
       nsFloatCacheFreeList &floats = iro->brs.mBelowCurrentLineFloats;
       if (!floats.IsEmpty()) {
-        line->AppendFloats(floats);
-
                 // preferred widths accumulated for floats that have already
                 // been cleared past
         nscoord floats_left_done = 0, floats_right_done = 0,
-                // preferred widths accumulated fol floats that have not yet
+                // preferred widths accumulated for floats that have not yet
                 // been cleared past
                 floats_left_cur = 0, floats_right_cur = 0;
 
@@ -723,6 +722,9 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
               break;
           }
         }
+
+        // This empties |floats|.
+        line->AppendFloats(floats);
 
         if (floats_left_cur > floats_left_done)
           floats_left_done = floats_left_cur;
