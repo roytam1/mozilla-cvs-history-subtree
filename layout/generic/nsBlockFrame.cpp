@@ -95,6 +95,7 @@ PRBool nsBlockFrame::gLamePaintMetrics;
 PRBool nsBlockFrame::gLameReflowMetrics;
 PRBool nsBlockFrame::gNoisy;
 PRBool nsBlockFrame::gNoisyDamageRepair;
+PRBool nsBlockFrame::gNoisyIntrinsic;
 PRBool nsBlockFrame::gNoisyReflow;
 PRBool nsBlockFrame::gReallyNoisyReflow;
 PRBool nsBlockFrame::gNoisySpaceManager;
@@ -111,6 +112,7 @@ struct BlockDebugFlags {
 static const BlockDebugFlags gFlags[] = {
   { "reflow", &nsBlockFrame::gNoisyReflow },
   { "really-noisy-reflow", &nsBlockFrame::gReallyNoisyReflow },
+  { "intrinsic", &nsBlockFrame::gNoisyIntrinsic },
   { "space-manager", &nsBlockFrame::gNoisySpaceManager },
   { "verify-lines", &nsBlockFrame::gVerifyLines },
   { "damage-repair", &nsBlockFrame::gNoisyDamageRepair },
@@ -607,10 +609,26 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
   nscoord min_result = 0, pref_result = 0;
   InlineReflowObjects *iro = nsnull;
 
+#ifdef DEBUG
+  if (gNoisyIntrinsic) {
+    IndentBy(stdout, gNoiseIndent);
+    ListTag(stdout);
+    printf(": CalcIntrinsicWidths\n");
+  }
+  AutoNoisyIndenter indent(gNoisyIntrinsic);
+#endif
+
   PRInt32 lineNumber = 0;
   for (line_iterator line = begin_lines(), line_end = end_lines();
        line != line_end; ++line, ++lineNumber)
   {
+#ifdef DEBUG
+    if (gNoisyIntrinsic) {
+      IndentBy(stdout, gNoiseIndent);
+      printf("line %d isblock=%d isempty=%d\n",
+             lineNumber, line->IsBlock(), line->IsEmpty());
+    }
+#endif
     nscoord line_pref, line_min;
     if (line->IsBlock()) {
       line_min = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
@@ -721,6 +739,13 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
       min_result = line_min;
     if (line_pref > pref_result)
       pref_result = line_pref;
+#ifdef DEBUG
+    if (gNoisyIntrinsic) {
+      IndentBy(stdout, gNoiseIndent);
+      printf("line_min=%d line_pref=%d ==> min_result=%d, pref_result=%d\n",
+             line_min, line_pref, min_result, pref_result);
+    }
+#endif
   }
 
   delete iro;

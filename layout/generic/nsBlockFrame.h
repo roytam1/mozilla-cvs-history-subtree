@@ -611,6 +611,7 @@ public:
   static PRBool gLameReflowMetrics;
   static PRBool gNoisy;
   static PRBool gNoisyDamageRepair;
+  static PRBool gNoisyIntrinsic;
   static PRBool gNoisyReflow;
   static PRBool gReallyNoisyReflow;
   static PRBool gNoisySpaceManager;
