@@ -636,36 +636,43 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
                      line->mFirstChild, nsLayoutUtils::MIN_WIDTH);
       line_pref = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
                       line->mFirstChild, nsLayoutUtils::PREF_WIDTH);
-    //} else if ((line == begin_lines() || !line.prev()->IsLineWrapped())) {
-    } else if (!line->IsEmpty()) {
+    } else {
       // This may not be the best way of doing things, but it's the
       // easiest way given the current code.  We'll say that the frame
       // needs reflow for completeness, but this shouldn't ever lead to
       // additional reflow.
 
-      if (!iro) {
-        iro = new InlineReflowObjects(this, aRenderingContext);
-        if (!iro)
-          break;
+      // XXX If we change this to not rewrap, we want to make this test
+      // if ((line == begin_lines() || !line.prev()->IsLineWrapped())) {
+      if (!line->IsEmpty()) {
+
+        if (!iro) {
+          iro = new InlineReflowObjects(this, aRenderingContext);
+          if (!iro)
+            break;
+        }
+
+        iro->brs.mLineNumber = lineNumber;
+
+        PRBool keepGoing = PR_FALSE;
+        PRUint8 lineReflowStatus = LINE_REFLOW_REDO;
+        nsLineLayout ll(iro->brs.mPresContext, nsnull /* space manager */,
+                        &iro->rs, PR_TRUE);
+        ll.Init(&iro->brs, iro->brs.mMinLineHeight, lineNumber);
+        nsresult rv = DoReflowInlineFrames(iro->brs, ll, line,
+                                           &keepGoing, &lineReflowStatus);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "DoReflowInlineFrames failed");
+        NS_ASSERTION(!keepGoing, "got keepGoing on intrinsic width pass");
+        NS_ASSERTION(lineReflowStatus == LINE_REFLOW_OK,
+                     "bad line reflow status for intrinsic width pass");
+
+        line_min = ll.GetLineMaxElementWidth(line);
+        line_pref = line->mBounds.XMost();
+        ll.EndLineReflow();
+      } else {
+        line_min = 0;
+        line_pref = 0;
       }
-
-      iro->brs.mLineNumber = lineNumber;
-
-      PRBool keepGoing = PR_FALSE;
-      PRUint8 lineReflowStatus = LINE_REFLOW_REDO;
-      nsLineLayout ll(iro->brs.mPresContext, nsnull /* space manager */,
-                      &iro->rs, PR_TRUE);
-      ll.Init(&iro->brs, iro->brs.mMinLineHeight, lineNumber);
-      nsresult rv = DoReflowInlineFrames(iro->brs, ll, line,
-                                         &keepGoing, &lineReflowStatus);
-      NS_ASSERTION(NS_SUCCEEDED(rv), "DoReflowInlineFrames failed");
-      NS_ASSERTION(!keepGoing, "got keepGoing on intrinsic width pass");
-      NS_ASSERTION(lineReflowStatus == LINE_REFLOW_OK,
-                   "bad line reflow status for intrinsic width pass");
-
-      line_min = ll.GetLineMaxElementWidth(line);
-      line_pref = line->mBounds.XMost();
-      ll.EndLineReflow();
 
       // In the intrinsic width pass, we put all floats into
       // mBelowCurrentLineFloats (simply because the code to do so is
@@ -732,9 +739,6 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
       line->MarkDirty();
       GetPresContext()->PresShell()->FrameNeedsReflow(this,
                                                       nsIPresShell::eResize);
-    } else {
-      line_pref = 0;
-      line_min = 0;
     }
     if (line_min > min_result)
       min_result = line_min;
