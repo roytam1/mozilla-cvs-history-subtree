@@ -625,8 +625,9 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
 #ifdef DEBUG
     if (gNoisyIntrinsic) {
       IndentBy(stdout, gNoiseIndent);
-      printf("line %d isblock=%d isempty=%d\n",
-             lineNumber, line->IsBlock(), line->IsEmpty());
+      printf("line %d (%s%s)\n", lineNumber,
+             line->IsBlock() ? "block" : "inline",
+             line->IsEmpty() ? ",empty" : "");
     }
 #endif
     nscoord line_pref, line_min;
