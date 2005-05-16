@@ -592,7 +592,7 @@ struct InlineReflowObjects {
          nsSize(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE))
     , metrics()
     // XXX this is the wrong frame:
-    , spaceMan(brs.mPresContext->GetPresShell(), aBlockFrame)
+    , spaceMan(aBlockFrame->GetPresContext()->GetPresShell(), aBlockFrame)
     , brs((rs.mSpaceManager = &spaceMan, rs),
           aBlockFrame->GetPresContext(), aBlockFrame, metrics,
           NS_BLOCK_MARGIN_ROOT & aBlockFrame->GetStateBits(),
