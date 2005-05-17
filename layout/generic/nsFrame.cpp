@@ -2138,6 +2138,23 @@ nsFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   return 0;
 }
 
+/* virtual */ nsIFrame::InlineIntrinsicWidth
+nsFrame::GetInlineMinWidth(nsIRenderingContext *aRenderingContext)
+{
+  InlineIntrinsicWidth result;
+  result.whole = GetMinWidth(aRenderingContext);
+  result.firstLine = result.innerLines = result.lastLine = 0;
+  return result;
+}
+
+/* virtual */ nsIFrame::InlineIntrinsicWidth
+nsFrame::GetInlinePrefWidth(nsIRenderingContext *aRenderingContext)
+{
+  InlineIntrinsicWidth result;
+  result.whole = GetPrefWidth(aRenderingContext);
+  result.firstLine = result.innerLines = result.lastLine = 0;
+  return result;
+}
 
 NS_IMETHODIMP
 nsFrame::WillReflow(nsPresContext* aPresContext)
