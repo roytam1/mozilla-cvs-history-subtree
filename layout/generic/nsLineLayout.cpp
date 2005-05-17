@@ -1625,6 +1625,15 @@ nsLineLayout::GetLineMaxElementWidth(nsLineBox* aLineBox)
         maxElementWidth = mw;
       }
     }
+#ifdef DEBUG
+    if (nsBlockFrame::gNoisyIntrinsic) {
+      nsFrame::IndentBy(stdout, nsBlockFrame::gNoiseIndent);
+      nsFrame::ListTag(stdout, pfd->mFrame);
+      printf(" mw=%d%s ==> accumw=%d mew=%d\n",
+             mw, prevFrameAccumulates ? " accumulates" : "",
+             accumulatedWidth, maxElementWidth);
+    }
+#endif
   }
   return maxElementWidth;
 }

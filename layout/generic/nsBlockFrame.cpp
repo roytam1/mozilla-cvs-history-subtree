@@ -629,6 +629,7 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
              line->IsBlock() ? "block" : "inline",
              line->IsEmpty() ? ",empty" : "");
     }
+    AutoNoisyIndenter lineindent(gNoisyIntrinsic);
 #endif
     nscoord line_pref, line_min;
     if (line->IsBlock()) {
@@ -746,7 +747,7 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
       pref_result = line_pref;
 #ifdef DEBUG
     if (gNoisyIntrinsic) {
-      IndentBy(stdout, gNoiseIndent);
+      IndentBy(stdout, gNoiseIndent - 1);
       printf("line_min=%d line_pref=%d ==> min_result=%d, pref_result=%d\n",
              line_min, line_pref, min_result, pref_result);
     }
