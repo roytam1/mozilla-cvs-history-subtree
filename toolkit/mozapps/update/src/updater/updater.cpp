@@ -871,20 +871,37 @@ threadfunc(void *param)
 
 int main(int argc, char **argv)
 {
-#if defined(XP_WIN)
-  // XXX This is an ugly hack to "ensure" that the parent process has exited
-  //     before we begin patching.  We need to do something better for sure.
-  Sleep(100);
-#endif
-
   int rv = InitProgressUI(&argc, &argv);
   if (rv)
     return rv;
 
-  if (argc < 2) {
-    fprintf(stderr, "Usage: %s <path> [callback]\n", argv[0]);
+  if (argc < 3) {
+#ifdef DEBUG
+#ifdef XP_WIN
+    fprintf(stderr, "Usage: updater <dir-path> <callback> [parent-pid]\n");
+#else
+    fprintf(stderr, "Usage: updater <dir-path> <callback>\n");
+#endif
+#endif
     return 1;
   }
+
+#ifdef XP_WIN
+  if (argc > 3) {
+    DWORD pid = atoi(argv[3]);
+    if (!pid)
+      return 1;
+    HANDLE parent = OpenProcess(SYNCHRONIZE, FALSE, pid);
+    // May return NULL if the parent process has already gone away.  Otherwise,
+    // wait for the parent process to exit before starting the update.
+    if (parent) {
+      DWORD result = WaitForSingleObject(parent, 5000);
+      CloseHandle(parent);
+      if (result != WAIT_OBJECT_0)
+        return 1;
+    }
+  }
+#endif
 
   gSourcePath = argv[1];
 
@@ -896,10 +913,7 @@ int main(int argc, char **argv)
 
   LogFinish();
 
-  if (argc >= 3)
-    return LaunchCallbackApp(argv[2]);
-
-  return rv;
+  return LaunchCallbackApp(argv[2]);
 }
 
 class ActionList
