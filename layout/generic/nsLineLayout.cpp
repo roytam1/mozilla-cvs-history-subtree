@@ -2427,9 +2427,6 @@ nsLineLayout::TrimTrailingWhiteSpaceIn(PerSpanData* psd,
 
       if (deltaWidth) {
         pfd->mBounds.width -= deltaWidth;
-        if (0 == pfd->mBounds.width) {
-          pfd->mMaxElementWidth = 0;
-        }
 
         // See if the text frame has already been placed in its parent
         if (psd != mRootSpan) {

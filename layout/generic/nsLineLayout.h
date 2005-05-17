@@ -351,7 +351,6 @@ protected:
     // From metrics
     nscoord mAscent, mDescent;
     nsRect mBounds;
-    nscoord mMaxElementWidth;
     nsRect mCombinedArea;
 
     // From reflow-state
