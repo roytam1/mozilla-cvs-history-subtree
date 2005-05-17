@@ -929,6 +929,50 @@ public:
   virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext) = 0;
 
   /**
+   * |InlineIntrinsicWidth| represents the intrinsic width information
+   * for a frame that can be broken across lines.
+   *
+   * When the frame has no break points (which are possible break points
+   * for GetInlineMinWidth and mandatory break points for
+   * GetInlinePrefWidth), then the intrinsic width result is placed in
+   * |whole| and |firstLine == innerLines == lastLine == 0|.  When the
+   * frame has break points, then |whole == 0|, the result for the part
+   * of the frame before its first break point is in |firstLine|, the
+   * result for the part of the frame after its last break point is in
+   * |lastLine|, and the result for the remainder of the frame is in
+   * |innerLines| (which is always 0 for a frame with exactly one break
+   * point).
+   */
+  struct InlineIntrinsicWidth {
+    nscoord whole, firstLine, innerLines, lastLine;
+  }
+
+  /**
+   * Get the intrinsic minimum width of a frame in a way suitable for
+   * use in inline layout.  All the comments for |GetMinWidth| apply,
+   * except that this fills in an |InlineIntrinsicWidth| structure based
+   * on using all *allowed* breakpoints within the frame.
+   *
+   * This may be called on any frame.  For frames that do not
+   * participate in line breaking, the result will have |firstLine ==
+   * innerLines == lastLine == 0|, and |whole| will be the same result
+   * that is returned from |GetMinWidth|.
+   */
+  virtual InlineIntrinsicWidth
+  GetInlineMinWidth(nsIRenderingContext *aRenderingContext) = 0;
+
+  /**
+   * Get the intrinsic width of a frame in a way suitable for
+   * use in inline layout.
+   *
+   * All the comments for |GetInlinePrefWidth| apply, except that this
+   * fills in an |InlineIntrinsicWidth| structure based on using all
+   * *mandatory* breakpoints within the frame.
+   */
+  virtual InlineIntrinsicWidth
+  GetInlinePrefWidth(nsIRenderingContext *aRenderingContext) = 0;
+
+  /**
    * Pre-reflow hook. Before a frame is reflowed this method will be called.
    * This call will always be invoked at least once before a subsequent Reflow
    * and DidReflow call. It may be called more than once, In general you will
