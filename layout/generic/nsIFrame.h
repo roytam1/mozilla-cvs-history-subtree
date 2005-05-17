@@ -945,7 +945,7 @@ public:
    */
   struct InlineIntrinsicWidth {
     nscoord whole, firstLine, innerLines, lastLine;
-  }
+  };
 
   /**
    * Get the intrinsic minimum width of a frame in a way suitable for
