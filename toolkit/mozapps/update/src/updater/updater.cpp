@@ -507,24 +507,6 @@ AddFile::Prepare()
 {
   LOG(("PREPARE ADD %s\n", mFile));
 
-/*
-  int rv;
-
-  char spath[MAXPATHLEN];
-  snprintf(spath, MAXPATHLEN, "%s/%s", gSourcePath, mFile);
-
-  rv = access(spath, R_OK);
-  if (rv)
-    return IO_ERROR;
-*/
-
-/* XXX maybe check to see if the directory is writable?
-   XXX but we also have to worry about creating subdirectories if necessary
-  rv = access(mFile, W_OK);
-  if (rv)
-    return IO_ERROR;
-*/
-
   return OK;
 }
 
@@ -532,9 +514,6 @@ int
 AddFile::Execute()
 {
   LOG(("EXECUTE ADD %s\n", mFile));
-
-  //char spath[MAXPATHLEN];
-  //snprintf(spath, MAXPATHLEN, "%s/%s", gSourcePath, mFile);
 
   int rv;
 
@@ -687,10 +666,6 @@ PatchFile::Prepare()
   //          no need to open all of the patch files and read all of 
   //          the source files before applying any patches.
 
-  // XXXdarin we could easily replace the open and read calls on the
-  //          patch file with BZ2_bzopen and BZ2_bzread calls instead.
-  //          then we should be able to get good compression.
-
   pfd = open(spath, O_RDONLY | _O_BINARY);
   if (pfd < 0)
     return IO_ERROR;
@@ -742,87 +717,6 @@ PatchFile::Finish(int status)
 
   backup_finish(mFile, status);
 }
-
-#if 0
-// Neat idea, but windows doesn't support fork().  Let's implement this
-// feature when we actually need it.
-
-class SubManifest : public Action
-{
-public:
-  SubManifest() : mManifest(NULL) { }
-
-  int Parse(char *line);
-  int Prepare();
-  int Execute();
-
-private:
-  char *mManifest;
-};
-
-int
-SubManifest::Parse(char *line)
-{
-  mManifest = mstrtok(kWhitespace, &line);
-  if (!mManifest)
-    return PARSE_ERROR;
-
-  return OK;
-}
-
-int
-SubManifest::Prepare()
-{
-  char spath[MAXPATHLEN];
-  snprintf(spath, MAXPATHLEN, "%s/%s/update.manifest", gSourcePath, mManifest);
-
-  struct stat s;
-
-  // All we do here is make sure that the manifest exists. We're under the
-  // assumption that each manifest lists a relatively self-contained update
-  // operation, so we can safely apply it even if the following operations fail.
-  if (stat(spath, &s))
-    return SOURCE_ERROR;
-
-  return OK;
-}
-
-int SubManifest::Execute()
-{
-  pid_t pid = fork();
-  switch (pid) {
-  case -1:
-    return IO_ERROR;
-
-  case 0:
-    char spath[MAXPATHLEN];
-    snprintf(spath, MAXPATHLEN, "%s/%s", gSourcePath, mManifest);
-    gSourcePath = spath;
-    exit(realmain());
-
-  default:
-    int status;
-    waitpid(pid, &status, 0);
-    return status;
-  }
-}
-#endif
-
-#if 0
-// XXXbsmedberg implement me!
-class ExecuteBinary : public Action
-{
-public:
-  ExecuteBinary(char *line);
-
-  int Prepare(); // check that the binary exists
-  int Execute();
-
-private:
-  char *mExecutable;
-  char *mArg;
-};
-#endif
 
 static int
 LaunchCallbackApp(const char *cmdLine)
@@ -1075,14 +969,6 @@ int realmain()
     else if (strcmp(token, "add") == 0) {
       action = new AddFile();
     }
-    /*
-    else if (strcmp(token, "submanifest") == 0) {
-      action = new SubManifest();
-    }
-    else if (strcmp(token, "replace") == 0) {
-      action = new ReplaceFile();
-    }
-    */
     else if (strcmp(token, "patch") == 0) {
       action = new PatchFile();
     }
