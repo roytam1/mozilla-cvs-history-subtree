@@ -310,8 +310,16 @@ nsSecurityNameSet::InitializeNameSet(nsIScriptContext* aScriptContext)
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsPrincipal)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsSecurityNameSet)
-NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(nsSystemPrincipal,
-    nsScriptSecurityManager::SystemPrincipalSingletonConstructor)
+
+// The system principal has a CID so that nsIDeserializingFactory can create
+// it. Nobody is supposed to call createInstance() on that CID.
+static NS_METHOD
+NotReachedConstructor(nsISupports* aOuter, REFNSIID iid, void **aResult)
+{
+    NS_NOTREACHED("Should not create this using createInstance!");
+
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
 
 
 NS_DECL_CLASSINFO(nsPrincipal)
@@ -406,13 +414,14 @@ static const nsModuleComponentInfo capsComponentInfo[] =
       NS_CI_INTERFACE_GETTER_NAME(nsPrincipal),
       nsnull,
       &NS_CLASSINFO_NAME(nsPrincipal),
-      nsIClassInfo::MAIN_THREAD_ONLY | nsIClassInfo::EAGER_CLASSINFO
+      nsIClassInfo::MAIN_THREAD_ONLY | nsIClassInfo::EAGER_CLASSINFO,
+      nsPrincipal::Deserialize
     },
 
     { NS_SYSTEMPRINCIPAL_CLASSNAME, 
       NS_SYSTEMPRINCIPAL_CID, 
       NS_SYSTEMPRINCIPAL_CONTRACTID,
-      nsSystemPrincipalConstructor,
+      NotReachedConstructor,
       nsnull,
       nsnull,
       nsnull,
@@ -420,7 +429,8 @@ static const nsModuleComponentInfo capsComponentInfo[] =
       nsnull,
       &NS_CLASSINFO_NAME(nsSystemPrincipal),
       nsIClassInfo::SINGLETON | nsIClassInfo::MAIN_THREAD_ONLY |
-      nsIClassInfo::EAGER_CLASSINFO
+      nsIClassInfo::EAGER_CLASSINFO,
+      nsSystemPrincipal::Deserialize
     },
 
     { "Security Script Name Set",

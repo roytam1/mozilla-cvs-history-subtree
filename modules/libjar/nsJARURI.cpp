@@ -139,19 +139,25 @@ nsJARURI::CreateEntryURL(const nsACString& entryFilename,
 ////////////////////////////////////////////////////////////////////////////////
 // nsISerializable methods:
 
-NS_IMETHODIMP
-nsJARURI::Read(nsIObjectInputStream* aInputStream)
+NS_METHOD
+nsJARURI::Deserialize(nsIObjectInputStream* aInputStream, nsISupports* *aResult)
 {
     nsresult rv;
 
-    rv = aInputStream->ReadObject(PR_TRUE, getter_AddRefs(mJARFile));
+    nsRefPtr<nsJARURI> uri = new nsJARURI();
+    if (!uri) return NS_ERROR_OUT_OF_MEMORY;
+
+    rv = aInputStream->ReadObject(PR_TRUE, getter_AddRefs(uri->mJARFile));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    rv = aInputStream->ReadObject(PR_TRUE, getter_AddRefs(mJAREntry));
+    rv = aInputStream->ReadObject(PR_TRUE, getter_AddRefs(uri->mJAREntry));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    rv = aInputStream->ReadCString(mCharsetHint);
-    return rv;
+    rv = aInputStream->ReadCString(uri->mCharsetHint);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    NS_ADDREF(*aResult = (nsIURI*) uri);
+    return NS_OK;
 }
 
 NS_IMETHODIMP

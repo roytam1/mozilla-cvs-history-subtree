@@ -40,6 +40,7 @@
 
 #include "nsSimpleURI.h"
 #include "nscore.h"
+#include "nsAutoPtr.h"
 #include "nsCRT.h"
 #include "nsString.h"
 #include "nsReadableUtils.h"
@@ -94,16 +95,21 @@ nsSimpleURI::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr)
 ////////////////////////////////////////////////////////////////////////////////
 // nsISerializable methods:
 
-NS_IMETHODIMP
-nsSimpleURI::Read(nsIObjectInputStream* aStream)
+NS_METHOD
+nsSimpleURI::Deserialize(nsIObjectInputStream* aStream, nsISupports* *aResult)
 {
     nsresult rv;
 
-    rv = aStream->ReadCString(mScheme);
+    nsRefPtr<nsSimpleURI> uri = new nsSimpleURI(nsnull);
+    if (!uri) return NS_ERROR_OUT_OF_MEMORY;
+
+    rv = aStream->ReadCString(uri->mScheme);
     if (NS_FAILED(rv)) return rv;
 
-    rv = aStream->ReadCString(mPath);
+    rv = aStream->ReadCString(uri->mPath);
     if (NS_FAILED(rv)) return rv;
+
+    NS_ADDREF(*aResult = (nsIURI*) uri);
 
     return NS_OK;
 }

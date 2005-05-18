@@ -92,7 +92,15 @@ static const nsModuleComponentInfo components[] =
     { NS_JARURI_CLASSNAME, // needed only for fastload
       NS_JARURI_CID,
       nsnull,
-      nsJARURIConstructor
+      nsJARURIConstructor,
+      nsnull,
+      nsnull,
+      nsnull,
+      nsnull,
+      nsnull,
+      nsnull,
+      0,
+      nsJARURI::Deserialize
     }
 };
 

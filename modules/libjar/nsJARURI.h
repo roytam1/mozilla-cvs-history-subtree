@@ -45,6 +45,8 @@
 #include "nsCOMPtr.h"
 #include "nsString.h"
 
+class nsIObjectInputStream;
+
 #define NS_THIS_JARURI_IMPL_CID                      \
 { /* 9a55f629-730b-4d08-b75b-fa7d9570a691 */         \
     0x9a55f629,                                      \
@@ -87,6 +89,9 @@ public:
                             const char* charset,
                             nsIURL** url);
     nsresult SetSpecWithBase(const nsACString& aSpec, nsIURI* aBaseURL);
+
+    static NS_METHOD
+    Deserialize(nsIObjectInputStream* aStream, nsISupports* *aResult);
 
 protected:
     nsCOMPtr<nsIURI> mJARFile;

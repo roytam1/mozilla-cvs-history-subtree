@@ -179,4 +179,4 @@ include $(topsrcdir)/config/rules.mk
 
 DEFINES		+= -D_IMPL_NS_COM
 
-LOCAL_INCLUDES	= -I..
+LOCAL_INCLUDES	= -I.. -I$(srcdir)/../components

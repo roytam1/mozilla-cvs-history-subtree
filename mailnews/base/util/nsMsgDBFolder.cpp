@@ -2197,14 +2197,6 @@ nsresult nsMsgDBFolder::CreateBaseMessageURI(const char *aURI)
   return NS_OK;
 }
 
-  // nsISerializable methods:
-NS_IMETHODIMP
-nsMsgDBFolder::Read(nsIObjectInputStream *aStream)
-{
-  NS_NOTREACHED("nsMsgDBFolder::Read");
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
 NS_IMETHODIMP
 nsMsgDBFolder::Write(nsIObjectOutputStream *aStream)
 {

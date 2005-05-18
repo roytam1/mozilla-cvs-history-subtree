@@ -327,9 +327,6 @@ public:
     static nsScriptSecurityManager*
     GetScriptSecurityManager();
 
-    static nsSystemPrincipal*
-    SystemPrincipalSingletonConstructor();
-
     JSContext* GetCurrentJSContext();
 
     JSContext* GetSafeJSContext();

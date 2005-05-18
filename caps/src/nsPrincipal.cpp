@@ -760,9 +760,13 @@ FreeAnnotationEntry(nsIObjectInputStream* aStream, nsHashKey* aKey,
   delete aKey;
 }
 
-NS_IMETHODIMP
-nsPrincipal::Read(nsIObjectInputStream* aStream)
+NS_METHOD
+nsPrincipal::Deserialize(nsIObjectInputStream* aStream, nsISupports* *aResult)
 {
+  nsRefPtr<nsPrincipal> prin = new nsPrincipal();
+  if (!prin)
+    return NS_ERROR_OUT_OF_MEMORY;
+
   PRUint32 annotationCount;
   nsresult rv = aStream->Read32(&annotationCount);
   if (NS_FAILED(rv)) {
@@ -783,7 +787,7 @@ nsPrincipal::Read(nsIObjectInputStream* aStream)
       return rv;
     }
 
-    if (!mAnnotations.InsertElementAt(NS_REINTERPRET_CAST(void*, ht), i)) {
+    if (!prin->mAnnotations.InsertElementAt(NS_REINTERPRET_CAST(void*, ht), i)) {
       delete ht;
       return NS_ERROR_OUT_OF_MEMORY;
     }
@@ -792,17 +796,17 @@ nsPrincipal::Read(nsIObjectInputStream* aStream)
   PRBool hasCapabilities;
   rv = aStream->ReadBoolean(&hasCapabilities);
   if (NS_SUCCEEDED(rv) && hasCapabilities) {
-    mCapabilities = nsHashtable(aStream,
-                                ReadAnnotationEntry,
-                                FreeAnnotationEntry,
-                                &rv);
+    prin->mCapabilities = nsHashtable(aStream,
+                                      ReadAnnotationEntry,
+                                      FreeAnnotationEntry,
+                                      &rv);
   }
 
   if (NS_FAILED(rv)) {
     return rv;
   }
 
-  rv = NS_ReadOptionalCString(aStream, mPrefName);
+  rv = NS_ReadOptionalCString(aStream, prin->mPrefName);
   if (NS_FAILED(rv)) {
     return rv;
   }

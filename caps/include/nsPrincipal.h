@@ -75,6 +75,9 @@ public:
                               PRBool aIsCert,
                               PRBool aTrusted);
 
+  static NS_METHOD
+  Deserialize(nsIObjectInputStream* aStream, nsISupports* *aResult);
+
   enum AnnotationValue { AnnotationEnabled=1, AnnotationDisabled };
 
   void SetURI(nsIURI *aURI);

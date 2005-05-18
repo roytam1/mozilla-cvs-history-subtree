@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -12,18 +12,21 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is mozilla.org code.
+ * The Original Code is Mozilla FastLoad code, split from
+ * xpcom/ds/nsISerializable.idl
  *
  * The Initial Developer of the Original Code is
  * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1998
+ * Portions created by the Initial Developer are Copyright (C) 2001
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *   Brendan Eich <brendan@mozilla.org> (original author)
+ *   Benjamin Smedberg <benjamin@smedbergs.us>
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * either of the GNU General Public License Version 2 or later (the "GPL"),
+ * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
@@ -35,45 +38,18 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsSimpleURI_h__
-#define nsSimpleURI_h__
+#include "nsISupports.idl"
 
-#include "nsIURL.h"
-#include "nsAgg.h"
-#include "nsISerializable.h"
-#include "nsString.h"
+interface nsIObjectInputStream;
 
-class nsIObjectInputStream;
-
-#define NS_THIS_SIMPLEURI_IMPLEMENTATION_CID         \
-{ /* 22b8f64a-2f7b-11d3-8cd0-0060b0fc14a3 */         \
-    0x22b8f64a,                                      \
-    0x2f7b,                                          \
-    0x11d3,                                          \
-    {0x8c, 0xd0, 0x00, 0x60, 0xb0, 0xfc, 0x14, 0xa3} \
-}
-
-class nsSimpleURI : public nsIURI, public nsISerializable
+[scriptable, uuid(FB68F059-C63D-11D9-8D33-001124787B2E)]
+interface nsIDeserializingFactory : nsISupports
 {
-public:
-    NS_DECL_AGGREGATED
-    NS_DECL_NSIURI
-    NS_DECL_NSISERIALIZABLE
-
-    // nsSimpleURI methods:
-
-    nsSimpleURI(nsISupports* outer);
-    virtual ~nsSimpleURI();
-
-    static NS_METHOD
-    Create(nsISupports *aOuter, REFNSIID aIID, void **aResult);
-
-    static NS_METHOD
-    Deserialize(nsIObjectInputStream* aStream, nsISupports* *aResult);
-
-protected:
-    nsCString mScheme;
-    nsCString mPath;
+  /**
+   * Initialize the object previously implemented with nsISerializable.
+   * All data members that can't be set to default values must have been
+   * serialized by nsISerializable.write, and should be read from
+   * aInputStream in the same order by this method.
+   */
+  nsISupports read(in nsIObjectInputStream aInputStream);
 };
-
-#endif // nsSimpleURI_h__

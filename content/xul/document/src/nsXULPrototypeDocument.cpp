@@ -179,9 +179,12 @@ protected:
     virtual ~nsXULPrototypeDocument();
     nsresult Init();
 
-    friend NS_IMETHODIMP
-    NS_NewXULPrototypeDocument(nsISupports* aOuter, REFNSIID aIID,
-                               void** aResult);
+    friend NS_METHOD
+    NS_NewXULPrototypeDocument(nsIXULPrototypeDocument* *aResult);
+
+    friend NS_METHOD
+    NS_DeserializeXULPrototypeDocument(nsIObjectInputStream* aStream,
+                                       nsISupports* *aResult);
 
     nsresult NewXULPDGlobalObject(nsIScriptGlobalObject** aResult);
 
@@ -285,12 +288,8 @@ NS_IMPL_ISUPPORTS3(nsXULPrototypeDocument,
                    nsISerializable)
 
 NS_IMETHODIMP
-NS_NewXULPrototypeDocument(nsISupports* aOuter, REFNSIID aIID, void** aResult)
+NS_NewXULPrototypeDocument(nsIXULPrototypeDocument* *aResult)
 {
-    NS_PRECONDITION(aOuter == nsnull, "no aggregation");
-    if (aOuter)
-        return NS_ERROR_NO_AGGREGATION;
-
     nsXULPrototypeDocument* result = new nsXULPrototypeDocument();
     if (! result)
         return NS_ERROR_OUT_OF_MEMORY;
@@ -302,9 +301,7 @@ NS_NewXULPrototypeDocument(nsISupports* aOuter, REFNSIID aIID, void** aResult)
         return rv;
     }
 
-    NS_ADDREF(result);
-    rv = result->QueryInterface(aIID, aResult);
-    NS_RELEASE(result);
+    NS_ADDREF(*aResult = result);
 
     return rv;
 }
@@ -350,8 +347,9 @@ nsXULPrototypeDocument::NewXULPDGlobalObject(nsIScriptGlobalObject** aResult)
 // nsISerializable methods
 //
 
-NS_IMETHODIMP
-nsXULPrototypeDocument::Read(nsIObjectInputStream* aStream)
+NS_METHOD
+NS_DeserializeXULPrototypeDocument(nsIObjectInputStream* aStream,
+                                   nsISupports* *aResult)
 {
     nsresult rv;
 
@@ -360,19 +358,28 @@ nsXULPrototypeDocument::Read(nsIObjectInputStream* aStream)
     if (version != XUL_FASTLOAD_FILE_VERSION)
         return NS_ERROR_FAILURE;
 
-    rv |= aStream->ReadObject(PR_TRUE, getter_AddRefs(mURI));
+    nsRefPtr<nsXULPrototypeDocument> proto = new nsXULPrototypeDocument();
+    if (!proto)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    rv = proto->Init();
+    if (NS_FAILED(rv)) return rv;
+
+    rv = aStream->ReadObject(PR_TRUE, getter_AddRefs(proto->mURI));
+    if (NS_FAILED(rv)) return rv;
 
     PRUint32 referenceCount;
     nsCOMPtr<nsIURI> referenceURI;
 
     PRUint32 i;
     // nsISupportsArray mStyleSheetReferences
-    rv |= aStream->Read32(&referenceCount);
+    rv = aStream->Read32(&referenceCount);
     if (NS_FAILED(rv)) return rv;
+
     for (i = 0; i < referenceCount; ++i) {
         rv |= aStream->ReadObject(PR_TRUE, getter_AddRefs(referenceURI));
         
-        mStyleSheetReferences->AppendElement(referenceURI);
+        proto->mStyleSheetReferences->AppendElement(referenceURI);
     }
 
     // nsISupportsArray mOverlayReferences
@@ -380,31 +387,31 @@ nsXULPrototypeDocument::Read(nsIObjectInputStream* aStream)
     for (i = 0; i < referenceCount; ++i) {
         rv |= aStream->ReadObject(PR_TRUE, getter_AddRefs(referenceURI));
         
-        mOverlayReferences->AppendElement(referenceURI);
+        proto->mOverlayReferences->AppendElement(referenceURI);
     }
 
     // nsIPrincipal mDocumentPrincipal
     nsCOMPtr<nsIPrincipal> principal;
     rv |= NS_ReadOptionalObject(aStream, PR_TRUE, getter_AddRefs(principal));
     if (! principal) {
-        principal = GetDocumentPrincipal();
+        principal = proto->GetDocumentPrincipal();
         if (!principal)
             rv |= NS_ERROR_FAILURE;
     } else {
-        mNodeInfoManager->SetDocumentPrincipal(principal);
-        mDocumentPrincipal = principal;
+        proto->mNodeInfoManager->SetDocumentPrincipal(principal);
+        proto->mDocumentPrincipal = principal;
     }
 
     // nsIScriptGlobalObject mGlobalObject
-    NewXULPDGlobalObject(getter_AddRefs(mGlobalObject));
-    if (! mGlobalObject)
+    proto->NewXULPDGlobalObject(getter_AddRefs(proto->mGlobalObject));
+    if (! proto->mGlobalObject)
         return NS_ERROR_OUT_OF_MEMORY;
 
-    mRoot = new nsXULPrototypeElement();
-    if (! mRoot)
+    proto->mRoot = new nsXULPrototypeElement();
+    if (! proto->mRoot)
        return NS_ERROR_OUT_OF_MEMORY;
 
-    nsIScriptContext *scriptContext = mGlobalObject->GetContext();
+    nsIScriptContext *scriptContext = proto->mGlobalObject->GetContext();
     NS_ASSERTION(scriptContext != nsnull,
                  "no prototype script context!");
 
@@ -418,7 +425,7 @@ nsXULPrototypeDocument::Read(nsIObjectInputStream* aStream)
         rv |= aStream->ReadString(qualifiedName);
 
         nsCOMPtr<nsINodeInfo> nodeInfo;
-        rv |= mNodeInfoManager->GetNodeInfo(qualifiedName, namespaceURI, getter_AddRefs(nodeInfo));
+        rv |= proto->mNodeInfoManager->GetNodeInfo(qualifiedName, namespaceURI, getter_AddRefs(nodeInfo));
         if (!nodeInfos.AppendObject(nodeInfo))
             rv |= NS_ERROR_OUT_OF_MEMORY;
     }
@@ -430,10 +437,15 @@ nsXULPrototypeDocument::Read(nsIObjectInputStream* aStream)
     if ((nsXULPrototypeNode::Type)type != nsXULPrototypeNode::eType_Element)
         return NS_ERROR_FAILURE;
 
-    rv |= mRoot->Deserialize(aStream, scriptContext, mURI, &nodeInfos);
-    rv |= NotifyLoadDone();
+    rv |= proto->mRoot->Deserialize(aStream, scriptContext, proto->mURI, &nodeInfos);
+    rv |= proto->NotifyLoadDone();
 
-    return rv;
+    if (NS_FAILED(rv))
+        return NS_ERROR_FAILURE;
+
+    NS_ADDREF(*aResult = (nsIXULPrototypeDocument*) proto);
+
+    return NS_OK;
 }
 
 static nsresult

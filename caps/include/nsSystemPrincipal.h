@@ -43,6 +43,8 @@
 #include "nsIPrincipal.h"
 #include "nsJSPrincipals.h"
 
+class nsIObjectInputStream;
+
 #define NS_SYSTEMPRINCIPAL_CLASSNAME "systemprincipal"
 #define NS_SYSTEMPRINCIPAL_CID \
 { 0x4a6212db, 0xaccb, 0x11d3, \
@@ -60,6 +62,9 @@ public:
     nsresult Init();
 
     nsSystemPrincipal();
+
+    static NS_METHOD
+    Deserialize(nsIObjectInputStream* aStream, nsISupports* *aResult);
 
 protected:
     virtual ~nsSystemPrincipal(void);

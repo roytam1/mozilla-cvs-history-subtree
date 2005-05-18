@@ -2539,80 +2539,89 @@ nsStandardURL::SetMutable(PRBool value)
 // nsStandardURL::nsISerializable
 //----------------------------------------------------------------------------
 
-NS_IMETHODIMP
-nsStandardURL::Read(nsIObjectInputStream *stream)
+NS_METHOD
+nsStandardURL::Deserialize(nsIObjectInputStream *stream, nsISupports* *aResult)
 {
     nsresult rv;
     
+    PRBool supportsFileURL;
+    rv = stream->Read32((PRUint32*) &supportsFileURL);
+    if (NS_FAILED(rv)) return rv;
+
+    nsRefPtr<nsStandardURL> url = new nsStandardURL(supportsFileURL);
+    if (!url) return NS_ERROR_OUT_OF_MEMORY;
+
     PRUint32 urlType;
     rv = stream->Read32(&urlType);
     if (NS_FAILED(rv)) return rv;
-    mURLType = urlType;
-    switch (mURLType) {
+    url->mURLType = urlType;
+    switch (url->mURLType) {
       case URLTYPE_STANDARD:
-        mParser = net_GetStdURLParser();
+        url->mParser = net_GetStdURLParser();
         break;
       case URLTYPE_AUTHORITY:
-        mParser = net_GetAuthURLParser();
+        url->mParser = net_GetAuthURLParser();
         break;
       case URLTYPE_NO_AUTHORITY:
-        mParser = net_GetNoAuthURLParser();
+        url->mParser = net_GetNoAuthURLParser();
         break;
       default:
         NS_NOTREACHED("bad urlType");
         return NS_ERROR_FAILURE;
     }
 
-    rv = stream->Read32((PRUint32 *) &mPort);
+    rv = stream->Read32((PRUint32 *) &url->mPort);
     if (NS_FAILED(rv)) return rv;
 
-    rv = stream->Read32((PRUint32 *) &mDefaultPort);
+    rv = stream->Read32((PRUint32 *) &url->mDefaultPort);
     if (NS_FAILED(rv)) return rv;
 
-    rv = NS_ReadOptionalCString(stream, mSpec);
+    rv = NS_ReadOptionalCString(stream, url->mSpec);
     if (NS_FAILED(rv)) return rv;
 
-    rv = ReadSegment(stream, mScheme);
+    rv = ReadSegment(stream, url->mScheme);
     if (NS_FAILED(rv)) return rv;
 
-    rv = ReadSegment(stream, mAuthority);
+    rv = ReadSegment(stream, url->mAuthority);
     if (NS_FAILED(rv)) return rv;
 
-    rv = ReadSegment(stream, mUsername);
+    rv = ReadSegment(stream, url->mUsername);
     if (NS_FAILED(rv)) return rv;
 
-    rv = ReadSegment(stream, mPassword);
+    rv = ReadSegment(stream, url->mPassword);
     if (NS_FAILED(rv)) return rv;
 
-    rv = ReadSegment(stream, mHost);
+    rv = ReadSegment(stream, url->mHost);
     if (NS_FAILED(rv)) return rv;
 
-    rv = ReadSegment(stream, mPath);
+    rv = ReadSegment(stream, url->mPath);
     if (NS_FAILED(rv)) return rv;
 
-    rv = ReadSegment(stream, mFilepath);
+    rv = ReadSegment(stream, url->mFilepath);
     if (NS_FAILED(rv)) return rv;
 
-    rv = ReadSegment(stream, mDirectory);
+    rv = ReadSegment(stream, url->mDirectory);
     if (NS_FAILED(rv)) return rv;
 
-    rv = ReadSegment(stream, mBasename);
+    rv = ReadSegment(stream, url->mBasename);
     if (NS_FAILED(rv)) return rv;
 
-    rv = ReadSegment(stream, mExtension);
+    rv = ReadSegment(stream, url->mExtension);
     if (NS_FAILED(rv)) return rv;
 
-    rv = ReadSegment(stream, mParam);
+    rv = ReadSegment(stream, url->mParam);
     if (NS_FAILED(rv)) return rv;
 
-    rv = ReadSegment(stream, mQuery);
+    rv = ReadSegment(stream, url->mQuery);
     if (NS_FAILED(rv)) return rv;
 
-    rv = ReadSegment(stream, mRef);
+    rv = ReadSegment(stream, url->mRef);
     if (NS_FAILED(rv)) return rv;
 
-    rv = NS_ReadOptionalCString(stream, mOriginCharset);
+    rv = NS_ReadOptionalCString(stream, url->mOriginCharset);
     if (NS_FAILED(rv)) return rv;
+
+    NS_ADDREF(*aResult = (nsIStandardURL*) url);
 
     return NS_OK;
 }
@@ -2621,6 +2630,9 @@ NS_IMETHODIMP
 nsStandardURL::Write(nsIObjectOutputStream *stream)
 {
     nsresult rv;
+
+    rv = stream->Write32(mSupportsFileURL);
+    if (NS_FAILED(rv)) return rv;
 
     rv = stream->Write32(mURLType);
     if (NS_FAILED(rv)) return rv;

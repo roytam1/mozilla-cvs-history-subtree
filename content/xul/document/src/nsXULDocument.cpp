@@ -2213,9 +2213,7 @@ nsXULDocument::PrepareToLoadPrototype(nsIURI* aURI, const char* aCommand,
     nsresult rv;
 
     // Create a new prototype document.
-    rv = NS_NewXULPrototypeDocument(nsnull,
-                                    NS_GET_IID(nsIXULPrototypeDocument),
-                                    getter_AddRefs(mCurrentPrototype));
+    rv = NS_NewXULPrototypeDocument(getter_AddRefs(mCurrentPrototype));
     if (NS_FAILED(rv)) return rv;
 
     // Bootstrap the master document prototype.

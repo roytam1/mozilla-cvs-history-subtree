@@ -58,6 +58,7 @@ class nsIXULDocument;
 class nsIScriptGlobalObject;
 class nsNodeInfoManager;
 class nsISupportsArray;
+class nsIObjectInputStream;
 
 #define NS_IXULPROTOTYPEDOCUMENT_IID \
 { 0x726f0ab8, 0xb3cb, 0x11d8, { 0xb2, 0x67, 0x00, 0x0a, 0x95, 0xdc, 0x23, 0x4c } }
@@ -104,7 +105,11 @@ public:
     {0xa08101ae,0xc0e8,0x4464,{0x99,0x9e,0xe5,0xa4,0xd7,0x09,0xa9,0x28}}
 
 
-NS_IMETHODIMP
-NS_NewXULPrototypeDocument(nsISupports* aOuter, REFNSIID aIID, void** aResult);
+NS_METHOD
+NS_NewXULPrototypeDocument(nsIXULPrototypeDocument* *aResult);
+
+NS_METHOD
+NS_DeserializeXULPrototypeDocument(nsIObjectInputStream* aStream,
+                                   nsISupports* *aResult);
 
 #endif // nsIXULPrototypeDocument_h__

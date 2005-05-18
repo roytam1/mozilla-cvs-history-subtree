@@ -47,6 +47,7 @@
 #include "nsReadableUtils.h"
 
 #include "nsIComponentManager.h"
+#include "nsIDeserializingFactory.h"
 #include "nsIFile.h"
 #include "nsILocalFile.h"
 #include "nsISeekableStream.h"
@@ -56,6 +57,7 @@
 #include "nsBinaryStream.h"
 #include "nsFastLoadFile.h"
 #include "nsInt64.h"
+#include "nsComponentManager.h"
 
 #ifdef DEBUG_brendan
 # define METERING
@@ -1016,21 +1018,15 @@ nsFastLoadFileReader::DeserializeObject(nsISupports* *aObject)
         return rv;
 
     const nsID& slowCID = mFooter.GetID(fastCID);
-    nsCOMPtr<nsISupports> object(do_CreateInstance(slowCID, &rv));
+
+    nsCOMPtr<nsIDeserializingFactory> factory;
+    rv = nsComponentManagerImpl::gComponentManager->
+        GetClassObject(slowCID, NS_GET_IID(nsIDeserializingFactory),
+                       getter_AddRefs(factory));
     if (NS_FAILED(rv))
         return rv;
 
-    nsCOMPtr<nsISerializable> serializable(do_QueryInterface(object));
-    if (!serializable)
-        return NS_ERROR_FAILURE;
-
-    rv = serializable->Read(this);
-    if (NS_FAILED(rv))
-        return rv;
-
-    *aObject = object;
-    NS_ADDREF(*aObject);
-    return NS_OK;
+    return factory->Read(this, aObject);
 }
 
 nsresult

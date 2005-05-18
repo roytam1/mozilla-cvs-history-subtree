@@ -2934,18 +2934,6 @@ nsScriptSecurityManager::GetScriptSecurityManager()
     return gScriptSecMan;
 }
 
-// Currently this nsGenericFactory constructor is used only from FastLoad
-// (XPCOM object deserialization) code, when "creating" the system principal
-// singleton.
-nsSystemPrincipal *
-nsScriptSecurityManager::SystemPrincipalSingletonConstructor()
-{
-    nsIPrincipal *sysprin = nsnull;
-    if (gScriptSecMan)
-        gScriptSecMan->GetSystemPrincipal(&sysprin);
-    return NS_STATIC_CAST(nsSystemPrincipal*, sysprin);
-}
-
 nsresult
 nsScriptSecurityManager::InitPolicies()
 {

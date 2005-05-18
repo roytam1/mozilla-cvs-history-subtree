@@ -42,6 +42,7 @@
 
 #include "nsISupportsArray.h"
 
+class nsIObjectInputStream;
 static const PRUint32 kAutoArraySize = 8;
 
 #undef  IMETHOD_VISIBILITY
@@ -54,6 +55,9 @@ public:
 
   static NS_METHOD
   Create(nsISupports *aOuter, REFNSIID aIID, void **aResult);
+
+  static NS_METHOD
+  Deserialize(nsIObjectInputStream* aInputStream, nsISupports* *aResult);
 
   NS_DECL_ISUPPORTS
 

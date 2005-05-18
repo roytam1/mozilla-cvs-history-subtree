@@ -263,16 +263,14 @@ nsXULPrototypeCache::GetPrototype(nsIURI* aURI, nsIXULPrototypeDocument** _resul
                 gFastLoadService->SelectMuxedDocument(aURI, getter_AddRefs(oldURI));
 
                 // Create a new prototype document.
-                nsCOMPtr<nsIXULPrototypeDocument> protoDoc;
-                rv = NS_NewXULPrototypeDocument(nsnull,
-                                                NS_GET_IID(nsIXULPrototypeDocument),
-                                                getter_AddRefs(protoDoc));
+                nsCOMPtr<nsISupports> protoDocSupports;
+                rv = NS_DeserializeXULPrototypeDocument(objectInput,
+                                                        getter_AddRefs(protoDocSupports));
                 if (NS_FAILED(rv)) return rv;
 
-                rv = protoDoc->Read(objectInput);
+                rv = CallQueryInterface(protoDocSupports, _result);
                 if (NS_SUCCEEDED(rv)) {
-                    NS_ADDREF(*_result = protoDoc);
-                    PutPrototype(protoDoc);
+                    PutPrototype(*_result);
 
                     gFastLoadService->EndMuxedDocument(aURI);
                 }

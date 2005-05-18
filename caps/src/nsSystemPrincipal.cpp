@@ -47,6 +47,7 @@
 #include "nsReadableUtils.h"
 #include "nsCRT.h"
 #include "nsString.h"
+#include "nsScriptSecurityManager.h"
 
 
 NS_IMPL_QUERY_INTERFACE2_CI(nsSystemPrincipal,
@@ -241,11 +242,17 @@ nsSystemPrincipal::GetJSPrincipals(JSContext *cx, JSPrincipals **jsprin)
 // Methods implementing nsISerializable //
 //////////////////////////////////////////
 
-NS_IMETHODIMP
-nsSystemPrincipal::Read(nsIObjectInputStream* aStream)
+NS_METHOD
+nsSystemPrincipal::Deserialize(nsIObjectInputStream* aStream,
+                               nsISupports* *aResult)
 {
-    // no-op: CID is sufficient to identify the mSystemPrincipal singleton
-    return NS_OK;
+    nsScriptSecurityManager* sec =
+        nsScriptSecurityManager::GetScriptSecurityManager();
+
+    if (!sec)
+        return NS_ERROR_NOT_INITIALIZED;
+
+    return sec->GetSystemPrincipal(NS_REINTERPRET_CAST(nsIPrincipal**, aResult));
 }
 
 NS_IMETHODIMP

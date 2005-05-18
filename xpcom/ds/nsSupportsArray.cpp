@@ -44,6 +44,7 @@
 #include "nsAString.h"
 #include "nsIObjectInputStream.h"
 #include "nsIObjectOutputStream.h"
+#include "nsAutoPtr.h"
 
 #if DEBUG_SUPPORTSARRAY
 #define MAXSUPPORTS 20
@@ -218,49 +219,34 @@ nsSupportsArray::Create(nsISupports *aOuter, REFNSIID aIID, void **aResult)
 
 NS_IMPL_THREADSAFE_ISUPPORTS3(nsSupportsArray, nsISupportsArray, nsICollection, nsISerializable)
 
-NS_IMETHODIMP
-nsSupportsArray::Read(nsIObjectInputStream *aStream)
+NS_METHOD
+nsSupportsArray::Deserialize(nsIObjectInputStream *aStream,
+                             nsISupports* *aResult)
 {
   nsresult rv;
 
-  PRUint32 newArraySize;
-  rv = aStream->Read32(&newArraySize);
+  nsRefPtr<nsSupportsArray> array = new nsSupportsArray();
 
-  if (newArraySize <= kAutoArraySize) {
-    if (mArray != mAutoArray) {
-      delete[] mArray;
-      mArray = mAutoArray;
-    }
-    newArraySize = kAutoArraySize;
-  }
-  else {
-    if (newArraySize <= mArraySize) {
-      // Keep non-default-size mArray, it's more than big enough.
-      newArraySize = mArraySize;
-    }
-    else {
-      nsISupports** array = new nsISupports*[newArraySize];
-      if (!array)
-        return NS_ERROR_OUT_OF_MEMORY;
-      if (mArray != mAutoArray)
-        delete[] mArray;
-      mArray = array;
-    }
-  }
-  mArraySize = newArraySize;
+  // We used to keep newArraySize and mCount separately... we don't do that
+  // any more, but to avoid problems we keep the old format.
+  PRUint32 count;
+  rv = aStream->Read32(&count);
 
-  rv = aStream->Read32(&mCount);
-  if (NS_FAILED(rv)) return rv;
+  rv = aStream->Read32(&count);
+  if (NS_FAILED(rv))
+    return rv;
 
-  NS_ASSERTION(mCount <= mArraySize, "overlarge mCount!");
-  if (mCount > mArraySize)
-    mCount = mArraySize;
+  rv = array->SizeTo(count);
+  if (NS_FAILED(rv))
+    return rv;
 
-  for (PRUint32 i = 0; i < mCount; i++) {
-    rv = aStream->ReadObject(PR_TRUE, &mArray[i]);
-    if (NS_FAILED(rv)) return rv;
+  for (PRUint32 i = 0; i < count; i++) {
+    rv = aStream->ReadObject(PR_TRUE, &array->mArray[i]);
+    if (NS_FAILED(rv))
+      return rv;
   }
 
+  NS_ADDREF(*aResult = array);
   return NS_OK;
 }
 

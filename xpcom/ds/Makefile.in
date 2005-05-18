@@ -139,6 +139,7 @@ XPIDLSRCS	= \
 		nsIAtom.idl \
 		nsIAtomService.idl \
 		nsICollection.idl \
+		nsIDeserializingFactory.idl \
 		nsIEnumerator.idl \
 		nsIPersistentProperties2.idl \
 		nsIProperty.idl \

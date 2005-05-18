@@ -58,6 +58,7 @@ class nsIBinaryOutputStream;
 class nsIIDNService;
 class nsICharsetConverterManager;
 class nsIPrefBranch;
+class nsIObjectInputStream;
 
 //-----------------------------------------------------------------------------
 // standard URL implementation
@@ -82,6 +83,9 @@ public:
 
     static void InitGlobalObjects();
     static void ShutdownGlobalObjects();
+
+    static NS_METHOD
+    Deserialize(nsIObjectInputStream* aStream, nsISupports* *aResult);
 
 public: /* internal -- HPUX compiler can't handle this being private */
     //
@@ -213,8 +217,8 @@ private:
     void ShiftFromRef(PRInt32 diff)       { mRef.mPos += diff; }
 
     // fastload helper functions
-    nsresult ReadSegment(nsIBinaryInputStream *, URLSegment &);
-    nsresult WriteSegment(nsIBinaryOutputStream *, const URLSegment &);
+    static nsresult ReadSegment(nsIBinaryInputStream *, URLSegment &);
+    static nsresult WriteSegment(nsIBinaryOutputStream *, const URLSegment &);
 
     static void PrefsChanged(nsIPrefBranch *prefs, const char *pref);
 
