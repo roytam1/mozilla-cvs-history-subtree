@@ -109,6 +109,7 @@ MODULES_core :=                                \
   mozilla/toolkit                               \
   mozilla/storage                               \
   mozilla/db/sqlite3                            \
+  mozilla/other-licenses/bsdiff                 \
   $(NULL)
 
 LOCALES_core :=                                 \
