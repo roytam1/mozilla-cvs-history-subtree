@@ -899,6 +899,9 @@ int main(int argc, char **argv)
       CloseHandle(parent);
       if (result != WAIT_OBJECT_0)
         return 1;
+      // The process may be signaled before it releases the executable image.
+      // This is a terrible hack, but it'll have to do for now :-(
+      Sleep(50);
     }
   }
 #endif
