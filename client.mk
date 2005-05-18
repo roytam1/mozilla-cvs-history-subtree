@@ -102,6 +102,8 @@ MODULES_core :=                                \
   SeaMonkeyAll                                  \
   mozilla/ipc/ipcd                              \
   mozilla/modules/libpr0n                       \
+  mozilla/modules/libmar                        \
+  mozilla/modules/libbz2                        \
   mozilla/accessible                            \
   mozilla/security/manager                      \
   mozilla/toolkit                               \
