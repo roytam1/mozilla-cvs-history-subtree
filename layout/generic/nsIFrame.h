@@ -942,6 +942,10 @@ public:
    * |lastLine|, and the result for the remainder of the frame is in
    * |innerLines| (which is always 0 for a frame with exactly one break
    * point).
+   *
+   * XXX What about trailing whitespace, especially for preferred width,
+   * but also for collapsing cross-frame whitespace for nowrap text for
+   * minimum width?
    */
   struct InlineIntrinsicWidth {
     nscoord whole, firstLine, innerLines, lastLine;
