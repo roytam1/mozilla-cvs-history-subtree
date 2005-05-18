@@ -1194,6 +1194,10 @@ MAKEFILES_libmar="
     modules/libmar/src/Makefile
 "
 
+MAKEFILES_bsdiff="
+    other-licenses/bsdiff/Makefile
+"
+
 if [ ! "$SYSTEM_PNG" ]; then
     MAKEFILES_libimg="$MAKEFILES_libimg modules/libimg/png/Makefile"
 fi
@@ -1589,6 +1593,7 @@ $MAKEFILES_xpfe
 $MAKEFILES_zlib
 $MAKEFILES_libbz2
 $MAKEFILES_libmar
+$MAKEFILES_bsdiff
 "
 
 if test -n "$MOZ_PSM"; then
