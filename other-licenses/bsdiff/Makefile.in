@@ -51,7 +51,7 @@ PROGRAM = mbsdiff$(BIN_SUFFIX)
 
 REQUIRES = $(ZLIB_REQUIRES)
 
-LIBS += $(DIST)/lib/$(LIB_PREFIX)mozz_s.$(LIB_SUFFIX)
+LIBS += $(DIST)/lib/$(LIB_PREFIX)bz2.$(LIB_SUFFIX)
 
 ifeq (WINNT,$(OS_ARCH))
 EXTRA_DSO_LDOPTS += Ws2_32.lib

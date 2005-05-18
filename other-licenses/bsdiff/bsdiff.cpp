@@ -14,8 +14,6 @@
 
 #include "bspatch.h"
 
-#include "zlib.h" // for crc32
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -32,6 +30,27 @@
 
 #undef MIN
 #define MIN(x,y) (((x)<(y)) ? (x) : (y))
+
+//-----------------------------------------------------------------------------
+
+// This variable lives in libbz2.  It's declared in bzlib_private.h, so we just
+// declare it here to avoid including that entire header file.
+extern "C" unsigned int BZ2_crc32Table[256];
+
+static unsigned int
+crc32(const unsigned char *buf, unsigned int len)
+{
+  unsigned int crc = 0xffffffffL;
+
+  const unsigned char *end = buf + len;
+  for (; buf != end; ++buf)
+    crc = (crc << 8) ^ BZ2_crc32Table[(crc >> 24) ^ *buf];
+
+  crc = ~crc;
+  return crc;
+}
+
+//-----------------------------------------------------------------------------
 
 static void
 reporterr(int e, const char *fmt, ...)
@@ -212,8 +231,7 @@ int main(int argc,char *argv[])
 		(close(fd)==-1))
 		reporterr(1,"%s\n",argv[1]);
 
-	PRUint32 scrc = crc32(0, NULL, 0);
-	scrc = crc32(scrc, old, oldsize);
+	unsigned int scrc = crc32(old, oldsize);
 
 	if(((I=(PROffset32*) malloc((oldsize+1)*sizeof(PROffset32)))==NULL) ||
 		((V=(PROffset32*) malloc((oldsize+1)*sizeof(PROffset32)))==NULL))
@@ -239,7 +257,7 @@ int main(int argc,char *argv[])
 	dblen=0;
 	eblen=0;
 
-	if((fd=open(argv[3],O_CREAT|O_TRUNC|O_WRONLY,0666))<0)
+	if((fd=open(argv[3],O_CREAT|O_TRUNC|O_WRONLY|_O_BINARY,0666))<0)
 		reporterr(1,"%s\n",argv[3]);
 
 	/* start writing here */
