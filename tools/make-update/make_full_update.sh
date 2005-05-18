@@ -55,6 +55,8 @@ for f in $targetfiles; do
   chmod --reference="$targetdir/$f" "$workdir/$f"
 done
 
+$BZIP2 -z9 "$manifest" && mv -f "$manifest.bz2" "$manifest"
+
 (cd "$workdir" && $MAR -c output.mar update.manifest $targetfiles)
 mv -f "$workdir/output.mar" "$archive"
 

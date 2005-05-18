@@ -71,7 +71,7 @@ for ((i=0; $i<$num_oldfiles; i=$i+1)); do
       patchsize=$(get_file_size "$patchfile")
       fullsize=$(get_file_size "$workdir/$f")
       if [ $patchsize -lt $fullsize ]; then
-        echo "patch $f.patch $f" >> $manifest
+        echo "patch \"$f.patch\" \"$f\"" >> $manifest
         mv -f "$patchfile" "$workdir/$f.patch"
         rm -f "$workdir/$f"
         archivefiles="$archivefiles $f.patch"
@@ -104,6 +104,8 @@ for ((i=0; $i<$num_newfiles; i=$i+1)); do
   echo "add $f" >> $manifest
   archivefiles="$archivefiles $f"
 done
+
+$BZIP2 -z9 "$manifest" && mv -f "$manifest.bz2" "$manifest"
 
 (cd "$workdir" && $MAR -c output.mar $archivefiles)
 mv -f "$workdir/output.mar" "$archive"
