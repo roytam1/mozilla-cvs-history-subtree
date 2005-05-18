@@ -109,4 +109,4 @@ done
 mv -f "$workdir/output.mar" "$archive"
 
 # cleanup
-#rm -fr "$workdir"
+rm -fr "$workdir"
