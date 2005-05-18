@@ -27,6 +27,7 @@
 #else
 #include <unistd.h>
 #include <arpa/inet.h>
+#define _O_BINARY 0
 #endif
 
 #undef MIN
@@ -203,13 +204,13 @@ int main(int argc,char *argv[])
 
 	/* Allocate oldsize+1 bytes instead of oldsize bytes to ensure
 		that we never try to malloc(0) and get a NULL pointer */
-	if(((fd=open(argv[1],O_RDONLY,0))<0) ||
+	if(((fd=open(argv[1],O_RDONLY|_O_BINARY,0))<0) ||
 		((oldsize=lseek(fd,0,SEEK_END))==-1) ||
 		((old=(unsigned char*) malloc(oldsize+1))==NULL) ||
 		(lseek(fd,0,SEEK_SET)!=0) ||
 		(read(fd,old,oldsize)!=oldsize) ||
 		(close(fd)==-1))
-		reporterr(1,"%s",argv[1]);
+		reporterr(1,"%s\n",argv[1]);
 
 	PRUint32 scrc = crc32(0, NULL, 0);
 	scrc = crc32(scrc, old, oldsize);
@@ -224,12 +225,12 @@ int main(int argc,char *argv[])
 
 	/* Allocate newsize+1 bytes instead of newsize bytes to ensure
 		that we never try to malloc(0) and get a NULL pointer */
-	if(((fd=open(argv[2],O_RDONLY,0))<0) ||
+	if(((fd=open(argv[2],O_RDONLY|_O_BINARY,0))<0) ||
 		((newsize=lseek(fd,0,SEEK_END))==-1) ||
 		((newbuf=(unsigned char*) malloc(newsize+1))==NULL) ||
 		(lseek(fd,0,SEEK_SET)!=0) ||
 		(read(fd,newbuf,newsize)!=newsize) ||
-		(close(fd)==-1)) reporterr(1,"%s",argv[2]);
+		(close(fd)==-1)) reporterr(1,"%s\n",argv[2]);
 
 	if(((db=(unsigned char*) malloc(newsize+1))==NULL) ||
 		((eb=(unsigned char*) malloc(newsize+1))==NULL))
@@ -239,7 +240,7 @@ int main(int argc,char *argv[])
 	eblen=0;
 
 	if((fd=open(argv[3],O_CREAT|O_TRUNC|O_WRONLY,0666))<0)
-		reporterr(1,"%s",argv[3]);
+		reporterr(1,"%s\n",argv[3]);
 
 	/* start writing here */
 
@@ -251,7 +252,7 @@ int main(int argc,char *argv[])
 		 at the end */
 
 	if(write(fd,&header,sizeof(MBSPatchHeader))!=sizeof(MBSPatchHeader))
-		reporterr(1,"%s",argv[3]);
+		reporterr(1,"%s\n",argv[3]);
 
 	scan=0;len=0;
 	lastscan=0;lastpos=0;lastoffset=0;
