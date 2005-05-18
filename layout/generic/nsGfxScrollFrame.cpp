@@ -262,12 +262,6 @@ struct ScrollReflowState {
   nsSize mInsideBorderSize;
   // Taken from kid metrics; ascent from the inner-border top edge
   nscoord mAscent;
-  // Taken from kid metrics; does not include our border widths,
-  // does include vertical scrollbar if present
-  nscoord mMaxElementWidth;
-  // Taken from kid metrics; does not include our border widths,
-  // does include vertical scrollbar if present
-  nscoord mMaximumWidth;
   // Whether we decided to show the horizontal scrollbar
   PRPackedBool mShowHScrollbar;
   // Whether we decided to show the vertical scrollbar
@@ -846,7 +840,6 @@ NS_NewXULScrollFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame, PRBool aIsR
 nsXULScrollFrame::nsXULScrollFrame(nsIPresShell* aShell, PRBool aIsRoot)
   : nsBoxFrame(aShell, aIsRoot),
     mInner(this, aIsRoot),
-    mMaxElementWidth(0),
     mHorizontalOverflow(PR_FALSE),
     mVerticalOverflow(PR_FALSE)
 {

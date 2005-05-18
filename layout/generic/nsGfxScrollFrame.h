@@ -485,7 +485,6 @@ protected:
 private:
   friend class nsGfxScrollFrameInner;
   nsGfxScrollFrameInner mInner;
-  nscoord mMaxElementWidth;
   PRPackedBool mHorizontalOverflow;
   PRPackedBool mVerticalOverflow;
 };

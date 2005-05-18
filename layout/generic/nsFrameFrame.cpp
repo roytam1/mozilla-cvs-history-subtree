@@ -419,9 +419,8 @@ nsSubDocumentFrame::Reflow(nsPresContext*          aPresContext,
     }
   }
 
-  // printf("OuterFrame::Reflow DONE %X (%d,%d), MEW=%d(%d)\n", this,
-  //        aDesiredSize.width, aDesiredSize.height, aDesiredSize.mMaxElementWidth,
-  //        aDesiredSize.mComputeMEW);
+  // printf("OuterFrame::Reflow DONE %X (%d,%d)\n", this,
+  //        aDesiredSize.width, aDesiredSize.height);
 
   NS_FRAME_TRACE(NS_FRAME_TRACE_CALLS,
      ("exit nsSubDocumentFrame::Reflow: size=%d,%d status=%x",

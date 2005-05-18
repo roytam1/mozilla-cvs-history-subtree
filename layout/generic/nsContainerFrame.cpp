@@ -861,14 +861,6 @@ nsContainerFrame::ReflowChild(nsIFrame*                aKidFrame,
 
   nsresult  result;
 
-#ifdef DEBUG
-#ifdef REALLY_NOISY_MAX_ELEMENT_SIZE
-  if (aDesiredSize.mComputeMEW) {
-    aDesiredSize.mMaxElementWidth = nscoord(0xdeadbeef);
-  }
-#endif
-#endif
-
   // Send the WillReflow() notification, and position the child frame
   // and its view if requested
   aKidFrame->WillReflow(aPresContext);
@@ -884,17 +876,6 @@ nsContainerFrame::ReflowChild(nsIFrame*                aKidFrame,
   // Reflow the child frame
   result = aKidFrame->Reflow(aPresContext, aDesiredSize, aReflowState,
                              aStatus);
-
-#ifdef DEBUG
-#ifdef REALLY_NOISY_MAX_ELEMENT_SIZE
-  if (aDesiredSize.mComputeMEW &&
-      (nscoord(0xdeadbeef) == aDesiredSize.mMaxElementWidth)) {
-    printf("nsContainerFrame: ");
-    nsFrame::ListTag(stdout, aKidFrame);
-    printf(" didn't set max-element-width!\n");
-  }
-#endif
-#endif
 
   // If the reflow was successful and the child frame is complete, delete any
   // next-in-flows
