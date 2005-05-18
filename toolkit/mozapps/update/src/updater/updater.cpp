@@ -78,6 +78,10 @@
 # define fchmod(a,b)
 #endif
 
+#ifndef _O_BINARY
+# define _O_BINARY 0
+#endif
+
 #ifndef NULL
 # define NULL (0)
 #endif
