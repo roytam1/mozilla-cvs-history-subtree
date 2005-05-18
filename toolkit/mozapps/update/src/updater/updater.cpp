@@ -236,11 +236,11 @@ static int copy_file(const char *spath, const char *dpath)
 
   struct stat ss;
 
-  int sfd = open(spath, O_RDONLY);
+  int sfd = open(spath, O_RDONLY | _O_BINARY);
   if (sfd < 0 || fstat(sfd, &ss))
     return IO_ERROR;
 
-  int dfd = open(dpath, O_WRONLY | O_TRUNC | O_CREAT, ss.st_mode);
+  int dfd = open(dpath, O_WRONLY | O_TRUNC | O_CREAT | _O_BINARY, ss.st_mode);
   if (dfd < 0) {
     close(sfd);
     return IO_ERROR;
@@ -600,7 +600,7 @@ PatchFile::~PatchFile()
 
   // delete the temporary patch file
   char spath[MAXPATHLEN];
-  snprintf(spath, MAXPATHLEN, "%s/%d.bspatch", gSourcePath, mPatchIndex);
+  snprintf(spath, MAXPATHLEN, "%s/%d.patch", gSourcePath, mPatchIndex);
   remove(spath);
 
   free(buf);
@@ -624,11 +624,12 @@ PatchFile::LoadSourceFile(int ofd)
   int r = header.slen;
   unsigned char *rb = buf;
   while (r) {
-    int c = read(ofd, rb, mmin(SSIZE_MAX,r));
+    int c = read(ofd, rb, mmin(BUFSIZ,r));
     if (c < 0)
       return IO_ERROR;
 
     r -= c;
+    rb += c;
 
     if (c == 0 && r)
       return BSP_ERROR_CORRUPT;
@@ -668,11 +669,13 @@ PatchFile::Parse(char *line)
 int
 PatchFile::Prepare()
 {
+  LOG(("PREPARE PATCH %s\n", mFile));
+
   // extract the patch to a temporary file
   mPatchIndex = sPatchIndex++;
 
   char spath[MAXPATHLEN];
-  snprintf(spath, MAXPATHLEN, "%s/%d.bspatch", gSourcePath, mPatchIndex);
+  snprintf(spath, MAXPATHLEN, "%s/%d.patch", gSourcePath, mPatchIndex);
 
   remove(spath);
 
@@ -688,7 +691,7 @@ PatchFile::Prepare()
   //          patch file with BZ2_bzopen and BZ2_bzread calls instead.
   //          then we should be able to get good compression.
 
-  pfd = open(spath, O_RDONLY);
+  pfd = open(spath, O_RDONLY | _O_BINARY);
   if (pfd < 0)
     return IO_ERROR;
 
@@ -696,7 +699,7 @@ PatchFile::Prepare()
   if (rv)
     return rv;
 
-  int ofd = open(mFile, O_RDONLY);
+  int ofd = open(mFile, O_RDONLY | _O_BINARY);
   if (ofd < 0)
     return IO_ERROR;
 
@@ -709,6 +712,8 @@ PatchFile::Prepare()
 int
 PatchFile::Execute()
 {
+  LOG(("EXECUTE PATCH %s\n", mFile));
+
   // Create backup copy of the destination file before proceeding.
 
   struct stat ss;
@@ -723,7 +728,7 @@ PatchFile::Execute()
   if (rv)
     return IO_ERROR;
 
-  int ofd = open(mFile, O_WRONLY | O_TRUNC | O_CREAT, ss.st_mode);
+  int ofd = open(mFile, O_WRONLY | O_TRUNC | O_CREAT | _O_BINARY, ss.st_mode);
   if (ofd < 0)
     return IO_ERROR;
 
@@ -733,6 +738,8 @@ PatchFile::Execute()
 void
 PatchFile::Finish(int status)
 {
+  LOG(("FINISH PATCH %s\n", mFile));
+
   backup_finish(mFile, status);
 }
 
