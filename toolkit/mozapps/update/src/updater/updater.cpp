@@ -128,19 +128,38 @@ typedef void (* ThreadFunc)(void *param);
 #ifdef XP_WIN
 #include <process.h>
 
-int
-RunOnBackgroundThread(ThreadFunc func, void *param)
+class Thread
 {
-  if (_beginthread(func, 0, param) == -1)
-    return MEM_ERROR;
+public:
+  int Run(ThreadFunc func, void *param)
+  {
+    mThreadFunc = func;
+    mThreadParam = param;
 
-  // XXX use _beginthreadex and WaitForSingleObject
-
-  return 0;
-}
+    unsigned threadID;
+    mThread = (HANDLE) _beginthreadex(NULL, 0, ThreadMain, this, 0, &threadID);
+    
+    return mThread ? 0 : -1;
+  }
+  int Join()
+  {
+    WaitForSingleObject(mThread, INFINITE);
+    CloseHandle(mThread);
+    return 0;
+  }
+private:
+  static unsigned __stdcall ThreadMain(void *p)
+  {
+    Thread *self = (Thread *) p;
+    self->mThreadFunc(self->mThreadParam);
+    return 0;
+  }
+  HANDLE     mThread;
+  ThreadFunc mThreadFunc;
+  void      *mThreadParam;
+};
 
 #else
-
 #include <pthread.h>
 
 class Thread
