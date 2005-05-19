@@ -493,6 +493,10 @@ public:
 
   // nsIHTMLReflow
   virtual void MarkIntrinsicWidthsDirty();
+  virtual void AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
+                                 InlineIntrinsicWidthData *aData);
+  virtual void AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
+                                  InlineIntrinsicWidthData *aData);
   NS_IMETHOD Reflow(nsPresContext* aPresContext,
                     nsHTMLReflowMetrics& aMetrics,
                     const nsHTMLReflowState& aReflowState,
@@ -5450,6 +5454,22 @@ nsTextFrame::MarkIntrinsicWidthsDirty()
   // Clear the TEXT_OPTIMIZE_RESIZE for the next time around.  It'll get
   // reset late in Reflow.
   RemoveStateBits(TEXT_OPTIMIZE_RESIZE);
+}
+
+/* virtual */ void
+nsTextFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
+                               nsIFrame::InlineIntrinsicWidthData *aData)
+{
+  NS_ASSERTION(aData->trailingWhitespace == 0,
+               "min-width calculation should never have trailing whitespace");
+#error "WRITE ME!"
+}
+
+/* virtual */ void
+nsTextFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
+                                nsIFrame::InlineIntrinsicWidthData *aData)
+{
+#error "WRITE ME!"
 }
 
 NS_IMETHODIMP

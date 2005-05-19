@@ -101,6 +101,10 @@ public:
   virtual PRBool IsSelfEmpty();
 
   // nsIHTMLReflow overrides
+  virtual void AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
+                                 InlineIntrinsicWidthData *aData);
+  virtual void AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
+                                  InlineIntrinsicWidthData *aData);
   NS_IMETHOD Reflow(nsPresContext* aPresContext,
                     nsHTMLReflowMetrics& aDesiredSize,
                     const nsHTMLReflowState& aReflowState,

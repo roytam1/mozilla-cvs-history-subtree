@@ -343,6 +343,22 @@ nsInlineFrame::Paint(nsPresContext*      aPresContext,
 //////////////////////////////////////////////////////////////////////
 // Reflow methods
 
+/* virtual */ void
+nsInlineFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
+                                 nsIFrame::InlineIntrinsicWidthData *aData)
+{
+  NS_ASSERTION(aData->trailingWhitespace == 0,
+               "min-width calculation should never have trailing whitespace");
+#error "WRITE ME!"
+}
+
+/* virtual */ void
+nsInlineFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
+                                  nsIFrame::InlineIntrinsicWidthData *aData)
+{
+#error "WRITE ME!"
+}
+
 NS_IMETHODIMP
 nsInlineFrame::Reflow(nsPresContext*          aPresContext,
                       nsHTMLReflowMetrics&     aMetrics,
