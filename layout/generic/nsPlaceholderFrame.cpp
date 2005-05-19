@@ -66,6 +66,16 @@ nsPlaceholderFrame::~nsPlaceholderFrame()
 {
 }
 
+/* virtual */ void
+nsPlaceholderFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
+                                       nsIFrame::InlineIntrinsicWidthData *aData)
+{
+  // Override AddInlinePrefWith so that *nothing* happens.  In
+  // particular, we don't want to zero out |aData->trailingWhitespace|,
+  // since nsLineLayout skips placeholders when trimming trailing
+  // whitespace.
+}
+
 NS_IMETHODIMP
 nsPlaceholderFrame::Reflow(nsPresContext*          aPresContext,
                            nsHTMLReflowMetrics&     aDesiredSize,

@@ -964,7 +964,9 @@ public:
    * |aData->trailingWhitespace| will always be zero (unlike for
    * AddInlinePrefWidth).
    *
-   * All the comments for |GetMinWidth| apply.
+   * All the comments for |GetMinWidth| apply, except that this function
+   * is responsible for adding padding, border, and margin and for
+   * considering the effects of 'width', 'min-width', and 'max-width'.
    *
    * This may be called on any frame.  For frames that do not
    * participate in line breaking, the result will simply append the
