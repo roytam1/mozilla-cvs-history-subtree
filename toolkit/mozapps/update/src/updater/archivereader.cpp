@@ -57,7 +57,7 @@ ArchiveReader::ExtractItemToStream(const MarItem *item, FILE *fp)
 
   offset = 0;
   for (;;) {
-    if (offset < item->length && strm.avail_in == 0) {
+    if (offset < (int) item->length && strm.avail_in == 0) {
       inlen = mar_read(mArchive, item, offset, inbuf, BUFSIZ);
       if (inlen <= 0)
         return -1;

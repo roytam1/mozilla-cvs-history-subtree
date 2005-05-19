@@ -113,12 +113,6 @@ UpdateDialog(gpointer data)
 
   float progress = sProgressVal;
 
-  /*
-  char text[32];
-  snprintf(text, sizeof(text), "%3.f%%\n", progress);
-
-  gtk_label_set_text(GTK_LABEL(sLabel), text);
-  */
   gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(sProgressBar),
                                 progress / 100.0);
 
@@ -177,6 +171,7 @@ ShowProgressUI()
   gtk_container_set_border_width(GTK_CONTAINER(sWin), 10);
   gtk_container_add(GTK_CONTAINER(sWin), vbox);
   gtk_widget_show_all(sWin);
+
   gtk_main();
   return 0;
 }
@@ -195,6 +190,6 @@ UpdateProgressUI(float progress)
   sProgressVal = progress;  // 32-bit writes are atomic
 
   // XXX TESTING
-  usleep(20000);
+  //usleep(60000);
   // XXX TESTING
 }

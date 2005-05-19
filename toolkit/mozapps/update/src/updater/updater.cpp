@@ -125,8 +125,6 @@ crc32(const unsigned char *buf, unsigned int len)
 
 typedef void (* ThreadFunc)(void *param);
 
-static int RunOnBackgroundThread(ThreadFunc func, void *param);
-
 #ifdef XP_WIN
 #include <process.h>
 
@@ -136,6 +134,8 @@ RunOnBackgroundThread(ThreadFunc func, void *param)
   if (_beginthread(func, 0, param) == -1)
     return MEM_ERROR;
 
+  // XXX use _beginthreadex and WaitForSingleObject
+
   return 0;
 }
 
@@ -143,19 +143,21 @@ RunOnBackgroundThread(ThreadFunc func, void *param)
 
 #include <pthread.h>
 
-int
-RunOnBackgroundThread(ThreadFunc func, void *param)
+class Thread
 {
-  pthread_attr_t attr;
-  pthread_attr_init(&attr);
-  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-
+public:
+  int Run(ThreadFunc func, void *param)
+  {
+    return pthread_create(&thr, NULL, (void* (*)(void *)) func, param);
+  }
+  int Join()
+  {
+    void *result;
+    return pthread_join(thr, &result);
+  }
+private:
   pthread_t thr;
-  int rv = pthread_create(&thr, &attr, (void* (*)(void *)) func, param);
-
-  pthread_attr_destroy(&attr);
-  return rv;
-}
+};
 
 #endif
 
@@ -374,8 +376,7 @@ static void backup_finish(const char *path, int status)
 
 //-----------------------------------------------------------------------------
 
-// Because we're using a child thread to do all the real work
-static int realmain();
+static int DoUpdate();
 
 static const int ACTION_DESCRIPTION_BUFSIZE = 256;
 
@@ -725,10 +726,10 @@ PatchFile::Finish(int status)
 static int
 LaunchCallbackApp(const char *cmdLine)
 {
-  // Someone will probably tell me that this is a bad idea, but for now it
-  // seems like it fits the bill.  It saves us from having to parse the command
-  // line in order to call execv, and it nicely blocks this process until the
-  // command line is finished executing.
+  // Someone will probably tell me that using 'system' is a bad idea, but for
+  // now it seems like it fits the bill.  It saves us from having to parse the
+  // command line in order to call execv, and it nicely blocks this process
+  // until the command line is finished executing.
 
   return system(cmdLine);
 }
@@ -752,7 +753,7 @@ WriteStatusFile(int status)
 }
 
 static void
-threadfunc(void *param)
+UpdateThreadFunc(void *param)
 {
   // open ZIP archive and process...
 
@@ -761,7 +762,7 @@ threadfunc(void *param)
 
   int rv = gArchiveReader.Open(dataFile);
   if (rv == OK) {
-    rv = realmain();
+    rv = DoUpdate();
     gArchiveReader.Close();
   }
 
@@ -771,14 +772,13 @@ threadfunc(void *param)
     LOG(("succeeded\n"));
   WriteStatusFile(rv);
 
+  LOG(("calling QuitProgressUI\n"));
   QuitProgressUI();
 }
 
 int main(int argc, char **argv)
 {
-  int rv = InitProgressUI(&argc, &argv);
-  if (rv)
-    return rv;
+  InitProgressUI(&argc, &argv);
 
   if (argc < 3) {
 #ifdef DEBUG
@@ -815,9 +815,13 @@ int main(int argc, char **argv)
 
   LogInit();
 
-  rv = RunOnBackgroundThread(threadfunc, NULL);
-  if (rv == 0)
-    rv = ShowProgressUI();
+  // Run update process on a background thread.  ShowProgressUI may return
+  // before QuitProgressUI has been called, so wait for UpdateThreadFunc to
+  // terminate.
+  Thread t;
+  if (t.Run(UpdateThreadFunc, NULL) == 0)
+    ShowProgressUI();
+  t.Join();
 
   LogFinish();
 
@@ -915,7 +919,7 @@ ActionList::Finish(int status)
   UpdateProgressUI(100.0f);
 }
 
-int realmain()
+int DoUpdate()
 {
   char manifest[MAXPATHLEN];
   snprintf(manifest, MAXPATHLEN, "%s/update.manifest", gSourcePath);
