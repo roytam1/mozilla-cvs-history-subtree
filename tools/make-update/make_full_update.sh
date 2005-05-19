@@ -33,6 +33,17 @@ fi
 
 # -----------------------------------------------------------------------------
 
+copy_perm() {
+  reference="$1"
+  target="$2"
+
+  if [ -x "$reference" ]; then
+    chmod 0755 "$target"
+  else
+    chmod 0644 "$target"
+  fi
+}
+
 archive="$1"
 targetdir="$2"
 workdir="$targetdir.work"
@@ -52,7 +63,7 @@ for f in $targetfiles; do
   dir=$(dirname $f)
   mkdir -p "$workdir/$dir"
   $BZIP2 -cz9 "$targetdir/$f" > "$workdir/$f"
-  chmod --reference="$targetdir/$f" "$workdir/$f"
+  copy_perm "$targetdir/$f" "$workdir/$f"
 done
 
 $BZIP2 -z9 "$manifest" && mv -f "$manifest.bz2" "$manifest"
