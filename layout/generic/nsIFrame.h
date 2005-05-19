@@ -908,16 +908,8 @@ public:
    * Note that many frames will cache the result of this function call
    * unless MarkIntrinsicWidthsDirty is called.
    *
-   * It is currently acceptable for a frame to mark itself dirty when
-   * this method is called.  (This wouldn't be a good design if we were
-   * starting from scratch, but we're not.  We may eventually want to
-   * move to a world where this is not acceptable, but it requires a
-   * good bit of work on inline layout.)  This means that if a frame
-   * calls GetMinWidth during Reflow on a child that is not dirty
-   * (NS_FRAME_IS_DIRTY or NS_FRAME_HAS_DIRTY_CHILDREN), it is required
-   * to recheck those dirty bits before finishing Reflow; failing to do
-   * so would leave NS_FRAME_HAS_DIRTY_CHILDREN unset where it should be
-   * set.
+   * It is not acceptable for a frame to mark itself dirty when this
+   * method is called.
    */
   virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext) = 0;
 
@@ -930,51 +922,67 @@ public:
 
   /**
    * |InlineIntrinsicWidth| represents the intrinsic width information
-   * for a frame that can be broken across lines.
-   *
-   * When the frame has no break points (which are possible break points
-   * for GetInlineMinWidth and mandatory break points for
-   * GetInlinePrefWidth), then the intrinsic width result is placed in
-   * |whole| and |firstLine == innerLines == lastLine == 0|.  When the
-   * frame has break points, then |whole == 0|, the result for the part
-   * of the frame before its first break point is in |firstLine|, the
-   * result for the part of the frame after its last break point is in
-   * |lastLine|, and the result for the remainder of the frame is in
-   * |innerLines| (which is always 0 for a frame with exactly one break
-   * point).
-   *
-   * XXX What about trailing whitespace, especially for preferred width,
-   * but also for collapsing cross-frame whitespace for nowrap text for
-   * minimum width?
+   * in inline layout.  Code that determines the intrinsic width of a
+   * region of inline layout accumulates the result into this structure.
+   * This pattern is needed because we need to maintain state
+   * information about whitespace (for both collapsing and trimming).
    */
-  struct InlineIntrinsicWidth {
-    nscoord whole, firstLine, innerLines, lastLine;
+  struct InlineIntrinsicWidthData {
+    InlineIntrinsicWidthData()
+      : prevLines(0), currentLine(0), trailingWhitespace(0) {}
+
+    // The maximum intrinsic width for all previous lines.
+    nscoord prevLines;
+
+    // The maximum intrinsic width for the current line.  At a line
+    // break (mandatory for preferred width; allowed for minimum width),
+    // the caller should call |Break()|.
+    nscoord currentLine;
+
+    // This contains the width of the collapsable/trimmable whitespace
+    // at the end of |currentLine|; it is zero if there is no such
+    // whitespace.
+    // (XXX What about space characters that have zero width?)
+    nscoord trailingWhitespace;
+
+    void Break()
+    {
+      currentLine -= trailingWhitespace;
+      prevLines = PR_MAX(prevLines, currentLine);
+      currentLine = trailingWhitespace = 0;
+    }
   };
 
   /**
-   * Get the intrinsic minimum width of a frame in a way suitable for
-   * use in inline layout.  All the comments for |GetMinWidth| apply,
-   * except that this fills in an |InlineIntrinsicWidth| structure based
-   * on using all *allowed* breakpoints within the frame.
+   * Add the intrinsic minimum width of a frame in a way suitable for
+   * use in inline layout to an |InlineIntrinsicWidthData| object that
+   * represents the intrinsic width information of all the previous
+   * frames in the inline layout region.
+   *
+   * All *allowed* breakpoints within the frame determine what counts as
+   * a line for the |InlineIntrinsicWidthData|
+   *
+   * All the comments for |GetMinWidth| apply.
    *
    * This may be called on any frame.  For frames that do not
-   * participate in line breaking, the result will have |firstLine ==
-   * innerLines == lastLine == 0|, and |whole| will be the same result
-   * that is returned from |GetMinWidth|.
+   * participate in line breaking, the result will simply append the
+   * result of |GetMinWidth| to the current line.
    */
-  virtual InlineIntrinsicWidth
-  GetInlineMinWidth(nsIRenderingContext *aRenderingContext) = 0;
+  virtual void
+  AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
+                    InlineIntrinsicWidthData *aData) = 0;
 
   /**
    * Get the intrinsic width of a frame in a way suitable for
    * use in inline layout.
    *
    * All the comments for |GetInlinePrefWidth| apply, except that this
-   * fills in an |InlineIntrinsicWidth| structure based on using all
+   * fills in an |InlineIntrinsicWidthData| structure based on using all
    * *mandatory* breakpoints within the frame.
    */
-  virtual InlineIntrinsicWidth
-  GetInlinePrefWidth(nsIRenderingContext *aRenderingContext) = 0;
+  virtual void
+  AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
+                     InlineIntrinsicWidthData *aData) = 0;
 
   /**
    * Pre-reflow hook. Before a frame is reflowed this method will be called.
