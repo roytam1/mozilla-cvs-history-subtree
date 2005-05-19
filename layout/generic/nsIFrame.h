@@ -960,7 +960,9 @@ public:
    * frames in the inline layout region.
    *
    * All *allowed* breakpoints within the frame determine what counts as
-   * a line for the |InlineIntrinsicWidthData|
+   * a line for the |InlineIntrinsicWidthData|.  This means that
+   * |aData->trailingWhitespace| will always be zero (unlike for
+   * AddInlinePrefWidth).
    *
    * All the comments for |GetMinWidth| apply.
    *
