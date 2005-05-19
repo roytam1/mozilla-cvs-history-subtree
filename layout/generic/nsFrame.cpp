@@ -2138,22 +2138,21 @@ nsFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   return 0;
 }
 
-/* virtual */ nsIFrame::InlineIntrinsicWidth
-nsFrame::GetInlineMinWidth(nsIRenderingContext *aRenderingContext)
+/* virtual */ void
+nsFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
+                           nsIFrame::InlineIntrinsicWidthData *aData)
 {
-  InlineIntrinsicWidth result;
-  result.whole = GetMinWidth(aRenderingContext);
-  result.firstLine = result.innerLines = result.lastLine = 0;
-  return result;
+  NS_ASSERTION(aData->trailingWhitespace == 0,
+               "min-width calculation should never have trailing whitespace");
+  aData->currentLine += GetMinWidth(aRenderingContext);
 }
 
-/* virtual */ nsIFrame::InlineIntrinsicWidth
-nsFrame::GetInlinePrefWidth(nsIRenderingContext *aRenderingContext)
+/* virtual */ void
+nsFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
+                            nsIFrame::InlineIntrinsicWidthData *aData)
 {
-  InlineIntrinsicWidth result;
-  result.whole = GetPrefWidth(aRenderingContext);
-  result.firstLine = result.innerLines = result.lastLine = 0;
-  return result;
+  aData->trailingWhitespace = 0;
+  aData->currentLine += GetMinWidth(aRenderingContext);
 }
 
 NS_IMETHODIMP
