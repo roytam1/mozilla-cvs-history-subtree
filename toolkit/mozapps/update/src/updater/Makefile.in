@@ -60,9 +60,10 @@ LIBS += \
 	$(NULL)
 
 ifeq ($(OS_ARCH),WINNT)
+HAVE_PROGRESSUI = 1
 RCINCLUDE = updater.rc
 CPPSRCS += progressui_win.cpp
-OS_LIBS += comctl32.lib
+OS_LIBS += comctl32.lib ws2_32.lib
 ifndef GNU_CC
 RCFLAGS += -I$(srcdir)
 else
@@ -70,22 +71,15 @@ RCFLAGS += --include-dir $(srcdir)
 endif
 endif
 
-ifndef MOZ_WINCONSOLE
-ifdef MOZ_DEBUG
-MOZ_WINCONSOLE = 1
-else
-MOZ_WINCONSOLE = 0
-endif
-endif
-
 ifneq ($(MOZ_ENABLE_GTK2)$(MOZ_ENABLE_GTK),)
+HAVE_PROGRESSUI = 1
 CPPSRCS += progressui_gtk.cpp
 OS_CXXFLAGS += $(TK_CFLAGS)
 OS_LIBS += $(TK_LIBS)
 endif
 
-ifeq (WINNT,$(OS_ARCH))
-EXTRA_DSO_LDOPTS += Ws2_32.lib
+ifndef HAVE_PROGRESSUI
+CPPSRCS += progressui_null.cpp
 endif
 
 include $(topsrcdir)/config/rules.mk
