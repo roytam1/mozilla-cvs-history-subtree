@@ -47,8 +47,10 @@ manifest="$workdir/update.manifest"
 archivefiles="update.manifest"
 
 # Generate a list of all files in the target directory.
-oldfiles=($(cd "$olddir" && find . -type f | cut -d'/' -f2-))
-newfiles=($(cd "$newdir" && find . -type f | cut -d'/' -f2-))
+list=$(cd "$olddir" && find . -type f | sed 's/\.\/\(.*\)/"\1"/')
+eval "oldfiles=($list)"
+list=$(cd "$newdir" && find . -type f | sed 's/\.\/\(.*\)/"\1"/')
+eval "newfiles=($list)"
 
 mkdir -p "$workdir"
 > $manifest
@@ -63,7 +65,8 @@ for ((i=0; $i<$num_oldfiles; i=$i+1)); do
       # Compute both the compressed binary diff and the compressed file, and
       # compare the sizes.  Then choose the smaller of the two to package.
       echo "  diffing $f"
-      mkdir -p $(dirname "$workdir/$f")
+      dir=$(dirname "$workdir/$f")
+      mkdir -p "$dir"
       $MBSDIFF "$olddir/$f" "$newdir/$f" "$workdir/$f.patch"
       $BZIP2 -z9 "$workdir/$f.patch"
       $BZIP2 -cz9 "$newdir/$f" > "$workdir/$f"
@@ -74,15 +77,15 @@ for ((i=0; $i<$num_oldfiles; i=$i+1)); do
         echo "patch \"$f.patch\" \"$f\"" >> $manifest
         mv -f "$patchfile" "$workdir/$f.patch"
         rm -f "$workdir/$f"
-        archivefiles="$archivefiles $f.patch"
+        archivefiles="$archivefiles \"$f.patch\""
       else
-        echo "add $f" >> $manifest
+        echo "add \"$f\"" >> $manifest
         rm -f "$patchfile"
-        archivefiles="$archivefiles $f"
+        archivefiles="$archivefiles \"$f\""
       fi
     fi
   else
-    echo "remove $f" >> $manifest
+    echo "remove \"$f\"" >> $manifest
   fi
 done
 
@@ -90,24 +93,27 @@ done
 num_newfiles=${#newfiles[*]}
 
 for ((i=0; $i<$num_newfiles; i=$i+1)); do
-  f=${newfiles[$i]}
+  f="${newfiles[$i]}"
 
   # If we've already tested this file, then skip it
   for ((j=0; $j<$num_oldfiles; j=$j+1)); do
-    if [ $f = ${oldfiles[j]} ]; then
+    if [ "$f" = "${oldfiles[j]}" ]; then
       continue 2
     fi
   done
   
+  dir=$(dirname "$workdir/$f")
+  mkdir -p "$dir"
+
   $BZIP2 -cz9 "$newdir/$f" > "$workdir/$f"
 
-  echo "add $f" >> $manifest
-  archivefiles="$archivefiles $f"
+  echo "add \"$f\"" >> "$manifest"
+  archivefiles="$archivefiles \"$f\""
 done
 
 $BZIP2 -z9 "$manifest" && mv -f "$manifest.bz2" "$manifest"
 
-(cd "$workdir" && $MAR -c output.mar $archivefiles)
+(cd "$workdir" && eval "$MAR -c output.mar $archivefiles")
 mv -f "$workdir/output.mar" "$archive"
 
 # cleanup
