@@ -343,20 +343,62 @@ nsInlineFrame::Paint(nsPresContext*      aPresContext,
 //////////////////////////////////////////////////////////////////////
 // Reflow methods
 
+static nscoord GetCoord(const nsStyleCoord& aCoord, nscoord aIfNotCoord)
+{
+  return aCoord.GetUnit() == eStyleUnit_Coord
+           ? aCoord.GetCoordValue()
+           : aIfNotCoord;
+}
+
+void
+nsInlineFrame::DoInlineIntrinsicWidth(nsIRenderingContext *aRenderingContext,
+                                      InlineIntrinsicWidthData *aData,
+                                      nsLayoutUtils::IntrinsicWidthType aType)
+{
+  NS_PRECONDITION(aType == nsLayoutUtils::MIN_WIDTH ||
+                  aType == nsLayoutUtils::PREF_WIDTH, "bad type");
+
+  PRUint8 startSide, endSide;
+
+  // XXX set these correctly!  (not trivial)
+  startSide = NS_SIDE_LEFT;
+  endSide = NS_SIDE_RIGHT;
+
+  const nsStylePadding *stylePadding = GetStylePadding();
+  const nsStyleBorder *styleBorder = GetStyleBorder();
+  const nsStyleMargin *styleMargin = GetStyleMargin();
+  nsStyleCoord tmp;
+
+  aData->currentLine += GetCoord(stylePadding->mPadding.Get(startSide, tmp), 0);
+  aData->currentLine += styleBorder->GetBorderWidth(startSide);
+  aData->currentLine += GetCoord(styleMargin->mMargin.Get(startSide, tmp), 0);
+
+  for (nsIFrame *kid = mFrames.FirstChild(); kid; kid = kid->GetNextSibling()) {
+    if (aType == nsLayoutUtils::MIN_WIDTH)
+      kid->AddInlineMinWidth(aRenderingContext, aData);
+    else
+      kid->AddInlinePrefWidth(aRenderingContext, aData);
+  }
+
+  aData->currentLine += GetCoord(stylePadding->mPadding.Get(endSide, tmp), 0);
+  aData->currentLine += styleBorder->GetBorderWidth(endSide);
+  aData->currentLine += GetCoord(styleMargin->mMargin.Get(endSide, tmp), 0);
+}
+
 /* virtual */ void
 nsInlineFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
                                  nsIFrame::InlineIntrinsicWidthData *aData)
 {
   NS_ASSERTION(aData->trailingWhitespace == 0,
                "min-width calculation should never have trailing whitespace");
-#error "WRITE ME!"
+  DoInlineIntrinsicWidth(aRenderingContext, aData, nsLayoutUtils::MIN_WIDTH);
 }
 
 /* virtual */ void
 nsInlineFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
                                   nsIFrame::InlineIntrinsicWidthData *aData)
 {
-#error "WRITE ME!"
+  DoInlineIntrinsicWidth(aRenderingContext, aData, nsLayoutUtils::PREF_WIDTH);
 }
 
 NS_IMETHODIMP

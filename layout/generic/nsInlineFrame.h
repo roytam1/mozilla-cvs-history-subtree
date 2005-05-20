@@ -41,6 +41,7 @@
 #include "nsAbsoluteContainingBlock.h"
 #include "nsLineLayout.h"
 #include "nsLayoutAtoms.h"
+#include "nsLayoutUtils.h"
 
 class nsAnonymousBlockFrame;
 
@@ -136,6 +137,10 @@ protected:
   nsInlineFrame();
 
   virtual PRIntn GetSkipSides() const;
+
+  void DoInlineIntrinsicWidth(nsIRenderingContext *aRenderingContext,
+                              InlineIntrinsicWidthData *aData,
+                              nsLayoutUtils::IntrinsicWidthType aType);
 
   nsresult ReflowFrames(nsPresContext* aPresContext,
                         const nsHTMLReflowState& aReflowState,
