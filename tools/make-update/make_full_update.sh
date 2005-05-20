@@ -48,27 +48,35 @@ archive="$1"
 targetdir="$2"
 workdir="$targetdir.work"
 manifest="$workdir/update.manifest"
+targetfiles="update.manifest"
 
 # Generate a list of all files in the target directory.
-targetfiles=$(cd "$targetdir" && find . -type f | cut -d'/' -f2-)
+list=$(cd "$targetdir" && find . -type f | sed 's/\.\/\(.*\)/"\1"/')
+eval "files=($list)"
 
 mkdir -p "$workdir"
 > $manifest
 
-for f in $targetfiles; do
+num_files=${#files[*]}
+
+for ((i=0; $i<$num_files; i=$i+1)); do
+  f=${files[$i]}
+
   echo "  processing $f"
 
-  echo "add $f" >> $manifest
+  echo "add \"$f\"" >> $manifest
 
-  dir=$(dirname $f)
+  dir=$(dirname "$f")
   mkdir -p "$workdir/$dir"
   $BZIP2 -cz9 "$targetdir/$f" > "$workdir/$f"
   copy_perm "$targetdir/$f" "$workdir/$f"
+
+  targetfiles="$targetfiles \"$f\""
 done
 
 $BZIP2 -z9 "$manifest" && mv -f "$manifest.bz2" "$manifest"
 
-(cd "$workdir" && $MAR -c output.mar update.manifest $targetfiles)
+(cd "$workdir" && eval "$MAR -c output.mar $targetfiles")
 mv -f "$workdir/output.mar" "$archive"
 
 # cleanup

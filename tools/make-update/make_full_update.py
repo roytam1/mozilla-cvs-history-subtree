@@ -7,6 +7,7 @@
 
 import sys;
 import os;
+import shutil;
 
 #-----------------------------------------------------------------------------
 
@@ -21,7 +22,6 @@ def enum_dir(dir):
 			path = f;
 		else:
 			path = dir + os.sep + f;
-		print "%s" %(path);
 		if os.path.isfile(path):
 			result.append(path);
 		elif os.path.isdir(path):
@@ -29,8 +29,8 @@ def enum_dir(dir):
 	return result;
 
 def ensure_dir(dir):
-	if !os.path.isdir(dir):
-		os.mkdir(dir);
+	if not(os.path.isdir(dir)):
+		os.makedirs(dir);
 
 #-----------------------------------------------------------------------------
 	
@@ -65,12 +65,38 @@ os.chdir(cwd);
 
 ensure_dir(workdir);
 
-manifest = open(workdir + os.sep + "update.manifest", "wt");
+manifest_path = workdir + os.sep + "update.manifest";
+manifest = open(manifest_path, "wt");
 
 for f in targetfiles:
 	print "  processing %s" % (f);
-	manifest.write("add " + f + "\n");
-	ensure_dir(os.path.dirname(workdir + os.sep + f));
+	manifest.write("add \"" + f + "\"\n");
+	src = targetdir + os.sep + f;
+	dest = workdir + os.sep + f;
+	ensure_dir(os.path.dirname(dest));
 	# bzip2 compress the target file
+	cmd = "bzip2 -cz9 \"" + src + "\" > \"" + dest + "\"";
+	os.system(cmd);
+	# fixup permissions
+	if os.access(src, os.X_OK):
+		os.chmod(dest, 0755);
+	else:
+		os.chmod(dest, 0644);
 
 manifest.close();
+
+# compress the manifest file
+cmd = "bzip2 -z9 " + manifest_path;
+os.system(cmd);
+os.rename(manifest_path + ".bz2", manifest_path);
+
+os.chdir(workdir);
+cmd = "mar -c output.mar update.manifest";
+for f in targetfiles:
+	cmd += " \"" + f + "\"";
+os.system(cmd);
+os.chdir(cwd);
+os.rename(workdir + os.sep + "output.mar", archive);
+
+# cleanup
+shutil.rmtree(workdir);
