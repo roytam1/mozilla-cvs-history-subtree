@@ -582,32 +582,11 @@ nsBlockFrame::MarkIntrinsicWidthsDirty()
   mPrefWidth = NS_INTRINSIC_WIDTH_UNKNOWN;
 }
 
-struct InlineReflowObjects {
-  nsHTMLReflowState rs;
-  nsHTMLReflowMetrics metrics;
-  nsSpaceManager spaceMan;
-  nsBlockReflowState brs;
-
-  InlineReflowObjects(nsBlockFrame *aBlockFrame,
-                      nsIRenderingContext *aRenderingContext)
-    : rs(aBlockFrame->GetPresContext(), aBlockFrame, aRenderingContext,
-         nsSize(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE))
-    , metrics()
-    // XXX this is the wrong frame:
-    , spaceMan(aBlockFrame->GetPresContext()->GetPresShell(), aBlockFrame)
-    , brs((rs.mSpaceManager = &spaceMan, rs),
-          aBlockFrame->GetPresContext(), aBlockFrame, metrics,
-          NS_BLOCK_MARGIN_ROOT & aBlockFrame->GetStateBits(),
-          NS_BLOCK_MARGIN_ROOT & aBlockFrame->GetStateBits())
-  {
-  }
-};
-
+// XXX Split the min-width and pref-width computation again.
 void
 nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
 {
   nscoord min_result = 0, pref_result = 0;
-  InlineReflowObjects *iro = nsnull;
 
 #ifdef DEBUG
   if (gNoisyIntrinsic) {
@@ -638,41 +617,28 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
       line_pref = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
                       line->mFirstChild, nsLayoutUtils::PREF_WIDTH);
     } else {
-      // This may not be the best way of doing things, but it's the
-      // easiest way given the current code.  We'll say that the frame
-      // needs reflow for completeness, but this shouldn't ever lead to
-      // additional reflow.
+      InlineIntrinsicWidthData data_pref, data_min;
 
-      // XXX If we change this to not rewrap, we want to make this test
-      // if ((line == begin_lines() || !line.prev()->IsLineWrapped())) {
+      // Go through all the lines that represent what could be wrapped
+      // as one line.
+      --line;
+      do {
+        ++line;
 
-      // XXX We can't even check emptiness since we need to do this to build
-      // mBelowCurrentLineFloats to see if there are floats.
+        nsIFrame *kid = line->mFirstChild;
+        for (PRInt32 i = 0, i_end = line->GetChildCount(); i != i_end;
+             ++i, kid = kid->GetNextSibling()) {
+          kid->AddInlineMinWidth(aRenderingContext, &data_min);
+          kid->AddInlinePrefWidth(aRenderingContext, &data_pref);
+        }
+        
+      } while (!line->IsLineWrapped() && line.next() != line_end);
 
-      if (!iro) {
-        iro = new InlineReflowObjects(this, aRenderingContext);
-        if (!iro)
-          break;
-      }
+      data_min.Break();
+      data_pref.Break();
 
-      iro->brs.mLineNumber = lineNumber;
-      iro->brs.mCurrentLine = line;
-
-      PRBool keepGoing = PR_FALSE;
-      PRUint8 lineReflowStatus = LINE_REFLOW_REDO;
-      nsLineLayout ll(iro->brs.mPresContext, nsnull /* space manager */,
-                      &iro->rs, PR_TRUE);
-      ll.Init(&iro->brs, iro->brs.mMinLineHeight, lineNumber);
-      nsresult rv = DoReflowInlineFrames(iro->brs, ll, line,
-                                         &keepGoing, &lineReflowStatus);
-      NS_ASSERTION(NS_SUCCEEDED(rv), "DoReflowInlineFrames failed");
-      NS_ASSERTION(!keepGoing, "got keepGoing on intrinsic width pass");
-      NS_ASSERTION(lineReflowStatus == LINE_REFLOW_OK,
-                   "bad line reflow status for intrinsic width pass");
-
-      line_min = ll.GetLineMaxElementWidth(line);
-      line_pref = line->mBounds.XMost();
-      ll.EndLineReflow();
+      line_min = data_min.prevLines;
+      line_pref = data_pref.prevLines;
 
       // In the intrinsic width pass, we put all floats into
       // mBelowCurrentLineFloats (simply because the code to do so is
@@ -734,12 +700,6 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
 
         line_pref += floats_left_done + floats_right_done;
       }
-
-      // Mark the line as dirty since we've put in into a fake state.
-      // The FrameNeedsReflow call should usually (always?) be a no-op.
-      line->MarkDirty();
-      GetPresContext()->PresShell()->FrameNeedsReflow(this,
-                                                      nsIPresShell::eResize);
     }
     if (line_min > min_result)
       min_result = line_min;
