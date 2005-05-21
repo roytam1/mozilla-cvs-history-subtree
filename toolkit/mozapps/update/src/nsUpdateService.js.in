@@ -35,8 +35,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-const NS_UPDATE_XMLNS = "http://www.mozilla.org/2005/app-update";
-
 const PREF_APP_UPDATE_ENABLED   = "app.update.enabled";
 const PREF_APP_UPDATE_MODE      = "app.update.mode";
 const PREF_APP_UPDATE_INTERVAL  = "app.update.interval";
@@ -67,9 +65,8 @@ const STATE_APPLYING  = "applying";
 const STATE_SUCCEEDED = "succeeded";
 const STATE_FAILED    = "failed";
 
-const PREFIX_APP_NS   = "http://www.mozilla.org/2004/app-rdf#";
-const PREFIX_UPDATES  = "urn:mozilla:updates:";
-const ROOT_UPDATES    = "urn:mozilla:updates:root";
+const DOWNLOAD_CHUNK_SIZE = 65536;
+const DOWNLOAD_INTERVAL   = 1;
 
 const nsILocalFile            = Components.interfaces.nsILocalFile;
 const nsIUpdateService        = Components.interfaces.nsIUpdateService;
@@ -79,27 +76,10 @@ const nsIIncrementalDownload  = Components.interfaces.nsIIncrementalDownload;
 
 const Node = Components.interfaces.nsIDOMNode;
 
-function APP_NS(aProperty) {
-  return PREFIX_APP_NS + aProperty;
-}
-
 var gApp      = null;
 var gPref     = null;
 var gOS       = null;
 var gConsole  = null;
-var gRDF      = null;
-
-function AUS_R(property) {
-  return gRDF.GetResource(EM_NS(property));
-}
-
-function AUS_L(literal) {
-  return gRDF.GetLiteral(literal);
-}
-
-function AUS_I(integer) {
-  return gRDF.GetIntLiteral(integer);
-}
 
 /**
  * Logs a string to the error console. 
@@ -292,8 +272,6 @@ function UpdateService() {
                     .getService(Components.interfaces.nsIObserverService);
   gConsole = Components.classes["@mozilla.org/consoleservice;1"]
                        .getService(Components.interfaces.nsIConsoleService);  
-  gRDF = Components.classes["@mozilla.org/rdf/rdf-service;1"]
-                   .getService(Components.interfaces.nsIRDFService);
   
   this._makeTimer();
 
@@ -306,13 +284,14 @@ function UpdateService() {
 
 UpdateService.prototype = {
   
+  _downloader: null,
   _timer: null,  
   _makeTimer: function() {
     if (!this._timer) 
       this._timer = Components.classes["@mozilla.org/timer;1"]
                               .createInstance(Components.interfaces.nsITimer);
     this._timer.cancel();
-    this._timer.initWithCallback(this, 2000, 
+    this._timer.initWithCallback(this, 5000, 
                                  Components.interfaces.nsITimer.TYPE_REPEATING_SLACK);
     return this._timer;
   },
@@ -345,16 +324,22 @@ UpdateService.prototype = {
   },
   
   notify: function(timer) {
+    if (this._downloader) {
+      LOG("download in progress");
+      return;
+    }
     var self = this;
     var listener = {
       onProgress: function() { },
       onCheckComplete: function(updates, updateCount) {
         if (self._needsToPromptForUpdate(updates)) {
+          dump("*** needs prompt\n");
           var prompter = Components.classes["@mozilla.org/updates/update-prompt;1"]
                                    .createInstance(Components.interfaces.nsIUpdatePrompt);
           prompter.showUpdateAvailable(updates, updateCount);
         }
         else {
+          dump("*** downloading updates\n");
           self.downloadUpdates(updates, updateCount);
         }
         
@@ -377,8 +362,8 @@ UpdateService.prototype = {
    * 
    */
   downloadUpdates: function(updates, updateCount) {
-    var downloader = new Downloader();
-    downloader.downloadUpdates(updates);
+    this._downloader = new Downloader();
+    this._downloader.downloadUpdates(updates);
   },
   
   /**
@@ -415,13 +400,12 @@ function getPref(func, preference) {
 /**
  * Update Patch
  */
-function UpdatePatch(type, url, hashfunction, hashvalue, currentSize, finalSize) {
+function UpdatePatch(type, url, hashfunction, hashvalue, size) {
   this.type = type;
   this.url = url;
   this.hashfunction = hashfunction;
   this.hashvalue = hashvalue;
-  this.currentSize = currentSize;
-  this.finalSize = finalSize;
+  this.size = size;
 }
 
 /**
@@ -477,15 +461,20 @@ function UpdateNode(node) {
     var patchNode = node.childNodes[i];
     if (patchNode.nodeType != Node.ELEMENT_NODE)
       continue;
+    LOG("processing new patch");
     var patch = new UpdatePatch(patchNode.getAttribute("type"),
                                 patchNode.getAttribute("url"),
                                 patchNode.getAttribute("hashfunction"),
                                 patchNode.getAttribute("hashvalue"),
                                 parseInt(patchNode.getAttribute("size")));
+    LOG("patch.type="+patch.type);
+    LOG("patch.size="+patch.size);
     var collection = patch.type == "partial" ? this.partial : this.complete;
     collection.patches.push(patch);
-    collection.size += patch.finalSize;
+    collection.size += patch.size;
   }
+  LOG("partial: size="+this.partial.size);
+  LOG("complete: size="+this.complete.size);
   
   // Initialize this object
   this._type = node.getAttribute("type");
@@ -495,8 +484,8 @@ function UpdateNode(node) {
 }
 
 UpdateNode.prototype = {
-  partial : { patches: [], size: 0 },
-  complete: { patches: [], size: 0 },
+  partial : null,
+  complete: null,
   
   get completeUpdate() {
     return new Update(this._type, this._version, this._extensionversion,
@@ -521,7 +510,8 @@ Checker.prototype = {
   
   get _updateURL() {
     try {
-      return gPref.getComplexValue(PREF_APP_UPDATE_URL, nsIPrefLocalizedString).data;
+      //return gPref.getComplexValue(PREF_APP_UPDATE_URL, nsIPrefLocalizedString).data;
+      return gPref.getCharPref(PREF_APP_UPDATE_URL);
     }
     catch (e) {
     }
@@ -534,6 +524,7 @@ Checker.prototype = {
       
     this._request = Components.classes["@mozilla.org/xmlextras/xmlhttprequest;1"]
                               .createInstance(Components.interfaces.nsIXMLHttpRequest);
+    dump("*** update url: " + this._updateURL + "\n");
     this._request.open("GET", this._updateURL, true);
     this._request.overrideMimeType("text/xml");
     this._request.setRequestHeader("Cache-Control", "no-cache");
@@ -561,7 +552,7 @@ Checker.prototype = {
       return [];
     }
     
-    var newestUpdate = { version: "0.0", update: null };
+    var newestUpdate = { version: "0.0", updateNode: null };
     var minorPartialPatches = [];
     var updates = [];
     var sizeOfPartialPatches = 0;
@@ -570,11 +561,14 @@ Checker.prototype = {
       if (updateElement.nodeType != Node.ELEMENT_NODE)
         continue;
       if (updateElement.getAttribute("type") == "minor") {
+        LOG("processing minor update element");
         var updateNode = new UpdateNode(updateElement); 
+
         var updateVersion = updateElement.getAttribute("version");
         var vc = new VersionChecker();
         if (vc.compare(newestUpdate.version, updateVersion) < 0)
           newestUpdate = { version: updateVersion, updateNode: updateNode };
+
         minorPartialPatches = minorPartialPatches.concat(updateNode.partial.patches);
         updates.push(updateNode.partialUpdate);
         sizeOfPartialPatches += updateNode.partial.size;
@@ -585,12 +579,13 @@ Checker.prototype = {
     }
     
     if (newestUpdate.updateNode && 
-        sizeOfPartialPatches > newestUpdate.updateNode.complete.size) {
+        (sizeOfPartialPatches == 0 ||
+         sizeOfPartialPatches > newestUpdate.updateNode.complete.size)) {
       LOG("Checker.get_updates: size of " + minorPartialPatches.length + " partial " + 
           "patches (" + sizeOfPartialPatches + ") exceeds size of newest " + 
           "full patch (" + newestUpdate.updateNode.complete.size + "), " + 
           "returning full patch instead.");
-      return [newestUpdate.completeUpdate];
+      return [newestUpdate.updateNode.completeUpdate];
     }
     LOG("Checker.get_updates: size of " + minorPartialPatches.length + " partial " + 
         "patches (" + sizeOfPartialPatches + ") is less than size of newest " + 
@@ -608,6 +603,15 @@ Checker.prototype = {
 
     // Analyze the resulting DOM and determine the set of updates to install
     var updates = this._updates;
+
+    /*
+    for (i=0; i<updates.length; ++i) {
+      var u = updates[i];
+      for (var p in u) {
+        dump("  " + p + "=" + eval("u."+p) + "\n");
+      }
+    }
+    */
     
     // ... and tell the Update Service about what we discovered.
     this._callback.onCheckComplete(updates, updates.length);
@@ -652,6 +656,7 @@ Downloader.prototype = {
     if (!statusFile.exists()) 
       statusFile.create(nsILocalFile.NORMAL_FILE_TYPE, PERMS_FILE);
     fos.init(statusFile, modeFlags, PERMS_FILE, 0);
+    state = state + "\r\n";
     fos.write(state, state.length);    
     if (fos instanceof Components.interfaces.nsISafeOutputStream)
       fos.finish();
@@ -670,7 +675,16 @@ Downloader.prototype = {
     var updatesDir = this._getUpdatesDir();
     var patchCount = 0;
     for (var i = 0; i < updates.length; ++i) {
+      dump("i="+i+"\n");
       for (var j = 0; j < updates[i].patchCount; ++j) {
+        LOG("j="+j+"\n");
+
+        var uri = ios.newURI(updates[i].getPatchAt(j).url, null, null);
+        if (uri.spec in this._downloads) {
+          LOG("already downloading");
+          continue;
+        }
+
         var id = Components.classes["@mozilla.org/network/incremental-download;1"]
                            .createInstance(nsIIncrementalDownload);
         var patchFile = updatesDir.clone();
@@ -678,15 +692,14 @@ Downloader.prototype = {
         if (!patchFile.exists())
           patchFile.create(nsILocalFile.DIRECTORY_TYPE, PERMS_DIRECTORY);
         
-        var uri = ios.newURI(updates[i].getPatchAt(j).url, null, null);
-        if (uri.spec in this._downloads)
-          continue;        
+
         var url = uri.QueryInterface(Components.interfaces.nsIURL);
         patchFile.append(url.fileName);
         LOG("Downloader.downloadUpdates: Downloading from " + uri.spec + " to " + 
             patchFile.path);
-        id.init(uri, patchFile, -1, -1);
+        id.init(uri, patchFile, DOWNLOAD_CHUNK_SIZE, DOWNLOAD_INTERVAL);
         id.start(this, null);
+
         this._downloads[uri.spec] = id;
       }
     }
@@ -711,7 +724,7 @@ Downloader.prototype = {
     if (request instanceof nsIIncrementalDownload) {
       LOG("Downloader.onStopRequest: " + request.URI.spec + ", status = " + status);
       var id = this._downloads[request.URI.spec];
-      LOG("Downloader.onStopRequest: updating status file: " + id.destination);
+      LOG("Downloader.onStopRequest: updating status file: " + id.destination.path);
       this._writeStatusFile(id.destination.parent, STATE_PENDING);
     }
   },
@@ -722,258 +735,6 @@ Downloader.prototype = {
   QueryInterface: function(iid) {
     if (!iid.equals(Components.interfaces.nsIRequestObserver) &&
         !iid.equals(Components.interfaces.nsIProgressEventSink) &&
-        !iid.equals(Components.interfaces.nsISupports))
-      throw Components.results.NS_ERROR_NO_INTERFACE;
-    return this;
-  }
-};
-
-var Manager = {
-  _request: null,
-  load: function() {
-    // Don't initialize more than once
-    if (this._request)
-      return;
-      
-    var updatesFile  = getFile(KEY_APPDIR, [FILE_UPDATES]);
-    var updatesFileURL = getURLSpecFromFile(updatesFile);
-
-    this._request = Components.classes["@mozilla.org/xmlextras/xmlhttprequest;1"]
-                              .createInstance(Components.interfaces.nsIXMLHttpRequest);
-    this._request.open("GET", updatesFileURL, true);
-    this._request.overrideMimeType("text/xml");
-    this._request.setRequestHeader("Cache-Control", "no-cache");
-    
-    var self = this;
-    this._request.onerror     = function(event) { self.onError(event);    };
-    this._request.onload      = function(event) { self.onLoad(event);     };
-
-    LOG("Manager.load: sending request to " + updatesFileURL);
-    this._request.send(null);
-  },
-  
-  onLoad: function(event) {
-    this._parseUpdatesXML();
-  },
-  
-  save: function() {
-    // Serialize...
-  },
-  
-  updates: { },
-  patches: { },
-  
-  _parseUpdatesXML: function() {
-    var updatesElement = this._request.responseXML.documentElement;
-    if (!updatesElement) {
-      LOG("Manager._parseUpdatesXML: empty updates document?!");
-      return [];
-    }
-    
-    for (var i = 0; i < updatesElement.childNodes.length; ++i) {
-      var updateElement = updatesElement.childNodes[i];
-      if (updateElement.nodeType != Node.ELEMENT_NODE)
-        continue;
-      
-      var patches = [];
-      for (var j = 0; j < updateElement.childNodes.length; ++j) {
-        var patchElement = updateElement.childNodes[j];
-        var p = new UpdatePatch(patchElement.getAttribute("type"),
-                                patchElement.getAttribute("url"),
-                                patchElement.getAttribute("hashfunction"),
-                                patchElement.getAttribute("hashvalue"),
-                                parseInt(patchElement.getAttribute("currentSize")),
-                                parseInt(patchElement.getAttribute("finalSize")));
-        patches.push(p);
-        this.patches[p.url] = p;
-      }
-      
-      var update = new Update(updateElement.getAttribute("type"), 
-                              updateElement.getAttribute("version"),
-                              updateElement.getAttribute("extensionversion"),
-                              updateElement.getAttribute("detailsurl"),
-                              patches);
-      this.updates[update.version] = update;
-    }
-  },
-  
-  onError: function(event) {
-    LOG("Manager.onError: failed to load updates database!");
-  },
-  
-  addUpdates: function(updates) {
-    for (var i = 0; i < updates.length; ++i) {
-      var update = updates[i];
-      this.updates[update.version] = update;
-    }
-    this._updateChildCount();
-  },
-  
-  _updateChildCount: function() {
-    var value = this.GetTarget(AUS_R(ROOT_UPDATES), AUS_R("child"), true);
-    if (value) {
-      for (var i = 0; i < this._observers.length; ++i)
-        this._observers[i].onAssert(this, AUS_R(ROOT_UPDATES), AUS_R("child"), 
-                                    value);
-    }
-  },
-  
-  /////////////////////////////////////////////////////////////////////////////
-  // nsIRDFDataSource
-  get URI() {
-    return "rdf:updates";
-  },
-  
-  GetSource: function(property, target, truthValue) {
-    return this._inner.GetSource(property, target, truthValue);
-  },
-  
-  GetSources: function(property, target, truthValue) {
-    return this._inner.GetSources(property, target, truthValue);
-  },
-  
-  /**
-   * See nsIRDFDataSource.idl
-   */
-  GetTarget: function(source, property, truthValue) {
-    if (!source)
-      return null;
-    
-    var version = stripPrefix(source.Value, PREFIX_UPDATES);
-    var update = this.updates[version];
-    var property = stripPrefix(property.Value, PREFIX_APP_NS);
-    if (property in update)
-      return AUS_L(update[property]);
-    return AUS_L("");
-  },
-  
-  /**
-   * See nsIRDFDataSource.idl
-   */
-  GetTargets: function(source, property, truthValue) {
-    if (!source)
-      return null;
-    
-    var targets = [];
-    if (source.EqualsNode(gRDF.GetResource(ROOT_UPDATES)) &&
-        property.EqualsNode(AUS_R("child")) {
-      var updates = [];
-      for (var update in this.updates) {
-        targets.push(AUS_R(PREFIX_UPDATES + this.updates[update].version));
-      }
-    }
-    else
-      targets = [this.GetTarget(source, property, truthValue)];
-    return new ArrayEnumerator(targets);
-  },
-  
-  Assert: function(source, property, target, truthValue) {
-    this._inner.Assert(source, property, target, truthValue);
-  },
-  
-  Unassert: function(source, property, target) {
-    this._inner.Unassert(source, property, target);
-  },
-  
-  Change: function(source, property, oldTarget, newTarget) {
-    this._inner.Change(source, property, oldTarget, newTarget);
-  },
-
-  Move: function(oldSource, newSource, property, target) {
-    this._inner.Move(oldSource, newSource, property, target);
-  },
-  
-  HasAssertion: function(source, property, target, truthValue) {
-    if (!source || !property || !target)
-      return false;
-    return this._inner.HasAssertion(source, property, target, truthValue);
-  },
-  
-  _observers: [],
-  AddObserver: function(observer) {
-    for (var i = 0; i < this._observers.length; ++i) {
-      if (this._observers[i] == observer) 
-        return;
-    }
-    this._observers.push(observer);
-    this._inner.AddObserver(observer);
-  },
-  
-  RemoveObserver: function(observer) {
-    for (var i = 0; i < this._observers.length; ++i) {
-      if (this._observers[i] == observer) 
-        this._observers.splice(i, 1);
-    }
-    this._inner.RemoveObserver(observer);
-  },
-  
-  ArcLabelsIn: function(node) {
-    return this._inner.ArcLabelsIn(node);
-  },
-  
-  ArcLabelsOut: function(source) {
-    return this._inner.ArcLabelsOut(source);
-  },
-  
-  GetAllResources: function() {
-    return this._inner.GetAllResources();
-  },
-  
-  IsCommandEnabled: function(sources, command, arguments) {
-    return this._inner.IsCommandEnabled(sources, command, arguments);
-  },
-  
-  DoCommand: function(sources, command, arguments) {
-    this._inner.DoCommand(sources, command, arguments);
-  },
-  
-  GetAllCmds: function(source) {
-    return this._inner.GetAllCmds(source);
-  },
-  
-  hasArcIn: function(node, arc) {
-    return this._inner.hasArcIn(node, arc);
-  },
-  
-  hasArcOut: function(source, arc) {
-    return this._inner.hasArcOut(source, arc);
-  },
-  
-  beginUpdateBatch: function() {
-    return this._inner.beginUpdateBatch();
-  },
-  
-  endUpdateBatch: function() {
-    return this._inner.endUpdateBatch();
-  },
-  
-  /**
-   * See nsIRDFRemoteDataSource.idl
-   */
-  get loaded() {
-    throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
-  },
-  
-  Init: function(uri) {
-  },
-  
-  Refresh: function(blocking) {
-  },
-  
-  Flush: function() {
-    if (this._inner instanceof Components.interfaces.nsIRDFRemoteDataSource)
-      this._inner.Flush();
-  },
-  
-  FlushTo: function(uri) {
-  },
-  
-  /**
-   * See nsISupports.idl
-   */
-  QueryInterface: function(iid) {
-    if (!iid.equals(Components.interfaces.nsIRDFDataSource) &&
-        !iid.equals(Components.interfaces.nsIRDFRemoteDataSource) && 
         !iid.equals(Components.interfaces.nsISupports))
       throw Components.results.NS_ERROR_NO_INTERFACE;
     return this;
