@@ -1,11 +1,11 @@
 #include <string.h>
+#include <fcntl.h>
 #include "bzlib.h"
 #include "archivereader.h"
 #include "errors.h"
 
 #if defined(XP_UNIX)
 # include <sys/types.h>
-# include <fcntl.h>
 #elif defined(XP_WIN)
 # include <io.h>
 #endif
