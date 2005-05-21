@@ -645,8 +645,10 @@ PatchFile::LoadSourceFile(int ofd)
 
   unsigned int crc = crc32(buf, header.slen);
 
-  if (crc != header.scrc32)
+  if (crc != header.scrc32) {
+    LOG(("CRC check failed\n"));
     return BSP_ERROR_CORRUPT;
+  }
   
   return OK;
 }
