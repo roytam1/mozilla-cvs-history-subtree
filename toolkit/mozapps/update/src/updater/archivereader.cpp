@@ -3,6 +3,13 @@
 #include "archivereader.h"
 #include "errors.h"
 
+#if defined(XP_UNIX)
+# include <sys/types.h>
+# include <fcntl.h>
+#elif defined(XP_WIN)
+# include <io.h>
+#endif
+
 int
 ArchiveReader::Open(const char *path)
 {
@@ -32,7 +39,15 @@ ArchiveReader::ExtractFile(const char *name, const char *dest)
   if (!item)
     return IO_ERROR;
 
-  FILE *fp = fopen(dest, "wb");
+#ifdef XP_WIN
+  int fd = _open(dest, _O_BINARY|_O_CREAT|_O_TRUNC|_O_WRONLY, item->flags);
+#else
+  int fd = creat(dest, item->flags);
+#endif
+	if (fd == -1)
+		return IO_ERROR;
+
+  FILE *fp = fdopen(fd, "wb");
   if (!fp)
     return IO_ERROR;
 

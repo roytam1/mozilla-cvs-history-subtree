@@ -188,7 +188,6 @@ static ArchiveReader gArchiveReader;
 static const char kWhitespace[] = " \t";
 static const char kNL[] = "\r\n";
 static const char kQuote[] = "\"";
-static const char kWSQuote[] = "\" \t";
 
 static inline PRUint32
 mmin(PRUint32 a, PRUint32 b)
@@ -443,7 +442,9 @@ private:
 int
 RemoveFile::Parse(char *line)
 {
-  mFile = mstrtok(kWhitespace, &line);
+  // format "<deadfile>"
+
+  mFile = mstrtok(kQuote, &line);
   if (!mFile)
     return PARSE_ERROR;
 
@@ -519,7 +520,9 @@ private:
 int
 AddFile::Parse(char *line)
 {
-  mFile = mstrtok(kWhitespace, &line);
+  // format "<newfile>"
+
+  mFile = mstrtok(kQuote, &line);
   if (!mFile)
     return PARSE_ERROR;
 
@@ -651,18 +654,18 @@ PatchFile::LoadSourceFile(int ofd)
 int
 PatchFile::Parse(char *line)
 {
-  char *q;
-
   // format "<patchfile>" "<filetopatch>"
-  mPatchFile = mstrtok(kWSQuote, &line);
+
+  mPatchFile = mstrtok(kQuote, &line);
   if (!mPatchFile)
     return PARSE_ERROR;
 
-  q = mstrtok(kQuote, &line);
+	// consume whitespace between args
+  char *q = mstrtok(kQuote, &line);
   if (!q)
     return PARSE_ERROR;
 
-  mFile = mstrtok(kWSQuote, &line);
+  mFile = mstrtok(kQuote, &line);
   if (!mFile)
     return PARSE_ERROR;
 
@@ -703,6 +706,8 @@ PatchFile::Prepare()
     return IO_ERROR;
 
   rv = LoadSourceFile(ofd);
+	if (rv)
+		LOG(("LoadSourceFile failed\n"));
   close(ofd);
 
   return rv;
