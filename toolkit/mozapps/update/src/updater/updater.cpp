@@ -768,13 +768,12 @@ WriteStatusFile(int status)
   char filename[MAXPATHLEN];
   snprintf(filename, MAXPATHLEN, "%s/update.status", gSourcePath);
 
-  int fd = open(filename, O_WRONLY | O_TRUNC | O_CREAT, 0644);
+  int fd = open(filename, O_WRONLY | O_TRUNC | O_CREAT | _O_BINARY, 0644);
   if (fd < 0)
     return;
 
-  const char *text = (status == OK) ? "succeeded" : "failed";
+  const char *text = (status == OK) ? "succeeded\n" : "failed\n";
   write(fd, text, strlen(text));
-  write(fd, kNL, sizeof(kNL)-1);
   close(fd);
 }
 

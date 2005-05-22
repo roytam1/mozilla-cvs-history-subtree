@@ -44,12 +44,14 @@
 #include "nsCOMPtr.h"
 #include "nsCOMArray.h"
 #include "nsString.h"
+#include "nsPrintfCString.h"
 #include "prproces.h"
 #include "prlog.h"
 
 #if defined(XP_WIN)
 # include <direct.h>
 # include <process.h>
+# include <windows.h>
 #elif defined(XP_UNIX)
 # include <unistd.h>
 #endif
@@ -185,7 +187,7 @@ SetStatus(nsILocalFile *statusFile, const char *status)
   if (NS_FAILED(rv))
     return PR_FALSE;
 
-  fprintf(fp, "%s\r\n", status);
+  fprintf(fp, "%s\n", status);
   fclose(fp);
   return PR_TRUE;
 }
@@ -204,16 +206,25 @@ CopyUpdaterIntoUpdateDir(nsIFile *appDir, nsIFile *updateDir,
   nsresult rv;
 
   for (const char **leafName = filesToMove; *leafName; ++leafName) {
+    nsDependentCString leaf(*leafName);
     nsCOMPtr<nsIFile> file;
 
+    // Make sure there is not an existing file in the target location.
+    rv = updateDir->Clone(getter_AddRefs(file));
+    if (NS_FAILED(rv))
+      return PR_FALSE;
+    rv = file->AppendNative(leaf);
+    if (NS_FAILED(rv))
+      return PR_FALSE;
+    file->Remove(PR_FALSE);
+
+    // Now, copy into the target location.
     rv = appDir->Clone(getter_AddRefs(file));
     if (NS_FAILED(rv))
       return PR_FALSE;
-
-    rv = file->AppendNative(nsDependentCString(*leafName));
+    rv = file->AppendNative(leaf);
     if (NS_FAILED(rv))
       return PR_FALSE;
-
     rv = file->CopyToNative(updateDir, EmptyCString());
     if (NS_FAILED(rv))
       return PR_FALSE;
@@ -273,13 +284,19 @@ ApplyUpdate(nsIFile *appDir, nsIFile *updateDir, nsILocalFile *statusFile,
   DoubleQuoteIfNeeded(commandLine);
 #endif
 
-  char **argv = new char*[4];
+  char **argv = new char*[5];
   if (!argv)
     return;
   argv[0] = (char*) updaterPath.get();
   argv[1] = (char*) updateDirPath.get();
   argv[2] = (char*) commandLine.get();
+#if defined(XP_WIN)
+  nsPrintfCString pid("%u", GetCurrentProcessId());
+  argv[3] = (char*) pid.get();
+  argv[4] = nsnull;
+#else
   argv[3] = nsnull;
+#endif
 
   LOG(("spawning updater process...\n"));
 

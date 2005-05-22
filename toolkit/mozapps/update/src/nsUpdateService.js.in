@@ -50,8 +50,10 @@ const KEY_APPDIR          = "XCurProcD";
 
 const DIR_UPDATES         = "updates";
 const FILE_UPDATE_STATUS  = "update.status";
-const FILE_UPDATES        = "updates.manifest";
+const FILE_UPDATE_ARCHIVE = "update.mar";
+const FILE_UPDATE_INFO    = "update.info";
 
+const MODE_RDONLY   = 0x01;
 const MODE_WRONLY   = 0x02;
 const MODE_CREATE   = 0x08;
 const MODE_APPEND   = 0x10;
@@ -60,10 +62,11 @@ const MODE_TRUNCATE = 0x20;
 const PERMS_FILE      = 0644;
 const PERMS_DIRECTORY = 0755;
 
-const STATE_PENDING   = "pending";
-const STATE_APPLYING  = "applying";
-const STATE_SUCCEEDED = "succeeded";
-const STATE_FAILED    = "failed";
+const STATE_DOWNLOADING = "downloading";
+const STATE_PENDING     = "pending";
+const STATE_APPLYING    = "applying";
+const STATE_SUCCEEDED   = "succeeded";
+const STATE_FAILED      = "failed";
 
 const DOWNLOAD_CHUNK_SIZE = 65536;
 const DOWNLOAD_INTERVAL   = 1;
@@ -221,6 +224,49 @@ function stripPrefix(string, prefix) {
 }
 
 /**
+ * Writes a string of text to a file.  A newline will be appended to the data
+ * written to the file.  This function only works with ASCII text.
+ */
+function writeStringToFile(file, text) {
+  var fos =
+      Components.classes["@mozilla.org/network/safe-file-output-stream;1"].
+      createInstance(Components.interfaces.nsIFileOutputStream);
+  var modeFlags = MODE_WRONLY | MODE_CREATE | MODE_TRUNCATE;
+  if (!file.exists()) 
+    file.create(nsILocalFile.NORMAL_FILE_TYPE, PERMS_FILE);
+  fos.init(file, modeFlags, PERMS_FILE, 0);
+  text += "\n";
+  fos.write(text, text.length);    
+  if (fos instanceof Components.interfaces.nsISafeOutputStream)
+    fos.finish();
+  else
+    fos.close();
+}
+
+/**
+ * Reads a string of text from a file.  A trailing newline will be removed
+ * before the result is returned.  This function only works with ASCII text.
+ */
+function readStringFromFile(file) {
+  var fis =
+      Components.classes["@mozilla.org/network/file-input-stream;1"].
+      createInstance(Components.interfaces.nsIFileInputStream);
+  var modeFlags = MODE_RDONLY;
+  if (!file.exists())
+    return null;
+  fis.init(file, modeFlags, PERMS_FILE, 0);
+  var sis =
+      Components.classes["@mozilla.org/scriptableinputstream;1"].
+      createInstance(Components.interfaces.nsIScriptableInputStream);
+  sis.init(fis);
+  var text = sis.read(sis.available());
+  sis.close();
+  if (text[text.length - 1] == "\n")
+    text = text.slice(0, -1);
+  return text;
+}
+
+/**
  *
  */
 function UpdatePrompt() {
@@ -229,7 +275,7 @@ UpdatePrompt.prototype = {
   /**
    * See nsIUpdateService.idl
    */
-  showUpdateAvailable: function(type, updates, updateCount) {
+  showUpdatesAvailable: function(type, updates, updateCount) {
     var ary = Components.classes["@mozilla.org/supports-array;1"]
                         .createInstance(Components.interfaces.nsISupportsArray);
     for (var i = 0; i < updateCount; ++i)
@@ -283,7 +329,6 @@ function UpdateService() {
 }
 
 UpdateService.prototype = {
-  
   _downloader: null,
   _timer: null,  
   _makeTimer: function() {
@@ -291,18 +336,19 @@ UpdateService.prototype = {
       this._timer = Components.classes["@mozilla.org/timer;1"]
                               .createInstance(Components.interfaces.nsITimer);
     this._timer.cancel();
-    this._timer.initWithCallback(this, 5000, 
+    this._timer.initWithCallback(this, 10000, 
                                  Components.interfaces.nsITimer.TYPE_REPEATING_SLACK);
     return this._timer;
   },
   
   observe: function(subject, topic, data) {
-    if (topic == "app-startup")
-      dump("*** goats\n");  
+    if (topic == "app-startup") {
+      // Resume fetching...
+      this.downloadUpdate(null);
+    }
   },
   
   _needsToPromptForUpdate: function(updates) {
-//#ifdef MOZ_XULAPP  
     // First, check for Extension incompatibilities. These trump any preference
     // settings.
     var em = Components.classes["@mozilla.org/extensions/manager;1"]
@@ -315,7 +361,6 @@ UpdateService.prototype = {
       if (count.value > 0)
         return true;
     }
-//#endif  
 
     // Now, inspect user preferences.
     
@@ -324,30 +369,46 @@ UpdateService.prototype = {
   },
   
   notify: function(timer) {
-    if (this._downloader) {
-      LOG("download in progress");
+    // If a download is in progress, then do nothing.
+    if (this._downloader && this._downloader.isBusy)
       return;
-    }
+
     var self = this;
     var listener = {
       onProgress: function() { },
       onCheckComplete: function(updates, updateCount) {
-        if (self._needsToPromptForUpdate(updates)) {
-          dump("*** needs prompt\n");
-          var prompter = Components.classes["@mozilla.org/updates/update-prompt;1"]
-                                   .createInstance(Components.interfaces.nsIUpdatePrompt);
-          prompter.showUpdateAvailable(updates, updateCount);
-        }
-        else {
-          dump("*** downloading updates\n");
-          self.downloadUpdates(updates, updateCount);
-        }
-        
-        dump("*** checkComplete, there are " + updateCount + " updates.\n");
+        self._selectUpdate(updates);
       },
       onError: function() { },
     }
+
     this.checkForUpdates(listener);
+  },
+
+  _selectUpdate: function(updates) {
+    // If there is a major update available, then we may want to notify the
+    // user here and let them select whether or not to install it.  Otherwise,
+    // if there is only a minor update available then we will proceed to
+    // download it.  In the case where we have both, we'll defer to the UI
+    // layer code to decide how to proceed.
+
+    for (var i = 0; i < updates.length; ++i) {
+      if (updates[i].type == "major") {
+        // Defer to UI
+        var prompter =
+            Components.classes["@mozilla.org/updates/update-prompt;1"].
+            createInstance(Components.interfaces.nsIUpdatePrompt);
+        prompter.showUpdatesAvailable(updates, updates.length);
+        return;
+      }
+    }
+
+    if (updates[0].type == "minor") {
+      if (updates.length > 1)
+        LOG("Ignoring unexpected updates");
+
+      this.downloadUpdate(updates[0]);
+    }
   },
 
   /**
@@ -361,9 +422,15 @@ UpdateService.prototype = {
   /**
    * 
    */
-  downloadUpdates: function(updates, updateCount) {
+  downloadUpdate: function(update) {
+    LOG("downloadUpdate");
+
+    if (this._downloader && this._downloader.isBusy) {
+      LOG("no support for downloading more than one update at a time");
+      return;
+    }
     this._downloader = new Downloader();
-    this._downloader.downloadUpdates(updates);
+    this._downloader.downloadUpdate(update);
   },
   
   /**
@@ -408,6 +475,15 @@ function UpdatePatch(type, url, hashfunction, hashvalue, size) {
   this.size = size;
 }
 
+UpdatePatch.prototype = {
+  QueryInterface: function(iid) {
+    if (!iid.equals(Components.interfaces.nsIUpdatePatch) &&
+        !iid.equals(Components.interfaces.nsISupports))
+      throw Components.results.NS_ERROR_NO_INTERFACE;
+    return this;
+  }
+};
+
 /**
  * Update
  * Implements nsIUpdate
@@ -448,55 +524,31 @@ Update.prototype = {
  
 
 /**
- * UpdateNode
- * Parses an <update> element into a group of datastructures for the purpose
- * of determining the best path to take when updating. 
+ * ParseUpdateNode
+ * Parses an <update> element into an Update object.
  */
-function UpdateNode(node) {
-  this.partial = { patches: [], size: 0 };
-  this.complete = { patches: [], size: 0 };
+function ParseUpdateNode(node) {
+  patches = [];
 
-  // Initialize the dependent patches
   for (var i = 0; i < node.childNodes.length; ++i) {
     var patchNode = node.childNodes[i];
     if (patchNode.nodeType != Node.ELEMENT_NODE)
       continue;
-    LOG("processing new patch");
-    var patch = new UpdatePatch(patchNode.getAttribute("type"),
-                                patchNode.getAttribute("url"),
-                                patchNode.getAttribute("hashfunction"),
-                                patchNode.getAttribute("hashvalue"),
-                                parseInt(patchNode.getAttribute("size")));
-    LOG("patch.type="+patch.type);
-    LOG("patch.size="+patch.size);
-    var collection = patch.type == "partial" ? this.partial : this.complete;
-    collection.patches.push(patch);
-    collection.size += patch.size;
-  }
-  LOG("partial: size="+this.partial.size);
-  LOG("complete: size="+this.complete.size);
-  
-  // Initialize this object
-  this._type = node.getAttribute("type");
-  this._version = node.getAttribute("version");
-  this._extensionversion = node.getAttribute("extensionversion");
-  this._detailsurl = node.getAttribute("detailsurl");
-}
 
-UpdateNode.prototype = {
-  partial : null,
-  complete: null,
-  
-  get completeUpdate() {
-    return new Update(this._type, this._version, this._extensionversion,
-                      this._detailsurl, this.complete.patches);
-  },
-  
-  get partialUpdate() {
-    return new Update(this._type, this._version, this._extensionversion,
-                      this._detailsurl, this.partial.patches);
-  },
-};
+    patches.push(
+        new UpdatePatch(patchNode.getAttribute("type"),
+                        patchNode.getAttribute("url"),
+                        patchNode.getAttribute("hashfunction"),
+                        patchNode.getAttribute("hashvalue"),
+                        parseInt(patchNode.getAttribute("size"))));
+  }
+
+  return new Update(node.getAttribute("type"),
+                    node.getAttribute("version"),
+                    node.getAttribute("extensionversion"),
+                    node.getAttribute("detailsurl"),
+                    patches);
+}
 
 /**
  * Checker
@@ -551,46 +603,16 @@ Checker.prototype = {
       LOG("Checker.get_updates: empty updates document?!");
       return [];
     }
-    
-    var newestUpdate = { version: "0.0", updateNode: null };
-    var minorPartialPatches = [];
+
     var updates = [];
-    var sizeOfPartialPatches = 0;
     for (var i = 0; i < updatesElement.childNodes.length; ++i) {
       var updateElement = updatesElement.childNodes[i];
       if (updateElement.nodeType != Node.ELEMENT_NODE)
         continue;
-      if (updateElement.getAttribute("type") == "minor") {
-        LOG("processing minor update element");
-        var updateNode = new UpdateNode(updateElement); 
 
-        var updateVersion = updateElement.getAttribute("version");
-        var vc = new VersionChecker();
-        if (vc.compare(newestUpdate.version, updateVersion) < 0)
-          newestUpdate = { version: updateVersion, updateNode: updateNode };
+      updates.push(ParseUpdateNode(updateElement));
+    }
 
-        minorPartialPatches = minorPartialPatches.concat(updateNode.partial.patches);
-        updates.push(updateNode.partialUpdate);
-        sizeOfPartialPatches += updateNode.partial.size;
-      }
-      else {
-        dump("*** HANDLE MAJOR UPDATE TO = " + updateElement.getAttribute("version") + "\n");
-      }
-    }
-    
-    if (newestUpdate.updateNode && 
-        (sizeOfPartialPatches == 0 ||
-         sizeOfPartialPatches > newestUpdate.updateNode.complete.size)) {
-      LOG("Checker.get_updates: size of " + minorPartialPatches.length + " partial " + 
-          "patches (" + sizeOfPartialPatches + ") exceeds size of newest " + 
-          "full patch (" + newestUpdate.updateNode.complete.size + "), " + 
-          "returning full patch instead.");
-      return [newestUpdate.updateNode.completeUpdate];
-    }
-    LOG("Checker.get_updates: size of " + minorPartialPatches.length + " partial " + 
-        "patches (" + sizeOfPartialPatches + ") is less than size of newest " + 
-        "full patch (" + newestUpdate.updateNode.complete.size + "), " + 
-        "returning incremental patches.");
     return updates;
   },
   
@@ -603,15 +625,6 @@ Checker.prototype = {
 
     // Analyze the resulting DOM and determine the set of updates to install
     var updates = this._updates;
-
-    /*
-    for (i=0; i<updates.length; ++i) {
-      var u = updates[i];
-      for (var p in u) {
-        dump("  " + p + "=" + eval("u."+p) + "\n");
-      }
-    }
-    */
     
     // ... and tell the Update Service about what we discovered.
     this._callback.onCheckComplete(updates, updates.length);
@@ -626,14 +639,22 @@ Checker.prototype = {
 function Downloader() {
 }
 Downloader.prototype = {
+  _request: null,
+
   /**
    * 
    */
   _getUpdatesDir: function() {
-    var fileLocator = Components.classes["@mozilla.org/file/directory_service;1"]
-                                .getService(Components.interfaces.nsIProperties);
+    // Right now, we only support downloading one patch at a time, so we always
+    // use the same target directory.
+    var fileLocator =
+        Components.classes["@mozilla.org/file/directory_service;1"].
+        getService(Components.interfaces.nsIProperties);
     var appDir = fileLocator.get(KEY_APPDIR, Components.interfaces.nsIFile);
     appDir.append(DIR_UPDATES);
+    appDir.append("0");
+    if (!appDir.exists())
+      appDir.create(nsILocalFile.DIRECTORY_TYPE, PERMS_DIRECTORY);
     return appDir;
   },
   
@@ -648,84 +669,209 @@ Downloader.prototype = {
    *          The state value to write.
    */
   _writeStatusFile: function(dir, state) {
-    var fos = Components.classes["@mozilla.org/network/safe-file-output-stream;1"]
-                        .createInstance(Components.interfaces.nsIFileOutputStream);
     var statusFile = dir.clone();
     statusFile.append(FILE_UPDATE_STATUS);
-    var modeFlags = MODE_WRONLY | MODE_CREATE | MODE_TRUNCATE;
-    if (!statusFile.exists()) 
-      statusFile.create(nsILocalFile.NORMAL_FILE_TYPE, PERMS_FILE);
-    fos.init(statusFile, modeFlags, PERMS_FILE, 0);
-    state = state + "\r\n";
-    fos.write(state, state.length);    
-    if (fos instanceof Components.interfaces.nsISafeOutputStream)
-      fos.finish();
-    else
-      fos.close();
+    writeStringToFile(statusFile, state);
   },
-  
-  _downloads: { },
 
   /**
-   * 
+   * Reads the current update state...
    */
-  downloadUpdates: function(updates) {
-    var ios = Components.classes["@mozilla.org/network/io-service;1"]
-                        .getService(Components.interfaces.nsIIOService);
-    var updatesDir = this._getUpdatesDir();
-    var patchCount = 0;
-    for (var i = 0; i < updates.length; ++i) {
-      dump("i="+i+"\n");
-      for (var j = 0; j < updates[i].patchCount; ++j) {
-        LOG("j="+j+"\n");
+  _readStatusFile: function(dir) {
+    var statusFile = dir.clone();
+    statusFile.append(FILE_UPDATE_STATUS);
+    LOG(statusFile.path);
+    return readStringFromFile(statusFile);
+  },
 
-        var uri = ios.newURI(updates[i].getPatchAt(j).url, null, null);
-        if (uri.spec in this._downloads) {
-          LOG("already downloading");
-          continue;
-        }
+  /**
+   * Select the patch to use given the current state of updateDir and the given
+   * set of update patches.
+   */
+  _selectPatch: function(update, updateDir) {
+    // Given an update to download, we will always try to download the patch
+    // for a partial update over the patch for a full update.
 
-        var id = Components.classes["@mozilla.org/network/incremental-download;1"]
-                           .createInstance(nsIIncrementalDownload);
-        var patchFile = updatesDir.clone();
-        patchFile.append(patchCount++);
-        if (!patchFile.exists())
-          patchFile.create(nsILocalFile.DIRECTORY_TYPE, PERMS_DIRECTORY);
-        
-
-        var url = uri.QueryInterface(Components.interfaces.nsIURL);
-        patchFile.append(url.fileName);
-        LOG("Downloader.downloadUpdates: Downloading from " + uri.spec + " to " + 
-            patchFile.path);
-        id.init(uri, patchFile, DOWNLOAD_CHUNK_SIZE, DOWNLOAD_INTERVAL);
-        id.start(this, null);
-
-        this._downloads[uri.spec] = id;
+    // Return the first UpdatePatch with the given type.
+    function getPatchOfType(type) {
+      for (var i = 0; i < update.patchCount; ++i) {
+        var patch = update.getPatchAt(i);
+        if (patch.type == type)
+          return patch;
       }
+      return null;
     }
+
+    // Return the first UpdatePatch with the given hash.
+    function getPatchWithHash(hashvalue) {
+      for (var i = 0; i < update.patchCount; ++i) {
+        var patch = update.getPatchAt(i);
+        if (patch.hashvalue == hashvalue)
+          return patch;
+      }
+      return null;
+    }
+
+    // Deserialize the UpdatePatch currently being downloaded.
+    function readUpdateInfo() {
+      var infoFile = updateDir.clone();
+      infoFile.append(FILE_UPDATE_INFO);
+      var info = readStringFromFile(infoFile);
+      if (!info)
+        return null;
+      var fields = info.split(" ");  
+
+      return new UpdatePatch(fields[0], fields[1], fields[2], fields[3],
+                             parseInt(fields[4]));
+    }
+
+    // Serialize the given UpdatePatch.
+    function writeUpdateInfo(patch) {
+      var info =
+         patch.type + " " +
+         patch.url + " " +
+         patch.hashfunction + " " +
+         patch.hashvalue + " " +
+         patch.size;
+      var infoFile = updateDir.clone();
+      infoFile.append(FILE_UPDATE_INFO);
+      writeStringToFile(infoFile, info);
+    }
+
+    // OK, now start by looking at what is currently in the updateDir.
+    var state = this._readStatusFile(updateDir);
+    var patch = readUpdateInfo();
+
+    // If this is a patch that we know about, then select it.  If it is a patch
+    // that we do not know about, then remove it and use our default logic.
+
+    var useComplete = false;
+
+    if (patch) {
+      LOG("found existing patch [state="+state+"]");
+
+      // We may have no update to compare the existing patch against.
+      var found = update ? getPatchWithHash(patch.hashvalue) : patch;
+      if (found) {
+        LOG("existing patch is known");
+
+        if (state == STATE_DOWNLOADING) {
+          LOG("resuming download");
+          return found;
+        }
+        if (state == STATE_PENDING) {
+          LOG("already downloaded and staged");
+          return null;
+        }
+        if (state == STATE_FAILED || state == STATE_APPLYING) {
+          // Something went wrong when we tried to apply the previous patch.
+          // Try the complete patch next time.
+          if (update && patch.type == "partial") {
+            useComplete = true;
+          } else {
+            // This is a pretty fatal error.  Just bail.
+            LOG("failed to apply complete patch!");
+            return null;
+          }
+        }
+      }
+
+      // The patch is no longer known to us, so we should assume that it is
+      // no longer valid.  Remove all from the updateDir.
+
+      // XXX We may want to preserve an update.log file from a failed update.
+
+      // We expect this operation to fail since some files (e.g., updater.exe)
+      // may still be in use.  That's ok.
+      try {
+        updateDir.remove(true);
+      } catch (e) {}
+      // Restore the updateDir since we may have deleted it.
+      updateDir = this._getUpdatesDir();
+
+      state = null;
+      patch = null;
+    }
+
+    if (!update)
+      return null;
+
+    // Now, we select the best patch from the given set
+    if (!useComplete)
+      patch = getPatchOfType("partial");
+    if (!patch)
+      patch = getPatchOfType("complete");
+
+    writeUpdateInfo(patch);
+    return patch;
+  },
+
+  get isBusy() {
+    return this._request != null;
+  },
+  
+  /**
+   * Download and stage the given update.
+   *
+   * @param update
+   *        An Update instance or null.  If null, then the downloader will
+   *        attempt to resume downloading what it was previously downloading.
+   */
+  downloadUpdate: function(update) {
+    var updateDir = this._getUpdatesDir();
+
+    // This function may return null, which indicates that there are no patches
+    // to download.
+    var patch = this._selectPatch(update, updateDir);
+    if (!patch) {
+      LOG("no patch to download");
+      return;
+    }
+
+    var patchFile = updateDir.clone();
+    patchFile.append(FILE_UPDATE_ARCHIVE);
+
+    var ios = Components.classes["@mozilla.org/network/io-service;1"].
+        getService(Components.interfaces.nsIIOService);
+    var uri = ios.newURI(patch.url, null, null);
+
+    this._request =
+        Components.classes["@mozilla.org/network/incremental-download;1"].
+        createInstance(nsIIncrementalDownload);
+
+    LOG("Downloader.downloadUpdate: Downloading from " + uri.spec + " to " + 
+        patchFile.path);
+
+    this._request.init(uri, patchFile, DOWNLOAD_CHUNK_SIZE, DOWNLOAD_INTERVAL);
+    this._request.start(this, null);
+
+    this._writeStatusFile(updateDir, STATE_DOWNLOADING);
   },
   
   onStartRequest: function(request, context) {
-    if (request instanceof nsIIncrementalDownload)
-      LOG("Downloader.onStartRequest: " + request.URI.spec);
+    request.QueryInterface(nsIIncrementalDownload);
+    LOG("Downloader.onStartRequest: " + request.URI.spec);
   },
   
   onProgress: function(request, context, progress, maxProgress) {
-    if (request instanceof nsIIncrementalDownload)
-      LOG("Downloader.onProgress: " + request.URI.spec + ", " + progress + "/" + maxProgress);
+    request.QueryInterface(nsIIncrementalDownload);
+    LOG("Downloader.onProgress: " + request.URI.spec + ", " + progress + "/" + maxProgress);
   },
   
   onStatus: function(request, context, status, statusText) {
-    if (request instanceof nsIIncrementalDownload)
-      LOG("Downloader.onStatus: " + request.URI.spec + " status = " + status + ", text = " + statusText);
+    request.QueryInterface(nsIIncrementalDownload);
+    LOG("Downloader.onStatus: " + request.URI.spec + " status = " + status + ", text = " + statusText);
   },
   
   onStopRequest: function(request, context, status) {
-    if (request instanceof nsIIncrementalDownload) {
-      LOG("Downloader.onStopRequest: " + request.URI.spec + ", status = " + status);
-      var id = this._downloads[request.URI.spec];
-      LOG("Downloader.onStopRequest: updating status file: " + id.destination.path);
-      this._writeStatusFile(id.destination.parent, STATE_PENDING);
+    request.QueryInterface(nsIIncrementalDownload);
+    LOG("Downloader.onStopRequest: " + request.URI.spec + ", status = " + status);
+
+    this._request = null;
+
+    if (Components.isSuccessCode(status)) {
+      // TODO: Verify download
+      this._writeStatusFile(this._getUpdatesDir(), STATE_PENDING);
     }
   },
    

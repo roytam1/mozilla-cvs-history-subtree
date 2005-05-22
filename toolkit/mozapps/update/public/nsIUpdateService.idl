@@ -102,7 +102,8 @@ interface nsIUpdateCheckListener : nsISupports
    *
    */
   void onProgress(in nsIRequest request, 
-                  in unsigned long position, in unsigned long totalSize);
+                  in unsigned long position,
+                  in unsigned long totalSize);
 
   /**
    *
@@ -119,8 +120,8 @@ interface nsIUpdateCheckListener : nsISupports
 [scriptable, uuid(22b00276-ec23-4034-a764-395da539b4be)]
 interface nsIUpdatePrompt : nsISupports
 {
-  void showUpdateAvailable([array, size_is(updateCount)] in nsIUpdate updates,
-                           in unsigned long updateCount);
+  void showUpdatesAvailable([array, size_is(updateCount)] in nsIUpdate updates,
+                            in unsigned long updateCount);
 };
 
 [scriptable, uuid(9849c4bf-5197-4d22-baa8-e3b44a1703d2)]
@@ -134,8 +135,7 @@ interface nsIApplicationUpdateService : nsISupports
   /**
    * 
    */
-  void downloadUpdates([array, size_is(updateCount)] in nsIUpdate updates,
-                       in unsigned long updateCount);
+  void downloadUpdate(in nsIUpdate update);
 };
 
 /**
