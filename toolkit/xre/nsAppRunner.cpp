@@ -1580,7 +1580,7 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
     DosSetMaxFH(256);
   }
 
-  ScopedFPHandler handler();
+  ScopedFPHandler handler;
 #endif /* XP_OS2 */
 
 #if defined(XP_BEOS)
