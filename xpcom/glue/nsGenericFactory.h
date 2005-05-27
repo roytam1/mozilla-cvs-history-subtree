@@ -41,29 +41,28 @@
 #include "nsCOMPtr.h"
 #include "nsIGenericFactory.h"
 #include "nsIClassInfo.h"
+#include "nsIDeserializingFactory.h"
 
 /**
  * Most factories follow this simple pattern, so why not just use a function
  * pointer for most creation operations?
  */
-class nsGenericFactory : public nsIGenericFactory, public nsIClassInfo {
+class nsGenericFactory : public nsIGenericFactory,
+                         public nsIClassInfo,
+                         public nsIDeserializingFactory
+{
 public:
-    NS_DEFINE_STATIC_CID_ACCESSOR(NS_GENERICFACTORY_CID);
-
     nsGenericFactory(const nsModuleComponentInfo *info = NULL);
     
     NS_DECL_ISUPPORTS
+    NS_DECL_NSIFACTORY
     NS_DECL_NSICLASSINFO
+    NS_DECL_NSIDESERIALIZINGFACTORY
     
     /* nsIGenericFactory methods */
     NS_IMETHOD SetComponentInfo(const nsModuleComponentInfo *info);
     NS_IMETHOD GetComponentInfo(const nsModuleComponentInfo **infop);
 
-    NS_IMETHOD CreateInstance(nsISupports *aOuter, REFNSIID aIID, void **aResult);
-
-    NS_IMETHOD LockFactory(PRBool aLock);
-
-    static NS_METHOD Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr);
 private:
     ~nsGenericFactory();
 

@@ -44,6 +44,7 @@
 #include "nsCOMPtr.h"
 #include "nsIComponentManager.h"
 #include "nsIComponentRegistrar.h"
+#include "nsIDeserializingFactory.h"
 
 #ifdef XPCOM_GLUE
 #include "nsXPCOMGlue.h"
@@ -70,10 +71,15 @@ nsGenericFactory::~nsGenericFactory()
     }
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS3(nsGenericFactory,
-                              nsIGenericFactory, 
-                              nsIFactory,
-                              nsIClassInfo)
+NS_IMPL_THREADSAFE_ADDREF(nsGenericFactory)
+NS_IMPL_THREADSAFE_RELEASE(nsGenericFactory)
+
+NS_INTERFACE_MAP_BEGIN(nsGenericFactory)
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIFactory)
+    NS_INTERFACE_MAP_ENTRY(nsIClassInfo)
+    NS_INTERFACE_MAP_ENTRY_CONDITIONAL(nsIDeserializingFactory,
+                                       mInfo && mInfo->mDeserializer)
+NS_INTERFACE_MAP_END
 
 NS_IMETHODIMP nsGenericFactory::CreateInstance(nsISupports *aOuter,
                                                REFNSIID aIID, void **aResult)
@@ -183,39 +189,24 @@ NS_IMETHODIMP nsGenericFactory::GetComponentInfo(const nsModuleComponentInfo **i
     return NS_OK;
 }
 
-NS_METHOD nsGenericFactory::Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr)
+NS_IMETHODIMP nsGenericFactory::Read(nsIObjectInputStream* aInputStream,
+                                     nsISupports* *aResult)
 {
-    // sorry, aggregation not spoken here.
-    nsresult res = NS_ERROR_NO_AGGREGATION;
-    if (outer == NULL) {
-        nsGenericFactory* factory = new nsGenericFactory;
-        if (factory != NULL) {
-            res = factory->QueryInterface(aIID, aInstancePtr);
-            if (res != NS_OK)
-                delete factory;
-        } else {
-            res = NS_ERROR_OUT_OF_MEMORY;
-        }
-    }
-    return res;
+    if (!mInfo || !mInfo->mDeserializer)
+        return NS_ERROR_FAILURE;
+
+    return mInfo->mDeserializer(aInputStream, aResult);
 }
 
 NS_COM_GLUE nsresult
 NS_NewGenericFactory(nsIGenericFactory* *result,
                      const nsModuleComponentInfo *info)
 {
-    nsresult rv;
-    nsIGenericFactory* fact;
-    rv = nsGenericFactory::Create(NULL, NS_GET_IID(nsIGenericFactory), (void**)&fact);
-    if (NS_FAILED(rv)) return rv;
-    rv = fact->SetComponentInfo(info);
-    if (NS_FAILED(rv)) goto error;
-    *result = fact;
-    return rv;
+    nsIGenericFactory* fact = new nsGenericFactory(info);
+    if (!fact)
+        return NS_ERROR_OUT_OF_MEMORY;
 
-  error:
-    NS_RELEASE(fact);
-    return rv;
+    return CallQueryInterface(fact, result);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

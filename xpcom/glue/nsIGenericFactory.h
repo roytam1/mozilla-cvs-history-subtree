@@ -39,8 +39,13 @@
 #define nsIGenericFactory_h___
 
 #include "nsIFactory.h"
-#include "nsIModule.h"
-#include "nsIClassInfo.h"
+
+class nsIModule;
+class nsIClassInfo;
+class nsIFile;
+class nsIComponentManager;
+class nsIObjectInputStream;
+
 #ifdef HAVE_DEPENDENT_LIBS
 #include "dependentLibs.h"
 #endif
@@ -204,6 +209,17 @@ typedef NS_CALLBACK(NSGetInterfacesProcPtr)(PRUint32 *countp,
 typedef NS_CALLBACK(NSGetLanguageHelperProcPtr)(PRUint32 language,
                                                 nsISupports **helper);
 
+/** 
+ * NSDeserializerProcPtr
+ * 
+ * If the factory should implement nsIDeserializingFactory, this creates a new
+ * object by reading from an object input stream.
+ *
+ * @see: nsIDeserializingFactory, nsISerializable
+ **/
+typedef NS_CALLBACK(NSDeserializerProcPtr)(nsIObjectInputStream* aInputStream,
+                                           nsISupports* *aResult);
+
 /**
  * nsModuleComponentInfo
  *
@@ -220,8 +236,10 @@ typedef NS_CALLBACK(NSGetLanguageHelperProcPtr)(PRUint32 language,
  * @param mGetInterfacesProc     : (optional) Interfaces Callback
  * @param mGetLanguageHelperProc : (optional) Language Helper Callback
  * @param mClassInfoGlobal       : (optional) Global Class Info of given object 
- * @param mFlags                 : (optional) Class Info Flags @see nsIClassInfo 
- *                                 
+ * @param mFlags                 : (optional) Class Info Flags @see nsIClassInfo
+ * @param mDeserializer          : (optional) Deserializer, if the factory
+ *                                 should implement nsIDeserializingFactory
+ * 
  * E.g.:
  *     static nsModuleComponentInfo components[] = { ... };
  *
@@ -239,6 +257,7 @@ struct nsModuleComponentInfo {
     NSGetLanguageHelperProcPtr                  mGetLanguageHelperProc;
     nsIClassInfo **                             mClassInfoGlobal;
     PRUint32                                    mFlags;
+    NSDeserializerProcPtr                       mDeserializer;
 };
 
 
