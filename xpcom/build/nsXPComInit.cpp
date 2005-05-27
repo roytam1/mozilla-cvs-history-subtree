@@ -305,6 +305,10 @@ PRBool gXPCOMShuttingDown = PR_FALSE;
    NULL, NULL, NULL, NS_CI_INTERFACE_GETTER_NAME(Class), NULL,                 \
    &NS_CLASSINFO_NAME(Class), Flags }
 
+#define COMPONENT_SERIALIZABLE(NAME, Ctor, Serializer)                         \
+ { NS_##NAME##_CLASSNAME, NS_##NAME##_CID, NS_##NAME##_CONTRACTID, Ctor,       \
+   NULL, NULL, NULL, NULL, NULL, NULL, NULL, Serializer }
+
 static const nsModuleComponentInfo components[] = {
     COMPONENT(MEMORY, nsMemoryImpl::Create),
     COMPONENT(DEBUG,  nsDebugImpl::Create),
@@ -334,7 +338,7 @@ static const nsModuleComponentInfo components[] = {
     COMPONENT(TIMELINESERVICE, nsTimelineServiceConstructor),
 #endif
     COMPONENT(OBSERVERSERVICE, nsObserverService::Create),
-    COMPONENT(GENERICFACTORY, nsGenericFactory::Create),
+    COMPONENT(GENERICFACTORY, NULL),
     COMPONENT(EVENTQUEUESERVICE, nsEventQueueServiceImplConstructor),
     COMPONENT(EVENTQUEUE, nsEventQueueImpl::Create),
     COMPONENT(THREAD, nsThread::Create),
@@ -734,13 +738,16 @@ NS_UnregisterXPCOMExitRoutine(XPCOMExitRoutine exitRoutine)
 //
 // NS_ShutdownXPCOM()
 //
-// The shutdown sequence for xpcom would be
+// The shutdown sequence for xpcom is
 //
+// - Notify Components that XPCOM is shutting down and they must release any
+//   cross-module COM references.
 // - Release the Global Service Manager
 //   - Release all service instances held by the global service manager
 //   - Release the Global Service Manager itself
 // - Release the Component Manager
 //   - Release all factories cached by the Component Manager
+//   - Notify component loaders that they may shutdown.
 //   - Unload Libraries
 //   - Release Contractid Cache held by Component Manager
 //   - Release dll abstraction held by Component Manager
@@ -749,6 +756,9 @@ NS_UnregisterXPCOMExitRoutine(XPCOMExitRoutine exitRoutine)
 //
 nsresult NS_COM NS_ShutdownXPCOM(nsIServiceManager* servMgr)
 {
+    // We want to hold on to the list of "xpcom-loader-shutdown" observers
+    // past final release of the observer service.
+    nsCOMPtr<nsISimpleEnumerator> componentLoaders;
 
     // Notify observers of xpcom shutting down
     nsresult rv = NS_OK;
@@ -759,14 +769,14 @@ nsresult NS_COM NS_ShutdownXPCOM(nsIServiceManager* servMgr)
                  do_GetService("@mozilla.org/observer-service;1", &rv);
         if (NS_SUCCEEDED(rv))
         {
-            nsCOMPtr<nsIServiceManager> mgr;
-            rv = NS_GetServiceManager(getter_AddRefs(mgr));
-            if (NS_SUCCEEDED(rv))
-            {
-                (void) observerService->NotifyObservers(mgr,
-                                                        NS_XPCOM_SHUTDOWN_OBSERVER_ID,
-                                                        nsnull);
-            }
+            (void) observerService->EnumerateObservers(
+                     "xpcom-loader-shutdown",
+                     getter_AddRefs(componentLoaders));
+
+            (void) observerService->NotifyObservers(
+                     (nsIServiceManager*) nsComponentManagerImpl::gComponentManager,
+                     NS_XPCOM_SHUTDOWN_OBSERVER_ID,
+                     nsnull);
         }
     }
 
@@ -806,6 +816,24 @@ nsresult NS_COM NS_ShutdownXPCOM(nsIServiceManager* servMgr)
 
     // Release the directory service
     NS_IF_RELEASE(gDirectoryService);
+
+    PRBool more;
+    while (NS_SUCCEEDED(componentLoaders->HasMoreElements(&more)) && more) {
+        nsCOMPtr<nsISupports> el;
+        componentLoaders->GetNext(getter_AddRefs(el));
+
+        // Don't even worry about weak-reference observers here: there is
+        // no reason in the world for weak-ref observers to register for
+        // xpcom-loader-shutdown.
+
+        nsCOMPtr<nsIObserver> obs (do_QueryInterface(el));
+        if (obs) {
+            (void) obs->Observe(nsnull, "xpcom-loader-shutdown", nsnull);
+        }
+    }
+
+    // release componentLoaders
+    componentLoaders = nsnull;
 
     // Shutdown nsLocalFile string conversion
     NS_ShutdownLocalFile();

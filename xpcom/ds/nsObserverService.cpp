@@ -42,6 +42,8 @@
 #include "nsIServiceManager.h"
 #include "nsIComponentManager.h"
 #include "nsIObserverService.h"
+#include "nsIObserver.h"
+#include "nsISimpleEnumerator.h"
 #include "nsObserverService.h"
 #include "nsObserverList.h"
 #include "nsHashtable.h"
@@ -135,10 +137,16 @@ nsresult nsObserverService::GetObserverList(const char* aTopic, nsObserverList**
         return NS_OK;
     }
 
-    topicObservers = new nsObserverList();
+    nsresult rv = NS_OK;
+    topicObservers = new nsObserverList(rv);
     if (!topicObservers)
         return NS_ERROR_OUT_OF_MEMORY;
-    
+
+    if (NS_FAILED(rv)) {
+        delete topicObservers;
+        return rv;
+    }
+
     *anObserverList = topicObservers;
     mObserverTopicTable->Put(&key, topicObservers);
     
