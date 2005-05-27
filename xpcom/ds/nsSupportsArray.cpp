@@ -226,6 +226,8 @@ nsSupportsArray::Deserialize(nsIObjectInputStream *aStream,
   nsresult rv;
 
   nsRefPtr<nsSupportsArray> array = new nsSupportsArray();
+  if (!array)
+    return NS_ERROR_OUT_OF_MEMORY;
 
   // We used to keep newArraySize and mCount separately... we don't do that
   // any more, but to avoid problems we keep the old format.
