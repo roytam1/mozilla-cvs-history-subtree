@@ -1,0 +1,72 @@
+/* ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1/GPL 2.0/LGPL 2.1
+ *
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License.
+ *
+ * The Original Code is the Mozilla capabilities security API.
+ *
+ * The Initial Developer of the Original Code is
+ * Benjamin Smedberg <benjamin@smedbergs.us>.
+ *
+ * Portions created by the Initial Developer are Copyright (C) 2005
+ * the Initial Developer. All Rights Reserved.
+ *
+ * Contributor(s):
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * in which case the provisions of the GPL or the LGPL are applicable instead
+ * of those above. If you wish to allow use of your version of this file only
+ * under the terms of either the GPL or the LGPL, and not to allow others to
+ * use your version of this file under the terms of the MPL, indicate your
+ * decision by deleting the provisions above and replace them with the notice
+ * and other provisions required by the GPL or the LGPL. If you do not delete
+ * the provisions above, a recipient may use your version of this file under
+ * the terms of any one of the MPL, the GPL or the LGPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
+
+#include "nsISupports.idl"
+
+interface capsIPermissionChecker;
+interface capsIEvidence;
+
+/**
+ * Permission policies review evidence and provide permission based on evidence
+ * they recognize.
+ *
+ * To register a policy, add the service contractid to the
+ * "caps-permission-policy" category.
+ */
+[scriptable, uuid(D970DC27-C635-11D9-B98F-001124787B2E)]
+interface capsIPermissionPolicy : nsISupports
+{
+  /**
+   * Return a permission checker for the specified evidence. The permission
+   * may be primitive evidence type or compound evidence. Permissions are
+   * checked in the following order:
+   *   1) if compound evidence, ask the permissionchecker for the compound
+   *      evidence.
+   *   2) ask the permissionchecker for each piece of primitive evidence
+   *   3) ask the permission for its default value.
+   *
+   * @param aEvidence Primitive or compound evidence. In most cases, policy
+   *                  should not need to return a permission provider for
+   *                  compound evidence.
+   * @return A permission checker, or null if no checker available from this
+   *         policy.
+   * @throw All errors are ignored.
+   * @note Objects implementing this interface may be created or called on
+   *       any thread.
+   */
+  capsIPermissionChecker getChecker(in capsIEvidence aEvidence);
+};

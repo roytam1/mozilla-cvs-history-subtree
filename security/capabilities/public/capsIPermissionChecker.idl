@@ -1,0 +1,76 @@
+/* ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1/GPL 2.0/LGPL 2.1
+ *
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License.
+ *
+ * The Original Code is the Mozilla capabilities security API.
+ *
+ * The Initial Developer of the Original Code is
+ * Benjamin Smedberg <benjamin@smedbergs.us>.
+ *
+ * Portions created by the Initial Developer are Copyright (C) 2005
+ * the Initial Developer. All Rights Reserved.
+ *
+ * Contributor(s):
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * in which case the provisions of the GPL or the LGPL are applicable instead
+ * of those above. If you wish to allow use of your version of this file only
+ * under the terms of either the GPL or the LGPL, and not to allow others to
+ * use your version of this file under the terms of the MPL, indicate your
+ * decision by deleting the provisions above and replace them with the notice
+ * and other provisions required by the GPL or the LGPL. If you do not delete
+ * the provisions above, a recipient may use your version of this file under
+ * the terms of any one of the MPL, the GPL or the LGPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
+
+#include "nsISupports.idl"
+
+interface nsIPrompt;
+interface capsIPermission;
+
+[scriptable, uuid(72C0BA92-C635-11D9-9ABF-001124787B2E)]
+interface capsIPermissionChecker : nsISupports
+{
+  const unsigned long PASS  = 0;
+  const unsigned long ALLOW = 1;
+  const unsigned long DENY  = 2;
+
+  /**
+   * Check whether the evidence allows the specified permission.
+   *
+   * @param aPermission   The permission to check. The set of permissions is
+   *                      open-ended, but each has the form
+   *                      "<provider>:<provider-specific data>". The provider-
+   *                      specific data may be binary and contain embedded
+   *                      null characters.
+   * @param aDefault      Whether the permission is applied by default.
+   * @param aShowUI       Whether to show synchronous UI, if enabling the
+   *                      permission requires showing UI.
+   * @param aPrompt       A prompt to use for showing security UI. If the
+   *                      original caller did not pass a prompt, the security
+   *                      system will pass a default prompt.
+   * @param aPersist      Whether to cache this permission request.
+   *                      NOTE: setting aPersist to false can significantly
+   *                      degrade performance.
+   * @return  ALLOW if the access should be allowed. DENY if the access is
+   *          explicitly denied. PASS if the access is not specified (if
+   *          all security providers return PASS, access is denied).
+   * @note Objects implementing this interface may be created or called on
+   *       any thread.
+   */
+  unsigned long demand(in capsIPermission aPermission, in boolean aDefault,
+                       in boolean aShowUI, in nsIPrompt aPrompt,
+                       out boolean aPersist);
+};
