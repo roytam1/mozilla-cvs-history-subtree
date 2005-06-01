@@ -157,7 +157,6 @@ function clearPref(prefName) {
             prefBranch.clearUserPref(prefName);
     }
     catch(e) {
-        displayError("clearPref", e);
     }
         
 }
