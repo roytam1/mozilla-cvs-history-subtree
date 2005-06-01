@@ -44,7 +44,7 @@ const PREF_APP_UPDATE_INPROGRESS      = "app.update.inProgress";
 const PREF_APP_UPDATE_LASTUPDATEDATE  = "app.update.lastUpdateDate";
 const PREF_APP_EXTENSIONS_VERSION     = "app.extensions.version";
 
-const URI_UPDATE_PROMPT_DIALOG  = "chrome://mozapps/content/update/updateWizard.xul";
+const URI_UPDATE_PROMPT_DIALOG  = "chrome://mozapps/content/update/updates.xul";
 
 const KEY_APPDIR          = "XCurProcD";
 
@@ -275,6 +275,25 @@ UpdatePrompt.prototype = {
   /**
    * See nsIUpdateService.idl
    */
+  checkForUpdates: function() {
+    var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                       .getService(Components.interfaces.nsIWindowMediator);
+    var win = wm.getMostRecentWindow("Update:Wizard");
+    if (win) {
+      win.focus();
+      win.checkForUpdates();
+    }
+    else {
+      var ww = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
+                         .getService(Components.interfaces.nsIWindowWatcher);
+      ww.openWindow(null, URI_UPDATE_PROMPT_DIALOG, 
+                    "", "chrome,centerscreen,dialog,titlebar", null);
+    }
+  },
+    
+  /**
+   * See nsIUpdateService.idl
+   */
   showUpdatesAvailable: function(type, updates, updateCount) {
     var ary = Components.classes["@mozilla.org/supports-array;1"]
                         .createInstance(Components.interfaces.nsISupportsArray);
@@ -336,7 +355,7 @@ UpdateService.prototype = {
       this._timer = Components.classes["@mozilla.org/timer;1"]
                               .createInstance(Components.interfaces.nsITimer);
     this._timer.cancel();
-    this._timer.initWithCallback(this, 10000, 
+    this._timer.initWithCallback(this, 1000000, 
                                  Components.interfaces.nsITimer.TYPE_REPEATING_SLACK);
     return this._timer;
   },
@@ -417,6 +436,7 @@ UpdateService.prototype = {
   checkForUpdates: function(listener) {
     var checker = new Checker();
     checker.findUpdates(listener);
+    return checker;
   },
   
   /**
@@ -633,6 +653,23 @@ Checker.prototype = {
   onError: function(event) {
     LOG("Checker.onError: error during load");
     this._callback.onError(event.target);
+  },
+  
+  /**
+   * See nsIUpdateService.idl
+   */
+  stopChecking: function() {
+    this._request.abort();
+  },
+  
+  /**
+   * See nsISupports.idl
+   */
+  QueryInterface: function(iid) {
+    if (!iid.equals(Components.interfaces.nsIUpdateChecker) &&
+        !iid.equals(Components.interfaces.nsISupports))
+      throw Components.results.NS_ERROR_NO_INTERFACE;
+    return this;
   }
 };
 

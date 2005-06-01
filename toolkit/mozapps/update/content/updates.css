@@ -1,0 +1,71 @@
+.wizard-header-description {
+  display: none;
+}
+
+.wizard-buttons {
+  display: none;
+}
+
+.wizard-page-box {
+  margin: 0px;
+}
+
+.content {
+  margin: 10px 44px 10px 44px;
+}
+
+update-info {
+  -moz-binding: url("chrome://mozapps/content/update/updates.xml#update-info");
+}
+
+compatibility-alert {
+  -moz-binding: url("chrome://mozapps/content/update/updates.xml#compatibility-alert");
+}
+
+link {
+  -moz-binding: url("chrome://mozapps/content/update/updates.xml#link");
+  -moz-user-focus: normal;
+  color: blue;
+  text-decoration: underline !important;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+link:hover:active {
+  color: red;
+}
+
+link:focus {
+  border: 1px dotted black;
+}
+
+.updateName {
+  font-weight: bold;
+  font-size: x-large;
+}
+
+.updateType[type=major] {
+  font-weight: bold;
+  color: #C00000;
+}
+
+.updateType[type=minor] {
+  font-weight: bold;
+  color: #FF0000;
+}
+
+update-info {
+  border: 2px solid;
+  -moz-border-left-colors: ThreeDShadow ThreeDDarkShadow;
+  -moz-border-top-colors: ThreeDShadow ThreeDDarkShadow;
+  -moz-border-bottom-colors: ThreeDFace ThreeDHighlight;
+  -moz-border-right-colors: ThreeDFace ThreeDHighlight;
+  -moz-appearance: listbox;
+  margin: 5px;
+  padding: 5px;
+}
+
+#updateAvailable {
+  margin: 5px;
+}
+

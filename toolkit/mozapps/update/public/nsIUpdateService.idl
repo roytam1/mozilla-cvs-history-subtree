@@ -120,8 +120,31 @@ interface nsIUpdateCheckListener : nsISupports
 [scriptable, uuid(22b00276-ec23-4034-a764-395da539b4be)]
 interface nsIUpdatePrompt : nsISupports
 {
+  /**
+   * Shows a user interface that checks for and then displays the available
+   * updates.
+   */
+  void checkForUpdates();
+
+  /**
+   * Show a message advising that a set of updates is available for
+   * download and install.
+   * @param   updates
+   *          An array of available nsIUpdates
+   * @param   updateCount
+   *          The length of |updates|
+   */
   void showUpdatesAvailable([array, size_is(updateCount)] in nsIUpdate updates,
                             in unsigned long updateCount);
+};
+
+[scriptable, uuid(877ace25-8bc5-452a-8586-9c1cf2871994)]
+interface nsIUpdateChecker : nsISupports
+{
+  /**
+   *
+   */
+  void stopChecking();
 };
 
 [scriptable, uuid(9849c4bf-5197-4d22-baa8-e3b44a1703d2)]
@@ -130,7 +153,7 @@ interface nsIApplicationUpdateService : nsISupports
   /**
    *
    */
-  void checkForUpdates(in nsIUpdateCheckListener listener);
+  nsIUpdateChecker checkForUpdates(in nsIUpdateCheckListener listener);
 
   /**
    * 

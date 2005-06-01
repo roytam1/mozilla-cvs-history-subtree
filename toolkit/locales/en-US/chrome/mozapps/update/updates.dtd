@@ -1,0 +1,12 @@
+<!ENTITY  updateWizard.title        "Software Update">
+
+<!ENTITY  checking.title            "Checking for Updates">
+<!ENTITY  checking.label            "&brandShortName; is now checking for updates...">
+
+<!ENTITY  cancel.label              "Cancel">
+<!ENTITY  cancel.accesskey          "C">
+
+<!ENTITY  updatesfound.title        "Updates Available">
+
+<!ENTITY  forMoreInfo.label         "For more information, ">
+<!ENTITY  clickHere.label           "Click Here">
