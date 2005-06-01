@@ -61,7 +61,7 @@ struct MarItemStack {
 
 /**
  * Push a new item onto the stack of items.  The stack is a single block
- * of memory.  The total
+ * of memory.
  */
 static int mar_push(struct MarItemStack *stack, uint32 length, uint32 flags,
                     const char *name) {
