@@ -455,7 +455,7 @@ int main(int argc, char **argv)
 {
 #if defined(XP_UNIX) || defined(XP_OS2_EMX)
 	int opt;
-	PR_IMPORT_DATA(char *) optarg;
+	extern char *optarg;
 #endif
 
 #if defined(XP_UNIX) || defined(XP_OS2_EMX)
