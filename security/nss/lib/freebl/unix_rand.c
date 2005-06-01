@@ -833,7 +833,7 @@ for the small amount of entropy it provides.
      * is running on.
      */
     if (environ != NULL) {
-        cp = (const char * const *) environ;
+        cp = environ;
         while (*cp) {
 	    RNG_RandomUpdate(*cp, strlen(*cp));
 	    cp++;

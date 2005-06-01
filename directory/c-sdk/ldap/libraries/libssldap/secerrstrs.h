@@ -1,39 +1,24 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- * 
- * The contents of this file are subject to the Mozilla Public License Version 
- * 1.1 (the "License"); you may not use this file except in compliance with 
- * the License. You may obtain a copy of the License at 
- * http://www.mozilla.org/MPL/
- * 
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- * 
+/*
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
  * The Original Code is Mozilla Communicator client code, released
  * March 31, 1998.
- * 
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1998-1999
- * the Initial Developer. All Rights Reserved.
- * 
+ *
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998-1999 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
  * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the terms of
- * either of the GNU General Public License Version 2 or later (the "GPL"),
- * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- * 
- * ***** END LICENSE BLOCK ***** */
+ */
 
 /*
  * secerrstrs.h - map security errors to strings (used by errormap.c)
@@ -42,13 +27,19 @@
 
 /*
  ****************************************************************************
- * On 21-June-2002, the code below this point was copied from the file
- * mozilla/security/nss/cmd/lib/SECerrs.h (tag NSS_3_4_2_RTM).
+ * The code below this point was provided by Nelson Bolyard <nelsonb> of the
+ *	Netscape Certificate Server team on 27-March-1998.
+ *	Taken from the file ns/security/cmd/lib/SECerrs.h on NSS_1_BRANCH.
+ *	Last updated from there: 24-July-1998 by Mark Smith <mcs>
+ *
+ * All of the Directory Server specific changes are enclosed inside
+ *	#ifdef NS_DIRECTORY.
  ****************************************************************************
  */
 
 /* General security error codes  */
 /* Caller must #include "secerr.h" */
+
 
 ER3(SEC_ERROR_IO,				SEC_ERROR_BASE + 0,
 "An I/O error occurred during security authorization.")
@@ -75,7 +66,7 @@ ER3(SEC_ERROR_INVALID_AVA,			SEC_ERROR_BASE + 7,
 "security library: invalid AVA.")
 
 ER3(SEC_ERROR_INVALID_TIME,			SEC_ERROR_BASE + 8,
-"Improperly formatted time string.")
+"security library: invalid time.")
 
 ER3(SEC_ERROR_BAD_DER,				SEC_ERROR_BASE + 9,
 "security library: improperly formatted DER-encoded message.")
@@ -371,8 +362,7 @@ ER3(SEC_ERROR_BAD_NICKNAME,			(SEC_ERROR_BASE + 103),
 ER3(SEC_ERROR_NOT_FORTEZZA_ISSUER,       	(SEC_ERROR_BASE + 104),
 "Peer FORTEZZA chain has a non-FORTEZZA Certificate.")
 
-ER3(SEC_ERROR_CANNOT_MOVE_SENSITIVE_KEY, 	(SEC_ERROR_BASE + 105),
-"A sensitive key cannot be moved to the slot where it is needed.")
+/* ER3(SEC_ERROR_UNKNOWN, 			(SEC_ERROR_BASE + 105), */
 
 ER3(SEC_ERROR_JS_INVALID_MODULE_NAME, 		(SEC_ERROR_BASE + 106),
 "Invalid module name.")
@@ -392,67 +382,11 @@ ER3(SEC_ERROR_OLD_KRL,	     			(SEC_ERROR_BASE + 110),
 ER3(SEC_ERROR_CKL_CONFLICT,	     		(SEC_ERROR_BASE + 111),
 "New CKL has different issuer than current CKL.  Delete current CKL.")
 
+#if 0 /* This was defined AFTER HCL 1.5 was released. */
 ER3(SEC_ERROR_CERT_NOT_IN_NAME_SPACE, 		(SEC_ERROR_BASE + 112),
-"The Certifying Authority for this certificate is not permitted to issue a \
-certificate with this name.")
+"The Certifying Authority for this certifcate is not permitted to issue a \
+certifcate with this name.")
+#endif
 
-ER3(SEC_ERROR_KRL_NOT_YET_VALID,		(SEC_ERROR_BASE + 113),
-"The key revocation list for this certificate is not yet valid.")
 
-ER3(SEC_ERROR_CRL_NOT_YET_VALID,		(SEC_ERROR_BASE + 114),
-"The certificate revocation list for this certificate is not yet valid.")
 
-ER3(SEC_ERROR_UNKNOWN_CERT,			(SEC_ERROR_BASE + 115),
-"The requested certificate could not be found.")
-
-ER3(SEC_ERROR_UNKNOWN_SIGNER,			(SEC_ERROR_BASE + 116),
-"The signer's certificate could not be found.")
-
-ER3(SEC_ERROR_CERT_BAD_ACCESS_LOCATION,		(SEC_ERROR_BASE + 117),
-"The location for the certificate status server has invalid format.")
-
-ER3(SEC_ERROR_OCSP_UNKNOWN_RESPONSE_TYPE,	(SEC_ERROR_BASE + 118),
-"The OCSP response cannot be fully decoded; it is of an unknown type.")
-
-ER3(SEC_ERROR_OCSP_BAD_HTTP_RESPONSE,		(SEC_ERROR_BASE + 119),
-"The OCSP server returned unexpected/invalid HTTP data.")
-
-ER3(SEC_ERROR_OCSP_MALFORMED_REQUEST,		(SEC_ERROR_BASE + 120),
-"The OCSP server found the request to be corrupted or improperly formed.")
-
-ER3(SEC_ERROR_OCSP_SERVER_ERROR,		(SEC_ERROR_BASE + 121),
-"The OCSP server experienced an internal error.")
-
-ER3(SEC_ERROR_OCSP_TRY_SERVER_LATER,		(SEC_ERROR_BASE + 122),
-"The OCSP server suggests trying again later.")
-
-ER3(SEC_ERROR_OCSP_REQUEST_NEEDS_SIG,		(SEC_ERROR_BASE + 123),
-"The OCSP server requires a signature on this request.")
-
-ER3(SEC_ERROR_OCSP_UNAUTHORIZED_REQUEST,	(SEC_ERROR_BASE + 124),
-"The OCSP server has refused this request as unauthorized.")
-
-ER3(SEC_ERROR_OCSP_UNKNOWN_RESPONSE_STATUS,	(SEC_ERROR_BASE + 125),
-"The OCSP server returned an unrecognizable status.")
-
-ER3(SEC_ERROR_OCSP_UNKNOWN_CERT,		(SEC_ERROR_BASE + 126),
-"The OCSP server has no status for the certificate.")
-
-ER3(SEC_ERROR_OCSP_NOT_ENABLED,			(SEC_ERROR_BASE + 127),
-"You must enable OCSP before performing this operation.")
-
-ER3(SEC_ERROR_OCSP_NO_DEFAULT_RESPONDER,	(SEC_ERROR_BASE + 128),
-"You must set the OCSP default responder before performing this operation.")
-
-ER3(SEC_ERROR_OCSP_MALFORMED_RESPONSE,		(SEC_ERROR_BASE + 129),
-"The response from the OCSP server was corrupted or improperly formed.")
-
-ER3(SEC_ERROR_OCSP_UNAUTHORIZED_RESPONSE,	(SEC_ERROR_BASE + 130),
-"The signer of the OCSP response is not authorized to give status for \
-this certificate.")
-
-ER3(SEC_ERROR_OCSP_FUTURE_RESPONSE,		(SEC_ERROR_BASE + 131),
-"The OCSP response is not yet valid (contains a date in the future).")
-
-ER3(SEC_ERROR_OCSP_OLD_RESPONSE,		(SEC_ERROR_BASE + 132),
-"The OCSP response contains out-of-date information.")
