@@ -354,6 +354,7 @@ static int backup_create(const char *path)
 
 // Copy the backup copy of the specified file back overtop
 // the specified file.
+// XXX should be a file move instead
 static int backup_restore(const char *path)
 {
   char backup[MAXPATHLEN];
@@ -806,22 +807,16 @@ int main(int argc, char **argv)
   InitProgressUI(&argc, &argv);
 
   if (argc < 3) {
-#ifdef DEBUG
-#ifdef XP_WIN
     fprintf(stderr, "Usage: updater <dir-path> <callback> [parent-pid]\n");
-#else
-    fprintf(stderr, "Usage: updater <dir-path> <callback>\n");
-#endif
-#endif
     return 1;
   }
 
-#ifdef XP_WIN
   if (argc > 3) {
-    DWORD pid = atoi(argv[3]);
+    int pid = atoi(argv[3]);
     if (!pid)
       return 1;
-    HANDLE parent = OpenProcess(SYNCHRONIZE, FALSE, pid);
+#ifdef XP_WIN
+    HANDLE parent = OpenProcess(SYNCHRONIZE, FALSE, (DWORD) pid);
     // May return NULL if the parent process has already gone away.  Otherwise,
     // wait for the parent process to exit before starting the update.
     if (parent) {
@@ -833,8 +828,11 @@ int main(int argc, char **argv)
       // This is a terrible hack, but it'll have to do for now :-(
       Sleep(50);
     }
-  }
+#else
+    int status;
+    waitpid(pid, &status, 0);
 #endif
+  }
 
   gSourcePath = argv[1];
 

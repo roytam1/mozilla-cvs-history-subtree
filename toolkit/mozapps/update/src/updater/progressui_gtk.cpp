@@ -59,7 +59,7 @@ static const char *sProgramPath;
 class AutoFILE {
 public:
   AutoFILE(FILE *fp) : fp_(fp) {}
-  ~AutoFILE() { fclose(fp_); }
+  ~AutoFILE() { if (fp_) fclose(fp_); }
   operator FILE *() { return fp_; }
 private:
   FILE *fp_;
