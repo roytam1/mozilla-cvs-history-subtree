@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # This tool generates incremental update packages for the update system.
-# Author: Darin Fisher
+# Author: Darin Fisher (darin@meer.net)
 #
 
 # -----------------------------------------------------------------------------
@@ -46,7 +46,8 @@ workdir="$newdir.work"
 manifest="$workdir/update.manifest"
 archivefiles="update.manifest"
 
-# Generate a list of all files in the target directory.
+# Generate a list of all files in the target directories.  Take care as some
+# filenames may contain spaces! :-(
 list=$(cd "$olddir" && find . -type f | sed 's/\.\/\(.*\)/"\1"/')
 eval "oldfiles=($list)"
 list=$(cd "$newdir" && find . -type f | sed 's/\.\/\(.*\)/"\1"/')

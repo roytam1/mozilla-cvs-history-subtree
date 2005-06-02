@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # This tool generates full update packages for the update system.
-# Author: Darin Fisher
+# Author: Darin Fisher (darin@meer.net)
 #
 
 # -----------------------------------------------------------------------------
@@ -50,7 +50,8 @@ workdir="$targetdir.work"
 manifest="$workdir/update.manifest"
 targetfiles="update.manifest"
 
-# Generate a list of all files in the target directory.
+# Generate a list of all files in the target directory.  Take care as some
+# filenames may contain spaces! :-(
 list=$(cd "$targetdir" && find . -type f | sed 's/\.\/\(.*\)/"\1"/')
 eval "files=($list)"
 
