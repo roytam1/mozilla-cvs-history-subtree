@@ -86,16 +86,11 @@ var gUpdatesAvailablePage = {
     updateInfo.name = updateName;
     
     var displayType = updateStrings.getString("updateType_" + newestVersion.type);
-    updateInfo.displayType = displayType;
     updateInfo.type = newestVersion.type;
     
     updateInfo.url = newestVersion.detailsurl;
-    
-    var updateAvailable = document.getElementById("updateAvailable");
-    while (updateAvailable.hasChildNodes())
-      updateAvailable.removeChild(updateAvailable.firstChild);
     var intro = updateStrings.getFormattedString("introType_" + newestVersion.type, [brandName]);
-    updateAvailable.appendChild(document.createTextNode(intro));
+    updateInfo.displayType = intro;
   }
 };
 

@@ -78,9 +78,8 @@
   <wizardpage id="updatesfound" pageid="updatesfound" next="downloading"
               label="&updatesfound.title;"
               onpageshow="gUpdatesAvailablePage.onPageShow();">
+    <update-info id="updateInfo"/>
     <vbox class="content" flex="1">
-      <description id="updateAvailable"/>
-      <update-info id="updateInfo"/>
       <compatibility-alert id="compatibilityAlert"/>
     </vbox>
     <hbox pack="end">

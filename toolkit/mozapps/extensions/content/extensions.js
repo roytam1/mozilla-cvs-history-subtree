@@ -62,6 +62,8 @@ const KEY_DEFAULT_THEME = "classic/1.0";
 const RDFURI_ITEM_ROOT  = "urn:mozilla:item:root";
 const PREFIX_ITEM_URI   = "urn:mozilla:item:";
 
+const URI_EXTENSION_UPDATE_DIALOG     = "chrome://mozapps/content/extensions/update.xul";
+
 ///////////////////////////////////////////////////////////////////////////////
 // Utility Functions 
 
@@ -520,10 +522,11 @@ function onThemeSelect(aEvent)
 var gExtensionContextMenus = ["menuitem_options", "menuitem_homepage", "menuitem_about", 
                               "menuseparator_1", "menuitem_uninstall", "menuitem_update",
                               "menuitem_enable", "menuitem_disable", "menuseparator_2", 
-                              "menuitem_moveTop", "menuitem_moveUp", "menuitem_moveDn"];
+                              "menuitem_moveTop", "menuitem_moveUp", "menuitem_moveDn",
+                              "menuseparator_3", "menuitem_showFolder"];
 var gThemeContextMenus = ["menuitem_useTheme", "menuitem_homepage", "menuitem_about", 
                           "menuseparator_1", "menuitem_uninstall", "menuitem_update",
-                          "menuitem_enable"];
+                          "menuitem_enable", "menuseparator_3", "menuitem_showFolder"];
 
 function buildContextMenu(aEvent)
 {
@@ -758,6 +761,9 @@ var gExtensionsViewController = {
     case "cmd_movedn":
       var children = gExtensionsView.children;
       return selectedItem && (children[children.length-1] != selectedItem);
+    case "cmd_showFolder":
+      return selectedItem && 
+             selectedItem.getAttribute("toBeInstalled") != "true";
 #ifndef MOZ_PHOENIX
     case "cmd_install":
       return true;   
@@ -867,11 +873,26 @@ var gExtensionsViewController = {
       var id = aSelectedItem ? getIDFromResourceURI(aSelectedItem.id) : null;
       var itemType = gWindowState == "extensions" ? nsIUpdateItem.TYPE_EXTENSION : nsIUpdateItem.TYPE_THEME;
       var items = id ? [gExtensionManager.getItemForID(id)] : [];
-      var updates = Components.classes["@mozilla.org/updates/update-service;1"]
-                              .getService(Components.interfaces.nsIUpdateService);
-      updates.checkForUpdates(items, items.length, itemType, 
-                              Components.interfaces.nsIUpdateService.SOURCE_EVENT_USER,
-                              window);
+      
+      var ary = Components.classes["@mozilla.org/supports-array;1"]
+                          .createInstance(Components.interfaces.nsISupportsArray);
+      var updateTypes = Components.classes["@mozilla.org/supports-PRUint8;1"]
+                                  .createInstance(Components.interfaces.nsISupportsPRUint8);
+      updateTypes.data = itemType;
+      ary.AppendElement(updateTypes);
+      var sourceEvent = Components.classes["@mozilla.org/supports-PRBool;1"]
+                                  .createInstance(Components.interfaces.nsISupportsPRBool);
+      sourceEvent.data = false;
+      ary.AppendElement(sourceEvent);
+      for (var i = 0; i < items.length; ++i)
+        ary.AppendElement(items[i]);
+
+      var features = "chrome,centerscreen,dialog,titlebar";
+      // This *must* be modal so as not to break startup! This code is invoked before
+      // the main event loop is initiated (via checkForMismatches).
+      var ww = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
+                         .getService(Components.interfaces.nsIWindowWatcher);
+      ww.openWindow(window, URI_EXTENSION_UPDATE_DIALOG, "", features, ary);
     },
 
     cmd_uninstall: function (aSelectedItem)
@@ -912,6 +933,15 @@ var gExtensionsViewController = {
       gExtensionManager.uninstallItem(getIDFromResourceURI(selectedID));
       
       gExtensionsView.selected = document.getElementById(nextElement);
+    },
+    
+    cmd_showFolder: function (aSelectedItem)
+    {
+      var id = getIDFromResourceURI(aSelectedItem.id);
+      var installLocation = gExtensionManager.getInstallLocation(id);
+      var location = installLocation.getItemLocation(id);
+      if (location instanceof Components.interfaces.nsILocalFile)
+        location.reveal();
     },
     
     cmd_disable: function (aSelectedItem)

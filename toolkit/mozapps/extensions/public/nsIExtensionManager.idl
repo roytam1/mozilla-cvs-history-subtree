@@ -277,8 +277,8 @@ interface nsIExtensionManager : nsISupports
    *          information for the currently installed version.
    */
   void update([array, size_is(itemCount)] in nsIUpdateItem items,
-               in unsigned long itemCount, 
-               in unsigned long versionUpdateOnly);
+              in unsigned long itemCount, 
+              in unsigned long versionUpdateOnly);
 
   /**
    * Whether or not the application is currently in safe mode.

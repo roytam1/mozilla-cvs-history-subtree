@@ -1,4 +1,4 @@
-.wizard-header-description {
+.wizard-header {
   display: none;
 }
 
@@ -54,15 +54,15 @@ link:focus {
   color: #FF0000;
 }
 
+.updateForMoreInfo {
+  margin-left: 5px;
+}
+
 update-info {
-  border: 2px solid;
-  -moz-border-left-colors: ThreeDShadow ThreeDDarkShadow;
-  -moz-border-top-colors: ThreeDShadow ThreeDDarkShadow;
+  border-bottom: 2px solid;
   -moz-border-bottom-colors: ThreeDFace ThreeDHighlight;
-  -moz-border-right-colors: ThreeDFace ThreeDHighlight;
-  -moz-appearance: listbox;
-  margin: 5px;
   padding: 5px;
+  background-color: #FFFFFF;
 }
 
 #updateAvailable {

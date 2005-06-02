@@ -136,6 +136,7 @@ const URI_FINALIZE_DIALOG             = "chrome://mozapps/content/extensions/fin
 const URI_EXTENSIONS_PROPERTIES       = "chrome://mozapps/locale/extensions/extensions.properties";
 const URI_BRAND_PROPERTIES            = "chrome://branding/locale/brand.properties";
 const URI_DOWNLOADS_PROPERTIES        = "chrome://mozapps/locale/downloads/downloads.properties";
+const URI_EXTENSION_UPDATE_DIALOG     = "chrome://mozapps/content/extensions/update.xul";
 
 const INSTALLERROR_SUCCESS              = 0;
 const INSTALLERROR_INVALID_VERSION      = -1;
@@ -2719,14 +2720,8 @@ ExtensionManager.prototype = {
         // Now disable the items so they won't hurt anything. 
         for (var i = 0; i < items.length; ++i)
           this.disableItem(items[i].id);
-
-        // Check for newer available versions.
-        var updates = Components.classes["@mozilla.org/updates/update-service;1"]
-                                .getService(Components.interfaces.nsIUpdateService);
-        updates.checkForUpdates(items, items.length, nsIUpdateItem.TYPE_ADDON, 
-                                nsIUpdateService.SOURCE_EVENT_MISMATCH,
-                                null);
         
+        this._showMismatchWindow(items);
         needsRestart = true;
       }
     }
@@ -2743,6 +2738,40 @@ ExtensionManager.prototype = {
     gPref.setCharPref(PREF_EM_LAST_APP_VERSION, currAppVersion);
 
     return needsRestart;
+  },
+  
+  /**
+   * Shows the "Incompatible Items Found" UI
+   * @param   items
+   *          An array of items to show in the Mismatch UI
+   */
+  _showMismatchWindow: function(items) {
+    var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                       .getService(Components.interfaces.nsIWindowMediator);
+    var wizard = wm.getMostRecentWindow("Update:Wizard");
+    if (wizard)
+      wizard.focus();
+    else {
+      var ary = Components.classes["@mozilla.org/supports-array;1"]
+                          .createInstance(Components.interfaces.nsISupportsArray);
+      var updateTypes = Components.classes["@mozilla.org/supports-PRUint8;1"]
+                                  .createInstance(Components.interfaces.nsISupportsPRUint8);
+      updateTypes.data = nsIUpdateItem.TYPE_ADDON;
+      ary.AppendElement(updateTypes);
+      var sourceEvent = Components.classes["@mozilla.org/supports-PRUint8;1"]
+                                  .createInstance(Components.interfaces.nsISupportsPRBool);
+      sourceEvent.data = true;
+      ary.AppendElement(sourceEvent);
+      for (var i = 0; i < items.length; ++i)
+        ary.AppendElement(items[i]);
+
+      var features = "chrome,centerscreen,dialog,titlebar,modal";
+      // This *must* be modal so as not to break startup! This code is invoked before
+      // the main event loop is initiated (via checkForMismatches).
+      var ww = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
+                         .getService(Components.interfaces.nsIWindowWatcher);
+      ww.openWindow(null, URI_EXTENSION_UPDATE_DIALOG, "", features, ary);
+    }
   },
   
   /**

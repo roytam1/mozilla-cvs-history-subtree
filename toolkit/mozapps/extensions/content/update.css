@@ -1,10 +1,10 @@
 radiogroup[type="update-types"] {
   overflow: auto;
-  -moz-binding: url("chrome://mozapps/content/update/updates.xml#updateCategorySet");
+  -moz-binding: url("chrome://mozapps/content/extensions/update.xml#updateCategorySet");
 }
 
 radio[type="update-type"] {
-  -moz-binding: url("chrome://mozapps/content/update/updates.xml#updateCategory");
+  -moz-binding: url("chrome://mozapps/content/extensions/update.xml#updateCategory");
   -moz-box-orient: vertical;
   -moz-box-align: stretch;
 }
@@ -30,11 +30,11 @@ radio[type="update-type"][selected="true"] .updateCategoryContent {
 }
 
 checkbox[type="update"] {
-  -moz-binding: url("chrome://mozapps/content/update/updates.xml#updateItem"); 
+  -moz-binding: url("chrome://mozapps/content/extensions/update.xml#updateItem"); 
 }
 
 link {
-  -moz-binding: url("chrome://mozapps/content/update/updates.xml#link"); 
+  -moz-binding: url("chrome://mozapps/content/extensions/update.xml#link"); 
   -moz-user-focus: normal;
 }
 
