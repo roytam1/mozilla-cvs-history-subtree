@@ -188,8 +188,4 @@ void
 UpdateProgressUI(float progress)
 {
   sProgressVal = progress;  // 32-bit writes are atomic
-
-  // XXX TESTING
-  //usleep(60000);
-  // XXX TESTING
 }
