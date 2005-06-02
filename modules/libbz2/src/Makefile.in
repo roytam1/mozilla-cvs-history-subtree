@@ -45,11 +45,13 @@ include $(DEPTH)/config/autoconf.mk
 
 MODULE		= libbz2
 LIBRARY_NAME	= bz2
-LIBXUL_LIBRARY	= 1
 
 PACKAGE_FILE = libbz2.pkg
 
-# BIGFILES
+# This is defined by the bzip2-1.0.3 Makefile.  It appears to be used to
+# configure GLIBC to support large files.  This isn't something we care about
+# at this stage, since we're only interested in the streaming API, but we
+# define it here anyways for consistency.
 DEFINES	+= -D_FILE_OFFSET_BITS=64
 
 CSRCS		= \
