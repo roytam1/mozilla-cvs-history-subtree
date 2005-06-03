@@ -52,6 +52,54 @@
       </handler>
     </handlers>
   </binding>
+
+  <binding id="update" extends="chrome://mozapps/content/shared/richview.xml#richview-item">
+    <resources>
+      <stylesheet src="chrome://mozapps/content/update/updates.css"/>
+    </resources>
+    <content>
+      <xul:hbox pack="start">
+        <xul:label class="update-item-name" xbl:inherits="value=name" crop="right" flex="1"/>
+        <xul:link class="update-item-details" xbl:inherits="href=url">&details.link;</xul:link>
+      </xul:hbox>
+      <xul:label class="update-item-status" xbl:inherits="xbl:text=status" flex="1"/>
+    </content>
+  </binding>
+  
+  <binding id="update-downloading" extends="chrome://mozapps/content/shared/richview.xml#richview-item">
+    <resources>
+      <stylesheet src="chrome://mozapps/content/update/updates.css"/>
+    </resources>
+    <content>
+      <xul:hbox pack="start">
+        <xul:label class="update-item-name" xbl:inherits="value=name" crop="right" flex="1"/>
+        <xul:link class="update-item-details" xbl:inherits="href=url">&details.link;</xul:link>
+      </xul:hbox>
+      <xul:progressmeter class="update-item-progress" xbl:inherits="value=progress"/>
+      <xul:label class="update-item-status" xbl:inherits="value=status"/>
+      <xul:hbox>
+        <xul:button label="&pause.label;" accesskey="&pause.accesskey;"/>
+      </xul:hbox>
+      
+      <xul:hbox flex="1">
+        <xul:vbox pack="start">
+          <xul:image class="update-icon" xbl:inherits="src=image"
+                     style="width: 32px; max-width: 32px; height: 32px; max-height: 32px;"/>
+        </xul:vbox>
+        <xul:vbox pack="start" flex="1">
+          <xul:hbox>
+            <xul:label class="update-item-name" xbl:inherits="value=name" crop="center"/>
+            <xul:label class="update-item-version" xbl:inherits="value=version"/>
+          </xul:hbox>
+          <xul:progressmeter class="update-item-progress" xbl:inherits="value=progress"/>
+          <xul:label class="update-item-status" xbl:inherits="value=status"/>
+        </xul:vbox>
+      </xul:hbox>
+    </content>  
+    <implementation>
+      <field name="eventPrefix">"update-"</field>
+    </implementation>
+  </binding>
   
 </bindings>
 

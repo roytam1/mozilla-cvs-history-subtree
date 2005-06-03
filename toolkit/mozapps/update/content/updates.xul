@@ -51,7 +51,8 @@
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         title="&updateWizard.title;" 
         windowtype="Update:Wizard" style="width: 36em;"
-        onwizardfinished="gUpdateWizard.onFinish();">
+        onwizardfinished="gUpdates.onFinish();"
+        onclose="return gUpdates.onClose();">
 
   <script type="application/x-javascript" src="chrome://mozapps/content/update/updates.js"/>
   
@@ -61,7 +62,6 @@
   </stringbundleset>
 
   <wizardpage id="checking" pageid="checking" next="updatesfound"
-              label="&checking.title;"
               onpageshow="gCheckingPage.onPageShow();">
     <vbox class="content" flex="1">
       <label>&checking.label;</label>
@@ -76,7 +76,6 @@
   </wizardpage>
   
   <wizardpage id="updatesfound" pageid="updatesfound" next="downloading"
-              label="&updatesfound.title;"
               onpageshow="gUpdatesAvailablePage.onPageShow();" flex="1">
     <separator flex="1"/>
     <hbox id="update-info">
@@ -108,15 +107,33 @@
     </hbox>
     <separator flex="1"/>
     <hbox class="action-button-box">
-      <button label="&later.label;" accesskey="&later.accesskey;"/>
+      <button label="&later.label;" accesskey="&later.accesskey;"
+              oncommand="close();"/>
       <separator flex="1"/>
-      <button id="download-button" label="&download.label;" accesskey="&download.accesskey;"/>
+      <button id="download-button" 
+              label="&download.label;" accesskey="&download.accesskey;"
+              oncommand="document.documentElement.advance()"/>
     </hbox>
     <!--
     <hbox pack="end">
       <resizer dir="bottomright"/>
     </hbox>
     -->
+  </wizardpage>
+  
+  <wizardpage id="downloading" pageid="downloading"
+              onpageshow="gDownloadingPage.onPageShow();" flex="1">
+    
+    <label>&downloading.intro;</label>
+    <view id="updatesView" flex="1"
+          datasources="rdf:null" persist="last-selected"/>
+    <hbox>
+      <checkbox id="showCompletedUpdates"
+                label="&showCompletedUpdates.label;" accesskey="&showCompletedUpdates.accesskey;"
+                oncommand="gDownloadingPage.showCompletedUpdatesChanged(event.target);"/>
+      <separator flex="1"/>
+      <button label="&close.label;" accesskey="&close.accesskey;" oncommand="close();"/>
+    </hbox>
   </wizardpage>
   
 </wizard>

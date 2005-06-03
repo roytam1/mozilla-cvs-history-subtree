@@ -38,6 +38,7 @@
 #include "nsISupports.idl"
 
 interface nsIRequest;
+interface nsIRequestObserver;
 
 [scriptable, uuid(56863a67-bd69-42de-9f40-583e625b457d)]
 interface nsIUpdatePatch : nsISupports
@@ -154,6 +155,25 @@ interface nsIApplicationUpdateService : nsISupports
    *
    */
   nsIUpdateChecker checkForUpdates(in nsIUpdateCheckListener listener);
+
+  /**
+   * Adds a listener that receives progress and state information about the 
+   * update that is currently being downloaded, e.g. to update a user 
+   * interface.
+   * @param   listener
+   *          An object implementing nsIRequestObserver and optionally
+   *          nsIProgressEventSink that is to be notified of state and
+   *          progress information as the update is downloaded.
+   */
+  void addDownloadListener(in nsIRequestObserver listener);
+
+  /**
+   * Removes a listener that is receiving progress and state information
+   * about the update that is currently being downloaded. 
+   * @param   listener
+   *          The listener object to remove.
+   */
+  void removeDownloadListener(in nsIRequestObserver listener);
 
   /**
    * 

@@ -440,6 +440,28 @@ UpdateService.prototype = {
   },
   
   /**
+   *
+   */
+  addDownloadListener: function(listener) {
+    if (!this._downloader) {
+      LOG("addDownloadListener: no downloader!\n");
+      return;
+    }
+    this._downloader.addDownloadListener(listener);
+  },
+  
+  /**
+   *
+   */
+  removeDownloadListener: function(listener) {
+    if (!this._downloader) {
+      LOG("removeDownloadListener: no downloader!\n");
+      return;
+    }
+    this._downloader.removeDownloadListener(listener);
+  },
+  
+  /**
    * 
    */
   downloadUpdate: function(update) {
@@ -883,6 +905,31 @@ Downloader.prototype = {
     this._request.start(this, null);
 
     this._writeStatusFile(updateDir, STATE_DOWNLOADING);
+  },
+  
+  _listeners: [],
+
+  /** 
+   * 
+   */
+  addDownloadListener: function(listener) {
+    for (var i = 0; i < this._listeners.length; ++i) {
+      if (this._listeners[i] == listener)
+        return;
+    }
+    this._listeners.push(listener);
+  },
+  
+  /** 
+   *
+   */
+  removeDownloadListener: function(listener) {
+    for (var i = 0; i < this._listeners.length; ++i) {
+      if (this._listeners[i] == listener) {
+        this._listeners.splice(i, 1);
+        return;
+      }
+    }
   },
   
   onStartRequest: function(request, context) {

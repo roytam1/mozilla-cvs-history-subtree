@@ -1,5 +1,18 @@
 const nsIUpdateItem = Components.interfaces.nsIUpdateItem;
 
+var gUpdates = {
+  updates: null,
+  onClose: function() {
+    var objects = {
+      checking: gCheckingPage,
+      updatesfound: gUpdatesAvailablePage
+    };
+    var pageid = document.documentElement.currentPage.pageid;
+    if ("onClose" in objects[pageid]) 
+      objects[pageid].onClose();
+  },
+}
+
 var gCheckingPage = {
   /**
    * The nsIUpdateChecker that is currently checking for updates. We hold onto 
@@ -42,7 +55,7 @@ var gCheckingPage = {
      * See nsIUpdateCheckListener.idl
      */
     onCheckComplete: function(updates, updateCount) {
-      gUpdatesAvailablePage.updates = updates;
+      gUpdates.updates = updates;
       document.documentElement.advance();
     },
 
@@ -70,12 +83,12 @@ var gUpdatesAvailablePage = {
   _incompatibleItems: null,
   
   onPageShow: function() {
-    var newestUpdate = this.updates[0];
+    var newestUpdate = gUpdates.updates[0];
     var vc = Components.classes["@mozilla.org/updates/version-checker;1"]
                        .createInstance(Components.interfaces.nsIVersionChecker);
-    for (var i = 0; i < this.updates.length; ++i) {
-      if (vc.compare(this.updates[i].version, newestUpdate.version) > 0)
-        newestVersion = this.updates[i];
+    for (var i = 0; i < gUpdates.updates.length; ++i) {
+      if (vc.compare(gUpdates.updates[i].version, newestUpdate.version) > 0)
+        newestVersion = gUpdates.updates[i];
     }
     
     var updateStrings = document.getElementById("updateStrings");
@@ -115,5 +128,38 @@ var gUpdatesAvailablePage = {
     openDialog("chrome://mozapps/content/update/incompatible.xul", "", 
                "dialog,centerscreen,modal,resizable,titlebar", this._incompatibleItems);
   }
+};
+
+var gDownloadingPage = {
+  onPageShow: function() {
+    // Build the UI for the active download
+    var update = document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",  
+                                          "update");
+    update.setAttribute("state", "downloading");
+    
+    
+    // Add this UI as a listener for active downloads
+    var updates = 
+        Components.classes["@mozilla.org/updates/update-service;1"]
+                  .getService(Components.interfaces.nsIApplicationUpdateService);
+    updates.addDownloadListener(this);
+    
+    // Build the UI for previously installed updates
+  },
+  
+  onClose: function() {
+    // Remove ourself as a download listener so that we don't continue to be 
+    // fed progress and state notifications after the UI we're updating has 
+    // gone away.
+    var updates = 
+        Components.classes["@mozilla.org/updates/update-service;1"]
+                  .getService(Components.interfaces.nsIApplicationUpdateService);
+    updates.removeDownloadListener(this);
+  },
+  
+  showCompletedUpdatesChanged: function(checkbox) {
+    var updatesView = document.getElementById("updatesView");
+    updatesView.setAttribute("showcompletedupdates", checkbox.checked);
+  },
 };
 

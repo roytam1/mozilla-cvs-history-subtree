@@ -92,3 +92,21 @@ link:focus {
   font-weight: bold;
 }
 
+#updatesView {
+  -moz-binding: url("chrome://mozapps/skin/shared/richview.xml#richview");
+  overflow: auto;
+}
+
+update {
+  -moz-binding: url("chrome://mozapps/content/update/updates.xml#update");
+  -moz-box-orient: vertical;
+}
+
+update[state="downloading"] {
+  -moz-binding: url("chrome://mozapps/content/update/updates.xml#update-downloading");
+}
+
+#updatesView[showcompletedupdates=true] > update {
+  display: none
+}
+
