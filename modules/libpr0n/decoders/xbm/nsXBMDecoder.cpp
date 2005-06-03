@@ -68,10 +68,10 @@ nsXBMDecoder::~nsXBMDecoder()
         free(mBuf);
 
     if (mRow)
-        delete[] mRow;
+        free(mRow);
 
     if (mAlphaRow)
-        delete[] mAlphaRow;
+        free(mAlphaRow);
 }
 
 NS_IMETHODIMP nsXBMDecoder::Init(imgILoad *aLoad)
@@ -104,11 +104,11 @@ NS_IMETHODIMP nsXBMDecoder::Close()
     mFrame = nsnull;
 
     if (mRow) {
-        delete[] mRow;
+        free(mRow);
         mRow = nsnull;
     }
     if (mAlphaRow) {
-        delete[] mAlphaRow;
+        free(mAlphaRow);
         mAlphaRow = nsnull;
     }
 
@@ -173,9 +173,8 @@ nsresult nsXBMDecoder::ProcessData(const char* aData, PRUint32 aCount) {
         PRUint32 abpr;
         mFrame->GetAlphaBytesPerRow(&abpr);
 
-        mRow = new PRUint8[bpr];
-        memset(mRow, 0, bpr);
-        mAlphaRow = new PRUint8[abpr];
+        mRow = (PRUint8*)calloc(bpr, 1);
+        mAlphaRow = (PRUint8*)malloc(abpr);
 
         mState = RECV_SEEK;
 
