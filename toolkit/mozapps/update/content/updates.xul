@@ -47,7 +47,7 @@
 %brandDTD;
 ]>
 
-<wizard id="updateWizard"
+<wizard id="updates"
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         title="&updateWizard.title;" 
         windowtype="Update:Wizard" style="width: 36em;"
@@ -77,14 +77,46 @@
   
   <wizardpage id="updatesfound" pageid="updatesfound" next="downloading"
               label="&updatesfound.title;"
-              onpageshow="gUpdatesAvailablePage.onPageShow();">
-    <update-info id="updateInfo"/>
-    <vbox class="content" flex="1">
-      <compatibility-alert id="compatibilityAlert"/>
-    </vbox>
+              onpageshow="gUpdatesAvailablePage.onPageShow();" flex="1">
+    <separator flex="1"/>
+    <hbox id="update-info">
+      <hbox id="update-info-inner" flex="1">
+        <vbox flex="1">
+          <description id="updateType">
+            &updateAvailable.placeholder;
+          </description>
+          <label id="updateName" crop="right"/>
+          <description class="updateForMoreInfo">&forMoreInfo.label;
+            <link id="updateMoreInfoURL">&clickHere.label;</link>.
+          </description>
+          <separator/>
+          <hbox align="start" id="incompatibleWarning" hidden="true">
+            <image id="alertImage"/>
+            <vbox flex="1">
+              <description>&incompatible.warning;</description>
+              <hbox pack="end">
+                <button label="&listIncompatible.label;" accesskey="&listIncompatible.accesskey;"
+                        oncommand="gUpdatesAvailablePage.showIncompatibleItems();"/>
+              </hbox>
+            </vbox>
+          </hbox>
+          <separator/>
+          <description class="bold">&upgrade.evangelism;</description>
+        </vbox>
+        <image id="updateImage" src="chrome://branding/content/icon64.png"/>
+      </hbox>
+    </hbox>
+    <separator flex="1"/>
+    <hbox class="action-button-box">
+      <button label="&later.label;" accesskey="&later.accesskey;"/>
+      <separator flex="1"/>
+      <button id="download-button" label="&download.label;" accesskey="&download.accesskey;"/>
+    </hbox>
+    <!--
     <hbox pack="end">
       <resizer dir="bottomright"/>
     </hbox>
+    -->
   </wizardpage>
   
 </wizard>

@@ -14,14 +14,6 @@
   margin: 10px 44px 10px 44px;
 }
 
-update-info {
-  -moz-binding: url("chrome://mozapps/content/update/updates.xml#update-info");
-}
-
-compatibility-alert {
-  -moz-binding: url("chrome://mozapps/content/update/updates.xml#compatibility-alert");
-}
-
 link {
   -moz-binding: url("chrome://mozapps/content/update/updates.xml#link");
   -moz-user-focus: normal;
@@ -39,33 +31,64 @@ link:focus {
   border: 1px dotted black;
 }
 
-.updateName {
+#updateName {
   font-weight: bold;
   font-size: x-large;
 }
 
-.updateType[type=major] {
+#updateType[type=major] {
   font-weight: bold;
   color: #C00000;
 }
 
-.updateType[type=minor] {
+#updateType[type=minor] {
   font-weight: bold;
   color: #FF0000;
 }
 
-.updateForMoreInfo {
+#updateForMoreInfo {
   margin-left: 5px;
 }
 
-update-info {
+#updateImage {
+  margin-right: 5px;
+}
+
+#update-info {
   border-bottom: 2px solid;
   -moz-border-bottom-colors: ThreeDFace ThreeDHighlight;
-  padding: 5px;
+  -moz-appearance: listbox;
+  margin: 10px;
   background-color: #FFFFFF;
+}
+
+#update-info-inner {
+  background-color: InfoBackground;
+  color: InfoText;
+  display: -moz-box;
+  -moz-box-orient: horizontal;
+  -moz-box-align: start;
+  padding: 7px 5px 20px 7px;
 }
 
 #updateAvailable {
   margin: 5px;
+}
+
+#alertImage {
+  list-style-image: url("chrome://global/skin/icons/Warning.png");
+  margin-right: 5px;
+}
+
+.action-button-box {
+  margin: 7px;
+}
+
+#download-button {
+  font-weight: bold;
+}
+
+.bold {
+  font-weight: bold;
 }
 

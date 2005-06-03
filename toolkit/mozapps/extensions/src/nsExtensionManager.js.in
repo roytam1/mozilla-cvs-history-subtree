@@ -4665,8 +4665,6 @@ ExtensionsDataSource.prototype = {
       var maxVersion  = stringData(datasource.GetTarget(targetApp, maxVersionRes, true));
       if (id == appID) {
         var versionChecker = getVersionChecker();
-        var goat = ((versionChecker.compare(version, minVersion) >= 0) &&
-                (versionChecker.compare(version, maxVersion) <= 0));
         return ((versionChecker.compare(version, minVersion) >= 0) &&
                 (versionChecker.compare(version, maxVersion) <= 0));
       }

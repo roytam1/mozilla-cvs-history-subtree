@@ -53,46 +53,5 @@
     </handlers>
   </binding>
   
-  <binding id="update-info">
-    <resources>
-      <stylesheet src="chrome://mozapps/content/update/updates.css"/>
-    </resources>
-    <content>
-      <xul:hbox flex="1" align="center">
-        <xul:image class="updateImage" src="chrome://branding/content/icon64.png"/>
-        <xul:vbox flex="1">
-          <xul:label class="updateType" xbl:inherits="value=displayType"/>
-          <xul:label class="updateName" flex="1" crop="right" xbl:inherits="value=name"/>
-          <xul:description class="updateForMoreInfo">&forMoreInfo.label;
-            <xul:link class="updateMoreInfoURL" xbl:inherits="value=url">&clickHere.label;</xul:link>
-          </xul:description>
-        </xul:vbox>
-      </xul:hbox>
-    </content>
-    <implementation>
-      <method name="_item">
-        <parameter name="class"/>
-        <body><![CDATA[
-          return document.getAnonymousElementByAttribute(this, "class", class);
-        ]]></body>
-      </method>
-      <property name="name" 
-                onget="return this._item('updateName').value;"
-                onset="this._item('updateName').value = val; return val;"/>
-      <property name="type" 
-                onget="return this._item('updateType').getAttribute('type');"
-                onset="this._item('updateType').setAttribute('type', val); return val;"/>
-      <property name="displayType" 
-                onget="return this._item('updateType').value;"
-                onset="this._item('updateType').value = val; return val;"/>
-      <property name="url" 
-                onget="return this._item('updateMoreInfoURL').href;"
-                onset="this._item('updateMoreInfoURL').href = val; return val;"/>
-    </implementation>
-  </binding>
-  
-  <binding id="compatibility-alert">
-  
-  </binding>
 </bindings>
 

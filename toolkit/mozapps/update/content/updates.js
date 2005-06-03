@@ -1,3 +1,4 @@
+const nsIUpdateItem = Components.interfaces.nsIUpdateItem;
 
 var gCheckingPage = {
   /**
@@ -66,6 +67,7 @@ var gCheckingPage = {
 
 var gUpdatesAvailablePage = {
   updates: null,
+  _incompatibleItems: null,
   
   onPageShow: function() {
     var newestUpdate = this.updates[0];
@@ -81,16 +83,37 @@ var gUpdatesAvailablePage = {
     var brandName = brandStrings.getString("brandShortName");
     var updateName = updateStrings.getFormattedString("updateName", 
                                                       [brandName, newestVersion.version]);
-    
-    var updateInfo = document.getElementById("updateInfo");
-    updateInfo.name = updateName;
+    var updateNameElement = document.getElementById("updateName");
+    updateNameElement.value = updateName;
     
     var displayType = updateStrings.getString("updateType_" + newestVersion.type);
-    updateInfo.type = newestVersion.type;
-    
-    updateInfo.url = newestVersion.detailsurl;
+    var updateTypeElement = document.getElementById("updateType");
+    updateTypeElement.setAttribute("type", newestVersion.type);
     var intro = updateStrings.getFormattedString("introType_" + newestVersion.type, [brandName]);
-    updateInfo.displayType = intro;
+    while (updateTypeElement.hasChildNodes())
+      updateTypeElement.removeChild(updateTypeElement.firstChild);
+    updateTypeElement.appendChild(document.createTextNode(intro));
+    
+    var updateMoreInfoURL = document.getElementById("updateMoreInfoURL");
+    updateMoreInfoURL.href = newestVersion.detailsurl;
+    
+    var em = Components.classes["@mozilla.org/extensions/manager;1"]
+                       .getService(Components.interfaces.nsIExtensionManager);
+    var items = em.getIncompatibleItemList("", newestVersion.version,
+                                           nsIUpdateItem.TYPE_ADDON, { });
+    if (items.length > 0) {
+      // There are addons that are incompatible with this update, so show the 
+      // warning message.
+      var incompatibleWarning = document.getElementById("incompatibleWarning");
+      incompatibleWarning.hidden = false;
+      
+      this._incompatibleItems = items;
+    }
+  },
+  
+  showIncompatibleItems: function() {
+    openDialog("chrome://mozapps/content/update/incompatible.xul", "", 
+               "dialog,centerscreen,modal,resizable,titlebar", this._incompatibleItems);
   }
 };
 
