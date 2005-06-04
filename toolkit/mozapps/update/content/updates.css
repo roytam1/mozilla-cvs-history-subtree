@@ -18,9 +18,12 @@ link {
   -moz-binding: url("chrome://mozapps/content/update/updates.xml#link");
   -moz-user-focus: normal;
   color: blue;
-  text-decoration: underline !important;
-  cursor: pointer;
   border: 1px solid transparent;
+}
+
+.linkLabel {
+  cursor: pointer;
+  text-decoration: underline !important;
 }
 
 link:hover:active {
@@ -66,9 +69,7 @@ link:focus {
   background-color: InfoBackground;
   color: InfoText;
   display: -moz-box;
-  -moz-box-orient: horizontal;
-  -moz-box-align: start;
-  padding: 7px 5px 20px 7px;
+  padding: 7px 5px 7px 7px;
 }
 
 #updateAvailable {
@@ -100,6 +101,9 @@ link:focus {
 update {
   -moz-binding: url("chrome://mozapps/content/update/updates.xml#update");
   -moz-box-orient: vertical;
+  background-color: #FFFFFF;
+  border-bottom: 1px dotted #C0C0C0;
+  padding: 5px;
 }
 
 update[state="downloading"] {
@@ -110,3 +114,22 @@ update[state="downloading"] {
   display: none
 }
 
+#incompatibleWarning {
+  margin-right: 50px;
+}
+
+#downloadingIntro {
+  margin: 10px 10px 0px 10px;
+}
+
+#downloadingFooter {
+  margin: 0px 4px 7px 4px;
+}
+
+.update-item-name {
+  font-weight: bold;
+}
+
+.update-item-pause {
+  font-size: smaller;
+}

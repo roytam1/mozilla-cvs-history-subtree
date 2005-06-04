@@ -1,4 +1,14 @@
 const nsIUpdateItem = Components.interfaces.nsIUpdateItem;
+const nsIIncrementalDownload = Components.interfaces.nsIIncrementalDownload;
+
+/**
+ * Logs a string to the error console. 
+ * @param   string
+ *          The string to write to the error console..
+ */  
+function LOG(string) {
+  dump("*** " + string + "\n");
+}
 
 var gUpdates = {
   updates: null,
@@ -79,7 +89,6 @@ var gCheckingPage = {
 };
 
 var gUpdatesAvailablePage = {
-  updates: null,
   _incompatibleItems: null,
   
   onPageShow: function() {
@@ -122,6 +131,9 @@ var gUpdatesAvailablePage = {
       
       this._incompatibleItems = items;
     }
+    
+    var dlButton = document.getElementById("download-button");
+    dlButton.focus();
   },
   
   showIncompatibleItems: function() {
@@ -136,15 +148,23 @@ var gDownloadingPage = {
     var update = document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",  
                                           "update");
     update.setAttribute("state", "downloading");
-    
+    update.setAttribute("name", "Firefox 1.0.4");
+    update.setAttribute("status", "Blah");
+    update.setAttribute("url", "http://www.bengoodger.com/");
+    update.id = "activeDownloadItem";
+    var updatesView = document.getElementById("updatesView");
+    updatesView.appendChild(update);
     
     // Add this UI as a listener for active downloads
     var updates = 
         Components.classes["@mozilla.org/updates/update-service;1"]
                   .getService(Components.interfaces.nsIApplicationUpdateService);
+    for (var i = 0; i < gUpdates.updates.length; ++i) 
+      updates.downloadUpdate(gUpdates.updates[i]);
     updates.addDownloadListener(this);
     
     // Build the UI for previously installed updates
+    // ...
   },
   
   onClose: function() {
@@ -161,5 +181,39 @@ var gDownloadingPage = {
     var updatesView = document.getElementById("updatesView");
     updatesView.setAttribute("showcompletedupdates", checkbox.checked);
   },
+
+  onStartRequest: function(request, context) {
+    request.QueryInterface(nsIIncrementalDownload);
+    LOG("gDownloadingPage.onStartRequest: " + request.URI.spec);
+  },
+  
+  onProgress: function(request, context, progress, maxProgress) {
+    request.QueryInterface(nsIIncrementalDownload);
+    LOG("gDownloadingPage.onProgress: " + request.URI.spec + ", " + progress + "/" + maxProgress);
+    
+    var active = document.getElementById("activeDownloadItem");
+    active.setAttribute("progress", Math.floor(100 * (progress/maxProgress)));
+  },
+  
+  onStatus: function(request, context, status, statusText) {
+    request.QueryInterface(nsIIncrementalDownload);
+    LOG("gDownloadingPage.onStatus: " + request.URI.spec + " status = " + status + ", text = " + statusText);
+  },
+  
+  onStopRequest: function(request, context, status) {
+    request.QueryInterface(nsIIncrementalDownload);
+    LOG("gDownloadingPage.onStopRequest: " + request.URI.spec + ", status = " + status);
+  },
+   
+  /**
+   * See nsISupports.idl
+   */
+  QueryInterface: function(iid) {
+    if (!iid.equals(Components.interfaces.nsIRequestObserver) &&
+        !iid.equals(Components.interfaces.nsIProgressEventSink) &&
+        !iid.equals(Components.interfaces.nsISupports))
+      throw Components.results.NS_ERROR_NO_INTERFACE;
+    return this;
+  }
 };
 

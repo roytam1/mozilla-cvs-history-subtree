@@ -77,43 +77,44 @@
   
   <wizardpage id="updatesfound" pageid="updatesfound" next="downloading"
               onpageshow="gUpdatesAvailablePage.onPageShow();" flex="1">
-    <separator flex="1"/>
-    <hbox id="update-info">
-      <hbox id="update-info-inner" flex="1">
-        <vbox flex="1">
-          <description id="updateType">
-            &updateAvailable.placeholder;
-          </description>
-          <label id="updateName" crop="right"/>
-          <description class="updateForMoreInfo">&forMoreInfo.label;
-            <link id="updateMoreInfoURL">&clickHere.label;</link>.
-          </description>
-          <separator/>
-          <hbox align="start" id="incompatibleWarning" hidden="true">
-            <image id="alertImage"/>
-            <vbox flex="1">
-              <description>&incompatible.warning;</description>
-              <hbox pack="end">
-                <button label="&listIncompatible.label;" accesskey="&listIncompatible.accesskey;"
-                        oncommand="gUpdatesAvailablePage.showIncompatibleItems();"/>
-              </hbox>
-            </vbox>
-          </hbox>
-          <separator/>
-          <description class="bold">&upgrade.evangelism;</description>
-        </vbox>
-        <image id="updateImage" src="chrome://branding/content/icon64.png"/>
-      </hbox>
-    </hbox>
-    <separator flex="1"/>
-    <hbox class="action-button-box">
-      <button label="&later.label;" accesskey="&later.accesskey;"
-              oncommand="close();"/>
-      <separator flex="1"/>
-      <button id="download-button" 
-              label="&download.label;" accesskey="&download.accesskey;"
-              oncommand="document.documentElement.advance()"/>
-    </hbox>
+    <vbox id="update-info" flex="1">
+      <vbox id="update-info-inner" flex="1">
+        <hbox align="start">
+          <vbox flex="1">
+            <description id="updateType">
+              &updateAvailable.placeholder;
+            </description>
+            <label id="updateName" crop="right"/>
+            <description class="updateForMoreInfo">&forMoreInfo.label;
+              <link id="updateMoreInfoURL">&clickHere.label;</link>.
+            </description>
+          </vbox>
+          <image id="updateImage" src="chrome://branding/content/icon64.png"/>
+        </hbox>
+        <separator flex="1"/>
+        <hbox align="start" id="incompatibleWarning" hidden="true">
+          <image id="alertImage"/>
+          <vbox flex="1">
+            <description>&incompatible.warning;</description>
+            <hbox pack="end">
+              <button label="&listIncompatible.label;" accesskey="&listIncompatible.accesskey;"
+                      oncommand="gUpdatesAvailablePage.showIncompatibleItems();"/>
+            </hbox>
+          </vbox>
+        </hbox>
+        <separator flex="1"/>
+        <description class="bold">&upgrade.evangelism;</description>
+        <separator/>
+        <hbox>
+          <button label="&later.label;" accesskey="&later.accesskey;"
+                  oncommand="close();"/>
+          <separator flex="1"/>
+          <button id="download-button" 
+                  label="&download.label;" accesskey="&download.accesskey;"
+                  oncommand="document.documentElement.advance()"/>
+        </hbox>
+      </vbox>
+    </vbox>
     <!--
     <hbox pack="end">
       <resizer dir="bottomright"/>
@@ -124,10 +125,10 @@
   <wizardpage id="downloading" pageid="downloading"
               onpageshow="gDownloadingPage.onPageShow();" flex="1">
     
-    <label>&downloading.intro;</label>
+    <label id="downloadingIntro">&downloading.intro;</label>
     <view id="updatesView" flex="1"
           datasources="rdf:null" persist="last-selected"/>
-    <hbox>
+    <hbox id="downloadingFooter">
       <checkbox id="showCompletedUpdates"
                 label="&showCompletedUpdates.label;" accesskey="&showCompletedUpdates.accesskey;"
                 oncommand="gDownloadingPage.showCompletedUpdatesChanged(event.target);"/>

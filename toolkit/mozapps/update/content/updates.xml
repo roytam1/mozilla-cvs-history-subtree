@@ -73,27 +73,12 @@
     <content>
       <xul:hbox pack="start">
         <xul:label class="update-item-name" xbl:inherits="value=name" crop="right" flex="1"/>
-        <xul:link class="update-item-details" xbl:inherits="href=url">&details.link;</xul:link>
+        <xul:link class="update-item-details" xbl:inherits="href=url" label="&details.link;"/>
       </xul:hbox>
       <xul:progressmeter class="update-item-progress" xbl:inherits="value=progress"/>
-      <xul:label class="update-item-status" xbl:inherits="value=status"/>
-      <xul:hbox>
-        <xul:button label="&pause.label;" accesskey="&pause.accesskey;"/>
-      </xul:hbox>
-      
-      <xul:hbox flex="1">
-        <xul:vbox pack="start">
-          <xul:image class="update-icon" xbl:inherits="src=image"
-                     style="width: 32px; max-width: 32px; height: 32px; max-height: 32px;"/>
-        </xul:vbox>
-        <xul:vbox pack="start" flex="1">
-          <xul:hbox>
-            <xul:label class="update-item-name" xbl:inherits="value=name" crop="center"/>
-            <xul:label class="update-item-version" xbl:inherits="value=version"/>
-          </xul:hbox>
-          <xul:progressmeter class="update-item-progress" xbl:inherits="value=progress"/>
-          <xul:label class="update-item-status" xbl:inherits="value=status"/>
-        </xul:vbox>
+      <xul:hbox align="center">
+        <xul:label class="update-item-status" xbl:inherits="value=status" flex="1" crop="right"/>
+        <xul:button class="update-item-pause" label="&pause.label;" accesskey="&pause.accesskey;"/>
       </xul:hbox>
     </content>  
     <implementation>

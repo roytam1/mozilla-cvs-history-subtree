@@ -935,21 +935,40 @@ Downloader.prototype = {
   onStartRequest: function(request, context) {
     request.QueryInterface(nsIIncrementalDownload);
     LOG("Downloader.onStartRequest: " + request.URI.spec);
+    var listenerCount = this._listeners.length;
+    for (var i = 0; i < listenerCount; ++i)
+      this._listeners[i].onStartRequest(request, context);
   },
   
   onProgress: function(request, context, progress, maxProgress) {
     request.QueryInterface(nsIIncrementalDownload);
     LOG("Downloader.onProgress: " + request.URI.spec + ", " + progress + "/" + maxProgress);
+    var listenerCount = this._listeners.length;
+    for (var i = 0; i < listenerCount; ++i) {
+      var listener = this._listeners[i];
+      if (listener instanceof Components.interfaces.nsIProgressEventSink)
+        listener.onProgress(request, context, progress, maxProgress);
+    }
   },
   
   onStatus: function(request, context, status, statusText) {
     request.QueryInterface(nsIIncrementalDownload);
     LOG("Downloader.onStatus: " + request.URI.spec + " status = " + status + ", text = " + statusText);
+    var listenerCount = this._listeners.length;
+    for (var i = 0; i < listenerCount; ++i) {
+      var listener = this._listeners[i];
+      if (listener instanceof Components.interfaces.nsIProgressEventSink)
+        listener.onStatus(request, context, status, statusText);
+    }
   },
   
   onStopRequest: function(request, context, status) {
     request.QueryInterface(nsIIncrementalDownload);
     LOG("Downloader.onStopRequest: " + request.URI.spec + ", status = " + status);
+
+    var listenerCount = this._listeners.length;
+    for (var i = 0; i < listenerCount; ++i)
+      this._listeners[i].onStopRequest(request, context, status);
 
     this._request = null;
 
