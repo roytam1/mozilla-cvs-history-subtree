@@ -139,10 +139,6 @@ pixman_composite_trapezoids (pixman_operator_t	      op,
     xDst = traps[0].left.p1.x >> 16;
     yDst = traps[0].left.p1.y >> 16;
     
-    format = pixman_format_create (PIXMAN_FORMAT_NAME_A8);
-    if (!format)
-	return;
-
     pixman_trapezoid_bounds (ntraps, traps, &traps_bounds);
 
     traps_region = pixman_region_create_simple (&traps_bounds);
@@ -167,11 +163,18 @@ pixman_composite_trapezoids (pixman_operator_t	      op,
     if (bounds.y1 >= bounds.y2 || bounds.x1 >= bounds.x2)
 	return;
 
+    format = pixman_format_create (PIXMAN_FORMAT_NAME_A8);
+    if (!format)
+	return;
+
     image = IcCreateAlphaPicture (dst, format,
 				  bounds.x2 - bounds.x1,
 				  bounds.y2 - bounds.y1);
     if (!image)
+    {
+	pixman_format_destroy (format);
 	return;
+    }
 
     for (; ntraps; ntraps--, traps++)
     {

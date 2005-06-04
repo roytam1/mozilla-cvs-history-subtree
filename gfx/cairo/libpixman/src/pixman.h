@@ -288,7 +288,7 @@ int
 pixman_image_set_clip_region (pixman_image_t	*image,
 			      pixman_region16_t	*region);
 
-typedef int pixman_fixed16_16_t;
+typedef int32_t pixman_fixed16_16_t;
 
 typedef struct pixman_point_fixed {
     pixman_fixed16_16_t  x, y;
