@@ -454,7 +454,7 @@ DefinePropertyIfFound(XPCCallContext& ccx,
 
         AUTO_MARK_JSVAL(ccx, funval);
 
-        funobj = JS_CloneFunctionObject(ccx, JSVAL_TO_OBJECT(funval), obj);
+        funobj = xpc_CloneJSFunction(ccx, JSVAL_TO_OBJECT(funval), obj);
         if(!funobj)
             return JS_FALSE;
     }
@@ -1024,7 +1024,7 @@ GetOrSetUnshadowedMemberValue(JSContext *cx,
 
         // clone a function we can use for this object
         JSObject* funobj =
-            JS_CloneFunctionObject(cx, JSVAL_TO_OBJECT(val), obj);
+            xpc_CloneJSFunction(ccx, JSVAL_TO_OBJECT(val), obj);
         if(!funobj)
             return Throw(NS_ERROR_XPC_BAD_CONVERT_JS, cx);
 

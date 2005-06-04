@@ -548,6 +548,7 @@ public:
         IDX_COMPONENTS              ,
         IDX_WRAPPED_JSOBJECT        ,
         IDX_OBJECT                  ,
+        IDX_FUNCTION                ,
         IDX_PROTOTYPE               ,
         IDX_CREATE_INSTANCE         ,
 #ifdef XPC_IDISPATCH_SUPPORT
@@ -1002,6 +1003,9 @@ public:
     JSObject*
     GetPrototypeJSObject() const {return mPrototypeJSObject;}
 
+    JSObject*
+    GetPrototypeJSFunction() const {return mPrototypeJSFunction;}
+
     void RemoveWrappedNativeProtos();
 
     static XPCWrappedNativeScope*
@@ -1062,6 +1066,7 @@ private:
     XPCWrappedNativeScope*           mNext;
     JSObject*                        mGlobalJSObject;
     JSObject*                        mPrototypeJSObject;
+    JSObject*                        mPrototypeJSFunction;
 };
 
 /***************************************************************************/
@@ -3221,6 +3226,9 @@ protected:
 JSBool xpc_IsReportableErrorCode(nsresult code);
 
 void XPC_WN_JSOps_Shutdown();
+
+JSObject* xpc_CloneJSFunction(XPCCallContext &ccx, JSObject *funobj,
+                              JSObject *parent);
 
 /***************************************************************************/
 // Inlined utilities.
