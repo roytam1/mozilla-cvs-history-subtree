@@ -42,11 +42,9 @@
 #define BLOCKSIZE 4096
 #define ROUND_UP(n, incr) (((n) / (incr) + 1) * (incr))
 
-typedef unsigned int uint32;
-
 #define MAR_ID "MAR1"
 #define MAR_ID_SIZE 4
 
-#define MAR_ITEM_SIZE(namelen) (3*sizeof(uint32) + (namelen) + 1)
+#define MAR_ITEM_SIZE(namelen) (3*sizeof(PRUint32) + (namelen) + 1)
 
 #endif  /* MAR_PRIVATE_H__ */

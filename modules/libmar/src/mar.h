@@ -39,15 +39,17 @@
 #ifndef MAR_H__
 #define MAR_H__
 
+#include "prtypes.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 typedef struct MarItem_ {
   struct MarItem_ *next;
-  unsigned int offset;  /* offset into archive */
-  unsigned int length;  /* length of data in bytes */
-  unsigned int flags;   /* contains file mode bits */
+  PRUint32 offset;  /* offset into archive */
+  PRUint32 length;  /* length of data in bytes */
+  PRUint32 flags;   /* contains file mode bits */
   char name[1];
 } MarItem;
 

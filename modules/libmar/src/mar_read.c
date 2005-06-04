@@ -58,8 +58,8 @@ struct MarFile_ {
 };
 
 /* this is the same hash algorithm used by nsZipArchive.cpp */
-static uint32 mar_hash_name(const char *name) {
-  uint32 val = 0;
+static PRUint32 mar_hash_name(const char *name) {
+  PRUint32 val = 0;
   unsigned char* c;
 
   for (c = (unsigned char *) name; *c; ++c)
@@ -69,9 +69,9 @@ static uint32 mar_hash_name(const char *name) {
 }
 
 static int mar_insert_item(MarFile *mar, const char *name, int namelen,
-                           uint32 offset, uint32 length, uint32 flags) {
+                           PRUint32 offset, PRUint32 length, PRUint32 flags) {
   MarItem *item, *root;
-  uint32 hash;
+  PRUint32 hash;
   
   item = (MarItem *) malloc(sizeof(MarItem) + namelen);
   if (!item)
@@ -99,18 +99,19 @@ static int mar_insert_item(MarFile *mar, const char *name, int namelen,
 static int mar_consume_index(MarFile *mar, char **buf, const char *buf_end) {
   /*
    * Each item has the following structure:
-   *   uint32 offset      (network byte order)
-   *   uint32 length      (network byte order)
-   *   char   name[N]
-   *   char   null_byte;
+   *   PRUint32 offset      (network byte order)
+   *   PRUint32 length      (network byte order)
+   *   PRUint32 flags       (network byte order)
+   *   char     name[N]
+   *   char     null_byte;
    */
-  uint32 offset;
-  uint32 length;
-  uint32 flags;
+  PRUint32 offset;
+  PRUint32 length;
+  PRUint32 flags;
   const char *name;
   int namelen;
 
-  if ((buf_end - *buf) < (int)(2*sizeof(uint32) + 2))
+  if ((buf_end - *buf) < (int)(2*sizeof(PRUint32) + 2))
     return -1;
 
   memcpy(&offset, *buf, sizeof(offset));
@@ -144,7 +145,7 @@ static int mar_consume_index(MarFile *mar, char **buf, const char *buf_end) {
 
 static int mar_read_index(MarFile *mar) {
   char id[MAR_ID_SIZE], *buf, *bufptr, *bufend;
-  uint32 offset_to_index, size_of_index;
+  PRUint32 offset_to_index, size_of_index;
 
   /* verify MAR ID */
   if (fread(id, MAR_ID_SIZE, 1, mar->fp) != 1)
@@ -152,13 +153,13 @@ static int mar_read_index(MarFile *mar) {
   if (memcmp(id, MAR_ID, MAR_ID_SIZE) != 0)
     return -1;
 
-  if (fread(&offset_to_index, sizeof(uint32), 1, mar->fp) != 1)
+  if (fread(&offset_to_index, sizeof(PRUint32), 1, mar->fp) != 1)
     return -1;
   offset_to_index = ntohl(offset_to_index);
 
   if (fseek(mar->fp, offset_to_index, SEEK_SET))
     return -1;
-  if (fread(&size_of_index, sizeof(uint32), 1, mar->fp) != 1)
+  if (fread(&size_of_index, sizeof(PRUint32), 1, mar->fp) != 1)
     return -1;
   size_of_index = ntohl(size_of_index);
 
@@ -221,7 +222,7 @@ void mar_close(MarFile *mar) {
 }
 
 const MarItem *mar_find_item(MarFile *mar, const char *name) {
-  uint32 hash;
+  PRUint32 hash;
   const MarItem *item;
 
   hash = mar_hash_name(name);

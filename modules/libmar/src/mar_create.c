@@ -54,20 +54,20 @@
 
 struct MarItemStack {
   void *head;
-  uint32 size_used;
-  uint32 size_allocated;
-  uint32 last_offset;
+  PRUint32 size_used;
+  PRUint32 size_allocated;
+  PRUint32 last_offset;
 };
 
 /**
  * Push a new item onto the stack of items.  The stack is a single block
  * of memory.
  */
-static int mar_push(struct MarItemStack *stack, uint32 length, uint32 flags,
+static int mar_push(struct MarItemStack *stack, PRUint32 length, PRUint32 flags,
                     const char *name) {
   int namelen;
-  uint32 n_offset, n_length, n_flags;
-  uint32 size;
+  PRUint32 n_offset, n_length, n_flags;
+  PRUint32 size;
   char *data;
   
   namelen = strlen(name);
@@ -127,7 +127,7 @@ static int mar_concat_file(FILE *fp, const char *path) {
 
 int mar_create(const char *dest, int num_files, char **files) {
   struct MarItemStack stack;
-  uint32 offset_to_index = 0, size_of_index;
+  PRUint32 offset_to_index = 0, size_of_index;
   struct stat st;
   FILE *fp;
   int i, rv = -1;
@@ -142,10 +142,10 @@ int mar_create(const char *dest, int num_files, char **files) {
 
   if (fwrite(MAR_ID, MAR_ID_SIZE, 1, fp) != 1)
     goto failure;
-  if (fwrite(&offset_to_index, sizeof(uint32), 1, fp) != 1)
+  if (fwrite(&offset_to_index, sizeof(PRUint32), 1, fp) != 1)
     goto failure;
 
-  stack.last_offset = MAR_ID_SIZE + sizeof(uint32);
+  stack.last_offset = MAR_ID_SIZE + sizeof(PRUint32);
 
   for (i = 0; i < num_files; ++i) {
     if (stat(files[i], &st)) {

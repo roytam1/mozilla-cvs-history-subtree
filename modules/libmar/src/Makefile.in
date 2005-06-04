@@ -45,9 +45,7 @@ include $(DEPTH)/config/autoconf.mk
 
 MODULE		= libmar
 LIBRARY_NAME	= mar
-LIBXUL_LIBRARY	= 1
-
-PACKAGE_FILE = libmar.pkg
+FORCE_STATIC_LIB= 1
 
 # This makefile just builds support for reading archives.
 
@@ -58,7 +56,5 @@ CSRCS		= \
 EXPORTS		= \
 		mar.h \
 		$(NULL)
-
-FORCE_STATIC_LIB = 1
 
 include $(topsrcdir)/config/rules.mk
