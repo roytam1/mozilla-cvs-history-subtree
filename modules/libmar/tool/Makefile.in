@@ -48,21 +48,25 @@ PROGRAM		= mar$(BIN_SUFFIX)
 
 # This makefile builds the mar command line utility
 
-CSRCS		= \
+LCSRCS		= \
 		mar_read.c \
 		mar_create.c \
 		mar_extract.c \
 		mar_test.c \
+		$(NULL)
+
+CSRCS		= \
+		$(LCSRCS) \
 		mar.c \
 		$(NULL)
 
 GARBAGE		+= $(CSRCS) $(wildcard *.$(OBJ_SUFFIX))
 
-ORIGINAL_CSRCS	:= $(addprefix $(topsrcdir)/modules/libmar/src/, $(CSRCS))
+EXPORT_LCSRCS	:= $(addprefix $(topsrcdir)/modules/libmar/src/, $(LCSRCS))
 
 LOCAL_INCLUDES	= -I$(srcdir)/../src
 
 include $(topsrcdir)/config/rules.mk
 
-export:: $(ORIGINAL_CSRCS)
+export:: $(EXPORT_LCSRCS)
 	$(INSTALL) $^ .
