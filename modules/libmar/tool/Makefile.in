@@ -44,14 +44,18 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 MODULE		= mar
-PROGRAM		= mar$(BIN_SUFFIX)
+
+# The mar executable is output into dist/host/bin since it is something that
+# would only be used by our build system and should not itself be included in a
+# Mozilla distribution.
+HOST_PROGRAM	= mar$(HOST_BIN_SUFFIX)
 
 REQUIRES	= libmar
 
-CSRCS		= \
+HOST_CSRCS	= \
 		mar.c \
 		$(NULL)
 
-LIBS		= $(DIST)/lib/$(LIB_PREFIX)mar.$(LIB_SUFFIX)
+HOST_LIBS	= $(DIST)/lib/$(LIB_PREFIX)mar.$(LIB_SUFFIX)
 
 include $(topsrcdir)/config/rules.mk
