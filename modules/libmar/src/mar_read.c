@@ -241,7 +241,9 @@ int mar_enum_items(MarFile *mar, MarItemCallback callback, void *closure) {
   for (i = 0; i < TABLESIZE; ++i) {
     item = mar->item_table[i];
     while (item) {
-      callback(mar, item, closure);
+      int rv = callback(mar, item, closure);
+      if (rv)
+        return rv;
       item = item->next;
     }
   }

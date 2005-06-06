@@ -39,54 +39,98 @@
 #ifndef MAR_H__
 #define MAR_H__
 
+/* We use NSPR here just to import the definition of PRUint32 */
 #include "prtypes.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/**
+ * The MAR item data structure.
+ */
 typedef struct MarItem_ {
-  struct MarItem_ *next;
-  PRUint32 offset;  /* offset into archive */
-  PRUint32 length;  /* length of data in bytes */
-  PRUint32 flags;   /* contains file mode bits */
-  char name[1];
+  struct MarItem_ *next;  /* private field */
+  PRUint32 offset;        /* offset into archive */
+  PRUint32 length;        /* length of data in bytes */
+  PRUint32 flags;         /* contains file mode bits */
+  char name[1];           /* file path */
 } MarItem;
 
 typedef struct MarFile_ MarFile;
 
+/**
+ * Signature of callback function passed to mar_enum_items.
+ * @param mar       The MAR file being visited.
+ * @param item      The MAR item being visited.
+ * @param data      The data parameter passed by the caller of mar_enum_items.
+ * @returns         A non-zero value to stop enumerating.
+ */
 typedef int (* MarItemCallback)(MarFile *mar, const MarItem *item, void *data);
 
-
-/******************************************************************************
- * The APIs below require mar_read.c
+/**
+ * Open a MAR file for reading.
+ * @param path      Specifies the path to the MAR file to open.  This path must
+ *                  be compatible with fopen.
+ * @returns         NULL if an error occurs.
  */
-
-/* open a mar archive for reading */
 MarFile *mar_open(const char *path);
 
-/* close a mar archive that was opened using mar_open */
+/**
+ * Close a MAR file that was opened using mar_open.
+ * @param mar       The MarFile object to close.
+ */
 void mar_close(MarFile *mar);
 
-/* find a mar item by name */
+/**
+ * Find an item in the MAR file by name.
+ * @param mar       The MarFile object to query.
+ * @param item      The name of the item to query.
+ * @returns         A const reference to a MAR item or NULL if not found.
+ */
 const MarItem *mar_find_item(MarFile *mar, const char *item);
 
-/* enumerate all mar items via callback function */
+/**
+ * Enumerate all MAR items via callback function.
+ * @param mar       The MAR file to enumerate.
+ * @param callback  The function to call for each MAR item.
+ * @param data      A caller specified value that is passed along to the
+ *                  callback function.
+ * @returns         Zero if the enumeration ran to completion.  Otherwise, any
+ *                  non-zero return value from the callback is returned.
+ */
 int mar_enum_items(MarFile *mar, MarItemCallback callback, void *data);
 
-/* read from mar item at given offset up to bufsize bytes */
+/**
+ * Read from MAR item at given offset up to bufsize bytes.
+ * @param mar       The MAR file to read.
+ * @param item      The MAR item to read.
+ * @param offset    The byte offset relative to the start of the item.
+ * @param buf       A pointer to a buffer to copy the data into.
+ * @param bufsize   The length of the buffer to copy the data into.
+ * @returns         The number of bytes written or a negative value if an
+ *                  error occurs.
+ */
 int mar_read(MarFile *mar, const MarItem *item, int offset, char *buf,
              int bufsize);
 
-
-/******************************************************************************
- * The APIs below require additional source modules
+/**
+ * Create a MAR file from a set of files.
+ * @param dest      The path to the file to create.  This path must be
+ *                  compatible with fopen.
+ * @param numfiles  The number of files to store in the archive.
+ * @param files     The list of null-terminated file paths.  Each file
+ *                  path must be compatible with fopen.
+ * @returns         A non-zero value if an error occurs.
  */
+int mar_create(const char *dest, int numfiles, char **files);
 
-/* create the archive from a set of files (needs mar_create.c) */
-int mar_create(const char *dest, int num_files, char **files);
-
-/* extract mar file to working directory (needs mar_extract.c) */
+/**
+ * Extract a MAR file to the current working directory.
+ * @param path      The path to the MAR file to extract.  This path must be
+ *                  compatible with fopen.
+ * @returns         A non-zero value if an error occurs.
+ */
 int mar_extract(const char *path);
 
 #ifdef __cplusplus
