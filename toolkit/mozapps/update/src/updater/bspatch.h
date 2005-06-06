@@ -41,7 +41,7 @@
 #define BSP_ERROR_CORRUPT -2
 #define BSP_ERROR_NOMEM   -3
 
-struct MBSPatchHeader {
+typedef struct MBSPatchHeader_ {
   /* "MBDIFF10" */
   char tag[8];
   
@@ -66,7 +66,7 @@ struct MBSPatchHeader {
   /* Control block (MBSPatchTriple[]) */
   /* Diff block (binary data) */
   /* Extra block (binary data) */
-};
+} MBSPatchHeader;
 
 /**
  * Read the header of a patch file into the MBSPatchHeader structure.
@@ -90,10 +90,10 @@ int MBS_ReadHeader(int fd, MBSPatchHeader *header);
 int MBS_ApplyPatch(const MBSPatchHeader *header, int patchfd,
 		   unsigned char *fbuffer, int filefd);
 
-struct MBSPatchTriple {
+typedef struct MBSPatchTriple_ {
   PRUint32 x; /* add x bytes from oldfile to x bytes from the diff block */
   PRUint32 y; /* copy y bytes from the extra block */
   PRInt32  z; /* seek forwards in oldfile by z bytes */
-};
+} MBSPatchTriple;
 
 #endif  // bspatch_h__
