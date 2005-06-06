@@ -45,8 +45,7 @@ include $(DEPTH)/config/autoconf.mk
 
 MODULE		= libbz2
 LIBRARY_NAME	= bz2
-
-PACKAGE_FILE = libbz2.pkg
+FORCE_STATIC_LIB= 1
 
 # This is defined by the bzip2-1.0.3 Makefile.  It appears to be used to
 # configure GLIBC to support large files.  This isn't something we care about
@@ -67,7 +66,5 @@ CSRCS		= \
 EXPORTS		= \
 		bzlib.h \
 		$(NULL)
-
-FORCE_STATIC_LIB = 1
 
 include $(topsrcdir)/config/rules.mk
