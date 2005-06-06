@@ -1,3 +1,4 @@
+/* vim:set ts=8 sw=8 sts=8 noet: */
 /*
   bsdiff.c -- Binary patch generator.
 
@@ -35,7 +36,7 @@
 
 // This variable lives in libbz2.  It's declared in bzlib_private.h, so we just
 // declare it here to avoid including that entire header file.
-extern "C" unsigned int BZ2_crc32Table[256];
+extern unsigned int BZ2_crc32Table[256];
 
 static unsigned int
 crc32(const unsigned char *buf, unsigned int len)
@@ -65,7 +66,8 @@ reporterr(int e, const char *fmt, ...)
 	exit(e);
 }
 
-void split(PROffset32 *I,PROffset32 *V,PROffset32 start,PROffset32 len,PROffset32 h)
+static void
+split(PROffset32 *I,PROffset32 *V,PROffset32 start,PROffset32 len,PROffset32 h)
 {
 	PROffset32 i,j,k,x,tmp,jj,kk;
 
@@ -126,7 +128,8 @@ void split(PROffset32 *I,PROffset32 *V,PROffset32 start,PROffset32 len,PROffset3
 	if(start+len>kk) split(I,V,kk,start+len-kk,h);
 }
 
-void qsufsort(PROffset32 *I,PROffset32 *V,unsigned char *old,PROffset32 oldsize)
+static void
+qsufsort(PROffset32 *I,PROffset32 *V,unsigned char *old,PROffset32 oldsize)
 {
 	PROffset32 buckets[256];
 	PROffset32 i,h,len;
@@ -164,7 +167,8 @@ void qsufsort(PROffset32 *I,PROffset32 *V,unsigned char *old,PROffset32 oldsize)
 	for(i=0;i<oldsize+1;i++) I[V[i]]=i;
 }
 
-PROffset32 matchlen(unsigned char *old,PROffset32 oldsize,unsigned char *newbuf,PROffset32 newsize)
+static PROffset32
+matchlen(unsigned char *old,PROffset32 oldsize,unsigned char *newbuf,PROffset32 newsize)
 {
 	PROffset32 i;
 
@@ -174,8 +178,9 @@ PROffset32 matchlen(unsigned char *old,PROffset32 oldsize,unsigned char *newbuf,
 	return i;
 }
 
-PROffset32 search(PROffset32 *I,unsigned char *old,PROffset32 oldsize,
-									unsigned char *newbuf,PROffset32 newsize,PROffset32 st,PROffset32 en,PROffset32 *pos)
+static PROffset32
+search(PROffset32 *I,unsigned char *old,PROffset32 oldsize,
+       unsigned char *newbuf,PROffset32 newsize,PROffset32 st,PROffset32 en,PROffset32 *pos)
 {
 	PROffset32 x,y;
 

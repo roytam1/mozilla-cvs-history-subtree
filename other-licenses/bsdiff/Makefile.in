@@ -1,4 +1,4 @@
-
+# vim:set ts=8 sw=8 sts=8 noet:
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
 #
@@ -43,18 +43,14 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-CPPSRCS = \
-	bsdiff.cpp \
-	$(NULL)
-
-PROGRAM = mbsdiff$(BIN_SUFFIX)
-
-REQUIRES = $(ZLIB_REQUIRES)
-
-LIBS += $(DIST)/lib/$(LIB_PREFIX)bz2.$(LIB_SUFFIX)
+# This program is output to dist/host/bin because it is only needed by the
+# build system and is not intended to be included in Mozilla distributions.
+HOST_PROGRAM = mbsdiff$(BIN_SUFFIX)
+HOST_CSRCS = bsdiff.c
+HOST_LIBS += $(DIST)/lib/$(LIB_PREFIX)bz2.$(LIB_SUFFIX)
 
 ifeq (WINNT,$(OS_ARCH))
-EXTRA_DSO_LDOPTS += Ws2_32.lib
+HOST_LIBS += $(call EXPAND_LIBNAME,Ws2_32)
 endif
 
 LOCAL_INCLUDES += -I$(topsrcdir)/toolkit/mozapps/update/src/updater
