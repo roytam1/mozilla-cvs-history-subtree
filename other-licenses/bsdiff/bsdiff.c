@@ -11,6 +11,9 @@
   2005-05-05 - Use the modified header struct from bspatch.h; use 32-bit
                values throughout.
                  --Benjamin Smedberg <benjamin@smedbergs.us>
+  2005-05-18 - Use the same CRC algorithm as bzip2, and leverage the CRC table
+               provided by libbz2.
+                 --Darin Fisher <darin@meer.net>
 */
 
 #include "bspatch.h"
