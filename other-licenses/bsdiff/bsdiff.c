@@ -223,6 +223,15 @@ int main(int argc,char *argv[])
 	PROffset32 dblen,eblen;
 	unsigned char *db,*eb;
 
+	unsigned int scrc;
+
+	MBSPatchHeader header = {
+		{'M','B','D','I','F','F','1','0'},
+		0, 0, 0, 0, 0, 0
+	};
+
+	PRUint32 numtriples;
+
 	if(argc!=4)
 		reporterr(1,"usage: %s <oldfile> <newfile> <patchfile>\n",argv[0]);
 
@@ -236,7 +245,7 @@ int main(int argc,char *argv[])
 		(close(fd)==-1))
 		reporterr(1,"%s\n",argv[1]);
 
-	unsigned int scrc = crc32(old, oldsize);
+	scrc = crc32(old, oldsize);
 
 	if(((I=(PROffset32*) malloc((oldsize+1)*sizeof(PROffset32)))==NULL) ||
 		((V=(PROffset32*) malloc((oldsize+1)*sizeof(PROffset32)))==NULL))
@@ -267,10 +276,6 @@ int main(int argc,char *argv[])
 
 	/* start writing here */
 
-	MBSPatchHeader header = {
-		{'M','B','D','I','F','F','1','0'},
-		0, 0, 0, 0, 0, 0
-	};
 	/* We don't know the lengths yet, so we will write the header again
 		 at the end */
 
@@ -279,7 +284,7 @@ int main(int argc,char *argv[])
 
 	scan=0;len=0;
 	lastscan=0;lastpos=0;lastoffset=0;
-	PRUint32 numtriples = 0;
+	numtriples = 0;
 	while(scan<newsize) {
 		oldscore=0;
 
@@ -301,6 +306,8 @@ int main(int argc,char *argv[])
 		};
 
 		if((len!=oldscore) || (scan==newsize)) {
+			MBSPatchTriple triple;
+
 			s=0;Sf=0;lenf=0;
 			for(i=0;(lastscan+i<scan)&&(lastpos+i<oldsize);) {
 				if(old[lastpos+i]==newbuf[lastscan+i]) s++;
@@ -340,7 +347,6 @@ int main(int argc,char *argv[])
 			dblen+=lenf;
 			eblen+=(scan-lenb)-(lastscan+lenf);
 
-			MBSPatchTriple triple;
 			triple.x = htonl(lenf);
 			triple.y = htonl((scan-lenb)-(lastscan+lenf));
 			triple.z = htonl((pos-lenb)-(lastpos+lenf));
