@@ -46,27 +46,12 @@ include $(DEPTH)/config/autoconf.mk
 MODULE		= mar
 PROGRAM		= mar$(BIN_SUFFIX)
 
-# This makefile builds the mar command line utility
-
-LCSRCS		= \
-		mar_read.c \
-		mar_create.c \
-		mar_extract.c \
-		mar_test.c \
-		$(NULL)
+REQUIRES	= libmar
 
 CSRCS		= \
-		$(LCSRCS) \
 		mar.c \
 		$(NULL)
 
-GARBAGE		+= $(CSRCS) $(wildcard *.$(OBJ_SUFFIX))
-
-EXPORT_LCSRCS	:= $(addprefix $(topsrcdir)/modules/libmar/src/, $(LCSRCS))
-
-LOCAL_INCLUDES	= -I$(srcdir)/../src
+LIBS		= $(DIST)/lib/$(LIB_PREFIX)mar.$(LIB_SUFFIX)
 
 include $(topsrcdir)/config/rules.mk
-
-export:: $(EXPORT_LCSRCS)
-	$(INSTALL) $^ .

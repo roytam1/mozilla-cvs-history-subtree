@@ -50,6 +50,8 @@ FORCE_STATIC_LIB= 1
 # This makefile just builds support for reading archives.
 
 CSRCS		= \
+		mar_create.c \
+		mar_extract.c \
 		mar_read.c \
 		$(NULL)
 

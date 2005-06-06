@@ -86,9 +86,6 @@ int mar_read(MarFile *mar, const MarItem *item, int offset, char *buf,
 /* create the archive from a set of files (needs mar_create.c) */
 int mar_create(const char *dest, int num_files, char **files);
 
-/* test mar file (needs mar_test.c) */
-int mar_test(const char *path);
-
 /* extract mar file to working directory (needs mar_extract.c) */
 int mar_extract(const char *path);
 

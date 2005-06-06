@@ -43,6 +43,25 @@ static void print_usage() {
     printf("usage: mar {-c|-x|-t} archive.mar [files...]\n");
 }
 
+static int mar_test_callback(MarFile *mar, const MarItem *item, void *unused) {
+  printf("%u\t0%o\t%s\n", item->length, item->flags, item->name);
+  return 0;
+}
+
+static int mar_test(const char *path) {
+  MarFile *mar;
+
+  mar = mar_open(path);
+  if (!mar)
+    return -1;
+
+  printf("SIZE\tMODE\tNAME\n");
+  mar_enum_items(mar, mar_test_callback, NULL);
+
+  mar_close(mar);
+  return 0;
+}
+
 int main(int argc, char **argv) {
   int command;
 
