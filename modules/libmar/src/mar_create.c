@@ -177,7 +177,8 @@ int mar_create(const char *dest, int num_files, char **files) {
 
   rv = 0;
 failure: 
-  free(stack.head);
+  if (stack.head)
+    free(stack.head);
   fclose(fp);
   if (rv)
     remove(dest);
