@@ -181,7 +181,7 @@ interface nsIExtensionDownloadListener : nsISupports
  * XXXben - Some of this stuff should go into a management-ey interface, 
  *          some into an app-startup-ey interface.
  */
-[scriptable, uuid(7b77761f-6737-4b77-abed-c82f35a57a90)]
+[scriptable, uuid(344c6fd1-ed48-4c84-a472-abdec533d1e2)]
 interface nsIExtensionManager : nsISupports
 {
   /**
