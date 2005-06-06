@@ -44,14 +44,14 @@ extern unsigned int BZ2_crc32Table[256];
 static unsigned int
 crc32(const unsigned char *buf, unsigned int len)
 {
-  unsigned int crc = 0xffffffffL;
+	unsigned int crc = 0xffffffffL;
 
-  const unsigned char *end = buf + len;
-  for (; buf != end; ++buf)
-    crc = (crc << 8) ^ BZ2_crc32Table[(crc >> 24) ^ *buf];
+	const unsigned char *end = buf + len;
+	for (; buf != end; ++buf)
+		crc = (crc << 8) ^ BZ2_crc32Table[(crc >> 24) ^ *buf];
 
-  crc = ~crc;
-  return crc;
+	crc = ~crc;
+	return crc;
 }
 
 //-----------------------------------------------------------------------------
