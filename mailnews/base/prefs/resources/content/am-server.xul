@@ -248,7 +248,7 @@ Contributors:
 -->
 
   <hbox align="end">
-    <vbox flex="1">
+    <vbox flex="1" id="onExitHandling">
       <checkbox hidefor="pop3,nntp,movemail" wsm_persist="true" id="imap.cleanupInboxOnExit"
                 label="&expungeOnExit.label;"
                 accesskey="&expungeOnExit.accesskey;"
