@@ -4639,6 +4639,16 @@ fi
 AC_SUBST(MOZ_INSTALLER)
 
 dnl ========================================================
+dnl Updater
+dnl ========================================================
+
+MOZ_ARG_ENABLE_BOOL(updater,
+[  --enable-updater        Enable building of updater],
+    MOZ_UPDATER=1,
+    MOZ_UPDATER= )
+AC_SUBST(MOZ_UPDATER)
+
+dnl ========================================================
 dnl ActiveX
 dnl ========================================================
 MOZ_NO_ACTIVEX_SUPPORT=1
