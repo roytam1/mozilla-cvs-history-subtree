@@ -45,7 +45,7 @@ include $(DEPTH)/config/autoconf.mk
 
 DIRS		= src
 
-# Building the mar executable in cross-compiled builds is not yet supported.
+# Cross-compiling the mar executable is not yet supported.
 ifndef CROSS_COMPILE
 DIRS		+= tool
 endif
