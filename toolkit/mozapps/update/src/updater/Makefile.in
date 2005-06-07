@@ -63,7 +63,7 @@ ifeq ($(OS_ARCH),WINNT)
 HAVE_PROGRESSUI = 1
 RCINCLUDE = updater.rc
 CPPSRCS += progressui_win.cpp
-OS_LIBS += comctl32.lib ws2_32.lib
+OS_LIBS += $(call EXPAND_LIBNAME,comctl32 ws2_32)
 ifndef GNU_CC
 RCFLAGS += -I$(srcdir)
 else
@@ -83,8 +83,3 @@ CPPSRCS += progressui_null.cpp
 endif
 
 include $(topsrcdir)/config/rules.mk
-
-libs:: updater.ini
-	$(INSTALL) $^ $(DIST)/bin
-install:: updater.ini
-	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(mozappdir)
