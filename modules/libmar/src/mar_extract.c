@@ -45,6 +45,11 @@
 #include "mar.h"
 #include "mar_private.h"
 
+#ifdef XP_WIN
+#include <io.h>
+#include <direct.h>
+#endif
+
 /* Ensure that the directory containing this file exists */
 static int mar_ensure_parent_dir(const char *path)
 {

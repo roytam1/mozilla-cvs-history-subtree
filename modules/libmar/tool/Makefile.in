@@ -58,4 +58,9 @@ HOST_CSRCS	= \
 
 HOST_LIBS	= $(DIST)/lib/$(LIB_PREFIX)mar.$(LIB_SUFFIX)
 
+ifeq (WINNT,$(OS_ARCH))
+EXTRA_LIBS += $(call EXPAND_LIBNAME,Ws2_32)
+WIN32_EXE_LDFLAGS += /NODEFAULTLIB:LIBC
+endif
+
 include $(topsrcdir)/config/rules.mk
