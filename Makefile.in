@@ -125,11 +125,13 @@ ifdef MOZ_INSTALLER
 tier_1_dirs	+= modules/zlib/standalone
 endif
 
+ifdef MOZ_UPDATER
 tier_1_dirs += modules/libbz2
 tier_1_dirs += modules/libmar
-
+# Cross-compiling the mbspatch executable is not yet supported.
 ifndef CROSS_COMPILE
 tier_1_dirs += other-licenses/bsdiff
+endif
 endif
 
 ifdef MOZ_SVG_RENDERER_LIBART
