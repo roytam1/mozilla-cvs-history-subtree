@@ -105,7 +105,8 @@ CPPSRCS = \
 	$(NULL)
 
 ifdef MOZ_UPDATER
-	nsUpdateDriver.cpp
+CPPSRCS += nsUpdateDriver.cpp
+DEFINES += -DMOZ_UPDATER
 endif
 
 ifeq ($(MOZ_WIDGET_TOOLKIT),windows)
