@@ -4979,26 +4979,6 @@ GlobalWindowImpl::OpenInternal(const nsAString& aUrl,
         // dialog is open.
         nsAutoPopupStatePusher popupStatePusher(openAbused, PR_TRUE);
 
-        nsCOMPtr<nsIDOMChromeWindow> chrome_win =
-          do_QueryInterface(NS_STATIC_CAST(nsIDOMWindow *, this));
-
-        nsCOMPtr<nsIJSContextStack> stack;
-        JSContext *cx = nsnull;
-
-        if (IsCallerChrome() && !chrome_win) {
-          // open() is called from chrome on a non-chrome window, push
-          // the context of the callee onto the context stack to
-          // prevent the caller's priveleges from leaking into code
-          // that runs while opening the new window.
-
-          cx = (JSContext *)mContext->GetNativeContext();
-
-          stack = do_GetService(sJSStackContractID);
-          if (stack && cx) {
-            stack->Push(cx);
-          }
-        }
-
         if (argc) {
           nsCOMPtr<nsPIWindowWatcher> pwwatch(do_QueryInterface(wwatch));
           if (pwwatch) {
@@ -5014,10 +4994,6 @@ GlobalWindowImpl::OpenInternal(const nsAString& aUrl,
         } else {
           rv = wwatch->OpenWindow(this, url.get(), name_ptr, options_ptr,
                                   aExtraArgument, getter_AddRefs(domReturn));
-        }
-
-        if (stack && cx) {
-          stack->Pop(nsnull);
         }
       }
     }
