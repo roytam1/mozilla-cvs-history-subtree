@@ -100,10 +100,13 @@ SHAREDCPPSRCS = \
 CPPSRCS = \
 	$(SHAREDCPPSRCS) \
 	nsAppRunner.cpp \
-	nsUpdateDriver.cpp \
 	nsXREDirProvider.cpp \
 	nsNativeAppSupportBase.cpp \
 	$(NULL)
+
+ifdef MOZ_UPDATER
+	nsUpdateDriver.cpp
+endif
 
 ifeq ($(MOZ_WIDGET_TOOLKIT),windows)
 CPPSRCS += nsNativeAppSupportWin.cpp
