@@ -663,7 +663,7 @@ PatchFile::Parse(char *line)
   if (!mPatchFile)
     return PARSE_ERROR;
 
-	// consume whitespace between args
+  // consume whitespace between args
   char *q = mstrtok(kQuote, &line);
   if (!q)
     return PARSE_ERROR;
@@ -709,8 +709,8 @@ PatchFile::Prepare()
     return IO_ERROR;
 
   rv = LoadSourceFile(ofd);
-	if (rv)
-		LOG(("LoadSourceFile failed\n"));
+  if (rv)
+    LOG(("LoadSourceFile failed\n"));
   close(ofd);
 
   return rv;

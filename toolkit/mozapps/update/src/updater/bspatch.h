@@ -88,7 +88,7 @@ int MBS_ReadHeader(int fd, MBSPatchHeader *header);
  *                should be at the beginning of the file.
  */
 int MBS_ApplyPatch(const MBSPatchHeader *header, int patchfd,
-		   unsigned char *fbuffer, int filefd);
+                   unsigned char *fbuffer, int filefd);
 
 typedef struct MBSPatchTriple_ {
   PRUint32 x; /* add x bytes from oldfile to x bytes from the diff block */

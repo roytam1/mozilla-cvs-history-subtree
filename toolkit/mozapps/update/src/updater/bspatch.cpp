@@ -106,14 +106,14 @@ MBS_ApplyPatch(const MBSPatchHeader *header, int patchfd,
     if (c < 0) {
       rv = BSP_ERROR_IO;
       goto end;
-		}
+    }
 
     r -= c;
 
     if (c == 0 && r) {
       rv = BSP_ERROR_CORRUPT;
       goto end;
-		}
+    }
   }
 
   {
@@ -132,12 +132,12 @@ MBS_ApplyPatch(const MBSPatchHeader *header, int patchfd,
 
 #ifdef DEBUG_bsmedberg
       printf("Applying block:\n"
-	     " x: %u\n"
-	     " y: %u\n"
-	     " z: %i\n",
-	     ctrlsrc->x,
-	     ctrlsrc->y,
-	     ctrlsrc->z);
+             " x: %u\n"
+             " y: %u\n"
+             " z: %i\n",
+             ctrlsrc->x,
+             ctrlsrc->y,
+             ctrlsrc->z);
 #endif
 
       /* Add x bytes from oldfile to x bytes from the diff block */

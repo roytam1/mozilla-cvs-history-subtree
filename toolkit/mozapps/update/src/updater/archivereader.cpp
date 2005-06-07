@@ -82,8 +82,8 @@ ArchiveReader::ExtractFile(const char *name, const char *dest)
 #else
   int fd = creat(dest, item->flags);
 #endif
-	if (fd == -1)
-		return IO_ERROR;
+  if (fd == -1)
+    return IO_ERROR;
 
   FILE *fp = fdopen(fd, "wb");
   if (!fp)
