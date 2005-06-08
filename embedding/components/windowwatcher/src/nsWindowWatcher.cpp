@@ -53,6 +53,7 @@
 #include "nsIDocShellTreeItem.h"
 #include "nsIDocShellTreeOwner.h"
 #include "nsIDocument.h"
+#include "nsIDOMChromeWindow.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMWindow.h"
 #include "nsIDOMWindowInternal.h"
@@ -581,8 +582,7 @@ nsWindowWatcher::OpenWindowJS(nsIDOMWindow *aParent,
   }
 
   chromeFlags = CalculateChromeFlags(features.get(), featuresSpecified,
-                                     aDialog, uriToLoadIsChrome,
-                                     !aParent || chromeParent);
+                                     aDialog, uriToLoadIsChrome);
 
   // no extant window? make a new one.
   if (!newDocShellItem) {
