@@ -4642,10 +4642,11 @@ dnl ========================================================
 dnl Updater
 dnl ========================================================
 
-MOZ_ARG_ENABLE_BOOL(updater,
-[  --enable-updater        Enable building of updater],
-    MOZ_UPDATER=1,
-    MOZ_UPDATER= )
+MOZ_UPDATER=1
+MOZ_ARG_DISABLE_BOOL(updater,
+[  --disable-updater       Disable building of updater],
+    MOZ_UPDATER=,
+    MOZ_UPDATER=1 )
 AC_SUBST(MOZ_UPDATER)
 
 dnl ========================================================

@@ -65,6 +65,7 @@
 #
 # Other common MOZ_CO_MODULE options include the following:
 #   mozilla/other-licenses/libart_lgpl
+#   mozilla/other-licenses/bsdiff
 #   mozilla/tools/codesighs
 #
 # Other targets (gmake -f client.mk [targets...]),
@@ -109,7 +110,6 @@ MODULES_core :=                                \
   mozilla/toolkit                               \
   mozilla/storage                               \
   mozilla/db/sqlite3                            \
-  mozilla/other-licenses/bsdiff                 \
   $(NULL)
 
 LOCALES_core :=                                 \
