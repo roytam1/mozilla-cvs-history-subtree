@@ -1690,9 +1690,10 @@ NS_IMETHODIMP nsParseNewMailState::ApplyFilterHit(nsIMsgFilter *filter, nsIMsgWi
           else
           {
             err = MoveIncorporatedMessage(msgHdr, m_mailDB, destIFolder, filter, msgWindow);
+            m_msgMovedByFilter = NS_SUCCEEDED(err);
             // cleanup after mailHdr in source DB because we moved the message.
-            m_mailDB->RemoveHeaderMdbRow(msgHdr);
-            m_msgMovedByFilter = PR_TRUE;
+            if (m_msgMovedByFilter)
+              m_mailDB->RemoveHeaderMdbRow(msgHdr);
           }
           if (NS_SUCCEEDED(err))
           {
@@ -1894,6 +1895,9 @@ nsresult nsParseNewMailState::MoveIncorporatedMessage(nsIMsgDBHdr *mailHdr,
   if (!parentFolder || !canFileMessages)
   {
     filter->SetEnabled(PR_FALSE);
+    // we need to explicitly save the filter file.
+    if (m_filterList)
+      m_filterList->SaveToDefaultFile();
     destIFolder->ThrowAlertMsg("filterDisabled", msgWindow);
     return NS_MSG_NOT_A_MAIL_FOLDER;
   }
