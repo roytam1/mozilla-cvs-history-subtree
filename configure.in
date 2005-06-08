@@ -4642,7 +4642,9 @@ dnl ========================================================
 dnl Updater
 dnl ========================================================
 
-MOZ_UPDATER=1
+if test "$MOZ_XUL_APP"; then
+    MOZ_UPDATER=1
+fi
 MOZ_ARG_DISABLE_BOOL(updater,
 [  --disable-updater       Disable building of updater],
     MOZ_UPDATER=,
