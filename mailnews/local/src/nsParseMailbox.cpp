@@ -1768,6 +1768,9 @@ nsresult nsParseNewMailState::MoveIncorporatedMessage(nsIMsgDBHdr *mailHdr,
   if (!parentFolder || !canFileMessages)
   {
     filter->SetEnabled(PR_FALSE);
+    // we need to explicitly save the filter file.
+    if (m_filterList)
+      m_filterList->SaveToDefaultFile();
     destIFolder->ThrowAlertMsg("filterDisabled", msgWindow);
     return NS_MSG_NOT_A_MAIL_FOLDER;
   }
