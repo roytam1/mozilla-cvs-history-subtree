@@ -87,10 +87,9 @@ nsUnknownContentTypeDialog.prototype = {
       // Display the dialog using the Window Watcher interface.
       
       var ir = aContext.QueryInterface(Components.interfaces.nsIInterfaceRequestor);
-      var dwi = ir.getInterface(Components.interfaces.nsIDOMWindowInternal);
       var ww = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
                 .getService(Components.interfaces.nsIWindowWatcher);
-      this.mDialog = ww.openWindow(dwi,
+      this.mDialog = ww.openWindow(null,
                                    "chrome://mozapps/content/downloads/unknownContentType.xul",
                                    null,
                                    "chrome,centerscreen,titlebar,dialog=yes,dependent",
