@@ -360,7 +360,8 @@ nsInlineFrame::DoInlineIntrinsicWidth(nsIRenderingContext *aRenderingContext,
 
   PRUint8 startSide, endSide;
 
-  // XXX set these correctly!  (not trivial)
+  // XXX set these correctly!  (not trivial, and GetSkipSides() and
+  // probably some reflow logic needs this too)
   startSide = NS_SIDE_LEFT;
   endSide = NS_SIDE_RIGHT;
 
