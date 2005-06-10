@@ -62,6 +62,7 @@ PACKAGE_FILE = xpconnect.pkg
 REQUIRES	= xpcom \
 		  string \
 		  js \
+		  jsloader \
 		  caps \
 		  dom \
 		  $(NULL)
@@ -123,6 +124,23 @@ EXTRA_DSO_LDOPTS += \
 ifdef MOZ_JSLOADER
 SHARED_LIBRARY_LIBS = \
 		$(DIST)/lib/$(LIB_PREFIX)jsloader_s.$(LIB_SUFFIX) \
+		$(NULL)
+REQUIRES_XPCONNECT_SHARED = 1
+endif
+
+ifdef MOZ_JSCODELIB
+SHARED_LIBRARY_LIBS += \
+		$(DIST)/lib/$(LIB_PREFIX)jscodelib_s.$(LIB_SUFFIX) \
+		$(NULL)
+LOCAL_INCLUDES += \
+		-I$(srcdir)/../codelib \
+		$(NULL)
+REQUIRES_XPCONNECT_SHARED = 1
+endif
+
+ifdef REQUIRES_XPCONNECT_SHARED
+SHARED_LIBRARY_LIBS += \
+		$(DIST)/lib/$(LIB_PREFIX)xpcshared_s.$(LIB_SUFFIX) \
 		$(NULL)
 endif
 

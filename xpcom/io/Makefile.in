@@ -160,6 +160,7 @@ SDK_XPIDLSRCS   = \
 		nsIInputStream.idl \
 		nsIOutputStream.idl \
 		nsIScriptableInputStream.idl \
+		nsIScriptableInputStreamEx.idl \
 		$(NULL)
 
 SDK_HEADERS =  \

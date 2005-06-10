@@ -89,6 +89,7 @@ CPPSRCS		= \
 		nsURLHelper.cpp \
 		nsURLParsers.cpp \
 		nsNetStrings.cpp \
+		nsUDPSocket.cpp \
 		$(NULL)
 
 ifeq ($(MOZ_WIDGET_TOOLKIT),os2)

@@ -204,13 +204,70 @@ BOOTSTRAP_macbrowser := mozilla/camino/config/mozconfig
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-#MOZ_CO_TAG          = <tag>
+
+# Pull the zap sip client mini-branch. Not all files are tagged. By 
+# adding '-f' to CVSCO below, we pull the head revision if a file is
+# not tagged
+MOZ_CO_TAG           = ZAP_20050610_BRANCH
+
 NSPR_CO_TAG          = NSPRPUB_PRE_4_2_CLIENT_BRANCH
 NSS_CO_TAG           = NSS_CLIENT_TAG
 LDAPCSDK_CO_TAG      = ldapcsdk_50_client_branch
 LOCALES_CO_TAG       =
 
 BUILD_MODULES = all
+
+#######################################################################
+# Branch maintenance
+
+ZAP_BRANCH_MODIFIED_FILES = \
+	allmakefiles.sh \
+	client.mk \
+	config/autoconf.mk.in \
+	configure \
+	configure.in \
+	js/src/xpconnect/Makefile.in \
+	js/src/xpconnect/loader/Makefile.in \
+	js/src/xpconnect/loader/mozJSComponentLoader.cpp \
+	js/src/xpconnect/loader/mozJSComponentLoader.h \
+	js/src/xpconnect/src/Makefile.in \
+	js/src/xpconnect/src/xpcmodule.cpp \
+	netwerk/base/public/Makefile.in \
+	netwerk/base/src/Makefile.in \
+	netwerk/build/nsNetCID.h \
+	netwerk/build/nsNetModule.cpp \
+	xpcom/io/Makefile.in \
+	xpcom/io/nsScriptableInputStream.cpp \
+	xpcom/io/nsScriptableInputStream.h
+
+ZAP_BRANCH_NEW_FILES = \
+	js/src/xpconnect/codelib/Makefile.in \
+	js/src/xpconnect/codelib/mozIJSCodeLib.idl \
+	js/src/xpconnect/codelib/mozJSCodeLib.cpp \
+	js/src/xpconnect/codelib/mozJSCodeLib.h \
+	js/src/xpconnect/loader/JSComponentUtils.js \
+	js/src/xpconnect/loader/mozIJSComponentLib.idl \
+	js/src/xpconnect/shared/JSFunctions.cpp \
+	js/src/xpconnect/shared/JSFunctions.h \
+	js/src/xpconnect/shared/Makefile.in \
+	netwerk/base/public/nsIUDPSocket.idl \
+	netwerk/base/src/nsUDPSocket.cpp \
+	netwerk/base/src/nsUDPSocket.h \
+	xpcom/io/nsIScriptableInputStreamEx.idl
+
+
+commit_zap:
+	cvs -z3 ci -r ZAP_20050610_BRANCH $(ZAP_BRANCH_MODIFIED_FILES) $(ZAP_BRANCH_NEW_FILES)
+
+merge_zap:
+	cvs -z3 up -dP -jZAP_20050610_BASE -jHEAD $(ZAP_BRANCH_MODIFIED_FILES)
+
+statictag_zap:
+	cvs -z3 tag -F -rHEAD ZAP_20050610_BASE $(ZAP_BRANCH_MODIFIED_FILES)
+
+branchtag_zap:
+	cvs -z3 tag -b ZAP_20050610_BRANCH $(ZAP_BRANCH_MODIFIED_FILES)
+
 
 #######################################################################
 # Defines
@@ -274,7 +331,7 @@ endif
 endif
 
 CVS_CO_DATE_FLAGS = $(if $(MOZ_CO_DATE),-D "$(MOZ_CO_DATE)")
-CVSCO = $(CVS) $(CVS_FLAGS) co $(MOZ_CO_FLAGS) $(if $(MOZ_CO_TAG),-r $(MOZ_CO_TAG)) $(CVS_CO_DATE_FLAGS)
+CVSCO = $(CVS) $(CVS_FLAGS) co $(MOZ_CO_FLAGS) $(if $(MOZ_CO_TAG),-f -r $(MOZ_CO_TAG)) $(CVS_CO_DATE_FLAGS)
 
 CVSCO_LOGFILE := $(ROOTDIR)/cvsco.log
 CVSCO_LOGFILE := $(shell echo $(CVSCO_LOGFILE) | sed s%//%/%)

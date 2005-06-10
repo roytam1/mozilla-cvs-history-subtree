@@ -37,8 +37,9 @@
 
 #include "nsScriptableInputStream.h"
 #include "nsMemory.h"
+#include "nsString.h"
 
-NS_IMPL_ISUPPORTS1(nsScriptableInputStream, nsIScriptableInputStream)
+NS_IMPL_ISUPPORTS2(nsScriptableInputStream, nsIScriptableInputStream, nsIScriptableInputStreamEx)
 
 // nsIBaseStream methods
 NS_IMETHODIMP
@@ -87,6 +88,33 @@ nsScriptableInputStream::Read(PRUint32 aCount, char **_retval) {
     *_retval = buffer;
     return NS_OK;
 }
+
+// nsIScriptableInputStreamEx methods
+NS_IMETHODIMP
+nsScriptableInputStream::ReadEx(PRUint32 aCount, nsACString & _retval) {
+    nsresult rv = NS_OK;
+    char *buffer = nsnull;
+
+    if (!mInputStream) return NS_ERROR_NOT_INITIALIZED;
+
+    _retval.SetLength(aCount);
+    nsACString::iterator iter;
+    _retval.BeginWriting(iter);
+    buffer = &(*iter);
+    if (!buffer) return NS_ERROR_OUT_OF_MEMORY;
+
+    PRUint32 amtRead = 0;
+    rv = mInputStream->Read(buffer, aCount, &amtRead);
+    if (NS_FAILED(rv)) {
+        _retval.SetLength(0);
+        return rv;
+    }
+    NS_ASSERTION(amtRead == aCount, "read error");
+        
+    return NS_OK;
+}
+
+
 
 NS_METHOD
 nsScriptableInputStream::Create(nsISupports *aOuter, REFNSIID aIID, void **aResult) {

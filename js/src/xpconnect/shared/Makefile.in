@@ -1,4 +1,3 @@
-#
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
 #
@@ -12,12 +11,11 @@
 # for the specific language governing rights and limitations under the
 # License.
 #
-# The Original Code is Mozilla Communicator client code, released
-# March 31, 1998.
+# The Original Code is Mozilla code.
 #
 # The Initial Developer of the Original Code is
 # Netscape Communications Corporation.
-# Portions created by the Initial Developer are Copyright (C) 1998
+# Portions created by the Initial Developer are Copyright (C) 1999
 # the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
@@ -36,7 +34,7 @@
 #
 # ***** END LICENSE BLOCK *****
 
-DEPTH		= ../../..
+DEPTH 		= ../../../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
 VPATH		= @srcdir@
@@ -44,32 +42,23 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 MODULE		= xpconnect
-DIRS		= public idl
+LIBRARY_NAME	= xpcshared_s
+FORCE_STATIC_LIB = 1
+LIBXUL_LIBRARY = 1
 
-ifdef MOZ_JSCODELIB
-DIRS         += codelib
-REQUIRES_XPCONNECT_SHARED = 1
-endif
+REQUIRES	= xpcom \
+		  string \
+		  xpconnect \
+		  js \
+		  caps \
+		  dom \
+		  necko \
+		  $(NULL)
 
-ifdef MOZ_JSLOADER
-DIRS         +=  loader
-REQUIRES_XPCONNECT_SHARED = 1
-endif
-
-ifdef REQUIRES_XPCONNECT_SHARED
-DIRS         += shared
-endif
-
-DIRS         += src
-
-TOOL_DIRS    += shell
-
-ifdef ENABLE_TESTS
-TOOL_DIRS    += tests
-endif
-
-ifdef MOZ_XPCTOOLS
-TOOL_DIRS    +=  tools 
-endif
+CPPSRCS		= JSFunctions.cpp
 
 include $(topsrcdir)/config/rules.mk
+
+DEFINES		+= -DJSFILE -DJS_THREADSAFE
+
+

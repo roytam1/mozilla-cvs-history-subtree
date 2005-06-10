@@ -91,6 +91,9 @@ NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsSocketTransportService, Init)
 #include "nsServerSocket.h"
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsServerSocket)
 
+#include "nsUDPSocket.h"
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsUDPSocket)
+    
 #include "nsAsyncStreamCopier.h"
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAsyncStreamCopier)
 
@@ -637,6 +640,10 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
       NS_SERVERSOCKET_CID,
       NS_SERVERSOCKET_CONTRACTID,
       nsServerSocketConstructor },
+    { NS_UDPSOCKET_CLASSNAME,
+      NS_UDPSOCKET_CID,
+      NS_UDPSOCKET_CONTRACTID,
+      nsUDPSocketConstructor },
     { NS_SOCKETPROVIDERSERVICE_CLASSNAME,
       NS_SOCKETPROVIDERSERVICE_CID,
       NS_SOCKETPROVIDERSERVICE_CONTRACTID,

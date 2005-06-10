@@ -378,6 +378,19 @@
     {0xab, 0x1d, 0x5e, 0x68, 0xa9, 0xf4, 0x5f, 0x08} \
 }
 
+// component implementing nsIUDPSocket
+#define NS_UDPSOCKET_CLASSNAME \
+    "nsUDPSocket"
+#define NS_UDPSOCKET_CONTRACTID \
+    "@mozilla.org/network/udp-socket;1"
+#define NS_UDPSOCKET_CID                             \
+{ /* 6b8e5bd3-8626-4fd8-bd21-69ec0af183d9 */         \
+    0x6b8e5bd3,                                      \
+    0x8626,                                          \
+    0x4fd8,                                          \
+    {0xbd, 0x21, 0x69, 0xec, 0x0a, 0xf1, 0x83, 0xd9} \
+}
+
 #define NS_LOCALFILEINPUTSTREAM_CLASSNAME \
     "nsFileInputStream"
 #define NS_LOCALFILEINPUTSTREAM_CONTRACTID \

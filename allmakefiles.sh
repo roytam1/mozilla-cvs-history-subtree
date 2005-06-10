@@ -275,6 +275,8 @@ js/src/xpconnect/shell/Makefile
 js/src/xpconnect/tools/Makefile
 js/src/xpconnect/tools/idl/Makefile
 js/src/xpconnect/tools/idl/Makefile
+js/src/xpconnect/codelib/Makefile
+js/src/xpconnect/shared/Makefile
 "
 
 MAKEFILES_jsdebugger="
@@ -1037,6 +1039,24 @@ toolkit/xre/Makefile
 toolkit/components/passwordmgr/resources/content/contents.rdf
 "
 
+MAKEFILES_zap="
+zap/Makefile
+zap/base/Makefile
+zap/base/idl/Makefile
+zap/audio/Makefile
+zap/audio/portaudio/Makefile
+zap/audio/audioserivce/Makefile
+zap/media/Makefile
+zap/media/mediaservice/Makefile
+zap/media/speex/Makefile
+zap/media/speex/libspeex/Makefile
+zap/media/rtp/Makefile
+zap/sdp/Makefile
+zap/sdp/idl/Makefile
+zap/sip/Makefile
+zap/sip/idl/Makefile
+zap/app/Makefile
+"
 
 MAKEFILES_thunderbird="
 mail/Makefile
@@ -1422,6 +1442,9 @@ for extension in $MOZ_EXTENSIONS; do
         irc ) MAKEFILES_extensions="$MAKEFILES_extensions
             extensions/irc/Makefile
             " ;;
+        jssh ) MAKEFILES_extensions="$MAKEFILES_extensions
+            extensions/jssh/Makefile
+            " ;;
         layout-debug ) MAKEFILES_extensions="$MAKEFILES_extensions
             extensions/layout-debug/Makefile
             extensions/layout-debug/src/Makefile
@@ -1639,6 +1662,8 @@ fi
 if test -n "$MOZ_XULRUNNER"; then
     add_makefiles "$MAKEFILES_xulrunner"
 fi
+
+add_makefiles "$MAKEFILES_zap"
 
 if test -n "$MOZ_THUNDERBIRD"; then
     if test -n "$MOZ_USE_OFFICIAL_BRANDING"; then

@@ -73,6 +73,7 @@
 // For reporting errors with the console service
 #include "nsIScriptError.h"
 #include "nsIConsoleService.h"
+#include "JSFunctions.h"
 
 const char mozJSComponentLoaderContractID[] = "@mozilla.org/moz/jsloader;1";
 const char jsComponentTypeName[] = "text/javascript";
@@ -84,7 +85,6 @@ const char JSxpcomKeyName[] = "software/mozilla/XPCOM/components";
 
 const char kJSRuntimeServiceContractID[] = "@mozilla.org/js/xpc/RuntimeService;1";
 const char kXPConnectServiceContractID[] = "@mozilla.org/js/xpc/XPConnect;1";
-const char kJSContextStackContractID[] =   "@mozilla.org/js/xpc/ContextStack;1";
 const char kConsoleServiceContractID[] =   "@mozilla.org/consoleservice;1";
 const char kScriptErrorContractID[] =      "@mozilla.org/scripterror;1";
 const char kObserverServiceContractID[] = "@mozilla.org/observer-service;1";
@@ -151,45 +151,11 @@ Reporter(JSContext *cx, const char *message, JSErrorReport *rep)
 #endif
 }
 
-JS_STATIC_DLL_CALLBACK(JSBool)
-Dump(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
-{
-    JSString *str;
-    if (!argc)
-        return JS_TRUE;
-    
-    str = JS_ValueToString(cx, argv[0]);
-    if (!str)
-        return JS_FALSE;
-
-    char *bytes = JS_GetStringBytes(str);
-    bytes = nsCRT::strdup(bytes);
-
-#ifdef XP_MAC
-    for (char *c = bytes; *c; c++)
-        if (*c == '\r')
-            *c = '\n';
-#endif
-    fputs(bytes, stderr);
-    nsMemory::Free(bytes);
-    return JS_TRUE;
-}
-
-JS_STATIC_DLL_CALLBACK(JSBool)
-Debug(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
-{
-#ifdef DEBUG
-    return Dump(cx, obj, argc, argv, rval);
-#else
-    return JS_TRUE;
-#endif
-}
-
 #ifndef XPCONNECT_STANDALONE
 
 static JSFunctionSpec gSandboxFun[] = {
-    {"dump", Dump, 1 },
-    {"debug", Debug, 1 },
+    {"dump", JSDump, 1 },
+    {"debug", JSDebug, 1 },
     {0}
 };
 
@@ -317,11 +283,14 @@ EvalInSandbox(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 #endif /* XPCONNECT_STANDALONE */
 
 static JSFunctionSpec gGlobalFun[] = {
-    {"dump", Dump, 1 },
-    {"debug", Debug, 1 },
+    {"dump", JSDump, 1 },
+    {"debug", JSDebug, 1 },
 #ifndef XPCONNECT_STANDALONE
     {"Sandbox", NewSandbox, 0 },
     {"evalInSandbox", EvalInSandbox, 3 },
+#endif
+#ifdef MOZ_JSCODELIB
+    {"importModule", JSImportModule, 1 },
 #endif
     {0}
 };
@@ -364,7 +333,9 @@ mozJSComponentLoader::~mozJSComponentLoader()
 {
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS1(mozJSComponentLoader, nsIComponentLoader)
+NS_IMPL_THREADSAFE_ISUPPORTS2(mozJSComponentLoader,
+                              nsIComponentLoader,
+                              mozIJSComponentLib)
 
 NS_IMETHODIMP
 mozJSComponentLoader::GetFactory(const nsIID &aCID,
@@ -846,7 +817,7 @@ mozJSComponentLoader::ModuleForLocation(const char *registryLocation,
     if (!xpc)
         return nsnull;
 
-    JSCLAutoContext cx(mRuntime);
+    JSAutoContext cx;
     if(NS_FAILED(cx.GetError()))
         return nsnull;
 
@@ -872,7 +843,7 @@ mozJSComponentLoader::ModuleForLocation(const char *registryLocation,
         return nsnull;
     }
 
-    JSCLAutoErrorReporterSetter aers(cx, Reporter);
+    JSAutoErrorReporterSetter aers(cx, Reporter);
 
     jsval argv[2], retval, NSGetModule_val;
 
@@ -944,7 +915,7 @@ mozJSComponentLoader::GlobalForLocation(const char *aLocation,
     nsresult rv;
     JSPrincipals* jsPrincipals = nsnull;
 
-    JSCLAutoContext cx(mRuntime);
+    JSAutoContext cx;
     if (NS_FAILED(cx.GetError()))
         return nsnull;
 
@@ -959,7 +930,7 @@ mozJSComponentLoader::GlobalForLocation(const char *aLocation,
     if (NS_FAILED(rv))
         return nsnull;
 
-    JSCLAutoErrorReporterSetter aers(cx, Reporter);
+    JSAutoErrorReporterSetter aers(cx, Reporter);
     nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
 
     nsCOMPtr<nsIXPConnect> xpc = do_GetService(kXPConnectServiceContractID);
@@ -1149,57 +1120,31 @@ mozJSComponentLoader::UnloadAll(PRInt32 aWhen)
 }
 
 //----------------------------------------------------------------------
+// mozIJSComponentLib methods
 
-JSCLAutoContext::JSCLAutoContext(JSRuntime* rt)
-    : mContext(nsnull), mError(NS_OK), mPopNeeded(JS_FALSE), mContextThread(0)
+/* void probeComponent (in AUTF8String registryLocation); */
+NS_IMETHODIMP
+mozJSComponentLoader::ProbeComponent(const nsACString & registryLocation)
 {
-    nsCOMPtr<nsIThreadJSContextStack> cxstack = 
-        do_GetService(kJSContextStackContractID, &mError);
+    // This function should only be called from JS.
     
-    if (NS_SUCCEEDED(mError)) {
-        mError = cxstack->GetSafeJSContext(&mContext);
-        if (NS_SUCCEEDED(mError) && mContext) {
-            mError = cxstack->Push(mContext);
-            if (NS_SUCCEEDED(mError)) {
-                mPopNeeded = JS_TRUE;   
-            } 
-        } 
-    }
+    nsCOMPtr<nsIXPConnect> xpc = do_GetService(kXPConnectServiceContractID);
+    NS_ASSERTION(xpc, "could not get xpconnect service");
     
-    if (mContext) {
-        mSavedOptions = JS_GetOptions(mContext);
-        JS_SetOptions(mContext, mSavedOptions | JSOPTION_XML);
-        mContextThread = JS_GetContextThread(mContext);
-        if (mContextThread) {
-            JS_BeginRequest(mContext);
-        } 
-    } else {
-        if (NS_SUCCEEDED(mError)) {
-            mError = NS_ERROR_FAILURE;
-        }
+    nsCOMPtr<nsIXPCNativeCallContext> cc;
+    xpc->GetCurrentNativeCallContext(getter_AddRefs(cc));
+    if (!cc) {
+        NS_ERROR("could not get native call context");
+        return NS_ERROR_FAILURE;
     }
+
+    JSObject *global = GlobalForLocation(PromiseFlatCString(registryLocation).get(), nsnull);
+    
+    jsval *retval = nsnull;
+    cc->GetRetValPtr(&retval);
+    if (*retval)
+        *retval = global ? OBJECT_TO_JSVAL(global) : JSVAL_NULL;
+
+    return NS_OK;
 }
 
-JSCLAutoContext::~JSCLAutoContext()
-{
-    if (mContext) {
-        JS_ClearNewbornRoots(mContext);
-        JS_SetOptions(mContext, mSavedOptions);
-        if (mContextThread)
-            JS_EndRequest(mContext);
-    }
-
-    if (mPopNeeded) {
-        nsCOMPtr<nsIThreadJSContextStack> cxstack = 
-            do_GetService(kJSContextStackContractID);
-        if (cxstack) {
-            JSContext* cx;
-            nsresult rv = cxstack->Pop(&cx);
-            NS_ASSERTION(NS_SUCCEEDED(rv) && cx == mContext, "push/pop mismatch");
-        }        
-    }        
-}        
-
-//----------------------------------------------------------------------
-
-/* XXX this should all be data-driven, via NS_IMPL_GETMODULE_WITH_CATEGORIES */

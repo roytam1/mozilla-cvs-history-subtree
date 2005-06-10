@@ -1,0 +1,33 @@
+#include "nsISupports.idl"
+
+interface nsIUDPSocket;
+
+[scriptable, uuid(f0aca68a-b00d-4ae9-b037-ac6d9b8349dd)]
+interface nsIDatagram : nsISupports
+{
+  readonly attribute ACString data;
+  readonly attribute ACString address;
+  readonly attribute long port;
+};
+
+[scriptable, uuid(05360e27-ad43-4219-aeab-1561dee08511)]
+interface nsIUDPReceiver : nsISupports
+{
+  void handleDatagram(in nsIUDPSocket socket, in nsIDatagram data);
+};
+
+[scriptable, uuid(437078ab-ed16-44f5-b828-18dcc1c8c607)]
+interface nsIUDPSocket : nsISupports
+{
+  void init(in long aPort);
+  void close();
+
+  void send(in ACString data, in ACString address, in long port);
+  
+  void setReceiver(in nsIUDPReceiver receiver);
+
+  /**
+   * The port of this socket.
+   */
+  readonly attribute long port;  
+};

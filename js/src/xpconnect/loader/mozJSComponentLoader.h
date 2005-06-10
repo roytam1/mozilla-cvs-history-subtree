@@ -51,6 +51,8 @@
 #ifndef XPCONNECT_STANDALONE
 #include "nsIPrincipal.h"
 #endif
+#include "mozIJSComponentLib.h"
+
 extern const char mozJSComponentLoaderContractID[];
 extern const char jsComponentTypeName[];
 
@@ -60,12 +62,14 @@ extern const char jsComponentTypeName[];
   {0x6bd13476, 0x1dd2, 0x11b2, \
     { 0xbb, 0xef, 0xf0, 0xcc, 0xb5, 0xfa, 0x64, 0xb6 }}
 
-class mozJSComponentLoader : public nsIComponentLoader {
+class mozJSComponentLoader : public nsIComponentLoader,
+                             public mozIJSComponentLib {
 
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSICOMPONENTLOADER
-
+    NS_DECL_MOZIJSCOMPONENTLIB
+    
     mozJSComponentLoader();
     virtual ~mozJSComponentLoader();
 
@@ -92,38 +96,4 @@ public:
 
     PRBool mInitialized;
     nsSupportsArray mDeferredComponents;
-};
-
-class JSCLAutoContext
-{
-public:
-    JSCLAutoContext(JSRuntime* rt);
-    ~JSCLAutoContext();
-
-    operator JSContext*() const {return mContext;}
-    JSContext* GetContext() const {return mContext;}
-    nsresult   GetError()   const {return mError;}
-
-
-    JSCLAutoContext(); // not implemnted
-private:
-    JSContext* mContext;
-    nsresult   mError;
-    JSBool     mPopNeeded;
-    intN       mContextThread; 
-    uint32     mSavedOptions;
-};
-
-
-class JSCLAutoErrorReporterSetter
-{
-public:
-    JSCLAutoErrorReporterSetter(JSContext* cx, JSErrorReporter reporter)
-        {mContext = cx; mOldReporter = JS_SetErrorReporter(cx, reporter);}
-    ~JSCLAutoErrorReporterSetter()
-        {JS_SetErrorReporter(mContext, mOldReporter);} 
-    JSCLAutoErrorReporterSetter(); // not implemented
-private:
-    JSContext* mContext;
-    JSErrorReporter mOldReporter;
 };
