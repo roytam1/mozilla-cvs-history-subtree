@@ -205,9 +205,9 @@ BOOTSTRAP_macbrowser := mozilla/camino/config/mozconfig
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
 
-# Pull the zap sip client mini-branch. Not all files are tagged. By 
-# adding '-f' to CVSCO below, we pull the head revision if a file is
-# not tagged
+# Pull the zap sip client mini-branch. Not all files are tagged. By
+# adding '-f' everywhere that we pull with the checkout tag, we force
+# the head revision if a file is not tagged
 MOZ_CO_TAG           = ZAP_20050610_BRANCH
 
 NSPR_CO_TAG          = NSPRPUB_PRE_4_2_CLIENT_BRANCH
@@ -450,7 +450,7 @@ MODULES_CO_FLAGS := -P
 ifdef MOZ_CO_FLAGS
   MODULES_CO_FLAGS := $(MOZ_CO_FLAGS)
 endif
-MODULES_CO_FLAGS := $(MODULES_CO_FLAGS) $(if $(MOZ_CO_TAG),-r $(MOZ_CO_TAG),-A)
+MODULES_CO_FLAGS := $(MODULES_CO_FLAGS) $(if $(MOZ_CO_TAG),-f -r $(MOZ_CO_TAG),-A)
 
 CVSCO_MODULES_NS = $(CVS) $(CVS_FLAGS) co $(MODULES_CO_FLAGS) $(CVS_CO_DATE_FLAGS) -l $(NOSUBDIRS_MODULE)
 
