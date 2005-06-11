@@ -1,0 +1,88 @@
+<?xml version="1.0"?>
+<!-- ***** BEGIN LICENSE BLOCK *****
+   - Version: MPL 1.1/GPL 2.0/LGPL 2.1
+   -
+   - The contents of this file are subject to the Mozilla Public License Version
+   - 1.1 (the "License"); you may not use this file except in compliance with
+   - the License. You may obtain a copy of the License at
+   - http://www.mozilla.org/MPL/
+   -
+   - Software distributed under the License is distributed on an "AS IS" basis,
+   - WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+   - for the specific language governing rights and limitations under the
+   - License.
+   -
+   - The Original Code is the Mozilla SIP client project.
+   -
+   - The Initial Developer of the Original Code is 8x8 Inc.
+   - Portions created by the Initial Developer are Copyright (C) 2005
+   - the Initial Developer. All Rights Reserved.
+   -
+   - Contributor(s):
+   -   Alex Fritze <alex@croczilla.com> (original author)
+   -
+   - Alternatively, the contents of this file may be used under the terms of
+   - either of the GNU General Public License Version 2 or later (the "GPL"),
+   - or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+   - in which case the provisions of the GPL or the LGPL are applicable instead
+   - of those above. If you wish to allow use of your version of this file only
+   - under the terms of either the GPL or the LGPL, and not to allow others to
+   - use your version of this file under the terms of the MPL, indicate your
+   - decision by deleting the provisions above and replace them with the notice
+   - and other provisions required by the GPL or the LGPL. If you do not delete
+   - the provisions above, a recipient may use your version of this file under
+   - the terms of any one of the MPL, the GPL or the LGPL.
+   -
+   - ***** END LICENSE BLOCK ***** -->
+<?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
+
+<!DOCTYPE window SYSTEM "chrome://zap/locale/zap.dtd">
+
+<window id="zap"
+        width="400" height="300" screenX="40" screenY="40" 
+        persist="width height screenX screenY sizemode"
+        onload="windowInit();"
+        onunload="windowClose();"
+        title = "zap! incoming call"
+        xmlns = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+  <!-- Scripts -->
+  <script type="application/x-javascript" src="chrome://zap/content/incomingcall.js"/>
+
+  <!-- Commands -->
+  <commandset>
+    <command id="cmd_accept" oncommand="cmdAccept()"/>
+    <command id="cmd_hangup" oncommand="cmdHangup()"/>
+    <command id="cmd_clearlog" oncommand="cmdClearLog()"/>
+  </commandset>
+
+
+  <!-- Main content box -->
+  <vbox flex="1" style="overflow:auto;">
+    <groupbox>
+      <caption label="Call Details:"/>
+      <hbox>
+        <label value="Caller:" control="caller-address"/>
+        <textbox id="caller-address" flex="1" readonly="true"/>
+      </hbox>
+      <hbox>
+        <label value="Status:" control="call-status"/>
+        <textbox id="call-status" flex="1" readonly="true"/>
+      </hbox>
+    </groupbox>
+    <groupbox>
+      <caption label="Actions"/>
+      <hbox pack="center">
+        <button label="Accept" command="cmd_accept"/>
+        <button label="Hang Up/Decline" command="cmd_hangup"/>
+      </hbox>
+    </groupbox>
+    <groupbox flex="1">
+      <caption label="call log"/>
+      <textbox id="log" multiline="true" readonly="true" flex="1"/>
+      <hbox pack="center">
+        <button label="Clear Log" command="cmd_clearlog"/>
+      </hbox>
+    </groupbox>
+  </vbox>
+</window>

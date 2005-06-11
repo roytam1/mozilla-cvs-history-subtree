@@ -1,0 +1,74 @@
+/* ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1/GPL 2.0/LGPL 2.1
+ *
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License.
+ *
+ * The Original Code is the Mozilla SIP client project.
+ *
+ * The Initial Developer of the Original Code is 8x8 Inc.
+ * Portions created by the Initial Developer are Copyright (C) 2005
+ * the Initial Developer. All Rights Reserved.
+ *
+ * Contributor(s):
+ *   Alex Fritze <alex@croczilla.com> (original author)
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * in which case the provisions of the GPL or the LGPL are applicable instead
+ * of those above. If you wish to allow use of your version of this file only
+ * under the terms of either the GPL or the LGPL, and not to allow others to
+ * use your version of this file under the terms of the MPL, indicate your
+ * decision by deleting the provisions above and replace them with the notice
+ * and other provisions required by the GPL or the LGPL. If you do not delete
+ * the provisions above, a recipient may use your version of this file under
+ * the terms of any one of the MPL, the GPL or the LGPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
+
+#include "nsISupports.idl"
+
+/**
+ * Interface to be implemented by consumers of the Logging Service.
+ */
+[scriptable, uuid(4b014334-855c-4537-93e9-970681d0ba1d)]
+interface zapILogListener : nsISupports
+{
+  /**
+   * Called by the Logging Service when a message is logged.
+   */
+  void log(in ACString logmodule, in unsigned short level, in ACString message);
+};
+
+/**
+ * Logging Service interface
+ *
+ * Implemented by Component 3ae046d9-a9b0-4033-8637-755eb015a986
+ * ("@mozilla.org/zap/loggingservice;1")
+ */
+[scriptable, uuid(77a7c76f-5281-47d1-89f9-6ed5572e9ccc)]
+interface zapILoggingService : nsISupports
+{
+  /**
+   * Log a message. Reentrant calls will be suppressed.
+   */
+  void log(in ACString logmodule, in unsigned short level, in ACString message);
+
+  /**
+   * Logging Levels
+   */
+  const unsigned short INFO    = 1;
+  const unsigned short WARNING = 2;
+  const unsigned short ERROR   = 4;
+
+  void addLogListener(in zapILogListener listener);
+  void removeLogListener(in zapILogListener listener);
+};

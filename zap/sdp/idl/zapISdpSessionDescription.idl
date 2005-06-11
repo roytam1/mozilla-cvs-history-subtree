@@ -1,0 +1,150 @@
+/* ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1/GPL 2.0/LGPL 2.1
+ *
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License.
+ *
+ * The Original Code is the Mozilla SIP client project.
+ *
+ * The Initial Developer of the Original Code is 8x8 Inc.
+ * Portions created by the Initial Developer are Copyright (C) 2005
+ * the Initial Developer. All Rights Reserved.
+ *
+ * Contributor(s):
+ *   Alex Fritze <alex@croczilla.com> (original author)
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * in which case the provisions of the GPL or the LGPL are applicable instead
+ * of those above. If you wish to allow use of your version of this file only
+ * under the terms of either the GPL or the LGPL, and not to allow others to
+ * use your version of this file under the terms of the MPL, indicate your
+ * decision by deleting the provisions above and replace them with the notice
+ * and other provisions required by the GPL or the LGPL. If you do not delete
+ * the provisions above, a recipient may use your version of this file under
+ * the terms of any one of the MPL, the GPL or the LGPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
+
+#include "zapISdpSyntaxObject.idl"
+
+interface zapISdpEmailAddress;
+interface zapISdpPhoneNumber;
+interface zapISdpBandwidth;
+interface zapISdpTime;
+interface zapISdpKey;
+interface zapISdpAttrib;
+interface zapISdpMediaDescription;
+interface zapISdpZoneAdjustments;
+interface zapISdpConnection;
+
+/**
+ * An RFC2327/draft-ietf-mmusic-sdp-new-24.txt session description
+ */
+
+[scriptable, uuid(800e5e3a-3fd6-46f6-95f4-11373ede9fdb)]
+interface zapISdpSessionDescription : zapISdpSyntaxObject
+{
+  /**
+   * version (v=) field:
+   */
+  attribute ACString protocolVersion;
+
+  /**
+   * origin (o=) field:
+   */
+  attribute ACString username;
+  attribute ACString sessionID;
+  attribute ACString sessionVersion;
+  attribute ACString originAddressType;
+  attribute ACString originAddress;
+
+  /**
+   * session name (s=) field:
+   */
+  attribute ACString sessionName;
+
+  /**
+   * optional information (i=) field:
+   */
+  attribute ACString information;
+
+  /**
+   * optional uri (u=) field:
+   */
+  attribute ACString uri;
+
+  /**
+   * optional email (e=) fields:
+   */
+  void getEmailAddresses(out unsigned long count,
+                         [retval, array, size_is(count)] out zapISdpEmailAddress addresses);
+  void setEmailAddresses([array, size_is(count)] in zapISdpEmailAddress addresses,
+                         in unsigned long count);
+
+  /**
+   * optional phone (p=) fields:
+   */
+  void getPhoneNumbers(out unsigned long count,
+                       [retval, array, size_is(count)] out zapISdpPhoneNumber numbers);
+  void setPhoneNumbers([array, size_is(count)] in zapISdpPhoneNumber numbers,
+                       in unsigned long count);
+
+  /**
+   * optional connection (c=) field:
+   * (a connection field must be present in every media description or
+   * at the session level)
+   */
+  attribute zapISdpConnection connection;
+
+  /**
+   * optional bandwidth (b=) fields:
+   */
+  void getBandwidths(out unsigned long count,
+                     [retval, array, size_is(count)] out zapISdpBandwidth bws);
+  void setBandwidths([array, size_is(count)] in zapISdpBandwidth bws,
+                     in unsigned long count);
+
+  /**
+   * time (t=, r=) fields:
+   * (at least 1 required)
+   */
+  void getTimes(out unsigned long count,
+                [retval, array, size_is(count)] out zapISdpTime times);
+  void setTimes([array, size_is(count)] in zapISdpTime times,
+                in unsigned long count);
+
+  /**
+   * optional zone adjustments (z=) field:
+   */
+  attribute zapISdpZoneAdjustments zoneAdjustments;
+  
+  /**
+   * optional key (k=) field:
+   */
+  attribute zapISdpKey key;
+
+  /**
+   * optional attribute (a=) fields:
+   */
+  void getAttribs(out unsigned long count,
+                  [retval, array, size_is(count)] out zapISdpAttrib attribs);
+  void setAttribs([array, size_is(count)] in zapISdpAttrib attribs,
+                  in unsigned long count);
+
+  /**
+   * optional media descriptions (m=, etc):
+   */
+  void getMediaDescriptions(out unsigned long count,
+                            [retval, array, size_is(count)] out zapISdpMediaDescription media);
+  void setMediaDescriptions([array, size_is(count)] in zapISdpMediaDescription media,
+                            in unsigned long count);
+};

@@ -1,0 +1,32 @@
+DEPTH		= ../..
+topsrcdir	= @top_srcdir@
+srcdir		= @srcdir@
+VPATH		= @srcdir@
+
+include $(DEPTH)/config/autoconf.mk
+
+DIRS         = idl
+
+MODULE       = zap_base
+
+EXTRA_PP_COMPONENTS = \
+	LoggingService.js \
+	$(NULL)
+
+include $(topsrcdir)/config/rules.mk
+
+JS_CODELIB_RESOURCES = \
+	ObjectUtils.js \
+	ArrayUtils.js \
+	ClassUtils.js  \
+	FunctionUtils.js \
+	StringUtils.js \
+	$(NULL)
+
+libs::  $(JS_CODELIB_RESOURCES)
+	$(INSTALL) $^ $(DIST)/bin/jscodelib/zap
+
+install::  $(JS_CODELIB_RESOURCES)
+	$(INSTALL) $^ $(DESTDIR)$(mozappdir)/bin/jscodelib/zap
+
+

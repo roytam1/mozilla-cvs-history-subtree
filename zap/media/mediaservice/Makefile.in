@@ -1,0 +1,45 @@
+DEPTH		= ../../..
+topsrcdir	= @top_srcdir@
+srcdir		= @srcdir@
+VPATH		= @srcdir@
+
+include $(DEPTH)/config/autoconf.mk
+
+MODULE		= mediaservice
+XPIDL_MODULE    = mediaservice
+LIBRARY_NAME	= mediaservice
+EXPORT_LIBRARY	= 1
+IS_COMPONENT	= 1
+MODULE_NAME	= zapMediaServiceModule
+MOZILLA_INTERNAL_API = 1
+
+REQUIRES	= \
+		zap_audio \
+		xpcom \
+		string \
+		necko \
+		$(NULL)
+
+CPPSRCS		= \
+		zapMediaService.cpp \
+		zapMediaServiceModule.cpp \
+		zapMediaStream.cpp \
+		$(NULL)
+
+XPIDLSRCS	= zapIMediaService.idl \
+		  zapIMediaStream.idl \
+		  $(NULL)
+
+
+SHARED_LIBRARY_LIBS += \
+		$(DIST)/lib/$(LIB_PREFIX)moz_speex.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)mediaservice_rtp.$(LIB_SUFFIX) \
+		$(NULL)
+
+include $(topsrcdir)/config/rules.mk
+
+EXTRA_DSO_LDOPTS += $(MOZ_COMPONENT_LIBS)
+
+INCLUDES += 	\
+		-I$(srcdir)/../speex/include \
+		$(NULL)

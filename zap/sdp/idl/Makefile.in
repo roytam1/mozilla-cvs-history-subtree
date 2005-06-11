@@ -1,0 +1,31 @@
+DEPTH		= ../../..
+topsrcdir	= @top_srcdir@
+srcdir		= @srcdir@
+VPATH		= @srcdir@
+
+include $(DEPTH)/config/autoconf.mk
+
+MODULE       = zap_sdp
+XPIDL_MODULE = zap_sdp
+
+XPIDLSRCS = \
+	zapISdpService.idl \
+	zapISdpSyntaxObject.idl \
+	zapISdpSessionDescription.idl \
+	zapISdpEmailAddress.idl \
+	zapISdpPhoneNumber.idl \
+	zapISdpBandwidth.idl \
+	zapISdpTime.idl \
+	zapISdpKey.idl \
+	zapISdpAttrib.idl \
+	zapISdpMediaDescription.idl \
+	zapISdpMediaFormat.idl \
+	zapISdpZoneAdjustments.idl \
+	zapISdpGenericValue.idl \
+	zapISdpConnection.idl \
+	$(NULL)
+
+include $(topsrcdir)/config/rules.mk
+
+
+

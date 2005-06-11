@@ -1,0 +1,2 @@
+content zap jar:zap.jar!/content/zap/
+locale zap en-US jar:en-US.jar!/locale/en-US/zap/

@@ -1,0 +1,10 @@
+zap.jar:
+  content/zap/zap.xul                (content/zap.xul)
+  content/zap/zap.js                 (content/zap.js)
+  content/zap/outgoingcall.xul       (content/outgoingcall.xul)
+  content/zap/outgoingcall.js        (content/outgoingcall.js)
+  content/zap/incomingcall.xul       (content/incomingcall.xul)
+  content/zap/incomingcall.js        (content/incomingcall.js)
+
+en-US.jar:
+  locale/en-US/zap/zap.dtd           (locale/zap.dtd)

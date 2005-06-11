@@ -1,0 +1,37 @@
+DEPTH		= ../../..
+topsrcdir	= @top_srcdir@
+srcdir		= @srcdir@
+VPATH		= @srcdir@
+
+include $(DEPTH)/config/autoconf.mk
+
+MODULE		= mediaservice
+XPIDL_MODULE    = mediaservice_rtp
+LIBRARY_NAME	= mediaservice_rtp
+MOZILLA_INTERNAL_API = 1
+
+REQUIRES	= \
+		xpcom \
+		string \
+		necko \
+		$(NULL)
+
+CPPSRCS		= \
+		zapRtpPacket.cpp \
+		zapRtpTransport.cpp \
+		$(NULL)
+
+XPIDLSRCS	= zapIRtpTransport.idl \
+		  zapIRtpPacket.idl \
+		  $(NULL)
+
+EXPORTS         = \
+		zapRtpPacket.h \
+		zapRtpTransport.h \
+		$(NULL)
+
+
+FORCE_STATIC_LIB = 1
+
+include $(topsrcdir)/config/rules.mk
+

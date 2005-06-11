@@ -1,0 +1,44 @@
+DEPTH		= ../../..
+topsrcdir	= @top_srcdir@
+srcdir		= @srcdir@
+VPATH		= @srcdir@
+
+include $(DEPTH)/config/autoconf.mk
+
+MODULE		= zap_audio
+XPIDL_MODULE    = zap_audio
+LIBRARY_NAME	= zap_audio
+SHORT_LIBNAME   = zap_aud
+EXPORT_LIBRARY	= 1
+IS_COMPONENT	= 1
+MODULE_NAME	= zapAudioModule
+MOZILLA_INTERNAL_API = 1
+
+REQUIRES	= \
+		xpcom \
+		string \
+		portaudio \
+		necko \
+		$(NULL)
+
+CPPSRCS		= \
+		zapAudioService.cpp \
+		zapAudioDevice.cpp \
+		zapAudioTransport.cpp \
+		zapAudioServiceModule.cpp \
+		$(NULL)
+
+XPIDLSRCS	= zapIAudioService.idl \
+		  zapIAudioDevice.idl \
+		  zapIAudioTransport.idl \
+		  $(NULL)
+
+SHARED_LIBRARY_LIBS += \
+                $(DIST)/lib/$(LIB_PREFIX)moz_portaudio.$(LIB_SUFFIX) \
+                $(NULL)
+
+include $(topsrcdir)/config/rules.mk
+
+OS_LIBS += dsound.lib ole32.lib
+
+EXTRA_DSO_LDOPTS += $(MOZ_COMPONENT_LIBS)

@@ -1,0 +1,20 @@
+DEPTH		= ../..
+topsrcdir	= @top_srcdir@
+srcdir		= @srcdir@
+VPATH		= @srcdir@
+
+include $(DEPTH)/config/autoconf.mk
+
+DIRS         = idl
+
+MODULE       = zap_sdp
+
+EXTRA_PP_COMPONENTS = \
+	SdpService.js \
+	$(NULL)
+
+include $(topsrcdir)/config/rules.mk
+
+
+
+

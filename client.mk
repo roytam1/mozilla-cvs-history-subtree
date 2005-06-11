@@ -253,7 +253,8 @@ ZAP_BRANCH_NEW_FILES = \
 	netwerk/base/public/nsIUDPSocket.idl \
 	netwerk/base/src/nsUDPSocket.cpp \
 	netwerk/base/src/nsUDPSocket.h \
-	xpcom/io/nsIScriptableInputStreamEx.idl
+	xpcom/io/nsIScriptableInputStreamEx.idl \
+	zap
 
 
 commit_zap:

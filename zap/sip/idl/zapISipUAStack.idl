@@ -1,0 +1,124 @@
+/* ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1/GPL 2.0/LGPL 2.1
+ *
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License.
+ *
+ * The Original Code is the Mozilla SIP client project.
+ *
+ * The Initial Developer of the Original Code is 8x8 Inc.
+ * Portions created by the Initial Developer are Copyright (C) 2005
+ * the Initial Developer. All Rights Reserved.
+ *
+ * Contributor(s):
+ *   Alex Fritze <alex@croczilla.com> (original author)
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * in which case the provisions of the GPL or the LGPL are applicable instead
+ * of those above. If you wish to allow use of your version of this file only
+ * under the terms of either the GPL or the LGPL, and not to allow others to
+ * use your version of this file under the terms of the MPL, indicate your
+ * decision by deleting the provisions above and replace them with the notice
+ * and other provisions required by the GPL or the LGPL. If you do not delete
+ * the provisions above, a recipient may use your version of this file under
+ * the terms of any one of the MPL, the GPL or the LGPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
+
+#include "nsISupports.idl"
+
+interface zapISipRequest;
+interface zapISipResponse;
+interface zapISipURI;
+interface zapISipAddress;
+interface zapISipInviteMC;
+interface zapISipInviteMCH;
+interface zapISipResolver;
+interface zapISipTransactionManager;
+interface zapISipSyntaxFactory;
+interface zapISipMSHFactory;
+
+/**
+ * User Agent SIP stack interface (RFC3261).
+ *
+ * Implemented by component '@mozilla.org/zap/sipstack;1'
+ */
+[scriptable, uuid(bc07e2a1-b759-439f-b8e0-30e8e84c21bf)]
+interface zapISipUAStack : nsISupports
+{
+  void init(in zapISipMSHFactory mshFactory);
+  
+  void shutdown();
+
+  readonly attribute zapISipTransactionManager transactionManager;
+  
+  readonly attribute zapISipSyntaxFactory syntaxFactory;
+
+  readonly attribute zapISipResolver resolver;
+  
+  /**
+   * Create a new generic request according to the rules of RFC3261
+   * Section 8.1.
+   *
+   * This method will return a new request object with request method
+   * and uri set to 'method' and 'requestURI' and the following
+   * headers:
+   *
+   * To : Will be set to 'ToAddress'.
+   *
+   * From : Will be set to 'FromAddress' and a new random tag
+   * parameter will be added.
+   *
+   * Call-ID : Will be set to a new UUID + local hostname.
+   *
+   * CSeq : Will be set to 1 and 'method'.
+   *
+   * Max-Forwards: Will be set to 70.
+   * 
+   * Via: The protocol name and version will be set to SIP and 2.0. A
+   * new branch id parameter will be added by the transaction layer
+   * when a new transaction is created for the request. The host, port
+   * and transport will be filled in by the transport layer when the
+   * request is sent.
+   */
+    
+  zapISipRequest formulateGenericRequest(in ACString method,
+                                         in zapISipURI requestURI,
+                                         in zapISipAddress ToAddress,
+                                         in zapISipAddress FromAddress);
+
+  /**
+   * Create a new INVITE request according to the rules of RFC3261
+   * Section 8.1.
+   *
+   * In addition to the processing of formuateGenericRequest(), the
+   * Contact header field will be set to the user info of the From
+   * address, with the host part of the URI replaced by the address of
+   * the local host.
+   */
+  zapISipRequest formulateInviteRequest(in zapISipAddress ToAddress,
+                                        in zapISipAddress FromAddress);
+
+  zapISipResponse formulateResponse(in ACString statusCode,
+                                    in AUTF8String reasonPhrase,
+                                    in zapISipRequest request,
+                                    in boolean generateToTag);
+  
+  /**
+   * Create an INVITE method client
+   */
+  zapISipInviteMC createInviteMC(in zapISipRequest inviteRequest,
+                                 in zapISipInviteMCH handler);
+
+  readonly attribute ACString hostName;
+  readonly attribute ACString hostAddress;
+};

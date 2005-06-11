@@ -1,0 +1,89 @@
+DEPTH		= ../../..
+topsrcdir	= @top_srcdir@
+srcdir		= @srcdir@
+VPATH		= @srcdir@
+
+include $(DEPTH)/config/autoconf.mk
+
+MODULE       = zap_sip
+XPIDL_MODULE = zap_sip
+
+XPIDLSRCS = \
+	zapISipSyntaxFactory.idl \
+	zapISipSyntaxObject.idl \
+	zapISipMessage.idl \
+	zapISipRequest.idl \
+	zapISipResponse.idl \
+	zapISipHeader.idl \
+	zapISipURI.idl \
+	zapISipAddress.idl \
+	zapISipViaHeader.idl \
+	zapISipAcceptHeader.idl \
+	zapISipAcceptEncodingHeader.idl \
+	zapISipAcceptLanguageHeader.idl \
+	zapISipAlertInfoHeader.idl \
+	zapISipAllowHeader.idl \
+	zapISipAuthenticationInfoHeader.idl \
+	zapISipAuthorizationHeader.idl \
+	zapISipCallIDHeader.idl \
+	zapISipCallInfoHeader.idl \
+	zapISipContactHeader.idl \
+	zapISipContentDispositionHeader.idl \
+	zapISipContentEncodingHeader.idl \
+	zapISipContentLanguageHeader.idl \
+	zapISipContentLengthHeader.idl \
+	zapISipContentTypeHeader.idl \
+	zapISipCSeqHeader.idl \
+	zapISipDateHeader.idl \
+	zapISipErrorInfoHeader.idl \
+	zapISipExpiresHeader.idl \
+	zapISipFromHeader.idl \
+	zapISipInReplyToHeader.idl \
+	zapISipMaxForwardsHeader.idl \
+	zapISipMIMEVersionHeader.idl \
+	zapISipMinExpiresHeader.idl \
+	zapISipOrganizationHeader.idl \
+	zapISipPriorityHeader.idl \
+	zapISipProxyAuthenticateHeader.idl \
+	zapISipProxyAuthorizationHeader.idl \
+	zapISipProxyRequireHeader.idl \
+	zapISipRecordRouteHeader.idl \
+	zapISipReplyToHeader.idl \
+	zapISipRequireHeader.idl \
+	zapISipRetryAfterHeader.idl \
+	zapISipRouteHeader.idl \
+	zapISipServerHeader.idl \
+	zapISipSubjectHeader.idl \
+	zapISipSupportedHeader.idl \
+	zapISipTimestampHeader.idl \
+	zapISipToHeader.idl \
+	zapISipUnsupportedHeader.idl \
+	zapISipUserAgentHeader.idl \
+	zapISipWarningHeader.idl \
+	zapISipWWWAuthenticateHeader.idl \
+	zapISipUnknownHeader.idl \
+	zapISipConnection.idl \
+	zapISipTransceiver.idl \
+	zapISipListeningSocket.idl \
+	zapISipUAStack.idl \
+	zapISipTransport.idl \
+	zapISipTransactionManager.idl \
+	zapISipServerTransaction.idl \
+	zapISipServerTransactionUser.idl \
+	zapISipClientTransactionUser.idl \
+	zapISipInviteMCH.idl \
+	zapISipInviteMC.idl \
+	zapISipInviteMSH.idl \
+	zapISipInviteMS.idl \
+	zapISipDialog.idl \
+	zapISipDialogHandler.idl \
+	zapISipEndpoint.idl \
+	zapISipResolveListener.idl \
+	zapISipResolver.idl \
+	zapISipMSHFactory.idl \
+	$(NULL)
+
+include $(topsrcdir)/config/rules.mk
+
+
+

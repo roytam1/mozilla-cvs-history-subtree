@@ -1,0 +1,118 @@
+DEPTH		= ../../..
+topsrcdir	= @top_srcdir@
+srcdir		= @srcdir@
+VPATH		= @srcdir@
+
+include $(DEPTH)/config/autoconf.mk
+
+
+MODULE		= portaudio
+LIBRARY_NAME	= moz_portaudio
+#LIB_IS_C_ONLY   = 1
+FORCE_STATIC_LIB= 1
+
+#CSRCS		= \
+#	pa_common/pa_allocation.c \
+#	pa_common/pa_converters.c \
+#	pa_common/pa_cpuload.c \
+#	pa_common/pa_dither.c \
+#	pa_common/pa_front.c \
+#	pa_common/pa_process.c \
+#	pa_common/pa_skeleton.c \
+#	pa_common/pa_stream.c \
+#	pa_common/pa_trace.c \
+#	pa_win_ds/pa_win_ds.c \
+#	pa_win_ds/dsound_wrapper.c \
+#	pa_win/pa_win_hostapis.c \
+#	pa_win/pa_win_util.c \
+#	$(NULL)
+
+
+CSRCS		= \
+	pa_common/pa_allocation.c \
+	pa_common/pa_converters.c \
+	pa_common/pa_cpuload.c \
+	pa_common/pa_dither.c \
+	pa_common/pa_front.c \
+	pa_common/pa_process.c \
+	pa_common/pa_skeleton.c \
+	pa_common/pa_stream.c \
+	pa_common/pa_trace.c \
+	pa_win_wmme/pa_win_wmme.c \
+	pa_win/pa_win_hostapis.c \
+	pa_win/pa_win_util.c \
+	$(NULL)
+
+
+EXPORTS         = \
+		pa_common/portaudio.h \
+		$(NULL)
+
+
+DEFINES 	+= -DPA_NO_DS -DPA_NO_ASIO -DPA_NO_WDMKS
+#DEFINES 	+= -DPA_NO_WMME -DPA_NO_ASIO -DPA_NO_WDMKS
+
+
+SIMPLE_PROGRAMS = \
+pa_tests/paqa_devs$(BIN_SUFFIX) \
+pa_tests/paqa_errs$(BIN_SUFFIX) \
+pa_tests/patest1$(BIN_SUFFIX) \
+pa_tests/patest_buffer$(BIN_SUFFIX) \
+pa_tests/patest_callbackstop$(BIN_SUFFIX) \
+pa_tests/patest_clip$(BIN_SUFFIX) \
+pa_tests/patest_dither$(BIN_SUFFIX) \
+pa_tests/patest_hang$(BIN_SUFFIX) \
+pa_tests/patest_in_overflow$(BIN_SUFFIX) \
+pa_tests/patest_latency$(BIN_SUFFIX) \
+pa_tests/patest_leftright$(BIN_SUFFIX) \
+pa_tests/patest_longsine$(BIN_SUFFIX) \
+pa_tests/patest_many$(BIN_SUFFIX) \
+pa_tests/patest_maxsines$(BIN_SUFFIX) \
+pa_tests/patest_multi_sine$(BIN_SUFFIX) \
+pa_tests/patest_out_underflow$(BIN_SUFFIX) \
+pa_tests/patest_pink$(BIN_SUFFIX) \
+pa_tests/patest_prime$(BIN_SUFFIX) \
+pa_tests/patest_read_record$(BIN_SUFFIX) \
+pa_tests/patest_record$(BIN_SUFFIX) \
+pa_tests/patest_ringmix$(BIN_SUFFIX) \
+pa_tests/patest_saw$(BIN_SUFFIX) \
+pa_tests/patest_sine8$(BIN_SUFFIX) \
+pa_tests/patest_sine$(BIN_SUFFIX) \
+pa_tests/patest_sine_formats$(BIN_SUFFIX) \
+pa_tests/patest_sine_time$(BIN_SUFFIX) \
+pa_tests/patest_start_stop$(BIN_SUFFIX) \
+pa_tests/patest_stop$(BIN_SUFFIX) \
+pa_tests/patest_sync$(BIN_SUFFIX) \
+pa_tests/patest_toomanysines$(BIN_SUFFIX) \
+pa_tests/patest_underflow$(BIN_SUFFIX) \
+pa_tests/patest_wire$(BIN_SUFFIX) \
+pa_tests/patest_write_sine$(BIN_SUFFIX) \
+pa_tests/pa_devs$(BIN_SUFFIX) \
+pa_tests/pa_fuzz$(BIN_SUFFIX) \
+pa_tests/pa_minlat$(BIN_SUFFIX)
+
+
+include $(topsrcdir)/config/rules.mk
+
+LOCAL_INCLUDES  = -I$(srcdir)/pa_common
+
+OS_LIBS += dsound.lib ole32.lib
+
+# The portaudio code is dispersed over several subdirectory, but
+# building separate libs is overkill. We drive the whole build from
+# this Makefile, but we need to make sure that the object dirs exist:
+
+EXTRA_OBJDIRS   = pa_common \
+		  pa_win_wmme \
+		  pa_win_ds \
+		  pa_win \
+		  pa_tests \
+		  $(NULL)
+
+export:: 
+	mkdir -p $(EXTRA_OBJDIRS)
+
+
+LIBS += $(LIBRARY_NAME).lib
+
+$(SIMPLE_PROGRAMS): %$(BIN_SUFFIX): %.$(OBJ_SUFFIX) $(STATIC_LIBRARY)

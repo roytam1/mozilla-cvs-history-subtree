@@ -1,0 +1,7 @@
+#include "zapISdpGenericValue.idl"
+
+[scriptable, uuid(d478ae03-1d71-4cfc-a8af-a1ba0dd9af25)]
+interface zapISdpZoneAdjustments : zapISdpGenericValue
+{
+  // TO BE IMPLEMENTED
+};
