@@ -218,59 +218,6 @@ LOCALES_CO_TAG       =
 BUILD_MODULES = all
 
 #######################################################################
-# Branch maintenance
-
-ZAP_BRANCH_MODIFIED_FILES = \
-	allmakefiles.sh \
-	client.mk \
-	config/autoconf.mk.in \
-	configure \
-	configure.in \
-	js/src/xpconnect/Makefile.in \
-	js/src/xpconnect/loader/Makefile.in \
-	js/src/xpconnect/loader/mozJSComponentLoader.cpp \
-	js/src/xpconnect/loader/mozJSComponentLoader.h \
-	js/src/xpconnect/src/Makefile.in \
-	js/src/xpconnect/src/xpcmodule.cpp \
-	netwerk/base/public/Makefile.in \
-	netwerk/base/src/Makefile.in \
-	netwerk/build/nsNetCID.h \
-	netwerk/build/nsNetModule.cpp \
-	xpcom/io/Makefile.in \
-	xpcom/io/nsScriptableInputStream.cpp \
-	xpcom/io/nsScriptableInputStream.h
-
-ZAP_BRANCH_NEW_FILES = \
-	js/src/xpconnect/codelib/Makefile.in \
-	js/src/xpconnect/codelib/mozIJSCodeLib.idl \
-	js/src/xpconnect/codelib/mozJSCodeLib.cpp \
-	js/src/xpconnect/codelib/mozJSCodeLib.h \
-	js/src/xpconnect/loader/JSComponentUtils.js \
-	js/src/xpconnect/loader/mozIJSComponentLib.idl \
-	js/src/xpconnect/shared/JSFunctions.cpp \
-	js/src/xpconnect/shared/JSFunctions.h \
-	js/src/xpconnect/shared/Makefile.in \
-	netwerk/base/public/nsIUDPSocket.idl \
-	netwerk/base/src/nsUDPSocket.cpp \
-	netwerk/base/src/nsUDPSocket.h \
-	xpcom/io/nsIScriptableInputStreamEx.idl \
-	zap
-
-
-commit_zap:
-	cvs -z3 ci -r ZAP_20050610_BRANCH $(ZAP_BRANCH_MODIFIED_FILES) $(ZAP_BRANCH_NEW_FILES)
-
-merge_zap:
-	cvs -z3 up -dP -jZAP_20050610_BASE -jHEAD $(ZAP_BRANCH_MODIFIED_FILES)
-
-statictag_zap:
-	cvs -z3 tag -F -rHEAD ZAP_20050610_BASE $(ZAP_BRANCH_MODIFIED_FILES)
-
-branchtag_zap:
-	cvs -z3 tag -b ZAP_20050610_BRANCH $(ZAP_BRANCH_MODIFIED_FILES)
-
-
-#######################################################################
 # Defines
 #
 CVS = cvs
@@ -840,3 +787,56 @@ echo_objdir:
 	@echo $(OBJDIR)
 
 .PHONY: checkout real_checkout depend build export libs alldep install clean realclean distclean cleansrcdir pull_all build_all clobber clobber_all pull_and_build_all everything
+
+#######################################################################
+# Branch maintenance
+
+ZAP_BRANCH_MODIFIED_FILES = \
+	allmakefiles.sh \
+	client.mk \
+	config/autoconf.mk.in \
+	configure \
+	configure.in \
+	js/src/xpconnect/Makefile.in \
+	js/src/xpconnect/loader/Makefile.in \
+	js/src/xpconnect/loader/mozJSComponentLoader.cpp \
+	js/src/xpconnect/loader/mozJSComponentLoader.h \
+	js/src/xpconnect/src/Makefile.in \
+	js/src/xpconnect/src/xpcmodule.cpp \
+	netwerk/base/public/Makefile.in \
+	netwerk/base/src/Makefile.in \
+	netwerk/build/nsNetCID.h \
+	netwerk/build/nsNetModule.cpp \
+	xpcom/io/Makefile.in \
+	xpcom/io/nsScriptableInputStream.cpp \
+	xpcom/io/nsScriptableInputStream.h
+
+ZAP_BRANCH_NEW_FILES = \
+	js/src/xpconnect/codelib/Makefile.in \
+	js/src/xpconnect/codelib/mozIJSCodeLib.idl \
+	js/src/xpconnect/codelib/mozJSCodeLib.cpp \
+	js/src/xpconnect/codelib/mozJSCodeLib.h \
+	js/src/xpconnect/loader/JSComponentUtils.js \
+	js/src/xpconnect/loader/mozIJSComponentLib.idl \
+	js/src/xpconnect/shared/JSFunctions.cpp \
+	js/src/xpconnect/shared/JSFunctions.h \
+	js/src/xpconnect/shared/Makefile.in \
+	netwerk/base/public/nsIUDPSocket.idl \
+	netwerk/base/src/nsUDPSocket.cpp \
+	netwerk/base/src/nsUDPSocket.h \
+	xpcom/io/nsIScriptableInputStreamEx.idl \
+	zap
+
+
+commit_zap:
+	cvs -z3 ci -r ZAP_20050610_BRANCH $(ZAP_BRANCH_MODIFIED_FILES) $(ZAP_BRANCH_NEW_FILES)
+
+merge_zap:
+	cvs -z3 up -dP -jZAP_20050610_BASE -jHEAD $(ZAP_BRANCH_MODIFIED_FILES)
+
+statictag_zap:
+	cvs -z3 tag -F -rHEAD ZAP_20050610_BASE $(ZAP_BRANCH_MODIFIED_FILES)
+
+branchtag_zap:
+	cvs -z3 tag -b ZAP_20050610_BRANCH $(ZAP_BRANCH_MODIFIED_FILES)
+
