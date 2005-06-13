@@ -697,6 +697,7 @@
                if (results && results.items.Count() > 0 && results.defaultItemIndex != -1)
                {
                   this.value = this.getSessionValueAt(name, results.defaultItemIndex);
+                  this.mDefaultMatchFilled = true;
                   this.mNeedToFinish = false;
                  break;
                }
@@ -714,7 +715,10 @@
                 this.mNeedToFinish = false;
                 var defaultSession = this.getDefaultSession();
                 if (defaultSession)
+                {
                     this.value = this.getSessionValueAt(defaultSession, 0); // preselect the first one...
+                    this.mDefaultMatchFilled = true;
+                }
               }
             }
 
