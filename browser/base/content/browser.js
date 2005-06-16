@@ -5628,6 +5628,11 @@ function missingPluginInstaller(){
 }
 
 missingPluginInstaller.prototype.installSinglePlugin = function(aEvent){
+  // Check if the event is trust-worthy.
+  if (!aEvent.isTrusted) {
+    return;
+  }
+
   var tabbrowser = getBrowser();
   var missingPluginsArray = new Object;
 
@@ -5654,6 +5659,11 @@ missingPluginInstaller.prototype.installSinglePlugin = function(aEvent){
 }
 
 missingPluginInstaller.prototype.newMissingPlugin = function(aEvent){
+  // Check if the event is trust-worthy.
+  if (!aEvent.isTrusted) {
+    return;
+  }
+
   // For broken non-object plugin tags, register a click handler so
   // that the user can click the plugin replacement to get the new
   // plugin. Object tags can, and often do, deal with that themselves,
