@@ -1165,7 +1165,6 @@ nsScriptSecurityManager::GetBaseURIScheme(nsIURI* aURI, char** aScheme)
             return NS_ERROR_FAILURE;
         const char* page = spec.get() + sizeof(aboutScheme);
         if ((strcmp(page, "blank") == 0)   ||
-            (strcmp(page, "") == 0)        ||
             (strcmp(page, "mozilla") == 0) ||
             (strcmp(page, "logo") == 0)    ||
             (strcmp(page, "credits") == 0))
