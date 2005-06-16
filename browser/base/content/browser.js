@@ -4057,10 +4057,12 @@ nsContextMenu.prototype = {
     },
     // Change current window to the URL of the image.
     viewImage : function (e) {
+        urlSecurityCheck( this.imageURL, document )
         openUILink( this.imageURL, e );
     },
     // Change current window to the URL of the background image.
     viewBGImage : function (e) {
+        urlSecurityCheck( this.bgImageURL, document )
         openUILink( this.bgImageURL, e );
     },
     setWallpaper: function() {
@@ -4494,6 +4496,9 @@ function asyncOpenWebPanel(event)
            return true;
          // javascript links should be executed in the current browser
          if (wrapper.href.substr(0, 11) === "javascript:")
+           return true;
+         // data links should be executed in the current browser
+         if (wrapper.href.substr(0, 5) === "data:")
            return true;
 
          if (!webPanelSecurityCheck(locWrapper.href, wrapper.href))
