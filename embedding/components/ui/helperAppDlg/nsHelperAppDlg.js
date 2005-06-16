@@ -239,7 +239,9 @@ nsHelperAppDialog.prototype = {
 
          // Some URIs do not implement nsIURL, so we can't just QI.
          var url = this.mLauncher.source.clone();
-         url.userPass = "";
+         try {
+           url.userPass = "";
+         } catch (ex) {}
          var fname = "";
          this.mSourcePath = url.prePath;
          try {
