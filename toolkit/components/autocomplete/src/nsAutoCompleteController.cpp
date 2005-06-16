@@ -329,9 +329,22 @@ nsAutoCompleteController::HandleKeyNavigation(PRUint16 aKey, PRBool *_retval)
   } else if (aKey == nsIAutoCompleteController::KEY_LEFT ||
              aKey == nsIAutoCompleteController::KEY_RIGHT)
   {
-    // When the user arrows to the side, close the popup
-    ClearSearchTimer();
-    ClosePopup();
+    // The user hit a left or right arrow key
+    PRBool isOpen;
+    mInput->GetPopupOpen(&isOpen);
+    if (isOpen) {
+      PRInt32 selectedIndex;
+      popup->GetSelectedIndex(&selectedIndex);
+      if (selectedIndex >= 0) {
+        // The pop-up is open and has a selection, take its value
+        nsAutoString value;
+        if (NS_SUCCEEDED(GetResultValueAt(selectedIndex, PR_TRUE, value)))
+          CompleteValue(value, PR_FALSE);
+      }
+      // Close the pop-up even if nothing was selected
+      ClearSearchTimer();
+      ClosePopup();
+    }
   }
   
   return NS_OK;
