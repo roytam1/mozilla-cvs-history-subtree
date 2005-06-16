@@ -249,7 +249,7 @@
     <separator/>
 
     <vbox align="start">
-      <checkbox id="resetHomepage" checked="true"
+      <checkbox id="resetHomepage" checked="false"
                 label="&resetHomepage.label;" accesskey="&resetHomepage.accesskey;"/>
     </vbox>
 #endif

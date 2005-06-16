@@ -2055,7 +2055,7 @@ LRESULT CALLBACK DlgProcInstallSuccessful(HWND hDlg, UINT msg, WPARAM wParam, LO
   LPNMHDR notifyMessage;
   HWND ctrl;
   static BOOL launchAppChecked = TRUE;
-  static BOOL resetHomepageChecked = TRUE;
+  static BOOL resetHomepageChecked = FALSE;
   DWORD result;
   HKEY theKey;
   

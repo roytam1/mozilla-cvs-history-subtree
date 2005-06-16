@@ -3786,7 +3786,7 @@ HRESULT InitDlgInstallSuccessful(diIS *diDialog)
 {
   diDialog->bShowDialog = FALSE;
   diDialog->bLaunchAppChecked = TRUE;
-  diDialog->bResetHomepageChecked = TRUE;
+  diDialog->bResetHomepageChecked = FALSE;
   if((diDialog->szTitle = NS_GlobalAlloc(MAX_BUF)) == NULL)
     return(1);
   if((diDialog->szMessage0 = NS_GlobalAlloc(MAX_BUF)) == NULL)
