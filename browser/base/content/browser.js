@@ -3763,8 +3763,11 @@ nsContextMenu.prototype = {
         // See if the user clicked on an image.
         if ( this.target.nodeType == Node.ELEMENT_NODE ) {
              if ( this.target.localName.toUpperCase() == "IMG" ) {
-                this.onImage = true;
-                this.imageURL = this.target.src;
+                var scheme = makeURL(this.target.src).scheme;
+                if (scheme != "javascript" && scheme != "data") {
+                  this.onImage = true;
+                  this.imageURL = this.target.src;
+                }
                 // Look for image map.
                 var mapName = this.target.getAttribute( "usemap" );
                 if ( mapName ) {
