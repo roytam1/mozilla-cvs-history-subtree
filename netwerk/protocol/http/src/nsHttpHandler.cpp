@@ -668,8 +668,8 @@ nsHttpHandler::InitUserAgentComponents()
     if (ret >= 0) {
         nsCString buf;  
         buf =  (char*)name.sysname;
-        buf += ' ';
 #ifdef AIX
+        buf += ' ';
         // AIX uname returns machine specific info in the uname.machine
         // field and does not return the cpu type like other platforms.
         // We use the AIX version and release numbers instead.
@@ -677,7 +677,20 @@ nsHttpHandler::InitUserAgentComponents()
         buf += '.';
         buf += (char*)name.release;
 #else
-        buf += (char*)name.machine;
+        if (strcmp(name.machine, "x86_64") == 0 &&
+            sizeof(long) == sizeof(PRInt32)) {
+            // We're running 32-bit code on x86_64. Make this browser
+            // look like it's running on i686 hardware, but append "
+            // (x86_64)" to the end of the oscpu identifier to be able
+            // to differentiate this from someone running 64-bit code
+            // on x86_64..
+
+            buf += " i686 (x86_64)";
+        } else {
+            buf += ' ';
+
+            buf += (char*)name.machine;
+        }
 #endif
         mOscpu.Assign(buf);
     }
