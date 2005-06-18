@@ -361,7 +361,8 @@ nsInlineFrame::DoInlineIntrinsicWidth(nsIRenderingContext *aRenderingContext,
   PRUint8 startSide, endSide;
 
   // XXX set these correctly!  (not trivial, and GetSkipSides() and
-  // probably some reflow logic needs this too)
+  // maybe some reflow logic needs this too, and should all be fixed at
+  // once)
   startSide = NS_SIDE_LEFT;
   endSide = NS_SIDE_RIGHT;
 
@@ -838,6 +839,10 @@ nsInlineFrame::PushFrames(nsPresContext* aPresContext,
 PRIntn
 nsInlineFrame::GetSkipSides() const
 {
+  // XXX This is wrong for RTL.  (Bidi cases might be fun, although
+  // if we split into multiple continuations it shouldn't be a problem.)
+  // DoInlineIntrinsicWidth needs to be fixed as well (and they should be
+  // fixed at the same time).
   PRIntn skip = 0;
   if (nsnull != mPrevInFlow) {
     nsInlineFrame* prev = (nsInlineFrame*) mPrevInFlow;
