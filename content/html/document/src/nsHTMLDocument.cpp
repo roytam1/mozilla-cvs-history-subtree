@@ -1985,15 +1985,10 @@ nsHTMLDocument::GetSourceCodebaseURI(nsIURI** sourceURI)
 {
   *sourceURI = nsnull;
 
-  // XXX This will fail on non-DOM contexts :(
-  nsIDOMDocument *domDoc = nsContentUtils::GetDocumentFromCaller();
+  nsIScriptSecurityManager *secMan = nsContentUtils::GetSecurityManager();
 
-  nsCOMPtr<nsIDocument> doc(do_QueryInterface(domDoc));
-  if (!doc) {
-    return NS_OK; // No document in the window
-  }
-
-  nsIPrincipal *principal = doc->GetPrincipal();
+  nsCOMPtr<nsIPrincipal> principal;
+  secMan->GetSubjectPrincipal(getter_AddRefs(principal));
 
   if (!principal) {
     return NS_OK; // No principal available
