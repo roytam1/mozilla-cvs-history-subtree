@@ -321,7 +321,7 @@ static void SetJavaLibPath(const nsCString& pluginPath)
     // Check for existance of jre/bin/classic dir, and append it to
     // LIBPATH if found
     PRFileInfo info;
-    javaDir.AppendLiteral("/classic");
+    javaDir.Append(NS_LITERAL_CSTRING("/classic"));
     if (PR_GetFileInfo(javaDir.get(), &info) == PR_SUCCESS &&
         info.type == PR_FILE_DIRECTORY)
     {
