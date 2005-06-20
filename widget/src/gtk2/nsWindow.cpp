@@ -1193,7 +1193,7 @@ nsWindow::OnExposeEvent(GtkWidget *aWidget, GdkEventExpose *aEvent)
     // XXX figure out the region/rect stuff!
     nsRect rect(aEvent->area.x, aEvent->area.y,
                 aEvent->area.width, aEvent->area.height);
-    nsPaintEvent event(NS_PAINT, this);
+    nsPaintEvent event(PR_TRUE, NS_PAINT, this);
 
     event.point.x = aEvent->area.x;
     event.point.y = aEvent->area.y;
@@ -1235,7 +1235,7 @@ nsWindow::OnConfigureEvent(GtkWidget *aWidget, GdkEventConfigure *aEvent)
         mBounds.y = newrect.y;
     }
 
-    nsGUIEvent event(NS_MOVE, this);
+    nsGUIEvent event(PR_TRUE, NS_MOVE, this);
 
     event.point.x = aEvent->x;
     event.point.y = aEvent->y;
@@ -1273,7 +1273,7 @@ nsWindow::OnSizeAllocate(GtkWidget *aWidget, GtkAllocation *aAllocation)
 void
 nsWindow::OnDeleteEvent(GtkWidget *aWidget, GdkEventAny *aEvent)
 {
-    nsGUIEvent event(NS_XUL_CLOSE, this);
+    nsGUIEvent event(PR_TRUE, NS_XUL_CLOSE, this);
 
     event.point.x = 0;
     event.point.y = 0;
@@ -1285,7 +1285,7 @@ nsWindow::OnDeleteEvent(GtkWidget *aWidget, GdkEventAny *aEvent)
 void
 nsWindow::OnEnterNotifyEvent(GtkWidget *aWidget, GdkEventCrossing *aEvent)
 {
-    nsMouseEvent event(NS_MOUSE_ENTER, this);
+    nsMouseEvent event(PR_TRUE, NS_MOUSE_ENTER, this);
 
     event.point.x = nscoord(aEvent->x);
     event.point.y = nscoord(aEvent->y);
@@ -1299,7 +1299,7 @@ nsWindow::OnEnterNotifyEvent(GtkWidget *aWidget, GdkEventCrossing *aEvent)
 void
 nsWindow::OnLeaveNotifyEvent(GtkWidget *aWidget, GdkEventCrossing *aEvent)
 {
-    nsMouseEvent event(NS_MOUSE_EXIT, this);
+    nsMouseEvent event(PR_TRUE, NS_MOUSE_EXIT, this);
 
     event.point.x = nscoord(aEvent->x);
     event.point.y = nscoord(aEvent->y);
@@ -1331,7 +1331,7 @@ nsWindow::OnMotionNotifyEvent(GtkWidget *aWidget, GdkEventMotion *aEvent)
         gPluginFocusWindow->LoseNonXEmbedPluginFocus();
     }
 
-    nsMouseEvent event(NS_MOUSE_MOVE, this);
+    nsMouseEvent event(PR_TRUE, NS_MOUSE_MOVE, this);
 
     if (synthEvent) {
         event.point.x = nscoord(xevent.xmotion.x);
@@ -1409,14 +1409,14 @@ nsWindow::OnButtonPressEvent(GtkWidget *aWidget, GdkEventButton *aEvent)
 
     nsCOMPtr<nsIWidget> kungFuDeathGrip = this;
 
-    nsMouseEvent event(eventType, this);
+    nsMouseEvent event(PR_TRUE, eventType, this);
     InitButtonEvent(event, aEvent);
 
     DispatchEvent(&event, status);
 
     // right menu click on linux should also pop up a context menu
     if (eventType == NS_MOUSE_RIGHT_BUTTON_DOWN) {
-        nsMouseEvent contextMenuEvent(NS_CONTEXTMENU, this);
+        nsMouseEvent contextMenuEvent(PR_TRUE, NS_CONTEXTMENU, this);
         InitButtonEvent(contextMenuEvent, aEvent);
         DispatchEvent(&contextMenuEvent, status);
     }
@@ -1445,7 +1445,7 @@ nsWindow::OnButtonReleaseEvent(GtkWidget *aWidget, GdkEventButton *aEvent)
         break;
     }
 
-    nsMouseEvent  event(eventType, this);
+    nsMouseEvent  event(PR_TRUE, eventType, this);
     InitButtonEvent(event, aEvent);
 
     nsEventStatus status;
@@ -1582,12 +1582,12 @@ nsWindow::OnKeyPressEvent(GtkWidget *aWidget, GdkEventKey *aEvent)
         mInKeyRepeat = PR_TRUE;
 
         // send the key down event
-        nsKeyEvent downEvent(NS_KEY_DOWN, this);
+        nsKeyEvent downEvent(PR_TRUE, NS_KEY_DOWN, this);
         InitKeyEvent(downEvent, aEvent);
         DispatchEvent(&downEvent, status);
     }
 
-    nsKeyEvent event(NS_KEY_PRESS, this);
+    nsKeyEvent event(PR_TRUE, NS_KEY_PRESS, this);
     InitKeyEvent(event, aEvent);
     event.charCode = nsConvertCharCodeToUnicode(aEvent);
     if (event.charCode) {
@@ -1615,7 +1615,7 @@ nsWindow::OnKeyPressEvent(GtkWidget *aWidget, GdkEventKey *aEvent)
     // before we dispatch a key, check if it's the context menu key.
     // If so, send a context menu key event instead.
     if (is_context_menu_key(event)) {
-        nsMouseEvent contextMenuEvent;
+        nsMouseEvent contextMenuEvent(PR_TRUE, 0, nsnull);
         key_event_to_context_menu_event(&event, &contextMenuEvent);
         DispatchEvent(&contextMenuEvent, status);
     }
@@ -1660,7 +1660,7 @@ nsWindow::OnKeyReleaseEvent(GtkWidget *aWidget, GdkEventKey *aEvent)
         return TRUE;
     }
 
-    nsKeyEvent event(NS_KEY_UP, this);
+    nsKeyEvent event(PR_TRUE, NS_KEY_UP, this);
     InitKeyEvent(event, aEvent);
 
     DispatchEvent(&event, status);
@@ -1677,7 +1677,7 @@ nsWindow::OnKeyReleaseEvent(GtkWidget *aWidget, GdkEventKey *aEvent)
 void
 nsWindow::OnScrollEvent(GtkWidget *aWidget, GdkEventScroll *aEvent)
 {
-    nsMouseScrollEvent event(NS_MOUSE_SCROLL, this);
+    nsMouseScrollEvent event(PR_TRUE, NS_MOUSE_SCROLL, this);
     InitMouseScrollEvent(event, aEvent);
 
     // check to see if we should rollup
@@ -1713,7 +1713,7 @@ nsWindow::OnWindowStateEvent(GtkWidget *aWidget, GdkEventWindowState *aEvent)
     LOG(("nsWindow::OnWindowStateEvent [%p] changed %d new_window_state %d\n",
          (void *)this, aEvent->changed_mask, aEvent->new_window_state));
 
-    nsSizeModeEvent event(NS_SIZEMODE, this);
+    nsSizeModeEvent event(PR_TRUE, NS_SIZEMODE, this);
 
     // We don't care about anything but changes in the maximized/icon
     // states
@@ -1802,7 +1802,7 @@ nsWindow::OnDragMotionEvent(GtkWidget *aWidget,
     // notify the drag service that we are starting a drag motion.
     dragSessionGTK->TargetStartDragMotion();
 
-    nsMouseEvent event(NS_DRAGDROP_OVER, innerMostWidget);
+    nsMouseEvent event(PR_TRUE, NS_DRAGDROP_OVER, innerMostWidget);
 
     InitDragEvent(event);
 
@@ -1915,7 +1915,7 @@ nsWindow::OnDragDropEvent(GtkWidget *aWidget,
 
     innerMostWidget->AddRef();
 
-    nsMouseEvent event(NS_DRAGDROP_OVER, innerMostWidget);
+    nsMouseEvent event(PR_TRUE, NS_DRAGDROP_OVER, innerMostWidget);
 
     InitDragEvent(event);
 
@@ -1984,7 +1984,7 @@ nsWindow::OnDragLeave(void)
 {
     LOG(("nsWindow::OnDragLeave(%p)\n", this));
 
-    nsMouseEvent event(NS_DRAGDROP_EXIT, this);
+    nsMouseEvent event(PR_TRUE, NS_DRAGDROP_EXIT, this);
 
     AddRef();
 
@@ -2018,8 +2018,8 @@ void
 nsWindow::OnDragEnter(nscoord aX, nscoord aY)
 {
     LOG(("nsWindow::OnDragEnter(%p)\n", this));
-    
-    nsMouseEvent event(NS_DRAGDROP_ENTER, this);
+
+    nsMouseEvent event(PR_TRUE, NS_DRAGDROP_ENTER, this);
 
     event.point.x = aX;
     event.point.y = aY;
@@ -3860,7 +3860,7 @@ PRBool
 nsWindow::DispatchAccessibleEvent(nsIAccessible** aAccessible)
 {
     PRBool result = PR_FALSE;
-    nsAccessibleEvent event(NS_GETACCESSIBLE, this);
+    nsAccessibleEvent event(PR_TRUE, NS_GETACCESSIBLE, this);
 
     *aAccessible = nsnull;
 
@@ -3976,7 +3976,7 @@ nsWindow::IMEComposeStart(void)
 
     mComposingText = PR_TRUE;
 
-    nsCompositionEvent compEvent(NS_COMPOSITION_START, this);
+    nsCompositionEvent compEvent(PR_TRUE, NS_COMPOSITION_START, this);
 
     nsEventStatus status;
     DispatchEvent(&compEvent, status);
@@ -3993,7 +3993,7 @@ nsWindow::IMEComposeText (const PRUnichar *aText,
         IMEComposeStart();
 
     LOGIM(("IMEComposeText\n"));
-    nsTextEvent textEvent(NS_TEXT_TEXT, this);
+    nsTextEvent textEvent(PR_TRUE, NS_TEXT_TEXT, this);
 
     if (aLen != 0) {
         textEvent.theText = (PRUnichar*)aText;
@@ -4025,7 +4025,7 @@ nsWindow::IMEComposeEnd(void)
 
     mComposingText = PR_FALSE;
 
-    nsCompositionEvent compEvent(NS_COMPOSITION_END, this);
+    nsCompositionEvent compEvent(PR_TRUE, NS_COMPOSITION_END, this);
 
     nsEventStatus status;
     DispatchEvent(&compEvent, status);
@@ -4271,7 +4271,7 @@ IM_set_text_range(const PRInt32 aLen,
         // Get the range of the current attribute(s)
         pango_attr_iterator_range(aFeedbackIterator, &start, &end);
 
-        PRUint32 feedbackType;
+        PRUint32 feedbackType = 0;
         // XIMReverse | XIMUnderline
         if (aPangoAttrUnderline && aPangoAttrReverse) {
             feedbackType = NS_TEXTRANGE_SELECTEDCONVERTEDTEXT;

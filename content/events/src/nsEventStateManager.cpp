@@ -504,7 +504,7 @@ nsEventStateManager::PreHandleEvent(nsIPresContext* aPresContext,
             // Fire the blur event on the previously focused document.
 
             nsEventStatus blurstatus = nsEventStatus_eIgnore;
-            nsEvent blurevent(NS_BLUR_CONTENT);
+            nsEvent blurevent(PR_TRUE, NS_BLUR_CONTENT);
 
             gLastFocusedDocument->HandleDOMEvent(gLastFocusedPresContext,
                                                  &blurevent,
@@ -556,10 +556,9 @@ nsEventStateManager::PreHandleEvent(nsIPresContext* aPresContext,
         // Now we should fire the focus event.  We fire it on the document,
         // then the content node, then the window.
 
-        nsEventStatus status = nsEventStatus_eIgnore;
-        nsEvent focusevent(NS_FOCUS_CONTENT);
+        nsCOMPtr<nsIScriptGlobalObject> globalObject =
+          mDocument->GetScriptGlobalObject();
 
-        nsCOMPtr<nsIScriptGlobalObject> globalObject = mDocument->GetScriptGlobalObject();
         if (globalObject) {
           // We don't want there to be a focused content node while we're
           // dispatching the focus event.
@@ -567,6 +566,9 @@ nsEventStateManager::PreHandleEvent(nsIPresContext* aPresContext,
           nsCOMPtr<nsIContent> currentFocus = mCurrentFocus;
           // "leak" this reference, but we take it back later
           SetFocusedContent(nsnull);
+
+          nsEventStatus status = nsEventStatus_eIgnore;
+          nsEvent focusevent(PR_TRUE, NS_FOCUS_CONTENT);
 
           if (gLastFocusedDocument != mDocument) {
             mDocument->HandleDOMEvent(aPresContext, &focusevent, nsnull,
@@ -655,7 +657,7 @@ nsEventStateManager::PreHandleEvent(nsIPresContext* aPresContext,
         // and window.
 
         nsEventStatus status = nsEventStatus_eIgnore;
-        nsEvent event(NS_BLUR_CONTENT);
+        nsEvent event(PR_TRUE, NS_BLUR_CONTENT);
 
         if (gLastFocusedDocument && gLastFocusedPresContext) {
           if (gLastFocusedContent) {
@@ -814,7 +816,7 @@ nsEventStateManager::PreHandleEvent(nsIPresContext* aPresContext,
       if (gLastFocusedDocument && gLastFocusedDocument == mDocument) {
 
         nsEventStatus status = nsEventStatus_eIgnore;
-        nsEvent event(NS_BLUR_CONTENT);
+        nsEvent event(PR_TRUE, NS_BLUR_CONTENT);
 
         if (gLastFocusedContent) {
           nsIPresShell *shell = gLastFocusedDocument->GetShellAt(0);
@@ -984,12 +986,10 @@ nsEventStateManager::HandleAccessKey(nsIPresContext* aPresContext,
 
         if (activate) {
           // B) Click on it if the users prefs indicate to do so.
-          nsEventStatus status = nsEventStatus_eIgnore;
-          nsMouseEvent event(NS_MOUSE_LEFT_CLICK);
 
           // Propagate trusted state to the new event.
-          event.internalAppFlags |=
-            aEvent->internalAppFlags & NS_APP_EVENT_FLAG_TRUSTED;
+          nsEventStatus status = nsEventStatus_eIgnore;
+          nsMouseEvent event(NS_IS_TRUSTED_EVENT(aEvent), NS_MOUSE_LEFT_CLICK, nsnull);
 
           content->HandleDOMEvent(mPresContext, &event, nsnull, NS_EVENT_FLAG_INIT, &status);
         }
@@ -1095,7 +1095,7 @@ void
 nsEventStateManager::CreateClickHoldTimer(nsIPresContext* inPresContext,
                                           nsGUIEvent* inMouseDownEvent)
 {
-  if (!(inMouseDownEvent->internalAppFlags & NS_APP_EVENT_FLAG_TRUSTED))
+  if (!NS_IS_TRUSTED_EVENT(inMouseDownEvent))
     return;
 
   // just to be anal (er, safe)
@@ -1201,7 +1201,7 @@ nsEventStateManager::FireContextClick()
 #endif
 
   nsEventStatus status = nsEventStatus_eIgnore;
-  nsMouseEvent event(NS_CONTEXTMENU, mEventDownWidget);
+  nsMouseEvent event(PR_TRUE, NS_CONTEXTMENU, mEventDownWidget);
   event.clickCount = 1;
   event.point = mEventPoint;
   event.refPoint = mEventRefPoint;
@@ -1444,7 +1444,8 @@ nsEventStateManager::GenerateDragGesture(nsIPresContext* aPresContext,
 
       // get the widget from the target frame
       nsEventStatus status = nsEventStatus_eIgnore;
-      nsMouseEvent event(NS_DRAGDROP_GESTURE, mGestureDownFrame->GetWindow());
+      nsMouseEvent event(NS_IS_TRUSTED_EVENT(aEvent), NS_DRAGDROP_GESTURE,
+                         mGestureDownFrame->GetWindow());
       event.point = mGestureDownPoint;
       event.refPoint = mGestureDownRefPoint;
       // ideally, we should get the modifiers from the original event too, 
@@ -1622,6 +1623,13 @@ nsEventStateManager::DoScrollText(nsIPresContext* aPresContext,
                                aEvent->isShift,    aEvent->isMeta,
                                0, nsnull);
     PRBool allowDefault;
+
+    nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(mouseEvent));
+
+    if (privateEvent && NS_IS_TRUSTED_EVENT(aEvent)) {
+      privateEvent->SetTrusted(PR_TRUE);
+    }
+
     nsCOMPtr<nsIDOMEventTarget> target(do_QueryInterface(targetContent));
     if (target) {
       target->DispatchEvent(event, &allowDefault);
@@ -1637,7 +1645,8 @@ nsEventStateManager::DoScrollText(nsIPresContext* aPresContext,
   // Create a mouseout event that we fire to the content before
   // scrolling, to allow tooltips to disappear, etc.
 
-  nsMouseEvent mouseOutEvent(NS_MOUSE_EXIT, aEvent->widget);
+  nsMouseEvent mouseOutEvent(NS_IS_TRUSTED_EVENT(aEvent),
+                             NS_MOUSE_EXIT, aEvent->widget);
   mouseOutEvent.internalAppFlags |=
     aEvent->internalAppFlags & NS_APP_EVENT_FLAG_TRUSTED;
 
@@ -2547,7 +2556,7 @@ nsEventStateManager::DispatchMouseEvent(nsIPresContext* aPresContext,
                                         nsIContent* aRelatedContent)
 {
   nsEventStatus status = nsEventStatus_eIgnore;
-  nsMouseEvent event(aMessage, aEvent->widget);
+  nsMouseEvent event(NS_IS_TRUSTED_EVENT(aEvent), aMessage, aEvent->widget);
   event.point = aEvent->point;
   event.refPoint = aEvent->refPoint;
   event.isShift = ((nsMouseEvent*)aEvent)->isShift;
@@ -2555,8 +2564,6 @@ nsEventStateManager::DispatchMouseEvent(nsIPresContext* aPresContext,
   event.isAlt = ((nsMouseEvent*)aEvent)->isAlt;
   event.isMeta = ((nsMouseEvent*)aEvent)->isMeta;
   event.nativeMsg = ((nsMouseEvent*)aEvent)->nativeMsg;
-  event.internalAppFlags |=
-    aEvent->internalAppFlags & NS_APP_EVENT_FLAG_TRUSTED;
 
   mCurrentTargetContent = aTargetContent;
   mCurrentRelatedContent = aRelatedContent;
@@ -2608,7 +2615,7 @@ nsEventStateManager::MaybeDispatchMouseEventToIframe(
         nsIPresShell *parentShell = parentDoc->GetShellAt(0);
         if (parentShell) {
           nsEventStatus status = nsEventStatus_eIgnore;
-          nsMouseEvent event(aMessage, aEvent->widget);
+          nsMouseEvent event(NS_IS_TRUSTED_EVENT(aEvent), aMessage, aEvent->widget);
           event.point = aEvent->point;
           event.refPoint = aEvent->refPoint;
           event.isShift = ((nsMouseEvent*)aEvent)->isShift;
@@ -2764,15 +2771,14 @@ nsEventStateManager::GenerateDragDropEnterExit(nsIPresContext* aPresContext,
         if ( mLastDragOverFrame ) {
           //fire drag exit
           nsEventStatus status = nsEventStatus_eIgnore;
-          nsMouseEvent event(NS_DRAGDROP_EXIT_SYNTH, aEvent->widget);
+          nsMouseEvent event(NS_IS_TRUSTED_EVENT(aEvent),
+                             NS_DRAGDROP_EXIT_SYNTH, aEvent->widget);
           event.point = aEvent->point;
           event.refPoint = aEvent->refPoint;
           event.isShift = ((nsMouseEvent*)aEvent)->isShift;
           event.isControl = ((nsMouseEvent*)aEvent)->isControl;
           event.isAlt = ((nsMouseEvent*)aEvent)->isAlt;
           event.isMeta = ((nsMouseEvent*)aEvent)->isMeta;
-          event.internalAppFlags |=
-            aEvent->internalAppFlags & NS_APP_EVENT_FLAG_TRUSTED;
 
           //The frame has change but the content may not have.  Check before dispatching to content
           mLastDragOverFrame->GetContentForEvent(aPresContext, aEvent, getter_AddRefs(lastContent));
@@ -2799,15 +2805,13 @@ nsEventStateManager::GenerateDragDropEnterExit(nsIPresContext* aPresContext,
 
         //fire drag enter
         nsEventStatus status = nsEventStatus_eIgnore;
-        nsMouseEvent event(NS_DRAGDROP_ENTER, aEvent->widget);
+        nsMouseEvent event(NS_IS_TRUSTED_EVENT(aEvent), NS_DRAGDROP_ENTER, aEvent->widget);
         event.point = aEvent->point;
         event.refPoint = aEvent->refPoint;
         event.isShift = ((nsMouseEvent*)aEvent)->isShift;
         event.isControl = ((nsMouseEvent*)aEvent)->isControl;
         event.isAlt = ((nsMouseEvent*)aEvent)->isAlt;
         event.isMeta = ((nsMouseEvent*)aEvent)->isMeta;
-        event.internalAppFlags |=
-          aEvent->internalAppFlags & NS_APP_EVENT_FLAG_TRUSTED;
 
         mCurrentTargetContent = targetContent;
         mCurrentRelatedContent = lastContent;
@@ -2842,15 +2846,13 @@ nsEventStateManager::GenerateDragDropEnterExit(nsIPresContext* aPresContext,
 
         // fire mouseout
         nsEventStatus status = nsEventStatus_eIgnore;
-        nsMouseEvent event(NS_DRAGDROP_EXIT_SYNTH, aEvent->widget);
+        nsMouseEvent event(NS_IS_TRUSTED_EVENT(aEvent), NS_DRAGDROP_EXIT_SYNTH, aEvent->widget);
         event.point = aEvent->point;
         event.refPoint = aEvent->refPoint;
         event.isShift = ((nsMouseEvent*)aEvent)->isShift;
         event.isControl = ((nsMouseEvent*)aEvent)->isControl;
         event.isAlt = ((nsMouseEvent*)aEvent)->isAlt;
         event.isMeta = ((nsMouseEvent*)aEvent)->isMeta;
-        event.internalAppFlags |=
-          aEvent->internalAppFlags & NS_APP_EVENT_FLAG_TRUSTED;
 
         // dispatch to content via DOM
         nsCOMPtr<nsIContent> lastContent;
@@ -2968,7 +2970,7 @@ nsEventStateManager::CheckForAndDispatchClick(nsIPresContext* aPresContext,
       break;
     }
 
-    nsMouseEvent event(eventMsg, aEvent->widget);
+    nsMouseEvent event(NS_IS_TRUSTED_EVENT(aEvent), eventMsg, aEvent->widget);
     event.point = aEvent->point;
     event.refPoint = aEvent->refPoint;
     event.clickCount = aEvent->clickCount;
@@ -2976,8 +2978,6 @@ nsEventStateManager::CheckForAndDispatchClick(nsIPresContext* aPresContext,
     event.isControl = aEvent->isControl;
     event.isAlt = aEvent->isAlt;
     event.isMeta = aEvent->isMeta;
-    event.internalAppFlags |=
-      aEvent->internalAppFlags & NS_APP_EVENT_FLAG_TRUSTED;
 
     nsCOMPtr<nsIPresShell> presShell = mPresContext->GetPresShell();
     if (presShell) {
@@ -2999,8 +2999,8 @@ nsEventStateManager::CheckForAndDispatchClick(nsIPresContext* aPresContext,
           eventMsg = NS_MOUSE_RIGHT_DOUBLECLICK;
           break;
         }
-        
-        nsMouseEvent event2(eventMsg, aEvent->widget);
+
+        nsMouseEvent event2(NS_IS_TRUSTED_EVENT(aEvent), eventMsg, aEvent->widget);
         event2.point = aEvent->point;
         event2.refPoint = aEvent->refPoint;
         event2.clickCount = aEvent->clickCount;
@@ -3008,10 +3008,9 @@ nsEventStateManager::CheckForAndDispatchClick(nsIPresContext* aPresContext,
         event2.isControl = aEvent->isControl;
         event2.isAlt = aEvent->isAlt;
         event2.isMeta = aEvent->isMeta;
-        event2.internalAppFlags |=
-          aEvent->internalAppFlags & NS_APP_EVENT_FLAG_TRUSTED;
 
-        ret = presShell->HandleEventWithTarget(&event2, mCurrentTarget, mouseContent, flags, aStatus);
+        ret = presShell->HandleEventWithTarget(&event2, mCurrentTarget,
+                                               mouseContent, flags, aStatus);
       }
     }
   }
@@ -4229,12 +4228,13 @@ nsEventStateManager::SendFocusBlur(nsIPresContext* aPresContext,
 
           //fire blur
           nsEventStatus status = nsEventStatus_eIgnore;
-          nsEvent event(NS_BLUR_CONTENT);
+          nsEvent event(PR_TRUE, NS_BLUR_CONTENT);
           shepherd.SetCurrentEvent(&event);
 
           EnsureDocument(presShell);
-          
-          // Make sure we're not switching command dispatchers, if so, surpress the blurred one
+
+          // Make sure we're not switching command dispatchers, if so,
+          // surpress the blurred one
           if(gLastFocusedDocument && mDocument) {
             nsCOMPtr<nsIFocusController> newFocusController;
             nsCOMPtr<nsIFocusController> oldFocusController;
@@ -4285,10 +4285,11 @@ nsEventStateManager::SendFocusBlur(nsIPresContext* aPresContext,
 
     if (gLastFocusedDocument && (gLastFocusedDocument != mDocument) && globalObject) {  
       nsEventStatus status = nsEventStatus_eIgnore;
-      nsEvent event(NS_BLUR_CONTENT);
+      nsEvent event(PR_TRUE, NS_BLUR_CONTENT);
       shepherd.SetCurrentEvent(&event);
 
-      // Make sure we're not switching command dispatchers, if so, surpress the blurred one
+      // Make sure we're not switching command dispatchers, if so,
+      // surpress the blurred one
       if (mDocument) {
         nsCOMPtr<nsIFocusController> newFocusController;
         nsCOMPtr<nsIFocusController> oldFocusController;
@@ -4370,7 +4371,7 @@ nsEventStateManager::SendFocusBlur(nsIPresContext* aPresContext,
 
     //fire focus
     nsEventStatus status = nsEventStatus_eIgnore;
-    nsEvent event(NS_FOCUS_CONTENT);
+    nsEvent event(PR_TRUE, NS_FOCUS_CONTENT);
     shepherd.SetCurrentEvent(&event);
 
     if (nsnull != mPresContext) {
@@ -4392,7 +4393,7 @@ nsEventStateManager::SendFocusBlur(nsIPresContext* aPresContext,
     //fire focus on document even if the content isn't focusable (ie. text)
     //see bugzilla bug 93521
     nsEventStatus status = nsEventStatus_eIgnore;
-    nsEvent event(NS_FOCUS_CONTENT);
+    nsEvent event(PR_TRUE, NS_FOCUS_CONTENT);
     shepherd.SetCurrentEvent(&event);
 
     if (nsnull != mPresContext && mDocument) {

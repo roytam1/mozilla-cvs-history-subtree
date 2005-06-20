@@ -906,6 +906,7 @@ nsSelectionIterator::IsDone()
 ////////////BEGIN nsSelection methods
 
 nsSelection::nsSelection()
+  : mDelayedMouseEvent(PR_FALSE, 0, nsnull)
 {
   PRInt32 i;
   for (i = 0;i<nsISelectionController::NUM_SELECTIONTYPES;i++){
@@ -2741,7 +2742,7 @@ printf(" * TakeFocus - moving into new cell\n");
 #endif
         nsCOMPtr<nsIDOMNode> parent;
         nsCOMPtr<nsIContent> parentContent;
-        nsMouseEvent event;
+        nsMouseEvent event(PR_FALSE, 0, nsnull);
         nsresult result;
 
         // Start selecting in the cell we were in before

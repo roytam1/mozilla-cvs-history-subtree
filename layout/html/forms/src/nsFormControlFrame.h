@@ -162,11 +162,6 @@ public:
   virtual void EnterPressed(nsIPresContext* aPresContext) {} 
 
   /**
-    * Respond to a mouse click (e.g. mouse enter, mouse down, mouse up)
-    */
-  virtual void MouseClicked(nsIPresContext* aPresContext) {}
-
-  /**
     * Respond to a control change (e.g. combo box close-up)
     */
   virtual void ControlChanged(nsIPresContext* aPresContext) {}

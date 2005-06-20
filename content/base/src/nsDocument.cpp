@@ -628,6 +628,7 @@ NS_INTERFACE_MAP_BEGIN(nsDocument)
   NS_INTERFACE_MAP_ENTRY(nsIDOMEventReceiver)
   NS_INTERFACE_MAP_ENTRY(nsIDOMEventTarget)
   NS_INTERFACE_MAP_ENTRY(nsIDOM3EventTarget)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMNSEventTarget)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNode)
   NS_INTERFACE_MAP_ENTRY(nsIDOM3Node)
   NS_INTERFACE_MAP_ENTRY(nsIDOM3Document)
@@ -1810,8 +1811,12 @@ nsDocument::EndLoad()
   nsCOMPtr<nsIDOMEvent> event;
   CreateEvent(NS_LITERAL_STRING("Events"), getter_AddRefs(event));
 
-  if (event) {
+  nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(event));
+
+  if (privateEvent) {
     event->InitEvent(NS_LITERAL_STRING("DOMContentLoaded"), PR_TRUE, PR_TRUE);
+    privateEvent->SetTrusted(PR_TRUE);
+
     PRBool noDefault;
     DispatchEvent(event, &noDefault);
   }
@@ -1857,8 +1862,6 @@ nsDocument::EndLoad()
         break;
       }
 
-      nsCOMPtr<nsIPrivateDOMEvent> private_event;
-
       nsCOMPtr<nsIDOMDocumentEvent> document_event =
         do_QueryInterface(ancestor_doc);
 
@@ -1866,14 +1869,15 @@ nsDocument::EndLoad()
         document_event->CreateEvent(NS_LITERAL_STRING("Events"),
                                     getter_AddRefs(event));
 
-        private_event = do_QueryInterface(event);
+        privateEvent = do_QueryInterface(event);
       }
 
-      if (event && private_event) {
+      if (event && privateEvent) {
         event->InitEvent(NS_LITERAL_STRING("DOMFrameContentLoaded"), PR_TRUE,
                          PR_TRUE);
 
-        private_event->SetTarget(target_frame);
+        privateEvent->SetTarget(target_frame);
+        privateEvent->SetTrusted(PR_TRUE);
 
         // To dispatch this event we must manually call
         // HandleDOMEvent() on the ancestor document since the target
@@ -1882,7 +1886,7 @@ nsDocument::EndLoad()
         // dispatching code.
 
         nsEvent* innerEvent;
-        private_event->GetInternalNSEvent(&innerEvent);
+        privateEvent->GetInternalNSEvent(&innerEvent);
         if (innerEvent) {
           nsEventStatus status = nsEventStatus_eIgnore;
 
@@ -3814,7 +3818,8 @@ nsDocument::AddEventListener(const nsAString& aType,
                              nsIDOMEventListener* aListener,
                              PRBool aUseCapture)
 {
-  return AddGroupedEventListener(aType, aListener, aUseCapture, nsnull);
+  return AddEventListener(aType, aListener, aUseCapture,
+                          !nsContentUtils::IsChromeDoc(this));
 }
 
 nsresult
@@ -3891,6 +3896,24 @@ NS_IMETHODIMP
 nsDocument::IsRegisteredHere(const nsAString & type, PRBool *_retval)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsDocument::AddEventListener(const nsAString& aType,
+                             nsIDOMEventListener *aListener,
+                             PRBool aUseCapture, PRBool aWantsUntrusted)
+{
+  nsCOMPtr<nsIEventListenerManager> manager;
+  nsresult rv = GetListenerManager(getter_AddRefs(manager));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  PRInt32 flags = aUseCapture ? NS_EVENT_FLAG_CAPTURE : NS_EVENT_FLAG_BUBBLE;
+
+  if (aWantsUntrusted) {
+    flags |= NS_PRIV_EVENT_UNTRUSTED_PERMITTED;
+  }
+
+  return manager->AddEventListenerByType(aListener, aType, flags, nsnull);
 }
 
 NS_IMETHODIMP

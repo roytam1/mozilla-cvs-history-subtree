@@ -43,27 +43,24 @@
 
 #define NS_MUTATION_EVENT     20
 
-struct nsMutationEvent : public nsEvent
-{             
-  nsMutationEvent(PRUint32 msg = 0, PRUint8 structType = NS_MUTATION_EVENT)
-    : nsEvent(msg, structType),
+class nsMutationEvent : public nsEvent
+{
+public:
+  nsMutationEvent(PRBool isTrusted, PRUint32 msg)
+    : nsEvent(isTrusted, msg, NS_MUTATION_EVENT),
       mAttrChange(0)
   {
   }
 
-  nsMutationEvent(PRUint32 msg,
-                  nsIDOMEventTarget *target,
-                  PRUint8 structType = NS_MUTATION_EVENT)
-    : nsEvent(msg, structType),
+  nsMutationEvent(PRBool isTrusted, PRUint32 msg, nsIDOMEventTarget *target)
+    : nsEvent(isTrusted, msg, NS_MUTATION_EVENT),
       mTarget(target),
       mAttrChange(0)
   {
   }
 
-  nsMutationEvent(PRUint32 msg,
-                  nsIContent *target,
-                  PRUint8 structType = NS_MUTATION_EVENT)
-    : nsEvent(msg, structType),
+  nsMutationEvent(PRBool isTrusted, PRUint32 msg, nsIContent *target)
+    : nsEvent(isTrusted, msg, NS_MUTATION_EVENT),
       mTarget(do_QueryInterface(target)),
       mAttrChange(0)
   {

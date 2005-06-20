@@ -150,7 +150,7 @@ HandleScrollEvent ( EventMouseWheelAxis inAxis, PRBool inByLine, PRInt32 inDelta
   if (!inWidget)
     return nsEventStatus_eIgnore;
 
-  nsMouseScrollEvent scrollEvent(NS_MOUSE_SCROLL, inWidget);
+  nsMouseScrollEvent scrollEvent(PR_TRUE, NS_MOUSE_SCROLL, inWidget);
   
   scrollEvent.scrollFlags = 
     (inAxis == kEventMouseWheelAxisX) ? nsMouseScrollEvent::kIsHorizontal : nsMouseScrollEvent::kIsVertical;
@@ -227,7 +227,7 @@ void nsMacEventDispatchHandler::DispatchGuiEvent(nsWindow *aWidget, PRUint32 aEv
 	if (!aWidget)
 		return;
 
-	nsGUIEvent	guiEvent(aEventType, aWidget);
+	nsGUIEvent guiEvent(PR_TRUE, aEventType, aWidget);
 	guiEvent.time = PR_IntervalNow();
 	aWidget->DispatchWindowEvent(guiEvent);
 }
@@ -241,7 +241,7 @@ void nsMacEventDispatchHandler::DispatchSizeModeEvent(nsWindow *aWidget, nsSizeM
 	if (!aWidget)
 		return;
 
-	nsSizeModeEvent	event(NS_SIZEMODE, aWidget);
+	nsSizeModeEvent event(PR_TRUE, NS_SIZEMODE, aWidget);
 	event.time = PR_IntervalNow();
 	event.mSizeMode = aMode;
 	aWidget->DispatchWindowEvent(event);
@@ -573,7 +573,7 @@ PRBool nsMacEventHandler::HandleMenuCommand(
 		focusedWidget = mTopLevelWidget;
 
 	// nsEvent
-	nsMenuEvent menuEvent(NS_MENU_SELECTED, focusedWidget);
+	nsMenuEvent menuEvent(PR_TRUE, NS_MENU_SELECTED, focusedWidget);
 	menuEvent.point.x		= aOSEvent.where.h;
 	menuEvent.point.y		= aOSEvent.where.v;
 	menuEvent.time			= PR_IntervalNow();
@@ -668,7 +668,7 @@ PRBool nsMacEventHandler::DragEvent ( unsigned int aMessage, Point aMouseGlobal,
 	// update the tracking of which widget the mouse is now over.
 	gEventDispatchHandler.SetWidgetPointed(widgetHit);
 	
-	nsMouseEvent geckoEvent(aMessage, widgetHit);
+	nsMouseEvent geckoEvent(PR_TRUE, aMessage, widgetHit);
 
 	// nsEvent
 	geckoEvent.point = widgetHitPoint;
@@ -1145,7 +1145,7 @@ PRBool nsMacEventHandler::HandleKeyEvent(EventRecord& aOSEvent)
 	{
 		case keyUp:
       {
-        nsKeyEvent keyUpEvent(NS_KEY_UP);
+        nsKeyEvent keyUpEvent(PR_TRUE, NS_KEY_UP, nsnull);
         InitializeKeyEvent(keyUpEvent, aOSEvent, focusedWidget, NS_KEY_UP);
         result = focusedWidget->DispatchWindowEvent(keyUpEvent);
         break;
@@ -1153,7 +1153,8 @@ PRBool nsMacEventHandler::HandleKeyEvent(EventRecord& aOSEvent)
 
     case keyDown:	
       {
-        nsKeyEvent keyDownEvent(NS_KEY_DOWN), keyPressEvent(NS_KEY_PRESS);
+        nsKeyEvent keyDownEvent(PR_TRUE, NS_KEY_DOWN, nsnull);
+        nsKeyEvent keyPressEvent(PR_TRUE, NS_KEY_PRESS, nsnull);
         InitializeKeyEvent(keyDownEvent, aOSEvent, focusedWidget, NS_KEY_DOWN);
         result = focusedWidget->DispatchWindowEvent(keyDownEvent);
 
@@ -1171,7 +1172,7 @@ PRBool nsMacEventHandler::HandleKeyEvent(EventRecord& aOSEvent)
         // before we dispatch this key, check if it's the contextmenu key.
         // If so, send a context menu event instead.
         if ( IsContextMenuKey(keyPressEvent) ) {
-          nsMouseEvent contextMenuEvent;
+          nsMouseEvent contextMenuEvent(PR_TRUE, 0, nsnull);
           ConvertKeyEventToContextMenuEvent(&keyPressEvent, &contextMenuEvent);
           result = focusedWidget->DispatchWindowEvent(contextMenuEvent);
           NS_ASSERTION(NS_SUCCEEDED(result), "cannot DispatchWindowEvent");
@@ -1185,7 +1186,7 @@ PRBool nsMacEventHandler::HandleKeyEvent(EventRecord& aOSEvent)
 
     case autoKey:
       {
-        nsKeyEvent keyPressEvent(NS_KEY_PRESS);
+        nsKeyEvent keyPressEvent(PR_TRUE, NS_KEY_PRESS, nsnull);
         InitializeKeyEvent(keyPressEvent, aOSEvent, focusedWidget, NS_KEY_PRESS);
         result = focusedWidget->DispatchWindowEvent(keyPressEvent);
         break;
@@ -1251,7 +1252,7 @@ PRBool nsMacEventHandler::HandleUKeyEvent(const PRUnichar* text, long charCount,
   // simulate key down event if this isn't an autoKey event
   if (aOSEvent.what == keyDown)
   {
-    nsKeyEvent keyDownEvent(NS_KEY_DOWN);
+    nsKeyEvent keyDownEvent(PR_TRUE, NS_KEY_DOWN, nsnull);
     InitializeKeyEvent(keyDownEvent, aOSEvent, focusedWidget, NS_KEY_DOWN, &isCharacter, PR_FALSE);
     result = focusedWidget->DispatchWindowEvent(keyDownEvent);
     NS_ASSERTION(NS_SUCCEEDED(result), "cannot DispatchWindowEvent keydown");
@@ -1265,7 +1266,7 @@ PRBool nsMacEventHandler::HandleUKeyEvent(const PRUnichar* text, long charCount,
   }
 
   // simulate key press events
-  nsKeyEvent keyPressEvent(NS_KEY_PRESS);
+  nsKeyEvent keyPressEvent(PR_TRUE, NS_KEY_PRESS, nsnull);
   InitializeKeyEvent(keyPressEvent, aOSEvent, focusedWidget, NS_KEY_PRESS, &isCharacter, PR_FALSE);
 
   if (isCharacter) 
@@ -1299,7 +1300,7 @@ PRBool nsMacEventHandler::HandleUKeyEvent(const PRUnichar* text, long charCount,
       // before we dispatch a key, check if it's the context menu key.
       // If so, send a context menu event instead.
       if ( IsContextMenuKey(keyPressEvent) ) {
-        nsMouseEvent contextMenuEvent;
+        nsMouseEvent contextMenuEvent(PR_TRUE, 0, nsnull);
         ConvertKeyEventToContextMenuEvent(&keyPressEvent, &contextMenuEvent);
         result = focusedWidget->DispatchWindowEvent(contextMenuEvent);
         NS_ASSERTION(NS_SUCCEEDED(result), "cannot DispatchWindowEvent");
@@ -1575,7 +1576,7 @@ PRBool nsMacEventHandler::HandleMouseDownEvent(EventRecord&	aOSEvent)
       if ( ignoreClickInContent )
         break;
 						
-			nsMouseEvent mouseEvent;
+			nsMouseEvent mouseEvent(PR_TRUE, 0, nsnull);
 			PRUint32 mouseButton = NS_MOUSE_LEFT_BUTTON_DOWN;
 			if ( aOSEvent.modifiers & controlKey )
 			  mouseButton = NS_MOUSE_RIGHT_BUTTON_DOWN;
@@ -1614,8 +1615,8 @@ PRBool nsMacEventHandler::HandleMouseDownEvent(EventRecord&	aOSEvent)
 			{        
 				// set the activation and focus on the widget hit, if it accepts it
 				{
-					nsMouseEvent mouseActivateEvent;
-			        ConvertOSEventToMouseEvent(aOSEvent, mouseActivateEvent, NS_MOUSE_ACTIVATE);
+					nsMouseEvent mouseActivateEvent(PR_TRUE, 0, nsnull);
+          ConvertOSEventToMouseEvent(aOSEvent, mouseActivateEvent, NS_MOUSE_ACTIVATE);
 					widgetHit->DispatchMouseEvent(mouseActivateEvent);
 				}
 
@@ -1625,7 +1626,7 @@ PRBool nsMacEventHandler::HandleMouseDownEvent(EventRecord&	aOSEvent)
 				// if we're a control-click, send in an additional NS_CONTEXTMENU event
 				// after the mouse down.
 				if ( mouseButton == NS_MOUSE_RIGHT_BUTTON_DOWN ) {
-    			nsMouseEvent contextMenuEvent;
+    			nsMouseEvent contextMenuEvent(PR_TRUE, 0, nsnull);
     			ConvertOSEventToMouseEvent(aOSEvent, contextMenuEvent, NS_CONTEXTMENU);
     			contextMenuEvent.isControl = PR_FALSE;    			
 					widgetHit->DispatchMouseEvent(contextMenuEvent);
@@ -1667,7 +1668,7 @@ PRBool nsMacEventHandler::HandleMouseUpEvent(
 {
 	PRBool retVal = PR_FALSE;
 
-	nsMouseEvent mouseEvent;
+	nsMouseEvent mouseEvent(PR_TRUE, 0, nsnull);
 	ConvertOSEventToMouseEvent(aOSEvent, mouseEvent, NS_MOUSE_LEFT_BUTTON_UP);
 
 	nsWindow* widgetReleased = (nsWindow*)mouseEvent.widget;
@@ -1701,7 +1702,7 @@ PRBool nsMacEventHandler::HandleMouseMoveEvent( EventRecord& aOSEvent )
   
 	PRBool retVal = PR_FALSE;
 
-	nsMouseEvent mouseEvent;
+	nsMouseEvent mouseEvent(PR_TRUE, 0, nsnull);
 	ConvertOSEventToMouseEvent(aOSEvent, mouseEvent, NS_MOUSE_MOVE);
 
 	if (lastWidgetHit)
@@ -2477,7 +2478,8 @@ nsresult nsMacEventHandler::HandleUnicodeGetSelectedText(nsAString& outString)
   if (!focusedWidget)
     focusedWidget = mTopLevelWidget;
 
-  nsReconversionEvent reconversionEvent(NS_RECONVERSION_QUERY, focusedWidget);
+  nsReconversionEvent reconversionEvent(PR_TRUE, NS_RECONVERSION_QUERY,
+                                        focusedWidget);
   reconversionEvent.time = PR_IntervalNow();
 
   nsresult res = focusedWidget->DispatchWindowEvent(reconversionEvent);
@@ -2517,7 +2519,8 @@ nsresult nsMacEventHandler::HandleStartComposition(void)
 	//
 	// create the nsCompositionEvent
 	//
-	nsCompositionEvent		compositionEvent(NS_COMPOSITION_START, focusedWidget);
+	nsCompositionEvent compositionEvent(PR_TRUE, NS_COMPOSITION_START,
+                                      focusedWidget);
 	compositionEvent.time = PR_IntervalNow();
 
 	nsresult res = focusedWidget->DispatchWindowEvent(compositionEvent);
@@ -2554,7 +2557,8 @@ nsresult nsMacEventHandler::HandleEndComposition(void)
 	//
 	// create the nsCompositionEvent
 	//
-	nsCompositionEvent		compositionEvent(NS_COMPOSITION_END, focusedWidget);
+	nsCompositionEvent compositionEvent(PR_TRUE, NS_COMPOSITION_END,
+                                      focusedWidget);
 	compositionEvent.time = PR_IntervalNow();
 
 	return(focusedWidget->DispatchWindowEvent(compositionEvent));
@@ -2617,7 +2621,7 @@ nsresult nsMacEventHandler::HandleTextEvent(PRUint32 textRangeCount, nsTextRange
 	//
 	// create the nsTextEvent
 	//
-	nsTextEvent		textEvent(NS_TEXT_TEXT, focusedWidget);
+	nsTextEvent textEvent(PR_TRUE, NS_TEXT_TEXT, focusedWidget);
 	textEvent.time = PR_IntervalNow();
 	textEvent.theText = mIMECompositionStr->get();
 	textEvent.rangeCount = textRangeCount;

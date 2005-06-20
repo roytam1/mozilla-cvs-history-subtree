@@ -2063,13 +2063,6 @@ nsListControlFrame::GetFormControlType() const
 }
 
 
-//---------------------------------------------------------
-void
-nsListControlFrame::MouseClicked(nsIPresContext* aPresContext)
-{
-}
-
-
 NS_IMETHODIMP
 nsListControlFrame::OnContentReset()
 {
@@ -2472,7 +2465,7 @@ nsListControlFrame::FireOnChange()
 
   // Dispatch the NS_FORM_CHANGE event
   nsEventStatus status = nsEventStatus_eIgnore;
-  nsEvent event(NS_FORM_CHANGE);
+  nsEvent event(PR_TRUE, NS_FORM_CHANGE);
 
   nsIPresShell *presShell = mPresContext->GetPresShell();
   if (presShell) {
@@ -2863,6 +2856,10 @@ nsListControlFrame::FireMenuItemActiveEvent()
   if (manager &&
       NS_SUCCEEDED(manager->CreateEvent(mPresContext, nsnull, NS_LITERAL_STRING("Events"), getter_AddRefs(event)))) {
     event->InitEvent(NS_LITERAL_STRING("DOMMenuItemActive"), PR_TRUE, PR_TRUE);
+
+    nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(event));
+    privateEvent->SetTrusted(PR_TRUE);
+
     PRBool noDefault;
     mPresContext->EventStateManager()->DispatchNewEvent(mContent, event,
                                                         &noDefault);

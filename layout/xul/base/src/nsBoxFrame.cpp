@@ -104,6 +104,7 @@
 #include "nsIEventListenerManager.h"
 #include "nsIEventStateManager.h"
 #include "nsIDOMEvent.h"
+#include "nsIPrivateDOMEvent.h"
 
 // Needed for Print Preview
 #include "nsIDocument.h"
@@ -2634,6 +2635,10 @@ nsBoxFrame::FireDOMEvent(nsIPresContext *aPresContext, const nsAString& aDOMEven
         NS_SUCCEEDED(manager->CreateEvent(aPresContext, nsnull, NS_LITERAL_STRING("Events"), getter_AddRefs(event)))) {
       event->InitEvent(aDOMEventName, PR_TRUE, PR_TRUE);
       PRBool noDefault;
+
+      nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(event));
+      privateEvent->SetTrusted(PR_TRUE);
+
       aPresContext->EventStateManager()->DispatchNewEvent(mContent, event,
                                                           &noDefault);
     }

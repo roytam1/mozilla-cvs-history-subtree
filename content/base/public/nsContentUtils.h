@@ -75,6 +75,8 @@ public:
 
   static PRBool   IsCallerChrome();
 
+  static PRBool   IsChromeDoc(nsIDocument *aDocument);
+
   /*
    * Returns true if the nodes are both in the same document or
    * if neither is in a document.

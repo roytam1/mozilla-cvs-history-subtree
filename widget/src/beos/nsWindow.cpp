@@ -307,7 +307,7 @@ PRBool nsWindow::DispatchWindowEvent(nsGUIEvent* event)
 
 PRBool nsWindow::DispatchStandardEvent(PRUint32 aMsg)
 {
-	nsGUIEvent event(aMsg, this);
+	nsGUIEvent event(PR_TRUE, aMsg, this);
 	InitEvent(event);
 
 	PRBool result = DispatchWindowEvent(&event);
@@ -1810,7 +1810,7 @@ bool nsWindow::CallMethod(MethodInfo *info)
 				return false;
 			NS_ASSERTION(info->nArgs == 1, "Wrong number of arguments to CallMethod");
 
-			nsMouseScrollEvent scrollEvent(NS_MOUSE_SCROLL, this);
+			nsMouseScrollEvent scrollEvent(PR_TRUE, NS_MOUSE_SCROLL, this);
 
 			scrollEvent.scrollFlags = nsMouseScrollEvent::kIsVertical;
 
@@ -2281,7 +2281,7 @@ PRBool nsWindow::OnKeyUp(PRUint32 aEventType, const char *bytes,
 PRBool nsWindow::DispatchKeyEvent(PRUint32 aEventType, PRUint32 aCharCode,
                                   PRUint32 aKeyCode)
 {
-	nsKeyEvent event(aEventType, this);
+	nsKeyEvent event(PR_TRUE, aEventType, this);
 	nsPoint point;
 
 	point.x = 0;
@@ -2357,7 +2357,7 @@ void nsWindow::OnDestroy()
 //-------------------------------------------------------------------------
 PRBool nsWindow::OnMove(PRInt32 aX, PRInt32 aY)
 {
-	nsGUIEvent event(NS_MOVE, this);
+	nsGUIEvent event(PR_TRUE, NS_MOVE, this);
 	InitEvent(event);
 	event.point.x = aX;
 	event.point.y = aY;
@@ -2386,7 +2386,7 @@ PRBool nsWindow::OnPaint(nsRect &r)
 			mView->ConstrainClippingRegion(&invalid);
 			mView->Flush();
 			mView->UnlockLooper();
-			nsPaintEvent event(NS_PAINT, this);
+			nsPaintEvent event(PR_TRUE, NS_PAINT, this);
 
 			InitEvent(event);
 			event.region = nsnull;
@@ -2424,7 +2424,7 @@ PRBool nsWindow::OnResize(nsRect &aWindowRect)
 	// call the event callback
 	if (mEventCallback)
 	{
-		nsSizeEvent event(NS_SIZE, this);
+		nsSizeEvent event(PR_TRUE, NS_SIZE, this);
 		InitEvent(event);
 		event.windowSize = &aWindowRect;
 		if(mView && mView->LockLooper())
@@ -2457,7 +2457,7 @@ PRBool nsWindow::DispatchMouseEvent(PRUint32 aEventType, nsPoint aPoint, PRUint3
 	PRBool result = PR_FALSE;
 	if(nsnull != mEventCallback || nsnull != mMouseListener)
 	{
-		nsMouseEvent event(aEventType, this);
+		nsMouseEvent event(PR_TRUE, aEventType, this);
 		InitEvent (event, &aPoint);
 		event.isShift   = mod & B_SHIFT_KEY;
 		event.isControl = mod & B_CONTROL_KEY;

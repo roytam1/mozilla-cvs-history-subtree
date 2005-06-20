@@ -163,9 +163,6 @@ public:
                                              nscoord aCharWidth) const;
   virtual nsresult RequiresWidget(PRBool &aRequiresWidget);
 
-  // nsIFormMouseListener
-  virtual void MouseClicked(nsIPresContext* aPresContext);
-
   //nsIComboboxControlFrame
   NS_IMETHOD IsDroppedDown(PRBool * aDoDropDown) { *aDoDropDown = mDroppedDown; return NS_OK; }
   NS_IMETHOD ShowDropDown(PRBool aDoDropDown);

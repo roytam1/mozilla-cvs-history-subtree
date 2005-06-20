@@ -1477,7 +1477,8 @@ nsGenericHTMLElement::HandleDOMEventForAnchors(nsIPresContext* aPresContext,
 
             //fire click
             nsGUIEvent* guiEvent = NS_STATIC_CAST(nsGUIEvent*, aEvent);
-            nsMouseEvent event(NS_MOUSE_LEFT_CLICK, guiEvent->widget);
+            nsMouseEvent event(NS_IS_TRUSTED_EVENT(aEvent),
+                               NS_MOUSE_LEFT_CLICK, guiEvent->widget);
             event.point = aEvent->point;
             event.refPoint = aEvent->refPoint;
             event.clickCount = 1;
@@ -1485,8 +1486,6 @@ nsGenericHTMLElement::HandleDOMEventForAnchors(nsIPresContext* aPresContext,
             event.isControl = keyEvent->isControl;
             event.isAlt = keyEvent->isAlt;
             event.isMeta = keyEvent->isMeta;
-            event.internalAppFlags |=
-              aEvent->internalAppFlags & NS_APP_EVENT_FLAG_TRUSTED;
 
             nsIPresShell *presShell = aPresContext->GetPresShell();
             if (presShell) {
@@ -1679,7 +1678,7 @@ nsGenericHTMLElement::SetAttrAndNotify(PRInt32 aNamespaceID,
     if (aFireMutation) {
       nsCOMPtr<nsIDOMEventTarget> node =
         do_QueryInterface(NS_STATIC_CAST(nsIContent *, this));
-      nsMutationEvent mutation(NS_MUTATION_ATTRMODIFIED, node);
+      nsMutationEvent mutation(PR_TRUE, NS_MUTATION_ATTRMODIFIED, node);
 
       nsAutoString attrName;
       aAttribute->ToString(attrName);

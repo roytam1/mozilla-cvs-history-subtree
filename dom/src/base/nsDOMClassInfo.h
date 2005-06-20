@@ -270,6 +270,7 @@ protected:
   static jsval sAdd_id;
   static jsval sAll_id;
   static jsval sTags_id;
+  static jsval sAddEventListener_id;
 
   static const JSClass *sObjectClass;
 
@@ -309,9 +310,14 @@ protected:
     return PR_FALSE;
   }
 
+  static JSBool JS_DLL_CALLBACK AddEventListenerHelper(JSContext *cx,
+                                                       JSObject *obj,
+                                                       uintN argc, jsval *argv,
+                                                       jsval *rval);
+
   nsresult RegisterCompileHandler(nsIXPConnectWrappedNative *wrapper,
                                   JSContext *cx, JSObject *obj, jsval id,
-                                  PRBool compile, PRBool *did_compile);
+                                  PRBool compile, PRBool *did_define);
 
 public:
   NS_IMETHOD NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,

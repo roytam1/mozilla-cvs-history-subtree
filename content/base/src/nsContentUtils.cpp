@@ -927,6 +927,21 @@ nsContentUtils::IsCallerChrome()
 
 // static
 PRBool
+nsContentUtils::IsChromeDoc(nsIDocument *aDocument)
+{
+  nsIPrincipal *principal;
+  if (!aDocument || !(principal = aDocument->GetPrincipal())) {
+    return PR_FALSE;
+  }
+
+  nsCOMPtr<nsIPrincipal> systemPrincipal;
+  sSecurityManager->GetSystemPrincipal(getter_AddRefs(systemPrincipal));
+
+  return principal == systemPrincipal;
+}
+
+// static
+PRBool
 nsContentUtils::InSameDoc(nsIDOMNode* aNode, nsIDOMNode* aOther)
 {
   if (!aNode || !aOther) {

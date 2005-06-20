@@ -243,13 +243,6 @@ nsHTMLButtonControlFrame::IsSubmit(PRInt32 type)
 }
 
 
-void
-nsHTMLButtonControlFrame::MouseClicked(nsIPresContext* aPresContext) 
-{
-// This is no longer called; click events are handled in
-// nsHTMLInputElement::HandleDOMEvent().
-}
-
 void 
 nsHTMLButtonControlFrame::SetFocus(PRBool aOn, PRBool aRepaint)
 {

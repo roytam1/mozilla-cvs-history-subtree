@@ -492,7 +492,7 @@ nsDOMEvent::PreventCapture()
 NS_IMETHODIMP
 nsDOMEvent::GetIsTrusted(PRBool *aIsTrusted)
 {
-  *aIsTrusted = (mEvent->internalAppFlags & NS_APP_EVENT_FLAG_TRUSTED) != 0;
+  *aIsTrusted = NS_IS_TRUSTED_EVENT(mEvent);
 
   return NS_OK;
 }
@@ -1570,7 +1570,7 @@ nsDOMEvent::GetEventPopupControlState(nsEvent *aEvent)
     }
     break;
   case NS_KEY_EVENT :
-    if (aEvent->internalAppFlags & NS_APP_EVENT_FLAG_TRUSTED) {
+    if (NS_IS_TRUSTED_EVENT(aEvent)) {
       PRUint32 key = NS_STATIC_CAST(nsKeyEvent *, aEvent)->keyCode;
       switch(aEvent->message) {
       case NS_KEY_PRESS :
@@ -1595,7 +1595,7 @@ nsDOMEvent::GetEventPopupControlState(nsEvent *aEvent)
     }
     break;
   case NS_MOUSE_EVENT :
-    if (aEvent->internalAppFlags & NS_APP_EVENT_FLAG_TRUSTED) {
+    if (NS_IS_TRUSTED_EVENT(aEvent)) {
       switch(aEvent->message) {
       case NS_MOUSE_LEFT_BUTTON_UP :
         if (::PopupAllowedForEvent("mouseup"))
@@ -1818,25 +1818,25 @@ nsDOMEvent::AllocateEvent(const nsAString& aEventType)
   //Allocate internal event
   nsAutoString eventType(aEventType);
   if (eventType.EqualsIgnoreCase("MouseEvents")) {
-    mEvent = new nsMouseEvent();
+    mEvent = new nsMouseEvent(PR_FALSE, 0, nsnull);
   }
   else if (eventType.EqualsIgnoreCase("MouseScrollEvents")) {
-    mEvent = new nsMouseScrollEvent();
+    mEvent = new nsMouseScrollEvent(PR_FALSE, 0, nsnull);
   }
   else if (eventType.EqualsIgnoreCase("KeyEvents")) {
-    mEvent = new nsKeyEvent();
+    mEvent = new nsKeyEvent(PR_FALSE, 0, nsnull);
   }
   else if (eventType.EqualsIgnoreCase("MutationEvents")) {
-    mEvent = new nsMutationEvent();
+    mEvent = new nsMutationEvent(PR_FALSE, 0);
   }
   else if (eventType.EqualsIgnoreCase("PopupEvents")) {
-    mEvent = new nsGUIEvent();
+    mEvent = new nsGUIEvent(PR_FALSE, 0, nsnull);
   }
   else if (eventType.EqualsIgnoreCase("PopupBlockedEvents")) {
-    mEvent = new nsPopupBlockedEvent();
+    mEvent = new nsPopupBlockedEvent(PR_FALSE, 0);
   }
   else {
-    mEvent = new nsEvent();
+    mEvent = new nsEvent(PR_FALSE, 0);
   }
   mEvent->time = PR_Now();
 }

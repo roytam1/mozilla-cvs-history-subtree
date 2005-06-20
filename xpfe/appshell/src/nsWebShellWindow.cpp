@@ -945,7 +945,7 @@ void nsWebShellWindow::DynamicLoadMenus(nsIDOMDocument * aDOMDoc, nsIWidget * aP
         pnsMenuBar->QueryInterface(NS_GET_IID(nsIMenuListener), getter_AddRefs(menuListener));
 
         //fake event
-        nsMenuEvent fake;
+        nsMenuEvent fake(PR_TRUE, 0, nsnull);
         menuListener->MenuConstruct(fake, aParentWindow, menubarNode, mWebShell);
 
         // Parent should own menubar now
@@ -1501,7 +1501,7 @@ PRBool nsWebShellWindow::ExecuteCloseHandler()
       docViewer->GetPresContext(getter_AddRefs(presContext));
 
       nsEventStatus status = nsEventStatus_eIgnore;
-      nsMouseEvent event(NS_XUL_CLOSE);
+      nsMouseEvent event(PR_TRUE, NS_XUL_CLOSE, nsnull);
 
       nsresult rv = globalObject->HandleDOMEvent(presContext, &event, nsnull,
                                                  NS_EVENT_FLAG_INIT, &status);

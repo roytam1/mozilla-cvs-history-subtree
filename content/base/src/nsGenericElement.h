@@ -50,11 +50,7 @@
 #include "nsIDOMEventReceiver.h"
 #include "nsIDOM3EventTarget.h"
 #include "nsIDOM3Node.h"
-#include "nsIStyleSheetLinkingElement.h"
-#include "nsICSSStyleSheet.h"
-#include "nsICSSLoaderObserver.h"
-#include "nsIDocument.h"
-#include "nsVoidArray.h"
+#include "nsIDOMNSEventTarget.h"
 #include "nsILinkHandler.h"
 #include "nsGenericDOMNodeList.h"
 #include "nsIEventListenerManager.h"
@@ -270,7 +266,8 @@ private:
  */
 
 class nsDOMEventRTTearoff : public nsIDOMEventReceiver,
-                            public nsIDOM3EventTarget
+                            public nsIDOM3EventTarget,
+                            public nsIDOMNSEventTarget
 {
 private:
   // This class uses a caching scheme so we don't let users of this
@@ -325,6 +322,9 @@ public:
   NS_IMETHOD GetListenerManager(nsIEventListenerManager** aResult);
   NS_IMETHOD HandleEvent(nsIDOMEvent *aEvent);
   NS_IMETHOD GetSystemEventGroup(nsIDOMEventGroup** aGroup);
+
+  // nsIDOMNSEventTarget
+  NS_DECL_NSIDOMNSEVENTTARGET
 
 private:
   /**
