@@ -359,6 +359,7 @@ nsInlineFrame::DoInlineIntrinsicWidth(nsIRenderingContext *aRenderingContext,
                   aType == nsLayoutUtils::PREF_WIDTH, "bad type");
 
   PRUint8 startSide, endSide;
+  PRIntn skipSides = GetSkipSides();
 
   // XXX set these correctly!  (not trivial, and GetSkipSides() and
   // maybe some reflow logic needs this too, and should all be fixed at
@@ -371,9 +372,12 @@ nsInlineFrame::DoInlineIntrinsicWidth(nsIRenderingContext *aRenderingContext,
   const nsStyleMargin *styleMargin = GetStyleMargin();
   nsStyleCoord tmp;
 
-  aData->currentLine += GetCoord(stylePadding->mPadding.Get(startSide, tmp), 0);
-  aData->currentLine += styleBorder->GetBorderWidth(startSide);
-  aData->currentLine += GetCoord(styleMargin->mMargin.Get(startSide, tmp), 0);
+  if (!(skipSides & (1 << startSide))) {
+    aData->currentLine +=
+      GetCoord(stylePadding->mPadding.Get(startSide, tmp), 0) +
+      styleBorder->GetBorderWidth(startSide) +
+      GetCoord(styleMargin->mMargin.Get(startSide, tmp), 0);
+  }
 
   for (nsIFrame *kid = mFrames.FirstChild(); kid; kid = kid->GetNextSibling()) {
     if (aType == nsLayoutUtils::MIN_WIDTH)
@@ -382,9 +386,12 @@ nsInlineFrame::DoInlineIntrinsicWidth(nsIRenderingContext *aRenderingContext,
       kid->AddInlinePrefWidth(aRenderingContext, aData);
   }
 
-  aData->currentLine += GetCoord(stylePadding->mPadding.Get(endSide, tmp), 0);
-  aData->currentLine += styleBorder->GetBorderWidth(endSide);
-  aData->currentLine += GetCoord(styleMargin->mMargin.Get(endSide, tmp), 0);
+  if (!(skipSides & (1 << endSide))) {
+    aData->currentLine +=
+      GetCoord(stylePadding->mPadding.Get(endSide, tmp), 0) +
+      styleBorder->GetBorderWidth(endSide) +
+      GetCoord(styleMargin->mMargin.Get(endSide, tmp), 0);
+  }
 }
 
 /* virtual */ void
