@@ -393,7 +393,8 @@ nsXMLElement::HandleDOMEvent(nsIPresContext* aPresContext,
 
           //fire click
           nsGUIEvent* guiEvent = NS_STATIC_CAST(nsGUIEvent*, aEvent);
-          nsMouseEvent event(NS_MOUSE_LEFT_CLICK, guiEvent->widget);
+          nsMouseEvent event(NS_IS_TRUSTED_EVENT(aEvent), NS_MOUSE_LEFT_CLICK,
+                             guiEvent->widget);
           event.point = aEvent->point;
           event.refPoint = aEvent->refPoint;
           event.clickCount = 1;

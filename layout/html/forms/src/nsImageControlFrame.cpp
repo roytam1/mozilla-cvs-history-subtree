@@ -99,8 +99,6 @@ public:
                        nsPoint&        aPoint,
                        PRInt32&        aCursor);
 
-  virtual void MouseClicked(nsIPresContext* aPresContext);
-
   NS_IMETHOD_(PRInt32) GetFormControlType() const;
 
   NS_IMETHOD GetName(nsAString* aName);
@@ -314,13 +312,6 @@ nsImageControlFrame::GetCursor(nsIPresContext* aPresContext,
     aCursor = NS_STYLE_CURSOR_POINTER;
   }
   return NS_OK;
-}
-
-void
-nsImageControlFrame::MouseClicked(nsIPresContext* aPresContext) 
-{
-// This is no longer called; click events are handled in
-// nsHTMLInputElement::HandleDOMEvent().
 }
 
 NS_IMETHODIMP

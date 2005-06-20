@@ -85,6 +85,8 @@
 #include "nsGUIEvent.h"
 #include "nsIEventStateManager.h"
 #include "nsITimerInternal.h"
+#include "nsContentUtils.h"
+
 #define NS_MENU_POPUP_LIST_INDEX   0
 
 #if defined(XP_WIN) || defined(XP_OS2)
@@ -1622,7 +1624,11 @@ nsMenuFrame::Execute(nsGUIEvent *aEvent)
 
 
   nsEventStatus status = nsEventStatus_eIgnore;
-  nsMouseEvent event(NS_XUL_COMMAND);
+  // Create a trusted event if the triggering event was trusted, or if
+  // we're called from chrome code (since at least one of our caller
+  // passes in a null event).
+  nsMouseEvent event(aEvent ? NS_IS_TRUSTED_EVENT(aEvent) :
+                     nsContentUtils::IsCallerChrome(), NS_XUL_COMMAND, nsnull);
   if (aEvent && (aEvent->eventStructType == NS_MOUSE_EVENT ||
                  aEvent->eventStructType == NS_KEY_EVENT ||
                  aEvent->eventStructType == NS_ACCESSIBLE_EVENT)) {
@@ -1667,8 +1673,8 @@ PRBool
 nsMenuFrame::OnCreate()
 {
   nsEventStatus status = nsEventStatus_eIgnore;
-  nsMouseEvent event(NS_XUL_POPUP_SHOWING);
-  
+  nsMouseEvent event(PR_TRUE, NS_XUL_POPUP_SHOWING, nsnull);
+
   nsCOMPtr<nsIContent> child;
   GetMenuChildrenElement(getter_AddRefs(child));
   
@@ -1756,8 +1762,8 @@ PRBool
 nsMenuFrame::OnCreated()
 {
   nsEventStatus status = nsEventStatus_eIgnore;
-  nsMouseEvent event(NS_XUL_POPUP_SHOWN);
-  
+  nsMouseEvent event(PR_TRUE, NS_XUL_POPUP_SHOWN, nsnull);
+
   nsCOMPtr<nsIContent> child;
   GetMenuChildrenElement(getter_AddRefs(child));
   
@@ -1782,8 +1788,8 @@ PRBool
 nsMenuFrame::OnDestroy()
 {
   nsEventStatus status = nsEventStatus_eIgnore;
-  nsMouseEvent event(NS_XUL_POPUP_HIDING);
-  
+  nsMouseEvent event(PR_TRUE, NS_XUL_POPUP_HIDING, nsnull);
+
   nsCOMPtr<nsIContent> child;
   GetMenuChildrenElement(getter_AddRefs(child));
   
@@ -1808,8 +1814,8 @@ PRBool
 nsMenuFrame::OnDestroyed()
 {
   nsEventStatus status = nsEventStatus_eIgnore;
-  nsMouseEvent event(NS_XUL_POPUP_HIDDEN);
-  
+  nsMouseEvent event(PR_TRUE, NS_XUL_POPUP_HIDDEN, nsnull);
+
   nsCOMPtr<nsIContent> child;
   GetMenuChildrenElement(getter_AddRefs(child));
   

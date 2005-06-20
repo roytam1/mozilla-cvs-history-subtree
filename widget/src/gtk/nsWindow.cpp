@@ -839,7 +839,7 @@ nsWindow::DoPaint (nsIRegion *aClipRegion)
   aClipRegion->GetBoundingBox(&boundsRect.x, &boundsRect.y, &boundsRect.width, &boundsRect.height);
 #endif
 
-  nsPaintEvent event(NS_PAINT, this);
+  nsPaintEvent event(PR_TRUE, NS_PAINT, this);
   event.renderingContext = rc;
   event.time = GDK_CURRENT_TIME; // No time in EXPOSE events
   event.rect = &boundsRect;
@@ -1409,7 +1409,7 @@ void nsWindow::DispatchSetFocusEvent(void)
   printf("nsWindow::DispatchSetFocusEvent %p\n", NS_STATIC_CAST(void *, this));
 #endif /* DEBUG_FOCUS */
 
-  nsGUIEvent event(NS_GOTFOCUS, this);
+  nsGUIEvent event(PR_TRUE, NS_GOTFOCUS, this);
 
   NS_ADDREF_THIS();
   DispatchFocus(event);
@@ -1429,7 +1429,7 @@ void nsWindow::DispatchLostFocusEvent(void)
   printf("nsWindow::DispatchLostFocusEvent %p\n", NS_STATIC_CAST(void *, this));
 #endif /* DEBUG_FOCUS */
 
-  nsGUIEvent event(NS_LOSTFOCUS, this);
+  nsGUIEvent event(PR_TRUE, NS_LOSTFOCUS, this);
 
   NS_ADDREF_THIS();
   
@@ -1450,7 +1450,7 @@ void nsWindow::DispatchActivateEvent(void)
 
   gJustGotDeactivate = PR_FALSE;
 
-  nsGUIEvent event(NS_ACTIVATE, this);
+  nsGUIEvent event(PR_TRUE, NS_ACTIVATE, this);
 
   NS_ADDREF_THIS();  
   DispatchFocus(event);
@@ -1471,7 +1471,7 @@ void nsWindow::DispatchDeactivateEvent(void)
   IMEBeingActivate(PR_TRUE);
 #endif // USE_XIM
 
-  nsGUIEvent event(NS_DEACTIVATE, this);
+  nsGUIEvent event(PR_TRUE, NS_DEACTIVATE, this);
 
   NS_ADDREF_THIS();
   DispatchFocus(event);
@@ -1664,7 +1664,7 @@ nsWindow::OnFocusInSignal(GdkEventFocus * aGdkFocusEvent)
   
   GTK_WIDGET_SET_FLAGS(mMozArea, GTK_HAS_FOCUS);
 
-  nsFocusEvent event(NS_GOTFOCUS, this);
+  nsFocusEvent event(PR_TRUE, NS_GOTFOCUS, this);
 #ifdef DEBUG  
   printf("send NS_GOTFOCUS from nsWindow::OnFocusInSignal\n");
 #endif
@@ -1685,7 +1685,7 @@ nsWindow::OnFocusOutSignal(GdkEventFocus * aGdkFocusEvent)
 
   GTK_WIDGET_UNSET_FLAGS(mMozArea, GTK_HAS_FOCUS);
 
-  nsFocusEvent event(NS_LOSTFOCUS, this);
+  nsFocusEvent event(PR_TRUE, NS_LOSTFOCUS, this);
   
 //  event.time = aGdkFocusEvent->time;;
 //  event.time = PR_Now();
@@ -1780,7 +1780,7 @@ gint handle_delete_event(GtkWidget *w, GdkEventAny *e, nsWindow *win)
   NS_ADDREF(win);
 
   // dispatch an "onclose" event. to delete immediately, call win->Destroy()
-  nsGUIEvent event(NS_XUL_CLOSE, win);
+  nsGUIEvent event(PR_TRUE, NS_XUL_CLOSE, win);
   nsEventStatus status;
   
   win->DispatchEvent(&event, status);
@@ -2798,7 +2798,7 @@ NS_IMETHODIMP nsWindow::Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint)
   }
   if (mIsToplevel || mListenForResizes) {
     //g_print("sending resize event\n");
-    nsSizeEvent sevent(NS_SIZE, this);
+    nsSizeEvent sevent(PR_TRUE, NS_SIZE, this);
     sevent.windowSize = new nsRect (0, 0, sizeWidth, sizeHeight);
     sevent.mWinWidth = sizeWidth;
     sevent.mWinHeight = sizeHeight;
@@ -2982,7 +2982,7 @@ nsWindow::HandleXlibConfigureNotifyEvent(XEvent *event)
 #endif
 
   if (mIsToplevel) {
-    nsSizeEvent sevent(NS_SIZE, this);
+    nsSizeEvent sevent(PR_TRUE, NS_SIZE, this);
     sevent.windowSize = new nsRect (event->xconfigure.x, event->xconfigure.y,
                                     event->xconfigure.width, event->xconfigure.height);
     sevent.point.x = event->xconfigure.x;
@@ -3129,7 +3129,7 @@ GtkWindow *nsWindow::GetTopLevelWindow(void)
 // These are all of our drag and drop operations
 
 void
-nsWindow::InitDragEvent (nsMouseEvent &aEvent)
+nsWindow::InitDragEvent(nsMouseEvent &aEvent)
 {
   // set the keyboard modifiers
   gint x, y;
@@ -3254,7 +3254,7 @@ gint nsWindow::OnDragMotionSignal      (GtkWidget *      aWidget,
   // notify the drag service that we are starting a drag motion.
   dragSessionGTK->TargetStartDragMotion();
 
-  nsMouseEvent event(NS_DRAGDROP_OVER, innerMostWidget);
+  nsMouseEvent event(PR_TRUE, NS_DRAGDROP_OVER, innerMostWidget);
 
   InitDragEvent(event);
 
@@ -3393,7 +3393,7 @@ nsWindow::OnDragDropSignal        (GtkWidget        *aWidget,
 
   innerMostWidget->AddRef();
 
-  nsMouseEvent event(NS_DRAGDROP_OVER, innerMostWidget);
+  nsMouseEvent event(PR_TRUE, NS_DRAGDROP_OVER, innerMostWidget);
 
   InitDragEvent(event);
 
@@ -3483,7 +3483,7 @@ nsWindow::OnDragLeave(void)
   g_print("nsWindow::OnDragLeave\n");
 #endif /* DEBUG_DND_EVENTS */
 
-  nsMouseEvent event(NS_DRAGDROP_EXIT, this);
+  nsMouseEvent event(PR_TRUE, NS_DRAGDROP_EXIT, this);
 
   AddRef();
 
@@ -3519,7 +3519,7 @@ nsWindow::OnDragEnter(nscoord aX, nscoord aY)
   g_print("nsWindow::OnDragEnter\n");
 #endif /* DEBUG_DND_EVENTS */
   
-  nsMouseEvent event(NS_DRAGDROP_ENTER, this);
+  nsMouseEvent event(PR_TRUE, NS_DRAGDROP_ENTER, this);
 
   event.point.x = aX;
   event.point.y = aY;
@@ -3740,7 +3740,7 @@ void nsWindow::ICSpotCallback(nsITimer * aTimer, void * aClosure)
 nsresult nsWindow::UpdateICSpot(nsIMEGtkIC *aXIC)
 {
   // set spot location
-  nsCompositionEvent compEvent(NS_COMPOSITION_QUERY, this);
+  nsCompositionEvent compEvent(PR_TRUE, NS_COMPOSITION_QUERY, this);
   static gint oldx =0;
   static gint oldy =0;
   static gint oldw =0;
@@ -4003,7 +4003,7 @@ nsWindow::IMEComposeStart(guint aTime)
     return;
   }
 #endif // USE_XIM 
-  nsCompositionEvent compEvent(NS_COMPOSITION_START, this);
+  nsCompositionEvent compEvent(PR_TRUE, NS_COMPOSITION_START, this);
   compEvent.time = aTime;
 
   OnComposition(compEvent);
@@ -4076,7 +4076,7 @@ void
 nsWindow::IMEComposeText(GdkEventKey *aEvent,
                          const PRUnichar *aText, const PRInt32 aLen,
                          const char *aFeedback) {
-  nsTextEvent textEvent(NS_TEXT_TEXT, this);
+  nsTextEvent textEvent(PR_TRUE, NS_TEXT_TEXT, this);
   if (aEvent) {
     textEvent.isShift = (aEvent->state & GDK_SHIFT_MASK) ? PR_TRUE : PR_FALSE;
     textEvent.isControl = (aEvent->state & GDK_CONTROL_MASK) ? PR_TRUE : PR_FALSE;
@@ -4114,7 +4114,7 @@ nsWindow::IMEComposeEnd(guint aTime)
   }
 #endif // USE_XIM 
 
-  nsCompositionEvent compEvent(NS_COMPOSITION_END, this);
+  nsCompositionEvent compEvent(PR_TRUE, NS_COMPOSITION_END, this);
   compEvent.time = aTime;
   OnComposition(compEvent);
 

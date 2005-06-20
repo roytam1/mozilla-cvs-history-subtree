@@ -54,9 +54,10 @@ class nsIPresContext;
 
 class nsIDOMEventTarget;
 class nsIDOMEvent;
+class nsEvent;
 
-class nsIPrivateDOMEvent : public nsISupports {
-
+class nsIPrivateDOMEvent : public nsISupports
+{
 public:
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_IPRIVATEDOMEVENT_IID)
 

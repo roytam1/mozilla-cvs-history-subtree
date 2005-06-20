@@ -294,7 +294,7 @@ nsTextInputListener::NotifySelectionChanged(nsIDOMDocument* aDoc, nsISelection* 
         if (presShell) 
         {
           nsEventStatus status = nsEventStatus_eIgnore;
-          nsEvent event(NS_FORM_SELECTED);
+          nsEvent event(PR_TRUE, NS_FORM_SELECTED);
 
           presShell->HandleEventWithTarget(&event,mFrame,content,NS_EVENT_FLAG_INIT,&status);
         }
@@ -2310,8 +2310,6 @@ void    nsTextControlFrame::ScrollIntoView(nsIPresContext* aPresContext)
   }
 }
 
-void    nsTextControlFrame::MouseClicked(nsIPresContext* aPresContext){}
-
 nscoord 
 nsTextControlFrame::GetVerticalInsidePadding(nsIPresContext* aPresContext,
                                              float aPixToTwip, 
@@ -3015,7 +3013,7 @@ nsTextControlFrame::FireOnInput()
   
   // Dispatch the "input" event
   nsEventStatus status = nsEventStatus_eIgnore;
-  nsGUIEvent event(NS_FORM_INPUT);
+  nsGUIEvent event(PR_TRUE, NS_FORM_INPUT, nsnull);
 
   // Have the content handle the event, propagating it according to normal
   // DOM rules.
@@ -3064,7 +3062,7 @@ nsTextControlFrame::FireOnChange()
   if (NS_SUCCEEDED(GetFormContent(*getter_AddRefs(content))))
   {
     nsEventStatus status = nsEventStatus_eIgnore;
-    nsInputEvent event(NS_FORM_CHANGE);
+    nsInputEvent event(PR_TRUE, NS_FORM_CHANGE, nsnull);
 
     // Have the content handle the event.
     nsWeakPtr &shell = mTextSelImpl->GetPresShell();

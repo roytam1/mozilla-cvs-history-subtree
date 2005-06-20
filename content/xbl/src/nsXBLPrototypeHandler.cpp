@@ -475,7 +475,7 @@ nsresult
 nsXBLPrototypeHandler::BindingAttached(nsIDOMEventReceiver* aReceiver)
 {
   nsresult ret;
-  nsMouseEvent event(NS_XUL_COMMAND);
+  nsMouseEvent event(PR_TRUE, NS_XUL_COMMAND, nsnull);
 
   nsCOMPtr<nsIEventListenerManager> listenerManager;
   if (NS_FAILED(ret = aReceiver->GetListenerManager(getter_AddRefs(listenerManager)))) {
@@ -496,6 +496,7 @@ nsXBLPrototypeHandler::BindingAttached(nsIDOMEventReceiver* aReceiver)
   nsCOMPtr<nsIPrivateDOMEvent> privateEvent = do_QueryInterface(domEvent);
   if (privateEvent) {
     privateEvent->SetTarget(aReceiver);
+    privateEvent->SetTrusted(PR_TRUE);
   }
 
   ExecuteHandler(aReceiver, domEvent);
@@ -507,7 +508,7 @@ nsresult
 nsXBLPrototypeHandler::BindingDetached(nsIDOMEventReceiver* aReceiver)
 {
   nsresult ret;
-  nsMouseEvent event(NS_XUL_COMMAND);
+  nsMouseEvent event(PR_TRUE, NS_XUL_COMMAND, nsnull);
 
   nsCOMPtr<nsIEventListenerManager> listenerManager;
   if (NS_FAILED(ret = aReceiver->GetListenerManager(getter_AddRefs(listenerManager)))) {
@@ -528,6 +529,7 @@ nsXBLPrototypeHandler::BindingDetached(nsIDOMEventReceiver* aReceiver)
   nsCOMPtr<nsIPrivateDOMEvent> privateEvent = do_QueryInterface(domEvent);
   if (privateEvent) {
     privateEvent->SetTarget(aReceiver);
+    privateEvent->SetTrusted(PR_TRUE);
   }
 
   ExecuteHandler(aReceiver, domEvent);

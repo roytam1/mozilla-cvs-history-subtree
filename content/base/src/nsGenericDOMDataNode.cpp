@@ -88,6 +88,8 @@ NS_INTERFACE_MAP_BEGIN(nsGenericDOMDataNode)
                                  nsDOMEventRTTearoff::Create(this))
   NS_INTERFACE_MAP_ENTRY_TEAROFF(nsIDOM3EventTarget,
                                  nsDOMEventRTTearoff::Create(this))
+  NS_INTERFACE_MAP_ENTRY_TEAROFF(nsIDOMNSEventTarget,
+                                 nsDOMEventRTTearoff::Create(this))
   NS_INTERFACE_MAP_ENTRY(nsIContent)
   // No nsITextContent since all subclasses might not want that.
   NS_INTERFACE_MAP_ENTRY_TEAROFF(nsIDOM3Node, new nsNode3Tearoff(this))
@@ -1095,7 +1097,7 @@ nsGenericDOMDataNode::SetText(const PRUnichar* aBuffer,
 
   if (haveMutationListeners) {
     nsCOMPtr<nsIDOMEventTarget> node(do_QueryInterface(this));
-    nsMutationEvent mutation(NS_MUTATION_CHARACTERDATAMODIFIED, node);
+    nsMutationEvent mutation(PR_TRUE, NS_MUTATION_CHARACTERDATAMODIFIED, node);
 
     mutation.mPrevAttrValue = oldValue;
     nsDependentString newVal(aBuffer);
@@ -1139,7 +1141,7 @@ nsGenericDOMDataNode::SetText(const char* aBuffer, PRInt32 aLength,
 
   if (haveMutationListeners) {
     nsCOMPtr<nsIDOMEventTarget> node(do_QueryInterface(this));
-    nsMutationEvent mutation(NS_MUTATION_CHARACTERDATAMODIFIED, node);
+    nsMutationEvent mutation(PR_TRUE, NS_MUTATION_CHARACTERDATAMODIFIED, node);
 
     mutation.mPrevAttrValue = oldValue;
     if (*aBuffer)
@@ -1170,14 +1172,14 @@ nsGenericDOMDataNode::SetText(const nsAString& aStr,
   if (haveMutationListeners) {
     oldValue = GetCurrentValueAtom();
   }
-    
+
   mText = aStr;
 
   SetBidiStatus();
 
   if (haveMutationListeners) {
     nsCOMPtr<nsIDOMEventTarget> node(do_QueryInterface(this));
-    nsMutationEvent mutation(NS_MUTATION_CHARACTERDATAMODIFIED, node);
+    nsMutationEvent mutation(PR_TRUE, NS_MUTATION_CHARACTERDATAMODIFIED, node);
 
     mutation.mPrevAttrValue = oldValue;
     if (!aStr.IsEmpty())

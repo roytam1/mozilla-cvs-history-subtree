@@ -70,8 +70,6 @@ public:
     return nsAreaFrame::Init(aPresContext, aContent, aParent, aContext, aPrevInFlow);
   }
 
-  virtual void MouseClicked(nsIPresContext* aPresContext) {}
-
   NS_IMETHOD Paint(nsIPresContext*      aPresContext,
                    nsIRenderingContext& aRenderingContext,
                    const nsRect&        aDirtyRect,

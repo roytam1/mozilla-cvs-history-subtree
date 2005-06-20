@@ -763,7 +763,7 @@ nsTreeSelection::FireOnSelectHandler()
     shell->GetPresContext(getter_AddRefs(aPresContext));
 
     nsEventStatus status = nsEventStatus_eIgnore;
-    nsEvent event(NS_FORM_SELECTED);
+    nsEvent event(PR_TRUE, NS_FORM_SELECTED);
 
     content->HandleDOMEvent(aPresContext, &event, nsnull, NS_EVENT_FLAG_INIT,
                             &status);

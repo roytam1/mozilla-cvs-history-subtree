@@ -208,7 +208,7 @@ nsSVGElement::SetAttr(PRInt32 aNamespaceID, nsIAtom* aName, nsIAtom* aPrefix,
     // We don't have an nsISVGValue attribute.
     attrValue.SetTo(aValue);
   }
-  
+
   return SetAttrAndNotify(aNamespaceID, aName, aPrefix, oldValue, attrValue,
                           modification, hasListeners, aNotify);
 }
@@ -550,7 +550,7 @@ nsSVGElement::SetAttrAndNotify(PRInt32 aNamespaceID, nsIAtom* aAttribute,
 
     if (aFireMutation) {
       nsCOMPtr<nsIDOMEventTarget> node = do_QueryInterface(NS_STATIC_CAST(nsIContent *, this));
-      nsMutationEvent mutation(NS_MUTATION_ATTRMODIFIED, node);
+      nsMutationEvent mutation(PR_TRUE, NS_MUTATION_ATTRMODIFIED, node);
 
       nsAutoString attrName;
       aAttribute->ToString(attrName);

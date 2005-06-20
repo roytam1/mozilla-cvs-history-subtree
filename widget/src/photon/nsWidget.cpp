@@ -359,7 +359,7 @@ PRBool nsWidget::OnResize( nsRect &aRect ) {
 
   // call the event callback
   if( mEventCallback ) {
-		nsSizeEvent event;
+		nsSizeEvent event(PR_TRUE, 0, nsnull);
 
 	  InitEvent(event, NS_SIZE);
 
@@ -384,7 +384,7 @@ PRBool nsWidget::OnResize( nsRect &aRect ) {
 // Move
 //------
 PRBool nsWidget::OnMove( PRInt32 aX, PRInt32 aY ) {
-  nsGUIEvent event;
+  nsGUIEvent event(PR_TRUE, 0, nsnull);
   InitEvent(event, NS_MOVE);
   event.point.x = aX;
   event.point.y = aY;
@@ -857,21 +857,21 @@ PRBool  nsWidget::DispatchKeyEvent( PhKeyEvent_t *aPhKeyEvent ) {
   w->AddRef();
  
   if (aPhKeyEvent->key_flags & Pk_KF_Key_Down) {
-		nsKeyEvent keyDownEvent(NS_KEY_DOWN, w);
+		nsKeyEvent keyDownEvent(PR_TRUE, NS_KEY_DOWN, w);
 		InitKeyEvent(aPhKeyEvent, keyDownEvent);
 		w->OnKey(keyDownEvent);
 
-		nsKeyEvent keyPressEvent(NS_KEY_PRESS, w);
+		nsKeyEvent keyPressEvent(PR_TRUE, NS_KEY_PRESS, w);
 		InitKeyPressEvent(aPhKeyEvent, keyPressEvent);
 		w->OnKey(keyPressEvent);
   	}
   else if (aPhKeyEvent->key_flags & Pk_KF_Key_Repeat) {
-		nsKeyEvent keyPressEvent(NS_KEY_PRESS, w);
+		nsKeyEvent keyPressEvent(PR_TRUE, NS_KEY_PRESS, w);
 		InitKeyPressEvent(aPhKeyEvent, keyPressEvent);
 		w->OnKey(keyPressEvent);
   	}
   else if (PkIsKeyDown(aPhKeyEvent->key_flags) == 0) {
-		nsKeyEvent kevent(NS_KEY_UP, w);
+		nsKeyEvent kevent(PR_TRUE, NS_KEY_UP, w);
 		InitKeyEvent(aPhKeyEvent, kevent);
 		w->OnKey(kevent);
   	}
@@ -948,7 +948,7 @@ inline PRBool nsWidget::HandleEvent( PtWidget_t *widget, PtCallbackInfo_t* aCbIn
       case Ph_EV_PTR_MOTION_NOBUTTON:
        	{
 	    	PhPointerEvent_t* ptrev = (PhPointerEvent_t*) PhGetData( event );
-	    	nsMouseEvent   theMouseEvent;
+	    	nsMouseEvent theMouseEvent(PR_TRUE, 0, nsnull);
 
         if( ptrev ) {
 
@@ -967,7 +967,7 @@ inline PRBool nsWidget::HandleEvent( PtWidget_t *widget, PtCallbackInfo_t* aCbIn
        {
 
 	    	PhPointerEvent_t* ptrev = (PhPointerEvent_t*) PhGetData( event );
-   		  nsMouseEvent   theMouseEvent;
+   		  nsMouseEvent theMouseEvent(PR_TRUE, 0, nsnull);
 
 				/* there should be no reason to do this - mozilla should figure out how to call SetFocus */
 				/* this though fixes the problem with the plugins capturing the focus */
@@ -989,7 +989,7 @@ inline PRBool nsWidget::HandleEvent( PtWidget_t *widget, PtCallbackInfo_t* aCbIn
 
 					// if we're a right-button-up we're trying to popup a context menu. send that event to gecko also
 					if( ptrev->buttons & Ph_BUTTON_MENU ) {
-						nsMouseEvent contextMenuEvent;
+						nsMouseEvent contextMenuEvent(PR_TRUE, 0, nsnull);
 						InitMouseEvent( ptrev, this, contextMenuEvent, NS_CONTEXTMENU );
 						result = DispatchMouseEvent( contextMenuEvent );
 						}
@@ -1001,7 +1001,7 @@ inline PRBool nsWidget::HandleEvent( PtWidget_t *widget, PtCallbackInfo_t* aCbIn
 		case Ph_EV_BUT_RELEASE:
 		  {
 			  PhPointerEvent_t* ptrev = (PhPointerEvent_t*) PhGetData( event );
-			  nsMouseEvent      theMouseEvent;
+			  nsMouseEvent theMouseEvent(PR_TRUE, 0, nsnull);
 			  
 			  if (event->subtype==Ph_EV_RELEASE_REAL || event->subtype==Ph_EV_RELEASE_PHANTOM) {
 				  if (ptrev) {
@@ -1027,7 +1027,7 @@ inline PRBool nsWidget::HandleEvent( PtWidget_t *widget, PtCallbackInfo_t* aCbIn
 		case Ph_EV_PTR_MOTION_BUTTON:
       	{
         PhPointerEvent_t* ptrev = (PhPointerEvent_t*) PhGetData( event );
-	    	nsMouseEvent   theMouseEvent;
+	    	nsMouseEvent theMouseEvent(PR_TRUE, 0, nsnull);
 
         if( ptrev ) {
 
@@ -1055,13 +1055,13 @@ inline PRBool nsWidget::HandleEvent( PtWidget_t *widget, PtCallbackInfo_t* aCbIn
 
       case Ph_EV_DRAG:
 	    	{
-          nsMouseEvent   theMouseEvent;
+          nsMouseEvent theMouseEvent(PR_TRUE, 0, nsnull);
 
           switch(event->subtype) {
 
 		  			case Ph_EV_DRAG_COMPLETE: 
             	{
- 		      		nsMouseEvent      theMouseEvent;
+ 		      		nsMouseEvent theMouseEvent(PR_TRUE, 0, nsnull);
               PhPointerEvent_t* ptrev2 = (PhPointerEvent_t*) PhGetData( event );
               ScreenToWidgetPos( ptrev2->pos );
               InitMouseEvent(ptrev2, this, theMouseEvent, NS_MOUSE_LEFT_BUTTON_UP );
@@ -1098,7 +1098,7 @@ inline PRBool nsWidget::HandleEvent( PtWidget_t *widget, PtCallbackInfo_t* aCbIn
 
 				if( evtype != 0 ) {
 					PhPointerEvent_t* ptrev = (PhPointerEvent_t*) PhGetData( event );
-					nsMouseEvent theMouseEvent;
+					nsMouseEvent theMouseEvent(PR_TRUE, 0, nsnull);
 					ScreenToWidgetPos( ptrev->pos );
 					InitMouseEvent( ptrev, this, theMouseEvent, evtype );
 					result = DispatchMouseEvent( theMouseEvent );
@@ -1200,7 +1200,7 @@ void nsWidget::ProcessDrag( PhEvent_t *event, PRUint32 aEventType, PhPoint_t *po
 
 void nsWidget::DispatchDragDropEvent( PhEvent_t *phevent, PRUint32 aEventType, PhPoint_t *pos ) {
   nsEventStatus status;
-  nsMouseEvent event;
+  nsMouseEvent event(PR_TRUE, 0, nsnull);
 
   InitEvent( event, aEventType );
 

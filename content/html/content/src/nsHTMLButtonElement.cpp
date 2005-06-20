@@ -256,8 +256,12 @@ nsHTMLButtonElement::Click()
       nsCOMPtr<nsIPresContext> context;
       shell->GetPresContext(getter_AddRefs(context));
       if (context) {
+        // Click() is never called from native code, but it may be
+        // called from chrome JS. Mark this event trusted if Click()
+        // is called from chrome code.
+        nsMouseEvent event(nsContentUtils::IsCallerChrome(),
+                           NS_MOUSE_LEFT_CLICK, nsnull);
         nsEventStatus status = nsEventStatus_eIgnore;
-        nsMouseEvent event(NS_MOUSE_LEFT_CLICK);
         HandleDOMEvent(context, &event, nsnull,
                        NS_EVENT_FLAG_INIT, &status);
       }
@@ -429,7 +433,9 @@ nsHTMLButtonElement::HandleDOMEvent(nsIPresContext* aPresContext,
           if ((keyEvent->keyCode == NS_VK_RETURN && NS_KEY_PRESS == aEvent->message) ||
               keyEvent->keyCode == NS_VK_SPACE  && NS_KEY_UP == aEvent->message) {
             nsEventStatus status = nsEventStatus_eIgnore;
-            nsMouseEvent event(NS_MOUSE_LEFT_CLICK);
+
+            nsMouseEvent event(NS_IS_TRUSTED_EVENT(aEvent),
+                               NS_MOUSE_LEFT_CLICK, nsnull);
             rv = HandleDOMEvent(aPresContext, &event, nsnull,
                                 NS_EVENT_FLAG_INIT, &status);
           }
@@ -438,22 +444,22 @@ nsHTMLButtonElement::HandleDOMEvent(nsIPresContext* aPresContext,
 
       case NS_MOUSE_LEFT_CLICK:
         {
-          if (mForm) {
-            if (mType == NS_FORM_BUTTON_SUBMIT || mType == NS_FORM_BUTTON_RESET) {
-              nsFormEvent event((mType == NS_FORM_BUTTON_RESET)
-                                ? NS_FORM_RESET : NS_FORM_SUBMIT);
-              event.originator      = this;
-              nsEventStatus status  = nsEventStatus_eIgnore;
+          if (mForm && (mType == NS_FORM_BUTTON_SUBMIT ||
+                        mType == NS_FORM_BUTTON_RESET)) {
+            nsFormEvent event(PR_TRUE,
+                              (mType == NS_FORM_BUTTON_RESET)
+                              ? NS_FORM_RESET : NS_FORM_SUBMIT);
+            event.originator      = this;
+            nsEventStatus status  = nsEventStatus_eIgnore;
 
-              nsIPresShell *presShell = aPresContext->GetPresShell();
-              // If |nsIPresShell::Destroy| has been called due to
-              // handling the event (base class HandleDOMEvent, above),
-              // the pres context will return a null pres shell.  See
-              // bug 125624.
-              if (presShell) {
-                nsCOMPtr<nsIContent> form(do_QueryInterface(mForm));
-                presShell->HandleDOMEventWithTarget(form, &event, &status);
-              }
+            nsIPresShell *presShell = aPresContext->GetPresShell();
+            // If |nsIPresShell::Destroy| has been called due to
+            // handling the event (base class HandleDOMEvent, above),
+            // the pres context will return a null pres shell.  See
+            // bug 125624.
+            if (presShell) {
+              nsCOMPtr<nsIContent> form(do_QueryInterface(mForm));
+              presShell->HandleDOMEventWithTarget(form, &event, &status);
             }
           }
         }

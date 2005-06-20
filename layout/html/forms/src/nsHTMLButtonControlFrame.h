@@ -147,7 +147,6 @@ public:
   NS_IMETHOD_(PRInt32) GetFormControlType() const;
   NS_IMETHOD GetName(nsAString* aName);
   NS_IMETHOD GetValue(nsAString* aName);
-  virtual void MouseClicked(nsIPresContext* aPresContext);
   NS_IMETHOD OnContentReset();
 
   void SetFocus(PRBool aOn, PRBool aRepaint);

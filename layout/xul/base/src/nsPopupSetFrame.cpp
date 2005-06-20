@@ -573,7 +573,7 @@ PRBool
 nsPopupSetFrame::OnCreate(PRInt32 aX, PRInt32 aY, nsIContent* aPopupContent)
 {
   nsEventStatus status = nsEventStatus_eIgnore;
-  nsMouseEvent event(NS_XUL_POPUP_SHOWING);
+  nsMouseEvent event(PR_TRUE, NS_XUL_POPUP_SHOWING, nsnull);
   event.point.x = aX;
   event.point.y = aY;
 
@@ -650,7 +650,7 @@ PRBool
 nsPopupSetFrame::OnCreated(PRInt32 aX, PRInt32 aY, nsIContent* aPopupContent)
 {
   nsEventStatus status = nsEventStatus_eIgnore;
-  nsMouseEvent event(NS_XUL_POPUP_SHOWN);
+  nsMouseEvent event(PR_TRUE, NS_XUL_POPUP_SHOWN, nsnull);
   event.point.x = aX;
   event.point.y = aY;
 
@@ -672,8 +672,8 @@ PRBool
 nsPopupSetFrame::OnDestroy(nsIContent* aPopupContent)
 {
   nsEventStatus status = nsEventStatus_eIgnore;
-  nsMouseEvent event(NS_XUL_POPUP_HIDING);
- 
+  nsMouseEvent event(PR_TRUE, NS_XUL_POPUP_HIDING, nsnull);
+
   if (aPopupContent) {
     nsIPresShell *shell = mPresContext->GetPresShell();
     if (shell) {
@@ -691,7 +691,7 @@ PRBool
 nsPopupSetFrame::OnDestroyed(nsIContent* aPopupContent)
 {
   nsEventStatus status = nsEventStatus_eIgnore;
-  nsMouseEvent event(NS_XUL_POPUP_HIDDEN);
+  nsMouseEvent event(PR_TRUE, NS_XUL_POPUP_HIDDEN, nsnull);
 
   if (aPopupContent) {
     nsIPresShell *shell = mPresContext->GetPresShell();

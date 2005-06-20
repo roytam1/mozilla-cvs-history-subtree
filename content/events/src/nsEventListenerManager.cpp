@@ -386,7 +386,8 @@ nsEventListenerManager::~nsEventListenerManager()
   }
 }
 
-nsresult nsEventListenerManager::RemoveAllListeners(PRBool aScriptOnly)
+nsresult
+nsEventListenerManager::RemoveAllListeners(PRBool aScriptOnly)
 {
   if (!aScriptOnly) {
     mListenersRemoved = PR_TRUE;
@@ -400,7 +401,7 @@ nsresult nsEventListenerManager::RemoveAllListeners(PRBool aScriptOnly)
 
   if (mMultiListeners) {
     // XXX probably should just be i < Count()
-    for (int i=0; i<EVENT_ARRAY_TYPE_LENGTH && i < mMultiListeners->Count(); i++) {
+    for (PRInt32 i=0; i<EVENT_ARRAY_TYPE_LENGTH && i < mMultiListeners->Count(); i++) {
       nsVoidArray* listeners;
       listeners = NS_STATIC_CAST(nsVoidArray*, mMultiListeners->ElementAt(i));
       ReleaseListeners(&listeners, aScriptOnly);
@@ -426,7 +427,8 @@ nsresult nsEventListenerManager::RemoveAllListeners(PRBool aScriptOnly)
   return NS_OK;
 }
 
-void nsEventListenerManager::Shutdown()
+void
+nsEventListenerManager::Shutdown()
 {
     sAddListenerID = JSVAL_VOID;
 
@@ -446,9 +448,9 @@ NS_INTERFACE_MAP_BEGIN(nsEventListenerManager)
 NS_INTERFACE_MAP_END
 
 
-nsVoidArray* nsEventListenerManager::GetListenersByType(EventArrayType aType, 
-                                                        nsHashKey* aKey,
-                                                        PRBool aCreate)
+nsVoidArray*
+nsEventListenerManager::GetListenersByType(EventArrayType aType, 
+                                           nsHashKey* aKey, PRBool aCreate)
 {
   NS_ASSERTION(aType >= 0,"Negative EventListenerType?");
   //Look for existing listeners
@@ -550,7 +552,8 @@ nsVoidArray* nsEventListenerManager::GetListenersByType(EventArrayType aType,
   return nsnull;
 }
 
-EventArrayType nsEventListenerManager::GetTypeForIID(const nsIID& aIID)
+EventArrayType
+nsEventListenerManager::GetTypeForIID(const nsIID& aIID)
 { 
   if (aIID.Equals(NS_GET_IID(nsIDOMMouseListener)))
       return eEventArrayType_Mouse;
@@ -597,7 +600,9 @@ EventArrayType nsEventListenerManager::GetTypeForIID(const nsIID& aIID)
   return eEventArrayType_None;
 }
 
-void nsEventListenerManager::ReleaseListeners(nsVoidArray** aListeners, PRBool aScriptOnly)
+void
+nsEventListenerManager::ReleaseListeners(nsVoidArray** aListeners,
+                                         PRBool aScriptOnly)
 {
   if (nsnull != *aListeners) {
     PRInt32 i, count = (*aListeners)->Count();
@@ -683,7 +688,7 @@ nsEventListenerManager::AddEventListener(nsIDOMEventListener *aListener,
   PRBool found = PR_FALSE;
   nsListenerStruct* ls;
 
-  for (int i=0; i<listeners->Count(); i++) {
+  for (PRInt32 i=0; i<listeners->Count(); i++) {
     ls = (nsListenerStruct*)listeners->ElementAt(i);
     if (ls->mListener == aListener && ls->mFlags == aFlags &&
         ls->mGroupFlags == group) {
@@ -727,9 +732,10 @@ nsEventListenerManager::RemoveEventListener(nsIDOMEventListener *aListener,
   nsListenerStruct* ls;
   PRBool listenerRemoved = PR_FALSE;
 
-  for (int i=0; i<listeners->Count(); i++) {
+  for (PRInt32 i=0; i<listeners->Count(); i++) {
     ls = (nsListenerStruct*)listeners->ElementAt(i);
-    if (ls->mListener == aListener && ls->mFlags == aFlags) {
+    if (ls->mListener == aListener &&
+        ((ls->mFlags & ~NS_PRIV_EVENT_UNTRUSTED_PERMITTED) == aFlags)) {
       ls->mSubType &= ~aSubType;
       if (ls->mSubType == NS_EVENT_BITS_NONE) {
         NS_RELEASE(ls->mListener);
@@ -1020,9 +1026,10 @@ nsEventListenerManager::FindJSEventListener(EventArrayType aType)
 {
   nsVoidArray *listeners = GetListenersByType(aType, nsnull, PR_FALSE);
   if (listeners) {
-    //Run through the listeners for this IID and see if a script listener is registered
+    // Run through the listeners for this type and see if a script
+    // listener is registered
     nsListenerStruct *ls;
-    for (int i=0; i<listeners->Count(); i++) {
+    for (PRInt32 i=0; i < listeners->Count(); i++) {
       ls = (nsListenerStruct*)listeners->ElementAt(i);
       if (ls->mFlags & NS_PRIV_EVENT_FLAG_SCRIPT) {
         return ls;
@@ -1037,7 +1044,8 @@ nsresult
 nsEventListenerManager::SetJSEventListener(nsIScriptContext *aContext, 
                                            nsISupports *aObject,
                                            nsIAtom* aName,
-                                           PRBool aIsString)
+                                           PRBool aIsString,
+                                           PRBool aPermitUntrustedEvents)
 {
   nsresult rv = NS_OK;
   nsListenerStruct *ls;
@@ -1050,8 +1058,8 @@ nsEventListenerManager::SetJSEventListener(nsIScriptContext *aContext,
   ls = FindJSEventListener(arrayType);
 
   if (nsnull == ls) {
-    //If we didn't find a script listener or no listeners existed
-    //create and add a new one.
+    // If we didn't find a script listener or no listeners existed
+    // create and add a new one.
     nsCOMPtr<nsIDOMScriptObjectFactory> factory =
       do_GetService(kDOMScriptObjectFactoryCID);
     NS_ENSURE_TRUE(factory, NS_ERROR_FAILURE);
@@ -1076,8 +1084,12 @@ nsEventListenerManager::SetJSEventListener(nsIScriptContext *aContext,
       ls->mHandlerIsString &= ~flags;
     }
 
-    //Set subtype flags based on event
+    // Set subtype flags based on event
     ls->mSubType |= flags;
+
+    if (aPermitUntrustedEvents) {
+      ls->mFlags |= NS_PRIV_EVENT_UNTRUSTED_PERMITTED;
+    }
   }
 
   return rv;
@@ -1087,7 +1099,8 @@ NS_IMETHODIMP
 nsEventListenerManager::AddScriptEventListener(nsISupports *aObject,
                                                nsIAtom *aName,
                                                const nsAString& aBody,
-                                               PRBool aDeferCompilation)
+                                               PRBool aDeferCompilation,
+                                               PRBool aPermitUntrustedEvents)
 {
   nsIScriptContext *context = nsnull;
   JSContext* cx = nsnull;
@@ -1185,7 +1198,8 @@ nsEventListenerManager::AddScriptEventListener(nsISupports *aObject,
     }
   }
 
-  return SetJSEventListener(context, aObject, aName, aDeferCompilation);
+  return SetJSEventListener(context, aObject, aName, aDeferCompilation,
+                            aPermitUntrustedEvents);
 }
 
 nsresult
@@ -1257,7 +1271,8 @@ nsEventListenerManager::RegisterScriptEventListener(nsIScriptContext *aContext,
   nsCOMPtr<nsIClassInfo> classInfo = do_QueryInterface(aObject);
 
   if (sAddListenerID == JSVAL_VOID && cx) {
-    sAddListenerID = STRING_TO_JSVAL(::JS_InternString(cx, "addEventListener"));
+    sAddListenerID =
+      STRING_TO_JSVAL(::JS_InternString(cx, "addEventListener"));
 
     rv = nsContentUtils::GetSecurityManager()->
       CheckPropertyAccess(cx, jsobj,
@@ -1270,7 +1285,10 @@ nsEventListenerManager::RegisterScriptEventListener(nsIScriptContext *aContext,
     }
   }
 
-  return SetJSEventListener(aContext, aObject, aName, PR_FALSE);
+  // Untrusted events are always permitted for non-chrome script
+  // handlers.
+  return SetJSEventListener(aContext, aObject, aName, PR_FALSE,
+                            !nsContentUtils::IsCallerChrome());
 }
 
 nsresult
@@ -1445,12 +1463,13 @@ nsEventListenerManager::HandleEventSubType(nsListenerStruct* aListenerStruct,
 * @param an event listener
 */
 
-nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
-                                             nsEvent* aEvent,
-                                             nsIDOMEvent** aDOMEvent,
-                                             nsIDOMEventTarget* aCurrentTarget,
-                                             PRUint32 aFlags,
-                                             nsEventStatus* aEventStatus)
+nsresult
+nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
+                                    nsEvent* aEvent,
+                                    nsIDOMEvent** aDOMEvent,
+                                    nsIDOMEventTarget* aCurrentTarget,
+                                    PRUint32 aFlags,
+                                    nsEventStatus* aEventStatus)
 {
   NS_ENSURE_ARG_POINTER(aEventStatus);
   nsresult ret = NS_OK;
@@ -1489,9 +1508,9 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
   if (aEvent->message == NS_USER_DEFINED_EVENT) {
     listeners = GetListenersByType(eEventArrayType_Hash, aEvent->userType, PR_FALSE);
   } else {
-    for (int i = 0; i < eEventArrayType_Hash; ++i) {
+    for (PRInt32 i = 0; i < eEventArrayType_Hash; ++i) {
       typeData = &sEventTypes[i];
-      for (int j = 0; j < typeData->numEvents; ++j) {
+      for (PRInt32 j = 0; j < typeData->numEvents; ++j) {
         dispData = &(typeData->events[j]);
         if (aEvent->message == dispData->message) {
           listeners = GetListenersByType((EventArrayType)i, nsnull, PR_FALSE);
@@ -1513,9 +1532,11 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
     if (NS_SUCCEEDED(ret)) {
       nsAutoPopupStatePusher popupStatePusher(nsDOMEvent::GetEventPopupControlState(aEvent));
 
-      for (int k = 0; !mListenersRemoved && listeners && k < listeners->Count(); ++k) {
+      for (PRInt32 k = 0; !mListenersRemoved && listeners && k < listeners->Count(); ++k) {
         nsListenerStruct* ls = NS_STATIC_CAST(nsListenerStruct*, listeners->ElementAt(k));
-        if (ls->mFlags & aFlags && ls->mGroupFlags == currentGroup) {
+        if (ls->mFlags & aFlags && ls->mGroupFlags == currentGroup &&
+            (NS_IS_TRUSTED_EVENT(aEvent) ||
+             ls->mFlags & NS_PRIV_EVENT_UNTRUSTED_PERMITTED)) {
           // Try the type-specific listener interface
           PRBool hasInterface = PR_FALSE;
           if (typeData)
@@ -1525,10 +1546,11 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
 
           // If it doesn't implement that, call the generic HandleEvent()
           if (!hasInterface && (ls->mSubType == NS_EVENT_BITS_NONE ||
-                                ls->mSubType & dispData->bits))
+                                ls->mSubType & dispData->bits)) {
             HandleEventSubType(ls, *aDOMEvent, aCurrentTarget,
                                dispData ? dispData->bits : NS_EVENT_BITS_NONE,
                                aFlags);
+          }
         }
       }
     }
@@ -1946,10 +1968,13 @@ nsEventListenerManager::FixContextMenuEvent(nsIPresContext* aPresContext,
   return ret;
 }
 
-void nsEventListenerManager::GetCoordinatesFor(nsIDOMElement *aCurrentEl, 
-                                               nsIPresContext *aPresContext,
-                                               nsIPresShell *aPresShell, 
-                                               nsPoint& aTargetPt)
+// Get coordinates relative to root view for element, 
+// first ensuring the element is onscreen
+void
+nsEventListenerManager::GetCoordinatesFor(nsIDOMElement *aCurrentEl, 
+                                          nsIPresContext *aPresContext,
+                                          nsIPresShell *aPresShell, 
+                                          nsPoint& aTargetPt)
 {
   nsCOMPtr<nsIContent> focusedContent(do_QueryInterface(aCurrentEl));
   nsIFrame *frame = nsnull;

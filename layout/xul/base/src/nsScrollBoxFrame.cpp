@@ -506,9 +506,11 @@ nsScrollBoxFrame::PostScrollPortEvent(nsIPresShell* aShell, PRBool aOverflow, ns
   if (!mContent)
     return;
 
-  nsScrollPortEvent* event = new nsScrollPortEvent(aOverflow ?
+  nsScrollPortEvent* event = new nsScrollPortEvent(PR_TRUE,
+                                                   aOverflow ?
                                                    NS_SCROLLPORT_OVERFLOW :
-                                                   NS_SCROLLPORT_UNDERFLOW);
+                                                   NS_SCROLLPORT_UNDERFLOW,
+                                                   nsnull);
   event->orient = aType;
   aShell->PostDOMEvent(mContent, event);
 }
@@ -786,15 +788,10 @@ public:
                          nsGUIEvent* aEvent,
                          nsEventStatus* aEventStatus);
 
-  NS_IMETHOD Init(nsIPresContext*  aPresContext,
-              nsIContent*      aContent,
-              nsIFrame*        aParent,
-              nsStyleContext*  aContext,
-              nsIFrame*        aPrevInFlow);
-
   NS_DECL_NSITIMERCALLBACK
-  nsIPresContext* mPresContext;
-  
+
+protected:
+  PRPackedBool mTrustedEvent;
 };
 
 nsresult
@@ -819,16 +816,6 @@ nsAutoRepeatBoxFrame::nsAutoRepeatBoxFrame(nsIPresShell* aPresShell)
 {
 }
 
-NS_IMETHODIMP
-nsAutoRepeatBoxFrame::Init(nsIPresContext*  aPresContext,
-              nsIContent*      aContent,
-              nsIFrame*        aParent,
-              nsStyleContext*  aContext,
-              nsIFrame*        aPrevInFlow)
-{
-  mPresContext = aPresContext;
-  return nsButtonBoxFrame::Init(aPresContext, aContent, aParent, aContext, aPrevInFlow);
-}
 
 NS_INTERFACE_MAP_BEGIN(nsAutoRepeatBoxFrame)
   NS_INTERFACE_MAP_ENTRY(nsITimerCallback)
@@ -847,12 +834,15 @@ nsAutoRepeatBoxFrame::HandleEvent(nsIPresContext* aPresContext,
     case NS_MOUSE_ENTER:
     case NS_MOUSE_ENTER_SYNTH:
        nsRepeatService::GetInstance()->Start(this);
-    break;
+       mTrustedEvent = NS_IS_TRUSTED_EVENT(aEvent);
+       break;
 
     case NS_MOUSE_EXIT:
     case NS_MOUSE_EXIT_SYNTH:
        nsRepeatService::GetInstance()->Stop();
-    break;
+       // Not really necessary but do this to be safe
+       mTrustedEvent = PR_FALSE;
+       break;
   }
      
   return nsButtonBoxFrame::HandleEvent(aPresContext, aEvent, aEventStatus);
@@ -861,7 +851,7 @@ nsAutoRepeatBoxFrame::HandleEvent(nsIPresContext* aPresContext,
 NS_IMETHODIMP
 nsAutoRepeatBoxFrame::Notify(nsITimer *timer)
 {
-  MouseClicked(mPresContext, nsnull);
+  DoMouseClick(nsnull, mTrustedEvent);
   return NS_OK;
 }
 

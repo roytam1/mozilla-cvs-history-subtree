@@ -1304,33 +1304,6 @@ nsXBLBinding::IsInExcludesList(nsIAtom* aTag, const nsString& aList)
   return PR_TRUE;
 }
 
-NS_IMETHODIMP
-nsXBLBinding::AddScriptEventListener(nsIContent* aElement, nsIAtom* aName,
-                                     const nsString& aValue)
-{
-  nsAutoString val;
-  aName->ToString(val);
-  
-  nsAutoString eventStr(NS_LITERAL_STRING("on"));
-  eventStr += val;
-
-  nsCOMPtr<nsIAtom> eventName = do_GetAtom(eventStr);
-
-  nsresult rv;
-
-  nsCOMPtr<nsIDOMEventReceiver> receiver(do_QueryInterface(aElement));
-  if (!receiver)
-    return NS_OK;
-
-  nsCOMPtr<nsIEventListenerManager> manager;
-  rv = receiver->GetListenerManager(getter_AddRefs(manager));
-  if (NS_FAILED(rv)) return rv;
-
-  rv = manager->AddScriptEventListener(receiver, eventName, aValue, PR_FALSE);
-
-  return rv;
-}
-
 nsresult
 nsXBLBinding::GetTextData(nsIContent *aParent, nsString& aResult)
 {

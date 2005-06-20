@@ -499,7 +499,7 @@ nsMenuBarX::MenuConstruct( const nsMenuEvent & aMenuEvent, nsIWidget* aParentWin
           nsAutoString menuIDstring;
           menu->GetAttr(kNameSpaceID_None, nsWidgetAtoms::id, menuIDstring);
           if ( menuIDstring == NS_LITERAL_STRING("menu_Help") ) {
-            nsMenuEvent event;
+            nsMenuEvent event(PR_TRUE, 0, nsnull);
             MenuHandle handle = nsnull;
 #if !TARGET_CARBON
             ::HMGetHelpMenuHandle(&handle);
@@ -988,7 +988,7 @@ MenuHelpersX::DispatchCommandTo(nsIWeakReference* aWebShellWeakRef,
   MenuHelpersX::WebShellToPresContext(webShell, getter_AddRefs(presContext));
 
   nsEventStatus status = nsEventStatus_eConsumeNoDefault;
-  nsMouseEvent event(NS_XUL_COMMAND);
+  nsMouseEvent event(PR_TRUE, NS_XUL_COMMAND, nsnull);
 
   // FIXME: Should probably figure out how to init this with the actual
   // pressed keys, but this is a big old edge case anyway. -dwh

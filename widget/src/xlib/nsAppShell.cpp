@@ -605,7 +605,7 @@ nsAppShell::HandleMotionNotifyEvent(XEvent *event, nsWidget *aWidget)
     HandleDragMotionEvent(event, aWidget);
   }
 
-  nsMouseEvent mevent(NS_MOUSE_MOVE, aWidget);
+  nsMouseEvent mevent(PR_TRUE, NS_MOUSE_MOVE, aWidget);
   XEvent aEvent;
 
   mevent.point.x = event->xmotion.x;
@@ -636,7 +636,7 @@ nsAppShell::HandleButtonEvent(XEvent *event, nsWidget *aWidget)
 {
   PRUint32 eventType = 0;
   PRBool currentlyDragging = mDragging;
-  nsMouseScrollEvent scrollEvent(NS_MOUSE_SCROLL, aWidget);
+  nsMouseScrollEvent scrollEvent(PR_TRUE, NS_MOUSE_SCROLL, aWidget);
 
   PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("Button event for window 0x%lx button %d type %s\n",
                                        event->xany.window,
@@ -695,7 +695,7 @@ nsAppShell::HandleButtonEvent(XEvent *event, nsWidget *aWidget)
     break;
   }
 
-  nsMouseEvent mevent(eventType, aWidget);
+  nsMouseEvent mevent(PR_TRUE, eventType, aWidget);
   mevent.isShift = mShiftDown;
   mevent.isControl = mCtrlDown;
   mevent.isAlt = mAltDown;
@@ -788,7 +788,7 @@ nsAppShell::HandleConfigureNotifyEvent(XEvent *event, nsWidget *aWidget)
     }
   }
 
-  nsSizeEvent sevent(NS_SIZE, aWidget);
+  nsSizeEvent sevent(PR_TRUE, NS_SIZE, aWidget);
   sevent.windowSize = new nsRect (event->xconfigure.x, event->xconfigure.y,
                                   event->xconfigure.width, event->xconfigure.height);
   sevent.point.x = event->xconfigure.x;
@@ -888,7 +888,7 @@ nsAppShell::HandleKeyPressEvent(XEvent *event, nsWidget *aWidget)
     return;
   }
 
-  nsKeyEvent keyEvent(NS_KEY_DOWN, focusWidget);
+  nsKeyEvent keyEvent(PR_TRUE, NS_KEY_DOWN, focusWidget);
 
   XComposeStatus compose;
 
@@ -910,7 +910,7 @@ nsAppShell::HandleKeyPressEvent(XEvent *event, nsWidget *aWidget)
 
   focusWidget->DispatchKeyEvent(keyEvent);
 
-  nsKeyEvent pressEvent(NS_KEY_PRESS, focusWidget);
+  nsKeyEvent pressEvent(PR_TRUE, NS_KEY_PRESS, focusWidget);
   pressEvent.keyCode = nsKeyCode::ConvertKeySymToVirtualKey(keysym);
   pressEvent.charCode = nsConvertCharCodeToUnicode(&event->xkey);
   pressEvent.time = event->xkey.time;
@@ -959,7 +959,7 @@ nsAppShell::HandleKeyReleaseEvent(XEvent *event, nsWidget *aWidget)
     return;
   }
 
-  nsKeyEvent keyEvent(NS_KEY_UP, aWidget);
+  nsKeyEvent keyEvent(PR_TRUE, NS_KEY_UP, aWidget);
 
   keyEvent.keyCode = nsKeyCode::ConvertKeySymToVirtualKey(keysym);
   keyEvent.time = event->xkey.time;
@@ -982,7 +982,7 @@ nsAppShell::HandleFocusInEvent(XEvent *event, nsWidget *aWidget)
 {
   PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("FocusIn event for window 0x%lx\n",
                                        event->xfocus.window));
-  nsFocusEvent focusEvent(NS_GOTFOCUS, aWidget);
+  nsFocusEvent focusEvent(PR_TRUE, NS_GOTFOCUS, aWidget);
   
   NS_ADDREF(aWidget);
   aWidget->DispatchWindowEvent(focusEvent);
@@ -994,7 +994,7 @@ nsAppShell::HandleFocusOutEvent(XEvent *event, nsWidget *aWidget)
 {
   PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("FocusOut event for window 0x%lx\n",
                                        event->xfocus.window));
-  nsFocusEvent focusEvent(NS_LOSTFOCUS, aWidget);
+  nsFocusEvent focusEvent(PR_TRUE, NS_LOSTFOCUS, aWidget);
 
   NS_ADDREF(aWidget);
   aWidget->DispatchWindowEvent(focusEvent);
@@ -1031,7 +1031,7 @@ nsAppShell::HandleEnterEvent(XEvent *event, nsWidget *aWidget)
     HandleDragEnterEvent(event, aWidget);
   }
 
-  nsMouseEvent enterEvent(NS_MOUSE_ENTER, aWidget);
+  nsMouseEvent enterEvent(PR_TRUE, NS_MOUSE_ENTER, aWidget);
 
   enterEvent.time = event->xcrossing.time;
   enterEvent.point.x = nscoord(event->xcrossing.x);
@@ -1059,7 +1059,7 @@ nsAppShell::HandleLeaveEvent(XEvent *event, nsWidget *aWidget)
     HandleDragLeaveEvent(event, aWidget);
   }
 
-  nsMouseEvent leaveEvent(NS_MOUSE_EXIT, aWidget);
+  nsMouseEvent leaveEvent(PR_TRUE, NS_MOUSE_EXIT, aWidget);
 
   leaveEvent.time = event->xcrossing.time;
   leaveEvent.point.x = nscoord(event->xcrossing.x);
@@ -1123,7 +1123,7 @@ void nsAppShell::HandleClientMessageEvent(XEvent *event, nsWidget *aWidget)
 
 void nsAppShell::HandleSelectionRequestEvent(XEvent *event, nsWidget *aWidget)
 {
-  nsGUIEvent ev(0, aWidget);
+  nsGUIEvent ev(PR_TRUE, 0, aWidget);
 
   ev.nativeMsg = (void *)event;
 
@@ -1146,7 +1146,7 @@ void nsAppShell::HandleDragMotionEvent(XEvent *event, nsWidget *aWidget) {
   if (currentlyDragging) {
     dragServiceXlib->UpdatePosition(event->xmotion.x, event->xmotion.y);
 
-    nsMouseEvent mevent(NS_DRAGDROP_OVER, aWidget);
+    nsMouseEvent mevent(PR_TRUE, NS_DRAGDROP_OVER, aWidget);
     mevent.point.x = event->xmotion.x;
     mevent.point.y = event->xmotion.y;
 
@@ -1170,7 +1170,7 @@ void nsAppShell::HandleDragEnterEvent(XEvent *event, nsWidget *aWidget) {
   }
 
   if (currentlyDragging) {
-    nsMouseEvent enterEvent(NS_DRAGDROP_ENTER, aWidget);
+    nsMouseEvent enterEvent(PR_TRUE, NS_DRAGDROP_ENTER, aWidget);
   
     enterEvent.point.x = event->xcrossing.x;
     enterEvent.point.y = event->xcrossing.y;
@@ -1197,7 +1197,7 @@ void nsAppShell::HandleDragLeaveEvent(XEvent *event, nsWidget *aWidget) {
   }
 
   if (currentlyDragging) {
-    nsMouseEvent leaveEvent(NS_DRAGDROP_EXIT, aWidget);
+    nsMouseEvent leaveEvent(PR_TRUE, NS_DRAGDROP_EXIT, aWidget);
   
     leaveEvent.point.x = event->xcrossing.x;
     leaveEvent.point.y = event->xcrossing.y;
@@ -1224,7 +1224,7 @@ void nsAppShell::HandleDragDropEvent(XEvent *event, nsWidget *aWidget) {
   }
 
   if (currentlyDragging) {
-    nsMouseEvent mevent(NS_DRAGDROP_DROP, aWidget);
+    nsMouseEvent mevent(PR_TRUE, NS_DRAGDROP_DROP, aWidget);
     mevent.point.x = event->xbutton.x;
     mevent.point.y = event->xbutton.y;
   
@@ -1238,7 +1238,7 @@ void nsAppShell::HandleDragDropEvent(XEvent *event, nsWidget *aWidget) {
 
 void nsAppShell::ForwardEvent(XEvent *event, nsWidget *aWidget)
 {
-  nsGUIEvent ev(0, aWidget);
+  nsGUIEvent ev(PR_TRUE, 0, aWidget);
   ev.nativeMsg = (void *)event;
 
   aWidget->DispatchWindowEvent(ev);

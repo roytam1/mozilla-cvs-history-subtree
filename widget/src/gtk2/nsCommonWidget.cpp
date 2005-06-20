@@ -157,7 +157,7 @@ nsCommonWidget::InitKeyEvent(nsKeyEvent &aEvent, GdkEventKey *aGdkEvent)
 void
 nsCommonWidget::DispatchGotFocusEvent(void)
 {
-    nsGUIEvent event(NS_GOTFOCUS, this);
+    nsGUIEvent event(PR_TRUE, NS_GOTFOCUS, this);
     nsEventStatus status;
     DispatchEvent(&event, status);
 }
@@ -165,7 +165,7 @@ nsCommonWidget::DispatchGotFocusEvent(void)
 void
 nsCommonWidget::DispatchLostFocusEvent(void)
 {
-    nsGUIEvent event(NS_LOSTFOCUS, this);
+    nsGUIEvent event(PR_TRUE, NS_LOSTFOCUS, this);
     nsEventStatus status;
     DispatchEvent(&event, status);
 }
@@ -173,7 +173,7 @@ nsCommonWidget::DispatchLostFocusEvent(void)
 void
 nsCommonWidget::DispatchActivateEvent(void)
 {
-    nsGUIEvent event(NS_ACTIVATE, this);
+    nsGUIEvent event(PR_TRUE, NS_ACTIVATE, this);
     nsEventStatus status;
     DispatchEvent(&event, status);
 }
@@ -181,7 +181,7 @@ nsCommonWidget::DispatchActivateEvent(void)
 void
 nsCommonWidget::DispatchDeactivateEvent(void)
 {
-    nsGUIEvent event(NS_DEACTIVATE, this);
+    nsGUIEvent event(PR_TRUE, NS_DEACTIVATE, this);
     nsEventStatus status;
     DispatchEvent(&event, status);
 }
@@ -189,7 +189,7 @@ nsCommonWidget::DispatchDeactivateEvent(void)
 void
 nsCommonWidget::DispatchResizeEvent(nsRect &aRect, nsEventStatus &aStatus)
 {
-    nsSizeEvent event(NS_SIZE, this);
+    nsSizeEvent event(PR_TRUE, NS_SIZE, this);
 
     event.windowSize = &aRect;
     event.point.x = aRect.x;
@@ -438,7 +438,7 @@ nsCommonWidget::OnDestroy(void)
 
     nsCOMPtr<nsIWidget> kungFuDeathGrip = this;
 
-    nsGUIEvent event(NS_DESTROY, this);
+    nsGUIEvent event(PR_TRUE, NS_DESTROY, this);
     nsEventStatus status;
     DispatchEvent(&event, status);
 }

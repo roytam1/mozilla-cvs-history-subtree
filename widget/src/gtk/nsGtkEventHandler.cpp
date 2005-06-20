@@ -450,7 +450,7 @@ void InitKeyPressEvent(GdkEventKey *aGEK,
 void handle_size_allocate(GtkWidget *w, GtkAllocation *alloc, gpointer p)
 {
   nsWindow *widget = (nsWindow *)p;
-  nsSizeEvent event(NS_SIZE, widget);
+  nsSizeEvent event(PR_TRUE, NS_SIZE, widget);
 
   InitAllocationEvent(alloc, event);
   NS_ADDREF(widget);
@@ -483,7 +483,7 @@ gint handle_key_press_event_for_text(GtkObject *w, GdkEventKey* event,
     return PR_TRUE;
 
   NS_ADDREF(win);
-  nsKeyEvent keyDownEvent(NS_KEY_DOWN, win);
+  nsKeyEvent keyDownEvent(PR_TRUE, NS_KEY_DOWN, win);
   InitKeyEvent(event, keyDownEvent);
   win->OnKey(keyDownEvent);
 
@@ -492,7 +492,7 @@ gint handle_key_press_event_for_text(GtkObject *w, GdkEventKey* event,
   //  character code.  Note we have to check for modifier keys, since
   // gtk returns a character value for them
   //
-  nsKeyEvent keyPressEvent(NS_KEY_PRESS, win);
+  nsKeyEvent keyPressEvent(PR_TRUE, NS_KEY_PRESS, win);
   InitKeyPressEvent(event, keyPressEvent);
   win->OnKey(keyPressEvent);
 
@@ -510,7 +510,7 @@ gint handle_key_release_event_for_text(GtkObject *w, GdkEventKey* event,
                                        gpointer p)
 {
   nsTextWidget* win = (nsTextWidget*)p;
-  nsKeyEvent kevent(NS_KEY_UP, win);
+  nsKeyEvent kevent(PR_TRUE, NS_KEY_UP, win);
 
   // Don't pass shift, control and alt as key release events
   if (event->keyval == GDK_Shift_L
@@ -565,7 +565,7 @@ gint handle_key_press_event(GtkObject *w, GdkEventKey* event, gpointer p)
   //   but lie about where it came from and say it is from the
   //   window that currently has focus inside our app...
   //
-  nsKeyEvent keyDownEvent(NS_KEY_DOWN, win);
+  nsKeyEvent keyDownEvent(PR_TRUE, NS_KEY_DOWN, win);
   InitKeyEvent(event, keyDownEvent);
   // if we need to suppress this NS_KEY_DOWN event, reset the flag
   if (suppressNextKeyDown == PR_TRUE)
@@ -581,7 +581,7 @@ gint handle_key_press_event(GtkObject *w, GdkEventKey* event, gpointer p)
   //
 
   // Call nsConvertCharCodeToUnicode() here to get kevent.charCode 
-  nsKeyEvent keyPressEvent(NS_KEY_PRESS, win);
+  nsKeyEvent keyPressEvent(PR_TRUE, NS_KEY_PRESS, win);
   InitKeyPressEvent(event, keyPressEvent);
 
   if (event->length) {
@@ -654,7 +654,7 @@ gint handle_key_release_event(GtkObject *w, GdkEventKey* event, gpointer p)
   if (nsWidget::sFocusWindow)
     win = nsWidget::sFocusWindow;
 
-  nsKeyEvent kevent(NS_KEY_UP, win);
+  nsKeyEvent kevent(PR_TRUE, NS_KEY_UP, win);
   InitKeyEvent(event, kevent);
 
   NS_ADDREF(win);

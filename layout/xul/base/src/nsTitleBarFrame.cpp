@@ -191,7 +191,7 @@ nsTitleBarFrame::HandleEvent(nsIPresContext* aPresContext,
 
 
     case NS_MOUSE_LEFT_CLICK:
-      MouseClicked(aPresContext);
+      MouseClicked(aPresContext, aEvent);
       break;
   }
   
@@ -231,10 +231,14 @@ nsTitleBarFrame::CaptureMouseEvents(nsIPresContext* aPresContext,PRBool aGrabMou
 
 
 void 
-nsTitleBarFrame::MouseClicked (nsIPresContext* aPresContext) 
+nsTitleBarFrame::MouseClicked(nsIPresContext* aPresContext, nsGUIEvent* aEvent) 
 {
   // Execute the oncommand event handler.
   nsEventStatus status = nsEventStatus_eIgnore;
-  nsMouseEvent event(NS_XUL_COMMAND);
-  mContent->HandleDOMEvent(aPresContext, &event, nsnull, NS_EVENT_FLAG_INIT, &status);
+
+  nsMouseEvent event(aEvent ? NS_IS_TRUSTED_EVENT(aEvent) : PR_FALSE,
+                     NS_XUL_COMMAND, nsnull);
+
+  mContent->HandleDOMEvent(aPresContext, &event, nsnull, NS_EVENT_FLAG_INIT,
+                           &status);
 }
