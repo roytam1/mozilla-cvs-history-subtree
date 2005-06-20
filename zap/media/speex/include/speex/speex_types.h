@@ -18,7 +18,14 @@
 #ifndef _SPEEX_TYPES_H
 #define _SPEEX_TYPES_H
 
-#if defined(_WIN32) 
+#if defined(MOZILLA_CLIENT)
+#  include "prtypes.h"
+   typedef PRInt16 spx_int16_t;
+   typedef PRUint16 spx_uint16_t;
+   typedef PRInt32 spx_int32_t;
+   typedef PRUint32 spx_uint32_t;
+   typedef PRInt64 spx_int64_t;
+#elif defined(_WIN32) 
 
 #  if defined(__CYGWIN__)
 #    include <_G_config.h>

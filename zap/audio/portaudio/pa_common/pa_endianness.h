@@ -54,6 +54,14 @@ extern "C"
 {
 #endif /* __cplusplus */
 
+/* Determine Endianness for Mozilla */
+#include "prcpucfg.h"
+#ifdef IS_BIG_ENDIAN
+#define PA_BIG_ENDIAN
+#endif
+#ifdef IS_LITTLE_ENDIAN
+#define PA_LITTLE_ENDIAN
+#endif
 
 #if defined(PA_LITTLE_ENDIAN) || defined(PA_BIG_ENDIAN)
     /* endianness define has been set externally, such as by autoconf */

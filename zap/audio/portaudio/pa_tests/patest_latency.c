@@ -175,7 +175,7 @@ int main(void)
         char c;
         do
         {
-            c = getch();
+            c = getchar();
         }
         while( c < ' '); /* Strip white space and control chars. */
 

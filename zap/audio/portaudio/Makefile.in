@@ -11,24 +11,7 @@ LIBRARY_NAME	= moz_portaudio
 #LIB_IS_C_ONLY   = 1
 FORCE_STATIC_LIB= 1
 
-#CSRCS		= \
-#	pa_common/pa_allocation.c \
-#	pa_common/pa_converters.c \
-#	pa_common/pa_cpuload.c \
-#	pa_common/pa_dither.c \
-#	pa_common/pa_front.c \
-#	pa_common/pa_process.c \
-#	pa_common/pa_skeleton.c \
-#	pa_common/pa_stream.c \
-#	pa_common/pa_trace.c \
-#	pa_win_ds/pa_win_ds.c \
-#	pa_win_ds/dsound_wrapper.c \
-#	pa_win/pa_win_hostapis.c \
-#	pa_win/pa_win_util.c \
-#	$(NULL)
-
-
-CSRCS		= \
+CSRCS = \
 	pa_common/pa_allocation.c \
 	pa_common/pa_converters.c \
 	pa_common/pa_cpuload.c \
@@ -38,19 +21,51 @@ CSRCS		= \
 	pa_common/pa_skeleton.c \
 	pa_common/pa_stream.c \
 	pa_common/pa_trace.c \
+	$(NULL)
+
+EXPORTS = \
+	pa_common/portaudio.h \
+	$(NULL)
+
+ifeq ($(OS_ARCH),WINNT)
+#CSRCS		= \
+#	pa_win_ds/pa_win_ds.c \
+#	pa_win_ds/dsound_wrapper.c \
+#	pa_win/pa_win_hostapis.c \
+#	pa_win/pa_win_util.c \
+#	$(NULL)
+
+CSRCS += \
 	pa_win_wmme/pa_win_wmme.c \
 	pa_win/pa_win_hostapis.c \
 	pa_win/pa_win_util.c \
 	$(NULL)
 
+DEFINES += -DPA_NO_DS -DPA_NO_ASIO -DPA_NO_WDMKS
+#DEFINES += -DPA_NO_WMME -DPA_NO_ASIO -DPA_NO_WDMKS
 
-EXPORTS         = \
-		pa_common/portaudio.h \
-		$(NULL)
+OS_LIBS += ole32.lib
+endif
 
+ifeq ($(OS_ARCH),Linux)
+#CSRCS += \
+#	pa_linux_alsa/pa_linux_alsa.c \
+#	pa_unix/pa_unix_hostapis.c \
+#	pa_unix/pa_unix_util.c \
+#	$(NULL)
 
-DEFINES 	+= -DPA_NO_DS -DPA_NO_ASIO -DPA_NO_WDMKS
-#DEFINES 	+= -DPA_NO_WMME -DPA_NO_ASIO -DPA_NO_WDMKS
+CSRCS += \
+	pa_unix_oss/pa_unix_oss.c \
+	pa_unix/pa_unix_hostapis.c \
+	pa_unix/pa_unix_util.c \
+	$(NULL)
+
+#DEFINES += -DPA_USE_ALSA
+DEFINES += -DPA_USE_OSS
+
+#OS_LIBS += -lasound
+
+endif
 
 
 SIMPLE_PROGRAMS = \
@@ -96,8 +111,6 @@ include $(topsrcdir)/config/rules.mk
 
 LOCAL_INCLUDES  = -I$(srcdir)/pa_common
 
-OS_LIBS += dsound.lib ole32.lib
-
 # The portaudio code is dispersed over several subdirectory, but
 # building separate libs is overkill. We drive the whole build from
 # this Makefile, but we need to make sure that the object dirs exist:
@@ -106,6 +119,9 @@ EXTRA_OBJDIRS   = pa_common \
 		  pa_win_wmme \
 		  pa_win_ds \
 		  pa_win \
+		  pa_linux_alsa \
+		  pa_unix \
+		  pa_unix_oss \
 		  pa_tests \
 		  $(NULL)
 
@@ -113,6 +129,6 @@ export::
 	mkdir -p $(EXTRA_OBJDIRS)
 
 
-LIBS += $(LIBRARY_NAME).lib
+LIBS += $(LIB_PREFIX)$(LIBRARY_NAME).$(LIB_SUFFIX)
 
 $(SIMPLE_PROGRAMS): %$(BIN_SUFFIX): %.$(OBJ_SUFFIX) $(STATIC_LIBRARY)

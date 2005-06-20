@@ -39,6 +39,4 @@ SHARED_LIBRARY_LIBS += \
 
 include $(topsrcdir)/config/rules.mk
 
-OS_LIBS += dsound.lib ole32.lib
-
 EXTRA_DSO_LDOPTS += $(MOZ_COMPONENT_LIBS)
