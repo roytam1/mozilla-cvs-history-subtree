@@ -1,3 +1,8 @@
+2005-06-21  Alex Fritze  <alex@croczilla.com>
+
+	* sip/SipUAStack.js:
+	Only create early dialog for responses with a To tag.
+
 2005-06-20  Alex Fritze  <alex@croczilla.com>
 
 	* media/speex/include/speex/speex_types.h, audio/portaudio/pa_tests/patest_latency.c, audio/portaudio/Makefile.in, audio/portaudio/pa_common/pa_endianness.h, audio/audioservice/Makefile.in:
