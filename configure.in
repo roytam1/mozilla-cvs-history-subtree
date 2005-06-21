@@ -505,9 +505,11 @@ darwin*)
         GCC_BUILD=`echo $CXX_VERSION | $PERL -pe 's/^.*build ([^ )]*).*/$1/'`
         changequote([,])
         if test "$GCC_BUILD" = "4061" ; then
-            AC_MSG_WARN([You are attempting to use gcc 4.0.0 build 4061.
-This compiler is unable to build Mozilla.  gcc 3.3 is recommended.
-Run \"sudo gcc_select 3.3\" to switch the system's default compiler.])
+            AC_MSG_ERROR([You are attempting to use Apple gcc 4.0 build 4061.
+This compiler was supplied with Xcode 2.0, and contains bugs that prevent it
+from building Mozilla.
+Either upgrade to Xcode 2.1 or later, or switch the system's default compiler
+to gcc 3.3 by running \"sudo gcc_select 3.3\".])
         fi
     fi
 
@@ -516,6 +518,17 @@ Run \"sudo gcc_select 3.3\" to switch the system's default compiler.])
     dnl /usr/bin/g(cc|++)-$GCC_VERSION.
     AC_PATH_PROGS(PBBUILD, pbbuild xcodebuild pbxbuild)
 
+    case "$PBBUILD" in
+      *xcodebuild*)
+        changequote(,)
+        XCODEBUILD_VERSION=`$PBBUILD -version 2>/dev/null | sed -e 's/.*DevToolsCore-\([0-9]*\).*/\1/'`
+        changequote([,])
+        if test -n "$XCODEBUILD_VERSION" && test "$XCODEBUILD_VERSION" -ge 620 ; then
+          HAS_XCODE_2_1=1;
+        fi
+      ;;
+    esac
+
     dnl sdp was formerly in /Developer/Tools.  As of Mac OS X 10.4 (Darwin 8),
     dnl it has moved into /usr/bin.
     AC_PATH_PROG(SDP, sdp, :, [$PATH:/usr/bin:/Developer/Tools])
@@ -523,6 +536,8 @@ Run \"sudo gcc_select 3.3\" to switch the system's default compiler.])
 esac
 
 AC_SUBST(GCC_VERSION)
+AC_SUBST(XCODEBUILD_VERSION)
+AC_SUBST(HAS_XCODE_2_1)
 
 dnl ========================================================
 dnl = Mac OS X SDK support
@@ -577,6 +592,19 @@ tools are selected during the Xcode/Developer Tools installation.])
   CXXCPP="$CXXCPP -nostdinc -nostdinc++ ${SDK_CXX_INCLUDE} ${SDK_C_INCLUDE}"
 
   LIBS="-L${MACOS_SDK_DIR}/usr/lib/gcc/${TARGET_ARCH_LIB} -L${MACOS_SDK_DIR}/usr/lib/gcc/${TARGET_ARCH_LIB}/${GCC_VERSION_FULL} -L${MACOS_SDK_DIR}/usr/lib $LIBS"
+
+  dnl Make sure that all of the paths that were just set will work
+  if test ! -d "${MACOS_SDK_DIR}/usr/lib/gcc/${TARGET_ARCH_LIB}/${GCC_VERSION_FULL}"; then
+    if test "$GCC_VERSION" = "4.0" ; then
+      COMPILER_SPECIFIC_MESSAGE="The selected compiler, gcc 4.0, requires SDK 10.3.9 or greater.
+"
+    fi
+    AC_MSG_ERROR([The selected SDK does not support the chosen compiler.
+Either switch to a different compiler or choose a different SDK.
+${COMPILER_SPECIFIC_MESSAGE}You can change the system's default compiler to gcc 3.3 by running
+\"sudo gcc_select 3.3\".
+You can change the target SDK by using a different --with-macos-sdk option.])
+  fi
 fi
 
 dnl Be sure the make we use is GNU make.
@@ -1011,10 +1039,6 @@ case "$host" in
     HOST_OPTIMIZE_FLAGS="${HOST_OPTIMIZE_FLAGS=-O3}"
     ;;
 
-*-os2*)
-    HOST_CFLAGS="$HOST_CFLAGS -Zomf"
-    ;;
-
 *cygwin*|*mingw*|*mks*|*msvc*|*wince)
     if test -n "$_WIN32_MSVC"; then
         HOST_CFLAGS="$HOST_CFLAGS -TC -nologo"
@@ -1058,10 +1082,11 @@ case "$host" in
     ;;
 
 *os2*)
-    HOST_CFLAGS="$HOST_CFLAGS -DXP_OS2 -DNO_X11"
+    HOST_CFLAGS="$HOST_CFLAGS -DXP_OS2 -DNO_X11 -Zomf"
     HOST_NSPR_MDCPUCFG='\"md/_os2.cfg\"'
     HOST_OPTIMIZE_FLAGS="${HOST_OPTIMIZE_FLAGS=-O2}"
     HOST_BIN_SUFFIX=.exe
+    MOZ_FIX_LINK_PATHS='-Wl,$(DIST)/bin'
     ;;
 
 *-osf*)
@@ -4868,7 +4893,28 @@ MOZ_ARG_DISABLE_BOOL(updater,
 [  --disable-updater       Disable building of updater],
     MOZ_UPDATER=,
     MOZ_UPDATER=1 )
+# The Windows build requires the iconv command line utility
+# in order to build the updater.
+case "$target_os" in
+    msvc*|mks*|cygwin*|mingw*|wince*)
+        if test -n "$MOZ_UPDATER"; then
+            AC_MSG_CHECKING([for iconv])
+            AC_CHECK_PROGS(HOST_ICONV, $HOST_ICONV "iconv", "")
+            if test -z "$HOST_ICONV"; then
+                AC_MSG_ERROR([iconv not found in \$PATH])
+            fi
+        fi
+        ;;
+esac
 AC_SUBST(MOZ_UPDATER)
+
+# tools/update-packaging is not checked out by default.
+MOZ_ARG_ENABLE_BOOL(update-packaging,
+[  --enable-update-packaging
+                           Enable tools/update-packaging],
+    MOZ_UPDATE_PACKAGING=1,
+    MOZ_UPDATE_PACKAGING= )
+AC_SUBST(MOZ_UPDATE_PACKAGING)
 
 dnl ========================================================
 dnl ActiveX
@@ -6174,6 +6220,79 @@ else
 fi
 
 AC_SUBST(MOZ_XUL)
+
+dnl ========================================================
+dnl Python XPCOM bindings - if enabled, we must locate Python.
+dnl ========================================================
+dnl
+dnl Allow PYTHON to point to the Python interpreter to use.
+dnl If not set, we use whatever Python we can find.  Setting
+dnl PYTHON will allow you to build from any Python version you nominate
+dnl
+dnl If future Python based extensions are added, some of this should
+dnl be split out appropriately.
+MOZ_PYTHON=
+MOZ_PYTHON_PREFIX=
+MOZ_PYTHON_INCLUDES=
+MOZ_PYTHON_LIBS=
+MOZ_PYTHON_VER=
+MOZ_PYTHON_VER_DOTTED=
+MOZ_PYTHON_DEBUG_SUFFIX=
+MOZ_PYTHON_DLL_SUFFIX=
+if test `echo "$MOZ_EXTENSIONS" | grep -c python/xpcom` -ne 0; then
+    dnl If PYTHON is in the environment, we use that
+    if test -z "$PYTHON"; then
+        AC_PATH_PROG(PYTHON, python, :)
+    fi
+    if test "$OS_ARCH" = "WINNT"; then
+        dnl Convert to cygwin style "mixed" (ie, "c:/path/file.exe")
+        PYTHON=`cygpath -t mixed $PYTHON`
+    fi
+    if test ! -x "$PYTHON"; then
+        AC_MSG_ERROR([Could not find Python - please adjust your PATH, or set PYTHON.])
+    fi
+    MOZ_PYTHON=$PYTHON
+    dnl Ask Python what its version number is
+    MOZ_PYTHON_VER=`$PYTHON -c "import sys;print '%d%d' % sys.version_info[[0:2]]"`
+    MOZ_PYTHON_VER_DOTTED=`$PYTHON -c "import sys;print '%d.%d' % sys.version_info[[0:2]]"`
+    dnl Ask for the Python "prefix" (ie, home/source dir)
+    MOZ_PYTHON_PREFIX=`$PYTHON -c "import sys; print sys.prefix"`
+    dnl Setup the include and library directories.
+    if test "$OS_ARCH" = "WINNT"; then
+        MOZ_PYTHON_PREFIX=`cygpath -t mixed $MOZ_PYTHON_PREFIX`
+        dnl Source trees have "include" and "PC" for .h, and "PCbuild" for .lib
+        dnl Binary trees have "include" for .h, and "libs" for .lib
+        dnl We add 'em both - along with quotes, to handle spaces.
+        MOZ_PYTHON_DLL_SUFFIX=.pyd
+        MOZ_PYTHON_INCLUDES="\"-I$MOZ_PYTHON_PREFIX/include\" \"-I$MOZ_PYTHON_PREFIX/PC\""
+        MOZ_PYTHON_LIBS="\"/libpath:$MOZ_PYTHON_PREFIX/PCBuild\" \"/libpath:$MOZ_PYTHON_PREFIX/libs\""
+    else
+        dnl Non-Windows include and libs
+        MOZ_PYTHON_DLL_SUFFIX=$DLL_SUFFIX
+        PYTHON_INCLUDE_SRC=$MOZ_PYTHON_PREFIX/include/python$MOZ_PYTHON_VER_DOTTED
+        PYTHON_LIB_SRC=`$PYTHON  -c 'from distutils import sysconfig; print sysconfig.get_config_var("LIBPL")'`
+        if test ! -f $PYTHON_INCLUDE_SRC/Python.h; then
+            AC_MSG_ERROR([Include directory $PYTHON_INCLUDE_SRC not found or does not contain development headers])
+        fi
+        MOZ_PYTHON_INCLUDES="-I$PYTHON_INCLUDE_SRC"
+        MOZ_PYTHON_LIBS="-L$PYTHON_LIB_SRC -lpython$MOZ_PYTHON_VER_DOTTED"
+    fi
+    dnl Handle "_d" on Windows
+    if test "$OS_ARCH" = "WINNT" && test -n "$MOZ_DEBUG"; then
+        MOZ_PYTHON_DEBUG_SUFFIX="_d"
+    else
+        MOZ_PYTHON_DEBUG_SUFFIX=
+    fi
+    AC_MSG_RESULT(Building PyXPCOM using Python-$MOZ_PYTHON_VER_DOTTED from $MOZ_PYTHON_PREFIX)
+fi
+AC_SUBST(MOZ_PYTHON)
+AC_SUBST(MOZ_PYTHON_PREFIX)
+AC_SUBST(MOZ_PYTHON_INCLUDES)
+AC_SUBST(MOZ_PYTHON_LIBS)
+AC_SUBST(MOZ_PYTHON_VER)
+AC_SUBST(MOZ_PYTHON_VER_DOTTED)
+AC_SUBST(MOZ_PYTHON_DEBUG_SUFFIX)
+AC_SUBST(MOZ_PYTHON_DLL_SUFFIX)
 
 dnl ========================================================
 dnl disable profile sharing

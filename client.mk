@@ -163,6 +163,8 @@ MODULES_mail :=                                 \
 LOCALES_mail :=                                 \
   $(LOCALES_toolkit)                            \
   mail                                          \
+  other-licenses/branding/thunderbird           \
+  editor/ui                                     \
   $(NULL)
 
 BOOTSTRAP_mail := mozilla/mail/config/mozconfig
