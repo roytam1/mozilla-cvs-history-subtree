@@ -737,7 +737,9 @@ InviteUACCore.fun(
     if (this._methodHandler)
       this._methodHandler.provisionalResponse(this, r);
     this._dump(r.statusCode);
-    if (r.statusCode>=101 && r.statusCode<199) {
+    // rfc3261 12.1: only provisional 101-199 responses with a 'To'
+    // tag create early dialogs
+    if (r.statusCode>=101 && r.statusCode<199 && r.getToHeader().getParameter("tag")) {
       if (!this._stack.findDialog(constructClientDialogID(r)))
         this._createNewDialog(r);
     }
