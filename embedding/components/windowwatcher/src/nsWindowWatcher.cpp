@@ -564,6 +564,13 @@ nsWindowWatcher::OpenWindowJS(nsIDOMWindow *aParent,
 
   nsCOMPtr<nsIDOMChromeWindow> chromeParent(do_QueryInterface(aParent));
 
+  // Make sure we call CalculateChromeFlags() *before* we push the
+  // callee context onto the context stack so that
+  // CalculateChromeFlags() sees the actual caller when doing it's
+  // security checks.
+  chromeFlags = CalculateChromeFlags(features.get(), featuresSpecified,
+                                     aDialog, uriToLoadIsChrome);
+
   PRBool isCallerChrome = PR_FALSE;
   nsCOMPtr<nsIScriptSecurityManager>
     sm(do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID));
@@ -580,9 +587,6 @@ nsWindowWatcher::OpenWindowJS(nsIDOMWindow *aParent,
 
     callerContextGuard.Push(cx);
   }
-
-  chromeFlags = CalculateChromeFlags(features.get(), featuresSpecified,
-                                     aDialog, uriToLoadIsChrome);
 
   // no extant window? make a new one.
   if (!newDocShellItem) {
