@@ -369,6 +369,10 @@ ifdef MOZ_SUNBIRD
 tier_99_dirs	+= calendar/sunbird
 endif
 
+ifdef MOZ_ZAP
+tier_99_dirs	+= zap
+endif
+
 ifdef MOZ_SUITE
 tier_99_dirs	+= suite
 endif

@@ -812,6 +812,7 @@ ZAP_BRANCH_MODIFIED_FILES = \
 	config/autoconf.mk.in \
 	configure \
 	configure.in \
+	Makefile.in \
 	js/src/xpconnect/Makefile.in \
 	js/src/xpconnect/loader/Makefile.in \
 	js/src/xpconnect/loader/mozJSComponentLoader.cpp \
