@@ -1,5 +1,7 @@
 2005-06-21  Alex Fritze  <alex@croczilla.com>
 
+	* config/mozconfig: Add config file for zap project.
+
 	* sip/SipUAStack.js:
 	Only create early dialog for responses with a To tag.
 
