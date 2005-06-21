@@ -1045,7 +1045,7 @@ zap/base/Makefile
 zap/base/idl/Makefile
 zap/audio/Makefile
 zap/audio/portaudio/Makefile
-zap/audio/audioserivce/Makefile
+zap/audio/audioservice/Makefile
 zap/media/Makefile
 zap/media/mediaservice/Makefile
 zap/media/speex/Makefile
