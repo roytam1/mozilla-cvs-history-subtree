@@ -97,6 +97,7 @@ AVAILABLE_PROJECTS = \
   calendar \
   xulrunner \
   macbrowser \
+  zap \
   $(NULL)
 
 MODULES_core :=                                \
@@ -200,6 +201,18 @@ MODULES_macbrowser :=                           \
   $(NULL)
 
 BOOTSTRAP_macbrowser := mozilla/camino/config/mozconfig
+
+MODULES_zap :=                                  \
+  $(MODULES_xulrunner)                          \
+  mozilla/zap                                   \
+  $(NULL)
+
+LOCALES_zap :=                                  \
+  $(LOCALES_xulrunner)                          \
+  $(NULL)
+
+BOOTSTRAP_zap := mozilla/zap/config/mozconfig
+
 
 #######################################################################
 # Checkout Tags

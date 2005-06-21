@@ -3809,6 +3809,7 @@ MOZ_ARG_ENABLE_STRING(application,
                             calendar
                             xulrunner
                             macbrowser (Camino)
+                            zap (SIP client)
                             standalone (use this for standalone
                               xpcom/xpconnect or to manually drive a build)],
 [ MOZ_BUILD_APP=$enableval ] )
@@ -3881,6 +3882,7 @@ xulrunner)
   MOZ_APP_VERSION=$MOZILLA_VERSION
   MOZ_EXTENSIONS_DEFAULT=" xml-rpc xmlextras pref transformiix universalchardet webservices gnomevfs negotiateauth"
   AC_DEFINE(MOZ_XULRUNNER)
+  AC_DEFINE(MOZ_ZAP)
   ;;
 
 macbrowser) 
@@ -3889,6 +3891,18 @@ macbrowser)
   MOZ_APP_VERSION=$MOZILLA_VERSION
   MOZ_EXTENSIONS_DEFAULT=" cookie xmlextras universalchardet typeaheadfind transformiix"
   AC_DEFINE(MOZ_MACBROWSER)
+  ;;
+
+zap)
+  MOZ_APP_NAME=xulrunner
+  MOZ_APP_DISPLAYNAME=Mozilla
+  MOZ_ZAP=1
+  MOZ_XUL_APP=1
+  MOZ_XULRUNNER=1
+  MOZ_ENABLE_LIBXUL=1
+  MOZ_APP_VERSION=$MOZILLA_VERSION
+  MOZ_EXTENSIONS_DEFAULT=" xml-rpc xmlextras pref transformiix universalchardet webservices gnomevfs negotiateauth"
+  AC_DEFINE(MOZ_XULRUNNER)
   ;;
 
 standalone) 
@@ -3910,6 +3924,7 @@ AC_SUBST(MOZ_THUNDERBIRD)
 AC_SUBST(MOZ_STANDALONE_COMPOSER)
 AC_SUBST(MOZ_SUNBIRD)
 AC_SUBST(MOZ_XULRUNNER)
+AC_SUBST(MOZ_ZAP)
 
 AC_DEFINE_UNQUOTED(MOZ_BUILD_APP,$MOZ_BUILD_APP)
 
