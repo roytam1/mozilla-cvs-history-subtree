@@ -635,6 +635,7 @@ public:
     PRPackedBool        mInWord;              // IN
     PRPackedBool        mFirstLetterOK;       // IN
     PRPackedBool        mCanBreakBefore;         // IN
+    PRPackedBool        mComputeMaxWordWidth; // IN
     PRPackedBool        mTrailingSpaceTrimmed; // IN/OUT
   
     TextReflowData(PRInt32 aStartingOffset,
@@ -644,6 +645,7 @@ public:
                    PRBool  aInWord,
                    PRBool  aFirstLetterOK,
                    PRBool  aCanBreakBefore,
+                   PRBool  aComputeMaxWordWidth,
                    PRBool  aTrailingSpaceTrimmed)
       : mX(0),
         mOffset(aStartingOffset),
@@ -656,6 +658,7 @@ public:
         mInWord(aInWord),
         mFirstLetterOK(aFirstLetterOK),
         mCanBreakBefore(aCanBreakBefore),
+        mComputeMaxWordWidth(aComputeMaxWordWidth),
         mTrailingSpaceTrimmed(aTrailingSpaceTrimmed)
     {}
   };
@@ -4830,7 +4833,7 @@ nsTextFrame::MeasureText(nsPresContext*          aPresContext,
   PRUint32 hints = 0;
   aReflowState.rendContext->GetHints(hints);
   if (hints & NS_RENDERING_HINT_FAST_MEASURE) {
-    measureTextRuns = !aTs.mPreformatted &&
+    measureTextRuns = !aTextData.mComputeMaxWordWidth && !aTs.mPreformatted &&
                       !aTs.mSmallCaps && !aTs.mWordSpacing && !aTs.mLetterSpacing &&
                       aTextData.mWrapping;
   }
@@ -5515,7 +5518,7 @@ nsTextFrame::Reflow(nsPresContext*          aPresContext,
     // prev-in-flow has changed the number of characters it maps and so we
     // need to measure text and not try and optimize a resize reflow
     if (startingOffset != mContentOffset) {
-      RemoveStateBits(TEXT_OPTIMIZE_RESIZE);
+      mState &= ~TEXT_OPTIMIZE_RESIZE;
     }
   }
   nsLineLayout& lineLayout = *aReflowState.mLineLayout;
@@ -5647,7 +5650,7 @@ nsTextFrame::Reflow(nsPresContext*          aPresContext,
   // Local state passed to the routines that do the actual text measurement
   TextReflowData  textData(startingOffset, wrapping, skipWhitespace, 
                            measureText, inWord, lineLayout.GetFirstLetterStyleOK(),
-                           lineLayout.LineIsBreakable(),
+                           lineLayout.LineIsBreakable(), PR_FALSE,
                            PR_FALSE);
   
   // Measure the text
@@ -5756,11 +5759,11 @@ nsTextFrame::Reflow(nsPresContext*          aPresContext,
   //   and our frame width won't get set
   if (NS_FRAME_IS_COMPLETE(aStatus) && !NS_INLINE_IS_BREAK(aStatus)  && 
       (aMetrics.width <= maxWidth)) {
-    AddStateBits(TEXT_OPTIMIZE_RESIZE);
+    mState |= TEXT_OPTIMIZE_RESIZE;
     mRect.width = aMetrics.width;
   }
   else {
-    RemoveStateBits(TEXT_OPTIMIZE_RESIZE);
+    mState &= ~TEXT_OPTIMIZE_RESIZE;
   }
  
   // If it's an incremental reflow command, then invalidate our existing
