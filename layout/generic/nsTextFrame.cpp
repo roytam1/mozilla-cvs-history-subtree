@@ -703,7 +703,7 @@ public:
                     nscoord aWidth,
                     SelectionDetails *aDetails = nsnull);
 
-  void MeasureSmallCapsText(const nsHTMLReflowState& aReflowState,
+  void MeasureSmallCapsText(nsIRenderingContext* aRenderingContext,
                             TextStyle& aStyle,
                             PRUnichar* aWord,
                             PRInt32 aWordLength,
@@ -762,7 +762,7 @@ public:
   nsTextDimensions ComputeTotalWordDimensions(nsPresContext* aPresContext,
                                 nsILineBreaker* aLineBreaker,
                                 nsLineLayout& aLineLayout,
-                                const nsHTMLReflowState& aReflowState,
+                                nsIRenderingContext* aRenderingContext,
                                 nsIFrame* aNextFrame,
                                 const nsTextDimensions& aBaseDimensions,
                                 PRUnichar* aWordBuf,
@@ -773,7 +773,7 @@ public:
   nsTextDimensions ComputeWordFragmentDimensions(nsPresContext* aPresContext,
                                    nsILineBreaker* aLineBreaker,
                                    nsLineLayout& aLineLayout,
-                                   const nsHTMLReflowState& aReflowState,
+                                   nsIRenderingContext* aRenderingContext,
                                    nsIFrame* aNextFrame,
                                    nsIContent* aContent,
                                    nsITextContent* aText,
@@ -2963,18 +2963,18 @@ nsTextFrame::RenderString(nsIRenderingContext& aRenderingContext,
 }
 
 inline void
-nsTextFrame::MeasureSmallCapsText(const nsHTMLReflowState& aReflowState,
+nsTextFrame::MeasureSmallCapsText(nsIRenderingContext* aRenderingContext,
                                   TextStyle& aTextStyle,
                                   PRUnichar* aWord,
                                   PRInt32 aWordLength,
                                   PRBool aIsEndOfFrame,
                                   nsTextDimensions* aDimensionsResult)
 {
-  nsIRenderingContext& rc = *aReflowState.rendContext;
   aDimensionsResult->Clear();
-  GetTextDimensions(rc, aTextStyle, aWord, aWordLength, aIsEndOfFrame, aDimensionsResult);
+  GetTextDimensions(*aRenderingContext, aTextStyle, aWord, aWordLength,
+                    aIsEndOfFrame, aDimensionsResult);
   if (aTextStyle.mLastFont != aTextStyle.mNormalFont) {
-    rc.SetFont(aTextStyle.mNormalFont);
+    aRenderingContext->SetFont(aTextStyle.mNormalFont);
     aTextStyle.mLastFont = aTextStyle.mNormalFont;
   }
 }
@@ -5068,7 +5068,7 @@ nsTextFrame::MeasureText(nsPresContext*          aPresContext,
         }
         else {
           if (aTs.mSmallCaps) {
-            MeasureSmallCapsText(aReflowState, aTs, bp2, wordLen, PR_FALSE, &dimensions);
+            MeasureSmallCapsText(aReflowState.rendContext, aTs, bp2, wordLen, PR_FALSE, &dimensions);
           }
           else {
             // Measure just the one word
@@ -5348,7 +5348,7 @@ nsTextFrame::MeasureText(nsPresContext*          aPresContext,
               lastWordDimensions.width = aTextData.mX;
             }
             else if (aTs.mSmallCaps) {
-              MeasureSmallCapsText(aReflowState, aTs, pWordBuf,
+              MeasureSmallCapsText(aReflowState.rendContext, aTs, pWordBuf,
                                    lastWordLen, PR_FALSE, &lastWordDimensions);
             }
             else {
@@ -5360,7 +5360,7 @@ nsTextFrame::MeasureText(nsPresContext*          aPresContext,
           }
           nsTextDimensions wordDimensions = ComputeTotalWordDimensions(aPresContext, aLb,
                                                     lineLayout,
-                                                    aReflowState, next,
+                                                    aReflowState.rendContext, next,
                                                     lastWordDimensions,
                                                     pWordBuf,
                                                     lastWordLen,
@@ -5894,7 +5894,7 @@ nsTextDimensions
 nsTextFrame::ComputeTotalWordDimensions(nsPresContext* aPresContext,
                                    nsILineBreaker* aLineBreaker,
                                    nsLineLayout& aLineLayout,
-                                   const nsHTMLReflowState& aReflowState,
+                                   nsIRenderingContext* aRenderingContext,
                                    nsIFrame* aNextFrame,
                                    const nsTextDimensions& aBaseDimensions,
                                    PRUnichar* aWordBuf,
@@ -5925,7 +5925,7 @@ nsTextFrame::ComputeTotalWordDimensions(nsPresContext* aPresContext,
       moreDimensions = ComputeWordFragmentDimensions(aPresContext,
                                                      aLineBreaker,
                                                      aLineLayout,
-                                                     aReflowState,
+                                                     aRenderingContext,
                                                      aNextFrame, content, tc,
                                                      &stop,
                                                      newWordBuf,
@@ -5950,7 +5950,7 @@ nsTextFrame::ComputeTotalWordDimensions(nsPresContext* aPresContext,
         if(newWordBuf)  {
           moreDimensions =
             ComputeWordFragmentDimensions(aPresContext, aLineBreaker,
-                                          aLineLayout, aReflowState,
+                                          aLineLayout, aRenderingContext,
                                           aNextFrame, content, tc, &stop,
                                           newWordBuf, aWordLen, newWordBufSize,
                                           aCanBreakBefore);
@@ -5997,7 +5997,7 @@ nsTextDimensions
 nsTextFrame::ComputeWordFragmentDimensions(nsPresContext* aPresContext,
                                       nsILineBreaker* aLineBreaker,
                                       nsLineLayout& aLineLayout,
-                                      const nsHTMLReflowState& aReflowState,
+                                      nsIRenderingContext* aRenderingContext,
                                       nsIFrame* aTextFrame,
                                       nsIContent* aContent,
                                       nsITextContent* aText,
@@ -6090,20 +6090,19 @@ nsTextFrame::ComputeWordFragmentDimensions(nsPresContext* aPresContext,
     // Measure the piece of text. Note that we have to select the
     // appropriate font into the text first because the rendering
     // context has our font in it, not the font that aText is using.
-    nsIRenderingContext& rc = *aReflowState.rendContext;
     nsCOMPtr<nsIFontMetrics> oldfm;
-    rc.GetFontMetrics(*getter_AddRefs(oldfm));
+    aRenderingContext->GetFontMetrics(*getter_AddRefs(oldfm));
 
-    TextStyle ts(aLineLayout.mPresContext, rc, sc);
+    TextStyle ts(aLineLayout.mPresContext, *aRenderingContext, sc);
     if (ts.mSmallCaps) {
-      MeasureSmallCapsText(aReflowState, ts, bp, wordLen, PR_FALSE, &dimensions);
+      MeasureSmallCapsText(aRenderingContext, ts, bp, wordLen, PR_FALSE, &dimensions);
     }
     else {
-      rc.GetTextDimensions(bp, wordLen, dimensions);
+      aRenderingContext->GetTextDimensions(bp, wordLen, dimensions);
       // NOTE: Don't forget to add letter spacing for the word fragment!
       dimensions.width += wordLen*ts.mLetterSpacing;
     }
-    rc.SetFont(oldfm);
+    aRenderingContext->SetFont(oldfm);
 
 #ifdef DEBUG_WORD_WRAPPING
     nsAutoString tmp(bp, wordLen);
