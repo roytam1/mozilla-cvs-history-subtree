@@ -1,0 +1,9 @@
+# Required build flags for the zap SIP client. Add it to your
+# .mozconfig like this:
+#    .$topsrcdir/zap/config/mozconfig
+
+mk_add_options MOZ_CO_PROJECT=zap
+ac_add_options --enable-application=zap
+
+ac_add_options --enable-extensions=xml-rpc,xmlextras,pref,transformiix,universalchardet,webservices,gnomevfs,negotiateauth
+ac_add_options --enable-crypto
