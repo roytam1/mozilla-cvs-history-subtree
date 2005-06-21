@@ -3647,9 +3647,23 @@ nsContextMenu.prototype = {
 #endif
         this.showItem( "context-setWallpaper", haveSetWallpaper && this.onImage );
 
-        if( haveSetWallpaper && this.onImage )
-            // Disable the Set As Wallpaper menu item if we're still trying to load the image
-          this.setItemAttr( "context-setWallpaper", "disabled", (("complete" in this.target) && !this.target.complete) ? "true" : null );
+        if( haveSetWallpaper && this.onImage ) {
+            // Disable the Set As Wallpaper menu item if we're still trying to load the image or the load failed
+            const nsIImageLoadingContent = Components.interfaces.nsIImageLoadingContent;
+            var disableSetWallpaper = false;
+            if (("complete" in this.target) && !this.target.complete)
+                 disableSetWallpaper = true;
+            else if (this.target instanceof nsIImageLoadingContent) {
+                var request = this.target.QueryInterface(nsIImageLoadingContent)
+                                  .getRequest(nsIImageLoadingContent.CURRENT_REQUEST);
+                if (!request)
+                    disableSetWallpaper = true;
+            }
+            else if (makeURL(this.target.src).scheme == "javascript")
+                disableSetWallpaper = true;
+              
+            this.setItemAttr( "context-setWallpaper", "disabled", disableSetWallpaper);
+        }
 
         // View Image depends on whether an image was clicked on.
         this.showItem( "context-viewimage", this.onImage );
