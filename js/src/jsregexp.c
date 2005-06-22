@@ -3426,10 +3426,14 @@ regexp_mark(JSContext *cx, JSObject *obj, void *arg)
 JSClass js_RegExpClass = {
     js_RegExp_str,
     JSCLASS_HAS_PRIVATE | JSCLASS_HAS_RESERVED_SLOTS(1),
-    JS_PropertyStub,  JS_PropertyStub,  regexp_getProperty, regexp_setProperty,
-    JS_EnumerateStub, JS_ResolveStub,   JS_ConvertStub,     regexp_finalize,
-    NULL,             NULL,             regexp_call,        NULL,
-    regexp_xdrObject, NULL,             regexp_mark,        0
+    JS_PropertyStub,    JS_PropertyStub,
+    regexp_getProperty, regexp_setProperty,
+    JS_EnumerateStub,   JS_ResolveStub,
+    JS_ConvertStub,     regexp_finalize,
+    NULL,               NULL,
+    regexp_call,        NULL,
+    regexp_xdrObject,   NULL,
+    regexp_mark,        NULL
 };
 
 static const jschar empty_regexp_ucstr[] = {'(', '?', ':', ')', 0};
