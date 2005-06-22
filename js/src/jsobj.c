@@ -186,7 +186,7 @@ obj_setSlot(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
         return JS_FALSE;
 
     /* __parent__ is readonly and permanent, only __proto__ may be set. */
-    propid = ATOM_TO_JSID(cx->runtime->atomState.protoAtom);
+    propid = (jsid) cx->runtime->atomState.protoAtom;
     if (!OBJ_CHECK_ACCESS(cx, obj, propid, JSACC_PROTO|JSACC_WRITE, vp, &attrs))
         return JS_FALSE;
 
@@ -3659,8 +3659,7 @@ CheckCtorGetAccess(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 
     atom = cx->runtime->atomState.constructorAtom;
     JS_ASSERT(id == ATOM_KEY(atom));
-    return OBJ_CHECK_ACCESS(cx, obj, ATOM_TO_JSID(atom), JSACC_READ,
-                            vp, &attrs);
+    return OBJ_CHECK_ACCESS(cx, obj, (jsid) atom, JSACC_READ, vp, &attrs);
 }
 
 static JSBool
@@ -3672,8 +3671,7 @@ CheckCtorSetAccess(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 
     atom = cx->runtime->atomState.constructorAtom;
     JS_ASSERT(id == ATOM_KEY(atom));
-    return OBJ_CHECK_ACCESS(cx, obj, ATOM_TO_JSID(atom), JSACC_WRITE,
-                            &oldval, &attrs);
+    return OBJ_CHECK_ACCESS(cx, obj, (jsid) atom, JSACC_WRITE, &oldval, &attrs);
 }
 
 JSBool
