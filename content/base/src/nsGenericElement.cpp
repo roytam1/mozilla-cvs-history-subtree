@@ -1840,6 +1840,9 @@ nsGenericElement::HandleDOMEvent(nsIPresContext* aPresContext,
                                  PRUint32 aFlags,
                                  nsEventStatus* aEventStatus)
 {
+  // Make sure to tell the event that dispatch has started.
+  NS_MARK_EVENT_DISPATCH_STARTED(aEvent);
+
   nsresult ret = NS_OK;
   PRBool retarget = PR_FALSE;
   PRBool externalDOMEvent = PR_FALSE;
@@ -2060,6 +2063,10 @@ nsGenericElement::HandleDOMEvent(nsIPresContext* aPresContext,
 
       aDOMEvent = nsnull;
     }
+
+    // Now that we're done with this event, remove the flag that says
+    // we're in the process of dispatching this event.
+    NS_MARK_EVENT_DISPATCH_DONE(aEvent);
   }
 
   return ret;
