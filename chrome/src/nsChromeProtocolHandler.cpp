@@ -754,7 +754,8 @@ nsChromeProtocolHandler::NewChannel(nsIURI* aURI,
         rv = url->GetFileExtension(fileExtension);
         if (PL_strcasecmp(fileExtension.get(), "xul") == 0 ||
             PL_strcasecmp(fileExtension.get(), "html") == 0 ||
-            PL_strcasecmp(fileExtension.get(), "xml") == 0)
+            PL_strcasecmp(fileExtension.get(), "xml") == 0 ||
+            PL_strcasecmp(fileExtension.get(), "xbl") == 0)
         {
             nsCOMPtr<nsIScriptSecurityManager> securityManager =
                      do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
