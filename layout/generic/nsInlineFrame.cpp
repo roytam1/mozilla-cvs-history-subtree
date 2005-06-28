@@ -359,13 +359,15 @@ nsInlineFrame::DoInlineIntrinsicWidth(nsIRenderingContext *aRenderingContext,
                   aType == nsLayoutUtils::PREF_WIDTH, "bad type");
 
   PRUint8 startSide, endSide;
-  PRIntn skipSides = GetSkipSides();
+  if (NS_GET_EMBEDDING_LEVEL(this) & 1) {
+    startSide = NS_SIDE_RIGHT;
+    endSide = NS_SIDE_LEFT;
+  } else {
+    startSide = NS_SIDE_LEFT;
+    endSide = NS_SIDE_RIGHT;
+  }
 
-  // XXX set these correctly!  (not trivial, and GetSkipSides() and
-  // maybe some reflow logic needs this too, and should all be fixed at
-  // once)
-  startSide = NS_SIDE_LEFT;
-  endSide = NS_SIDE_RIGHT;
+  PRIntn skipSides = GetSkipSides();
 
   const nsStylePadding *stylePadding = GetStylePadding();
   const nsStyleBorder *styleBorder = GetStyleBorder();
@@ -846,32 +848,38 @@ nsInlineFrame::PushFrames(nsPresContext* aPresContext,
 PRIntn
 nsInlineFrame::GetSkipSides() const
 {
-  // XXX This is wrong for RTL.  (Bidi cases might be fun, although
-  // if we split into multiple continuations it shouldn't be a problem.)
-  // DoInlineIntrinsicWidth needs to be fixed as well (and they should be
-  // fixed at the same time).
+  PRUint8 startSide, endSide;
+
+  if (NS_GET_EMBEDDING_LEVEL(this) & 1) {
+    startSide = NS_SIDE_RIGHT;
+    endSide = NS_SIDE_LEFT;
+  } else {
+    startSide = NS_SIDE_LEFT;
+    endSide = NS_SIDE_RIGHT;
+  }
+
   PRIntn skip = 0;
   if (nsnull != mPrevInFlow) {
     nsInlineFrame* prev = (nsInlineFrame*) mPrevInFlow;
     if (prev->mRect.height || prev->mRect.width) {
-      // Prev-in-flow is not empty therefore we don't render our left
+      // Prev-in-flow is not empty therefore we don't render our start
       // border edge.
-      skip |= 1 << NS_SIDE_LEFT;
+      skip |= 1 << startSide;
     }
     else {
-      // If the prev-in-flow is empty, then go ahead and let our left
+      // If the prev-in-flow is empty, then go ahead and let our start
       // edge border render.
     }
   }
   if (nsnull != mNextInFlow) {
     nsInlineFrame* next = (nsInlineFrame*) mNextInFlow;
     if (next->mRect.height || next->mRect.width) {
-      // Next-in-flow is not empty therefore we don't render our right
+      // Next-in-flow is not empty therefore we don't render our end
       // border edge.
-      skip |= 1 << NS_SIDE_RIGHT;
+      skip |= 1 << endSide;
     }
     else {
-      // If the next-in-flow is empty, then go ahead and let our right
+      // If the next-in-flow is empty, then go ahead and let our end
       // edge border render.
     }
   }
