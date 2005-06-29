@@ -261,6 +261,13 @@ public:
     DomainPolicy() : mWildcardPolicy(nsnull),
                      mRefCount(0)
     {
+        mGeneration = sGeneration;
+
+#ifdef DEBUG_CAPS_DomainPolicyLifeCycle
+        ++sObjects;
+        _printPopulationInfo();
+#endif
+
     }
 
     PRBool Init()
@@ -285,6 +292,12 @@ public:
     ~DomainPolicy()
     {
         PL_DHashTableFinish(this);
+
+#ifdef DEBUG_CAPS_DomainPolicyLifeCycle
+        --sObjects;
+        _printPopulationInfo();
+#endif
+
     }
 
     void Hold()
@@ -297,11 +310,29 @@ public:
         if (--mRefCount == 0)
             delete this;
     }
-
+    
+    static void InvalidateAll()
+    {
+        sGeneration++;
+    }
+    
+    PRBool IsInvalid()
+    {
+        return mGeneration != sGeneration; 
+    }
+    
     ClassPolicy* mWildcardPolicy;
 
 private:
     PRUint32 mRefCount;
+    PRUint32 mGeneration;
+    static PRUint32 sGeneration;
+    
+#ifdef DEBUG_CAPS_DomainPolicyLifeCycle
+    static PRUint32 sObjects;
+    static void _printPopulationInfo();
+#endif
+
 };
 
 /////////////////////////////
