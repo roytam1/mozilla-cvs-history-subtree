@@ -145,6 +145,7 @@ deleteElement(void* aElement, void *aData)
 nsPrincipal::~nsPrincipal(void)
 {
   mAnnotations.EnumerateForwards(deleteElement, nsnull);
+  SetSecurityPolicy(nsnull); 
 }
 
 NS_IMETHODIMP
@@ -201,14 +202,25 @@ nsPrincipal::GetOrigin(char **aOrigin)
 NS_IMETHODIMP
 nsPrincipal::GetSecurityPolicy(void** aSecurityPolicy)
 {
-  *aSecurityPolicy = mSecurityPolicy;
+  if (mSecurityPolicy && mSecurityPolicy->IsInvalid()) 
+    SetSecurityPolicy(nsnull);
+  
+  *aSecurityPolicy = (void *) mSecurityPolicy;
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsPrincipal::SetSecurityPolicy(void* aSecurityPolicy)
 {
-  mSecurityPolicy = aSecurityPolicy;
+  DomainPolicy *newPolicy = NS_REINTERPRET_CAST(
+                              DomainPolicy *, aSecurityPolicy);
+  if (newPolicy)
+    newPolicy->Hold();
+ 
+  if (mSecurityPolicy)
+    mSecurityPolicy->Drop();
+  
+  mSecurityPolicy = newPolicy;
   return NS_OK;
 }
 
@@ -563,7 +575,7 @@ nsPrincipal::SetDomain(nsIURI* aDomain)
 {
   mDomain = aDomain;
   // Domain has changed, forget cached security policy
-  mSecurityPolicy = nsnull;
+  SetSecurityPolicy(nsnull);
 
   return NS_OK;
 }
