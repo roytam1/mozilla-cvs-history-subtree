@@ -122,7 +122,7 @@ void nsXBLSpecialDocInfo::LoadDocInfo()
   nsCOMPtr<nsIPrefBranch> prefBranch(do_GetService(NS_PREFSERVICE_CONTRACTID));
   if (prefBranch) {
     nsAdoptingCString userHTMLBindingStr;
-    sPrefBranch->GetCharPref("dom.userHTMLBindings.uri", getter_Copies(userHTMLBindingStr));
+    prefBranch->GetCharPref("dom.userHTMLBindings.uri", getter_Copies(userHTMLBindingStr));
     if (!userHTMLBindingStr.IsEmpty()) {
       NS_NewURI(getter_AddRefs(bindingURI), userHTMLBindingStr);
       if (!bindingURI) {
