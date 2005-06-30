@@ -68,6 +68,8 @@
 #include "nsXULAtoms.h"
 #include "nsIURI.h"
 #include "nsNetUtil.h"
+#include "nsIPrefBranch.h"
+#include "nsIPrefService.h"
 
 class nsXBLSpecialDocInfo
 {
@@ -92,10 +94,7 @@ public:
   nsXBLSpecialDocInfo() : mInitialized(PR_FALSE) {};
 };
 
-const char nsXBLSpecialDocInfo::sHTMLBindingStr[] = "resource://gre/res/builtin/platformHTMLBindings.xml";
-// Allow for a userHTMLBindings.xml.
-// XXXbsmedberg Should be in the profile chrome directory, when we have a resource mapping for that
-const char nsXBLSpecialDocInfo::sUserHTMLBindingStr[] = "resource://gre/res/builtin/userHTMLBindings.xml";
+const char nsXBLSpecialDocInfo::sHTMLBindingStr[] = "chrome://global/content/platformHTMLBindings.xml";
 
 void nsXBLSpecialDocInfo::LoadDocInfo()
 {
@@ -120,16 +119,22 @@ void nsXBLSpecialDocInfo::LoadDocInfo()
                                       PR_TRUE, 
                                       getter_AddRefs(mHTMLBindings));
 
-  rv = bindingURI->SetSpec(NS_LITERAL_CSTRING(sUserHTMLBindingStr));
-  if (NS_FAILED(rv)) {
-    NS_ERROR("Shouldn't fail to set spec here");
-    return;
+  nsCOMPtr<nsIPrefBranch> prefBranch(do_GetService(NS_PREFSERVICE_CONTRACTID));
+  if (prefBranch) {
+    nsAdoptingCString userHTMLBindingStr;
+    prefBranch->GetCharPref("dom.userHTMLBindings.uri", getter_Copies(userHTMLBindingStr));
+    if (!userHTMLBindingStr.IsEmpty()) {
+      NS_NewURI(getter_AddRefs(bindingURI), userHTMLBindingStr);
+      if (!bindingURI) {
+        return;
+      }
+
+      xblService->LoadBindingDocumentInfo(nsnull, nsnull,
+                                          bindingURI,
+                                          PR_TRUE, 
+                                          getter_AddRefs(mUserHTMLBindings));
+    }
   }
-  
-  xblService->LoadBindingDocumentInfo(nsnull, nsnull,
-                                      bindingURI,
-                                      PR_TRUE, 
-                                      getter_AddRefs(mUserHTMLBindings));
 }
 
 //

@@ -336,7 +336,6 @@ thunderbird\res\charsetalias.properties
 thunderbird\res\langGroups.properties
 thunderbird\res\language.properties
 thunderbird\res\wincharset.properties
-thunderbird\res\builtin\*
 thunderbird\res\entityTables\*
 
 ; editor resource files
