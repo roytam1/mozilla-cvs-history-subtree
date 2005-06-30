@@ -738,10 +738,12 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
 #endif
 
     /* Scan the optional function name into funAtom. */
-    if (js_MatchToken(cx, ts, TOK_NAME))
-        funAtom = CURRENT_TOKEN(ts).t_atom;
-    else
-        funAtom = NULL;
+    funAtom = js_MatchToken(cx, ts, TOK_NAME) ? CURRENT_TOKEN(ts).t_atom : NULL;
+    if (!funAtom && !lambda) {
+        js_ReportCompileErrorNumber(cx, ts, NULL, JSREPORT_ERROR,
+                                    JSMSG_SYNTAX_ERROR);
+        return NULL;
+    }
 
     /* Find the nearest variable-declaring scope and use it as our parent. */
     parent = cx->fp->varobj;
@@ -926,13 +928,14 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
     }
 
 #if JS_HAS_LEXICAL_CLOSURE
-    if (lambda || !funAtom) {
+    JS_ASSERT(lambda || funAtom);
+    if (lambda) {
         /*
          * ECMA ed. 3 standard: function expression, possibly anonymous (even
          * if at top-level, an unnamed function is an expression statement, not
          * a function declaration).
          */
-        op = fun->atom ? JSOP_NAMEDFUNOBJ : JSOP_ANONFUNOBJ;
+        op = funAtom ? JSOP_NAMEDFUNOBJ : JSOP_ANONFUNOBJ;
     } else if (tc->topStmt) {
         /*
          * ECMA ed. 3 extension: a function expression statement not at the
