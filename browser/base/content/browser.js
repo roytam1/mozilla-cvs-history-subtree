@@ -2983,7 +2983,7 @@ nsContextMenu.prototype = {
 
         // See if the user clicked on an image.
         if ( this.target.nodeType == Node.ELEMENT_NODE ) {
-             if ( this.target.localName.toUpperCase() == "IMG" ) {
+             if ( this.target instanceof HTMLImageElement ) {
                 this.onImage = true;
                 this.imageURL = this.target.src;
                 // Look for image map.
@@ -2998,9 +2998,7 @@ nsContextMenu.prototype = {
                         areas.length = 0;
                         for ( var i = 0; i < areas.length && !this.onLink; i++ ) {
                             var area = areas[i];
-                            if ( area.nodeType == Node.ELEMENT_NODE
-                                 &&
-                                 area.localName.toUpperCase() == "AREA" ) {
+                            if ( area instanceof HTMLAreaElement ) {
                                 // Get type (rect/circle/polygon/default).
                                 var type = area.getAttribute( "type" );
                                 var coords = this.parseCoords( area );
@@ -3025,7 +3023,7 @@ nsContextMenu.prototype = {
                         }
                     }
                 }
-             } else if ( this.target.localName.toUpperCase() == "OBJECT"
+             } else if ( this.target instanceof HTMLObjectElement
                          &&
                          // See if object tag is for an image.
                          this.objectIsImage( this.target ) ) {
@@ -3033,7 +3031,7 @@ nsContextMenu.prototype = {
                 this.onImage = true;
                 // URL must be constructed.
                 this.imageURL = this.objectImageURL( this.target );
-             } else if ( this.target.localName.toUpperCase() == "INPUT") {
+             } else if ( this.target instanceof HTMLInputElement) {
                type = this.target.getAttribute("type");
                if(type && type.toUpperCase() == "IMAGE") {
                  this.onImage = true;
@@ -3044,9 +3042,9 @@ nsContextMenu.prototype = {
                  this.onTextInput = this.isTargetATextBox(this.target);
                  this.onKeywordField = this.isTargetAKeywordField(this.target);
                }
-            } else if ( this.target.localName.toUpperCase() == "TEXTAREA" ) {
+            } else if ( this.target instanceof HTMLTextAreaElement ) {
                  this.onTextInput = true;
-            } else if ( this.target.localName.toUpperCase() == "HTML" ) {
+            } else if ( this.target instanceof HTMLHtmlElement ) {
                // pages with multiple <body>s are lame. we'll teach them a lesson.
                var bodyElt = this.target.ownerDocument.getElementsByTagName("body")[0];
                if ( bodyElt ) {
@@ -3113,13 +3111,11 @@ nsContextMenu.prototype = {
         var elem = this.target;
         while ( elem ) {
             if ( elem.nodeType == Node.ELEMENT_NODE ) {
-                var localname = elem.localName.toUpperCase();
-                
                 // Link?
                 if ( !this.onLink && 
-                    ( (localname === "A" && elem.href) ||
-                      localname === "AREA" ||
-                      localname === "LINK" ||
+                    ( (elem instanceof HTMLAnchorElement && elem.href) ||
+                      elem instanceof HTMLAreaElement ||
+                      elem instanceof HTMLLinkElement ||
                       elem.getAttributeNS( "http://www.w3.org/1999/xlink", "type") == "simple" ) ) {
                     // Clicked on a link.
                     this.onLink = true;
@@ -3141,14 +3137,12 @@ nsContextMenu.prototype = {
                 if ( !this.onMetaDataItem ) {
                     // We currently display metadata on anything which fits
                     // the below test.
-                    if ( ( localname === "BLOCKQUOTE" && 'cite' in elem && elem.cite)  ||
-                         ( localname === "Q" && 'cite' in elem && elem.cite)           ||
-                         ( localname === "TABLE" && 'summary' in elem && elem.summary) ||
-                         ( ( localname === "INS" || localname === "DEL" ) &&
-                           ( ( 'cite' in elem && elem.cite ) ||
-                             ( 'dateTime' in elem && elem.dateTime ) ) )               ||
-                         ( 'title' in elem && elem.title )                             ||
-                         ( 'lang' in elem && elem.lang ) ) {
+                    if ( ( elem instanceof HTMLQuoteElement && elem.cite)    ||
+                         ( elem instanceof HTMLTableElement && elem.summary) ||
+                         ( elem instanceof HTMLModElement &&
+                             ( elem.cite || elem.dateTime ) )                ||
+                         ( elem instanceof HTMLElement &&
+                             ( elem.title || elem.lang ) ) ) {
                         this.onMetaDataItem = true;
                     }
                 }
@@ -3544,28 +3538,10 @@ nsContextMenu.prototype = {
     },
     isTargetATextBox : function ( node )
     {
-      if (node.nodeType != Node.ELEMENT_NODE)
-        return false;
+      if (node instanceof HTMLInputElement)
+        return (node.type == "text" || node.type == "password")
 
-      if (node.localName.toUpperCase() == "INPUT") {
-        var attrib = "";
-        var type = node.getAttribute("type");
-
-        if (type)
-          attrib = type.toUpperCase();
-
-        return( (attrib != "IMAGE") &&
-                (attrib != "CHECKBOX") &&
-                (attrib != "RADIO") &&
-                (attrib != "SUBMIT") &&
-                (attrib != "RESET") &&
-                (attrib != "FILE") &&
-                (attrib != "HIDDEN") &&
-                (attrib != "RESET") &&
-                (attrib != "BUTTON") );
-      } else  {
-        return(node.localName.toUpperCase() == "TEXTAREA");
-      }
+      return (node instanceof HTMLTextAreaElement);
     },
     isTargetAKeywordField : function ( node )
     {
@@ -3647,26 +3623,18 @@ function asyncOpenWebPanel(event)
    var target = event.target;
    var linkNode;
 
-   var local_name = target.localName;
-
-   if (local_name) {
-     local_name = local_name.toLowerCase();
+   if (target instanceof HTMLAnchorElement ||
+       target instanceof HTMLAreaElement ||
+       target instanceof HTMLLinkElement) {
+     if (target.hasAttribute("href"))
+       linkNode = target;
    }
-
-   switch (local_name) {
-     case "a":
-     case "area":
-     case "link":
-       if (target.hasAttribute("href")) 
-         linkNode = target;
-       break;
-     default:
-       linkNode = findParentNode(event.originalTarget, "a");
-       // <a> cannot be nested.  So if we find an anchor without an
-       // href, there is no useful <a> around the target
-       if (linkNode && !linkNode.hasAttribute("href"))
-         linkNode = null;
-       break;
+   else {
+     linkNode = findParentNode(event.originalTarget, "a");
+     // <a> cannot be nested.  So if we find an anchor without an
+     // href, there is no useful <a> around the target
+     if (linkNode && !linkNode.hasAttribute("href"))
+       linkNode = null;
    }
    if (linkNode) {
      var wrapper = new XPCNativeWrapper(linkNode, "href", "getAttribute()");
