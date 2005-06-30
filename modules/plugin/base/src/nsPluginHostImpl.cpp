@@ -259,6 +259,8 @@ static nsActivePluginList *gActivePluginList;
 PRBool gSkipPluginSafeCalls = PR_FALSE;
 #endif
 
+nsIFile *nsPluginHostImpl::sPluginTempDir;
+
 ////////////////////////////////////////////////////////////////////////
 // flat file reg funcs
 static
@@ -1899,11 +1901,7 @@ nsPluginStreamListenerPeer::SetupPluginCacheFile(nsIChannel* channel)
   
   if (!useExistingCacheFile) {
     nsCOMPtr<nsIFile> pluginTmp;
-    // Is this the best place to put this temp file?
-    rv = NS_GetSpecialDirectory(NS_OS_TEMP_DIR, getter_AddRefs(pluginTmp));
-    if (NS_FAILED(rv)) return rv;
-    
-    rv = pluginTmp->AppendNative(kPluginTmpDirName);
+    rv = nsPluginHostImpl::GetPluginTempDir(getter_AddRefs(pluginTmp));
     if (NS_FAILED(rv)) return rv;
     
     (void) pluginTmp->Create(nsIFile::DIRECTORY_TYPE,0777);
@@ -3250,19 +3248,16 @@ NS_IMETHODIMP nsPluginHostImpl::Destroy(void)
   }
 
   // Lets remove any of the temporary files that we created.
-  nsCOMPtr<nsIFile> pluginTmp;
-  nsresult rv = NS_GetSpecialDirectory(NS_OS_TEMP_DIR, getter_AddRefs(pluginTmp));
-  if (NS_FAILED(rv)) return rv;
-    
-  rv = pluginTmp->AppendNative(kPluginTmpDirName);
-  if (NS_FAILED(rv)) return rv;
-
-  pluginTmp->Remove(PR_TRUE);
+  if (sPluginTempDir) {
+    sPluginTempDir->Remove(PR_TRUE);
+    NS_RELEASE(sPluginTempDir);
+  }
 
   if (mPrivateDirServiceProvider)
   {
-    nsCOMPtr<nsIDirectoryService> dirService(do_GetService(kDirectoryServiceContractID, &rv));
-    if (NS_SUCCEEDED(rv))
+    nsCOMPtr<nsIDirectoryService> dirService =
+      do_GetService(kDirectoryServiceContractID);
+    if (dirService)
       dirService->UnregisterProvider(mPrivateDirServiceProvider);
     mPrivateDirServiceProvider = nsnull;
   }
@@ -3283,6 +3278,26 @@ void nsPluginHostImpl::UnloadUnusedLibraries()
   mUnusedLibraries.Clear();
 }
 
+nsresult
+nsPluginHostImpl::GetPluginTempDir(nsIFile **aDir)
+{
+  if (!sPluginTempDir) {
+    nsCOMPtr<nsIFile> tmpDir;
+    nsresult rv = NS_GetSpecialDirectory(NS_OS_TEMP_DIR,
+                                         getter_AddRefs(tmpDir));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = tmpDir->AppendNative(kPluginTmpDirName);
+
+    // make it unique, and mode == 0700, not world-readable
+    rv = tmpDir->CreateUnique(nsIFile::DIRECTORY_TYPE, 0700);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    tmpDir.swap(sPluginTempDir);
+  }
+
+  return sPluginTempDir->Clone(aDir);
+}
 
 ////////////////////////////////////////////////////////////////////////
 /* Called by nsPluginInstanceOwner (nsObjectFrame.cpp - embeded case) */
@@ -6395,14 +6410,11 @@ nsPluginHostImpl::CreateTmpFileToPost(const char *postDataURL, char **pTmpFileNa
     rv = NS_NewLocalFileInputStream(getter_AddRefs(inStream), inFile);
     if (NS_FAILED(rv)) return rv;
     
-    // Create a temporary file to write the http Content-length: %ld\r\n\" header 
-    // and "\r\n" == end of headers for post data to
+    // Create a temporary file to write the http Content-length:
+    // %ld\r\n\" header and "\r\n" == end of headers for post data to
+ 
     nsCOMPtr<nsIFile> tempFile;
-    rv = NS_GetSpecialDirectory(NS_OS_TEMP_DIR, getter_AddRefs(tempFile));
-    if (NS_FAILED(rv))
-      return rv;
-    
-    rv = tempFile->AppendNative(kPluginTmpDirName);
+    rv = GetPluginTempDir(getter_AddRefs(tempFile));
     if (NS_FAILED(rv))
       return rv;
 
