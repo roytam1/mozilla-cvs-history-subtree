@@ -68,7 +68,8 @@
 #include "nsXULAtoms.h"
 #include "nsIURI.h"
 #include "nsNetUtil.h"
-#include "nsContentUtils.h"
+#include "nsIPrefBranch.h"
+#include "nsIPrefService.h"
 
 class nsXBLSpecialDocInfo
 {
@@ -118,18 +119,22 @@ void nsXBLSpecialDocInfo::LoadDocInfo()
                                       PR_TRUE, 
                                       getter_AddRefs(mHTMLBindings));
 
-  const nsAdoptingCString& userHTMLBindingStr =
-    nsContentUtils::GetCharPref("dom.userHTMLBindings.uri");
-  if (!userHTMLBindingStr.IsEmpty()) {
-    NS_NewURI(getter_AddRefs(bindingURI), userHTMLBindingStr);
-    if (!bindingURI) {
-      return;
+  nsCOMPtr<nsIPrefBranch> prefBranch(do_GetService(NS_PREFSERVICE_CONTRACTID));
+  if (prefBranch) {
+    nsAdoptingCString userHTMLBindingStr;
+    sPrefBranch->GetCharPref("dom.userHTMLBindings.uri", getter_Copies(userHTMLBindingStr));
+    if (!userHTMLBindingStr.IsEmpty()) {
+      NS_NewURI(getter_AddRefs(bindingURI), userHTMLBindingStr);
+      if (!bindingURI) {
+        return;
+      }
+
+      xblService->LoadBindingDocumentInfo(nsnull, nsnull,
+                                          bindingURI,
+                                          PR_TRUE, 
+                                          getter_AddRefs(mUserHTMLBindings));
     }
 
-    xblService->LoadBindingDocumentInfo(nsnull, nsnull,
-                                        bindingURI,
-                                        PR_TRUE, 
-                                        getter_AddRefs(mUserHTMLBindings));
   }
 }
 
