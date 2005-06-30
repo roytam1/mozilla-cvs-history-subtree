@@ -1048,7 +1048,7 @@ function ctrlNumberTabSelection(event)
     // XXXblake Proper fix is to just check whether focus is in the urlbar. However, focus with the autocomplete widget is all
     // hacky and broken and there's no way to do that right now. So this just patches it to ensure that alt+enter works when focus
     // is on a link.
-    if (!document.commandDispatcher.focusedElement || document.commandDispatcher.focusedElement.localName.toLowerCase() != "a") {
+    if (!(document.commandDispatcher.focusedElement instanceof HTMLAnchorElement)) {
       // Don't let winxp beep on ALT+ENTER, since the URL bar uses it.
       event.preventDefault();
       return;
@@ -3776,7 +3776,7 @@ nsContextMenu.prototype = {
 
         // See if the user clicked on an image.
         if ( this.target.nodeType == Node.ELEMENT_NODE ) {
-             if ( this.target.localName.toUpperCase() == "IMG" ) {
+             if ( this.target instanceof HTMLImageElement ) {
                 this.onImage = true;
                 this.imageURL = this.target.src;
                 // Look for image map.
@@ -3791,9 +3791,7 @@ nsContextMenu.prototype = {
                         areas.length = 0;
                         for ( var i = 0; i < areas.length && !this.onLink; i++ ) {
                             var area = areas[i];
-                            if ( area.nodeType == Node.ELEMENT_NODE
-                                 &&
-                                 area.localName.toUpperCase() == "AREA" ) {
+                            if ( area instanceof HTMLAreaElement ) {
                                 // Get type (rect/circle/polygon/default).
                                 var type = area.getAttribute( "type" );
                                 var coords = this.parseCoords( area );
@@ -3818,7 +3816,7 @@ nsContextMenu.prototype = {
                         }
                     }
                 }
-             } else if ( this.target.localName.toUpperCase() == "OBJECT"
+             } else if ( this.target instanceof HTMLObjectElement
                          &&
                          // See if object tag is for an image.
                          this.objectIsImage( this.target ) ) {
@@ -3826,7 +3824,7 @@ nsContextMenu.prototype = {
                 this.onImage = true;
                 // URL must be constructed.
                 this.imageURL = this.objectImageURL( this.target );
-             } else if ( this.target.localName.toUpperCase() == "INPUT") {
+             } else if ( this.target instanceof HTMLInputElement) {
                type = this.target.getAttribute("type");
                if(type && type.toUpperCase() == "IMAGE") {
                  this.onImage = true;
@@ -3837,9 +3835,9 @@ nsContextMenu.prototype = {
                  this.onTextInput = this.isTargetATextBox(this.target);
                  this.onKeywordField = this.isTargetAKeywordField(this.target);
                }
-            } else if ( this.target.localName.toUpperCase() == "TEXTAREA" ) {
+            } else if ( this.target instanceof HTMLTextAreaElement ) {
                  this.onTextInput = true;
-            } else if ( this.target.localName.toUpperCase() == "HTML" ) {
+            } else if ( this.target instanceof HTMLHtmlElement ) {
                // pages with multiple <body>s are lame. we'll teach them a lesson.
                var bodyElt = this.target.ownerDocument.getElementsByTagName("body")[0];
                if ( bodyElt ) {
@@ -3906,13 +3904,11 @@ nsContextMenu.prototype = {
         var elem = this.target;
         while ( elem ) {
             if ( elem.nodeType == Node.ELEMENT_NODE ) {
-                var localname = elem.localName.toUpperCase();
-                
                 // Link?
                 if ( !this.onLink && 
-                    ( (localname === "A" && elem.href) ||
-                      localname === "AREA" ||
-                      localname === "LINK" ||
+                    ( (elem instanceof HTMLAnchorElement && elem.href) ||
+                      elem instanceof HTMLAreaElement ||
+                      elem instanceof HTMLLinkElement ||
                       elem.getAttributeNS( "http://www.w3.org/1999/xlink", "type") == "simple" ) ) {
                     // Clicked on a link.
                     this.onLink = true;
@@ -3934,14 +3930,12 @@ nsContextMenu.prototype = {
                 if ( !this.onMetaDataItem ) {
                     // We currently display metadata on anything which fits
                     // the below test.
-                    if ( ( localname === "BLOCKQUOTE" && 'cite' in elem && elem.cite)  ||
-                         ( localname === "Q" && 'cite' in elem && elem.cite)           ||
-                         ( localname === "TABLE" && 'summary' in elem && elem.summary) ||
-                         ( ( localname === "INS" || localname === "DEL" ) &&
-                           ( ( 'cite' in elem && elem.cite ) ||
-                             ( 'dateTime' in elem && elem.dateTime ) ) )               ||
-                         ( 'title' in elem && elem.title )                             ||
-                         ( 'lang' in elem && elem.lang ) ) {
+                    if ( ( elem instanceof HTMLQuoteElement && elem.cite)    ||
+                         ( elem instanceof HTMLTableElement && elem.summary) ||
+                         ( elem instanceof HTMLModElement &&
+                             ( elem.cite || elem.dateTime ) )                ||
+                         ( elem instanceof HTMLElement &&
+                             ( elem.title || elem.lang ) ) ) {
                         this.onMetaDataItem = true;
                     }
                 }
@@ -4352,28 +4346,10 @@ nsContextMenu.prototype = {
     },
     isTargetATextBox : function ( node )
     {
-      if (node.nodeType != Node.ELEMENT_NODE)
-        return false;
+      if (node instanceof HTMLInputElement)
+        return (node.type == "text" || node.type == "password")
 
-      if (node.localName.toUpperCase() == "INPUT") {
-        var attrib = "";
-        var type = node.getAttribute("type");
-
-        if (type)
-          attrib = type.toUpperCase();
-
-        return( (attrib != "IMAGE") &&
-                (attrib != "CHECKBOX") &&
-                (attrib != "RADIO") &&
-                (attrib != "SUBMIT") &&
-                (attrib != "RESET") &&
-                (attrib != "FILE") &&
-                (attrib != "HIDDEN") &&
-                (attrib != "RESET") &&
-                (attrib != "BUTTON") );
-      } else  {
-        return(node.localName.toUpperCase() == "TEXTAREA");
-      }
+      return (node instanceof HTMLTextAreaElement);
     },
     isTargetAKeywordField : function ( node )
     {
@@ -4467,26 +4443,18 @@ function asyncOpenWebPanel(event)
    var target = event.target;
    var linkNode;
 
-   var local_name = target.localName;
-
-   if (local_name) {
-     local_name = local_name.toLowerCase();
+   if (target instanceof HTMLAnchorElement ||
+       target instanceof HTMLAreaElement ||
+       target instanceof HTMLLinkElement) {
+     if (target.hasAttribute("href"))
+       linkNode = target;
    }
-
-   switch (local_name) {
-     case "a":
-     case "area":
-     case "link":
-       if (target.hasAttribute("href")) 
-         linkNode = target;
-       break;
-     default:
-       linkNode = findParentNode(event.originalTarget, "a");
-       // <a> cannot be nested.  So if we find an anchor without an
-       // href, there is no useful <a> around the target
-       if (linkNode && !linkNode.hasAttribute("href"))
-         linkNode = null;
-       break;
+   else {
+     linkNode = findParentNode(event.originalTarget, "a");
+     // <a> cannot be nested.  So if we find an anchor without an
+     // href, there is no useful <a> around the target
+     if (linkNode && !linkNode.hasAttribute("href"))
+       linkNode = null;
    }
    if (linkNode) {
      var wrapper = new XPCNativeWrapper(linkNode, "href", "getAttribute()", "ownerDocument");
@@ -5372,10 +5340,10 @@ function AddKeywordForSearchField()
       (node.form.enctype == "application/x-www-form-urlencoded" || node.form.enctype == "")) {
     for (var i = 0; i < node.form.elements.length; ++i) {
       var e = node.form.elements[i];
-      if (e.type.toLowerCase() == "text" || e.type.toLowerCase() == "hidden" || 
-          e.localName.toLowerCase() == "textarea") 
+      if (e.type.toLowerCase() == "text" || e.type.toLowerCase() == "hidden" ||
+          e instanceof HTMLTextAreaElement)
         postData += escape(e.name + "=" + (e == node ? "%s" : e.value)) + "&";
-      else if (e.localName.toLowerCase() == "select" && e.selectedIndex >= 0)
+      else if (e instanceof HTMLSelectElement && e.selectedIndex >= 0)
         postData += escape(e.name + "=" + e.options[e.selectedIndex].value) + "&";
       else if ((e.type.toLowerCase() == "checkbox" ||
 	  	e.type.toLowerCase() == "radio") && e.checked)
@@ -5389,10 +5357,10 @@ function AddKeywordForSearchField()
       if (e == node) // avoid duplication of the target field value, which was populated above.
         continue;
         
-      if (e.type.toLowerCase() == "text" || e.type.toLowerCase() == "hidden" || 
-          e.localName.toLowerCase() == "textarea")
+      if (e.type.toLowerCase() == "text" || e.type.toLowerCase() == "hidden" ||
+          e instanceof HTMLTextAreaElement)
         spec += "&" + escape(e.name) + "=" + escape(e.value);
-      else if (e.localName.toLowerCase() == "select" && e.selectedIndex >= 0)
+      else if (e instanceof HTMLSelectElement && e.selectedIndex >= 0)
         spec += "&" + escape(e.name) + "=" + escape(e.options[e.selectedIndex].value);
       else if ((e.type.toLowerCase() == "checkbox" ||
 	  	e.type.toLowerCase() == "radio") && e.checked)
@@ -5649,9 +5617,9 @@ missingPluginInstaller.prototype.installSinglePlugin = function(aEvent){
 
   var tagMimetype;
   var pluginsPage;
-  if (aEvent.target.localName.toLowerCase() == "applet") {
+  if (aEvent.target instanceof HTMLAppletElement) {
     tagMimetype = "application/x-java-vm";
-  } else if (aEvent.target.localName.toLowerCase() == "object") {
+  } else if (aEvent.target instanceof HTMLObjectElement) {
     tagMimetype = aEvent.target.type;
     pluginsPage = aEvent.target.getAttribute("codebase");
   } else {
@@ -5680,7 +5648,7 @@ missingPluginInstaller.prototype.newMissingPlugin = function(aEvent){
   // plugin. Object tags can, and often do, deal with that themselves,
   // so don't stomp on the page developers toes.
 
-  if (aEvent.target.localName.toLowerCase() != "object") {
+  if (!(aEvent.target instanceof HTMLObjectElement)) {
     aEvent.target.addEventListener("click",
                                    gMissingPluginInstaller.installSinglePlugin,
                                    false);
@@ -5710,9 +5678,9 @@ missingPluginInstaller.prototype.newMissingPlugin = function(aEvent){
 
   var tagMimetype;
   var pluginsPage;
-  if (aEvent.target.localName.toLowerCase() == "applet") {
+  if (aEvent.target instanceof HTMLAppletElement) {
     tagMimetype = "application/x-java-vm";
-  } else if (aEvent.target.localName.toLowerCase() == "object") {
+  } else if (aEvent.target instanceof HTMLObjectElement) {
     tagMimetype = aEvent.target.type;
     pluginsPage = aEvent.target.getAttribute("codebase");
   } else {
