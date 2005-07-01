@@ -459,8 +459,6 @@ NS_IMETHODIMP nsDrawingSurfaceWin :: Init(HDC aDC, PRUint32 aWidth,
         mBitmap.bmWidthBytes = RASWIDTH(aWidth, depth);
         mBitmap.bmBitsPixel = depth;
       }
-      else
-        tbits = ::CreateCompatibleBitmap(aDC, aWidth, aHeight);
     }
     else
     {
