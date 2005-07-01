@@ -41,6 +41,11 @@
 
 #include <windows.h>
 #include "nsIImage.h"
+#include "nsCOMPtr.h"
+#include "nsITimer.h"
+
+// Remove DDB after 60s of non-use
+#define GFX_MS_REMOVE_DBB          60000
 
 /* for compatibility with VC++ 5 */
 #if !defined(AC_SRC_OVER)
@@ -156,6 +161,13 @@ public:
   static PRInt32 gPlatform;
   static PRInt32 gOsMajorVersion;
 
+  /** Create a DDB out of the imagebits, and destroy the imagebits
+   */
+  NS_IMETHOD CreateDDB();
+  /** Removes the DBB, restoring the imagebits if necessary
+   */
+  NS_IMETHOD RemoveDDB();
+
 private:
   /** 
    * Clean the device Independent bits that could be allocated by this object.
@@ -171,13 +183,6 @@ private:
 
   void CreateImageWithAlphaBits(HDC TheHDC);
 
-  /** 
-   * Create a Device Dependent bitmap from a drawing surface
-   * @update dc - 10/29/98
-   * @param aSurface - The drawingsurface to create the DDB from.
-   */
-  void CreateDDB(nsDrawingSurface aSurface);
-
   void DrawComposited24(unsigned char *aBits,
                         PRUint8 *aImageRGB, PRUint32 aStrideRGB,
                         PRUint8 *aImageAlpha, PRUint32 aStrideAlpha,
@@ -188,9 +193,8 @@ private:
   static PRBool CanAlphaBlend(void);
 
   /** 
-   * Create a Device Dependent bitmap from a drawing surface
-   * @update dc - 05/20/99
-   * @param aSurface - The drawingsurface to create the DIB from.
+   * Recreate a device independent image from a device dependent image (DDB)
+   * Does not remove the DDB
    */
   nsresult ConvertDDBtoDIB();
 
@@ -259,9 +263,11 @@ private:
   PRUint8 PaletteMatch(PRUint8 r, PRUint8 g, PRUint8 b);
 
   PRPackedBool        mInitialized;
+  PRPackedBool        mWantsOptimization;
   PRPackedBool        mIsOptimized;       // Did we convert our DIB to a HBITMAP
   PRPackedBool        mIsLocked;          // variable to keep track of the locking
   PRPackedBool        mDIBTemp;           // boolean to let us know if DIB was created as temp
+  PRPackedBool        mImagePreMultiplied;// Are the image bits pre-multiplied with alpha?
   PRInt8              mNumBytesPixel;     // number of bytes per pixel
   PRInt16             mNumPaletteColors;  // Number of colors in the pallete 256 
   PRInt32             mSizeImage;         // number of bytes
@@ -284,6 +290,8 @@ private:
 
   static ALPHABLENDPROC gAlphaBlend;      // AlphaBlend function pointer
 
+  nsCOMPtr<nsITimer>  mTimer;             // Timer for releasing DDB
+  static void TimerCallBack(nsITimer *aTimer, void *aClosure);
 };
 
 #endif
