@@ -156,6 +156,11 @@ public:
     void reportError(nsresult aResult, const PRUnichar *aErrorText,
                      const PRUnichar *aSourceText);
 
+    nsIDOMNode *GetSourceContentModel()
+    {
+        return mSource;
+    }
+
 private:
     nsresult DoTransform();
     void notifyError();

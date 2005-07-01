@@ -690,8 +690,11 @@ txMozillaXSLTProcessor::reportError(nsresult aResult,
             do_GetService(NS_STRINGBUNDLE_CONTRACTID);
         if (sbs) {
             nsXPIDLString errorText;
-            sbs->FormatStatusMessage(aResult, nsString().get(),
-                                     getter_Copies(errorText));
+            nsresult rv = sbs->FormatStatusMessage(aResult, nsString().get(),
+                                                   getter_Copies(errorText));
+            if (NS_FAILED(rv) && aResult == NS_ERROR_XSLT_LOAD_BLOCKED_ERROR) {
+                errorText.Append(NS_LITERAL_STRING("An XSLT stylesheet load was blocked for security reasons."));
+            }
 
             nsXPIDLString errorMessage;
             nsCOMPtr<nsIStringBundle> bundle;
