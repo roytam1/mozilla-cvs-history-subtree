@@ -4927,7 +4927,7 @@ nsTextFrame::MeasureText(nsPresContext*          aPresContext,
       if (firstWordDone) {
         // The first word has been processed, and 2nd word is seen 
         // we can set it be breakable here after.
-         aTextData.mCanBreakBefore = PR_TRUE;
+        aTextData.mCanBreakBefore = PR_TRUE;
       }
     } else {
       if (textRun.IsBuffering()) {
@@ -5150,116 +5150,116 @@ nsTextFrame::MeasureText(nsPresContext*          aPresContext,
   MeasureTextRun:
 #if defined(_WIN32) || defined(XP_OS2) || defined(MOZ_X11) || defined(XP_BEOS)
   // see if we have implementation for GetTextDimensions()
-  if (hints & NS_RENDERING_HINT_FAST_MEASURE) {
-    PRInt32 numCharsFit;
-    // These calls can return numCharsFit not positioned at a break in the textRun. Beware.
-    if (aTx.TransformedTextIsAscii()) {
-      aReflowState.rendContext->GetTextDimensions((char*)aTx.GetWordBuffer(), textRun.mTotalNumChars,
-                                         maxWidth - aTextData.mX,
-                                         textRun.mBreaks, textRun.mNumSegments,
-                                         dimensions, numCharsFit, lastWordDimensions);
-    } else {
-      aReflowState.rendContext->GetTextDimensions(aTx.GetWordBuffer(), textRun.mTotalNumChars,
-                                         maxWidth - aTextData.mX,
-                                         textRun.mBreaks, textRun.mNumSegments,
-                                         dimensions, numCharsFit, lastWordDimensions);
-    }
-    // See how much of the text fit
-    if ((0 != aTextData.mX) && aTextData.mWrapping && (aTextData.mX + dimensions.width > maxWidth)) {
-      // None of the text fits
-#ifdef IBMBIDI
-      nextBidi = nsnull;
-#endif // IBMBIDI
-      break;
-    }
-
-    // Find the index of the last segment that fit
-    PRInt32 lastSegment;
-    if (numCharsFit >= textRun.mTotalNumChars) { // fast path, normal case
-      NS_ASSERTION(numCharsFit == textRun.mTotalNumChars, "shouldn't overshoot");
-      lastSegment = textRun.mNumSegments - 1;
-    } else {
-      for (lastSegment = 0; textRun.mBreaks[lastSegment] < numCharsFit; lastSegment++) ;
-      NS_ASSERTION(lastSegment < textRun.mNumSegments, "failed to find segment");
-      // now we have textRun.mBreaks[lastSegment] >= numCharsFit
-      /* O'Callahan XXX: This snippet together with the snippet below prevents mail from loading
-         Justification seems to work just fine without these changes.
-         We get into trouble in a case where lastSegment gets set to -1
-
-      if (textRun.mBreaks[lastSegment] > numCharsFit) {
-        // NOTE: this segment did not actually fit!
-        lastSegment--;
+    if (hints & NS_RENDERING_HINT_FAST_MEASURE) {
+      PRInt32 numCharsFit;
+      // These calls can return numCharsFit not positioned at a break in the textRun. Beware.
+      if (aTx.TransformedTextIsAscii()) {
+        aReflowState.rendContext->GetTextDimensions((char*)aTx.GetWordBuffer(), textRun.mTotalNumChars,
+                                           maxWidth - aTextData.mX,
+                                           textRun.mBreaks, textRun.mNumSegments,
+                                           dimensions, numCharsFit, lastWordDimensions);
+      } else {
+        aReflowState.rendContext->GetTextDimensions(aTx.GetWordBuffer(), textRun.mTotalNumChars,
+                                           maxWidth - aTextData.mX,
+                                           textRun.mBreaks, textRun.mNumSegments,
+                                           dimensions, numCharsFit, lastWordDimensions);
       }
-      */
-    }
-
-    /* O'Callahan XXX: This snippet together with the snippet above prevents mail from loading
-
-    if (lastSegment < 0) {        
-      // no segments fit
-      break;
-    } else */
-    if (lastSegment == 0) {
-      // Only one segment fit
-      prevColumn = column;
-      prevOffset = aTextData.mOffset;
-    } else {
-      // The previous state is for the next to last word
-      // NOTE: The textRun data are relative to the last updated column and offset!
-      prevColumn = column + textRun.mBreaks[lastSegment - 1];
-      prevOffset = aTextData.mOffset + textRun.mSegments[lastSegment - 1].ContentLen();
-    }
-
-    aTextData.mX += dimensions.width;
-    if (aTextData.mAscent < dimensions.ascent) {
-      aTextData.mAscent = dimensions.ascent;
-    }
-    if (aTextData.mDescent < dimensions.descent) {
-      aTextData.mDescent = dimensions.descent;
-    }
-    // this is where to backup if line-breaking happens to push the last word
-    prevAscent = aTextData.mAscent;
-    prevDescent = aTextData.mDescent;
-    // we can now consider the last word since we know where to backup
-    if (aTextData.mAscent < lastWordDimensions.ascent) {
-      aTextData.mAscent = lastWordDimensions.ascent;
-    }
-    if (aTextData.mDescent < lastWordDimensions.descent) {
-      aTextData.mDescent = lastWordDimensions.descent;
-    }
-
-    column += numCharsFit;
-    aTextData.mOffset += textRun.mSegments[lastSegment].ContentLen();
-    endsInWhitespace = textRun.mSegments[lastSegment].IsWhitespace();
-
-    // If all the text didn't fit, then we're done
-    if (numCharsFit != textRun.mTotalNumChars) {
+      // See how much of the text fit
+      if ((0 != aTextData.mX) && aTextData.mWrapping && (aTextData.mX + dimensions.width > maxWidth)) {
+        // None of the text fits
 #ifdef IBMBIDI
-      nextBidi = nsnull;
+        nextBidi = nsnull;
 #endif // IBMBIDI
-      break;
-    }
+        break;
+      }
+
+      // Find the index of the last segment that fit
+      PRInt32 lastSegment;
+      if (numCharsFit >= textRun.mTotalNumChars) { // fast path, normal case
+        NS_ASSERTION(numCharsFit == textRun.mTotalNumChars, "shouldn't overshoot");
+        lastSegment = textRun.mNumSegments - 1;
+      } else {
+        for (lastSegment = 0; textRun.mBreaks[lastSegment] < numCharsFit; lastSegment++) ;
+        NS_ASSERTION(lastSegment < textRun.mNumSegments, "failed to find segment");
+        // now we have textRun.mBreaks[lastSegment] >= numCharsFit
+        /* O'Callahan XXX: This snippet together with the snippet below prevents mail from loading
+           Justification seems to work just fine without these changes.
+           We get into trouble in a case where lastSegment gets set to -1
+
+        if (textRun.mBreaks[lastSegment] > numCharsFit) {
+          // NOTE: this segment did not actually fit!
+          lastSegment--;
+        }
+        */
+      }
+
+      /* O'Callahan XXX: This snippet together with the snippet above prevents mail from loading
+
+      if (lastSegment < 0) {        
+        // no segments fit
+        break;
+      } else */
+      if (lastSegment == 0) {
+        // Only one segment fit
+        prevColumn = column;
+        prevOffset = aTextData.mOffset;
+      } else {
+        // The previous state is for the next to last word
+        // NOTE: The textRun data are relative to the last updated column and offset!
+        prevColumn = column + textRun.mBreaks[lastSegment - 1];
+        prevOffset = aTextData.mOffset + textRun.mSegments[lastSegment - 1].ContentLen();
+      }
+
+      aTextData.mX += dimensions.width;
+      if (aTextData.mAscent < dimensions.ascent) {
+        aTextData.mAscent = dimensions.ascent;
+      }
+      if (aTextData.mDescent < dimensions.descent) {
+        aTextData.mDescent = dimensions.descent;
+      }
+      // this is where to backup if line-breaking happens to push the last word
+      prevAscent = aTextData.mAscent;
+      prevDescent = aTextData.mDescent;
+      // we can now consider the last word since we know where to backup
+      if (aTextData.mAscent < lastWordDimensions.ascent) {
+        aTextData.mAscent = lastWordDimensions.ascent;
+      }
+      if (aTextData.mDescent < lastWordDimensions.descent) {
+        aTextData.mDescent = lastWordDimensions.descent;
+      }
+
+      column += numCharsFit;
+      aTextData.mOffset += textRun.mSegments[lastSegment].ContentLen();
+      endsInWhitespace = textRun.mSegments[lastSegment].IsWhitespace();
+
+      // If all the text didn't fit, then we're done
+      if (numCharsFit != textRun.mTotalNumChars) {
+#ifdef IBMBIDI
+        nextBidi = nsnull;
+#endif // IBMBIDI
+        break;
+      }
 
 #ifdef IBMBIDI
-    if (nextBidi && (mContentLength <= 0) ) {
-      break;
-    }
+      if (nextBidi && (mContentLength <= 0) ) {
+        break;
+      }
 #endif // IBMBIDI
 
-    if (nsnull == bp2) {
-      // No more text so we're all finished. Advance the offset in case the last
-      // call to GetNextWord() discarded characters
-      aTextData.mOffset += contentLen;
-      break;
+      if (nsnull == bp2) {
+        // No more text so we're all finished. Advance the offset in case the last
+        // call to GetNextWord() discarded characters
+        aTextData.mOffset += contentLen;
+        break;
+      }
+
+      // Reset the number of text run segments
+      textRun.Reset();
+
+      // Estimate the remaining number of characters we think will fit
+      estimatedNumChars = EstimateNumChars(maxWidth - aTextData.mX,
+                                           aTs.mAveCharWidth);
     }
-
-    // Reset the number of text run segments
-    textRun.Reset();
-
-    // Estimate the remaining number of characters we think will fit
-    estimatedNumChars = EstimateNumChars(maxWidth - aTextData.mX,
-                                         aTs.mAveCharWidth);
-  }
 #else /* defined(_WIN32) || defined(XP_OS2) || defined(MOZ_X11) || defined(XP_BEOS) */
     int unused = -1;
 #endif /* defined(_WIN32) || defined(XP_OS2) || defined(MOZ_X11) || defined(XP_BEOS) */
