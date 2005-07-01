@@ -626,7 +626,6 @@ public:
   struct TextReflowData {
     PRInt32             mX;                   // OUT
     PRInt32             mOffset;              // IN/OUT How far along we are in the content
-    nscoord             mMaxWordWidth;        // OUT
     nscoord             mAscent;              // OUT
     nscoord             mDescent;             // OUT
     PRPackedBool        mWrapping;            // IN
@@ -635,7 +634,6 @@ public:
     PRPackedBool        mInWord;              // IN
     PRPackedBool        mFirstLetterOK;       // IN
     PRPackedBool        mCanBreakBefore;         // IN
-    PRPackedBool        mComputeMaxWordWidth; // IN
     PRPackedBool        mTrailingSpaceTrimmed; // IN/OUT
   
     TextReflowData(PRInt32 aStartingOffset,
@@ -645,11 +643,9 @@ public:
                    PRBool  aInWord,
                    PRBool  aFirstLetterOK,
                    PRBool  aCanBreakBefore,
-                   PRBool  aComputeMaxWordWidth,
                    PRBool  aTrailingSpaceTrimmed)
       : mX(0),
         mOffset(aStartingOffset),
-        mMaxWordWidth(0),
         mAscent(0),
         mDescent(0),
         mWrapping(aWrapping),
@@ -658,7 +654,6 @@ public:
         mInWord(aInWord),
         mFirstLetterOK(aFirstLetterOK),
         mCanBreakBefore(aCanBreakBefore),
-        mComputeMaxWordWidth(aComputeMaxWordWidth),
         mTrailingSpaceTrimmed(aTrailingSpaceTrimmed)
     {}
   };
@@ -4813,7 +4808,7 @@ nsTextFrame::MeasureText(nsPresContext*          aPresContext,
   PRInt32 prevOffset = -1;
   PRInt32 column = mColumn;
   PRInt32 prevColumn = column;
-  nscoord prevMaxWordWidth = 0, prevAscent = 0, prevDescent = 0;
+  nscoord prevAscent = 0, prevDescent = 0;
   PRInt32 lastWordLen = 0;
   PRUnichar* lastWordPtr = nsnull;
   PRBool  endsInWhitespace = PR_FALSE;
@@ -4833,7 +4828,7 @@ nsTextFrame::MeasureText(nsPresContext*          aPresContext,
   PRUint32 hints = 0;
   aReflowState.rendContext->GetHints(hints);
   if (hints & NS_RENDERING_HINT_FAST_MEASURE) {
-    measureTextRuns = !aTextData.mComputeMaxWordWidth && !aTs.mPreformatted &&
+    measureTextRuns = !aTs.mPreformatted &&
                       !aTs.mSmallCaps && !aTs.mWordSpacing && !aTs.mLetterSpacing &&
                       aTextData.mWrapping;
   }
@@ -5106,14 +5101,10 @@ nsTextFrame::MeasureText(nsPresContext*          aPresContext,
             // The text will not fit.
             break;
           }
-          prevMaxWordWidth = aTextData.mMaxWordWidth;
           prevAscent = aTextData.mAscent;
           prevDescent =  aTextData.mDescent;
 
           aTextData.mX += dimensions.width;
-          if (dimensions.width > aTextData.mMaxWordWidth) {
-            aTextData.mMaxWordWidth = dimensions.width;
-          }
           if (aTextData.mAscent < dimensions.ascent) {
             aTextData.mAscent = dimensions.ascent;
           }
@@ -5372,9 +5363,6 @@ nsTextFrame::MeasureText(nsPresContext*          aPresContext,
             // joined word is large than it's pieces, the right effect
             // will occur from the perspective of the container
             // reflowing this frame)
-            if (wordDimensions.width > aTextData.mMaxWordWidth) {
-              aTextData.mMaxWordWidth = wordDimensions.width;
-            }
             // Now that we now that we will retain the last word, we should
             // account for its ascent and descent
             if (aTextData.mAscent < lastWordDimensions.ascent) {
@@ -5393,7 +5381,6 @@ nsTextFrame::MeasureText(nsPresContext*          aPresContext,
             // The fully joined word won't fit. We need to reduce our
             // size by lastWordDimensions
             aTextData.mX -= lastWordDimensions.width;
-            aTextData.mMaxWordWidth = prevMaxWordWidth;
             aTextData.mOffset = prevOffset;
             column = prevColumn;
             if (aTextData.mMeasureText) {
@@ -5407,7 +5394,7 @@ nsTextFrame::MeasureText(nsPresContext*          aPresContext,
             //     our remaining text could have got shorter.
             // }
 #ifdef DEBUG_WORD_WRAPPING
-            printf("  x=%d maxWordWidth=%d len=%d\n", aTextData.mX, aTextData.mMaxWordWidth,
+            printf("  x=%d len=%d\n", aTextData.mX,
                    aTextData.mOffset - startingOffset);
 #endif
             lineLayout.ForgetWordFrames();
@@ -5650,8 +5637,7 @@ nsTextFrame::Reflow(nsPresContext*          aPresContext,
   // Local state passed to the routines that do the actual text measurement
   TextReflowData  textData(startingOffset, wrapping, skipWhitespace, 
                            measureText, inWord, lineLayout.GetFirstLetterStyleOK(),
-                           lineLayout.LineIsBreakable(), PR_FALSE,
-                           PR_FALSE);
+                           lineLayout.LineIsBreakable(), PR_FALSE);
   
   // Measure the text
   // MeasureText may set TEXT_TRIMMED_WS flag, so don't clear after the call
@@ -5685,9 +5671,6 @@ nsTextFrame::Reflow(nsPresContext*          aPresContext,
     aMetrics.height = aMetrics.ascent + aMetrics.descent;
   }
   mAscent = aMetrics.ascent;
-  if (!wrapping) {
-    textData.mMaxWordWidth = textData.mX;
-  }
 
   // Set content offset and length
   mContentOffset = startingOffset;
