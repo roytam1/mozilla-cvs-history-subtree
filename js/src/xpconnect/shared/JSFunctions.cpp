@@ -119,54 +119,20 @@ JSImportModule(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
 
 
 ////////////////////////////////////////////////////////////////////////
-// JSAutoContext
+// JSContextHelper
 
-JSAutoContext::JSAutoContext()
-    : mContext(nsnull), mError(NS_OK), mPopNeeded(JS_FALSE), mContextThread(0)
+JSContextHelper::JSContextHelper(JSContext *cx)
+    : mContext(cx), mContextThread(0)
 {
-    nsCOMPtr<nsIThreadJSContextStack> cxstack = 
-        do_GetService(kJSContextStackContractID, &mError);
-    
-    if (NS_SUCCEEDED(mError)) {
-        mError = cxstack->GetSafeJSContext(&mContext);
-        if (NS_SUCCEEDED(mError) && mContext) {
-            mError = cxstack->Push(mContext);
-            if (NS_SUCCEEDED(mError)) {
-                mPopNeeded = JS_TRUE;   
-            } 
-        } 
-    }
-    
-    if (mContext) {
-        mSavedOptions = JS_GetOptions(mContext);
-        JS_SetOptions(mContext, mSavedOptions | JSOPTION_XML);
-        mContextThread = JS_GetContextThread(mContext);
-        if (mContextThread) {
-            JS_BeginRequest(mContext);
-        } 
-    } else {
-        if (NS_SUCCEEDED(mError)) {
-            mError = NS_ERROR_FAILURE;
-        }
-    }
+    mContextThread = JS_GetContextThread(mContext);
+    if (mContextThread) {
+        JS_BeginRequest(mContext);
+    } 
 }
 
-JSAutoContext::~JSAutoContext()
+JSContextHelper::~JSContextHelper()
 {
-    if (mContext) {
-        JS_ClearNewbornRoots(mContext);
-        JS_SetOptions(mContext, mSavedOptions);
-        if (mContextThread)
-            JS_EndRequest(mContext);
-    }
-
-    if (mPopNeeded) {
-        nsCOMPtr<nsIThreadJSContextStack> cxstack = 
-            do_GetService(kJSContextStackContractID);
-        if (cxstack) {
-            JSContext* cx;
-            nsresult rv = cxstack->Pop(&cx);
-            NS_ASSERTION(NS_SUCCEEDED(rv) && cx == mContext, "push/pop mismatch");
-        }        
-    }        
+    JS_ClearNewbornRoots(mContext);
+    if (mContextThread)
+        JS_EndRequest(mContext);
 }        

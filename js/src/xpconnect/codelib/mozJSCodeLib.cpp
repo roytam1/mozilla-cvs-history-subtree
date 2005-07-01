@@ -94,7 +94,22 @@ nsresult mozJSCodeLib::Init()
     NS_ERROR("could not get JSRuntimeService");
     return NS_ERROR_FAILURE;
   }
+  
+  JSRuntime *rt = nsnull;
+  mRuntimeService->GetRuntime(&rt);
+  if (!rt) {
+    NS_ERROR("null js runtime");
+    return NS_ERROR_FAILURE;
+  }
 
+  // Create our compilation context.
+  mContext = JS_NewContext(rt, 256);
+  if (!mContext)
+    return NS_ERROR_OUT_OF_MEMORY;
+  
+  uint32 options = JS_GetOptions(mContext);
+  JS_SetOptions(mContext, options | JSOPTION_XML);
+    
 #ifndef XPCONNECT_STANDALONE
   nsCOMPtr<nsIScriptSecurityManager> secman = 
     do_GetService(kScriptSecurityManagerContractID);
@@ -399,7 +414,7 @@ mozJSCodeLib::LoadModule(const nsACString &module, PLHashEntry **hep, PRBool for
   }
   
   jsval result;
-  JSAutoContext cx;
+  JSContextHelper cx(mContext);
   JSPrincipals* jsprincipals = nsnull;
   nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
 
@@ -489,5 +504,11 @@ mozJSCodeLib::UnloadModules()
 
   PL_HashTableEnumerateEntries(mModules, UnrootModulesCallback, rt);
   PL_HashTableDestroy(mModules);
-  mModules = nsnull;  
+  mModules = nsnull;
+
+  // Destroying our context will force a GC.
+  JS_DestroyContext(mContext);
+  mContext = nsnull;
+
+  mRuntimeService = nsnull;
 }

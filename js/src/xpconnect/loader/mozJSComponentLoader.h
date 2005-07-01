@@ -91,6 +91,7 @@ public:
     nsCOMPtr<nsIPrincipal> mSystemPrincipal;
 #endif
     JSRuntime *mRuntime;
+    JSContext *mContext;
     PLHashTable *mModules;
     PLHashTable *mGlobals;
 

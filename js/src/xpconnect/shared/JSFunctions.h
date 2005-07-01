@@ -57,26 +57,21 @@ JSBool JS_DLL_CALLBACK
 JSImportModule(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
 #endif // MOZ_JSCODELIB
 
-
 ////////////////////////////////////////////////////////////////////////
-// JSAutoContext
+// JSContextHelper
 
-class JSAutoContext
+class JSContextHelper
 {
 public:
-    JSAutoContext();
-    ~JSAutoContext();
+    JSContextHelper(JSContext* cx);
+    ~JSContextHelper();
 
     operator JSContext*() const {return mContext;}
-    JSContext* GetContext() const {return mContext;}
-    nsresult   GetError()   const {return mError;}
 
+    JSContextHelper(); // not implemnted
 private:
     JSContext* mContext;
-    nsresult   mError;
-    JSBool     mPopNeeded;
-    intN       mContextThread;
-    uint32     mSavedOptions;
+    intN       mContextThread; 
 };
 
 ////////////////////////////////////////////////////////////////////////
@@ -94,5 +89,6 @@ private:
     JSContext* mContext;
     JSErrorReporter mOldReporter;
 };
+
 
 #endif // __JS_FUNCTIONS_H__

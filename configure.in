@@ -164,6 +164,27 @@ case "$target" in
 esac
 fi
 
+
+dnl Do some special WinCE toolchain stuff
+case "$target" in
+*wince)
+    echo -----------------------------------------------------------------------------
+    echo Building Windows CE Shunt Library and Tool Chain
+    echo -----------------------------------------------------------------------------
+    `$srcdir/build/cygwin-wrapper evc $srcdir/build/wince/shunt/build/shunt.vcw /MAKE ALL > shunt.out <<\EOF`
+    cat shunt.out
+    rm shunt.out
+    $srcdir/build/wince/tools/topsrcdir.h
+
+    echo -n "#define TOPSRCDIR \"" > $srcdir/build/wince/tools/topsrcdir.h
+    `$srcdir/build/cygwin-wrapper echo -n $_topsrcdir >> $srcdir/build/wince/tools/topsrcdir.h`
+    echo -n \" >> $srcdir/build/wince/tools/topsrcdir.h
+
+    make -C  $srcdir/build/wince/tools
+    echo -----------------------------------------------------------------------------
+    ;;
+esac
+
 dnl ========================================================
 dnl Checks for compilers.
 dnl ========================================================
@@ -355,10 +376,6 @@ case "$target" in
         _MIDL_MAJOR_VERSION=`echo ${_MIDL_FULL_VERSION} | $AWK -F\. '{ print $1 }'`
         _MIDL_MINOR_VERSION=`echo ${_MIDL_FULL_VERSION} | $AWK -F\. '{ print $2 }'`
         _MIDL_REV_VERSION=`echo ${_MIDL_FULL_VERSION} | $AWK -F\. '{ print $3 }'`
-         if test "$_MIDL_MAJOR_VERSION" != "5" -a "$_MIDL_FULL_VERSION" != "6.00.0347" -a "$_MIDL_FULL_VERSION" != "6.00.0361" -a "$_MIDL_FULL_VERSION" != "6.00.0364"; then
-             AC_MSG_ERROR([Midl version $_MIDL_FULL_VERSION was found.  Midl version must be 5.x.x (VC6*) or 6.00.0347 (VC7) or 6.00.0361 (VC.net 2003) or 6.00.0364 (VC 2005).])
-         fi
-
          # Add flags if necessary
          AC_MSG_CHECKING([for midl flags])
          if test \( "$_MIDL_MAJOR_VERSION" -gt "6" \) -o \( "$_MIDL_MAJOR_VERSION" = "6" -a "$_MIDL_MINOR_VERSION" -gt "0" \) -o \( "$_MIDL_MAJOR_VERSION" = "6" -a "$_MIDL_MINOR_VERSION" = "00" -a "$_MIDL_REV_VERSION" -gt "359" \); then
@@ -565,16 +582,17 @@ tools are selected during the Xcode/Developer Tools installation.])
 
   GCC_VERSION_MAJOR=`echo $GCC_VERSION_FULL | $PERL -pe 's/(^\d*).*/$1/;'`
   if test "$GCC_VERSION_MAJOR" -lt "4" ; then
+    dnl gcc < 4.0 only supports PowerPC, OK to hard-code
     TARGET_ARCH_LIB="darwin"
     TARGET_ARCH_INCLUDE="ppc-darwin"
     SDK_C_INCLUDE="-isystem ${MACOS_SDK_DIR}/usr/include/gcc/darwin/${GCC_VERSION} -isystem ${MACOS_SDK_DIR}/usr/include -F${MACOS_SDK_DIR}/System/Library/Frameworks"
   else
-    dnl If gcc >= 4, use powerpc-apple-darwin#, where # is the version of
+    dnl If gcc >= 4, use cpu-apple-darwin#, where # is the version of
     dnl the Darwin release corresponding to the target Mac OS X release.
     dnl For OS X >= 10.1.1, take the minor version number and add 4 to get
     dnl the Darwin major version number.  If it can't be determined, use the
     dnl current Darwin major version number and hope that there's a symlink.
-    TARGET_ARCH_LIB=powerpc-apple-darwin`echo $MACOS_SDK_DIR | $PERL -pe 's/MacOSX10\.([^\.]*)//;if ($1) {$_=$1+4;} else {$_="'${target_os}'";s/(\d+)//;$_=$1;}'`
+    TARGET_ARCH_LIB=${target_cpu}-${target_vendor}-darwin`echo $MACOS_SDK_DIR | $PERL -pe 's/MacOSX10\.([\d]*)//;if ($1) {$_=$1+4;} else {$_="'${target_os}'";s/(\d+)//;$_=$1;}'`
     TARGET_ARCH_INCLUDE=$TARGET_ARCH_LIB
     SDK_C_INCLUDE="-isystem ${MACOS_SDK_DIR}/usr/lib/gcc/${TARGET_ARCH_LIB}/${GCC_VERSION_FULL}/include -isystem ${MACOS_SDK_DIR}/usr/include -F${MACOS_SDK_DIR}/System/Library/Frameworks"
   fi
@@ -883,6 +901,9 @@ WINCE)
     OS_ARCH=WINCE
     OS_TARGET=WINCE
     ;;
+Darwin)
+    OS_TEST=`uname -p`
+    ;;
 esac
 
 if test "$OS_ARCH" = "NCR"; then
@@ -1072,7 +1093,7 @@ case "$host" in
     HOST_NSPR_MDCPUCFG='\"md/_darwin.cfg\"'
     HOST_OPTIMIZE_FLAGS="${HOST_OPTIMIZE_FLAGS=-O3}"
     MOZ_FIX_LINK_PATHS='-Wl,-executable_path,$(DIST)/bin'
-    LIBXUL_LIBS='$(XPCOM_FROZEN_LDOPTS) -lxul -lobjc'
+    LIBXUL_LIBS='$(XPCOM_FROZEN_LDOPTS) $(DIST)/bin/XUL -lobjc'
     ;;
 
 *-linux*)
@@ -2571,10 +2592,10 @@ dnl Check for MacOS deployment target version
 dnl ========================================================
 
 MOZ_ARG_ENABLE_STRING(macos-target,
-                      [  --enable-macos-target=VER (default=10.1)
+                      [  --enable-macos-target=VER (default=10.2)
                           Set the minimum MacOS version needed at runtime],
                       [MACOS_DEPLOYMENT_TARGET_STR=$enableval _MACOS_DT_SET=1],
-                      [MACOS_DEPLOYMENT_TARGET_STR=10.1])
+                      [MACOS_DEPLOYMENT_TARGET_STR=10.2])
 
 case "$target" in
 *-darwin*)
@@ -3822,9 +3843,9 @@ suite)
   MOZ_LDAP_XPCOM=1
   MOZ_COMPOSER=1
   MOZ_SUITE=1
-  MOZ_PROFILESHARING=1
+  MOZ_PROFILESHARING=
   MOZ_APP_VERSION=$MOZILLA_VERSION
-  MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs xml-rpc xmlextras help p3p pref transformiix venkman inspector irc universalchardet typeaheadfind webservices spellcheck gnomevfs negotiateauth sroaming permissions"
+  MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs xml-rpc xmlextras help p3p pref transformiix venkman inspector irc universalchardet typeaheadfind webservices spellcheck gnomevfs negotiateauth sroaming permissions reporter"
   AC_DEFINE(MOZ_SUITE)
   ;;
 
@@ -3919,6 +3940,7 @@ esac
 
 AC_SUBST(MOZ_BUILD_APP)
 AC_SUBST(MOZ_XUL_APP)
+AC_SUBST(MOZ_SUITE)
 AC_SUBST(MOZ_PHOENIX)
 AC_SUBST(MOZ_THUNDERBIRD)
 AC_SUBST(MOZ_STANDALONE_COMPOSER)
@@ -4637,10 +4659,8 @@ if test -n "$USE_GSSAPI" && test `echo "$MOZ_EXTENSIONS" | grep -c negotiateauth
     dnl
     if test -n "$GSSAPI_DIR"; then
         _GSSAPI_INC="-I$GSSAPI_DIR/include"
-        _GSSAPI_LIB="-L$GSSAPI_DIR/lib"
     else
         _GSSAPI_INC=
-        _GSSAPI_LIB=
     fi
 
     _SAVE_CPPFLAGS="$CPPFLAGS"
@@ -4648,61 +4668,26 @@ if test -n "$USE_GSSAPI" && test `echo "$MOZ_EXTENSIONS" | grep -c negotiateauth
     _SAVE_LIBS="$LIBS"
 
     CPPFLAGS="$CPPFLAGS $_GSSAPI_INC"
-    LDFLAGS="$LDFLAGS $_GSSAPI_LIB"
 
     dnl
     dnl Try to set GSSAPI_INCLUDES ...
     dnl
     AC_CHECK_HEADERS(gssapi.h,
-        [GSSAPI_INCLUDES="$_GSSAPI_INC"])
-    if test -z "$GSSAPI_INCLUDES" ; then
+        [GSSAPI_INCLUDES="$_GSSAPI_INC" _GSSAPI_FOUND=1])
+    if test -z "$_GSSAPI_FOUND" ; then
         AC_CHECK_HEADERS(gssapi/gssapi.h,
-            [GSSAPI_INCLUDES="$_GSSAPI_INC"])
-    fi
-    CPPFLAGS="$_SAVE_CPPFLAGS $GSSAPI_INCLUDES"
-
-    dnl
-    dnl Try to set GSSAPI_LIBS ...
-    dnl
-    AC_CHECK_LIB(gss, gss_init_sec_context,
-        [GSSAPI_LIBS="$_GSSAPI_LIB -lgss"],)
-
-    dnl
-    dnl If libgss was not found, look for the MIT Kerberos V5 GSSAPI
-    dnl libraries instead.
-    dnl
-    if test -z "$GSSAPI_LIBS" ; then
-        dnl
-        dnl We only need to link to libgssapi_krb5.so
-        dnl
-        _GSS_LIBS="$_GSSAPI_LIB -lgssapi_krb5"
-        LIBS="$LIBS $_GSS_LIBS"
-        AC_CHECK_FUNC(gss_init_sec_context, 
-            [GSSAPI_LIBS="$_GSS_LIBS"],)
-        LIBS="$_SAVE_LIBS"
+            [GSSAPI_INCLUDES="$_GSSAPI_INC" _GSSAPI_FOUND=1])
     fi
 
-    dnl
-    dnl If GSS libs were STILL not found, try looking for Heimdal
-    dnl Kerberos V5 libraries.
-    dnl
-    if test -z "$GSSAPI_LIBS" ; then
+    if test -z "$_GSSAPI_FOUND" ; then
         if test -n "$GSSAPI_DIR" ; then
             AC_PATH_PROG(KRB5CONFIG, krb5-config, :, [$GSSAPI_DIR/bin:$PATH:/usr/bin])
         else
             AC_PATH_PROG(KRB5CONFIG, krb5-config, :, [$PATH:/usr/bin])
         fi
         if test -n "$KRB5CONFIG" -a -x "$KRB5CONFIG" ; then
-            TMP_GSSAPI_LIBS=`$KRB5CONFIG --libs gssapi 2>/dev/null`
-            TMP_GSSAPI_INCLUDES=`$KRB5CONFIG --cflags gssapi 2>/dev/null`
-
-            LIBS="$LIBS $TMP_GSSAPI_LIBS"
-            AC_CHECK_LIB(gssapi, gss_init_sec_context,
-                [GSSAPI_LIBS="$TMP_GSSAPI_LIBS"
-                 GSSAPI_INCLUDES="$TMP_GSSAPI_INCLUDES"],
-                [GSSAPI_LIBS=""])
-
-            CPPFLAGS="$_SAVE_CPPFLAGS $GSSAPI_INCLUDES"
+            GSSAPI_INCLUDES=`$KRB5CONFIG --cflags gssapi 2>/dev/null`
+            _GSSAPI_FOUND=1
         fi
     fi
 
@@ -4710,27 +4695,10 @@ if test -n "$USE_GSSAPI" && test `echo "$MOZ_EXTENSIONS" | grep -c negotiateauth
     dnl If GSSAPI libs were not found, remove extension from the list to be
     dnl built.
     dnl
-    if test -z "$GSSAPI_LIBS" ; then
+    if test -z "$_GSSAPI_FOUND" ; then
         AC_MSG_WARN([Cannot build negotiateauth without GSSAPI. Removing negotatiate from MOZ_EXTENSIONS.])
         MOZ_EXTENSIONS=`echo $MOZ_EXTENSIONS | sed -e 's|negotiateauth||'`
-        GSSAPI_INCLUDES=
-    else
-        dnl
-        dnl Try to determine if the GSS_C_NT_HOSTBASED_SERVICE value is
-        dnl defined.  Older MIT releases did not define this correctly.
-        dnl
-        AC_CHECK_HEADERS([gssapi_generic.h])
-        AC_CHECK_HEADERS([gssapi/gssapi_generic.h])
-
-        AC_TRY_COMPILE([ #if defined(HAVE_GSSAPI_H)
-                         #include <gssapi.h>
-                         #elif defined(HAVE_GSSAPI_GSSAPI_H)
-                         #include <gssapi/gssapi.h>
-                         #endif ],
-            [ gss_OID oid = GSS_C_NT_HOSTBASED_SERVICE; ],
-            [AC_DEFINE(HAVE_GSS_C_NT_HOSTBASED_SERVICE)],[
-             AC_MSG_WARN([GSS_C_NT_HOSTBASED_SERVICE not found])
-            ])
+        USE_GSSAPI=
     fi
 
     LIBS="$_SAVE_LIBS"
@@ -4738,8 +4706,8 @@ if test -n "$USE_GSSAPI" && test `echo "$MOZ_EXTENSIONS" | grep -c negotiateauth
     CPPFLAGS="$_SAVE_CPPFLAGS"
 
     AC_SUBST(GSSAPI_INCLUDES)
-    AC_SUBST(GSSAPI_LIBS)
 fi
+AC_SUBST(USE_GSSAPI)
 
 
 dnl Remove dupes
@@ -4868,6 +4836,20 @@ if test -n "$MOZ_SVG"; then
     ;;
   esac
 fi
+
+dnl COMMENTED OUT because foreignobject support should
+dnl not be tweakable by distributors!
+dnl ========================================================
+dnl SVG <foreignObject>
+dnl ========================================================
+dnl MOZ_ARG_ENABLE_BOOL(svg-foreignobject,
+dnl [  --enable-svg-foreignobject
+dnl                          Enable SVG <foreignObject> support],
+dnl    MOZ_SVG_FOREIGNOBJECT=1,
+dnl    MOZ_SVG_FOREIGNOBJECT= )
+dnl if test -n "$MOZ_SVG_FOREIGNOBJECT"; then
+dnl   AC_DEFINE(MOZ_SVG_FOREIGNOBJECT)
+dnl fi
 
 dnl ========================================================
 dnl Transformiix
@@ -6493,6 +6475,7 @@ AC_SUBST(MINIMO)
 AC_SUBST(MOZ_MATHML)
 AC_SUBST(MOZ_XTF)
 AC_SUBST(MOZ_SVG)
+AC_SUBST(MOZ_SVG_FOREIGNOBJECT)
 AC_SUBST(MOZ_SVG_RENDERER_GDIPLUS)
 AC_SUBST(MOZ_SVG_RENDERER_LIBART)
 AC_SUBST(MOZ_SVG_RENDERER_CAIRO)

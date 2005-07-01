@@ -64,6 +64,7 @@ REQUIRES	= xpcom \
 		  js \
 		  jsloader \
 		  caps \
+		  necko \
 		  dom \
 		  $(NULL)
 

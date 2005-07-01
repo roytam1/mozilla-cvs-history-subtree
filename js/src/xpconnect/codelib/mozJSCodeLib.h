@@ -73,6 +73,7 @@ private:
   
   nsCOMPtr<nsIXPConnect> mXPConnect;
   nsCOMPtr<nsIJSRuntimeService> mRuntimeService;
+  JSContext *mContext;
 #ifndef XPCONNECT_STANDALONE
   nsCOMPtr<nsIPrincipal> mSystemPrincipal;
 #endif
