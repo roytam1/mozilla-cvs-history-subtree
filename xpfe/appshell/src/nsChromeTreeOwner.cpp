@@ -70,6 +70,7 @@ NS_IMPL_RELEASE(nsChromeTreeOwner)
 NS_INTERFACE_MAP_BEGIN(nsChromeTreeOwner)
    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDocShellTreeOwner)
    NS_INTERFACE_MAP_ENTRY(nsIDocShellTreeOwner)
+   NS_INTERFACE_MAP_ENTRY(nsIDocShellTreeOwnerTmp)
    NS_INTERFACE_MAP_ENTRY(nsIBaseWindow)
    NS_INTERFACE_MAP_ENTRY(nsIWebProgressListener)
    NS_INTERFACE_MAP_ENTRY(nsIInterfaceRequestor)
@@ -106,6 +107,13 @@ NS_IMETHODIMP nsChromeTreeOwner::GetInterface(const nsIID& aIID, void** aSink)
 
 NS_IMETHODIMP nsChromeTreeOwner::FindItemWithName(const PRUnichar* aName,
    nsIDocShellTreeItem* aRequestor, nsIDocShellTreeItem** aFoundItem)
+{
+  return FindItemWithNameTmp(aName, aRequestor, nsnull, aFoundItem);
+}
+
+NS_IMETHODIMP nsChromeTreeOwner::FindItemWithNameTmp(const PRUnichar* aName,
+   nsIDocShellTreeItem* aRequestor, nsIDocShellTreeItem* aOriginalRequestor,
+   nsIDocShellTreeItem** aFoundItem)
 {
    NS_ENSURE_ARG_POINTER(aFoundItem);
 
@@ -150,16 +158,21 @@ NS_IMETHODIMP nsChromeTreeOwner::FindItemWithName(const PRUnichar* aName,
      
       if(fIs_Content)
          {
-         xulWindow->GetPrimaryContentShell(getter_AddRefs(shellAsTreeItem));
-         if(shellAsTreeItem)
-            *aFoundItem = shellAsTreeItem;
+         xulWindow->GetPrimaryContentShell(aFoundItem);
          }
       else
          {
          nsCOMPtr<nsIDocShell> shell;
          xulWindow->GetDocShell(getter_AddRefs(shell));
          shellAsTreeItem = do_QueryInterface(shell);
-         if(shellAsTreeItem && (aRequestor != shellAsTreeItem.get()))
+         if (shellAsTreeItem) {
+           // Get the root tree item of same type, since roots are the only
+           // things that call into the treeowner to look for named items.
+           nsCOMPtr<nsIDocShellTreeItem> root;
+           shellAsTreeItem->GetSameTypeRootTreeItem(getter_AddRefs(root));
+           shellAsTreeItem = root;
+         }
+         if(shellAsTreeItem && aRequestor != shellAsTreeItem)
             {
             // Do this so we can pass in the tree owner as the requestor so the child knows not
             // to call back up.
@@ -167,7 +180,11 @@ NS_IMETHODIMP nsChromeTreeOwner::FindItemWithName(const PRUnichar* aName,
             shellAsTreeItem->GetTreeOwner(getter_AddRefs(shellOwner));
             nsCOMPtr<nsISupports> shellOwnerSupports(do_QueryInterface(shellOwner));
 
-            shellAsTreeItem->FindItemWithName(aName, shellOwnerSupports, aFoundItem);
+            nsCOMPtr<nsIDocShellTreeItemTmp> shellAsTreeItemTmp =
+              do_QueryInterface(shellAsTreeItem);
+            shellAsTreeItemTmp->FindItemWithNameTmp(aName, shellOwnerSupports,
+                                                    aOriginalRequestor,
+                                                    aFoundItem);
             }
          }
       if(*aFoundItem)

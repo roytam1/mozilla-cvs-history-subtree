@@ -4048,13 +4048,14 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     }
 
     if (count > 0) {
+      nsCOMPtr<nsIDocShellTreeNodeTmp> dsntmp(do_QueryInterface(dsn));
       nsCOMPtr<nsIDocShellTreeItem> child;
 
       const jschar *chars = ::JS_GetStringChars(str);
 
-      dsn->FindChildWithName(NS_REINTERPRET_CAST(const PRUnichar*, chars),
-                             PR_FALSE, PR_TRUE, nsnull,
-                             getter_AddRefs(child));
+      dsntmp->FindChildWithNameTmp(NS_REINTERPRET_CAST(const PRUnichar*, chars),
+                                   PR_FALSE, PR_TRUE, nsnull, nsnull,
+                                   getter_AddRefs(child));
 
       nsCOMPtr<nsIDOMWindow> child_win(do_GetInterface(child));
 

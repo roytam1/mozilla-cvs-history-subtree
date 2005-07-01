@@ -94,6 +94,7 @@ NS_IMPL_RELEASE(nsContentTreeOwner)
 NS_INTERFACE_MAP_BEGIN(nsContentTreeOwner)
    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDocShellTreeOwner)
    NS_INTERFACE_MAP_ENTRY(nsIDocShellTreeOwner)
+   NS_INTERFACE_MAP_ENTRY(nsIDocShellTreeOwnerTmp)
    NS_INTERFACE_MAP_ENTRY(nsIBaseWindow)
    NS_INTERFACE_MAP_ENTRY(nsIWebBrowserChrome)
    NS_INTERFACE_MAP_ENTRY(nsIInterfaceRequestor)
@@ -153,6 +154,13 @@ NS_IMETHODIMP nsContentTreeOwner::GetInterface(const nsIID& aIID, void** aSink)
 NS_IMETHODIMP nsContentTreeOwner::FindItemWithName(const PRUnichar* aName,
    nsIDocShellTreeItem* aRequestor, nsIDocShellTreeItem** aFoundItem)
 {
+  return FindItemWithNameTmp(aName, aRequestor, nsnull, aFoundItem);
+}
+
+NS_IMETHODIMP nsContentTreeOwner::FindItemWithNameTmp(const PRUnichar* aName,
+   nsIDocShellTreeItem* aRequestor, nsIDocShellTreeItem* aOriginalRequestor,
+   nsIDocShellTreeItem** aFoundItem)
+{
    NS_ENSURE_ARG_POINTER(aFoundItem);
 
    *aFoundItem = nsnull;
@@ -201,15 +209,29 @@ NS_IMETHODIMP nsContentTreeOwner::FindItemWithName(const PRUnichar* aName,
             *aFoundItem = shellAsTreeItem;
             NS_ADDREF(*aFoundItem);
             }
-         else if(aRequestor != shellAsTreeItem.get())
+         else
             {
-            // Do this so we can pass in the tree owner as the requestor so the child knows not
-            // to call back up.
-            nsCOMPtr<nsIDocShellTreeOwner> shellOwner;
-            shellAsTreeItem->GetTreeOwner(getter_AddRefs(shellOwner));
-            nsCOMPtr<nsISupports> shellOwnerSupports(do_QueryInterface(shellOwner));
+            // Get the root tree item of same type, since roots are the only
+            // things that call into the treeowner to look for named items.
+            nsCOMPtr<nsIDocShellTreeItem> root;
+            shellAsTreeItem->GetSameTypeRootTreeItem(getter_AddRefs(root));
+            NS_ASSERTION(root, "Must have root tree item of same type");
+            shellAsTreeItem = root;
+            if(aRequestor != shellAsTreeItem)
+               {
+               // Do this so we can pass in the tree owner as the
+               // requestor so the child knows not to call back up.
+               nsCOMPtr<nsIDocShellTreeOwner> shellOwner;
+               shellAsTreeItem->GetTreeOwner(getter_AddRefs(shellOwner));
+               nsCOMPtr<nsISupports> shellOwnerSupports(do_QueryInterface(shellOwner));
 
-            shellAsTreeItem->FindItemWithName(aName, shellOwnerSupports, aFoundItem);
+               nsCOMPtr<nsIDocShellTreeItemTmp> shellAsTreeItemTmp =
+                 do_QueryInterface(shellAsTreeItem);
+               shellAsTreeItemTmp->FindItemWithNameTmp(aName,
+                                                       shellOwnerSupports,
+                                                       aOriginalRequestor,
+                                                       aFoundItem);
+               }
             }
          if(*aFoundItem)
             return NS_OK;

@@ -123,12 +123,12 @@ void nsMsgWindow::GetMessageWindowDocShell(nsIDocShell ** aDocShell)
     nsCOMPtr<nsIDocShell> rootShell(do_QueryReferent(mRootDocShellWeak));
     if (rootShell)
     {
-      nsCOMPtr<nsIDocShellTreeNode> rootAsNode(do_QueryInterface(rootShell));
+      nsCOMPtr<nsIDocShellTreeNodeTmp> rootAsNode(do_QueryInterface(rootShell));
 
       nsCOMPtr<nsIDocShellTreeItem> msgDocShellItem;
       if(rootAsNode)
-         rootAsNode->FindChildWithName(NS_LITERAL_STRING("messagepane").get(), PR_TRUE, PR_FALSE,
-                                       nsnull, getter_AddRefs(msgDocShellItem));
+         rootAsNode->FindChildWithNameTmp(NS_LITERAL_STRING("messagepane").get(), PR_TRUE, PR_FALSE,
+                                       nsnull, nsnull, getter_AddRefs(msgDocShellItem));
 
       docShell = do_QueryInterface(msgDocShellItem);
       // we don't own mMessageWindowDocShell so don't try to keep a reference to it!

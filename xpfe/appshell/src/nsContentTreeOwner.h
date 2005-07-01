@@ -1,4 +1,4 @@
-/* -*- Mode: IDL; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
@@ -38,9 +38,10 @@ class nsXULWindow;
 class nsSiteWindow2;
 
 class nsContentTreeOwner : public nsIDocShellTreeOwner,
-                                  public nsIBaseWindow,
-                                  public nsIInterfaceRequestor,
-                                  public nsIWebBrowserChrome
+                           public nsIDocShellTreeOwnerTmp,
+                           public nsIBaseWindow,
+                           public nsIInterfaceRequestor,
+                           public nsIWebBrowserChrome
 {
 friend class nsXULWindow;
 friend class nsSiteWindow2;
@@ -50,6 +51,7 @@ public:
 
    NS_DECL_NSIBASEWINDOW
    NS_DECL_NSIDOCSHELLTREEOWNER
+   NS_DECL_NSIDOCSHELLTREEOWNERTMP
    NS_DECL_NSIINTERFACEREQUESTOR
    NS_DECL_NSIWEBBROWSERCHROME
 

@@ -23,6 +23,7 @@
 
 #include "nsISupports.idl"
 #include "nsIDocShellTreeItem.idl"
+#include "nsIDocShellTreeNodeTmp.idl"
 
 /**
  * The nsIDocShellTreeNode supplies the methods for interacting with children
@@ -53,18 +54,10 @@ interface nsIDocShellTreeNode : nsISupports
 	nsIDocShellTreeItem getChildAt(in long index);
 
 	/*
-	Return the child DocShellTreeItem with the specified name.
-	aName - This is the name of the item that is trying to be found.
-	aRecurse - Is used to tell the function to recurse through children.
-		Note, recursion will only happen through items of the same type.
-	aSameType - If this is set only children of the same type will be returned.
-	aRequestor - This is the docshellTreeItem that is requesting the find.  This
-		parameter is used when recursion is being used to avoid searching the same
-		tree again when a child has asked a parent to search for children.
-
-	Note the search is depth first when recursing.
+	Deprecated method signature, see nsIDocShellTreeNodeTmp for details
 	*/
 	nsIDocShellTreeItem findChildWithName(in wstring aName, in boolean aRecurse,
 		in boolean aSameType, in nsIDocShellTreeItem aRequestor);
+
 };
 

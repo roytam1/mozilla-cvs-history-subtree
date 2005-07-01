@@ -446,14 +446,13 @@ nsXPBaseWindow::FindWebShellWithName(const PRUnichar* aName,
       }
     }      
 
-    nsCOMPtr<nsIDocShellTreeNode> docShellAsNode(do_QueryInterface(webShell));
+    nsCOMPtr<nsIDocShellTreeNodeTmp> docShellAsNode(do_QueryInterface(webShell));
     nsCOMPtr<nsIDocShellTreeItem> result;
-    if (NS_OK == docShellAsNode->FindChildWithName(aName, PR_TRUE, PR_FALSE,
-      nsnull, getter_AddRefs(result))) {
-      if (result) {
-        CallQueryInterface(result, &aResult);
-        return NS_OK;
-      }
+    docShellAsNode->FindChildWithNameTmp(aName, PR_TRUE, PR_FALSE, nsnull,
+                                         nsnull, getter_AddRefs(result));
+    if (result) {
+      CallQueryInterface(result, &aResult);
+      return NS_OK;
     }
   }
 

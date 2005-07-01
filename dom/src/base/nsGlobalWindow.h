@@ -243,6 +243,9 @@ protected:
                          float* aT2P);
   nsresult SecurityCheckURL(const char *aURL);
   PRBool   CheckForAbusePoint();
+  PRBool   CheckOpenAllow(const nsAString &aName);
+  void     FireAbuseEvents(PRBool aBlocked, PRBool aWindow,
+                           const nsAString &aPopupURL);
 
   void FlushPendingNotifications(PRBool aFlushReflows);
   void EnsureReflowFlushAndPaint();
@@ -267,6 +270,8 @@ protected:
   nsresult GetScrollMaxXY(PRInt32* aScrollMaxX, PRInt32* aScrollMaxY);
 
   PRBool DispatchCustomEvent(const char *aEventName);
+
+  PRBool WindowExists(const nsAString& aName);
 
   // When adding new member variables, be careful not to create cycles
   // through JavaScript.  If there is any chance that a member variable

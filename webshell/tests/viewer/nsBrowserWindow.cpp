@@ -2076,15 +2076,16 @@ nsBrowserWindow::FindWebShellWithName(const PRUnichar* aName, nsIWebShell*& aRes
         }
       }      
 
-      nsCOMPtr<nsIDocShellTreeNode> docShellAsNode(do_QueryInterface(mDocShell));
+      nsCOMPtr<nsIDocShellTreeNodeTmp> docShellAsNode(do_QueryInterface(mDocShell));
 
       nsCOMPtr<nsIDocShellTreeItem> result;
-      if (NS_OK == docShellAsNode->FindChildWithName(aName, PR_TRUE, PR_FALSE, nsnull,
-         getter_AddRefs(result))) {
-        if (result) {
-          CallQueryInterface(result, &aResult);
-          return NS_OK;
-        }
+      docShellAsNode->FindChildWithNameTmp(aName, PR_TRUE,
+                                           PR_FALSE, nsnull,
+                                           nsnull,
+                                           getter_AddRefs(result));
+      if (result) {
+        CallQueryInterface(result, &aResult);
+        return NS_OK;
       }
     }
   }

@@ -154,6 +154,7 @@ NS_INTERFACE_MAP_BEGIN(nsWebBrowser)
     NS_INTERFACE_MAP_ENTRY(nsIScrollable)
     NS_INTERFACE_MAP_ENTRY(nsITextScroll)
     NS_INTERFACE_MAP_ENTRY(nsIDocShellTreeItem)
+    NS_INTERFACE_MAP_ENTRY(nsIDocShellTreeItemTmp)
     NS_INTERFACE_MAP_ENTRY(nsIInterfaceRequestor)
     NS_INTERFACE_MAP_ENTRY(nsIWebBrowserSetup)
     NS_INTERFACE_MAP_ENTRY(nsIWebBrowserPersist)
@@ -527,11 +528,22 @@ NS_IMETHODIMP nsWebBrowser::GetSameTypeRootTreeItem(nsIDocShellTreeItem** aRootT
 NS_IMETHODIMP nsWebBrowser::FindItemWithName(const PRUnichar *aName, 
    nsISupports* aRequestor, nsIDocShellTreeItem **_retval)
 {
+    return FindItemWithNameTmp(aName, aRequestor, nsnull, _retval);
+}
+
+NS_IMETHODIMP nsWebBrowser::FindItemWithNameTmp(const PRUnichar *aName, 
+   nsISupports* aRequestor, nsIDocShellTreeItem* aOriginalRequestor,
+   nsIDocShellTreeItem **_retval)
+{
    NS_ENSURE_STATE(mDocShell);
    NS_ASSERTION(mDocShellTreeOwner, "This should always be set when in this situation");
 
-   return mDocShellAsItem->FindItemWithName(aName, 
-      NS_STATIC_CAST(nsIDocShellTreeOwner*, mDocShellTreeOwner), _retval);
+   nsCOMPtr<nsIDocShellTreeItemTmp> item =
+       do_QueryInterface(mDocShellAsItem);
+
+   return item->FindItemWithNameTmp(aName, 
+      NS_STATIC_CAST(nsIDocShellTreeOwner*, mDocShellTreeOwner),
+      aOriginalRequestor, _retval);
 }
 
 NS_IMETHODIMP nsWebBrowser::GetTreeOwner(nsIDocShellTreeOwner** aTreeOwner)

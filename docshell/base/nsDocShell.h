@@ -153,7 +153,9 @@ class nsDocShell : public nsIDocShell,
                    public nsIWebProgressListener,
                    public nsIEditorDocShell,
                    public nsIWebPageDescriptor,
-                   public nsSupportsWeakReference
+                   public nsSupportsWeakReference,
+                   public nsIDocShellTreeItemTmp,
+                   public nsIDocShellTreeNodeTmp
 {
 friend class nsDSURIContentListener;
 
@@ -179,6 +181,8 @@ public:
     NS_DECL_NSICONTENTVIEWERCONTAINER
     NS_DECL_NSIEDITORDOCSHELL
     NS_DECL_NSIWEBPAGEDESCRIPTOR
+    NS_DECL_NSIDOCSHELLTREEITEMTMP
+    NS_DECL_NSIDOCSHELLTREENODETMP
 
     nsresult SetLoadCookie(nsISupports * aCookie);
     nsresult GetLoadCookie(nsISupports ** aResult);
@@ -270,9 +274,9 @@ protected:
 
 
 
-    virtual nsresult FindTarget(const PRUnichar *aTargetName,
-                                PRBool *aIsNewWindow,
-                                nsIDocShell **aResult);
+    nsresult FindTarget(const PRUnichar *aTargetName,
+                        PRBool *aIsNewWindow,
+                        nsIDocShell **aResult);
 
     PRBool IsFrame();
 
@@ -285,6 +289,14 @@ protected:
                                  nsresult aResult);
 
     nsresult CheckLoadingPermissions();
+
+    // Security checks to prevent frameset spoofing.  See comments at
+    // implementation sites.
+    static PRBool CanAccessItem(nsIDocShellTreeItem* aTargetItem,
+                                nsIDocShellTreeItem* aAccessingItem,
+                                PRBool aConsiderOpener = PR_TRUE);
+    static PRBool ValidateOrigin(nsIDocShellTreeItem* aOriginTreeItem,
+                                 nsIDocShellTreeItem* aTargetTreeItem);
 
 protected:
     nsString                   mName;
@@ -354,9 +366,6 @@ protected:
 
     // Disallow popping up new windows with target=
     PRBool                     mDisallowPopupWindows;
-
-    // Validate window targets to prevent frameset spoofing
-    PRBool                     mValidateOrigin;
 
     PRBool                     mIsBeingDestroyed;
 

@@ -97,6 +97,19 @@ nsWWJSUtils::nsGetDynamicScriptContext(JSContext *aContext,
                                   (void**)aScriptContext);
 }
 
+nsresult
+nsWWJSUtils::nsGetDynamicScriptGlobal(JSContext *aContext,
+                                      nsIScriptGlobalObject** aNativeGlobal)
+{
+  nsCOMPtr<nsIScriptContext> scriptCX;
+  nsGetDynamicScriptContext(aContext, getter_AddRefs(scriptCX));
+  if (!scriptCX) {
+    *aNativeGlobal = nsnull;
+    return NS_ERROR_FAILURE;
+  }
+  return scriptCX->GetGlobalObject(aNativeGlobal);
+}
+
 nsresult 
 nsWWJSUtils::nsGetStaticScriptContext(JSContext* aContext,
                                       JSObject* aObj,
