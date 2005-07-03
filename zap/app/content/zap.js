@@ -124,24 +124,28 @@ var SipClient = {
 function initSipClient()
 {
   log("Initializing Sip Client...");
+  try {
+    log("Getting SDP Service");
+    SipClient.sdpService = Components.classes["@mozilla.org/zap/sdpservice;1"].
+      getService(Components.interfaces.zapISdpService);
+    
+    log("Constructing Sip UA Stack");
+    SipClient.sipStack = Components.classes["@mozilla.org/zap/sipstack;1"].createInstance();
+    SipClient.sipStack.QueryInterface(Components.interfaces.zapISipUAStack);
+    SipClient.sipStack.init(gInviteMSHFactory);
+    
+    log("Getting Media Service");
+    SipClient.mediaService = Components.classes["@mozilla.org/zap/mediaservice;1"].
+      getService(Components.interfaces.zapIMediaService);
+    
+    // initialize host-name to our ip address:
+    wHostNameElement.value = SipClient.sipStack.hostAddress;
 
-  log("Getting SDP Service");
-  SipClient.sdpService = Components.classes["@mozilla.org/zap/sdpservice;1"].
-    getService(Components.interfaces.zapISdpService);
-  
-  log("Constructing Sip UA Stack");
-  SipClient.sipStack = Components.classes["@mozilla.org/zap/sipstack;1"].createInstance();
-  SipClient.sipStack.QueryInterface(Components.interfaces.zapISipUAStack);
-  SipClient.sipStack.init(gInviteMSHFactory);
-
-  log("Getting Media Service");
-  SipClient.mediaService = Components.classes["@mozilla.org/zap/mediaservice;1"].
-    getService(Components.interfaces.zapIMediaService);
-
-  // initialize host-name to our ip address:
-  wHostNameElement.value = SipClient.sipStack.hostAddress;
-  
-  log("...Sip Client Initialization done.");
+    log("...Sip Client Initialization done.");
+  }
+  catch(e) {
+    log("Error during Sip Client initialization: "+e);
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -244,7 +248,7 @@ InviteMSH.fun(
           }
       }
       catch(e) {
-        log("Session negotiation failed: "+e);
+        log("Session negotiation for offer ["+sd.serialize()+"] failed: "+e);
         var r = SipClient.sipStack.formulateResponse("603", "Decline", request, true);
         ms.sendResponse(r);
         this.destroy();
