@@ -70,10 +70,10 @@
 #include "nsNetUtil.h"
 #endif
 #include "nsIComponentLoaderManager.h"
+#include "xpcprivate.h"
 // For reporting errors with the console service
 #include "nsIScriptError.h"
 #include "nsIConsoleService.h"
-#include "JSFunctions.h"
 
 const char mozJSComponentLoaderContractID[] = "@mozilla.org/moz/jsloader;1";
 const char jsComponentTypeName[] = "text/javascript";
@@ -151,46 +151,9 @@ Reporter(JSContext *cx, const char *message, JSErrorReport *rep)
 #endif
 }
 
-JS_STATIC_DLL_CALLBACK(JSBool)
-Dump(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
-{
-    JSString *str;
-    if (!argc)
-        return JS_TRUE;
-    
-    str = JS_ValueToString(cx, argv[0]);
-    if (!str)
-        return JS_FALSE;
-
-    char *bytes = JS_GetStringBytes(str);
-    bytes = nsCRT::strdup(bytes);
-
-#ifdef XP_MAC
-    for (char *c = bytes; *c; c++)
-        if (*c == '\r')
-            *c = '\n';
-#endif
-    fputs(bytes, stderr);
-    nsMemory::Free(bytes);
-    return JS_TRUE;
-}
-
-JS_STATIC_DLL_CALLBACK(JSBool)
-Debug(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
-{
-#ifdef DEBUG
-    return Dump(cx, obj, argc, argv, rval);
-#else
-    return JS_TRUE;
-#endif
-}
-
 static JSFunctionSpec gGlobalFun[] = {
-    {"dump", Dump, 1 },
-    {"debug", Debug, 1 },
-#ifdef MOZ_JSCODELIB
-    {"importModule", JSImportModule, 1 },
-#endif
+    {"dump", JSDump, 1 },
+    {"debug", JSDebug, 1 },
     {0}
 };
 
@@ -235,7 +198,7 @@ mozJSComponentLoader::~mozJSComponentLoader()
 
 NS_IMPL_THREADSAFE_ISUPPORTS2(mozJSComponentLoader,
                               nsIComponentLoader,
-                              mozIJSComponentLib)
+                              xpcIJSComponentLoader)
 
 NS_IMETHODIMP
 mozJSComponentLoader::GetFactory(const nsIID &aCID,
@@ -749,7 +712,7 @@ mozJSComponentLoader::ModuleForLocation(const char *registryLocation,
         return nsnull;
     }
 
-    JSAutoErrorReporterSetter aers(cx, Reporter);
+    AutoJSErrorReporterSetter aers(cx, Reporter);
 
     jsval argv[2], retval, NSGetModule_val;
 
@@ -834,7 +797,7 @@ mozJSComponentLoader::GlobalForLocation(const char *aLocation,
     if (NS_FAILED(rv))
         return nsnull;
 
-    JSAutoErrorReporterSetter aers(cx, Reporter);
+    AutoJSErrorReporterSetter aers(cx, Reporter);
     nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
 
     nsCOMPtr<nsIXPConnect> xpc = do_GetService(kXPConnectServiceContractID);
@@ -1026,11 +989,11 @@ mozJSComponentLoader::UnloadAll(PRInt32 aWhen)
 }
 
 //----------------------------------------------------------------------
-// mozIJSComponentLib methods
+// xpcIJSComponentLoader methods
 
-/* void probeComponent (in AUTF8String registryLocation); */
+/* void importModule (in AUTF8String registryLocation); */
 NS_IMETHODIMP
-mozJSComponentLoader::ProbeComponent(const nsACString & registryLocation)
+mozJSComponentLoader::ImportModule(const nsACString & registryLocation)
 {
     // This function should only be called from JS.
     

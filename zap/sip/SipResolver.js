@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.classes['@mozilla.org/moz/jsloader;1'].getService(Components.interfaces.mozIJSComponentLib).probeComponent('rel:SipResolver.js', true)" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.classes['@mozilla.org/moz/jsloader;1'].getService(Components.interfaces.xpcIJSComponentLoader).importModule('rel:SipResolver.js')" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -38,12 +38,12 @@
 
 debug("*** loading SipResolver.js\n");
 
-importModule("resource:/jscodelib/JSComponentUtils.js");
-importModule("resource:/jscodelib/zap/ClassUtils.js");
-importModule("resource:/jscodelib/zap/ArrayUtils.js");
-importModule("resource:/jscodelib/zap/StringUtils.js");
-importModule("resource:/jscodelib/zap/ObjectUtils.js");
-importModule("resource:/jscodelib/zap/SipUtils.js");
+Components.util.importModule("resource:/jscodelib/JSComponentUtils.js");
+Components.util.importModule("resource:/jscodelib/zap/ClassUtils.js");
+Components.util.importModule("resource:/jscodelib/zap/ArrayUtils.js");
+Components.util.importModule("resource:/jscodelib/zap/StringUtils.js");
+Components.util.importModule("resource:/jscodelib/zap/ObjectUtils.js");
+Components.util.importModule("resource:/jscodelib/zap/SipUtils.js");
 
 // name our global object:
 function toString() { return "[SipResolver.js]"; }

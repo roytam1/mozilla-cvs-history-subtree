@@ -36,48 +36,39 @@
  *
  * ----- END LICENSE BLOCK ----- */
 
-#ifndef __MOZ_JSCODELIB_H__
-#define __MOZ_JSCODELIB_H__
+#include "nsISupports.idl"
 
-#include "xpcIJSCodeLoader.h"
-#include "plhash.h"
-#include "jsapi.h"
-#include "nsCOMPtr.h"
-#include "nsIXPConnect.h"
-#include "nsIJSRuntimeService.h"
-#include "nsString.h"
+%{C++
+struct JSObject;
 
-#ifndef XPCONNECT_STANDALONE
-#include "nsIPrincipal.h"
-#endif
+// {621E3F64-7060-4AE1-A338-276FC522B393}
+#define MOZ_JSCODELIB_CID \
+{ 0x621e3f64, 0x7060, 0x4ae1, { 0xa3, 0x38, 0x27, 0x6f, 0xc5, 0x22, 0xb3, 0x93 } }
 
-////////////////////////////////////////////////////////////////////////
-// mozJSCodeLib class
+#define MOZ_JSCODELIB_CONTRACTID "@mozilla.org/jscodelib;1"
+%}
 
-class mozJSCodeLib : public xpcIJSCodeLoader
+[ptr] native JSObjectPtr(JSObject);
+
+[scriptable, uuid(42d9d5db-8c35-4438-bb80-f02e8b11e64f)]
+interface xpcIJSCodeLoader : nsISupports
 {
-public:
-  mozJSCodeLib();
-  ~mozJSCodeLib();
-  nsresult Init();
+  /**
+   * To be called from JS only.
+   *
+   * Imports the JS code module at 'moduleURL' into the calling JS
+   * context. If the optional argument 'targetObj' is given, the module will
+   * be installed on 'targetObj' instead of the calling context's global
+   * object.
+   * Returns the JS code module's global object.
+   */
+  void /* JSObject */ importModule(in AUTF8String moduleURL
+                                   /* , [optional] in JSObject targetObj */);
 
-  NS_DECL_ISUPPORTS
-  NS_DECL_XPCIJSCODELOADER
-  
-private:
-  PRInt32 LoadURL(nsCString &buf, const nsACString &url);
-  JSObject *LoadModule(const nsACString &module, PLHashEntry **hep);
-  void UnloadModules();
-
-  PLHashTable *mModules;
-  
-  nsCOMPtr<nsIXPConnect> mXPConnect;
-  nsCOMPtr<nsIJSRuntimeService> mRuntimeService;
-  JSContext *mContext;
-#ifndef XPCONNECT_STANDALONE
-  nsCOMPtr<nsIPrincipal> mSystemPrincipal;
-#endif
-  
+  /**
+   * Imports the JS code module at 'moduleURL' to the JS object 'targetObj'
+   * (if != null) and returns the module's global object.
+   */
+  [noscript] JSObjectPtr importModuleToJSObject(in AUTF8String moduleURL, in JSObjectPtr targetObj);  
 };
 
-#endif // __MOZ_JSCODELIB_H__

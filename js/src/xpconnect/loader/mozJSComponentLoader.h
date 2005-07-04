@@ -51,7 +51,7 @@
 #ifndef XPCONNECT_STANDALONE
 #include "nsIPrincipal.h"
 #endif
-#include "mozIJSComponentLib.h"
+#include "xpcIJSComponentLoader.h"
 
 extern const char mozJSComponentLoaderContractID[];
 extern const char jsComponentTypeName[];
@@ -63,12 +63,12 @@ extern const char jsComponentTypeName[];
     { 0xbb, 0xef, 0xf0, 0xcc, 0xb5, 0xfa, 0x64, 0xb6 }}
 
 class mozJSComponentLoader : public nsIComponentLoader,
-                             public mozIJSComponentLib {
+                             public xpcIJSComponentLoader {
 
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSICOMPONENTLOADER
-    NS_DECL_MOZIJSCOMPONENTLIB
+    NS_DECL_XPCIJSCOMPONENTLOADER
     
     mozJSComponentLoader();
     virtual ~mozJSComponentLoader();

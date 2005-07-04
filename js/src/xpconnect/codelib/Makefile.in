@@ -58,10 +58,10 @@ REQUIRES	= xpcom \
 CPPSRCS		= mozJSCodeLib.cpp 
 
 LOCAL_INCLUDES = \
-		-I$(srcdir)/../shared \
+		-I$(srcdir)/../src \
 		$(NULL)
 
-XPIDLSRCS	= mozIJSCodeLib.idl
+XPIDLSRCS	= xpcIJSCodeLoader.idl
 
 include $(topsrcdir)/config/rules.mk
 

@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.classes['@mozilla.org/jscodelib;1'].getService(Components.interfaces.mozIJSCodeLib).probeModule('resource:/jscodelib/zap/ClassUtils.js', true)" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.util.importModule('resource:/jscodelib/zap/ClassUtils.js', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -35,16 +35,16 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-importModule("resource:/jscodelib/zap/ArrayUtils.js");
-importModule("resource:/jscodelib/zap/ObjectUtils.js");
-importModule("resource:/jscodelib/zap/FunctionUtils.js");
+Components.util.importModule("resource:/jscodelib/zap/ArrayUtils.js");
+Components.util.importModule("resource:/jscodelib/zap/ObjectUtils.js");
+Components.util.importModule("resource:/jscodelib/zap/FunctionUtils.js");
 
-MOZ_EXPORTED_SYMBOLS = [ "StdClass",
-                         "makeClass",
-                         "NamedObject",
-                         "ErrorReporter",
-                         "SupportsImpl",
-                         "AttributeParser" ];
+EXPORTED_SYMBOLS = [ "StdClass",
+                     "makeClass",
+                     "NamedObject",
+                     "ErrorReporter",
+                     "SupportsImpl",
+                     "AttributeParser" ];
 
 // name our global object:
 function toString() { return "[ClassUtils.js]"; }

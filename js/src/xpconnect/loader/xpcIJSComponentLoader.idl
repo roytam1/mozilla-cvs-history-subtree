@@ -12,15 +12,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the Mozilla JSCodeLib.
+ * The Original Code is Mozilla Communicator client code, released
+ * March 31, 1998.
  *
- * The Initial Developer of the Original Code is 
- * Alex Fritze.
- * Portions created by the Initial Developer are Copyright (C) 2004
+ * The Initial Developer of the Original Code is
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1999
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *    Alex Fritze <alex@croczilla.com> (original author)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -36,48 +36,18 @@
  *
  * ----- END LICENSE BLOCK ----- */
 
-#ifndef __MOZ_JSCODELIB_H__
-#define __MOZ_JSCODELIB_H__
+#include "nsISupports.idl"
 
-#include "xpcIJSCodeLoader.h"
-#include "plhash.h"
-#include "jsapi.h"
-#include "nsCOMPtr.h"
-#include "nsIXPConnect.h"
-#include "nsIJSRuntimeService.h"
-#include "nsString.h"
-
-#ifndef XPCONNECT_STANDALONE
-#include "nsIPrincipal.h"
-#endif
-
-////////////////////////////////////////////////////////////////////////
-// mozJSCodeLib class
-
-class mozJSCodeLib : public xpcIJSCodeLoader
+[scriptable, uuid(be280e56-9bad-4ff6-aaac-c080979e185c)]
+interface xpcIJSComponentLoader : nsISupports
 {
-public:
-  mozJSCodeLib();
-  ~mozJSCodeLib();
-  nsresult Init();
-
-  NS_DECL_ISUPPORTS
-  NS_DECL_XPCIJSCODELOADER
-  
-private:
-  PRInt32 LoadURL(nsCString &buf, const nsACString &url);
-  JSObject *LoadModule(const nsACString &module, PLHashEntry **hep);
-  void UnloadModules();
-
-  PLHashTable *mModules;
-  
-  nsCOMPtr<nsIXPConnect> mXPConnect;
-  nsCOMPtr<nsIJSRuntimeService> mRuntimeService;
-  JSContext *mContext;
-#ifndef XPCONNECT_STANDALONE
-  nsCOMPtr<nsIPrincipal> mSystemPrincipal;
-#endif
-  
+  /**
+   * To be called from JS only.
+   *
+   * Load JS XPCOM component at 'registryLocation' if it isn't loaded
+   * already. Returns the component's global object, or null if the
+   * component wasn't found.
+   */
+  void /* JSObject */ importModule(in AUTF8String registryLocation);
 };
 
-#endif // __MOZ_JSCODELIB_H__

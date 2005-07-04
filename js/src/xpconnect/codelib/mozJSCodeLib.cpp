@@ -40,7 +40,6 @@
 #include "nsIServiceManager.h"
 #include "nsIXPConnect.h"
 #include "jsapi.h"
-#include "JSFunctions.h" 
 #include "nsIIOService.h"
 #include "nsNetCID.h"
 #include "nsIChannel.h"
@@ -48,6 +47,7 @@
 #include "nsIJSContextStack.h"
 #include "nsIXPCScriptable.h"
 #include "nsCRT.h"
+#include "xpcprivate.h"
 
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
@@ -64,7 +64,6 @@ const char kScriptSecurityManagerContractID[] = NS_SCRIPTSECURITYMANAGER_CONTRAC
 static JSFunctionSpec gGlobalFunctions[] = {
   {"dump", JSDump, 1},
   {"debug", JSDebug, 1 },
-  {"importModule", JSImportModule, 1 },
   {0}
 };
 
@@ -141,13 +140,13 @@ NS_IMPL_THREADSAFE_RELEASE(mozJSCodeLib)
 
 NS_INTERFACE_MAP_BEGIN(mozJSCodeLib)
   NS_INTERFACE_MAP_ENTRY(nsISupports)
-  NS_INTERFACE_MAP_ENTRY(mozIJSCodeLib)
+  NS_INTERFACE_MAP_ENTRY(xpcIJSCodeLoader)
 NS_INTERFACE_MAP_END
 
 //----------------------------------------------------------------------
-// mozIJSCodeLib methods
+// xpcIJSCodeLoader methods
 
-/* void importModule (in AUTF8String moduleURL, [optional] in JSObject obj); */
+/* JSObject importModule (in AUTF8String moduleURL, [optional] in JSObject targetObj); */
 NS_IMETHODIMP
 mozJSCodeLib::ImportModule(const nsACString & moduleName)
 {
@@ -205,21 +204,25 @@ mozJSCodeLib::ImportModule(const nsACString & moduleName)
   }
   NS_ASSERTION(targetObject, "null targetObject");
 
-  return ImportModuleToJSObject(moduleName, targetObject);
+  JSObject *globalObj = nsnull;
+  nsresult rv = ImportModuleToJSObject(moduleName, targetObject, &globalObj);
+
+  jsval *retval = nsnull;
+  cc->GetRetValPtr(&retval);
+  if (*retval)
+    *retval = globalObj ? OBJECT_TO_JSVAL(globalObj) : JSVAL_NULL;
+    
+  return rv;
 }
 
-/* [noscript] void importModuleToJSObject (in AUTF8String moduleURL, in JSObjectPtr obj); */
+/* [noscript] JSObjectPtr importModuleToJSObject (in AUTF8String moduleURL, in JSObjectPtr targetObj); */
 NS_IMETHODIMP
-mozJSCodeLib::ImportModuleToJSObject(const nsACString & moduleName, JSObject * targetObj)
+mozJSCodeLib::ImportModuleToJSObject(const nsACString & moduleName, JSObject * targetObj, JSObject * *_retval)
 {
 #ifdef DEBUG
   printf("mozJSCodeLib::ImportModuleToJSObject(%s,%p)\n", PromiseFlatCString(moduleName).get(), targetObj);
 #endif
-  if (!targetObj) {
-    NS_ERROR("null target object");
-    return NS_ERROR_FAILURE;
-  }
-
+  
   JSObject *moduleObj = nsnull;
   const char *location = PromiseFlatCString(moduleName).get();
   PLHashNumber hash = PL_HashString(location);
@@ -233,121 +236,67 @@ mozJSCodeLib::ImportModuleToJSObject(const nsACString & moduleName, JSObject * t
     moduleObj = LoadModule(moduleName, hep);
   }
   if (!moduleObj) {
+    *_retval = nsnull;
     return NS_ERROR_FAILURE;
   }
 
-  // Retrieve the code module's MOZ_EXPORTED_SYMBOLS array:
-
-  // we need a context; any will do
-  nsCOMPtr<nsIThreadJSContextStack> cxstack = 
-    do_GetService(kJSContextStackContractID);
-  JSContext*cx = nsnull;
-  cxstack->GetSafeJSContext(&cx);
-
-  jsval symbols;
-  if (!JS_GetProperty(cx, moduleObj, "MOZ_EXPORTED_SYMBOLS", &symbols)) {
-    NS_ERROR("error finding MOZ_EXPORTED_SYMBOLS");
-    return NS_ERROR_FAILURE;
-  }
-
-  JSObject *symbolsObj = nsnull;
-  if (!JSVAL_IS_OBJECT(symbols) ||
-      !(symbolsObj = JSVAL_TO_OBJECT(symbols)) ||
-      !JS_IsArrayObject(cx, symbolsObj)) {
-    NS_ERROR("MOZ_EXPORTED_SYMBOLS is not an array");
-    return NS_ERROR_FAILURE;
-  }
-
-  // Iterate over symbols array, installing symbols on targetObj:
-
-  jsuint symbolCount = 0;
-  if (!JS_GetArrayLength(cx, symbolsObj, &symbolCount)) {
-    NS_ERROR("Error getting array length");
-    return NS_ERROR_FAILURE;
-  }
-#ifdef DEBUG
-  printf("Installing symbols [ ");
-#endif
-
-  for (jsuint i=0; i<symbolCount; ++i) {
-    jsval val;
-    JSString *symbolName;
-    if (!JS_GetElement(cx, symbolsObj, i, &val) ||
-        !JSVAL_IS_STRING(val) ||
-        !(symbolName = JSVAL_TO_STRING(val))) {
-      NS_ERROR("Array element is not a string");
-      return NS_ERROR_FAILURE;
-    }
-#ifdef DEBUG
-    printf("%s ", JS_GetStringBytes(symbolName));
-#endif
-    
-    if (!JS_GetProperty(cx, moduleObj, JS_GetStringBytes(symbolName), &val)) {
-      NS_ERROR("Could not get symbol");
-      return NS_ERROR_FAILURE;
-    }
-
-    if (!JS_SetProperty(cx, targetObj, JS_GetStringBytes(symbolName), &val)) {
-      NS_ERROR("Could not set property on target");
-      return NS_ERROR_FAILURE;
-    }
-  }
-#ifdef DEBUG
-  printf("]\n");
-#endif
+  *_retval = moduleObj;
   
-  return NS_OK;
-}
-
-/* JSObject probeModule (in AUTF8String moduleURL, [optional] in boolean force); */
-NS_IMETHODIMP
-mozJSCodeLib::ProbeModule(const nsACString & moduleName)
-{
-  // This function should only be called from JS.
-
-  nsCOMPtr<nsIXPCNativeCallContext> cc;
-  mXPConnect->GetCurrentNativeCallContext(getter_AddRefs(cc));
-  if (!cc) {
-    NS_ERROR("could not get native call context");
-    return NS_ERROR_FAILURE;
-  }
-
-  JSBool force = PR_FALSE;
-  
-  PRUint32 argc = 0;
-  cc->GetArgc(&argc);
-
-  if (argc>1) {
-    // The caller passed in the optional second argument. Get it.
-    JSContext *cx = nsnull;
-    cc->GetJSContext (&cx);
+  if (targetObj) {
+    // Retrieve the code module's EXPORTED_SYMBOLS array:
     
-    jsval *argv = nsnull;
-    cc->GetArgvPtr (&argv);
-
-    if (!JS_ValueToBoolean(cx, argv[1], &force)) {
-      cc->SetExceptionWasThrown(JS_TRUE);
-      return NS_OK;
+    jsval symbols;
+    if (!JS_GetProperty(mContext, moduleObj, "EXPORTED_SYMBOLS", &symbols)) {
+      NS_ERROR("error finding EXPORTED_SYMBOLS");
+      return NS_ERROR_FAILURE;
     }
-  }
-    
-  JSObject *moduleObj = nsnull;
-  const char *location = PromiseFlatCString(moduleName).get();
-  PLHashNumber hash = PL_HashString(location);
-  PLHashEntry **hep = PL_HashTableRawLookup(mModules, hash,
-                                            (void *)location);
-  PLHashEntry *he = *hep;
-  if (he) {
-    moduleObj = (JSObject *)he->value;
-  }
-  else {
-    moduleObj = LoadModule(moduleName, hep, force);
-  }
 
-  jsval *retval = nsnull;
-  cc->GetRetValPtr(&retval);
-  if (*retval)
-    *retval = moduleObj ? OBJECT_TO_JSVAL(moduleObj) : JSVAL_NULL;
+    JSObject *symbolsObj = nsnull;
+    if (!JSVAL_IS_OBJECT(symbols) ||
+        !(symbolsObj = JSVAL_TO_OBJECT(symbols)) ||
+        !JS_IsArrayObject(mContext, symbolsObj)) {
+      NS_ERROR("EXPORTED_SYMBOLS is not an array");
+      return NS_ERROR_FAILURE;
+    }
+
+    // Iterate over symbols array, installing symbols on targetObj:
+
+    jsuint symbolCount = 0;
+    if (!JS_GetArrayLength(mContext, symbolsObj, &symbolCount)) {
+      NS_ERROR("Error getting array length");
+      return NS_ERROR_FAILURE;
+    }
+#ifdef DEBUG
+    printf("Installing symbols [ ");
+#endif
+    
+    for (jsuint i=0; i<symbolCount; ++i) {
+      jsval val;
+      JSString *symbolName;
+      if (!JS_GetElement(mContext, symbolsObj, i, &val) ||
+          !JSVAL_IS_STRING(val) ||
+          !(symbolName = JSVAL_TO_STRING(val))) {
+        NS_ERROR("Array element is not a string");
+        return NS_ERROR_FAILURE;
+      }
+#ifdef DEBUG
+      printf("%s ", JS_GetStringBytes(symbolName));
+#endif
+    
+      if (!JS_GetProperty(mContext, moduleObj, JS_GetStringBytes(symbolName), &val)) {
+        NS_ERROR("Could not get symbol");
+        return NS_ERROR_FAILURE;
+      }
+      
+      if (!JS_SetProperty(mContext, targetObj, JS_GetStringBytes(symbolName), &val)) {
+        NS_ERROR("Could not set property on target");
+        return NS_ERROR_FAILURE;
+      }
+    }
+#ifdef DEBUG
+    printf("]\n");
+#endif
+  }
   
   return NS_OK;
 }
@@ -403,12 +352,11 @@ mozJSCodeLib::LoadURL(nsCString &buf, const nsACString &url)
 }
 
 JSObject *
-mozJSCodeLib::LoadModule(const nsACString &module, PLHashEntry **hep, PRBool force)
+mozJSCodeLib::LoadModule(const nsACString &module, PLHashEntry **hep)
 {
   JSObject *moduleObj = nsnull;
   nsCString buf;
-  PRBool urlLoaded = LoadURL(buf, module);
-  if (!urlLoaded && !force) {
+  if (!LoadURL(buf, module)) {
     NS_ERROR("error loading url");
     return nsnull;
   }
@@ -455,11 +403,11 @@ mozJSCodeLib::LoadModule(const nsACString &module, PLHashEntry **hep, PRBool for
   }
 #endif
   
-  if (urlLoaded && !JS_EvaluateScriptForPrincipals(cx, moduleObj,
-                                                   jsprincipals,
-                                                   PromiseFlatCString(buf).get(),
-                                                   buf.Length(),
-                                                   PromiseFlatCString(module).get(), 1, &result)) {
+  if (!JS_EvaluateScriptForPrincipals(cx, moduleObj,
+                                      jsprincipals,
+                                      PromiseFlatCString(buf).get(),
+                                      buf.Length(),
+                                      PromiseFlatCString(module).get(), 1, &result)) {
     moduleObj = nsnull;
   }
   else {

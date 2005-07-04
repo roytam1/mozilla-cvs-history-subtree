@@ -4441,18 +4441,6 @@ if test "$MOZ_JSLOADER"; then
 fi
 
 dnl ========================================================
-dnl JSCodeLib
-dnl ========================================================
-MOZ_JSCODELIB=1
-MOZ_ARG_DISABLE_BOOL(jscodelib,
-[  --disable-jscodelib     Disable js shared code library],
-    MOZ_JSCODELIB=,
-    MOZ_JSCODELIB=1 )
-if test -n "$MOZ_JSCODELIB"; then
-  AC_DEFINE(MOZ_JSCODELIB)
-fi
-
-dnl ========================================================
 dnl use native unicode converters
 dnl ========================================================
 MOZ_USE_NATIVE_UCONV=

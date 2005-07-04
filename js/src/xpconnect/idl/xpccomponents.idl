@@ -113,7 +113,7 @@ interface nsIXPCConstructor : nsISupports
 /**
 * interface of Components.util
 */
-[scriptable, uuid(24E63203-A931-43B5-B2C7-3053B48A9E4F)]
+[scriptable, uuid(30f32fec-5abb-49e9-8050-4147ab3743b4)]
 interface nsIXPCComponents_Util : nsISupports
 {
 
@@ -162,6 +162,27 @@ interface nsIXPCComponents_Util : nsISupports
      * var outerThirtyFive = s.thirtyFive;
      */
     void evalInSandbox(in AString source, in AUTF8String codebase /*, obj */);
+
+    /*
+     * importModule is only meant to be called from JavaScript.
+     *
+     * importModule(moduleURL, [optional] targetObj) synchronously
+     * loads and evaluates the js file located at 'moduleURL' with a
+     * new, fully privileged global object. It then looks for a
+     * property 'EXPORTED_SYMBOLS' on the global object.
+     * 'EXPORTED_SYMBOLS' is expected to be an array of strings
+     * identifying properties on the global object. These properties
+     * will then be installed as properties on 'targetObj', or, if
+     * 'targetObj' is not given, on the caller's global object.
+     * Finally, the global object will be returned.
+     *
+     * The implementation maintains a hash of moduleURL->global
+     * obj. Subsequent invocations of importModule with the same
+     * 'moduleURL' will not cause the file at 'moduleURL' to be
+     * re-evaluated.
+     */
+    void /* JSObject */ importModule(in AUTF8String moduleURL
+                                     /*, [optional] in JSObject targetObj */);
 };
 
 /**

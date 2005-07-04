@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.classes['@mozilla.org/jscodelib;1'].getService(Components.interfaces.mozIJSCodeLib).probeModule('resource:/jscodelib/zap/ObjectUtils.js', true)" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.util.importModule('resource:/jscodelib/zap/ObjectUtils.js', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -35,17 +35,17 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-MOZ_EXPORTED_SYMBOLS = [ "hasproperty",
-                         "hasgettersetter",
-                         "propcopy",
-                         "objclone",
-                         "objmerge",
-                         "hashget",
-                         "hashhas",
-                         "hashset",
-                         "hashdel",
-                         "hashkeys",
-                         "hashmap"];
+EXPORTED_SYMBOLS = [ "hasproperty",
+                     "hasgettersetter",
+                     "propcopy",
+                     "objclone",
+                     "objmerge",
+                     "hashget",
+                     "hashhas",
+                     "hashset",
+                     "hashdel",
+                     "hashkeys",
+                     "hashmap"];
 
 // object to hold module's documentation:
 var _doc_ = {};

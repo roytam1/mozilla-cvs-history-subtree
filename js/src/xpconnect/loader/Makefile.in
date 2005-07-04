@@ -53,15 +53,16 @@ REQUIRES	= xpcom \
 		  js \
 		  caps \
 		  necko \
+		  dom \
 		  $(NULL)
 
 CPPSRCS		= mozJSComponentLoader.cpp mozJSSubScriptLoader.cpp
 
 LOCAL_INCLUDES  = \
-		-I$(srcdir)/../shared \
+		-I$(srcdir)/../src \
 		$(NULL)
 
-XPIDLSRCS       = mozIJSComponentLib.idl
+XPIDLSRCS       = xpcIJSComponentLoader.idl
 
 include $(topsrcdir)/config/rules.mk
 

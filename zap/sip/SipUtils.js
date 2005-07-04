@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.classes['@mozilla.org/jscodelib;1'].getService(Components.interfaces.mozIJSCodeLib).probeModule('resource:/jscodelib/zap/SipUtils.js', true)" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.util.importModule('resource:/jscodelib/zap/SipUtils.js', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -38,16 +38,16 @@
 
 debug("*** loading SipUtils\n");
 
-importModule("resource:/jscodelib/zap/StringUtils.js");
+Components.util.importModule("resource:/jscodelib/zap/StringUtils.js");
 
-MOZ_EXPORTED_SYMBOLS = ["BRANCH_COOKIE",
-                        "gSIPEventQ",
-                        "getProxyOnSIPThread",
-                        "gSyntaxFactory",
-                        "gDNSService",
-                        "gLoggingService",
-                        "generateTag",
-                        "generateUUID"];
+EXPORTED_SYMBOLS = ["BRANCH_COOKIE",
+                    "gSIPEventQ",
+                    "getProxyOnSIPThread",
+                    "gSyntaxFactory",
+                    "gDNSService",
+                    "gLoggingService",
+                    "generateTag",
+                    "generateUUID"];
 
 // name our global object:
 function toString() { return "[SipUtils.js]"; }
@@ -104,7 +104,7 @@ function getProxyOnSIPThread(aObject, aInterface) {
 
 // access the syntax factory directly (less overhead, no type safety,
 // access to non-xpcom interface):
-var gSyntaxFactory = Components.classes['@mozilla.org/moz/jsloader;1'].getService(Components.interfaces.mozIJSComponentLib).probeComponent('rel:SipSyntaxFactory.js', false).theSyntaxFactory;
+var gSyntaxFactory = Components.classes['@mozilla.org/moz/jsloader;1'].getService(Components.interfaces.xpcIJSComponentLoader).importModule('rel:SipSyntaxFactory.js').theSyntaxFactory;
 
 ////////////////////////////////////////////////////////////////////////
 // gDNSService: global dns service instance
@@ -124,7 +124,7 @@ var gDNSService = CLASS_DNS_SERVICE.getService(ITF_DNS_SERVICE);
 
 // access the logging service directly (less overhead, no type safety,
 // access to non-xpcom interface):
-var gLoggingService = Components.classes['@mozilla.org/moz/jsloader;1'].getService(Components.interfaces.mozIJSComponentLib).probeComponent('rel:LoggingService.js', false).theLoggingService;
+var gLoggingService = Components.classes['@mozilla.org/moz/jsloader;1'].getService(Components.interfaces.xpcIJSComponentLoader).importModule('rel:LoggingService.js').theLoggingService;
 
 
 ////////////////////////////////////////////////////////////////////////

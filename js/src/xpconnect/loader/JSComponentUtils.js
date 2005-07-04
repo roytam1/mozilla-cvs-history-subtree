@@ -1,4 +1,4 @@
-/* -*- moz-jssh-buffer-globalobj: "Components.classes['@mozilla.org/jscodelib;1'].getService(Components.interfaces.mozIJSCodeLib).probeModule('resource:/jscodelib/JSComponentUtils.js', false)" -*- */
+/* -*- moz-jssh-buffer-globalobj: "Components.util.importModule('resource:/jscodelib/JSComponentUtils.js', null)" -*- */
 /*
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -46,7 +46,7 @@
  * 
  */
 
-MOZ_EXPORTED_SYMBOLS = [ "ComponentUtils" ];
+EXPORTED_SYMBOLS = [ "ComponentUtils" ];
 
 debug("*** loading JSComponentUtils\n");
 

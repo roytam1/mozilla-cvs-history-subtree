@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.classes['@mozilla.org/jscodelib;1'].getService(Components.interfaces.mozIJSCodeLib).probeModule('resource:/jscodelib/zap/StringUtils.js', true)" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.util.importModule('resource:/jscodelib/zap/StringUtils.js', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -35,10 +35,10 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-MOZ_EXPORTED_SYMBOLS = [ "utf8ToUnicode",
-                         "unicodeToUTF8",
-                         "padright",
-                         "padleft"];
+EXPORTED_SYMBOLS = [ "utf8ToUnicode",
+                     "unicodeToUTF8",
+                     "padright",
+                     "padleft"];
 
 // object to hold module's documentation:
 var _doc_ = {};

@@ -43,6 +43,7 @@
 
 #include "xpcprivate.h"
 #include "nsReadableUtils.h"
+#include "xpcIJSCodeLoader.h"
 
 /***************************************************************************/
 // stuff used by all
@@ -2026,8 +2027,8 @@ nsXPCComponents_Util::ReportError()
 const char kScriptSecurityManagerContractID[] = NS_SCRIPTSECURITYMANAGER_CONTRACTID;
 const char kStandardURLContractID[] = "@mozilla.org/network/standard-url;1";
 
-JS_STATIC_DLL_CALLBACK(JSBool)
-SandboxDump(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+JSBool JS_DLL_CALLBACK
+JSDump(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSString *str;
     if (!argc)
@@ -2045,11 +2046,11 @@ SandboxDump(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return JS_TRUE;
 }
 
-JS_STATIC_DLL_CALLBACK(JSBool)
-SandboxDebug(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+JSBool JS_DLL_CALLBACK
+JSDebug(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
 #ifdef DEBUG
-    return SandboxDump(cx, obj, argc, argv, rval);
+    return JSDump(cx, obj, argc, argv, rval);
 #else
     return JS_TRUE;
 #endif
@@ -2076,8 +2077,8 @@ static JSClass SandboxClass = {
 };
 
 static JSFunctionSpec SandboxFunctions[] = {
-    {"dump", SandboxDump, 1},
-    {"debug", SandboxDebug, 1},
+    {"dump", JSDump, 1},
+    {"debug", JSDebug, 1},
     {0}
 };
 
@@ -2211,6 +2212,16 @@ nsXPCComponents_Util::EvalInSandbox(const nsAString &source,
     JSPRINCIPALS_DROP(cx, jsPrincipals);
     return rv;
 #endif /* !XPCONNECT_STANDALONE */
+}
+
+/* JSObject importModule (in AUTF8String moduleURL, [optional] in JSObject targetObj); */
+NS_IMETHODIMP
+nsXPCComponents_Util::ImportModule(const nsACString & moduleURL)
+{
+    nsCOMPtr<xpcIJSCodeLoader> codeloader = do_GetService(MOZ_JSCODELIB_CONTRACTID);
+    if (!codeloader)
+        return NS_ERROR_FAILURE;
+    return codeloader->ImportModule(moduleURL);
 }
 
 #ifdef XPC_USE_SECURITY_CHECKED_COMPONENT
