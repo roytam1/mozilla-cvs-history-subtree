@@ -5452,6 +5452,56 @@ nsTextFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
 {
   NS_ASSERTION(aData->trailingWhitespace == 0,
                "min-width calculation should never have trailing whitespace");
+  nsresult rv;
+
+  nsPresContext *presContext = GetPresContext();
+  TextStyle ts(presContext, *aRenderingContext, mStyleContext);
+  if (!ts.mFont->mSize)
+    // XXX If font size is zero, we still need to figure out whether we've
+    // got non-whitespace text and whether we end in whitespace.
+    return;
+
+  PRBool forceArabicShaping = (ts.mSmallCaps ||
+                               (0 != ts.mWordSpacing) ||
+                               (0 != ts.mLetterSpacing) ||
+                               ts.mJustifying);
+  nsTextTransformer tx(mContent->GetOwnerDoc()->GetLineBreaker(), nsnull,
+                       presContext);
+  // Keep the text in ascii if possible. Note that if we're measuring small
+  // caps text then transform to Unicode because the helper function only
+  // accepts Unicode text
+  // XXX Do we want to do all the work for the first-in-flow or do the
+  // work for each part?
+  rv = tx.Init(this, mContent, mContentOffset, forceArabicShaping,
+               !ts.mSmallCaps);
+  if (NS_FAILED(rv)) {
+    NS_NOTREACHED("failure initializing text transformer");
+    return;
+  }
+
+  for (;;) {
+    union {
+      char*       bp1;
+      PRUnichar*  bp2;
+    };
+    PRInt32 wordLen, contentLen;
+    PRBool isWhitespace, wasTransformed;
+    // XXX Is !aData->skipWhitespace the right criterion for when the
+    // text transformer should capitalize the first letter?
+    bp2 = tx.GetNextWord(!aData->skipWhitespace, &wordLen, &contentLen,
+                         &isWhitespace, &wasTransformed);
+    if (!bp2)
+      break;
+    // XXX Watch mContentLength!
+
+    if (isWhitespace) {
+      if (aData->skipWhitespace) {
+      } else {
+      }
+    } else {
+    }
+  }
+
 #error "WRITE ME!"
 }
 
@@ -5524,6 +5574,7 @@ nsTextFrame::Reflow(nsPresContext*          aPresContext,
         (hints & NS_RENDERING_HINT_ARABIC_SHAPING) == NS_RENDERING_HINT_ARABIC_SHAPING) ||
         (eCharType_RightToLeft == charType &&
         (hints & NS_RENDERING_HINT_BIDI_REORDERING) == NS_RENDERING_HINT_BIDI_REORDERING)) {
+      // XXXldb This needs to happen before |Reflow|.
       aPresContext->SetIsBidiSystem(PR_TRUE);
     }
   }
