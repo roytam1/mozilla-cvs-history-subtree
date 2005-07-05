@@ -288,7 +288,7 @@ mozJSCodeLib::ImportModuleToJSObject(const nsACString & moduleName, JSObject * t
       }
     }
 #ifdef DEBUG
-    printf("] onto %s\n", PromiseFlatCString(moduleName).get());
+    printf("] from %s\n", PromiseFlatCString(moduleName).get());
 #endif
   }
   
