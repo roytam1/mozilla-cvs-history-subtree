@@ -834,7 +834,7 @@ SipToHeader.fun(
   function clone() {
     var rv =SipToHeader.instantiate();
     rv.address = this.address.clone().QueryInterface(Components.interfaces.zapISipAddress);
-    rv._URIParameterHash = objclone(this._URIParameterHash);
+    rv._ParameterHash = objclone(this._ParameterHash);
     return rv;
   });
 
