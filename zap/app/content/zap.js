@@ -38,8 +38,7 @@
 //----------------------------------------------------------------------
 // imports
 
-var wCodelib = Components.classes['@mozilla.org/jscodelib;1'].getService(Components.interfaces.xpcIJSCodeLoader);
-wCodelib.importModule("resource:/jscodelib/zap/ClassUtils.js");
+Components.util.importModule("resource:/jscodelib/zap/ClassUtils.js");
 
 //----------------------------------------------------------------------
 // window-global data:
