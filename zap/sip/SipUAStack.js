@@ -393,8 +393,8 @@ SipInviteServerDialog.fun(
                     null, // local cseq
                     request.getCSeqHeader().sequenceNumber, // remote cseq
                     request.getCallIDHeader().callID,
-                    request.getToHeader().getParameter("tag"),
-                    response.getFromHeader().getParameter("tag"),
+                    response.getToHeader().getParameter("tag"),
+                    request.getFromHeader().getParameter("tag"),
                     request.getToHeader().address,
                     request.getFromHeader().address,
                     request.getTopContactHeader().address);
