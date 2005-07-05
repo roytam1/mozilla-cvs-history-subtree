@@ -37,7 +37,6 @@
 
 Components.util.importModule("resource:/jscodelib/zap/ArrayUtils.js");
 Components.util.importModule("resource:/jscodelib/zap/ObjectUtils.js");
-Components.util.importModule("resource:/jscodelib/zap/FunctionUtils.js");
 
 EXPORTED_SYMBOLS = [ "StdClass",
                      "makeClass",
@@ -110,7 +109,7 @@ StdClass.prototype.fun = function fun(/*[opt] doc, [opt] metadata, fct*/) {
     fct = arguments[2];
   }
   
-  var name = funname(fct);
+  var name = fct.name;
 
   this.prototype[name] = fct;
   if (meta)
@@ -321,7 +320,7 @@ StdClass.fun(
       fct = arguments[1];
     }
 
-    var name = funname(fct);
+    var name = fct.name;
 
     this[name] = fct;
     if (doc) {

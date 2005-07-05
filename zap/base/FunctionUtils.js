@@ -35,29 +35,15 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-EXPORTED_SYMBOLS = [ "funname",
-                     "noop" ];
+EXPORTED_SYMBOLS = [ "noop" ];
 
 // object to hold module's documentation:
 var _doc_ = {};
 
 //----------------------------------------------------------------------
-// funname
-
-_doc_.funname = "\
- Returns the name of 'fun'.                                           ";
-
-function funname(fun) {
-  if (fun.name !== undefined) return fun.name;
-  // fun.name is undefined. This happens when there is a local variable
-  // called 'name' in fun. We'll have to do some pattern matching:
-  return /^\s*function\s+([^\s\(]*)\(/(fun.toString())[1];
-}
-
-//----------------------------------------------------------------------
 // noop
 
-_doc_.funname = "\
+_doc_.noop = "\
  A function that does nothing.                                        ";
 
 function noop() {}
