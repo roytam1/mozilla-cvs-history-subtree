@@ -43,7 +43,8 @@ EXPORTED_SYMBOLS = [ "StdClass",
                      "NamedObject",
                      "ErrorReporter",
                      "SupportsImpl",
-                     "AttributeParser" ];
+                     "AttributeParser",
+                     "Unwrappable" ];
 
 // name our global object:
 function toString() { return "[ClassUtils.js]"; }
@@ -523,3 +524,14 @@ AttributeParser.metafun(
       setter
       );
   });
+
+
+////////////////////////////////////////////////////////////////////////
+// Class Unwrappable: allows clients to get access to the underlying
+// JS object if it has been wrapped by XPConnect using
+// 'wrappedObj.wrappedJSObject'. See nsIXPConnect.idl for more details.
+
+var Unwrappable = makeClass("Unwrappable");
+
+Unwrappable.getter("wrappedJSObject", function() { return this; });
+

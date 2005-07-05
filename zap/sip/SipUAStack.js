@@ -430,9 +430,9 @@ SipInviteServerDialog.fun(
 ////////////////////////////////////////////////////////////////////////
 // SipUAStack
 
-var SipUAStack = makeClass("SipUAStack", SupportsImpl);
+var SipUAStack = makeClass("SipUAStack", SupportsImpl, Unwrappable);
 SipUAStack.addInterfaces(Components.interfaces.zapISipUAStack,
-                       Components.interfaces.zapISipTransportSink);
+                         Components.interfaces.zapISipTransportSink);
 
 SipUAStack.appendCtor(
   function ctor() {
