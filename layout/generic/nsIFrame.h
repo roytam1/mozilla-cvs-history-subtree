@@ -929,7 +929,8 @@ public:
    */
   struct InlineIntrinsicWidthData {
     InlineIntrinsicWidthData()
-      : prevLines(0), currentLine(0), trailingWhitespace(0) {}
+      : prevLines(0), currentLine(0), trailingWhitespace(0),
+        skipWhitespace(PR_TRUE) {}
 
     // The maximum intrinsic width for all previous lines.
     nscoord prevLines;
@@ -939,11 +940,14 @@ public:
     // the caller should call |Break()|.
     nscoord currentLine;
 
-    // This contains the width of the collapsable/trimmable whitespace
-    // at the end of |currentLine|; it is zero if there is no such
-    // whitespace.
-    // (XXX What about space characters that have zero width?)
+    // This contains the width of the trimmable whitespace at the end of
+    // |currentLine|; it is zero if there is no such whitespace.
     nscoord trailingWhitespace;
+
+    // True if collapsable whitespace should be skipped.  This should be
+    // true at the beginning of a block and when the last text ended
+    // with whitespace.
+    PRBool skipWhitespace;
 
     void Break()
     {

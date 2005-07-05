@@ -67,13 +67,22 @@ nsPlaceholderFrame::~nsPlaceholderFrame()
 }
 
 /* virtual */ void
+nsPlaceholderFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
+                                      nsIFrame::InlineIntrinsicWidthData *aData)
+{
+  // Override AddInlineMinWith so that *nothing* happens.  In
+  // particular, we don't want to set aData->skipWhitespace to false.
+}
+
+/* virtual */ void
 nsPlaceholderFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
                                        nsIFrame::InlineIntrinsicWidthData *aData)
 {
   // Override AddInlinePrefWith so that *nothing* happens.  In
   // particular, we don't want to zero out |aData->trailingWhitespace|,
   // since nsLineLayout skips placeholders when trimming trailing
-  // whitespace.
+  // whitespace, and we don't want to set aData->skipWhitespace to
+  // false.
 }
 
 NS_IMETHODIMP
