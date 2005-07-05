@@ -48,6 +48,9 @@
 #include "nsIXPCScriptable.h"
 #include "nsCRT.h"
 #include "xpcprivate.h"
+#include "nsIURI.h"
+#include "nsIFileURL.h"
+#include "nsILocalFile.h"
 
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
@@ -176,10 +179,6 @@ mozJSCodeLib::ImportModule(const nsACString & moduleName)
       cc->SetExceptionWasThrown(JS_TRUE);
       return NS_OK;
     }
-    if (!targetObject) {
-      // This happens when the caller passes in 'null' as targetObject.
-      return NS_ERROR_FAILURE;
-    }
   }
   else {
     // Our targetObject is the caller's global object. Find it by
@@ -202,7 +201,6 @@ mozJSCodeLib::ImportModule(const nsACString & moduleName)
       targetObject = parent;
     
   }
-  NS_ASSERTION(targetObject, "null targetObject");
 
   JSObject *globalObj = nsnull;
   nsresult rv = ImportModuleToJSObject(moduleName, targetObject, &globalObj);
@@ -219,10 +217,6 @@ mozJSCodeLib::ImportModule(const nsACString & moduleName)
 NS_IMETHODIMP
 mozJSCodeLib::ImportModuleToJSObject(const nsACString & moduleName, JSObject * targetObj, JSObject * *_retval)
 {
-#ifdef DEBUG
-  printf("mozJSCodeLib::ImportModuleToJSObject(%s,%p)\n", PromiseFlatCString(moduleName).get(), targetObj);
-#endif
-  
   JSObject *moduleObj = nsnull;
   const char *location = PromiseFlatCString(moduleName).get();
   PLHashNumber hash = PL_HashString(location);
@@ -294,7 +288,7 @@ mozJSCodeLib::ImportModuleToJSObject(const nsACString & moduleName, JSObject * t
       }
     }
 #ifdef DEBUG
-    printf("]\n");
+    printf("] onto %s\n", PromiseFlatCString(moduleName).get());
 #endif
   }
   
@@ -305,7 +299,8 @@ mozJSCodeLib::ImportModuleToJSObject(const nsACString & moduleName, JSObject * t
 // implementation helpers:
 
 PRBool
-mozJSCodeLib::LoadURL(nsCString &buf, const nsACString &url)
+mozJSCodeLib::LoadURL(nsCString &buf, const nsACString &url,
+                      nsILocalFile** localfile)
 {  
   nsCOMPtr<nsIIOService> ioserv = do_GetService(kIOServiceCID);
   if (!ioserv) {
@@ -318,6 +313,16 @@ mozJSCodeLib::LoadURL(nsCString &buf, const nsACString &url)
   if (!channel) {
     NS_WARNING("could not create channel");
     return false;
+  }
+
+  nsCOMPtr<nsIURI> uri;
+  nsCOMPtr<nsIFileURL> fileURL;
+  channel->GetURI(getter_AddRefs(uri));
+  if (uri && (fileURL = do_QueryInterface(uri))) {
+    nsCOMPtr<nsIFile> file;
+    fileURL->GetFile(getter_AddRefs(file));
+    if (file)
+      file->QueryInterface(NS_GET_IID(nsILocalFile), (void**)localfile);
   }
   
   nsCOMPtr<nsIInputStream> instream;
@@ -356,7 +361,8 @@ mozJSCodeLib::LoadModule(const nsACString &module, PLHashEntry **hep)
 {
   JSObject *moduleObj = nsnull;
   nsCString buf;
-  if (!LoadURL(buf, module)) {
+  nsCOMPtr<nsILocalFile> localFile;
+  if (!LoadURL(buf, module, getter_AddRefs(localFile))) {
     NS_ERROR("error loading url");
     return nsnull;
   }
@@ -392,6 +398,30 @@ mozJSCodeLib::LoadModule(const nsACString &module, PLHashEntry **hep)
     moduleObj = nsnull;
     NS_ERROR("error setting functions");
     goto done;
+  }
+
+  if (localFile) {
+    nsCOMPtr<nsIXPConnectJSObjectHolder> locationHolder;
+    mXPConnect->WrapNative(cx, moduleObj, localFile,
+                           NS_GET_IID(nsILocalFile),
+                           getter_AddRefs(locationHolder));
+    if (!locationHolder) {
+      moduleObj = nsnull;
+      NS_ERROR("could not wrap location object");
+      goto done;
+    }
+    JSObject *locationObj;
+    if (NS_FAILED(locationHolder->GetJSObject(&locationObj))) {
+      moduleObj = nsnull;
+      goto done;
+    }
+    if (!JS_DefineProperty(cx, moduleObj, "__LOCATION__",
+                           OBJECT_TO_JSVAL(locationObj), NULL,
+                           NULL, 0)) {
+      moduleObj = nsnull;
+      NS_ERROR("error setting __LOCATION__ property");
+      goto done;
+    }
   }
   
 #ifndef XPCONNECT_STANDALONE

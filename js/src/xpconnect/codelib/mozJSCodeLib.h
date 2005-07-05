@@ -51,6 +51,8 @@
 #include "nsIPrincipal.h"
 #endif
 
+class nsILocalFile;
+
 ////////////////////////////////////////////////////////////////////////
 // mozJSCodeLib class
 
@@ -65,7 +67,7 @@ public:
   NS_DECL_XPCIJSCODELOADER
   
 private:
-  PRInt32 LoadURL(nsCString &buf, const nsACString &url);
+  PRInt32 LoadURL(nsCString &buf, const nsACString &url, nsILocalFile** file);
   JSObject *LoadModule(const nsACString &module, PLHashEntry **hep);
   void UnloadModules();
 
