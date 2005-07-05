@@ -349,7 +349,7 @@ StdClass.fun(
     var inst = new this.__parent__.Object();
     inst.__proto__ = this.prototype;
     var args = arguments;
-    amap(function(f) {f.apply(inst, args);}, this.ctorhook);
+    this.ctorhook.forEach(function(f) {f.apply(inst, args);});
     return inst;
   });
 
@@ -360,7 +360,7 @@ StdClass.fun(
   function instantiateWithParent(parent, args) {
     var inst = new parent.Object();
     inst.__proto__ = this.prototype;
-    amap(function(f) {f.apply(inst, args);}, this.ctorhook);
+    this.ctorhook.forEach(function(f) {f.apply(inst, args);});
     return inst;
   });
 

@@ -339,13 +339,13 @@ SipTransceiver.fun(
 SipTransceiver.fun(
   function getListeningSockets(count) {
     var rv =
-      arraymap(
+      hashkeys(this._listeningSockets).map(
         function(s) {
           var match = /^([^:]*):(\d*)$/(s);
           return { protocol : match[1],
                    port     : parseInt(match[2]) };
-        },
-        hashkeys(this._listeningSockets));
+        });
+
     if (count)
       count.value = rv.length;
     return rv;
@@ -617,9 +617,8 @@ SipTransport.fun(
         " from "+endpoint.address+":"+endpoint.port+" :\n"+message.serialize());
     
     // hand messages to transport sinks until one returns true:
-    amap(function(s) {
-           return s.handleSipMessage(message, endpoint, connection); },
-         this._sinks);
+    this._sinks.some(function(s) {
+                       return s.handleSipMessage(message, endpoint, connection); });
   });
 
 //----------------------------------------------------------------------

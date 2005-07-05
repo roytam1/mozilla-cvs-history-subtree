@@ -561,8 +561,7 @@ SipUAStack.fun(
     m.appendHeader(request.getCallIDHeader());
     m.appendHeader(request.getCSeqHeader());
     // copy Via headers:
-    amap(function(v) { m.appendHeader(v); },
-         request.getHeaders("Via", {}));
+    request.getHeaders("Via", {}).forEach(function(v) { m.appendHeader(v); });
     var toHeader = request.getToHeader().clone().QueryInterface(Components.interfaces.zapISipToHeader);
     m.appendHeader(toHeader);
     if (generateToTag && !toHeader.getParameter("tag")) {
@@ -808,7 +807,7 @@ InviteUACCore.fun(
 
 InviteUACCore.fun(
   function _terminateEarlyDialogs() {
-    amap(function(d) { if (d.state == d.Early) d.terminate(); }, this._dialogs);
+    this._dialogs.forEach(function(d) { if (d.state == d.Early) d.terminate(); });
     this._dialogs = [];
   });
 
@@ -901,8 +900,8 @@ InviteUASCore.fun(
     // 12.1.1:
     var m = this._stack.formulateResponse("200", "OK", this._request, true);
     // copy record-route headers:
-    amap(function(v) { m.appendHeader(v); },
-         this._request.getHeaders("Record-Route", {}));
+    this._request.getHeaders("Record-Route", {}).forEach(function(v) {
+                                                           m.appendHeader(v); });
     // set contact header:
     // XXX use ToAddress of request for now:
     var ToAddress = this._request.getToHeader().address;

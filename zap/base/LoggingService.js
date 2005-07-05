@@ -72,8 +72,7 @@ LoggingService.fun(
     if (this.busy) return; // ignore silently
     this.busy = true;
     try {
-      amap(function(l) { l.log(logmodule, level, message); },
-           this.listeners);
+      this.listeners.forEach(function(l) { l.log(logmodule, level, message); });
     } catch(e) {
       this._dump("Error during logging: "+e);
     }

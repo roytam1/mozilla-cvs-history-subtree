@@ -38,10 +38,6 @@
 EXPORTED_SYMBOLS = [ "arraymerge",
                      "arrayclone",
                      "arraysplit",
-                     "arraymap",
-                     "amap",
-                     "every",
-                     "some",
                      "member",
                      "findif",
                      "isarray",
@@ -109,68 +105,6 @@ function arraysplit(predicate, array) {
 }
 
 //----------------------------------------------------------------------
-// arraymap
-
-_doc_.arraymap = "\
- Map function 'fct' over 'array'. Accumulate output of 'fct' in new  \n\
- array.                                                              \n\
- 'fct' will be passed two arguments: the array element and the index \n\
- Returns array of accumulated output.                                 ";
-
-function arraymap(fct, array) {
-  var accu = new Array(array.length);
-  for (var i=0, l=array.length; i<l; ++i) {
-    accu[i] = fct(array[i], i);
-  }
-  return accu;
-}
-
-//----------------------------------------------------------------------
-// amap
-
-_doc_.amap = "\
- Map function 'fct' over 'array'. Don't accumulate output of 'fct'.  \n\
- If 'fct' returns 'true', processing stops at the current element    \n\
- and amap returns.                                                   \n\
- 'fct' will be passed two arguments: the array element and the index. ";
-
-function amap(fct, array) {
-  for (var i=0, l=array.length; i<l; ++i) {
-    if (fct(array[i], i))
-      return;
-  }
-}
-
-//----------------------------------------------------------------------
-// every
-
-_doc_.every = "\
- Returns true if 'predicate' is true for every element of 'array'.    ";
-
-function every(predicate, array) {
-  for (var i=0, l=array.length; i<l; ++i) {
-    if (!predicate(array[i]))
-      return false;
-  }
-  return true;
-}
-
-//----------------------------------------------------------------------
-// some
-
-_doc_.some = "\
- Returns true if 'predicate' is true for at least one element of     \n\
- 'array'.                                                             ";
-
-function some(predicate, array) {
-  for (var i=0, l=array.length; i<l; ++i) {
-    if (predicate(array[i]))
-      return true;
-  }
-  return false;
-}
-
-//----------------------------------------------------------------------
 // member
 
 _doc_.member = "\
@@ -178,7 +112,7 @@ _doc_.member = "\
  to 'element'.                                                        ";
 
 function member(element, array) {
-  return some(function(e) {return e==element;}, array);
+  return array.some(function(e) {return e==element;});
 }
 
 //----------------------------------------------------------------------
@@ -226,7 +160,7 @@ function flatten(array) {
   var retval = [];
   for (var i=0; i<l; ++i) {
     if (isarray(array[i])) {
-      amap(function(e){retval.push(e);}, array[i]);
+      array[i].forEach(function(e){retval.push(e);});
     }
     else
       retval.push(array[i]);
@@ -304,8 +238,8 @@ _doc_.intersection = "\
 
 function intersection(arr1, arr2) {
   var retval = [];
-  amap(function(item) {if (member(item, arr2)) arraymerge(retval, [item]);},
-       arr1);
+  arr1.forEach(function(item) {
+                 if (member(item, arr2)) arraymerge(retval, [item]);});
   return retval;
 }
 
@@ -317,7 +251,7 @@ _doc_.difference = "\
 
 function difference(arr1, arr2) {
   var retval = [];
-  amap(function(item) {if (!member(item, arr2)) retval.push(item);},
-       arr1);
+  arr1.forEach(function(item) {
+                 if (!member(item, arr2)) retval.push(item);});
   return retval;
 }

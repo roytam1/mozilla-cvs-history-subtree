@@ -434,18 +434,17 @@ SdpMediaDescription.fun(
     if (this.portCount)
       rv += "/" + this.portCount;
     rv += " " + this.protocol;
-    amap(function(f) { rv+=" "+f.format; },
-         this._Formats);
+    this._Formats.forEach(function(f) { rv+=" "+f.format; });
     rv += CRLF;
 
     if (this.information) 
       rv += "i=" + this.information + CRLF;
     if (this.connection)
       rv += this.connection.serialize();
-    amap(callSerialize, this._Bandwidths);
+    this._Bandwidths.forEach(callSerialize);
     if (this.key)
       rv += this.key.serialize();
-    amap(callSerialize, this._Attribs);
+    this._Attribs.forEach(callSerialize);
 
     return rv;
   });
@@ -567,18 +566,18 @@ SdpSessionDescription.fun(
       rv += "i=" + this.information + CRLF;
     if (this.uri)
       rv += "u=" + this.uri + CRLF;
-    amap(callSerialize, this._EmailAddresses);
-    amap(callSerialize, this._PhoneNumbers);      
+    this._EmailAddresses.forEach(callSerialize);
+    this._PhoneNumbers.forEach(callSerialize);      
     if (this.connection)
       rv += this.connection.serialize();
-    amap(callSerialize, this._Bandwidths);
-    amap(callSerialize, this._Times);
+    this._Bandwidths.forEach(callSerialize);
+    this._Times.forEach(callSerialize);
     if (this.zoneAdjustments)
       rv += this.zoneAdjustments.serialize();
     if (this.key)
       rv += this.key.serialize();
-    amap(callSerialize, this._Attribs);
-    amap(callSerialize, this._MediaDescriptions);
+    this._Attribs.forEach(callSerialize);
+    this._MediaDescriptions.forEach(callSerialize);
 
     return rv;
   });

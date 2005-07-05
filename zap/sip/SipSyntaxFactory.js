@@ -1706,7 +1706,7 @@ SipMessage.fun(
 SipMessage.fun(
   function _serializeHeaders() {
     var rv = "";
-    amap(
+    this._headers.forEach(
       function(h) {
         if (h.serialize)
           rv += h.serialize();
@@ -1714,8 +1714,7 @@ SipMessage.fun(
           rv += h.name + ": " + h.data;
         }
         rv += CRLF;
-      },
-      this._headers);   
+      });
     return rv;
   });
 

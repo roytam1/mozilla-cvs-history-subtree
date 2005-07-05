@@ -207,7 +207,7 @@ SipInviteClientTransaction.fun(
     m.appendHeader(gSyntaxFactory.createMaxForwardsHeader());
     // copy any 'Route' headers from the original request:
     var routeHeaders = this.initialRequest.getHeaders("Route", {});
-    amap(function(h) { m.appendHeader(h); }, routeHeaders);
+    routeHeaders.forEach(function(h) { m.appendHeader(h); });
 
     // now send the request:
     this._dump("sending ACK");
@@ -616,8 +616,8 @@ SipInviteServerTransaction.fun(
       response.appendHeader(request.getCallIDHeader());
       response.appendHeader(request.getCSeqHeader());
       // copy Via headers:
-      amap(function(v) { response.appendHeader(v); },
-           request.getHeaders("Via", {}));
+      request.getHeaders("Via", {}).forEach(function(v) {
+                                              response.appendHeader(v); });
       response.appendHeader(request.getToHeader());
       //XXX delete To tag if there is one?
 
