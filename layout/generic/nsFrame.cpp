@@ -2144,6 +2144,7 @@ nsFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
 {
   NS_ASSERTION(aData->trailingWhitespace == 0,
                "min-width calculation should never have trailing whitespace");
+  aData->skipWhitespace = PR_FALSE;
   aData->currentLine += nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
                             this, nsLayoutUtils::MIN_WIDTH);
 }
@@ -2153,6 +2154,7 @@ nsFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
                             nsIFrame::InlineIntrinsicWidthData *aData)
 {
   aData->trailingWhitespace = 0;
+  aData->skipWhitespace = PR_FALSE;
   aData->currentLine += nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
                             this, nsLayoutUtils::PREF_WIDTH);
 }

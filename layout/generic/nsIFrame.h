@@ -944,9 +944,9 @@ public:
     // |currentLine|; it is zero if there is no such whitespace.
     nscoord trailingWhitespace;
 
-    // True if collapsable whitespace should be skipped.  This should be
-    // true at the beginning of a block and when the last text ended
-    // with whitespace.
+    // True if initial collapsable whitespace should be skipped.  This
+    // should be true at the beginning of a block and when the last text
+    // ended with whitespace.
     PRBool skipWhitespace;
 
     void Break()
