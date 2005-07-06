@@ -511,7 +511,16 @@ function Startup()
   // Check for window.arguments[0]. If present, use that for uriToLoad.
   if ("arguments" in window && window.arguments.length >= 1 && window.arguments[0])
     uriToLoad = window.arguments[0];
-    
+
+  try {
+    if (makeURL(uriToLoad).schemeIs("chrome")) {
+      dump("*** Preventing external load of chrome: URI into browser window\n");
+      dump("    Use -chrome <uri> instead\n");
+      window.close();
+      return;
+    }
+  } catch(e) {}
+
   gIsLoadingBlank = uriToLoad == "about:blank";
 
   if (!gIsLoadingBlank)
@@ -3195,6 +3204,14 @@ nsBrowserAccess.prototype =
   {
     var newWindow = null;
     var referrer = null;
+    var isExternal = (aContext == nsCI.nsIBrowserDOMWindow.OPEN_EXTERNAL);
+
+    if (isExternal && aURI && aURI.schemeIs("chrome"))
+      return null;
+
+    var loadflags = isExternal ?
+                       nsCI.nsIWebNavigation.LOAD_FLAGS_FROM_EXTERNAL :
+                       nsCI.nsIWebNavigation.LOAD_FLAGS_NONE;
     if (aWhere == nsCI.nsIBrowserDOMWindow.OPEN_DEFAULTWINDOW) {
       switch (aContext) {
         case nsCI.nsIBrowserDOMWindow.OPEN_EXTERNAL :
@@ -3225,8 +3242,7 @@ nsBrowserAccess.prototype =
           }
           newWindow.QueryInterface(nsCI.nsIInterfaceRequestor)
                    .getInterface(nsCI.nsIWebNavigation)
-                   .loadURI(url, nsCI.nsIWebNavigation.LOAD_FLAGS_NONE,
-                            referrer, null, null);
+                   .loadURI(url, loadflags, referrer, null, null);
         } catch(e) {
         }
         break;
@@ -3241,13 +3257,12 @@ nsBrowserAccess.prototype =
                                       .call(aOpener);
             newWindow.QueryInterface(nsCI.nsIInterfaceRequestor)
                      .getInterface(nsIWebNavigation)
-                     .loadURI(url, nsIWebNavigation.LOAD_FLAGS_NONE, referrer,
-                              null, null);
+                     .loadURI(url, loadflags, referrer, null, null);
           } else {
             newWindow = gBrowser.selectedBrowser.docShell
                                 .QueryInterface(nsCI.nsIInterfaceRequestor)
                                 .getInterface(nsCI.nsIDOMWindow);
-            loadURI(url, null);
+            getWebNavigation().loadURI(url, loadflags, null, null, null);
           }
         } catch(e) {
         }
