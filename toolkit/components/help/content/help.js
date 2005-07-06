@@ -575,27 +575,6 @@ function showPanel(panelId) {
       document.getElementById("findText").focus();
 }
 
-function findParentNode(node, parentNode)
-{
-  if (node && node.nodeType == Node.TEXT_NODE) {
-    node = node.parentNode;
-  }
-  while (node) {
-    var nodeName = node.localName;
-    if (!nodeName)
-      return null;
-    nodeName = nodeName.toLowerCase();
-    if (nodeName == "body" || nodeName == "html" ||
-        nodeName == "#document") {
-      return null;
-    }
-    if (nodeName == parentNode)
-      return node;
-    node = node.parentNode;
-  }
-  return null;
-}
-
 function onselect_loadURI(tree) {
     try {
         var resource = tree.view.getResourceAtIndex(tree.currentIndex);

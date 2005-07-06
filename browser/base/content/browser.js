@@ -3104,9 +3104,9 @@ nsBrowserStatusHandler.prototype =
         if (this.urlBar)
           this.urlBar.setAttribute("level", "low");
         try {
-          this.securityButton.setAttribute("label", 
+          this.securityButton.setAttribute("label",
             gBrowser.contentWindow.location.host);
-        } catch(exception) {}        
+        } catch(exception) {}
         break;
       case wpl.STATE_IS_BROKEN:
         this.securityButton.setAttribute("level", "broken");
@@ -4450,7 +4450,8 @@ function asyncOpenWebPanel(event)
        linkNode = target;
    }
    else {
-     linkNode = findParentNode(event.originalTarget, "a");
+     while (linkNode && !(linkNode instanceof HTMLAnchorElement))
+       linkNode = linkNode.parentNode;
      // <a> cannot be nested.  So if we find an anchor without an
      // href, there is no useful <a> around the target
      if (linkNode && !linkNode.hasAttribute("href"))
@@ -4553,7 +4554,7 @@ function asyncOpenWebPanel(event)
      }
    }
    if (event.button == 1 &&
-       !findParentNode(event.originalTarget, "scrollbar") &&
+       !event.getPreventDefault() &&
        gPrefService.getBoolPref("middlemouse.contentLoadURL")) {
      middleMousePaste(event);
    }
@@ -4629,27 +4630,6 @@ function makeURLAbsolute( base, url )
   var baseURI  = ioService.newURI(base, null, null);
 
   return ioService.newURI(baseURI.resolve(url), null, null).spec;
-}
-
-function findParentNode(node, parentNode)
-{
-  if (node && node.nodeType == Node.TEXT_NODE) {
-    node = node.parentNode;
-  }
-  while (node) {
-    var nodeName = node.localName;
-    if (!nodeName)
-      return null;
-    nodeName = nodeName.toLowerCase();
-    if (nodeName == "body" || nodeName == "html" ||
-        nodeName == "#document") {
-      return null;
-    }
-    if (nodeName == parentNode)
-      return node;
-    node = node.parentNode;
-  }
-  return null;
 }
 
 function saveFrameDocument()
