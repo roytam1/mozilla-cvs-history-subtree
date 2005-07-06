@@ -4961,7 +4961,7 @@ nsTextFrame::MeasureText(nsPresContext*          aPresContext,
       }
       if (aTextData.mSkipWhitespace) {
         aTextData.mOffset += contentLen;
-        aTextData.mSkipWhitespace = PR_FALSE;
+        aTextData.mSkipWhitespace = PR_FALSE; // XXXldb Eh?
 
         if (wasTransformed) {
           // As long as there were no discarded characters, then don't consider
@@ -5035,6 +5035,8 @@ nsTextFrame::MeasureText(nsPresContext*          aPresContext,
       firstThing = PR_FALSE;
       aTextData.mSkipWhitespace = PR_FALSE;
 
+      // XXX :first-letter should be handled during frame construction
+      // (and it has a good bit in common with nextBidi)
       if (aTextData.mFirstLetterOK) {
         if (IsPunctuationMark(firstChar)) {
           if (contentLen > 1)
@@ -5446,6 +5448,7 @@ nsTextFrame::MarkIntrinsicWidthsDirty()
   RemoveStateBits(TEXT_OPTIMIZE_RESIZE);
 }
 
+// XXX This should really share more code with the first half of MeasureText.
 /* virtual */ void
 nsTextFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
                                nsIFrame::InlineIntrinsicWidthData *aData)
@@ -5471,7 +5474,10 @@ nsTextFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
   // caps text then transform to Unicode because the helper function only
   // accepts Unicode text
   // XXX Do we want to do all the work for the first-in-flow or do the
-  // work for each part?
+  // work for each part?  (Be careful of first-letter / first-line, though,
+  // especially first-line!)
+  // XXX We really need to make :first-letter happen during frame
+  // construction.
   rv = tx.Init(this, mContent, mContentOffset, forceArabicShaping,
                !ts.mSmallCaps);
   if (NS_FAILED(rv)) {
@@ -5495,21 +5501,141 @@ nsTextFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
     // XXX Watch mContentLength!
 
     if (isWhitespace) {
-      if (aData->skipWhitespace) {
-      } else {
+      const nsStyleText *styleText = GetStyleText();
+      if (styleText->CanBreakAtWhiteSpace()) {
+        aData->Break();
+      } else if (!aData->skipWhitespace) {
+        PRUnichar firstChar;
+        if (tx.TransformedTextIsAscii()) {
+          firstChar = *bp1;
+        } else {
+          firstChar = *bp2;
+        }
+        if ('\t' == firstChar) {
+          // XXX Need to track column!
+          wordLen = 8;
+          // Apply word spacing to every space derived from a tab
+          aData->currentLine +=
+            (ts.mSpaceWidth + ts.mWordSpacing + ts.mLetterSpacing)*wordLen;
+        } else {
+          // Apply word spacing to every space, if there's more than one
+          aData->currentLine +=
+            wordLen*(ts.mWordSpacing + ts.mLetterSpacing + ts.mSpaceWidth);// XXX simplistic
+        }
       }
     } else {
+      nsTextDimensions dimensions;
+      if (ts.mSmallCaps) {
+        MeasureSmallCapsText(aRenderingContext, ts, bp2, wordLen, PR_FALSE,
+                             &dimensions);
+      } else {
+        if (tx.TransformedTextIsAscii()) {
+          aRenderingContext->GetTextDimensions(bp1, wordLen, dimensions);
+        } else {
+          aRenderingContext->GetTextDimensions(bp2, wordLen, dimensions);
+        }
+        dimensions.width += ts.mLetterSpacing * wordLen;
+      }
+
+      aData->currentLine += dimensions.width;
+      aData->skipWhitespace = PR_FALSE;
     }
   }
-
-#error "WRITE ME!"
 }
 
 /* virtual */ void
 nsTextFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
                                 nsIFrame::InlineIntrinsicWidthData *aData)
 {
-#error "WRITE ME!"
+  nsresult rv;
+
+  nsPresContext *presContext = GetPresContext();
+  TextStyle ts(presContext, *aRenderingContext, mStyleContext);
+  if (!ts.mFont->mSize)
+    // XXX If font size is zero, we still need to figure out whether we've
+    // got non-whitespace text and whether we end in whitespace.
+    return;
+
+  PRBool forceArabicShaping = (ts.mSmallCaps ||
+                               (0 != ts.mWordSpacing) ||
+                               (0 != ts.mLetterSpacing) ||
+                               ts.mJustifying);
+  nsTextTransformer tx(mContent->GetOwnerDoc()->GetLineBreaker(), nsnull,
+                       presContext);
+  // Keep the text in ascii if possible. Note that if we're measuring small
+  // caps text then transform to Unicode because the helper function only
+  // accepts Unicode text
+  // XXX Do we want to do all the work for the first-in-flow or do the
+  // work for each part?  (Be careful of first-letter / first-line, though,
+  // especially first-line!)
+  // XXX We really need to make :first-letter happen during frame
+  // construction.
+  rv = tx.Init(this, mContent, mContentOffset, forceArabicShaping,
+               !ts.mSmallCaps);
+  if (NS_FAILED(rv)) {
+    NS_NOTREACHED("failure initializing text transformer");
+    return;
+  }
+
+  for (;;) {
+    union {
+      char*       bp1;
+      PRUnichar*  bp2;
+    };
+    PRInt32 wordLen, contentLen;
+    PRBool isWhitespace, wasTransformed;
+    // XXX Is !aData->skipWhitespace the right criterion for when the
+    // text transformer should capitalize the first letter?
+    bp2 = tx.GetNextWord(!aData->skipWhitespace, &wordLen, &contentLen,
+                         &isWhitespace, &wasTransformed);
+    if (!bp2)
+      break;
+    // XXX Watch mContentLength!
+
+    if (isWhitespace) {
+      PRUnichar firstChar;
+      if (tx.TransformedTextIsAscii()) {
+        firstChar = *bp1;
+      } else {
+        firstChar = *bp2;
+      }
+      if ('\n' == firstChar) {
+        aData->Break();
+      } else if (!aData->skipWhitespace) {
+        nscoord width;
+        if ('\t' == firstChar) {
+          // XXX Need to track column!
+          wordLen = 8;
+          // Apply word spacing to every space derived from a tab
+          width =
+            (ts.mSpaceWidth + ts.mWordSpacing + ts.mLetterSpacing)*wordLen;
+        } else {
+          // Apply word spacing to every space, if there's more than one
+          width =
+            wordLen*(ts.mWordSpacing + ts.mLetterSpacing + ts.mSpaceWidth);// XXX simplistic
+        }
+        aData->currentLine += width;
+        aData->trailingWhitespace += width;
+      }
+    } else {
+      nsTextDimensions dimensions;
+      if (ts.mSmallCaps) {
+        MeasureSmallCapsText(aRenderingContext, ts, bp2, wordLen, PR_FALSE,
+                             &dimensions);
+      } else {
+        if (tx.TransformedTextIsAscii()) {
+          aRenderingContext->GetTextDimensions(bp1, wordLen, dimensions);
+        } else {
+          aRenderingContext->GetTextDimensions(bp2, wordLen, dimensions);
+        }
+        dimensions.width += ts.mLetterSpacing * wordLen;
+      }
+
+      aData->currentLine += dimensions.width;
+      aData->skipWhitespace = PR_FALSE;
+      aData->trailingWhitespace = 0;
+    }
+  }
 }
 
 NS_IMETHODIMP
@@ -5596,8 +5722,7 @@ nsTextFrame::Reflow(nsPresContext*          aPresContext,
     }
   }
 
-  PRBool wrapping = (NS_STYLE_WHITESPACE_NORMAL == ts.mText->mWhiteSpace) ||
-    (NS_STYLE_WHITESPACE_MOZ_PRE_WRAP == ts.mText->mWhiteSpace);
+  PRBool wrapping = ts.mText->CanBreakAtWhiteSpace();
 
   // Set whitespace skip flag
   PRBool skipWhitespace = PR_FALSE;
