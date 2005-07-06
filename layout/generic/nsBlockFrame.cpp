@@ -714,8 +714,6 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
 #endif
   }
 
-  delete iro;
-
   mMinWidth = min_result;
   mPrefWidth = pref_result;
 }
