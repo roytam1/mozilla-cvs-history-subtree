@@ -251,6 +251,7 @@ components\xmlextras.xpt
 res\html.css   
 res\quirk.css
 res\viewsource.css
+res\hiddenWindow.html
 res\ua.css
 res\forms.css
 res\platform-forms.css
