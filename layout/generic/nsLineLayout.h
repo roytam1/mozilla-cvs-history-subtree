@@ -134,9 +134,6 @@ public:
 
   void VerticalAlignLine(nsLineBox* aLineBox);
 
-  // XXX This probably requires that the line has already been reflowed.
-  nscoord GetLineMaxElementWidth(nsLineBox* aLineBox);
-
   PRBool TrimTrailingWhiteSpace();
 
   void HorizontalAlignFrames(nsRect& aLineBounds, PRBool aAllowJustify);
