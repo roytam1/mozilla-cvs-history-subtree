@@ -194,7 +194,7 @@
     }
 
     if (pref && !isKeyPress && event.button == 1 &&
-        !event.getPreventDefault()
+        !event.getPreventDefault() &&
         pref.getBoolPref("middlemouse.contentLoadURL")) {
       if (middleMousePaste(event)) {
         event.preventBubble();
