@@ -240,7 +240,8 @@ ViewportFrame::Reflow(nsPresContext*          aPresContext,
     // Deal with a non-incremental reflow or an incremental reflow
     // targeted at our one-and-only principal child frame.
     if ((GetStateBits() & NS_FRAME_IS_DIRTY) ||
-        (mFrames.FirstChild()->GetStateBits() & NS_FRAME_IS_DIRTY)) {
+        (mFrames.FirstChild()->GetStateBits() &
+         (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN))) {
       // Reflow our one-and-only principal child frame
       nsIFrame*           kidFrame = mFrames.FirstChild();
       nsHTMLReflowMetrics kidDesiredSize(nsnull);
