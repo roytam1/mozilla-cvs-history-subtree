@@ -32,7 +32,7 @@ if [ $TESTSET = "all" -o $TESTSET = "symmkey" ]; then
 echo "<TABLE BORDER=1><TR><TH COLSPAN=6>Symmetric Key Cipher Performance</TH></TR>" >> ${PERFRESULTS}
 echo "<TR bgcolor=lightGreen><TH>MODE</TH><TH>INPUT SIZE (bytes)</TH><TH>SYMMETRIC KEY SIZE (bits)</TH><TH>REPETITIONS (cx/op)</TH><TH>CONTEXT CREATION TIME (ms)</TH><TH>OPERATION TIME (ms)</TH></TR>" >> ${PERFRESULTS}
 
-while read mode keysize bufsize reps cxreps
+cat ${SKTESTS} | while read mode keysize bufsize reps cxreps
 do
     if [ $mode != "#" ]; then
 	echo "bltest -N -m $mode -b $bufsize -g $keysize -u $cxreps"
@@ -47,21 +47,21 @@ do
 	echo "bltest -D -m $mode -i ${CIPHERDIR}/$mode.out -k ${CIPHERDIR}/$mode.key -v ${CIPHERDIR}/$mode.iv -p $reps -o ${CIPHERDIR}/$mode.inv"
 	bltest -D -m $mode -i ${CIPHERDIR}/$mode.out -k ${CIPHERDIR}/$mode.key -v ${CIPHERDIR}/$mode.iv -p $reps -o ${CIPHERDIR}/$mode.inv >> ${SKPERFOUT}
     fi
-done < ${SKTESTS} 
+done
 
-while read md buf sk rps cxrps cx op
+cat ${SKPERFOUT} | while read md buf sk rps cxrps cx op
 do
     if [ $md != "#" ]; then
 	echo "<TR><TH>$md</TH><TD align=right>$buf</TD><TD align=right>$sk</TD><TD align=right>$cxrps/$rps</TD><TD align=right>$cx</TD><TD align=right>$op</TD></TR>" >> ${PERFRESULTS}
     fi
-done < ${SKPERFOUT} 
+done
 
 echo "</TABLE><BR>" >> ${PERFRESULTS}
 
 fi
 
 if [ $TESTSET = "all" -o $TESTSET = "rsa" ]; then
-while read mode keysize bufsize exp reps cxreps
+cat ${RSATESTS} | while read mode keysize bufsize exp reps cxreps
 do
     if [ $mode != "#" ]; then
 	echo "bltest -N -m $mode -b $bufsize -e $exp -g $keysize -u $cxreps"
@@ -73,24 +73,22 @@ do
 	echo "bltest -D -m $mode -i ${CIPHERDIR}/$mode.out -k ${CIPHERDIR}/$mode.key -p $reps -o ${CIPHERDIR}/$mode.inv"
 	bltest -D -m $mode -i ${CIPHERDIR}/$mode.out -k ${CIPHERDIR}/$mode.key -p $reps -o ${CIPHERDIR}/$mode.inv >> ${RSAPERFOUT}
     fi
-done < ${RSATESTS} 
+done
 
 echo "<TABLE BORDER=1><TR><TH COLSPAN=7>RSA Cipher Performance</TH></TR>" >> ${PERFRESULTS}
 echo "<TR bgcolor=lightGreen><TH>MODE</TH><TH>INPUT SIZE (bytes)</TH><TH>KEY SIZE (bits)</TH><TH>PUBLIC EXPONENT</TH><TH>REPETITIONS (cx/op)</TH><TH>CONTEXT CREATION TIME (ms)</TH><TH>OPERATION TIME (ms)</TH></TR>" >> ${PERFRESULTS}
-
-while read md buf mod pe rps cxrps cx op
+cat ${RSAPERFOUT} | while read md buf mod pe rps cxrps cx op
 do
     if [ $md != "#" ]; then
 	echo "<TR><TH>$md</TH><TD align=right>$buf</TD><TD align=right>$mod</TD><TD align=right>$pe</TD><TD align=right>$cxrps/$rps</TD><TD align=right>$cx</TD><TD align=right>$op</TD></TR>" >> ${PERFRESULTS}
     fi
-done < ${RSAPERFOUT} 
+done
 
 echo "</TABLE><BR>" >> ${PERFRESULTS}
 fi
 
 if [ $TESTSET = "all" -o $TESTSET = "dsa" ]; then
-
-while read mode keysize bufsize reps cxreps
+cat ${DSATESTS} | while read mode keysize bufsize reps cxreps
 do
     if [ $mode != "#" ]; then
 	echo "bltest -N -m $mode -b $bufsize -g $keysize -u $cxreps"
@@ -102,23 +100,22 @@ do
 	echo "bltest -V -m $mode -f ${CIPHERDIR}/$mode.out -k ${CIPHERDIR}/$mode.key -p $reps -i ${CIPHERDIR}/$mode.in -o ${CIPHERDIR}/$mode.out"
 	bltest -V -m $mode -f ${CIPHERDIR}/$mode.out -k ${CIPHERDIR}/$mode.key -p $reps -i ${CIPHERDIR}/$mode.in -o ${CIPHERDIR}/$mode.out >> ${DSAPERFOUT}
     fi
-done < ${DSATESTS} 
+done
 
 echo "<TABLE BORDER=1><TR><TH COLSPAN=6>DSA Cipher Performance</TH></TR>" >> ${PERFRESULTS}
 echo "<TR bgcolor=lightGreen><TH>MODE</TH><TH>INPUT SIZE (bytes)</TH><TH>KEY SIZE (bits)</TH><TH>REPETITIONS (cx/op)</TH><TH>CONTEXT CREATION TIME (ms)</TH><TH>OPERATION TIME (ms)</TH></TR>" >> ${PERFRESULTS}
-
-while read md buf mod rps cxrps cx op
+cat ${DSAPERFOUT} | while read md buf mod rps cxrps cx op
 do
     if [ $md != "#" ]; then
 	echo "<TR><TH>$md</TH><TD align=right>$buf</TD><TD align=right>$mod</TD><TD align=right>$cxrps/$rps</TD><TD align=right>$cx</TD><TD align=right>$op</TD></TR>" >> ${PERFRESULTS}
     fi
-done < ${DSAPERFOUT} 
+done
 
 echo "</TABLE><BR>" >> ${PERFRESULTS}
 fi
 
 if [ $TESTSET = "all" -o $TESTSET = "hash" ]; then
-while read mode bufsize reps
+cat ${HASHTESTS} | while read mode bufsize reps
 do
     if [ $mode != "#" ]; then
 	echo "bltest -N -m $mode -b $bufsize"
@@ -127,17 +124,16 @@ do
 	echo "bltest -H -m $mode -i ${CIPHERDIR}/$mode.in -p $reps -o ${CIPHERDIR}/$mode.out"
 	bltest -H -m $mode -i ${CIPHERDIR}/$mode.in -p $reps -o ${CIPHERDIR}/$mode.out >> ${HASHPERFOUT}
     fi
-done < ${HASHTESTS} 
+done
 
 echo "<TABLE BORDER=1><TR><TH COLSPAN=6>Hash Cipher Performance</TH></TR>" >> ${PERFRESULTS}
 echo "<TR bgcolor=lightGreen><TH>MODE</TH><TH>INPUT SIZE (bytes)</TH><TH>REPETITIONS</TH><TH>OPERATION TIME (ms)</TH></TR>" >> ${PERFRESULTS}
-
-while read md buf rps cxrps cx op
+cat ${HASHPERFOUT} | while read md buf rps cxrps cx op
 do
     if [ $md != "#" ]; then
 	echo "<TR><TH>$md</TH><TD align=right>$buf</TD><TD align=right>$rps</TD><TD align=right>$op</TD></TR>" >> ${PERFRESULTS}
     fi
-done < ${HASHPERFOUT} 
+done
 
 echo "</TABLE><BR>" >> ${PERFRESULTS}
 fi

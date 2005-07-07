@@ -3,6 +3,8 @@
 <!ENTITY titleSeparator.label " - ">
 
 <!-- File Menu -->
+<!ENTITY newMessage.label "New Message">
+<!ENTITY newMessage.accesskey "N">
 <!ENTITY newFolderCmd.label "Folder...">
 <!ENTITY newFolderCmd.accesskey "F">
 <!ENTITY newVirtualFolderCmd.label "Saved Search...">
@@ -10,6 +12,8 @@
 <!ENTITY newAccountCmd.label "Account...">
 <!ENTITY newAccountCmd.accesskey "A">
 <!ENTITY openMessageMenu.label "Open">
+<!ENTITY openMessageWindowCmd.label "Open Message">
+<!ENTITY openMessageWindowCmd.accesskey "s">
 <!ENTITY openMessageFileCmd.label "Open Saved Message...">
 <!ENTITY openMessageFileCmd.accesskey "O">
 <!ENTITY openAttachmentCmd.label "Attachments">
@@ -247,8 +251,6 @@
 <!ENTITY searchMailCmd.label "Search Messages...">
 <!ENTITY searchMailCmd.accesskey "M">
 <!ENTITY searchMailCmd.key "f">
-<!ENTITY searchAddressesCmd.label "Search Addresses...">
-<!ENTITY searchAddressesCmd.accesskey "S">
 
 <!-- Go Menu -->
 <!ENTITY goMenu.label "Go">
@@ -395,6 +397,11 @@
 <!ENTITY addressBookCmd.label "Address Book">  
 <!ENTITY addressBookCmd.accesskey "a">
 <!ENTITY addressBookCmd.commandkey "2">
+<!ENTITY searchMailCmd.label "Search Messages...">
+<!ENTITY searchMailCmd.accesskey "e">
+<!ENTITY searchMailCmd.key "f">
+<!ENTITY searchAddressesCmd.label "Search Addresses...">
+<!ENTITY searchAddressesCmd.accesskey "S">
 <!ENTITY junkMailCmd.label "Junk Mail Controls...">
 <!ENTITY junkMailCmd.accesskey "J">
 <!ENTITY runJunkControls.label "Run Junk Mail Controls on Folder">
@@ -411,9 +418,7 @@
 <!ENTITY releaseCmd.accesskey "R"> 
 <!ENTITY hintsAndTips.label "&brandFullName; Help">
 <!ENTITY hintsAndTipsMac.commandkey "?">
-<!ENTITY hintsAndTips.accesskey "h">
-<!ENTITY updateCmd.accesskey  "o">
-<!ENTITY updateCmd.label      "Check for Updates...">
+<!ENTITY hintsAndTips.accesskey "h"> 
 <!ENTITY aboutCmd.label "About &brandFullName;">
 <!ENTITY aboutCmd.accesskey "A">
 
@@ -431,7 +436,6 @@
 <!ENTITY printButton.label "Print">
 <!ENTITY stopButton.label "Stop">
 <!ENTITY throbberItem.title "Activity Indicator">
-<!ENTITY updatesItem.title  "Updates">
 <!ENTITY junkButton.label "Junk">
 <!ENTITY notJunkButton.label "Not Junk">
 <!ENTITY addressBookButton.label "Address Book">
@@ -459,6 +463,8 @@
 <!-- Folder Pane -->
 <!ENTITY folderPaneHeader.label "Folders">
 <!ENTITY folderColumn.label "Name">
+<!ENTITY unreadColumn.label "Unread">
+<!ENTITY totalColumn.label "Total">
 <!ENTITY folderSizeColumn.label "Size">
 
 <!-- Folder Pane Context Menu -->
@@ -508,8 +514,7 @@
 <!-- Quick Search Menu Bar -->
 <!ENTITY searchSubjectMenu.label "Subject">
 <!ENTITY searchSenderMenu.label "Sender">
-<!ENTITY searchSubjectOrSenderMenu.label "Subject or Sender">
-<!ENTITY searchRecipient.label "To or Cc">
+<!ENTITY searchSubjectOrSenderMenu.label "Subject Or Sender">
 <!ENTITY searchMessageBody.label "Entire Message">
 <!ENTITY findInMessageMenu.label "Find In Message">
 <!ENTITY saveAsVirtualFolderMenu.label "Save Search as a Folder...">
@@ -588,17 +593,13 @@
 <!ENTITY contextAddAllToAddressBook.accesskey "A">
 
 <!-- Junk Bar -->
-<!ENTITY junkBarMessage.label "&brandShortName; thinks this message is junk.">
-<!ENTITY junkBarButton.label "This is Not Junk">
+<!ENTITY junkBarMessage.label "&brandShortName; thinks this message is junk mail">
+<!ENTITY notJunkButton.label "This is Not Junk">
 <!ENTITY junkInfoButton.label "?">
 
 <!-- Remote Content Bar -->
-<!ENTITY remoteContentMessage.label "To protect your privacy, &brandShortName; has blocked remote images in this message.">
+<!ENTITY remoteContenMessage.label "To protect your privacy, &brandShortName; has blocked remote images in this message." >
 <!ENTITY loadRemoteContentButton.label "Show Images">
-
-<!-- Phshing bar Bar -->
-<!ENTITY phishingBarMessage.label "&brandShortName; thinks this message might be an email scam.">
-<!ENTITY removePhishingBarButton.label "Not a Scam">
 
 <!-- Search Bar -->
 <!ENTITY quickSearchCmd.key "k">

@@ -40,7 +40,7 @@ topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
 VPATH		= @srcdir@
 
-include $(DEPTH)/config/autoconf.mk
+NO_GECKO_SDK=1
 
 NO_PKG_FILES = \
 	TestGtkEmbed \
@@ -57,6 +57,7 @@ NO_PKG_FILES = \
 	msmap* \
 	nm2tsv* \
 	nsinstall* \
+	regchrome* \
 	regxpcom* \
 	res/samples \
 	res/throbber \
@@ -72,24 +73,67 @@ NO_PKG_FILES = \
 	res/arrowd.gif \
 	res/boatcycle.html \
 	res/cmessage.txt \
+	res/dtd \
 	res/html \
 	res/loading-image.gif \
 	res/rdf \
 	res/viewer.properties \
 	res/viewsource.css \
+	chrome/US.jar \
 	chrome/chromelist.txt \
+	chrome/classic.jar \
+	chrome/comm.jar \
 	chrome/embed-sample.jar \
+	chrome/en-US.jar \
+	chrome/messenger.jar \
+	chrome/pipnss.jar \
+	chrome/pippki.jar \
+	chrome/toolkit.jar \
 	PalmSyncInstall.exe \
 	components/libgkplugin.so \
 	components/plugin.xpt \
 	components/gkplugin.dll \
 	$(NULL)
 
-include $(topsrcdir)/config/rules.mk
+ifeq ($(OS_ARCH), WINNT)
+NO_PKG_FILES += \
+	chrome/en-unix.jar \
+	chrome/en-mac.jar \
+	$(NULL)
+endif
 
-include $(topsrcdir)/toolkit/mozapps/installer/packager.mk
+# Before building the installer, re-make in mail/config to pick up
+# new files in dist/bin.  This is needed for Talkback.
+libs:: 
+	$(MAKE) -C ../config
 
-installer:
-ifdef INSTALLER_DIR
-	$(MAKE) -C $(INSTALLER_DIR)
+# Before building the installer, re-make in mail/config to pick up
+# new files in dist/bin.  This is needed for Talkback.
+installer:: 
+	$(MAKE) -C ../config
+
+ifeq ($(OS_ARCH), Darwin)
+MOZ_PKG_APPNAME = Thunderbird
+endif
+
+include $(DEPTH)/config/autoconf.mk
+
+include $(DEPTH)/xpinstall/packager/Makefile
+
+# Rename the archive after it's created, so that we can differentiate between
+# the gtk1 and gtk2 packages on ftp, and so the Windows package has a
+# friendlier name.
+
+ifeq ($(OS_ARCH)_$(TARGET_CPU)_$(MOZ_WIDGET_TOOLKIT)_$(MOZ_ENABLE_XFT), Linux_i686_gtk2_1)
+PACKAGE_NAME = thunderbird-i686-linux-gtk2+xft.tar.gz
+else
+ifeq ($(OS_ARCH), WINNT)
+PACKAGE_NAME = thunderbird-win32.zip
+endif
+endif
+
+ifdef PACKAGE_NAME
+libs:: $(PACKAGE)
+	@rm -f $(DIST)/$(PACKAGE_NAME)
+	@mv $(DIST)/$(PACKAGE) $(DIST)/$(PACKAGE_NAME)
 endif

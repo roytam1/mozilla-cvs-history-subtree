@@ -1,40 +1,21 @@
 # -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
-# ***** BEGIN LICENSE BLOCK *****
-# Version: MPL 1.1/GPL 2.0/LGPL 2.1
-#
-# The contents of this file are subject to the Mozilla Public License Version
-# 1.1 (the "License"); you may not use this file except in compliance with
-# the License. You may obtain a copy of the License at
-# http://www.mozilla.org/MPL/
-#
-# Software distributed under the License is distributed on an "AS IS" basis,
-# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
-# for the specific language governing rights and limitations under the
-# License.
-#
+# The contents of this file are subject to the Netscape Public
+# License Version 1.1 (the "License"); you may not use this file
+# except in compliance with the License. You may obtain a copy of
+# the License at http://www.mozilla.org/NPL/
+# 
+# Software distributed under the License is distributed on an "AS
+# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# rights and limitations under the License.
+# 
 # The Original Code is Mozilla Communicator client code, released
 # March 31, 1998.
-#
-# The Initial Developer of the Original Code is
-# Netscape Communications Corporation.
-# Portions created by the Initial Developer are Copyright (C) 1998-1999
-# the Initial Developer. All Rights Reserved.
-#
-# Contributor(s):
-#
-# Alternatively, the contents of this file may be used under the terms of
-# either the GNU General Public License Version 2 or later (the "GPL"), or
-# the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
-# in which case the provisions of the GPL or the LGPL are applicable instead
-# of those above. If you wish to allow use of your version of this file only
-# under the terms of either the GPL or the LGPL, and not to allow others to
-# use your version of this file under the terms of the MPL, indicate your
-# decision by deleting the provisions above and replace them with the notice
-# and other provisions required by the GPL or the LGPL. If you do not delete
-# the provisions above, a recipient may use your version of this file under
-# the terms of any one of the MPL, the GPL or the LGPL.
-#
-# ***** END LICENSE BLOCK *****
+# 
+# The Initial Developer of the Original Code is Netscape
+# Communications Corporation. Portions created by Netscape are
+# Copyright (C) 1998-1999 Netscape Communications Corporation. All
+# Rights Reserved.
 
 /* This is where functions related to the standalone message window are kept */
 
@@ -252,19 +233,19 @@ function OnLoadMessageWindow()
 
 function delayedOnLoadMessageWindow()
 {
-  HideMenus();
+	HideMenus();
   ShowMenus();
   AddMailOfflineObserver();
-  CreateMailWindowGlobals();
-  CreateMessageWindowGlobals();
-  verifyAccounts(null);
+	CreateMailWindowGlobals();
+	CreateMessageWindowGlobals();
+	verifyAccounts(null);
 
-  InitMsgWindow();
+	InitMsgWindow();
 
-  messenger.SetWindow(window, msgWindow);
-  InitializeDataSources();
-  // FIX ME - later we will be able to use onload from the overlay
-  OnLoadMsgHeaderPane();
+	messenger.SetWindow(window, msgWindow);
+	InitializeDataSources();
+	// FIX ME - later we will be able to use onload from the overlay
+	OnLoadMsgHeaderPane();
 
   try {
     var nsIFolderListener = Components.interfaces.nsIFolderListener;
@@ -278,9 +259,9 @@ function delayedOnLoadMessageWindow()
   var folder = null;
   var messageUri;
   var loadCustomMessage = false;       //set to true when either loading a message/rfc822 attachment or a .eml file
-  if (window.arguments)
-  {
-    if (window.arguments[0])
+	if (window.arguments)
+	{
+		if (window.arguments[0])
     {
       try
       {
@@ -300,20 +281,20 @@ function delayedOnLoadMessageWindow()
       }
 
       if (!gCurrentMessageUri)
-        gCurrentMessageUri = window.arguments[0];
+			gCurrentMessageUri = window.arguments[0];
     }
-    else
-      gCurrentMessageUri = null;
+		else
+			gCurrentMessageUri = null;
 
-    if (window.arguments[1])
-      gCurrentFolderUri = window.arguments[1];
-    else
+		if (window.arguments[1])
+			gCurrentFolderUri = window.arguments[1];
+		else
       gCurrentFolderUri = folder ? folder.URI : null;
 
     if (window.arguments[2])
       originalView = window.arguments[2];      
 
-  }	
+	}	
 
   CreateView(originalView);
   
@@ -327,32 +308,12 @@ function delayedOnLoadMessageWindow()
   setTimeout(OnLoadMessageWindowDelayed, 0, loadCustomMessage);
   
   SetupCommandUpdateHandlers();
-
-  // Ensure the Software Update item is visible on the menubar on Windows and 
-  // Linux, and on the navigation toolbar on MacOSX (since we can't put items on
-  // the menubar on OS X)... 
-  // We don't use a customizable item for the updates item so we can always be
-  // sure it's present.
-  var updateItem = document.getElementById("softwareupdate-item");
-  updateItem.parentNode.removeChild(updateItem);
-#ifdef XP_MACOSX
-  var theToolbar = document.getElementById("mail-bar");
-#else
-  var theToolbar = document.getElementById("toolbar-menubar");
-#endif
-  if (theToolbar.lastChild.id == "throbber-box")
-    theToolbar.insertBefore(updateItem, document.getElementById("throbber-box"));
-  else
-    theToolbar.appendChild(updateItem);
 }
 
 function OnLoadMessageWindowDelayed(loadCustomMessage)
 {
   if (loadCustomMessage)
-  {
-    gDBView.suppressMsgDisplay = false;
     gDBView.loadMessageByUrl(gCurrentMessageUri);
-  }
   else
   {
     var msgKey = extractMsgKeyFromURI(gCurrentMessageUri); 
@@ -401,13 +362,6 @@ function CreateView(originalView)
       msgDatabase = null;
       dbFolderInfo = null;
    }
-  }
-  else
-  {
-    // this is a hack to make opening a stand-alone msg window on a 
-    // .eml file work. We use a search view since its much more tolerant
-    // of not having a folder.
-    viewType = nsMsgViewType.eShowSearch;
   }
 
   // create a db view
@@ -552,12 +506,12 @@ function InitializeDataSources()
 
 function GetSelectedMsgFolders()
 {
-  var folderArray = new Array(1);
-  var msgFolder = GetLoadedMsgFolder();
-  if (msgFolder)
-    folderArray[0] = msgFolder;	
+	var folderArray = new Array(1);
+	var msgFolder = GetLoadedMsgFolder();
+	if (msgFolder)
+		folderArray[0] = msgFolder;	
 
-  return folderArray;
+	return folderArray;
 }
 
 function GetFirstSelectedMessage()
@@ -618,14 +572,14 @@ function GetLoadedMessage()
 //Clear everything related to the current message. called after load start page.
 function ClearMessageSelection()
 {
-  gCurrentMessageUri = null;
-  gCurrentFolderUri = null;
+	gCurrentMessageUri = null;
+	gCurrentFolderUri = null;
   UpdateMailToolbar("clear msg, std alone window");
 }
 
 function GetCompositeDataSource(command)
 {
-  return gCompositeDataSource;	
+	return gCompositeDataSource;	
 }
 
 function SetNextMessageAfterDelete()
@@ -739,38 +693,38 @@ function MsgDeleteMessageFromMessageWindow(reallyDelete, fromToolbar)
 var MessageWindowController =
 {
    supportsCommand: function(command)
-  {
-    switch ( command )
-    {
-      case "cmd_reply":
-      case "button_reply":
-      case "cmd_replySender":
-      case "cmd_replyGroup":
-      case "cmd_replyall":
-      case "button_replyall":
-      case "cmd_forward":
-      case "button_forward":
-      case "cmd_forwardInline":
-      case "cmd_forwardAttachment":
-      case "cmd_editAsNew":
-      case "cmd_delete":
+	{
+		switch ( command )
+		{
+			case "cmd_reply":
+			case "button_reply":
+			case "cmd_replySender":
+			case "cmd_replyGroup":
+			case "cmd_replyall":
+			case "button_replyall":
+			case "cmd_forward":
+			case "button_forward":
+			case "cmd_forwardInline":
+			case "cmd_forwardAttachment":
+			case "cmd_editAsNew":
+			case "cmd_delete":
       case "cmd_undo":
       case "cmd_redo":
       case "cmd_killThread":
       case "cmd_watchThread":
-      case "button_delete":
+			case "button_delete":
       case "button_junk":
-      case "cmd_shiftDelete":
-      case "cmd_saveAsFile":
-      case "cmd_saveAsTemplate":
-      case "cmd_viewPageSource":
+			case "cmd_shiftDelete":
+			case "cmd_saveAsFile":
+			case "cmd_saveAsTemplate":
+			case "cmd_viewPageSource":
       case "cmd_getMsgsForAuthAccounts":
       case "button_mark":
-      case "cmd_markAsRead":
-      case "cmd_markAllRead":
-      case "cmd_markThreadAsRead":
+			case "cmd_markAsRead":
+			case "cmd_markAllRead":
+			case "cmd_markThreadAsRead":
       case "cmd_markReadByDate":
-      case "cmd_markAsFlagged":
+			case "cmd_markAsFlagged":
       case "cmd_label0":
       case "cmd_label1":
       case "cmd_label2":
@@ -778,24 +732,23 @@ var MessageWindowController =
       case "cmd_label4":
       case "cmd_label5":
       case "button_file":
-      case "cmd_file":
+			case "cmd_file":
       case "cmd_markAsJunk":
       case "cmd_markAsNotJunk":
       case "cmd_recalculateJunkScore":
       case "cmd_applyFilters":
       case "cmd_runJunkControls":
       case "cmd_deleteJunk":
-      case "cmd_nextMsg":
+			case "cmd_nextMsg":
       case "button_next":
       case "button_previous":
-      case "cmd_nextUnreadMsg":
-      case "cmd_nextFlaggedMsg":
-      case "cmd_nextUnreadThread":
-      case "cmd_previousMsg":
-      case "cmd_previousUnreadMsg":
-      case "cmd_previousFlaggedMsg":
+			case "cmd_nextUnreadMsg":
+			case "cmd_nextFlaggedMsg":
+			case "cmd_nextUnreadThread":
+			case "cmd_previousMsg":
+			case "cmd_previousUnreadMsg":
+			case "cmd_previousFlaggedMsg":
         return !(gDBView.keyForFirstSelectedMessage == nsMsgKey_None);
-
       case "cmd_getNextNMessages":
       case "cmd_find":
       case "cmd_findAgain":

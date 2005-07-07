@@ -49,7 +49,7 @@
 #define DEFAULT_DURATION        10
 #define DEFAULT_KEY_BITS        1024
 #define MIN_KEY_BITS            512
-#define MAX_KEY_BITS            65536
+#define MAX_KEY_BITS            8192
 #define BUFFER_BYTES            MAX_KEY_BITS / 8
 #define DEFAULT_THREADS         1
 #define DEFAULT_EXPONENT        0x10001
@@ -463,7 +463,7 @@ main(int argc, char **argv)
         CERTCertDBHandle* certdb = NULL;
 	certdb = CERT_GetDefaultCertDB();
         
-        cert = PK11_FindCertFromNickname(nickname, &pwData);
+        cert = CERT_FindCertByNickname(certdb, nickname);
         if (cert == NULL) {
             fprintf(stderr,
                     "Can't find certificate by name \"%s\"\n", nickname);
@@ -542,7 +542,7 @@ main(int argc, char **argv)
         if (!privHighKey) {
             fprintf(stderr,
                     "Key generation failed in token \"%s\"\n",
-                    PK11_GetTokenName(slot));
+                    PK11_GetTokenName(privHighKey->pkcs11Slot));
             exit(1);
         }
 

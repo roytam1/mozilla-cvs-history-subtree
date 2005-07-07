@@ -1,43 +1,26 @@
 # -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-# ***** BEGIN LICENSE BLOCK *****
-# Version: MPL 1.1/GPL 2.0/LGPL 2.1
+# The contents of this file are subject to the Netscape Public
+# License Version 1.1 (the "License"); you may not use this file
+# except in compliance with the License. You may obtain a copy of
+# the License at http://www.mozilla.org/NPL/
 #
-# The contents of this file are subject to the Mozilla Public License Version
-# 1.1 (the "License"); you may not use this file except in compliance with
-# the License. You may obtain a copy of the License at
-# http://www.mozilla.org/MPL/
+# Software distributed under the License is distributed on an "AS
+# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# rights and limitations under the License.
 #
-# Software distributed under the License is distributed on an "AS IS" basis,
-# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
-# for the specific language governing rights and limitations under the
-# License.
+# The Original Code is Mozilla Communicator client code,
+# released March 31, 1998.
 #
-# The Original Code is Mozilla Communicator client code, released
-# March 31, 1998.
-#
-# The Initial Developer of the Original Code is
-# Netscape Communications Corporation.
-# Portions created by the Initial Developer are Copyright (C) 1998
-# the Initial Developer. All Rights Reserved.
+# The Initial Developer of the Original Code is Netscape Communications
+# Corporation.  Portions created by Netscape are
+# Copyright (C) 1998 Netscape Communications Corporation. All
+# Rights Reserved.
 #
 # Contributor(s):
-#   William A. ("PowerGUI") Law <law@netscape.com>
-#   Blake Ross <blakeross@telocity.com>
-#   Gervase Markham <gerv@gerv.net>
-#
-# Alternatively, the contents of this file may be used under the terms of
-# either the GNU General Public License Version 2 or later (the "GPL"), or
-# the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
-# in which case the provisions of the GPL or the LGPL are applicable instead
-# of those above. If you wish to allow use of your version of this file only
-# under the terms of either the GPL or the LGPL, and not to allow others to
-# use your version of this file under the terms of the MPL, indicate your
-# decision by deleting the provisions above and replace them with the notice
-# and other provisions required by the GPL or the LGPL. If you do not delete
-# the provisions above, a recipient may use your version of this file under
-# the terms of any one of the MPL, the GPL or the LGPL.
-#
-# ***** END LICENSE BLOCK *****
+#     William A. ("PowerGUI") Law <law@netscape.com>
+#     Blake Ross <blakeross@telocity.com>
+#     Gervase Markham <gerv@gerv.net>
 
 /*------------------------------ nsContextMenu ---------------------------------
 |   This JavaScript "class" is used to implement the browser's content-area    |
@@ -49,6 +32,7 @@
 |   longer term, this code will be restructured to make it more reusable.      |
 ------------------------------------------------------------------------------*/
 
+const kMailToLength = 7;
 
 function nsContextMenu( xulMenu ) {
     this.target         = null;
@@ -256,20 +240,74 @@ nsContextMenu.prototype = {
 
         // See if the user clicked on an image.
         if ( this.target.nodeType == Node.ELEMENT_NODE ) {
-             if ( this.target instanceof Components.interfaces.nsIImageLoadingContent &&
-                  this.target.currentURI != null ) {
+             if ( this.target.localName.toUpperCase() == "IMG" ) {
                 this.onImage = true;
-                this.imageURL = this.target.currentURI.spec;
+                this.imageURL = this.target.src;
 
                 var documentType = window._content.document.contentType;
                 if ( documentType.substr(0,6) == "image/" )
                     this.onStandaloneImage = true;
-             } else if ( this.target instanceof HTMLInputElement) {
+
+                // Look for image map.
+                var mapName = this.target.getAttribute( "usemap" );
+                if ( mapName ) {
+                    // Find map.
+                    var map = this.target.ownerDocument.getElementById( mapName.substr(1) );
+                    if ( map ) {
+                        // Search child <area>s for a match.
+                        var areas = map.childNodes;
+                        //XXX Client side image maps are too hard for now!
+                        areas.length = 0;
+                        for ( var i = 0; i < areas.length && !this.onLink; i++ ) {
+                            var area = areas[i];
+                            if ( area.nodeType == Node.ELEMENT_NODE
+                                 &&
+                                 area.localName.toUpperCase() == "AREA" ) {
+                                // Get type (rect/circle/polygon/default).
+                                var type = area.getAttribute( "type" );
+                                var coords = this.parseCoords( area );
+                                switch ( type.toUpperCase() ) {
+                                    case "RECT":
+                                    case "RECTANGLE":
+                                        break;
+                                    case "CIRC":
+                                    case "CIRCLE":
+                                        break;
+                                    case "POLY":
+                                    case "POLYGON":
+                                        break;
+                                    case "DEFAULT":
+                                        // Default matches entire image.
+                                        this.onLink = true;
+                                        this.link = area;
+                                        this.onSaveableLink = this.isLinkSaveable( this.link );
+                                        break;
+                                }
+                            }
+                        }
+                    }
+                }
+             } else if ( this.target.localName.toUpperCase() == "OBJECT"
+                         &&
+                         // See if object tag is for an image.
+                         this.objectIsImage( this.target ) ) {
+                // This is an image.
+                this.onImage = true;
+                // URL must be constructed.
+                this.imageURL = this.objectImageURL( this.target );
+             } else if ( this.target.localName.toUpperCase() == "INPUT") {
                type = this.target.getAttribute("type");
-               this.onTextInput = this.isTargetATextBox(this.target);
-            } else if ( this.target instanceof HTMLTextAreaElement ) {
+               if(type && type.toUpperCase() == "IMAGE") {
+                 this.onImage = true;
+                 // Convert src attribute to absolute URL.
+                 this.imageURL = this.makeURLAbsolute( this.target.baseURI,
+                                                       this.target.src );
+               } else /* if (this.target.getAttribute( "type" ).toUpperCase() == "TEXT") */ {
+                 this.onTextInput = this.isTargetATextBox(this.target);
+               }
+            } else if ( this.target.localName.toUpperCase() == "TEXTAREA" ) {
                  this.onTextInput = true;
-            } else if ( this.target instanceof HTMLHtmlElement ) {
+            } else if ( this.target.localName.toUpperCase() == "HTML" ) {
                // pages with multiple <body>s are lame. we'll teach them a lesson.
                var bodyElt = this.target.ownerDocument.getElementsByTagName("body")[0];
                if ( bodyElt ) {
@@ -336,11 +374,13 @@ nsContextMenu.prototype = {
         var elem = this.target;
         while ( elem ) {
             if ( elem.nodeType == Node.ELEMENT_NODE ) {
+                var localname = elem.localName.toUpperCase();
+                
                 // Link?
                 if ( !this.onLink && 
-                    ( (elem instanceof HTMLAnchorElement && elem.href) ||
-                      elem instanceof HTMLAreaElement ||
-                      elem instanceof HTMLLinkElement ||
+                    ( (localname === "A" && elem.href) ||
+                      localname === "AREA" ||
+                      localname === "LINK" ||
                       elem.getAttributeNS( "http://www.w3.org/1999/xlink", "type") == "simple" ) ) {
                     // Clicked on a link.
                     this.onLink = true;
@@ -362,12 +402,15 @@ nsContextMenu.prototype = {
                 if ( !this.onMetaDataItem ) {
                     // We currently display metadata on anything which fits
                     // the below test.
-                    if ( ( elem instanceof HTMLQuoteElement && elem.cite)    ||
-                         ( elem instanceof HTMLTableElement && elem.summary) ||
-                         ( elem instanceof HTMLModElement &&
-                             ( elem.cite || elem.dateTime ) )                ||
-                         ( elem instanceof HTMLElement &&
-                             ( elem.title || elem.lang ) ) ) {
+                    if ( ( localname === "BLOCKQUOTE" && 'cite' in elem && elem.cite)  ||
+                         ( localname === "Q" && 'cite' in elem && elem.cite)           ||
+                         ( localname === "TABLE" && 'summary' in elem && elem.summary) ||
+                         ( ( localname === "INS" || localname === "DEL" ) &&
+                           ( ( 'cite' in elem && elem.cite ) ||
+                             ( 'dateTime' in elem && elem.dateTime ) ) )               ||
+                         ( 'title' in elem && elem.title )                             ||
+                         ( 'lang' in elem && elem.lang ) ) {
+                        dump("On metadata item.\n");
                         this.onMetaDataItem = true;
                     }
                 }
@@ -567,30 +610,14 @@ nsContextMenu.prototype = {
         // Copy the comma-separated list of email addresses only.
         // There are other ways of embedding email addresses in a mailto:
         // link, but such complex parsing is beyond us.
-        
-        const kMailToLength = 7; // length of "mailto:"
-
         var url = this.linkURL();
         var qmark = url.indexOf( "?" );
         var addresses;
         
-        if ( qmark > kMailToLength ) {
+        if ( qmark > kMailToLength ) 
             addresses = url.substring( kMailToLength, qmark );
-        } else {
+        else 
             addresses = url.substr( kMailToLength );
-        }
-
-        // Let's try to unescape it using a character set
-        try {
-          var ownerDocument = new XPCNativeWrapper(this.target, "ownerDocument").ownerDocument;
-          var characterSet = new XPCNativeWrapper(ownerDocument, "characterSet").characterSet;
-          const textToSubURI = Components.classes["@mozilla.org/intl/texttosuburi;1"]
-                                         .getService(Components.interfaces.nsITextToSubURI);
-          addresses = textToSubURI.unEscapeURIForUI(characterSet, addresses);
-        }
-        catch(ex) {
-          // Do nothing.
-        }
 
         var clipboard = this.getService( "@mozilla.org/widget/clipboardhelper;1",
                                          Components.interfaces.nsIClipboardHelper );
@@ -600,7 +627,7 @@ nsContextMenu.prototype = {
       var docshell = document.getElementById( "content" ).webNavigation;
       BookmarksUtils.addBookmark( docshell.currentURI.spec,
                                   docshell.document.title,
-                                  docshell.document.characterSet,
+                                  docshell.document.charset,
                                   false );
     },
     addBookmarkForFrame : function() {
@@ -611,7 +638,7 @@ nsContextMenu.prototype = {
         title = uri;
       BookmarksUtils.addBookmark( uri,
                                   title,
-                                  doc.characterSet,
+                                  doc.charset,
                                   false );
     },
     // Open Metadata window for node
@@ -750,6 +777,26 @@ nsContextMenu.prototype = {
         return searchStr;
     },
     
+    // Determine if target <object> is an image.
+    objectIsImage : function ( objElem ) {
+        var result = false;
+        // Get type and data attributes.
+        var type = objElem.getAttribute( "type" );
+        var data = objElem.getAttribute( "data" );
+        // Presume any mime type of the form "image/..." is an image.
+        // There must be a data= attribute with an URL, also.
+        if ( type.substring( 0, 6 ) == "image/" && data && data != "" ) {
+            result = true;
+        }
+        return result;
+    },
+    // Extract image URL from <object> tag.
+    objectImageURL : function ( objElem ) {
+        // Extract url from data= attribute.
+        var data = objElem.getAttribute( "data" );
+        // Make it absolute.
+        return this.makeURLAbsolute( objElem.baseURI, data );
+    },
     // Convert relative URL to absolute, using document's <base>.
     makeURLAbsolute : function ( base, url ) {
         // Construct nsIURL.
@@ -760,6 +807,10 @@ nsContextMenu.prototype = {
         return ioService.newURI(baseURI.resolve(url), null, null).spec;
     },
 
+    // Parse coords= attribute and return array.
+    parseCoords : function ( area ) {
+        return [];
+    },
     toString : function () {
         return "contextMenu.target     = " + this.target + "\n" +
                "contextMenu.onImage    = " + this.onImage + "\n" +
@@ -770,12 +821,29 @@ nsContextMenu.prototype = {
     },
     isTargetATextBox : function ( node )
     {
-      if (node instanceof HTMLInputElement)
-        return (node.type == "text" || node.type == "password")
+      if (node.nodeType != Node.ELEMENT_NODE)
+        return false;
 
-      return (node instanceof HTMLTextAreaElement);
+      if (node.localName.toUpperCase() == "INPUT") {
+        var attrib = "";
+        var type = node.getAttribute("type");
+
+        if (type)
+          attrib = type.toUpperCase();
+
+        return( (attrib != "IMAGE") &&
+                (attrib != "CHECKBOX") &&
+                (attrib != "RADIO") &&
+                (attrib != "SUBMIT") &&
+                (attrib != "RESET") &&
+                (attrib != "HIDDEN") &&
+                (attrib != "RESET") &&
+                (attrib != "BUTTON") );
+      } else  {
+        return(node.localName.toUpperCase() == "TEXTAREA");
+      }
     },
-
+    
     // Determines whether or not the separator with the specified ID should be 
     // shown or not by determining if there are any non-hidden items between it
     // and the previous separator. 
@@ -806,7 +874,7 @@ function nsDefaultEngine()
         var pb = Components.classes["@mozilla.org/preferences-service;1"].
                    getService(Components.interfaces.nsIPrefBranch);
         var pbi = pb.QueryInterface(
-                    Components.interfaces.nsIPrefBranch2);
+                    Components.interfaces.nsIPrefBranchInternal);
         pbi.addObserver(this.domain, this, false);
 
         // reuse code by explicitly invoking initial |observe| call

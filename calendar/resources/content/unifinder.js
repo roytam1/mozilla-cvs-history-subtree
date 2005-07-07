@@ -21,11 +21,10 @@
  * Contributor(s): Garth Smedley <garths@oeone.com>
  *                 Mike Potter <mikep@oeone.com>
  *                 Chris Charabaruk <coldacid@meldstar.com>
- *                 Colin Phillips <colinp@oeone.com>
+ *						 Colin Phillips <colinp@oeone.com>
  *                 ArentJan Banck <ajbanck@planet.nl>
  *                 Eric Belhaire <eric.belhaire@ief.u-psud.fr>
  *                 Matthew Willis <mattwillis@gmail.com>
- *                 Michiel van Leeuwen <mvl@exedo.nl>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -79,6 +78,7 @@ function selectSelectedEventsInTree( EventsToSelect )
    if( EventsToSelect === false )
       EventsToSelect = gCalendarWindow.EventSelection.selectedEvents;
 
+   dump( "CALENDAR unifinder.js->on selection changed\n" );
    var SearchTree = document.getElementById( UnifinderTreeName );
       
    /* The following is a brutal hack, caused by 
@@ -121,6 +121,7 @@ function selectSelectedEventsInTree( EventsToSelect )
    }
    else
    {
+      dump( "--->>>>unifinder.js selection callback :: Clear selection\n" );
       SearchTree.view.selection.clearSelection( );
    }
    
@@ -133,55 +134,59 @@ function selectSelectedEventsInTree( EventsToSelect )
 *   display up to date when the calendar event data is changed
 */
 
-var unifinderObserver = {
-    mInBatch: false,
-
-    QueryInterface: function (aIID) {
-        if (!aIID.equals(Components.interfaces.nsISupports) &&
-            !aIID.equals(Components.interfaces.calICompositeObserver) &&
-            !aIID.equals(Components.interfaces.calIObserver))
+var unifinderEventDataSourceObserver =
+{
+   onLoad   : function()
+   {
+        if( !gICalLib.batchMode )
         {
-            throw Components.results.NS_ERROR_NO_INTERFACE;
+           refreshEventTree( getAndSetEventTable() );
         }
+   },
+   
+   onStartBatch   : function()
+   {
+   },
+    
+   onEndBatch   : function()
+   {
+        refreshEventTree( getAndSetEventTable() );
+   },
+    
+   onAddItem : function( calendarEvent )
+   {
+        if( !gICalLib.batchMode )
+        {
+            if( calendarEvent )
+            {
+               refreshEventTree( getAndSetEventTable() );
+            }
+        }
+   },
 
-        return this;
-    },
+   onModifyItem : function( calendarEvent, originalEvent )
+   {
+        if( !gICalLib.batchMode )
+        {
+            refreshEventTree( getAndSetEventTable() );
+        }
+   },
 
-    onStartBatch: function() {
-        this.mInBatch = true;
-    },
-    onEndBatch: function() {
-        this.mInBatch = false;
-        refreshEventTree();
-    },
-    onLoad: function() {
-        if (!this.mInBatch)
-            refreshEventTree();
-    },
-    onAddItem: function(aItem) {
-        if (!this.mInBatch)
-            refreshEventTree();
-    },
-    onModifyItem: function(aNewItem, aOldItem) {
-        if (!this.mInBatch)
-            refreshEventTree();
-    },
-    onDeleteItem: function(aDeletedItem) {
-        if (!this.mInBatch)
-            refreshEventTree();
-    },
-    onAlarm: function(aAlarmItem) {},
-    onError: function(aMessage) {},
+   onDeleteItem : function( calendarEvent )
+   {
+        if( !gICalLib.batchMode )
+        {
+           refreshEventTree( getAndSetEventTable() );
+        }
+   },
 
-    onCalendarAdded: function(aDeletedItem) {
-        if (!this.mInBatch)
-            refreshEventTree();
-    },
-    onCalendarRemoved: function(aDeletedItem) {
-        if (!this.mInBatch)
-            refreshEventTree();
-    },
-    onDefaultCalendarChanged: function(aNewDefaultCalendar) {}
+   onAlarm : function( calendarEvent )
+   {
+      
+   },
+   onError : function()
+   {
+   }
 };
 
 
@@ -203,10 +208,7 @@ function prepareCalendarUnifinder( )
    gCalendarWindow.EventSelection.addObserver( unifinderEventSelectionObserver );
    
    // set up our calendar event observer
-   
-   var ccalendar = getDisplayComposite();
-   ccalendar.addObserver(unifinderObserver);
-   refreshEventTree(); //Display something upon first load. onLoad doesn't work properly for observers
+   gICalLib.addObserver( unifinderEventDataSourceObserver );
 }
 
 /**
@@ -215,9 +217,7 @@ function prepareCalendarUnifinder( )
 
 function finishCalendarUnifinder( )
 {
-  //gICalLib.removeObserver( unifinderEventDataSourceObserver  );
-   var ccalendar = getDisplayComposite();
-   ccalendar.removeObserver(unifinderObserver);
+   gICalLib.removeObserver( unifinderEventDataSourceObserver  );
 }
 
 /**
@@ -272,6 +272,8 @@ function getCalendarEventFromEvent( event )
 
 function unifinderOnSelect( event )
 {
+   dump( "in unifinder onselect\n" );
+
    if( event.target.view.selection.getRangeCount() == 0 )
        return;
 
@@ -306,7 +308,7 @@ function unifinderOnSelect( event )
    if( ArrayOfEvents.length == 1 )
    {
       /*start date is either the next or last occurence, or the start date of the event */
-      var eventStartDate = calendarEvent.startDate.jsDate;
+      var eventStartDate = getCurrentNextOrPreviousRecurrence( calendarEvent );
       
       /* you need this in case the current day is not visible. */
       if( gCalendarWindow.currentView.getVisibleEvent( calendarEvent ) == false )
@@ -330,18 +332,21 @@ var gSearchTimeout = null;
 
 function searchKeyPress( searchTextItem, event )
 {
-    // 13 == return
-    if (event && event.keyCode == 13) {
-        clearSearchTimer();
-        refreshEventTreeInternal();
-        return;
-    }
+   // 13 == return
+   if (event && event.keyCode == 13) 
+   {
+     clearSearchTimer();
+     doSearch();
+     return;
+   }
     
     // always clear the old one first
-    clearSearchTimer();
+    
+   clearSearchTimer();
    
-    // make a new timer
-    gSearchTimeout = setTimeout( "refreshEventTreeInternal()", 400 );
+   // make a new timer
+   
+   gSearchTimeout = setTimeout( "doSearch()", 400 );
 }
 
 function clearSearchTimer( )
@@ -353,13 +358,100 @@ function clearSearchTimer( )
    }
 }
 
+function doSearch( )
+{
+   var eventTable = new Array();
+
+   var searchText = document.getElementById( "unifinder-search-field" ).value;
+   
+   if ( searchText.length <= 0 ) 
+   {
+      eventTable = gEventSource.currentEvents;
+   }
+   else if ( searchText == " " ) 
+   {
+      searchText = "";
+      document.getElementById( "unifinder-search-field" ).value = '';
+      return;
+   }
+   else
+   {
+      var FieldsToSearch = new Array( "title", "description", "location", "categories" );
+      eventTable = gEventSource.search( searchText, FieldsToSearch );
+   }
+   
+   if( document.getElementById( "erase_command" ) )
+   {
+      if( searchText.length <= 0 )
+         document.getElementById( "erase_command" ).setAttribute( "disabled", "true" );
+      else
+         document.getElementById( "erase_command" ).removeAttribute( "disabled" );
+   }
+   refreshEventTree( eventTable );
+}
+
+
 /*
 ** This function returns the event table. The event table also gets set in the gEventSource
 */
 
+function getAndSetEventTable( )
+{
+   var Today = new Date();
+   //do this to allow all day events to show up all day long
+   var StartDate = new Date( Today.getFullYear(), Today.getMonth(), Today.getDate(), 0, 0, 0 );
+   var EndDate;
+
+   switch( document.getElementById( "event-filter-menulist" ).selectedItem.value )
+   {
+      case "all":
+         return( gEventSource.getAllEvents() );
+         
+      case "today":
+         EndDate = new Date( StartDate.getTime() + ( 1000 * 60 * 60 * 24 ) - 1 );
+         return( gEventSource.getEventsForRange( StartDate, EndDate ) );
+         
+      case "next7Days":
+         EndDate = new Date( StartDate.getTime() + ( 1000 * 60 * 60 * 24 * 8 ) );
+         return( gEventSource.getEventsForRange( StartDate, EndDate ) );
+         
+      case "next14Days":
+         EndDate = new Date( StartDate.getTime() + ( 1000 * 60 * 60 * 24 * 15 ) );
+         return( gEventSource.getEventsForRange( StartDate, EndDate ) );
+         
+      case "next31Days":
+         EndDate = new Date( StartDate.getTime() + ( 1000 * 60 * 60 * 24 * 32 ) );
+         return( gEventSource.getEventsForRange( StartDate, EndDate ) );
+         
+      case "thisCalendarMonth":
+         // midnight on first day of this month
+         var startOfMonth = new Date( Today.getFullYear(), Today.getMonth(), 1, 0, 0, 0 );
+         // midnight on first day of next month
+         var startOfNextMonth = new Date( Today.getFullYear(), (Today.getMonth() + 1), 1, 0, 0, 0 );
+         // 23:59:59 on last day of this month
+         var endOfMonth = new Date( startOfNextMonth.getTime() - 1000 );
+         return( gEventSource.getEventsForRange( startOfMonth, endOfMonth ) );
+
+      case "future":
+         return( gEventSource.getAllFutureEvents() );
+      
+      case "current":
+         var SelectedDate = gCalendarWindow.getSelectedDate();
+         var MidnightSelectedDate = new Date( SelectedDate.getFullYear(), SelectedDate.getMonth(), SelectedDate.getDate(), 0, 0, 0 );
+         EndDate = new Date( MidnightSelectedDate.getTime() + ( 1000 * 60 * 60 * 24 ) - 1000 );
+         return( gEventSource.getEventsForRange( MidnightSelectedDate, EndDate ) );
+      
+      default: 
+         dump( "there's no case for "+document.getElementById( "event-filter-menulist" ).selectedItem.value+"\n" );
+         return( eventTable = new Array() );
+   }
+}
+
 function changeEventFilter( event )
 {
-   refreshEventTree();
+   getAndSetEventTable()
+   
+   doSearch();
 
    /* The following isn't exactly right. It should actually reload after the next event happens. */
 
@@ -370,7 +462,7 @@ function changeEventFilter( event )
    
    var milliSecsTillTomorrow = tomorrow.getTime() - now.getTime();
    
-   setTimeout( "refreshEventTree()", milliSecsTillTomorrow );
+   setTimeout( "refreshEventTree( getAndSetEventTable() )", milliSecsTillTomorrow );
 }
 
 /**
@@ -394,6 +486,7 @@ var treeView =
    getImageSrc : function(){return false;},
    cycleHeader : function(col, element) // element parameter used in Moz1.7-
    {                                    // not in Moz1.8+
+      //dump( "in cycle header\n" );
       var sortActive;
       var treeCols;
    
@@ -445,19 +538,18 @@ var treeView =
             return( calendarEvent.title );
          
          case "unifinder-search-results-tree-col-startdate":
-            var eventStartDate = calendarEvent.startDate.jsDate;
-            // XXX reimplement
-            //var eventStartDate = getCurrentNextOrPreviousRecurrence( calendarEvent );
-            return formatUnifinderEventDateTime(eventStartDate, calendarEvent.isAllDay);
+            var eventStartDate = getCurrentNextOrPreviousRecurrence( calendarEvent );
+            return formatUnifinderEventDateTime(eventStartDate, calendarEvent.allDay);
          
          case "unifinder-search-results-tree-col-enddate":
-            var eventEndDate = calendarEvent.endDate.jsDate;
-            // XXX reimplement
-            //var eventEndDate = getCurrentNextOrPreviousRecurrence( calendarEvent );
-            if (calendarEvent.isAllDay) // display enddate is ical enddate - 1
+            var eventEndDate = getCurrentNextOrPreviousRecurrence( calendarEvent );
+            var eventLength = calendarEvent.end.getTime() - calendarEvent.start.getTime();
+            var actualEndDate = eventEndDate.getTime() + eventLength;
+            eventEndDate = new Date( actualEndDate );
+            if (calendarEvent.allDay) // display enddate is ical enddate - 1
                //user-enddate is ical-enddate - 1
                eventEndDate.setDate( eventEndDate.getDate() - 1 );
-            return formatUnifinderEventDateTime(eventEndDate, calendarEvent.isAllDay);         
+            return formatUnifinderEventDateTime(eventEndDate, calendarEvent.allDay);         
 
          case "unifinder-search-results-tree-col-categories":
             return( calendarEvent.categories );
@@ -468,8 +560,12 @@ var treeView =
          case "unifinder-search-results-tree-col-status":
             return getEventStatusString(calendarEvent);
 
-        case "unifinder-search-results-tree-col-calendarname":
-          return calendarEvent.calendar.name;
+        case "unifinder-search-results-tree-col-filename":
+            var thisCalendar = gCalendarWindow.calendarManager.getCalendarByName( calendarEvent.parent.server );
+            if( thisCalendar )
+                return( thisCalendar.getAttribute( "http://home.netscape.com/NC-rdf#name" ) );
+            else
+                return( "" );
 
          default: 
             return false;
@@ -509,9 +605,6 @@ function compareEvents( eventA, eventB )
       case "unifinder-search-results-tree-col-status":
          return compareString(eventA.status, eventB.status) * modifier;
 
-      case "unifinder-search-results-tree-col-calendarname":
-        return compareString(eventA.parent.name, eventB.parent.name) * modifier;
-
       default:
          return 0;
    }
@@ -529,13 +622,11 @@ function nullToEmpty(value) {
 }
 
 function compareMSTime(a, b) {
-  return ((a < b) ? -1 :
-          (a > b) ?  1 : 0);
+  return ((a < b) ? -1 :      // avoid underflow problems of subtraction
+          (a > b) ?  1 : 0); 
 }
 
 function msNextOrPreviousRecurrenceStart( calendarEvent ) {
-  return calendarEvent.startDate.nativeTime;
-  // XXX reimplement the following
   if (calendarEvent.recur && calendarEvent.start) {
     treeView.outParameter.value = null; // avoid creating objects during sort
     if (calendarEvent.getNextRecurrence(treeView.sortStartedTime,
@@ -549,7 +640,7 @@ function msNextOrPreviousRecurrenceStart( calendarEvent ) {
 
 function msNextOrPreviousRecurrenceEnd(event) {
   var msNextStart = msNextOrPreviousRecurrenceStart(event);
-  var msDuration=dateToMilliseconds(event.endDate)-dateToMilliseconds(event.startDate);
+  var msDuration=dateToMilliseconds(event.end)-dateToMilliseconds(event.start);
   return msNextStart + msDuration;
 }
 
@@ -588,111 +679,7 @@ calendarEventView.prototype.getRowOfCalendarEvent = function( Event )
 
 function refreshEventTree( eventArray )
 {
-   var savedThis = this;
-   var refreshListener = {
-       mEventArray: new Array(),
-
-       onOperationComplete: function (aCalendar, aStatus, aOperationType, aId, aDateTime) {
-           setTimeout(function () { refreshEventTreeInternal(refreshListener.mEventArray); }, 0);
-       },
-
-       onGetResult: function (aCalendar, aStatus, aItemType, aDetail, aCount, aItems) {
-           for (var i = 0; i < aCount; i++) {
-               refreshListener.mEventArray.push(aItems[i]);
-           }
-       }
-   };
-
-   var Today = new Date();
-   //do this to allow all day events to show up all day long
-   var StartDate = new Date( Today.getFullYear(), Today.getMonth(), Today.getDate(), 0, 0, 0 );
-   var EndDate;
-
-   var ccalendar = getDisplayComposite();
-   var filter = 0;
-
-   filter |= ccalendar.ITEM_FILTER_TYPE_EVENT;
-
-   switch( document.getElementById( "event-filter-menulist" ).selectedItem.value )
-   {
-      case "all":
-         StartDate = null;
-         EndDate = null;
-         break;
-         
-      case "today":
-         EndDate = new Date( StartDate.getTime() + ( 1000 * 60 * 60 * 24 ) - 1 );
-         break;
-         
-      case "next7Days":
-         EndDate = new Date( StartDate.getTime() + ( 1000 * 60 * 60 * 24 * 8 ) );
-         break;
-         
-      case "next14Days":
-         EndDate = new Date( StartDate.getTime() + ( 1000 * 60 * 60 * 24 * 15 ) );
-         break;
-         
-      case "next31Days":
-         EndDate = new Date( StartDate.getTime() + ( 1000 * 60 * 60 * 24 * 32 ) );
-         break;
-         
-      case "thisCalendarMonth":
-         // midnight on first day of this month
-         var startOfMonth = new Date( Today.getFullYear(), Today.getMonth(), 1, 0, 0, 0 );
-         // midnight on first day of next month
-         var startOfNextMonth = new Date( Today.getFullYear(), (Today.getMonth() + 1), 1, 0, 0, 0 );
-         // 23:59:59 on last day of this month
-         EndDate = new Date( startOfNextMonth.getTime() - 1000 );
-         StartDate = startOfMonth;
-         break;
-
-      case "future":
-         EndDate = null;
-         break;
-
-      case "current":
-         var SelectedDate = gCalendarWindow.getSelectedDate();
-         StartDate = new Date( SelectedDate.getFullYear(), SelectedDate.getMonth(), SelectedDate.getDate(), 0, 0, 0 );
-         EndDate = new Date( MidnightSelectedDate.getTime() + ( 1000 * 60 * 60 * 24 ) - 1000 );
-         break;
-      
-      default: 
-         dump( "there's no case for "+document.getElementById( "event-filter-menulist" ).selectedItem.value+"\n" );
-         EndDate = StartDate;
-         break;
-   }
-   var s = StartDate ? jsDateToDateTime(StartDate) : null;
-   var e = EndDate ? jsDateToDateTime(EndDate) : null;
-   if (StartDate && EndDate) {
-       filter |= ccalendar.ITEM_FILTER_CLASS_OCCURRENCES;
-   }
-   ccalendar.getItems (filter, 0, s, e, refreshListener);
-
-}
-
-function refreshEventTreeInternal(eventArray)
-{
-   var searchText = document.getElementById( "unifinder-search-field" ).value;
-
-   // XXX match for strings with only whitespace. Skip those too
-   if (searchText.length) {
-       gEventArray = new Array();
-       var fieldsToSearch = new Array("description", "location", "categories" );
-
-       for (var j in eventArray) {
-           var event = eventArray[j];
-           if (event.title && 
-               event.title.toLowerCase().indexOf(searchText) != -1 )
-               gEventArray.push(event);
-           for (var k in fieldsToSearch) {
-               var val = event.getProperty(fieldsToSearch[k]);
-               if (val && val.toLowerCase().indexOf(searchText) != -1 )
-                   gEventArray.push(event);
-           }
-       }
-   } else {
-       gEventArray = eventArray;
-   }
+   gEventArray = eventArray;
 
    treeView.rowCount = gEventArray.length;
       
@@ -741,5 +728,20 @@ function focusFirstItemIfNoSelection()
          gCalendarWindow.currentView.goToDay( eventStartDate, true);
       }
    }
+}
+
+function changeToolTipTextForEvent( event )
+{
+   var thisEvent = getCalendarEventFromEvent( event );
+   
+   var toolTip = document.getElementById( "eventTreeListTooltip" );
+
+   while( toolTip.hasChildNodes() )
+   {
+      toolTip.removeChild( toolTip.firstChild );
+   }
+   var holderBox = getPreviewForEvent( thisEvent );
+   if (holderBox)
+     toolTip.appendChild( holderBox );
 }
 

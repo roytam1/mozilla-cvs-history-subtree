@@ -1,52 +1,53 @@
 <?xml version="1.0"?>
 <!-- ***** BEGIN LICENSE BLOCK *****
-   - Version: MPL 1.1/GPL 2.0/LGPL 2.1
-   -
-   - The contents of this file are subject to the Mozilla Public License Version
-   - 1.1 (the "License"); you may not use this file except in compliance with
-   - the License. You may obtain a copy of the License at
-   - http://www.mozilla.org/MPL/
-   -
-   - Software distributed under the License is distributed on an "AS IS" basis,
-   - WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
-   - for the specific language governing rights and limitations under the
-   - License.
-   -
-   - The Original Code is OEone Calendar Code, released October 31st, 2001.
-   -
-   - The Initial Developer of the Original Code is
-   - OEone Corporation.
-   - Portions created by the Initial Developer are Copyright (C) 2001
-   - the Initial Developer. All Rights Reserved.
-   -
-   - Contributor(s): Garth Smedley <garths@oeone.com> 
-   -                 Mike Potter <mikep@oeone.com>
-   -                 Colin Phillips <colinp@oeone.com>
-   -                 Chris Charabaruk <coldacid@djfly.org>
-   -                 Karl Guertin <grayrest@grayrest.com> 
-   -                 Dan Parent <danp@oeone.com> 
-   -                 ArentJan Banck <ajbanck@planet.nl> 
-   -                 Eric Belhaire <belhaire@ief.u-psud.fr>
-   -
-   - Alternatively, the contents of this file may be used under the terms of
-   - either the GNU General Public License Version 2 or later (the "GPL"), or
-   - the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
-   - in which case the provisions of the GPL or the LGPL are applicable instead
-   - of those above. If you wish to allow use of your version of this file only
-   - under the terms of either the GPL or the LGPL, and not to allow others to
-   - use your version of this file under the terms of the MPL, indicate your
-   - decision by deleting the provisions above and replace them with the notice
-   - and other provisions required by the LGPL or the GPL. If you do not delete
-   - the provisions above, a recipient may use your version of this file under
-   - the terms of any one of the MPL, the GPL or the LGPL.
-   -
-   - ***** END LICENSE BLOCK ***** -->
+  - Version: MPL 1.1/GPL 2.0/LGPL 2.1
+  -
+  - The contents of this file are subject to the Mozilla Public License Version
+  - 1.1 (the "License"); you may not use this file except in compliance with
+  - the License. You may obtain a copy of the License at
+  - http://www.mozilla.org/MPL/
+  -
+  - Software distributed under the License is distributed on an "AS IS" basis,
+  - WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+  - for the specific language governing rights and limitations under the
+  - License.
+  -
+  - The Original Code is OEone Calendar Code, released October 31st, 2001.
+  -
+  - The Initial Developer of the Original Code is
+  - OEone Corporation.
+  - Portions created by the Initial Developer are Copyright (C) 2001
+  - the Initial Developer. All Rights Reserved.
+  -
+  - Contributor(s): Garth Smedley <garths@oeone.com> 
+  -                 Mike Potter <mikep@oeone.com>
+  -                 Colin Phillips <colinp@oeone.com>
+  -                 Chris Charabaruk <coldacid@djfly.org>
+  -                 Karl Guertin <grayrest@grayrest.com> 
+  -                 Dan Parent <danp@oeone.com> 
+  -                 ArentJan Banck <ajbanck@planet.nl> 
+  -                 Eric Belhaire <belhaire@ief.u-psud.fr>
+  -
+  - Alternatively, the contents of this file may be used under the terms of
+  - either the GNU General Public License Version 2 or later (the "GPL"), or
+  - the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+  - in which case the provisions of the GPL or the LGPL are applicable instead
+  - of those above. If you wish to allow use of your version of this file only
+  - under the terms of either the GPL or the LGPL, and not to allow others to
+  - use your version of this file under the terms of the MPL, indicate your
+  - decision by deleting the provisions above and replace them with the notice
+  - and other provisions required by the LGPL or the GPL. If you do not delete
+  - the provisions above, a recipient may use your version of this file under
+  - the terms of any one of the MPL, the GPL or the LGPL.
+  -
+  - ***** END LICENSE BLOCK ***** -->
 
 <!-- Style sheets -->
 
 <?xml-stylesheet href="chrome://global/skin/global.css" type="text/css"?> 
 <?xml-stylesheet href="chrome://calendar/skin/calendar.css" type="text/css"?>
 <?xml-stylesheet href="chrome://calendar/content/datetimepickers/minimonth.css" type="text/css"?>
+<?xml-stylesheet href="chrome://communicator/skin/communicator.css" type="text/css"?>
 
 <!-- Overlays -->
 <?xul-overlay href="chrome://global/content/globalOverlay.xul"?>
@@ -90,8 +91,6 @@
   <command id="modify_command" oncommand="editEventCommand()" disabled="true" disabledwhennoeventsselected="true"/>
   <command id="send_event_command" oncommand="sendEvent()" disabled="true" disabledwhennoeventsselected="true"/>
   <command id="print_command" oncommand="print()"/>
-  <command id="undo_command" oncommand="undo()" disabled="true"/>
-  <command id="redo_command" oncommand="redo()" disabled="true"/>
   <command id="cut_command" oncommand="cutToClipboard()" disabled="true" disabledwhennoeventsselected="true"/>
   <command id="copy_command" oncommand="copyToClipboard()" disabled="true" disabledwhennoeventsselected="true"/>
   <command id="paste_command" oncommand="pasteFromClipboard()"/>
@@ -101,9 +100,13 @@
   <command id="modify_todo_command" oncommand="modifyToDoCommand( event )"/>
   <command id="delete_todo_command" oncommand="deleteToDoCommand()" disabled="true"/>
 
-  <command id="new_calendar_command" oncommand="newCalendarDialog()"/>
-  <command id="edit_calendar_command" oncommand="editCalendarDialog(event)"/>
-  <command id="delete_calendar_command" oncommand="deleteCalendar(event)"/>
+  <command id="new_local_calendar_command" oncommand="gCalendarWindow.calendarManager.launchNewCalendarFileDialog()"/>
+  <command id="open_local_calendar_command" oncommand="gCalendarWindow.calendarManager.launchOpenCalendarFileDialog()"/>
+  <command id="edit_local_calendar_command" oncommand="gCalendarWindow.calendarManager.launchEditCalendarDialog()"/>
+  <command id="new_server_command" oncommand="gCalendarWindow.calendarManager.launchAddRemoteCalendarDialog()"/>
+  <command id="edit_server_command" oncommand="gCalendarWindow.calendarManager.launchEditRemoteCalendarDialog()"/>
+  <command id="delete_server_command" oncommand="deleteCalendar()"/>
+  <command id="find_new_calendar_command" oncommand="goFindNewCalendars()"/>
 
   <command id="next_command" oncommand="gCalendarWindow.currentView.goToNext()"/>
   <command id="previous_command" oncommand="gCalendarWindow.currentView.goToPrevious()"/>
@@ -132,9 +135,6 @@
   <command id="minimizeWindowCmd" oncommand="window.minimize();"/>
   <command id="zoomWindowCmd" oncommand="zoomWindow();"/>
 #endif
-
-  <command id="timezone_command" oncommand="openTimezoneWindow()"/>
-
 </commandset>
 
 <keyset>
@@ -151,12 +151,6 @@
 #endif
   <key id="print_key"            key="&calendar.print.key;"              observes="print_command"               modifiers="accel"/>
 
-  <key id="key_undo"             key="&calendar.undo.key;"               observes="undo_command"                modifiers="accel"/>
-#ifdef XP_UNIX
-  <key id="key_redo"             key="&calendar.undo.key;"               observes="redo_command"                modifiers="accel,shift"/>
-#else
-  <key id="key_redo"             key="&calendar.redo.key;"               observes="redo_command"                modifiers="accel"/>
-#endif
   <key id="key_cut"              key="&calendar.cut.key;"                observes="cut_command"                 modifiers="accel"/>
   <key id="key_copy"             key="&calendar.copy.key;"               observes="copy_command"                modifiers="accel"/>
   <key id="key_paste"            key="&calendar.paste.key;"              observes="paste_command"               modifiers="accel"/>
@@ -204,11 +198,14 @@
 
 <!-- Javascript includes -->
 
+<script type="application/x-javascript" src="chrome://calendar/content/jslib/jslib.js"/>
+<script type="application/x-javascript" src="chrome://communicator/content/utilityOverlay.js"/>
+
 <!-- NEEDED FOR DRAG AND DROP SUPPORT -->
 <script type="application/x-javascript" src="chrome://calendar/content/dragDrop.js"/>
 
 <!-- NEEDED FOR MULTIPLE CALENDAR SUPPORT -->
-<script type="application/x-javascript" src="chrome://calendar/content/calendarManagement.js"/>
+<script type="application/x-javascript" src="chrome://calendar/content/calendarManager.js"/>
 
 <!-- NEEDED FOR CLIPBOARD SUPPORT -->
 <script type="application/x-javascript" src="chrome://calendar/content/clipboard.js"/>
@@ -225,7 +222,6 @@
 <!-- NEEDED FOR DATE UTILS -->
 <script type="application/x-javascript" src="chrome://calendar/content/dateUtils.js"/>
 
-<script type="application/x-javascript" src="chrome://calendar/content/calendarUtils.js"/>
 <script type="application/x-javascript" src="chrome://calendar/content/calendar.js"/>
 <script type="application/x-javascript" src="chrome://calendar/content/calendarEvent.js"/>
 <script type="application/x-javascript" src="chrome://calendar/content/calendarSelection.js"/>
@@ -243,7 +239,6 @@
 <!-- NEEDED FOR APPLICATION SUPPORT -->
 <script type="application/x-javascript" src="chrome://calendar/content/applicationUtil.js"/>
 <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
-<script type="application/x-javascript" src="chrome://communicator/content/utilityOverlay.js"/>
 
 <!-- GENERAL CONTEXT MENU -->
 <popup id="context-menu"
@@ -404,13 +399,13 @@
 <popup id="calendarlist-context-menu">
   <menuitem label="&calendar.context.newserver.label;"
             accesskey="&calendar.context.newserver.accesskey;"
-            observes="new_calendar_command"/>
+            observes="new_local_calendar_command"/>
   <menuitem label="&calendar.context.editserver.label;"
             accesskey="&calendar.context.editserver.accesskey;"
-            observes="edit_calendar_command"/>
+            observes="edit_local_calendar_command"/>
   <menuitem label="&calendar.context.deleteserver.label;"
             accesskey="&calendar.context.deleteserver.accesskey;"
-            observes="delete_calendar_command"/>
+            observes="delete_server_command"/>
   <menuitem label="&calendar.context.reloadserver.label;"
             accesskey="&calendar.context.reloadserver.accesskey;"
             observes="reload_remote_calendars"/>
@@ -479,15 +474,15 @@
 </toolbox>
 
 <!-- tooltips to show cropped text behave as a titletip: don't hide until mouse moved away -->
-<tooltip id="eventTreeTooltip"
-         onpopupshowing="return onMouseOverEventTree( this, event )"
+<tooltip id="eventTreeListTooltip"
+         onpopupshowing="changeToolTipTextForEvent( event );return( checkTooltip( event ) );"
          noautohide="true"/>
 
-<tooltip id="taskTreeTooltip"
-         onpopupshowing="return onMouseOverTaskTree( this, event )"
+<tooltip id="eventTooltip"
          noautohide="true"/>
 
-<tooltip id="gridOccurrenceTooltip"
+<tooltip id="taskTooltip"
+         onpopupshowing="changeToolTipTextForToDo( event );return( checkTooltip( event ) );"
          noautohide="true"/>
 
 <!-- V I S I B L E  C O N T E N T  -->
@@ -525,12 +520,33 @@
           <tabpanel>
             <!--<vbox id="left-hand-above-splitter" flex="1">-->
             <listbox id="list-calendars-listbox" class="unifinder-tree-class" flex="1" 
-                     contextmenu="calendarlist-context-menu">
+                     contextmenu="calendarlist-context-menu" datasources="rdf:null" ref="urn:calendarcontainer">
+              <listhead>
+                <listheader flex="1" crop="end" label="&calendar.calendarlistbox.label;"/>
+                <listheader/>
+              </listhead>
               <listcols>
-                <listcol/>
-                <listcol/>
                 <listcol flex="1"/>
+                <listcol/>
               </listcols>
+              <template>
+                <rule>   
+                  <listitem uri="rdf:*" 
+                            calendarPath="rdf:http://home.netscape.com/NC-rdf#path"
+                            onclick="switchCalendar( event );">
+                    <listcell class="calendar-list-item-class"
+                              label="rdf:http://home.netscape.com/NC-rdf#name"
+                              flex="1"
+                              type="checkbox"
+                              checked="rdf:http://home.netscape.com/NC-rdf#active"/>
+                    <!-- If you add something between the above listcell and this listcell,
+                         or between the next listcell and the image tag, you have to modify calendarManager.js -->
+                    <listcell>
+                      <image class="calendar-list-item-class"/>
+                    </listcell>
+                  </listitem>
+                </rule>
+              </template>
             </listbox>
             <!--</vbox>-->
           </tabpanel>
@@ -545,7 +561,7 @@
           <label flex="1" crop="end" style="font-weight: bold" value="&calendar.unifinder.todoitems.label;"/>
         </box>
         <box align="center">
-          <checkbox id="hide-completed-checkbox"
+          <checkbox id="only-completed-checkbox"
                     label="&calendar.unifinder.hidecompletedtodos.label;"
                     flex="1"
                     crop="end"
@@ -596,27 +612,9 @@
                      persist="hidden ordinal width sortDirection sortActive" 
                      hidden="true"
                      flex="1" label="&calendar.unifinder.tree.categories.label;"/>
-            <splitter class="tree-splitter"/>
-            <treecol id="unifinder-todo-tree-col-location"
-                     persist="hidden ordinal width sortDirection sortActive" 
-                     flex="1"
-                     hidden="true"
-                     label="&calendar.unifinder.tree.location.label;"/>
-            <splitter class="tree-splitter"/>
-            <treecol id="unifinder-todo-tree-col-status"
-                     persist="hidden ordinal width sortDirection sortActive" 
-                     flex="1"
-                     hidden="true"
-                     label="&calendar.unifinder.tree.status.label;"/>
-            <splitter class="tree-splitter"/>
-            <treecol id="unifinder-todo-tree-col-calendarname"
-                     persist="hidden ordinal width sortDirection sortActive" 
-                     flex="1"
-                     hidden="true"
-                     label="&calendar.unifinder.tree.calendarname.label;"/>
           </treecols>
        
-          <treechildren tooltip="taskTreeTooltip"
+          <treechildren tooltip="taskTooltip"
                         onmousedown="unifinderMouseDownToDo( event )"/>
         </tree>
       </vbox>
@@ -702,16 +700,15 @@
                      flex="1"
                      hidden="true"
                      label="&calendar.unifinder.tree.status.label;"/>
-            <splitter class="tree-splitter"/>
-            <treecol id="unifinder-search-results-tree-col-calendarname"
+            <treecol id="unifinder-search-results-tree-col-filename"
                      persist="hidden ordinal width sortDirection sortActive" 
                      flex="1"
                      hidden="true"
-                     label="&calendar.unifinder.tree.calendarname.label;"/>
+                     label="&calendar.unifinder.tree.filename.label;"/>
           </treecols>
 
           <!-- on mousedown here happens before onclick above -->
-          <treechildren tooltip="eventTreeTooltip" 
+          <treechildren tooltip="eventTreeListTooltip" 
                         onkeypress="if (event.keyCode == 13) unifinderEditCommand();"
                         ondragover="return( false );"  
                         ondblclick="unifinderDoubleClickEvent( event )"

@@ -1,43 +1,28 @@
 # -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
-# ***** BEGIN LICENSE BLOCK *****
-# Version: MPL 1.1/GPL 2.0/LGPL 2.1
-#
-# The contents of this file are subject to the Mozilla Public License Version
-# 1.1 (the "License"); you may not use this file except in compliance with
-# the License. You may obtain a copy of the License at
-# http://www.mozilla.org/MPL/
-#
-# Software distributed under the License is distributed on an "AS IS" basis,
-# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
-# for the specific language governing rights and limitations under the
-# License.
-#
+# The contents of this file are subject to the Netscape Public
+# License Version 1.1 (the "License"); you may not use this file
+# except in compliance with the License. You may obtain a copy of
+# the License at http://www.mozilla.org/NPL/
+# 
+# Software distributed under the License is distributed on an "AS
+# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# rights and limitations under the License.
+# 
 # The Original Code is Mozilla Communicator client code, released
 # March 31, 1998.
+# 
+# The Initial Developer of the Original Code is Netscape
+# Communications Corporation. Portions created by Netscape are
+# Copyright (C) 1998-1999 Netscape Communications Corporation. All
+# Rights Reserved.
 #
-# The Initial Developer of the Original Code is
-# Netscape Communications Corporation.
-# Portions created by the Initial Developer are Copyright (C) 1998-1999
-# the Initial Developer. All Rights Reserved.
+# Original Author:
+#   Paul Hangas <hangas@netscape.com>
 #
 # Contributor(s):
-#   Paul Hangas <hangas@netscape.com>
 #   Alec Flett <alecf@netscape.com>
 #   Seth Spitzer <sspitzer@netscape.com>
-#
-# Alternatively, the contents of this file may be used under the terms of
-# either the GNU General Public License Version 2 or later (the "GPL"), or
-# the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
-# in which case the provisions of the GPL or the LGPL are applicable instead
-# of those above. If you wish to allow use of your version of this file only
-# under the terms of either the GPL or the LGPL, and not to allow others to
-# use your version of this file under the terms of the MPL, indicate your
-# decision by deleting the provisions above and replace them with the notice
-# and other provisions required by the GPL or the LGPL. If you do not delete
-# the provisions above, a recipient may use your version of this file under
-# the terms of any one of the MPL, the GPL or the LGPL.
-#
-# ***** END LICENSE BLOCK *****
 
 //NOTE: gAddressBookBundle must be defined and set or this Overlay won't work
 
@@ -235,17 +220,16 @@ function DisplayCardViewPane(card)
   var goimURL = "aim:goim?screenname=" + card.aimScreenName;
   var hasScreenName = HandleLink(data.cvScreenname, zScreenName, card.aimScreenName, data.cvScreennameBox, goimURL);
   
-  data.cvAimPresence.removeAttribute("src");
-  data.cvAimPresence.removeAttribute("url");
-  data.cvAimPresence.setAttribute("width","0");
-
-#if 0
-    // for now, disable the presence check since we don't really support this anymore but we may again in the future. 
-    // I'm leaving the code here for historical reference. See Bug #295726.
+  if (!hasScreenName || gIOService.offline) {
+    data.cvAimPresence.removeAttribute("src");
+    data.cvAimPresence.removeAttribute("url");
+    data.cvAimPresence.setAttribute("width","0");
+  }
+  else {
     data.cvAimPresence.setAttribute("src","http://big.oscar.aol.com:80/" + card.aimScreenName + "?on_url=http://ncmail.netscape.com/include/nc/images/online.gif&off_url=http://ncmail.netscape.com/include/nc/images/offline.gif");   
     data.cvAimPresence.setAttribute("url", goimURL);
     data.cvAimPresence.setAttribute("width","16");
-#endif
+  }
 
   visible = hasScreenName || visible;
   visible = HandleLink(data.cvEmail2, zSecondaryEmail, card.secondEmail, data.cvEmail2Box, "mailto:" + card.secondEmail) || visible;

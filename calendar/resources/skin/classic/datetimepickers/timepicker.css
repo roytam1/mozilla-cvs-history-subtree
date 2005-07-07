@@ -13,7 +13,8 @@
  *
  * The Original Code is OEone Calendar Code, released October 31st, 2001.
  *
- * The Initial Developer of the Original Code is OEone Corporation.
+ * The Initial Developer of the Original Code is
+ * OEone Corporation.
  * Portions created by the Initial Developer are Copyright (C) 2001
  * the Initial Developer. All Rights Reserved.
  *
@@ -34,19 +35,40 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+
+
 /*-------------------------------------------------------------------
- *   Timepicker (text menulist with popup)
+ *   Time field and button (modified from skin/eventDialog.css)
  *-------------------------------------------------------------------*/
 
 .timepicker-box-class {
 }
 
 .timepicker-text-class {
-  width: 8em;
+}
+
+.timepicker-button-class {
+  background-image : url("chrome://calendar/skin/datetimepickers/clock_up.gif");
+  background-repeat: no-repeat;
+  background-position : left center;
+}
+.timepicker-button-class[disabled="true"],
+.timepicker-button-class[disabled="true"]:hover,
+.timepicker-button-class[disabled="true"]:hover:active {
+  background-image: url("chrome://calendar/skin/datetimepickers/clock_disabled.gif");
+}
+.timepicker-button-class:hover {
+  background-image: url("chrome://calendar/skin/datetimepickers/clock_hover.gif");
+}
+.timepicker-button-class:hover:active {
+  background-image: url("chrome://calendar/skin/datetimepickers/clock_down.gif");
+}
+.menu-right {
+  visibility : hidden;
 }
 
 /*-------------------------------------------------------------------
- *   popup (from timepicker/timepicker.css)
+ *   popup (from timepicker/timepicker.css
  *-------------------------------------------------------------------*/
 
 /* Box that occupies whole window */

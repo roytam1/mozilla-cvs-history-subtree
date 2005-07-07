@@ -19,7 +19,6 @@
  *
  * Contributor(s):
  *   Darin Fisher <darin@meer.net>
- *   Benjamin Smedberg <benjamin@smedbergs.us>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -35,61 +34,14 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#include "nsXULAppAPI.h"
+#include "plstr.h"
 #include <stdio.h>
 #include <stdlib.h>
 #ifdef XP_WIN
 #include <windows.h>
 #endif
 
-#include "nsXULAppAPI.h"
-#include "nsXPCOMGlue.h"
-#include "nsRegisterGRE.h"
-#include "nsAppRunner.h"
-#include "nsINIParser.h"
-#include "nsILocalFile.h"
-#include "nsCOMPtr.h"
-#include "nsMemory.h"
-#include "nsBuildID.h"
-#include "plstr.h"
-#include "prprf.h"
-#include "prenv.h"
-
-/**
- * Output a string to the user.  This method is really only meant to be used to
- * output last-ditch error messages designed for developers NOT END USERS.
- *
- * @param isError
- *        Pass true to indicate severe errors.
- * @param fmt
- *        printf-style format string followed by arguments.
- */
-static void Output(PRBool isError, const char *fmt, ... )
-{
-  va_list ap;
-  va_start(ap, fmt);
-
-#if defined(XP_WIN) && !MOZ_WINCONSOLE
-  char *msg = PR_vsmprintf(fmt, ap);
-  if (msg)
-  {
-    UINT flags = MB_OK;
-    if (isError)
-      flags |= MB_ICONERROR;
-    else 
-      flags |= MB_ICONINFORMATION;
-    MessageBox(NULL, msg, "XULRunner", flags);
-    PR_smprintf_free(msg);
-  }
-#else
-  vfprintf(stderr, fmt, ap);
-#endif
-
-  va_end(ap);
-}
-
-/**
- * Return true if |arg| matches the given argument name.
- */
 static PRBool IsArg(const char* arg, const char* s)
 {
   if (*arg == '-')
@@ -107,311 +59,56 @@ static PRBool IsArg(const char* arg, const char* s)
   return PR_FALSE;
 }
 
-/**
- * Version checking.
- */
-
-static PRUint32 geckoVersion = 0;
-
-static PRUint32 ParseVersion(const char *versionStr)
-{
-  PRUint16 major, minor;
-  if (PR_sscanf(versionStr, "%hu.%hu", &major, &minor) != 2) {
-    NS_WARNING("invalid version string");
-    return 0;
-  }
-
-  return PRUint32(major) << 16 | PRUint32(minor);
-}
-
-static PRBool CheckMinVersion(const char *versionStr)
-{
-  PRUint32 v = ParseVersion(versionStr);
-  return geckoVersion >= v;
-}
-
-static PRBool CheckMaxVersion(const char *versionStr)
-{
-  PRUint32 v = ParseVersion(versionStr);
-  return geckoVersion <= v;
-}
-
-/**
- * Parse application data.
- */
-static int LoadAppData(const char* appDataFile, nsXREAppData* aResult)
-{
-  static char vendor[256], name[256], version[32], buildID[32], appID[256], copyright[512];
-  
-  nsresult rv;
-
-  nsCOMPtr<nsILocalFile> lf;
-  XRE_GetFileFromPath(appDataFile, getter_AddRefs(lf));
-  if (!lf)
-    return 2;
-
-  nsCOMPtr<nsIFile> appDir;
-  rv = lf->GetParent(getter_AddRefs(appDir));
-  if (NS_FAILED(rv))
-    return 2;
-
-  rv = CallQueryInterface(appDir, &aResult->directory);
-  if (NS_FAILED(rv))
-    return 2;
-
-  nsINIParser parser;
-  rv = parser.Init(lf);
-  if (NS_FAILED(rv))
-    return 2;
-
-  // Gecko version checking
-  //
-  // TODO: If these version checks fail, then look for a compatible XULRunner
-  //       version on the system, and launch it instead.
-
-  char gkVersion[32];
-  rv = parser.GetString("Gecko", "MinVersion", gkVersion, sizeof(gkVersion));
-  if (NS_FAILED(rv) || !CheckMinVersion(gkVersion)) {
-    Output(PR_TRUE, "Error: Gecko MinVersion requirement not met.\n");
-    return 1;
-  }
-
-  rv = parser.GetString("Gecko", "MaxVersion", gkVersion, sizeof(gkVersion));
-  if (NS_SUCCEEDED(rv) && !CheckMaxVersion(gkVersion)) {
-    Output(PR_TRUE, "Error: Gecko MaxVersion requirement not met.\n");
-    return 1;
-  }
-
-  PRUint32 i;
-
-  // Read string-valued fields
-  const struct {
-    const char *key;
-    const char **fill;
-    char       *buf;
-    size_t      bufLen;
-    PRBool      required;
-  } string_fields[] = {
-    { "Vendor",    &aResult->vendor,    vendor,    sizeof(vendor),    PR_FALSE },
-    { "Name",      &aResult->name,      name,      sizeof(name),      PR_TRUE  },
-    { "Version",   &aResult->version,   version,   sizeof(version),   PR_FALSE },
-    { "BuildID",   &aResult->buildID,   buildID,   sizeof(buildID),   PR_TRUE  },
-    { "ID",        &aResult->ID,        appID,     sizeof(appID),     PR_FALSE },
-    { "Copyright", &aResult->copyright, copyright, sizeof(copyright), PR_FALSE }
-  };
-  for (i = 0; i < NS_ARRAY_LENGTH(string_fields); ++i) {
-    rv = parser.GetString("App", string_fields[i].key, string_fields[i].buf,
-                          string_fields[i].bufLen);
-    if (NS_SUCCEEDED(rv)) {
-      *string_fields[i].fill = string_fields[i].buf;
-    }
-    else if (string_fields[i].required) {
-      Output(PR_TRUE, "Error: %x: No \"%s\" field.\n",
-             rv, string_fields[i].key);
-      return 1;
-    }
-  }
-
-  // Read boolean-valued fields
-  const struct {
-    const char* key;
-    PRUint32 flag;
-  } boolean_fields[] = {
-    { "EnableProfileMigrator",  NS_XRE_ENABLE_PROFILE_MIGRATOR  },
-    { "EnableExtensionManager", NS_XRE_ENABLE_EXTENSION_MANAGER }
-  };
-  char buf[6]; // large enough to hold "false"
-  aResult->flags = 0;
-  for (i = 0; i < NS_ARRAY_LENGTH(boolean_fields); ++i) {
-    rv = parser.GetString("XRE", boolean_fields[i].key, buf, sizeof(buf));
-    // accept a truncated result since we are only interested in the
-    // first character.  this is designed to allow the possibility of
-    // expanding these boolean attributes to express additional options.
-    if ((NS_SUCCEEDED(rv) || rv == NS_ERROR_LOSS_OF_SIGNIFICANT_DATA) &&
-        (buf[0] == '1' || buf[0] == 't' || buf[0] == 'T')) {
-      aResult->flags |= boolean_fields[i].flag;
-    }
-  } 
-
-#ifdef DEBUG
-  printf("---------------------------------------------------------\n");
-  printf("     Vendor %s\n", aResult->vendor);
-  printf("       Name %s\n", aResult->name);
-  printf("    Version %s\n", aResult->version);
-  printf("    BuildID %s\n", aResult->buildID);
-  printf("  Copyright %s\n", aResult->copyright);
-  printf("      Flags %08x\n", aResult->flags);
-  printf("---------------------------------------------------------\n");
-#endif
-
-  return 0;
-}
-
-static void Usage()
-{
-    // display additional information (XXX make localizable?)
-    Output(PR_FALSE,
-           "Mozilla XULRunner %s\n\n"
-           "Usage: " XULRUNNER_PROGNAME " [OPTIONS]\n"
-           "       " XULRUNNER_PROGNAME " APP-FILE [APP-OPTIONS...]\n"
-           "\n"
-           "OPTIONS\n"
-           "      --app                  specify APP-FILE (optional)\n"
-           "  -h, --help                 show this message\n"
-           "  -v, --version              show version\n"
-           "  --gre-version              print the GRE version string on stdout\n"
-           "  --register-global          register this GRE in the machine registry\n"
-           "  --register-user            register this GRE in the user registry\n"
-           "  --unregister-global        unregister this GRE formerly registered with\n"
-           "                             --register-global\n"
-           "  --unregister-user          unregister this GRE formely registered with\n"
-           "                             --register-user\n"
-           "  --find-gre <version>       Find a GRE with version <version> and print\n"
-           "                             the path on stdout\n"
-           "\n"
-           "APP-FILE\n"
-           "  Application initialization file.\n"
-           "\n"
-           "APP-OPTIONS\n"
-           "  Application specific options.\n",
-           GRE_BUILD_ID);
-}
-
-static nsresult
-GetXULRunnerDir(const char *argv0, nsIFile* *aResult)
-{
-  nsresult rv;
-
-  nsCOMPtr<nsILocalFile> appFile;
-  rv = XRE_GetBinaryPath(argv0, getter_AddRefs(appFile));
-  if (NS_FAILED(rv)) {
-    Output(PR_TRUE, "Could not find XULRunner application path.\n");
-    return rv;
-  }
-
-  rv = appFile->GetParent(aResult);
-  if (NS_FAILED(rv)) {
-    Output(PR_TRUE, "Could not find XULRunner installation dir.\n");
-  }
-  return rv;
-}
-
 int main(int argc, char* argv[])
 {
-  if (argc > 1 && (IsArg(argv[1], "h") ||
-                   IsArg(argv[1], "help") ||
-                   IsArg(argv[1], "?")))
+  if (argc == 1 || IsArg(argv[1], "h")
+                || IsArg(argv[1], "help")
+                || IsArg(argv[1], "?"))
   {
-    Usage();
+    printf("Usage: " XULRUNNER_PROGNAME " [OPTIONS] [APP-FILE [APP-OPTIONS...]]\n");
+    if (argc > 1) {
+      // display additional information
+      printf("\n"
+             "OPTIONS\n"
+             "  -h, --help       show this message\n"
+             "  -v, --version    show version\n"
+             "\n"
+             "APP-FILE\n"
+             "  Application initialization file.\n"
+             "\n"
+             "APP-OPTIONS\n"
+             "  Application specific options.\n");
+    }
     return 0;
   }
 
-  if (argc == 2 && (IsArg(argv[1], "v") || IsArg(argv[1], "version")))
-  {
-    Output(PR_FALSE, "Mozilla XULRunner %s\n", GRE_BUILD_ID);
+  if (argc == 2 && (IsArg(argv[1], "v") || IsArg(argv[1], "version"))) {
+    printf("Mozilla XULRunner %s %s (Gecko:%s)\n", APP_VERSION, BUILD_ID, MOZILLA_VERSION);
     return 0;
   }
 
-  if (argc > 1) {
-    PRBool registerGlobal = IsArg(argv[1], "register-global");
-    PRBool registerUser   = IsArg(argv[1], "register-user");
-    if (registerGlobal || registerUser) {
-      if (argc != 2) {
-        Usage();
-        return 1;
-      }
-
-      nsCOMPtr<nsIFile> regDir;
-      nsresult rv = GetXULRunnerDir(argv[0], getter_AddRefs(regDir));
-      if (NS_FAILED(rv))
-        return 2;
-
-      return RegisterXULRunner(registerGlobal, regDir) ? 0 : 2;
-    }
-
-    registerGlobal = IsArg(argv[1], "unregister-global");
-    registerUser   = IsArg(argv[1], "unregister-user");
-    if (registerGlobal || registerUser) {
-      if (argc != 2) {
-        Usage();
-        return 1;
-      }
-
-      nsCOMPtr<nsIFile> regDir;
-      nsresult rv = GetXULRunnerDir(argv[0], getter_AddRefs(regDir));
-      if (NS_FAILED(rv))
-        return 2;
-      UnregisterXULRunner(registerGlobal, regDir);
-      return 0;
-    }
-
-    if (IsArg(argv[1], "find-gre")) {
-      if (argc != 3) {
-        Usage();
-        return 1;
-      }
-
-      char version[MAXPATHLEN];
-      nsresult rv = GRE_GetGREPathForVersion(argv[2], version, MAXPATHLEN);
-      if (NS_FAILED(rv))
-        return 1;
-
-      printf("%s\n", version);
-      return 0;
-    }
-
-    if (IsArg(argv[1], "gre-version")) {
-      if (argc != 2) {
-        Usage();
-        return 1;
-      }
-
-      printf("%s\n", GRE_BUILD_ID);
-      return 0;
-    }
+  // fixup argv to start with -app.
+  char **argv2 = NULL;
+  if (argv[1][0] != '-')
+  {
+    argv2 = (char **) malloc(sizeof(char*) * (argc + 2));
+    argv2[0] = argv[0];
+    argv2[1] = "-app";
+    for (int i=1; i<argc; ++i)
+      argv2[i+1] = argv[i];
+    argv2[argc+1] = NULL;
+    argv = argv2;
+    argc++;
   }
 
-  geckoVersion = ParseVersion(GRE_BUILD_ID);
+  int rv = xre_main(argc, argv, NULL);
 
-  const char *appDataFile = PR_GetEnv("XUL_APP_FILE");
-
-  if (!(appDataFile && *appDataFile)) {
-    if (argc < 2) {
-      Usage();
-      return 1;
-    }
-
-    if (IsArg(argv[1], "app")) {
-      if (argc == 2) {
-        Usage();
-        return 1;
-      }
-      argv[1] = argv[0];
-      ++argv;
-      --argc;
-    }
-
-    appDataFile = argv[1];
-    argv[1] = argv[0];
-    ++argv;
-    --argc;
-
-    static char kAppEnv[MAXPATHLEN];
-    PR_snprintf(kAppEnv, MAXPATHLEN, "XUL_APP_FILE=%s", appDataFile);
-    PR_SetEnv(kAppEnv);
-  }
-
-  nsXREAppData appData = { sizeof(nsXREAppData), 0 };
-
-  int rv = LoadAppData(appDataFile, &appData);
-  if (!rv)
-    rv = XRE_main(argc, argv, &appData);
-
-  NS_IF_RELEASE(appData.directory);
+  if (argv2)
+    free(argv2);
 
   return rv;
 }
-
+                                                                                                                                                
 #if defined( XP_WIN ) && defined( WIN32 ) && !defined(__GNUC__)
 // We need WinMain in order to not be a console app.  This function is
 // unused if we are a console application.

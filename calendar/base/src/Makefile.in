@@ -48,7 +48,6 @@ LIBRARY_NAME     = calbase_s
 MODULE_NAME      = calBaseModule
 FORCE_STATIC_LIB = 1
 GRE_MODULE       = 1
-MOZILLA_INTERNAL_API = 1
 
 REQUIRES = xpcom \
 	   js \
@@ -61,30 +60,23 @@ REQUIRES = xpcom \
 #	   sqlite3 \
 #           $(NULL)
 
-XPIDL_MODULE	= calbaseinternal
-XPIDLSRCS = \
-	calInternalInterfaces.idl \
-	$(NULL)
+CPPSRCS = \
+	calDateTime.cpp
 
-CPPSRCS = calDateTime.cpp \
-	  calDuration.cpp \
-	  calICSService.cpp \
-	  calRecurrenceRule.cpp \
-	  calRecurrenceDate.cpp \
-	  calRecurrenceDateSet.cpp \
-	  $(NULL)
+#CPPSRCS = \
+#	calItemBase.cpp \
+#	calEvent.cpp \
+#	calTodo.cpp \
+#	$(NULL)
 
 
 EXTRA_COMPONENTS = \
-	calAlarmService.js \
-	calAttachment.js \
-	calAttendee.js \
-	calCalendarManager.js \
-	calRecurrenceInfo.js \
-	calEvent.js \
 	calItemBase.js \
+	calEvent.js \
 	calItemModule.js \
-	calTodo.js \
 	$(NULL)
 
 include $(topsrcdir)/config/rules.mk
+
+%.js: %.js.pre
+	cpp -P -undef $(DEFINES) $(ACDEFINES) $^ > $@

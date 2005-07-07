@@ -1,43 +1,26 @@
 <?xml version="1.0"?>
-# ***** BEGIN LICENSE BLOCK *****
-# Version: MPL 1.1/GPL 2.0/LGPL 2.1
-#
-# The contents of this file are subject to the Mozilla Public License Version
-# 1.1 (the "License"); you may not use this file except in compliance with
-# the License. You may obtain a copy of the License at
-# http://www.mozilla.org/MPL/
-#
-# Software distributed under the License is distributed on an "AS IS" basis,
-# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
-# for the specific language governing rights and limitations under the
-# License.
-#
+# The contents of this file are subject to the Netscape Public
+# License Version 1.1 (the "License"); you may not use this file
+# except in compliance with the License. You may obtain a copy of
+# the License at http://www.mozilla.org/NPL/
+#  
+# Software distributed under the License is distributed on an "AS
+# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# rights and limitations under the License.
+#  
 # The Original Code is Mozilla Communicator client code, released
 # March 31, 1998.
-#
-# The Initial Developer of the Original Code is
-# Netscape Communications Corporation.
-# Portions created by the Initial Developer are Copyright (C) 1999
-# the Initial Developer. All Rights Reserved.
-#
+# 
+# The Initial Developer of the Original Code is Netscape
+# Communications Corporation. Portions created by Netscape are
+# Copyright (C) 1999 Netscape Communications Corporation. All
+# Rights Reserved.
+# 
 # Contributor(s):
 #   Ben Goodger <ben@netscape.com> (ass'td polish fixes)
 #   Håkan Waara <hwaara@chello.se>
 #   Neil Rashbrook <neil@parkwaycc.co.uk> (ass'td polish fix)
-#
-# Alternatively, the contents of this file may be used under the terms of
-# either the GNU General Public License Version 2 or later (the "GPL"), or
-# the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
-# in which case the provisions of the GPL or the LGPL are applicable instead
-# of those above. If you wish to allow use of your version of this file only
-# under the terms of either the GPL or the LGPL, and not to allow others to
-# use your version of this file under the terms of the MPL, indicate your
-# decision by deleting the provisions above and replace them with the notice
-# and other provisions required by the GPL or the LGPL. If you do not delete
-# the provisions above, a recipient may use your version of this file under
-# the terms of any one of the MPL, the GPL or the LGPL.
-#
-# ***** END LICENSE BLOCK *****
 
 <?xml-stylesheet href="chrome://messenger/skin/messengercompose/messengercompose.css" type="text/css"?>
 <?xml-stylesheet href="chrome://messenger/skin/folderMenus.css" type="text/css"?>
@@ -46,7 +29,7 @@
 <!DOCTYPE window [
 <!ENTITY % messengercomposeDTD SYSTEM "chrome://messenger/locale/messengercompose/messengercompose.dtd" >
 %messengercomposeDTD;
-<!ENTITY % brandDTD SYSTEM "chrome://branding/locale/brand.dtd" >
+<!ENTITY % brandDTD SYSTEM "chrome://global/locale/brand.dtd" >
 %brandDTD;
 <!ENTITY % charsetDTD SYSTEM "chrome://global/locale/charsetOverlay.dtd" >
 %charsetDTD;
@@ -70,7 +53,6 @@
 </stringbundleset>
 
 <script type="application/x-javascript" src="chrome://communicator/content/printing.js"/>
-<script type="application/x-javascript" src="chrome://editor/content/editorInlineSpellCheck.js"/>
 <script type="application/x-javascript" src="chrome://messenger/content/accountUtils.js"/>
 <script type="application/x-javascript" src="chrome://messenger/content/widgetglue.js"/>
 <script type="application/x-javascript" src="chrome://messenger/content/mailCore.js"/>
@@ -78,7 +60,6 @@
 <script type="application/x-javascript" src="chrome://messenger/content/messengercompose/MsgComposeCommands.js"/>
 
 <!-- drag and drop -->
-<script type="application/x-javascript" src="chrome://messenger/content/addressbook/abDragDrop.js"/>
 <script type="application/x-javascript" src="chrome://global/content/nsDragAndDrop.js"/>
 <script type="application/x-javascript" src="chrome://global/content/nsTransferable.js"/>
 
@@ -171,7 +152,6 @@
   <broadcaster id="Communicator:WorkMode" label="&offlineGoOfflineCmd.label;"
                type="checkbox" oncommand="toggleOfflineStatus();"/>
   <broadcaster id="args" value="editorType=default"/>
-  <broadcaster id="viewAddressPicker" autoCheck="false" type="checkbox" oncommand="toggleAddressPicker();"/>
 </broadcasterset>
 
 <keyset id="tasksKeys">
@@ -183,12 +163,12 @@
   <key id="key_newMessage" key="&newMessage.key;" oncommand="goOpenNewMessage();" modifiers="accel"/>
   <key id="key_newMessage2" key="&newMessageCmd2.key;" oncommand="goOpenNewMessage();" modifiers="accel"/>
 #endif
-  <key id="key_close" key="&closeCmd.key;" command="cmd_close"  modifiers="accel"/>
+  <key id="key_close" key="&closeCmd.key;" modifiers="accel"/>
   <key id="key_save" key="&saveCmd.key;" command="cmd_saveDefault" modifiers="accel"/>
   <key id="key_send" keycode="&sendCmd.keycode;" observes="cmd_sendWithCheck" modifiers="accel"/>
   <key id="key_sendLater" keycode="&sendLaterCmd.keycode;" observes="cmd_sendLater" modifiers="accel, shift"/>
   <key id="key_print" key="&printCmd.key;" command="cmd_print" modifiers="accel"/>
-  <key id="key_quit" oncommand="goQuitApplication();"  key="&quitApplicationCmd.key;" modifiers="accel"/>
+  <key id="key_quit" key="&quitApplicationCmd.key;" modifiers="accel"/>
   
   <!-- Edit Menu -->
   <key id="key_undo" key="&undoCmd.key;" modifiers="accel"/>
@@ -237,18 +217,9 @@
 
 <keyset id="editorKeys"/>
 
-<popup id="msgComposeContext"
-    onpopupshowing="openEditorContextMenu();">
-  
-  <menuitem id="spellCheckNoSuggestions" label="&spellCheckNoSuggestions.label;" disabled="true"/>
-  <menuseparator id="spellCheckAddSep"/>
-  <menuitem id="spellCheckAddToDictionary" label="&spellCheckAddToDictionary.label;" accesskey="&spellCheckAddToDictionary.accesskey;"
-            oncommand="InlineSpellChecker.addToDictionary(null,null);"/>  
-  <menuitem id="spellCheckIgnoreWord" label="&spellCheckIgnoreWord.label;" accesskey="&spellCheckIgnoreWord.accesskey;"
-            oncommand="InlineSpellChecker.ignoreWord(null, null)"/>  
-  <menuseparator id="spellCheckSuggestionsSeparator"/>
-
+<popup id="msgComposeContext" onpopupshowing="updateEditItems();">
   <menuitem label="&undo.label;" accesskey="&undo.accesskey;" command="cmd_undo"/>
+  <menuseparator/>
   <menuitem label="&cut.label;" accesskey="&cut.accesskey;" command="cmd_cut"/>
   <menuitem label="&copy.label;" accesskey="&copy.accesskey;" command="cmd_copy"/>
   <menuitem label="&paste.label;" accesskey="&paste.accesskey;" command="cmd_paste"/>
@@ -355,7 +326,7 @@
           <menuseparator id="prefSep"/>
           <menuitem label="&accountManagerCmd.label;" accesskey="&accountManagerCmdUnix.accesskey;" command="cmd_account"/>
           <menuitem id="menu_preferences" label="&preferencesCmdUnix.label;" accesskey="&preferencesCmdUnix.accesskey;"
-                    oncommand="openOptionsDialog('paneCompose');"/>
+                    oncommand="openOptionsDialog('mailcomposepref', 'chrome://messenger/content/messengercompose/pref-composing_messages.xul', 'mailcomposepref');"/>
 #endif
 #endif
         </menupopup>
@@ -388,8 +359,7 @@
                     
             </menupopup>
           </menu>
-
-          <menuitem id="menu_AddressSidebar" label="&addressSidebar.label;" accesskey="&addressSidebar.accesskey;" observes="viewAddressPicker"/>
+          <menuitem id="menu_AddressSidebar" type="checkbox" checked="false" label="&addressSidebar.label;" accesskey="&addressSidebar.accesskey;" oncommand="toggleAddressPicker();"/>
         </menupopup>
       </menu>
   
@@ -407,9 +377,6 @@
       <menu id="optionsMenu" label="&optionsMenu.label;" accesskey="&optionsMenu.accesskey;">
         <menupopup id="optionsMenuPopup"> 
           <menuitem label="&checkSpellingCmd.label;" id="menu_checkspelling" accesskey="&checkSpellingCmd.accesskey;" key="key_checkspelling" command="cmd_spelling"/>
-          <menuitem label="&enableInlineSpellChecker.label;" id="menu_inlineSpellCheck" 
-                           accesskey="&enableInlineSpellChecker.accesskey;" checked="false"
-                           type="checkbox" oncommand="ToggleInlineSpellChecker(event.target)"/>
           <menuitem label="&quoteCmd.label;" accesskey="&quoteCmd.accesskey;" command="cmd_quoteMessage"/>
           <menuseparator/>
           <menuitem id="returnReceiptMenu" type="checkbox" label="&returnReceiptMenu.label;" accesskey="&returnReceiptMenu.accesskey;" checked="false" oncommand="ToggleReturnReceipt(event.target)"/>
@@ -512,12 +479,12 @@
             <menuseparator id="prefSep"/>
             <menuitem label="&accountManagerCmd.label;" accesskey="&accountManagerCmd.accesskey;" command="cmd_account"/>
             <menuitem id="menu_preferences" label="&preferencesCmd.label;" accesskey="&preferencesCmd.accesskey;"
-                      oncommand="openOptionsDialog('paneCompose');"/>
+                      oncommand="openOptionsDialog('mailcomposepref', 'chrome://messenger/content/messengercompose/pref-composing_messages.xul', 'mailcomposepref');"/>
 #else
 #ifdef XP_MACOSX
             <menuitem label="&accountManagerCmd.label;" accesskey="&accountManagerCmd.accesskey;" command="cmd_account"/>
             <menuitem id="menu_preferences" label="&preferencesCmd.label;" accesskey="&preferencesCmd.accesskey;"
-                      oncommand="openOptionsDialog('paneCompose');"/>
+                      oncommand="openOptionsDialog('mailcomposepref', 'chrome://messenger/content/messengercompose/pref-composing_messages.xul', 'mailcomposepref');"/>
 #endif
 #endif
          </menupopup>
@@ -582,7 +549,7 @@
     <toolbarbutton class="toolbarbutton-1"
                id="button-address" label="&addressButton.label;" 
                tooltiptext="&addressButton.tooltip;" 
-               observes="viewAddressPicker"/>
+               oncommand="toggleAddressPicker();"/>
     
     <toolbarbutton class="toolbarbutton-1" type="menu-button"
                id="button-attach" label="&attachButton.label;" 
@@ -739,8 +706,8 @@
                      onkeypress="subjectKeyPress(event);" />
           </hbox>
         </vbox>
-        <splitter id="attachmentbucket-sizer" collapsed="true" collapse="after"/>
-        <vbox id="attachments-box" collapsed="true">
+        <splitter id="attachmentbucket-sizer" hidden="true" collapse="after"/>
+        <vbox id="attachments-box" hidden="true">
           <label id="attachmentBucketText" value="&attachments.label;" crop="right"
                  accesskey="&attachments.accesskey;" control="attachmentBucket"/>
           <listbox seltype="multiple" id="attachmentBucket" flex="1" rows="4"

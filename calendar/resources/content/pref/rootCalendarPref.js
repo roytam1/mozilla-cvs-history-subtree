@@ -40,7 +40,7 @@ function calendarPrefObserver( CalendarPreferences )
 {
    this.CalendarPreferences = CalendarPreferences;
    try {
-     var pbi = rootPrefNode.QueryInterface(Components.interfaces.nsIPrefBranch2);
+     var pbi = rootPrefNode.QueryInterface(Components.interfaces.nsIPrefBranchInternal);
      pbi.addObserver("calendar.", this, false);
      window.addEventListener("unload", this, false);
   } catch(ex) {
@@ -58,6 +58,7 @@ calendarPrefObserver.prototype =
         {
             case "calendar.event.defaultstarthour":
             case "calendar.event.defaultendhour":
+            case "calendar.weeks.inview":
             case "calendar.previousweeks.inview":
             case "calendar.week.d0sundaysoff":
             case "calendar.week.d1mondaysoff":
@@ -66,32 +67,18 @@ calendarPrefObserver.prototype =
             case "calendar.week.d4thursdaysoff":
             case "calendar.week.d5fridaysoff":
             case "calendar.week.d6saturdaysoff":
-                if (this.CalendarPreferences.calendarWindow.currentView != null) {
-                  this.CalendarPreferences.calendarWindow.currentView.refresh();
-                }
+                if (this.CalendarPreferences.calendarWindow.currentView != null)
+                this.CalendarPreferences.calendarWindow.currentView.refresh();
                 break;
-            case "calendar.weeks.inview":
-                if (this.CalendarPreferences.calendarWindow.multiweekView != null) {
-                  //changeNumberOfWeeks expects an element with attribute 'value'
-                  var newWeeks = document.createElement( "textbox" );
-                  newWeeks.setAttribute("value", subject.getIntPref( prefName ) );
-                  this.CalendarPreferences.calendarWindow.multiweekView
-                         .changeNumberOfWeeks(newWeeks);
-                }
-                break;
+
             case "calendar.week.start":
-                if (this.CalendarPreferences.calendarWindow.currentView != null) {
-                  this.CalendarPreferences.calendarWindow.currentView.refresh();
-                }
-                if (this.CalendarPreferences.calendarWindow.miniMonth != null) {
-                  this.CalendarPreferences.calendarWindow.miniMonth.refreshDisplay(true);
-                }
+                this.CalendarPreferences.calendarWindow.currentView.refresh();
+                this.CalendarPreferences.calendarWindow.miniMonth.refreshDisplay(true);
                 break;
+
             case "calendar.date.format" :
-                if (this.CalendarPreferences.calendarWindow.currentView != null) {
-                  this.CalendarPreferences.calendarWindow.currentView.refresh();
-                }
-                refreshEventTree();
+                this.CalendarPreferences.calendarWindow.currentView.refresh();
+                refreshEventTree( getAndSetEventTable() );
                 toDoUnifinderRefresh();
                 break;
 
@@ -101,16 +88,6 @@ calendarPrefObserver.prototype =
                     gICalLib.batchMode = true; 
                     gICalLib.batchMode = false;
                 }
-                break;
-
-            case "calendar.local-time-zone":
-                gDefaultTimezone = subject.getCharPref( prefName );
-
-                if (this.CalendarPreferences.calendarWindow.currentView != null) {
-                  this.CalendarPreferences.calendarWindow.currentView.refresh();
-                }
-                refreshEventTree();
-                toDoUnifinderRefresh();
                 break;
 
             default :
@@ -123,7 +100,7 @@ calendarPrefObserver.prototype =
 
     handleEvent: function handleEvent(event)
     {
-      var pbi = rootPrefNode.QueryInterface(Components.interfaces.nsIPrefBranch2);
+      var pbi = rootPrefNode.QueryInterface(Components.interfaces.nsIPrefBranchInternal);
       pbi.removeObserver(this.domain, this);
     }
 }

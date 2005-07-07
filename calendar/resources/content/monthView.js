@@ -158,7 +158,7 @@ function MonthView( calendarWindow )
       }
    }
       
-   //calendarWindow.EventSelection.addObserver( monthViewEventSelectionObserver );
+   calendarWindow.EventSelection.addObserver( monthViewEventSelectionObserver );
    
    this.showingLastDay = false;
   
@@ -167,7 +167,7 @@ function MonthView( calendarWindow )
    this.dayNumberItemArray = new Array();
    this.dayBoxItemArray = new Array();
    this.weekNumberItemArray = new Array();
-//   this.kungFooDeathGripOnEventBoxes = new Array();
+   this.kungFooDeathGripOnEventBoxes = new Array();
    this.firstDateOfView = new Date();
    this.lastDateOfView = new Date();
 
@@ -216,100 +216,8 @@ function MonthView( calendarWindow )
 *   We create XUL boxes dynamically and insert them into the XUL. 
 *   To refresh the display we remove all the old boxes and make new ones.
 */
-MonthView.prototype.refreshEvents = function()
+MonthView.prototype.refreshEvents = function monthView_refreshEvents( )
 {
-    // clear out the current events
-    this.removeElementsByAttribute("eventbox", "monthview");
-  
-    // Figure out the start and end days for the week we're currently viewing
-    var startDate = new Date(this.firstDateOfView);
-    var endDate = new Date(this.lastDateOfView);
-    endDate.setDate(endDate.getDate() + 1);
-    endDate.setSeconds(endDate.getSeconds() - 1);
-
-    // Save this off so we can get it again in onGetResult below
-    var eventController = this;
-    var getListener = {
-        onOperationComplete: function(aCalendar, aStatus, aOperationType, aId, aDetail) {
-            dump("onOperationComplete\n");
-        },
-        onGetResult: function(aCalendar, aStatus, aItemType, aDetail, aCount, aItems) {
-            for (var i = 0; i < aCount; ++i) {
-                eventController.createEventBox(aItems[i],
-                                               function(a1, a2, a3) { eventController.createEventBoxInternal(a1, a2, a3); } );
-            }
-        }
-    };
-
-    var ccalendar = getDisplayComposite();
-
-    dump("Fetching events from " + startDate.toString() + " to " + endDate.toString() + "\n");
-
-    ccalendar.getItems(ccalendar.ITEM_FILTER_TYPE_EVENT | ccalendar.ITEM_FILTER_CLASS_OCCURRENCES,
-                      0, jsDateToDateTime(startDate), jsDateToDateTime(endDate), getListener);
-}
-
-MonthView.prototype.createEventBoxInternal = function(itemOccurrence, startDate, endDate)
-{
-    dayBoxItem = this.dayBoxItemArray[this.indexOfDate(startDate.jsDate)];
-    if (!dayBoxItem)
-        return;
-
-    var calEvent = itemOccurrence.QueryInterface(Components.interfaces.calIEvent);
- 
-    // Make a box item to hold the event
-    eventBox = document.createElement("box");
-    eventBox.setAttribute("id", "month-view-event-box-" + itemOccurrence.id );
-    eventBox.setAttribute("name", "month-view-event-box-" + itemOccurrence.id );
-    //eventBox.setAttribute( "event"+toString(calendarEventDisplay.event.id), true );
-
-    this.setEventboxClass(eventBox, calEvent, "month-view");
-    eventBox.setAttribute("class", "month-view-event-class default");
-    
-    eventBox.setAttribute("eventbox", "monthview" );
-    eventBox.setAttribute("onclick", "monthEventBoxClickEvent( this, event )" );
-    eventBox.setAttribute("ondblclick", "monthEventBoxDoubleClickEvent( this, event )" );
-    eventBox.setAttribute("onmouseover", "onMouseOverGridOccurrence(event)" );
-    eventBox.setAttribute("tooltip", "gridOccurrenceTooltip" );
-    eventBox.setAttribute("ondraggesture", "nsDragAndDrop.startDrag(event,monthViewEventDragAndDropObserver);" );
-    // add a property to the event box that holds the calendarEvent that the
-    // box represents
-
-    eventBox.occurrence = itemOccurrence; // for mouseover preview
-    eventBox.event = calEvent;
-
-    // Make a text item to show the event title
-    var eventBoxText = document.createElement("label");
-    eventBoxText.setAttribute("crop", "end");
-    eventBoxText.setAttribute("class", "month-day-event-text-class");
-
-    if (calEvent.startDate.isDate) {
-        eventBox.setAttribute("allday", "true");
-        eventBoxText.setAttribute("value", calEvent.title );
-        // Create an image
-        var newImage = document.createElement("image");
-        newImage.setAttribute("class", "all-day-event-class");
-        eventBox.appendChild(newImage);
-    } else {
-        // To format the starting time of the event
-        var eventStartTime = new Date(calEvent.startDate.jsDate.getTime());
-        var StartFormattedTime = this.calendarWindow.dateFormater.getFormatedTime(eventStartTime);
-        // display as "12:15 titleevent"
-        eventBoxText.setAttribute("value", StartFormattedTime+' '+ calEvent.title);
-    }
-
-    eventBoxText.setAttribute("flex", "1");
-    eventBoxText.setAttribute("ondraggesture", "nsDragAndDrop.startDrag(event,monthViewEventDragAndDropObserver);");
-
-    // add the text to the event box and the event box to the day box
-
-    eventBox.appendChild(eventBoxText);        
-
-    // XXX need to look at the number of children here and determine what we're supposed to do
-    dayBoxItem.appendChild(eventBox);
-
-/*
-
   // Set the numberOfEventsToShow
   if( this.numberOfEventsToShow == false )
          this.setNumberOfEventsToShow();
@@ -369,7 +277,7 @@ MonthView.prototype.createEventBoxInternal = function(itemOccurrence, startDate,
          eventBox.setAttribute( "onclick", "monthEventBoxClickEvent( this, event )" );
          eventBox.setAttribute( "ondblclick", "monthEventBoxDoubleClickEvent( this, event )" );
          eventBox.setAttribute( "onmouseover", "gCalendarWindow.changeMouseOverInfo( calendarEventDisplay, event )" );
-         eventBox.setAttribute( "tooltip", "gridOccurrenceTooltip" );
+         eventBox.setAttribute( "tooltip", "eventTooltip" );
          eventBox.setAttribute( "ondraggesture", "nsDragAndDrop.startDrag(event,monthViewEventDragAndDropObserver);" );
          // add a property to the event box that holds the calendarEvent that the
          // box represents
@@ -377,7 +285,7 @@ MonthView.prototype.createEventBoxInternal = function(itemOccurrence, startDate,
          eventBox.calendarEventDisplay = calendarEventDisplay;
          
          this.kungFooDeathGripOnEventBoxes.push( eventBox );
-
+         
          // Make a text item to show the event title
          
          var eventBoxText = document.createElement( "label" );
@@ -449,7 +357,7 @@ MonthView.prototype.createEventBoxInternal = function(itemOccurrence, startDate,
             eventBox.setAttribute( "onmouseover", "gCalendarWindow.changeMouseOverInfo( calendarEventDisplay, event )" );
             eventBox.setAttribute( "onclick", "monthEventBoxClickEvent( this, event )" );
             eventBox.setAttribute( "ondblclick", "monthEventBoxDoubleClickEvent( this, event )" );
-            eventBox.setAttribute( "tooltip", "gridOccurrenceTooltip" );
+            eventBox.setAttribute( "tooltip", "eventTooltip" );
    
             this.kungFooDeathGripOnEventBoxes.push( eventBox );
             
@@ -465,7 +373,6 @@ MonthView.prototype.createEventBoxInternal = function(itemOccurrence, startDate,
          this.selectBoxForEvent( calendarEventDisplay.event ); 
       } 
    }
-*/
 }
 
 
@@ -519,7 +426,7 @@ MonthView.prototype.switchTo = function monthView_switchTo( )
 *   Redraw the display, but not the events
 */
 
-MonthView.prototype.refreshDisplay = function()
+MonthView.prototype.refreshDisplay = function monthView_refreshDisplay( )
 { 
    // set the month/year in the header
    
@@ -541,7 +448,7 @@ MonthView.prototype.refreshDisplay = function()
    
   var Offset = this.preferredWeekStart();
   var isOnlyWorkDays = (gOnlyWorkdayChecked == "true");
-  var isDayOff = this.preferredDaysOff();
+  var isDayOff = (isOnlyWorkDays? this.preferredDaysOff() : null);
 
    var NewArrayOfDayNames = new Array();
    
@@ -576,7 +483,7 @@ MonthView.prototype.refreshDisplay = function()
    var lastDateCol = (firstDateCol + lastDayOfMonth - 1) % 7;
 
    this.firstDateOfView = new Date( newYear, newMonth, 1 - firstDateCol, 0, 0, 0 );
-   this.lastDateOfView = new Date( newYear, newMonth,  42 - firstDateCol, 0, 0, 0 );
+   this.lastDateOfView = new Date( newYear, newMonth,  42 - firstDateCol, 23, 59, 59 );
    
   // hide or unhide columns for days off
   for(var day = 0; day < 7; day++) {
@@ -685,8 +592,10 @@ MonthView.prototype.refreshDisplay = function()
       {
          dayBoxItem.removeAttribute( "empty" ); 
 
-         if ( isDayOff[ thisDate.getDay() ] )
+         if( thisDate.getDay() == 0 | thisDate.getDay() == 6 )
+         {
             dayBoxItem.setAttribute( "weekend", "true" );
+         }
          else
             dayBoxItem.removeAttribute( "weekend" ); 
 
@@ -972,7 +881,7 @@ MonthView.prototype.doubleClickDay = function monthView_doubleClickDay( event )
 
 MonthView.prototype.clearSelectedEvent = function monthView_clearSelectedEvent( )
 {
-  monthdebug("clearSelectedEvent");
+  debug("clearSelectedEvent");
   this.removeAttributeFromElements("eventselected","true");
 }
 
@@ -1197,7 +1106,7 @@ var monthViewEventDragAndDropObserver  = {
   }
 };
 
-function monthdebug( Text )
+function debug( Text )
 {
    dump( "monthView.js: "+ Text +"\n");
 

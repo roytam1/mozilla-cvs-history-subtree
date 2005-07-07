@@ -39,7 +39,6 @@
 #include "nsILocalFile.h"
 #include "nsIDOMWindowInternal.h"
 #include "nsIProfileMigrator.h"
-#include "nsIPrefService.h"
 #include "nsIServiceManager.h"
 #include "nsIToolkitProfile.h"
 #include "nsIToolkitProfileService.h"
@@ -78,9 +77,7 @@ NS_IMETHODIMP
 nsProfileMigrator::Migrate(nsIProfileStartup* aStartup)
 {
   nsCAutoString key;
-  nsCOMPtr<nsIMailProfileMigrator> mailMigrator;
-  nsresult rv = GetDefaultMailMigratorKey(key, mailMigrator);
-  NS_ENSURE_SUCCESS(rv, rv); // abort migration if we failed to get a mailMigrator (if we were supposed to)
+  GetDefaultMailMigratorKey(key);
 
   nsCOMPtr<nsISupportsCString> cstr (do_CreateInstance("@mozilla.org/supports-cstring;1"));
   NS_ENSURE_TRUE(cstr, NS_ERROR_OUT_OF_MEMORY);
@@ -94,7 +91,6 @@ nsProfileMigrator::Migrate(nsIProfileStartup* aStartup)
   if (!ww || !params) return NS_ERROR_FAILURE;
 
   params->AppendElement(cstr);
-  params->AppendElement(mailMigrator);
   params->AppendElement(aStartup);
 
   nsCOMPtr<nsIDOMWindow> migrateWizard;
@@ -117,38 +113,49 @@ typedef struct {
 #define INTERNAL_NAME_DOGBERT         "Netscape Messenger"
 #endif
 
-nsresult
-nsProfileMigrator::GetDefaultMailMigratorKey(nsACString& aKey, nsCOMPtr<nsIMailProfileMigrator>& mailMigrator)
+void
+nsProfileMigrator::GetDefaultMailMigratorKey(nsACString& aKey)
 {
-  // look up the value of profile.force.migration in case we are supposed to force migration using a particular
-  // migrator....
-  nsresult rv = NS_OK;
-  nsCOMPtr<nsIPrefBranch> prefs(do_GetService(NS_PREFSERVICE_CONTRACTID, &rv));
-  NS_ENSURE_SUCCESS(rv, rv);
+#if 0
+  HKEY hkey;
 
-  nsXPIDLCString forceMigrationType;
-  prefs->GetCharPref("profile.force.migration", getter_Copies(forceMigrationType));
-
-  // if we are being forced to migrate to a particular migration type, then create an instance of that migrator
-  // and return it.
-  if (forceMigrationType.get())
+  const char* kCommandKey = "SOFTWARE\\Clients\\Mail";
+  if (::RegOpenKeyEx(HKEY_LOCAL_MACHINE, kCommandKey, 0, KEY_READ, &hkey) == ERROR_SUCCESS) 
   {
-    PRBool exists = PR_FALSE;
-    nsCAutoString migratorID (NS_MAILPROFILEMIGRATOR_CONTRACTID_PREFIX);
-    migratorID.Append(forceMigrationType);
-    mailMigrator = do_CreateInstance(migratorID.get());
-  
-    if (mailMigrator)
+    DWORD type;
+    DWORD length = MAX_PATH;
+    unsigned char value[MAX_PATH];
+    if (::RegQueryValueEx(hkey, NULL, 0, &type, value, &length) == ERROR_SUCCESS) 
     {
-      mailMigrator->GetSourceExists(&exists);
-      if (exists) 
-        aKey = forceMigrationType;
-      else
-        rv = NS_ERROR_FAILURE; // trying to force migration on a source which does not have any profiles
+      nsCAutoString str; str.Assign((char*)value);
+
+      if (!nsCRT::strcasecmp((char*)value, INTERNAL_NAME_SEAMONKEY)) 
+      {
+        aKey = "seamonkey";
+        return NS_OK;
+      }
+      
+      if (!nsCRT::strcasecmp((char*)value, INTERNAL_NAME_DOGBERT)) 
+      {
+        aKey = "dogbert";
+        return NS_OK;
+      }
     }
   }
- 
-  return rv;
+#else
+  // XXXben - until we figure out what to do here with default browsers on MacOS and
+  // GNOME, simply copy data from a previous Seamonkey install. 
+  PRBool exists = PR_FALSE;
+  nsCOMPtr<nsIMailProfileMigrator> mailMigrator;
+  mailMigrator = do_CreateInstance(NS_MAILPROFILEMIGRATOR_CONTRACTID_PREFIX "seamonkey");
+  if (mailMigrator)
+    mailMigrator->GetSourceExists(&exists);
+  if (exists) {
+    aKey = "seamonkey";
+  }
+#endif
+
+  return;
 }
 
 NS_IMETHODIMP
@@ -253,8 +260,7 @@ nsProfileMigrator::ImportRegistryProfiles(const nsACString& aAppName)
     if (NS_FAILED(rv)) continue;
 
     nsCOMPtr<nsIToolkitProfile> tprofile;
-    profileSvc->CreateProfile(profileFile, nsnull,
-                              nsDependentCString(profileName),
+    profileSvc->CreateProfile(profileFile, nsDependentCString(profileName),
                               getter_AddRefs(tprofile));
     migrated = PR_TRUE;
   }

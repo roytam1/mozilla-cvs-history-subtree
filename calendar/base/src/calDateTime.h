@@ -47,7 +47,6 @@
 #include "calIDateTime.h"
 
 struct icaltimetype;
-struct _icaltimezone;
 
 class calDateTime : public calIDateTime,
                     public nsIXPCScriptable
@@ -55,7 +54,6 @@ class calDateTime : public calIDateTime,
 public:
     calDateTime ();
     calDateTime (struct icaltimetype *timeptr);
-    calDateTime (const calDateTime& cdt);
 
     // nsISupports interface
     NS_DECL_ISUPPORTS
@@ -68,7 +66,7 @@ public:
 protected:
     PRBool mImmutable;
 
-    PRBool mIsValid;
+    PRBool mValid;
 
     PRTime mNativeTime;
 
@@ -79,14 +77,14 @@ protected:
     PRInt16 mMinute;
     PRInt16 mSecond;
 
-    PRBool mIsDate;
+    PRBool mIsUtc;
     nsCString mTimezone;
 
     PRInt16 mWeekday;
     PRInt16 mYearday;
 
-    void FromIcalTime(icaltimetype *icalt);
-    nsresult GetIcalTZ(const nsACString& tzid, struct _icaltimezone **tzp);
+    void toIcalTime(icaltimetype *icalt);
+    void fromIcalTime(icaltimetype *icalt);
 
     PRTime mLastModified;
 };

@@ -1,11 +1,11 @@
 # -*- Mode: Java; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 # ***** BEGIN LICENSE BLOCK *****
-# Version: MPL 1.1/GPL 2.0/LGPL 2.1
+# Version: NPL 1.1/GPL 2.0/LGPL 2.1
 #
-# The contents of this file are subject to the Mozilla Public License Version
-# 1.1 (the "License"); you may not use this file except in compliance with
-# the License. You may obtain a copy of the License at
-# http://www.mozilla.org/MPL/
+# The contents of this file are subject to the Netscape Public License
+# Version 1.1 (the "License"); you may not use this file except in
+# compliance with the License. You may obtain a copy of the License at
+# http://www.mozilla.org/NPL/
 #
 # Software distributed under the License is distributed on an "AS IS" basis,
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
@@ -14,7 +14,7 @@
 #
 # The Original Code is mozilla.org code.
 #
-# The Initial Developer of the Original Code is
+# The Initial Developer of the Original Code is 
 # Netscape Communications Corporation.
 # Portions created by the Initial Developer are Copyright (C) 1998
 # the Initial Developer. All Rights Reserved.
@@ -26,18 +26,18 @@
 #   Blake Ross      <blakeross@telocity.com>
 #
 # Alternatively, the contents of this file may be used under the terms of
-# either the GNU General Public License Version 2 or later (the "GPL"), or
+# either the GNU General Public License Version 2 or later (the "GPL"), or 
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
 # in which case the provisions of the GPL or the LGPL are applicable instead
 # of those above. If you wish to allow use of your version of this file only
 # under the terms of either the GPL or the LGPL, and not to allow others to
-# use your version of this file under the terms of the MPL, indicate your
+# use your version of this file under the terms of the NPL, indicate your
 # decision by deleting the provisions above and replace them with the notice
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
-# the terms of any one of the MPL, the GPL or the LGPL.
+# the terms of any one of the NPL, the GPL or the LGPL.
 #
-# ***** END LICENSE BLOCK *****
+# ***** END LICENSE BLOCK ***** */
 
 /*
  * - [ Dependencies ] ---------------------------------------------------------
@@ -45,33 +45,82 @@
  *    - gatherTextUnder
  */
 
-  var pref = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch);
+  var pref = null;
+  pref = Components.classes["@mozilla.org/preferences-service;1"]
+                   .getService(Components.interfaces.nsIPrefBranch);
 
-  function linkNodeForClickEvent(event)
+  // Prefill a single text field
+  function prefillTextBox(target) {
+
+    // obtain values to be used for prefilling
+    var walletService = Components.classes["@mozilla.org/wallet/wallet-service;1"].getService(Components.interfaces.nsIWalletService);
+    var value = walletService.WALLET_PrefillOneElement(window._content, target);
+    if (value) {
+
+      // result is a linear sequence of values, each preceded by a separator character
+      // convert linear sequence of values into an array of values
+      var separator = value[0];
+      var valueList = value.substring(1, value.length).split(separator);
+
+      target.value = valueList[0];
+    }
+  }
+  
+  function hrefForClickEvent(event)
   {
     var target = event.target;
     var linkNode;
-    var linkNodeText;
 
+    var local_name = target.localName;
+
+    if (local_name) {
+      local_name = local_name.toLowerCase();
+    }
+    
     var isKeyPress = (event.type == "keypress");
 
-    if ( target instanceof HTMLAnchorElement ||
-         target instanceof HTMLAreaElement   ||
-         target instanceof HTMLLinkElement ) {
-      if (target.hasAttribute("href")) 
-        linkNode = target;
+    switch (local_name) {
+      case "a":
+      case "area":
+      case "link":
+        if (target.hasAttribute("href")) 
+          linkNode = target;
+        break;
+      case "input":
+        if ((event.target.type == "text") // text field
+            && !isKeyPress       // not a key event
+            && event.detail == 2 // double click
+            && event.button == 0 // left mouse button
+            && event.target.value.length == 0) { // no text has been entered
+          prefillTextBox(target); // prefill the empty text field if possible
+        }
+        break;
+      default:
+        linkNode = findParentNode(event.originalTarget, "a");
+        // <a> cannot be nested.  So if we find an anchor without an
+        // href, there is no useful <a> around the target
+        if (linkNode && !linkNode.hasAttribute("href"))
+          linkNode = null;
+        break;
     }
-    else if (!(target instanceof HTMLInputElement)) {
-      linkNode = event.originalTarget;
-      while (linkNode && !(linkNode instanceof HTMLAnchorElement))
+    var href;
+    if (linkNode) {
+      href = linkNode.href;
+    } else {
+      // Try simple XLink
+      linkNode = target;
+      while (linkNode) {
+        if (linkNode.nodeType == Node.ELEMENT_NODE) {
+          href = linkNode.getAttributeNS("http://www.w3.org/1999/xlink", "href");
+          break;
+        }
         linkNode = linkNode.parentNode;
-      // <a> cannot be nested.  So if we find an anchor without an
-      // href, there is no useful <a> around the target
-      if (linkNode && !linkNode.hasAttribute("href"))
-        linkNode = null;
+      }
+      if (href && href != "") {
+        href = makeURLAbsolute(target.baseURI,href);
+      }
     }
-
-    return linkNode;
+    return href;
   }
 
   // Called whenever the user clicks in the content area,
@@ -79,15 +128,10 @@
   // should always return true for click to go through
   function contentAreaClick(event) 
   {
-    var linkNode = linkNodeForClickEvent(event);
-    if (linkNode && linkNode.href) 
-    {
-      handleLinkClick(event, linkNode.href, null);
-
-      // block the link click if we determine that this URL
-      // is phishy (i.e. a potential email scam) 
-      if (!event.button)  // left click only
-        return !isPhishingURL(linkNode, false); 
+    var href = hrefForClickEvent(event);
+    if (href) {
+      handleLinkClick(event, href, null);
+      return true;
     }
 
     return true;
@@ -96,6 +140,7 @@
   function openNewTabOrWindow(event, href, sendReferrer)
   {
     // always return false for stand alone mail (MOZ_THUNDERBIRD)
+
     // let someone else deal with it
     return false;
   }
@@ -121,3 +166,27 @@
 
     return ioService.newURI(baseURI.resolve(url), null, null).spec;
   }
+
+  function findParentNode(node, parentNode)
+  {
+    if (node && node.nodeType == Node.TEXT_NODE) {
+      node = node.parentNode;
+    }
+    
+    while (node) {
+      var nodeName = node.localName;
+      if (!nodeName)
+        return null;
+      nodeName = nodeName.toLowerCase();
+      if (nodeName == "body" || nodeName == "html" ||
+          nodeName == "#document") {
+        return null;
+      }
+      if (nodeName == parentNode)
+        return node;
+      node = node.parentNode;
+    }
+    
+    return null;
+  }
+

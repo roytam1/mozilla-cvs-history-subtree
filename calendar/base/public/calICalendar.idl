@@ -23,8 +23,6 @@
  *                 Chris Charabaruk <ccharabaruk@meldstar.com>
  *                 ArentJan Banck <ajbanck@planet.nl>
  *                 Dan Mosedale <dan.mosedale@oracle.com>
- *                 Vladimir Vukicevic <vladimir.vukicevic@oracle.com>
- *                 Mike Shaver <shaver@off.net>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -54,31 +52,13 @@ interface calIOperationListener;
 interface calIRange;
 interface calIDateTime;
 
-[scriptable, uuid(74e685e4-d863-11d9-88f2-000b7d081f44)]
+[scriptable, uuid(4c352774-2c4f-11d9-9c63-00045ace3b8d)]
 interface calICalendar : nsISupports
 {
-  /**
-   * Name of the calendar
-   * Notes: Can only be set after the calendar is registered with the calendar manager.
-   */
-  attribute AUTF8String name;
-
-  /**
-   * Type of the calendar
-   *   'memory', 'storage', 'caldav', etc
-   */
-  readonly attribute AUTF8String type;
-
   /**
    * Setting this URI causes the calendar to be (re)loaded.
    */
   attribute nsIURI uri;
-
-  /**
-   * Is this calendar read-only?  Used by the UI to decide whether or not 
-   * widgetry should allow editing.
-   */
-  attribute boolean readOnly;
 
   /** 
    * In combination with the other parameters to getItems(), these
@@ -86,15 +66,6 @@ interface calICalendar : nsISupports
    * in getting and observing items.  At some point fairly soon, we're
    * going to need to generalize this mechanism significantly (so we
    * can allow boolean logic, categories, etc.).
-   *
-   * When adding item filters (bits which, when not set to 1, reduce the
-   * scope of the results), use bit positions <= 15, so that
-   * ITEM_FILTER_ALL_ITEMS remains compatible for components that have the
-   * constant compiled in.
-   *
-   * XXX the naming here is questionable; adding a filter (setting a bit, in
-   * this case) usually _reduces_ the set of items that pass the set of
-   * filters, rather than adding to it.
    */
   const unsigned long ITEM_FILTER_COMPLETED_YES = 1 << 0; 
   const unsigned long ITEM_FILTER_COMPLETED_NO = 1 << 1; 
@@ -107,116 +78,34 @@ interface calICalendar : nsISupports
   const unsigned long ITEM_FILTER_TYPE_ALL = 
     (ITEM_FILTER_TYPE_TODO | ITEM_FILTER_TYPE_EVENT |
      ITEM_FILTER_TYPE_JOURNAL);
-  
-  const unsigned long ITEM_FILTER_ALL_ITEMS = 0xFFFF;
 
   /** 
-   * If set, return calIItemOccurence items, otherwise return subclasses of
+   * If set, return calIOccurence items, otherwise return subclasses of
    * calIItemBase.
    */
-  const unsigned long ITEM_FILTER_CLASS_OCCURRENCES = 1 << 16;
+  const unsigned long ITEM_FILTER_CLASS_OCCURRENCES = 1 << 5;
 
-  void addObserver( in calIObserver observer );
+  void addObserver( in calIObserver observer, in unsigned long aItemFilter );
   void removeObserver( in calIObserver observer );
 
   /**
-   * The following five "Item" functions are all asynchronous, and return
-   * their results to a calIOperationListener object.
+   * The following five "Item" functions are all asynchronous, and get 
+   * their results called back through an calIOperationListener object.
    *
-   */
-
-  /**
-   * addItem adds the given calIItemBase to the calendar.
-   *
-   * @param aItem       item to add
-   * @param aListener   where to call back the results
-   *
-   * - If aItem already has an ID, that ID is used when adding.
-   * - If aItem is mutable and has no ID, the calendar is expected
-   *   to generate an ID for the item.
-   * - If aItem is immutable and has no ID, an error is thrown.
-   *
-   * The results of the operation are reported through an
-   * onOperationComplete call on the listener, with the following
-   * parameters:
-   *
-   * - aOperationType: calIOperationListener::ADD
-   * - aId: the ID of the newly added item
-   * - aDetail: the calIItemBase corresponding to the immutable
-   *            version of the newly added item
-   *
-   * If an item with a given ID already exists in the calendar,
-   * onOperationComplete is called with an aStatus of NS_ERROR_XXXXX,
-   * and aDetail set with the calIItemBase of the internal already
-   * existing item.
+   * @param aItem	      item to add or modify
+   * @param aListener 	where to call back the results
+   * @param aId		      UID of the event in question
    */
   void addItem( in calIItemBase aItem, in calIOperationListener aListener );
+  void modifyItem( in calIItemBase aItem, in calIOperationListener aListener );
+  void deleteItem( in string aId, in calIOperationListener aListener );
 
   /**
-   * modifyItem takes a modified mutable item and modifies the
-   * calendar's internal version of the item to match.  The item is
-   * expected to have an ID that already exists in the calendar; if it
-   * doesn't, or there is no id, onOperationComplete is called with a
-   * status of NS_ERROR_XXXXX.  If the item is immutable,
-   * onOperationComplete is called with a status of NS_ERROR_XXXXX.
-   *
-   * If the generation of the given aNewItem does not match the generation
-   * of the internal item (indicating that someone else modified the
-   * item), onOperationComplete is called with a status of NS_ERROR_XXXXX
-   * and aDetail is set to the latest-version internal immutable item.
-   *
-   * @param aNewItem    new version to replace the old one
-   * @param aOldItem    caller's view of the item to be changed, as it is now
-   * @param aListener   where to call back the results
-   *
-   * The results of the operation are reported through an
-   * onOperationComplete call on the listener, with the following
-   * parameters:
-   *
-   * - aOperationType: calIOperationListener::MODIFY
-   * - aId: the ID of the modified item
-   * - aDetail: the calIItemBase corresponding to the newly-updated
-   *            immutable version of the modified item
-   */
-  void modifyItem( in calIItemBase aNewItem, in calIItemBase aOldItem, 
-                   in calIOperationListener aListener );
-
-  /**
-   * deleteItem takes an item that is to be deleted.  The item is
-   * expected to have an ID that already exists in the calendar; if it
-   * doesn't, or there is no id, onOperationComplete is called with
-   * a status of NS_ERROR_XXXXX.
-   *
-   * @param aItem       item to delete
-   * @param aListener   where to call back the results
-   *
-   * The results of the operation are reported through an
-   * onOperationComplete call on the listener, with the following
-   * parameters:
-   *
-   * - aOperationType: calIOperationListener::DELETE
-   * - aId: the ID of the deleted item
-   * - aDetail: the calIItemBase corresponding to the immutable version
-   *            of the deleted item
-   */
-  void deleteItem( in calIItemBase aItem, in calIOperationListener aListener );
-
-  /**
-   * Get a single event.  The event will be typed as one of the subclasses
-   * of calIItemBase (whichever concrete type is most appropriate).
+   * Get a single event.  The event will be typed as one of the child classes
+   * child of calIItemBase (which ever concrete one is most appropriate).
    * 
    * @param aId        UID of the event
    * @param aListener  listener to which this event will be called back.
-   *
-   * The results of the operation are reported through the listener,
-   * via zero or one onGetResult calls (with aCount set to 1)
-   * followed by an onOperationComplete.
-   *
-   * The parameters to onOperationComplete will be:
-   *
-   * - aOperationType: calIOperationListener::GET
-   * - aId: the ID of the requested item
-   * - aDetail: null (? we can also pass the item back here as well,..)
    */
   void getItem( in string aId, in calIOperationListener aListener );
 
@@ -248,27 +137,16 @@ interface calICalendar : nsISupports
    * live outside the range.
    *
    * @param aItemFilter ITEM_FILTER flags, or-ed together
-   * @param aCount      Maximum number of items to return, or 0 for
-   *                    an unbounded query.
+   * @param aCount	    Maximum number of items to return.  
    * @param aRangeStart Items starting at this time or after should be 
    *                    returned.  If invalid, assume "since the beginning
    *                    of time".
-   * @param aRangeEndEx Items starting before (not including) aRangeEndEx should be
-   *                    returned.  If null, assume "until the end of time".
+   * @param aRangeEnd   Items starting at this time or before should be
+   *			              returned.  If invalid, assume "until the end of time".
    * @param aListener   The results will be called back through this interface.
-   *
-   *
-   * The results of the operation are reported through the listener,
-   * via zero or more onGetResult calls followed by an onOperationComplete.
-   *
-   * The parameters to onOperationComplete will be:
-   *
-   * - aOperationType: calIOperationListener::GET
-   * - aId: null
-   * - aDetail: null
    */
   void getItems( in unsigned long aItemFilter, in unsigned long aCount, 
-                 in calIDateTime aRangeStart, in calIDateTime aRangeEndEx,
+                 in calIDateTime aRangeStart, in calIDateTime aRangeEnd,
                  in calIOperationListener aListener );
 
   /**
@@ -281,28 +159,18 @@ interface calICalendar : nsISupports
  * Used to allow multiple calendars (eg work and home) to be easily queried
  * and displayed as a single unit.
  */
-[scriptable, uuid(8285aa0b-594c-4f93-abe3-523df947e0ad)]
+[scriptable, uuid(1f6dba37-8ce4-4c51-bc10-6892d3e6f5ed)]
 interface calICompositeCalendar : calICalendar
 {
   /**
-   * Add an already created calendar to the composite
+   * Routines to manipulate calendars on a composite.
    * 
-   * @param aCalendar the calendar to be added
-   */
-  void addCalendar( in calICalendar aCalendar );
-  /**
-   * Remove a calendar from the composite
-   * 
-   * @param aServer  URI of the server to be removed
-   */
+   * @param aServer  URI of the server to be created 
+   * @param aType    used to parameterize the XPCOM contract-id of the
+   *                 calendar object to be created (eg "?type=caldav")
+   */ 
+  void addCalendar( in nsIURI aServer, in string aType );
   void removeCalendar( in nsIURI aServer );
-  /**
-   * If a calendar for the given URI exists in the CompositeCalendar,
-   * return it; otherwise return null.
-   *
-   * @param aServer  URI of the server whose calendar to return
-   * @return calendar for aServer, or null if none
-   */
   calICalendar getCalendar( in nsIURI aServer );
 
   /**
@@ -315,14 +183,7 @@ interface calICompositeCalendar : calICalendar
    * to set this attribute to specify which underlying calendar the item is
    * to be added to.
    */
-  attribute calICalendar defaultCalendar;
-  
-  /**
-   * If set, the composite will initialize itself from calICalendarManager
-   * prefs keyed off of the provided prefPrefix, and update those prefs to
-   * track changes in calendar membership and default calendar.
-   */
-  attribute ACString prefPrefix;
+  attribute nsIURI defaultCalendar;
 };
 
 /**
@@ -342,17 +203,6 @@ interface calIObserver : nsISupports
   void onError( in nsresult aErrNo, in AUTF8String aMessage );
 };
 
-/**
- * calICompositeObserver interface adds things to observe changes to
- * a calICompositeCalendar
- */
-[scriptable, uuid(a3584c92-b8eb-4aa8-a638-e46a2e11d6a9)]
-interface calICompositeObserver : calIObserver
-{
-  void onCalendarAdded( in calICalendar aCalendar );
-  void onCalendarRemoved( in calICalendar aCalendar );
-  void onDefaultCalendarChanged( in calICalendar aNewDefaultCalendar );
-};
 
 /**
  * Async operations are called back via this interface.  If you know that your
@@ -365,43 +215,36 @@ interface calIOperationListener : nsISupports
   /**
    * For add, modify, and delete.
    *
-   * @param aCalendar       the calICalendar on which the operation took place
-   * @param aStatus         status code summarizing what happened
-   * @param aOperationType  type of operation that was completed
-   * @param aId             UUID of element that was changed
-   * @param aDetail         not yet fully specified.  If aStatus is an error
+   * @param aOperationType 	type of operation that was completed
+   * @param aId			        UUID of element that was changed
+   * @param aStatus		      status code summarizing what happened
+   * @param aDetail		      not yet fully specified.  If aStatus is an error
    *                        result, this will probably be an extended error
    *                        string (eg one returned by a server).
    */
-  void onOperationComplete(in calICalendar aCalendar,
-                           in nsresult aStatus,
-                           in unsigned long aOperationType,
+  void onOperationComplete(in unsigned long aOperationType,
                            in string aId,
+                           in nsresult aStatus,
                            in nsIVariant aDetail);
   const unsigned long ADD = 1;
   const unsigned long MOVE = 2;
   const unsigned long DELETE = 3;
-  const unsigned long GET = 4;
 
   /**
    * For getItem and getItems.
    * 
-   * @param aStatus   status code summarizing what happened.
-   * @param aItemType type of interface returned in the array (@see
-   *                  calICalendar::GetItems).
-   * @param aDetail   not yet fully specified.  If aStatus is an error
+   * @param aStatus	  status code summarizing what happened.
+   * @param aItemType	type of interface returned in the array (@see
+   *               		calICalendar::GetItems).
+   * @param aDetail	  not yet fully specified.  If aStatus is an error
    *                  result, this will probably be an extended error
    *                  string (eg one returned by a server).
    * @param aCount    size of array returned, in items
-   * @param aItems    array of immutable items
-   *
-   * Multiple onGetResults might be called 
+   * @param aItems    array of item interfaces
+   *			
    */
-  void onGetResult (in calICalendar aCalendar,
-                    in nsresult aStatus,
-                    in nsIIDRef aItemType, 
-                    in nsIVariant aDetail,
-                    in PRUint32 aCount, 
-                    [array, size_is(aCount), iid_is(aItemType)] 
-                    in nsQIResult aItems ); 
+  void onGetComplete(in nsresult aStatus, in nsIIDRef aItemType, 
+                     in nsIVariant aDetail, in PRUint32 aCount, 
+                     [array, size_is(aCount), iid_is(aItemType)] 
+                     in nsQIResult aItems ); 
 };

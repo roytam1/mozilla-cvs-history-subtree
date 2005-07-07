@@ -1,41 +1,25 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
- * ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
  *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
  * The Original Code is mozilla.org code.
  *
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1999
- * the Initial Developer. All Rights Reserved.
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1999 Netscape Communications Corporation.  All
+ * Rights Reserved.
  *
  * Contributor(s):
- *   Seth Spitzer <sspitzer@netscape.com>
- *   Robert Ginda <rginda@netscape.com>
- *
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- *
- * ***** END LICENSE BLOCK ***** */
+ * Seth Spitzer <sspitzer@netscape.com>
+ * Robert Ginda <rginda@netscape.com>
+ */
 
 /*
  * This file contains the following calendar related components:
@@ -70,15 +54,12 @@ const STANDARDURL_CONTRACTID =
     "@mozilla.org/network/standard-url;1";
 const ASS_CONTRACTID =
     "@mozilla.org/appshell/appShellService;1";
-const WINDOWWATCHER_CONTRACTID =
-    "@mozilla.org/embedcomp/window-watcher;1";
 
 /* interafces used in this file */
 const nsIWindowMediator  = Components.interfaces.nsIWindowMediator;
 const nsICmdLineHandler  = Components.interfaces.nsICmdLineHandler;
 const nsICategoryManager = Components.interfaces.nsICategoryManager;
 const nsIContentHandler  = Components.interfaces.nsIContentHandler;
-const nsIFactory         = Components.interfaces.nsIFactory;
 const nsIProtocolHandler = Components.interfaces.nsIProtocolHandler;
 const nsIURI             = Components.interfaces.nsIURI;
 const nsIStandardURL     = Components.interfaces.nsIStandardURL;
@@ -86,63 +67,31 @@ const nsIChannel         = Components.interfaces.nsIChannel;
 const nsIRequest         = Components.interfaces.nsIRequest;
 const nsIAppShellService = Components.interfaces.nsIAppShellService;
 const nsISupports        = Components.interfaces.nsISupports;
-const nsIWindowWatcher   = Components.interfaces.nsIWindowWatcher;
-
-if ("nsICommandLineHandler" in Components.interfaces)
-     const nsICommandLineHandler = Components.interfaces.nsICommandLineHandler;
 
 /* Command Line handler service */
 function CLineService()
 {}
 
-CLineService.prototype = {
-    /* nsISupports */
-    QueryInterface : function service_qi(iid) {
-        if (iid.equals(nsISupports))
-            return this;
-
-        if (nsICmdLineHandler && iid.equals(nsICmdLineHandler))
-            return this;
-
-        if (nsICommandLineHandler && iid.equals(nsICommandLineHandler))
-            return this;
-
-        throw Components.results.NS_ERROR_NO_INTERFACE;
-    },
-
-    /* nsICmdLineHandler */
-
-    commandLineArgument : "-calendar",
-    prefNameForStartup  : "general.startup.calendar",
-    chromeUrlForTask    : "chrome://calendar/content",
-    helpText            : "Start with calendar",
-    handlesArgs         : false,
-    defaultArgs         : "",
-    openWindowWithArgs  : true,
-
-    /* nsICommandLineHandler */
-
-    handle : function service_handle(cmdLine) {
-        if (cmdLine.handleFlag("calendar", false)) {
-            wwatch = Components.classes[WINDOWWATCHER_CONTRACTID]
-                               .getService(nsIWindowWatcher);
-            wwatch.openWindow(null, "chrome://calendar/content/",
-                              "_blank", "chrome,dialog=no,all", cmdLine);
-            cmdLine.preventDefault = true;
-        }
-    },
-
-    helpInfo : "  -calendar            Start with the calendar.\n"
-};
+CLineService.prototype.commandLineArgument = "-calendar";
+CLineService.prototype.prefNameForStartup = "general.startup.calendar";
+CLineService.prototype.chromeUrlForTask = "chrome://calendar/content";
+CLineService.prototype.helpText = "Start with calendar";
+CLineService.prototype.handlesArgs = false;
+CLineService.prototype.defaultArgs = "";
+CLineService.prototype.openWindowWithArgs = true;
 
 /* factory for command line handler service (CLineService) */
-var CLineFactory = {
-    createInstance : function (outer, iid) {
-        if (outer != null)
-            throw Components.results.NS_ERROR_NO_AGGREGATION;
+var CLineFactory = new Object();
 
-        return new CLineService().QueryInterface(iid);
-    }
+CLineFactory.createInstance =
+function (outer, iid) {
+    if (outer != null)
+        throw Components.results.NS_ERROR_NO_AGGREGATION;
+
+    if (!iid.equals(nsICmdLineHandler) && !iid.equals(nsISupports))
+        throw Components.results.NS_ERROR_INVALID_ARG;
+
+    return new CLineService();
 }
 
 /* text/calendar content handler */
@@ -161,43 +110,51 @@ function (iid) {
 }
 
 ICALContentHandler.prototype.handleContent =
-function(aContentType, aWindowTarget, aRequest)
+function (aContentType, param2, param3, param4)
 {
+
+    var aWindowTarget, aRequest;
+    if (param4 === undefined)
+    {// Moz1.8+ uses 3 params: (aContentType, aWindowTarget, aRequest)
+        aWindowTarget = param2;
+        aRequest      = param3;
+    }
+    else
+    {// Moz1.7- uses 4 params: (aContentType, aCommand, aWindowTarget, aRequest)
+        aWindowTarget = param3;
+        aRequest      = param4;
+    }
+
+    var e;
     var channel = aRequest.QueryInterface(nsIChannel);
 
-    // Cancel the request ...
-    var uri = channel.URI;
-    const NS_BINDING_ABORTED = 0x804b0002 // from nsNetError.h
-    aRequest.cancel(NS_BINDING_ABORTED);
+    /*
+    dump ("ICALContentHandler.handleContent (" + aContentType + ", " +
+           aWindowTarget + ", " + channel.URI.spec + ")\n");
+    */
 
-    // ... Subscribe to the uri ...
-    var calendarManager = Components.classes["@mozilla.org/calendar/manager;1"]
-                                    .getService(Components.interfaces.calICalendarManager);
-
-    var newCalendar = calendarManager.createCalendar('ics', uri);
-    calendarManager.registerCalendar(newCalendar);
-
-    // XXX Come up with a better name, like the filename or X-WR-CALNAME
-    // XXX Also, make up a color
-    newCalendar.name = "temp";
-
-    // ... and open or focus a calendar window.
-    var windowManager = Components.classes[MEDIATOR_CONTRACTID]
-                                  .getService(nsIWindowMediator);
+    var windowManager =
+        Components.classes[MEDIATOR_CONTRACTID].getService(nsIWindowMediator);
 
     var w = windowManager.getMostRecentWindow("calendarMainWindow");
 
-    if (w) {
+    if (w)
+    {
         w.focus();
-    } else {
-        var ass = Components.classes[ASS_CONTRACTID]
-                            .getService(nsIAppShellService);
+
+        w.gCalendarWindow.calendarManager.checkCalendarURL( channel );
+    }
+    else
+    {
+        var ass =
+            Components.classes[ASS_CONTRACTID].getService(nsIAppShellService);
         w = ass.hiddenDOMWindow;
 
         var args = new Object ();
         args.channel = channel;
         w.openDialog("chrome://calendar/content/calendar.xul", "calendar", "chrome,menubar,resizable,scrollbars,status,toolbar,dialog=no", args);
     }
+
 }
 
 /* content handler factory object (ICALContentHandler) */
@@ -335,7 +292,7 @@ var CalendarModule = new Object();
 CalendarModule.registerSelf =
 function (compMgr, fileSpec, location, type)
 {
-    // dump("*** Registering -calendar handler.\n");
+    dump("*** Registering -calendar handler.\n");
 
     compMgr = compMgr.QueryInterface(Components.interfaces.nsIComponentRegistrar);
 
@@ -346,15 +303,13 @@ function (compMgr, fileSpec, location, type)
                                     location,
                                     type);
 
-    var catman = Components.classes["@mozilla.org/categorymanager;1"]
-                           .getService(nsICategoryManager);
+    catman = Components.classes["@mozilla.org/categorymanager;1"]
+                       .getService(nsICategoryManager);
     catman.addCategoryEntry("command-line-argument-handlers",
                             "calendar command line handler",
                             CLINE_SERVICE_CONTRACTID, true, true);
-    catman.addCategoryEntry("command-line-handler", "m-calendar",
-                            CLINE_SERVICE_CONTRACTID, true, true);
 
-    // dump("*** Registering text/calendar handler.\n");
+    dump("*** Registering text/calendar handler.\n");
     compMgr.registerFactoryLocation(ICALCNT_HANDLER_CID,
                                     "Webcal Content Handler",
                                     ICALCNT_HANDLER_CONTRACTID,
@@ -362,7 +317,7 @@ function (compMgr, fileSpec, location, type)
                                     location,
                                     type);
 
-    // dump("*** Registering webcal protocol handler.\n");
+    dump("*** Registering webcal protocol handler.\n");
     compMgr.registerFactoryLocation(ICALPROT_HANDLER_CID,
                                     "Webcal protocol handler",
                                     ICALPROT_HANDLER_CONTRACTID,
@@ -376,16 +331,12 @@ function(compMgr, fileSpec, location)
 {
     compMgr = compMgr.QueryInterface(Components.interfaces.nsIComponentRegistrar);
 
-    compMgr.unregisterFactoryLocation(CLINE_SERVICE_CID, fileSpec);
-    compMgr.unregisterFactoryLocation(ICALCNT_HANDLER_CID, fileSpec);
-    compMgr.unregisterFactoryLocation(ICALPROT_HANDLER_CID, fileSpec);
-
+    compMgr.unregisterFactoryLocation(CLINE_SERVICE_CID,
+                                      fileSpec);
     catman = Components.classes["@mozilla.org/categorymanager;1"]
                        .getService(nsICategoryManager);
     catman.deleteCategoryEntry("command-line-argument-handlers",
-                               "calendar command line handler", true);
-    catman.deleteCategoryEntry("command-line-handler",
-                               "m-calendar", true);
+                               CLINE_SERVICE_CONTRACTID, true);
 }
 
 CalendarModule.getClassObject =
@@ -399,7 +350,11 @@ function (compMgr, cid, iid) {
     if (cid.equals(ICALPROT_HANDLER_CID))
         return ICALProtocolHandlerFactory;
 
+    if (!iid.equals(Components.interfaces.nsIFactory))
+        throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
+
     throw Components.results.NS_ERROR_NO_INTERFACE;
+
 }
 
 CalendarModule.canUnload =

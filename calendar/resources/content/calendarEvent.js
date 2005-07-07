@@ -523,7 +523,7 @@ CalendarEventDataSource.prototype.getAllToDos = function calEvent_getAllToDos()
  */
 CalendarEventDataSource.prototype.getToDosForRange = function calEvent_getToDosForRange( StartDate, EndDate )
 {
-   var Checked = document.getElementById( "hide-completed-checkbox" ).checked;
+   var Checked = document.getElementById( "only-completed-checkbox" ).checked;
    
    gICalLib.resetFilter();
       
@@ -615,7 +615,7 @@ function getCurrentNextOrPreviousRecurrence( calendarEvent )
 
       var result = new Object();
 
-      var dur = calendarEvent.endDate.jsDate - calendarEvent.startDate.jsDate;
+      var dur = calendarEvent.end.getTime() - calendarEvent.start.getTime();
 
       // To find current event when now is during event, look for occurrence
       // starting duration ago.
@@ -640,7 +640,7 @@ function getCurrentNextOrPreviousRecurrence( calendarEvent )
    
    if( !isValid )
    {
-      eventStartDate = new Date( calendarEvent.startDate.jsDate );
+      eventStartDate = new Date( calendarEvent.start.getTime() );
    }
       
    return eventStartDate;

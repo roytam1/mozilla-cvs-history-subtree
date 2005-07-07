@@ -40,236 +40,147 @@
 // calMemoryCalendar.js
 //
 
-const calCalendarManagerContractID = "@mozilla.org/calendar/manager;1";
-const calICalendarManager = Components.interfaces.calICalendarManager;
-
-var activeCalendarManager = null;
-function getCalendarManager()
-{
-    if (!activeCalendarManager) {
-        activeCalendarManager = 
-            Components.classes[calCalendarManagerContractID].getService(calICalendarManager);
-    }
-    return activeCalendarManager;
-}
-
 function calMemoryCalendar() {
     this.wrappedJSObject = this;
-    this.calendarToReturn = this,
-    this.initMemoryCalendar();
 }
-
-function makeOccurrence(item, start, end)
-{
-    var occ = item.createProxy();
-    occ.recurrenceId = start;
-    occ.startDate = start;
-    occ.endDate = end;
-    return occ;
-}
-
-// END_OF_TIME needs to be the max value a PRTime can be
-const START_OF_TIME = -0x7fffffffffffffff;
-const END_OF_TIME = 0x7fffffffffffffff;
 
 calMemoryCalendar.prototype = {
-    // This will be returned from getItems as the calendar. The ics
-    // calendar overwrites this.
-    calendarToReturn: null,
+    //
+    // private members
+    //
+    mObservers: Array(),
+    mItems: Array(),
 
     //
     // nsISupports interface
     // 
     QueryInterface: function (aIID) {
         if (!aIID.equals(Components.interfaces.nsISupports) &&
-            !aIID.equals(Components.interfaces.calICalendar)) {
+            !aIID.equals(Components.interfaces.calICalendar))
+        {
             throw Components.results.NS_ERROR_NO_INTERFACE;
         }
 
         return this;
     },
 
-    initMemoryCalendar: function() {
-        this.mObservers = Array();
-        this.mItems = { };
-    },
-
     //
     // nsICalendar interface
     //
 
-    // attribute AUTF8String name;
-    get name() {
-        return getCalendarManager().getCalendarPref(this, "NAME");
-    },
-    set name(name) {
-        getCalendarManager().setCalendarPref(this, "NAME", name);
-    },
-
-    // readonly attribute AUTF8String type;
-    get type() { return "memory"; },
-
     // attribute nsIURI uri;
-    mUri: null,
-    get uri() { return this.mUri; },
-    set uri(aURI) { this.mUri = aURI; },
+    get uri() { return ""; },
+    set uri(aURI) { throw Components.results.NS_ERROR_NOT_IMPLEMENTED; },
 
     // attribute boolean suppressAlarms;
     get suppressAlarms() { return false; },
     set suppressAlarms(aSuppressAlarms) { throw Components.results.NS_ERROR_NOT_IMPLEMENTED; },
 
-    // void addObserver( in calIObserver observer );
+    // void addObserver( in calIObserver observer, in unsigned long aItemFilter );
     addObserver: function (aObserver, aItemFilter) {
-        if (this.mObservers.some(function(o) { return (o == aObserver); }))
-            return;
+        for (var i = 0; i < this.mObservers.length; i++) {
+            if (this.mObservers[i].observer == aObserver &&
+                this.mObservers[i].filter == aItemFilter)
+            {
+                return;
+            }
+        }
 
-        this.mObservers.push(aObserver);
+        this.mObservers.push( {observer: aObserver, filter: aItemFilter} );
     },
 
     // void removeObserver( in calIObserver observer );
     removeObserver: function (aObserver) {
-        var newObservers = this.mObservers.filter(function(o) { return (o != aObserver); });
+        var newObservers = Array();
+        for (var i = 0; i < this.mObservers.length; i++) {
+            if (this.mObservers[i].observer != aObserver)
+                newObservers.push(mObservers[i]);
+        }
         this.mObservers = newObservers;
     },
 
     // void addItem( in calIItemBase aItem, in calIOperationListener aListener );
     addItem: function (aItem, aListener) {
-        if (aItem.id == null && aItem.isMutable)
-            aItem.id = "uuid" + (new Date()).getTime();
-
         if (aItem.id == null) {
-            if (aListener)
-                aListener.onOperationComplete (this.calendarToReturn,
-                                               Components.results.NS_ERROR_FAILURE,
-                                               aListener.ADD,
-                                               aItem.id,
-                                               "Can't set ID on non-mutable item to addItem");
-            return;
+            // is this an error?  Or should we generate an IID?
+            aItem.id = "uuid:" + (new Date()).getTime();
         }
-
         if (this.mItems[aItem.id] != null) {
             // is this an error?
             if (aListener)
-                aListener.onOperationComplete (this.calendarToReturn,
-                                               Components.results.NS_ERROR_FAILURE,
-                                               aListener.ADD,
+                aListener.onOperationComplete (Components.results.NS_ERROR_FAILURE,
                                                aItem.id,
-                                               "ID already exists for addItem");
+                                               aListener.ADD,
+                                               "ID already eists for addItem");
             return;
         }
 
-        var newItem = aItem.clone();
-        newItem.calendar = this.calendarToReturn;
-        newItem.generation = 1;
-        newItem.makeImmutable();
-        this.mItems[newItem.id] = newItem;
+        this.mItems[aItem.id] = aItem;
+
+        // notify observers
+        this.observeAddItem(aItem);
 
         // notify the listener
         if (aListener)
-            aListener.onOperationComplete (this.calendarToReturn,
-                                           Components.results.NS_OK,
+            aListener.onOperationComplete (Components.results.NS_OK,
+                                           aItem.id,
                                            aListener.ADD,
-                                           newItem.id,
-                                           newItem);
-        // notify observers
-        this.observeAddItem(newItem);
+                                           aItem);
     },
 
-    // void modifyItem( in calIItemBase aNewItem, in calIItemBase aOldItem, in calIOperationListener aListener );
-    modifyItem: function (aNewItem, aOldItem, aListener) {
-        if (!aNewItem) {
-            throw Components.results.NS_ERROR_FAILURE;
-        }
-        if (aNewItem.id == null || this.mItems[aNewItem.id] == null) {
+    // void modifyItem( in calIItemBase aItem, in calIOperationListener aListener );
+    modifyItem: function (aItem, aListener) {
+        if (aItem.id == null ||
+            this.mItems[aItem.id] == null)
+        {
             // this is definitely an error
             if (aListener)
-                aListener.onOperationComplete (this.calendarToReturn,
-                                               Components.results.NS_ERROR_FAILURE,
+                aListener.onOperationComplete (Components.results.NS_ERROR_FAILURE,
+                                               aItem.id,
                                                aListener.MODIFY,
-                                               aNewItem.id,
-                                               "ID for modifyItem doesn't exist, is null, or is from different calendar");
+                                               "ID for modifyItem doesn't exist or is null");
             return;
         }
 
-        // do the old and new items match?
-        if (aOldItem.id != aNewItem.id) {
-            if (aListener)
-                aListener.onOperationComplete (this.calendarToReturn,
-                                               Components.results.NS_ERROR_FAILURE,
-                                               aListener.MODIFY,
-                                               aNewItem.id,
-                                               "item ID mismatch between old and new items");
-            return;
-        }
+        // technically, they should be the same item
+        var modifiedItem = this.mItems[aItem.id];
+        this.mItems[aItem.id] = aItem;
 
-        if (aOldItem != this.mItems[aOldItem.id]) {
-            if (aListener)
-                aListener.onOperationComplete (this.calendarToReturn,
-                                               Components.results.NS_ERROR_FAILURE,
-                                               aListener.MODIFY,
-                                               aNewItem.id,
-                                               "old item mismatch in modifyItem");
-            return;
-        }
-
-        if (aOldItem.generation != aNewItem.generation) {
-            if (aListener)
-                aListener.onOperationComplete (this.calendarToReturn,
-                                               Components.results.NS_ERROR_FAILURE,
-                                               aListener.MODIFY,
-                                               aNewItem.id,
-                                               "generation mismatch in modifyItem");
-            return;
-        }
-
-        var modifiedItem = aNewItem.clone();
-        modifiedItem.generation += 1;
-        modifiedItem.makeImmutable();
-        this.mItems[aNewItem.id] = modifiedItem;
+        // notify observers
+        this.observeModifyItem(modifiedItem, aItem);
 
         if (aListener)
-            aListener.onOperationComplete (this.calendarToReturn,
-                                           Components.results.NS_OK,
+            aListener.onOperationComplete (Components.results.NS_OK,
+                                           aItem.id,
                                            aListener.MODIFY,
-                                           modifiedItem.id,
-                                           modifiedItem);
-        // notify observers
-        this.observeModifyItem(modifiedItem, aOldItem);
+                                           aItem);
     },
 
-    // void deleteItem( in calIItemBase aItem, in calIOperationListener aListener );
-    deleteItem: function (aItem, aListener) {
-        if (aItem.id == null || this.mItems[aItem.id] == null) {
+    // void deleteItem( in string id, in calIOperationListener aListener );
+    deleteItem: function (aId, aListener) {
+        if (aId == null ||
+            this.mItems[aId] == null)
+        {
             if (aListener)
-                aListener.onOperationComplete (this.calendarToReturn,
-                                               Components.results.NS_ERROR_FAILURE,
+                aListener.onOperationComplete (Components.results.NS_ERROR_FAILURE,
+                                               aId,
                                                aListener.DELETE,
-                                               aItem.id,
-                                               "ID is null or is from different calendar in deleteItem");
+                                               "ID doesn't exist for deleteItem");
             return;
         }
 
-        var oldItem = this.mItems[aItem.id];
-        if (oldItem.generation != aItem.generation) {
-            if (aListener)
-                aListener.onOperationComplete (this.calendarToReturn,
-                                               Components.results.NS_ERROR_FAILURE,
-                                               aListener.DELETE,
-                                               aItem.id,
-                                               "generation mismatch in deleteItem");
-            return;
-        }
+        deletedItem = this.mItems[aId];
+        delete this.mItems[aId];
 
-        delete this.mItems[aItem.id];
+        // notify observers
+        observeDeleteItem(deletedItem);
 
         if (aListener)
-            aListener.onOperationComplete (this.calendarToReturn,
-                                           Components.results.NS_OK,
+            aListener.onOperationComplete (Components.results.NS_OK,
+                                           aId,
                                            aListener.DELETE,
-                                           aItem.id,
                                            null);
-        // notify observers
-        this.observeDeleteItem(oldItem);
+
     },
 
     // void getItem( in string id, in calIOperationListener aListener );
@@ -278,199 +189,124 @@ calMemoryCalendar.prototype = {
             return;
 
         if (aId == null ||
-            this.mItems[aId] == null) {
-            aListener.onOperationComplete(this.calendarToReturn,
-                                          Components.results.NS_ERROR_FAILURE,
-                                          aListener.GET,
-                                          null,
-                                          "IID doesn't exist for getItem");
+            this.mItems[aId] == null)
+        {
+            aListener.onGetComplete(Components.results.NS_ERROR_FAILURE,
+                                    null,
+                                    "IID doesn't exist for getItem", 0, []);
             return;
         }
 
         var item = this.mItems[aId];
         var iid = null;
 
-        if (item instanceof Components.interfaces.calIEvent) {
+        if (item.QueryInterface(Components.interfaces.calIEvent)) {
             iid = Components.interfaces.calIEvent;
-        } else if (item instanceof Components.interfaces.calITodo) {
+        } else if (item.QueryInterface(Components.interfaces.calITodo)) {
             iid = Components.interfaces.calITodo;
         } else {
-            aListener.onOperationComplete (this.calendarToReturn,
-                                           Components.results.NS_ERROR_FAILURE,
-                                           aListener.GET,
-                                           aId,
-                                           "Can't deduce item type based on QI");
+            aListener.onGetComplete(Components.results.NS_ERROR_FAILURE,
+                                    null,
+                                    "Can't deduce item type based on QI", 0, []);
             return;
         }
 
-        aListener.onGetResult (this.calendarToReturn,
-                               Components.results.NS_OK,
-                               iid,
-                               null, 1, [item]);
-
-        aListener.onOperationComplete (this.calendarToReturn,
-                                       Components.results.NS_OK,
-                                       aListener.GET,
-                                       aId,
-                                       null);
-
+        aListener.onGetComplete(Components.results.NS_OK,
+                                iid,
+                                null, 1, [item]);
     },
 
-    // void getItems( in unsigned long aItemFilter, in unsigned long aCount, 
-    //                in calIDateTime aRangeStart, in calIDateTime aRangeEnd,
+    // void getItems( in nsIIDRef aItemType, in unsigned long aItemFilter, 
+    //                in unsigned long aCount, in calIDateTime aRangeStart,
+    //                in calIDateTime aRangeEnd, 
     //                in calIOperationListener aListener );
-    getItems: function (aItemFilter, aCount,
+    getItems: function (aItemType, aItemFilter, aCount,
                         aRangeStart, aRangeEnd, aListener)
     {
-        if (!aListener)
-            return;
-
-        const calICalendar = Components.interfaces.calICalendar;
-        const calIItemBase = Components.interfaces.calIItemBase;
-        const calIEvent = Components.interfaces.calIEvent;
-        const calITodo = Components.interfaces.calITodo;
-        const calIItemOccurrence = Components.interfaces.calIItemOccurrence;
-        const calIRecurrenceInfo = Components.interfaces.calIRecurrenceInfo;
+        // we ignore aItemFilter; we always return all items.  if
+        // aCount != 0, we don't attempt to sort anything, and instead
+        // return the first aCount items that match.
 
         var itemsFound = Array();
-        var startTime = START_OF_TIME;
-        var endTime = END_OF_TIME;
+        var startTime = 0;
+        // endTime needs to be the max value a PRTime can be
+        var endTime = 0x7fffffffffffffff;
         if (aRangeStart)
-            startTime = aRangeStart.nativeTime;
+            startTime = aRangeStart.utcTime;
         if (aRangeEnd)
-            endTime = aRangeEnd.nativeTime;
+            endTime = aRangeEnd.utcTime;
 
-        //
-        // filters
-        //
+        const calIEvent = Components.interfaces.calIEvent;
+        const calITodo = Components.interfaces.calITodo;
 
-        // item base type
-        var wantEvents = ((aItemFilter & calICalendar.ITEM_FILTER_TYPE_EVENT) != 0);
-        var wantTodos = ((aItemFilter & calICalendar.ITEM_FILTER_TYPE_TODO) != 0);
-        if(!wantEvents && !wantTodos) {
-            // bail.
-            aListener.onOperationComplete (this.calendarToReturn,
-                                           Components.results.NS_ERROR_FAILURE,
-                                           aListener.GET,
-                                           null,
-                                           "Bad aItemFilter passed to getItems");
-            return;
-        }
+        for (var i = 0; i < this.mItems.length; i++) {
+            var item = this.mItems[i];
 
-        // completed?
-        var itemCompletedFilter = ((aItemFilter & calICalendar.ITEM_FILTER_COMPLETED_YES) != 0);
-        var itemNotCompletedFilter = ((aItemFilter & calICalendar.ITEM_FILTER_COMPLETED_NO) != 0);
+            if (aItemType)
+                item = item.QueryInterface(aItemType);
+            if (item) {
+                var itemStartTime = 0;
+                var itemEndTime = 0;
 
-        // return occurrences?
-        var itemReturnOccurrences = ((aItemFilter & calICalendar.ITEM_FILTER_CLASS_OCCURRENCES) != 0);
-
-        // figure out the return interface type
-        var typeIID = null;
-        if (itemReturnOccurrences) {
-            typeIID = calIItemBase;
-        } else {
-            if (wantEvents && wantTodos) {
-                typeIID = calIItemBase;
-            } else if (wantEvents) {
-                typeIID = calIEvent;
-            } else if (wantTodos) {
-                typeIID = calITodo;
-            }
-        }
-
-        //  if aCount != 0, we don't attempt to sort anything, and
-        //  instead return the first aCount items that match.
-
-        for (var itemIndex in this.mItems) {
-            var item = this.mItems[itemIndex];
-            var itemtoadd = null;
-
-            var itemStartTime = 0;
-            var itemEndTime = 0;
-
-            var tmpitem = item;
-            if (wantEvents && (item instanceof calIEvent)) {
-                tmpitem = item.QueryInterface(calIEvent);
-                itemStartTime = (item.startDate.isValid
-                                 ? item.startDate.nativeTime
-                                 : START_OF_TIME);
-                itemEndTime = (item.endDate.isValid
-                               ? item.endDate.nativeTime
-                               : END_OF_TIME);
-            } else if (wantTodos && (item instanceof calITodo)) {
-                // if it's a todo, also filter based on completeness
-                if (item.percentComplete == 100 && !itemCompletedFilter)
-                    continue;
-                else if (item.percentComplete < 100 && !itemNotCompletedFilter)
-                    continue;
-
-                itemEndTime = itemStartTime = 
-                    item.entryDate ? item.entryDate.nativeTime : 0;
-            } else {
-                // XXX unknown item type, wth do we do?
-                continue;
-            }
-
-            if (itemStartTime < endTime) {
-                // figure out if there are recurrences here we care about
-                if (itemReturnOccurrences && item.recurrenceInfo)
+                var tmpitem = item;
+                if (aItemType == calIEvent ||
+                    (tmpitem = item.QueryInterface(calIEvent)) != null)
                 {
-                    // there might be some recurrences here that we need to handle
-                    var recs = item.recurrenceInfo.getOccurrences (aRangeStart, aRangeEnd, 0, {});
-                    itemsFound = itemsFound.concat(recs);
-                } else if (itemEndTime >= startTime) {
-                    // no occurrences
-                    if (itemReturnOccurrences)
-                        itemtoadd = makeOccurrence(item, item.startDate, item.endDate);
-                    else
-                        itemtoadd = item;
-                    itemsFound.push(itemtoadd);
+                    itemStartTime = tmpitem.startDate.utcTime;
+                    itemEndTime = tmpitem.endDate.utcTime;
+                } else if (aItemType == calITodo ||
+                           (tmpitem = item.QueryInterface(calITodo)) != null)
+                {
+                    itemStartTime = tmpitem.entryTime.utcTime;
+                    itemEndTime = tmpitem.entryTime.utcTime;
+                } else {
+                    // XXX unknown item type, wth do we do?
+                    continue;
                 }
-            }
 
-            if (aCount && itemsFound.length >= aCount)
-                break;
+                // determine whether any endpoint falls within the range
+                if (itemStartTime <= endTime && itemEndTime >= startTime) {
+                    itemsFound.push(item);
+                }
+
+                if (aCount && itemsFound.length >= aCount)
+                    break;
+            }
         }
 
-        aListener.onGetResult (this.calendarToReturn,
-                               Components.results.NS_OK,
-                               typeIID,
-                               null,
-                               itemsFound.length,
-                               itemsFound);
-
-        aListener.onOperationComplete (this.calendarToReturn,
-                                       Components.results.NS_OK,
-                                       aListener.GET,
-                                       null,
-                                       null);
+        if (aListener)
+            aListener.onGetComplete (Components.results.NS_OK,
+                                     aItemType,
+                                     null,
+                                     itemsFound.length,
+                                     itemsFound);
     },
 
     //
     // Helper functions
     //
     observeBatchChange: function (aNewBatchMode) {
-        for each (obs in this.mObservers) {
+        for (var i = 0; i < this.mObservers.length; i++) {
             if (aNewBatchMode)
-                obs.onStartBatch ();
+                this.mObservers[i].onStartBatch ();
             else
-                obs.onEndBatch ();
+                this.mObservers[i].onEndBatch ();
         }
     },
 
     observeAddItem: function (aItem) {
-        for each (obs in this.mObservers)
-            obs.onAddItem (aItem);
+        for (var i = 0; i < this.mObservers.length; i++)
+            this.mObservers[i].onAddItem (aItem);
     },
 
     observeModifyItem: function (aOldItem, aNewItem) {
-        for each (obs in this.mObservers)
-            obs.onModifyItem (aOldItem, aNewItem);
+        for (var i = 0; i < this.mObservers.length; i++)
+            this.mObservers[i].onModifyItem (aOldItem, aNewItem);
     },
 
     observeDeleteItem: function (aDeletedItem) {
-        for each (obs in this.mObservers)
-            obs.onDeleteItem (aDeletedItem);
+        for (var i = 0; i < this.mObservers.length; i++)
+            this.mObservers[i].onDeleteItem (aDeletedItem);
     },
 }
 
@@ -480,7 +316,7 @@ calMemoryCalendar.prototype = {
 
 var calMemoryCalendarModule = {
     mCID: Components.ID("{bda0dd7f-0a2f-4fcf-ba08-5517e6fbf133}"),
-    mContractID: "@mozilla.org/calendar/calendar;1?type=memory",
+    mContractID: "@mozilla.org/calendar/calendar;1&type=memory",
     
     registerSelf: function (compMgr, fileSpec, location, type) {
         compMgr = compMgr.QueryInterface(Components.interfaces.nsIComponentRegistrar);

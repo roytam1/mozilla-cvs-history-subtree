@@ -42,8 +42,6 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MOZILLA_INTERNAL_API = 1
-
 AB_CD = $(MOZ_UI_LOCALE) 
 
 DEFINES += -DTHUNDERBIRD_ICO=\"$(DIST)/branding/thunderbird.ico\" -DAB_CD=$(AB_CD)
@@ -61,7 +59,11 @@ PROGRAM = thunderbird-bin$(BIN_SUFFIX)
 endif
 
 REQUIRES = \
+	string \
 	xpcom \
+	xulapp \
+	xpinstall \
+        appshell \
 	$(NULL)
 
 LOCAL_INCLUDES = -I$(topsrcdir)/toolkit/xre
@@ -80,19 +82,15 @@ LIBS = \
 	$(STATIC_COMPONENTS_LINKER_PATH) \
 	$(DIST)/lib/$(LIB_PREFIX)xulapp_s.$(LIB_SUFFIX) \
 	$(MOZ_JS_LIBS) \
+	$(TK_LIBS) \
 	$(EXTRA_DSO_LIBS) \
 	$(XPCOM_LIBS) \
 	$(NSPR_LIBS) \
-	$(TK_LIBS) \
 	$(NULL)
 
 # Add explicit X11 dependency when building against X11 toolkits
 ifneq (,$(filter gtk gtk2 xlib,$(MOZ_WIDGET_TOOLKIT)))
 LIBS += $(XLDFLAGS) $(XLIBS)
-endif
-
-ifdef MOZ_JPROF
-LIBS += -ljprof
 endif
 
 ifndef MOZ_WINCONSOLE
@@ -150,7 +148,10 @@ include $(topsrcdir)/config/static-rules.mk
 endif
 
 APP_VERSION = $(shell cat $(srcdir)/../config/version.txt)
-DEFINES += -DAPP_VERSION="$(APP_VERSION)"
+DEFINES += -DAPP_VERSION=\"$(APP_VERSION)\"
+
+BUILD_ID = $(shell cat $(DEPTH)/config/build_number)
+DEFINES += -DBUILD_ID=\"$(BUILD_ID)\"
 
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 ifdef BUILD_STATIC_LIBS
@@ -273,8 +274,6 @@ endif
 
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 
-AB := $(firstword $(subst -, ,$(AB_CD)))
-
 ifdef MOZ_DEBUG
 APP_NAME = ThunderbirdDebug
 else
@@ -283,20 +282,14 @@ endif
 
 libs:: $(PROGRAM)
 	mkdir -p $(DIST)/$(APP_NAME).app/Contents/MacOS
-	rsync -a --exclude CVS --exclude "*.in" $(srcdir)/macbuild/Contents $(DIST)/$(APP_NAME).app --exclude English.lproj
-	mkdir -p $(DIST)/$(APP_NAME).app/Contents/Resources/$(AB).lproj
-	rsync -a --exclude CVS $(srcdir)/macbuild/Contents/Resources/English.lproj/ $(DIST)/$(APP_NAME).app/Contents/Resources/$(AB).lproj
+	rsync -a --exclude CVS --exclude "*.in" $(srcdir)/macbuild/Contents $(DIST)/$(APP_NAME).app
 	sed -e "s/APP_VERSION/$(APP_VERSION)/" $(srcdir)/macbuild/Contents/Info.plist.in > $(DIST)/$(APP_NAME).app/Contents/Info.plist
 	rsync -a $(DIST)/bin/ $(DIST)/$(APP_NAME).app/Contents/MacOS
 	rm -f $(DIST)/$(APP_NAME).app/Contents/MacOS/$(PROGRAM)
 	rsync -aL $(PROGRAM) $(DIST)/$(APP_NAME).app/Contents/MacOS
 	mkdir -p $(DIST)/$(APP_NAME).app/Contents/Plug-Ins
-# Bug 297227: the next line only exists to repair broken depend builds, it can
-# go away once that bug has been closed for a while.
-	rm -rf $(DIST)/$(APP_NAME).app/Contents/Plug-Ins/PrintPDE.plugin
-	rsync -a --copy-unsafe-links $(DIST)/package/PrintPDE.plugin $(DIST)/$(APP_NAME).app/Contents/Plug-Ins
+	cp -R $(DIST)/package/PrintPDE.plugin $(DIST)/$(APP_NAME).app/Contents/Plug-Ins/
 	cp -RL $(DIST)/branding/thunderbird.icns $(DIST)/$(APP_NAME).app/Contents/Resources/thunderbird.icns
-	cp -RL $(srcdir)/macbuild/mail-biff-badge.png 	$(DIST)/$(APP_NAME).app/Contents/Resources/mail-biff-badge.png
 	echo -n APPLMOZM > $(DIST)/$(APP_NAME).app/Contents/PkgInfo
 #       remove CVS dirs from packaged app
 	find $(DIST)/$(APP_NAME).app -type d -name "CVS" -prune -exec rm -rf {} \;
@@ -305,11 +298,14 @@ clean clobber::
 	rm -rf $(DIST)/$(APP_NAME).app
 endif
 
+README_FILE = $(srcdir)/README.txt
+
 libs::
+	$(INSTALL) $(README_FILE) $(DIST)/bin
 	$(INSTALL) $(topsrcdir)/mail/LICENSE.txt $(DIST)/bin
 
 libs:: $(srcdir)/profile/prefs.js
 	$(INSTALL) $^ $(DIST)/bin/defaults/profile
 
 install:: $(srcdir)/profile/prefs.js
-	$(SYSINSTALL) $(IFLAGS1) $^  $(DESTDIR)$(mozappdir)/defaults/profile
+	$(SYSINSTALL) $(IFLAGS1) $^ $(destdir)$(bindir)/defaults/profile

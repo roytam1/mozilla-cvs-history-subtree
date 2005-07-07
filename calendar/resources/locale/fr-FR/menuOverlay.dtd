@@ -49,11 +49,11 @@
 <!ENTITY event.new.todo.key                     "T">
 <!ENTITY event.new.todo.accesskey               "T">
 
-<!ENTITY calendar.new.server.label              "Nouveau fichier d'agenda…">
+<!ENTITY calendar.new.server.label              "Nouveau fichier du calendrier…">
 <!ENTITY calendar.new.server.key                "L">
 <!ENTITY calendar.new.server.accesskey          "a">
 
-<!ENTITY calendar.open.file.label               "Ouvrir le fichier d'agenda…">
+<!ENTITY calendar.open.file.label               "Ouvrez le fichier du calendrier…">
 <!ENTITY calendar.open.file.key                 "O">
 <!ENTITY calendar.open.file.accesskey           "O">
 
@@ -71,7 +71,7 @@
 <!ENTITY event.mail.event.key                   "M">
 <!ENTITY event.mail.event.accesskey             "m">
 
-<!ENTITY calendar.print.label                   "Imprimer les agendas actif(s)…">
+<!ENTITY calendar.print.label                   "Imprimer les calendriers actif(s)…">
 <!ENTITY calendar.print.key                     "P">
 <!ENTITY calendar.print.accesskey               "r">
 
@@ -91,10 +91,10 @@
 <!ENTITY calendar.export.label                  "Exporter les événements sélectionnés…">
 <!ENTITY calendar.export.accesskey              "e">
 
-<!ENTITY calendar.subscribe.label               "S'abonner à un agenda distant…">
+<!ENTITY calendar.subscribe.label               "S'abonner à un calendrier distant…">
 <!ENTITY calendar.subscribe.accesskey           "s">
 
-<!ENTITY calendar.reloadserver.label            "Actualiser les agendas distants">
+<!ENTITY calendar.reloadserver.label            "Actualiser les calendriers distants">
 <!ENTITY calendar.reloadserver.key              "R">
 <!ENTITY calendar.reloadserver.accesskey        "R">
 
@@ -103,14 +103,6 @@
 
 <!ENTITY calendar.about.label                   "À propos de Calendar">
 <!ENTITY calendar.about.accesskey               "a">
-
-<!ENTITY calendar.undo.label                    "Annuler">
-<!ENTITY calendar.undo.key                      "Z">
-<!ENTITY calendar.undo.accesskey                "u">
-
-<!ENTITY calendar.redo.label                    "Refaire">
-<!ENTITY calendar.redo.key                      "Y">
-<!ENTITY calendar.redo.accesskey                "r">
 
 <!ENTITY calendar.cut.label                     "Couper">
 <!ENTITY calendar.cut.key                       "X">
@@ -134,10 +126,10 @@
 <!ENTITY goMenu.label                           "Aller à">
 <!ENTITY goMenu.accesskey                       "a">
 
-<!ENTITY goTodayCmd.label                       "Aujourd'hui">
+<!ENTITY goTodayCmd.label                       "Aller à aujourd'hui">
 <!ENTITY goTodayCmd.accesskey                   "j">
 
-<!ENTITY goDateCmd.label                        "Une date…">
+<!ENTITY goDateCmd.label                        "Aller à une date">
 <!ENTITY goDateCmd.accesskey                    "d">
 
 <!ENTITY goPreviousCmd.label                    "Précédent">
@@ -191,5 +183,5 @@
 <!ENTITY windowMenu.label                       "Window">
 <!ENTITY minimizeWindow.label                   "Réduire">
 <!ENTITY zoomWindow.label                       "Zoom">
-<!ENTITY minimizeWindow.key                     "M">
+<!ENTITY minimizeWindow.accesskey               "M">
 <!ENTITY bringAllToFront.label                  "Ramener tout à l'avant-plan">

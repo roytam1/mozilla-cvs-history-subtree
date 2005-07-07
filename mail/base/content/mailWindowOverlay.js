@@ -1,46 +1,28 @@
 # -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
-# ***** BEGIN LICENSE BLOCK *****
-# Version: MPL 1.1/GPL 2.0/LGPL 2.1
+# The contents of this file are subject to the Netscape Public
+# License Version 1.1 (the "License"); you may not use this file
+# except in compliance with the License. You may obtain a copy of
+# the License at http://www.mozilla.org/NPL/
 #
-# The contents of this file are subject to the Mozilla Public License Version
-# 1.1 (the "License"); you may not use this file except in compliance with
-# the License. You may obtain a copy of the License at
-# http://www.mozilla.org/MPL/
-#
-# Software distributed under the License is distributed on an "AS IS" basis,
-# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
-# for the specific language governing rights and limitations under the
-# License.
+# Software distributed under the License is distributed on an "AS
+# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# rights and limitations under the License.
 #
 # The Original Code is Mozilla Communicator client code, released
 # March 31, 1998.
 #
-# The Initial Developer of the Original Code is
-# Netscape Communications Corporation.
-# Portions created by the Initial Developer are Copyright (C) 1998-1999
-# the Initial Developer. All Rights Reserved.
+# The Initial Developer of the Original Code is Netscape
+# Communications Corporation. Portions created by Netscape are
+# Copyright (C) 1998-1999 Netscape Communications Corporation. All
+# Rights Reserved.
 #
-# Contributor(s):
-#   timeless
-#   slucy@objectivesw.co.uk
-#   Håkan Waara <hwaara@chello.se>
-#   Jan Varga <varga@nixcorp.com>
-#   Seth Spitzer <sspitzer@netscape.com>
-#   David Bienvenu <bienvenu@netscape.com>
-#
-# Alternatively, the contents of this file may be used under the terms of
-# either the GNU General Public License Version 2 or later (the "GPL"), or
-# the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
-# in which case the provisions of the GPL or the LGPL are applicable instead
-# of those above. If you wish to allow use of your version of this file only
-# under the terms of either the GPL or the LGPL, and not to allow others to
-# use your version of this file under the terms of the MPL, indicate your
-# decision by deleting the provisions above and replace them with the notice
-# and other provisions required by the GPL or the LGPL. If you do not delete
-# the provisions above, a recipient may use your version of this file under
-# the terms of any one of the MPL, the GPL or the LGPL.
-#
-# ***** END LICENSE BLOCK *****
+# Contributors: timeless
+#               slucy@objectivesw.co.uk
+#               Håkan Waara <hwaara@chello.se>
+#               Jan Varga <varga@nixcorp.com>
+#               Seth Spitzer <sspitzer@netscape.com>
+#               David Bienvenu <bienvenu@netscape.com>
 
 const MSG_FLAG_READ              = 0x000001;
 const MSG_FLAG_IMAP_DELETED      = 0x200000;
@@ -61,11 +43,6 @@ const kVerticalMailLayout = 2;
 const kNoRemoteContentPolicy = 0;
 const kBlockRemoteContent = 1;
 const kAllowRemoteContent = 2;
-
-const kMsgNotificationNoStatus = 0;
-const kMsgNotificationJunkBar = 1;
-const kMsgNotificationRemoteImages = 2;
-const kMsgNotificationPhishingBar = 3;
 
 var gMessengerBundle;
 var gPromptService;
@@ -129,7 +106,7 @@ function menu_new_init()
   EnableMenuItem("menu_newFolder", !isIMAPFolder || !ioService.offline);
   EnableMenuItem("menu_newVirtualFolder", true);
   if (showNew)
-    SetMenuItemLabel("menu_newFolder", gMessengerBundle.getString((isServer || isInbox) ? "newFolderMenuItem" : "newSubfolderMenuItem"));
+    SetMenuItemLabel("menu_newFolder", gMessengerBundle.getString((isServer || isInbox) ? "newFolder" : "newSubfolder"));
 }
 
 function goUpdateMailMenuItems(commandset)
@@ -540,8 +517,32 @@ function InitMessageLabel(menuType)
 
     try
     {
+        var msgFolder = GetLoadedMsgFolder();
+        var msgDatabase = msgFolder.getMsgDatabase(msgWindow);
+        var numSelected = GetNumSelectedMessages();
+        var indices = GetSelectedIndices(gDBView);
         var isChecked = true;
-        var checkedLabel = gDBView.hdrForFirstSelectedMessage.label;
+        var checkedLabel;
+        var msgKey;
+
+        if (numSelected > 0) {
+            msgKey = gDBView.getKeyAt(indices[0]);
+            checkedLabel = msgDatabase.GetMsgHdrForKey(msgKey).label;
+            if (numSelected > 1) {
+                for (var i = 1; i < indices.length; i++)
+                {
+                    msgKey = gDBView.getKeyAt(indices[i]);
+                    if (msgDatabase.GetMsgHdrForKey(msgKey).label == checkedLabel) {
+                        continue;
+                    }
+                    isChecked = false;
+                    break;
+                }
+            }
+        }
+        else {
+            isChecked = false;
+        }
     }
     catch(ex)
     {
@@ -758,14 +759,23 @@ function MsgGetMessagesForAllServers(defaultServer)
             var protocolinfo = Components.classes["@mozilla.org/messenger/protocol/info;1?type=" + currentServer.type].getService(Components.interfaces.nsIMsgProtocolInfo);
             if (protocolinfo.canLoginAtStartUp && currentServer.loginAtStartUp)
             {
-                 if (currentServer.type == "pop3" && currentServer.downloadOnBiff)
-                 {
-                   CoalesceGetMsgsForPop3ServersByDestFolder(currentServer, pop3DownloadServersArray, localFoldersToDownloadTo);
-                   pop3Server = currentServer.QueryInterface(Components.interfaces.nsIPop3IncomingServer);
-                 }
-                 else
-                 // Check to see if there are new messages on the server
-                   currentServer.PerformBiff(msgWindow);
+                if (defaultServer && defaultServer.equals(currentServer) && 
+                  !defaultServer.isDeferredTo &&
+                  defaultServer.msgFolder == defaultServer.rootMsgFolder)
+                {
+                    dump(currentServer.serverURI + "...skipping, already opened\n");
+                }
+                else
+                {
+                    if (currentServer.type == "pop3" && currentServer.downloadOnBiff)
+                    {
+                      CoalesceGetMsgsForPop3ServersByDestFolder(currentServer, pop3DownloadServersArray, localFoldersToDownloadTo);
+                      pop3Server = currentServer.QueryInterface(Components.interfaces.nsIPop3IncomingServer);
+                    }
+                    else
+                    // Check to see if there are new messages on the server
+                      currentServer.PerformBiff(msgWindow);
+                }
             }
         }
         for (var i = 0; i < pop3DownloadServersArray.length; i++)
@@ -2115,7 +2125,7 @@ function HandleJunkStatusChanged(folder)
         // We have no way of determining if the junk status of our current message has really changed
         // the only thing we can do is cheat by asking if the junkbar visibility had to change as a result of this notification
 
-        var changedJunkStatus = gMessageNotificationBar.setJunkMsg(msgHdr);
+        var changedJunkStatus = SetUpJunkBar(msgHdr);
 
         // we may be forcing junk mail to be rendered with sanitized html. In that scenario, we want to 
         // reload the message if the status has just changed to not junk. 
@@ -2140,76 +2150,53 @@ function HandleJunkStatusChanged(folder)
       }
     }
     else
-      gMessageNotificationBar.setJunkMsg(null);
+      SetUpJunkBar(null);
   }
 }
 
-var gMessageNotificationBar = 
+// returns true if we actually changed the visiblity of the junk bar otherwise false
+function SetUpJunkBar(aMsgHdr)
 {
-  mMsgNotificationBar: document.getElementById('msgNotificationBar'),
+  // XXX todo
+  // should this happen on the start, or at the end?
+  // if at the end, we might keep the "this message is junk" up for a while, until a big message is loaded
+  // or do we need to wait until here, to make sure the message is fully analyzed
+  // what about almost hiding it on the start, and then showing here?
 
-  setJunkMsg: function (aMsgHdr)
-  {
-    var isJunk = false;
-    var isCurrentlyNotJunk = this.mMsgNotificationBar.selectedIndex != kMsgNotificationJunkBar;
+  var isJunk = false;
   
-    if (aMsgHdr) 
-    {
-      var junkScore = aMsgHdr.getStringProperty("junkscore"); 
-      isJunk = ((junkScore != "") && (junkScore != "0"));
-    }
-
-    this.updateMsgNotificationBar (isJunk ? kMsgNotificationJunkBar : kMsgNotificationNoStatus);
-
-    goUpdateCommand('button_junk');
-
-    return (isJunk && isCurrentlyNotJunk) || (!isJunk && !isCurrentlyNotJunk);
-  },
-
-  setRemoteContentMsg: function (aMsgHdr)
-  {  
-    // The phishing message and junk message takes precedence over the remote content msg
-    if (this.mMsgNotificationBar.selectedIndex != kMsgNotificationJunkBar && 
-        this.mMsgNotificationBar.selectedIndex != kMsgNotificationPhishingBar)
-      this.updateMsgNotificationBar(aMsgHdr && aMsgHdr.getUint32Property("remoteContentPolicy") == kBlockRemoteContent ? 
-                                    kMsgNotificationRemoteImages : kMsgNotificationNoStatus);
-  },
-
-  // aUrl is the nsIURI for the message currently loaded in the message pane
-  setPhishingMsg: function(aUrl)
-  {
-    var msgURI = GetLoadedMessage();
-    if (msgURI && !(/type=x-message-display/.test(msgURI)))
-    {
-      var msgHdr = messenger.messageServiceFromURI(msgURI).messageURIToMsgHdr(msgURI);
-      // if we've explicitly marked this message as not being an email scam, then don't
-      // bother checking it with the phishing detector.
-      if (msgHdr && msgHdr.getUint32Property("notAPhishMessage"))
-        return; 
-    }
-
-    // The Junk message takes precedence over the phishing message...so skip this step
-    // if the message is already marked as junk
-    if (this.mMsgNotificationBar.selectedIndex != kMsgNotificationJunkBar && isMsgEmailScam(aUrl))
-      this.updateMsgNotificationBar(kMsgNotificationPhishingBar);
-  },
-
-  clearMsgNotifications: function()
-  {
-    this.updateMsgNotificationBar(kMsgNotificationNoStatus);
-  },
-
-  // private method used to set our message notification deck to the correct value...
-  updateMsgNotificationBar: function(aIndex)
-  {
-    if (aIndex == kMsgNotificationNoStatus)
-      this.mMsgNotificationBar.setAttribute('collapsed', true);
-    else
-      this.mMsgNotificationBar.removeAttribute('collapsed');
-    
-    this.mMsgNotificationBar.selectedIndex = aIndex;
+  if (aMsgHdr) {
+    var junkScore = aMsgHdr.getStringProperty("junkscore"); 
+    isJunk = ((junkScore != "") && (junkScore != "0"));
   }
-};
+  
+  var junkBar = document.getElementById("junkBar");
+  var isAlreadyCollapsed = junkBar.getAttribute("collapsed") == "true";
+
+  if (isJunk)
+    junkBar.removeAttribute("collapsed");
+  else
+    junkBar.setAttribute("collapsed","true");
+ 
+  goUpdateCommand('button_junk');
+
+  return (isJunk && isAlreadyCollapsed) || (!isJunk && !isAlreadyCollapsed);
+}
+
+// hides or shows the remote content bar based on the property in the msg hdr
+function SetUpRemoteContentBar(aMsgHdr)
+{
+  var showRemoteContentBar = false;
+  if (aMsgHdr && aMsgHdr.getUint32Property("remoteContentPolicy") == kBlockRemoteContent)
+    showRemoteContentBar = true;
+
+  var remoteContentBar = document.getElementById("remoteContentBar");
+  
+  if (showRemoteContentBar)
+    remoteContentBar.removeAttribute("collapsed");
+  else
+    remoteContentBar.setAttribute("collapsed","true");
+}
 
 function LoadMsgWithRemoteContent()
 {
@@ -2226,26 +2213,6 @@ function LoadMsgWithRemoteContent()
     if (msgHdr)
     {
       msgHdr.setUint32Property("remoteContentPolicy", kAllowRemoteContent); 
-      MsgReload();
-    }
-  }
-}
-
-function MsgIsNotAScam()
-{
-  // we want to get the msg hdr for the currently selected message
-  // change the "isPhishingMsg" property on it
-  // then reload the message
-
-  var msgURI = GetLoadedMessage();
-  var msgHdr = null;
-    
-  if (msgURI && !(/type=x-message-display/.test(msgURI)))
-  {
-    msgHdr = messenger.messageServiceFromURI(msgURI).messageURIToMsgHdr(msgURI);
-    if (msgHdr)
-    {
-      msgHdr.setUint32Property("notAPhishMessage", 1); 
       MsgReload();
     }
   }
@@ -2271,8 +2238,6 @@ function OnMsgParsed(aUrl)
 {
   if ("onQuickSearchNewMsgLoaded" in this)
     onQuickSearchNewMsgLoaded();
-  
-  gMessageNotificationBar.setPhishingMsg(aUrl);
 }
 
 function OnMsgLoaded(aUrl)
@@ -2295,8 +2260,8 @@ function OnMsgLoaded(aUrl)
 
     if (!(/type=x-message-display/.test(msgURI)))
       msgHdr = messenger.messageServiceFromURI(msgURI).messageURIToMsgHdr(msgURI);
-     
-    gMessageNotificationBar.setJunkMsg(msgHdr);
+        
+    SetUpJunkBar(msgHdr);
 
     // we just finished loading a message. set a timer to actually mark the message is read after n seconds
     // where n can be configured by the user.
@@ -2381,13 +2346,11 @@ function HandleMDNResponse(aUrl)
 
   var msgHdr = messenger.messageServiceFromURI(msgURI).messageURIToMsgHdr(msgURI);
   var mimeHdr;
-
+  
   try {
-    mimeHdr = aUrl.mimeHeaders;
-  } catch (ex) {
-    return;
-  }
-
+    mimeHdr = aUrl.mimeHeaders;  
+  } catch (ex) { return 0;}
+    
   // If we didn't get the message id when we downloaded the message header,
   // we cons up an md5: message id. If we've done that, we'll try to extract
   // the message id out of the mime headers for the whole message.
@@ -2514,62 +2477,4 @@ function loadThrobberUrl(urlPref)
         url = gPrefBranch.getComplexValue(urlPref, Components.interfaces.nsIPrefLocalizedString).data;
         messenger.launchExternalURL(url);  
     } catch (ex) {}
-}
-
-/**
- * Opens the update manager and checks for updates to the application.
- */
-
-function checkForUpdates()
-{
-  var prompter = Components.classes["@mozilla.org/updates/update-prompt;1"]
-                           .createInstance(Components.interfaces.nsIUpdatePrompt);
-  prompter.checkForUpdates();
-}
-
-function buildHelpMenu()
-{
-  var updates = 
-      Components.classes["@mozilla.org/updates/update-service;1"].
-      getService(Components.interfaces.nsIApplicationUpdateService);
-  var um = 
-      Components.classes["@mozilla.org/updates/update-manager;1"].
-      getService(Components.interfaces.nsIUpdateManager);
-  
-  // Disable the UI if the update enabled pref has been locked by the
-  // administrator or if we cannot update for some other reason 
-  var checkForUpdates = document.getElementById("checkForUpdates");
-  var canUpdate = updates.canUpdate;
-  checkForUpdates.setAttribute("disabled", !canUpdate);
-  if (!canUpdate)
-    return;
-
-  if (!gMessengerBundle)
-    gMessengerBundle = document.getElementById("bundle_messenger");
-  
-  var label = gMessengerBundle.getString("updates_checkForUpdates");
-  var activeUpdate = um.activeUpdate;
-  if (activeUpdate) 
-  {
-    if (updates.isDownloading) 
-    {
-      if (activeUpdate.name) 
-        label = gMessengerBundle.getFormattedString("updates_downloadingUpdates", [activeUpdate.name]);
-      else
-        label = gMessengerBundle.getString("updates_downloadingUpdatesFallback");
-    }
-    else 
-    {
-      if (activeUpdate.name) 
-        label = gMessengerBundle.getFormattedString("updates_resumeDownloading", [activeUpdate.name]);
-      else
-        label = gMessengerBundle.getString("updates_resumeDownloadingFallback");
-    }
-  }
-
-  checkForUpdates.label = label;
-  if (um.activeUpdate && updates.isDownloading)
-    checkForUpdates.setAttribute("loading", "true");
-  else
-    checkForUpdates.removeAttribute("loading");
 }

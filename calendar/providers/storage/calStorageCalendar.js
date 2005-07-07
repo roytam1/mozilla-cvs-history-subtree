@@ -43,191 +43,83 @@
 const kStorageServiceContractID = "@mozilla.org/storage/service;1";
 const kStorageServiceIID = Components.interfaces.mozIStorageService;
 
-const kCalICalendar = Components.interfaces.calICalendar;
+const kCalEventContractID = "@mozilla.org/calendar/item;1&type=event";
+const kCalEventIID = Components.interfaces.calIEvent;
 
-const kCalCalendarManagerContractID = "@mozilla.org/calendar/manager;1";
-const kCalICalendarManager = Components.interfaces.calICalendarManager;
-
-const kCalEventContractID = "@mozilla.org/calendar/event;1";
-const kCalIEvent = Components.interfaces.calIEvent;
-var CalEvent;
-
-const kCalTodoContractID = "@mozilla.org/calendar/todo;1";
-const kCalITodo = Components.interfaces.calITodo;
-var CalTodo;
+const kCalTodoContractID = "@mozilla.org/calendar/item;1&type=todo";
+const kCalTodoIID = Components.interfaces.calITodo;
 
 const kCalDateTimeContractID = "@mozilla.org/calendar/datetime;1";
-const kCalIDateTime = Components.interfaces.calIDateTime;
-var CalDateTime;
+const kCalDateTimeIID = Components.interfaces.calIDateTime;
 
-const kCalAttendeeContractID = "@mozilla.org/calendar/attendee;1";
-const kCalIAttendee = Components.interfaces.calIAttendee;
-var CalAttendee;
+// column ids in the base columns
+var ITEM_COLUMN_COUNTER = 0;
+const ITEM_HASHID = ITEM_COLUMN_COUNTER++;
+const ITEM_TIME_CREATED = ITEM_COLUMN_COUNTER++;
+const ITEM_LAST_MODIFIED = ITEM_COLUMN_COUNTER++;
+const ITEM_TITLE = ITEM_COLUMN_COUNTER++;
+const ITEM_PRIORITY = ITEM_COLUMN_COUNTER++;
+const ITEM_FLAGS = ITEM_COLUMN_COUNTER++;
+const ITEM_LOCATION = ITEM_COLUMN_COUNTER++;
+const ITEM_CATEGORIES = ITEM_COLUMN_COUNTER++;
+const ITEM_ALARM_DATA = ITEM_COLUMN_COUNTER++;
+const ITEM_ALARM_TIME = ITEM_COLUMN_COUNTER++;
+const ITEM_RECUR_TYPE = ITEM_COLUMN_COUNTER++;
+const ITEM_RECUR_INTERVAL = ITEM_COLUMN_COUNTER++;
+const ITEM_RECUR_DATA = ITEM_COLUMN_COUNTER++;
+const ITEM_RECUR_END = ITEM_COLUMN_COUNTER++;
+const ITEM_RECUR_FLAGS = ITEM_COLUMN_COUNTER++;
 
-const kCalRecurrenceInfoContractID = "@mozilla.org/calendar/recurrence-info;1";
-const kCalIRecurrenceInfo = Components.interfaces.calIRecurrenceInfo;
-var CalRecurrenceInfo;
+// column ids in cal_events
+var EV_COLUMN_COUNTER = ITEM_COLUMN_COUNTER;
+const EV_TIME_START = EV_COLUMN_COUNTER++;
+const EV_TIME_END = EV_COLUMN_COUNTER++;
 
-const kCalRecurrenceRuleContractID = "@mozilla.org/calendar/recurrence-rule;1";
-const kCalIRecurrenceRule = Components.interfaces.calIRecurrenceRule;
-var CalRecurrenceRule;
+// column ids in cal_todos
+var TODO_COLUMN_COUNTER = ITEM_COLUMN_COUNTER;
+const TODO_TIME_ENTRY = TODO_COLUMN_COUNTER++;
+const TODO_TIME_DUE = TODO_COLUMN_COUNTER++;
+const TODO_TIME_COMPLETED = TODO_COLUMN_COUNTER++;
+const TODO_PERCENT_COMPLETE = TODO_COLUMN_COUNTER++;
 
-const kCalRecurrenceDateSetContractID = "@mozilla.org/calendar/recurrence-date-set;1";
-const kCalIRecurrenceDateSet = Components.interfaces.calIRecurrenceDateSet;
-var CalRecurrenceDateSet;
-
-const kCalRecurrenceDateContractID = "@mozilla.org/calendar/recurrence-date;1";
-const kCalIRecurrenceDate = Components.interfaces.calIRecurrenceDate;
-var CalRecurrenceDate;
-
-const kMozStorageStatementWrapperContractID = "@mozilla.org/storage/statement-wrapper;1";
-const kMozStorageStatementWrapperIID = Components.interfaces.mozIStorageStatementWrapper;
-var MozStorageStatementWrapper;
-
-if (!kMozStorageStatementWrapperIID) {
-    dump("*** mozStorage not available, calendar/storage provider will not function\n");
-}
-
-const CAL_ITEM_TYPE_EVENT = 0;
-const CAL_ITEM_TYPE_TODO = 1;
-
-// bitmasks
-const CAL_ITEM_FLAG_PRIVATE = 1;
-const CAL_ITEM_FLAG_HAS_ATTENDEES = 2;
-const CAL_ITEM_FLAG_HAS_PROPERTIES = 4;
-const CAL_ITEM_FLAG_EVENT_ALLDAY = 8;
-const CAL_ITEM_FLAG_HAS_RECURRENCE = 16;
-const CAL_ITEM_FLAG_HAS_EXCEPTIONS = 32;
-
-function initCalStorageCalendarComponent() {
-    CalEvent = new Components.Constructor(kCalEventContractID, kCalIEvent);
-    CalTodo = new Components.Constructor(kCalTodoContractID, kCalITodo);
-    CalDateTime = new Components.Constructor(kCalDateTimeContractID, kCalIDateTime);
-    CalAttendee = new Components.Constructor(kCalAttendeeContractID, kCalIAttendee);
-    CalRecurrenceInfo = new Components.Constructor(kCalRecurrenceInfoContractID, kCalIRecurrenceInfo);
-    CalRecurrenceRule = new Components.Constructor(kCalRecurrenceRuleContractID, kCalIRecurrenceRule);
-    CalRecurrenceDateSet = new Components.Constructor(kCalRecurrenceDateSetContractID, kCalIRecurrenceDateSet);
-    CalRecurrenceDate = new Components.Constructor(kCalRecurrenceDateContractID, kCalIRecurrenceDate);
-    MozStorageStatementWrapper = new Components.Constructor(kMozStorageStatementWrapperContractID, kMozStorageStatementWrapperIID);
-}
-
-//
-// Storage helpers
-//
-
-function createStatement (dbconn, sql) {
-    try {
-        var stmt = dbconn.createStatement(sql);
-        var wrapper = MozStorageStatementWrapper();
-        wrapper.initialize(stmt);
-        return wrapper;
-    } catch (e) {
-        Components.reportError("mozStorage exception: createStatement failed, statement: '" + 
-                               sql + "', error: '" + dbconn.lastErrorString + "'");
-    }
-
-    return null;
-}
-
-function textToDate(d) {
-    var dval;
-    var tz = "UTC";
-
-    if (d[0] == 'Z') {
-        var strs = d.substr(2).split(":");
-        dval = parseInt(strs[0]);
-        tz = strs[1].replace(/%:/g, ":").replace(/%%/g, "%");
-    } else {
-        dval = parseInt(d.substr(2));
-    }
-
-    var date;
-    if (d[0] == 'U' || d[0] == 'Z') {
-        date = newDateTime(dval, tz);
-    } else if (d[0] == 'L') {
-        // is local time
-        date = newDateTime(dval, "floating");
-    }
-
-    if (d[1] == 'D')
-        date.isDate = true;
-    return date;
-}
-
-function dateToText(d) {
-    var datestr;
-    var tz = null;
-    if (d.timezone != "floating") {
-        if (d.timezone == "UTC") {
-            datestr = "U";
-        } else {
-            datestr = "Z";
-            tz = d.timezone;
-        }
-    } else {
-        datestr = "L";
-    }
-
-    if (d.isDate) {
-        datestr += "D";
-    } else {
-        datestr += "T";
-    }
-
-    datestr += d.nativeTime;
-
-    if (tz) {
-        // replace '%' with '%%', then replace ':' with '%:'
-        tz = tz.replace(/%/g, "%%");
-        tz = tz.replace(/:/g, "%:");
-        datestr += ":" + tz;
-    }
-    return datestr;
-}
-
-// 
-// other helpers
-//
-
-function newDateTime(aNativeTime, aTimezone) {
-    var t = new CalDateTime();
-    t.nativeTime = aNativeTime;
-    if (aTimezone && aTimezone != "floating") {
-        t = t.getInTimezone(aTimezone);
-    } else {
-        t.timezone = "floating";
-    }
-
+// helpers
+function newDateTime(aPRTime) {
+    var t = Components.classes[kCalDateTimeContractID]
+                      .createInstance(kCalDateTimeIID);
+    t.isUtc = true;
+    t.nativeTime = aPRTime;
     return t;
-}
-
-//
-// calStorageCalendar
-//
-
-var activeCalendarManager = null;
-function getCalendarManager()
-{
-    if (!activeCalendarManager) {
-        activeCalendarManager = 
-            Components.classes[kCalCalendarManagerContractID].getService(kCalICalendarManager);
-    }
-    return activeCalendarManager;
 }
 
 function calStorageCalendar() {
     this.wrappedJSObject = this;
-    this.mObservers = new Array();
-    this.mItemCache = new Array();
 }
 
 calStorageCalendar.prototype = {
     //
     // private members
     //
+    mObservers: Array(),
     mDB: null,
-    mDBTwo: null,
-    mCalId: 0,
+    mItemCache: Array(),
+
+    // database statements
+
+    // events
+    mSelectEventByHash: null,
+    mSelectEventByOid: null,
+    mSelectEventsByRange: null,
+    mSelectEventsByRangeWithLimit: null,
+    mDeleteEventByHash: null,
+    mInsertEvent: null,
+
+    // todos
+    mSelectTodoByHash: null,
+    mSelectTodoByOid: null,
+    mSelectTodosByRange: null,
+    mSelectTodosByRangeWithLimit: null,
+    mDeleteTodoByHash: null,
+    mInsertTodo: null,
 
     //
     // nsISupports interface
@@ -243,18 +135,8 @@ calStorageCalendar.prototype = {
     },
 
     //
-    // calICalendar interface
+    // nsICalendar interface
     //
-
-    // attribute AUTF8String name;
-    get name() {
-        return getCalendarManager().getCalendarPref(this, "NAME");
-    },
-    set name(name) {
-        getCalendarManager().setCalendarPref(this, "NAME", name);
-    },
-    // readonly attribute AUTF8String type;
-    get type() { return "storage"; },
 
     mURI: null,
     // attribute nsIURI uri;
@@ -264,206 +146,155 @@ calStorageCalendar.prototype = {
         if (this.mURI)
             throw Components.results.NS_ERROR_FAILURE;
 
-        var id = 0;
-
-        // check if there's a ?id=
-        var path = aURI.path;
-        var pos = path.indexOf("?id=");
-
-        if (pos != -1) {
-            id = parseInt(path.substr(pos+4));
-            path = path.substr(0, pos);
-        }
-
-        var dbService;
-        if (aURI.scheme == "file") {
-            var fileURL = aURI.QueryInterface(Components.interfaces.nsIFileURL);
-            if (!fileURL)
-                throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
-
-            // open the database
-            dbService = Components.classes[kStorageServiceContractID].getService(kStorageServiceIID);
-            this.mDB = dbService.openDatabase (fileURL.file);
-            this.mDBTwo = dbService.openDatabase (fileURL.file);
-        } else if (aURI.scheme == "moz-profile-calendar") {
-            dbService = Components.classes[kStorageServiceContractID].getService(kStorageServiceIID);
-            this.mDB = dbService.getProfileStorage("profile");
-            this.mDBTwo = dbService.getProfileStorage("profile");
-        }
-
-        this.initDB();
-
-        this.mCalId = id;
+        // we can only load storage bits from a file
         this.mURI = aURI;
-    },
+        var fileURL = aURI.QueryInterface(Components.interfaces.nsIFileURL);
+        if (!fileURL)
+            throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
 
-    // attribute boolean readOnly;
-    get readOnly() { return false; },
-    set readOnly() { throw Components.results.NS_ERROR_NOT_IMPLEMENTED; },
+        // open the database
+        var dbService = Components.classes[kStorageServiceContractID]
+                                  .getService(kStorageServiceIID);
+        this.mDB = dbService.openDatabase (fileURL.file);
+
+        initDB();
+    },
 
     // attribute boolean suppressAlarms;
     get suppressAlarms() { return false; },
     set suppressAlarms(aSuppressAlarms) { throw Components.results.NS_ERROR_NOT_IMPLEMENTED; },
 
-    // void addObserver( in calIObserver observer );
+    // void addObserver( in calIObserver observer, in unsigned long aItemFilter );
     addObserver: function (aObserver, aItemFilter) {
-        for each (obs in this.mObservers) {
-            if (obs == aObserver)
+        for (var i = 0; i < this.mObservers.length; i++) {
+            if (this.mObservers[i].observer == aObserver &&
+                this.mObservers[i].filter == aItemFilter)
+            {
                 return;
+            }
         }
 
-        this.mObservers.push(aObserver);
+        this.mObservers.push( {observer: aObserver, filter: aItemFilter} );
     },
 
     // void removeObserver( in calIObserver observer );
     removeObserver: function (aObserver) {
         var newObservers = Array();
-        for each (obs in this.mObservers) {
-            if (obs != aObserver)
-                newObservers.push(obs);
+        for (var i = 0; i < this.mObservers.length; i++) {
+            if (this.mObservers[i].observer != aObserver)
+                newObservers.push(this.mObservers[i]);
         }
         this.mObservers = newObservers;
     },
 
     // void addItem( in calIItemBase aItem, in calIOperationListener aListener );
     addItem: function (aItem, aListener) {
-        // Ensure that we're looking at the base item
-        // if we were given an occurrence.  Later we can
-        // optimize this.
-        if (aItem.parentItem != aItem) {
-            aItem.parentItem.recurrenceInfo.modifyException(aItem);
-        }
-        aItem = aItem.parentItem;
-
         if (aItem.id == null) {
             // is this an error?  Or should we generate an IID?
             aItem.id = "uuid:" + (new Date()).getTime();
-        } else {
-            var olditem = this.getItemById(aItem.id);
-            if (olditem) {
-                if (aListener)
-                    aListener.onOperationComplete (this,
-                                                   Components.results.NS_ERROR_FAILURE,
-                                                   aListener.ADD,
-                                                   aItem.id,
-                                                   "ID already exists for addItem");
-                return;
-            }
+        }
+        if (this.mItems[aItem.id] != null) {
+            // is this an error?
+            if (aListener)
+                aListener.onOperationComplete (Components.results.NS_ERROR_FAILURE,
+                                               aItem.id,
+                                               aListener.ADD,
+                                               "ID already eists for addItem");
+            return;
         }
 
-        var newItem = aItem.clone();
-        newItem.calendar = this;
-        newItem.generation = 1;
-        newItem.makeImmutable();
+        // is this item an event?
+        var event = aItem.QueryInterface(kCalEventIID);
+        if (event) {
+            flushEvent (event);
+        } else {
+            aListener.onOperationComplete (Components.results.NS_ERROR_FAILURE,
+                                           aItem.id,
+                                           aListener.ADD,
+                                           "Don't know how to add items of the given type");
+            return;
+        }
 
-        this.flushItem (newItem, null);
+        // notify observers
+        observeAddItem(aItem);
 
         // notify the listener
         if (aListener)
-            aListener.onOperationComplete (this,
-                                           Components.results.NS_OK,
+            aListener.onOperationComplete (Components.results.NS_OK,
+                                           aItem.id,
                                            aListener.ADD,
-                                           newItem.id,
-                                           newItem);
-
-        // notify observers
-        this.observeAddItem(newItem);
+                                           aItem);
     },
 
-    // void modifyItem( in calIItemBase aNewItem, in calIItemBase aOldItem, in calIOperationListener aListener );
-    modifyItem: function (aNewItem, aOldItem, aListener) {
-        function reportError(errId, errStr) {
-            if (aListener)
-                aListener.onOperationComplete (this,
-                                               errId ? errId : Components.results.NS_ERROR_FAILURE,
-                                               aListener.MODIFY,
-                                               aNewItem.id,
-                                               errStr);
-        }
-
-        if (aNewItem.id == null) {
+    // void modifyItem( in calIItemBase aItem, in calIOperationListener aListener );
+    modifyItem: function (aItem, aListener) {
+        if (aItem.id == null)
+        {
             // this is definitely an error
-            reportError (null, "ID for modifyItem item is null");
-            return;
-        }
-
-        // Ensure that we're looking at the base item
-        // if we were given an occurrence.  Later we can
-        // optimize this.
-        if (aNewItem.parentItem != aNewItem) {
-            aNewItem.parentItem.recurrenceInfo.modifyException(aNewItem);
-        }
-
-        aNewItem = aNewItem.parentItem;
-
-        // get the old item
-        var olditem = this.getItemById(aOldItem.id);
-        if (!olditem) {
-            // no old item found?  should be using addItem, then.
             if (aListener)
-                aListener.onOperationComplete (this,
-                                               Components.results.NS_ERROR_FAILURE,
+                aListener.onOperationComplete (Components.results.NS_ERROR_FAILURE,
+                                               aItem.id,
                                                aListener.MODIFY,
-                                               aNewItem.id,
-                                               "ID does not already exist for modifyItem");
+                                               "ID for modifyItem item is null");
             return;
         }
 
-        if (aOldItem.generation != aNewItem.generation) {
-            if (aListener)
-                aListener.onOperationComplete (this,
-                                               Components.results.NS_ERROR_FAILURE,
-                                               aListener.MODIFY,
-                                               aNewItem.id,
-                                               "generation too old for for modifyItem");
-            return;
-        }
-
-        var modifiedItem = aNewItem.clone();
-        modifiedItem.generation += 1;
-        modifiedItem.makeImmutable();
-
-        this.flushItem (modifiedItem, aOldItem);
-
-        if (aListener)
-            aListener.onOperationComplete (this,
-                                           Components.results.NS_OK,
+        // is this item an event?
+        var event = aItem.QueryInterface(kCalEventIID);
+        if (event) {
+            flushEvent (event);
+        } else {
+            aListener.onOperationComplete (Components.results.NS_ERROR_FAILURE,
+                                           aItem.id,
                                            aListener.MODIFY,
-                                           modifiedItem.id,
-                                           modifiedItem);
+                                           "Don't know how to modify items of the given type");
+            return;
+        }
 
         // notify observers
-        this.observeModifyItem(modifiedItem, aOldItem);
+        observeModifyItem(modifiedItem, aItem);
+
+        if (aListener)
+            aListener.onOperationComplete (Components.results.NS_OK,
+                                           aItem.id,
+                                           aListener.MODIFY,
+                                           aItem);
     },
 
     // void deleteItem( in string id, in calIOperationListener aListener );
-    deleteItem: function (aItem, aListener) {
-        if (aItem.parentItem != aItem) {
-            aItem.parentItem.recurrenceInfo.removeExceptionFor(aItem.recurrenceId);
-            return;
-        }
-
-        if (aItem.id == null) {
+    deleteItem: function (aId, aListener) {
+        if (aId == null)
+        {
             if (aListener)
-                aListener.onOperationComplete (this,
-                                               Components.results.NS_ERROR_FAILURE,
+                aListener.onOperationComplete (Components.results.NS_ERROR_FAILURE,
+                                               aId,
                                                aListener.DELETE,
-                                               null,
                                                "ID is null for deleteItem");
             return;
         }
 
-        this.deleteItemById(aItem.id);
-
-        if (aListener)
-            aListener.onOperationComplete (this,
-                                           Components.results.NS_OK,
-                                           aListener.DELETE,
+        // is this item an event?
+        var item = getItemByHash (aId);
+        var event = item.QueryInterface(kCalEventIID);
+        if (event) {
+            deleteEvent (aId);
+        } else {
+            aListener.onOperationComplete (Components.results.NS_ERROR_FAILURE,
                                            aItem.id,
-                                           null);
+                                           aListener.DELETE,
+                                           "Don't know how to delete items of the given type");
+            return;
+        }
 
         // notify observers 
-        this.observeDeleteItem(aItem);
+        observeDeleteItem(item);
+
+        if (aListener)
+            aListener.onOperationComplete (Components.results.NS_OK,
+                                           aId,
+                                           aListener.DELETE,
+                                           null);
+
     },
 
     // void getItem( in string id, in calIOperationListener aListener );
@@ -471,1230 +302,303 @@ calStorageCalendar.prototype = {
         if (!aListener)
             return;
 
-        var item = this.getItemById (aId);
-        if (!item) {
-            aListener.onOperationComplete (this,
-                                           Components.results.NS_ERROR_FAILURE,
-                                           aListener.GET,
-                                           aId,
-                                           "ID doesn't exist for getItem");
+        var item = getItemByHash (aId);
+        if (item) {
+            var item_iid = null;
+            if (item.QueryInterface (kCalEventIID)) {
+                item_iid = kCalEventIID;
+            } else if (item.QueryInterface (kCalTodoIID)) {
+                item_iid = kCalTodoIID;
+            } else {
+                aListener.onGetComplete(Components.results.NS_ERROR_FAILURE,
+                                        null,
+                                        "Unknown IID type", 0, []);
+                return;
+            }
+
+            aListener.onGetComplete(Components.results.NS_OK,
+                                    item_iid,
+                                    null, 1, [item]);
+        } else {
+            aListener.onGetComplete (Components.results.NS_ERROR_FAILURE,
+                                     null,
+                                     "ID not found", 0, []);
         }
-
-        var item_iid = null;
-        if (item instanceof kCalIEvent)
-            item_iid = kCalIEvent;
-        else if (item instanceof kCalITodo)
-            item_iid = kCalITodo;
-        else {
-            aListener.onOperationComplete (this,
-                                           Components.results.NS_ERROR_FAILURE,
-                                           aListener.GET,
-                                           aId,
-                                           "Can't deduce item type based on QI");
-            return;
-        }
-
-        aListener.onGetResult (this,
-                               Components.results.NS_OK,
-                               item_iid, null,
-                               1, [item]);
-
-        aListener.onOperationComplete (this,
-                                       Components.results.NS_OK,
-                                       aListener.GET,
-                                       aId,
-                                       null);
     },
 
-    // void getItems( in unsigned long aItemFilter, in unsigned long aCount, 
-    //                in calIDateTime aRangeStart, in calIDateTime aRangeEnd,
+    // void getItems( in nsIIDRef aItemType, in unsigned long aItemFilter, 
+    //                in unsigned long aCount, in calIDateTime aRangeStart,
+    //                in calIDateTime aRangeEnd, 
     //                in calIOperationListener aListener );
-    getItems: function (aItemFilter, aCount,
+    getItems: function (aItemType, aItemFilter, aCount,
                         aRangeStart, aRangeEnd, aListener)
     {
-        //var profStartTime = Date.now();
         if (!aListener)
             return;
 
-        var self = this;
+        // we ignore aItemFilter; we always return all items.  if
+        // aCount != 0, we don't attempt to sort anything, and instead
+        // return the first aCount items that match.
 
         var itemsFound = Array();
-        var startTime = -0x7fffffffffffffff;
+        var startTime = 0;
         // endTime needs to be the max value a PRTime can be
         var endTime = 0x7fffffffffffffff;
-        var count = 0;
         if (aRangeStart)
-            startTime = aRangeStart.nativeTime;
+            startTime = aRangeStart.utcTime;
         if (aRangeEnd)
-            endTime = aRangeEnd.nativeTime;
+            endTime = aRangeEnd.utcTime;
 
-        var wantEvents = ((aItemFilter & kCalICalendar.ITEM_FILTER_TYPE_EVENT) != 0);
-        var wantTodos = ((aItemFilter & kCalICalendar.ITEM_FILTER_TYPE_TODO) != 0);
-        var asOccurrences = ((aItemFilter & kCalICalendar.ITEM_FILTER_CLASS_OCCURRENCES) != 0);
-        if (!wantEvents && !wantTodos) {
-            // nothing to do
-            aListener.onOperationComplete (this,
-                                           Components.results.NS_OK,
-                                           aListener.GET,
-                                           null,
-                                           null);
+        if (aItemType != null && aItemType != kCalEventIID) {
+            // we don't know what to do with anything but events for now
+            aListener.onGetComplete(Components.results.NS_ERROR_FAILURE,
+                                    aItemType,
+                                    "Don't know how to get the requested item type",
+                                    aCount, Array());
             return;
         }
 
-        var wantCompletedItems = ((aItemFilter & kCalICalendar.ITEM_FILTER_COMPLETED_YES) != 0);
-        var wantNotCompletedItems = ((aItemFilter & kCalICalendar.ITEM_FILTER_COMPLETED_NO) != 0);
-        
-        // sending items to the listener 1 at a time sucks. instead,
-        // queue them up.
-        // if we ever have more than maxQueueSize items outstanding,
-        // call the listener.  Calling with null theItems forces
-        // a send and a queue clear.
-        var maxQueueSize = 10;
-        var queuedItems = [ ];
-        var queuedItemsIID;
-        function queueItems(theItems, theIID) {
-            // if we're about to start sending a different IID,
-            // flush the queue
-            if (theIID && queuedItemsIID != theIID) {
-                if (queuedItemsIID)
-                    queueItems(null);
-                queuedItemsIID = theIID;
-            }
+        var events = getEventsByRange();
 
-            if (theItems)
-                queuedItems = queuedItems.concat(theItems);
-
-            if (queuedItems.length != 0 && (!theItems || queuedItems.length > maxQueueSize)) {
-                //var listenerStart = Date.now();
-                aListener.onGetResult(self,
-                                      Components.results.NS_OK,
-                                      queuedItemsIID, null,
-                                      queuedItems.length, queuedItems);
-                //var listenerEnd = Date.now();
-                //dump ("++++ listener callback took: " + (listenerEnd - listenerStart) + " ms\n");
-
-                queuedItems = [ ];
-            }
-        }
-
-        // helper function to handle converting a row to an item,
-        // expanding occurrences, and queue the items for the listener
-        function handleResultItem(item, flags, theIID) {
-            self.getAdditionalDataForItem(item, flags);
-            item.makeImmutable();
-
-            var expandedItems;
-
-            if (asOccurrences && item.recurrenceInfo) {
-                expandedItems = item.recurrenceInfo.getOccurrences (aRangeStart, aRangeEnd, 0, {});
-            } else {
-                expandedItems = [ item ];
-            }
-
-            queueItems (expandedItems, theIID);
-
-            return expandedItems.length;
-        }
-
-        // check the count and send end if count is exceeded
-        function checkCount() {
-            if (aCount && count >= aCount) {
-                // flush queue
-                queueItems(null);
-
-                // send operation complete
-                aListener.onOperationComplete (self,
-                                               Components.results.NS_OK,
-                                               aListener.GET,
-                                               null,
-                                               null);
-
-                // tell caller we're done
-                return true;
-            }
-
-            return false;
-        }
-
-        // First fetch all the events
-        if (wantEvents) {
-            // this will contain a lookup table of item ids that we've already dealt with,
-            // if we have recurrence to care about.
-            var handledRecurringEvents = { };
-            var sp;             // stmt params
-
-            var resultItems = [];
-
-            // first get non-recurring events and recurring events that happen
-            // to fall within the range
-            sp = this.mSelectEventsByRange.params;
-            sp.cal_id = this.mCalId;
-            sp.event_start = startTime;
-            sp.event_end = endTime;
-
-            while (this.mSelectEventsByRange.step()) {
-                var row = this.mSelectEventsByRange.row;
-                var flags = {};
-                var item = this.getEventFromRow(row, flags);
-                flags = flags.value;
-
-                resultItems.push({item: item, flags: flags});
-
-                if (asOccurrences && flags & CAL_ITEM_FLAG_HAS_RECURRENCE)
-                    handledRecurringEvents[row.id] = true;
-            }
-            this.mSelectEventsByRange.reset();
-
-            // then, if we want occurrences, we need to query database-wide.. yuck
-            if (asOccurrences) {
-                sp = this.mSelectEventsWithRecurrence.params;
-                sp.cal_id = this.mCalId;
-                while (this.mSelectEventsWithRecurrence.step()) {
-                    var row = this.mSelectEventsWithRecurrence.row;
-                    // did we already deal with this event id?
-                    if (handledRecurringEvents[row.id] == true)
-                        continue;
-
-                    var flags = {};
-                    var item = this.getEventFromRow(row, flags);
-                    flags = flags.value;
-
-                    resultItems.push({item: item, flags: flags});
-                }
-                this.mSelectEventsWithRecurrence.reset();
-            }
-
-            // process the events
-            for each (var evitem in resultItems) {
-                count += handleResultItem(evitem.item, evitem.flags, kCalIEvent);
-                if (checkCount())
-                    return;
-            }
-        }
-
-
-        // if todos are wanted, do them next
-        if (wantTodos) {
-            // this will contain a lookup table of item ids that we've already dealt with,
-            // if we have recurrence to care about.
-            var handledRecurringTodos = { };
-            var sp;             // stmt params
-
-            var resultItems = [];
-
-            // first get non-recurring todos and recurring todos that happen
-            // to fall within the range
-            sp = this.mSelectTodosByRange.params;
-            sp.cal_id = this.mCalId;
-            sp.todo_start = startTime;
-            sp.todo_end = endTime;
-
-            while (this.mSelectTodosByRange.step()) {
-                var row = this.mSelectTodosByRange.row;
-                var flags = {};
-                var item = this.getTodoFromRow(row, flags);
-                flags = flags.value;
-
-                var itemIsCompleted = false;
-                if (item.todo_complete == 100 ||
-                    item.todo_completed != null ||
-                    item.ical_status == kCalITodo.CAL_TODO_STATUS_COMPLETED)
-                    itemIsCompleted = true;
-
-                if (!itemIsCompleted && !wantNotCompletedItems)
-                    continue;
-                if (itemIsCompleted && !wantCompletedItems)
-                    continue;
-
-                var completed = 
-                resultItems.push({item: item, flags: flags});
-                if (asOccurrences && row.flags & CAL_ITEM_FLAG_HAS_RECURRENCE)
-                    handledRecurringTodos[row.id] = true;
-            }
-            this.mSelectTodosByRange.reset();
-
-            // then, if we want occurrences, we need to query database-wide.. yuck
-            if (asOccurrences) {
-                sp = this.mSelectTodosWithRecurrence.params;
-                sp.cal_id = this.mCalId;
-                while (this.mSelectTodosWithRecurrence.step()) {
-                    var row = this.mSelectTodosByRange.row;
-                    // did we already deal with this todo id?
-                    if (handledRecurringTodos[row.id] == true)
-                        continue;
-
-                    var flags = {};
-                    var item = this.getTodoFromRow(row, flags);
-                    flags = flags.value;
-
-                    var itemIsCompleted = false;
-                    if (item.todo_complete == 100 ||
-                        item.todo_completed != null ||
-                        item.ical_status == kCalITodo.CAL_TODO_STATUS_COMPLETED)
-                        itemIsCompleted = true;
-
-                    if (!itemIsCompleted && !wantNotCompletedItems)
-                        continue;
-                    if (itemIsCompleted && !wantCompletedItems)
-                        continue;
-
-                    resultItems.push({item: item, flags: flags});
-                }
-                this.mSelectTodosWithRecurrence.reset();
-            }
-
-            // process the todos
-            for each (var todoitem in resultItems) {
-                count += handleResultItem(todoitem.item, todoitem.flags, kCalITodo);
-                if (checkCount())
-                    return;
-            }
-        }
-
-        // flush the queue
-        queueItems(null);
-
-        // and finish
-        aListener.onOperationComplete (this,
-                                       Components.results.NS_OK,
-                                       aListener.GET,
-                                       null,
-                                       null);
-
-        //var profEndTime = Date.now();
-        //dump ("++++ getItems took: " + (profEndTime - profStartTime) + " ms\n");
+        if (aListener)
+            aListener.onGetComplete (Components.results.NS_OK,
+                                     aItemType,
+                                     null,
+                                     itemsFound.length,
+                                     itemsFound);
     },
 
     //
     // Helper functions
     //
     observeLoad: function () {
-        for each (obs in this.mObservers)
-            obs.onLoad ();
+        for (var i = 0; i < mObservers.length; i++)
+            mObservers[i].onLoad ();
     },
 
     observeBatchChange: function (aNewBatchMode) {
-        for each (obs in this.mObservers) {
+        for (var i = 0; i < mObservers.length; i++) {
             if (aNewBatchMode)
-                obs.onStartBatch ();
+                mObservers[i].onStartBatch ();
             else
-                obs.onEndBatch ();
+                mObservers[i].onEndBatch ();
         }
     },
 
     observeAddItem: function (aItem) {
-        for each (obs in this.mObservers)
-            obs.onAddItem (aItem);
+        for (var i = 0; i < mObservers.length; i++)
+            mObservers[i].onAddItem (aItem);
     },
 
-    observeModifyItem: function (aNewItem, aOldItem) {
-        for each (obs in this.mObservers)
-            obs.onModifyItem (aNewItem, aOldItem);
+    observeModifyItem: function (aOldItem, aNewItem) {
+        for (var i = 0; i < mObservers.length; i++)
+            mObservers[i].onModifyItem (aOldItem, aNewItem);
     },
 
     observeDeleteItem: function (aDeletedItem) {
-        for each (obs in this.mObservers)
-            obs.onDeleteItem (aDeletedItem);
-    },
-
-    //
-    // database handling
-    //
-
-    // initialize the database schema.
-    // needs to do some version checking
-    initDBSchema: function () {
-        for (table in sqlTables) {
-            dump (table + "\n");
-            try {
-                this.mDB.executeSimpleSQL("DROP TABLE " + table);
-            } catch (e) { }
-            this.mDB.createTable(table, sqlTables[table]);
-        }
-
-        this.mDB.executeSimpleSQL("INSERT INTO cal_calendar_schema_version VALUES(" + this.DB_SCHEMA_VERSION + ")");
-    },
-
-    // check db version
-    DB_SCHEMA_VERSION: 4,
-    versionCheck: function () {
-        var version = -1;
-        var selectSchemaVersion;
-
-        try {
-            selectSchemaVersion = createStatement (this.mDB, "SELECT version FROM cal_calendar_schema_version LIMIT 1");
-            if (selectSchemaVersion.step()) {
-                version = selectSchemaVersion.row.version;
-            }
-        } catch (e) {
-            // either the cal_calendar_schema_version table is not
-            // found, or something else happened
-            version = -1;
-        }
-        if (selectSchemaVersion)
-            selectSchemaVersion.reset();
-
-        return version;
-    },
-
-    upgradeDB: function (oldVersion) {
-        // some common helpers
-        function addColumn(db, tableName, colName, colType) {
-            db.executeSimpleSQL("ALTER TABLE " + tableName + " ADD COLUMN " + colName + " " + colType);
-        }
-
-        if (oldVersion == 2 && this.DB_SCHEMA_VERSION >= 3) {
-            dump ("**** Upgrading schema from 2 -> 3\n");
-
-            this.mDB.beginTransaction();
-            try {
-                // the change between 2 and 3 includes the splitting of cal_items into
-                // cal_events and cal_todos, and the addition of columns for
-                // event_start_tz, event_end_tz, todo_entry_tz, todo_due_tz.
-                // These need to default to "UTC" if their corresponding time is
-                // given, since that's what the default was for v2 calendars
-
-                // create the two new tables
-                try { this.mDB.executeSimpleSQL("DROP TABLE cal_events; DROP TABLE cal_todos;"); } catch (e) { }
-                this.mDB.createTable("cal_events", sqlTables["cal_events"]);
-                this.mDB.createTable("cal_todos", sqlTables["cal_todos"]);
-
-                // copy stuff over
-                var eventCols = ["cal_id", "id", "time_created", "last_modified", "title",
-                                 "priority", "privacy", "ical_status", "flags",
-                                 "event_start", "event_end", "event_stamp"];
-                var todoCols = ["cal_id", "id", "time_created", "last_modified", "title",
-                                "priority", "privacy", "ical_status", "flags",
-                                "todo_entry", "todo_due", "todo_completed", "todo_complete"];
-
-                this.mDB.executeSimpleSQL("INSERT INTO cal_events(" + eventCols.join(",") + ") " +
-                                          "     SELECT " + eventCols.join(",") +
-                                          "       FROM cal_items WHERE item_type = 0");
-                this.mDB.executeSimpleSQL("INSERT INTO cal_todos(" + todoCols.join(",") + ") " +
-                                          "     SELECT " + todoCols.join(",") +
-                                          "       FROM cal_items WHERE item_type = 1");
-
-                // now fix up the new _tz columns
-                this.mDB.executeSimpleSQL("UPDATE cal_events SET event_start_tz = 'UTC' WHERE event_start IS NOT NULL");
-                this.mDB.executeSimpleSQL("UPDATE cal_events SET event_end_tz = 'UTC' WHERE event_end IS NOT NULL");
-                this.mDB.executeSimpleSQL("UPDATE cal_todos SET todo_entry_tz = 'UTC' WHERE todo_entry IS NOT NULL");
-                this.mDB.executeSimpleSQL("UPDATE cal_todos SET todo_due_tz = 'UTC' WHERE todo_due IS NOT NULL");
-                this.mDB.executeSimpleSQL("UPDATE cal_todos SET todo_completed_tz = 'UTC' WHERE todo_completed IS NOT NULL");
-
-                // finally update the version
-                this.mDB.executeSimpleSQL("DELETE FROM cal_calendar_schema_version; INSERT INTO cal_calendar_schema_version VALUES (3);");
-
-                this.mDB.commitTransaction();
-
-                oldVersion = 3;
-            } catch (e) {
-                dump ("+++++++++++++++++ DB Error: " + this.mDB.lastErrorString + "\n");
-                Components.reportError("Upgrade failed! DB Error: " + this.mDB.lastErrorString);
-                this.mDB.rollbackTransaction();
-                throw e;
-            }
-        }
-
-        if (oldVersion == 3 && this.DB_SCHEMA_VERSION >= 4) {
-            dump ("**** Upgrading schema from 3 -> 4\n");
-
-            this.mDB.beginTransaction();
-            try {
-                // the change between 3 and 4 is the addition of
-                // recurrence_id and recurrence_id_tz columns to
-                // cal_events, cal_todos, cal_attendees, and cal_properties
-                addColumn(this.mDB, "cal_events", "recurrence_id", "INTEGER");
-                addColumn(this.mDB, "cal_events", "recurrence_id_tz", "VARCHAR");
-
-                addColumn(this.mDB, "cal_todos", "recurrence_id", "INTEGER");
-                addColumn(this.mDB, "cal_todos", "recurrence_id_tz", "VARCHAR");
-
-                addColumn(this.mDB, "cal_attendees", "recurrence_id", "INTEGER");
-                addColumn(this.mDB, "cal_attendees", "recurrence_id_tz", "VARCHAR");
-
-                addColumn(this.mDB, "cal_properties", "recurrence_id", "INTEGER");
-                addColumn(this.mDB, "cal_properties", "recurrence_id_tz", "VARCHAR");
-
-                this.mDB.executeSimpleSQL("DELETE FROM cal_calendar_schema_version; INSERT INTO cal_calendar_schema_version VALUES (4);");
-                this.mDB.commitTransaction();
-
-                oldVersion = 4;
-            } catch (e) {
-                dump ("+++++++++++++++++ DB Error: " + this.mDB.lastErrorString + "\n");
-                Components.reportError("Upgrade failed! DB Error: " + this.mDB.lastErrorString);
-                this.mDB.rollbackTransaction();
-                throw e;
-            }
-        }
-
-        if (oldVersion != 4) {
-            dump ("#######!!!!! calStorageCalendar Schema Update failed -- db version: " + oldVersion + " this version: " + this.DB_SCHEMA_VERSION + "\n");
-            throw Components.results.NS_ERROR_FAILURE;
-        }
+        for (var i = 0; i < mObservers.length; i++)
+            mObservers[i].onDeleteItem (aDeletedItem);
     },
 
     // database initialization
     // assumes mDB is valid
-
     initDB: function () {
-        var version = this.versionCheck();
-        dump ("*** Calendar schema version is: " + version + "\n");
-        if (version == -1) {
-            this.initDBSchema();
-        } else if (version != this.DB_SCHEMA_VERSION) {
-            this.upgradeDB(version);
-        }
+        // these are columns that appear in all concrete items; SQLite could use
+        // an "extends" thing like postgresql has
+        const item_base_columns =
+            "hashid, time_created, last_modified, " +
+            "title, priority, flags, location, categories, " +
+            "alarm_data, alarm_time, " +
+            "recur_type, recur_interval, recur_data, recur_end, recur_flags";
+        try {
+            mDB.createTable ("cal_events",
+                             item_base_columns + ", " +
+                             "time_start, time_end");
+        } catch (e) { }
+        try {
+            mDB.createTable ("cal_todos",
+                             item_base_columns + ", " +
+                             "time_entry, time_due, time_completed, percent_complete");
+        } catch (e) { }
+        try {
+            mDB.createTable ("cal_recur_exceptions",
+                             "item_id, skip_date");
+        } catch (e) { }
+        try {
+            mDB.createTable ("cal_event_attendees",
+                             "event_id, attendee, attendee_status");
+        } catch (e) { }
+        try {
+            mDB.createTable ("cal_event_attachments",
+                             "event_id, attachment_type, attachment_data");
 
-        this.mSelectEvent = createStatement (
-            this.mDB,
-            "SELECT * FROM cal_events " +
-            "WHERE id = :id AND recurrence_id IS NULL " +
-            "LIMIT 1"
-            );
+        } catch (e) { }
+        try {
+            mDB.executeSimpleSQL ("CREATE INDEX cal_events_hash_idx ON cal_events.hashid");
+        } catch (e) { }
 
-        this.mSelectTodo = createStatement (
-            this.mDB,
-            "SELECT * FROM cal_todos " +
-            "WHERE id = :id AND recurrence_id IS NULL " +
-            "LIMIT 1"
-            );
+        var qs;
 
-        this.mSelectEventsByRange = createStatement(
-            this.mDB,
-            "SELECT * FROM cal_events " +
-            "WHERE event_end >= :event_start AND event_start < :event_end " +
-            "  AND cal_id = :cal_id AND recurrence_id IS NULL"
-            );
+        // event statements
 
-        this.mSelectTodosByRange = createStatement(
-            this.mDB,
-            "SELECT * FROM cal_todos " +
-            "WHERE ((todo_entry >= :todo_start AND todo_entry < :todo_end) OR (todo_entry IS NULL)) " +
-            "  AND cal_id = :cal_id AND recurrence_id IS NULL"
-            );
+        mSelectEventByHash = mDB.createStatement ("SELECT * FROM cal_events WHERE hashid = ? LIMIT 1");
+        mSelectEventByOid = mDB.createStatement ("SELECT * FROM cal_events WHERE oid = ? LIMIT 1");
+        // this needs to have the range bound like this: start, end
+        mSelectEventsByRange = mDB.createStatement ("SELECT * FROM cal_events WHERE (time_end >= ? AND time_start <= ?)");
+        mSelectEventsByRangeAndLimit = mDB.createStatement ("SELECT * FROM cal_events WHERE (time_end >= ? AND time_start <= ?) LIMIT ?");
+        mDeleteEventByHash = mDB.createStatement ("DELETE FROM cal_events WHERE hashid = ?");
+        qs = "?"; for (var i = 1; i < EV_COLUMN_COUNTER; i++) qs += ",?";
+        mInsertEvent = mDB.createStatement ("INSERT INTO cal_events VALUES (" + qs + ")");
 
-        this.mSelectEventsWithRecurrence = createStatement(
-            this.mDB,
-            "SELECT * FROM cal_events " +
-            " WHERE flags & 16 == 16 " +
-            "   AND cal_id = :cal_id AND recurrence_id is NULL"
-            );
-
-        this.mSelectTodosWithRecurrence = createStatement(
-            this.mDB,
-            "SELECT * FROM cal_todos " +
-            " WHERE flags & 16 == 16 " +
-            "   AND cal_id = :cal_id AND recurrence_id IS NULL"
-            );
-
-        this.mSelectEventExceptions = createStatement (
-            this.mDB,
-            "SELECT * FROM cal_events " +
-            "WHERE id = :id AND recurrence_id IS NOT NULL"
-            );
-
-        this.mSelectTodoExceptions = createStatement (
-            this.mDB,
-            "SELECT * FROM cal_todos " +
-            "WHERE id = :id AND recurrence_id IS NOT NULL"
-            );
-
-        // For the extra-item data, note that we use mDBTwo, so that
-        // these can be executed while a selectItems is running!
-        this.mSelectAttendeesForItem = createStatement(
-            this.mDBTwo,
-            "SELECT * FROM cal_attendees " +
-            "WHERE item_id = :item_id AND recurrence_id IS NULL"
-            );
-
-        this.mSelectAttendeesForItemWithRecurrenceId = createStatement(
-            this.mDBTwo,
-            "SELECT * FROM cal_attendees " +
-            "WHERE item_id = :item_id AND recurrence_id = :recurrence_id AND recurrence_id_tz = :recurrence_id_tz"
-            );
-
-        this.mSelectPropertiesForItem = createStatement(
-            this.mDBTwo,
-            "SELECT * FROM cal_properties " +
-            "WHERE item_id = :item_id AND recurrence_id IS NULL"
-            );
-
-        this.mSelectPropertiesForItemWithRecurrenceId = createStatement(
-            this.mDBTwo,
-            "SELECT * FROM cal_properties " +
-            "WHERE item_id = :item_id AND recurrence_id = :recurrence_id AND recurrence_id_tz = :recurrence_id_tz"
-            );
-
-        this.mSelectRecurrenceForItem = createStatement(
-            this.mDBTwo,
-            "SELECT * FROM cal_recurrence " +
-            "WHERE item_id = :item_id " +
-            "ORDER BY recur_index"
-            );
-
-        // insert statements
-        this.mInsertEvent = createStatement (
-            this.mDB,
-            "INSERT INTO cal_events " +
-            "  (cal_id, id, time_created, last_modified, " +
-            "   title, priority, privacy, ical_status, flags, " +
-            "   event_start, event_start_tz, event_end, event_end_tz, event_stamp, " +
-            "   alarm_time, alarm_time_tz, recurrence_id, recurrence_id_tz) " +
-            "VALUES (:cal_id, :id, :time_created, :last_modified, " +
-            "        :title, :priority, :privacy, :ical_status, :flags, " +
-            "        :event_start, :event_start_tz, :event_end, :event_end_tz, :event_stamp, " +
-            "        :alarm_time, :alarm_time_tz, :recurrence_id, :recurrence_id_tz)"
-            );
-
-        this.mInsertTodo = createStatement (
-            this.mDB,
-            "INSERT INTO cal_todos " +
-            "  (cal_id, id, time_created, last_modified, " +
-            "   title, priority, privacy, ical_status, flags, " +
-            "   todo_entry, todo_entry_tz, todo_due, todo_due_tz, todo_completed, " +
-            "   todo_completed_tz, todo_complete, " +
-            "   alarm_time, alarm_time_tz, recurrence_id, recurrence_id_tz) " +
-            "VALUES (:cal_id, :id, :time_created, :last_modified, " +
-            "        :title, :priority, :privacy, :ical_status, :flags, " +
-            "        :todo_entry, :todo_entry_tz, :todo_due, :todo_due_tz, " +
-            "        :todo_completed, :todo_completed_tz, :todo_complete, " +
-            "        :alarm_time, :alarm_time_tz, :recurrence_id, :recurrence_id_tz)"
-            );
-        this.mInsertProperty = createStatement (
-            this.mDB,
-            "INSERT INTO cal_properties (item_id, recurrence_id, recurrence_id_tz, key, value) " +
-            "VALUES (:item_id, :recurrence_id, :recurrence_id_tz, :key, :value)"
-            );
-        this.mInsertAttendee = createStatement (
-            this.mDB,
-            "INSERT INTO cal_attendees " +
-            "  (item_id, recurrence_id, recurrence_id_tz, attendee_id, common_name, rsvp, role, status, type) " +
-            "VALUES (:item_id, :recurrence_id, :recurrence_id_tz, :attendee_id, :common_name, :rsvp, :role, :status, :type)"
-            );
-        this.mInsertRecurrence = createStatement (
-            this.mDB,
-            "INSERT INTO cal_recurrence " +
-            "  (item_id, recur_index, recur_type, is_negative, dates, count, end_date, interval, second, minute, hour, day, monthday, yearday, weekno, month, setpos) " +
-            "VALUES (:item_id, :recur_index, :recur_type, :is_negative, :dates, :count, :end_date, :interval, :second, :minute, :hour, :day, :monthday, :yearday, :weekno, :month, :setpos)"
-            );
-
-        // delete statements
-        this.mDeleteEvent = createStatement (
-            this.mDB,
-            "DELETE FROM cal_events WHERE id = :id"
-            );
-        this.mDeleteTodo = createStatement (
-            this.mDB,
-            "DELETE FROM cal_todos WHERE id = :id"
-            );
-        this.mDeleteAttendees = createStatement (
-            this.mDB,
-            "DELETE FROM cal_attendees WHERE item_id = :item_id"
-            );
-        this.mDeleteProperties = createStatement (
-            this.mDB,
-            "DELETE FROM cal_properties WHERE item_id = :item_id"
-            );
-        this.mDeleteRecurrence = createStatement (
-            this.mDB,
-            "DELETE FROM cal_recurrence WHERE item_id = :item_id"
-            );
+        // todo statements
+        mSelectTodoByHash = mDB.createStatement ("SELECT * FROM cal_todos WHERE hashid = ? LIMIT 1");
+        mSelectTodoByOid = mDB.createStatement ("SELECT * from cal_todos WHERE oid = ? LIMIT 1");
+        mSelectTodosByRange = mDB.createStatement ("SELECT * FROM cal_todos WHERE (time_entry >= ? AND time_entry <= time_end)");
+        mSelectTodosByRangeAndLimit = mDB.createStatement ("SELECT * FROM cal_todos WHERE (time_entry >= ? AND time_entry <= time_end) LIMIT ?");
+        mDeleteTodoByHash = mDB.createStatement ("DELETE FROM cal_todos WHERE hashid = ?");
+        qs = "?"; for (var i = 1; i < TODO_COLUMN_COUNTER; i++) qs += ",?";
+        mInsertTodo = mDB.createStatement ("INSERT INTO cal_todos VALUES (" + qs + ")");
     },
 
-
-    //
-    // database reading functions
-    //
+    // database helper functions
 
     // read in the common ItemBase attributes from aDBRow, and stick
-    // them on item
-    getItemBaseFromRow: function (row, flags, item) {
-        if (row.time_created)
-            item.creationDate = newDateTime(row.time_created, "UTC");
-        if (row.last_modified)
-            item.lastModifiedTime = newDateTime(row.last_modified, "UTC");
-        item.calendar = this;
-        item.id = row.id;
-        if (row.title)
-            item.title = row.title;
-        if (row.priority)
-            item.priority = row.priority;
-        if (row.privacy)
-            item.privacy = row.privacy;
-        if (row.ical_status)
-            item.status = row.ical_status;
+    // them on aItemBase
+    getItemBaseFromRow: function (aDBRow, aItemBase) {
+        aItemBase.title = aDBRow.getAsString(ITEM_TITLE);
+        aItemBase.description = aDBRow.getAsString(ITEM_DESCRIPTION);
+        aItemBase.location = aDBRow.getAsString(ITEM_LOCATION);
+        aItemBase.categories = aDBRow.getAsString(ITEM_CATEGORIES);
 
-        if (row.alarm_time)
-            item.alarmTime = newDateTime(row.alarm_time, row.alarm_time_tz);
-
-        if (row.recurrence_id)
-            item.recurrenceId = newDateTime(row.recurrence_id, row.recurrence_id_tz);
-
-        if (flags)
-            flags.value = row.flags;
+        aItemBase.id = aDBRow.getAsString(ITEM_HASHID);
+        aItemBase.parent = this;
     },
 
-    getEventFromRow: function (row, flags) {
-        var item = new CalEvent();
+    // create a new event and read in its attributes from aDBRow
+    getEventFromRow: function (aDBRow) {
+        // create a new generic event
+        var e = Components.classes[kCalEventContractID]
+        .createInstance(kCalEventIID);
 
-        this.getItemBaseFromRow (row, flags, item);
+        getItemBaseFromRow (aDBRow, e);
 
-        if (row.event_start)
-            item.startDate = newDateTime(row.event_start, row.event_start_tz);
-        if (row.event_end)
-            item.endDate = newDateTime(row.event_end, row.event_end_tz);
-        if (row.event_stamp)
-            item.stampTime = newDateTime(row.event_stamp, "UTC");
-        if ((row.flags & CAL_ITEM_FLAG_EVENT_ALLDAY) != 0) {
-            item.startDate.isDate = true;
-            item.endDate.isDate = true;
-        }
+        // XXX do I need getAsPRTime?
+        e.startDate = newDateTime (aDBRow.getAsInt64(EV_TIME_START));
+        e.endDate = newDateTime (aDBRow.getAsInt64(EV_TIME_END));
 
-        return item;
+        return e;
     },
 
-    getTodoFromRow: function (row, flags) {
-        var item = new CalTodo();
+    // create a new todo and read in its attributes from aDBRow
+    getTodoFromRow: function (aDBRow) {
+        // create a new generic todo
+        var todo = Components.classes[kCalTodoContractID]
+        .createInstance(kCalTodoIID);
 
-        this.getItemBaseFromRow (row, flags, item);
+        getItemBaseFromRow (aDBRow, todo);
 
-        if (row.todo_entry)
-            item.entryDate = newDateTime(row.todo_entry, row.todo_entry_tz);
-        if (row.todo_due)
-            item.dueDate = newDateTime(row.todo_due, row.todo_due_tz);
-        if (row.todo_completed)
-            item.completedDate = newDateTime(row.todo_completed, row.todo_completed_tz);
-        if (row.todo_complete)
-            item.percentComplete = row.todo_complete;
+        todo.entryTime = newDateTime (aDBRow.getAsInt64(TODO_TIME_ENTRY));
+        todo.dueDate = newDateTime (aDBRow.getAsInt64(TODO_TIME_DUE));
+        todo.completedDate = newDateTime (aDBRow.getAsInt64(TODO_TIME_COMPLETED));
+        todo.percent_complete = aDBRow.getAsInt32(TODO_PERCENT_COMPLETE);
 
-        return item;
-    },
-
-    // after we get the base item, we need to check if we need to pull in
-    // any extra data from other tables.  We do that here.
-
-    // note that we use mDBTwo for this, so this can be run while a
-    // select is executing; don't use any statements that aren't
-    // against mDBTwo in here!
-    
-    getAdditionalDataForItem: function (item, flags) {
-        if (flags & CAL_ITEM_FLAG_HAS_ATTENDEES) {
-            var selectItem = null;
-            if (item.recurrenceId == null)
-                selectItem = this.mSelectAttendeesForItem;
-            else {
-                selectItem = this.mSelectAttendeesForItemWithRecurrenceId;
-                this.setDateParamHelper(selectItem.params, "recurrence_id", item.recurrenceId);
-            }
-
-            selectItem.params.item_id = item.id;
-
-            while (selectItem.step()) {
-                var attendee = this.getAttendeeFromRow(selectItem.row);
-                item.addAttendee(attendee);
-            }
-            selectItem.reset();
-        }
-
-        var row;
-        if (flags & CAL_ITEM_FLAG_HAS_PROPERTIES) {
-            var selectItem = null;
-            if (item.recurrenceId == null)
-                selectItem = this.mSelectPropertiesForItem;
-            else {
-                selectItem = this.mSelectPropertiesForItemWithRecurrenceId;
-                this.setDateParamHelper(selectItem.params, "recurrence_id", item.recurrenceId);
-            }
-                
-            selectItem.params.item_id = item.id;
-            
-            while (selectItem.step()) {
-                row = selectItem.row;
-                item.setProperty (row.key, row.value);
-            }
-            selectItem.reset();
-        }
-
-        var i;
-        if (flags & CAL_ITEM_FLAG_HAS_RECURRENCE) {
-            if (item.recurrenceId)
-                throw Components.results.NS_ERROR_UNEXPECTED;
-
-            var rec = null;
-
-            this.mSelectRecurrenceForItem.params.item_id = item.id;
-            while (this.mSelectRecurrenceForItem.step()) {
-                row = this.mSelectRecurrenceForItem.row;
-
-                var ritem = null;
-
-                if (row.recur_type == null ||
-                    row.recur_type == "x-dateset")
-                {
-                    ritem = new CalRecurrenceDateSet();
-
-                    var dates = row.dates.split(",");
-                    for (i = 0; i < dates.length; i++) {
-                        var date = textToDate(dates[i]);
-                        ritem.addDate(date);
-                    }
-                } else if (row.recur_type == "x-date") {
-                    ritem = new CalRecurrenceDate();
-                    var d = row.dates;
-                    ritem.date = textToDate(d);
-                } else {
-                    ritem = new CalRecurrenceRule();
-
-                    ritem.type = row.recur_type;
-                    if (row.count) {
-                        ritem.count = row.count;
-                    } else {
-                        ritem.endDate = newDateTime(row.end_date);
-                    }
-                    ritem.interval = row.interval;
-
-                    var rtypes = ["second",
-                                  "minute",
-                                  "hour",
-                                  "day",
-                                  "monthday",
-                                  "yearday",
-                                  "weekno",
-                                  "month",
-                                  "setpos"];
-
-                    for (i = 0; i < rtypes.length; i++) {
-                        var comp = "BY" + rtypes[i].toUpperCase();
-                        if (row[rtypes[i]]) {
-                            var rstr = row[rtypes[i]].split(",");
-                            var rarray = [];
-                            for (var j = 0; j < rstr.length; j++) {
-                                rarray[j] = parseInt(rstr[j]);
-                            }
-
-                            ritem.setComponent (comp, rarray.length, rarray);
-                        }
-                    }
-                }
-
-                if (row.is_negative)
-                    ritem.isNegative = true;
-                if (rec == null) {
-                    rec = new CalRecurrenceInfo();
-                    rec.item = item;
-                }
-                rec.appendRecurrenceItem(ritem);
-            }
-
-            if (rec == null) {
-                dump ("XXXX Expected to find recurrence, but got no items!\n");
-            }
-            item.recurrenceInfo = rec;
-
-            this.mSelectRecurrenceForItem.reset();
-        }
-
-        if (flags & CAL_ITEM_FLAG_HAS_EXCEPTIONS) {
-            if (item.recurrenceId)
-                throw Components.results.NS_ERROR_UNEXPECTED;
-
-            var rec = item.recurrenceInfo;
-
-            var exceptions = [];
-
-            if (item instanceof kCalIEvent) {
-                this.mSelectEventExceptions.params.id = item.id;
-                while (this.mSelectEventExceptions.step()) {
-                    var row = this.mSelectEventExceptions.row;
-                    var flags = {};
-                    var exc = this.getEventFromRow(row, flags);
-                    exceptions.push({item: exc, flags: flags.value});
-                }
-                this.mSelectEventExceptions.reset();
-            } else if (item instanceof kCalITodo) {
-                this.mSelectTodoExceptions.params.id = item.id;
-                while (this.mSelectTodoExceptions.step()) {
-                    var row = this.mSelectTodoExceptions.row;
-                    var flags = {};
-                    var exc = this.getTodoFromRow(row, flags);
-                    
-                    exceptions.push({item: exc, flags: flags.value});
-                }
-                this.mSelectTodoExceptions.reset();
-            } else {
-                throw Components.results.NS_ERROR_UNEXPECTED;
-            }
-
-            for each (var exc in exceptions) {
-                this.getAdditionalDataForItem(exc.item, exc.flags);
-                exc.item.parentItem = item;
-                rec.modifyException(exc.item);
-            }
-        }
-    },
-
-    getAttendeeFromRow: function (row) {
-        var a = CalAttendee();
-
-        a.id = row.attendee_id;
-        a.commonName = row.common_name;
-        a.rsvp = (row.rsvp != 0);
-        a.role = row.role;
-        a.participationStatus = row.status;
-        a.userType = row.type;
-
-        return a;
+        return todo;
     },
 
     //
-    // get item from db or from cache with given iid
+    // get an todo from the db or cache with the given ID
     //
-    getItemById: function (aID) {
+    getItemByHash: function (aID) {
         // cached?
-        if (this.mItemCache[aID] != null)
-            return this.mItemCache[aID];
+        if (mItemHash[aID] != null)
+            return mItemHash[aID];
 
         var retval = null;
 
         // not cached; need to read from the db
-        var flags = {};
-        var item = null;
 
-        // try events first
-        this.mSelectEvent.params.id = aID;
-        if (this.mSelectEvent.step())
-            item = this.getEventFromRow(this.mSelectEvent.row, flags);
-        this.mSelectEvent.reset();
-
-        // try todo if event fails
-        if (!item) {
-            this.mSelectTodo.params.id = aID;
-            if (this.mSelectTodo.step())
-                item = this.getTodoFromRow(this.mSelectTodo.row, flags);
-            this.mSelectTodo.reset();
+        // try event first
+        mSelectEventByHash.bindCStringParameter (0, aID);
+        if (mSelectEventByHash.executeStep()) {
+            var e = getEventFromRow (mSelectEventByHash);
+            retval = e;
         }
 
-        // bail if still not found
-        if (!item)
-            return null;
-
-        this.getAdditionalDataForItem(item, flags.value);
-
-        item.makeImmutable();
-
-        // cache it
-        this.mItemCache[aID] = item;
-
-        return item;
-    },
-
-    //
-    // database writing functions
-    //
-
-    setDateParamHelper: function (params, entryname, cdt) {
-        if (cdt) {
-            params[entryname] = cdt.nativeTime;
-            params[entryname + "_tz"] = cdt.timezone;
-        } else {
-            params[entryname] = null;
-            params[entryname + "_tz"] = null;
-        }
-    },
-
-    flushItem: function (item, olditem) {
-        this.mDB.beginTransaction();
-        try {
-            this.writeItem(item, olditem);
-            this.mDB.commitTransaction();
-        } catch (e) {
-            dump("flushItem DB error: " + this.mDB.lastErrorString + "\n");
-            Components.reportError("flushItem DB error: " + this.mDB.lastErrorString);
-            this.mDB.rollbackTransaction();
-            throw e;
-        }
-
-        this.mItemCache[item.id] = item;
-    },
-
-    //
-    // Nuke olditem, if any
-    //
-
-    deleteOldItem: function (item, olditem) {
-        if (olditem) {
-            var oldItemDeleteStmt;
-            if (olditem instanceof kCalIEvent)
-                oldItemDeleteStmt = this.mDeleteEvent;
-            else if (olditem instanceof kCalITodo)
-                oldItemDeleteStmt = this.mDeleteTodo;
-
-            oldItemDeleteStmt.params.id = olditem.id;
-            this.mDeleteAttendees.params.item_id = olditem.id;
-            this.mDeleteProperties.params.item_id = olditem.id;
-            this.mDeleteRecurrence.params.item_id = olditem.id;
-
-            this.mDeleteRecurrence.execute();
-            this.mDeleteProperties.execute();
-            this.mDeleteAttendees.execute();
-            oldItemDeleteStmt.execute();
-        }
-    },
-
-    //
-    // The write* functions execute the database bits
-    // to write the given item type.  They're to return
-    // any bits they want or'd into flags, which will be passed
-    // to writeEvent/writeTodo to actually do the writing.
-    //
-
-    writeItem: function (item, olditem) {
-        var flags = 0;
-
-        this.deleteOldItem(item, olditem);
-
-        flags |= this.writeAttendees(item, olditem);
-        flags |= this.writeRecurrence(item, olditem);
-        flags |= this.writeProperties(item, olditem);
-        flags |= this.writeAttachments(item, olditem);
-
-        if (item instanceof kCalIEvent)
-            this.writeEvent(item, olditem, flags);
-        else if (item instanceof kCalITodo)
-            this.writeTodo(item, olditem, flags);
-        else
-            throw Components.results.NS_ERROR_UNEXPECTED;
-    },
-
-    writeEvent: function (item, olditem, flags) {
-        var ip = this.mInsertEvent.params;
-        this.setupItemBaseParams(item, olditem,ip);
-
-        var tmp;
-
-        tmp = item.getUnproxiedProperty("DTSTART");
-        //if (tmp instanceof kCalIDateTime) {}
-        this.setDateParamHelper(ip, "event_start", tmp);
-        tmp = item.getUnproxiedProperty("DTEND");
-        //if (tmp instanceof kCalIDateTime) {}
-        this.setDateParamHelper(ip, "event_end", tmp);
-
-        if (item.startDate.isDate)
-            flags |= CAL_ITEM_FLAG_EVENT_ALLDAY;
-
-        ip.flags = flags;
-
-        this.mInsertEvent.execute();
-    },
-
-    writeTodo: function (item, olditem, flags) {
-        var ip = this.mInsertTodo.params;
-
-        this.setupItemBaseParams(item, olditem,ip);
-
-        this.setDateParamHelper(ip, "todo_entry", item.getUnproxiedProperty("DTSTART"));
-        this.setDateParamHelper(ip, "todo_due", item.getUnproxiedProperty("DUE"));
-        this.setDateParamHelper(ip, "todo_completed", item.getUnproxiedProperty("COMPLETED"));
-
-        ip.todo_complete = item.getUnproxiedProperty("PERCENT-COMPLETED");
-
-        ip.flags = flags;
-
-        this.mInsertTodo.execute();
-    },
-
-    setupItemBaseParams: function (item, olditem, ip) {
-        ip.cal_id = this.mCalId;
-        ip.id = item.id;
-
-        if (item.recurrenceId)
-            this.setDateParamHelper(ip, "recurrence_id", item.recurrenceId);
-
-        var tmp;
-
-        if (tmp = item.getUnproxiedProperty("CREATED"))
-            ip.time_created = tmp.nativeTime;
-        if (tmp = item.getUnproxiedProperty("LAST-MODIFIED"))
-            ip.last_modified = tmp.nativeTime;
-
-        ip.title = item.getUnproxiedProperty("SUMMARY");
-        ip.priority = item.getUnproxiedProperty("PRIROITY");
-        ip.privacy = item.getUnproxiedProperty("PRIVACY");
-        ip.ical_status = item.getUnproxiedProperty("STATUS");
-
-        if (!item.parentItem)
-            ip.event_stamp = item.stampTime.nativeTime;
-
-        if (tmp = item.getUnproxiedProperty("ALARMTIME"))
-            this.setDateParamHelper(ip, "alarm_time", tmp);
-    },
-
-    writeAttendees: function (item, olditem) {
-        // XXX how does this work for proxy stuffs?
-        var attendees = item.getAttendees({});
-        if (attendees && attendees.length > 0) {
-            flags |= CAL_ITEM_FLAG_HAS_ATTENDEES;
-            for each (var att in attendees) {
-                var ap = this.mInsertAttendee.params;
-                ap.item_id = item.id;
-                this.setDateParamHelper(ap, "recurrence_id", item.recurrenceId);
-                ap.attendee_id = att.id;
-                ap.common_name = att.commonName;
-                ap.rsvp = att.rsvp;
-                ap.role = att.role;
-                ap.status = att.participationStatus;
-                ap.type = att.userType;
-
-                this.mInsertAttendee.execute();
-            }
-
-            return CAL_ITEM_FLAG_HAS_ATTENDEES;
-        }
-
-        return 0;
-    },
-
-    writeProperties: function (item, olditem) {
-        var ret = 0;
-        var propEnumerator = item.unproxiedPropertyEnumerator;
-        while (propEnumerator.hasMoreElements()) {
-            ret = CAL_ITEM_FLAG_HAS_PROPERTIES;
-
-            var prop = propEnumerator.getNext().QueryInterface(Components.interfaces.nsIProperty);
-
-            if (item.isPropertyPromoted(prop.name))
-                continue;
-
-            var pp = this.mInsertProperty.params;
-
-            pp.key = prop.name;
-            var pval = prop.value;
-            if (pval instanceof kCalIDateTime) {
-                pp.value = pval.nativeTime;
-            } else {
-                pp.value = pval;
-            }
-            pp.item_id = item.id;
-            this.setDateParamHelper(pp, "recurrence_id", item.recurrenceId);
-
-            this.mInsertProperty.execute();
-        }
-
-        return ret;
-    },
-
-    writeRecurrence: function (item, olditem) {
-        var flags = 0;
-
-        var rec = item.recurrenceInfo;
-        if (rec) {
-            flags = CAL_ITEM_FLAG_HAS_RECURRENCE;
-            var ritems = rec.getRecurrenceItems ({});
-            for (i in ritems) {
-                var ritem = ritems[i];
-                ap = this.mInsertRecurrence.params;
-                ap.item_id = item.id;
-                ap.recur_index = i;
-                ap.is_negative = ritem.isNegative;
-                if (ritem instanceof kCalIRecurrenceDate) {
-                    ritem = ritem.QueryInterface(kCalIRecurrenceDate);
-                    ap.recur_type = "x-date";
-                    ap.dates = dateToText(ritem.date);
-
-                } else if (ritem instanceof kCalIRecurrenceDateSet) {
-                    ritem = ritem.QueryInterface(kCalIRecurrenceDateSet);
-                    ap.recur_type = "x-dateset";
-
-                    var rdates = ritem.getDates({});
-                    var datestr = "";
-                    for (j in rdates) {
-                        if (j != 0)
-                            datestr += ",";
-
-                        datestr += dateToText(rdates[j]);
-                    }
-
-                    ap.dates = datestr;
-
-                } else if (ritem instanceof kCalIRecurrenceRule) {
-                    ritem = ritem.QueryInterface(kCalIRecurrenceRule);
-                    ap.recur_type = ritem.type;
-
-                    if (ritem.isByCount)
-                        ap.count = ritem.count;
-                    else
-                        ap.end_date = ritem.endDate.nativeTime;
-
-                    ap.interval = ritem.interval;
-
-                    var rtypes = ["second",
-                                  "minute",
-                                  "hour",
-                                  "day",
-                                  "monthday",
-                                  "yearday",
-                                  "weekno",
-                                  "month",
-                                  "setpos"];
-                    for (j = 0; j < rtypes.length; j++) {
-                        var comp = "BY" + rtypes[i].toUpperCase();
-                        var comps = ritem.getComponent(comp, {});
-                        if (comps && comps.length > 0) {
-                            var compstr = comps.join(",");
-                            ap[rtypes[j]] = compstr;
-                        }
-                    }
-                } else {
-                    dump ("##### Don't know how to serialize recurrence item " + ritem + "!\n");
-                }
-
-                this.mInsertRecurrence.execute();
-            }
-
-            var exceptions = rec.getExceptionIds ({});
-            if (exceptions.length > 0) {
-                flags |= CAL_ITEM_FLAG_HAS_EXCEPTIONS;
-
-                // we need to serialize each exid as a separate
-                // event/todo; setupItemBase will handle
-                // writing the recurrenceId for us
-                for each (exid in exceptions) {
-                    var ex = rec.getExceptionFor(exid, false);
-                    if (!ex)
-                        throw Components.results.NS_ERROR_UNEXPECTED;
-                    this.writeItem(ex, null);
-                }
+        if (retval == null) {
+            // not found; try a todo
+            mSelectTodoByHash.bindCStringParameter (0, aID);
+            if (mSelectTodoByHash.executeStep()) {
+                var e = getTodoFromRow (mSelectTodoByHash);
+                retval = e;
             }
         }
 
-        return flags;
+        mSelectEventByHash.reset();
+
+        if (retval)
+            mItemHash[aID] = retval;
+        return retval;
     },
 
-    writeAttachments: function (item, olditem) {
-        // XXX write me?
-        return 0;
-    },
+    // get a list of events from the db in the given range
+    getEventsByRange: function (aRangeStart, aRangeEnd, aCount) {
+        var stmt = mSelectEventsByRange;
+        if (aCount)
+            stmt = mSelectEventsByRangeAndLimit;
 
-    //
-    // delete the item with the given uid
-    //
-    deleteItemById: function (aID) {
-        this.mDB.beginTransaction();
-        try {
-            this.mDeleteAttendees(aID);
-            this.mDeleteProperties(aID);
-            this.mDeleteRecurrence(aID);
-            this.mDeleteEvent(aID);
-            this.mDeleteTodo(aID);
-            this.mDB.commitTransaction();
-        } catch (e) {
-            Components.reportError("deleteItemById DB error: " + this.mDB.lastErrorString);
-            this.mDB.rollbackTransaction();
-            throw e;
+        stmt.bindInt64Parameter(0, aRangeStart);
+        stmt.bindInt64Parameter(1, aRangeEnd);
+        stmt.bindInt64Parameter(2, aRangeStart);
+        stmt.bindInt64Parameter(3, aRangeStart);
+        stmt.bindInt64Parameter(4, aRangeEnd);
+        stmt.bindInt64Parameter(5, aRangeEnd);
+        if (aCount)
+            stmt.bindInt32Parameter(6, aCount);
+
+        var events = Array();
+        while (stmt.executeStep()) {
+            var e = getEventFromRow(stmt);
+            events.push (e);
+            mItemHash[e.id] = e;
         }
 
-        delete this.mItemCache[aID];
-    }
+        return events;
+    },
+
+    // write this event's changed data to the db
+    flushEvent: function (aEvent) {
+        // set up statements before executing the transaction
+        mDeleteEventByHash.bindCStringParameter (0, aEvent.id);
+
+        mInsertEvent.bindCStringParameter (ITEM_HASHID, aEvent.id);
+
+        mInsertEvent.bindInt64Parameter (EV_TIME_START, aEvent.start.utcTime);
+        mInsertEvent.bindInt64Parameter (EV_TIME_END, aEvent.end.utcTime);
+
+        mInsertEvent.bindStringParameter (ITEM_TITLE, aEvent.title);
+        mInsertEvent.bindStringParameter (ITEM_DESCRIPTION, aEvent.description);
+        mInsertEvent.bindStringParameter (ITEM_LOCATION, aEvent.location);
+        mInsertEvent.bindStringParameter (ITEM_CATEGORIES, aEvent.categories);
+
+        mDB.beginTransaction();
+        mDeleteEventByHash.execute();
+        mInsertEvent.execute();
+        mDB.commitTransaction();
+
+        mDeleteEventByHash.reset();
+        mInsertEvent.reset();
+
+        mItemHash[aEvent.id] = aEvent;
+    },
+
+    // delete the event with the given uid
+    deleteEvent: function (aID) {
+        mDeleteEventByHash.bindCStringParameter (0, aID);
+        mDeleteEventByHash.execute ();
+        mDeleteEventByHash.reset ();
+
+        delete mItemHash[aID];
+    },
 }
 
 
@@ -1704,7 +608,7 @@ calStorageCalendar.prototype = {
 
 var calStorageCalendarModule = {
     mCID: Components.ID("{b3eaa1c4-5dfe-4c0a-b62a-b3a514218461}"),
-    mContractID: "@mozilla.org/calendar/calendar;1?type=storage",
+    mContractID: "@mozilla.org/calendar/calendar;1&type=storage",
     
     registerSelf: function (compMgr, fileSpec, location, type) {
         compMgr = compMgr.QueryInterface(Components.interfaces.nsIComponentRegistrar);
@@ -1722,13 +626,6 @@ var calStorageCalendarModule = {
 
         if (!iid.equals(Components.interfaces.nsIFactory))
             throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
-
-        if (!kStorageServiceIID)
-            throw Components.results.NS_ERROR_NOT_INITIALIZED;
-
-        if (!CalEvent) {
-            initCalStorageCalendarComponent();
-        }
 
         return this.mFactory;
     },
@@ -1749,134 +646,3 @@ var calStorageCalendarModule = {
 function NSGetModule(compMgr, fileSpec) {
     return calStorageCalendarModule;
 }
-
-
-
-//
-// sqlTables generated from schema.sql via makejsschema.pl
-//
-
-var sqlTables = {
-  cal_calendar_schema_version:
-    "	version	INTEGER" +
-    "",
-
-  cal_events:
-    /* 	REFERENCES cal_calendars.id, */
-    "	cal_id		INTEGER, " +
-    /*  ItemBase bits */
-    "	id		STRING," +
-    "	time_created	INTEGER," +
-    "	last_modified	INTEGER," +
-    "	title		STRING," +
-    "	priority	INTEGER," +
-    "	privacy		STRING," +
-    "	ical_status	STRING," +
-    "	recurrence_id	INTEGER," +
-    "	recurrence_id_tz	VARCHAR," +
-    /*  CAL_ITEM_FLAG_PRIVATE = 1 */
-    /*  CAL_ITEM_FLAG_HAS_ATTENDEES = 2 */
-    /*  CAL_ITEM_FLAG_HAS_PROPERTIES = 4 */
-    /*  CAL_ITEM_FLAG_EVENT_ALLDAY = 8 */
-    /*  CAL_ITEM_FLAG_HAS_RECURRENCE = 16 */
-    /*  CAL_ITEM_FLAG_HAS_EXCEPTIONS = 32 */
-    "	flags		INTEGER," +
-    /*  Event bits */
-    "	event_start	INTEGER," +
-    "	event_start_tz	VARCHAR," +
-    "	event_end	INTEGER," +
-    "	event_end_tz	VARCHAR," +
-    "	event_stamp	INTEGER," +
-    /*  alarm time */
-    "	alarm_time	INTEGER," +
-    "	alarm_time_tz	VARCHAR" +
-    "",
-
-  cal_todos:
-    /* 	REFERENCES cal_calendars.id, */
-    "	cal_id		INTEGER, " +
-    /*  ItemBase bits */
-    "	id		STRING," +
-    "	time_created	INTEGER," +
-    "	last_modified	INTEGER," +
-    "	title		STRING," +
-    "	priority	INTEGER," +
-    "	privacy		STRING," +
-    "	ical_status	STRING," +
-    "	recurrence_id	INTEGER," +
-    "	recurrence_id_tz	VARCHAR," +
-    /*  CAL_ITEM_FLAG_PRIVATE = 1 */
-    /*  CAL_ITEM_FLAG_HAS_ATTENDEES = 2 */
-    /*  CAL_ITEM_FLAG_HAS_PROPERTIES = 4 */
-    /*  CAL_ITEM_FLAG_EVENT_ALLDAY = 8 */
-    /*  CAL_ITEM_FLAG_HAS_RECURRENCE = 16 */
-    /*  CAL_ITEM_FLAG_HAS_EXCEPTIONS = 32 */
-    "	flags		INTEGER," +
-    /*  Todo bits */
-    /*  date the todo is to be displayed */
-    "	todo_entry	INTEGER," +
-    "	todo_entry_tz	VARCHAR," +
-    /*  date the todo is due */
-    "	todo_due	INTEGER," +
-    "	todo_due_tz	VARCHAR," +
-    /*  date the todo is completed */
-    "	todo_completed	INTEGER," +
-    "	todo_completed_tz VARCHAR," +
-    /*  percent the todo is complete (0-100) */
-    "	todo_complete	INTEGER," +
-    /*  alarm time */
-    "	alarm_time	INTEGER," +
-    "	alarm_time_tz	VARCHAR" +
-    "",
-
-  cal_attendees:
-    "	item_id         STRING," +
-    "	recurrence_id	INTEGER," +
-    "	recurrence_id_tz	VARCHAR," +
-    "	attendee_id	STRING," +
-    "	common_name	STRING," +
-    "	rsvp		INTEGER," +
-    "	role		STRING," +
-    "	status		STRING," +
-    "	type		STRING" +
-    "",
-
-  cal_recurrence:
-    "	item_id		STRING," +
-    /*  the index in the recurrence array of this thing */
-    "	recur_index	INTEGER, " +
-    /*  values from calIRecurrenceInfo; if null, date-based. */
-    "	recur_type	STRING, " +
-    "	is_negative	BOOLEAN," +
-    /*  */
-    /*  these are for date-based recurrence */
-    /*  */
-    /*  comma-separated list of dates */
-    "	dates		STRING," +
-    /*  */
-    /*  these are for rule-based recurrence */
-    /*  */
-    "	count		INTEGER," +
-    "	end_date	INTEGER," +
-    "	interval	INTEGER," +
-    /*  components, comma-separated list or null */
-    "	second		STRING," +
-    "	minute		STRING," +
-    "	hour		STRING," +
-    "	day		STRING," +
-    "	monthday	STRING," +
-    "	yearday		STRING," +
-    "	weekno		STRING," +
-    "	month		STRING," +
-    "	setpos		STRING" +
-    "",
-
-  cal_properties:
-    "	item_id		STRING," +
-    "	recurrence_id	INTEGER," +
-    "	recurrence_id_tz	VARCHAR," +
-    "	key		STRING," +
-    "	value		BLOB" +
-    "",
-
-};

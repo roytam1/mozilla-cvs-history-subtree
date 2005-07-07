@@ -45,13 +45,12 @@
 #include "prtypes.h"
 
 static const nsXREAppData kAppData = {
-  sizeof(nsXREAppData),
-  nsnull,
-  nsnull,
+  0,
   "Thunderbird",
-  NS_STRINGIFY(APP_VERSION),
-  NS_STRINGIFY(BUILD_ID),
-  "{3550f703-e582-4d05-9a08-453d09bdfdc6}",
+  APP_VERSION,
+  BUILD_ID,
+  // {3550f703-e582-4d05-9a08-453d09bdfdc6}
+  { 0x3550f703, 0xe582, 0x4d05, { 0x9a, 0x08, 0x45, 0x3d, 0x09, 0xbd, 0xfd, 0xc6 } },
   "Copyright (c) 2005 mozilla.org",
   NS_XRE_ENABLE_PROFILE_MIGRATOR |
   NS_XRE_ENABLE_EXTENSION_MANAGER
@@ -59,7 +58,7 @@ static const nsXREAppData kAppData = {
 
 int main(int argc, char* argv[])
 {
-  return XRE_main(argc, argv, &kAppData);
+  return xre_main(argc, argv, &kAppData);
 }
 
 #if defined( XP_WIN ) && defined( WIN32 ) && !defined(__GNUC__)

@@ -1,40 +1,21 @@
 # -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
-# ***** BEGIN LICENSE BLOCK *****
-# Version: MPL 1.1/GPL 2.0/LGPL 2.1
+# The contents of this file are subject to the Netscape Public
+# License Version 1.1 (the "License"); you may not use this file
+# except in compliance with the License. You may obtain a copy of
+# the License at http://www.mozilla.org/NPL/
 #
-# The contents of this file are subject to the Mozilla Public License Version
-# 1.1 (the "License"); you may not use this file except in compliance with
-# the License. You may obtain a copy of the License at
-# http://www.mozilla.org/MPL/
-#
-# Software distributed under the License is distributed on an "AS IS" basis,
-# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
-# for the specific language governing rights and limitations under the
-# License.
+# Software distributed under the License is distributed on an "AS
+# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# rights and limitations under the License.
 #
 # The Original Code is Mozilla Communicator client code, released
 # March 31, 1998.
 #
-# The Initial Developer of the Original Code is
-# Netscape Communications Corporation.
-# Portions created by the Initial Developer are Copyright (C) 1998-1999
-# the Initial Developer. All Rights Reserved.
-#
-# Contributor(s):
-#
-# Alternatively, the contents of this file may be used under the terms of
-# either the GNU General Public License Version 2 or later (the "GPL"), or
-# the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
-# in which case the provisions of the GPL or the LGPL are applicable instead
-# of those above. If you wish to allow use of your version of this file only
-# under the terms of either the GPL or the LGPL, and not to allow others to
-# use your version of this file under the terms of the MPL, indicate your
-# decision by deleting the provisions above and replace them with the notice
-# and other provisions required by the GPL or the LGPL. If you do not delete
-# the provisions above, a recipient may use your version of this file under
-# the terms of any one of the MPL, the GPL or the LGPL.
-#
-# ***** END LICENSE BLOCK *****
+# The Initial Developer of the Original Code is Netscape
+# Communications Corporation. Portions created by Netscape are
+# Copyright (C) 1998-1999 Netscape Communications Corporation. All
+# Rights Reserved.
 
 /**
  * interfaces
@@ -184,7 +165,9 @@ function disableEditableFields()
   gMsgCompose.editor.flags |= nsIPlaintextEditorMail.eEditorReadonlyMask;
   var disableElements = document.getElementsByAttribute("disableonsend", "true");
   for (i=0;i<disableElements.length;i++)
+  {
     disableElements[i].setAttribute('disabled', 'true');
+  }
 }
 
 function enableEditableFields()
@@ -569,6 +552,7 @@ function GetSelectedMessages()
 
 function SetupCommandUpdateHandlers()
 {
+//  dump("SetupCommandUpdateHandlers\n");
   top.controllers.insertControllerAt(0, defaultController);
 }
 
@@ -589,57 +573,37 @@ function CommandUpdate_MsgCompose()
   updateComposeItems();
 }
 
-function updateComposeItems() 
-{
-  try 
+function updateComposeItems() {
+  try {
+
+  //Edit Menu
+  goUpdateCommand("cmd_rewrap");
+
+  //Insert Menu
+  if (gMsgCompose && gMsgCompose.composeHTML)
   {
-    //Edit Menu
-    goUpdateCommand("cmd_rewrap");
+    goUpdateCommand("cmd_renderedHTMLEnabler");
+    goUpdateCommand("cmd_decreaseFont");
+    goUpdateCommand("cmd_increaseFont");
+    goUpdateCommand("cmd_bold");
+    goUpdateCommand("cmd_italic");
+    goUpdateCommand("cmd_underline");
+    goUpdateCommand("cmd_ul");
+    goUpdateCommand("cmd_ol");
+    goUpdateCommand("cmd_indent");
+    goUpdateCommand("cmd_outdent");
+    goUpdateCommand("cmd_align");
+    goUpdateCommand("cmd_smiley");
+  }
 
-    //Insert Menu
-    if (gMsgCompose && gMsgCompose.composeHTML)
-    {
-      goUpdateCommand("cmd_renderedHTMLEnabler");
-      goUpdateCommand("cmd_decreaseFont");
-      goUpdateCommand("cmd_increaseFont");
-      goUpdateCommand("cmd_bold");
-      goUpdateCommand("cmd_italic");
-      goUpdateCommand("cmd_underline");
-      goUpdateCommand("cmd_ul");
-      goUpdateCommand("cmd_ol");
-      goUpdateCommand("cmd_indent");
-      goUpdateCommand("cmd_outdent");
-      goUpdateCommand("cmd_align");
-      goUpdateCommand("cmd_smiley");
-    }
-
-    //Options Menu
-    goUpdateCommand("cmd_spelling");
-    goUpdateCommand("cmd_quoteMessage");
+  //Options Menu
+  goUpdateCommand("cmd_spelling");
+  goUpdateCommand("cmd_quoteMessage");
 
   } catch(e) {}
 }
 
-function openEditorContextMenu() 
-{
-  // if we have a mispelled word, do one thing, otherwise show the usual context menu
-  var spellCheckNoSuggestionsItem = document.getElementById('spellCheckNoSuggestions');
-  var word;
-  var misspelledWordStatus = InlineSpellChecker.updateSuggestionsMenu(document.getElementById('msgComposeContext'), spellCheckNoSuggestionsItem,
-                              word);
-  
-  var hideSpellingItems = (misspelledWordStatus == kSpellNoMispelling);
-  spellCheckNoSuggestionsItem.hidden = hideSpellingItems || misspelledWordStatus != kSpellNoSuggestionsFound;
-  document.getElementById('spellCheckAddToDictionary').hidden = hideSpellingItems;
-  document.getElementById('spellCheckIgnoreWord').hidden = hideSpellingItems;
-  document.getElementById('spellCheckAddSep').hidden = hideSpellingItems;
-  document.getElementById('spellCheckSuggestionsSeparator').hidden = hideSpellingItems;
-
-  updateEditItems();
-}
-
-function updateEditItems() 
-{
+function updateEditItems() {
   goUpdateCommand("cmd_pasteNoFormatting");
   goUpdateCommand("cmd_pasteQuote");
   goUpdateCommand("cmd_delete");
@@ -650,10 +614,8 @@ function updateEditItems()
   goUpdateCommand("cmd_findPrev");
 }
 
-var messageComposeOfflineObserver = 
-{
-  observe: function(subject, topic, state) 
-  {
+var messageComposeOfflineObserver = {
+  observe: function(subject, topic, state) {
     // sanity checks
     if (topic != "network:offline-status-changed") return;
     if (state == "offline")
@@ -1308,7 +1270,6 @@ function ComposeStartup(recycled, aParams)
                                          gMsgCompose.compFields.returnReceipt);
       document.getElementById("cmd_attachVCard").setAttribute('checked', 
                                          gMsgCompose.compFields.attachVCard);
-      document.getElementById("menu_inlineSpellCheck").setAttribute('checked', sPrefs.getBoolPref("mail.spellcheck.inline"));
 
       // If recycle, editor is already created
       if (!recycled) 
@@ -1367,7 +1328,9 @@ function ComposeStartup(recycled, aParams)
           
           if (attachments.Count()) 
           {
-            ChangeAttachmentBucketVisibility(false);
+            var attachmentBox = document.getElementById("attachments-box");
+            attachmentBox.hidden = false;
+            document.getElementById("attachmentbucket-sizer").hidden=false; 
           }
       }
 
@@ -1375,7 +1338,8 @@ function ComposeStartup(recycled, aParams)
 
       if (recycled)
       {
-        InitEditor();
+        // This sets charset and does reply quote insertion
+        gMsgCompose.initEditor(GetCurrentEditor(), window.content);
 
         if (gMsgCompose.composeHTML)
         {
@@ -1421,7 +1385,7 @@ function ComposeStartup(recycled, aParams)
     : 0;
 
   if (gAutoSaveInterval)
-    gAutoSaveTimeout = setTimeout(AutoSave, gAutoSaveInterval);
+    gAutoSaveTimeout = setTimeout("AutoSave()", gAutoSaveInterval);
 }
 
 // The new, nice, simple way of getting notified when a new editor has been created
@@ -1436,7 +1400,7 @@ var gMsgEditorCreationObserver =
       {
         var editorStyle = editor.QueryInterface(Components.interfaces.nsIEditorStyleSheets);
         editorStyle.addStyleSheet("chrome://messenger/skin/messageQuotes.css");
-        InitEditor();
+        gMsgCompose.initEditor(editor, window.content);
       }
     }
   }
@@ -1464,7 +1428,7 @@ function ComposeLoad()
     var prefService = Components.classes["@mozilla.org/preferences-service;1"]
                               .getService(Components.interfaces.nsIPrefService);
     sPrefs = prefService.getBranch(null);
-    sPrefBranchInternal = sPrefs.QueryInterface(Components.interfaces.nsIPrefBranch2);
+    sPrefBranchInternal = sPrefs.QueryInterface(Components.interfaces.nsIPrefBranchInternal);
   }
   catch (ex) {
     dump("failed to preferences services\n");
@@ -1712,7 +1676,7 @@ function GenericSendMessage( msgType )
              var result = {value:sComposeMsgsBundle.getString("defaultSubject")};
              if (gPromptService.prompt(
                 window,
-                sComposeMsgsBundle.getString("sendMsgTitle"),
+                sComposeMsgsBundle.getString("subjectDlogTitle"),
                 sComposeMsgsBundle.getString("subjectDlogMessage"),
                 result,
                 null,
@@ -1730,11 +1694,6 @@ function GenericSendMessage( msgType )
           // check if the user tries to send a message to a newsgroup through a mail account
           var currentAccountKey = getCurrentAccountKey();
           var account = gAccountManager.getAccount(currentAccountKey);
-          if (!account)
-          {
-            throw "UNEXPECTED: currentAccountKey '" + currentAccountKey +
-                "' has no matching account!";
-          }
           var servertype = account.incomingServer.type;
 
           if (servertype != "nntp" && msgCompFields.newsgroups != "")
@@ -1746,7 +1705,7 @@ function GenericSendMessage( msgType )
             {
               var checkbox = {value:false};
               var okToProceed = gPromptService.confirmCheck(window,
-                                                            sComposeMsgsBundle.getString("sendMsgTitle"),
+                                                            sComposeMsgsBundle.getString("subjectDlogTitle"),
                                                             sComposeMsgsBundle.getString("recipientDlogMessage"),
                                                             sComposeMsgsBundle.getString("CheckMsg"), checkbox);
 
@@ -1765,11 +1724,6 @@ function GenericSendMessage( msgType )
           // Before sending the message, check what to do with HTML message, eventually abort.
           var convert = DetermineConvertibility();
           var action = DetermineHTMLAction(convert);
-         // check if e-mail addresses are complete, in case user
-         // has turned off autocomplete to local domain.
-         if (!CheckValidEmailAddress(msgCompFields.to, msgCompFields.cc, msgCompFields.bcc))
-          return;
-
           if (action == nsIMsgCompSendFormat.AskUser)
           {
             var recommAction = convert == nsIMsgCompConvertible.No
@@ -1828,24 +1782,9 @@ function GenericSendMessage( msgType )
         {
           var dlgTitle = sComposeMsgsBundle.getString("initErrorDlogTitle");
           var dlgText = sComposeMsgsBundle.getString("12553");  // NS_ERROR_MSG_MULTILINGUAL_SEND
-          var result3 = gPromptService.confirmEx(window, dlgTitle, dlgText,
-              (gPromptService.BUTTON_TITLE_IS_STRING * gPromptService.BUTTON_POS_0) +
-              (gPromptService.BUTTON_TITLE_IS_STRING * gPromptService.BUTTON_POS_1) +
-              (gPromptService.BUTTON_TITLE_CANCEL * gPromptService.BUTTON_POS_2),
-              sComposeMsgsBundle.getString('sendInUTF8'), 
-              sComposeMsgsBundle.getString('sendAnyway'),
-              null, null, {value:0}); 
-          switch(result3)
-          {
-            case 0: 
-              fallbackCharset.value = "UTF-8";
-              break;
-            case 1:  // send anyway
-              msgCompFields.needToCheckCharset = false;
-              break;
-            case 2:  // cancel
-              return;
-          }
+          if (!gPromptService.confirm(window, dlgTitle, dlgText))
+            return;
+          fallbackCharset.value = "UTF-8";
         }
         if (fallbackCharset && 
             fallbackCharset.value && fallbackCharset.value != "")
@@ -1883,28 +1822,6 @@ function GenericSendMessage( msgType )
   }
   else
     dump("###SendMessage Error: composeAppCore is null!\n");
-}
-
-function CheckValidEmailAddress(to, cc, bcc)
-{
-  var invalidStr = null;
-  // crude check that the to, cc, and bcc fields contain at least one '@'.
-  // We could parse each address, but that might be overkill.
-  if (to.length > 0 && (to.indexOf("@") <= 0 || to.indexOf("@") == to.length - 1))
-    invalidStr = to;
-  else if (cc.length > 0 && (cc.indexOf("@") <= 0 || cc.indexOf("@") == cc.length - 1))
-    invalidStr = cc;
-  else if (bcc.length > 0 && (bcc.indexOf("@") <= 0 || bcc.indexOf("@") == bcc.length - 1))
-    invalidStr = bcc;
-  if (invalidStr)
-  {
-    var errorTitle = sComposeMsgsBundle.getString("sendMsgTitle");
-    var errorMsg = sComposeMsgsBundle.getFormattedString("addressInvalid", [invalidStr], 1);
-    if (gPromptService)
-      gPromptService.alert(window, errorTitle, errorMsg);
-    return false;
-  } 
-  return true;
 }
 
 function SendMessage()
@@ -2084,6 +2001,7 @@ function SelectAddress()
   var ccAddress = msgCompFields.cc;
   var bccAddress = msgCompFields.bcc;
 
+  dump("toAddress: " + toAddress + "\n");
   window.openDialog("chrome://messenger/content/addressbook/abSelectAddressesDialog.xul",
             "",
             "chrome,resizable,titlebar,modal",
@@ -2095,50 +2013,6 @@ function SelectAddress()
   // We have to set focus to the addressingwidget because we seem to loose focus often 
   // after opening the SelectAddresses Dialog- bug # 89950
   AdjustFocus();
-}
-
-// walk through the recipients list and add them to the inline spell checker ignore list
-function addRecipientsToIgnoreList(aAddressesToAdd)
-{ 
-  if (InlineSpellChecker.inlineSpellChecker && InlineSpellChecker.inlineSpellChecker.enableRealTimeSpell)
-  {
-    // break the list of potentially many recipients back into individual names
-    var hdrParser = Components.classes["@mozilla.org/messenger/headerparser;1"].getService(Components.interfaces.nsIMsgHeaderParser);
-    var emailAddresses = {};
-    var names = {};
-    var fullNames = {};
-    var numAddresses = hdrParser.parseHeadersWithArray(aAddressesToAdd, emailAddresses, names, fullNames);
-    var tokenizedNames = new Array();
-
-    // each name could consist of multiple word delimited by either commas or spaces. i.e. Green Lantern
-    // or Lantern,Green. Tokenize on comma first, then tokenize again on spaces.
-    for (name in names.value)
-    {
-      var splitNames = names.value[name].split(',');
-      for (var i=0; i < splitNames.length; i++)
-      {
-        // now tokenize off of white space
-        var splitNamesFromWhiteSpaceArray = splitNames[i].split(' ');
-        for (var whiteSpaceIndex = 0; whiteSpaceIndex < splitNamesFromWhiteSpaceArray.length; whiteSpaceIndex++)
-          if (splitNamesFromWhiteSpaceArray[whiteSpaceIndex])
-            tokenizedNames.push(splitNamesFromWhiteSpaceArray[whiteSpaceIndex]);
-      }
-    }
-
-    InlineSpellChecker.inlineSpellChecker.ignoreWords(tokenizedNames, tokenizedNames.length);
-  }
-}
-
-function ToggleInlineSpellChecker(target)
-{
-  if (InlineSpellChecker.inlineSpellChecker)
-  {
-    InlineSpellChecker.inlineSpellChecker.enableRealTimeSpell = !InlineSpellChecker.inlineSpellChecker.enableRealTimeSpell;
-    target.setAttribute('checked', InlineSpellChecker.inlineSpellChecker.enableRealTimeSpell);
-
-    if (InlineSpellChecker.inlineSpellChecker.enableRealTimeSpell)
-      InlineSpellChecker.checkDocument(window.content.document);
-  }
 }
 
 function ToggleReturnReceipt(target)
@@ -2154,13 +2028,13 @@ function ToggleReturnReceipt(target)
 
 function ToggleAttachVCard(target)
 {
-  var msgCompFields = gMsgCompose.compFields;
-  if (msgCompFields)
-  {
-    msgCompFields.attachVCard = ! msgCompFields.attachVCard;
-    target.setAttribute('checked', msgCompFields.attachVCard);
-    gAttachVCardOptionChanged = true;
-  }
+    var msgCompFields = gMsgCompose.compFields;
+    if (msgCompFields)
+    {
+        msgCompFields.attachVCard = ! msgCompFields.attachVCard;
+        target.setAttribute('checked', msgCompFields.attachVCard);
+        gAttachVCardOptionChanged = true;
+    }
 }
 
 function queryISupportsArray(supportsArray, iid) {
@@ -2327,6 +2201,7 @@ function ComposeCanClose()
     }
   }
 
+  dump("XXX changed? " + gContentChanged + "," + gMsgCompose.bodyModified + "\n");
   // Returns FALSE only if user cancels save action
   if (gContentChanged || gMsgCompose.bodyModified)
   {
@@ -2454,12 +2329,14 @@ function AttachFile()
     var fileHandler = ioService.getProtocolHandler("file").QueryInterface(Components.interfaces.nsIFileProtocolHandler);
     var currentAttachment = fileHandler.getURLSpecFromFile(currentFile);
 
-
     if (!DuplicateFileCheck(currentAttachment)) {
       var attachment = Components.classes["@mozilla.org/messengercompose/attachment;1"].createInstance(Components.interfaces.nsIMsgAttachment);
       attachment.url = currentAttachment;
       AddAttachment(attachment);
-      ChangeAttachmentBucketVisibility(false);
+      var attachmentBox = document.getElementById("attachments-box");
+      attachmentBox.hidden = false;
+      document.getElementById("attachmentbucket-sizer").hidden=false;
+
       gContentChanged = true;
     }
   }
@@ -2470,6 +2347,7 @@ function AddAttachment(attachment)
   if (attachment && attachment.url)
   {
     var bucket = document.getElementById("attachmentBucket");
+    var item = document.createElement("listitem");
 
     if (!attachment.name)
       attachment.name = gMsgCompose.AttachmentPrettyName(attachment.url, null);
@@ -2487,7 +2365,7 @@ function AddAttachment(attachment)
         attachment.name = sComposeMsgsBundle.getString("partAttachmentSafeName");
     }
 
-    var item = bucket.appendItem(attachment.name, "");
+    item.setAttribute("label", attachment.name);    //use for display only
     item.attachment = attachment;   //full attachment object stored here
     try {
       item.setAttribute("tooltiptext", decodeURI(attachment.url));
@@ -2517,6 +2395,8 @@ function AddAttachment(attachment)
       item.setAttribute("image", "moz-icon://" + url.fileName);
     else      
       item.setAttribute("image", "moz-icon:" + attachment.url);
+    
+    bucket.appendChild(item);
   }
 }
 
@@ -2531,7 +2411,7 @@ function MessageHasAttachments()
 {
   var bucketList = document.getElementById("attachmentBucket");
   if (bucketList) {
-    return (bucketList && bucketList.getRowCount() && (bucketList == top.document.commandDispatcher.focusedElement));
+    return (bucketList && bucketList.hasChildNodes() && (bucketList == top.document.commandDispatcher.focusedElement));
   }
   return false;
 }
@@ -2562,16 +2442,18 @@ function AttachPage()
         var attachment = Components.classes["@mozilla.org/messengercompose/attachment;1"].createInstance(Components.interfaces.nsIMsgAttachment);
         attachment.url = result.value;
         AddAttachment(attachment);
-        ChangeAttachmentBucketVisibility(false);
+        var attachmentBox = document.getElementById("attachments-box");
+        attachmentBox.hidden = false;
+        document.getElementById("attachmentbucket-sizer").hidden=false;
       }
    }
 }
 function DuplicateFileCheck(FileUrl)
 {
   var bucket = document.getElementById('attachmentBucket');
-  for (var index = 0; index < bucket.getRowCount(); index++)
+  for (var index = 0; index < bucket.childNodes.length; index++)
   {
-    var item = bucket.getItemAtIndex(index);
+    var item = bucket.childNodes[index];
     var attachment = item.attachment;
     if (attachment)
     {
@@ -2590,9 +2472,9 @@ function Attachments2CompFields(compFields)
   //First, we need to clear all attachment in the compose fields
   compFields.removeAttachments();
 
-  for (var index = 0; index < bucket.getRowCount(); index++)
+  for (var index = 0; index < bucket.childNodes.length; index++)
   {
-    var item = bucket.getItemAtIndex(index);
+    var item = bucket.childNodes[index];
     var attachment = item.attachment;
     if (attachment)
       compFields.addAttachment(attachment);
@@ -2603,20 +2485,15 @@ function RemoveAllAttachments()
 {
   var child;
   var bucket = document.getElementById("attachmentBucket");
-  while (bucket.getRowCount())
+  while (bucket.hasChildNodes())
   {
-    child = bucket.removeItemAt(bucket.getRowCount() - 1);
+    child = bucket.removeChild(bucket.lastChild);
     // Let's release the attachment object hold by the node else it won't go away until the window is destroyed
     child.attachment = null;
   }
   
-  ChangeAttachmentBucketVisibility(true);
-}
-
-function ChangeAttachmentBucketVisibility(aHideBucket)
-{
-  document.getElementById("attachments-box").collapsed = aHideBucket;
-  document.getElementById("attachmentbucket-sizer").collapsed = aHideBucket;   
+  document.getElementById("attachments-box").setAttribute("hidden", "true");
+  document.getElementById("attachmentbucket-sizer").setAttribute("hidden", "true");   
 }
 
 function RemoveSelectedAttachment()
@@ -2624,31 +2501,35 @@ function RemoveSelectedAttachment()
   var child;
   var bucket = document.getElementById("attachmentBucket");
   if (bucket.selectedItems.length > 0) {
-    for (var index = bucket.selectedCount - 1; index >= 0; index-- )
+    for (var item = bucket.selectedItems.length - 1; item >= 0; item-- )
     {
-      child = bucket.removeItemAt(bucket.getIndexOfItem(bucket.getSelectedItem(index)));
-      // Let's release the attachment object held by the node else it won't go away until the window is destroyed
+      child = bucket.removeChild(bucket.selectedItems[item]);
+      // Let's release the attachment object hold by the node else it won't go away until the window is destroyed
       child.attachment = null;
     }
     gContentChanged = true;
   }
 
   if (!MessageHasAttachments())
-    ChangeAttachmentBucketVisibility(true);
+  {                                                
+    document.getElementById("attachments-box").setAttribute("hidden", "true");
+    document.getElementById("attachmentbucket-sizer").setAttribute("hidden", "true");    
+  }
 }
 
 function FocusOnFirstAttachment()
 {
   var bucketList = document.getElementById("attachmentBucket");
 
-  if (bucketList && bucketList.getRowCount())
-    bucketTree.selectedIndex(0);
+  if (bucketList && bucketList.hasChildNodes())
+    bucketTree.selectItem(bucketList.firstChild);
 }
 
 function AttachmentElementHasItems()
 {
   var element = document.getElementById("attachmentBucket");
-  return element ? element.getRowCount() : 0;
+
+  return element ? element.childNodes.length : 0;
 }  
 
 function OpenSelectedAttachment()
@@ -2917,8 +2798,6 @@ function LoadIdentity(startup)
             gAutocompleteSession = Components.classes["@mozilla.org/autocompleteSession;1?type=addrbook"].getService(Components.interfaces.nsIAbAutoCompleteSession);
           if (gAutocompleteSession)
             setDomainName();
-          if (sPrefs.getBoolPref("mail.autoComplete.highlightNonMatches"))
-            document.getElementById('addressCol2#1').highlightNonMatches = true;
 
           try {
               setupLdapAutocompleteSession();
@@ -2926,20 +2805,15 @@ function LoadIdentity(startup)
               // catch the exception and ignore it, so that if LDAP setup 
               // fails, the entire compose window doesn't end up horked
           }
-
-          addRecipientsToIgnoreList(gCurrentIdentity.identityName);  // only do this if we aren't starting up....it gets done as part of startup already
       }
     }
 }
 
 function setDomainName()
 {
-  if (gCurrentIdentity.autocompleteToMyDomain)
-  {
-    var emailAddr = gCurrentIdentity.email;
-    var start = emailAddr.lastIndexOf("@");
-    gAutocompleteSession.defaultDomain = emailAddr.slice(start + 1, emailAddr.length);
-  }
+  var emailAddr = gCurrentIdentity.email;
+  var start = emailAddr.lastIndexOf("@");
+  gAutocompleteSession.defaultDomain = emailAddr.slice(start + 1, emailAddr.length);
 }
 
 function setupAutocomplete()
@@ -2955,9 +2829,6 @@ function setupAutocomplete()
       // honor it as well
       //
       try {
-          if (sPrefs.getBoolPref("mail.autoComplete.highlightNonMatches"))
-            document.getElementById('addressCol2#1').highlightNonMatches = true;
-
           if (sPrefs.getIntPref("mail.autoComplete.commentColumn")) {              
               document.getElementById('addressCol2#1').showCommentColumn = true;
           }
@@ -3083,7 +2954,10 @@ var envelopeDragObserver = {
               attachment.url = rawData;
               attachment.name = prettyName;
               AddAttachment(attachment);
-              ChangeAttachmentBucketVisibility(false);
+  
+              var attachmentBox = document.getElementById("attachments-box");
+              attachmentBox.hidden = false;
+              document.getElementById("attachmentbucket-sizer").hidden=false;
             }
           }
         }
@@ -3102,12 +2976,11 @@ var envelopeDragObserver = {
       {
         // make sure the attachment box is visible during drag over
         var attachmentBox = document.getElementById("attachments-box");
-        if (attachmentBox.collapsed)
-          ChangeAttachmentBucketVisibility(false);
-      }
-      else
-      {
-          DragAddressOverTargetControl(aEvent);
+        if (attachmentBox.hidden)
+        {
+          attachmentBox.hidden = false;
+          document.getElementById("attachmentbucket-sizer").hidden=false;
+        }
       }
     },
 
@@ -3327,12 +3200,11 @@ function toggleAddressPicker()
 {
   var sidebarBox = document.getElementById("sidebar-box");
   var sidebarSplitter = document.getElementById("sidebar-splitter");
-  var elt = document.getElementById("viewAddressPicker");
+  var menuItem = document.getElementById("menu_AddressSidebar");
   if (sidebarBox.hidden) 
   {
     sidebarBox.hidden = false;
     sidebarSplitter.hidden = false;
-    elt.setAttribute("checked","true");
 
     var sidebar = document.getElementById("sidebar");
     var sidebarUrl = sidebar.getAttribute("src");
@@ -3341,6 +3213,7 @@ function toggleAddressPicker()
     // data sources. Only when the user opens the address picker do we set the src url for the sidebar...
     if (sidebarUrl == "")
       sidebar.setAttribute("src", "chrome://messenger/content/addressbook/abContactsPanel.xul");
+    menuItem.setAttribute("checked","true");
 
     sidebarBox.setAttribute("sidebarVisible", "true");
   }
@@ -3348,8 +3221,8 @@ function toggleAddressPicker()
   {
     sidebarBox.hidden = true;
     sidebarSplitter.hidden = true;
+    menuItem.setAttribute("checked","false");
     sidebarBox.setAttribute("sidebarVisible", "false");
-    elt.removeAttribute("checked");
   }
 
 }
@@ -3407,14 +3280,6 @@ function AutoSave()
   if (gMsgCompose.editor && (gContentChanged || gMsgCompose.bodyModified))
     GenericSendMessage(nsIMsgCompDeliverMode.AutoSaveAsDraft);
 
-  gAutoSaveTimeout = setTimeout(AutoSave, gAutoSaveInterval);
-}
-
-function InitEditor()
-{
-  var editor = GetCurrentEditor();
-  gMsgCompose.initEditor(editor, window.content);
-  InlineSpellChecker.Init(editor, sPrefs.getBoolPref("mail.spellcheck.inline"));
-  InlineSpellChecker.checkDocument(window.content.document);
+  gAutoSaveTimeout = setTimeout("AutoSave()", gAutoSaveInterval);
 }
 

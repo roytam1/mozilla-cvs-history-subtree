@@ -49,7 +49,6 @@
 #include "nsIPrefBranch.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsDirectoryServiceUtils.h"
-#include "nsEmbedCID.h"
 
 #include <glib.h>
 #include <limits.h>
@@ -211,18 +210,6 @@ nsMailGNOMEIntegration::SetIsDefaultNewsClient(PRBool aIsDefault)
 }
 
 NS_IMETHODIMP
-nsMailGNOMEIntegration::GetIsDefaultFeedClient(PRBool *aIsDefault)
-{
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsMailGNOMEIntegration::SetIsDefaultFeedClient(PRBool aIsDefault)
-{
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
 nsMailGNOMEIntegration::GetShowDialog(PRBool *aShow)
 {
   *aShow = (mShowMailDialog || mShowNewsDialog);
@@ -249,7 +236,7 @@ nsMailGNOMEIntegration::ShowMailIntegrationDialog(nsIDOMWindow* aParentWindow)
   NS_ENSURE_TRUE(bundleService, NS_ERROR_FAILURE);
 
   nsCOMPtr<nsIStringBundle> brandBundle;
-  bundleService->CreateBundle("chrome://branding/locale/brand.properties",
+  bundleService->CreateBundle("chrome://global/locale/brand.properties",
                               getter_AddRefs(brandBundle));
   NS_ENSURE_TRUE(brandBundle, NS_ERROR_FAILURE);
 
@@ -278,7 +265,7 @@ nsMailGNOMEIntegration::ShowMailIntegrationDialog(nsIDOMWindow* aParentWindow)
   NS_ENSURE_SUCCESS(rv, rv);
 
   nsCOMPtr<nsIPromptService> promptService =
-    do_GetService(NS_PROMPTSERVICE_CONTRACTID);
+    do_GetService("@mozilla.org/embedcomp/prompt-service;1");
   NS_ENSURE_TRUE(promptService, NS_ERROR_FAILURE);
 
   if (mShowMailDialog && showMailDialog) {

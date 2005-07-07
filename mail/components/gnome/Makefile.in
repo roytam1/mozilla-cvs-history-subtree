@@ -45,7 +45,6 @@ include $(DEPTH)/config/autoconf.mk
 MODULE = mail_gnome
 LIBRARY_NAME = mail_gnome_s
 MODULE_NAME = nsMailGNOMEModule
-MOZILLA_INTERNAL_API = 1
 
 REQUIRES = \
 	xpcom \
@@ -57,7 +56,6 @@ REQUIRES = \
 	intl \
 	windowwatcher \
 	pref \
-	embed_base \
 	$(NULL)
 
 CPPSRCS = nsMailGNOMEIntegration.cpp

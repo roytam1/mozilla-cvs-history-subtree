@@ -402,11 +402,10 @@ endif
 
 ifeq (,$(filter-out _WIN%,$(NS_USE_GCC)_$(OS_TARGET)))
 NEED_ABSOLUTE_PATH := 1
-PWD := $(shell pwd)
 ifeq (,$(findstring ;,$(PATH)))
-ifndef USE_MSYS
-PWD := $(subst \,/,$(shell cygpath -w $(PWD)))
-endif
+PWD :=  $(subst \,/,$(shell cygpath -w `pwd`))
+else
+PWD := $(shell pwd)
 endif
 endif
 

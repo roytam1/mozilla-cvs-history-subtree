@@ -84,8 +84,7 @@ function CalendarWindow( )
    this.miniMonth = document.getElementById( "lefthandcalendar" );
    
    //setup the calendars
-   this.calendarManager = new Object();
-   //this.calendarManager = new calendarManager( this );
+   this.calendarManager = new calendarManager( this );
    
    //setup the calendar event selection
    this.EventSelection = new CalendarEventSelection( this );
@@ -137,61 +136,84 @@ function CalendarWindow( )
    // observer when things change in the data source.
    
    var calendarWindow = this;
+   
+   this.calendarEventDataSourceObserver =
+   {
+      
+      onLoad   : function()
+      {
+         //this is basically useless, since the calendar window is not yet made yet.
+      },
+      onStartBatch   : function()
+      {
+      },
+      onEndBatch   : function()
+      {
+         calendarWindow.currentView.refreshEvents( );
+      },
+      
+      onAddItem : function( calendarEvent )
+      {
+         if( !gICalLib.batchMode )
+         {
+             if( calendarEvent )
+             {
+                calendarWindow.setSelectedEvent( calendarEvent );
 
-    var savedThis = this;
-    var calendarObserver = {
-        QueryInterface: function (aIID) {
-            if (!aIID.equals(Components.interfaces.nsISupports) &&
-                !aIID.equals(Components.interfaces.calICompositeObserver) &&
-                !aIID.equals(Components.interfaces.calIObserver))
+                calendarWindow.currentView.refreshEvents( );
+             }
+         }
+      },
+   
+      onModifyItem : function( calendarEvent, originalEvent )
+      {
+        if( !gICalLib.batchMode )
+        {
+             calendarWindow.currentView.refreshEvents( );
+        }
+      },
+   
+      onDeleteItem : function( calendarEvent, nextEvent )
+      {
+         //if you put this outside of the batch mode, deleting all events
+         //puts the calendar into an infinite loop.
+           
+         if( !gICalLib.batchMode )
+         {
+            calendarWindow.currentView.refreshEvents( );
+            
+            if ( nextEvent ) 
             {
-                throw Components.results.NS_ERROR_NO_INTERFACE;
+               calendarWindow.setSelectedEvent( nextEvent );
             }
+            else
+            {
+               //get the tree, see if there are items to highlight.
 
-            return this;
-        },
+               var today = new Date( );
 
-        mInBatch: false,
+               //calendarWindow.setSelectedDate( getNextOrPreviousRecurrence( calendarEvent ) );
+               calendarWindow.setSelectedDate( today );
 
-        onStartBatch: function() {
-            this.mInBatch = true;
-        },
-        onEndBatch: function() {
-            this.mInBatch = false;
-            calendarWindow.currentView.refreshEvents();
-        },
-        onLoad: function() {
-            if (!this.mInBatch)
-                refreshEventTree();
-        },
-        onAddItem: function(aItem) {
-            if (!this.mInBatch)
-                calendarWindow.currentView.refreshEvents();
-        },
-        onModifyItem: function(aNewItem, aOldItem) {
-            if (!this.mInBatch)
-                calendarWindow.currentView.refreshEvents();
-        },
-        onDeleteItem: function(aDeletedItem) {
-            if (!this.mInBatch)
-                calendarWindow.currentView.refreshEvents();
-        },
-        onAlarm: function(aAlarmItem) {},
-        onError: function(aMessage) {},
-
-        onCalendarAdded: function(aDeletedItem) {
-            if (!this.mInBatch)
-                calendarWindow.currentView.refreshEvents();
-        },
-        onCalendarRemoved: function(aDeletedItem) {
-            if (!this.mInBatch)
-                calendarWindow.currentView.refreshEvents();
-        },
-        onDefaultCalendarChanged: function(aNewDefaultCalendar) {}
-    }
-    var ccalendar = getDisplayComposite();
-    ccalendar.addObserver(calendarObserver);
+               if( "hiliteSelectedDate" in calendarWindow.currentView )
+                  calendarWindow.currentView.hiliteSelectedDate( );
+            }
+         }
+      },
+      onAlarm : function( calendarEvent )
+      {
+      
+      },
+      onError : function()
+      {
+      }
+   };
+   
+   // add the observer to the event source
+   
+   gICalLib.addObserver( this.calendarEventDataSourceObserver );
 }
+
 
 /** PUBLIC
 *
@@ -201,7 +223,7 @@ function CalendarWindow( )
 
 CalendarWindow.prototype.close = function calWin_close( )
 {
-  //gICalLib.removeObserver(  this.calendarEventDataSourceObserver ); 
+   gICalLib.removeObserver(  this.calendarEventDataSourceObserver ); 
 }
 
 
@@ -382,7 +404,7 @@ CalendarWindow.prototype.setSelectedDate = function calWin_setSelectedDate( date
        document.getElementById( "event-filter-menulist" ).selectedItem.value == "current" )
    {
       //redraw the top tree
-      setTimeout( "refreshEventTree();", 150 );
+      setTimeout( "refreshEventTree( getAndSetEventTable() );", 150 );
    }
    
    if( "hiliteSelectedDate" in this.currentView && noHighlight != false )
@@ -460,9 +482,7 @@ CalendarWindow.prototype.switchToView = function calWin_switchToView( newView )
 
 CalendarWindow.prototype.changeMouseOverInfo = function calWin_changeMouseOverInfo( calendarEvent, event )
 {
-    return;
-    // XXX fixme
-   const toolTip = document.getElementById( "gridOccurrenceTooltip" );
+   const toolTip = document.getElementById( "eventTooltip" );
 
    while( toolTip.hasChildNodes() )
    {
@@ -529,11 +549,11 @@ CalendarWindow.prototype.compareNumbers = function calWin_compareNumbers(a, b) {
 }
 
 CalendarWindow.prototype.compareDisplayEventStart = function calWin_compareDisplayEventStart(a, b) {
-   return ( a.start.compare(b.start) );
+   return ( a.displayDate - b.displayDate );
 }
 
 CalendarWindow.prototype.compareDisplayEventEnd = function calWin_compareDisplayEventStart(a, b) {
-   return ( a.end.compare(b.end) );
+   return ( a.displayEndDate - b.displayEndDate );
 }
 
 CalendarWindow.prototype.onMouseUpCalendarSplitter = function calWinOnMouseUpCalendarSplitter()
@@ -550,7 +570,7 @@ CalendarWindow.prototype.onMouseUpCalendarViewSplitter = function calWinOnMouseU
       //do this because if they started with it collapsed, its not showing anything right now.
 
       //in a setTimeout to give the pull down menu time to draw.
-      setTimeout( "refreshEventTree();", 10 );
+      setTimeout( "refreshEventTree( getAndSetEventTable() );", 10 );
    }
    
    this.doResize();
@@ -638,71 +658,6 @@ CalendarView.prototype.refresh = function calView_refresh( ShowEvent )
    this.refreshEvents()
 }
 
-
-/*
- * Create eventboxes. Calls aInteralFunction for every day the occurence
- * spans.
- * prototype: aInteralFunction(aItemOccurrence, aStartDate, aEndDate);
- * Doesn't check if the parts fall withing the view. This is up to
- * the internal function
- */
-
-//CalendarView.prototype.displayTimezone = "/mozilla.org/20050126_1/Europe/Amsterdam";
-CalendarView.prototype.createEventBox = function(aItemOccurrence, aInteralFunction )
-{    
-    var startDate;
-    var origEndDate;
-
-    if ("displayTimezone" in this) {
-        startDate = aItemOccurrence.startDate.getInTimezone(this.displayTimezone).clone();
-        origEndDate = aItemOccurrence.endDate.getInTimezone(this.displayTimezone).clone();
-    } else {
-        // Copy the values from jsDate. jsDate is in de users timezone
-        // It's a hack, but it kind of works. It doesn't set the right
-        // timezone info for the date, but that's not a real problem.
-        startDate = aItemOccurrence.startDate.clone();
-        var jsDate = startDate.jsDate;
-        startDate.year = jsDate.getFullYear();
-        startDate.month = jsDate.getMonth();
-        startDate.day = jsDate.getDate();
-        startDate.hour = jsDate.getHours();
-        startDate.minute = jsDate.getMinutes();
-        startDate.second = jsDate.getSeconds();
-        startDate.normalize();
-
-        origEndDate = aItemOccurrence.endDate.clone();
-        jsDate = origEndDate.jsDate;
-        origEndDate.year = jsDate.getFullYear();
-        origEndDate.month = jsDate.getMonth();
-        origEndDate.day = jsDate.getDate();
-        origEndDate.hour = jsDate.getHours();
-        origEndDate.minute = jsDate.getMinutes();
-        origEndDate.second = jsDate.getSeconds();
-        origEndDate.normalize();
-    }
-
-    var endDate = startDate.clone();
-    endDate.hour = 23;
-    endDate.minute = 59;
-    endDate.second = 59;
-    endDate.normalize();
-    while (endDate.compare(origEndDate) < 0) {
-        aInteralFunction(aItemOccurrence, startDate, endDate);
-
-        startDate.day = startDate.day + 1;
-        startDate.hour = 0;
-        startDate.minute = 0;
-        startDate.second = 0;
-        startDate.normalize();
-
-        endDate.day = endDate.day + 1;
-        endDate.normalize();
-    }
-    aInteralFunction(aItemOccurrence, startDate, origEndDate);
-}
-
-
-
 /**
  * PUBLIC
  * Set classes on a eventbox
@@ -710,8 +665,8 @@ CalendarView.prototype.createEventBox = function(aItemOccurrence, aInteralFuncti
 
 CalendarView.prototype.setEventboxClass = function calView_setEventboxClass(aEventBox, aEvent, aViewType)
 {
-   // XXX this isn't really const, of course; need to get it from prefs
-   const containerName = "default";
+   var containerName = gCalendarWindow.calendarManager.getCalendarByName(
+                           aEvent.parent.server ).subject.split(":")[2];
 
    // set the event box to be of class <aViewType>-event-class
    // and the appropriate calendar-color class
@@ -750,7 +705,7 @@ CalendarView.prototype.getViewLimits = function calView_getViewLimits( dayDispla
   var dateEnd = tmpDate.valueOf();
   
   for ( var i = 0; i < dayDisplayEventList.length; i++ ) {
-    if( dayDisplayEventList[i].event.isAllDay != true ) {
+    if( dayDisplayEventList[i].event.allDay != true ) {
       
       if( dayDisplayEventList[i].displayDate < dateStart ) {
         sHour=0;
@@ -797,12 +752,11 @@ CalendarView.prototype.setDrawProperties = function calView_setDrawProperties( d
   var done = false;
 
   var i;
-  for( i = 0; i < dayEventList.length; i++ ) {
-    if (!dayEventList[i].event.startDate.isDate) {
+  for( i = 0; i < dayEventList.length; i++ )
+    if( !dayEventList[i].event.allDay) {
       dayEventStartList.push(dayEventList[i]);
       dayEventEndList.push(dayEventList[i]);
     }
-  }
     
   if( dayEventStartList.length > 0 ) {
 
@@ -881,8 +835,7 @@ CalendarView.prototype.setDrawProperties = function calView_setDrawProperties( d
       if( !(eventStartListIndex in dayEventStartList) || dayEventStartList[eventStartListIndex] == null )
         done = true;
       else
-        nextEventIsStarting = dayEventStartList[eventStartListIndex].start
-                                  .compare(dayEventEndList[eventEndListIndex].end);
+        nextEventIsStarting = ( dayEventStartList[eventStartListIndex].displayDate <  dayEventEndList[eventEndListIndex].displayEndDate );     
     }
     //  set totalSlotCount for the last contiguous group of events
     for ( i = groupStartIndex; i < dayEventStartList.length; i++ )
@@ -933,7 +886,7 @@ CalendarView.prototype.setAllDayDrawProperties = function calView_setAllDayDrawP
   }
   
   for( i = 0; i < eventList.length; i++ ) {
-    if( eventList[i].event.isAllDay) {
+    if( eventList[i].event.allDay) {
       
       if( eventList[i].event.recur ) {
         //get start time for correct occurrence

@@ -77,15 +77,13 @@ function searchOnLoad()
   initializeSearchWindowWidgets();
 
   gSearchBundle = document.getElementById("bundle_search");
-  gSearchStopButton.setAttribute("label", gSearchBundle.getString("labelForSearchButton"));
-  gSearchStopButton.setAttribute("accesskey", gSearchBundle.getString("accesskeyForSearchButton"));
   gAddressBookBundle = document.getElementById("bundle_addressBook");
   gSearchSession = Components.classes[searchSessionContractID].createInstance(Components.interfaces.nsIMsgSearchSession);
 
   // initialize a flag for phonetic name search
   var prefService = Components.classes["@mozilla.org/preferences-service;1"]
                               .getService(Components.interfaces.nsIPrefService);
-  var prefBranch = prefService.getBranch(null).QueryInterface(Components.interfaces.nsIPrefBranch2);
+  var prefBranch = prefService.getBranch(null).QueryInterface(Components.interfaces.nsIPrefBranchInternal);
   gSearchPhoneticName =
         prefBranch.getComplexValue("mail.addr_book.show_phonetic_fields", 
                                    Components.interfaces.nsIPrefLocalizedString).data;
@@ -97,7 +95,7 @@ function searchOnLoad()
   abList = document.getElementById("abPopup");
   gAbResultsTree = document.getElementById("abResultsTree");
 
-  onMore(null, 0);
+  onMore(null);
 }
 
 function searchOnUnload()

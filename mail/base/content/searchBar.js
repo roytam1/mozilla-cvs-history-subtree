@@ -50,8 +50,6 @@ var gSearchInput = null;
 var gDefaultSearchViewTerms = null;
 var gQSViewIsDirty = false;
 var gHighlightedMessageText = false; 
-var gIgnoreFocus = false;
-var gIgnoreClick = false;
 var gNumTotalMessages;
 var gNumUnreadMessages;
 
@@ -65,7 +63,6 @@ const kQuickSearchSender = 1;
 const kQuickSearchSenderOrSubject = 2;
 const kQuickSearchBody = 3;
 const kQuickSearchHighlight = 4;
-const kQuickSearchRecipient = 5;
 
 var gFinder = Components.classes["@mozilla.org/embedcomp/rangefind;1"].createInstance()
                         .QueryInterface(Components.interfaces.nsIFind);
@@ -471,19 +468,6 @@ function createSearchTerms()
         term.booleanAnd = false;
         searchTermsArray.AppendElement(term);
       }
-
-      // create, fill, and append the recipient
-      if (gSearchInput.searchMode == kQuickSearchRecipient)
-      {
-        term = gSearchSession.createTerm();
-        value = term.value;
-        value.str = termList[i];
-        term.value = value;
-        term.attrib = nsMsgSearchAttrib.ToOrCC;
-        term.op = nsMsgSearchOp.Contains; 
-        term.booleanAnd = false;
-        searchTermsArray.AppendElement(term);
-      }
     }
   }
 
@@ -539,30 +523,8 @@ function onSearchInputFocus(event)
     gSearchInput.value = "";
     gSearchInput.showingSearchCriteria = false;
   }
-  
-  if (gIgnoreFocus)
-    gIgnoreFocus = false;
-  else
-    gSearchInput.select();
-}
 
-function onSearchInputMousedown(event)
-{
-  if (gSearchInput.hasAttribute("focused")) 
-    gIgnoreClick = true;
-  else 
-  {
-    gIgnoreFocus = true;
-    gIgnoreClick = false;
-    gSearchInput.setSelectionRange(0, 0);
-  }
-}
-
-
-function onSearchInputClick(event)
-{
-  if (!gIgnoreClick && gSearchInput.selectionStart == gSearchInput.selectionEnd)
-    gSearchInput.select();
+  gSearchInput.select();
 }
 
 function onSearchInputBlur(event)

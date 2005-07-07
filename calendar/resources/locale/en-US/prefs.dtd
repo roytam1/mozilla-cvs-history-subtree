@@ -45,21 +45,13 @@
 <!ENTITY calendar.views.label       "Views">
 <!ENTITY calendar.timezone.label    "My Timezone">
 
-<!ENTITY prefWindow.title            "Options">
+<!ENTITY prefWindow.title            "Calendar Options">
 <!ENTITY prefWindow.size             "width: 52.3em; height: 41em;">
 <!ENTITY prefWindow.category         "Category">
 
 <!ENTITY pref.mainbox.label         "General Settings" >
 <!ENTITY pref.alarmgoesoff.label "When an alarm goes off:">
 <!ENTITY pref.playasound  "Play a sound" >
-<!ENTITY pref.preview.label "Preview" >
-
-#ifdef MOZ_SUNBIRD
-<!ENTITY pref.showConnections.label      "Connection Settings...">
-<!ENTITY pref.showConnections.accesskey  "o">
-<!ENTITY pref.proxiesInfo.label          "Determine how &brandShortName; connects to the Internet.">
-<!ENTITY pref.connectionsInfo.caption    "Connection">
-#endif
 
 <!ENTITY pref.alarmbox.label    "Alarms" >
 <!ENTITY pref.showalarmbox    "Show an alarm box" >
@@ -132,15 +124,12 @@
 
 <!ENTITY pref.categories.label   "Categories" >
 
+<!ENTITY pref.categories.help.description   "Use a comma between each category you want to add.">
+
 <!ENTITY pref.categories.add.title    "Add Category">
+<!ENTITY pref.categories.add.prompt   "Enter the name of the category">
 <!ENTITY pref.categories.edit.title   "Edit Category">
-<!ENTITY pref.categories.name.label   "Name">
-<!ENTITY pref.categories.color.label  "Color">
-<!ENTITY pref.categories.usecolor.label   "Use Color">
-<!ENTITY pref.categories.none.label   "(none)">
-<!ENTITY pref.categories.overwrite  "A category already exists with that name. \n Do you want to overwrite it?">
-<!ENTITY pref.categories.overwrite.title  "Warning: Duplicate name">
-<!ENTITY pref.categories.noBlankCategories  "You must enter a category name.">
+
 
 <!ENTITY pref.reloadonlaunch       "Reload Remote Calendars On Startup">
 
@@ -152,7 +141,6 @@
 <!-- Calendar Timezone preferences information -->
 <!ENTITY pref.calendar.timezone.label "My Timezone">
 <!ENTITY pref.calendar.timezone.caption "Timezone">
-<!ENTITY pref.calendar.timezone.shortdescription "This doesn't yet do anything.">
 <!ENTITY pref.calendar.timezone.description "Timezone ID is (continent or ocean)/(largest city in legal timezone region).">
 <!ENTITY pref.defaultzone.label     "Default Timezone:" >
 

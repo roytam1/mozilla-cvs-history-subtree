@@ -880,7 +880,7 @@ icalcomponent* icalparser_add_line(icalparser* parser,
                 have the option of being flexible towards unsupported parameters */
                 #ifndef ICAL_ERRORS_ARE_FATAL
                 continue;
-                #endif
+                #endif;
 		insert_error(tail, str, "Cant parse parameter name",
 			     ICAL_XLICERRORTYPE_PARAMETERNAMEPARSEERROR);
 		tail = 0;

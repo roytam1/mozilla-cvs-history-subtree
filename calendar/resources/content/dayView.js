@@ -106,63 +106,9 @@ function DayView( calendarWindow )
 *   Redraw the events for the current day
 */
 
-DayView.prototype.refreshEvents = function()
-{
-    // clean up anything that was here before
-    this.removeElementsByAttribute("eventbox", "dayview");
-    this.eventList = new Array();
-
-    // set view limits for the day
-    // XXX expand if event outside this window. Or better, always display the
-    //     complete day, but stroll as needed
-    var sHour = getIntPref(this.calendarWindow.calendarPreferences.calendarPref, "event.defaultstarthour", 8);
-    var eHour = getIntPref(this.calendarWindow.calendarPreferences.calendarPref, "event.defaultendhour", 17);
-    var i;
-    for (i = 0; i < 24; i++) {
-        if ((i < sHour) || (i > eHour))
-            document.getElementById("day-tree-item-"+i).setAttribute("hidden", "true");
-        else
-            document.getElementById("day-tree-item-"+i).removeAttribute("hidden");
-    }
-
-    // Figure out the start and end days for the week we're currently viewing
-    var selectedDateTime = this.calendarWindow.getSelectedDate();
-    this.displayStartDate = new Date(selectedDateTime.getFullYear(),
-                                     selectedDateTime.getMonth(),
-                                     selectedDateTime.getDate());
-    this.displayEndDate = new Date(this.displayStartDate);
-    this.displayEndDate.setDate(this.displayEndDate.getDate() + 1)
-    this.displayEndDate.setMilliseconds(this.displayEndDate.getMilliseconds() - 1);
-
-    // Save this off so we can get it again in onGetResult below
-    var eventController = this;
-    var getListener = {
-        onOperationComplete: function(aCalendar, aStatus, aOperationType, aId, aDetail) {
-            eventController.drawEventBoxes();
-        },
-        onGetResult: function(aCalendar, aStatus, aItemType, aDetail, aCount, aItems) {
-            for (var i = 0; i < aCount; ++i) {
-                eventController.createEventBox(aItems[i],
-                                               function(a1, a2, a3) { eventController.addToDisplayList(a1, a2, a3); } );
-            }
-        }
-    };
-
-    var ccalendar = getDisplayComposite();
-
-    dump("Fetching events from " + this.displayStartDate.toString() + " to " + this.displayEndDate.toString() + "\n");
-
-    ccalendar.getItems(ccalendar.ITEM_FILTER_TYPE_EVENT | ccalendar.ITEM_FILTER_CLASS_OCCURRENCES,
-                      0, jsDateToDateTime(this.displayStartDate),
-                      jsDateToDateTime(this.displayEndDate), getListener);
-
-    return;
-    
-    
-
-
+DayView.prototype.refreshEvents = function dayview_refreshEvents( ) {
    this.kungFooDeathGripOnEventBoxes = new Array();
-      
+   
    var dayEventList = gEventSource.getEventsForDay( this.calendarWindow.getSelectedDate() );
    var allDayEvents = new Array();
    var normalEvents = new Array();
@@ -192,7 +138,7 @@ DayView.prototype.refreshEvents = function()
    
    // Divide events into all day and other events
    for( i = 0; i < dayEventList.length; i++ ) {
-      if ( dayEventList[i].event.isAllDay == true )
+      if ( dayEventList[i].event.allDay == true )
          allDayEvents.push(dayEventList[i]);
       else
          normalEvents.push(dayEventList[i]);
@@ -341,13 +287,12 @@ DayView.prototype.createAllDayEventBox = function dayview_createAllDayEventBox( 
    eventBox.appendChild( newLabel );
    eventBox.setAttribute( "name", "day-view-event-box-" + calendarEventDisplay.event.id );
    
-   eventBox.setAttribute("class", "day-view-event-class");
    this.setEventboxClass( eventBox, calendarEventDisplay.event, "day-view-all-day");
    
    eventBox.setAttribute( "onclick", "dayEventItemClick( this, event )" );
    eventBox.setAttribute( "ondblclick", "dayEventItemDoubleClick( this, event )" );
    eventBox.setAttribute( "onmouseover", "gCalendarWindow.changeMouseOverInfo( calendarEventDisplay, event )" );
-   eventBox.setAttribute( "tooltip", "gridOccurrenceTooltip" );
+   eventBox.setAttribute( "tooltip", "eventTooltip" );
    
    eventBox.setAttribute( "flex", "1" );  
    
@@ -363,141 +308,82 @@ DayView.prototype.createAllDayEventBox = function dayview_createAllDayEventBox( 
    return eventBox;
 }
 
-DayView.prototype.addToDisplayList = function(itemOccurrence, startDate, endDate)
-{
-    this.eventList.push({event:itemOccurrence, start:startDate, end:endDate});
-}
-
-DayView.prototype.drawEventBoxes = function()
-{
-    this.setDrawProperties(this.eventList);
-    var event;
-    for (event in this.eventList) {
-        this.createEventBoxInternal(this.eventList[event]);
-    }
-}
-
 /** PRIVATE
 *
 *   This creates an event box for the day view
 */
-DayView.prototype.createEventBoxInternal = function(event)
-{
-    var itemOccurrence = event.event;
-    var startDate = event.start;
-    var endDate = event.end;
-    var calEvent = itemOccurrence.QueryInterface(Components.interfaces.calIEvent);
-
-    // XXX Centralize this next checks
-    // Check if the event is within the bounds of events to be displayed.
-    if ((endDate.jsDate < this.displayStartDate) ||
-        (startDate.jsDate > this.displayEndDate))
-        return;
-
-    // XXX Should this really be done? better would be to adjust the
-    // display boundaries
-    if (startDate.jsDate < this.displayStartDate)
-        startDate.jsDate = this.displayStartDate;
-
-    if (endDate.jsDate > this.displayEndDate)
-        endDate.jsDate = this.displayEndDate;
-
-    startDate.normalize();
-    endDate.normalize();
-
-    /*
-    if (calEvent.isAllDay) {
-        endDate = endDate.clone();
-        endDate.hour = 23;
-        endDate.minute = 59;
-        endDate.normalize();
-    }
-    */
-    dump("all day:   " + calEvent.isAllDay + "\n");
-    dump("startdate: " + startDate + "\n");
-    dump("enddate:   " + endDate + "\n");
-
-    var startHour = startDate.hour;
-    var startMinutes = startDate.minute;
-    var eventDuration = (endDate.jsDate - startDate.jsDate) / (60 * 60 * 1000);
-
-    dump("duration:  " + eventDuration + "\n");
-    
-
+DayView.prototype.createEventBox = function dayview_createEventBox( calendarEventDisplay ) {
+   //if you change this class, you have to change calendarViewDNDObserver in calendarDragDrop.js
+   var displayDateObject = new Date( calendarEventDisplay.displayDate );
+   var startHour = displayDateObject.getHours();
+   var startMinutes = displayDateObject.getMinutes();
+   var eventDurationHours = ( ( calendarEventDisplay.displayEndDate 
+                                - calendarEventDisplay.displayDate ) 
+                              / ( kDate_MillisecondsInHour ) );
    
-    var startHourTreeItem = document.getElementById( "day-tree-item-"+startHour );
+   var startHourTreeItem = document.getElementById( "day-tree-item-"+startHour );
    
-    var hourHeight = startHourTreeItem.boxObject.height;
-    var hourWidth = startHourTreeItem.boxObject.width;
-    var eventSlotWidth = Math.round( ( hourWidth - kDayViewHourLeftStart ) 
-                                     / event.totalSlotCount);
+   var hourHeight = startHourTreeItem.boxObject.height;
+   var hourWidth = startHourTreeItem.boxObject.width;
+   var eventSlotWidth = Math.round( ( hourWidth - kDayViewHourLeftStart ) 
+                                    / calendarEventDisplay.totalSlotCount );
 
-    //calculate event dimensions
-    var eventTop = startHourTreeItem.boxObject.y -
-                    startHourTreeItem.parentNode.boxObject.y +
-                    Math.round( hourHeight * startMinutes/ 60 ) - 1;
-    var eventLeft = kDayViewHourLeftStart + ( event.startDrawSlot * eventSlotWidth );
-    var eventHeight = Math.round( eventDuration * hourHeight ) + 1;
-    var eventWidth = ( event.drawSlotCount * eventSlotWidth ) - 1;
+   var eventLocation = calendarEventDisplay.event.location;
 
-    // create title label, location label and description description :)
-    var eventTitleLabel = document.createElement( "label" );
-    eventTitleLabel.setAttribute( "class", "day-view-event-title-label-class" );
+   //calculate event dimensions
+   var eventTop = startHourTreeItem.boxObject.y -
+                  startHourTreeItem.parentNode.boxObject.y +
+                  Math.round( hourHeight * startMinutes/ 60 ) - 1;
+   var eventLeft = kDayViewHourLeftStart + ( calendarEventDisplay.startDrawSlot * eventSlotWidth );
+   var eventHeight = Math.round( eventDurationHours * hourHeight ) + 1;
+   var eventWidth = ( calendarEventDisplay.drawSlotCount * eventSlotWidth ) - 1;
+   
+   // create title label, location label and description description :)
+   var eventTitleLabel = document.createElement( "label" );
+   eventTitleLabel.setAttribute( "class", "day-view-event-title-label-class" );
+   eventTitleLabel.setAttribute( "crop", "end" );
+   eventTitleLabel.setAttribute( "flex", "1" );
+   if( eventLocation ) 
+      eventTitleLabel.setAttribute( "value", calendarEventDisplay.event.title + " (" + eventLocation + ")" );
+   else
+      eventTitleLabel.setAttribute( "value", calendarEventDisplay.event.title );
 
-    var eventLocation = calEvent.getProperty("LOCATION");
-    if (eventLocation)
-        eventTitleLabel.setAttribute( "value", calEvent.title + " (" + eventLocation + ")" );
-    else
-        eventTitleLabel.setAttribute( "value", calEvent.title );
-
-    var desc = calEvent.getProperty("DESCRIPTION");
-    if (!desc)
-        desc = ""
-    var eventText = document.createTextNode(desc);
-    var eventDescription = document.createElement( "description" );
-    eventDescription.setAttribute( "class", "day-view-event-description-class" );
-    eventDescription.appendChild( eventText );
+   var eventText = document.createTextNode( calendarEventDisplay.event.description );
+   var eventDescription = document.createElement( "description" );
+   eventDescription.setAttribute( "class", "day-view-event-description-class" );
+   eventDescription.appendChild( eventText );
 
    //create actual eventbox
    var eventBox = document.createElement( "vbox" );
-   eventBox.occurrence = itemOccurrence;
-   eventBox.event = calEvent;
-   eventBox.setAttribute( "name", "day-view-event-box-"+calEvent.id );
+   eventBox.calendarEventDisplay = calendarEventDisplay;
+   eventBox.setAttribute( "name", "day-view-event-box-"+calendarEventDisplay.event.id );
 
    // set the event box to be of class day-view-event-class and the appropriate calendar-color class
-   eventBox.setAttribute("class", "day-view-event-class");
-   this.setEventboxClass( eventBox, calEvent, "day-view");
+   this.setEventboxClass( eventBox, calendarEventDisplay.event, "day-view");
 
-   if (!startDate.isDate) {
-      eventBox.setAttribute( "top", eventTop );
-      eventBox.setAttribute( "left", eventLeft );
-      eventBox.setAttribute( "height", eventHeight );
-      eventBox.setAttribute( "width", eventWidth );
-   }
+   eventBox.setAttribute( "top", eventTop );
+   eventBox.setAttribute( "left", eventLeft );
+   eventBox.setAttribute( "height", eventHeight );
+   eventBox.setAttribute( "width", eventWidth );
+   
    eventBox.setAttribute( "flex", "1" );
    eventBox.setAttribute( "eventbox", "dayview" ); // ?
    
    eventBox.setAttribute( "onclick", "dayEventItemClick( this, event )" );
    eventBox.setAttribute( "ondblclick", "dayEventItemDoubleClick( this, event )" );
-   eventBox.setAttribute( "onmouseover", "onMouseOverGridOccurrence(event)" );
-   eventBox.setAttribute( "tooltip", "gridOccurrenceTooltip" );
+   eventBox.setAttribute( "onmouseover", "gCalendarWindow.changeMouseOverInfo( calendarEventDisplay, event )" );
+   eventBox.setAttribute( "tooltip", "eventTooltip" );
    eventBox.setAttribute( "ondraggesture", "nsDragAndDrop.startDrag(event,calendarViewDNDObserver);" );
    eventBox.setAttribute( "ondragover", "nsDragAndDrop.dragOver(event,calendarViewDNDObserver)" );
    eventBox.setAttribute( "ondragdrop", "nsDragAndDrop.drop(event,calendarViewDNDObserver)" );
    
    // mark the box as selected, if the event is
-   if (this.calendarWindow.EventSelection.isSelectedEvent(calEvent))
+   if( this.calendarWindow.EventSelection.isSelectedEvent( calendarEventDisplay.event ) )
       eventBox.setAttribute( "eventselected", "true" );
    
    eventBox.appendChild( eventTitleLabel );
    eventBox.appendChild( eventDescription );   
-   if (!startDate.isDate) {
-      document.getElementById("day-view-content-board").appendChild(eventBox);
-   } else {
-      allDayRow = document.createElement("hbox");
-      allDayRow.appendChild(eventBox);
-      document.getElementById("all-day-content-box").appendChild(allDayRow);
-   }
+   return eventBox;
 }
 
 /** PUBLIC
@@ -685,7 +571,7 @@ DayView.prototype.selectBoxForEvent = function dayview_selectBoxForEvent( calend
 */
 DayView.prototype.clearSelectedEvent = function dayview_clearSelectedEvent( )
 {
-  daydebug("clearSelectedEvent");
+  debug("clearSelectedEvent");
   this.removeAttributeFromElements("eventselected", "true");
 }
 
@@ -718,7 +604,7 @@ DayView.prototype.hiliteTodaysDate = function dayview_hiliteTodaysDate( )
 }
 
 
-function daydebug( Text )
+function debug( Text )
 {
    dump( "dayView.js: "+ Text +"\n");
 }

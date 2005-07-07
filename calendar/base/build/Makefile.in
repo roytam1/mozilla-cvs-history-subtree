@@ -49,7 +49,6 @@ SHORT_LIBNAME = calbscmp
 EXPORT_LIBRARY = 1
 IS_COMPONENT = 1
 MODULE_NAME = calBaseModule
-MOZILLA_INTERNAL_API = 1
 
 REQUIRES = \
 	xpcom \
@@ -58,6 +57,8 @@ REQUIRES = \
 	string \
 	ical \
 	calbase
+
+EXPORTS = calBaseCID.h
 
 CPPSRCS = calBaseModule.cpp \
 	$(NULL)
@@ -68,13 +69,13 @@ LOCAL_INCLUDES = \
 SHARED_LIBRARY_LIBS = \
 	$(DIST)/lib/$(LIB_PREFIX)calbase_s.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)mozical.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)mozicalss.$(LIB_SUFFIX) \
 	$(NULL)
 
 EXTRA_DSO_LDOPTS += \
 	$(LIBS_DIR) \
 	$(EXTRA_DSO_LIBS) \
 	$(MOZ_COMPONENT_LIBS) \
-	$(MOZ_JS_LIBS) \
 	$(NULL)
 
 include $(topsrcdir)/config/rules.mk

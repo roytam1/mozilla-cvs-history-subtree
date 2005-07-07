@@ -48,6 +48,8 @@
     var defaultCalendarFileName = "&calendar.file.default.name;";
   </script>
 
+  <script type="application/x-javascript" src="chrome://calendar/content/jslib/jslib.js"/>
+
 #ifdef XP_MACOSX
   <!-- Needed for Mac OS X "Window" menu -->
   <script type="application/x-javascript" src="chrome://calendar/content/hiddenWindow.js"/>
@@ -57,7 +59,7 @@
   <script type="application/x-javascript" src="chrome://calendar/content/dragDrop.js"/>
 
   <!-- NEEDED FOR MULTIPLE CALENDAR SUPPORT -->
-  <script type="application/x-javascript" src="chrome://calendar/content/calendarManagement.js"/>
+  <script type="application/x-javascript" src="chrome://calendar/content/calendarManager.js"/>
 
   <!-- NEEDED FOR CLIPBOARD SUPPORT -->
   <script type="application/x-javascript" src="chrome://calendar/content/clipboard.js"/>
@@ -75,7 +77,6 @@
   <script type="application/x-javascript" src="chrome://calendar/content/dateUtils.js"/>
 
   <script type="application/x-javascript" src="chrome://calendar/content/calendar.js"/>
-  <script type="application/x-javascript" src="chrome://calendar/content/calendarUtils.js"/>
   <script type="application/x-javascript" src="chrome://calendar/content/calendarEvent.js"/>
   <script type="application/x-javascript" src="chrome://calendar/content/calendarSelection.js"/>
   <script type="application/x-javascript" src="chrome://calendar/content/calendarWindow.js"/>

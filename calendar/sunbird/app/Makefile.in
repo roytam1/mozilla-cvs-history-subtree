@@ -44,13 +44,9 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MOZILLA_INTERNAL_API = 1
-
 DIRS		= profile/extensions profile
 
 PREF_JS_EXPORTS = $(srcdir)/profile/sunbird.js
-
-DEFINES += -DAB_CD=$(AB_CD)
 
 ifeq ($(USE_SHORT_LIBNAME), 1)
 PROGRAM = sunbird$(BIN_SUFFIX)
@@ -150,6 +146,7 @@ ifeq ($(OS_ARCH),OS2)
 RESFILE=splashos2.res
 RCFLAGS += -DMOZ_SUNBIRD
 ifdef BUILD_STATIC_LIBS
+OS_LIBS += -lpmwinx
 EXE_DEF_FILE = browser.def
 RCFLAGS += -DMOZ_STATIC_BUILD -i $(DIST)/include/widget
 endif
@@ -168,7 +165,10 @@ include $(topsrcdir)/config/static-rules.mk
 endif
 
 APP_VERSION = $(shell cat $(srcdir)/../config/version.txt)
-DEFINES += -DAPP_VERSION="$(APP_VERSION)"
+DEFINES += -DAPP_VERSION=\"$(APP_VERSION)\"
+
+BUILD_ID = $(shell cat $(DEPTH)/config/build_number)
+DEFINES += -DBUILD_ID=\"$(BUILD_ID)\"
 
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 ifdef BUILD_STATIC_LIBS
@@ -260,9 +260,9 @@ ifeq ($(MOZ_WIDGET_TOOLKIT),gtk2)
 	cp $(srcdir)/default.xpm   $(DIST)/branding/default.xpm	
 endif
 ifeq ($(OS_ARCH),OS2)
-	cp $(srcdir)/sunbird-os2.ico  $(DIST)/branding/sunbird.ico
-	cp $(srcdir)/sunbird-os2.ico  $(DIST)/branding/app.ico
-	cp $(srcdir)/sunbird-os2.ico  $(DIST)/branding/document.ico
+	cp $(srcdir)/sunbird.ico   $(DIST)/branding/sunbird.ico
+	cp $(srcdir)/sunbird.ico   $(DIST)/branding/app.ico
+	cp $(srcdir)/sunbird.ico  $(DIST)/branding/document.ico
 endif
 endif
 

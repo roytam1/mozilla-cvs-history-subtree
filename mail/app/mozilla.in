@@ -1,40 +1,20 @@
 #!/bin/sh
 #
-# ***** BEGIN LICENSE BLOCK *****
-# Version: MPL 1.1/GPL 2.0/LGPL 2.1
+# The contents of this file are subject to the Netscape Public License
+# Version 1.0 (the "NPL"); you may not use this file except in
+# compliance with the NPL.  You may obtain a copy of the NPL at
+# http://www.mozilla.org/NPL/
 #
-# The contents of this file are subject to the Mozilla Public License Version
-# 1.1 (the "License"); you may not use this file except in compliance with
-# the License. You may obtain a copy of the License at
-# http://www.mozilla.org/MPL/
-#
-# Software distributed under the License is distributed on an "AS IS" basis,
-# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+# Software distributed under the NPL is distributed on an "AS IS" basis,
+# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
 # for the specific language governing rights and limitations under the
-# License.
+# NPL.
 #
-# The Original Code is mozilla.org Code.
+# The Initial Developer of this code under the NPL is Netscape
+# Communications Corporation.  Portions created by Netscape are
+# Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+# Reserved.
 #
-# The Initial Developer of the Original Code is
-# Netscape Communications Corporation.
-# Portions created by the Initial Developer are Copyright (C) 1998
-# the Initial Developer. All Rights Reserved.
-#
-# Contributor(s):
-#
-# Alternatively, the contents of this file may be used under the terms of
-# either the GNU General Public License Version 2 or later (the "GPL"), or
-# the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
-# in which case the provisions of the GPL or the LGPL are applicable instead
-# of those above. If you wish to allow use of your version of this file only
-# under the terms of either the GPL or the LGPL, and not to allow others to
-# use your version of this file under the terms of the MPL, indicate your
-# decision by deleting the provisions above and replace them with the notice
-# and other provisions required by the GPL or the LGPL. If you do not delete
-# the provisions above, a recipient may use your version of this file under
-# the terms of any one of the MPL, the GPL or the LGPL.
-#
-# ***** END LICENSE BLOCK *****
 
 ## $Id$
 ## 
@@ -140,9 +120,87 @@ moreargs=""
 debugging=0
 MOZILLA_BIN="${progbase}-bin"
 
+# The following is to check for a currently running instance.
+# This is taken almost verbatim from the Mozilla RPM package's launch script.
+MOZ_CLIENT_PROGRAM="$dist_bin/mozilla-xremote-client"
+check_running() {
+    "${run_moz}" "$MOZ_CLIENT_PROGRAM" -a "${progbase}" 'ping()' 2>/dev/null >/dev/null
+    RETURN_VAL=$?
+    if [ $RETURN_VAL -eq 0 ]; then
+        echo 1
+        return 1
+    else
+        echo 0
+        return 0
+    fi
+}
+
 if [ "$OSTYPE" = "beos" ]; then
   mimeset -F "$MOZILLA_BIN"
 fi
+
+ALREADY_RUNNING=`check_running`
+
+################################################################ Parse Arguments
+# If there's a command line argument but it doesn't begin with a -
+# it's probably a url.  Try to send it to a running instance.
+_USE_EXIST=0
+_NEW_WINDOW=
+_optOne="$1"
+case "${_optOne}" in
+	-*) 
+		;;
+	*)
+		_USE_EXIST=1
+		;;
+esac
+
+_optOthers=
+_optLast=
+for i in "$@"; do 
+	_optLast="${i}"
+done #last arg
+
+for i in "$@"; do
+	[ $i = ${_optLast} ] && break
+	_optOthers="${_optOthers} ${i}"
+done #others arg
+
+#???: needs check if othersopt begin with -* ?
+if [ `expr "${_optLast}" : '.*:/.*'` -eq 0 -a \( -f "${_optLast}" -o -d "${_optLast}" \) ]; then
+	# Last argument seems to be a local file/directory
+	# Check, if it is absolutely specified (ie. /home/foo/file vs. ./file)
+	# If it is just "relatively" (./file) specified, make it absolutely
+	[ `expr "${_optLast}" : '/.*'` -eq 0 ] && _optLast="file://`pwd`/${_optLast}"
+elif [ `expr "${_optLast}" : '.*:/.*'` -gt 0 -o -n "${_optOthers}" ]; then #???? like before...
+	_NEW_WINDOW=1
+fi
+################################################################ Parse Arguments
+
+########################################################################### Main
+if [ $ALREADY_RUNNING -eq 1 ]; then
+	# There's an instance already running. Use it.
+	# Any command line args passed in?
+	if [ $# -gt 0 ]; then
+		# There were "some" command line args.
+		if [ ${_USE_EXIST} -eq 1 ]; then
+			# We should use an existing instance, as _USE_EXIST=$_USE_EXIST=-1
+			_open_type="window"
+			#_open_type="tab"
+			_remote_cmd="openURL(${_optLast} , new-${_open_type})"
+			"${run_moz}" "$MOZ_CLIENT_PROGRAM" -a "${progbase}" "${_remote_cmd}"
+			unset _remote_cmd _open_type
+			exit $?
+		fi
+	else
+		# No command line args. Open new window/tab
+		#exec "${run_moz}" "$MOZ_CLIENT_PROGRAM" -a "${progbase}" "xfeDoCommand(openBrowser)"
+		"${run_moz}" "$MOZ_CLIENT_PROGRAM" -a "${progbase}" "xfeDoCommand(openInbox)"
+		exit $?
+	fi
+fi
+# Default action - no running instance or _USE_EXIST (${_USE_EXIST}) ! -eq 1
+########################################################################### Main
 
 while [ $# -gt 0 ]
 do

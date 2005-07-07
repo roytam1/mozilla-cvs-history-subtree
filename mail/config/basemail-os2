@@ -70,7 +70,6 @@ defaults\profile\US\mimeTypes.rdf
 components\mozldap.dll
 components\mozldap.xpt
 components\nsLDAPPrefsService.js
-components\nsAbLDAPAttributeMap.js
 ldap50.dll
 prldap50.dll
 
@@ -309,6 +308,7 @@ res\charsetalias.properties
 res\langGroups.properties
 res\language.properties
 res\os2charset.properties
+res\builtin\*
 res\entityTables\*
 
 ; editor resource files

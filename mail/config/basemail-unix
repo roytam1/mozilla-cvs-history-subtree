@@ -31,7 +31,6 @@ chrome/icons/default/addressbookWindow.xpm
 chrome/icons/default/messengerWindow.xpm
 chrome/icons/default/msgcomposeWindow.xpm
 
-bin/extensions/{972ce4c6-7e08-4474-a285-3208198ce6fd}/install.rdf
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Mail Extensions (smime, etc.)
@@ -39,6 +38,7 @@ bin/extensions/{972ce4c6-7e08-4474-a285-3208198ce6fd}/install.rdf
 components/offlineStartup.js
 components/mdn-service.js
 components/libsmimestb.so
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Chrome Files
@@ -60,17 +60,16 @@ chrome/en-unix.jar
 defaults/pref/*
 greprefs/*
 defaults/messenger/mailViews.dat
-defaults/messenger/SpamAssassin.sfd
-defaults/messenger/SpamPal.sfd
 defaults/profile/localstore.rdf
 defaults/profile/mimeTypes.rdf
 defaults/profile/US/localstore.rdf
 defaults/profile/US/mimeTypes.rdf
 defaults/isp/US/movemail.rdf
 defaults/isp/movemail.rdf
-defaults/autoconfig/platform.js
-defaults/autoconfig/prefcalls.js
-updater.ini
+defaults/profile/extensions/Extensions.rdf
+defaults/profile/extensions/installed-extensions.txt
+defaults/profile/extensions/{972ce4c6-7e08-4474-a285-3208198ce6fd}/install.rdf
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; App extensions to Mail
@@ -80,7 +79,6 @@ updater.ini
 components/libmozldap.so
 components/mozldap.xpt
 components/nsLDAPPrefsService.js
-components/nsAbLDAPAttributeMap.js
 libldap50.so
 libprldap50.so
 
@@ -386,8 +384,6 @@ components/libfileview.so
 ;;components/nsHelperAppDlg.js
 ;;components/nsDownloadProgressListener.js
 
-; updater
-updater
 
 ; xmlextras, optional for XMLHttpRequest support
 components/libxmlextras.so
@@ -402,6 +398,7 @@ res/charsetalias.properties
 res/langGroups.properties
 res/language.properties
 ;res/wincharset.properties
+res/builtin/*
 res/entityTables/*
 
 ; editor resource files
@@ -456,6 +453,7 @@ components/filepicker.xpt
 ;;res/arrowd.gif
 ;;res/loading-image.gif
 ;;res/broken-image.gif
+;;res/builtin/*
 ;;res/entityTables/html40Special.properties
 ;;res/entityTables/htmlEntityVersion.properties
 ;;res/entityTables/html40Latin1.properties

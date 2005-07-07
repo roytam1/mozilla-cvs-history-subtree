@@ -49,73 +49,15 @@
      some of it duplicated.)
 **/
 
-/** PUBLIC
-*
-*  This changes the mouseover preview based on the start and end dates
-*  of an occurrence of a (one-time or recurring) calEvent or calToDo.
-*  Used by all grid views.
-*/
-
-function onMouseOverGridOccurrence( occurrenceBoxMouseEvent )
-{
-  if ("occurrence" in occurrenceBoxMouseEvent.currentTarget) {
-    // occurrence of repeating event or todo
-    var occurrence = occurrenceBoxMouseEvent.currentTarget.occurrence;
-    var item = occurrence;
-    var start = occurrence.startDate.jsDate;
-    var endEx = occurrence.endDate.jsDate;
-
-    const toolTip = document.getElementById( "gridOccurrenceTooltip" );
-    var holderBox = null;
-    if (isEvent(item)) {
-      holderBox = getPreviewForEvent(item, start, endEx);
-    } else if (isToDo(item)) {
-      holderBox = getPreviewForToDo(item, start, endEx);
-    }
-    if (holderBox) {
-      setToolTipContent(toolTip, holderBox);
-      return true;
-    } 
-  }
-  return false;
-}
-
-/** For all instances of an event, as displayed by unifinder. **/
-function onMouseOverEventTree( toolTip, mouseEvent )
-{
-  var item = getCalendarEventFromEvent( mouseEvent );
-  if (isEvent(item)) {
-    var holderBox = getPreviewForEvent(item);
-    if (holderBox) {
-      setToolTipContent(toolTip, holderBox);
-      return true;
-    } 
-  }
-  return false;
-}
-
-/** For all instances of a task, as displayed by unifinderToDo. **/
-function onMouseOverTaskTree( toolTip, mouseEvent )
-{
-  var item = getToDoFromEvent( mouseEvent );
-  if (isToDo(item)) {
-    var holderBox = getPreviewForTask(item);
-    if (holderBox) {
-      setToolTipContent(toolTip, holderBox);
-      return true;
-    }
-  }
-  return false;
-}
+// Whether to show event details on mouseover (set to true or false by code)
+var gShowTooltip = true;
 
 /*
-** add newContentBox,
+** A function to check if the tooltip should be shown.
 */
-function setToolTipContent(toolTip, holderBox)
+function checkTooltip( event )
 {
-  while (toolTip.hasChildNodes())
-    toolTip.removeChild( toolTip.firstChild );
-  toolTip.appendChild( holderBox );
+   return( gShowTooltip );
 }
 
 /**
@@ -126,6 +68,8 @@ function getPreviewForTask( toDoItem )
 {
   if( toDoItem )
   {
+    gShowTooltip = true; //needed to show the tooltip.
+
     const vbox = document.createElement( "vbox" );
     boxInitializeHeaderGrid(vbox);
 
@@ -137,24 +81,23 @@ function getPreviewForTask( toDoItem )
       hasHeader = true;
     }
 
-    var location = toDoItem.getProperty("LOCATION");
-    if (location)
+    if (toDoItem.location)
     {
-      boxAppendLabeledText(vbox, "tooltipLocation", location);
+      boxAppendLabeledText(vbox, "tooltipLocation", toDoItem.location);
       hasHeader = true;
     }
    
-    if (toDoItem.entryDate && toDoItem.entryDate.isValid)
+    if (toDoItem.start && toDoItem.start.isSet)
     {
-      var startDate = toDoItem.entryDate.jsDate;
-      boxAppendLabeledDateTime(vbox, "tooltipStart", startDate, false);
+      var startDate = new Date( toDoItem.start.getTime() );
+      boxAppendLabeledDateTime(vbox, "tooltipStart", startDate, toDoItem.allDay);
       hasHeader = true;
     }
    
-    if (toDoItem.dueDat && toDoItem.dueDate.isValid)
+    if (toDoItem.due && toDoItem.due.isSet)
     {
-      var dueDate = toDoItem.dueDate.jsDate;
-      boxAppendLabeledDateTime(vbox, "tooltipDue", dueDate, false);
+      var dueDate = new Date( toDoItem.due.getTime() );
+      boxAppendLabeledDateTime(vbox, "tooltipDue", dueDate, toDoItem.allDay);
       hasHeader = true;
     }   
 
@@ -164,40 +107,60 @@ function getPreviewForTask( toDoItem )
       hasHeader = true;
     }
 
-    if (toDoItem.status && toDoItem.status != "NONE")
+    if (toDoItem.status && toDoItem.status != toDoItem.ICAL_STATUS_NONE)
     {
       var status = getToDoStatusString(toDoItem);
       boxAppendLabeledText(vbox, "tooltipStatus", status);
       hasHeader = true;
     }
 
-    if (toDoItem.percentComplete != 0 && toDoItem.percentComplete != 100)
+    if (toDoItem.percent && toDoItem.percent != 0)
     {
-      boxAppendLabeledText(vbox, "tooltipPercent", String(toDoItem.percentComplete)+"%");
-      hasHeader = true;
-    } else if (toDoItem.percentComplete == 100)
-    {
-        var completedDate = toDoItem.completedDate.jsDate;
-      boxAppendLabeledDateTime(vbox, "tooltipCompleted", completedDate, false);
+      boxAppendLabeledText(vbox, "tooltipPercent", String(toDoItem.percent)+"%");
       hasHeader = true;
     }
 
-    var description = toDoItem.getProperty("DESCRIPTION");
-    if (description)
+    if (toDoItem.completed && toDoItem.completed.isSet)
+    {
+      var completedDate = new Date( toDoItem.completed.getTime() );
+      boxAppendLabeledDateTime(vbox, "tooltipCompleted", completedDate, toDoItem.allDay);
+      hasHeader = true;
+    }
+
+
+    if (toDoItem.description)
     {
       // display up to 4 description lines like body of message below headers
       if (hasHeader)
         boxAppendText(vbox, ""); 
 
-      boxAppendLines(vbox, description, 4);
+      boxAppendLines(vbox, toDoItem.description, 4);
     }
       
     return ( vbox );
   } 
   else
   {
+    gShowTooltip = false; //Don't show the tooltip
     return null;
   }
+}
+
+/**
+*  Called when mouse moves over a different event display box.
+*  An ICalEventDisplay represents an instance of a possibly recurring event.
+*/
+function getPreviewForEventDisplay( calendarEventDisplay )
+{
+  var instStartDate = new Date(calendarEventDisplay.displayDate);
+  // End date is normally at the time at which event ends.
+  // So AllDay displayed ending today end at 0:00 next day.
+  var instEndDate = new Date(calendarEventDisplay.displayEndDate);
+  if (calendarEventDisplay.event.allDay)
+    instEndDate.setDate(instEndDate.getDate() + 1);
+
+  return getPreviewForEvent(calendarEventDisplay.event,
+                            instStartDate, instEndDate);
 }
 
 /**
@@ -211,25 +174,26 @@ function getPreviewForEvent( event, instStartDate, instEndDate )
 {
   const vbox = document.createElement( "vbox" );
   boxInitializeHeaderGrid(vbox);
-
+    
   if (event)
   {
+    gShowTooltip = true;
+
     if (event.title)
     {
       boxAppendLabeledText(vbox, "tooltipTitle", event.title);
     }
 
-    var location = event.getProperty("LOCATION");
-    if (location)
+    if (event.location)
     {
-      boxAppendLabeledText(vbox, "tooltipLocation", location);
+      boxAppendLabeledText(vbox, "tooltipLocation", event.location);
     }
 
-    if (event.startDate || instStartDate)
+    if (event.start || instStartDate)
     {
-      var eventStart = new Date(event.startDate.jsDate);
-      var eventEnd = event.endDate && new Date(event.endDate.jsDate);
-      if (event.isAllDay && eventEnd) { 
+      var eventStart = new Date(event.start.getTime());
+      var eventEnd = event.end && new Date(event.end.getTime());
+      if (event.allDay && eventEnd) { 
         eventEnd.setDate(eventEnd.getDate() - 1);
       }
       var relativeToDate;
@@ -240,7 +204,10 @@ function getPreviewForEvent( event, instStartDate, instEndDate )
         relativeToDate = instStartDate || new Date(); // today
       } else {
         // event spanning multiple days, do not omit dates.
+        // For multiday events use event start/end, not grid start/end.
         relativeToDate = false;
+        instStartDate = null;
+        instEndDate = null;
       }
 
       var startDate, endDate;
@@ -251,34 +218,34 @@ function getPreviewForEvent( event, instStartDate, instEndDate )
         // Event may be recurrent event.   If no displayed instance specified,
         // use next instance, or previous instance if no next instance.
         startDate = instStartDate || getCurrentNextOrPreviousRecurrence(event);
-        var eventDuration = (event.endDate
-                             ? event.endDate.jsDate - event.startDate.jsDate
+        var eventDuration = (event.end
+                             ? event.end.getTime() - event.start.getTime()
                              : 0);
         endDate = new Date(startDate.getTime() + eventDuration);
       }
       boxAppendLabeledDateTimeInterval(vbox, "tooltipDate",
-                                       startDate, endDate, event.isAllDay,
+                                       startDate, endDate, event.allDay,
                                        relativeToDate);
     }
 
-    if (event.status && event.status != "NONE")
+    if (event.status && event.status != event.ICAL_STATUS_NONE)
     {
       var statusString = getEventStatusString(event);
       boxAppendLabeledText(vbox, "tooltipStatus", statusString);
     }
 
-    var description = event.getProperty("DESCRIPTION");
-    if (description)
+    if (event.description)
     {
       // display up to 4 description lines, like body of message below headers
       boxAppendText(vbox, ""); 
-      boxAppendLines(vbox, description, 4);
+      boxAppendLines(vbox, event.description, 4);
     }
 
     return ( vbox );
   }
   else
   {
+    gShowTooltip = false; //Don't show the tooltip
     return null;
   }
 }
@@ -289,13 +256,13 @@ function getEventStatusString(calendarEvent)
 {
   switch( calendarEvent.status )
   {
-    // Event status value keywords are specified in RFC2445sec4.8.1.11
-    case "TENTATIVE":
-      return gCalendarBundle.getString("statusTentative");
-    case "CONFIRMED":
-      return gCalendarBundle.getString("statusConfirmed");
-    case "CANCELLED":
-      return gCalendarBundle.getString("statusCancelled");
+     case calendarEvent.ICAL_STATUS_TENTATIVE:
+        return( gCalendarBundle.getString( "statusTentative" ) );
+     case calendarEvent.ICAL_STATUS_CONFIRMED:
+        return( gCalendarBundle.getString( "statusConfirmed" ) );
+     case calendarEvent.ICAL_STATUS_CANCELLED:
+        return( gCalendarBundle.getString( "statusCancelled" ) );
+     case calendarEvent.ICAL_STATUS_NONE:
      default: 
         return "";
   }
@@ -306,15 +273,15 @@ function getToDoStatusString(iCalToDo)
 {
   switch( iCalToDo.status )
   {
-    // Todo status keywords are specified in RFC2445sec4.8.1.11
-    case "NEEDS-ACTION":
-      return gCalendarBundle.getString("statusNeedsAction");
-    case "IN-PROCESS":
-      return gCalendarBundle.getString("statusInProcess");
-    case "CANCELLED":
-      return gCalendarBundle.getString("statusCancelled");
-    case "COMPLETED":
-      return gCalendarBundle.getString("statusCompleted");
+     case iCalToDo.ICAL_STATUS_NEEDSACTION:
+        return( gCalendarBundle.getString( "statusNeedsAction" ) );
+     case iCalToDo.ICAL_STATUS_INPROCESS:
+        return( gCalendarBundle.getString( "statusInProcess" ) );
+     case iCalToDo.ICAL_STATUS_CANCELLED:
+        return( gCalendarBundle.getString( "statusCancelled" ) );
+     case iCalToDo.ICAL_STATUS_COMPLETED:
+        return( gCalendarBundle.getString( "statusCompleted" ) );
+     case iCalToDo.ICAL_STATUS_NONE:
      default: 
         return "";
   }

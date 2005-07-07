@@ -32,7 +32,7 @@ bin\defaults\profile\mimeTypes.rdf
 bin\defaults\profile\extensions\Extensions.rdf
 bin\defaults\profile\extensions\installed-extensions.txt
 ;!4sunbird bin\defaults\profile\extensions\{641d8d09-7dda-4850-8228-ac0ab65e2ac9}\install.rdf
-bin\defaults\profile\extensions\{972ce4c6-7e08-4474-a285-3208198ce6fd}\install.rdf
+bin\defaults\profile\extensions\{8af2d0a7-e394-4de2-ae55-2dae532a7a9b}\install.rdf
 
 [xpcom]
 bin\js3250.dll
@@ -60,7 +60,6 @@ bin\components\alerts.xpt
 bin\components\accessibility.xpt
 bin\components\accessibility-msaa.xpt
 bin\components\appshell.xpt
-bin\components\appstartup.xpt
 bin\components\autocomplete.xpt
 bin\components\autoconfig.xpt
 bin\components\bookmarks.xpt
@@ -108,8 +107,8 @@ bin\components\jsconsole.xpt
 bin\components\jsconsole-clhandler.js
 ;!4sunbird bin\components\jsd3250.dll
 ;!4sunbird bin\components\jsdservice.xpt
+bin\components\jsurl.xpt
 bin\components\layout_base.xpt
-bin\components\layout_printing.xpt
 bin\components\layout_xul.xpt
 bin\components\layout_xul_tree.xpt
 bin\components\locale.xpt
@@ -198,25 +197,6 @@ bin\chrome\classic.jar
 bin\chrome\comm.jar
 bin\chrome\toolkit.jar
 
-bin\chrome\calendar-ca-AD.jar
-bin\chrome\calendar-de-AT.jar
-bin\chrome\calendar-hu-HU.jar
-bin\chrome\calendar-lt-LT.jar
-bin\chrome\calendar-pt-BR.jar
-bin\chrome\calendar-sv-SE.jar
-bin\chrome\calendar-cs-CZ.jar
-bin\chrome\calendar-es-ES.jar
-bin\chrome\calendar-it-IT.jar
-bin\chrome\calendar-nl-NL.jar
-bin\chrome\calendar-sk-SK.jar
-bin\chrome\calendar-tr-TR.jar
-bin\chrome\calendar-cy-GB.jar
-bin\chrome\calendar-fr-FR.jar
-bin\chrome\calendar-ja-JP.jar
-bin\chrome\calendar-pl-PL.jar
-bin\chrome\calendar-sl-SI.jar
-bin\chrome\calendar-wen-DE.jar
-
 ; [Default Preferences]
 ; All the pref files must be part of base to prevent migration bugs
 bin\defaults\pref\sunbird.js
@@ -232,6 +212,7 @@ bin\res\ua.css
 bin\res\html.css
 bin\res\quirk.css
 bin\res\forms.css
+bin\res\platform-forms.css
 ;!4sunbird bin\res\EditorOverride.css
 ;!4sunbird bin\res\table-add-column-after-active.gif
 ;!4sunbird bin\res\table-add-column-after-hover.gif
@@ -267,6 +248,8 @@ bin\res\charsetData.properties
 bin\res\langGroups.properties
 bin\res\language.properties
 bin\res\entityTables\*
+bin\res\builtin\htmlBindings.xml
+bin\res\builtin\platformHTMLBindings.xml
 
 ; [Personal Security Manager]
 ;

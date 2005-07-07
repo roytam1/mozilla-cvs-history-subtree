@@ -36,14 +36,10 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
+include('chrome://calendar/content/jslib/io/io.js');
+include('chrome://calendar/content/jslib/rdf/rdf.js');
+include('chrome://calendar/content/jslib/rdf/rdfFile.js');
 var gNextSubNodeToRefresh=0;
-var gModifiedTime = new Array();
-//var gModifiedTimeRemote = new Array(); 
-var gAutoreloadTimerId = new Array(); //stores Timer Id for each autoreload
-
-const LOCALFILE_CTRID = "@mozilla.org/file/local;1";
-const nsILocalFile = Components.interfaces.nsILocalFile;
 
 function CalendarObject()
 {
@@ -55,8 +51,6 @@ function CalendarObject()
    this.active = false;
    this.color = ""; 
    this.publishAutomatically = false;
-   this.shared = false;
-   this.autoreload = 0;
 }
 
 function calendarManager( CalendarWindow )
@@ -100,8 +94,6 @@ function calendarManager( CalendarWindow )
       node.setAttribute( "http://home.netscape.com/NC-rdf#remote", "false" );
       node.setAttribute( "http://home.netscape.com/NC-rdf#remotePath", "" );
       node.setAttribute( "http://home.netscape.com/NC-rdf#color", "#F9F4FF"); //default color
-      node.setAttribute( "http://home.netscape.com/NC-rdf#shared", "false" );
-      node.setAttribute( "http://home.netscape.com/NC-rdf#autoreload", "0" );
    }
    else
    {
@@ -119,26 +111,10 @@ function calendarManager( CalendarWindow )
    /* add active calendars */
    for( var i = 0; i < this.rootContainer.getSubNodes().length; i++ )
    {
-      var Calendar = this.rootContainer.getSubNodes()[i]; 
-      if( Calendar.getAttribute( "http://home.netscape.com/NC-rdf#active" ) == "true" )
+      if( this.rootContainer.getSubNodes()[i].getAttribute( "http://home.netscape.com/NC-rdf#active" ) == "true" )
       {
-         this.addCalendar( Calendar );
-      }
-      // Add autoreload timers for all calendars
-      var autoreload = Calendar.getAttribute( "http://home.netscape.com/NC-rdf#autoreload" );
-      if ( autoreload > 0 ) 
-      {
-         function closure( ThisObject,ThisCalendar ) {
-            function autoreloadCmd(){
-               if( ThisCalendar.getAttribute( "http://home.netscape.com/NC-rdf#active" ) == "true" )
-                  ThisObject.reloadCalendar( ThisCalendar ); 
-            }
-            return autoreloadCmd;
-         }
-         var X = closure( this, Calendar );
-         var serverNumber = Calendar.getAttribute( "http://home.netscape.com/NC-rdf#serverNumber" );
-         gAutoreloadTimerId[serverNumber] = setInterval( X, autoreload ); 
-      }
+         this.addCalendar( this.rootContainer.getSubNodes()[i] );
+      }                
    }
    
    /* Refresh remote calendars */
@@ -215,8 +191,6 @@ calendarManager.prototype.launchEditCalendarDialog = function calMan_launchEditC
    ThisCalendarObject.color = SelectedCalendar.getAttribute( "http://home.netscape.com/NC-rdf#color"); 
    ThisCalendarObject.remotePath = SelectedCalendar.getAttribute( "http://home.netscape.com/NC-rdf#remotePath" );
    ThisCalendarObject.publishAutomatically = SelectedCalendar.getAttribute( "http://home.netscape.com/NC-rdf#publishAutomatically" );
-   ThisCalendarObject.shared = SelectedCalendar.getAttribute( "http://home.netscape.com/NC-rdf#shared" );
-   ThisCalendarObject.autoreload = SelectedCalendar.getAttribute( "http://home.netscape.com/NC-rdf#autoreload" );
    
    var args = new Object();
    args.mode = "edit";
@@ -287,9 +261,6 @@ calendarManager.prototype.launchEditRemoteCalendarDialog = function calMan_launc
    ThisCalendarObject.remotePath = SelectedCalendar.getAttribute( "http://home.netscape.com/NC-rdf#remotePath" );
    ThisCalendarObject.publishAutomatically = SelectedCalendar.getAttribute( "http://home.netscape.com/NC-rdf#publishAutomatically" );
    ThisCalendarObject.color = SelectedCalendar.getAttribute( "http://home.netscape.com/NC-rdf#color" );
-   ThisCalendarObject.shared = SelectedCalendar.getAttribute( "http://home.netscape.com/NC-rdf#shared" );
-   ThisCalendarObject.autoreload = SelectedCalendar.getAttribute( "http://home.netscape.com/NC-rdf#autoreload" );
-   
    var args = new Object();
    args.mode = "edit";
 
@@ -320,8 +291,6 @@ calendarManager.prototype.addServerDialogResponse = function calMan_addServerDia
    node.setAttribute("http://home.netscape.com/NC-rdf#active", "true");
    node.setAttribute("http://home.netscape.com/NC-rdf#serverNumber", next);
    node.setAttribute("http://home.netscape.com/NC-rdf#name", CalendarObject.name);
-   node.setAttribute( "http://home.netscape.com/NC-rdf#shared",  CalendarObject.shared);
-   node.setAttribute( "http://home.netscape.com/NC-rdf#autoreload",  CalendarObject.autoreload);
    
    var profileFile;
 
@@ -416,9 +385,6 @@ calendarManager.prototype.editLocalCalendarDialogResponse = function calMan_edit
    node.setAttribute( "http://home.netscape.com/NC-rdf#remotePath", CalendarObject.remotePath );
    node.setAttribute("http://home.netscape.com/NC-rdf#publishAutomatically", CalendarObject.publishAutomatically);
    node.setAttribute("http://home.netscape.com/NC-rdf#color", CalendarObject.color);
-   //node.setAttribute( "http://home.netscape.com/NC-rdf#shared",  CalendarObject.shared); //TBD uncomment once the calendar dialog is changed
-   //node.setAttribute( "http://home.netscape.com/NC-rdf#autoreload",  CalendarObject.autoreload); //TBD uncomment once the calendar dialog is changed 
-
    this.rdf.flush();
    
    // CofC
@@ -439,9 +405,6 @@ calendarManager.prototype.editServerDialogResponse = function calMan_editServerD
    node.setAttribute( "http://home.netscape.com/NC-rdf#name", CalendarObject.name );
    node.setAttribute("http://home.netscape.com/NC-rdf#publishAutomatically", CalendarObject.publishAutomatically);
    node.setAttribute("http://home.netscape.com/NC-rdf#color", CalendarObject.color);
-   //node.setAttribute( "http://home.netscape.com/NC-rdf#shared",  CalendarObject.shared); //TBD uncomment once the calendar dialog is changed
-   //node.setAttribute( "http://home.netscape.com/NC-rdf#autoreload",  CalendarObject.autoreload); //TBD uncomment once the calendar dialog is changed
-   
    this.rdf.flush();
    
    // CofC
@@ -455,17 +418,14 @@ calendarManager.prototype.editServerDialogResponse = function calMan_editServerD
 */
 calendarManager.prototype.addCalendar = function calMan_addCalendar( ThisCalendarObject )
 {
-  dump(Components.stack.toString() + "\n");
-  var x = Components.stack.caller;
-  while (x) {
-    dump(x.toString() + "\n");
-    x = x.caller;
-  }
+   //dump( "\n CALENDAR MANANGER-> add calendar with path "+ThisCalendarObject.getAttribute( "http://home.netscape.com/NC-rdf#path"+"\n\n" ) );
 
    gICalLib.addCalendar( ThisCalendarObject.getAttribute( "http://home.netscape.com/NC-rdf#path" ),
-                         ThisCalendarObject.getAttribute( "http://home.netscape.com/NC-rdf#type" ) );
-   var id = ThisCalendarObject.getAttribute( "http://home.netscape.com/NC-rdf#serverNumber" );
-   gModifiedTime[id] = this.getLocalModifiedTime( ThisCalendarObject );
+                         ThisCalendarObject.getAttribute( "http://home.netscape.com/NC-rdf#type" ));
+
+   //ThisCalendarObject.setAttribute( "http://home.netscape.com/NC-rdf#active", "true" );
+
+   //this.rdf.flush();
 }
 
 
@@ -486,154 +446,27 @@ calendarManager.prototype.removeCalendar = function calMan_removeCalendar( ThisC
 
 /* 
 ** Reload the calendar
-*
-* skipRefresh will reparse the file, without refreshing the view
-* return true if the calendar was actually reloaded i.e. if there were external changes
 */
-
-calendarManager.prototype.reloadCalendar = function calMan_reloadCalendar( ThisCalendarObject, skipRefresh )
+calendarManager.prototype.reloadCalendar = function calMan_reloadCalendar( ThisCalendarObject )
 {
-   skipRefresh = (calMan_reloadCalendar.arguments.length == 1) ? false : skipRefresh;
-   //TODO implement reloadCalendar inside gICalLib
-   var active = ( ThisCalendarObject.getAttribute( "http://home.netscape.com/NC-rdf#active" ) == "true" );
-   var path = ThisCalendarObject.getAttribute( "http://home.netscape.com/NC-rdf#path" );
-   var id = ThisCalendarObject.getAttribute( "http://home.netscape.com/NC-rdf#serverNumber");
-
-   var localModifiedTime = this.getLocalModifiedTime( ThisCalendarObject );
-   if ( gModifiedTime[id] < localModifiedTime ) {
-      gICalLib.removeCalendar( path );
-      this.addCalendar( ThisCalendarObject );
-      if ( !skipRefresh ) {
-         refreshView();
-      }
-      return true;
-   }
-   return false;
+  //TODO implement reloadCalendar inside gICalLib
+  gICalLib.removeCalendar( ThisCalendarObject.getAttribute( "http://home.netscape.com/NC-rdf#path" ) );
+  gICalLib.addCalendar( ThisCalendarObject.getAttribute( "http://home.netscape.com/NC-rdf#path" ),
+                        ThisCalendarObject.getAttribute( "http://home.netscape.com/NC-rdf#type" ));
+  refreshView();
 }
-
-
-
-calendarManager.prototype.getLocalModifiedTime = function calMan_getModifiedTime( Calendar )
-{   
-   var calendarFile = Components.classes[LOCALFILE_CTRID].createInstance( nsILocalFile );
-   var path = Calendar.getAttribute( "http://home.netscape.com/NC-rdf#path" );
-   calendarFile.initWithPath( path );
-   
-   if ( calendarFile.exists() ){
-      return calendarFile.lastModifiedTime;
-   } else {
-      return 0;
-   }   
-}
-
-
-calendarManager.prototype.startLocalLock = function calMan_startLocalLock( Calendar )
-{
-   var lockTimeOut = 5000; //millisecs after which a lock expires
-   var maxWaitTime = 10000; //millisecs waited before giving up
-   var loopWait = 500; //millisecs to wait before rechecking lock
-   
-   const NORMAL_FILE_TYPE = 0;
-   const PERMISSIONS = 777;
-   
-   var CalendarFile = Components.classes[LOCALFILE_CTRID].createInstance( nsILocalFile );
-   var LockFile = Components.classes[LOCALFILE_CTRID].createInstance( nsILocalFile );
-   var DummyFile = Components.classes[LOCALFILE_CTRID].createInstance( nsILocalFile );
-   var path = Calendar.getAttribute( "http://home.netscape.com/NC-rdf#path" );
-   CalendarFile.initWithPath( path );
-   LockFile.initWithPath( path + ".lock" );
-   DummyFile.initWithPath( path + ".dummy" );
-   
-   //Make TimeOut depend on file size
-   var fileSize =  CalendarFile.fileSize;
-   lockTimeOut = lockTimeOut + fileSize / 1000; //~+1 sec per MB
-   maxWaitTime = maxWaitTime + fileSize / 500; //~+2 sec per MB
-         
-    //Get time of server hosting remote file, simulating _nix touch command
-   if (DummyFile.exists()){
-     DummyFile.remove(false);
-   }
-   try{
-      DummyFile.create(NORMAL_FILE_TYPE,PERMISSIONS);
-   } catch(er) {
-      return false;
-   }
-   var timeServer = DummyFile.lastModifiedTime;
-   DummyFile.remove(false);
-   
-   //Check lock
-   var timeStart = new Date().getTime();
-   var timeOffset = timeServer - timeStart; 
-   var timeLoop = 0; //used to replicate wait() 
-   var timeLock = 0; //modified time of locked file
-   while(1){
-      timeNow = new Date().getTime(); 
-      //TODO add proper wait function (using xpcom?)
-      if ( timeNow > timeLoop + loopWait ) {
-         //only check every half second
-         timeLoop = timeNow;
-         if ( ! LockFile.exists() ) {
-            //if there is no lock, we assume it is ok to proceed
-            break;
-         } else {
-            //Check if the lock is an old leftover, if so delete it
-            try {
-               timeLock = LockFile.lastModifiedTime;
-            } catch(er) {
-               timeLock = null;
-            }
-            if ( ( timeLock != null ) &&
-                 ( timeNow + timeOffset > timeLock + lockTimeOut ) ) {
-               LockFile.remove(false);
-               break;
-            }
-         }
-      }
-      //Give up if we have been looping for more than maxWaitTime
-      if ( timeNow > timeStart + maxWaitTime ) {
-         return false;
-      }
-   }
-   //Start new lock 
-   try{
-      LockFile.create(NORMAL_FILE_TYPE,PERMISSIONS);
-      return LockFile.exists();
-   } catch(er) {
-      return false;
-   }
-}
-
-
-calendarManager.prototype.removeLocalLock = function calMan_removeLocalLock( Calendar )
-{
-   var LockFile = Components.classes[LOCALFILE_CTRID].createInstance( nsILocalFile );
-   var path = Calendar.getAttribute( "http://home.netscape.com/NC-rdf#path" );
-   LockFile.initWithPath( path + ".lock" );
-   try{
-      LockFile.remove(false);
-   } catch(er) {
-   }
-}
-
 
 /*
 ** Delete the calendar. Remove the file, it won't be used any longer.
 */
 calendarManager.prototype.deleteCalendar = function calMan_deleteCalendar( ThisCalendarObject, deleteFile )
 {
-   var serverNumber = ThisCalendarObject.getAttribute( "http://home.netscape.com/NC-rdf#serverNumber" );
-   if( serverNumber == 0 )
+   if( ThisCalendarObject.getAttribute( "http://home.netscape.com/NC-rdf#serverNumber" ) == 0 )
       return;
 
    gICalLib.removeCalendar( ThisCalendarObject.getAttribute( "http://home.netscape.com/NC-rdf#path" ) );
-   var tid = gAutoreloadTimerId[serverNumber];
-   if ( tid != null ){
-      clearInterval(gAutoreloadTimerId[serverNumber]);
-   }
 
-   //I think deleting calendar and file is a bad idea, particularly if the calendar is shared
-   //TODO modify GUI and eliminate "Delete Calendar and File" button
-   if( deleteFile == true && ThisCalendarObject.getAttribute( "http://home.netscape.com/NC-rdf#shared" ) != "true" ) 
+   if( deleteFile === true )
    {
       var FileToRemove = new File( ThisCalendarObject.getAttribute( "http://home.netscape.com/NC-rdf#path" ) );
       FileToRemove.remove();
@@ -732,16 +565,14 @@ calendarManager.prototype.refreshAllRemoteCalendars = function calMan_refreshAll
       //check their remote attribute, if its true, call retrieveAndSaveRemoteCalendar()
       if( SubNodes[i].getAttribute( "http://home.netscape.com/NC-rdf#remote" ) == "true" )
       {
-         if (throbberElement)
-            throbberElement.setAttribute("busy", "true")
+         throbberElement.setAttribute("busy", "true")
          this.retrieveAndSaveRemoteCalendar( SubNodes[i] );
          gNextSubNodeToRefresh = i+1;
          return;
       }
    }
    gNextSubNodeToRefresh = 0;
-   if (throbberElement)
-      throbberElement.setAttribute("busy", "false")
+   throbberElement.setAttribute("busy", "false")
 }
 
 /*
@@ -876,31 +707,19 @@ calendarManager.prototype.getRemoteCalendarText = function calMan_getRemoteCalen
 
          var retval = false;
          if( typeof( result ) != "string" ) { //for 1.7 compatibility
-            // Result is an array of integer unicode values.
-
-            try {
-               var unicodeConverter = Components.classes["@mozilla.org/intl/scriptableunicodeconverter"]
-                                                .createInstance(Components.interfaces.nsIScriptableUnicodeConverter);
-               // ics files are always utf8
-               unicodeConverter.charset = "UTF-8";
-               result = unicodeConverter.convertFromByteArray( result, result.length );
-            } catch(e) {
-               // Now try the pre-1.8a5 method, which might have problems
-               // with utf8 chars
-
-               // Convert to string by applying String.fromCharCode static function.
-               // Function.apply can take array of length < expt(2, 16),
-               // so convert slices half that length to strings, then join strings.
-               var sliceStringArray = new Array();
-               for (var start = 0, end;
-                    start < (end = Math.min(result.length, start + 32768));
-                    start = end) { 
-                 var slice = result.slice(start, end);
-                 var sliceString = String.fromCharCode.apply(null, slice);
-                 sliceStringArray[sliceStringArray.length] = sliceString;
-               }
-               result = sliceStringArray.join("");
-            }
+           // Result is an array of integer unicode values.
+           // Convert to string by applying String.fromCharCode static function.
+           // Function.apply can take array of length < expt(2, 16),
+           // so convert slices half that length to strings, then join strings.
+           var sliceStringArray = new Array();
+           for (var start = 0, end;
+                start < (end = Math.min(result.length, start + 32768));
+                start = end) { 
+             var slice = result.slice(start, end);
+             var sliceString = String.fromCharCode.apply(null, slice);
+             sliceStringArray[sliceStringArray.length] = sliceString;
+           }
+           result = sliceStringArray.join("");
          }
 
          var ch;
@@ -940,15 +759,15 @@ calendarManager.prototype.getRemoteCalendarText = function calMan_getRemoteCalen
      getInterface: function(iid, instance) {
        if (iid.equals(Components.interfaces.nsIAuthPrompt)) {
          // use the window watcher service to get a nsIAuthPrompt impl
-         return Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
-                          .getService(Components.interfaces.nsIWindowWatcher)
-                          .getNewAuthPrompter(window);
+         var ww = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
+                            .getService(Components.interfaces.nsIWindowWatcher);
+         return ww.getNewAuthPrompter(window);
        }
        else if (iid.equals(Components.interfaces.nsIPrompt)) {
          // use the window watcher service to get a nsIPrompt impl
-         return Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
-                          .getService(Components.interfaces.nsIWindowWatcher)
-                          .getNewPrompter(window);
+         var ww = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
+                            .getService(Components.interfaces.nsIWindowWatcher);
+         return ww.getNewPrompter(window);
        }
        Components.returnCode = Components.results.NS_ERROR_NO_INTERFACE;
        return null;
@@ -1023,17 +842,12 @@ calendarManager.prototype.getAndConvertAllOldCalendars = function calMan_getAllC
       thisCalendar = new CalendarObject();
       
       try { 
-         var Branch = prefService.getBranch( "calendar." );
          thisCalendar.serverNumber = ArrayOfCalendars[i];
-         var serverString = "server" + thisCalendar.serverNumber;
-         
-         thisCalendar.name = getCharPref(Branch, serverString + ".name", "" );
-         thisCalendar.path = getCharPref(Branch, serverString + ".path", "" );
-         thisCalendar.active = getBoolPref(Branch, serverString + ".active", false );
-         thisCalendar.remote = getBoolPref(Branch, serverString + ".remote", false );
-         thisCalendar.remotePath = getCharPref(Branch, serverString + ".remotePath", "" );
-         thisCalendar.shared = getCharPref(Branch, serverString + ".shared", false );
-         thisCalendar.autoreload = getCharPref(Branch, serverString + ".autoreload", false );
+         thisCalendar.name = getCharPref(prefService.getBranch( "calendar." ), "server"+ArrayOfCalendars[i]+".name", "" );
+         thisCalendar.path = getCharPref(prefService.getBranch( "calendar." ), "server"+ArrayOfCalendars[i]+".path", "" );
+         thisCalendar.active = getBoolPref(prefService.getBranch( "calendar." ), "server"+ArrayOfCalendars[i]+".active", false );
+         thisCalendar.remote = getBoolPref(prefService.getBranch( "calendar." ), "server"+ArrayOfCalendars[i]+".remote", false );
+         thisCalendar.remotePath = getCharPref(prefService.getBranch( "calendar." ), "server"+ArrayOfCalendars[i]+".remotePath", "" );
       }
       catch ( e )
       {
@@ -1080,20 +894,28 @@ calendarManager.prototype.getAndConvertAllOldCalendars = function calMan_getAllC
          oldCalendarDataFile.copy( newCalendarDataFile.path );
          oldCalendarDataFile.remove( );
       }
-      try{
-         Branch.clearUserPref( serverString + ".name" );
-         Branch.clearUserPref( serverString + ".path" );
-         Branch.clearUserPref( serverString + ".active" );
-         Branch.clearUserPref( serverString + ".remote" );
-         Branch.clearUserPref( serverString + ".remotePath" );
-      }catch(e){
-   }
+
+      prefService.getBranch( "calendar." ).clearUserPref( "server"+thisCalendar.serverNumber+".name" );
+      prefService.getBranch( "calendar." ).clearUserPref( "server"+thisCalendar.serverNumber+".path" );
+      prefService.getBranch( "calendar." ).clearUserPref( "server"+thisCalendar.serverNumber+".active" );
+      prefService.getBranch( "calendar." ).clearUserPref( "server"+thisCalendar.serverNumber+".remote" );
+      prefService.getBranch( "calendar." ).clearUserPref( "server"+thisCalendar.serverNumber+".remotePath" );
    }
    try
    {
-      Branch.clearUserPref( "server0.active" );
-      Branch.clearUserPref( "servers.count" );
-      Branch.clearUserPref( "servers.array" );
+      prefService.getBranch( "calendar." ).clearUserPref( "server0.active" );
+   } catch( e ) {
+   }
+   
+   try
+   {
+      prefService.getBranch( "calendar." ).clearUserPref( "servers.array" );
+   } catch( e ) {
+   }
+
+   try
+   {
+      prefService.getBranch( "calendar." ).clearUserPref( "servers.count" );
    } catch( e ) {
    }
 }
@@ -1108,7 +930,7 @@ function makeURLFromPath( path ) {
 }
 
 function refreshView() {
-  refreshEventTree();
+  refreshEventTree( getAndSetEventTable() );
   refreshToDoTree( false );
   gCalendarWindow.currentView.refreshEvents();
 }

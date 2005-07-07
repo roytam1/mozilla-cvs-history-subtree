@@ -52,17 +52,6 @@
   <command id="modify_command" oncommand="editEventCommand()" disabled="true" disabledwhennoeventsselected="true"/>
   <command id="send_event_command" oncommand="sendEvent()" disabled="true" disabledwhennoeventsselected="true"/>
   <command id="print_command" oncommand="print()"/>
-  
-#  <command id="Edit:Undo"      oncommand="goDoCommand('cmd_undo')"      disabled="true"/>
-#  <command id="Edit:Redo"      oncommand="goDoCommand('cmd_redo')"      disabled="true"/>
-#  <command id="Edit:Cut"       oncommand="goDoCommand('cmd_cut')"       disabled="true"/>
-#  <command id="Edit:Copy"      oncommand="goDoCommand('cmd_copy')"      disabled="true"/>
-#  <command id="Edit:Paste"     oncommand="goDoCommand('cmd_paste')"     disabled="true"/>
-#  <command id="Edit:Delete"    oncommand="goDoCommand('cmd_delete')"    disabled="true"/>
-#  <command id="Edit:SelectAll" oncommand="goDoCommand('cmd_selectAll')" disabled="true"/>
-  
-  <command id="undo_command" oncommand="undo()" disabled="true"/>
-  <command id="redo_command" oncommand="redo()" disabled="true"/>
   <command id="cut_command" oncommand="cutToClipboard()" disabled="true" disabledwhennoeventsselected="true"/>
   <command id="copy_command" oncommand="copyToClipboard()" disabled="true" disabledwhennoeventsselected="true"/>
   <command id="paste_command" oncommand="pasteFromClipboard()"/>
@@ -72,12 +61,12 @@
   <command id="modify_todo_command" oncommand="modifyToDoCommand( event )"/>
   <command id="delete_todo_command" oncommand="deleteToDoCommand()" disabled="true"/>
 
-  <command id="new_local_calendar_command" oncommand="newCalendarDialog()"/>
+  <command id="new_local_calendar_command" oncommand="gCalendarWindow.calendarManager.launchNewCalendarFileDialog()"/>
   <command id="open_local_calendar_command" oncommand="gCalendarWindow.calendarManager.launchOpenCalendarFileDialog()"/>
   <command id="edit_local_calendar_command" oncommand="gCalendarWindow.calendarManager.launchEditCalendarDialog()"/>
   <command id="new_server_command" oncommand="gCalendarWindow.calendarManager.launchAddRemoteCalendarDialog()"/>
   <command id="edit_server_command" oncommand="gCalendarWindow.calendarManager.launchEditRemoteCalendarDialog()"/>
-  <command id="delete_server_command" oncommand="deleteCalendar(event)"/>
+  <command id="delete_server_command" oncommand="deleteCalendar()"/>
   <command id="find_new_calendar_command" oncommand="goFindNewCalendars()"/>
 
   <command id="next_command" oncommand="gCalendarWindow.currentView.goToNext()"/>
@@ -103,15 +92,7 @@
 
   <command id="wizard_command" oncommand="launchWizard()" collapsed="true"/>
 
-  <command id="cmd_CustomizeToolbars"   oncommand="CalendarCustomizeToolbar()"/>
-  <command id="cmd_showCalendarToolbar" oncommand="goToggleToolbar('calendar-bar', 'menu_showCalendarToolbar');"/>
-  <command id="cmd_showSearchToolbar"   oncommand="goToggleToolbar('searchBox', 'menu_showSearchToolbar');"/>
-  <command id="cmd_showStatusBar"       oncommand="goToggleToolbar('status-bar', 'menu_showStatusBar');"/>
-  <command id="cmd_showTaskBox"         oncommand="goToggleToolbar('taskBox', 'menu_showTaskBox');"/>
-
-  <command id="Tools:Extensions" oncommand="goOpenExtensions('extensions');"/>
-  <command id="Tools:Themes"     oncommand="goOpenExtensions('themes');"/>
-
+  <command id="cmd_CustomizeToolbars" oncommand="CalendarCustomizeToolbar()"/>
 #ifdef XP_MACOSX
   <command id="minimizeWindowCmd" oncommand="window.minimize();"/>
   <command id="zoomWindowCmd" oncommand="zoomWindow();"/>
@@ -121,9 +102,6 @@
 <keyset>
   <key id="new_event_key"        key="&event.new.event.key;"             observes="new_command"                 modifiers="accel"/>
   <key id="new_todo_key"         key="&event.new.todo.key;"              observes="new_todo_command"            modifiers="accel"/>
-#XXX lilmatt: Finish/localize this!
-  <key id="new_journal_key"      key="J"               modifiers="accel"/>
-
   <key id="modify_event_key"     key="&event.edit.event.key;"            observes="modify_command"              modifiers="accel"/>
   <key id="new_calendar_key"     key="&calendar.new.server.key;"         observes="new_local_calendar_command"  modifiers="accel"/>
   <key id="open_calendar_key"    key="&calendar.open.file.key;"          observes="open_local_calendar_command" modifiers="accel"/>
@@ -134,10 +112,6 @@
   <key id="send_event_key"       key="&event.mail.event.key;"            observes="send_event_command"          modifiers="accel"/>
 #endif
   <key id="print_key"            key="&calendar.print.key;"              observes="print_command"               modifiers="accel"/>
-
-#XXX lilmatt: Finish/localize this!
-  <key id="undo_key"             key="Z"               modifiers="accel"/>
-  <key id="redo_key"             key="Z"               modifiers="shift,accel"/>
 
   <key id="key_cut"              key="&calendar.cut.key;"                observes="cut_command"                 modifiers="accel"/>
   <key id="key_copy"             key="&calendar.copy.key;"               observes="copy_command"                modifiers="accel"/>

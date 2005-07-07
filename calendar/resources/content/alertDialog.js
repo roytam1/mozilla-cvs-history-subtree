@@ -41,12 +41,10 @@ var gAllEvents = new Array();
 var CreateAlarmBox = true;
 var kungFooDeathGripOnEventBoxes = new Array();
 var gICalLib;
-var gCalendarBundle;
 var calendarsToPublish = new Array();
 
 function onLoad()
 {
-   gCalendarBundle = document.getElementById("bundle_calendar");
    var calendarEventService = opener.gEventSource;
    
    gICalLib = calendarEventService.getICalLib();
@@ -68,12 +66,15 @@ function onLoad()
                 
         buildEventBoxes();
    }
+   
+   doSetOKCancel( onOkButton, 0 );
 }
 
 function buildEventBoxes()
 {
    //remove all the old event boxes.
    var EventContainer = document.getElementById( "event-container-rows" );
+   var tooManyDescValue ;
 
    if( EventContainer )
    {
@@ -96,21 +97,21 @@ function buildEventBoxes()
       }
       
       //reset the text
-      var TooManyDesc = document.getElementById( "too-many-alarms-description" );
-      var tooManyDescValue ;
-
       if( gAllEvents.length > 6 )
       {
+         var TooManyDesc = document.getElementById( "too-many-alarms-description" );
          TooManyDesc.removeAttribute( "collapsed" );         
          tooManyDescValue = gCalendarBundle.getFormattedString("TooManyAlarmsMessage", [gAllEvents.length]);
          TooManyDesc.setAttribute( "value", tooManyDescValue );
       }
       else
       {
+         var TooManyDesc = document.getElementById( "too-many-alarms-description" );
          TooManyDesc.setAttribute( "collapsed", "true" );
       }
 
    }
+   sizeToContent();
 }
 
 function onAlarmCall( Event )
@@ -166,11 +167,10 @@ function createAlarmBox( Event )
    var EventDescription = document.createTextNode( Event.description );
    OuterBox.getElementsByAttribute( "name", "Description" )[0].appendChild( EventDescription );
 
-   var displayDate;
    if( !Event.recur )
-       displayDate = new Date( Event.start.getTime() );
+       var displayDate = new Date( Event.start.getTime() );
    else
-       displayDate = new Date( Event.displayDate );
+       var displayDate = new Date( Event.displayDate );
 
    var EventDisplayDate = document.createTextNode( getFormatedDate( displayDate ) );
    OuterBox.getElementsByAttribute( "name", "StartDate" )[0].appendChild( EventDisplayDate );
@@ -207,11 +207,13 @@ function removeAlarmBox( Event )
    if( EventAlarmBoxes.item(0) )
    {
       //there are still boxes left.
-      return;
+      return( false );
    }
-
-   //close the dialog
-   self.close();
+   else
+   {
+      //close the dialog
+      self.close();
+   }
 }
 
 function getArrayId( Event )
@@ -228,7 +230,6 @@ function getArrayId( Event )
 
 function onOkButton( )   // "Acknowledge All Alarms" button
 {
-   var i;
    // Set each alarm's last alarm ack date/time to now
    for( i = 0; i < gAllEvents.length; i++ )
    {
@@ -291,11 +292,18 @@ function onOkButton( )   // "Acknowledge All Alarms" button
    return( true );
 }
 
+function onCancelButton()
+{
+   //just close the dialog
+   return( true );
+
+}
+
 function acknowledgeAlarm( Event )
 {
    Event.lastAlarmAck = new Date();
 
-   opener.saveItem( Event, Event.parent.server, "modifyEvent" );
+   opener.refreshRemoteCalendarAndRunFunction( Event, Event.parent.server, "modifyEvent" );
 
    var Id = getArrayId( Event )
 
@@ -362,7 +370,7 @@ function snoozeAlarm( Event )
    
    Event.setSnoozeTime( DateObjOfNextAlarm );
    
-   opener.saveItem( Event, Event.parent.server, "modifyEvent" );
+   opener.refreshRemoteCalendarAndRunFunction( Event, Event.parent.server, "modifyEvent" );
 
    var Id = getArrayId( Event )
 

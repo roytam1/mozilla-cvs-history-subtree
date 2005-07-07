@@ -233,13 +233,6 @@ nssCertificate_GetDecoding
   NSSCertificate *c
 );
 
-extern PRIntn
-nssCertificate_SubjectListSort
-(
-  void *v1,
-  void *v2
-);
-
 NSS_EXTERN nssDecodedCert *
 nssDecodedCert_Create
 (

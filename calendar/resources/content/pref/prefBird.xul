@@ -17,9 +17,9 @@
 	style="&prefWindow.size;"
 	windowtype="mozilla:preferences"
 	buttons="accept,cancel"
-	onload="hPrefWindow.init();"
-	ondialogaccept="return hPrefWindow.onOK(event);"
-	ondialogcancel="return hPrefWindow.onCancel(event);"
+	onload="PrefDialogService.init();"
+	ondialogaccept="return PrefDialogService.onOK(event);"
+	ondialogcancel="return PrefDialogService.onCancel(event);"
 	persist="width height screenX screenY"
 	resizable="true">
 
@@ -33,7 +33,7 @@
 			flex="1"
 			seltype="single"
 			hidecolumnpicker="true"
-			onselect="hPrefWindow();">
+			onselect="PrefDialogService.switchPage();">
 			<treecols>
 				<treecol id="categoryCol"
 					flex="1"
@@ -55,7 +55,7 @@
 <script type="application/x-javascript"><![CDATA[
 var _elementIDs = [];
 
-var hPrefWindow = 
+var PrefDialogService = 
 {
 	
 	// properties 
@@ -461,10 +461,10 @@ var hPrefWindow =
  
 function initPanel(aPanelURL) 
 {
-	if (hPrefWindow.initialized)
-		hPrefWindow.onPageLoad(aPanelURL);
+	if (PrefDialogService.initialized)
+		PrefDialogService.onPageLoad(aPanelURL);
 	else
-		hPrefWindow.queuedPanel = aPanelURL;
+		PrefDialogService.queuedPanel = aPanelURL;
 }
  
 ]]></script>

@@ -1,14 +1,22 @@
-#filter substitution
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Base Thunderbird Package File for Win32
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-[@AB_CD@]
-bin\chrome\@AB_CD@.jar
-bin\chrome\@AB_CD@.manifest
-bin\chrome\mail-locales.manifest
+[langenus]
+bin\chrome\en-US-mail.jar
+bin\chrome\en-win.jar
+
+[regus]
+bin\defaults\profile\US\localstore.rdf
+bin\defaults\profile\US\mimeTypes.rdf
+
+[deflenus]
 bin\defaults\messenger\mailViews.dat
+bin\defaults\profile\localstore.rdf
+bin\defaults\profile\prefs.js
+bin\defaults\profile\mimeTypes.rdf
+bin\defaults\profile\extensions\*
+bin\defaults\profile\extensions\{972ce4c6-7e08-4474-a285-3208198ce6fd}\install.rdf
 
 [xpcom]
 bin\xpcom.dll
@@ -33,27 +41,24 @@ bin\components\xpinstal.dll
 ; Optional offline extension
 [offline]
 bin\chrome\offline.jar
-bin\chrome\offline.manifest
 
 ; Optional RSS extension
 [newsblog]
 bin\chrome\newsblog.jar
-bin\chrome\newsblog.manifest
-
 bin\defaults\isp\rss.rdf
 bin\components\newsblog.js
 
 ; Optional Talkback
 [talkback]
-bin\extensions\talkback@mozilla.org\components\qfaservices.dll
-bin\extensions\talkback@mozilla.org\components\qfaservices.xpt
-bin\extensions\talkback@mozilla.org\components\BrandRes.dll
-bin\extensions\talkback@mozilla.org\components\fullsoft.dll
-bin\extensions\talkback@mozilla.org\components\master.ini
-bin\extensions\talkback@mozilla.org\components\talkback-l10n.ini
-bin\extensions\talkback@mozilla.org\components\talkback.cnt
-bin\extensions\talkback@mozilla.org\components\talkback.exe
-bin\extensions\talkback@mozilla.org\components\talkback.hlp
+bin\components\qfaservices.dll
+bin\components\qfaservices.xpt
+bin\components\BrandRes.dll
+bin\components\fullsoft.dll
+bin\components\master.ini
+bin\components\talkback-l10n.ini
+bin\components\talkback.cnt
+bin\components\talkback.exe
+bin\components\talkback.hlp
 
 [mail]
 
@@ -65,13 +70,6 @@ bin\README.txt
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Mail Specific Files
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-bin\defaults\messenger\SpamAssassin.sfd
-bin\defaults\messenger\SpamPal.sfd
-bin\defaults\profile\localstore.rdf
-bin\defaults\profile\prefs.js
-bin\defaults\profile\mimeTypes.rdf
-bin\updater.ini
-
 bin\components\addrbook.xpt
 bin\components\mime.xpt
 bin\components\mailnews.xpt
@@ -87,19 +85,11 @@ bin\components\impComm4xMail.xpt
 bin\components\mailview.xpt
 bin\components\mailprofilemigration.xpt
 
-bin\chrome\toolkit.jar
-bin\chrome\toolkit.manifest
-bin\chrome\comm.jar
-bin\chrome\comm.manifest
-bin\chrome\pippki.jar
-bin\chrome\pippki.manifest
-bin\chrome\messenger.jar
-bin\chrome\messenger.manifest
+bin\chrome\mail.jar
 bin\chrome\icons\default\abcardWindow.ico
 bin\chrome\icons\default\addressbookWindow.ico
 bin\chrome\icons\default\messengerWindow.ico
 bin\chrome\icons\default\msgcomposeWindow.ico
-bin\extensions\{972ce4c6-7e08-4474-a285-3208198ce6fd}\install.rdf
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Mail Extensions (smime, etc.)
@@ -121,8 +111,7 @@ bin\components\msgsmime.xpt
 ; Chrome Files
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-bin\chrome\classic.jar
-bin\chrome\classic.manifest
+bin\chrome\qute.jar
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Default Profile Settings
@@ -139,7 +128,6 @@ bin\greprefs\
 ; LDAP components 
 bin\components\mozldap.xpt
 bin\components\nsLDAPPrefsService.js
-bin\components\nsAbLDAPAttributeMap.js
 bin\nsldap32v50.dll
 bin\nsldappr32v50.dll
 
@@ -165,10 +153,6 @@ bin\components\xpinstall.xpt
 
 ; xmlextras (for RSS feeds and the like)
 bin\components\xmlextras.xpt
-
-; misson control, autoconfig
-bin\defaults\autoconfig\platform.js
-bin\defaults\autoconfig\prefcalls.js
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Base Package Files
@@ -231,7 +215,6 @@ bin\components\toolkitprofile.xpt
 ; toolkit
 bin\components\appstartup.xpt
 bin\components\commandlines.xpt
-bin\components\chrome.xpt
 
 ; rdf
 bin\components\rdf.xpt
@@ -323,7 +306,6 @@ bin\components\lwbrk.xpt
 bin\components\nsCloseAllWindows.js
 bin\components\winhooks.xpt
 
-bin\res\hiddenWindow.html
 bin\res\ua.css
 bin\res\html.css
 bin\res\quirk.css
@@ -333,6 +315,7 @@ bin\res\charsetalias.properties
 bin\res\langGroups.properties
 bin\res\language.properties
 bin\res\wincharset.properties
+bin\res\builtin\*
 bin\res\entityTables\*
 
 ; editor resource files
@@ -356,11 +339,3 @@ bin\res\table-remove-column.gif
 bin\res\table-remove-row-active.gif
 bin\res\table-remove-row-hover.gif
 bin\res\table-remove-row.gif
-
-; svg
-bin\gksvggdiplus.dll
-bin\res\svg.css
-bin\components\dom_svg.xpt
-
-; [Updater]
-bin\updater.exe

@@ -1,5 +1,4 @@
-/* -*- Mode: javascript; tab-width: 20; indent-tabs-mode: nil; c-basic-offset: 4 -*-
- * ***** BEGIN LICENSE BLOCK *****
+/* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
  * The contents of this file are subject to the Mozilla Public License Version
@@ -70,8 +69,6 @@
 *  G L O B A L     V A R I A B L E S
 */
 
-var gCalendar = null;
-
 //the next line needs XX-DATE-XY but last X instead of Y
 var gDateMade = "2002052213-cal"
 
@@ -87,6 +84,9 @@ var gEventSource = null;
 // single global instance of CalendarWindow
 var gCalendarWindow;
 
+// style sheet number for calendar
+var gCalendarStyleSheet;
+
 //an array of indexes to boxes for the week view
 var gHeaderDateItemArray = null;
 
@@ -98,6 +98,8 @@ var gDisplayToDoInViewChecked ;
 // DAY VIEW VARIABLES
 var kDayViewHourLeftStart = 105;
 
+var kWeekViewHourHeight = 50;
+var kWeekViewHourHeightDifference = 2;
 var kDaysInWeek = 7;
 
 const kMAX_NUMBER_OF_DOTS_IN_MONTH_VIEW = "8"; //the maximum number of dots that fit in the month view
@@ -149,12 +151,12 @@ var categoryPrefObserver =
         }
       }
 
-      var categoryPrefBranch = prefService.getBranch("calendar.category.color.");
+      var catergoryPrefBranch = prefService.getBranch("calendar.category.color.");
       var prefCount = { value: 0 };
-      var prefArray = categoryPrefBranch.getChildList("", prefCount);
+      var prefArray = catergoryPrefBranch.getChildList("", prefCount);
       for (i = 0; i < prefArray.length; ++i) {
          var prefName = prefArray[i];
-         var prefValue = categoryPrefBranch.getCharPref(prefName);
+         var prefValue = catergoryPrefBranch.getCharPref(prefName);
          this.mCalendarStyleSheet.insertRule(".event-category-" + prefName + " { border-color: " + prefValue +" !important; }", 1);
       }
    }
@@ -166,9 +168,15 @@ var categoryPrefObserver =
 
 function calendarInit() 
 {
-    // XXX remove this eventually
-    gICalLib = new Object();
+	// get the calendar event data source
+   gEventSource = new CalendarEventDataSource();
+   
+   // get the Ical Library
+   gICalLib = gEventSource.getICalLib();
 
+   // this suspends feedbacks to observers until all is settled
+   gICalLib.batchMode = true;
+   
    // set up the CalendarWindow instance
    
    gCalendarWindow = new CalendarWindow();
@@ -187,92 +195,102 @@ function calendarInit()
    prepareCalendarToDoUnifinder();
    
    update_date();
+   	
+	checkForMailNews();
 
-   checkForMailNews();
+   // Change made by CofC for Calendar Coloring
+   // initialize calendar color style rules in the calendar's styleSheet
 
-   initCalendarManager();
+   // find calendar's style sheet index
+   var i;
+   for (i=0; i<document.styleSheets.length; i++)
+   {
+      if (document.styleSheets[i].href.match(/chrome.*\/skin.*\/calendar.css$/))
+      {
+          gCalendarStyleSheet = document.styleSheets[i];
+          break;
+      }
+   }
 
-   //XXX Reimplement this function so that eventboxes will be colored
-   //updateColors();
-}
+   var calendarNode;
+   var containerName;
+   var calendarColor;
 
-function updateColors()
-{
-    // Change made by CofC for Calendar Coloring
-    // initialize calendar color style rules in the calendar's styleSheet
+   // loop through the calendars via the rootSequence of the RDF datasource
+   var seq = gCalendarWindow.calendarManager.rdf.getRootSeq("urn:calendarcontainer");
+   var list = seq.getSubNodes();
+   var calListItems = document.getElementById( "list-calendars-listbox" ).getElementsByTagName("listitem");
 
-    // find calendar's style sheet index
-    for (var i in document.styleSheets) {
-        if (document.styleSheets[i].href.match(
-                /chrome.*\/skin.*\/calendar.css$/ )) {
-            var calStyleSheet = document.styleSheets[i];
-            break;
-        }
-    }
+   for(i=0; i<list.length;i++)
+   {
 
-    // get the list of all calendars from the manager
-    const calMgr = getCalendarManager();
-    var count = {};
-    var calendars = calMgr.getCalendars(count);
-    
-    var calListItems = document.getElementById( "list-calendars-listbox" )
-        .getElementsByTagName("listitem");
+     calendarNode = gCalendarWindow.calendarManager.rdf.getNode( list[i].subject );
+     
+     // grab the container name and use it for the name of the style rule
+     containerName = list[i].subject.split(":")[2];
 
-    for(i in calendars) {
-        // XXX need to get this from the calendar prefs
-        const containerName = "default";
+     // obtain calendar color from the rdf datasource
+     calendarColor = calendarNode.getAttribute("http://home.netscape.com/NC-rdf#color");
 
-        // XXX need to get this from the calendar prefs
-        const calendarColor = "#FFFFFF"; // XXX what is default?
+     // if the calendar had a color attribute create a style sheet for it
+     if (calendarColor != null)
+     {
+       gCalendarStyleSheet.insertRule("." + containerName + " { background-color:" + calendarColor + "!important;}", 1);
 
-        // if the calendar had a color attribute create a style sheet for it
-        if (calendarColor != null) {
-            calStyleSheet.insertRule("." + containerName
-                                     + " { background-color:"
-                                     + calendarColor + "!important;}", 1);
-            calStyleSheet.insertRule("." + containerName + " { color:"
-                                     + getContrastingTextColor(calendarColor)
-                                     + "!important;}", 1);
-            //dump("calListItems[0] = " + calListItems[0] + "\n");
-            //dump("calListItems[1] = " + calListItems[1] + "\n");
-            var calListItem = calListItems[i];
-            if (calListItem && calListItem.childNodes[0]) {
-                calListItem.childNodes[0]
-                    .setAttribute("class", "calendar-list-item-class "
-                                  + containerName);
-            }
-        }
-    }
+       var calcColor = calendarColor.replace(/#/g, "");
+       var red = parseInt(calcColor.substring(0, 2), 16);
+       var green = parseInt(calcColor.substring(2, 4), 16);
+       var blue = parseInt(calcColor.substring(4, 6), 16);
 
-    // Setup css classes for category colors
-    var catergoryPrefBranch = prefService.getBranch("");
-    var pbi = catergoryPrefBranch.QueryInterface(
-        Components.interfaces.nsIPrefBranch2);
-    pbi.addObserver("calendar.category.color.", categoryPrefObserver, false);
-    categoryPrefObserver.mCalendarStyleSheet = calStyleSheet;
-    categoryPrefObserver.observe(null, null, "");
+       // Calculate the L(ightness) value of the HSL color system.
+       // L = (max(R, G, B) + min(R, G, B)) / 2
+       var max = Math.max(Math.max(red, green), blue);
+       var min = Math.min(Math.min(red, green), blue);
+       var lightness = (max + min) / 2;
 
-    if( ("arguments" in window) && (window.arguments.length) &&
-        (typeof(window.arguments[0]) == "object") &&
-        ("channel" in window.arguments[0]) ) {
-        gCalendarWindow.calendarManager.checkCalendarURL( 
-            window.arguments[0].channel );
-    }
+       // Consider all colors with less than 50% Lightness as dark colors
+       // and use white as the foreground color; otherwise use black.
+       // Actually we use a treshold a bit below 50%, so colors like
+       // #FF0000, #00FF00 and #0000FF still get black text which looked
+       // better when we tested this.
+       if (lightness < 120) {
+         gCalendarStyleSheet.insertRule("." + containerName + " { color:" + " white" + "!important;}", 1);
+       } else {
+         gCalendarStyleSheet.insertRule("." + containerName + " { color:" + " black" + "!important;}", 1);
+       }
+       var calListItem = calListItems[i+1];
+       if (calListItem && calListItem.childNodes[0]) {
+         calListItem.childNodes[0].setAttribute("class", "calendar-list-item-class " + containerName);
+       }
+     }
+   }
 
-    // a bit of a hack since the menulist doesn't remember the selected value
-    var value = document.getElementById( 'event-filter-menulist' ).value;
-    document.getElementById( 'event-filter-menulist' ).selectedItem = 
-        document.getElementById( 'event-filter-'+value );
+   // Setup css classes for category colors
+   var catergoryPrefBranch = prefService.getBranch("");
+   var pbi = catergoryPrefBranch.QueryInterface(Components.interfaces.nsIPrefBranchInternal);
+   pbi.addObserver("calendar.category.color.", categoryPrefObserver, false);
+   categoryPrefObserver.mCalendarStyleSheet = gCalendarStyleSheet;
+   categoryPrefObserver.observe(null, null, "");
 
-    // XXX busted somehow, so I've commented it out for now.  also, why the
-    // heck are we doing this here?
-    //gEventSource.alarmObserver.firePendingAlarms();
+   if( ("arguments" in window) &&
+       (window.arguments.length) &&
+       (typeof(window.arguments[0]) == "object") &&
+       ("channel" in window.arguments[0]) )
+   {
+      gCalendarWindow.calendarManager.checkCalendarURL( window.arguments[0].channel );
+   }
 
-    // All is settled, enable feedbacks to observers
-    gICalLib.batchMode = false;
+   //a bit of a hack since the menulist doesn't remember the selected value     
+   var value = document.getElementById( 'event-filter-menulist' ).value;
+   document.getElementById( 'event-filter-menulist' ).selectedItem = document.getElementById( 'event-filter-'+value );
 
-    var toolbox = document.getElementById("calendar-toolbox");
-    toolbox.customizeDone = CalendarToolboxCustomizeDone;
+   gEventSource.alarmObserver.firePendingAlarms();
+
+   //All is settled, enable feedbacks to observers
+   gICalLib.batchMode = false;
+
+   var toolbox = document.getElementById("calendar-toolbox");
+   toolbox.customizeDone = CalendarToolboxCustomizeDone;
 }
 
 // Set the date and time on the clock and set up a timeout to refresh the clock when the 
@@ -303,7 +321,7 @@ function calendarFinish()
    finishCalendarToDoUnifinder();
 
    var pbi = prefService.getBranch("");
-   pbi = pbi.QueryInterface(Components.interfaces.nsIPrefBranch2);
+   pbi = pbi.QueryInterface(Components.interfaces.nsIPrefBranchInternal);
    pbi.removeObserver("calendar.category.color.", categoryPrefObserver);
 
    gCalendarWindow.close();
@@ -313,10 +331,10 @@ function calendarFinish()
 
 function launchPreferences()
 {
-    if (applicationName == "Mozilla" || applicationName == "Firebird")
-        goPreferences( "calendarPanel", "chrome://calendar/content/pref/calendarPref.xul", "calendarPanel" );
-    else
-        window.openDialog("chrome://calendar/content/pref/prefBird.xul", "PrefWindow", "chrome,titlebar,resizable,modal");
+  if( applicationName == "Mozilla" || applicationName == "Firebird" ) {
+    goPreferences( "calendarPanel", "chrome://calendar/content/pref/calendarPref.xul", "calendarPanel" );
+  } else
+    window.openDialog("chrome://calendar/content/pref/prefBird.xul", "PrefWindow", "chrome,titlebar,resizable,modal");
 }
 
 /** 
@@ -345,7 +363,7 @@ function dayEventItemClick( eventBox, event )
 {
    //do this check, otherwise on double click you get into an infinite loop
    if( event.detail == 1 )
-      gCalendarWindow.EventSelection.replaceSelection( eventBox.event );
+      gCalendarWindow.EventSelection.replaceSelection( eventBox.calendarEventDisplay.event );
    
    if ( event ) 
    {
@@ -368,7 +386,7 @@ function dayEventItemDoubleClick( eventBox, event )
    // we only care about button 0 (left click) events
    if (event.button != 0) return;
    
-   editEvent( eventBox.event );
+   editEvent( eventBox.calendarEventDisplay.event );
 
    if ( event ) 
    {
@@ -435,22 +453,22 @@ function dayViewHourDoubleClick( event )
 *    event      - the click event, Not used yet 
 */
 
-function weekEventItemClick(eventBox, event)
+function weekEventItemClick( eventBox, event )
 {
-    //do this check, otherwise on double click you get into an infinite loop
-    if (event.detail == 1) {
-        var calEvent = eventBox.event;
+   //do this check, otherwise on double click you get into an infinite loop
+   if( event.detail == 1 )
+   {
+      gCalendarWindow.EventSelection.replaceSelection( eventBox.calendarEventDisplay.event );
 
-        gCalendarWindow.EventSelection.replaceSelection(calEvent);
+      var newDate = new Date( eventBox.calendarEventDisplay.displayDate );
 
-        var newDate = new Date(calEvent.startDate.jsDate);
+      gCalendarWindow.setSelectedDate( newDate, false );
+   }
 
-        gCalendarWindow.setSelectedDate(newDate, false);
-    }
-
-    if (event) {
-        event.stopPropagation();
-    }
+   if ( event ) 
+   {
+      event.stopPropagation();
+   }
 }
 
 
@@ -468,7 +486,7 @@ function weekEventItemDoubleClick( eventBox, event )
    // we only care about button 0 (left click) events
    if (event.button != 0) return;
    
-   editEvent( eventBox.event );
+   editEvent( eventBox.calendarEventDisplay.event );
 
    if ( event ) 
    {
@@ -545,11 +563,11 @@ function monthEventBoxClickEvent( eventBox, event )
    //do this check, otherwise on double click you get into an infinite loop
    if( event.detail == 1 )
    {
-      gCalendarWindow.EventSelection.replaceSelection( eventBox.event );
+      gCalendarWindow.EventSelection.replaceSelection( eventBox.calendarEventDisplay.event );
       
       var newDate = gCalendarWindow.getSelectedDate();
 
-      newDate.setDate( eventBox.event.startDate.day );
+      newDate.setDate( eventBox.calendarEventDisplay.event.start.day );
 
       gCalendarWindow.setSelectedDate( newDate, false );
    }
@@ -576,7 +594,7 @@ function monthEventBoxDoubleClickEvent( eventBox, event )
    
    gCalendarWindow.monthView.clearSelectedDate();
    
-   editEvent( eventBox.event );
+   editEvent( eventBox.calendarEventDisplay.event );
 
    if ( event ) 
    {
@@ -630,13 +648,14 @@ function multiweekToDoBoxDoubleClickEvent( todoBox, event )
    
    gCalendarWindow.multiweekView.clearSelectedDate();
    
-   editEvent( todoBox.calendarToDo );
+   editToDo( todoBox.calendarToDo );
 
    if ( event ) 
    {
       event.stopPropagation();
    }
 }
+   
 
 /** 
 * Called when the new event button is clicked
@@ -645,7 +664,24 @@ var gNewDateVariable = null;
 
 function newEventCommand( event )
 {
-   newEvent();
+   var startDate;
+
+   if( gNewDateVariable != null )
+   {
+      startDate = gNewDateVariable;
+   }
+   else
+      startDate = gCalendarWindow.currentView.getNewEventDate();
+
+   var Minutes = Math.ceil( startDate.getMinutes() / 5 ) * 5 ;
+   
+   startDate = new Date( startDate.getFullYear(),
+                         startDate.getMonth(),
+                         startDate.getDate(),
+                         startDate.getHours(),
+                         Minutes,
+                         0);
+   newEvent( startDate );
 }
 
 
@@ -658,96 +694,35 @@ function newToDoCommand()
   newToDo( null, null ); // new task button defaults to undated todo
 }
 
-function newCalendarDialog()
+
+function createEvent ()
 {
-    openCalendarWizard();
+   var iCalEventComponent = Components.classes["@mozilla.org/icalevent;1"].createInstance();
+   var iCalEvent = iCalEventComponent.QueryInterface(Components.interfaces.oeIICalEvent);
+   return iCalEvent;
 }
 
-function editCalendarDialog(event)
+
+function createToDo ()
 {
-    openCalendarProperties(document.popupNode.calendar, null);
+   var iCalToDoComponent = Components.classes["@mozilla.org/icaltodo;1"].createInstance();
+   var iCalToDo = iCalToDoComponent.QueryInterface(Components.interfaces.oeIICalTodo);
+   return iCalToDo;
 }
 
-function deleteCalendar(event)
+
+function isEvent ( aObject )
 {
-    var cal = document.popupNode.calendar
-    getDisplayComposite().removeCalendar(cal.uri);
-    var calMgr = getCalendarManager();
-    calMgr.unregisterCalendar(cal);
-    // Delete file?
-    //calMgr.deleteCalendar(cal);
+   return aObject instanceof Components.interfaces.oeIICalEvent;
 }
 
 
-function appendCalendars(to, froms, listener)
+function isToDo ( aObject )
 {
-    var getListener = {
-        onOperationComplete: function(aCalendar, aStatus, aOperationType, aId, aDetail)
-        {
-            if (listener)
-                listener.onOperationComplete(aCalendar, aStatus, aOperationType,
-                                             aId, aDetail);
-        },
-        onGetResult: function(aCalendar, aStatus, aItemType, aDetail, aCount, aItems)
-        {
-            if (!Components.isSuccessCode(aStatus)) {
-                aborted = true;
-                return;
-            }
-            if (aCount) {
-                for (var i=0; i<aCount; ++i) {
-                    // Store a (short living) reference to the item.
-                    var itemCopy = aItems[i].clone();
-                    to.addItem(itemCopy, null);
-                }  
-            }
-        }
-    };
-
-
-    for each(var from in froms) {
-        from.getItems(Components.interfaces.calICalendar.ITEM_FILTER_TYPE_ALL,
-                      0, null, null, getListener);
-    }
+   return aObject instanceof Components.interfaces.oeIICalTodo;
 }
 
 
-
-/* 
-* returns true if lastModified match
-*
-*If a client for some reason modifies the item without
-*touching lastModified this will obviously fail
-*/
-function compareItems( aObject1, aObject2 ){
-   if ( aObject1 == null || aObject2 == null){
-      return false;
-   }
-   //workaround Bug 270644, normally I should only check lastModified
-   //but on new events such property throws an error and need a try
-   try{ 
-      return (aObject1.lastModified == aObject2.lastModified);
-   }catch(er){
-      return (aObject1.stamp.getTime() == aObject2.stamp.getTime());
-   }
-}
-
-
-/* 
-* useful to get the new version of an item
-* in order to check if it changed 
-*/
-function fetchItem( aObject ){
-   try{
-      if ( isToDo(aObject) ) {
-         return gICalLib.fetchTodo( aObject.id ); 
-      } else {
-         return gICalLib.fetchEvent( aObject.id );
-      }
-   }catch(er){
-   }
-   return null;
-}
 
 /** 
 * Defaults null start/end date based on selected date in current view.
@@ -755,32 +730,35 @@ function fetchItem( aObject ){
 * Calls editNewEvent. 
 */
 
-function newEvent(startDate, endDate, allDay)
+function newEvent( startDate, endDate, allDay )
 {
    // create a new event to be edited and added
    var calendarEvent = createEvent();
+   
+   if( !startDate )
+      startDate = gCalendarWindow.currentView.getNewEventDate();
 
-   if (!startDate) {
-       startDate = gCalendarWindow.currentView.getNewEventDate();
+   calendarEvent.start.setTime( startDate );
+   
+   if( !endDate )
+   {
+     var MinutesToAddOn = getIntPref(gCalendarWindow.calendarPreferences.calendarPref, "event.defaultlength", gCalendarBundle.getString("defaultEventLength" ) );
+   
+      var endDateTime = startDate.getTime() + ( 1000 * 60 * MinutesToAddOn );
+   
+      calendarEvent.end.setTime( endDateTime );
    }
-
-   calendarEvent.startDate.jsDate = startDate;
-
-   if (!endDate) {
-       var MinutesToAddOn = getIntPref(gCalendarWindow.calendarPreferences.calendarPref, "event.defaultlength", gCalendarBundle.getString("defaultEventLength" ) );
-       
-       endDate = new Date(startDate);
-       endDate.setMinutes(endDate.getMinutes() + MinutesToAddOn);
+   else
+   {
+      calendarEvent.end.setTime( endDate.getTime() );
    }
-
-   calendarEvent.endDate.jsDate = endDate
-
-   if (allDay)
-       calendarEvent.isAllDay = true;
-
-   var calendar = getSelectedCalendarOrNull();
-
-   editNewEvent( calendarEvent, calendar );
+   
+   if( allDay )
+     calendarEvent.allDay = true;
+   
+   var server = getSelectedCalendarPathOrNull();
+   
+   editNewEvent( calendarEvent, server );
 }
 
 /*
@@ -793,85 +771,85 @@ function newToDo ( startDate, dueDate )
     var calendarToDo = createToDo();
    
     // created todo has no start or due date unless user wants one
-    if (startDate) 
-        calendarToDo.entryTime.jsDate = startDate;
+    if (! startDate ) 
+      calendarToDo.start.clear();
+  else
+    calendarToDo.start.setTime( startDate );
 
-    if (dueDate)
-        calendarToDo.dueDate.jsDate = dueDate;
+    if (! dueDate ) 
+      calendarToDo.due.clear();
+  else
+    calendarToDo.due.setTime( dueDate );
 
-    var calendar = getSelectedCalendarOrNull();
-    
-    editNewToDo(calendarToDo, calendar);
+    var server = getSelectedCalendarPathOrNull();
+   
+    editNewToDo(calendarToDo, server);
 }
 
-/**
- * Get the default calendar selected in the calendars tab.
- * Returns a calICalendar object, or null if none selected.
- */
-function getSelectedCalendarOrNull()
+function getSelectedCalendarPathOrNull()
 {
+   //get the selected calendar
    var selectedCalendarItem = document.getElementById( "list-calendars-listbox" ).selectedItem;
    
    if ( selectedCalendarItem )
-     return selectedCalendarItem.calendar;
+     return selectedCalendarItem.getAttribute( "calendarPath" );
    else
      return null;
 }
 
 /**
 * Launch the event dialog to edit a new (created, imported, or pasted) event.
-* 'calendar' is a calICalendar object.
+* 'server' is calendarPath.
 * When the user clicks OK "addEventDialogResponse" is called
 */
 
-function editNewEvent( calendarEvent, calendar )
+function editNewEvent( calendarEvent, server )
 {
   openEventDialog(calendarEvent,
                   "new",
                   self.addEventDialogResponse,
-                  calendar);
+                  server);
 }
 
 /**
 * Launch the todo dialog to edit a new (created, imported, or pasted) ToDo.
-* 'calendar' is a calICalendar object.
+* 'server' is calendarPath.
 * When the user clicks OK "addToDoDialogResponse" is called
 */
-function editNewToDo( calendarToDo, calendar )
+function editNewToDo( calendarToDo, server )
 {
-  openEventDialog(calendarToDo,
-                  "new",
-                  self.addToDoDialogResponse,
-                  calendar);
+  openToDoDialog(calendarToDo,
+                 "new",
+                 self.addToDoDialogResponse,
+                 server);
 }
 
 /** 
 * Called when the user clicks OK in the new event dialog
-* 'calendar' is a calICalendar object.
 *
-* Updates the data source.  The unifinder views and the calendar views will be
-* notified of the change through their respective observers.
+* Update the data source, the unifinder views and the calendar views will be
+* notified of the change through their respective observers
 */
 
-function addEventDialogResponse( calendarEvent, calendar )
+function addEventDialogResponse( calendarEvent, Server )
 {
-   saveItem( calendarEvent, calendar, "addEvent" );
+   refreshRemoteCalendarAndRunFunction( calendarEvent, Server, "addEvent" );
 }
 
 
 /** 
 * Called when the user clicks OK in the new to do item dialog
-* 'calendar' is a calICalendar object.
+*
 */
 
-function addToDoDialogResponse( calendarToDo, calendar )
+function addToDoDialogResponse( calendarToDo, Server )
 {
-    addEventDialogResponse(calendarToDo, calendar);
+    refreshRemoteCalendarAndRunFunction( calendarToDo, Server, "addTodo" );
 }
 
 
 /** 
-* Helper function to launch the event dialog to edit an event.
+* Helper function to launch the event composer to edit an event.
 * When the user clicks OK "modifyEventDialogResponse" is called
 */
 
@@ -882,48 +860,51 @@ function editEvent( calendarEvent )
                   self.modifyEventDialogResponse,
                   null);
 }
+   
+/** 
+* Helper function to launch the event composer to edit an event.
+* When the user clicks OK "modifyEventDialogResponse" is called
+*/
 
-function editToDo( calendarTodo )
+function editToDo( calendarToDo )
 {
-  openEventDialog(calendarTodo,
-                  "edit",
-                  self.modifyEventDialogResponse,
-                  null);
+  openToDoDialog(calendarToDo,
+                 "edit",
+                 self.modifyToDoDialogResponse,
+                 null);
 }
    
 /** 
 * Called when the user clicks OK in the edit event dialog
-* 'calendar' is a calICalendar object.
 *
 * Update the data source, the unifinder views and the calendar views will be
 * notified of the change through their respective observers
 */
 
-function modifyEventDialogResponse( calendarEvent, calendar, originalEvent )
+function modifyEventDialogResponse( calendarEvent, Server )
 {
-   saveItem( calendarEvent, calendar, "modifyEvent", originalEvent );
+   refreshRemoteCalendarAndRunFunction( calendarEvent, Server, "modifyEvent" );
 }
 
 
 /** 
 * Called when the user clicks OK in the edit event dialog
-* 'calendar' is a calICalendar object.
 *
 * Update the data source, the unifinder views and the calendar views will be
 * notified of the change through their respective observers
 */
 
-function modifyToDoDialogResponse( calendarToDo, calendar, originalToDo )
+function modifyToDoDialogResponse( calendarToDo, Server )
 {
-    modifyEventDialogResponse(calendarToDo, calendar, originalToDo);
+    refreshRemoteCalendarAndRunFunction( calendarToDo, Server, "modifyTodo" );
 }
 
 
 /** PRIVATE: open event dialog in mode, and call onOk if ok is clicked.
     'mode' is "new" or "edit".
-    'calendar' is default calICalendar, typically from getSelectedCalendarOrNull
+    'server' is path to calendar to update.
  **/
-function openEventDialog(calendarEvent, mode, onOk, calendar)
+function openEventDialog(calendarEvent, mode, onOk, server)
 {
   // set up a bunch of args to pass to the dialog
   var args = new Object();
@@ -931,13 +912,33 @@ function openEventDialog(calendarEvent, mode, onOk, calendar)
   args.mode = mode;
   args.onOk = onOk;
 
-  if( calendar )
-    args.calendar = calendar;
+  if( server )
+    args.server = server;
 
   // wait cursor will revert to auto in eventDialog.js loadCalendarEventDialog
   window.setCursor( "wait" );
   // open the dialog modally
   openDialog("chrome://calendar/content/eventDialog.xul", "caEditEvent", "chrome,titlebar,modal", args );
+}
+
+/** PRIVATE: open todo dialog in mode, and call onOk if ok is clicked.
+    'mode' is "new" or "edit".
+    'server' is path to calendar to update.
+ **/
+function openToDoDialog(calendarToDo, mode, onOk, server)
+{
+  // set up a bunch of args to pass to the dialog
+  var args = new Object();
+  args.calendarEvent = calendarToDo;
+  args.mode = mode;
+  args.onOk = onOk;
+  if( server )
+    args.server = server;
+   
+  // wait cursor will revert to auto in todoDialog.js loadCalendarEventDialog
+  window.setCursor( "wait" );
+  // open the dialog modally
+  openDialog("chrome://calendar/content/toDoDialog.xul", "caEditToDo", "chrome,titlebar,modal", args );
 }
 
 /**
@@ -958,79 +959,167 @@ function editEventCommand()
 }
 
 
-//originalEvent is the item before edits were committed, 
-//used to check if there were external changes for shared calendar
-function saveItem( calendarEvent, calendar, functionToRun, originalEvent )
+function refreshRemoteCalendarAndRunFunction( calendarEvent, Server, functionToRun )
 {
-    dump(functionToRun + " " + calendarEvent.title + "\n");
-
-    if (functionToRun == 'addEvent') {
-        doTransaction('add', calendarEvent, calendar, null, null);
-    } else if (functionToRun == 'modifyEvent') {
-        // compare cal.uri because there may be multiple instances of
-        // calICalendar or uri for the same spec, and those instances are
-        // not ==.
-        if (!originalEvent.calendar || 
-            (originalEvent.calendar.uri.equals(calendar.uri)))
-            doTransaction('modify', calendarEvent, calendar, originalEvent, null);
-        else
-            doTransaction('move', calendarEvent, calendar, originalEvent, null);
-    }
+   var calendarServer = gCalendarWindow.calendarManager.getCalendarByName( Server )
+   
+   if( calendarServer )
+   {
+      if( calendarServer.getAttribute( "http://home.netscape.com/NC-rdf#publishAutomatically" ) == "true" )
+      {
+         var onResponseExtra = function( )
+         {
+            //add the event
+            eval( "gICalLib."+functionToRun+"( calendarEvent, Server )" );
+   
+            gCalendarWindow.clearSelectedEvent( calendarEvent );
+            
+            //publish the changes back to the server
+            gCalendarWindow.calendarManager.publishCalendar( calendarServer );
+         }
+   
+         //refresh the calendar file.
+         gCalendarWindow.calendarManager.retrieveAndSaveRemoteCalendar( calendarServer, onResponseExtra );
+      }
+      else
+      {
+         eval( "gICalLib."+functionToRun+"( calendarEvent, Server )" );
+   
+         gCalendarWindow.clearSelectedEvent( calendarEvent );
+      }
+   }
+   else
+   {
+      eval( "gICalLib."+functionToRun+"( calendarEvent, Server )" );
+   
+      gCalendarWindow.clearSelectedEvent( calendarEvent );
+   }
 }
 
 
 /**
 *  This is called from the unifinder's delete command
-*
 */
-function deleteItems( SelectedItems, DoNotConfirm )
-{
-    if (!SelectedItems)
-        return;
 
-    startBatchTransaction();
-    for (i in SelectedItems) {
-        doTransaction('delete', SelectedItems[i], SelectedItems[i].calendar, null, null);
-    }
-    endBatchTransaction();
-}
-
-
-/**
-*  Delete the current selected item with focus from the ToDo unifinder list
-*/
 function deleteEventCommand( DoNotConfirm )
 {
    var SelectedItems = gCalendarWindow.EventSelection.selectedEvents;
-   deleteItems( SelectedItems, DoNotConfirm );
-   for ( i in  SelectedItems) {
-      gCalendarWindow.clearSelectedEvent( SelectedItems[i] );
-   }
+   outerLoop:
+      if ( SelectedItems )
+      {
+         if ( !DoNotConfirm )
+         {
+            var calendarEvent = SelectedItems[0];
+            var confirmText
+
+            if ( SelectedItems.length > 1 )
+               confirmText = confirmDeleteAllEvents;
+            else if ( calendarEvent.title )
+               confirmText = (confirmDeleteEvent+" "+calendarEvent.title+"?" );
+            else 
+               confirmText = confirmDeleteUntitledEvent;
+
+            if ( !confirm( confirmText ) )
+               break outerLoop;
+         }
+
+         calendarsToPublish = new Array();
+         var autoPublishEnabled = false;
+         var serverInArray = false;
+         for( i = 0; i < SelectedItems.length; i++ )
+         {
+            var calendarServer = gCalendarWindow.calendarManager.getCalendarByName( SelectedItems[i].parent.server );
+            if( calendarServer.getAttribute( "http://home.netscape.com/NC-rdf#publishAutomatically" ) == "true" )
+            {
+
+               // If the calendarsToPublish array is empty, add this alarm's calendar's parent server to the array
+               if( calendarsToPublish.length == 0 )
+                  serverInArray = false;
+               else
+               {
+                  // Check if this alarm's parent calendar's server is already in the calendarsToPublish array
+                  serverInArray = false;
+                  for( var j = 0; j < calendarsToPublish.length; j++ )
+                  {
+                     if( calendarsToPublish[j].getAttribute( "http://home.netscape.com/NC-rdf#remotePath" ) ==
+                         calendarServer.getAttribute( "http://home.netscape.com/NC-rdf#remotePath" ) )
+                     {
+                        serverInArray = true;
+                     }
+                  }
+               }
+
+               // If this event's parent calendar's server isn't in the array, add it
+               if( !serverInArray )
+                  calendarsToPublish.push(calendarServer);
+            }
+         }
+
+         gICalLib.batchMode = true;
+         for( i = 0; i < SelectedItems.length; i++ )
+         {
+            try {
+               gCalendarWindow.clearSelectedEvent( SelectedItems[i] );
+               gICalLib.deleteEvent( SelectedItems[i].id );
+            }
+            catch (ex) {
+               dump("*** deleteEventCommand failed: "+ ex + "\n");
+            }
+         }
+         gICalLib.batchMode = false;
+
+         // If we need to publish at least one calendar, publish to each calendarServer in the array
+         if( calendarsToPublish.length )
+         {
+            for( i = 0; i < calendarsToPublish.length; i++ )
+            {
+               gCalendarWindow.calendarManager.publishCalendar( calendarsToPublish[i] );
+            }
+         }
+      }
 }
 
 
 /**
 *  Delete the current selected item with focus from the ToDo unifinder list
 */
+
 function deleteToDoCommand( DoNotConfirm )
 {
-   var SelectedItems = new Array();
-   var tree = document.getElementById( ToDoUnifinderTreeName );
-   var start = new Object();
-   var end = new Object();
-   var numRanges = tree.view.selection.getRangeCount();
-   var t;
-   var v;
-   var toDoItem;
-   for (t = 0; t < numRanges; t++) {
-      tree.view.selection.getRangeAt(t, start, end);
-      for (v = start.value; v <= end.value; v++) {
-         toDoItem = tree.taskView.getCalendarTaskAtRow( v );
-         SelectedItems.push( toDoItem );
-      }
-   }
-   deleteItems( SelectedItems, DoNotConfirm );
-   tree.view.selection.clearSelection();
+   // TODO Implement Confirm
+
+    var tree = document.getElementById( ToDoUnifinderTreeName );
+    var start = new Object();
+    var end = new Object();
+    var numRanges = tree.view.selection.getRangeCount();
+
+    // delete in reverse order so indexes of remaining selected tasks stay same
+    var t;
+    var v;
+    var toDoItem;
+    if( numRanges == 1 ) {
+        for (t=numRanges-1; t>=0; t--){
+            tree.view.selection.getRangeAt(t,start,end);
+            for (v=end.value; v>=start.value; v--){
+                toDoItem = tree.taskView.getCalendarTaskAtRow( v );
+                refreshRemoteCalendarAndRunFunction( toDoItem.id, toDoItem.parent.server, "deleteTodo" );
+            }
+        }
+    } else {
+        gICalLib.batchMode = true;
+
+        for (t=numRanges; t>=0; t--){
+            tree.view.selection.getRangeAt(t,start,end);
+            for (v=end.value; v>=start.value; v--){
+                toDoItem = tree.taskView.getCalendarTaskAtRow( v );
+                var todoId = toDoItem.id
+                gICalLib.deleteTodo( todoId );   
+            }
+        }
+        gICalLib.batchMode = false;
+    }
+    // all selected tasks deleted, now clear selection
+    tree.view.selection.clearSelection();
 }
 
 
@@ -1083,9 +1172,16 @@ function closeCalendar()
 }
 
 
+function launchWizard()
+{
+   var args = new Object();
+
+   openDialog("chrome://calendar/content/wizard.xul", "caWizard", "chrome,titlebar,modal", args );
+}
+
 function reloadApplication()
 {
-    gEventSource.calendarManager.refreshAllRemoteCalendars();
+	gEventSource.calendarManager.refreshAllRemoteCalendars();
 }
 
 
@@ -1113,7 +1209,7 @@ function printEventArray( calendarEventArray, stylesheetName )
 
       domParser.baseURI = stylesheetUrl;
       var xslContent = loadFile( stylesheetName );
-      var xslDocument = domParser.parseFromString(xslContent, 'application/xml');
+      var xslDocument = domParser.parseFromString(xslContent, 'text/xml');
 
       // hack, might be cleaner to assing xml document directly to printWindow.document
       // var elementNode = xcsDocument.documentElement;
@@ -1140,16 +1236,16 @@ function print()
    args.selectedDate=gNewDateVariable = gCalendarWindow.getSelectedDate();
 
    var Offset = getIntPref(gCalendarWindow.calendarPreferences.calendarPref, 
-                           "week.start", 
-                           gCalendarBundle.getString("defaultWeekStart" ) );
+			   "week.start", 
+			   gCalendarBundle.getString("defaultWeekStart" ) );
    var WeeksInView = getIntPref(gCalendarWindow.calendarPreferences.calendarPref, 
-                                "weeks.inview", 
-                                gCalendarBundle.getString("defaultWeeksInView" ) );
+				"weeks.inview", 
+				gCalendarBundle.getString("defaultWeeksInView" ) );
    WeeksInView = ( WeeksInView >= 6 ) ? 6 : WeeksInView ;
 
    var PreviousWeeksInView = getIntPref(gCalendarWindow.calendarPreferences.calendarPref, 
-                                        "previousweeks.inview", 
-                                        gCalendarBundle.getString("defaultPreviousWeeksInView" ) );
+					"previousweeks.inview", 
+					gCalendarBundle.getString("defaultPreviousWeeksInView" ) );
    PreviousWeeksInView = ( PreviousWeeksInView >= WeeksInView - 1 ) ? WeeksInView - 1 : PreviousWeeksInView ;
 
    args.startOfWeek=Offset;
@@ -1162,45 +1258,44 @@ function print()
 
 function publishEntireCalendar()
 {
-    var args = new Object();
+   var args = new Object();
+   
+   args.onOk =  self.publishEntireCalendarDialogResponse;
+   var name = gCalendarWindow.calendarManager.getSelectedCalendarId();
+   var node = gCalendarWindow.calendarManager.rdf.getNode( name );
 
-    args.onOk =  self.publishEntireCalendarDialogResponse;
-
-    var remotePath = ""; // get a remote path as a pref of the calendar
-
-    if (remotePath != "" && remotePath != null) {
-        var publishObject = new Object( );
-        publishObject.remotePath = remotePath;
-        args.publishObject = publishObject;
-    }
-
-    openDialog("chrome://calendar/content/publishDialog.xul", "caPublishEvents", "chrome,titlebar,modal", args );
+   var remotePath = node.getAttribute( "http://home.netscape.com/NC-rdf#remotePath" );
+   
+   if( remotePath != "" && remotePath != null )
+   {
+      var publishObject = new Object( );
+      publishObject.remotePath = remotePath;
+      args.publishObject = publishObject;
+   }
+   
+   openDialog("chrome://calendar/content/publishDialog.xul", "caPublishEvents", "chrome,titlebar,modal", args );
 }
 
 function publishEntireCalendarDialogResponse( CalendarPublishObject )
 {
-    var icsURL = makeURL(CalendarPublishObject.remotePath);
+   //update the calendar object with the publish information
+   var name = gCalendarWindow.calendarManager.getSelectedCalendarId();
+   
+   //get the node
+   var node = gCalendarWindow.calendarManager.rdf.getNode( name );
+   
+   node.setAttribute( "http://home.netscape.com/NC-rdf#remotePath", CalendarPublishObject.remotePath );
+   
+    if( node.getAttribute("http://home.netscape.com/NC-rdf#publishAutomatically") != "true" )
+        node.setAttribute("http://home.netscape.com/NC-rdf#publishAutomatically", "false");
 
-    var oldCalendar = getDefaultCalendar(); // get the currently selected calendar
+   gCalendarWindow.calendarManager.rdf.flush();
+      
+   calendarUploadFile(node.getAttribute( "http://home.netscape.com/NC-rdf#path" ), 
+                      CalendarPublishObject.remotePath, 
+                      "text/calendar");
 
-    // create an ICS calendar, but don't register it
-    var calManager = getCalendarManager();
-    try {
-        var newCalendar = calManager.createCalendar("ics", icsURL);
-    } catch (ex) {
-        dump(ex);
-        return;
-    }
-
-    var getListener = {
-        onOperationComplete: function(aCalendar, aStatus, aOperationType, aId, aDetail)
-        {
-            // delete the new calendar now that we're done with it
-            calManager.deleteCalendar(newCalendar);
-        }
-    };
-
-    appendCalendars(newCalendar, [oldCalendar], getListener);
+   return( false );
 }
 
 function publishCalendarData()
@@ -1223,21 +1318,27 @@ function publishCalendarDataDialogResponse( CalendarPublishObject )
 
 function getCharPref (prefObj, prefName, defaultValue)
 {
-    try {
+    try
+    {
         return prefObj.getCharPref (prefName);
-    } catch (e) {
-        prefObj.setCharPref( prefName, defaultValue );  
-        return defaultValue;
+    }
+    catch (e)
+    {
+       prefObj.setCharPref( prefName, defaultValue );  
+       return defaultValue;
     }
 }
 
-function getIntPref(prefObj, prefName, defaultValue)
+function getIntPref (prefObj, prefName, defaultValue)
 {
-    try {
-        return prefObj.getIntPref(prefName);
-    } catch (e) {
-        prefObj.setIntPref(prefName, defaultValue);  
-        return defaultValue;
+    try
+    {
+        return prefObj.getIntPref (prefName);
+    }
+    catch (e)
+    {
+       prefObj.setIntPref( prefName, defaultValue );  
+       return defaultValue;
     }
 }
 
@@ -1414,154 +1515,4 @@ function CalendarToolboxCustomizeDone(aToolboxChanged)
 
   // XXX Shouldn't have to do this, but I do
   window.focus();
-}
-
-/**
- * Pick whichever of "black" or "white" will look better when used as a text
- * color against a background of bgColor. 
- *
- * @param bgColor   the background color as a "#RRGGBB" string
- */
-function getContrastingTextColor(bgColor)
-{
-    var calcColor = bgColor.replace(/#/g, "");
-    var red = parseInt(calcColor.substring(0, 2), 16);
-    var green = parseInt(calcColor.substring(2, 4), 16);
-    var blue = parseInt(calcColor.substring(4, 6), 16);
-
-    // Calculate the L(ightness) value of the HSL color system.
-    // L = (max(R, G, B) + min(R, G, B)) / 2
-    var max = Math.max(Math.max(red, green), blue);
-    var min = Math.min(Math.min(red, green), blue);
-    var lightness = (max + min) / 2;
-
-    // Consider all colors with less than 50% Lightness as dark colors
-    // and use white as the foreground color; otherwise use black.
-    // Actually we use a threshold a bit below 50%, so colors like
-    // #FF0000, #00FF00 and #0000FF still get black text which looked
-    // better when we tested this.
-    if (lightness < 120) {
-        return "white";
-    }
-    
-    return "black";
-}
-
-var gTransactionMgr = Components.classes["@mozilla.org/transactionmanager;1"]
-                                .getService(Components.interfaces.nsITransactionManager);
-function doTransaction(aAction, aItem, aCalendar, aOldItem, aListener) {
-    var txn = new calTransaction(aAction, aItem, aCalendar, aOldItem, aListener);
-    gTransactionMgr.doTransaction(txn);
-    updateUndoRedoMenu();
-}
-
-function undo() {
-    gTransactionMgr.undoTransaction();
-    updateUndoRedoMenu();
-}
-
-function redo() {
-    gTransactionMgr.redoTransaction();
-    updateUndoRedoMenu();
-}
-
-function startBatchTransaction() {
-    gTransactionMgr.beginBatch();
-}
-function endBatchTransaction() {
-    gTransactionMgr.endBatch();
-    updateUndoRedoMenu();
-}
-
-function canUndo() {
-    return (gTransactionMgr.numberOfUndoItems > 0);
-}
-function canRedo() {
-    return (gTransactionMgr.numberOfRedoItems > 0);
-}
-
-function updateUndoRedoMenu() {
-    if (gTransactionMgr.numberOfUndoItems)
-        document.getElementById('undo_command').removeAttribute('disabled');
-    else    
-        document.getElementById('undo_command').setAttribute('disabled', true);
-
-    if (gTransactionMgr.numberOfRedoItems)
-        document.getElementById('redo_command').removeAttribute('disabled');
-    else    
-        document.getElementById('redo_command').setAttribute('disabled', true);
-}
-
-// Valid values for aAction: 'add', 'modify', 'delete', 'move'
-// aOldItem is only needed for aAction == 'modify'
-function calTransaction(aAction, aItem, aCalendar, aOldItem, aListener) {
-    this.mAction = aAction;
-    this.mItem = aItem;
-    this.mCalendar = aCalendar;
-    this.mOldItem = aOldItem;
-    this.mListener = aListener;
-}
-
-calTransaction.prototype = {
-    mAction: null,
-    mItem: null,
-    mCalendar: null,
-    mOldItem: null,
-    mOldCalendar: null,
-    mListener: null,
-
-    QueryInterface: function (aIID) {
-        if (!aIID.equals(Components.interfaces.nsISupports) &&
-            !aIID.equals(Components.interfaces.nsITransaction))
-        {
-            throw Components.results.NS_ERROR_NO_INTERFACE;
-        }
-        return this;
-    },
-
-    doTransaction: function () {
-        switch (this.mAction) {
-            case 'add':
-                this.mCalendar.addItem(this.mItem, this.mListener);
-                break;
-            case 'modify':
-                this.mCalendar.modifyItem(this.mItem, this.mOldItem,
-                                          this.mListener);
-                break;
-            case 'delete':
-                this.mCalendar.deleteItem(this.mItem, this.mListener);
-                break;
-            case 'move':
-                this.mOldCalendar = this.mOldItem.calendar;
-                this.mCalendar.addItem(this.mItem, this.mListener);
-                this.mOldCalendar.deleteItem(this.mOldItem, this.mListener);
-                break;
-        }
-    },
-    undoTransaction: function () {
-        switch (this.mAction) {
-            case 'add':
-                this.mCalendar.deleteItem(this.mItem, null);
-                break;
-            case 'modify':
-                this.mCalendar.modifyItem(this.mOldItem, this.mItem, null);
-                break;
-            case 'delete':
-                this.mCalendar.addItem(this.mItem, null);
-                break;
-            case 'move':
-                this.mOldCalendar.addItem(this.mOldItem, this.mListener);
-                this.mCalendar.deleteItem(this.mItem, this.mListener);
-                break;
-        }
-    },
-    redoTransaction: function () {
-        this.doTransaction();
-    },
-    isTransient: false,
-    
-    merge: function (aTransaction) {
-        // No support for merging
-        return false;
-    }
 }

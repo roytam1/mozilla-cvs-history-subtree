@@ -38,7 +38,6 @@
 
 
 if [ -z "${CLEANUP}" -o "${CLEANUP}" = "${SCRIPTNAME}" ]; then
-    html "END_OF_TEST<BR>"
     html "</BODY></HTML>" 
     rm -f ${TEMPFILES} 2>/dev/null
 fi

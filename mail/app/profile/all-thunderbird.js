@@ -1,11 +1,11 @@
 /* -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
+ * Version: NPL 1.1/GPL 2.0/LGPL 2.1
  *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/NPL/
  *
  * Software distributed under the License is distributed on an "AS IS" basis,
  * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
@@ -14,7 +14,7 @@
  *
  * The Original Code is mozilla.org code.
  *
- * The Initial Developer of the Original Code is
+ * The Initial Developer of the Original Code is 
  * Netscape Communications Corporation.
  * Portions created by the Initial Developer are Copyright (C) 1998
  * the Initial Developer. All Rights Reserved.
@@ -22,93 +22,44 @@
  * Contributor(s):
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * either the GNU General Public License Version 2 or later (the "GPL"), or 
  * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
+ * use your version of this file under the terms of the NPL, indicate your
  * decision by deleting the provisions above and replace them with the notice
  * and other provisions required by the GPL or the LGPL. If you do not delete
  * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
+ * the terms of any one of the NPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
 
-#expand pref("general.useragent.extra.thunderbird", "Thunderbird/__APP_VERSION__");
+pref("general.useragent.vendor", "Thunderbird");
+pref("general.useragent.vendorSub",
+#expand __APP_VERSION__
+);
 
 #expand pref("general.useragent.locale", "__AB_CD__");
 pref("general.skins.selectedSkin", "classic/1.0");
 
+pref("app.extensions.version", "0.6");
+
 #ifdef XP_MACOSX
-pref("browser.chromeURL", "chrome://messenger/content/messengercompose/messengercompose.xul");
 pref("mail.biff.animate_dock_icon", false);
 #endif
 
-pref("app.extensions.version", "1.0+");
-pref("update.app.enabled", true); // Whether or not app updates are enabled 
-pref("update.app.url", "chrome://mozapps/locale/update/update.properties");	
-pref("update.extensions.enabled", true);
-
 // App-specific update preferences
-
-// Whether or not app updates are enabled
-pref("app.update.enabled", false);               
-
-// This preference turns on app.update.mode and allows automatic download and
-// install to take place. We use a separate boolean toggle for this to make     
-// the UI easier to construct.
-pref("app.update.auto", true);
-
-// Defines how the Application Update Service notifies the user about updates:
-//
-// AUM Set to:        Minor Releases:     Major Releases:
-// 0                  download no prompt  download no prompt
-// 1                  download no prompt  download no prompt if no incompatibilities
-// 2                  download no prompt  prompt
-//
-// See chart in nsUpdateService.js.in for more details
-//
-pref("app.update.mode", 1);
-// If set to true, the Update Service will present no UI for any event.
-pref("app.update.silent", false);
-pref("app.update.logEnabled", true);
-
-// Default service URL for testing.
-pref("app.update.url", "chrome://mozapps/locale/update/updates.properties");
-// URL user can browse to manually if for some reason all update installation
-// attempts fail.
-pref("app.update.url.manual", "chrome://mozapps/locale/update/updates.properties");
-// User-settable update preference that overrides app.update.url for testing 
-// purposes.
-pref("app.update.url.override", "chrome://mozapps/locale/update/updates.properties");
-
-// Interval: Time between checks for a new version (in seconds)
-//           default=1 day
-pref("app.update.interval", 86400);
-// Interval: Time before prompting the user to download a new version that 
-//           is available (in seconds) default=1 day
-pref("app.update.nagTimer.download", 86400);
-// Interval: Time before prompting the user to restart to install the latest
-//           download (in seconds) default=30 minutes
-pref("app.update.nagTimer.restart", 1800);
-// Interval: When all registered timers should be checked (in milliseconds)
-//           default=5 seconds
-pref("app.update.timer", 5000);
-
-// Whether or not we show a dialog box informing the user that the update was
-// successfully applied. This is off in Firefox by default since we show a 
-// upgrade start page instead! Other apps may wish to show this UI, and supply
-// a whatsNewURL field in their brand.properties that contains a link to a page
-// which tells users what's new in this new update.
-pref("app.update.showInstalledUI", false);
-
-// Developers can set this to |true| if they are constantly changing files in their
-// extensions directory so that the extension system does not constantly think that
-// their extensions are being updated and thus reregistered every time the app is started
-pref("extensions.ignoreMTimeChanges", false);
-// Enables some extra Extension System Logging (can reduce performance) 
-pref("extensions.logging.enabled", false); 
+pref("app.update.enabled", true);               // Whether or not app updates are enabled
+pref("app.update.autoUpdateEnabled", true);     // Whether or not background app updates 
+                                                // are enabled
+pref("app.update.url", "chrome://mozapps/locale/update/update.properties");
+pref("app.update.updatesAvailable", false);
+pref("app.update.interval", 86400000);          // Check for updates to Firefox every day
+pref("app.update.lastUpdateDate", 0);           // UTC offset when last App update was 
+                                                // performed. 
+pref("app.update.performed", false);            // Whether or not an update has been 
+                                                // performed this session. 
 
 // Symmetric (can be overridden by individual extensions) update preferences.
 // e.g.
@@ -155,22 +106,7 @@ pref("update.showSlidingNotification", true);   // Windows-only slide-up taskbar
 // 2 = high   (new version of Firefox/Security patch)
 pref("update.severity", 0); 
 
-pref("xpinstall.whitelist.add", "update.mozilla.org");
-pref("xpinstall.whitelist.add.103", "addons.mozilla.org");
-
-pref("mail.phishing.detection.enabled", true); // enable / disable phishing detection for link clicks
-pref("mail.spellcheck.inline", true);
-
-#ifdef XP_WIN
-pref("browser.preferences.instantApply", false);
-#else
-pref("browser.preferences.instantApply", true);
-#endif
-#ifdef XP_MACOSX
-pref("browser.preferences.animateFadeIn", true);
-#else
-pref("browser.preferences.animateFadeIn", false);
-#endif
+pref("xpinstall.whitelist.add", "update.mozilla.org,addons.mozilla.org");
 
 /////////////////////////////////////////////////////////////////
 // Overrides of the seamonkey suite mailnews.js prefs
@@ -240,7 +176,6 @@ pref("intl.menuitems.alwaysappendaccesskeys","chrome://global/locale/intl.proper
 
 pref("signon.rememberSignons",              true);
 pref("signon.expireMasterPassword",         false);
-pref("signon.SignonFileName",               "signons.txt");
 
 pref("browser.hiddenWindowChromeURL", "chrome://messenger/content/hiddenWindow.xul");
 pref("network.search.url","http://cgi.netscape.com/cgi-bin/url_search.cgi?search=");
@@ -279,11 +214,9 @@ pref("network.hosts.pop_server",            "mail");
 
 pref("general.config.obscure_value", 0); // for MCD .cfg files
 
+pref("xpinstall.dialog.progress", "chrome://communicator/content/xpinstall/xpistatus.xul");
 pref("xpinstall.dialog.confirm", "chrome://mozapps/content/xpinstall/xpinstallConfirm.xul");
-pref("xpinstall.dialog.progress.skin", "chrome://mozapps/content/extensions/extensions.xul?type=themes");
-pref("xpinstall.dialog.progress.chrome", "chrome://mozapps/content/extensions/extensions.xul?type=extensions");
-pref("xpinstall.dialog.progress.type.skin", "Extension:Manager-themes"); 
-pref("xpinstall.dialog.progress.type.chrome", "Extension:Manager-extensions");
+pref("xpinstall.dialog.progress.type", "");
 
 /////////////////////////////////////////////////////////////////
 // End seamonkey suite all.js pref overrides
@@ -322,6 +255,7 @@ pref("browser.chrome.toolbar_style",        2);
 pref("browser.xul.error_pages.enabled", true);
 
 // Dialog modality issues
+pref("browser.prefWindowModal", true);
 pref("browser.show_about_as_stupid_modal_window", false);
 
 pref("browser.download.progressDnldDialog.keepAlive", true); // keep the dnload progress dialog up after dnload is complete
@@ -387,10 +321,13 @@ pref("news.directory",                  "");
 pref("autoupdate.enabled",              true);
 pref("browser.editor.disabled", false);
 pref("spellchecker.dictionary", "");
-// profile.force.migration can be used to bypass the migration wizard, forcing migration from a particular
-// mail application without any user intervention. Possible values are: 
-// dogbert (4.x), seamonkey (mozilla suite), eudora, oexpress, outlook. 
-pref("profile.force.migration", "");
+pref("profile.allow_automigration", false);   // setting to false bypasses automigration in the profile code
+// profile.migration_behavior determines how the profiles root is set
+// 0 - use NS_APP_USER_PROFILES_ROOT_DIR
+// 1 - create one based on the NS4.x profile root
+// 2 - use, if not empty, profile.migration_directory otherwise same as 0 
+pref("profile.migration_behavior",0);
+pref("profile.migration_directory", "");
 
 // Customizable toolbar stuff
 pref("custtoolbar.personal_toolbar_folder", "");
@@ -418,6 +355,11 @@ pref("alerts.slideIncrementTime", 10);
 pref("alerts.totalOpenTime", 4000);
 pref("alerts.height", 50);
 
+// update notifications prefs
+pref("update_notifications.enabled", true);
+pref("update_notifications.provider.0.frequency", 7); // number of days
+pref("update_notifications.provider.0.datasource", "chrome://communicator-region/locale/region.properties");
+
 // 0 opens the download manager
 // 1 opens a progress dialog
 // 2 and other values, no download manager, no progress dialog. 
@@ -429,11 +371,10 @@ pref("privacy.popups.statusbar_icon_enabled",     true);
 
 #ifndef XP_MACOSX
 #ifdef XP_UNIX
+// Most Unix people think modal pref windows are stupid:
+pref("browser.prefWindowModal", false);
 // For the download dialog
 pref("browser.download.progressDnldDialog.enable_launch_reveal_buttons", false);
 pref("browser.urlbar.clickSelectsAll", false);
 #endif
 #endif
-
-// prevent status-bar spoofing even if people are foolish enough to turn on JS
-pref("dom.disable_window_status_change",          true);

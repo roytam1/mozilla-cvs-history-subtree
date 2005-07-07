@@ -118,7 +118,16 @@
                    key="new_calendar_key"
                    label="&calendar.new.server.label;"
                    accesskey="&calendar.new.server.accesskey;"
-                   observes="new_calendar_command"/>
+                   observes="new_local_calendar_command"/>
+         <menuitem id="calendar-open-calendar-menu"
+                   key="open_calendar_key"
+                   label="&calendar.open.file.label;"
+                   accesskey="&calendar.open.file.accesskey;"
+                   observes="open_local_calendar_command"/>
+         <menuitem id="calendar-addserver-menu"
+                   label="&calendar.subscribe.label;"
+                   accesskey="&calendar.subscribe.accesskey;"
+                   observes="new_server_command"/>
          <menuitem id="calendar-reloadserver-menu"
                    key="reload_server_key"
                    label="&calendar.reloadserver.label;"
@@ -168,17 +177,6 @@
          label="&editMenu.label;"
          accesskey="&editMenu.accesskey;">
       <menupopup id="mppEdit">
-         <menuitem id="calendar-undo-menu"
-                   key="key_undo"
-                   label="&calendar.undo.label;"
-                   accesskey="&calendar.undo.accesskey;"
-                   observes="undo_command" />
-         <menuitem id="calendar-redo-menu"
-                   key="key_undo"
-                   label="&calendar.redo.label;"
-                   accesskey="&calendar.redo.accesskey;"
-                   observes="redo_command" />
-         <menuseparator/>
          <menuitem id="calendar-cut-menu"
                    key="key_cut"
                    label="&calendar.cut.label;"

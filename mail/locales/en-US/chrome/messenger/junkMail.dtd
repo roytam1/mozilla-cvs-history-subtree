@@ -1,9 +1,11 @@
 <!ENTITY window.title "Junk Mail Controls">
-<!ENTITY mainDescription.label "&brandShortName; has several ways to detect junk mail. These controls evaluate incoming messages and identify those that are most likely to be junk mail.">
+<!ENTITY mainDescription.label "&brandShortName; has several ways to detect junk mail, or unsolicited mail. These controls evaluate incoming messages and identify those that are most likely to be junk mail.  A junk icon is displayed if the message is identified as junk mail.">
 
 <!-- Tab titles -->
 <!ENTITY settingsTab.label "Settings">
+<!ENTITY whiteListTab.label "White Lists">
 <!ENTITY adaptiveTab.label "Adaptive Filter">
+<!ENTITY blackListsTab.label "Black Lists">
 
 <!-- Settings tab -->
 <!ENTITY move.label "Move incoming messages determined to be junk mail to:">
@@ -28,6 +30,7 @@
 
 <!-- Adaptive Filter tab -->
 
+<!ENTITY adaptiveInfo.label "&brandShortName; can be trained to analyze the contents of your incoming messages and identify those that are most likely to be junk. This can be an extremely effective tool for detecting junk mail.">
 <!ENTITY adaptiveCaption.label "Adaptive Filter">
 <!ENTITY trainingWarning.label "If enabled, you must first train &brandShortName; to identify junk mail by using the Junk toolbar button to mark messages as junk or not. You need to identify both junk and non junk messages.">
 <!ENTITY level.label "Enable adaptive junk mail detection">
@@ -37,8 +40,10 @@
 <!ENTITY resetTrainingData.label "Reset Training Data">
 <!ENTITY resetTrainingData.accesskey "R">
 
-<!ENTITY whitelist.label "Do not mark messages as junk if the sender is in: ">
+<!-- White List tab -->
+<!ENTITY whiteListCaption.label "White Lists">
+<!ENTITY whitelist.label "Do not mark messages as junk mail if the sender is in my address book:">
 <!ENTITY whitelist.accesskey "D">
 
-<!ENTITY ispHeaders.label "Trust junk mail headers set by: ">
-<!ENTITY ispHeaders.accesskey "T">
+<!-- Black List tab -->
+

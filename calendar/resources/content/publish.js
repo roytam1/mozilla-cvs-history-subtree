@@ -1,11 +1,11 @@
 /* -*- Mode: Java; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
+ * Version: NPL 1.1/GPL 2.0/LGPL 2.1
  *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/NPL/
  *
  * Software distributed under the License is distributed on an "AS IS" basis,
  * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
@@ -19,8 +19,7 @@
  * Portions created by the Initial Developer are Copyright (C) 2001-2002
  * the Initial Developer. All Rights Reserved.
  *
- * Contributor(s):
- *   ArentJan Banck <ajbanck@planet.nl>
+ * Contributor(s): ArentJan Banck <ajbanck@planet.nl>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -28,11 +27,11 @@
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
+ * use your version of this file under the terms of the NPL, indicate your
  * decision by deleting the provisions above and replace them with the notice
  * and other provisions required by the GPL or the LGPL. If you do not delete
  * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
+ * the terms of any one of the NPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
 
@@ -286,24 +285,6 @@ var gPublishingListener =
   onStopRequest: function(request, ctxt, status, errorMsg)
   {
     dump("onStopRequest status = " + request.status.toString(16) + " " + errorMsg + "\n");
-    var ch;
-    var calendarStringBundle = srGetStrBundle("chrome://calendar/locale/calendar.properties");
-    var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
-                                  .getService(Components.interfaces.nsIPromptService);
-    try {
-      ch = request.QueryInterface(Components.interfaces.nsIHttpChannel);
-      dump(ch.requestSucceeded+"\n");
-    } catch(e) {
-    }
-    if (ch && !ch.requestSucceeded) {
-      promptService.alert(null, calendarStringBundle.GetStringFromName('errorTitle'),
-                          calendarStringBundle.formatStringFromName('httpPutError',[ch.responseStatus, ch.responseStatusText],2));
-    }
-    else if (!ch && !Components.isSuccessCode(request.status)) {
-      // XXX this should be made human-readable.
-      promptService.alert(null, calendarStringBundle.GetStringFromName('errorTitle'),
-                          calendarStringBundle.formatStringFromName('otherPutError',[request.status.toString(16)],1));
-    }
   },
 
   onDataAvailable: function(request, ctxt, inStream, sourceOffset, count)

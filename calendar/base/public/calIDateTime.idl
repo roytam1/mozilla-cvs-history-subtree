@@ -38,176 +38,86 @@
 
 #include "nsISupports.idl"
 
-interface calIDuration;
-[ptr] native icaltimetypeptr(struct icaltimetype);
-
 [scriptable, uuid(5678d4a3-2543-4ece-afbb-079292f2866e)]
 interface calIDateTime : nsISupports
 {
-  /**
-   * isMutable is true if this instance is modifiable.
-   * If isMutable is false, any attempts to modify
-   * the object will throw CAL_ERROR_ITEM_IS_MUTABLE.
-   */
+  // returns true if this thing is able to be modified;
+  // if the item is not mutable, attempts to modify
+  // any data will throw CAL_ERROR_ITEM_IS_IMMUTABLE
   readonly attribute boolean isMutable;
 
-  /**
-   * Make this calIDateTime instance immutable.
-   */
+  // makes this item immutable
   void makeImmutable();
 
-  /**
-   * Clone this calIDateTime instance into a new
-   * mutable object.
-   */
+  // clone always returns a mutable event
   calIDateTime clone();
 
-  /**
-   * valid is true if this object contains a valid
-   * time/date.
-   */
   // true if this thing is set/valid
-  readonly attribute boolean isValid;
+  readonly attribute boolean valid;
 
-  /**
-   * nativeTime contains this instance's PRTime value relative
-   * to the UTC epoch, regardless of the timezone that's set
-   * on this instance.  If nativeTime is set, the given UTC PRTime
-   * value is exploded into year/month/etc, taking into account
-   * the timezone setting.
-   */
+  // this thing's base PRTime value, either
+  // as UTC or as local.  Setting this
+  // will explode the PRTime value to
+  // year/etc.
   attribute PRTime nativeTime;
 
-  /**
-   * Full 4-digit year value (e.g. "1989", "2004")
-   */
+  // also implemented is a jsTime attribute,
+  // for getting/setting a javascript Date object
+
+  // Year, fully exploded (e.g. "1989", "2004")
   attribute short year;
 
-  /**
-   * Month, 0-11, 0 = January
-   */
+  // Month, 0-11
   attribute short month;
 
-  /**
-   * Day of month, 1-[28,29,31]
-   */
+  // Day, 1 through whatever XXX - does libical want 1.. or 0..?
   attribute short day;
 
-  /**
-   * Hour, 0-23
-   */
+  // Hour, 0-23
   attribute short hour;
 
-  /**
-   * Minute, 0-59
-   */
+  // Minute, 0-59
   attribute short minute;
 
-  /**
-   * Second, 0-59
-   */
+  // Second, 0-59
   attribute short second;
 
-  /**
-   * Gets or sets the timezone of this calIDateTime instance.
-   * Setting the timezone does not change the actual date/time components;
-   * to convert between timezones, use getInTimezone(). 
-   *
-   * Valid values are:
-   *
-   * - "UTC" (or "utc", "UTC" preferred)
-   *   - the object refers to a time in UTC.
-   * - a TZID string, understood by the ICS Service
-   *   - the object refers to a time in that tz
-   * - "floating"
-   *   - the object is in floating time and does not have an
-   *     associated timezone.
-   *
-   * @throws NS_ERROR_INVALID_ARG if an invalid timezone is passed in.
-   */
+  // whether this thing indicates a time in UTC, or in the local time
+  // zone
+  attribute PRBool isUtc;
+
+  // an associated timezone that's the preferred way of representing
+  // this object.  If this is null/empty, then there is no preferred
+  // timezone, and UTC or localtime is assumed (based on isUtc).
   attribute AUTF8String timezone;
 
-  /**
-   * isDate indicates that this calIDateTime instance represents a date
-   * (a whole day), and not a specific time on that day.  If isDate is set,
-   * accessing the hour/minute/second fields will return 0, and and setting
-   * them is an illegal operation.
-   */
-  attribute PRBool isDate;
+  //
+  // computed values
+  //
 
-  /*
-   * computed values
-   */
-
-  /**
-   * Day of the week. 0-6, with Sunday = 0.
-   */
+  // Day of the week, 0-6, Sunday = 0
   readonly attribute short weekday;
 
-  /**
-   * Day of the year, 0-365/366.
-   */
+  // Day of the year, 0-365/366
   readonly attribute short yearday;
 
-  /*
-   * Methods
-   */
+  //
+  // Methods
+  //
 
-  /**
-   * Reset this instance to an invalid state.
-   */
-  void reset();
-
-  /**
-   * Return a string representation of this instance.
-   */
+  // return a string representation of this date/time
+  // in the current locale
   AUTF8String toString();
 
   // normalize and validate the expanded-out values
-  // XXX going away soon
   void normalize();
 
-  /**
-   * Set the value of this calIDateTime instance
-   * to aTime milliseconds since the epoch in the
-   * given timezone.  Valid values for the aTimezone
-   * are either a known TZID or "UTC"; null/empty string
-   * is not valid.
-   */
-  void setTimeInTimezone (in PRTime aTime, in AUTF8String aTimezone);
+  // sets this thing to a time in the given timezone
+  void setTimeInTimezone (in PRTime aTime, in string aTimezone);
 
-  /**
-   * Return a new calIDateTime instance that's the result of
-   * converting this one into the given timezone.  Valid values
-   * for aTimezone are the same as the timezone field.  If
-   * the "floating" timezone is given, then this object
-   * is just cloned, and the timezone is set to floating.
-   */
-  calIDateTime getInTimezone (in AUTF8String aTimezone);
-
-  // add the given calIDateTime, treating it as a duration, to
-  // this item.
-  // XXX will change
-  void addDuration (in calIDuration aDuration);
-
-  // Subtract two dates and return a duration
-  // returns duration of this - aOtherDate
-  // if aOtherDate is > this the duration will be negative
-  calIDuration subtractDate (in calIDateTime aOtherDate);
-
-  /**
-   * Compare this calIDateTime instance to aOther.  Returns -1, 0, 1 to
-   * indicate if this < aOther, this == aOther, or this > aOther,
-   * respectively.
-   *
-   * This comparison is timezone-aware; the given values are converted
-   * to a common timezone before comparing. If either this or aOther is
-   * floating, both objects are treated as floating for the comparison.
-   *
-   * If either this or aOther has isDate set, then only the date portion is
-   * compared.
-   */
-  long compare (in calIDateTime aOther);
+  // gets a new calIDateTime object representing this
+  // item in the given timezone
+  calIDateTime getInTimezone (in string aTimezone);
 
   //
   // Some helper getters for calculating useful ranges
@@ -224,22 +134,4 @@ interface calIDateTime : nsISupports
   // the start/end of the current object's year
   readonly attribute calIDateTime startOfYear;
   readonly attribute calIDateTime endOfYear;
-
-  [noscript,notxpcom] void toIcalTime(in icaltimetypeptr itt);
-
-  /**
-   * This object as either an iCalendar DATE or DATETIME string, as
-   * appropriate.
-   */
-  readonly attribute ACString icalString;
-
-  /* JS only:
-   * // Setting jsDate via a JavaScript Date object will set
-   * // the calIDateTime to the jsDate's time ***in UTC***.
-   * // There's no way for us to recover TZ info from a jsDate,
-   * // so we always pull it out as UTC, and force the calIDateTime's
-   * // timezone to UTC.
-   * attribute Date jsDate;
-   *
-   */
 };

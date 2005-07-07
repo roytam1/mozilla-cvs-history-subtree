@@ -14,11 +14,6 @@
  *
  * The Original Code is Mozilla Mail Code.
  *
- * The Initial Developer of the Original Code is
- * The Mozilla Foundation.
- * Portions created by the Initial Developer are Copyright (C) 2004
- * the Initial Developer. All Rights Reserved.
- *
  * Contributor(s):
  *   Scott MacGregor <mscott@mozilla.org>
  *
@@ -38,30 +33,23 @@
 
 function onLoad()
 { 
-  var feedLocationEl = document.getElementById('feedLocation');
-  var rssAccountMenuItem = document.getElementById('rssAccountMenuItem');
-
   if (window.arguments[0].feedLocation)
-    feedLocationEl.value = window.arguments[0].feedLocation;  
+    document.getElementById('feedLocation').value = window.arguments[0].feedLocation;  
 
   // root the location picker to the news & blogs server
   document.getElementById('selectFolder').setAttribute('ref', window.arguments[0].serverURI);
 
   SetFolderPicker(window.arguments[0].folderURI ? window.arguments[0].folderURI : window.arguments[0].serverURI, 'selectFolder');
-  document.getElementById('selectFolder').setInitialSelection();
 
-  rssAccountMenuItem.label = window.arguments[0].serverPrettyName;
-  rssAccountMenuItem.value = window.arguments[0].serverURI;
+  document.getElementById('rssAccountMenuItem').label = window.arguments[0].serverPrettyName;
+  document.getElementById('rssAccountMenuItem').value = window.arguments[0].serverURI;
 
   // set quick mode value
   document.getElementById('quickMode').checked = window.arguments[0].quickMode;
 
-  if (!window.arguments[0].newFeed)
-  {
-    // if we are editing an existing feed, disable the top level account
-    rssAccountMenuItem.setAttribute('disabled', 'true');
-    feedLocationEl.setAttribute('readonly', true);
-  }
+  // if we are editing an existing feed, disable the top level account
+  if (window.arguments[0].folderURI)
+    document.getElementById('rssAccountMenuItem').setAttribute('disabled', 'true');
 }
 
 function onOk()
@@ -93,18 +81,4 @@ function SetFolderPicker(uri,pickerID)
 
   picker.setAttribute("label",msgfolder.name);
   picker.setAttribute("uri",uri);
-}
-
-// CopyWebsiteAddress takes the website address title button, extracts
-// the website address we stored in there and copies it to the clipboard
-function CopyWebsiteAddress(websiteAddressNode)
-{
-  if (websiteAddressNode)
-  {
-    var websiteAddress = websiteAddressNode.value;
-    var contractid = "@mozilla.org/widget/clipboardhelper;1";
-    var iid = Components.interfaces.nsIClipboardHelper;
-    var clipboard = Components.classes[contractid].getService(iid);
-    clipboard.copyString(websiteAddress);
-  }
 }

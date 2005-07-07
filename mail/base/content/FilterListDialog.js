@@ -249,10 +249,11 @@ function setServer(uri)
    gCurrentServerURI = uri;
 }
 
-function toggleFilter(aResource)
+function toggleFilter(aFilterURI)
 {
-    var filter = aResource.GetDelegate("filter",
-                                       Components.interfaces.nsIMsgFilter);
+    var filterResource = gRDF.GetResource(aFilterURI);
+    var filter = filterResource.GetDelegate("filter",
+                                            Components.interfaces.nsIMsgFilter);
     if (filter.unparseable)
     {
       if (gPromptService)
@@ -618,7 +619,8 @@ function onFilterClick(event)
     }
         
     if (col.value.id == "activeColumn") {
-      toggleFilter(filterTree.builderView.getResourceAtIndex(row.value));
+      var res = filterTree.builderView.getResourceAtIndex(row.value);
+      toggleFilter(res.Value);
     }
 }
 
@@ -653,7 +655,8 @@ function onFilterTreeKeyPress(event)
     var start = {}, end = {};
     gFilterTree.view.selection.getRangeAt(i, start, end);
     for (var k = start.value; k <= end.value; ++k) {
-      toggleFilter(gFilterTree.builderView.getResourceAtIndex(k));
+      var res = gFilterTree.builderView.getResourceAtIndex(k);
+      toggleFilter(res.Value);
     }
   }
 }

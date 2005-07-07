@@ -78,14 +78,14 @@
 <!ENTITY newevent.startdate.label    "Start" >
 <!ENTITY newevent.enddate.label      "End" >
 <!ENTITY newevent.end.label          "End" >
-<!ENTITY newevent.alldayevent.label  "All Day" >
-<!ENTITY newevent.description.label  "Description" >
+<!ENTITY newevent.alldayevent.label  "This event lasts all day." >
+<!ENTITY newevent.description.label  "Note" >
 <!ENTITY newevent.uri.label          "URL" >
 <!ENTITY newevent.uri.visit.label    "Visit URL" >
 <!ENTITY newevent.private.label      "Private" >
 <!ENTITY newevent.private.note       "This event is private." >
 <!ENTITY newevent.alarm.label        "Alarm" >
-<!ENTITY newevent.server.label       "Calendar" >
+<!ENTITY newevent.server.label       "Calendar File" >
 <!ENTITY newevent.invite.label       "Invite" >
 <!ENTITY newevent.email.label        "Email Alarm To:" >
 <!ENTITY newevent.beforealarm.label  "before the event starts" >
@@ -105,11 +105,10 @@
 <!ENTITY newevent.endtime.tooltip    "Choose an end time for this event" >
 <!ENTITY newevent.starttimeerror.alertmessage "Your event cannot end before it has started. Please fix either the start time or the end time." >
 <!ENTITY newevent.recurendtimeerror.alertmessage "Your event's repeat time cannot be before the event end time. Please fix this, or disable repeating." >
-<!ENTITY newevent.general.tab.label         "General" >
-<!ENTITY newevent.recurrence.tab.label      "Recurrence" >
-<!ENTITY newevent.attendees.tab.label       "Attendees" >
-<!ENTITY newevent.attachments.tab.label     "Attachments" >
-<!ENTITY newevent.advanced.tab.label        "Advanced" >
+<!ENTITY newevent.newevent.tab.label "Event" >
+<!ENTITY newevent.recurrence.tab.label "Recurrence" >
+<!ENTITY newevent.contacts.tab.label "Contacts" >
+<!ENTITY newevent.files.tab.label "Files" >
 <!ENTITY newevent.status.label "Status" >
 <!ENTITY newevent.status.longlabel "Event Status">
 <!ENTITY newevent.status.needsaction.label "Needs Action" >
@@ -118,10 +117,6 @@
 <!ENTITY newevent.status.cancelled.label   "Cancelled" >
 <!ENTITY newevent.status.tentative.label   "Tentative" >
 <!ENTITY newevent.status.confirmed.label   "Confirmed" >
-<!ENTITY newevent.itemType.label            "Item Type" >
-<!ENTITY newevent.itemType.event.label      "Event" >
-<!ENTITY newevent.itemType.todo.label       "Task" >
-<!ENTITY newevent.itemType.journal.label    "Journal" >
 
 <!ENTITY newevent.advanced.repeat.dayofmonth.label "On the xth day of the month">
 <!ENTITY newevent.advanced.repeat.dayofweek.label "4th Tuesday of the month">
@@ -214,7 +209,7 @@
 <!ENTITY calendar.unifinder.todoitems.label       "Tasks" >
 <!ENTITY calendar.unifinder.hidecompletedtodos.label "Hide Completed Tasks">
 
-<!ENTITY calendar.calendartab.label "Date">
+<!ENTITY calendar.calendartab.label "Calendar">
 <!ENTITY calendar.listofcalendarstab.label "Calendars">
 <!ENTITY calendar.gototoday.button.label        "Go to Today" >
 
@@ -243,7 +238,7 @@
 <!ENTITY calendar.unifinder.tree.categories.label    "Category">
 <!ENTITY calendar.unifinder.tree.location.label    "Location">
 <!ENTITY calendar.unifinder.tree.status.label    "Status">
-<!ENTITY calendar.unifinder.tree.calendarname.label    "Calendar Name">
+<!ENTITY calendar.unifinder.tree.filename.label    "Calendar Name">
 
 <!ENTITY calendar.gototoday.button.tooltip        "Go to today" >
 <!ENTITY calendar.choosedate.button.tooltip       "Choose date to go to" >
@@ -442,13 +437,9 @@
 <!ENTITY calendar.local.calendar.dialog.help.label  "Use this to specify where on your computer the calendar file is stored. This is optional.">
 <!ENTITY calendar.local.calendar.dialog.optional.label "These optional settings are used when publishing this calendar to a remote location.">
 
-<!-- Calendar Properties -->
-<!ENTITY calendarproperties.color.label    "Color:">
-<!ENTITY calendarproperties.webdav.label   "WebDAV">
-<!ENTITY calendarproperties.caldav.label   "CalDAV">
-<!ENTITY calendarproperties.format.label   "Format:">
-<!ENTITY calendarproperties.location.label "Location:">
-<!ENTITY calendarproperties.name.label     "Name:">
+<!-- Calendar Coloring -->
+<!ENTITY calendar.server.dialog.color.label "Color:">
+
 
 <!-- Calendar Publish Dialog -->
 <!ENTITY calendar.publish.dialog.title              "Publish Calendar">
@@ -504,9 +495,3 @@
 <!-- LOCALIZATION NOTE (mainWindow.titlemodifiermenuseparator): DONT_TRANSLATE -->
 <!ENTITY mainWindow.titlemodifiermenuseparator " - ">
 
-<!-- Temporary, until brand.dtd works again. bug 272643 -->
-<!ENTITY  lang.version          "1.7a">
-<!ENTITY  brandShortName        "Sunbird">
-<!ENTITY  brandFullName         "Mozilla Sunbird">
-<!ENTITY  vendorShortName       "Mozilla">
-<!ENTITY  releaseURL            "http://www.mozilla.org/projects/calendar">

@@ -10,13 +10,13 @@
 	<key>CFBundleExecutable</key>
 	<string>sunbird-bin</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Sunbird APP_VERSION, © 1998-2005 Contributors</string>
+	<string>Sunbird APP_VERSION, © 1998-2004 Contributors</string>
 	<key>CFBundleIconFile</key>
 	<string>sunbird</string>
 	<key>CFBundleIdentifier</key>
 	<string>org.mozilla.sunbird</string>
 	<key>CFBundleInfoDictionaryVersion</key>
-	<string>6.0</string>
+	<string>APP_VERSION</string>
 	<key>CFBundleName</key>
 	<string>Sunbird</string>
 	<key>CFBundlePackageType</key>

@@ -1,24 +1,21 @@
 # -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
-# ***** BEGIN LICENSE BLOCK *****
-# Version: MPL 1.1/GPL 2.0/LGPL 2.1
-#
-# The contents of this file are subject to the Mozilla Public License Version
-# 1.1 (the "License"); you may not use this file except in compliance with
-# the License. You may obtain a copy of the License at
-# http://www.mozilla.org/MPL/
-#
-# Software distributed under the License is distributed on an "AS IS" basis,
-# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
-# for the specific language governing rights and limitations under the
-# License.
-#
+# The contents of this file are subject to the Netscape Public
+# License Version 1.1 (the "License"); you may not use this file
+# except in compliance with the License. You may obtain a copy of
+# the License at http://www.mozilla.org/NPL/
+# 
+# Software distributed under the License is distributed on an "AS
+# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# rights and limitations under the License.
+# 
 # The Original Code is Mozilla Communicator client code, released
 # March 31, 1998.
-#
-# The Initial Developer of the Original Code is
-# Netscape Communications Corporation.
-# Portions created by the Initial Developer are Copyright (C) 1998-1999
-# the Initial Developer. All Rights Reserved.
+# 
+# The Initial Developer of the Original Code is Netscape
+# Communications Corporation. Portions created by Netscape are
+# Copyright (C) 1998-1999 Netscape Communications Corporation. All
+# Rights Reserved.
 #
 # Contributor(s):
 #   Jan Varga (varga@nixcorp.com)
@@ -26,20 +23,6 @@
 #   Neil Rashbrook (neil@parkwaycc.co.uk)
 #   Seth Spitzer <sspitzer@netscape.com>
 #   David Bienvenu <bienvenu@nventure.com>
-#
-# Alternatively, the contents of this file may be used under the terms of
-# either the GNU General Public License Version 2 or later (the "GPL"), or
-# the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
-# in which case the provisions of the GPL or the LGPL are applicable instead
-# of those above. If you wish to allow use of your version of this file only
-# under the terms of either the GPL or the LGPL, and not to allow others to
-# use your version of this file under the terms of the MPL, indicate your
-# decision by deleting the provisions above and replace them with the notice
-# and other provisions required by the GPL or the LGPL. If you do not delete
-# the provisions above, a recipient may use your version of this file under
-# the terms of any one of the MPL, the GPL or the LGPL.
-#
-# ***** END LICENSE BLOCK *****
 
 /* This is where functions related to the 3 pane window are kept */
 
@@ -785,7 +768,7 @@ function OnLoadMessenger()
 /* Functions related to startup */
 function delayedOnLoadMessenger()
 {
-  pref.QueryInterface(Components.interfaces.nsIPrefBranch2);
+  pref.QueryInterface(Components.interfaces.nsIPrefBranchInternal);
   pref.addObserver("mail.pane_config.dynamic", MailPrefObserver, false);
   pref.addObserver("mail.showFolderPaneColumns", MailPrefObserver, false);
 
@@ -793,7 +776,7 @@ function delayedOnLoadMessenger()
   CreateMailWindowGlobals();
   verifyAccounts(null);
     
-  ShowThreadPane();
+  HideAccountCentral();
   InitMsgWindow();
   messenger.SetWindow(window, msgWindow);
 
@@ -805,7 +788,6 @@ function delayedOnLoadMessenger()
   accountManager.addIncomingServerListener(gThreePaneIncomingServerListener);
 
   AddToSession();
-
   //need to add to session before trying to load start folder otherwise listeners aren't
   //set up correctly.
   // argument[0] --> folder uri
@@ -813,16 +795,7 @@ function delayedOnLoadMessenger()
   // argument[2] --> optional email address; //will come from aim; needs to show msgs from buddy's email address  
   if ("arguments" in window)
   {
-    // filter our any feed urls that came in as arguments to the new window...
-    if (window.arguments.length && /^feed:/i.test(window.arguments[0] ))
-    {
-      var feedHandler = Components.classes["@mozilla.org/newsblog-feed-downloader;1"].getService(Components.interfaces.nsINewsBlogFeedDownloader);
-      if (feedHandler)
-        feedHandler.subscribeToFeed(window.arguments[0], null, msgWindow);
-      gStartFolderUri = null;
-    }
-    else
-      gStartFolderUri = (window.arguments.length > 0) ? window.arguments[0] : null;
+    gStartFolderUri = (window.arguments.length > 0) ? window.arguments[0] : null;
     gStartMsgKey = (window.arguments.length > 1) ? window.arguments[1]: nsMsgKey_None;
     gSearchEmailAddress = (window.arguments.length > 2) ? window.arguments[2] : null;
   }
@@ -846,30 +819,15 @@ function delayedOnLoadMessenger()
   var toolbarset = document.getElementById('customToolbars');
   toolbox.toolbarset = toolbarset;
 
-  // Ensure the Software Update item is visible on the menubar on Windows and 
-  // Linux, and on the navigation toolbar on MacOSX (since we can't put items on
-  // the menubar on OS X)... 
-  // We don't use a customizable item for the updates item so we can always be
-  // sure it's present.
-  var updateItem = document.getElementById("softwareupdate-item");
-  updateItem.parentNode.removeChild(updateItem);
-
-#ifdef XP_MACOSX
-  var theToolbar = document.getElementById("mail-bar");
-#else
-  var theToolbar = document.getElementById("mail-toolbar-menubar");
-#endif
-  if (theToolbar.lastChild.id == "throbber-box")
-    theToolbar.insertBefore(updateItem, document.getElementById("throbber-box"));
-  else
-    theToolbar.appendChild(updateItem);
+  var updatePanel = document.getElementById("statusbar-updates");
+  updatePanel.init();
 }
 
 function OnUnloadMessenger()
 {
   OnLeavingFolder(gMsgFolderSelected);  // mark all read in current folder
   accountManager.removeIncomingServerListener(gThreePaneIncomingServerListener);
-  pref.QueryInterface(Components.interfaces.nsIPrefBranch2);
+  pref.QueryInterface(Components.interfaces.nsIPrefBranchInternal);
   pref.removeObserver("mail.pane_config.dynamic", MailPrefObserver);
   pref.removeObserver("mail.showFolderPaneColumns", MailPrefObserver);
 
@@ -986,11 +944,8 @@ function loadStartFolder(initialUri)
       dump(ex);
       dump('Exception in LoadStartFolder caused by no default account.  We know about this\n');
     }
-    
-    // if gLoadStartFolder is true, then we must have just created a POP3 account
-    // and we aren't supposed to initially download mail. (Bug #270743)
-    if (gLoadStartFolder)
-      MsgGetMessagesForAllServers(defaultServer);
+
+    MsgGetMessagesForAllServers(defaultServer);
 
     if (this.CheckForUnsentMessages != undefined && CheckForUnsentMessages())
     {
@@ -1142,6 +1097,12 @@ function UpgradeThreadPaneUI()
           // date column. 
           var dateCol = document.getElementById("dateCol");
           threadTree._reorderColumn(junkCol, dateCol, true);
+
+          // hide labels column by default
+          if (threadPaneUIVersion == 1) {
+            labelCol = document.getElementById("labelCol");
+            labelCol.setAttribute("hidden", "true");
+          }
         }
 
         var senderCol = document.getElementById("senderCol");
@@ -1279,12 +1240,14 @@ function ClearMessagePane()
   {
     gHaveLoadedMessage = false;
     gCurrentDisplayedMessage = null;
-    if (GetMessagePaneFrame().location.href != "about:blank")
-        GetMessagePaneFrame().location.href = "about:blank";
-    
+    if (GetMessagePaneFrame().location != "about:blank")
+        GetMessagePaneFrame().location = "about:blank";
     // hide the message header view AND the message pane...
     HideMessageHeaderPane();
-    gMessageNotificationBar.clearMsgNotifications();
+
+    // hide the junk bar
+    SetUpJunkBar(null);
+    SetUpRemoteContentBar(null);
   }
 }
 

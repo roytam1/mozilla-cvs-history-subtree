@@ -14,12 +14,13 @@
 #
 # The Original Code is the Mozilla Browser code.
 #
-# The Initial Developer of the Original Code is Google Inc.
-# Portions created by the Initial Developer are Copyright (C) 2005
+# The Initial Developer of the Original Code is
+# Netscape Communications Corporation.
+# Portions created by the Initial Developer are Copyright (C) 2002
 # the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
-#  Darin Fisher <darin@meer.net>
+#  Brian Ryner <bryner@brianryner.com>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -42,25 +43,48 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE		= simple
-XPI_NAME	= simple
+NSDISTMODE = copy
 
-DIRS		= components
-
-PREF_JS_EXPORTS	= $(srcdir)/simple-prefs.js
-DIST_FILES	= application.ini
-DIST_CHROME_FILES = chrome.manifest
-
-ifneq (,$(filter windows,$(MOZ_WIDGET_TOOLKIT)))
-ICONS		= icons/simple.ico
-endif
-ifneq (,$(filter gtk gtk2,$(MOZ_WIDGET_TOOLKIT)))
-ICONS		= icons/simple.xpm icons/simple16.xpm
-endif
-
+include $(topsrcdir)/config/config.mk
 include $(topsrcdir)/config/rules.mk
 
-ifneq (,$(ICONS))
-libs:: $(ICONS)
-	$(INSTALL) $^ $(FINAL_TARGET)/chrome/icons/default
+APPNAME	= simple
+
+CONTENT	= \
+	content/simple.xul \
+	content/contents.rdf \
+	$(NULL)
+
+ifneq (,$(filter os2 windows,$(MOZ_WIDGET_TOOLKIT)))
+ICONS	= icons/simple.ico
 endif
+ifneq (,$(filter gtk gtk2,$(MOZ_WIDGET_TOOLKIT)))
+ICONS	= \
+	icons/simple.xpm \
+	icons/simple16.xpm \
+	$(NULL)
+endif
+
+PREFS	= \
+	defaults/pref/simple.js \
+	$(NULL)
+
+BUILD_ID=`date +%""Y%""m%d%H`
+
+#
+# install stuff
+#
+
+libs:: $(CONTENT)
+	$(INSTALL) $^ $(DIST)/bin/apps/$(APPNAME)/chrome/content/$(APPNAME)
+	echo 'content,profile,url,resource://app/chrome/content/simple/' > $(DIST)/bin/apps/$(APPNAME)/chrome/installed-chrome.txt
+
+libs:: $(ICONS)
+	$(INSTALL) $^ $(DIST)/bin/apps/$(APPNAME)/chrome/icons/default
+
+libs:: $(PREFS)
+	$(INSTALL) $^ $(DIST)/bin/apps/$(APPNAME)/defaults/pref
+
+libs:: $(APPNAME).xulapp
+	$(EXIT_ON_ERROR) \
+	cat $< | sed 's|BUILD_ID|'`date +%Y%m%d%H`'|' > $(DIST)/bin/apps/$(APPNAME)/$(APPNAME).xulapp

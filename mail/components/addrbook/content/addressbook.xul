@@ -1,42 +1,25 @@
 <?xml version="1.0"?> 
 
-# ***** BEGIN LICENSE BLOCK *****
-# Version: MPL 1.1/GPL 2.0/LGPL 2.1
-#
-# The contents of this file are subject to the Mozilla Public License Version
-# 1.1 (the "License"); you may not use this file except in compliance with
-# the License. You may obtain a copy of the License at
-# http://www.mozilla.org/MPL/
-#
-# Software distributed under the License is distributed on an "AS IS" basis,
-# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
-# for the specific language governing rights and limitations under the
-# License.
-#
+# The contents of this file are subject to the Netscape Public
+# License Version 1.1 (the "License"); you may not use this file
+# except in compliance with the License. You may obtain a copy of
+# the License at http://www.mozilla.org/NPL/
+# 
+# Software distributed under the License is distributed on an "AS
+# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# rights and limitations under the License.
+# 
 # The Original Code is Mozilla Communicator client code, released
 # March 31, 1998.
-#
-# The Initial Developer of the Original Code is
-# Netscape Communications Corporation.
-# Portions created by the Initial Developer are Copyright (C) 1998-1999
-# the Initial Developer. All Rights Reserved.
-#
+# 
+# The Initial Developer of the Original Code is Netscape
+# Communications Corporation. Portions created by Netscape are
+# Copyright (C) 1998-1999 Netscape Communications Corporation. All
+# Rights Reserved.
+# 
 # Contributor(s):
 #   Seth Spitzer <sspitzer@netscape.com>
-#
-# Alternatively, the contents of this file may be used under the terms of
-# either the GNU General Public License Version 2 or later (the "GPL"), or
-# the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
-# in which case the provisions of the GPL or the LGPL are applicable instead
-# of those above. If you wish to allow use of your version of this file only
-# under the terms of either the GPL or the LGPL, and not to allow others to
-# use your version of this file under the terms of the MPL, indicate your
-# decision by deleting the provisions above and replace them with the notice
-# and other provisions required by the GPL or the LGPL. If you do not delete
-# the provisions above, a recipient may use your version of this file under
-# the terms of any one of the MPL, the GPL or the LGPL.
-#
-# ***** END LICENSE BLOCK *****
 
 <?xml-stylesheet href="chrome://messenger/skin/addressbook/addressbook.css" type="text/css"?> 
 
@@ -45,7 +28,7 @@
 <!DOCTYPE window [
 <!ENTITY % abMainWindowDTD SYSTEM "chrome://messenger/locale/addressbook/abMainWindow.dtd" >
 %abMainWindowDTD;
-<!ENTITY % brandDTD SYSTEM "chrome://branding/locale/brand.dtd" >
+<!ENTITY % brandDTD SYSTEM "chrome://global/locale/brand.dtd" >
 %brandDTD;
 ]>
 
@@ -64,7 +47,7 @@
   <stringbundleset id="stringbundleset">
     <stringbundle id="bundle_addressBook" src="chrome://messenger/locale/addressbook/addressBook.properties"/>
     <stringbundle id="bundle_messenger" src="chrome://messenger/locale/messenger.properties"/>
-    <stringbundle id="bundle_brand" src="chrome://branding/locale/brand.properties"/>
+    <stringbundle id="bundle_brand" src="chrome://global/locale/brand.properties"/>
   </stringbundleset>
 
 <script type="application/x-javascript" src="chrome://messenger/content/accountUtils.js"/>
@@ -85,7 +68,7 @@
 <script type="application/x-javascript" src="chrome://messenger/content/addressbook/abResultsPane.js"/>
 <script type="application/x-javascript" src="chrome://messenger/content/addressbook/abCardViewOverlay.js"/>
 
-<commandset id="addressBook">
+  <commandset id="addressBook">
   <commandset id="CommandUpdate_AddressBook"
               commandupdater="true"
               events="focus,addrbook-select"
@@ -102,8 +85,6 @@
               commandupdater="true"
               events="focus"
               oncommandupdate="goUpdateGlobalEditMenuItems()"/>
-    <command id="cmd_printcardpreview" oncommand="goDoCommand('cmd_printcardpreview');"/>
-    <command id="cmd_printcard" oncommand="goDoCommand('cmd_printcard');"/>
     <command id="cmd_properties" oncommand="goDoCommand('button_edit');"/>
     <command id="cmd_undo" oncommand="goDoCommand('cmd_undo')" disabled="true"/>
     <command id="cmd_redo" oncommand="goDoCommand('cmd_redo')" disabled="true"/>
@@ -141,7 +122,7 @@
     <key id="key_newCard" key="&newCard.key;" modifiers="accel" oncommand="AbNewCard('dirTree')"/>
 #endif
 
-  <key id="key_printCard" key="&printCardViewCmd.key;" command="cmd_printcard" modifiers="accel"/>
+  <key id="key_printCard" key="&printCardViewCmd.key;" oncommand="AbPrintCard()" modifiers="accel"/>
   <key id="key_close" key="&closeCmd.key;" modifiers="accel" oncommand="AbClose()"/>
   <key id="key_quit" key="&quitApplicationCmd.key;" modifiers="accel" oncommand="goQuitApplication()"/>
   <!-- Edit Menu -->
@@ -194,7 +175,6 @@
   <menuitem id="dirTreeContext-delete"
             label="&deleteButton.label;"
             accesskey="&deleteButton.accesskey;"
-            observes="button_delete"
             oncommand="goDoCommand('button_delete');"/>
 </popup>
 
@@ -234,7 +214,7 @@
    <toolbaritem id="menubar-items" align="center">
      <menubar id="mail-menubar" style="border:0px;padding:0px;margin:0px;-moz-appearance:none">
         <menu id="menu_File" label="&fileMenu.label;" accesskey="&fileMenu.accesskey;">
-            <menupopup id="menu_FilePopup" onpopupshowing="onFileMenuInit();">
+            <menupopup id="menu_FilePopup">
                 <menu id="menu_New" label="&newMenu.label;" accesskey="&newMenu.accesskey;">
                     <menupopup id="menu_NewPopup">
                       <menuitem label="&newCard.label;" accesskey="&newCard.accesskey;" key="key_newCard" oncommand="AbNewCard('dirTree')"/>
@@ -249,10 +229,10 @@
                 <menuseparator/>
                 <menuitem id="printSetupMenuItem" label="&printSetupCmd.label;" accesskey="&printSetupCmd.accesskey;" oncommand="NSPrintSetup()"/>
 #ifndef XP_MACOSX
-                <menuitem id="printPreviewMenuItem" label="&printPreviewCardViewCmd.label;" accesskey="&printPreviewCardViewCmd.accesskey;" command="cmd_printcardpreview"/>
+                <menuitem id="printPreviewMenuItem" label="&printPreviewCardViewCmd.label;" accesskey="&printPreviewCardViewCmd.accesskey;" oncommand="AbPrintPreviewCard()"/>
                 <menuitem id="printPreviewAddressBook" label="&printPreviewAddressBook.label;" accesskey="&printPreviewAddressBook.accesskey;" oncommand="AbPrintPreviewAddressBook()"/>
 #endif
-                <menuitem id="printMenuItem" label="&printCardViewCmd.label;" accesskey="&printCardViewCmd.accesskey;" key="key_printCard" command="cmd_printcard"/>
+                <menuitem id="printMenuItem" label="&printCardViewCmd.label;" accesskey="&printCardViewCmd.accesskey;" key="key_printCard" oncommand="AbPrintCard()"/>
                 <menuitem id="printAddressBook" label="&printAddressBook.label;" accesskey="&printAddressBook.accesskey;" oncommand="AbPrintAddressBook()"/>
                 <menuseparator id="menu_FileQuitSeparator"/>
                 <menuitem id="menu_FileQuitItem" 
@@ -324,7 +304,7 @@
 #ifndef XP_MACOSX
         <menuseparator id="prefSep"/>
         <menuitem id="menu_preferences" label="&preferencesCmdUnix.label;" accesskey="&preferencesCmdUnix.accesskey;"
-                  oncommand="openOptionsDialog()"/>
+                  oncommand="openOptionsDialog('mailnews', 'chrome://messenger/content/addressbook/pref-addressing.xul', 'mailaddressbookpref')"/>
 #endif
 #endif
           </menupopup>
@@ -463,11 +443,11 @@
 #ifndef XP_UNIX
         <menuseparator id="prefSep"/>
             <menuitem id="menu_preferences" label="&preferencesCmd.label;" accesskey="&preferencesCmd.accesskey;"
-                      oncommand="openOptionsDialog()"/>
+                      oncommand="openOptionsDialog('mailnews', 'chrome://messenger/content/addressbook/pref-addressing.xul', 'mailaddressbookpref')"/>
 #else
 #ifdef XP_MACOSX
         <menuitem id="menu_preferences" label="&preferencesCmd.label;" accesskey="&preferencesCmd.accesskey;"
-                  oncommand="openOptionsDialog()"/>
+                  oncommand="openOptionsDialog('mailnews', 'chrome://messenger/content/addressbook/pref-addressing.xul', 'mailaddressbookpref')"/>
 #endif
 #endif
           </menupopup>
@@ -545,12 +525,13 @@
   </toolbox>
 
   <!-- The main address book three pane -->
-  <hbox id="abContent" flex="1">
+  <hbox flex="1">
     <vbox id="dirTreeBox" persist="width collapsed">
-      <hbox id="abDirTreeHeader" align="center">
+      <hbox id="abDirTreeHeaderContainer">
+      <sidebarheader id="abDirTreeHeader" align="center" flex="1">
         <label id="abDirTreeHeader-title" value="&dirTreeHeader.label;"/>
+      </sidebarheader>
       </hbox>
-
       <!-- FIX ME - remove document.commandDispatcher.updateCommands() when tree selection calls this automatically -->
       <tree id="dirTree" class="abDirectory plain" seltype="single" minwidth="150" flex="1" persist="width"
             datasources="rdf:addressdirectory" ref="moz-abdirectory://"
@@ -749,7 +730,7 @@
                   <description class="CardViewText" id="cvCustom2"/>
                   <description class="CardViewText" id="cvCustom3"/>
                   <description class="CardViewText" id="cvCustom4"/>
-                  <description class="CardViewText" id="cvNotes" style="white-space: -moz-pre-wrap;"/>
+                  <description class="CardViewText" id="cvNotes"/>
                   <hbox>
                     <image id="cvBuddyIcon"/> 
                   </hbox>
