@@ -3117,6 +3117,7 @@ PresShell::StyleChangeReflow()
   nsIFrame* rootFrame = FrameManager()->GetRootFrame();
   if (rootFrame) {
     // Mark everything dirty
+    rootFrame->AddStateBits(NS_FRAME_IS_DIRTY);
     FrameNeedsReflow(rootFrame, eStyleChange);
 
     // Kick off a top-down reflow
@@ -3368,17 +3369,18 @@ PresShell::FrameNeedsReflow(nsIFrame *aFrame, IntrinsicDirty aIntrinsicDirty)
   // tree until we reach either a frame that's already dirty or a reflow root.
   nsIFrame *f = aFrame;
   for (;;) {
+    if (((f->GetStateBits() & NS_FRAME_REFLOW_ROOT) && f != aFrame) ||
+        !f->GetParent()) {
+      // we've hit a reflow root or the root frame
+      NS_ASSERTION(mDirtyRoots.IndexOf(f) == -1, "HasDirtyChild lied");
+      mDirtyRoots.AppendElement(f);
+      break;
+    }
+
     nsIFrame *child = f;
     f = f->GetParent();
     if (f->ChildIsDirty(child)) {
       // This frame was already marked dirty.
-      break;
-    }
-
-    if ((f->GetStateBits() & NS_FRAME_REFLOW_ROOT) || !f->GetParent()) {
-      // we've hit a reflow root or the root frame
-      NS_ASSERTION(mDirtyRoots.IndexOf(f) == -1, "HasDirtyChild lied");
-      mDirtyRoots.AppendElement(f);
       break;
     }
   }
