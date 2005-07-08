@@ -2216,7 +2216,7 @@ nsXPCComponents_Utils::EvalInSandbox(const nsAString &source,
 
 /* JSObject importModule (in AUTF8String moduleURL, [optional] in JSObject targetObj); */
 NS_IMETHODIMP
-nsXPCComponents_Util::ImportModule(const nsACString & moduleURL)
+nsXPCComponents_Utils::ImportModule(const nsACString & moduleURL)
 {
     nsCOMPtr<xpcIJSCodeLoader> codeloader = do_GetService(MOZ_JSCODELIB_CONTRACTID);
     if (!codeloader)

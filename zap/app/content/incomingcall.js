@@ -38,7 +38,7 @@
 //----------------------------------------------------------------------
 // imports
 
-Components.util.importModule("resource:/jscodelib/zap/ClassUtils.js");
+Components.utils.importModule("resource:/jscodelib/zap/ClassUtils.js");
 
 //----------------------------------------------------------------------
 // window-global data:

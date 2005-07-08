@@ -1,4 +1,4 @@
-/* -*- moz-jssh-buffer-globalobj: "Components.util.importModule('resource:/jscodelib/JSComponentUtils.js', null)" -*- */
+/* -*- moz-jssh-buffer-globalobj: "Components.utils.importModule('resource:/jscodelib/JSComponentUtils.js', null)" -*- */
 /*
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1

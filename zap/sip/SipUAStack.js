@@ -38,12 +38,12 @@
 
 debug("*** loading SipUAStack\n");
 
-Components.util.importModule("resource:/jscodelib/JSComponentUtils.js");
-Components.util.importModule("resource:/jscodelib/zap/ClassUtils.js");
-Components.util.importModule("resource:/jscodelib/zap/ArrayUtils.js");
-Components.util.importModule("resource:/jscodelib/zap/StringUtils.js");
-Components.util.importModule("resource:/jscodelib/zap/ObjectUtils.js");
-Components.util.importModule("resource:/jscodelib/zap/SipUtils.js");
+Components.utils.importModule("resource:/jscodelib/JSComponentUtils.js");
+Components.utils.importModule("resource:/jscodelib/zap/ClassUtils.js");
+Components.utils.importModule("resource:/jscodelib/zap/ArrayUtils.js");
+Components.utils.importModule("resource:/jscodelib/zap/StringUtils.js");
+Components.utils.importModule("resource:/jscodelib/zap/ObjectUtils.js");
+Components.utils.importModule("resource:/jscodelib/zap/SipUtils.js");
 
 // name our global object:
 function toString() { return "[SipUAStack.js]"; }
