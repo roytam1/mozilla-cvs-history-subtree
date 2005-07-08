@@ -2977,7 +2977,7 @@ private:
     nsXPCComponents_ID*             mID;
     nsXPCComponents_Exception*      mException;
     nsXPCComponents_Constructor*    mConstructor;
-    nsXPCComponents_Util*           mUtil;
+    nsXPCComponents_Utils*          mUtils;
 };
 
 /***************************************************************************/
