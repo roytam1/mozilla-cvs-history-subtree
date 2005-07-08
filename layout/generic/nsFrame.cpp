@@ -4912,8 +4912,8 @@ nsFrame::GetPrefSize(nsBoxLayoutState& aState, nsSize& aSize)
   // be depending on, then we just return the cached size.
   nsBoxLayoutMetrics *metrics = BoxMetrics();
   if (!DoesNeedRecalc(metrics->mPrefSize)) {
-    aSize = metrics->mPrefSize;
-    return NS_OK;
+     aSize = metrics->mPrefSize;
+     return NS_OK;
   }
 
   aSize.width = 0;
@@ -4929,14 +4929,14 @@ nsFrame::GetPrefSize(nsBoxLayoutState& aState, nsSize& aSize)
 
     // Refresh our caches with new sizes.
     if (!completelyRedefined) {
-      RefreshSizeCache(aState);
-      metrics->mPrefSize = metrics->mBlockPrefSize;
+       RefreshSizeCache(aState);
+       metrics->mPrefSize = metrics->mBlockPrefSize;
 
-      // notice we don't need to add our borders or padding
-      // in. Thats because the block did it for us.
-      // but we do need to add insets so debugging will work.
-      AddInset(metrics->mPrefSize);
-      nsIBox::AddCSSPrefSize(aState, this, metrics->mPrefSize);
+       // notice we don't need to add our borders or padding
+       // in. Thats because the block did it for us.
+       // but we do need to add insets so debugging will work.
+       AddInset(metrics->mPrefSize);
+       nsIBox::AddCSSPrefSize(aState, this, metrics->mPrefSize);
     }
   }
 
@@ -4951,8 +4951,8 @@ nsFrame::GetMinSize(nsBoxLayoutState& aState, nsSize& aSize)
   // Don't use the cache if we have HTMLReflowState constraints --- they might have changed
   nsBoxLayoutMetrics *metrics = BoxMetrics();
   if (!DoesNeedRecalc(metrics->mMinSize)) {
-    aSize = metrics->mMinSize;
-    return NS_OK;
+     aSize = metrics->mMinSize;
+     return NS_OK;
   }
 
   aSize.width = 0;
@@ -4968,10 +4968,10 @@ nsFrame::GetMinSize(nsBoxLayoutState& aState, nsSize& aSize)
 
     // Refresh our caches with new sizes.
     if (!completelyRedefined) {
-      RefreshSizeCache(aState);
-      metrics->mMinSize = metrics->mBlockMinSize;
-      AddInset(metrics->mMinSize);
-      nsIBox::AddCSSMinSize(aState, this, metrics->mMinSize);
+       RefreshSizeCache(aState);
+       metrics->mMinSize = metrics->mBlockMinSize;
+       AddInset(metrics->mMinSize);
+       nsIBox::AddCSSMinSize(aState, this, metrics->mMinSize);
     }
   }
 
@@ -4986,8 +4986,8 @@ nsFrame::GetMaxSize(nsBoxLayoutState& aState, nsSize& aSize)
   // Don't use the cache if we have HTMLReflowState constraints --- they might have changed
   nsBoxLayoutMetrics *metrics = BoxMetrics();
   if (!DoesNeedRecalc(metrics->mMaxSize)) {
-    aSize = metrics->mMaxSize;
-    return NS_OK;
+     aSize = metrics->mMaxSize;
+     return NS_OK;
   }
 
   aSize.width = NS_INTRINSICSIZE;
@@ -5013,8 +5013,8 @@ nsFrame::GetFlex(nsBoxLayoutState& aState, nscoord& aFlex)
 {
   nsBoxLayoutMetrics *metrics = BoxMetrics();
   if (!DoesNeedRecalc(metrics->mFlex)) {
-    aFlex = metrics->mFlex;
-    return NS_OK;
+     aFlex = metrics->mFlex;
+     return NS_OK;
   }
 
   metrics->mFlex = 0;
