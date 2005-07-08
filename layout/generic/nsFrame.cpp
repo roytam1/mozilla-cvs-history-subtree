@@ -2111,7 +2111,7 @@ nsFrame::MarkIntrinsicWidthsDirty()
 {
   // This version is meant only for what used to be box-to-block adaptors.
   // It should not be called by other derived classes.
-  if (IsBoxFrame()) {
+  if (IsBoxWrapped()) {
     nsBoxLayoutMetrics *metrics = BoxMetrics();
 
     SizeNeedsRecalc(metrics->mPrefSize);
