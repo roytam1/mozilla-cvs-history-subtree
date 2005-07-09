@@ -668,11 +668,22 @@ JS_StackFramePrincipals(JSContext *cx, JSStackFrame *fp)
 JS_PUBLIC_API(JSPrincipals *)
 JS_EvalFramePrincipals(JSContext *cx, JSStackFrame *fp, JSStackFrame *caller)
 {
-    if (cx->findObjectPrincipals)
-        return cx->findObjectPrincipals(cx, JSVAL_TO_OBJECT(fp->argv[-2]));
+    JSObject *callee;
+    JSPrincipals *principals, *callerPrincipals;
+
+    if (cx->findObjectPrincipals) {
+        callee = JSVAL_TO_OBJECT(fp->argv[-2]);
+        principals = cx->findObjectPrincipals(cx, callee);
+    } else {
+        principals = NULL;
+    }
     if (!caller)
-        return NULL;
-    return JS_StackFramePrincipals(cx, caller);
+        return principals;
+    callerPrincipals = JS_StackFramePrincipals(cx, caller);
+    return (principals && callerPrincipals &&
+            principals->subsume(principals, callerPrincipals))
+           ? callerPrincipals
+           : principals;
 }
 
 JS_PUBLIC_API(void *)

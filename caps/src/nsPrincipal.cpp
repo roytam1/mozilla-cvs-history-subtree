@@ -264,6 +264,11 @@ nsPrincipal::Equals(nsIPrincipal *aOther, PRBool *aResult)
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsPrincipal::Subsumes(nsIPrincipal *aOther, PRBool *aResult)
+{
+  return Equals(aOther, aResult);
+}
 
 NS_IMETHODIMP
 nsPrincipal::CanEnableCapability(const char *capability, PRInt16 *result)
