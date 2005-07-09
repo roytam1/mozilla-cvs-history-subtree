@@ -1081,10 +1081,13 @@ obj_eval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     }
 #endif
 
-    /* Belt-and-braces: check that this eval callee has access to scopeobj. */
-    if (cx->findObjectPrincipals) {
+    /*
+     * Belt-and-braces: check that the lesser of eval's principals and the
+     * caller's principals has access to scopeobj.
+     */
+    if (principals && cx->findObjectPrincipals) {
         scopePrincipals = cx->findObjectPrincipals(cx, scopeobj);
-        if (scopePrincipals != principals) {
+        if (!principals->subsume(principals, scopePrincipals)) {
             JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
                                  JSMSG_BAD_INDIRECT_CALL, js_eval_str);
             return JS_FALSE;

@@ -202,7 +202,7 @@ script_compile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     }
 
     /* Compile the new script using the caller's scope chain, a la eval(). */
-    fp->flags |= JSFRAME_EVAL;
+    fp->flags |= JSFRAME_EVAL | JSFRAME_SCRIPT_OBJECT;
     script = JS_CompileUCScriptForPrincipals(cx, scopeobj, principals,
                                              JSSTRING_CHARS(str),
                                              JSSTRING_LENGTH(str),
@@ -232,7 +232,7 @@ script_exec(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     JSScript *script;
     JSObject *scopeobj, *parent;
     JSStackFrame *fp, *caller;
-    JSPrincipals *scopePrincipals;
+    JSPrincipals *principals, *scopePrincipals;
 
     if (!JS_InstanceOf(cx, obj, &js_ScriptClass, argv))
         return JS_FALSE;
@@ -293,9 +293,10 @@ script_exec(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     }
 
     /* Belt-and-braces: check that this script object has access to scopeobj. */
-    if (cx->findObjectPrincipals) {
+    principals = script->principals;
+    if (principals && cx->findObjectPrincipals) {
         scopePrincipals = cx->findObjectPrincipals(cx, scopeobj);
-        if (scopePrincipals != script->principals) {
+        if (!principals->subsume(principals, scopePrincipals)) {
             JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
                                  JSMSG_BAD_INDIRECT_CALL,
                                  "Script.prototype.exec");
