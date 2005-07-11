@@ -150,6 +150,98 @@ nsImgManager::PrefChanged(nsIPrefBranch *aPrefBranch,
     mBlockInMailNewsPref = val;
 }
 
+
+nsIURI *nsImgManager::GetBaseUri(nsISupports *context, nsIDOMWindow *window)
+{
+  nsCOMPtr<nsIDocument> doc;
+  nsCOMPtr<nsIContent> content = do_QueryInterface(context);
+  if (content) {
+    // XXXbz GetOwnerDocument
+    doc = content->GetDocument();
+    if (!doc) {
+      nsINodeInfo *nodeinfo = content->GetNodeInfo();
+      if (nodeinfo) {
+        doc = nodeinfo->GetDocument();
+      }
+    }
+  }
+
+  if (!doc && window) {
+    nsCOMPtr<nsIDOMDocument> domDoc;
+    window->GetDocument(getter_AddRefs(domDoc));
+    doc = do_QueryInterface(domDoc);
+  }
+    
+  // XXX what to do if there is really no document?
+  if (!doc)
+    return nsnull;
+    
+  return doc->GetBaseURI();
+}
+
+// check if this is a mailnews window, and if it is, should we load the url?
+void nsImgManager::CheckMailNews(nsIURI *baseURI,
+                                 PRBool isFtp,
+                                 PRInt32 contentType, 
+                                 nsIURI *contentLoc,
+                                 nsISupports *context,
+                                 nsIDOMWindow *window,
+                                 PRBool *shouldLoad)
+{
+  nsresult rv;
+
+  if (!baseURI)
+    return;
+
+  nsCOMPtr<nsIDocShell> docshell = GetRootDocShell(window);
+  if (docshell) {
+    PRUint32 appType;
+    rv = docshell->GetAppType(&appType);
+    if (NS_SUCCEEDED(rv) && appType == nsIDocShell::APP_TYPE_MAIL) {
+      *shouldLoad = PR_FALSE;
+      // if aRequestingLocation is chrome, about or resource, 
+      // allow aContentLoc to load
+      PRBool isChrome = PR_FALSE;
+      PRBool isRes = PR_FALSE;
+      PRBool isAbout = PR_FALSE;
+
+      rv = baseURI->SchemeIs("chrome", &isChrome);
+      rv |= baseURI->SchemeIs("resource", &isRes);
+      rv |= baseURI->SchemeIs("about", &isAbout);
+  
+      if (NS_SUCCEEDED(rv) && (isChrome || isRes || isAbout)) 
+      {
+        *shouldLoad = PR_TRUE;
+        return;
+      }
+
+      // if aContentLoc is a protocol we handle (imap, pop3, mailbox, etc) 
+      // or is a chrome url, then allow the load
+      nsCAutoString contentScheme;
+      PRBool isExposedProtocol = PR_FALSE;
+      rv = contentLoc->SchemeIs("chrome", &isChrome);
+      rv |= contentLoc->GetScheme(contentScheme);
+      if (NS_FAILED(rv))
+        return;
+      if (isChrome || contentScheme.Equals("mailto") ||
+          contentScheme.Equals("news") || contentScheme.Equals("snews") ||
+          contentScheme.Equals("nntp") || contentScheme.Equals("imap") ||
+          contentScheme.Equals("addbook") || contentScheme.Equals("pop") ||
+          contentScheme.Equals("mailbox") ) {
+        *shouldLoad = PR_TRUE;
+      }
+
+      // never allow ftp for mail messages, 
+      // because we don't want to send the users email address
+      // as the anonymous password
+      if (mBlockInMailNewsPref || isFtp) 
+        return;
+      // if we're not blocking images, allow everything else
+      *shouldLoad = PR_TRUE;
+    }
+  }
+}
+      
 // nsIContentPolicy Implementation
 NS_IMETHODIMP nsImgManager::ShouldLoad(PRInt32 aContentType, 
                                        nsIURI *aContentLoc,
@@ -158,17 +250,23 @@ NS_IMETHODIMP nsImgManager::ShouldLoad(PRInt32 aContentType,
                                        PRBool *aShouldLoad)
 {
   *aShouldLoad = PR_TRUE;
-  nsresult rv = NS_OK;
 
   // we can't do anything w/ out this
   if (!aContentLoc)
-    return rv;
+    return NS_OK;
 
+  PRBool isFtp;
+  nsresult rv = aContentLoc->SchemeIs("ftp", &isFtp);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  nsIURI *baseURI = GetBaseUri(aContext, aWindow);
+
+  CheckMailNews(baseURI, isFtp, aContentType, aContentLoc, aContext, aWindow, 
+                aShouldLoad);
+  if (!*aShouldLoad)
+    return NS_OK;
   if (aContentType == nsIContentPolicy::IMAGE) {
     // we only want to check http, https, ftp
-    PRBool isFtp;
-    rv = aContentLoc->SchemeIs("ftp", &isFtp);
-    NS_ENSURE_SUCCESS(rv,rv);
 
     PRBool needToCheck = isFtp;
     if (!needToCheck) {
@@ -185,54 +283,12 @@ NS_IMETHODIMP nsImgManager::ShouldLoad(PRInt32 aContentType,
     if (!needToCheck)
       return NS_OK;
 
-    nsCOMPtr<nsIDocument> doc;
-    nsCOMPtr<nsIContent> content = do_QueryInterface(aContext);
-    if (content) {
-      // XXXbz GetOwnerDocument
-      doc = content->GetDocument();
-      if (!doc) {
-        nsINodeInfo *nodeinfo = content->GetNodeInfo();
-        if (nodeinfo) {
-          doc = nodeinfo->GetDocument();
-        }
-      }
-    }
 
-    if (!doc && aWindow) {
-      nsCOMPtr<nsIDOMDocument> domDoc;
-      aWindow->GetDocument(getter_AddRefs(domDoc));
-      doc = do_QueryInterface(domDoc);
-    }
-    
-    if (!doc) {
-      // XXX what to do if there is really no document?
-      return NS_OK;
-    }
-    
-    nsIURI *baseURI = doc->GetBaseURI();
-    if (!baseURI)
-      return rv;
-
-    nsCOMPtr<nsIDocShell> docshell = GetRootDocShell(aWindow);
-    if (docshell) {
-      PRUint32 appType;
-      rv = docshell->GetAppType(&appType);
-      if (NS_SUCCEEDED(rv) && appType == nsIDocShell::APP_TYPE_MAIL) {
-        // never allow ftp for mail messages, 
-        // because we don't want to send the users email address
-        // as the anonymous password
-        if (mBlockInMailNewsPref || isFtp) {
-          *aShouldLoad = PR_FALSE;
-          return NS_OK;
-        }
-      }
-    }
-      
-    rv =  TestPermission(aContentLoc, baseURI, aShouldLoad);
-    if (NS_FAILED(rv))
-      return rv;
+    if (baseURI)
+      rv =  TestPermission(aContentLoc, baseURI, aShouldLoad);
   }
-  return NS_OK;
+
+  return rv;
 }
 
 NS_IMETHODIMP nsImgManager::ShouldProcess(PRInt32 aContentType,

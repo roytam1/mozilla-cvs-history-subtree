@@ -69,6 +69,14 @@ public:
 protected:
 
   void PrefChanged(nsIPrefBranch *, const char *);
+  nsIURI *GetBaseUri(nsISupports *context, nsIDOMWindow *window);
+  void CheckMailNews(nsIURI *baseURI,
+                       PRBool isFtp,
+                       PRInt32 contentType, 
+                       nsIURI *contentLoc,
+                       nsISupports *context,
+                       nsIDOMWindow *window,
+                       PRBool *shouldLoad);
 
   nsCOMPtr<nsIPermissionManager> mPermissionManager;  
   
