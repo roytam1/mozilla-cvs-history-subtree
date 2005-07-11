@@ -639,7 +639,7 @@ nsBlockFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 
       line_min = data.prevLines;
 
-      for (PRInt32 i = data.floats.Count() - 1; i >= 0; --i) {
+      for (PRInt32 i = 0, i_end = data.floats.Count(); i != i_end; ++i) {
         nsIFrame *floatFrame = NS_STATIC_CAST(nsIFrame*, data.floats[i]);
         nscoord float_min =
           nsLayoutUtils::IntrinsicForContainer(aRenderingContext, floatFrame,
@@ -728,7 +728,7 @@ nsBlockFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
                 // been cleared past
                 floats_left_cur = 0, floats_right_cur = 0;
 
-        for (PRInt32 i = data.floats.Count() - 1; i >= 0; --i) {
+        for (PRInt32 i = 0, i_end = data.floats.Count(); i != i_end; ++i) {
           nsIFrame *floatFrame = NS_STATIC_CAST(nsIFrame*, data.floats[i]);
           const nsStyleDisplay *floatDisp = floatFrame->GetStyleDisplay();
           if (floatDisp->mBreakType == NS_STYLE_CLEAR_LEFT ||
