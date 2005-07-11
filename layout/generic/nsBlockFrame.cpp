@@ -623,9 +623,6 @@ nsBlockFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
            ++i, kid = kid->GetNextSibling()) {
         kid->AddInlineMinWidth(aRenderingContext, &data);
       }
-
-      if (!line->IsLineWrapped())
-        data.Break(aRenderingContext);
     }
   }
   data.Break(aRenderingContext);
@@ -675,9 +672,6 @@ nsBlockFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
            ++i, kid = kid->GetNextSibling()) {
         kid->AddInlinePrefWidth(aRenderingContext, &data);
       }
-
-      if (!line->IsLineWrapped())
-        data.Break(aRenderingContext);
     }
   }
   data.Break(aRenderingContext);
