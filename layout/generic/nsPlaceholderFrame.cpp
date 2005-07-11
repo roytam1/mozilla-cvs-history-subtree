@@ -68,19 +68,19 @@ nsPlaceholderFrame::~nsPlaceholderFrame()
 
 /* virtual */ void
 nsPlaceholderFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
-                                      nsIFrame::InlineIntrinsicWidthData *aData)
+                                      nsIFrame::InlineMinWidthData *aData)
 {
   // Override AddInlineMinWith so that *nothing* happens.  In
   // particular, we don't want to set aData->skipWhitespace to false.
 
-  // [temporary, I hope] but push floats onto the list
+  // ...but push floats onto the list
   if (mOutOfFlowFrame->GetStyleDisplay()->mFloats != NS_STYLE_FLOAT_NONE)
     aData->floats.AppendElement(mOutOfFlowFrame);
 }
 
 /* virtual */ void
 nsPlaceholderFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
-                                       nsIFrame::InlineIntrinsicWidthData *aData)
+                                       nsIFrame::InlinePrefWidthData *aData)
 {
   // Override AddInlinePrefWith so that *nothing* happens.  In
   // particular, we don't want to zero out |aData->trailingWhitespace|,
@@ -88,7 +88,7 @@ nsPlaceholderFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
   // whitespace, and we don't want to set aData->skipWhitespace to
   // false.
 
-  // [temporary, I hope] but push floats onto the list
+  // ...but push floats onto the list
   if (mOutOfFlowFrame->GetStyleDisplay()->mFloats != NS_STYLE_FLOAT_NONE)
     aData->floats.AppendElement(mOutOfFlowFrame);
 }

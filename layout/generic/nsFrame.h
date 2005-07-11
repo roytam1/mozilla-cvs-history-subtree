@@ -277,9 +277,9 @@ public:
   virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
   virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
   virtual void AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
-                                 InlineIntrinsicWidthData *aData);
+                                 InlineMinWidthData *aData);
   virtual void AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
-                                  InlineIntrinsicWidthData *aData);
+                                  InlinePrefWidthData *aData);
 
   NS_IMETHOD  WillReflow(nsPresContext* aPresContext);
   NS_IMETHOD  Reflow(nsPresContext*          aPresContext,

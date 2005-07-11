@@ -929,8 +929,7 @@ public:
    */
   struct InlineIntrinsicWidthData {
     InlineIntrinsicWidthData()
-      : prevLines(0), currentLine(0), trailingWhitespace(0),
-        skipWhitespace(PR_TRUE) {}
+      : prevLines(0), currentLine(0), skipWhitespace(PR_TRUE) {}
 
     // The maximum intrinsic width for all previous lines.
     nscoord prevLines;
@@ -940,17 +939,30 @@ public:
     // the caller should call |Break()|.
     nscoord currentLine;
 
-    // This contains the width of the trimmable whitespace at the end of
-    // |currentLine|; it is zero if there is no such whitespace.
-    nscoord trailingWhitespace;
-
     // True if initial collapsable whitespace should be skipped.  This
     // should be true at the beginning of a block and when the last text
     // ended with whitespace.
     PRBool skipWhitespace;
 
-    // [temporary, I hope] Floats encountered in the lines.
+    // Floats encountered in the lines.
     nsVoidArray floats; // of nsIFrame*
+  };
+
+  struct InlineMinWidthData : public InlineIntrinsicWidthData {
+    void Break()
+    {
+      prevLines = PR_MAX(prevLines, currentLine);
+      currentLine = 0;
+    }
+  };
+
+  struct InlinePrefWidthData : public InlineIntrinsicWidthData {
+    // This contains the width of the trimmable whitespace at the end of
+    // |currentLine|; it is zero if there is no such whitespace.
+    nscoord trailingWhitespace;
+
+    InlinePrefWidthData()
+      : trailingWhitespace(0) {}
 
     void Break()
     {
@@ -981,7 +993,7 @@ public:
    */
   virtual void
   AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
-                    InlineIntrinsicWidthData *aData) = 0;
+                    InlineMinWidthData *aData) = 0;
 
   /**
    * Get the intrinsic width of a frame in a way suitable for
@@ -993,7 +1005,7 @@ public:
    */
   virtual void
   AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
-                     InlineIntrinsicWidthData *aData) = 0;
+                     InlinePrefWidthData *aData) = 0;
 
   /**
    * Pre-reflow hook. Before a frame is reflowed this method will be called.

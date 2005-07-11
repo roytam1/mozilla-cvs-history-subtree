@@ -381,9 +381,11 @@ nsInlineFrame::DoInlineIntrinsicWidth(nsIRenderingContext *aRenderingContext,
 
   for (nsIFrame *kid = mFrames.FirstChild(); kid; kid = kid->GetNextSibling()) {
     if (aType == nsLayoutUtils::MIN_WIDTH)
-      kid->AddInlineMinWidth(aRenderingContext, aData);
+      kid->AddInlineMinWidth(aRenderingContext,
+                             NS_STATIC_CAST(InlineMinWidthData*, aData));
     else
-      kid->AddInlinePrefWidth(aRenderingContext, aData);
+      kid->AddInlinePrefWidth(aRenderingContext,
+                              NS_STATIC_CAST(InlinePrefWidthData*, aData));
   }
 
   if (!(skipSides & (1 << endSide))) {
@@ -396,16 +398,14 @@ nsInlineFrame::DoInlineIntrinsicWidth(nsIRenderingContext *aRenderingContext,
 
 /* virtual */ void
 nsInlineFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
-                                 nsIFrame::InlineIntrinsicWidthData *aData)
+                                 nsIFrame::InlineMinWidthData *aData)
 {
-  NS_ASSERTION(aData->trailingWhitespace == 0,
-               "min-width calculation should never have trailing whitespace");
   DoInlineIntrinsicWidth(aRenderingContext, aData, nsLayoutUtils::MIN_WIDTH);
 }
 
 /* virtual */ void
 nsInlineFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
-                                  nsIFrame::InlineIntrinsicWidthData *aData)
+                                  nsIFrame::InlinePrefWidthData *aData)
 {
   DoInlineIntrinsicWidth(aRenderingContext, aData, nsLayoutUtils::PREF_WIDTH);
 }

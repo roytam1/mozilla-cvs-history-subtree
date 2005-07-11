@@ -617,7 +617,7 @@ nsBlockFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
       line_min = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
           line->mFirstChild, nsLayoutUtils::MIN_WIDTH);
     } else {
-      InlineIntrinsicWidthData data;
+      InlineMinWidthData data;
 
       // Go through all the lines that represent what could be wrapped
       // as one line.
@@ -698,7 +698,7 @@ nsBlockFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
       line_pref = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
                       line->mFirstChild, nsLayoutUtils::PREF_WIDTH);
     } else {
-      InlineIntrinsicWidthData data;
+      InlinePrefWidthData data;
 
       // Go through all the lines that represent what could be wrapped
       // as one line.

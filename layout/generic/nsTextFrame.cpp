@@ -494,9 +494,9 @@ public:
   // nsIHTMLReflow
   virtual void MarkIntrinsicWidthsDirty();
   virtual void AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
-                                 InlineIntrinsicWidthData *aData);
+                                 InlineMinWidthData *aData);
   virtual void AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
-                                  InlineIntrinsicWidthData *aData);
+                                  InlinePrefWidthData *aData);
   NS_IMETHOD Reflow(nsPresContext* aPresContext,
                     nsHTMLReflowMetrics& aMetrics,
                     const nsHTMLReflowState& aReflowState,
@@ -5451,10 +5451,8 @@ nsTextFrame::MarkIntrinsicWidthsDirty()
 // XXX This should really share more code with the first half of MeasureText.
 /* virtual */ void
 nsTextFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
-                               nsIFrame::InlineIntrinsicWidthData *aData)
+                               nsIFrame::InlineMinWidthData *aData)
 {
-  NS_ASSERTION(aData->trailingWhitespace == 0,
-               "min-width calculation should never have trailing whitespace");
   nsresult rv;
 
   nsPresContext *presContext = GetPresContext();
@@ -5545,7 +5543,7 @@ nsTextFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
 
 /* virtual */ void
 nsTextFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
-                                nsIFrame::InlineIntrinsicWidthData *aData)
+                                nsIFrame::InlinePrefWidthData *aData)
 {
   nsresult rv;
 
