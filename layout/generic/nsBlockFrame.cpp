@@ -624,6 +624,13 @@ nsBlockFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
         kid->AddInlineMinWidth(aRenderingContext, &data);
       }
     }
+#ifdef DEBUG
+    if (gNoisyIntrinsic) {
+      IndentBy(stdout, gNoiseIndent);
+      printf("min: [prevLines=%d currentLine=%d]\n",
+             data.prevLines, data.currentLine);
+    }
+#endif
   }
   data.Break(aRenderingContext);
 
@@ -673,6 +680,13 @@ nsBlockFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
         kid->AddInlinePrefWidth(aRenderingContext, &data);
       }
     }
+#ifdef DEBUG
+    if (gNoisyIntrinsic) {
+      IndentBy(stdout, gNoiseIndent);
+      printf("pref: [prevLines=%d currentLine=%d]\n",
+             data.prevLines, data.currentLine);
+    }
+#endif
   }
   data.Break(aRenderingContext);
 
