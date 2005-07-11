@@ -949,11 +949,7 @@ public:
   };
 
   struct InlineMinWidthData : public InlineIntrinsicWidthData {
-    void Break()
-    {
-      prevLines = PR_MAX(prevLines, currentLine);
-      currentLine = 0;
-    }
+    void Break(nsIRenderingContext *aRenderingContext);
   };
 
   struct InlinePrefWidthData : public InlineIntrinsicWidthData {
@@ -964,12 +960,7 @@ public:
     InlinePrefWidthData()
       : trailingWhitespace(0) {}
 
-    void Break()
-    {
-      currentLine -= trailingWhitespace;
-      prevLines = PR_MAX(prevLines, currentLine);
-      currentLine = trailingWhitespace = 0;
-    }
+    void Break(nsIRenderingContext *aRenderingContext);
   };
 
   /**

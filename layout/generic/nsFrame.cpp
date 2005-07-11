@@ -2157,6 +2157,81 @@ nsFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
                             this, nsLayoutUtils::PREF_WIDTH);
 }
 
+void
+nsIFrame::InlineMinWidthData::Break(nsIRenderingContext *aRenderingContext)
+{
+  prevLines = PR_MAX(prevLines, currentLine);
+  currentLine = 0;
+
+  for (PRInt32 i = 0, i_end = floats.Count(); i != i_end; ++i) {
+    nsIFrame *floatFrame = NS_STATIC_CAST(nsIFrame*, floats[i]);
+    nscoord float_min =
+      nsLayoutUtils::IntrinsicForContainer(aRenderingContext, floatFrame,
+                                           nsLayoutUtils::MIN_WIDTH);
+    if (float_min > prevLines)
+      prevLines = float_min;
+  }
+  floats.Clear();
+}
+
+void
+nsIFrame::InlinePrefWidthData::Break(nsIRenderingContext *aRenderingContext)
+{
+  if (floats.Count() != 0) {
+            // preferred widths accumulated for floats that have already
+            // been cleared past
+    nscoord floats_left_done = 0, floats_right_done = 0,
+            // preferred widths accumulated for floats that have not yet
+            // been cleared past
+            floats_left_cur = 0, floats_right_cur = 0;
+
+    for (PRInt32 i = 0, i_end = floats.Count(); i != i_end; ++i) {
+      nsIFrame *floatFrame = NS_STATIC_CAST(nsIFrame*, floats[i]);
+      const nsStyleDisplay *floatDisp = floatFrame->GetStyleDisplay();
+      if (floatDisp->mBreakType == NS_STYLE_CLEAR_LEFT ||
+          floatDisp->mBreakType == NS_STYLE_CLEAR_LEFT_AND_RIGHT) {
+        if (floats_left_cur > floats_left_done)
+          floats_left_done = floats_left_cur;
+        floats_left_cur = 0;
+      }
+      if (floatDisp->mBreakType == NS_STYLE_CLEAR_RIGHT ||
+          floatDisp->mBreakType == NS_STYLE_CLEAR_LEFT_AND_RIGHT) {
+        if (floats_right_cur > floats_right_done)
+          floats_right_done = floats_right_cur;
+        floats_right_cur = 0;
+      }
+
+      nscoord float_pref =
+        nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
+                      floatFrame, nsLayoutUtils::PREF_WIDTH);
+      switch (floatDisp->mFloats) {
+        case NS_STYLE_FLOAT_LEFT:
+          floats_left_cur += float_pref;
+          break;
+        case NS_STYLE_FLOAT_RIGHT:
+          floats_right_cur += float_pref;
+          break;
+        default:
+          NS_NOTREACHED("float must be right or left");
+          break;
+      }
+    }
+
+    if (floats_left_cur > floats_left_done)
+      floats_left_done = floats_left_cur;
+    if (floats_right_cur > floats_right_done)
+      floats_right_done = floats_right_cur;
+
+    currentLine += floats_left_done + floats_right_done;
+
+    floats.Clear();
+  }
+
+  currentLine -= trailingWhitespace;
+  prevLines = PR_MAX(prevLines, currentLine);
+  currentLine = trailingWhitespace = 0;
+}
+
 NS_IMETHODIMP
 nsFrame::WillReflow(nsPresContext* aPresContext)
 {

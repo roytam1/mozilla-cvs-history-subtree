@@ -5501,7 +5501,7 @@ nsTextFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
     if (isWhitespace) {
       const nsStyleText *styleText = GetStyleText();
       if (styleText->CanBreakAtWhiteSpace()) {
-        aData->Break();
+        aData->Break(aRenderingContext);
       } else if (!aData->skipWhitespace) {
         PRUnichar firstChar;
         if (tx.TransformedTextIsAscii()) {
@@ -5598,7 +5598,7 @@ nsTextFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
         firstChar = *bp2;
       }
       if ('\n' == firstChar) {
-        aData->Break();
+        aData->Break(aRenderingContext);
       } else if (!aData->skipWhitespace) {
         nscoord width;
         if ('\t' == firstChar) {
