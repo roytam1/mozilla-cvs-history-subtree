@@ -949,6 +949,9 @@ public:
     // ended with whitespace.
     PRBool skipWhitespace;
 
+    // [temporary, I hope] Floats encountered in the lines.
+    nsVoidArray floats; // of nsIFrame*
+
     void Break()
     {
       currentLine -= trailingWhitespace;

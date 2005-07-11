@@ -582,17 +582,19 @@ nsBlockFrame::MarkIntrinsicWidthsDirty()
   mPrefWidth = NS_INTRINSIC_WIDTH_UNKNOWN;
 }
 
-// XXX Split the min-width and pref-width computation again.
-void
-nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
+/* virtual */ nscoord
+nsBlockFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
-  nscoord min_result = 0, pref_result = 0;
+  if (mMinWidth != NS_INTRINSIC_WIDTH_UNKNOWN)
+    return mMinWidth;
+
+  nscoord min_result = 0;
 
 #ifdef DEBUG
   if (gNoisyIntrinsic) {
     IndentBy(stdout, gNoiseIndent);
     ListTag(stdout);
-    printf(": CalcIntrinsicWidths\n");
+    printf(": GetMinWidth\n");
   }
   AutoNoisyIndenter indent(gNoisyIntrinsic);
 #endif
@@ -610,41 +612,115 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
     }
     AutoNoisyIndenter lineindent(gNoisyIntrinsic);
 #endif
-    nscoord line_pref, line_min;
+    nscoord line_min;
     if (line->IsBlock()) {
       line_min = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
-                     line->mFirstChild, nsLayoutUtils::MIN_WIDTH);
-      line_pref = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
-                      line->mFirstChild, nsLayoutUtils::PREF_WIDTH);
+          line->mFirstChild, nsLayoutUtils::MIN_WIDTH);
     } else {
-      InlineIntrinsicWidthData data_pref, data_min;
+      InlineIntrinsicWidthData data;
 
       // Go through all the lines that represent what could be wrapped
       // as one line.
       --line;
+      --lineNumber;
       do {
         ++line;
+        ++lineNumber;
 
         nsIFrame *kid = line->mFirstChild;
         for (PRInt32 i = 0, i_end = line->GetChildCount(); i != i_end;
              ++i, kid = kid->GetNextSibling()) {
-          kid->AddInlineMinWidth(aRenderingContext, &data_min);
-          kid->AddInlinePrefWidth(aRenderingContext, &data_pref);
+          kid->AddInlineMinWidth(aRenderingContext, &data);
         }
         
-      } while (!line->IsLineWrapped() && line.next() != line_end);
+      } while (line->IsLineWrapped() && line.next() != line_end);
 
-      data_min.Break();
-      data_pref.Break();
+      data.Break();
 
-      line_min = data_min.prevLines;
-      line_pref = data_pref.prevLines;
+      line_min = data.prevLines;
 
-      // In the intrinsic width pass, we put all floats into
-      // mBelowCurrentLineFloats (simply because the code to do so is
-      // simpler).
-      nsFloatCacheFreeList &floats = iro->brs.mBelowCurrentLineFloats;
-      if (!floats.IsEmpty()) {
+      for (PRInt32 i = data.floats.Count() - 1; i >= 0; --i) {
+        nsIFrame *floatFrame = NS_STATIC_CAST(nsIFrame*, data.floats[i]);
+        nscoord float_min =
+          nsLayoutUtils::IntrinsicForContainer(aRenderingContext, floatFrame,
+                                               nsLayoutUtils::MIN_WIDTH);
+        if (float_min > line_min)
+          line_min = float_min;
+      }
+      data.floats.Clear();
+    }
+    if (line_min > min_result)
+      min_result = line_min;
+#ifdef DEBUG
+    if (gNoisyIntrinsic) {
+      IndentBy(stdout, gNoiseIndent - 1);
+      printf("line_min=%d ==> min_result=%d\n", line_min, min_result);
+    }
+#endif
+  }
+
+  mMinWidth = min_result;
+  return mMinWidth;
+}
+
+/* virtual */ nscoord
+nsBlockFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
+{
+  if (mPrefWidth != NS_INTRINSIC_WIDTH_UNKNOWN)
+    return mPrefWidth;
+
+  nscoord pref_result = 0;
+
+#ifdef DEBUG
+  if (gNoisyIntrinsic) {
+    IndentBy(stdout, gNoiseIndent);
+    ListTag(stdout);
+    printf(": GetPrefWidth\n");
+  }
+  AutoNoisyIndenter indent(gNoisyIntrinsic);
+#endif
+
+  PRInt32 lineNumber = 0;
+  for (line_iterator line = begin_lines(), line_end = end_lines();
+       line != line_end; ++line, ++lineNumber)
+  {
+#ifdef DEBUG
+    if (gNoisyIntrinsic) {
+      IndentBy(stdout, gNoiseIndent);
+      printf("line %d (%s%s)\n", lineNumber,
+             line->IsBlock() ? "block" : "inline",
+             line->IsEmpty() ? ",empty" : "");
+    }
+    AutoNoisyIndenter lineindent(gNoisyIntrinsic);
+#endif
+    nscoord line_pref;
+    if (line->IsBlock()) {
+      line_pref = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
+                      line->mFirstChild, nsLayoutUtils::PREF_WIDTH);
+    } else {
+      InlineIntrinsicWidthData data;
+
+      // Go through all the lines that represent what could be wrapped
+      // as one line.
+      --line;
+      --lineNumber;
+      do {
+        ++line;
+        ++lineNumber;
+
+        nsIFrame *kid = line->mFirstChild;
+        for (PRInt32 i = 0, i_end = line->GetChildCount(); i != i_end;
+             ++i, kid = kid->GetNextSibling()) {
+          kid->AddInlinePrefWidth(aRenderingContext, &data);
+        }
+        
+      } while (line->IsLineWrapped() && line.next() != line_end);
+
+      data.Break();
+
+      line_pref = data.prevLines;
+
+      if (data.floats.Count() != 0) {
                 // preferred widths accumulated for floats that have already
                 // been cleared past
         nscoord floats_left_done = 0, floats_right_done = 0,
@@ -652,8 +728,8 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
                 // been cleared past
                 floats_left_cur = 0, floats_right_cur = 0;
 
-        for (nsFloatCache *fc = floats.Head(); fc; fc = fc->Next()) {
-          nsIFrame *floatFrame = fc->mPlaceholder->GetOutOfFlowFrame();
+        for (PRInt32 i = data.floats.Count() - 1; i >= 0; --i) {
+          nsIFrame *floatFrame = NS_STATIC_CAST(nsIFrame*, data.floats[i]);
           const nsStyleDisplay *floatDisp = floatFrame->GetStyleDisplay();
           if (floatDisp->mBreakType == NS_STYLE_CLEAR_LEFT ||
               floatDisp->mBreakType == NS_STYLE_CLEAR_LEFT_AND_RIGHT) {
@@ -667,12 +743,6 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
               floats_right_done = floats_right_cur;
             floats_right_cur = 0;
           }
-
-          nscoord float_min =
-            nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
-                         floatFrame, nsLayoutUtils::MIN_WIDTH);
-          if (float_min > line_min)
-            line_min = float_min;
 
           nscoord float_pref =
             nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
@@ -690,47 +760,27 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
           }
         }
 
-        // This empties |floats|.
-        line->AppendFloats(floats);
-
         if (floats_left_cur > floats_left_done)
           floats_left_done = floats_left_cur;
         if (floats_right_cur > floats_right_done)
           floats_right_done = floats_right_cur;
 
         line_pref += floats_left_done + floats_right_done;
+
+        data.floats.Clear();
       }
     }
-    if (line_min > min_result)
-      min_result = line_min;
     if (line_pref > pref_result)
       pref_result = line_pref;
 #ifdef DEBUG
     if (gNoisyIntrinsic) {
       IndentBy(stdout, gNoiseIndent - 1);
-      printf("line_min=%d line_pref=%d ==> min_result=%d, pref_result=%d\n",
-             line_min, line_pref, min_result, pref_result);
+      printf("line_pref=%d ==> pref_result=%d\n", line_pref, pref_result);
     }
 #endif
   }
 
-  mMinWidth = min_result;
   mPrefWidth = pref_result;
-}
-
-/* virtual */ nscoord
-nsBlockFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
-{
-  if (mMinWidth == NS_INTRINSIC_WIDTH_UNKNOWN)
-    CalcIntrinsicWidths(aRenderingContext);
-  return mMinWidth;
-}
-
-/* virtual */ nscoord
-nsBlockFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
-{
-  if (mPrefWidth == NS_INTRINSIC_WIDTH_UNKNOWN)
-    CalcIntrinsicWidths(aRenderingContext);
   return mPrefWidth;
 }
 

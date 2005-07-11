@@ -343,8 +343,6 @@ protected:
     return 0 != (mState & NS_BLOCK_FRAME_HAS_OUTSIDE_BULLET);
   }
 
-  void CalcIntrinsicWidths(nsIRenderingContext* aRenderingContext);
-
   /** move the frames contained by aLine by aDY
     * if aLine is a block, it's child floats are added to the state manager
     */
