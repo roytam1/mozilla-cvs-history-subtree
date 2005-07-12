@@ -131,16 +131,18 @@ nsUTF8ConverterService::ConvertURISpecToUTF8(const nsACString &aSpec,
   nsCAutoString unescapedSpec; 
   // NS_UnescapeURL does not fill up unescapedSpec unless there's at least 
   // one character to unescape.
-  NS_UnescapeURL(PromiseFlatCString(aSpec), esc_AlwaysCopy, unescapedSpec);
+  PRBool written = NS_UnescapeURL(PromiseFlatCString(aSpec).get(), aSpec.Length(), 
+                                  esc_OnlyNonASCII, unescapedSpec);
 
-  // convert to UTF-8 unless ASCII only or UTF-8
-  if (!IsUTF8(unescapedSpec)) {
-    nsresult rv = ToUTF8(unescapedSpec, aCharset, unescapedSpec);
-    NS_ENSURE_SUCCESS(rv, rv);
+  if (!written) {
+    aUTF8Spec = aSpec;
+    return NS_OK;
+  }
+  // return if ASCII only or escaped UTF-8
+  if (IsASCII(unescapedSpec) || IsUTF8(unescapedSpec)) {
+    aUTF8Spec = unescapedSpec;
+    return NS_OK;
   }
 
-  NS_EscapeURL(unescapedSpec, esc_FilePath | esc_OnlyASCII | esc_AlwaysCopy,
-               aUTF8Spec);
-
-  return NS_OK;
+  return ToUTF8(unescapedSpec, aCharset, aUTF8Spec);
 }
