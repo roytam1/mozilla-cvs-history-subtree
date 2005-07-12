@@ -1024,7 +1024,7 @@ nsMsgIncomingServer::GetLocalPath(nsIFileSpec **aLocalPath)
 	nsXPIDLCString hostname;
     rv = GetHostName(getter_Copies(hostname));
     if (NS_FAILED(rv)) return rv;
-    rv = path->MakeUniqueDirWithSuggestedName((const char *)hostname);
+	rv = path->MakeUniqueWithSuggestedName((const char *)hostname);
     if (NS_FAILED(rv)) return rv;
 
     rv = SetLocalPath(path);

@@ -315,22 +315,6 @@ NS_IMETHODIMP nsFileSpecImpl::MakeUniqueWithSuggestedName(const char *suggestedN
 }
 
 //----------------------------------------------------------------------------------------
-NS_IMETHODIMP nsFileSpecImpl::MakeUniqueDir()
-//----------------------------------------------------------------------------------------
-{
-	mFileSpec.MakeUnique(PR_FALSE);
-	return mFileSpec.Error();
-}
-
-//----------------------------------------------------------------------------------------
-NS_IMETHODIMP nsFileSpecImpl::MakeUniqueDirWithSuggestedName(const char *suggestedName)
-//----------------------------------------------------------------------------------------
-{
-	mFileSpec.MakeUnique(suggestedName, PR_FALSE);
-	return mFileSpec.Error();
-}
-
-//----------------------------------------------------------------------------------------
 NS_IMETHODIMP nsFileSpecImpl::GetModDate(PRUint32 *aModDate)
 //----------------------------------------------------------------------------------------
 {

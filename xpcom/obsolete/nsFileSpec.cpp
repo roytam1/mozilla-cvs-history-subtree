@@ -896,40 +896,47 @@ nsFileSpec::nsFileSpec(const nsFileURL& inURL)
 }
 
 //----------------------------------------------------------------------------------------
-void nsFileSpec::MakeUnique(const char* inSuggestedLeafName, PRBool inCreateFile)
+void nsFileSpec::MakeUnique(const char* inSuggestedLeafName)
 //----------------------------------------------------------------------------------------
 {
     if (inSuggestedLeafName && *inSuggestedLeafName)
         SetLeafName(inSuggestedLeafName);
-    MakeUnique(inCreateFile);
+
+    MakeUnique();
 } // nsFileSpec::MakeUnique
 
 //----------------------------------------------------------------------------------------
-void nsFileSpec::MakeUnique(PRBool inCreateFile)
+void nsFileSpec::MakeUnique()
 //----------------------------------------------------------------------------------------
 {
-    // XXX: updated path starts empty. In case of error this will cause
-    // any callers to fail badly, but that seems better than letting them
-    // re-use the default name which has failed to be unique.
-    nsCAutoString path;
-    nsCOMPtr<nsILocalFile> localFile;
-    NS_NewNativeLocalFile(nsDependentCString(*this), PR_TRUE, getter_AddRefs(localFile));
-    if (localFile)
+    if (!Exists())
+        return;
+
+    char* leafName = GetLeafName();
+    if (!leafName)
+        return;
+
+    char* lastDot = strrchr(leafName, '.');
+    char* suffix = "";
+    if (lastDot)
     {
-        nsresult rv;
-
-        if (inCreateFile)
-            rv = localFile->CreateUnique(nsIFile::NORMAL_FILE_TYPE, 0600);
-        else
-            rv = localFile->CreateUnique(nsIFile::DIRECTORY_TYPE, 0700);
-
-        if (NS_SUCCEEDED(rv))
-            localFile->GetNativePath(path);
+        suffix = nsCRT::strdup(lastDot); // include '.'
+        *lastDot = '\0'; // strip suffix and dot.
     }
-
-    NS_WARN_IF_FALSE(!path.IsEmpty(), "MakeUnique() failed!");
-    *this = path.get(); // reset the filepath to point to the unique location
-
+    const int kMaxRootLength
+        = nsFileSpecHelpers::kMaxCoreLeafNameLength - strlen(suffix) - 1;
+    if ((int)strlen(leafName) > (int)kMaxRootLength)
+        leafName[kMaxRootLength] = '\0';
+    for (short indx = 1; indx < 1000 && Exists(); indx++)
+    {
+        // start with "Picture-1.jpg" after "Picture.jpg" exists
+        char newName[nsFileSpecHelpers::kMaxFilenameLength + 1];
+        sprintf(newName, "%s-%d%s", leafName, indx, suffix);
+        SetLeafName(newName);
+    }
+    if (*suffix)
+        nsCRT::free(suffix);
+    nsCRT::free(leafName);
 } // nsFileSpec::MakeUnique
 
 //----------------------------------------------------------------------------------------
