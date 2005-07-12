@@ -113,10 +113,10 @@ nsProxyObjectCallInfo::nsProxyObjectCallInfo( nsProxyObject* owner,
 nsProxyObjectCallInfo::~nsProxyObjectCallInfo()
 {
     if ((mOwner->GetProxyType() & PROXY_ASYNC)) {
-        CopyStrings(PR_FALSE);}
-//        if (!(mOwner->GetProxyType() & PROXY_AUTOPROXIFY))
+        if (!(mOwner->GetProxyType() & PROXY_AUTOPROXIFY))
             RefCountInInterfacePointers(PR_FALSE);
-//    }
+        CopyStrings(PR_FALSE);
+    }
 
     mOwner = nsnull;
     
@@ -129,8 +129,6 @@ nsProxyObjectCallInfo::~nsProxyObjectCallInfo()
 nsresult
 nsProxyObjectCallInfo::Init()
 {
-//    else if (mOwner->GetProxyType() & PROXY_ASYNC) 
-        RefCountInInterfacePointers(PR_TRUE);
     if (mOwner->GetProxyType() & PROXY_AUTOPROXIFY) {
         nsresult rv;
         rv = mOwner->AutoproxifyInParameterList(mParameterList, mParameterCount,
@@ -138,6 +136,8 @@ nsProxyObjectCallInfo::Init()
         if (NS_FAILED(rv))
             return rv;
     }
+    else if (mOwner->GetProxyType() & PROXY_ASYNC) 
+        RefCountInInterfacePointers(PR_TRUE);
 
     return NS_OK;
 }
