@@ -41,6 +41,7 @@
 #include "nsDOMEvent.h"
 #include "nsMutationEvent.h"
 #include "nsContentUtils.h"
+#include "nsIScriptSecurityManager.h"
 
 class nsIPresContext;
 
@@ -150,6 +151,26 @@ nsDOMMutationEvent::InitMutationEvent(const nsAString& aTypeArg, PRBool aCanBubb
                                       const nsAString& aAttrNameArg,
                                       PRUint16 aAttrChangeArg)
 {
+  // Make sure this event isn't already being dispatched.
+  NS_ENSURE_TRUE(!NS_IS_EVENT_IN_DISPATCH(mEvent), NS_ERROR_INVALID_ARG);
+
+  if (NS_IS_TRUSTED_EVENT(mEvent)) {
+    // Ensure the caller is permitted to dispatch trusted DOM events.
+
+    PRBool enabled = PR_FALSE;
+    nsContentUtils::GetSecurityManager()->
+      IsCapabilityEnabled("UniversalBrowserWrite", &enabled);
+
+    if (!enabled) {
+      SetTrusted(PR_FALSE);
+    }
+  }
+
+  // Unset the NS_EVENT_FLAG_STOP_DISPATCH_IMMEDIATELY bit (which is
+  // set at the end of event dispatch) so that this event can be
+  // dispatched.
+  mEvent->flags &= ~NS_EVENT_FLAG_STOP_DISPATCH_IMMEDIATELY;
+
   NS_ENSURE_SUCCESS(SetEventType(aTypeArg), NS_ERROR_FAILURE);
   mEvent->flags |= aCanBubbleArg ? NS_EVENT_FLAG_NONE : NS_EVENT_FLAG_CANT_BUBBLE;
   mEvent->flags |= aCancelableArg ? NS_EVENT_FLAG_NONE : NS_EVENT_FLAG_CANT_CANCEL;
