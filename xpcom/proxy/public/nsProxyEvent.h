@@ -53,11 +53,20 @@
     
 class nsProxyObjectCallInfo;
 
-#define PROXY_SYNC    0x0001  // acts just like a function call.
-#define PROXY_ASYNC   0x0002  // fire and forget.  This will return immediately and you will lose all return information.
-#define PROXY_ALWAYS  0x0004   // ignore check to see if the eventQ is on the same thread as the caller, and alway return a proxied object.
+#define PROXY_SYNC        0x0001  // acts just like a function call.
 
-//#define AUTOPROXIFICATION
+#define PROXY_ASYNC       0x0002  // fire and forget.  This will return immediately and you will lose all return information.
+
+#define PROXY_ALWAYS      0x0004  // ignore check to see if the eventQ is on the same thread as the caller, and alway return a proxied object.
+
+#define PROXY_AUTOPROXIFY 0x0008  // 'autoproxify' all interface parameter.
+                                  // Ensures that all 'in' interfaces are accessed on the caller's thread and
+                                  // all 'out' interfaces are accessed on this proxies thread.
+                                  // If a parameter is already proxied, it will be accessed via that proxy.
+                                  // 'inout' parameters will not be proxified.
+
+#define PROXY_ISUPPORTS   0x0010  // This flag ensures that calls to QueryInterface(), AddRef() and Release()
+                                  // will be proxied. Usually only the final Release() call will be proxied.
 
 // WARNING about PROXY_ASYNC:  
 //
@@ -107,6 +116,18 @@ public:
     nsISupports*        GetRealObject() const { return mRealObject; }
     nsIEventQueue*      GetQueue() const { return mDestQueue; }
     PRInt32             GetProxyType() const { return mProxyType; }
+    
+    nsresult AutoproxifyInParameterList(nsXPTCVariant *params,
+                                        uint8 paramCount,
+                                        nsXPTMethodInfo *methodInfo,
+                                        PRUint32 methodIndex,
+                                        nsIInterfaceInfo* interfaceInfo);
+    nsresult AutoproxifyOutParameterList(nsXPTCVariant *params,
+                                         uint8 paramCount,
+                                         nsXPTMethodInfo *methodInfo,
+                                         PRUint32 methodIndex,
+                                         nsIInterfaceInfo* interfaceInfo,
+                                         PRBool proxifyOutPars = PR_TRUE);
 
     friend class nsProxyEventObject;
 private:
@@ -125,7 +146,6 @@ private:
                                          nsXPTCMiniVariant * params, 
                                          nsXPTCVariant     **fullParam, 
                                          uint8 *paramCount);
-
 };
 
 
@@ -137,11 +157,14 @@ public:
                           nsXPTMethodInfo *methodInfo,
                           PRUint32 methodIndex, 
                           nsXPTCVariant* parameterList, 
-                          PRUint32 parameterCount, 
+                          PRUint32 parameterCount,
+                          nsIInterfaceInfo *interfaceInfo,
                           PLEvent *event);
 
     ~nsProxyObjectCallInfo();
 
+    nsresult Init();
+    
     PRUint32            GetMethodIndex() const { return mMethodIndex; }
     nsXPTCVariant*      GetParameterList() const { return mParameterList; }
     PRUint32            GetParameterCount() const { return mParameterCount; }
@@ -165,6 +188,7 @@ private:
     PRUint32         mMethodIndex;               /* which method to be called? */
     nsXPTCVariant   *mParameterList;             /* marshalled in parameter buffer */
     PRUint32         mParameterCount;            /* number of params */
+    nsCOMPtr<nsIInterfaceInfo> mInterfaceInfo;   /* interface info for current interface */
     PLEvent         *mEvent;                     /* the current plevent */       
     PRInt32          mCompleted;                 /* is true when the method has been called. */
        

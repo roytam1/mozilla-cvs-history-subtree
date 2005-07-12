@@ -259,7 +259,8 @@ nsProxyEventClass::CallQueryInterfaceOnProxy(nsProxyEventObject* self, REFNSIID 
 
     rv = self->CallMethod(0, mi, var);
 
-    if (NS_SUCCEEDED(rv))
+    // proxify result if it hasn't been proxified already
+    if (NS_SUCCEEDED(rv) && !(self->GetProxyType() & PROXY_AUTOPROXIFY))
     {
         nsISupports *aIdentificationObject;
 

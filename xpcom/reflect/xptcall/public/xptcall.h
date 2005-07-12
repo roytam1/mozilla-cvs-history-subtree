@@ -109,7 +109,8 @@ struct nsXPTCVariant : public nsXPTCMiniVariant
         VAL_IS_ARRAY   = 0x8,  // val.p holds a pointer to an array needing cleanup
         VAL_IS_DOMSTR  = 0x10, // val.p holds a pointer to domstring needing cleanup
         VAL_IS_UTF8STR = 0x20, // val.p holds a pointer to utf8string needing cleanup
-        VAL_IS_CSTR    = 0x40  // val.p holds a pointer to cstring needing cleanup        
+        VAL_IS_CSTR    = 0x40, // val.p holds a pointer to cstring needing cleanup
+        VAL_IS_PROXIED = 0x80  // val.p holds a proxied interface needing cleanup (see nsProxyEvent.cpp)
     };
 
     void ClearFlags()         {flags = 0;}
@@ -120,7 +121,8 @@ struct nsXPTCVariant : public nsXPTCMiniVariant
     void SetValIsDOMString()  {flags |= VAL_IS_DOMSTR;}
     void SetValIsUTF8String() {flags |= VAL_IS_UTF8STR;}
     void SetValIsCString()    {flags |= VAL_IS_CSTR;}    
-
+    void SetValIsProxied()    {flags |= VAL_IS_PROXIED;}
+    
     PRBool IsPtrData()       const  {return 0 != (flags & PTR_IS_DATA);}
     PRBool IsValAllocated()  const  {return 0 != (flags & VAL_IS_ALLOCD);}
     PRBool IsValInterface()  const  {return 0 != (flags & VAL_IS_IFACE);}
@@ -128,7 +130,8 @@ struct nsXPTCVariant : public nsXPTCMiniVariant
     PRBool IsValDOMString()  const  {return 0 != (flags & VAL_IS_DOMSTR);}
     PRBool IsValUTF8String() const  {return 0 != (flags & VAL_IS_UTF8STR);}
     PRBool IsValCString()    const  {return 0 != (flags & VAL_IS_CSTR);}    
-
+    PRBool IsValProxied()    const  {return 0 != (flags & VAL_IS_PROXIED);}
+    
     void Init(const nsXPTCMiniVariant& mv, const nsXPTType& t, PRUint8 f)
     {
         type = t;

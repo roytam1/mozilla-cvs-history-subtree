@@ -136,14 +136,13 @@ public:
                        nsProxyEventClass* aClass,
                        nsProxyEventObject* root);
     
+    ~nsProxyEventObject();
+    
     nsProxyEventObject*   LockedFind(REFNSIID aIID);
 
 #ifdef DEBUG_xpcom_proxy
     void DebugDump(const char * message, PRUint32 hashKey);
 #endif
-
-private:
-    ~nsProxyEventObject();
 
 protected:
     void LockedRemoveProxy();

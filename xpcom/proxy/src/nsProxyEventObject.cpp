@@ -53,6 +53,8 @@
 
 static NS_DEFINE_IID(kProxyObject_Identity_Class_IID, NS_PROXYEVENT_IDENTITY_CLASS_IID);
 
+static void* PR_CALLBACK ProxyObjectDestructorEventHandler(PLEvent *self);
+static void  PR_CALLBACK ProxyObjectDestructorDestroyHandler(PLEvent *self);
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -416,7 +418,17 @@ nsProxyEventObject::~nsProxyEventObject()
 #ifdef DEBUG_xpcom_proxy
     DebugDump("Delete", 0);
 #endif
+    
+    // Be pessimistic about whether the manager or even the monitor
+    // exist...  This is to protect against shutdown issues where a
+    // proxy object could be destroyed after (or while) the Proxy
+    // Manager is being destroyed...  
+    nsProxyObjectManager* manager = nsProxyObjectManager::GetInstance();
+
     if (mRoot) {
+        
+        nsAutoMonitor mon(manager ? manager->GetMonitor() : nsnull);
+        
         //
         // This proxy is not the root interface so it must be removed
         // from the chain of proxies...
@@ -439,12 +451,14 @@ nsProxyEventObject::~nsProxyEventObject()
         // to zero, it safe to remove it because no proxies are in its chain.
         //
         if (! nsProxyObjectManager::IsManagerShutdown()) {
-            nsProxyObjectManager* manager = nsProxyObjectManager::GetInstance();
+            
             nsHashtable *realToProxyMap = manager->GetRealObjectToProxyObjectMap();
 
             NS_ASSERTION(!mNext, "There are still proxies in the chain!");
 
             if (realToProxyMap != nsnull) {
+                nsAutoMonitor mon(manager->GetMonitor());
+        
                 nsCOMPtr<nsISupports> rootObject = do_QueryInterface(mProxyObject->mRealObject);
                 nsCOMPtr<nsISupports> rootQueue = do_QueryInterface(mProxyObject->mDestQueue);
                 nsProxyEventKey key(rootObject, rootQueue, mProxyObject->mProxyType);
@@ -475,28 +489,47 @@ NS_IMPL_THREADSAFE_ADDREF(nsProxyEventObject)
 NS_IMETHODIMP_(nsrefcnt)
 nsProxyEventObject::Release(void)
 {
-    //
-    // Be pessimistic about whether the manager or even the monitor exist...
-    // This is to protect against shutdown issues where a proxy object could
-    // be destroyed after (or while) the Proxy Manager is being destroyed...
-    //
-    nsProxyObjectManager* manager = nsProxyObjectManager::GetInstance();
-    nsAutoMonitor mon(manager ? manager->GetMonitor() : nsnull);
-
     nsrefcnt count;
     NS_PRECONDITION(0 != mRefCnt, "dup release");
-    // Decrement atomically - in case the Proxy Object Manager has already
-    // been deleted and the monitor is unavailable...
+
     count = PR_AtomicDecrement((PRInt32 *)&mRefCnt);
     NS_LOG_RELEASE(this, count, "nsProxyEventObject");
     if (0 == count) {
+        
         mRefCnt = 1; /* stabilize */
+        
         //
         // Remove the proxy from the hashtable (if necessary) or its
-        // proxy chain.  This must be done inside of the proxy lock to
-        // prevent GetNewOrUsedProxy(...) from ressurecting it...
-        //
-        NS_DELETEXPCOM(this);
+        // proxy chain.  
+
+        if (!mRoot && (mProxyObject->GetProxyType() & PROXY_ISUPPORTS)) {
+            // we must make sure that this root proxy is deleted on
+            // the proxied object's thread
+            PRBool callDirectly;
+            mProxyObject->GetQueue()->IsOnCurrentThread(&callDirectly);
+            if (callDirectly)
+            {
+                NS_DELETEXPCOM(this);
+                return 0;
+            }
+
+            PLEvent *event = PR_NEW(PLEvent);
+            if (event == nsnull)
+            {
+                NS_ERROR("Could not create a plevent. Leaking nsProxyEventObject");
+                return 0;
+            }
+
+            PL_InitEvent(event,
+                         this,
+                         ProxyObjectDestructorEventHandler,
+                         ProxyObjectDestructorDestroyHandler);
+            
+            mProxyObject->GetQueue()->PostEvent(event);
+        }
+        else {
+            NS_DELETEXPCOM(this);
+        }
         return 0;
     }
     return count;
@@ -552,4 +585,16 @@ nsProxyEventObject::CallMethod(PRUint16 methodIndex,
     }
 
     return rv;
+}
+
+static void* ProxyObjectDestructorEventHandler(PLEvent *self)
+{
+    nsProxyEventObject* owner = (nsProxyEventObject*) PL_GetEventOwner(self);
+    NS_DELETEXPCOM(owner);
+    return nsnull;
+}
+
+static void ProxyObjectDestructorDestroyHandler(PLEvent *self)
+{
+    PR_DELETE(self);
 }

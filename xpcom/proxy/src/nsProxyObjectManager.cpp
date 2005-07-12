@@ -214,6 +214,27 @@ nsProxyObjectManager::GetProxyForObject(nsIEventQueue *destQueue,
             return aObj->QueryInterface(aIID, aProxyObject);
         }
     }
+
+    // check if we need to create the proxy on the target thread.
+    
+    if (postQ && (proxyType & PROXY_ISUPPORTS))
+    {
+        PRBool aResult;
+        postQ->IsOnCurrentThread(&aResult);
+
+        if (!aResult) {
+            // the object wants ISupports called proxied and we're not on its thread.
+            // Create an nsProxyObjectManager proxy and proxify the object from there.
+            nsCOMPtr<nsIProxyObjectManager> proxiedPOM;
+            NS_GetProxyForObject(postQ, GetIID(), this, PROXY_SYNC | PROXY_ALWAYS, 
+                                 getter_AddRefs(proxiedPOM));
+            if (!proxiedPOM) {
+                NS_ERROR("failed to create proxied proxy object manager");
+                return NS_ERROR_FAILURE;
+            }
+            return proxiedPOM->GetProxyForObject(postQ, aIID, aObj, proxyType, aProxyObject);
+        }
+    }
     
     // check to see if proxy is there or not.
     *aProxyObject = nsProxyEventObject::GetNewOrUsedProxy(postQ, proxyType, aObj, aIID);

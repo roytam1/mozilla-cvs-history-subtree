@@ -828,7 +828,14 @@ ZAP_BRANCH_MODIFIED_FILES = \
 	netwerk/build/nsNetModule.cpp \
 	xpcom/io/Makefile.in \
 	xpcom/io/nsScriptableInputStream.cpp \
-	xpcom/io/nsScriptableInputStream.h
+	xpcom/io/nsScriptableInputStream.h \
+	xpcom/proxy/public/nsProxyEvent.h \
+	xpcom/proxy/src/nsProxyEvent.cpp \
+	xpcom/proxy/src/nsProxyEventClass.cpp \
+	xpcom/proxy/src/nsProxyEventObject.cpp \
+	xpcom/proxy/src/nsProxyEventPrivate.h \
+	xpcom/proxy/src/nsProxyObjectManager.cpp \
+	xpcom/reflect/xptcall/public/xptcall.h
 
 ZAP_BRANCH_NEW_FILES = \
 	js/src/xpconnect/codelib/Makefile.in \
