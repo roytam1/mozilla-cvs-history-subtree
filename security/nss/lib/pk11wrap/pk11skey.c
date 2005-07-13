@@ -771,12 +771,11 @@ PK11_MoveSymKey(PK11SlotInfo *slot, CK_ATTRIBUTE_TYPE operation,
  * from this interface!
  */
 PK11SymKey *
-PK11_TokenKeyGenWithFlags(PK11SlotInfo *slot, CK_MECHANISM_TYPE type,
-    SECItem *param, int keySize, SECItem *keyid, CK_FLAGS flags,
-    PRBool isToken, void *wincx)
+PK11_TokenKeyGen(PK11SlotInfo *slot, CK_MECHANISM_TYPE type, SECItem *param,
+    int keySize, SECItem *keyid, PRBool isToken, void *wincx)
 {
     PK11SymKey *symKey;
-    CK_ATTRIBUTE genTemplate[MAX_TEMPL_ATTRS];
+    CK_ATTRIBUTE genTemplate[6];
     CK_ATTRIBUTE *attrs = genTemplate;
     int count = sizeof(genTemplate)/sizeof(genTemplate[0]);
     CK_SESSION_HANDLE session;
@@ -792,7 +791,8 @@ PK11_TokenKeyGenWithFlags(PK11SlotInfo *slot, CK_MECHANISM_TYPE type,
     }
 
     /* TNH: Isn't this redundant, since "handleKey" will set defaults? */
-    flags |= (!weird) ? CKF_ENCRYPT : CKF_DECRYPT;
+    PK11_SETATTRS(attrs, (!weird) 
+	? CKA_ENCRYPT : CKA_DECRYPT, &cktrue, sizeof(CK_BBOOL)); attrs++;
     
     if (keySize != 0) {
         ck_key_size = keySize; /* Convert to PK11 type */
@@ -811,7 +811,7 @@ PK11_TokenKeyGenWithFlags(PK11SlotInfo *slot, CK_MECHANISM_TYPE type,
         PK11_SETATTRS(attrs, CKA_PRIVATE, &cktrue, sizeof(cktrue));  attrs++;
     }
 
-    attrs += pk11_FlagsToAttributes(flags, attrs, &cktrue);
+    PK11_SETATTRS(attrs, CKA_SIGN, &cktrue, sizeof(cktrue));  attrs++;
 
     count = attrs - genTemplate;
     PR_ASSERT(count <= sizeof(genTemplate)/sizeof(CK_ATTRIBUTE));
@@ -880,14 +880,6 @@ PK11_TokenKeyGenWithFlags(PK11SlotInfo *slot, CK_MECHANISM_TYPE type,
     }
 
     return symKey;
-}
-
-PK11SymKey *
-PK11_TokenKeyGen(PK11SlotInfo *slot, CK_MECHANISM_TYPE type, SECItem *param,
-    int keySize, SECItem *keyid, PRBool isToken, void *wincx)
-{
-    return PK11_TokenKeyGenWithFlags(slot, type, param, keySize, keyid,
-						CKF_SIGN, isToken, wincx);
 }
 
 PK11SymKey *
@@ -1183,7 +1175,7 @@ PK11_DeriveWithFlagsPerm( PK11SymKey *baseKey, CK_MECHANISM_TYPE derive,
 	int keySize, CK_FLAGS flags, PRBool isPerm)
 {
     CK_BBOOL        cktrue	= CK_TRUE; 
-    CK_ATTRIBUTE    keyTemplate[MAX_TEMPL_ATTRS];
+    CK_ATTRIBUTE    keyTemplate[MAX_TEMPL_ATTRS+1];
     CK_ATTRIBUTE    *attrs;
     unsigned int    templateCount = 0;
 
