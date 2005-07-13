@@ -1,4 +1,0 @@
-#ifndef MOZ_XUL_APP
-en-US.jar:
-  locale/en-US/global/webservices/security.properties (/toolkit/locales/en-US/chrome/global/webservices/security.properties)
-#endif
