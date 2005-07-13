@@ -62,7 +62,6 @@
 #include "secport.h"
 #include "pcert.h"
 #include "secrng.h"
-#include "nss.h"
 
 #include "keydbi.h" 
 
@@ -2789,24 +2788,6 @@ CK_RV nsc_CommonInitialize(CK_VOID_PTR pReserved, PRBool isFIPS)
     /* initialize the key and cert db's */
     nsslowkey_SetDefaultKeyDBAlg
 			     (SEC_OID_PKCS12_PBE_WITH_SHA1_AND_TRIPLE_DES_CBC);
-    if (init_args && (!(init_args->flags & CKF_OS_LOCKING_OK))) {
-        if (init_args->CreateMutex && init_args->DestroyMutex &&
-            init_args->LockMutex && init_args->UnlockMutex) {
-            /* softoken always uses NSPR (ie. OS locking), and doesn't know how
-             * to use the lock functions provided by the application.
-             */
-            crv = CKR_CANT_LOCK;
-            return crv;
-        }
-        if (init_args->CreateMutex || init_args->DestroyMutex ||
-            init_args->LockMutex || init_args->UnlockMutex) {
-            /* only some of the lock functions were provided by the
-             * application. This is invalid per PKCS#11 spec.
-             */
-            crv = CKR_ARGUMENTS_BAD;
-            return crv;
-        }
-    }
     crv = CKR_ARGUMENTS_BAD;
     if ((init_args && init_args->LibraryParameters)) {
 	sftk_parameters paramStrings;
@@ -2930,8 +2911,8 @@ CK_RV  NSC_GetInfo(CK_INFO_PTR pInfo)
     pInfo->cryptokiVersion.major = 2;
     pInfo->cryptokiVersion.minor = 11;
     PORT_Memcpy(pInfo->manufacturerID,manufacturerID,32);
-    pInfo->libraryVersion.major = NSS_VMAJOR;
-    pInfo->libraryVersion.minor = NSS_VMINOR;
+    pInfo->libraryVersion.major = 3;
+    pInfo->libraryVersion.minor = 8;
     PORT_Memcpy(pInfo->libraryDescription,libraryDescription,32);
     pInfo->flags = 0;
     return CKR_OK;
@@ -2972,8 +2953,8 @@ CK_RV NSC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo)
     pInfo->flags = CKF_TOKEN_PRESENT;
     /* ok we really should read it out of the keydb file. */
     /* pInfo->hardwareVersion.major = NSSLOWKEY_DB_FILE_VERSION; */
-    pInfo->hardwareVersion.major = NSS_VMAJOR;
-    pInfo->hardwareVersion.minor = NSS_VMINOR;
+    pInfo->hardwareVersion.major = 3;
+    pInfo->hardwareVersion.minor = 8;
     return CKR_OK;
 }
 

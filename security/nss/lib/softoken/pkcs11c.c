@@ -1608,16 +1608,17 @@ nsc_DSA_Sign_Stub(void *ctx, void *sigBuf,
                   unsigned int *sigLen, unsigned int maxSigLen,
                   void *dataBuf, unsigned int dataLen)
 {
-    SECItem signature, digest;
+    SECItem signature = { 0 }, digest;
     SECStatus rv;
     NSSLOWKEYPrivateKey *key = (NSSLOWKEYPrivateKey *)ctx;
 
-    signature.data = (unsigned char *)sigBuf;
-    signature.len = maxSigLen;
+    (void)SECITEM_AllocItem(NULL, &signature, maxSigLen);
     digest.data = (unsigned char *)dataBuf;
     digest.len = dataLen;
     rv = DSA_SignDigest(&(key->u.dsa), &signature, &digest);
     *sigLen = signature.len;
+    PORT_Memcpy(sigBuf, signature.data, signature.len);
+    SECITEM_FreeItem(&signature, PR_FALSE);
     return rv;
 }
 
@@ -1641,16 +1642,17 @@ nsc_ECDSASignStub(void *ctx, void *sigBuf,
                   unsigned int *sigLen, unsigned int maxSigLen,
                   void *dataBuf, unsigned int dataLen)
 {
-    SECItem signature, digest;
+    SECItem signature = { 0 }, digest;
     SECStatus rv;
     NSSLOWKEYPrivateKey *key = (NSSLOWKEYPrivateKey *)ctx;
 
-    signature.data = (unsigned char *)sigBuf;
-    signature.len = maxSigLen;
+    (void)SECITEM_AllocItem(NULL, &signature, maxSigLen);
     digest.data = (unsigned char *)dataBuf;
     digest.len = dataLen;
     rv = ECDSA_SignDigest(&(key->u.ec), &signature, &digest);
     *sigLen = signature.len;
+    PORT_Memcpy(sigBuf, signature.data, signature.len);
+    SECITEM_FreeItem(&signature, PR_FALSE);
     return rv;
 }
 #endif /* NSS_ENABLE_ECC */
