@@ -1576,9 +1576,7 @@ nsBlockFrame::ReflowDirtyLines(nsBlockReflowState& aState,
       // Reflow the dirty line. If it's an incremental reflow, then force
       // it to invalidate the dirty area if necessary
       rv = ReflowLine(aState, line, &keepGoing);
-      if (NS_FAILED(rv)) {
-        return rv;
-      }
+      NS_ENSURE_SUCCESS(rv, rv);
       
       if (line->HasFloats()) {
         reflowedFloat = PR_TRUE;
@@ -1775,10 +1773,7 @@ nsBlockFrame::ReflowDirtyLines(nsBlockReflowState& aState,
       // when this happens).
       while (line != end_lines()) {
         rv = ReflowLine(aState, line, &keepGoing);
-        if (NS_FAILED(rv)) {
-          NS_WARNING("Line reflow failed");
-          return rv;
-        }
+        NS_ENSURE_SUCCESS(rv, rv);
         DumpLine(aState, line, deltaY, -1);
         if (!keepGoing) {
           if (0 == line->GetChildCount()) {
@@ -2634,9 +2629,7 @@ nsBlockFrame::ReflowBlockFrame(nsBlockReflowState& aState,
                          clearance, aState.IsAdjacentWithTop(), computedOffsets,
                          blockHtmlRS, frameReflowStatus);
     
-    if (NS_FAILED(rv)) {
-      return rv;
-    }
+    NS_ENSURE_SUCCESS(rv, rv);
     
     if (mayNeedRetry) {
       if (clearanceFrame) {
@@ -2703,17 +2696,14 @@ nsBlockFrame::ReflowBlockFrame(nsBlockReflowState& aState,
         if (NS_FRAME_IS_NOT_COMPLETE(frameReflowStatus)) {
           PRBool madeContinuation;
           rv = CreateContinuationFor(aState, nsnull, frame, madeContinuation);
-          if (NS_FAILED(rv)) 
-            return rv;
+          NS_ENSURE_SUCCESS(rv, rv);
           
           nsIFrame* nextFrame = frame->GetNextInFlow();
           
           // Push continuation to a new line, but only if we actually made one.
           if (madeContinuation) {
             nsLineBox* line = aState.NewLineBox(nextFrame, 1, PR_TRUE);
-            if (nsnull == line) {
-              return NS_ERROR_OUT_OF_MEMORY;
-            }
+            NS_ENSURE_TRUE(line, NS_ERROR_OUT_OF_MEMORY);
             mLines.after_insert(aLine, line);
           }
           
@@ -2991,9 +2981,7 @@ nsBlockFrame::DoReflowInlineFrames(nsBlockReflowState& aState,
     }
     rv = ReflowInlineFrame(aState, aLineLayout, aLine, frame,
                            &lineReflowStatus);
-    if (NS_FAILED(rv)) {
-      return rv;
-    }
+    NS_ENSURE_SUCCESS(rv, rv);
     if (LINE_REFLOW_OK != lineReflowStatus) {
       // It is possible that one or more of next lines are empty
       // (because of DeleteNextInFlowChild). If so, delete them now
@@ -3023,9 +3011,7 @@ nsBlockFrame::DoReflowInlineFrames(nsBlockReflowState& aState,
     // Pull frames and reflow them until we can't
     while (LINE_REFLOW_OK == lineReflowStatus) {
       rv = PullFrame(aState, aLine, frame);
-      if (NS_FAILED(rv)) {
-        return rv;
-      }
+      NS_ENSURE_SUCCESS(rv, rv);
       if (nsnull == frame) {
         break;
       }
@@ -3034,9 +3020,7 @@ nsBlockFrame::DoReflowInlineFrames(nsBlockReflowState& aState,
         PRInt32 oldCount = aLine->GetChildCount();
         rv = ReflowInlineFrame(aState, aLineLayout, aLine, frame,
                                &lineReflowStatus);
-        if (NS_FAILED(rv)) {
-          return rv;
-        }
+        NS_ENSURE_SUCCESS(rv, rv);
         if (aLine->GetChildCount() != oldCount) {
           // We just created a continuation for aFrame AND its going
           // to end up on this line (e.g. :first-letter
@@ -3155,9 +3139,7 @@ nsBlockFrame::ReflowInlineFrame(nsBlockReflowState& aState,
     }
   }
 
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
+  NS_ENSURE_SUCCESS(rv, rv);
 #ifdef REALLY_NOISY_REFLOW_CHILD
   nsFrame::ListTag(stdout, aFrame);
   printf(": status=%x\n", frameReflowStatus);
@@ -3208,9 +3190,7 @@ nsBlockFrame::ReflowInlineFrame(nsBlockReflowState& aState,
         // It's not the first child on this line so go ahead and split
         // the line. We will see the frame again on the next-line.
         rv = SplitLine(aState, aLineLayout, aLine, aFrame);
-        if (NS_FAILED(rv)) {
-          return rv;
-        }
+        NS_ENSURE_SUCCESS(rv, rv);
 
         // If we're splitting the line because the frame didn't fit and it
         // was pushed, then mark the line as having word wrapped. We need to
@@ -3241,8 +3221,7 @@ nsBlockFrame::ReflowInlineFrame(nsBlockReflowState& aState,
         // frame may already have a continuation.
         PRBool madeContinuation;
         rv = CreateContinuationFor(aState, aLine, aFrame, madeContinuation);
-        if (NS_FAILED(rv)) 
-          return rv;
+        NS_ENSURE_SUCCESS(rv, rv);
         if (!aLineLayout.GetLineEndsInBR()) {
           // Remember that the line has wrapped
           aLine->SetLineWrapped(PR_TRUE);
@@ -3251,9 +3230,7 @@ nsBlockFrame::ReflowInlineFrame(nsBlockReflowState& aState,
 
       // Split line, but after the frame just reflowed
       rv = SplitLine(aState, aLineLayout, aLine, aFrame->GetNextSibling());
-      if (NS_FAILED(rv)) {
-        return rv;
-      }
+      NS_ENSURE_SUCCESS(rv, rv);
 
       if (NS_FRAME_IS_NOT_COMPLETE(frameReflowStatus)) {
         // Mark next line dirty in case SplitLine didn't end up
@@ -3276,8 +3253,7 @@ nsBlockFrame::ReflowInlineFrame(nsBlockReflowState& aState,
     rv = (nsLayoutAtoms::placeholderFrame == frameType)
          ? SplitPlaceholder(aState, aFrame)
          : CreateContinuationFor(aState, aLine, aFrame, madeContinuation);
-    if (NS_FAILED(rv)) 
-      return rv;
+    NS_ENSURE_SUCCESS(rv, rv);
 
     // Remember that the line has wrapped
     if (!aLineLayout.GetLineEndsInBR()) {
@@ -3299,9 +3275,7 @@ nsBlockFrame::ReflowInlineFrame(nsBlockReflowState& aState,
       // Split line after the current frame
       *aLineReflowStatus = LINE_REFLOW_STOP;
       rv = SplitLine(aState, aLineLayout, aLine, aFrame->GetNextSibling());
-      if (NS_FAILED(rv)) {
-        return rv;
-      }
+      NS_ENSURE_SUCCESS(rv, rv);
 
       // Mark next line dirty in case SplitLine didn't end up
       // pushing any frames.
@@ -3336,9 +3310,7 @@ nsBlockFrame::CreateContinuationFor(nsBlockReflowState& aState,
   nsresult rv;
   nsIFrame* nextInFlow;
   rv = CreateNextInFlow(aState.mPresContext, this, aFrame, nextInFlow);
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
+  NS_ENSURE_SUCCESS(rv, rv);
   if (nsnull != nextInFlow) {
     aMadeNewFrame = PR_TRUE;
     if (aLine) { 
@@ -3357,8 +3329,7 @@ nsBlockFrame::SplitPlaceholder(nsBlockReflowState& aState,
 {
   nsIFrame* nextInFlow;
   nsresult rv = CreateNextInFlow(aState.mPresContext, this, aPlaceholder, nextInFlow);
-  if (NS_FAILED(rv)) 
-    return rv;
+  NS_ENSURE_SUCCESS(rv, rv);
 
   if (!nextInFlow) {
     // Next in flow was not created because it already exists.
