@@ -201,7 +201,6 @@ SECOidTag PK11_FortezzaMapSig(SECOidTag algTag);
 SECStatus PK11_ParamToAlgid(SECOidTag algtag, SECItem *param,
                                    PRArenaPool *arena, SECAlgorithmID *algid);
 SECStatus PK11_SeedRandom(PK11SlotInfo *,unsigned char *data,int len);
-SECStatus PK11_GenerateRandomOnSlot(PK11SlotInfo *,unsigned char *data,int len);
 SECStatus PK11_RandomUpdate(void *data, size_t bytes);
 SECStatus PK11_GenerateRandom(unsigned char *data,int len);
 CK_RV PK11_MapPBEMechanismToCryptoMechanism(CK_MECHANISM_PTR pPBEMechanism,
@@ -236,10 +235,6 @@ PK11SymKey *PK11_KeyGen(PK11SlotInfo *slot,CK_MECHANISM_TYPE type,
 				SECItem *param,	int keySize,void *wincx);
 PK11SymKey *PK11_TokenKeyGen(PK11SlotInfo *slot, CK_MECHANISM_TYPE type,
 				SECItem *param, int keySize, SECItem *keyid,
-				PRBool isToken, void *wincx);
-PK11SymKey *PK11_TokenKeyGenWithFlags(PK11SlotInfo *slot,
-				CK_MECHANISM_TYPE type, SECItem *param,
-				int keySize, SECItem *keyid, CK_FLAGS flags,
 				PRBool isToken, void *wincx);
 PK11SymKey * PK11_ListFixedKeysInSlot(PK11SlotInfo *slot, char *nickname,
 								void *wincx);
@@ -577,7 +572,7 @@ SECStatus PK11_UpdateSlotAttribute(PK11SlotInfo *, PK11DefaultArrayEntry *,
 PK11GenericObject *PK11_FindGenericObjects(PK11SlotInfo *slot, 
 						CK_OBJECT_CLASS objClass);
 PK11GenericObject *PK11_GetNextGenericObject(PK11GenericObject *object);
-PK11GenericObject *PK11_GetPrevGenericObject(PK11GenericObject *object);
+PK11GenericObject *PK11_GetPrevtGenericObject(PK11GenericObject *object);
 SECStatus PK11_UnlinkGenericObject(PK11GenericObject *object);
 SECStatus PK11_LinkGenericObject(PK11GenericObject *list,
 				 PK11GenericObject *object);

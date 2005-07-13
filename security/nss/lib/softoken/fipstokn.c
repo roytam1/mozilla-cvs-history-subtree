@@ -63,7 +63,7 @@
 static PRBool isLoggedIn = PR_FALSE;
 static PRBool fatalError = PR_FALSE;
 
-/* FIPS required checks before any useful cryptographic services */
+/* Fips required checks before any useful crypto graphic services */
 static CK_RV sftk_fipsCheck(void) {
     if (isLoggedIn != PR_TRUE) 
 	return CKR_USER_NOT_LOGGED_IN;
