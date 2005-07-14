@@ -5488,10 +5488,11 @@ nsTextFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
       char*       bp1;
       PRUnichar*  bp2;
     };
-    // XXX Initializing wordLen to -1 is required for the ugly IBMBIDI
-    // hack to GetNextWord.  It's unclear if this is right as it's
-    // totally undocumented.
-    PRInt32 wordLen = -1, contentLen;
+    PRInt32 wordLen, contentLen;
+#ifdef IBMBIDI
+    // Is this right for this purpose?
+    wordLen = (mState & NS_FRAME_IS_BIDI) ? mContentOffset + mContentLength : -1;
+#endif // IBMBIDI
     PRBool isWhitespace, wasTransformed;
     // XXX Is !aData->skipWhitespace the right criterion for when the
     // text transformer should capitalize the first letter?
@@ -5583,10 +5584,11 @@ nsTextFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
       char*       bp1;
       PRUnichar*  bp2;
     };
-    // XXX Initializing wordLen to -1 is required for the ugly IBMBIDI
-    // hack to GetNextWord.  It's unclear if this is right as it's
-    // totally undocumented.
     PRInt32 wordLen = -1, contentLen;
+#ifdef IBMBIDI
+    // Is this right for this purpose?
+    wordLen = (mState & NS_FRAME_IS_BIDI) ? mContentOffset + mContentLength : -1;
+#endif // IBMBIDI
     PRBool isWhitespace, wasTransformed;
     // XXX Is !aData->skipWhitespace the right criterion for when the
     // text transformer should capitalize the first letter?
