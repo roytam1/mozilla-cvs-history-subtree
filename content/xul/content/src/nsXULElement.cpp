@@ -565,6 +565,8 @@ NS_INTERFACE_MAP_BEGIN(nsXULElement)
                                    nsDOMEventRTTearoff::Create(this))
     NS_INTERFACE_MAP_ENTRY_TEAROFF(nsIDOM3EventTarget,
                                    nsDOMEventRTTearoff::Create(this))
+    NS_INTERFACE_MAP_ENTRY_TEAROFF(nsIDOMNSEventTarget,
+                                   nsDOMEventRTTearoff::Create(this))
     NS_INTERFACE_MAP_ENTRY(nsIChromeEventHandler)
     NS_INTERFACE_MAP_ENTRY_TEAROFF(nsIDOM3Node,
                                    new nsNode3Tearoff(this))
