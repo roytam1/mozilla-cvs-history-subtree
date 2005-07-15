@@ -49,7 +49,7 @@
 class nsIObjectInputStream;
 class nsIObjectOutputStream;
 
-class nsPrincipal : public nsIPrincipal,
+class nsPrincipal : public nsISubsumingPrincipal,
                     public nsIPrincipalObsolete
 {
 public:
@@ -64,8 +64,9 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 public:
 
-  NS_DECL_NSIPRINCIPAL
   NS_DECL_NSISERIALIZABLE
+  NS_DECL_NSIPRINCIPAL
+  NS_DECL_NSISUBSUMINGPRINCIPAL
 
   // nsIPrincipalObsolete declarations, written out because some of them
   // overlap with nsIPrincipal.
