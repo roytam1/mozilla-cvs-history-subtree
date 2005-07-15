@@ -1755,10 +1755,13 @@ nsWindowWatcher::AttachArguments(nsIDOMWindow *aWindow,
       // the "arguments" property we're about to set.  So set the document in
       // the window to null right away, so that when the new document loads we
       // don't clear the scope.
+#if 0
       nsCOMPtr<nsIScriptGlobalObject> globalObject(do_GetInterface(aWindow));
       if (globalObject) {
         globalObject->SetNewDocument(nsnull, PR_TRUE, PR_TRUE);
       }
+#endif
+
       jsval argsVal = OBJECT_TO_JSVAL(args);
       // ::JS_DefineProperty(cx, window_obj, "arguments",
       // argsVal, NULL, NULL, JSPROP_PERMANENT);

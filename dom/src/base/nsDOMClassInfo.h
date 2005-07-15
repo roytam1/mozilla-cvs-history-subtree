@@ -396,9 +396,6 @@ public:
   NS_IMETHOD Finalize(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                       JSObject *obj);
 
-  static nsresult OnDocumentChanged(JSContext *cx, JSObject *obj,
-                                    nsIDOMWindow *window);
-
   static JSBool JS_DLL_CALLBACK GlobalScopePolluterNewResolve(JSContext *cx,
                                                               JSObject *obj,
                                                               jsval id,

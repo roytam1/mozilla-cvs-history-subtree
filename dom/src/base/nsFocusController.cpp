@@ -150,18 +150,31 @@ nsFocusController::RewindFocusState()
 NS_IMETHODIMP
 nsFocusController::SetFocusedWindow(nsIDOMWindowInternal* aWindow)
 {
-  if (aWindow && (mCurrentWindow != aWindow)) {
-    nsCOMPtr<nsIScriptGlobalObject> sgo = do_QueryInterface(aWindow);
+  nsCOMPtr<nsPIDOMWindow> pwin = do_QueryInterface(aWindow);
+  nsPIDOMWindow *outerWin;
+
+  if (pwin && (outerWin = pwin->GetOuterWindow())) {
+    pwin = outerWin;
+  }
+
+  nsCOMPtr<nsIDOMWindowInternal> win = do_QueryInterface(pwin);
+
+  if (win && (mCurrentWindow != win)) {
+    nsCOMPtr<nsIScriptGlobalObject> sgo = do_QueryInterface(win);
     if (sgo) {
       nsCOMPtr<nsIBaseWindow> basewin = do_QueryInterface(sgo->GetDocShell());
       if (basewin)
         basewin->SetFocus();
     }
   }
-  if(mCurrentWindow) mPreviousWindow = mCurrentWindow;
-  else if (aWindow) mPreviousWindow = aWindow;
 
-  mCurrentWindow = aWindow;
+  if (mCurrentWindow) {
+    mPreviousWindow = mCurrentWindow;
+  } else if (win) {
+    mPreviousWindow = win;
+  }
+
+  mCurrentWindow = win;
 
   if (mUpdateWindowWatcher) {
     NS_ASSERTION(mActive, "This shouldn't happen");

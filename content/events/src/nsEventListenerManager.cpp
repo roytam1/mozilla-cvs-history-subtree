@@ -1172,6 +1172,8 @@ nsEventListenerManager::AddScriptEventListener(nsISupports *aObject,
 
   nsISupports *objiSupp = aObject;
 
+  JSObject *scope = nsnull;
+
   if (content) {
     // Try to get context from doc
     doc = content->GetOwnerDoc();
@@ -1179,6 +1181,7 @@ nsEventListenerManager::AddScriptEventListener(nsISupports *aObject,
 
     if (doc && (global = doc->GetScriptGlobalObject())) {
       context = global->GetContext();
+      scope = global->GetGlobalJSObject();
     }
   } else {
     nsCOMPtr<nsIDOMWindow> win(do_QueryInterface(aObject));
@@ -1199,6 +1202,7 @@ nsEventListenerManager::AddScriptEventListener(nsISupports *aObject,
     }
     if (global) {
       context = global->GetContext();
+      scope = global->GetGlobalJSObject();
     }
   }
 
@@ -1223,9 +1227,12 @@ nsEventListenerManager::AddScriptEventListener(nsISupports *aObject,
   if (!aDeferCompilation) {
     JSContext *cx = (JSContext *)context->GetNativeContext();
 
+    if (!scope) {
+      scope = ::JS_GetGlobalObject(cx);
+    }
+
     nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
-    rv = nsContentUtils::XPConnect()->WrapNative(cx, ::JS_GetGlobalObject(cx),
-                                                 aObject,
+    rv = nsContentUtils::XPConnect()->WrapNative(cx, scope, aObject,
                                                  NS_GET_IID(nsISupports),
                                                  getter_AddRefs(holder));
     NS_ENSURE_SUCCESS(rv, rv);
@@ -1355,6 +1362,7 @@ nsEventListenerManager::RegisterScriptEventListener(nsIScriptContext *aContext,
 
   JSContext *current_cx = (JSContext *)aContext->GetNativeContext();
 
+  // XXXjst: Don't use JS_GetGlobalObject(cx) here!
   nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
   rv = nsContentUtils::XPConnect()->
     WrapNative(current_cx, ::JS_GetGlobalObject(current_cx), aObject,

@@ -94,7 +94,7 @@ public:
   virtual nsresult Deactivate() = 0;
 
   nsIChromeEventHandler* GetChromeEventHandler()
-  {  
+  {
     return mChromeEventHandler;
   }
 
@@ -150,10 +150,31 @@ public:
   // Restore the window state from aState.
   virtual nsresult RestoreWindowState(nsISupports *aState) = 0;
 
+  nsPIDOMWindow *GetOuterWindow()
+  {
+    return mOuterWindow;
+  }
+
+  nsPIDOMWindow *GetCurrentInnerWindow()
+  {
+    return mInnerWindow;
+  }
+
+  PRBool IsInnerWindow()
+  {
+    return mOuterWindow != nsnull;
+  }
+
+  PRBool IsOuterWindow()
+  {
+    return !IsInnerWindow();
+  }
+
 protected:
-  nsPIDOMWindow()
+  nsPIDOMWindow(nsPIDOMWindow *aOuterWindow)
     : mRunningTimeout(nsnull), mMutationBits(0), mIsDocumentLoaded(PR_FALSE),
-      mIsHandlingResizeEvent(PR_FALSE)
+      mIsHandlingResizeEvent(PR_FALSE), mInnerWindow(nsnull),
+      mOuterWindow(aOuterWindow)
   {
   }
 
@@ -167,6 +188,9 @@ protected:
 
   PRPackedBool           mIsDocumentLoaded;
   PRPackedBool           mIsHandlingResizeEvent;
+
+  nsPIDOMWindow         *mInnerWindow;
+  nsPIDOMWindow         *mOuterWindow;
 };
 
 

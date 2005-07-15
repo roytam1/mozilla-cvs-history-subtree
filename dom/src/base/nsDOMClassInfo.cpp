@@ -61,8 +61,11 @@
 #include "jsapi.h"
 #include "jsnum.h"
 #include "jsdbgapi.h"
+#include "jsdhash.h" // for nasty cx->resolvingTable hack
+#include "jscntxt.h" // for nasty cx->resolvingTable hack
 
 // General helper includes
+#include "nsGlobalWindow.h"
 #include "nsIContent.h"
 #include "nsIDocument.h"
 #include "nsIDOMDocument.h"
@@ -3468,12 +3471,12 @@ nsDOMClassInfo::doCheckPropertyAccess(JSContext *cx, JSObject *obj, jsval id,
   }
 
   nsIScriptContext *scx = sgo->GetContext();
+  JSObject *global;
 
-  if (!scx || !scx->IsContextInitialized()) {
+  if (!scx || !scx->IsContextInitialized() ||
+      !(global = sgo->GetGlobalJSObject())) {
     return NS_OK;
   }
-
-  JSObject *global = sgo->GetGlobalJSObject();
 
   return sSecMan->CheckPropertyAccess(cx, global, mData->mName, id,
                                       accessMode);
@@ -3745,10 +3748,8 @@ nsWindowSH::InstallGlobalScopePolluter(JSContext *cx, JSObject *obj,
 
 static
 already_AddRefed<nsIDOMWindow>
-GetChildFrame(nsIXPConnectWrappedNative *wrapper, jsval id)
+GetChildFrame(nsGlobalWindow *win, jsval id)
 {
-  nsCOMPtr<nsIDOMWindowInternal> win(do_QueryWrappedNative(wrapper));
-
   nsCOMPtr<nsIDOMWindowCollection> frames;
   win->GetFrames(getter_AddRefs(frames));
 
@@ -3765,6 +3766,49 @@ NS_IMETHODIMP
 nsWindowSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                         JSObject *obj, jsval id, jsval *vp, PRBool *_retval)
 {
+  nsGlobalWindow *win = nsGlobalWindow::FromWrapper(wrapper);
+
+  {
+    nsDependentJSString str(::JS_ValueToString(cx, id));
+
+    if (win->IsInnerWindow()) {
+#ifdef DEBUG_PRINT_INNER
+      printf("Property '%s' get on inner window %p\n",
+             NS_ConvertUTF16toUTF8(str).get(), (void *)win);
+#endif
+    } else {
+      printf("Property '%s' get on outer window %p\n",
+             NS_ConvertUTF16toUTF8(str).get(), (void *)win);
+    }
+  }
+
+  if (win->IsOuterWindow()) {
+    // XXXjst: Do security checks here!
+
+    nsGlobalWindow *innerWin = win->GetCurrentInnerWindowInternal();
+
+    JSObject *innerObj;
+    if (innerWin && (innerObj = innerWin->GetGlobalJSObject())) {
+      printf(" --- Forwarding get to inner window %p\n", (void *)innerWin);
+
+      // Forward the get to the inner object
+      if (JSVAL_IS_STRING(id)) {
+        JSString *str = JSVAL_TO_STRING(id);
+
+        *_retval = ::JS_GetUCProperty(cx, innerObj, ::JS_GetStringChars(str),
+                                      ::JS_GetStringLength(str), vp);
+      } else if (JSVAL_IS_INT(id)) {
+        *_retval = ::JS_GetElement(cx, innerObj, JSVAL_TO_INT(id), vp);
+      } else {
+        NS_ERROR("Write me!");
+
+        return NS_ERROR_NOT_IMPLEMENTED;
+      }
+
+      return NS_OK;
+    }
+  }
+
   // The order in which things are done in this method are a bit
   // whacky, that's because this method is *extremely* performace
   // critical. Don't touch this unless you know what you're doing.
@@ -3775,7 +3819,7 @@ nsWindowSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     // if window.frames[n] is a child frame, wrap the frame and return
     // it without doing a security check.
 
-    nsCOMPtr<nsIDOMWindow> frame = GetChildFrame(wrapper, id);
+    nsCOMPtr<nsIDOMWindow> frame = GetChildFrame(win, id);
     nsresult rv = NS_OK;
 
     if (frame) {
@@ -3783,8 +3827,7 @@ nsWindowSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
       // child frame, wrap the child frame without doing a security
       // check and return.
 
-      rv = WrapNative(cx, ::JS_GetGlobalObject(cx), frame,
-                      NS_GET_IID(nsIDOMWindow), vp);
+      rv = WrapNative(cx, obj, frame, NS_GET_IID(nsIDOMWindow), vp);
     }
 
     return rv;
@@ -3840,6 +3883,49 @@ NS_IMETHODIMP
 nsWindowSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                         JSObject *obj, jsval id, jsval *vp, PRBool *_retval)
 {
+  nsGlobalWindow *win = nsGlobalWindow::FromWrapper(wrapper);
+
+  {
+    nsDependentJSString str(::JS_ValueToString(cx, id));
+
+    if (win->IsInnerWindow()) {
+#ifdef DEBUG_PRINT_INNER
+      printf("Property '%s' set on inner window %p\n",
+             NS_ConvertUTF16toUTF8(str).get(), (void *)win);
+#endif
+    } else {
+      printf("Property '%s' set on outer window %p\n",
+             NS_ConvertUTF16toUTF8(str).get(), (void *)win);
+    }
+  }
+
+  if (win->IsOuterWindow()) {
+    // XXXjst: Do security checks here!
+
+    nsGlobalWindow *innerWin = win->GetCurrentInnerWindowInternal();
+
+    JSObject *innerObj;
+    if (innerWin && (innerObj = innerWin->GetGlobalJSObject())) {
+      printf(" --- Forwarding set to inner window %p\n", (void *)innerWin);
+
+      // Forward the set to the inner object
+      if (JSVAL_IS_STRING(id)) {
+        JSString *str = JSVAL_TO_STRING(id);
+
+        *_retval = ::JS_SetUCProperty(cx, innerObj, ::JS_GetStringChars(str),
+                                      ::JS_GetStringLength(str), vp);
+      } else if (JSVAL_IS_INT(id)) {
+        *_retval = ::JS_SetElement(cx, innerObj, JSVAL_TO_INT(id), vp);
+      } else {
+        NS_ERROR("Write me!");
+
+        return NS_ERROR_NOT_IMPLEMENTED;
+      }
+
+      return NS_OK;
+    }
+  }
+
   if (needsSecurityCheck(cx, wrapper)) {
     nsresult rv =
       doCheckPropertyAccess(cx, obj, id, wrapper,
@@ -3881,6 +3967,49 @@ nsWindowSH::AddProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                         JSObject *obj, jsval id, jsval *vp,
                         PRBool *_retval)
 {
+  nsGlobalWindow *win = nsGlobalWindow::FromWrapper(wrapper);
+
+  {
+    nsDependentJSString str(::JS_ValueToString(cx, id));
+
+    if (win->IsInnerWindow()) {
+#ifdef DEBUG_PRINT_INNER
+      printf("Property '%s' add on inner window %p\n",
+             NS_ConvertUTF16toUTF8(str).get(), (void *)win);
+#endif
+    } else {
+      printf("Property '%s' add on outer window %p\n",
+             NS_ConvertUTF16toUTF8(str).get(), (void *)win);
+    }
+  }
+
+  if (win->IsOuterWindow()) {
+    // XXXjst: Do security checks here!
+
+    nsGlobalWindow *innerWin = win->GetCurrentInnerWindowInternal();
+
+    JSObject *innerObj;
+    if (innerWin && (innerObj = innerWin->GetGlobalJSObject())) {
+      printf(" --- Forwarding add to inner window %p\n", (void *)innerWin);
+
+      // Forward the add to the inner object
+      if (JSVAL_IS_STRING(id)) {
+        JSString *str = JSVAL_TO_STRING(id);
+
+        *_retval = ::JS_SetUCProperty(cx, innerObj, ::JS_GetStringChars(str),
+                                      ::JS_GetStringLength(str), vp);
+      } else if (JSVAL_IS_INT(id)) {
+        *_retval = ::JS_SetElement(cx, innerObj, JSVAL_TO_INT(id), vp);
+      } else {
+        NS_ERROR("Write me!");
+
+        return NS_ERROR_NOT_IMPLEMENTED;
+      }
+
+      return NS_OK;
+    }
+  }
+
   // If we're in a state where we're not supposed to do a security
   // check, return early.
   if (!sDoSecurityCheckInAddProperty) {
@@ -3916,6 +4045,24 @@ nsWindowSH::DelProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                         JSObject *obj, jsval id, jsval *vp,
                         PRBool *_retval)
 {
+  nsGlobalWindow *win = nsGlobalWindow::FromWrapper(wrapper);
+
+  {
+    nsDependentJSString str(::JS_ValueToString(cx, id));
+
+    if (win->IsInnerWindow()) {
+#ifdef DEBUG_PRINT_INNER
+      printf("Property '%s' del on inner window %p\n",
+             NS_ConvertUTF16toUTF8(str).get(), (void *)win);
+#endif
+    } else {
+      printf("Property '%s' del on outer window %p\n",
+             NS_ConvertUTF16toUTF8(str).get(), (void *)win);
+    }
+
+    // XXXjst: Forward delete to inner if celled on outer.
+  }
+
   if (id == sLocation_id) {
     // Don't allow deleting window.location, allowing that could lead
     // to security bugs (see bug 143369).
@@ -3987,8 +4134,8 @@ BaseStubConstructor(const nsGlobalNameStruct *name_struct, JSContext *cx,
     return rv;
   }
 
-  rv = nsDOMGenericSH::WrapNative(cx, ::JS_GetGlobalObject(cx), native,
-                                  NS_GET_IID(nsISupports), rval);
+  rv = nsDOMGenericSH::WrapNative(cx, obj, native, NS_GET_IID(nsISupports),
+                                  rval);
 
   return NS_SUCCEEDED(rv) ? JS_TRUE : JS_FALSE;
 }
@@ -5028,8 +5175,7 @@ nsWindowSH::GlobalResolve(nsIScriptGlobalObject *global, JSContext *cx,
 
       prop_val = OBJECT_TO_JSVAL(prop_obj);
     } else {
-      rv = WrapNative(cx, ::JS_GetGlobalObject(cx), native,
-                      NS_GET_IID(nsISupports), &prop_val);
+      rv = WrapNative(cx, obj, native, NS_GET_IID(nsISupports), &prop_val);
     }
 
     NS_ENSURE_SUCCESS(rv, rv);
@@ -5059,36 +5205,58 @@ nsWindowSH::GlobalResolve(nsIScriptGlobalObject *global, JSContext *cx,
   return rv;
 }
 
-// static
-nsresult
-nsWindowSH::OnDocumentChanged(JSContext *cx, JSObject *obj,
-                              nsIDOMWindow *window)
-{
-  nsCOMPtr<nsIDOMDocument> document;
-  nsresult rv = window->GetDocument(getter_AddRefs(document));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  jsval v;
-  rv = WrapNative(cx, obj, document, NS_GET_IID(nsIDOMDocument), &v);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  NS_NAMED_LITERAL_STRING(doc_str, "document");
-
-  if (!::JS_DefineUCProperty(cx, obj, NS_REINTERPRET_CAST(const jschar *,
-                                                          doc_str.get()),
-                             doc_str.Length(), v, nsnull,
-                             nsnull, JSPROP_READONLY | JSPROP_ENUMERATE)) {
-    return NS_ERROR_FAILURE;
-  }
-
-  return NS_OK;
-}
-
 NS_IMETHODIMP
 nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                        JSObject *obj, jsval id, PRUint32 flags,
                        JSObject **objp, PRBool *_retval)
 {
+  nsGlobalWindow *win = nsGlobalWindow::FromWrapper(wrapper);
+
+  {
+    nsDependentJSString str(::JS_ValueToString(cx, id));
+
+    if (win->IsInnerWindow()) {
+#ifdef DEBUG_PRINT_INNER
+      printf("Property '%s' resolve on inner window %p\n",
+             NS_ConvertUTF16toUTF8(str).get(), (void *)win);
+#endif
+    } else {
+      printf("Property '%s' resolve on outer window %p\n",
+             NS_ConvertUTF16toUTF8(str).get(), (void *)win);
+    }
+  }
+
+  if (win->IsOuterWindow()) {
+    // XXXjst: Do security checks here!
+
+    nsGlobalWindow *innerWin = win->GetCurrentInnerWindowInternal();
+
+    JSObject *innerObj;
+    if (innerWin && (innerObj = innerWin->GetGlobalJSObject())) {
+      printf(" --- Forwarding resolve to inner window %p\n", (void *)innerWin);
+
+      // Forward the resolve to the inner object
+      JSNewResolveOp newresolve =
+        (JSNewResolveOp)JS_GET_CLASS(cx, innerObj)->resolve;
+
+      // Fun hack to make the JS engine deal with this resolve
+      // forwarding for now...
+      JSDHashTable *table = cx->resolvingTable;
+      cx->resolvingTable = nsnull;
+
+      JSObject *oldObjp = *objp;
+      *_retval = newresolve(cx, innerObj, id, flags, objp);
+
+      cx->resolvingTable = table;
+
+      if (*objp != oldObjp) {
+        printf(" --- Resolve on inner window found property.\n");
+      }
+
+      return NS_OK;
+    }
+  }
+
   if (!JSVAL_IS_STRING(id)) {
     if (JSVAL_IS_INT(id) && !(flags & JSRESOLVE_ASSIGNING)) {
       // If we're resolving a numeric property, treat that as if
@@ -5096,7 +5264,7 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
       // window), if window.frames[n] is a child frame, define a
       // property for this index.
 
-      nsCOMPtr<nsIDOMWindow> frame = GetChildFrame(wrapper, id);
+      nsCOMPtr<nsIDOMWindow> frame = GetChildFrame(win, id);
 
       if (frame) {
         // A numeric property accessed and the numeric property is a
@@ -5114,10 +5282,7 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     return NS_OK;
   }
 
-  nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryWrappedNative(wrapper));
-  NS_ENSURE_TRUE(sgo, NS_ERROR_UNEXPECTED);
-
-  nsIScriptContext *my_context = sgo->GetContext();
+  nsIScriptContext *my_context = win->GetContextInternal();
 
   nsresult rv = NS_OK;
 
@@ -5131,7 +5296,7 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     // initialization to behave as if it were done eagerly, on each
     // window's own context (not on some other window-caller's
     // context).
- 
+
     JSContext *my_cx;
 
     if (!my_context) {
@@ -5176,7 +5341,7 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
   JSString *str = JSVAL_TO_STRING(id);
 
-  nsCOMPtr<nsIDocShellTreeNode> dsn(do_QueryInterface(sgo->GetDocShell()));
+  nsCOMPtr<nsIDocShellTreeNode> dsn(do_QueryInterface(win->GetDocShell()));
 
   PRInt32 count = 0;
 
@@ -5200,8 +5365,11 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
       // on the wrapper so that ::NewResolve() doesn't get called
       // again for this property name.
 
+      JSObject *wrapperObj;
+      wrapper->GetJSObject(&wrapperObj);
+
       jsval v;
-      rv = WrapNative(cx, ::JS_GetGlobalObject(cx), child_win,
+      rv = WrapNative(cx, wrapperObj, child_win,
                       NS_GET_IID(nsIDOMWindowInternal), &v);
       NS_ENSURE_SUCCESS(rv, rv);
 
@@ -5244,7 +5412,7 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     // which have been registered with the script namespace manager.
 
     JSBool did_resolve = JS_FALSE;
-    rv = GlobalResolve(sgo, cx, obj, str, flags, &did_resolve);
+    rv = GlobalResolve(win, cx, obj, str, flags, &did_resolve);
     NS_ENSURE_SUCCESS(rv, rv);
 
     if (did_resolve) {
@@ -5290,11 +5458,8 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     // here) since we must define window.location to prevent the
     // getter from being overriden (for security reasons).
 
-    nsCOMPtr<nsIDOMWindowInternal> window(do_QueryInterface(sgo));
-    NS_ENSURE_TRUE(window, NS_ERROR_UNEXPECTED);
-
     nsCOMPtr<nsIDOMLocation> location;
-    rv = window->GetLocation(getter_AddRefs(location));
+    rv = win->GetLocation(getter_AddRefs(location));
     NS_ENSURE_SUCCESS(rv, rv);
 
     jsval v;
@@ -5340,11 +5505,8 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     }
   } else {
     if (id == sNavigator_id) {
-      nsCOMPtr<nsIDOMWindowInternal> window(do_QueryInterface(sgo));
-      NS_ENSURE_TRUE(window, NS_ERROR_UNEXPECTED);
-
       nsCOMPtr<nsIDOMNavigator> navigator;
-      rv = window->GetNavigator(getter_AddRefs(navigator));
+      rv = win->GetNavigator(getter_AddRefs(navigator));
       NS_ENSURE_SUCCESS(rv, rv);
 
       jsval v;
@@ -5363,11 +5525,22 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     }
 
     if (id == sDocument_id) {
-      nsCOMPtr<nsIDOMWindowInternal> window(do_QueryInterface(sgo));
-      NS_ENSURE_TRUE(window, NS_ERROR_UNEXPECTED);
-
-      rv = OnDocumentChanged(cx, obj, window);
+      nsCOMPtr<nsIDOMDocument> document;
+      nsresult rv = win->GetDocument(getter_AddRefs(document));
       NS_ENSURE_SUCCESS(rv, rv);
+
+      jsval v;
+      rv = WrapNative(cx, obj, document, NS_GET_IID(nsIDOMDocument), &v);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      NS_NAMED_LITERAL_STRING(doc_str, "document");
+
+      if (!::JS_DefineUCProperty(cx, obj, NS_REINTERPRET_CAST(const jschar *,
+                                                              doc_str.get()),
+                                 doc_str.Length(), v, nsnull,
+                                 nsnull, JSPROP_READONLY | JSPROP_ENUMERATE)) {
+        return NS_ERROR_FAILURE;
+      }
 
       *objp = obj;
 
@@ -5375,8 +5548,10 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     }
 
     if (id == sWindow_id) {
+      // XXXjst: Why wrap window here, find the instance from obj...
       jsval v;
-      rv = WrapNative(cx, obj, sgo, NS_GET_IID(nsIDOMWindow), &v);
+      rv = WrapNative(cx, obj, (nsIScriptGlobalObject *)win,
+                      NS_GET_IID(nsIDOMWindow), &v);
       NS_ENSURE_SUCCESS(rv, rv);
 
       if (!::JS_DefineUCProperty(cx, obj, ::JS_GetStringChars(str),
@@ -5529,6 +5704,8 @@ nsNodeSH::PreCreate(nsISupports *nativeObj, JSContext *cx, JSObject *globalObj,
       return NS_OK;
     }
   }
+
+  // XXXjst: Is it ok to use JS_GetGlobalObject() here?
 
   jsval v;
   nsresult rv = WrapNative(cx, ::JS_GetGlobalObject(cx), native_parent,
@@ -5998,8 +6175,7 @@ nsArraySH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     NS_ENSURE_SUCCESS(rv, rv);
 
     if (array_item) {
-      rv = WrapNative(cx, ::JS_GetGlobalObject(cx), array_item,
-                      NS_GET_IID(nsISupports), vp);
+      rv = WrapNative(cx, obj, array_item, NS_GET_IID(nsISupports), vp);
       NS_ENSURE_SUCCESS(rv, rv);
     }
   }
@@ -6035,8 +6211,7 @@ nsNamedArraySH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     NS_ENSURE_SUCCESS(rv, rv);
 
     if (item) {
-      rv = WrapNative(cx, ::JS_GetGlobalObject(cx), item,
-                      NS_GET_IID(nsISupports), vp);
+      rv = WrapNative(cx, obj, item, NS_GET_IID(nsISupports), vp);
       NS_ENSURE_SUCCESS(rv, rv);
     }
 
@@ -6132,6 +6307,7 @@ nsContentListSH::PreCreate(nsISupports *nativeObj, JSContext *cx,
     return NS_OK;
   }
 
+  // XXXjst: Don't use JS_GetGlobalObject() here!
   jsval v;
   nsresult rv = WrapNative(cx, ::JS_GetGlobalObject(cx), native_parent,
                            NS_GET_IID(nsISupports), &v);
@@ -6159,6 +6335,14 @@ nsFormControlListSH::GetNamedItem(nsISupports *aNative,
 static inline PRBool
 documentNeedsSecurityCheck(JSContext *cx, nsIXPConnectWrappedNative *wrapper)
 {
+  // XXXjst: Figure this out!
+
+
+
+  return PR_TRUE;
+
+
+
   // We cache a pointer to a wrapper and a context that we've last vetted
   // and cache what the verdict was.
 
@@ -6508,8 +6692,7 @@ nsHTMLDocumentSH::DocumentOpen(JSContext *cx, JSObject *obj, uintN argc,
     return JS_FALSE;
   }
 
-  rv = WrapNative(cx, ::JS_GetGlobalObject(cx), retval,
-                  NS_GET_IID(nsIDOMDocument), rval);
+  rv = WrapNative(cx, obj, retval, NS_GET_IID(nsIDOMDocument), rval);
   NS_ASSERTION(NS_SUCCEEDED(rv), "Failed to wrap native!");
 
   return NS_SUCCEEDED(rv);
@@ -7117,8 +7300,7 @@ nsHTMLDocumentSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
   NS_ENSURE_SUCCESS(rv, rv);
 
   if (result) {
-    return WrapNative(cx, ::JS_GetGlobalObject(cx), result,
-                      NS_GET_IID(nsISupports), vp);
+    return WrapNative(cx, obj, result, NS_GET_IID(nsISupports), vp);
   }
 
   return NS_OK;
@@ -7250,8 +7432,7 @@ nsHTMLFormElementSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
     if (result) {
       // Wrap result, result can be either an element or a list of
       // elements
-      return WrapNative(cx, ::JS_GetGlobalObject(cx), result,
-                        NS_GET_IID(nsISupports), vp);
+      return WrapNative(cx, obj, result, NS_GET_IID(nsISupports), vp);
     }
 
     return NS_OK; // Don't fall through
@@ -7264,8 +7445,7 @@ nsHTMLFormElementSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
     form->GetElementAt(n, getter_AddRefs(control));
 
     if (control) {
-      return WrapNative(cx, ::JS_GetGlobalObject(cx), control,
-                        NS_GET_IID(nsISupports), vp);
+      return WrapNative(cx, obj, control, NS_GET_IID(nsISupports), vp);
     }
   }
 
@@ -7368,8 +7548,7 @@ nsHTMLSelectElementSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
 
       options->Item(n, getter_AddRefs(node));
 
-      return WrapNative(cx, ::JS_GetGlobalObject(cx), node,
-                        NS_GET_IID(nsIDOMNode), vp);
+      return WrapNative(cx, obj, node, NS_GET_IID(nsIDOMNode), vp);
     }
   }
 
@@ -7955,8 +8134,7 @@ nsHTMLPluginObjElementSH::NewResolve(nsIXPConnectWrappedNative *wrapper,
         }
 
         nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
-        rv = sXPConnect->WrapNative(cx, ::JS_GetGlobalObject(cx), pi, *iid,
-                                    getter_AddRefs(holder));
+        rv = sXPConnect->WrapNative(cx, obj, pi, *iid, getter_AddRefs(holder));
 
         if (NS_SUCCEEDED(rv)) {
           JSObject* ifaceObj;

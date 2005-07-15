@@ -70,6 +70,7 @@
 #include "nsIDOMJSWindow.h"
 #include "nsIDOMChromeWindow.h"
 #include "nsIScriptGlobalObject.h"
+#include "nsIScriptContext.h"
 #include "nsIScriptObjectPrincipal.h"
 #include "nsITimer.h"
 #include "nsIWebBrowserChrome.h"
@@ -206,7 +207,9 @@ public:
 
   virtual NS_HIDDEN_(nsresult) SaveWindowState(nsISupports **aState);
   virtual NS_HIDDEN_(nsresult) RestoreWindowState(nsISupports *aState);
-  
+
+  virtual NS_HIDDEN_(nsPIDOMWindow *) GetOuterWindow();
+  virtual NS_HIDDEN_(nsPIDOMWindow *) GetCurrentInnerWindow();
   // nsIDOMViewCSS
   NS_DECL_NSIDOMVIEWCSS
 
@@ -217,7 +220,32 @@ public:
   NS_DECL_NSIINTERFACEREQUESTOR
 
   // Object Management
-  nsGlobalWindow();
+  nsGlobalWindow(nsGlobalWindow *aOuterWindow);
+
+  static nsGlobalWindow *FromWrapper(nsIXPConnectWrappedNative *wrapper)
+  {
+    // Make sure this matches the casts we do in QueryInterface().
+    return (nsGlobalWindow *)(nsIScriptGlobalObject *)wrapper->Native();
+  }
+
+  nsIScriptContext *GetContextInternal()
+  {
+    if (IsInnerWindow()) {
+      return GetOuterWindowInternal()->mContext;
+    }
+
+    return mContext;
+  }
+
+  nsGlobalWindow *GetOuterWindowInternal()
+  {
+    return NS_STATIC_CAST(nsGlobalWindow *, mOuterWindow);
+  }
+
+  nsGlobalWindow *GetCurrentInnerWindowInternal()
+  {
+    return NS_STATIC_CAST(nsGlobalWindow *, mInnerWindow);
+  }
 
   static void ShutDown();
   static PRBool IsCallerChrome();
@@ -325,6 +353,9 @@ protected:
   PRPackedBool                  mInClose;
   PRPackedBool                  mOpenerWasCleared;
   PRPackedBool                  mIsPopupSpam;
+
+  nsCOMPtr<nsIXPConnectJSObjectHolder> mInnerWindowHolder;
+
   nsCOMPtr<nsIScriptContext>    mContext;
   nsCOMPtr<nsIDOMWindowInternal> mOpener;
   nsCOMPtr<nsIControllers>      mControllers;
@@ -354,16 +385,6 @@ protected:
   nsEvent*                      mCurrentEvent;
   nsCOMPtr<nsIDOMCrypto>        mCrypto;
   nsCOMPtr<nsIDOMPkcs11>        mPkcs11;
-  nsCOMPtr<nsIPrincipal>        mDocumentPrincipal;
-
-  // XXX We need mNavigatorHolder because we make two SetNewDocument()
-  // calls when transitioning from page to page. This keeps a reference
-  // to the JSObject holder for the navigator object in between
-  // SetNewDocument() calls so that the JSObject doesn't get garbage
-  // collected in between these calls.
-  // See bug 163645 for more on why we need this and bug 209607 for info
-  // on how we can remove the need for this.
-  nsCOMPtr<nsIXPConnectJSObjectHolder> mNavigatorHolder;
 
   friend class nsDOMScriptableHelper;
   friend class nsDOMWindowUtils;
@@ -384,6 +405,11 @@ public:
 
   // nsIDOMChromeWindow interface
   NS_DECL_NSIDOMCHROMEWINDOW
+
+  nsGlobalChromeWindow(nsGlobalWindow *aOuterWindow)
+    : nsGlobalWindow(aOuterWindow)
+  {
+  }
 
 protected:
   nsCOMPtr<nsIBrowserDOMWindow> mBrowserDOMWindow;
