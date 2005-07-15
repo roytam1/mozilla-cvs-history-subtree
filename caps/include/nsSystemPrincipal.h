@@ -52,13 +52,14 @@
 #define NS_SYSTEMPRINCIPAL_CONTRACTID "@mozilla.org/systemprincipal;1"
 
 
-class nsSystemPrincipal : public nsIPrincipal,
+class nsSystemPrincipal : public nsISubsumingPrincipal,
                           public nsIPrincipalObsolete
 {
 public:
     NS_DECL_ISUPPORTS_INHERITED
-    NS_DECL_NSIPRINCIPAL
     NS_DECL_NSISERIALIZABLE
+    NS_DECL_NSIPRINCIPAL
+    NS_DECL_NSISUBSUMINGPRINCIPAL
 
     // nsIPrincipalObsolete declarations, written out because some of them
     // overlap with nsIPrincipal.

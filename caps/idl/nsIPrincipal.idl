@@ -52,7 +52,7 @@ interface nsIURI;
 [ptr] native JSContext(JSContext);
 [ptr] native JSPrincipals(JSPrincipals);
 
-[uuid(a67c4736-9a95-4ce1-9ffc-3f88c0913a34)]
+[uuid(0575ea96-4561-4dc6-a818-3c4c97c2430d)]
 interface nsIPrincipal : nsISerializable
 {
     /**
@@ -152,7 +152,11 @@ interface nsIPrincipal : nsISerializable
      * Throws if there is no certificate associated with this principal.
      */
     attribute string commonName;
+};
 
+[uuid(a67c4736-9a95-4ce1-9ffc-3f88c0913a34)]
+interface nsISubsumingPrincipal : nsIPrincipal
+{
     /**
      * Returns whether the other principal is equal to or weaker than this
      * principal.  Principals are equal if they are the same object, they

@@ -64,11 +64,13 @@ NS_INTERFACE_MAP_BEGIN(nsPrincipal)
   NS_INTERFACE_MAP_ENTRY(nsIPrincipal)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISerializable, nsIPrincipal)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIPrincipal)
+  NS_INTERFACE_MAP_ENTRY(nsISubsumingPrincipal)
   NS_INTERFACE_MAP_ENTRY(nsIPrincipalObsolete)
   NS_IMPL_QUERY_CLASSINFO(nsPrincipal)
 NS_INTERFACE_MAP_END
 
-NS_IMPL_CI_INTERFACE_GETTER2(nsPrincipal,
+NS_IMPL_CI_INTERFACE_GETTER3(nsPrincipal,
+                             nsISubsumingPrincipal,
                              nsIPrincipal,
                              nsISerializable)
 

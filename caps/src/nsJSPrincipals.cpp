@@ -67,9 +67,14 @@ nsJSPrincipalsSubsume(JSPrincipals *jsprin, JSPrincipals *other)
     nsJSPrincipals *nsjsprin = NS_STATIC_CAST(nsJSPrincipals *, jsprin);
     nsJSPrincipals *nsother  = NS_STATIC_CAST(nsJSPrincipals *, other);
 
+    nsCOMPtr<nsISubsumingPrincipal> subjsprin =
+        do_QueryInterface(nsjsprin->nsIPrincipalPtr);
+    if (!subjsprin) {
+        return JS_FALSE;
+    }
+
     JSBool result;
-    nsresult rv = nsjsprin->nsIPrincipalPtr->Subsumes(nsother->nsIPrincipalPtr,
-                                                      &result);
+    nsresult rv = subjsprin->Subsumes(nsother->nsIPrincipalPtr, &result);
     return NS_SUCCEEDED(rv) && result;
 }
 
