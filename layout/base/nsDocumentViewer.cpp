@@ -1266,9 +1266,6 @@ DocumentViewerImpl::Close(nsISHEntry *aSHEntry)
   } else
 #endif
     {
-      // out of band cleanup of webshell
-      mDocument->SetScriptGlobalObject(nsnull);
-
       if (!mSHEntry)
         mDocument->Destroy();
     }

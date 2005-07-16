@@ -3607,7 +3607,7 @@ nsWindowSH::GlobalScopePolluterNewResolve(JSContext *cx, JSObject *obj,
 
   nsIHTMLDocument *doc = (nsIHTMLDocument *)::JS_GetPrivate(cx, obj);
 
-  if (!doc || doc->GetCompatibilityMode() != eCompatibility_NavQuirks) {
+  if (doc->GetCompatibilityMode() != eCompatibility_NavQuirks) {
     // If we don't have a document, or if the document is not in
     // quirks mode, return early.
 
@@ -3664,51 +3664,19 @@ nsWindowSH::GlobalScopePolluterNewResolve(JSContext *cx, JSObject *obj,
 }
 
 // static
-JSObject *
-nsWindowSH::GetInvalidatedGlobalScopePolluter(JSContext *cx, JSObject *obj)
-{
-  JSObject *proto;
-
-  while ((proto = ::JS_GetPrototype(cx, obj))) {
-    if (JS_GET_CLASS(cx, proto) == &sGlobalScopePolluterClass) {
-      nsIHTMLDocument *doc = (nsIHTMLDocument *)::JS_GetPrivate(cx, proto);
-
-      NS_IF_RELEASE(doc);
-
-      ::JS_SetPrivate(cx, proto, nsnull);
-
-      // Pull the global scope polluter out of the prototype chain.
-      ::JS_SetPrototype(cx, obj, ::JS_GetPrototype(cx, proto));
-
-      ::JS_ClearScope(cx, proto);
-
-      break;
-    }
-
-    obj = proto;
-  }
-
-  return proto;
-}
-
-// static
 nsresult
 nsWindowSH::InstallGlobalScopePolluter(JSContext *cx, JSObject *obj,
-                                       JSObject *oldPolluter,
                                        nsIHTMLDocument *doc)
 {
-  // If global scope pollution is disabled, do nothing
-  if (sDisableGlobalScopePollutionSupport) {
+  // If global scope pollution is disabled, or if our document is not
+  // a HTML document, do nothing
+  if (sDisableGlobalScopePollutionSupport || !doc) {
     return NS_OK;
   }
 
-  JSObject *gsp = oldPolluter;
-
+  JSObject *gsp = ::JS_NewObject(cx, &sGlobalScopePolluterClass, nsnull, obj);
   if (!gsp) {
-    gsp = ::JS_NewObject(cx, &sGlobalScopePolluterClass, nsnull, obj);
-    if (!gsp) {
-      return NS_ERROR_OUT_OF_MEMORY;
-    }
+    return NS_ERROR_OUT_OF_MEMORY;
   }
 
   JSObject *o = obj, *proto;
@@ -5235,22 +5203,49 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     if (innerWin && (innerObj = innerWin->GetGlobalJSObject())) {
       printf(" --- Forwarding resolve to inner window %p\n", (void *)innerWin);
 
-      // Forward the resolve to the inner object
-      JSNewResolveOp newresolve =
-        (JSNewResolveOp)JS_GET_CLASS(cx, innerObj)->resolve;
+      jsid interned_id;
+      JSObject *pobj;
+      JSProperty *prop = nsnull;
 
-      // Fun hack to make the JS engine deal with this resolve
-      // forwarding for now...
-      JSDHashTable *table = cx->resolvingTable;
-      cx->resolvingTable = nsnull;
+      *_retval = (::JS_ValueToId(cx, id, &interned_id) &&
+                  OBJ_LOOKUP_PROPERTY(cx, innerObj, interned_id, &pobj,
+                                      &prop));
 
-      JSObject *oldObjp = *objp;
-      *_retval = newresolve(cx, innerObj, id, flags, objp);
-
-      cx->resolvingTable = table;
-
-      if (*objp != oldObjp) {
+      if (*_retval && prop) {
         printf(" --- Resolve on inner window found property.\n");
+
+        OBJ_DROP_PROPERTY(cx, pobj, prop);
+
+        JSObject *proto;
+        if (pobj != innerObj && (proto = ::JS_GetPrototype(cx, obj))) {
+          // A property was found on one of innerObj's prototypes,
+          // this means the property could've been found on the
+          // XPCWrappedNative proto, which means that the property is
+          // likely a function (getter, setter, or a method). In this
+          // case we can't expose this method as a property of the
+          // outer since a call to it would be on the wrong object and
+          // XPConnect can't deal. In this case only, check if the
+          // property also exists on our prototype, and if it does,
+          // return it instead of the one found on the inner object's
+          // prototype chain.
+
+          printf(" ... but the propety was found on the prototype, checking to see if the property also exists on our prototype.\n");
+
+          JSObject *mypobj;
+          OBJ_LOOKUP_PROPERTY(cx, proto, interned_id, &mypobj,
+                              &prop);
+
+          if (prop) {
+            // We found the prop on obj's prototype too, use it
+            // instead.
+
+            OBJ_DROP_PROPERTY(cx, mypobj, prop);
+
+            pobj = mypobj;
+          }
+        }
+
+        *objp = pobj;
       }
 
       return NS_OK;

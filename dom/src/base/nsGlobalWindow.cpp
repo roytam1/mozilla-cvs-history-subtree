@@ -571,11 +571,6 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
         //xblService->AttachGlobalDragHandler(rec);
       }
     }
-    /*
-      nsCOMPtr<nsIHTMLDocument> html_doc(do_QueryInterface(aDocument));
-
-      nsWindowSH::InstallGlobalScopePolluter(cx, mJSObject, nsnull, html_doc);
-    */
   }
 
   /* No mDocShell means we've already been partially closed down.
@@ -595,14 +590,14 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
   nsIXPConnect *xpc = nsContentUtils::XPConnect();
 
   if (oldDoc) {
-    nsIURI *docURL = oldDoc->GetDocumentURI();
+    nsIURI *oldURL = oldDoc->GetDocumentURI();
 
     // If we had a document in this window the document most likely
     // made our scope "unclear"
 
     mIsScopeClear = PR_FALSE;
 
-    if (docURL) {
+    if (oldURL) {
       nsCOMPtr<nsIDocShellTreeItem> treeItem(do_QueryInterface(mDocShell));
       PRBool isContentWindow = PR_FALSE;
 
@@ -616,19 +611,18 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
       PRBool isSameOrigin = PR_FALSE;
       PRBool isAboutBlank = PR_FALSE;
       PRBool isAbout;
-      if (NS_SUCCEEDED(docURL->SchemeIs("about", &isAbout)) && isAbout) {
+      if (NS_SUCCEEDED(oldURL->SchemeIs("about", &isAbout)) && isAbout) {
         nsCAutoString url;
-        docURL->GetSpec(url);
+        oldURL->GetSpec(url);
         isAboutBlank = url.EqualsLiteral("about:blank");
 
         if (isAboutBlank && mOpenerScriptURL) {
           nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(mDocShell));
           if (webNav) {
-            nsCOMPtr<nsIURI> newDocURL;
-            webNav->GetCurrentURI(getter_AddRefs(newDocURL));
-            if (newDocURL && sSecMan) {
-              sSecMan->SecurityCompareURIs(mOpenerScriptURL,
-                                           newDocURL,
+            nsCOMPtr<nsIURI> newURL;
+            webNav->GetCurrentURI(getter_AddRefs(newURL));
+            if (newURL && sSecMan) {
+              sSecMan->SecurityCompareURIs(mOpenerScriptURL, newURL,
                                            &isSameOrigin);
             }
           }
@@ -649,23 +643,8 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
         }
 
         if (cx && mJSObject) {
-          /*
-            JSObject *gsp =
-              nsWindowSH::GetInvalidatedGlobalScopePolluter(cx, mJSObject);
-          */
-
           ::JS_ClearScope(cx, mJSObject);
           ::JS_ClearRegExpStatics(cx);
-
-          /*
-
-          if (gsp) {
-            nsCOMPtr<nsIHTMLDocument> html_doc(do_QueryInterface(aDocument));
-
-            nsWindowSH::InstallGlobalScopePolluter(cx, mJSObject, gsp,
-                                                   html_doc);
-          }
-          */
 
           mIsScopeClear = PR_TRUE;
         }
@@ -674,13 +653,19 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
       // Don't remove event listeners in similar conditions
       aRemoveEventListeners = aRemoveEventListeners &&
         (!isAboutBlank || (isContentWindow && !isSameOrigin));
-
     }
 
     if (aRemoveEventListeners && mListenerManager) {
       mListenerManager->RemoveAllListeners(PR_FALSE);
       mListenerManager = nsnull;
     }
+
+    // Tear down the old document. Ideally we wouldn't need to do
+    // this, but until we can make nsJSEventListener objects not hold
+    // a strong reference to the nsJSContext we don't really have a
+    // choise.
+    oldDoc->SetScriptGlobalObject(nsnull);
+    oldDoc->Destroy();
   }
 
   if (cx && aDocument) {
@@ -808,19 +793,6 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
   }
 
   if (aDocument && scx) {
-    /*
-    JSObject *gsp =
-      nsWindowSH::GetInvalidatedGlobalScopePolluter(cx, mJSObject);
-
-    // Lock gsp to keep it from being collected by a last-ditch GC under
-    // mContext->InitContext(this), or possibly other indirect GC-thing
-    // allocations that might nest between here and the point in
-    // nsWindowSH::InstallGlobalScopePolluter that puts gsp back into the
-    // window object's prototype chain.
-
-    ::JS_LockGCThing(cx, gsp);
-    */
-
     if (mIsScopeClear && IsOuterWindow()) {
       scx->InitContext(this);
     } else {
@@ -832,13 +804,10 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
       //      nsWindowSH::OnDocumentChanged(cx, mJSObject, this);
     }
 
-    /*
-    nsCOMPtr<nsIHTMLDocument> html_doc(do_QueryInterface(mDocument));
-
-    nsWindowSH::InstallGlobalScopePolluter(cx, mJSObject, gsp, html_doc);
-
-    ::JS_UnlockGCThing(cx, gsp);
-    */
+    if (IsInnerWindow()) {
+      nsCOMPtr<nsIHTMLDocument> html_doc(do_QueryInterface(mDocument));
+      nsWindowSH::InstallGlobalScopePolluter(cx, mJSObject, html_doc);
+    }
   }
 
   // Clear our mutation bitfield.
@@ -904,6 +873,17 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
 
     if (currentInner) {
       currentInner->mChromeEventHandler = nsnull;
+
+      nsCOMPtr<nsIDocument> doc(do_QueryInterface(currentInner->mDocument));
+
+      if (doc) {
+        // Tear down the old document. Ideally we wouldn't need to do
+        // this, but until we can make nsJSEventListener objects not
+        // hold a strong reference to the nsJSContext we don't really
+        // have a choise.
+        doc->SetScriptGlobalObject(nsnull);
+        doc->Destroy();
+      }
     }
   }
 
