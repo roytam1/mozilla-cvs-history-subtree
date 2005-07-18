@@ -4102,8 +4102,8 @@ BaseStubConstructor(const nsGlobalNameStruct *name_struct, JSContext *cx,
     return rv;
   }
 
-  rv = nsDOMGenericSH::WrapNative(cx, obj, native, NS_GET_IID(nsISupports),
-                                  rval);
+  rv = nsDOMGenericSH::WrapNative(cx, GetGlobalJSObject(cx, obj), native,
+                                  NS_GET_IID(nsISupports), rval);
 
   return NS_SUCCEEDED(rv) ? JS_TRUE : JS_FALSE;
 }

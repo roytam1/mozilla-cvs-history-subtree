@@ -693,12 +693,12 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
   mDocument = aDocument;
 
   if (xpc && aDocument && IsOuterWindow()) {
-    if (mInnerWindow) {
-      nsGlobalWindow *currentInner = GetCurrentInnerWindowInternal();
-      if (currentInner->mListenerManager) {
-        currentInner->mListenerManager->RemoveAllListeners(PR_FALSE);
-        currentInner->mListenerManager = nsnull;
-      }
+    nsGlobalWindow *currentInner = GetCurrentInnerWindowInternal();
+
+    if (aRemoveEventListeners && currentInner &&
+        currentInner->mListenerManager) {
+      currentInner->mListenerManager->RemoveAllListeners(PR_FALSE);
+      currentInner->mListenerManager = nsnull;
     }
 
     nsRefPtr<nsGlobalWindow> newInnerWindow;
@@ -732,7 +732,6 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
 
     mInnerWindowHolder->GetJSObject(&newInnerWindow->mJSObject);
 
-    nsGlobalWindow *currentInner = GetCurrentInnerWindowInternal();
     JSObject *oldGlobal = currentInner ? currentInner->mJSObject : mJSObject;
 
     if (oldGlobal) {
@@ -759,8 +758,8 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
       nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
       nsIDOMNavigator* navigator =
         NS_STATIC_CAST(nsIDOMNavigator*, mNavigator.get());
-      xpc->WrapNative(cx, mJSObject, navigator, NS_GET_IID(nsIDOMNavigator),
-                      getter_AddRefs(holder));
+      xpc->WrapNative(cx, currentInner->mJSObject, navigator,
+                      NS_GET_IID(nsIDOMNavigator), getter_AddRefs(holder));
 
       if (holder) {
         JSObject *nav;
@@ -769,6 +768,11 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
         jsval navVal = OBJECT_TO_JSVAL(nav);
         ::JS_SetProperty(cx, newInnerWindow->mJSObject, "navigator", &navVal);
       }
+
+      // XXXjst: We shouldn't need to do this, but if we don't we leak
+      // the world... actually, even with this we leak the
+      // world... need to figure this out.
+      ::JS_ClearScope(cx, currentInner->mJSObject);
     }
 
     mInnerWindow = newInnerWindow;
@@ -841,6 +845,19 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
         currentInner->mListenerManager->RemoveAllListeners(PR_FALSE);
         currentInner->mListenerManager = nsnull;
       }
+
+      JSContext *cx = (JSContext *)mContext->GetNativeContext();
+
+      // XXXjst: We shouldn't need to do this, but if we don't we leak
+      // the world... actually, even with this we leak the
+      // world... need to figure this out.
+      if (currentInner->mJSObject) {
+        ::JS_ClearScope(cx, currentInner->mJSObject);
+      }
+
+      if (mJSObject) {
+        ::JS_ClearScope(cx, mJSObject);
+      }        
     }
 
     // if we are closing the window while in full screen mode, be sure
