@@ -346,8 +346,6 @@ protected:
   // objects will keep the global object (this object) alive.  To prevent
   // these cycles, ownership of such members must be released in
   // |CleanUp| and |SetDocShell|.
-  PRPackedBool                  mFirstDocumentLoad;
-  PRPackedBool                  mIsScopeClear;
   PRPackedBool                  mFullScreen;
   PRPackedBool                  mIsClosed;
   PRPackedBool                  mInClose;

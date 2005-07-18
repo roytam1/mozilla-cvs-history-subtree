@@ -5624,6 +5624,8 @@ NS_IMETHODIMP
 nsNodeSH::PreCreate(nsISupports *nativeObj, JSContext *cx, JSObject *globalObj,
                     JSObject **parentObj)
 {
+  // XXXjst: Add code that asserts the the scope is an inner window
+
   nsCOMPtr<nsIContent> content(do_QueryInterface(nativeObj));
   nsCOMPtr<nsIDocument> doc;
 

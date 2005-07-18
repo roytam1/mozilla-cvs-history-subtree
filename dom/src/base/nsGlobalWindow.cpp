@@ -237,7 +237,6 @@ static const char kPkcs11ContractID[] = NS_PKCS11_CONTRACTID;
 
 nsGlobalWindow::nsGlobalWindow(nsGlobalWindow *aOuterWindow)
   : nsPIDOMWindow(aOuterWindow),
-    mIsScopeClear(PR_TRUE),
     mFullScreen(PR_FALSE),
     mIsClosed(PR_FALSE), 
     mInClose(PR_FALSE), 
@@ -483,6 +482,8 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
                                PRBool aRemoveEventListeners,
                                PRBool aClearScopeHint)
 {
+  // XXXjst: Assert that no timeouts were registerd on the outer window!
+
   if (!aDocument) {
     NS_ERROR("SetNewDocument(null) called!");
 
@@ -588,14 +589,10 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
   // If we're in the middle of shutdown, nsContentUtils may have
   // already been notified of shutdown and may return null here.
   nsIXPConnect *xpc = nsContentUtils::XPConnect();
+  PRBool reUseInnerWindow = PR_FALSE;
 
   if (oldDoc) {
     nsIURI *oldURL = oldDoc->GetDocumentURI();
-
-    // If we had a document in this window the document most likely
-    // made our scope "unclear"
-
-    mIsScopeClear = PR_FALSE;
 
     if (oldURL) {
       nsCOMPtr<nsIDocShellTreeItem> treeItem(do_QueryInterface(mDocShell));
@@ -619,36 +616,21 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
         if (isAboutBlank && mOpenerScriptURL) {
           nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(mDocShell));
           if (webNav) {
-            nsCOMPtr<nsIURI> newURL;
-            webNav->GetCurrentURI(getter_AddRefs(newURL));
-            if (newURL && sSecMan) {
-              sSecMan->SecurityCompareURIs(mOpenerScriptURL, newURL,
+            nsCOMPtr<nsIURI> newURI;
+            webNav->GetCurrentURI(getter_AddRefs(newURI));
+            if (newURI && sSecMan) {
+              // XXXjst: Uh, don't we want to compare the new URI
+              // against the calling URI (JS_GetScopeChain()?) and not
+              // the opener script URL?
+              sSecMan->SecurityCompareURIs(mOpenerScriptURL, newURI,
                                            &isSameOrigin);
             }
           }
         }
       }
 
-      if (!isAboutBlank ||
-          (isContentWindow && aClearScopeHint && !isSameOrigin)) {
-        // the current document is *not* about:blank,
-        // or aClearScopeHint is true and the new document
-        // has a different origin than the calling script.
-        // clear timeouts and clear the scope
-        ClearAllTimeouts();
-
-        if (mInnerWindow) {
-          // Clear timeouts in the inner window as well.
-          GetCurrentInnerWindowInternal()->ClearAllTimeouts();
-        }
-
-        if (cx && mJSObject) {
-          ::JS_ClearScope(cx, mJSObject);
-          ::JS_ClearRegExpStatics(cx);
-
-          mIsScopeClear = PR_TRUE;
-        }
-      }
+      reUseInnerWindow = (isAboutBlank && !isContentWindow &&
+                          !aClearScopeHint && isSameOrigin);
 
       // Don't remove event listeners in similar conditions
       aRemoveEventListeners = aRemoveEventListeners &&
@@ -690,15 +672,25 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
   // having to *always* reach into the inner window to find the
   // document.
 
+  NS_ASSERTION(!reUseInnerWindow || mDocument == aDocument,
+               "SetNewDocument() not changing windows but the document "
+               "is changed!");
+
   mDocument = aDocument;
 
-  if (xpc && aDocument && IsOuterWindow()) {
+  nsGlobalWindow *currentInner = GetCurrentInnerWindowInternal();
+
+  if (xpc && aDocument && IsOuterWindow() &&
+      (!currentInner || !reUseInnerWindow)) {
     nsGlobalWindow *currentInner = GetCurrentInnerWindowInternal();
 
-    if (aRemoveEventListeners && currentInner &&
-        currentInner->mListenerManager) {
-      currentInner->mListenerManager->RemoveAllListeners(PR_FALSE);
-      currentInner->mListenerManager = nsnull;
+    if (currentInner) {
+      currentInner->ClearAllTimeouts();
+
+      if (aRemoveEventListeners && currentInner->mListenerManager) {
+        currentInner->mListenerManager->RemoveAllListeners(PR_FALSE);
+        currentInner->mListenerManager = nsnull;
+      }
     }
 
     nsRefPtr<nsGlobalWindow> newInnerWindow;
@@ -723,7 +715,8 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
       return NS_ERROR_OUT_OF_MEMORY;
     }
 
-    nsIScriptGlobalObject *sgo = (nsIScriptGlobalObject *)newInnerWindow.get();
+    nsIScriptGlobalObject *sgo =
+      (nsIScriptGlobalObject *)newInnerWindow.get();
 
     nsresult rv = xpc->
       InitClassesWithNewWrappedGlobal(cx, sgo, NS_GET_IID(nsISupports), flags,
@@ -769,10 +762,11 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
         ::JS_SetProperty(cx, newInnerWindow->mJSObject, "navigator", &navVal);
       }
 
-      // XXXjst: We shouldn't need to do this, but if we don't we leak
-      // the world... actually, even with this we leak the
+      // XXXjst: We shouldn't need to do this, but if we don't we
+      // leak the world... actually, even with this we leak the
       // world... need to figure this out.
       ::JS_ClearScope(cx, currentInner->mJSObject);
+      ::JS_ClearRegExpStatics(cx);
     }
 
     mInnerWindow = newInnerWindow;
@@ -797,18 +791,9 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
   }
 
   if (aDocument && scx) {
-    if (mIsScopeClear && IsOuterWindow()) {
+    if (IsOuterWindow()) {
       scx->InitContext(this);
-    } else {
-      // If we didn't clear the scope (i.e. the old document was
-      // about:blank) then we need to update the cached document
-      // property on the window to reflect the new document and not the
-      // old one.
-
-      //      nsWindowSH::OnDocumentChanged(cx, mJSObject, this);
-    }
-
-    if (IsInnerWindow()) {
+    } else if (IsInnerWindow()) {
       nsCOMPtr<nsIHTMLDocument> html_doc(do_QueryInterface(mDocument));
       nsWindowSH::InstallGlobalScopePolluter(cx, mJSObject, html_doc);
     }
@@ -857,7 +842,9 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
 
       if (mJSObject) {
         ::JS_ClearScope(cx, mJSObject);
-      }        
+      }
+
+      ::JS_ClearRegExpStatics(cx);
     }
 
     // if we are closing the window while in full screen mode, be sure
@@ -5268,6 +5255,8 @@ static const char kSetTimeoutStr[] = "setTimeout";
 nsresult
 nsGlobalWindow::SetTimeoutOrInterval(PRBool aIsInterval, PRInt32 *aReturn)
 {
+  FORWARD_TO_INNER(SetTimeoutOrInterval, (aIsInterval, aReturn));
+
   nsIScriptContext *scx = GetContextInternal();
 
   if (!scx) {
