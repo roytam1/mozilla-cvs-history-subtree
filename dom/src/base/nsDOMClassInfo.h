@@ -447,6 +447,30 @@ public:
 };
 
 
+// Navigator scriptable helper
+
+class nsNavigatorSH : public nsDOMGenericSH
+{
+protected:
+  nsNavigatorSH(nsDOMClassInfoData* aData) : nsDOMGenericSH(aData)
+  {
+  }
+
+  virtual ~nsNavigatorSH()
+  {
+  }
+
+public:
+  NS_IMETHOD PreCreate(nsISupports *nativeObj, JSContext *cx,
+                       JSObject *globalObj, JSObject **parentObj);
+
+  static nsIClassInfo *doCreate(nsDOMClassInfoData* aData)
+  {
+    return new nsNavigatorSH(aData);
+  }
+};
+
+
 // DOM Node helper, this class deals with setting the parent for the
 // wrappers
 

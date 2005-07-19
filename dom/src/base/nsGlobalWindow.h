@@ -520,6 +520,11 @@ public:
   NS_DECL_NSIDOMJSNAVIGATOR
   
   void SetDocShell(nsIDocShell *aDocShell);
+  nsIDocShell *GetDocShell()
+  {
+    return mDocShell;
+  }
+
   void LoadingNewDocument();
   nsresult RefreshMIMEArray();
 

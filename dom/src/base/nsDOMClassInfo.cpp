@@ -497,8 +497,9 @@ static nsDOMClassInfoData sClassInfoData[] = {
                            DOM_DEFAULT_SCRIPTABLE_FLAGS &
                            ~nsIXPCScriptable::ALLOW_PROP_MODS_TO_PROTOTYPE)
 
-  NS_DEFINE_CLASSINFO_DATA(Navigator, nsDOMGenericSH,
-                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
+  NS_DEFINE_CLASSINFO_DATA(Navigator, nsNavigatorSH,
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS |
+                           nsIXPCScriptable::WANT_PRECREATE)
   NS_DEFINE_CLASSINFO_DATA(Plugin, nsPluginSH,
                            ARRAY_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(PluginArray, nsPluginArraySH,
@@ -5267,7 +5268,9 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
           // return it instead of the one found on the inner object's
           // prototype chain.
 
+#ifdef DEBUG_SH_FORWARDING
           printf(" ... but the propety was found on the prototype, checking to see if the property also exists on our prototype.\n");
+#endif
 
           JSObject *mypobj;
           OBJ_LOOKUP_PROPERTY(cx, proto, interned_id, &mypobj,
@@ -5683,7 +5686,6 @@ nsWindowSH::ThisObject(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
 }
 
 
-
 // DOM Location helper
 
 NS_IMETHODIMP
@@ -5703,6 +5705,34 @@ nsLocationSH::CheckAccess(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   return nsDOMGenericSH::CheckAccess(wrapper, cx, obj, id, mode, vp, _retval);
 }
 
+
+// DOM Navigator helper
+nsresult
+nsNavigatorSH::PreCreate(nsISupports *nativeObj, JSContext *cx,
+                         JSObject *globalObj, JSObject **parentObj)
+{
+  // window.navigator is persisted across document transitions if
+  // we're loading a page from the same origin. Because of that we
+  // need to parent the navigator wrapper at the outer window to avoid
+  // holding on to the inner window where the navigator was initially
+  // created too long.
+  *parentObj = globalObj;
+
+  nsNavigator *nav = (nsNavigator *)(nsIDOMNavigator *)nativeObj;
+  nsIDocShell *ds = nav->GetDocShell();
+
+  nsCOMPtr<nsIScriptGlobalObject> sgo = do_GetInterface(ds);
+
+  if (sgo) {
+    JSObject *global = sgo->GetGlobalJSObject();
+
+    if (global) {
+      *parentObj = global;
+    }
+  }
+
+  return NS_OK;
+}
 
 // DOM Node helper
 

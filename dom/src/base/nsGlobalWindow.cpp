@@ -536,7 +536,7 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
         // for the new document.
         mNavigator->LoadingNewDocument();
       } else {
-        // Different origins.  Destroy the navigator object so it gets
+        // Different origins.  Release the navigator object so it gets
         // recreated for the new document.  The plugins or mime types
         // arrays may have changed. See bug 150087.
         mNavigator->SetDocShell(nsnull);
@@ -650,24 +650,6 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
     oldDoc->Destroy();
   }
 
-  if (cx && aDocument) {
-    if (mNavigator && mJSObject) {
-      // Make our JS wrapper hold on to the navigator object so
-      // that it doesn't go away when transitioning from page to
-      // page. We do this by just asking for the navigator
-      // property on the global object. That causes the global
-      // object's resolve hook to cache the property on the
-      // global, and thus root it which prevents GC from getting
-      // rid of the object.
-      jsval dummy;
-      ::JS_GetProperty(cx, mJSObject, "navigator", &dummy);
-    }
-
-    // Add an extra ref in case we release mContext during GC.
-    nsCOMPtr<nsIScriptContext> kungFuDeathGrip = scx;
-    kungFuDeathGrip->GC();
-  }
-
   // Set mDocument even if this is an outer window to avoid
   // having to *always* reach into the inner window to find the
   // document.
@@ -737,29 +719,19 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
       }
     }
 
-    if (mNavigator && currentInner && currentInner->mJSObject) {
-      // XXXjst: Fix this comment
+    nsCOMPtr<nsIXPConnectJSObjectHolder> navigatorHolder;
+    if (currentInner && currentInner->mJSObject) {
+      if (mNavigator) {
+        // Hold on to the navigator wrapper so that we can set
+        // window.navigator in the new window to point to the same
+        // object (assuming we didn't change origins etc). See bug
+        // 163645 for more on why we need this.
 
-      // XXX We need mNavigatorHolder because we make two SetNewDocument()
-      // calls when transitioning from page to page. This keeps a reference
-      // to the JSObject holder for the navigator object in between
-      // SetNewDocument() calls so that the JSObject doesn't get garbage
-      // collected in between these calls.
-      // See bug 163645 for more on why we need this and bug 209607 for info
-      // on how we can remove the need for this.
-
-      nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
-      nsIDOMNavigator* navigator =
-        NS_STATIC_CAST(nsIDOMNavigator*, mNavigator.get());
-      xpc->WrapNative(cx, currentInner->mJSObject, navigator,
-                      NS_GET_IID(nsIDOMNavigator), getter_AddRefs(holder));
-
-      if (holder) {
-        JSObject *nav;
-        holder->GetJSObject(&nav);
-
-        jsval navVal = OBJECT_TO_JSVAL(nav);
-        ::JS_SetProperty(cx, newInnerWindow->mJSObject, "navigator", &navVal);
+        nsIDOMNavigator* navigator =
+          NS_STATIC_CAST(nsIDOMNavigator*, mNavigator.get());
+        xpc->WrapNative(cx, currentInner->mJSObject, navigator,
+                        NS_GET_IID(nsIDOMNavigator),
+                        getter_AddRefs(navigatorHolder));
       }
 
       // XXXjst: We shouldn't need to do this, but if we don't we
@@ -788,11 +760,24 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
     // Give the new inner window our chrome event handler (since it
     // doesn't have one).
     newInnerWindow->mChromeEventHandler = mChromeEventHandler;
+
+    if (navigatorHolder) {
+      // Restore window.navigator onto the new inner window.
+      JSObject *nav;
+      navigatorHolder->GetJSObject(&nav);
+
+      jsval navVal = OBJECT_TO_JSVAL(nav);
+      ::JS_SetProperty(cx, newInnerWindow->mJSObject, "navigator", &navVal);
+    }
   }
 
   if (aDocument && scx) {
     if (IsOuterWindow()) {
       scx->InitContext(this);
+
+      // Add an extra ref in case we release mContext during GC.
+      nsCOMPtr<nsIScriptContext> kungFuDeathGrip = scx;
+      kungFuDeathGrip->GC();
     } else if (IsInnerWindow()) {
       nsCOMPtr<nsIHTMLDocument> html_doc(do_QueryInterface(mDocument));
       nsWindowSH::InstallGlobalScopePolluter(cx, mJSObject, html_doc);
