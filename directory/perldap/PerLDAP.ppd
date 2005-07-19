@@ -1,0 +1,10 @@
+<SOFTPKG NAME="PerLDAP" VERSION="1,5,0,0">
+    <TITLE>PerLDAP</TITLE>
+    <ABSTRACT>Perl methods for LDAP C API calls</ABSTRACT>
+    <AUTHOR>Leif Hedstrom &lt;leif@ogre.com&gt;</AUTHOR>
+    <IMPLEMENTATION>
+        <OS NAME="MSWin32" />
+        <ARCHITECTURE NAME="MSWin32-x86-multi-thread-5.8" />
+        <CODEBASE HREF="package.tar.gz" />
+    </IMPLEMENTATION>
+</SOFTPKG>

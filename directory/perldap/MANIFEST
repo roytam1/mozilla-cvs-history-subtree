@@ -3,6 +3,7 @@ API.pm
 API.xs
 MANIFEST
 Makefile.PL
+PerLDAP.ppd
 constant.h
 typemap
 Entry.pm
@@ -37,3 +38,4 @@ examples/rename.pl
 examples/psoftsync.pl
 examples/changes2ldif.pl
 examples/rand_mods.pl
+META.yml                                 Module meta-data (added by MakeMaker)
