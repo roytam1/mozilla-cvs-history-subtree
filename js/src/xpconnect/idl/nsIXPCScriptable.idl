@@ -41,7 +41,7 @@
 #include "nsISupports.idl"
 #include "nsIXPConnect.idl"
 
-[uuid(fa2c3b80-0e9d-11d5-9092-0010a4e73d9a)]
+[uuid(f617776f-c0f8-465f-8e60-268a1bf05a76)]
 interface nsIXPCScriptable : nsISupports
 {
     /* bitflags used for 'flags' (only 32 bits available!) */
@@ -74,6 +74,8 @@ interface nsIXPCScriptable : nsISupports
     const PRUint32 ALLOW_PROP_MODS_TO_PROTOTYPE     = 1 << 25;
     const PRUint32 DONT_SHARE_PROTOTYPE             = 1 << 26;
     const PRUint32 DONT_REFLECT_INTERFACE_NAMES     = 1 << 27;
+    const PRUint32 WANT_EQUALITY                    = 1 << 28;
+    const PRUint32 WANT_THIS_OBJECT                 = 1 << 29;
 
     // The high order bit is RESERVED for consumers of these flags. 
     // No implementor of this interface should ever return flags 
@@ -144,4 +146,10 @@ interface nsIXPCScriptable : nsISupports
 
     PRUint32 mark(in nsIXPConnectWrappedNative wrapper,
                   in JSContextPtr cx, in JSObjectPtr obj, in voidPtr arg);
+
+    PRBool equality(in nsIXPConnectWrappedNative wrapper,
+                    in JSContextPtr cx, in JSObjectPtr obj, in JSVal val);
+
+    JSObjectPtr thisObject(in nsIXPConnectWrappedNative wrapper,
+                           in JSContextPtr cx, in JSObjectPtr obj);
 };

@@ -395,6 +395,10 @@ public:
                         JSObject **objp, PRBool *_retval);
   NS_IMETHOD Finalize(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                       JSObject *obj);
+  NS_IMETHOD Equality(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
+                      JSObject * obj, jsval val, PRBool *bp);
+  NS_IMETHOD ThisObject(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
+                        JSObject * obj, JSObject * *_retval);
 
   static JSBool JS_DLL_CALLBACK GlobalScopePolluterNewResolve(JSContext *cx,
                                                               JSObject *obj,

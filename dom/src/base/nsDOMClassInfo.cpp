@@ -488,6 +488,8 @@ static nsDOMClassInfoData sClassInfoData[] = {
                            nsIXPCScriptable::WANT_ADDPROPERTY |
                            nsIXPCScriptable::WANT_DELPROPERTY |
                            nsIXPCScriptable::WANT_ENUMERATE |
+                           nsIXPCScriptable::WANT_EQUALITY |
+                           nsIXPCScriptable::WANT_THIS_OBJECT |
                            nsIXPCScriptable::DONT_ENUM_QUERY_INTERFACE)
 
   // Don't allow modifications to Location.prototype
@@ -3199,6 +3201,24 @@ nsDOMClassInfo::Mark(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   return NS_ERROR_UNEXPECTED;
 }
 
+NS_IMETHODIMP
+nsDOMClassInfo::Equality(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
+                         JSObject * obj, jsval val, PRBool *bp)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+nsDOMClassInfo::ThisObject(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
+                           JSObject * obj, JSObject * *_retval)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
 
 // static
 nsIClassInfo *
@@ -3736,6 +3756,7 @@ nsWindowSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 {
   nsGlobalWindow *win = nsGlobalWindow::FromWrapper(wrapper);
 
+#ifdef DEBUG_SH_FORWARDING
   {
     nsDependentJSString str(::JS_ValueToString(cx, id));
 
@@ -3749,6 +3770,7 @@ nsWindowSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
              NS_ConvertUTF16toUTF8(str).get(), (void *)win);
     }
   }
+#endif
 
   if (win->IsOuterWindow()) {
     // XXXjst: Do security checks here!
@@ -3757,7 +3779,9 @@ nsWindowSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
     JSObject *innerObj;
     if (innerWin && (innerObj = innerWin->GetGlobalJSObject())) {
+#ifdef DEBUG_SH_FORWARDING
       printf(" --- Forwarding get to inner window %p\n", (void *)innerWin);
+#endif
 
       // Forward the get to the inner object
       if (JSVAL_IS_STRING(id)) {
@@ -3853,6 +3877,7 @@ nsWindowSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 {
   nsGlobalWindow *win = nsGlobalWindow::FromWrapper(wrapper);
 
+#ifdef DEBUG_SH_FORWARDING
   {
     nsDependentJSString str(::JS_ValueToString(cx, id));
 
@@ -3866,6 +3891,7 @@ nsWindowSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
              NS_ConvertUTF16toUTF8(str).get(), (void *)win);
     }
   }
+#endif
 
   if (win->IsOuterWindow()) {
     // XXXjst: Do security checks here!
@@ -3874,7 +3900,9 @@ nsWindowSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
     JSObject *innerObj;
     if (innerWin && (innerObj = innerWin->GetGlobalJSObject())) {
+#ifdef DEBUG_SH_FORWARDING
       printf(" --- Forwarding set to inner window %p\n", (void *)innerWin);
+#endif
 
       // Forward the set to the inner object
       if (JSVAL_IS_STRING(id)) {
@@ -3937,6 +3965,7 @@ nsWindowSH::AddProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 {
   nsGlobalWindow *win = nsGlobalWindow::FromWrapper(wrapper);
 
+#ifdef DEBUG_SH_FORWARDING
   {
     nsDependentJSString str(::JS_ValueToString(cx, id));
 
@@ -3950,6 +3979,7 @@ nsWindowSH::AddProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
              NS_ConvertUTF16toUTF8(str).get(), (void *)win);
     }
   }
+#endif
 
   if (win->IsOuterWindow()) {
     // XXXjst: Do security checks here!
@@ -3958,7 +3988,9 @@ nsWindowSH::AddProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
     JSObject *innerObj;
     if (innerWin && (innerObj = innerWin->GetGlobalJSObject())) {
+#ifdef DEBUG_SH_FORWARDING
       printf(" --- Forwarding add to inner window %p\n", (void *)innerWin);
+#endif
 
       // Forward the add to the inner object
       if (JSVAL_IS_STRING(id)) {
@@ -5180,6 +5212,7 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 {
   nsGlobalWindow *win = nsGlobalWindow::FromWrapper(wrapper);
 
+#ifdef DEBUG_SH_FORWARDING
   {
     nsDependentJSString str(::JS_ValueToString(cx, id));
 
@@ -5193,6 +5226,7 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
              NS_ConvertUTF16toUTF8(str).get(), (void *)win);
     }
   }
+#endif
 
   if (win->IsOuterWindow()) {
     // XXXjst: Do security checks here!
@@ -5201,7 +5235,9 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
     JSObject *innerObj;
     if (innerWin && (innerObj = innerWin->GetGlobalJSObject())) {
+#ifdef DEBUG_SH_FORWARDING
       printf(" --- Forwarding resolve to inner window %p\n", (void *)innerWin);
+#endif
 
       jsid interned_id;
       JSObject *pobj;
@@ -5212,7 +5248,9 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                                       &prop));
 
       if (*_retval && prop) {
+#ifdef DEBUG_SH_FORWARDING
         printf(" --- Resolve on inner window found property.\n");
+#endif
 
         OBJ_DROP_PROPERTY(cx, pobj, prop);
 
@@ -5596,6 +5634,54 @@ nsWindowSH::Finalize(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
   return NS_OK;
 }
+
+NS_IMETHODIMP
+nsWindowSH::Equality(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
+                     JSObject * obj, jsval val, PRBool *bp)
+{
+  *bp = PR_FALSE;
+
+  if (JSVAL_IS_PRIMITIVE(val)) {
+    return NS_OK;
+  }
+
+  nsCOMPtr<nsIXPConnectWrappedNative> other_wrapper;
+  nsContentUtils::XPConnect()->
+    GetWrappedNativeOfJSObject(cx, JSVAL_TO_OBJECT(val),
+                               getter_AddRefs(other_wrapper));
+  if (!other_wrapper) {
+    // Not equals.
+
+    return NS_OK;
+  }
+
+  nsGlobalWindow *win = nsGlobalWindow::FromWrapper(wrapper);
+
+  nsPIDOMWindow *outer;
+
+  if (win->IsInnerWindow()) {
+    outer = win->GetOuterWindow();
+  } else {
+    outer = win;
+  }
+
+  nsCOMPtr<nsPIDOMWindow> other = do_QueryWrappedNative(other_wrapper);
+
+  *bp = outer == other || outer == other->GetOuterWindow();
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsWindowSH::ThisObject(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
+                       JSObject * obj, JSObject * *_retval)
+{
+  // Just return obj for now.
+  *_retval = obj;
+
+  return NS_OK;
+}
+
 
 
 // DOM Location helper

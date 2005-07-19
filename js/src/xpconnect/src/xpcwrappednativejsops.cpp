@@ -738,13 +738,12 @@ GetIdentityObject(JSContext *cx, JSObject *obj)
 {
     XPCWrappedNative *wrapper;
 
-    if (XPCNativeWrapper::IsNativeWrapper(cx, obj)) {
+    if(XPCNativeWrapper::IsNativeWrapper(cx, obj))
         wrapper = XPCNativeWrapper::GetWrappedNative(cx, obj);
-    } else {
+    else
         wrapper = XPCWrappedNative::GetWrappedNativeOfJSObject(cx, obj);
-    }
 
-    if (!wrapper) {
+    if(!wrapper) {
         return nsnull;
     }
 
@@ -754,18 +753,29 @@ GetIdentityObject(JSContext *cx, JSObject *obj)
 JS_STATIC_DLL_CALLBACK(JSBool)
 XPC_WN_Equality(JSContext *cx, JSObject *obj, jsval v, JSBool *bp)
 {
-  if (JSVAL_IS_PRIMITIVE(v)) {
     *bp = JS_FALSE;
 
+    XPCWrappedNative *wrapper =
+        XPCWrappedNative::GetWrappedNativeOfJSObject(cx, obj);
+    THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
+
+    XPCNativeScriptableInfo* si = wrapper->GetScriptableInfo();
+    if(si && si->GetFlags().WantEquality())
+    {
+        nsresult rv = si->GetCallback()->Equality(wrapper, cx, obj, v, bp);
+
+        if(NS_FAILED(rv))
+            return Throw(rv, cx);
+    }
+    else if(!JSVAL_IS_PRIMITIVE(v))
+    {
+        JSObject *other = JSVAL_TO_OBJECT(v);
+
+        *bp = (obj == other ||
+               GetIdentityObject(cx, obj) == GetIdentityObject(cx, other));
+    }
+
     return JS_TRUE;
-  }
-
-  JSObject *other = JSVAL_TO_OBJECT(v);
-
-  *bp = (obj == other ||
-         GetIdentityObject(cx, obj) == GetIdentityObject(cx, other));
-
-  return JS_TRUE;
 }
 
 
@@ -1155,6 +1165,45 @@ XPC_WN_JSOp_Clear(JSContext *cx, JSObject *obj)
     js_ObjectOps.clear(cx, obj);
 }
 
+JS_STATIC_DLL_CALLBACK(JSObject *)
+XPC_WN_JSOp_ThisObject(JSContext *cx, JSObject *obj)
+{
+    XPCWrappedNative *wrapper =
+        XPCWrappedNative::GetWrappedNativeOfJSObject(cx, obj);
+    if(!wrapper)
+    {
+        Throw(NS_ERROR_XPC_BAD_OP_ON_WN_PROTO, cx);
+
+        return nsnull;
+    }
+
+    if(!wrapper->IsValid())
+    {
+        Throw(NS_ERROR_XPC_HAS_BEEN_SHUTDOWN, cx);
+
+        return nsnull;
+    }
+
+    XPCNativeScriptableInfo* si = wrapper->GetScriptableInfo();
+    if(si && si->GetFlags().WantThisObject())
+    {
+        JSObject *newThis;
+        nsresult rv =
+            si->GetCallback()->ThisObject(wrapper, cx, obj, &newThis);
+
+        if(NS_FAILED(rv))
+        {
+            Throw(rv, cx);
+
+            return nsnull;
+        }
+
+        obj = newThis;
+    }
+
+    return obj;
+}
+
 JSObjectOps * JS_DLL_CALLBACK
 XPC_WN_GetObjectOpsNoCall(JSContext *cx, JSClass *clazz)
 {
@@ -1177,10 +1226,12 @@ JSBool xpc_InitWrappedNativeJSOps()
         memcpy(&XPC_WN_WithCall_JSOps, &js_ObjectOps, sizeof(JSObjectOps));
         XPC_WN_WithCall_JSOps.enumerate = XPC_WN_JSOp_Enumerate;
         XPC_WN_WithCall_JSOps.clear = XPC_WN_JSOp_Clear;
+        XPC_WN_WithCall_JSOps.thisObject = XPC_WN_JSOp_ThisObject;
 
         XPC_WN_NoCall_JSOps.call = nsnull;
         XPC_WN_NoCall_JSOps.construct = nsnull;
         XPC_WN_NoCall_JSOps.clear = XPC_WN_JSOp_Clear;
+        XPC_WN_NoCall_JSOps.thisObject = XPC_WN_JSOp_ThisObject;
     }
     return JS_TRUE;
 }
