@@ -1249,7 +1249,7 @@ ldap_multisort_entries(ld,chain,attr,...)
 	CODE:
 	{
 	   SV		*cmp;
-	   int		(*func)() = &StrCaseCmp;
+	   int		(*func)(const char *s, const char *t) = &StrCaseCmp;
 
 	   if (items > 3) {
 	      cmp = ST(3);
@@ -1624,7 +1624,7 @@ ldap_sort_entries(ld,chain,attr,...)
 	CODE:
 	{
 	   SV		*cmp;
-	   int		(*func)() = &StrCaseCmp;
+	   int		(*func)(const char *s, const char *t) = &StrCaseCmp;
 
 	   if (items > 3) {
 	      cmp = ST(3);

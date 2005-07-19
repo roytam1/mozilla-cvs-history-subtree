@@ -39,7 +39,7 @@ $ldapsdk_loc = $ENV{"LDAPSDKDIR"}; # Full Path to C SDK Top-Level
 $ldapsdk_ssl = $ENV{"LDAPSDKSSL"}; # N to exclude SSL
 $ldapsdk_pr = $ENV{"LDAPPR"};      # Y to include prldap_ functions
 
-$libexts = "so|sl|a|lib";
+$libexts = "so|sl|a|lib|dll";
 
 
 print "\nPerLDAP - Perl 5 Module for LDAP\n";
@@ -97,11 +97,11 @@ foreach $candidate (@libfiles) {
 
 if (!((@ldaplib = grep{/ldapssl$/} @libs) && $ssl_def))
 {
-   @ldaplib = grep{/^ldap.*$/} @libs;
-   @prldaplib = grep{/^prldap.*$/} @libs;
-   @lberlib = grep{/^lber.*$/} @libs;
+   @ldaplib = grep{/^(ns)?ldap.*$/} @libs;
+   @prldaplib = grep{/^(prldap|nsldappr).*$/} @libs;
+   @lberlib = grep{/^(ns)?lber.*$/} @libs;
 
-   @ldapslib = grep{/^ssldap.*$/} @libs if $ssl_def;
+   @ldapslib = grep{/^(ssldap|nsldapssl).*$/} @libs if $ssl_def;
    @ssllib = grep{/^ssl[0-9].*$/} @libs if $ssl_def;
    @nsslib = grep{/^nss[0-9].*$/} @libs if $ssl_def;
    @plclib = grep{/^plc[0-9].*$/} @libs if $ssl_def;
@@ -188,8 +188,8 @@ $my_includes .= " -I$include_nspr" if $pr_def;
 @extras = ();
 if ($osname =~ /mswin/i)
 {
-   $my_extlib = "$lib_ldap\\$ldaplib[0]";
-   $my_extlib .= " $lib_ldap\\$lberlib[0]" if $#lberlib >= 0;
+   $my_extlib = "$lib_ldap\\$ldaplib[0].lib";
+   $my_extlib .= " $lib_ldap\\$lberlib[0].lib" if $#lberlib >= 0;
    push(@extras, 'dynamic_lib' => {
      'OTHERLDFLAGS' => "kernel32.lib oldnames.lib" });
 } else {

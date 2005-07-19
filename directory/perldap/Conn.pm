@@ -86,6 +86,7 @@ sub new
       $self->{"certdb"} = $certdb if defined($certdb);
       $self->{"version"} = $version || LDAP_VERSION3;
       $self->{"usenspr"} = 1 if (defined($nspr) && $nspr);
+      $self->{"entryclass"} = 'Mozilla::LDAP::Entry';
     }
 
   # Anonymous bind is the default...
