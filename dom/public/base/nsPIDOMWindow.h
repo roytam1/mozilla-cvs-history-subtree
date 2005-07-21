@@ -95,6 +95,7 @@ public:
 
   nsIChromeEventHandler* GetChromeEventHandler()
   {
+    // XXXjst: inner/outer!
     return mChromeEventHandler;
   }
 
@@ -103,7 +104,11 @@ public:
     return (mMutationBits & aMutationEventType) != 0;
   }
 
-  void SetMutationListeners(PRUint32 aType) { mMutationBits |= aType; }
+  void SetMutationListeners(PRUint32 aType)
+  {
+    // XXXjst: inner/outer!
+    mMutationBits |= aType;
+  }
 
   virtual nsIFocusController* GetRootFocusController() = 0;
 
@@ -113,25 +118,40 @@ public:
   // Internal getter/setter for the frame element, this version of the
   // getter crosses chrome boundaries whereas the public scriptable
   // one doesn't for security reasons.
-  nsIDOMElement* GetFrameElementInternal() { return mFrameElement; }
+  nsIDOMElement* GetFrameElementInternal()
+  {
+    if (IsInnerWindow()) {
+      return mOuterWindow->GetFrameElementInternal();
+    }
+
+    return mFrameElement;
+  }
+
   void SetFrameElementInternal(nsIDOMElement *aFrameElement)
   {
+    if (IsInnerWindow()) {
+      return mOuterWindow->SetFrameElementInternal(aFrameElement);
+    }
+
     mFrameElement = aFrameElement;
   }
 
   PRBool IsLoadingOrRunningTimeout() const
   {
+    // XXXjst: inner/outer!
     return !mIsDocumentLoaded || mRunningTimeout;
   }
 
   // Check whether a document is currently loading
   PRBool IsLoading() const
   {
+    // XXXjst: inner/outer!
     return !mIsDocumentLoaded;
   }
 
   PRBool IsHandlingResizeEvent() const
   {
+    // XXXjst: inner/outer!
     return mIsHandlingResizeEvent;
   }
 
