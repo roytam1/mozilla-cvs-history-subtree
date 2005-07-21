@@ -162,7 +162,10 @@ protected:
   void TransformPoint(float& x, float& y);
   void TransformVector(float& x, float& y);
 
-  PRBool mIsDirty;
+  PRBool IsDirty() {
+      return (GetStateBits() & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)) != 0;
+  }
+
   nsCOMPtr<nsIDOMSVGLength> mX;
   nsCOMPtr<nsIDOMSVGLength> mY;
   nsCOMPtr<nsIDOMSVGLength> mWidth;
@@ -197,7 +200,7 @@ NS_NewSVGForeignObjectFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIF
 }
 
 nsSVGForeignObjectFrame::nsSVGForeignObjectFrame()
-  : mIsDirty(PR_TRUE), mPropagateTransform(PR_TRUE)
+  : mPropagateTransform(PR_TRUE)
 {
 }
 
@@ -308,6 +311,11 @@ nsSVGForeignObjectFrame::Init(nsPresContext*  aPresContext,
                   nsStyleContext*  aContext,
                   nsIFrame*        aPrevInFlow)
 {
+  // A layout change inside a foreign object can never affect anything
+  // outside of it.  Or at least that's how we implement it, whether
+  // or not it's really true.
+  AddStateBits(NS_FRAME_REFLOW_ROOT);
+
   nsresult rv;
   rv = nsSVGForeignObjectFrameBase::Init(aPresContext, aContent, aParent,
                              aContext, aPrevInFlow);
@@ -469,7 +477,7 @@ nsSVGForeignObjectFrame::DidModifySVGObservable (nsISVGValue* observable,
 NS_IMETHODIMP
 nsSVGForeignObjectFrame::PaintSVG(nsISVGRendererCanvas* canvas, const nsRect& dirtyRectTwips)
 {
-  if (mIsDirty) {
+  if (IsDirty()) {
     nsCOMPtr<nsISVGRendererRegion> region = DoReflow();
   }
 
@@ -609,7 +617,7 @@ nsSVGForeignObjectFrame::NotifyRedrawSuspended()
 NS_IMETHODIMP
 nsSVGForeignObjectFrame::NotifyRedrawUnsuspended()
 {
-  if (mIsDirty) {
+  if (IsDirty()) {
     nsCOMPtr<nsISVGRendererRegion> dirtyRegion = DoReflow();
     if (dirtyRegion) {
       nsISVGOuterSVGFrame *outerSVGFrame = GetOuterSVGFrame();
@@ -759,7 +767,7 @@ void nsSVGForeignObjectFrame::Update()
   printf("**nsSVGForeignObjectFrame::Update()\n");
 #endif
 
-  mIsDirty = PR_TRUE;
+  AddStateBits(NS_FRAME_IS_DIRTY);
 
   nsISVGOuterSVGFrame *outerSVGFrame = GetOuterSVGFrame();
   if (!outerSVGFrame) {
@@ -814,8 +822,6 @@ nsSVGForeignObjectFrame::DoReflow()
   Reflow(presContext, desiredSize, reflowState, status);
   SetSize(nsSize(desiredSize.width, desiredSize.height));
   DidReflow(presContext, &reflowState, NS_FRAME_REFLOW_FINISHED);
-
-  mIsDirty = PR_FALSE;
 
   nsCOMPtr<nsISVGRendererRegion> area_after = GetCoveredRegion();
   nsISVGRendererRegion *dirtyRegion;
