@@ -130,14 +130,15 @@ public:
 
   virtual void SetGCOnDestruction(PRBool aGCOnDestruction);
 
+  virtual nsresult InitClasses(JSObject *aGlobalObj);
+
   NS_DECL_NSIXPCSCRIPTNOTIFY
 
   NS_DECL_NSITIMERCALLBACK
 
 protected:
-  nsresult InitClasses();
   nsresult InitializeExternalClasses();
-  nsresult InitializeLiveConnectClasses();
+  nsresult InitializeLiveConnectClasses(JSObject *aGlobalObj);
 
   void FireGCTimer();
 

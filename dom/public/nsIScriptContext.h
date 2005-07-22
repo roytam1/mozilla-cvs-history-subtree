@@ -335,6 +335,11 @@ public:
    * Tell the context whether or not to GC when destroyed.
    */
   virtual void SetGCOnDestruction(PRBool aGCOnDestruction) = 0;
+
+  /**
+   * Initialize DOM classes on aGlobalObj
+   */
+  virtual nsresult InitClasses(JSObject *aGlobalObj) = 0;
 };
 
 inline nsIScriptContext *

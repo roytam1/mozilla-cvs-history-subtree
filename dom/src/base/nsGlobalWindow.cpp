@@ -646,8 +646,12 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
     // this, but until we can make nsJSEventListener objects not hold
     // a strong reference to the nsJSContext we don't really have a
     // choise.
-    oldDoc->SetScriptGlobalObject(nsnull);
-    oldDoc->Destroy();
+
+    // XXXjst: Can't do this here, must be done by the callers since
+    // all callers don't want this to happen (document.write for one).
+
+    //    oldDoc->SetScriptGlobalObject(nsnull);
+    //    oldDoc->Destroy();
   }
 
   // Set mDocument even if this is an outer window to avoid
@@ -673,6 +677,8 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
         currentInner->mListenerManager->RemoveAllListeners(PR_FALSE);
         currentInner->mListenerManager = nsnull;
       }
+
+      currentInner->mChromeEventHandler = nsnull;
     }
 
     nsRefPtr<nsGlobalWindow> newInnerWindow;
@@ -737,6 +743,10 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
       // XXXjst: We shouldn't need to do this, but if we don't we
       // leak the world... actually, even with this we leak the
       // world... need to figure this out.
+
+      // XXXjst: We should do this as a termination function to let
+      // code that initiated this call finish running before we clear
+      // scope!
       ::JS_ClearScope(cx, currentInner->mJSObject);
       ::JS_ClearRegExpStatics(cx);
     }
@@ -760,6 +770,10 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
     // Give the new inner window our chrome event handler (since it
     // doesn't have one).
     newInnerWindow->mChromeEventHandler = mChromeEventHandler;
+
+    // Initialize DOM classes etc on the inner window.
+    rv = scx->InitClasses(newInnerWindow->mJSObject);
+    NS_ENSURE_SUCCESS(rv, rv);
 
     if (navigatorHolder) {
       // Restore window.navigator onto the new inner window.
@@ -5821,6 +5835,8 @@ nsTimeout::AddRef()
 nsresult
 nsGlobalWindow::ClearTimeoutOrInterval()
 {
+  FORWARD_TO_INNER(ClearTimeoutOrInterval, ());
+
   nsresult rv = NS_OK;
   nsCOMPtr<nsIXPCNativeCallContext> ncc;
 
