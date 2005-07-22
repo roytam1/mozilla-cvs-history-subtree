@@ -166,8 +166,6 @@ nsBoxFrame::nsBoxFrame(nsIPresShell* aPresShell, PRBool aIsRoot, nsIBoxLayout* a
   }
 
   SetLayoutManager(layout);
-
-  MarkIntrinsicWidthsDirty();
 }
 
 nsBoxFrame::~nsBoxFrame()
@@ -220,6 +218,8 @@ nsBoxFrame::Init(nsPresContext*  aPresContext,
   mPresContext = aPresContext;
 
   nsresult  rv = nsContainerFrame::Init(aPresContext, aContent, aParent, aContext, aPrevInFlow);
+
+  MarkIntrinsicWidthsDirty();
 
   // see if we need a widget. Get our parent. Querty interface the parent we are given. 
   if (aParent && aParent->IsBoxFrame()) {
