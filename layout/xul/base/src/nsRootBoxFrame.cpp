@@ -108,7 +108,7 @@ public:
   virtual nsIAtom* GetType() const;
   
 #ifdef DEBUG
-  NS_IMETHOD GetFrameName(nsString& aResult) const;
+  NS_IMETHOD GetFrameName(nsAString& aResult) const;
 #endif
 
   nsIFrame* mPopupSetFrame;
@@ -342,7 +342,7 @@ NS_INTERFACE_MAP_END_INHERITING(nsBoxFrame)
 
 #ifdef DEBUG
 NS_IMETHODIMP
-nsRootBoxFrame::GetFrameName(nsString& aResult) const
+nsRootBoxFrame::GetFrameName(nsAString& aResult) const
 {
   return MakeFrameName(NS_LITERAL_STRING("RootBox"), aResult);
 }
