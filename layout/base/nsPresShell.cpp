@@ -3329,10 +3329,10 @@ PresShell::FrameNeedsReflow(nsIFrame *aFrame, IntrinsicDirty aIntrinsicDirty)
   }  
 #endif
 
-  if (aIntrinsicDirty != eResize) {
-    // Mark the intrinsic widths as dirty on the frame, all of its ancestors,
-    // and all of its descendants:
+  // Mark the intrinsic widths as dirty on the frame, all of its ancestors,
+  // and all of its descendants, if needed:
 
+  if (aIntrinsicDirty != eResize) {
     // Mark argument and all ancestors dirty (unless we hit a reflow root
     // other than aFrame)
     for (nsIFrame *a = aFrame;
