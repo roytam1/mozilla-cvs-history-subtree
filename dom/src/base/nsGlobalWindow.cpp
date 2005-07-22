@@ -180,11 +180,19 @@ PRInt32 gTimeoutCnt                                    = 0;
 
 #define DOM_MIN_TIMEOUT_VALUE 10 // 10ms
 
-#define FORWARD_TO_OUTER(method, args) \
-  PR_BEGIN_MACRO \
-  if (IsInnerWindow()) { \
-    return GetOuterWindowInternal()->method args; \
-  } \
+#define FORWARD_TO_OUTER(method, args)                                        \
+  PR_BEGIN_MACRO                                                              \
+  if (IsInnerWindow()) {                                                      \
+    return GetOuterWindowInternal()->method args;                             \
+  }                                                                           \
+  PR_END_MACRO
+
+#define FORWARD_TO_OUTER_VOID(method, args)                                   \
+  PR_BEGIN_MACRO                                                              \
+  if (IsInnerWindow()) {                                                      \
+    GetOuterWindowInternal()->method args;                                    \
+    return;                                                                   \
+  }                                                                           \
   PR_END_MACRO
 
 #define FORWARD_TO_OUTER_CHROME(method, args)                                 \
@@ -435,7 +443,7 @@ nsGlobalWindow::GetContext()
 void
 nsGlobalWindow::SetOpenerScriptURL(nsIURI* aURI)
 {
-  FORWARD_TO_OUTER(SetOpenerScriptURL, (aURI));
+  FORWARD_TO_OUTER_VOID(SetOpenerScriptURL, (aURI));
 
   mOpenerScriptURL = aURI;
 }
@@ -642,16 +650,13 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
       mListenerManager = nsnull;
     }
 
-    // Tear down the old document. Ideally we wouldn't need to do
-    // this, but until we can make nsJSEventListener objects not hold
-    // a strong reference to the nsJSContext we don't really have a
-    // choise.
+    // Tear down the old document, unless the old document is the same
+    // as the new document (happens when document.open() is called).
 
-    // XXXjst: Can't do this here, must be done by the callers since
-    // all callers don't want this to happen (document.write for one).
-
-    //    oldDoc->SetScriptGlobalObject(nsnull);
-    //    oldDoc->Destroy();
+    if (oldDoc != newDoc) {
+      oldDoc->SetScriptGlobalObject(nsnull);
+      oldDoc->Destroy();
+    }
   }
 
   // Set mDocument even if this is an outer window to avoid
@@ -744,11 +749,16 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
       // leak the world... actually, even with this we leak the
       // world... need to figure this out.
 
-      // XXXjst: We should do this as a termination function to let
-      // code that initiated this call finish running before we clear
-      // scope!
-      ::JS_ClearScope(cx, currentInner->mJSObject);
-      ::JS_ClearRegExpStatics(cx);
+      if (oldDoc == newDoc) {
+        // We're called from document.open(), clear the scope etc in a
+        // termination function to prevent clearing the calling scope.
+        scx->SetTerminationFunction(ClearWindowScope,
+                                    NS_STATIC_CAST(nsIDOMWindow *,
+                                                   currentInner));
+      } else {
+        ::JS_ClearScope(cx, currentInner->mJSObject);
+        ::JS_ClearRegExpStatics(cx);
+      }
     }
 
     mInnerWindow = newInnerWindow;
@@ -941,7 +951,7 @@ nsGlobalWindow::GetDocShell()
 void
 nsGlobalWindow::SetOpenerWindow(nsIDOMWindowInternal* aOpener)
 {
-  FORWARD_TO_OUTER(SetOpenerWindow, (aOpener));
+  FORWARD_TO_OUTER_VOID(SetOpenerWindow, (aOpener));
 
   mOpener = aOpener;
 }
@@ -949,7 +959,7 @@ nsGlobalWindow::SetOpenerWindow(nsIDOMWindowInternal* aOpener)
 void
 nsGlobalWindow::SetGlobalObjectOwner(nsIScriptGlobalObjectOwner* aOwner)
 {
-  FORWARD_TO_OUTER(SetGlobalObjectOwner, (aOwner));
+  FORWARD_TO_OUTER_VOID(SetGlobalObjectOwner, (aOwner));
 
   mGlobalObjectOwner = aOwner;  // Note this is supposed to be a weak ref.
 }
@@ -3974,7 +3984,7 @@ nsGlobalWindow::Close()
 void
 nsGlobalWindow::ReallyCloseWindow()
 {
-  FORWARD_TO_OUTER(ReallyCloseWindow, ());
+  FORWARD_TO_OUTER_VOID(ReallyCloseWindow, ());
 
   nsCOMPtr<nsIBaseWindow> treeOwnerAsWin;
   GetTreeOwner(getter_AddRefs(treeOwnerAsWin));
@@ -5251,6 +5261,25 @@ nsGlobalWindow::CloseWindow(nsISupports *aWindow)
 
   NS_STATIC_CAST(nsGlobalWindow *,
                  NS_STATIC_CAST(nsPIDOMWindow*, win))->ReallyCloseWindow();
+}
+
+void
+nsGlobalWindow::ClearWindowScope(nsISupports *aWindow)
+{
+  nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(aWindow));
+
+  nsIScriptContext *scx = sgo->GetContext();
+
+  if (scx) {
+    JSContext *cx = (JSContext *)scx->GetNativeContext();
+    JSObject *global = sgo->GetGlobalJSObject();
+
+    if (global) {
+      ::JS_ClearScope(cx, sgo->GetGlobalJSObject());
+    }
+
+    ::JS_ClearRegExpStatics(cx);
+  }
 }
 
 //*****************************************************************************

@@ -152,14 +152,16 @@ protected:
   struct TerminationFuncHolder;
   friend struct TerminationFuncHolder;
   
-  struct TerminationFuncClosure {
+  struct TerminationFuncClosure
+  {
     TerminationFuncClosure(nsScriptTerminationFunc aFunc,
                            nsISupports* aArg,
                            TerminationFuncClosure* aNext) :
       mTerminationFunc(aFunc),
       mTerminationFuncArg(aArg),
       mNext(aNext)
-    {}
+    {
+    }
     ~TerminationFuncClosure()
     {
       delete mNext;
@@ -170,14 +172,16 @@ protected:
     TerminationFuncClosure* mNext;
   };
 
-  struct TerminationFuncHolder {
-    TerminationFuncHolder(nsJSContext* aContext) :
-      mContext(aContext),
-      mTerminations(aContext->mTerminations)
+  struct TerminationFuncHolder
+  {
+    TerminationFuncHolder(nsJSContext* aContext)
+      : mContext(aContext),
+        mTerminations(aContext->mTerminations)
     {
       aContext->mTerminations = nsnull;
     }
-    ~TerminationFuncHolder() {
+    ~TerminationFuncHolder()
+    {
       // Have to be careful here.  mContext might have picked up new
       // termination funcs while the script was evaluating.  Prepend whatever
       // we have to the current termination funcs on the context (since our

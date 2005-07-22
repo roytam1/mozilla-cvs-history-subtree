@@ -281,6 +281,7 @@ protected:
                           PRBool aDialog, jsval *argv, PRUint32 argc,
                           nsISupports *aExtraArgument, nsIDOMWindow **aReturn);
   static void CloseWindow(nsISupports* aWindow);
+  static void ClearWindowScope(nsISupports* aWindow);
 
   // Timeout Functions
   nsresult SetTimeoutOrInterval(PRBool aIsInterval, PRInt32* aReturn);
