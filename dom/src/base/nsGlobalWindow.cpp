@@ -935,9 +935,7 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
 nsIDocShell *
 nsGlobalWindow::GetDocShell()
 {
-  FORWARD_TO_OUTER(GetDocShell, ());
-
-  return mDocShell;
+  return GetDocShellInternal();
 }
 
 void
@@ -1106,9 +1104,10 @@ nsGlobalWindow::HandleDOMEvent(nsPresContext* aPresContext, nsEvent* aEvent,
   }
 
   if (aEvent->message == NS_PAGE_LOAD) {
-    nsCOMPtr<nsIContent> content(do_QueryInterface(mFrameElement));
+    nsCOMPtr<nsIContent> content(do_QueryInterface(GetFrameElementInternal()));
 
-    nsCOMPtr<nsIDocShellTreeItem> treeItem(do_QueryInterface(mDocShell));
+    nsCOMPtr<nsIDocShellTreeItem> treeItem =
+      do_QueryInterface(GetDocShellInternal());
 
     PRInt32 itemType = nsIDocShellTreeItem::typeChrome;
 
@@ -1237,8 +1236,9 @@ nsGlobalWindow::GetDocument(nsIDOMDocument** aDocument)
   // thing as our mDocument, but we don't have to explicitly set the
   // member variable because the docshell has already called
   // SetNewDocument().
-  if (!mDocument && mDocShell)
-    nsCOMPtr<nsIDOMDocument> domdoc(do_GetInterface(mDocShell));
+  nsIDocShell *docShell;
+  if (!mDocument && (docShell = GetDocShellInternal()))
+    nsCOMPtr<nsIDOMDocument> domdoc(do_GetInterface(docShell));
 
   NS_IF_ADDREF(*aDocument = mDocument);
 
@@ -2390,10 +2390,11 @@ nsGlobalWindow::WindowExists(const nsAString& aName)
 
   if (!caller) {
     // If we can't reach a caller, try to use our own docshell
-    caller = do_QueryInterface(mDocShell);
+    caller = do_QueryInterface(GetDocShellInternal());
   }
 
-  nsCOMPtr<nsIDocShellTreeItem> docShell(do_QueryInterface(mDocShell));
+  nsCOMPtr<nsIDocShellTreeItem> docShell =
+    do_QueryInterface(GetDocShellInternal());
 
   if (docShell) {
     nsCOMPtr<nsIDocShellTreeItem> namedItem;
@@ -2439,6 +2440,8 @@ nsGlobalWindow::GetMainWidget()
 NS_IMETHODIMP
 nsGlobalWindow::SetFullScreen(PRBool aFullScreen)
 {
+  FORWARD_TO_OUTER(SetFullScreen, (aFullScreen));
+
   // Only chrome can change our fullScreen mode.
   if (aFullScreen == mFullScreen || !IsCallerChrome()) {
     return NS_OK;
@@ -2483,6 +2486,8 @@ nsGlobalWindow::SetFullScreen(PRBool aFullScreen)
 NS_IMETHODIMP
 nsGlobalWindow::GetFullScreen(PRBool* aFullScreen)
 {
+  FORWARD_TO_OUTER(GetFullScreen, (aFullScreen));
+
   *aFullScreen = mFullScreen;
   return NS_OK;
 }
@@ -3969,6 +3974,8 @@ nsGlobalWindow::Close()
 void
 nsGlobalWindow::ReallyCloseWindow()
 {
+  FORWARD_TO_OUTER(ReallyCloseWindow, ());
+
   nsCOMPtr<nsIBaseWindow> treeOwnerAsWin;
   GetTreeOwner(getter_AddRefs(treeOwnerAsWin));
 
@@ -4014,6 +4021,8 @@ nsGlobalWindow::ReallyCloseWindow()
 NS_IMETHODIMP
 nsGlobalWindow::GetFrameElement(nsIDOMElement** aFrameElement)
 {
+  FORWARD_TO_OUTER(GetFrameElement, (aFrameElement));
+
   *aFrameElement = nsnull;
 
   nsCOMPtr<nsIDocShellTreeItem> docShellTI(do_QueryInterface(mDocShell));

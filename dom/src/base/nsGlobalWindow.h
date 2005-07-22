@@ -247,6 +247,15 @@ public:
     return NS_STATIC_CAST(nsGlobalWindow *, mInnerWindow);
   }
 
+  nsIDocShell *GetDocShellInternal()
+  {
+    if (IsInnerWindow()) {
+      return GetOuterWindowInternal()->GetDocShellInternal();
+    }
+
+    return mDocShell;
+  }
+
   static void ShutDown();
   static PRBool IsCallerChrome();
 
