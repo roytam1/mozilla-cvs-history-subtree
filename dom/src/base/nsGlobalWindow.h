@@ -267,6 +267,11 @@ protected:
   void CleanUp();
   void ClearControllers();
 
+  nsresult SetNewDocument(nsIDOMDocument *aDocument,
+                          PRBool aRemoveEventListeners,
+                          PRBool aClearScopeHint,
+                          PRBool aIsInternalCall);
+
   // Get the parent, returns null if this is a toplevel window
   nsIDOMWindowInternal *GetParentInternal();
 

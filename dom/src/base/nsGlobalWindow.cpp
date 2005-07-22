@@ -490,7 +490,22 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
                                PRBool aRemoveEventListeners,
                                PRBool aClearScopeHint)
 {
+  return SetNewDocument(aDocument, aRemoveEventListeners, aClearScopeHint,
+                        PR_FALSE);
+}
+
+nsresult
+nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
+                               PRBool aRemoveEventListeners,
+                               PRBool aClearScopeHint,
+                               PRBool aIsInternalCall)
+{
   // XXXjst: Assert that no timeouts were registerd on the outer window!
+
+  if (!aIsInternalCall && IsInnerWindow()) {
+    GetOuterWindowInternal()->SetNewDocument(aDocument, aRemoveEventListeners,
+                                             aClearScopeHint, PR_TRUE);
+  }
 
   if (!aDocument) {
     NS_ERROR("SetNewDocument(null) called!");
@@ -774,7 +789,7 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
     }
 
     rv = newInnerWindow->SetNewDocument(aDocument, aRemoveEventListeners,
-                                        aClearScopeHint);
+                                        aClearScopeHint, PR_TRUE);
     NS_ENSURE_SUCCESS(rv, rv);
 
     // Give the new inner window our chrome event handler (since it

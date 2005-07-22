@@ -1913,20 +1913,8 @@ nsHTMLDocument::OpenCommon(const nsACString& aContentType, PRBool aReplace)
     nsCOMPtr<nsIDOMDocument> kungFuDeathGrip =
       do_QueryInterface((nsIHTMLDocument*)this);
 
-    nsCOMPtr<nsPIDOMWindow> win(do_QueryInterface(mScriptGlobalObject));
-
-    nsCOMPtr<nsIScriptGlobalObject> sgo;
-
-    // XXXjst: Assert that win is an inner window here?
-    if (win->IsInnerWindow()) {
-      sgo = do_QueryInterface(win->GetOuterWindow());
-    }
-
-    if (!sgo) {
-      sgo = mScriptGlobalObject;
-    }
-
-    rv = sgo->SetNewDocument(kungFuDeathGrip, PR_FALSE, PR_FALSE);
+    rv = mScriptGlobalObject->SetNewDocument(kungFuDeathGrip, PR_FALSE,
+                                             PR_FALSE);
 
     if (NS_FAILED(rv)) {
       return rv;
