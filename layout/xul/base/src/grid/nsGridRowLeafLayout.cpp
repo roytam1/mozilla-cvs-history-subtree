@@ -132,39 +132,6 @@ nsGridRowLeafLayout::GetMaxSize(nsIBox* aBox, nsBoxLayoutState& aState, nsSize& 
   }
 }
 
-NS_IMETHODIMP
-nsGridRowLeafLayout::ChildBecameDirty(nsIBox* aBox, nsBoxLayoutState& aState, nsIBox* aChild)
-{
-#error "This needs to be rewritten, since virtual function ChildBecameDirty no longer exists."
-  nsGrid* grid = nsnull;
-  PRInt32 index = 0;
-  GetGrid(aBox, &grid, &index);
-  PRInt32 isHorizontal = IsHorizontal(aBox);
-
-  if (grid) {
-    PRInt32 columnIndex = -1;
-    aBox->GetIndexOf(aChild, &columnIndex);
-    grid->RowChildIsDirty(aState, index, columnIndex, isHorizontal);
-  }
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsGridRowLeafLayout::BecameDirty(nsIBox* aBox, nsBoxLayoutState& aState)
-{
-#error "This needs to be rewritten, since virtual function BecameDirty no longer exists."
-  nsGrid* grid = nsnull;
-  PRInt32 index = 0;
-  GetGrid(aBox, &grid, &index);
-  PRInt32 isHorizontal = IsHorizontal(aBox);
-
-  if (grid)
-    grid->RowIsDirty(aState, index, isHorizontal);
-
-  return NS_OK;
-}
-
 /** If a child is added or removed or changes size
   */
 NS_IMETHODIMP
@@ -377,6 +344,8 @@ nsGridRowLeafLayout::DirtyRows(nsIBox* aBox, nsBoxLayoutState& aState)
   if (aBox) {
     // mark us dirty
     aBox->AddStateBits(NS_FRAME_IS_DIRTY);
+    // XXXldb We probably don't want to walk up the ancestor chain
+    // calling MarkIntrinsicWidthsDirty for every row.
     aState.PresShell()->FrameNeedsReflow(aBox, nsIPresShell::eTreeChange);
   }
 

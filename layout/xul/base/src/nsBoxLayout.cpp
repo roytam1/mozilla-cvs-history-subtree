@@ -199,6 +199,12 @@ nsBoxLayout::ChildrenSet(nsIBox* aBox, nsBoxLayoutState& aState, nsIBox* aChildL
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsBoxLayout::IntrinsicWidthsDirty(nsIBox* aBox, nsBoxLayoutState& aState)
+{
+  return NS_OK;
+}
+
 // nsISupports
 NS_IMPL_ADDREF(nsBoxLayout)
 NS_IMPL_RELEASE(nsBoxLayout)

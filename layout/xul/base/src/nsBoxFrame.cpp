@@ -1079,6 +1079,11 @@ nsBoxFrame::MarkIntrinsicWidthsDirty()
   SizeNeedsRecalc(mMaxSize);
   CoordNeedsRecalc(mFlex);
   CoordNeedsRecalc(mAscent);
+
+  if (mLayoutManager) {
+    nsBoxLayoutState state(GetPresContext());
+    mLayoutManager->IntrinsicWidthsDirty(this, state);
+  }
 }
 
 NS_IMETHODIMP

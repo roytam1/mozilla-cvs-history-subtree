@@ -61,6 +61,7 @@ public:
   NS_IMETHOD ChildrenAppended(nsIBox* aBox, nsBoxLayoutState& aState, nsIBox* aChildList);
   NS_IMETHOD ChildrenRemoved(nsIBox* aBox, nsBoxLayoutState& aState, nsIBox* aChildList);
   NS_IMETHOD ChildrenSet(nsIBox* aBox, nsBoxLayoutState& aState, nsIBox* aChildList);
+  NS_IMETHOD IntrinsicWidthsDirty(nsIBox* aBox, nsBoxLayoutState& aState);
 
   virtual void GetParentLayout(nsIBox* aBox, nsIBoxLayout** aParent);
   virtual void AddBorderAndPadding(nsIBox* aBox, nsSize& aSize);
