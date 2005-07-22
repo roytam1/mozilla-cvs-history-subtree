@@ -62,6 +62,7 @@
 #include "nsIDOMDOMImplementation.h"
 #include "nsIDOMDocumentType.h"
 #include "nsIDOMWindowInternal.h"
+#include "nsPIDOMWindow.h"
 #include "nsIDOMHTMLFormElement.h"
 #include "nsDOMString.h"
 #include "nsIStreamListener.h"
@@ -1912,8 +1913,20 @@ nsHTMLDocument::OpenCommon(const nsACString& aContentType, PRBool aReplace)
     nsCOMPtr<nsIDOMDocument> kungFuDeathGrip =
       do_QueryInterface((nsIHTMLDocument*)this);
 
-    rv = mScriptGlobalObject->SetNewDocument(kungFuDeathGrip, PR_FALSE,
-                                             PR_FALSE);
+    nsCOMPtr<nsPIDOMWindow> win(do_QueryInterface(mScriptGlobalObject));
+
+    nsCOMPtr<nsIScriptGlobalObject> sgo;
+
+    // XXXjst: Assert that win is an inner window here?
+    if (win->IsInnerWindow()) {
+      sgo = do_QueryInterface(win->GetOuterWindow());
+    }
+
+    if (!sgo) {
+      sgo = mScriptGlobalObject;
+    }
+
+    rv = sgo->SetNewDocument(kungFuDeathGrip, PR_FALSE, PR_FALSE);
 
     if (NS_FAILED(rv)) {
       return rv;
@@ -3140,8 +3153,6 @@ FindNamedItems(const nsAString& aName, nsIContent *aContent,
                "Entry w/o content list passed to FindNamedItems()!");
   NS_ASSERTION(aEntry.mContentList != NAME_NOT_VALID,
                "Entry that should never have a list passed to FindNamedItems()!");
-
-  nsIAtom *tag = aContent->Tag();
 
   if (aContent->IsContentOfType(nsIContent::eTEXT)) {
     // Text nodes are not named items nor can they have children.
