@@ -130,7 +130,7 @@ public:
   void SetFrameElementInternal(nsIDOMElement *aFrameElement)
   {
     if (IsInnerWindow()) {
-      return mOuterWindow->SetFrameElementInternal(aFrameElement);
+      mOuterWindow->SetFrameElementInternal(aFrameElement);
     }
 
     mFrameElement = aFrameElement;
