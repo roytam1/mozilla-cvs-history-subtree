@@ -355,12 +355,13 @@ nsInlineFrame::DoInlineIntrinsicWidth(nsIRenderingContext *aRenderingContext,
                                       InlineIntrinsicWidthData *aData,
                                       nsLayoutUtils::IntrinsicWidthType aType)
 {
+  if (mPrevInFlow)
+    return; // Already added.
+
   NS_PRECONDITION(aType == nsLayoutUtils::MIN_WIDTH ||
                   aType == nsLayoutUtils::PREF_WIDTH, "bad type");
 
   PRUint8 startSide, endSide;
-  PRIntn skipSides = GetSkipSides();
-
   // XXX set these correctly!  (not trivial, and GetSkipSides() and
   // maybe some reflow logic needs this too, and should all be fixed at
   // once)
@@ -372,28 +373,28 @@ nsInlineFrame::DoInlineIntrinsicWidth(nsIRenderingContext *aRenderingContext,
   const nsStyleMargin *styleMargin = GetStyleMargin();
   nsStyleCoord tmp;
 
-  if (!(skipSides & (1 << startSide))) {
-    aData->currentLine +=
-      GetCoord(stylePadding->mPadding.Get(startSide, tmp), 0) +
-      styleBorder->GetBorderWidth(startSide) +
-      GetCoord(styleMargin->mMargin.Get(startSide, tmp), 0);
+  aData->currentLine +=
+    GetCoord(stylePadding->mPadding.Get(startSide, tmp), 0) +
+    styleBorder->GetBorderWidth(startSide) +
+    GetCoord(styleMargin->mMargin.Get(startSide, tmp), 0);
+
+  for (nsInlineFrame *nif = this; nif;
+       nif = (nsInlineFrame*) nif->mNextInFlow) {
+    for (nsIFrame *kid = nif->mFrames.FirstChild(); kid;
+         kid = kid->GetNextSibling()) {
+      if (aType == nsLayoutUtils::MIN_WIDTH)
+        kid->AddInlineMinWidth(aRenderingContext,
+                               NS_STATIC_CAST(InlineMinWidthData*, aData));
+      else
+        kid->AddInlinePrefWidth(aRenderingContext,
+                                NS_STATIC_CAST(InlinePrefWidthData*, aData));
+    }
   }
 
-  for (nsIFrame *kid = mFrames.FirstChild(); kid; kid = kid->GetNextSibling()) {
-    if (aType == nsLayoutUtils::MIN_WIDTH)
-      kid->AddInlineMinWidth(aRenderingContext,
-                             NS_STATIC_CAST(InlineMinWidthData*, aData));
-    else
-      kid->AddInlinePrefWidth(aRenderingContext,
-                              NS_STATIC_CAST(InlinePrefWidthData*, aData));
-  }
-
-  if (!(skipSides & (1 << endSide))) {
-    aData->currentLine +=
-      GetCoord(stylePadding->mPadding.Get(endSide, tmp), 0) +
-      styleBorder->GetBorderWidth(endSide) +
-      GetCoord(styleMargin->mMargin.Get(endSide, tmp), 0);
-  }
+  aData->currentLine +=
+    GetCoord(stylePadding->mPadding.Get(endSide, tmp), 0) +
+    styleBorder->GetBorderWidth(endSide) +
+    GetCoord(styleMargin->mMargin.Get(endSide, tmp), 0);
 }
 
 /* virtual */ void

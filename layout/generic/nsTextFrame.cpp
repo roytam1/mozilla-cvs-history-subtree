@@ -855,6 +855,11 @@ public:
     return NS_OK;
   }
   virtual nsIFrame* GetFirstInFlow() const;
+
+  virtual void AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
+                                 InlineMinWidthData *aData);
+  virtual void AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
+                                  InlinePrefWidthData *aData);
   
 protected:
   nsIFrame* mPrevInFlow;
@@ -931,6 +936,29 @@ nsContinuingTextFrame::GetFirstInFlow() const
     previous = firstInFlow->GetPrevInFlow();
   } while (previous);
   return firstInFlow;
+}
+
+// XXX Do we want to do all the work for the first-in-flow or do the
+// work for each part?  (Be careful of first-letter / first-line, though,
+// especially first-line!)
+
+// XXX We really need to make :first-letter happen during frame
+// construction.
+
+/* virtual */ void
+nsContinuingTextFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
+                                         InlineMinWidthData *aData)
+{
+  // Do nothing, since the first-in-flow accounts for everything.
+  return;
+}
+
+/* virtual */ void
+nsContinuingTextFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
+                                          InlinePrefWidthData *aData)
+{
+  // Do nothing, since the first-in-flow accounts for everything.
+  return;
 }
 
 inline nscolor EnsureDifferentColors(nscolor colorA, nscolor colorB)
@@ -5471,11 +5499,6 @@ nsTextFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
   // Keep the text in ascii if possible. Note that if we're measuring small
   // caps text then transform to Unicode because the helper function only
   // accepts Unicode text
-  // XXX Do we want to do all the work for the first-in-flow or do the
-  // work for each part?  (Be careful of first-letter / first-line, though,
-  // especially first-line!)
-  // XXX We really need to make :first-letter happen during frame
-  // construction.
   rv = tx.Init(this, mContent, mContentOffset, forceArabicShaping,
                !ts.mSmallCaps);
   if (NS_FAILED(rv)) {
@@ -5567,11 +5590,6 @@ nsTextFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
   // Keep the text in ascii if possible. Note that if we're measuring small
   // caps text then transform to Unicode because the helper function only
   // accepts Unicode text
-  // XXX Do we want to do all the work for the first-in-flow or do the
-  // work for each part?  (Be careful of first-letter / first-line, though,
-  // especially first-line!)
-  // XXX We really need to make :first-letter happen during frame
-  // construction.
   rv = tx.Init(this, mContent, mContentOffset, forceArabicShaping,
                !ts.mSmallCaps);
   if (NS_FAILED(rv)) {
