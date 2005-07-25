@@ -46,6 +46,7 @@
 #include "nsIObserver.h"
 #include "nsWeakReference.h"
 #include "nsString.h"
+#include "nsIPrefBranch.h"
 
 #include "nsICookiePermission.h" 
 
@@ -76,8 +77,10 @@ protected:
   PRBool   mUseRemoteImageWhiteList;
   nsXPIDLCString mRemoteImageWhiteListURI;
   PRBool   mAllowPlugins;
+  nsAdoptingCString  mTrustedMailDomains;
 
   nsresult IsSenderInWhiteList(nsIMsgDBHdr * aMsgHdr, PRBool * aWhiteListed);
+  nsresult IsTrustedDomain(nsIURI * aContentLocation, PRBool * aTrustedDomain);
 };
 
 /* 2C4B5CC1-8C0F-4080-92A7-D133CC30F43B */
