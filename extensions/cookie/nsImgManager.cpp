@@ -180,8 +180,7 @@ nsIURI *nsImgManager::GetBaseUri(nsISupports *context, nsIDOMWindow *window)
 }
 
 // check if this is a mailnews window, and if it is, should we load the url?
-void nsImgManager::CheckMailNews(nsIURI *baseURI,
-                                 PRBool isFtp,
+void nsImgManager::CheckMailNews(PRBool isFtp,
                                  PRInt32 contentType, 
                                  nsIURI *contentLoc,
                                  nsISupports *context,
@@ -190,14 +189,12 @@ void nsImgManager::CheckMailNews(nsIURI *baseURI,
 {
   nsresult rv;
 
-  if (!baseURI)
-    return;
-
   nsCOMPtr<nsIDocShell> docshell = GetRootDocShell(window);
   if (docshell) {
     PRUint32 appType;
     rv = docshell->GetAppType(&appType);
     if (NS_SUCCEEDED(rv) && appType == nsIDocShell::APP_TYPE_MAIL) {
+      nsIURI *baseURI = GetBaseUri(context, window);
       *shouldLoad = PR_FALSE;
       // if aRequestingLocation is chrome, about or resource, 
       // allow aContentLoc to load
@@ -259,9 +256,7 @@ NS_IMETHODIMP nsImgManager::ShouldLoad(PRInt32 aContentType,
   nsresult rv = aContentLoc->SchemeIs("ftp", &isFtp);
   NS_ENSURE_SUCCESS(rv,rv);
 
-  nsIURI *baseURI = GetBaseUri(aContext, aWindow);
-
-  CheckMailNews(baseURI, isFtp, aContentType, aContentLoc, aContext, aWindow, 
+  CheckMailNews(isFtp, aContentType, aContentLoc, aContext, aWindow, 
                 aShouldLoad);
   if (!*aShouldLoad)
     return NS_OK;
@@ -283,6 +278,7 @@ NS_IMETHODIMP nsImgManager::ShouldLoad(PRInt32 aContentType,
     if (!needToCheck)
       return NS_OK;
 
+    nsIURI *baseURI = GetBaseUri(aContext, aWindow);
 
     if (baseURI)
       rv =  TestPermission(aContentLoc, baseURI, aShouldLoad);
