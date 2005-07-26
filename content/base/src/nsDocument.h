@@ -172,7 +172,6 @@ public:
 protected:
   PRInt32       mLength;
   nsIDocument*  mDocument;
-  void*         mScriptObject;
 };
 
 class nsOnloadBlocker : public nsIRequest
