@@ -88,7 +88,6 @@
 #include "nsIPresShell.h"
 #include "nsMutationEvent.h"
 #include "nsIXPConnect.h"
-#include "nsIDOMScriptObjectFactory.h"
 #include "nsDOMCID.h"
 #include "nsIScriptObjectOwner.h" // for nsIScriptEventHandlerOwner
 #include "nsIClassInfo.h"
@@ -1102,7 +1101,8 @@ nsEventListenerManager::FindJSEventListener(EventArrayType aType)
 }
 
 nsresult
-nsEventListenerManager::SetJSEventListener(nsIScriptContext *aContext, 
+nsEventListenerManager::SetJSEventListener(nsIScriptContext *aContext,
+                                           JSObject *aScopeObject,
                                            nsISupports *aObject,
                                            nsIAtom* aName,
                                            PRBool aIsString,
@@ -1121,13 +1121,9 @@ nsEventListenerManager::SetJSEventListener(nsIScriptContext *aContext,
   if (nsnull == ls) {
     // If we didn't find a script listener or no listeners existed
     // create and add a new one.
-    nsCOMPtr<nsIDOMScriptObjectFactory> factory =
-      do_GetService(kDOMScriptObjectFactoryCID);
-    NS_ENSURE_TRUE(factory, NS_ERROR_FAILURE);
-
     nsCOMPtr<nsIDOMEventListener> scriptListener;
-    rv = factory->NewJSEventListener(aContext, aObject,
-                                     getter_AddRefs(scriptListener));
+    rv = NS_NewJSEventListener(aContext, aScopeObject, aObject,
+                               getter_AddRefs(scriptListener));
     if (NS_SUCCEEDED(rv)) {
       AddEventListener(scriptListener, arrayType, NS_EVENT_BITS_NONE, nsnull,
                        NS_EVENT_FLAG_BUBBLE | NS_PRIV_EVENT_FLAG_SCRIPT, nsnull);
@@ -1304,7 +1300,7 @@ nsEventListenerManager::AddScriptEventListener(nsISupports *aObject,
     }
   }
 
-  return SetJSEventListener(context, objiSupp, aName, aDeferCompilation,
+  return SetJSEventListener(context, scope, objiSupp, aName, aDeferCompilation,
                             aPermitUntrustedEvents);
 }
 
@@ -1342,6 +1338,7 @@ nsEventListenerManager::sAddListenerID = JSVAL_VOID;
 
 NS_IMETHODIMP
 nsEventListenerManager::RegisterScriptEventListener(nsIScriptContext *aContext,
+                                                    JSObject *aScopeObject,
                                                     nsISupports *aObject, 
                                                     nsIAtom *aName)
 {
@@ -1362,11 +1359,10 @@ nsEventListenerManager::RegisterScriptEventListener(nsIScriptContext *aContext,
 
   JSContext *current_cx = (JSContext *)aContext->GetNativeContext();
 
-  // XXXjst: Don't use JS_GetGlobalObject(cx) here!
   nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
   rv = nsContentUtils::XPConnect()->
-    WrapNative(current_cx, ::JS_GetGlobalObject(current_cx), aObject,
-               NS_GET_IID(nsISupports), getter_AddRefs(holder));
+    WrapNative(current_cx, aScopeObject, aObject, NS_GET_IID(nsISupports),
+               getter_AddRefs(holder));
   NS_ENSURE_SUCCESS(rv, rv);
 
   // Since JSEventListeners only have a raw nsISupports pointer, it's
@@ -1380,11 +1376,11 @@ nsEventListenerManager::RegisterScriptEventListener(nsIScriptContext *aContext,
   rv = holder->GetJSObject(&jsobj);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  nsCOMPtr<nsIClassInfo> classInfo = do_QueryInterface(aObject);
-
-  if (sAddListenerID == JSVAL_VOID && cx) {
-    sAddListenerID =
-      STRING_TO_JSVAL(::JS_InternString(cx, "addEventListener"));
+  if (cx) {
+    if (sAddListenerID == JSVAL_VOID) {
+      sAddListenerID =
+        STRING_TO_JSVAL(::JS_InternString(cx, "addEventListener"));
+    }
 
     rv = nsContentUtils::GetSecurityManager()->
       CheckPropertyAccess(cx, jsobj,
@@ -1399,12 +1395,13 @@ nsEventListenerManager::RegisterScriptEventListener(nsIScriptContext *aContext,
 
   // Untrusted events are always permitted for non-chrome script
   // handlers.
-  return SetJSEventListener(aContext, wrapper->Native(), aName, PR_FALSE,
-                            !nsContentUtils::IsCallerChrome());
+  return SetJSEventListener(aContext, aScopeObject, wrapper->Native(), aName,
+                            PR_FALSE, !nsContentUtils::IsCallerChrome());
 }
 
 nsresult
 nsEventListenerManager::CompileScriptEventListener(nsIScriptContext *aContext, 
+                                                   JSObject *aScopeObject,
                                                    nsISupports *aObject, 
                                                    nsIAtom *aName,
                                                    PRBool *aDidCompile)
@@ -1427,7 +1424,8 @@ nsEventListenerManager::CompileScriptEventListener(nsIScriptContext *aContext,
   }
 
   if (ls->mHandlerIsString & subType) {
-    rv = CompileEventHandlerInternal(aContext, aObject, aName, ls, /*XXX fixme*/nsnull, subType);
+    rv = CompileEventHandlerInternal(aContext, aScopeObject, aObject, aName,
+                                     ls, /*XXX fixme*/nsnull, subType);
   }
 
   // Set *aDidCompile to true even if we didn't really compile
@@ -1442,6 +1440,7 @@ nsEventListenerManager::CompileScriptEventListener(nsIScriptContext *aContext,
 
 nsresult
 nsEventListenerManager::CompileEventHandlerInternal(nsIScriptContext *aContext,
+                                                    JSObject *aScopeObject,
                                                     nsISupports *aObject,
                                                     nsIAtom *aName,
                                                     nsListenerStruct *aListenerStruct,
@@ -1453,9 +1452,7 @@ nsEventListenerManager::CompileEventHandlerInternal(nsIScriptContext *aContext,
   JSContext *cx = (JSContext *)aContext->GetNativeContext();
 
   nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
-  result = nsContentUtils::XPConnect()->WrapNative(cx,
-                                                   ::JS_GetGlobalObject(cx),
-                                                   aObject,
+  result = nsContentUtils::XPConnect()->WrapNative(cx, aScopeObject, aObject,
                                                    NS_GET_IID(nsISupports),
                                                    getter_AddRefs(holder));
   NS_ENSURE_SUCCESS(result, result);
@@ -1569,6 +1566,7 @@ nsEventListenerManager::HandleEventSubType(nsListenerStruct* aListenerStruct,
           nsCOMPtr<nsIAtom> atom = do_GetAtom(NS_LITERAL_STRING("on") + eventString);
 
           result = CompileEventHandlerInternal(jslistener->GetEventContext(),
+                                               jslistener->GetEventScope(),
                                                jslistener->GetEventTarget(),
                                                atom, aListenerStruct,
                                                aCurrentTarget,

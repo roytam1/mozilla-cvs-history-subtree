@@ -6056,13 +6056,16 @@ nsEventReceiverSH::RegisterCompileHandler(nsIXPConnectWrappedNative *wrapper,
 
   nsresult rv;
 
+  JSObject *scope = GetGlobalJSObject(cx, obj);
+
   if (compile) {
-    rv = manager->CompileScriptEventListener(script_cx, receiver, atom,
+    rv = manager->CompileScriptEventListener(script_cx, scope, receiver, atom,
                                              did_define);
   } else if (remove) {
     rv = manager->RemoveScriptEventListener(atom);
   } else {
-    rv = manager->RegisterScriptEventListener(script_cx, receiver, atom);
+    rv = manager->RegisterScriptEventListener(script_cx, scope, receiver,
+                                              atom);
   }
 
   return rv;

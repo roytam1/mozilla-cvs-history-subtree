@@ -288,12 +288,15 @@ nsGlobalWindow::~nsGlobalWindow()
   printf("--DOMWINDOW == %d\n", gRefCnt);
 #endif
 
-  if (IsInnerWindow() && GetOuterWindowInternal()->mInnerWindow == this) {
-    GetOuterWindowInternal()->mInnerWindow = nsnull;
+  nsGlobalWindow *outer = GetOuterWindowInternal();
+  if (outer && outer->mInnerWindow == this) {
+    outer->mInnerWindow = nsnull;
   }
 
-  if (mInnerWindow) {
-    GetCurrentInnerWindowInternal()->mOuterWindow = nsnull;
+  nsGlobalWindow *inner = GetCurrentInnerWindowInternal();
+
+  if (inner) {
+    inner->mOuterWindow = nsnull;
   }
 
   mDocument = nsnull;           // Forces Release
@@ -328,7 +331,6 @@ nsGlobalWindow::CleanUp()
   mScrollbars = nsnull;
   mLocation = nsnull;
   mFrames = nsnull;
-  mInnerWindowHolder = nsnull;
 
   ClearControllers();
 
@@ -343,6 +345,14 @@ nsGlobalWindow::CleanUp()
     SetPopupSpamWindow(PR_FALSE);
     --gOpenPopupSpamCount;
   }
+
+  nsGlobalWindow *inner = GetCurrentInnerWindowInternal();
+
+  if (inner) {
+    inner->CleanUp();
+  }
+
+  mInnerWindowHolder = nsnull;
 }
 
 void
@@ -362,6 +372,12 @@ nsGlobalWindow::ClearControllers()
     }
 
     mControllers = nsnull;
+  }
+
+  nsGlobalWindow *inner = GetCurrentInnerWindowInternal();
+
+  if (inner) {
+    inner->ClearControllers();
   }
 }
 
@@ -4075,22 +4091,18 @@ nsGlobalWindow::GetFrameElement(nsIDOMElement** aFrameElement)
 NS_IMETHODIMP
 nsGlobalWindow::UpdateCommands(const nsAString& anAction)
 {
-  nsIDOMWindowInternal *rootWindow = nsGlobalWindow::GetPrivateRoot();
+  nsPIDOMWindow *rootWindow = nsGlobalWindow::GetPrivateRoot();
   if (!rootWindow)
     return NS_OK;
 
-  nsCOMPtr<nsIDOMDocument> document;
-  rootWindow->GetDocument(getter_AddRefs(document));
-
-  if (document) {
-    // See if we contain a XUL document.
-    nsCOMPtr<nsIDOMXULDocument> xulDoc = do_QueryInterface(document);
-    if (xulDoc) {
-      // Retrieve the command dispatcher and call updateCommands on it.
-      nsCOMPtr<nsIDOMXULCommandDispatcher> xulCommandDispatcher;
-      xulDoc->GetCommandDispatcher(getter_AddRefs(xulCommandDispatcher));
-      xulCommandDispatcher->UpdateCommands(anAction);
-    }
+  nsCOMPtr<nsIDOMXULDocument> xulDoc =
+    do_QueryInterface(rootWindow->GetExtantDocument());
+  // See if we contain a XUL document.
+  if (xulDoc) {
+    // Retrieve the command dispatcher and call updateCommands on it.
+    nsCOMPtr<nsIDOMXULCommandDispatcher> xulCommandDispatcher;
+    xulDoc->GetCommandDispatcher(getter_AddRefs(xulCommandDispatcher));
+    xulCommandDispatcher->UpdateCommands(anAction);
   }
 
   return NS_OK;
@@ -4699,18 +4711,13 @@ nsGlobalWindow::GetPrivateRoot()
       if (parent) {
         nsCOMPtr<nsIDOMWindow> tempParent;
         parent->GetTop(getter_AddRefs(tempParent));
-        return NS_STATIC_CAST(nsGlobalWindow *,
-                              NS_STATIC_CAST(nsIDOMWindow*, tempParent));
+        tempParent.swap(parent);
       }
     }
   }
 
-  if (parent) {
-    return NS_STATIC_CAST(nsGlobalWindow *,
-                          NS_STATIC_CAST(nsIDOMWindow*, parent));
-  }
-
-  return nsnull;
+  return NS_STATIC_CAST(nsGlobalWindow *,
+                        NS_STATIC_CAST(nsIDOMWindow *, parent));
 }
 
 
