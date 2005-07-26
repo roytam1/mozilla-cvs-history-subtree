@@ -208,8 +208,6 @@ public:
   virtual NS_HIDDEN_(nsresult) SaveWindowState(nsISupports **aState);
   virtual NS_HIDDEN_(nsresult) RestoreWindowState(nsISupports *aState);
 
-  virtual NS_HIDDEN_(nsPIDOMWindow *) GetOuterWindow();
-  virtual NS_HIDDEN_(nsPIDOMWindow *) GetCurrentInnerWindow();
   // nsIDOMViewCSS
   NS_DECL_NSIDOMVIEWCSS
 

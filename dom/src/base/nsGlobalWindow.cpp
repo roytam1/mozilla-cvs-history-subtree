@@ -209,6 +209,14 @@ PRInt32 gTimeoutCnt                                    = 0;
   }                                                                           \
   PR_END_MACRO
 
+#define FORWARD_TO_INNER_VOID(method, args)                                   \
+  PR_BEGIN_MACRO                                                              \
+  if (mInnerWindow) {                                                         \
+    GetCurrentInnerWindowInternal()->method args;                             \
+    return;                                                                   \
+  }                                                                           \
+  PR_END_MACRO
+
 #define ASSIGN_TO_OUTER_MEMBER(member, value)                                 \
   PR_BEGIN_MACRO                                                              \
   if (IsInnerWindow()) {                                                      \
@@ -679,14 +687,6 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
     if (aRemoveEventListeners && mListenerManager) {
       mListenerManager->RemoveAllListeners(PR_FALSE);
       mListenerManager = nsnull;
-    }
-
-    // Tear down the old document, unless the old document is the same
-    // as the new document (happens when document.open() is called).
-
-    if (oldDoc != newDoc) {
-      oldDoc->SetScriptGlobalObject(nsnull);
-      oldDoc->Destroy();
     }
   }
 
@@ -2064,6 +2064,8 @@ nsGlobalWindow::SetOuterHeight(PRInt32 aOuterHeight)
 NS_IMETHODIMP
 nsGlobalWindow::GetScreenX(PRInt32* aScreenX)
 {
+  FORWARD_TO_OUTER(GetScreenX, (aScreenX));
+
   nsCOMPtr<nsIBaseWindow> treeOwnerAsWin;
   GetTreeOwner(getter_AddRefs(treeOwnerAsWin));
   NS_ENSURE_TRUE(treeOwnerAsWin, NS_ERROR_FAILURE);
@@ -2079,6 +2081,8 @@ nsGlobalWindow::GetScreenX(PRInt32* aScreenX)
 NS_IMETHODIMP
 nsGlobalWindow::SetScreenX(PRInt32 aScreenX)
 {
+  FORWARD_TO_OUTER(SetScreenX, (aScreenX));
+
   /*
    * If caller is not chrome and dom.disable_window_move_resize is true,
    * prevent setting window.screenX by exiting early
@@ -2108,6 +2112,8 @@ nsGlobalWindow::SetScreenX(PRInt32 aScreenX)
 NS_IMETHODIMP
 nsGlobalWindow::GetScreenY(PRInt32* aScreenY)
 {
+  FORWARD_TO_OUTER(GetScreenY, (aScreenY));
+
   nsCOMPtr<nsIBaseWindow> treeOwnerAsWin;
   GetTreeOwner(getter_AddRefs(treeOwnerAsWin));
   NS_ENSURE_TRUE(treeOwnerAsWin, NS_ERROR_FAILURE);
@@ -2123,6 +2129,8 @@ nsGlobalWindow::GetScreenY(PRInt32* aScreenY)
 NS_IMETHODIMP
 nsGlobalWindow::SetScreenY(PRInt32 aScreenY)
 {
+  FORWARD_TO_OUTER(SetScreenY, (aScreenY));
+
   /*
    * If caller is not chrome and dom.disable_window_move_resize is true,
    * prevent setting window.screenY by exiting early
@@ -2269,6 +2277,8 @@ nsGlobalWindow::GetPageYOffset(PRInt32* aPageYOffset)
 nsresult
 nsGlobalWindow::GetScrollMaxXY(PRInt32* aScrollMaxX, PRInt32* aScrollMaxY)
 {
+  FORWARD_TO_OUTER(GetScrollMaxXY, (aScrollMaxX, aScrollMaxY));
+
   nsresult rv;
   nsIScrollableView *view = nsnull;      // no addref/release for views
   float p2t, t2p;
@@ -2314,6 +2324,8 @@ nsresult
 nsGlobalWindow::GetScrollXY(PRInt32* aScrollX, PRInt32* aScrollY,
                             PRBool aDoFlush)
 {
+  FORWARD_TO_OUTER(GetScrollXY, (aScrollX, aScrollY, aDoFlush));
+
   nsresult rv;
   nsIScrollableView *view = nsnull;      // no addref/release for views
   float p2t, t2p;
@@ -3816,6 +3828,8 @@ nsGlobalWindow::OpenDialog(nsIDOMWindow** _retval)
 NS_IMETHODIMP
 nsGlobalWindow::GetFrames(nsIDOMWindow** aFrames)
 {
+  FORWARD_TO_OUTER(GetFrames, (aFrames));
+
   *aFrames = this;
   NS_ADDREF(*aFrames);
 
@@ -4184,6 +4198,8 @@ nsGlobalWindow::GetBlurSuppression()
 NS_IMETHODIMP
 nsGlobalWindow::GetSelection(nsISelection** aSelection)
 {
+  FORWARD_TO_OUTER(GetSelection, (aSelection));
+
   NS_ENSURE_ARG_POINTER(aSelection);
   *aSelection = nsnull;
 
@@ -4297,6 +4313,10 @@ nsGlobalWindow::FindInternal(const nsAString& aStr, PRBool caseSensitive,
                              PRBool wholeWord, PRBool searchInFrames,
                              PRBool showDialog, PRBool *aDidFind)
 {
+  FORWARD_TO_OUTER(FindInternal, (aStr, caseSensitive, backwards, wrapAround,
+                                  wholeWord, searchInFrames, showDialog,
+                                  aDidFind));
+
   NS_ENSURE_ARG_POINTER(aDidFind);
   nsresult rv = NS_OK;
   *aDidFind = PR_FALSE;
@@ -4542,7 +4562,8 @@ nsGlobalWindow::RemoveGroupedEventListener(const nsAString & aType,
   if (mListenerManager) {
     PRInt32 flags = aUseCapture ? NS_EVENT_FLAG_CAPTURE : NS_EVENT_FLAG_BUBBLE;
 
-    mListenerManager->RemoveEventListenerByType(aListener, aType, flags, aEvtGrp);
+    mListenerManager->RemoveEventListenerByType(aListener, aType, flags,
+                                                aEvtGrp);
     return NS_OK;
   }
   return NS_ERROR_FAILURE;
@@ -4744,7 +4765,7 @@ nsresult
 nsGlobalWindow::GetObjectProperty(const PRUnichar *aProperty,
                                   nsISupports ** aObject)
 {
-  // XXXjst: FORWARD_TO_OUTER???
+  FORWARD_TO_INNER(GetObjectProperty, (aProperty, aObject));
 
   NS_ENSURE_TRUE(mJSObject, NS_ERROR_NOT_AVAILABLE);
 
@@ -5276,6 +5297,7 @@ nsGlobalWindow::OpenInternal(const nsAString& aUrl, const nsAString& aName,
   return rv;
 }
 
+// static
 void
 nsGlobalWindow::CloseWindow(nsISupports *aWindow)
 {
@@ -5285,6 +5307,7 @@ nsGlobalWindow::CloseWindow(nsISupports *aWindow)
                  NS_STATIC_CAST(nsPIDOMWindow*, win))->ReallyCloseWindow();
 }
 
+// static
 void
 nsGlobalWindow::ClearWindowScope(nsISupports *aWindow)
 {
@@ -5518,6 +5541,8 @@ nsGlobalWindow::SetTimeoutOrInterval(PRBool aIsInterval, PRInt32 *aReturn)
 void
 nsGlobalWindow::RunTimeout(nsTimeout *aTimeout)
 {
+  NS_ASSERTION(IsInnerWindow(), "Timeout running on outer window!");
+
   // Make sure that the script context doesn't go away as a result of
   // running timeouts
   nsCOMPtr<nsIScriptContext> scx = GetContextInternal();
@@ -6007,6 +6032,8 @@ void
 nsGlobalWindow::InsertTimeoutIntoList(nsTimeout **aList,
                                       nsTimeout *aTimeout)
 {
+  // XXXjst: FORWARD_TO_INNER???
+
   nsTimeout *to;
 
   NS_ASSERTION(aList,
@@ -6438,16 +6465,17 @@ CopyJSProperties(JSContext *cx, JSObject *aSource, JSObject *aDest)
 nsresult
 nsGlobalWindow::SaveWindowState(nsISupports **aState)
 {
-  // XXXjst: Figure this out...
-
   *aState = nsnull;
 
-  if (!mContext || !mJSObject) {
+  if (IsOuterWindow() && (!mContext || !mJSObject)) {
     // The window may be getting torn down; don't bother saving state.
     return NS_OK;
   }
 
-  JSContext *cx = NS_STATIC_CAST(JSContext*, mContext->GetNativeContext());
+  FORWARD_TO_INNER(SaveWindowState, (aState));
+
+  JSContext *cx = NS_STATIC_CAST(JSContext*,
+                                 GetContextInternal()->GetNativeContext());
   NS_ENSURE_TRUE(cx, NS_ERROR_FAILURE);
 
   JSObject *stateObj = ::JS_NewObject(cx, &sWindowStateClass, NULL, NULL);
@@ -6474,14 +6502,18 @@ nsGlobalWindow::SaveWindowState(nsISupports **aState)
 nsresult
 nsGlobalWindow::RestoreWindowState(nsISupports *aState)
 {
-  // XXXjst: Figure this out...
+  // SetNewDocument() has already been called so we should have a
+  // new clean inner window to restore stat into here.
 
-  if (!mContext || !mJSObject) {
+  if (IsOuterWindow() && (!mContext || !mJSObject)) {
     // The window may be getting torn down; don't bother restoring state.
     return NS_OK;
   }
 
-  JSContext *cx = NS_STATIC_CAST(JSContext*, mContext->GetNativeContext());
+  FORWARD_TO_INNER(RestoreWindowState, (aState));
+
+  JSContext *cx = NS_STATIC_CAST(JSContext*,
+                                 GetContextInternal()->GetNativeContext());
   NS_ENSURE_TRUE(cx, NS_ERROR_FAILURE);
 
   // Note that we don't need to call JS_ClearScope here.  The scope is already
@@ -6555,6 +6587,8 @@ nsGlobalWindow::RestoreWindowState(nsISupports *aState)
 void
 nsGlobalWindow::SuspendTimeouts()
 {
+  FORWARD_TO_INNER_VOID(SuspendTimeouts, ());
+
   nsInt64 now = PR_IntervalNow();
   for (nsTimeout *t = mTimeouts; t; t = t->mNext) {
     // Change mWhen to be the time remaining for this timer.
@@ -6595,6 +6629,8 @@ nsGlobalWindow::SuspendTimeouts()
 nsresult
 nsGlobalWindow::ResumeTimeouts()
 {
+  FORWARD_TO_INNER(ResumeTimeouts, ());
+
   // Restore all of the timeouts, using the stored time remaining.
 
   nsInt64 now = PR_IntervalNow();
@@ -6636,18 +6672,6 @@ nsGlobalWindow::ResumeTimeouts()
   }
 
   return NS_OK;
-}
-
-nsPIDOMWindow *
-nsGlobalWindow::GetOuterWindow()
-{
-  return mOuterWindow;
-}
-
-nsPIDOMWindow *
-nsGlobalWindow::GetCurrentInnerWindow()
-{
-  return mInnerWindow;
 }
 
 // QueryInterface implementation for nsGlobalChromeWindow
