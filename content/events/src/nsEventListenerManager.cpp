@@ -2147,7 +2147,7 @@ nsEventListenerManager::FixContextMenuEvent(nsPresContext* aPresContext,
 
       currentTarget = do_QueryInterface(currentFocus);
       nsCOMPtr<nsIPrivateDOMEvent> pEvent(do_QueryInterface(*aDOMEvent));
-      pEvent->SetTarget (currentTarget);
+      pEvent->SetTarget(currentTarget);
     }
   }
 

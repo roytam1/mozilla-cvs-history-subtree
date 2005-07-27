@@ -93,32 +93,45 @@ public:
   virtual nsresult Activate() = 0;
   virtual nsresult Deactivate() = 0;
 
-  nsIChromeEventHandler* GetChromeEventHandler()
+  nsIChromeEventHandler* GetChromeEventHandler() const
   {
-    // XXXjst: inner/outer!
     return mChromeEventHandler;
   }
 
-  PRBool HasMutationListeners(PRUint32 aMutationEventType)
+  PRBool HasMutationListeners(PRUint32 aMutationEventType) const
   {
-    return (mMutationBits & aMutationEventType) != 0;
+    const nsPIDOMWindow *win = GetCurrentInnerWindow();
+
+    if (!win) {
+      win = this;
+    }
+
+    return (win->mMutationBits & aMutationEventType) != 0;
   }
 
   void SetMutationListeners(PRUint32 aType)
   {
-    // XXXjst: inner/outer!
-    mMutationBits |= aType;
+    nsPIDOMWindow *win = GetCurrentInnerWindow();
+
+    if (!win) {
+      win = this;
+    }
+
+    win->mMutationBits |= aType;
   }
 
   virtual nsIFocusController* GetRootFocusController() = 0;
 
   // GetExtantDocument provides a backdoor to the DOM GetDocument accessor
-  nsIDOMDocument* GetExtantDocument() { return mDocument; }
+  nsIDOMDocument* GetExtantDocument() const
+  {
+    return mDocument;
+  }
 
   // Internal getter/setter for the frame element, this version of the
   // getter crosses chrome boundaries whereas the public scriptable
   // one doesn't for security reasons.
-  nsIDOMElement* GetFrameElementInternal()
+  nsIDOMElement* GetFrameElementInternal() const
   {
     if (IsInnerWindow()) {
       return mOuterWindow->GetFrameElementInternal();
@@ -138,21 +151,36 @@ public:
 
   PRBool IsLoadingOrRunningTimeout() const
   {
-    // XXXjst: inner/outer!
-    return !mIsDocumentLoaded || mRunningTimeout;
+    const nsPIDOMWindow *win = GetCurrentInnerWindow();
+
+    if (!win) {
+      win = this;
+    }
+
+    return !win->mIsDocumentLoaded || win->mRunningTimeout;
   }
 
   // Check whether a document is currently loading
   PRBool IsLoading() const
   {
-    // XXXjst: inner/outer!
-    return !mIsDocumentLoaded;
+    const nsPIDOMWindow *win = GetCurrentInnerWindow();
+
+    if (!win) {
+      win = this;
+    }
+
+    return !win->mIsDocumentLoaded;
   }
 
   PRBool IsHandlingResizeEvent() const
   {
-    // XXXjst: inner/outer!
-    return mIsHandlingResizeEvent;
+    const nsPIDOMWindow *win = GetCurrentInnerWindow();
+
+    if (!win) {
+      win = this;
+    }
+
+    return win->mIsHandlingResizeEvent;
   }
 
   virtual void SetOpenerScriptURL(nsIURI* aURI) = 0;
@@ -163,29 +191,29 @@ public:
   virtual PopupControlState GetPopupControlState() const = 0;
   virtual OpenAllowValue GetOpenAllow(const nsAString &aName) = 0;
 
-    // Returns an object containing the window's state.  This also suspends
+  // Returns an object containing the window's state.  This also suspends
   // all running timeouts in the window.
   virtual nsresult SaveWindowState(nsISupports **aState) = 0;
 
   // Restore the window state from aState.
   virtual nsresult RestoreWindowState(nsISupports *aState) = 0;
 
-  nsPIDOMWindow *GetOuterWindow()
+  nsPIDOMWindow *GetOuterWindow() const
   {
     return mOuterWindow;
   }
 
-  nsPIDOMWindow *GetCurrentInnerWindow()
+  nsPIDOMWindow *GetCurrentInnerWindow() const
   {
     return mInnerWindow;
   }
 
-  PRBool IsInnerWindow()
+  PRBool IsInnerWindow() const
   {
     return mOuterWindow != nsnull;
   }
 
-  PRBool IsOuterWindow()
+  PRBool IsOuterWindow() const
   {
     return !IsInnerWindow();
   }

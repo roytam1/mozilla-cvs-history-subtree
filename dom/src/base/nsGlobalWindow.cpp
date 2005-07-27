@@ -524,11 +524,10 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
                                PRBool aClearScopeHint,
                                PRBool aIsInternalCall)
 {
-  // XXXjst: Assert that no timeouts were registerd on the outer window!
-
   if (!aIsInternalCall && IsInnerWindow()) {
-    GetOuterWindowInternal()->SetNewDocument(aDocument, aRemoveEventListeners,
-                                             aClearScopeHint, PR_TRUE);
+    return GetOuterWindowInternal()->SetNewDocument(aDocument,
+                                                    aRemoveEventListeners,
+                                                    aClearScopeHint, PR_TRUE);
   }
 
   if (!aDocument) {
@@ -706,12 +705,18 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
       (!currentInner || !reUseInnerWindow)) {
     nsGlobalWindow *currentInner = GetCurrentInnerWindowInternal();
 
+    // In case we're not removing event listeners, move the event
+    // listener manager over to the new inner window.
+    nsCOMPtr<nsIEventListenerManager> listenerManager;
+
     if (currentInner) {
       currentInner->ClearAllTimeouts();
 
       if (aRemoveEventListeners && currentInner->mListenerManager) {
         currentInner->mListenerManager->RemoveAllListeners(PR_FALSE);
         currentInner->mListenerManager = nsnull;
+      } else {
+        listenerManager = currentInner->mListenerManager;
       }
 
       currentInner->mChromeEventHandler = nsnull;
@@ -824,6 +829,10 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
       jsval navVal = OBJECT_TO_JSVAL(nav);
       ::JS_SetProperty(cx, newInnerWindow->mJSObject, "navigator", &navVal);
     }
+
+    // XXXjst: Do we need to call SetTarget() on the listener manager
+    // here?
+    newInnerWindow->mListenerManager = listenerManager;
   }
 
   if (aDocument && scx) {
@@ -907,12 +916,6 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
 
     ClearControllers();
 
-    mContext->GC();
-
-    if (mContext) {
-      mContext->SetOwner(nsnull);
-      mContext = nsnull;          // force release now
-    }
     mChromeEventHandler = nsnull; // force release now
 
     if (currentInner) {
@@ -928,6 +931,15 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
         doc->SetScriptGlobalObject(nsnull);
         doc->Destroy();
       }
+    }
+
+    mInnerWindowHolder = nsnull;
+
+    mContext->GC();
+
+    if (mContext) {
+      mContext->SetOwner(nsnull);
+      mContext = nsnull;          // force release now
     }
   }
 
@@ -6032,7 +6044,8 @@ void
 nsGlobalWindow::InsertTimeoutIntoList(nsTimeout **aList,
                                       nsTimeout *aTimeout)
 {
-  // XXXjst: FORWARD_TO_INNER???
+  NS_ASSERTION(IsInnerWindow(),
+               "InsertTimeoutIntoList() called on outer window!");
 
   nsTimeout *to;
 
@@ -6952,7 +6965,8 @@ NS_IMPL_ADDREF(nsNavigator)
 NS_IMPL_RELEASE(nsNavigator)
 
 
-void nsNavigator::SetDocShell(nsIDocShell *aDocShell)
+void
+nsNavigator::SetDocShell(nsIDocShell *aDocShell)
 {
   mDocShell = aDocShell;
   if (mPlugins)

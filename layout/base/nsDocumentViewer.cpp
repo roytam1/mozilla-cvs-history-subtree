@@ -1501,16 +1501,19 @@ DocumentViewerImpl::SetDOMDocument(nsIDOMDocument *aDocument)
   nsCOMPtr<nsISupports> container = do_QueryReferent(mContainer);
   newDoc->SetContainer(container);
 
-  // Replace the old document with the new one
-  mDocument = newDoc;
+  if (mDocument != newDoc) {
+    // Replace the old document with the new one. Do this only when
+    // the new document really is a new document.
+    mDocument = newDoc;
 
-  // Set the script global object on the new document
-  nsCOMPtr<nsIScriptGlobalObject> global = do_GetInterface(container);
-  if (global) {
-    global->SetNewDocument(aDocument, PR_TRUE, PR_TRUE);
+    // Set the script global object on the new document
+    nsCOMPtr<nsIScriptGlobalObject> global = do_GetInterface(container);
+    if (global) {
+      global->SetNewDocument(aDocument, PR_TRUE, PR_TRUE);
 
-    rv = SyncParentSubDocMap();
-    NS_ENSURE_SUCCESS(rv, rv);
+      rv = SyncParentSubDocMap();
+      NS_ENSURE_SUCCESS(rv, rv);
+    }
   }
 
   // Replace the current pres shell with a new shell for the new document
