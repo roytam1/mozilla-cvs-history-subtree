@@ -2914,7 +2914,7 @@ nsDocument::GetDefaultView(nsIDOMAbstractView** aDefaultView)
   nsCOMPtr<nsPIDOMWindow> win(do_QueryInterface(mScriptGlobalObject));
 
   if (win) {
-    nsPIDOMWindow *view = win->IsInnerWindow() ? win->GetOuterWindow() : win;
+    nsPIDOMWindow *view = win->IsInnerWindow() ? win->GetOuterWindow() : win.get();
 
     return CallQueryInterface(view, aDefaultView);
   }
