@@ -743,6 +743,8 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
     JSObject *oldGlobal = currentInner ? currentInner->mJSObject : mJSObject;
 
     if (oldGlobal) {
+      // XXXjst: Should we only do this for chrome windows?
+
       jsval arguments;
       ::JS_GetProperty(cx, oldGlobal, "arguments", &arguments);
 
