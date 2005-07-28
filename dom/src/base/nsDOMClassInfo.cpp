@@ -3382,6 +3382,10 @@ void InvalidateContextAndWrapperCache()
 static inline PRBool
 needsSecurityCheck(JSContext *cx, nsIXPConnectWrappedNative *wrapper)
 {
+  // XXXjst: Figure this out
+
+
+
   // We cache a pointer to a wrapper and a context that we've last vetted
   // and cache what the verdict was.
 
@@ -3627,7 +3631,7 @@ nsWindowSH::GlobalScopePolluterNewResolve(JSContext *cx, JSObject *obj,
 
   nsIHTMLDocument *doc = (nsIHTMLDocument *)::JS_GetPrivate(cx, obj);
 
-  if (doc->GetCompatibilityMode() != eCompatibility_NavQuirks) {
+  if (!doc || doc->GetCompatibilityMode() != eCompatibility_NavQuirks) {
     // If we don't have a document, or if the document is not in
     // quirks mode, return early.
 
@@ -3752,7 +3756,9 @@ nsWindowSH::InstallGlobalScopePolluter(JSContext *cx, JSObject *obj,
     return NS_ERROR_UNEXPECTED;
   }
 
-  NS_IF_ADDREF(doc);
+  // The global scope polluter will release doc on destruction (or
+  // invalidation).
+  NS_ADDREF(doc);
 
   return NS_OK;
 }
@@ -5591,12 +5597,8 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
       rv = WrapNative(cx, obj, document, NS_GET_IID(nsIDOMDocument), &v);
       NS_ENSURE_SUCCESS(rv, rv);
 
-      // XXXjst: Use JS_GetStringChars(id) here etc.
-      NS_NAMED_LITERAL_STRING(doc_str, "document");
-
-      if (!::JS_DefineUCProperty(cx, obj, NS_REINTERPRET_CAST(const jschar *,
-                                                              doc_str.get()),
-                                 doc_str.Length(), v, nsnull,
+      if (!::JS_DefineUCProperty(cx, obj, ::JS_GetStringChars(str),
+                                 ::JS_GetStringLength(str), v, nsnull,
                                  nsnull, JSPROP_READONLY | JSPROP_ENUMERATE)) {
         return NS_ERROR_FAILURE;
       }
@@ -5675,7 +5677,7 @@ nsWindowSH::Equality(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
     GetWrappedNativeOfJSObject(cx, JSVAL_TO_OBJECT(val),
                                getter_AddRefs(other_wrapper));
   if (!other_wrapper) {
-    // Not equals.
+    // Not equal.
 
     return NS_OK;
   }
@@ -5845,10 +5847,13 @@ nsNodeSH::PreCreate(nsISupports *nativeObj, JSContext *cx, JSObject *globalObj,
     }
   }
 
-  // XXXjst: Is it ok to use JS_GetGlobalObject() here?
+  // XXXjst: Maybe we need to find the global to use from the
+  // nsIScriptGlobalObject that's reachable from the node we're about
+  // to wrap here? But that's not always reachable, let's use
+  // globalObj for now...
 
   jsval v;
-  nsresult rv = WrapNative(cx, ::JS_GetGlobalObject(cx), native_parent,
+  nsresult rv = WrapNative(cx, globalObj, native_parent,
                            NS_GET_IID(nsISupports), &v);
 
   *parentObj = JSVAL_TO_OBJECT(v);
@@ -6450,9 +6455,8 @@ nsContentListSH::PreCreate(nsISupports *nativeObj, JSContext *cx,
     return NS_OK;
   }
 
-  // XXXjst: Don't use JS_GetGlobalObject() here!
   jsval v;
-  nsresult rv = WrapNative(cx, ::JS_GetGlobalObject(cx), native_parent,
+  nsresult rv = WrapNative(cx, globalObj, native_parent,
                            NS_GET_IID(nsISupports), &v);
 
   *parentObj = JSVAL_TO_OBJECT(v);
