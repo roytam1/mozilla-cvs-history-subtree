@@ -958,9 +958,7 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
         PR_DELETE(lm);
         goto unlock;
     }
-#ifndef WINCE
     lm->name = strdup(name);
-#endif
     lm->dlh = h;
     lm->next = pr_loadmap;
     pr_loadmap = lm;
@@ -974,12 +972,10 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
 
     static const macLibraryLoadProc loadProcs[] = {
 #if defined(XP_MACOSX)
-#ifndef WINCE
         pr_LoadViaDyld, pr_LoadCFBundle, pr_LoadViaCFM
 #elif TARGET_CARBON
         pr_LoadViaCFM, pr_LoadCFBundle
 #else
-#endif
         pr_LoadViaCFM
 #endif
     };
