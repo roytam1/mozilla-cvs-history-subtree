@@ -412,6 +412,7 @@ public:
   static JSBool JS_DLL_CALLBACK SecurityCheckOnSetProp(JSContext *cx,
                                                        JSObject *obj, jsval id,
                                                        jsval *vp);
+  static void InvalidateGlobalScopePolluter(JSContext *cx, JSObject *obj);
   static nsresult InstallGlobalScopePolluter(JSContext *cx, JSObject *obj,
                                              nsIHTMLDocument *doc);
 

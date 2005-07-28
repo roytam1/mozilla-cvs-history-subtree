@@ -61,8 +61,7 @@
 #include "jsapi.h"
 #include "jsnum.h"
 #include "jsdbgapi.h"
-#include "jsdhash.h" // for nasty cx->resolvingTable hack
-#include "jscntxt.h" // for nasty cx->resolvingTable hack
+#include "jscntxt.h"
 
 // General helper includes
 #include "nsGlobalWindow.h"
@@ -3563,7 +3562,7 @@ static JSClass sGlobalScopePolluterClass = {
   nsWindowSH::GlobalScopePolluterGetProperty,
   nsWindowSH::SecurityCheckOnSetProp, JS_EnumerateStub,
   (JSResolveOp)nsWindowSH::GlobalScopePolluterNewResolve, JS_ConvertStub,
-  JS_FinalizeStub
+  nsHTMLDocumentSH::ReleaseDocument
 };
 
 
@@ -3685,6 +3684,31 @@ nsWindowSH::GlobalScopePolluterNewResolve(JSContext *cx, JSObject *obj,
 }
 
 // static
+void
+nsWindowSH::InvalidateGlobalScopePolluter(JSContext *cx, JSObject *obj)
+{
+  JSObject *proto;
+
+  while ((proto = ::JS_GetPrototype(cx, obj))) {
+    if (JS_GET_CLASS(cx, proto) == &sGlobalScopePolluterClass) {
+      nsIHTMLDocument *doc = (nsIHTMLDocument *)::JS_GetPrivate(cx, proto);
+
+      NS_IF_RELEASE(doc);
+
+      ::JS_SetPrivate(cx, proto, nsnull);
+
+      // Pull the global scope polluter out of the prototype chain so
+      // that it can be freed.
+      ::JS_SetPrototype(cx, obj, ::JS_GetPrototype(cx, proto));
+
+      break;
+    }
+
+    obj = proto;
+  }
+}
+
+// static
 nsresult
 nsWindowSH::InstallGlobalScopePolluter(JSContext *cx, JSObject *obj,
                                        nsIHTMLDocument *doc)
@@ -3728,9 +3752,7 @@ nsWindowSH::InstallGlobalScopePolluter(JSContext *cx, JSObject *obj,
     return NS_ERROR_UNEXPECTED;
   }
 
-  // XXXjst: Figure this out, make the gsp hold a weak reference, or
-  // something...
-  // NS_IF_ADDREF(doc);
+  NS_IF_ADDREF(doc);
 
   return NS_OK;
 }
@@ -7090,7 +7112,6 @@ nsHTMLDocumentSH::DocumentAllNewResolve(JSContext *cx, JSObject *obj, jsval id,
 
 // Finalize hook used by document related JS objects, but also by
 // sGlobalScopePolluterClass!
-// XXXjst: Uh, no, sGlobalScopePolluterClass doesn't use this any more.
 
 void JS_DLL_CALLBACK
 nsHTMLDocumentSH::ReleaseDocument(JSContext *cx, JSObject *obj)

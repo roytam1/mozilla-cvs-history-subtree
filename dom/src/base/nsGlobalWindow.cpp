@@ -287,8 +287,6 @@ nsGlobalWindow::nsGlobalWindow(nsGlobalWindow *aOuterWindow)
 
 nsGlobalWindow::~nsGlobalWindow()
 {
-  printf("Deleting nsGlobalWindow %p\n", (void *)this);
-
   if (!--gRefCnt) {
     NS_IF_RELEASE(gEntropyCollector);
   }
@@ -318,11 +316,6 @@ nsGlobalWindow::ShutDown()
 {
   NS_IF_RELEASE(sSecMan);
   NS_IF_RELEASE(sComputedDOMStyleFactory);
-
-#ifdef DEBUG_jst
-  printf ("---- Leaked %d nsGlobalWindow's\n", gRefCnt);
-  printf ("---- Leaked %d nsTimeout's\n", gTimeoutCnt);
-#endif
 }
 
 void
@@ -558,10 +551,6 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
   nsIScriptContext *scx = GetContextInternal();
   if (scx) {
     cx = (JSContext *)scx->GetNativeContext();
-
-    if (mJSObject && IsOuterWindow()) {
-      ::JS_ClearWatchPointsForObject(cx, mJSObject);
-    }
   }
 
   if (aDocument) {
@@ -737,9 +726,6 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
       newInnerWindow = new nsGlobalWindow(this);
     }
 
-    printf("Created new inner window %p for outer window %p\n",
-           (void *)newInnerWindow.get(), (void *)this);
-
     if (!newInnerWindow) {
       return NS_ERROR_OUT_OF_MEMORY;
     }
@@ -781,25 +767,49 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
                         getter_AddRefs(navigatorHolder));
       }
 
-      // XXXjst: We shouldn't need to do this, but if we don't we
-      // leak the world... actually, even with this we leak the
-      // world... need to figure this out.
+      PRBool termFuncSet = PR_FALSE;
 
       if (oldDoc == newDoc) {
-        // We're called from document.open(), clear the scope etc in a
-        // termination function to prevent clearing the calling scope.
-        scx->SetTerminationFunction(ClearWindowScope,
-                                    NS_STATIC_CAST(nsIDOMWindow *,
-                                                   currentInner));
-      } else {
+        nsCOMPtr<nsIJSContextStack> stack =
+          do_GetService(sJSStackContractID);
+
+        JSContext *cx = nsnull;
+
+        if (stack) {
+          stack->Peek(&cx);
+        }
+
+        nsIScriptContext *callerScx;
+        if (cx && (callerScx = GetScriptContextFromJSContext(cx))) {
+          // We're called from document.open() (and document.open() is
+          // called from JS), clear the scope etc in a termination
+          // function on the calling context to prevent clearing the
+          // calling scope.
+          callerScx->SetTerminationFunction(ClearWindowScope,
+                                            NS_STATIC_CAST(nsIDOMWindow *,
+                                                           currentInner));
+
+          termFuncSet = PR_TRUE;
+        }
+      }
+
+      // Clear scope on the outer window
+      ::JS_ClearScope(cx, mJSObject);
+      ::JS_ClearWatchPointsForObject(cx, mJSObject);
+
+      // Re-initialize the outer window.
+      scx->InitContext(this);
+
+      if (!termFuncSet) {
         ::JS_ClearScope(cx, currentInner->mJSObject);
         ::JS_ClearWatchPointsForObject(cx, currentInner->mJSObject);
         ::JS_ClearRegExpStatics(cx);
       }
 
-      // Make the current inner window release its strong reference to
+      // Make the current inner window release its strong references to
       // the document to prevent it from keeping everything around.
       currentInner->mDocument = nsnull;
+      nsWindowSH::InvalidateGlobalScopePolluter(cx, currentInner->mJSObject);
 
       // XXXjst: Clear the global scope polluter's weak document
       // reference!
@@ -845,8 +855,6 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
 
   if (aDocument && scx) {
     if (IsOuterWindow()) {
-      scx->InitContext(this);
-
       // Add an extra ref in case we release mContext during GC.
       nsCOMPtr<nsIScriptContext> kungFuDeathGrip = scx;
       kungFuDeathGrip->GC();
@@ -897,8 +905,9 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
         ::JS_ClearScope(cx, currentInner->mJSObject);
         ::JS_ClearWatchPointsForObject(cx, currentInner->mJSObject);
 
-        // Release the current inner window's document reference
+        // Release the current inner window's document references.
         currentInner->mDocument = nsnull;
+        nsWindowSH::InvalidateGlobalScopePolluter(cx, currentInner->mJSObject);
       }
 
       if (mJSObject) {
@@ -907,6 +916,11 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
 
         // Release the our document reference
         mDocument = nsnull;
+
+        // An outer window shouldn't have a global scope polluter, but
+        // in case code on a webpage took one and put it in an outer
+        // object's prototype, we need to invalidate it nonetheless.
+        nsWindowSH::InvalidateGlobalScopePolluter(cx, mJSObject);
       }
 
       ::JS_ClearRegExpStatics(cx);
@@ -6324,7 +6338,7 @@ public:
   nsTimeout** GetTimeoutInsertionPoint() { return mTimeoutInsertionPoint; }
   void ClearSavedTimeouts() { mSavedTimeouts = nsnull; }
 
-private:
+protected:
   ~WindowStateHolder();
 
   JSRuntime *mRuntime;
