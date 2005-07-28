@@ -1203,7 +1203,8 @@ nsEventListenerManager::AddScriptEventListener(nsISupports *aObject,
   }
 
   if (!context) {
-    // Get JSContext from stack.
+    // Get JSContext from stack, or use the safe context (and hidden
+    // window global) if no JS is running.
     nsCOMPtr<nsIThreadJSContextStack> stack =
       do_GetService("@mozilla.org/js/xpc/ContextStack;1");
     NS_ENSURE_TRUE(stack, NS_ERROR_FAILURE);
@@ -1216,16 +1217,19 @@ nsEventListenerManager::AddScriptEventListener(nsISupports *aObject,
 
     context = nsJSUtils::GetDynamicScriptContext(cx);
     NS_ENSURE_TRUE(context, NS_ERROR_FAILURE);
+
+    scope = ::JS_GetGlobalObject(cx);
+  } else if (!scope) {
+    NS_ERROR("Context reachable, but no scope reachable in "
+             "AddScriptEventListener()!");
+
+    return NS_ERROR_NOT_AVAILABLE;
   }
 
   nsresult rv;
 
   if (!aDeferCompilation) {
     JSContext *cx = (JSContext *)context->GetNativeContext();
-
-    if (!scope) {
-      scope = ::JS_GetGlobalObject(cx);
-    }
 
     nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
     rv = nsContentUtils::XPConnect()->WrapNative(cx, scope, aObject,
