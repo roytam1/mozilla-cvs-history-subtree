@@ -793,8 +793,16 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
                                                    currentInner));
       } else {
         ::JS_ClearScope(cx, currentInner->mJSObject);
+        ::JS_ClearWatchPointsForObject(cx, currentInner->mJSObject);
         ::JS_ClearRegExpStatics(cx);
       }
+
+      // Make the current inner window release its strong reference to
+      // the document to prevent it from keeping everything around.
+      currentInner->mDocument = nsnull;
+
+      // XXXjst: Clear the global scope polluter's weak document
+      // reference!
     }
 
     mInnerWindow = newInnerWindow;
@@ -887,10 +895,18 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
       // world... need to figure this out.
       if (currentInner->mJSObject) {
         ::JS_ClearScope(cx, currentInner->mJSObject);
+        ::JS_ClearWatchPointsForObject(cx, currentInner->mJSObject);
+
+        // Release the current inner window's document reference
+        currentInner->mDocument = nsnull;
       }
 
       if (mJSObject) {
         ::JS_ClearScope(cx, mJSObject);
+        ::JS_ClearWatchPointsForObject(cx, mJSObject);
+
+        // Release the our document reference
+        mDocument = nsnull;
       }
 
       ::JS_ClearRegExpStatics(cx);
@@ -5332,7 +5348,8 @@ nsGlobalWindow::ClearWindowScope(nsISupports *aWindow)
     JSObject *global = sgo->GetGlobalJSObject();
 
     if (global) {
-      ::JS_ClearScope(cx, sgo->GetGlobalJSObject());
+      ::JS_ClearScope(cx, global);
+      ::JS_ClearWatchPointsForObject(cx, global);
     }
 
     ::JS_ClearRegExpStatics(cx);

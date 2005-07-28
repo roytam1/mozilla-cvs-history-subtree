@@ -115,8 +115,8 @@ NS_IMETHODIMP XPC_MAP_CLASSNAME::GetScriptableFlags(PRUint32 *aFlags)
 #ifdef XPC_MAP_WANT_EQUALITY
     nsIXPCScriptable::WANT_EQUALITY |
 #endif
-#ifdef XPC_MAP_WANT_THIS_OBJECT
-    nsIXPCScriptable::WANT_THIS_OBJECT |
+#ifdef XPC_MAP_WANT_OUTER_OBJECT
+    nsIXPCScriptable::WANT_OUTER_OBJECT |
 #endif
 
 #ifdef XPC_MAP_FLAGS
@@ -219,8 +219,8 @@ NS_IMETHODIMP XPC_MAP_CLASSNAME::Equality(nsIXPConnectWrappedNative *wrapper, JS
     {NS_ERROR("never called"); return NS_ERROR_NOT_IMPLEMENTED;}
 #endif
 
-#ifndef XPC_MAP_WANT_THIS_OBJECT
-NS_IMETHODIMP XPC_MAP_CLASSNAME::ThisObject(nsIXPConnectWrappedNative *wrapper, JSContext * cx, JSObject * obj, JSObject * *_retval)
+#ifndef XPC_MAP_WANT_OUTER_OBJECT
+NS_IMETHODIMP XPC_MAP_CLASSNAME::OuterObject(nsIXPConnectWrappedNative *wrapper, JSContext * cx, JSObject * obj, JSObject * *_retval)
     {NS_ERROR("never called"); return NS_ERROR_NOT_IMPLEMENTED;}
 #endif
 
@@ -301,8 +301,8 @@ NS_IMETHODIMP XPC_MAP_CLASSNAME::ThisObject(nsIXPConnectWrappedNative *wrapper, 
 #undef XPC_MAP_WANT_EQUALITY
 #endif
 
-#ifdef XPC_MAP_WANT_THIS_OBJECT
-#undef XPC_MAP_WANT_THIS_OBJECT
+#ifdef XPC_MAP_WANT_OUTER_OBJECT
+#undef XPC_MAP_WANT_OUTER_OBJECT
 #endif
 
 #ifdef XPC_MAP_FLAGS

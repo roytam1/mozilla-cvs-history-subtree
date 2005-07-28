@@ -489,7 +489,7 @@ static nsDOMClassInfoData sClassInfoData[] = {
                            nsIXPCScriptable::WANT_DELPROPERTY |
                            nsIXPCScriptable::WANT_ENUMERATE |
                            nsIXPCScriptable::WANT_EQUALITY |
-                           nsIXPCScriptable::WANT_THIS_OBJECT |
+                           nsIXPCScriptable::WANT_OUTER_OBJECT |
                            nsIXPCScriptable::DONT_ENUM_QUERY_INTERFACE)
 
   // Don't allow modifications to Location.prototype
@@ -3212,8 +3212,8 @@ nsDOMClassInfo::Equality(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
 }
 
 NS_IMETHODIMP
-nsDOMClassInfo::ThisObject(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
-                           JSObject * obj, JSObject * *_retval)
+nsDOMClassInfo::OuterObject(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
+                            JSObject * obj, JSObject * *_retval)
 {
   NS_ERROR("Don't call me!");
 
@@ -3563,7 +3563,7 @@ static JSClass sGlobalScopePolluterClass = {
   nsWindowSH::GlobalScopePolluterGetProperty,
   nsWindowSH::SecurityCheckOnSetProp, JS_EnumerateStub,
   (JSResolveOp)nsWindowSH::GlobalScopePolluterNewResolve, JS_ConvertStub,
-  nsHTMLDocumentSH::ReleaseDocument
+  JS_FinalizeStub
 };
 
 
@@ -3728,9 +3728,9 @@ nsWindowSH::InstallGlobalScopePolluter(JSContext *cx, JSObject *obj,
     return NS_ERROR_UNEXPECTED;
   }
 
-  // The global scope polluter will release doc on destruction (or
-  // reinitialzation).
-  NS_IF_ADDREF(doc);
+  // XXXjst: Figure this out, make the gsp hold a weak reference, or
+  // something...
+  // NS_IF_ADDREF(doc);
 
   return NS_OK;
 }
@@ -5569,6 +5569,7 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
       rv = WrapNative(cx, obj, document, NS_GET_IID(nsIDOMDocument), &v);
       NS_ENSURE_SUCCESS(rv, rv);
 
+      // XXXjst: Use JS_GetStringChars(id) here etc.
       NS_NAMED_LITERAL_STRING(doc_str, "document");
 
       if (!::JS_DefineUCProperty(cx, obj, NS_REINTERPRET_CAST(const jschar *,
@@ -5584,15 +5585,14 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     }
 
     if (id == sWindow_id) {
-      // XXXjst: Why wrap window here, find the instance from obj...
-      jsval v;
-      rv = WrapNative(cx, obj, (nsIScriptGlobalObject *)win,
-                      NS_GET_IID(nsIDOMWindow), &v);
-      NS_ENSURE_SUCCESS(rv, rv);
+      if (win->IsInnerWindow()) {
+        win = win->GetOuterWindowInternal();
+      }
 
       if (!::JS_DefineUCProperty(cx, obj, ::JS_GetStringChars(str),
-                                 ::JS_GetStringLength(str), v, nsnull,
-                                 nsnull,
+                                 ::JS_GetStringLength(str),
+                                 OBJECT_TO_JSVAL(win->GetGlobalJSObject()),
+                                 nsnull, nsnull,
                                  JSPROP_READONLY | JSPROP_ENUMERATE)) {
         return NS_ERROR_FAILURE;
       }
@@ -5676,11 +5676,16 @@ nsWindowSH::Equality(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
 }
 
 NS_IMETHODIMP
-nsWindowSH::ThisObject(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
-                       JSObject * obj, JSObject * *_retval)
+nsWindowSH::OuterObject(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
+                        JSObject * obj, JSObject * *_retval)
 {
-  // Just return obj for now.
-  *_retval = obj;
+  nsGlobalWindow *win = nsGlobalWindow::FromWrapper(wrapper);
+
+   if (win->IsInnerWindow()) {
+    *_retval = win->GetOuterWindowInternal()->GetGlobalJSObject();
+  } else {
+    *_retval = obj;
+  }
 
   return NS_OK;
 }
@@ -7085,6 +7090,7 @@ nsHTMLDocumentSH::DocumentAllNewResolve(JSContext *cx, JSObject *obj, jsval id,
 
 // Finalize hook used by document related JS objects, but also by
 // sGlobalScopePolluterClass!
+// XXXjst: Uh, no, sGlobalScopePolluterClass doesn't use this any more.
 
 void JS_DLL_CALLBACK
 nsHTMLDocumentSH::ReleaseDocument(JSContext *cx, JSObject *obj)

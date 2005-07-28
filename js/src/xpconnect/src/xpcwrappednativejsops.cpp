@@ -778,6 +778,45 @@ XPC_WN_Equality(JSContext *cx, JSObject *obj, jsval v, JSBool *bp)
     return JS_TRUE;
 }
 
+JS_STATIC_DLL_CALLBACK(JSObject *)
+XPC_WN_OuterObject(JSContext *cx, JSObject *obj)
+{
+    XPCWrappedNative *wrapper =
+        XPCWrappedNative::GetWrappedNativeOfJSObject(cx, obj);
+    if(!wrapper)
+    {
+        Throw(NS_ERROR_XPC_BAD_OP_ON_WN_PROTO, cx);
+
+        return nsnull;
+    }
+
+    if(!wrapper->IsValid())
+    {
+        Throw(NS_ERROR_XPC_HAS_BEEN_SHUTDOWN, cx);
+
+        return nsnull;
+    }
+
+    XPCNativeScriptableInfo* si = wrapper->GetScriptableInfo();
+    if(si && si->GetFlags().WantOuterObject())
+    {
+        JSObject *newThis;
+        nsresult rv =
+            si->GetCallback()->OuterObject(wrapper, cx, obj, &newThis);
+
+        if(NS_FAILED(rv))
+        {
+            Throw(rv, cx);
+
+            return nsnull;
+        }
+
+        obj = newThis;
+    }
+
+    return obj;
+}
+
 
 JSExtendedClass XPC_WN_NoHelper_JSClass = {
     {
@@ -806,7 +845,8 @@ JSExtendedClass XPC_WN_NoHelper_JSClass = {
         XPC_WN_Shared_Mark,             // mark;
         nsnull                          // spare;
     },
-    XPC_WN_Equality
+    XPC_WN_Equality,
+    XPC_WN_OuterObject
 };
 
 
@@ -1165,45 +1205,6 @@ XPC_WN_JSOp_Clear(JSContext *cx, JSObject *obj)
     js_ObjectOps.clear(cx, obj);
 }
 
-JS_STATIC_DLL_CALLBACK(JSObject *)
-XPC_WN_JSOp_ThisObject(JSContext *cx, JSObject *obj)
-{
-    XPCWrappedNative *wrapper =
-        XPCWrappedNative::GetWrappedNativeOfJSObject(cx, obj);
-    if(!wrapper)
-    {
-        Throw(NS_ERROR_XPC_BAD_OP_ON_WN_PROTO, cx);
-
-        return nsnull;
-    }
-
-    if(!wrapper->IsValid())
-    {
-        Throw(NS_ERROR_XPC_HAS_BEEN_SHUTDOWN, cx);
-
-        return nsnull;
-    }
-
-    XPCNativeScriptableInfo* si = wrapper->GetScriptableInfo();
-    if(si && si->GetFlags().WantThisObject())
-    {
-        JSObject *newThis;
-        nsresult rv =
-            si->GetCallback()->ThisObject(wrapper, cx, obj, &newThis);
-
-        if(NS_FAILED(rv))
-        {
-            Throw(rv, cx);
-
-            return nsnull;
-        }
-
-        obj = newThis;
-    }
-
-    return obj;
-}
-
 JSObjectOps * JS_DLL_CALLBACK
 XPC_WN_GetObjectOpsNoCall(JSContext *cx, JSClass *clazz)
 {
@@ -1226,12 +1227,10 @@ JSBool xpc_InitWrappedNativeJSOps()
         memcpy(&XPC_WN_WithCall_JSOps, &js_ObjectOps, sizeof(JSObjectOps));
         XPC_WN_WithCall_JSOps.enumerate = XPC_WN_JSOp_Enumerate;
         XPC_WN_WithCall_JSOps.clear = XPC_WN_JSOp_Clear;
-        XPC_WN_WithCall_JSOps.thisObject = XPC_WN_JSOp_ThisObject;
 
         XPC_WN_NoCall_JSOps.call = nsnull;
         XPC_WN_NoCall_JSOps.construct = nsnull;
         XPC_WN_NoCall_JSOps.clear = XPC_WN_JSOp_Clear;
-        XPC_WN_NoCall_JSOps.thisObject = XPC_WN_JSOp_ThisObject;
     }
     return JS_TRUE;
 }
@@ -1375,6 +1374,7 @@ XPCNativeScriptableShared::PopulateJSClass()
         mJSClass.base.mark = XPC_WN_Shared_Mark;
 
     mJSClass.equality = XPC_WN_Equality;
+    mJSClass.outerObject = XPC_WN_OuterObject;
 }
 
 /***************************************************************************/

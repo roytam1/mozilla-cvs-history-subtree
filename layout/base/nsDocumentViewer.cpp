@@ -1510,11 +1510,11 @@ DocumentViewerImpl::SetDOMDocument(nsIDOMDocument *aDocument)
     nsCOMPtr<nsIScriptGlobalObject> global = do_GetInterface(container);
     if (global) {
       global->SetNewDocument(aDocument, PR_TRUE, PR_TRUE);
-
-      rv = SyncParentSubDocMap();
-      NS_ENSURE_SUCCESS(rv, rv);
     }
   }
+
+  rv = SyncParentSubDocMap();
+  NS_ENSURE_SUCCESS(rv, rv);
 
   // Replace the current pres shell with a new shell for the new document
 
