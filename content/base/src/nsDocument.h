@@ -612,7 +612,12 @@ protected:
 
   // Basically always has at least 1 entry
   nsAutoVoidArray mObservers;
+
+  // The document's script global object, the object from which the
+  // document can get its script context and scope. This is the
+  // *inner* window object.
   nsCOMPtr<nsIScriptGlobalObject> mScriptGlobalObject;
+
   nsCOMPtr<nsIEventListenerManager> mListenerManager;
   nsCOMPtr<nsIDOMStyleSheetList> mDOMStyleSheets;
   nsCOMPtr<nsIScriptLoader> mScriptLoader;
