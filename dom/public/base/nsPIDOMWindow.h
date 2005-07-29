@@ -220,9 +220,9 @@ public:
 
 protected:
   nsPIDOMWindow(nsPIDOMWindow *aOuterWindow)
-    : mRunningTimeout(nsnull), mMutationBits(0), mIsDocumentLoaded(PR_FALSE),
-      mIsHandlingResizeEvent(PR_FALSE), mInnerWindow(nsnull),
-      mOuterWindow(aOuterWindow)
+    : mFrameElement(nsnull), mRunningTimeout(nsnull), mMutationBits(0),
+      mIsDocumentLoaded(PR_FALSE), mIsHandlingResizeEvent(PR_FALSE),
+      mInnerWindow(nsnull), mOuterWindow(aOuterWindow)
   {
   }
 

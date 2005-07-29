@@ -267,8 +267,14 @@ nsGlobalWindow::nsGlobalWindow(nsGlobalWindow *aOuterWindow)
     mDocShell(nsnull),
     mCurrentEvent(0)
 {
-  // nsPIDOMWindow initializers
-  mFrameElement = nsnull;
+  // Window object's are also PRCList's, the list is for keeping all
+  // innter windows reachable from the outer so that the proper
+  // cleanup can be done on shutdown.
+  PR_INIT_CLIST(this);
+
+  if (aOuterWindow) {
+    PR_INSERT_AFTER(aOuterWindow, this);
+  }
 
   // We could have failed the first time through trying
   // to create the entropy collector, so we should
@@ -299,10 +305,25 @@ nsGlobalWindow::~nsGlobalWindow()
     outer->mInnerWindow = nsnull;
   }
 
-  nsGlobalWindow *inner = GetCurrentInnerWindowInternal();
+  if (IsOuterWindow() && !PR_CLIST_IS_EMPTY(this)) {
+    // An outer window is destroyed with inner windows still alive,
+    // iterate through the inner windows and null out their back
+    // pointer to this outer.
 
-  if (inner) {
-    inner->mOuterWindow = nsnull;
+    nsGlobalWindow *w = (nsGlobalWindow *)PR_LIST_HEAD(this);
+
+    while (w != this) {
+      NS_ASSERTION(w->mOuterWindow == this, "Uh, bad outer window pointer?");
+
+      w->mOuterWindow = nsnull;
+
+      w = (nsGlobalWindow *)PR_NEXT_LINK(w);
+    }
+  } else if (IsInnerWindow()) {
+    // An inner window is destroyed, pull it out of the outer window's
+    // list if inner windows.
+
+    PR_REMOVE_LINK(this);
   }
 
   mDocument = nsnull;           // Forces Release

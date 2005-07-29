@@ -87,6 +87,7 @@
 #include "nsPoint.h"
 #include "nsSize.h"
 #include "mozFlushType.h"
+#include "prclist.h"
 
 #define DEFAULT_HOME_PAGE "www.mozilla.org"
 #define PREF_BROWSER_STARTUP_HOMEPAGE "browser.startup.homepage"
@@ -127,7 +128,8 @@ class nsGlobalWindow : public nsIScriptGlobalObject,
                        public nsIDOMNSEventTarget,
                        public nsIDOMViewCSS,
                        public nsSupportsWeakReference,
-                       public nsIInterfaceRequestor
+                       public nsIInterfaceRequestor,
+                       public PRCListStr
 {
 public:
   // public methods
