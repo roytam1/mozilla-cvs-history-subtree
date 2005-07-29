@@ -308,18 +308,19 @@ nsGlobalWindow::~nsGlobalWindow()
   if (IsOuterWindow() && !PR_CLIST_IS_EMPTY(this)) {
     // An outer window is destroyed with inner windows still alive,
     // iterate through the inner windows and null out their back
-    // pointer to this outer.
+    // pointer to this outer, and pull them out of the list of inner
+    // windows.
 
     nsGlobalWindow *w = (nsGlobalWindow *)PR_LIST_HEAD(this);
 
-    while (w != this) {
+    while ((w = (nsGlobalWindow *)PR_LIST_HEAD(this)) != this) {
       NS_ASSERTION(w->mOuterWindow == this, "Uh, bad outer window pointer?");
 
       w->mOuterWindow = nsnull;
 
-      w = (nsGlobalWindow *)PR_NEXT_LINK(w);
+      PR_REMOVE_AND_INIT_LINK(w);
     }
-  } else if (IsInnerWindow()) {
+  } else {
     // An inner window is destroyed, pull it out of the outer window's
     // list if inner windows.
 
@@ -3023,9 +3024,7 @@ nsGlobalWindow::Focus()
     nsIFocusController *focusController =
       nsGlobalWindow::GetRootFocusController();
     if (focusController) {
-      nsGlobalWindow *win = IsInnerWindow() ? GetOuterWindowInternal() : this;
-
-      focusController->SetFocusedWindow(win);
+      focusController->SetFocusedWindow(this);
     }
   }
 
