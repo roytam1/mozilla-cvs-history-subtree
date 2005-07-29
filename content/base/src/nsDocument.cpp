@@ -2911,16 +2911,17 @@ nsDocument::CreateTreeWalker(nsIDOMNode *aRoot,
 NS_IMETHODIMP
 nsDocument::GetDefaultView(nsIDOMAbstractView** aDefaultView)
 {
+  *aDefaultView = nsnull;
+
   nsCOMPtr<nsPIDOMWindow> win(do_QueryInterface(mScriptGlobalObject));
 
   if (win) {
-    nsPIDOMWindow *view =
-      win->IsInnerWindow() ? win->GetOuterWindow() : win.get();
+    if (!win->IsInnerWindow()) {
+      return NS_ERROR_UNEXPECTED;
+    }
 
-    return CallQueryInterface(view, aDefaultView);
+    return CallQueryInterface(win->GetOuterWindow(), aDefaultView);
   }
-
-  *aDefaultView = nsnull;
 
   return NS_OK;
 }
