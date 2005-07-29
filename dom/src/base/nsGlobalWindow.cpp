@@ -374,12 +374,6 @@ nsGlobalWindow::ClearControllers()
 
     mControllers = nsnull;
   }
-
-  nsGlobalWindow *inner = GetCurrentInnerWindowInternal();
-
-  if (inner) {
-    inner->ClearControllers();
-  }
 }
 
 //*****************************************************************************

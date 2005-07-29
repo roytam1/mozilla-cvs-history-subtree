@@ -3382,10 +3382,6 @@ void InvalidateContextAndWrapperCache()
 static inline PRBool
 needsSecurityCheck(JSContext *cx, nsIXPConnectWrappedNative *wrapper)
 {
-  // XXXjst: Figure this out
-
-
-
   // We cache a pointer to a wrapper and a context that we've last vetted
   // and cache what the verdict was.
 
@@ -6482,14 +6478,6 @@ nsFormControlListSH::GetNamedItem(nsISupports *aNative,
 static inline PRBool
 documentNeedsSecurityCheck(JSContext *cx, nsIXPConnectWrappedNative *wrapper)
 {
-  // XXXjst: Figure this out!
-
-
-
-  return PR_TRUE;
-
-
-
   // We cache a pointer to a wrapper and a context that we've last vetted
   // and cache what the verdict was.
 
@@ -6516,13 +6504,6 @@ documentNeedsSecurityCheck(JSContext *cx, nsIXPConnectWrappedNative *wrapper)
                  "Bad class for Document object!");
   }
 #endif
-
-  if (wrapper_global != ::JS_GetGlobalObject(cx)) {
-    // cx is not the context in the global object in wrapper, force
-    // a security check.
-
-    return PR_TRUE;
-  }
 
   // Check if the calling function comes from the same scope that the
   // wrapper comes from. If that's the case, or if there's no JS
@@ -6570,6 +6551,7 @@ documentNeedsSecurityCheck(JSContext *cx, nsIXPConnectWrappedNative *wrapper)
   // object in the scope that wrapper came from, no need to do a
   // security check now.
   cached_doc_needs_check = PR_FALSE;
+
   return PR_FALSE;
 }
 
