@@ -2916,6 +2916,7 @@ nsDocument::GetDefaultView(nsIDOMAbstractView** aDefaultView)
   nsCOMPtr<nsPIDOMWindow> win(do_QueryInterface(mScriptGlobalObject));
 
   if (win) {
+    // The default view is our outer window.
     if (!win->IsInnerWindow()) {
       return NS_ERROR_UNEXPECTED;
     }
