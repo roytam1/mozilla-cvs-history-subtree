@@ -2671,6 +2671,9 @@ static void CheckForFocus(nsPIDOMWindow* aOurWindow,
                           nsIFocusController* aFocusController,
                           nsIDocument* aDocument)
 {
+  NS_ASSERTION(aOurWindow->IsOuterWindow(),
+               "Uh, our window has to be an outer window!");
+
   // Now that we have a root frame, we can set focus on the presshell.
   // We do this only if our DOM window is currently focused or is an
   // an ancestor of a previously focused window.
@@ -2711,8 +2714,10 @@ static void CheckForFocus(nsPIDOMWindow* aOurWindow,
   }
 
   while (curDoc) {
-    nsCOMPtr<nsIDOMWindowInternal> curWin = do_QueryInterface(curDoc->GetScriptGlobalObject());
-    if (curWin == ourWin || !curWin)
+    nsCOMPtr<nsPIDOMWindow> curWin =
+      do_QueryInterface(curDoc->GetScriptGlobalObject());
+
+    if (curWin == ourWin || !curWin || curWin->GetOuterWindow() == ourWin)
       break;
 
     curDoc = curDoc->GetParentDocument();
@@ -4359,6 +4364,11 @@ PresShell::GoToAnchor(const nsAString& aAnchorName, PRBool aScroll)
       // Now focus the document itself if focus is on an element within it.
       nsCOMPtr<nsPIDOMWindow> win =
         do_QueryInterface(mDocument->GetScriptGlobalObject());
+
+      if (win->IsInnerWindow()) {
+        win = win->GetOuterWindow();
+      }
+
       if (win) {
         nsCOMPtr<nsIFocusController> focusController = win->GetRootFocusController();
         if (focusController) {
