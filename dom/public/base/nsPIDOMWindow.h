@@ -226,10 +226,17 @@ protected:
   {
   }
 
+  // These two variables are special in that they're set to the same
+  // value on both the outer window and the current inner window. Make
+  // sure you keep them in sync!
   nsCOMPtr<nsIChromeEventHandler> mChromeEventHandler; // strong
   nsCOMPtr<nsIDOMDocument> mDocument; // strong
+
+  // These members are only used on outer windows.
   nsIDOMElement *mFrameElement; // weak
   nsCOMPtr<nsIURI> mOpenerScriptURL; // strong; used to determine whether to clear scope
+
+  // These variables are only used on inner windows.
   nsTimeout             *mRunningTimeout;
 
   PRUint32               mMutationBits;
@@ -237,6 +244,7 @@ protected:
   PRPackedBool           mIsDocumentLoaded;
   PRPackedBool           mIsHandlingResizeEvent;
 
+  // And these are the references between inner and outer windows.
   nsPIDOMWindow         *mInnerWindow;
   nsPIDOMWindow         *mOuterWindow;
 };
