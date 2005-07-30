@@ -5575,12 +5575,13 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
       }
     }
 
-    if (scope) {
+    if (!scope) {
       scope = obj;
     }
 
     jsval v;
-    rv = WrapNative(cx, scope, location, NS_GET_IID(nsIDOMLocation), &v);
+    rv = WrapNative(cx, GetGlobalJSObject(cx, scope), location,
+                    NS_GET_IID(nsIDOMLocation), &v);
     NS_ENSURE_SUCCESS(rv, rv);
 
     sDoSecurityCheckInAddProperty = PR_FALSE;
@@ -6366,7 +6367,8 @@ nsArraySH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     NS_ENSURE_SUCCESS(rv, rv);
 
     if (array_item) {
-      rv = WrapNative(cx, obj, array_item, NS_GET_IID(nsISupports), vp);
+      rv = WrapNative(cx, GetGlobalJSObject(cx, obj), array_item,
+                      NS_GET_IID(nsISupports), vp);
       NS_ENSURE_SUCCESS(rv, rv);
     }
   }
@@ -6402,7 +6404,8 @@ nsNamedArraySH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     NS_ENSURE_SUCCESS(rv, rv);
 
     if (item) {
-      rv = WrapNative(cx, obj, item, NS_GET_IID(nsISupports), vp);
+      rv = WrapNative(cx, GetGlobalJSObject(cx, obj), item,
+                      NS_GET_IID(nsISupports), vp);
       NS_ENSURE_SUCCESS(rv, rv);
     }
 
@@ -6660,7 +6663,8 @@ nsDocumentSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
     jsval v;
 
-    rv = WrapNative(cx, obj, location, NS_GET_IID(nsIDOMLocation), &v);
+    rv = WrapNative(cx, GetGlobalJSObject(cx, obj), location,
+                    NS_GET_IID(nsIDOMLocation), &v);
     NS_ENSURE_SUCCESS(rv, rv);
 
     sDoSecurityCheckInAddProperty = PR_FALSE;
@@ -6767,7 +6771,8 @@ nsDocumentSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
       rv = location->SetHref(nsDependentJSString(val));
       NS_ENSURE_SUCCESS(rv, rv);
 
-      return WrapNative(cx, obj, location, NS_GET_IID(nsIDOMLocation), vp);
+      return WrapNative(cx, GetGlobalJSObject(cx, obj), location,
+                        NS_GET_IID(nsIDOMLocation), vp);
     }
   }
 
@@ -6868,7 +6873,8 @@ nsHTMLDocumentSH::DocumentOpen(JSContext *cx, JSObject *obj, uintN argc,
     return JS_FALSE;
   }
 
-  rv = WrapNative(cx, obj, retval, NS_GET_IID(nsIDOMDocument), rval);
+  rv = WrapNative(cx, GetGlobalJSObject(cx, obj), retval,
+                  NS_GET_IID(nsIDOMDocument), rval);
   NS_ASSERTION(NS_SUCCEEDED(rv), "Failed to wrap native!");
 
   return NS_SUCCEEDED(rv);
@@ -7608,7 +7614,8 @@ nsHTMLFormElementSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
     if (result) {
       // Wrap result, result can be either an element or a list of
       // elements
-      return WrapNative(cx, obj, result, NS_GET_IID(nsISupports), vp);
+      return WrapNative(cx, GetGlobalJSObject(cx, obj), result,
+                        NS_GET_IID(nsISupports), vp);
     }
 
     return NS_OK; // Don't fall through
@@ -7621,7 +7628,8 @@ nsHTMLFormElementSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
     form->GetElementAt(n, getter_AddRefs(control));
 
     if (control) {
-      return WrapNative(cx, obj, control, NS_GET_IID(nsISupports), vp);
+      return WrapNative(cx, GetGlobalJSObject(cx, obj), control,
+                        NS_GET_IID(nsISupports), vp);
     }
   }
 
@@ -7724,7 +7732,8 @@ nsHTMLSelectElementSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
 
       options->Item(n, getter_AddRefs(node));
 
-      return WrapNative(cx, obj, node, NS_GET_IID(nsIDOMNode), vp);
+      return WrapNative(cx, GetGlobalJSObject(cx, obj), node,
+                        NS_GET_IID(nsIDOMNode), vp);
     }
   }
 
@@ -8310,7 +8319,8 @@ nsHTMLPluginObjElementSH::NewResolve(nsIXPConnectWrappedNative *wrapper,
         }
 
         nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
-        rv = sXPConnect->WrapNative(cx, obj, pi, *iid, getter_AddRefs(holder));
+        rv = sXPConnect->WrapNative(cx, GetGlobalJSObject(cx, obj), pi, *iid,
+                                    getter_AddRefs(holder));
 
         if (NS_SUCCEEDED(rv)) {
           JSObject* ifaceObj;
