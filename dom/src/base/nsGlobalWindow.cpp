@@ -250,6 +250,7 @@ nsGlobalWindow::nsGlobalWindow(nsGlobalWindow *aOuterWindow)
     mOpenerWasCleared(PR_FALSE),
     mIsPopupSpam(PR_FALSE),
     mJSObject(nsnull),
+    mArguments(nsnull),
     mTimeouts(nsnull),
     mTimeoutInsertionPoint(&mTimeouts),
     mTimeoutPublicIdCounter(1),
@@ -589,10 +590,10 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
     }
   }
 
-  /* No mDocShell means we've already been partially closed down.
-     When that happens, setting status isn't a big requirement,
-     so don't. (Doesn't happen under normal circumstances, but
-     bug 49615 describes a case.) */
+  /* No mDocShell means we've either an inner window or we're already
+     been partially closed down.  When that happens, setting status
+     isn't a big requirement, so don't. (Doesn't happen under normal
+     circumstances, but bug 49615 describes a case.) */
   /* We only want to do this when we're setting a new document rather
      than going away. See bug 61840.  */
 
@@ -758,8 +759,6 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
 
       mInnerWindowHolder->GetJSObject(&newInnerWindow->mJSObject);
 
-      JSObject *oldGlobal = currentInner ? currentInner->mJSObject : mJSObject;
-
       if (currentInner && currentInner->mJSObject) {
         if (mNavigator) {
           // Hold on to the navigator wrapper so that we can set
@@ -860,6 +859,16 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
       newInnerWindow->mListenerManager = listenerManager;
     }
 
+    if (mArguments) {
+      jsval args = OBJECT_TO_JSVAL(mArguments);
+
+      ::JS_SetProperty(cx, newInnerWindow->mJSObject, "arguments",
+                       &args);
+
+      ::JS_UnlockGCThing(cx, mArguments);
+      mArguments = nsnull;
+    }
+
     // Give the new inner window our chrome event handler (since it
     // doesn't have one).
     newInnerWindow->mChromeEventHandler = mChromeEventHandler;
@@ -896,6 +905,8 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
   if (!aDocShell && mContext) {
     ClearAllTimeouts();
 
+    JSContext *cx = (JSContext *)mContext->GetNativeContext();
+
     nsGlobalWindow *currentInner = GetCurrentInnerWindowInternal();
     if (currentInner) {
       currentInner->ClearAllTimeouts();
@@ -919,12 +930,12 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
         nsWindowSH::InvalidateGlobalScopePolluter(cx, currentInner->mJSObject);
       }
 
+      // Release the our document reference
+      mDocument = nsnull;
+
       if (mJSObject) {
         ::JS_ClearScope(cx, mJSObject);
         ::JS_ClearWatchPointsForObject(cx, mJSObject);
-
-        // Release the our document reference
-        mDocument = nsnull;
 
         // An outer window shouldn't have a global scope polluter, but
         // in case code on a webpage took one and put it in an outer
@@ -933,6 +944,8 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
       }
 
       ::JS_ClearRegExpStatics(cx);
+
+      currentInner->mChromeEventHandler = nsnull;
     }
 
     // if we are closing the window while in full screen mode, be sure
@@ -957,19 +970,11 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
 
     mChromeEventHandler = nsnull; // force release now
 
-    if (currentInner) {
-      currentInner->mChromeEventHandler = nsnull;
-
-      nsCOMPtr<nsIDocument> doc(do_QueryInterface(currentInner->mDocument));
-
-      if (doc) {
-        // Tear down the old document. Ideally we wouldn't need to do
-        // this, but until we can make nsJSEventListener objects not
-        // hold a strong reference to the nsJSContext we don't really
-        // have a choise.
-        doc->SetScriptGlobalObject(nsnull);
-        doc->Destroy();
-      }
+    if (mArguments) { 
+      // We got no new document after someone called
+      // SetNewArguments(), drop our reference to the arguments.
+      ::JS_UnlockGCThing(cx, mArguments);
+      mArguments = nsnull;
     }
 
     mInnerWindowHolder = nsnull;
@@ -1272,6 +1277,8 @@ nsGlobalWindow::OnFinalize(JSObject *aJSObject)
 void
 nsGlobalWindow::SetScriptsEnabled(PRBool aEnabled, PRBool aFireTimeouts)
 {
+  FORWARD_TO_INNER(SetScriptsEnabled, (aEnabled, aFireTimeouts));
+
   if (aEnabled && aFireTimeouts) {
     // Scripts are enabled (again?) on this context, run timeouts that
     // fired on this context while scripts were disabled.
@@ -1280,6 +1287,33 @@ nsGlobalWindow::SetScriptsEnabled(PRBool aEnabled, PRBool aFireTimeouts)
   }
 }
 
+nsresult
+nsGlobalWindow::SetNewArguments(JSObject *aArguments)
+{
+  FORWARD_TO_OUTER(SetNewArguments, (aArguments));
+
+  JSContext *cx;
+  NS_ENSURE_TRUE(aArguments && mContext &&
+                 (cx = (JSContext *)mContext->GetNativeContext()),
+                 NS_ERROR_NOT_INITIALIZED);
+
+  nsGlobalWindow *currentInner = GetCurrentInnerWindowInternal();
+
+  jsval args = OBJECT_TO_JSVAL(aArguments);
+
+  if (currentInner && currentInner->mJSObject) {
+    if (!::JS_SetProperty(cx, currentInner->mJSObject, "arguments", &args)) {
+      return NS_ERROR_FAILURE;
+    }
+  }
+
+  // Hold on to the arguments so that we can re-set them once the next
+  // document is loaded.
+  mArguments = aArguments;
+  ::JS_LockGCThing(cx, mArguments);
+
+  return NS_OK;
+}
 
 //*****************************************************************************
 // nsGlobalWindow::nsIScriptObjectPrincipal
@@ -6688,7 +6722,7 @@ nsGlobalWindow::ResumeTimeouts()
   nsresult rv;
 
   for (nsTimeout *t = mTimeouts; t; t = t->mNext) {
-    PRInt32 interval = PR_MAX(t->mWhen, DOM_MIN_TIMEOUT_VALUE);
+    PRInt32 interval = (PRInt32)PR_MAX(t->mWhen, DOM_MIN_TIMEOUT_VALUE);
     t->mWhen = now + nsInt64(t->mWhen);
 
     t->mTimer = do_CreateInstance("@mozilla.org/timer;1");

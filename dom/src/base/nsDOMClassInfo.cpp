@@ -5567,8 +5567,23 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     rv = win->GetLocation(getter_AddRefs(location));
     NS_ENSURE_SUCCESS(rv, rv);
 
+    // Make sure we wrap the location object in the inner window's
+    // scope if we've got an inner window.
+    JSObject *scope = nsnull;
+    if (win->IsOuterWindow()) {
+      nsGlobalWindow *innerWin = win->GetCurrentInnerWindowInternal();
+
+      if (innerWin) {
+        scope = innerWin->GetGlobalJSObject();
+      }
+    }
+
+    if (scope) {
+      scope = obj;
+    }
+
     jsval v;
-    rv = WrapNative(cx, obj, location, NS_GET_IID(nsIDOMLocation), &v);
+    rv = WrapNative(cx, scope, location, NS_GET_IID(nsIDOMLocation), &v);
     NS_ENSURE_SUCCESS(rv, rv);
 
     sDoSecurityCheckInAddProperty = PR_FALSE;

@@ -908,6 +908,15 @@ nsWindowWatcher::GetActiveWindow(nsIDOMWindow **aActiveWindow)
 NS_IMETHODIMP
 nsWindowWatcher::SetActiveWindow(nsIDOMWindow *aActiveWindow)
 {
+#ifdef DEBUG
+  {
+    nsCOMPtr<nsPIDOMWindow> win(do_QueryInterface(aActiveWindow));
+
+    NS_ASSERTION(!win || win->IsOuterWindow(),
+                 "Uh, the active window must be an outer window!");
+  }
+#endif
+
   if (FindWindowEntry(aActiveWindow)) {
     mActiveWindow = aActiveWindow;
     return NS_OK;
@@ -923,6 +932,15 @@ nsWindowWatcher::AddWindow(nsIDOMWindow *aWindow, nsIWebBrowserChrome *aChrome)
 
   if (!aWindow)
     return NS_ERROR_INVALID_ARG;
+
+#ifdef DEBUG
+  {
+    nsCOMPtr<nsPIDOMWindow> win(do_QueryInterface(aWindow));
+
+    NS_ASSERTION(win->IsOuterWindow(),
+                 "Uh, the active window must be an outer window!");
+  }
+#endif
 
   {
     nsWatcherWindowEntry *info;
@@ -1730,34 +1748,20 @@ nsWindowWatcher::AttachArguments(nsIDOMWindow *aWindow,
   NS_ENSURE_TRUE(scriptGlobal, NS_ERROR_UNEXPECTED);
 
   nsIScriptContext *scriptContext = scriptGlobal->GetContext();
+  nsresult rv = NS_OK;
+
   if (scriptContext) {
     JSContext *cx;
     cx = (JSContext *)scriptContext->GetNativeContext();
 
-    nsresult rv;
-    nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID(), &rv));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    nsCOMPtr<nsIXPConnectJSObjectHolder> wrapper;
-    rv = xpc->WrapNative(cx, ::JS_GetGlobalObject(cx), aWindow,
-                         NS_GET_IID(nsIDOMWindow), getter_AddRefs(wrapper));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    JSObject *window_obj;
-    rv = wrapper->GetJSObject(&window_obj);
-    NS_ENSURE_SUCCESS(rv, rv);
-
     JSObject *args;
     args = ::JS_NewArrayObject(cx, argc, argv);
     if (args) {
-      jsval argsVal = OBJECT_TO_JSVAL(args);
-      // ::JS_DefineProperty(cx, window_obj, "arguments",
-      // argsVal, NULL, NULL, JSPROP_PERMANENT);
-      ::JS_SetProperty(cx, window_obj, "arguments", &argsVal);
+      rv = scriptGlobal->SetNewArguments(args);
     }
   }
 
-  return NS_OK;
+  return rv;
 }
 
 nsresult

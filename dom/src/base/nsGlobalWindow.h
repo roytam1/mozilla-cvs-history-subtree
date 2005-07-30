@@ -158,6 +158,7 @@ public:
   virtual JSObject *GetGlobalJSObject();
   virtual void OnFinalize(JSObject *aJSObject);
   virtual void SetScriptsEnabled(PRBool aEnabled, PRBool aFireTimeouts);
+  virtual nsresult SetNewArguments(JSObject *aArguments);
 
   // nsIScriptObjectPrincipal
   virtual nsIPrincipal* GetPrincipal();
@@ -272,8 +273,15 @@ protected:
   nsIDOMWindowInternal *GetParentInternal();
 
   // popup tracking
-  PRBool         IsPopupSpamWindow() const { return mIsPopupSpam; }
-  void           SetPopupSpamWindow(PRBool aPopup) { mIsPopupSpam = aPopup; }
+  PRBool IsPopupSpamWindow()
+  {
+    return GetOuterWindowInternal()->mIsPopupSpam;
+  }
+
+  void SetPopupSpamWindow(PRBool aPopup)
+  {
+    GetOuterWindowInternal()->mIsPopupSpam = aPopup;
+  }
 
   // Window Control Functions
   NS_IMETHOD OpenInternal(const nsAString& aUrl,
@@ -357,19 +365,20 @@ protected:
   // objects will keep the global object (this object) alive.  To prevent
   // these cycles, ownership of such members must be released in
   // |CleanUp| and |SetDocShell|.
+
+  // These members are only used on outer window objects. Make sure
+  // you never set any of these on an inner object!
   PRPackedBool                  mFullScreen;
   PRPackedBool                  mIsClosed;
   PRPackedBool                  mInClose;
   PRPackedBool                  mOpenerWasCleared;
   PRPackedBool                  mIsPopupSpam;
 
-  nsCOMPtr<nsIXPConnectJSObjectHolder> mInnerWindowHolder;
-
   nsCOMPtr<nsIScriptContext>    mContext;
   nsCOMPtr<nsIDOMWindowInternal> mOpener;
   nsCOMPtr<nsIControllers>      mControllers;
-  nsCOMPtr<nsIEventListenerManager> mListenerManager;
   JSObject*                     mJSObject;
+  JSObject*                     mArguments;
   nsRefPtr<nsNavigator>         mNavigator;
   nsRefPtr<nsScreen>            mScreen;
   nsRefPtr<nsHistory>           mHistory;
@@ -393,6 +402,11 @@ protected:
   nsIDocShell*                  mDocShell;  // Weak Reference
   nsCOMPtr<nsIDOMCrypto>        mCrypto;
   nsCOMPtr<nsIDOMPkcs11>        mPkcs11;
+
+  nsCOMPtr<nsIXPConnectJSObjectHolder> mInnerWindowHolder;
+
+  // This member variable is used only on the inner window.
+  nsCOMPtr<nsIEventListenerManager> mListenerManager;
 
   friend class nsDOMScriptableHelper;
   friend class nsDOMWindowUtils;
