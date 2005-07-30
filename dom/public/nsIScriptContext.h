@@ -340,6 +340,16 @@ public:
    * Initialize DOM classes on aGlobalObj
    */
   virtual nsresult InitClasses(JSObject *aGlobalObj) = 0;
+
+  /**
+   * Tell the context we're about to be reinitialize it.
+   */
+  virtual void WillInitializeContext() = 0;
+
+  /**
+   * Dell the context we're done reinitializing it.
+   */
+  virtual void DidInitializeContext() = 0;
 };
 
 inline nsIScriptContext *

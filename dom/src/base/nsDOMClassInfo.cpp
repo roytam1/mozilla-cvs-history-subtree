@@ -36,6 +36,9 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+//#define DEBUG_SH_FORWARDING 1
+//#define DEBUG_PRINT_INNER 1
+
 #include "nscore.h"
 #include "nsDOMClassInfo.h"
 #include "nsCRT.h"
@@ -5278,6 +5281,27 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     // checks on the inner window.
 
     nsGlobalWindow *innerWin = win->GetCurrentInnerWindowInternal();
+
+    if (!innerWin || !innerWin->GetExtantDocument()) {
+      // We're resolving a property on an outer window for which there
+      // is no inner window yet. If the context is already initalized,
+      // trigger creation of a new inner window by calling
+      // GetDocument() on the outer window. This will create a
+      // synthetic about:blank document, and an inner window which may
+      // be reused by the actual document being loaded into this outer
+      // window. This way properties defined on the window while the
+      // document before the document load stated will be visible to
+      // the document once it's loaded, assuming same origin etc.
+      nsIScriptContext *scx = win->GetContextInternal();
+
+      if (scx && scx->IsContextInitialized()) {
+        nsCOMPtr<nsIDOMDocument> doc;
+        win->GetDocument(getter_AddRefs(doc));
+
+        // Grab the new inner window.
+        innerWin = win->GetCurrentInnerWindowInternal();
+      }
+    }
 
     JSObject *innerObj;
     if (innerWin && (innerObj = innerWin->GetGlobalJSObject())) {

@@ -536,7 +536,9 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
   }
 
   nsCOMPtr<nsIDocument> newDoc(do_QueryInterface(aDocument));
-  NS_ENSURE_TRUE(!aDocument || newDoc, NS_ERROR_FAILURE);
+  NS_ENSURE_TRUE(newDoc, NS_ERROR_FAILURE);
+
+  nsresult rv = NS_OK;
 
   nsCOMPtr<nsIDocument> oldDoc(do_QueryInterface(mDocument));
 
@@ -559,37 +561,9 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
     cx = (JSContext *)scx->GetNativeContext();
   }
 
-  if (aDocument) {
-    nsIPrincipal *oldPrincipal;
-    if (mNavigator && oldDoc && (oldPrincipal = oldDoc->GetPrincipal())) {
-      // Loading a new document.  Compare its principal against the
-      // old principal to see whether we are allowed to keep the old
-      // navigator object.
-      nsIPrincipal *newPrincipal = newDoc->GetPrincipal();
-      nsresult rv = NS_ERROR_FAILURE;
-      if (newPrincipal) {
-        rv = sSecMan->CheckSameOriginPrincipal(oldPrincipal, newPrincipal);
-      }
-
-      if (NS_SUCCEEDED(rv)) {
-        // Same origins.  Notify the navigator object that we are
-        // loading a new document, so it can make sure it is ready
-        // for the new document.
-        mNavigator->LoadingNewDocument();
-      } else {
-        // Different origins.  Release the navigator object so it gets
-        // recreated for the new document.  The plugins or mime types
-        // arrays may have changed. See bug 150087.
-        mNavigator->SetDocShell(nsnull);
-
-        mNavigator = nsnull;
-      }
-    }
-
-    // clear smartcard events, our document has gone away.
-    if (mCrypto) {
-      mCrypto->SetEnableSmartCardEvents(PR_FALSE);
-    }
+  // clear smartcard events, our document has gone away.
+  if (mCrypto) {
+    mCrypto->SetEnableSmartCardEvents(PR_FALSE);
   }
 
   if (!mDocument) {
@@ -622,7 +596,7 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
   /* We only want to do this when we're setting a new document rather
      than going away. See bug 61840.  */
 
-  if (mDocShell && aDocument) {
+  if (mDocShell) {
     SetStatus(EmptyString());
     SetDefaultStatus(EmptyString());
   }
@@ -670,34 +644,62 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
         }
       }
 
-      reUseInnerWindow = (isAboutBlank && !isContentWindow &&
-                          !aClearScopeHint && isSameOrigin);
+      reUseInnerWindow =
+        isAboutBlank && (!isContentWindow || !aClearScopeHint ||
+                         isSameOrigin);
+
+      // XXXjst: Remove the aRemoveEventListeners argument, it's
+      // always passed the same value as aClearScopeHint.
 
       // Don't remove event listeners in similar conditions
       aRemoveEventListeners = aRemoveEventListeners &&
         (!isAboutBlank || (isContentWindow && !isSameOrigin));
     }
+  }
 
-    if (aRemoveEventListeners && mListenerManager) {
-      mListenerManager->RemoveAllListeners(PR_FALSE);
-      mListenerManager = nsnull;
+  // Drop our reference to the navigator object unless we're reusing
+  // the existing inner window or the new document is from the same
+  // origin as the old document.
+  nsIPrincipal *oldPrincipal;
+  if (!reUseInnerWindow && mNavigator && oldDoc &&
+      (oldPrincipal = oldDoc->GetPrincipal())) {
+    nsIPrincipal *newPrincipal = newDoc->GetPrincipal();
+    rv = NS_ERROR_FAILURE;
+
+    if (newPrincipal) {
+      rv = sSecMan->CheckSameOriginPrincipal(oldPrincipal, newPrincipal);
     }
+
+    if (NS_FAILED(rv)) {
+      // Different origins.  Release the navigator object so it gets
+      // recreated for the new document.  The plugins or mime types
+      // arrays may have changed. See bug 150087.
+      mNavigator->SetDocShell(nsnull);
+
+      mNavigator = nsnull;
+    }
+  }
+
+  if (mNavigator && newDoc != oldDoc) {
+    // We didn't drop our reference to our old navigator object and
+    // we're loading a new document. Notify the navigator object about
+    // the new document load so that it can make sure it is ready for
+    // the new document.
+
+    mNavigator->LoadingNewDocument();
   }
 
   // Set mDocument even if this is an outer window to avoid
   // having to *always* reach into the inner window to find the
   // document.
 
-  NS_ASSERTION(!reUseInnerWindow || mDocument == aDocument,
-               "SetNewDocument() not changing windows but the document "
-               "is changed!");
-
   mDocument = aDocument;
 
-  nsGlobalWindow *currentInner = GetCurrentInnerWindowInternal();
+  if (IsOuterWindow()) {
+    scx->WillInitializeContext();
+  }
 
-  if (xpc && aDocument && IsOuterWindow() &&
-      (!currentInner || !reUseInnerWindow)) {
+  if (xpc && IsOuterWindow()) {
     nsGlobalWindow *currentInner = GetCurrentInnerWindowInternal();
 
     // In case we're not removing event listeners, move the event
@@ -705,7 +707,11 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
     nsCOMPtr<nsIEventListenerManager> listenerManager;
 
     if (currentInner) {
-      currentInner->ClearAllTimeouts();
+      if (!reUseInnerWindow) {
+        currentInner->ClearAllTimeouts();
+
+        currentInner->mChromeEventHandler = nsnull;
+      }
 
       if (aRemoveEventListeners && currentInner->mListenerManager) {
         currentInner->mListenerManager->RemoveAllListeners(PR_FALSE);
@@ -714,162 +720,157 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
         listenerManager = currentInner->mListenerManager;
       }
 
-      currentInner->mChromeEventHandler = nsnull;
+      nsWindowSH::InvalidateGlobalScopePolluter(cx, currentInner->mJSObject);
     }
 
     nsRefPtr<nsGlobalWindow> newInnerWindow;
 
     nsCOMPtr<nsIDOMChromeWindow> thisChrome =
       do_QueryInterface(NS_STATIC_CAST(nsIDOMWindow *, this));
+    nsCOMPtr<nsIXPConnectJSObjectHolder> navigatorHolder;
 
     PRUint32 flags = 0;
 
-    if (thisChrome) {
-      newInnerWindow = new nsGlobalChromeWindow(this);
-
-      flags = nsIXPConnect::FLAG_SYSTEM_GLOBAL_OBJECT;
+    if (reUseInnerWindow) {
+      // We're reusing the current inner window.
+      newInnerWindow = currentInner;
     } else {
-      newInnerWindow = new nsGlobalWindow(this);
-    }
+      if (thisChrome) {
+        newInnerWindow = new nsGlobalChromeWindow(this);
 
-    if (!newInnerWindow) {
-      return NS_ERROR_OUT_OF_MEMORY;
-    }
-
-    nsIScriptGlobalObject *sgo =
-      (nsIScriptGlobalObject *)newInnerWindow.get();
-
-    nsresult rv = xpc->
-      InitClassesWithNewWrappedGlobal(cx, sgo, NS_GET_IID(nsISupports), flags,
-                                      getter_AddRefs(mInnerWindowHolder));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    mInnerWindowHolder->GetJSObject(&newInnerWindow->mJSObject);
-
-    JSObject *oldGlobal = currentInner ? currentInner->mJSObject : mJSObject;
-
-    if (oldGlobal) {
-      // XXXjst: Should we only do this for chrome windows?
-
-      jsval arguments;
-      ::JS_GetProperty(cx, oldGlobal, "arguments", &arguments);
-
-      if (arguments != JSVAL_VOID) {
-        ::JS_SetProperty(cx, newInnerWindow->mJSObject, "arguments",
-                         &arguments);
-      }
-    }
-
-    nsCOMPtr<nsIXPConnectJSObjectHolder> navigatorHolder;
-    if (currentInner && currentInner->mJSObject) {
-      if (mNavigator) {
-        // Hold on to the navigator wrapper so that we can set
-        // window.navigator in the new window to point to the same
-        // object (assuming we didn't change origins etc). See bug
-        // 163645 for more on why we need this.
-
-        nsIDOMNavigator* navigator =
-          NS_STATIC_CAST(nsIDOMNavigator*, mNavigator.get());
-        xpc->WrapNative(cx, currentInner->mJSObject, navigator,
-                        NS_GET_IID(nsIDOMNavigator),
-                        getter_AddRefs(navigatorHolder));
+        flags = nsIXPConnect::FLAG_SYSTEM_GLOBAL_OBJECT;
+      } else {
+        newInnerWindow = new nsGlobalWindow(this);
       }
 
-      PRBool termFuncSet = PR_FALSE;
+      if (!newInnerWindow) {
+        return NS_ERROR_OUT_OF_MEMORY;
+      }
 
-      if (oldDoc == newDoc) {
-        nsCOMPtr<nsIJSContextStack> stack =
-          do_GetService(sJSStackContractID);
+      nsIScriptGlobalObject *sgo =
+        (nsIScriptGlobalObject *)newInnerWindow.get();
 
-        JSContext *cx = nsnull;
+      nsresult rv = xpc->
+        InitClassesWithNewWrappedGlobal(cx, sgo, NS_GET_IID(nsISupports),
+                                        flags,
+                                        getter_AddRefs(mInnerWindowHolder));
+      NS_ENSURE_SUCCESS(rv, rv);
 
-        if (stack) {
-          stack->Peek(&cx);
+      mInnerWindowHolder->GetJSObject(&newInnerWindow->mJSObject);
+
+      JSObject *oldGlobal = currentInner ? currentInner->mJSObject : mJSObject;
+
+      if (currentInner && currentInner->mJSObject) {
+        if (mNavigator) {
+          // Hold on to the navigator wrapper so that we can set
+          // window.navigator in the new window to point to the same
+          // object (assuming we didn't change origins etc). See bug
+          // 163645 for more on why we need this.
+
+          nsIDOMNavigator* navigator =
+            NS_STATIC_CAST(nsIDOMNavigator*, mNavigator.get());
+          xpc->WrapNative(cx, currentInner->mJSObject, navigator,
+                          NS_GET_IID(nsIDOMNavigator),
+                          getter_AddRefs(navigatorHolder));
         }
 
-        nsIScriptContext *callerScx;
-        if (cx && (callerScx = GetScriptContextFromJSContext(cx))) {
-          // We're called from document.open() (and document.open() is
-          // called from JS), clear the scope etc in a termination
-          // function on the calling context to prevent clearing the
-          // calling scope.
-          callerScx->SetTerminationFunction(ClearWindowScope,
-                                            NS_STATIC_CAST(nsIDOMWindow *,
-                                                           currentInner));
+        PRBool termFuncSet = PR_FALSE;
 
-          termFuncSet = PR_TRUE;
+        if (oldDoc == newDoc) {
+          nsCOMPtr<nsIJSContextStack> stack =
+            do_GetService(sJSStackContractID);
+
+          JSContext *cx = nsnull;
+
+          if (stack) {
+            stack->Peek(&cx);
+          }
+
+          nsIScriptContext *callerScx;
+          if (cx && (callerScx = GetScriptContextFromJSContext(cx))) {
+            // We're called from document.open() (and document.open() is
+            // called from JS), clear the scope etc in a termination
+            // function on the calling context to prevent clearing the
+            // calling scope.
+            callerScx->SetTerminationFunction(ClearWindowScope,
+                                              NS_STATIC_CAST(nsIDOMWindow *,
+                                                             currentInner));
+
+            termFuncSet = PR_TRUE;
+          }
         }
+
+        // Clear scope on the outer window
+        ::JS_ClearScope(cx, mJSObject);
+        ::JS_ClearWatchPointsForObject(cx, mJSObject);
+
+        // Re-initialize the outer window.
+        scx->InitContext(this);
+
+        if (!termFuncSet) {
+          ::JS_ClearScope(cx, currentInner->mJSObject);
+          ::JS_ClearWatchPointsForObject(cx, currentInner->mJSObject);
+          ::JS_ClearRegExpStatics(cx);
+        }
+
+        // Make the current inner window release its strong references to
+        // the document to prevent it from keeping everything around.
+        currentInner->mDocument = nsnull;
       }
 
-      // Clear scope on the outer window
-      ::JS_ClearScope(cx, mJSObject);
-      ::JS_ClearWatchPointsForObject(cx, mJSObject);
+      mInnerWindow = newInnerWindow;
 
-      // Re-initialize the outer window.
-      scx->InitContext(this);
+      // InitClassesWithNewWrappedGlobal() sets the global object in
+      // cx to be the new wrapped global. We don't want that, so set
+      // it back to our own JS object.
 
-      if (!termFuncSet) {
-        ::JS_ClearScope(cx, currentInner->mJSObject);
-        ::JS_ClearWatchPointsForObject(cx, currentInner->mJSObject);
-        ::JS_ClearRegExpStatics(cx);
+      ::JS_SetGlobalObject(cx, mJSObject);
+
+      if (newDoc != oldDoc) {
+        nsCOMPtr<nsIHTMLDocument> html_doc(do_QueryInterface(mDocument));
+        nsWindowSH::InstallGlobalScopePolluter(cx, newInnerWindow->mJSObject,
+                                               html_doc);
       }
-
-      // Make the current inner window release its strong references to
-      // the document to prevent it from keeping everything around.
-      currentInner->mDocument = nsnull;
-      nsWindowSH::InvalidateGlobalScopePolluter(cx, currentInner->mJSObject);
-
-      // XXXjst: Clear the global scope polluter's weak document
-      // reference!
     }
-
-    mInnerWindow = newInnerWindow;
-
-    // InitClassesWithNewWrappedGlobal() sets the global object in cx
-    // to be the new wrapped global. We don't want that, so set it
-    // back to our own JS object.
-
-    ::JS_SetGlobalObject(cx, mJSObject);
 
     if (newDoc) {
       newDoc->SetScriptGlobalObject(newInnerWindow);
     }
 
-    rv = newInnerWindow->SetNewDocument(aDocument, aRemoveEventListeners,
-                                        aClearScopeHint, PR_TRUE);
-    NS_ENSURE_SUCCESS(rv, rv);
+    if (reUseInnerWindow) {
+      newInnerWindow->mDocument = aDocument;
+    } else {
+      rv = newInnerWindow->SetNewDocument(aDocument, aRemoveEventListeners,
+                                          aClearScopeHint, PR_TRUE);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      // Initialize DOM classes etc on the inner window.
+      rv = scx->InitClasses(newInnerWindow->mJSObject);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      if (navigatorHolder) {
+        // Restore window.navigator onto the new inner window.
+        JSObject *nav;
+        navigatorHolder->GetJSObject(&nav);
+
+        jsval navVal = OBJECT_TO_JSVAL(nav);
+        ::JS_SetProperty(cx, newInnerWindow->mJSObject, "navigator", &navVal);
+      }
+
+      newInnerWindow->mListenerManager = listenerManager;
+    }
 
     // Give the new inner window our chrome event handler (since it
     // doesn't have one).
     newInnerWindow->mChromeEventHandler = mChromeEventHandler;
-
-    // Initialize DOM classes etc on the inner window.
-    rv = scx->InitClasses(newInnerWindow->mJSObject);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    if (navigatorHolder) {
-      // Restore window.navigator onto the new inner window.
-      JSObject *nav;
-      navigatorHolder->GetJSObject(&nav);
-
-      jsval navVal = OBJECT_TO_JSVAL(nav);
-      ::JS_SetProperty(cx, newInnerWindow->mJSObject, "navigator", &navVal);
-    }
-
-    // XXXjst: Do we need to call SetTarget() on the listener manager
-    // here?
-    newInnerWindow->mListenerManager = listenerManager;
   }
 
-  if (aDocument && scx) {
-    if (IsOuterWindow()) {
-      // Add an extra ref in case we release mContext during GC.
-      nsCOMPtr<nsIScriptContext> kungFuDeathGrip = scx;
-      kungFuDeathGrip->GC();
-    } else if (IsInnerWindow()) {
-      nsCOMPtr<nsIHTMLDocument> html_doc(do_QueryInterface(mDocument));
-      nsWindowSH::InstallGlobalScopePolluter(cx, mJSObject, html_doc);
-    }
+  if (scx && IsOuterWindow()) {
+    // Add an extra ref in case we release mContext during GC.
+    nsCOMPtr<nsIScriptContext> kungFuDeathGrip = scx;
+    scx->GC();
+
+    scx->DidInitializeContext();
   }
 
   // Clear our mutation bitfield.

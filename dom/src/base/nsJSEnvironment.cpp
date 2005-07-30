@@ -1921,6 +1921,18 @@ nsJSContext::InitClasses(JSObject *aGlobalObj)
   return rv;
 }
 
+void
+nsJSContext::WillInitializeContext()
+{
+  mIsInitialized = PR_FALSE;
+}
+
+void
+nsJSContext::DidInitializeContext()
+{
+  mIsInitialized = PR_TRUE;
+}
+
 PRBool
 nsJSContext::IsContextInitialized()
 {

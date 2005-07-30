@@ -132,6 +132,9 @@ public:
 
   virtual nsresult InitClasses(JSObject *aGlobalObj);
 
+  virtual void WillInitializeContext();
+  virtual void DidInitializeContext();
+
   NS_DECL_NSIXPCSCRIPTNOTIFY
 
   NS_DECL_NSITIMERCALLBACK
