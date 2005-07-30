@@ -798,7 +798,7 @@ CalendarView.prototype.setDrawProperties = function calView_setDrawProperties( d
 
   var i;
   for( i = 0; i < dayEventList.length; i++ ) {
-    if (!dayEventList[i].event.startDate.isDate) {
+    if( !dayEventList[i].event.isAllDay) {
       dayEventStartList.push(dayEventList[i]);
       dayEventEndList.push(dayEventList[i]);
     }

@@ -4,7 +4,7 @@
 
 var calendarPrefStyleSheet = null;
 for (var i = 0; i < document.styleSheets.length; i++) {
-    if (document.styleSheets[i].title == "calendar-dynamic-style-sheet") {
+    if (document.styleSheets[i].href == "about:blank?calendar-dynamic-style-sheet") {
         calendarPrefStyleSheet = document.styleSheets[i];
         break;
     }
@@ -147,6 +147,7 @@ var ltnCalendarViewController = {
             aCalendar.addItem(event, null);
         } else if (aStartTime && aStartTime.isDate) {
             var event = createEvent();
+            event.isAllDay = true;
             event.startDate = aStartTime;
             aCalendar.addItem(event, null);
         } else {

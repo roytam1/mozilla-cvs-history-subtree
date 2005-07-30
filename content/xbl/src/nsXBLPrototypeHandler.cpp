@@ -405,6 +405,11 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
   // that.
   if (focusedWin) {
     nsCOMPtr<nsPIDOMWindow> piWin(do_QueryInterface(focusedWin));
+
+    if (piWin && piWin->GetCurrentInnerWindow()) {
+      piWin = piWin->GetCurrentInnerWindow();
+    }
+
     boundGlobal = do_QueryInterface(piWin->GetPrivateRoot());
   }
   else boundGlobal = do_QueryInterface(aReceiver);
@@ -483,14 +488,10 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
   boundContext->BindCompiledEventHandler(scriptObject, onEventAtom, handler);
 
   // Execute it.
-  nsCOMPtr<nsIDOMScriptObjectFactory> factory =
-    do_GetService(kDOMScriptObjectFactoryCID);
-  NS_ENSURE_TRUE(factory, NS_ERROR_FAILURE);
-
   nsCOMPtr<nsIDOMEventListener> eventListener;
 
-  factory->NewJSEventListener(boundContext, aReceiver,
-                              getter_AddRefs(eventListener));
+  NS_NewJSEventListener(boundContext, boundGlobal->GetGlobalJSObject(),
+                        aReceiver, getter_AddRefs(eventListener));
 
   nsCOMPtr<nsIJSEventListener> jsListener(do_QueryInterface(eventListener));
   jsListener->SetEventName(onEventAtom);

@@ -54,6 +54,7 @@ function calTodo() {
         "DTSTAMP": true,
         "DUE": true,
         "COMPLETED": true,
+        "PERCENT-COMPLETE": true,
         __proto__: this.itemBasePromotedProps
     };
 }
@@ -96,18 +97,23 @@ calTodo.prototype = {
         if (aIID.equals(Components.interfaces.nsIClassInfo))
             return calTodoClassInfo;
 
-        return this.__proto__.__proto__.QueryInterface.call(this, aIID);
+        return this.__proto__.__proto__.QueryInterface.apply(this, aIID);
     },
 
     initTodo: function () {
-        // todos by default don't have any of the dates set, or status, or
-        // percentComplete
+        this.mEntryDate = new CalDateTime();
+        this.mDueDate = new CalDateTime();
+        this.mCompletedDate = new CalDateTime();
+        this.mPercentComplete = undefined;
     },
 
     cloneShallow: function (aNewParent) {
         var m = new calTodo();
         this.cloneItemBaseInto(m, aNewParent);
-
+        m.mEntryDate = this.mEntryDate.clone();
+        m.mDueDate = this.mDueDate.clone();
+        m.mCompletedDate = this.mCompletedDate.clone();
+        m.mPercentComplete = this.mPercentComplete;
         return m;
     },
 
@@ -125,11 +131,6 @@ calTodo.prototype = {
     },
 
     createProxy: function () {
-        if (this.mIsProxy) {
-            calDebug("Tried to create a proxy for an existing proxy!\n");
-            throw Components.results.NS_ERROR_UNEXPECTED;
-        }
-
         var m = new calTodo();
         m.initializeProxy(this);
 
@@ -137,30 +138,15 @@ calTodo.prototype = {
     },
 
     makeImmutable: function () {
+        this.mEntryDate.makeImmutable();
+        this.mDueDate.makeImmutable();
+        this.mCompletedDate.makeImmutable();
+
         this.makeItemBaseImmutable();
     },
 
-    get isCompleted() {
-        return this.completedDate != null ||
-               this.percentComplete == 100 ||
-               this.status == "COMPLETED";
-    },
-    
-    set isCompleted(v) {
-        if (v) {
-            if (!this.completedDate)
-                this.completedDate = NewCalDateTime(new Date);
-            this.status = "COMPLETED";
-            this.percentComplete = 100;
-        } else {
-            this.deleteProperty("COMPLETED");
-            this.deleteProperty("STATUS");
-            this.deleteProperty("PERCENT-COMPLETE");
-        }
-    },
-
     get recurrenceStartDate() {
-        return this.entryDate;
+        return this.mEntryDate;
     },
 
     icsEventPropMap: [
@@ -191,12 +177,18 @@ calTodo.prototype = {
         this.fillIcalComponentFromBase(icalcomp);
         this.mapPropsToICS(icalcomp, this.icsEventPropMap);
 
+        if (this.mPercentComplete != undefined) {
+            var percentprop = icssvc.createIcalProperty("PERCENT-COMPLETE");
+            percentprop.stringValue = this.mPercentComplete;
+            icalcomp.addProperty(percentprop);
+        }
+
         var bagenum = this.mProperties.enumerator;
         while (bagenum.hasMoreElements()) {
             var iprop = bagenum.getNext().
                 QueryInterface(Components.interfaces.nsIProperty);
             try {
-                if (!this.todoPromotedProps[iprop.name]) {
+                if (!this.eventPromotedProps[iprop.name]) {
                     var icalprop = icssvc.createIcalProperty(iprop.name);
                     icalprop.stringValue = iprop.value;
                     icalcomp.addProperty(icalprop);
@@ -240,5 +232,5 @@ if (makeMemberAttr) {
     makeMemberAttr(calTodo, "DTSTART", null, "entryDate", true);
     makeMemberAttr(calTodo, "DUE", null, "dueDate", true);
     makeMemberAttr(calTodo, "COMPLETED", null, "completedDate", true);
-    makeMemberAttr(calTodo, "PERCENT-COMPLETE", 0, "percentComplete", true);
+    makeMemberAttr(calTodo, "mPercentComplete", 0, "percentComplete");
 }

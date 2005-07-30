@@ -287,7 +287,7 @@
         ]]></getter>
         <setter><![CDATA[
           if (val <= 0.0)
-            val = 0.01;
+            throw "Bad pixpermin";
           if (val != this.mPixPerMin) {
             this.mPixPerMin = val;
             this.relayout();
@@ -1195,9 +1195,8 @@
       <xul:box anonid="eventbox" xbl:inherits="orient,width,height" flex="1">
         <xul:calendar-event-gripbar anonid="gripbar1" whichside="start" xbl:inherits="parentorient=orient"/>
         <xul:vbox class="calendar-event-box-container" xbl:inherits="context,parentorient=orient" flex="1" align="left">
-          <xul:label anonid="event-name" flex="1" crop="right"/>
           <xul:textbox class="plain" style="background: transparent !important"
-            anonid="event-name-textbox" crop="right" hidden="true" wrap="true"/>
+            anonid="event-name" crop="right" readonly="true"/>
           <xul:spacer flex="1"/>
         </xul:vbox>
         <xul:calendar-event-gripbar anonid="gripbar2" whichside="end" xbl:inherits="parentorient=orient"/>
@@ -1212,15 +1211,7 @@
          if (orient == "vertical") otherorient = "horizontal";
 
          var self = this;
-         this.eventNameInput.onblur = function() { self.stopEditing(true); };
-         this.eventNameInput.onkeypress = function(event) {
-             // save on enter
-             if (event.keyCode == 13)
-                 self.stopEditing(true);
-             // abort on escape
-             else if (event.keyCode == 27)
-                 self.stopEditing(false);
-         };
+         this.eventNameElement.onblur = function() { self.stopEditing(); };
       ]]></constructor>
 
       <!-- fields -->
@@ -1262,12 +1253,8 @@
         ]]></body>
       </method>
 
-      <property name="eventNameLabel" readonly="true"
-        onget="return document.getAnonymousElementByAttribute(this, 'anonid', 'event-name');"/>
-      <property name="eventNameTextbox" readonly="true"
-        onget="return document.getAnonymousElementByAttribute(this, 'anonid', 'event-name-textbox');"/>
-      <property name="eventNameInput" readonly="true"
-        onget="return document.getAnonymousElementByAttribute(this, 'anonid', 'event-name-textbox').inputField;"/>
+      <property name="eventNameElement" readonly="true"
+        onget="return document.getAnonymousElementByAttribute(this, 'anonid', 'event-name').inputField;"/>
 
       <property name="occurrence">
         <getter><![CDATA[
@@ -1275,15 +1262,13 @@
         ]]></getter>
         <setter><![CDATA[
           this.mOccurrence = val;
-          var evl = this.eventNameLabel;
+          var evl = this.eventNameElement;
 
-          while (evl.firstChild)
-              evl.removeChild(evl.firstChild);
-
-          if (val && val != "")
-              evl.appendChild(document.createTextNode(val.title));
-          else
-              evl.appendChild(document.createTextNode("Untitled Event"));
+          if (val) {
+              evl.value = val.title;
+          } else {
+              evl.value = "Untitled Event";
+          }
           return val;
         ]]></setter>
       </property>
@@ -1316,45 +1301,28 @@
 
       <method name="startEditing">
         <body><![CDATA[
-          this.editingTimer = null;
-          this.mOriginalTextLabel = this.mOccurrence.title;
-
-          this.eventNameLabel.setAttribute("hidden", "true");
-
-          this.mEditing = true;
-
-          this.eventNameTextbox.value = this.mOriginalTextLabel;
-          this.eventNameTextbox.removeAttribute("hidden");
-          if (this.calendarView)
-              this.calendarView.activeInPlaceEdit = true;
-          this.eventNameInput.focus();
-          this.eventNameInput.select();
+           this.editingTimer = null;
+           this.eventNameElement.removeAttribute("readonly");
+           this.mOriginalTextLabel = this.eventNameElement.value;
+           this.mEditing = true;
+           this.eventNameElement.focus();
+           this.eventNameElement.select();
         ]]></body>
       </method>
 
       <method name="stopEditing">
-        <parameter name="saveChanges"/>
         <body><![CDATA[
           this.mEditing = false;
-
-          if (this.calendarView)
-              this.calendarView.activeInPlaceEdit = false;
-
-          if (!saveChanges) {
-              this.eventNameTextbox.setAttribute("hidden", "true");
-              this.eventNameLabel.removeAttribute("hidden");
-              return;
-          }
-
-          if (this.eventNameTextbox.value != this.mOriginalTextLabel) {
+          if (this.eventNameElement.value != this.mOriginalTextLabel) {
               var clone = this.mOccurrence.clone();
-              clone.title = this.eventNameTextbox.value;
+              clone.title = this.eventNameElement.value;
               clone.calendar.modifyItem(clone, this.mOccurrence, null);
 
               // Note that as soon as we do the modifyItem, this element ceases to exist,
               // so don't bother trying to modify anything further here! ('this' exists,
               // because it's being kept alive, but our child content etc. is all gone)
           }
+
         ]]></body>
       </method>
     </implementation>
@@ -1380,13 +1348,10 @@
             }
 	} else {
             // start single click timeout
-            if (this.selected) {
-                var self = this;
-                if (this.editingTimer) clearTimeout(this.editingTimer);
-                this.editingTimer = setTimeout(function () { self.startEditing(); }, 350);
-            } else {
-                this.calendarView.selectedItem = this.mOccurrence;
-            }
+            this.calendarView.selectedItem = this.mOccurrence;
+            var self = this;
+            if (this.editingTimer) clearTimeout(this.editingTimer);
+            this.editingTimer = setTimeout(function () { self.startEditing(); }, 350);
             this.mLastClickTime = evTime;
         }
       ]]></handler>
@@ -1419,9 +1384,6 @@
                 this.calendarView.selectedItem = this.mOccurrence;
 
                 this.mEditing = false;
-                if (this.calendarView)
-                    this.calendarView.activeInPlaceEdit = false;
-
                 this.parentColumn.startSweepingToModifyEvent(this, this.mOccurrence, "middle", this.mMouseX, this.mMouseY);
                 this.mInMouseDown = false;
             }
@@ -1470,6 +1432,7 @@
 	this.reorient();
       ]]></constructor>
 
+      <field name="mTimeoutScheduled">false</field>
       <field name="mLastSize">0</field>
       <method name="onResize">
         <parameter name="aRealSelf"/>
@@ -1477,6 +1440,7 @@
           var self = this;
           if (aRealSelf) {
             self = aRealSelf;
+            self.mTimeoutScheduled = false;
           }
 
           var timebar = document.getAnonymousElementByAttribute(self, "anonid", "timebar");
@@ -1492,19 +1456,16 @@
           if (self.mLastSize > size) {
             self.pixelsPerMinute = 0.01;
             self.mLastSize = size;
-
-            if (self.orient == "horizontal")
-              size = daybox.boxObject.width;
-            else
-              size = daybox.boxObject.height;
+            if (!self.mTimeoutScheduled)
+              setTimeout(self.onResize, 0, self);
+            return;
           }
 
           self.mLastSize = size;
 
-          //self.removeAttribute("hidden");
           var minutes = self.mEndMin - self.mStartMin;
           var ppm = size / minutes;
-          self.pixelsPerMinute = Math.round(ppm * 10) / 10;
+          self.pixelsPerMinute = ppm;
         ]]></body>
       </method>
 
@@ -1866,15 +1827,6 @@
       <property name="pixelsPerMinute">
         <getter>return this.mPixPerMin</getter>
         <setter>this.setPixelsPerMin(val); return val;</setter>
-      </property>
-
-      <property name="activeInPlaceEdit">
-        <getter><![CDATA[
-          return this.mInPlaceEditActive;
-        ]]></getter>
-        <setter><![CDATA[
-          this.mInPlaceEditActive = val;
-        ]]></setter>
       </property>
 
       <!-- private -->
@@ -2250,7 +2202,7 @@
         if (event.keyCode == kKE.DOM_VK_BACK_SPACE ||
             event.keyCode == kKE.DOM_VK_DELETE)
         {
-            if (!this.activeInPlaceEdit && this.selectedItem && this.controller) {
+            if (this.selectedItem && this.controller) {
                 var occurrence = (event.ctrlKey) ? this.selectedItem.parentItem : this.selectedItem;
                 this.controller.deleteOccurrence(occurrence);
             }

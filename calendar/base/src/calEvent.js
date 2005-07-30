@@ -204,6 +204,7 @@ calEvent.prototype = {
 
         this.setItemBaseFromICS(event);
         this.mapPropsFromICS(event, this.icsEventPropMap);
+        this.mIsAllDay = this.startDate && this.startDate.isDate;
 
         this.importUnpromotedProperties(event, this.eventPromotedProps);
         // Importing didn't really change anything
@@ -237,4 +238,6 @@ var makeMemberAttr;
 if (makeMemberAttr) {
     makeMemberAttr(calEvent, "DTSTART", null, "startDate", true);
     makeMemberAttr(calEvent, "DTEND", null, "endDate", true);
+    // XXX get rid of this
+    makeMemberAttr(calEvent, "mIsAllDay", false, "isAllDay");
 }

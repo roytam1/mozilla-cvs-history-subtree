@@ -202,7 +202,8 @@ calMemoryCalendar.prototype = {
             return;
         }
 
-        if (aOldItem != this.mItems[aOldItem.id]) {
+        if (aOldItem.id != this.mItems[aOldItem.id] ||
+            aOldItem.generation != aOldItem.generation) {
             if (aListener)
                 aListener.onOperationComplete (this.calendarToReturn,
                                                Components.results.NS_ERROR_FAILURE,
@@ -225,7 +226,7 @@ calMemoryCalendar.prototype = {
         var modifiedItem = aNewItem.clone();
         modifiedItem.generation += 1;
         modifiedItem.makeImmutable();
-        this.mItems[aNewItem.id] = modifiedItem;
+        this.mItems[newItem.id] = modifiedItem;
 
         if (aListener)
             aListener.onOperationComplete (this.calendarToReturn,
@@ -404,8 +405,7 @@ calMemoryCalendar.prototype = {
                 else if (item.percentComplete < 100 && !itemNotCompletedFilter)
                     continue;
 
-                itemEndTime = itemStartTime = 
-                    item.entryDate ? item.entryDate.nativeTime : 0;
+                itemEndTime = itemStartTime = item.entryDate.nativeTime || 0;
             } else {
                 // XXX unknown item type, wth do we do?
                 continue;

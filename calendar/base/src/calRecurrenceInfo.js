@@ -210,23 +210,6 @@ calRecurrenceInfo.prototype = {
         this.mRecurrenceItems.splice(aIndex, 1);
     },
 
-    deleteRecurrenceItem: function(aItem) {
-        if (!this.mBaseItem)
-            throw Components.results.NS_ERROR_NOT_INITIALIZED;
-
-        if (this.mImmutable)
-            throw Components.results.NS_ERROR_OBJECT_IS_IMMUTABLE;
-
-        for (var i = 0; i < this.mRecurrenceItems.length; i++) {
-            if (this.mRecurrenceItems[i] == aItem) {
-                this.deleteRecurrenceItemAt(i);
-                return;
-            }
-        }
-
-        throw Components.results.NS_ERROR_INVALID_ARG;
-    },
-
     insertRecurrenceItemAt: function(aItem, aIndex) {
         if (!this.mBaseItem)
             throw Components.results.NS_ERROR_NOT_INITIALIZED;
@@ -234,7 +217,7 @@ calRecurrenceInfo.prototype = {
         if (this.mImmutable)
             throw Components.results.NS_ERROR_OBJECT_IS_IMMUTABLE;
 
-        if (aIndex < 0 || aIndex > this.mRecurrenceItems.length)
+        if (aIndex < 0 || aIndex >= this.mRecurrenceItems.length)
             throw Components.results.NS_ERROR_INVALID_ARG;
 
         this.mRecurrenceItems.splice(aIndex, 0, aItem);

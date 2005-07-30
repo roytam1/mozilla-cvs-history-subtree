@@ -62,6 +62,7 @@
 #include "nsIDOMDOMImplementation.h"
 #include "nsIDOMDocumentType.h"
 #include "nsIDOMWindowInternal.h"
+#include "nsPIDOMWindow.h"
 #include "nsIDOMHTMLFormElement.h"
 #include "nsDOMString.h"
 #include "nsIStreamListener.h"
@@ -3140,8 +3141,6 @@ FindNamedItems(const nsAString& aName, nsIContent *aContent,
                "Entry w/o content list passed to FindNamedItems()!");
   NS_ASSERTION(aEntry.mContentList != NAME_NOT_VALID,
                "Entry that should never have a list passed to FindNamedItems()!");
-
-  nsIAtom *tag = aContent->Tag();
 
   if (aContent->IsContentOfType(nsIContent::eTEXT)) {
     // Text nodes are not named items nor can they have children.

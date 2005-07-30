@@ -43,10 +43,16 @@ function nextMonth(dt)
 }
 
 var gMiniMonthLoading = false;
-function ltnMinimonthPick(minimonth)
+function ltnMinimonthPick(which, minimonth)
 {
     if (gMiniMonthLoading)
         return;
+
+    if (which == "left") {
+        // update right
+        var d2 = nextMonth(minimonth.value);
+        document.getElementById("ltnMinimonthRight").showMonth(d2);
+    }
 
     var cdt = new CalDateTime();
     cdt.jsDate = minimonth.value;
@@ -63,7 +69,8 @@ function ltnOnLoad(event)
     var today = new Date();
     var nextmo = nextMonth(today);
 
-    document.getElementById("ltnMinimonth").value = today;
+    document.getElementById("ltnMinimonthLeft").value = today;
+    document.getElementById("ltnMinimonthRight").showMonth(nextmo);
 
     gMiniMonthLoading = false;
 
@@ -97,6 +104,7 @@ function showCalendar(aDate1, aDate2)
 }
 
 function switchView(type) {
+    var messengerDisplayDeck = document.getElementById("displayDeck");
     var calendarViewBox = document.getElementById("calendar-view-box");
 
     var monthView = document.getElementById("calendar-month-view");
@@ -140,10 +148,8 @@ function selectedCalendarPane(event)
     document.getElementById("displayDeck").selectedPanel =
         document.getElementById("calendar-view-box");
 
-    // give the view the calendar, but make sure that everything
-    // has uncollapsed first before we try to relayout!
-    // showCalendar(today());
-    setTimeout(function() { showCalendar(today()); }, 0);
+    // give the view the calendar
+    showCalendar(today());
 }
 
 function LtnObserveDisplayDeckChange(event)
@@ -155,9 +161,10 @@ function LtnObserveDisplayDeckChange(event)
         GetMessagePane().collapsed = true;
         document.getElementById("threadpane-splitter").collapsed = true;
         gSearchBox.collapsed = true;
-        deck.selectedPanel.style.visibility = "";
     } else {
-        document.getElementById("calendar-view-box").style.visibility = "collapse";
+        // nothing to "undo" for now
+        // Later: mark the view as not needing reflow due to new events coming
+        // in, for better performance and batching.
     }
 }
 

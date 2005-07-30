@@ -2,7 +2,6 @@ lightning.jar:
   content/lightning/lightning-utils.js			(content/lightning-utils.js) 
   content/lightning/messenger-overlay-sidebar.xul	(content/messenger-overlay-sidebar.xul)
   content/lightning/messenger-overlay-sidebar.js	(content/messenger-overlay-sidebar.js)
-  content/lightning/messenger-overlay-sidebar.css	(content/messenger-overlay-sidebar.css)
   content/lightning/calendar-management.js		(content/calendar-management.js)
   content/lightning/lightning-widgets.css		(content/lightning-widgets.css)
   content/lightning/agenda-tree-overlay.xul             (content/agenda-tree-overlay.xul)
@@ -12,10 +11,6 @@ lightning.jar:
   content/lightning/lightning-preferences.xul		(content/lightning-preferences.xul)
   content/lightning/lightning-preferences.js		(content/lightning-preferences.js)
   content/lightning/messenger-overlay-toolbar.xul	(content/messenger-overlay-toolbar.xul)
-  content/lightning/todo-list-overlay.xul             (content/todo-list-overlay.xul)
-  content/lightning/todo-list.js			(content/todo-list.js)
-  content/lightning/calendar-todo-list.css		(content/calendar-todo-list.css)
-  content/lightning/calendar-todo-list.xml		(content/calendar-todo-list.xml)
 
 en-US.jar:
   locale/en-US/lightning/lightning.dtd				(locale/lightning.dtd)

@@ -156,14 +156,14 @@ function loadCalendarEventDialog()
         setElementValue("all-day-event-checkbox", event.isAllDay, "checked");
         break;
     case "todo":
-        var hasEntry = event.entryDate ? true : false;
-        var entryDate = (hasEntry ? event.entryDate.jsDate : null);
+        var hasEntry = event.entryDate.isValid;
+        var entryDate = (hasEntry? event.entryDate.jsDate : null);
 
         setElementValue("start-datetime", entryDate);
         setElementValue("start-datetime", !hasEntry, "disabled");
         setElementValue("start-checkbox", hasEntry,  "checked");
 
-        var hasDue = event.dueDate ? true : false;
+        var hasDue = event.dueDate.isValid;
         var dueDate = (hasDue? event.dueDate.jsDate : null);
 
         setElementValue("due-datetime", dueDate);
@@ -489,10 +489,6 @@ function onOKCommand()
             endDate.setDate(endDate.getDate() + 1); 
         }
         event.endDate = jsDateToDateTime(endDate);
-        if (event.isAllDay) {
-            event.startDate.isDate = true;
-            event.endDate.isDate = true;
-        }
 
         var status = getElementValue("event-status-field");
         if (status)
@@ -505,13 +501,13 @@ function onOKCommand()
         if ( getElementValue("start-checkbox", "checked") ) {
             event.entryDate = jsDateToDateTime(getElementValue("start-datetime"));
         } else {
-            event.entryDate = null;
+            event.entryDate.reset();
         }
 
         if ( getElementValue("due-checkbox", "checked") ) {
             event.dueDate = jsDateToDateTime(getElementValue("due-datetime"));
         } else {
-            event.dueDate = null;
+            event.dueDate.reset();
         }
 
         event.status          = getElementValue("todo-status-field");
@@ -607,7 +603,7 @@ function onOKCommand()
     if (getElementValue("repeat-checkbox", "checked")) {
         var recurrenceInfo = createRecurrenceInfo();
         debug("** recurrenceInfo: " + recurrenceInfo);
-        recurrenceInfo.item = event;
+        recurrenceInfo.initialize(event);
 
         var recRule = new calRecurrenceRule();
 

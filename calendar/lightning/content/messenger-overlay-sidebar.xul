@@ -7,7 +7,7 @@
 <?xml-stylesheet href="chrome://calendar/content/calendar-multiday-view.css" type="text/css"?>
 <?xml-stylesheet href="chrome://calendar/content/calendar-month-view.css" type="text/css"?>
 <?xml-stylesheet href="chrome://calendar/content/datetimepickers/minimonth.css" type="text/css"?>
-<?xml-stylesheet href="data:text/css," title="calendar-dynamic-style-sheet" type="text/css"?>
+<?xml-stylesheet href="about:blank?calendar-dynamic-style-sheet" type="text/css"?>
 
 <overlay xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
@@ -17,6 +17,7 @@
 <script type="application/x-javascript" src="chrome://lightning/content/lightning-utils.js"/>
 <script type="application/x-javascript" src="chrome://lightning/content/calendar-management.js"/>
 <script type="application/x-javascript" src="chrome://lightning/content/messenger-overlay-sidebar.js"/>
+<script type="application/x-javascript" src="chrome://lightning/content/agenda-tree.js"/>
 
 <vbox id="folderPaneBox">
   <commandset id="calendar_commands">
@@ -32,20 +33,17 @@
 
   <vbox flex="1">
     <hbox>
-      <spacer flex="1"/>
-      <minimonth id="ltnMinimonth" onchange="ltnMinimonthPick(this);" flex="2"/>
-      <spacer flex="1"/>
+      <minimonth id="ltnMinimonthLeft" onchange="ltnMinimonthPick('left', this);" flex="1"/>
+      <minimonth id="ltnMinimonthRight" onchange="ltnMinimonthPick('right', this);" flex="1"/>
     </hbox>
   
     <tabbox flex="1">
       <tabs>
         <tab label="Agenda"/>
-        <tab label="Todo"/>
         <tab label="Calendars"/>
       </tabs>
       <tabpanels flex="1">
         <vbox id="agenda-tab-panel"/>    
-        <vbox id="todo-tab-panel"/>
         <vbox flex="1">
           <hbox>
             <button label="New..." oncommand="ltnNewCalendar();"/>
@@ -68,9 +66,9 @@
 </vbox>
 
 <deck id="displayDeck">
-  <deck flex="1" id="calendar-view-box">
-    <calendar-month-view id="calendar-month-view" flex="1"/>
-    <calendar-multiday-view orient="vertical" id="calendar-multiday-view" flex="1"/>
+  <deck id="calendar-view-box" flex="1">
+    <calendar-month-view id="calendar-month-view" flex="1" />
+    <calendar-multiday-view orient="vertical" id="calendar-multiday-view" flex="1" />
   </deck>
 </deck>
 </overlay>

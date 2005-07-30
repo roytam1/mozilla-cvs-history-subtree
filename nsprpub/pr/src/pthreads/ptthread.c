@@ -248,11 +248,11 @@ static void *_pt_root(void *arg)
 
     /*
     * Here we set the pthread's backpointer to the PRThread to NULL.
-    * Otherwise the destructor would get called eagerly as the thread
+    * Otherwise the desctructor would get called eagerly as the thread
     * returns to the pthread runtime. The joining thread would them be
     * the proud possessor of a dangling reference. However, this is the
     * last chance to delete the object if the thread is detached, so
-    * just let the destructor do the work.
+    * just let the destuctor do the work.
     */
     if (PR_FALSE == detached)
     {
@@ -1233,8 +1233,7 @@ static void suspend_signal_handler(PRIntn sig)
 	while (me->suspend & PT_THREAD_SUSPENDED)
 	{
 #if !defined(FREEBSD) && !defined(NETBSD) && !defined(OPENBSD) \
-    && !defined(BSDI) && !defined(VMS) && !defined(UNIXWARE) \
-    && !defined(DARWIN) && !defined(RISCOS) /*XXX*/
+    && !defined(BSDI) && !defined(VMS) && !defined(UNIXWARE) && !defined(DARWIN)  /*XXX*/
         PRIntn rv;
 	    sigwait(&sigwait_set, &rv);
 #endif

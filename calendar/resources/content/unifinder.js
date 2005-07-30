@@ -647,7 +647,9 @@ function refreshEventTree( eventArray )
          break;
 
       case "future":
-         EndDate = null;
+         // XXX
+         //return( gEventSource.getAllFutureEvents() );
+         EndDate = StartDate;
          break;
 
       case "current":
@@ -663,9 +665,6 @@ function refreshEventTree( eventArray )
    }
    var s = StartDate ? jsDateToDateTime(StartDate) : null;
    var e = EndDate ? jsDateToDateTime(EndDate) : null;
-   if (StartDate && EndDate) {
-       filter |= ccalendar.ITEM_FILTER_CLASS_OCCURRENCES;
-   }
    ccalendar.getItems (filter, 0, s, e, refreshListener);
 
 }

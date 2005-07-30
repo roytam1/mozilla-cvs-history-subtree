@@ -2106,29 +2106,9 @@ PK11_SeedRandom(PK11SlotInfo *slot, unsigned char *data, int len) {
     CK_RV crv;
 
     PK11_EnterSlotMonitor(slot);
-    crv = PK11_GETTAB(slot)->C_SeedRandom(slot->session, data, (CK_ULONG)len);
+    crv = PK11_GETTAB(slot)->C_SeedRandom(slot->session,data, (CK_ULONG)len);
     PK11_ExitSlotMonitor(slot);
-    if (crv != CKR_OK) {
-	PORT_SetError(PK11_MapError(crv));
-	return SECFailure;
-    }
-    return SECSuccess;
-}
-
-
-SECStatus
-PK11_GenerateRandomOnSlot(PK11SlotInfo *slot, unsigned char *data, int len) {
-    CK_RV crv;
-
-    if (!slot->isInternal) PK11_EnterSlotMonitor(slot);
-    crv = PK11_GETTAB(slot)->C_GenerateRandom(slot->session,data, 
-							(CK_ULONG)len);
-    if (!slot->isInternal) PK11_ExitSlotMonitor(slot);
-    if (crv != CKR_OK) {
-	PORT_SetError(PK11_MapError(crv));
-	return  SECFailure;
-    }
-    return SECSuccess;
+    return (crv != CKR_OK) ? SECFailure : SECSuccess;
 }
 
 /* Attempts to update the Best Slot for "FAKE RANDOM" generation.
@@ -2167,14 +2147,17 @@ PK11_RandomUpdate(void *data, size_t bytes)
 SECStatus
 PK11_GenerateRandom(unsigned char *data,int len) {
     PK11SlotInfo *slot;
-    SECStatus rv;
+    CK_RV crv;
 
     slot = PK11_GetBestSlot(CKM_FAKE_RANDOM,NULL);
     if (slot == NULL) return SECFailure;
 
-    rv = PK11_GenerateRandomOnSlot(slot, data, len);
+    if (!slot->isInternal) PK11_EnterSlotMonitor(slot);
+    crv = PK11_GETTAB(slot)->C_GenerateRandom(slot->session,data, 
+							(CK_ULONG)len);
+    if (!slot->isInternal) PK11_ExitSlotMonitor(slot);
     PK11_FreeSlot(slot);
-    return rv;
+    return (crv != CKR_OK) ? SECFailure : SECSuccess;
 }
 
 /*

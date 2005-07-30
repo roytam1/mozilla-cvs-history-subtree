@@ -113,11 +113,11 @@ grid[anonid="time-picker-hour-grid"] {
 /* label inside each minute/hour */
 
 .time-picker-minute-label {
-  text-align : center;
+  align : center;
 }
 
 .time-picker-hour-label {
-  text-align : center;
+  align : center;
 }
 
 .time-picker-minute-label:hover {

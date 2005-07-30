@@ -66,9 +66,6 @@ function onLoad()
     updateAccept();
 
     // update datetime pickers
-    updateDuedate();
-
-    // update datetime pickers
     updateAllDay();
 
     // update recurrence button
@@ -118,10 +115,11 @@ function loadDialog(item)
 
     /* event specific properties */
     if (isEvent(item)) {
+        /* all day */
+        setElementValue("event-all-day",    item.isAllDay, "checked");
         var startDate = item.startDate.getInTimezone(kDefaultTimezone);
         var endDate = item.endDate.getInTimezone(kDefaultTimezone);
         if (startDate.isDate) {
-            setElementValue("event-all-day", true, "checked");
             endDate.day -= 1;
             endDate.normalize();
         }
@@ -131,11 +129,8 @@ function loadDialog(item)
 
     /* todo specific properties */
     if (isToDo(item)) {
-        var hasDueDate = (item.dueDate != null);
-        setElementValue("todo-has-duedate", hasDueDate, "checked");
-        if (hasDueDate)
-            setElementValue("todo-duedate", item.dueDate.jsDate);
-        setElementValue("todo-completed", item.isCompleted, "checked");
+        setElementValue("todo-duedate",   item.dueDate.jsDate);
+        setElementValue("todo-completed", (item.percentComplete == 100), "checked");
     }
 
     /* attendence */
@@ -189,27 +184,16 @@ function saveDialog(item)
     setItemProperty(item, "DESCRIPTION", getElementValue("item-description"));
 
     if (isEvent(item)) {
-        var startDate = jsDateToDateTime(getElementValue("event-starttime"));
-        var endDate = jsDateToDateTime(getElementValue("event-endtime"));
-
-        var isAllDay = getElementValue("event-all-day", "checked");
-        if (isAllDay) {
-            startDate.isDate = true;
-            startDate.normalize();
-
-            endDate.isDate = true;
-            endDate.day += 1;
-            endDate.normalize();
-        }
-        setItemProperty(item, "startDate",   startDate);
-        setItemProperty(item, "endDate",     endDate);
+        // setItemProperty will only change if the value is different and 
+        // does magic for startDate and endDate based on isAllDay, so set that first.
+        setItemProperty(item, "isAllDay",    getElementValue("event-all-day", "checked"));
+        setItemProperty(item, "startDate",   jsDateToDateTime(getElementValue("event-starttime")));
+        setItemProperty(item, "endDate",     jsDateToDateTime(getElementValue("event-endtime")));
     }
 
     if (isToDo(item)) {
-        var dueDate = getElementValue("todo-has-duedate", "checked") ? 
-            jsDateToDateTime(getElementValue("todo-duedate")) : null;
-        setItemProperty(item, "dueDate",     dueDate);
-        setItemProperty(item, "isCompleted", getElementValue("todo-completed", "checked"));
+        setItemProperty(item, "dueDate",         jsDateToDateTime(getElementValue("todo-duedate")));
+        setItemProperty(item, "percentComplete", getElementValue("todo-completed", "checked"));
     }
 
     /* attendence */
@@ -321,17 +305,6 @@ function updateAccept()
         acceptButton.removeAttribute("disabled");
 }
 
-function updateDuedate()
-{
-    if (!isToDo(window.calendarItem))
-        return;
-
-    // force something to get set if there was nothing there before
-    setElementValue("todo-duedate", getElementValue("todo-duedate"));
-
-    setElementValue("todo-duedate", !getElementValue("todo-has-duedate", "checked"), "disabled");
-}
-
 
 function updateAllDay()
 {
@@ -420,31 +393,38 @@ function editRecurrence()
 function setItemProperty(item, propertyName, value)
 {
     switch(propertyName) {
+    case "isAllDay":
+        if (value != item.isAllDay)
+            item.isAllDay = value;
+        break;
     case "startDate":
-        if (value.isDate && !item.startDate.isDate ||
-            !value.isDate && item.startDate.isDate ||
-            value.compare(item.startDate) != 0)
+        if (value.compare(item.startDate) != 0) {
+            if (item.isAllDay)
+                value.isDate = true;
             item.startDate = value;
+        }
         break;
     case "endDate":
-        if (value.isDate && !item.endDate.isDate ||
-            !value.isDate && item.endDate.isDate ||
-            value.compare(item.endDate) != 0)
+        if (value.compare(item.endDate) != 0) {
+            if (item.isAllDay) {
+                value.isDate = true;
+                value.day += 1;
+                value.normalize();
+            }
             item.endDate = value;
+        }
         break;
 
 
     case "dueDate":
-        if (value == item.dueDate)
-            break;
-        if ((value && !item.dueDate) ||
-            (!value && item.dueDate) ||
-            (value.compare(item.dueDate) != 0))
+        if (value.compare(item.dueDate) != 0) {
             item.dueDate = value;
+        }
         break;
-    case "isCompleted":
-        if (value != item.isCompleted)
-            item.isCompleted = value;
+    case "percentComplete":
+        var percent = (value) ? 100 : 0;
+        if (percent != item.percentComplete)
+            item.percentComplete = percent;
         break;
 
     case "title":

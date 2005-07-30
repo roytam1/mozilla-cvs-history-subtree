@@ -89,7 +89,7 @@ MKSHLIB                 = $(CXX) $(CXXFLAGS) $(DSO_LDOPTS) -o $@
 MKCSHLIB                = $(CC) $(CFLAGS) $(DSO_LDOPTS) -o $@
 MKSHLIB_FORCE_ALL       = 
 MKSHLIB_UNFORCE_ALL     = 
-DSO_LDOPTS              = -Zomf -Zdll -Zmap
+DSO_LDOPTS              = -Zomf -Zdll
 SHLIB_LDSTARTFILE	= 
 SHLIB_LDENDFILE		= 
 ifdef MAPFILE

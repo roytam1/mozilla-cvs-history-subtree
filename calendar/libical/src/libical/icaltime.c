@@ -45,7 +45,7 @@
 #include "icalvalue.h"
 
 #ifdef WIN32
-#include <windows.h>
+#include <Windows.h>
 
 #define snprintf      _snprintf
 #define strcasecmp    stricmp
