@@ -198,9 +198,9 @@ public:
   // Restore the window state from aState.
   virtual nsresult RestoreWindowState(nsISupports *aState) = 0;
 
-  nsPIDOMWindow *GetOuterWindow() const
+  nsPIDOMWindow *GetOuterWindow()
   {
-    return mOuterWindow;
+    return mOuterWindow ? mOuterWindow : this;
   }
 
   nsPIDOMWindow *GetCurrentInnerWindow() const

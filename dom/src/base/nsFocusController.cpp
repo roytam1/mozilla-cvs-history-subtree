@@ -151,10 +151,9 @@ NS_IMETHODIMP
 nsFocusController::SetFocusedWindow(nsIDOMWindowInternal* aWindow)
 {
   nsCOMPtr<nsPIDOMWindow> pwin = do_QueryInterface(aWindow);
-  nsPIDOMWindow *outerWin;
 
-  if (pwin && (outerWin = pwin->GetOuterWindow())) {
-    pwin = outerWin;
+  if (pwin) {
+    pwin = pwin->GetOuterWindow();
   }
 
   NS_ASSERTION(!pwin || !pwin->IsInnerWindow(),

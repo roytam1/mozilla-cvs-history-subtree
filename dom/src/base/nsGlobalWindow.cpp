@@ -217,15 +217,6 @@ PRInt32 gTimeoutCnt                                    = 0;
   }                                                                           \
   PR_END_MACRO
 
-#define ASSIGN_TO_OUTER_MEMBER(member, value)                                 \
-  PR_BEGIN_MACRO                                                              \
-  if (IsInnerWindow()) {                                                      \
-    GetOuterWindowInternal()->member = (value);                               \
-  } else {                                                                    \
-    member = (value);                                                         \
-  }                                                                           \
-  PR_END_MACRO
-
 // CIDs
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 #ifdef OJI
@@ -264,8 +255,7 @@ nsGlobalWindow::nsGlobalWindow(nsGlobalWindow *aOuterWindow)
     mTimeoutPublicIdCounter(1),
     mTimeoutFiringDepth(0),
     mGlobalObjectOwner(nsnull),
-    mDocShell(nsnull),
-    mCurrentEvent(0)
+    mDocShell(nsnull)
 {
   // Window object's are also PRCList's, the list is for keeping all
   // innter windows reachable from the outer so that the proper
@@ -301,7 +291,7 @@ nsGlobalWindow::~nsGlobalWindow()
 #endif
 
   nsGlobalWindow *outer = GetOuterWindowInternal();
-  if (outer && outer->mInnerWindow == this) {
+  if (outer->mInnerWindow == this) {
     outer->mInnerWindow = nsnull;
   }
 
@@ -1071,6 +1061,8 @@ nsGlobalWindow::HandleDOMEvent(nsPresContext* aPresContext, nsEvent* aEvent,
   FORWARD_TO_INNER(HandleDOMEvent,
                    (aPresContext, aEvent, aDOMEvent, aFlags, aEventStatus));
 
+  nsGlobalWindow *outer = GetOuterWindowInternal();
+
   // Make sure to tell the event that dispatch has started.
   NS_MARK_EVENT_DISPATCH_STARTED(aEvent);
 
@@ -1078,9 +1070,6 @@ nsGlobalWindow::HandleDOMEvent(nsPresContext* aPresContext, nsEvent* aEvent,
   PRBool externalDOMEvent = PR_FALSE;
   nsIDOMEvent *domEvent = nsnull;
   static PRUint32 count = 0;
-
-  nsEvent *oldEvent = mCurrentEvent;
-  mCurrentEvent = aEvent;
 
   /* mChromeEventHandler and mContext go dangling in the middle of this
      function under some circumstances (events that destroy the window)
@@ -1117,7 +1106,7 @@ nsGlobalWindow::HandleDOMEvent(nsPresContext* aPresContext, nsEvent* aEvent,
 
   // if the window is deactivated while in full screen mode,
   // restore OS chrome, and hide it again upon re-activation
-  if (mFullScreen && (NS_EVENT_FLAG_BUBBLE & aFlags)) {
+  if (outer->mFullScreen && (NS_EVENT_FLAG_BUBBLE & aFlags)) {
     if (aEvent->message == NS_DEACTIVATE || aEvent->message == NS_ACTIVATE) {
       nsCOMPtr<nsIFullScreen> fullScreen =
         do_GetService("@mozilla.org/browser/fullscreen;1");
@@ -1152,7 +1141,7 @@ nsGlobalWindow::HandleDOMEvent(nsPresContext* aPresContext, nsEvent* aEvent,
   }
 
   if (aEvent->message == NS_PAGE_UNLOAD) {
-    ASSIGN_TO_OUTER_MEMBER(mIsDocumentLoaded, PR_FALSE);
+    mIsDocumentLoaded = PR_FALSE;
   }
 
   // Capturing stage
@@ -1185,7 +1174,7 @@ nsGlobalWindow::HandleDOMEvent(nsPresContext* aPresContext, nsEvent* aEvent,
   }
 
   if (aEvent->message == NS_PAGE_LOAD) {
-    ASSIGN_TO_OUTER_MEMBER(mIsDocumentLoaded, PR_TRUE);
+    mIsDocumentLoaded = PR_TRUE;
   }
 
   // Bubbling stage
@@ -1258,7 +1247,6 @@ nsGlobalWindow::HandleDOMEvent(nsPresContext* aPresContext, nsEvent* aEvent,
     NS_MARK_EVENT_DISPATCH_DONE(aEvent);
   }
 
-  mCurrentEvent = oldEvent;
   return ret;
 }
 
@@ -5107,6 +5095,8 @@ nsGlobalWindow::GetInterface(const nsIID & aIID, void **aSink)
     }
   }
   else if (aIID.Equals(NS_GET_IID(nsIDOMWindowUtils))) {
+    FORWARD_TO_OUTER(GetInterface, (aIID, aSink));
+
     nsCOMPtr<nsISupports> utils(do_QueryReferent(mWindowUtils));
     if (utils) {
       *aSink = utils;
@@ -6639,7 +6629,7 @@ nsGlobalWindow::RestoreWindowState(nsISupports *aState)
 
   // If our state is being restored from history, we won't be getting an onload
   // event.  Make sure we're marked as being completely loaded.
-  ASSIGN_TO_OUTER_MEMBER(mIsDocumentLoaded, PR_TRUE);
+  mIsDocumentLoaded = PR_TRUE;
 
   return ResumeTimeouts();
 }

@@ -174,8 +174,9 @@ GetDocumentOuterWindow(nsIDocument *aDocument)
     nsIScriptGlobalObject *sgo = aDocument->GetScriptGlobalObject();
     nsCOMPtr<nsPIDOMWindow> win = do_QueryInterface(sgo);
 
-    if (win && (win = win->GetOuterWindow())) {
-      nsCOMPtr<nsIScriptGlobalObject> outersgo = do_QueryInterface(win);
+    if (win) {
+      nsCOMPtr<nsIScriptGlobalObject> outersgo =
+        do_QueryInterface(win->GetOuterWindow());
 
       return outersgo;
     }

@@ -2717,7 +2717,7 @@ static void CheckForFocus(nsPIDOMWindow* aOurWindow,
     nsCOMPtr<nsPIDOMWindow> curWin =
       do_QueryInterface(curDoc->GetScriptGlobalObject());
 
-    if (curWin == ourWin || !curWin || curWin->GetOuterWindow() == ourWin)
+    if (!curWin || curWin->GetOuterWindow() == ourWin)
       break;
 
     curDoc = curDoc->GetParentDocument();
@@ -4365,16 +4365,12 @@ PresShell::GoToAnchor(const nsAString& aAnchorName, PRBool aScroll)
       nsCOMPtr<nsPIDOMWindow> win =
         do_QueryInterface(mDocument->GetScriptGlobalObject());
 
-      if (win->IsInnerWindow()) {
-        win = win->GetOuterWindow();
-      }
-
       if (win) {
         nsCOMPtr<nsIFocusController> focusController = win->GetRootFocusController();
         if (focusController) {
           nsCOMPtr<nsIDOMWindowInternal> focusedWin;
           focusController->GetFocusedWindow(getter_AddRefs(focusedWin));
-          if (SameCOMIdentity(win, focusedWin)) {
+          if (SameCOMIdentity(win->GetOuterWindow(), focusedWin)) {
             esm->ChangeFocusWith(nsnull, nsIEventStateManager::eEventFocusedByApplication);
           }
         }

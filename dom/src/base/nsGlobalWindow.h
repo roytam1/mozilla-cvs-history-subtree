@@ -239,7 +239,7 @@ public:
 
   nsGlobalWindow *GetOuterWindowInternal()
   {
-    return NS_STATIC_CAST(nsGlobalWindow *, mOuterWindow);
+    return NS_STATIC_CAST(nsGlobalWindow *, GetOuterWindow());
   }
 
   nsGlobalWindow *GetCurrentInnerWindowInternal()
@@ -249,11 +249,7 @@ public:
 
   nsIDocShell *GetDocShellInternal()
   {
-    if (IsInnerWindow()) {
-      return GetOuterWindowInternal()->GetDocShellInternal();
-    }
-
-    return mDocShell;
+    return GetOuterWindowInternal()->mDocShell;
   }
 
   static void ShutDown();
@@ -395,7 +391,6 @@ protected:
 
   nsIScriptGlobalObjectOwner*   mGlobalObjectOwner; // Weak Reference
   nsIDocShell*                  mDocShell;  // Weak Reference
-  nsEvent*                      mCurrentEvent;
   nsCOMPtr<nsIDOMCrypto>        mCrypto;
   nsCOMPtr<nsIDOMPkcs11>        mPkcs11;
 

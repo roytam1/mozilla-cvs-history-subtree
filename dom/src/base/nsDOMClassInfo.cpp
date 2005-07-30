@@ -3798,7 +3798,8 @@ nsWindowSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 #endif
 
   if (win->IsOuterWindow()) {
-    // XXXjst: Do security checks here!
+    // XXXjst: Do security checks here when we remove the security
+    // checks on the inner window.
 
     nsGlobalWindow *innerWin = win->GetCurrentInnerWindowInternal();
 
@@ -3919,7 +3920,8 @@ nsWindowSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 #endif
 
   if (win->IsOuterWindow()) {
-    // XXXjst: Do security checks here!
+    // XXXjst: Do security checks here when we remove the security
+    // checks on the inner window.
 
     nsGlobalWindow *innerWin = win->GetCurrentInnerWindowInternal();
 
@@ -4007,7 +4009,8 @@ nsWindowSH::AddProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 #endif
 
   if (win->IsOuterWindow()) {
-    // XXXjst: Do security checks here!
+    // XXXjst: Do security checks here when we remove the security
+    // checks on the inner window.
 
     nsGlobalWindow *innerWin = win->GetCurrentInnerWindowInternal();
 
@@ -4018,18 +4021,10 @@ nsWindowSH::AddProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 #endif
 
       // Forward the add to the inner object
-      if (JSVAL_IS_STRING(id)) {
-        JSString *str = JSVAL_TO_STRING(id);
-
-        *_retval = ::JS_SetUCProperty(cx, innerObj, ::JS_GetStringChars(str),
-                                      ::JS_GetStringLength(str), vp);
-      } else if (JSVAL_IS_INT(id)) {
-        *_retval = ::JS_SetElement(cx, innerObj, JSVAL_TO_INT(id), vp);
-      } else {
-        NS_ERROR("Write me!");
-
-        return NS_ERROR_NOT_IMPLEMENTED;
-      }
+      jsid interned_id;
+      *_retval = (::JS_ValueToId(cx, id, &interned_id) &&
+                  OBJ_DEFINE_PROPERTY(cx, innerObj, interned_id, *vp, nsnull,
+                                      nsnull, JSPROP_ENUMERATE, nsnull));
 
       return NS_OK;
     }
@@ -4072,6 +4067,7 @@ nsWindowSH::DelProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 {
   nsGlobalWindow *win = nsGlobalWindow::FromWrapper(wrapper);
 
+#ifdef DEBUG_SH_FORWARDING
   {
     nsDependentJSString str(::JS_ValueToString(cx, id));
 
@@ -4084,8 +4080,28 @@ nsWindowSH::DelProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
       printf("Property '%s' del on outer window %p\n",
              NS_ConvertUTF16toUTF8(str).get(), (void *)win);
     }
+  }
+#endif
 
-    // XXXjst: Forward delete to inner if celled on outer.
+  if (win->IsOuterWindow()) {
+    // XXXjst: Do security checks here when we remove the security
+    // checks on the inner window.
+
+    nsGlobalWindow *innerWin = win->GetCurrentInnerWindowInternal();
+
+    JSObject *innerObj;
+    if (innerWin && (innerObj = innerWin->GetGlobalJSObject())) {
+#ifdef DEBUG_SH_FORWARDING
+      printf(" --- Forwarding add to inner window %p\n", (void *)innerWin);
+#endif
+
+      // Forward the del to the inner object
+      jsid interned_id;
+      *_retval = (::JS_ValueToId(cx, id, &interned_id) &&
+                  OBJ_DELETE_PROPERTY(cx, innerObj, interned_id, vp));
+
+      return NS_OK;
+    }
   }
 
   if (id == sLocation_id) {
@@ -5253,8 +5269,13 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   }
 #endif
 
-  if (win->IsOuterWindow()) {
-    // XXXjst: Do security checks here!
+  // Note, we won't forward resolve of the location property to the
+  // inner window, we need to deal with that one for the outer too
+  // since we've got special security protection code for that
+  // property.
+  if (win->IsOuterWindow() && id != sLocation_id) {
+    // XXXjst: Do security checks here when we remove the security
+    // checks on the inner window.
 
     nsGlobalWindow *innerWin = win->GetCurrentInnerWindowInternal();
 
@@ -5605,9 +5626,8 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     }
 
     if (id == sWindow_id) {
-      if (win->IsInnerWindow()) {
-        win = win->GetOuterWindowInternal();
-      }
+      // window should *always* be the outer window object.
+      win = win->GetOuterWindowInternal();
 
       if (!::JS_DefineUCProperty(cx, obj, ::JS_GetStringChars(str),
                                  ::JS_GetStringLength(str),
@@ -5680,17 +5700,11 @@ nsWindowSH::Equality(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
 
   nsGlobalWindow *win = nsGlobalWindow::FromWrapper(wrapper);
 
-  nsPIDOMWindow *outer;
-
-  if (win->IsInnerWindow()) {
-    outer = win->GetOuterWindow();
-  } else {
-    outer = win;
-  }
-
   nsCOMPtr<nsPIDOMWindow> other = do_QueryWrappedNative(other_wrapper);
 
-  *bp = outer == other || outer == other->GetOuterWindow();
+  if (other) {
+    *bp = win->GetOuterWindow() == other->GetOuterWindow();
+  }
 
   return NS_OK;
 }
@@ -5701,11 +5715,8 @@ nsWindowSH::OuterObject(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
 {
   nsGlobalWindow *win = nsGlobalWindow::FromWrapper(wrapper);
 
-   if (win->IsInnerWindow()) {
-    *_retval = win->GetOuterWindowInternal()->GetGlobalJSObject();
-  } else {
-    *_retval = obj;
-  }
+  // Always return the outer window.
+  *_retval = win->GetOuterWindowInternal()->GetGlobalJSObject();
 
   return NS_OK;
 }
