@@ -36,9 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-//#define DEBUG_SH_FORWARDING 1
-//#define DEBUG_PRINT_INNER 1
-
 #include "nscore.h"
 #include "nsDOMClassInfo.h"
 #include "nsCRT.h"
