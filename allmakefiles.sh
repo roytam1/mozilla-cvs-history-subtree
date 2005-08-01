@@ -376,6 +376,7 @@ MAKEFILES_oji="
 modules/oji/Makefile
 modules/oji/public/Makefile
 modules/oji/src/Makefile
+plugin/oji/JEP/Makefile
 "
 
 MAKEFILES_plugin="
@@ -815,6 +816,7 @@ security/manager/pki/Makefile
 security/manager/pki/resources/Makefile
 security/manager/pki/src/Makefile
 security/manager/pki/public/Makefile
+security/manager/locales/Makefile
 netwerk/protocol/http/public/Makefile
 netwerk/build/Makefile
 netwerk/base/public/Makefile
@@ -844,6 +846,7 @@ extensions/inspector/base/src/Makefile
 extensions/inspector/build/Makefile
 extensions/inspector/build/src/Makefile
 extensions/inspector/resources/Makefile
+extensions/inspector/resources/locale/Makefile
 "
 
 MAKEFILES_spatialnavigation="
@@ -887,18 +890,6 @@ extensions/typeaheadfind/src/Makefile
 extensions/typeaheadfind/Makefile
 "
 
-MAKEFILES_firefox_branding="
-other-licenses/branding/firefox/Makefile
-other-licenses/branding/firefox/content/Makefile
-other-licenses/branding/firefox/locales/Makefile
-"
-
-MAKEFILES_thunderbird_branding="
-other-licenses/branding/thunderbird/Makefile
-other-licenses/branding/thunderbird/content/Makefile
-other-licenses/branding/thunderbird/locales/Makefile
-"
-
 MAKEFILES_phoenix="
 browser/Makefile
 browser/app/Makefile
@@ -921,7 +912,6 @@ browser/components/sidebar/src/Makefile
 browser/components/shell/Makefile
 browser/components/shell/public/Makefile
 browser/components/shell/src/Makefile
-browser/extensions/inspector/Makefile
 browser/extensions/Makefile
 browser/extensions/layout-debug/Makefile
 browser/extensions/package-fixup/Makefile
@@ -938,6 +928,7 @@ browser/themes/winstripe/Makefile
 
 MAKEFILES_suite="
 suite/Makefile
+suite/branding/Makefile
 suite/components/Makefile
 suite/components/xulappinfo/Makefile
 "
@@ -1037,7 +1028,6 @@ toolkit/themes/winstripe/global/Makefile
 toolkit/themes/winstripe/help/Makefile
 toolkit/themes/winstripe/mozapps/Makefile
 toolkit/xre/Makefile
-toolkit/components/passwordmgr/resources/content/contents.rdf
 "
 
 MAKEFILES_zap="
@@ -1070,7 +1060,7 @@ mail/components/compose/Makefile
 mail/components/addrbook/Makefile
 mail/components/preferences/Makefile
 mail/components/build/Makefile
-mail/components/gnome/Makefile
+mail/components/shell/Makefile
 mail/extensions/Makefile
 mail/extensions/smime/Makefile
 mail/extensions/offline/Makefile
@@ -1470,6 +1460,7 @@ for extension in $MOZ_EXTENSIONS; do
             " ;;
         reporter ) MAKEFILES_extensions="$MAKEFILES_extensions
             extensions/reporter/Makefile
+	    extensions/reporter/locales/Makefile
             " ;;
         spellcheck ) MAKEFILES_extensions="$MAKEFILES_extensions
             extensions/spellcheck/Makefile
@@ -1658,9 +1649,6 @@ if test -n "$MOZ_CALENDAR"; then
 fi
 
 if test -n "$MOZ_PHOENIX"; then
-    if test -n "$MOZ_USE_OFFICIAL_BRANDING"; then
-        add_makefiles "$MAKEFILES_firefox_branding"
-    fi
     add_makefiles "$MAKEFILES_phoenix"
 fi
 
@@ -1679,9 +1667,6 @@ fi
 add_makefiles "$MAKEFILES_zap"
 
 if test -n "$MOZ_THUNDERBIRD"; then
-    if test -n "$MOZ_USE_OFFICIAL_BRANDING"; then
-        add_makefiles "$MAKEFILES_thunderbird_branding"
-    fi
     add_makefiles "$MAKEFILES_thunderbird"
 fi
 

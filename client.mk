@@ -42,7 +42,7 @@
 #    1. cvs co mozilla/client.mk
 #    2. cd mozilla
 #    3. create your .mozconfig file with
-#       mk_add_options MOZ_CO_PROJECT=suite,browser,mail,xulrunner
+#       mk_add_options MOZ_CO_PROJECT=suite,browser,mail,minimo,xulrunner
 #    4. gmake -f client.mk 
 #
 # This script will pick up the CVSROOT from the CVS/Root file. If you wish
@@ -58,6 +58,7 @@
 #     suite (Seamonkey suite)
 #     browser (aka Firefox)
 #     mail (aka Thunderbird)
+#     minimo (small browser for devices)
 #     composer (standalone composer, aka NVU)
 #     calendar (aka Sunbird, use this to build the calendar extensions also)
 #     xulrunner
@@ -93,6 +94,7 @@ AVAILABLE_PROJECTS = \
   toolkit \
   browser \
   mail \
+  minimo \
   composer \
   calendar \
   xulrunner \
@@ -145,14 +147,19 @@ MODULES_browser :=                              \
   mozilla/other-licenses/7zstub/firefox         \
   $(NULL)
 
+MODULES_minimo :=                               \
+  $(MODULES_toolkit)                            \
+  $(NULL)
+
 LOCALES_browser :=                              \
   $(LOCALES_toolkit)                            \
   browser                                       \
   other-licenses/branding/firefox               \
-  extensions/reporter                           \
   $(NULL)
 
 BOOTSTRAP_browser := mozilla/browser/config/mozconfig
+
+BOOTSTRAP_minimo := mozilla/embedding/minimo
 
 MODULES_mail :=                                 \
   $(MODULES_toolkit)                            \
@@ -702,8 +709,6 @@ $(TOPSRCDIR)/configure: $(TOPSRCDIR)/configure.in $(EXTRA_CONFIG_DEPS)
 	cd $(TOPSRCDIR); $(AUTOCONF)
 endif
 
-CONFIG_STATUS_DEPS_L10N := $(wildcard $(TOPSRCDIR)/l10n/makefiles.all)
-
 CONFIG_STATUS_DEPS := \
 	$(TOPSRCDIR)/configure \
 	$(TOPSRCDIR)/allmakefiles.sh \
@@ -711,7 +716,6 @@ CONFIG_STATUS_DEPS := \
 	$(wildcard $(TOPSRCDIR)/nsprpub/configure) \
 	$(wildcard $(TOPSRCDIR)/directory/c-sdk/configure) \
 	$(wildcard $(TOPSRCDIR)/mailnews/makefiles) \
-	$(CONFIG_STATUS_DEPS_L10N) \
 	$(wildcard $(TOPSRCDIR)/themes/makefiles) \
 	$(wildcard $(TOPSRCDIR)/config/milestone.txt) \
 	$(wildcard $(TOPSRCDIR)/config/chrome-versions.sh) \
@@ -730,7 +734,7 @@ ifdef MOZ_TOOLS
   CONFIGURE := $(TOPSRCDIR)/configure
 endif
 
-$(OBJDIR)/Makefile $(OBJDIR)/config.status: $(CONFIG_STATUS_DEPS)
+configure:
 	@if test ! -d $(OBJDIR); then $(MKDIR) $(OBJDIR); else true; fi
 	@echo cd $(OBJDIR);
 	@echo $(CONFIGURE) $(CONFIGURE_ARGS)
@@ -738,6 +742,9 @@ $(OBJDIR)/Makefile $(OBJDIR)/config.status: $(CONFIG_STATUS_DEPS)
 	  || ( echo "*** Fix above errors and then restart with\
                \"$(MAKE) -f client.mk build\"" && exit 1 )
 	@touch $(OBJDIR)/Makefile
+
+$(OBJDIR)/Makefile $(OBJDIR)/config.status: $(CONFIG_STATUS_DEPS)
+	@$(MAKE) -f client.mk configure
 
 ifdef CONFIG_STATUS
 $(OBJDIR)/config/autoconf.mk: $(TOPSRCDIR)/config/autoconf.mk.in
@@ -801,8 +808,6 @@ endif
 echo_objdir:
 	@echo $(OBJDIR)
 
-.PHONY: checkout real_checkout depend build export libs alldep install clean realclean distclean cleansrcdir pull_all build_all clobber clobber_all pull_and_build_all everything
-
 #######################################################################
 # Branch maintenance
 
@@ -862,4 +867,7 @@ statictag_zap:
 
 branchtag_zap:
 	cvs -z3 tag -b ZAP_20050610_BRANCH $(ZAP_BRANCH_MODIFIED_FILES)
+
+
+.PHONY: checkout real_checkout depend build export libs alldep install clean realclean distclean cleansrcdir pull_all build_all clobber clobber_all pull_and_build_all everything configure
 

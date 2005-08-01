@@ -624,6 +624,10 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
       NS_IOSERVICE_CID,
       NS_IOSERVICE_CONTRACTID,
       nsIOServiceConstructor },
+    { NS_IOSERVICE_CLASSNAME,
+      NS_IOSERVICE_CID,
+      NS_NETUTIL_CONTRACTID,
+      nsIOServiceConstructor },
     { NS_IOTHREADPOOL_CLASSNAME,
       NS_IOTHREADPOOL_CID,
       NS_IOTHREADPOOL_CONTRACTID,
@@ -1036,6 +1040,11 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
     { "about:about",
       NS_ABOUT_REDIRECTOR_MODULE_CID,
       NS_ABOUT_MODULE_CONTRACTID_PREFIX "about",
+      nsAboutRedirector::Create
+    },
+    { "about:neterror",
+      NS_ABOUT_REDIRECTOR_MODULE_CID,
+      NS_ABOUT_MODULE_CONTRACTID_PREFIX "neterror",
       nsAboutRedirector::Create
     },
 

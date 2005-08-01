@@ -83,13 +83,13 @@ char* xpc_CloneAllAccess()
 
 char * xpc_CheckAccessList(const PRUnichar* wideName, const char* list[])
 {
-    nsCAutoString asciiName;   
+    nsCAutoString asciiName;
     CopyUTF16toUTF8(nsDependentString(wideName), asciiName);
 
     for(const char** p = list; *p; p++)
         if(!strcmp(*p, asciiName.get()))
             return xpc_CloneAllAccess();
-    
+
     return nsnull;
 }
 #endif
@@ -155,7 +155,7 @@ nsXPCComponents_Interfaces::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
     {
         case JSENUMERATE_INIT:
         {
-            if(!mManager || 
+            if(!mManager ||
                NS_FAILED(mManager->EnumerateInterfaces(&e)) || !e ||
                NS_FAILED(e->First()))
 
@@ -174,7 +174,7 @@ nsXPCComponents_Interfaces::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
             nsCOMPtr<nsISupports> isup;
 
             e = (nsIEnumerator*) JSVAL_TO_PRIVATE(*statep);
-            
+
             while(1)
             {
                 if(NS_ENUMERATOR_FALSE == e->IsDone() &&
@@ -188,7 +188,7 @@ nsXPCComponents_Interfaces::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
                         const char* name;
                         PRBool scriptable;
 
-                        if(NS_SUCCEEDED(iface->IsScriptable(&scriptable)) && 
+                        if(NS_SUCCEEDED(iface->IsScriptable(&scriptable)) &&
                            !scriptable)
                         {
                             continue;
@@ -236,7 +236,7 @@ nsXPCComponents_Interfaces::NewResolve(nsIXPConnectWrappedNative *wrapper,
         if(!info)
             return NS_OK;
 
-        nsCOMPtr<nsIJSIID> nsid = 
+        nsCOMPtr<nsIJSIID> nsid =
             dont_AddRef(NS_STATIC_CAST(nsIJSIID*, nsJSIID::NewID(info)));
 
         if(nsid)
@@ -384,7 +384,7 @@ nsXPCComponents_InterfacesByID::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
     {
         case JSENUMERATE_INIT:
         {
-            if(!mManager || 
+            if(!mManager ||
                NS_FAILED(mManager->EnumerateInterfaces(&e)) || !e ||
                NS_FAILED(e->First()))
 
@@ -403,7 +403,7 @@ nsXPCComponents_InterfacesByID::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
             nsCOMPtr<nsISupports> isup;
 
             e = (nsIEnumerator*) JSVAL_TO_PRIVATE(*statep);
-            
+
             while(1)
             {
                 if(NS_ENUMERATOR_FALSE == e->IsDone() &&
@@ -418,7 +418,7 @@ nsXPCComponents_InterfacesByID::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
                         JSString* jsstr;
                         PRBool scriptable;
 
-                        if(NS_SUCCEEDED(iface->IsScriptable(&scriptable)) && 
+                        if(NS_SUCCEEDED(iface->IsScriptable(&scriptable)) &&
                            !scriptable)
                         {
                             continue;
@@ -476,7 +476,7 @@ name)).get()))
         if(!info)
             return NS_OK;
 
-        nsCOMPtr<nsIJSIID> nsid = 
+        nsCOMPtr<nsIJSIID> nsid =
             dont_AddRef(NS_STATIC_CAST(nsIJSIID*, nsJSIID::NewID(info)));
 
         if (!nsid)
@@ -611,8 +611,8 @@ nsXPCComponents_Classes::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
     {
         case JSENUMERATE_INIT:
         {
-            nsCOMPtr<nsIComponentRegistrar> compMgr;            
-            if(NS_FAILED(NS_GetComponentRegistrar(getter_AddRefs(compMgr))) || !compMgr || 
+            nsCOMPtr<nsIComponentRegistrar> compMgr;
+            if(NS_FAILED(NS_GetComponentRegistrar(getter_AddRefs(compMgr))) || !compMgr ||
                NS_FAILED(compMgr->EnumerateContractIDs(&e)) || !e )
             {
                 *statep = JSVAL_NULL;
@@ -629,7 +629,7 @@ nsXPCComponents_Classes::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
             nsCOMPtr<nsISupports> isup;
             PRBool hasMore;
             e = (nsISimpleEnumerator*) JSVAL_TO_PRIVATE(*statep);
- 
+
             if(NS_SUCCEEDED(e->HasMoreElements(&hasMore)) && hasMore &&
                NS_SUCCEEDED(e->GetNext(getter_AddRefs(isup))) && isup)
             {
@@ -767,8 +767,8 @@ nsXPCComponents_ClassesByID::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
     {
         case JSENUMERATE_INIT:
         {
-            nsCOMPtr<nsIComponentRegistrar> compMgr;            
-            if(NS_FAILED(NS_GetComponentRegistrar(getter_AddRefs(compMgr))) || !compMgr || 
+            nsCOMPtr<nsIComponentRegistrar> compMgr;
+            if(NS_FAILED(NS_GetComponentRegistrar(getter_AddRefs(compMgr))) || !compMgr ||
                NS_FAILED(compMgr->EnumerateCIDs(&e)) || !e )
             {
                 *statep = JSVAL_NULL;
@@ -826,8 +826,8 @@ IsRegisteredCLSID(const char* str)
     if(!id.Parse(str))
         return PR_FALSE;
 
-    nsCOMPtr<nsIComponentRegistrar> compMgr;            
-    if(NS_FAILED(NS_GetComponentRegistrar(getter_AddRefs(compMgr))) || !compMgr || 
+    nsCOMPtr<nsIComponentRegistrar> compMgr;
+    if(NS_FAILED(NS_GetComponentRegistrar(getter_AddRefs(compMgr))) || !compMgr ||
        NS_FAILED(compMgr->IsCIDRegistered(id, &registered)))
         return PR_FALSE;
 
@@ -1667,7 +1667,7 @@ nsXPCComponents_Constructor::CallOrConstruct(nsIXPConnectWrappedNative *wrapper,
     {
         nsCOMPtr<nsIInterfaceInfo> info;
         xpc->GetInfoForIID(&NS_GET_IID(nsISupports), getter_AddRefs(info));
-        
+
         if(info)
         {
             cInterfaceID =
@@ -1818,7 +1818,7 @@ nsXPCComponents_Utils::LookupMethod()
     // to this object - though we don't verify that it is to this exact method)
     nsCOMPtr<nsISupports> callee;
     cc->GetCallee(getter_AddRefs(callee));
-    if(!callee || callee.get() != 
+    if(!callee || callee.get() !=
                   NS_STATIC_CAST(const nsISupports*,
                                  NS_STATIC_CAST(const nsIXPCComponents_Utils*,this)))
         return NS_ERROR_FAILURE;
@@ -1880,7 +1880,7 @@ nsXPCComponents_Utils::LookupMethod()
     XPCNativeMember* member = inner_cc.GetMember();
     if(!member || member->IsConstant())
         return NS_ERROR_XPC_BAD_CONVERT_JS;
-    
+
     // it would a be a big surprise if there is a member without an interface :)
     XPCNativeInterface* iface = inner_cc.GetInterface();
     if(!iface)
@@ -1891,8 +1891,12 @@ nsXPCComponents_Utils::LookupMethod()
     if(!member->GetValue(inner_cc, iface, &funval))
         return NS_ERROR_XPC_BAD_CONVERT_JS;
 
-    // clone a function we can use for this object 
-    JSObject* funobj = xpc_CloneJSFunction(inner_cc, JSVAL_TO_OBJECT(funval), 
+    // Make sure the function we're cloning doesn't go away while
+    // we're cloning it.
+    AUTO_MARK_JSVAL(inner_cc, funval);
+
+    // clone a function we can use for this object
+    JSObject* funobj = xpc_CloneJSFunction(inner_cc, JSVAL_TO_OBJECT(funval),
                                            wrapper->GetFlatJSObject());
     if(!funobj)
         return NS_ERROR_XPC_BAD_CONVERT_JS;
@@ -1933,7 +1937,7 @@ nsXPCComponents_Utils::ReportError()
     // to this object - though we don't verify that it is to this exact method)
     nsCOMPtr<nsISupports> callee;
     cc->GetCallee(getter_AddRefs(callee));
-    if(!callee || callee.get() != 
+    if(!callee || callee.get() !=
                   NS_STATIC_CAST(const nsISupports*,
                                  NS_STATIC_CAST(const nsIXPCComponents_Utils*,this))) {
         NS_ERROR("reportError() must only be called from JS!");
@@ -2033,7 +2037,7 @@ JSDump(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     JSString *str;
     if (!argc)
         return JS_TRUE;
-    
+
     str = JS_ValueToString(cx, argv[0]);
     if (!str)
         return JS_FALSE;
@@ -2084,6 +2088,18 @@ static JSFunctionSpec SandboxFunctions[] = {
 
 #endif /* !XPCONNECT_STANDALONE */
 
+/*
+ * Throw an exception on caller_cx that is made from message and report,
+ * which were reported as uncaught on cx.
+ */
+static void
+SandboxErrorReporter(JSContext *cx, const char *message, JSErrorReport *report)
+{
+    JSContext *caller_cx = NS_STATIC_CAST(JSContext*, JS_GetContextPrivate(cx));
+
+    JS_ThrowReportedError(caller_cx, message, report);
+}
+
 /* void evalInSandbox(in AString source, in AUTF8String codebase); */
 NS_IMETHODIMP
 nsXPCComponents_Utils::EvalInSandbox(const nsAString &source,
@@ -2093,7 +2109,7 @@ nsXPCComponents_Utils::EvalInSandbox(const nsAString &source,
     return NS_ERROR_NOT_AVAILABLE;
 #else
     nsresult rv;
-    
+
     nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID(), &rv));
     if(NS_FAILED(rv))
         return rv;
@@ -2146,10 +2162,10 @@ nsXPCComponents_Utils::EvalInSandbox(const nsAString &source,
        JS_ReportError(cx, "Can't create URL for evalInSandbox");
        return rv;
     }
-    
+
     JSPrincipals *jsPrincipals;
     nsCOMPtr<nsIPrincipal> principal;
-    nsCOMPtr<nsIScriptSecurityManager> secman = 
+    nsCOMPtr<nsIScriptSecurityManager> secman =
         do_GetService(kScriptSecurityManagerContractID);
     if(!secman ||
        NS_FAILED(secman->GetCodebasePrincipal(iURL,
@@ -2160,7 +2176,7 @@ nsXPCComponents_Utils::EvalInSandbox(const nsAString &source,
        JS_ReportError(cx, "Can't get principals for evalInSandbox");
        return NS_ERROR_FAILURE;
     }
-    
+
     JSContext *sandcx = JS_NewContext(JS_GetRuntime(cx), 1024);
     if(!sandcx) {
         JS_ReportError(cx, "Can't prepare context for evalInSandbox");
@@ -2175,7 +2191,7 @@ nsXPCComponents_Utils::EvalInSandbox(const nsAString &source,
             JSPRINCIPALS_DROP(cx, jsPrincipals);
             return NS_ERROR_OUT_OF_MEMORY;
         }
-    
+
         rv = xpc->InitClasses(sandcx, sandbox);
         if (NS_SUCCEEDED(rv) &&
             !JS_DefineFunctions(sandcx, sandbox, SandboxFunctions)) {
@@ -2185,21 +2201,21 @@ nsXPCComponents_Utils::EvalInSandbox(const nsAString &source,
             JS_DestroyContext(sandcx);
             JSPRINCIPALS_DROP(cx, jsPrincipals);
             return rv;
-        }        
-    }        
+        }
+    }
     JS_SetGlobalObject(sandcx, sandbox);
-    
-    // There's no JS_GetErrorReporter, so we fake it
-    JSErrorReporter borrowedReporter = JS_SetErrorReporter(cx, nsnull);
-    JS_SetErrorReporter(sandcx, borrowedReporter);
-    JS_SetErrorReporter(cx, borrowedReporter);
 
-    if(!JS_EvaluateUCScriptForPrincipals(sandcx, sandbox, jsPrincipals,
-                                         NS_REINTERPRET_CAST(const jschar *,
-                                             PromiseFlatString(source).get()),
-                                         source.Length(),
-                                         PromiseFlatUTF8String(codebase).get(),
-                                         1, rval)) {
+    // Capture uncaught exceptions reported as errors on sandcx and
+    // re-throw them on cx.
+    JS_SetContextPrivate(sandcx, cx);
+    JS_SetErrorReporter(sandcx, SandboxErrorReporter);
+
+    if (!JS_EvaluateUCScriptForPrincipals(sandcx, sandbox, jsPrincipals,
+                                          NS_REINTERPRET_CAST(const jschar *,
+                                              PromiseFlatString(source).get()),
+                                          source.Length(),
+                                          PromiseFlatUTF8String(codebase).get(),
+                                          1, rval)) {
         rv = NS_ERROR_FAILURE;
     }
 
@@ -2207,8 +2223,8 @@ nsXPCComponents_Utils::EvalInSandbox(const nsAString &source,
         *rval = OBJECT_TO_JSVAL(sandbox);
         cc->SetReturnValueWasSet(PR_TRUE);
     }
-    
-    JS_DestroyContext(sandcx);
+
+    JS_DestroyContextNoGC(sandcx);
     JSPRINCIPALS_DROP(cx, jsPrincipals);
     return rv;
 #endif /* !XPCONNECT_STANDALONE */
@@ -2298,7 +2314,7 @@ nsXPCComponents::~nsXPCComponents()
     ClearMembers();
 }
 
-void 
+void
 nsXPCComponents::ClearMembers()
 {
     NS_IF_RELEASE(mInterfaces);
@@ -2433,13 +2449,15 @@ nsXPCComponents::GetProperty(nsIXPConnectWrappedNative *wrapper,
         doResult = JS_TRUE;
     }
 
+    nsresult rv = NS_OK;
     if(doResult)
     {
         if(!JS_NewNumberValue(cx, (jsdouble) res, vp))
             return NS_ERROR_OUT_OF_MEMORY;
+        rv = NS_SUCCESS_I_DID_SOMETHING;
     }
 
-    return NS_OK;
+    return rv;
 }
 
 /* PRBool setProperty (in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj, in JSVal id, in JSValPtr vp); */
@@ -2463,7 +2481,7 @@ nsXPCComponents::SetProperty(nsIXPConnectWrappedNative *wrapper,
         {
             xpcc->SetPendingResult(rv);
             xpcc->SetLastResult(rv);
-            return NS_OK;
+            return NS_SUCCESS_I_DID_SOMETHING;
         }
         return NS_ERROR_FAILURE;
     }
@@ -2517,7 +2535,7 @@ NS_IMETHODIMP nsXPCComponents::LookupMethod()
     nsresult rv;
     nsCOMPtr<nsIXPCComponents_Utils> utils;
 
-    NS_WARNING("Components.lookupMethod deprecated, use Components.utils.lookupMethod");    
+    NS_WARNING("Components.lookupMethod deprecated, use Components.utils.lookupMethod");
     rv = GetUtils(getter_AddRefs(utils));
     if (NS_FAILED(rv))
         return rv;
@@ -2531,7 +2549,7 @@ NS_IMETHODIMP nsXPCComponents::ReportError()
     nsresult rv;
     nsCOMPtr<nsIXPCComponents_Utils> utils;
 
-    NS_WARNING("Components.reportError deprecated, use Components.utils.reportError");    
+    NS_WARNING("Components.reportError deprecated, use Components.utils.reportError");
     rv = GetUtils(getter_AddRefs(utils));
     if (NS_FAILED(rv))
         return rv;
