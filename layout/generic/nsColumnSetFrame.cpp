@@ -688,18 +688,6 @@ nsColumnSetFrame::Reflow(nsPresContext*          aPresContext,
     aStatus, config, unboundedLastColumn, &carriedOutBottomMargin);
 
   if (isBalancing) {
-    if (feasible ||
-      // All children were reflowed as necessary, so we can go ahead
-      // and do resize reflows from now on
-        kidReason != eReflowReason_StyleChange) {
-      // Any non-stylechange reflow can be followed by resize
-      // reflows. But a stylechange reflow demands that all children
-      // be reflowed, which may not have happened yet; some of them
-      // might just have been pushed to an overflow list. So we have to
-      // keep doing stylechange reflows.
-      kidReason = eReflowReason_Resize;
-    }
-
     nscoord availableContentHeight = GetAvailableContentHeight(aReflowState);
   
     // Termination of the algorithm below is guaranteed because

@@ -644,7 +644,7 @@ nsHTMLScrollFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
     nsBoxLayoutState bls(GetPresContext());
     nsSize vScrollbarMinSize(0, 0);
     GetScrollbarMetrics(bls, mInner.mVScrollbarBox,
-                        &vScrollbarMinSize, PR_TRUE);
+                        &vScrollbarMinSize, nsnull, PR_TRUE);
     result += vScrollbarMinSize.width;
   }
 
@@ -664,7 +664,7 @@ nsHTMLScrollFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
     nsBoxLayoutState bls(GetPresContext());
     nsSize vScrollbarMinSize(0, 0);
     GetScrollbarMetrics(bls, mInner.mVScrollbarBox,
-                        &vScrollbarMinSize, PR_TRUE);
+                        &vScrollbarMinSize, nsnull, PR_TRUE);
     result += vScrollbarMinSize.width;
   }
 
