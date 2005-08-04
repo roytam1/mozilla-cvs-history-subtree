@@ -217,7 +217,7 @@ BOOTSTRAP_macbrowser := mozilla/camino/config/mozconfig
 NSPR_CO_TAG          = NSPRPUB_PRE_4_2_CLIENT_BRANCH
 NSS_CO_TAG           = NSS_CLIENT_TAG
 LDAPCSDK_CO_TAG      = ldapcsdk_50_client_branch
-LAYOUT_CO_TAG        = REFLOW_20050429_BRANCH
+LAYOUT_CO_TAG        = REFLOW_20050804_BRANCH
 LOCALES_CO_TAG       =
 
 BUILD_MODULES = all
