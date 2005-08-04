@@ -42,7 +42,6 @@
 
 class nsIFrame;
 class nsPresContext;
-class nsReflowPath;
 class nsIRenderingContext;
 class nsSpaceManager;
 class nsLineLayout;
@@ -63,23 +62,6 @@ struct nsHypotheticalBox;
  * @see #Reflow()
  */
 #define NS_UNCONSTRAINEDSIZE NS_MAXSIZE
-
-/**
- * The reason the frame is being reflowed.
- *
- * XXX Should probably be a #define so it can be extended for specialized
- * reflow interfaces...
- *
- * @see nsHTMLReflowState
- */
-enum nsReflowReason {
-  eReflowReason_Initial = 0,       // initial reflow of a newly created frame
-  eReflowReason_Incremental = 1,   // an incremental change has occured. see the reflow command for details
-  eReflowReason_Resize = 2,        // general request to determine a desired size
-  eReflowReason_StyleChange = 3,   // request to reflow because of a style change. Note: you must reflow
-                                   // all your child frames
-  eReflowReason_Dirty = 4          // request to reflow because you and/or your children are dirty
-};
 
 /**
  * CSS Frame type. Included as part of the reflow state.
@@ -115,7 +97,6 @@ typedef PRUint32  nsCSSFrameType;
   ((_ft) & ~NS_CSS_FRAME_TYPE_REPLACED)
 
 #define NS_INTRINSICSIZE    NS_UNCONSTRAINEDSIZE
-#define NS_SHRINKWRAPWIDTH  NS_UNCONSTRAINEDSIZE
 #define NS_AUTOHEIGHT       NS_UNCONSTRAINEDSIZE
 #define NS_AUTOMARGIN       NS_UNCONSTRAINEDSIZE
 #define NS_AUTOOFFSET       NS_UNCONSTRAINEDSIZE
@@ -124,7 +105,10 @@ typedef PRUint32  nsCSSFrameType;
 //       at least update AdjustComputedHeight/Width and test ad nauseum
 
 /**
- * Reflow state passed to a frame during reflow.
+ * State passed to a frame during reflow or intrinsic size calculation.
+ *
+ * XXX Refactor so only a base class (nsSizingState?) is used for intrinsic
+ * size calculation.
  *
  * @see nsIFrame#Reflow()
  */
@@ -135,17 +119,6 @@ struct nsHTMLReflowState {
 
   // the frame being reflowed
   nsIFrame*           frame;
-
-  // the reason for the reflow
-  nsReflowReason      reason;
-
-  // the incremental reflow path, when the reflow reason is
-  // eReflowReason_Incremental. Specifically, this corresponds to the
-  // portion of the incremental reflow path from `frame' down. Note
-  // that it is safe to assume that this is non-null: we maintain the
-  // invariant that it contains a valid nsReflowPath pointer when
-  // reason == eReflowReason_Incremental.
-  nsReflowPath        *path;
 
   // the available width in which to reflow the frame. The space
   // represents the amount of room for the frame's border, padding,
@@ -189,9 +162,6 @@ struct nsHTMLReflowState {
   //
   // For block-level frames, the computed width is based on the width of the
   // containing block, the margin/border/padding areas, and the min/max width.
-  // A value of NS_SHRINKWRAPWIDTH means that you should choose a width based
-  // on your content. The width may be as large as the specified maximum width
-  // (see mComputedMaxWidth).
   nscoord          mComputedWidth; 
 
   // The computed height specifies the frame's content height, and it does
@@ -274,8 +244,6 @@ struct nsHTMLReflowState {
 #ifdef DEBUG
   // hook for attaching debug info (e.g. tables may attach a timer during reflow)
   void* mDebugHook;
-
-  static const char* ReasonToString(nsReflowReason aReason);
 #endif
 
   // Note: The copy constructor is written by the compiler automatically. You
@@ -284,46 +252,23 @@ struct nsHTMLReflowState {
 
   // Initialize a <b>root</b> reflow state with a rendering context to
   // use for measuring things.
-  nsHTMLReflowState(nsPresContext*          aPresContext,
+  nsHTMLReflowState(nsPresContext*           aPresContext,
                     nsIFrame*                aFrame,
-                    nsReflowReason           aReason,
-                    nsIRenderingContext*     aRenderingContext,
-                    const nsSize&            aAvailableSpace);
-
-  // Initialize a <b>root</b> reflow state for an <b>incremental</b>
-  // reflow.
-  nsHTMLReflowState(nsPresContext*          aPresContext,
-                    nsIFrame*                aFrame,
-                    nsReflowPath*            aReflowPath,
                     nsIRenderingContext*     aRenderingContext,
                     const nsSize&            aAvailableSpace);
 
   // Initialize a reflow state for a child frames reflow. Some state
   // is copied from the parent reflow state; the remaining state is
   // computed. 
-  nsHTMLReflowState(nsPresContext*          aPresContext,
+  nsHTMLReflowState(nsPresContext*           aPresContext,
                     const nsHTMLReflowState& aParentReflowState,
                     nsIFrame*                aFrame,
                     const nsSize&            aAvailableSpace,
-                    nsReflowReason           aReason, 
+                    // These two are used by absolute positioning code
+                    // two override default containing block w & h:
+                    nscoord                  aContainingBlockWidth = -1,
+                    nscoord                  aContainingBlockHeight = -1,
                     PRBool                   aInit = PR_TRUE);
-
-  // Same as the previous except that the reason is taken from the
-  // parent's reflow state.
-  nsHTMLReflowState(nsPresContext*          aPresContext,
-                    const nsHTMLReflowState& aParentReflowState,
-                    nsIFrame*                aFrame,
-                    const nsSize&            aAvailableSpace);
-
-  // Used when you want to override the default containing block
-  // width and height. Used by absolute positioning code
-  nsHTMLReflowState(nsPresContext*          aPresContext,
-                    const nsHTMLReflowState& aParentReflowState,
-                    nsIFrame*                aFrame,
-                    const nsSize&            aAvailableSpace,
-                    nscoord                  aContainingBlockWidth,
-                    nscoord                  aContainingBlockHeight,
-                    nsReflowReason           aReason);
 
   // This method initializes various data members. It is automatically
   // called by the various constructors

@@ -76,11 +76,11 @@ NS_IMETHODIMP nsPageContentFrame::Reflow(nsPresContext*   aPresContext,
                                   const nsHTMLReflowState& aReflowState,
                                   nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsPageContentFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsPageContentFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
   aStatus = NS_FRAME_COMPLETE;  // initialize out parameter
 
-  if (eReflowReason_Incremental != aReflowState.reason) {
+  if (GetStateBits() & NS_FRAME_IS_DIRTY) {
     // Resize our frame allowing it only to be as big as we are
     // XXX Pay attention to the page's border and padding...
     if (mFrames.NotEmpty()) {

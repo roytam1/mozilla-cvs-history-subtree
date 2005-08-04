@@ -62,7 +62,7 @@ public:
   nsLineLayout(nsPresContext* aPresContext,
                nsSpaceManager* aSpaceManager,
                const nsHTMLReflowState* aOuterReflowState,
-               PRBool aComputeMaxElementWidth);
+               PRBool aIntrinsicWidthPass);
   ~nsLineLayout();
 
   class ArenaDeque : public nsDeque
@@ -92,6 +92,8 @@ public:
     return mLineNumber;
   }
 
+  PRBool GetIntrinsicWidthPass() const { return mIntrinsicWidthPass; }
+
   void BeginLineReflow(nscoord aX, nscoord aY,
                        nscoord aWidth, nscoord aHeight,
                        PRBool aImpactedByFloats,
@@ -108,8 +110,7 @@ public:
                      nscoord aLeftEdge,
                      nscoord aRightEdge);
 
-  void EndSpan(nsIFrame* aFrame, nsSize& aSizeResult,
-               nscoord* aMaxElementWidth);
+  void EndSpan(nsIFrame* aFrame, nsSize& aSizeResult);
 
   PRInt32 GetCurrentSpanCount() const;
 
@@ -131,14 +132,11 @@ public:
     PushFrame(aFrame);
   }
 
-  void VerticalAlignLine(nsLineBox* aLineBox,
-                         nscoord* aMaxElementWidthResult);
+  void VerticalAlignLine(nsLineBox* aLineBox);
 
   PRBool TrimTrailingWhiteSpace();
 
-  PRBool HorizontalAlignFrames(nsRect& aLineBounds,
-                               PRBool aAllowJustify,
-                               PRBool aShrinkWrapWidth);
+  void HorizontalAlignFrames(nsRect& aLineBounds, PRBool aAllowJustify);
 
   /**
    * Handle all the relative positioning in the line, compute the
@@ -278,12 +276,6 @@ public:
 
   static PRBool TreatFrameAsBlock(nsIFrame* aFrame);
 
-  static PRBool IsPercentageUnitSides(const nsStyleSides* aSides);
-
-  static PRBool IsPercentageAwareReplacedElement(nsPresContext *aPresContext, 
-                                                 nsIFrame       *aFrame);
-
-
   //----------------------------------------
 
   nsPresContext* mPresContext;
@@ -300,7 +292,7 @@ protected:
   nsBlockReflowState* mBlockRS;/* XXX hack! */
   nsCompatibility mCompatMode;
   nscoord mMinLineHeight;
-  PRPackedBool mComputeMaxElementWidth;
+  PRPackedBool mIntrinsicWidthPass;
   PRUint8 mTextAlign;
 
   PRUint8 mPlacedFloats;
@@ -355,7 +347,6 @@ protected:
     // From metrics
     nscoord mAscent, mDescent;
     nsRect mBounds;
-    nscoord mMaxElementWidth;
     nsRect mCombinedArea;
 
     // From reflow-state

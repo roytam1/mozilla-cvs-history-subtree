@@ -60,13 +60,37 @@ nsLeafFrame::Paint(nsPresContext*      aPresContext,
   return NS_OK;
 }
 
+/* virtual */ nscoord
+nsLeafFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
+{
+  // XXX We really don't want to construct a reflow state here.  This
+  // will probably cause problems, like setting dirty bits.
+  nsHTMLReflowState rs(GetPresContext(), this, aRenderingContext,
+                       nsSize(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE));
+  nsHTMLReflowMetrics metrics;
+  GetDesiredSize(GetPresContext(), rs, metrics);
+  return metrics.width;
+}
+
+/* virtual */ nscoord
+nsLeafFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
+{
+  // XXX We really don't want to construct a reflow state here.  This
+  // will probably cause problems, like setting dirty bits.
+  nsHTMLReflowState rs(GetPresContext(), this, aRenderingContext,
+                       nsSize(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE));
+  nsHTMLReflowMetrics metrics;
+  GetDesiredSize(GetPresContext(), rs, metrics);
+  return metrics.width;
+}
+
 NS_IMETHODIMP
 nsLeafFrame::Reflow(nsPresContext* aPresContext,
                     nsHTMLReflowMetrics& aMetrics,
                     const nsHTMLReflowState& aReflowState,
                     nsReflowStatus& aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsLeafFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsLeafFrame");
   NS_FRAME_TRACE(NS_FRAME_TRACE_CALLS,
                  ("enter nsLeafFrame::Reflow: aMaxSize=%d,%d",
                   aReflowState.availableWidth, aReflowState.availableHeight));
@@ -80,9 +104,6 @@ nsLeafFrame::Reflow(nsPresContext* aPresContext,
   GetDesiredSize(aPresContext, aReflowState, aMetrics);
   nsMargin borderPadding;
   AddBordersAndPadding(aPresContext, aReflowState, aMetrics, borderPadding);
-  if (aMetrics.mComputeMEW) {
-    aMetrics.SetMEWToActualWidth(aReflowState.mStylePosition->mWidth.GetUnit());
-  }
   aStatus = NS_FRAME_COMPLETE;
 
   NS_FRAME_TRACE(NS_FRAME_TRACE_CALLS,

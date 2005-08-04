@@ -54,7 +54,6 @@
 #include "nsISupports.h"
 #include "nsCoord.h"
 #include "nsEvent.h"
-#include "nsReflowType.h"
 #include "nsCompatibility.h"
 #include "nsCOMArray.h"
 #include "nsFrameManagerBase.h"
@@ -320,14 +319,20 @@ public:
                                     nsIFrame** aPlaceholderFrame) const = 0;
 
   /**
-   * Reflow commands
+   * Tell the pres shell that a frame is dirty (as indicated by bits)
+   * and needs Reflow.  It's OK if this is an ancestor of the frame needing
+   * reflow as long as the ancestor chain between them doesn't cross a reflow
+   * root.
    */
-  NS_IMETHOD AppendReflowCommand(nsIFrame*    aTargetFrame,
-                                 nsReflowType aReflowType,
-                                 nsIAtom*     aChildListName) = 0;
-  // XXXbz don't we need a child list name on this too?
-  NS_IMETHOD CancelReflowCommand(nsIFrame* aTargetFrame, nsReflowType* aCmdType) = 0;
-  NS_IMETHOD CancelAllReflowCommands() = 0;
+  enum IntrinsicDirty {
+    eResize,     // don't mark any intrinsic widths dirty
+    eTreeChange, // mark intrinsic widths dirty on aFrame and its ancestors
+    eStyleChange // Do eTreeChange, plus all of aFrame's descendants
+  };
+  NS_IMETHOD FrameNeedsReflow(nsIFrame *aFrame,
+                              IntrinsicDirty aIntrinsicDirty) = 0;
+
+  NS_IMETHOD CancelAllPendingReflows() = 0;
 
   /**
    * Recreates the frames for a node
@@ -638,7 +643,7 @@ public:
 
 #ifdef MOZ_REFLOW_PERF
   NS_IMETHOD DumpReflows() = 0;
-  NS_IMETHOD CountReflows(const char * aName, PRUint32 aType, nsIFrame * aFrame) = 0;
+  NS_IMETHOD CountReflows(const char * aName, nsIFrame * aFrame) = 0;
   NS_IMETHOD PaintCount(const char * aName, 
                         nsIRenderingContext* aRenderingContext, 
                         nsPresContext * aPresContext, 

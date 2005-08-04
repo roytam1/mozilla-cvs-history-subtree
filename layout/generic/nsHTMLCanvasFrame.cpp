@@ -71,13 +71,27 @@ nsHTMLCanvasFrame::~nsHTMLCanvasFrame()
         ? (_max)                 \
         : (_value)))
 
+/* virtual */ nscoord
+nsHTMLCanvasFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
+{
+  float p2t = GetPresContext()->PixelsToTwips();
+  return NSIntPixelsToTwips(mCanvasSize.width, p2t);
+}
+
+/* virtual */ nscoord
+nsHTMLCanvasFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
+{
+  float p2t = GetPresContext()->PixelsToTwips();
+  return NSIntPixelsToTwips(mCanvasSize.width, p2t);
+}
+
 NS_IMETHODIMP
 nsHTMLCanvasFrame::Reflow(nsPresContext*           aPresContext,
                           nsHTMLReflowMetrics&     aMetrics,
                           const nsHTMLReflowState& aReflowState,
                           nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsHTMLCanvasFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsHTMLCanvasFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aMetrics, aStatus);
   NS_FRAME_TRACE(NS_FRAME_TRACE_CALLS,
                   ("enter nsHTMLCanvasFrame::Reflow: availSize=%d,%d",
@@ -134,13 +148,6 @@ nsHTMLCanvasFrame::Reflow(nsPresContext*           aPresContext,
   aMetrics.ascent  = aMetrics.height;
   aMetrics.descent = 0;
 
-  if (aMetrics.mComputeMEW) {
-    aMetrics.SetMEWToActualWidth(aReflowState.mStylePosition->mWidth.GetUnit());
-  }
-  
-  if (aMetrics.mFlags & NS_REFLOW_CALC_MAX_WIDTH) {
-    aMetrics.mMaximumWidth = aMetrics.width;
-  }
   aMetrics.mOverflowArea.SetRect(0, 0, aMetrics.width, aMetrics.height);
   FinishAndStoreOverflow(&aMetrics);
 

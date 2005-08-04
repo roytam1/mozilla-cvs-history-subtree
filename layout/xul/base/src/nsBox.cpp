@@ -177,24 +177,7 @@ nsBox::BeginLayout(nsBoxLayoutState& aState)
 #ifdef DEBUG_LAYOUT 
 
   nsBoxAddIndents();
-
-  nsAutoString reason;
-  switch(aState.LayoutReason())
-    {
-    case nsBoxLayoutState::Dirty:
-      reason.AssignLiteral("Dirty");
-      break;
-    case nsBoxLayoutState::Initial:
-      reason.AssignLiteral("Initial");
-      break;
-    case nsBoxLayoutState::Resize:
-      reason.AssignLiteral("Resize");
-      break;
-    }
-
-  char ch[100];
-  reason.ToCString(ch,100);
-  printf("%s Layout: ", ch);
+  printf("Layout: ");
   DumpBox(stdout);
   printf("\n");
   gIndent++;
@@ -202,7 +185,18 @@ nsBox::BeginLayout(nsBoxLayoutState& aState)
 
   // mark ourselves as dirty so no child under us
   // can post an incremental layout.
+  // XXXldb Is this still needed?
   mState |= NS_FRAME_HAS_DIRTY_CHILDREN;
+
+  if (GetStateBits() & NS_FRAME_IS_DIRTY)
+  {
+    // If the parent is dirty, all the children are dirty (nsHTMLReflowState
+    // does this too).
+    nsIFrame* box;
+    for (GetChildBox(&box); box; box->GetNextBox(&box))
+      box->AddStateBits(NS_FRAME_IS_DIRTY);
+  }
+
 
 #ifdef DEBUG_LAYOUT
   PropagateDebug(aState);
@@ -265,156 +259,6 @@ nsBox::Shutdown()
 {
   gGotTheme = PR_FALSE;
   NS_IF_RELEASE(gTheme);
-}
-
-NS_IMETHODIMP
-nsBox::MarkDirty(nsBoxLayoutState& aState)
-{
-  // only reflow if we aren't already dirty.
-  if (GetStateBits() & NS_FRAME_IS_DIRTY) {      
-#ifdef DEBUG_COELESCED
-      Coelesced();
-#endif
-      return NS_OK;
-  }
-
-  AddStateBits(NS_FRAME_IS_DIRTY);
-
-  NeedsRecalc();
-
-  nsCOMPtr<nsIBoxLayout> layout;
-  GetLayoutManager(getter_AddRefs(layout));
-  if (layout)
-    layout->BecameDirty(this, aState);
-
-  if (GetStateBits() & NS_FRAME_HAS_DIRTY_CHILDREN) {   
-#ifdef DEBUG_COELESCED
-      Coelesced();
-#endif
-      return NS_OK;
-  }
-
-  nsIBox* parent = nsnull;
-  GetParentBox(&parent);
-  if (parent)
-     return parent->RelayoutDirtyChild(aState, this);
-  else {
-    return GetParent()->ReflowDirtyChild(aState.PresShell(), this);
-  }
-}
-
-nsresult
-nsIFrame::MarkDirtyChildren(nsBoxLayoutState& aState)
-{
-  return RelayoutDirtyChild(aState, nsnull);
-}
-
-NS_IMETHODIMP
-nsBox::MarkStyleChange(nsBoxLayoutState& aState)
-{
-  NeedsRecalc();
-
-  if (HasStyleChange())
-    return NS_OK;
-
-  // iterate through all children making them dirty
-  MarkChildrenStyleChange();
-
-  nsCOMPtr<nsIBoxLayout> layout;
-  GetLayoutManager(getter_AddRefs(layout));
-  if (layout)
-    layout->BecameDirty(this, aState);
-
-  nsIBox* parent = nsnull;
-  GetParentBox(&parent);
-  if (parent)
-     return parent->RelayoutDirtyChild(aState, this);
-  else {
-    /*
-    aState.PresShell()->AppendReflowCommand(this, eReflowType_StyleChanged,
-                                            nsnull);
-    return NS_OK;
-    */
-    return GetParent()->ReflowDirtyChild(aState.PresShell(), this);
-  }
-
-  return NS_OK;
-}
-
-PRBool
-nsBox::HasStyleChange()
-{
-  PRBool aDirty = PR_FALSE;
-  IsDirty(aDirty);
-  return aDirty;
-}
-
-void
-nsBox::SetStyleChangeFlag(PRBool aDirty)
-{
-  NeedsRecalc();
-  AddStateBits(NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN);
-}
-
-NS_IMETHODIMP
-nsBox::MarkChildrenStyleChange()
-{
-  // only reflow if we aren't already dirty.
-  if (HasStyleChange()) {   
-#ifdef DEBUG_COELESCED
-    printf("StyleChange reflows coelesced=%d\n", ++StyleCoelesced);  
-#endif
-    return NS_OK;
-  }
-
-  SetStyleChangeFlag(PR_TRUE);
-
-  nsIBox* child = nsnull;
-  GetChildBox(&child);
-  while(child)
-  {
-    child->MarkChildrenStyleChange();
-    child->GetNextBox(&child);
-  }
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsBox::RelayoutDirtyChild(nsBoxLayoutState& aState, nsIBox* aChild)
-{
-    if (aChild != nsnull) {
-        nsCOMPtr<nsIBoxLayout> layout;
-        GetLayoutManager(getter_AddRefs(layout));
-        if (layout)
-          layout->ChildBecameDirty(this, aState, aChild);
-    }
-
-    // if we are not dirty mark ourselves dirty and tell our parent we are dirty too.
-    if (!(GetStateBits() & NS_FRAME_HAS_DIRTY_CHILDREN)) {      
-      // Mark yourself as dirty and needing to be recalculated
-      AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
-
-      if (GetStateBits() & NS_FRAME_REFLOW_ROOT) {
-        aState.PresShell()->AppendReflowCommand(this, eReflowType_ReflowDirty,
-                                                nsnull);
-        return NS_OK;
-      }
-
-      NeedsRecalc();
-
-      nsIBox* parentBox = nsnull;
-      GetParentBox(&parentBox);
-      if (parentBox)
-         return parentBox->RelayoutDirtyChild(aState, this);
-      return GetParent()->ReflowDirtyChild(aState.PresShell(), this);
-    } else {
-#ifdef DEBUG_COELESCED
-      Coelesced();
-#endif
-    }
-
-    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -623,12 +467,6 @@ nsIFrame::GetParentBox(nsIBox** aParent)
   return NS_OK;
 }
 
-NS_IMETHODIMP
-nsBox::NeedsRecalc()
-{
-  return NS_OK;
-}
-
 void
 nsBox::SizeNeedsRecalc(nsSize& aSize)
 {
@@ -827,9 +665,7 @@ nsBox::SyncLayout(nsBoxLayoutState& aState)
   */
   
 
-  PRBool dirty = PR_FALSE;
-  IsDirty(dirty);
-  if (dirty || aState.LayoutReason() == nsBoxLayoutState::Initial)
+  if (GetStateBits() & NS_FRAME_IS_DIRTY)
      Redraw(aState);
 
   RemoveStateBits(NS_FRAME_HAS_DIRTY_CHILDREN | NS_FRAME_IS_DIRTY
@@ -905,12 +741,6 @@ nsIFrame::Redraw(nsBoxLayoutState& aState,
 {
   if (aState.PaintingDisabled())
     return NS_OK;
-
-  const nsHTMLReflowState* s = aState.GetReflowState();
-  if (s) {
-    if (s->reason != eReflowReason_Incremental)
-      return NS_OK;
-  }
 
   nsRect damageRect(0,0,0,0);
   if (aDamageRect)

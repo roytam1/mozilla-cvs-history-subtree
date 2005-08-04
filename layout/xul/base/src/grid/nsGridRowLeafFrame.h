@@ -48,6 +48,8 @@
 
 #include "nsBoxFrame.h"
 
+// XXXldb This needs a better name that indicates that it's for any grid
+// row.
 class nsGridRowLeafFrame : public nsBoxFrame
 {
 public:

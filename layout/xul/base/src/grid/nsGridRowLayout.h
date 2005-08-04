@@ -53,6 +53,8 @@ class nsBoxLayoutState;
 class nsIPresShell;
 class nsGrid;
 
+// XXXldb This needs a name that indicates that it's a base class for
+// both row and rows (row-group).
 class nsGridRowLayout : public nsSprocketLayout,
                         public nsIGridPart
 {

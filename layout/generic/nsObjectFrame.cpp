@@ -867,6 +867,41 @@ nsObjectFrame::CreateWidget(nscoord aWidth,
 #define EMBED_DEF_WIDTH 240
 #define EMBED_DEF_HEIGHT 200
 
+/* virtual */ nscoord
+nsObjectFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
+{
+  if (IsHidden(PR_FALSE))
+    return 0;
+
+  nsIFrame * child = mFrames.FirstChild();
+  if (IsBroken() && !child) {
+    nsHTMLReflowMetrics metrics;
+    nsHTMLReflowState rs(GetPresContext(), this, aRenderingContext,
+                         nsSize(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE));
+    CreateDefaultFrames(GetPresContext(), metrics, rs);
+    child = mFrames.FirstChild();
+
+    // XXX SizeAnchor stuff
+  }
+
+  if (child)
+    return child->GetMinWidth(aRenderingContext);
+  
+  nsIAtom *atom = mContent->Tag();
+  if (atom == nsHTMLAtoms::applet || atom == nsHTMLAtoms::embed) {
+    float p2t = GetPresContext()->ScaledPixelsToTwips();
+    return NSIntPixelsToTwips(EMBED_DEF_WIDTH, p2t);
+  }
+
+  return 0;
+}
+
+/* virtual */ nscoord
+nsObjectFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
+{
+  return nsObjectFrame::GetMinWidth(aRenderingContext);
+}
+
 void
 nsObjectFrame::GetDesiredSize(nsPresContext* aPresContext,
                               const nsHTMLReflowState& aReflowState,
@@ -879,9 +914,6 @@ nsObjectFrame::GetDesiredSize(nsPresContext* aPresContext,
   aMetrics.descent = 0;
 
   if (IsHidden(PR_FALSE)) {
-    if (aMetrics.mComputeMEW) {
-      aMetrics.mMaxElementWidth = 0;
-    }      
     return;
   }
   
@@ -940,10 +972,6 @@ nsObjectFrame::GetDesiredSize(nsPresContext* aPresContext,
   
   // ascent
   aMetrics.ascent = aMetrics.height;
-
-  if (aMetrics.mComputeMEW) {
-    aMetrics.mMaxElementWidth = aMetrics.width;
-  }
 }
 
 nsresult 
@@ -997,7 +1025,7 @@ nsObjectFrame::Reflow(nsPresContext*           aPresContext,
                       const nsHTMLReflowState& aReflowState,
                       nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsObjectFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsObjectFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aMetrics, aStatus);
   nsresult rv = NS_OK;
 
@@ -1030,15 +1058,6 @@ nsObjectFrame::Reflow(nsPresContext*           aPresContext,
 
       // Set the child's content width and height
       SizeAnchor(child->GetContent(), width, height);
-
-      // SizeAnchor() is seriously evil as it ends up setting an
-      // attribute (through the style changes that it does) while
-      // we're in reflow. This is also seriously evil, as it pulls
-      // that reflow command out of the reflow queue, as leaving it
-      // there can get us into infinite loops while reflowing object
-      // frames for missing plugins.
-      nsReflowType reflowType(eReflowType_StyleChanged);
-      aPresContext->PresShell()->CancelReflowCommand(child, &reflowType);
     }
   }
 
@@ -3110,8 +3129,8 @@ nsObjectFrame::PluginNotAvailable(const char *aMimeType)
 
     mState |= NS_FRAME_HAS_DIRTY_CHILDREN;
 
-    GetParent()->ReflowDirtyChild(mContent->GetDocument()->GetShellAt(0),
-                                  this);
+    mContent->GetDocument()->GetShellAt(0)->
+      FrameNeedsReflow(this, nsIPresShell::eStyleChange);
   }
 }
 
