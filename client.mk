@@ -563,9 +563,9 @@ ifdef RUN_AUTOCONF_LOCALLY
 		mozilla/directory/c-sdk/configure
 endif
 	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE)
-	@echo '$(CVSCO) -r $(LAYOUT_CO_TAG) mozilla/client.mk' && \
+	@echo '$(CVS) $(CVS_FLAGS) co -r $(LAYOUT_CO_TAG) mozilla/client.mk' && \
         cd $(ROOTDIR) && \
-	$(CVSCO) -r $(LAYOUT_CO_TAG) mozilla/client.mk && \
+	$(CVS) $(CVS_FLAGS) co -r $(LAYOUT_CO_TAG) mozilla/client.mk && \
 	echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) $(MOZCONFIG_MODULES)' && \
 	$(CVSCO) $(CVS_CO_DATE_FLAGS) $(MOZCONFIG_MODULES)
 	@cd $(ROOTDIR) && $(MAKE) -f mozilla/client.mk real_checkout
@@ -583,8 +583,8 @@ real_checkout:
 	$(CHECKOUT_MODULES) \
 	$(CHECKOUT_MODULES_NS); \
 	$(CHECKOUT_LOCALES); \
-	echo '$(CVSCO) -r $(LAYOUT_CO_TAG) mozilla/client.mk' && \
-	$(CVSCO) -r $(LAYOUT_CO_TAG) mozilla/client.mk;
+	echo '$(CVS) $(CVS_FLAGS) co -r $(LAYOUT_CO_TAG) mozilla/client.mk' && \
+	$(CVS) $(CVS_FLAGS) co -r $(LAYOUT_CO_TAG) mozilla/client.mk;
 	@echo "checkout finish: "`date` | tee -a $(CVSCO_LOGFILE)
 # update the NSS checkout timestamp
 	@if test `egrep -c '^(U|C) mozilla/security/(nss|coreconf)' $(CVSCO_LOGFILE) 2>/dev/null` != 0; then \
