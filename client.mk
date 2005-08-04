@@ -403,7 +403,7 @@ ifdef MOZ_CO_FLAGS
   LAYOUT_CO_FLAGS := $(MOZ_CO_FLAGS)
 endif
 LAYOUT_CO_FLAGS := $(LAYOUT_CO_FLAGS) $(if $(LAYOUT_CO_TAG),-r $(LAYOUT_CO_TAG),-A)
-CVSCO_LAYOUT = $(CVS) $(CVS_FLAGS) co $(LAYOUT_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(LAYOUT_CO_MODULE)
+CVSCO_LAYOUT = $(CVS) $(CVS_FLAGS) co $(LAYOUT_CO_FLAGS) $(LAYOUT_CO_MODULE)
 
 ####################################
 # CVS defines for standalone modules
@@ -565,7 +565,7 @@ endif
 	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE)
 	@echo '$(CVSCO) -r $(LAYOUT_CO_TAG) mozilla/client.mk' && \
         cd $(ROOTDIR) && \
-	$(CVSCO) $(CVS_CO_DATE_FLAGS) -r $(LAYOUT_CO_TAG) mozilla/client.mk && \
+	$(CVSCO) -r $(LAYOUT_CO_TAG) mozilla/client.mk && \
 	echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) $(MOZCONFIG_MODULES)' && \
 	$(CVSCO) $(CVS_CO_DATE_FLAGS) $(MOZCONFIG_MODULES)
 	@cd $(ROOTDIR) && $(MAKE) -f mozilla/client.mk real_checkout
@@ -583,8 +583,8 @@ real_checkout:
 	$(CHECKOUT_MODULES) \
 	$(CHECKOUT_MODULES_NS); \
 	$(CHECKOUT_LOCALES); \
-	echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) -r $(LAYOUT_CO_TAG) mozilla/client.mk' && \
-	$(CVSCO) $(CVS_CO_DATE_FLAGS) -r $(LAYOUT_CO_TAG) mozilla/client.mk;
+	echo '$(CVSCO) -r $(LAYOUT_CO_TAG) mozilla/client.mk' && \
+	$(CVSCO) -r $(LAYOUT_CO_TAG) mozilla/client.mk;
 	@echo "checkout finish: "`date` | tee -a $(CVSCO_LOGFILE)
 # update the NSS checkout timestamp
 	@if test `egrep -c '^(U|C) mozilla/security/(nss|coreconf)' $(CVSCO_LOGFILE) 2>/dev/null` != 0; then \
