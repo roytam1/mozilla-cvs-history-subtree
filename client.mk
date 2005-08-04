@@ -563,7 +563,7 @@ ifdef RUN_AUTOCONF_LOCALLY
 		mozilla/directory/c-sdk/configure
 endif
 	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE)
-	@echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) -r $(LAYOUT_CO_TAG) mozilla/client.mk' && \
+	@echo '$(CVSCO) -r $(LAYOUT_CO_TAG) mozilla/client.mk' && \
         cd $(ROOTDIR) && \
 	$(CVSCO) $(CVS_CO_DATE_FLAGS) -r $(LAYOUT_CO_TAG) mozilla/client.mk && \
 	echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) $(MOZCONFIG_MODULES)' && \
