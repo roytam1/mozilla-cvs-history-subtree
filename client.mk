@@ -217,6 +217,7 @@ BOOTSTRAP_macbrowser := mozilla/camino/config/mozconfig
 NSPR_CO_TAG          = NSPRPUB_PRE_4_2_CLIENT_BRANCH
 NSS_CO_TAG           = NSS_CLIENT_TAG
 LDAPCSDK_CO_TAG      = ldapcsdk_50_client_branch
+LAYOUT_CO_TAG        = REFLOW_20050429_BRANCH
 LOCALES_CO_TAG       =
 
 BUILD_MODULES = all
@@ -282,7 +283,7 @@ ifneq ($(CVS_ROOT_IN_TREE),$(CVSROOT))
 endif
 endif
 
-CVS_CO_DATE_FLAGS = $(if $(MOZ_CO_DATE),-D "$(MOZ_CO_DATE)")
+CVS_CO_DATE_FLAGS = -D "2005-08-04 07:00 +0000"
 CVSCO = $(CVS) $(CVS_FLAGS) co $(MOZ_CO_FLAGS) $(if $(MOZ_CO_TAG),-r $(MOZ_CO_TAG)) $(CVS_CO_DATE_FLAGS)
 
 CVSCO_LOGFILE := $(ROOTDIR)/cvsco.log
@@ -393,6 +394,17 @@ endif
 LDAPCSDK_CO_FLAGS := $(LDAPCSDK_CO_FLAGS) $(if $(LDAPCSDK_CO_TAG),-r $(LDAPCSDK_CO_TAG),-A)
 CVSCO_LDAPCSDK = $(CVS) $(CVS_FLAGS) co $(LDAPCSDK_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(LDAPCSDK_CO_MODULE)
 
+########################
+# CVS defines for layout
+#
+LAYOUT_CO_MODULE = mozilla/layout
+LAYOUT_CO_FLAGS := -P
+ifdef MOZ_CO_FLAGS
+  LAYOUT_CO_FLAGS := $(MOZ_CO_FLAGS)
+endif
+LAYOUT_CO_FLAGS := $(LAYOUT_CO_FLAGS) $(if $(LAYOUT_CO_TAG),-r $(LAYOUT_CO_TAG),-A)
+CVSCO_LAYOUT = $(CVS) $(CVS_FLAGS) co $(LAYOUT_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(LAYOUT_CO_MODULE)
+
 ####################################
 # CVS defines for standalone modules
 #
@@ -464,6 +476,8 @@ CHECKOUT_MODULES   = $(error No modules or projects were specified. Use MOZ_CO_P
 else
 FASTUPDATE_MODULES := fast_update $(CVS) $(CVS_FLAGS) co $(MODULES_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(MOZ_MODULE_LIST)
 CHECKOUT_MODULES   := $(foreach module,$(MOZ_MODULE_LIST),cvs_co $(CVS) $(CVS_FLAGS) co $(MODULES_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(module);)
+
+CHECKOUT_MODULES   := $(subst SeaMonkeyAll, SeaMonkeyAll \!mozilla/layout, $(CHECKOUT_MODULES))
 endif
 ifeq (,$(NOSUBDIRS_MODULE))
 FASTUPDATE_MODULES_NS := true
@@ -549,9 +563,11 @@ ifdef RUN_AUTOCONF_LOCALLY
 		mozilla/directory/c-sdk/configure
 endif
 	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE)
-	@echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/client.mk $(MOZCONFIG_MODULES)'; \
+	@echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) -r $(LAYOUT_CO_TAG) mozilla/client.mk' && \
         cd $(ROOTDIR) && \
-	$(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/client.mk $(MOZCONFIG_MODULES)
+	$(CVSCO) $(CVS_CO_DATE_FLAGS) -r $(LAYOUT_CO_TAG) mozilla/client.mk && \
+	echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) $(MOZCONFIG_MODULES)' && \
+	$(CVSCO) $(CVS_CO_DATE_FLAGS) $(MOZCONFIG_MODULES)
 	@cd $(ROOTDIR) && $(MAKE) -f mozilla/client.mk real_checkout
 
 #	Start the checkout. Split the output to the tty and a log file.
@@ -563,9 +579,12 @@ real_checkout:
 	cvs_co $(CVSCO_NSPR); \
 	cvs_co $(CVSCO_NSS); \
 	cvs_co $(CVSCO_LDAPCSDK); \
+	cvs_co $(CVSCO_LAYOUT); \
 	$(CHECKOUT_MODULES) \
 	$(CHECKOUT_MODULES_NS); \
-	$(CHECKOUT_LOCALES);
+	$(CHECKOUT_LOCALES); \
+	echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) -r $(LAYOUT_CO_TAG) mozilla/client.mk' && \
+	$(CVSCO) $(CVS_CO_DATE_FLAGS) -r $(LAYOUT_CO_TAG) mozilla/client.mk;
 	@echo "checkout finish: "`date` | tee -a $(CVSCO_LOGFILE)
 # update the NSS checkout timestamp
 	@if test `egrep -c '^(U|C) mozilla/security/(nss|coreconf)' $(CVSCO_LOGFILE) 2>/dev/null` != 0; then \
