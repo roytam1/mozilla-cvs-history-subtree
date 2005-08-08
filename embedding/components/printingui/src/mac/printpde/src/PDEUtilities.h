@@ -2,6 +2,9 @@
 ********************************************************************************
 
     $Log$
+    Revision 1.2  2003/04/03 19:20:05  ccarlen%netscape.com
+    Bug 188508 - Upgrade print dialog PDE. r=pinkerton/sr=sfraser
+
 
 
     (c) Copyright 2002 Apple Computer, Inc.  All rights reserved.
@@ -63,6 +66,7 @@
 */
 
 extern void         MyDebugMessage (char *msg, SInt32 err);
+extern CFTypeRef    MyCFAssign(CFTypeRef srcRef, CFTypeRef dstRef);
 
 extern CFBundleRef  MyGetBundle();
 extern void         MyFreeBundle();
