@@ -266,8 +266,12 @@ ViewportFrame::Reflow(nsPresContext*          aPresContext,
 
   // Return the max size as our desired size
   aDesiredSize.width = aReflowState.availableWidth;
-  aDesiredSize.height = aReflowState.availableHeight;
-  aDesiredSize.ascent = aReflowState.availableHeight;
+  // Being flowed initially at an unconstrained height means we should
+  // return our child's intrinsic size.
+  aDesiredSize.height = aReflowState.availableHeight != NS_UNCONSTRAINEDSIZE
+                          ? aReflowState.availableHeight
+                          : kidRect.height;
+  aDesiredSize.ascent = aDesiredSize.height;
   aDesiredSize.descent = 0;
 
   // Make a copy of the reflow state and change the computed width and height
