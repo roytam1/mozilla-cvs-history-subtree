@@ -316,10 +316,7 @@ PK11_CheckSSOPassword(PK11SlotInfo *slot, char *ssopw)
 
     /* get a rwsession */
     rwsession = PK11_GetRWSession(slot);
-    if (rwsession == CK_INVALID_SESSION) {
-    	PORT_SetError(SEC_ERROR_BAD_DATA);
-    	return rv;
-    }
+    if (rwsession == CK_INVALID_SESSION) return rv;
 
     if (slot->protectedAuthPath) {
 	len = 0;
@@ -386,11 +383,7 @@ PK11_InitPin(PK11SlotInfo *slot,char *ssopw, char *userpw)
 
     /* get a rwsession */
     rwsession = PK11_GetRWSession(slot);
-    if (rwsession == CK_INVALID_SESSION) {
-    	PORT_SetError(SEC_ERROR_BAD_DATA);
-	slot->lastLoginCheck = 0;
-    	return rv;
-    }
+    if (rwsession == CK_INVALID_SESSION) goto done;
 
     if (slot->protectedAuthPath) {
 	len = 0;
@@ -450,10 +443,6 @@ PK11_ChangePW(PK11SlotInfo *slot,char *oldpw, char *newpw)
 
     /* get a rwsession */
     rwsession = PK11_GetRWSession(slot);
-    if (rwsession == CK_INVALID_SESSION) {
-    	PORT_SetError(SEC_ERROR_BAD_DATA);
-    	return rv;
-    }
 
     crv = PK11_GETTAB(slot)->C_SetPIN(rwsession,
 		(unsigned char *)oldpw,oldLen,(unsigned char *)newpw,newLen);

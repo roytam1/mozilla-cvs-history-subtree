@@ -140,30 +140,28 @@ static const Stype Kinit[256] = {
 	0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff
 };
 
+/*
+ * Initialize a new generator.
+ */
 RC4Context *
-RC4_AllocateContext(void)
-{
-    return PORT_ZNew(RC4Context);
-}
-
-SECStatus   
-RC4_InitContext(RC4Context *cx, const unsigned char *key, unsigned int len,
-	        const unsigned char * unused1, int unused2, 
-		unsigned int unused3, unsigned int unused4)
+RC4_CreateContext(const unsigned char *key, int len)
 {
 	int i;
 	PRUint8 j, tmp;
+	RC4Context *cx;
 	PRUint8 K[256];
 	PRUint8 *L;
 	/* verify the key length. */
 	PORT_Assert(len > 0 && len < ARCFOUR_STATE_SIZE);
 	if (len < 0 || len >= ARCFOUR_STATE_SIZE) {
 		PORT_SetError(SEC_ERROR_INVALID_ARGS);
-		return SECFailure;
+		return NULL;
 	}
+	/* Create space for the context. */
+	cx = (RC4Context *)PORT_ZAlloc(sizeof(RC4Context));
 	if (cx == NULL) {
-	    PORT_SetError(SEC_ERROR_INVALID_ARGS);
-	    return SECFailure;
+		PORT_SetError(PR_OUT_OF_MEMORY_ERROR);
+		return NULL;
 	}
 	/* Initialize the state using array indices. */
 	memcpy(cx->S, Kinit, sizeof cx->S);
@@ -187,25 +185,7 @@ RC4_InitContext(RC4Context *cx, const unsigned char *key, unsigned int len,
 	}
 	cx->i = 0;
 	cx->j = 0;
-	return SECSuccess;
-}
-
-
-/*
- * Initialize a new generator.
- */
-RC4Context *
-RC4_CreateContext(const unsigned char *key, int len)
-{
-    RC4Context *cx = RC4_AllocateContext();
-    if (cx) {
-	SECStatus rv = RC4_InitContext(cx, key, len, NULL, 0, 0, 0);
-	if (rv != SECSuccess) {
-	    PORT_ZFree(cx, sizeof(*cx));
-	    cx = NULL;
-	}
-    }
-    return cx;
+	return cx;
 }
 
 void 

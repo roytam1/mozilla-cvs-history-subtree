@@ -36,6 +36,7 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
+/* $Id$ */
 
 /* $Id$ */
 
@@ -131,15 +132,22 @@ static const PRUint8 S[256] = {
 0305,0363,0333,0107,0345,0245,0234,0167,0012,0246,0040,0150,0376,0177,0301,0255
 };
 
-RC2Context * RC2_AllocateContext(void)
+/*
+** Create a new RC2 context suitable for RC2 encryption/decryption.
+** 	"key" raw key data
+** 	"len" the number of bytes of key data
+** 	"iv" is the CBC initialization vector (if mode is NSS_RC2_CBC)
+** 	"mode" one of NSS_RC2 or NSS_RC2_CBC
+**	"effectiveKeyLen" in bytes, not bits.
+**
+** When mode is set to NSS_RC2_CBC the RC2 cipher is run in "cipher block
+** chaining" mode.
+*/
+RC2Context *
+RC2_CreateContext(const unsigned char *key, unsigned int len,
+		  const unsigned char *input, int mode, unsigned efLen8)
 {
-    return PORT_ZNew(RC2Context);
-}
-SECStatus   
-RC2_InitContext(RC2Context *cx, const unsigned char *key, unsigned int len,
-	        const unsigned char *input, int mode, unsigned int efLen8, 
-		unsigned int unused)
-{
+    RC2Context *cx;
     PRUint8    *L,*L2;
     int         i;
 #if !defined(IS_LITTLE_ENDIAN)
@@ -147,22 +155,22 @@ RC2_InitContext(RC2Context *cx, const unsigned char *key, unsigned int len,
 #endif
     PRUint8     tmpB;
 
-    if (!key || !cx || !len || len > (sizeof cx->B) || 
-	efLen8 > (sizeof cx->B)) {
-	PORT_SetError(SEC_ERROR_INVALID_ARGS);
-    	return SECFailure;
+    if (!key || len == 0 || len > (sizeof cx->B) || efLen8 > (sizeof cx->B)) {
+    	return NULL;
     }
     if (mode == NSS_RC2) {
     	/* groovy */
     } else if (mode == NSS_RC2_CBC) {
     	if (!input) {
-	    PORT_SetError(SEC_ERROR_INVALID_ARGS);
-	    return SECFailure;
+	    return NULL;	/* not groovy */
 	}
     } else {
-	PORT_SetError(SEC_ERROR_INVALID_ARGS);
-	return SECFailure;
+    	return NULL;
     }
+
+    cx = PORT_ZNew(RC2Context);
+    if (!cx)
+    	return cx;
 
     if (mode == NSS_RC2_CBC) {
     	cx->enc = & rc2_EncryptCBC;
@@ -200,32 +208,6 @@ RC2_InitContext(RC2Context *cx, const unsigned char *key, unsigned int len,
         SWAPK(i);		/* candidate for unrolling */
     }
 #endif
-    return SECSuccess;
-}
-
-/*
-** Create a new RC2 context suitable for RC2 encryption/decryption.
-** 	"key" raw key data
-** 	"len" the number of bytes of key data
-** 	"iv" is the CBC initialization vector (if mode is NSS_RC2_CBC)
-** 	"mode" one of NSS_RC2 or NSS_RC2_CBC
-**	"effectiveKeyLen" in bytes, not bits.
-**
-** When mode is set to NSS_RC2_CBC the RC2 cipher is run in "cipher block
-** chaining" mode.
-*/
-RC2Context *
-RC2_CreateContext(const unsigned char *key, unsigned int len,
-		  const unsigned char *iv, int mode, unsigned efLen8)
-{
-    RC2Context *cx = PORT_ZNew(RC2Context);
-    if (cx) {
-	SECStatus rv = RC2_InitContext(cx, key, len, iv, mode, efLen8, 0);
-	if (rv != SECSuccess) {
-	    RC2_DestroyContext(cx, PR_TRUE);
-	    cx = NULL;
-	}
-    }
     return cx;
 }
 

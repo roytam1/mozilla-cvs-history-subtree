@@ -21,7 +21,8 @@
 #
 # Contributor(s):
 #   Dr Vipul Gupta <vipul.gupta@sun.com> and
-#   Douglas Stebila <douglas@stebila.ca>, Sun Microsystems Laboratories
+#   Douglas Stebila <douglas@stebila.ca>, Sun Microsystems
+#   Laboratories
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -65,7 +66,6 @@ EXPORTS = \
 	$(NULL)
 
 PRIVATE_EXPORTS = \
-	alghmac.h \
 	blapi.h \
 	secmpi.h \
 	secrng.h \
@@ -96,8 +96,6 @@ CSRCS = \
 	md2.c \
 	md5.c \
 	sha512.c \
-	alghmac.c \
-	rawhash.c \
 	alg2268.c \
 	arcfour.c \
 	arcfive.c \
@@ -111,7 +109,6 @@ CSRCS = \
 	dsa.c \
 	rsa.c \
 	shvfy.c \
-	tlsprfalg.c \
 	$(MPI_SRCS) \
 	$(ECL_SRCS) \
 	$(NULL)
@@ -119,7 +116,6 @@ CSRCS = \
 ALL_CSRCS := $(CSRCS)
 
 ALL_HDRS =  \
-	alghmac.h \
 	blapi.h \
 	blapit.h \
 	des.h \

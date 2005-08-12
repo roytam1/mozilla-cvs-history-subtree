@@ -71,7 +71,6 @@ ECGroup_new()
 	group->extra1 = NULL;
 	group->extra2 = NULL;
 	group->extra_free = NULL;
-	group->validate_point = NULL;
 
   CLEANUP:
 	if (res != MP_OKAY) {
@@ -111,7 +110,6 @@ ECGroup_consGFp(const mp_int *irr, const mp_int *curvea,
 	group->point_mul = &ec_GFp_pt_mul_jm_wNAF;
 	group->base_point_mul = NULL;
 	group->points_mul = &ec_GFp_pts_mul_jac;
-	group->validate_point = &ec_GFp_validate_point;
 
   CLEANUP:
 	if (res != MP_OKAY) {
@@ -154,7 +152,6 @@ ECGroup_consGFp_mont(const mp_int *irr, const mp_int *curvea,
 	group->point_mul = &ec_GFp_pt_mul_jm_wNAF;
 	group->base_point_mul = NULL;
 	group->points_mul = &ec_GFp_pts_mul_jac;
-	group->validate_point = &ec_GFp_validate_point;
 
   CLEANUP:
 	if (res != MP_OKAY) {
@@ -196,7 +193,6 @@ ECGroup_consGF2m(const mp_int *irr, const unsigned int irr_arr[5],
 	group->point_mul = &ec_GF2m_pt_mul_mont;
 	group->base_point_mul = NULL;
 	group->points_mul = &ec_pts_mul_basic;
-	group->validate_point = &ec_GF2m_validate_point;
 
   CLEANUP:
 	if (res != MP_OKAY) {
@@ -333,10 +329,11 @@ ecgroup_fromNameAndHex(const ECCurveName name,
 
 	/* set name, if any */
 	if (params->text != NULL) {
-		group->text = strdup(params->text);
+		group->text = (char *) malloc(sizeof(char) * strlen(params->text));
 		if (group->text == NULL) {
 			res = MP_MEM;
 		}
+		strcpy(group->text, params->text);
 	}
 
   CLEANUP:
@@ -392,21 +389,6 @@ ECGroup_fromName(const ECCurveName name)
 		return NULL;
 	}
 	return group;
-}
-
-/* Validates an EC public key as described in Section 5.2.2 of X9.63. */
-mp_err ECPoint_validate(const ECGroup *group, const mp_int *px, const 
-					mp_int *py)
-{
-    /* 1: Verify that publicValue is not the point at infinity */
-    /* 2: Verify that the coordinates of publicValue are elements 
-     *    of the field.
-     */
-    /* 3: Verify that publicValue is on the curve. */
-    /* 4: Verify that the order of the curve times the publicValue
-     *    is the point at infinity.
-     */
-	return group->validate_point(px, py, group);
 }
 
 /* Free the memory allocated (if any) to an ECGroup object. */

@@ -523,19 +523,6 @@ typedef enum SECCertTimeValidityEnum {
 } SECCertTimeValidity;
 
 /*
- * This is used with CERT_CompareValidityTimes when comparing the validity
- * periods of two certificates A and B.
- */
-
-typedef enum CERTCompareValidityStatusEnum
-{
-    certValidityUndetermined = 0,
-    certValidityChooseB = 1,
-    certValidityEqual = 2,
-    certValidityChooseA = 3
-} CERTCompareValidityStatus;
-
-/*
  * Interface for getting certificate nickname strings out of the database
  */
 

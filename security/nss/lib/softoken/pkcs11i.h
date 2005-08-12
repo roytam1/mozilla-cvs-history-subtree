@@ -683,6 +683,10 @@ SFTKTokenObject *sftk_convertSessionToToken(SFTKObject *so);
  * implement TLS Pseudo Random Function (PRF)
  */
 
+extern SECStatus
+sftk_PRF(const SECItem *secret, const char *label, SECItem *seed, 
+         SECItem *result, PRBool isFIPS);
+
 extern CK_RV
 sftk_TLSPRFInit(SFTKSessionContext *context, 
 		  SFTKObject *        key, 

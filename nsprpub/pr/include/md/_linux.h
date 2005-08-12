@@ -46,9 +46,7 @@
 
 #define PR_LINKER_ARCH	"linux"
 #define _PR_SI_SYSNAME  "LINUX"
-#ifdef __powerpc64__
-#define _PR_SI_ARCHITECTURE "ppc64"
-#elif defined(__powerpc__)
+#ifdef __powerpc__
 #define _PR_SI_ARCHITECTURE "ppc"
 #elif defined(__alpha)
 #define _PR_SI_ARCHITECTURE "alpha"

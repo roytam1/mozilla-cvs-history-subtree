@@ -59,6 +59,10 @@
 #include "secpkcs5.h"  
 #include "ec.h"
 
+#define PAIRWISE_SECITEM_TYPE			siBuffer
+#define PAIRWISE_DIGEST_LENGTH			SHA1_LENGTH /* 160-bits */
+#define PAIRWISE_MESSAGE_LENGTH			20          /* 160-bits */
+
 /*
  * import a public key into the desired slot
  */
@@ -503,6 +507,258 @@ PK11_GetPrivateModulusLen(SECKEYPrivateKey *key)
     return -1;
 }
 
+/*
+ * PKCS #11 pairwise consistency check utilized to validate key pair.
+ */
+static SECStatus
+pk11_PairwiseConsistencyCheck(SECKEYPublicKey *pubKey, 
+	SECKEYPrivateKey *privKey, CK_MECHANISM *mech, void* wincx )
+{
+    /* Variables used for Encrypt/Decrypt functions. */
+    unsigned char *known_message = (unsigned char *)"Known Crypto Message";
+    CK_BBOOL isEncryptable = CK_FALSE;
+    CK_BBOOL canSignVerify = CK_FALSE;
+    CK_BBOOL isDerivable = CK_FALSE;
+    unsigned char plaintext[PAIRWISE_MESSAGE_LENGTH];
+    CK_ULONG bytes_decrypted;
+    PK11SlotInfo *slot;
+    CK_OBJECT_HANDLE id;
+    unsigned char *ciphertext;
+    unsigned char *text_compared;
+    CK_ULONG max_bytes_encrypted;
+    CK_ULONG bytes_encrypted;
+    CK_ULONG bytes_compared;
+    CK_RV crv;
+
+    /* Variables used for Signature/Verification functions. */
+    unsigned char *known_digest = (unsigned char *)"Mozilla Rules World!";
+    SECItem  signature;
+    SECItem  digest;    /* always uses SHA-1 digest */
+    int signature_length;
+    SECStatus rv;
+
+    /**************************************************/
+    /* Pairwise Consistency Check of Encrypt/Decrypt. */
+    /**************************************************/
+
+    isEncryptable = PK11_HasAttributeSet( privKey->pkcs11Slot, 
+					privKey->pkcs11ID, CKA_DECRYPT );
+
+    /* If the encryption attribute is set; attempt to encrypt */
+    /* with the public key and decrypt with the private key.  */
+    if( isEncryptable ) {
+	/* Find a module to encrypt against */
+	slot = PK11_GetBestSlot(pk11_mapWrapKeyType(privKey->keyType),wincx);
+	if (slot == NULL) {
+	    PORT_SetError( SEC_ERROR_NO_MODULE );
+	    return SECFailure;
+	}
+
+	id = PK11_ImportPublicKey(slot,pubKey,PR_FALSE);
+	if (id == CK_INVALID_HANDLE) {
+	    PK11_FreeSlot(slot);
+	    return SECFailure;
+	}
+
+        /* Compute max bytes encrypted from modulus length of private key. */
+	max_bytes_encrypted = PK11_GetPrivateModulusLen( privKey );
+
+
+	/* Prepare for encryption using the public key. */
+        PK11_EnterSlotMonitor(slot);
+	crv = PK11_GETTAB( slot )->C_EncryptInit( slot->session,
+						  mech, id );
+        if( crv != CKR_OK ) {
+	    PK11_ExitSlotMonitor(slot);
+	    PORT_SetError( PK11_MapError( crv ) );
+	    PK11_FreeSlot(slot);
+	    return SECFailure;
+	}
+
+	/* Allocate space for ciphertext. */
+	ciphertext = (unsigned char *) PORT_Alloc( max_bytes_encrypted );
+	if( ciphertext == NULL ) {
+	    PK11_ExitSlotMonitor(slot);
+	    PORT_SetError( SEC_ERROR_NO_MEMORY );
+	    PK11_FreeSlot(slot);
+	    return SECFailure;
+	}
+
+	/* Initialize bytes encrypted to max bytes encrypted. */
+	bytes_encrypted = max_bytes_encrypted;
+
+	/* Encrypt using the public key. */
+	crv = PK11_GETTAB( slot )->C_Encrypt( slot->session,
+					      known_message,
+					      PAIRWISE_MESSAGE_LENGTH,
+					      ciphertext,
+					      &bytes_encrypted );
+	PK11_ExitSlotMonitor(slot);
+	PK11_FreeSlot(slot);
+	if( crv != CKR_OK ) {
+	    PORT_SetError( PK11_MapError( crv ) );
+	    PORT_Free( ciphertext );
+	    return SECFailure;
+	}
+
+	/* Always use the smaller of these two values . . . */
+	bytes_compared = ( bytes_encrypted > PAIRWISE_MESSAGE_LENGTH )
+			 ? PAIRWISE_MESSAGE_LENGTH
+			 : bytes_encrypted;
+
+	/* If there was a failure, the plaintext */
+	/* goes at the end, therefore . . .      */
+	text_compared = ( bytes_encrypted > PAIRWISE_MESSAGE_LENGTH )
+			? (ciphertext + bytes_encrypted -
+			  PAIRWISE_MESSAGE_LENGTH )
+			: ciphertext;
+
+	/* Check to ensure that ciphertext does */
+	/* NOT EQUAL known input message text   */
+	/* per FIPS PUB 140-1 directive.        */
+	if( ( bytes_encrypted != max_bytes_encrypted ) ||
+	    ( PORT_Memcmp( text_compared, known_message,
+			   bytes_compared ) == 0 ) ) {
+	    /* Set error to Invalid PRIVATE Key. */
+	    PORT_SetError( SEC_ERROR_INVALID_KEY );
+	    PORT_Free( ciphertext );
+	    return SECFailure;
+	}
+
+	slot = privKey->pkcs11Slot;
+	/* Prepare for decryption using the private key. */
+        PK11_EnterSlotMonitor(slot);
+	crv = PK11_GETTAB( slot )->C_DecryptInit( slot->session,
+						  mech,
+						  privKey->pkcs11ID );
+	if( crv != CKR_OK ) {
+	    PK11_ExitSlotMonitor(slot);
+	    PORT_SetError( PK11_MapError(crv) );
+	    PORT_Free( ciphertext );
+	    return SECFailure;
+	}
+
+	/* Initialize bytes decrypted to be the */
+	/* expected PAIRWISE_MESSAGE_LENGTH.    */
+	bytes_decrypted = PAIRWISE_MESSAGE_LENGTH;
+
+	/* Decrypt using the private key.   */
+	/* NOTE:  No need to reset the      */
+	/*        value of bytes_encrypted. */
+	crv = PK11_GETTAB( slot )->C_Decrypt( slot->session,
+					      ciphertext,
+					      bytes_encrypted,
+					      plaintext,
+					      &bytes_decrypted );
+	PK11_ExitSlotMonitor(slot);
+
+	/* Finished with ciphertext; free it. */
+	PORT_Free( ciphertext );
+
+	if( crv != CKR_OK ) {
+	   PORT_SetError( PK11_MapError(crv) );
+	   return SECFailure;
+	}
+
+	/* Check to ensure that the output plaintext */
+	/* does EQUAL known input message text.      */
+	if( ( bytes_decrypted != PAIRWISE_MESSAGE_LENGTH ) ||
+	    ( PORT_Memcmp( plaintext, known_message,
+			   PAIRWISE_MESSAGE_LENGTH ) != 0 ) ) {
+	    /* Set error to Bad PUBLIC Key. */
+	    PORT_SetError( SEC_ERROR_BAD_KEY );
+	    return SECFailure;
+	}
+      }
+
+    /**********************************************/
+    /* Pairwise Consistency Check of Sign/Verify. */
+    /**********************************************/
+
+    canSignVerify = PK11_HasAttributeSet ( privKey->pkcs11Slot, 
+					  privKey->pkcs11ID, CKA_SIGN);
+    
+    if (canSignVerify)
+      {
+	/* Initialize signature and digest data. */
+	signature.data = NULL;
+	digest.data = NULL;
+	
+	/* Determine length of signature. */
+	signature_length = PK11_SignatureLen( privKey );
+	if( signature_length == 0 )
+	  goto failure;
+	
+	/* Allocate space for signature data. */
+	signature.data = (unsigned char *) PORT_Alloc( signature_length );
+	if( signature.data == NULL ) {
+	  PORT_SetError( SEC_ERROR_NO_MEMORY );
+	  goto failure;
+	}
+	
+	/* Allocate space for known digest data. */
+	digest.data = (unsigned char *) PORT_Alloc( PAIRWISE_DIGEST_LENGTH );
+	if( digest.data == NULL ) {
+	  PORT_SetError( SEC_ERROR_NO_MEMORY );
+	  goto failure;
+	}
+	
+	/* "Fill" signature type and length. */
+	signature.type = PAIRWISE_SECITEM_TYPE;
+	signature.len  = signature_length;
+	
+	/* "Fill" digest with known SHA-1 digest parameters. */
+	digest.type = PAIRWISE_SECITEM_TYPE;
+	PORT_Memcpy( digest.data, known_digest, PAIRWISE_DIGEST_LENGTH );
+	digest.len = PAIRWISE_DIGEST_LENGTH;
+	
+	/* Sign the known hash using the private key. */
+	rv = PK11_Sign( privKey, &signature, &digest );
+	if( rv != SECSuccess )
+	  goto failure;
+	
+	/* Verify the known hash using the public key. */
+	rv = PK11_Verify( pubKey, &signature, &digest, wincx );
+    if( rv != SECSuccess )
+      goto failure;
+	
+	/* Free signature and digest data. */
+	PORT_Free( signature.data );
+	PORT_Free( digest.data );
+      }
+
+
+
+    /**********************************************/
+    /* Pairwise Consistency Check for Derivation  */
+    /**********************************************/
+
+    isDerivable = PK11_HasAttributeSet ( privKey->pkcs11Slot, 
+					  privKey->pkcs11ID, CKA_DERIVE);
+    
+    if (isDerivable)
+      {   
+	/* 
+	 * We are not doing consistency check for Diffie-Hellman Key - 
+	 * otherwise it would be here
+	 * This is also true for Elliptic Curve Diffie-Hellman keys
+	 * NOTE: EC keys are currently subjected to pairwise
+	 * consistency check for signing/verification.
+	 */
+
+      }
+
+    return SECSuccess;
+
+failure:
+    if( signature.data != NULL )
+	PORT_Free( signature.data );
+    if( digest.data != NULL )
+	PORT_Free( digest.data );
+
+    return SECFailure;
+}
+
 
 
 /*
@@ -747,6 +1003,7 @@ PK11_GenerateKeyPair(PK11SlotInfo *slot,CK_MECHANISM_TYPE type,
     CK_ATTRIBUTE *privattrs;
     SECItem *pubKeyIndex;
     CK_ATTRIBUTE setTemplate;
+    SECStatus rv;
     CK_MECHANISM_INFO mechanism_info;
     CK_OBJECT_CLASS keyClass;
     SECItem *cka_id;
@@ -815,12 +1072,7 @@ PK11_GenerateKeyPair(PK11SlotInfo *slot,CK_MECHANISM_TYPE type,
     /* set up the mechanism specific info */
     switch (type) {
     case CKM_RSA_PKCS_KEY_PAIR_GEN:
-    case CKM_RSA_X9_31_KEY_PAIR_GEN:
 	rsaParams = (PK11RSAGenParams *)param;
-	if (rsaParams->pe == 0) {
-	    PORT_SetError(SEC_ERROR_INVALID_ARGS);
-	    return NULL;
-	}
 	modulusBits = rsaParams->keySizeInBits;
 	peCount = 0;
 
@@ -959,17 +1211,12 @@ PK11_GenerateKeyPair(PK11SlotInfo *slot,CK_MECHANISM_TYPE type,
 	haslock = PK11_RWSessionHasLock(slot,session_handle);
 	restore = PR_TRUE;
     } else {
+        PK11_EnterSlotMonitor(slot); /* gross!! */
 	session_handle = slot->session;
-	if (session_handle != CK_INVALID_SESSION)
-	    PK11_EnterSlotMonitor(slot);
 	restore = PR_FALSE;
 	haslock = PR_TRUE;
     }
 
-    if (session_handle == CK_INVALID_SESSION) {
-    	PORT_SetError(SEC_ERROR_BAD_DATA);
-	return NULL;
-    }
     crv = PK11_GETTAB(slot)->C_GenerateKeyPair(session_handle, &mechanism,
 	pubTemplate,pubCount,privTemplate,privCount,&pubID,&privID);
 
@@ -1010,7 +1257,6 @@ PK11_GenerateKeyPair(PK11SlotInfo *slot,CK_MECHANISM_TYPE type,
     pubKeyIndex =  NULL;
     switch (type) {
     case CKM_RSA_PKCS_KEY_PAIR_GEN:
-    case CKM_RSA_X9_31_KEY_PAIR_GEN:
       pubKeyIndex = &(*pubKey)->u.rsa.modulus;
       break;
     case CKM_DSA_KEY_PAIR_GEN:
@@ -1063,6 +1309,16 @@ PK11_GenerateKeyPair(PK11SlotInfo *slot,CK_MECHANISM_TYPE type,
 	SECKEY_DestroyPublicKey(*pubKey);
 	PK11_DestroyObject(slot,privID);
 	*pubKey = NULL;
+	return NULL;  /* due to pairwise consistency check */
+    }
+
+    /* Perform PKCS #11 pairwise consistency check. */
+    rv = pk11_PairwiseConsistencyCheck( *pubKey, privKey, &test_mech, wincx );
+    if( rv != SECSuccess ) {
+	SECKEY_DestroyPublicKey( *pubKey );
+	SECKEY_DestroyPrivateKey( privKey );
+	*pubKey = NULL;
+	privKey = NULL;
 	return NULL;
     }
 
@@ -1631,46 +1887,6 @@ loser:
 }
 
 SECKEYPrivateKey*
-PK11_CopyTokenPrivKeyToSessionPrivKey(PK11SlotInfo *destSlot,
-				      SECKEYPrivateKey *privKey)
-{
-    CK_RV             crv;
-    CK_OBJECT_HANDLE  newKeyID;
-
-    static const CK_BBOOL     ckfalse = CK_FALSE;
-    static const CK_ATTRIBUTE template[1] = { 
-       { CKA_TOKEN, (CK_BBOOL *)&ckfalse, sizeof ckfalse }
-    };
-
-    if (destSlot && destSlot != privKey->pkcs11Slot) {
-	SECKEYPrivateKey *newKey =
-	       pk11_loadPrivKey(destSlot, 
-				privKey, 
-			        NULL,     /* pubKey    */
-			        PR_FALSE, /* token     */
-			        PR_FALSE);/* sensitive */
-	if (newKey)
-	    return newKey;
-    }
-    destSlot = privKey->pkcs11Slot;
-    PK11_Authenticate(destSlot, PR_TRUE, privKey->wincx);
-    PK11_EnterSlotMonitor(destSlot);
-    crv = PK11_GETTAB(destSlot)->C_CopyObject(	destSlot->session, 
-						privKey->pkcs11ID,
-						(CK_ATTRIBUTE *)template, 
-						1, &newKeyID);
-    PK11_ExitSlotMonitor(destSlot);
-
-    if (crv != CKR_OK) {
-	PORT_SetError( PK11_MapError(crv) );
-	return NULL;
-    }
-
-    return PK11_MakePrivKey(destSlot, privKey->keyType, PR_TRUE /*isTemp*/, 
-			    newKeyID, privKey->wincx);
-}
-
-SECKEYPrivateKey*
 PK11_ConvertSessionPrivKeyToTokenPrivKey(SECKEYPrivateKey *privk, void* wincx)
 {
     PK11SlotInfo* slot = privk->pkcs11Slot;
@@ -1685,10 +1901,6 @@ PK11_ConvertSessionPrivKeyToTokenPrivKey(SECKEYPrivateKey *privk, void* wincx)
 
     PK11_Authenticate(slot, PR_TRUE, wincx);
     rwsession = PK11_GetRWSession(slot);
-    if (rwsession == CK_INVALID_SESSION) {
-    	PORT_SetError(SEC_ERROR_BAD_DATA);
-	return NULL;
-    }
     crv = PK11_GETTAB(slot)->C_CopyObject(rwsession, privk->pkcs11ID,
         template, 1, &newKeyID);
     PK11_RestoreROSession(slot, rwsession);
@@ -1701,7 +1913,6 @@ PK11_ConvertSessionPrivKeyToTokenPrivKey(SECKEYPrivateKey *privk, void* wincx)
     return PK11_MakePrivKey(slot, nullKey /*KeyType*/, PR_FALSE /*isTemp*/,
         newKeyID, NULL /*wincx*/);
 }
-
 /*
  * destroy a private key if there are no matching certs.
  * this function also frees the privKey structure.

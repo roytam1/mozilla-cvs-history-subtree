@@ -44,18 +44,13 @@
 CORE_DEPTH = ../../..
 
 NAME        = sun-nss
-RELEASE     = 1
+RELEASE     = 4
 VERSION     = `grep NSS_VERSION $(CORE_DEPTH)/../dist/public/nss/nss.h \
 		| sed -e 's/"$$//' -e 's/.*"//' -e 's/ .*//'`
 PWD         = `pwd`
 BUILDROOT   = $(PWD)\/$(NAME)-root
 
 include $(CORE_DEPTH)/coreconf/config.mk
-
-# Force i386 for non 64 bit build
-ifneq ($(USE_64),1)
-	RPMTARGET = "--target=i386"
-endif
 
 publish:
 	$(MAKE) clean
@@ -104,7 +99,7 @@ publish:
 	find opt -type f \( -name "*.h" \) \
 		| sed -e "s-^-/-" >>temp.spec
 	cp $(NAME)-$(VERSION).tar.gz SOURCES
-	rpmbuild $(RPMTARGET) -bb temp.spec
+	rpm -ba temp.spec
 
 clean::
 	rm -rf SOURCES SRPMS RPMS BUILD

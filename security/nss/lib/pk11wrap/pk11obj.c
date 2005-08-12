@@ -97,10 +97,6 @@ PK11_DestroyTokenObject(PK11SlotInfo *slot,CK_OBJECT_HANDLE object) {
 
     
     rwsession = PK11_GetRWSession(slot);
-    if (rwsession == CK_INVALID_SESSION) {
-    	PORT_SetError(SEC_ERROR_BAD_DATA);
-    	return SECFailure;
-    }
 
     crv = PK11_GETTAB(slot)->C_DestroyObject(rwsession,object);
     if (crv != CKR_OK) {
@@ -214,9 +210,6 @@ PK11_GetAttributes(PRArenaPool *arena,PK11SlotInfo *slot,
     /* make pedantic happy... note that it's only used arena != NULL */ 
     void *mark = NULL; 
     CK_RV crv;
-    PORT_Assert(slot->session != CK_INVALID_SESSION);
-    if (slot->session == CK_INVALID_SESSION)
-	return CKR_SESSION_HANDLE_INVALID;
 
     /*
      * first get all the lengths of the parameters.
@@ -326,10 +319,6 @@ PK11_SetObjectNickname(PK11SlotInfo *slot, CK_OBJECT_HANDLE id,
 
     PK11_SETATTRS(&setTemplate, CKA_LABEL, (CK_CHAR *) nickname, len);
     rwsession = PK11_GetRWSession(slot);
-    if (rwsession == CK_INVALID_SESSION) {
-    	PORT_SetError(SEC_ERROR_BAD_DATA);
-    	return SECFailure;
-    }
     crv = PK11_GETTAB(slot)->C_SetAttributeValue(rwsession, id,
 			&setTemplate, 1);
     PK11_RestoreROSession(slot, rwsession);
@@ -400,12 +389,7 @@ PK11_CreateNewObject(PK11SlotInfo *slot, CK_SESSION_HANDLE session,
 	    rwsession =  PK11_GetRWSession(slot);
 	} else if (rwsession == CK_INVALID_SESSION) {
 	    rwsession =  slot->session;
-	    if (rwsession != CK_INVALID_SESSION)
-		PK11_EnterSlotMonitor(slot);
-	}
-	if (rwsession == CK_INVALID_SESSION) {
-	    PORT_SetError(SEC_ERROR_BAD_DATA);
-	    return SECFailure;
+	    PK11_EnterSlotMonitor(slot);
 	}
 	crv = PK11_GETTAB(slot)->C_CreateObject(rwsession, theTemplate,
 							count,objectID);
@@ -423,7 +407,6 @@ PK11_CreateNewObject(PK11SlotInfo *slot, CK_SESSION_HANDLE session,
 }
 
 
-/* This function may add a maximum of 9 attributes. */
 unsigned int
 pk11_FlagsToAttributes(CK_FLAGS flags, CK_ATTRIBUTE *attrs, CK_BBOOL *ckTrue)
 {
@@ -445,10 +428,8 @@ pk11_FlagsToAttributes(CK_FLAGS flags, CK_ATTRIBUTE *attrs, CK_BBOOL *ckTrue)
     for (; flags && test <= CKF_DERIVE; test <<= 1, ++pType) {
     	if (test & flags) {
 	    flags ^= test;
-	    if (*pType) {
-		PK11_SETATTRS(attr, *pType, ckTrue, sizeof *ckTrue); 
-		++attr;
-	    }
+	    PK11_SETATTRS(attr, *pType, ckTrue, sizeof *ckTrue); 
+	    ++attr;
 	}
     }
     return (attr - attrs);
@@ -940,17 +921,11 @@ PK11_UnwrapPrivKey(PK11SlotInfo *slot, PK11SymKey *wrappingKey,
     if (newKey) {
 	if (perm) {
 	    /* Get RW Session will either lock the monitor if necessary, 
-	     *  or return a thread safe session handle, or fail. */ 
+	     *  or return a thread safe session handle. */ 
 	    rwsession = PK11_GetRWSession(slot);
 	} else {
 	    rwsession = slot->session;
-	    if (rwsession != CK_INVALID_SESSION) 
-		PK11_EnterSlotMonitor(slot);
-	}
-	if (rwsession == CK_INVALID_SESSION) {
-	    PK11_FreeSymKey(newKey);
-	    PORT_SetError(SEC_ERROR_BAD_DATA);
-	    return NULL;
+	    PK11_EnterSlotMonitor(slot);
 	}
 	crv = PK11_GETTAB(slot)->C_UnwrapKey(rwsession, &mechanism, 
 					 newKey->objectID,
@@ -1127,7 +1102,7 @@ PK11_FindGenericObjects(PK11SlotInfo *slot, CK_OBJECT_CLASS objClass)
     CK_ATTRIBUTE template[1];
     CK_ATTRIBUTE *attrs = template;
     CK_OBJECT_HANDLE *objectIDs = NULL;
-    PK11GenericObject *lastObj = NULL, *obj;
+    PK11GenericObject *lastObj, *obj;
     PK11GenericObject *firstObj = NULL;
     int i, count = 0;
 

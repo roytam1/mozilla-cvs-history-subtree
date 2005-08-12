@@ -2482,13 +2482,8 @@ secuCommandFlag certutil_options[] =
     }
 
     /*  -P certdb name prefix */
-    if (certutil.options[opt_DBPrefix].activated) {
-        if (certutil.options[opt_DBPrefix].arg) {
-            certPrefix = strdup(certutil.options[opt_DBPrefix].arg);
-        } else {
-            Usage(progName);
-        }
-    }
+    if (certutil.options[opt_DBPrefix].activated)
+	certPrefix = strdup(certutil.options[opt_DBPrefix].arg);
 
     /*  -q PQG file or curve name */
     if (certutil.options[opt_PQGFile].activated) {

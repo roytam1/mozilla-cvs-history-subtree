@@ -139,8 +139,6 @@ int ssl3CipherSuites[] = {
     0
 };
 
-#define NO_FULLHS_PERCENTAGE -1
-
 /* This global string is so that client main can see 
  * which ciphers to use. 
  */
@@ -150,26 +148,8 @@ static const char *cipherString;
 static int certsTested;
 static int MakeCertOK;
 static int NoReuse;
-static int fullhs = NO_FULLHS_PERCENTAGE; /* percentage of full handshakes to
-                                          ** perform */
-static PRInt32 globalconid = 0; /* atomically set */
-static int total_connections;  /* total number of connections to perform */
-static int total_connections_rounded_down_to_hundreds;
-static int total_connections_modulo_100;
-
 static PRBool NoDelay;
 static PRBool QuitOnTimeout = PR_FALSE;
-static PRBool ThrottleUp = PR_FALSE;
-
-static PRLock    * threadLock; /* protects the global variables below */
-static PRTime lastConnectFailure;
-static PRTime lastConnectSuccess;
-static PRTime lastThrottleUp;
-static int remaining_connections;  /* number of connections left */
-static int active_threads = 8; /* number of threads currently trying to
-                               ** connect */
-static int numUsed;
-/* end of variables protected by threadLock */
 
 static SSL3Statistics * ssl3stats;
 
@@ -201,19 +181,13 @@ Usage(const char *progName)
 {
     fprintf(stderr, 
     	"Usage: %s [-n nickname] [-p port] [-d dbdir] [-c connections]\n"
- 	"          [-3DTovq] [-2 filename] [-P fullhandshakespercentage | -N]\n"
+	"          [-3DNTovq] [-2 filename]\n"
 	"          [-w dbpasswd] [-C cipher(s)] [-t threads] hostname\n"
 	" where -v means verbose\n"
-        "       -o flag is interpreted as follows:\n"
-        "          1 -o   means override the result of server certificate validation.\n"
-        "          2 -o's mean skip server certificate validation altogether.\n"
-        "       -3 means disable SSL3\n"
+	"       -o means override server certificate validation\n"
 	"       -D means no TCP delays\n"
 	"       -q means quit when server gone (timeout rather than retry forever)\n"
-	"       -N means no session reuse\n"
- 	"       -P means do a specified percentage of full handshakes (0-100)\n"
-        "       -T means disable TLS\n"
-        "       -U means enable throttling up threads\n",
+	"       -N means no session reuse\n",
 	progName);
     exit(1);
 }
@@ -279,9 +253,6 @@ mySSLAuthCertificate(void *arg, PRFileDesc *fd, PRBool checkSig,
     SECStatus rv;
     CERTCertificate *    peerCert;
 
-    if (MakeCertOK>=2) {
-        return SECSuccess;
-    }
     peerCert = SSL_PeerCertificate(fd);
 
     PRINTF("strsclnt: Subject: %s\nstrsclnt: Issuer : %s\n", 
@@ -379,18 +350,26 @@ printSecurityInfo(PRFileDesc *fd)
 
 typedef int startFn(void *a, void *b, int c);
 
+PRLock    * threadLock;
+PRCondVar * threadStartQ;
+PRCondVar * threadEndQ;
 
-static PRInt32     numConnected;
-static int         max_threads;    /* peak threads allowed */
+int         numUsed;
+int         numRunning;
+PRInt32     numConnected;
+int         max_threads = 8;	/* default much less than max. */
+
+typedef enum { rs_idle = 0, rs_running = 1, rs_zombie = 2 } runState;
 
 typedef struct perThreadStr {
     void *	a;
     void *	b;
-    int         tid;
+    int         c;
     int         rv;
     startFn  *  startFunc;
     PRThread *  prThread;
     PRBool	inUse;
+    runState	running;
 } perThread;
 
 perThread threads[MAX_THREADS];
@@ -399,61 +378,25 @@ void
 thread_wrapper(void * arg)
 {
     perThread * slot = (perThread *)arg;
-    PRBool die = PR_FALSE;
 
-    do {
-        PRBool doop = PR_FALSE;
-        PRBool dosleep = PR_FALSE;
-        PRTime now = PR_Now();
+    /* wait for parent to finish launching us before proceeding. */
+    PR_Lock(threadLock);
+    PR_Unlock(threadLock);
 
-        PR_Lock(threadLock);
-        if (! (slot->tid < active_threads)) {
-            /* this thread isn't supposed to be running */
-            if (!ThrottleUp) {
-                /* we'll never need this thread again, so abort it */
-                die = PR_TRUE;
-            } else if (remaining_connections > 0) {
-                /* we may still need this thread, so just sleep for 1s */
-                dosleep = PR_TRUE;
-                /* the conditions to trigger a throttle up are :
-                ** 1. last PR_Connect failure must have happened more than
-                **    10s ago
-                ** 2. last throttling up must have happened more than 0.5s ago
-                ** 3. there must be a more recent PR_Connect success than
-                **    failure
-                */
-                if ( (now - lastConnectFailure > 10 * PR_USEC_PER_SEC) &&
-                    ( (!lastThrottleUp) || ( (now - lastThrottleUp) >=
-                                             (PR_USEC_PER_SEC/2)) ) &&
-                    (lastConnectSuccess > lastConnectFailure) ) {
-                    /* try throttling up by one thread */
-                    active_threads = PR_MIN(max_threads, active_threads+1);
-                    fprintf(stderr,"active_threads set up to %d\n",
-                            active_threads);
-                    lastThrottleUp = PR_MAX(now, lastThrottleUp);
-                }
-            } else {
-                /* no more connections left, we are done */
-                die = PR_TRUE;
-            }
-        } else {
-            /* this thread should run */
-            if (--remaining_connections >= 0) {
-                doop = PR_TRUE;
-            } else {
-                die = PR_TRUE;
-            }
-        }
-        PR_Unlock(threadLock);
-        if (doop) {
-            slot->rv = (* slot->startFunc)(slot->a, slot->b, slot->tid);
-            PRINTF("strsclnt: Thread in slot %d returned %d\n", 
-                   slot->tid, slot->rv);
-        }
-        if (dosleep) {
-            PR_Sleep(PR_SecondsToInterval(1));
-        }
-    } while (!die);
+    slot->rv = (* slot->startFunc)(slot->a, slot->b, slot->c);
+
+    /* Handle cleanup of thread here. */
+    PRINTF("strsclnt: Thread in slot %d returned %d\n", 
+	   slot - threads, slot->rv);
+
+    PR_Lock(threadLock);
+    slot->running = rs_idle;
+    --numRunning;
+
+    /* notify the thread launcher. */
+    PR_NotifyCondVar(threadStartQ);
+
+    PR_Unlock(threadLock);
 }
 
 SECStatus
@@ -461,30 +404,46 @@ launch_thread(
     startFn *	startFunc,
     void *	a,
     void *	b,
-    int         tid)
+    int         c)
 {
     perThread * slot;
     int         i;
 
+    if (!threadStartQ) {
+	threadLock = PR_NewLock();
+	threadStartQ = PR_NewCondVar(threadLock);
+	threadEndQ   = PR_NewCondVar(threadLock);
+    }
     PR_Lock(threadLock);
-
-    PORT_Assert(numUsed < MAX_THREADS);
-    if (! (numUsed < MAX_THREADS)) {
-        PR_Unlock(threadLock);
-        return SECFailure;
+    while (numRunning >= max_threads) {
+    	PR_WaitCondVar(threadStartQ, PR_INTERVAL_NO_TIMEOUT);
+    }
+    for (i = 0; i < numUsed; ++i) {
+    	if (threads[i].running == rs_idle) 
+	    break;
+    }
+    if (i >= numUsed) {
+	if (i >= MAX_THREADS) {
+	    /* something's really wrong here. */
+	    PORT_Assert(i < MAX_THREADS);
+	    PR_Unlock(threadLock);
+	    return SECFailure;
+	}
+	++numUsed;
+	PORT_Assert(numUsed == i + 1);
     }
 
-    slot = &threads[numUsed++];
+    slot = threads + i;
     slot->a = a;
     slot->b = b;
-    slot->tid = tid;
+    slot->c = c;
 
     slot->startFunc = startFunc;
 
     slot->prThread      = PR_CreateThread(PR_USER_THREAD,
                                       thread_wrapper, slot,
 				      PR_PRIORITY_NORMAL, PR_GLOBAL_THREAD,
-				      PR_JOINABLE_THREAD, 0);
+				      PR_UNJOINABLE_THREAD, 0);
     if (slot->prThread == NULL) {
 	PR_Unlock(threadLock);
 	printf("strsclnt: Failed to launch thread!\n");
@@ -492,25 +451,37 @@ launch_thread(
     } 
 
     slot->inUse   = 1;
+    slot->running = 1;
+    ++numRunning;
     PR_Unlock(threadLock);
     PRINTF("strsclnt: Launched thread in slot %d \n", i);
 
     return SECSuccess;
 }
 
-/* join all the threads */
+/* Wait until numRunning == 0 */
 int 
 reap_threads(void)
 {
     perThread * slot;
     int         i;
 
-    for (i = 0; i < MAX_THREADS; ++i) {
-        if (threads[i].prThread) {
-            PR_JoinThread(threads[i].prThread);
-            threads[i].prThread = NULL;
-        }
+    if (!threadLock)
+    	return 0;
+    PR_Lock(threadLock);
+    while (numRunning > 0) {
+    	PR_WaitCondVar(threadStartQ, PR_INTERVAL_NO_TIMEOUT);
     }
+
+    /* Safety Sam sez: make sure count is right. */
+    for (i = 0; i < numUsed; ++i) {
+	slot = threads + i;
+    	if (slot->running != rs_idle)  {
+	    FPRINTF(stderr, "strsclnt: Thread in slot %d is in state %d!\n", 
+	            i, slot->running);
+    	}
+    }
+    PR_Unlock(threadLock);
     return 0;
 }
 
@@ -519,16 +490,18 @@ destroy_thread_data(void)
 {
     PORT_Memset(threads, 0, sizeof threads);
 
+    if (threadEndQ) {
+    	PR_DestroyCondVar(threadEndQ);
+	threadEndQ = NULL;
+    }
+    if (threadStartQ) {
+    	PR_DestroyCondVar(threadStartQ);
+	threadStartQ = NULL;
+    }
     if (threadLock) {
     	PR_DestroyLock(threadLock);
 	threadLock = NULL;
     }
-}
-
-void
-init_thread_data(void)
-{
-    threadLock = PR_NewLock();
 }
 
 /**************************************************************************
@@ -690,7 +663,7 @@ cleanup:
 const char request[] = {"GET /abc HTTP/1.0\r\n\r\n" };
 
 SECStatus
-handle_connection( PRFileDesc *ssl_sock, int tid)
+handle_connection( PRFileDesc *ssl_sock, int connection)
 {
     int	    countRead = 0;
     PRInt32 rv;
@@ -724,9 +697,8 @@ handle_connection( PRFileDesc *ssl_sock, int tid)
 	}
 
 	countRead += rv;
-	FPRINTF(stderr,
-                "strsclnt: connection on thread %d read %d bytes (%d total).\n",
-		tid, rv, countRead );
+	FPRINTF(stderr, "strsclnt: connection %d read %d bytes (%d total).\n", 
+		connection, rv, countRead );
     }
     PR_Free(buf);
     buf = 0;
@@ -734,26 +706,11 @@ handle_connection( PRFileDesc *ssl_sock, int tid)
     /* Caller closes the socket. */
 
     FPRINTF(stderr, 
-    "strsclnt: connection on thread %d read %d bytes total. ---------\n", 
-    	    tid, countRead);
+    "strsclnt: connection %d read %d bytes total. -----------------------\n", 
+    	    connection, countRead);
 
     return SECSuccess;	/* success */
 }
-
-#define USE_SOCK_PEER_ID 1
-
-#ifdef USE_SOCK_PEER_ID
-
-PRInt32 lastFullHandshakePeerID;
-
-SECStatus 
-myHandshakeCallback(PRFileDesc *socket, void *arg) 
-{
-    PR_AtomicSet(&lastFullHandshakePeerID, (PRInt32) arg);
-    return SECSuccess;
-}
-
-#endif
 
 /* one copy of this function is launched in a separate thread for each
 ** connection to be made.
@@ -762,7 +719,7 @@ int
 do_connects(
     void *	a,
     void *	b,
-    int         tid)
+    int         connection)
 {
     PRNetAddr  *        addr		= (PRNetAddr *)  a;
     PRFileDesc *        model_sock	= (PRFileDesc *) b;
@@ -803,26 +760,16 @@ retry:
 
     prStatus = PR_Connect(tcp_sock, addr, PR_INTERVAL_NO_TIMEOUT);
     if (prStatus != PR_SUCCESS) {
-        PRErrorCode err = PR_GetError(); /* save error code */
-        if (ThrottleUp) {
-            PRTime now = PR_Now();
-            PR_Lock(threadLock);
-            lastConnectFailure = PR_MAX(now, lastConnectFailure);
-            PR_Unlock(threadLock);
-        }
-        if ((err == PR_CONNECT_REFUSED_ERROR) || 
+	PRErrorCode err = PR_GetError();
+	if ((err == PR_CONNECT_REFUSED_ERROR) || 
 	    (err == PR_CONNECT_RESET_ERROR)      ) {
 	    int connections = numConnected;
 
 	    PR_Close(tcp_sock);
-            PR_Lock(threadLock);
-            if (connections > 2 && active_threads >= connections) {
-                active_threads = connections - 1;
-                fprintf(stderr,"active_threads set down to %d\n",
-                        active_threads);
-            }
-            PR_Unlock(threadLock);
-
+	    if (connections > 2 && max_threads >= connections) {
+	        max_threads = connections - 1;
+		fprintf(stderr,"max_threads set down to %d\n", max_threads);
+	    }
             if (QuitOnTimeout && sleepInterval > 40000) {
                 fprintf(stderr,
 	            "strsclnt: Client timed out waiting for connection to server.\n");
@@ -835,13 +782,6 @@ retry:
 	errWarn("PR_Connect");
 	rv = SECFailure;
 	goto done;
-    } else {
-        if (ThrottleUp) {
-            PRTime now;
-            PR_Lock(threadLock);
-            lastConnectSuccess = PR_MAX(now, lastConnectSuccess);
-            PR_Unlock(threadLock);
-        }
     }
 
     ssl_sock = SSL_ImportFD(model_sock, tcp_sock);
@@ -850,37 +790,7 @@ retry:
     	PR_Close(tcp_sock);
 	return SECSuccess;
     }
-    if (fullhs != NO_FULLHS_PERCENTAGE) {
-#ifdef USE_SOCK_PEER_ID
-        char sockPeerIDString[512];
-        static PRInt32 sockPeerID = 0; /* atomically incremented */
-        PRInt32 thisPeerID;
-#endif
-        PRInt32 savid = PR_AtomicIncrement(&globalconid);
-        PRInt32 conid = 1 + (savid - 1) % 100;
-        /* don't change peer ID on the very first handshake, which is always
-           a full, so the session gets stored into the client cache */
-        if ( (savid != 1) &&
-            ( ( (savid <= total_connections_rounded_down_to_hundreds) &&
-                (conid <= fullhs) ) ||
-              (conid*100 <= total_connections_modulo_100*fullhs ) ) ) {
-#ifdef USE_SOCK_PEER_ID
-            /* force a full handshake by changing the socket peer ID */
-            thisPeerID = PR_AtomicIncrement(&sockPeerID);
-        } else {
-            /* reuse previous sockPeerID for restart handhsake */
-            thisPeerID = lastFullHandshakePeerID;
-        }
-        PR_snprintf(sockPeerIDString, sizeof(sockPeerIDString), "ID%d",
-                    thisPeerID);
-        SSL_SetSockPeerID(ssl_sock, sockPeerIDString);
-        SSL_HandshakeCallback(ssl_sock, myHandshakeCallback, (void*)thisPeerID);
-#else
-            /* force a full handshake by setting the no cache option */
-            SSL_OptionSet(ssl_sock, SSL_NO_CACHE, 1);
-        }
-#endif
-    }
+
     rv = SSL_ResetHandshake(ssl_sock, /* asServer */ 0);
     if (rv != SECSuccess) {
 	errWarn("SSL_ResetHandshake");
@@ -890,9 +800,9 @@ retry:
     PR_AtomicIncrement(&numConnected);
 
     if (bigBuf.data != NULL) {
-	result = handle_fdx_connection( ssl_sock, tid);
+	result = handle_fdx_connection( ssl_sock, connection);
     } else {
-	result = handle_connection( ssl_sock, tid);
+	result = handle_connection( ssl_sock, connection);
     }
 
     PR_AtomicDecrement(&numConnected);
@@ -1003,7 +913,7 @@ StressClient_GetClientAuthData(void * arg,
                 PR_Unlock(Cert_And_Key->lock);
                 if (!*pRetCert || !*pRetKey) {
                     /* one or both of them failed to copy. Either the source was NULL, or there was
-                    ** an out of memory condition. Free any allocated copy and fail */
+                       an out of memory condition. Free any allocated copy and fail */
                     if (*pRetCert) {
                         CERT_DestroyCertificate(*pRetCert);
                         *pRetCert = NULL;
@@ -1211,26 +1121,20 @@ client_main(
 
     /* end of ssl configuration. */
 
-    init_thread_data();
-
-    remaining_connections = total_connections = connections;
-    total_connections_modulo_100 = total_connections % 100;
-    total_connections_rounded_down_to_hundreds =
-        total_connections - total_connections_modulo_100;
-
+    i = 1;
     if (!NoReuse) {
-        remaining_connections = 1;
-	rv = launch_thread(do_connects, &addr, model_sock, 0);
+	rv = launch_thread(do_connects, &addr, model_sock, i);
+	--connections;
+	++i;
 	/* wait for the first connection to terminate, then launch the rest. */
 	reap_threads();
-        remaining_connections = total_connections - 1 ;
     }
-    if (remaining_connections > 0) {
-        active_threads  = PR_MIN(active_threads, remaining_connections);
-	/* Start up the threads */
-	for (i=0;i<active_threads;i++) {
+    if (connections > 0) {
+	/* Start up the connections */
+	do {
 	    rv = launch_thread(do_connects, &addr, model_sock, i);
-	}
+	    ++i;
+	} while (--connections > 0);
 	reap_threads();
     }
     destroy_thread_data();
@@ -1305,7 +1209,7 @@ main(int argc, char **argv)
     progName = progName ? progName + 1 : tmp;
  
 
-    optstate = PL_CreateOptState(argc, argv, "2:3C:DNP:TUc:d:n:op:qt:vw:");
+    optstate = PL_CreateOptState(argc, argv, "2:3C:DNTc:d:n:op:qt:vw:");
     while ((status = PL_GetNextOpt(optstate)) == PL_OPT_OK) {
 	switch(optstate->option) {
 
@@ -1318,12 +1222,8 @@ main(int argc, char **argv)
 	case 'D': NoDelay = PR_TRUE; break;
 
 	case 'N': NoReuse = 1; break;
-        
-	case 'P': fullhs = PORT_Atoi(optstate->value); break;
 
 	case 'T': disableTLS = PR_TRUE; break;
-            
-	case 'U': ThrottleUp = PR_TRUE; break;
 
 	case 'c': connections = PORT_Atoi(optstate->value); break;
 
@@ -1331,7 +1231,7 @@ main(int argc, char **argv)
 
         case 'n': nickName = PL_strdup(optstate->value); break;
 
-	case 'o': MakeCertOK++; break;
+	case 'o': MakeCertOK = 1; break;
 
 	case 'p': port = PORT_Atoi(optstate->value); break;
 
@@ -1340,7 +1240,7 @@ main(int argc, char **argv)
 	case 't':
 	    tmpInt = PORT_Atoi(optstate->value);
 	    if (tmpInt > 0 && tmpInt < MAX_THREADS) 
-	        max_threads = active_threads = tmpInt;
+	        max_threads = tmpInt;
 	    break;
 
         case 'v': verbose++; break;
@@ -1363,9 +1263,6 @@ main(int argc, char **argv)
     }
     if (!hostName || status == PL_OPT_BAD)
     	Usage(progName);
-
-    if (fullhs!= NO_FULLHS_PERCENTAGE && (fullhs < 0 || fullhs>100 || NoReuse) )
-        Usage(progName);
 
     if (port == 0)
 	Usage(progName);

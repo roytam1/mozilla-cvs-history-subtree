@@ -639,7 +639,7 @@ StringGetChar(void *stream)
         return EOF;
     } else {
         *((char **) stream) = cPtr + 1;
-        return (unsigned char) *cPtr;
+        return *cPtr;
     }
 }
 
