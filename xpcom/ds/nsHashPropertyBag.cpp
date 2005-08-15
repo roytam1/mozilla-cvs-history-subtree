@@ -210,6 +210,7 @@ nsHashPropertyBag::SetPropertyAs ## Name (const nsAString & prop, Type value) \
     return SetProperty(prop, var); \
 }
 
+IMPL_GETSETPROPERTY_AS(Uint16, PRUint16)
 IMPL_GETSETPROPERTY_AS(Int32, PRInt32)
 IMPL_GETSETPROPERTY_AS(Uint32, PRUint32)
 IMPL_GETSETPROPERTY_AS(Int64, PRInt64)

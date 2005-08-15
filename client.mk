@@ -853,6 +853,9 @@ ZAP_BRANCH_MODIFIED_FILES = \
 	netwerk/base/src/Makefile.in \
 	netwerk/build/nsNetCID.h \
 	netwerk/build/nsNetModule.cpp \
+	xpcom/ds/nsHashPropertyBag.cpp \
+	xpcom/ds/nsIPropertyBag2.idl \
+	xpcom/ds/nsIWritablePropertyBag2.idl \
 	xpcom/io/Makefile.in \
 	xpcom/io/nsScriptableInputStream.cpp \
 	xpcom/io/nsScriptableInputStream.h \
