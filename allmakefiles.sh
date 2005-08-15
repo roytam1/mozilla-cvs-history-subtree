@@ -73,6 +73,7 @@ if [ "$MOZ_COMPOSER" ]; then
 MAKEFILES_composer="
 editor/composer/Makefile
 editor/ui/Makefile
+editor/ui/locales/Makefile
 "
 fi
 
@@ -801,6 +802,14 @@ MAKEFILES_minimo="
 embedding/minimo/Makefile
 embedding/minimo/app/Makefile
 embedding/minimo/popuplite/Makefile
+minimo/Makefile
+minimo/base/Makefile
+minimo/components/Makefile
+minimo/components/phone/Makefile
+minimo/components/softkb/Makefile
+minimo/components/ssr/Makefile
+minimo/customization/Makefile
+minimo/chrome/Makefile
 "
 
 MAKEFILES_psm2="
@@ -1691,7 +1700,7 @@ if test -n "$MOZ_PROFILESHARING"; then
     add_makefiles "$MAKEFILES_profilesharingsetup"
 fi
 
-if test -n "MINIMO"; then
+if test -n "$MINIMO"; then
     add_makefiles "$MAKEFILES_minimo"
     add_makefiles "$MAKEFILES_xulapp"
 fi
