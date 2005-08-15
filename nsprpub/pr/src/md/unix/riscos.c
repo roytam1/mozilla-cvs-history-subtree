@@ -16,10 +16,10 @@
  *
  * The Initial Developer of the Original Code is
  * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2000
+ * Portions created by the Initial Developer are Copyright (C) 1998-2000
  * the Initial Developer. All Rights Reserved.
  *
- * Contributor(s):
+ * Contributor(s): Peter Naulls <peter@chocky.org>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -35,11 +35,86 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * A dummy header file that is a dependency for all the object files.
- * Used to force a full recompilation of NSPR in Mozilla's Tinderbox
- * depend builds.  See comments in rules.mk.
- */
+#include "primpl.h"
 
-#error "Do not include this header file."
+void _MD_EarlyInit(void)
+{
+}
 
+PRWord *_MD_HomeGCRegisters(PRThread *t, int isCurrent, int *np)
+{
+#ifndef _PR_PTHREADS
+    if (isCurrent) {
+	(void) setjmp(CONTEXT(t));
+    }
+    *np = sizeof(CONTEXT(t)) / sizeof(PRWord);
+    return (PRWord *) CONTEXT(t);
+#else
+	*np = 0;
+	return NULL;
+#endif
+}
+
+#ifdef _PR_PTHREADS
+
+void _MD_CleanupBeforeExit(void)
+{
+}
+
+#else /* ! _PR_PTHREADS */
+
+void
+_MD_SET_PRIORITY(_MDThread *thread, PRUintn newPri)
+{
+    return;
+}
+
+PRStatus
+_MD_InitializeThread(PRThread *thread)
+{
+	/*
+	 * set the pointers to the stack-pointer and frame-pointer words in the
+	 * context structure; this is for debugging use.
+	 */
+	thread->md.sp = _MD_GET_SP_PTR(thread);
+	thread->md.fp = _MD_GET_FP_PTR(thread);
+	return PR_SUCCESS;
+}
+
+PRStatus
+_MD_WAIT(PRThread *thread, PRIntervalTime ticks)
+{
+    PR_ASSERT(!(thread->flags & _PR_GLOBAL_SCOPE));
+    _PR_MD_SWITCH_CONTEXT(thread);
+    return PR_SUCCESS;
+}
+
+PRStatus
+_MD_WAKEUP_WAITER(PRThread *thread)
+{
+    if (thread) {
+	PR_ASSERT(!(thread->flags & _PR_GLOBAL_SCOPE));
+    }
+    return PR_SUCCESS;
+}
+
+/* These functions should not be called for RISC OS */
+void
+_MD_YIELD(void)
+{
+    PR_NOT_REACHED("_MD_YIELD should not be called for RISC OS.");
+}
+
+PRStatus
+_MD_CREATE_THREAD(
+    PRThread *thread,
+    void (*start) (void *),
+    PRThreadPriority priority,
+    PRThreadScope scope,
+    PRThreadState state,
+    PRUint32 stackSize)
+{
+    PR_NOT_REACHED("_MD_CREATE_THREAD should not be called for RISC OS.");
+	return PR_FAILURE;
+}
+#endif /* ! _PR_PTHREADS */
