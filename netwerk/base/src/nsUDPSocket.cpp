@@ -8,6 +8,7 @@
 #include "nsNetCID.h"
 #include "prnetdb.h"
 #include "prio.h"
+#include "prerror.h"
 
 static NS_DEFINE_CID(kSocketTransportServiceCID, NS_SOCKETTRANSPORTSERVICE_CID);
 
@@ -331,6 +332,9 @@ nsUDPSocket::OnSocketReady(PRFileDesc *fd, PRInt16 outFlags)
     PRInt32 avail = PR_Available(mFD);
     if (avail == -1 || avail == 0) {
       NS_WARNING("no data available");
+#ifdef DEBUG
+      printf("%s\n", PR_ErrorToString(PR_GetError(),PR_LANGUAGE_I_DEFAULT));
+#endif
       mCondition = NS_ERROR_UNEXPECTED;
     }
 
