@@ -516,12 +516,10 @@ SipSyntaxObject.metafun(
   which should return a serialized string representation of the elements. \n\
   TODO: XXX add escaping filters.                                          ",
   function parsedHash(/*[opt] doc, name, serializer, tokenizer,
-                        re_name, re_value, [opt] re_hash*/) {
+                        re_name, re_value,  re_hash*/) {
     // unpack args:
     var i = arguments.length-1;
-    var re_hash = {};
-    if (typeof(arguments[i]) == "object")
-      re_hash = arguments[i--];
+    var re_hash = arguments[i--];
     var re_value = arguments[i--];
     var re_name = arguments[i--];
     var tokenizer = arguments[i--];
@@ -636,13 +634,13 @@ SipSIPURI.fun(
 SipSIPURI.obj("sips", false);
 
 // attribute ACString userinfo;
-SipSIPURI.parsedAttrib("userinfo", REGEXP_USERINFO);
+SipSIPURI.parsedAttrib("userinfo", REGEXP_USERINFO, null);
 
 // attribute ACString host;
-SipSIPURI.parsedAttrib("host", REGEXP_HOST);
+SipSIPURI.parsedAttrib("host", REGEXP_HOST, null);
 
 // attribute ACString port;
-SipSIPURI.parsedAttrib("port", REGEXP_PORT);
+SipSIPURI.parsedAttrib("port", REGEXP_PORT, null);
 
 // ACString getURIParameter(in ACString name);
 // boolean hasURIParameter(in ACString name);
@@ -674,7 +672,8 @@ SipSIPURI.parsedHash(
   SERIALIZER_URI_HEADERS,
   TOKENIZER_URI_HEADERS,
   REGEXP_URI_HEADER_NAME,
-  REGEXP_URI_HEADER_VALUE);
+  REGEXP_URI_HEADER_VALUE,
+  {});
 
 //----------------------------------------------------------------------
 
@@ -730,7 +729,7 @@ SipAddress.fun(
 // zapISipAddress implementation:
 
 // attribute AUTF8String displayName;
-SipAddress.parsedAttrib("displayName", REGEXP_DISPLAY_NAME);
+SipAddress.parsedAttrib("displayName", REGEXP_DISPLAY_NAME, null);
 
 // attribute zapISipURI uri;
 SipAddress.obj("uri", null);
@@ -906,7 +905,8 @@ SipReplyToHeader.parsedHash(
   SERIALIZER_PARAMS,
   TOKENIZER_GENERIC_PARAMS,
   REGEXP_TOKEN,
-  REGEXP_GEN_VALUE);
+  REGEXP_GEN_VALUE,
+  {});
 
 //----------------------------------------------------------------------
 
@@ -1115,7 +1115,7 @@ SipCSeqHeader.fun(
 // zapISipCSeqHeader implementation
 
 // attribute ACString method;
-SipCSeqHeader.parsedAttrib("method", REGEXP_TOKEN); 
+SipCSeqHeader.parsedAttrib("method", REGEXP_TOKEN, null); 
 
 // attribute unsigned long sequenceNumber;
 SipCSeqHeader.obj("sequenceNumber", 0);
@@ -1185,10 +1185,10 @@ SipContentTypeHeader.fun(
 // zapISipContentTypeHeader implementation
 
 // attribute ACString type;
-SipContentTypeHeader.parsedAttrib("type", REGEXP_TOKEN);
+SipContentTypeHeader.parsedAttrib("type", REGEXP_TOKEN, null);
 
 // attribute ACString subType;
-SipContentTypeHeader.parsedAttrib("subType", REGEXP_TOKEN);
+SipContentTypeHeader.parsedAttrib("subType", REGEXP_TOKEN, null);
 
 // ACString getParameter(in ACString name);
 // boolean hasParameter(in ACString name);
@@ -1201,7 +1201,8 @@ SipContentTypeHeader.parsedHash(
   SERIALIZER_PARAMS,
   TOKENIZER_GENERIC_PARAMS,
   REGEXP_TOKEN,
-  REGEXP_GEN_VALUE);
+  REGEXP_GEN_VALUE,
+  {});
 
 //----------------------------------------------------------------------
 
@@ -1236,7 +1237,7 @@ SipCallIDHeader.fun(
 // zapISipCallIDHeader implementation
 
 // attribute ACString callID;
-SipCallIDHeader.parsedAttrib("callID", REGEXP_CALLID);
+SipCallIDHeader.parsedAttrib("callID", REGEXP_CALLID, null);
 
 //----------------------------------------------------------------------
 
@@ -1273,19 +1274,19 @@ SipViaHeader.fun(
 // zapISipViaHeader implementation
 
 // attribute ACString protocol;
-SipViaHeader.parsedAttrib("protocolName", REGEXP_TOKEN);
+SipViaHeader.parsedAttrib("protocolName", REGEXP_TOKEN, null);
 
 // attribute ACString version;
-SipViaHeader.parsedAttrib("protocolVersion", REGEXP_TOKEN);
+SipViaHeader.parsedAttrib("protocolVersion", REGEXP_TOKEN, null);
 
 // attribute ACString transport;
-SipViaHeader.parsedAttrib("transport", REGEXP_TOKEN);
+SipViaHeader.parsedAttrib("transport", REGEXP_TOKEN, null);
 
 // attribute ACString host;
-SipViaHeader.parsedAttrib("host", REGEXP_HOST);
+SipViaHeader.parsedAttrib("host", REGEXP_HOST, null);
 
 // attribute ACString port;
-SipViaHeader.parsedAttrib("port", REGEXP_PORT);
+SipViaHeader.parsedAttrib("port", REGEXP_PORT, null);
 
 // ACString getParameter(in ACString name);
 // boolean hasParameter(in ACString name);
@@ -1340,7 +1341,7 @@ SipAllowHeader.fun(
 //----------------------------------------------------------------------
 // zapISipAllowHeader implementation
 
-SipAllowHeader.parsedAttrib("method", REGEXP_TOKEN);
+SipAllowHeader.parsedAttrib("method", REGEXP_TOKEN, null);
 
 //----------------------------------------------------------------------
 
@@ -1428,7 +1429,7 @@ SipPriorityHeader.fun(
 // zapISipPriorityHeader implementation
 
 // attribute ACString priority;
-SipPriorityHeader.parsedAttrib("priority", REGEXP_TOKEN);
+SipPriorityHeader.parsedAttrib("priority", REGEXP_TOKEN, null);
 
 //----------------------------------------------------------------------
 
@@ -1457,7 +1458,7 @@ SipUnknownHeader.fun(
 // zapISipUnknownHeader implementation:
 
 // attribute AUTF8String value;
-SipUnknownHeader.parsedAttrib("value", REGEXP_EXTENSION_HEADER_VALUE);
+SipUnknownHeader.parsedAttrib("value", REGEXP_EXTENSION_HEADER_VALUE, null);
 
 //----------------------------------------------------------------------
 
@@ -1740,7 +1741,7 @@ SipRequest.obj("isRequest", true);
 // zapISipRequest implementation:
 
 // attribute ACString method;
-SipRequest.parsedAttrib("method", REGEXP_TOKEN);
+SipRequest.parsedAttrib("method", REGEXP_TOKEN, null);
 
 // attribute zapISipURI requestURI;
 SipMessage.obj("requestURI", null);
@@ -1790,10 +1791,10 @@ SipResponse.obj("isRequest", false);
 // zapISipResponse implementation:
 
 // attribute ACString statusCode;
-SipResponse.parsedAttrib("statusCode", REGEXP_STATUS_CODE);
+SipResponse.parsedAttrib("statusCode", REGEXP_STATUS_CODE, null);
 
 // attribute AUTF8String reasonPhrase;
-SipResponse.parsedAttrib("reasonPhrase", REGEXP_REASON_PHRASE);
+SipResponse.parsedAttrib("reasonPhrase", REGEXP_REASON_PHRASE, null);
 
 //----------------------------------------------------------------------
 // zapISipSyntaxObject implementation:

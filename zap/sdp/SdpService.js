@@ -194,7 +194,7 @@ SdpGenericValue.fun(
 // zapISdpGenericValue implementation:
 
 // attribute ACString value;
-SdpGenericValue.parsedAttrib("value", REGEXP_TEXT);
+SdpGenericValue.parsedAttrib("value", REGEXP_TEXT, null);
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -283,10 +283,10 @@ SdpConnection.fun(
 // zapISdpConnection implementation:
 
 // attribute ACString addressType;
-SdpConnection.parsedAttrib("addressType", REGEXP_TOKEN);
+SdpConnection.parsedAttrib("addressType", REGEXP_TOKEN, null);
 
 // attribute ACString address;
-SdpConnection.parsedAttrib("address", REGEXP_UNICAST_ADDRESS); //XXX add multicast
+SdpConnection.parsedAttrib("address", REGEXP_UNICAST_ADDRESS, null); //XXX add multicast
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -305,7 +305,7 @@ SdpMediaFormat.fun(
 // zapISdpMediaFormat implementation:
 
 // attribute ACString format;
-SdpMediaFormat.parsedAttrib("format", REGEXP_TOKEN);
+SdpMediaFormat.parsedAttrib("format", REGEXP_TOKEN, null);
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -453,16 +453,16 @@ SdpMediaDescription.fun(
 // zapISdpMediaDescription implementation:
 
 // attribute ACString media;
-SdpMediaDescription.parsedAttrib("media", REGEXP_TOKEN);
+SdpMediaDescription.parsedAttrib("media", REGEXP_TOKEN, null);
   
 // attribute ACString long port;
-SdpMediaDescription.parsedAttrib("port", REGEXP_DIGITS);
+SdpMediaDescription.parsedAttrib("port", REGEXP_DIGITS, null);
 
 // attribute ACString portCount;
-SdpMediaDescription.parsedAttrib("portCount", REGEXP_DIGITS_OR_NOTHING);
+SdpMediaDescription.parsedAttrib("portCount", REGEXP_DIGITS_OR_NOTHING, null);
 
 // attribute ACString protocol;
-SdpMediaDescription.parsedAttrib("protocol", REGEXP_PROTOCOL);
+SdpMediaDescription.parsedAttrib("protocol", REGEXP_PROTOCOL, null);
 
 // void getFormats(out unsigned long count,
 //                 [retval, array, size_is(count)] out zapISdpMediaFormat formats);
@@ -471,7 +471,7 @@ SdpMediaDescription.parsedAttrib("protocol", REGEXP_PROTOCOL);
 SdpMediaDescription.arr("Formats");
 
 // attribute ACString information;
-SdpMediaDescription.parsedAttrib("information", REGEXP_TEXT);
+SdpMediaDescription.parsedAttrib("information", REGEXP_TEXT, null);
 
 // attribute zapISdpConnection connection;
 SdpMediaDescription.obj("connection", null);
@@ -589,28 +589,28 @@ SdpSessionDescription.fun(
 SdpSessionDescription.parsedAttrib("protocolVersion", REGEXP_PROTOCOLVERSION, "0");
 
 // attribute ACString username;
-SdpSessionDescription.parsedAttrib("username", REGEXP_USERNAME);
+SdpSessionDescription.parsedAttrib("username", REGEXP_USERNAME, null);
 
 // attribute ACString sessionID;
-SdpSessionDescription.parsedAttrib("sessionID", REGEXP_DIGITS);
+SdpSessionDescription.parsedAttrib("sessionID", REGEXP_DIGITS, null);
 
 // attribute ACString sessionVersion;
-SdpSessionDescription.parsedAttrib("sessionVersion", REGEXP_DIGITS);
+SdpSessionDescription.parsedAttrib("sessionVersion", REGEXP_DIGITS, null);
 
 // attribute ACString originAddressType;
-SdpSessionDescription.parsedAttrib("originAddressType", REGEXP_TOKEN);
+SdpSessionDescription.parsedAttrib("originAddressType", REGEXP_TOKEN, null);
 
 // attribute ACString originAddress;
-SdpSessionDescription.parsedAttrib("originAddress", REGEXP_UNICAST_ADDRESS);
+SdpSessionDescription.parsedAttrib("originAddress", REGEXP_UNICAST_ADDRESS, null);
 
 // attribute ACString sessionName;
-SdpSessionDescription.parsedAttrib("sessionName", REGEXP_TEXT);
+SdpSessionDescription.parsedAttrib("sessionName", REGEXP_TEXT, null);
 
 // attribute ACString information;
-SdpSessionDescription.parsedAttrib("information", REGEXP_TEXT);
+SdpSessionDescription.parsedAttrib("information", REGEXP_TEXT, null);
 
 // attribute ACString uri;
-SdpSessionDescription.parsedAttrib("uri", REGEXP_URI);
+SdpSessionDescription.parsedAttrib("uri", REGEXP_URI, null);
 
 // void getEmailAddresses(out unsigned long count,
 //                        [retval, array, size_is(count)] out zapISdpEmailAddress addresses);

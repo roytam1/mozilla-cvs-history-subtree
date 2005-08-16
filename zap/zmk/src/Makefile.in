@@ -1,0 +1,79 @@
+DEPTH		= ../../..
+topsrcdir	= @top_srcdir@
+srcdir		= @srcdir@
+VPATH		= @srcdir@
+
+include $(DEPTH)/config/autoconf.mk
+
+MODULE		= zmk
+XPIDL_MODULE    = zmk
+LIBRARY_NAME	= zmk
+EXPORT_LIBRARY	= 1
+IS_COMPONENT	= 1
+MODULE_NAME	= zapMediaKitModule
+MOZILLA_INTERNAL_API = 1
+
+REQUIRES	= \
+		xpcom \
+		string \
+		necko \
+		zap_base \
+		portaudio_v18_1 \
+		$(NULL)
+
+CPPSRCS		= \
+		zapMediaGraph.cpp \
+		zapMediaFrame.cpp \
+		zapAudioDeviceManager.cpp \
+		zapAudioDevice.cpp \
+		zapAudioStreamUtils.cpp \
+		zapAudioOut.cpp \
+		zapAudioIn.cpp \
+		zapMediaModule.cpp \
+		zapPacketBuffer.cpp \
+		zapFilterNode.cpp \
+		zapSpeexEncoder.cpp \
+		zapSpeexDecoder.cpp \
+		zapUDPSocket.cpp \
+		zapUDPSocketPair.cpp \
+		zapDatagramFrame.cpp \
+		zapRTPFrame.cpp \
+		zapSpeexRTPPacketizer.cpp \
+		zapSpeexRTPDepacketizer.cpp \
+		zapRTPTransmitter.cpp \
+		zapRTPReceiver.cpp \
+		zapRTPSession.cpp \
+		$(NULL)
+
+XPIDLSRCS	= zapIMediaGraph.idl \
+		  zapIMediaNode.idl \
+		  zapIMediaSource.idl \
+		  zapIMediaSink.idl \
+		  zapIMediaFrame.idl \
+		  zapIAudioDeviceManager.idl \
+		  zapIAudioIn.idl \
+		  zapIAudioOut.idl \
+		  zapIAudioDevice.idl \
+		  zapIPortaudioDevice.idl \
+		  zapISpeexEncoder.idl \
+		  zapIRTPFrame.idl \
+		  zapIUDPSocket.idl \
+		  zapIUDPSocketPair.idl \
+		  $(NULL)
+
+SHARED_LIBRARY_LIBS += \
+		$(DIST)/lib/$(LIB_PREFIX)moz_portaudio_v18_1.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)moz_speex_v1_1_10.$(LIB_SUFFIX) \
+		$(NULL)
+
+ifeq ($(OS_ARCH),WINNT)
+OS_LIBS += dsound.lib winmm.lib
+endif
+
+include $(topsrcdir)/config/rules.mk
+
+EXTRA_DSO_LDOPTS += $(MOZ_COMPONENT_LIBS)
+
+INCLUDES += 	\
+		-I$(srcdir)/../speex-1.1.10/include \
+		$(NULL)

@@ -44,7 +44,9 @@ EXPORTED_SYMBOLS = [ "StdClass",
                      "ErrorReporter",
                      "SupportsImpl",
                      "AttributeParser",
-                     "Unwrappable" ];
+                     "Unwrappable",
+                     "PropertyBag",
+                     "makePropertyBag" ];
 
 // name our global object:
 function toString() { return "[ClassUtils.js]"; }
@@ -495,11 +497,9 @@ AttributeParser.metafun(
  Adds a getter/setter pair for 'attrib' and a variable with name     \n\
  '_attrib' to the prototype. The setter will peform a syntax check   \n\
  using 'regex' and throw an error if the syntax is invalid.           ",
-  function parsedAttrib(/*[opt] doc, attrib, regex, [opt] default*/) {
+  function parsedAttrib(/*[opt] doc, attrib, regex, default*/) {
     var i = arguments.length-1;
-    var defval = null;
-    if (typeof(arguments[i])!="function")
-      defval = arguments[i--];
+    var defval = arguments[i--];
     var regex = arguments[i--];
     var attrib = arguments[i--];
 
@@ -535,3 +535,113 @@ var Unwrappable = makeClass("Unwrappable");
 
 Unwrappable.getter("wrappedJSObject", function() { return this; });
 
+
+////////////////////////////////////////////////////////////////////////
+// Class PropertyBag: a class implementing nsIPropertyBag, 
+// nsIPropertyBag2 and nsIWritablePropertyBag.
+// Values are stored as properties on the instance, with keys prefixed
+// by '$' (see ObjectUtils.js hash functions).
+
+var PropertyBag = makeClass("PropertyBag", SupportsImpl);
+PropertyBag.addInterfaces(Components.interfaces.nsIPropertyBag,
+                          Components.interfaces.nsIPropertyBag2,
+                          Components.interfaces.nsIWritablePropertyBag);
+
+//----------------------------------------------------------------------
+// nsIPropertyBag implementation:
+
+/* readonly attribute nsISimpleEnumerator enumerator; */
+PropertyBag.getter(
+  "enumerator",
+  function get_enumerator() {
+    var keys = hashkeys(this);
+    var bag = this;
+    var i = 0;
+    return { // object implementing nsISimpleEnumerator
+      hasMoreElements : function() { return i<keys.length; },
+      getNext : function() {
+        if (i>keys.length) throw Components.results.NS_ERROR_FAILURE;
+        var prop = { name: keys[i], value: bag.getProperty(keys[i]) };
+        ++i;
+        return prop;
+      }          
+    };
+  });
+
+/* nsIVariant getProperty(in AString name); */
+PropertyBag.fun(
+  function getProperty(key) {
+    var val = hashget(this, key);
+    if (val === undefined) throw(Components.results.NS_ERROR_FAILURE);
+    return val;
+  });
+
+//----------------------------------------------------------------------
+// nsIPropertyBag2 implementation:
+// XXX these methods will not perform type conversion when called
+// directly from JS
+
+/* PRUint16    getPropertyAsUint16      (in AString prop); */
+PropertyBag.obj("getPropertyAsUint16", PropertyBag.prototype.getProperty);
+
+/* PRInt32     getPropertyAsInt32       (in AString prop); */
+PropertyBag.obj("getPropertyAsInt32", PropertyBag.prototype.getProperty);
+
+/* PRUint32    getPropertyAsUint32      (in AString prop); */
+PropertyBag.obj("getPropertyAsUint32", PropertyBag.prototype.getProperty);
+
+/* PRInt64     getPropertyAsInt64       (in AString prop); */
+PropertyBag.obj("getPropertyAsInt64", PropertyBag.prototype.getProperty);
+
+/* PRUint64    getPropertyAsUint64      (in AString prop); */
+PropertyBag.obj("getPropertyAsUint64", PropertyBag.prototype.getProperty);
+
+/* double      getPropertyAsDouble      (in AString prop); */
+PropertyBag.obj("getPropertyAsDouble", PropertyBag.prototype.getProperty);
+
+/* AString     getPropertyAsAString     (in AString prop); */
+PropertyBag.obj("getPropertyAsAString", PropertyBag.prototype.getProperty);
+
+/* ACString    getPropertyAsACString    (in AString prop); */
+PropertyBag.obj("getPropertyAsACString", PropertyBag.prototype.getProperty);
+
+/* AUTF8String getPropertyAsAUTF8String (in AString prop); */
+PropertyBag.obj("getPropertyAsAUTF8String", PropertyBag.prototype.getProperty);
+
+/* boolean     getPropertyAsBool        (in AString prop); */
+PropertyBag.obj("getPropertyAsBool", PropertyBag.prototype.getProperty);
+
+/*  void        getPropertyAsInterface   (in AString prop,
+                                        in nsIIDRef iid,
+                                        [iid_is(iid), retval] out nsQIResult result); */
+PropertyBag.fun(
+  function getPropertyAsInterface(key, iid) {
+    return this.getProperty(key);
+  });
+
+//PropertyBag.obj("getPropertyAsInterface", PropertyBag.prototype.getProperty);
+
+//----------------------------------------------------------------------
+// nsIWritablePropertyBag implementation:
+
+/* void setProperty(in AString name, in nsIVariant value); */
+PropertyBag.fun(
+  function setProperty(key, value) {
+    hashset(this, key, value);
+  });
+
+/* void deleteProperty(in AString name); */
+PropertyBag.fun(
+  function deleteProperty(key) {
+    if (!hashhas(this, key))
+      throw(Components.results.NS_ERROR_FAILURE);
+    hashdel(this, key);
+  });
+
+//----------------------------------------------------------------------
+
+// wrap 'obj' with nsIPropertyBag/nsIWritablePropertyBag interfaces
+function makePropertyBag(obj) {
+  obj.__proto__ = PropertyBag.prototype;
+  return obj;
+}

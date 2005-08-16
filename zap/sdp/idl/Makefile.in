@@ -23,6 +23,7 @@ XPIDLSRCS = \
 	zapISdpZoneAdjustments.idl \
 	zapISdpGenericValue.idl \
 	zapISdpConnection.idl \
+	zapIMediaSession.idl \
 	$(NULL)
 
 include $(topsrcdir)/config/rules.mk

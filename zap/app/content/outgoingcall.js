@@ -120,7 +120,7 @@ function cmdCall() {
   // m=
   var mediaDescription = wSipClient.sdpService.createMediaDescription();
   mediaDescription.media = "audio";
-  mediaDescription.port = wCallHandler.rtpBase;
+  mediaDescription.port = wCallHandler.mediaSession.localRTPPort;
   mediaDescription.portCount = "";
   mediaDescription.protocol = "RTP/AVP";
   var fmt = wSipClient.sdpService.createMediaFormat();
@@ -173,22 +173,17 @@ CallHandler.addInterfaces(Components.interfaces.zapISipInviteMCH,
 CallHandler.obj(
   "dialog", null);
 
-CallHandler.obj(
-  "rtpBase", 6000);
-
 CallHandler.appendCtor(
   function() {
-    log("Create media stream");
-    var thread = Components.classes["@mozilla.org/thread;1"].createInstance(Components.interfaces.nsIThread);
-    this.mediaStream = wSipClient.mediaService.createMediaStream(this.rtpBase, this.rtpBase+1);
-    thread.init(this.mediaStream, 0, 1, 1, 1);
+    log("Create media session");
+    this.mediaSession = Components.classes["@mozilla.org/zap/mediasession;1"].createInstance(Components.interfaces.zapIMediaSession);    
   });
 
 CallHandler.fun(
   function destroy() {
-    if (this.mediaStream) {
-      this.mediaStream.close();
-      this.mediaStream = null;
+    if (this.mediaSession) {
+      this.mediaSession.close();
+      this.mediaSession = null;
     }
     this.dialog = null;
     wCallHandler = null;
@@ -286,11 +281,10 @@ CallHandler.fun(
     }
     
     // start sending/receiving audio:
-    this.mediaStream.startReceive();
-    this.mediaStream.startSend(remoteHost,
-                               rtpPort,
-                               rtpPort+1,
-                               payloadFormat);
+    this.mediaSession.start(remoteHost,
+                           rtpPort,
+                           rtpPort+1,
+                           payloadFormat);
 
     log("Established speex/8000 ("+payloadFormat+") call to "+remoteHost+":"+rtpPort);
   });

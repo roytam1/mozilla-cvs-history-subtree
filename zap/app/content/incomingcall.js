@@ -124,7 +124,7 @@ function cmdAccept() {
     // m=
     var mediaDescription = wSipClient.sdpService.createMediaDescription();
     mediaDescription.media = "audio";
-    mediaDescription.port = wCallHandler.rtpBase;
+    mediaDescription.port = wCallHandler.mediaSession.localRTPPort;
     mediaDescription.portCount = "";
     mediaDescription.protocol = "RTP/AVP";
     var fmt = wSipClient.sdpService.createMediaFormat();

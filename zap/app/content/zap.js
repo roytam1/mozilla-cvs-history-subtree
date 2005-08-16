@@ -133,10 +133,6 @@ function initSipClient()
     SipClient.sipStack.QueryInterface(Components.interfaces.zapISipUAStack);
     SipClient.sipStack.init(gInviteMSHFactory);
     
-    log("Getting Media Service");
-    SipClient.mediaService = Components.classes["@mozilla.org/zap/mediaservice;1"].
-      getService(Components.interfaces.zapIMediaService);
-    
     // initialize host-name to our ip address:
     wHostNameElement.value = SipClient.sipStack.hostAddress;
 
@@ -156,10 +152,8 @@ InviteMSH.addInterfaces(Components.interfaces.zapISipInviteMSH,
 
 InviteMSH.appendCtor(
   function() {
-    log("Create media stream");
-    var thread = Components.classes["@mozilla.org/thread;1"].createInstance(Components.interfaces.nsIThread);
-    this.mediaStream = SipClient.mediaService.createMediaStream(this.rtpBase, this.rtpBase+1);
-    thread.init(this.mediaStream, 0, 1, 1, 1);
+    log("Create media session");
+    this.mediaSession = Components.classes["@mozilla.org/zap/mediasession;1"].createInstance(Components.interfaces.zapIMediaSession);    
   });
 
 
@@ -175,15 +169,11 @@ InviteMSH.obj("destroyHook", null);
 // this will be overwritten by the incomingcall window:
 InviteMSH.obj("callSuccessHook", null);
 
-InviteMSH.obj(
-  "rtpBase", 6000);
-
-
 InviteMSH.fun(
   function destroy() {
-     if (this.mediaStream) {
-       this.mediaStream.close();
-       this.mediaStream = null;
+     if (this.mediaSession) {
+       this.mediaSession.shutdown();
+       this.mediaSession = null;
      }
     this.dialog = null;
     if (this.destroyHook)
@@ -219,8 +209,7 @@ InviteMSH.fun(
         var mediaDescriptions = sd.getMediaDescriptions({});
         // XXX assuming that there is only one media description for the moment:
         
-        this.remoteRtpPort = mediaDescriptions[0].port;
-        
+        this.remoteRtpPort = mediaDescriptions[0].port;        
         var connection = mediaDescriptions[0].connection;
         if (!connection)
           connection = sd.connection;
@@ -279,11 +268,10 @@ InviteMSH.fun(
     if (this.callSuccessHook)
       this.callSuccessHook();
     // start sending/receiving audio:
-    this.mediaStream.startReceive();
-    this.mediaStream.startSend(this.remoteMediaHost,
-                               this.remoteRtpPort,
-                               this.remoteRtpPort+1,
-                               this.remotePayloadFormat);
+    this.mediaSession.start(this.remoteMediaHost,
+                           this.remoteRtpPort,
+                           this.remoteRtpPort+1,
+                           this.remotePayloadFormat);
 
     this.log("Established speex/8000 ("+this.remotePayloadFormat+") call to "+this.remoteMediaHost+":"+this.remoteRtpPort);
   });
