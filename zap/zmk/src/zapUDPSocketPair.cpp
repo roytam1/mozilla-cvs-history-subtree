@@ -106,7 +106,8 @@ zapUDPSocketPair::AddedToGraph(zapIMediaGraph *graph,
 
   // make sure portbase is next even number:
   portbase = ((portbase+1)>>1)<<1;
-  for (PRUint32 port = portbase; port<65535; port+=2) {
+  PRUint32 port = portbase;
+  for (/**/; port<65535; port+=2) {
     if (NS_SUCCEEDED(socketA->Init(port))) {
       if (NS_SUCCEEDED(socketB->Init(port+1))) {
         break;
