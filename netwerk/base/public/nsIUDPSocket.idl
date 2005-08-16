@@ -6,7 +6,15 @@ interface nsIUDPSocket;
 interface nsIDatagram : nsISupports
 {
   readonly attribute ACString data;
+
+  /**
+   * remote address
+   */
   readonly attribute ACString address;
+
+  /**
+   * remote port
+   */
   readonly attribute long port;
 };
 
@@ -27,7 +35,7 @@ interface nsIUDPSocket : nsISupports
   void setReceiver(in nsIUDPReceiver receiver);
 
   /**
-   * The port of this socket.
+   * The (local) port of this socket.
    */
   readonly attribute long port;  
 };
