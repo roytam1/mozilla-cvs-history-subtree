@@ -894,6 +894,8 @@ statictag_zap:
 branchtag_zap:
 	cvs -z3 tag -b ZAP_20050610_BRANCH $(ZAP_BRANCH_MODIFIED_FILES)
 
+diff_zap:
+	cvs -z3 diff $(ZAP_BRANCH_MODIFIED_FILES) $(ZAP_BRANCH_NEW_FILES)
 
 .PHONY: checkout real_checkout depend build export libs alldep install clean realclean distclean cleansrcdir pull_all build_all clobber clobber_all pull_and_build_all everything configure
 
