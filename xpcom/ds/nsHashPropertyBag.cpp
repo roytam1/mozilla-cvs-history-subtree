@@ -64,6 +64,26 @@ NS_NewHashPropertyBag(nsIWritablePropertyBag* *_retval)
     return NS_OK;
 }
 
+nsresult
+NS_NewHashPropertyBag2(nsIWritablePropertyBag2* *_retval)
+{
+    nsHashPropertyBag *hpb = new nsHashPropertyBag();
+    if (!hpb)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    NS_ADDREF(hpb);
+
+    nsresult rv = hpb->Init();
+    if (NS_FAILED(rv)) {
+        NS_RELEASE(hpb);
+        return rv;
+    }
+
+    *_retval = hpb;
+    return NS_OK;
+}
+
+
 /*
  * nsHashPropertyBag impl
  */
