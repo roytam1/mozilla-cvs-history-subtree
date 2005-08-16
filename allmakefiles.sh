@@ -1043,19 +1043,16 @@ MAKEFILES_zap="
 zap/Makefile
 zap/base/Makefile
 zap/base/idl/Makefile
-zap/audio/Makefile
-zap/audio/portaudio/Makefile
-zap/audio/audioservice/Makefile
-zap/media/Makefile
-zap/media/mediaservice/Makefile
-zap/media/speex/Makefile
-zap/media/speex/libspeex/Makefile
-zap/media/rtp/Makefile
 zap/sdp/Makefile
 zap/sdp/idl/Makefile
 zap/sip/Makefile
 zap/sip/idl/Makefile
 zap/app/Makefile
+zap/zmk/Makefile
+zap/zmk/portaudio_v18_1/Makefile
+zap/zmk/speex-1.1.10/Makefile
+zap/zmk/speex-1.1.10/libspeex/Makefile
+zap/zmk/src/Makefile
 "
 
 MAKEFILES_thunderbird="
