@@ -68,6 +68,9 @@ class nsProxyObjectCallInfo;
 #define PROXY_ISUPPORTS   0x0010  // This flag ensures that calls to QueryInterface(), AddRef() and Release()
                                   // will be proxied. Usually only the final Release() call will be proxied.
 
+#define PROXY_SAMETHREAD  0x0020  // proxy calls even if the caller is on the same thread as the proxy
+
+
 // WARNING about PROXY_ASYNC:  
 //
 // If the calling thread goes away, any function which accesses the calling stack 

@@ -495,9 +495,7 @@ nsProxyEventObject::Release(void)
     count = PR_AtomicDecrement((PRInt32 *)&mRefCnt);
     NS_LOG_RELEASE(this, count, "nsProxyEventObject");
     if (0 == count) {
-        
-        mRefCnt = 1; /* stabilize */
-        
+        mRefCnt = 1; /* stabilize */        
         //
         // Remove the proxy from the hashtable (if necessary) or its
         // proxy chain.  

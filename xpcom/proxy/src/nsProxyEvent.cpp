@@ -662,7 +662,7 @@ nsProxyObject::Post( PRUint32 methodIndex,
     // (methodIndex == 0), or it is a sync proxy and this code is running on the same thread
     // as the destination event queue. 
     if ( (!(mProxyType & PROXY_ISUPPORTS) && methodIndex == 0) ||
-         (mProxyType & PROXY_SYNC && 
+         ((mProxyType & PROXY_SYNC) && !(mProxyType & PROXY_SAMETHREAD) &&
           NS_SUCCEEDED(mDestQueue->IsOnCurrentThread(&callDirectly)) &&
           callDirectly))
     {
