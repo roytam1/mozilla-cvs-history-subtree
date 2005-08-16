@@ -38,24 +38,25 @@ import java.lang.String;
  */
 public class ByteToCharConverterEnumeration extends PrefetchEnumeration {
     Enumeration fDelegate;
-/*
- *
- * @author ftang
- * @version $Revision$
- * @see
- *
- */
+  /*
+   *
+   * @author ftang
+   * @version $Revision$
+   * @see
+   *
+   */
     public ByteToCharConverterEnumeration()
     {
         fDelegate = new ClasspathEntryEnumeration("sun.io", "ByteToChar", ".class");
     }
-/*
- *
- * @author ftang
- * @version $Revision$
- * @see
- *
- */
+
+  /*
+   *
+   * @author ftang
+   * @version $Revision$
+   * @see
+   *
+   */
     protected boolean verify(Object obj)
     {
         try {
@@ -66,13 +67,14 @@ public class ByteToCharConverterEnumeration extends PrefetchEnumeration {
             return false;
         }
     }
-/*
- *
- * @author ftang
- * @version $Revision$
- * @see
- *
- */
+
+  /*
+   *
+   * @author ftang
+   * @version $Revision$
+   * @see
+   *
+   */
     protected Object fetch()
     {
         for(; fDelegate.hasMoreElements(); )
