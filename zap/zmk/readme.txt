@@ -70,6 +70,8 @@ Sinks: 1
 Node parameters:
 - int "max_size" : maximum number of packets to buffer (10)
 - int "prefill_size" : no of packets to prebuffer at start of stream (0)
+- boolean "rebuffer" : refill buffer to prefill_size whenever the number
+                       of packets in the buffer drops to 0 (true)
 
 Input stream:
 any

@@ -93,7 +93,8 @@ private:
   // node parameters (set in zapIMediaGraph::AddNode()):  
   PRUint32 mPrefillSize; // number of packets to prefill the buffer with
   PRUint32 mMaxSize; // maximum number of packets buffered
-
+  PRBool mRebuffer; // rebuffer to prefill_size whenever the number of packets
+                    // in the buffer drops to 0
 
   nsDeque mBuffer; // the actual buffer
 

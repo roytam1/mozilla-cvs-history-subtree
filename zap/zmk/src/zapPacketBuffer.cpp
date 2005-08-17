@@ -105,6 +105,7 @@ zapPacketBuffer::AddedToGraph(zapIMediaGraph *graph,
   // node parameter defaults:
   mPrefillSize = 0;
   mMaxSize = 10;
+  mRebuffer = PR_TRUE;
   // unpack node parameters:
   if (node_pars) {
     node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("prefill_size"), &mPrefillSize);
@@ -114,6 +115,8 @@ zapPacketBuffer::AddedToGraph(zapIMediaGraph *graph,
       NS_WARNING("adjusted maximum buffer size");
       mMaxSize = mPrefillSize;
     }
+
+    node_pars->GetPropertyAsBool(NS_LITERAL_STRING("rebuffer"), &mRebuffer);
   }
 
   return NS_OK;
@@ -724,7 +727,13 @@ zapPacketBufferSink_IDLE::RequestFrame(zapPacketBuffer* pb)
   }
   else {
     // nothing in buffer
-    ChangeState(pb, zapPacketBufferSink_WAITING::Instance());
+#ifdef DEBUG
+    printf("E");
+#endif
+    if (pb->mRebuffer)
+      ChangeState(pb, zapPacketBufferSink_WAITING_PREFILLING::Instance());
+    else
+      ChangeState(pb, zapPacketBufferSink_WAITING::Instance());
   }
   return NS_OK;
 }
