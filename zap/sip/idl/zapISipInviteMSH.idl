@@ -43,9 +43,30 @@ interface zapISipDialog;
 [scriptable, uuid(83cce9d5-a923-4120-99a7-b25010cd2ffd)]
 interface zapISipInviteMSH : nsISupports
 {
+  /**
+   * Called by the MS to initialize the MSH. 'request' is the request that
+   * spawned this invite server.
+   * The MSH should respond by calling sendResponse() with provisional or
+   * final responses.
+   */
   void invite(in zapISipInviteMS methodServer, in zapISipRequest request);
 
+  /**
+   * Called by the MS when the invite transaction spawns a new dialog.
+   * This might an Early or Confirmed dialog.
+   */
   void dialogSpawned(in zapISipInviteMS methodServer, in zapISipDialog dialog);
+
+  /**
+   * Called by the MS to inform the MSH that it has terminated with a failure
+   * (after the MSH has sent a failure response using MS.sendResponse()).
+   */
   void failure(in zapISipInviteMS methodServer);
+
+  /**
+   * Called by the MS to inform the MSH that a dialog has successfully
+   * been established (after the MSH has sent a success response using
+   * MS.sendResponse()).
+   */
   void success(in zapISipInviteMS methodServer, in zapISipDialog dialog);
 };

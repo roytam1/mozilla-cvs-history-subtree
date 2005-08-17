@@ -47,11 +47,52 @@ interface zapISipEndpoint;
 [scriptable, uuid(58b2934f-9b4f-43a3-9233-6856c02e99f1)]
 interface zapISipInviteMCH : nsISupports
 {
+  /**
+   * Called by the MC when the invite transaction spawns a new dialog.
+   * This might an Early or Confirmed dialog.
+   */
   void dialogSpawned(in zapISipInviteMC methodClient, in zapISipDialog dialog);
+  /**
+   * Called by the MC to inform the MCH that it is calling the given
+   * endpoint.  Depending on configuration of the SIP stack and the
+   * domain being called, an endpoint might be the other UA, a proxy
+   * for its domain, or an outgoing proxy set up for our SIP stack.
+   * Several endpoints might be tried by a MC.
+   */
   void calling(in zapISipInviteMC methodClient, in zapISipEndpoint endpoint);
+
+  /**
+   * Called by the MC to inform the MCH that the last endpoint called
+   * has responded to the invite with a failure response.  Depending
+   * on the endpoint's response, other endpoints might be tried (in
+   * which case the MC will call MCH.calling() ), or alternatively the
+   * MC will signal failure to the MCH (by calling MCH.failure() ).
+   */
   void failureResponse(in zapISipInviteMC methodClient, in zapISipResponse response);
+
+  /**
+   * Called by the MC to inform the MCH that a provisional (1XX) response
+   * has been received.
+   */
   void provisionalResponse(in zapISipInviteMC methodClient, in zapISipResponse response);
+
+  /**
+   * Called by the MC to inform the MCH that a success response has been
+   * received.
+   */
   void successResponse(in zapISipInviteMC methodClient, in zapISipResponse response);
+
+  /**
+   * Called by the MCH to inform the MC that it has terminated with a
+   * failure.
+   */
   void failure(in zapISipInviteMC methodClient);
+
+  /**
+   * Called by the MCH to inform the MC that it has successfully
+   * terminated. All early dialogs that haven't transitioned to
+   * confirmed dialogs will be terminated prior to this call.
+   * The final confirmed dialog (which may or may not be a
+   */
   void success(in zapISipInviteMC methodClient, in zapISipDialog dialog);
 };

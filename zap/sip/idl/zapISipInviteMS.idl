@@ -41,6 +41,15 @@ interface zapISipResponse;
 [scriptable, uuid(ef89b9cb-fcd5-45c1-b09a-61ced843466a)]
 interface zapISipInviteMS : nsISupports
 {
+  /**
+   * Send a response to the UAC.
+   */
   void sendResponse(in zapISipResponse response);
+
+  /**
+   * Formulate a dialog-establishing response according to RFC3261
+   * 12.1.1. Other responses can be formulated using
+   * zapISipUAStack::formulateResponse().
+   */
   zapISipResponse formulate200Response();
 };

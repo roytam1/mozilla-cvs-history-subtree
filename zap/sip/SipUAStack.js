@@ -570,7 +570,8 @@ SipUAStack.fun(
     return m;
   });
 
-// void createInviteMC(in zapISipRequest inviteRequest);
+// zapISipInviteMC createInviteMC(in zapISipRequest inviteRequest,
+//                                in zapISipInviteMCH handler);
 SipUAStack.fun(
   function createInviteMC(request, methodHandler) {
     var client = InviteUACCore.instantiate();
