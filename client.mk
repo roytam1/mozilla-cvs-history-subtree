@@ -103,8 +103,10 @@ AVAILABLE_PROJECTS = \
   macbrowser \
   $(NULL)
 
-MODULES_core :=                                \
+MODULES_core :=                                 \
   SeaMonkeyAll                                  \
+  browser/config/version.txt                    \
+  mail/config/version.txt                       \
   mozilla/ipc/ipcd                              \
   mozilla/modules/libpr0n                       \
   mozilla/modules/libmar                        \
@@ -148,10 +150,6 @@ MODULES_browser :=                              \
   mozilla/other-licenses/7zstub/firefox         \
   $(NULL)
 
-MODULES_minimo :=                               \
-  $(MODULES_toolkit)                            \
-  $(NULL)
-
 LOCALES_browser :=                              \
   $(LOCALES_toolkit)                            \
   browser                                       \
@@ -160,7 +158,10 @@ LOCALES_browser :=                              \
 
 BOOTSTRAP_browser := mozilla/browser/config/mozconfig
 
-BOOTSTRAP_minimo := mozilla/minimo
+MODULES_minimo :=                               \
+  $(MODULES_toolkit)                            \
+  mozilla/minimo                                \
+  $(NULL)
 
 MODULES_mail :=                                 \
   $(MODULES_toolkit)                            \
