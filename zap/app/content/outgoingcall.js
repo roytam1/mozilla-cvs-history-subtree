@@ -182,7 +182,7 @@ CallHandler.appendCtor(
 CallHandler.fun(
   function destroy() {
     if (this.mediaSession) {
-      this.mediaSession.close();
+      this.mediaSession.shutdown();
       this.mediaSession = null;
     }
     this.dialog = null;
