@@ -49,6 +49,8 @@
 #include "nsIWritablePropertyBag2.h"
 #include "zapAudioStreamUtils.h"
 
+class zapAudioInState;
+
 ////////////////////////////////////////////////////////////////////////
 // zapAudioIn
 
