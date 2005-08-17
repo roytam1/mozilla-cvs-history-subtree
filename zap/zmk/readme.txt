@@ -172,6 +172,8 @@ audio/speex stream with
 
 Filter for decoding speex streams as encoded using speex-encoder
 
+Control interfaces: zapISpeexDecoder
+
 Node parameters:
 -double "sample_rate" : 8000|16000|32000 (default:8000)
 

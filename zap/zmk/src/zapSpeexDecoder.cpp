@@ -63,6 +63,50 @@ zapSpeexDecoder::~zapSpeexDecoder()
 #endif
 }
 
+//----------------------------------------------------------------------
+// nsISupports methods:
+
+NS_IMPL_ADDREF_INHERITED(zapSpeexDecoder, zapFilterNode)
+NS_IMPL_RELEASE_INHERITED(zapSpeexDecoder, zapFilterNode)
+
+NS_INTERFACE_MAP_BEGIN(zapSpeexDecoder)
+  NS_INTERFACE_MAP_ENTRY(zapISpeexDecoder)
+NS_INTERFACE_MAP_END_INHERITING(zapFilterNode)
+  
+//----------------------------------------------------------------------
+// zapISpeexDecoder methods:
+
+  /* attribute boolean penhance; */
+NS_IMETHODIMP
+zapSpeexDecoder::GetPenhance(PRBool *aPenhance)
+{
+  int bPenh;
+  speex_decoder_ctl(mDecoderState, SPEEX_GET_ENH, &bPenh);
+  *aPenhance = (bPenh==1);
+  return NS_OK;
+}
+NS_IMETHODIMP
+zapSpeexDecoder::SetPenhance(PRBool aPenhance)
+{
+  int bPenh = aPenhance;
+  speex_decoder_ctl(mDecoderState, SPEEX_SET_ENH, &bPenh);
+  return NS_OK;
+}
+
+/* readonly attribute unsigned long maxBitrate; */
+NS_IMETHODIMP
+zapSpeexDecoder::GetMaxBitrate(PRUint32 *aMaxBitrate)
+{
+  int br;
+  speex_decoder_ctl(mDecoderState, SPEEX_GET_BITRATE, &br);
+  *aMaxBitrate = (PRUint32)br;
+  return NS_OK;
+}
+
+
+//----------------------------------------------------------------------
+// Implementation helpers:
+
 NS_IMETHODIMP
 zapSpeexDecoder::AddedToGraph(zapIMediaGraph *graph, const nsACString & id, nsIPropertyBag2 *node_pars)
 {

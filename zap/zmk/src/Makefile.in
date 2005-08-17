@@ -56,6 +56,7 @@ XPIDLSRCS	= zapIMediaGraph.idl \
 		  zapIAudioDevice.idl \
 		  zapIPortaudioDevice.idl \
 		  zapISpeexEncoder.idl \
+		  zapISpeexDecoder.idl \
 		  zapIRTPFrame.idl \
 		  zapIUDPSocket.idl \
 		  zapIUDPSocketPair.idl \

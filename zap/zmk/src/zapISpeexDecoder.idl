@@ -34,47 +34,18 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __ZAP_SPEEXDECODER_H__
-#define __ZAP_SPEEXDECODER_H__
+#include "nsISupports.idl"
 
-#include "zapFilterNode.h"
-#include "speex/speex.h"
-#include "nsIWritablePropertyBag2.h"
-#include "zapISpeexDecoder.h"
-
-////////////////////////////////////////////////////////////////////////
-// zapSpeexDecoder
-
-// {9B930D99-3608-449B-8BA0-D77EBB879AE1}
-#define ZAP_SPEEXDECODER_CID                             \
-  { 0x9b930d99, 0x3608, 0x449b, { 0x8b, 0xa0, 0xd7, 0x7e, 0xbb, 0x87, 0x9a, 0xe1 } }
-
-#define ZAP_SPEEXDECODER_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "speex-decoder"
-
-class zapSpeexDecoder : public zapFilterNode,
-                        public zapISpeexDecoder
+[scriptable, uuid(b92f1c21-7f63-422f-985b-08b9ceb56950)]
+interface zapISpeexDecoder : nsISupports
 {
-public:
-  zapSpeexDecoder();
-  ~zapSpeexDecoder();
-
-  NS_DECL_ISUPPORTS_INHERITED
-  NS_DECL_ZAPISPEEXDECODER
+  /**
+   * Toggles perceptual enhancer
+   */
+  attribute boolean penhance;
   
-  NS_IMETHOD AddedToGraph(zapIMediaGraph *graph,
-                          const nsACString & id,
-                          nsIPropertyBag2 *node_pars);
-  NS_IMETHOD RemovedFromGraph(zapIMediaGraph *graph);
-  virtual nsresult OpenStream(nsIPropertyBag2* streamInfo);
-  virtual void CloseStream();
-  virtual nsresult Filter(zapIMediaFrame* input, zapIMediaFrame** output);
-
-private:
-  double mSampleRate;
-  SpeexBits mDecoderBits;
-  void* mDecoderState;
-  PRUint32 mOutputBufferLength; // length of output buffers (bytes)
-  nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
+  /**
+   * Maximum bitrate (bps).
+   */
+  readonly attribute unsigned long maxBitrate;
 };
-
-#endif // __ZAP_SPEEXDECODER_H__
