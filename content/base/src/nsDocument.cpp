@@ -740,6 +740,10 @@ nsDocument::~nsDocument()
                    "Unexpected current doc in root content");
       // The root content still has a pointer back to the document,
       // clear the document pointer in all children.
+      
+      // Destroy link map now so we don't waste time removing
+      // links one by one
+      DestroyLinkMap();
 
       PRInt32 count = mChildren.Count();
       for (indx = 0; indx < count; ++indx) {
@@ -952,6 +956,10 @@ nsDocument::ResetToURI(nsIURI *aURI, nsILoadGroup *aLoadGroup)
 
     mSubDocuments = nsnull;
   }
+
+  // Destroy link map now so we don't waste time removing
+  // links one by one
+  DestroyLinkMap();
 
   mRootContent = nsnull;
   PRInt32 count, i;
@@ -1716,6 +1724,7 @@ nsDocument::SetRootContent(nsIContent* aRoot)
   }
 
   if (mRootContent) {
+    DestroyLinkMap();
     mRootContent->UnbindFromTree();
     mChildren.RemoveObject(mRootContent);
     mRootContent = nsnull;
@@ -3677,8 +3686,10 @@ nsDocument::RemoveChild(nsIDOMNode* aOldChild, nsIDOMNode** aReturn)
   ContentRemoved(nsnull, content, indx);
 
   mChildren.RemoveObjectAt(indx);
-  if (content == mRootContent)
+  if (content == mRootContent) {
+    DestroyLinkMap();
     mRootContent = nsnull;
+  }
 
   content->UnbindFromTree();
 
@@ -5036,7 +5047,7 @@ nsDocument::Destroy()
   PRInt32 count = mChildren.Count();
 
   mIsGoingAway = PR_TRUE;
-
+  DestroyLinkMap();
   for (PRInt32 indx = 0; indx < count; ++indx) {
     mChildren[indx]->UnbindFromTree();
   }
@@ -5196,6 +5207,12 @@ nsDocument::AddStyleRelevantLink(nsIContent* aContent, nsIURI* aURI)
 void
 nsDocument::ForgetLink(nsIContent* aContent)
 {
+  // Important optimization! If the link map is empty (as it will be
+  // during teardown because we destroy the map early), then stop
+  // now before we waste time constructing a URI object.
+  if (mLinkMap.Count() == 0)
+    return;
+    
   nsCOMPtr<nsIURI> uri = nsContentUtils::GetLinkURI(aContent);
   if (!uri)
     return;
@@ -5261,6 +5278,13 @@ nsDocument::NotifyURIVisitednessChanged(nsIURI* aURI)
     ContentStatesChanged(visitor.contentVisited[i],
                          nsnull, NS_EVENT_STATE_VISITED);
   }
+}
+
+void
+nsDocument::DestroyLinkMap()
+{
+  mVisitednessChangedURIs.Clear();
+  mLinkMap.Clear();
 }
 
 void
