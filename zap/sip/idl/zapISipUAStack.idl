@@ -42,6 +42,8 @@ interface zapISipURI;
 interface zapISipAddress;
 interface zapISipInviteMC;
 interface zapISipInviteMCH;
+interface zapISipGenericMC;
+interface zapISipGenericMCH;
 interface zapISipResolver;
 interface zapISipTransactionManager;
 interface zapISipSyntaxFactory;
@@ -119,6 +121,12 @@ interface zapISipUAStack : nsISupports
   zapISipInviteMC createInviteMC(in zapISipRequest inviteRequest,
                                  in zapISipInviteMCH handler);
 
+  /**
+   * Create a NON-INVITE method client
+   */
+  zapISipGenericMC createGenericMC(in zapISipRequest request,
+                                   in zapISipGenericMCH handler);
+  
   readonly attribute ACString hostName;
   readonly attribute ACString hostAddress;
 };

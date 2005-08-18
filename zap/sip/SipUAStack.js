@@ -579,6 +579,15 @@ SipUAStack.fun(
     return client;
   });
 
+// zapISipGenericMC createGenericMC(in zapISipRequest request,
+//                                  in zapISipGenericMCH handler);
+SipUAStack.fun(
+  function createGenericMC(request, methodHandler) {
+    var client = GenericUACCore.instantiate();
+    client.init(this, request, methodHandler);
+    return client;
+  });
+
 // readonly attribute ACString hostName
 SipUAStack.getter(
   "hostName",
@@ -823,13 +832,13 @@ InviteUASCore.addInterfaces(Components.interfaces.zapISipServerTransactionUser,
                             Components.interfaces.zapISipInviteMS);
 
 // Request object:
-InviteUACCore.obj("_request", null);
+InviteUASCore.obj("_request", null);
 
 // UAStack object:
-InviteUACCore.obj("_stack", null);
+InviteUASCore.obj("_stack", null);
 
 // zapISipInviteMSH peer:
-InviteUACCore.obj("_methodHandler", null);
+InviteUASCore.obj("_methodHandler", null);
 
 InviteUASCore.fun(
   function init(stack, request, methodHandler) {
@@ -909,6 +918,120 @@ InviteUASCore.fun(
     m.appendHeader(gSyntaxFactory.createContactHeader(ToAddress));
     return m;
   });
+
+////////////////////////////////////////////////////////////////////////
+// GenericUACCore : UAC Non-invite handler
+
+// XXX recode this as a state machine with states RESOLVING, TRYING, ...
+
+var GenericUACCore = makeClass("GenericUACCore", SupportsImpl);
+GenericUACCore.addInterfaces(Components.interfaces.zapISipClientTransactionUser,
+                             Components.interfaces.zapISipGenericMC,
+                             Components.interfaces.zapISipResolveListener);
+
+// Array of possible destinations for the request:
+GenericUACCore.obj("_destinations", []);
+
+// Current destination (index into destinations):
+GenericUACCore.obj("_destinationIndex", -1);
+
+// Request object:
+GenericUACCore.obj("_request", null);
+
+// UAStack object:
+GenericUACCore.obj("_stack", null);
+
+// zapISipInviteMCH peer:
+GenericUACCore.obj("_methodHandler", null);
+
+GenericUACCore.fun(
+  function init(stack, request, methodHandler) {
+    this._dialogs = [];
+    this._stack = stack;
+    this._request = request;
+    this._methodHandler = methodHandler;
+  });
+
+//----------------------------------------------------------------------
+// zapISipGenericMC implementation:
+
+GenericUACCore.fun(
+  function execute() {
+    // This will asynchronously resolve the possible destinations for
+    // our request and call 'resolveComplete' once finished:
+    this._stack.resolver.resolveEndpointsAsync(this._request.requestURI,
+                                               /*this._request.getHeaders("Route", {}),*/
+                                               this);
+  });
+
+//----------------------------------------------------------------------
+// zapISipResolveListener implementation:
+
+GenericUACCore.fun(
+  function resolveComplete(destinations, count) {
+    // We've got destinations to try the request on now.
+    this._destinations = destinations;
+    this._tryNextDestination();
+  });
+
+//----------------------------------------------------------------------
+// zapISipClientTransactionUser implementation:
+
+GenericUACCore.fun(
+  function handleFailureResponse(r) {
+    this._dump(r.statusCode);
+    if (this._methodHandler) {
+      this._methodHandler.finalResponse(this, r);
+      this._methodHandler.terminated(this);
+    }
+  });
+
+GenericUACCore.fun(
+  function handleProvisionalResponse(r) {
+    if (this._methodHandler)
+      this._methodHandler.provisionalResponse(this, r);
+    this._dump(r.statusCode);
+  });
+
+GenericUACCore.fun(
+  function handleSuccessResponse(r) {
+    this._dump(r.statusCode);
+    if (this._methodHandler) {
+      this._methodHandler.finalResponse(this, r);
+      this._methodHandler.terminated(this);
+    }
+  });
+
+GenericUACCore.fun(
+  function handleTimeout() {
+    // XXX notify UI
+    this._tryNextDestination();
+  });
+
+//----------------------------------------------------------------------
+
+GenericUACCore.fun(
+  function _tryNextDestination() {
+    if (++this._destinationIndex >= this._destinations.length) {
+      this._dump("no more destinations to try");
+      if (this._methodHandler)
+        this._methodHandler.terminated(this);
+      return;
+    }
+    this._sendRequest(this._destinations[this._destinationIndex]);
+  });
+
+GenericUACCore.fun(
+  function _sendRequest(dest) {
+    if (this._methodHandler)
+      this._methodHandler.calling(this, dest);
+    // Give the top Via a new branch id:
+    this._request.getTopViaHeader().setParameter("branch", BRANCH_COOKIE+generateUUID());
+    this._stack.transactionManager.executeNonInviteClientTransaction(this._request,
+                                                                     dest,
+                                                                     this);
+  });
+
 
 
 ////////////////////////////////////////////////////////////////////////

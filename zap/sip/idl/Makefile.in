@@ -75,6 +75,8 @@ XPIDLSRCS = \
 	zapISipInviteMC.idl \
 	zapISipInviteMSH.idl \
 	zapISipInviteMS.idl \
+	zapISipGenericMC.idl \
+	zapISipGenericMCH.idl \
 	zapISipDialog.idl \
 	zapISipDialogHandler.idl \
 	zapISipEndpoint.idl \
