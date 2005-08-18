@@ -48,6 +48,7 @@ var wDisplayNameElement;
 var wUserNameElement;
 var wHostNameElement;
 var wCallRejectElement;
+var wVerboseErrorService;
 
 //----------------------------------------------------------------------
 // Initialization:
@@ -61,7 +62,8 @@ function windowInit() {
   wLogger = Components.classes["@mozilla.org/zap/loggingservice;1"].
     getService(Components.interfaces.zapILoggingService);
   wLogger.addLogListener(logListener);
-  
+  wVerboseErrorService = Components.classes["@mozilla.org/zap/verbose-error-service;1"].
+    getService(Components.interfaces.zapIVerboseErrorService);
   initSipClient();
 }
 
@@ -102,6 +104,11 @@ var wCount = 1;
 function cmdCall() {
   
   window.open("chrome://zap/content/outgoingcall.xul", "call"+(wCount++), "chrome, resizable");
+}
+
+function cmdRequest() {
+  window.open("chrome://zap/content/genericrequest.xul", "request"+(wCount++),
+              "chrome, resizable");
 }
 
 function cmdClearLog() {

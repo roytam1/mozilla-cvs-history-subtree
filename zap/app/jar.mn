@@ -5,6 +5,8 @@ zap.jar:
   content/zap/outgoingcall.js        (content/outgoingcall.js)
   content/zap/incomingcall.xul       (content/incomingcall.xul)
   content/zap/incomingcall.js        (content/incomingcall.js)
+  content/zap/genericrequest.xul     (content/genericrequest.xul)
+  content/zap/genericrequest.js      (content/genericrequest.js)
 
 en-US.jar:
   locale/en-US/zap/zap.dtd           (locale/zap.dtd)

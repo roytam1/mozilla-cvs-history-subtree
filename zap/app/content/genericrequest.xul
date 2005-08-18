@@ -38,75 +38,51 @@
 
 <!DOCTYPE window SYSTEM "chrome://zap/locale/zap.dtd">
 
-<window id="zap"
-        width="640" height="480" screenX="20" screenY="20" 
+<window id="genericrequest"
+        width="400" height="300" screenX="40" screenY="40" 
         persist="width height screenX screenY sizemode"
-        title = "&zap.title;"
         onload="windowInit();"
         onunload="windowClose();"
+        title = "zap! generic request"
         xmlns = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
   <!-- Scripts -->
-  <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
-  <script type="application/x-javascript" src="chrome://zap/content/zap.js"/>
+  <script type="application/x-javascript" src="chrome://zap/content/genericrequest.js"/>
 
   <!-- Commands -->
   <commandset>
-    <command id="cmd_exit" oncommand="cmdExit()"/>
+    <command id="cmd_rgen" oncommand="cmdGenerateRequest()"/>
     <command id="cmd_call" oncommand="cmdCall()"/>
-    <command id="cmd_request" oncommand="cmdRequest()"/>
     <command id="cmd_clearlog" oncommand="cmdClearLog()"/>
   </commandset>
 
-  <!-- Main menu bar -->
-  <menubar>
-    <menu label="File"
-          accesskey="F">
-      <menupopup>
-        <menuitem label="Exit" 
-                  accesskey="x"
-                  command="cmd_exit" />
-      </menupopup>
-    </menu>
-  </menubar>
 
   <!-- Main content box -->
   <vbox flex="1" style="overflow:auto;">
     <groupbox>
-      <caption label="Identity"/>
-      <grid>
-        <columns>
-          <column/><column flex="1"/>
-        </columns>
-        <rows>
-          <row>
-            <label value="Display Name:" control="display-name"/>
-            <textbox id="display-name" />
-          </row>
-          <row>
-            <label value="User Name:" control="user-name"/>
-            <textbox id="user-name" value="anonymous"/>
-          </row>
-          <row>
-            <label value="Host:" control="host-name"/>
-            <textbox id="host-name" />
-          </row>
-        </rows>
-      </grid>
+      <caption label="request template"/>
+      <hbox>
+        <label value="Destination Address:" control="dest-address"/>
+        <textbox id="dest-address" value="sip:name@host" flex="1" persist="value"/>
+      </hbox>
+      <hbox>
+        <label value="Method:" control="method-name"/>
+        <textbox id="method-name" value="OPTIONS" flex="1" persist="value"/>
+      </hbox>
     </groupbox>
     <groupbox>
-      <caption label="Settings"/>
-      <checkbox label="Reject incoming calls" id="call-reject"/>
-    </groupbox>
-    <groupbox>
-      <caption label="Actions"/>
+      <caption label="actions"/>
       <hbox pack="center">
-        <button label="New Call" command="cmd_call"/>
-        <button label="Generic Request" command="cmd_request"/>
+        <button label="Generate request" command="cmd_rgen"/>
+        <button label="Send request" command="cmd_call"/>
       </hbox>
     </groupbox>
     <groupbox flex="1">
-      <caption label="log"/>
+      <caption label="request"/>
+      <textbox id="request" multiline="true" flex="1"/>
+    </groupbox>
+    <groupbox flex="1">
+      <caption label="response"/>
       <textbox id="log" multiline="true" readonly="true" flex="1"/>
       <hbox pack="center">
         <button label="Clear Log" command="cmd_clearlog"/>
