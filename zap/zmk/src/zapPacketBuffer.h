@@ -44,6 +44,9 @@
 #include "nsCOMPtr.h"
 #include "nsIEventQueue.h"
 
+class zapPacketBufferSourceState;
+class zapPacketBufferSinkState;
+
 ////////////////////////////////////////////////////////////////////////
 // zapPacketBuffer
 
