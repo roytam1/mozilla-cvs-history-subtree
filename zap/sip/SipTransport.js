@@ -296,7 +296,8 @@ SipTransceiver.fun(
     protocol = protocol.toLowerCase();
     var key = protocol+":"+port;
     if (hashhas(this._listeningSockets, key))
-      this._error("Already open");
+      this._error("SipTransceiver: "+protocol+
+                  " listening socket at "+port+" already open");
 
     var socket;
     if (protocol == "udp") {
@@ -312,7 +313,7 @@ SipTransceiver.fun(
       socket.asyncListen(this);
     }
     else {
-      this._error("Unsupported protocol");
+      this._error("SipTransceiver: Unsupported protocol '"+protocol+"'");
     }
     
     hashset(this._listeningSockets, key, socket);
@@ -325,11 +326,12 @@ SipTransceiver.fun(
     var key = protocol+":"+port;
     var socket;
     if (!(socket = hashget(this._listeningSockets, key)))
-      this._error("Socket not open");
+      this._error("SipTransceiver: Trying to close unknown "+
+                  protocol+" socket at "+port);
     if (protocol == "udp" || protocol == "tcp")
       socket.close();
     else
-      this._error("Unsupported protocol");
+      this._error("SipTransceiver: Unsupported protocol '"+protocol+"'");
     
     hashdel(this._listeningSockets, key);
   });
@@ -360,7 +362,7 @@ SipTransceiver.fun(
       this._assert(connection==null,
                    "Connection provided for connection-less protocol!");
       var socket = this._getUDPSendSocket();
-      if (!socket) this._error("No sending socket");
+      if (!socket) this._error("SipTransceiver: No UDP socket available");
       log("Sending UDP packet to "+destAddress+":"+destPort+ " :\n"+message.serialize());
       socket.send(message.serialize(), destAddress, destPort);
     }
@@ -383,7 +385,7 @@ SipTransceiver.fun(
       connection.send(message.serialize());
     }
     else
-      this._error("Unsupported protocol");
+      this._error("SipTransceiver: Unsupported protocol '"+protocol+"'");
     return connection;
   });
 

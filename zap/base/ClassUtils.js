@@ -425,9 +425,21 @@ NamedObject.fun(
 
 var ErrorReporter = makeClass("ErrorReporter", NamedObject);
 
+var gVerboseErrorService;
+function getVerboseErrorService() {
+  if (!gVerboseErrorService) {
+    // create via xpcom:
+    //gVerboseErrorService = Components.classes["@mozilla.org/zap/verbose-error-reporter;1"].getService(Components.interfaces.zapIVerboseErrorService);
+
+    // create via js:
+    gVerboseErrorService = Components.classes["@mozilla.org/moz/jsloader;1"].getService(Components.interfaces.xpcIJSComponentLoader).importModule("rel:zapVerboseErrorService.js").theVerboseErrorService;
+  }
+  return gVerboseErrorService;
+}
+    
 ErrorReporter.fun(
   function _error(message) {
-    throw(this+"::"+Components.stack.caller.name+": "+message);
+    throw(getVerboseErrorService().setVerboseErrorMessage(message));
   });
 
 ErrorReporter.fun(

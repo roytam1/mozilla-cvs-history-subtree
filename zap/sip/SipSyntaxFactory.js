@@ -56,7 +56,7 @@ var SIP_PROTOCOL_NAME = "SIP";
 var SIP_PROTOCOL_VERSION = "2.0";
 var SIP_VERSION = SIP_PROTOCOL_NAME+"/"+SIP_PROTOCOL_VERSION;
 var CRLF = "\r\n";
-var PARSE_ERROR = "Parse error"; // error to throw when parsing fails
+var PARSE_ERROR = "SIP parse error"; // generic error message for parse failure
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -681,7 +681,7 @@ SipSIPURI.fun(
   function deserialize(octets) {
     // parse into (secure?, userinfo, host, port, uri-parameters, headers):
     var matches = REGEXP_SIPURI(octets);
-    if (!matches) this._error(PARSE_ERROR);
+    if (!matches) this._error(PARSE_ERROR+": malformed SIP URI ("+octets+")");
 
     if (matches[1].length)
       this.sips = true;
@@ -746,7 +746,7 @@ SipAddress.fun(
       // a 'name-addr':
       // -> parse into (display-name[parsed,?], addr-spec[unparsed])
       var matches = REGEXP_NAME_ADDR(octets);
-      if (!matches) this._error(PARSE_ERROR);
+      if (!matches) this._error(PARSE_ERROR+": malformed address ("+octets+")");
       this.displayName = matches[1];
       this.uri = theSyntaxFactory.deserializeURI(matches[2]);
     }
@@ -863,7 +863,7 @@ SipToHeader.fun(
   function deserialize(name, data) {
     // parse into (name-addr|addr-spec[parsed], to-parameters[unparsed])
     var matches = REGEXP_NAME_ADDR_PARS(data);
-    if (!matches) this._error(PARSE_ERROR);
+    if (!matches) this._error(PARSE_ERROR+": malformed To Header ("+data+")");
     
     this.address = theSyntaxFactory.deserializeAddress(matches[1]);
     this._deserializeParameters(matches[2]);
@@ -914,7 +914,7 @@ SipReplyToHeader.fun(
   function deserialize(name, data) {
     // parse into (name-addr|addr-spec[parsed], to-parameters[unparsed])
     var matches = REGEXP_NAME_ADDR_PARS(data);
-    if (!matches) this._error(PARSE_ERROR);
+    if (!matches) this._error(PARSE_ERROR+": malformed Reply-To header ("+data+")");
     
     this.address = theSyntaxFactory.deserializeAddress(matches[1]);
     this._deserializeParameters(matches[2]);
@@ -967,7 +967,7 @@ SipFromHeader.fun(
   function deserialize(name, data) {
     // parse into (name-addr|addr-spec[parsed], to-parameters[unparsed])
     var matches = REGEXP_NAME_ADDR_PARS(data);
-    if (!matches) this._error(PARSE_ERROR);
+    if (!matches) this._error(PARSE_ERROR+": malformed From header ("+data+")");
     
     this.address = theSyntaxFactory.deserializeAddress(matches[1]);
     this._deserializeParameters(matches[2]);
@@ -1055,7 +1055,7 @@ SipContactHeader.fun(
     else {
       // parse into (name-addr|addr-spec[parsed], to-parameters[unparsed])
       var matches = REGEXP_NAME_ADDR_PARS(data);
-      if (!matches) this._error(PARSE_ERROR);
+      if (!matches) this._error(PARSE_ERROR+": malformed Contact header ("+data+")");
 
       this.address = theSyntaxFactory.deserializeAddress(matches[1]);
       this._deserializeParameters(matches[2]);
@@ -1089,7 +1089,7 @@ SipMaxForwardsHeader.obj("maxForwards", 70);
 SipMaxForwardsHeader.fun(
   function deserialize(name, data) {
     if (isNaN(this.maxForwards = parseInt(data)))
-      this._error(PARSE_ERROR);
+      this._error(PARSE_ERROR+": malformed Max-Forwards header ("+data+")");
   });
 
 
@@ -1126,7 +1126,7 @@ SipCSeqHeader.fun(
   function deserialize(name, data) {
     // parse into (sequencenumber, method)
     var matches = REGEXP_CSEQ_HEADER_VALUE(data);
-    if (!matches) this._error(PARSE_ERROR);
+    if (!matches) this._error(PARSE_ERROR+": malformed CSeq header ("+data+")");
 
     this.sequenceNumber = parseInt(matches[1]);
     this._method = matches[2];
@@ -1159,7 +1159,7 @@ SipContentLengthHeader.fun(
   function deserialize(name, data) {
     // XXX parsing is not strict
     if (isNaN(this.contentLength = parseInt(data)) || this.contentLength<0)
-      this._error(PARSE_ERROR);
+      this._error(PARSE_ERROR+": malformed Content-Length header ("+data+")");
   });
 
 
@@ -1210,7 +1210,7 @@ SipContentTypeHeader.fun(
   function deserialize(name, data) {
     // parse into (type[parsed], subtype[parsed], m-parameters[unparsed])
     var matches = REGEXP_CONTENT_TYPE_HEADER_VALUE(data);
-    if (!matches) this._error(PARSE_ERROR);
+    if (!matches) this._error(PARSE_ERROR+": malformed Content-Type header ("+data+")");
     
     this._type = matches[1];
     this._subType = matches[2];
@@ -1312,7 +1312,7 @@ SipViaHeader.fun(
   function deserialize(name, data) {
     // parse into (protocol, version, transport, host, port, via-params[unparsed])
     var matches = REGEXP_VIA_HEADER_VALUE(data);
-    if (!matches) this._error(PARSE_ERROR);
+    if (!matches) this._error(PARSE_ERROR+": malformed Via header ("+data+")");
 
     this._protocolName = matches[1];
     this._protocolVersion = matches[2];
@@ -1377,7 +1377,7 @@ SipExpiresHeader.fun(
   function deserialize(name, data) {
     // XXX parsing is not strict
     if (isNaN(this.deltaSeconds = parseInt(data)) || this.deltaSeconds<0)
-      this._error(PARSE_ERROR);
+      this._error(PARSE_ERROR+": malformed Expires header ("+data+")");
   });
 
 ////////////////////////////////////////////////////////////////////////
@@ -1407,7 +1407,7 @@ SipMinExpiresHeader.fun(
   function deserialize(name, data) {
     // XXX parsing is not strict
     if (isNaN(this.deltaSeconds = parseInt(data)) || this.deltaSeconds<0)
-      this._error(PARSE_ERROR);
+      this._error(PARSE_ERROR+": malformed Min-Expires header ("+data+")");
   });
 
 ////////////////////////////////////////////////////////////////////////
@@ -1593,7 +1593,7 @@ SipMessage.fun(
   function getSingleHeader(name) {
     var headers = this.getHeaders(name);
     if (headers.length == 0) return null;
-    if (headers.length < 1) this._error("Multiple headers of the given name");
+    if (headers.length < 1) this._error(PARSE_ERROR+": Message contains multiple "+name+" headers");
     return headers[0];
   });
 
@@ -1765,7 +1765,7 @@ SipRequest.fun(
   function deserialize(octets) {
     // parse into (method, request-uri, sip-version, headers, body):
     var matches = REGEXP_REQUEST(octets);
-    if (!matches) this._error(PARSE_ERROR);
+    if (!matches) this._error(PARSE_ERROR+": malformed SIP request (\n"+octets+"\n)");
     
     this._method = matches[1];
     this.requestURI = theSyntaxFactory.deserializeURI(matches[2]);
@@ -1815,7 +1815,7 @@ SipResponse.fun(
   function deserialize(octets) {
     // parse into (sip-version, status-code, reason-phrase, headers, body):
     var matches = REGEXP_RESPONSE(octets);
-    if (!matches) this._error(PARSE_ERROR);
+    if (!matches) this._error(PARSE_ERROR+": malformed SIP response (\n"+data+"\n)");
 
     this._version = matches[1];
     this._statusCode = matches[2];

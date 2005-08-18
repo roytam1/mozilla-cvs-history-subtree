@@ -10,6 +10,7 @@ XPIDL_MODULE = zap_base
 
 XPIDLSRCS = \
 	zapILoggingService.idl \
+	zapIVerboseErrorService.idl \
 	$(NULL)
 
 include $(topsrcdir)/config/rules.mk

@@ -11,6 +11,7 @@ MODULE       = zap_base
 
 EXTRA_PP_COMPONENTS = \
 	LoggingService.js \
+	zapVerboseErrorService.js \
 	$(NULL)
 
 include $(topsrcdir)/config/rules.mk
