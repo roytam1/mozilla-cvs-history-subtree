@@ -43,6 +43,8 @@
 #include "nsArray.h"
 #include "nsIDOMDocument.h"
 #include "nsIFrame.h"
+#include "nsIScrollableFrame.h"
+#include "nsIScrollableView.h"
 #include "nsINameSpaceManager.h"
 #include "nsINodeInfo.h"
 #include "nsIPrefService.h"
@@ -171,28 +173,53 @@ STDMETHODIMP nsAccessibleWrap::get_accParent( IDispatch __RPC_FAR *__RPC_FAR *pp
     return E_FAIL;  // We've been shut down
 
   nsIFrame *frame = GetFrame();
-  nsCOMPtr<nsIAccessible> xpParentAccessible;
-  GetParent(getter_AddRefs(xpParentAccessible));
+  HWND hwnd = 0;
   if (frame) {
-    nsCOMPtr<nsPIAccessNode> parentAccessNode(do_QueryInterface(xpParentAccessible));
-    nsIFrame *parentFrame;
-    if (!parentAccessNode ||
-      ((parentFrame = parentAccessNode->GetFrame()) != nsnull) && (frame->GetWindow() != parentFrame->GetWindow())) {
+    nsIView *view = frame->GetViewExternal();
+    if (view) {
       // This code is essentially our implementation of WindowFromAccessibleObject,
       // because MSAA iterates get_accParent() until it sees an object of ROLE_WINDOW
       // to know where the window for a given accessible is. We must expose the native 
       // window accessible that MSAA creates for us. This must be done for the document
       // object as well as any layout that creates its own window (e.g. via overflow: scroll)
-      HWND hWnd = (HWND)frame->GetWindow()->GetNativeData(NS_NATIVE_WINDOW);
-      NS_ASSERTION(hWnd, "No window handle for window");
-      if (SUCCEEDED(AccessibleObjectFromWindow(hWnd, OBJID_WINDOW, IID_IAccessible,
-                                              (void**)ppdispParent))) {
-        return S_OK;
+      nsIWidget *widget = view->GetWidget();
+      if (widget) {
+        hwnd = (HWND)widget->GetNativeData(NS_NATIVE_WINDOW);
+        NS_ASSERTION(hwnd, "No window handle for window");
+        nsIView *rootView;
+        view->GetViewManager()->GetRootView(rootView);
+        if (rootView == view) {
+          // If the current object has a widget but was created by an
+          // outer object with its own outer window, then
+          // we want the native accessible for that outer window
+          hwnd = ::GetParent(hwnd);
+          NS_ASSERTION(hwnd, "No window handle for window");
+        }
       }
+      else {
+        // If a frame is a scrollable frame, then it has one window for the client area,
+        // not an extra parent window for just the scrollbars
+        nsIScrollableFrame *scrollFrame = nsnull;
+        CallQueryInterface(frame, &scrollFrame);
+        if (scrollFrame) {
+          hwnd = (HWND)scrollFrame->GetScrolledFrame()->GetWindow()->GetNativeData(NS_NATIVE_WINDOW);
+          NS_ASSERTION(hwnd, "No window handle for window");
+        }
+      }
+    }
+
+    if (hwnd && SUCCEEDED(AccessibleObjectFromWindow(hwnd, OBJID_WINDOW, IID_IAccessible,
+                                              (void**)ppdispParent))) {
+      return S_OK;
     }
   }
 
+  nsCOMPtr<nsIAccessible> xpParentAccessible;
+  GetParent(getter_AddRefs(xpParentAccessible));
   NS_ASSERTION(xpParentAccessible, "No parent accessible where we're not direct child of window");
+  if (!xpParentAccessible) {
+    return E_UNEXPECTED;
+  }
   *ppdispParent = NativeAccessible(xpParentAccessible);
 
   return S_OK;
