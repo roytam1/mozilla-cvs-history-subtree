@@ -106,8 +106,8 @@ AVAILABLE_PROJECTS = \
 
 MODULES_core :=                                 \
   SeaMonkeyAll                                  \
-  browser/config/version.txt                    \
-  mail/config/version.txt                       \
+  mozilla/browser/config/version.txt            \
+  mozilla/mail/config/version.txt               \
   mozilla/ipc/ipcd                              \
   mozilla/modules/libpr0n                       \
   mozilla/modules/libmar                        \
@@ -364,7 +364,7 @@ MOZCONFIG_MODULES += $(foreach project,$(MOZ_PROJECT_LIST),$(BOOTSTRAP_$(project
 # Using $(sort) here because it also removes duplicate entries.
 MOZ_MODULE_LIST := $(sort $(MOZ_MODULE_LIST))
 LOCALE_DIRS := $(sort $(LOCALE_DIRS))
-MOZCONFIG_MODULES += $(sort $(MOZCONFIG_MODULES))
+MOZCONFIG_MODULES := $(sort $(MOZCONFIG_MODULES))
 
 # Change CVS flags if anonymous root is requested
 ifdef MOZ_CO_USE_MIRROR
