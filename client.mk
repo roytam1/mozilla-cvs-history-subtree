@@ -881,7 +881,8 @@ ZAP_BRANCH_NEW_FILES = \
 	netwerk/base/src/nsUDPSocket.cpp \
 	netwerk/base/src/nsUDPSocket.h \
 	xpcom/io/nsIScriptableInputStreamEx.idl \
-	zap
+	zap \
+	extensions/jssh
 
 
 commit_zap:
