@@ -22,10 +22,10 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "icint.h"
+#include "pixman-xserver-compat.h"
 
 static void
-IcPixelsInit (IcPixels *pixels, pixman_bits_t *buf, int width, int height, int depth, int bpp, int stride);
+FbPixelsInit (FbPixels *pixels, pixman_bits_t *buf, int width, int height, int depth, int bpp, int stride);
 
 static unsigned int
 pixman_bits_per_pixel (unsigned int depth);
@@ -47,10 +47,10 @@ pixman_bits_per_pixel (unsigned int depth)
 	    return 1;
 }
 
-IcPixels *
-IcPixelsCreate (int width, int height, int depth)
+FbPixels *
+FbPixelsCreate (int width, int height, int depth)
 {
-    IcPixels		*pixels;
+    FbPixels		*pixels;
     pixman_bits_t		*buf;
     unsigned int	buf_size;
     unsigned int	bpp;
@@ -59,9 +59,9 @@ IcPixelsCreate (int width, int height, int depth)
     unsigned int	base;
 
     bpp = pixman_bits_per_pixel (depth);
-    stride = ((width * bpp + IC_MASK) >> IC_SHIFT) * sizeof (pixman_bits_t);
+    stride = ((width * bpp + FB_MASK) >> FB_SHIFT) * sizeof (pixman_bits_t);
     buf_size = height * stride;
-    base = sizeof (IcPixels);
+    base = sizeof (FbPixels);
     adjust = 0;
     if (base & 7)
 	adjust = 8 - (base & 7);
@@ -73,27 +73,27 @@ IcPixelsCreate (int width, int height, int depth)
 
     buf = (pixman_bits_t *) ((char *)pixels + base + adjust);
 
-    IcPixelsInit (pixels, buf, width, height, depth, bpp, stride);
+    FbPixelsInit (pixels, buf, width, height, depth, bpp, stride);
 
     return pixels;
 }
 
-IcPixels *
-IcPixelsCreateForData (pixman_bits_t *data, int width, int height, int depth, int bpp, int stride)
+FbPixels *
+FbPixelsCreateForData (pixman_bits_t *data, int width, int height, int depth, int bpp, int stride)
 {
-    IcPixels *pixels;
+    FbPixels *pixels;
 
-    pixels = malloc (sizeof (IcPixels));
+    pixels = malloc (sizeof (FbPixels));
     if (pixels == NULL)
 	return NULL;
 
-    IcPixelsInit (pixels, data, width, height, depth, bpp, stride);
+    FbPixelsInit (pixels, data, width, height, depth, bpp, stride);
 
     return pixels;
 }
 
 static void
-IcPixelsInit (IcPixels *pixels, pixman_bits_t *buf, int width, int height, int depth, int bpp, int stride)
+FbPixelsInit (FbPixels *pixels, pixman_bits_t *buf, int width, int height, int depth, int bpp, int stride)
 {
     pixels->data = buf;
     pixels->width = width;
@@ -107,7 +107,7 @@ IcPixelsInit (IcPixels *pixels, pixman_bits_t *buf, int width, int height, int d
 }
 
 void
-IcPixelsDestroy (IcPixels *pixels)
+FbPixelsDestroy (FbPixels *pixels)
 {
     if(--pixels->refcnt)
 	return;

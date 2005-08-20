@@ -91,6 +91,7 @@ SOFTWARE.
 # include "mozstdint.h"
 #endif
 
+#include "pixman-remap.h"
 
 #if defined(__cplusplus) || defined(c_plusplus)
 extern "C" {
@@ -272,6 +273,7 @@ pixman_image_create (pixman_format_t	*format,
 */
 #ifndef IC_SHIFT
 #define IC_SHIFT 5
+#define FB_SHIFT IC_SHIFT
 typedef uint32_t pixman_bits_t;
 #endif
 
