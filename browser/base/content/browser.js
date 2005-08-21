@@ -36,7 +36,6 @@
 #   Giorgio Maone <g.maone@informaction.com>
 #   Tom Germeau <tom.germeau@epigoon.com>
 #   Jesse Ruderman <jruderman@gmail.com>
-#   Someone
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
