@@ -36,6 +36,7 @@
 #   Giorgio Maone <g.maone@informaction.com>
 #   Tom Germeau <tom.germeau@epigoon.com>
 #   Jesse Ruderman <jruderman@gmail.com>
+#   Someone
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -577,7 +578,7 @@ function BrowserStartup()
     uriToLoad = window.arguments[0];
 
   try {
-    if (makeURL(uriToLoad).schemeIs("chrome")) {
+    if (makeURI(uriToLoad).schemeIs("chrome")) {
       dump("*** Preventing external load of chrome: URI into browser window\n");
       dump("    Use -chrome <uri> instead\n");
       window.close();
