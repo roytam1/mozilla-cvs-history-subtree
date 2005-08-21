@@ -3639,6 +3639,11 @@ nsDocument::ReplaceChild(nsIDOMNode* aNewChild, nsIDOMNode* aOldChild,
 
   mChildren.RemoveObjectAt(indx);
 
+  if (nodeType == nsIDOMNode::ELEMENT_NODE) {
+    // This must be replacing the root node. Tear down the link map
+    // because we're going to unbind all content.
+    DestroyLinkMap();
+  }
   ContentRemoved(nsnull, refContent, indx);
   refContent->UnbindFromTree();
 
