@@ -220,6 +220,7 @@ ImageListener::OnStopRequest(nsIRequest* request, nsISupports *ctxt,
   }
 
 
+  // mImageContent can be null if the document is already destroyed
   if (NS_FAILED(status) && imgDoc->mStringBundle && imgDoc->mImageContent) {
     nsCAutoString src;
     imgDoc->mDocumentURI->GetSpec(src);
