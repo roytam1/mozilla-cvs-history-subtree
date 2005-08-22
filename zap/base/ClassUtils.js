@@ -46,7 +46,8 @@ EXPORTED_SYMBOLS = [ "StdClass",
                      "AttributeParser",
                      "Unwrappable",
                      "PropertyBag",
-                     "makePropertyBag" ];
+                     "makePropertyBag",
+                     "StateMachine"];
 
 // name our global object:
 function toString() { return "[ClassUtils.js]"; }
@@ -438,14 +439,19 @@ function getVerboseErrorService() {
 }
     
 ErrorReporter.fun(
-  function _error(message) {
+  function _verboseError(message) {
     throw(getVerboseErrorService().setVerboseErrorMessage(message));
+  });
+
+ErrorReporter.fun(
+  function _error(message) {
+    throw(this+"::"+Components.stack.caller.name+": ERROR: "+message);
   });
 
 ErrorReporter.fun(
   function _assert(cond, message) {
     if (!cond)
-      throw(this+"::"+Components.stack.caller.name+": "+message);
+      throw(this+"::"+Components.stack.caller.name+": ASSERTION FAILED: "+message);
   });
 
 ErrorReporter.fun(
@@ -657,3 +663,41 @@ function makePropertyBag(obj) {
   obj.__proto__ = PropertyBag.prototype;
   return obj;
 }
+
+
+////////////////////////////////////////////////////////////////////////
+// Class StateMachine
+
+var StateMachine = makeClass("StateMachine", ErrorReporter);
+
+StateMachine.obj("currentState", "*");
+
+StateMachine.obj("states", []);
+
+StateMachine.fun(
+  function changeState(state) {
+    this.currentState = state;
+  });
+
+StateMachine.metafun(
+  function statefun(state, fct) {
+    var name = fct.name;
+    
+    // create a dispatcher function if neccessary:
+    if (!this.prototype[name]) {      
+      this.prototype[name] = function() {
+        if (this.states[this.currentState][name])
+          return this.states[this.currentState][name].apply(this, arguments);
+        else if (this.states["*"][name])
+          return this.states["*"][name].apply(this, arguments);
+        else
+          this._error("StateMachine "+this+" error: "+name+" not found in state "+this.currentState);
+      }
+    }
+
+    // create state if neccessary:
+    if (!this.prototype.states[state]) this.prototype.states[state] = {};
+
+    // define state function:
+    this.prototype.states[state][name] = fct;
+  });
