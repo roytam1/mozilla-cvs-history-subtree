@@ -47,7 +47,8 @@ EXPORTED_SYMBOLS = [ "arraymerge",
                      "arrayequal",
                      "union",
                      "intersection",
-                     "difference" ];
+                     "difference",
+                     "makeArrayIterator"];
 
 // name our global object:
 function toString() { return "[ArrayUtils.js]"; }
@@ -254,4 +255,19 @@ function difference(arr1, arr2) {
   arr1.forEach(function(item) {
                  if (!member(item, arr2)) retval.push(item);});
   return retval;
+}
+
+//----------------------------------------------------------------------
+// makeArrayIterator
+
+_doc_.makeArrayIterator = "\
+ Returns an iterator with methods getNext() and hasMore()           \n\
+ for the given array.                                                 ";
+
+function makeArrayIterator(arr) {
+  var index = 0;
+  return {
+    getNext: function() { return arr[index++]; },
+    hasMore: function() { return index<arr.length; }
+  };
 }
