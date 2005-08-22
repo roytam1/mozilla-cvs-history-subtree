@@ -1587,9 +1587,12 @@ nsFrame::HandleMultiplePress(nsPresContext* aPresContext,
   nsMouseEvent *me = (nsMouseEvent *)aEvent;
   if (!me) return NS_OK;
 
+#if 0 // Paragraph selection is currently broken - so disable it
   if (me->clickCount == 4)
     selectPara = PR_TRUE;
-  else if (me->clickCount == 3)
+  else
+#endif
+  if (me->clickCount == 3)
   {
     selectPara =
       nsContentUtils::GetBoolPref("browser.triple_click_selects_paragraph");
