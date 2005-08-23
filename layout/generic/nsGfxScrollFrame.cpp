@@ -2445,7 +2445,7 @@ nsMargin
 nsGfxScrollFrameInner::GetActualScrollbarSizes() const {
   nsMargin border;
   mOuter->GetBorder(border);
-  nsRect r = mOuter->GetRect();
+  nsRect r(nsPoint(0,0), mOuter->GetSize());
   r.Deflate(border);
   nsRect scrollArea = mScrollableView->View()->GetBounds();
 
