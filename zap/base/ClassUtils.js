@@ -686,12 +686,13 @@ StateMachine.metafun(
     // create a dispatcher function if neccessary:
     if (!this.prototype[name]) {      
       this.prototype[name] = function() {
-        if (this.states[this.currentState][name])
+        if (this.states[this.currentState] &&
+            this.states[this.currentState][name])
           return this.states[this.currentState][name].apply(this, arguments);
-        else if (this.states["*"][name])
+        else if (this.states["*"] && this.states["*"][name])
           return this.states["*"][name].apply(this, arguments);
         else
-          this._error("StateMachine "+this+" error: "+name+" not found in state "+this.currentState);
+          this._error("StateMachine "+this+": "+name+" not found in state "+this.currentState);
       }
     }
 
