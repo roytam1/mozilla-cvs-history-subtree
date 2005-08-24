@@ -697,6 +697,8 @@ private:
 
   nsresult RecreateFramesForContent(nsIContent*      aContent);
 
+  PRBool MaybeRecreateContainerForIBSplitterFrame(nsIFrame* aFrame, nsresult* aResult);
+
   nsresult CreateContinuingOuterTableFrame(nsIPresShell*    aPresShell, 
                                            nsPresContext*  aPresContext,
                                            nsIFrame*        aFrame,
