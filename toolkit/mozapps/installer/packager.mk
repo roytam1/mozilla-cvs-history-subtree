@@ -119,10 +119,12 @@ MAKE_PACKAGE	= $(_ABS_TOPSRCDIR)/build/package/mac_osx/pkg-dmg \
 UNMAKE_PACKAGE	= \
   set -e; \
   unset NEXT_ROOT; \
+  export PAGER=true; \
   mkdir mount-temp; \
-  hdiutil attach -readonly -mountpoint mount-temp -private -noautoopen $(UNPACKAGE) > hdi.output; \
-  DEV_NAME=`egrep '^/dev' < hdi.output | sed 1q | awk '{print $$1}'`; \
-  rsync -a mount-temp/$(_APPNAME) $(MOZ_PKG_APPNAME); \
+  echo Y | hdiutil attach -readonly -mountpoint mount-temp -private -noautoopen $(UNPACKAGE) > hdi.output; \
+  DEV_NAME=`perl -n -e 'if($$_=~/(\/dev\/disk[^ ]*)/) {print $$1."\n";exit;}'< hdi.output`; \
+  MOUNTPOINT=`perl -n -e 'split(/\/dev\/disk[^ ]*/,$$_,2);if($$_[1]=~/(\/.*)/) {print $$1."\n";exit;}'< hdi.output`; \
+  rsync -a $${MOUNTPOINT}/$(_APPNAME) $(MOZ_PKG_APPNAME); \
   hdiutil detach $${DEV_NAME}; \
   $(NULL)
 endif
