@@ -403,7 +403,12 @@ nsProxyObject::PostAndWait(nsProxyObjectCallInfo *proxyInfo)
         
         rv = mEventQService->GetThreadEventQueue(NS_CURRENT_THREAD, getter_AddRefs(eventQ));
     }
-
+    else if (mProxyType & PROXY_NESTED_QUEUES)
+    {
+        eventQ = nsnull;
+        rv = mEventQService->PushThreadEventQueue(getter_AddRefs(eventQ));
+    }
+        
     if (NS_FAILED(rv))
         return rv;
     
@@ -429,7 +434,9 @@ nsProxyObject::PostAndWait(nsProxyObjectCallInfo *proxyInfo)
          mEventQService->DestroyThreadEventQueue();
          eventQ = 0;
     }
-    
+    else if (mProxyType & PROXY_NESTED_QUEUES) {
+        mEventQService->PopThreadEventQueue(eventQ);
+    }
     return rv;
 }
         

@@ -70,6 +70,10 @@ class nsProxyObjectCallInfo;
 
 #define PROXY_SAMETHREAD  0x0020  // proxy calls even if the caller is on the same thread as the proxy
 
+#define PROXY_NESTED_QUEUES 0x0040 // push a new event queue on the calling thread when making calls
+                                   // through the proxy. This ensures that the caller only handles
+                                   // events originating from the callee while waiting for a
+                                   // synchronous call to complete.
 
 // WARNING about PROXY_ASYNC:  
 //
