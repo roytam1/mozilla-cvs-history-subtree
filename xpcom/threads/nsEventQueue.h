@@ -60,6 +60,7 @@ public:
     NS_IMETHOD Unlink();
     NS_IMETHOD GetYoungest(nsIEventQueue **aQueue);
     NS_IMETHOD GetYoungestActive(nsIEventQueue **aQueue);
+    NS_IMETHOD GetYoungestActiveProxyTagged(PRThread *aThread, nsIEventQueue **aQueue);
     NS_IMETHOD SetYounger(nsPIEventQueueChain *aQueue);
     NS_IMETHOD GetYounger(nsIEventQueue **aQueue);
     NS_IMETHOD SetElder(nsPIEventQueueChain *aQueue);
@@ -75,6 +76,8 @@ private:
   nsCOMPtr<nsPIEventQueueChain> mElderQueue; // younger can hold on to elder
   nsPIEventQueueChain *mYoungerQueue; // but elder can't hold on to younger
 
+  PRThread *mProxyThreadTag; // do we accept proxy events from the given thread?
+  
   void NotifyObservers(const char *aTopic);
   void CheckForDeactivation();
 };

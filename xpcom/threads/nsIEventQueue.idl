@@ -107,5 +107,12 @@ interface nsIEventQueue : nsIEventTarget
     // effectively kill the queue. warning: the queue is allowed to delete
     // itself any time after this.
     void stopAcceptingEvents();
+
+    /**
+     * Helpers for tagging/resolving nested event queues when
+     * executing methods through a proxy
+     */
+    [noscript] void SetProxyThreadTag(in PRThreadPtr thread);
+    [noscript] nsIEventQueue getProxyTaggedQueue();
 };
 

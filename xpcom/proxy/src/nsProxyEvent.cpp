@@ -263,9 +263,9 @@ nsProxyObjectCallInfo::PostCompleted()
     if (mOwner->GetProxyType() & PROXY_AUTOPROXIFY) {
         PRBool bAsync = mOwner->GetProxyType() & PROXY_ASYNC;
         mOwner->AutoproxifyOutParameterList(mParameterList, mParameterCount,
-                                                      mMethodInfo, mMethodIndex,
-                                                      mInterfaceInfo,
-                                                      !bAsync && NS_SUCCEEDED(mResult));
+                                            mMethodInfo, mMethodIndex,
+                                            mInterfaceInfo,
+                                            !bAsync && NS_SUCCEEDED(mResult));
     }
 
     if (mCallersEventQ)
@@ -407,6 +407,14 @@ nsProxyObject::PostAndWait(nsProxyObjectCallInfo *proxyInfo)
     {
         eventQ = nsnull;
         rv = mEventQService->PushThreadEventQueue(getter_AddRefs(eventQ));
+        if (NS_FAILED(rv))
+            return rv;
+
+        // Tag the nested thread queue, so that calls being proxied
+        // back from our destQ to the caller thread will not deadlock:
+        PLEventQueue *destQ;
+        mDestQueue->GetPLEventQueue(&destQ);
+        eventQ->SetProxyThreadTag(PL_GetEventQueueThread(destQ));
     }
         
     if (NS_FAILED(rv))
@@ -417,9 +425,15 @@ nsProxyObject::PostAndWait(nsProxyObjectCallInfo *proxyInfo)
     PLEvent* event = proxyInfo->GetPLEvent();
     if (!event)
         return NS_ERROR_NULL_POINTER;
-    
-    mDestQueue->PostEvent(event);
 
+    {
+        // Resolve destination queue (in case there is a nested queue
+        // tagged for our thread), and post:
+        nsCOMPtr<nsIEventQueue> proxyDestQ;
+        mDestQueue->GetProxyTaggedQueue(getter_AddRefs(proxyDestQ));
+        proxyDestQ->PostEvent(event);
+    }
+    
     while (! proxyInfo->GetCompleted())
     {
         PLEvent *nextEvent;
@@ -738,7 +752,11 @@ nsProxyObject::Post( PRUint32 methodIndex,
     
     if (mProxyType & PROXY_ASYNC)
     {
-        mDestQueue->PostEvent(event);
+        // Resolve destination queue (in case there is a nested queue
+        // tagged for our thread), and post:
+        nsCOMPtr<nsIEventQueue> proxyDestQ;
+        mDestQueue->GetProxyTaggedQueue(getter_AddRefs(proxyDestQ));
+        proxyDestQ->PostEvent(event);
         return NS_OK;
     }
     return NS_ERROR_UNEXPECTED;

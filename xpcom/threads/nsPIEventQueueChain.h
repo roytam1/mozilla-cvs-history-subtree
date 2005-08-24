@@ -84,6 +84,13 @@ public:
      */
     NS_IMETHOD GetYoungestActive(nsIEventQueue **aQueue) = 0;
 
+    /**
+     * Fetch (and addred) the youngest member of the chain which is active
+     * and tagged to accept proxy events from 'thread'
+     */
+    NS_IMETHOD GetYoungestActiveProxyTagged(PRThread *aThread,
+                                            nsIEventQueue **aQueue) = 0;
+  
     NS_IMETHOD SetYounger(nsPIEventQueueChain *aQueue) = 0;
     NS_IMETHOD GetYounger(nsIEventQueue **aQueue) = 0;
 

@@ -416,6 +416,12 @@ PR_EXTERN(PRBool)
     PL_IsQueueOnCurrentThread( PLEventQueue *queue );
 
 /*
+**  Retrieve the handling thread of the given event queue
+*/
+PR_EXTERN(PRThread*)
+PL_GetEventQueueThread( PLEventQueue *queue );
+
+/*
 ** Returns whether the queue is native (true) or monitored (false)
 */
 PR_EXTERN(PRBool)

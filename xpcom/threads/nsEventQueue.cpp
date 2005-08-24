@@ -124,6 +124,7 @@ nsEventQueueImpl::nsEventQueueImpl()
   mEventQueue = nsnull;
   mAcceptingEvents = PR_TRUE;
   mCouldHaveEvents = PR_TRUE;
+  mProxyThreadTag = nsnull;
 }
 
 nsEventQueueImpl::~nsEventQueueImpl()
@@ -221,6 +222,30 @@ nsEventQueueImpl::StopAcceptingEvents()
          (long)mEventQueue,(int)mAcceptingEvents,(int)mCouldHaveEvents));
   ++gEventQueueLogCount;
 #endif
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsEventQueueImpl::SetProxyThreadTag(PRThread *thread)
+{
+  mProxyThreadTag = thread;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsEventQueueImpl::GetProxyTaggedQueue(nsIEventQueue **aQueue)
+{
+  nsCOMPtr<nsIEventQueue> answer;
+
+  if (mYoungerQueue)
+    mYoungerQueue->GetYoungestActiveProxyTagged(PR_GetCurrentThread(),
+                                                getter_AddRefs(answer));
+
+  if (!answer)
+    answer = NS_STATIC_CAST(nsIEventQueue*, this);
+
+  *aQueue = answer;
+  NS_IF_ADDREF(*aQueue);
   return NS_OK;
 }
 
@@ -623,6 +648,24 @@ nsEventQueueImpl::GetYoungestActive(nsIEventQueue **aQueue)
     mYoungerQueue->GetYoungestActive(getter_AddRefs(answer));
   if (!answer) {
     if (mAcceptingEvents && mCouldHaveEvents)
+      answer = NS_STATIC_CAST(nsIEventQueue *, this);
+  }
+  *aQueue = answer;
+  NS_IF_ADDREF(*aQueue);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsEventQueueImpl::GetYoungestActiveProxyTagged(PRThread *aThread,
+                                               nsIEventQueue **aQueue)
+{
+  nsCOMPtr<nsIEventQueue> answer;
+
+  if (mYoungerQueue)
+    mYoungerQueue->GetYoungestActiveProxyTagged(aThread,
+                                                getter_AddRefs(answer));
+  if (!answer) {
+    if (mAcceptingEvents && mCouldHaveEvents && (mProxyThreadTag == aThread))
       answer = NS_STATIC_CAST(nsIEventQueue *, this);
   }
   *aQueue = answer;

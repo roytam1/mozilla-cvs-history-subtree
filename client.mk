@@ -868,6 +868,12 @@ ZAP_BRANCH_MODIFIED_FILES = \
 	xpcom/proxy/src/nsProxyEventObject.cpp \
 	xpcom/proxy/src/nsProxyEventPrivate.h \
 	xpcom/proxy/src/nsProxyObjectManager.cpp \
+	xpcom/threads/nsEventQueue.cpp \
+	xpcom/threads/nsEventQueue.h \
+	xpcom/threads/nsIEventQueue.idl \
+	xpcom/threads/nsPIEventQueueChain.h \
+	xpcom/threads/plevent.c \
+	xpcom/threads/plevent.h \
 	xpcom/reflect/xptcall/public/xptcall.h
 
 ZAP_BRANCH_NEW_FILES = \

@@ -1386,6 +1386,13 @@ PL_IsQueueOnCurrentThread( PLEventQueue *queue )
     return me == queue->handlerThread;
 }
 
+PR_IMPLEMENT(PRThread*)
+PL_GetEventQueueThread( PLEventQueue *queue )
+{
+    return queue->handlerThread;
+}
+
+
 PR_EXTERN(PRBool)
 PL_IsQueueNative(PLEventQueue *queue)
 {
