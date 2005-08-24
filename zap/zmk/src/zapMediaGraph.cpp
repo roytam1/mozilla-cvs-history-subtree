@@ -565,7 +565,8 @@ NS_IMETHODIMP ConstructMediaGraph(nsISupports *aOuter, REFNSIID aIID,
   
   // Return a proxy for the media graph:
   rv = NS_GetProxyForObject(eventQ, aIID, mediaGraph,
-                            PROXY_SYNC | PROXY_ALWAYS | PROXY_AUTOPROXIFY | PROXY_ISUPPORTS,
+                            PROXY_SYNC | PROXY_ALWAYS | PROXY_AUTOPROXIFY |
+                            PROXY_ISUPPORTS | PROXY_NESTED_QUEUES,
                             result);
   if (NS_FAILED(rv)) {
     NS_ERROR("proxification failure. potential race condition.");
