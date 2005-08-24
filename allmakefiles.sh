@@ -1453,8 +1453,8 @@ for extension in $MOZ_EXTENSIONS; do
         spellcheck ) MAKEFILES_extensions="$MAKEFILES_extensions
             extensions/spellcheck/Makefile
             extensions/spellcheck/idl/Makefile
+            extensions/spellcheck/locales/Makefile
             extensions/spellcheck/myspell/Makefile
-            extensions/spellcheck/myspell/dictionaries/Makefile
             extensions/spellcheck/src/Makefile
             " ;;
         tasks ) MAKEFILES_extensions="$MAKEFILES_extensions
