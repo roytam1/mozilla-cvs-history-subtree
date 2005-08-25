@@ -42,6 +42,7 @@
 #include "nsIObserver.h"
 #include "nsIURI.h"
 #include <windows.h>
+#include <ole2.h>
 
 class nsITransferable;
 class nsIClipboardOwner;
@@ -98,6 +99,19 @@ protected:
 
   nsIWidget         * mWindow;
 
+};
+
+class nsClipboardImage : public nsIClipboardImage {
+public:
+  nsClipboardImage();
+  ~nsClipboardImage();
+
+  NS_DECL_ISUPPORTS
+
+  NS_DECL_NSICLIPBOARDIMAGE
+
+protected:
+  STGMEDIUM   mStgMedium;
 };
 
 #define SET_FORMATETC(fe, cf, td, asp, li, med)   \
