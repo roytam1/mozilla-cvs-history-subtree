@@ -37,7 +37,15 @@ CSRCS		+= \
 		$(NULL)
 endif
 
-#XXX Mac build
+ifeq ($(OS_ARCH),Darwin)
+CSRCS		+=\
+		pa_mac_core/pa_mac_core.c\
+		pablio/ringbuffer.c\
+		$(NULL)
+
+OS_LIBS += -framework CoreAudio -framework AudioToolbox
+endif
+
 
 SIMPLE_PROGRAMS = \
 pa_tests/debug_convert$(BIN_SUFFIX) \
@@ -85,7 +93,7 @@ pa_tests/patest_wire$(BIN_SUFFIX)
 
 include $(topsrcdir)/config/rules.mk
 
-LOCAL_INCLUDES  = -I$(srcdir)/pa_common
+LOCAL_INCLUDES  = -I$(srcdir)/pa_common -I$(srcdir)/pablio
 
 # The portaudio code is dispersed over several subdirectory, but
 # building separate libs is overkill. We drive the whole build from
@@ -96,6 +104,8 @@ EXTRA_OBJDIRS   = pa_common \
 		  pa_win_ds \
 		  pa_unix_oss \
 		  pa_tests \
+		  pa_mac_core \
+		  pablio \
 		  $(NULL)
 
 export:: 
