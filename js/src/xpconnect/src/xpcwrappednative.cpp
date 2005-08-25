@@ -1233,10 +1233,10 @@ return_tearoff:
     // If we didn't find a wrapper using the given funobj and obj, try
     // again with obj's outer object, if it's got one.
 
-    JSExtendedClass *clazz = JS_GET_CLASS(cx, obj);
+    JSClass *clazz = JS_GET_CLASS(cx, obj);
 
     if((clazz->flags & JSCLASS_IS_EXTENDED) &&
-        ((JSExtendedClass*)clazz)->outerObject)
+       ((JSExtendedClass*)clazz)->outerObject)
     {
         JSObject *outer = ((JSExtendedClass*)clazz)->outerObject(cx, obj);
 
