@@ -171,6 +171,8 @@ function Startup()
     gSelectedFolder = RDF.GetResource(gMenulist.selectedItem.id);
   }
   setTimeout(initMenulist, 0);
+  var btfMenuItem = document.getElementById("btfMenuItem");
+  btfMenuItem.setAttribute("id", BMSVC.getBookmarksToolbarFolder().Value);
 } 
 
 function initTitle()
