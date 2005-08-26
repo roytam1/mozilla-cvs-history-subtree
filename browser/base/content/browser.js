@@ -992,7 +992,6 @@ function BrowserShutdown()
     gSanitizeListener.shutdown();
 
   BrowserOffline.uninit();
-  FeedHandler.uninit();
 
   uninitFindBar();
 
