@@ -226,3 +226,4 @@ var Module = {
 // entrypoint
 function NSGetModule(compMgr, fileSpec) {
   return Module;
+}
