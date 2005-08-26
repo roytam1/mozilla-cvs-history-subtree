@@ -154,13 +154,7 @@ function Startup()
     localStore.Unassert(rDialog, rPersist, rElement, true);
     gExpander.setAttribute("class", "down");
   }
-  
-  // Reset the |id| attribute on the toolbar folder attribute to the URI of the
-  // Bookmarks toolbar folder. 
-  var toolbarFolder = BMDS.getBookmarksToolbarFolder();
-  var toolbarItem = document.getElementById("NC:BookmarksToolbarFolder");
-  toolbarItem.id = toolbarFolder.Value;  
-  
+
   // Select the specified folder after the window is made visible
   function initMenulist() {
     if ("folderURI" in gArg) {
