@@ -113,10 +113,12 @@ class EmbedPrivate {
   // visibility is set.
   void        ContentFinishedLoading(void);
 
+#ifdef MOZ_WIDGET_GTK
   // these let the widget code know when the toplevel window gets and
   // looses focus.
   void        TopLevelFocusIn (void);
   void        TopLevelFocusOut(void);
+#endif
 
   // these are when the widget itself gets focus in and focus out
   // events
