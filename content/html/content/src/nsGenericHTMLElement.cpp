@@ -3586,7 +3586,9 @@ nsGenericHTMLElement::SetElementFocus(PRBool aDoFocus)
 nsresult
 nsGenericHTMLElement::Blur()
 {
-  SetElementFocus(PR_FALSE);
+  if (ShouldFocus(this)) {
+    SetElementFocus(PR_FALSE);
+  }
 
   return NS_OK;
 }
@@ -3597,7 +3599,9 @@ nsGenericHTMLElement::Focus()
   // Generic HTML elements are focusable only if tabindex explicitly set.
   // SetFocus() will check to see if we're focusable and then
   // call into esm to do the work of focusing.
-  SetElementFocus(PR_TRUE);
+  if (ShouldFocus(this)) {
+    SetElementFocus(PR_TRUE);
+  }
 
   return NS_OK;
 }
