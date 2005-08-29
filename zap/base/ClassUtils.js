@@ -464,6 +464,20 @@ ErrorReporter.fun(
     dump(this+"::"+Components.stack.caller.name+": "+message+"\n");
   });
 
+ErrorReporter.fun(
+  function _backtrace(offset, max_depth) {
+    var str = "";
+    if (!offset) offset = 1;
+    if (!max_depth) max_depth = 10;
+    var frame = Components.stack;
+    for (var i=0; (i<max_depth) && frame; frame=frame.caller, ++i) {
+      if (i >= offset) {
+        str += "["+i+"] "+frame+"\n";
+      }
+    }
+    return str;
+  });
+
 ErrorReporter.metafun(
   "\
  Create a prototype stub function 'name' that will throw an error     \n\
