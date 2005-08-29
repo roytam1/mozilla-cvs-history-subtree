@@ -89,7 +89,7 @@ var logListener = {
 function log(mes, level) {
   if (!level)
     level = Components.interfaces.zapILoggingService.INFO;
-  this.wLogger.log("UI", level, mes);
+  wLogger.log("UI", level, mes);
 }
 
 //----------------------------------------------------------------------
@@ -124,7 +124,10 @@ var SipClient = {
     return wDisplayNameElement.value+" <sip:"+
            wUserNameElement.value+"@"+
            wHostNameElement.value+">";
-  }
+  },
+  sipStack: null,
+  getUserName : function() { return wUserNameElement.value; },
+  getHostName : function() { return wHostNameElement.value; }
 };
 
 function initSipClient()
@@ -138,10 +141,13 @@ function initSipClient()
     log("Constructing Sip UA Stack");
     SipClient.sipStack = Components.classes["@mozilla.org/zap/sipstack;1"].createInstance();
     SipClient.sipStack.QueryInterface(Components.interfaces.zapISipUAStack);
-    SipClient.sipStack.init(gInviteMSHFactory);
+    SipClient.sipStack.init(gUAHandler,
+                            makePropertyBag({$port_base:5060,
+                                             $methods: "OPTIONS,INVITE,ACK,BYE"}));
     
     // initialize host-name to our ip address:
-    wHostNameElement.value = SipClient.sipStack.hostAddress;
+    wHostNameElement.value = SipClient.sipStack.hostAddress + ":" +
+      SipClient.sipStack.listeningPort;
 
     log("...Sip Client Initialization done.");
   }
@@ -151,158 +157,129 @@ function initSipClient()
 }
 
 ////////////////////////////////////////////////////////////////////////
-// INVITE Method Server Handler:
+// InviteRSHandler: INVITE request server handler
 
-var InviteMSH = makeClass("InviteMSH", SupportsImpl);
-InviteMSH.addInterfaces(Components.interfaces.zapISipInviteMSH,
-                        Components.interfaces.zapISipDialogHandler);
+var InviteRSHandler = makeClass("InviteRSHandler",
+                                SupportsImpl, StateMachine);
+InviteRSHandler.addInterfaces(Components.interfaces.zapISipInviteRSListener);
 
-InviteMSH.appendCtor(
-  function() {
-    log("Create media session");
-    this.mediaSession = Components.classes["@mozilla.org/zap/mediasession;1"].createInstance(Components.interfaces.zapIMediaSession);    
+InviteRSHandler.fun(
+  function init(rs) {
+    this.changeState("INITIALIZED");
+    this.rs = rs;
+    rs.listener = this;
+    // check for outright call rejection:
+    if (wCallRejectElement.checked) {
+      this.log("Declining INVITE");
+      rs.sendResponse(rs.formulateResponse("603"));
+      this.changeState("REJECTED");
+      return;
+    }
+      
+    this.mediaSession = Components.classes["@mozilla.org/zap/mediasession;1"].createInstance(Components.interfaces.zapIMediaSession);
+    this.mediaSession.init(wUserNameElement.value,
+                           wHostNameElement.value,
+                           SipClient.sipStack.hostAddress);
+    
+    // parse offer:
+    try {
+      var offer = SipClient.sdpService.deserializeSessionDescription(rs.request.body);
+      this.answer = this.mediaSession.processSDPOffer(offer);
+    }
+    catch(e) {
+      // Session negotiation failed.
+      // Send 488 (Not acceptable) (RFC3261 13.3.1.3)
+      // XXX set a Warning header
+      this.changeState("REJECTED");
+      rs.sendResponse(rs.formulateResponse("488"));
+
+      // log error:
+      if (wVerboseErrorService.isVerboseError(e.result))
+        this.log(wVerboseErrorService.retrieveVerboseErrorMessage(e.result));
+      else
+        this.log("Exception: "+e);
+      
+      return;
+    }
+
+    // the offer is acceptable; we have an answer at hand.
+    // hand over to incomingcall:
+    window.openDialog("chrome://zap/content/incomingcall.xul", "call"+(wCount++), "chrome, resizable", this);
   });
-
-
-InviteMSH.obj(
-  "dialog", null);
-
-// this will be overwritten by the incomingcall window:
-InviteMSH.obj("log", log);
-
-// this will be overwritten by the incomingcall window:
-InviteMSH.obj("destroyHook", null);
-
-// this will be overwritten by the incomingcall window:
-InviteMSH.obj("callSuccessHook", null);
-
-InviteMSH.fun(
-  function destroy() {
-     if (this.mediaSession) {
-       this.mediaSession.shutdown();
-       this.mediaSession = null;
-     }
-    this.dialog = null;
-    if (this.destroyHook)
-      this.destroyHook();
-  });
-
 
 //----------------------------------------------------------------------
-// zapISipInviteMSH implementation:
-InviteMSH.fun(
-  function invite(ms, request) {
-    if (wCallRejectElement.checked) {
-      log("Rejecting INVITE");
-      var r = SipClient.sipStack.formulateResponse("603", "Decline", request, true);
-      ms.sendResponse(r);
-      this.destroy();
-    }
-    else {
+// hooks: will be overwritten by the incomingcall window
 
-      // parse the INVITE's sdp to see if it is acceptable:
-      var sd;
-      try {
-        sd = SipClient.sdpService.deserializeSessionDescription(request.body);
-      }
-      catch(e) {
-        log("Can't parse other party's session description: "+request.body);
-        var r = SipClient.sipStack.formulateResponse("603", "Decline", request, true);
-        ms.sendResponse(r);
-        this.destroy();
-        return;
-      }
-      try {
-        var mediaDescriptions = sd.getMediaDescriptions({});
-        // XXX assuming that there is only one media description for the moment:
-        
-        this.remoteRtpPort = mediaDescriptions[0].port;        
-        var connection = mediaDescriptions[0].connection;
-        if (!connection)
-          connection = sd.connection;
-        this.remoteMediaHost = connection.address;
-        
-//         // find media description that contains an a=rtpmap:xx iLBC/8000
-//         // attribute to determine payload type:
-//         var attribs = mediaDescriptions[0].getAttribs({});
-//         var match;
-//         for (var i=0,l=attribs.length; i<l; ++i)
-//           if ((match = /rtpmap:(\d+) iLBC\/8000/(attribs[i].value))) {
-//             this.remotePayloadFormat = match[1];
-//             break;
-//           }
-        
-        // find media description that contains an a=rtpmap:xx speex/8000
-        // attribute to determine payload type:
-        var attribs = mediaDescriptions[0].getAttribs({});
-        var match;
-        for (var i=0,l=attribs.length; i<l; ++i)
-          if ((match = /rtpmap:(\d+) speex\/8000/(attribs[i].value))) {
-            this.remotePayloadFormat = match[1];
-            break;
-          }
-      }
-      catch(e) {
-        log("Session negotiation for offer ["+sd.serialize()+"] failed: "+e);
-        var r = SipClient.sipStack.formulateResponse("603", "Decline", request, true);
-        ms.sendResponse(r);
-        this.destroy();
-        return;
-      }
-      // if we get to here, the remote host's offering is acceptable
-      this.ms = ms;
-      this.request = request;
-      window.openDialog("chrome://zap/content/incomingcall.xul", "call"+(wCount++), "chrome, resizable", this);
-    }
+InviteRSHandler.obj("log", log);
+InviteRSHandler.obj("failHook", null);
+InviteRSHandler.obj("successHook", null);
+InviteRSHandler.obj("noACKHook", null);
+
+//----------------------------------------------------------------------
+// zapISipInviteRSListener
+
+//  void notifyTerminated(in zapISipInviteRS requestServer);
+InviteRSHandler.statefun(
+  "*",
+  function notifyTerminated(rs) {
+    this.log("Call failed");
+    if (this.failHook)
+      this.failHook();
+    if (this.mediaSession)
+      this.mediaSession.shutdown();
+  });
+InviteRSHandler.statefun(
+  "ACCEPTED",
+  function notifyTerminated(rs) {
+    this.log("Call succeeded, but no ACK");
+    if (this.noACKHook)
+      this.noACKHook(this.rs.dialog, this.mediaSession);
+    this.changeState("TERMINATED");
+  });
+InviteRSHandler.statefun(
+  "CONFIRMED",
+  function notifyTerminated(rs) {
+    this.log("Call succeeded");
+    if (this.successHook)
+      this.successHook(this.rs.dialog, this.mediaSession);
+    this.changeState("TERMINATED");
   });
 
-InviteMSH.fun(
-  function dialogSpawned(method, dialog) {
-    // handle new dialog in success()
+    
+//  void notifyACKReceived(in zapISipInviteRS requestServer,
+//                         in zapISipRequest ACKRequest);
+InviteRSHandler.statefun(
+  "ACCEPTED",
+  function notifyACKReceived(rs, request) {
+    this.log("ACK received");
+    this.changeState("CONFIRMED");
   });
-
-InviteMSH.fun(
-  function failure(method) {
-    log("Call terminated");
-    this.destroy();
-  });
-
-InviteMSH.fun(
-  function success(method, dialog) {
-    log("Call succeeded");
-    this.dialog = dialog;
-    dialog.setDialogHandler(this);
-    if (this.callSuccessHook)
-      this.callSuccessHook();
-    // start sending/receiving audio:
-    this.mediaSession.start(this.remoteMediaHost,
-                           this.remoteRtpPort,
-                           this.remoteRtpPort+1,
-                           this.remotePayloadFormat);
-
-    this.log("Established speex/8000 ("+this.remotePayloadFormat+") call to "+this.remoteMediaHost+":"+this.remoteRtpPort);
-  });
-
-// zaISipDialogHandler implementation:
-
-InviteMSH.fun(
-  function dialogConfirmed(d) {
-    log("Dialog established - we don't hit this, since we only handle already confirmed dialogs");
-  });
-
-InviteMSH.fun(
-  function dialogTerminated(d) {
-    log("Call Terminated");
-    this.destroy();
-  });
-
 
 ////////////////////////////////////////////////////////////////////////
-// Method Server Handler Factory:
+// UA Handler:
 
-var gInviteMSHFactory = {
-  createInviteMSH : function() {
-    return InviteMSH.instantiate();
+// XXX request handler
+var gUAHandler = {
+
+  handleNonInviteRequest: function(rs) {
+//     if (rs.request.method == "OPTIONS") {
+//       var response = rs.formulateResponse("200");
+//        var allowed = ["INVITE", "ACK", "OPTIONS", "BYE"];
+//        allowed.forEach(
+//          function(m) {
+//            var h = SipClient.sipStack.syntaxFactory.createAllowHeader(m);
+//            response.appendHeader(h);
+//          });
+//       rs.sendResponse(response);
+//       return true;
+//     }
+    return false;
+  },
+
+  handleInviteRequest: function(rs) {
+    var handler = InviteRSHandler.instantiate();
+    handler.init(rs);
+    return true;
   }
 };
 

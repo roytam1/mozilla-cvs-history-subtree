@@ -36,55 +36,38 @@
 
 #include "nsISupports.idl"
 
-interface zapISipTransportSink;
-interface zapISipMessage;
-interface zapISipConnection;
-interface zapISipEndpoint;
+interface zapISipInviteRSListener;
+interface zapISipDialog;
 interface zapISipRequest;
 interface zapISipResponse;
-interface nsIPropertyBag2;
 
 /**
- * API for the SIP transport layer (RFC 3261 section 18).
- *
- * Implemented by component '@mozilla.org/zap/siptransport;1'
+ * A request server for handling remote INVITE requests including ACK
+ * buffering.
  */
-[scriptable, uuid(246b5eed-332b-43b2-b80c-75479379e65f)]
-interface zapISipTransport : nsISupports
+
+[scriptable, uuid(26a28335-2912-47c2-a1d7-f2944cb15d0d)]
+interface zapISipInviteRS : nsISupports
 {
+  attribute zapISipInviteRSListener listener;
+  readonly attribute zapISipRequest request;
+  readonly attribute zapISipDialog dialog;
+  
   /**
-   * Initialize this SIP transport object with the given configuration
-   * parameters.
+   * Formulate a response by calling formulateResponse() on the
+   * UAStack (see additional documentation in zapISipUAStack.idl).
    *
-   * Valid configuration parameters:
-   *   unsigned short "port_base" : port at which to listen for
-   *                                tcp and udp SIP traffic. If
-   *                                the port is not available,
-   *                                the next available port
-   *                                greater than port_base will
-   *                                be used instead. Default: 5060
+   * In addition, if this the request was outside of a dialog, ensure
+   * that the To tag generated will be the same for all (provisional
+   * and one final) responses sent through this request server.
+   *
+   * In addition, for dialog-establishing responses (!=100), copy
+   * Record-Route headers to response and add a Contact header
+   * composed of the username part of the FromAddress and the
+   * hostAddress as obtained from the UAStack.
+   *
    */
-  void init(in nsIPropertyBag2 transportConfiguration);
+  zapISipResponse formulateResponse(in ACString statusCode);
   
-  void shutdown();
-
-  void appendTransportSink(in zapISipTransportSink sink);
-
-  readonly attribute unsigned short listeningPort;
-  
-  zapISipConnection sendRequest(in zapISipRequest request,
-                                in zapISipEndpoint endpoint,
-                                in zapISipConnection connection);
-
-  zapISipConnection sendResponse(in zapISipResponse response,
-                                 in zapISipConnection connection);
-};
-
-
-[scriptable, uuid(de8739f6-9bc4-47c0-b200-bbbfef40c8c8)]
-interface zapISipTransportSink : nsISupports
-{
-  boolean handleSipMessage(in zapISipMessage message,
-                           in zapISipEndpoint endpoint,
-                           in zapISipConnection connection);
+  zapISipDialog sendResponse(in zapISipResponse response);
 };

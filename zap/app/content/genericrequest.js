@@ -47,6 +47,7 @@ var wDestAddressElement;
 var wMethodNameElement;
 var wRequestElement;
 var wSipClient;
+var wNonInviteRC;
 var wCallHandler;
 var wVerboseErrorService;
 
@@ -94,12 +95,19 @@ function cmdGenerateRequest() {
     return;
   }
 
-  var request = wSipClient.sipStack.formulateGenericRequest(wMethodNameElement.value, destAddress.uri, destAddress, callerAddress);
+  wNonInviteRC = wSipClient.sipStack.createNonInviteRequestClient(destAddress);
+  var request = wNonInviteRC.formulateRequest(wMethodNameElement.value);
+  
+//  var request = wSipClient.sipStack.formulateGenericRequest(wMethodNameElement.value, destAddress.uri, destAddress, callerAddress);
 
   wRequestElement.value = request.serialize();
 }
 
 function cmdCall() {
+  if (!wNonInviteRC) {
+    alert("Create a request first!");
+    return;
+  }
   if (wCallHandler) {
     alert("Call is already in progress!");
     return;
@@ -119,10 +127,12 @@ function cmdCall() {
     return;
   }
   wCallHandler = CallHandler.instantiate();
+  wNonInviteRC.listener = wCallHandler;
   
   log("trying ...");
-  var genericMC = wSipClient.sipStack.createGenericMC(request, wCallHandler);
-  genericMC.execute();  
+//  var genericMC = wSipClient.sipStack.createGenericMC(request, wCallHandler);
+//  genericMC.execute();
+  wNonInviteRC.sendRequest(request);
 }
 
 function cmdClearLog() {
@@ -143,23 +153,28 @@ CallHandler.fun(
 
 // zapISipGenericMCH implementation:
 
+// CallHandler.fun(
+//   function calling(method, endpoint) {
+//     log(">>> calling "+endpoint.address+":"+endpoint.port+" via "+endpoint.transport);
+//   });
+
+// CallHandler.fun(
+//   function finalResponse(method, response) {
+//     log(">>> final response: \n"+response.serialize());
+//   });
+
+// CallHandler.fun(
+//   function provisionalResponse(method, response) {
+//     log(response.statusCode+" ("+response.reasonPhrase+")");
+//   });
+
 CallHandler.fun(
-  function calling(method, endpoint) {
-    log(">>> calling "+endpoint.address+":"+endpoint.port+" via "+endpoint.transport);
+  function notifyResponseReceived(rc, dial, response) {
+    log(">>> response: \n"+response.serialize()+"\n\n");
   });
 
 CallHandler.fun(
-  function finalResponse(method, response) {
-    log(">>> final response: \n"+response.serialize());
-  });
-
-CallHandler.fun(
-  function provisionalResponse(method, response) {
-    log(response.statusCode+" ("+response.reasonPhrase+")");
-  });
-
-CallHandler.fun(
-  function terminated(method) {
+  function notifyTerminated(rc) {
     log("... end");
     this.destroy();
   });

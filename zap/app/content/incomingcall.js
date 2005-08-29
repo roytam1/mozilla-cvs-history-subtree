@@ -47,6 +47,7 @@ var wCallerAddressElement;
 var wCallStatusElement;
 var wSipClient;
 var wCallHandler;
+var wDialog;
 
 //----------------------------------------------------------------------
 // Initialization:
@@ -59,20 +60,38 @@ function windowInit() {
   wCallHandler = window.arguments[0];
   // install our own log method, so that log messages land in our window:
   wCallHandler.log = log;
-  wCallHandler.destroyHook = function() {
-    wCallStatusElement.value = "Terminated";
+//   wCallHandler.destroyHook = function() {
+//     wCallStatusElement.value = "Terminated";
+//  };
+  wCallHandler.successHook = function(dialog, mediasession) {
+    dialog.listener = {
+      notifyDialogTerminated:function(d) {
+        mediasession.shutdown();
+        wCallStatusElement.value = "Terminated";
+      }
+    };
+    wDialog = dialog;
+    wCallStatusElement.value = "Confirmed";
   };
-  wCallHandler.callSuccessHook = function() {
-    wCallStatusElement.value = "Established";
+  wCallHandler.noACKHook = function(dialog, mediasession) {
+    dialog.listener = {
+      notifyDialogTerminated:function(d) {
+        mediasession.shutdown();
+        wCallStatusElement.value = "Terminated";
+      }
+    };
+    wDialog = dialog;
+    wCallStatusElement.value = "Established (not confirmed)";
   };
-
+  wCallHandler.failHook = function() {
+    wCallStatusElement.value = "Call failed";
+  };
   // display call info:
-  wCallerAddressElement.value = wCallHandler.request.getFromHeader().serialize();
+  wCallerAddressElement.value = wCallHandler.rs.request.getFromHeader().serialize();
   
   log("Ringing");
   wCallStatusElement.value = "Ringing";
-  var r = wSipClient.sipStack.formulateResponse("180", "Ringing", wCallHandler.request, false);
-  wCallHandler.ms.sendResponse(r);
+  wCallHandler.rs.sendResponse(wCallHandler.rs.formulateResponse("180"));
 }
 
 function windowClose() {
@@ -93,72 +112,25 @@ function log(mes) {
 function cmdAccept() {
   if (wCallStatusElement.value == "Ringing") {
     log("Accepting");
-    var r = wCallHandler.ms.formulate200Response();
-
-    // set media offer:
-    var callerAddress;
-    try {
-      callerAddress = wSipClient.sipStack.syntaxFactory.deserializeAddress(wSipClient.getCallerAddress());
-    } catch(e) {
-      alert(wSipClient.getCallerAddress()+" is not a valid sip address! Please check Identity setup in main app window and try again.");
-      return;
-    }
-    var myURI = callerAddress.uri.QueryInterface(Components.interfaces.zapISipSIPURI);
-    var offer = wSipClient.sdpService.createSessionDescription();
-    // o=
-    offer.username = myURI.userinfo;
-    offer.sessionID = "0";
-    offer.sessionVersion = "0";
-    offer.originAddressType = "IP4";
-    offer.originAddress = myURI.host;
-    // s=
-    offer.sessionName = " ";
-    // c=
-    offer.connection = wSipClient.sdpService.createConnection();
-    offer.connection.addressType = "IP4";
-    offer.connection.address = wSipClient.sipStack.hostAddress;
-    // t=
-    var time = wSipClient.sdpService.createTime();
-    time.value = "0 0";
-    offer.setTimes([time], 1);
-    // m=
-    var mediaDescription = wSipClient.sdpService.createMediaDescription();
-    mediaDescription.media = "audio";
-    mediaDescription.port = wCallHandler.mediaSession.localRTPPort;
-    mediaDescription.portCount = "";
-    mediaDescription.protocol = "RTP/AVP";
-    var fmt = wSipClient.sdpService.createMediaFormat();
-    fmt.format = "97";
-    mediaDescription.setFormats([fmt], 1);
+    var r = wCallHandler.rs.formulateResponse("200");
     
-    // a=
-    var attribs = [];
-    var attrib = wSipClient.sdpService.createAttrib();
-//    attrib.value = "rtpmap:97 iLBC/8000";
-    attrib.value = "rtpmap:97 speex/8000";
-    attribs.push(attrib);
-//     var attrib = wSipClient.sdpService.createAttrib();
-//     attrib.value = "fmtp:97 mode=30";
-//     attribs.push(attrib);
-    
-    mediaDescription.setAttribs(attribs, attribs.length);
-    
-    offer.setMediaDescriptions([mediaDescription], 1);
-    
-    r.setContent("application", "sdp", offer.serialize());
-    wCallHandler.ms.sendResponse(r);
+    r.setContent("application", "sdp", wCallHandler.answer.serialize());
+    wCallHandler.rs.sendResponse(r);
+    wCallHandler.changeState("ACCEPTED");
+    wCallHandler.mediaSession.startSession();
   }
 }
 
 function cmdHangup() {
   if (wCallStatusElement.value == "Ringing") {
     log("Rejecting");
-    var r = wSipClient.sipStack.formulateResponse("603", "Decline", wCallHandler.request, true);
-    wCallHandler.ms.sendResponse(r);
+    wCallHandler.rs.sendResponse(wCallHandler.rs.formulateResponse("603"));
   }
-  else if (wCallStatusElement.value == "Established") {
+  else if (wCallStatusElement.value == "Established (not confirmed)" ||
+           wCallStatusElement.value == "Confirmed") {
     log("Hanging up");
-    wCallHandler.dialog.bye();
+    rc = wDialog.createNonInviteRequestClient();
+    rc.sendRequest(rc.formulateRequest("BYE"));
   }
 }
 

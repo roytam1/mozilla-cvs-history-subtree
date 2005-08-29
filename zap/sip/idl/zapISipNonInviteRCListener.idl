@@ -34,12 +34,18 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "zapISipHeader.idl"
+#include "nsISupports.idl"
 
-[scriptable, uuid(c5f9ac11-3444-4ec9-8a09-72029a692337)]
-interface zapISipAcceptEncodingHeader : zapISipHeader
+interface zapISipNonInviteRC;
+interface zapISipDialog;
+interface zapISipResponse;
+
+[scriptable, uuid(22ea95a9-5d89-4b32-b328-f6d700d73dd3)]
+interface zapISipNonInviteRCListener : nsISupports
 {
-  /**
-   * To be implemented
-   */
+  void notifyResponseReceived(in zapISipNonInviteRC requestClient,
+                              in zapISipDialog dialog,
+                              in zapISipResponse response);
+  
+  void notifyTerminated(in zapISipNonInviteRC requestClient);
 };

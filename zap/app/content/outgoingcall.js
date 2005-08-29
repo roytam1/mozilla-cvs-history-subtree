@@ -46,6 +46,8 @@ var wLogElement;
 var wDestAddressElement;
 var wSipClient;
 var wCallHandler;
+var wMediaSession;
+var wDialog;
 
 //----------------------------------------------------------------------
 // Initialization:
@@ -76,18 +78,11 @@ function cmdCall() {
     alert("Call is already in progress!");
     return;
   }
-  
-  log("Parsing caller address");
-  var callerAddress;
-  try {
-    callerAddress = wSipClient.sipStack.syntaxFactory.deserializeAddress(wSipClient.getCallerAddress());
-  } catch(e) {
-    alert(wSipClient.getCallerAddress()+" is not a valid sip address! Please check Identity setup in main app window and try again.");
+  if (wDialog) {
+    alert("Call established - hang up first!");
     return;
   }
   
-  log("Parsing destination address");
-  var destAddress;
   try {
     destAddress = wSipClient.sipStack.syntaxFactory.deserializeAddress(wDestAddressElement.value);
   } catch(e) {
@@ -95,67 +90,18 @@ function cmdCall() {
     return;
   }
 
-  log("Creating call handler");
-  wCallHandler = CallHandler.instantiate();
   
-  log("Formulating SDP offer");
-  var myURI = callerAddress.uri.QueryInterface(Components.interfaces.zapISipSIPURI);
-  var offer = wSipClient.sdpService.createSessionDescription();
-  // o=
-  offer.username = myURI.userinfo;
-  offer.sessionID = "0";
-  offer.sessionVersion = "0";
-  offer.originAddressType = "IP4";
-  offer.originAddress = myURI.host;
-  // s=
-  offer.sessionName = " ";
-  // c=
-  offer.connection = wSipClient.sdpService.createConnection();
-  offer.connection.addressType = "IP4";
-  offer.connection.address = wSipClient.sipStack.hostAddress;
-  // t=
-  var time = wSipClient.sdpService.createTime();
-  time.value = "0 0";
-  offer.setTimes([time], 1);
-  // m=
-  var mediaDescription = wSipClient.sdpService.createMediaDescription();
-  mediaDescription.media = "audio";
-  mediaDescription.port = wCallHandler.mediaSession.localRTPPort;
-  mediaDescription.portCount = "";
-  mediaDescription.protocol = "RTP/AVP";
-  var fmt = wSipClient.sdpService.createMediaFormat();
-  fmt.format = "97";
-  mediaDescription.setFormats([fmt], 1);
-    
-  // a=
-  var attribs = [];
-  var attrib = wSipClient.sdpService.createAttrib();
-//  attrib.value = "rtpmap:97 iLBC/8000";
-  attrib.value = "rtpmap:97 speex/8000";
-  attribs.push(attrib);
-//  var attrib = wSipClient.sdpService.createAttrib();
-//  attrib.value = "fmtp:97 mode=30";
-//  attribs.push(attrib);
-    
-  mediaDescription.setAttribs(attribs, attribs.length);
-    
-  offer.setMediaDescriptions([mediaDescription], 1);
-
-  log("Formulating Invite request");
-  var request = wSipClient.sipStack.formulateInviteRequest(destAddress, callerAddress);
-  request.setContent("application", "sdp", offer.serialize());
-
-  log("Sending invite to "+destAddress.serialize());
-  var inviteMC = wSipClient.sipStack.createInviteMC(request, wCallHandler);
-  inviteMC.execute();  
+  wCallHandler = CallHandler.instantiate();
+  wCallHandler.call(destAddress);
 }
 
 function cmdHangup() {
-  if (!wCallHandler) {
+  if (!wDialog) {
     alert("Call not active!");
     return;
   }
-  wCallHandler.dialog.bye();
+  var rc = wDialog.createNonInviteRequestClient();
+  rc.sendRequest(rc.formulateRequest("BYE"));
 }
 
 function cmdClearLog() {
@@ -163,142 +109,90 @@ function cmdClearLog() {
 }
 
 
-////////////////////////////////////////////////////////////////////////
-// CallHandler:
+// ////////////////////////////////////////////////////////////////////////
+// // CallHandler:
 
-var CallHandler = makeClass("CallHandler", SupportsImpl);
-CallHandler.addInterfaces(Components.interfaces.zapISipInviteMCH,
-                          Components.interfaces.zapISipDialogHandler);
-
-CallHandler.obj(
-  "dialog", null);
-
-CallHandler.appendCtor(
-  function() {
-    log("Create media session");
-    this.mediaSession = Components.classes["@mozilla.org/zap/mediasession;1"].createInstance(Components.interfaces.zapIMediaSession);    
-  });
+var CallHandler = makeClass("CallHandler", StateMachine, SupportsImpl);
+CallHandler.addInterfaces(Components.interfaces.zapISipInviteRCListener,
+                          Components.interfaces.zapISipInviteResponseHandler);
 
 CallHandler.fun(
-  function destroy() {
-    if (this.mediaSession) {
-      this.mediaSession.shutdown();
-      this.mediaSession = null;
-    }
-    this.dialog = null;
+  function call(to) {
+    var rc = wSipClient.sipStack.createInviteRequestClient(to);
+    rc.listener = this;
+
+    wMediaSession = Components.classes["@mozilla.org/zap/mediasession;1"].createInstance(Components.interfaces.zapIMediaSession);
+    wMediaSession.init(wSipClient.getUserName(),
+                       wSipClient.getHostName(),
+                       wSipClient.sipStack.hostAddress);
+    var offer = wMediaSession.generateSDPOffer();
+    
+    var request = rc.formulateInvite();
+    request.setContent("application", "sdp", offer.serialize());
+    log("Sending invite to "+to.serialize()+"...");
+
+    rc.sendInvite(request, this);
+    
+    this.changeState("CALLING");
+  });
+  
+//----------------------------------------------------------------------
+// zapISipInviteRCListener
+
+CallHandler.statefun(
+  "CALLING",
+  function notifyResponseReceived(rc, dialog, response) {
+    log("Response received: "+response.statusCode+" ("+response.reasonPhrase+")");
+  });
+
+CallHandler.statefun(
+  "CALLING",
+  function notifyTerminated(rc) {
+    this.changeState("TERMINATED");
     wCallHandler = null;
+    if (!wDialog) {
+      log("Call failed");
+      wMediaSession.shutdown();
+      wMediaSession = null;
+    }
+    log("...Done");
   });
 
-// zapISipInviteMCH implementation:
+//----------------------------------------------------------------------
+// zapISipInviteResponseHandler
 
-CallHandler.fun(
-  function dialogSpawned(method, dialog) {
-    log("Early dialog established");
-  });
+CallHandler.statefun(
+  "CALLING",
+  function handle2XXResponse(rc, dialog, response, ack) {
+    if (wDialog) {
+      alert("uh-oh, we already have a dialog for this call. multiple dialogs/call not supported yet!");
+      return null;
+    }
 
-CallHandler.fun(
-  function calling(method, endpoint) {
-    log("Calling "+endpoint.address+":"+endpoint.port+" via "+endpoint.transport);
-  });
-
-CallHandler.fun(
-  function failureResponse(method, response) {
-    log("Failure: "+response.statusCode+" ("+response.reasonPhrase+")");
-  });
-
-CallHandler.fun(
-  function provisionalResponse(method, response) {
-    log(response.statusCode+" ("+response.reasonPhrase+")");
-  });
-
-CallHandler.fun(
-  function successResponse(method, response) {
-    log("Call accepted: "+response.statusCode+" ("+response.reasonPhrase+")");
-    // store response, so that we perform sdp negotiation in success()
-    this.acceptResponse = response;
-  });
-
-CallHandler.fun(
-  function failure(method) {
-    log("Call failed!");
-    this.destroy();
-  });
-
-CallHandler.fun(
-  function success(method, dialog) {
-    this.dialog = dialog;
-    dialog.setDialogHandler(this);
-    
-    // parse the accept response's sdp to determine remoteHost,
-    // rtp/rtcp ports and payload format:
-    var remoteHost;
-    var rtpPort;
-    var payloadFormat;
-    
     var sd;
     try {
-      sd = wSipClient.sdpService.deserializeSessionDescription(this.acceptResponse.body);
+      sd = wSipClient.sdpService.deserializeSessionDescription(response.body);
     }
     catch(e) {
-      log("Can't parse other party's session description: "+this.acceptResponse.body);
-      this.destroy();
-      return;
-    }
-    try {
-      var mediaDescriptions = sd.getMediaDescriptions({});
-      // XXX assuming that there is only one media description for the moment:
-      
-      rtpPort = mediaDescriptions[0].port;
-
-      var connection = mediaDescriptions[0].connection;
-      if (!connection)
-        connection = sd.connection;
-      remoteHost = connection.address;
-      
-//         // find media description that contains an a=rtpmap:xx iLBC/8000
-//         // attribute to determine payload type:
-//         var attribs = mediaDescriptions[0].getAttribs({});
-//       var match;
-//       for (var i=0,l=attribs.length; i<l; ++i)
-//         if ((match = /rtpmap:(\d+) iLBC\/8000/(attribs[i].value))) {
-//           payloadFormat = match[1];
-//           break;
-//         }
-      // find media description that contains an a=rtpmap:xx speex/8000
-      // attribute to determine payload type:
-      var attribs = mediaDescriptions[0].getAttribs({});
-      var match;
-      for (var i=0,l=attribs.length; i<l; ++i)
-        if ((match = /rtpmap:(\d+) speex\/8000/(attribs[i].value))) {
-          payloadFormat = match[1];
-          break;
-        }
-    }
-    catch(e) {
-      log("Session negotiation failed: "+e);
-      this.destroy();
-      return;
+      log("Can't parse other party's session description: "+response.body);
+      return null;
     }
     
-    // start sending/receiving audio:
-    this.mediaSession.start(remoteHost,
-                           rtpPort,
-                           rtpPort+1,
-                           payloadFormat);
+    wDialog = dialog;
+    wMediaSession.processSDPAnswer(sd);
+    wMediaSession.startSession();
 
-    log("Established speex/8000 ("+payloadFormat+") call to "+remoteHost+":"+rtpPort);
+    // add listener to dialog to shutdown media session:
+    wDialog.listener = {
+      notifyDialogTerminated : function(d) {
+        wMediaSession.shutdown();
+        wMediaSession = null;
+        wDialog = null;
+        log("Call terminated");
+      }
+    };
+    
+    return ack;
   });
 
 
-// zapISipDialogHandler implementation:
-
-CallHandler.fun(
-  function dialogConfirmed(d) {
-    log("Dialog established - we don't hit this, since we only handle already confirmed dialogs");
-  });
-
-CallHandler.fun(
-  function dialogTerminated(d) {
-    log("Call Terminated");
-    this.destroy();
-  });

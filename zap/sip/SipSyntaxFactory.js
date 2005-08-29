@@ -542,11 +542,11 @@ SipSyntaxObject.metafun(
     
     eval("set_fct = function set"+name+"(n, v) {"+
          "var name = n.toLowerCase();"+
-         "if (!re_name.test(name)) this._error(PARSE_ERROR);"+
+         "if (!re_name.test(name)) this._verboseError(PARSE_ERROR);"+
          "var _re_value = hashget(re_hash, name);"+
          "if (!_re_value) _re_value = re_value;"+
          "if (!v) v = '';"+ // <-- this is to avoid 'null' or 'undefined' to be stringified when applying the regexp
-         "if (!_re_value.test(v)) this._error(PARSE_ERROR);"+
+         "if (!_re_value.test(v)) this._verboseError(PARSE_ERROR);"+
          "return hashset(this[hashname], name, v);}");
     
     eval("remove_fct = function remove"+name+"(n) { hashdel(this[hashname], n.toLowerCase()); }");
@@ -563,7 +563,7 @@ SipSyntaxObject.metafun(
          "var match;"+
          "while ((match = tokenizer(data))) {"+
          "  if (this.has"+name+"(match[1]))"+
-         "    this._error(PARSE_ERROR);"+
+         "    this._verboseError(PARSE_ERROR);"+
          "  this.set"+name+"(match[1], match[2]);}}");
 
     eval("serialize_fct = function _serialize"+name+"s() {"+
@@ -681,7 +681,7 @@ SipSIPURI.fun(
   function deserialize(octets) {
     // parse into (secure?, userinfo, host, port, uri-parameters, headers):
     var matches = REGEXP_SIPURI(octets);
-    if (!matches) this._error(PARSE_ERROR+": malformed SIP URI ("+octets+")");
+    if (!matches) this._verboseError(PARSE_ERROR+": malformed SIP URI ("+octets+")");
 
     if (matches[1].length)
       this.sips = true;
@@ -746,7 +746,7 @@ SipAddress.fun(
       // a 'name-addr':
       // -> parse into (display-name[parsed,?], addr-spec[unparsed])
       var matches = REGEXP_NAME_ADDR(octets);
-      if (!matches) this._error(PARSE_ERROR+": malformed address ("+octets+")");
+      if (!matches) this._verboseError(PARSE_ERROR+": malformed address ("+octets+")");
       this.displayName = matches[1];
       this.uri = theSyntaxFactory.deserializeURI(matches[2]);
     }
@@ -863,7 +863,7 @@ SipToHeader.fun(
   function deserialize(name, data) {
     // parse into (name-addr|addr-spec[parsed], to-parameters[unparsed])
     var matches = REGEXP_NAME_ADDR_PARS(data);
-    if (!matches) this._error(PARSE_ERROR+": malformed To Header ("+data+")");
+    if (!matches) this._verboseError(PARSE_ERROR+": malformed To Header ("+data+")");
     
     this.address = theSyntaxFactory.deserializeAddress(matches[1]);
     this._deserializeParameters(matches[2]);
@@ -914,7 +914,7 @@ SipReplyToHeader.fun(
   function deserialize(name, data) {
     // parse into (name-addr|addr-spec[parsed], to-parameters[unparsed])
     var matches = REGEXP_NAME_ADDR_PARS(data);
-    if (!matches) this._error(PARSE_ERROR+": malformed Reply-To header ("+data+")");
+    if (!matches) this._verboseError(PARSE_ERROR+": malformed Reply-To header ("+data+")");
     
     this.address = theSyntaxFactory.deserializeAddress(matches[1]);
     this._deserializeParameters(matches[2]);
@@ -967,7 +967,7 @@ SipFromHeader.fun(
   function deserialize(name, data) {
     // parse into (name-addr|addr-spec[parsed], to-parameters[unparsed])
     var matches = REGEXP_NAME_ADDR_PARS(data);
-    if (!matches) this._error(PARSE_ERROR+": malformed From header ("+data+")");
+    if (!matches) this._verboseError(PARSE_ERROR+": malformed From header ("+data+")");
     
     this.address = theSyntaxFactory.deserializeAddress(matches[1]);
     this._deserializeParameters(matches[2]);
@@ -1055,7 +1055,7 @@ SipContactHeader.fun(
     else {
       // parse into (name-addr|addr-spec[parsed], to-parameters[unparsed])
       var matches = REGEXP_NAME_ADDR_PARS(data);
-      if (!matches) this._error(PARSE_ERROR+": malformed Contact header ("+data+")");
+      if (!matches) this._verboseError(PARSE_ERROR+": malformed Contact header ("+data+")");
 
       this.address = theSyntaxFactory.deserializeAddress(matches[1]);
       this._deserializeParameters(matches[2]);
@@ -1089,7 +1089,7 @@ SipMaxForwardsHeader.obj("maxForwards", 70);
 SipMaxForwardsHeader.fun(
   function deserialize(name, data) {
     if (isNaN(this.maxForwards = parseInt(data)))
-      this._error(PARSE_ERROR+": malformed Max-Forwards header ("+data+")");
+      this._verboseError(PARSE_ERROR+": malformed Max-Forwards header ("+data+")");
   });
 
 
@@ -1126,7 +1126,7 @@ SipCSeqHeader.fun(
   function deserialize(name, data) {
     // parse into (sequencenumber, method)
     var matches = REGEXP_CSEQ_HEADER_VALUE(data);
-    if (!matches) this._error(PARSE_ERROR+": malformed CSeq header ("+data+")");
+    if (!matches) this._verboseError(PARSE_ERROR+": malformed CSeq header ("+data+")");
 
     this.sequenceNumber = parseInt(matches[1]);
     this._method = matches[2];
@@ -1159,7 +1159,7 @@ SipContentLengthHeader.fun(
   function deserialize(name, data) {
     // XXX parsing is not strict
     if (isNaN(this.contentLength = parseInt(data)) || this.contentLength<0)
-      this._error(PARSE_ERROR+": malformed Content-Length header ("+data+")");
+      this._verboseError(PARSE_ERROR+": malformed Content-Length header ("+data+")");
   });
 
 
@@ -1210,7 +1210,7 @@ SipContentTypeHeader.fun(
   function deserialize(name, data) {
     // parse into (type[parsed], subtype[parsed], m-parameters[unparsed])
     var matches = REGEXP_CONTENT_TYPE_HEADER_VALUE(data);
-    if (!matches) this._error(PARSE_ERROR+": malformed Content-Type header ("+data+")");
+    if (!matches) this._verboseError(PARSE_ERROR+": malformed Content-Type header ("+data+")");
     
     this._type = matches[1];
     this._subType = matches[2];
@@ -1312,7 +1312,7 @@ SipViaHeader.fun(
   function deserialize(name, data) {
     // parse into (protocol, version, transport, host, port, via-params[unparsed])
     var matches = REGEXP_VIA_HEADER_VALUE(data);
-    if (!matches) this._error(PARSE_ERROR+": malformed Via header ("+data+")");
+    if (!matches) this._verboseError(PARSE_ERROR+": malformed Via header ("+data+")");
 
     this._protocolName = matches[1];
     this._protocolVersion = matches[2];
@@ -1377,7 +1377,7 @@ SipExpiresHeader.fun(
   function deserialize(name, data) {
     // XXX parsing is not strict
     if (isNaN(this.deltaSeconds = parseInt(data)) || this.deltaSeconds<0)
-      this._error(PARSE_ERROR+": malformed Expires header ("+data+")");
+      this._verboseError(PARSE_ERROR+": malformed Expires header ("+data+")");
   });
 
 ////////////////////////////////////////////////////////////////////////
@@ -1407,7 +1407,7 @@ SipMinExpiresHeader.fun(
   function deserialize(name, data) {
     // XXX parsing is not strict
     if (isNaN(this.deltaSeconds = parseInt(data)) || this.deltaSeconds<0)
-      this._error(PARSE_ERROR+": malformed Min-Expires header ("+data+")");
+      this._verboseError(PARSE_ERROR+": malformed Min-Expires header ("+data+")");
   });
 
 ////////////////////////////////////////////////////////////////////////
@@ -1436,6 +1436,62 @@ SipPriorityHeader.parsedAttrib("priority", REGEXP_TOKEN, null);
 SipPriorityHeader.fun(
   function deserialize(name, data) {
     this.priority = data;
+  });
+
+////////////////////////////////////////////////////////////////////////
+// Class SipRequireHeader
+
+var SipRequireHeader = makeClass("SipRequireHeader", SipHeader);
+SipRequireHeader.addInterfaces(Components.interfaces.zapISipRequireHeader);
+SipRequireHeader.setAliases("Require");
+SipRequireHeader.metaobj("isCommaSeparatedList", true);
+
+//----------------------------------------------------------------------
+// zapISipSyntaxObject implementation
+
+SipRequireHeader.fun(
+  function serialize() {
+    return this.name + ": " + this._optionTag;
+  });
+
+//----------------------------------------------------------------------
+// zapISipRequireHeader implementation
+
+SipRequireHeader.parsedAttrib("optionTag", REGEXP_TOKEN, null);
+
+//----------------------------------------------------------------------
+
+SipRequireHeader.fun(
+  function deserialize(name, data) {
+    this.optionTag  =data;
+  });
+
+////////////////////////////////////////////////////////////////////////
+// Class SipUnsupportedHeader
+
+var SipUnsupportedHeader = makeClass("SipUnsupportedHeader", SipHeader);
+SipUnsupportedHeader.addInterfaces(Components.interfaces.zapISipUnsupportedHeader);
+SipUnsupportedHeader.setAliases("Unsupported");
+SipUnsupportedHeader.metaobj("isCommaSeparatedList", true);
+
+//----------------------------------------------------------------------
+// zapISipSyntaxObject implementation
+
+SipUnsupportedHeader.fun(
+  function serialize() {
+    return this.name + ": " + this._optionTag;
+  });
+
+//----------------------------------------------------------------------
+// zapISipUnsupportedHeader implementation
+
+SipUnsupportedHeader.parsedAttrib("optionTag", REGEXP_TOKEN, null);
+
+//----------------------------------------------------------------------
+
+SipUnsupportedHeader.fun(
+  function deserialize(name, data) {
+    this.optionTag  =data;
   });
 
 ////////////////////////////////////////////////////////////////////////
@@ -1593,7 +1649,7 @@ SipMessage.fun(
   function getSingleHeader(name) {
     var headers = this.getHeaders(name);
     if (headers.length == 0) return null;
-    if (headers.length < 1) this._error(PARSE_ERROR+": Message contains multiple "+name+" headers");
+    if (headers.length < 1) this._verboseError(PARSE_ERROR+": Message contains multiple "+name+" headers");
     return headers[0];
   });
 
@@ -1765,7 +1821,7 @@ SipRequest.fun(
   function deserialize(octets) {
     // parse into (method, request-uri, sip-version, headers, body):
     var matches = REGEXP_REQUEST(octets);
-    if (!matches) this._error(PARSE_ERROR+": malformed SIP request (\n"+octets+"\n)");
+    if (!matches) this._verboseError(PARSE_ERROR+": malformed SIP request (\n"+octets+"\n)");
     
     this._method = matches[1];
     this.requestURI = theSyntaxFactory.deserializeURI(matches[2]);
@@ -1815,7 +1871,7 @@ SipResponse.fun(
   function deserialize(octets) {
     // parse into (sip-version, status-code, reason-phrase, headers, body):
     var matches = REGEXP_RESPONSE(octets);
-    if (!matches) this._error(PARSE_ERROR+": malformed SIP response (\n"+data+"\n)");
+    if (!matches) this._verboseError(PARSE_ERROR+": malformed SIP response (\n"+data+"\n)");
 
     this._version = matches[1];
     this._statusCode = matches[2];
@@ -1950,6 +2006,90 @@ SipSyntaxFactory.fun(
     var h = SipContactHeader.instantiate();
     h.address = address;
     return h;
+  });
+
+// zapISipRequireHeader createRequireHeader(in ACString optionTag);
+SipSyntaxFactory.fun(
+  function createRequireHeader(optionTag) {
+    var h = SipRequireHeader.instantiate();
+    h.optionTag = optionTag;
+    return h;
+  });
+
+// zapISipUnsupportedHeader createUnsupportedHeader(in ACString optionTag);
+SipSyntaxFactory.fun(
+  function createUnsupportedHeader(optionTag) {
+    var h = SipUnsupportedHeader.instantiate();
+    h.optionTag = optionTag;
+    return h;
+  });
+
+// zapISipAllowHeader createAllowHeader(in ACString method);
+SipSyntaxFactory.fun(
+  function createAllowHeader(method) {
+    var h = SipAllowHeader.instantiate();
+    h.method = method;
+    return h;
+  });
+
+// hash of RFC3261 status code -> reason phrase
+var ReasonPhraseHash = {
+  "$100" : "Trying",
+  "$180" : "Ringing",
+  "$181" : "Call Is Being Forwarded",
+  "$182" : "Queued",
+  "$183" : "Session Progress",
+  "$200" : "OK",
+  "$300" : "Multiple Choices",
+  "$301" : "Moved Permanently",
+  "$302" : "Moved Temporarily",
+  "$305" : "Use Proxy",
+  "$380" : "Alternative Service",
+  "$400" : "Bad Request",
+  "$401" : "Unauthorized",
+  "$402" : "Payment Required",
+  "$403" : "Forbidden",
+  "$404" : "Not Found",
+  "$405" : "Method Not Allowed",
+  "$406" : "Not Acceptable",
+  "$407" : "Proxy Authentication Required",
+  "$408" : "Request Timeout",
+  "$410" : "Gone",
+  "$413" : "Request Entity Too Large",
+  "$414" : "Request-URI Too Long",
+  "$415" : "Unsupported Media Type",
+  "$416" : "Unsupported URI Scheme",
+  "$420" : "Bad Extension",
+  "$421" : "Extension Required",
+  "$423" : "Interval Too Brief",
+  "$480" : "Temporarily Unavailable",
+  "$481" : "Call/Transaction Does Not Exist",
+  "$482" : "Loop Detected",
+  "$483" : "Too Many Hops",
+  "$484" : "Address Incomplete",
+  "$485" : "Ambiguous",
+  "$486" : "Busy Here",
+  "$487" : "Request Terminated",
+  "$488" : "Not Acceptable Here",
+  "$491" : "Request Pending",
+  "$493" : "Undecipherable",
+  "$500" : "Server Internal Error",
+  "$501" : "Not Implemented",
+  "$502" : "Bad Gateway",
+  "$503" : "Service Unavailable",
+  "$504" : "Server Time-out",
+  "$505" : "Version Not Supported",
+  "$513" : "Message Too Large",
+  "$600" : "Busy Everywhere",
+  "$603" : "Decline",
+  "$604" : "Does Not Exist Anywhere",
+  "$606" : "Not Acceptable"
+};
+
+// ACString getStandardReasonPhrase(in ACString statusCode);
+SipSyntaxFactory.fun(
+  function getStandardReasonPhrase(statusCode) {
+    return hashget(ReasonPhraseHash, statusCode);
   });
 
 //----------------------------------------------------------------------

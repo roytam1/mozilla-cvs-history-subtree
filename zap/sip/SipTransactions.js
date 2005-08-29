@@ -50,43 +50,8 @@ function toString() { return "[SipTransactions.js]"; }
 // object to hold component's documentation:
 var _doc_ = {};
 
-////////////////////////////////////////////////////////////////////////
-// globals
-
-//----------------------------------------------------------------------
-// timers
-
-var CLASS_TIMER = Components.classes["@mozilla.org/timer;1"];
-var ITF_TIMER = Components.interfaces.nsITimer;
-
 //----------------------------------------------------------------------
 // helpers
-
-function constructClientTransactionKey(message) {
-  // client transactions are indexed by branch+";"+CSeq-method,
-  // so that we can match them in the client pool according to
-  // RFC3261 Section 17.1.3:
-  var branch = message.getTopViaHeader().getParameter("branch");
-  var method =
-    message.getSingleHeader("CSeq").QueryInterface(Components.interfaces.zapISipCSeqHeader).method;
-  return branch+";"+method;
-}
-
-function constructServerTransactionKey(request) {
-  // indexed according to RFC3261 17.2.3 by
-  // branch+";"+sent-by-host+":"+sent-by-port+";"+method. 
-  // XXX implement RFC2543 compatibility as described in section 17.2.3
-  var topVia = request.getTopViaHeader();
-  var branch = topVia.getParameter("branch");
-  var host = topVia.host;
-  var port = topVia.port;
-  if (!port)
-    port = 5060;
-  var method = request.method;
-  if (method == "ACK")
-    method = "INVITE";
-  return branch+";"+host+":"+port+";"+method;
-}
 
 // Helper to log transport events:
 function log(mes, level) {
@@ -101,15 +66,6 @@ function log(mes, level) {
 
 var SipTransaction = makeClass("SipTransaction", SupportsImpl);
 SipTransaction.addInterfaces(Components.interfaces.nsITimerCallback);
-
-// Timer value 'T1' in ms (see RFC3261 17.1.1.1)
-SipTransaction.obj("T1", 500);
-
-// Timer value 'T2' in ms (RFC3261 17.1.2.2)
-SipTransaction.obj("T2", 4000);
-
-// Timer value 'T4' in ms (RFC3261 17.1.2.2)
-SipTransaction.obj("T4", 5000);
 
 // Transactions are statemachines. _state holds the current state
 // object that events will be forwarded to:
@@ -231,13 +187,11 @@ SipInviteClientTransaction.obj(
       t.connection = t.transport.sendRequest(t.initialRequest, t.endpoint, null);
 
       // start timer 'B':
-      t.timerB = CLASS_TIMER.createInstance(ITF_TIMER);
-      t.timerB.initWithCallback(t, t.T1 * 64, ITF_TIMER.TYPE_ONE_SHOT);
+      t.timerB = makeOneShotTimer(t, t.manager.T1 * 64);
       
       // start timer 'A' if transport is not reliable:
       if (t.endpoint.transport == "udp") {
-        t.timerA = CLASS_TIMER.createInstance(ITF_TIMER);
-        t.timerA.initWithCallback(t, t.T1, ITF_TIMER.TYPE_ONE_SHOT);
+        t.timerA = makeOneShotTimer(t, t.manager.T1);
       }
     },
       
@@ -268,7 +222,7 @@ SipInviteClientTransaction.obj(
         // Resend INVITE:
         t.connection = t.transport.sendRequest(t.initialRequest, t.endpoint, t.connection);
         // Reset A. Double interval:
-        t.timerA.initWithCallback(t, t.timerA.delay * 2, ITF_TIMER.TYPE_ONE_SHOT);
+        resetOneShotTimer(t.timerA, t.timerA.delay * 2);
       }
       else if (timer == t.timerB) {
         t._dump("Timer B fired.");
@@ -327,8 +281,7 @@ SipInviteClientTransaction.obj(
       }
       else {
         // start timer 'D' with an absolute value of 32 seconds:
-        t.timerD = CLASS_TIMER.createInstance(ITF_TIMER);
-        t.timerD.initWithCallback(t, 32000, ITF_TIMER.TYPE_ONE_SHOT);
+        t.timerD = makeOneShotTimer(t, 32000);
       }
     },
       
@@ -411,13 +364,11 @@ SipNonInviteClientTransaction.obj(
       t.connection = t.transport.sendRequest(t.initialRequest, t.endpoint, null);
 
       // start timer 'F':
-      t.timerF = CLASS_TIMER.createInstance(ITF_TIMER);
-      t.timerF.initWithCallback(t, t.T1 * 64, ITF_TIMER.TYPE_ONE_SHOT);
+      t.timerF = makeOneShotTimer(t, t.manager.T1 * 64);
 
       // start timer 'E':
       if (t.endpoint.transport == "udp") {
-        t.timerE = CLASS_TIMER.createInstance(ITF_TIMER);
-        t.timerE.initWithCallback(t, t.T1, ITF_TIMER.TYPE_ONE_SHOT);
+        t.timerE = makeOneShotTimer(t, t.manager.T1);
       }
     },
 
@@ -448,8 +399,7 @@ SipNonInviteClientTransaction.obj(
         t.connection = t.transport.sendRequest(t.initialRequest,
                                                t.endpoint, t.connection);
         // Reset E to fire at min(old-delay*2, T2):
-        timer.initWithCallback(t, Math.min(timer.delay*2, t.T2),
-                               ITF_TIMER.TYPE_ONE_SHOT);
+        resetOneShotTimer(timer, Math.min(timer.delay*2, t.manager.T2));
       }
       else if (timer == t.timerF) {
         t._dump("Timer F fired.");
@@ -496,8 +446,7 @@ SipNonInviteClientTransaction.obj(
         t.connection = t.transport.sendRequest(t.initialRequest,
                                                t.endpoint, t.connection);
         // Reset E to fire at min(old-delay*2, T2):
-        timer.initWithCallback(t, Math.min(timer.delay*2, t.T2),
-                               ITF_TIMER.TYPE_ONE_SHOT);
+        resetOneShotTimer(timer, Math.min(timer.delay*2, t.manager.T2));
       }
       else if (timer == t.timerF) {
         t._dump("Timer F fired.");
@@ -523,8 +472,7 @@ SipNonInviteClientTransaction.obj(
       }
       else {
         // start timer 'K' with a value of T4:
-        t.timerK = CLASS_TIMER.createInstance(ITF_TIMER);
-        t.timerK.initWithCallback(t, t.T4, ITF_TIMER.TYPE_ONE_SHOT);
+        t.timerK = makeOneShotTimer(t, t.manager.T4);
       }
     },
       
@@ -677,13 +625,11 @@ SipInviteServerTransaction.obj(
 
       // start timer 'G' if we have an unreliable protocol:
       if (!t.isReliableTransport) {
-        t.timerG = CLASS_TIMER.createInstance(ITF_TIMER);
-        t.timerG.initWithCallback(t, t.T1, ITF_TIMER.TYPE_ONE_SHOT);
+        t.timerG = makeOneShotTimer(t, t.manager.T1);
       }
       
       // start timer 'H':
-      t.timerH = CLASS_TIMER.createInstance(ITF_TIMER);
-      t.timerH.initWithCallback(t, t.T1 * 64, ITF_TIMER.TYPE_ONE_SHOT);
+      t.timerH = makeOneShotTimer(t, t.manager.T1 * 64);
     },
 
     handleRequest : function handleRequest_Completed(t, r) {
@@ -707,8 +653,7 @@ SipInviteServerTransaction.obj(
         // Resend response:
         t.transport.sendResponse(t.lastResponse, null);
         // Reset G to fire at min(old-delay*2, T2):
-        timer.initWithCallback(t, Math.min(timer.delay*2, t.T2),
-                               ITF_TIMER.TYPE_ONE_SHOT);
+        resetOneShotTimer(timer, Math.min(timer.delay*2, t.manager.T2));
       }
       else if (timer == t.timerH) {
         t._dump("Timer H fired.");
@@ -736,8 +681,7 @@ SipInviteServerTransaction.obj(
       }
       else {
         // start timer 'I' with a value of T4:
-        t.timerI = CLASS_TIMER.createInstance(ITF_TIMER);
-        t.timerI.initWithCallback(t, t.T4, ITF_TIMER.TYPE_ONE_SHOT);
+        t.timerI = makeOneShotTimer(t, t.manager.T4);
       }      
     },
 
@@ -888,8 +832,7 @@ SipNonInviteServerTransaction.obj(
       t._dump("Entering 'COMPLETED' state");
 
       // start timer 'J':
-      t.timerJ = CLASS_TIMER.createInstance(ITF_TIMER);
-      t.timerJ.initWithCallback(t, t.T1 * 64, ITF_TIMER.TYPE_ONE_SHOT);
+      t.timerJ = makeOneShotTimer(t, t.manager.T1 * 64);
     },
 
     handleRequest : function handleRequest_Completed(t, r) {
@@ -951,6 +894,15 @@ SipTransactionManager.fun(
   function init(transport) {
     this._transport = transport;
   });
+
+// Timer value 'T1' in ms (see RFC3261 17.1.1.1)
+SipTransactionManager.obj("T1", 500);
+
+// Timer value 'T2' in ms (RFC3261 17.1.2.2)
+SipTransactionManager.obj("T2", 4000);
+
+// Timer value 'T4' in ms (RFC3261 17.1.2.2)
+SipTransactionManager.obj("T4", 5000);
 
 SipTransactionManager.fun(
   function executeInviteClientTransaction(request, endpoint, tu) {    

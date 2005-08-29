@@ -36,55 +36,20 @@
 
 #include "nsISupports.idl"
 
-interface zapISipTransportSink;
-interface zapISipMessage;
-interface zapISipConnection;
-interface zapISipEndpoint;
+interface zapISipInviteRCListener;
+interface zapISipDialog;
 interface zapISipRequest;
-interface zapISipResponse;
-interface nsIPropertyBag2;
+interface zapISipAddress;
+interface zapISipInviteResponseHandler;
 
-/**
- * API for the SIP transport layer (RFC 3261 section 18).
- *
- * Implemented by component '@mozilla.org/zap/siptransport;1'
- */
-[scriptable, uuid(246b5eed-332b-43b2-b80c-75479379e65f)]
-interface zapISipTransport : nsISupports
+[scriptable, uuid(dd497847-1b53-4d86-a6aa-b9d41f1499fc)]
+interface zapISipInviteRC : nsISupports
 {
-  /**
-   * Initialize this SIP transport object with the given configuration
-   * parameters.
-   *
-   * Valid configuration parameters:
-   *   unsigned short "port_base" : port at which to listen for
-   *                                tcp and udp SIP traffic. If
-   *                                the port is not available,
-   *                                the next available port
-   *                                greater than port_base will
-   *                                be used instead. Default: 5060
-   */
-  void init(in nsIPropertyBag2 transportConfiguration);
+  attribute zapISipInviteRCListener listener;
+  readonly attribute zapISipDialog dialog;
+  readonly attribute zapISipAddress ToAddress;
   
-  void shutdown();
-
-  void appendTransportSink(in zapISipTransportSink sink);
-
-  readonly attribute unsigned short listeningPort;
-  
-  zapISipConnection sendRequest(in zapISipRequest request,
-                                in zapISipEndpoint endpoint,
-                                in zapISipConnection connection);
-
-  zapISipConnection sendResponse(in zapISipResponse response,
-                                 in zapISipConnection connection);
-};
-
-
-[scriptable, uuid(de8739f6-9bc4-47c0-b200-bbbfef40c8c8)]
-interface zapISipTransportSink : nsISupports
-{
-  boolean handleSipMessage(in zapISipMessage message,
-                           in zapISipEndpoint endpoint,
-                           in zapISipConnection connection);
+  zapISipRequest formulateInvite();
+  void sendInvite(in zapISipRequest request,
+                  in zapISipInviteResponseHandler rh);
 };

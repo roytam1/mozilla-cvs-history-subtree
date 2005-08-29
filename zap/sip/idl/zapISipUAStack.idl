@@ -36,97 +36,175 @@
 
 #include "nsISupports.idl"
 
-interface zapISipRequest;
-interface zapISipResponse;
-interface zapISipURI;
 interface zapISipAddress;
-interface zapISipInviteMC;
-interface zapISipInviteMCH;
-interface zapISipGenericMC;
-interface zapISipGenericMCH;
 interface zapISipResolver;
 interface zapISipTransactionManager;
+interface zapISipTransport;
 interface zapISipSyntaxFactory;
-interface zapISipMSHFactory;
+interface zapISipRequestHandler;
+interface nsIPropertyBag2;
+interface zapISipNonInviteRC;
+interface zapISipInviteRC;
+interface zapISipResponse;
+interface zapISipRequest;
+interface zapISipMessage;
 
 /**
  * User Agent SIP stack interface (RFC3261).
  *
  * Implemented by component '@mozilla.org/zap/sipstack;1'
+ *
+ * The User Agent SIP stack is the primary entry-point into the ZAP
+ * SIP module. In conjunction with a user application component
+ * implementing zapISipRequestHandler, it constitutes the UAC and UAS
+ * components described in RFC3261. For most of the time the User
+ * Agent stack handles all interfacing to the lower SIP protocol
+ * layers.
  */
 [scriptable, uuid(bc07e2a1-b759-439f-b8e0-30e8e84c21bf)]
 interface zapISipUAStack : nsISupports
 {
-  void init(in zapISipMSHFactory mshFactory);
+  /**
+   * Initialize this SIP stack with the given request handler and
+   * configuration parameters.
+   *
+   * Valid configuration parameters:
+   *   unsigned short "port_base" : port at which to listen for
+   *                                tcp and udp SIP traffic. If
+   *                                the port is not available,
+   *                                the next available port
+   *                                greater than port_base will
+   *                                be used instead. Default: 5060
+   *   ACString "methods"         : comma-separated list of SIP
+   *                                methods understood by the UA.
+   *                                Will be used to construct
+   *                                Allow headers and influences
+   *                                error responses returned for
+   *                                requests handled by the UAStack.
+   *                                Default: "OPTIONS"
+   *   ACString "extensions"      : comma-separated list of extensions
+   *                                (option tags) understood by the UA.
+   *                                Will be used to filter incoming
+   *                                requests with Require headers and
+   *                                to construct Supported headers.
+   *                                Default: ""
+   */
+  void init(in zapISipRequestHandler handler,
+            in nsIPropertyBag2 stackConfiguration);
   
   void shutdown();
 
-  readonly attribute zapISipTransactionManager transactionManager;
-  
-  readonly attribute zapISipSyntaxFactory syntaxFactory;
-
-  readonly attribute zapISipResolver resolver;
-  
   /**
-   * Create a new generic request according to the rules of RFC3261
-   * Section 8.1.
-   *
-   * This method will return a new request object with request method
-   * and uri set to 'method' and 'requestURI' and the following
-   * headers:
-   *
-   * To : Will be set to 'ToAddress'.
-   *
-   * From : Will be set to 'FromAddress' and a new random tag
-   * parameter will be added.
-   *
-   * Call-ID : Will be set to a new UUID + local hostname.
-   *
-   * CSeq : Will be set to 1 and 'method'.
-   *
-   * Max-Forwards: Will be set to 70.
-   * 
-   * Via: The protocol name and version will be set to SIP and 2.0. A
-   * new branch id parameter will be added by the transaction layer
-   * when a new transaction is created for the request. The host, port
-   * and transport will be filled in by the transport layer when the
-   * request is sent.
+   * Address that will be inserted into From headers.
+   * Initialized to sip:thisis@anonymous.invalid.
    */
-    
-  zapISipRequest formulateGenericRequest(in ACString method,
-                                         in zapISipURI requestURI,
-                                         in zapISipAddress ToAddress,
-                                         in zapISipAddress FromAddress);
+  attribute zapISipAddress FromAddress;
 
   /**
-   * Create a new INVITE request according to the rules of RFC3261
-   * Section 8.1.
+   * Remote requests received by the stack will be routed as follows:
    *
-   * In addition to the processing of formuateGenericRequest(), the
-   * Contact header field will be set to the user info of the From
-   * address, with the host part of the URI replaced by the address of
-   * the local host.
+   * - Requests with Require headers will be checked against the list
+   *   of extensions in the configuration parameters. If there are
+   *   unsupported extensions, a 420 (Bad Extension) will be generated.
+   *
+   * - Requests with a To tag that don't match any ongoing dialog
+   *   will be answered with 481 (Call/Transaction Does Not Exist).
+   *
+   * - If the request is an ACK it will be routed to the pending
+   *   INVITE or silently dropped if there is no pending INVITE
+   *   waiting for ACK.
+   *
+   * - If the request is an in-dialog INVITE request and there is a 
+   *   pending INVITE on the dialog, a 500 or 491 will be generated
+   *   following RFC3261 14.2.
+   *
+   * - If the request is an in-dialog request and the dialog has
+   *   a request handler set, it will get a chance to handle the
+   *   request.
+   *
+   * - If the dialog request handler doesn't handle the request, or
+   *   if the request is outside of a dialog it will be passed to the
+   *   user application component's request handler set on the UAStack.
+   *
+   * - If the request still isn't handled it will be handled by the
+   *   UAStack itself. The UAStack only handles ACK, BYE, CANCEL,
+   *   OPTIONS and REGISTER, and only if they appear in the "methods"
+   *   configuration parameter. For other requests a 405 (Method Not
+   *   Allowed) or 500 (Server Internal Error) will be returned,
+   *   depending on whether or not the request method is listed in
+   *   the "methods" configuration parameter.
+   *
+   *   The default BYE handler returns 200 (OK) for in-dialog requests
+   *   matching an active dialog and 481 for BYE requests without a
+   *   To tag. (RFC3261 15.1.2). BYE requests will always terminate
+   *   their associated dialog after the response has been sent,
+   *   independent of whether the response is generated by the default
+   *   handler or by the user application component's request handler.
+   *
+   *   The default OPTIONS handler returns 200 (OK) with Allowed
+   *   headers constructed by appendAllowHeaders().
    */
-  zapISipRequest formulateInviteRequest(in zapISipAddress ToAddress,
-                                        in zapISipAddress FromAddress);
+  attribute zapISipRequestHandler requestHandler;
 
+  /**
+   * Obtain a request client object for transactionally sending a
+   * NON-INVITE request to ToAddress outside of a dialog.
+   */
+  zapISipNonInviteRC createNonInviteRequestClient(in zapISipAddress ToAddress);
+
+  /**
+   * Obtain a request client object for transactionally sending an
+   * INVITE request to ToAddress outside of a dialog.
+   */
+  zapISipInviteRC createInviteRequestClient(in zapISipAddress ToAddress);
+
+  /**
+   * Formulate a method-agnostic response with the given status code
+   * for the given request.
+   *
+   * For transactional requests, clients should generally not call
+   * this method, but instead call formulateResponse() on the request
+   * server (zapISipNonInviteRS or zapISipInviteRS), as this will
+   * formulate the response in a way appropriate to the given request.
+   *
+   * Responses are constructed as follows (following RFC3261):
+   *
+   * statusCode  : set to the given status code (SC)
+   * reasonPhrase: set to the standard RFC3261 english phrase
+   *               appropriate for the status code
+   * From        : copied from request
+   * Call-ID     : copied from request
+   * CSeq        : copied from request
+   * Via         : all copied from request
+   * To          : copied from request
+   *
+   * If the request does not contain a To tag, SC!=100 and
+   * 'toTag'==null, a new tag will be created and set on the To
+   * header.
+   *
+   * If 'toTag'!=null it will be set on the To header. The request
+   * must not already contain a tag or an error will be thrown.
+   *
+   * For SC==405: Allow headers will be added with appendAllowHeaders()
+   *
+   */
   zapISipResponse formulateResponse(in ACString statusCode,
-                                    in AUTF8String reasonPhrase,
                                     in zapISipRequest request,
-                                    in boolean generateToTag);
-  
-  /**
-   * Create an INVITE method client
-   */
-  zapISipInviteMC createInviteMC(in zapISipRequest inviteRequest,
-                                 in zapISipInviteMCH handler);
+                                    in ACString toTag);
 
   /**
-   * Create a NON-INVITE method client
+   * Append Allow headers to the given message, using the method list
+   * passed in the configuration parameters to this stack (see
+   * init()).
    */
-  zapISipGenericMC createGenericMC(in zapISipRequest request,
-                                   in zapISipGenericMCH handler);
+  void appendAllowHeaders(in zapISipMessage message);
   
+  readonly attribute zapISipTransactionManager transactionManager;
+  readonly attribute zapISipTransport transport;
+  readonly attribute zapISipSyntaxFactory syntaxFactory;
+  readonly attribute zapISipResolver resolver;
+
   readonly attribute ACString hostName;
   readonly attribute ACString hostAddress;
+  readonly attribute unsigned short listeningPort;
 };

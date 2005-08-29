@@ -36,55 +36,26 @@
 
 #include "nsISupports.idl"
 
-interface zapISipTransportSink;
-interface zapISipMessage;
-interface zapISipConnection;
-interface zapISipEndpoint;
-interface zapISipRequest;
+interface zapISipInviteRC;
+interface zapISipDialog;
 interface zapISipResponse;
-interface nsIPropertyBag2;
+interface zapISipRequest;
 
-/**
- * API for the SIP transport layer (RFC 3261 section 18).
- *
- * Implemented by component '@mozilla.org/zap/siptransport;1'
- */
-[scriptable, uuid(246b5eed-332b-43b2-b80c-75479379e65f)]
-interface zapISipTransport : nsISupports
+[scriptable, uuid(b3b72e54-e7f3-43d8-9d6e-549dff1cd679)]
+interface zapISipInviteResponseHandler : nsISupports
 {
   /**
-   * Initialize this SIP transport object with the given configuration
-   * parameters.
+   * Called by the invite request client for each distinct received
+   * 2XX response. For invite requests outside of a dialog, multiple
+   * distinct 2XX responses might be received (RFC3261 13.2.2.4), each
+   * of which establish a dialog within the same call.
    *
-   * Valid configuration parameters:
-   *   unsigned short "port_base" : port at which to listen for
-   *                                tcp and udp SIP traffic. If
-   *                                the port is not available,
-   *                                the next available port
-   *                                greater than port_base will
-   *                                be used instead. Default: 5060
+   * handle2XXResponse() must return an ACK request for each 2XX
+   * response received. 'ackTemplate' should be used as a template for
+   * constructing the ACK.
    */
-  void init(in nsIPropertyBag2 transportConfiguration);
-  
-  void shutdown();
-
-  void appendTransportSink(in zapISipTransportSink sink);
-
-  readonly attribute unsigned short listeningPort;
-  
-  zapISipConnection sendRequest(in zapISipRequest request,
-                                in zapISipEndpoint endpoint,
-                                in zapISipConnection connection);
-
-  zapISipConnection sendResponse(in zapISipResponse response,
-                                 in zapISipConnection connection);
-};
-
-
-[scriptable, uuid(de8739f6-9bc4-47c0-b200-bbbfef40c8c8)]
-interface zapISipTransportSink : nsISupports
-{
-  boolean handleSipMessage(in zapISipMessage message,
-                           in zapISipEndpoint endpoint,
-                           in zapISipConnection connection);
+  zapISipRequest handle2XXResponse(in zapISipInviteRC requestClient,
+                                   in zapISipDialog dialog,
+                                   in zapISipResponse response,
+                                   in zapISipRequest ackTemplate);
 };

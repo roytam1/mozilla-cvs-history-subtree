@@ -36,55 +36,10 @@
 
 #include "nsISupports.idl"
 
-interface zapISipTransportSink;
-interface zapISipMessage;
-interface zapISipConnection;
-interface zapISipEndpoint;
-interface zapISipRequest;
-interface zapISipResponse;
-interface nsIPropertyBag2;
+interface zapISipDialog;
 
-/**
- * API for the SIP transport layer (RFC 3261 section 18).
- *
- * Implemented by component '@mozilla.org/zap/siptransport;1'
- */
-[scriptable, uuid(246b5eed-332b-43b2-b80c-75479379e65f)]
-interface zapISipTransport : nsISupports
+[scriptable, uuid(b7a26b03-45e6-4eb5-ab3d-5767d624ad0e)]
+interface zapISipDialogListener : nsISupports
 {
-  /**
-   * Initialize this SIP transport object with the given configuration
-   * parameters.
-   *
-   * Valid configuration parameters:
-   *   unsigned short "port_base" : port at which to listen for
-   *                                tcp and udp SIP traffic. If
-   *                                the port is not available,
-   *                                the next available port
-   *                                greater than port_base will
-   *                                be used instead. Default: 5060
-   */
-  void init(in nsIPropertyBag2 transportConfiguration);
-  
-  void shutdown();
-
-  void appendTransportSink(in zapISipTransportSink sink);
-
-  readonly attribute unsigned short listeningPort;
-  
-  zapISipConnection sendRequest(in zapISipRequest request,
-                                in zapISipEndpoint endpoint,
-                                in zapISipConnection connection);
-
-  zapISipConnection sendResponse(in zapISipResponse response,
-                                 in zapISipConnection connection);
-};
-
-
-[scriptable, uuid(de8739f6-9bc4-47c0-b200-bbbfef40c8c8)]
-interface zapISipTransportSink : nsISupports
-{
-  boolean handleSipMessage(in zapISipMessage message,
-                           in zapISipEndpoint endpoint,
-                           in zapISipConnection connection);
+  void notifyDialogTerminated(in zapISipDialog dialog);
 };

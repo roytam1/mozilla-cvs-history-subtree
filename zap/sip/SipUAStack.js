@@ -44,6 +44,8 @@ Components.utils.importModule("resource:/jscodelib/zap/ArrayUtils.js");
 Components.utils.importModule("resource:/jscodelib/zap/StringUtils.js");
 Components.utils.importModule("resource:/jscodelib/zap/ObjectUtils.js");
 Components.utils.importModule("resource:/jscodelib/zap/SipUtils.js");
+Components.utils.importModule("resource:/jscodelib/zap/SipUARequestCore.js");
+Components.utils.importModule("resource:/jscodelib/zap/SipDialog.js");
 
 // name our global object:
 function toString() { return "[SipUAStack.js]"; }
@@ -95,22 +97,6 @@ function createSipTransactionManager() {
 //----------------------------------------------------------------------
 // Helpers
 
-// Construct a dialog ID for a UAC (rfc3261 12)
-function constructClientDialogID(message) {
-  var callID = message.getCallIDHeader().callID;
-  var localtag = message.getFromHeader().getParameter("tag");
-  var remotetag = message.getToHeader().getParameter("tag");
-  return callID+";"+localtag+";"+remotetag;
-}
-
-// Construct a dialog ID for a UAS (rfc3261 12)
-function constructServerDialogID(message) {
-  var callID = message.getCallIDHeader().callID;
-  var localtag = message.getToHeader().getParameter("tag");
-  var remotetag = message.getFromHeader().getParameter("tag");
-  return callID+";"+localtag+";"+remotetag;
-}
-
 // Helper to log transport events:
 function log(mes, level) {
   if (!level)
@@ -119,316 +105,9 @@ function log(mes, level) {
 }
 
 
-
-////////////////////////////////////////////////////////////////////////
-// SipDialog
-
-var SipDialog = makeClass("SipDialog", SupportsImpl);
-SipDialog.addInterfaces(Components.interfaces.zapISipDialog);
-
-SipDialog.getter(
-  "_name_",
-  function get_name_() {
-    return "Dialog "+this.id;
-  });
-
-SipDialog.fun(
-  function _initState(stack, id, secure, routeSet, localSeq, remoteSeq,
-                      callID, localTag, remoteTag, localAddress,
-                      remoteAddress, remoteTarget) {
-    this.stack = stack;
-    this.id = id;
-    this.secure = secure;
-    this.routeSet = routeSet;
-    this.localSeq = localSeq;
-    this.remoteSeq = remoteSeq;
-    this.callID = callID;
-    this.localTag = localTag;
-    this.remoteTag = remoteTag;
-    this.localAddress = localAddress;
-    this.remoteAddress = remoteAddress;
-    this.remoteTarget = remoteTarget;
-    stack.registerDialog(this);
-  });
-
-SipDialog.obj("state", null);
-
-SipDialog.fun(
-  function changeState(newState) {
-    this.state = newState;
-    if (newState.enterState)
-      newState.enterState(this);
-  });
-
-SipDialog.fun(
-  "Transition an 'Early' dialog to a confirmed state",
-  function confirm(response) {
-    // XXX recompute route set
-    this.changeState(this.Confirmed);
-    // send ACK
-  });
-
-SipDialog.fun(
-  function formulateGenericRequest(method) {
-    // formulate a generic request within a dialog (rfc3261 12.2.1.1):
-    var m = gSyntaxFactory.createRequest();
-    // method:
-    m.method = method;
-    // Request uri & route set:
-    // XXX 
-    m.requestURI = this.remoteTarget.uri;
-    // To header + tag:
-    var toHeader = gSyntaxFactory.createToHeader(this.remoteAddress);
-    if (this.remoteTag)
-      toHeader.setParameter("tag", this.remoteTag);
-    m.appendHeader(toHeader);
-    // From header + tag:
-    var fromHeader = gSyntaxFactory.createFromHeader(this.localAddress);
-    if (this.localTag)
-      fromHeader.setParameter("tag", this.localTag);
-    m.appendHeader(fromHeader);
-    // Call-ID header:
-    m.appendHeader(gSyntaxFactory.createCallIDHeader(this.callID));
-    // CSeq header:
-    // NOTE: CSeq sequenceNumber must be updated on sending!
-    m.appendHeader(gSyntaxFactory.createCSeqHeader(method, 1));
-    // Max-Forwards header:
-    m.appendHeader(gSyntaxFactory.createMaxForwardsHeader());    
-    // New Via header:
-    m.appendHeader(gSyntaxFactory.createViaHeader());
-
-    return m;
-  });
-
-SipDialog.fun(
-  function sendNonInviteRequest(r, TU) {
-    // send a non-invite request within a dialog (rfc3261 12.2.1.1)
-    var me = this;
-    r.getCSeqHeader().sequenceNumber = ++this.localSeq;
-
-    var listener = {
-      resolveComplete : function(destinations, count) {
-        me._assert(destinations.length > 0, "no destinations for request!");
-        // just send directly to the first destination:
-        // but first give the top Via a new branch id:
-        r.getTopViaHeader().setParameter("branch", BRANCH_COOKIE+generateUUID());
-        me.stack.transactionManager.executeNonInviteClientTransaction(r,
-                                                                      destinations[0],
-                                                                      TU);
-      }
-    };
-    this.stack.resolver.resolveEndpointsAsync(this.remoteTarget.uri,
-                                              /*this.routeSet,*/
-                                              listener);
-  });
-
-SipDialog.fun(
-  function bye() {
-    var r = this.formulateGenericRequest("BYE");
-    this.sendNonInviteRequest(r, null);
-    this.changeState(this.Terminated);
-  });
-
-SipDialog.fun(
-  function terminate() {
-    this.changeState(this.Terminated);
-  });
-
-//----------------------------------------------------------------------
-// zapISipDialog implementation:
-
-// void setDialogHandler(in zapISipDialogHandler handler)
-SipDialog.fun(
-  function setDialogHandler(handler) {
-    this.handler = handler;
-  });
-
-//----------------------------------------------------------------------
-// 'Early' state
-
-SipDialog.obj(
-  "Early",
-  {
-    enterState : function enterState_Early(d) {
-    }
-  });
-
-//----------------------------------------------------------------------
-// 'Confirmed' state
-
-SipDialog.obj(
-  "Confirmed",
-  {
-    enterState : function enterState_Confirmed(d) {
-      if (d.handler)
-        d.handler.dialogConfirmed(d);
-    }
-  });
-  
-//----------------------------------------------------------------------
-// 'Terminated' state
-
-SipDialog.obj(
-  "Terminated",
-  {
-    enterState : function enterState_Terminated(d) {
-      if (d.handler) {
-        d.handler.dialogTerminated(d);
-        d.handler = null;
-      }
-      d.stack.unregisterDialog(d);
-    }
-  });
-
-
-////////////////////////////////////////////////////////////////////////
-// SipInviteClientDialog : a dialog started by an outgoing 'INVITE'
-
-var SipInviteClientDialog = makeClass("SipInviteClientDialog",
-                                      SipDialog);
-// SipInviteClientDialog.addInterfaces(...
-
-SipInviteClientDialog.fun(
-  "Initialize the dialog state at the UAC end.",
-  function init(stack, request, response) {
-    this.initialRequest = request;
-    
-    // Construct dialog state (rfc3261 12.1.2):
-    this._initState(stack,
-                    constructClientDialogID(response),
-                    false, // secure XXX
-                    [], // route set XXX
-                    request.getCSeqHeader().sequenceNumber,
-                    null, // remote cseq
-                    request.getCallIDHeader().callID,
-                    request.getFromHeader().getParameter("tag"),
-                    response.getToHeader().getParameter("tag"),
-                    request.getFromHeader().address,
-                    request.getToHeader().address,
-                    response.getTopContactHeader().address);
-
-    this.changeState(response.statusCode[0]=='1' ? this.Early : this.Confirmed);
-  });
-
-SipInviteClientDialog.fun(
-  function handleResponse(response) {
-    this._dump("RESPONSE "+response.statusCode);
-    if (response.statusCode[0] == '2') {
-      // This must be a retransmission of the response to our initial
-      // invite. Quench further responses by sending an 'ACK' (rfc3261 13.2.2.4):
-      this.sendACK();
-    }
-    else {
-      this._dump("Stray response "+response.statusCode+" ("+response.reasonPhrase+"). Dropping.");
-    }
-  });
-
-SipInviteClientDialog.fun(
-  function handleRequest(request) {
-    // XXX implement 12.2.2 procedures
-    
-    this._dump("REQUEST "+request.method);
-    if (request.method == "BYE") {
-      var m = this.stack.formulateResponse("200", "OK", request, false);
-      this.stack.transactionManager.executeNonInviteServerTransaction(request,
-                                                                      null,
-                                                                      m);
-      this.changeState(this.Terminated);      
-    }
-  });
-
-SipInviteClientDialog.fun(
-  function sendACK() {
-    // Send an ACK for a previous 2xx response (rfc3261 13.2.2.4)
-    var me = this;
-    var ack = this.formulateGenericRequest("ACK");
-    ack.getCSeqHeader().sequenceNumber = this.initialRequest.getCSeqHeader().sequenceNumber;
-    // XXX copy authentication headers from initial request
-    
-    var listener = {
-      resolveComplete : function(destinations, count) {
-        me._assert(destinations.length > 0, "no destinations for ack!");
-        // just send directly to the first destination:
-        // but first give the top Via a new branch id:
-        ack.getTopViaHeader().setParameter("branch", BRANCH_COOKIE+generateUUID());
-        me.stack.transport.sendRequest(ack, destinations[0], null);
-      }
-    };
-    this.stack.resolver.resolveEndpointsAsync(this.remoteTarget.uri,
-                                              /*this.routeSet,*/
-                                              listener);
-  });
-
-//----------------------------------------------------------------------
-// Specialized 'Confirmed' state
-
-SipInviteClientDialog.obj(
-  "Confirmed",
-  {
-    enterState : function enterState_InviteClient_Confirmed(d) {
-      d.sendACK();
-      if (d.handler)
-        d.handler.dialogConfirmed(d);
-    }
-  });
-
-
-////////////////////////////////////////////////////////////////////////
-// SipInviteServerDialog : a dialog started by an incoming 'INVITE'
-
-var SipInviteServerDialog = makeClass("SipInviteServerDialog",
-                                      SipDialog);
-// SipInviteServerDialog.addInterfaces(...
-
-SipInviteServerDialog.fun(
-  "Initialize the dialog state at the UAS end.",
-  function init(stack, request, response) {
-    this.initialRequest = request;
-    
-    // Construct dialog state (rfc3261 12.1.1):
-    this._initState(stack,
-                    constructServerDialogID(response),
-                    false, // secure XXX
-                    [], // route set XXX
-                    null, // local cseq
-                    request.getCSeqHeader().sequenceNumber, // remote cseq
-                    request.getCallIDHeader().callID,
-                    response.getToHeader().getParameter("tag"),
-                    request.getFromHeader().getParameter("tag"),
-                    request.getToHeader().address,
-                    request.getFromHeader().address,
-                    request.getTopContactHeader().address);
-
-    this.changeState(response.statusCode[0]=='1' ? this.Early : this.Confirmed);
-  });
-
-
-SipInviteServerDialog.fun(
-  function handleResponse(response) {
-    this._dump("Stray response "+response.statusCode+" ("+response.reasonPhrase+"). Dropping.");
-  });
-
-SipInviteServerDialog.fun(
-  function handleRequest(request) {
-    // XXX implement 12.2.2 procedures
-    
-    this._dump("REQUEST "+request.method);
-    if (request.method == "ACK") {
-      //XXX implement automatic closing of dialog if ACK doesn't arrive
-    }
-    else if (request.method == "BYE") {
-      var m = this.stack.formulateResponse("200", "OK", request, false);
-      this.stack.transactionManager.executeNonInviteServerTransaction(request,
-                                                                      null,
-                                                                      m);
-      this.changeState(this.Terminated);      
-    }
-  });
-
-
-
 ////////////////////////////////////////////////////////////////////////
 // SipUAStack
+
 
 var SipUAStack = makeClass("SipUAStack", SupportsImpl, Unwrappable);
 SipUAStack.addInterfaces(Components.interfaces.zapISipUAStack,
@@ -437,21 +116,38 @@ SipUAStack.addInterfaces(Components.interfaces.zapISipUAStack,
 SipUAStack.appendCtor(
   function ctor() {
     // Pool of active dialogs, indexed by dialog id:
-    this._dialogPool = {};    
+    this.dialogPool = {};
+    // Pool of active invite client servers (for response routing of
+    // 2XX responses after the client transaction has terminated):
+    this.inviteRCPool = {};
   });
 
 //----------------------------------------------------------------------
 // zapISipUAStack
 
-// void init(in zapISipMSHFactory mshFactory)
+//  void init(in zapISipRequestHandler handler,
+//            in nsIPropertyBag2 stackConfiguration);
 SipUAStack.fun(
-  function init(mshFactory) {
+  function init(handler, config) {
     this._dump("Building SIP User Agent Stack...");
 
-    this.mshFactory = mshFactory;
+    this.FromAddress = gSyntaxFactory.deserializeAddress("sip:thisis@anonymous.invalid");
+    
+    this.requestHandler = handler;
+
+    // Unpack configuration parameters:
+    var methods = "OPTIONS";
+    var extensions = "";
+    if (config) {
+      try { methods = config.getProperty("methods"); }catch(e){}
+      try { extensions = config.getProperty("extensions"); }catch(e){}
+    }
+    this.allowedMethods = methods.split(",");
+    this.supportedExtensions = extensions.split(",");
     
     // Create transport layer:
     this.transport = createSipTransport();
+    this.transport.init(config);
     
     // Create transaction manager:
     this.transactionManager = createSipTransactionManager();
@@ -468,140 +164,115 @@ SipUAStack.fun(
 
     this._dump("SIP User Agent Stack built.");    
   });
-
-
-// void shutdown()
+  
+//  void shutdown();
 SipUAStack.fun(
   function shutdown() {
     this.transport.shutdown();
   });
 
-// readonly attribute zapISipTransactionManager transactionManager
-SipUAStack.obj("transactionManager", null);
+// attribute zapISipAddress FromAddress;
+SipUAStack.obj("FromAddress", null);
 
-// readonly attribute zapISipSyntaxFactory syntaxFactory
-SipUAStack.obj("syntaxFactory", gSyntaxFactory);
+//  attribute zapISipRequestHandler requestHandler;
+SipUAStack.obj("requestHandler", null);
 
-// readonly attribute zapISipResolver resolver
-SipUAStack.obj("resolver", gResolver);
-
-// zapISipRequest formulateGenericRequest(in ACString method,
-//                                        in zapISipURI requestURI,
-//                                        in zapISipAddress ToAddress,
-//                                        in zapISipAddress FromAddress);
+//  zapISipNonInviteRC createNonInviteRequestClient(in zapISipAddress ToAddress);
 SipUAStack.fun(
-  function formulateGenericRequest(method, requestURI, ToAddress,
-                                   FromAddress) {
-    // XXX handle RouteSet
-    
-    var m = gSyntaxFactory.createRequest();    
-    // method:
-    m.method = method;
-    // request uri:
-    m.requestURI = requestURI;
-    // To header:
-    m.appendHeader(gSyntaxFactory.createToHeader(ToAddress));
-    // From header + new tag:
-    var fromHeader = gSyntaxFactory.createFromHeader(FromAddress);
-    fromHeader.setParameter("tag", generateTag());
-    m.appendHeader(fromHeader);
-    // Call-ID header with new call id:
-    var callIDHeader =
-      gSyntaxFactory.createCallIDHeader(generateUUID()+
-                                        "@"+ this.hostName);
-    m.appendHeader(callIDHeader);
-    
-    // CSeq header matching the request method and with new sequence
-    // number:
-    m.appendHeader(gSyntaxFactory.createCSeqHeader(method, 1));
-    
-    // Max-Forwards header:
-    m.appendHeader(gSyntaxFactory.createMaxForwardsHeader());
-    
-    // New Via header:
-    m.appendHeader(gSyntaxFactory.createViaHeader());
-    
-    return m;
+  function createNonInviteRequestClient(ToAddress) {
+    var rc = SipNonInviteRC.instantiate();
+    rc.init(this, null, ToAddress);
+    return rc;
   });
 
-// zapISipRequest formulateInviteRequest(in zapISipAddress ToAddress,
-//                                       in zapISipAddress FromAddress);
+//  zapISipInviteRC createInviteRequestClient(in zapISipAddress ToAddress);
 SipUAStack.fun(
-  function formulateInviteRequest(ToAddress, FromAddress) {
-    var message = this.formulateGenericRequest("INVITE", ToAddress.uri, ToAddress,
-                                               FromAddress);
-    // Set mandatory Contact header (rfc3261 8.1.1.8):
-    // XXX should this be user-configurable?
-    // for the time being just use user name of FromAddress and ip address
-    // of local host:
-    //var contactAddr = FromAddress.clone().QueryInterface(Components.interfaces.zapISipAddress);
-    //contactAddr.uri.QueryInterface(Components.interfaces.zapISipSIPURI);
-    //contactAddr.uri.host = this.hostAddress;
-    //contactAddr.uri.port = "";
-    //message.appendHeader(gSyntaxFactory.createContactHeader(contactAddr));
-
-    // XXX use FromAddress for the time being:
-    message.appendHeader(gSyntaxFactory.createContactHeader(FromAddress));
-    
-    return message;
+  function createInviteRequestClient(ToAddress) {
+    var rc = SipInviteRC.instantiate();
+    rc.init(this, null, ToAddress);
+    return rc;
   });
 
-// zapISipResponse formulateResponse(in ACString statusCode,
-//                                   in AUTF8String reasonPhrase,
-//                                   in zapISipRequest request,
-//                                   in boolean generateToTag);
+
 SipUAStack.fun(
-  function formulateResponse(statusCode, reasonPhrase,
-                             request, generateToTag) {
+  function formulateResponse(statusCode, request, toTag) {
     var m = gSyntaxFactory.createResponse();
+    // set status code
     m.statusCode = statusCode;
-    m.reasonPhrase = reasonPhrase;
-    
-    m.appendHeader(request.getFromHeader());
-    m.appendHeader(request.getCallIDHeader());
-    m.appendHeader(request.getCSeqHeader());
+    // add standard reason phrase
+    m.reasonPhrase = gSyntaxFactory.getStandardReasonPhrase(statusCode);
     // copy Via headers:
     request.getHeaders("Via", {}).forEach(function(v) { m.appendHeader(v); });
+    // copy From:
+    m.appendHeader(request.getFromHeader());
+    // copy To:
     var toHeader = request.getToHeader().clone().QueryInterface(Components.interfaces.zapISipToHeader);
     m.appendHeader(toHeader);
-    if (generateToTag && !toHeader.getParameter("tag")) {
+    // maybe add tag:
+    var tag = toHeader.getParameter("tag");
+    if (!tag && statusCode != "100" && !toTag) {
       toHeader.setParameter("tag", generateTag());
     }
+    else if (toTag) {
+      if (!tag) {
+        toHeader.setParameter("tag", toTag);
+      }
+      else {
+        this._assert(toTag == tag, 
+                     "already have a different To tag in "+statusCode+ " response to "+request.method+"  :: CALLSTACK ::\n"+this._backtrace());
+      }
+    }
+    // copy Call-ID:
+    m.appendHeader(request.getCallIDHeader());
+    // copy CSeq:
+    m.appendHeader(request.getCSeqHeader());
+
+    // for 405 add Allow headers:
+    if (statusCode == "405") this.appendAllowHeaders(m);
+    
     return m;
   });
 
-// zapISipInviteMC createInviteMC(in zapISipRequest inviteRequest,
-//                                in zapISipInviteMCH handler);
 SipUAStack.fun(
-  function createInviteMC(request, methodHandler) {
-    var client = InviteUACCore.instantiate();
-    client.init(this, request, methodHandler);
-    return client;
+  function appendAllowHeaders(message) {
+    this.allowedMethods.forEach(
+      function(m) {
+        message.appendHeader(gSyntaxFactory.createAllowHeader(m));
+      });
   });
 
-// zapISipGenericMC createGenericMC(in zapISipRequest request,
-//                                  in zapISipGenericMCH handler);
-SipUAStack.fun(
-  function createGenericMC(request, methodHandler) {
-    var client = GenericUACCore.instantiate();
-    client.init(this, request, methodHandler);
-    return client;
-  });
+//  readonly attribute zapISipTransactionManager transactionManager;
+SipUAStack.obj("transactionManager", null);
 
-// readonly attribute ACString hostName
+//  readonly attribute zapISipTransport transport;
+SipUAStack.obj("transport", null);
+
+//  readonly attribute zapISipSyntaxFactory syntaxFactory;
+SipUAStack.obj("syntaxFactory", gSyntaxFactory);
+
+//  readonly attribute zapISipResolver resolver;
+SipUAStack.obj("resolver", gResolver);
+
+//  readonly attribute ACString hostName;
 SipUAStack.getter(
   "hostName",
   function get_hostName() {
     return gDNSService.myHostName;
   });
 
-// readonly attribute ACString hostAddress
+//  readonly attribute ACString hostAddress;
 SipUAStack.getter(
   "hostAddress",
   function get_hostAddress() {
     return gDNSService.resolve(gDNSService.myHostName,0).getNextAddrAsString();
   });
 
+//  readonly attribute unsigned short listeningPort;
+SipUAStack.getter(
+  "listeningPort",
+  function get_listeningPort() {
+    return this.transport.listeningPort;
+  });
 
 //----------------------------------------------------------------------
 // zapISipTransportSink implementation:
@@ -609,429 +280,273 @@ SipUAStack.getter(
 SipUAStack.fun(
   function handleSipMessage(message, endpoint, connection) {
     if (message.isRequest) {
+      // We have received a request.      
       message.QueryInterface(Components.interfaces.zapISipRequest);
       log(message.method+" request received");
-      //check if we should route request to a dialog:
-      var id = constructServerDialogID(message);
-      var dialog = this.findDialog(id);
-      if (dialog)
-        dialog.handleRequest(message);
+
+      // Match against supported extensions (RFC3261 8.2.2.3):
+      var reqHeaders = message.getHeaders("Require", {});
+      if (reqHeaders.length) {
+        var unknowns = [];
+        reqHeaders.forEach(
+          function(h) {
+            h = h.QueryInterface(Components.interfaces.zapISipRequireHeader);
+            if (!member(h.optionTag, this.supportedExtensions))
+              unknowns.push(h.optionTag);
+          });
+        if (unknowns.length) {
+          // We have unsupported extensions.
+          // Generate a 420 (Bad Extension)
+          var response = this.formulateResponse("420", message, null);
+          // add Unsupported headers for all unknown extensions:
+          unknowns.forEach(
+            function(t) {
+              response.appendHeader(gSyntaxFactory.createUnsupportedHeader(t));
+            });
+          this.sendTransactionalResponse(response, message);
+        }
+      }
+      
+      // Check if we should dispatch to a dialog:
+      if (message.getToHeader().getParameter("tag")) {
+        var dialog = this.findDialog(constructServerDialogID(message));
+        if (dialog)
+          dialog.handleRequest(message);
+        else {
+          // The dialog does not exist. Reject with a 481
+          // (Call/Transaction Does Not Exist). (RFC3261 12.2.2)
+          var response = this.formulateResponse("481", message, null);
+          this.sendTransactionalResponse(response, message);
+        }
+      }
       else {
-        // process request according to RFC3261 8.2
-        switch (message.method) {
-          case "INVITE":
-            // create a new InviteMSH/InviteUASCore to handle the INVITE:
-            var msh = this.mshFactory.createInviteMSH();
-            var ms = InviteUASCore.instantiate();
-            ms.init(this, message, msh);
-            ms.execute();
-            break;
-          default:
-            // generate 405 (Method Not Allowed)
-            // XXX only do this for recognised methods??
-            var response = this.formulateResponse("405", "Method Not Allowed",
-                                                  message, true);
-            this.transactionManager.executeNonInviteServerTransaction(message,
-                                                                      null,
-                                                                      response);
-            break;
+        // The request is outside of a dialog.
+        // Create a new request server and dispatch to handler:
+        if (message.method == "INVITE") {
+          var rs = SipInviteRS.instantiate();
+          rs.init(this, null, message);
+          // pass along the handler chain:
+          // UA client request handler --> UA Stack request handler
+          if (!this.requestHandler ||
+              !this.requestHandler.handleInviteRequest(rs))
+            this.handleInviteRequest(rs);
+        }
+        else {
+          var rs = SipNonInviteRS.instantiate();
+          rs.init(this, null, message);
+          // pass along the handler chain:
+          // UA client request handler --> UA Stack request handler
+          if (!this.requestHandler ||
+              !this.requestHandler.handleNonInviteRequest(rs))
+            this.handleNonInviteRequest(rs);
         }
       }
     }
     else {
+      // We have received a response.
       message.QueryInterface(Components.interfaces.zapISipResponse);
-      // check if we should route response to a dialog:
-      var id = constructClientDialogID(message);
-      var dialog = this.findDialog(id);
-      if (dialog)
-        dialog.handleResponse(message);
-      else
-        this._dump("Stray response ("+message.statusCode+" --- "+
-                   message.reasonPhrase+")");
+
+      // Try to match to a pending invite request client:
+      var rs = this.findInviteRC(constructClientTransactionKey(message));
+      if (rs)
+        rs.handleResponse(message);
+      else {
+        // nope, this must be a stray response
+        this._dump("Stray response (" + message.statusCode + " --- "+
+                   message.reasonPhrase + ")");
+      }
     }
+
+    // true == message handled
     return true;
+  });
+
+//----------------------------------------------------------------------
+// Default UA Stack request handlers:
+// These are the 'last-stop' request handlers; called after any UA
+// client or dialog handlers have had a chance to handle the request
+
+SipUAStack.fun(
+  function handleNonInviteRequest(rs) {
+    var response;
+    var method = rs.request.method;
+
+    // always silently drop ACK:
+    if (method == "ACK") return;
+    
+    if (member(method, this.allowedMethods)) {
+      if (method == "OPTIONS") {
+        response = rs.formulateResponse("200");
+        this.appendAllowHeaders(response);
+      }
+      if (method == "BYE") {
+        // RFC3261 15.1.2
+        if (rs.dialog)
+          response = rs.formulateResponse("200");
+        else 
+          response = rs.formulateResponse("481");
+      }
+      else {
+        // The UA handler should have really handled this!
+        // -> 500 (Server Internal Error)
+        this._dump("unhandled method "+method);
+        response = rs.formulateResponse("500");
+      }
+    }
+    else {
+      // 405 (Method Not Allowed)
+      response = rs.formulateResponse("405");
+    }
+    
+    rs.sendResponse(response);
+  });
+
+SipUAStack.fun(
+  function handleInviteRequest(rs) {
+    this._assert(!rs.dialog, "re-invite should have been handled by dialog request handler");
+
+    var code;
+    if (member(rs.request.method, this.allowedMethods)) {
+      // The UA handler should have really handled this!
+      // -> 500 (Server Internal Error)
+      this._dump("unhandled method "+rs.request.method);
+      code = "500";
+    } else {
+      // Reject invites with a 405 (Method Not Allowed):
+      code = "405";
+    }
+    
+    var response = rs.formulateResponse(code);
+    rs.sendResponse(response);
+  });
+
+//----------------------------------------------------------------------
+// Interface to request servers/clients:
+
+SipUAStack.fun(
+  function formulateGenericRequest(method, ToAddress) {
+    // XXX handle RouteSet
+
+    var m = gSyntaxFactory.createRequest();
+    // method:
+    m.method = method;
+    // requestURI:
+    m.requestURI = ToAddress.uri;
+    // Via header:
+    m.appendHeader(gSyntaxFactory.createViaHeader());
+    // To header:
+    m.appendHeader(gSyntaxFactory.createToHeader(ToAddress));
+    // From header + new tag:
+    var fromHeader = gSyntaxFactory.createFromHeader(this.FromAddress);
+    fromHeader.setParameter("tag", generateTag());
+    m.appendHeader(fromHeader);
+    // Call-ID header with new call id:
+    var callIDHeader =
+      gSyntaxFactory.createCallIDHeader(generateUUID() + "@" +
+                                        this.hostName);
+    m.appendHeader(callIDHeader);
+    // CSeq header matching the request method and containing a new
+    // sequence number:
+    m.appendHeader(gSyntaxFactory.createCSeqHeader(method, 1));
+    // Max-Forwards header:
+    m.appendHeader(gSyntaxFactory.createMaxForwardsHeader());
+
+    return m;
+  });
+
+// get the address to use for an Contact header for a
+// dialog-establishing message:
+// XXX this should be user configurable in some form or another
+// XXX get fqdn from elsewhere?
+// XXX should this also be the contact set for non-dialog establising requests?
+// XXX distinguish between sip and sips
+SipUAStack.fun(
+  function getContactAddress() {
+    var user = (this.FromAddress.uri).QueryInterface(Components.interfaces.zapISipSIPURI).userinfo;
+    var host = this.hostAddress;
+    return gSyntaxFactory.deserializeAddress("sip:"+user+"@"+host);
+  });
+
+// create a dialog at UAS end:
+SipUAStack.fun(
+  function createDialogUAS(request, response) {
+    var dialog = SipDialog.instantiate();
+    dialog.initUAS(this, request, response);
+    return dialog;
+  });
+
+// create a dialog at UAC end:
+SipUAStack.fun(
+  function createDialogUAC(request, response) {
+    var dialog = SipDialog.instantiate();
+    dialog.initUAC(this, request, response);
+    return dialog;
   });
 
 //----------------------------------------------------------------------
 // Dialog management:
 
+// newly created dialogs will call this to register themselves with
+// the stack:
 SipUAStack.fun(
   function registerDialog(dialog) {
-    hashset(this._dialogPool, dialog.id, dialog);
+    hashset(this.dialogPool, dialog.dialogID, dialog);
   });
 
+// terminated dialogs will call this to unregister:
 SipUAStack.fun(
   function unregisterDialog(dialog) {
-    hashdel(this._dialogPool, dialog.id);
+    hashdel(this.dialogPool, dialog.dialogID);
   });
 
 SipUAStack.fun(
   function findDialog(id) {
-    return hashget(this._dialogPool, id);
+    return hashget(this.dialogPool, id);
   });
 
+//----------------------------------------------------------------------
+// Invite request client management:
 
-////////////////////////////////////////////////////////////////////////
-// InviteUACCore : UAC INVITE handler 
+// invite request clients will call this to register themselves with
+// the stack after they have received their first 2XX response, so
+// that subsequent 2XX can be routed to them:
+SipUAStack.fun(
+  function registerInviteRC(rc, transactionKey) {
+    hashset(this.inviteRCPool, transactionKey, rc);
+  });
 
-// XXX recode this as a state machine with state RESOLVING, INVITING, ...
+// terminated invite request clients will call this to unregister:
+SipUAStack.fun(
+  function unregisterInviteRC(transactionKey) {
+    hashdel(this.inviteRCPool, transactionKey);
+  });
 
-var InviteUACCore = makeClass("InviteUACCore", SupportsImpl);
-InviteUACCore.addInterfaces(Components.interfaces.zapISipClientTransactionUser,
-                            Components.interfaces.zapISipInviteMC,
-                            Components.interfaces.zapISipResolveListener);
+SipUAStack.fun(
+  function findInviteRC(transactionKey) {
+    return hashget(this.inviteRCPool, transactionKey);
+  });
 
-// Array of dialogs established through this transaction:
-InviteUACCore.obj("_dialogs", null);  
+//----------------------------------------------------------------------
+// Implementation helpers:
+
+// Send a response to the given request via a server invite or
+// non-invite transaction, as appropriate for the request method.
+SipUAStack.fun(
+  function sendTransactionalResponse(response, request) {
+    if (request.method == "INVITE") {
+      var tx = this.transactionManager.executeInviteServerTransaction(request,
+                                                                      null,
+                                                                      false);
+      tx.sendResponse(response);
+    }
+    else {
+      this.transactionManager.executeNonInviteServerTransaction(request,
+                                                                null,
+                                                                response);
+    }
+  });
+
   
-// Array of possible destinations for the request:
-InviteUACCore.obj("_destinations", []);
-
-// Current destination (index into destinations):
-InviteUACCore.obj("_destinationIndex", -1);
-
-// Request object:
-InviteUACCore.obj("_request", null);
-
-// UAStack object:
-InviteUACCore.obj("_stack", null);
-
-// zapISipInviteMCH peer:
-InviteUACCore.obj("_methodHandler", null);
-
-InviteUACCore.fun(
-  function init(stack, request, methodHandler) {
-    this._dialogs = [];
-    this._stack = stack;
-    this._request = request;
-    this._methodHandler = methodHandler;
-  });
-
-//----------------------------------------------------------------------
-// zapISipInviteMC implementation:
-
-InviteUACCore.fun(
-  function execute() {
-    // This will asynchronously resolve the possible destinations for
-    // our request and call 'resolveComplete' once finished:
-    this._stack.resolver.resolveEndpointsAsync(this._request.requestURI,
-                                               /*this._request.getHeaders("Route", {}),*/
-                                               this);
-  });
-
-//----------------------------------------------------------------------
-// zapISipResolveListener implementation:
-
-InviteUACCore.fun(
-  function resolveComplete(destinations, count) {
-    // We've got destinations to try the request on now.
-    this._destinations = destinations;
-    this._tryNextDestination();
-  });
-
-//----------------------------------------------------------------------
-// zapISipClientTransactionUser implementation:
-
-InviteUACCore.fun(
-  function handleFailureResponse(r) {
-    if (this._methodHandler)
-      this._methodHandler.failureResponse(this, r);
-    this._dump(r.statusCode);
-    this._terminateEarlyDialogs();    
-    this._tryNextDestination();
-  });
-
-InviteUACCore.fun(
-  function handleProvisionalResponse(r) {
-    if (this._methodHandler)
-      this._methodHandler.provisionalResponse(this, r);
-    this._dump(r.statusCode);
-    // rfc3261 12.1: only provisional 101-199 responses with a 'To'
-    // tag create early dialogs
-    if (r.statusCode>=101 && r.statusCode<199 && r.getToHeader().getParameter("tag")) {
-      if (!this._stack.findDialog(constructClientDialogID(r)))
-        this._createNewDialog(r);
-    }
-  });
-
-InviteUACCore.fun(
-  function handleSuccessResponse(r) {
-    if (this._methodHandler)
-      this._methodHandler.successResponse(this, r);
-    this._dump(r.statusCode);
-    var dialog = this._stack.findDialog(constructClientDialogID(r));
-    if (dialog) {
-      this._assert(dialog.state == dialog.Early, "Dialog not in Early state??");
-    } else {
-      dialog = this._createNewDialog(r);
-    }
-    dialog.confirm(r);
-    this._terminateEarlyDialogs();
-    
-    if (this._methodHandler)
-      this._methodHandler.success(this, dialog);
-  });
-
-InviteUACCore.fun(
-  function handleTimeout() {
-    this._terminateEarlyDialogs();
-    // XXX notify UI
-    this._tryNextDestination();
-  });
-
-
-//----------------------------------------------------------------------
-
-InviteUACCore.fun(
-  function _tryNextDestination() {
-    if (++this._destinationIndex >= this._destinations.length) {
-      this._dump("no more destinations to try");
-      if (this._methodHandler)
-        this._methodHandler.failure(this);
-      return;
-    }
-    this._sendRequest(this._destinations[this._destinationIndex]);
-  });
-
-InviteUACCore.fun(
-  function _sendRequest(dest) {
-    if (this._methodHandler)
-      this._methodHandler.calling(this, dest);
-    // Give the top Via a new branch id:
-    this._request.getTopViaHeader().setParameter("branch", BRANCH_COOKIE+generateUUID());
-    this._stack.transactionManager.executeInviteClientTransaction(this._request,
-                                                                  dest,
-                                                                  this);
-  });
-
-InviteUACCore.fun(
-  function _createNewDialog(response) {
-    var dialog = SipInviteClientDialog.instantiate();
-    dialog.init(this._stack, this._request, response);
-    this._dialogs.push(dialog);
-    log("spawning new dialog");
-    if (this._methodHandler)
-      this._methodHandler.dialogSpawned(this, dialog);
-    return dialog;
-  });
-
-InviteUACCore.fun(
-  function _terminateEarlyDialogs() {
-    this._dialogs.forEach(function(d) { if (d.state == d.Early) d.terminate(); });
-    this._dialogs = [];
-  });
-
-
-////////////////////////////////////////////////////////////////////////
-// InviteUASCore : UAS INVITE handler
-
-// XXX recode as a state machine
-
-var InviteUASCore = makeClass("InviteUASCore", SupportsImpl);
-InviteUASCore.addInterfaces(Components.interfaces.zapISipServerTransactionUser,
-                            Components.interfaces.zapISipInviteMS);
-
-// Request object:
-InviteUASCore.obj("_request", null);
-
-// UAStack object:
-InviteUASCore.obj("_stack", null);
-
-// zapISipInviteMSH peer:
-InviteUASCore.obj("_methodHandler", null);
-
-InviteUASCore.fun(
-  function init(stack, request, methodHandler) {
-    this._stack = stack;
-    this._request = request;
-    this._methodHandler = methodHandler;
-  });
-
-InviteUASCore.fun(
-  function execute() {
-    // create a new invite server transaction:
-    this._transaction = this._stack.transactionManager.executeInviteServerTransaction(this._request, this, true);
-    this._methodHandler.invite(this, this._request);
-  });
-
-InviteUASCore.fun(
-  function _createNewDialog(response) {
-    this.dialog = SipInviteServerDialog.instantiate();
-    this.dialog.init(this._stack, this._request, response);
-    log("spawning new dialog");
-    if (this._methodHandler)
-      this._methodHandler.dialogSpawned(this, this.dialog);
-    return this.dialog;
-  });
-
-//----------------------------------------------------------------------
-// zapISipServerTransactionUser implementation:
-
-//  void handleTimeout();
-InviteUASCore.fun(
-  function handleTimeout() {
-    this._dump("TIMEOUT!");
-  });
-
-//  void transactionTerminated(in zapISipServerTransaction transaction);
-InviteUASCore.fun(
-  function transactionTerminated(transaction) {
-    this._dump("TERMINATED!");
-  });
-
-//----------------------------------------------------------------------
-// zapISipInviteMS implementation:
-
-// void sendResponse(in zapISipResponse response);
-InviteUASCore.fun(
-  function sendResponse(response) {
-    if (response.statusCode[0] == "2") {
-      // construct a new dialog:
-      this._createNewDialog(response);
-      this._transaction.sendResponse(response);
-      if (this._methodHandler)
-        this._methodHandler.success(this, this.dialog);
-    }
-    else if (response.statusCode[0] != "1") {
-      this._transaction.sendResponse(response);
-      if (this._methodHandler)
-        this._methodHandler.failure(this);
-    }
-    else { // 1xx
-    // XXX construct early dialog for 101-199
-      this._transaction.sendResponse(response);
-    }
-  });
-
-// zapISipResponse formulate200Response();
-InviteUASCore.fun(
-  function formulate200Response() {
-    // construct a dialog-establishing response according to RFC3261
-    // 12.1.1:
-    var m = this._stack.formulateResponse("200", "OK", this._request, true);
-    // copy record-route headers:
-    this._request.getHeaders("Record-Route", {}).forEach(function(v) {
-                                                           m.appendHeader(v); });
-    // set contact header:
-    // XXX use ToAddress of request for now:
-    var ToAddress = this._request.getToHeader().address;
-    m.appendHeader(gSyntaxFactory.createContactHeader(ToAddress));
-    return m;
-  });
-
-////////////////////////////////////////////////////////////////////////
-// GenericUACCore : UAC Non-invite handler
-
-// XXX recode this as a state machine with states RESOLVING, TRYING, ...
-
-var GenericUACCore = makeClass("GenericUACCore", SupportsImpl);
-GenericUACCore.addInterfaces(Components.interfaces.zapISipClientTransactionUser,
-                             Components.interfaces.zapISipGenericMC,
-                             Components.interfaces.zapISipResolveListener);
-
-// Array of possible destinations for the request:
-GenericUACCore.obj("_destinations", []);
-
-// Current destination (index into destinations):
-GenericUACCore.obj("_destinationIndex", -1);
-
-// Request object:
-GenericUACCore.obj("_request", null);
-
-// UAStack object:
-GenericUACCore.obj("_stack", null);
-
-// zapISipInviteMCH peer:
-GenericUACCore.obj("_methodHandler", null);
-
-GenericUACCore.fun(
-  function init(stack, request, methodHandler) {
-    this._dialogs = [];
-    this._stack = stack;
-    this._request = request;
-    this._methodHandler = methodHandler;
-  });
-
-//----------------------------------------------------------------------
-// zapISipGenericMC implementation:
-
-GenericUACCore.fun(
-  function execute() {
-    // This will asynchronously resolve the possible destinations for
-    // our request and call 'resolveComplete' once finished:
-    this._stack.resolver.resolveEndpointsAsync(this._request.requestURI,
-                                               /*this._request.getHeaders("Route", {}),*/
-                                               this);
-  });
-
-//----------------------------------------------------------------------
-// zapISipResolveListener implementation:
-
-GenericUACCore.fun(
-  function resolveComplete(destinations, count) {
-    // We've got destinations to try the request on now.
-    this._destinations = destinations;
-    this._tryNextDestination();
-  });
-
-//----------------------------------------------------------------------
-// zapISipClientTransactionUser implementation:
-
-GenericUACCore.fun(
-  function handleFailureResponse(r) {
-    this._dump(r.statusCode);
-    if (this._methodHandler) {
-      this._methodHandler.finalResponse(this, r);
-      this._methodHandler.terminated(this);
-    }
-  });
-
-GenericUACCore.fun(
-  function handleProvisionalResponse(r) {
-    if (this._methodHandler)
-      this._methodHandler.provisionalResponse(this, r);
-    this._dump(r.statusCode);
-  });
-
-GenericUACCore.fun(
-  function handleSuccessResponse(r) {
-    this._dump(r.statusCode);
-    if (this._methodHandler) {
-      this._methodHandler.finalResponse(this, r);
-      this._methodHandler.terminated(this);
-    }
-  });
-
-GenericUACCore.fun(
-  function handleTimeout() {
-    // XXX notify UI
-    this._tryNextDestination();
-  });
-
-//----------------------------------------------------------------------
-
-GenericUACCore.fun(
-  function _tryNextDestination() {
-    if (++this._destinationIndex >= this._destinations.length) {
-      this._dump("no more destinations to try");
-      if (this._methodHandler)
-        this._methodHandler.terminated(this);
-      return;
-    }
-    this._sendRequest(this._destinations[this._destinationIndex]);
-  });
-
-GenericUACCore.fun(
-  function _sendRequest(dest) {
-    if (this._methodHandler)
-      this._methodHandler.calling(this, dest);
-    // Give the top Via a new branch id:
-    this._request.getTopViaHeader().setParameter("branch", BRANCH_COOKIE+generateUUID());
-    this._stack.transactionManager.executeNonInviteClientTransaction(this._request,
-                                                                     dest,
-                                                                     this);
-  });
-
 
 
 ////////////////////////////////////////////////////////////////////////

@@ -92,6 +92,7 @@ SipResolver.fun(
           }
         }
         resolveListener.resolveComplete(rv, rv.length);
+        resolveListener = null;
       }
     };
     

@@ -36,55 +36,25 @@
 
 #include "nsISupports.idl"
 
-interface zapISipTransportSink;
-interface zapISipMessage;
-interface zapISipConnection;
-interface zapISipEndpoint;
-interface zapISipRequest;
-interface zapISipResponse;
-interface nsIPropertyBag2;
+interface zapISipInviteRS;
+interface zapISipNonInviteRS;
 
-/**
- * API for the SIP transport layer (RFC 3261 section 18).
- *
- * Implemented by component '@mozilla.org/zap/siptransport;1'
- */
-[scriptable, uuid(246b5eed-332b-43b2-b80c-75479379e65f)]
-interface zapISipTransport : nsISupports
+[scriptable, uuid(f8d39381-c162-47aa-ab69-f8631d945f7e)]
+interface zapISipRequestHandler : nsISupports
 {
   /**
-   * Initialize this SIP transport object with the given configuration
-   * parameters.
+   * Handle a remote NON-INVITE request.
    *
-   * Valid configuration parameters:
-   *   unsigned short "port_base" : port at which to listen for
-   *                                tcp and udp SIP traffic. If
-   *                                the port is not available,
-   *                                the next available port
-   *                                greater than port_base will
-   *                                be used instead. Default: 5060
+   * Return 'true' if the request was handled, or 'false' if it should
+   * be passed down the handler-chain.
    */
-  void init(in nsIPropertyBag2 transportConfiguration);
-  
-  void shutdown();
+  boolean handleNonInviteRequest(in zapISipNonInviteRS requestServer);
 
-  void appendTransportSink(in zapISipTransportSink sink);
-
-  readonly attribute unsigned short listeningPort;
-  
-  zapISipConnection sendRequest(in zapISipRequest request,
-                                in zapISipEndpoint endpoint,
-                                in zapISipConnection connection);
-
-  zapISipConnection sendResponse(in zapISipResponse response,
-                                 in zapISipConnection connection);
-};
-
-
-[scriptable, uuid(de8739f6-9bc4-47c0-b200-bbbfef40c8c8)]
-interface zapISipTransportSink : nsISupports
-{
-  boolean handleSipMessage(in zapISipMessage message,
-                           in zapISipEndpoint endpoint,
-                           in zapISipConnection connection);
+  /**
+   * Handle a remote INVITE request.
+   *
+   * Return 'true' if the request was handled, or 'false' if it should
+   * be passed down the handler-chain.
+   */
+  boolean handleInviteRequest(in zapISipInviteRS requestServer);
 };

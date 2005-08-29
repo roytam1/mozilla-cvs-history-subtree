@@ -51,6 +51,24 @@ interface zapISipTransactionManager : nsISupports
 {
   void init(in zapISipTransport transport);
 
+  /**
+   * Timer value 'T1' in ms (see RFC3261 17.1.1.1)
+   * Default: 500
+   */
+  attribute unsigned long T1;
+
+  /**
+   * Timer value 'T2' in ms (see RFC3261 17.1.2.2)
+   * Default: 4000
+   */
+  attribute unsigned long T2;
+
+  /**
+   * Timer value 'T4' in ms (see RFC3261 17.1.2.2)
+   * Default: 5000
+   */
+  attribute unsigned long T4;
+  
   void executeInviteClientTransaction(in zapISipRequest request,
                                       in zapISipEndpoint endpoint,
                                       in zapISipClientTransactionUser tu);

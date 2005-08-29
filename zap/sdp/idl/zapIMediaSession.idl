@@ -36,13 +36,27 @@
 
 #include "nsISupports.idl"
 
+interface zapISdpSessionDescription;
+
 [scriptable, uuid(af83aea5-6268-47a7-97e8-5252e1cd379b)]
 interface zapIMediaSession : nsISupports
 {
-  void start(in ACString remoteHost, in unsigned short remoteRTPPort,
-             in unsigned short remoteRTCPPort,
-             in unsigned short remotePayloadFormat);
+  void init(in ACString originUsername,
+            in ACString originAddress,
+            in ACString connectionAddress);
+  
+  zapISdpSessionDescription generateSDPOffer();
+  
+  zapISdpSessionDescription processSDPOffer(in zapISdpSessionDescription offer);
 
+  void processSDPAnswer(in zapISdpSessionDescription answer);
+
+  /**
+   * startSession() must only be called after a successful call to
+   * processSDPOffer() or processSDPAnswer()
+   */
+  void startSession();
+  
   readonly attribute unsigned short localRTPPort;
   readonly attribute unsigned short localRTCPPort;
 

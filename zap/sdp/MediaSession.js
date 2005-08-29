@@ -53,20 +53,274 @@ var _doc_ = {};
 var PB = makePropertyBag;
 
 ////////////////////////////////////////////////////////////////////////
+// gSdpService: global sdp service instance
+
+// access the sdp service via xpcom (more overhead, all syntax
+// objects need to be xpcom-wrapped):
+//var gSdpService =
+//  Components.classes['@mozilla.org/zap/sdpservice;1']
+//      .getService(Components.interfaces.zapISdpService);
+
+// access the sdp service directly (less overhead, no type safety,
+// access to non-xpcom interface):
+var gSdpService = Components.classes['@mozilla.org/moz/jsloader;1'].getService(Components.interfaces.xpcIJSComponentLoader).importModule('rel:SdpService.js').theSdpService;
+
+
+////////////////////////////////////////////////////////////////////////
 // Class MediaSession
 // Maintains an SDP-negotiated media session
 
-var MediaSession = makeClass("MediaSession", SupportsImpl);
+var MediaSession = makeClass("MediaSession",
+                             SupportsImpl, Unwrappable, StateMachine);
 MediaSession.addInterfaces(Components.interfaces.zapIMediaSession);
-
-MediaSession.appendCtor(
-  function() {
-    this.mediaGraph = Components.classes["@mozilla.org/zap/mediagraph;1"].createInstance(Components.interfaces.zapIMediaGraph);
-    this.socketpair = this.mediaGraph.addNode("udp-socket-pair", null);
-  });    
 
 //----------------------------------------------------------------------
 // zapIMediaSession
+// INITIALIZED --> NEGOTIATED --> RUNNING --> TERMINATED
+
+//  void init(in ACString originUsername,
+//            in ACString originAddress,
+//            in ACString connectionAddress);
+MediaSession.fun(
+  function init(originUsername, originAddress, connectionAddress) {
+    this.originUsername = originUsername;
+    this.originAddress = originAddress;
+    this.connectionAddress = connectionAddress;
+
+    this.mediaGraph = Components.classes["@mozilla.org/zap/mediagraph;1"].createInstance(Components.interfaces.zapIMediaGraph);
+    this.socketpair = this.mediaGraph.addNode("udp-socket-pair", null);
+    this.changeState("INITIALIZED");
+  });
+
+//  zapISdpSessionDescription generateSDPOffer();
+MediaSession.fun(
+  function generateSDPOffer() {
+    var offer = gSdpService.createSessionDescription();
+    // o=
+    offer.username = this.originUsername;
+    offer.sessionID = "0";
+    offer.sessionVersion = "0";
+    offer.originAddressType = "IP4";
+    offer.originAddress = this.originAddress;
+    // s=
+    offer.sessionName = " ";
+    // c=
+    offer.connection = gSdpService.createConnection();
+    offer.connection.addressType = "IP4";
+    offer.connection.address = this.connectionAddress;
+    // t=
+    var time = gSdpService.createTime();
+    time.value = "0 0";
+    offer.setTimes([time], 1);
+    // m=
+    var mediaDescription = gSdpService.createMediaDescription();
+    mediaDescription.media = "audio";
+    mediaDescription.port = this.localRTPPort;
+    mediaDescription.portCount = "";
+    mediaDescription.protocol = "RTP/AVP";
+    var fmt = gSdpService.createMediaFormat();
+    fmt.format  ="97";
+    mediaDescription.setFormats([fmt], 1);
+    // a=
+    var attribs = [];
+    var attrib = gSdpService.createAttrib();
+    attrib.value = "rtpmap:97 speex/8000";
+    attribs.push(attrib);
+    // //  attrib.value = "rtpmap:97 iLBC/8000";
+// //  var attrib = wSipClient.sdpService.createAttrib();
+// //  attrib.value = "fmtp:97 mode=30";
+// //  attribs.push(attrib);
+    mediaDescription.setAttribs(attribs, attribs.length);
+
+    offer.setMediaDescriptions([mediaDescription], 1);
+
+    return offer;
+  });
+
+//  zapISdpSessionDescription processSDPOffer(in zapISdpSessionDescription offer);
+MediaSession.fun(
+  function processSDPOffer(offer) {
+    var remoteHost, remoteRTPPort, remoteRTCPPort, remotePayloadFormat;
+    
+    try {
+      var mediaDescriptions = offer.getMediaDescriptions({});
+      // XXX assuming that there is only one media description for the moment:
+        
+      remoteRTPPort = mediaDescriptions[0].port;
+      remoteRTCPPort = remoteRTPPort+1;
+      
+      var connection = mediaDescriptions[0].connection;
+      if (!connection)
+           connection = offer.connection;
+      remoteHost = connection.address;
+        
+// //         // find media description that contains an a=rtpmap:xx iLBC/8000
+// //         // attribute to determine payload type:
+// //         var attribs = mediaDescriptions[0].getAttribs({});
+// //         var match;
+// //         for (var i=0,l=attribs.length; i<l; ++i)
+// //           if ((match = /rtpmap:(\d+) iLBC\/8000/(attribs[i].value))) {
+// //             remotePayloadFormat = match[1];
+// //             break;
+// //           }
+        
+      // find media description that contains an a=rtpmap:xx speex/8000
+      // attribute to determine payload type:
+      var attribs = mediaDescriptions[0].getAttribs({});
+      var match;
+      for (var i=0,l=attribs.length; i<l; ++i)
+        if ((match = /rtpmap:(\d+) speex\/8000/(attribs[i].value))) {
+          remotePayloadFormat = match[1];
+          break;
+        }
+    }
+    catch(e) {
+      this._verboseError("Session negotiation failed for offer ["+offer.serialize()+"]: "+e);
+    }
+
+    // The offer is acceptable.
+    // Set session parameters:
+    this.remoteHost = remoteHost;
+    this.remoteRTPPort = remoteRTPPort;
+    this.remoteRTCPPort = remoteRTCPPort;
+    this.remotePayloadFormat = remotePayloadFormat;
+
+    // change state:
+    this.changeState("NEGOTIATED");
+        
+    // Generate answer:
+    // XXX do this properly.
+    var answer = gSdpService.createSessionDescription();
+    // o=
+    answer.username = this.originUsername;
+    answer.sessionID = "0";
+    answer.sessionVersion = "0";
+    answer.originAddressType = "IP4";
+    answer.originAddress = this.originAddress;
+    // s=
+    answer.sessionName = " ";
+    // c=
+    answer.connection = gSdpService.createConnection();
+    answer.connection.addressType = "IP4";
+    answer.connection.address = this.connectionAddress;
+    // t=
+    var time = gSdpService.createTime();
+    time.value = "0 0";
+    answer.setTimes([time], 1);
+    // m=
+    var mediaDescription = gSdpService.createMediaDescription();
+    mediaDescription.media = "audio";
+    mediaDescription.port = this.localRTPPort;
+    mediaDescription.portCount = "";
+    mediaDescription.protocol = "RTP/AVP";
+    var fmt = gSdpService.createMediaFormat();
+    fmt.format = "97";
+    mediaDescription.setFormats([fmt], 1);
+    
+    // a=
+    var attribs = [];
+    var attrib = gSdpService.createAttrib();
+//    attrib.value = "rtpmap:97 iLBC/8000";
+    attrib.value = "rtpmap:97 speex/8000";
+    attribs.push(attrib);
+//     var attrib = wSipClient.sdpService.createAttrib();
+//     attrib.value = "fmtp:97 mode=30";
+//     attribs.push(attrib);
+    
+    mediaDescription.setAttribs(attribs, attribs.length);
+    
+    answer.setMediaDescriptions([mediaDescription], 1);
+
+    return answer;
+  });
+
+//  void processSDPAnswer(in zapISdpSessionDescription answer);
+MediaSession.fun(
+  function processSDPAnswer(answer) {
+    var remoteHost, remoteRTPPort, remoteRTCPPort, remotePayloadFormat;
+    
+    try {
+      var mediaDescriptions = answer.getMediaDescriptions({});
+      // XXX assuming that there is only one media description for the moment:
+        
+      remoteRTPPort = mediaDescriptions[0].port;
+      remoteRTCPPort = remoteRTPPort+1;
+      
+      var connection = mediaDescriptions[0].connection;
+      if (!connection)
+           connection = answer.connection;
+      remoteHost = connection.address;
+        
+// //         // find media description that contains an a=rtpmap:xx iLBC/8000
+// //         // attribute to determine payload type:
+// //         var attribs = mediaDescriptions[0].getAttribs({});
+// //         var match;
+// //         for (var i=0,l=attribs.length; i<l; ++i)
+// //           if ((match = /rtpmap:(\d+) iLBC\/8000/(attribs[i].value))) {
+// //             remotePayloadFormat = match[1];
+// //             break;
+// //           }
+        
+      // find media description that contains an a=rtpmap:xx speex/8000
+      // attribute to determine payload type:
+      var attribs = mediaDescriptions[0].getAttribs({});
+      var match;
+      for (var i=0,l=attribs.length; i<l; ++i)
+        if ((match = /rtpmap:(\d+) speex\/8000/(attribs[i].value))) {
+          remotePayloadFormat = match[1];
+          break;
+        }
+    }
+    catch(e) {
+      this._verboseError("Session negotiation failed for answer ["+answer.serialize()+"]: "+e);
+    }
+
+    // The answer is acceptable.
+    // Set session parameters:
+    this.remoteHost = remoteHost;
+    this.remoteRTPPort = remoteRTPPort;
+    this.remoteRTCPPort = remoteRTCPPort;
+    this.remotePayloadFormat = remotePayloadFormat;
+
+    // change state:
+    this.changeState("NEGOTIATED");
+  });
+
+//  void startSession();
+MediaSession.statefun(
+  "NEGOTIATED",
+  function startSession() {
+    this.start(this.remoteHost, this.remoteRTPPort,
+               this.remoteRTCPPort, this.remotePayloadFormat);
+    this.changeState("RUNNING");
+  });
+
+//  readonly attribute unsigned short localRTPPort;
+MediaSession.getter(
+  "localRTPPort",
+  function getLocalRTPPort() {
+    var sp = this.mediaGraph.getNode(this.socketpair, Components.interfaces.zapIUDPSocketPair, true);
+    return sp.portA;
+  });
+
+//  readonly attribute unsigned short localRTCPPort;
+MediaSession.getter(
+  "localRTCPPort",
+  function getLocalRTCPPort() {
+    var sp = this.mediaGraph.getNode(this.socketpair, Components.interfaces.zapIUDPSocketPair, true);
+    return sp.portB;
+  });
+
+
+//  void shutdown();
+MediaSession.fun(
+  function shutdown() {
+    this.mediaGraph.shutdown();
+    this.changeState("TERMINATED");
+  });
+
+//----------------------------------------------------------------------
+// Implementation helpers:
 
 MediaSession.fun(
   function start(remoteHost, remoteRTPPort,
@@ -75,8 +329,8 @@ MediaSession.fun(
     this.aout = this.mediaGraph.addNode("audioout", null);
     this.enc = this.mediaGraph.addNode("speex-encoder", null);
     this.dec = this.mediaGraph.addNode("speex-decoder", null);
-    this.buf1 = this.mediaGraph.addNode("buffer", PB({$prefill_size:2, $max_size:10}));
-    this.buf2 = this.mediaGraph.addNode("buffer", PB({$prefill_size:2, $max_size:10}));
+//    this.buf1 = this.mediaGraph.addNode("buffer", PB({$prefill_size:1, $max_size:10}));
+    this.buf2 = this.mediaGraph.addNode("buffer", PB({$prefill_size:4, $max_size:30}));
     this.speex2rtp = this.mediaGraph.addNode("speex-rtp-packetizer",
                                              PB({$payload_type:remotePayloadFormat}));
     this.rtp2speex = this.mediaGraph.addNode("speex-rtp-depacketizer", null);
@@ -90,8 +344,8 @@ MediaSession.fun(
     this.C = this.mediaGraph.connect(this.speex2rtp, null,
                                      this.rtpsession, PB({$name:"local-rtp"}));
     this.D = this.mediaGraph.connect(this.rtpsession, PB({$name:"remote-rtp"}),
-                                     this.buf1, null);
-    this.E = this.mediaGraph.connect(this.buf1, null,
+//                                     this.buf1, null);
+//    this.E = this.mediaGraph.connect(this.buf1, null,
                                      this.socketpair, PB({$name:"socket-a"}));
     // decoder pipe:
     this.F = this.mediaGraph.connect(this.socketpair, PB({$name:"socket-a"}),
@@ -104,25 +358,6 @@ MediaSession.fun(
     this.J = this.mediaGraph.connect(this.dec, null, this.aout, null);
   });
 
-MediaSession.getter(
-  "localRTPPort",
-  function getLocalRTPPort() {
-    var sp = this.mediaGraph.getNode(this.socketpair, Components.interfaces.zapIUDPSocketPair, true);
-    return sp.portA;
-  });
-
-MediaSession.getter(
-  "localRTCPPort",
-  function getLocalRTCPPort() {
-    var sp = this.mediaGraph.getNode(this.socketpair, Components.interfaces.zapIUDPSocketPair, true);
-    return sp.portB;
-  });
-
-
-MediaSession.fun(
-  function shutdown() {
-    this.mediaGraph.shutdown();
-  });
 
 ////////////////////////////////////////////////////////////////////////
 // Module definition

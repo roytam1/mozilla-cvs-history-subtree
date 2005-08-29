@@ -21,6 +21,8 @@ include $(topsrcdir)/config/rules.mk
 
 JS_CODELIB_RESOURCES = \
 	SipUtils.js \
+	SipUARequestCore.js \
+	SipDialog.js \
 	$(NULL)
 
 libs::  $(JS_CODELIB_RESOURCES)

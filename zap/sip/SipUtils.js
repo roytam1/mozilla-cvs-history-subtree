@@ -36,6 +36,11 @@
  * ***** END LICENSE BLOCK ***** */
 
 
+/**
+ * SipUtils contains common utility code shared by all SIP modules
+ * apart from SipSyntaxFactory.
+ */
+
 debug("*** loading SipUtils\n");
 
 Components.utils.importModule("resource:/jscodelib/zap/StringUtils.js");
@@ -47,7 +52,13 @@ EXPORTED_SYMBOLS = ["BRANCH_COOKIE",
                     "gDNSService",
                     "gLoggingService",
                     "generateTag",
-                    "generateUUID"];
+                    "generateUUID",
+                    "constructClientTransactionKey",
+                    "constructServerTransactionKey",
+                    "constructClientDialogID",
+                    "constructServerDialogID",
+                    "makeOneShotTimer",
+                    "resetOneShotTimer"];
 
 // name our global object:
 function toString() { return "[SipUtils.js]"; }
@@ -165,4 +176,81 @@ function generateUUID() {
     padleft(clock_seq_low_8.toString(16), "0", 2) + "-" +
     padleft(node1_16.toString(16), "0", 4) +
     padleft(node2_32.toString(16), "0", 8);
+}
+
+////////////////////////////////////////////////////////////////////////
+// Transaction key construction:
+
+function constructClientTransactionKey(message) {
+  // client transactions are indexed by branch+";"+CSeq-method,
+  // so that we can match them in the client pool according to
+  // RFC3261 Section 17.1.3:
+  var branch = message.getTopViaHeader().getParameter("branch");
+  var method =
+    message.getSingleHeader("CSeq").QueryInterface(Components.interfaces.zapISipCSeqHeader).method;
+  return branch+";"+method;
+}
+
+function constructServerTransactionKey(request) {
+  // indexed according to RFC3261 17.2.3 by
+  // branch+";"+sent-by-host+":"+sent-by-port+";"+method. 
+  // XXX implement RFC2543 compatibility as described in section 17.2.3
+  var topVia = request.getTopViaHeader();
+  var branch = topVia.getParameter("branch");
+  var host = topVia.host;
+  var port = topVia.port;
+  if (!port)
+    port = 5060;
+  var method = request.method;
+  if (method == "ACK")
+    method = "INVITE";
+  return branch+";"+host+":"+port+";"+method;
+}
+
+////////////////////////////////////////////////////////////////////////
+// Dialog id construction:
+
+// Construct a dialog ID for a UAC (rfc3261 12)
+function constructClientDialogID(message) {
+  var callID = message.getCallIDHeader().callID;
+  var localtag = message.getFromHeader().getParameter("tag");
+  var remotetag = message.getToHeader().getParameter("tag");
+  return callID+";"+localtag+";"+remotetag;
+}
+
+// Construct a dialog ID for a UAS (rfc3261 12)
+function constructServerDialogID(message) {
+  var callID = message.getCallIDHeader().callID;
+  var localtag = message.getToHeader().getParameter("tag");
+  var remotetag = message.getFromHeader().getParameter("tag");
+  return callID+";"+localtag+";"+remotetag;
+}
+
+
+////////////////////////////////////////////////////////////////////////
+// Timer utilities:
+
+var CLASS_TIMER = "@mozilla.org/timer;1";
+
+/** Create a new one-shot timer
+ *
+ * 'callback' must implement nsITimerCallback
+ * 'duration' is the time in ms after which the timer fires
+ *
+ * The timer can be cancelled with timer.cancel() and reset with a
+ * different duration using resetOneShotTimer(.).
+ */
+function makeOneShotTimer(callback, duration) {
+  // We need to use 'this.Components' to ensure that xpconnect wraps
+  // the timer for the caller's global object (assuming that the
+  // callback has the same global object). See also the comments in
+  // ClassUtils.js, function makeClass().
+  var timer = this.Components.classes[CLASS_TIMER].createInstance(this.Components.interfaces.nsITimer);
+  timer.initWithCallback(callback, duration, this.Components.interfaces.nsITimer);
+  return timer;
+}
+
+function resetOneShotTimer(timer, duration) {
+  timer.initWithCallback(timer.callback, duration, this.Components.interfaces.nsITimer);
+  return timer;
 }

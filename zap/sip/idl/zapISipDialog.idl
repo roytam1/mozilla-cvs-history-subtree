@@ -36,15 +36,105 @@
 
 #include "nsISupports.idl"
 
-interface zapISipDialogHandler;
+interface zapISipDialogListener;
+interface zapISipRequestHandler;
+interface zapISipNonInviteRC;
+interface zapISipInviteRC;
+interface zapISipURI;
 
-[scriptable, uuid(06245cfc-eeb8-49ce-8dc7-5f82781b99c8)]
+[scriptable, uuid(a3995457-2090-490b-a9dc-b73dfbcac3dd)]
 interface zapISipDialog : nsISupports
 {
-  void setDialogHandler(in zapISipDialogHandler handler);
-  void bye();
+  attribute zapISipDialogListener listener;
+  attribute zapISipRequestHandler requestHandler;
+
+  zapISipNonInviteRC createNonInviteRequestClient();
+  zapISipInviteRC createInviteRequestClient();
+
+  /**
+   * Call-ID + ";" + localTag + ";" + remoteTag
+   */
+  readonly attribute ACString dialogID;
+
+  /**
+   * Call-ID
+   */
+  readonly attribute ACString callID;
   
-  const unsigned short STATE_EARLY = 1;
-  const unsigned short STATE_CONFIRMED = 2;
-  const unsigned short STATE_TERMINATED = 3;
+  /**
+   * For dialogs constructed at UAS end, the local tag equals the To
+   * tag of response that established the dialog.
+   *
+   * For dialog constructed at UAC end, the local tag equals the From
+   * tag of request that led to establishing of the dialog.
+   */
+  readonly attribute ACString localTag;
+
+  /**
+   * For dialogs constructed at UAS end, the remote tag equals the From
+   * tag of request that led to establishing of the dialog.
+   *
+   * For dialogs constructed at UAC end, the remote tag equals the To tag
+   * of response that established dialog.
+   */
+  readonly attribute ACString remoteTag;
+
+  /**
+   * Local sequence number for sequencing requests sent from the local
+   * side of this dialog.
+   *
+   * The special value 2^32-1 (UNINITIALIZED_SEQUENCE_NUMBER) indicates
+   * that the sequence number is not initialized yet (because there
+   * has not been a request inside the dialog from our end).
+   */
+  readonly attribute unsigned long localSequenceNumber;
+  
+  /**
+   * Remote sequence number for sequencing requests sent from the
+   * remote side of this dialog.
+   *
+   * The special value 2^32-1 (UNINITIALIZED_SEQUENCE_NUMBER)
+   * indicates that the sequence number is not initialized yet
+   * (because there has not been a request inside the dialog from the
+   * remote end).
+   */
+  readonly attribute unsigned long remoteSequenceNumber;
+
+  /**
+   * Local URI
+   */
+  readonly attribute zapISipURI localURI;
+  
+  /**
+   * Remote URI
+   */
+  readonly attribute zapISipURI remoteURI;
+
+  /**
+   * Remote target (taken from Contact field of initial request/response)
+   */
+  readonly attribute zapISipURI remoteTarget;
+
+  /**
+   * Secure flag
+   */
+  readonly attribute boolean secure;
+  
+  /**
+   * Route set (taken from Record-Route)
+   */
+  void getRouteSet(out unsigned long count,
+                   [array, retval, size_is(count)] out zapISipURI routeset);
+  
+  /**
+   * "EARLY", "CONFIRMED" or "TERMINATED"
+   */
+  readonly attribute ACString dialogState;
+
+  /**
+   * 2^32-1 constant indicating an uninitialized sequence number.
+   * (By virtue of initial sequence number being < 2^31, we can
+   * assume that 2^32-1 will never be reached within a dialog)
+   */
+  const unsigned long UNINITIALIZED_SEQUENCE_NUMBER = 0xFFFFFFFF;
 };

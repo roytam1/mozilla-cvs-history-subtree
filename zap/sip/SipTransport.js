@@ -501,14 +501,51 @@ SipTransport.addInterfaces(Components.interfaces.zapISipTransceiverSink);
 SipTransport.appendCtor(
   function ctor() {
     this._sinks = [];
-    this._transceiver = SipTransceiver.instantiate();
-    this._transceiver.setTransceiverSink(this);
-    this._transceiver.openListeningSocket("udp", 5060);
-    this._transceiver.openListeningSocket("tcp", 5060);
   });
 
 //----------------------------------------------------------------------
 // zapISipTransport
+
+SipTransport.fun(
+  function init(config) {
+    this._assert(!this._transceiver, "already initialized");
+    this._transceiver = SipTransceiver.instantiate();
+    this._transceiver.setTransceiverSink(this);
+
+    var port = 5060;
+    if (config) {
+      try {
+        port = config.getProperty("port_base");
+      }catch(e){}
+    }
+
+    // find the first port >= listeningPort that is available for both
+    // udp and tcp:
+    while (port < 65536) {
+      try {
+        this._transceiver.openListeningSocket("udp", port);
+      }
+      catch(e) {
+        ++port;
+        continue;
+      }
+
+      try {
+        this._transceiver.openListeningSocket("tcp", port);
+      }
+      catch(e) {
+        this._transceiver.closeListeningSocket("udp", port);
+        ++port;
+        continue;
+      }
+      // success:
+      this.listeningPort = port;
+      return;
+    }
+    // failure:
+    this._error("SipTransport: failure obtaining listening socket.");
+  });
+
 
 SipTransport.fun(
   function shutdown() {
@@ -520,6 +557,8 @@ SipTransport.fun(
     this._sinks.push(sink);
   });
 
+SipTransport.obj("listeningPort", 0);
+
 SipTransport.fun(
   "Send a request (RFC3261 Section 18.1.1)",
   function sendRequest(request, endpoint, connection) {
@@ -528,13 +567,11 @@ SipTransport.fun(
     // Insert IP address or host name and port into 'sent-by' of top
     // Via (RFC3261 18.1.1)
     var topVia = request.getTopViaHeader();
-    // XXX for now don't use the fqdn, so that we can do simple manual
-    // NAT traversal. Use the request from address instead:
+    topVia.host = this._getMyFQDN();
+    topVia.port = this.listeningPort;
     
-    //topVia.host = this._getMyFQDN();
-    topVia.host = request.getFromHeader().address.uri.QueryInterface(Components.interfaces.zapISipSIPURI).host;
-      
-    // XXX add port if not default. distinguish between sip/sips, etc. etc.
+    // XXX distinguish between sip/sips, etc. etc.
+    
     
     // Add transport portion of 'sent-protocol':
     topVia.transport = endpoint.transport.toUpperCase();
@@ -555,9 +592,7 @@ SipTransport.fun(
     var transport = topVia.transport.toLowerCase();
 
     // Check for 'received' parameter first:
-    // XXX don't do this for now, so that we can sort-of negotiate NATs
-    // var address = topVia.getParameter("received");
-    var address = null;
+    var address = topVia.getParameter("received");
     if (!address)
       address = topVia.host;
 
@@ -595,9 +630,6 @@ SipTransport.fun(
       }
     }
     else {
-      // XXX don't do this for now, so that we can have simple manual
-      // NAT traversal
-      
       // RFC3261 18.1.2:
       // When a response is received, the client transport examines
       // the top Via header field value.  If the value of the
@@ -605,14 +637,15 @@ SipTransport.fun(
       // correspond to a value that the client transport is configured
       // to insert into requests, the response MUST be silently
       // discarded.
-      // var topVia = message.getTopViaHeader();
-//       if (topVia.host != this._getMyFQDN() ||
-//           topVia.port) {
-//         this._dump("Response from "+endpoint.address+":"+endpoint.port+
-//                    " to request from "+topVia.host+":"+topVia.port+
-//                    " discarded!");
-//         return;
-//      }
+       var topVia = message.getTopViaHeader();
+       var ViaPort = topVia.port ? topVia.port : 5060;
+       if (topVia.host != this._getMyFQDN() ||
+           ViaPort != this.listeningPort ) {
+         this._dump("Response from "+endpoint.address+":"+endpoint.port+
+                    " to request from "+topVia.host+":"+topVia.port+
+                    " discarded!");
+         return;
+      }
     }
 
     log("Message received via "+endpoint.transport+
