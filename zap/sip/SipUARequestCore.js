@@ -447,14 +447,16 @@ SipInviteRC.fun(
     else if (this.dialog.dialogState == "EARLY") {
       dialog.confirm(response);
     }
-
-    if (this.listener)
-      this.listener.notifyResponseReceived(this, dialog, response);
     
     // We need to acknowledge the response.
     // Check if we already have an ACK that we can send:
     var ack = hashget(this.acks, dialog.dialogID);
     if (!ack) {
+      // We only inform the listener of the response when there is no
+      // ack yet to filter out 2xx retransmissions:
+      if (this.listener)
+        this.listener.notifyResponseReceived(this, dialog, response);
+      
       // create an ACK template (RFC3261 13.2.2.4):
       var ackTemplate = dialog.formulateGenericRequest("ACK");
       // copy sequence number from INVITE:
