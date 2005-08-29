@@ -264,7 +264,11 @@ SipUAStack.getter(
 SipUAStack.getter(
   "hostAddress",
   function get_hostAddress() {
-    return gDNSService.resolve(gDNSService.myHostName,0).getNextAddrAsString();
+    try {
+      return gDNSService.resolve(gDNSService.myHostName,0).getNextAddrAsString();
+    } catch(e) {
+      return "127.0.0.1";
+    }
   });
 
 //  readonly attribute unsigned short listeningPort;
