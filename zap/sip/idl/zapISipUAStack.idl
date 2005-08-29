@@ -50,16 +50,44 @@ interface zapISipRequest;
 interface zapISipMessage;
 
 /**
- * User Agent SIP stack interface (RFC3261).
+ * \mainpage
  *
- * Implemented by component '@mozilla.org/zap/sipstack;1'
+ * \section ZAP SIP module
+ *
+ * The main entry point into the ZAP SIP module is the zapISipUAStack interface.
+ */
+
+/**
+ * User Agent SIP stack interface.
+ *
+ * Implemented by component <b>'\@mozilla.org/zap/sipstack;1'</b>.
  *
  * The User Agent SIP stack is the primary entry-point into the ZAP
  * SIP module. In conjunction with a user application component
  * implementing zapISipRequestHandler, it constitutes the UAC and UAS
- * components described in RFC3261. For most of the time the User
- * Agent stack handles all interfacing to the lower SIP protocol
- * layers.
+ * components described in RFC3261.
+ *
+ * For most of the time the User Agent stack handles all interfacing
+ * to the lower SIP protocol layers. It manages dialogs, provides
+ * stateful request servers/clients with automatic ACK/response
+ * retransmission logic and automatically handles certain error
+ * conditions (e.g. malformed requests, misdirected messages,
+ * concurrent invites).
+ *
+ * The user application handles calls through zapISipRequestHandler
+ * callback interfaces. These can be set on either the zapISipUAStack
+ * or on individual zapISipDialogs. Some requests (e.g. BYE) can
+ * sensibly be handled by the UA stack itself. See
+ * zapISipUAStack::requestHandler for more information about the
+ * routing of requests.
+ *
+ * The user application initiates new calls through stateful 'request
+ * clients' obtained by calling
+ * zapISipUAStack::createNonInviteRequestClient(),
+ * zapISipUAStack::createInviteRequestClient(),
+ * zapISipDialog::createNonInviteRequestClient() and
+ * zapISipDialog::createInviteRequestClient().
+ *
  */
 [scriptable, uuid(bc07e2a1-b759-439f-b8e0-30e8e84c21bf)]
 interface zapISipUAStack : nsISupports
@@ -69,29 +97,34 @@ interface zapISipUAStack : nsISupports
    * configuration parameters.
    *
    * Valid configuration parameters:
-   *   unsigned short "port_base" : port at which to listen for
-   *                                tcp and udp SIP traffic. If
-   *                                the port is not available,
-   *                                the next available port
-   *                                greater than port_base will
-   *                                be used instead. Default: 5060
-   *   ACString "methods"         : comma-separated list of SIP
+   * - unsigned short <b>"port_base"</b> : port at which to listen for
+   *                                       tcp and udp SIP traffic. If
+   *                                       the port is not available,
+   *                                       the next available port
+   *                                       greater than port_base will
+   *                                       be used instead. Default: 5060
+   * - ACString <b>"methods"</b>  : comma-separated list of SIP
    *                                methods understood by the UA.
    *                                Will be used to construct
    *                                Allow headers and influences
    *                                error responses returned for
    *                                requests handled by the UAStack.
    *                                Default: "OPTIONS"
-   *   ACString "extensions"      : comma-separated list of extensions
-   *                                (option tags) understood by the UA.
-   *                                Will be used to filter incoming
-   *                                requests with Require headers and
-   *                                to construct Supported headers.
-   *                                Default: ""
+   * - ACString <b>"extensions"</b> : comma-separated list of extensions
+   *                                  (option tags) understood by the UA.
+   *                                  Will be used to filter incoming
+   *                                  requests with Require headers and
+   *                                  to construct Supported headers.
+   *                                  Default: ""
    */
   void init(in zapISipRequestHandler handler,
             in nsIPropertyBag2 stackConfiguration);
-  
+
+  /**
+   * Shutdown the stack, releasing all network sockets.  It is the
+   * user application's responsibility to terminate any dialogs or
+   * ongoing transactions before shutting down the stack.
+   */
   void shutdown();
 
   /**

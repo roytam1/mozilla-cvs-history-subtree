@@ -44,7 +44,7 @@ interface zapISipListeningSocket;
 /**
  * Part of the SIP transport layer (RFC 3261 section 18).
  *
- * Implemented by component '@mozilla.org/zap/siptransceiver;1'
+ * Implemented by component <b>'\@mozilla.org/zap/siptransceiver;1'</b>
  */
 [scriptable, uuid(ddd9ae8a-a25d-4e83-b611-9754f2623804)]
 interface zapISipTransceiver : nsISupports

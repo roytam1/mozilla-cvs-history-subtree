@@ -44,7 +44,7 @@ interface zapISipClientTransactionUser;
 interface zapISipServerTransactionUser;
 interface zapISipServerTransaction;
 /*
- * Implemented by component '@mozilla.org/zap/siptransactmgr;1'
+ * Implemented by component <b>'\@mozilla.org/zap/siptransactmgr;1'</b>
  */
 [scriptable, uuid(5767d856-dca2-4822-ac7d-ecd3cda5ff45)]
 interface zapISipTransactionManager : nsISupports

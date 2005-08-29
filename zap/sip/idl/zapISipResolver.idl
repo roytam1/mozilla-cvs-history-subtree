@@ -42,7 +42,7 @@ interface zapISipResolveListener;
 /**
  * SIP location resolver implementing the procedures of RFC3263
  *
- * Implemented by component '@mozilla.org/zap/sipresolver;1'
+ * Implemented by component <b>'\@mozilla.org/zap/sipresolver;1'</b>
  */
 [scriptable, uuid(b593a9cd-8cf5-4abf-9591-8576a411e8cf)]
 interface zapISipResolver : nsISupports

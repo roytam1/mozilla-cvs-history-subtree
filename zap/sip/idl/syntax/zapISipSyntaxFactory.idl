@@ -58,27 +58,27 @@ interface zapISipAllowHeader;
  * An API for constructing syntacically correct SIP messages.
  * (see RFC 3261)
  *
- * Implemented by component '@mozilla.org/zap/sipsyntaxfactory;1'
+ * Implemented by component <b>'\@mozilla.org/zap/sipsyntaxfactory;1'</b>
  */
 
 [scriptable, uuid(65c2a40b-b9c2-43ed-91f6-03d8276bdd3d)]
 interface zapISipSyntaxFactory : nsISupports
 {
   /**
-   * Deserialize an rfc3261 'request' or 'response' into a zapISipRequest
+   * Deserialize an RFC3261 'request' or 'response' into a zapISipRequest
    * or zapISipResponse object.
    */
   zapISipMessage deserializeMessage(in ACString octets);
 
   /**
-   * Deserialize an rfc3261 'SIP-URI', 'SIPS-URI' or 'absoluteURI'.
+   * Deserialize an RFC3261 'SIP-URI', 'SIPS-URI' or 'absoluteURI'.
    * Currently only 'SIP-URI' and 'SIPS-URI' parsing is
    * implemented. The returned object will implement zapISipSIPURI.
    */
   zapISipURI deserializeURI(in ACString octets);
 
   /**
-   * Deserialize an rfc3261 'name-addr' or 'addr-spec' into a
+   * Deserialize an RFC3261 'name-addr' or 'addr-spec' into a
    * zapISipAddress object.
    */
   zapISipAddress deserializeAddress(in ACString octets);
