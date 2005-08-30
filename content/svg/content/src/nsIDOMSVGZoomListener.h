@@ -12,20 +12,18 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the Mozilla SVG project.
+ * The Original Code is Mozilla SVG Project code.
  *
- * The Initial Developer of the Original Code is
- * Crocodile Clips Ltd..
- * Portions created by the Initial Developer are Copyright (C) 2001
+ * The Initial Developer of the Original Code is Jonathan Watt.
+ * Portions created by the Initial Developer are Copyright (C) 2005
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
- *   Jonathan Watt <jonathan.watt@strath.ac.uk>
+ *   Jonathan Watt <jonathan.watt@strath.ac.uk> (original author)
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either of the GNU General Public License Version 2 or later (the "GPL"),
- * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
@@ -37,15 +35,24 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __NS_SVGPOINT_H__
-#define __NS_SVGPOINT_H__
+#ifndef __NS_SVGZOOMEVENT_H__
+#define __NS_SVGZOOMEVENT_H__
 
-#include "nsIDOMSVGPoint.h"
+#include "nsIDOMEventListener.h"
 
-nsresult
-NS_NewSVGPoint(nsIDOMSVGPoint** result, float x = 0.0f, float y = 0.0f);
+class nsIDOMEvent;
 
-nsresult
-NS_NewSVGReadonlyPoint(nsIDOMSVGPoint** result, float x = 0.0f, float y = 0.0f);
+/*
+ * SVG zoom event listener interface.
+ */
 
-#endif //__NS_SVGPOINT_H__
+#define NS_IDOMSVGZOOMLISTENER_IID \
+{ 0xccbeadab, 0xb3fe, 0x42f7, { 0x90, 0xed, 0xd6, 0xe4, 0x0f, 0x71, 0x2c, 0x29 } }
+
+class nsIDOMSVGZoomListener : public nsIDOMEventListener {
+ public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IDOMSVGZOOMLISTENER_IID)
+  NS_IMETHOD Zoom (nsIDOMEvent* aEvent) = 0;
+};
+
+#endif // __NS_SVGZOOMEVENT_H__

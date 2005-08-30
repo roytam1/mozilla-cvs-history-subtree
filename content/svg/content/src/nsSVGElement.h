@@ -157,6 +157,7 @@ protected:
                              PRInt32 aNamespaceID = kNameSpaceID_None);
   
   static PRBool IsGraphicElementEventName(nsIAtom* aName);
+  static nsIAtom* GetEventNameForAttr(nsIAtom* aAttr);
 
   nsCOMPtr<nsICSSStyleRule> mContentStyleRule;
   nsAttrAndChildArray mMappedAttributes;
