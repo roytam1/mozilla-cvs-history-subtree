@@ -191,7 +191,9 @@ function UpdateBackForwardButtons()
 function UpdateBookmarkAllTabsMenuitem()
 {
   var tabbrowser = getBrowser();
-  var numTabs = tabbrowser.tabContainer.childNodes.length;
+  var numTabs = 0;
+  if (tabbrowser)
+    numTabs = tabbrowser.tabContainer.childNodes.length;
 
   var bookmarkAllCommand = document.getElementById("Browser:BookmarkAllTabs");
   if (numTabs > 1)
@@ -208,6 +210,8 @@ function addBookmarkMenuitems()
   bookmarkAllTabsItem.setAttribute("label", gNavigatorBundle.getString("bookmarkAllTabs_label"));
   bookmarkAllTabsItem.setAttribute("accesskey", gNavigatorBundle.getString("bookmarkAllTabs_accesskey"));
   bookmarkAllTabsItem.setAttribute("command", "Browser:BookmarkAllTabs");
+  // set up the bookmarkAllTabs menu item correctly when the menu popup is shown
+  tabMenu.addEventListener("popupshowing", UpdateBookmarkAllTabsMenuitem, false);
   var bookmarkCurTabItem = document.createElement("menuitem");
   bookmarkCurTabItem.setAttribute("label", gNavigatorBundle.getString("bookmarkCurTab_label"));
   bookmarkCurTabItem.setAttribute("accesskey", gNavigatorBundle.getString("bookmarkCurTab_accesskey"));
