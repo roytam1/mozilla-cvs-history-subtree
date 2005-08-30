@@ -256,11 +256,6 @@ ifdef MOZ_XUL_APP
 tier_50_dirs	+= toolkit
 endif
 
-ifdef MOZ_PHOENIX
-#XXXBlake this shell path is a temp hack; toolkit shouldn't depend on browser
-tier_50_dirs    += browser/components/shell/public
-endif
-
 ifdef MOZ_XPINSTALL
 tier_50_dirs     +=  xpinstall
 endif
@@ -338,9 +333,7 @@ endif
 
 # Java Embedding Plugin
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
-ifneq (,$(filter macbrowser browser,$(MOZ_BUILD_APP)))
 tier_99_dirs += plugin/oji/JEP
-endif
 endif
 
 ifneq (,$(filter browser suite,$(MOZ_BUILD_APP)))
@@ -384,7 +377,7 @@ tier_99_dirs	+= suite
 endif
 
 ifdef MINIMO
-tier_99_dirs	+= embedding/minimo minimo
+tier_99_dirs	+= minimo embedding/minimo
 endif
 
 ifdef MOZ_XUL_APP

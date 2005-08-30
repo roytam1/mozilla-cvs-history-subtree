@@ -34,6 +34,8 @@ dnl               Howard Chu <hyc@symas.com>
 dnl                 MSYS support
 dnl               Mark Mentovai <mark@moxienet.com>:
 dnl                 Mac OS X 10.4 support
+dnl               Giorgio Maone <g.maone@informaction.com>
+dnl                 MSVC l10n compatible version check
 dnl
 dnl Process this file with autoconf to produce a configure script.
 dnl ========================================================
@@ -94,7 +96,8 @@ PERL_VERSION=5.004
 QT_VERSION=3.2.0
 QT_VERSION_NUM=320
 LIBART_VERSION=2.3.4
-CAIRO_VERSION=0.3.0
+CAIRO_VERSION=0.9.1
+GLITZ_VERSION=0.4.0
 GTK2_VERSION=1.3.7
 MAKE_VERSION=3.78
 WINDRES_VERSION=2.14.90
@@ -356,14 +359,16 @@ case "$target" in
             [ unsigned *test = new unsigned(42); ],,
             AC_MSG_ERROR([\$(CXX) test failed.  You must have MS VC++ in your path to build.]) )
         AC_LANG_RESTORE
-
+        
+        _MSVC_VER_FILTER='s|.* \([[0-9]][[0-9]]*\.[[0-9]][[0-9]]*\.[[0-9]][[0-9]]*\).*|\1|p'
+        
         # Determine compiler version
-        CC_VERSION=`"${CC}" -v 2>&1 | grep ' [[0-9]]\+\.[[0-9]]\+\.[[0-9]]' | sed -e 's|.* \([[0-9]]\+\.[[0-9]]\+\.[[0-9]]\+\).*|\1|'`
+        CC_VERSION=`"${CC}" -v 2>&1 | sed -ne "$_MSVC_VER_FILTER"`
         _CC_MAJOR_VERSION=`echo ${CC_VERSION} | $AWK -F\. '{ print $1 }'`
         _CC_MINOR_VERSION=`echo ${CC_VERSION} | $AWK -F\. '{ print $2 }'`
         _MSC_VER=${_CC_MAJOR_VERSION}${_CC_MINOR_VERSION}
 
-        CXX_VERSION=`"${CXX}" -v 2>&1 | grep ' [[0-9]]\+\.[[0-9]]\+\.[[0-9]]' | sed -e 's|.* \([[0-9]]\+\.[[0-9]]\+\.[[0-9]]\+\).*|\1|'`
+        CXX_VERSION=`"${CXX}" -v 2>&1 | sed -ne "$_MSVC_VER_FILTER"`
         _CXX_MAJOR_VERSION=`echo ${CXX_VERSION} | $AWK -F\. '{ print $1 }'`
 
         if test "$_CC_MAJOR_VERSION" != "$_CXX_MAJOR_VERSION"; then
@@ -380,7 +385,7 @@ case "$target" in
         fi
 
         # Check linker version
-        _LD_FULL_VERSION=`"${LD}" -v 2>&1 | grep ' [[0-9]]\+\.[[0-9]]\+\.[[0-9]]' | sed -e 's|.* \([[0-9]]\+\.[[0-9]]\+\.[[0-9]]\+\).*|\1|'`
+        _LD_FULL_VERSION=`"${LD}" -v 2>&1 | sed -ne "$_MSVC_VER_FILTER"`
         _LD_MAJOR_VERSION=`echo ${_LD_FULL_VERSION} | $AWK -F\. '{ print $1 }'`
         if test "$_LD_MAJOR_VERSION" != "$_CC_SUITE"; then
             AC_MSG_ERROR([The linker major version, $_LD_FULL_VERSION,  does not match the compiler suite version, $_CC_SUITE.])
@@ -388,7 +393,7 @@ case "$target" in
         INCREMENTAL_LINKER=1
 
         # Check midl version
-        _MIDL_FULL_VERSION=`"${MIDL}" -v 2>&1 | grep ' [[0-9]]\+\.[[0-9]]\+\.[[0-9]]' | sed -e 's|.* \([[0-9]]\+\.[[0-9]]\+\.[[0-9]]\+\).*|\1|'`
+        _MIDL_FULL_VERSION=`"${MIDL}" -v 2>&1 | sed -ne "$_MSVC_VER_FILTER"`
         _MIDL_MAJOR_VERSION=`echo ${_MIDL_FULL_VERSION} | $AWK -F\. '{ print $1 }'`
         _MIDL_MINOR_VERSION=`echo ${_MIDL_FULL_VERSION} | $AWK -F\. '{ print $2 }'`
         _MIDL_REV_VERSION=`echo ${_MIDL_FULL_VERSION} | $AWK -F\. '{ print $3 }'`
@@ -407,6 +412,9 @@ case "$target" in
              MIDL_FLAGS="${MIDL_FLAGS}"
              AC_MSG_RESULT([none needed])
         fi
+        
+        unset _MSVC_VER_FILTER
+        
     else
         # Check w32api version
         _W32API_MAJOR_VERSION=`echo $W32API_VERSION | $AWK -F\. '{ print $1 }'`
@@ -1628,6 +1636,7 @@ case "$target" in
     AC_DEFINE(XP_WIN32)
     AC_DEFINE(HW_THREADS)
     AC_DEFINE_UNQUOTED(WINVER,0x400)
+    AC_DEFINE_UNQUOTED(_WIN32_WINNT,0x400)
     AC_DEFINE(STDC_HEADERS)
     AC_DEFINE(NEW_H, <new>)
     AC_DEFINE(WIN32_LEAN_AND_MEAN)
@@ -3620,6 +3629,16 @@ if test "$MOZ_ENABLE_CANVAS"; then
     AC_DEFINE(MOZ_ENABLE_CANVAS)
 fi
 
+dnl check whether to enable glitz
+dnl ========================================================
+MOZ_ARG_ENABLE_BOOL(glitz,
+[  --enable-glitz          Enable Glitz for use with Cairo],
+    MOZ_ENABLE_GLITZ=1,
+    MOZ_ENABLE_GLITZ= )
+if test "$MOZ_ENABLE_GLITZ"; then
+    AC_DEFINE(MOZ_ENABLE_GLITZ)
+fi
+
 dnl ========================================================
 dnl Java SDK support
 dnl ========================================================
@@ -3666,6 +3685,7 @@ MOZ_ARG_HEADER(Toolkit Options)
         -o "$_DEFAULT_TOOLKIT" = "mac" \
         -o "$_DEFAULT_TOOLKIT" = "windows" \
         -o "$_DEFAULT_TOOLKIT" = "cocoa" \
+        -o "$_DEFAULT_TOOLKIT" = "cairo-windows" \
         -o "$_DEFAULT_TOOLKIT" = "cairo-gtk2" \
         -o "$_DEFAULT_TOOLKIT" = "cairo-xlib"
     then
@@ -3747,6 +3767,12 @@ mac|cocoa)
         MOZ_ENABLE_COCOA=1
         AC_DEFINE(MOZ_WIDGET_COCOA)
     fi
+    ;;
+
+cairo-windows)
+    MOZ_WIDGET_TOOLKIT=windows
+    MOZ_GFX_TOOLKIT=cairo
+    MOZ_ENABLE_CAIRO_GFX=1
     ;;
 
 cairo-gtk2)
@@ -3881,6 +3907,7 @@ AC_SUBST(MOZ_ENABLE_QT)
 AC_SUBST(MOZ_ENABLE_PHOTON)
 AC_SUBST(MOZ_ENABLE_COCOA)
 AC_SUBST(MOZ_ENABLE_CAIRO_GFX)
+AC_SUBST(MOZ_ENABLE_GLITZ)
 AC_SUBST(MOZ_ENABLE_XREMOTE)
 AC_SUBST(MOZ_GTK_CFLAGS)
 AC_SUBST(MOZ_GTK_LDFLAGS)
@@ -3892,6 +3919,11 @@ AC_SUBST(MOZ_QT_CFLAGS)
 AC_SUBST(MOZ_QT_LDFLAGS)
 
 AC_SUBST(MOC)
+
+if test "$MOZ_ENABLE_CAIRO_GFX"
+then
+    AC_DEFINE(MOZ_THEBES)
+fi
 
 if test "$MOZ_ENABLE_GTK" \
 || test "$MOZ_ENABLE_QT" \
@@ -4013,7 +4045,7 @@ minimo)
   ENABLE_TESTS=
   MINIMO=1
   MOZ_ACTIVEX_SCRIPTING_SUPPORT=
-  MOZ_APP_VERSION=`cat $topsrcdir/embedding/minimo/wince/version.txt`
+  MOZ_APP_VERSION=`cat $topsrcdir/minimo/config/version.txt`
   MOZ_COMPOSER=
   MOZ_ENABLE_POSTSCRIPT=
   MOZ_EXTENSIONS_DEFAULT="xml-rpc xmlextras transformiix webservices spatialnavigation"
@@ -4052,7 +4084,7 @@ mail)
   MOZ_STATIC_MAIL_BUILD=1
   MOZ_COMPOSER=1
   MOZ_APP_VERSION=$THUNDERBIRD_VERSION
-  MOZ_EXTENSIONS_DEFAULT=" wallet spellcheck xmlextras pref webservices universalchardet"
+  MOZ_EXTENSIONS_DEFAULT=" wallet spellcheck xmlextras pref webservices universalchardet auth"
   AC_DEFINE(MOZ_THUNDERBIRD)
   ;;
 
@@ -4306,17 +4338,7 @@ MOZ_ARG_ENABLE_BOOL(pango,
 if test "$MOZ_ENABLE_PANGO"
 then
     AC_DEFINE(MOZ_ENABLE_PANGO)
-    PKG_CHECK_MODULES(MOZ_PANGO, pango >= 1.5.0)
-
-    dnl Make sure that the pango version is _actually_ new enough
-    _SAVE_CFLAGS=$CFLAGS
-    _SAVE_LDFLAGS=$LDFLAGS
-    CFLAGS="$MOZ_PANGO_CFLAGS $CFLAGS"
-    LDFLAGS="$MOZ_PANGO_LIBS $LDFLAGS"
-    AC_CHECK_LIB(pangoft2-1.0, pango_fc_font_map_add_decoder_find_func,,
-                 AC_MSG_ERROR([Your Pango is too old. Sorry.]))
-    CFLAGS=$_SAVE_CFLAGS
-    LDFLAGS=$_SAVE_LDFLAGS
+    PKG_CHECK_MODULES(MOZ_PANGO, pango >= 1.6.0 pangoft2 >= 1.6.0)
 
     AC_SUBST(MOZ_ENABLE_PANGO)
     AC_SUBST(MOZ_PANGO_CFLAGS)
@@ -5010,6 +5032,17 @@ case "$target_os" in
         ;;
 esac
 AC_SUBST(MOZ_UPDATER)
+
+# app update channel is 'default' when not supplied.
+MOZ_ARG_ENABLE_STRING([update-channel],
+[  --enable-update-channel=CHANNEL
+                           Select application update channel (default=default)],
+    MOZ_UPDATE_CHANNEL=`echo $enableval | tr A-Z a-z`)
+
+if test -z "$MOZ_UPDATE_CHANNEL"; then
+    MOZ_UPDATE_CHANNEL=default
+fi
+AC_DEFINE_UNQUOTED(MOZ_UPDATE_CHANNEL, $MOZ_UPDATE_CHANNEL)
 
 # tools/update-packaging is not checked out by default.
 MOZ_ARG_ENABLE_BOOL(update-packaging,
@@ -6230,33 +6263,27 @@ if test "$MOZ_SVG_RENDERER_CAIRO" -o "$MOZ_ENABLE_CANVAS" -o "$MOZ_ENABLE_CAIRO_
        AC_DEFINE(HAVE_UINT64_T)
 
        # Define macros for cairo-features.h
-       PS_SURFACE_FEATURE=CAIRO_HAS_NO_PS_SURFACE
-       PDF_SURFACE_FEATURE=CAIRO_HAS_NO_PDF_SURFACE
-       PNG_SURFACE_FEATURE=CAIRO_HAS_NO_PNG_SURFACE
        if test "$MOZ_X11"; then
-           XLIB_SURFACE_FEATURE=CAIRO_HAS_XLIB_SURFACE
-           FT_FONT_FEATURE=CAIRO_HAS_FT_FONT
-       else
-           XLIB_SURFACE_FEATURE=CAIRO_HAS_NO_XLIB_SURFACe
-           FT_FONT_FEATURE=CAIRO_HAS_NO_FT_FONT
+           XLIB_SURFACE_FEATURE="#define CAIRO_HAS_XLIB_SURFACE 1"
+           FT_FONT_FEATURE="#define CAIRO_HAS_FT_FONT 1"
        fi
        if test "$MOZ_WIDGET_TOOLKIT" = "mac" -o "$MOZ_WIDGET_TOOLKIT" = "cocoa"; then
-           QUARTZ_SURFACE_FEATURE=CAIRO_HAS_QUARTZ_SURFACE
-           ATSUI_FONT_FEATURE=CAIRO_HAS_ATSUI_FONT
-       else
-           QUARTZ_SURFACE_FEATURE=CAIRO_HAS_NO_QUARTZ_SURFACE
-           ATSUI_FONT_FEATURE=CAIRO_HAS_NO_ATSUI_FONT
+           QUARTZ_SURFACE_FEATURE="#define CAIRO_HAS_QUARTZ_SURFACE 1"
+           ATSUI_FONT_FEATURE="#define CAIRO_HAS_ATSUI_FONT 1"
        fi
-       XCB_SURFACE_FEATURE=CAIRO_HAS_NO_XCB_SURFACE
        if test "$MOZ_WIDGET_TOOLKIT" = "windows"; then
-           WIN32_SURFACE_FEATURE=CAIRO_HAS_WIN32_SURFACE
-           WIN32_FONT_FEATURE=CAIRO_HAS_WIN32_FONT
-       else
-           WIN32_SURFACE_FEATURE=CAIRO_HAS_NO_WIN32_SURFACE
-           WIN32_FONT_FEATURE=CAIRO_HAS_NO_WIN32_FONT
+           WIN32_SURFACE_FEATURE="#define CAIRO_HAS_WIN32_SURFACE 1"
+           WIN32_FONT_FEATURE="#define CAIRO_HAS_WIN32_FONT 1"
        fi
-       GLITZ_SURFACE_FEATURE=CAIRO_HAS_NO_GLITZ_SURFACE
-       SANITY_CHECKING_FEATURE=CAIRO_DO_SANITY_CHECKING
+       if test "$MOZ_ENABLE_GLITZ"; then
+           GLITZ_SURFACE_FEATURE="#define CAIRO_HAS_GLITZ_SURFACE 1"
+       fi
+
+       if test "$MOZ_DEBUG"; then
+         SANITY_CHECKING_FEATURE="#define CAIRO_DO_SANITY_CHECKING 1"
+       else
+         SANITY_CHECKING_FEATURE="#undef CAIRO_DO_SANITY_CHECKING"
+       fi
 
        AC_SUBST(PS_SURFACE_FEATURE)
        AC_SUBST(PDF_SURFACE_FEATURE)
@@ -6269,16 +6296,31 @@ if test "$MOZ_SVG_RENDERER_CAIRO" -o "$MOZ_ENABLE_CANVAS" -o "$MOZ_ENABLE_CAIRO_
        AC_SUBST(FT_FONT_FEATURE)
        AC_SUBST(WIN32_FONT_FEATURE)
        AC_SUBST(ATSUI_FONT_FEATURE)
+       AC_SUBST(PNG_FUNCTIONS_FEATURE)
        AC_SUBST(SANITY_CHECKING_FEATURE)
 
        if test "$_WIN32_MSVC"; then
            MOZ_CAIRO_LIBS='$(DIST)/lib/mozcairo.lib $(DIST)/lib/mozlibpixman.lib'
+           if test "$MOZ_ENABLE_GLITZ"; then
+               MOZ_CAIRO_LIBS="$MOZ_CAIRO_LIBS $(DIST)/lib/mozglitz.lib $(DIST)/lib/mozglitzwgl.lib"
+           fi
        else
            MOZ_CAIRO_LIBS="-lmozcairo -lmozlibpixman"
 
            if test "$MOZ_X11"; then
                MOZ_CAIRO_LIBS="$MOZ_CAIRO_LIBS $XLDFLAGS -lXrender -lfreetype"
            fi
+
+           if test "$MOZ_ENABLE_GLITZ"; then
+               MOZ_CAIRO_LIBS="$MOZ_CAIRO_LIBS -lmozglitz"
+               if test "$MOZ_X11"; then
+                   MOZ_CAIRO_LIBS="$MOZ_CAIRO_LIBS -lmozglitzglx -lGL"
+               fi
+               if test "$MOZ_WIDGET_TOOLKIT" = "windows"; then
+                   MOZ_CAIRO_LIBS="$MOZ_CAIRO_LIBS -lmozglitzwgl"
+               fi
+           fi
+
            if test "$MOZ_WIDGET_TOOLKIT" = "windows"; then
                MOZ_CAIRO_LIBS="$MOZ_CAIRO_LIBS -lgdi32"
            fi

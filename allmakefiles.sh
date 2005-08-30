@@ -171,7 +171,7 @@ gfx/src/xlib/Makefile
 gfx/src/os2/Makefile
 gfx/src/xlibrgb/Makefile
 gfx/src/windows/Makefile
-gfx/src/cairo/Makefile
+gfx/src/thebes/Makefile
 gfx/tests/Makefile
 "
 
@@ -181,6 +181,9 @@ gfx/cairo/Makefile
 gfx/cairo/libpixman/src/Makefile
 gfx/cairo/cairo/src/Makefile
 gfx/cairo/cairo/src/cairo-features.h
+gfx/cairo/glitz/src/Makefile
+gfx/cairo/glitz/src/glx/Makefile
+gfx/cairo/glitz/src/wgl/Makefile
 "
 fi
 
@@ -1471,8 +1474,8 @@ for extension in $MOZ_EXTENSIONS; do
         spellcheck ) MAKEFILES_extensions="$MAKEFILES_extensions
             extensions/spellcheck/Makefile
             extensions/spellcheck/idl/Makefile
+            extensions/spellcheck/locales/Makefile
             extensions/spellcheck/myspell/Makefile
-            extensions/spellcheck/myspell/dictionaries/Makefile
             extensions/spellcheck/src/Makefile
             " ;;
         tasks ) MAKEFILES_extensions="$MAKEFILES_extensions
