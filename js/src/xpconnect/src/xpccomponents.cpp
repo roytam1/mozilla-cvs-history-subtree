@@ -2387,6 +2387,8 @@ nsXPCComponents_Utils::EvalInSandbox(const nsAString &source)
         if (JS_GetPendingException(sandcx, &exn)) {
             JS_SetPendingException(cx, exn);
             cc->SetExceptionWasThrown(PR_TRUE);
+        } else {
+            rv = NS_ERROR_OUT_OF_MEMORY;
         }
     } else {
         cc->SetReturnValueWasSet(PR_TRUE);
@@ -2394,7 +2396,7 @@ nsXPCComponents_Utils::EvalInSandbox(const nsAString &source)
 
     JS_DestroyContextNoGC(sandcx);
     JSPRINCIPALS_DROP(cx, jsPrincipals);
-    return NS_OK;
+    return rv;
 #endif /* !XPCONNECT_STANDALONE */
 }
 
