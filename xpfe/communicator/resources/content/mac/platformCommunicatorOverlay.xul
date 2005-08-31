@@ -101,4 +101,7 @@
     <menuseparator position="3"/>
   </menupopup>
 
+  <!-- Help menu -->
+  <menuitem id="aboutName" hidden="true"/>
+
 </overlay>    
