@@ -517,6 +517,7 @@ nsLayoutUtils::IntrinsicForContainer(nsIRenderingContext *aRenderingContext,
     const nsStyleCoord &styleWidth = stylePos->mWidth;
     if (styleWidth.GetUnit() == eStyleUnit_Coord) {
       result = styleWidth.GetCoordValue();
+    // XXX If it's a percent, should we use 0 for min-width?
     } else {
       if (aType == MIN_WIDTH)
         result = aFrame->GetMinWidth(aRenderingContext);
