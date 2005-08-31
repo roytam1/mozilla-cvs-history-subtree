@@ -78,6 +78,7 @@ public:
 
   void CreateAnonymousContent(nsISupportsArray& aAnonymousChildren);
   void PostScrollPortEvent(PRBool aOverflow, nsScrollPortEvent::orientType aType);
+  void PostOverflowEvents();
 
   nsresult GetChildContentAndOffsetsFromPoint(nsPresContext* aCX,
                                               const nsPoint&  aPoint,
@@ -160,6 +161,10 @@ public:
   // Is this the scrollframe for the document's viewport?
   PRPackedBool mIsRoot:1;
   PRPackedBool mSupppressScrollbarUpdate:1;
+  // State used only by PostScrollEvents so we know
+  // which overflow states have changed.
+  PRPackedBool mHorizontalOverflow:1;
+  PRPackedBool mVerticalOverflow:1;
 };
 
 /**
@@ -491,8 +496,6 @@ private:
   friend class nsGfxScrollFrameInner;
   nsGfxScrollFrameInner mInner;
   nscoord mMaxElementWidth;
-  PRPackedBool mHorizontalOverflow;
-  PRPackedBool mVerticalOverflow;
 };
 
 #endif /* nsGfxScrollFrame_h___ */
