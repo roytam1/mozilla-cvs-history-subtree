@@ -213,6 +213,44 @@ StdClass.fun(
     }
   });
 
+// A function specialization to overwrite an existing function.
+// behaves as 'fun'. in addition:
+// - asserts that a function with the given name already exists
+//   in prototype
+// - the old function will be stored as prototype["_"+classname+"_"+name]
+// XXX handle old metadata properly
+StdClass.fun(
+  function spec(/*[opt] doc, [opt] metadata, fct*/) {
+    var doc, meta, fct;
+    if (arguments.length == 1)
+      fct = arguments[0];
+    else if (arguments.length == 2) {
+      fct = arguments[1];
+      if (typeof(arguments[0])=="string")
+        doc = arguments[0];
+      else
+        meta = arguments[0];
+    }
+    else {
+      doc = arguments[0];
+      meta = arguments[1];
+      fct = arguments[2];
+    }
+    
+    var name = fct.name;
+
+    var old = this.prototype[name];
+    this._assert(old, "function "+name+" does not exist - can't specialize");
+    this.prototype["_"+this._name_+"_"+name] = old;
+
+    this.prototype[name] = fct;
+    if (meta)
+      this.protometa[name] = meta;
+    if (doc) {
+      this.prototype._doc_[name] = doc;
+    }
+  });
+
 StdClass.fun(
   function mergeClass(c) {
     var me = this;
