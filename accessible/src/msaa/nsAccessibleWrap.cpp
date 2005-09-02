@@ -910,6 +910,8 @@ nsAccessibleWrap::Next(ULONG aNumElementsRequested, VARIANT FAR* pvar, ULONG FAR
     PRBool wasAccessibleFetched = PR_FALSE;
     nsAccessibleWrap *msaaAccessible = 
       NS_STATIC_CAST(nsAccessibleWrap*, pvar[*aNumElementsFetched].pdispVal);
+    if (!msaaAccessible)
+      break;
     if (childIndex >= mEnumVARIANTPosition) {
       if (++*aNumElementsFetched >= aNumElementsRequested)
         break;
@@ -1004,7 +1006,7 @@ STDMETHODIMP nsAccessibleWrap::Invoke(DISPID dispIdMember, REFIID riid,
 NS_IMETHODIMP nsAccessibleWrap::GetNativeInterface(void **aOutAccessible)
 {
   *aOutAccessible = NS_STATIC_CAST(IAccessible*, this);
-  NS_STATIC_CAST(IAccessible*, this)->AddRef();
+  NS_ADDREF_THIS();
   return NS_OK;
 }
 
