@@ -55,6 +55,10 @@
   min-height: 26px;
 }
 
+#personal-bookmarks .toolbarbutton-icon { 
+  padding: 0; 
+}
+
 /* ..... fix searchbar "add engine" padding issue ..... */
 
 #searchbar .searchbar-dropmarker menuseparator + menuitem { 

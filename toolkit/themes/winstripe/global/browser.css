@@ -11,10 +11,10 @@ tabpanels {
 
 .tabbrowser-tabs {
 	padding-top: 1px;
-        background: transparent url("chrome://global/skin/icons/tabstrip-bottom.png") repeat-x bottom center !important;
-        -moz-padding-start: 2px;
-        border-bottom: 2px solid;
-        -moz-border-bottom-colors: threedshadow threedlightshadow;
+  background: transparent url("chrome://global/skin/icons/tabstrip-bottom.png") repeat-x bottom center !important;
+	-moz-padding-start: 2px;
+	border-bottom: 2px solid;
+	-moz-border-bottom-colors: threedshadow threedlightshadow;
 }
 
 .tabs-left,
@@ -32,6 +32,10 @@ tabpanels {
   -moz-image-region: rect(0px, 16px, 16px, 0px);
 }
 
+.tabs-closebutton{
+ padding: 1px !important;
+}
+
 tab[busy] > .tab-middle > .tab-icon {
   list-style-image: url("chrome://global/skin/throbber/Throbber-small.gif");
   opacity: 0.5;
@@ -47,18 +51,18 @@ tab {
 }
 
 #tab-drop-indicator-bar {
-    display:none;
-    height: 9px;
-    margin-top: -9px;
-    position: relative;
+  display:none;
+	height: 9px;
+	margin-top: -9px;
+	position: relative;
 }
 
 #tab-drop-indicator {
-    height: 9px;
-    width: 9px;
-    margin-bottom: -5px;
-    position: relative;
-    background: url('chrome://global/skin/tabDragDrop/tabDragIndicator.png') 50% 50% no-repeat;
+	height: 9px;
+	width: 9px;
+	margin-bottom: -5px;
+	position: relative;
+	background: url('chrome://global/skin/tabDragDrop/tabDragIndicator.png') 50% 50% no-repeat;
 }
 
 #tab-drop-indicator-bar[dragging="true"] {
