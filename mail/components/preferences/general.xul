@@ -103,9 +103,11 @@
                   label="&checkDefaultMailClient.label;"
                   accesskey="&checkDefaultMailClient.accesskey;"
                   flex="1"/>
+#ifndef XP_MACOSX
         <button label="&defaultClientAdvanced.label;"
                 accesskey="&defaultClientAdvanced.accesskey;"
                 oncommand="gGeneralPane.openDefaultClientDialog()"/>
+#endif
       </hbox>
 #endif
     </groupbox>
