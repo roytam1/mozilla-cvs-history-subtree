@@ -355,11 +355,27 @@ nsXFormsSubmissionElement::GetInterface(const nsIID & aIID, void **aResult)
 
 // nsIChannelEventSink
 
+// It is possible that the submission element could well on its way to invalid
+// by the time that the below handlers are called.  If the document was
+// destroyed after we've already started submitting data then this will cause
+// mElement to become null.  Since the channel will hold a nsCOMPtr
+// to the nsXFormsSubmissionElement as a callback to the channel, this prevents
+// it from being freed up.  The channel will still be able to call the
+// nsIStreamListener functions that we implement here.  And calling
+// mChannel->Cancel() is no guarantee that these other notifications won't come
+// through if the timing is wrong.  So we need to check for mElement below
+// before we handle any of the stream notifications.
+
+
 NS_IMETHODIMP
 nsXFormsSubmissionElement::OnChannelRedirect(nsIChannel *aOldChannel,
                                              nsIChannel *aNewChannel,
                                              PRUint32    aFlags)
 {
+  if (!mElement) {
+    return NS_OK;
+  }
+
   NS_PRECONDITION(aNewChannel, "Redirect without a channel?");
   nsCOMPtr<nsIURI> newURI;
   nsresult rv = aNewChannel->GetURI(getter_AddRefs(newURI));
@@ -390,6 +406,10 @@ NS_IMETHODIMP
 nsXFormsSubmissionElement::OnStopRequest(nsIRequest *request, nsISupports *ctx, nsresult status)
 {
   LOG(("xforms submission complete [status=%x]\n", status));
+
+  if (!mElement) {
+    return NS_OK;
+  }
 
   nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
   NS_ASSERTION(channel, "request should be a channel");
@@ -489,23 +509,33 @@ nsXFormsSubmissionElement::LoadReplaceInstance(nsIChannel *channel)
     }
   }
 
-  // get the nodeset that we are currently bound to
-  nsCOMPtr<nsIDOMNode> data;
+  // Get the appropriate instance node.  If the "instance" attribute is set,
+  // then get that instance node.  Otherwise, get the one we are bound to.
+  nsresult rv;
   nsCOMPtr<nsIModelElementPrivate> model = GetModel();
   NS_ENSURE_STATE(model);
-  nsresult rv = GetSelectedInstanceData(getter_AddRefs(data));
+  nsCOMPtr<nsIInstanceElementPrivate> instanceElement;
+  nsAutoString value;
+  mElement->GetAttribute(NS_LITERAL_STRING("instance"), value);
+  if (!value.IsEmpty()){
+    rv = GetSelectedInstanceElement(value, model,
+                                    getter_AddRefs(instanceElement));
+  } else {
+    nsCOMPtr<nsIDOMNode> data;
+    rv = GetBoundInstanceData(getter_AddRefs(data));
   if (NS_SUCCEEDED(rv)) {
     nsCOMPtr<nsIDOMNode> instanceNode;
     rv = nsXFormsUtils::GetInstanceNodeForData(data, model, 
                                                getter_AddRefs(instanceNode));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    nsCOMPtr<nsIInstanceElementPrivate> instanceElement =
-      do_QueryInterface(instanceNode);
+      instanceElement = do_QueryInterface(instanceNode);
+    }
+  }
 
     // replace the document referenced by this instance element with the info
     // returned back from the submission
-    if (instanceElement) {
+  if (NS_SUCCEEDED(rv) && instanceElement) {
       instanceElement->SetDocument(newDoc);
 
       // refresh everything
@@ -514,8 +544,26 @@ nsXFormsSubmissionElement::LoadReplaceInstance(nsIChannel *channel)
       model->Revalidate();
       model->Refresh();
     }
+
+
+  return NS_OK;
   }
 
+nsresult
+nsXFormsSubmissionElement::GetSelectedInstanceElement(
+                                            const nsString &aInstanceID,
+                                            nsIModelElementPrivate *aModel,
+                                            nsIInstanceElementPrivate **aResult)
+{
+  aModel->FindInstanceElement(aInstanceID, aResult);
+  if (*aResult == nsnull) {
+    // if failed to get desired instance, dispatch binding exception
+    const PRUnichar *strings[] = { aInstanceID.get() };
+    nsXFormsUtils::ReportError(NS_LITERAL_STRING("instanceBindError"),
+                               strings, 1, mElement, mElement);
+    nsXFormsUtils::DispatchEvent(mElement, eEvent_BindingException);
+    return NS_ERROR_FAILURE;
+  }
 
   return NS_OK;
 }
@@ -578,7 +626,7 @@ nsXFormsSubmissionElement::Submit()
   // 2. get selected node from the instance data (use xpath, gives us node
   //    iterator)
   nsCOMPtr<nsIDOMNode> data;
-  rv = GetSelectedInstanceData(getter_AddRefs(data));
+  rv = GetBoundInstanceData(getter_AddRefs(data));
   NS_ENSURE_TRUE(NS_SUCCEEDED(rv) && data, rv);
 
 
@@ -608,7 +656,7 @@ nsXFormsSubmissionElement::Submit()
 }
 
 nsresult
-nsXFormsSubmissionElement::GetSelectedInstanceData(nsIDOMNode **result)
+nsXFormsSubmissionElement::GetBoundInstanceData(nsIDOMNode **result)
 {
   nsCOMPtr<nsIModelElementPrivate> model;
   nsCOMPtr<nsIDOMXPathResult> xpRes;
