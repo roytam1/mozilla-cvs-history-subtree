@@ -57,17 +57,11 @@ toolbarbutton {
 
 .toolbarbutton-icon {
   -moz-margin-end: 5px;
-	padding: 4px; 
-}
-
-toolbar[iconsize="large"] .toolbarbutton-icon { 
-  padding: 2px; 
 }
 
 .toolbarbutton-text {
   margin: 0 !important;
   text-align: center;
-  padding-bottom: 1px;
 }
 
 toolbarbutton.tabbable {
