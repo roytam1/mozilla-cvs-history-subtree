@@ -113,8 +113,6 @@ ifdef NS_USE_GCC
 	endif
 	ifdef BUILD_OPT
 	    OPTIMIZER = -O2
-	    # Enable this for accurate dtrace profiling
-	    # OPTIMIZER += -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer
 	endif
 else
 	CC         = cc
@@ -183,7 +181,6 @@ ifeq ($(USE_64), 1)
 endif
 	DSO_LDOPTS += -G -h $(notdir $@)
 endif
-DSO_LDOPTS += -z combreloc -z defs -z ignore
 
 # -KPIC generates position independent code for use in shared libraries.
 # (Similarly for -fPIC in case of gcc.)

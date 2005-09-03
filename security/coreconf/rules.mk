@@ -348,9 +348,9 @@ else
 endif
 else
 ifdef XP_OS2_VACPP
-	$(MKSHLIB) $(DLLFLAGS) $(LDFLAGS) $(OBJS) $(SUB_SHLOBJS) $(LD_LIBS) $(EXTRA_LIBS) $(EXTRA_SHARED_LIBS) $(OS_LIBS)
+	$(MKSHLIB) $(DLLFLAGS) $(LDFLAGS) $(OBJS) $(SUB_SHLOBJS) $(LD_LIBS) $(EXTRA_LIBS) $(EXTRA_SHARED_LIBS)
 else
-	$(MKSHLIB) -o $@ $(OBJS) $(SUB_SHLOBJS) $(LD_LIBS) $(EXTRA_LIBS) $(EXTRA_SHARED_LIBS) $(OS_LIBS)
+	$(MKSHLIB) -o $@ $(OBJS) $(SUB_SHLOBJS) $(LD_LIBS) $(EXTRA_LIBS) $(EXTRA_SHARED_LIBS)
 endif
 	chmod +x $@
 ifeq ($(OS_TARGET),Darwin)
@@ -402,11 +402,10 @@ endif
 
 ifeq (,$(filter-out _WIN%,$(NS_USE_GCC)_$(OS_TARGET)))
 NEED_ABSOLUTE_PATH := 1
-PWD := $(shell pwd)
 ifeq (,$(findstring ;,$(PATH)))
-ifndef USE_MSYS
-PWD := $(subst \,/,$(shell cygpath -w $(PWD)))
-endif
+PWD :=  $(subst \,/,$(shell cygpath -w `pwd`))
+else
+PWD := $(shell pwd)
 endif
 endif
 

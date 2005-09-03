@@ -61,6 +61,7 @@ PRIVATE_EXPORTS = \
 	$(NULL)
 
 CSRCS = \
+	alghmac.c \
 	dbinit.c \
 	dbmshim.c \
 	ecdecode.c \
@@ -76,6 +77,7 @@ CSRCS = \
 	pkcs11.c   \
 	pkcs11c.c  \
 	pkcs11u.c  \
+	rawhash.c \
 	rsawrapr.c  \
 	softkver.c  \
 	tlsprf.c   \

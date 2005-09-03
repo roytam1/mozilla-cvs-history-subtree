@@ -48,8 +48,6 @@ fix_test_scripts()
     FLAG=$1
     CERT_DIR=cert
     CERT_SCRIPT=cert.sh
-    SMIME_DIR=smime
-    SMIME_SCRIPT=smime.sh
     SSL_DIR=ssl
     SSLAUTH=sslauth.txt
     SSLCOV=sslcov.txt
@@ -62,7 +60,6 @@ fix_test_scripts()
 
     if [ xx$FLAG = xx"enable_ecc" ]; then
     	if [ -f $CERT_DIR/$NOEC_PREFIX$CERT_SCRIPT -a \
-	     -f $SMIME_DIR/$NOEC_PREFIX$SMIME_SCRIPT -a \
 	     -f $SSL_DIR/$NOEC_PREFIX$SSLAUTH -a \
 	     -f $SSL_DIR/$NOEC_PREFIX$SSLCOV -a \
 	     -f $SSL_DIR/$NOEC_PREFIX$SSL_SCRIPT -a \
@@ -73,7 +70,6 @@ fix_test_scripts()
 	     echo "noecc files are missing"
              echo "Saving files as noec"
 	     cp $CERT_DIR/$CERT_SCRIPT $CERT_DIR/$NOEC_PREFIX$CERT_SCRIPT
-	     cp $SMIME_DIR/$SMIME_SCRIPT $SMIME_DIR/$NOEC_PREFIX$SMIME_SCRIPT
 	     cp $SSL_DIR/$SSLAUTH $SSL_DIR/$NOEC_PREFIX$SSLAUTH
 	     cp $SSL_DIR/$SSLCOV $SSL_DIR/$NOEC_PREFIX$SSLCOV
 	     cp $SSL_DIR/$SSL_SCRIPT $SSL_DIR/$NOEC_PREFIX$SSL_SCRIPT
@@ -82,7 +78,6 @@ fix_test_scripts()
 	fi
 	echo "Overwriting with ec versions"
 	cp $CERT_DIR/$EC_PREFIX$CERT_SCRIPT $CERT_DIR/$CERT_SCRIPT
-	cp $SMIME_DIR/$EC_PREFIX$SMIME_SCRIPT $SMIME_DIR/$SMIME_SCRIPT
 	cp $SSL_DIR/$EC_PREFIX$SSLAUTH $SSL_DIR/$SSLAUTH
 	cp $SSL_DIR/$EC_PREFIX$SSLCOV $SSL_DIR/$SSLCOV
 	cp $SSL_DIR/$EC_PREFIX$SSL_SCRIPT $SSL_DIR/$SSL_SCRIPT
@@ -90,7 +85,6 @@ fix_test_scripts()
 	cp $TOOLS_DIR/$EC_PREFIX$TOOLS_SCRIPT $TOOLS_DIR/$TOOLS_SCRIPT 
     elif [ xx$FLAG = xx"disable_ecc" ]; then
     	if [ -f $CERT_DIR/$NOEC_PREFIX$CERT_SCRIPT -a \
-	     -f $SMIME_DIR/$NOEC_PREFIX$SMIME_SCRIPT -a \
 	     -f $SSL_DIR/$NOEC_PREFIX$SSLAUTH -a \
 	     -f $SSL_DIR/$NOEC_PREFIX$SSLCOV -a \
 	     -f $SSL_DIR/$NOEC_PREFIX$SSL_SCRIPT -a \
@@ -99,7 +93,6 @@ fix_test_scripts()
 	     echo "noecc files exist"
 	     echo "Overwriting with noec versions"
 	     cp $CERT_DIR/$NOEC_PREFIX$CERT_SCRIPT $CERT_DIR/$CERT_SCRIPT
-	     cp $SMIME_DIR/$NOEC_PREFIX$SMIME_SCRIPT $SMIME_DIR/$SMIME_SCRIPT
 	     cp $SSL_DIR/$NOEC_PREFIX$SSLAUTH $SSL_DIR/$SSLAUTH
 	     cp $SSL_DIR/$NOEC_PREFIX$SSLCOV $SSL_DIR/$SSLCOV
 	     cp $SSL_DIR/$NOEC_PREFIX$SSL_SCRIPT $SSL_DIR/$SSL_SCRIPT

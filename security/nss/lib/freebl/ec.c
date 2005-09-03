@@ -115,7 +115,7 @@ ec_points_mul(const ECParams *params, const mp_int *k1, const mp_int *k2,
 	len = (params->fieldID.size + 7) >> 3;
 	if (pointP != NULL) {
 		if ((pointP->data[0] != EC_POINT_FORM_UNCOMPRESSED) ||
-			(pointP->len != (2 * len + 1))) {
+		(pointP->len != (2 * len + 1))) {
 			return SECFailure;
 		};
 	}
@@ -382,7 +382,7 @@ cleanup:
 }
 
 /* Validates an EC public key as described in Section 5.2.2 of
- * X9.62. The ECDH primitive when used without the cofactor does
+ * X9.63. The ECDH primitive when used without the cofactor does
  * not address small subgroup attacks, which may occur when the
  * public key is not valid. These attacks can be prevented by 
  * validating the public key before using ECDH.
@@ -391,55 +391,13 @@ SECStatus
 EC_ValidatePublicKey(ECParams *ecParams, SECItem *publicValue)
 {
 #ifdef NSS_ENABLE_ECC
-    mp_int Px, Py;
-    ECGroup *group = NULL;
-    SECStatus rv = SECFailure;
-    mp_err err = MP_OKAY;
-    int len;
-
     if (!ecParams || !publicValue) {
 	PORT_SetError(SEC_ERROR_INVALID_ARGS);
 	return SECFailure;
     }
-	
-    /* NOTE: We only support uncompressed points for now */
-    len = (ecParams->fieldID.size + 7) >> 3;
-    if (publicValue->data[0] != EC_POINT_FORM_UNCOMPRESSED) {
-	PORT_SetError(SEC_ERROR_UNSUPPORTED_EC_POINT_FORM);
-	return SECFailure;
-    } else if (publicValue->len != (2 * len + 1)) {
-	PORT_SetError(SEC_ERROR_INPUT_LEN);
-	return SECFailure;
-    };
 
-    MP_DIGITS(&Px) = 0;
-    MP_DIGITS(&Py) = 0;
-    CHECK_MPI_OK( mp_init(&Px) );
-    CHECK_MPI_OK( mp_init(&Py) );
-
-    /* Initialize Px and Py */
-    CHECK_MPI_OK( mp_read_unsigned_octets(&Px, publicValue->data + 1, (mp_size) len) );
-    CHECK_MPI_OK( mp_read_unsigned_octets(&Py, publicValue->data + 1 + len, (mp_size) len) );
-
-    /* construct from named params */
-    group = ECGroup_fromName(ecParams->name);
-    if (group == NULL)
-	goto cleanup;
-
-    /* validate public point */
-    CHECK_MPI_OK( ECPoint_validate(group, &Px, &Py) );
-
-    rv = SECSuccess;
-
-cleanup:
-    ECGroup_free(group);
-    mp_clear(&Px);
-    mp_clear(&Py);
-    if (err) {
-	MP_TO_SEC_ERROR(err);
-	rv = SECFailure;
-    }
-    return rv;
+    /* XXX Add actual checks here. */
+    return SECSuccess;
 #else
     PORT_SetError(SEC_ERROR_UNSUPPORTED_KEYALG);
     return SECFailure;

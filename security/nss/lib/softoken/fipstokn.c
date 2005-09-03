@@ -63,7 +63,7 @@
 static PRBool isLoggedIn = PR_FALSE;
 static PRBool fatalError = PR_FALSE;
 
-/* FIPS required checks before any useful cryptographic services */
+/* Fips required checks before any useful crypto graphic services */
 static CK_RV sftk_fipsCheck(void) {
     if (isLoggedIn != PR_TRUE) 
 	return CKR_USER_NOT_LOGGED_IN;
@@ -780,7 +780,6 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
     CK_ULONG usPrivateKeyAttributeCount, CK_OBJECT_HANDLE_PTR phPublicKey,
 					CK_OBJECT_HANDLE_PTR phPrivateKey) {
     CK_BBOOL *boolptr;
-    CK_RV crv;
 
     SFTK_FIPSCHECK();
 
@@ -793,14 +792,9 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
 	    return CKR_ATTRIBUTE_VALUE_INVALID;
 	}
     }
-    crv = NSC_GenerateKeyPair (hSession,pMechanism,pPublicKeyTemplate,
+    return NSC_GenerateKeyPair (hSession,pMechanism,pPublicKeyTemplate,
     		usPublicKeyAttributeCount,pPrivateKeyTemplate,
 		usPrivateKeyAttributeCount,phPublicKey,phPrivateKey);
-    if (crv == CKR_GENERAL_ERROR) {
-	/* pairwise consistency check failed. */
-	fatalError = PR_TRUE;
-    }
-    return crv;
 }
 
 

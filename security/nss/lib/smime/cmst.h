@@ -202,9 +202,6 @@ struct NSSCMSSignedDataStr {
     SECItem **			digests;
     CERTCertificate **		certs;
     CERTCertificateList **	certLists;
-    CERTCertificate **          tempCerts;              /* temporary certs, needed
-                                                         * for example for signature
-                                                         * verification */
 };
 #define NSS_CMS_SIGNED_DATA_VERSION_BASIC	1	/* what we *create* */
 #define NSS_CMS_SIGNED_DATA_VERSION_EXT		3	/* what we *create* */

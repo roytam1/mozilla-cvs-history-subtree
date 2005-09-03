@@ -62,7 +62,6 @@
 #include "secport.h"
 #include "pcert.h"
 #include "secrng.h"
-#include "nss.h"
 
 #include "keydbi.h" 
 
@@ -1358,9 +1357,14 @@ fail:
 	if (object->objectInfo == NULL) return crv;
 	object->infoFree = (SFTKFree) nsslowkey_DestroyPrivateKey;
 	/* now NULL out the sensitive attributes */
-	/* remove nulled out attributes for session objects. these only
-	 * applied to rsa private keys anyway (other private keys did not
-	 * get their attributes NULL'ed out */
+	if (sftk_isTrue(object,CKA_SENSITIVE)) {
+	    sftk_nullAttribute(object,CKA_PRIVATE_EXPONENT);
+	    sftk_nullAttribute(object,CKA_PRIME_1);
+	    sftk_nullAttribute(object,CKA_PRIME_2);
+	    sftk_nullAttribute(object,CKA_EXPONENT_1);
+	    sftk_nullAttribute(object,CKA_EXPONENT_2);
+	    sftk_nullAttribute(object,CKA_COEFFICIENT);
+	}
     }
     return CKR_OK;
 }
@@ -2553,10 +2557,11 @@ SFTK_SlotInit(char *configdir,sftk_token_parameters *params, int moduleIndex)
 	/* if the data base is initialized with a null password,remember that */
 	slot->needLogin = 
 		(PRBool)!sftk_hasNullPassword(slot->keyDB,&slot->password);
-	if ((params->minPW >= 0) && (params->minPW <= SFTK_MAX_PIN)) {
+	if (params->minPW <= SFTK_MAX_PIN) {
 	    slot->minimumPinLen = params->minPW;
 	}
-	if ((slot->minimumPinLen == 0) && (params->pwRequired)) {
+	if ((slot->minimumPinLen == 0) && (params->pwRequired) && 
+		(slot->minimumPinLen <= SFTK_MAX_PIN)) {
 	    slot->minimumPinLen = 1;
 	}
     }
@@ -2783,24 +2788,6 @@ CK_RV nsc_CommonInitialize(CK_VOID_PTR pReserved, PRBool isFIPS)
     /* initialize the key and cert db's */
     nsslowkey_SetDefaultKeyDBAlg
 			     (SEC_OID_PKCS12_PBE_WITH_SHA1_AND_TRIPLE_DES_CBC);
-    if (init_args && (!(init_args->flags & CKF_OS_LOCKING_OK))) {
-        if (init_args->CreateMutex && init_args->DestroyMutex &&
-            init_args->LockMutex && init_args->UnlockMutex) {
-            /* softoken always uses NSPR (ie. OS locking), and doesn't know how
-             * to use the lock functions provided by the application.
-             */
-            crv = CKR_CANT_LOCK;
-            return crv;
-        }
-        if (init_args->CreateMutex || init_args->DestroyMutex ||
-            init_args->LockMutex || init_args->UnlockMutex) {
-            /* only some of the lock functions were provided by the
-             * application. This is invalid per PKCS#11 spec.
-             */
-            crv = CKR_ARGUMENTS_BAD;
-            return crv;
-        }
-    }
     crv = CKR_ARGUMENTS_BAD;
     if ((init_args && init_args->LibraryParameters)) {
 	sftk_parameters paramStrings;
@@ -2922,10 +2909,10 @@ CK_RV  NSC_GetInfo(CK_INFO_PTR pInfo)
 
     c = __nss_softokn_rcsid[0] + __nss_softokn_sccsid[0]; 
     pInfo->cryptokiVersion.major = 2;
-    pInfo->cryptokiVersion.minor = 20;
+    pInfo->cryptokiVersion.minor = 11;
     PORT_Memcpy(pInfo->manufacturerID,manufacturerID,32);
-    pInfo->libraryVersion.major = NSS_VMAJOR;
-    pInfo->libraryVersion.minor = NSS_VMINOR;
+    pInfo->libraryVersion.major = 3;
+    pInfo->libraryVersion.minor = 8;
     PORT_Memcpy(pInfo->libraryDescription,libraryDescription,32);
     pInfo->flags = 0;
     return CKR_OK;
@@ -2966,8 +2953,8 @@ CK_RV NSC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo)
     pInfo->flags = CKF_TOKEN_PRESENT;
     /* ok we really should read it out of the keydb file. */
     /* pInfo->hardwareVersion.major = NSSLOWKEY_DB_FILE_VERSION; */
-    pInfo->hardwareVersion.major = NSS_VMAJOR;
-    pInfo->hardwareVersion.minor = NSS_VMINOR;
+    pInfo->hardwareVersion.major = 3;
+    pInfo->hardwareVersion.minor = 8;
     return CKR_OK;
 }
 
@@ -3043,7 +3030,10 @@ CK_RV NSC_GetTokenInfo(CK_SLOT_ID slotID,CK_TOKEN_INFO_PTR pInfo)
 				CKF_LOGIN_REQUIRED | CKF_USER_PIN_INITIALIZED;
 	}
 	pInfo->ulMaxPinLen = SFTK_MAX_PIN;
-	pInfo->ulMinPinLen = (CK_ULONG)slot->minimumPinLen;
+	pInfo->ulMinPinLen = 0;
+	if (slot->minimumPinLen > 0) {
+	    pInfo->ulMinPinLen = (CK_ULONG)slot->minimumPinLen;
+	}
 	pInfo->ulTotalPublicMemory = 1;
 	pInfo->ulFreePublicMemory = 1;
 	pInfo->ulTotalPrivateMemory = 1;

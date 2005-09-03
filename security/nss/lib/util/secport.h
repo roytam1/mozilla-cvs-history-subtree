@@ -37,6 +37,10 @@
 /*
  * secport.h - portability interfaces for security libraries
  *
+ * This file abstracts out libc functionality that libsec depends on
+ * 
+ * NOTE - These are not public interfaces
+ *
  * $Id$
  */
 
@@ -92,6 +96,12 @@
 #include <time.h> /* for time_t below */
 #else
 #include <sys/types.h>
+#endif
+
+#ifdef notdef
+#ifdef XP_MAC
+#include "NSString.h"
+#endif
 #endif
 
 #include <ctype.h>

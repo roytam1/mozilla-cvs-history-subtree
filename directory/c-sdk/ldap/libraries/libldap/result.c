@@ -1,39 +1,24 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- * 
- * The contents of this file are subject to the Mozilla Public License Version 
- * 1.1 (the "License"); you may not use this file except in compliance with 
- * the License. You may obtain a copy of the License at 
- * http://www.mozilla.org/MPL/
- * 
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- * 
+/*
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
  * The Original Code is Mozilla Communicator client code, released
  * March 31, 1998.
- * 
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1998-1999
- * the Initial Developer. All Rights Reserved.
- * 
+ *
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998-1999 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
  * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the terms of
- * either of the GNU General Public License Version 2 or later (the "GPL"),
- * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- * 
- * ***** END LICENSE BLOCK ***** */
+ */
 /*
  *  Copyright (c) 1990 Regents of the University of Michigan.
  *  All rights reserved.
@@ -49,13 +34,6 @@ static char copyright[] = "@(#) Copyright (c) 1990 Regents of the University of 
 #endif
 
 #include "ldap-int.h"
-
-/*
- * Special return values used by some functions (wait4msg() and read1msg()).
- */
-#define NSLDAPI_RESULT_TIMEOUT          0
-#define NSLDAPI_RESULT_ERROR            (-1)
-#define NSLDAPI_RESULT_NOT_FOUND        (-2)
 
 static int check_response_queue( LDAP *ld, int msgid, int all,
 	int do_abandon_check, LDAPMessage **result );
@@ -73,6 +51,10 @@ static void merge_error_info( LDAP *ld, LDAPRequest *parentr, LDAPRequest *lr );
 static int cldap_select1( LDAP *ld, struct timeval *timeout );
 #endif
 static void link_pend( LDAP *ld, LDAPPend *lp );
+#if 0 /* these functions are no longer used */
+static void unlink_pend( LDAP *ld, LDAPPend *lp );
+static int unlink_msg( LDAP *ld, int msgid, int all );
+#endif /* 0 */
 
 /*
  * ldap_result - wait for an ldap result response to a message from the
@@ -277,24 +259,15 @@ check_response_queue( LDAP *ld, int msgid, int all, int do_abandon_check,
 }
 
 
-/*
- * wait4msg(): Poll for incoming LDAP messages, respecting the timeout.
- *
- * Return values:
- *  > 0:                      message received; value is the tag of the message.
- *  NSLDAPI_RESULT_TIMEOUT    timeout exceeded.
- *  NSLDAPI_RESULT_ERROR      fatal error occurred such as connection closed.
- */
 static int
 wait4msg( LDAP *ld, int msgid, int all, int unlock_permitted,
 	struct timeval *timeout, LDAPMessage **result )
 {
-	int		err, rc = NSLDAPI_RESULT_NOT_FOUND;
+	int		rc;
 	struct timeval	tv, *tvp;
 	long		start_time = 0, tmp_time;
 	LDAPConn	*lc, *nextlc;
-	/* lr points to the specific request we are waiting for, if any */
-	LDAPRequest	*lr = NULL;
+	LDAPRequest	*lr;
 
 #ifdef LDAP_DEBUG
 	if ( timeout == NULL ) {
@@ -313,12 +286,12 @@ wait4msg( LDAP *ld, int msgid, int all, int unlock_permitted,
 		rc = (ld->ld_cache_result)( ld, msgid, all, timeout, result );
 		LDAP_MUTEX_UNLOCK( ld, LDAP_CACHE_LOCK );
 		/* if ( unlock_permitted ) LDAP_MUTEX_LOCK( ld ); */
-		if ( rc != NSLDAPI_RESULT_TIMEOUT ) {
+		if ( rc != 0 ) {
 			return( rc );
 		}
 		if ( ld->ld_cache_strategy == LDAP_CACHE_LOCALDB ) {
 			LDAP_SET_LDERRNO( ld, LDAP_TIMEOUT, NULL, NULL );
-			return( NSLDAPI_RESULT_TIMEOUT );
+			return( 0 );	/* timeout */
 		}
 	}
 
@@ -333,14 +306,14 @@ wait4msg( LDAP *ld, int msgid, int all, int unlock_permitted,
 			LDAP_MUTEX_UNLOCK( ld, LDAP_REQ_LOCK );
 			LDAP_SET_LDERRNO( ld, LDAP_PARAM_ERROR, NULL,
 				nsldapi_strdup( "unknown message id" ));
-			return( NSLDAPI_RESULT_ERROR );	/* could not find request for msgid */
+			return( -1 );	/* could not find request for msgid */
 		}
 		if ( lr->lr_conn != NULL &&
 		    lr->lr_conn->lconn_status == LDAP_CONNST_DEAD ) {
 			nsldapi_free_request( ld, lr, 1 );
 			LDAP_MUTEX_UNLOCK( ld, LDAP_REQ_LOCK );
 			LDAP_SET_LDERRNO( ld, LDAP_SERVER_DOWN, NULL, NULL );
-			return( NSLDAPI_RESULT_ERROR );	/* connection dead */
+			return( -1 );	/* connection dead */
 		}
 		LDAP_MUTEX_UNLOCK( ld, LDAP_REQ_LOCK );
 	}
@@ -353,19 +326,14 @@ wait4msg( LDAP *ld, int msgid, int all, int unlock_permitted,
 		start_time = (long)time( NULL );
 	}
 
-	rc = NSLDAPI_RESULT_NOT_FOUND;
-	while ( rc == NSLDAPI_RESULT_NOT_FOUND ) {
+	rc = -2;
+	while ( rc == -2 ) {
 #ifdef LDAP_DEBUG
 		if ( ldap_debug & LDAP_DEBUG_TRACE ) {
 			nsldapi_dump_connection( ld, ld->ld_conns, 1 );
 			nsldapi_dump_requests_and_responses( ld );
 		}
 #endif /* LDAP_DEBUG */
-
-		/*
-		 * Check if we have some data in a connection's BER buffer.
-		 * If so, use it.
-		 */
 		LDAP_MUTEX_LOCK( ld, LDAP_CONN_LOCK );
 		LDAP_MUTEX_LOCK( ld, LDAP_REQ_LOCK );
 		for ( lc = ld->ld_conns; lc != NULL; lc = lc->lconn_next ) {
@@ -380,14 +348,10 @@ wait4msg( LDAP *ld, int msgid, int all, int unlock_permitted,
 		LDAP_MUTEX_UNLOCK( ld, LDAP_CONN_LOCK );
 
 		if ( lc == NULL ) {
-			/*
-			 * There was no buffered data. Poll to check connection
-			 * status (read/write readiness).
-			 */
-			err = nsldapi_iostatus_poll( ld, tvp );
+			rc = nsldapi_iostatus_poll( ld, tvp );
 
 #if defined( LDAP_DEBUG ) && !defined( macintosh ) && !defined( DOS )
-			if ( err == -1 ) {
+			if ( rc == -1 ) {
 			    LDAPDebug( LDAP_DEBUG_TRACE,
 				    "nsldapi_iostatus_poll returned -1: errno %d\n",
 				    LDAP_GET_ERRNO( ld ), 0, 0 );
@@ -395,100 +359,67 @@ wait4msg( LDAP *ld, int msgid, int all, int unlock_permitted,
 #endif
 
 #if !defined( macintosh ) && !defined( DOS )
-			/*
-			 * If the restart option is enabled and the error
-			 * was EINTR, try again.
-			 */
-			if ( err == -1
-			    && 0 != ( ld->ld_options & LDAP_BITOPT_RESTART )
-			    && LDAP_GET_ERRNO( ld ) == EINTR ) {
-				continue;
-			}
+			if ( rc == 0 || ( rc == -1 && (( ld->ld_options &
+			    LDAP_BITOPT_RESTART ) == 0 ||
+			    LDAP_GET_ERRNO( ld ) != EINTR ))) {
+#else
+			if ( rc == -1 || rc == 0 ) {
 #endif
-
-			/*
-			 * Handle timeouts (no activity) and fatal errors.
-			 */
-			if ( err == -1 || err == 0 ) {
-				LDAP_SET_LDERRNO( ld, (err == -1 ?
+				LDAP_SET_LDERRNO( ld, (rc == -1 ?
 				    LDAP_SERVER_DOWN : LDAP_TIMEOUT), NULL,
 				    NULL );
-				if ( err == -1 ) {
+				if ( rc == -1 ) {
 					LDAP_MUTEX_LOCK( ld, LDAP_REQ_LOCK );
 					nsldapi_connection_lost_nolock( ld,
 						NULL );
 					LDAP_MUTEX_UNLOCK( ld, LDAP_REQ_LOCK );
-					rc = NSLDAPI_RESULT_ERROR;
-				} else {
-					rc = NSLDAPI_RESULT_TIMEOUT;
 				}
 				return( rc );
 			}
 
-			/*
-			 * Check each connection for interesting activity.
-			 */
-			LDAP_MUTEX_LOCK( ld, LDAP_CONN_LOCK );
-			LDAP_MUTEX_LOCK( ld, LDAP_REQ_LOCK );
-			for ( lc = ld->ld_conns;
-			    rc == NSLDAPI_RESULT_NOT_FOUND && lc != NULL;
-			    lc = nextlc ) {
-				nextlc = lc->lconn_next;
-
-				/*
-				 * For connections that are in the CONNECTING
-				 * state, check for write ready (which
-				 * indicates that the connection completed) and
-				 * transition to the CONNECTED state.
-				 */
-				if ( lc->lconn_status == LDAP_CONNST_CONNECTING
-				    && nsldapi_iostatus_is_write_ready( ld,
-				    lc->lconn_sb ) ) {
-					lc->lconn_status = LDAP_CONNST_CONNECTED;
-					LDAPDebug( LDAP_DEBUG_TRACE,
-					"wait4msg: connection 0x%x -"
-					" LDAP_CONNST_CONNECTING ->"
-					" LDAP_CONNST_CONNECTED\n",
-					lc, 0, 0 );
-				}
-
-				if ( lc->lconn_status
-				    != LDAP_CONNST_CONNECTED ) {
-					continue;
-				}
-
-				/*
-				* For connections that are CONNECTED, check
-				* for read ready (which indicates that data
-				* from server is available), and, for
-				* connections with associated requests that
-				* have not yet been sent, write ready (okay
-				* to send some data to the server).
-				*/
-				if ( nsldapi_iostatus_is_read_ready( ld,
-				    lc->lconn_sb )) {
-					rc = read1msg( ld, msgid, all,
-					    lc->lconn_sb, lc, result );
-				}
-
-				/*
-				 * Send pending requests if possible.
-				 */
-				if ( lc->lconn_pending_requests > 0
-				    && nsldapi_iostatus_is_write_ready( ld,
-				    lc->lconn_sb )) {
-					err = nsldapi_send_pending_requests_nolock(
-					    ld, lc );
-					if ( err == -1 &&
-					    rc == NSLDAPI_RESULT_NOT_FOUND ) {
-						rc = NSLDAPI_RESULT_ERROR;
+			if ( rc == -1 ) {
+				rc = -2;	/* select interrupted: loop */
+			} else {
+				rc = -2;
+				LDAP_MUTEX_LOCK( ld, LDAP_CONN_LOCK );
+				LDAP_MUTEX_LOCK( ld, LDAP_REQ_LOCK );
+				for ( lc = ld->ld_conns; rc == -2 && lc != NULL;
+				    lc = nextlc ) {
+					nextlc = lc->lconn_next;
+					if ( lc->lconn_status ==
+					    LDAP_CONNST_CONNECTED &&
+					    nsldapi_iostatus_is_read_ready( ld,
+					    lc->lconn_sb )) {
+						rc = read1msg( ld, msgid, all,
+						    lc->lconn_sb, lc, result );
+					}
+					else if (ld->ld_options & LDAP_BITOPT_ASYNC) {
+                        if ( lr
+                              && lc->lconn_status == LDAP_CONNST_CONNECTING
+                              && nsldapi_iostatus_is_write_ready( ld,
+			      lc->lconn_sb ) ) {
+                            rc = nsldapi_ber_flush( ld, lc->lconn_sb, lr->lr_ber, 0, 1 );
+                            if ( rc == 0 ) {
+                                rc = LDAP_RES_BIND;
+                                lc->lconn_status = LDAP_CONNST_CONNECTED;
+                                
+                                lr->lr_ber->ber_end = lr->lr_ber->ber_ptr;
+                                lr->lr_ber->ber_ptr = lr->lr_ber->ber_buf;
+                                nsldapi_iostatus_interest_read( ld, lc->lconn_sb );
+                            }
+                            else if ( rc == -1 ) {
+                                LDAP_SET_LDERRNO( ld, LDAP_SERVER_DOWN, NULL, NULL );
+                                nsldapi_free_request( ld, lr, 0 );
+                                nsldapi_free_connection( ld, lc, NULL, NULL,
+				    0, 0 );
+                            }
+                        }
+                        
 					}
 				}
-
+				LDAP_MUTEX_UNLOCK( ld, LDAP_REQ_LOCK );
+				LDAP_MUTEX_UNLOCK( ld, LDAP_CONN_LOCK );
 			}
-
-			LDAP_MUTEX_UNLOCK( ld, LDAP_REQ_LOCK );
-			LDAP_MUTEX_UNLOCK( ld, LDAP_CONN_LOCK );
 		}
 
 		/*
@@ -499,7 +430,7 @@ wait4msg( LDAP *ld, int msgid, int all, int unlock_permitted,
 		 * waiting on the network for a message that we already
 		 * received!
 		 */
-		if ( rc == NSLDAPI_RESULT_NOT_FOUND &&
+		if ( rc == -2 &&
 		    check_response_queue( ld, msgid, all, 0, result ) != 0 ) {
 			LDAP_SET_LDERRNO( ld, LDAP_SUCCESS, NULL, NULL );
 			rc = (*result)->lm_msgtype;
@@ -508,10 +439,10 @@ wait4msg( LDAP *ld, int msgid, int all, int unlock_permitted,
 		/*
 		 * honor the timeout if specified
 		 */
-		if ( rc == NSLDAPI_RESULT_NOT_FOUND && tvp != NULL ) {
+		if ( rc == -2 && tvp != NULL ) {
 			tmp_time = (long)time( NULL );
 			if (( tv.tv_sec -=  ( tmp_time - start_time )) <= 0 ) {
-				rc = NSLDAPI_RESULT_TIMEOUT;
+				rc = 0;	/* timed out */
 				LDAP_SET_LDERRNO( ld, LDAP_TIMEOUT, NULL,
 				    NULL );
 				break;
@@ -527,19 +458,8 @@ wait4msg( LDAP *ld, int msgid, int all, int unlock_permitted,
 }
 
 
-#define NSLDAPI_REQUEST_COMPLETE( lr )				\
-	( (lr)->lr_outrefcnt <= 0 && 				\
-	  (lr)->lr_res_msgtype != LDAP_RES_SEARCH_ENTRY &&	\
-	  (lr)->lr_res_msgtype != LDAP_RES_SEARCH_REFERENCE )
-
 /*
  * read1msg() should be called with LDAP_CONN_LOCK and LDAP_REQ_LOCK locked.
- *
- * Return values:
- *  > 0:                      message received; value is the tag of the message.
- *  NSLDAPI_RESULT_TIMEOUT    timeout exceeded.
- *  NSLDAPI_RESULT_ERROR      fatal error occurred such as connection closed.
- *  NSLDAPI_RESULT_NOT_FOUND  message not yet complete; keep waiting.
  */
 static int
 read1msg( LDAP *ld, int msgid, int all, Sockbuf *sb, LDAPConn *lc,
@@ -564,7 +484,7 @@ read1msg( LDAP *ld, int msgid, int all, Sockbuf *sb, LDAPConn *lc,
 	 */
 	if ( lc->lconn_ber == NULLBER && nsldapi_alloc_ber_with_options( ld,
 	    &lc->lconn_ber ) != LDAP_SUCCESS ) {
-		return( NSLDAPI_RESULT_ERROR );
+		return( -1 );
 	}
 
 	/*
@@ -578,14 +498,14 @@ read1msg( LDAP *ld, int msgid, int all, Sockbuf *sb, LDAPConn *lc,
 	    != LDAP_TAG_MESSAGE ) {
 		terrno = LDAP_GET_ERRNO( ld );
 		if ( terrno == EWOULDBLOCK || terrno == EAGAIN ) {
-		    return( NSLDAPI_RESULT_NOT_FOUND );	/* try again */
+		    return( -2 );	/* try again */
 		}
 		LDAP_SET_LDERRNO( ld, (tag == LBER_DEFAULT ? LDAP_SERVER_DOWN :
                     LDAP_LOCAL_ERROR), NULL, NULL );
 		if ( tag == LBER_DEFAULT ) {
 			nsldapi_connection_lost_nolock( ld, sb );
 		}
-		return( NSLDAPI_RESULT_ERROR );
+		return( -1 );
 	}
 
 	/*
@@ -597,15 +517,14 @@ read1msg( LDAP *ld, int msgid, int all, Sockbuf *sb, LDAPConn *lc,
 
 	/* message id */
 	if ( ber_get_int( ber, &id ) == LBER_ERROR ) {
-		ber_free( ber, 1 );
 		LDAP_SET_LDERRNO( ld, LDAP_DECODING_ERROR, NULL, NULL );
-		return( NSLDAPI_RESULT_ERROR );
+		return( -1 );
 	}
 
 	/* if it's been abandoned, toss it */
 	if ( ldap_abandoned( ld, (int)id ) ) {
 		ber_free( ber, 1 );
-		return( NSLDAPI_RESULT_NOT_FOUND );	/* continue looking */
+		return( -2 );	/* continue looking */
 	}
 
 	if ( id == LDAP_RES_UNSOLICITED ) {
@@ -615,14 +534,13 @@ read1msg( LDAP *ld, int msgid, int all, Sockbuf *sb, LDAPConn *lc,
 		    "no request for response with msgid %ld (tossing)\n",
 		    id, 0, 0 );
 		ber_free( ber, 1 );
-		return( NSLDAPI_RESULT_NOT_FOUND );	/* continue looking */
+		return( -2 );	/* continue looking */
 	}
 
 	/* the message type */
 	if ( (tag = ber_peek_tag( ber, &len )) == LBER_ERROR ) {
-		ber_free( ber, 1 );
 		LDAP_SET_LDERRNO( ld, LDAP_DECODING_ERROR, NULL, NULL );
-		return( NSLDAPI_RESULT_ERROR );
+		return( -1 );
 	}
 	LDAPDebug( LDAP_DEBUG_TRACE, "got %s msgid %ld, original id %d\n",
 	    ( tag == LDAP_RES_SEARCH_ENTRY ) ? "ENTRY" :
@@ -633,7 +551,7 @@ read1msg( LDAP *ld, int msgid, int all, Sockbuf *sb, LDAPConn *lc,
 		id = lr->lr_origid;
 		lr->lr_res_msgtype = tag;
 	}
-	rc = NSLDAPI_RESULT_NOT_FOUND;	/* default is to keep looking (no response found) */
+	rc = -2;	/* default is to keep looking (no response found) */
 
 	if ( id != LDAP_RES_UNSOLICITED && ( tag == LDAP_RES_SEARCH_REFERENCE ||
 	    tag != LDAP_RES_SEARCH_ENTRY )) {
@@ -701,21 +619,21 @@ read1msg( LDAP *ld, int msgid, int all, Sockbuf *sb, LDAPConn *lc,
 				merge_error_info( ld, lr->lr_parent, lr );
 
 				lr = lr->lr_parent;
-				--lr->lr_outrefcnt;
-				if ( !NSLDAPI_REQUEST_COMPLETE(lr)) {
-					break;
+				if ( --lr->lr_outrefcnt > 0 ) {
+					break;	/* not completely done yet */
 				}
 			}
 
 			/*
-			 * we recognize a request as fully complete when:
-			 *  1) it is not a child request (NULL parent)
-			 *  2) it has no outstanding referrals
+			 * we recognize a request as complete when:
+			 *  1) it has no outstanding referrals
+			 *  2) it is not a child request
 			 *  3) we have received a result for the request (i.e.,
 			 *     something other than an entry or a reference).
 			 */
-			if ( lr->lr_parent == NULL
-			    && NSLDAPI_REQUEST_COMPLETE(lr)) {
+			if ( lr->lr_outrefcnt <= 0 && lr->lr_parent == NULL &&
+			    lr->lr_res_msgtype != LDAP_RES_SEARCH_ENTRY &&
+			    lr->lr_res_msgtype != LDAP_RES_SEARCH_REFERENCE ) {
 				id = lr->lr_msgid;
 				tag = lr->lr_res_msgtype;
 				LDAPDebug( LDAP_DEBUG_TRACE,
@@ -731,7 +649,7 @@ lr->lr_res_matched ? lr->lr_res_matched : "" );
 					}
 					if ( build_result_ber( ld, &ber, lr )
 					    != LDAP_SUCCESS ) {
-                                                rc = NSLDAPI_RESULT_ERROR;
+						rc = -1; /* fatal error */
 					} else {
 						manufactured_result = 1;
 					}
@@ -752,7 +670,7 @@ lr->lr_res_matched ? lr->lr_res_matched : "" );
 	if ( (new = (LDAPMessage*)NSLDAPI_CALLOC( 1, sizeof(struct ldapmsg) ))
 	    == NULL ) {
 		LDAP_SET_LDERRNO( ld, LDAP_NO_MEMORY, NULL, NULL );
-                return( NSLDAPI_RESULT_ERROR );
+		return( -1 );
 	}
 	new->lm_msgid = (int)id;
 	new->lm_msgtype = tag;
@@ -818,13 +736,12 @@ lr->lr_res_matched ? lr->lr_res_matched : "" );
 		LDAP_MUTEX_UNLOCK( ld, LDAP_RESP_LOCK );
 		if( message_can_be_returned )
 			POST( ld, new->lm_msgid, new );
-                return( NSLDAPI_RESULT_NOT_FOUND );  /* continue looking */
+		return( -2 );	/* continue looking */
 	}
 
 	LDAPDebug( LDAP_DEBUG_TRACE,
-            "adding response 0x%x - id %d type %d",
-            new, new->lm_msgid, new->lm_msgtype );
-        LDAPDebug( LDAP_DEBUG_TRACE, " (looking for id %d)\n", msgid, 0, 0 );
+	    "adding response id %d type %d (looking for id %d)\n",
+	    new->lm_msgid, new->lm_msgtype, msgid );
 
 	/*
 	 * part of a search response - add to end of list of entries
@@ -939,7 +856,7 @@ lr->lr_res_matched ? lr->lr_res_matched : "" );
 		return( tag );
 	}
 	LDAP_MUTEX_UNLOCK( ld, LDAP_RESP_LOCK );
-        return( NSLDAPI_RESULT_NOT_FOUND );     /* continue looking */
+	return( -2 );	/* continue looking */
 }
 
 
@@ -1429,3 +1346,98 @@ link_pend( LDAP *ld, LDAPPend *lp )
 	ld->ld_pend = lp; 
 	lp->lp_prev = NULL; 
 }
+
+#if 0 /* these functions are no longer used */
+static void
+unlink_pend( LDAP *ld, LDAPPend *lp )
+{
+        if ( lp->lp_prev == NULL ) {
+                ld->ld_pend = lp->lp_next;
+        } else { 
+                lp->lp_prev->lp_next = lp->lp_next;
+        }
+ 
+        if ( lp->lp_next != NULL ) {
+                lp->lp_next->lp_prev = lp->lp_prev;
+        }
+}
+
+static int
+unlink_msg( LDAP *ld, int msgid, int all )
+{
+	int rc;
+	LDAPMessage	*lm, *lastlm, *nextlm;
+
+	lastlm = NULL;
+	LDAP_MUTEX_LOCK( ld, LDAP_RESP_LOCK );
+	for ( lm = ld->ld_responses; lm != NULL; lm = nextlm )
+	{
+		nextlm = lm->lm_next;
+
+		if ( lm->lm_msgid == msgid )
+		{
+			LDAPMessage	*tmp;
+
+			if ( all == 0
+			    || (lm->lm_msgtype != LDAP_RES_SEARCH_RESULT
+			    && lm->lm_msgtype != LDAP_RES_SEARCH_REFERENCE
+			    && lm->lm_msgtype != LDAP_RES_SEARCH_ENTRY) )
+				break;
+
+			for ( tmp = lm; tmp != NULL; tmp = tmp->lm_chain ) {
+				if ( tmp->lm_msgtype == LDAP_RES_SEARCH_RESULT )
+					break;
+			}
+			if( tmp != NULL )
+				break;
+		}
+		lastlm = lm;
+	}
+
+	if( lm != NULL )
+	{
+
+		if ( all == 0 )
+		{
+			if ( lm->lm_chain == NULL )
+			{
+				if ( lastlm == NULL )
+					ld->ld_responses = lm->lm_next;
+				else
+					lastlm->lm_next = lm->lm_next;
+			}
+			else
+			{
+				if ( lastlm == NULL )
+				{
+					ld->ld_responses = lm->lm_chain;
+					ld->ld_responses->lm_next = lm->lm_next;
+				}
+				else
+				{
+					lastlm->lm_next = lm->lm_chain;
+					lastlm->lm_next->lm_next = lm->lm_next;
+				}
+			}
+		}
+		else
+		{
+			if ( lastlm == NULL )
+				ld->ld_responses = lm->lm_next;
+			else
+				lastlm->lm_next = lm->lm_next;
+		}
+
+		if ( all == 0 )
+			lm->lm_chain = NULL;
+		lm->lm_next = NULL;
+		rc = lm->lm_msgtype;
+	}
+	else
+	{
+		rc = -2;
+	}
+	LDAP_MUTEX_UNLOCK( ld, LDAP_RESP_LOCK );
+	return ( rc );
+}
+#endif /* 0 */

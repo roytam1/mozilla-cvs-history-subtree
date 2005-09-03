@@ -146,9 +146,7 @@
  * function takes desired number of bits in P,
  * returns index (0..8) or -1 if number of bits is invalid.
  */
-#define PQG_PBITS_TO_INDEX(bits) \
-    (((bits) < 512 || (bits) > 1024 || (bits) % 64) ? \
-    -1 : (int)((bits)-512)/64)
+#define PQG_PBITS_TO_INDEX(bits) ((((bits)-512) % 64) ? -1 : (int)((bits)-512)/64)
 
 /*
  * function takes index (0-8)
@@ -349,20 +347,5 @@ struct ECPrivateKeyStr {
     SECItem version;       /* As per SEC 1, Appendix C, Section C.4 */
 };
 typedef struct ECPrivateKeyStr ECPrivateKey;
-
-typedef void * (*BLapiAllocateFunc)(void);
-typedef void (*BLapiDestroyContextFunc)(void *cx, PRBool freeit);
-typedef SECStatus (*BLapiInitContextFunc)(void *cx, 
-				   const unsigned char *key, 
-				   unsigned int keylen,
-				   const unsigned char *, 
-				   int, 
-				   unsigned int ,
-				   unsigned int );
-typedef SECStatus (*BLapiEncrypt)(void *cx, unsigned char *output,
-				unsigned int *outputLen, 
-				unsigned int maxOutputLen,
-				const unsigned char *input, 
-				unsigned int inputLen);
 
 #endif /* _BLAPIT_H_ */

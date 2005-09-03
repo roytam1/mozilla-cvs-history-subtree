@@ -45,7 +45,6 @@
 #include "secmodi.h"
 #include "secmodti.h"
 #include "nssilock.h"
-#include "secerr.h"
 
 extern void FC_GetFunctionList(void);
 extern void NSC_GetFunctionList(void);
@@ -91,52 +90,15 @@ static const CK_C_INITIALIZE_ARGS secmodLockFunctions = {
     ,NULL
 };
 
-static PRBool loadSingleThreadedModules = PR_TRUE;
-static PRBool enforceAlreadyInitializedError = PR_TRUE;
-static PRBool finalizeModules = PR_TRUE;
-
-/* set global options for NSS PKCS#11 module loader */
-SECStatus pk11_setGlobalOptions(PRBool noSingleThreadedModules,
-                                PRBool allowAlreadyInitializedModules,
-                                PRBool dontFinalizeModules)
-{
-    if (noSingleThreadedModules) {
-        loadSingleThreadedModules = PR_FALSE;
-    } else {
-        loadSingleThreadedModules = PR_TRUE;
-    }
-    if (allowAlreadyInitializedModules) {
-        enforceAlreadyInitializedError = PR_FALSE;
-    } else {
-        enforceAlreadyInitializedError = PR_TRUE;
-    }
-    if (dontFinalizeModules) {
-        finalizeModules = PR_FALSE;
-    } else {
-        finalizeModules = PR_TRUE;
-    }
-    return SECSuccess;
-}
-
-PRBool pk11_getFinalizeModulesOption(void)
-{
-    return finalizeModules;
-}
-
 /*
  * collect the steps we need to initialize a module in a single function
  */
 SECStatus
-secmod_ModuleInit(SECMODModule *mod, PRBool* alreadyLoaded)
+secmod_ModuleInit(SECMODModule *mod)
 {
     CK_C_INITIALIZE_ARGS moduleArgs;
     CK_VOID_PTR pInitArgs;
     CK_RV crv;
-
-    if (!mod || !alreadyLoaded) {
-        PORT_SetError(SEC_ERROR_INVALID_ARGS);
-        return SECFailure;
-    }
 
     if (mod->isThreadSafe == PR_FALSE) {
 	pInitArgs = NULL;
@@ -148,11 +110,6 @@ secmod_ModuleInit(SECMODModule *mod, PRBool* alreadyLoaded)
 	pInitArgs = &moduleArgs;
     }
     crv = PK11_GETTAB(mod)->C_Initialize(pInitArgs);
-    if ((CKR_CRYPTOKI_ALREADY_INITIALIZED == crv) &&
-        (!enforceAlreadyInitializedError)) {
-        *alreadyLoaded = PR_TRUE;
-        return SECSuccess;
-    }
     if (crv != CKR_OK) {
 	if (pInitArgs == NULL ||
 		crv == CKR_NETSCAPE_CERTDB_FAILED ||
@@ -160,17 +117,8 @@ secmod_ModuleInit(SECMODModule *mod, PRBool* alreadyLoaded)
 	    PORT_SetError(PK11_MapError(crv));
 	    return SECFailure;
 	}
-	if (!loadSingleThreadedModules) {
-	    PORT_SetError(SEC_ERROR_INCOMPATIBLE_PKCS11);
-	    return SECFailure;
-	}
 	mod->isThreadSafe = PR_FALSE;
     	crv = PK11_GETTAB(mod)->C_Initialize(NULL);
-	if ((CKR_CRYPTOKI_ALREADY_INITIALIZED == crv) &&
-	    (!enforceAlreadyInitializedError)) {
-	    *alreadyLoaded = PR_TRUE;
-	    return SECSuccess;
-	}
     	if (crv != CKR_OK)  {
 	    PORT_SetError(PK11_MapError(crv));
 	    return SECFailure;
@@ -232,7 +180,6 @@ SECMOD_LoadPKCS11Module(SECMODModule *mod) {
     CK_INFO info;
     CK_ULONG slotCount = 0;
     SECStatus rv;
-    PRBool alreadyLoaded = PR_FALSE;
 
     if (mod->loaded) return SECSuccess;
 
@@ -319,7 +266,7 @@ SECMOD_LoadPKCS11Module(SECMODModule *mod) {
     mod->isThreadSafe = PR_TRUE;
 
     /* Now we initialize the module */
-    rv = secmod_ModuleInit(mod, &alreadyLoaded);
+    rv = secmod_ModuleInit(mod);
     if (rv != SECSuccess) {
 	goto fail;
     }
@@ -328,14 +275,8 @@ SECMOD_LoadPKCS11Module(SECMODModule *mod) {
     if (PK11_GETTAB(mod)->C_GetInfo(&info) != CKR_OK) goto fail2;
     if (info.cryptokiVersion.major != 2) goto fail2;
     /* all 2.0 are a priori *not* thread safe */
-    if (info.cryptokiVersion.minor < 1) {
-        if (!loadSingleThreadedModules) {
-            PORT_SetError(SEC_ERROR_INCOMPATIBLE_PKCS11);
-            goto fail2;
-        } else {
-            mod->isThreadSafe = PR_FALSE;
-        }
-    }
+    if (info.cryptokiVersion.minor < 1) mod->isThreadSafe = PR_FALSE;
+
 
     /* If we don't have a common name, get it from the PKCS 11 module */
     if ((mod->commonName == NULL) || (mod->commonName[0] == 0)) {
@@ -382,9 +323,7 @@ SECMOD_LoadPKCS11Module(SECMODModule *mod) {
     mod->moduleID = nextModuleID++;
     return SECSuccess;
 fail2:
-    if (enforceAlreadyInitializedError || (!alreadyLoaded)) {
-        PK11_GETTAB(mod)->C_Finalize(NULL);
-    }
+    PK11_GETTAB(mod)->C_Finalize(NULL);
 fail:
     mod->functionList = NULL;
     if (library) PR_UnloadLibrary(library);
@@ -398,9 +337,8 @@ SECMOD_UnloadModule(SECMODModule *mod) {
     if (!mod->loaded) {
 	return SECFailure;
     }
-    if (finalizeModules) {
-        if (!mod->moduleDBOnly) PK11_GETTAB(mod)->C_Finalize(NULL);
-    }
+
+    if (!mod->moduleDBOnly) PK11_GETTAB(mod)->C_Finalize(NULL);
     mod->moduleID = 0;
     mod->loaded = PR_FALSE;
     

@@ -969,16 +969,16 @@ rijndael_decryptCBC(AESContext *cx, unsigned char *output,
  *
  ***********************************************************************/
 
-AESContext * AES_AllocateContext(void)
+/* AES_CreateContext
+ *
+ * create a new context for Rijndael operations
+ */
+AESContext *
+AES_CreateContext(const unsigned char *key, const unsigned char *iv, 
+                  int mode, int encrypt,
+                  unsigned int keysize, unsigned int blocksize)
 {
-    return PORT_ZNew(AESContext);
-}
-
-SECStatus   
-AES_InitContext(AESContext *cx, const unsigned char *key, unsigned int keysize, 
-	        const unsigned char *iv, int mode, unsigned int encrypt,
-	        unsigned int blocksize)
-{
+    AESContext *cx;
     unsigned int Nk;
     /* According to Rijndael AES Proposal, section 12.1, block and key
      * lengths between 128 and 256 bits are supported, as long as the
@@ -992,19 +992,20 @@ AES_InitContext(AESContext *cx, const unsigned char *key, unsigned int keysize,
 	blocksize > RIJNDAEL_MAX_BLOCKSIZE || 
 	blocksize % 4 != 0) {
 	PORT_SetError(SEC_ERROR_INVALID_ARGS);
-	return SECFailure;
+	return NULL;
     }
     if (mode != NSS_AES && mode != NSS_AES_CBC) {
 	PORT_SetError(SEC_ERROR_INVALID_ARGS);
-	return SECFailure;
+	return NULL;
     }
     if (mode == NSS_AES_CBC && iv == NULL) {
 	PORT_SetError(SEC_ERROR_INVALID_ARGS);
-	return SECFailure;
+	return NULL;
     }
+    cx = PORT_ZNew(AESContext);
     if (!cx) {
-	PORT_SetError(SEC_ERROR_INVALID_ARGS);
-    	return SECFailure;
+	PORT_SetError(SEC_ERROR_NO_MEMORY);
+    	return NULL;
     }
     /* Nb = (block size in bits) / 32 */
     cx->Nb = blocksize / 4;
@@ -1019,9 +1020,10 @@ AES_InitContext(AESContext *cx, const unsigned char *key, unsigned int keysize,
     } else {
 	cx->worker = (encrypt) ? &rijndael_encryptECB : &rijndael_decryptECB;
     }
-    PORT_Assert((cx->Nb * (cx->Nr + 1)) <= RIJNDAEL_MAX_EXP_KEY_SIZE);
-    if ((cx->Nb * (cx->Nr + 1)) > RIJNDAEL_MAX_EXP_KEY_SIZE) {
-	PORT_SetError(SEC_ERROR_LIBRARY_FAILURE);
+    /* Allocate memory for the expanded key */
+    cx->expandedKey = PORT_ZNewArray(PRUint32, cx->Nb * (cx->Nr + 1));
+    if (!cx->expandedKey) {
+	PORT_SetError(SEC_ERROR_NO_MEMORY);
 	goto cleanup;
     }
     /* Generate expanded key */
@@ -1032,31 +1034,12 @@ AES_InitContext(AESContext *cx, const unsigned char *key, unsigned int keysize,
 	if (rijndael_invkey_expansion(cx, key, Nk) != SECSuccess)
 	    goto cleanup;
     }
-    return SECSuccess;
-cleanup:
-    return SECFailure;
-}
-
-
-/* AES_CreateContext
- *
- * create a new context for Rijndael operations
- */
-AESContext *
-AES_CreateContext(const unsigned char *key, const unsigned char *iv, 
-                  int mode, int encrypt,
-                  unsigned int keysize, unsigned int blocksize)
-{
-    AESContext *cx = AES_AllocateContext();
-    if (cx) {
-	SECStatus rv = AES_InitContext(cx, key, keysize, iv, mode, encrypt,
-				       blocksize);
-	if (rv != SECSuccess) {
-	    AES_DestroyContext(cx, PR_TRUE);
-	    cx = NULL;
-	}
-    }
     return cx;
+cleanup:
+    if (cx->expandedKey)
+	PORT_ZFree(cx->expandedKey, cx->Nb * (cx->Nr + 1));
+    PORT_ZFree(cx, sizeof *cx);
+    return NULL;
 }
 
 /*
@@ -1068,7 +1051,8 @@ AES_CreateContext(const unsigned char *key, const unsigned char *iv,
 void 
 AES_DestroyContext(AESContext *cx, PRBool freeit)
 {
-/*  memset(cx, 0, sizeof *cx); */
+    PORT_ZFree(cx->expandedKey, cx->Nb * (cx->Nr + 1));
+    memset(cx, 0, sizeof *cx);
     if (freeit)
 	PORT_Free(cx);
 }

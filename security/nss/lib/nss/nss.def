@@ -850,20 +850,3 @@ NSS_Get_CERT_SignedCrlTemplate;
 ;+    local:
 ;+       *;
 ;+};
-;+NSS_3.10.2 { 	# NSS 3.10.2 release
-;+    global:
-PK11_TokenKeyGenWithFlags;
-PK11_GenerateKeyPairWithFlags;
-;+    local:
-;+       *;
-;+};
-;+NSS_3.11 { 	# NSS 3.11 release
-;+    global:
-CERT_CompareValidityTimes;
-PK11_CopyTokenPrivKeyToSessionPrivKey;
-PK11_FreeSlotListElement;
-PK11_GenerateRandomOnSlot;
-SECMOD_HasRootCerts;
-;+    local:
-;+       *;
-;+};

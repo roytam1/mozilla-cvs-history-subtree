@@ -150,6 +150,20 @@ new_cache_entry(NSSArena *arena, void *value, PRBool ownArena)
     return ce;
 }
 
+/* sort the subject list from newest to oldest */
+static PRIntn subject_list_sort(void *v1, void *v2)
+{
+    NSSCertificate *c1 = (NSSCertificate *)v1;
+    NSSCertificate *c2 = (NSSCertificate *)v2;
+    nssDecodedCert *dc1 = nssCertificate_GetDecoding(c1);
+    nssDecodedCert *dc2 = nssCertificate_GetDecoding(c2);
+    if (dc1->isNewerThan(dc1, dc2)) {
+	return -1;
+    } else {
+	return 1;
+    }
+}
+
 /* this should not be exposed in a header, but is here to keep the above
  * types/functions static
  */
@@ -582,7 +596,7 @@ add_subject_entry (
 	if (nickname) {
 	    ce->nickname = nssUTF8_Duplicate(nickname, arena);
 	}
-	nssList_SetSortFunction(list, nssCertificate_SubjectListSort);
+	nssList_SetSortFunction(list, subject_list_sort);
 	/* Add the cert entry to this list of subjects */
 	nssrv = nssList_AddUnique(list, cert);
 	if (nssrv != PR_SUCCESS) {

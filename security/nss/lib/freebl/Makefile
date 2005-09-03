@@ -132,8 +132,7 @@ ifeq ($(CPU_ARCH),x86_64)
     ASFILES  = arcfour-amd64-gas.s mpi_amd64_gas.s
     ASFLAGS += -march=opteron -m64 -fPIC
     DEFINES += -DNSS_BEVAND_ARCFOUR -DMPI_AMD64 -DMP_ASSEMBLY_MULTIPLY
-    DEFINES += -DNSS_USE_COMBA
-    MPI_SRCS += mpi_amd64.c mp_comba.c
+    MPI_SRCS += mpi_amd64.c
 endif
 ifeq ($(CPU_ARCH),x86)
     ASFILES  = mpi_x86.s
@@ -210,11 +209,9 @@ ifeq ($(CPU_ARCH),sparc)
     endif # NS_USE_GCC
     ifdef USE_PURE_32
 	# this builds for Sparc v8 pure 32-bit architecture
-	ASFILES = mpv_sparcv8x.s
 	DEFINES += -DMP_USE_LONG_LONG_MULTIPLY -DMP_USE_UINT_DIGIT 
 	DEFINES += -DMP_NO_MP_WORD
 	DEFINES += -DSHA_NO_LONG_LONG # avoid 64-bit arithmetic in SHA512
-	DEFINES += -DMP_ASSEMBLY_MULTIPLY
     else
 	ifdef USE_64
 	    # this builds for Sparc v9a pure 64-bit architecture
@@ -252,15 +249,11 @@ else
 	ifdef NS_USE_GCC
 	    ASFILES  = arcfour-amd64-gas.s mpi_amd64_gas.s
 	    ASFLAGS += -march=opteron -m64 -fPIC
-	    MPI_SRCS += mp_comba.c
 	else
-	    ASFILES  = arcfour-amd64-sun.s mpi_amd64_sun.s sha-fast-amd64-sun.s
-	    ASFILES += mp_comba_amd64_sun.s
+	    ASFILES  = arcfour-amd64-sun.s mpi_amd64_sun.s
 	    ASFLAGS += -xarch=generic64 -K PIC
-	    SHA_SRCS =
 	endif
 	DEFINES += -DNSS_BEVAND_ARCFOUR -DMPI_AMD64 -DMP_ASSEMBLY_MULTIPLY
-	DEFINES += -DNSS_USE_COMBA
 	MPI_SRCS += mpi_amd64.c
     else
 	# Solaris x86

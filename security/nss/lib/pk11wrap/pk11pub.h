@@ -58,7 +58,6 @@ SEC_BEGIN_PROTOS
  * Generic Slot Lists Management
  ************************************************************/
 void PK11_FreeSlotList(PK11SlotList *list);
-SECStatus PK11_FreeSlotListElement(PK11SlotList *list, PK11SlotListElement *le);
 PK11SlotListElement * PK11_GetFirstSafe(PK11SlotList *list);
 PK11SlotListElement *PK11_GetNextSafe(PK11SlotList *list, 
 				PK11SlotListElement *le, PRBool restart);
@@ -202,7 +201,6 @@ SECOidTag PK11_FortezzaMapSig(SECOidTag algTag);
 SECStatus PK11_ParamToAlgid(SECOidTag algtag, SECItem *param,
                                    PRArenaPool *arena, SECAlgorithmID *algid);
 SECStatus PK11_SeedRandom(PK11SlotInfo *,unsigned char *data,int len);
-SECStatus PK11_GenerateRandomOnSlot(PK11SlotInfo *,unsigned char *data,int len);
 SECStatus PK11_RandomUpdate(void *data, size_t bytes);
 SECStatus PK11_GenerateRandom(unsigned char *data,int len);
 CK_RV PK11_MapPBEMechanismToCryptoMechanism(CK_MECHANISM_PTR pPBEMechanism,
@@ -238,10 +236,6 @@ PK11SymKey *PK11_KeyGen(PK11SlotInfo *slot,CK_MECHANISM_TYPE type,
 PK11SymKey *PK11_TokenKeyGen(PK11SlotInfo *slot, CK_MECHANISM_TYPE type,
 				SECItem *param, int keySize, SECItem *keyid,
 				PRBool isToken, void *wincx);
-PK11SymKey *PK11_TokenKeyGenWithFlags(PK11SlotInfo *slot,
-				CK_MECHANISM_TYPE type, SECItem *param,
-				int keySize, SECItem *keyid, CK_FLAGS opFlags,
-				PK11AttrFlags attrFlags, void *wincx);
 PK11SymKey * PK11_ListFixedKeysInSlot(PK11SlotInfo *slot, char *nickname,
 								void *wincx);
 PK11SymKey *PK11_GetNextSymKey(PK11SymKey *symKey);
@@ -351,14 +345,6 @@ SECStatus PK11_ExtractKeyValue(PK11SymKey *symKey);
 SECItem * PK11_GetKeyData(PK11SymKey *symKey);
 PK11SlotInfo * PK11_GetSlotFromKey(PK11SymKey *symKey);
 void *PK11_GetWindow(PK11SymKey *symKey);
-/*
- * The attrFlags is the logical OR of the PK11_ATTR_XXX bitflags.
- * These flags apply to the private key.  The PK11_ATTR_TOKEN and
- * PK11_ATTR_READONLY flags also apply to the public key.
- */
-SECKEYPrivateKey *PK11_GenerateKeyPairWithFlags(PK11SlotInfo *slot,
-   CK_MECHANISM_TYPE type, void *param, SECKEYPublicKey **pubk,
-		 	    PK11AttrFlags attrFlags, void *wincx);
 SECKEYPrivateKey *PK11_GenerateKeyPair(PK11SlotInfo *slot,
    CK_MECHANISM_TYPE type, void *param, SECKEYPublicKey **pubk,
 		 	    PRBool isPerm, PRBool isSensitive, void *wincx);
@@ -441,8 +427,6 @@ PK11SymKey *PK11_ConvertSessionSymKeyToTokenSymKey(PK11SymKey *symk,
 	void *wincx);
 SECKEYPrivateKey *PK11_ConvertSessionPrivKeyToTokenPrivKey(
 	SECKEYPrivateKey *privk, void* wincx);
-SECKEYPrivateKey * PK11_CopyTokenPrivKeyToSessionPrivKey(PK11SlotInfo *destSlot,
-				      SECKEYPrivateKey *privKey);
 
 /**********************************************************************
  *                   Certs
@@ -588,7 +572,7 @@ SECStatus PK11_UpdateSlotAttribute(PK11SlotInfo *, PK11DefaultArrayEntry *,
 PK11GenericObject *PK11_FindGenericObjects(PK11SlotInfo *slot, 
 						CK_OBJECT_CLASS objClass);
 PK11GenericObject *PK11_GetNextGenericObject(PK11GenericObject *object);
-PK11GenericObject *PK11_GetPrevGenericObject(PK11GenericObject *object);
+PK11GenericObject *PK11_GetPrevtGenericObject(PK11GenericObject *object);
 SECStatus PK11_UnlinkGenericObject(PK11GenericObject *object);
 SECStatus PK11_LinkGenericObject(PK11GenericObject *list,
 				 PK11GenericObject *object);

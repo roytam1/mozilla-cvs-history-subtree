@@ -1462,7 +1462,6 @@ CERT_CompareNameSpace(CERTCertificate  *cert,
     CERTNameConstraint  *matchingConstraints;
     CERTCertificate      *badCert = NULL;
     
-    constraintsExtension.data = NULL;
     rv = CERT_FindCertExtension(cert, SEC_OID_X509_NAME_CONSTRAINTS, 
                                 &constraintsExtension);
     if (rv != SECSuccess) {
@@ -1475,7 +1474,6 @@ CERT_CompareNameSpace(CERTCertificate  *cert,
     }
     /* TODO: mark arena */
     constraints = cert_DecodeNameConstraints(arena, &constraintsExtension);
-    PORT_Free(constraintsExtension.data);
     currentName = namesList;
     if (constraints == NULL) { /* decode failed */
 	rv = SECFailure;

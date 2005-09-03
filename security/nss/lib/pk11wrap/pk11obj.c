@@ -97,10 +97,6 @@ PK11_DestroyTokenObject(PK11SlotInfo *slot,CK_OBJECT_HANDLE object) {
 
     
     rwsession = PK11_GetRWSession(slot);
-    if (rwsession == CK_INVALID_SESSION) {
-    	PORT_SetError(SEC_ERROR_BAD_DATA);
-    	return SECFailure;
-    }
 
     crv = PK11_GETTAB(slot)->C_DestroyObject(rwsession,object);
     if (crv != CKR_OK) {
@@ -214,9 +210,6 @@ PK11_GetAttributes(PRArenaPool *arena,PK11SlotInfo *slot,
     /* make pedantic happy... note that it's only used arena != NULL */ 
     void *mark = NULL; 
     CK_RV crv;
-    PORT_Assert(slot->session != CK_INVALID_SESSION);
-    if (slot->session == CK_INVALID_SESSION)
-	return CKR_SESSION_HANDLE_INVALID;
 
     /*
      * first get all the lengths of the parameters.
@@ -326,10 +319,6 @@ PK11_SetObjectNickname(PK11SlotInfo *slot, CK_OBJECT_HANDLE id,
 
     PK11_SETATTRS(&setTemplate, CKA_LABEL, (CK_CHAR *) nickname, len);
     rwsession = PK11_GetRWSession(slot);
-    if (rwsession == CK_INVALID_SESSION) {
-    	PORT_SetError(SEC_ERROR_BAD_DATA);
-    	return SECFailure;
-    }
     crv = PK11_GETTAB(slot)->C_SetAttributeValue(rwsession, id,
 			&setTemplate, 1);
     PK11_RestoreROSession(slot, rwsession);
@@ -400,12 +389,7 @@ PK11_CreateNewObject(PK11SlotInfo *slot, CK_SESSION_HANDLE session,
 	    rwsession =  PK11_GetRWSession(slot);
 	} else if (rwsession == CK_INVALID_SESSION) {
 	    rwsession =  slot->session;
-	    if (rwsession != CK_INVALID_SESSION)
-		PK11_EnterSlotMonitor(slot);
-	}
-	if (rwsession == CK_INVALID_SESSION) {
-	    PORT_SetError(SEC_ERROR_BAD_DATA);
-	    return SECFailure;
+	    PK11_EnterSlotMonitor(slot);
 	}
 	crv = PK11_GETTAB(slot)->C_CreateObject(rwsession, theTemplate,
 							count,objectID);
@@ -423,9 +407,8 @@ PK11_CreateNewObject(PK11SlotInfo *slot, CK_SESSION_HANDLE session,
 }
 
 
-/* This function may add a maximum of 9 attributes. */
 unsigned int
-pk11_OpFlagsToAttributes(CK_FLAGS flags, CK_ATTRIBUTE *attrs, CK_BBOOL *ckTrue)
+pk11_FlagsToAttributes(CK_FLAGS flags, CK_ATTRIBUTE *attrs, CK_BBOOL *ckTrue)
 {
 
     const static CK_ATTRIBUTE_TYPE attrTypes[12] = {
@@ -445,93 +428,9 @@ pk11_OpFlagsToAttributes(CK_FLAGS flags, CK_ATTRIBUTE *attrs, CK_BBOOL *ckTrue)
     for (; flags && test <= CKF_DERIVE; test <<= 1, ++pType) {
     	if (test & flags) {
 	    flags ^= test;
-	    if (*pType) {
-		PK11_SETATTRS(attr, *pType, ckTrue, sizeof *ckTrue); 
-		++attr;
-	    }
+	    PK11_SETATTRS(attr, *pType, ckTrue, sizeof *ckTrue); 
+	    ++attr;
 	}
-    }
-    return (attr - attrs);
-}
-
-/*
- * Check for conflicting flags, for example, if both PK11_ATTR_PRIVATE
- * and PK11_ATTR_PUBLIC are set.
- */
-PRBool
-pk11_BadAttrFlags(PK11AttrFlags attrFlags)
-{
-    PK11AttrFlags trueFlags = attrFlags & 0x55555555;
-    PK11AttrFlags falseFlags = attrFlags >> 1 & 0x55555555;
-    return (trueFlags & falseFlags) != 0 ? PR_TRUE : PR_FALSE;
-}
-
-/*
- * This function may add a maximum of 5 attributes.
- * The caller must make sure the attribute flags don't have conflicts.
- */
-unsigned int
-pk11_AttrFlagsToAttributes(PK11AttrFlags attrFlags, CK_ATTRIBUTE *attrs,
-				CK_BBOOL *ckTrue, CK_BBOOL *ckFalse)
-{
-    CK_ATTRIBUTE *attr = attrs;
-
-    PR_ASSERT(!pk11_BadAttrFlags(attrFlags));
-
-    /*
-     * The default value of the CKA_TOKEN attribute is CK_FALSE,
-     * so we only need to set this attribute for CK_TRUE.
-     */
-    if (attrFlags & PK11_ATTR_TOKEN) {
-	PK11_SETATTRS(attr, CKA_TOKEN, ckTrue, sizeof *ckTrue);
-	++attr;
-    }
-
-    /*
-     * The default value of the CKA_PRIVATE attribute is
-     * token-specific.
-     */
-    if (attrFlags & PK11_ATTR_PRIVATE) {
-	PK11_SETATTRS(attr, CKA_PRIVATE, ckTrue, sizeof *ckTrue);
-	++attr;
-    } else if (attrFlags & PK11_ATTR_PUBLIC) {
-	PK11_SETATTRS(attr, CKA_PRIVATE, ckFalse, sizeof *ckFalse);
-	++attr;
-    }
-
-    /*
-     * The default value of the CKA_MODIFIABLE attribute is CK_TRUE,
-     * so we only need to set this attribute for CK_FALSE.
-     */
-    if (attrFlags & PK11_ATTR_READONLY) {
-	PK11_SETATTRS(attr, CKA_MODIFIABLE, ckFalse, sizeof *ckFalse);
-	++attr;
-    }
-
-    /*
-     * For private keys, the default value of the CKA_SENSITIVE
-     * attribute is token-specific.  For secret keys, the default
-     * value of this attribute is CK_FALSE per PKCS #11 but in
-     * practice it is token-specific.
-     */
-    if (attrFlags & PK11_ATTR_SENSITIVE) {
-	PK11_SETATTRS(attr, CKA_SENSITIVE, ckTrue, sizeof *ckTrue);
-	++attr;
-    } else if (attrFlags & PK11_ATTR_INSENSITIVE) {
-	PK11_SETATTRS(attr, CKA_SENSITIVE, ckFalse, sizeof *ckFalse);
-	++attr;
-    }
-
-    /*
-     * The default value of the CKA_EXTRACTABLE attribute is
-     * token-specific.
-     */
-    if (attrFlags & PK11_ATTR_EXTRACTABLE) {
-	PK11_SETATTRS(attr, CKA_EXTRACTABLE, ckTrue, sizeof *ckTrue);
-	++attr;
-    } else if (attrFlags & PK11_ATTR_UNEXTRACTABLE) {
-	PK11_SETATTRS(attr, CKA_EXTRACTABLE, ckFalse, sizeof *ckFalse);
-	++attr;
     }
     return (attr - attrs);
 }
@@ -587,9 +486,11 @@ int
 PK11_SignatureLen(SECKEYPrivateKey *key)
 {
     int val;
+#ifdef NSS_ENABLE_ECC
     CK_ATTRIBUTE theTemplate = { CKA_EC_PARAMS, NULL, 0 };
     SECItem params = {siBuffer, NULL, 0};
     int length; 
+#endif /* NSS_ENABLE_ECC */
 
     switch (key->keyType) {
     case rsaKey:
@@ -602,6 +503,7 @@ PK11_SignatureLen(SECKEYPrivateKey *key)
     case fortezzaKey:
     case dsaKey:
 	return 40;
+#ifdef NSS_ENABLE_ECC
     case ecKey:
 	if (PK11_GetAttributes(NULL, key->pkcs11Slot, key->pkcs11ID,
 			       &theTemplate, 1) == CKR_OK) {
@@ -615,6 +517,7 @@ PK11_SignatureLen(SECKEYPrivateKey *key)
 	    return length;
 	}
 	break;
+#endif /* NSS_ENABLE_ECC */
     default:
 	break;
     }
@@ -1018,17 +921,11 @@ PK11_UnwrapPrivKey(PK11SlotInfo *slot, PK11SymKey *wrappingKey,
     if (newKey) {
 	if (perm) {
 	    /* Get RW Session will either lock the monitor if necessary, 
-	     *  or return a thread safe session handle, or fail. */ 
+	     *  or return a thread safe session handle. */ 
 	    rwsession = PK11_GetRWSession(slot);
 	} else {
 	    rwsession = slot->session;
-	    if (rwsession != CK_INVALID_SESSION) 
-		PK11_EnterSlotMonitor(slot);
-	}
-	if (rwsession == CK_INVALID_SESSION) {
-	    PK11_FreeSymKey(newKey);
-	    PORT_SetError(SEC_ERROR_BAD_DATA);
-	    return NULL;
+	    PK11_EnterSlotMonitor(slot);
 	}
 	crv = PK11_GETTAB(slot)->C_UnwrapKey(rwsession, &mechanism, 
 					 newKey->objectID,
@@ -1205,7 +1102,7 @@ PK11_FindGenericObjects(PK11SlotInfo *slot, CK_OBJECT_CLASS objClass)
     CK_ATTRIBUTE template[1];
     CK_ATTRIBUTE *attrs = template;
     CK_OBJECT_HANDLE *objectIDs = NULL;
-    PK11GenericObject *lastObj = NULL, *obj;
+    PK11GenericObject *lastObj, *obj;
     PK11GenericObject *firstObj = NULL;
     int i, count = 0;
 
