@@ -183,7 +183,7 @@ Verify Existence=
 [Dialog Welcome]
 Show Dialog=TRUE
 Title={Welcome_Title}
-MessageWelcome={Welcome_MessageWelcome}
+MessageWelcome={Welcome_MessageWelcome} - Beta 1
 Message0={Welcome_Message0}
 Message1={Welcome_Message1}
 Message2={Welcome_Message2}
