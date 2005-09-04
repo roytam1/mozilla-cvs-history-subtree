@@ -53,7 +53,14 @@ FORCE_USE_PIC = 1
 
 DLL_SUFFIX=$(PYTHON_DLL_SUFFIX)
 LOCAL_INCLUDES = $(PYTHON_INCLUDES)
-EXTRA_LIBS += $(PYTHON_LIBS) $(DIST)/lib/pyxpcom.lib
+
+EXTRA_LIBS += $(PYTHON_LIBS)
+
+ifeq ($(OS_ARCH), WINNT)
+EXTRA_LIBS += $(DIST)/lib/pyxpcom.lib
+else
+EXTRA_LIBS += -lpyxpcom
+endif
 
 CPPSRCS= \
 	_xpcom.cpp \

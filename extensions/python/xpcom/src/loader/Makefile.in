@@ -52,7 +52,12 @@ FORCE_SHARED_LIB = 1
 FORCE_USE_PIC = 1
 
 LOCAL_INCLUDES = $(PYTHON_INCLUDES)
-EXTRA_LIBS += $(PYTHON_LIBS) $(DIST)/lib/pyxpcom.lib
+ifeq ($(OS_ARCH), WINNT)
+EXTRA_LIBS += $(DIST)/lib/pyxpcom.lib
+else
+EXTRA_LIBS += -lpyxpcom
+endif
+
 
 CPPSRCS		=		   \
 		pyloader.cpp	   \
