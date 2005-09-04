@@ -1,0 +1,6 @@
+pyxultest.jar:
+    content/pyxultest/contents.rdf			(contents.rdf)
+    content/pyxultest/pyxultest.xul				(pyxultest.xul)
+#    content/pyxultest/pyxultest.js				(pyxultest.js)
+    content/pyxultest/pyxultest.py				(pyxultest.py)
+    content/pyxultest/pyxultest.css				(pyxultest.css)
