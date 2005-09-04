@@ -2032,8 +2032,10 @@ PyObject *PyXPCOM_GatewayVariantHelper::MakeSingleParam(int index, PythonTypeDes
 	  case nsXPTType::T_ARRAY: {
 		void *t = DEREF_IN_OR_OUT(ns_v.val.p, void *);
 		if (t==NULL) {
-			ret = Py_None;
-			Py_INCREF(Py_None);
+			// JS may send us a NULL here occasionally - as the
+			// type is array, we silently convert this to a zero
+			// length list, a-la JS.
+			ret = PyList_New(0);
 		} else {
 			PRUint8 array_type;
 			nsresult ns = GetArrayType(index, &array_type);
