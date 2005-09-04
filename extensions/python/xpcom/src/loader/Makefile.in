@@ -46,13 +46,13 @@ include $(DEPTH)/config/autoconf.mk
 
 LIBRARY_NAME	= pyloader
 IS_COMPONENT	= 1
-REQUIRES	= xpcom string xpcom_obsolete $(NULL)
+REQUIRES	= pyxpcom xpcom string xpcom_obsolete $(NULL)
 MOZILLA_INTERNAL_API = 1
 FORCE_SHARED_LIB = 1 
 FORCE_USE_PIC = 1
 
 LOCAL_INCLUDES = $(PYTHON_INCLUDES)
-EXTRA_LIBS += $(PYTHON_LIBS)
+EXTRA_LIBS += $(PYTHON_LIBS) $(DIST)/lib/pyxpcom.lib
 
 CPPSRCS		=		   \
 		pyloader.cpp	   \

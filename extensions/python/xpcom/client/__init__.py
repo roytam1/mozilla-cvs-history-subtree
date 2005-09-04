@@ -37,7 +37,10 @@
 
 import os
 import new
+import logging
 from xpcom import xpt, COMException, nsError
+
+logger = logging.getLogger('pyxpcom')
 
 # Suck in stuff from _xpcom we use regularly to prevent a module lookup
 from xpcom._xpcom import IID_nsISupports, IID_nsIClassInfo, IID_nsISupportsCString, IID_nsISupportsWeakReference, \
@@ -256,7 +259,13 @@ class Component(_XPCOMBase):
                 for nominated_iid in interface_infos:
                     # Interface may appear twice in the class info list, so check this here.
                     if not self.__dict__['_interface_infos_'].has_key(nominated_iid):
-                        self._remember_interface_info(nominated_iid)
+                        try:
+                            self._remember_interface_info(nominated_iid)
+                        except COMException, why:
+                            # eeek - if we fail to build an interface we will just
+                            # try and fail again next time.  We need None in the map
+                            logger.warning("Failed to build interface info for %s: %s" \
+                                           % (nominated_iid, why))
                 if real_cid is not None:
                     contractid_info = {}
                     contractid_info['_name_to_interface_name_'] = self.__dict__['_name_to_interface_name_']
@@ -367,7 +376,9 @@ class Component(_XPCOMBase):
             iface_names = ",".join([iid.name for iid in infos.keys()])
             iface_desc = " (implementing %s)" % (iface_names,)
         else:
-            iface_desc = " (with no class info)"
+            # no class info, so we only implement the interface on our
+            # underlying object.
+            iface_desc = " (implementing %s)" % (self.__dict__['_comobj_'].IID.name,)
         return "<XPCOM component '%s'%s>" % (self._object_name_,iface_desc)
 
 class _Interface(_XPCOMBase):

@@ -39,15 +39,6 @@
 # The XPCOM (Cross Platform COM) package.
 import exceptions
 
-
-import sys
-#sys.stdout = open("pystdout.log", "w")
-if sys.version_info >= (2, 3):
-    # sick off the new hex() warnings, and no time to digest what the 
-    # impact will be!
-    import warnings
-    warnings.filterwarnings("ignore", category=FutureWarning, append=1)
-
 # A global "verbose" flag - currently used by the
 # server package to print trace messages
 verbose = 0
@@ -72,7 +63,7 @@ class Exception(exceptions.Exception):
             message = hr_map.get(self.errno)
             if message is None:
                 message = ""
-        return "0x%x (%s)" % (self.errno, message)
+        return "%d (%s)" % (self.errno, message)
 
 # An alias for Exception - allows code to say "from xpcom import COMException"
 # rather than "Exception" - thereby preventing clashes.
@@ -90,5 +81,24 @@ class ServerException(Exception):
             import nsError
             errno = nsError.NS_ERROR_FAILURE
         Exception.__init__(self, errno, *args, **kw)
+
+# Logging support - setup the 'pyxpcom' logger to write to the Mozilla
+# console service.
+import logging
+class ConsoleServiceStream:
+    # enough of a stream to keep logging happy
+    def flush(self):
+        pass
+    def write(self, msg):
+        import _xpcom
+        _xpcom.LogConsoleMessage(msg)
+
+logger = logging.getLogger('pyxpcom')
+if len(logger.handlers) == 0:
+    hdlr = logging.StreamHandler(ConsoleServiceStream())
+    fmt = logging.Formatter(logging.BASIC_FORMAT)
+    hdlr.setFormatter(fmt)
+    logger.addHandler(hdlr)
+del ConsoleServiceStream, logging, logger, hdlr, fmt
 
 # Some global functions.

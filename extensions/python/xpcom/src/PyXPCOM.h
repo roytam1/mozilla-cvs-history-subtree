@@ -49,6 +49,30 @@
 #ifndef __PYXPCOM_H__
 #define __PYXPCOM_H__
 
+#include "nsIAllocator.h"
+#include "nsIWeakReference.h"
+#include "nsIInterfaceInfoManager.h"
+#include "nsIClassInfo.h"
+#include "nsIComponentManager.h"
+#include "nsIComponentManagerObsolete.h"
+#include "nsIServiceManager.h"
+#include "nsIInputStream.h"
+#include "nsIVariant.h"
+#include "nsIModule.h"
+
+#include "nsXPIDLString.h"
+#include "nsCRT.h"
+#include "xptcall.h"
+#include "xpt_xdr.h"
+
+#ifdef HAVE_LONG_LONG
+	// Mozilla also defines this - we undefine it to
+	// prevent a compiler warning.
+#	undef HAVE_LONG_LONG
+#endif // HAVE_LONG_LONG
+
+#include <Python.h>
+
 #ifdef XP_WIN
 #	ifdef BUILD_PYXPCOM
 		/* We are building the main dll */
@@ -58,17 +82,13 @@
 #		define PYXPCOM_EXPORT __declspec(dllimport)
 #	endif // BUILD_PYXPCOM
 
-	// We need these libs!
-#	pragma comment(lib, "xpcom.lib")
-#	pragma comment(lib, "nspr4.lib")
-
 #else // XP_WIN
 #	define PYXPCOM_EXPORT
 #endif // XP_WIN
 
 
 // An IID we treat as NULL when passing as a reference.
-extern nsIID Py_nsIID_NULL;
+extern PYXPCOM_EXPORT nsIID Py_nsIID_NULL;
 
 /*************************************************************************
 **************************************************************************
@@ -455,6 +475,11 @@ private:
 		return GATEWAY_BASE::ThisAsIID(iid);                       \
 	}                                                                  \
 
+extern PYXPCOM_EXPORT void AddDefaultGateway(PyObject *instance, nsISupports *gateway);
+
+extern PYXPCOM_EXPORT PRInt32 _PyXPCOM_GetGatewayCount(void);
+extern PYXPCOM_EXPORT PRInt32 _PyXPCOM_GetInterfaceCount(void);
+
 
 // Weak Reference class.  This is a true COM object, representing
 // a weak reference to a Python object.  For each Python XPCOM object,
@@ -660,11 +685,11 @@ extern struct PyMethodDef Methods[];                                      \
 class ClassName : public Py_nsISupports                                   \
 {                                                                         \
 public:                                                                   \
-	static PyXPCOM_TypeObject *type;                                  \
+	static PYXPCOM_EXPORT PyXPCOM_TypeObject *type;                                  \
 	static Py_nsISupports *Constructor(nsISupports *pInitObj, const nsIID &iid) { \
 		return new ClassName(pInitObj, iid);                      \
 	}                                                                 \
-	static void InitType(PyObject *iidNameDict) {                     \
+	static void InitType() {                                          \
 		type = new PyXPCOM_TypeObject(                            \
 				#InterfaceName,                           \
 				Py_nsISupports::type,                     \
@@ -673,9 +698,6 @@ public:                                                                   \
 				Constructor);                             \
 		const nsIID &iid = NS_GET_IID(InterfaceName);             \
 		RegisterInterface(iid, type);                             \
-		PyObject *iid_ob = Py_nsIID::PyObjectFromIID(iid);        \
-		PyDict_SetItemString(iidNameDict, "IID_"#InterfaceName, iid_ob); \
-		Py_DECREF(iid_ob);                                        \
 	}                                                                 \
 protected:                                                                \
 	ClassName(nsISupports *p, const nsIID &iid) :                     \
@@ -698,7 +720,7 @@ public:                                                                   \
 	static Py_nsISupports *Constructor(nsISupports *pInitObj, const nsIID &iid) { \
 		return new ClassName(pInitObj, iid);                      \
 	}                                                                 \
-	static void InitType(PyObject *iidNameDict) {                     \
+	static void InitType() {                                          \
 		type = new PyXPCOM_TypeObject(                            \
 				#InterfaceName,                           \
 				Py_nsISupports::type,                     \
@@ -707,9 +729,6 @@ public:                                                                   \
 				Constructor);                             \
 		const nsIID &iid = NS_GET_IID(InterfaceName);             \
 		RegisterInterface(iid, type);                             \
-		PyObject *iid_ob = Py_nsIID::PyObjectFromIID(iid);        \
-		PyDict_SetItemString(iidNameDict, "IID_"#InterfaceName, iid_ob); \
-		Py_DECREF(iid_ob);                                        \
 }                                                                         \
 	virtual PyObject *getattr(const char *name);                      \
 	virtual int setattr(const char *name, PyObject *val);             \

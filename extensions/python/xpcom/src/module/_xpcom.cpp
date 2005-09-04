@@ -45,15 +45,14 @@
 //
 // (c) 2000, ActiveState corp.
 
-#include "PyXPCOM_std.h"
-#include "nsIThread.h"
+#include "PyXPCOM.h"
 #include "nsXPCOM.h"
 #include "nsISupportsPrimitives.h"
-#include "nsIModule.h"
 #include "nsIFile.h"
-#include "nsILocalFile.h"
 #include "nsIComponentRegistrar.h"
 #include "nsIComponentManagerObsolete.h"
+#include "nsIConsoleService.h"
+#include "nspr.h" // PR_fprintf
 
 #ifdef XP_WIN
 #ifndef WIN32_LEAN_AND_MEAN
@@ -65,86 +64,11 @@
 #include "nsIEventQueue.h"
 #include "nsIProxyObjectManager.h"
 
-PYXPCOM_EXPORT PyObject *PyXPCOM_Error = NULL;
-extern PRInt32 _PyXPCOM_GetGatewayCount(void);
-extern PRInt32 _PyXPCOM_GetInterfaceCount(void);
-
-extern void AddDefaultGateway(PyObject *instance, nsISupports *gateway);
-
 #define LOADER_LINKS_WITH_PYTHON
 
 #ifndef PYXPCOM_USE_PYGILSTATE
-extern void PyXPCOM_InterpreterState_Ensure();
+extern PYXPCOM_EXPORT void PyXPCOM_InterpreterState_Ensure();
 #endif
-
-PyXPCOM_INTERFACE_DEFINE(Py_nsIComponentManager, nsIComponentManager, PyMethods_IComponentManager)
-PyXPCOM_INTERFACE_DEFINE(Py_nsIInterfaceInfoManager, nsIInterfaceInfoManager, PyMethods_IInterfaceInfoManager)
-PyXPCOM_INTERFACE_DEFINE(Py_nsIEnumerator, nsIEnumerator, PyMethods_IEnumerator)
-PyXPCOM_INTERFACE_DEFINE(Py_nsISimpleEnumerator, nsISimpleEnumerator, PyMethods_ISimpleEnumerator)
-PyXPCOM_INTERFACE_DEFINE(Py_nsIInterfaceInfo, nsIInterfaceInfo, PyMethods_IInterfaceInfo)
-PyXPCOM_INTERFACE_DEFINE(Py_nsIInputStream, nsIInputStream, PyMethods_IInputStream)
-PyXPCOM_INTERFACE_DEFINE(Py_nsIClassInfo, nsIClassInfo, PyMethods_IClassInfo)
-PyXPCOM_INTERFACE_DEFINE(Py_nsIVariant, nsIVariant, PyMethods_IVariant)
-// deprecated, but retained for backward compatibility:
-PyXPCOM_INTERFACE_DEFINE(Py_nsIComponentManagerObsolete, nsIComponentManagerObsolete, PyMethods_IComponentManagerObsolete)
-
-////////////////////////////////////////////////////////////
-// This is the main entry point called by the Python component
-// loader.
-extern "C" NS_EXPORT nsresult PyXPCOM_NSGetModule(nsIComponentManager *servMgr,
-                                          nsIFile* location,
-                                          nsIModule** result)
-{
-	NS_PRECONDITION(result!=NULL, "null result pointer in PyXPCOM_NSGetModule!");
-	NS_PRECONDITION(location!=NULL, "null nsIFile pointer in PyXPCOM_NSGetModule!");
-	NS_PRECONDITION(servMgr!=NULL, "null servMgr pointer in PyXPCOM_NSGetModule!");
-#ifndef LOADER_LINKS_WITH_PYTHON
-	if (!Py_IsInitialized()) {
-		Py_Initialize();
-		if (!Py_IsInitialized()) {
-			PyXPCOM_LogError("Python initialization failed!\n");
-			return NS_ERROR_FAILURE;
-		}
-		PyEval_InitThreads();
-#ifndef PYXPCOM_USE_PYGILSTATE
-		PyXPCOM_InterpreterState_Ensure();
-#endif
-		PyEval_SaveThread();
-	}
-#endif // LOADER_LINKS_WITH_PYTHON	
-	CEnterLeavePython _celp;
-	PyObject *func = NULL;
-	PyObject *obServMgr = NULL;
-	PyObject *obLocation = NULL;
-	PyObject *wrap_ret = NULL;
-	PyObject *args = NULL;
-	PyObject *mod = PyImport_ImportModule("xpcom.server");
-	if (!mod) goto done;
-	func = PyObject_GetAttrString(mod, "NS_GetModule");
-	if (func==NULL) goto done;
-	obServMgr = Py_nsISupports::PyObjectFromInterface(servMgr, NS_GET_IID(nsIComponentManager), PR_TRUE);
-	if (obServMgr==NULL) goto done;
-	obLocation = Py_nsISupports::PyObjectFromInterface(location, NS_GET_IID(nsIFile), PR_TRUE);
-	if (obLocation==NULL) goto done;
-	args = Py_BuildValue("OO", obServMgr, obLocation);
-	if (args==NULL) goto done;
-	wrap_ret = PyEval_CallObject(func, args);
-	if (wrap_ret==NULL) goto done;
-	Py_nsISupports::InterfaceFromPyObject(wrap_ret, NS_GET_IID(nsIModule), (nsISupports **)result, PR_FALSE, PR_FALSE);
-done:
-	nsresult nr = NS_OK;
-	if (PyErr_Occurred()) {
-		PyXPCOM_LogError("Obtaining the module object from Python failed.\n");
-		nr = PyXPCOM_SetCOMErrorFromPyException();
-	}
-	Py_XDECREF(func);
-	Py_XDECREF(obServMgr);
-	Py_XDECREF(obLocation);
-	Py_XDECREF(wrap_ret);
-	Py_XDECREF(mod);
-	Py_XDECREF(args);
-	return nr;
-}
 
 // "boot-strap" methods - interfaces we need to get the base
 // interface support!
@@ -186,6 +110,24 @@ PyXPCOMMethod_GetComponentManager(PyObject *self, PyObject *args)
 		return PyXPCOM_BuildPyException(rv);
 
 	return Py_nsISupports::PyObjectFromInterface(cm, NS_GET_IID(nsIComponentManager), PR_FALSE, PR_FALSE);
+}
+
+// No xpcom callable way to get at the registrar, even though the interface
+// is scriptable.
+static PyObject *
+PyXPCOMMethod_GetComponentRegistrar(PyObject *self, PyObject *args)
+{
+	if (!PyArg_ParseTuple(args, ""))
+		return NULL;
+	nsIComponentRegistrar* cm;
+	nsresult rv;
+	Py_BEGIN_ALLOW_THREADS;
+	rv = NS_GetComponentRegistrar(&cm);
+	Py_END_ALLOW_THREADS;
+	if ( NS_FAILED(rv) )
+		return PyXPCOM_BuildPyException(rv);
+
+	return Py_nsISupports::PyObjectFromInterface(cm, NS_GET_IID(nsISupports), PR_FALSE, PR_FALSE);
 }
 
 static PyObject *
@@ -444,6 +386,7 @@ PyObject *AllocateBuffer(PyObject *self, PyObject *args)
 	return PyBuffer_New(bufSize);
 }
 
+// These should no longer be used - just use the logging.getLogger('pyxpcom')...
 PyObject *LogWarning(PyObject *self, PyObject *args)
 {
 	char *msg;
@@ -464,11 +407,30 @@ PyObject *LogError(PyObject *self, PyObject *args)
 	return Py_None;
 }
 
-extern PyObject *PyXPCOMMethod_IID(PyObject *self, PyObject *args);
+// Writes a message to the console service.  This could be done via pure
+// Python code, but is useful when the logging code is actually the
+// xpcom .py framework itself (ie, we don't want our logging framework to
+// call back into the very code generating the log messages!
+PyObject *LogConsoleMessage(PyObject *self, PyObject *args)
+{
+	char *msg;
+	if (!PyArg_ParseTuple(args, "s", &msg))
+		return NULL;
+
+	nsCOMPtr<nsIConsoleService> consoleService = do_GetService(NS_CONSOLESERVICE_CONTRACTID);
+	NS_ASSERTION(consoleService != nsnull, "pyxpcom can't find the console service");
+	if (consoleService)
+		consoleService->LogStringMessage(NS_ConvertASCIItoUCS2(msg).get());
+	else
+		PR_fprintf(PR_STDERR,"%s\n", &msg);
+}
+
+extern PYXPCOM_EXPORT PyObject *PyXPCOMMethod_IID(PyObject *self, PyObject *args);
 
 static struct PyMethodDef xpcom_methods[]=
 {
 	{"GetComponentManager", PyXPCOMMethod_GetComponentManager, 1},
+	{"GetComponentRegistrar", PyXPCOMMethod_GetComponentRegistrar, 1},
 	{"NS_GetGlobalComponentManager", PyXPCOMMethod_NS_GetGlobalComponentManager, 1}, // deprecated
 	{"XPTI_GetInterfaceInfoManager", PyXPCOMMethod_XPTI_GetInterfaceInfoManager, 1},
 	{"XPTC_InvokeByIndex", PyXPCOMMethod_XPTC_InvokeByIndex, 1},
@@ -485,82 +447,12 @@ static struct PyMethodDef xpcom_methods[]=
 	{"GetProxyForObject", PyXPCOMMethod_GetProxyForObject, 1},
 	{"GetSpecialDirectory", PyGetSpecialDirectory, 1},
 	{"AllocateBuffer", AllocateBuffer, 1},
+	{"LogConsoleMessage", LogConsoleMessage, 1, "Write a message to the xpcom console service"},
+	// These should no longer be used - just use the logging.getLogger('pyxpcom')...
 	{"LogWarning", LogWarning, 1},
 	{"LogError", LogError, 1},
 	{ NULL }
 };
-
-////////////////////////////////////////////////////////////
-// Other helpers/global functions.
-//
-PRBool PyXPCOM_Globals_Ensure()
-{
-	PRBool rc = PR_TRUE;
-
-#ifndef PYXPCOM_USE_PYGILSTATE
-	PyXPCOM_InterpreterState_Ensure();
-#endif
-
-	// The exception object - we load it from .py code!
-	if (PyXPCOM_Error == NULL) {
-		rc = PR_FALSE;
-		PyObject *mod = NULL;
-
-		mod = PyImport_ImportModule("xpcom");
-		if (mod!=NULL) {
-			PyXPCOM_Error = PyObject_GetAttrString(mod, "Exception");
-			Py_DECREF(mod);
-		}
-		rc = (PyXPCOM_Error != NULL);
-	}
-	if (!rc)
-		return rc;
-
-	static PRBool bHaveInitXPCOM = PR_FALSE;
-	if (!bHaveInitXPCOM) {
-		nsCOMPtr<nsIThread> thread_check;
-		// xpcom appears to assert if already initialized
-		// Is there an official way to determine this?
-		if (NS_FAILED(nsIThread::GetMainThread(getter_AddRefs(thread_check)))) {
-			// not already initialized.
-#ifdef XP_WIN
-			// On Windows, we need to locate the Mozilla bin
-			// directory.  This by using locating a Moz DLL we depend
-			// on, and assume it lives in that bin dir.  Different
-			// moz build types (eg, xulrunner, suite) package
-			// XPCOM itself differently - but all appear to require
-			// nspr4.dll - so this is what we use.
-			char landmark[MAX_PATH+1];
-			HMODULE hmod = GetModuleHandle("nspr4.dll");
-			if (hmod==NULL) {
-				PyErr_SetString(PyExc_RuntimeError, "We dont appear to be linked against nspr4.dll.");
-				return PR_FALSE;
-			}
-			GetModuleFileName(hmod, landmark, sizeof(landmark)/sizeof(landmark[0]));
-			char *end = landmark + (strlen(landmark)-1);
-			while (end > landmark && *end != '\\')
-				end--;
-			if (end > landmark) *end = '\0';
-
-			nsCOMPtr<nsILocalFile> ns_bin_dir;
-			NS_ConvertASCIItoUCS2 strLandmark(landmark);
-			NS_NewLocalFile(strLandmark, PR_FALSE, getter_AddRefs(ns_bin_dir));
-			nsresult rv = NS_InitXPCOM2(nsnull, ns_bin_dir, nsnull);
-#else
-			// Elsewhere, Mozilla can find it itself (we hope!)
-			nsresult rv = NS_InitXPCOM2(nsnull, nsnull, nsnull);
-#endif // XP_WIN
-			if (NS_FAILED(rv)) {
-				PyErr_SetString(PyExc_RuntimeError, "The XPCOM subsystem could not be initialized");
-				return PR_FALSE;
-			}
-		}
-		// Even if xpcom was already init, we want to flag it as init!
-		bHaveInitXPCOM = PR_TRUE;
-	}
-	return rc;
-}
-
 
 #define REGISTER_IID(t) { \
 	PyObject *iid_ob = Py_nsIID::PyObjectFromIID(NS_GET_IID(t)); \
@@ -602,14 +494,6 @@ init_xpcom() {
 	}
 	PyDict_SetItemString(dict, "IIDType", (PyObject *)&Py_nsIID::type);
 
-	// register our entry point.
-	PyObject *obFuncPtr = PyLong_FromVoidPtr((void *)&PyXPCOM_NSGetModule);
-	if (obFuncPtr)
-		PyDict_SetItemString(dict, 
-		                             "_NSGetModule_FuncPtr", 
-		                             obFuncPtr);
-	Py_XDECREF(obFuncPtr);
-
 	REGISTER_IID(nsISupports);
 	REGISTER_IID(nsISupportsCString);
 	REGISTER_IID(nsIModule);
@@ -619,19 +503,18 @@ init_xpcom() {
 	REGISTER_IID(nsIClassInfo);
 	REGISTER_IID(nsIServiceManager);
 	REGISTER_IID(nsIComponentRegistrar);
-	// Register our custom interfaces.
 
-	Py_nsISupports::InitType();
-	Py_nsIComponentManager::InitType(dict);
-	Py_nsIInterfaceInfoManager::InitType(dict);
-	Py_nsIEnumerator::InitType(dict);
-	Py_nsISimpleEnumerator::InitType(dict);
-	Py_nsIInterfaceInfo::InitType(dict);
-	Py_nsIInputStream::InitType(dict);
-	Py_nsIClassInfo::InitType(dict);
-	Py_nsIVariant::InitType(dict);
+	// Register our custom interfaces.
+	REGISTER_IID(nsIComponentManager);
+	REGISTER_IID(nsIInterfaceInfoManager);
+	REGISTER_IID(nsIEnumerator);
+	REGISTER_IID(nsISimpleEnumerator);
+	REGISTER_IID(nsIInterfaceInfo);
+	REGISTER_IID(nsIInputStream);
+	REGISTER_IID(nsIClassInfo);
+	REGISTER_IID(nsIVariant);
 	// for backward compatibility:
-	Py_nsIComponentManagerObsolete::InitType(dict);
+	REGISTER_IID(nsIComponentManagerObsolete);
 
     // We have special support for proxies - may as well add their constants!
     REGISTER_INT(PROXY_SYNC);

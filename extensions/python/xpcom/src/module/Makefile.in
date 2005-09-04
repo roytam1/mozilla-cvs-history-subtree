@@ -13,12 +13,12 @@
 #
 # The Original Code is mozilla.org code.
 #
-# The Initial Developer of the Original Code is
-# Mark Hammond <mhammond@skippinet.com.au>.
+# The Initial Developer of the Original Code is mozilla.org
 # Portions created by the Initial Developer are Copyright (C) 2002
 # the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
+#   Mark Hammond <mhammond@skippinet.com.au> (original author)
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -34,9 +34,9 @@
 #
 # ***** END LICENSE BLOCK *****
 
-# Top-level PyXPCOM makefile - build sub-dirs and install .py code.
+# The xpcom._xpcom module
 
-DEPTH   =../../..
+DEPTH=../../../../..
 
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
@@ -45,62 +45,43 @@ pyexecdir	= @libdir@/python$(PYTHON_VER_DOTTED)/site-packages
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS = \
-        src \
-        $(NULL)
+LIBRARY_NAME	= _xpcom$(PYTHON_DEBUG_SUFFIX)
+REQUIRES	= pyxpcom xpcom string $(NULL)
+MOZILLA_INTERNAL_API = 1
+FORCE_SHARED_LIB = 1 
+FORCE_USE_PIC = 1 
 
-ifdef ENABLE_TESTS
-        DIRS += test $(NULL)
-endif
+DLL_SUFFIX=$(PYTHON_DLL_SUFFIX)
+LOCAL_INCLUDES = $(PYTHON_INCLUDES)
+EXTRA_LIBS += $(PYTHON_LIBS) $(DIST)/lib/pyxpcom.lib
 
-
-PYSRCS_XPCOM = \
-	__init__.py \
-	components.py \
-	file.py \
-	nsError.py \
-	register.py \
-	xpcom_consts.py \
-	xpt.py \
+CPPSRCS= \
+	_xpcom.cpp \
 	$(NULL)
 
-PYSRCS_XPCOMCLIENT = \
-	__init__.py \
-	$(NULL)
-
-PYSRCS_XPCOMSERVER = \
-	__init__.py \
-	enumerator.py \
-	factory.py \
-	loader.py \
-	module.py \
-	policy.py \
-	$(NULL)
-
-PYSRCS_XPCOMTOOLS = \
-	regxpcom.py \
-	tracer_demo.py \
-	$(NULL)
-
-PYSRCS_XPCOM       := $(addprefix $(srcdir)/,$(PYSRCS_XPCOM))
-PYSRCS_XPCOMCLIENT := $(addprefix $(srcdir)/client/,$(PYSRCS_XPCOMCLIENT))
-PYSRCS_XPCOMSERVER := $(addprefix $(srcdir)/server/,$(PYSRCS_XPCOMSERVER))
-PYSRCS_XPCOMTOOLS  := $(addprefix $(srcdir)/tools/,$(PYSRCS_XPCOMTOOLS))
-
+include $(topsrcdir)/config/config.mk
 include $(topsrcdir)/config/rules.mk
 
+EXTRA_DSO_LDOPTS += $(MOZ_COMPONENT_LIBS)
+IMPORT_LIBRARY		:= $(SHARED_LIBRARY:.pyd=.lib)
+
+# Install into our Python directory
+# default build installs into bin and lib - remove them
 libs::
-	$(INSTALL) $(PYSRCS_XPCOM) $(DIST)/bin/python/xpcom 
-	$(INSTALL) $(PYSRCS_XPCOMCLIENT) $(DIST)/bin/python/xpcom/client
-	$(INSTALL) $(PYSRCS_XPCOMSERVER) $(DIST)/bin/python/xpcom/server
-	$(INSTALL) $(PYSRCS_XPCOMTOOLS) $(DIST)/bin/python/xpcom/tools
+ifeq ($(OS_ARCH),WINNT)
+	$(INSTALL) -m 555 $(SHARED_LIBRARY) $(DIST)/bin/python/xpcom
+else
+	$(INSTALL) -m 555 $(SHARED_LIBRARY) $(DIST)/bin/python/xpcom
+	mv $(DIST)/bin/python/xpcom/$(SHARED_LIBRARY) $(DIST)/bin/python/xpcom/_xpcom.so
+endif
+	rm -f $(DIST)/bin/$(SHARED_LIBRARY)
+	rm -f $(DIST)/lib/$(IMPORT_LIBRARY)
 
 install::
-	$(SYSINSTALL) $(IFLAGS1) $(PYSRCS_XPCOM) $(DISTDIR)$(pyexecdir)/xpcom
-	$(SYSINSTALL) $(IFLAGS1) $(PYSRCS_XPCOMCLIENT) $(DISTDIR)$(pyexecdir)/xpcom/client
-	$(SYSINSTALL) $(IFLAGS1) $(PYSRCS_XPCOMSERVER) $(DISTDIR)$(pyexecdir)/xpcom/server
+ifneq ($(OS_ARCH),WINNT)
+	$(SYSINSTALL) $(IFLAGS2) $(SHARED_LIBRARY) $(DISTDIR)$(pyexecdir)/xpcom
+	mv $(DISTDIR)$(pyexecdir)/xpcom/$(SHARED_LIBRARY) $(DISTDIR)$(pyexecdir)/xpcom/_xpcom$(PYTHON_DLL_SUFFIX)
+endif
 
 clobber::
-	rm -rf $(DIST)/bin/python/xpcom
-	rm -f test/*.pyc test/*.pyo
-
+	rm -f *.ilk *.pdb

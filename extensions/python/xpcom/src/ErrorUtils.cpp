@@ -58,7 +58,7 @@ static char *PyTraceback_AsString(PyObject *exc_tb);
 void LogMessage(const char *prefix, const char *pszMessageText)
 {
 	nsCOMPtr<nsIConsoleService> consoleService = do_GetService(NS_CONSOLESERVICE_CONTRACTID);
-	NS_ABORT_IF_FALSE(consoleService, "Where is the console service?");
+	NS_ASSERTION(consoleService != nsnull, "pyxpcom can't find the console service");
 	if (consoleService)
 		consoleService->LogStringMessage(NS_ConvertASCIItoUCS2(pszMessageText).get());
 	else
