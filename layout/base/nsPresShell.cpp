@@ -1177,6 +1177,8 @@ public:
   NS_IMETHOD NotifyDestroyingFrame(nsIFrame* aFrame);
   
   NS_IMETHOD DoCopy();
+  NS_IMETHOD GetSelectionForCopy(nsISelection** outSelection);
+
   NS_IMETHOD GetLinkLocation(nsIDOMNode* aNode, nsAString& aLocationString);
   NS_IMETHOD DoGetContents(const nsACString& aMimeType, PRUint32 aFlags, PRBool aSelectionOnly, nsAString& outValue);
 
@@ -1394,9 +1396,6 @@ protected:
   nsresult SetPrefFocusRules(void);
   nsresult SetPrefNoScriptRule();
   nsresult SetPrefNoFramesRule(void);
-
-
-  nsresult GetSelectionForCopy(nsISelection** outSelection);
 
   nsICSSStyleSheet*         mPrefStyleSheet; // mStyleSet owns it but we maintain a ref, may be null
 #ifdef DEBUG
@@ -4703,7 +4702,7 @@ NS_IMETHODIMP PresShell::GetLinkLocation(nsIDOMNode* aNode, nsAString& aLocation
   return NS_ERROR_FAILURE;
 }
 
-nsresult
+NS_IMETHODIMP
 PresShell::GetSelectionForCopy(nsISelection** outSelection)
 {
   nsresult rv = NS_OK;

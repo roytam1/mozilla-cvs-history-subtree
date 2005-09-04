@@ -88,6 +88,7 @@ class nsIDOMNode;
 class nsIStyleFrameConstruction;
 class nsIStyleSheet;
 class nsCSSFrameConstructor;
+class nsISelection;
 
 #define NS_IPRESSHELL_IID     \
 { 0x0672be76, 0x1047, 0x4905, \
@@ -455,6 +456,12 @@ public:
    * Notify the Clipboard that we have something to copy.
    */
   NS_IMETHOD DoCopy() = 0;
+
+  /**
+   * Get the selection of the focussed element (either the page selection,
+   * or the selection for a text field).
+   */
+  NS_IMETHOD GetSelectionForCopy(nsISelection** outSelection) = 0;
 
   /**
    * Get link location.
