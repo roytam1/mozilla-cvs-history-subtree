@@ -70,7 +70,7 @@
 #include "nsNetUtil.h"
 #include "nsIScriptSecurityManager.h"
 #include "nsDOMError.h"
-#include "nsIDOMWindowInternal.h"
+#include "nsPIDOMWindow.h"
 #include "nsIJSContextStack.h"
 #include "nsIDocShell.h"
 #include "nsIDocShellTreeItem.h"
@@ -109,6 +109,7 @@
 static NS_DEFINE_CID(kXTFServiceCID, NS_XTFSERVICE_CID);
 #endif
 #include "nsIMIMEService.h"
+#include "jsdbgapi.h"
 
 // for ReportToConsole
 #include "nsIStringBundle.h"
@@ -908,19 +909,22 @@ nsContentUtils::GetDocumentFromCaller()
   JSContext *cx = nsnull;
   sThreadJSContextStack->Peek(&cx);
 
-  nsCOMPtr<nsIDOMDocument> doc;
+  nsIDOMDocument *doc = nsnull;
 
   if (cx) {
-    nsIScriptGlobalObject *sgo = nsJSUtils::GetDynamicScriptGlobal(cx);
+    JSObject *callee = nsnull;
+    JSStackFrame *fp = nsnull;
+    while (!callee && (fp = ::JS_FrameIterator(cx, &fp))) {
+      callee = ::JS_GetFrameCalleeObject(cx, fp);
+    }
 
-    nsCOMPtr<nsIDOMWindowInternal> win(do_QueryInterface(sgo));
+    nsCOMPtr<nsPIDOMWindow> win =
+      do_QueryInterface(nsJSUtils::GetStaticScriptGlobal(cx, callee));
     if (win) {
-      win->GetDocument(getter_AddRefs(doc));
+      doc = win->GetExtantDocument();
     }
   }
 
-  // This will return a pointer to something we're about to release,
-  // but that's ok here.
   return doc;
 }
 
