@@ -423,6 +423,8 @@ PyObject *LogConsoleMessage(PyObject *self, PyObject *args)
 		consoleService->LogStringMessage(NS_ConvertASCIItoUCS2(msg).get());
 	else
 		PR_fprintf(PR_STDERR,"%s\n", &msg);
+	Py_INCREF(Py_None);
+	return Py_None;
 }
 
 extern PYXPCOM_EXPORT PyObject *PyXPCOMMethod_IID(PyObject *self, PyObject *args);

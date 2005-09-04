@@ -92,10 +92,18 @@ class ConsoleServiceStream:
     def write(self, msg):
         import _xpcom
         _xpcom.LogConsoleMessage(msg)
+    def close(self):
+        pass
 
 logger = logging.getLogger('pyxpcom')
 if len(logger.handlers) == 0:
     hdlr = logging.StreamHandler(ConsoleServiceStream())
+    fmt = logging.Formatter(logging.BASIC_FORMAT)
+    hdlr.setFormatter(fmt)
+    logger.addHandler(hdlr)
+    # The console handler in mozilla does not go to the console!?
+    # Add a handler to print to stderr.
+    hdlr = logging.StreamHandler()
     fmt = logging.Formatter(logging.BASIC_FORMAT)
     hdlr.setFormatter(fmt)
     logger.addHandler(hdlr)
