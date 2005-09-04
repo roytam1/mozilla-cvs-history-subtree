@@ -107,6 +107,7 @@ _doc_.objclone = "\
  setters.                                                             ";
 
 function objclone(src) {
+  if (src == null) return null;
   var dest = {};
   for (var p in src) {
     propcopy(dest, src, p);
