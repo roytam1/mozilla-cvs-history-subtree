@@ -75,6 +75,7 @@
 #include "nsIAuthPrompt.h"
 #include "nsIStringStream.h"
 #include "nsIStreamConverterService.h"
+#include "nsDOMJSUtils.h" // GetScriptContextFromJSContext
 
 static const char* kLoadAsData = "loadAsData";
 #define LOADSTR NS_LITERAL_STRING("load")

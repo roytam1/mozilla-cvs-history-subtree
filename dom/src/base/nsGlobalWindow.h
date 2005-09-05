@@ -109,6 +109,7 @@ class nsScreen;
 class nsHistory;
 class nsIDocShellLoadInfo;
 class WindowStateHolder;
+class nsIArray;
 
 //*****************************************************************************
 // nsGlobalWindow: Global Object for Scripting
@@ -151,8 +152,16 @@ public:
   NS_DECL_ISUPPORTS
 
   // nsIScriptGlobalObject
-  virtual void SetContext(nsIScriptContext *aContext);
   virtual nsIScriptContext *GetContext();
+  virtual JSObject *GetGlobalJSObject();
+
+  virtual nsIScriptContext *GetLanguageContext(PRUint32 lang);
+  virtual void *GetLanguageGlobal(PRUint32 lang);
+
+  // Set a new language context for this global.  The native global for the
+  // context is created by the context's GetNativeGlobal() method.
+  virtual nsresult SetLanguageContext(PRUint32 lang, nsIScriptContext *aContext);
+  
   virtual nsresult SetNewDocument(nsIDOMDocument *aDocument,
                                   nsISupports *aState,
                                   PRBool aRemoveEventListeners,
@@ -166,10 +175,9 @@ public:
                                   nsEvent* aEvent, nsIDOMEvent** aDOMEvent,
                                   PRUint32 aFlags,
                                   nsEventStatus* aEventStatus);
-  virtual JSObject *GetGlobalJSObject();
-  virtual void OnFinalize(JSObject *aJSObject);
+  virtual void OnFinalize();
   virtual void SetScriptsEnabled(PRBool aEnabled, PRBool aFireTimeouts);
-  virtual nsresult SetNewArguments(JSObject *aArguments);
+  virtual nsresult SetNewArguments(nsIArray *aArguments);
 
   // nsIScriptObjectPrincipal
   virtual nsIPrincipal* GetPrincipal();
@@ -324,7 +332,7 @@ protected:
   NS_IMETHOD OpenInternal(const nsAString& aUrl,
                           const nsAString& aName,
                           const nsAString& aOptions,
-                          PRBool aDialog, jsval *argv, PRUint32 argc,
+                          PRBool aDialog, nsIArray *argv,
                           nsISupports *aExtraArgument, nsIDOMWindow **aReturn);
   static void CloseWindow(nsISupports* aWindow);
   static void ClearWindowScope(nsISupports* aWindow);
@@ -432,7 +440,7 @@ protected:
   nsCOMPtr<nsIScriptContext>    mContext;
   nsCOMPtr<nsIDOMWindowInternal> mOpener;
   nsCOMPtr<nsIControllers>      mControllers;
-  JSObject*                     mArguments;
+  nsCOMPtr<nsIArray>            mArguments;
   nsRefPtr<nsNavigator>         mNavigator;
   nsRefPtr<nsScreen>            mScreen;
   nsRefPtr<nsHistory>           mHistory;
@@ -447,6 +455,9 @@ protected:
   nsRefPtr<nsLocation>          mLocation;
   nsString                      mStatus;
   nsString                      mDefaultStatus;
+  // index 0->language_id 1, so index MAX-1 == language_id MAX
+  nsCOMPtr<nsIScriptContext>    mLanguageContexts[nsIProgrammingLanguage::MAX];
+  void *                        mLanguageGlobals[nsIProgrammingLanguage::MAX];
 
   nsIScriptGlobalObjectOwner*   mGlobalObjectOwner; // Weak Reference
   nsIDocShell*                  mDocShell;  // Weak Reference
@@ -568,7 +579,7 @@ struct nsTimeout
   // caller of setTimeout()
   char *mFileName;
   PRUint32 mLineNo;
-  const char *mVersion;
+  PRUint32 mVersion;
 
   // stack depth at which timeout is firing
   PRUint32 mFiringDepth;

@@ -65,7 +65,6 @@
 #include "nsXPIDLString.h"
 #include "prprf.h"
 #include "nsEscape.h"
-#include "nsIJSContextStack.h"
 #include "nsIWebNavigation.h"
 #include "nsIDocShell.h"
 #include "nsIContentViewer.h"
@@ -260,7 +259,7 @@ nsresult nsJSThunk::EvaluateScript(nsIChannel *aChannel)
     PRBool bIsUndefined;
 
     rv = scriptContext->EvaluateString(NS_ConvertUTF8toUCS2(script),
-                                       globalJSObject, // obj
+                                       global, // obj
                                        principal,
                                        url.get(),      // url
                                        1,              // line no

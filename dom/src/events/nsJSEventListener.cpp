@@ -39,22 +39,23 @@
 #include "nsString.h"
 #include "nsReadableUtils.h"
 #include "nsIServiceManager.h"
-#include "nsIJSContextStack.h"
 #include "nsIScriptSecurityManager.h"
 #include "nsIScriptContext.h"
+#include "nsIScriptGlobalObject.h"
 #include "nsIXPConnect.h"
 #include "nsIPrivateDOMEvent.h"
 #include "nsGUIEvent.h"
 #include "nsContentUtils.h"
+#include "nsArray.h"
 
 
 /*
  * nsJSEventListener implementation
  */
 nsJSEventListener::nsJSEventListener(nsIScriptContext *aContext,
-                                     JSObject *aScopeObject,
-                                     nsISupports *aObject)
-  : nsIJSEventListener(aContext, aScopeObject, aObject),
+                                     nsIScriptGlobalObject *aScopeObject,
+                                     nsIScriptBinding *aBinding)
+  : nsIJSEventListener(aContext, aScopeObject, aBinding),
     mReturnResult(nsReturnResult_eNotSet)
 {
 }
@@ -84,7 +85,8 @@ nsJSEventListener::SetEventName(nsIAtom* aName)
 nsresult
 nsJSEventListener::HandleEvent(nsIDOMEvent* aEvent)
 {
-  jsval funval;
+  nsresult rv;
+  nsCOMPtr<nsIArray> iargv;
   jsval arg;
   jsval *argv = &arg;
   PRInt32 argc = 0;
@@ -115,29 +117,11 @@ nsJSEventListener::HandleEvent(nsIDOMEvent* aEvent)
     mEventName->ToString(eventString);
   }
 
-  nsresult rv;
-  nsIXPConnect *xpc = nsContentUtils::XPConnect();
-
-  // root
-  nsCOMPtr<nsIXPConnectJSObjectHolder> wrapper;
-  rv = xpc->WrapNative(cx, mScopeObject, mTarget, NS_GET_IID(nsISupports),
-                       getter_AddRefs(wrapper));
+  void *funcval;
+  rv = mContext->GetScriptBindingHandler(mBinding, eventString, &funcval);
   NS_ENSURE_SUCCESS(rv, rv);
-
-  JSObject* obj = nsnull;
-  rv = wrapper->GetJSObject(&obj);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  if (!JS_LookupUCProperty(cx, obj,
-                           NS_REINTERPRET_CAST(const jschar *,
-                                               eventString.get()),
-                           eventString.Length(), &funval)) {
-    return NS_ERROR_FAILURE;
-  }
-
-  if (JS_TypeOfValue(cx, funval) != JSTYPE_FUNCTION) {
+  if (!funcval)
     return NS_OK;
-  }
 
   PRBool handledScriptError = PR_FALSE;
   if (eventString.EqualsLiteral("onerror")) {
@@ -155,25 +139,24 @@ nsJSEventListener::HandleEvent(nsIDOMEvent* aEvent)
       NS_ENSURE_TRUE(argv, NS_ERROR_OUT_OF_MEMORY);
       argc = 3;
       handledScriptError = PR_TRUE;
+      NS_ERROR("nsJSEventListener ignoring args!");
     }
   }
 
   if (!handledScriptError) {
-    rv = xpc->WrapNative(cx, obj, aEvent, NS_GET_IID(nsIDOMEvent),
-                         getter_AddRefs(wrapper));
+    nsCOMPtr<nsIMutableArray> tempargv;
+    rv = NS_NewArray(getter_AddRefs(tempargv));
     NS_ENSURE_SUCCESS(rv, rv);
-
-    JSObject *eventObj = nsnull;
-    rv = wrapper->GetJSObject(&eventObj);
+    NS_ENSURE_TRUE(tempargv != nsnull, NS_ERROR_OUT_OF_MEMORY);
+    rv = tempargv->AppendElement(aEvent, PR_FALSE);
     NS_ENSURE_SUCCESS(rv, rv);
-
-    argv[0] = OBJECT_TO_JSVAL(eventObj);
-    argc = 1;
+    iargv = do_QueryInterface(tempargv);
   }
 
-  jsval rval;
-  rv = mContext->CallEventHandler(obj, JSVAL_TO_OBJECT(funval), argc, argv,
-                                  &rval);
+  nsCOMPtr<nsISupports> irv;
+  // XXX - fix return val!
+  jsval rval = JSVAL_VOID;
+  rv = mContext->CallEventHandler(mBinding, funcval, iargv, getter_AddRefs(irv));
 
   if (argv != &arg) {
     ::JS_PopArguments(cx, stackPtr);
@@ -222,11 +205,11 @@ nsJSEventListener::HandleEvent(nsIDOMEvent* aEvent)
  */
 
 nsresult
-NS_NewJSEventListener(nsIScriptContext *aContext, JSObject *aScopeObject,
-                      nsISupports *aObject, nsIDOMEventListener ** aReturn)
+NS_NewJSEventListener(nsIScriptContext *aContext, nsIScriptGlobalObject *aScopeGlobal,
+                      nsIScriptBinding *aBinding, nsIDOMEventListener ** aReturn)
 {
   nsJSEventListener* it =
-    new nsJSEventListener(aContext, aScopeObject, aObject);
+    new nsJSEventListener(aContext, aScopeGlobal, aBinding);
   if (!it) {
     return NS_ERROR_OUT_OF_MEMORY;
   }

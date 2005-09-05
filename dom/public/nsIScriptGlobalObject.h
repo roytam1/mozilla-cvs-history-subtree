@@ -49,11 +49,13 @@ class nsPresContext;
 class nsIDocShell;
 class nsIDOMWindowInternal;
 class nsIScriptGlobalObjectOwner;
+class nsIArray;
 struct JSObject;
 
+// {6E7EF978-47D0-47c9-9649-CDCDB1E4CCEC}
 #define NS_ISCRIPTGLOBALOBJECT_IID \
-{ 0xd4ddb2f8, 0x385f, 0x4baa, \
-  { 0xba, 0x69, 0x6c, 0x42, 0xb3, 0xc2, 0xd0, 0xd0 } }
+{ 0x6e7ef978, 0x47d0, 0x47c9, \
+{ 0x96, 0x49, 0xcd, 0xcd, 0xb1, 0xe4, 0xcc, 0xec } }
 
 /**
  * The JavaScript specific global object. This often used to store
@@ -65,8 +67,6 @@ class nsIScriptGlobalObject : public nsISupports
 public:
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISCRIPTGLOBALOBJECT_IID)
 
-  virtual void SetContext(nsIScriptContext *aContext) = 0;
-  virtual nsIScriptContext *GetContext() = 0;
   virtual nsresult SetNewDocument(nsIDOMDocument *aDocument,
                                   nsISupports *aState,
                                   PRBool aRemoveEventListeners,
@@ -97,13 +97,38 @@ public:
                                   PRUint32 aFlags,
                                   nsEventStatus* aEventStatus)=0;
 
-  virtual JSObject *GetGlobalJSObject() = 0;
+  /**
+   * Get a script context (WITHOUT added reference) for the specified language.
+   */
+  virtual nsIScriptContext *GetLanguageContext(PRUint32 lang) = 0;
+  
+  /**
+   * Get the opaque "global" object for the specified lang.
+   */
+  virtual void *GetLanguageGlobal(PRUint32 lang) = 0;
+
+  // Set/GetContext deprecated methods - use GetLanguageContext/Global
+  virtual JSObject *GetGlobalJSObject() {
+        return (JSObject *)GetLanguageGlobal(nsIProgrammingLanguage::JAVASCRIPT);
+  }
+
+  virtual nsIScriptContext *GetContext() {
+        return GetLanguageContext(nsIProgrammingLanguage::JAVASCRIPT);
+  }
 
   /**
-   * Called when the global JSObject is finalized
+   * Set a new language context for this global.  The native global for the
+   * context is created by the context's GetNativeGlobal() method.
    */
 
-  virtual void OnFinalize(JSObject *aJSObject) = 0;
+  virtual nsresult SetLanguageContext(PRUint32 lang, nsIScriptContext *aContext) = 0;
+
+  /**
+   * Called when the global script is finalized.  Finalizes all contexts and globals
+   * for all languages.
+   */
+
+  virtual void OnFinalize() = 0;
 
   /**
    * Called to enable/disable scripts.
@@ -113,9 +138,10 @@ public:
   /** Set a new arguments object for this window. This will be set on
    * the window right away (if there's an existing document) and it
    * will also be installed on the window when the next document is
-   * loaded.
-   */
-  virtual nsresult SetNewArguments(JSObject *aArguments) = 0;
+   * loaded.  Each language impl is responsible for converting to
+   * an array of args as appropriate for that language.
+    */
+  virtual nsresult SetNewArguments(nsIArray *aArguments) = 0;
 };
 
 #endif

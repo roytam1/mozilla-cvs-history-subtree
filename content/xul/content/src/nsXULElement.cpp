@@ -190,6 +190,7 @@ nsICSSOMFactory* nsXULElement::gCSSOMFactory = nsnull;
 
 static NS_DEFINE_CID(kXULPopupListenerCID,        NS_XULPOPUPLISTENER_CID);
 static NS_DEFINE_CID(kCSSOMFactoryCID,            NS_CSSOMFACTORY_CID);
+static NS_DEFINE_CID(kDOMScriptObjectFactoryCID, NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
 
 //----------------------------------------------------------------------
 
@@ -206,57 +207,6 @@ static struct {
     PRUint32 Total;
 } gFaults;
 #endif
-
-#include "nsIJSRuntimeService.h"
-static nsIJSRuntimeService* gJSRuntimeService = nsnull;
-static JSRuntime* gScriptRuntime = nsnull;
-static PRInt32 gScriptRuntimeRefcnt = 0;
-
-static nsresult
-AddJSGCRoot(void* aScriptObjectRef, const char* aName)
-{
-    if (++gScriptRuntimeRefcnt == 1 || !gScriptRuntime) {
-        CallGetService("@mozilla.org/js/xpc/RuntimeService;1",
-                       &gJSRuntimeService);
-        if (! gJSRuntimeService) {
-            NS_NOTREACHED("couldn't add GC root");
-            return NS_ERROR_FAILURE;
-        }
-
-        gJSRuntimeService->GetRuntime(&gScriptRuntime);
-        if (! gScriptRuntime) {
-            NS_NOTREACHED("couldn't add GC root");
-            return NS_ERROR_FAILURE;
-        }
-    }
-
-    PRBool ok;
-    ok = ::JS_AddNamedRootRT(gScriptRuntime, aScriptObjectRef, aName);
-    if (! ok) {
-        NS_NOTREACHED("couldn't add GC root");
-        return NS_ERROR_OUT_OF_MEMORY;
-    }
-
-    return NS_OK;
-}
-
-static nsresult
-RemoveJSGCRoot(void* aScriptObjectRef)
-{
-    if (! gScriptRuntime) {
-        NS_NOTREACHED("couldn't remove GC root");
-        return NS_ERROR_FAILURE;
-    }
-
-    ::JS_RemoveRootRT(gScriptRuntime, aScriptObjectRef);
-
-    if (--gScriptRuntimeRefcnt == 0) {
-        NS_RELEASE(gJSRuntimeService);
-        gScriptRuntime = nsnull;
-    }
-
-    return NS_OK;
-}
 
 //----------------------------------------------------------------------
 
@@ -409,11 +359,27 @@ nsXULElement::Create(nsXULPrototypeElement* aPrototype,
     aPrototype->AddRef();
 
     if (aIsScriptable) {
+        // If this element defines a "scriptLanguage" element locate the ID
+        PRUint32 lang_id = nsIProgrammingLanguage::JAVASCRIPT;
+        nsAutoString languageAttr;
+        element->GetAttr(kNameSpaceID_None, nsXULAtoms::scriptLanguage,
+                         languageAttr);
+        if (!languageAttr.IsEmpty()) {
+            // convert name to language ID
+            nsCOMPtr<nsIDOMScriptObjectFactory> factory = \
+                    do_GetService(kDOMScriptObjectFactoryCID);
+            NS_ENSURE_TRUE(factory, NS_ERROR_FAILURE);
+            rv = factory->GetIDForLanguage(languageAttr, &lang_id);
+            NS_ASSERTION(NS_SUCCEEDED(rv),
+                         "Failed to locate script language - assuming js");
+        }
+
         // Check each attribute on the prototype to see if we need to do
         // any additional processing and hookup that would otherwise be
         // done 'automagically' by SetAttr().
         for (PRUint32 i = 0; i < aPrototype->mNumAttributes; ++i)
-            element->AddListenerFor(aPrototype->mAttributes[i].mName, PR_TRUE);
+            element->AddListenerFor(aPrototype->mAttributes[i].mName, lang_id,
+                                    PR_TRUE);
     }
 
     NS_ADDREF(*aResult = element.get());
@@ -626,7 +592,8 @@ nsXULElement::MaybeTriggerAutoLink(nsIDocShell *aShell)
 }
 
 nsresult
-nsXULElement::AddScriptEventListener(nsIAtom* aName, const nsAString& aValue)
+nsXULElement::AddScriptEventListener(nsIAtom* aName, const nsAString& aValue,
+                                     PRUint32 aLanguage)
 {
     // XXX sXBL/XBL2 issue! Owner or current document?
     // Note that If it's current, then we need to hook up listeners on the root
@@ -662,8 +629,8 @@ nsXULElement::AddScriptEventListener(nsIAtom* aName, const nsAString& aValue)
 
     if (NS_FAILED(rv)) return rv;
 
-    return manager->AddScriptEventListener(target, aName, aValue, defer,
-                                           !nsContentUtils::IsChromeDoc(doc));
+    return manager->AddScriptEventListener(target, aName, aValue, aLanguage,
+                                           defer, !nsContentUtils::IsChromeDoc(doc));
 }
 
 nsresult
@@ -741,7 +708,7 @@ nsXULElement::GetCompiledEventHandler(nsIAtom *aName, void** aHandler)
 
 nsresult
 nsXULElement::CompileEventHandler(nsIScriptContext* aContext,
-                                  void* aTarget,
+                                  nsIScriptBinding* aTarget,
                                   nsIAtom *aName,
                                   const nsAString& aBody,
                                   const char* aURL,
@@ -749,16 +716,16 @@ nsXULElement::CompileEventHandler(nsIScriptContext* aContext,
                                   void** aHandler)
 {
     nsresult rv;
-    JSObject* scopeObject;
+    nsIScriptBinding *compileTarget;
 
     XUL_PROTOTYPE_ATTRIBUTE_METER(gNumCacheSets);
 
-    nsIScriptContext *context;
+    nsIScriptContext *compileContext;
     if (mPrototype) {
         // It'll be shared among the instances of the prototype.
         // Use null for the scope object when precompiling shared
         // prototype scripts.
-        scopeObject = nsnull;
+        compileTarget = nsnull;
 
         // Use the prototype document's special context.  Because
         // scopeObject is null, the JS engine has no other source of
@@ -781,27 +748,31 @@ nsXULElement::CompileEventHandler(nsIScriptContext* aContext,
         nsIScriptGlobalObject* global = globalOwner->GetScriptGlobalObject();
         NS_ENSURE_TRUE(global, NS_ERROR_UNEXPECTED);
 
-        context = global->GetContext();
+        compileContext = global->GetLanguageContext(aContext->GetLanguage());
+        // It could be possible the language has been setup on aContext but
+        // not on the global - we don't demand-create language contexts on the
+        // nsGlobalWindow
+        NS_ASSERTION(compileContext, "Failed to get a context of this language from the global!?");
     }
     else {
         // We don't have a prototype; do a one-off compile.
         NS_ASSERTION(aTarget != nsnull, "no prototype and no target?!");
-        scopeObject = NS_REINTERPRET_CAST(JSObject*, aTarget);
-        context = aContext;
+        compileTarget = aTarget;
+        compileContext = aContext;
     }
 
     // Compile the event handler
     const char *eventName = nsContentUtils::GetEventArgName(kNameSpaceID_XUL);
-    rv = context->CompileEventHandler(scopeObject, aName, eventName, aBody,
-                                      aURL, aLineNo, !scopeObject,
-                                      aHandler);
+    rv = compileContext->CompileEventHandler(compileTarget, aName, eventName,
+                                             aBody, aURL, aLineNo, !compileTarget,
+                                             aHandler);
     if (NS_FAILED(rv)) return rv;
 
-    if (! scopeObject) {
+    if (! compileTarget) {
         // If it's a shared handler, we need to bind the shared
         // function object to the real target.
 
-        // XXX: Shouldn't this use context and not aContext?
+        // XXX: Shouldn't this use compileContext and not aContext?
         rv = aContext->BindCompiledEventHandler(aTarget, aName, *aHandler);
         if (NS_FAILED(rv)) return rv;
     }
@@ -811,13 +782,10 @@ nsXULElement::CompileEventHandler(nsIScriptContext* aContext,
     if (attr) {
         XUL_PROTOTYPE_ATTRIBUTE_METER(gNumCacheFills);
         attr->mEventHandler = *aHandler;
+        attr->mEventContext = compileContext;
 
         if (attr->mEventHandler) {
-            JSContext *cx = (JSContext*) context->GetNativeContext();
-            if (!cx)
-                return NS_ERROR_UNEXPECTED;
-
-            rv = AddJSGCRoot(&attr->mEventHandler,
+            rv = compileContext->AddGCRoot(&attr->mEventHandler,
                              "nsXULPrototypeAttribute::mEventHandler");
             if (NS_FAILED(rv)) return rv;
         }
@@ -829,6 +797,7 @@ nsXULElement::CompileEventHandler(nsIScriptContext* aContext,
 
 void
 nsXULElement::AddListenerFor(const nsAttrName& aName,
+                             PRUint32 aLanguage,
                              PRBool aCompileEventHandlers)
 {
     // If appropriate, add a popup listener and/or compile the event
@@ -841,7 +810,7 @@ nsXULElement::AddListenerFor(const nsAttrName& aName,
         if (aCompileEventHandlers && IsEventHandler(attr)) {
             nsAutoString value;
             GetAttr(kNameSpaceID_None, attr, value);
-            AddScriptEventListener(attr, value);
+            AddScriptEventListener(attr, value, aLanguage);
         }
     }
 }
@@ -958,12 +927,27 @@ nsXULElement::BindToTree(nsIDocument* aDocument, nsIContent* aParent,
         // Shouldn't they depend on the owner document?  Or is this code just
         // misplaced, basically?
         
+        // If this element defines a "scriptLanguage" element locate the ID
+        PRUint32 lang_id = nsIProgrammingLanguage::JAVASCRIPT;
+        nsAutoString languageAttr;
+        GetAttr(kNameSpaceID_None, nsXULAtoms::scriptLanguage, languageAttr);
+        if (!languageAttr.IsEmpty()) {
+            // convert name to language ID
+            nsCOMPtr<nsIDOMScriptObjectFactory> factory = \
+                                do_GetService(kDOMScriptObjectFactoryCID);
+            NS_ENSURE_TRUE(factory, NS_ERROR_FAILURE);
+            nsresult rv;
+            rv = factory->GetIDForLanguage(languageAttr, &lang_id);
+            NS_ASSERTION(NS_SUCCEEDED(rv),
+                         "Failed to locate script language - assuming js");
+        }
+
         PRInt32 count = mAttrsAndChildren.AttrCount();
         PRBool haveLocalAttributes = (count > 0);
         PRInt32 i;
         for (i = 0; i < count; i++) {
             AddListenerFor(*mAttrsAndChildren.GetSafeAttrNameAt(i),
-                           aCompileEventHandlers);
+                           lang_id, aCompileEventHandlers);
         }
 
         if (mPrototype) {
@@ -979,7 +963,7 @@ nsXULElement::BindToTree(nsIDocument* aDocument, nsIContent* aParent,
                     continue;
                 }
 
-                AddListenerFor(protoattr->mName, aCompileEventHandlers);
+                AddListenerFor(protoattr->mName, lang_id, aCompileEventHandlers);
             }
         }
     }
@@ -1468,7 +1452,8 @@ nsXULElement::SetAttr(PRInt32 aNamespaceID, nsIAtom* aName, nsIAtom* aPrefix,
         // the attribute isn't set yet.
         MaybeAddPopupListener(aName);
         if (IsEventHandler(aName)) {
-            AddScriptEventListener(aName, aValue);
+            // XXX - script language for this stuff?
+            AddScriptEventListener(aName, aValue, nsIProgrammingLanguage::JAVASCRIPT);
         }
 
         // Hide chrome if needed
@@ -3016,7 +3001,10 @@ nsXULPrototypeAttribute::~nsXULPrototypeAttribute()
 {
     MOZ_COUNT_DTOR(nsXULPrototypeAttribute);
     if (mEventHandler)
-        RemoveJSGCRoot(&mEventHandler);
+        if (mEventContext)
+            mEventContext->RemoveGCRoot(&mEventHandler);
+        else
+            NS_ERROR("Handler without context - leaked GC root?");
 }
 
 
@@ -3027,7 +3015,7 @@ nsXULPrototypeAttribute::~nsXULPrototypeAttribute()
 
 nsresult
 nsXULPrototypeElement::Serialize(nsIObjectOutputStream* aStream,
-                                 nsIScriptContext* aContext,
+                                 nsIScriptGlobalObject* aGlobal,
                                  const nsCOMArray<nsINodeInfo> *aNodeInfos)
 {
     nsresult rv;
@@ -3072,27 +3060,34 @@ nsXULPrototypeElement::Serialize(nsIObjectOutputStream* aStream,
         switch (child->mType) {
         case eType_Element:
         case eType_Text:
-            rv |= child->Serialize(aStream, aContext, aNodeInfos);
+            rv |= child->Serialize(aStream, aGlobal, aNodeInfos);
             break;
         case eType_Script:
             rv |= aStream->Write32(child->mType);
             nsXULPrototypeScript* script = NS_STATIC_CAST(nsXULPrototypeScript*, child);
 
+            PRUint32 langID = script->mScriptContext->GetLanguage();
+            NS_ASSERTION(langID == nsIProgrammingLanguage::JAVASCRIPT,
+                         "Fix me for non JS languages");
+			if (langID != nsIProgrammingLanguage::JAVASCRIPT)
+				return NS_ERROR_UNEXPECTED;
+
             rv |= aStream->Write8(script->mOutOfLine);
             if (! script->mOutOfLine) {
-                rv |= script->Serialize(aStream, aContext, aNodeInfos);
+                rv |= script->Serialize(aStream, aGlobal, aNodeInfos);
             } else {
                 rv |= aStream->WriteCompoundObject(script->mSrcURI,
                                                    NS_GET_IID(nsIURI),
                                                    PR_TRUE);
 
-                if (script->mJSObject) {
+                if (script->mScriptObject && langID == nsIProgrammingLanguage::JAVASCRIPT) {
                     // This may return NS_OK without muxing script->mSrcURI's
                     // data into the FastLoad file, in the case where that
                     // muxed document is already there (written by a prior
                     // session, or by an earlier FastLoad episode during this
                     // session).
-                    rv |= script->SerializeOutOfLine(aStream, aContext);
+                    nsIScriptContext *context = aGlobal->GetLanguageContext(langID);
+                    rv |= script->SerializeOutOfLine(aStream, aGlobal);
                 }
             }
             break;
@@ -3104,7 +3099,7 @@ nsXULPrototypeElement::Serialize(nsIObjectOutputStream* aStream,
 
 nsresult
 nsXULPrototypeElement::Deserialize(nsIObjectInputStream* aStream,
-                                   nsIScriptContext* aContext,
+                                   nsIScriptGlobalObject* aGlobal,
                                    nsIURI* aDocumentURI,
                                    const nsCOMArray<nsINodeInfo> *aNodeInfos)
 {
@@ -3165,7 +3160,7 @@ nsXULPrototypeElement::Deserialize(nsIObjectInputStream* aStream,
                     return NS_ERROR_OUT_OF_MEMORY;
                 child->mType = childType;
 
-                rv |= child->Deserialize(aStream, aContext, aDocumentURI,
+                rv |= child->Deserialize(aStream, aGlobal, aDocumentURI,
                                          aNodeInfos);
                 break;
             case eType_Text:
@@ -3174,12 +3169,23 @@ nsXULPrototypeElement::Deserialize(nsIObjectInputStream* aStream,
                     return NS_ERROR_OUT_OF_MEMORY;
                 child->mType = childType;
 
-                rv |= child->Deserialize(aStream, aContext, aDocumentURI,
+                rv |= child->Deserialize(aStream, aGlobal, aDocumentURI,
                                          aNodeInfos);
                 break;
             case eType_Script: {
+                // Hmmm.  Theoretically we need to work out the script language,
+                // find a script context for that language, then delegate the serialize
+                // to that.
+                // But now we only know about JavaScript.
+                // We need to change the fast-load format.
+                nsIScriptContext *context = aGlobal->GetLanguageContext(nsIProgrammingLanguage::JAVASCRIPT);
+                if (!context) {
+                    // We must always be able to get JS
+                    NS_ERROR("Could not get JS language context???");
+                    return NS_ERROR_UNEXPECTED;
+                }
                 // language version/options obtained during deserialization.
-                nsXULPrototypeScript* script = new nsXULPrototypeScript(0, nsnull, PR_FALSE);
+                nsXULPrototypeScript* script = new nsXULPrototypeScript(context, 0, 0);
                 if (! script)
                     return NS_ERROR_OUT_OF_MEMORY;
                 child = script;
@@ -3187,12 +3193,12 @@ nsXULPrototypeElement::Deserialize(nsIObjectInputStream* aStream,
 
                 rv |= aStream->Read8(&script->mOutOfLine);
                 if (! script->mOutOfLine) {
-                    rv |= script->Deserialize(aStream, aContext, aDocumentURI,
+                    rv |= script->Deserialize(aStream, aGlobal, aDocumentURI,
                                               aNodeInfos);
                 } else {
                     rv |= aStream->ReadObject(PR_TRUE, getter_AddRefs(script->mSrcURI));
 
-                    rv |= script->DeserializeOutOfLine(aStream, aContext);
+                    rv |= script->DeserializeOutOfLine(aStream, aGlobal);
                 }
                 break;
             }
@@ -3274,32 +3280,42 @@ nsXULPrototypeElement::SetAttrAt(PRUint32 aPos, const nsAString& aValue,
 // nsXULPrototypeScript
 //
 
-nsXULPrototypeScript::nsXULPrototypeScript(PRUint32 aLineNo, const char *aVersion, PRBool aHasE4XOption)
+nsXULPrototypeScript::nsXULPrototypeScript(nsIScriptContext *aContext, PRUint32 aLineNo, PRUint32 aVersion)
     : nsXULPrototypeNode(eType_Script),
       mLineNo(aLineNo),
       mSrcLoading(PR_FALSE),
       mOutOfLine(PR_TRUE),
-      mHasE4XOption(aHasE4XOption),
       mSrcLoadWaiters(nsnull),
-      mJSObject(nsnull),
+      mScriptObject(nsnull),
+      mScriptContext(aContext),
       mLangVersion(aVersion)
 {
     NS_LOG_ADDREF(this, 1, ClassName(), ClassSize());
-    AddJSGCRoot(&mJSObject, "nsXULPrototypeScript::mJSObject");
+    aContext->AddGCRoot(&mScriptObject, "nsXULPrototypeScript::mScriptObject");
 }
 
 
 nsXULPrototypeScript::~nsXULPrototypeScript()
 {
-    RemoveJSGCRoot(&mJSObject);
+    if (mScriptContext)
+        mScriptContext->RemoveGCRoot(&mScriptObject);
+    else
+        NS_ERROR("nsXULPrototypeScript without context - leaked GC root?");
 }
 
 
 nsresult
 nsXULPrototypeScript::Serialize(nsIObjectOutputStream* aStream,
-                                nsIScriptContext* aContext,
+                                nsIScriptGlobalObject* aGlobal,
                                 const nsCOMArray<nsINodeInfo> *aNodeInfos)
 {
+    PRUint32 langID = mScriptContext->GetLanguage();
+    nsIScriptContext *context = aGlobal->GetLanguageContext(langID);
+    NS_ASSERTION(context == mScriptContext, "Contexts are confused?");
+    NS_ASSERTION(langID == nsIProgrammingLanguage::JAVASCRIPT, "Still only JS");
+    // todo - Write the language ID etc.
+    
+    JSObject *mJSObject = (JSObject *)mScriptObject; // eeek - this must be delegated??
     NS_ASSERTION(!mSrcLoading || mSrcLoadWaiters != nsnull || !mJSObject,
                  "script source still loading when serializing?!");
     if (!mJSObject)
@@ -3311,7 +3327,7 @@ nsXULPrototypeScript::Serialize(nsIObjectOutputStream* aStream,
     aStream->Write32(mLineNo);
 
     JSContext* cx = NS_REINTERPRET_CAST(JSContext*,
-                                        aContext->GetNativeContext());
+                                        context->GetNativeContext());
     JSXDRState *xdr = ::JS_XDRNewMem(cx, JSXDR_ENCODE);
     if (! xdr)
         return NS_ERROR_OUT_OF_MEMORY;
@@ -3349,10 +3365,7 @@ nsXULPrototypeScript::Serialize(nsIObjectOutputStream* aStream,
     ::JS_XDRDestroy(xdr);
     if (NS_FAILED(rv)) return rv;
 
-    PRUint32 version = PRUint32(mLangVersion
-                                ? ::JS_StringToVersion(mLangVersion)
-                                : JSVERSION_DEFAULT);
-    rv = aStream->Write32(version);
+    rv = aStream->Write32(mLangVersion);
     if (NS_FAILED(rv)) return rv;
 
     return NS_OK;
@@ -3360,8 +3373,13 @@ nsXULPrototypeScript::Serialize(nsIObjectOutputStream* aStream,
 
 nsresult
 nsXULPrototypeScript::SerializeOutOfLine(nsIObjectOutputStream* aStream,
-                                         nsIScriptContext* aContext)
+                                         nsIScriptGlobalObject* aGlobal)
 {
+    PRUint32 langID = mScriptContext->GetLanguage();
+    NS_ASSERTION(aGlobal->GetLanguageContext(langID) == mScriptContext,
+                 "Contexts are confused?");
+    NS_ASSERTION(langID == nsIProgrammingLanguage::JAVASCRIPT, "Still only JS");
+
     nsIXULPrototypeCache* cache = GetXULCache();
 #ifdef NS_DEBUG
     PRBool useXULCache = PR_TRUE;
@@ -3409,7 +3427,7 @@ nsXULPrototypeScript::SerializeOutOfLine(nsIObjectOutputStream* aStream,
 
     nsCOMPtr<nsIURI> oldURI;
     rv |= fastLoadService->SelectMuxedDocument(mSrcURI, getter_AddRefs(oldURI));
-    rv |= Serialize(objectOutput, aContext, nsnull);
+    rv |= Serialize(objectOutput, aGlobal, nsnull);
     rv |= fastLoadService->EndMuxedDocument(mSrcURI);
 
     if (oldURI) {
@@ -3426,12 +3444,18 @@ nsXULPrototypeScript::SerializeOutOfLine(nsIObjectOutputStream* aStream,
 
 nsresult
 nsXULPrototypeScript::Deserialize(nsIObjectInputStream* aStream,
-                                  nsIScriptContext* aContext,
+                                  nsIScriptGlobalObject* aGlobal,
                                   nsIURI* aDocumentURI,
                                   const nsCOMArray<nsINodeInfo> *aNodeInfos)
 {
+    PRUint32 langID = mScriptContext->GetLanguage();
+    NS_ASSERTION(aGlobal->GetLanguageContext(langID) == mScriptContext,
+                 "Contexts are confused?");
+    NS_ASSERTION(langID == nsIProgrammingLanguage::JAVASCRIPT, "Still only JS");
     NS_TIMELINE_MARK_FUNCTION("chrome js deserialize");
     nsresult rv;
+
+    JSObject *mJSObject = (JSObject *)mScriptObject; // eeek - this must be delegated??
 
     // Read basic prototype data
     aStream->Read32(&mLineNo);
@@ -3447,7 +3471,7 @@ nsXULPrototypeScript::Deserialize(nsIObjectInputStream* aStream,
     rv = aStream->ReadBytes(size, &data);
     if (NS_SUCCEEDED(rv)) {
         JSContext* cx = NS_REINTERPRET_CAST(JSContext*,
-                                            aContext->GetNativeContext());
+                                            aGlobal->GetContext()->GetNativeContext());
 
         JSXDRState *xdr = ::JS_XDRNewMem(cx, JSXDR_DECODE);
         if (! xdr) {
@@ -3501,22 +3525,26 @@ nsXULPrototypeScript::Deserialize(nsIObjectInputStream* aStream,
     }
     if (NS_FAILED(rv)) return rv;
 
-    PRUint32 version;
-    rv = aStream->Read32(&version);
+    rv = aStream->Read32(&mLangVersion);
     if (NS_FAILED(rv)) return rv;
 
-    mLangVersion = ::JS_VersionToString(JSVersion(version));
     return NS_OK;
 }
 
 
 nsresult
 nsXULPrototypeScript::DeserializeOutOfLine(nsIObjectInputStream* aInput,
-                                           nsIScriptContext* aContext)
+                                           nsIScriptGlobalObject* aGlobal)
 {
     // Keep track of FastLoad failure via rv, so we can
     // AbortFastLoads if things look bad.
     nsresult rv = NS_OK;
+    PRUint32 langID = mScriptContext->GetLanguage();
+    NS_ASSERTION(aGlobal->GetLanguageContext(langID) == mScriptContext,
+                 "Contexts are confused?");
+    NS_ASSERTION(langID == nsIProgrammingLanguage::JAVASCRIPT, "Still only JS");
+
+    JSObject *mJSObject = (JSObject *)mScriptObject; // eeek - this must be delegated??
 
     nsIXULPrototypeCache* cache = GetXULCache();
     nsCOMPtr<nsIFastLoadService> fastLoadService;
@@ -3577,7 +3605,7 @@ nsXULPrototypeScript::DeserializeOutOfLine(nsIObjectInputStream* aInput,
             // We're better off slow-loading than bailing out due to a
             // FastLoad error.
             if (NS_SUCCEEDED(rv))
-                rv = Deserialize(objectInput, aContext, nsnull, nsnull);
+                rv = Deserialize(objectInput, aGlobal, nsnull, nsnull);
 
             if (NS_SUCCEEDED(rv) && mSrcURI) {
                 rv = fastLoadService->EndMuxedDocument(mSrcURI);
@@ -3632,6 +3660,11 @@ nsXULPrototypeScript::Compile(const PRUnichar* aText,
     // and the first document would indirectly reference the prototype
     // document because it keeps the prototype cache alive. Circularity!
     nsresult rv;
+    // In a multi-language world, that means ignoring our mScriptContext
+    // other than to ask it for its language ID to get a matching context
+    // from the global.
+    PRUint32 lang_id = mScriptContext ? 
+                         mScriptContext->GetLanguage() : nsIProgrammingLanguage::JAVASCRIPT;
 
     // Use the prototype document's special context
     nsIScriptContext *context;
@@ -3644,8 +3677,7 @@ nsXULPrototypeScript::Compile(const PRUnichar* aText,
         if (! global)
             return NS_ERROR_UNEXPECTED;
 
-        context = global->GetContext();
-
+        context = global->GetLanguageContext(lang_id);
         NS_ASSERTION(context != nsnull, "no context for script global");
         if (! context)
             return NS_ERROR_UNEXPECTED;
@@ -3662,22 +3694,32 @@ nsXULPrototypeScript::Compile(const PRUnichar* aText,
 
     // Ok, compile it to create a prototype script object!
 
-    // XXXbe violate nsIScriptContext layering because its version parameter
-    // is mis-typed as const char * -- if it were uint32, we could more easily
-    // extend version to include compile-time option, as the JS engine does.
-    // It'd also be more efficient than converting to and from a C string.
+/** I think this is taken care of by nsIScriptContext->CompileScript - it
+ * saves and restores the version.
+ * 
+    // *sob* - what to do about these options?
+    NS_ENSURE_TRUE(cx, NS_ERROR_UNEXPECTED);
+    uint32 options = 0;
+    JSBool changed = PR_FALSE;
+    if (context->GetLanguage() == nsIProgrammingLanguage::JAVASCRIPT) {
 
-    JSContext* cx = NS_REINTERPRET_CAST(JSContext*,
-                                        context->GetNativeContext());
-    uint32 options = ::JS_GetOptions(cx);
-    JSBool changed = (mHasE4XOption ^ !!(options & JSOPTION_XML));
-    if (changed) {
-        ::JS_SetOptions(cx,
-                        mHasE4XOption
-                        ? options | JSOPTION_XML
-                        : options & ~JSOPTION_XML);
+        // XXXbe violate nsIScriptContext layering because its version parameter
+        // is mis-typed as const char * -- if it were uint32, we could more easily
+        // extend version to include compile-time option, as the JS engine does.
+        // It'd also be more efficient than converting to and from a C string.
+
+        JSContext* cx = NS_REINTERPRET_CAST(JSContext*,
+                                                                                context->GetNativeContext());
+        uint32 options = ::JS_GetOptions(cx);
+        JSBool changed = (mHasE4XOption ^ !!(options & JSOPTION_XML));
+        if (changed) {
+            ::JS_SetOptions(cx,
+                            mHasE4XOption
+                            ? options | JSOPTION_XML
+                            : options & ~JSOPTION_XML);
+        }
     }
-
+***/
     rv = context->CompileScript(aText,
                                 aTextLength,
                                 nsnull,
@@ -3685,11 +3727,16 @@ nsXULPrototypeScript::Compile(const PRUnichar* aText,
                                 urlspec.get(),
                                 aLineNo,
                                 mLangVersion,
-                                (void**)&mJSObject);
-
-    if (changed) {
-        ::JS_SetOptions(cx, options);
+                                (void**)&mScriptObject);
+/***
+    if (context->GetLanguage() == nsIProgrammingLanguage::JAVASCRIPT) {
+        if (changed) {
+            JSContext* cx = NS_REINTERPRET_CAST(JSContext*,
+                                                context->GetNativeContext());
+            ::JS_SetOptions(cx, options);
+        }
     }
+***/
     return rv;
 }
 
@@ -3700,7 +3747,7 @@ nsXULPrototypeScript::Compile(const PRUnichar* aText,
 
 nsresult
 nsXULPrototypeText::Serialize(nsIObjectOutputStream* aStream,
-                              nsIScriptContext* aContext,
+                              nsIScriptGlobalObject* aGlobal,
                               const nsCOMArray<nsINodeInfo> *aNodeInfos)
 {
     nsresult rv;
@@ -3715,7 +3762,7 @@ nsXULPrototypeText::Serialize(nsIObjectOutputStream* aStream,
 
 nsresult
 nsXULPrototypeText::Deserialize(nsIObjectInputStream* aStream,
-                                nsIScriptContext* aContext,
+                                nsIScriptGlobalObject* aGlobal,
                                 nsIURI* aDocumentURI,
                                 const nsCOMArray<nsINodeInfo> *aNodeInfos)
 {

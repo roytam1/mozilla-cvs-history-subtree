@@ -53,6 +53,7 @@
 #include "nsIDOMScriptObjectFactory.h"
 #include "nsIObserver.h"
 #include "nsIExceptionService.h"
+#include "nsILanguageRuntime.h"
 
 class nsDOMScriptObjectFactory : public nsIDOMScriptObjectFactory,
                                  public nsIObserver,
@@ -70,8 +71,14 @@ public:
   NS_DECL_NSIEXCEPTIONPROVIDER
 
   // nsIDOMScriptObjectFactory
-  NS_IMETHOD NewScriptContext(nsIScriptGlobalObject *aGlobal,
-                              nsIScriptContext **aContext);
+  NS_IMETHOD GetLanguageRuntime(const nsAString &aLanguageName,
+                                nsILanguageRuntime **aLanguage);
+
+  NS_IMETHOD GetLanguageRuntimeByID(PRUint32 aLanguageID, 
+                                    nsILanguageRuntime **aLanguage);
+
+  NS_IMETHOD GetIDForLanguage(const nsAString &aLanguageName,
+                              PRUint32 *aLanguageID);
 
   NS_IMETHOD NewScriptGlobalObject(PRBool aIsChrome,
                                    nsIScriptGlobalObject **aGlobal);
@@ -86,4 +93,7 @@ public:
                                   PRUint32 aScriptableFlags,
                                   PRBool aHasClassInterface,
                                   const nsCID *aConstructorCID);
+protected:
+  // Indexed by language_id-1
+  nsCOMPtr<nsILanguageRuntime> mLanguageArray[nsIProgrammingLanguage::MAX-1];
 };

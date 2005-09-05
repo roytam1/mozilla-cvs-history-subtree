@@ -48,6 +48,7 @@
 #include "nsNetUtil.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptContext.h"
+#include "nsILanguageRuntime.h"
 #include "nsINodeInfo.h"
 #include "nsIScriptSecurityManager.h"
 #include "nsIPrincipal.h"
@@ -63,6 +64,7 @@
 #include "nsAutoPtr.h"
 
 static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
+static NS_DEFINE_CID(kDOMScriptObjectFactoryCID, NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
 
 //////////////////////////////////////////////////////////////
 //
@@ -108,8 +110,7 @@ class nsScriptLoadRequest : public nsISupports {
 public:
   nsScriptLoadRequest(nsIScriptElement* aElement,
                       nsIScriptLoaderObserver* aObserver,
-                      const char* aVersionString,
-                      PRBool aHasE4XOption);
+                      PRUint32 aVersion);
   virtual ~nsScriptLoadRequest();
 
   NS_DECL_ISUPPORTS
@@ -123,21 +124,19 @@ public:
   PRPackedBool mLoading;             // Are we still waiting for a load to complete?
   PRPackedBool mWasPending;          // Processed immediately or pending
   PRPackedBool mIsInline;            // Is the script inline or loaded?
-  PRPackedBool mHasE4XOption;        // Has E4X=1 script type parameter
   nsString mScriptText;              // Holds script for loaded scripts
-  const char* mJSVersion;            // We don't own this string
+  PRUint32 mJSVersion;
   nsCOMPtr<nsIURI> mURI;
   PRInt32 mLineNo;
 };
 
 nsScriptLoadRequest::nsScriptLoadRequest(nsIScriptElement* aElement,
                                          nsIScriptLoaderObserver* aObserver,
-                                         const char* aVersionString,
-                                         PRBool aHasE4XOption) :
+                                         PRUint32 aVersion) :
   mElement(aElement), mObserver(aObserver),
   mLoading(PR_TRUE), mWasPending(PR_FALSE),
-  mIsInline(PR_TRUE), mHasE4XOption(aHasE4XOption),
-  mJSVersion(aVersionString), mLineNo(1)
+  mIsInline(PR_TRUE),
+  mJSVersion(aVersion), mLineNo(1)
 {
 }
 
@@ -380,6 +379,8 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement,
 
   // Script evaluation can also be disabled in the current script
   // context even though it's enabled in the document.
+  // XXXMarkh - note we are still checking js here even though another
+  // language may be specified.  Need to clarify the "IsEnabled()" semantics
   nsIScriptGlobalObject *globalObject = mDocument->GetScriptGlobalObject();
   if (globalObject)
   {
@@ -393,35 +394,20 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement,
     }
   }
 
-  PRBool isJavaScript = PR_TRUE;
-  PRBool hasE4XOption = PR_FALSE;
-  const char* jsVersionString = nsnull;
+  nsCOMPtr<nsIDOMScriptObjectFactory> factory = do_GetService(kDOMScriptObjectFactoryCID);
+  NS_ENSURE_TRUE(factory, nsnull);
+  
+  nsCOMPtr<nsILanguageRuntime> languageRuntime;
+  PRUint32 version = 0;
+  PRBool seenLanguage = PR_FALSE;
+
   nsAutoString language, type, src;
 
-  // "language" is a deprecated attribute of HTML, so we check it only for
-  // HTML script elements.
-  nsCOMPtr<nsIDOMHTMLScriptElement> htmlScriptElement =
-    do_QueryInterface(aElement);
-  if (htmlScriptElement) {
-    // Check the language attribute first, so type can trump language.
-    htmlScriptElement->GetAttribute(NS_LITERAL_STRING("language"), language);
-    if (!language.IsEmpty()) {
-      isJavaScript = nsParserUtils::IsJavaScriptLanguage(language,
-                                                         &jsVersionString);
-
-      // IE, Opera, etc. do not respect language version, so neither should
-      // we at this late date in the browser wars saga.  Note that this change
-      // affects HTML but not XUL or SVG (but note also that XUL has its own
-      // code to check nsParserUtils::IsJavaScriptLanguage -- that's probably
-      // a separate bug, one we may not be able to fix short of XUL2).  See
-      // bug 255895 (https://bugzilla.mozilla.org/show_bug.cgi?id=255895).
-      jsVersionString = ::JS_VersionToString(JSVERSION_DEFAULT);
-    }
-  }
-
   // Check the type attribute to determine language and version.
+  // If type exists, it trumps the deprecated 'language='
   aElement->GetScriptType(type);
   if (!type.IsEmpty()) {
+    seenLanguage = PR_TRUE;
     nsCOMPtr<nsIMIMEHeaderParam> mimeHdrParser =
       do_GetService("@mozilla.org/network/mime-hdrparam;1");
     NS_ENSURE_TRUE(mimeHdrParser, NS_ERROR_FAILURE);
@@ -434,6 +420,7 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement,
                                      mimeType);
     NS_ENSURE_SUCCESS(rv, rv);
 
+    // Javascript keeps the fast path, optimized for most-likely type
     // Table ordered from most to least likely JS MIME types.
     // See bug 62485, feel free to add <script type="..."> survey data to it,
     // or to a new bug once 62485 is closed.
@@ -446,37 +433,44 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement,
       nsnull
     };
 
-    isJavaScript = PR_FALSE;
+    PRBool isJavaScript = PR_FALSE;
     for (PRInt32 i = 0; jsTypes[i]; i++) {
       if (mimeType.LowerCaseEqualsASCII(jsTypes[i])) {
         isJavaScript = PR_TRUE;
         break;
       }
     }
+    if (isJavaScript)
+      rv = factory->GetLanguageRuntimeByID(nsIProgrammingLanguage::JAVASCRIPT,
+                                           getter_AddRefs(languageRuntime));
+    else
+      // Use the object factory to locate a matching language.
+      rv = factory->GetLanguageRuntime(mimeType, getter_AddRefs(languageRuntime));
+    if (NS_FAILED(rv) || languageRuntime == nsnull) {
+      NS_WARNING("Failed to find a scripting language");
+      return NS_FAILED(rv) ? rv : NS_ERROR_UNEXPECTED;
+    }
 
-    if (isJavaScript) {
-      JSVersion jsVersion = JSVERSION_DEFAULT;
-      nsAutoString value;
-      rv = mimeHdrParser->GetParameter(typeAndParams, "version",
-                                       EmptyCString(), PR_FALSE, nsnull,
-                                       value);
+    // Get the version string, and ensure the language supports it.
+    nsAutoString versionName;
+    rv = mimeHdrParser->GetParameter(typeAndParams, "version",
+                                     EmptyCString(), PR_FALSE, nsnull,
+                                     versionName);
+    if (NS_FAILED(rv)) {
+      // no language specified - verion remains 0.
+      if (rv != NS_ERROR_INVALID_ARG)
+        return rv;
+    } else {
+      rv = languageRuntime->ParseVersion(versionName, &version);
       if (NS_FAILED(rv)) {
-        if (rv != NS_ERROR_INVALID_ARG)
-          return rv;
-      } else {
-        if (value.Length() != 3 || value[0] != '1' || value[1] != '.')
-          jsVersion = JSVERSION_UNKNOWN;
-        else switch (value[2]) {
-          case '0': jsVersion = JSVERSION_1_0; break;
-          case '1': jsVersion = JSVERSION_1_1; break;
-          case '2': jsVersion = JSVERSION_1_2; break;
-          case '3': jsVersion = JSVERSION_1_3; break;
-          case '4': jsVersion = JSVERSION_1_4; break;
-          case '5': jsVersion = JSVERSION_1_5; break;
-          default:  jsVersion = JSVERSION_UNKNOWN;
-        }
+        NS_WARNING("This script language version is not supported - ignored");
+        return rv;
       }
-      jsVersionString = ::JS_VersionToString(jsVersion);
+    }
+
+    // Some js specifics yet to be abstracted.
+    if (languageRuntime->GetLanguage() == nsIProgrammingLanguage::JAVASCRIPT) {
+      nsAutoString value;
 
       rv = mimeHdrParser->GetParameter(typeAndParams, "e4x",
                                        EmptyCString(), PR_FALSE, nsnull,
@@ -486,20 +480,59 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement,
           return rv;
       } else {
         if (value.Length() == 1 && value[0] == '1')
-          hasE4XOption = PR_TRUE;
+          version |= JSOPTION_XML;
+      }
+    }
+  } else {
+    // no 'type=' element
+    // "language" is a deprecated attribute of HTML, so we check it only for
+    // HTML script elements.
+    nsCOMPtr<nsIDOMHTMLScriptElement> htmlScriptElement =
+      do_QueryInterface(aElement);
+    if (htmlScriptElement) {
+      htmlScriptElement->GetAttribute(NS_LITERAL_STRING("language"), language);
+      if (!language.IsEmpty()) {
+        seenLanguage = PR_TRUE;
+        if (nsParserUtils::IsJavaScriptLanguage(language, &version)) {
+          rv = factory->GetLanguageRuntimeByID(nsIProgrammingLanguage::JAVASCRIPT,
+                                               getter_AddRefs(languageRuntime));
+          if (NS_FAILED(rv)) {
+            NS_ERROR("Failed to get javascript language");
+            return rv;
+          }
+        }
+        // IE, Opera, etc. do not respect language version, so neither should
+        // we at this late date in the browser wars saga.  Note that this change
+        // affects HTML but not XUL or SVG (but note also that XUL has its own
+        // code to check nsParserUtils::IsJavaScriptLanguage -- that's probably
+        // a separate bug, one we may not be able to fix short of XUL2).  See
+        // bug 255895 (https://bugzilla.mozilla.org/show_bug.cgi?id=255895).
+        NS_ASSERTION(JSVERSION_DEFAULT == 0,
+                     "We rely on all languages having 0 as a version default");
+        version = 0;
       }
     }
   }
 
-  // If this isn't JavaScript, we don't know how to evaluate.
-  // XXX How and where should we deal with other scripting languages?
-  //     See bug 255942 (https://bugzilla.mozilla.org/show_bug.cgi?id=255942).
-  if (!isJavaScript) {
+  if (!seenLanguage) {
+    NS_ASSERTION(languageRuntime == nsnull, "eh?");
+    rv = factory->GetLanguageRuntimeByID(nsIProgrammingLanguage::JAVASCRIPT,
+                                         getter_AddRefs(languageRuntime));
+    NS_ASSERTION(!NS_FAILED(rv), "Failed to get default JavaScript language!");
+  }
+
+  // If we don't know the language, we don't know how to evaluate
+  if (!languageRuntime) {
+    return FireErrorNotification(NS_ERROR_NOT_AVAILABLE, aElement, aObserver);
+  }
+  // Our nsScriptLoadRequest is not yet language agnostic
+  if (languageRuntime->GetLanguage() != nsIProgrammingLanguage::JAVASCRIPT) {
+    NS_WARNING("Nearly got another language executed");
     return FireErrorNotification(NS_ERROR_NOT_AVAILABLE, aElement, aObserver);
   }
 
   // Create a request object for this script
-  nsRefPtr<nsScriptLoadRequest> request = new nsScriptLoadRequest(aElement, aObserver, jsVersionString, hasE4XOption);
+  nsRefPtr<nsScriptLoadRequest> request = new nsScriptLoadRequest(aElement, aObserver, version);
   if (!request) {
     return FireErrorNotification(NS_ERROR_OUT_OF_MEMORY, aElement, aObserver);
   }
@@ -738,29 +771,19 @@ nsScriptLoader::EvaluateScript(nsScriptLoadRequest* aRequest,
   PRBool oldProcessingScriptTag = context->GetProcessingScriptTag();
   context->SetProcessingScriptTag(PR_TRUE);
 
-  JSContext *cx = (JSContext *)context->GetNativeContext();
-  uint32 options = ::JS_GetOptions(cx);
-  PRBool needE4X = aRequest->mHasE4XOption && !(options & JSOPTION_XML);
-  if (needE4X) {
-    ::JS_SetOptions(cx, options | JSOPTION_XML);
-  }
-
   // Update our current script.
   nsCOMPtr<nsIScriptElement> oldCurrent = mCurrentScript;
   mCurrentScript = aRequest->mElement;
 
   PRBool isUndefined;
-  context->EvaluateString(aScript, globalObject->GetGlobalJSObject(),
+  context->EvaluateString(aScript, globalObject->GetLanguageGlobal(nsIProgrammingLanguage::JAVASCRIPT),
                           principal, url.get(), aRequest->mLineNo,
                           aRequest->mJSVersion, nsnull, &isUndefined);
 
   // Put the old script back in case it wants to do anything else.
   mCurrentScript = oldCurrent;
 
-  ::JS_ReportPendingException(cx);
-  if (needE4X) {
-    ::JS_SetOptions(cx, options);
-  }
+  ::JS_ReportPendingException((JSContext *)context->GetNativeContext());
 
   context->SetProcessingScriptTag(oldProcessingScriptTag);
 

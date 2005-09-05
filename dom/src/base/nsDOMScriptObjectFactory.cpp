@@ -62,6 +62,7 @@
 #ifdef MOZ_XUL
 #include "nsIXULPrototypeCache.h"
 #endif
+#include "nsICategoryManager.h"
 
 nsDOMScriptObjectFactory::nsDOMScriptObjectFactory()
 {
@@ -82,6 +83,8 @@ nsDOMScriptObjectFactory::nsDOMScriptObjectFactory()
     xs->RegisterExceptionProvider(this, NS_ERROR_MODULE_SVG);
 #endif
   }
+  // And pre-create the javascript language.
+  NS_CreateJSRuntime(getter_AddRefs(mLanguageArray[nsIProgrammingLanguage::JAVASCRIPT-1]));
 }
 
 NS_INTERFACE_MAP_BEGIN(nsDOMScriptObjectFactory)
@@ -95,12 +98,71 @@ NS_INTERFACE_MAP_END
 NS_IMPL_ADDREF(nsDOMScriptObjectFactory)
 NS_IMPL_RELEASE(nsDOMScriptObjectFactory)
 
+NS_IMETHODIMP
+nsDOMScriptObjectFactory::GetLanguageRuntime(const nsAString &aLanguageName,
+                                             nsILanguageRuntime **aLanguage)
+{
+  // For now, we just treat the category manager as a hash-table, looking
+  // up the contract ID each language request.  This never happens for
+  // javascript, so will do for now.
+  nsresult rv;
+  nsCOMPtr<nsICategoryManager> catman =
+        do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv);
+
+  nsXPIDLCString cid;
+  rv = catman->GetCategoryEntry(SCRIPT_LANGUAGE_CATEGORY,
+                                NS_LossyConvertUTF16toASCII(aLanguageName).get(),
+                                getter_Copies(cid));
+  if (NS_FAILED(rv)) {
+    NS_WARNING("No script language registered for this mime-type");
+    return NS_ERROR_FACTORY_NOT_REGISTERED;
+  }
+  // Now get the language service.
+  nsCOMPtr<nsILanguageRuntime> lang =
+      do_GetService(cid, &rv);
+  if (NS_FAILED(rv)) {
+    NS_ERROR("Failed to get the script language service");
+    return rv;
+  }
+  // And stash it away in our array for fast lookup by ID.
+  PRUint32 lang_ndx = lang->GetLanguage() - 1;
+  NS_ASSERTION(mLanguageArray[lang_ndx] == nsnull || mLanguageArray[lang_ndx] == lang,
+               "Got a different language for this ID???");
+  mLanguageArray[lang_ndx] = lang;
+  *aLanguage = lang;
+  NS_IF_ADDREF(*aLanguage);
+  return NS_OK;
+}
 
 NS_IMETHODIMP
-nsDOMScriptObjectFactory::NewScriptContext(nsIScriptGlobalObject *aGlobal,
-                                           nsIScriptContext **aContext)
+nsDOMScriptObjectFactory::GetLanguageRuntimeByID(PRUint32 aLanguageID, 
+                                                 nsILanguageRuntime **aLanguage)
 {
-  return NS_CreateScriptContext(aGlobal, aContext);
+  if (aLanguageID == 0 || aLanguageID > nsIProgrammingLanguage::MAX) {
+    NS_WARNING("Unknown script language");
+    return NS_ERROR_UNEXPECTED;
+  }
+  *aLanguage = mLanguageArray[aLanguageID-1];
+  if (!*aLanguage) {
+    NS_WARNING("Failed to load script language");
+    return NS_ERROR_UNEXPECTED;
+  }
+  NS_IF_ADDREF(*aLanguage);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDOMScriptObjectFactory::GetIDForLanguage(const nsAString &aLanguageName,
+                                           PRUint32 *aLang)
+{
+    nsCOMPtr<nsILanguageRuntime> languageRuntime;
+    nsresult rv;
+    rv = GetLanguageRuntime(aLanguageName, getter_AddRefs(languageRuntime));
+    if (NS_FAILED(rv))
+      return rv;
+
+    *aLang = languageRuntime->GetLanguage();
+    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -180,7 +242,12 @@ nsDOMScriptObjectFactory::Observe(nsISupports *aSubject,
 
     nsGlobalWindow::ShutDown();
     nsDOMClassInfo::ShutDown();
-    nsJSEnvironment::ShutDown();
+
+    for (PRUint32 i=0;i<sizeof(mLanguageArray)/sizeof(mLanguageArray[0]);i++)
+      if (mLanguageArray[i] != nsnull) {
+        mLanguageArray[i]->ShutDown();
+        mLanguageArray[i] = nsnull;
+      }
 
     nsCOMPtr<nsIExceptionService> xs =
       do_GetService(NS_EXCEPTIONSERVICE_CONTRACTID);

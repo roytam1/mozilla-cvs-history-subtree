@@ -131,16 +131,17 @@ public:
   NS_IMETHOD AddScriptEventListener(nsISupports *aObject,
                                     nsIAtom *aName,
                                     const nsAString& aFunc,
+                                    PRUint32 aLanguage,
                                     PRBool aDeferCompilation,
                                     PRBool aPermitUntrustedEvents);
   NS_IMETHOD RegisterScriptEventListener(nsIScriptContext *aContext,
-                                         JSObject *aScopeObject,
+                                         nsIScriptGlobalObject *aScopeObject,
                                          nsISupports *aObject,
                                          nsIAtom* aName);
   NS_IMETHOD RemoveScriptEventListener(nsIAtom *aName);
   NS_IMETHOD CompileScriptEventListener(nsIScriptContext *aContext,
-                                        JSObject *aScopeObject,
-                                        nsISupports *aObject,
+                                        nsIScriptGlobalObject *aScopeObject,
+                                        nsIScriptBinding *aBinding,
                                         nsIAtom* aName, PRBool *aDidCompile);
 
   NS_IMETHOD CaptureEvent(PRInt32 aEventTypes);
@@ -201,15 +202,15 @@ protected:
                               PRUint32 aSubType,
                               PRUint32 aPhaseFlags);
   nsresult CompileEventHandlerInternal(nsIScriptContext *aContext,
-                                       JSObject *aScopeObject,
-                                       nsISupports *aObject,
+                                       nsIScriptGlobalObject *aScopeObject,
+                                       nsIScriptBinding *aBinding,
                                        nsIAtom *aName,
                                        nsListenerStruct *aListenerStruct,
                                        nsIDOMEventTarget* aCurrentTarget,
                                        PRUint32 aSubType);
   nsListenerStruct* FindJSEventListener(EventArrayType aType);
   nsresult SetJSEventListener(nsIScriptContext *aContext,
-                              JSObject *aScopeObject, nsISupports *aObject,
+                              nsIScriptGlobalObject *aScopeGlobal, nsIScriptBinding *aObject,
                               nsIAtom* aName, PRBool aIsString,
                               PRBool aPermitUntrustedEvents);
   nsresult AddEventListener(nsIDOMEventListener *aListener, 

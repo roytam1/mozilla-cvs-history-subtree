@@ -116,7 +116,7 @@ public:
    * @param aHandler the compiled, bound handler object
    */
   virtual nsresult CompileEventHandler(nsIScriptContext* aContext,
-                                       void* aTarget,
+                                       nsIScriptBinding* aTarget,
                                        nsIAtom *aName,
                                        const nsAString& aBody,
                                        const char* aURL,

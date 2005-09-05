@@ -53,6 +53,7 @@ XPIDLSRCS	= nsIScriptContextOwner.idl \
 
 EXPORTS=nsIScriptContext.h		\
 	nsIJSNativeInitializer.h	\
+	nsILanguageRuntime.h		\
 	nsIScriptObjectOwner.h		\
 	nsIScriptObjectPrincipal.h	\
 	nsIScriptGlobalObject.h		\
@@ -66,6 +67,7 @@ EXPORTS=nsIScriptContext.h		\
 	nsIDOMClassInfo.h		\
 	nsIBaseDOMException.h		\
 	nsDOMString.h			\
+	nsDOMJSUtils.h			\
 	$(NULL)
 
 include $(topsrcdir)/config/rules.mk

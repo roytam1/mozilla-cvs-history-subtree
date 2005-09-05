@@ -118,6 +118,7 @@ class nsXULPrototypeAttribute
 public:
     nsXULPrototypeAttribute()
         : mName(nsXULAtoms::id),  // XXX this is a hack, but names have to have a value
+          mEventContext(nsnull),
           mEventHandler(nsnull)
     {
         XUL_PROTOTYPE_ATTRIBUTE_METER(gNumAttributes);
@@ -129,6 +130,7 @@ public:
     nsAttrName mName;
     nsAttrValue mValue;
     void* mEventHandler;
+    nsCOMPtr<nsIScriptContext> mEventContext; // used only so we can do context->RemoveGCRoot
 
 #ifdef XUL_PROTOTYPE_ATTRIBUTE_METERING
     /**
@@ -200,10 +202,10 @@ public:
 
     virtual ~nsXULPrototypeNode() {}
     virtual nsresult Serialize(nsIObjectOutputStream* aStream,
-                               nsIScriptContext* aContext,
+                               nsIScriptGlobalObject* aGlobal,
                                const nsCOMArray<nsINodeInfo> *aNodeInfos) = 0;
     virtual nsresult Deserialize(nsIObjectInputStream* aStream,
-                                 nsIScriptContext* aContext,
+                                 nsIScriptGlobalObject* aGlobal,
                                  nsIURI* aDocumentURI,
                                  const nsCOMArray<nsINodeInfo> *aNodeInfos) = 0;
 
@@ -268,10 +270,10 @@ public:
     }
 
     virtual nsresult Serialize(nsIObjectOutputStream* aStream,
-                               nsIScriptContext* aContext,
+                               nsIScriptGlobalObject* aGlobal,
                                const nsCOMArray<nsINodeInfo> *aNodeInfos);
     virtual nsresult Deserialize(nsIObjectInputStream* aStream,
-                                 nsIScriptContext* aContext,
+                                 nsIScriptGlobalObject* aGlobal,
                                  nsIURI* aDocumentURI,
                                  const nsCOMArray<nsINodeInfo> *aNodeInfos);
 
@@ -312,8 +314,7 @@ class nsXULDocument;
 class nsXULPrototypeScript : public nsXULPrototypeNode
 {
 public:
-    nsXULPrototypeScript(PRUint32 aLineNo, const char *aVersion,
-                         PRBool aHasE4XOption);
+    nsXULPrototypeScript(nsIScriptContext *aContext, PRUint32 aLineNo, PRUint32 version);
     virtual ~nsXULPrototypeScript();
 
 #ifdef NS_BUILD_REFCNT_LOGGING
@@ -322,16 +323,16 @@ public:
 #endif
 
     virtual nsresult Serialize(nsIObjectOutputStream* aStream,
-                               nsIScriptContext* aContext,
+                               nsIScriptGlobalObject* aGlobal,
                                const nsCOMArray<nsINodeInfo> *aNodeInfos);
     nsresult SerializeOutOfLine(nsIObjectOutputStream* aStream,
-                                nsIScriptContext* aContext);
+                                nsIScriptGlobalObject* aGlobal);
     virtual nsresult Deserialize(nsIObjectInputStream* aStream,
-                                 nsIScriptContext* aContext,
+                                 nsIScriptGlobalObject* aGlobal,
                                  nsIURI* aDocumentURI,
                                  const nsCOMArray<nsINodeInfo> *aNodeInfos);
     nsresult DeserializeOutOfLine(nsIObjectInputStream* aInput,
-                                  nsIScriptContext* aContext);
+                                  nsIScriptGlobalObject* aGlobal);
 
     nsresult Compile(const PRUnichar* aText, PRInt32 aTextLength,
                      nsIURI* aURI, PRUint32 aLineNo,
@@ -342,10 +343,10 @@ public:
     PRUint32                 mLineNo;
     PRPackedBool             mSrcLoading;
     PRPackedBool             mOutOfLine;
-    PRPackedBool             mHasE4XOption;
     nsXULDocument*           mSrcLoadWaiters;   // [OWNER] but not COMPtr
-    JSObject*                mJSObject;
-    const char*              mLangVersion;
+    nsCOMPtr<nsIScriptContext> mScriptContext;
+    void *                   mScriptObject;
+    PRUint32                 mLangVersion;
 
     static void ReleaseGlobals()
     {
@@ -382,10 +383,10 @@ public:
 #endif
 
     virtual nsresult Serialize(nsIObjectOutputStream* aStream,
-                               nsIScriptContext* aContext,
+                               nsIScriptGlobalObject* aGlobal,
                                const nsCOMArray<nsINodeInfo> *aNodeInfos);
     virtual nsresult Deserialize(nsIObjectInputStream* aStream,
-                                 nsIScriptContext* aContext,
+                                 nsIScriptGlobalObject* aGlobal,
                                  nsIURI* aDocumentURI,
                                  const nsCOMArray<nsINodeInfo> *aNodeInfos);
 
@@ -544,7 +545,8 @@ public:
     PRBool GetLazyState(LazyState aFlag)
     { return GetFlags() & (aFlag << XUL_ELEMENT_LAZY_STATE_OFFSET); }
     NS_HIDDEN_(nsresult) AddScriptEventListener(nsIAtom* aName,
-                                                const nsAString& aValue);
+                                                const nsAString& aValue,
+                                                PRUint32 aLanguage);
 
     // nsIDOMNode
     NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericElement::)
@@ -557,7 +559,7 @@ public:
 
     // nsIScriptEventHandlerOwner
     nsresult CompileEventHandler(nsIScriptContext* aContext,
-                                 void* aTarget,
+                                 nsIScriptBinding* aTarget,
                                  nsIAtom *aName,
                                  const nsAString& aBody,
                                  const char* aURL,
@@ -614,6 +616,7 @@ protected:
      * Add a listener for the specified attribute, if appropriate.
      */
     void AddListenerFor(const nsAttrName& aName,
+                        PRUint32 aScriptLanguage,
                         PRBool aCompileEventHandlers);
     void MaybeAddPopupListener(nsIAtom* aLocalName);
 

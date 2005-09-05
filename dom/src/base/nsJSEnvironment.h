@@ -38,9 +38,9 @@
 #define nsJSEnvironment_h___
 
 #include "nsIScriptContext.h"
+#include "nsILanguageRuntime.h"
 #include "nsCOMPtr.h"
 #include "jsapi.h"
-#include "nsCOMPtr.h"
 #include "nsIObserver.h"
 #include "nsIScriptSecurityManager.h"
 #include "nsIXPCScriptNotify.h"
@@ -58,12 +58,14 @@ public:
 
   NS_DECL_ISUPPORTS
 
+  virtual PRUint32 GetLanguage() { return nsIProgrammingLanguage::JAVASCRIPT; }
+
   virtual nsresult EvaluateString(const nsAString& aScript,
                                   void *aScopeObject,
                                   nsIPrincipal *principal,
                                   const char *aURL,
                                   PRUint32 aLineNo,
-                                  const char* aVersion,
+                                  PRUint32 aVersion,
                                   nsAString *aRetValue,
                                   PRBool* aIsUndefined);
   virtual nsresult EvaluateStringWithValue(const nsAString& aScript,
@@ -71,7 +73,7 @@ public:
                                      nsIPrincipal *aPrincipal,
                                      const char *aURL,
                                      PRUint32 aLineNo,
-                                     const char* aVersion,
+                                     PRUint32 aVersion,
                                      void* aRetValue,
                                      PRBool* aIsUndefined);
 
@@ -81,13 +83,21 @@ public:
                                  nsIPrincipal *principal,
                                  const char *aURL,
                                  PRUint32 aLineNo,
-                                 const char* aVersion,
+                                 PRUint32 aVersion,
                                  void** aScriptObject);
   virtual nsresult ExecuteScript(void* aScriptObject,
                                  void *aScopeObject,
                                  nsAString* aRetValue,
                                  PRBool* aIsUndefined);
-  virtual nsresult CompileEventHandler(void *aTarget,
+
+  virtual nsresult GetScriptBinding(nsISupports *aObject, void *aScope,
+                                    nsIScriptBinding **aBinding);
+
+  virtual nsresult GetScriptBindingHandler(nsIScriptBinding *aBinding,
+                                           nsString &name,
+                                           void **handler);
+
+  virtual nsresult CompileEventHandler(nsIScriptBinding *aTarget,
                                        nsIAtom *aName,
                                        const char *aEventName,
                                        const nsAString& aBody,
@@ -95,9 +105,9 @@ public:
                                        PRUint32 aLineNo,
                                        PRBool aShared,
                                        void** aHandler);
-  virtual nsresult CallEventHandler(JSObject *aTarget, JSObject *aHandler, 
-                                    uintN argc, jsval *argv, jsval* rval);
-  virtual nsresult BindCompiledEventHandler(void *aTarget,
+  virtual nsresult CallEventHandler(nsIScriptBinding* aTarget, void* aHandler,
+                                    nsIArray *argv, nsISupports **rv);
+  virtual nsresult BindCompiledEventHandler(nsIScriptBinding *aTarget,
                                             nsIAtom *aName,
                                             void *aHandler);
   virtual nsresult CompileFunction(void* aTarget,
@@ -110,11 +120,16 @@ public:
                                    PRBool aShared,
                                    void** aFunctionObject);
 
-  virtual void SetDefaultLanguageVersion(const char* aVersion);
+  virtual nsresult AddGCRoot(void *object, const char *desc);
+  virtual nsresult RemoveGCRoot(void *object);
+
+  virtual void SetDefaultLanguageVersion(PRUint32 aVersion);
   virtual nsIScriptGlobalObject *GetGlobalObject();
   virtual void *GetNativeContext();
+  virtual void *GetNativeGlobal();
   virtual nsresult InitContext(nsIScriptGlobalObject *aGlobalObject);
   virtual PRBool IsContextInitialized();
+
   virtual void GC();
 
   virtual void ScriptEvaluated(PRBool aTerminated);
@@ -125,15 +140,22 @@ public:
   virtual PRBool GetScriptsEnabled();
   virtual void SetScriptsEnabled(PRBool aEnabled, PRBool aFireTimeouts);
 
+  virtual nsresult SetProperty(void *aTarget, const char *aPropName, nsISupports *aVal);
+
   virtual PRBool GetProcessingScriptTag();
   virtual void SetProcessingScriptTag(PRBool aResult);
 
   virtual void SetGCOnDestruction(PRBool aGCOnDestruction);
 
-  virtual nsresult InitClasses(JSObject *aGlobalObj);
+  virtual nsresult InitClasses(void *aGlobalObj);
+  virtual nsresult FinalizeClasses(void* aGlobalObj);
 
   virtual void WillInitializeContext();
   virtual void DidInitializeContext();
+
+  nsresult ConvertSupportsTojsvals(nsISupports *aArgs,
+                                   PRUint32 *aArgc, jsval **aArgv,
+                                   void **aMarkp);
 
   NS_DECL_NSIXPCSCRIPTNOTIFY
 
@@ -146,6 +168,9 @@ protected:
   nsresult FindXPCNativeWrapperClass(nsIXPConnectJSObjectHolder *aHolder);
 
   void FireGCTimer();
+
+  nsresult   AddSupportsTojsvals(nsISupports *aArg, jsval *aArgv);
+  nsresult   AddInterfaceTojsvals(nsISupports *aArg, jsval *aArgv);
 
 private:
   JSContext *mContext;
@@ -232,25 +257,51 @@ private:
 
 class nsIJSRuntimeService;
 
-class nsJSEnvironment
+class nsJSRuntime : public nsILanguageRuntime
 {
 private:
   static JSRuntime *sRuntime;
 
 public:
+  // nsISupports
+  NS_DECL_ISUPPORTS
+
+  // nsILanguageRuntime
+  virtual void ShutDown();
+
+  virtual PRUint32 GetLanguage() {
+            return nsIProgrammingLanguage::JAVASCRIPT;
+  }
+
+  virtual nsresult CreateContext(nsIScriptContext **ret);
+
+  virtual nsresult ParseVersion(const nsString &aVersionStr, PRUint32 *flags);
+  
+  // Private stuff.
   // called from the module Ctor to initialize statics
   static void Startup();
 
   static nsresult Init();
+};
 
-  static nsresult CreateNewContext(nsIScriptContext **aContext);
 
-  static void ShutDown();
+class nsJSScriptBinding : public nsIScriptBinding {
+public:
+  nsJSScriptBinding(nsIXPConnectJSObjectHolder *aHolder);
+  virtual ~nsJSScriptBinding();
+
+  NS_DECL_ISUPPORTS
+
+
+  virtual PRUint32 GetLanguage() {return nsIProgrammingLanguage::JAVASCRIPT;}
+  void *GetNativeObject();
+  nsISupports *GetTarget();
+protected:
+  nsCOMPtr<nsIXPConnectJSObjectHolder> mHolder;
 };
 
 /* factory function */
-nsresult NS_CreateScriptContext(nsIScriptGlobalObject *aGlobal,
-                                nsIScriptContext **aContext);
+nsresult NS_CreateJSRuntime(nsILanguageRuntime **aRuntime);
 
 /* prototypes */
 void JS_DLL_CALLBACK NS_ScriptErrorReporter(JSContext *cx, const char *message, JSErrorReport *report);

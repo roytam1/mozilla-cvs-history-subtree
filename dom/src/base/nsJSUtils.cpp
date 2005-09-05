@@ -55,6 +55,7 @@
 #include "nsCOMPtr.h"
 #include "nsContentUtils.h"
 
+#include "nsDOMJSUtils.h" // for GetScriptContextFromJSContext
 
 JSBool
 nsJSUtils::GetCallingLocation(JSContext* aContext, const char* *aFilename,

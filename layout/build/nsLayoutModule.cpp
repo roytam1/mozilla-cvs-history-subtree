@@ -267,7 +267,9 @@ Initialize(nsIModule* aSelf)
 
   gInitialized = PR_TRUE;
 
-  nsJSEnvironment::Startup();
+  // XXX - should this nsJSRuntime::Startup be changed to a
+  // nsDOMScriptObjectFactory startup, so it can re-init *all* languages?
+  nsJSRuntime::Startup();
   nsresult rv = nsContentUtils::Init();
   if (NS_FAILED(rv)) {
     NS_ERROR("Could not initialize nsContentUtils");

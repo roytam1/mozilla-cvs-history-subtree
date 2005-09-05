@@ -2955,9 +2955,9 @@ nsXULDocument::ResumeWalk()
                     if (NS_SUCCEEDED(rv) && blocked)
                         return NS_OK;
                 }
-                else if (scriptproto->mJSObject) {
+                else if (scriptproto->mScriptObject) {
                     // An inline script
-                    rv = ExecuteScript(scriptproto->mJSObject);
+                    rv = ExecuteScript(scriptproto);
                     if (NS_FAILED(rv)) return rv;
                 }
             }
@@ -3268,8 +3268,8 @@ nsXULDocument::LoadScript(nsXULPrototypeScript* aScriptProto, PRBool* aBlock)
     // Load a transcluded script
     nsresult rv;
 
-    if (aScriptProto->mJSObject) {
-        rv = ExecuteScript(aScriptProto->mJSObject);
+    if (aScriptProto->mScriptObject) {
+        rv = ExecuteScript(aScriptProto);
 
         // Ignore return value from execution, and don't block
         *aBlock = PR_FALSE;
@@ -3282,12 +3282,17 @@ nsXULDocument::LoadScript(nsXULPrototypeScript* aScriptProto, PRBool* aBlock)
     PRBool useXULCache;
     gXULCache->GetEnabled(&useXULCache);
 
-    if (useXULCache) {
+    if (useXULCache && mScriptGlobalObject) {
+        // XUL cache only handle JS currently.
         gXULCache->GetScript(aScriptProto->mSrcURI,
-                             NS_REINTERPRET_CAST(void**, &aScriptProto->mJSObject));
+                             &aScriptProto->mScriptObject);
 
-        if (aScriptProto->mJSObject) {
-            rv = ExecuteScript(aScriptProto->mJSObject);
+        if (aScriptProto->mScriptObject) {
+            aScriptProto->mScriptContext = mScriptGlobalObject->GetLanguageContext(
+                                                    nsIProgrammingLanguage::JAVASCRIPT);
+            // failure getting a script context is fatal.
+            NS_ENSURE_TRUE(aScriptProto->mScriptContext != nsnull, NS_ERROR_UNEXPECTED);
+            rv = ExecuteScript(aScriptProto);
 
             // Ignore return value from execution, and don't block
             *aBlock = PR_FALSE;
@@ -3380,7 +3385,7 @@ nsXULDocument::OnStreamComplete(nsIStreamLoader* aLoader,
         // be writing a new FastLoad file.  If we were reading this script
         // from the FastLoad file, XULContentSinkImpl::OpenScript (over in
         // nsXULContentSink.cpp) would have already deserialized a non-null
-        // script->mJSObject, causing control flow at the top of LoadScript
+        // script->mScriptObject, causing control flow at the top of LoadScript
         // not to reach here.
         nsCOMPtr<nsIURI> uri = scriptProto->mSrcURI;
 
@@ -3394,8 +3399,8 @@ nsXULDocument::OnStreamComplete(nsIStreamLoader* aLoader,
                                     1, this, mCurrentPrototype);
 
         aStatus = rv;
-        if (NS_SUCCEEDED(rv) && scriptProto->mJSObject) {
-            rv = ExecuteScript(scriptProto->mJSObject);
+        if (NS_SUCCEEDED(rv) && scriptProto->mScriptContext) {
+            rv = ExecuteScript(scriptProto);
 
             // If the XUL cache is enabled, save the script object there in
             // case different XUL documents source the same script.
@@ -3421,9 +3426,11 @@ nsXULDocument::OnStreamComplete(nsIStreamLoader* aLoader,
             PRBool useXULCache;
             gXULCache->GetEnabled(&useXULCache);
 
-            if (useXULCache && IsChromeURI(mDocumentURI)) {
+            if (useXULCache && IsChromeURI(mDocumentURI) &&
+                scriptProto->mScriptContext &&
+                scriptProto->mScriptContext->GetLanguage() == nsIProgrammingLanguage::JAVASCRIPT) {
                 gXULCache->PutScript(scriptProto->mSrcURI,
-                                     NS_REINTERPRET_CAST(void*, scriptProto->mJSObject));
+                                     scriptProto->mScriptObject);
             }
 
             if (mIsWritingFastLoad && mCurrentPrototype != mMasterPrototype) {
@@ -3445,9 +3452,13 @@ nsXULDocument::OnStreamComplete(nsIStreamLoader* aLoader,
 
                 NS_ASSERTION(global != nsnull, "master prototype w/o global?!");
                 if (global) {
+                    PRUint32 langID = scriptProto->mScriptContext->GetLanguage();
+                    NS_ASSERTION(global->GetLanguageContext(langID) == scriptProto->mScriptContext,
+                                 "Contexts appear confused?");
                     nsIScriptContext *scriptContext = global->GetContext();
                     if (scriptContext)
-                        scriptProto->SerializeOutOfLine(nsnull, scriptContext);
+                        // xxxmarkh - global?
+                        scriptProto->SerializeOutOfLine(nsnull, global);
                 }
             }
         }
@@ -3476,8 +3487,8 @@ nsXULDocument::OnStreamComplete(nsIStreamLoader* aLoader,
         doc->mNextSrcLoadWaiter = nsnull;
 
         // Execute only if we loaded and compiled successfully, then resume
-        if (NS_SUCCEEDED(aStatus) && scriptProto->mJSObject) {
-            doc->ExecuteScript(scriptProto->mJSObject);
+        if (NS_SUCCEEDED(aStatus) && scriptProto->mScriptObject) {
+            doc->ExecuteScript(scriptProto);
         }
         doc->ResumeWalk();
         NS_RELEASE(doc);
@@ -3488,23 +3499,31 @@ nsXULDocument::OnStreamComplete(nsIStreamLoader* aLoader,
 
 
 nsresult
-nsXULDocument::ExecuteScript(JSObject* aScriptObject)
+nsXULDocument::ExecuteScript(nsIScriptContext * aContext, void * aScriptObject)
 {
-    NS_PRECONDITION(aScriptObject != nsnull, "null ptr");
-    if (! aScriptObject)
+    NS_PRECONDITION(aScriptObject != nsnull && aContext != nsnull, "null ptr");
+    if (! aScriptObject || ! aContext)
         return NS_ERROR_NULL_POINTER;
 
     // Execute the precompiled script with the given version
+    nsresult rv;
+    void *global = mScriptGlobalObject->GetLanguageGlobal(aContext->GetLanguage());
+    rv = aContext->ExecuteScript(aScriptObject,
+                                 global,
+                                 nsnull, nsnull);
+
+    return rv;
+}
+
+nsresult
+nsXULDocument::ExecuteScript(nsXULPrototypeScript *aScript)
+{
+    NS_PRECONDITION(aScript != nsnull, "null ptr");
+    NS_ENSURE_TRUE(aScript, NS_ERROR_NULL_POINTER);
+
     nsresult rv = NS_ERROR_UNEXPECTED;
-
-    NS_ASSERTION(mScriptGlobalObject != nsnull, "no script global object");
-
-    nsCOMPtr<nsIScriptContext> context;
-    if (mScriptGlobalObject && (context = mScriptGlobalObject->GetContext()))
-        rv = context->ExecuteScript(aScriptObject,
-                                    mScriptGlobalObject->GetGlobalJSObject(),
-                                    nsnull, nsnull);
-
+    if (aScript->mScriptContext && aScript->mScriptObject)
+        rv = ExecuteScript(aScript->mScriptContext, aScript->mScriptObject);
     return rv;
 }
 

@@ -67,9 +67,7 @@
 #include "nsIObserverService.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptSecurityManager.h"
-#include "nsISupportsArray.h"
 #include "nsXPCOM.h"
-#include "nsISupportsPrimitives.h"
 #include "nsIURI.h"
 #include "nsIWebBrowser.h"
 #include "nsIWebBrowserChrome.h"
@@ -81,6 +79,7 @@
 #include "nsIMarkupDocumentViewer.h"
 #include "nsIContentViewer.h"
 #include "nsIDocumentViewer.h"
+#include "nsArray.h"
 
 #include "nsIPrefBranch.h"
 #include "nsIPrefService.h"
@@ -400,25 +399,6 @@ nsresult JSContextAutoPopper::Push(JSContext *cx)
 }
 
 /****************************************************************
- ************************** AutoFree ****************************
- ****************************************************************/
-
-class AutoFree {
-public:
-  AutoFree(void *aPtr) : mPtr(aPtr) {
-  }
-  ~AutoFree() {
-    if (mPtr)
-      nsMemory::Free(mPtr);
-  }
-  void Invalidate() {
-    mPtr = 0;
-  }
-private:
-  void *mPtr;
-};
-
-/****************************************************************
  *********************** nsWindowWatcher ************************
  ****************************************************************/
 
@@ -461,24 +441,25 @@ nsWindowWatcher::OpenWindow(nsIDOMWindow *aParent,
                             nsISupports *aArguments,
                             nsIDOMWindow **_retval)
 {
-  PRUint32  argc;
-  jsval    *argv = nsnull;
-  JSContext *cx;
-  void *mark;
-  nsresult  rv;
-
-  rv = ConvertSupportsTojsvals(aParent, aArguments, &argc, &argv, &cx, &mark);
-  if (NS_SUCCEEDED(rv)) {
-    PRBool dialog = argc == 0 ? PR_FALSE : PR_TRUE;
-    rv = OpenWindowJS(aParent, aUrl, aName, aFeatures, dialog, argc, argv,
-                      _retval);
-
-    if (argv) {
-      js_FreeStack(cx, mark);
+  nsCOMPtr<nsIArray> argsArray;
+  PRUint32 argc = 0;
+  if (aArguments) {
+    // If aArguments is not already an array, make it one.
+    argsArray = do_QueryInterface(aArguments);
+    if (argsArray == nsnull) {
+        nsCOMPtr<nsIMutableArray> tempArray;
+        nsresult rv = NS_NewArray(getter_AddRefs(tempArray));
+        NS_ENSURE_SUCCESS(rv, rv);
+        tempArray->AppendElement(aArguments, PR_FALSE);
+        argsArray = do_QueryInterface(tempArray);
+        NS_ENSURE_TRUE(argsArray != nsnull, NS_ERROR_UNEXPECTED);
     }
+    argsArray->GetLength(&argc);
   }
 
-  return rv;
+  PRBool dialog = argc == 0 ? PR_FALSE : PR_TRUE;
+  return OpenWindowJS(aParent, aUrl, aName, aFeatures, dialog, argsArray,
+                      _retval);
 }
 
 NS_IMETHODIMP
@@ -487,8 +468,7 @@ nsWindowWatcher::OpenWindowJS(nsIDOMWindow *aParent,
                               const char *aName,
                               const char *aFeatures,
                               PRBool aDialog,
-                              PRUint32 argc,
-                              jsval *argv,
+                              nsIArray *argv,
                               nsIDOMWindow **_retval)
 {
   nsresult                        rv = NS_OK;
@@ -706,12 +686,12 @@ nsWindowWatcher::OpenWindowJS(nsIDOMWindow *aParent,
     }
   }
 
-  if (aDialog && argc > 0) {
-    rv = AttachArguments(*_retval, argc, argv);
-
-    if (NS_FAILED(rv)) {
-      return rv;
-    }
+  if (aDialog && argv > 0) {
+    // Set the args on the new object.
+    nsCOMPtr<nsIScriptGlobalObject> scriptGlobal(do_QueryInterface(*_retval));
+    NS_ENSURE_TRUE(scriptGlobal, NS_ERROR_UNEXPECTED);
+    rv = scriptGlobal->SetNewArguments(argv);
+    NS_ENSURE_SUCCESS(rv, rv);
   }
 
   /* allow an extant window to keep its name (important for cases like
@@ -1733,337 +1713,6 @@ nsWindowWatcher::SizeOpenedDocShellItem(nsIDocShellTreeItem *aDocShellItem,
     }
   }
   treeOwnerAsWin->SetVisibility(PR_TRUE);
-}
-
-// attach the given array of JS values to the given window, as a property array
-// named "arguments"
-nsresult
-nsWindowWatcher::AttachArguments(nsIDOMWindow *aWindow,
-                                 PRUint32 argc, jsval *argv)
-{
-  if (argc == 0)
-    return NS_OK;
-
-  // copy the extra parameters into a JS Array and attach it
-  nsCOMPtr<nsIScriptGlobalObject> scriptGlobal(do_QueryInterface(aWindow));
-  NS_ENSURE_TRUE(scriptGlobal, NS_ERROR_UNEXPECTED);
-
-  nsIScriptContext *scriptContext = scriptGlobal->GetContext();
-  nsresult rv = NS_OK;
-
-  if (scriptContext) {
-    JSContext *cx;
-    cx = (JSContext *)scriptContext->GetNativeContext();
-
-    JSObject *args;
-    args = ::JS_NewArrayObject(cx, argc, argv);
-    if (args) {
-      rv = scriptGlobal->SetNewArguments(args);
-    }
-  }
-
-  return rv;
-}
-
-nsresult
-nsWindowWatcher::ConvertSupportsTojsvals(nsIDOMWindow *aWindow,
-                                         nsISupports *aArgs,
-                                         PRUint32 *aArgc, jsval **aArgv,
-                                         JSContext **aUsedContext,
-                                         void **aMarkp)
-{
-  nsresult rv = NS_OK;
-
-  *aArgv = nsnull;
-  *aArgc = 0;
-
-  // copy the elements in aArgsArray into the JS array
-  // window.arguments in the new window
-
-  if (!aArgs)
-    return NS_OK;
-
-  PRUint32 argCtr, argCount;
-  nsCOMPtr<nsISupportsArray> argsArray(do_QueryInterface(aArgs));
-
-  if (argsArray) {
-    argsArray->Count(&argCount);
-    if (argCount == 0)
-      return NS_OK;
-  } else
-    argCount = 1; // the nsISupports which is not an array
-
-  JSContext           *cx;
-  JSContextAutoPopper  contextGuard;
-
-  cx = GetJSContextFromWindow(aWindow);
-  if (!cx)
-    cx = GetJSContextFromCallStack();
-  if (!cx) {
-    rv = contextGuard.Push();
-    if (NS_FAILED(rv))
-      return rv;
-    cx = contextGuard.get();
-  }
-
-  jsval *argv = js_AllocStack(cx, argCount, aMarkp);
-  NS_ENSURE_TRUE(argv, NS_ERROR_OUT_OF_MEMORY);
-
-  if (argsArray)
-    for (argCtr = 0; argCtr < argCount && NS_SUCCEEDED(rv); argCtr++) {
-      nsCOMPtr<nsISupports> s(dont_AddRef(argsArray->ElementAt(argCtr)));
-      rv = AddSupportsTojsvals(s, cx, argv + argCtr);
-    }
-  else
-    rv = AddSupportsTojsvals(aArgs, cx, argv);
-
-  if (NS_FAILED(rv)) {
-    js_FreeStack(cx, *aMarkp);
-
-    return rv;
-  }
-
-  *aUsedContext = cx;
-  *aArgv = argv;
-  *aArgc = argCount;
-  return NS_OK;
-}
-
-nsresult
-nsWindowWatcher::AddInterfaceTojsvals(nsISupports *aArg,
-                                      JSContext *cx,
-                                      jsval *aArgv)
-{
-  nsresult rv;
-  nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID(), &rv));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  nsCOMPtr<nsIXPConnectJSObjectHolder> wrapper;
-  rv = xpc->WrapNative(cx, ::JS_GetGlobalObject(cx), aArg,
-              NS_GET_IID(nsISupports), getter_AddRefs(wrapper));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  JSObject *obj;
-  rv = wrapper->GetJSObject(&obj);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  *aArgv = OBJECT_TO_JSVAL(obj);
-  return NS_OK;
-}
-
-nsresult
-nsWindowWatcher::AddSupportsTojsvals(nsISupports *aArg,
-                                     JSContext *cx, jsval *aArgv)
-{
-  if (!aArg) {
-    *aArgv = JSVAL_NULL;
-    return NS_OK;
-  }
-
-  nsCOMPtr<nsISupportsPrimitive> argPrimitive(do_QueryInterface(aArg));
-  if (!argPrimitive)
-    return AddInterfaceTojsvals(aArg, cx, aArgv);
-
-  PRUint16 type;
-  argPrimitive->GetType(&type);
-
-  switch(type) {
-    case nsISupportsPrimitive::TYPE_CSTRING : {
-      nsCOMPtr<nsISupportsCString> p(do_QueryInterface(argPrimitive));
-      NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
-
-      nsCAutoString data;
-
-      p->GetData(data);
-
-      
-      JSString *str = ::JS_NewStringCopyN(cx, data.get(), data.Length());
-      NS_ENSURE_TRUE(str, NS_ERROR_OUT_OF_MEMORY);
-
-      *aArgv = STRING_TO_JSVAL(str);
-
-      break;
-    }
-    case nsISupportsPrimitive::TYPE_STRING : {
-      nsCOMPtr<nsISupportsString> p(do_QueryInterface(argPrimitive));
-      NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
-
-      nsAutoString data;
-
-      p->GetData(data);
-
-      // cast is probably safe since wchar_t and jschar are expected
-      // to be equivalent; both unsigned 16-bit entities
-      JSString *str =
-        ::JS_NewUCStringCopyN(cx,
-                              NS_REINTERPRET_CAST(const jschar *,data.get()),
-                              data.Length());
-      NS_ENSURE_TRUE(str, NS_ERROR_OUT_OF_MEMORY);
-
-      *aArgv = STRING_TO_JSVAL(str);
-      break;
-    }
-    case nsISupportsPrimitive::TYPE_PRBOOL : {
-      nsCOMPtr<nsISupportsPRBool> p(do_QueryInterface(argPrimitive));
-      NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
-
-      PRBool data;
-
-      p->GetData(&data);
-
-      *aArgv = BOOLEAN_TO_JSVAL(data);
-
-      break;
-    }
-    case nsISupportsPrimitive::TYPE_PRUINT8 : {
-      nsCOMPtr<nsISupportsPRUint8> p(do_QueryInterface(argPrimitive));
-      NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
-
-      PRUint8 data;
-
-      p->GetData(&data);
-
-      *aArgv = INT_TO_JSVAL(data);
-
-      break;
-    }
-    case nsISupportsPrimitive::TYPE_PRUINT16 : {
-      nsCOMPtr<nsISupportsPRUint16> p(do_QueryInterface(argPrimitive));
-      NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
-
-      PRUint16 data;
-
-      p->GetData(&data);
-
-      *aArgv = INT_TO_JSVAL(data);
-
-      break;
-    }
-    case nsISupportsPrimitive::TYPE_PRUINT32 : {
-      nsCOMPtr<nsISupportsPRUint32> p(do_QueryInterface(argPrimitive));
-      NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
-
-      PRUint32 data;
-
-      p->GetData(&data);
-
-      *aArgv = INT_TO_JSVAL(data);
-
-      break;
-    }
-    case nsISupportsPrimitive::TYPE_CHAR : {
-      nsCOMPtr<nsISupportsChar> p(do_QueryInterface(argPrimitive));
-      NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
-
-      char data;
-
-      p->GetData(&data);
-
-      JSString *str = ::JS_NewStringCopyN(cx, &data, 1);
-      NS_ENSURE_TRUE(str, NS_ERROR_OUT_OF_MEMORY);
-
-      *aArgv = STRING_TO_JSVAL(str);
-
-      break;
-    }
-    case nsISupportsPrimitive::TYPE_PRINT16 : {
-      nsCOMPtr<nsISupportsPRInt16> p(do_QueryInterface(argPrimitive));
-      NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
-
-      PRInt16 data;
-
-      p->GetData(&data);
-
-      *aArgv = INT_TO_JSVAL(data);
-
-      break;
-    }
-    case nsISupportsPrimitive::TYPE_PRINT32 : {
-      nsCOMPtr<nsISupportsPRInt32> p(do_QueryInterface(argPrimitive));
-      NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
-
-      PRInt32 data;
-
-      p->GetData(&data);
-
-      *aArgv = INT_TO_JSVAL(data);
-
-      break;
-    }
-    case nsISupportsPrimitive::TYPE_FLOAT : {
-      nsCOMPtr<nsISupportsFloat> p(do_QueryInterface(argPrimitive));
-      NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
-
-      float data;
-
-      p->GetData(&data);
-
-      jsdouble *d = ::JS_NewDouble(cx, data);
-
-      *aArgv = DOUBLE_TO_JSVAL(d);
-
-      break;
-    }
-    case nsISupportsPrimitive::TYPE_DOUBLE : {
-      nsCOMPtr<nsISupportsDouble> p(do_QueryInterface(argPrimitive));
-      NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
-
-      double data;
-
-      p->GetData(&data);
-
-      jsdouble *d = ::JS_NewDouble(cx, data);
-
-      *aArgv = DOUBLE_TO_JSVAL(d);
-
-      break;
-    }
-    case nsISupportsPrimitive::TYPE_INTERFACE_POINTER : {
-      nsCOMPtr<nsISupportsInterfacePointer> p(do_QueryInterface(argPrimitive));
-      NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
-
-      nsCOMPtr<nsISupports> data;
-      nsIID *iid = nsnull;
-
-      p->GetData(getter_AddRefs(data));
-      p->GetDataIID(&iid);
-      NS_ENSURE_TRUE(iid, NS_ERROR_UNEXPECTED);
-
-      AutoFree iidGuard(iid); // Free iid upon destruction.
-
-      nsresult rv;
-      nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID(), &rv));
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      nsCOMPtr<nsIXPConnectJSObjectHolder> wrapper;
-      rv = xpc->WrapNative(cx, ::JS_GetGlobalObject(cx), data,
-                           *iid, getter_AddRefs(wrapper));
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      JSObject *obj;
-      rv = wrapper->GetJSObject(&obj);
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      *aArgv = OBJECT_TO_JSVAL(obj);
-
-      break;
-    }
-    case nsISupportsPrimitive::TYPE_ID :
-    case nsISupportsPrimitive::TYPE_PRUINT64 :
-    case nsISupportsPrimitive::TYPE_PRINT64 :
-    case nsISupportsPrimitive::TYPE_PRTIME :
-    case nsISupportsPrimitive::TYPE_VOID : {
-      NS_WARNING("Unsupported primitive type used");
-      *aArgv = JSVAL_NULL;
-      break;
-    }
-    default : {
-      NS_WARNING("Unknown primitive type used");
-      *aArgv = JSVAL_NULL;
-      break;
-    }
-  }
-  return NS_OK;
 }
 
 void

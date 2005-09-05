@@ -42,20 +42,42 @@
 #include "nsString.h"
 #include "nsISupports.h"
 #include "nsCOMPtr.h"
-#include "jsapi.h"
 
 class nsIScriptGlobalObject;
 class nsIScriptSecurityManager;
 class nsIScriptContextOwner;
 class nsIPrincipal;
 class nsIAtom;
+class nsIArray;
 
 typedef void (*nsScriptTerminationFunc)(nsISupports* aRef);
 
+// XXXMarkh - todo - move this to its own file?
+// Better name than "binding"?  Conflicts with BindEventHandler - maybe that
+// could be renamed to AssignEventHandler?
+// 
+#define NS_ISCRIPTBINDING_IID \
+{ /* {2B387445-6955-442f-BB4C-5FED9F7A1736} */ \
+  0x2b387445, 0x6955, 0x442f, \
+   { 0xbb, 0x4c, 0x5f, 0xed, 0x9f, 0x7a, 0x17, 0x36 } }
+
+/**
+ * A binding of an XPCOM object (generally a DOM one) and a namespace for the
+ * object inside script language.
+ */
+class nsIScriptBinding : public nsISupports
+{
+public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISCRIPTBINDING_IID)
+  virtual PRUint32 GetLanguage() = 0;
+  virtual void *GetNativeObject() = 0;
+  virtual nsISupports *GetTarget() = 0;
+};
+
 #define NS_ISCRIPTCONTEXT_IID \
-{ /* b3fd8821-b46d-4160-913f-cc8fe8176f5f */ \
-  0xb3fd8821, 0xb46d, 0x4160, \
-  {0x91, 0x3f, 0xcc, 0x8f, 0xe8, 0x17, 0x6f, 0x5f} }
+{ /* {52B46C37-A078-4952-AED7-035D83C810C0} */ \
+  0x52b46c37, 0xa078, 0x4952, \
+  {0xae, 0xd7, 0x3, 0x5d, 0x83, 0xc8, 0x10, 0xc0 } }
 
 /**
  * It is used by the application to initialize a runtime and run scripts.
@@ -69,6 +91,7 @@ class nsIScriptContext : public nsISupports
 public:
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISCRIPTCONTEXT_IID)
 
+  virtual PRUint32 GetLanguage() = 0;
   /**
    * Compile and execute a script.
    *
@@ -91,7 +114,7 @@ public:
                                   nsIPrincipal *aPrincipal,
                                   const char *aURL,
                                   PRUint32 aLineNo,
-                                  const char* aVersion,
+                                  PRUint32 aVersion,
                                   nsAString *aRetValue,
                                   PRBool* aIsUndefined) = 0;
 
@@ -100,7 +123,7 @@ public:
                                            nsIPrincipal *aPrincipal,
                                            const char *aURL,
                                            PRUint32 aLineNo,
-                                           const char* aVersion,
+                                           PRUint32 aVersion,
                                            void* aRetValue,
                                            PRBool* aIsUndefined) = 0;
 
@@ -128,7 +151,7 @@ public:
                                  nsIPrincipal* aPrincipal,
                                  const char* aURL,
                                  PRUint32 aLineNo,
-                                 const char* aVersion,
+                                 PRUint32 aVersion,
                                  void** aScriptObject) = 0;
 
   /**
@@ -150,6 +173,15 @@ public:
                                  nsAString* aRetValue,
                                  PRBool* aIsUndefined) = 0;
 
+  /**
+   * Bind a DOM object to the language.
+   */
+  virtual nsresult GetScriptBinding(nsISupports *aObject, void *aScope,
+                                    nsIScriptBinding **aBinding)=0;
+
+  virtual nsresult GetScriptBindingHandler(nsIScriptBinding *aBinding,
+                                           nsString &name,
+                                           void **handler)=0;
   /**
    * Compile the event handler named by atom aName, with function body aBody
    * into a function object returned if ok via *aHandler.  Bind the lowercase
@@ -175,7 +207,7 @@ public:
    *
    * @return NS_OK if the function body was valid and got compiled
    */
-  virtual nsresult CompileEventHandler(void* aTarget,
+  virtual nsresult CompileEventHandler(nsIScriptBinding* aTarget,
                                        nsIAtom* aName,
                                        const char* aEventName,
                                        const nsAString& aBody,
@@ -191,14 +223,11 @@ public:
    * @param aTarget an object telling the scope in which to bind the compiled
    *        event handler function.
    * @param aHandler function object (function and static scope) to invoke.
-   * @param argc actual argument count; length of argv
-   * @param argv vector of arguments; length is argc
-   * @param aBoolResult out parameter returning boolean function result, or
-   *        true if the result was not boolean.
+   * @param argv vector of arguments
+   * @param rval out parameter returning result
    **/
-  virtual nsresult CallEventHandler(JSObject* aTarget, JSObject* aHandler,
-                                    uintN argc, jsval* argv,
-                                    jsval* rval) = 0;
+  virtual nsresult CallEventHandler(nsIScriptBinding* aTarget, void* aHandler,
+                                    nsIArray *argv, nsISupports **rv) = 0;
 
   /**
    * Bind an already-compiled event handler function to a name in the given
@@ -216,7 +245,7 @@ public:
    *        CompileEventHandler
    * @return NS_OK if the function was successfully bound to the name
    */
-  virtual nsresult BindCompiledEventHandler(void* aTarget,
+  virtual nsresult BindCompiledEventHandler(nsIScriptBinding* aTarget,
                                             nsIAtom* aName,
                                             void* aHandler) = 0;
 
@@ -230,13 +259,17 @@ public:
                                    PRBool aShared,
                                    void** aFunctionObject) = 0;
 
-
+  /**
+   *  Inform the context of a GC root
+   */
+  virtual nsresult AddGCRoot(void *object, const char *desc) = 0;
+  virtual nsresult RemoveGCRoot(void *object) = 0;
   /**
    * Set the default scripting language version for this context, which must
    * be a context specific to a particular scripting language.
    *
    **/
-  virtual void SetDefaultLanguageVersion(const char* aVersion) = 0;
+  virtual void SetDefaultLanguageVersion(PRUint32 aVersion) = 0;
 
   /**
    * Return the global object.
@@ -249,6 +282,12 @@ public:
    *
    **/
   virtual void *GetNativeContext() = 0;
+
+  /**
+   * Return the native global object for this context.
+   *
+   **/
+  virtual void *GetNativeGlobal() = 0;
 
   /**
    * Init this context.
@@ -324,6 +363,9 @@ public:
   virtual PRBool GetScriptsEnabled() = 0;
   virtual void SetScriptsEnabled(PRBool aEnabled, PRBool aFireTimeouts) = 0;
 
+  // SetProperty is suspect and jst believes should not be needed.  Currenly
+  // used only for "arguments".
+  virtual nsresult SetProperty(void *aTarget, const char *aPropName, nsISupports *aVal) = 0;
   /** 
    * Called to set/get information if the script context is
    * currently processing a script tag
@@ -342,7 +384,12 @@ public:
    * call DidInitializeContext() when a context is fully
    * (successfully) initialized.
    */
-  virtual nsresult InitClasses(JSObject *aGlobalObj) = 0;
+  virtual nsresult InitClasses(void *aGlobalObj) = 0;
+
+  /**
+   * Finalize script objects on aGlobalObj
+   */
+  virtual nsresult FinalizeClasses(void* aGlobalObj) = 0;
 
   /**
    * Tell the context we're about to be reinitialize it.
@@ -354,22 +401,6 @@ public:
    */
   virtual void DidInitializeContext() = 0;
 };
-
-inline nsIScriptContext *
-GetScriptContextFromJSContext(JSContext *cx)
-{
-  if (!(::JS_GetOptions(cx) & JSOPTION_PRIVATE_IS_NSISUPPORTS)) {
-    return nsnull;
-  }
-
-  nsCOMPtr<nsIScriptContext> scx =
-    do_QueryInterface(NS_STATIC_CAST(nsISupports *,
-                                     ::JS_GetContextPrivate(cx)));
-
-  // This will return a pointer to something that's about to be
-  // released, but that's ok here.
-  return scx;
-}
 
 #endif // nsIScriptContext_h__
 

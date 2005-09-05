@@ -43,7 +43,7 @@
 class nsIScriptObjectOwner;
 class nsIDOMEventListener;
 class nsIAtom;
-struct JSObject;
+class nsIScriptGlobalObject;
 
 #define NS_IJSEVENTLISTENER_IID     \
 { 0xa6cf9118, 0x15b3, 0x11d2,       \
@@ -56,14 +56,18 @@ class nsIJSEventListener : public nsISupports
 public:
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_IJSEVENTLISTENER_IID)
 
-  nsIJSEventListener(nsIScriptContext *aContext, JSObject *aScopeObject,
-                     nsISupports *aTarget)
-    : mContext(aContext), mScopeObject(aScopeObject), mTarget(aTarget)
+  nsIJSEventListener(nsIScriptContext *aContext, nsIScriptGlobalObject *aScopeGlobal,
+                     nsIScriptBinding *aBinding)
+    : mContext(aContext), mScopeGlobal(aScopeGlobal), mBinding(aBinding)
   {
     // mTarget is a weak reference. We are guaranteed because of the
     // ownership model that the target will be freed (and the
     // references dropped) before either the context or the owner goes
     // away.
+    // XXX - eeek - are these lifetimes still OK?  We hold a string reference
+    // to the script binding, which generally holds an indirect reference to
+    // the original target.
+    // XXXMarkh - what to do about the global?  Currently a weakref too.
 
     NS_IF_ADDREF(mContext);
   }
@@ -73,14 +77,14 @@ public:
     return mContext;
   }
 
-  nsISupports *GetEventTarget()
+  nsIScriptBinding *GetEventBinding()
   {
-    return mTarget;
+    return mBinding;
   }
 
-  JSObject *GetEventScope()
+  nsIScriptGlobalObject *GetEventGlobal()
   {
-    return mScopeObject;
+    return mScopeGlobal;
   }
 
   virtual void SetEventName(nsIAtom* aName) = 0;
@@ -88,17 +92,18 @@ public:
 protected:
   ~nsIJSEventListener()
   {
+    // COMPtr??
     NS_IF_RELEASE(mContext);
   }
 
   nsIScriptContext *mContext;
-  JSObject *mScopeObject;
-  nsISupports *mTarget;
+  nsIScriptGlobalObject *mScopeGlobal;
+  nsCOMPtr<nsIScriptBinding> mBinding;
 };
 
 /* factory function */
 nsresult NS_NewJSEventListener(nsIScriptContext *aContext,
-                               JSObject *aScopeObject, nsISupports *aObject,
+                               nsIScriptGlobalObject *aScopeGlobal, nsIScriptBinding *aBinding,
                                nsIDOMEventListener **aReturn);
 
 #endif // nsIJSEventListener_h__

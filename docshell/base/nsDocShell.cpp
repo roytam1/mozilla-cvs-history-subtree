@@ -76,6 +76,7 @@
 #include "nsIScriptSecurityManager.h"
 #include "nsIJSContextStack.h"
 #include "nsIScriptObjectPrincipal.h"
+#include "nsILanguageRuntime.h"
 #include "nsDocumentCharsetInfoCID.h"
 #include "nsICanvasFrame.h"
 #include "nsIScrollableFrame.h"
@@ -86,6 +87,8 @@
 #include "nsAutoPtr.h"
 #include "nsIPrefService.h"
 #include "nsIWritablePropertyBag2.h"
+#include "nsIProgrammingLanguage.h"
+#include "nsDOMJSUtils.h" // GetScriptContextFromJSContext
 
 // we want to explore making the document own the load group
 // so we can associate the document URI with the load group.
@@ -8068,9 +8071,20 @@ nsDocShell::EnsureScriptEnvironment()
         SetGlobalObjectOwner(NS_STATIC_CAST
                              (nsIScriptGlobalObjectOwner *, this));
 
+    // Ensure the script object is set to run javascript - other languages
+    // setup on demand.
+    nsresult rv;
+    nsCOMPtr<nsILanguageRuntime> languageRuntime;
+    rv = factory->GetLanguageRuntimeByID(nsIProgrammingLanguage::JAVASCRIPT,
+                                         getter_AddRefs(languageRuntime));
+    NS_ENSURE_SUCCESS(rv, rv);
+
     nsCOMPtr<nsIScriptContext> context;
-    factory->NewScriptContext(mScriptGlobal, getter_AddRefs(context));
-    NS_ENSURE_TRUE(context, NS_ERROR_FAILURE);
+    rv = languageRuntime->CreateContext(getter_AddRefs(context));
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = mScriptGlobal->SetLanguageContext(nsIProgrammingLanguage::JAVASCRIPT,
+                                           context);
+    NS_ENSURE_SUCCESS(rv, rv);
 
     // Note that mScriptGlobal has taken a reference to the script
     // context, so we don't have to.

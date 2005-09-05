@@ -47,12 +47,13 @@
 #include "nsIScriptContext.h"
 
 //nsIDOMMouseListener interface
+// misnamed - JS grip is broken!
 class nsJSEventListener : public nsIDOMEventListener,
                           public nsIJSEventListener
 {
 public:
-  nsJSEventListener(nsIScriptContext *aContext, JSObject *aScopeObject,
-                    nsISupports* aObject);
+  nsJSEventListener(nsIScriptContext *aContext, nsIScriptGlobalObject *aScopeObject,
+                    nsIScriptBinding* aObject);
   virtual ~nsJSEventListener();
 
   NS_DECL_ISUPPORTS

@@ -42,20 +42,43 @@
 #include "nsIDOMClassInfo.h"
 #include "nsString.h"
 
+// XXX - need a new IID - but should this entire interface be renamed?
 #define NS_IDOM_SCRIPT_OBJECT_FACTORY_IID   \
 { 0xbac2482a, 0x456e, 0x4ea5,               \
   { 0x83, 0xfb, 0x16, 0xe1, 0x24, 0x9c, 0x16, 0x6f } }
 
 class nsIScriptContext;
 class nsIScriptGlobalObject;
+class nsILanguageRuntime;
 class nsIDOMEventListener;
 
 class nsIDOMScriptObjectFactory : public nsISupports {
 public:  
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_IDOM_SCRIPT_OBJECT_FACTORY_IID)
 
-  NS_IMETHOD NewScriptContext(nsIScriptGlobalObject *aGlobal,
-                              nsIScriptContext **aContext) = 0;
+  // Get a script language given its "name" (ie, the mime-type)
+  // See below - we should consider having the JS code still register
+  // as a component (using the simple name 'javascript', for example).
+  // We would still keep the mime-type matching for JS external, but it would
+  // then allow this module to work correctly with JS, and remove the JS
+  // dependency from this interface.
+  // NOTE: Only works for "pluggable" languages - does *not* work for
+  // javascript - the mime-type handling for JS remains external to this for
+  // perf reasons.  If you want javascript, use GetLanguageByID.
+  NS_IMETHOD GetLanguageRuntime(const nsAString &aLanguageName,
+                                nsILanguageRuntime **aLanguage) = 0;
+
+  // Get a script language given its nsIProgrammingLanguage ID.  Note that for
+  // languages other than javascript, the language must have previously been
+  // instantiated via GetScriptLanguage (as we have no way of mapping language
+  // IDs to contract IDs.)
+  NS_IMETHOD GetLanguageRuntimeByID(PRUint32 aLanguageID, 
+                                    nsILanguageRuntime **aLanguage) = 0;
+
+  // Get the ID for a language given its name - but like GetScriptLanguage,
+  // *not* for javascript.
+  NS_IMETHOD GetIDForLanguage(const nsAString &aLanguageName,
+                              PRUint32 *aLanguageID) = 0;
 
   NS_IMETHOD NewScriptGlobalObject(PRBool aIsChrome,
                                    nsIScriptGlobalObject **aGlobal) = 0;

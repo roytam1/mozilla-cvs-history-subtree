@@ -65,6 +65,9 @@ interface nsIProgrammingLanguage : nsISupports
     const PRUint32 JAVA        = 5;
     const PRUint32 ZX81_BASIC  = 6;  // it could happen :)
     const PRUint32 JAVASCRIPT2 = 7;
+    const PRUint32 RUBY =        8;
+    const PRUint32 TCL =         9;
     // This list can grow indefinitely. Just don't ever change an existing item.
+    const PRUint32 MAX         = 9; // keep this as the largest index.
     
 };
