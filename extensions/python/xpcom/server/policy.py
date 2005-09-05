@@ -37,10 +37,12 @@
 
 from xpcom import xpcom_consts, _xpcom, client, nsError, ServerException, COMException
 import xpcom
-import traceback
 import xpcom.server
 import operator
 import types
+
+import logging
+logger = logging.getLogger('pyxpcom')
 
 IID_nsISupports = _xpcom.IID_nsISupports
 IID_nsIVariant = _xpcom.IID_nsIVariant
@@ -234,12 +236,11 @@ class DefaultPolicy:
             if dt == xpcom_consts.VTYPE_ID:
                 return interface.getAsID()
             # all else fails...
-            print "Warning: nsIVariant type %d not supported - returning a string" % (dt,)
+            logger.warning("Warning: nsIVariant type %d not supported - returning a string", dt)
             try:
                 return interface.getAsString()
             except COMException:
-                print "Error: failed to get Variant as a string - returning variant object"
-                traceback.print_exc()
+                logger.exception("Error: failed to get Variant as a string - returning variant object")
                 return interface
             
         return client.Component(interface, iid)
@@ -275,15 +276,19 @@ class DefaultPolicy:
         exc_val = exc_info[1]
         is_server_exception = isinstance(exc_val, ServerException)
         if is_server_exception:
-            if xpcom.verbose:
-                print "** Information:  '%s' raised COM Exception %s" % (func_name, exc_val)
-                traceback.print_exception(exc_info[0], exc_val, exc_info[2])
-                print "** Returning nsresult from existing exception", exc_val
+            # Note that Python 2.3 does not allow an explicit exc_info tuple
+            # and passing 'True' will not work as there is no exception pending.
+            # Trick things!
+            if logger.isEnabledFor(logging.DEBUG):
+                try:
+                    raise exc_info[0], exc_info[1], exc_info[2]
+                except:
+                    logger.debug("'%s' raised COM Exception %s",
+                             func_name, exc_val, exc_info = 1)
             return exc_val.errno
         # Unhandled exception - always print a warning.
-        print "** Unhandled exception calling '%s'" % (func_name,)
-        traceback.print_exception(exc_info[0], exc_val, exc_info[2])
-        print "** Returning nsresult of NS_ERROR_FAILURE"
+        logger.exception("Unhandled exception calling '%s' - returning NS_ERROR_FAILURE",
+                         func_name)
         return nsError.NS_ERROR_FAILURE
 
 

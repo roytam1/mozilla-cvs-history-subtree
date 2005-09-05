@@ -141,6 +141,15 @@ PYXPCOM_EXPORT void PyXPCOM_LogDebug(const char *fmt, ...);
 #define PyUnicode_FromPRUnichar(src, size) \
 	PyUnicode_DecodeUTF16((char*)(src),sizeof(PRUnichar)*(size),NULL,NULL)
 
+// Some utility converters
+// strings
+PYXPCOM_EXPORT PyObject *PyObject_FromNSString( const nsACString &s, PRBool bAssumeUTF8 = PR_FALSE );
+PYXPCOM_EXPORT PyObject *PyObject_FromNSString( const nsAString &s );
+
+// Variants.
+PYXPCOM_EXPORT nsIVariant *PyObject_AsVariant( PyObject *ob);
+PYXPCOM_EXPORT PyObject *PyObject_FromVariant( nsIVariant *v);
+
 /*************************************************************************
 **************************************************************************
 
@@ -542,9 +551,6 @@ PyObject *PyObject_FromXPTTypeDescriptor( const XPTTypeDescriptor *d);
 PyObject *PyObject_FromXPTParamDescriptor( const XPTParamDescriptor *d);
 PyObject *PyObject_FromXPTMethodDescriptor( const XPTMethodDescriptor *d);
 PyObject *PyObject_FromXPTConstant( const XPTConstDescriptor *d);
-
-nsIVariant *PyObject_AsVariant( PyObject *ob);
-PyObject *PyObject_FromVariant( nsIVariant *v);
 
 // DLL reference counting functions.
 // Although we maintain the count, we never actually

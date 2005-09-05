@@ -51,48 +51,86 @@
 #include "nspr.h" // PR_fprintf
 
 static char *PyTraceback_AsString(PyObject *exc_tb);
+static PRBool PyXPCOM_FormatCurrentException(nsCString &streamout);
 
 // The internal helper that actually moves the
 // formatted string to the target!
 
-void LogMessage(const char *prefix, const char *pszMessageText)
+// Only used in really bad situations!
+static void _PanicErrorWrite(const char *msg)
 {
 	nsCOMPtr<nsIConsoleService> consoleService = do_GetService(NS_CONSOLESERVICE_CONTRACTID);
-	NS_ASSERTION(consoleService != nsnull, "pyxpcom can't find the console service");
 	if (consoleService)
-		consoleService->LogStringMessage(NS_ConvertASCIItoUCS2(pszMessageText).get());
-	else
-		PR_fprintf(PR_STDERR,"%s\n", pszMessageText);
+		consoleService->LogStringMessage(NS_ConvertASCIItoUCS2(msg).get());
+	PR_fprintf(PR_STDERR,"%s\n", msg);
 }
 
-void LogMessage(const char *prefix, nsACString &text)
+// Called when our "normal" error logger fails.
+static void HandleLogError(const char *pszMessageText)
+{
+	nsCAutoString streamout;
+
+	_PanicErrorWrite("Failed to log an error record");
+	if (PyXPCOM_FormatCurrentException(streamout))
+		_PanicErrorWrite(streamout.get());
+	_PanicErrorWrite("Original error follows:");
+	_PanicErrorWrite(pszMessageText);
+}
+
+static const char *LOGGER_WARNING = "warning";
+static const char *LOGGER_ERROR = "error";
+static const char *LOGGER_DEBUG = "debug";
+
+// Our "normal" error logger - calls back to the logging module.
+void LogMessage(const char *methodName, const char *pszMessageText)
+{
+	// We now go back via the 'logging' module, which itself generally
+	// arranges to pump back to the console service.  This makes all
+	// logging consistent with the package.
+	PyObject *mod = PyImport_ImportModule("logger");
+	if (!mod) {
+		HandleLogError(pszMessageText);
+		return;
+	}
+	PyObject *logger = PyObject_CallMethod(mod, "getLogger", "s", "pyxpcom");
+	Py_DECREF(mod);
+	if (!logger) {
+		HandleLogError(pszMessageText);
+		return;
+	}
+	PyObject *result = PyObject_CallMethod(logger, (char *)methodName, "ss", "%s", pszMessageText);
+	Py_DECREF(logger);
+	if (!result) {
+		HandleLogError(pszMessageText);
+		return;
+	}
+	Py_DECREF(result);
+}
+
+void LogMessage(const char *methodName, nsACString &text)
 {
 	char *c = ToNewCString(text);
-	LogMessage(prefix, c);
+	LogMessage(methodName, c);
 	nsCRT::free(c);
 }
 
 // A helper for the various logging routines.
-static void VLogF(const char *prefix, const char *fmt, va_list argptr)
+static void VLogF(const char *methodName, const char *fmt, va_list argptr)
 {
 	char buff[512];
 
 	vsprintf(buff, fmt, argptr);
 
-	LogMessage(prefix, buff);
+	LogMessage(methodName, buff);
 }
 
-void PyXPCOM_LogError(const char *fmt, ...)
+PRBool PyXPCOM_FormatCurrentException(nsCString &streamout)
 {
-	va_list marker;
-	va_start(marker, fmt);
-	VLogF("PyXPCOM Error: ", fmt, marker);
-	// If we have a Python exception, also log that:
+	PRBool ok = PR_FALSE;
 	PyObject *exc_typ = NULL, *exc_val = NULL, *exc_tb = NULL;
 	PyErr_Fetch( &exc_typ, &exc_val, &exc_tb);
 	if (exc_typ) {
 		PyErr_NormalizeException( &exc_typ, &exc_val, &exc_tb);
-		nsCAutoString streamout;
 
 		if (exc_tb) {
 			const char *szTraceback = PyTraceback_AsString(exc_tb);
@@ -120,16 +158,32 @@ void PyXPCOM_LogError(const char *fmt, ...)
 				streamout += "Can't convert exception value to a string!";
 		}
 		streamout += "\n";
-		LogMessage("PyXPCOM Exception:", streamout);
+		PRBool ok = PR_FALSE;
 	}
 	PyErr_Restore(exc_typ, exc_val, exc_tb);
+	return ok;
+
+}
+void PyXPCOM_LogError(const char *fmt, ...)
+{
+	va_list marker;
+	va_start(marker, fmt);
+	// NOTE: It is trick to use logger.exception here - the exception
+	// state when called back from the C code is clear.  Only Python 2.4
+	// and later allows an explicit exc_info tuple().
+	VLogF(LOGGER_ERROR, fmt, marker);
+	// If we have a Python exception, also log that:
+	nsCAutoString streamout;
+	if (PyXPCOM_FormatCurrentException(streamout)) {
+		LogMessage(LOGGER_ERROR, streamout);
+	}
 }
 
 void PyXPCOM_LogWarning(const char *fmt, ...)
 {
 	va_list marker;
 	va_start(marker, fmt);
-	VLogF("PyXPCOM Warning: ", fmt, marker);
+	VLogF(LOGGER_WARNING, fmt, marker);
 }
 
 #ifdef DEBUG
@@ -137,7 +191,7 @@ void PyXPCOM_LogDebug(const char *fmt, ...)
 {
 	va_list marker;
 	va_start(marker, fmt);
-	VLogF("PyXPCOM Debug: ", fmt, marker);
+	VLogF(LOGGER_DEBUG, fmt, marker);
 }
 #endif
 

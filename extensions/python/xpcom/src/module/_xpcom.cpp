@@ -386,27 +386,6 @@ PyObject *AllocateBuffer(PyObject *self, PyObject *args)
 	return PyBuffer_New(bufSize);
 }
 
-// These should no longer be used - just use the logging.getLogger('pyxpcom')...
-PyObject *LogWarning(PyObject *self, PyObject *args)
-{
-	char *msg;
-	if (!PyArg_ParseTuple(args, "s", &msg))
-		return NULL;
-	PyXPCOM_LogWarning("%s", msg);
-	Py_INCREF(Py_None);
-	return Py_None;
-}
-
-PyObject *LogError(PyObject *self, PyObject *args)
-{
-	char *msg;
-	if (!PyArg_ParseTuple(args, "s", &msg))
-		return NULL;
-	PyXPCOM_LogError("%s", msg);
-	Py_INCREF(Py_None);
-	return Py_None;
-}
-
 // Writes a message to the console service.  This could be done via pure
 // Python code, but is useful when the logging code is actually the
 // xpcom .py framework itself (ie, we don't want our logging framework to
@@ -451,8 +430,6 @@ static struct PyMethodDef xpcom_methods[]=
 	{"AllocateBuffer", AllocateBuffer, 1},
 	{"LogConsoleMessage", LogConsoleMessage, 1, "Write a message to the xpcom console service"},
 	// These should no longer be used - just use the logging.getLogger('pyxpcom')...
-	{"LogWarning", LogWarning, 1},
-	{"LogError", LogError, 1},
 	{ NULL }
 };
 

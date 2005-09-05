@@ -535,7 +535,7 @@ def doit(num_loops = -1):
     # Sometimes we get spurious counts off by 1 or 2.
     # This can't indicate a real leak, as we have looped
     # more than twice!
-    if abs(lost)>2:
+    if abs(lost)>3: # 2 or 3 :)
         print "*** Lost %d references" % (lost,)
 
     # sleep to allow the OS to recover

@@ -39,6 +39,9 @@
 from xpcom import components, nsError, ServerException, COMException
 from xpcom.server import WrapObject
 
+import unittest
+import logging
+
 class PythonFailingComponent:
     # Re-use the test interface for this test.
     _com_interfaces_ = components.interfaces.nsIPythonTestInterfaceExtra
@@ -75,29 +78,47 @@ class PythonFailingComponent:
         # Report of a crash in this case - test it!
         raise ServerException, "A bad exception param"
 
-def _testit(expected_errno, func, *args):
-    try:
-        apply(func, args)
-    except COMException, what:
-        if what.errno != expected_errno:
-            raise
+class TestHandler(logging.Handler):
+    def __init__(self, level=logging.ERROR): # only counting error records
+        logging.Handler.__init__(self, level)
+        self.records = []
+    
+    def reset(self):
+        self.records = []
 
-def test():
-    # For the benefit of the test suite, we print some reassuring messages.
-    import sys
-    sys.__stderr__.write("***** NOTE: Three tracebacks below this is normal\n")
-    ob = WrapObject( PythonFailingComponent(), components.interfaces.nsIPythonTestInterfaceExtra)
-    _testit(nsError.NS_ERROR_FAILURE, ob.do_boolean, 0, 0)
-    _testit(nsError.NS_ERROR_NOT_IMPLEMENTED, ob.do_octet, 0, 0)
-    _testit(nsError.NS_ERROR_FAILURE, ob.do_short, 0, 0)
-    _testit(nsError.NS_ERROR_FAILURE, ob.do_unsigned_short, 0, 0)
-    _testit(nsError.NS_ERROR_FAILURE, ob.do_long, 0, 0)
-    _testit(nsError.NS_ERROR_NOT_IMPLEMENTED, ob.do_unsigned_long, 0, 0)
-    _testit(nsError.NS_ERROR_NOT_IMPLEMENTED, ob.do_long_long, 0, 0)
-    _testit(nsError.NS_ERROR_FAILURE, ob.do_unsigned_long_long, 0, 0)
-    print "The xpcom exception tests passed"
-    # For the benefit of the test suite, some more reassuring messages.
-    sys.__stderr__.write("***** NOTE: Three tracebacks printed above this is normal\n")
-    sys.__stderr__.write("*****       It is testing the Python XPCOM Exception semantics\n")
+    def handle(self, record):
+        self.records.append(record)
 
-test()
+class ExceptionTests(unittest.TestCase):
+
+    def _testit(self, expected_errno, num_tracebacks, func, *args):
+
+        # Screw with the logger
+        logger = logging.getLogger('pyxpcom')
+        old_handlers = logger.handlers
+        test_handler = TestHandler()
+        logger.handlers = [test_handler]
+
+        try:
+            try:
+                apply(func, args)
+            except COMException, what:
+                if what.errno != expected_errno:
+                    raise
+        finally:
+            logger.handlers = old_handlers
+        self.failUnlessEqual(num_tracebacks, len(test_handler.records))
+
+    def testEmAll(self):
+        ob = WrapObject( PythonFailingComponent(), components.interfaces.nsIPythonTestInterfaceExtra)
+        self._testit(nsError.NS_ERROR_FAILURE, 0, ob.do_boolean, 0, 0)
+        self._testit(nsError.NS_ERROR_NOT_IMPLEMENTED, 0, ob.do_octet, 0, 0)
+        self._testit(nsError.NS_ERROR_FAILURE, 1, ob.do_short, 0, 0)
+        self._testit(nsError.NS_ERROR_FAILURE, 1, ob.do_unsigned_short, 0, 0)
+        self._testit(nsError.NS_ERROR_FAILURE, 0, ob.do_long, 0, 0)
+        self._testit(nsError.NS_ERROR_NOT_IMPLEMENTED, 0, ob.do_unsigned_long, 0, 0)
+        self._testit(nsError.NS_ERROR_NOT_IMPLEMENTED, 0, ob.do_long_long, 0, 0)
+        self._testit(nsError.NS_ERROR_FAILURE, 1, ob.do_unsigned_long_long, 0, 0)
+
+if __name__=='__main__':
+    unittest.main()
