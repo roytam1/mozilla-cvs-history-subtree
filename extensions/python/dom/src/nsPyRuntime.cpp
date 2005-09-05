@@ -38,6 +38,11 @@
 #include "nsPyContext.h"
 #include "nsIServiceManager.h"
 #include "nsICategoryManager.h"
+#include "nsIScriptGlobalObject.h"
+#include "nsIScriptContext.h"
+#include "nsIScriptObjectPrincipal.h"
+
+extern void init_nsdom();
 
 // QueryInterface implementation for nsPythonRuntime
 NS_INTERFACE_MAP_BEGIN(nsPythonRuntime)
@@ -55,6 +60,7 @@ nsPythonRuntime::CreateContext(nsIScriptContext **ret)
         Py_Initialize();
         PyXPCOM_Globals_Ensure();
     }
+    init_nsdom();
     *ret = new nsPythonContext();
     if (!ret)
         return NS_ERROR_OUT_OF_MEMORY;
@@ -113,4 +119,83 @@ nsPythonRuntime::UnregisterSelf(nsIComponentManager* aCompMgr,
     catman->DeleteCategoryEntry(SCRIPT_LANGUAGE_CATEGORY,
                                 "python", PR_TRUE);
     return rv;
+}
+
+PyObject *PyJSExec(PyObject *self, PyObject *args)
+{
+    PyObject *obGlobal;
+    char *code;
+    char *url = "<python JSExec script>";
+    PRUint32 lineNo = 0;
+    PRUint32 version = 0;
+    if (!PyArg_ParseTuple(args, "Os|sii", &obGlobal, &code, &url, &lineNo, &version))
+        return NULL;
+    nsCOMPtr<nsISupports> isup;
+    if (!Py_nsISupports::InterfaceFromPyObject(
+                obGlobal,
+                NS_GET_IID(nsISupports),
+                getter_AddRefs(isup),
+                PR_FALSE, PR_FALSE))
+        return NULL;
+    nsCOMPtr<nsIScriptGlobalObject> scriptGlobal = do_QueryInterface(isup);
+    if (scriptGlobal == nsnull)
+        return PyErr_Format(PyExc_TypeError, "Object is not an nsIScriptGlobal");
+    nsIScriptContext *scriptContext =
+           scriptGlobal->GetLanguageContext(nsIProgrammingLanguage::JAVASCRIPT);
+    if (!scriptContext)
+        return PyErr_Format(PyExc_RuntimeError, "No javascript context available");
+
+    // get the principal
+    nsIPrincipal *principal = nsnull;
+    nsCOMPtr<nsIScriptObjectPrincipal> globalData = do_QueryInterface(scriptGlobal);
+    if (globalData)
+        principal = globalData->GetPrincipal();
+    if (!principal)
+        return PyErr_Format(PyExc_RuntimeError, "No nsIPrincipal available");
+
+    nsresult rv;
+    void *scope = scriptGlobal->GetLanguageGlobal(nsIProgrammingLanguage::JAVASCRIPT);
+    void *scriptObject = nsnull;
+    nsAutoString str;
+    PRBool bIsUndefined;
+    Py_BEGIN_ALLOW_THREADS
+    rv = scriptContext->CompileScript( NS_ConvertASCIItoUCS2(code).get(),
+                                       strlen(code),
+                                       scope,
+                                       principal, // no principal??
+                                       url,
+                                       lineNo,
+                                       version,
+                                       &scriptObject);
+    if (NS_SUCCEEDED(rv))
+        rv = scriptContext->ExecuteScript(scriptObject, scope, &str,
+                                          &bIsUndefined);
+    Py_END_ALLOW_THREADS
+    if (NS_FAILED(rv))
+        return PyXPCOM_BuildPyException(rv);
+    return Py_BuildValue("NN", PyObject_FromNSString(str), PyBool_FromLong(bIsUndefined));
+    // XXX - cleanup scriptObject???
+}
+// We also setup a "fake" module called nsdom with a few utility functions
+// available to python.
+static struct PyMethodDef methods[]=
+{
+    {"JSExec", PyJSExec, 1},
+    { NULL }
+};
+
+////////////////////////////////////////////////////////////
+// The module init code.
+//
+// *NOT* called by Python - this is not a regular Python module.
+static PRBool have_init = PR_FALSE;
+
+void 
+init_nsdom() {
+    if (have_init)
+        return;
+    CEnterLeavePython _celp;
+    // Create the module and add the functions
+    Py_InitModule("nsdom", methods);
+    have_init = PR_TRUE;
 }
