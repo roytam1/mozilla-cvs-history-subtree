@@ -40,10 +40,17 @@
 class nsPresContext;
 class nsIContent;
 class nsStyleCoord;
+class nsIFrame;
+struct nsStyleSVGPaint;
 
 class nsSVGUtils
 {
 public:
+  /* Checks the svg enable preference and if a renderer could
+   * successfully be created.
+   */
+  static PRBool SVGEnabled();
+
   /*
    * Converts a nsStyleCoord into a userspace value.  Handles units
    * Factor (straight userspace), Coord (dimensioned), and Percent (of
