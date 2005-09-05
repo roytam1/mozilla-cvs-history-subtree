@@ -259,7 +259,7 @@ nsresult nsJSThunk::EvaluateScript(nsIChannel *aChannel)
     PRBool bIsUndefined;
 
     rv = scriptContext->EvaluateString(NS_ConvertUTF8toUCS2(script),
-                                       global, // obj
+                                       globalJSObject, // obj
                                        principal,
                                        url.get(),      // url
                                        1,              // line no
