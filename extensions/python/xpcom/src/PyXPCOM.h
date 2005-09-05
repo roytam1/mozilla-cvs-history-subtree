@@ -71,6 +71,10 @@
 #	undef HAVE_LONG_LONG
 #endif // HAVE_LONG_LONG
 
+#ifdef _POSIX_C_SOURCE // Ditto here
+#	undef _POSIX_C_SOURCE
+#endif // _POSIX_C_SOURCE
+
 #include <Python.h>
 
 #ifdef XP_WIN
