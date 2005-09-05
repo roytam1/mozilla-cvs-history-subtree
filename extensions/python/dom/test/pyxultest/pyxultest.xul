@@ -10,44 +10,7 @@
   <script type="application/x-python" src="chrome://pyxultest/content/pyxultest.py"/>
   <script type="application/x-python">
     <![CDATA[
-import sys
-import xpcom
-from xpcom import components
 
-class EventListener:
-    _com_interfaces_ = components.interfaces.nsIDOMEventListener
-    def __init__(self, handler, globs = None):
-        try:
-            self.co = handler.func_code
-        except AttributeError:
-            self.co = compile(handler, "inline script", "exec")
-        self.globals = globs or globals()
-    
-    def handleEvent(self, event):
-        exec self.co in self.globals
-
-def event():
-    input = this.document.getElementById("input-box")
-    val = "This is the Python on XUL demo, using Python " + sys.version
-    input.setAttribute("value", val)
-    
-    # Sadly no inline event handlers yet - hook up a click event.
-    button = this.document.getElementById("button1")
-    button.addEventListener('click', EventListener('print "hello from the click event"'), False)
-
-
-print "Event listener is", this.window.addEventListener
-this.window.addEventListener('load', EventListener('print "hello from the event " + str(this.document)'), False)
-this.window.addEventListener('load', EventListener(event), False)
-
-print this
-for attr in "document parent top scrollbars name textZoom scrollX scrollY".split():
-    try:
-        val = getattr(this, attr)
-    except (xpcom.Exception, AttributeError), exc:
-        print "FAILED to get attribute %s: %s" % (attr, exc)
-    else:
-        print attr, "is", val
 print "Scrollbar visible =", this.scrollbars.visible
 #this.alert('hi from Python');
 import xpcom
@@ -61,9 +24,10 @@ print "Window location is", this.window.location.href
 
   <vbox flex="1">
     <textbox id="input-box" style="width:100%" value = "hello there"
-             rows="5" multiline="1" flex="1"
+             rows="5" multiline="true" flex="1"
     />
-    <button scriptLanguage="python" id="button1" label="click me" oncommand="print 'hello!!!';print event.target.tagName"/>
+    <button scriptLanguage="python" id="button1" label="open dialog"
+            oncommand="on_button_click()"/>
   </vbox>
   <!-- Here we have a script element defined at a parent node -->
   <hbox scriptLanguage="python" oncommand="print 'You clicked on a', event.target.tagName">

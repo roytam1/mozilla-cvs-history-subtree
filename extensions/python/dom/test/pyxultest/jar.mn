@@ -4,3 +4,4 @@ pyxultest.jar:
 #    content/pyxultest/pyxultest.js				(pyxultest.js)
     content/pyxultest/pyxultest.py				(pyxultest.py)
     content/pyxultest/pyxultest.css				(pyxultest.css)
+    content/pyxultest/dialog.xul				(dialog.xul)
