@@ -5829,9 +5829,9 @@ nsGlobalWindow::OpenInternal(const nsAString& aUrl, const nsAString& aName,
         if (argc) {
           nsCOMPtr<nsPIWindowWatcher> pwwatch(do_QueryInterface(wwatch));
           if (pwwatch) {
-            // Remove the first 3 args here - not too sure why.  Create temp argv
-            // surely there is a better way to go!  Apparently no "Clone" method
-            // like nsISupportsArray?
+            // Remove the first 3 args - the rest are the args as seen by scripts.
+            // Surely there is a better way to do this?  Apparently no
+            // "Clone" method like nsISupportsArray?
             nsCOMPtr<nsIMutableArray> tempargv;
             rv = NS_NewArray(getter_AddRefs(tempargv));
             NS_ENSURE_SUCCESS(rv, rv);
@@ -5853,8 +5853,6 @@ nsGlobalWindow::OpenInternal(const nsAString& aUrl, const nsAString& aName,
             rv = NS_ERROR_UNEXPECTED;
           }
         } else {
-          // eeek - aExtraArgument needs work
-          NS_ERROR("aExtraArgument not being handled");
           rv = wwatch->OpenWindow(this, url.get(), name_ptr, options_ptr,
                                   aExtraArgument, getter_AddRefs(domReturn));
         }
