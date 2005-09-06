@@ -1008,7 +1008,8 @@ nsImageFrame::Reflow(nsPresContext*          aPresContext,
     mState &= ~IMAGE_SIZECONSTRAINED;
   }
 
-  // XXXldb These two bits mean the same thing; remove IMAGE_GOTINITIALREFLOW.
+  // XXXldb These two bits are almost exact opposites (except in the
+  // middle of the initial reflow); remove IMAGE_GOTINITIALREFLOW.
   if (GetStateBits() & NS_FRAME_FIRST_REFLOW) {
     mState |= IMAGE_GOTINITIALREFLOW;
   }
