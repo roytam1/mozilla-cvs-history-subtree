@@ -486,10 +486,6 @@ nsWebShellWindow::HandleEvent(nsGUIEvent *aEvent)
             nsCOMPtr<nsIDOMWindowInternal> domWindow = 
               do_QueryInterface(piWin);
 
-            if (domWindow == focusedWindow) {
-              break; // Already focused
-            }
-
             focusController->SetSuppressFocus(PR_TRUE, "Activation Suppression");
 
             NS_ASSERTION(domWindow,
