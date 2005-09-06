@@ -270,6 +270,29 @@ static char **gRestartArgv;
 #include <qapplication.h>
 #endif
 
+// Save the path of the given file to the specified environment variable.
+static void
+SaveFileToEnv(const char *name, nsIFile *file)
+{
+  nsCAutoString path;
+  file->GetNativePath(path);
+
+  char *expr = PR_smprintf("%s=%s", name, path.get());
+  if (expr)
+    PR_SetEnv(expr);
+  // We intentionally leak |expr| here since it is required by PR_SetEnv.
+}
+
+// Save the path of the given file to the specified environment variable
+// provided the environment variable does not have a value.
+static void
+SaveFileToEnvIfUnset(const char *name, nsIFile *file)
+{
+  const char *val = PR_GetEnv(name);
+  if (!(val && *val))
+    SaveFileToEnv(name, file);
+}
+
 static PRBool
 strimatch(const char* lowerstr, const char* mixedstr)
 {
@@ -1365,16 +1388,8 @@ ShowProfileManager(nsIToolkitProfileService* aProfileSvc,
     }
   }
 
-  nsCAutoString path1;
-  nsCAutoString path2;
-  profD->GetNativePath(path1);
-  profLD->GetNativePath(path2);
-
-  static char kEnvVar1[MAXPATHLEN], kEnvVar2[MAXPATHLEN];
-  sprintf(kEnvVar1, "XRE_PROFILE_PATH=%s", path1.get());
-  sprintf(kEnvVar2, "XRE_PROFILE_LOCAL_PATH=%s", path2.get());
-  PR_SetEnv(kEnvVar1);
-  PR_SetEnv(kEnvVar2);
+  SaveFileToEnv("XRE_PROFILE_PATH", profD);
+  SaveFileToEnv("XRE_PROFILE_LOCAL_PATH", profLD);
 
   PRBool offline = PR_FALSE;
   aProfileSvc->GetStartOffline(&offline);
@@ -2373,21 +2388,15 @@ XRE_main(int argc, char* argv[], const nsXREAppData* aAppData)
       }
     }
 
-    nsCAutoString path1, path2;
-    profD->GetNativePath(path1);
-    profLD->GetNativePath(path2);
-
-    static char kEnvVar1[MAXPATHLEN], kEnvVar2[MAXPATHLEN];
-    sprintf(kEnvVar1, "XRE_PROFILE_PATH=%s", path1.get());
-    sprintf(kEnvVar2, "XRE_PROFILE_LOCAL_PATH=%s", path2.get());
-    PR_SetEnv(kEnvVar1);
-    PR_SetEnv(kEnvVar2);
+    // Ensure that these environment variables are set:
+    SaveFileToEnvIfUnset("XRE_PROFILE_PATH", profD);
+    SaveFileToEnvIfUnset("XRE_PROFILE_LOCAL_PATH", profLD);
 
 #ifdef XP_MACOSX
     if (gBinaryPath) {
-      static char kEnvVar3[MAXPATHLEN];
-      sprintf(kEnvVar3, "XRE_BINARY_PATH=%s", gBinaryPath);
-      PR_SetEnv(kEnvVar3);
+      static char kEnvVar[MAXPATHLEN];
+      sprintf(kEnvVar, "XRE_BINARY_PATH=%s", gBinaryPath);
+      PR_SetEnv(kEnvVar);
     }
 #endif
 
