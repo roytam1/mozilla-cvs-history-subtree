@@ -5,11 +5,11 @@
 # Installer keys (don't translate strings in $$)
 #define SETUP_TITLE $ProductShortName$ Setup
 #define SETUP_WELCOME Welcome to %s
-#define SETUP_MESSAGE0 You are about to install %s.
+#define SETUP_MESSAGE0 You are about to install %s 1.5 Beta 1.
 #define SETUP_MESSAGE1 It is strongly recommended that you exit all Windows programs before running this Setup program.
 #define SETUP_MESSAGE1_UNIX It is strongly recommended that you exit all instances of %s before running this Setup program.
 #define SETUP_MESSAGE2 Click Cancel to quit Setup and then close any programs you have running.  Click Next to continue the Setup program.
-#define SETUP_MESSAGE3 Click Next to continue installing %s.
+#define SETUP_MESSAGE3 Click Next to continue installing %s 1.5 Beta 1.
 
 #define LICENSE_TITLE Software License Agreement
 #define LICENSE_SUBTITLE Terms and conditions for using this software.
