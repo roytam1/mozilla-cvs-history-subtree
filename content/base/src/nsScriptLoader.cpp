@@ -473,6 +473,7 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement,
           case '3': jsVersion = JSVERSION_1_3; break;
           case '4': jsVersion = JSVERSION_1_4; break;
           case '5': jsVersion = JSVERSION_1_5; break;
+          case '6': jsVersion = JSVERSION_1_6; break;
           default:  jsVersion = JSVERSION_UNKNOWN;
         }
       }
@@ -739,9 +740,12 @@ nsScriptLoader::EvaluateScript(nsScriptLoadRequest* aRequest,
 
   JSContext *cx = (JSContext *)context->GetNativeContext();
   uint32 options = ::JS_GetOptions(cx);
-  PRBool needE4X = aRequest->mHasE4XOption && !(options & JSOPTION_XML);
-  if (needE4X) {
-    ::JS_SetOptions(cx, options | JSOPTION_XML);
+  JSBool changed = (aRequest->mHasE4XOption ^ !!(options & JSOPTION_XML));
+  if (changed) {
+    ::JS_SetOptions(cx,
+                    aRequest->mHasE4XOption
+                    ? options | JSOPTION_XML
+                    : options & ~JSOPTION_XML);
   }
 
   // Update our current script.
@@ -757,7 +761,7 @@ nsScriptLoader::EvaluateScript(nsScriptLoadRequest* aRequest,
   mCurrentScript = oldCurrent;
 
   ::JS_ReportPendingException(cx);
-  if (needE4X) {
+  if (changed) {
     ::JS_SetOptions(cx, options);
   }
 
