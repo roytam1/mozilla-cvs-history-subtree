@@ -996,7 +996,10 @@ nsContinuingTextFrame::GetFirstInFlow() const
 
 // XXX Do we want to do all the work for the first-in-flow or do the
 // work for each part?  (Be careful of first-letter / first-line, though,
-// especially first-line!)
+// especially first-line!)  Doing all the work on the first-in-flow has
+// the advantage of avoiding the potential for incremental reflow bugs,
+// but depends on our maintining the frame tree in reasonable ways even
+// for edge cases (block-within-inline splits, nextBidi, etc.)
 
 // XXX We really need to make :first-letter happen during frame
 // construction.
