@@ -3,10 +3,10 @@
 
 Welcome_Title=$ProductName$ Setup
 Welcome_MessageWelcome=Welcome to %s!
-Welcome_Message0=You are about to install %s $Version$.
+Welcome_Message0=You are about to install %s 1.5 Beta 1.
 Welcome_Message1=It is strongly recommended that you exit all Windows programs before running this Setup program.
 Welcome_Message2=Click Cancel to quit Setup and then close any programs you have running.  Click Next to continue the Setup program.
-Welcome_Message3=Click Next to continue installing %s $Version$.
+Welcome_Message3=Click Next to continue installing %s 1.5 Beta 1.
 
 License_Title=Software License Agreement
 License_SubTitle=Terms and conditions for using this software.
