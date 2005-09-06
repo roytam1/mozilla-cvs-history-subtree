@@ -276,6 +276,10 @@ class DefaultPolicy:
         exc_val = exc_info[1]
         is_server_exception = isinstance(exc_val, ServerException)
         if is_server_exception:
+            # When a component raised an explicit COM exception, it is
+            # considered 'normal' - however, we still write a debug log
+            # record to help track these otherwise silent exceptions.
+
             # Note that Python 2.3 does not allow an explicit exc_info tuple
             # and passing 'True' will not work as there is no exception pending.
             # Trick things!
@@ -286,11 +290,13 @@ class DefaultPolicy:
                     logger.debug("'%s' raised COM Exception %s",
                              func_name, exc_val, exc_info = 1)
             return exc_val.errno
-        # Unhandled exception - always print a warning.
-        logger.exception("Unhandled exception calling '%s' - returning NS_ERROR_FAILURE",
-                         func_name)
+        # Unhandled exception - always print a warning and the traceback.
+        # As above, trick the logging module to handle Python 2.3
+        try:
+            raise exc_info[0], exc_info[1], exc_info[2]
+        except:
+            logger.exception("Unhandled exception calling '%s'", func_name)
         return nsError.NS_ERROR_FAILURE
-
 
     # Called whenever an unhandled Python exception is detected as a result
     # of _CallMethod_ - this exception may have been raised during the _CallMethod_
@@ -308,8 +314,12 @@ class DefaultPolicy:
             import xpcom.xpt
             m = xpcom.xpt.Method(info, index, None)
             func_repr = m.Describe().lstrip()
-        except:
+        except COMException:
             func_repr = "%s(%r)" % (name, param_descs)
+        except:
+            # any other errors are evil!?  Log it
+            self._doHandleException("<building method repr>", sys.exc_info())
+            # And fall through to logging the original error.
         return self._doHandleException(func_repr, exc_info)
 
     # Called whenever a gateway fails due to anything other than _CallMethod_.

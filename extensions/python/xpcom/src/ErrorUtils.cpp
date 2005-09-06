@@ -82,12 +82,12 @@ static const char *LOGGER_ERROR = "error";
 static const char *LOGGER_DEBUG = "debug";
 
 // Our "normal" error logger - calls back to the logging module.
-void LogMessage(const char *methodName, const char *pszMessageText)
+void DoLogMessage(const char *methodName, const char *pszMessageText)
 {
 	// We now go back via the 'logging' module, which itself generally
 	// arranges to pump back to the console service.  This makes all
 	// logging consistent with the package.
-	PyObject *mod = PyImport_ImportModule("logger");
+	PyObject *mod = PyImport_ImportModule("logging");
 	if (!mod) {
 		HandleLogError(pszMessageText);
 		return;
@@ -107,6 +107,17 @@ void LogMessage(const char *methodName, const char *pszMessageText)
 	Py_DECREF(result);
 }
 
+void LogMessage(const char *methodName, const char *pszMessageText)
+{
+	// Be careful to save and restore the Python exception state
+	// before calling back to Python, or we lose the original error.
+	PyObject *exc_typ = NULL, *exc_val = NULL, *exc_tb = NULL;
+	PyErr_Fetch( &exc_typ, &exc_val, &exc_tb);
+	DoLogMessage(methodName, pszMessageText);
+	PyErr_Restore(exc_typ, exc_val, exc_tb);
+}
+
+
 void LogMessage(const char *methodName, nsACString &text)
 {
 	char *c = ToNewCString(text);
@@ -118,8 +129,8 @@ void LogMessage(const char *methodName, nsACString &text)
 static void VLogF(const char *methodName, const char *fmt, va_list argptr)
 {
 	char buff[512];
-
-	vsprintf(buff, fmt, argptr);
+	// Use safer NS_ functions.
+	PR_vsnprintf(buff, sizeof(buff), fmt, argptr);
 
 	LogMessage(methodName, buff);
 }
@@ -130,6 +141,7 @@ PRBool PyXPCOM_FormatCurrentException(nsCString &streamout)
 	PyObject *exc_typ = NULL, *exc_val = NULL, *exc_tb = NULL;
 	PyErr_Fetch( &exc_typ, &exc_val, &exc_tb);
 	if (exc_typ) {
+		streamout += "\n";
 		PyErr_NormalizeException( &exc_typ, &exc_val, &exc_tb);
 
 		if (exc_tb) {
@@ -157,8 +169,7 @@ PRBool PyXPCOM_FormatCurrentException(nsCString &streamout)
 			} else
 				streamout += "Can't convert exception value to a string!";
 		}
-		streamout += "\n";
-		PRBool ok = PR_FALSE;
+		ok = PR_TRUE;
 	}
 	PyErr_Restore(exc_typ, exc_val, exc_tb);
 	return ok;
@@ -168,12 +179,16 @@ void PyXPCOM_LogError(const char *fmt, ...)
 {
 	va_list marker;
 	va_start(marker, fmt);
-	// NOTE: It is trick to use logger.exception here - the exception
+	// NOTE: It is tricky to use logger.exception here - the exception
 	// state when called back from the C code is clear.  Only Python 2.4
 	// and later allows an explicit exc_info tuple().
-	VLogF(LOGGER_ERROR, fmt, marker);
+	
+	// Don't use VLogF here, instead arrange for exception info and
+	// traceback to be in the same buffer.
+	char buff[512];
+	PR_vsnprintf(buff, sizeof(buff), fmt, marker);
 	// If we have a Python exception, also log that:
-	nsCAutoString streamout;
+	nsCAutoString streamout(buff);
 	if (PyXPCOM_FormatCurrentException(streamout)) {
 		LogMessage(LOGGER_ERROR, streamout);
 	}
