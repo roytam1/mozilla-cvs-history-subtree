@@ -1250,6 +1250,7 @@ nsEventListenerManager::AddScriptEventListener(nsISupports *aObject,
 
     if (doc && (global = doc->GetScriptGlobalObject())) {
       context = global->GetLanguageContext(aLanguage);
+      NS_ASSERTION(context, "Failed to get language context from global");
     }
   } else {
     nsCOMPtr<nsPIDOMWindow> win(do_QueryInterface(aObject));
@@ -1296,6 +1297,9 @@ nsEventListenerManager::AddScriptEventListener(nsISupports *aObject,
     NS_ENSURE_TRUE(context, NS_ERROR_FAILURE);
 
     global = context->GetGlobalObject();
+    // but if the language is *not* js , we now have the wrong context.
+    context = global->GetLanguageContext(aLanguage);
+    NS_ENSURE_TRUE(context, NS_ERROR_FAILURE);
   }
   if (!global) {
     NS_ERROR("Context reachable, but no scope reachable in "
