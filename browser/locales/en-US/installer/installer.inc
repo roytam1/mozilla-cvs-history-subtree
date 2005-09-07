@@ -9,7 +9,7 @@
 #define SETUP_MESSAGE1 It is strongly recommended that you exit all Windows programs before running this Setup program.
 #define SETUP_MESSAGE1_UNIX It is strongly recommended that you exit all instances of %s before running this Setup program.
 #define SETUP_MESSAGE2 Click Cancel to quit Setup and then close any programs you have running.  Click Next to continue the Setup program.
-#define SETUP_MESSAGE3 Click Next to continue installing %s 1.5 Beta 1.
+#define SETUP_MESSAGE3 Click Next to continue installing %s.
 
 #define LICENSE_TITLE Software License Agreement
 #define LICENSE_SUBTITLE Terms and conditions for using this software.
