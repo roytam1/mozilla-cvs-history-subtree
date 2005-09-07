@@ -286,6 +286,7 @@ nsHTMLScriptEventHandler::Invoke(nsISupports *aTargetObject,
 
   // Invoke the event handler script...
   // eeek - jsval <-> nsISupports???
+  NS_ERROR("HTML script args are being ignored");
   nsIArray *arg = nsnull;
   nsISupports *ret = nsnull;
   
