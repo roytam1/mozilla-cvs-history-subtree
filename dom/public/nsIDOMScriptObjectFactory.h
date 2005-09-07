@@ -69,9 +69,10 @@ public:
                                 nsILanguageRuntime **aLanguage) = 0;
 
   // Get a script language given its nsIProgrammingLanguage ID.  Note that for
-  // languages other than javascript, the language must have previously been
-  // instantiated via GetScriptLanguage (as we have no way of mapping language
-  // IDs to contract IDs.)
+  // languages other than javascript, if the language has not previosly been
+  // loaded by name, the factory will instantiate *all* registered
+  // nsILanguageRuntime components to match the ID (we have no way of mapping
+  // language IDs directly to contract IDs.)
   NS_IMETHOD GetLanguageRuntimeByID(PRUint32 aLanguageID, 
                                     nsILanguageRuntime **aLanguage) = 0;
 
@@ -99,5 +100,12 @@ public:
                                   PRBool aHasClassInterface,
                                   const nsCID *aConstructorCID) = 0;
 };
+
+/* helper functions */
+nsresult NS_GetLanguageRuntime(const nsAString &aLanguageName,
+                               nsILanguageRuntime **aLanguage);
+
+nsresult NS_GetLanguageRuntimeByID(PRUint32 aLanguageID,
+                               nsILanguageRuntime **aLanguage);
 
 #endif /* nsIDOMScriptObjectFactory_h__ */

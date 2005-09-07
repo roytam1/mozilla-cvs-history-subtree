@@ -94,6 +94,8 @@ public:
                                   PRBool aHasClassInterface,
                                   const nsCID *aConstructorCID);
 protected:
+  PRBool mLoadedAllLanguages;
+  nsresult LoadAllLanguages();
   // Indexed by language_id-1
   nsCOMPtr<nsILanguageRuntime> mLanguageArray[nsIProgrammingLanguage::MAX-1];
 };

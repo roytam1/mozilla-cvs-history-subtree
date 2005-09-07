@@ -57,6 +57,7 @@
 #include "nsJSEventListener.h"
 #include "nsGlobalWindow.h"
 #include "nsIJSContextStack.h"
+#include "nsISupportsPrimitives.h"
 #include "nsDOMException.h"
 #include "nsCRT.h"
 #ifdef MOZ_XUL
@@ -64,7 +65,10 @@
 #endif
 #include "nsICategoryManager.h"
 
-nsDOMScriptObjectFactory::nsDOMScriptObjectFactory()
+static NS_DEFINE_CID(kDOMScriptObjectFactoryCID, NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
+
+nsDOMScriptObjectFactory::nsDOMScriptObjectFactory() :
+  mLoadedAllLanguages(PR_FALSE)
 {
   nsCOMPtr<nsIObserverService> observerService =
     do_GetService("@mozilla.org/observer-service;1");
@@ -108,6 +112,8 @@ nsDOMScriptObjectFactory::GetLanguageRuntime(const nsAString &aLanguageName,
   nsresult rv;
   nsCOMPtr<nsICategoryManager> catman =
         do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv);
+  if (NS_FAILED(rv))
+    return rv;
 
   nsXPIDLCString cid;
   rv = catman->GetCategoryEntry(SCRIPT_LANGUAGE_CATEGORY,
@@ -144,10 +150,52 @@ nsDOMScriptObjectFactory::GetLanguageRuntimeByID(PRUint32 aLanguageID,
   }
   *aLanguage = mLanguageArray[aLanguageID-1];
   if (!*aLanguage) {
-    NS_WARNING("Failed to load script language");
+    if (!mLoadedAllLanguages) {
+      LoadAllLanguages();
+      *aLanguage = mLanguageArray[aLanguageID-1];
+    }
+  }
+  if (!*aLanguage) {
+    NS_WARNING("No such language has been registered");
     return NS_ERROR_UNEXPECTED;
   }
   NS_IF_ADDREF(*aLanguage);
+  return NS_OK;
+}
+
+nsresult
+nsDOMScriptObjectFactory::LoadAllLanguages()
+{
+  nsresult rv;
+  nsCOMPtr<nsICategoryManager> catman =
+        do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv);
+  if (NS_FAILED(rv))
+    return rv;
+  nsCOMPtr<nsISimpleEnumerator> catenum;
+  rv = catman->EnumerateCategory(SCRIPT_LANGUAGE_CATEGORY,
+                                 getter_AddRefs(catenum));
+  if (NS_FAILED(rv))
+    return rv;
+
+  mLoadedAllLanguages = PR_TRUE;
+  nsCOMPtr<nsISupports> supports;
+  PRBool hasMoreElements;
+  while (NS_SUCCEEDED(catenum->HasMoreElements(&hasMoreElements)) && hasMoreElements) {
+    catenum->GetNext(getter_AddRefs(supports));
+    if (supports != nsnull) {
+      nsCOMPtr<nsISupportsCString> category = do_QueryInterface(supports, &rv);
+      if (NS_SUCCEEDED(rv)) {
+        nsCAutoString categoryEntry;
+        rv = category->GetData(categoryEntry);
+        if (NS_SUCCEEDED(rv)) {
+          nsCOMPtr<nsILanguageRuntime> temp;
+          // Just ask GetLanguageRuntime to load it.
+          GetLanguageRuntime(NS_ConvertASCIItoUCS2(categoryEntry),
+                             getter_AddRefs(temp));
+        }
+      }
+    }
+  }
   return NS_OK;
 }
 
@@ -302,4 +350,29 @@ nsDOMScriptObjectFactory::RegisterDOMClassInfo(const char *aName,
                                               aScriptableFlags,
                                               aHasClassInterface,
                                               aConstructorCID);
+}
+
+// Factories
+nsresult NS_GetLanguageRuntime(const nsAString &aLanguageName,
+                               nsILanguageRuntime **aLanguage)
+{
+  nsresult rv;
+  *aLanguage = nsnull;
+  nsCOMPtr<nsIDOMScriptObjectFactory> factory = \
+        do_GetService(kDOMScriptObjectFactoryCID, &rv);
+  if (NS_FAILED(rv))
+    return rv;
+  return factory->GetLanguageRuntime(aLanguageName, aLanguage);
+}
+
+nsresult NS_GetLanguageRuntimeByID(PRUint32 aLanguageID,
+                               nsILanguageRuntime **aLanguage)
+{
+  nsresult rv;
+  *aLanguage = nsnull;
+  nsCOMPtr<nsIDOMScriptObjectFactory> factory = \
+        do_GetService(kDOMScriptObjectFactoryCID, &rv);
+  if (NS_FAILED(rv))
+    return rv;
+  return factory->GetLanguageRuntimeByID(aLanguageID, aLanguage);
 }
