@@ -133,8 +133,15 @@ SipNonInviteRC.statefun(
 SipNonInviteRC.statefun(
   "CALLING",
   function tryNextDestination() {
-    if (!this._destinationIterator.hasMore())
+    if (!this._destinationIterator.hasMore()) {
+      if (this.listener) {
+        // generate a 408 (Request Timeout) to hand to the listener
+        // (RFC3261 8.1.3.1):
+        var r = this.stack.formulateResponse("408", this.request, this._ToTag);
+        this.listener.notifyResponseReceived(this, this.dialog, r);
+      }
       return this.terminate();
+    }
     // send request to next destination:
     this.request.getTopViaHeader().setParameter("branch",
                                                  BRANCH_COOKIE+generateUUID());
@@ -298,8 +305,14 @@ SipInviteRC.statefun(
 // resolved destinations:
 SipInviteRC.statefun(
   "CALLING",
-  function tryNextDestination() {
+  function tryNextDestination() { 
     if (!this._destinationIterator.hasMore()) {
+      if (this.listener) {
+        // generate a 408 (Request Timeout) to hand to the listener
+        // (RFC3261 8.1.3.1):
+        var r = this.stack.formulateResponse("408", this.request, this._ToTag);
+        this.listener.notifyResponseReceived(this, this.dialog, r);
+      }
       this.terminate();
       return;
     }
