@@ -64,7 +64,6 @@
 #include "nsAutoPtr.h"
 
 static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
-static NS_DEFINE_CID(kDOMScriptObjectFactoryCID, NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
 
 //////////////////////////////////////////////////////////////
 //
@@ -394,12 +393,9 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement,
     }
   }
 
-  nsCOMPtr<nsIDOMScriptObjectFactory> factory = do_GetService(kDOMScriptObjectFactoryCID);
-  NS_ENSURE_TRUE(factory, nsnull);
-  
-  nsCOMPtr<nsILanguageRuntime> languageRuntime;
+  // soon the default language will be specified by the doc (or something!)
+  PRUint32 langID = langID = nsIProgrammingLanguage::JAVASCRIPT;
   PRUint32 version = 0;
-  PRBool seenLanguage = PR_FALSE;
 
   nsAutoString language, type, src;
 
@@ -407,7 +403,6 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement,
   // If type exists, it trumps the deprecated 'language='
   aElement->GetScriptType(type);
   if (!type.IsEmpty()) {
-    seenLanguage = PR_TRUE;
     nsCOMPtr<nsIMIMEHeaderParam> mimeHdrParser =
       do_GetService("@mozilla.org/network/mime-hdrparam;1");
     NS_ENSURE_TRUE(mimeHdrParser, NS_ERROR_FAILURE);
@@ -441,35 +436,45 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement,
       }
     }
     if (isJavaScript)
-      rv = factory->GetLanguageRuntimeByID(nsIProgrammingLanguage::JAVASCRIPT,
-                                           getter_AddRefs(languageRuntime));
-    else
+      langID = nsIProgrammingLanguage::JAVASCRIPT;
+    else {
       // Use the object factory to locate a matching language.
-      rv = factory->GetLanguageRuntime(mimeType, getter_AddRefs(languageRuntime));
-    if (NS_FAILED(rv) || languageRuntime == nsnull) {
-      NS_WARNING("Failed to find a scripting language");
-      return NS_FAILED(rv) ? rv : NS_ERROR_UNEXPECTED;
+      nsCOMPtr<nsILanguageRuntime> runtime;
+      rv = NS_GetLanguageRuntime(mimeType, getter_AddRefs(runtime));
+      if (NS_FAILED(rv) || runtime == nsnull) {
+        // Failed to get the explicitly specified language
+        NS_WARNING("Failed to find a scripting language");
+        langID = nsIProgrammingLanguage::UNKNOWN;
+      } else
+        langID = runtime->GetLanguage();
     }
-
-    // Get the version string, and ensure the language supports it.
-    nsAutoString versionName;
-    rv = mimeHdrParser->GetParameter(typeAndParams, "version",
-                                     EmptyCString(), PR_FALSE, nsnull,
-                                     versionName);
-    if (NS_FAILED(rv)) {
-      // no language specified - verion remains 0.
-      if (rv != NS_ERROR_INVALID_ARG)
-        return rv;
-    } else {
-      rv = languageRuntime->ParseVersion(versionName, &version);
+    if (langID != nsIProgrammingLanguage::UNKNOWN) {
+      // Get the version string, and ensure the language supports it.
+      nsAutoString versionName;
+      rv = mimeHdrParser->GetParameter(typeAndParams, "version",
+                                       EmptyCString(), PR_FALSE, nsnull,
+                                       versionName);
       if (NS_FAILED(rv)) {
-        NS_WARNING("This script language version is not supported - ignored");
-        return rv;
+        // no version attribute - version remains 0.
+        if (rv != NS_ERROR_INVALID_ARG)
+          return rv;
+      } else {
+        nsCOMPtr<nsILanguageRuntime> runtime;
+        rv = NS_GetLanguageRuntimeByID(langID, getter_AddRefs(runtime));
+        if (NS_FAILED(rv)) {
+          NS_ERROR("Failed to locate the language with this ID");
+          return rv;
+        }
+        rv = runtime->ParseVersion(versionName, &version);
+        if (NS_FAILED(rv)) {
+          NS_WARNING("This script language version is not supported - ignored");
+          langID = nsIProgrammingLanguage::UNKNOWN;
+        }
       }
     }
 
     // Some js specifics yet to be abstracted.
-    if (languageRuntime->GetLanguage() == nsIProgrammingLanguage::JAVASCRIPT) {
+    if (langID == nsIProgrammingLanguage::JAVASCRIPT) {
       nsAutoString value;
 
       rv = mimeHdrParser->GetParameter(typeAndParams, "e4x",
@@ -492,15 +497,10 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement,
     if (htmlScriptElement) {
       htmlScriptElement->GetAttribute(NS_LITERAL_STRING("language"), language);
       if (!language.IsEmpty()) {
-        seenLanguage = PR_TRUE;
-        if (nsParserUtils::IsJavaScriptLanguage(language, &version)) {
-          rv = factory->GetLanguageRuntimeByID(nsIProgrammingLanguage::JAVASCRIPT,
-                                               getter_AddRefs(languageRuntime));
-          if (NS_FAILED(rv)) {
-            NS_ERROR("Failed to get javascript language");
-            return rv;
-          }
-        }
+        if (nsParserUtils::IsJavaScriptLanguage(language, &version))
+          langID = nsIProgrammingLanguage::JAVASCRIPT;
+        else
+          langID = nsIProgrammingLanguage::UNKNOWN;
         // IE, Opera, etc. do not respect language version, so neither should
         // we at this late date in the browser wars saga.  Note that this change
         // affects HTML but not XUL or SVG (but note also that XUL has its own
@@ -514,19 +514,15 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement,
     }
   }
 
-  if (!seenLanguage) {
-    NS_ASSERTION(languageRuntime == nsnull, "eh?");
-    rv = factory->GetLanguageRuntimeByID(nsIProgrammingLanguage::JAVASCRIPT,
-                                         getter_AddRefs(languageRuntime));
-    NS_ASSERTION(!NS_FAILED(rv), "Failed to get default JavaScript language!");
-  }
-
   // If we don't know the language, we don't know how to evaluate
-  if (!languageRuntime) {
+  if (langID == nsIProgrammingLanguage::UNKNOWN) {
     return FireErrorNotification(NS_ERROR_NOT_AVAILABLE, aElement, aObserver);
   }
   // Our nsScriptLoadRequest is not yet language agnostic
-  if (languageRuntime->GetLanguage() != nsIProgrammingLanguage::JAVASCRIPT) {
+  // We would also need to check the language is "safe".  Currently the only
+  // other language impl is Python, and that is *not* safe in untrusted code -
+  // so fixing this isn't a priority.
+  if (langID != nsIProgrammingLanguage::JAVASCRIPT) {
     NS_WARNING("Nearly got another language executed");
     return FireErrorNotification(NS_ERROR_NOT_AVAILABLE, aElement, aObserver);
   }
