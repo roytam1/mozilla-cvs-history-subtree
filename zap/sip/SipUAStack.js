@@ -138,9 +138,11 @@ SipUAStack.fun(
     // Unpack configuration parameters:
     var methods = "OPTIONS";
     var extensions = "";
+    this.rport_client = true;
     if (config) {
       try { methods = config.getProperty("methods"); }catch(e){}
       try { extensions = config.getProperty("extensions"); }catch(e){}
+      try { rport_client = config.getProperty("rport_client"); }catch(e){}
     }
     this.allowedMethods = methods.split(",");
     this.supportedExtensions = extensions.split(",");
@@ -383,12 +385,35 @@ SipUAStack.fun(
         response = rs.formulateResponse("200");
         this.appendAllowHeaders(response);
       }
-      if (method == "BYE") {
+      else if (method == "BYE") {
         // RFC3261 15.1.2
         if (rs.dialog)
           response = rs.formulateResponse("200");
         else 
           response = rs.formulateResponse("481");
+      }
+      else if (method == "CANCEL") {
+        // RFC3261 9.2
+        // try to match the request to an ongoing server transaction:
+        var transaction = this.transactionManager.findCancelledTransaction(rs.request);
+        if (!transaction) {
+          response = rs.formulateResponse("481");
+        }
+        else {
+          response = rs.formulateResponse("200");
+          
+          if (transaction.request.method == "INVITE") {
+            // XXX this is maybe a bit dodgy. we shouldn't have to use
+            // wrappedJSObject to locate the server.
+            
+            // locate the invite server. This better be a SipInviteRS.
+            var irs = transaction.transactionUser.wrappedJSObject;
+            if(!irs || !irs.cancel)
+              this._warning("can only cancel built-in invite request server");
+            else
+              irs.cancel();
+          }
+        }
       }
       else {
         // The UA handler should have really handled this!
@@ -437,7 +462,10 @@ SipUAStack.fun(
     // requestURI:
     m.requestURI = ToAddress.uri;
     // Via header:
-    m.appendHeader(gSyntaxFactory.createViaHeader());
+    var viaHeader = gSyntaxFactory.createViaHeader(); 
+    if (this.rport_client)
+      viaHeader.setParameter("rport", "");
+    m.appendHeader(viaHeader);
     // To header:
     m.appendHeader(gSyntaxFactory.createToHeader(ToAddress));
     // From header + new tag:

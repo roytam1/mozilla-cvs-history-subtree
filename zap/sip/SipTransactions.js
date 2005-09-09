@@ -129,7 +129,7 @@ SipInviteClientTransaction.getter(
   });
 
 SipInviteClientTransaction.fun(
-  function execute(manager, transport, request, endpoint, TU) {
+  function execute(manager, transport, request, endpoint, TU, refresh) {
     this.initialRequest = request;
     log("Executing "+this._name_);
     
@@ -137,6 +137,7 @@ SipInviteClientTransaction.fun(
     this.transport = transport;
     this.endpoint = endpoint;
     this.TU = TU;
+    this.periodicRefresh = refresh;
     
     // set initial state:
     this.changeState(this.Calling);
@@ -242,6 +243,10 @@ SipInviteClientTransaction.obj(
     enterState : function enterState_Proceeding(t) {
       log(t._name_+": PROCEEDING");
       t._dump("Entering 'Proceeding' state");
+
+      // start timer R if refreshing is requested:
+      if (t.periodicRefresh)
+        t.timerR = makeOneShotTimer(t, t.manager.Trefresh);
     },
       
     handleResponse : function handleResponse_Proceeding(t, r) {
@@ -261,6 +266,17 @@ SipInviteClientTransaction.obj(
             t.TU.handleFailureResponse(r);
           t.changeState(t.Completed);
           break;
+      }
+    },
+
+    handleTimer : function handleTimer_Proceeding(t, timer) {
+      if (timer == t.timerR) {
+        t._dump("Timer R fired. Resending Invite to refresh NAT binding");
+        // Resend INVITE:
+        t.connection = t.transport.sendRequest(t.initialRequest, t.endpoint,
+                                               t.connection);
+        // Reset R:
+        resetOneShotTimer(t.timerR, t.timerR.delay);
       }
     }
   });
@@ -517,6 +533,20 @@ SipServerTransaction.fun(
 
 //----------------------------------------------------------------------
 // zapISipServerTransaction implementation:
+
+//  readonly attribute zapISipServerTransactionUser transactionUser;
+SipServerTransaction.getter(
+  "transactionUser",
+  function get_transactionUser() {
+    return this.TU;
+  });
+
+//  readonly attribute zapISipRequest request;
+SipServerTransaction.getter(
+  "request",
+  function get_request() {
+    return this.initialRequest;
+  });
 
 // void sendResponse(in zapISipResponse response);
 SipServerTransaction.fun(
@@ -904,10 +934,13 @@ SipTransactionManager.obj("T2", 4000);
 // Timer value 'T4' in ms (RFC3261 17.1.2.2)
 SipTransactionManager.obj("T4", 5000);
 
+// Timer for INVITE NAT binding refresh
+SipTransactionManager.obj("Trefresh", 20000);
+
 SipTransactionManager.fun(
-  function executeInviteClientTransaction(request, endpoint, tu) {    
+  function executeInviteClientTransaction(request, endpoint, tu, refresh) {    
     var transaction = SipInviteClientTransaction.instantiate();
-    transaction.execute(this, this._transport, request, endpoint, tu);
+    transaction.execute(this, this._transport, request, endpoint, tu, refresh);
     //return transaction;
   });
 
@@ -930,6 +963,28 @@ SipTransactionManager.fun(
     var transaction = SipNonInviteServerTransaction.instantiate();
     transaction.execute(this, this._transport, request, tu, response);
     return transaction;
+  });
+
+//  zapISipServerTransaction findCancelledTransaction(in zapISipRequest cancelRequest); 
+SipTransactionManager.fun(
+  function findCancelledTransaction(cancelRequest) {
+    // construct a regular expressions that matches relevant server
+    // transaction keys:
+    var topVia = cancelRequest.getTopViaHeader();
+    var branch = topVia.getParameter("branch");
+    var host = topVia.host;
+    var port = topVia.port;
+    if (!port)
+      port = 5060;
+    var reText = "$"+branch+";"+host+":"+port+";";
+    // search server pool:
+    for (var key in this._serverPool) {
+      if (key.indexOf(reText,0)==0 &&
+          this._serverPool[key].request.method != "CANCEL" &&
+          this._serverPool[key].request.method != "ACK")
+        return this._serverPool[key];
+    }
+    return null;
   });
 
 //----------------------------------------------------------------------

@@ -1,0 +1,3 @@
+content zap jar:zap.jar!/content/zap/
+locale zap en-US jar:en-US.jar!/locale/en-US/zap/
+skin zap classic/1.0 jar:classic.jar!/skin/classic/zap/

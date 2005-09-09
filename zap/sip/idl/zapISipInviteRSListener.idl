@@ -42,7 +42,8 @@ interface zapISipRequest;
 [scriptable, uuid(9fe1602c-4137-4c54-84b2-b3c5d5502eac)]
 interface zapISipInviteRSListener : nsISupports
 {
-  void notifyTerminated(in zapISipInviteRS requestServer);
+  void notifyCancelled(in zapISipInviteRS requestServer);
   void notifyACKReceived(in zapISipInviteRS requestServer,
                          in zapISipRequest ACKRequest);
+  void notifyTerminated(in zapISipInviteRS requestServer);  
 };

@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:NC="http://home.netscape.com/NC-rdf#"
+     xmlns:zap="urn:mozilla:zap:">
+  <rdf:Seq rdf:about="urn:mozilla:zap:calls">
+  </rdf:Seq>
+  <rdf:Seq rdf:about="urn:mozilla:zap:recent_calls">
+  </rdf:Seq>
+</rdf:RDF>

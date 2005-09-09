@@ -596,7 +596,10 @@ SipTransport.fun(
     if (!address)
       address = topVia.host;
 
-    var port = topVia.port;
+    // RFC3581 4: check for rport parameter
+    var port = topVia.getParameter("rport");
+    if (!port)
+      port = topVia.port;
     if (!port)
       port = "5060";
     
@@ -612,21 +615,29 @@ SipTransport.fun(
 SipTransport.fun(
   function handleSipMessage(message, endpoint, connection) {
     if (message.isRequest) {
-      // RFC3261 18.2.1:      
-      // When the server transport receives a request over any
-      // transport, it MUST examine the value of the "sent-by"
-      // parameter in the top Via header field value.  If the host
-      // portion of the "sent-by" parameter contains a domain name, or
-      // if it contains an IP address that differs from the packet
-      // source address, the server MUST add a "received" parameter to
-      // that Via header field value.  This parameter MUST contain the
-      // source address from which the packet was received.  This is
-      // to assist the server transport layer in sending the response,
-      // since it must be sent to the source IP address from which the
-      // request came.
+      // Process according to RFC3261 18.2.1 and RFC3581 4:
       var topVia = message.getTopViaHeader();
-      if (topVia.host != endpoint.address) {
+      if (topVia.hasParameter("rport")) {
+        // RFC3581 4: unconditionally insert rport & received parameters
         topVia.setParameter("received", endpoint.address);
+        topVia.setParameter("rport", endpoint.port);
+      }
+      else {
+        // RFC3261 18.2.1:      
+        // When the server transport receives a request over any
+        // transport, it MUST examine the value of the "sent-by"
+        // parameter in the top Via header field value.  If the host
+        // portion of the "sent-by" parameter contains a domain name, or
+        // if it contains an IP address that differs from the packet
+        // source address, the server MUST add a "received" parameter to
+        // that Via header field value.  This parameter MUST contain the
+        // source address from which the packet was received.  This is
+        // to assist the server transport layer in sending the response,
+        // since it must be sent to the source IP address from which the
+        // request came.
+        if (topVia.host != endpoint.address) {
+          topVia.setParameter("received", endpoint.address);
+        }
       }
     }
     else {

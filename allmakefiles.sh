@@ -1049,7 +1049,10 @@ zap/sdp/Makefile
 zap/sdp/idl/Makefile
 zap/sip/Makefile
 zap/sip/idl/Makefile
-zap/app/Makefile
+zap/sip/idl/syntax/Makefile
+zap/client/Makefile
+zap/client/profile/Makefile
+zap/client/src/Makefile
 zap/zmk/Makefile
 zap/zmk/portaudio_v18_1/Makefile
 zap/zmk/speex-1.1.10/Makefile

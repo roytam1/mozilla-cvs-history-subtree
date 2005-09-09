@@ -1,0 +1,259 @@
+<?xml version="1.0"?>
+<!-- ***** BEGIN LICENSE BLOCK *****
+   - Version: MPL 1.1/GPL 2.0/LGPL 2.1
+   -
+   - The contents of this file are subject to the Mozilla Public License Version
+   - 1.1 (the "License"); you may not use this file except in compliance with
+   - the License. You may obtain a copy of the License at
+   - http://www.mozilla.org/MPL/
+   -
+   - Software distributed under the License is distributed on an "AS IS" basis,
+   - WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+   - for the specific language governing rights and limitations under the
+   - License.
+   -
+   - The Original Code is the Mozilla SIP client project.
+   -
+   - The Initial Developer of the Original Code is 8x8 Inc.
+   - Portions created by the Initial Developer are Copyright (C) 2005
+   - the Initial Developer. All Rights Reserved.
+   -
+   - Contributor(s):
+   -   Alex Fritze <alex@croczilla.com> (original author)
+   -
+   - Alternatively, the contents of this file may be used under the terms of
+   - either of the GNU General Public License Version 2 or later (the "GPL"),
+   - or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+   - in which case the provisions of the GPL or the LGPL are applicable instead
+   - of those above. If you wish to allow use of your version of this file only
+   - under the terms of either the GPL or the LGPL, and not to allow others to
+   - use your version of this file under the terms of the MPL, indicate your
+   - decision by deleting the provisions above and replace them with the notice
+   - and other provisions required by the GPL or the LGPL. If you do not delete
+   - the provisions above, a recipient may use your version of this file under
+   - the terms of any one of the MPL, the GPL or the LGPL.
+   -
+   - ***** END LICENSE BLOCK ***** -->
+
+<?xml-stylesheet href="chrome://zap/skin/zap.css" type="text/css"?>
+
+<!DOCTYPE window SYSTEM "chrome://zap/locale/zap.dtd">
+
+<page id="zap_contacts"
+        xmlns = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+        onload="initPage()" >
+
+  <broadcasterset>
+    <broadcaster id="selection_state" disabled="true"/>
+  </broadcasterset>
+
+  <!-- Scripts -->
+  <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
+  <script type="text/javascript" src="chrome://zap/content/chromeUtils.js"/>
+  <script type="application/x-javascript">
+  <![CDATA[
+    var wContactsTree;    
+    var wSelectionState;
+    var wCurrentContact;
+    var wMode = "init"; // init|browsing|editing|adding
+
+    function initPage() {
+      wContactsTree = document.getElementById("contacts_tree");
+      wSelectionState = document.getElementById("selection_state");
+      wContactsTree.database.AddDataSource(parent.wContactsDS);
+      wContactsTree.builder.rebuild();
+      selectResource(wContactsTree, parent.getSelectedSidebarResource());
+    }
+
+    function contactsSelectionChange() {
+      if (wMode != "init") {
+        // XXX what we actually want to do is to update the sidebar selection to 
+        // reflect the new choice, but this is difficult because not all contacts
+        // are in the sidebar. Let's clear the selection for the time being:
+        parent.clearSidebarSelection();
+      }
+
+      if (wMode != "browsing") {
+        document.getElementById("module_page").setAttribute("readonly", "true");
+        document.getElementById("button_deck").selectedIndex = 0;      
+        wMode = "browsing";
+      }
+
+      var resource = getSelectedResource(wContactsTree);
+      if (!resource) {
+        // fill with blank data
+        wCurrentContact = parent.Contact.instantiate();
+        wCurrentContact.fillDocument(document);
+
+        wSelectionState.setAttribute("disabled", "true");
+      }
+      else {
+        wSelectionState.removeAttribute("disabled");
+        wCurrentContact = parent.Contact.instantiate();
+        wCurrentContact.initWithResource(resource);
+        wCurrentContact.fillDocument(document);      
+      }
+    }
+
+    function clearSelection() {
+      var selection = wContactsTree.view.selection;
+      if (selection)
+       selection.clearSelection();
+    }
+
+    function add() {
+      clearSelection();
+      wCurrentContact = parent.Contact.instantiate();
+      wCurrentContact.fillDocument(document);
+      document.getElementById("module_page").setAttribute("readonly", "false");
+      document.getElementById("button_deck").selectedIndex = 1;      
+      document.getElementById("http://home.netscape.com/NC-rdf#Name").select();
+      wMode = "adding";      
+    }
+
+    function edit() {
+      document.getElementById("module_page").setAttribute("readonly", "false");
+      document.getElementById("button_deck").selectedIndex = 1;      
+      document.getElementById("http://home.netscape.com/NC-rdf#Name").select();
+      wMode = "editing";            
+    }
+
+    function del() {
+      var ok = parent.wPromptService.confirm(null, "Delete Contact", 
+                                             "Are you sure you wish to delete contact '"+wCurrentContact["http://home.netscape.com/NC-rdf#Name"]+"'?");
+      if (ok) {
+        wCurrentContact.remove();
+      }      
+    }
+
+    function commit() {
+      if (wMode == "adding") {
+        wCurrentContact.createFromDocument(document);
+        wCurrentContact.flush();
+        // select newly created contact (will automatically restore "browsing" mode)
+        selectResource(wContactsTree, wCurrentContact.resource);
+      }
+      else if (wMode == "editing") {
+        wCurrentContact.updateFromDocument(document);
+        wCurrentContact.flush();
+        document.getElementById("module_page").setAttribute("readonly", "true");
+        document.getElementById("button_deck").selectedIndex = 0;      
+        wMode = "browsing";
+      }
+    }
+
+    function cancel() {
+      if (wMode == "adding") {
+        parent.reloadPage();
+      }
+      else if (wMode == "editing") {
+        document.getElementById("module_page").setAttribute("readonly", "true");
+        document.getElementById("button_deck").selectedIndex = 0;
+        wCurrentContact.fillDocument(document);
+        wMode = "browsing";      
+      }
+    }
+
+  ]]>
+  </script>
+
+  <vbox id="module_page" flex="1" readonly="true">
+    <label class="titlebox" value="Contacts"/>
+
+    <hbox flex="1">
+      <vbox flex="1">
+        <tree id="contacts_tree" flex="1" 
+              seltype="single"
+              datasources="rdf:null"
+              ref="urn:mozilla:zap:contacts"
+              onselect="contactsSelectionChange()"
+              flags="dont-build-content">
+          <treecols>
+            <treecol id="contacts_col_name" label="Name"  flex="1"/>
+            <treecol id="contacts_col_sip1" label="SIP Address" flex="1" hidden="true"/>
+            <treecol id="contacts_col_sip2" label="Alternative SIP Address" flex="1" hidden="true"/>
+            <treecol id="contacts_col_organization" label="Organization" flex="1" hidden="true"/>
+            <treecol id="contacts_col_email" label="Email" flex="1" hidden="true"/>
+            <treecol id="contacts_col_www" label="WWW" flex="1" hidden="true"/>
+          </treecols>
+          <template>
+            <rule>
+              <conditions>
+                <content uri="?container"/>
+                <member container="?container" child="?node"/>
+              </conditions>
+              <bindings>
+                <binding subject="?node"
+                         predicate="http://home.netscape.com/NC-rdf#Name"
+                         object="?name"/>
+                <binding subject="?node"
+                         predicate="urn:mozilla:zap:sip1"
+                         object="?sip1"/>
+                <binding subject="?node"
+                         predicate="urn:mozilla:zap:sip2"
+                         object="?sip2"/>
+                <binding subject="?node"
+                         predicate="urn:mozilla:zap:organization"
+                         object="?organization"/>
+                <binding subject="?node"
+                         predicate="urn:mozilla:zap:email"
+                         object="?email"/>
+                <binding subject="?node"
+                         predicate="urn:mozilla:zap:homepage"
+                         object="?homepage"/>
+              </bindings>
+              <action>
+                <treechildren>
+                  <treeitem uri="?node">
+                    <treerow>
+                      <treecell label="?name"/>
+                      <treecell label="?sip1"/>
+                      <treecell label="?sip2"/>
+                      <treecell label="?organization"/>
+                      <treecell label="?email"/>
+                      <treecell label="?homepage"/>
+                    </treerow>
+                  </treeitem>
+                </treechildren>
+              </action>
+            </rule>
+          </template>
+        </tree>
+      </vbox>
+      
+      <vbox flex="1">
+        <label control="http://home.netscape.com/NC-rdf#Name" value="Name:"/>
+        <textbox id="http://home.netscape.com/NC-rdf#Name"/>
+        <checkbox label="Display this contact in sidebar" id="urn:mozilla:zap:isfriend" />
+        <label control="urn:mozilla:zap:organization" value="Organization:"/>
+        <textbox id="urn:mozilla:zap:organization"/>
+        <label control="urn:mozilla:zap:sip1" value="SIP Address 1:"/>
+        <textbox id="urn:mozilla:zap:sip1"/>
+        <label control="urn:mozilla:zap:sip2" value="SIP Address 2:"/>
+        <textbox id="urn:mozilla:zap:sip2"/>
+        <label control="urn:mozilla:zap:email" value="Email:"/>
+        <textbox id="urn:mozilla:zap:email"/>
+        <label control="urn:mozilla:zap:homepage" value="WWW:"/>
+        <textbox id="urn:mozilla:zap:homepage"/>
+      </vbox>
+
+    </hbox>
+
+    <hbox>
+      <deck id="button_deck" flex="1">
+        <hbox flex="1">
+          <spacer flex="1"/>
+          <button label="New" oncommand="add()" />
+          <button label="Delete" oncommand="del()" observes="selection_state"/>
+          <button label="Edit" oncommand="edit()" observes="selection_state"/>
+        </hbox>
+        <hbox flex="1">
+          <spacer flex="1"/>
+          <button label="Commit" oncommand="commit()" />
+          <button label="Cancel" oncommand="cancel()" />
+        </hbox>
+      </deck>
+    </hbox>
+
+  </vbox>
+</page>

@@ -1,0 +1,3 @@
+cgroup { 
+  -moz-binding: url("chrome://zap/content/zap-widgets.xml#cgroup");
+}

@@ -55,11 +55,19 @@ interface zapISipMessage;
  * \section ZAP SIP module
  *
  * The main entry point into the ZAP SIP module is the zapISipUAStack interface.
+ *
+ * The ZAP SIP module implements a UA Stack compliant with the following
+ * specifications:
+ *
+ * -  <b>RFC3261</b>: SIP: Session Initiation Protocol
+ * -  <b>RFC3581</b>: Symmetric Response Routing
+ * 
+ *
  */
 
 /**
  * User Agent SIP stack interface.
- *
+ * 
  * Implemented by component <b>'\@mozilla.org/zap/sipstack;1'</b>.
  *
  * The User Agent SIP stack is the primary entry-point into the ZAP
@@ -116,6 +124,13 @@ interface zapISipUAStack : nsISupports
    *                                  requests with Require headers and
    *                                  to construct Supported headers.
    *                                  Default: ""
+   * - boolean <b>"rport_client"</b> : if 'true', requests formulated
+   *                                   by the stack will include an
+   *                                   'rport' parameter in the top
+   *                                   via, and INVITE requests will
+   *                                   be retransmitted every 20s as
+   *                                   specified in RFC3581 3.
+   *                                   Default: true
    */
   void init(in zapISipRequestHandler handler,
             in nsIPropertyBag2 stackConfiguration);
@@ -176,6 +191,16 @@ interface zapISipUAStack : nsISupports
    *
    *   The default OPTIONS handler returns 200 (OK) with Allowed
    *   headers constructed by appendAllowHeaders().
+   *
+   *   The default CANCEL handler returns 481 (Transaction Does Not Exist)
+   *   if there is no matching transaction, or 200 (OK) otherwise.
+   *   In addition, if a matching INVITE server transaction is found for
+   *   which no final response has been sent yet, and this transaction is
+   *   owned by a zapISipInviteRS, the transaction will be cancelled
+   *   by sending a 487 (Request Terminated), and the associated
+   *   zapISipInviteRSListener will be informed of the cancellation with
+   *   a call to zapISipInviteRSListener::notifyCancelled().
+   *   
    */
   attribute zapISipRequestHandler requestHandler;
 

@@ -1,0 +1,250 @@
+<?xml version="1.0"?>
+<!-- ***** BEGIN LICENSE BLOCK *****
+   - Version: MPL 1.1/GPL 2.0/LGPL 2.1
+   -
+   - The contents of this file are subject to the Mozilla Public License Version
+   - 1.1 (the "License"); you may not use this file except in compliance with
+   - the License. You may obtain a copy of the License at
+   - http://www.mozilla.org/MPL/
+   -
+   - Software distributed under the License is distributed on an "AS IS" basis,
+   - WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+   - for the specific language governing rights and limitations under the
+   - License.
+   -
+   - The Original Code is the Mozilla SIP client project.
+   -
+   - The Initial Developer of the Original Code is 8x8 Inc.
+   - Portions created by the Initial Developer are Copyright (C) 2005
+   - the Initial Developer. All Rights Reserved.
+   -
+   - Contributor(s):
+   -   Alex Fritze <alex@croczilla.com> (original author)
+   -
+   - Alternatively, the contents of this file may be used under the terms of
+   - either of the GNU General Public License Version 2 or later (the "GPL"),
+   - or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+   - in which case the provisions of the GPL or the LGPL are applicable instead
+   - of those above. If you wish to allow use of your version of this file only
+   - under the terms of either the GPL or the LGPL, and not to allow others to
+   - use your version of this file under the terms of the MPL, indicate your
+   - decision by deleting the provisions above and replace them with the notice
+   - and other provisions required by the GPL or the LGPL. If you do not delete
+   - the provisions above, a recipient may use your version of this file under
+   - the terms of any one of the MPL, the GPL or the LGPL.
+   -
+   - ***** END LICENSE BLOCK ***** -->
+
+<?xml-stylesheet href="chrome://zap/skin/zap.css" type="text/css"?>
+
+<!DOCTYPE window SYSTEM "chrome://zap/locale/zap.dtd">
+
+<page id="zap_call"
+        xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+        xmlns:html="http://www.w3.org/1999/xhtml"
+        onload="initPage()">
+
+  <!-- Scripts -->
+  <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
+
+  <script type="application/x-javascript">
+  <![CDATA[
+    var wCall;
+
+    function initPage() {
+      var selectedResource = parent.getSelectedCallResource();
+      if (!selectedResource) {
+        dump("uh-oh, no selected resource in call.xul. How did that happen?");
+        return;
+      }
+      wCall = parent.getCall(selectedResource);
+
+      // init templates
+      var template1 = document.getElementById("template1");
+      template1.database.AddDataSource(wCall.datasources["default"]);
+      template1.database.AddDataSource(wCall.datasources["ephemeral"]);
+      template1.builder.rebuild();
+
+      var template2 = document.getElementById("template2");
+      template2.database.AddDataSource(wCall.datasources["default"]);
+      template2.database.AddDataSource(wCall.datasources["ephemeral"]);
+      template2.builder.rebuild();
+    }
+
+    function cmdHangup() {
+      var rc = wCall.dialog.createNonInviteRequestClient();
+      rc.sendRequest(rc.formulateRequest("BYE"));
+    }
+
+    function cmdReject() {
+      var rc = wCall.callHandler.rejectCall();
+    }
+
+    function cmdAccept() {
+      var rc = wCall.callHandler.acceptCall();
+    }
+
+    function cmdCancel() {
+      wCall.callHandler.rc.cancel();
+    }
+
+  ]]>
+  </script>
+
+  <vbox id="module_page" flex="1">
+
+    <vbox id="template1" 
+          containment="urn:mozilla:zap:current-call"
+          datasources="rdf:null"
+          flags="dont-build-content"
+          ref="urn:mozilla:zap:root"
+          flex="1">
+      <template>
+        <rule><!-- ACTIVE CALL -->
+          <conditions>
+            <content uri="?dummy"/>
+            <member container="?dummy" child="?node"/>
+            <triple subject="?node"
+                    predicate="urn:mozilla:zap:active"
+                    object="true"/>
+          </conditions>
+          <bindings>
+            <binding subject="?node"
+                     predicate="urn:mozilla:zap:status"
+                     object="?status"/>
+            <binding subject="?node"
+                     predicate="urn:mozilla:zap:remote"
+                     object="?remote"/>
+            <binding subject="?node"
+                     predicate="urn:mozilla:zap:subject"
+                     object="?subject"/>
+            <binding subject="?node"
+                     predicate="urn:mozilla:zap:direction"
+                     object="?direction"/>              
+          </bindings>
+          <action>
+            <vbox uri="?node" flex="1">
+              <label class="titlebox" value="Active ?direction call"/>
+              <vbox flex="1">
+                <label value="Remote party:"/>
+                <textbox value="?remote" class="ro_modulefield"/>
+                <label value="Subject:"/>
+                <textbox value="?subject" class="ro_modulefield"/>
+                <label value="Current Status:"/>
+                <textbox value="?status" class="ro_modulefield"/>
+              </vbox>
+            </vbox>
+          </action>
+        </rule>
+        <rule><!-- INACTIVE CALL -->
+          <conditions>
+            <content uri="?dummy"/>
+            <member container="?dummy" child="?node"/>
+            <triple subject="?node"
+                    predicate="urn:mozilla:zap:active"
+                    object="false"/>
+          </conditions>
+          <bindings>
+            <binding subject="?node"
+                     predicate="urn:mozilla:zap:status"
+                     object="?status"/>
+            <binding subject="?node"
+                     predicate="urn:mozilla:zap:remote"
+                     object="?remote"/>
+            <binding subject="?node"
+                     predicate="urn:mozilla:zap:subject"
+                     object="?subject"/>
+            <binding subject="?node"
+                     predicate="urn:mozilla:zap:direction"
+                     object="?direction"/>              
+          </bindings>
+          <action>
+            <vbox uri="?node" flex="1">
+              <label class="titlebox" value="Inactive ?direction call"/>
+              <vbox flex="1">
+                <label value="Remote party:"/>
+                <textbox value="?remote" class="ro_modulefield"/>
+                <label value="Subject:"/>
+                <textbox value="?subject" class="ro_modulefield"/>
+                <label value="Status:"/>
+                <textbox value="?status" class="ro_modulefield"/>
+              </vbox>
+            </vbox>
+          </action>
+        </rule>
+      </template>
+    </vbox>
+
+    <vbox id="template2" 
+          containment="urn:mozilla:zap:current-call"
+          datasources="rdf:null"
+          flags="dont-build-content"
+          ref="urn:mozilla:zap:root"
+          flex="1">
+      <template>
+        <rule><!-- ACTIVE IN-SESSION CALL -->
+          <conditions>
+            <content uri="?dummy"/>
+            <member container="?dummy" child="?node"/>
+            <triple subject="?node"
+                    predicate="urn:mozilla:zap:active"
+                    object="true"/>
+            <triple subject="?node"
+                    predicate="urn:mozilla:zap:session-running"
+                    object="true"/>
+          </conditions>
+          <action>
+            <vbox uri="?node" flex="1">
+              <hbox>
+                <spacer flex="1"/>
+                <button label="Hang Up" oncommand="cmdHangup()"/>
+              </hbox>
+            </vbox>
+          </action>
+        </rule>
+        <rule><!-- ACTIVE PRE-SESSION OUTBOUND CALL -->
+          <conditions>
+            <content uri="?dummy"/>
+            <member container="?dummy" child="?node"/>
+            <triple subject="?node"
+                    predicate="urn:mozilla:zap:active"
+                    object="true"/>
+            <triple subject="?node"
+                    predicate="urn:mozilla:zap:direction"
+                    object="outbound"/>
+          </conditions>
+          <action>
+            <vbox uri="?node" flex="1">
+              <hbox>
+                <spacer flex="1"/>
+                <button label="Cancel" oncommand="cmdCancel()"/>
+              </hbox>
+            </vbox>
+          </action>
+        </rule>
+        <rule><!-- ACTIVE PRE-SESSION INBOUND CALL -->
+          <conditions>
+            <content uri="?dummy"/>
+            <member container="?dummy" child="?node"/>
+            <triple subject="?node"
+                    predicate="urn:mozilla:zap:active"
+                    object="true"/>
+            <triple subject="?node"
+                    predicate="urn:mozilla:zap:direction"
+                    object="inbound"/>
+          </conditions>
+          <action>
+            <vbox uri="?node" flex="1">
+              <hbox>
+                <spacer flex="1"/>
+                <button label="Reject" oncommand="cmdReject()"/>
+                <button label="Accept" oncommand="cmdAccept()"/>
+              </hbox>
+            </vbox>
+          </action>
+        </rule>
+      </template>
+    </vbox>
+
+  </vbox>
+</page>

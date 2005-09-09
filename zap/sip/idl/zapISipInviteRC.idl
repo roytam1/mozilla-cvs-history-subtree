@@ -48,8 +48,39 @@ interface zapISipInviteRC : nsISupports
   attribute zapISipInviteRCListener listener;
   readonly attribute zapISipDialog dialog;
   readonly attribute zapISipAddress ToAddress;
-  
+
+  /**
+   * Formulate an INVITE request appropriate for this request client,
+   * adding all required headers as per RFC3261.
+   *
+   * The request client user should ammend this request as appropriate
+   * and send it using zapISipInviteRC::sendInvite().
+   */
   zapISipRequest formulateInvite();
+  
+  /**
+   * Send the INVITE request which should have been constructed with
+   * zapISipInviteRC::formulateInvite(). This function must only be
+   * called once.
+   *
+   * Once a request has been sent it can be cancelled with a call to
+   * zapISipInviteRC::cancel().
+   */
   void sendInvite(in zapISipRequest request,
                   in zapISipInviteResponseHandler rh);
+  
+  /**
+   * Cancel the ongoing invite by sending a CANCEL request (RFC3261
+   * 9.1).
+   *
+   * Must only be called AFTER a request has been sent using
+   * zapISipInviteRC::sendInvite() and BEFORE a final response has
+   * been received.
+   *
+   * If cancel() is called before the request client has received a
+   * provisional response, sending of the CANCEL request will be
+   * delayed until the request client receives such a
+   * response. (RFC3261 9.1)
+   */
+  void cancel();
 };

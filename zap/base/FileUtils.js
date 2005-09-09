@@ -1,3 +1,4 @@
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.importModule('resource:/jscodelib/zap/FileUtils.js', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -34,25 +35,40 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
+EXPORTED_SYMBOLS = [ "getProfileFile",
+                     "getProfileFileURL"];
 
-interface zapISipResponse;
-interface zapISipRequest;
-interface zapISipServerTransactionUser;
 
-[scriptable, uuid(a1bc41dc-3160-4666-a2ea-a62b4664ad9d)]
-interface zapISipServerTransaction : nsISupports
+// name our global object:
+function toString() { return "[FileUtils.js]"; }
+
+// object to hold module's documentation:
+var _doc_ = {};
+
+////////////////////////////////////////////////////////////////////////
+// Globals
+
+var gDirectoryService = Components.classes["@mozilla.org/file/directory_service;1"].getService(Components.interfaces.nsIProperties);
+var gIOService = Components.classes["@mozilla.org/network/io-service;1"].getService(Components.interfaces.nsIIOService);
+var gFileProtocolHandler = gIOService.getProtocolHandler("file").QueryInterface(Components.interfaces.nsIFileProtocolHandler);
+
+
+
+////////////////////////////////////////////////////////////////////////
+//
+
+// get a file in the profile directory:
+function getProfileFile(name)
 {
-  /**
-   * The transaction user registered with this transaction.
-   */
-  readonly attribute zapISipServerTransactionUser transactionUser;
-  
-  /**
-   * The request that started this transaction.
-   */
-  readonly attribute zapISipRequest request;
-  
-  void sendResponse(in zapISipResponse response);
-};
+  var file = gDirectoryService.get("ProfD",
+                                   Components.interfaces.nsIFile);
+  file.append(name);
+  return file;
+}
 
+// get the url of a file in the profile directory (e.g. for opening a
+// datasource):
+function getProfileFileURL(name)
+{
+  return gFileProtocolHandler.getURLSpecFromFile(getProfileFile(name));
+}

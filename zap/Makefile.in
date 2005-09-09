@@ -5,7 +5,7 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS = base zmk sdp sip app
+DIRS = base zmk sdp sip client
 
 include $(topsrcdir)/config/rules.mk
 

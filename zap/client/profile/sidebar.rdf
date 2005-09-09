@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:NC="http://home.netscape.com/NC-rdf#"
+     xmlns:zap="urn:mozilla:zap:">
+
+  <rdf:Seq rdf:about="urn:mozilla:zap:sidebar" >
+    <rdf:li rdf:resource="urn:mozilla:zap:home"/>
+    <rdf:li rdf:resource="urn:mozilla:zap:accounts"/>
+    <rdf:li rdf:resource="urn:mozilla:zap:friends"/>
+    <rdf:li rdf:resource="urn:mozilla:zap:logs"/>
+    <rdf:li rdf:resource="urn:mozilla:zap:prefs"/>
+  </rdf:Seq>
+
+  <rdf:Description rdf:about="urn:mozilla:zap:home">
+    <NC:Name>Home</NC:Name>
+    <zap:nodetype>home</zap:nodetype>
+    <zap:chromepage>chrome://zap/content/home.xul</zap:chromepage>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="urn:mozilla:zap:accounts">
+    <NC:Name>Accounts</NC:Name> 
+    <zap:nodetype>accounts</zap:nodetype>
+    <zap:chromepage>chrome://zap/content/accounts.xul</zap:chromepage>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="urn:mozilla:zap:friends">
+    <NC:Name>Contacts</NC:Name> 
+    <zap:nodetype>contacts</zap:nodetype>
+    <zap:chromepage>chrome://zap/content/contacts.xul</zap:chromepage>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="urn:mozilla:zap:logs">
+    <NC:Name>Logs</NC:Name> 
+    <zap:nodetype>logs</zap:nodetype>
+    <zap:chromepage>chrome://zap/content/logs.xul</zap:chromepage>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="urn:mozilla:zap:prefs">
+    <NC:Name>Preferences</NC:Name> 
+    <zap:nodetype>prefs</zap:nodetype>
+    <zap:chromepage>chrome://zap/content/prefs.xul</zap:chromepage>
+  </rdf:Description>
+
+</rdf:RDF>

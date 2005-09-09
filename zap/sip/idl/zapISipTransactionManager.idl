@@ -68,10 +68,25 @@ interface zapISipTransactionManager : nsISupports
    * Default: 5000
    */
   attribute unsigned long T4;
+
+  /**
+   * Timer (in ms) for INVITE client transaction binding
+   * refreshing. See executeInviteClientTransaction().
+   * Default: 20000
+   */
+  attribute unsigned long Trefresh;
   
+  /**
+   * periodicRetransmit: if true, the client transaction will
+   * periodically resend the request at a rate given by
+   * zapISipTransactionManager::Trefresh after provisional responses
+   * have been received. This is to support NAT binding refreshing as
+   * specified in RFC3581 3.
+   */
   void executeInviteClientTransaction(in zapISipRequest request,
                                       in zapISipEndpoint endpoint,
-                                      in zapISipClientTransactionUser tu);
+                                      in zapISipClientTransactionUser tu,
+                                      in boolean periodicRefresh);
 
   void executeNonInviteClientTransaction(in zapISipRequest request,
                                          in zapISipEndpoint endpoint,
@@ -85,5 +100,11 @@ interface zapISipTransactionManager : nsISupports
                                                              in zapISipServerTransactionUser tu,
                                                              in zapISipResponse response);
 
+  /**
+   * Returns the server transaction being cancelled by the given
+   * request, or null if no such transaction exists. Will not match
+   * CANCEL or ACK server transactions. (RFC3261 9.2)
+   */
+  zapISipServerTransaction findCancelledTransaction(in zapISipRequest cancelRequest); 
 };
 

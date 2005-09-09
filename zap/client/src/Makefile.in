@@ -1,0 +1,20 @@
+DEPTH		= ../../..
+topsrcdir	= @top_srcdir@
+srcdir		= @srcdir@
+VPATH		= @srcdir@
+
+include $(DEPTH)/config/autoconf.mk
+
+MODULE       = zap_client
+# XXX staging from xpi-stage doesn't work
+export XPI_NAME	= 
+
+EXTRA_PP_COMPONENTS = \
+	zapAutocompleter.js \
+	$(NULL)
+
+include $(topsrcdir)/config/rules.mk
+
+
+
+

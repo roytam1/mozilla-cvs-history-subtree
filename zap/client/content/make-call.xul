@@ -1,0 +1,176 @@
+<?xml version="1.0"?>
+<!-- ***** BEGIN LICENSE BLOCK *****
+   - Version: MPL 1.1/GPL 2.0/LGPL 2.1
+   -
+   - The contents of this file are subject to the Mozilla Public License Version
+   - 1.1 (the "License"); you may not use this file except in compliance with
+   - the License. You may obtain a copy of the License at
+   - http://www.mozilla.org/MPL/
+   -
+   - Software distributed under the License is distributed on an "AS IS" basis,
+   - WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+   - for the specific language governing rights and limitations under the
+   - License.
+   -
+   - The Original Code is the Mozilla SIP client project.
+   -
+   - The Initial Developer of the Original Code is 8x8 Inc.
+   - Portions created by the Initial Developer are Copyright (C) 2005
+   - the Initial Developer. All Rights Reserved.
+   -
+   - Contributor(s):
+   -   Alex Fritze <alex@croczilla.com> (original author)
+   -
+   - Alternatively, the contents of this file may be used under the terms of
+   - either of the GNU General Public License Version 2 or later (the "GPL"),
+   - or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+   - in which case the provisions of the GPL or the LGPL are applicable instead
+   - of those above. If you wish to allow use of your version of this file only
+   - under the terms of either the GPL or the LGPL, and not to allow others to
+   - use your version of this file under the terms of the MPL, indicate your
+   - decision by deleting the provisions above and replace them with the notice
+   - and other provisions required by the GPL or the LGPL. If you do not delete
+   - the provisions above, a recipient may use your version of this file under
+   - the terms of any one of the MPL, the GPL or the LGPL.
+   -
+   - ***** END LICENSE BLOCK ***** -->
+
+<?xml-stylesheet href="chrome://zap/skin/zap.css" type="text/css"?>
+
+<!DOCTYPE window SYSTEM "chrome://zap/locale/zap.dtd">
+
+<page id="zap_make_call"
+        xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+        xmlns:html="http://www.w3.org/1999/xhtml"
+        onload="initPage()"
+        onunload="cleanup()">
+
+  <!-- Scripts -->
+  <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
+
+  <script type="application/x-javascript">
+  <![CDATA[
+    var wRemoteAddress;
+    var wOptionsRS;
+
+    function initPage() {
+      // try to parse the url_field into a sip address:
+      try {
+        var address = parent.wURLField.value;
+        if (!/sip:/.test(address))
+          address = "sip:"+address;
+        wRemoteAddress = parent.wSipStack.syntaxFactory.deserializeAddress(address);
+      } catch(e) {
+        dump("initialization failure make-call.xul:"+wRemoteAddress+"\n");
+        // by default the deck displays the error page, 
+        // so let's just fall through:
+        return;
+      }
+      
+      dump("initialized make-call.xul:"+wRemoteAddress.serialize()+"\n");
+
+      // we have a valid SIP address. display the proper call chrome:
+      document.getElementById("content_deck").selectedIndex = 1;
+
+      // fill in remote party:
+      document.getElementById("urn:mozilla:zap:remote").value = wRemoteAddress.serialize();
+
+      // kick off an async OPTIONS request:
+      wOptionsRS = parent.wSipStack.createNonInviteRequestClient(wRemoteAddress);
+      wOptionsRS.listener = {
+        responseReceived: false,
+        notifyResponseReceived : function(rc, dialog, response) {
+          this.responseReceived = true;
+          if (document)
+            document.getElementById("options_result").value = response.serialize();
+        },
+        notifyTerminated : function(rc) {
+          if (!this.responseReceived) {
+            if (document)
+              document.getElementById("options_result").value = 
+                "Failed to contact the remote party. It is unlikely that dialling "+
+                "will succeed. Please check the address.";
+          }
+        }
+      }
+      wOptionsRS.sendRequest(wOptionsRS.formulateRequest("OPTIONS"));
+
+      // focus call button, so that the user just needs to press enter:
+      document.getElementById("call_button").focus();
+    }    
+
+    function cleanup() {
+      dump("cleanup make-call.xul:"+wRemoteAddress.serialize()+"\n");
+      wOptionsRS.listener = null;
+    }
+
+    function call() {
+      var oc = parent.OutboundCall.instantiate();
+      oc.createFromDocument(document);
+      oc.mediasession = Components.classes["@mozilla.org/zap/mediasession;1"].createInstance(Components.interfaces.zapIMediaSession);
+      oc.mediasession.init("zap",
+                           parent.wSipStack.hostAddress,
+                           parent.wSipStack.hostAddress);
+
+      oc["urn:mozilla:zap:status"] = "Calling...";
+      oc.flush();
+      // start the ball rolling:
+      oc.makeCall(wRemoteAddress);
+      parent.selectCall(oc.resource);
+    }
+  ]]>
+  </script>
+
+
+  <vbox id="module_page" flex="1">
+    <label class="titlebox" value="Make Outgoing Call"/>
+    <deck id="content_deck">
+      <vbox>
+        <description>
+          <html:b>Invalid SIP Address</html:b>
+          <html:p>
+          Please enter a valid SIP address in the URL bar and hit enter.
+          </html:p>
+        </description>
+      </vbox>
+
+      <vbox>
+        <label value="Remote party:"/>
+        <textbox id="urn:mozilla:zap:remote" class="ro_modulefield"/>
+        <cgroup id="capabilities_cgroup" 
+                title="Remote party capabilities" 
+                closed="true"
+                persist="closed">
+          <label value="OPTIONS request on remote party yields:"/>
+          <textbox id="options_result" class="ro_modulefield" 
+                   multiline="true" rows="7" 
+                   value="zap! is currently trying to contact the remote party. You should see a response here shortly. You can start the call to the remote party at any time by pressing the 'call' key."/>
+        </cgroup>
+ 
+        <cgroup id="mediaoffer_cgroup" title="Media Offer" closed="true" persist="closed">
+          <hbox>
+            <vbox flex="1">
+              <checkbox label="Enable Speex Codec" checked="true"/>
+              <checkbox label="Enable iLBC Codec"/>
+              <checkbox label="Enable G.711 Codec"/>
+            </vbox>
+            <vbox flex="1">
+              <cgroup title="Speex Settings" closed="true"/>
+              <cgroup title="iLBC Settings" closed="true"/>
+              <cgroup title="G.711 Settings" closed="true"/>
+            </vbox>
+          </hbox>
+        </cgroup>
+
+        <label value="Subject:"/>
+        <textbox id="urn:mozilla:zap:subject"/>
+
+        <hbox>
+          <spacer flex="1"/>
+          <button id="call_button" label="Call" oncommand="call()" default="true"/>
+        </hbox>
+      </vbox>
+
+    </deck>
+  </vbox>
+</page>

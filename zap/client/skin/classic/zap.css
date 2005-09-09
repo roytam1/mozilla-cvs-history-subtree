@@ -1,0 +1,308 @@
+/* ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1/GPL 2.0/LGPL 2.1
+ *
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License.
+ *
+ * The Original Code is the Mozilla SIP client project.
+ *
+ * The Initial Developer of the Original Code is 8x8 Inc.
+ * Portions created by the Initial Developer are Copyright (C) 2005
+ * the Initial Developer. All Rights Reserved.
+ *
+ * Contributor(s):
+ *   Alex Fritze <alex@croczilla.com> (original author)
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * in which case the provisions of the GPL or the LGPL are applicable instead
+ * of those above. If you wish to allow use of your version of this file only
+ * under the terms of either the GPL or the LGPL, and not to allow others to
+ * use your version of this file under the terms of the MPL, indicate your
+ * decision by deleting the provisions above and replace them with the notice
+ * and other provisions required by the GPL or the LGPL. If you do not delete
+ * the provisions above, a recipient may use your version of this file under
+ * the terms of any one of the MPL, the GPL or the LGPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
+
+@import url("chrome://global/skin/");
+@import url("chrome://zap/content/zap-widgets.css");
+
+@namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
+
+/* ---------------------------------------------------------------------- */
+/* url field                                                              */
+
+#field_url { 
+  margin-left: 1em;
+}
+
+
+/* ---------------------------------------------------------------------- */
+/* go button                                                              */
+
+#button_go {  
+  list-style-image: url("chrome://zap/skin/go.png");
+  -moz-image-region: rect(0px 20px 20px 0px);
+  padding-top: 2px;
+  padding-bottom: 2px;
+  -moz-padding-start: 3px;
+  -moz-padding-end: 5px;
+}
+
+#button_go:hover {
+  -moz-image-region: rect(0px 40px 20px 20px);
+}
+
+#button_go:hover:active {
+  padding: 3px 4px 1px 4px;
+}
+
+#button_go[disabled="true"] {
+  -moz-image-region: rect(0px 60px 20px 40px);
+}
+
+/* ---------------------------------------------------------------------- */
+/* calls tree                                                             */
+
+#calls {
+  margin: 0px;
+}
+
+treechildren::-moz-tree-row(callactive-true) { 
+  background-color: #FF8080;
+}
+treechildren::-moz-tree-row(callactive-true, selected, focus) { 
+  background-color: #FF4040;
+}
+
+treechildren::-moz-tree-image(calls_direction, direction-inbound) {
+  list-style-image: url("chrome://zap/skin/inbound.png");
+}
+
+treechildren::-moz-tree-image(calls_direction, direction-outbound) {
+  list-style-image: url("chrome://zap/skin/outbound.png");
+}
+
+/* ---------------------------------------------------------------------- */
+/* sidebar tree                                                           */
+
+#sidebar { 
+  margin: 0px;
+}
+
+treechildren::-moz-tree-row(selected,focus) { 
+  border: 1px dotted #000000;
+}
+
+treechildren::-moz-tree-image(sidebar_col_name) { 
+  padding-right: 2px;
+  margin: 0px 2px;
+  list-style-image: url("chrome://zap/skin/folder-closed.png");
+}
+
+treechildren::-moz-tree-image(sidebar_col_name, open) { 
+  list-style-image: url("chrome://zap/skin/folder-open.png");
+}
+
+treechildren::-moz-tree-image(nodetype-home) {
+  list-style-image: url("chrome://zap/skin/home.png");
+}
+
+treechildren::-moz-tree-image(nodetype-accounts) {
+  list-style-image: url("chrome://zap/skin/accounts.png");
+}
+
+treechildren::-moz-tree-image(nodetype-account) {
+  list-style-image: url("chrome://zap/skin/account.png");
+}
+
+treechildren::-moz-tree-image(nodetype-buddies) {
+  list-style-image: url("chrome://zap/skin/contacts.png");
+}
+
+treechildren::-moz-tree-image(nodetype-contacts) {
+  list-style-image: url("chrome://zap/skin/contacts.png");
+}
+
+treechildren::-moz-tree-image(nodetype-logs) {
+  list-style-image: url("chrome://zap/skin/logs.png");
+}
+
+treechildren::-moz-tree-image(nodetype-prefs) {
+  list-style-image: url("chrome://zap/skin/prefs.png");
+}
+
+treechildren::-moz-tree-image(nodetype-contact) {
+  list-style-image: url("chrome://zap/skin/contact.png");
+}
+
+
+/* ---------------------------------------------------------------------- */
+/* various chrome tweaks                                                  */
+
+#calls_splitter { 
+  border: none;
+}
+
+#sidebar_splitter { 
+  border: none;
+  min-width: 5px;
+  width: 5px;
+}
+
+#box_interact { 
+  border-left: 1px solid;
+  border-bottom: 1px solid;
+  -moz-border-left-colors: ThreeDShadow;
+  -moz-border-bottom-colors: ThreeDShadow;
+}
+
+/* ---------------------------------------------------------------------- */
+/* cgroup collapsable group widget                                        */
+
+.cgroup { 
+  margin-top: 10px;
+  margin-bottom: 10px;
+  margin-left: 5px;
+  margin-right: 5px;
+}
+
+.cgroup-title { 
+  -moz-appearance: toolbox;
+  min-height: 20px;
+  max-height: 20px;
+  padding: 0px 2px 0px 8px;
+  font-weight: bold;
+}
+
+.cgroup-title:hover { 
+  cursor: pointer;
+  color: #39598E;
+}
+
+.cgroup-title-button
+{ 
+  list-style-image    : url("chrome://zap/skin/section_up.png");
+  -moz-appearance     : none !important; 
+  border              : none !important; 
+  background-color    : transparent !important;
+  padding             : 0px !important; 
+  margin              : 0px !important; 
+  margin-right        : 1px !important;
+  -moz-user-focus     : ignore !important;
+  max-width           : 21px !important; 
+  min-width           : 21px !important;
+}
+
+.cgroup-title:hover > .cgroup-title > .cgroup-title-button
+{  
+  list-style-image: url("chrome://zap/skin/section_up_hl.png")
+}
+
+.cgroup[closed=true] > .cgroup-title > .cgroup-title-button
+{
+  list-style-image: url("chrome://zap/skin/section_down.png")
+}
+
+.cgroup[closed=true] > .cgroup-title:hover > .cgroup-title-button
+{
+  list-style-image: url("chrome://zap/skin/section_down_hl.png")
+}
+
+.cgroup-body { 
+  border: 1px solid #c0c0c0;
+  border-top: 0px;
+  padding: 2px;
+}
+
+.cgroup[closed=true] > .cgroup-body { 
+  visibility: collapse;
+}
+
+
+/* ---------------------------------------------------------------------- */
+/* module pages                                                           */
+
+#module_page {
+  overflow: auto;
+  background-color: #FFFFFF;
+  padding: 10px;
+}
+
+/*
+#module_page textbox 
+{ 
+  border: 2px solid;
+  -moz-appearance: none;
+}
+*/
+
+#module_page[readonly="true"] textbox,
+.ro_modulefield
+{ 
+  -moz-user-focus: ignore;
+  -moz-user-input: disabled;
+  -moz-border-top-colors: #c0c0c0;
+  -moz-border-left-colors: #c0c0c0;
+  -moz-border-right-colors: #c0c0c0;
+  -moz-border-bottom-colors: #c0c0c0;
+  border: 1px solid;
+  font-weight: bold;
+  -moz-appearance: none;
+}
+
+#module_page[readonly="true"] checkbox
+{ 
+  -moz-user-focus: ignore;
+  -moz-user-input: disabled;
+}
+
+#module_page[readonly="true"] checkbox > .checkbox-check
+{ 
+  background-color: white !important;
+  -moz-appearance: none;
+  -moz-border-top-colors: #c0c0c0;
+  -moz-border-left-colors: #c0c0c0;
+  -moz-border-right-colors: #c0c0c0;
+  -moz-border-bottom-colors: #c0c0c0;
+  border: 1px solid;
+}
+
+/* a style for title labels */
+.titlebox { 
+  padding-left: 5px;
+  padding-top: 3px;
+  padding-bottom: 3px;
+  margin-bottom: 10px;
+  -moz-appearance: toolbox;
+  font-size: 130%;
+  font-weight: bold;
+}
+
+/* ---------------------------------------------------------------------- */
+/* accounts page                                                          */
+
+#accounts_new { 
+  background: url("chrome://zap/skin/new-account.png") no-repeat !important;
+  margin-left: 15px;
+  padding-left: 45px;
+  padding-top: .55em;
+  padding-bottom: .55em;
+  font-size: 120%;
+}
+
+#accounts_new:hover { 
+  cursor: pointer;
+  color: #39598E;
+}
+

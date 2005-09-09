@@ -22,6 +22,8 @@ JS_CODELIB_RESOURCES = \
 	ClassUtils.js  \
 	FunctionUtils.js \
 	StringUtils.js \
+	RDFUtils.js \
+	FileUtils.js \
 	$(NULL)
 
 libs::  $(JS_CODELIB_RESOURCES)

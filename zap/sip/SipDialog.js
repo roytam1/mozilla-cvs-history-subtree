@@ -322,7 +322,10 @@ SipDialog.fun(
     // XXX
     m.requestURI = this.remoteTarget;
     // Via header:
-    m.appendHeader(gSyntaxFactory.createViaHeader());    
+    var viaHeader = gSyntaxFactory.createViaHeader();
+    if (this.stack.rport_client)
+      viaHeader.setParameter("rport", "");
+    m.appendHeader(viaHeader);    
     // To header + tag:
     var toHeader = gSyntaxFactory.createToHeader(this.remoteAddress);
     if (this.remoteTag)

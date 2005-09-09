@@ -1,0 +1,253 @@
+<?xml version="1.0"?>
+<!-- ***** BEGIN LICENSE BLOCK *****
+   - Version: MPL 1.1/GPL 2.0/LGPL 2.1
+   -
+   - The contents of this file are subject to the Mozilla Public License Version
+   - 1.1 (the "License"); you may not use this file except in compliance with
+   - the License. You may obtain a copy of the License at
+   - http://www.mozilla.org/MPL/
+   -
+   - Software distributed under the License is distributed on an "AS IS" basis,
+   - WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+   - for the specific language governing rights and limitations under the
+   - License.
+   -
+   - The Original Code is the Mozilla SIP client project.
+   -
+   - The Initial Developer of the Original Code is 8x8 Inc.
+   - Portions created by the Initial Developer are Copyright (C) 2005
+   - the Initial Developer. All Rights Reserved.
+   -
+   - Contributor(s):
+   -   Alex Fritze <alex@croczilla.com> (original author)
+   -
+   - Alternatively, the contents of this file may be used under the terms of
+   - either of the GNU General Public License Version 2 or later (the "GPL"),
+   - or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+   - in which case the provisions of the GPL or the LGPL are applicable instead
+   - of those above. If you wish to allow use of your version of this file only
+   - under the terms of either the GPL or the LGPL, and not to allow others to
+   - use your version of this file under the terms of the MPL, indicate your
+   - decision by deleting the provisions above and replace them with the notice
+   - and other provisions required by the GPL or the LGPL. If you do not delete
+   - the provisions above, a recipient may use your version of this file under
+   - the terms of any one of the MPL, the GPL or the LGPL.
+   -
+   - ***** END LICENSE BLOCK ***** -->
+
+<?xml-stylesheet href="chrome://zap/skin/zap.css" type="text/css"?>
+
+<!DOCTYPE window SYSTEM "chrome://zap/locale/zap.dtd">
+
+<window id="zap"
+        width="640" height="480" screenX="20" screenY="20" 
+        persist="width height screenX screenY sizemode"
+        title = "&zap.title;"
+        onload="windowInit();"
+        onunload="windowClose();"
+        xmlns = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+  <!-- Scripts -->
+  <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
+  <script type="application/x-javascript" src="chrome://zap/content/zap.js"/>
+  <script type="text/javascript" src="chrome://zap/content/chromeUtils.js"/>
+
+  <!-- Commands -->
+  <commandset>
+    <command id="cmd_exit" oncommand="cmdExit()"/>
+    <command id="cmd_call" oncommand="cmdCall()"/>
+    <command id="cmd_request" oncommand="cmdRequest()"/>
+    <command id="cmd_about" oncommand="cmdAbout()"/>
+  </commandset>
+
+  <toolbox>
+    <!-- Main menu bar -->
+    <menubar>
+      <menu label="File"
+            accesskey="F">
+        <menupopup>
+          <menuitem label="Exit" 
+                    accesskey="x"
+                    command="cmd_exit" />
+        </menupopup>
+      </menu>
+      <menu label="Options"
+            accesskey="O">
+        <menupopup>
+        </menupopup>
+      </menu>
+      <menu label="Tools"
+            accesskey="T">
+        <menupopup>
+        </menupopup>
+      </menu>
+      <menu label="Help"
+            accesskey="H">
+        <menupopup>
+          <menuitem label="About ZAP..." 
+                    accesskey="A"
+                    command="cmd_about" />
+        </menupopup>
+      </menu>
+    </menubar>
+
+    <!-- URL bar -->
+    <toolbar flex="1">
+      <toolbaritem flex="1">
+        <textbox id="url_field" flex="1"
+                 type="autocomplete"
+                 autocompletesearch="zap-autocomplete"
+                 enablehistory="true"
+                 completeselectedindex="false"
+                 tabscrolling="true"
+                 ontextentered="cmdGo()"
+                 showcommentcolumn="false"
+                 />
+      </toolbaritem>
+      <toolbarbutton id="button_go" label="Go" oncommand="cmdGo()" />
+      <toolbarspacer/>
+      <toolbaritem>
+        <label value="Outbound:"/>
+        <menulist id="outbound_list" 
+                  minwidth="100">
+          <menupopup id="outbound_list_popup"
+                     datasources="rdf:null"
+                     ref="urn:mozilla:zap:accounts">
+            <template>
+              <rule>
+                <conditions>
+                  <content uri="?container"/>
+                  <member container="?container" child="?account"/>
+                </conditions>
+                <bindings>
+                  <binding subject="?account"
+                          predicate="http://home.netscape.com/NC-rdf#Name"
+                          object="?name"/>
+                </bindings>
+                <action>
+                  <menuitem uri="?account" label="?name"/>
+                </action>
+              </rule>
+            </template>
+          </menupopup>
+        </menulist>
+      </toolbaritem>
+      <toolbarbutton id="button_dnd" label="DND" type="checkbox"/>
+    </toolbar>
+  </toolbox>
+
+  <!-- Main content box -->
+  <hbox flex="1">
+    <vbox id="box_sidebar"  minwidth="100" width="200" persist="width">
+      <tree id="sidebar" flex="1" hidecolumnpicker="true" 
+            seltype="single"
+            datasources="rdf:null"
+            ref="urn:mozilla:zap:sidebar"
+            onselect="sidebarSelectionChange()"
+            flags="dont-build-content">
+        <treecols>
+          <treecol id="sidebar_col_name" primary="true" hideheader="true" flex="1" />
+        </treecols>
+        <template>
+          <rule>
+            <conditions>
+              <content uri="?container"/>
+              <member container="?container" child="?node"/>
+            </conditions>
+            <bindings>
+              <binding subject="?node"
+                       predicate="http://home.netscape.com/NC-rdf#Name"
+                       object="?name"/>
+              <binding subject="?node"
+                       predicate="urn:mozilla:zap:nodetype"
+                       object="?nodetype"/>
+            </bindings>
+            <action>
+              <treechildren>
+                <treeitem uri="?node">
+                  <treerow>
+                    <treecell label="?name"
+                              properties="nodetype-?nodetype" />
+                  </treerow>
+                </treeitem>
+              </treechildren>
+            </action>
+          </rule>
+        </template>
+      </tree>
+    </vbox>
+
+   <splitter id="sidebar_splitter" collapse="before" persist="state"/>
+
+    <vbox flex="1">
+
+      <box id="box_interact" flex="2" minwidth="200" minheight="200">
+        <iframe id="interactpane" flex="1"  src="about:blank" />
+      </box>
+
+      <splitter id="calls_splitter" persist="state hidden"/>
+
+      <box id="box_calls"  minwidth="200" minheight="50" persist="height">
+        <tree id="calls" flex="1" 
+              seltype="single"
+              datasources="rdf:null"
+              ref="urn:mozilla:zap:recent_calls"
+              sortDirection="ascending"
+              onselect="callsSelectionChange()"
+              flags="dont-build-content">
+          <treecols>
+            <treecol id="calls_status_icon" display="Status Icon" />
+            <treecol id="calls_direction" display="Direction" style="min-width:20px;"/>
+            <treecol id="calls_status" label="Status" flex="1" />
+            <treecol id="calls_remote" label="Remote" flex="2" />
+            <treecol id="calls_subject" label="Subject" flex="2" />
+            <treecol id="calls_actions" display="Actions" />
+          </treecols>
+          <template>
+            <rule>
+              <conditions>
+                <content uri="?container"/>
+                <member container="?container" child="?node"/>              
+              </conditions>
+              <bindings>
+                <binding subject="?node"
+                         predicate="urn:mozilla:zap:active"
+                         object="?active"/>
+                <binding subject="?node"
+                         predicate="urn:mozilla:zap:status"
+                         object="?status"/>
+                <binding subject="?node"
+                         predicate="urn:mozilla:zap:remote"
+                         object="?remote"/>
+                <binding subject="?node"
+                         predicate="urn:mozilla:zap:subject"
+                         object="?subject"/>
+                <binding subject="?node"
+                         predicate="urn:mozilla:zap:direction"
+                         object="?direction"/>              
+              </bindings>
+              <action>
+                <treechildren>
+                  <treeitem uri="?node">
+                    <treerow properties="callactive-?active">
+                      <treecell/>
+                      <treecell properties="direction-?direction"/>
+                      <treecell label="?status"/>
+                      <treecell label="?remote"/>
+                      <treecell label="?subject"/>
+                      <treecell/>
+                    </treerow>
+                  </treeitem>
+                </treechildren>
+              </action>
+            </rule>
+          </template>
+        </tree>
+      </box>
+
+    </vbox>
+  </hbox>
+  <statusbar>
+    <statusbarpanel id="status_text" crop="right" flex="1"/>
+  </statusbar>
+</window>

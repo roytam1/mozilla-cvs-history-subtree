@@ -243,6 +243,17 @@ SipInviteRC.fun(
     this.acks = {};
   });
 
+// this is set to true if the request is cancelled while in the
+// RESOLVING or CALLING state:
+SipInviteRC.obj("cancelled", false);
+
+// this is set to true if we have received a provisional response:
+SipInviteRC.obj("provisional_received", false);
+
+// this will be set to the current destination that a request has been
+// sent to:
+SipInviteRC.obj("current_destination", null);
+
 //----------------------------------------------------------------------
 // zapISipInviteRC
 
@@ -287,6 +298,50 @@ SipInviteRC.statefun(
                                               this);
   });
 
+//  void cancel();
+SipInviteRC.statefun(
+  "*",
+  function cancel() {
+    // XXX if the state is 2XX_RECEIVED or TERMINATED it is too late
+    // to cancel. Should we throw an exception in these cases?
+    this.cancelled = true;
+  });
+
+SipInviteRC.statefun(
+  "CALLING",
+  function cancel() {
+    this.cancelled = true;
+    if (!this.provisional_received) return;
+    
+    // construct and send a cancel request (RFC3261 9.1):
+    var req = gSyntaxFactory.createRequest();
+    // method:
+    req.method = "CANCEL";
+    // request uri & route set XXX:
+    req.requestURI = this.request.requestURI;
+    // Via:
+    req.appendHeader(this.request.getTopViaHeader());
+    // To header:
+    req.appendHeader(this.request.getToHeader());
+    // From header:
+    req.appendHeader(this.request.getFromHeader());
+    // Call-ID header:
+    req.appendHeader(this.request.getCallIDHeader());
+    // CSeq header:
+    req.appendHeader(this.request.getCSeqHeader()); //XXX maybe clone
+    req.getCSeqHeader().method = "CANCEL";
+    // Max-Forwards header:
+    req.appendHeader(this.request.getSingleHeader("Max-Forwards"));
+
+    this.stack.transactionManager.executeNonInviteClientTransaction(req,
+                                                                    this.current_destination,
+                                                                    null);
+
+    // start a timer to timeout this transaction in case we don't
+    // receive a 487 (Request Terminated) response for the INVITE
+    // transaction (RFC3261 9.1):
+    // XXX
+  });
 
 //----------------------------------------------------------------------
 // zapISipResolveListener
@@ -310,12 +365,24 @@ SipInviteRC.statefun(
       if (this.listener) {
         // generate a 408 (Request Timeout) to hand to the listener
         // (RFC3261 8.1.3.1):
-        var r = this.stack.formulateResponse("408", this.request, this._ToTag);
+        var r = this.stack.formulateResponse("408", this.request, null);
         this.listener.notifyResponseReceived(this, this.dialog, r);
       }
       this.terminate();
       return;
     }
+
+    if (this.cancelled) {
+      if (this.listener) {
+        // generate a 487 (Request Terminated) to hand to the listener
+        // (RFC3261 9.1):
+        var r = this.stack.formulateResponse("487", this.request, null);
+        this.listener.notifyResponseReceived(this, this.dialog, r);
+      }
+      this.terminate();
+      return;
+    }
+    
     // send request to next destination:
     this.request.getTopViaHeader().setParameter("branch",
                                                  BRANCH_COOKIE+generateUUID());
@@ -328,9 +395,11 @@ SipInviteRC.statefun(
       this.request.getCSeqHeader().sequenceNumber =
         ++this.dialog.localSequenceNumber;
     }
+    this.current_destination = this._destinationIterator.getNext();
     this.stack.transactionManager.executeInviteClientTransaction(this.request,
-                                                                 this._destinationIterator.getNext(),
-                                                                 this);
+                                                                 this.current_destination,
+                                                                 this,
+                                                                 this.stack.rport_client);
   });
 
 //----------------------------------------------------------------------
@@ -340,6 +409,16 @@ SipInviteRC.statefun(
 SipInviteRC.statefun(
   "CALLING",
   function handleProvisionalResponse(response) {
+
+    if (this.cancelled && !this.provisional_received) {
+      // we have received the first provisional response. send a
+      // cancellation now:
+      this.provisional_received = true;
+      this.cancel();
+    }
+
+    this.provisional_received = true;
+    
     var dialog;
     if (this.dialog) {
       // This is a RE-INVITE; we don't spawn any new dialogs.
@@ -628,7 +707,8 @@ SipNonInviteRS.fun(
 // request server for receiving invite requests
 // INITIALIZED --> ACK_PENDING --> TERMINATED
 
-var SipInviteRS = makeClass("SipInviteRS", SupportsImpl, StateMachine);
+var SipInviteRS = makeClass("SipInviteRS",
+                            SupportsImpl, StateMachine, Unwrappable);
 SipInviteRS.addInterfaces(Components.interfaces.zapISipInviteRS,
                           Components.interfaces.zapISipServerTransactionUser);
 
@@ -792,4 +872,21 @@ SipInviteRS.fun(
       this.listener.notifyTerminated(this);
       this.listener = null;
     }
+  });
+
+//----------------------------------------------------------------------
+// Interface to SipUAStack:
+
+// the sip ua stack will call this to cancel the transaction
+SipInviteRS.fun(
+  function cancel() {
+    if (this.currentState == "INITIALIZED") {
+      if (this.listener) {
+        this.listener.notifyCancelled(this);
+      }
+      // send a 487:
+      var resp = this.formulateResponse("487");
+      this.sendResponse(resp);
+    }
+    // else ...too late
   });
