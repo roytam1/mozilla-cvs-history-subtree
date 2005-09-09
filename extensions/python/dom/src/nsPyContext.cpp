@@ -35,6 +35,9 @@
  * ***** END LICENSE BLOCK ***** */
 #include "nsIScriptContext.h"
 #include "nsIScriptGlobalObject.h"
+#include "nsIObjectInputStream.h"
+#include "nsIObjectOutputStream.h"
+#include "nsITimelineService.h"
 #include "nsITimer.h"
 #include "nsIArray.h"
 #include "prtime.h"
@@ -43,6 +46,7 @@
 #include "nsPyContext.h"
 
 #include "compile.h"
+#include "marshal.h"
 #include "eval.h"
 
 static PRInt32 sContextCount;
@@ -121,8 +125,8 @@ NS_IMPL_RELEASE(nsPythonContext)
 /*static*/ nsresult nsPythonContext::HandlePythonError()
 {
   // need to raise an exception
-  NS_WARNING("Python error");
-  PyErr_Print(); // for now.
+  NS_WARNING("Python error calling DOM script");
+  PyXPCOM_LogError("Python error");
   return PyXPCOM_SetCOMErrorFromPyException();
 }
 
@@ -264,6 +268,7 @@ nsPythonContext::CompileScript(const PRUnichar* aText,
                            void** aScriptObject)
 {
   NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
+  NS_TIMELINE_MARK_FUNCTION("nsPythonContext::CompileScript");
 
   // XXX - todo - specify PyCF_SOURCE_IS_UTF8 in Py_CompileStringFlags
   NS_ConvertUTF16toUTF8 cs(aText, aTextLength);
@@ -480,6 +485,69 @@ nsresult
 nsPythonContext::InitClasses(void *aGlobalObj)
 {
     return NS_OK;
+}
+
+nsresult
+nsPythonContext::Serialize(nsIObjectOutputStream* aStream, void *aScriptObject)
+{
+  NS_TIMELINE_MARK_FUNCTION("nsPythonContext::Serialize");
+  CEnterLeavePython _celp;
+  nsresult rv;
+  if (!PyCode_Check((PyObject *)aScriptObject)) {
+    NS_ERROR("aScriptObject is not a code object");
+    return NS_ERROR_UNEXPECTED;
+  }
+  rv = aStream->Write32(PyImport_GetMagicNumber());
+  if (NS_FAILED(rv)) return rv;
+
+  PyObject *obMarshal =
+#ifdef Py_MARSHAL_VERSION
+      PyMarshal_WriteObjectToString((PyObject *)aScriptObject,
+                                    Py_MARSHAL_VERSION);
+#else
+      // 2.3 etc - only takes 1 arg.
+      PyMarshal_WriteObjectToString((PyObject *)aScriptObject);
+
+#endif
+  if (!obMarshal)
+    return HandlePythonError();
+  NS_ASSERTION(PyString_Check(obMarshal), "marshal returned a non string?");
+  rv |= aStream->Write32(PyString_GET_SIZE(obMarshal));
+  rv |= aStream->WriteBytes(PyString_AS_STRING(obMarshal), PyString_GET_SIZE(obMarshal));
+  Py_DECREF(obMarshal);
+  return rv;
+}
+
+nsresult
+nsPythonContext::Deserialize(nsIObjectInputStream* aStream, void **aResult)
+{
+  NS_TIMELINE_MARK_FUNCTION("nsPythonContext::Deserialize");
+  nsresult rv;
+  PRUint32 magic;
+  rv = aStream->Read32(&magic);
+  if (NS_FAILED(rv)) return rv;
+  if (magic != PyImport_GetMagicNumber()) {
+    NS_WARNING("Python has different marshal version");
+    return NS_ERROR_UNEXPECTED;
+  }
+  PRUint32 nBytes;
+  rv = aStream->Read32(&nBytes);
+  if (NS_FAILED(rv)) return rv;
+
+  char* data = nsnull;
+  rv = aStream->ReadBytes(nBytes, &data);
+  if (NS_FAILED(rv)) return rv;
+
+  CEnterLeavePython _celp;
+  PyObject *codeObject = PyMarshal_ReadObjectFromString(data, nBytes);
+  if (data)
+    nsMemory::Free(data);
+  if (codeObject == NULL)
+    return HandlePythonError();
+  NS_ASSERTION(PyCode_Check(codeObject), "unmarshal returned a non string?");
+  *aResult = codeObject;
+  PYLEAK_STAT_INCREMENT(ScriptObject);
+  return NS_OK;
 }
 
 void

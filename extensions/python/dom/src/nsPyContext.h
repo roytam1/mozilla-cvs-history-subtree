@@ -143,6 +143,9 @@ public:
   virtual void WillInitializeContext();
   virtual void DidInitializeContext();
 
+  virtual nsresult Serialize(nsIObjectOutputStream* aStream, void *aScriptObject);
+  virtual nsresult Deserialize(nsIObjectInputStream* aStream, void **aResult);
+
   NS_DECL_NSITIMERCALLBACK
 protected:
   PRPackedBool mIsInitialized;

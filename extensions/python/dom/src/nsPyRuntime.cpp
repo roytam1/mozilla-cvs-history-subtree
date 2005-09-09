@@ -91,11 +91,6 @@ nsPythonRuntime::RegisterSelf(nsIComponentManager* aCompMgr,
     if (NS_FAILED(rv))
         return rv;
 
-    // And also register a short name.
-    rv = catman->AddCategoryEntry(SCRIPT_LANGUAGE_CATEGORY,
-                                  "python",
-                                  NS_SCRIPT_LANGUAGE_PYTHON_CONTRACTID,
-                                  PR_TRUE, PR_TRUE, getter_Copies(previous));
     return rv;
 }
 
@@ -116,11 +111,25 @@ nsPythonRuntime::UnregisterSelf(nsIComponentManager* aCompMgr,
 
     catman->DeleteCategoryEntry(SCRIPT_LANGUAGE_CATEGORY,
                                 "application/x-python", PR_TRUE);
-    catman->DeleteCategoryEntry(SCRIPT_LANGUAGE_CATEGORY,
-                                "python", PR_TRUE);
     return rv;
 }
 
+nsresult
+nsPythonRuntime::LockGCThing(void *object)
+{
+    return NS_OK;
+}
+
+nsresult
+nsPythonRuntime::UnlockGCThing(void *object)
+{
+    return NS_OK;
+}
+
+////////////////////////////////////////////////////////////////////////
+//
+// An "implicit" Python module.
+//
 PyObject *PyJSExec(PyObject *self, PyObject *args)
 {
     PyObject *obGlobal;

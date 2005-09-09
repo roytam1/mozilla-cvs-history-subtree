@@ -77,4 +77,7 @@ public:
     *flags=0;
     return NS_OK;
   }
+  virtual nsresult LockGCThing(void *object);
+  virtual nsresult UnlockGCThing(void *object);
+ 
 };
