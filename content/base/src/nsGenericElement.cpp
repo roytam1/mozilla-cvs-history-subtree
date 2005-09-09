@@ -3384,7 +3384,9 @@ nsGenericElement::AddScriptEventListener(nsIAtom* aAttribute,
   if (manager) {
     nsIDocument *ownerDoc = GetOwnerDoc();
 
-    PRUint32 lang = nsIProgrammingLanguage::JAVASCRIPT; // XXX - fix me!
+    // XXXmarkh - fix me!
+    NS_WARNING("Assuming js language - fix me");
+    PRUint32 lang = nsIProgrammingLanguage::JAVASCRIPT;
     rv =
       manager->AddScriptEventListener(target, aAttribute, aValue, lang, defer,
                                       !nsContentUtils::IsChromeDoc(ownerDoc));
