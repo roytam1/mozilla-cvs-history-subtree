@@ -42,10 +42,10 @@
 #include "nsIDOMClassInfo.h"
 #include "nsString.h"
 
-// XXX - need a new IID - but should this entire interface be renamed?
 #define NS_IDOM_SCRIPT_OBJECT_FACTORY_IID   \
-{ 0xbac2482a, 0x456e, 0x4ea5,               \
-  { 0x83, 0xfb, 0x16, 0xe1, 0x24, 0x9c, 0x16, 0x6f } }
+  { /* {38EC7717-6CBE-44a8-B2BB-53F2BA998B31} */ \
+  0x38ec7717, 0x6cbe, 0x44a8, \
+  { 0xb2, 0xbb, 0x53, 0xf2, 0xba, 0x99, 0x8b, 0x31 } }
 
 class nsIScriptContext;
 class nsIScriptGlobalObject;
