@@ -406,11 +406,6 @@ protected:
     CreateTemplateBuilder(nsIContent* aElement);
 
     /**
-     * Do hookup for <xul:observes> tag
-     */
-    nsresult HookupObserver(nsIContent* aElement);
-
-    /**
      * Add the current prototype's style sheets to the document.
      */
     nsresult AddPrototypeSheets();
