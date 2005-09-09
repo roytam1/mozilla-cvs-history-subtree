@@ -1235,6 +1235,8 @@ nsEventListenerManager::AddScriptEventListener(nsISupports *aObject,
                                                PRBool aDeferCompilation,
                                                PRBool aPermitUntrustedEvents)
 {
+  NS_PRECONDITION(aLanguage != nsIProgrammingLanguage::UNKNOWN,
+                  "Must know the language for the script event listener");
   nsIScriptContext *context = nsnull;
 
   nsCOMPtr<nsIContent> content(do_QueryInterface(aObject));
