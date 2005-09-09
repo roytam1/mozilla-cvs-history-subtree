@@ -203,55 +203,45 @@ XBL_ProtoErrorReporter(JSContext *cx,
 //
 
 void
-nsXBLDocGlobalObject::SetContext(nsIScriptContext *aContext)
+nsXBLDocGlobalObject::SetContext(nsIScriptContext *aScriptContext)
 {
-  mScriptContext = aContext;
+  NS_ASSERTION(aScriptContext->GetLanguage() == nsIProgrammingLanguage::JAVASCRIPT,
+               "xbl is not multi-language");
+  NS_ASSERTION(aScriptContext, "Must provide a context");
+  aScriptContext->WillInitializeContext();
+  // NOTE: We init this context with a NULL global - this is subtly
+  // different than nsGlobalWindow which passes 'this'
+  nsresult rv;
+  rv = aScriptContext->InitContext(nsnull);
+  NS_ASSERTION(NS_SUCCEEDED(rv), "InitContext failed");
+  aScriptContext->DidInitializeContext();
+  // and we setup our global manually
+  mScriptContext = aScriptContext;
 }
 
 nsIScriptContext *
 nsXBLDocGlobalObject::GetContext()
 {
   // This whole fragile mess is predicated on the fact that
-  // GetContext() will be called before GetScriptObject()/SetLanguageContext() is.
+  // GetContext() will be called before GetScriptObject() is.
   if (! mScriptContext) {
     nsCOMPtr<nsIDOMScriptObjectFactory> factory = do_GetService(kDOMScriptObjectFactoryCID);
     NS_ENSURE_TRUE(factory, nsnull);
 
-    // mScriptContext is actually set by PrepareScriptContext - so fetch our
-    // new context into a local
     nsresult rv;
+    PRUint32 langID = nsIProgrammingLanguage::JAVASCRIPT;
+
     nsCOMPtr<nsILanguageRuntime> languageRuntime;
-    rv = factory->GetLanguageRuntimeByID(nsIProgrammingLanguage::JAVASCRIPT,
-                                         getter_AddRefs(languageRuntime));
+    rv = NS_GetLanguageRuntimeByID(langID, getter_AddRefs(languageRuntime));
     NS_ENSURE_SUCCESS(rv, nsnull);
     nsCOMPtr<nsIScriptContext> newCtx;
     rv = languageRuntime->CreateContext(getter_AddRefs(newCtx));
     NS_ENSURE_SUCCESS(rv, nsnull);
-    // For some reason, this new context is setup for *no* global object.
-    // This means we can't call our standard PrepareScriptEnvironment, as that
-    // associates the new context with ourself as the global.
-    // XXX - this also exists in nsXULPrototypeDocument
-
-    // This is similar to nsXULPrototypeDocument::SetLanguageContext, but
-    // we don't yet support multiple languages.
-    newCtx->WillInitializeContext();
-
-    // Bind the script context and the global object
-    rv = newCtx->InitContext(nsnull); // <- null here is different
-    NS_ENSURE_SUCCESS(rv, nsnull);
-  
-    newCtx->DidInitializeContext();
-    // bogus!  Maybe SetContext can die.
-    SetContext(newCtx);
-    // end of clone.
-    //rv = PrepareScriptEnvironment(nsIProgrammingLanguage::JAVASCRIPT, newCtx);
-    //NS_ENSURE_SUCCESS(rv, nsnull);
+    rv = SetLanguageContext(langID, newCtx);
 
     JSContext *cx = (JSContext *)mScriptContext->GetNativeContext();
 
     // nsJSEnvironment set the error reporter to NS_ScriptErrorReporter
-    // 
-    // I guess we need to reset it.
     JS_SetErrorReporter(cx, XBL_ProtoErrorReporter);
     mJSObject = ::JS_NewObject(cx, &gSharedGlobalClass, nsnull, nsnull);
     if (!mJSObject)
@@ -352,6 +342,7 @@ nsXBLDocGlobalObject::OnFinalize()
     mScriptContext = nsnull;
   }
   mJSObject = nsnull;
+  SetGlobalObjectOwner(nsnull);
 }
 
 void
@@ -424,8 +415,9 @@ nsXBLDocumentInfo::~nsXBLDocumentInfo()
 {
   /* destructor code */
   if (mGlobalObject) {
-    mGlobalObject->OnFinalize();
-    mGlobalObject->SetGlobalObjectOwner(nsnull); // just in case
+    mGlobalObject->OnFinalize(); // remove circular reference
+    NS_ASSERTION(mGlobalObject->GetGlobalObjectOwner() == nsnull,
+                 "Finalizing should have nuked the owner");
   }
   delete mBindingTable;
 }
