@@ -35,7 +35,11 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-EXPORTED_SYMBOLS = [ "getProfileFile",
+EXPORTED_SYMBOLS = [ "urlToFile",
+                     "fileToURL",
+                     "openFileForWriting",
+                     "getProfileDir",
+                     "getProfileFile",
                      "getProfileFileURL"];
 
 
@@ -52,10 +56,66 @@ var gDirectoryService = Components.classes["@mozilla.org/file/directory_service;
 var gIOService = Components.classes["@mozilla.org/network/io-service;1"].getService(Components.interfaces.nsIIOService);
 var gFileProtocolHandler = gIOService.getProtocolHandler("file").QueryInterface(Components.interfaces.nsIFileProtocolHandler);
 
+// ioflags for nsIFileOutputStream::init()
+var IO_RDONLY               = 0x01;
+var IO_WRONLY               = 0x02;
+var IO_RDWR                 = 0x04;
+var IO_CREATE_FILE          = 0x08;
+var IO_APPEND               = 0x10;
+var IO_TRUNCATE             = 0x20;
+var IO_SYNC                 = 0x40;
+var IO_EXCL                 = 0x80;
 
 
 ////////////////////////////////////////////////////////////////////////
 //
+
+// convert a url string to an nsIFile object
+function urlToFile(url) {
+  try {
+    return gIOService.newURI(url, null, null)
+      .QueryInterface(Components.interfaces.nsIFileURL).file;
+  }
+  catch(e) {
+    // doesn't appear to be a file
+    return null;
+  }
+}
+
+// convert an nsIFile object to a url string
+function fileToURL(file) {
+  return gFileProtocolHandler.getURLSpecFromFile(file);
+}
+
+// open a file for overwriting or appending. returns an
+// nsIFileOutputStream object
+function openFileForWriting(file, append)
+{
+  var fos;
+  try {
+    fos = Components.classes["@mozilla.org/network/file-output-stream;1"]
+      .createInstance(Components.interfaces.nsIFileOutputStream);
+    var ioflags = IO_WRONLY | IO_CREATE_FILE;
+    if (append)
+      ioflags |= IO_APPEND;
+    else
+      ioflags |= IO_TRUNCATE;
+    fos.init(file, ioflags, 4, null);
+  }
+  catch(e) {
+    if (fos)
+      fos.close();
+    fos = null;
+  }
+  return fos;
+}
+
+// returns the profile directory
+function getProfileDir()
+{
+  return gDirectoryService.get("ProfD", Components.interfaces.nsIFile);
+}
+
 
 // get a file in the profile directory:
 function getProfileFile(name)
