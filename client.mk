@@ -854,6 +854,7 @@ ZAP_BRANCH_MODIFIED_FILES = \
 	netwerk/base/src/Makefile.in \
 	netwerk/build/nsNetCID.h \
 	netwerk/build/nsNetModule.cpp \
+	toolkit/content/widgets/checkbox.xml \
 	xpcom/ds/nsHashPropertyBag.cpp \
 	xpcom/ds/nsHashPropertyBag.h \
 	xpcom/ds/nsIPropertyBag2.idl \

@@ -48,7 +48,10 @@
         ]]>
         </body>
       </method>
-      
+
+      <property name="userInputDisabled" readonly="true"
+                onget="return this.disabled || (window.getComputedStyle(this, '').getPropertyValue('-moz-user-input') == 'disabled');" />
+
       <!-- public implementation -->
       <property name="checked"    onset="return this.setChecked(val);"
                                   onget="return this.getAttribute('checked') == 'true';"/>
@@ -58,10 +61,11 @@
       <!-- While it would seem we could do this by handling oncommand, we need can't
            because any external oncommand handlers might get called before ours, and
            then they would see the incorrect value of checked. -->           
-      <handler event="click" button="0" action="if (!this.disabled) this.checked = !this.checked;"/>
+      <handler event="click" button="0" action="if (!this.userInputDisabled) this.checked = !this.checked;"/>
       <handler event="keypress" key=" ">
         <![CDATA[
-          this.checked = !this.checked;
+          if (!this.userInputDisabled)
+            this.checked = !this.checked;
         ]]>
       </handler>
     </handlers>
