@@ -5,3 +5,5 @@ pyxultest.jar:
     content/pyxultest/pyxultest.py				(pyxultest.py)
     content/pyxultest/pyxultest.css				(pyxultest.css)
     content/pyxultest/dialog.xul				(dialog.xul)
+    content/pyxultest/python_overlay.xul		        (python_overlay.xul)
+    content/pyxultest/js_overlay.xul		                (js_overlay.xul)

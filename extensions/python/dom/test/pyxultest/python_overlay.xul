@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+
+<overlay id="python_overlay"
+         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+         scripttype="application/x-python"
+>
+
+    <hbox id="language_box">
+        <button id="but_python" label="click for Python"
+                oncommand="print 'hello from Python'"/>
+    </hbox>
+
+</overlay>

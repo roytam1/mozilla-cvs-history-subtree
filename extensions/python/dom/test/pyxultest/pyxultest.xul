@@ -1,14 +1,18 @@
 <?xml version="1.0"?>
 <?xml-stylesheet href="chrome://communicator/skin/" type="text/css"?>
 
+<?xul-overlay href="chrome://pyxultest/content/js_overlay.xul"?>
+<?xul-overlay href="chrome://pyxultest/content/python_overlay.xul"?>
+  
 <window
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
   id="main-window" orient="vertical"
   screenX="100" screenY="100"
   height="300" width="500"
+  scripttype="application/x-python"
   >
   <script type="application/x-python" src="chrome://pyxultest/content/pyxultest.py"/>
-  <script type="application/x-python">
+  <script>
     <![CDATA[
 
 print "Scrollbar visible =", this.scrollbars.visible
@@ -21,19 +25,22 @@ print "Window location is", this.window.location.href
 
     ]]>
   </script>
-
   <vbox flex="1">
     <textbox id="input-box" style="width:100%" value = "hello there"
              rows="5" multiline="true" flex="1"
     />
-    <button scriptLanguage="python" id="button1" label="open dialog"
+    <button id="button1" label="open dialog"
             oncommand="on_button_click()"/>
   </vbox>
+  
+  <!-- A box from our overlay - it will have one button using js events
+       and another using Python events
+  -->
+  <hbox id="language_box"/>
   <!-- Here we have a script element defined at a parent node -->
-  <hbox scriptLanguage="python" oncommand="print 'You clicked on a', event.target.tagName">
+  <hbox oncommand="print 'You clicked on a', event.target.tagName">
     <button label = "click here"/>
     <button label = "or here"/>
   </hbox>
-
 </window>
 

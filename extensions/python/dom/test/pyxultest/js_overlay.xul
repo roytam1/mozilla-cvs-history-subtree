@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+
+<overlay id="js_overlay"
+         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+    <hbox id="language_box">
+        <button id="but_js" label="click for js"
+                oncommand="dump('hello from js\n');"/>
+    </hbox>
+</overlay>

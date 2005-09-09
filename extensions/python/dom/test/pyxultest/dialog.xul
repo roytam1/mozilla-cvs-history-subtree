@@ -1,23 +1,21 @@
 <?xml version="1.0"?>
 <?xml-stylesheet href="chrome://communicator/skin/" type="text/css"?>
 
+<!-- note: nsXBLPrototypeHandler::ExecuteHandler is still JS specific,
+so 'ondialogaccept' handler does not execute Python
+-->
 <dialog
-  scriptLanguage="python"
+  scripttype="application/x-python"
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-  id="my_dialog" orient="vertical"
+  id="my-dialog" orient="vertical"
   buttons="accept,cancel"
   ondialogaccept="print 'hello'"
   >
-  <script type="application/x-python" src="chrome://pyxultest/content/pyxultest.py"/>
-  <script type="application/x-python">
+
+  <script>
     <![CDATA[
 
-import xpcom
-print "Window is", this.window
 print "Dialog location is", this.window.location.href
-
-#promptService =  xpcom.components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(xpcom.components.interfaces.nsIPromptService)
-#promptService.alert(this.window, "title", "Hello from Python");
 
     ]]>
   </script>
