@@ -40,7 +40,6 @@
 #include "jsapi.h"
 #include "nsReadableUtils.h"
 #include "nsCRT.h"
-#include "nsIProgrammingLanguage.h"
 
 #define SKIP_WHITESPACE(iter, end_iter)                          \
   while ((iter) != (end_iter) && nsCRT::IsAsciiSpace(*(iter))) { \
