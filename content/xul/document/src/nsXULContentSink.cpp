@@ -114,7 +114,6 @@ static PRLogModuleInfo* gLog;
 #endif
 
 static NS_DEFINE_CID(kXULPrototypeCacheCID,      NS_XULPROTOTYPECACHE_CID);
-static NS_DEFINE_CID(kDOMScriptObjectFactoryCID, NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
 
 //----------------------------------------------------------------------
 
@@ -151,6 +150,7 @@ protected:
     PRInt32 mTextLength;
     PRInt32 mTextSize;
     PRBool mConstrainSize;
+    PRUint32 mLangID; // The language ID extracted from the root node.
 
     nsresult AddAttributes(const PRUnichar** aAttributes, 
                            const PRUint32 aAttrLen, 
@@ -323,7 +323,8 @@ XULContentSinkImpl::XULContentSinkImpl(nsresult& rv)
       mTextSize(0),
       mConstrainSize(PR_TRUE),
       mState(eInProlog),
-      mParser(nsnull)
+      mParser(nsnull),
+      mLangID(nsIProgrammingLanguage::JAVASCRIPT)
 {
 
     if (gRefCnt++ == 0) {
@@ -681,6 +682,7 @@ XULContentSinkImpl::CreateElement(nsINodeInfo *aNodeInfo,
         return NS_ERROR_OUT_OF_MEMORY;
 
     element->mNodeInfo    = aNodeInfo;
+    element->mLangID      = mLangID;
     
     *aResult = element;
     return NS_OK;
@@ -823,7 +825,7 @@ XULContentSinkImpl::HandleEndElement(const PRUnichar *aName)
             NS_STATIC_CAST(nsXULPrototypeScript*, node);
 
         // If given a src= attribute, we must ignore script tag content.
-        if (! script->mSrcURI && ! script->mScriptObject) {
+        if (! script->mSrcURI && ! script->GetScriptObject()) {
             nsCOMPtr<nsIDocument> doc = do_QueryReferent(mDocument);
 
             script->mOutOfLine = PR_FALSE;
@@ -1082,6 +1084,28 @@ XULContentSinkImpl::OpenRoot(const PRUnichar** aAttributes,
         return NS_ERROR_UNEXPECTED;
     }
 
+    // Check for default script language before creating the first node.
+    PRUint32 i;
+    for (i=0;i<aAttrLen;i++) {
+        const nsDependentString key(aAttributes[i*2]);
+        if (key.EqualsLiteral("scripttype")) {
+            const nsDependentString value(aAttributes[i*2+1]);
+            if (!value.IsEmpty()) {
+                nsCOMPtr<nsILanguageRuntime> runtime;
+                rv = NS_GetLanguageRuntime(value, getter_AddRefs(runtime));
+                if (NS_SUCCEEDED(rv))
+                    mLangID = runtime->GetLanguage();
+                else {
+                    NS_ERROR("Failed to load the root object's script language!");
+                    // Set the default language to unknown - we don't want js
+                    // trying to execute this stuff.
+                    mLangID = nsIProgrammingLanguage::UNKNOWN;
+                }
+            }
+            break;
+        }
+    }
+
     // Create the element
     nsXULPrototypeElement* element;
     rv = CreateElement(aNodeInfo, &element);
@@ -1180,12 +1204,8 @@ XULContentSinkImpl::OpenScript(const PRUnichar** aAttributes,
 {
   nsresult rv = NS_OK;
 
-  nsCOMPtr<nsIDOMScriptObjectFactory> factory = do_GetService(kDOMScriptObjectFactoryCID);
-  NS_ENSURE_TRUE(factory, nsnull);
-  
-  nsCOMPtr<nsILanguageRuntime> languageRuntime;
+  PRUint32 langID = mLangID;
   PRUint32 version = 0;
-  PRBool seenLanguage = PR_FALSE ; // have we seen a language specified?
 
   // Look for SRC attribute and look for a LANGUAGE attribute
   nsAutoString src;
@@ -1195,7 +1215,6 @@ XULContentSinkImpl::OpenScript(const PRUnichar** aAttributes,
           src.Assign(aAttributes[1]);
       }
       else if (key.EqualsLiteral("type")) {
-          seenLanguage = PR_TRUE;
           nsCOMPtr<nsIMIMEHeaderParam> mimeHdrParser =
               do_GetService("@mozilla.org/network/mime-hdrparam;1");
           NS_ENSURE_TRUE(mimeHdrParser, NS_ERROR_FAILURE);
@@ -1229,34 +1248,44 @@ XULContentSinkImpl::OpenScript(const PRUnichar** aAttributes,
                   break;
               }
           }
-          if (isJavaScript)
-            rv = factory->GetLanguageRuntimeByID(nsIProgrammingLanguage::JAVASCRIPT,
-                                                getter_AddRefs(languageRuntime));
-          else
-            // Use the script object factory to locate a matching language.
-            rv = factory->GetLanguageRuntime(mimeType, getter_AddRefs(languageRuntime));
-          if (NS_FAILED(rv) || languageRuntime == nsnull) {
-            NS_WARNING("Failed to find a scripting language");
-            return NS_FAILED(rv) ? rv : NS_ERROR_UNEXPECTED;
-          }
-          // Get the version string, and ensure the language supports it.
-          nsAutoString versionName;
-          rv = mimeHdrParser->GetParameter(typeAndParams, "version",
-                                           EmptyCString(), PR_FALSE, nsnull,
-                                           versionName);
-          if (NS_FAILED(rv)) {
-            // no language specified - verion remains 0.
-            if (rv != NS_ERROR_INVALID_ARG)
-              return rv;
+          if (isJavaScript) {
+              langID = nsIProgrammingLanguage::JAVASCRIPT;
           } else {
-            rv = languageRuntime->ParseVersion(versionName, &version);
+              // Use the script object factory to locate the language.
+              nsCOMPtr<nsILanguageRuntime> runtime;
+              rv = NS_GetLanguageRuntime(mimeType, getter_AddRefs(runtime));
+              if (NS_FAILED(rv) || runtime == nsnull) {
+                  // Failed to get the explicitly specified language
+                  NS_WARNING("Failed to find a scripting language");
+                  langID = nsIProgrammingLanguage::UNKNOWN;
+              } else
+                  langID = runtime->GetLanguage();
+          }
+
+          if (langID != nsIProgrammingLanguage::UNKNOWN) {
+            // Get the version string, and ensure the language supports it.
+            nsAutoString versionName;
+            rv = mimeHdrParser->GetParameter(typeAndParams, "version",
+                                             EmptyCString(), PR_FALSE, nsnull,
+                                             versionName);
             if (NS_FAILED(rv)) {
-              NS_WARNING("This script language version is not supported - ignored");
-              return rv;
+              // no version specified - version remains 0.
+              if (rv != NS_ERROR_INVALID_ARG)
+                return rv;
+            } else {
+                nsCOMPtr<nsILanguageRuntime> runtime;
+                rv = NS_GetLanguageRuntimeByID(langID, getter_AddRefs(runtime));
+                if (NS_FAILED(rv))
+                    return rv;
+                rv = runtime->ParseVersion(versionName, &version);
+                if (NS_FAILED(rv)) {
+                    NS_WARNING("This script language version is not supported - ignored");
+                    langID = nsIProgrammingLanguage::UNKNOWN;
+                }
             }
           }
           // Some js specifics yet to be abstracted.
-          if (languageRuntime->GetLanguage() == nsIProgrammingLanguage::JAVASCRIPT) {
+          if (langID == nsIProgrammingLanguage::JAVASCRIPT) {
             nsAutoString value;
             rv = mimeHdrParser->GetParameter(typeAndParams, "e4x",
                                              EmptyCString(), PR_FALSE, nsnull,
@@ -1275,53 +1304,19 @@ XULContentSinkImpl::OpenScript(const PRUnichar** aAttributes,
         // various version strings anyway.  So we make no attempt to support
         // languages other than JS for language=
           nsAutoString lang(aAttributes[1]);
-          seenLanguage = PR_TRUE;
-          if (nsParserUtils::IsJavaScriptLanguage(lang, &version)) {
-            rv = factory->GetLanguageRuntimeByID(nsIProgrammingLanguage::JAVASCRIPT,
-                                                 getter_AddRefs(languageRuntime));
-            NS_ASSERTION(NS_SUCCEEDED(rv), "Failed to get javascript language");
-          }
+          if (nsParserUtils::IsJavaScriptLanguage(lang, &version))
+            langID = nsIProgrammingLanguage::JAVASCRIPT;
       }
       aAttributes += 2;
   }
-  if (!seenLanguage) {
-    // no one tried to identify a language - JS is default.
-    // (If they did try to identify but it was unrecognized, we don't want to
-    // assume JS)
-    NS_ASSERTION(languageRuntime == nsnull, "eh?");
-    rv = factory->GetLanguageRuntimeByID(nsIProgrammingLanguage::JAVASCRIPT,
-                                         getter_AddRefs(languageRuntime));
-    NS_ASSERTION(!NS_FAILED(rv), "Failed to get default JavaScript language!");
-    // languageRuntime remains NULL - we will ignore it.
-  }
   // Don't process scripts that aren't known
-  if (languageRuntime != nsnull) {
+  if (langID != nsIProgrammingLanguage::UNKNOWN) {
       nsIScriptGlobalObject* globalObject = nsnull; // borrowed reference
-      nsIScriptContext* scriptContext = nsnull; // borrowed reference
       nsCOMPtr<nsIDocument> doc(do_QueryReferent(mDocument));
       if (doc)
           globalObject = doc->GetScriptGlobalObject();
-      if (globalObject) {
-        scriptContext = globalObject->GetLanguageContext(languageRuntime->GetLanguage());
-        // hrm - I don't think this is the right place to do this, but here we go anyway...
-        if (scriptContext == nsnull) {
-          // first request for this programming language - set things up.
-          rv = languageRuntime->CreateContext(&scriptContext);
-          NS_ENSURE_SUCCESS(rv, nsnull);
-          rv = globalObject->SetLanguageContext(languageRuntime->GetLanguage(),
-                                                scriptContext);
-          NS_ENSURE_SUCCESS(rv, nsnull);
-          // globalObject now holds reference to context, but scriptContext
-          // has an extra one.
-          // NS_IF_RELEASE sets to NULL - not what we want.
-          scriptContext->Release();
-        }
-      }
-      NS_ASSERTION(scriptContext != nsnull, "no script context!");
-      NS_ENSURE_TRUE(scriptContext != nsnull, NS_ERROR_UNEXPECTED);
-
       nsXULPrototypeScript* script =
-          new nsXULPrototypeScript(scriptContext, aLineNumber, version);
+          new nsXULPrototypeScript(langID, aLineNumber, version);
       if (! script)
           return NS_ERROR_OUT_OF_MEMORY;
 

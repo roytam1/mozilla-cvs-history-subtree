@@ -109,6 +109,7 @@
 #include "nsContentList.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptGlobalObjectOwner.h"
+#include "nsILanguageRuntime.h"
 #include "nsIScriptSecurityManager.h"
 #include "nsNodeInfoManager.h"
 #include "nsContentCreatorFunctions.h"
@@ -2955,7 +2956,7 @@ nsXULDocument::ResumeWalk()
                     if (NS_SUCCEEDED(rv) && blocked)
                         return NS_OK;
                 }
-                else if (scriptproto->mScriptObject) {
+                else if (scriptproto->GetScriptObject()) {
                     // An inline script
                     rv = ExecuteScript(scriptproto);
                     if (NS_FAILED(rv)) return rv;
@@ -3268,7 +3269,7 @@ nsXULDocument::LoadScript(nsXULPrototypeScript* aScriptProto, PRBool* aBlock)
     // Load a transcluded script
     nsresult rv;
 
-    if (aScriptProto->mScriptObject) {
+    if (aScriptProto->GetScriptObject()) {
         rv = ExecuteScript(aScriptProto);
 
         // Ignore return value from execution, and don't block
@@ -3282,16 +3283,24 @@ nsXULDocument::LoadScript(nsXULPrototypeScript* aScriptProto, PRBool* aBlock)
     PRBool useXULCache;
     gXULCache->GetEnabled(&useXULCache);
 
-    if (useXULCache && mScriptGlobalObject) {
+    if (useXULCache) {
         // XUL cache only handle JS currently.
+        void *newScriptObject = nsnull;
+        PRUint32 fetchedLang = nsIProgrammingLanguage::UNKNOWN;
         gXULCache->GetScript(aScriptProto->mSrcURI,
-                             &aScriptProto->mScriptObject);
+                             &fetchedLang,
+                             &newScriptObject);
+        if (newScriptObject) {
+            NS_ASSERTION(aScriptProto->mLangID == fetchedLang,
+                         "XUL cache gave me an incorrect script language");
+            // eeek - we can't simply assign to mLangID as the GC stuff will not work
+            // If we keep going things will certainly crash.
+            if (aScriptProto->mLangID != fetchedLang)
+                return NS_ERROR_UNEXPECTED;
+        }
+        aScriptProto->SetScriptObject(newScriptObject);
 
-        if (aScriptProto->mScriptObject) {
-            aScriptProto->mScriptContext = mScriptGlobalObject->GetLanguageContext(
-                                                    nsIProgrammingLanguage::JAVASCRIPT);
-            // failure getting a script context is fatal.
-            NS_ENSURE_TRUE(aScriptProto->mScriptContext != nsnull, NS_ERROR_UNEXPECTED);
+        if (aScriptProto->GetScriptObject()) {
             rv = ExecuteScript(aScriptProto);
 
             // Ignore return value from execution, and don't block
@@ -3399,7 +3408,7 @@ nsXULDocument::OnStreamComplete(nsIStreamLoader* aLoader,
                                     1, this, mCurrentPrototype);
 
         aStatus = rv;
-        if (NS_SUCCEEDED(rv) && scriptProto->mScriptContext) {
+        if (NS_SUCCEEDED(rv)) {
             rv = ExecuteScript(scriptProto);
 
             // If the XUL cache is enabled, save the script object there in
@@ -3426,11 +3435,10 @@ nsXULDocument::OnStreamComplete(nsIStreamLoader* aLoader,
             PRBool useXULCache;
             gXULCache->GetEnabled(&useXULCache);
 
-            if (useXULCache && IsChromeURI(mDocumentURI) &&
-                scriptProto->mScriptContext &&
-                scriptProto->mScriptContext->GetLanguage() == nsIProgrammingLanguage::JAVASCRIPT) {
+            if (useXULCache && IsChromeURI(mDocumentURI)) {
                 gXULCache->PutScript(scriptProto->mSrcURI,
-                                     scriptProto->mScriptObject);
+                                     scriptProto->mLangID,
+                                     scriptProto->GetScriptObject());
             }
 
             if (mIsWritingFastLoad && mCurrentPrototype != mMasterPrototype) {
@@ -3452,12 +3460,11 @@ nsXULDocument::OnStreamComplete(nsIStreamLoader* aLoader,
 
                 NS_ASSERTION(global != nsnull, "master prototype w/o global?!");
                 if (global) {
-                    PRUint32 langID = scriptProto->mScriptContext->GetLanguage();
-                    NS_ASSERTION(global->GetLanguageContext(langID) == scriptProto->mScriptContext,
-                                 "Contexts appear confused?");
-                    nsIScriptContext *scriptContext = global->GetContext();
+                    nsIScriptContext *scriptContext = \
+                          global->GetLanguageContext(scriptProto->mLangID);
+                    NS_ASSERTION(scriptContext != nsnull,
+                                 "Failed to get script context for language");
                     if (scriptContext)
-                        // xxxmarkh - global?
                         scriptProto->SerializeOutOfLine(nsnull, global);
                 }
             }
@@ -3487,7 +3494,7 @@ nsXULDocument::OnStreamComplete(nsIStreamLoader* aLoader,
         doc->mNextSrcLoadWaiter = nsnull;
 
         // Execute only if we loaded and compiled successfully, then resume
-        if (NS_SUCCEEDED(aStatus) && scriptProto->mScriptObject) {
+        if (NS_SUCCEEDED(aStatus) && scriptProto->GetScriptObject()) {
             doc->ExecuteScript(scriptProto);
         }
         doc->ResumeWalk();
@@ -3522,8 +3529,28 @@ nsXULDocument::ExecuteScript(nsXULPrototypeScript *aScript)
     NS_ENSURE_TRUE(aScript, NS_ERROR_NULL_POINTER);
 
     nsresult rv = NS_ERROR_UNEXPECTED;
-    if (aScript->mScriptContext && aScript->mScriptObject)
-        rv = ExecuteScript(aScript->mScriptContext, aScript->mScriptObject);
+    nsIScriptContext *context;
+    context = mScriptGlobalObject->GetLanguageContext(aScript->mLangID);
+    if (context == nsnull) {
+        // first request for this programming language - set things up.
+        nsCOMPtr<nsIScriptContext> newContext;
+        nsCOMPtr<nsILanguageRuntime> languageRuntime;
+        rv = NS_GetLanguageRuntimeByID(aScript->mLangID,
+                                       getter_AddRefs(languageRuntime));
+        NS_ENSURE_SUCCESS(rv, rv);
+        rv = languageRuntime->CreateContext(getter_AddRefs(newContext));
+        NS_ENSURE_SUCCESS(rv, rv);
+        rv = mScriptGlobalObject->SetLanguageContext(aScript->mLangID,
+                                                     newContext);
+        NS_ENSURE_SUCCESS(rv, rv);
+        context = mScriptGlobalObject->GetLanguageContext(aScript->mLangID);
+    }
+
+    // failure getting a script context is fatal.
+    NS_ENSURE_TRUE(context != nsnull, NS_ERROR_UNEXPECTED);
+
+    if (aScript->GetScriptObject())
+        rv = ExecuteScript(context, aScript->GetScriptObject());
     return rv;
 }
 

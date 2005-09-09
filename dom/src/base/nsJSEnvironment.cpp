@@ -79,7 +79,11 @@
 #include "nsIAtom.h"
 #include "nsContentUtils.h"
 #include "jscntxt.h"
+#include "jsxdrapi.h"
 #include "nsIArray.h"
+#include "nsIObjectInputStream.h"
+#include "nsIObjectOutputStream.h"
+#include "nsITimelineService.h"
 
 // For locale aware string methods
 #include "plstr.h"
@@ -1575,59 +1579,127 @@ nsJSContext::GetScriptBindingHandler(nsIScriptBinding *aBinding,
   return NS_OK;
 }
 
-
-// GC root functions lifted from static functions in nsXULElement and still
-// uses the static globals that version did.
-static nsIJSRuntimeService* gJSRuntimeService = nsnull;
-static JSRuntime* gScriptRuntime = nsnull;
-static PRInt32 gScriptRuntimeRefcnt = 0;
-
+// serialization
 nsresult
-nsJSContext::AddGCRoot(void* aScriptObjectRef, const char* aName)
+nsJSContext::Serialize(nsIObjectOutputStream* aStream, void *aScriptObject)
 {
-    if (++gScriptRuntimeRefcnt == 1 || !gScriptRuntime) {
-        CallGetService("@mozilla.org/js/xpc/RuntimeService;1",
-                       &gJSRuntimeService);
-        if (! gJSRuntimeService) {
-            NS_NOTREACHED("couldn't add GC root");
-            return NS_ERROR_FAILURE;
-        }
-
-        gJSRuntimeService->GetRuntime(&gScriptRuntime);
-        if (! gScriptRuntime) {
-            NS_NOTREACHED("couldn't add GC root");
-            return NS_ERROR_FAILURE;
-        }
-    }
-
-    PRBool ok;
-    ok = ::JS_AddNamedRootRT(gScriptRuntime, aScriptObjectRef, aName);
-    if (! ok) {
-        NS_NOTREACHED("couldn't add GC root");
-        return NS_ERROR_OUT_OF_MEMORY;
-    }
-
-    return NS_OK;
-}
-
-nsresult
-nsJSContext::RemoveGCRoot(void* aScriptObjectRef)
-{
-    if (! gScriptRuntime) {
-        NS_NOTREACHED("couldn't remove GC root");
+    JSObject *mJSObject = (JSObject *)aScriptObject;
+    if (!mJSObject)
         return NS_ERROR_FAILURE;
+
+    nsresult rv;
+
+    JSContext* cx = mContext;
+    JSXDRState *xdr = ::JS_XDRNewMem(cx, JSXDR_ENCODE);
+    if (! xdr)
+        return NS_ERROR_OUT_OF_MEMORY;
+    xdr->userdata = (void*) aStream;
+
+    JSScript *script = NS_REINTERPRET_CAST(JSScript*,
+                                           ::JS_GetPrivate(cx, mJSObject));
+    if (! ::JS_XDRScript(xdr, &script)) {
+        rv = NS_ERROR_FAILURE;  // likely to be a principals serialization error
+    } else {
+        // Get the encoded JSXDRState data and write it.  The JSXDRState owns
+        // this buffer memory and will free it beneath ::JS_XDRDestroy.
+        //
+        // If an XPCOM object needs to be written in the midst of the JS XDR
+        // encoding process, the C++ code called back from the JS engine (e.g.,
+        // nsEncodeJSPrincipals in caps/src/nsJSPrincipals.cpp) will flush data
+        // from the JSXDRState to aStream, then write the object, then return
+        // to JS XDR code with xdr reset so new JS data is encoded at the front
+        // of the xdr's data buffer.
+        //
+        // However many XPCOM objects are interleaved with JS XDR data in the
+        // stream, when control returns here from ::JS_XDRScript, we'll have
+        // one last buffer of data to write to aStream.
+
+        uint32 size;
+        const char* data = NS_REINTERPRET_CAST(const char*,
+                                               ::JS_XDRMemGetData(xdr, &size));
+        NS_ASSERTION(data, "no decoded JSXDRState data!");
+
+        rv = aStream->Write32(size);
+        if (NS_SUCCEEDED(rv))
+            rv = aStream->WriteBytes(data, size);
     }
 
-    ::JS_RemoveRootRT(gScriptRuntime, aScriptObjectRef);
+    ::JS_XDRDestroy(xdr);
+    if (NS_FAILED(rv)) return rv;
 
-    if (--gScriptRuntimeRefcnt == 0) {
-        NS_RELEASE(gJSRuntimeService);
-        gScriptRuntime = nsnull;
-    }
-
-    return NS_OK;
+    return rv;
 }
 
+nsresult
+nsJSContext::Deserialize(nsIObjectInputStream* aStream, void **aResult)
+{
+    JSObject *result = nsnull;
+    nsresult rv;
+
+    NS_TIMELINE_MARK_FUNCTION("js script deserialize");
+
+    PRUint32 size;
+    rv = aStream->Read32(&size);
+    if (NS_FAILED(rv)) return rv;
+
+    char* data;
+    rv = aStream->ReadBytes(size, &data);
+    if (NS_FAILED(rv)) return rv;
+
+    JSContext* cx = mContext;
+
+    JSXDRState *xdr = ::JS_XDRNewMem(cx, JSXDR_DECODE);
+    if (! xdr) {
+        rv = NS_ERROR_OUT_OF_MEMORY;
+    } else {
+        xdr->userdata = (void*) aStream;
+        ::JS_XDRMemSetData(xdr, data, size);
+
+        JSScript *script = nsnull;
+        if (! ::JS_XDRScript(xdr, &script)) {
+            rv = NS_ERROR_FAILURE;  // principals deserialization error?
+        } else {
+            result = ::JS_NewScriptObject(cx, script);
+            if (! result) {
+                rv = NS_ERROR_OUT_OF_MEMORY;    // certain error
+                ::JS_DestroyScript(cx, script);
+            }
+        }
+
+        // Update data in case ::JS_XDRScript called back into C++ code to
+        // read an XPCOM object.
+        //
+        // In that case, the serialization process must have flushed a run
+        // of counted bytes containing JS data at the point where the XPCOM
+        // object starts, after which an encoding C++ callback from the JS
+        // XDR code must have written the XPCOM object directly into the
+        // nsIObjectOutputStream.
+        //
+        // The deserialization process will XDR-decode counted bytes up to
+        // but not including the XPCOM object, then call back into C++ to
+        // read the object, then read more counted bytes and hand them off
+        // to the JSXDRState, so more JS data can be decoded.
+        //
+        // This interleaving of JS XDR data and XPCOM object data may occur
+        // several times beneath the call to ::JS_XDRScript, above.  At the
+        // end of the day, we need to free (via nsMemory) the data owned by
+        // the JSXDRState.  So we steal it back, nulling xdr's buffer so it
+        // doesn't get passed to ::JS_free by ::JS_XDRDestroy.
+
+        uint32 junk;
+        data = (char*) ::JS_XDRMemGetData(xdr, &junk);
+        if (data)
+            ::JS_XDRMemSetData(xdr, NULL, 0);
+        ::JS_XDRDestroy(xdr);
+    }
+
+    // If data is null now, it must have been freed while deserializing an
+    // XPCOM object (e.g., a principal) beneath ::JS_XDRScript.
+    if (data)
+        nsMemory::Free(data);
+    *aResult = result;
+    return NS_OK;
+}
 
 void
 nsJSContext::SetDefaultLanguageVersion(PRUint32 aVersion)
@@ -2887,6 +2959,32 @@ void nsJSRuntime::ShutDown()
   }
 
   sDidShutdown = PR_TRUE;
+}
+
+nsresult
+nsJSRuntime::LockGCThing(void* aScriptObject)
+{
+    NS_ASSERTION(sIsInitialized, "runtime not initialized");
+    if (! sRuntime) {
+        NS_NOTREACHED("couldn't remove GC root");
+        return NS_ERROR_FAILURE;
+    }
+
+    ::JS_LockGCThingRT(sRuntime, aScriptObject);
+    return NS_OK;
+}
+
+nsresult
+nsJSRuntime::UnlockGCThing(void* aScriptObject)
+{
+    NS_ASSERTION(sIsInitialized, "runtime not initialized");
+    if (! sRuntime) {
+        NS_NOTREACHED("couldn't remove GC root");
+        return NS_ERROR_FAILURE;
+    }
+
+    ::JS_UnlockGCThingRT(sRuntime, aScriptObject);
+    return NS_OK;
 }
 
 // A factory for the runtime.

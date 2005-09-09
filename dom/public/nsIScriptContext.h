@@ -49,6 +49,8 @@ class nsIScriptContextOwner;
 class nsIPrincipal;
 class nsIAtom;
 class nsIArray;
+class nsIObjectInputStream;
+class nsIObjectOutputStream;
 
 typedef void (*nsScriptTerminationFunc)(nsISupports* aRef);
 
@@ -260,11 +262,6 @@ public:
                                    void** aFunctionObject) = 0;
 
   /**
-   *  Inform the context of a GC root
-   */
-  virtual nsresult AddGCRoot(void *object, const char *desc) = 0;
-  virtual nsresult RemoveGCRoot(void *object) = 0;
-  /**
    * Set the default scripting language version for this context, which must
    * be a context specific to a particular scripting language.
    *
@@ -329,6 +326,11 @@ public:
    * @return NS_OK if the method is successful
    */
   virtual void ScriptEvaluated(PRBool aTerminated) = 0;
+
+  virtual nsresult Serialize(nsIObjectOutputStream* aStream,
+                             void *aScriptObject) = 0;
+  virtual nsresult Deserialize(nsIObjectInputStream* aStream,
+                               void **aResult) = 0;
 
   /**
    * Let the script context know who its owner is.

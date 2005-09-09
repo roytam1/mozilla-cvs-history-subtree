@@ -861,10 +861,8 @@ nsXULPDGlobalObject::GetLanguageContext(PRUint32 lang_id)
     nsresult rv;
     NS_ASSERTION(mLanguageGlobals[lang_ndx] == nsnull, "Have global without context?");
 
-    nsCOMPtr<nsIDOMScriptObjectFactory> factory = do_GetService(kDOMScriptObjectFactoryCID);
-    NS_ENSURE_TRUE(factory, nsnull);
     nsCOMPtr<nsILanguageRuntime> languageRuntime;
-    rv = factory->GetLanguageRuntimeByID(lang_id, getter_AddRefs(languageRuntime));
+    rv = NS_GetLanguageRuntimeByID(lang_id, getter_AddRefs(languageRuntime));
     NS_ENSURE_SUCCESS(rv, nsnull);
 
     nsCOMPtr<nsIScriptContext> ctxNew;
@@ -980,6 +978,7 @@ nsXULPDGlobalObject::OnFinalize()
     mLanguageContexts[lang_ndx] = nsnull;
     mLanguageGlobals[lang_ndx] = nsnull;
   }
+  SetGlobalObjectOwner(nsnull);
 }
 
 void

@@ -544,7 +544,15 @@ nsGlobalWindow::SetLanguageContext(PRUint32 lang_id, nsIScriptContext *aScriptCo
     // The outer should assert in this case, but let's do it anyway.
     NS_ASSERTION(outer->mLanguageContexts[lang_ndx] == nsnull,
                  "SetLanguageContext on inner window for existing language");
-    return outer->SetLanguageContext(lang_id, aScriptContext);
+    rv = outer->SetLanguageContext(lang_id, aScriptContext);
+    // sob - but now the inner window has no global - just copy it
+    if (NS_SUCCEEDED(rv)) {
+        NS_ASSERTION(mLanguageGlobals[lang_ndx] == nsnull, "How did inner get a global?");
+        NS_ASSERTION(outer->mLanguageGlobals[lang_ndx] != nsnull, "Outer got no global?");
+        // XXXmarkh - memory management issue??  Tell context of copy?
+        mLanguageGlobals[lang_ndx] = outer->mLanguageGlobals[lang_ndx];
+    }
+    return rv;
   }
 
 
@@ -1730,6 +1738,7 @@ nsGlobalWindow::OnFinalize()
     mLanguageContexts[lang_ndx] = nsnull;
     mLanguageGlobals[lang_ndx] = nsnull;
   }
+  SetGlobalObjectOwner(nsnull);
 }
 
 void

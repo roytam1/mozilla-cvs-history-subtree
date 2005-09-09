@@ -118,7 +118,6 @@ class nsXULPrototypeAttribute
 public:
     nsXULPrototypeAttribute()
         : mName(nsXULAtoms::id),  // XXX this is a hack, but names have to have a value
-          mEventContext(nsnull),
           mEventHandler(nsnull)
     {
         XUL_PROTOTYPE_ATTRIBUTE_METER(gNumAttributes);
@@ -130,7 +129,10 @@ public:
     nsAttrName mName;
     nsAttrValue mValue;
     void* mEventHandler;
-    nsCOMPtr<nsIScriptContext> mEventContext; // used only so we can do context->RemoveGCRoot
+    // sadly we also need the language ID here so we can do GC on destruction.
+    // Otherwise we could use the mLangID in the containing
+    // nsXULPrototypeElement
+    PRUint32 mLangID;
 
 #ifdef XUL_PROTOTYPE_ATTRIBUTE_METERING
     /**
@@ -240,7 +242,8 @@ public:
           mNumChildren(0),
           mChildren(nsnull),
           mNumAttributes(0),
-          mAttributes(nsnull)
+          mAttributes(nsnull),
+          mLangID(nsIProgrammingLanguage::UNKNOWN)
     {
         NS_LOG_ADDREF(this, 1, ClassName(), ClassSize());
     }
@@ -287,6 +290,11 @@ public:
     PRUint32                 mNumAttributes;
     nsXULPrototypeAttribute* mAttributes;         // [OWNER]
 
+    // The language ID can not be set on a per-node basis, but is tracked
+    // so that the language ID from the originating root can be used
+    // (eg, when a node from an overlay ends up in our document, that node
+    // must use its original script language, not our document's default.
+    PRUint32                 mLangID;
     static void ReleaseGlobals()
     {
         NS_IF_RELEASE(sCSSParser);
@@ -314,7 +322,7 @@ class nsXULDocument;
 class nsXULPrototypeScript : public nsXULPrototypeNode
 {
 public:
-    nsXULPrototypeScript(nsIScriptContext *aContext, PRUint32 aLineNo, PRUint32 version);
+    nsXULPrototypeScript(PRUint32 aLangID, PRUint32 aLineNo, PRUint32 version);
     virtual ~nsXULPrototypeScript();
 
 #ifdef NS_BUILD_REFCNT_LOGGING
@@ -344,10 +352,17 @@ public:
     PRPackedBool             mSrcLoading;
     PRPackedBool             mOutOfLine;
     nsXULDocument*           mSrcLoadWaiters;   // [OWNER] but not COMPtr
-    nsCOMPtr<nsIScriptContext> mScriptContext;
-    void *                   mScriptObject;
+    PRUint32                 mLangID;
     PRUint32                 mLangVersion;
 
+    // We need to take care with ownership of mScriptObject - so we expose
+    // getters and setters instead of the object itself.
+    void *GetScriptObject() {
+        return mScriptObject;
+    }
+    // Setting it is where ownership is tricky
+    void SetScriptObject(void *aScriptObject);
+    
     static void ReleaseGlobals()
     {
         NS_IF_RELEASE(sXULPrototypeCache);
@@ -362,6 +377,7 @@ protected:
         return sXULPrototypeCache;
     }
     static nsIXULPrototypeCache* sXULPrototypeCache;
+    void *                   mScriptObject;
 };
 
 class nsXULPrototypeText : public nsXULPrototypeNode

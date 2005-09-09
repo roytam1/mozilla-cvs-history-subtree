@@ -120,9 +120,6 @@ public:
                                    PRBool aShared,
                                    void** aFunctionObject);
 
-  virtual nsresult AddGCRoot(void *object, const char *desc);
-  virtual nsresult RemoveGCRoot(void *object);
-
   virtual void SetDefaultLanguageVersion(PRUint32 aVersion);
   virtual nsIScriptGlobalObject *GetGlobalObject();
   virtual void *GetNativeContext();
@@ -152,6 +149,9 @@ public:
 
   virtual void WillInitializeContext();
   virtual void DidInitializeContext();
+
+  virtual nsresult Serialize(nsIObjectOutputStream* aStream, void *aScriptObject);
+  virtual nsresult Deserialize(nsIObjectInputStream* aStream, void **aResult);
 
   nsresult ConvertSupportsTojsvals(nsISupports *aArgs,
                                    PRUint32 *aArgc, jsval **aArgv,
@@ -276,6 +276,9 @@ public:
   virtual nsresult CreateContext(nsIScriptContext **ret);
 
   virtual nsresult ParseVersion(const nsString &aVersionStr, PRUint32 *flags);
+
+  virtual nsresult LockGCThing(void *object);
+  virtual nsresult UnlockGCThing(void *object);
   
   // Private stuff.
   // called from the module Ctor to initialize statics

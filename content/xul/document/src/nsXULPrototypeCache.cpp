@@ -54,8 +54,7 @@
 #include "nsIXBLDocumentInfo.h"
 #include "nsIServiceManager.h"
 #include "nsXULDocument.h"
-#include "nsIJSRuntimeService.h"
-#include "jsapi.h"
+#include "nsILanguageRuntime.h"
 
 #include "nsIChromeRegistry.h"
 #include "nsIFastLoadService.h"
@@ -71,6 +70,12 @@
 #include "nsInterfaceHashtable.h"
 #include "nsDataHashtable.h"
 #include "nsAppDirectoryServiceDefs.h"
+
+struct CacheScriptEntry
+{
+    PRUint32    mLangID;
+    void*       mScriptObject;
+};
 
 class nsXULPrototypeCache : public nsIXULPrototypeCache,
                                    nsIObserver
@@ -88,8 +93,8 @@ public:
     NS_IMETHOD PutStyleSheet(nsICSSStyleSheet* aStyleSheet);
     NS_IMETHOD FlushStyleSheets();
 
-    NS_IMETHOD GetScript(nsIURI* aURI, void** aScriptObject);
-    NS_IMETHOD PutScript(nsIURI* aURI, void* aScriptObject);
+    NS_IMETHOD GetScript(nsIURI* aURI, PRUint32 *langID, void** aScriptObject);
+    NS_IMETHOD PutScript(nsIURI* aURI, PRUint32 langID, void* aScriptObject);
     NS_IMETHOD FlushScripts();
 
     NS_IMETHOD GetXBLDocumentInfo(nsIURI* aURL, nsIXBLDocumentInfo** _result);
@@ -114,14 +119,10 @@ protected:
 
     void FlushSkinFiles();
 
-    JSRuntime*  GetJSRuntime();
-
     nsInterfaceHashtable<nsURIHashKey,nsIXULPrototypeDocument> mPrototypeTable;
     nsInterfaceHashtable<nsURIHashKey,nsICSSStyleSheet>        mStyleSheetTable;
-    nsDataHashtable<nsURIHashKey,void*>                        mScriptTable;
+    nsDataHashtable<nsURIHashKey,CacheScriptEntry>             mScriptTable;
     nsInterfaceHashtable<nsURIHashKey,nsIXBLDocumentInfo>      mXBLDocTable;
-
-    JSRuntime*          mJSRuntime;
 
     ///////////////////////////////////////////////////////////////////////////
     // FastLoad
@@ -164,7 +165,6 @@ nsIFastLoadService*   nsXULPrototypeCache::gFastLoadService = nsnull;
 nsIFile*              nsXULPrototypeCache::gFastLoadFile = nsnull;
 
 nsXULPrototypeCache::nsXULPrototypeCache()
-    : mJSRuntime(nsnull)
 {
 }
 
@@ -298,18 +298,6 @@ nsXULPrototypeCache::PutPrototype(nsIXULPrototypeDocument* aDocument)
     return NS_OK;
 }
 
-JSRuntime*
-nsXULPrototypeCache::GetJSRuntime()
-{
-    if (!mJSRuntime) {
-        nsCOMPtr<nsIJSRuntimeService> rtsvc = do_GetService("@mozilla.org/js/xpc/RuntimeService;1");
-        if (rtsvc)
-            rtsvc->GetRuntime(&mJSRuntime);
-    }
-
-    return mJSRuntime;
-}
-
 NS_IMETHODIMP
 nsXULPrototypeCache::FlushPrototypes()
 {
@@ -351,30 +339,46 @@ nsXULPrototypeCache::FlushStyleSheets()
 
 
 NS_IMETHODIMP
-nsXULPrototypeCache::GetScript(nsIURI* aURI, void** aScriptObject)
+nsXULPrototypeCache::GetScript(nsIURI* aURI, PRUint32 *aLangID,
+                               void** aScriptObject)
 {
-    if (!mScriptTable.Get(aURI, aScriptObject))
+    CacheScriptEntry entry;
+    if (!mScriptTable.Get(aURI, &entry)) {
+        *aLangID = nsIProgrammingLanguage::UNKNOWN;
         *aScriptObject = nsnull;
-
+    } else {
+        *aScriptObject = entry.mScriptObject;
+        *aLangID = entry.mLangID;
+    }
     return NS_OK;
 }
 
 
 NS_IMETHODIMP
-nsXULPrototypeCache::PutScript(nsIURI* aURI, void* aScriptObject)
+nsXULPrototypeCache::PutScript(nsIURI* aURI, PRUint32 aLangID, void* aScriptObject)
 {
-    NS_ENSURE_TRUE(mScriptTable.Put(aURI, aScriptObject), NS_ERROR_OUT_OF_MEMORY);
+    CacheScriptEntry entry = {aLangID, aScriptObject};
+
+    NS_ENSURE_TRUE(mScriptTable.Put(aURI, entry), NS_ERROR_OUT_OF_MEMORY);
 
     // Lock the object from being gc'd until it is removed from the cache
-    JS_LockGCThingRT(GetJSRuntime(), aScriptObject);
-    return NS_OK;
+    nsresult rv;
+    nsCOMPtr<nsILanguageRuntime> rt;
+    rv = NS_GetLanguageRuntimeByID(aLangID, getter_AddRefs(rt));
+    if (NS_SUCCEEDED(rv))
+        rv = rt->LockGCThing(aScriptObject);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "Failed to GC lock the object");
+    // On failure doing the lock, we should remove the map entry?
+    return rv;
 }
 
 /* static */
 PR_STATIC_CALLBACK(PLDHashOperator)
-ReleaseJSObjectCallback(nsIURI* aKey, void* &aData, void* aClosure)
+ReleaseScriptObjectCallback(nsIURI* aKey, CacheScriptEntry &aData, void* aClosure)
 {
-    JS_UnlockGCThingRT((JSRuntime*) aClosure, aData);
+    nsCOMPtr<nsILanguageRuntime> rt;
+    if (NS_SUCCEEDED(NS_GetLanguageRuntimeByID(aData.mLangID, getter_AddRefs(rt))))
+        rt->UnlockGCThing(aData.mScriptObject);
     return PL_DHASH_REMOVE;
 }
 
@@ -382,7 +386,8 @@ NS_IMETHODIMP
 nsXULPrototypeCache::FlushScripts()
 {
     // This callback will unlock each object so it can once again be gc'd.
-    mScriptTable.Enumerate(ReleaseJSObjectCallback, (void*) GetJSRuntime());
+    // XXX - this might be slow - we fetch the runtime each and every object.
+    mScriptTable.Enumerate(ReleaseScriptObjectCallback, nsnull);
     return NS_OK;
 }
 
