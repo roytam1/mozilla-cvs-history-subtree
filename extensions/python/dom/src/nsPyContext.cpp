@@ -44,10 +44,9 @@
 #include "nsString.h"
 
 #include "nsPyContext.h"
-
 #include "compile.h"
-#include "marshal.h"
 #include "eval.h"
+#include "marshal.h"
 
 static PRInt32 sContextCount;
 
@@ -128,6 +127,41 @@ NS_IMPL_RELEASE(nsPythonContext)
   NS_WARNING("Python error calling DOM script");
   PyXPCOM_LogError("Python error");
   return PyXPCOM_SetCOMErrorFromPyException();
+}
+
+nsCAutoString
+nsPythonContext::FixSource(const nsAString &aOrigSource)
+{
+  nsCAutoString source;
+  CopyUTF16toUTF8(aOrigSource, source);
+
+  // Python insists on \n between lines and a trailing \n.  Fixup windows/mac
+
+  // Windows linebreaks: Map CRLF to LF:
+  source.ReplaceSubstring(NS_LITERAL_CSTRING("\r\n").get(),
+                          NS_LITERAL_CSTRING("\n").get());
+
+  // Mac linebreaks: Map any remaining CR to LF:
+  source.ReplaceSubstring(NS_LITERAL_CSTRING("\r").get(),
+                          NS_LITERAL_CSTRING("\n").get());
+
+  // trailing \n
+  source.Append(NS_LITERAL_CSTRING("\n"));
+  return source;
+}
+
+PyObject *
+nsPythonContext::InternalCompile(const nsAString &aOrigSource, const char *url,
+                                 PRUint32 lineNo)
+{
+  nsCAutoString source(FixSource(aOrigSource));
+  // It is very hard to trick Python into using a different line number.
+  // To do so would involve reimplementing PyParser_ParseStringFlagsFilename,
+  // but that relies on Python's Parser/tokenizer.h, which is not included in
+  // (windows at least) binary versions.
+  PyCompilerFlags cf;
+  cf.cf_flags = PyCF_SOURCE_IS_UTF8;
+  return Py_CompileStringFlags(source.get(), url, Py_file_input, &cf);
 }
 
 nsresult
@@ -248,11 +282,12 @@ nsPythonContext::ExecuteScript(void* aScriptObject,
   NS_ASSERTION(PyCode_Check(pyScriptObject), "aScriptObject not a code object?");
   NS_ENSURE_TRUE(PyCode_Check(pyScriptObject), NS_ERROR_UNEXPECTED);
   PyObject *ret = PyEval_EvalCode(pyScriptObject, pyScopeObject, NULL);
-  if (!ret)
-    return HandlePythonError();
-//  PyObject *obu = PyUnicode_FromObject(obRet);
-//  if (obRet)
-//    PyUnicode_AS_UNICODE(val_use)
+  if (!ret) {
+    HandlePythonError();
+    // we should notify someone/something...
+    // but either way, we return OK - it was "just" a script error
+    return NS_OK;
+  }
   Py_DECREF(ret);
   return NS_OK;
 }
@@ -270,26 +305,11 @@ nsPythonContext::CompileScript(const PRUnichar* aText,
   NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
   NS_TIMELINE_MARK_FUNCTION("nsPythonContext::CompileScript");
 
-  // XXX - todo - specify PyCF_SOURCE_IS_UTF8 in Py_CompileStringFlags
-  NS_ConvertUTF16toUTF8 cs(aText, aTextLength);
-  // XXX - need to instantiate a tokenizer and set its lineno member.
-  // ignore that for now.
+  // nsDependentString looked good, but insists on no length!
+  nsAutoString strSource(aText, aTextLength);
 
-  // Python insists on \n between lines and a trailing \n.  Fixup windows/mac
-  nsCAutoString source(cs);  // hope this does copy-on-write
-
-  // Windows linebreaks: Map CRLF to LF:
-  source.ReplaceSubstring(NS_LITERAL_CSTRING("\r\n").get(),
-                          NS_LITERAL_CSTRING("\n").get());
-
-  // Mac linebreaks: Map any remaining CR to LF:
-  source.ReplaceSubstring(NS_LITERAL_CSTRING("\r").get(),
-                          NS_LITERAL_CSTRING("\n").get());
-
-  // trailing \n
-  source.Append(NS_LITERAL_CSTRING("\n"));
   CEnterLeavePython _celp;
-  PyObject *co = Py_CompileString(source.get(), aURL, Py_file_input);
+  PyObject *co = InternalCompile(strSource, aURL, aLineNo);
   if (!co)
     return HandlePythonError();
   *aScriptObject = co;
@@ -306,28 +326,8 @@ nsPythonContext::CompileEventHandler(nsIScriptBinding *aTarget, nsIAtom *aName,
 {
   NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
 
-  // shameless clone of above - let's see what happens before rationalizing
-  // XXX - todo - specify PyCF_SOURCE_IS_UTF8 in Py_CompileStringFlags
-  nsCAutoString cs;
-  CopyUTF16toUTF8(aBody, cs);
-  // XXX - need to instantiate a tokenizer and set its lineno member.
-  // ignore that for now.
-
-  // Python insists on \n between lines and a trailing \n.  Fixup windows/mac
-  nsCAutoString source(cs);  // hope this does copy-on-write
-
-  // Windows linebreaks: Map CRLF to LF:
-  source.ReplaceSubstring(NS_LITERAL_CSTRING("\r\n").get(),
-                          NS_LITERAL_CSTRING("\n").get());
-
-  // Mac linebreaks: Map any remaining CR to LF:
-  source.ReplaceSubstring(NS_LITERAL_CSTRING("\r").get(),
-                          NS_LITERAL_CSTRING("\n").get());
-
-  // trailing \n
-  source.Append(NS_LITERAL_CSTRING("\n"));
   CEnterLeavePython _celp;
-  PyObject *co = Py_CompileString(source.get(), aURL, Py_file_input);
+  PyObject *co = InternalCompile(aBody, aURL, aLineNo);
   if (!co)
     return HandlePythonError();
   PYLEAK_STAT_INCREMENT(EventHandler);
@@ -526,10 +526,11 @@ nsPythonContext::Deserialize(nsIObjectInputStream* aStream, void **aResult)
   PRUint32 magic;
   rv = aStream->Read32(&magic);
   if (NS_FAILED(rv)) return rv;
-  if (magic != PyImport_GetMagicNumber()) {
-    NS_WARNING("Python has different marshal version");
-    return NS_ERROR_UNEXPECTED;
-  }
+
+  // Note that if we find a different marshalled version, we should
+  // still read the bytes from the stream, but throw them away and
+  // simply return nsnull in aResult.
+  // Failure to do this throws the stream out for future objects.
   PRUint32 nBytes;
   rv = aStream->Read32(&nBytes);
   if (NS_FAILED(rv)) return rv;
@@ -537,6 +538,14 @@ nsPythonContext::Deserialize(nsIObjectInputStream* aStream, void **aResult)
   char* data = nsnull;
   rv = aStream->ReadBytes(nBytes, &data);
   if (NS_FAILED(rv)) return rv;
+
+  if (magic != PyImport_GetMagicNumber()) {
+    NS_WARNING("Python has different marshal version");
+    if (data)
+      nsMemory::Free(data);
+    *aResult = nsnull;
+    return NS_OK;
+  }
 
   CEnterLeavePython _celp;
   PyObject *codeObject = PyMarshal_ReadObjectFromString(data, nBytes);

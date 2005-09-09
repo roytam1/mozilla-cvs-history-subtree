@@ -148,6 +148,12 @@ public:
 
   NS_DECL_NSITIMERCALLBACK
 protected:
+
+  // covert utf-16 source code into utf8 with normalized line endings.
+  nsCAutoString FixSource(const nsAString &aSource);
+  PyObject *InternalCompile(const nsAString &source, const char *url,
+                            PRUint32 lineNo);
+
   PRPackedBool mIsInitialized;
   PRPackedBool mScriptsEnabled;
   PRPackedBool mProcessingScriptTag;
