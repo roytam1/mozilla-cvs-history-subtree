@@ -412,6 +412,7 @@ nsStandardURL::BuildNormalizedSpec(const char *spec)
     nsCAutoString encUsername;
     nsCAutoString encPassword;
     nsCAutoString encHost;
+    PRBool useEncHost;
     nsCAutoString encDirectory;
     nsCAutoString encBasename;
     nsCAutoString encExtension;
@@ -449,6 +450,7 @@ nsStandardURL::BuildNormalizedSpec(const char *spec)
     // However, perform Unicode normalization on it, as IDN does.
     mHostEncoding = eEncoding_ASCII;
     if (mHost.mLen > 0) {
+        useEncHost = PR_FALSE;
         const nsCSubstring& tempHost =
             Substring(spec + mHost.mPos, spec + mHost.mPos + mHost.mLen);
         if (IsASCII(tempHost))
@@ -456,8 +458,10 @@ nsStandardURL::BuildNormalizedSpec(const char *spec)
         else {
             mHostEncoding = eEncoding_UTF8;
             if (gIDNService &&
-                NS_SUCCEEDED(gIDNService->Normalize(tempHost, encHost)))
+                NS_SUCCEEDED(gIDNService->Normalize(tempHost, encHost))) {
                 approxLen += encHost.Length();
+                useEncHost = PR_TRUE;
+            }
             else {
                 encHost.Truncate();
                 approxLen += mHost.mLen;
@@ -492,7 +496,12 @@ nsStandardURL::BuildNormalizedSpec(const char *spec)
         buf[i++] = '@';
     }
     if (mHost.mLen > 0) {
-        i = AppendSegmentToBuf(buf, i, spec, mHost, &encHost);
+        if (useEncHost) {
+            mHost.mPos = i;
+            mHost.mLen = encHost.Length();
+            i = AppendToBuf(buf, i, encHost.get(), mHost.mLen);
+        } else
+            i = AppendSegmentToBuf(buf, i, spec, mHost);
         net_ToLowerCase(buf + mHost.mPos, mHost.mLen);
         if (mPort != -1 && mPort != mDefaultPort) {
             nsCAutoString portbuf;
