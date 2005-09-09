@@ -8073,6 +8073,7 @@ nsDocShell::EnsureScriptEnvironment()
 
     // Ensure the script object is set to run javascript - other languages
     // setup on demand.
+    // XXX - should this be setup to run the default language for this doc?
     nsresult rv;
     nsCOMPtr<nsILanguageRuntime> languageRuntime;
     rv = factory->GetLanguageRuntimeByID(nsIProgrammingLanguage::JAVASCRIPT,
