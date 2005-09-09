@@ -47,7 +47,7 @@
 
 const nsIX509CertDB = Components.interfaces.nsIX509CertDB;
 const nsX509CertDB = "@mozilla.org/security/x509certdb;1";
-const CertAttribute = "usercertificate;binary";
+const CertAttribute = "usersmimecertificate;binary";
 
 var gEmailAddresses;
 var gDirectoryPref;
