@@ -16,10 +16,12 @@
  *
  * The Initial Developer of the Original Code is
  * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2002
+ * Portions created by the Initial Developer are Copyright (C) 2004
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *    Simon Fraser <smfr@smfr.org>
+ *
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -34,25 +36,19 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
- 
-#import <Cocoa/Cocoa.h>
-#import <PreferencePanes/NSPreferencePane.h>
 
-#import "PreferencePaneBase.h"
+#import <AppKit/AppKit.h>
 
-class nsIPref;
-
-@interface OrgMozillaChimeraPreferenceSecurity : PreferencePaneBase
+@interface ExtendedSplitView : NSSplitView
 {
-  IBOutlet NSButton* mLeaveEncrypted;
-  IBOutlet NSButton* mLoadLowGrade;
-  IBOutlet NSButton* mViewMixed;  
+  NSString*       mAutosaveName;    // owned
+  BOOL            mAutosaveSplitterPosition;
 }
 
--(IBAction) clickEnableLeaveEncrypted:(id)sender;
--(IBAction) clickEnableLoadLowGrade:(id)sender;
--(IBAction) clickEnableViewMixed:(id)sender;
+- (void)setAutosaveName:(NSString *)name;
+- (NSString *)autosaveName;
 
--(IBAction)showCertificates:(id)sender;
+- (BOOL)autosaveSplitterPosition;
+- (void)setAutosaveSplitterPosition:(BOOL)inAutosave;
 
 @end
