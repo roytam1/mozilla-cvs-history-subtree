@@ -225,6 +225,14 @@ nsresult PyXPCOM_SetCOMErrorFromPyException()
 	if (!PyErr_Occurred())
 		// No error occurred
 		return NS_OK;
+	// todo:
+	// * Translate PyExc_MemoryError to NS_ERROR_OUT_OF_MEMORY
+	// * Set an exception using the exception service.
+
+	// Once we have returned to pyxpcom, we don't want to leave a
+	// Python exception pending - it may get noticed when the next call
+	// is made on the same thread.
+	PyErr_Clear();
 	return NS_ERROR_FAILURE;
 }
 
