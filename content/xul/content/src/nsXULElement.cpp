@@ -3034,6 +3034,9 @@ nsXULPrototypeElement::Serialize(nsIObjectOutputStream* aStream,
     // Write basic prototype data
     rv = aStream->Write32(mType);
 
+    // Write script language
+    rv |= aStream->Write32(mLangID);
+
     // Write Node Info
     PRInt32 index = aNodeInfos->IndexOf(mNodeInfo);
     NS_ASSERTION(index >= 0, "unknown nsINodeInfo index");
@@ -3112,9 +3115,11 @@ nsXULPrototypeElement::Deserialize(nsIObjectInputStream* aStream,
     NS_PRECONDITION(aNodeInfos, "missing nodeinfo array");
     nsresult rv;
 
+    // Read script language
+    rv = aStream->Read32(&mLangID);
     // Read Node Info
     PRUint32 number;
-    rv = aStream->Read32(&number);
+    rv |= aStream->Read32(&number);
     mNodeInfo = aNodeInfos->SafeObjectAt(number);
     if (!mNodeInfo)
         return NS_ERROR_UNEXPECTED;
