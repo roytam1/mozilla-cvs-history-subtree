@@ -93,6 +93,12 @@ zapVerboseErrorService.fun(
     return this._currentMessage;
   });
 
+//  readonly attribute AString lastMessage;
+zapVerboseErrorService.getter(
+  "lastMessage",
+  function get_lastMessage() {
+    return this._currentMessage;
+  });
 
 // unsigned long setVerboseErrorMessage(in AString message);
 zapVerboseErrorService.fun(

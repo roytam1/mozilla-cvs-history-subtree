@@ -54,6 +54,8 @@ interface zapIVerboseErrorService : nsISupports
 {
   AString retrieveVerboseErrorMessage(in unsigned long errorCode);
 
+  readonly attribute AString lastMessage;
+  
   unsigned long setVerboseErrorMessage(in AString message);
 
   boolean isVerboseError(in unsigned long errorCode);
