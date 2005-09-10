@@ -107,6 +107,7 @@ SipTCPConnection.fun(
   function init(socket, transceiver) {
     this._readBuffer = "";
     this._pendingMessage = null;
+    this._pendingMessageBytes = null;
     this._pendingBytes = 0;
     
     this._transceiver = transceiver;
@@ -214,23 +215,26 @@ SipTCPConnection.fun(
         // added later):
         var endp = start + match.index + 4;
         try {
-          var message = gSyntaxFactory.deserializeMessage(this._readBuffer.substring(0, endp));
+          var messageBytes = this._readBuffer.substring(0, endp);
+          var message = gSyntaxFactory.deserializeMessage(messageBytes);
           var l = 0;
           var cl = message.getSingleHeader("Content-Length");
           if (cl)
             l = cl.contentLength;
           if (l>0) {
             // wait for body octets:
+            this._pendingMessageBytes = messageBytes;
             this._pendingMessage = message;
             this._pendingBytes = l;
           }
           else {
-            this._handleMessage(message);
+            this._handleMessage(messageBytes, message);
           }
         }
         catch(e) {
           // parse error
           this._warning("Malformed message: "+e);
+          this._handleMessage(messageBytes, null);
           
         }
         finally {
@@ -244,10 +248,12 @@ SipTCPConnection.fun(
         // we have a pending message, waiting for body octets
         if (this._pendingBytes<=this._readBuffer.length) {
           this._pendingMessage.body = this._readBuffer.substring(0, this._pendingBytes);
+          this._pendingMessageBytes += this._readBuffer.substring(0, this._pendingBytes);
           this._readBuffer = this._readBuffer.substring(this._pendingBytes);
           start = 0;
-          this._handleMessage(this._pendingMessage);
+          this._handleMessage(this._pendingMessageBytes, this._pendingMessage);
           this._pendingMessage = null;
+          this._pendingMessageBytes = null;
           this._pendingBytes = 0;
         }
         else {
@@ -262,9 +268,17 @@ SipTCPConnection.fun(
   });
 
 SipTCPConnection.fun(
-  function _handleMessage(message) {
-    this._transceiver._handleReceivedMessage("tcp", this.host, this.port,
-                                           message, this);
+  function _handleMessage(bytes, message) {
+    if (this._transceiver.trafficMonitor)
+      this._transceiver.trafficMonitor.notifyPacket(bytes,
+                                                    "tcp",
+                                                    "xxx-local-address",
+                                                    this.socket.port,
+                                                    this.host, this.port,
+                                                    false);
+    if (message)
+      this._transceiver._handleReceivedMessage("tcp", this.host, this.port,
+                                               message, this);
   });
 
 
@@ -274,8 +288,8 @@ SipTCPConnection.fun(
 
 var SipTransceiver = makeClass("SipTransceiver", SupportsImpl);
 SipTransceiver.addInterfaces(Components.interfaces.zapISipTransceiver,
-                           Components.interfaces.nsIUDPReceiver,
-                           Components.interfaces.nsIServerSocketListener);
+                             Components.interfaces.nsIUDPReceiver,
+                             Components.interfaces.nsIServerSocketListener);
 
 SipTransceiver.appendCtor(
   function() {
@@ -358,13 +372,14 @@ SipTransceiver.fun(
 //                               in zapISipConnection connection);
 SipTransceiver.fun(
   function sendMessage(message, protocol, destAddress, destPort, connection) {
+    var localPort;
     if (protocol == "udp") {
       this._assert(connection==null,
                    "Connection provided for connection-less protocol!");
       var socket = this._getUDPSendSocket();
       if (!socket) this._error("SipTransceiver: No UDP socket available");
-      log("Sending UDP packet to "+destAddress+":"+destPort+ " :\n"+message.serialize());
       socket.send(message.serialize(), destAddress, destPort);
+      localPort = socket.port;
     }
     else if (protocol == "tcp") {
       // if a connection has been provided, use it:
@@ -383,9 +398,18 @@ SipTransceiver.fun(
       }
       log("Sending packet via TCP :\n"+message.serialize());
       connection.send(message.serialize());
+      localPort = connection.socket.port;
     }
     else
       this._error("SipTransceiver: Unsupported protocol '"+protocol+"'");
+
+    if (this.trafficMonitor)
+      this.trafficMonitor.notifyPacket(message.serialize(),
+                                       protocol,
+                                       "xxx-local-address",
+                                       localPort,
+                                       destAddress, destPort,
+                                       true);
     return connection;
   });
 
@@ -395,6 +419,9 @@ SipTransceiver.fun(
     this._receiver = receiver;
   });
 
+// attribute zapISipTrafficMonitor trafficMonitor;
+SipTransceiver.obj("trafficMonitor", null);
+
 // void shutdown();
 SipTransceiver.fun(
   function shutdown() {
@@ -402,6 +429,8 @@ SipTransceiver.fun(
     hashmap(this._listeningSockets, function(k,s) {s.close(); return false;});
     // close all open connections:
     hashmap(this._connections, function(k,c) {c.close(); return false;});
+
+    this.trafficMonitor = null;
   });
 
 //----------------------------------------------------------------------
@@ -409,8 +438,14 @@ SipTransceiver.fun(
 
 SipTransceiver.fun(
   function handleDatagram(socket, data) {
-//    this._dump("Received a udp datagram on port "+socket.port);
-//    this._dump("Sender: "+data.address+" Port: "+data.port);
+    if (this.trafficMonitor)
+      this.trafficMonitor.notifyPacket(data.data,
+                                       "udp",
+                                       "xxx-local-address",
+                                       socket.port,
+                                       data.address, data.port,
+                                       false);
+    
     try {
       var message = gSyntaxFactory.deserializeMessage(data.data);
     }
@@ -508,9 +543,9 @@ SipTransport.appendCtor(
 
 SipTransport.fun(
   function init(config) {
-    this._assert(!this._transceiver, "already initialized");
-    this._transceiver = SipTransceiver.instantiate();
-    this._transceiver.setTransceiverSink(this);
+    this._assert(!this.transceiver, "already initialized");
+    this.transceiver = SipTransceiver.instantiate();
+    this.transceiver.setTransceiverSink(this);
 
     var port = 5060;
     if (config) {
@@ -523,7 +558,7 @@ SipTransport.fun(
     // udp and tcp:
     while (port < 65536) {
       try {
-        this._transceiver.openListeningSocket("udp", port);
+        this.transceiver.openListeningSocket("udp", port);
       }
       catch(e) {
         ++port;
@@ -531,10 +566,10 @@ SipTransport.fun(
       }
 
       try {
-        this._transceiver.openListeningSocket("tcp", port);
+        this.transceiver.openListeningSocket("tcp", port);
       }
       catch(e) {
-        this._transceiver.closeListeningSocket("udp", port);
+        this.transceiver.closeListeningSocket("udp", port);
         ++port;
         continue;
       }
@@ -549,13 +584,16 @@ SipTransport.fun(
 
 SipTransport.fun(
   function shutdown() {
-    this._transceiver.shutdown();
+    this.transceiver.shutdown();
   });
 
 SipTransport.fun(
   function appendTransportSink(sink) {
     this._sinks.push(sink);
   });
+
+//  readonly attribute zapISipTransceiver transceiver;
+SipTransport.obj("transceiver", null);
 
 SipTransport.obj("listeningPort", 0);
 
@@ -576,9 +614,9 @@ SipTransport.fun(
     // Add transport portion of 'sent-protocol':
     topVia.transport = endpoint.transport.toUpperCase();
     
-    return this._transceiver.sendMessage(request, endpoint.transport,
-                                         endpoint.address,
-                                         endpoint.port, connection);
+    return this.transceiver.sendMessage(request, endpoint.transport,
+                                        endpoint.address,
+                                        endpoint.port, connection);
   });
 
 SipTransport.fun(
@@ -603,10 +641,10 @@ SipTransport.fun(
     if (!port)
       port = "5060";
     
-    return this._transceiver.sendMessage(response, transport,
-                                         address,
-                                         port,
-                                         connection);
+    return this.transceiver.sendMessage(response, transport,
+                                        address,
+                                        port,
+                                        connection);
   });
 
 //----------------------------------------------------------------------

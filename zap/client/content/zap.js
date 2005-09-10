@@ -103,6 +103,7 @@ function windowInit() {
 }
 
 function windowClose() {
+  cleanupSipStack();
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -360,8 +361,39 @@ function initSipStack() {
                  makePropertyBag({$port_base:5060,
                                   $methods: "OPTIONS,INVITE,ACK,CANCEL,BYE"}));
   document.getElementById("status_text").label = "Listening for UDP/TCP SIP traffic on port "+wSipStack.listeningPort;
+
+  // set up logging to profile_dir/zap.sbox:
+  wSipTrafficLogger.logOutputStream = openFileForWriting(getProfileFile("zap.sbox"),
+                                                         true);
+  wSipStack.transport.transceiver.trafficMonitor = wSipTrafficLogger;
 }
 
+function cleanupSipStack() {
+  wSipTrafficLogger.logOutputStream.close();
+  wSipTrafficLogger.logOutputStream = null;
+}
+
+// traffic logger for logging the raw sip traffic to profile_dir/zap.sbox
+var wSipTrafficLogger = {
+  logOutputStream : null,
+  notifyPacket: function(data, protocol, localAddress, localPort,
+                         remoteAddress, remotePort, outbound) {
+    if (!this.logOutputStream) return;
+    var entry = "- From "+localAddress+":"+localPort;
+    if (outbound)
+      entry += "-->";
+    else
+      entry += "<--";
+    entry += remoteAddress+":" + remotePort + " " + protocol + " ";
+    entry += data.length + "bytes " + (new Date()).toUTCString() + "\n";
+    entry += data + "\n\n";
+
+    this.logOutputStream.write(entry, entry.length);
+  }
+};
+
+
+// our UA request handler:
 var wUAHandler = {
   handleNonInviteRequest: function(rs) {
     return false;

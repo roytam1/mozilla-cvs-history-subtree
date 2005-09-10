@@ -40,6 +40,7 @@ interface zapISipTransceiverSink;
 interface zapISipMessage;
 interface zapISipConnection;
 interface zapISipListeningSocket;
+interface zapISipTrafficMonitor;
 
 /**
  * Part of the SIP transport layer (RFC 3261 section 18).
@@ -73,6 +74,11 @@ interface zapISipTransceiver : nsISupports
   void setTransceiverSink(in zapISipTransceiverSink receiver);
 
   /**
+   * The trafficMonitor receives all raw incoming and outgoing traffic.
+   */
+  attribute zapISipTrafficMonitor trafficMonitor;
+  
+  /**
    * Close all open connections and listening sockets.
    */
   void shutdown();
@@ -86,3 +92,14 @@ interface zapISipTransceiverSink : nsISupports
                         in ACString sourceAddress, in ACString sourcePort,
                         in zapISipConnection connection);
 };
+
+
+[scriptable, uuid(dd7c4e01-8026-4e15-81f4-9e42853360e8)]
+interface zapISipTrafficMonitor : nsISupports
+{
+  void notifyPacket(in ACString data, in ACString protocol,
+                    in ACString localAddress, in ACString localPort,
+                    in ACString remoteAddress, in ACString remotePort,
+                    in boolean outbound);
+};
+

@@ -37,6 +37,7 @@
 #include "nsISupports.idl"
 
 interface zapISipTransportSink;
+interface zapISipTransceiver;
 interface zapISipMessage;
 interface zapISipConnection;
 interface zapISipEndpoint;
@@ -47,7 +48,7 @@ interface nsIPropertyBag2;
 /**
  * API for the SIP transport layer (RFC 3261 section 18).
  *
- * Implemented by component <b>'@mozilla.org/zap/siptransport;1'</b>
+ * Implemented by component <b>'\@mozilla.org/zap/siptransport;1'</b>
  */
 [scriptable, uuid(246b5eed-332b-43b2-b80c-75479379e65f)]
 interface zapISipTransport : nsISupports
@@ -70,6 +71,8 @@ interface zapISipTransport : nsISupports
 
   void appendTransportSink(in zapISipTransportSink sink);
 
+  readonly attribute zapISipTransceiver transceiver;
+  
   readonly attribute unsigned short listeningPort;
   
   zapISipConnection sendRequest(in zapISipRequest request,
