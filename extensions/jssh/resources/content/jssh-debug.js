@@ -571,3 +571,10 @@ function time(fct) {
   return end.getTime() - start.getTime();
 }
 
+//----------------------------------------------------------------------
+_help_strings.lastError = "lastError() returns the last verbose error from the zap verbose error service";
+function lastError() {
+  var errorService = Components.classes["@mozilla.org/zap/verbose-error-service;1"]
+    .getService(Components.interfaces.zapIVerboseErrorService);
+  return errorService.lastMessage;
+}
