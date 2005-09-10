@@ -477,32 +477,38 @@ function getVerboseErrorService() {
 }
     
 ErrorReporter.fun(
+  {mergeover:false},
   function _verboseError(message) {
     throw(getVerboseErrorService().setVerboseErrorMessage(message));
   });
 
 ErrorReporter.fun(
+  {mergeover:false},
   function _error(message) {
     throw(this+"::"+Components.stack.caller.name+": ERROR: "+message);
   });
 
 ErrorReporter.fun(
+  {mergeover:false},
   function _assert(cond, message) {
     if (!cond)
       throw(this+"::"+Components.stack.caller.name+": ASSERTION FAILED: "+message);
   });
 
 ErrorReporter.fun(
+  {mergeover:false},
   function _warning(message) {
     dump(this+"::"+Components.stack.caller.name+": WARNING: "+message+"\n");
   });
 
 ErrorReporter.fun(
+  {mergeover:false},
   function _dump(message) {
     dump(this+"::"+Components.stack.caller.name+": "+message+"\n");
   });
 
 ErrorReporter.fun(
+  {mergeover:false},
   function _backtrace(offset, max_depth) {
     var str = "";
     if (!offset) offset = 1;
