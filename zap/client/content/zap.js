@@ -121,7 +121,11 @@ function cmdExit() {
 }
 
 function cmdGo() {
-  loadPage("chrome://zap/content/make-call.xul", 1);
+  loadPage("chrome://zap/content/make-call.xul", true);
+}
+
+function cmdGenericRequest() {
+  loadPage("chrome://zap/content/generic-request.xul", false);
 }
 
 ////////////////////////////////////////////////////////////////////////

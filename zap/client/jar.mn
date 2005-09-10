@@ -16,6 +16,7 @@ zap.jar:
   content/zap/make-call.xul          (content/make-call.xul)
   content/zap/call.xul               (content/call.xul)
   content/zap/prefs.xul              (content/prefs.xul)
+  content/zap/generic-request.xul    (content/generic-request.xul)
 
 en-US.jar:
   locale/en-US/zap/zap.dtd           (locale/en-US/zap.dtd)

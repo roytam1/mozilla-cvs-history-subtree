@@ -58,6 +58,7 @@
     <command id="cmd_call" oncommand="cmdCall()"/>
     <command id="cmd_request" oncommand="cmdRequest()"/>
     <command id="cmd_about" oncommand="cmdAbout()"/>
+    <command id="cmd_generic_request" oncommand="cmdGenericRequest()"/>
   </commandset>
 
   <toolbox>
@@ -79,6 +80,9 @@
       <menu label="Tools"
             accesskey="T">
         <menupopup>
+          <menuitem label="Send generic request..."
+                    accesskey="s"
+                    command="cmd_generic_request" />
         </menupopup>
       </menu>
       <menu label="Help"
