@@ -48,26 +48,45 @@
 #include "eval.h"
 #include "marshal.h"
 
-static PRInt32 sContextCount;
-
 #ifdef NS_DEBUG
 class nsPyDOMObjectLeakStats
   {
     public:
       nsPyDOMObjectLeakStats()
-        : mEventHandlerCount(0), mScriptObjectCount(0), mBindingCount(0) {}
+        : mEventHandlerCount(0), mScriptObjectCount(0), mBindingCount(0),
+          mScriptContextCount(0) {}
 
       ~nsPyDOMObjectLeakStats()
         {
-          printf("nsPyDOMObjectLeakStats lost object counts\n");
-          printf(" => mEventHandlerCount:   % 10d\n", mEventHandlerCount);
-          printf(" => mScriptObjectCount:   % 10d\n", mScriptObjectCount);
-          printf(" => mBindingCount:        % 10d\n", mBindingCount);
+          printf("pydom leaked objects:\n");
+          PRBool leaked = PR_FALSE;
+#define CHECKLEAK(attr) \
+          if (attr) { \
+            printf(" => %-20s % 6d\n", #attr ":", attr); \
+            leaked = PR_TRUE; \
+          }
+      
+          CHECKLEAK(mScriptObjectCount);
+          CHECKLEAK(mBindingCount);
+          CHECKLEAK(mScriptContextCount);
+          if (_PyXPCOM_GetInterfaceCount()) {
+            printf(" => %-20s % 6d\n",
+                   "pyxpcom interfaces:", _PyXPCOM_GetInterfaceCount());
+            leaked = PR_TRUE;
+          }
+          if (_PyXPCOM_GetGatewayCount()) {
+            printf(" => %-20s % 6d\n",
+                   "pyxpcom gateways:", _PyXPCOM_GetGatewayCount());
+            leaked = PR_TRUE;
+          }
+          if (!leaked)
+            printf("No leaks.objects");
         }
 
       PRInt32 mEventHandlerCount;
       PRInt32 mScriptObjectCount;
       PRInt32 mBindingCount;
+      PRInt32 mScriptContextCount;
   };
 static nsPyDOMObjectLeakStats gLeakStats;
 #define PYLEAK_STAT_INCREMENT(_s) PR_AtomicIncrement(&gLeakStats.m ## _s ## Count)
@@ -90,24 +109,17 @@ static PyObject *delegateModule = NULL;
 nsPythonContext::nsPythonContext()
     : mGlobal(NULL)
 {
-  ++sContextCount;
-
   mIsInitialized = PR_FALSE;
   mNumEvaluations = 0;
   mOwner = nsnull;
   mScriptsEnabled = PR_TRUE;
   mProcessingScriptTag=PR_FALSE;
+  PYLEAK_STAT_INCREMENT(ScriptContext);
 }
 
 nsPythonContext::~nsPythonContext()
 {
-                  
-  // Unregister our "javascript.options.*" pref-changed callback.
-//  nsContentUtils::UnregisterPrefCallback(js_options_dot_str,
-//                                         JSOptionChangedCallback,
-//                                         this);
-
-    --sContextCount;
+  PYLEAK_STAT_DECREMENT(ScriptContext);
 }
 
 // QueryInterface implementation for nsPythonContext
@@ -132,6 +144,8 @@ NS_IMPL_RELEASE(nsPythonContext)
 nsCAutoString
 nsPythonContext::FixSource(const nsAString &aOrigSource)
 {
+  // As of python 2.3, this \r\n etc mangling is necessary.  However I heard
+  // a rumour later versions were fixing that.
   nsCAutoString source;
   CopyUTF16toUTF8(aOrigSource, source);
 
@@ -159,6 +173,8 @@ nsPythonContext::InternalCompile(const nsAString &aOrigSource, const char *url,
   // To do so would involve reimplementing PyParser_ParseStringFlagsFilename,
   // but that relies on Python's Parser/tokenizer.h, which is not included in
   // (windows at least) binary versions.
+  // Another options is to tricky Python by prepending lineNo '\n' chars
+  // before the source, but that seems extreme!
   PyCompilerFlags cf;
   cf.cf_flags = PyCF_SOURCE_IS_UTF8;
   return Py_CompileStringFlags(source.get(), url, Py_file_input, &cf);
