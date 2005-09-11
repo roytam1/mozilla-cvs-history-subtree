@@ -430,6 +430,7 @@ PyG_Base::GetWeakReference(nsIWeakReference **ret)
 	if (ret==nsnull) return NS_ERROR_INVALID_POINTER;
 	if (!m_pWeakRef) {
 		// First query for a weak reference - create it.
+		// XXX - this looks like it needs thread safety!?
 		m_pWeakRef = new PyXPCOM_GatewayWeakReference(this);
 		NS_ABORT_IF_FALSE(m_pWeakRef, "Shouldn't be able to fail creating a weak reference!");
 		if (!m_pWeakRef)
@@ -448,17 +449,17 @@ nsresult PyG_Base::HandleNativeGatewayError(const char *szMethodName)
 		// good error reporting is critical for users to know WTF 
 		// is going on - especially with TypeErrors etc in their
 		// return values (ie, after the Python code has successfully
-		// existed, but we encountered errors unpacking their
+		// exited, but we encountered errors unpacking their
 		// result values for the COM caller - there is literally no 
 		// way to catch these exceptions from Python code, as their
-		// is no Python function on the call-stack)
+		// is no Python function directly on the call-stack)
 
 		// First line of attack in an error is to call-back on the policy.
 		// If the callback of the error handler succeeds and returns an
 		// integer (for the nsresult), we take no further action.
 
-		// If this callback fails, we log _2_ exceptions - the error handler
-		// error, and the original error.
+		// If this callback fails, we log _2_ exceptions - the error
+		// handler error, and the original error.
 
 		PRBool bProcessMainError = PR_TRUE; // set to false if our exception handler does its thing!
 		PyObject *exc_typ, *exc_val, *exc_tb;
@@ -700,10 +701,10 @@ PyObject *PyG_Base::UnwrapPythonObject(void)
 
  Some special support to help with object identity.
 
-  In the simplest case, assume a Python COM object is
+  In the simplest case, assume a Python XPCOM object is
   supporting a function "nsIWhatever GetWhatever()",
   so implements it as:
-    return this
+    return self
   it is almost certain they intend returning
   the same COM OBJECT to the caller!  Thus, if a user of this COM
   object does:
@@ -713,7 +714,7 @@ PyObject *PyG_Base::UnwrapPythonObject(void)
 
   We almost certainly expect p1==p2==foo.
 
-  We previously _did_ have special support for the "this"
+  We previously _did_ have special support for the "self"
   example above, but this implements a generic scheme that
   works for _all_ objects.
 
