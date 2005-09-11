@@ -1104,6 +1104,7 @@ Otherwise, we return the URL we originally got. Right now this supports .url and
   NSSavePanel* savePanel = [NSSavePanel savePanel];
   [savePanel setPrompt:NSLocalizedString(@"Export", @"Export")];
   [savePanel setRequiredFileType:@"html"];
+  [savePanel setCanSelectHiddenExtension: YES];
   
   // get an accessory view for HTML or Safari .plist output
   if (!mExportPanelView)
