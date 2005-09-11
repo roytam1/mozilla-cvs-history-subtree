@@ -68,6 +68,20 @@ nsPythonRuntime::CreateContext(nsIScriptContext **ret)
     return NS_OK;
 }
 
+nsresult
+nsPythonRuntime::ParseVersion(const nsString &aVersionStr, PRUint32 *aFlags) {
+    // We ignore the version, but it is safer to fail whenever a version is
+    // specified, thereby ensuring noone will ever specify a version with
+    // Python, allowing future semantics to be defined without concern for
+    // existing behaviour.
+    if (aVersionStr.IsEmpty()) {
+        *aFlags = 0;
+        return NS_OK;
+    }
+    NS_ERROR("Don't specify a version for Python");
+    return NS_ERROR_UNEXPECTED;
+  }
+
 NS_METHOD
 nsPythonRuntime::RegisterSelf(nsIComponentManager* aCompMgr,
                                    nsIFile* aPath,

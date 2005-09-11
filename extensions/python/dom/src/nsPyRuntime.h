@@ -73,10 +73,8 @@ public:
 
   virtual nsresult CreateContext(nsIScriptContext **ret);
 
-  virtual nsresult ParseVersion(const nsString &aVersionStr, PRUint32 *flags) {
-    *flags=0;
-    return NS_OK;
-  }
+  virtual nsresult ParseVersion(const nsString &aVersionStr, PRUint32 *flags);
+
   virtual nsresult LockGCThing(void *object);
   virtual nsresult UnlockGCThing(void *object);
  
