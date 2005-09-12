@@ -204,9 +204,7 @@ PR_STATIC_CALLBACK(JSBool)
 InstallTriggerGlobalUpdateEnabled(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsIDOMInstallTriggerGlobal *nativeThis = (nsIDOMInstallTriggerGlobal*)
-    JS_GetInstancePrivate(cx, obj, &InstallTriggerGlobalClass, argv);
-  if (!nativeThis)
-    return JS_FALSE;
+    JS_GetInstancePrivate(cx, obj, &InstallTriggerGlobalClass, 0);
 
   *rval = JSVAL_FALSE;
 
@@ -233,9 +231,7 @@ PR_STATIC_CALLBACK(JSBool)
 InstallTriggerGlobalInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 { 
   nsIDOMInstallTriggerGlobal *nativeThis = (nsIDOMInstallTriggerGlobal*)
-    JS_GetInstancePrivate(cx, obj, &InstallTriggerGlobalClass, argv);
-  if (!nativeThis)
-    return JS_FALSE;
+    JS_GetInstancePrivate(cx, obj, &InstallTriggerGlobalClass, 0);
 
   *rval = JSVAL_FALSE;
 
@@ -402,9 +398,7 @@ PR_STATIC_CALLBACK(JSBool)
 InstallTriggerGlobalInstallChrome(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsIDOMInstallTriggerGlobal *nativeThis = (nsIDOMInstallTriggerGlobal*)
-    JS_GetInstancePrivate(cx, obj, &InstallTriggerGlobalClass, argv);
-  if (!nativeThis)
-    return JS_FALSE;
+    JS_GetInstancePrivate(cx, obj, &InstallTriggerGlobalClass, 0);
 
   uint32       chromeType = NOT_CHROME;
   nsAutoString sourceURL;
@@ -488,9 +482,7 @@ PR_STATIC_CALLBACK(JSBool)
 InstallTriggerGlobalStartSoftwareUpdate(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsIDOMInstallTriggerGlobal *nativeThis = (nsIDOMInstallTriggerGlobal*)
-    JS_GetInstancePrivate(cx, obj, &InstallTriggerGlobalClass, argv);
-  if (!nativeThis)
-    return JS_FALSE;
+    JS_GetInstancePrivate(cx, obj, &InstallTriggerGlobalClass, 0);
 
   PRBool       nativeRet;
   PRInt32      flags = 0;
@@ -570,9 +562,7 @@ PR_STATIC_CALLBACK(JSBool)
 InstallTriggerGlobalCompareVersion(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsIDOMInstallTriggerGlobal *nativeThis = (nsIDOMInstallTriggerGlobal*)
-    JS_GetInstancePrivate(cx, obj, &InstallTriggerGlobalClass, argv);
-  if (!nativeThis)
-    return JS_FALSE;
+    JS_GetInstancePrivate(cx, obj, &InstallTriggerGlobalClass, 0);
 
   nsAutoString regname;
   nsAutoString version;
@@ -673,9 +663,7 @@ PR_STATIC_CALLBACK(JSBool)
 InstallTriggerGlobalGetVersion(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsIDOMInstallTriggerGlobal *nativeThis = (nsIDOMInstallTriggerGlobal*)
-    JS_GetInstancePrivate(cx, obj, &InstallTriggerGlobalClass, argv);
-  if (!nativeThis)
-    return JS_FALSE;
+    JS_GetInstancePrivate(cx, obj, &InstallTriggerGlobalClass, 0);
 
   nsAutoString regname;
   nsAutoString version;
