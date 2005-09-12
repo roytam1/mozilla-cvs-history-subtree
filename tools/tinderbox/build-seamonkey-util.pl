@@ -451,7 +451,7 @@ sub SetupPath {
         $Settings::DistBin = "dist/";
 
         # Deal with the most common case first.
-        if ($Settings::ProductName != 'XULRunner') {
+        if ($Settings::ProductName ne 'XULRunner') {
             $Settings::DistBin .= "$Settings::ProductName";
             if ($Settings::BuildDebug) {
                 $Settings::DistBin .= "Debug";
