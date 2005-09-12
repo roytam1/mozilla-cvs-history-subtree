@@ -3284,7 +3284,6 @@ nsXULDocument::LoadScript(nsXULPrototypeScript* aScriptProto, PRBool* aBlock)
     gXULCache->GetEnabled(&useXULCache);
 
     if (useXULCache) {
-        // XUL cache only handle JS currently.
         void *newScriptObject = nsnull;
         PRUint32 fetchedLang = nsIProgrammingLanguage::UNKNOWN;
         gXULCache->GetScript(aScriptProto->mSrcURI,
@@ -3293,8 +3292,9 @@ nsXULDocument::LoadScript(nsXULPrototypeScript* aScriptProto, PRBool* aBlock)
         if (newScriptObject) {
             NS_ASSERTION(aScriptProto->mLangID == fetchedLang,
                          "XUL cache gave me an incorrect script language");
-            // eeek - we can't simply assign to mLangID as the GC stuff will not work
-            // If we keep going things will certainly crash.
+            // eeek - we can't simply assign to mLangID as the GC stuff will
+            // not work.  If we keep going things will certainly crash.
+            // This should never happen, but guard against it anyway.
             if (aScriptProto->mLangID != fetchedLang)
                 return NS_ERROR_UNEXPECTED;
         }

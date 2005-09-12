@@ -276,6 +276,8 @@ nsXULPrototypeDocument::Init()
 nsXULPrototypeDocument::~nsXULPrototypeDocument()
 {
     if (mGlobalObject) {
+        // XXXmarkh - this previously just did SetContext(nsnull), but this
+        // also wipes out the script globals.
         mGlobalObject->OnFinalize();
         mGlobalObject->SetGlobalObjectOwner(nsnull); // just in case
     }
