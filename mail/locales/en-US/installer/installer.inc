@@ -66,9 +66,9 @@ Installing_Component=Currently Installing:
 
 Success_Title=Install Complete
 Success_Header=Install Complete
-Success_Message0=%s $Version$ was successfully installed.
+Success_Message0=%s was successfully installed.
 Success_Message1=Click Finish to complete Setup. 
-Success_Launch=Launch %s $Version$ now.
+Success_Launch=Launch %s now.
 
 Check_Message=Download of $ProductName$ was successful. $ProductNameInternal$ must be closed to proceed with installation. Click OK to exit $ProductNameInternal$ automatically and to begin installation.
 Check_FullMessage=$ProductNameInternal$ must be closed to proceed with installation. Click OK to exit $ProductNameInternal$ automatically and to begin installation.
