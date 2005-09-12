@@ -1448,10 +1448,19 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
 
     mContext->GC();
 
-    if (mContext) {
-      mContext->SetOwner(nsnull);
-      mContext = nsnull;          // force release now
+    // force release of all script contexts now.
+    NS_ASSERTION(mContext == mLanguageContexts[nsIProgrammingLanguage::JAVASCRIPT-1],
+                 "Contexts confused");
+    for (PRUint32 lang_ndx=0;lang_ndx < nsIProgrammingLanguage::MAX; lang_ndx++) {
+      if (mLanguageContexts[lang_ndx]) {
+        mLanguageContexts[lang_ndx]->SetOwner(nsnull);
+        mLanguageContexts[lang_ndx] = nsnull;
+      }
     }
+    // js already had SetOwner called above - but we still have this extra ref.
+    // This sucks too!
+    if (mContext)
+      mContext = nsnull;
   }
 
   mDocShell = aDocShell;        // Weak Reference
@@ -1730,14 +1739,19 @@ void
 nsGlobalWindow::OnFinalize()
 {
   for (PRUint32 lang_ndx=0;lang_ndx < nsIProgrammingLanguage::MAX; lang_ndx++) {
-    if (mLanguageContexts[lang_ndx])
+    if (mLanguageContexts[lang_ndx]) {
       mLanguageContexts[lang_ndx]->FinalizeClasses(mLanguageGlobals[lang_ndx]);
-    else
+      // xxxmarkh - should be no need to reset mLanguageContexts[] as it is an
+      // array of nsCOMPtrs.  I'll delete it once I have found the leaks I am
+      // tracking!
+      mLanguageContexts[lang_ndx] = nsnull;
+    } else
       NS_ASSERTION(mLanguageGlobals[lang_ndx] == nsnull,
                    "OnFinalize has a global without matching context!");
-    mLanguageContexts[lang_ndx] = nsnull;
     mLanguageGlobals[lang_ndx] = nsnull;
   }
+  mJSObject = nsnull;
+  mContext = nsnull;
   SetGlobalObjectOwner(nsnull);
 }
 
