@@ -61,7 +61,7 @@ Uninstall Filename=$UninstallFile$
 Defaults Info Filename=defaults_info.ini
 
 [Check Instance0]
-Class Name=$ProductName$MessageWindow
+Class Name=SeaMonkeyMessageWindow
 Window Name=
 Process Name=seamonkey.exe
 Pretty Name=SeaMonkey
@@ -75,7 +75,7 @@ Message wait=Shutting down SeaMonkey.  Please wait...
 Close All Process Windows=TRUE
 
 ; These keys are not normally necessary for checking instances.  They are
-; set here because Mozilla requires a way to shut down its turbo mode.
+; set here because Mozilla requires a way to shut down it's turbo mode.
 Extra Cmd0 Reg Key Root=HKEY_LOCAL_MACHINE
 Extra Cmd0 Reg Key=Software\Microsoft\Windows\CurrentVersion\App Paths\seamonkey.exe
 Extra Cmd0 Reg Name=
@@ -96,7 +96,7 @@ Message wait=Shutting down Netscape.  Please wait...
 Close All Process Windows=TRUE
 
 ; These keys are not normally necessary for checking instances.  They are
-; set here because Netscape 6 requires a way to shut down its turbo mode.
+; set here because Netscape 6 requires a way to shut down it's turbo mode.
 ; This will stop at the first one that succeeds (key and file found).
 Extra Cmd0 Reg Key Root=HKEY_LOCAL_MACHINE
 Extra Cmd0 Reg Key=Software\Microsoft\Windows\CurrentVersion\App Paths\Netscp6.exe

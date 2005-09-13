@@ -43,6 +43,7 @@
 #import "NSResponder+Utils.h"
 #import "NSMenu+Utils.h"
 #import "NSURL+Utils.h"
+#import "NSWorkspace+Utils.h"
 
 #import "ChimeraUIConstants.h"
 #import "MainController.h"
@@ -103,6 +104,7 @@ const int kReuseWindowOnAE = 2;
 
 - (void)setupStartpage;
 - (void)setupRendezvous;
+- (void)checkDefaultBrowser;
 - (NSMenu*)bookmarksMenu;
 - (BOOL)bookmarksItemsEnabled;
 - (void)adjustBookmarkMenuItems;
@@ -331,6 +333,9 @@ const int kReuseWindowOnAE = 2;
   NSWindow* browserWindow = [self getFrontmostBrowserWindow];
   if (!browserWindow)
     [self newWindow:self];
+
+  // delay the default browser check to give the first page time to load
+  [self performSelector:@selector(checkDefaultBrowser) withObject:nil afterDelay:2.0f];
 }
 
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)sender
@@ -422,6 +427,45 @@ const int kReuseWindowOnAE = 2;
     int itemIndex;
     while ((itemIndex = [mGoMenu indexOfItemWithTag:kRendezvousRelatedItemTag]) != -1)
       [mGoMenu removeItemAtIndex:itemIndex];
+  }
+}
+
+- (void)checkDefaultBrowser
+{
+  NSString* defaultBrowserIdentifier = [[NSWorkspace sharedWorkspace] defaultBrowserIdentifier];
+  NSString* myIdentifier = [[NSBundle mainBundle] bundleIdentifier];
+
+  // silently update from our old to new bundle identifier
+  if ([defaultBrowserIdentifier isEqualToString:@"org.mozilla.navigator"])
+  {
+    [[NSWorkspace sharedWorkspace] setDefaultBrowserWithIdentifier:myIdentifier];
+  }
+  else if (![defaultBrowserIdentifier isEqualToString:myIdentifier])
+  {
+    BOOL gotPref;
+    BOOL allowPrompt = ([[PreferenceManager sharedInstance] getBooleanPref:"camino.check_default_browser" withSuccess:&gotPref] ||
+                        !gotPref);
+    if (allowPrompt)
+    {
+      nsAlertController* controller = [[nsAlertController alloc] init];
+      BOOL dontAskAgain = NO;
+      int result = [controller confirmCheckEx:nil // parent
+                                            title:NSLocalizedString(@"DefaultBrowserTitle", nil)
+                                             text:NSLocalizedString(@"DefaultBrowserMessage", nil)
+                                          button1:NSLocalizedString(@"DefaultBrowserAcceptButton", nil)
+                                          button2:NSLocalizedString(@"DefaultBrowserDenyButton", nil)
+                                          button3:nil
+                                         checkMsg:NSLocalizedString(@"DefaultBrowserChecboxTitle", nil)
+                                       checkValue:&dontAskAgain];
+
+      if (result == NSAlertDefaultReturn)
+      {
+        [[NSWorkspace sharedWorkspace] setDefaultBrowserWithIdentifier:myIdentifier];
+      }
+      
+      [[PreferenceManager sharedInstance] setPref:"camino.check_default_browser" toBoolean:!dontAskAgain];
+      [controller release];
+    }
   }
 }
 
@@ -1060,6 +1104,7 @@ Otherwise, we return the URL we originally got. Right now this supports .url and
   NSSavePanel* savePanel = [NSSavePanel savePanel];
   [savePanel setPrompt:NSLocalizedString(@"Export", @"Export")];
   [savePanel setRequiredFileType:@"html"];
+  [savePanel setCanSelectHiddenExtension: YES];
   
   // get an accessory view for HTML or Safari .plist output
   if (!mExportPanelView)

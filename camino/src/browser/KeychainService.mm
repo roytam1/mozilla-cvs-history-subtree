@@ -364,21 +364,19 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
 // actions for the buttons of the keychain prompt dialogs.
 //
 
-enum { kOKButton = 0, kCancelButton = 1, kOtherButton = 2 };
-
 - (IBAction)hitButtonOK:(id)sender
 {
-  [NSApp stopModalWithCode:kOKButton];
+  [NSApp stopModalWithCode:NSAlertDefaultReturn];
 }
 
 - (IBAction)hitButtonCancel:(id)sender
 {
-  [NSApp stopModalWithCode:kCancelButton];
+  [NSApp stopModalWithCode:NSAlertAlternateReturn];
 }
 
 - (IBAction)hitButtonOther:(id)sender
 {
-  [NSApp stopModalWithCode:kOtherButton];
+  [NSApp stopModalWithCode:NSAlertOtherReturn];
 }
 
 //
@@ -393,9 +391,16 @@ enum { kOKButton = 0, kCancelButton = 1, kOtherButton = 2 };
   int result = [NSApp runModalForWindow:confirmStorePasswordPanel relativeToWindow:parent];
   [confirmStorePasswordPanel close];
   
-  // the results of hitButtonXX: map to the corresponding values in the
-  // |KeychainPromptResult| enum so we can just cast and return
-  return NS_STATIC_CAST(KeychainPromptResult, result);
+  KeychainPromptResult keychainAction = kDontRemember;
+  switch (result)
+  {
+    case NSAlertDefaultReturn:    keychainAction = kSave;          break;
+    default:
+    case NSAlertAlternateReturn:  keychainAction = kDontRemember;  break;
+    case NSAlertOtherReturn:      keychainAction = kNeverRemember; break;
+  }
+
+  return keychainAction;
 }
 
 //
@@ -408,7 +413,7 @@ enum { kOKButton = 0, kCancelButton = 1, kOtherButton = 2 };
 {
   int result = [NSApp runModalForWindow:confirmChangePasswordPanel relativeToWindow:parent];
   [confirmChangePasswordPanel close];
-  return (result == kOKButton);
+  return (result == NSAlertDefaultReturn);
 }
 
 
