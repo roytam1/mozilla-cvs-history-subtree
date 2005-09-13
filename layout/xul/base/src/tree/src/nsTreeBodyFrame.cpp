@@ -1907,7 +1907,7 @@ nsTreeBodyFrame::HandleEvent(nsPresContext* aPresContext,
     // checking if anything changed first. For drop feedback we use drop,
     // dropBefore and dropAfter property.
 
-    if (! mView)
+    if (!mView || !mSlots)
       return NS_OK;
 
     // Save last values, we will need them.
@@ -1997,6 +1997,10 @@ nsTreeBodyFrame::HandleEvent(nsPresContext* aPresContext,
       mSlots->mDragSession->SetCanDrop(PR_TRUE);
   }
   else if (aEvent->message == NS_DRAGDROP_DROP) {
+     // this event was meant for another frame, so ignore it
+     if (!mSlots)
+       return NS_OK;
+
     // Tell the view where the drop happened.
 
     // Remove the drop folder and all its parents from the array.
@@ -2010,6 +2014,10 @@ nsTreeBodyFrame::HandleEvent(nsPresContext* aPresContext,
     mView->Drop(mSlots->mDropRow, mSlots->mDropOrient);
   }
   else if (aEvent->message == NS_DRAGDROP_EXIT) {
+    // this event was meant for another frame, so ignore it
+    if (!mSlots)
+      return NS_OK;
+
     // Clear out all our tracking vars.
 
     if (mSlots->mDropAllowed) {
