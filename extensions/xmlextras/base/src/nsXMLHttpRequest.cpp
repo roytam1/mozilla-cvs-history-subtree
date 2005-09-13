@@ -1579,7 +1579,7 @@ nsXMLHttpRequest::SetRequestHeader(const nsACString& header,
     "host", "content-length", "transfer-encoding", "via", "upgrade"
   };
   for (size_t i = 0; i < NS_ARRAY_LENGTH(kInvalidHeaders); ++i) {
-    if (header.Equals(kInvalidHeaders[i], nsCaseInsensitiveStringComparator())) {
+    if (header.Equals(kInvalidHeaders[i], nsCaseInsensitiveCStringComparator())) {
       return NS_ERROR_INVALID_ARG;
     }
   }
