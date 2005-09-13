@@ -1,0 +1,5 @@
+/* Localized versions of Info.plist keys */
+
+CFBundleName = "SeaMonkey";
+CFBundleGetInfoString = "SeaMonkey 1.0a, Copyright © 1998-2005 Contributors to Mozilla.org.";
+NSHumanReadableCopyright = "Copyright © 1998-2005 Contributors to Mozilla.org.";
