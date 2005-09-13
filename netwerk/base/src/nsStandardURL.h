@@ -124,7 +124,8 @@ public: /* internal -- HPUX compiler can't handle this being private */
         PRInt32 EncodeSegmentCount(const char *str,
                                    const URLSegment &segment,
                                    PRInt16 mask,
-                                   nsAFlatCString &buf);
+                                   nsAFlatCString &buf,
+                                   PRBool& appended);
          
         // Encode the given string if necessary, and return a reference to
         // the encoded string.  Returns a reference to |buf| if encoding
@@ -150,7 +151,7 @@ private:
     PRBool   EncodeHost(const char *host, nsCString &result);
     void     CoalescePath(netCoalesceFlags coalesceFlag, char *path);
 
-    PRUint32 AppendSegmentToBuf(char *, PRUint32, const char *, URLSegment &, const nsCString *esc=nsnull);
+    PRUint32 AppendSegmentToBuf(char *, PRUint32, const char *, URLSegment &, const nsCString *esc=nsnull, PRBool useEsc = PR_FALSE);
     PRUint32 AppendToBuf(char *, PRUint32, const char *, PRUint32);
 
     nsresult BuildNormalizedSpec(const char *spec);
