@@ -1087,7 +1087,8 @@ obj_eval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
      */
     if (principals && cx->findObjectPrincipals) {
         scopePrincipals = cx->findObjectPrincipals(cx, scopeobj);
-        if (!principals->subsume(principals, scopePrincipals)) {
+        if (scopePrincipals &&
+            !principals->subsume(principals, scopePrincipals)) {
             JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
                                  JSMSG_BAD_INDIRECT_CALL, js_eval_str);
             return JS_FALSE;
