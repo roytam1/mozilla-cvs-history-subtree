@@ -4909,6 +4909,16 @@ GlobalWindowImpl::OpenInternal(const nsAString& aUrl,
                                nsISupports *aExtraArgument,
                                nsIDOMWindow **aReturn)
 {
+  if (!IsChrome()) {
+    nsCOMPtr<nsIWebBrowserChrome> chrome;
+    GetWebBrowserChrome(getter_AddRefs(chrome));
+    if (!chrome) {
+      // No chrome means we don't want to go through with this open call
+      // -- see nsIWindowWatcher.idl
+      return NS_ERROR_NOT_AVAILABLE;
+    }
+  }
+
   nsXPIDLCString url;
   nsresult rv = NS_OK;  
 
