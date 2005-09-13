@@ -79,6 +79,7 @@ NS_IMETHODIMP
 nsAboutRedirector::NewChannel(nsIURI *aURI, nsIChannel **result)
 {
     NS_ENSURE_ARG(aURI);
+    NS_ASSERTION(result, "must not be null");
     nsCAutoString path;
     (void)aURI->GetPath(path);
     nsresult rv;
@@ -93,8 +94,13 @@ nsAboutRedirector::NewChannel(nsIURI *aURI, nsIChannel **result)
             nsCOMPtr<nsIChannel> tempChannel;
              rv = ioService->NewChannel(nsDependentCString(kRedirMap[i].url),
                                         nsnull, nsnull, getter_AddRefs(tempChannel));
+             if (NS_FAILED(rv))
+                 return rv;
+
+             tempChannel->SetOriginalURI(aURI);
+
              // Keep the page from getting unnecessary privileges unless it needs them
-             if (NS_SUCCEEDED(rv) && result && kRedirMap[i].dropChromePrivs)
+             if (kRedirMap[i].dropChromePrivs)
              {
                   nsCOMPtr<nsIScriptSecurityManager> securityManager = 
                            do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
