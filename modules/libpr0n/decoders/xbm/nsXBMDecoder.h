@@ -83,7 +83,6 @@ private:
     PRInt32 mWidth;
     PRInt32 mHeight;
 
-    PRUint8* mRow; // Hold the decoded row
     PRUint8* mAlphaRow; // alpha data for the row
 
     enum {
