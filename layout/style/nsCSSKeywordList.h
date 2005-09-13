@@ -144,6 +144,7 @@ CSS_KEY(-moz-marker, _moz_marker) // Disabled because not supported correctly.
 CSS_KEY(-moz-menuhover, _moz_menuhover)
 CSS_KEY(-moz-menuhovertext, _moz_menuhovertext)
 CSS_KEY(-moz-myanmar, _moz_myanmar)
+CSS_KEY(-moz-none, _moz_none)
 CSS_KEY(-moz-oriya, _moz_oriya)
 CSS_KEY(-moz-persian, _moz_persian)
 CSS_KEY(-moz-popup, _moz_popup)

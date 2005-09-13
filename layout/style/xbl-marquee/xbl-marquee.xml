@@ -379,7 +379,7 @@
 
     <content>
       <html:div xbl:inherits="" style="overflow: -moz-scrollbars-none">
-        <xul:hbox style="margin: 0 100%;">
+        <xul:hbox style="margin: 0 100%; -moz-user-select: text;">
           <html:div anonid="innerDiv">
             <children/>
           </html:div>
