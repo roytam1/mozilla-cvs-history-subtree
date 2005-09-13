@@ -298,6 +298,8 @@ protected:
 
   PRBool WindowExists(const nsAString& aName);
 
+  virtual PRBool IsChrome() const { return PR_FALSE; }
+
   // When adding new member variables, be careful not to create cycles
   // through JavaScript.  If there is any chance that a member variable
   // could own objects that are implemented in JavaScript, then those
@@ -381,6 +383,8 @@ public:
 
 protected:
   nsresult GetMainWidget(nsIWidget** aMainWidget);
+
+  virtual PRBool IsChrome() const { return PR_TRUE; }
 
   nsString mTitle;
 };
