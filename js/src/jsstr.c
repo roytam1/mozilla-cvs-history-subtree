@@ -360,6 +360,20 @@ js_str_escape(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval
         } else {
             newlength += 5; /* The character will be encoded as %uXXXX */
         }
+
+        /*
+         * This overflow test works because newlength is incremented by at
+         * most 5 on each iteration.
+         */
+        if (newlength < length) {
+            JS_ReportOutOfMemory(cx);
+            return JS_FALSE;
+        }
+    }
+
+    if (newlength >= ~(size_t)0 / sizeof(jschar)) {
+        JS_ReportOutOfMemory(cx);
+        return JS_FALSE;
     }
 
     newchars = (jschar *) JS_malloc(cx, (newlength + 1) * sizeof(jschar));
