@@ -238,8 +238,7 @@ nsresult nsXBMDecoder::ProcessData(const char* aData, PRUint32 aCount) {
             }
 
             // Skip the comma
-            NS_ASSERTION(mState != RECV_DATA || *mPos == ',' ||
-                         (mIsX10 && hiByte),
+            NS_ASSERTION(mState != RECV_DATA || *mPos == ',',
                          "Must be a comma");
             if (*mPos == ',')
                 mPos++;
