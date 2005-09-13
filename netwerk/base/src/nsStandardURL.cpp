@@ -170,10 +170,8 @@ PRInt32 nsStandardURL::
 nsSegmentEncoder::EncodeSegmentCount(const char *str,
                                      const URLSegment &seg,
                                      PRInt16 mask,
-                                     nsAFlatCString &result,
-                                     PRBool &appended)
+                                     nsAFlatCString &result)
 {
-    appended = PR_FALSE;
     if (!str)
         return 0;
     PRInt32 len = 0;
@@ -205,14 +203,11 @@ nsSegmentEncoder::EncodeSegmentCount(const char *str,
         PRUint32 initLen = result.Length();
 
         // now perform any required escaping
-        if (NS_EscapeURL(str + pos, len, mask | escapeFlags, result)) {
+        if (NS_EscapeURL(str + pos, len, mask | escapeFlags, result))
             len = result.Length() - initLen;
-            appended = PR_TRUE;
-        }
         else if (str == encBuf.get()) {
             result += encBuf; // append only!!
             len = encBuf.Length();
-            appended = PR_TRUE;
         }
     }
     return len;
@@ -224,11 +219,13 @@ nsSegmentEncoder::EncodeSegment(const nsASingleFragmentCString &str,
                                 nsAFlatCString &result)
 {
     const char *text;
-    PRBool encoded;
-    EncodeSegmentCount(str.BeginReading(text), URLSegment(0, str.Length()), mask, result, encoded);
-    if (encoded)
+    PRUint32 resultLen = result.Length();
+    EncodeSegmentCount(str.BeginReading(text), URLSegment(0, str.Length()), mask, result);
+    // since EncodeSegmentCount appends to result, we must check whether its length grew
+    if (result.Length() > resultLen)
         return result;
-    return str;
+    else
+        return str;
 }
 
 PRBool nsStandardURL::
@@ -398,14 +395,14 @@ nsStandardURL::NormalizeIDN(const nsCSubstring &host, nsCString &result)
         PRBool isACE;
         if (gIDN &&
             NS_SUCCEEDED(gIDN->IsACE(host, &isACE)) && isACE &&
-            NS_SUCCEEDED(ACEtoDisplayIDN(host, result))) {
+            NS_SUCCEEDED(ACEtoUTF8(host, result))) {
             mHostEncoding = eEncoding_UTF8;
             return PR_TRUE;
         }
     }
     else {
         mHostEncoding = eEncoding_UTF8;
-        if (gIDN && NS_SUCCEEDED(UTF8toDisplayIDN(host, result))) {
+        if (gIDN && NS_SUCCEEDED(NormalizeUTF8(host, result))) {
             // normalization could result in an ASCII only hostname
             if (IsASCII(result))
                 mHostEncoding = eEncoding_ASCII;
@@ -432,10 +429,10 @@ nsStandardURL::CoalescePath(netCoalesceFlags coalesceFlag, char *path)
 }
 
 PRUint32
-nsStandardURL::AppendSegmentToBuf(char *buf, PRUint32 i, const char *str, URLSegment &seg, const nsCString *escapedStr, PRBool useEscaped)
+nsStandardURL::AppendSegmentToBuf(char *buf, PRUint32 i, const char *str, URLSegment &seg, const nsCString *escapedStr)
 {
     if (seg.mLen > 0) {
-        if (useEscaped) {
+        if (escapedStr && !escapedStr->IsEmpty()) {
             seg.mLen = escapedStr->Length();
             memcpy(buf + i, escapedStr->get(), seg.mLen);
         }
@@ -467,10 +464,15 @@ nsStandardURL::BuildNormalizedSpec(const char *spec)
 
     // buffers for holding escaped url segments (these will remain empty unless
     // escaping is required).
-    nsCAutoString encUsername, encPassword, encHost, encDirectory,
-      encBasename, encExtension, encParam, encQuery, encRef;
-    PRBool useEncUsername, useEncPassword, useEncHost, useEncDirectory,
-      useEncBasename, useEncExtension, useEncParam, useEncQuery, useEncRef;
+    nsCAutoString encUsername;
+    nsCAutoString encPassword;
+    nsCAutoString encHost;
+    nsCAutoString encDirectory;
+    nsCAutoString encBasename;
+    nsCAutoString encExtension;
+    nsCAutoString encParam;
+    nsCAutoString encQuery;
+    nsCAutoString encRef;
 
     //
     // escape each URL segment, if necessary, and calculate approximate normalized
@@ -487,14 +489,14 @@ nsStandardURL::BuildNormalizedSpec(const char *spec)
     // appropriate encoding.
     {
         GET_SEGMENT_ENCODER(encoder);
-        approxLen += encoder.EncodeSegmentCount(spec, mUsername,  esc_Username,      encUsername,  useEncUsername);
-        approxLen += encoder.EncodeSegmentCount(spec, mPassword,  esc_Password,      encPassword,  useEncPassword);
-        approxLen += encoder.EncodeSegmentCount(spec, mDirectory, esc_Directory,     encDirectory, useEncDirectory);
-        approxLen += encoder.EncodeSegmentCount(spec, mBasename,  esc_FileBaseName,  encBasename,  useEncBasename);
-        approxLen += encoder.EncodeSegmentCount(spec, mExtension, esc_FileExtension, encExtension, useEncExtension);
-        approxLen += encoder.EncodeSegmentCount(spec, mParam,     esc_Param,         encParam,     useEncParam);
-        approxLen += encoder.EncodeSegmentCount(spec, mQuery,     esc_Query,         encQuery,     useEncQuery);
-        approxLen += encoder.EncodeSegmentCount(spec, mRef,       esc_Ref,           encRef,       useEncRef);
+        approxLen += encoder.EncodeSegmentCount(spec, mUsername,  esc_Username,      encUsername);
+        approxLen += encoder.EncodeSegmentCount(spec, mPassword,  esc_Password,      encPassword);
+        approxLen += encoder.EncodeSegmentCount(spec, mDirectory, esc_Directory,     encDirectory);
+        approxLen += encoder.EncodeSegmentCount(spec, mBasename,  esc_FileBaseName,  encBasename);
+        approxLen += encoder.EncodeSegmentCount(spec, mExtension, esc_FileExtension, encExtension);
+        approxLen += encoder.EncodeSegmentCount(spec, mParam,     esc_Param,         encParam);
+        approxLen += encoder.EncodeSegmentCount(spec, mQuery,     esc_Query,         encQuery);
+        approxLen += encoder.EncodeSegmentCount(spec, mRef,       esc_Ref,           encRef);
     }
 
     // do not escape the hostname, if IPv6 address literal, mHost will
@@ -504,7 +506,7 @@ nsStandardURL::BuildNormalizedSpec(const char *spec)
     if (mHost.mLen > 0) {
         const nsCSubstring& tempHost =
             Substring(spec + mHost.mPos, spec + mHost.mPos + mHost.mLen);
-        if ((useEncHost = NormalizeIDN(tempHost, encHost)))
+        if (NormalizeIDN(tempHost, encHost))
             approxLen += encHost.Length();
         else
             approxLen += mHost.mLen;
@@ -529,15 +531,15 @@ nsStandardURL::BuildNormalizedSpec(const char *spec)
 
     // append authority
     if (mUsername.mLen > 0) {
-        i = AppendSegmentToBuf(buf, i, spec, mUsername, &encUsername, useEncUsername);
+        i = AppendSegmentToBuf(buf, i, spec, mUsername, &encUsername);
         if (mPassword.mLen >= 0) {
             buf[i++] = ':';
-            i = AppendSegmentToBuf(buf, i, spec, mPassword, &encPassword, useEncPassword);
+            i = AppendSegmentToBuf(buf, i, spec, mPassword, &encPassword);
         }
         buf[i++] = '@';
     }
     if (mHost.mLen > 0) {
-        i = AppendSegmentToBuf(buf, i, spec, mHost, &encHost, useEncHost);
+        i = AppendSegmentToBuf(buf, i, spec, mHost, &encHost);
         net_ToLowerCase(buf + mHost.mPos, mHost.mLen);
         if (mPort != -1 && mPort != mDefaultPort) {
             nsCAutoString portbuf;
@@ -571,7 +573,7 @@ nsStandardURL::BuildNormalizedSpec(const char *spec)
         // record corrected (file)path starting position
         mPath.mPos = mFilepath.mPos = i - leadingSlash;
 
-        i = AppendSegmentToBuf(buf, i, spec, mDirectory, &encDirectory, useEncDirectory);
+        i = AppendSegmentToBuf(buf, i, spec, mDirectory, &encDirectory);
 
         // the directory must end with a '/'
         if (buf[i-1] != '/') {
@@ -579,7 +581,7 @@ nsStandardURL::BuildNormalizedSpec(const char *spec)
             mDirectory.mLen++;
         }
 
-        i = AppendSegmentToBuf(buf, i, spec, mBasename, &encBasename, useEncBasename);
+        i = AppendSegmentToBuf(buf, i, spec, mBasename, &encBasename);
 
         // make corrections to directory segment if leadingSlash
         if (leadingSlash) {
@@ -592,22 +594,22 @@ nsStandardURL::BuildNormalizedSpec(const char *spec)
 
         if (mExtension.mLen >= 0) {
             buf[i++] = '.';
-            i = AppendSegmentToBuf(buf, i, spec, mExtension, &encExtension, useEncExtension);
+            i = AppendSegmentToBuf(buf, i, spec, mExtension, &encExtension);
         }
         // calculate corrected filepath length
         mFilepath.mLen = i - mFilepath.mPos;
 
         if (mParam.mLen >= 0) {
             buf[i++] = ';';
-            i = AppendSegmentToBuf(buf, i, spec, mParam, &encParam, useEncParam);
+            i = AppendSegmentToBuf(buf, i, spec, mParam, &encParam);
         }
         if (mQuery.mLen >= 0) {
             buf[i++] = '?';
-            i = AppendSegmentToBuf(buf, i, spec, mQuery, &encQuery, useEncQuery);
+            i = AppendSegmentToBuf(buf, i, spec, mQuery, &encQuery);
         }
         if (mRef.mLen >= 0) {
             buf[i++] = '#';
-            i = AppendSegmentToBuf(buf, i, spec, mRef, &encRef, useEncRef);
+            i = AppendSegmentToBuf(buf, i, spec, mRef, &encRef);
         }
         // calculate corrected path length
         mPath.mLen = i - mPath.mPos;
@@ -850,7 +852,7 @@ nsStandardURL::PrefsChanged(nsIPrefBranch *prefs, const char *pref)
 }
 
 /* static */ nsresult
-nsStandardURL::ACEtoDisplayIDN(const nsCSubstring &host, nsCString &result)
+nsStandardURL::ACEtoUTF8(const nsCSubstring &host, nsCString &result)
 {
     if (gShowPunycode || !IsInWhitelist(host)) {
         result = host;
@@ -861,7 +863,7 @@ nsStandardURL::ACEtoDisplayIDN(const nsCSubstring &host, nsCString &result)
 }
 
 /* static */ nsresult
-nsStandardURL::UTF8toDisplayIDN(const nsCSubstring &host, nsCString &result)
+nsStandardURL::NormalizeUTF8(const nsCSubstring &host, nsCString &result)
 {
     if (gShowPunycode || !IsInWhitelist(host))
         return gIDN->ConvertUTF8toACE(host, result);
@@ -1212,20 +1214,18 @@ nsStandardURL::SetUserPass(const nsACString &input)
     nsCAutoString buf;
     if (usernameLen > 0) {
         GET_SEGMENT_ENCODER(encoder);
-        PRBool ignoredOut;
         usernameLen = encoder.EncodeSegmentCount(userpass.get(),
                                                  URLSegment(usernamePos,
                                                             usernameLen),
                                                  esc_Username | esc_AlwaysCopy,
-                                                 buf, ignoredOut);
+                                                 buf);
         if (passwordLen >= 0) {
             buf.Append(':');
             passwordLen = encoder.EncodeSegmentCount(userpass.get(),
                                                      URLSegment(passwordPos,
                                                                 passwordLen),
                                                      esc_Password |
-                                                     esc_AlwaysCopy, buf,
-                                                     ignoredOut);
+                                                     esc_AlwaysCopy, buf);
         }
         if (mUsername.mLen < 0)
             buf.Append('@');
@@ -2176,11 +2176,9 @@ nsStandardURL::SetQuery(const nsACString &input)
 
     // encode query if necessary
     nsCAutoString buf;
-    PRBool encoded;
     GET_SEGMENT_ENCODER(encoder);
-    encoder.EncodeSegmentCount(query, URLSegment(0, queryLen), esc_Query,
-                               buf, encoded);
-    if (encoded) {
+    encoder.EncodeSegmentCount(query, URLSegment(0, queryLen), esc_Query, buf);
+    if (!buf.IsEmpty()) {
         query = buf.get();
         queryLen = buf.Length();
     }
@@ -2236,11 +2234,9 @@ nsStandardURL::SetRef(const nsACString &input)
 
     // encode ref if necessary
     nsCAutoString buf;
-    PRBool encoded;
     GET_SEGMENT_ENCODER(encoder);
-    encoder.EncodeSegmentCount(ref, URLSegment(0, refLen), esc_Ref,
-                               buf, encoded);
-    if (encoded) {
+    encoder.EncodeSegmentCount(ref, URLSegment(0, refLen), esc_Ref, buf);
+    if (!buf.IsEmpty()) {
         ref = buf.get();
         refLen = buf.Length();
     }
@@ -2308,20 +2304,17 @@ nsStandardURL::SetFileName(const nsACString &input)
         }
         else {
             nsCAutoString newFilename;
-            PRBool ignoredOut;
             GET_SEGMENT_ENCODER(encoder);
             basename.mLen = encoder.EncodeSegmentCount(filename, basename,
                                                        esc_FileBaseName |
                                                        esc_AlwaysCopy,
-                                                       newFilename,
-                                                       ignoredOut);
+                                                       newFilename);
             if (extension.mLen >= 0) {
                 newFilename.Append('.');
                 extension.mLen = encoder.EncodeSegmentCount(filename, extension,
                                                             esc_FileExtension |
                                                             esc_AlwaysCopy,
-                                                            newFilename,
-                                                            ignoredOut);
+                                                            newFilename);
             }
 
             if (mBasename.mLen < 0) {

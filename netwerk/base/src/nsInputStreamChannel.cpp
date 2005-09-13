@@ -163,7 +163,6 @@ NS_IMETHODIMP
 nsInputStreamChannel::SetLoadGroup(nsILoadGroup *aLoadGroup)
 {
     mLoadGroup = aLoadGroup;
-    mProgressSink = nsnull;
     return NS_OK;
 }
 
@@ -218,7 +217,6 @@ NS_IMETHODIMP
 nsInputStreamChannel::SetNotificationCallbacks(nsIInterfaceRequestor *aCallbacks)
 {
     mCallbacks = aCallbacks;
-    mProgressSink = nsnull;
     return NS_OK;
 }
 
@@ -295,6 +293,9 @@ nsInputStreamChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *ctxt)
 {
     NS_ENSURE_TRUE(mContentStream, NS_ERROR_NOT_INITIALIZED);
     NS_ENSURE_TRUE(!mPump, NS_ERROR_IN_PROGRESS);
+
+    // Initialize mProgressSink
+    NS_QueryNotificationCallbacks(mCallbacks, mLoadGroup, mProgressSink);
 
     // if content length is unknown, then we must guess... in this case, we
     // assume the stream can tell us.  if the stream is a pipe, then this will
@@ -390,9 +391,6 @@ nsInputStreamChannel::OnDataAvailable(nsIRequest *req, nsISupports *ctx,
     nsresult rv;
 
     rv = mListener->OnDataAvailable(this, mListenerContext, stream, offset, count);
-
-    if (!mProgressSink)
-        NS_QueryNotificationCallbacks(mCallbacks, mLoadGroup, mProgressSink);
 
     // XXX need real 64-bit math here! (probably needs new streamlistener and
     // channel ifaces)

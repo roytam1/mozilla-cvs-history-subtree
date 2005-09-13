@@ -124,8 +124,7 @@ public: /* internal -- HPUX compiler can't handle this being private */
         PRInt32 EncodeSegmentCount(const char *str,
                                    const URLSegment &segment,
                                    PRInt16 mask,
-                                   nsAFlatCString &buf,
-                                   PRBool& appended);
+                                   nsAFlatCString &buf);
          
         // Encode the given string if necessary, and return a reference to
         // the encoded string.  Returns a reference to |buf| if encoding
@@ -160,7 +159,7 @@ private:
     PRBool   NormalizeIDN(const nsCSubstring &host, nsCString &result);
     void     CoalescePath(netCoalesceFlags coalesceFlag, char *path);
 
-    PRUint32 AppendSegmentToBuf(char *, PRUint32, const char *, URLSegment &, const nsCString *esc=nsnull, PRBool useEsc = PR_FALSE);
+    PRUint32 AppendSegmentToBuf(char *, PRUint32, const char *, URLSegment &, const nsCString *esc=nsnull);
     PRUint32 AppendToBuf(char *, PRUint32, const char *, PRUint32);
 
     nsresult BuildNormalizedSpec(const char *spec);
@@ -220,8 +219,8 @@ private:
     static void PrefsChanged(nsIPrefBranch *prefs, const char *pref);
 
     // IDN routines
-    static nsresult ACEtoDisplayIDN(const nsCSubstring &in, nsCString &out);
-    static nsresult UTF8toDisplayIDN(const nsCSubstring &in, nsCString &out);
+    static nsresult ACEtoUTF8(const nsCSubstring &in, nsCString &out);
+    static nsresult NormalizeUTF8(const nsCSubstring &in, nsCString &out);
     static PRBool IsInWhitelist(const nsCSubstring &host);
 
     // mSpec contains the normalized version of the URL spec (UTF-8 encoded).
