@@ -1582,7 +1582,8 @@ nsXMLHttpRequest::SetRequestHeader(const nsACString& header,
   };
   for (size_t i = 0; i < NS_ARRAY_LENGTH(kInvalidHeaders); ++i) {
     if (header.Equals(kInvalidHeaders[i], nsCaseInsensitiveCStringComparator())) {
-      return NS_ERROR_INVALID_ARG;
+      NS_WARNING("refusing to set request header");
+      return NS_OK;
     }
   }
 
