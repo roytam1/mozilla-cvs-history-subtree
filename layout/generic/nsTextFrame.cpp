@@ -862,8 +862,8 @@ protected:
   PRBool IsChineseJapaneseLangGroup();
   PRBool IsJustifiableCharacter(PRUnichar aChar, PRBool aLangIsCJ);
 
-  void FillClusterBuffer(nsPresContext *aPresContext, const PRUnichar *aText,
-                         PRUint32 aLength, PRUint8 *aClusterStarts);
+  nsresult FillClusterBuffer(nsPresContext *aPresContext, const PRUnichar *aText,
+                             PRUint32 aLength, nsAutoPRUint8Buffer& aClusterBuffer);
 };
 
 #ifdef ACCESSIBILITY
@@ -1650,32 +1650,37 @@ nsTextFrame::IsJustifiableCharacter(PRUnichar aChar, PRBool aLangIsCJ)
   return PR_FALSE;
 }
 
-void
+nsresult
 nsTextFrame::FillClusterBuffer(nsPresContext *aPresContext, const PRUnichar *aText,
-                               PRUint32 aLength, PRUint8 *aClusterStarts)
+                               PRUint32 aLength, nsAutoPRUint8Buffer& aClusterBuffer)
 {
+  nsresult rv = aClusterBuffer.GrowTo(aLength);
+  NS_ENSURE_SUCCESS(rv, rv);
+
   // Fill in the cluster hint information, if it's available.
   nsCOMPtr<nsIRenderingContext> acx;
   PRUint32 clusterHint = 0;
 
   nsIPresShell *shell = aPresContext->GetPresShell();
   if (shell) {
-    shell->CreateRenderingContext(this, getter_AddRefs(acx));
+    rv = shell->CreateRenderingContext(this, getter_AddRefs(acx));
+    NS_ENSURE_SUCCESS(rv, rv);
 
     // Find the font metrics for this text
     SetFontFromStyle(acx, mStyleContext);
 
-    if (acx)
-      acx->GetHints(clusterHint);
+    acx->GetHints(clusterHint);
     clusterHint &= NS_RENDERING_HINT_TEXT_CLUSTERS;
   }
 
   if (clusterHint) {
-    acx->GetClusterInfo(aText, aLength, aClusterStarts);
+    rv = acx->GetClusterInfo(aText, aLength, aClusterBuffer.mBuffer);
   }
   else {
-    memset(aClusterStarts, 1, sizeof(PRInt8) * aLength);
+    memset(aClusterBuffer.mBuffer, 1, sizeof(PRInt8) * aLength);
   }
+
+  return rv;
 }
 
 inline PRBool IsEndOfLine(nsFrameState aState)
@@ -4438,12 +4443,6 @@ nsTextFrame::PeekOffset(nsPresContext* aPresContext, nsPeekOffsetStruct *aPos)
   }
   PRInt32* ip = indexBuffer.mBuffer;
 
-  nsAutoPRUint8Buffer clusterBuffer;
-  rv = clusterBuffer.GrowTo(mContentLength + 1);
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
-
   PRInt32 textLength;
   nsresult result(NS_ERROR_FAILURE);
   aPos->mResultContent = mContent;//do this right off
@@ -4509,8 +4508,10 @@ nsTextFrame::PeekOffset(nsPresContext* aPresContext, nsPeekOffsetStruct *aPos)
           aPos->mContentOffset = 0;
           PRInt32 i;
 
-          FillClusterBuffer(aPresContext, paintBuffer.mBuffer,
-                            (PRUint32)textLength, clusterBuffer.mBuffer);
+          nsAutoPRUint8Buffer clusterBuffer;
+          rv = FillClusterBuffer(aPresContext, paintBuffer.mBuffer,
+                                 (PRUint32)textLength, clusterBuffer);
+          NS_ENSURE_SUCCESS(rv, rv);
 
           for (i = aPos->mStartOffset -1 - mContentOffset; i >=0;  i--){
             if ((ip[i] < ip[aPos->mStartOffset - mContentOffset]) &&
@@ -4565,8 +4566,10 @@ nsTextFrame::PeekOffset(nsPresContext* aPresContext, nsPeekOffsetStruct *aPos)
           PRInt32 i;
           aPos->mContentOffset = mContentLength;
 
-          FillClusterBuffer(aPresContext, paintBuffer.mBuffer,
-                            (PRUint32)textLength, clusterBuffer.mBuffer);
+          nsAutoPRUint8Buffer clusterBuffer;
+          rv = FillClusterBuffer(aPresContext, paintBuffer.mBuffer,
+                                 (PRUint32)textLength, clusterBuffer);
+          NS_ENSURE_SUCCESS(rv, rv);
 
           for (i = aPos->mStartOffset - mContentOffset; i <= mContentLength; i++) {
             if ((ip[i] > ip[aPos->mStartOffset - mContentOffset]) &&
