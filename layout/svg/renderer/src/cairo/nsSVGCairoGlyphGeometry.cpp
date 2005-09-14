@@ -267,6 +267,8 @@ nsSVGCairoGlyphGeometry::Render(nsISVGRendererCanvas *canvas)
       }
   }
 
+  cairo_move_to(ctx, x, y);
+
   if (hasStroke) {
     nscolor rgb;
     mSource->GetStrokePaint(&rgb);

@@ -18250,33 +18250,18 @@ EOF
 
 
        # Define macros for cairo-features.h
-       PS_SURFACE_FEATURE=CAIRO_HAS_NO_PS_SURFACE
-       PDF_SURFACE_FEATURE=CAIRO_HAS_NO_PDF_SURFACE
-       PNG_SURFACE_FEATURE=CAIRO_HAS_NO_PNG_SURFACE
        if test "$MOZ_X11"; then
-           XLIB_SURFACE_FEATURE=CAIRO_HAS_XLIB_SURFACE
-           FT_FONT_FEATURE=CAIRO_HAS_FT_FONT
-       else
-           XLIB_SURFACE_FEATURE=CAIRO_HAS_NO_XLIB_SURFACe
-           FT_FONT_FEATURE=CAIRO_HAS_NO_FT_FONT
+           XLIB_SURFACE_FEATURE="#define CAIRO_HAS_XLIB_SURFACE 1"
+           FT_FONT_FEATURE="#define CAIRO_HAS_FT_FONT 1"
        fi
        if test "$MOZ_WIDGET_TOOLKIT" = "mac" -o "$MOZ_WIDGET_TOOLKIT" = "cocoa"; then
-           QUARTZ_SURFACE_FEATURE=CAIRO_HAS_QUARTZ_SURFACE
-           ATSUI_FONT_FEATURE=CAIRO_HAS_ATSUI_FONT
-       else
-           QUARTZ_SURFACE_FEATURE=CAIRO_HAS_NO_QUARTZ_SURFACE
-           ATSUI_FONT_FEATURE=CAIRO_HAS_NO_ATSUI_FONT
+           QUARTZ_SURFACE_FEATURE="#define CAIRO_HAS_QUARTZ_SURFACE 1"
+           ATSUI_FONT_FEATURE="#define CAIRO_HAS_ATSUI_FONT 1"
        fi
-       XCB_SURFACE_FEATURE=CAIRO_HAS_NO_XCB_SURFACE
        if test "$MOZ_WIDGET_TOOLKIT" = "windows"; then
-           WIN32_SURFACE_FEATURE=CAIRO_HAS_WIN32_SURFACE
-           WIN32_FONT_FEATURE=CAIRO_HAS_WIN32_FONT
-       else
-           WIN32_SURFACE_FEATURE=CAIRO_HAS_NO_WIN32_SURFACE
-           WIN32_FONT_FEATURE=CAIRO_HAS_NO_WIN32_FONT
+           WIN32_SURFACE_FEATURE="#define CAIRO_HAS_WIN32_SURFACE 1"
+           WIN32_FONT_FEATURE="#define CAIRO_HAS_WIN32_FONT 1"
        fi
-       GLITZ_SURFACE_FEATURE=CAIRO_HAS_NO_GLITZ_SURFACE
-       SANITY_CHECKING_FEATURE=CAIRO_DO_SANITY_CHECKING
 
        
        
@@ -18311,7 +18296,7 @@ EOF
     # Extract the first word of "pkg-config", so it can be a program name with args.
 set dummy pkg-config; ac_word=$2
 echo $ac_n "checking for $ac_word""... $ac_c" 1>&6
-echo "configure:18315: checking for $ac_word" >&5
+echo "configure:18300: checking for $ac_word" >&5
 if eval "test \"`echo '$''{'ac_cv_path_PKG_CONFIG'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
@@ -18355,19 +18340,19 @@ fi
      PKG_CONFIG_MIN_VERSION=0.9.0
      if $PKG_CONFIG --atleast-pkgconfig-version $PKG_CONFIG_MIN_VERSION; then
         echo $ac_n "checking for cairo >= $CAIRO_VERSION""... $ac_c" 1>&6
-echo "configure:18359: checking for cairo >= $CAIRO_VERSION" >&5
+echo "configure:18344: checking for cairo >= $CAIRO_VERSION" >&5
 
         if $PKG_CONFIG --exists "cairo >= $CAIRO_VERSION" ; then
             echo "$ac_t""yes" 1>&6
             succeeded=yes
 
             echo $ac_n "checking CAIRO_CFLAGS""... $ac_c" 1>&6
-echo "configure:18366: checking CAIRO_CFLAGS" >&5
+echo "configure:18351: checking CAIRO_CFLAGS" >&5
             CAIRO_CFLAGS=`$PKG_CONFIG --cflags "cairo >= $CAIRO_VERSION"`
             echo "$ac_t""$CAIRO_CFLAGS" 1>&6
 
             echo $ac_n "checking CAIRO_LIBS""... $ac_c" 1>&6
-echo "configure:18371: checking CAIRO_LIBS" >&5
+echo "configure:18356: checking CAIRO_LIBS" >&5
             ## don't use --libs since that can do evil things like add
             ## -Wl,--export-dynamic
             CAIRO_LIBS="`$PKG_CONFIG --libs-only-L \"cairo >= $CAIRO_VERSION\"` `$PKG_CONFIG --libs-only-l \"cairo >= $CAIRO_VERSION\"`"
@@ -18432,7 +18417,7 @@ if test `echo "$MOZ_EXTENSIONS" | grep -c python/xpcom` -ne 0; then
         # Extract the first word of "python", so it can be a program name with args.
 set dummy python; ac_word=$2
 echo $ac_n "checking for $ac_word""... $ac_c" 1>&6
-echo "configure:18436: checking for $ac_word" >&5
+echo "configure:18421: checking for $ac_word" >&5
 if eval "test \"`echo '$''{'ac_cv_path_PYTHON'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
@@ -18693,14 +18678,14 @@ ac_link='${CC-cc} -o conftest${ac_exeext} $CFLAGS $CPPFLAGS $LDFLAGS conftest.$a
 cross_compiling=$ac_cv_prog_cc_cross
 
     cat > conftest.$ac_ext <<EOF
-#line 18697 "configure"
+#line 18682 "configure"
 #include "confdefs.h"
 #include <gmodule.h>
 int main() {
  int x = 1; x++; 
 ; return 0; }
 EOF
-if { (eval echo configure:18704: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
+if { (eval echo configure:18689: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
   :
 else
   echo "configure: failed program was:" >&5
@@ -18993,7 +18978,7 @@ if test "$MOZ_X11"; then
                 _SAVE_CFLAGS=$CFLAGS
     CFLAGS="$CFLAGS $XCFLAGS"
     cat > conftest.$ac_ext <<EOF
-#line 18997 "configure"
+#line 18982 "configure"
 #include "confdefs.h"
 
         #include <stdio.h>
@@ -19009,7 +18994,7 @@ int main() {
     
 ; return 0; }
 EOF
-if { (eval echo configure:19013: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
+if { (eval echo configure:18998: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
   :
 else
   echo "configure: failed program was:" >&5

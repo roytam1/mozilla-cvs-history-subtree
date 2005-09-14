@@ -10,8 +10,7 @@ http://www.cairographics.org/.
 
 VERSIONS:
 
-  cairo 0.5.0
-  libpixman 0.1.5
+  cairo 1.0.0
 
 ***** NOTE FOR VISUAL C++ 6.0 *****
 
@@ -24,21 +23,6 @@ PATCHES:
 
   stdint.h - select between inttypes.h, stdint.h, and mozstdint.h.
 
-  dash-dos.diff - prevent DOS attack with dasharray.
-
-  alphablend.diff - check for AlphaBlend usability at runtime (win32)
-
   feature-tests.diff - change #if to #ifdef, and change
       cairo-features.h.in to #define things based on mozilla configure
       tests
-
-  allow-null-surface.diff - allow creating a cairo_t with a NULL
-      target surface
-
-  optimize-opaque-paint.diff - if cairo_paint_with_alpha is called
-      with alpha == 1.0, turn it into cairo_paint
-
-  win32-extents.diff - correct text extents for general tranforms
-      (upstream patch)
-
-  atsui-empty.diff - prevent OS-X crash with empty string
