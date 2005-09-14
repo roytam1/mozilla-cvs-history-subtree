@@ -162,11 +162,6 @@ function Startup()
 
   gExtensionsView.addEventListener("extension-updatenow", onExtensionUpdateNow, false);
 
-  // Finally, update the UI. 
-  gExtensionsView.database.AddDataSource(gExtensionManager.datasource);
-  gExtensionsView.setAttribute("ref", RDFURI_ITEM_ROOT);
-  gExtensionsView.focus();
-  
   var pref = Components.classes["@mozilla.org/preferences-service;1"]
                        .getService(Components.interfaces.nsIPrefBranch);
   var defaultPref = pref.QueryInterface(Components.interfaces.nsIPrefService)
@@ -187,6 +182,11 @@ function Startup()
     optionsButton.hidden = true;
   }
 
+  // Finally, update the UI. 
+  gExtensionsView.database.AddDataSource(gExtensionManager.datasource);
+  gExtensionsView.setAttribute("ref", RDFURI_ITEM_ROOT);
+  gExtensionsView.focus();
+  
   var extensionsStrings = document.getElementById("extensionsStrings");
   document.title = extensionsStrings.getString(gWindowState + "Title");
   
