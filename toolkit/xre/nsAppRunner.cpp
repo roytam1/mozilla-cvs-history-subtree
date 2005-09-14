@@ -132,7 +132,6 @@
 #endif //XP_BEOS
 
 #ifdef XP_WIN
-#include <windows.h>
 #include <process.h>
 #endif
 
@@ -238,22 +237,6 @@ extern "C" {
 
 #if defined(XP_UNIX) || defined(XP_BEOS)
   extern void InstallUnixSignalHandlers(const char *ProgramName);
-#endif
-
-#if defined(XP_WIN)
-/**
- * Return a malloc'd copy of the given string surrounded with double quotes.
- */
-static char *NewQuotedString(const char *input)
-{
-  int len = strlen(input);
-  char *p = (char *) malloc(len + 3);
-  p[0] = '\"';
-  memcpy(&p[1], input, len);
-  p[len + 1] = '\"';
-  p[len + 2] = '\0';
-  return p;
-}
 #endif
 
 int    gArgc;
@@ -1182,6 +1165,10 @@ XRE_GetBinaryPath(const char* argv0, nsILocalFile* *aResult)
 
 #define NS_ERROR_LAUNCHED_CHILD_PROCESS NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_PROFILE, 200)
 
+#ifdef XP_WIN
+#include "nsWindowsRestart.cpp"
+#endif
+
 // If aBlankCommandLine is true, then the application will be launched with a
 // blank command line instead of being launched with the same command line that
 // it was initially started with.
@@ -1212,15 +1199,7 @@ static nsresult LaunchChild(nsINativeAppSupport* aNative,
     return rv;
 
 #if defined(XP_WIN)
-  // We must shorten the path to a 8.3 path, since that's all _execv can
-  // handle (otherwise segments after any spaces that might exist in the path
-  // will be converted into parameters, and really weird things will happen)
-  char shortPath[MAXPATHLEN];
-  ::GetShortPathName(exePath.get(), shortPath, MAXPATHLEN);
-
-  gRestartArgv[0] = shortPath;
-
-  if (_execv(shortPath, gRestartArgv) == -1)
+  if (!WinLaunchChild(exePath.get(), gRestartArgc, gRestartArgv))
     return NS_ERROR_FAILURE;
 #elif defined(XP_OS2)
   if (_execv(exePath.get(), gRestartArgv) == -1)
@@ -1474,7 +1453,7 @@ SelectProfile(nsIProfileLock* *aResult, nsINativeAppSupport* aNative,
     const char *dummy;
     CheckArg("p", &dummy);
     CheckArg("profile", &dummy);
-    CheckArg("profilemanager", &dummy);
+    CheckArg("profilemanager");
 
     return NS_LockProfilePath(lf, localDir, nsnull, aResult);
   }
@@ -1921,13 +1900,6 @@ XRE_main(int argc, char* argv[], const nsXREAppData* aAppData)
 
   int i;
   for (i = 0; i < argc; ++i) {
-#if defined(XP_WIN)
-    if (strchr(argv[i], ' ')) {
-      gRestartArgv[i] = NewQuotedString(argv[i]);
-      if (!gRestartArgv[i]) return 1;
-    }
-    else
-#endif
     gRestartArgv[i] = argv[i];
   }
   gRestartArgv[argc] = nsnull;
