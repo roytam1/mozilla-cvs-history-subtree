@@ -4116,6 +4116,7 @@ inline nsresult
 ProcessPseudoFrames(nsFrameConstructorState& aState,
                     nsFrameItems&   aItems)
 {
+  return NS_OK;
 }
 #endif
 
