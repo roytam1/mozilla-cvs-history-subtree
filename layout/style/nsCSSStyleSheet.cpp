@@ -3134,6 +3134,18 @@ static PRBool SelectorMatches(RuleProcessorData &data,
     else if (nsCSSPseudoClasses::optional == pseudoClass->mAtom) {
       result = STATE_CHECK(NS_EVENT_STATE_OPTIONAL);
     }
+    else if (nsCSSPseudoClasses::valid == pseudoClass->mAtom) {
+      result = STATE_CHECK(NS_EVENT_STATE_VALID);
+    }
+    else if (nsCSSPseudoClasses::invalid == pseudoClass->mAtom) {
+      result = STATE_CHECK(NS_EVENT_STATE_INVALID);
+    }
+    else if (nsCSSPseudoClasses::inRange == pseudoClass->mAtom) {
+      result = STATE_CHECK(NS_EVENT_STATE_INRANGE);
+    }
+    else if (nsCSSPseudoClasses::outOfRange == pseudoClass->mAtom) {
+      result = STATE_CHECK(NS_EVENT_STATE_OUTOFRANGE);
+    }
     else {
       NS_ERROR("CSS parser parsed a pseudo-class that we do not handle");
       result = PR_FALSE;  // unknown pseudo class
@@ -3650,7 +3662,11 @@ PRBool IsStateSelector(nsCSSSelector& aSelector)
         (pseudoClass->mAtom == nsCSSPseudoClasses::link) ||
         (pseudoClass->mAtom == nsCSSPseudoClasses::visited) ||
         (pseudoClass->mAtom == nsCSSPseudoClasses::required) ||
-        (pseudoClass->mAtom == nsCSSPseudoClasses::optional)) {
+        (pseudoClass->mAtom == nsCSSPseudoClasses::optional) ||
+        (pseudoClass->mAtom == nsCSSPseudoClasses::valid) ||
+        (pseudoClass->mAtom == nsCSSPseudoClasses::invalid) ||
+        (pseudoClass->mAtom == nsCSSPseudoClasses::inRange) ||
+        (pseudoClass->mAtom == nsCSSPseudoClasses::outOfRange)) {
       return PR_TRUE;
     }
   }
