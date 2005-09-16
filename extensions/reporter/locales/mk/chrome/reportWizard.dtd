@@ -1,55 +1,41 @@
 <!-- Entities for the Sample Extension Options Dialog go here -->
-<!ENTITY reportWizard.title                         "Report A Broken Web Site">
-
-<!ENTITY privacyNotice.label                        "Privacy Policy">
-<!ENTITY reportWizardPrivacy.description            "This tool allows you to tell the Evangelism Team about web sites that do not work properly in &brandShortName;, or shut &brandShortName; out. This is your way to help us ensure the best possible experience for &brandShortName; users. Please take a moment to read the following to learn how we use the information we collect should you choose to participate.">
-<!ENTITY reportWizardMustAgree.description          "To continue you need to agree to the privacy policy above.">
-
-<!ENTITY dontShowPrivacyStatement.label             "I have read and accept the above privacy policy.">
-<!ENTITY dontShowPrivacyStatement.accesskey         "I">
-
-<!ENTITY reportForm.label                           "Fill out Report">
-
-<!ENTITY reportForm.description                     "Tell us a little about the problem you encountered:">
-<!ENTITY reportForm.url.title                       "Web site URL:">
-
-<!ENTITY reportForm.behind_login.title              "Web site is password-protected"><!-- No ":" at the end -->
-<!ENTITY reportForm.behind_login.accesskey          "P">
-
-<!ENTITY reportForm.problem_type.title              "Problem Type:">
-<!ENTITY reportForm.problem_type.accesskey          "T">
-
-<!ENTITY reportForm.problem_type.chooseOne.title    "Choose One...">
-
+<!ENTITY reportWizard.title "Пријавување на расипано веб место">
+<!ENTITY privacyNotice.label "Политика на приватност">
+<!ENTITY reportWizardPrivacy.description "Оваа алатка ви овозможува да го известите тимот на евангелисти за веб места кои не работат соодветно во &brandShortName; или кои го гасат &brandShortName;. Ова е Вашиот начин да ни помогнете да обезбедиме најдобро можно искуство за корисниците на &brandShortName;. Ве молиме прочитајте ги следниве информации за да научите како ние ги користиме собраните информации доколку решите да учествувате.">
+<!ENTITY reportWizardMustAgree.description "За да продолжите морате да се согласите со политиката на приватност погоре.">
+<!ENTITY dontShowPrivacyStatement.label "Ја прочитав и се согласувам со политиката на приватност.">
+<!ENTITY dontShowPrivacyStatement.accesskey "и">
+<!ENTITY reportForm.label "Пополни извештај">
+<!ENTITY reportForm.description "Кажате ни за проблемот на кој наидовте:">
+<!ENTITY reportForm.url.title "URL на веб место:">
+<!-- No ":" at the end -->
+<!ENTITY reportForm.behind_login.title "Веб местото е заштитено со лозинка">
+<!ENTITY reportForm.behind_login.accesskey "л">
+<!ENTITY reportForm.problem_type.title "Тип на проблем:">
+<!ENTITY reportForm.problem_type.accesskey "Т">
+<!ENTITY reportForm.problem_type.chooseOne.title "Изберете еден...">
 <!-- DO *NOT* Add/change/modify (except localization) without consulting with r.m.o server admin first! -->
-<!ENTITY reportForm.problem_type.item1.title        "Browser not supported">
-<!ENTITY reportForm.problem_type.item2.title        "Can't log in">
-<!ENTITY reportForm.problem_type.item3.title        "Plugin not shown">
-<!ENTITY reportForm.problem_type.item4.title        "Other content missing">
-<!ENTITY reportForm.problem_type.item5.title        "Behavior wrong">
-<!ENTITY reportForm.problem_type.item6.title        "Appearance wrong">
-<!ENTITY reportForm.problem_type.item7.title        "Other problem">
-
-<!ENTITY reportForm.describe.title                  "Describe Problem:">
-<!ENTITY reportForm.describe.accesskey              "D">
-
-<!ENTITY reportForm.platform.title                  "Platform:">
-<!ENTITY reportForm.product.title                   "Product:">
-<!ENTITY reportForm.gecko.title                     "Gecko:">
-<!ENTITY reportForm.useragent.title                 "Useragent:">
-<!ENTITY reportForm.language.title                  "Language:">
-
+<!ENTITY reportForm.problem_type.item1.title "Прелистувачот не е поддржан">
+<!ENTITY reportForm.problem_type.item2.title "Не можете да се пријавите">
+<!ENTITY reportForm.problem_type.item3.title "Додатоткот не се прикажува">
+<!ENTITY reportForm.problem_type.item4.title "Недостасува друга содржина">
+<!ENTITY reportForm.problem_type.item5.title "Однесувањето е погрешно">
+<!ENTITY reportForm.problem_type.item6.title "Изгледот е погрешен">
+<!ENTITY reportForm.problem_type.item7.title "Друг проблем">
+<!ENTITY reportForm.describe.title "Опис на проблемот:">
+<!ENTITY reportForm.describe.accesskey "с">
+<!ENTITY reportForm.platform.title "Платформа:">
+<!ENTITY reportForm.product.title "Производ:">
+<!ENTITY reportForm.gecko.title "Геко:">
+<!ENTITY reportForm.useragent.title "Кориснички агент:">
+<!ENTITY reportForm.language.title "Јазик:">
 <!--  Make sure this has "(Optional)" at the end.  This is important for the user to know -->
-<!ENTITY reportForm.email.title                     "Email (Optional):">
-<!ENTITY reportForm.email.accesskey                 "E">
-
-<!ENTITY reportForm.privacyPolicy.title             "Privacy Policy">
-<!ENTITY reportForm.privacyPolicy.tooltip           "View Privacy Policy">
-
-<!ENTITY reportResults.showDetail.title             "Show Details">
-<!ENTITY reportResults.showDetail.accesskey         "S">
-
-<!ENTITY sendReport.label                           "Sending Report">
-<!ENTITY sendReport.description                     "Sending Report to server...">
-
-<!ENTITY finish.label                               "Report Sent">
+<!ENTITY reportForm.email.title "Е-пошта (по желба):">
+<!ENTITY reportForm.email.accesskey "Е">
+<!ENTITY reportForm.privacyPolicy.title "Политика на приватност">
+<!ENTITY reportForm.privacyPolicy.tooltip "Видете ја политиката на приватност">
+<!ENTITY reportResults.showDetail.title "Прикажи детали">
+<!ENTITY reportResults.showDetail.accesskey "д">
+<!ENTITY sendReport.label "Извештајот се испраќа">
+<!ENTITY sendReport.description "Извештајот се испраќа до серверот...">
+<!ENTITY finish.label "Извештајот е испратен">
