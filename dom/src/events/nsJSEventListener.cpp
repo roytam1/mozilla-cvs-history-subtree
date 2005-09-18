@@ -53,9 +53,9 @@
  * nsJSEventListener implementation
  */
 nsJSEventListener::nsJSEventListener(nsIScriptContext *aContext,
-                                     nsIScriptGlobalObject *aScopeObject,
-                                     nsIScriptBinding *aBinding)
-  : nsIJSEventListener(aContext, aScopeObject, aBinding),
+                                     void *aScopeObject,
+                                     nsISupports *aTarget)
+  : nsIJSEventListener(aContext, aScopeObject, aTarget),
     mReturnResult(nsReturnResult_eNotSet)
 {
 }
@@ -96,6 +96,7 @@ nsJSEventListener::HandleEvent(nsIDOMEvent* aEvent)
   // the event handler. Might need to get one from the JS thread context
   // stack.
   JSContext* cx = (JSContext*)mContext->GetNativeContext();
+  nsCOMPtr<nsIAtom> atomName;
 
   if (!mEventName) {
     if (NS_OK != aEvent->GetType(eventString)) {
@@ -112,13 +113,17 @@ nsJSEventListener::HandleEvent(nsIDOMEvent* aEvent)
       }
     //}
     eventString.Assign(NS_LITERAL_STRING("on") + eventString);
+	atomName = do_GetAtom(eventString);
   }
   else {
     mEventName->ToString(eventString);
+	atomName = mEventName;
   }
 
+
   void *funcval;
-  rv = mContext->GetScriptBindingHandler(mBinding, eventString, &funcval);
+  rv = mContext->GetBoundEventHandler(mTarget, mScopeObject, atomName,
+                                      &funcval);
   NS_ENSURE_SUCCESS(rv, rv);
   if (!funcval)
     return NS_OK;
@@ -156,7 +161,8 @@ nsJSEventListener::HandleEvent(nsIDOMEvent* aEvent)
   nsCOMPtr<nsISupports> irv;
   // XXX - fix return val!
   jsval rval = JSVAL_VOID;
-  rv = mContext->CallEventHandler(mBinding, funcval, iargv, getter_AddRefs(irv));
+  rv = mContext->CallEventHandler(mTarget, mScopeObject, funcval, iargv,
+                                  getter_AddRefs(irv));
 
   if (argv != &arg) {
     ::JS_PopArguments(cx, stackPtr);
@@ -205,11 +211,11 @@ nsJSEventListener::HandleEvent(nsIDOMEvent* aEvent)
  */
 
 nsresult
-NS_NewJSEventListener(nsIScriptContext *aContext, nsIScriptGlobalObject *aScopeGlobal,
-                      nsIScriptBinding *aBinding, nsIDOMEventListener ** aReturn)
+NS_NewJSEventListener(nsIScriptContext *aContext, void *aScopeObject,
+                      nsISupports*aTarget, nsIDOMEventListener ** aReturn)
 {
   nsJSEventListener* it =
-    new nsJSEventListener(aContext, aScopeGlobal, aBinding);
+    new nsJSEventListener(aContext, aScopeObject, aTarget);
   if (!it) {
     return NS_ERROR_OUT_OF_MEMORY;
   }

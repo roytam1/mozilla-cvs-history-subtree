@@ -126,6 +126,8 @@ public:
   /**
    * Called when the global script is finalized.  Finalizes all contexts and globals
    * for all languages.
+   * XXXmarkh - that is not the original intent - OnFinalize generally called
+   * as part of js class destruction.
    */
 
   virtual void OnFinalize() = 0;

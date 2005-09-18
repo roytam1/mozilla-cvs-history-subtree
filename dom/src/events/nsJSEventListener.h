@@ -46,14 +46,14 @@
 #include "nsIAtom.h"
 #include "nsIScriptContext.h"
 
-//nsIDOMMouseListener interface
-// misnamed - JS grip is broken!
+// nsJSEventListener interface
+// misnamed - JS no longer has exclusive rights over this interface!
 class nsJSEventListener : public nsIDOMEventListener,
                           public nsIJSEventListener
 {
 public:
-  nsJSEventListener(nsIScriptContext *aContext, nsIScriptGlobalObject *aScopeObject,
-                    nsIScriptBinding* aObject);
+  nsJSEventListener(nsIScriptContext *aContext, void *aScopeObject,
+                    nsISupports* aObject);
   virtual ~nsJSEventListener();
 
   NS_DECL_ISUPPORTS

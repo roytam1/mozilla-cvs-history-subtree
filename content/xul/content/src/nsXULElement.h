@@ -575,7 +575,7 @@ public:
 
     // nsIScriptEventHandlerOwner
     nsresult CompileEventHandler(nsIScriptContext* aContext,
-                                 nsIScriptBinding* aTarget,
+                                 nsISupports* aTarget,
                                  nsIAtom *aName,
                                  const nsAString& aBody,
                                  const char* aURL,

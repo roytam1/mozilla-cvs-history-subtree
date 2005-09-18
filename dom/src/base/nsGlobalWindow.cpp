@@ -261,41 +261,6 @@ static const char kDOMSecurityWarningsBundleURL[] = "chrome://global/locale/dom/
 static const char kCryptoContractID[] = NS_CRYPTO_CONTRACTID;
 static const char kPkcs11ContractID[] = NS_PKCS11_CONTRACTID;
 
-// This is a bit of a hack - used to create a temporary script binding to
-// the global window itself.
-class nsSelfScriptBinding : public nsIScriptBinding {
-public:
-  nsSelfScriptBinding(PRUint32 language, void *scope)
-    : mLanguage(language), mScope(scope) {;}
-    
-  NS_DECL_ISUPPORTS
-
-  virtual PRUint32 GetLanguage() {return mLanguage;}
-  void *GetNativeObject() {return mScope;}
-  nsISupports *GetTarget() {NS_ERROR("Don't have the target!"); return nsnull;}
-protected:
-  void *mScope;
-  PRUint32 mLanguage;
-};
-// nsSelfScriptBinding
-// QueryInterface implementation for nsSelfScriptBinding
-NS_INTERFACE_MAP_BEGIN(nsSelfScriptBinding)
-  NS_INTERFACE_MAP_ENTRY(nsSelfScriptBinding)
-NS_INTERFACE_MAP_END
-
-NS_IMPL_ADDREF(nsSelfScriptBinding)
-NS_IMPL_RELEASE(nsSelfScriptBinding)
-
-nsresult MakeSelfBinding(PRUint32 lang, void *scope, nsIScriptBinding **aResult)
-{
-    *aResult = new nsSelfScriptBinding(lang, scope);
-    if (!*aResult)
-        return NS_ERROR_UNEXPECTED;
-    NS_IF_ADDREF(*aResult);
-    return NS_OK;
-}
-
-
 //*****************************************************************************
 //***    nsGlobalWindow: Object Management
 //*****************************************************************************
@@ -6328,17 +6293,10 @@ nsGlobalWindow::RunTimeout(nsTimeout *aTimeout)
       nsCOMPtr<nsISupports> dummy;
       // Fix nsISupports -> argv
       NS_ASSERTION(timeout->mArgc == 0, "Event firing ignoring args");
-      nsCOMPtr<nsIDOMWindow> me =
-            do_QueryInterface(NS_STATIC_CAST(nsIDOMWindow *, this));
-
-      nsCOMPtr<nsIScriptBinding> binding;
-      PRUint32 lang = scx->GetLanguage();
-      // XXXmarkh - is this really necessary?  Could we call
-      // nsIScriptContext->GetScriptBinding(this)?
-      if (NS_SUCCEEDED(MakeSelfBinding(lang, GetLanguageGlobal(lang),
-                                       getter_AddRefs(binding)))) {
-        scx->CallEventHandler(binding, timeout->mFunObj, nsnull, getter_AddRefs(dummy));
-      }
+      nsCOMPtr<nsISupports> me(NS_STATIC_CAST(nsIDOMWindow *, this));
+      scx->CallEventHandler(me,
+                            GetLanguageGlobal(nsIProgrammingLanguage::JAVASCRIPT),
+                            timeout->mFunObj, nsnull, getter_AddRefs(dummy));
     }
 
     --mTimeoutFiringDepth;

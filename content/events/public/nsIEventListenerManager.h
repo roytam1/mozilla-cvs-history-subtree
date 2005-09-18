@@ -49,9 +49,6 @@ class nsIDOMEventTarget;
 class nsIDOMEventGroup;
 class nsIAtom;
 
-class nsIScriptGlobalObject;
-class nsIScriptBinding;
-
 /*
  * Event listener manager interface.
  */
@@ -119,7 +116,7 @@ public:
   * @param the name of an event listener
   */
   NS_IMETHOD RegisterScriptEventListener(nsIScriptContext *aContext,
-                                         nsIScriptGlobalObject *aScopeGlobal,
+                                         void *aScopeObject,
                                          nsISupports *aObject,
                                          nsIAtom* aName) = 0;
 
@@ -128,8 +125,8 @@ public:
   * script object for a given event type.
   * @param an event listener */
   NS_IMETHOD CompileScriptEventListener(nsIScriptContext *aContext,
-                                        nsIScriptGlobalObject *aScopeObject,
-                                        nsIScriptBinding *aBinding,
+                                        void *aScopeObject,
+                                        nsISupports *aObject,
                                         nsIAtom* aName,
                                         PRBool *aDidCompile) = 0;
 

@@ -720,7 +720,7 @@ nsXULElement::GetCompiledEventHandler(nsIAtom *aName, void** aHandler)
 
 nsresult
 nsXULElement::CompileEventHandler(nsIScriptContext* aContext,
-                                  nsIScriptBinding* aTarget,
+                                  nsISupports* aTarget,
                                   nsIAtom *aName,
                                   const nsAString& aBody,
                                   const char* aURL,
@@ -728,7 +728,6 @@ nsXULElement::CompileEventHandler(nsIScriptContext* aContext,
                                   void** aHandler)
 {
     nsresult rv;
-    nsIScriptBinding *compileTarget;
 
     XUL_PROTOTYPE_ATTRIBUTE_METER(gNumCacheSets);
 
@@ -737,7 +736,6 @@ nsXULElement::CompileEventHandler(nsIScriptContext* aContext,
         // It'll be shared among the instances of the prototype.
         // Use null for the scope object when precompiling shared
         // prototype scripts.
-        compileTarget = nsnull;
 
         // Use the prototype document's special context.  Because
         // scopeObject is null, the JS engine has no other source of
@@ -769,23 +767,24 @@ nsXULElement::CompileEventHandler(nsIScriptContext* aContext,
     else {
         // We don't have a prototype; do a one-off compile.
         NS_ASSERTION(aTarget != nsnull, "no prototype and no target?!");
-        compileTarget = aTarget;
         compileContext = aContext;
     }
 
     // Compile the event handler
     const char *eventName = nsContentUtils::GetEventArgName(kNameSpaceID_XUL);
-    rv = compileContext->CompileEventHandler(compileTarget, aName, eventName,
-                                             aBody, aURL, aLineNo, !compileTarget,
+    rv = compileContext->CompileEventHandler(nsnull, aName, eventName,
+                                             aBody, aURL, aLineNo,
                                              aHandler);
     if (NS_FAILED(rv)) return rv;
 
-    if (! compileTarget) {
+    if (mPrototype) {
         // If it's a shared handler, we need to bind the shared
         // function object to the real target.
 
         // XXX: Shouldn't this use compileContext and not aContext?
-        rv = aContext->BindCompiledEventHandler(aTarget, aName, *aHandler);
+        // XXXmarkh - is GetNativeGlobal() the correct scope?
+        rv = aContext->BindCompiledEventHandler(aTarget, aContext->GetNativeGlobal(),
+                                                aName, *aHandler);
         if (NS_FAILED(rv)) return rv;
     }
 

@@ -54,28 +54,6 @@ class nsIObjectOutputStream;
 
 typedef void (*nsScriptTerminationFunc)(nsISupports* aRef);
 
-// XXXMarkh - todo - move this to its own file?
-// Better name than "binding"?  Conflicts with BindEventHandler - maybe that
-// could be renamed to AssignEventHandler?
-// 
-#define NS_ISCRIPTBINDING_IID \
-{ /* {2B387445-6955-442f-BB4C-5FED9F7A1736} */ \
-  0x2b387445, 0x6955, 0x442f, \
-   { 0xbb, 0x4c, 0x5f, 0xed, 0x9f, 0x7a, 0x17, 0x36 } }
-
-/**
- * A binding of an XPCOM object (generally a DOM one) and a namespace for the
- * object inside script language.
- */
-class nsIScriptBinding : public nsISupports
-{
-public:
-  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISCRIPTBINDING_IID)
-  virtual PRUint32 GetLanguage() = 0;
-  virtual void *GetNativeObject() = 0;
-  virtual nsISupports *GetTarget() = 0;
-};
-
 #define NS_ISCRIPTCONTEXT_IID \
 { /* {52B46C37-A078-4952-AED7-035D83C810C0} */ \
   0x52b46c37, 0xa078, 0x4952, \
@@ -176,21 +154,13 @@ public:
                                  PRBool* aIsUndefined) = 0;
 
   /**
-   * Bind a DOM object to the language.
-   */
-  virtual nsresult GetScriptBinding(nsISupports *aObject, void *aScope,
-                                    nsIScriptBinding **aBinding)=0;
-
-  virtual nsresult GetScriptBindingHandler(nsIScriptBinding *aBinding,
-                                           nsString &name,
-                                           void **handler)=0;
-  /**
    * Compile the event handler named by atom aName, with function body aBody
-   * into a function object returned if ok via *aHandler.  Bind the lowercase
-   * ASCII name to the function in its parent object aTarget.
+   * into a function object returned if ok via *aHandler.  Does NOT bind the
+   * function to anything - BindCompiledEventHandler() should be used for that
+   * purpose.
    *
-   * @param aTarget an object telling the scope in which to bind the compiled
-   *        event handler function to aName.
+   * @param aPrincipals the principals to compile the function with.  May be
+   *        nsnull.
    * @param aName an nsIAtom pointer naming the function; it must be lowercase
    *        and ASCII, and should not be longer than 63 chars.  This bound on
    *        length is enforced only by assertions, so caveat caller!
@@ -198,24 +168,18 @@ public:
    * @param aBody the event handler function's body
    * @param aURL the URL or filename for error messages
    * @param aLineNo the starting line number of the script for error messages
-   * @param aShared flag telling whether the compiled event handler will be
-   *        shared via nsIScriptEventHandlerOwner, in which case any static
-   *        link compiled into it based on aTarget should be cleared, both
-   *        to avoid entraining garbage to be collected, and to trigger static
-   *        link re-binding in BindCompiledEventHandler (see below).
    * @param aHandler the out parameter in which a void pointer to the compiled
    *        function object is returned on success; may be null, meaning the
    *        caller doesn't need to store the handler for later use.
    *
    * @return NS_OK if the function body was valid and got compiled
    */
-  virtual nsresult CompileEventHandler(nsIScriptBinding* aTarget,
+  virtual nsresult CompileEventHandler(nsIPrincipal * aPrincipals,
                                        nsIAtom* aName,
                                        const char* aEventName,
                                        const nsAString& aBody,
                                        const char* aURL,
                                        PRUint32 aLineNo,
-                                       PRBool aShared,
                                        void** aHandler) = 0;
 
   /**
@@ -228,7 +192,8 @@ public:
    * @param argv vector of arguments
    * @param rval out parameter returning result
    **/
-  virtual nsresult CallEventHandler(nsIScriptBinding* aTarget, void* aHandler,
+  virtual nsresult CallEventHandler(nsISupports* aTarget,
+                                    void *aScope, void* aHandler,
                                     nsIArray *argv, nsISupports **rv) = 0;
 
   /**
@@ -238,8 +203,13 @@ public:
    * static scoping must re-bind the scope chain for aHandler to begin (after
    * the activation scope for aHandler itself, typically) with aTarget's scope.
    *
+   * Logically, this 'bind' operation is more of a 'copy' - it simply
+   * stashes/associates the event handler function with the event target, so
+   * it can be fetched later with GetBoundEventHandler().
+   *
    * @param aTarget an object telling the scope in which to bind the compiled
-   *        event handler function.
+   *        event handler function.  The context will presumably associate
+   *        this nsISupports with a native script object.
    * @param aName an nsIAtom pointer naming the function; it must be lowercase
    *        and ASCII, and should not be longer than 63 chars.  This bound on
    *        length is enforced only by assertions, so caveat caller!
@@ -247,9 +217,20 @@ public:
    *        CompileEventHandler
    * @return NS_OK if the function was successfully bound to the name
    */
-  virtual nsresult BindCompiledEventHandler(nsIScriptBinding* aTarget,
+  virtual nsresult BindCompiledEventHandler(nsISupports* aTarget, void *aScope,
                                             nsIAtom* aName,
                                             void* aHandler) = 0;
+
+  /**
+   * Lookup a previously bound event handler for the specified target.  This
+   * will return an object equivilent to the one passed to
+   * BindCompiledEventHandler (although the pointer may not be the same).
+   *
+   * The result native object must be 'unlocked'. xxxmarkh - update this!
+   */
+  virtual nsresult GetBoundEventHandler(nsISupports* aTarget, void *aScope,
+                                        nsIAtom* aName,
+                                        void** aHandler) = 0;
 
   virtual nsresult CompileFunction(void* aTarget,
                                    const nsACString& aName,
@@ -386,6 +367,7 @@ public:
    * call DidInitializeContext() when a context is fully
    * (successfully) initialized.
    */
+  // xxxmarkh - is this really public?  Only caller is nsJSContext?
   virtual nsresult InitClasses(void *aGlobalObj) = 0;
 
   /**

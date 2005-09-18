@@ -128,6 +128,10 @@ void PR_CALLBACK nsXBLDocGlobalObject_finalize(JSContext *cx, JSObject *obj)
 
   if (sgo) {
     // We previously passed 'obj' to OnFinalize which did this check...
+    // This assertion now commonly fails - the script context has already been
+    // set to nsnull, so sgo>GetLanguageGlobal early returns.  Looking in the
+    // debugger shows it does have mJSObject as obj though.
+    // xxxmarkh - fix this!
     NS_ASSERTION(obj == sgo->GetLanguageGlobal(nsIProgrammingLanguage::JAVASCRIPT),
                  "Finalizing global that doesn't have our global obj");
     sgo->OnFinalize();
@@ -205,6 +209,10 @@ XBL_ProtoErrorReporter(JSContext *cx,
 void
 nsXBLDocGlobalObject::SetContext(nsIScriptContext *aScriptContext)
 {
+  if (!aScriptContext) {
+    mScriptContext = nsnull;
+    return;
+  }
   NS_ASSERTION(aScriptContext->GetLanguage() == nsIProgrammingLanguage::JAVASCRIPT,
                "xbl is not multi-language");
   NS_ASSERTION(aScriptContext, "Must provide a context");
@@ -331,12 +339,16 @@ nsXBLDocGlobalObject::GetGlobalJSObject()
   if (!cx)
     return nsnull;
 
-  return ::JS_GetGlobalObject(cx);
+  JSObject *ret = ::JS_GetGlobalObject(cx);
+  NS_ASSERTION(mJSObject == ret, "How did this magic switch happen?");
+  return ret;
 }
 
 void
 nsXBLDocGlobalObject::OnFinalize()
 {
+  NS_ASSERTION(mJSObject && mScriptContext, 
+               "OnFinalize called multiple times or before init?");
   if (mScriptContext) {
     mScriptContext->FinalizeClasses(mJSObject);
     mScriptContext = nsnull;
@@ -415,9 +427,10 @@ nsXBLDocumentInfo::~nsXBLDocumentInfo()
 {
   /* destructor code */
   if (mGlobalObject) {
-    mGlobalObject->OnFinalize(); // remove circular reference
-    NS_ASSERTION(mGlobalObject->GetGlobalObjectOwner() == nsnull,
-                 "Finalizing should have nuked the owner");
+    // xxxmarkh - note we can't call OnFinalize here, as the mJSObject
+    // is actually cleaned up in the _finalize call.  What to do about this?
+    mGlobalObject->SetLanguageContext(nsIProgrammingLanguage::JAVASCRIPT, nsnull); // remove circular reference
+    mGlobalObject->SetGlobalObjectOwner(nsnull); // just in case
   }
   delete mBindingTable;
 }

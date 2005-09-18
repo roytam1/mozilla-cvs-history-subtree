@@ -59,6 +59,7 @@
 #include "nsIDOMDocument.h"
 #include "nsIArray.h"
 
+
 //
 // Helper class used to support <SCRIPT FOR=object EVENT=handler ...>
 // style script tags...
@@ -224,11 +225,24 @@ nsHTMLScriptEventHandler::Invoke(nsISupports *aTargetObject,
   }
 
   // wrap the target object...
-  nsCOMPtr<nsIScriptBinding> scriptBinding;
-  void *scope = sgo->GetLanguageGlobal(scriptContext->GetLanguage());
-  rv = scriptContext->GetScriptBinding(aTargetObject, scope,
-                                       getter_AddRefs(scriptBinding));
-  NS_ENSURE_SUCCESS(rv, rv);
+  JSContext *cx = (JSContext *)scriptContext->GetNativeContext();
+  JSObject *scriptObject = nsnull;
+  JSObject *scope = sgo->GetGlobalJSObject();
+
+  nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
+  nsContentUtils::XPConnect()->WrapNative(cx, scope,
+                                          aTargetObject,
+                                          NS_GET_IID(nsISupports),
+                                          getter_AddRefs(holder));
+  if (holder) {
+    holder->GetJSObject(&scriptObject);
+  }
+
+  // Fail if wrapping the native object failed...
+  if (!scriptObject) {
+    return NS_ERROR_FAILURE;
+  }
+
   // Build up the array of argument names...
   //
   // Since this array is temporary (and const) the 'argument name' strings
@@ -265,7 +279,7 @@ nsHTMLScriptEventHandler::Invoke(nsISupports *aTargetObject,
   void* funcObject = nsnull;
   NS_NAMED_LITERAL_CSTRING(funcName, "anonymous");
 
-  rv = scriptContext->CompileFunction(scriptBinding,
+  rv = scriptContext->CompileFunction(scriptObject,
                                       funcName,   // method name
                                       argc,       // no of arguments
                                       args,       // argument names
@@ -291,7 +305,7 @@ nsHTMLScriptEventHandler::Invoke(nsISupports *aTargetObject,
   nsISupports *ret = nsnull;
   
   
-  return scriptContext->CallEventHandler(scriptBinding, funcObject,
+  return scriptContext->CallEventHandler(aTargetObject, scope, funcObject,
                                          arg, &ret);
 }
 

@@ -135,13 +135,13 @@ public:
                                     PRBool aDeferCompilation,
                                     PRBool aPermitUntrustedEvents);
   NS_IMETHOD RegisterScriptEventListener(nsIScriptContext *aContext,
-                                         nsIScriptGlobalObject *aScopeObject,
+                                         void *aScopeObject,
                                          nsISupports *aObject,
                                          nsIAtom* aName);
   NS_IMETHOD RemoveScriptEventListener(nsIAtom *aName);
   NS_IMETHOD CompileScriptEventListener(nsIScriptContext *aContext,
-                                        nsIScriptGlobalObject *aScopeObject,
-                                        nsIScriptBinding *aBinding,
+                                        void *aScopeObject,
+                                        nsISupports *aObject,
                                         nsIAtom* aName, PRBool *aDidCompile);
 
   NS_IMETHOD CaptureEvent(PRInt32 aEventTypes);
@@ -202,15 +202,16 @@ protected:
                               PRUint32 aSubType,
                               PRUint32 aPhaseFlags);
   nsresult CompileEventHandlerInternal(nsIScriptContext *aContext,
-                                       nsIScriptGlobalObject *aScopeObject,
-                                       nsIScriptBinding *aBinding,
+                                       void *aScopeObject,
+                                       nsISupports *aObject,
                                        nsIAtom *aName,
                                        nsListenerStruct *aListenerStruct,
                                        nsIDOMEventTarget* aCurrentTarget,
                                        PRUint32 aSubType);
   nsListenerStruct* FindJSEventListener(EventArrayType aType);
   nsresult SetJSEventListener(nsIScriptContext *aContext,
-                              nsIScriptGlobalObject *aScopeGlobal, nsIScriptBinding *aObject,
+                              void *aScopeGlobal,
+                              nsISupports *aObject,
                               nsIAtom* aName, PRBool aIsString,
                               PRBool aPermitUntrustedEvents);
   nsresult AddEventListener(nsIDOMEventListener *aListener, 

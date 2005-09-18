@@ -90,26 +90,23 @@ public:
                                  nsAString* aRetValue,
                                  PRBool* aIsUndefined);
 
-  virtual nsresult GetScriptBinding(nsISupports *aObject, void *aScope,
-                                    nsIScriptBinding **aBinding);
-
-  virtual nsresult GetScriptBindingHandler(nsIScriptBinding *aBinding,
-                                           nsString &name,
-                                           void **handler);
-
-  virtual nsresult CompileEventHandler(nsIScriptBinding *aTarget,
+  virtual nsresult CompileEventHandler(nsIPrincipal *aPrincipal,
                                        nsIAtom *aName,
                                        const char *aEventName,
                                        const nsAString& aBody,
                                        const char *aURL,
                                        PRUint32 aLineNo,
-                                       PRBool aShared,
                                        void** aHandler);
-  virtual nsresult CallEventHandler(nsIScriptBinding* aTarget, void* aHandler,
+  virtual nsresult CallEventHandler(nsISupports* aTarget, void *aScope,
+                                    void* aHandler,
                                     nsIArray *argv, nsISupports **rv);
-  virtual nsresult BindCompiledEventHandler(nsIScriptBinding *aTarget,
+  virtual nsresult BindCompiledEventHandler(nsISupports *aTarget,
+                                            void *aScope,
                                             nsIAtom *aName,
                                             void *aHandler);
+  virtual nsresult GetBoundEventHandler(nsISupports* aTarget, void *aScope,
+                                        nsIAtom* aName,
+                                        void** aHandler);
   virtual nsresult CompileFunction(void* aTarget,
                                    const nsACString& aName,
                                    PRUint32 aArgCount,
@@ -285,22 +282,6 @@ public:
   static void Startup();
 
   static nsresult Init();
-};
-
-
-class nsJSScriptBinding : public nsIScriptBinding {
-public:
-  nsJSScriptBinding(nsIXPConnectJSObjectHolder *aHolder);
-  virtual ~nsJSScriptBinding();
-
-  NS_DECL_ISUPPORTS
-
-
-  virtual PRUint32 GetLanguage() {return nsIProgrammingLanguage::JAVASCRIPT;}
-  void *GetNativeObject();
-  nsISupports *GetTarget();
-protected:
-  nsCOMPtr<nsIXPConnectJSObjectHolder> mHolder;
 };
 
 /* factory function */

@@ -1302,11 +1302,12 @@ AtomToEventHandlerName(nsIAtom *aName)
 }
 
 nsresult
-nsJSContext::CompileEventHandler(nsIScriptBinding *aTarget, nsIAtom *aName,
+nsJSContext::CompileEventHandler(nsIPrincipal *aPrincipal,
+                                 nsIAtom *aName,
                                  const char *aEventName,
                                  const nsAString& aBody,
                                  const char *aURL, PRUint32 aLineNo,
-                                 PRBool aShared, void** aHandler)
+                                 void** aHandler)
 {
   NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
 
@@ -1321,22 +1322,8 @@ nsJSContext::CompileEventHandler(nsIScriptBinding *aTarget, nsIAtom *aName,
 
   JSPrincipals *jsprin = nsnull;
 
-  if (aTarget) {
-    // Get the principal of the event target (the object principal),
-    // don't get the principal of the global object in this context
-    // since that opens up security exploits with delayed event
-    // handler compilation on stale DOM objects (objects that live in
-    // a document that has already been unloaded).
-    NS_ASSERTION(aTarget->GetLanguage() == nsIProgrammingLanguage::JAVASCRIPT,
-                 "Can't call me with a non js binding!");
-    target = (JSObject *)aTarget->GetNativeObject();
-
-    nsCOMPtr<nsIPrincipal> prin;
-    nsresult rv = sSecurityManager->GetObjectPrincipal(mContext, target,
-                                                       getter_AddRefs(prin));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    prin->GetJSPrincipals(mContext, &jsprin);
+  if (aPrincipal) {
+    aPrincipal->GetJSPrincipals(mContext, &jsprin);
     NS_ENSURE_TRUE(jsprin, NS_ERROR_NOT_AVAILABLE);
   }
 
@@ -1346,7 +1333,7 @@ nsJSContext::CompileEventHandler(nsIScriptBinding *aTarget, nsIAtom *aName,
 
   JSFunction* fun =
       ::JS_CompileUCFunctionForPrincipals(mContext,
-                                          aShared ? nsnull : target, jsprin,
+                                          nsnull, jsprin,
                                           charName, 1, argList,
                                           (jschar*)PromiseFlatString(aBody).get(),
                                           aBody.Length(),
@@ -1414,8 +1401,8 @@ nsJSContext::CompileFunction(void* aTarget,
 }
 
 nsresult
-nsJSContext::CallEventHandler(nsIScriptBinding *aTarget, void* aHandler,
-                                    nsIArray *aargv, nsISupports **arv)
+nsJSContext::CallEventHandler(nsISupports* aTarget, void *aScope, void *aHandler,
+                              nsIArray *aargv, nsISupports **arv)
 {
   NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
 
@@ -1423,16 +1410,27 @@ nsJSContext::CallEventHandler(nsIScriptBinding *aTarget, void* aHandler,
     return NS_OK;
   }
 
-  NS_ASSERTION(aTarget->GetLanguage() == nsIProgrammingLanguage::JAVASCRIPT,
-               "Can't call me with a non js binding!");
-  JSObject *target = (JSObject *)aTarget->GetNativeObject();
+  // Get the jsobject associated with this target
+  nsresult rv;
+  nsCOMPtr<nsIXPConnectJSObjectHolder> jsholder;
+  rv = nsContentUtils::XPConnect()->WrapNative(mContext, (JSObject *)aScope,
+                                               aTarget,
+                                               NS_GET_IID(nsISupports),
+                                               getter_AddRefs(jsholder));
+
+  JSObject* target = nsnull;
+  rv = jsholder->GetJSObject(&target);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  JSObject *handler = (JSObject *)aHandler;
   //XXX - fix this!
   jsval rval_local = JSVAL_VOID;
   jsval *rval = &rval_local;
 
-  nsresult rv;
   // This one's a lot easier than EvaluateString because we don't have to
   // hassle with principals: they're already compiled into the JS function.
+  // xxxmarkh - this comment is no longer true - principals are not used at
+  // all now, and never were in some cases.
 
   nsCOMPtr<nsIJSContextStack> stack =
     do_GetService("@mozilla.org/js/xpc/ContextStack;1", &rv);
@@ -1496,19 +1494,27 @@ nsJSContext::CallEventHandler(nsIScriptBinding *aTarget, void* aHandler,
 }
 
 nsresult
-nsJSContext::BindCompiledEventHandler(nsIScriptBinding *aTarget, nsIAtom *aName,
+nsJSContext::BindCompiledEventHandler(nsISupports* aTarget, void *aScope,
+                                      nsIAtom *aName,
                                       void *aHandler)
 {
   NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
-  NS_ASSERTION(aTarget->GetLanguage() == nsIProgrammingLanguage::JAVASCRIPT,
-               "Can't call me with a non js binding!");
 
   const char *charName = AtomToEventHandlerName(aName);
+  nsresult rv;
+
+  // Get the jsobject associated with this target
+  nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
+  rv = nsContentUtils::XPConnect()->WrapNative(mContext, (JSObject *)aScope,
+                                               aTarget,
+                                               NS_GET_IID(nsISupports),
+                                               getter_AddRefs(holder));
+
+  JSObject* target = nsnull;
+  rv = holder->GetJSObject(&target);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   JSObject *funobj = (JSObject*) aHandler;
-  JSObject *target = (JSObject*) aTarget->GetNativeObject();
-
-  nsresult rv;
 
   // Push our JSContext on our thread's context stack, in case native code
   // called from JS calls back into JS via XPConnect.
@@ -1540,43 +1546,35 @@ nsJSContext::BindCompiledEventHandler(nsIScriptBinding *aTarget, nsIAtom *aName,
 }
 
 nsresult
-nsJSContext::GetScriptBinding(nsISupports *aObject, void *aScope,
-                              nsIScriptBinding **aBinding)
+nsJSContext::GetBoundEventHandler(nsISupports* aTarget, void *aScope,
+                                  nsIAtom* aName,
+                                  void** aHandler)
 {
     nsresult rv;
     nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
-    rv = nsContentUtils::XPConnect()->WrapNative(mContext, (JSObject *)aScope, aObject,
+    rv = nsContentUtils::XPConnect()->WrapNative(mContext, (JSObject *)aScope,
+                                                 aTarget,
                                                  NS_GET_IID(nsISupports),
                                                  getter_AddRefs(holder));
-    *aBinding = new nsJSScriptBinding(holder);
-    if (!*aBinding)
-        return NS_ERROR_OUT_OF_MEMORY;
-    NS_IF_ADDREF(*aBinding);
-    return NS_OK;
-}
 
-nsresult
-nsJSContext::GetScriptBindingHandler(nsIScriptBinding *aBinding,
-                                     nsString &name,
-                                     void **handler)
-{
-  jsval funval;
-  NS_ASSERTION(aBinding->GetLanguage() == nsIProgrammingLanguage::JAVASCRIPT,
-               "Not a js binding!?");
-  if (!JS_LookupUCProperty(mContext, (JSObject *)aBinding->GetNativeObject(),
-                           NS_REINTERPRET_CAST(const jschar *,
-                                               name.get()),
-                           name.Length(), &funval)) {
-    return NS_ERROR_FAILURE;
-  }
+    JSObject* obj = nsnull;
+    rv = holder->GetJSObject(&obj);
+    NS_ENSURE_SUCCESS(rv, rv);
 
-  if (JS_TypeOfValue(mContext, funval) != JSTYPE_FUNCTION) {
-    NS_WARNING("ScriptBindingHandler not a function");
-    *handler = nsnull;
+    const char *charName = AtomToEventHandlerName(aName);
+
+    jsval funval;
+    if (!JS_LookupProperty(mContext, obj, 
+                             charName, &funval))
+        return NS_ERROR_FAILURE;
+
+    if (JS_TypeOfValue(mContext, funval) != JSTYPE_FUNCTION) {
+        NS_WARNING("Event handler object not a function");
+        *aHandler = nsnull;
+        return NS_OK;
+    }
+    *aHandler = JSVAL_TO_OBJECT(funval);
     return NS_OK;
-  }
-  *handler = JSVAL_TO_OBJECT(funval);
-  return NS_OK;
 }
 
 // serialization
@@ -2995,49 +2993,5 @@ nsresult NS_CreateJSRuntime(nsILanguageRuntime **aRuntime)
         return NS_ERROR_OUT_OF_MEMORY;
     NS_IF_ADDREF(*aRuntime);
     return NS_OK;
-}
-
-
-/**********************************************************************
- * nsJSScriptBinding implementation
- *********************************************************************/
-
-// QueryInterface implementation for nsJSScriptBinding
-NS_INTERFACE_MAP_BEGIN(nsJSScriptBinding)
-  NS_INTERFACE_MAP_ENTRY(nsIScriptBinding)
-NS_INTERFACE_MAP_END
-
-
-NS_IMPL_ADDREF(nsJSScriptBinding)
-NS_IMPL_RELEASE(nsJSScriptBinding)
-
-nsJSScriptBinding::nsJSScriptBinding(nsIXPConnectJSObjectHolder *aHolder)
-{
-    mHolder = aHolder;
-}
-nsJSScriptBinding::~nsJSScriptBinding()
-{
-}
-
-void *
-nsJSScriptBinding::GetNativeObject()
-{
-    JSObject *ret;
-    nsresult rv = mHolder->GetJSObject(&ret);
-    NS_ASSERTION(!NS_FAILED(rv), "Object has no JSObject?");
-    return ret;
-}
-
-nsISupports *
-nsJSScriptBinding::GetTarget()
-{
-    // Since we are specified only as a aw nsISupports pointer, it's
-    // important that it point to the same object that the WrappedNative wraps.
-    // (In the case of a tearoff, the tearoff will not persist).
-    // XXXMarkh - is this correct?
-
-    nsCOMPtr<nsIXPConnectWrappedNative> wrapper = do_QueryInterface(mHolder);
-    NS_ASSERTION(wrapper, "wrapper must impl nsIXPConnectWrappedNative");
-    return wrapper == nsnull ? nsnull : wrapper->Native();
 }
 

@@ -43,7 +43,6 @@
 class nsIScriptObjectOwner;
 class nsIDOMEventListener;
 class nsIAtom;
-class nsIScriptGlobalObject;
 
 #define NS_IJSEVENTLISTENER_IID     \
 { 0xa6cf9118, 0x15b3, 0x11d2,       \
@@ -56,18 +55,14 @@ class nsIJSEventListener : public nsISupports
 public:
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_IJSEVENTLISTENER_IID)
 
-  nsIJSEventListener(nsIScriptContext *aContext, nsIScriptGlobalObject *aScopeGlobal,
-                     nsIScriptBinding *aBinding)
-    : mContext(aContext), mScopeGlobal(aScopeGlobal), mBinding(aBinding)
+  nsIJSEventListener(nsIScriptContext *aContext, void *aScopeObject,
+                     nsISupports *aTarget)
+    : mContext(aContext), mScopeObject(aScopeObject), mTarget(aTarget)
   {
     // mTarget is a weak reference. We are guaranteed because of the
     // ownership model that the target will be freed (and the
     // references dropped) before either the context or the owner goes
     // away.
-    // XXX - eeek - are these lifetimes still OK?  We hold a string reference
-    // to the script binding, which generally holds an indirect reference to
-    // the original target.
-    // XXXMarkh - what to do about the global?  Currently a weakref too.
 
     NS_IF_ADDREF(mContext);
   }
@@ -77,14 +72,14 @@ public:
     return mContext;
   }
 
-  nsIScriptBinding *GetEventBinding()
+  nsISupports *GetEventTarget()
   {
-    return mBinding;
+    return mTarget;
   }
 
-  nsIScriptGlobalObject *GetEventGlobal()
+  void* GetEventScope()
   {
-    return mScopeGlobal;
+    return mScopeObject;
   }
 
   virtual void SetEventName(nsIAtom* aName) = 0;
@@ -97,13 +92,13 @@ protected:
   }
 
   nsIScriptContext *mContext;
-  nsIScriptGlobalObject *mScopeGlobal;
-  nsCOMPtr<nsIScriptBinding> mBinding;
+  void *mScopeObject;
+  nsISupports *mTarget;
 };
 
 /* factory function */
 nsresult NS_NewJSEventListener(nsIScriptContext *aContext,
-                               nsIScriptGlobalObject *aScopeGlobal, nsIScriptBinding *aBinding,
+                               void *aScopeObject, nsISupports *aTarget,
                                nsIDOMEventListener **aReturn);
 
 #endif // nsIJSEventListener_h__

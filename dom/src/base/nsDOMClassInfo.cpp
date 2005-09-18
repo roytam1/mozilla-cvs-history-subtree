@@ -6264,20 +6264,15 @@ nsEventReceiverSH::RegisterCompileHandler(nsIXPConnectWrappedNative *wrapper,
 
   nsresult rv;
 
-  NS_WARNING("Need nsIScriptGlobalObject here, not JSObject - is this ok?");
-  //JSObject *scope = GetGlobalJSObject(cx, obj);
-  nsIScriptGlobalObject *scopeGlobal = script_cx->GetGlobalObject();
+  JSObject *scope = GetGlobalJSObject(cx, obj);
+
   if (compile) {
-    // eeek - need a script binding around the receiver.
-    nsCOMPtr<nsIScriptBinding> binding;
-    rv = script_cx->GetScriptBinding(receiver, obj, getter_AddRefs(binding));
-    NS_ENSURE_SUCCESS(rv, rv);
-    rv = manager->CompileScriptEventListener(script_cx, scopeGlobal, binding, atom,
+    rv = manager->CompileScriptEventListener(script_cx, scope, receiver, atom,
                                              did_define);
   } else if (remove) {
     rv = manager->RemoveScriptEventListener(atom);
   } else {
-    rv = manager->RegisterScriptEventListener(script_cx, scopeGlobal, receiver,
+    rv = manager->RegisterScriptEventListener(script_cx, scope, receiver,
                                               atom);
   }
 
