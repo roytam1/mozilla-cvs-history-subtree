@@ -36,9 +36,63 @@
 
 #include "nsIScriptContext.h"
 #include "nsITimer.h"
+#include "nsDataHashtable.h"
+ 
 #include "PyXPCOM.h"
 class nsIScriptObjectOwner;
 class nsIArray;
+
+#ifdef NS_DEBUG
+class nsPyDOMObjectLeakStats
+  {
+    public:
+      nsPyDOMObjectLeakStats()
+        : mEventHandlerCount(0), mScriptObjectCount(0), mBindingCount(0),
+          mScriptContextCount(0) {}
+
+      ~nsPyDOMObjectLeakStats()
+        {
+          printf("pydom leaked objects:\n");
+          PRBool leaked = PR_FALSE;
+#define CHECKLEAK(attr) \
+          if (attr) { \
+            printf(" => %-20s % 6d\n", #attr ":", attr); \
+            leaked = PR_TRUE; \
+          }
+      
+          CHECKLEAK(mScriptObjectCount);
+          CHECKLEAK(mBindingCount);
+          CHECKLEAK(mScriptContextCount);
+          if (_PyXPCOM_GetInterfaceCount()) {
+            printf(" => %-20s % 6d\n",
+                   "pyxpcom interfaces:", _PyXPCOM_GetInterfaceCount());
+            leaked = PR_TRUE;
+          }
+          if (_PyXPCOM_GetGatewayCount()) {
+            printf(" => %-20s % 6d\n",
+                   "pyxpcom gateways:", _PyXPCOM_GetGatewayCount());
+            leaked = PR_TRUE;
+          }
+          if (!leaked)
+            printf("No leaks.objects");
+        }
+
+      PRInt32 mEventHandlerCount;
+      PRInt32 mScriptObjectCount;
+      PRInt32 mBindingCount;
+      PRInt32 mScriptContextCount;
+  };
+extern nsPyDOMObjectLeakStats gLeakStats;
+#define PYLEAK_STAT_INCREMENT(_s) PR_AtomicIncrement(&gLeakStats.m ## _s ## Count)
+#define PYLEAK_STAT_XINCREMENT(_what, _s) if (_what) PR_AtomicIncrement(&gLeakStats.m ## _s ## Count)
+#define PYLEAK_STAT_DECREMENT(_s) PR_AtomicDecrement(&gLeakStats.m ## _s ## Count)
+#define PYLEAK_STAT_XDECREMENT(_what, _s) if (_what) PR_AtomicDecrement(&gLeakStats.m ## _s ## Count)
+#else
+#define PYLEAK_STAT_INCREMENT(_s)
+#define PYLEAK_STAT_XINCREMENT(_what, _s)
+#define PYLEAK_STAT_DECREMENT(_s)
+#define PYLEAK_STAT_XDECREMENT(_what, _s)
+#endif
 
 class nsPythonContext : public nsIScriptContext,
                         public nsITimerCallback
@@ -80,19 +134,22 @@ public:
                                  void *aScopeObject,
                                  nsAString* aRetValue,
                                  PRBool* aIsUndefined);
-  virtual nsresult CompileEventHandler(nsIScriptBinding *aTarget,
+  virtual nsresult CompileEventHandler(nsIPrincipal *aPrincipal,
                                        nsIAtom *aName,
                                        const char *aEventName,
                                        const nsAString& aBody,
                                        const char *aURL,
                                        PRUint32 aLineNo,
-                                       PRBool aShared,
                                        void** aHandler);
-  virtual nsresult CallEventHandler(nsIScriptBinding* aTarget, void* aHandler,
+  virtual nsresult CallEventHandler(nsISupports* aTarget, void *aScope,
+                                    void* aHandler,
                                     nsIArray *argv, nsISupports **rv);
-  virtual nsresult BindCompiledEventHandler(nsIScriptBinding *aTarget,
+  virtual nsresult BindCompiledEventHandler(nsISupports*aTarget, void *aScope,
                                             nsIAtom *aName,
                                             void *aHandler);
+  virtual nsresult GetBoundEventHandler(nsISupports* aTarget, void *aScope,
+                                        nsIAtom* aName,
+                                        void** aHandler);
   virtual nsresult CompileFunction(void* aTarget,
                                    const nsACString& aName,
                                    PRUint32 aArgCount,
@@ -102,16 +159,6 @@ public:
                                    PRUint32 aLineNo,
                                    PRBool aShared,
                                    void** aFunctionObject);
-
-  virtual nsresult GetScriptBinding(nsISupports *aObject, void *aScope,
-                                    nsIScriptBinding **aBinding);
-
-  virtual nsresult GetScriptBindingHandler(nsIScriptBinding *aBinding,
-                                           nsString &name,
-                                           void **handler);
-
-  virtual nsresult AddGCRoot(void *object, const char *desc);
-  virtual nsresult RemoveGCRoot(void *object);
 
   virtual void SetDefaultLanguageVersion(PRUint32 aVersion);
   virtual nsIScriptGlobalObject *GetGlobalObject();
@@ -163,21 +210,16 @@ protected:
   nsIScriptContextOwner* mOwner;  /* NB: weak reference, not ADDREF'd */
 
   static nsresult HandlePythonError();
-};
+  
+  // Implement our concept of a 'wrapped native'.  No concept of 'expandos'
+  // yet - we explicitly know when we need to create a new permanent one.
 
-
-class nsPyScriptBinding : public nsIScriptBinding {
-public:
-  nsPyScriptBinding(nsISupports *aObject);
-  virtual ~nsPyScriptBinding();
-
-  NS_DECL_ISUPPORTS
-
-
-  virtual PRUint32 GetLanguage() {return nsIProgrammingLanguage::PYTHON;}
-  void *GetNativeObject();
-  nsISupports *GetTarget();
-
-  nsCOMPtr<nsISupports> mHolder;
-  PyObject *mCodeObject;
+  PyObject *GetPyNamespaceFor(nsISupports *pThing, PRBool bCreate);
+  void CleanPyNamespaces();
+  
+  // and the data.
+  nsDataHashtable<nsISupportsHashKey, PyObject *> mMapPyObjects;
+  // And other to keep an explicit strong ref to the target for as long as our
+  // context is alive.
+//  nsClassHashtable<nsISupportsHashKey, nsISupports> mMapNatives; 
 };

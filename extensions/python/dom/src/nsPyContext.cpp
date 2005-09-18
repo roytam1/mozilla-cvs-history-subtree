@@ -40,6 +40,7 @@
 #include "nsITimelineService.h"
 #include "nsITimer.h"
 #include "nsIArray.h"
+#include "nsIAtom.h"
 #include "prtime.h"
 #include "nsString.h"
 
@@ -49,62 +50,30 @@
 #include "marshal.h"
 
 #ifdef NS_DEBUG
-class nsPyDOMObjectLeakStats
+nsPyDOMObjectLeakStats gLeakStats;
+#endif
+
+// Straight from nsJSEnvironment.
+static inline const char *
+AtomToEventHandlerName(nsIAtom *aName)
+{
+  const char *name;
+
+  aName->GetUTF8String(&name);
+
+#ifdef DEBUG
+  const char *cp;
+  char c;
+  for (cp = name; *cp != '\0'; ++cp)
   {
-    public:
-      nsPyDOMObjectLeakStats()
-        : mEventHandlerCount(0), mScriptObjectCount(0), mBindingCount(0),
-          mScriptContextCount(0) {}
-
-      ~nsPyDOMObjectLeakStats()
-        {
-          printf("pydom leaked objects:\n");
-          PRBool leaked = PR_FALSE;
-#define CHECKLEAK(attr) \
-          if (attr) { \
-            printf(" => %-20s % 6d\n", #attr ":", attr); \
-            leaked = PR_TRUE; \
-          }
-      
-          CHECKLEAK(mScriptObjectCount);
-          CHECKLEAK(mBindingCount);
-          CHECKLEAK(mScriptContextCount);
-          if (_PyXPCOM_GetInterfaceCount()) {
-            printf(" => %-20s % 6d\n",
-                   "pyxpcom interfaces:", _PyXPCOM_GetInterfaceCount());
-            leaked = PR_TRUE;
-          }
-          if (_PyXPCOM_GetGatewayCount()) {
-            printf(" => %-20s % 6d\n",
-                   "pyxpcom gateways:", _PyXPCOM_GetGatewayCount());
-            leaked = PR_TRUE;
-          }
-          if (!leaked)
-            printf("No leaks.objects");
-        }
-
-      PRInt32 mEventHandlerCount;
-      PRInt32 mScriptObjectCount;
-      PRInt32 mBindingCount;
-      PRInt32 mScriptContextCount;
-  };
-static nsPyDOMObjectLeakStats gLeakStats;
-#define PYLEAK_STAT_INCREMENT(_s) PR_AtomicIncrement(&gLeakStats.m ## _s ## Count)
-#define PYLEAK_STAT_XINCREMENT(_what, _s) if (_what) PR_AtomicIncrement(&gLeakStats.m ## _s ## Count)
-#define PYLEAK_STAT_DECREMENT(_s) PR_AtomicDecrement(&gLeakStats.m ## _s ## Count)
-#define PYLEAK_STAT_XDECREMENT(_what, _s) if (_what) PR_AtomicDecrement(&gLeakStats.m ## _s ## Count)
-#else
-#define PYLEAK_STAT_INCREMENT(_s)
-#define PYLEAK_STAT_XINCREMENT(_what, _s)
-#define PYLEAK_STAT_DECREMENT(_s)
-#define PYLEAK_STAT_XDECREMENT(_what, _s)
+    c = *cp;
+    NS_ASSERTION (('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z'),
+                  "non-ASCII non-alphabetic event handler name");
+  }
 #endif
 
-#ifndef NS_DEBUG
-// non debug build store it once.  Debug builds refetch, allowing someone
-// to reload(mod) to get new versions)
-static PyObject *delegateModule = NULL;
-#endif
+  return name;
+}
 
 nsPythonContext::nsPythonContext()
     : mGlobal(NULL)
@@ -114,11 +83,13 @@ nsPythonContext::nsPythonContext()
   mOwner = nsnull;
   mScriptsEnabled = PR_TRUE;
   mProcessingScriptTag=PR_FALSE;
+  mMapPyObjects.Init();
   PYLEAK_STAT_INCREMENT(ScriptContext);
 }
 
 nsPythonContext::~nsPythonContext()
 {
+  CleanPyNamespaces();
   PYLEAK_STAT_DECREMENT(ScriptContext);
 }
 
@@ -334,11 +305,11 @@ nsPythonContext::CompileScript(const PRUnichar* aText,
 }
 
 nsresult
-nsPythonContext::CompileEventHandler(nsIScriptBinding *aTarget, nsIAtom *aName,
+nsPythonContext::CompileEventHandler(nsIPrincipal *aPrincipal, nsIAtom *aName,
                                  const char *aEventName,
                                  const nsAString& aBody,
                                  const char *aURL, PRUint32 aLineNo,
-                                 PRBool aShared, void** aHandler)
+                                 void** aHandler)
 {
   NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
 
@@ -348,27 +319,26 @@ nsPythonContext::CompileEventHandler(nsIScriptBinding *aTarget, nsIAtom *aName,
     return HandlePythonError();
   PYLEAK_STAT_INCREMENT(EventHandler);
   *aHandler = co;
-  // If we were passed a handler, bind to it.
-  nsresult rv = NS_OK;
-  if (aTarget) {
-    NS_ASSERTION(aTarget->GetNativeObject() == nsnull, "Can't already have a native");
-    rv = BindCompiledEventHandler(aTarget, aName, *aHandler);
-  }
-  return rv;
+  return NS_OK;
 }
 
 nsresult
-nsPythonContext::BindCompiledEventHandler(nsIScriptBinding *aTarget, nsIAtom *aName,
-                                      void *aHandler)
+nsPythonContext::BindCompiledEventHandler(nsISupports *aTarget, void *aScope,
+                                          nsIAtom *aName, void *aHandler)
 {
-  NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
-  NS_ASSERTION(aTarget->GetLanguage() == nsIProgrammingLanguage::PYTHON,
-               "Must be a Python binder!?");
-  nsPyScriptBinding *pyBinding = (nsPyScriptBinding *)aTarget;
-  NS_ASSERTION(pyBinding->mCodeObject == nsnull, "Already bound?");
-  // XXX - not taking a reference to aHandler - it is assumed we steal the
-  // lifetime from the caller.
-  pyBinding->mCodeObject = (PyObject *)aHandler;
+  PyObject *d = GetPyNamespaceFor(aTarget, PR_TRUE);
+  if (!d)
+    return HandlePythonError();
+  if (!PyDict_Check(d)) {
+    NS_ERROR("Expecting a Python dictionary!");
+    return NS_ERROR_UNEXPECTED;
+  }
+  if (!aHandler || !PyCode_Check((PyObject *)aHandler)) {
+    NS_ERROR("Expecting a Python code object");
+    return NS_ERROR_UNEXPECTED;
+  }
+  const char *charName = AtomToEventHandlerName(aName);
+  PyDict_SetItemString(d, (char *)charName, (PyObject *)aHandler);
   return NS_OK;
 }
 
@@ -391,7 +361,7 @@ nsPythonContext::CompileFunction(void* aTarget,
 }
 
 nsresult
-nsPythonContext::CallEventHandler(nsIScriptBinding *aTarget, void* aHandler,
+nsPythonContext::CallEventHandler(nsISupports *aTarget, void *aScope, void* aHandler,
                                     nsIArray *aargv, nsISupports **arv)
 {
   NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
@@ -399,9 +369,6 @@ nsPythonContext::CallEventHandler(nsIScriptBinding *aTarget, void* aHandler,
   if (!mScriptsEnabled) {
     return NS_OK;
   }
-  nsPyScriptBinding *pyBinding = (nsPyScriptBinding *)aTarget;
-  NS_ENSURE_TRUE(pyBinding->mCodeObject, NS_ERROR_UNEXPECTED);
-
   CEnterLeavePython _celp;
   PyObject *obEvent = NULL;
   PyObject *obTarget = NULL;
@@ -415,7 +382,7 @@ nsPythonContext::CallEventHandler(nsIScriptBinding *aTarget, void* aHandler,
     goto done;
 
   // Could get perf by caching wrapped object
-  obTarget = Py_nsISupports::PyObjectFromInterface(pyBinding->mHolder,
+  obTarget = Py_nsISupports::PyObjectFromInterface(aTarget,
                                                   NS_GET_IID(nsISupports),
                                                   PR_TRUE);
   if (!obTarget)
@@ -439,8 +406,9 @@ nsPythonContext::CallEventHandler(nsIScriptBinding *aTarget, void* aHandler,
   if (obEvent)
     PyDict_SetItemString(thisGlobals, "event", obEvent);
 
-
-  ret = PyEval_EvalCode((PyCodeObject *)pyBinding->mCodeObject,
+  NS_ASSERTION(PyCode_Check((PyObject *)aHandler), "Not a Python code object");
+  NS_ENSURE_TRUE(PyCode_Check((PyObject *)aHandler), NS_ERROR_UNEXPECTED);
+  ret = PyEval_EvalCode((PyCodeObject *)aHandler,
                         thisGlobals, NULL);
   if (!ret)
     goto done;
@@ -456,25 +424,25 @@ done:
 }
 
 nsresult
-nsPythonContext::GetScriptBinding(nsISupports *aObject, void *aScope,
-                              nsIScriptBinding **aBinding)
+nsPythonContext::GetBoundEventHandler(nsISupports* aTarget, void *aScope,
+                                      nsIAtom* aName,
+                                      void** aHandler)
 {
-    *aBinding = new nsPyScriptBinding(aObject);
-    if (!*aBinding)
-        return NS_ERROR_OUT_OF_MEMORY;
-    NS_IF_ADDREF(*aBinding);
+  *aHandler = nsnull;
+  PyObject *ns = GetPyNamespaceFor(aTarget, PR_FALSE);
+  if (!ns) {
+    NS_WARNING("Nothing has been bound to this object");
     return NS_OK;
-}
-
-nsresult
-nsPythonContext::GetScriptBindingHandler(nsIScriptBinding *aBinding,
-                                     nsString &name,
-                                     void **handler)
-{
-  NS_ASSERTION(aBinding->GetLanguage() == nsIProgrammingLanguage::PYTHON,
-               "Not a Python binding!?");
-  nsPyScriptBinding *pyBinding = (nsPyScriptBinding *)aBinding;
-  *handler = pyBinding->mCodeObject;
+  }
+  const char *charName = AtomToEventHandlerName(aName);
+  PyObject *func = PyDict_GetItemString(ns, (char *)charName);
+  if (!func) {
+    NS_WARNING("No event handler of that name found");
+    return NS_OK;
+  }
+  *aHandler = func;
+  Py_INCREF(func);
+  PYLEAK_STAT_INCREMENT(ScriptObject);
   return NS_OK;
 }
 
@@ -483,18 +451,6 @@ nsPythonContext::SetProperty(void *aTarget, const char *aPropName, nsISupports *
 {
     NS_ERROR("SetProperty not impl");
     return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-nsresult
-nsPythonContext::AddGCRoot(void* aScriptObjectRef, const char* aName)
-{
-    return NS_OK;
-}
-
-nsresult
-nsPythonContext::RemoveGCRoot(void* aScriptObjectRef)
-{
-    return NS_OK;
 }
 
 nsresult
@@ -689,6 +645,7 @@ nsresult
 nsPythonContext::FinalizeClasses(void *aGlobalObj)
 {
   Py_XDECREF((PyObject *)aGlobalObj);
+  CleanPyNamespaces();
   return NS_OK;
 }
 
@@ -698,39 +655,38 @@ nsPythonContext::Notify(nsITimer *timer)
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-// nsPyScriptBinding
-// QueryInterface implementation for nsPyScriptBinding
-NS_INTERFACE_MAP_BEGIN(nsPyScriptBinding)
-  NS_INTERFACE_MAP_ENTRY(nsIScriptBinding)
-NS_INTERFACE_MAP_END
-
-
-NS_IMPL_ADDREF(nsPyScriptBinding)
-NS_IMPL_RELEASE(nsPyScriptBinding)
-
-nsPyScriptBinding::nsPyScriptBinding(nsISupports *aObject) :
-  mHolder(aObject), mCodeObject(NULL)
+static PLDHashOperator
+CleanupPyObjects(nsISupports *aKey,
+                 PyObject *&aPyOb,
+                 void *closure)
 {
-  PYLEAK_STAT_INCREMENT(Binding);
-
+  NS_RELEASE(aKey);
+  Py_DECREF(aPyOb);
+  return PL_DHASH_REMOVE;
 }
 
-nsPyScriptBinding::~nsPyScriptBinding()
+void nsPythonContext::CleanPyNamespaces()
 {
-  PYLEAK_STAT_XDECREMENT(mCodeObject, EventHandler);
-  Py_XDECREF(mCodeObject);
-  PYLEAK_STAT_DECREMENT(Binding);
+  mMapPyObjects.Enumerate(CleanupPyObjects, nsnull);  
 }
 
-void *
-nsPyScriptBinding::GetNativeObject()
+PyObject *nsPythonContext::GetPyNamespaceFor(nsISupports *aThing, PRBool bCreate)
 {
-  NS_ERROR("GetNativeObject not impl");
-  return nsnull;
-}
-
-nsISupports *
-nsPyScriptBinding::GetTarget()
-{
-  return mHolder;
+  PyObject *ret = NULL;
+  NS_ASSERTION(aThing, "Null pointer!");
+  NS_ENSURE_TRUE(aThing, NULL);
+  if (!mMapPyObjects.Get(aThing, &ret) && bCreate) {
+    ret = PyDict_New();
+    if (!ret)
+      return NULL;
+    // store the new object in the hash-table.  It then has ownership of the
+    // reference.
+    if (!mMapPyObjects.Put(aThing, ret)) {
+      NS_ERROR("Failed to store in the hash-table");
+      Py_DECREF(ret);
+      return NULL;
+    }
+    NS_ADDREF(aThing);
+  }
+  return ret;
 }
