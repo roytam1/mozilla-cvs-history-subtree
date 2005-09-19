@@ -1961,7 +1961,7 @@
 			sourceTree = SOURCE_ROOT;
 		};
 		0FCD85D108C4D6EE00A1923B = {
-			fileEncoding = 4;
+			fileEncoding = 10;
 			isa = PBXFileReference;
 			lastKnownFileType = text.plist.strings;
 			name = English;
