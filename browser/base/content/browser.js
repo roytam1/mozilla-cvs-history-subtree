@@ -831,11 +831,10 @@ function delayedStartup()
     bt.ref = btf;
     document.getElementById("bookmarks-chevron").ref = btf;
     bt.database.AddObserver(BookmarksToolbarRDFObserver);
-    bt.controllers.appendController(BookmarksMenuController);
   }
-  var bm = document.getElementById("bookmarks-menu");
-  bm.controllers.appendController(BookmarksMenuController);
   window.addEventListener("resize", BookmarksToolbar.resizeFunc, false);
+  document.getElementById("PersonalToolbar")
+          .controllers.appendController(BookmarksMenuController);
 
   // called when we go into full screen, even if it is
   // initiated by a web page script
@@ -961,19 +960,18 @@ function BrowserShutdown()
   } catch (ex) {
   }
 
+  try {
+    document.getElementById("PersonalToolbar")
+            .controllers.removeController(BookmarksMenuController);
+  } catch (ex) {
+  }
+
   var bt = document.getElementById("bookmarks-ptf");
   if (bt) {
     try {
       bt.database.RemoveObserver(BookmarksToolbarRDFObserver);
-      bt.controllers.removeController(BookmarksMenuController);
     } catch (ex) {
     }
-  }
-
-  try {
-    var bm = document.getElementById("bookmarks-menu");
-    bm.controllers.removeController(BookmarksMenuController);
-  } catch (ex) {
   }
 
   try {
@@ -3043,12 +3041,10 @@ function BrowserToolboxCustomizeDone(aToolboxChanged)
     // no uniqueness is guaranteed, so we have to remove first
     try {
       bt.database.RemoveObserver(BookmarksToolbarRDFObserver);
-      bt.controllers.removeController(BookmarksMenuController);
     } catch (ex) {
       // ignore
     }
     bt.database.AddObserver(BookmarksToolbarRDFObserver);
-    bt.controllers.appendController(BookmarksMenuController);
     bt.builder.rebuild();
     btchevron.builder.rebuild();
 
@@ -3056,11 +3052,6 @@ function BrowserToolboxCustomizeDone(aToolboxChanged)
     // from the bar to the overflow item
     BookmarksToolbar.resizeFunc(null);
   }
-
-  // fix bug 291781 - controller has been lost while removeChild and appendChild
-  var bm = document.getElementById("bookmarks-menu");
-  if (bm)
-    bm.controllers.appendController(BookmarksMenuController);
 
   // XXX Shouldn't have to do this, but I do
   window.focus();
