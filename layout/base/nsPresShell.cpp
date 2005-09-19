@@ -6358,75 +6358,76 @@ PresShell::HandleEventInternal(nsEvent* aEvent, nsIView *aView,
                                  aStatus, aView);
 
     // 2. Give event to the DOM for third party and JS use.
-    if ((GetCurrentEventFrame()) && NS_SUCCEEDED(rv) &&
-         // We want synthesized mouse moves to cause mouseover and mouseout
-         // DOM events (PreHandleEvent above), but not mousemove DOM events.
-         !IsSynthesizedMouseMove(aEvent)) {
-      if (mCurrentEventContent) {
-        rv = mCurrentEventContent->HandleDOMEvent(mPresContext, aEvent, nsnull,
-                                                  aFlags, aStatus);
-      }
-      else {
-        nsCOMPtr<nsIContent> targetContent;
-        rv = mCurrentEventFrame->GetContentForEvent(mPresContext, aEvent,
-                                                    getter_AddRefs(targetContent));
-        if (NS_SUCCEEDED(rv) && targetContent) {
-          rv = targetContent->HandleDOMEvent(mPresContext, aEvent, nsnull, 
-                                             aFlags, aStatus);
+    if ((GetCurrentEventFrame()) && NS_SUCCEEDED(rv)) {
+      // We want synthesized mouse moves to cause mouseover and mouseout
+      // DOM events (PreHandleEvent above), but not mousemove DOM events.
+      if (!IsSynthesizedMouseMove(aEvent)) {
+        if (mCurrentEventContent) {
+          rv = mCurrentEventContent->HandleDOMEvent(mPresContext, aEvent, nsnull,
+                                                    aFlags, aStatus);
         }
-      }
-
-      // Stopping propagation in the default group does not affect
-      // propagation in the system event group.
-      // (see also section 1.2.2.6 of the DOM3 Events Working Draft)
-
-      aEvent->flags &= ~NS_EVENT_FLAG_STOP_DISPATCH;
-
-      // 3. Give event to the Frames for browser default processing.
-      if (GetCurrentEventFrame() && NS_SUCCEEDED (rv) &&
-          aEvent->eventStructType != NS_EVENT) {
-        // If aView is non-null, adjust coordinates of aEvent to be in the
-        // coordinate system of mCurrentEventFrame's closest view.  Don't use
-        // aView here, since it may be dead by now.
-        nsPoint offset(0,0);
-        if (aView) {
-          NS_ASSERTION(mViewManager,
-                       "How did GetCurrentEventFrame() succeed?");
-          nsIView* rootView;
-          mViewManager->GetRootView(rootView);
-          nsIView* frameView;
-          nsPoint pt;
-          mCurrentEventFrame->GetOffsetFromView(pt, &frameView);
-          offset = frameView->GetOffsetTo(rootView) - offsetOfaView;
+        else {
+          nsCOMPtr<nsIContent> targetContent;
+          rv = mCurrentEventFrame->GetContentForEvent(mPresContext, aEvent,
+                                                      getter_AddRefs(targetContent));
+          if (NS_SUCCEEDED(rv) && targetContent) {
+            rv = targetContent->HandleDOMEvent(mPresContext, aEvent, nsnull, 
+                                               aFlags, aStatus);
+          }
         }
 
-        // Transform aEvent->point from aView's coordinate system to
-        // that of mCurrentEventFrame's closest view
-        aEvent->point -= offset;
-        
-        rv = mCurrentEventFrame->HandleEvent(mPresContext, (nsGUIEvent*)aEvent,
-                                             aStatus);
-        // Now transform back
-        aEvent->point += offset;
-      }
+        // Stopping propagation in the default group does not affect
+        // propagation in the system event group.
+        // (see also section 1.2.2.6 of the DOM3 Events Working Draft)
 
-      // Continue with second dispatch to system event handlers.
+        aEvent->flags &= ~NS_EVENT_FLAG_STOP_DISPATCH;
 
-      // Need to null check mCurrentEventContent and mCurrentEventFrame
-      // since the previous dispatch could have nuked them.
-      if (mCurrentEventContent) {
-        rv = mCurrentEventContent->HandleDOMEvent(mPresContext, aEvent, nsnull,
-                                                  aFlags | NS_EVENT_FLAG_SYSTEM_EVENT,
-                                                  aStatus);
-      }
-      else if (mCurrentEventFrame) {
-        nsCOMPtr<nsIContent> targetContent;
-        rv = mCurrentEventFrame->GetContentForEvent(mPresContext, aEvent,
-                                                    getter_AddRefs(targetContent));
-        if (NS_SUCCEEDED(rv) && targetContent) {
-          rv = targetContent->HandleDOMEvent(mPresContext, aEvent, nsnull, 
-                                             aFlags | NS_EVENT_FLAG_SYSTEM_EVENT,
-                                             aStatus);
+        // 3. Give event to the Frames for browser default processing.
+        if (GetCurrentEventFrame() && NS_SUCCEEDED (rv) &&
+            aEvent->eventStructType != NS_EVENT) {
+          // If aView is non-null, adjust coordinates of aEvent to be in the
+          // coordinate system of mCurrentEventFrame's closest view.  Don't use
+          // aView here, since it may be dead by now.
+          nsPoint offset(0,0);
+          if (aView) {
+            NS_ASSERTION(mViewManager,
+                         "How did GetCurrentEventFrame() succeed?");
+            nsIView* rootView;
+            mViewManager->GetRootView(rootView);
+            nsIView* frameView;
+            nsPoint pt;
+            mCurrentEventFrame->GetOffsetFromView(pt, &frameView);
+            offset = frameView->GetOffsetTo(rootView) - offsetOfaView;
+          }
+  
+          // Transform aEvent->point from aView's coordinate system to
+          // that of mCurrentEventFrame's closest view
+          aEvent->point -= offset;
+  
+          rv = mCurrentEventFrame->HandleEvent(mPresContext, (nsGUIEvent*)aEvent,
+                                               aStatus);
+          // Now transform back
+          aEvent->point += offset;
+        }
+
+        // Continue with second dispatch to system event handlers.
+
+        // Need to null check mCurrentEventContent and mCurrentEventFrame
+        // since the previous dispatch could have nuked them.
+        if (mCurrentEventContent) {
+          rv = mCurrentEventContent->HandleDOMEvent(mPresContext, aEvent, nsnull,
+                                                    aFlags | NS_EVENT_FLAG_SYSTEM_EVENT,
+                                                    aStatus);
+        }
+        else if (mCurrentEventFrame) {
+          nsCOMPtr<nsIContent> targetContent;
+          rv = mCurrentEventFrame->GetContentForEvent(mPresContext, aEvent,
+                                                      getter_AddRefs(targetContent));
+          if (NS_SUCCEEDED(rv) && targetContent) {
+            rv = targetContent->HandleDOMEvent(mPresContext, aEvent, nsnull, 
+                                               aFlags | NS_EVENT_FLAG_SYSTEM_EVENT,
+                                               aStatus);
+          }
         }
       }
 
