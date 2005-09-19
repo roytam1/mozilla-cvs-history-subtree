@@ -42,6 +42,8 @@ EXPORTED_SYMBOLS = [ "StdClass",
                      "makeClass",
                      "NamedObject",
                      "ErrorReporter",
+                     "ErrorReporterSink",
+                     "ConsoleErrorReporterFunction",
                      "SupportsImpl",
                      "AttributeParser",
                      "Unwrappable",
@@ -475,36 +477,56 @@ function getVerboseErrorService() {
   }
   return gVerboseErrorService;
 }
-    
+
+// The standard error reporter sink, directing messages to the
+// console:
+var ConsoleErrorReporterFunction = dump;
+
+// ErrorReporterSink: The function referenced by this global exported
+// variable will be used to sink messages from the
+// ErrorReporter. Users can set this to a different function to
+// redirect messages to e.g. a file:
+var ErrorReporterSink = { reporterFunction : ConsoleErrorReporterFunction };
+
+
 ErrorReporter.fun(
   {mergeover:false},
   function _verboseError(message) {
+    ErrorReporterSink.reporterFunction(this+"::"+Components.stack.caller.name+
+                                       ": Verbose Error: "+message+"\n");
     throw(getVerboseErrorService().setVerboseErrorMessage(message));
   });
 
 ErrorReporter.fun(
   {mergeover:false},
   function _error(message) {
+    ErrorReporterSink.reporterFunction(this+"::"+Components.stack.caller.name+
+                                       ": ERROR: "+message+"\n");
     throw(this+"::"+Components.stack.caller.name+": ERROR: "+message);
   });
 
 ErrorReporter.fun(
   {mergeover:false},
   function _assert(cond, message) {
-    if (!cond)
+    if (!cond) {
+      ErrorReporterSink.reporterFunction(this+"::"+Components.stack.caller.name+
+                                         ": ASSERTION FAILED: "+message+"\n");
       throw(this+"::"+Components.stack.caller.name+": ASSERTION FAILED: "+message);
+    }
   });
 
 ErrorReporter.fun(
   {mergeover:false},
   function _warning(message) {
-    dump(this+"::"+Components.stack.caller.name+": WARNING: "+message+"\n");
+    ErrorReporterSink.reporterFunction(this+"::"+Components.stack.caller.name+
+                                       ": WARNING: "+message+"\n");
   });
 
 ErrorReporter.fun(
   {mergeover:false},
   function _dump(message) {
-    dump(this+"::"+Components.stack.caller.name+": "+message+"\n");
+    ErrorReporterSink.reporterFunction(this+"::"+Components.stack.caller.name+
+                                       ": "+message+"\n");
   });
 
 ErrorReporter.fun(
@@ -528,6 +550,7 @@ ErrorReporter.metafun(
  'message' when called.                                                ",
   function stub(name, message) {
     this.prototype[name] = function() {
+      ErrorReporterSink.reporterFunction(this+"::stub '"+name+"': "+message+"\n");
       throw(this+"::stub '"+name+"': "+message);
     };
   });
