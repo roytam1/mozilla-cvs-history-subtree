@@ -144,7 +144,7 @@ nsPythonContext::InternalCompile(const nsAString &aOrigSource, const char *url,
   // To do so would involve reimplementing PyParser_ParseStringFlagsFilename,
   // but that relies on Python's Parser/tokenizer.h, which is not included in
   // (windows at least) binary versions.
-  // Another options is to tricky Python by prepending lineNo '\n' chars
+  // Another options is to trick Python by prepending lineNo '\n' chars
   // before the source, but that seems extreme!
   PyCompilerFlags cf;
   cf.cf_flags = PyCF_SOURCE_IS_UTF8;
