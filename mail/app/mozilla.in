@@ -116,7 +116,6 @@ if [ $found = 0 ]; then
 fi
 
 script_args=""
-moreargs=""
 debugging=0
 MOZILLA_BIN="${progbase}-bin"
 
@@ -202,7 +201,8 @@ fi
 # Default action - no running instance or _USE_EXIST (${_USE_EXIST}) ! -eq 1
 ########################################################################### Main
 
-while [ $# -gt 0 ]
+pass_arg_count=0
+while [ $# -gt $pass_arg_count ]
 do
   case "$1" in
     -p | --pure | -pure)
@@ -219,14 +219,16 @@ do
       shift 2
       ;;
     *)
-      moreargs="$moreargs \"$1\""
-      shift 1
+      # Move the unrecognized argument to the end of the list.
+      arg="$1"
+      shift
+      set -- "$@" "$arg"
+      pass_arg_count=`expr $pass_arg_count + 1`
       ;;
   esac
 done
 
 export MRE_HOME
-eval "set -- $moreargs"
 
 ## Start addon scripts
 moz_pis_startstop_scripts "start"
