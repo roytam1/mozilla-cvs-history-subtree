@@ -70,6 +70,14 @@ nsTextEditRules::CheckBidiLevelForDeletion(nsIDOMNode           *aSelNode,
   nsCOMPtr<nsIContent> content = do_QueryInterface(aSelNode);
   if (!content)
     return NS_ERROR_NULL_POINTER;
+
+  if (content->IsContentOfType(nsIContent::eELEMENT))
+  {
+    content = content->GetChildAt(aSelOffset);    
+    if (!content)
+      return NS_ERROR_FAILURE;
+    aSelOffset = 0;
+  }    
   
   nsIFrame *primaryFrame;
   res = shell->GetPrimaryFrameFor(content, &primaryFrame);
