@@ -161,6 +161,12 @@ nsSVGCairoGlyphGeometry::Render(nsISVGRendererCanvas *canvas)
   NS_ASSERTION(cairoCanvas, "wrong svg render context for geometry!");
   if (!cairoCanvas) return NS_ERROR_FAILURE;
 
+  nsAutoString text;
+  mSource->GetCharacterData(text);
+
+  if (!text.Length())
+    return NS_OK;
+
   cairo_t *ctx = cairoCanvas->GetContext();
 
   /* get the metrics */
@@ -202,8 +208,6 @@ nsSVGCairoGlyphGeometry::Render(nsISVGRendererCanvas *canvas)
     else
       cairo_set_fill_rule(ctx, CAIRO_FILL_RULE_WINDING);
 
-    nsAutoString text;
-    mSource->GetCharacterData(text);
     cairo_text_path(ctx, NS_ConvertUCS2toUTF8(text).get());
 
     cairo_set_matrix(ctx, &matrix);
@@ -249,9 +253,6 @@ nsSVGCairoGlyphGeometry::Render(nsISVGRendererCanvas *canvas)
                             NS_GET_B(rgb)/255.0,
                             opacity);
       
-      nsAutoString text;
-      mSource->GetCharacterData(text);
-
       if (filltype == nsISVGGeometrySource::PAINT_TYPE_SOLID_COLOR) {
         cairo_show_text(ctx, (const char*)NS_ConvertUCS2toUTF8(text).get());
       } else if (filltype == nsISVGGeometrySource::PAINT_TYPE_SERVER) {
@@ -329,8 +330,6 @@ nsSVGCairoGlyphGeometry::Render(nsISVGRendererCanvas *canvas)
       delete [] dashes;
     }
 
-    nsAutoString text;
-    mSource->GetCharacterData(text);
     cairo_text_path(ctx, NS_ConvertUCS2toUTF8(text).get());
 
     if (stroketype == nsISVGGeometrySource::PAINT_TYPE_SOLID_COLOR) {
@@ -442,6 +441,14 @@ nsSVGCairoGlyphGeometry::GetCoveredRegion(nsISVGRendererRegion **_retval)
 
   nsAutoString text;
   mSource->GetCharacterData(text);
+
+  if (text.Length() == 0) {
+    double xx = x, yy = y;
+    cairo_user_to_device(ctx, &xx, &yy);
+    cairo_destroy(ctx);
+    return NS_NewSVGCairoRectRegion(_retval, xx, yy, 0, 0);
+  }
+
   cairo_text_path(ctx, NS_ConvertUCS2toUTF8(text).get());
 
   double xmin, ymin, xmax, ymax;
