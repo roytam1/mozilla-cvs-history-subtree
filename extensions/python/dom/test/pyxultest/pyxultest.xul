@@ -10,6 +10,7 @@
   screenX="100" screenY="100"
   height="300" width="500"
   scripttype="application/x-python"
+  onload="print 'hello from the window load event'"
   >
   <script type="application/x-python" src="chrome://pyxultest/content/pyxultest.py"/>
   <script>
@@ -32,11 +33,11 @@ print "Window location is", this.window.location.href
     <button id="button1" label="open dialog"
             oncommand="on_button_click()"/>
   </vbox>
-  
   <!-- A box from our overlay - it will have one button using js events
-       and another using Python events
-  -->
+       and another using Python events -->
   <hbox id="language_box"/>
+  
+  <button id="but_multi" label="click for both"/>
   <!-- Here we have a script element defined at a parent node -->
   <hbox oncommand="print 'You clicked on a', event.target.tagName">
     <button label = "click here"/>
