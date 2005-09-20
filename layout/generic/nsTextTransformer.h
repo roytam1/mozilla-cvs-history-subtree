@@ -285,11 +285,11 @@ public:
     return mTransformBuf.GetBufferLength();
   }
 
-  PRBool GetWordSelectEatSpaceAfter() {
+  static PRBool GetWordSelectEatSpaceAfter() {
   	return sWordSelectEatSpaceAfter;
   }
   
-  PRBool GetWordSelectStopAtPunctuation() {
+  static PRBool GetWordSelectStopAtPunctuation() {
   	return sWordSelectStopAtPunctuation;
   }
   

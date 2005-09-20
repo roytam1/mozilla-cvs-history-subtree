@@ -94,6 +94,7 @@
 #include "nsITextControlFrame.h"
 #include "nsINameSpaceManager.h"
 #include "nsIPercentHeightObserver.h"
+#include "nsTextTransformer.h"
 
 // For triple-click pref
 #include "nsIServiceManager.h"
@@ -3736,7 +3737,20 @@ nsFrame::PeekOffset(nsPresContext* aPresContext, nsPeekOffsetStruct *aPos)
           else
             aPos->mContentOffset = newOffset;//to beginning of frame
 
-          result = GetFrameFromDirection(aPresContext, aPos);
+          nsTextTransformer::Initialize();
+          if (nsTextTransformer::GetWordSelectEatSpaceAfter() &&
+              aPos->mDirection == eDirNext && aPos->mEatingWS)
+          {
+            //If we want to stop at beginning of the next word
+            //GetFrameFromDirection should not return NS_ERROR_FAILURE
+            //at end of line
+            aPos->mEatingWS = PR_FALSE;	
+            result = GetFrameFromDirection(aPresContext, aPos);
+            aPos->mEatingWS = PR_TRUE;
+          }
+          else
+            result = GetFrameFromDirection(aPresContext, aPos);
+
           if (NS_FAILED(result))
             return result;
           PRBool selectable = PR_FALSE;
