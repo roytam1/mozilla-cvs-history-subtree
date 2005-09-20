@@ -97,6 +97,7 @@ public:
                                   PRUint32 aFlags,
                                   nsEventStatus* aEventStatus)=0;
 
+  virtual nsresult EnsureScriptEnvironment(PRUint32 aLangID) = 0;
   /**
    * Get a script context (WITHOUT added reference) for the specified language.
    */

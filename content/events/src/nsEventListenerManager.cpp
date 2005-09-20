@@ -1361,6 +1361,10 @@ nsEventListenerManager::AddScriptEventListener(nsISupports *aObject,
                                           aBody,
                                           url.get(), lineNo,
                                           &handler);
+        // And bind it.
+        rv = context->BindCompiledEventHandler(aObject, scope,
+                                                aName, handler);
+        NS_ENSURE_SUCCESS(rv, rv);
       }
       if (NS_FAILED(rv)) return rv;
     }
@@ -1587,6 +1591,10 @@ nsEventListenerManager::CompileEventHandlerInternal(nsIScriptContext *aContext,
                                                  handlerBody,
                                                  url.get(), lineNo,
                                                  &handler);
+          // And bind it.
+          result = aContext->BindCompiledEventHandler(aObject, aScope,
+                                                      aName, handler);
+          NS_ENSURE_SUCCESS(result, result);
         }
 
         if (NS_SUCCEEDED(result)) {

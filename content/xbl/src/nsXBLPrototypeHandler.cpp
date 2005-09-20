@@ -441,28 +441,19 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
   nsIScriptContext *boundContext = boundGlobal->GetContext();
   if (!boundContext) return NS_OK;
 
-  JSObject *scopeObject = nsnull;
+  nsISupports *scriptTarget;
   // strong ref to a GC root we'll need to protect scriptObject in the case
   // where it is not the global object (!winRoot).
   nsCOMPtr<nsIXPConnectJSObjectHolder> wrapper;
 
   if (winRoot) {
-    scopeObject = boundGlobal->GetGlobalJSObject();
+    scriptTarget = boundGlobal;
   } else {
-    NS_ASSERTION(boundContext->GetLanguage() == nsIProgrammingLanguage::JAVASCRIPT,
-                 "xbl is only JS!");
-    JSObject *global = boundGlobal->GetGlobalJSObject();
-    JSContext *cx = (JSContext *)boundContext->GetNativeContext();
-
-    // XXX: Don't use the global object!
-    rv = nsContentUtils::XPConnect()->WrapNative(cx, global, aReceiver,
-                                                 NS_GET_IID(nsISupports),
-                                                 getter_AddRefs(wrapper));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    rv = wrapper->GetJSObject(&scopeObject);
-    NS_ENSURE_SUCCESS(rv, rv);
+    scriptTarget = aReceiver;
   }
+  // XXX - apparently we should not be using the global as the scope - what
+  // should we use?
+  void *scope = boundGlobal->GetLanguageGlobal(boundContext->GetLanguage());
 
   const char *eventName = nsContentUtils::GetEventArgName(kNameSpaceID_XBL);
 
@@ -488,14 +479,14 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
   NS_ENSURE_SUCCESS(rv, rv);
 
   // Temporarily bind it to the bound element
-  rv = boundContext->BindCompiledEventHandler(aReceiver, scopeObject,
+  rv = boundContext->BindCompiledEventHandler(scriptTarget, scope,
                                               onEventAtom, handler);
   NS_ENSURE_SUCCESS(rv, rv);
 
   // Execute it.
   nsCOMPtr<nsIDOMEventListener> eventListener;
-  NS_NewJSEventListener(boundContext, scopeObject,
-                        aReceiver, getter_AddRefs(eventListener));
+  NS_NewJSEventListener(boundContext, scope,
+                        scriptTarget, getter_AddRefs(eventListener));
 
   nsCOMPtr<nsIJSEventListener> jsListener(do_QueryInterface(eventListener));
   jsListener->SetEventName(onEventAtom);

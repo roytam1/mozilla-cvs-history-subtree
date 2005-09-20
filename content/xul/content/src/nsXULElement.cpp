@@ -319,7 +319,8 @@ PRUint32             nsXULPrototypeAttribute::gNumCacheFills;
 nsXULElement::nsXULElement(nsINodeInfo* aNodeInfo)
     : nsGenericElement(aNodeInfo),
       mPrototype(nsnull),
-      mBindingParent(nsnull)
+      mBindingParent(nsnull),
+      mDefaultScriptLanguage(nsIProgrammingLanguage::JAVASCRIPT)
 {
     XUL_PROTOTYPE_ATTRIBUTE_METER(gNumElements);
 }
@@ -378,19 +379,27 @@ nsXULElement::Create(nsXULPrototypeElement* aPrototype,
         return NS_ERROR_OUT_OF_MEMORY;
 
     element->mPrototype = aPrototype;
+    NS_ASSERTION(aPrototype->mLangID != nsIProgrammingLanguage::UNKNOWN,
+                 "Need to know the language!");
+    element->SetDefaultScriptLanguage(aPrototype->mLangID);
 
     aPrototype->AddRef();
 
     if (aIsScriptable) {
-        NS_ASSERTION(aPrototype->mLangID != nsIProgrammingLanguage::UNKNOWN,
-                     "Need to know the language!");
+        // Ensure we are setup to execute scripts of our default language
+        nsIScriptGlobalObject *global = aDocument->GetScriptGlobalObject();
+        if (global) {
+            rv = global->EnsureScriptEnvironment(aPrototype->mLangID);
+            NS_ENSURE_SUCCESS(rv, rv);
+        } else {
+            NS_WARNING("No global object - can't setup default script lang");
+        }
+
         // Check each attribute on the prototype to see if we need to do
         // any additional processing and hookup that would otherwise be
         // done 'automagically' by SetAttr().
         for (PRUint32 i = 0; i < aPrototype->mNumAttributes; ++i) {
-            element->AddListenerFor(aPrototype->mAttributes[i].mName,
-                                    aPrototype->mLangID,
-                                    PR_TRUE);
+            element->AddListenerFor(aPrototype->mAttributes[i].mName, PR_TRUE);
         }
     }
 
@@ -504,11 +513,16 @@ nsXULElement::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
         rv = nsXULElement::Create(mPrototype, GetOwnerDoc(), PR_TRUE,
                                   getter_AddRefs(result));
         NS_ENSURE_SUCCESS(rv, rv);
+        NS_ASSERTION(GetDefaultScriptLanguage() == mPrototype->mLangID,
+                     "Didn't get the default language from proto?");
 
         fakeBeingInDocument = IsInDoc();
     } else {
         rv = NS_NewXULElement(getter_AddRefs(result), mNodeInfo);
         NS_ENSURE_SUCCESS(rv, rv);
+        // If created from a prototype, we will already have the script
+        // language specified by the proto - otherwise copy it directly
+        result->SetDefaultScriptLanguage(GetDefaultScriptLanguage());
     }
 
     // Copy attributes
@@ -605,7 +619,7 @@ nsXULElement::MaybeTriggerAutoLink(nsIDocShell *aShell)
 
 nsresult
 nsXULElement::AddScriptEventListener(nsIAtom* aName, const nsAString& aValue,
-                                     PRUint32 aLanguage)
+                                     PRBool aDefer)
 {
     // XXX sXBL/XBL2 issue! Owner or current document?
     // Note that If it's current, then we need to hook up listeners on the root
@@ -617,7 +631,7 @@ nsXULElement::AddScriptEventListener(nsIAtom* aName, const nsAString& aValue,
     nsresult rv;
 
     nsISupports *target = NS_STATIC_CAST(nsIContent *, this);
-    PRBool defer = PR_TRUE;
+    PRBool defer = aDefer;
 
     nsCOMPtr<nsIEventListenerManager> manager;
 
@@ -641,7 +655,8 @@ nsXULElement::AddScriptEventListener(nsIAtom* aName, const nsAString& aValue,
 
     if (NS_FAILED(rv)) return rv;
 
-    return manager->AddScriptEventListener(target, aName, aValue, aLanguage,
+    return manager->AddScriptEventListener(target, aName, aValue,
+                                           GetDefaultScriptLanguage(),
                                            defer, !nsContentUtils::IsChromeDoc(doc));
 }
 
@@ -734,8 +749,6 @@ nsXULElement::CompileEventHandler(nsIScriptContext* aContext,
     nsIScriptContext *compileContext;
     if (mPrototype) {
         // It'll be shared among the instances of the prototype.
-        // Use null for the scope object when precompiling shared
-        // prototype scripts.
 
         // Use the prototype document's special context.  Because
         // scopeObject is null, the JS engine has no other source of
@@ -793,7 +806,6 @@ nsXULElement::CompileEventHandler(nsIScriptContext* aContext,
     if (attr) {
         XUL_PROTOTYPE_ATTRIBUTE_METER(gNumCacheFills);
         attr->mEventHandler = *aHandler;
-        attr->mLangID = mPrototype->mLangID; // only need this for gc :(
         if (attr->mEventHandler) {
             rv = LockScriptThing(mPrototype->mLangID, attr->mEventHandler);
             if (NS_FAILED(rv)) return rv;
@@ -806,7 +818,6 @@ nsXULElement::CompileEventHandler(nsIScriptContext* aContext,
 
 void
 nsXULElement::AddListenerFor(const nsAttrName& aName,
-                             PRUint32 aLanguage,
                              PRBool aCompileEventHandlers)
 {
     // If appropriate, add a popup listener and/or compile the event
@@ -819,7 +830,7 @@ nsXULElement::AddListenerFor(const nsAttrName& aName,
         if (aCompileEventHandlers && IsEventHandler(attr)) {
             nsAutoString value;
             GetAttr(kNameSpaceID_None, attr, value);
-            AddScriptEventListener(attr, value, aLanguage);
+            AddScriptEventListener(attr, value, PR_TRUE);
         }
     }
 }
@@ -938,19 +949,16 @@ nsXULElement::BindToTree(nsIDocument* aDocument, nsIContent* aParent,
 
         PRInt32 count = mAttrsAndChildren.AttrCount();
         PRBool haveLocalAttributes = (count > 0);
-        // Local nodes are added in the local nodes default language.
-        // How do we determine this???
-        // For now add a warning
-        PRUint32 langID = nsIProgrammingLanguage::JAVASCRIPT;
-        NS_WARNING("Don't know the language for these elements");
 
         PRInt32 i;
         for (i = 0; i < count; i++) {
             AddListenerFor(*mAttrsAndChildren.GetSafeAttrNameAt(i),
-                           langID, aCompileEventHandlers);
+                           aCompileEventHandlers);
         }
 
         if (mPrototype) {
+            NS_ASSERTION(mPrototype->mLangID == GetDefaultScriptLanguage(),
+                         "Prototype and node confused about default language?");
             PRInt32 count = mPrototype->mNumAttributes;
             for (i = 0; i < count; i++) {
                 nsXULPrototypeAttribute *protoattr =
@@ -964,8 +972,7 @@ nsXULElement::BindToTree(nsIDocument* aDocument, nsIContent* aParent,
                 }
                 // scripts from prototype nodes must use the language
                 // specified in the node.
-                AddListenerFor(protoattr->mName, mPrototype->mLangID,
-                               aCompileEventHandlers);
+                AddListenerFor(protoattr->mName, aCompileEventHandlers);
             }
         }
     }
@@ -1454,18 +1461,14 @@ nsXULElement::SetAttr(PRInt32 aNamespaceID, nsIAtom* aName, nsIAtom* aPrefix,
         // the attribute isn't set yet.
         MaybeAddPopupListener(aName);
         if (IsEventHandler(aName)) {
-            // XXX - script language for this stuff?  Not sure of the
-            // semantics desired here.  For now warning if things aren't js,
-            // but still honour the default script language.
-            PRUint32 langID;
-            if (mPrototype)
-                langID = mPrototype->mLangID;
-            else {
-                NS_WARNING("No prototype - don't know the script language! "
-                           "Assuming js.");
-                langID = nsIProgrammingLanguage::JAVASCRIPT;
-            }
-            AddScriptEventListener(aName, aValue, langID);
+            // If mPrototype->mLangID != GetDefaultScriptLanguage(), it means
+            // we are resolving an overlay with a different default script
+            // language.  We can't defer compilation of those handlers as
+            // we will have lost the script language (storing it on each
+            // nsXULPrototypeAttribute is expensive!)
+            PRBool defer = mPrototype == nsnull ||
+                           mPrototype->mLangID == GetDefaultScriptLanguage();
+            AddScriptEventListener(aName, aValue, defer);
         }
 
         // Hide chrome if needed
@@ -3012,9 +3015,17 @@ nsXULElement::BoolAttrIsTrue(nsIAtom* aName)
 nsXULPrototypeAttribute::~nsXULPrototypeAttribute()
 {
     MOZ_COUNT_DTOR(nsXULPrototypeAttribute);
-    if (mEventHandler)
-        if (NS_FAILED(UnlockScriptThing(mLangID, mEventHandler)))
+    NS_ASSERTION(!mEventHandler, "Finalize not called - language object leak!");
+}
+
+void
+nsXULPrototypeAttribute::Finalize(PRUint32 aLangID)
+{
+    if (mEventHandler) {
+        if (NS_FAILED(UnlockScriptThing(aLangID, mEventHandler)))
             NS_ERROR("Failed to unlock script object");
+        mEventHandler = nsnull;
+    }
 }
 
 

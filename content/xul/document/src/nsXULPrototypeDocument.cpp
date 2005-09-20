@@ -109,6 +109,7 @@ public:
 
     virtual nsIScriptContext *GetLanguageContext(PRUint32 lang);
     virtual void *GetLanguageGlobal(PRUint32 lang);
+    virtual nsresult EnsureScriptEnvironment(PRUint32 aLangID);
   
     virtual nsresult SetLanguageContext(PRUint32 language, nsIScriptContext *ctx);
 
@@ -849,16 +850,15 @@ nsXULPDGlobalObject::SetLanguageContext(PRUint32 lang_id, nsIScriptContext *aScr
   return NS_OK;
 }
 
-nsIScriptContext *
-nsXULPDGlobalObject::GetLanguageContext(PRUint32 lang_id)
+nsresult
+nsXULPDGlobalObject::EnsureScriptEnvironment(PRUint32 lang_id)
 {
   // All languages are stored in table, indexed by language-1
   PRBool ok = lang_id > nsIProgrammingLanguage::UNKNOWN && lang_id <= nsIProgrammingLanguage::MAX;
   NS_ASSERTION(ok, "Invalid programming language ID requested");
-  NS_ENSURE_TRUE(ok, nsnull);
+  NS_ENSURE_TRUE(ok, NS_ERROR_INVALID_ARG);
   PRUint32 lang_ndx = lang_id - 1;
-  
-  // This global object creates a context on demand - do that now.
+
   if (mLanguageContexts[lang_ndx] == nsnull) {
     nsresult rv;
     NS_ASSERTION(mLanguageGlobals[lang_ndx] == nsnull, "Have global without context?");
@@ -892,7 +892,20 @@ nsXULPDGlobalObject::GetLanguageContext(PRUint32 lang_id)
     rv = SetLanguageContext(lang_id, ctxNew);
     NS_ENSURE_SUCCESS(rv, nsnull);
   }
-  return mLanguageContexts[lang_ndx];
+  return NS_OK;
+}
+
+nsIScriptContext *
+nsXULPDGlobalObject::GetLanguageContext(PRUint32 lang_id)
+{
+  // This global object creates a context on demand - do that now.
+  nsresult rv = EnsureScriptEnvironment(lang_id);
+  if (NS_FAILED(rv)) {
+    NS_ERROR("Failed to setup script language");
+    return nsnull;
+  }
+  // Note that EnsureScriptEnvironment has validated lang_id
+  return mLanguageContexts[lang_id-1];
 }
 
 void *

@@ -1318,7 +1318,7 @@ nsJSContext::CompileEventHandler(nsIPrincipal *aPrincipal,
     return NS_ERROR_UNEXPECTED;
   }
 
-  JSObject *target = nsnull;
+  //JSObject *target = nsnull;
 
   JSPrincipals *jsprin = nsnull;
 
@@ -1417,6 +1417,13 @@ nsJSContext::CallEventHandler(nsISupports* aTarget, void *aScope, void *aHandler
                                                aTarget,
                                                NS_GET_IID(nsISupports),
                                                getter_AddRefs(jsholder));
+  NS_ENSURE_SUCCESS(rv, rv);
+#ifdef NS_DEBUG
+  nsCOMPtr<nsIXPConnectWrappedNative> wrapper = do_QueryInterface(jsholder);
+  NS_ASSERTION(wrapper, "wrapper must impl nsIXPConnectWrappedNative");
+  nsCOMPtr<nsISupports> targetSupp = do_QueryInterface(aTarget);
+  NS_ASSERTION(wrapper->Native() == targetSupp, "Native should be the target!");
+#endif
 
   JSObject* target = nsnull;
   rv = jsholder->GetJSObject(&target);
@@ -1509,6 +1516,13 @@ nsJSContext::BindCompiledEventHandler(nsISupports* aTarget, void *aScope,
                                                aTarget,
                                                NS_GET_IID(nsISupports),
                                                getter_AddRefs(holder));
+  NS_ENSURE_SUCCESS(rv, rv);
+#ifdef NS_DEBUG
+  nsCOMPtr<nsIXPConnectWrappedNative> wrapper = do_QueryInterface(holder);
+  NS_ASSERTION(wrapper, "wrapper must impl nsIXPConnectWrappedNative");
+  nsCOMPtr<nsISupports> targetSupp = do_QueryInterface(aTarget);
+  NS_ASSERTION(wrapper->Native() == targetSupp, "Native should be the target!");
+#endif
 
   JSObject* target = nsnull;
   rv = holder->GetJSObject(&target);
@@ -1525,11 +1539,11 @@ nsJSContext::BindCompiledEventHandler(nsISupports* aTarget, void *aScope,
   }
 
   // Make sure the handler function is parented by its event target object
-  if (funobj && ::JS_GetParent(mContext, funobj) != target) {
+  //if (funobj && ::JS_GetParent(mContext, funobj) != target) {
     funobj = ::JS_CloneFunctionObject(mContext, funobj, target);
     if (!funobj)
       rv = NS_ERROR_OUT_OF_MEMORY;
-  }
+  //}
 
   if (NS_SUCCEEDED(rv) &&
       !::JS_DefineProperty(mContext, target, charName,
@@ -1537,6 +1551,9 @@ nsJSContext::BindCompiledEventHandler(nsISupports* aTarget, void *aScope,
                            JSPROP_ENUMERATE | JSPROP_PERMANENT)) {
     rv = NS_ERROR_FAILURE;
   }
+
+  // XXXmarkh - ideally we should assert that the wrapped native is now
+  // "long lived" - how to do that?
 
   if (NS_FAILED(stack->Pop(nsnull)) && NS_SUCCEEDED(rv)) {
     rv = NS_ERROR_FAILURE;
@@ -1556,6 +1573,13 @@ nsJSContext::GetBoundEventHandler(nsISupports* aTarget, void *aScope,
                                                  aTarget,
                                                  NS_GET_IID(nsISupports),
                                                  getter_AddRefs(holder));
+    NS_ENSURE_SUCCESS(rv, rv);
+#ifdef NS_DEBUG
+    nsCOMPtr<nsIXPConnectWrappedNative> wrapper = do_QueryInterface(holder);
+    NS_ASSERTION(wrapper, "wrapper must impl nsIXPConnectWrappedNative");
+    nsCOMPtr<nsISupports> targetSupp = do_QueryInterface(aTarget);
+    NS_ASSERTION(wrapper->Native() == targetSupp, "Native should be the target!");
+#endif
 
     JSObject* obj = nsnull;
     rv = holder->GetJSObject(&obj);

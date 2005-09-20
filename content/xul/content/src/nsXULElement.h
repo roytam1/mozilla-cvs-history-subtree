@@ -126,13 +126,15 @@ public:
 
     ~nsXULPrototypeAttribute();
 
+
     nsAttrName mName;
     nsAttrValue mValue;
+    // mEventHandler is only valid for the language ID specified in the
+    // containing nsXULPrototypeElement
     void* mEventHandler;
-    // sadly we also need the language ID here so we can do GC on destruction.
-    // Otherwise we could use the mLangID in the containing
-    // nsXULPrototypeElement
-    PRUint32 mLangID;
+
+    // Containing element must tell us the langID so we can cleanup.
+    void Finalize(PRUint32 aLangID);
 
 #ifdef XUL_PROTOTYPE_ATTRIBUTE_METERING
     /**
@@ -250,6 +252,9 @@ public:
 
     virtual ~nsXULPrototypeElement()
     {
+        PRInt32 i;
+        for (i = 0; i < mNumAttributes; i++)
+            mAttributes[i].Finalize(mLangID);
         delete[] mAttributes;
         delete[] mChildren;
     }
@@ -315,8 +320,6 @@ protected:
     static nsICSSParser* sCSSParser;
 };
 
-struct JSRuntime;
-struct JSObject;
 class nsXULDocument;
 
 class nsXULPrototypeScript : public nsXULPrototypeNode
@@ -377,7 +380,7 @@ protected:
         return sXULPrototypeCache;
     }
     static nsIXULPrototypeCache* sXULPrototypeCache;
-    void *                   mScriptObject;
+    void *mScriptObject;
 };
 
 class nsXULPrototypeText : public nsXULPrototypeNode
@@ -510,6 +513,17 @@ public:
     virtual nsresult GetAttrNameAt(PRUint32 aIndex, PRInt32* aNameSpaceID,
                                    nsIAtom** aName, nsIAtom** aPrefix) const;
     virtual PRUint32 GetAttrCount() const;
+
+    virtual PRUint32 GetDefaultScriptLanguage() const
+        { return mDefaultScriptLanguage; }
+
+    virtual nsresult SetDefaultScriptLanguage(PRUint32 aLang)
+    { NS_ASSERTION(aLang != nsIProgrammingLanguage::UNKNOWN,
+                   "Must set to a real language");
+      mDefaultScriptLanguage = aLang;
+      return NS_OK;
+    }
+
 #ifdef DEBUG
     virtual void List(FILE* out, PRInt32 aIndent) const;
     virtual void DumpContent(FILE* out, PRInt32 aIndent,PRBool aDumpAll) const
@@ -562,7 +576,7 @@ public:
     { return GetFlags() & (aFlag << XUL_ELEMENT_LAZY_STATE_OFFSET); }
     NS_HIDDEN_(nsresult) AddScriptEventListener(nsIAtom* aName,
                                                 const nsAString& aValue,
-                                                PRUint32 aLanguage);
+                                                PRBool aDefer);
 
     // nsIDOMNode
     NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericElement::)
@@ -632,7 +646,6 @@ protected:
      * Add a listener for the specified attribute, if appropriate.
      */
     void AddListenerFor(const nsAttrName& aName,
-                        PRUint32 aScriptLanguage,
                         PRBool aCompileEventHandlers);
     void MaybeAddPopupListener(nsIAtom* aLocalName);
 
@@ -651,6 +664,7 @@ protected:
 
     const nsAttrName* InternalGetExistingAttrNameFromQName(const nsAString& aStr) const;
 
+    PRUint32 mDefaultScriptLanguage;
 protected:
     // Internal accessor. This shadows the 'Slots', and returns
     // appropriate value.

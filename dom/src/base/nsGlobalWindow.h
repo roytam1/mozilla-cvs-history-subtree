@@ -155,6 +155,8 @@ public:
   virtual nsIScriptContext *GetContext();
   virtual JSObject *GetGlobalJSObject();
 
+  virtual nsresult EnsureScriptEnvironment(PRUint32 aLangID);
+
   virtual nsIScriptContext *GetLanguageContext(PRUint32 lang);
   virtual void *GetLanguageGlobal(PRUint32 lang);
 

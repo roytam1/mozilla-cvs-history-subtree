@@ -69,6 +69,7 @@ public:
   NS_DECL_ISUPPORTS
   
   // nsIScriptGlobalObject methods
+  virtual nsresult EnsureScriptEnvironment(PRUint32 aLangID);
   virtual void SetContext(nsIScriptContext *aContext);
   virtual nsresult SetLanguageContext(PRUint32 lang_id, nsIScriptContext *aContext) {
     NS_ASSERTION(lang_id == nsIProgrammingLanguage::JAVASCRIPT, "Only JS allowed!");
@@ -227,12 +228,15 @@ nsXBLDocGlobalObject::SetContext(nsIScriptContext *aScriptContext)
   mScriptContext = aScriptContext;
 }
 
-nsIScriptContext *
-nsXBLDocGlobalObject::GetContext()
+nsresult
+nsXBLDocGlobalObject::EnsureScriptEnvironment(PRUint32 aLangID)
 {
-  // This whole fragile mess is predicated on the fact that
-  // GetContext() will be called before GetScriptObject() is.
-  if (! mScriptContext) {
+    if (aLangID != nsIProgrammingLanguage::JAVASCRIPT) {
+        NS_WARNING("XBL still JS only");
+        return NS_ERROR_INVALID_ARG;
+    }
+    if (mScriptContext)
+        return NS_OK; // already initialized for this lang
     nsCOMPtr<nsIDOMScriptObjectFactory> factory = do_GetService(kDOMScriptObjectFactoryCID);
     NS_ENSURE_TRUE(factory, nsnull);
 
@@ -261,8 +265,20 @@ nsXBLDocGlobalObject::GetContext()
     // released when the JSObject is finalized.
     ::JS_SetPrivate(cx, mJSObject, this);
     NS_ADDREF(this);
-  }
+    return NS_OK;
+}
 
+nsIScriptContext *
+nsXBLDocGlobalObject::GetContext()
+{
+  // This whole fragile mess is predicated on the fact that
+  // GetContext() will be called before GetScriptObject() is.
+  if (! mScriptContext) {
+    nsresult rv = EnsureScriptEnvironment(nsIProgrammingLanguage::JAVASCRIPT);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "Failed to setup JS!?");
+    NS_ENSURE_SUCCESS(rv, nsnull);
+    NS_ASSERTION(mScriptContext, "Failed to find a script context!?");
+  }
   return mScriptContext;
 }
 

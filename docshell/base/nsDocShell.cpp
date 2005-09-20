@@ -76,7 +76,6 @@
 #include "nsIScriptSecurityManager.h"
 #include "nsIJSContextStack.h"
 #include "nsIScriptObjectPrincipal.h"
-#include "nsILanguageRuntime.h"
 #include "nsDocumentCharsetInfoCID.h"
 #include "nsICanvasFrame.h"
 #include "nsIScrollableFrame.h"
@@ -87,7 +86,6 @@
 #include "nsAutoPtr.h"
 #include "nsIPrefService.h"
 #include "nsIWritablePropertyBag2.h"
-#include "nsIProgrammingLanguage.h"
 #include "nsDOMJSUtils.h" // GetScriptContextFromJSContext
 
 // we want to explore making the document own the load group
@@ -8075,21 +8073,8 @@ nsDocShell::EnsureScriptEnvironment()
     // setup on demand.
     // XXX - should this be setup to run the default language for this doc?
     nsresult rv;
-    nsCOMPtr<nsILanguageRuntime> languageRuntime;
-    rv = factory->GetLanguageRuntimeByID(nsIProgrammingLanguage::JAVASCRIPT,
-                                         getter_AddRefs(languageRuntime));
+    rv = mScriptGlobal->EnsureScriptEnvironment(nsIProgrammingLanguage::JAVASCRIPT);
     NS_ENSURE_SUCCESS(rv, rv);
-
-    nsCOMPtr<nsIScriptContext> context;
-    rv = languageRuntime->CreateContext(getter_AddRefs(context));
-    NS_ENSURE_SUCCESS(rv, rv);
-    rv = mScriptGlobal->SetLanguageContext(nsIProgrammingLanguage::JAVASCRIPT,
-                                           context);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    // Note that mScriptGlobal has taken a reference to the script
-    // context, so we don't have to.
-
     return NS_OK;
 }
 

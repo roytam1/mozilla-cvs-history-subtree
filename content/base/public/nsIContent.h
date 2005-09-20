@@ -60,8 +60,8 @@ class nsIURI;
 
 // IID for the nsIContent interface
 #define NS_ICONTENT_IID       \
-{ 0x3fecc374, 0x2839, 0x4db3, \
- { 0x8d, 0xe8, 0x6b, 0x76, 0xd1, 0xd8, 0xe6, 0xf6 } }
+{ 0x469b2ce5, 0x3e00, 0x45e0, \
+ { 0x9c, 0x6e, 0x4e, 0x80, 0xfb, 0x27, 0x59, 0x7d } }
 
 /**
  * A node of content in a document's content model. This interface
@@ -664,6 +664,15 @@ public:
     return 0;
   }
     
+  /* The default script language for this content.
+     All content must support fetching the default language.
+   */
+  virtual PRUint32 GetDefaultScriptLanguage() const
+  { return nsIProgrammingLanguage::JAVASCRIPT; }
+
+  /* Not all content supports setting a new default language */
+  virtual nsresult SetDefaultScriptLanguage(PRUint32 aLang)
+  { return NS_ERROR_NOT_IMPLEMENTED; }
 
   /* Methods for manipulating content node properties.  For documentation on
    * properties, see nsPropertyTable.h.

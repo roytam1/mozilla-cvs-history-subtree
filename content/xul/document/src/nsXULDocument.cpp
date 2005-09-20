@@ -3528,29 +3528,19 @@ nsXULDocument::ExecuteScript(nsXULPrototypeScript *aScript)
     NS_PRECONDITION(aScript != nsnull, "null ptr");
     NS_ENSURE_TRUE(aScript, NS_ERROR_NULL_POINTER);
 
-    nsresult rv = NS_ERROR_UNEXPECTED;
+    nsresult rv;
+    rv = mScriptGlobalObject->EnsureScriptEnvironment(aScript->mLangID);
+    NS_ENSURE_SUCCESS(rv, rv);
+
     nsIScriptContext *context;
     context = mScriptGlobalObject->GetLanguageContext(aScript->mLangID);
-    if (context == nsnull) {
-        // first request for this programming language - set things up.
-        nsCOMPtr<nsIScriptContext> newContext;
-        nsCOMPtr<nsILanguageRuntime> languageRuntime;
-        rv = NS_GetLanguageRuntimeByID(aScript->mLangID,
-                                       getter_AddRefs(languageRuntime));
-        NS_ENSURE_SUCCESS(rv, rv);
-        rv = languageRuntime->CreateContext(getter_AddRefs(newContext));
-        NS_ENSURE_SUCCESS(rv, rv);
-        rv = mScriptGlobalObject->SetLanguageContext(aScript->mLangID,
-                                                     newContext);
-        NS_ENSURE_SUCCESS(rv, rv);
-        context = mScriptGlobalObject->GetLanguageContext(aScript->mLangID);
-    }
-
     // failure getting a script context is fatal.
     NS_ENSURE_TRUE(context != nsnull, NS_ERROR_UNEXPECTED);
 
     if (aScript->GetScriptObject())
         rv = ExecuteScript(context, aScript->GetScriptObject());
+    else
+        rv = NS_ERROR_UNEXPECTED;
     return rv;
 }
 
@@ -3887,7 +3877,14 @@ nsXULDocument::OverlayForwardReference::Resolve()
     if (! target)
         return eResolve_Error;
 
+    // While merging, set the default script language of the element to be
+    // the language from the overlay - attributes will then be correctly
+    // hooked up with the appropriate language (while child nodes ignore
+    // the default language - they have it in their proto.
+    PRUint32 oldDefLang = target->GetDefaultScriptLanguage();
+    target->SetDefaultScriptLanguage(mOverlay->GetDefaultScriptLanguage());
     rv = Merge(target, mOverlay, notify);
+    target->SetDefaultScriptLanguage(oldDefLang);
     if (NS_FAILED(rv)) return eResolve_Error;
 
     // Add child and any descendants to the element map

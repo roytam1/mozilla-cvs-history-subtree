@@ -142,6 +142,7 @@
 #include "nsIURIFixup.h"
 #include "nsCDefaultURIFixup.h"
 #include "nsArray.h"
+#include "nsILanguageRuntime.h"
 
 #include "plbase64.h"
 
@@ -560,6 +561,31 @@ nsGlobalWindow::SetLanguageContext(PRUint32 lang_id, nsIScriptContext *aScriptCo
   mLanguageContexts[lang_ndx] = aScriptContext;
   mLanguageGlobals[lang_ndx] = script_glob;
   return NS_OK;
+}
+
+nsresult
+nsGlobalWindow::EnsureScriptEnvironment(PRUint32 aLangID)
+{
+    nsresult rv;
+
+    PRBool ok = aLangID > nsIProgrammingLanguage::UNKNOWN && aLangID <= nsIProgrammingLanguage::MAX;
+    NS_ASSERTION(ok, "Invalid programming language ID requested");
+    NS_ENSURE_TRUE(ok, NS_ERROR_INVALID_ARG);
+    PRUint32 lang_ndx = aLangID - 1;
+
+    if (mLanguageGlobals[lang_ndx])
+        return NS_OK; // already initialized for this language.
+    nsCOMPtr<nsILanguageRuntime> languageRuntime;
+    rv = NS_GetLanguageRuntimeByID(aLangID, getter_AddRefs(languageRuntime));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    nsCOMPtr<nsIScriptContext> context;
+    rv = languageRuntime->CreateContext(getter_AddRefs(context));
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = SetLanguageContext(aLangID, context);
+    NS_ENSURE_SUCCESS(rv, rv);
+    // Note that SetLanguageContext has taken a reference to the context.
+    return NS_OK;
 }
 
 nsIScriptContext *
