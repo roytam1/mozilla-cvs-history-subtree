@@ -467,8 +467,12 @@ function updateContextMenu()
   
   var entry = gPrefView[view.selection.currentIndex];
   var isLocked = gPrefBranch.prefIsLocked(entry.prefCol);
-  document.getElementById("lockSelected").hidden = isLocked;
-  document.getElementById("unlockSelected").hidden = !isLocked;
+
+  // These might not exist (bug 289136)
+  try {
+    document.getElementById("lockSelected").hidden = isLocked;
+    document.getElementById("unlockSelected").hidden = !isLocked;
+  } catch (ex) {}
 }
 
 function copyName()
