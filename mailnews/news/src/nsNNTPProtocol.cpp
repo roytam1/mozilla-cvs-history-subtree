@@ -4586,7 +4586,7 @@ PRInt32 nsNNTPProtocol::ListXActiveResponse(nsIInputStream * inputStream, PRUint
       */
       while (*s && !NET_IS_SPACE(*s))
         s++;
-      if (s)
+      if (*s)
       {
         char flags[32];	/* ought to be big enough */
         *s = 0;
