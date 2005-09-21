@@ -101,6 +101,14 @@ var PATTERN_UTF8_NONASCII = "(?:[\\xc0-\\xdf]"+PATTERN_UTF8_CONT+"|"+
                             "[\\xf8-\\xfb]"+PATTERN_UTF8_CONT+"{4}|"+
                             "[\\xfc-\\xfd]"+PATTERN_UTF8_CONT+"{5})";
 
+// rfc3261 'TEXT-UTF8char'
+var PATTERN_TEXT_UTF8char = "(?:[\\x21-\\x7e]|"+PATTERN_UTF8_NONASCII+")";
+
+// rfc3261 'TEXT-UTF8-TRIM'
+var PATTERN_TEXT_UTF8_TRIM = PATTERN_TEXT_UTF8char+
+                             "+(?:(?:"+PATTERN_LWS+")*"+PATTERN_TEXT_UTF8char+
+                             ")*";
+
 // rfc3261 'token'
 var PATTERN_TOKEN = "[A-Za-z0-9\\-.!%*_+`'~]+";
 
@@ -214,10 +222,17 @@ var PATTERN_URI_HEADER = PATTERN_HEADERCHAR+"+\\="+PATTERN_HEADERCHAR+"*";
 var PATTERN_URI_HEADERS = "\\?"+PATTERN_URI_HEADER+"(?:&"+PATTERN_URI_HEADER+")*";
 
 // ~ rfc3261 'addr-spec'
-// XXX PATTERN_ADDR_SPEC only matches (SIP-URI|SIPS-URI), NOT absoluteURI
+// XXX PATTERN_ADDR_SPEC and PATTERN_ADDR_SPEC_NO_PARS only matche
+// (SIP-URI|SIPS-URI), NOT absoluteURI
 var PATTERN_ADDR_SPEC = "[Ss][Ii][Pp][Ss]?\\:(?:"+PATTERN_USERINFO+
                         "@)?"+PATTERN_HOST+"(?:\\:"+PATTERN_PORT+")?"+
                         PATTERN_URI_PARAMETERS+"(?:"+PATTERN_URI_HEADERS+")?";
+// 'addr-spec' without semicolon deliminated pars for matching
+// 'addr-spec' when it is not enclosed by LAQUOT/RAQUOT. See RFC3261
+// 20 last para.
+var PATTERN_ADDR_SPEC_NO_PARS = "[Ss][Ii][Pp][Ss]?\\:(?:"+PATTERN_USERINFO+
+                         "@)?"+PATTERN_HOST+"(?:\\:"+PATTERN_PORT+")?"+
+                         "(?:"+PATTERN_URI_HEADERS+")?";
 
 // rfc3261 'name-addr'
 var PATTERN_NAME_ADDR = PATTERN_DISPLAY_NAME+"?"+PATTERN_LAQUOT+
@@ -249,7 +264,10 @@ var PATTERN_REASON_PHRASE = "(?:"+PATTERN_RESERVED+"|"+
                             PATTERN_ESCAPED+"|"+
                             PATTERN_UTF8_NONASCII+"|"+
                             PATTERN_UTF8_CONT+"|[ \t])*";
-  
+
+// (token / quoted-string)
+var PATTERN_AUTH_VALUE = "(?:"+PATTERN_TOKEN+"|"+PATTERN_QUOTED_STRING+")";
+
 //----------------------------------------------------------------------
 // Regexps used for testing or parsing SIP elements:
 
@@ -271,9 +289,15 @@ var REGEXP_EXTENSION_HEADER_VALUE = new RegExp("^(?:.|\\r(?!\\n)|\\n|\\r\\n(?=[ 
 
 // Parse a To/From/Contact message header value into
 // (addr-spec|name-addr[parsed], to-parameters[unparsed])
- var REGEXP_NAME_ADDR_PARS = new RegExp("^("+PATTERN_ADDR_SPEC+"|"+
-                                        PATTERN_NAME_ADDR+")"+PATTERN_SWS+
+ var REGEXP_NAME_ADDR_SPEC_PARS = new RegExp("^("+PATTERN_ADDR_SPEC_NO_PARS+"|"+
+                                             PATTERN_NAME_ADDR+")"+PATTERN_SWS+
+                                             "(;"+PATTERN_ANYTHING+"*)?$");
+
+// Parse Route/Record header value into
+// (name-addr[parsed], rr-params[unparsed])
+ var REGEXP_NAME_ADDR_PARS = new RegExp("^("+PATTERN_NAME_ADDR+")"+PATTERN_SWS+
                                         "(;"+PATTERN_ANYTHING+"*)?$");
+
 
 // Parse a Content-Type message header into
 // (type[parsed], subtype[parsed], m-paramters[unparsed])
@@ -281,7 +305,13 @@ var REGEXP_CONTENT_TYPE_HEADER_VALUE = new RegExp("^("+PATTERN_TOKEN+")"+
                                                   PATTERN_SLASH+"("+
                                                   PATTERN_TOKEN+")"+PATTERN_SWS+
                                                   "(;"+PATTERN_ANYTHING+"*)?$");
-                                                  
+
+// Parse a WWW-Authenticate, Proxy-Authenticate, Authorization or
+// Proxy-Authorization message header into (scheme[parsed],
+// auth-parameters[unparsed])
+REGEXP_AUTH_HEADER_VALUE = new RegExp("^("+PATTERN_TOKEN+")"+
+                                      PATTERN_LWS+"("+PATTERN_TOKEN+
+                                      PATTERN_ANYTHING+"*)$");
 
 // Parses a sip request into (method, request-uri, sip-version,
 // unparsed headers, body):
@@ -426,6 +456,12 @@ function PARSE_RETRY_AFTER_HEADER_VALUE(data) {
   return matches;
 }
 
+// matches (token / quoted-string):
+var REGEXP_AUTH_VALUE = new RegExp("^"+PATTERN_AUTH_VALUE+"$");
+
+// matches TEXT_UTF8_TRIM|nothing:
+var REGEXP_TEXT_UTF8_TRIM = new RegExp("^(?:"+PATTERN_TEXT_UTF8_TRIM+")?$");
+
 //----------------------------------------------------------------------
 // Tokenizers to be applied repeatedly to input:
 
@@ -456,6 +492,11 @@ var TOKENIZER_GENERIC_PARAMS =
   makeTokenizer(PATTERN_SEMI+"("+PATTERN_TOKEN+")(?:"+PATTERN_EQUAL+
                 "("+PATTERN_GEN_VALUE+"))?");
 
+// Tokenizes a list of auth-param separated by COMMA into (name, value) pairs:
+var TOKENIZER_AUTH_PARAMS =
+  makeTokenizer("("+PATTERN_TOKEN+")"+PATTERN_EQUAL+"("+PATTERN_AUTH_VALUE+")(?:"+
+                PATTERN_COMMA+"|$)");
+
 // Tokenizes a comma-separated header value of the form
 //   header-value *(COMMA header-value)
 // into individual header-values, making sure that whitespace binds
@@ -481,6 +522,20 @@ function SERIALIZER_PARAMS(hash) {
   return rv;
 }
 
+// serialize a hash of auth-params (WWW-Authenticate, Proxy-Authenticate, ...):
+function SERIALIZER_AUTH_PARAMS(hash) {
+  var rv = "";
+  var first = true;
+  for (var n in hash) {
+    if (!first)
+      rv += ",";
+    else
+      first = false;
+    rv += n.substring(1) + "=" + hash[n];
+  }
+  return rv;
+}
+
 // serializes a hash of uri-headers:
 function SERIALIZER_URI_HEADERS(hash) {
   var rv = "";
@@ -497,7 +552,7 @@ function SERIALIZER_URI_HEADERS(hash) {
 // Class SipSyntaxObject
 
 var SipSyntaxObject = makeClass("SipSyntaxObject",
-                                SupportsImpl, AttributeParser);
+                                SupportsImpl, AttributeParser, Unwrappable);
 SipSyntaxObject.addInterfaces(Components.interfaces.zapISipSyntaxObject);
 
 SipSyntaxObject.metafun(
@@ -862,7 +917,7 @@ SipToHeader.parsedHash(
 SipToHeader.fun(
   function deserialize(name, data) {
     // parse into (name-addr|addr-spec[parsed], to-parameters[unparsed])
-    var matches = REGEXP_NAME_ADDR_PARS(data);
+    var matches = REGEXP_NAME_ADDR_SPEC_PARS(data);
     if (!matches) this._verboseError(PARSE_ERROR+": malformed To Header ("+data+")");
     
     this.address = theSyntaxFactory.deserializeAddress(matches[1]);
@@ -913,7 +968,7 @@ SipReplyToHeader.parsedHash(
 SipReplyToHeader.fun(
   function deserialize(name, data) {
     // parse into (name-addr|addr-spec[parsed], to-parameters[unparsed])
-    var matches = REGEXP_NAME_ADDR_PARS(data);
+    var matches = REGEXP_NAME_ADDR_SPEC_PARS(data);
     if (!matches) this._verboseError(PARSE_ERROR+": malformed Reply-To header ("+data+")");
     
     this.address = theSyntaxFactory.deserializeAddress(matches[1]);
@@ -966,7 +1021,7 @@ SipFromHeader.parsedHash(
 SipFromHeader.fun(
   function deserialize(name, data) {
     // parse into (name-addr|addr-spec[parsed], to-parameters[unparsed])
-    var matches = REGEXP_NAME_ADDR_PARS(data);
+    var matches = REGEXP_NAME_ADDR_SPEC_PARS(data);
     if (!matches) this._verboseError(PARSE_ERROR+": malformed From header ("+data+")");
     
     this.address = theSyntaxFactory.deserializeAddress(matches[1]);
@@ -1054,13 +1109,118 @@ SipContactHeader.fun(
     }
     else {
       // parse into (name-addr|addr-spec[parsed], to-parameters[unparsed])
-      var matches = REGEXP_NAME_ADDR_PARS(data);
+      var matches = REGEXP_NAME_ADDR_SPEC_PARS(data);
       if (!matches) this._verboseError(PARSE_ERROR+": malformed Contact header ("+data+")");
 
       this.address = theSyntaxFactory.deserializeAddress(matches[1]);
       this._deserializeParameters(matches[2]);
     }
   });
+
+////////////////////////////////////////////////////////////////////////
+// Class SipRouteHeader
+
+var SipRouteHeader = makeClass("SipRouteHeader", SipHeader);
+SipRouteHeader.addInterfaces(Components.interfaces.zapISipRouteHeader);
+SipRouteHeader.setAliases("Route");
+SipRouteHeader.metaobj("isCommaSeparatedList", true);
+
+//----------------------------------------------------------------------
+// zapISipSyntaxObject implementation
+
+SipRouteHeader.fun(
+  function serialize() {
+    var rv = "";
+    rv += this.name + ": ";
+    rv += this.address.serialize();
+    rv += this._serializeParameters();
+    return rv;
+  });
+
+//----------------------------------------------------------------------
+// zapISipRouteHeader implementation
+
+// attribute zapISipAddress address;
+SipRouteHeader.obj("address", null);
+
+// ACString getParameter(in ACString name);
+// boolean hasParameter(in ACString name);
+// void setParameter(in ACString name, in ACString value);
+// void removeParameter(in ACString name);
+// void getParameterNames(out unsigned long count,
+//                        [retval, array, size_is(count)] out string names);
+SipRouteHeader.parsedHash(
+  "Parameter",
+  SERIALIZER_PARAMS,
+  TOKENIZER_GENERIC_PARAMS,
+  REGEXP_TOKEN,
+  REGEXP_GEN_VALUE,
+  {});
+
+//----------------------------------------------------------------------
+
+SipRouteHeader.fun(
+  function deserialize(name, data) {
+    // parse into (name-addr[parsed], to-parameters[unparsed])
+    var matches = REGEXP_NAME_ADDR_PARS(data);
+    if (!matches) this._verboseError(PARSE_ERROR+": malformed Record-Route header ("+data+")");
+    
+    this.address = theSyntaxFactory.deserializeAddress(matches[1]);
+    this._deserializeParameters(matches[2]);
+  });
+
+////////////////////////////////////////////////////////////////////////
+// Class SipRecordRouteHeader
+
+var SipRecordRouteHeader = makeClass("SipRecordRouteHeader", SipHeader);
+SipRecordRouteHeader.addInterfaces(Components.interfaces.zapISipRecordRouteHeader);
+SipRecordRouteHeader.setAliases("Record-Route");
+SipRecordRouteHeader.metaobj("isCommaSeparatedList", true);
+
+//----------------------------------------------------------------------
+// zapISipSyntaxObject implementation
+
+SipRecordRouteHeader.fun(
+  function serialize() {
+    var rv = "";
+    rv += this.name + ": ";
+    rv += this.address.serialize();
+    rv += this._serializeParameters();
+    return rv;
+  });
+
+//----------------------------------------------------------------------
+// SipRecordRouteHeader implementation
+
+// attribute zapISipAddress address;
+SipRecordRouteHeader.obj("address", null);
+
+// ACString getParameter(in ACString name);
+// boolean hasParameter(in ACString name);
+// void setParameter(in ACString name, in ACString value);
+// void removeParameter(in ACString name);
+// void getParameterNames(out unsigned long count,
+//                        [retval, array, size_is(count)] out string names);
+SipRecordRouteHeader.parsedHash(
+  "Parameter",
+  SERIALIZER_PARAMS,
+  TOKENIZER_GENERIC_PARAMS,
+  REGEXP_TOKEN,
+  REGEXP_GEN_VALUE,
+  {});
+
+//----------------------------------------------------------------------
+
+SipRecordRouteHeader.fun(
+  function deserialize(name, data) {
+    // parse into (name-addr[parsed], to-parameters[unparsed])
+    var matches = REGEXP_NAME_ADDR_PARS(data);
+    if (!matches) this._verboseError(PARSE_ERROR+": malformed Route header ("+data+")");
+    
+    this.address = theSyntaxFactory.deserializeAddress(matches[1]);
+    this._deserializeParameters(matches[2]);
+  });
+
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -1494,6 +1654,149 @@ SipUnsupportedHeader.fun(
     this.optionTag  =data;
   });
 
+
+////////////////////////////////////////////////////////////////////////
+// Class SipAuthHeaderBase : baseclass for Proxy-Authenticate,
+// WWW-Authenticate, Authorization and Proxy-Authorization headers
+
+var SipAuthHeaderBase = makeClass("SipAuthHeaderBase", SipHeader);
+
+//----------------------------------------------------------------------
+// zapISipSyntaxObject implementation
+
+SipAuthHeaderBase.fun(
+  function serialize() {
+    var rv = "";
+    rv += this.name + ": " + this._scheme + " ";
+    rv += this._serializeParameters();
+    return rv;
+  });
+
+//----------------------------------------------------------------------
+// zapISipWWWAuthenticateHeader/zapISipProxyAuthenticateHeader/
+// zapISipAuthorizationHeader/zapISipProxyAuthorizationHeader
+// implementation:
+
+// attribute ACString type;
+SipAuthHeaderBase.parsedAttrib("scheme", REGEXP_TOKEN, "Digest");
+
+// ACString getParameter(in ACString name);
+// boolean hasParameter(in ACString name);
+// void setParameter(in ACString name, in ACString value);
+// void removeParameter(in ACString name);
+// void getParameterNames(out unsigned long count,
+//                        [retval, array, size_is(count)] out string names);
+SipAuthHeaderBase.parsedHash(
+  "Parameter",
+  SERIALIZER_AUTH_PARAMS,
+  TOKENIZER_AUTH_PARAMS,
+  REGEXP_TOKEN,
+  REGEXP_AUTH_VALUE,
+  {});
+
+//----------------------------------------------------------------------
+
+SipAuthHeaderBase.fun(
+  function deserialize(name, data) {
+    // parse into (scheme[parsed], auth-parameters[unparsed])
+    var matches = REGEXP_AUTH_HEADER_VALUE(data);
+    if (!matches) this._verboseError(PARSE_ERROR+": malformed "+this.name+" header ("+data+")");
+    
+    this._type = matches[1];
+    this._deserializeParameters(matches[2]);
+  });
+
+////////////////////////////////////////////////////////////////////////
+// Class SipAuthorizationHeader
+
+var SipAuthorizationHeader = makeClass("SipAuthorizationHeader",
+                                       SipAuthHeaderBase);
+SipAuthorizationHeader.addInterfaces(Components.interfaces.zapISipAuthorizationHeader);
+SipAuthorizationHeader.setAliases("Authorization");
+
+////////////////////////////////////////////////////////////////////////
+// Class SipWWWAuthenticateHeader
+
+var SipWWWAuthenticateHeader = makeClass("SipWWWAuthenticateHeader",
+                                         SipAuthHeaderBase);
+SipWWWAuthenticateHeader.addInterfaces(Components.interfaces.zapISipWWWAuthenticateHeader);
+SipWWWAuthenticateHeader.setAliases("WWW-Authenticate");
+
+////////////////////////////////////////////////////////////////////////
+// Class SipProxyAuthorizationHeader
+
+var SipProxyAuthorizationHeader = makeClass("SipProxyAuthorizationHeader",
+                                            SipAuthHeaderBase);
+SipProxyAuthorizationHeader.addInterfaces(Components.interfaces.zapISipProxyAuthorizationHeader);
+SipProxyAuthorizationHeader.setAliases("Proxy-Authorization");
+
+////////////////////////////////////////////////////////////////////////
+// Class SipProxyAuthenticateHeader
+
+var SipProxyAuthenticateHeader = makeClass("SipProxyAuthenticateHeader",
+                                           SipAuthHeaderBase);
+SipProxyAuthenticateHeader.addInterfaces(Components.interfaces.zapISipProxyAuthenticateHeader);
+SipProxyAuthenticateHeader.setAliases("Proxy-Authenticate");
+
+
+////////////////////////////////////////////////////////////////////////
+// Class SipSubjectHeader
+
+var SipSubjectHeader = makeClass("SipSubjectHeader", SipHeader);
+SipSubjectHeader.addInterfaces(Components.interfaces.zapISipSubjectHeader);
+SipSubjectHeader.setAliases("Subject", "s");
+
+//----------------------------------------------------------------------
+// zapISipSyntaxObject implementation
+
+SipSubjectHeader.fun(
+  function serialize() {
+    return this.name + ": " + this.subject;
+  });
+
+//----------------------------------------------------------------------
+// zapISipPriorityHeader implementation
+
+// attribute AUTF8String subject;
+SipSubjectHeader.parsedAttrib("subject", REGEXP_TEXT_UTF8_TRIM, null);
+
+//----------------------------------------------------------------------
+
+SipSubjectHeader.fun(
+  function deserialize(name, data) {
+    this.subject = data;
+  });
+
+////////////////////////////////////////////////////////////////////////
+// Class SipOrganizationHeader
+
+var SipOrganizationHeader = makeClass("SipOrganizationHeader", SipHeader);
+SipOrganizationHeader.addInterfaces(Components.interfaces.zapISipOrganizationHeader);
+SipOrganizationHeader.setAliases("Organization");
+
+//----------------------------------------------------------------------
+// zapISipSyntaxObject implementation
+
+SipOrganizationHeader.fun(
+  function serialize() {
+    return this.name + ": " + this.organization;
+  });
+
+//----------------------------------------------------------------------
+// zapISipPriorityHeader implementation
+
+// attribute AUTF8String organization;
+SipOrganizationHeader.parsedAttrib("organization",
+                                   REGEXP_TEXT_UTF8_TRIM, null);
+
+//----------------------------------------------------------------------
+
+SipOrganizationHeader.fun(
+  function deserialize(name, data) {
+    this.organization = data;
+  });
+
+
 ////////////////////////////////////////////////////////////////////////
 // Class SipUnknownHeader : header class used for header types unknown
 // to the implementation
@@ -1587,6 +1890,23 @@ SipMessage.fun(
 SipMessage.fun(
   function removeHeaderAt(i) {
     this._headers.splice(i, 1);
+  });
+
+// void removeHeader(in zapISipHeader header);
+SipMessage.fun(
+  function removeHeader(header) {
+    // unwrap inner object:
+    header = header.wrappedJSObject;
+    if (!header) this._assert("Invalid argument");
+    
+    for (var i=0,l=headers.length; i<l; ++i) {
+      if (headers[i].wrappedJSObject == header) {
+        this.removeHeaderAt(i);
+        return;
+      }
+    }
+    // not found
+    this._warning("header "+header+" ("+header.name+") not found");
   });
 
 // attribute ACString body;
@@ -1871,7 +2191,7 @@ SipResponse.fun(
   function deserialize(octets) {
     // parse into (sip-version, status-code, reason-phrase, headers, body):
     var matches = REGEXP_RESPONSE(octets);
-    if (!matches) this._verboseError(PARSE_ERROR+": malformed SIP response (\n"+data+"\n)");
+    if (!matches) this._verboseError(PARSE_ERROR+": malformed SIP response (\n"+octets+"\n)");
 
     this._version = matches[1];
     this._statusCode = matches[2];
@@ -1931,6 +2251,15 @@ SipSyntaxFactory.fun(
 SipSyntaxFactory.fun(
   function createResponse() {
     return SipResponse.instantiate();
+  });
+
+// zapISipHeader createHeader(in ACString name);
+SipSyntaxFactory.fun(
+  function createHeader(name) {
+    var headerClass = gKnownHeaders[name.toLowerCase()];
+    if (!headerClass)
+      headerClass = SipUnknownHeader;
+    return headerClass.instantiate();
   });
 
 // zapISipToHeader createToHeader(in zapISipAddress address);

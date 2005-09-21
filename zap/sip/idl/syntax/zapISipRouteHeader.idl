@@ -36,11 +36,17 @@
 
 #include "zapISipHeader.idl"
 
+interface zapISipAddress;
+
 [scriptable, uuid(de6f08e9-42eb-4a20-9672-1a633d11f653)]
 interface zapISipRouteHeader : zapISipHeader
 {
-  /**
-   * To be implemented
-   */
+  attribute zapISipAddress address;
 
+  ACString getParameter(in ACString name);
+  boolean hasParameter(in ACString name);
+  void setParameter(in ACString name, in ACString value);
+  void removeParameter(in ACString name);
+  void getParameterNames(out unsigned long count,
+                         [retval, array, size_is(count)] out string names);
 };

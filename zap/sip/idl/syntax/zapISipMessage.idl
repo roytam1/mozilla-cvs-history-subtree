@@ -69,7 +69,8 @@ interface zapISipMessage : zapISipSyntaxObject
   void appendHeader(in zapISipHeader header);
   void insertHeaderBefore(in zapISipHeader header, in unsigned long i);
   void removeHeaderAt(in unsigned long i);
-
+  void removeHeader(in zapISipHeader header);
+  
   attribute ACString body;
 
   /**

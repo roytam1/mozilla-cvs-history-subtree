@@ -39,8 +39,5 @@
 [scriptable, uuid(90c1a528-1c8e-4df1-9cfc-5439e40d40c2)]
 interface zapISipOrganizationHeader : zapISipHeader
 {
-  /**
-   * To be implemented
-   */
-
+  attribute AUTF8String organization;
 };

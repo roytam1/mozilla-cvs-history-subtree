@@ -39,8 +39,5 @@
 [scriptable, uuid(799ca3e8-9e3e-49c1-8ca4-df46f4f6b4ce)]
 interface zapISipSubjectHeader : zapISipHeader
 {
-  /**
-   * To be implemented
-   */
-
+  attribute AUTF8String subject;
 };

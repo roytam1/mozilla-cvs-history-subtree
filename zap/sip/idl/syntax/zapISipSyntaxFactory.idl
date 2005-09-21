@@ -41,6 +41,7 @@ interface zapISipRequest;
 interface zapISipResponse;
 interface zapISipURI;
 interface zapISipAddress;
+interface zapISipHeader;
 interface zapISipToHeader;
 interface zapISipFromHeader;
 interface zapISipCallIDHeader;
@@ -94,6 +95,13 @@ interface zapISipSyntaxFactory : nsISupports
    */
   zapISipResponse createResponse();
 
+  /**
+   * Create a generic header. The returned value can be QIed to one of
+   * the zapISipHeader subclasses, as appropriate for the given header
+   * name.
+   */
+  zapISipHeader createHeader(in ACString name);
+  
   /**
    * Create a To header from the given address
    */

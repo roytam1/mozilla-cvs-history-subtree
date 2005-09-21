@@ -39,8 +39,12 @@
 [scriptable, uuid(801786aa-d78b-4cba-b6a8-895d14c9b4ae)]
 interface zapISipAuthorizationHeader : zapISipHeader
 {
-  /**
-   * To be implemented
-   */
-
+  attribute ACString scheme;
+  
+  ACString getParameter(in ACString name);
+  boolean hasParameter(in ACString name);
+  void setParameter(in ACString name, in ACString value);
+  void removeParameter(in ACString name);
+  void getParameterNames(out unsigned long count,
+                         [retval, array, size_is(count)] out string names);
 };
