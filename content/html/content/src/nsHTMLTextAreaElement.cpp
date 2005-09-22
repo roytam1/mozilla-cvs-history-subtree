@@ -39,6 +39,7 @@
 #include "nsIDOMHTMLTextAreaElement.h"
 #include "nsIDOMNSHTMLTextAreaElement.h"
 #include "nsITextControlElement.h"
+#include "nsIDOMNSEditableElement.h"
 #include "nsIControllers.h"
 #include "nsContentCID.h"
 #include "nsCOMPtr.h"
@@ -75,7 +76,8 @@ static NS_DEFINE_CID(kXULControllersCID,  NS_XULCONTROLLERS_CID);
 class nsHTMLTextAreaElement : public nsGenericHTMLFormElement,
                               public nsIDOMHTMLTextAreaElement,
                               public nsIDOMNSHTMLTextAreaElement,
-                              public nsITextControlElement
+                              public nsITextControlElement,
+                              public nsIDOMNSEditableElement
 {
 public:
   nsHTMLTextAreaElement(nsINodeInfo *aNodeInfo, PRBool aFromParser = PR_FALSE);
@@ -98,6 +100,9 @@ public:
 
   // nsIDOMNSHTMLTextAreaElement
   NS_DECL_NSIDOMNSHTMLTEXTAREAELEMENT
+
+  // nsIDOMNSEditableElement
+  NS_FORWARD_NSIDOMNSEDITABLEELEMENT(nsGenericHTMLElement::)
 
   // nsIFormControl
   NS_IMETHOD_(PRInt32) GetType() { return NS_FORM_TEXTAREA; }
@@ -191,6 +196,7 @@ NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLTextAreaElement,
   NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLTextAreaElement)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNSHTMLTextAreaElement)
   NS_INTERFACE_MAP_ENTRY(nsITextControlElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMNSEditableElement)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLTextAreaElement)
 NS_HTML_CONTENT_INTERFACE_MAP_END
 

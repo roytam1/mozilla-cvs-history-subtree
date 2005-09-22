@@ -39,6 +39,7 @@
 #include "nsIDOMHTMLInputElement.h"
 #include "nsIDOMNSHTMLInputElement.h"
 #include "nsITextControlElement.h"
+#include "nsIDOMNSEditableElement.h"
 #include "nsIRadioControlElement.h"
 #include "nsIRadioVisitor.h"
 #include "nsIPhonetic.h"
@@ -136,7 +137,8 @@ class nsHTMLInputElement : public nsGenericHTMLFormElement,
                            public nsIDOMNSHTMLInputElement,
                            public nsITextControlElement,
                            public nsIRadioControlElement,
-                           public nsIPhonetic
+                           public nsIPhonetic,
+                           public nsIDOMNSEditableElement
 {
 public:
   nsHTMLInputElement(nsINodeInfo *aNodeInfo, PRBool aFromParser);
@@ -162,6 +164,9 @@ public:
 
   // nsIPhonetic
   NS_DECL_NSIPHONETIC
+
+  // nsIDOMNSEditableElement
+  NS_FORWARD_NSIDOMNSEDITABLEELEMENT(nsGenericHTMLElement::)
 
   // Overriden nsIFormControl methods
   NS_IMETHOD_(PRInt32) GetType() { return mType; }
@@ -375,6 +380,7 @@ NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLInputElement,
   NS_INTERFACE_MAP_ENTRY(nsIPhonetic)
   NS_INTERFACE_MAP_ENTRY(imgIDecoderObserver)
   NS_INTERFACE_MAP_ENTRY(nsIImageLoadingContent)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMNSEditableElement)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLInputElement)
 NS_HTML_CONTENT_INTERFACE_MAP_END
 
