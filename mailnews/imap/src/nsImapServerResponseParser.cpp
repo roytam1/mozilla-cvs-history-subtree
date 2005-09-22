@@ -1053,7 +1053,7 @@ void nsImapServerResponseParser::msg_fetch()
   // we have not seen a uid response or flags for this fetch, yet
   fCurrentResponseUID = 0;
   fCurrentLineContainedFlagInfo = PR_FALSE;
-  
+  fSizeOfMostRecentMessage = 0;  
   // show any incremental progress, for instance, for header downloading
   fServerConnection.ShowProgress();
   
@@ -1088,7 +1088,9 @@ void nsImapServerResponseParser::msg_fetch()
         fCurrentResponseUID = atoi(fNextToken);
         if (fCurrentResponseUID > fHighestRecordedUID)
           fHighestRecordedUID = fCurrentResponseUID;
-        
+        // size came before UID
+        if (fSizeOfMostRecentMessage)
+          fReceivedHeaderOrSizeForUID = CurrentResponseUID();
         // if this token ends in ')', then it is the last token
         // else we advance
         if ( *(fNextToken + strlen(fNextToken) - 1) == ')')
