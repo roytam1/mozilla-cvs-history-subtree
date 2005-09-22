@@ -43,6 +43,7 @@
  * - [ Dependencies ] ---------------------------------------------------------
  *  utilityOverlay.js:
  *    - gatherTextUnder
+ *    - startScrolling
  */
 
   var pref = null;
@@ -199,6 +200,42 @@
       }
     }
     return true;
+  }
+
+  function contentAreaMouseDown(event)
+  {
+    if (event.button == 1 && (event.target != event.currentTarget)
+        && !hrefAndLinkNodeForClickEvent(event)
+        && !isAutoscrollBlocker(event.originalTarget)) {
+      startScrolling(event);
+      return false;
+    }
+    return true;
+  }
+
+  function isAutoscrollBlocker(node)
+  {
+    if (!pref)
+      return false;
+    
+    if (pref.getBoolPref("middlemouse.contentLoadURL"))
+      return true;
+    
+    if (!pref.getBoolPref("middlemouse.paste"))
+      return false;
+    
+    if (node.ownerDocument.designMode == "on")
+      return true;
+    
+    while (node) {
+      if (node instanceof HTMLTextAreaElement ||
+          (node instanceof HTMLInputElement &&
+           (node.type == "text" || node.type == "password")))
+        return true;
+      
+      node = node.parentNode;
+    }
+    return false;
   }
 
   function openNewTabOrWindow(event, href, sendReferrer)
