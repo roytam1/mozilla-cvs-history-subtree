@@ -5288,7 +5288,7 @@ out:
              */
             SCRIPT_FIND_CATCH_START(script, pc, pc);
             if (pc) {
-                /* Don't clear cx->throwing so cx->exception isn't collected. */
+                /* Don't clear cx->throwing to save cx->exception from GC. */
                 len = 0;
                 ok = JS_TRUE;
 #if JS_HAS_XML_SUPPORT
