@@ -1,7 +1,0 @@
-<!-- XXXBlake This should be in mozilla/browser -->
-
-<!ENTITY  lang.version          "1.2a">
-<!ENTITY  brandShortName        "Phoenix">
-<!ENTITY  version               "0.4">
-<!ENTITY  vendorShortName       "Phoenix">
-<!ENTITY  releaseURL            "http://www.mozilla.org/projects/phoenix/phoenix-release-notes.html">
