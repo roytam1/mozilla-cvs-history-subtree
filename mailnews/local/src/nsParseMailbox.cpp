@@ -1561,6 +1561,63 @@ PRInt32 nsParseNewMailState::PublishMsgHeader(nsIMsgWindow *msgWindow)
       m_inboxFileStream->flush();
       PRUint32 msgOffset;
       (void) m_newMsgHdr->GetMessageOffset(&msgOffset);
+      m_curHdrOffset = msgOffset;
+
+      nsCOMPtr<nsIMsgIncomingServer> server;
+      nsresult rv = m_rootFolder->GetServer(getter_AddRefs(server));
+      NS_ENSURE_SUCCESS(rv, 0);
+      PRInt32 duplicateAction;
+      server->GetIncomingDuplicateAction(&duplicateAction);
+      if (duplicateAction != nsIMsgIncomingServer::keepDups)
+      {
+        PRBool isDup;
+        server->IsNewHdrDuplicate(m_newMsgHdr, &isDup);
+        if (isDup)
+        {
+          // we want to do something similar to applying filter hits.
+          // if a dup is marked read, it shouldn't trigger biff.
+          // Same for deleting it or moving it to trash.
+          switch (duplicateAction)
+          {
+            case nsIMsgIncomingServer::deleteDups:
+              {
+                m_inboxFileStream->close();
+
+                nsresult truncRet = m_inboxFileSpec.Truncate(msgOffset);
+                NS_ASSERTION(NS_SUCCEEDED(truncRet), "unable to truncate file");
+                if (NS_FAILED(truncRet))
+                  m_rootFolder->ThrowAlertMsg("dupDeleteFolderTruncateFailed", msgWindow);
+
+                //  need to re-open the inbox file stream.
+                m_inboxFileStream->Open(m_inboxFileSpec, (PR_RDWR | PR_CREATE_FILE));
+                if (m_inboxFileStream)
+                  m_inboxFileStream->seek(m_inboxFileSpec.GetFileSize());
+  
+                m_mailDB->RemoveHeaderMdbRow(m_newMsgHdr);
+              }
+              break;
+            case nsIMsgIncomingServer::moveDupsToTrash:
+              {
+                nsCOMPtr <nsIMsgFolder> trash;
+                GetTrashFolder(getter_AddRefs(trash));
+                if (trash)
+                  MoveIncorporatedMessage(m_newMsgHdr, m_mailDB, trash,
+                                                          nsnull, msgWindow);
+              }
+              break;
+            case nsIMsgIncomingServer::markDupsRead:
+              MarkFilteredMessageRead(m_newMsgHdr);
+              break;
+          }
+          PRInt32 numNewMessages;
+          m_downloadFolder->GetNumNewMessages(PR_FALSE, &numNewMessages);
+          m_downloadFolder->SetNumNewMessages(numNewMessages - 1);
+
+          m_newMsgHdr = nsnull;
+          return 0;
+        }
+      }
+
       ApplyFilters(&moved, msgWindow, msgOffset);
     }
     if (!moved)
@@ -1606,7 +1663,6 @@ nsresult nsParseNewMailState::GetTrashFolder(nsIMsgFolder **pTrashFolder)
 void nsParseNewMailState::ApplyFilters(PRBool *pMoved, nsIMsgWindow *msgWindow, PRUint32 msgOffset)
 {
   m_msgMovedByFilter = PR_FALSE;
-  m_curHdrOffset = msgOffset;
 
   if (!m_disableFilters)
   {
@@ -2052,11 +2108,14 @@ nsresult nsParseNewMailState::MoveIncorporatedMessage(nsIMsgDBHdr *mailHdr,
     destIFolder->GetCanFileMessages(&canFileMessages);
   if (!parentFolder || !canFileMessages)
   {
-    filter->SetEnabled(PR_FALSE);
-    // we need to explicitly save the filter file.
-    if (m_filterList)
-      m_filterList->SaveToDefaultFile();
-    destIFolder->ThrowAlertMsg("filterDisabled", msgWindow);
+    if (filter)
+    {
+      filter->SetEnabled(PR_FALSE);
+      // we need to explicitly save the filter file.
+      if (m_filterList)
+        m_filterList->SaveToDefaultFile();
+      destIFolder->ThrowAlertMsg("filterDisabled", msgWindow);
+    }
     return NS_MSG_NOT_A_MAIL_FOLDER;
   }
   
