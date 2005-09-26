@@ -241,6 +241,12 @@ var MigrationWizard = {
       }
     }
   },
+  
+  onImportItemsPageRewound: function ()
+  {
+    this._wiz.canAdvance = true;
+    this.onImportItemsPageAdvanced();
+  },
 
   onImportItemsPageAdvanced: function ()
   {
