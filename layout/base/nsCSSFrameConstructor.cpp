@@ -13780,7 +13780,16 @@ void nsCSSFrameConstructor::RestyleEvent::HandleEvent() {
   NS_ASSERTION(viewManager, "Must have view manager for update");
 
   viewManager->BeginUpdateViewBatch();
+  // Force flushing of any pending content notifications that might have queued
+  // up while our event was pending.  That will ensure that we don't construct
+  // frames for content right now that's still waiting to be notified on,
+  constructor->mPresShell->GetDocument()->
+    FlushPendingNotifications(Flush_ContentAndNotify);
+
+  // Make sure that any restyles that happen from now on will go into
+  // a new event.
   constructor->mRestyleEventQueue = nsnull;
+
   constructor->ProcessPendingRestyles();
   viewManager->EndUpdateViewBatch(NS_VMREFRESH_NO_SYNC);
 }
