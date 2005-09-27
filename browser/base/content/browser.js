@@ -1965,14 +1965,16 @@ function BrowserViewSourceOfURL(url, charset, pageCookie)
              url, charset, pageCookie);
 }
 
-// doc=null for regular page info, doc=owner document for frame info.
-function BrowserPageInfo(doc)
+// doc - document to use for source, or null for this window's document
+// initialTab - name of the initial tab to display, or null for the first tab
+function BrowserPageInfo(doc, initialTab)
 {
+  var args = {doc: doc, initialTab: initialTab};
   toOpenDialogByTypeAndUrl("Browser:page-info",
                            doc ? doc.location : window.content.document.location,
                            "chrome://browser/content/pageInfo.xul",
                            "chrome,dialog=no",
-                           doc);
+                           args);
 }
 
 #ifdef DEBUG
@@ -3741,8 +3743,7 @@ function onViewToolbarCommand(aEvent)
 
 function displaySecurityInfo()
 {
-  window.openDialog("chrome://browser/content/pageInfo.xul", "_blank",
-                    "dialog=no", null, "securityTab");
+  BrowserPageInfo(null, "securityTab");
 }
 
 function nsBrowserContentListener(toplevelWindow, contentWindow)
