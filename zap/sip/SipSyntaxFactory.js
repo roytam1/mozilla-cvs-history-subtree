@@ -1949,7 +1949,7 @@ SipMessage.fun(
 // void removeHeaders(in ACString name);
 SipMessage.fun(
   function removeHeaders(name) {
-    arraysplit(function(h) { h.name == name; },
+    arraysplit(function(h) { return h.name == name; },
                this._headers);
   });
 
