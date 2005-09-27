@@ -1418,8 +1418,8 @@ nsMacEventHandler::Scroll(EventMouseWheelAxis inAxis, PRInt32 inDelta,
   widgetToScroll->ConvertToDeviceCoordinates(widgetOrigin.x, widgetOrigin.y);
   mouseLocRelativeToWidget.MoveBy(-widgetOrigin.x, -widgetOrigin.y);
 
-  scrollEvent.refPoint.x = mouseLocRelativeToWidget.x;
-  scrollEvent.refPoint.y = mouseLocRelativeToWidget.y;
+  scrollEvent.point.x = mouseLocRelativeToWidget.x;
+  scrollEvent.point.y = mouseLocRelativeToWidget.y;
   scrollEvent.time = PR_IntervalNow();
 
   // Translate OS event modifiers into Gecko event modifiers
