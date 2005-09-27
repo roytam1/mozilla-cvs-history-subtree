@@ -218,7 +218,7 @@ SipTCPConnection.fun(
           var messageBytes = this._readBuffer.substring(0, endp);
           var message = gSyntaxFactory.deserializeMessage(messageBytes);
           var l = 0;
-          var cl = message.getSingleHeader("Content-Length");
+          var cl = message.getSingleHeader("Content-Length").QueryInterface(Components.interfaces.zapISipContentLengthHeader);
           if (cl)
             l = cl.contentLength;
           if (l>0) {
@@ -273,7 +273,7 @@ SipTCPConnection.fun(
       this._transceiver.trafficMonitor.notifyPacket(bytes,
                                                     "tcp",
                                                     "xxx-local-address",
-                                                    this.socket.port,
+                                                    this._socket.port,
                                                     this.host, this.port,
                                                     false);
     if (message)
@@ -398,7 +398,7 @@ SipTransceiver.fun(
       }
       log("Sending packet via TCP :\n"+message.serialize());
       connection.send(message.serialize());
-      localPort = connection.socket.port;
+      localPort = connection._socket.port;
     }
     else
       this._error("SipTransceiver: Unsupported protocol '"+protocol+"'");
@@ -600,6 +600,7 @@ SipTransport.obj("listeningPort", 0);
 SipTransport.fun(
   "Send a request (RFC3261 Section 18.1.1)",
   function sendRequest(request, endpoint, connection) {
+    this._assert(endpoint, "no endpoint for sending request. backtrace:"+this._backtrace());
     // XXX possibly switch transports if request is too large.
 
     // Insert IP address or host name and port into 'sent-by' of top
