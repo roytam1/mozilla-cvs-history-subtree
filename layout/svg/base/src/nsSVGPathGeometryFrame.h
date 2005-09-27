@@ -139,6 +139,8 @@ protected:
   nsISVGOuterSVGFrame *GetOuterSVGFrame();
   nsISVGRendererPathGeometry *GetGeometry();
 
+  nsCOMPtr<nsISVGRendererRegion> mMarkerRegion;
+
 private:
   nsCOMPtr<nsISVGRendererPathGeometry> mGeometry;
   PRUint32 mUpdateFlags;

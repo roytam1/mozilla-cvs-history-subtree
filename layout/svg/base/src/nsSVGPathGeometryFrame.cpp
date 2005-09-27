@@ -246,6 +246,10 @@ nsSVGPathGeometryFrame::PaintSVG(nsISVGRendererCanvas* canvas, const nsRect& dir
     GetMarkerFrames(&markerStart, &markerMid, &markerEnd);
 
     if (markerEnd || markerMid || markerStart) {
+      // need to set this up with the first draw
+      if (!mMarkerRegion)
+        mMarkerRegion = GetCoveredRegion();
+
       float strokeWidth;
       GetStrokeWidth(&strokeWidth);
       
@@ -854,11 +858,34 @@ void nsSVGPathGeometryFrame::UpdateGraphic(PRUint32 flags)
       PRBool painting;
       vm->IsPainting(painting);
 
-      if (!painting)
+      if (!painting) {
+        if (mMarkerRegion) {
+          outerSVGFrame->InvalidateRegion(mMarkerRegion, PR_TRUE);
+          mMarkerRegion = nsnull;
+        }
+        
+        nsISVGMarkable *markable;
+        CallQueryInterface(this, &markable);
+        
+        if (markable) {
+          nsSVGMarkerFrame *markerEnd, *markerMid, *markerStart;
+          GetMarkerFrames(&markerStart, &markerMid, &markerEnd);
+          
+          if (markerEnd || markerMid || markerStart) {
+            mMarkerRegion = GetCoveredRegion();
+            if (mMarkerRegion) {
+              outerSVGFrame->InvalidateRegion(mMarkerRegion, PR_TRUE);
+              mUpdateFlags = 0;
+            }
+            return;
+          }
+        }
+
         outerSVGFrame->InvalidateRegion(dirty_region, PR_TRUE);
+      }
     }
     mUpdateFlags = 0;
-  }  
+  }
 }
 
 nsISVGOuterSVGFrame *
