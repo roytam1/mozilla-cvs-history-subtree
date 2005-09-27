@@ -44,6 +44,7 @@ interface zapISipAddress;
 interface zapISipHeader;
 interface zapISipToHeader;
 interface zapISipFromHeader;
+interface zapISipRouteHeader;
 interface zapISipCallIDHeader;
 interface zapISipCSeqHeader;
 interface zapISipMaxForwardsHeader;
@@ -84,6 +85,17 @@ interface zapISipSyntaxFactory : nsISupports
    */
   zapISipAddress deserializeAddress(in ACString octets);
 
+  /**
+   * Deserialize a comma-separated list of RFC3261 'name-addr' into an
+   * array of zapISipAddress objects. The syntax parsed is that of a
+   * Route or Record-Route header value (or an empty string):
+   * '0*1(route-param *(COMMA route-param))'
+   *
+   * rr-params will be ignored.
+   */
+  void deserializeRouteSet(in ACString octets, out unsigned long count,
+                           [array, retval, size_is(count)] out
+                           zapISipAddress routeset);
 
   /**
    * Create a blank request object
@@ -96,6 +108,12 @@ interface zapISipSyntaxFactory : nsISupports
   zapISipResponse createResponse();
 
   /**
+   * Create a zapISipAddress from the URI and display name
+   */
+  zapISipAddress createAddress(in AUTF8String displayName,
+                               in zapISipURI uri);
+  
+  /**
    * Create a generic header. The returned value can be QIed to one of
    * the zapISipHeader subclasses, as appropriate for the given header
    * name.
@@ -103,16 +121,24 @@ interface zapISipSyntaxFactory : nsISupports
   zapISipHeader createHeader(in ACString name);
   
   /**
-   * Create a To header from the given address
+   * Create a To header from the given address. The address object
+   * will not be cloned.
    */
   zapISipToHeader createToHeader(in zapISipAddress address);
 
 
   /**
-   * Create a From header from the given address
+   * Create a From header from the given address. The address object
+   * will not be cloned.
    */
   zapISipFromHeader createFromHeader(in zapISipAddress address);
 
+  /**
+   * Create a Route header from the given address. The address object
+   * will not be cloned.
+   */
+  zapISipRouteHeader createRouteHeader(in zapISipAddress address);
+  
   /**
    * Create a Call-ID header from the given callID
    */
@@ -146,7 +172,8 @@ interface zapISipSyntaxFactory : nsISupports
   zapISipContentLengthHeader createContentLengthHeader(in unsigned long contentLength);
 
   /**
-   * Create a Contact Header from the given address
+   * Create a Contact Header from the given address. The address
+   * object will not be cloned.
    */
   zapISipContactHeader createContactHeader(in zapISipAddress address);
 

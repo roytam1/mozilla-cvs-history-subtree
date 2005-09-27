@@ -39,6 +39,7 @@
 interface zapISipHeader;
 interface zapISipContentLengthHeader;
 interface zapISipViaHeader;
+interface zapISipRouteHeader;
 interface zapISipCallIDHeader;
 interface zapISipToHeader;
 interface zapISipFromHeader;
@@ -109,6 +110,11 @@ interface zapISipMessage : zapISipSyntaxObject
    */
   zapISipViaHeader getTopViaHeader();
 
+  /**
+   * Helper to get the top-most Route header.
+   */
+  zapISipRouteHeader getTopRouteHeader();
+  
   /**
    * Helper to get the top-most Contact header.
    */

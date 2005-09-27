@@ -713,8 +713,10 @@ SipSIPURI.parsedHash(
     "$user"      : REGEXP_TOKEN,
     "$method"    : REGEXP_TOKEN,
     "$ttl"       : REGEXP_TTL,
-    "$maddr"     : REGEXP_HOST,
-    "$lr"        : REGEXP_NOTHING });
+/*  some proxies set lr=on, so we relax the parsing for lr
+    "$lr"        : REGEXP_NOTHING, */
+    "$maddr"     : REGEXP_HOST
+  });
 
 // ACString getHeader(in ACString name);
 // boolean hasHeader(in ACString name);
@@ -1161,7 +1163,7 @@ SipRouteHeader.parsedHash(
 
 SipRouteHeader.fun(
   function deserialize(name, data) {
-    // parse into (name-addr[parsed], to-parameters[unparsed])
+    // parse into (name-addr[parsed], parameters[unparsed])
     var matches = REGEXP_NAME_ADDR_PARS(data);
     if (!matches) this._verboseError(PARSE_ERROR+": malformed Record-Route header ("+data+")");
     
@@ -1213,7 +1215,7 @@ SipRecordRouteHeader.parsedHash(
 
 SipRecordRouteHeader.fun(
   function deserialize(name, data) {
-    // parse into (name-addr[parsed], to-parameters[unparsed])
+    // parse into (name-addr[parsed], parameters[unparsed])
     var matches = REGEXP_NAME_ADDR_PARS(data);
     if (!matches) this._verboseError(PARSE_ERROR+": malformed Route header ("+data+")");
     
@@ -1979,6 +1981,12 @@ SipMessage.fun(
     return this.getTopHeader("Via");
   });
 
+// zapISipRouteHeader getTopRouteHeader();
+SipMessage.fun(
+  function getTopRouteHeader() {
+    return this.getTopHeader("Route");
+  });
+
 // zapISipContactHeader getTopContactHeader();
 SipMessage.fun(
   function getTopContactHeader() {
@@ -2241,6 +2249,27 @@ SipSyntaxFactory.fun(
     return addr;
   });
 
+// void deserializeRouteSet(in ACString octets, out unsigned long count,
+//                          [array, retval, size_is(count)] out
+//                          zapISipAddress routeset);
+SipSyntaxFactory.fun(
+  function deserializeRouteSet(octets, count) {
+    var rv = [];
+    if (octets.length) {
+      resetTokenizer(TOKENIZER_COMMA_SEPARATED_LIST);
+      var match;
+      while((match = TOKENIZER_COMMA_SEPARATED_LIST(octets))) {
+        var matches = REGEXP_NAME_ADDR_PARS(match[1]);
+        if (!matches) this._verboseError(PARSE_ERROR+": malformed route set");
+        rv.push(this.deserializeAddress(matches[1]));
+      }
+    }
+    
+    if (count)
+      count.value = rv.length;
+    return rv;
+  });
+
 // zapISipRequest createRequest();
 SipSyntaxFactory.fun(
   function createRequest() {
@@ -2251,6 +2280,16 @@ SipSyntaxFactory.fun(
 SipSyntaxFactory.fun(
   function createResponse() {
     return SipResponse.instantiate();
+  });
+
+// zapISipAddress createAddress(in AUTF8String displayName,
+//                              in zapISipURI uri);
+SipSyntaxFactory.fun(
+  function createAddress(displayName, uri) {
+    var address = SipAddress.instantiate();
+    address.displayName = displayName;
+    address.uri = uri;
+    return address;
   });
 
 // zapISipHeader createHeader(in ACString name);
@@ -2274,6 +2313,14 @@ SipSyntaxFactory.fun(
 SipSyntaxFactory.fun(
   function createFromHeader(address) {
     var h = SipFromHeader.instantiate();
+    h.address = address;
+    return h;
+  });
+
+// zapISipRouteHeader createRouteHeader(in zapISipAddress address);
+SipSyntaxFactory.fun(
+  function createRouteHeader(address) {
+    var h = SipRouteHeader.instantiate();
     h.address = address;
     return h;
   });
