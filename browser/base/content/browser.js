@@ -3440,7 +3440,7 @@ nsBrowserStatusHandler.prototype =
       if (browser.userTypedClear > 0)
         browser.userTypedValue = null;
 
-      if (!gBrowser.mTabbedMode)
+      if (!gBrowser.mTabbedMode && aWebProgress.isLoadingDocument)
         gBrowser.setIcon(gBrowser.mCurrentTab, null);
 
       if (findField)
