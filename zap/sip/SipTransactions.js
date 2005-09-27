@@ -200,18 +200,18 @@ SipInviteClientTransaction.obj(
       switch (r.statusCode[0]) {
         case '1':
           if (t.TU)
-            t.TU.handleProvisionalResponse(r);
+            callAsync(function() { t.TU.handleProvisionalResponse(r); });
           t.changeState(t.Proceeding);
           break;
         case '2':
           if (t.TU)
-            t.TU.handleSuccessResponse(r);
+            callAsync(function() { t.TU.handleSuccessResponse(r); });
           t.changeState(t.Terminated);
           break;
         default: // 300 - 699
           t.sendACK(r);
           if (t.TU)
-            t.TU.handleFailureResponse(r);
+            callAsync(function() { t.TU.handleFailureResponse(r); });
           t.changeState(t.Completed);
           break;
       }
@@ -228,7 +228,7 @@ SipInviteClientTransaction.obj(
       else if (timer == t.timerB) {
         t._dump("Timer B fired.");
         if (t.TU)
-          t.TU.handleTimeout();
+          callAsync(function() { t.TU.handleTimeout(); });
         t.changeState(t.Terminated);
       }
     }
@@ -253,17 +253,17 @@ SipInviteClientTransaction.obj(
       switch (r.statusCode[0]) {
         case '1':
           if (t.TU)
-            t.TU.handleProvisionalResponse(r);
+            callAsync(function() { t.TU.handleProvisionalResponse(r); });
           break;
         case '2':
           if (t.TU)
-            t.TU.handleSuccessResponse(r);
+            callAsync(function() { t.TU.handleSuccessResponse(r); });
           t.changeState(t.Terminated);
           break;
         default: // 300 - 699
           t.sendACK(r);
           if (t.TU)
-            t.TU.handleFailureResponse(r);
+            callAsync(function() { t.TU.handleFailureResponse(r); });
           t.changeState(t.Completed);
           break;
       }
@@ -392,17 +392,17 @@ SipNonInviteClientTransaction.obj(
       switch (r.statusCode[0]) {
         case '1':
           if (t.TU)
-            t.TU.handleProvisionalResponse(r);
+            callAsync(function() { t.TU.handleProvisionalResponse(r); });
           t.changeState(t.Proceeding);
           break;
         case '2':
           if (t.TU)
-            t.TU.handleSuccessResponse(r);
+            callAsync(function() { t.TU.handleSuccessResponse(r); });
           t.changeState(t.Completed);
           break;
         default: // 300 - 699
           if (t.TU)
-            t.TU.handleFailureResponse(r);
+            callAsync(function() { t.TU.handleFailureResponse(r); });
           t.changeState(t.Completed);
           break;
       }
@@ -420,7 +420,7 @@ SipNonInviteClientTransaction.obj(
       else if (timer == t.timerF) {
         t._dump("Timer F fired.");
         if (t.TU)
-          t.TU.handleTimeout();
+          callAsync(function() { t.TU.handleTimeout(); });
         t.changeState(t.Terminated);
       }
     }
@@ -440,16 +440,16 @@ SipNonInviteClientTransaction.obj(
       switch (r.statusCode[0]) {
         case '1':
           if (t.TU)
-            t.TU.handleProvisionalResponse(r);
+            callAsync(function() { t.TU.handleProvisionalResponse(r); });
           break;
         case '2':
           if (t.TU)
-            t.TU.handleSuccessResponse(r);
+            callAsync(function() { t.TU.handleSuccessResponse(r); });
           t.changeState(t.Completed);
           break;
         default: // 300 - 699
           if (t.TU)
-            t.TU.handleFailureResponse(r);
+            callAsync(function() { t.TU.handleFailureResponse(r); });
           t.changeState(t.Completed);
           break;
       }
@@ -467,7 +467,7 @@ SipNonInviteClientTransaction.obj(
       else if (timer == t.timerF) {
         t._dump("Timer F fired.");
         if (t.TU)
-          t.TU.handleTimeout();
+          callAsync(function() { t.TU.handleTimeout(); });
         t.changeState(t.Terminated);
       }
     }
@@ -688,7 +688,7 @@ SipInviteServerTransaction.obj(
       else if (timer == t.timerH) {
         t._dump("Timer H fired.");
         if (t.TU)
-          t.TU.handleTimeout(t);
+          callAsync(function() { t.TU.handleTimeout(t); });
         t.changeState(t.Terminated);
       }
       
@@ -743,7 +743,7 @@ SipInviteServerTransaction.obj(
       log(t._name_+": TERMINATED");
       t._dump("Entering 'Terminated' state");
       if (t.TU)
-        t.TU.transactionTerminated(t);
+        callAsync(function() { t.TU.transactionTerminated(t); });
       
       // remove transaction from pool:
       t.manager.unregisterServerTransaction(t);
@@ -890,7 +890,7 @@ SipNonInviteServerTransaction.obj(
       log(t._name_+": TERMINATED");
       t._dump("Entering 'Terminated' state");
       if (t.TU)
-        t.TU.transactionTerminated(t);
+        callAsync(function() { t.TU.transactionTerminated(t); });
       
       // remove transaction from pool:
       t.manager.unregisterServerTransaction(t);
@@ -987,6 +987,29 @@ SipTransactionManager.fun(
     return null;
   });
 
+SipTransactionManager.fun(
+  function isForkedRequest(request) {
+    // Check if this is a request arriving by different paths
+    // (RFC3261 8.2.2.2):
+    // XXX recode for efficiency.
+    
+    if (request.getToHeader().getParameter("tag")) return;
+    
+    var from = request.getFromHeader().getParameter("tag");
+    var callID = request.getCallIDHeader().serialize();
+    var cseq = request.getCSeqHeader().serialize();
+    // search server pool:
+    for (var key in this._serverPool) {
+      var t = this._serverPool[key];
+      if ((t.request.getFromHeader().getParameter("tag") == from) &&
+          (t.request.getCallIDHeader().serialize() == callID) &&
+          (t.request.getCSeqHeader().serialize() == cseq)) {
+        return true;
+      }
+    }
+    return false;
+  });
+
 //----------------------------------------------------------------------
 // zapISipTransportSink implementation:
 
@@ -1015,6 +1038,12 @@ SipTransactionManager.fun(
         message.QueryInterface(Components.interfaces.zapISipResponse);
         transaction.handleResponse(message);
         rv = true;
+      }
+      else {
+        this._dump("response "+key+
+                   " doesn't match any transaction in client pool:");
+        for (var t in this._clientPool)
+          this._dump(t);
       }
     }
     

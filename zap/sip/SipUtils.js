@@ -48,6 +48,7 @@ Components.utils.importModule("resource:/jscodelib/zap/StringUtils.js");
 EXPORTED_SYMBOLS = ["BRANCH_COOKIE",
                     "gSIPEventQ",
                     "getProxyOnSIPThread",
+                    "callAsync",
                     "gSyntaxFactory",
                     "gDNSService",
                     "gLoggingService",
@@ -103,6 +104,20 @@ function getProxyOnSIPThread(aObject, aInterface) {
     // 5 == PROXY_ALWAYS | PROXY_SYNC
 }
 
+// Call 'fct' asynchronous:
+function callAsync(fct) {
+  // XXX we *really* want a new method on nsIEventTarget for posting
+  // from JS here. setTimeout is not a good idea, since, among other
+  // things, it sets up a 10ms timer even if the timeout value is 0ms.
+  // This means that there is the potential for race conditions - the
+  // call is not guaranteed to be the next one in the queue.
+  var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                     .getService(Components.interfaces.nsIWindowMediator);
+  var enumerator = wm.getEnumerator(null);
+  var retval = [];
+  if (!enumerator.hasMoreElements()) return; // can't post
+  enumerator.getNext().setTimeout(fct, 0);
+}
 
 ////////////////////////////////////////////////////////////////////////
 // gSyntaxFactory: global sip syntax factory instance

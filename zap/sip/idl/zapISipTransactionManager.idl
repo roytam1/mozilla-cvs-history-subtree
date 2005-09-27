@@ -105,6 +105,11 @@ interface zapISipTransactionManager : nsISupports
    * request, or null if no such transaction exists. Will not match
    * CANCEL or ACK server transactions. (RFC3261 9.2)
    */
-  zapISipServerTransaction findCancelledTransaction(in zapISipRequest cancelRequest); 
+  zapISipServerTransaction findCancelledTransaction(in zapISipRequest cancelRequest);
+
+  /**
+   * Check if there is already a transaction for the given request.
+   */
+  boolean isForkedRequest(in zapISipRequest request);
 };
 
