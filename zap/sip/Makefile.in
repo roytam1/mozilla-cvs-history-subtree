@@ -15,6 +15,7 @@ EXTRA_PP_COMPONENTS = \
 	SipUAStack.js \
 	SipTransactions.js \
 	SipResolver.js \
+	SipAuthentication.js \
 	$(NULL)
 
 include $(topsrcdir)/config/rules.mk
