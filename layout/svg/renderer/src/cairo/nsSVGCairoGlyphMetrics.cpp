@@ -193,14 +193,17 @@ nsSVGCairoGlyphMetrics::GetSubBoundingBox(PRUint32 charoffset, PRUint32 count,
   }
 
   cairo_text_extents_t extents;
+  memset(&mExtents, 0, sizeof(cairo_text_extents_t));
+
   nsAutoString text;
   mSource->GetCharacterData(text);
-  cairo_text_extents(mCT,
-                     NS_ConvertUCS2toUTF8(Substring(text,
-                                                    charoffset,
-                                                    count)).get(),
-                     &extents);
-
+  if (text.Length()) {
+    cairo_text_extents(mCT,
+                       NS_ConvertUCS2toUTF8(Substring(text,
+                                                      charoffset,
+                                                      count)).get(),
+                       &extents);
+  }
   
   rect->SetX(extents.x_bearing);
   rect->SetY(extents.y_bearing);
@@ -285,9 +288,14 @@ nsSVGCairoGlyphMetrics::Update(PRUint32 updatemask, PRBool *_retval)
 
   nsAutoString text;
   mSource->GetCharacterData(text);
-  cairo_text_extents(mCT, 
-                     NS_ConvertUCS2toUTF8(text).get(),
-                     &mExtents);
+
+  if (!text.Length()) {
+    memset(&mExtents, 0, sizeof(cairo_text_extents_t));
+  } else {
+    cairo_text_extents(mCT, 
+                       NS_ConvertUCS2toUTF8(text).get(),
+                       &mExtents);
+  }
   
   return NS_OK;
 }

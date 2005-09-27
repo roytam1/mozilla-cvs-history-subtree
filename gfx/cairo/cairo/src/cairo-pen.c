@@ -173,130 +173,13 @@ device space.
 We construct the pen by computing points along the circumference
 using equally spaced angles.
 
-We show below that this approximation to the ellipse has
-maximum error at the major axis of the ellipse.  
-So, we need to compute the length of the major axis and then 
-use that to compute the number of sides needed in our pen.
-
-Thanks to Walter Brisken <wbrisken@aoc.nrao.edu> for this
-derivation:
-
-1.  First some notation:
-
-All capital letters represent vectors in two dimensions.  A prime ' 
-represents a transformed coordinate.  Matrices are written in underlined
-form, ie _R_.  Lowercase letters represent scalar real values.
-
-The letter t is used to represent the greek letter theta.
-
-2.  The question has been posed:  What is the maximum expansion factor 
-achieved by the linear transformation
-
-X' = _R_ X
-
-where _R_ is a real-valued 2x2 matrix with entries:
-
-_R_ = [a b]
-      [c d]  .
-
-In other words, what is the maximum radius, MAX[ |X'| ], reached for any 
-X on the unit circle ( |X| = 1 ) ?
-
-
-3.  Some useful formulae
-
-(A) through (C) below are standard double-angle formulae.  (D) is a lesser
-known result and is derived below:
-
-(A)  sin^2(t) = (1 - cos(2*t))/2
-(B)  cos^2(t) = (1 + cos(2*t))/2
-(C)  sin(t)*cos(t) = sin(2*t)/2
-(D)  MAX[a*cos(t) + b*sin(t)] = sqrt(a^2 + b^2)
-
-Proof of (D):
-
-find the maximum of the function by setting the derivative to zero:
-
-     -a*sin(t)+b*cos(t) = 0
-
-From this it follows that 
-
-     tan(t) = b/a 
-
-and hence 
-
-     sin(t) = b/sqrt(a^2 + b^2)
-
-and 
-
-     cos(t) = a/sqrt(a^2 + b^2)
-
-Thus the maximum value is
-
-     MAX[a*cos(t) + b*sin(t)] = (a^2 + b^2)/sqrt(a^2 + b^2)
-                                 = sqrt(a^2 + b^2)
-
-
-4.  Derivation of maximum expansion
-
-To find MAX[ |X'| ] we search brute force method using calculus.  The unit
-circle on which X is constrained is to be parameterized by t:
-
-     X(t) = (cos(t), sin(t))
-
-Thus 
-
-     X'(t) = (a*cos(t) + b*sin(t), c*cos(t) + d*sin(t)) .
-
-Define 
-
-     r(t) = |X'(t)|
-
-Thus
-
-     r^2(t) = (a*cos(t) + b*sin(t))^2 + (c*cos(t) + d*sin(t))^2
-            = (a^2 + c^2)*cos^2(t) + (b^2 + d^2)*sin^2(t) 
-               + 2*(a*b + c*d)*cos(t)*sin(t) 
-
-Now apply the double angle formulae (A) to (C) from above:
-
-     r^2(t) = (a^2 + b^2 + c^2 + d^2)/2 
-	  + (a^2 - b^2 + c^2 - d^2)*cos(2*t)/2
-	  + (a*b + c*d)*sin(2*t)
-            = f + g*cos(u) + h*sin(u)
-
-Where
-
-     f = (a^2 + b^2 + c^2 + d^2)/2
-     g = (a^2 - b^2 + c^2 - d^2)/2
-     h = (a*b + c*d)
-     u = 2*t
-
-It is clear that MAX[ |X'| ] = sqrt(MAX[ r^2 ]).  Here we determine MAX[ r^2 ]
-using (D) from above:
-
-     MAX[ r^2 ] = f + sqrt(g^2 + h^2)
-
-And finally
-
-     MAX[ |X'| ] = sqrt( f + sqrt(g^2 + h^2) )
-
-Which is the solution to this problem.
-
-
-Walter Brisken
-2004/10/08
-
-(Note that the minor axis length is at the minimum of the above solution,
-which is just sqrt (f - sqrt (g^2 + h^2)) given the symmetry of (D)).
-
-Now to compute how many sides to use for the pen formed by
-a regular polygon.
+We show that this approximation to the ellipse has maximum error at the
+major axis of the ellipse.  
 
 Set
 
-	    M = major axis length (computed by above formula)
-	    m = minor axis length (computed by above formula)
+	    M = major axis length
+	    m = minor axis length
 
 Align 'M' along the X axis and 'm' along the Y axis and draw
 an ellipse parameterized by angle 't':
@@ -306,36 +189,36 @@ an ellipse parameterized by angle 't':
 Perturb t by ± d and compute two new points (x+,y+), (x-,y-).
 The distance from the average of these two points to (x,y) represents
 the maximum error in approximating the ellipse with a polygon formed
-from vertices 2? radians apart.
+from vertices 2∆ radians apart.
 
-	    x+ = M cos (t+?)		y+ = m sin (t+?)
-	    x- = M cos (t-?)		y- = m sin (t-?)
+	    x+ = M cos (t+∆)		y+ = m sin (t+∆)
+	    x- = M cos (t-∆)		y- = m sin (t-∆)
 
 Now compute the approximation error, E:
 
 	Ex = (x - (x+ + x-) / 2)
-	Ex = (M cos(t) - (Mcos(t+?) + Mcos(t-?))/2)
-	   = M (cos(t) - (cos(t)cos(?) + sin(t)sin(?) +
-			  cos(t)cos(?) - sin(t)sin(?))/2)
-	   = M(cos(t) - cos(t)cos(?))
-	   = M cos(t) (1 - cos(?))
+	Ex = (M cos(t) - (Mcos(t+∆) + Mcos(t-∆))/2)
+	   = M (cos(t) - (cos(t)cos(∆) + sin(t)sin(∆) +
+			  cos(t)cos(∆) - sin(t)sin(∆))/2)
+	   = M(cos(t) - cos(t)cos(∆))
+	   = M cos(t) (1 - cos(∆))
 
 	Ey = y - (y+ - y-) / 2
-	   = m sin (t) - (m sin(t+?) + m sin(t-?)) / 2
-	   = m (sin(t) - (sin(t)cos(?) + cos(t)sin(?) +
-			  sin(t)cos(?) - cos(t)sin(?))/2)
-	   = m (sin(t) - sin(t)cos(?))
-	   = m sin(t) (1 - cos(?))
+	   = m sin (t) - (m sin(t+∆) + m sin(t-∆)) / 2
+	   = m (sin(t) - (sin(t)cos(∆) + cos(t)sin(∆) +
+			  sin(t)cos(∆) - cos(t)sin(∆))/2)
+	   = m (sin(t) - sin(t)cos(∆))
+	   = m sin(t) (1 - cos(∆))
 
 	E² = Ex² + Ey²
-	   = (M cos(t) (1 - cos (?)))² + (m sin(t) (1-cos(?)))²
-	   = (1 - cos(?))² (M² cos²(t) + m² sin²(t))
-	   = (1 - cos(?))² ((m² + M² - m²) cos² (t) + m² sin²(t))
-	   = (1 - cos(?))² (M² - m²) cos² (t) + (1 - cos(?))² m²
+	   = (M cos(t) (1 - cos (∆)))² + (m sin(t) (1-cos(∆)))²
+	   = (1 - cos(∆))² (M² cos²(t) + m² sin²(t))
+	   = (1 - cos(∆))² ((m² + M² - m²) cos² (t) + m² sin²(t))
+	   = (1 - cos(∆))² (M² - m²) cos² (t) + (1 - cos(∆))² m²
 
 Find the extremum by differentiation wrt t and setting that to zero
 
-∂(E²)/∂(t) = (1-cos(?))² (M² - m²) (-2 cos(t) sin(t))
+∂(E²)/∂(t) = (1-cos(∆))² (M² - m²) (-2 cos(t) sin(t))
 
          0 = 2 cos (t) sin (t)
 	 0 = sin (2t)
@@ -344,29 +227,28 @@ Find the extremum by differentiation wrt t and setting that to zero
 Which is to say that the maximum and minimum errors occur on the
 axes of the ellipse at 0 and π radians:
 
-	E²(0) = (1-cos(?))² (M² - m²) + (1-cos(?))² m²
-	      = (1-cos(?))² M²
-	E²(π) = (1-cos(?))² m²
+	E²(0) = (1-cos(∆))² (M² - m²) + (1-cos(∆))² m²
+	      = (1-cos(∆))² M²
+	E²(π) = (1-cos(∆))² m²
 
-maximum error = M (1-cos(?))
-minimum error = m (1-cos(?))
+maximum error = M (1-cos(∆))
+minimum error = m (1-cos(∆))
 
-We must make maximum error ≤ tolerance, so compute the ? needed:
+We must make maximum error ≤ tolerance, so compute the ∆ needed:
 
-	    tolerance = M (1-cos(?))
-	tolerance / M = 1 - cos (?)
-	       cos(?) = 1 - tolerance/M
-                    ? = acos (1 - tolerance / M);
+	    tolerance = M (1-cos(∆))
+	tolerance / M = 1 - cos (∆)
+	       cos(∆) = 1 - tolerance/M
+                    ∆ = acos (1 - tolerance / M);
 
-Remembering that ? is half of our angle between vertices,
+Remembering that ∆ is half of our angle between vertices,
 the number of vertices is then
 
-vertices = ceil(2π/2?).
-		 = ceil(π/?).
+             vertices = ceil(2π/2∆).
+                      = ceil(π/∆).
 
 Note that this also equation works for M == m (a circle) as it
 doesn't matter where on the circle the error is computed.
-
 */
 
 static int
@@ -374,15 +256,18 @@ _cairo_pen_vertices_needed (double	    tolerance,
 			    double	    radius,
 			    cairo_matrix_t  *matrix)
 {
-    double min, max, major_axis;
-    int num_vertices;
-
-    _cairo_matrix_compute_expansion_factors (matrix, &min, &max);
-    major_axis = radius * max;
+    /* 
+     * the pen is a circle that gets transformed to an ellipse by matrix.
+     * compute major axis length for a pen with the specified radius.
+     * we don't need the minor axis length.
+     */
     
+    double  major_axis = _cairo_matrix_transformed_circle_major_axis(matrix, radius);
+
     /*
      * compute number of vertices needed
      */
+    int	    num_vertices;
     
     /* Where tolerance / M is > 1, we use 4 points */
     if (tolerance >= major_axis) {

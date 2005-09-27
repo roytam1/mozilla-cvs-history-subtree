@@ -81,16 +81,27 @@ SOFTWARE.
  */
 
 
-#if HAVE_STDINT_H
-# include <stdint.h>
-#elif HAVE_INTTYPES_H
-# include <inttypes.h>
-#elif HAVE_SYS_INT_TYPES_H
+#if defined (__SVR4) && defined (__sun)
 # include <sys/int_types.h>
+#elif defined (__OpenBSD__) || defined (_AIX)
+# include <inttypes.h>
+#elif defined(_MSC_VER)
+  typedef __int8 int8_t;
+  typedef unsigned __int8 uint8_t;
+  typedef __int16 int16_t;
+  typedef unsigned __int16 uint16_t;
+  typedef __int32 int32_t;
+  typedef unsigned __int32 uint32_t;
+  typedef __int64 int64_t;
+  typedef unsigned __int64 uint64_t;
+# ifndef HAVE_UINT64_T
+#  define HAVE_UINT64_T 1
+# endif
 #else
-# include "mozstdint.h"
+# include <stdint.h>
 #endif
 
+#include "pixman-remap.h"
 
 #if defined(__cplusplus) || defined(c_plusplus)
 extern "C" {
@@ -272,6 +283,7 @@ pixman_image_create (pixman_format_t	*format,
 */
 #ifndef IC_SHIFT
 #define IC_SHIFT 5
+#define FB_SHIFT IC_SHIFT
 typedef uint32_t pixman_bits_t;
 #endif
 

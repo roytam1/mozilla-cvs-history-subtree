@@ -54,13 +54,13 @@ endif
 endif
 
 CSRCS	= \
+	fbcompose.c \
 	fbedge.c \
+	fbpict.c \
 	fbtrap.c \
-	ic.c \
 	icblt.c \
 	icbltone.c \
 	iccolor.c \
-	iccompose.c \
 	icformat.c \
 	icimage.c \
 	icpixels.c \
@@ -74,7 +74,7 @@ CSRCS	= \
 	renderedge.c \
 	$(NULL)
 
-EXPORTS		= pixman.h mozstdint.h
+EXPORTS		= pixman.h
 
 LOCAL_INCLUDES	= -I$(srcdir)
 

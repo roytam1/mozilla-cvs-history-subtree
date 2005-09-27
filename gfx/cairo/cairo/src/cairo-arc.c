@@ -106,19 +106,13 @@ _arc_segments_needed (double	      angle,
 		      cairo_matrix_t *ctm,
 		      double	      tolerance)
 {
-    double l1, l2, lmax;
-    double max_angle;
+    double major_axis, max_angle;
 
-    _cairo_matrix_compute_eigen_values (ctm, &l1, &l2);
-
-    l1 = fabs (l1);
-    l2 = fabs (l2);
-    if (l1 > l2)
-	lmax = l1;
-    else
-	lmax = l2;
-
-    max_angle = _arc_max_angle_for_tolerance_normalized (tolerance / (radius * lmax));
+    /* the error is amplified by at most the length of the
+     * major axis of the circle; see cairo-pen.c for a more detailed analysis
+     * of this. */
+    major_axis = _cairo_matrix_transformed_circle_major_axis (ctm, radius);
+    max_angle = _arc_max_angle_for_tolerance_normalized (tolerance / major_axis);
 
     return (int) ceil (angle / max_angle);
 }
