@@ -547,7 +547,12 @@ ActiveAccount.fun(
 ActiveAccount.fun(
   function notify(timer) {
     this.registrationRC.listener = this;
-    this.registrationRC.sendRequest();
+    try {
+      this.registrationRC.sendRequest();
+    } catch(e) {
+      // the rc might still be busy with the last request.
+      // XXX we should have a 'state' member on rc's
+    }
   });
 
 //----------------------------------------------------------------------
