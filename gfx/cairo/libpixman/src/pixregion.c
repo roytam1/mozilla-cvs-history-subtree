@@ -50,6 +50,8 @@ SOFTWARE.
 #include <limits.h>
 #include <string.h>
 
+#undef DEBUG
+
 #include "pixregionint.h"
 #include "slim_internal.h"
 
