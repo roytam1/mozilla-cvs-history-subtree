@@ -5,6 +5,7 @@
 
   <rdf:Seq rdf:about="urn:mozilla:zap:sidebar" >
     <rdf:li rdf:resource="urn:mozilla:zap:home"/>
+    <rdf:li rdf:resource="urn:mozilla:zap:locations"/>
     <rdf:li rdf:resource="urn:mozilla:zap:accounts"/>
     <rdf:li rdf:resource="urn:mozilla:zap:friends"/>
     <rdf:li rdf:resource="urn:mozilla:zap:logs"/>
@@ -15,6 +16,12 @@
     <NC:Name>Home</NC:Name>
     <zap:nodetype>home</zap:nodetype>
     <zap:chromepage>chrome://zap/content/home.xul</zap:chromepage>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="urn:mozilla:zap:locations">
+    <NC:Name>Locations</NC:Name> 
+    <zap:nodetype>locations</zap:nodetype>
+    <zap:chromepage>chrome://zap/content/locations.xul</zap:chromepage>
   </rdf:Description>
 
   <rdf:Description rdf:about="urn:mozilla:zap:accounts">

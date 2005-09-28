@@ -58,6 +58,10 @@ var wSidebarDS;
 var wPrefs;
 var wPrefsDS = wRDF.GetDataSourceBlocking(getProfileFileURL("prefs.rdf"));
 
+var wLocationsDS = wRDF.GetDataSourceBlocking(getProfileFileURL("locations.rdf"));
+var wLocationsContainer;
+var wCurrentLocation;
+
 var wAccountsDS = wRDF.GetDataSourceBlocking(getProfileFileURL("accounts.rdf"));
 var wAccountsContainer;
 
@@ -73,8 +77,14 @@ var wCallsDS = wRDF.GetDataSourceBlocking(getProfileFileURL("calls.rdf"));
 var wCallsContainer;
 var wRecentCallsContainer;
 
+// an application-global ds for storing emphemeral state, e.g. whether
+// a registration is active or not:
+var wGlobalEphemeralDS = Components.classes["@mozilla.org/rdf/datasource;1?name=in-memory-datasource"].createInstance(Components.interfaces.nsIRDFDataSource);
+
 var wSipStack;
 var wSdpService;
+
+var wErrorLog;
 
 ////////////////////////////////////////////////////////////////////////
 // Initialization:
@@ -82,28 +92,49 @@ var wSdpService;
 function windowInit() {
   dump("Initializing zap main window...\n");
 
+  // set up error logging:
+  // XXX this should be configurable (enable/disable)
+  wErrorLog = openFileForWriting(getProfileFile("zap.log"), true);
+  ErrorReporterSink.reporterFunction = function (mes) {
+    if (wErrorLog)
+      wErrorLog.write(mes,mes.length);
+    else
+      dump(mes);
+  };
+  
   wInteractPane = document.getElementById("interactpane");
   wURLField = document.getElementById("url_field");
 
   initPrefs();
+  initLocations();
   initAccounts();
   initContacts();
   initCalls();
   initSidebar();
-  
-  // init other chrome bits:
-  var accountslist = document.getElementById("outbound_list_popup");
-  accountslist.database.AddDataSource(wAccountsDS);
-  accountslist.builder.rebuild();
-
+    
   // initialize sip stack:
   initSipStack();
+
+  // set the current location:
+  var locationsList = document.getElementById("locations_list_popup");
+  locationsList.database.AddDataSource(wLocationsDS);
+  locationsList.builder.rebuild();
+  // select correct location in locations list:
+  document.getElementById("locations_list").selectedItem = document.getElementById(wPrefs["urn:mozilla:zap:location"]);
+  // make sure out stack is configured for this location profile:
+  wCurrentLocation = Location.instantiate();
+  wCurrentLocation.initWithResource(wRDF.GetResource(wPrefs["urn:mozilla:zap:location"]));
+  currentLocationUpdated();
   
   dump("... Done initializing zap main window\n");
 }
 
 function windowClose() {
   cleanupSipStack();
+
+  // close error log:
+  wErrorLog.close();
+  wErrorLog = null;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -128,6 +159,10 @@ function cmdGenericRequest() {
   loadPage("chrome://zap/content/generic-request.xul", false);
 }
 
+function cmdRegisterRequest() {
+  loadPage("chrome://zap/content/register-request.xul", false);
+}
+  
 ////////////////////////////////////////////////////////////////////////
 // Interaction pane:
 
@@ -157,8 +192,111 @@ var Prefs = makeClass("Prefs", PersistentRDFObject);
 
 Prefs.prototype.datasources["default"] = wPrefsDS;
 
+Prefs.rdfResourceAttrib("urn:mozilla:zap:location",
+                        "urn:mozilla:zap:initial_location");
 Prefs.rdfLiteralAttrib("urn:mozilla:zap:max_recent_calls", "10");
 Prefs.rdfLiteralAttrib("urn:mozilla:zap:dnd_code", "480"); // Temporarily unavail.
+Prefs.rdfLiteralAttrib("urn:mozilla:zap:dnd_headers", ""); // additional headers for DND response
+
+////////////////////////////////////////////////////////////////////////
+// Locations:
+
+function initLocations() {
+  wLocationsContainer = Components.classes["@mozilla.org/rdf/container;1"].
+    createInstance(Components.interfaces.nsIRDFContainer);
+  wLocationsContainer.Init(wLocationsDS,
+                           wRDF.GetResource("urn:mozilla:zap:locations"));
+}
+
+// called when the user selects a different location in the locations_list:
+function locationChange() {
+  var l = document.getElementById("locations_list").selectedItem.getAttribute("id");
+  if (wPrefs["urn:mozilla:zap:location"] == l)
+    return;
+  else {
+    wPrefs["urn:mozilla:zap:location"] = l;
+    wPrefs.flush();
+  }
+  wCurrentLocation = Location.instantiate();
+  wCurrentLocation.initWithResource(wRDF.GetResource(wPrefs["urn:mozilla:zap:location"]));
+  currentLocationUpdated();
+}
+
+// we call this function every time the current location profile is
+// updated or a new one is selected so that we can reconfigure the
+// stack from here. Alternatively we could listen in on the location
+// and prefs datasources, which we should probably do at some point.
+function currentLocationUpdated() {
+  // XXX these try/catch blocks will be redundant once we hook up
+  // syntax checking to PersistentRDFObject
+  try {
+    wSipStack.FromAddress = wSipStack.syntaxFactory.deserializeAddress(wCurrentLocation["urn:mozilla:zap:from_address"]);
+  }
+  catch(e) {
+    alert("The From-Address in the currently selected location has invalid syntax");
+  }
+  try {
+    var routeSet = wSipStack.syntaxFactory.deserializeRouteSet(wCurrentLocation["urn:mozilla:zap:route_set"], {});
+    wSipStack.setDefaultRoute(routeSet, routeSet.length);
+  }
+  catch(e) {
+    alert("The Route Set in the currently selected location has invalid syntax");
+  }
+
+  currentAccountsUpdated();
+}
+
+//----------------------------------------------------------------------
+// Location class
+
+var Location = makeClass("Location", PersistentRDFObject, SupportsImpl);
+Location.addInterfaces(Components.interfaces.zapISipCredentialsProvider);
+
+Location.prototype.datasources["default"] = wLocationsDS;
+
+Location.rdfResourceAttrib("urn:mozilla:zap:sidebarparent",
+                           "urn:mozilla:zap:locations");
+Location.rdfLiteralAttrib("urn:mozilla:zap:chromepage",
+                          "chrome://zap/content/location.xul");
+Location.rdfLiteralAttrib("http://home.netscape.com/NC-rdf#Name", "");
+Location.rdfLiteralAttrib("urn:mozilla:zap:nodetype", "location");
+Location.rdfLiteralAttrib("urn:mozilla:zap:from_address",
+                          "Anonymous <sip:thisis@anonymous.invalid>");
+Location.rdfLiteralAttrib("urn:mozilla:zap:route_set", "");
+
+Location.spec(
+  function createFromDocument(doc) {
+    this._Location_createFromDocument(doc);
+    // append to locations:
+    wLocationsContainer.AppendElement(this.resource);
+  });
+
+// zapISipCredentialsProvider methods:
+Location.fun(
+  function getCredentialsForRealm(realm, username, password) {
+    // try our active accounts first:
+    var accounts = wLocationsDS.GetTargets(this.resource,
+                                           wRDF.GetResource("urn:mozilla:zap:account"),
+                                           true);
+    while (accounts.hasMoreElements()) {
+      var ar = accounts.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
+      var account = getAccount(ar);
+      if (account["urn:mozilla:zap:authentication_realm"] == realm) {
+        username.value = account["urn:mozilla:zap:authentication_username"];
+        password.value = account["urn:mozilla:zap:authentication_password"];
+        return true;
+      }
+    }
+    // our accounts don't have the credentials; prompt instead:
+    var rv = wPromptService.promptUsernameAndPassword(null, "Enter credentials",
+                                                      "Enter credentials for realm "+
+                                                      realm+":",
+                                                      username,
+                                                      password,
+                                                      null,
+                                                      {});
+    return rv;
+  });
 
 ////////////////////////////////////////////////////////////////////////
 // Accounts:
@@ -174,6 +312,9 @@ function initAccounts() {
 var Account = makeClass("Account", PersistentRDFObject);
 
 Account.prototype.datasources["default"] = wAccountsDS;
+Account.prototype.datasources["locations"] = wLocationsDS;
+Account.prototype.datasources["global-ephemeral"] = wGlobalEphemeralDS;
+Account.addInMemoryDS("ephemeral");
 
 Account.rdfResourceAttrib("urn:mozilla:zap:sidebarparent",
                           "urn:mozilla:zap:accounts");
@@ -181,16 +322,291 @@ Account.rdfLiteralAttrib("urn:mozilla:zap:chromepage",
                          "chrome://zap/content/account.xul");
 Account.rdfLiteralAttrib("http://home.netscape.com/NC-rdf#Name", "");
 Account.rdfLiteralAttrib("urn:mozilla:zap:nodetype", "account");
-Account.rdfLiteralAttrib("urn:mozilla:zap:sip_server", "");
-Account.rdfLiteralAttrib("urn:mozilla:zap:outbound_proxy", "");
-Account.rdfLiteralAttrib("urn:mozilla:zap:display_name", "");
+Account.rdfLiteralAttrib("urn:mozilla:zap:authentication_realm", "");
+Account.rdfLiteralAttrib("urn:mozilla:zap:authentication_username", "");
+Account.rdfLiteralAttrib("urn:mozilla:zap:authentication_password", "");
+Account.rdfLiteralAttrib("urn:mozilla:zap:automatic_registration", "false");
+Account.rdfLiteralAttrib("urn:mozilla:zap:registrar_server", "");
+Account.rdfLiteralAttrib("urn:mozilla:zap:address_of_record", "");
+Account.rdfLiteralAttrib("urn:mozilla:zap:suggested_registration_interval", "60");
+
+// A pointer so that we can use the current account as a parameter in
+// a template rule triple. See account-template.xul
+Account.rdfPointerAttrib("urn:mozilla:zap:root",
+                         "urn:mozilla:zap:current-account",
+                         "ephemeral");
 
 Account.spec(
   function createFromDocument(doc) {
     this._Account_createFromDocument(doc);
     // append to accounts:
     wAccountsContainer.AppendElement(this.resource);
+    this.updateLocationProfiles(doc);
   });
+
+Account.spec(
+  function updateFromDocument(doc) {
+    this._Account_updateFromDocument(doc);
+    this.updateLocationProfiles(doc);
+  });
+
+// helper to update resource links from location profiles to this
+// account:
+Account.fun(
+  function updateLocationProfiles(doc) {
+    // iterate through locations container and add/clear
+    // (location,account,this) triples:
+    var locations = wLocationsContainer.GetElements();
+    var resourceAccount = wRDF.GetResource("urn:mozilla:zap:account");
+    while (locations.hasMoreElements()) {
+      var location = locations.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
+      var elem = doc.getElementById(location.Value);
+      if (!elem) continue;
+      var hasTriple = wLocationsDS.HasAssertion(location,
+                                                resourceAccount,
+                                                this.resource, true);
+      if (elem.checked) {
+        // add a triple if there isn't one already:
+        if (!hasTriple)
+          wLocationsDS.Assert(location, resourceAccount, this.resource, true);
+      }
+      else {
+        // remove triple if there is one:
+        if (hasTriple)
+          wLocationsDS.Unassert(location, resourceAccount, this.resource);
+      }
+    }
+  });
+
+Account.spec(
+  function fillDocument(doc) {
+    this._Account_fillDocument(doc);
+    // initialize locations template:
+    var ltemplate = doc.getElementById("locations_template");
+    if (!ltemplate) return;
+
+    ltemplate.database.AddDataSource(wLocationsDS);
+    ltemplate.database.AddDataSource(this.datasources["ephemeral"]);
+    ltemplate.builder.rebuild();
+  });
+
+//----------------------------------------------------------------------
+// ActiveAccount
+
+var ActiveAccount = makeClass("ActiveAccount", Account, SupportsImpl);
+ActiveAccount.addInterfaces(Components.interfaces.zapISipNonInviteRCListener,
+                            Components.interfaces.nsITimerCallback);
+
+// true if this account is currently successfully registered with a server:
+ActiveAccount.rdfLiteralAttrib("urn:mozilla:zap:is_registered", "false", "global-ephemeral");
+// true if this account has been activated:
+ActiveAccount.rdfLiteralAttrib("urn:mozilla:zap:is_active", "false", "global-ephemeral");
+// current registration interval as returned by the server
+ActiveAccount.rdfLiteralAttrib("urn:mozilla:zap:registration_interval", "", "ephemeral");
+
+ActiveAccount.fun(
+  function activate() {
+    this["urn:mozilla:zap:is_active"] = "true";
+    // remember the credentials context, so that we can correctly
+    // authenticate on deactivation when the location profile might
+    // have changed:
+    this.credentials = wCurrentLocation;
+
+    if (this["urn:mozilla:zap:automatic_registration"] != "true")
+      return;
+    var server = wSipStack.syntaxFactory.deserializeURI(this["urn:mozilla:zap:registrar_server"]);
+    this.aor = wSipStack.syntaxFactory.deserializeAddress(this["urn:mozilla:zap:address_of_record"]);
+    var interval = this["urn:mozilla:zap:suggested_registration_interval"];
+    this.registrationRC =
+      wSipStack.createRegisterRequestClient(server, this.aor, interval);
+
+    this.registrationRC.listener = this;
+    this.registrationRC.sendRequest();
+  });
+
+ActiveAccount.fun(
+  function deactivate() {
+    this["urn:mozilla:zap:is_active"] = "false";
+    if (this.registrationRC) {
+      this.clearRefresh();
+      this.deactivating = true;
+      var contact = this.registrationRC.request.getTopContactHeader();
+      if (contact) {
+        contact = contact.QueryInterface(Components.interfaces.zapISipContactHeader);
+        contact.setParameter("expires", "0");
+        this.registrationRC.request.removeHeaders("Authorization");
+        this.registrationRC.listener = this;
+        try {
+          this.registrationRC.sendRequest();
+        } catch(e) {
+          // the rc might still be busy with the last request.
+          // XXX we should have a 'state' member on rc's
+        }
+      }
+      delete this.registrationRC;
+    }
+  });
+
+// zapISipNonInviteRCListener methods:
+ActiveAccount.fun(
+  function notifyResponseReceived(rc, dialog, response) {
+    this._dump("response: "+response.statusCode);
+    if (response.statusCode[0] == "1")
+      return; // just a provisional response
+    rc.listener = null;
+    if ((response.statusCode == "401" ||
+         response.statusCode == "407") &&
+        wSipStack.authentication.
+          addAuthorizationHeaders(this.credentials,
+                                  response,
+                                  rc.request)) {
+      // retry with credentials:
+      rc.listener = this;
+      rc.sendRequest();
+      return;
+    }
+    else if (response.statusCode[0] == "2") {
+      // find our registration among the returned contact headers:
+      var contacts = response.getHeaders("Contact", {});
+      var contact;
+      var myURI = rc.request.getTopContactHeader().QueryInterface(Components.interfaces.zapISipContactHeader).address.uri.QueryInterface(Components.interfaces.zapISipSIPURI);
+      for (var i=0,l=contacts.length; i<l; ++i) {
+        var c = contacts[i].QueryInterface(Components.interfaces.zapISipContactHeader);
+        try {
+          var uri = c.address.uri.QueryInterface(Components.interfaces.zapISipSIPURI);
+          if (uri.equals(myURI)) {
+            // we've found a match
+            contact = c;
+            break;
+          }
+          else {
+            this._dump(myURI.serialize()+" != "+uri.serialize());
+          }
+        }
+        catch(e) {
+          // there was an error parsing the uri in the contact header. ignore
+          this._dump("exception during registration response parsing: "+e);
+        }
+      }
+      if (contact) {
+        // looks like we're registered ok. let's see when the registration
+        // expires (RFC3261 10.2.4):
+        var expires = contact.getParameter("expires");
+        if (!expires) {
+          var expiresHeader = response.getTopHeader("Expires");
+          if (expiresHeader) {
+            expires = expiresHeader.QueryInterface(Components.interfaces.zapISipExpiresHeader).deltaSeconds;
+          }
+        }
+        else {
+          // the 'expires' uri parameter is a string. parse it:
+          expires = parseInt(expires);
+        }
+        if (expires != null && !isNaN(expires) && expires!=0) {
+          // we've got a valid registration!
+          // update our state:
+          this["urn:mozilla:zap:registration_interval"] = expires.toString();
+          this["urn:mozilla:zap:is_registered"] = "true";
+          // set up a refresh timer:
+          this.scheduleRefresh(expires*1000*0.9);
+          return;
+        }
+      }
+    }
+    // failure (or success if we are unregistering). update state:
+    this["urn:mozilla:zap:is_registered"] = "false";
+    if (!this.deactivating) {
+      this._dump("Registration failure for "+this.aor.serialize()+". Retrying in 1 minute");
+      // try again in a minute:
+      this.scheduleRefresh(60000);
+    }
+  });
+
+ActiveAccount.fun(
+  function scheduleRefresh(delay_ms) {
+    if (this.refreshTimer) {
+      this.refreshTimer.cancel();
+    }
+    else {
+      this.refreshTimer =
+        Components.classes["@mozilla.org/timer;1"].createInstance(Components.interfaces.nsITimer);
+    }
+    this.refreshTimer.initWithCallback(this, delay_ms,
+                                       Components.interfaces.nsITimer.TYPE_ONE_SHOT);
+  });
+
+ActiveAccount.fun(
+  function clearRefresh() {
+    if (this.refreshTimer) {
+      this.refreshTimer.cancel();
+      delete this.refreshTimer;
+    }
+  });
+
+// nsITimerCallback methods:
+ActiveAccount.fun(
+  function notify(timer) {
+    this.registrationRC.listener = this;
+    this.registrationRC.sendRequest();
+  });
+
+//----------------------------------------------------------------------
+// active account management
+
+// hash of currently active accounts:
+var wActiveAccounts = {};
+
+// Get the Account object for the given resource. This will either be
+// a new Account instance or a cached active account object:
+function getAccount(resource) {
+  var account = wActiveAccounts[resource.Value];
+  if (!account) {
+    account = Account.instantiate();
+    account.initWithResource(resource);
+  }
+  return account;
+}
+
+// This will be called whenever the current location changes and we
+// might need to add/remove accounts to/from wActiveAccounts:
+function currentAccountsUpdated() {
+  // walk through all accounts:
+  var accounts = wAccountsContainer.GetElements();
+  var resourceAccount = wRDF.GetResource("urn:mozilla:zap:account");
+  while (accounts.hasMoreElements()) {
+    var account = accounts.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
+    // check if this account is active in the current location
+    // profile:
+    var active = wLocationsDS.HasAssertion(wCurrentLocation.resource,
+                                           resourceAccount,
+                                           account,
+                                           true);
+    if (active) {
+      if (wActiveAccounts[account.Value]) {
+        // Account is already active. Activate it again (route set or
+        // contact might have changed:
+        dump("Reactivating account "+account.Value+"\n");
+        wActiveAccounts[account.Value].activate();
+      }
+      else {
+        // activate account:
+        dump("Activating account "+account.Value+"\n");
+        var aa = ActiveAccount.instantiate();
+        aa.initWithResource(account);
+        wActiveAccounts[account.Value] = aa;
+        aa.activate();
+      }
+    }
+    else {
+      var aa = wActiveAccounts[account.Value];
+      if (aa) {
+        dump("Deactivating account "+account.Value+"\n");
+        aa.deactivate();
+        delete wActiveAccounts[account.Value];
+      }
+    }
+  }
+}
 
 ////////////////////////////////////////////////////////////////////////
 // Contacts:
@@ -229,7 +645,7 @@ Contact.spec(
     this._Contact_createFromDocument(doc);
     // append to contacts:
     wContactsContainer.AppendElement(this.resource);
-    // ... and if its a friend, to the friends list as well:
+    // ... and if it's a friend, to the friends list as well:
     if (this["urn:mozilla:zap:isfriend"] == "true")
       wFriendsContainer.AppendElement(this.resource);
   });
@@ -277,11 +693,13 @@ function initSidebar() {
   wSidebarDS = wRDF.GetDataSourceBlocking(getProfileFileURL("sidebar.rdf"));
   wSidebarTree = document.getElementById("sidebar");
   wSidebarTree.database.AddDataSource(wSidebarDS);
+  wSidebarTree.database.AddDataSource(wLocationsDS);
   wSidebarTree.database.AddDataSource(wAccountsDS);
   wSidebarTree.database.AddDataSource(wContactsDS);
+  wSidebarTree.database.AddDataSource(wGlobalEphemeralDS);
 
   wSidebarTree.builder.rebuild();
-  selectSidebarNode("urn:mozilla:zap:accounts");
+  selectSidebarNode("urn:mozilla:zap:home");
 }
 
 function getSelectedSidebarResource()
@@ -505,7 +923,7 @@ Call.addInMemoryDS("ephemeral");
 Call.rdfLiteralAttrib("urn:mozilla:zap:active", "true");
 Call.rdfLiteralAttrib("urn:mozilla:zap:status", "");
 Call.rdfLiteralAttrib("urn:mozilla:zap:remote", "");
-Call.rdfLiteralAttrib("urn:mozilla:zap:subject", "no subject");
+Call.rdfLiteralAttrib("urn:mozilla:zap:subject", "");
 
 // ephemeral attributes:
 Call.rdfLiteralAttrib("urn:mozilla:zap:session-running", "false", "ephemeral");
@@ -628,18 +1046,31 @@ OutboundCall.fun(
     var rc = wSipStack.createInviteRequestClient(toAddress);
     rc.listener = this.callHandler;
     this.callHandler.rc = rc;
+
+    var subject = this["urn:mozilla:zap:subject"];
+    if (subject) {
+      try {
+        var s = wSipStack.syntaxFactory.createHeader("Subject").QueryInterface(Components.interfaces.zapISipSubjectHeader);
+        s.subject = subject;
+        rc.request.appendHeader(s);
+      }
+      catch(e) {
+        this._warning("Exception during Subject header construction: "+e);
+      }
+    }
     
     var offer = this.mediasession.generateSDPOffer();
-    
-    var request = rc.formulateInvite();
-    request.setContent("application", "sdp", offer.serialize());
-    rc.sendInvite(request, this.callHandler);
+
+    rc.request.setContent("application", "sdp", offer.serialize());
+    rc.sendInvite(this.callHandler);
   });
 
 //----------------------------------------------------------------------
 // OutboundCallHandler
+// CALLING -> 2XX_RECEIVED -> TERMINATED
 
-var OutboundCallHandler = makeClass("OutboundCallHandler", SupportsImpl);
+var OutboundCallHandler = makeClass("OutboundCallHandler",
+                                    SupportsImpl, StateMachine);
 OutboundCallHandler.addInterfaces(Components.interfaces.zapISipInviteResponseHandler,
                                   Components.interfaces.zapISipInviteRCListener);
 
@@ -647,11 +1078,11 @@ OutboundCallHandler.addInterfaces(Components.interfaces.zapISipInviteResponseHan
 OutboundCallHandler.fun(
   function handle2XXResponse(rc, dialog, response, ackTemplate) {
     if (this.call.dialog) {
+      this._dump("received additional dialog for outbound call");
       // we already have a dialog. this must be a subsequent dialog
       // from a forking proxy. send a bye immediately:
       // XXX probably not a good idea to do this before sending the ack
-      var rc = dialog.createNonInviteRequestClient();
-      rc.sendRequest(rc.formulateRequest("BYE"));
+      dialog.createNonInviteRequestClient("BYE").sendRequest();
       return ackTemplate;
     }
 
@@ -664,8 +1095,7 @@ OutboundCallHandler.fun(
       this["urn:mozilla:zap:status"] = "Can't parse other party's session description";
       // send a BYE:
       // XXX need a way to send ACK first
-      var rc = dialog.createNonInviteRequestClient();
-      rc.sendRequest(rc.formulateRequest("BYE"));
+      dialog.createNonInviteRequestClient("BYE").sendRequest();
       return ackTemplate;
     }
 
@@ -679,8 +1109,7 @@ OutboundCallHandler.fun(
       
       // send a BYE:
       // XXX need a way to send ACK first
-      var rc = dialog.createNonInviteRequestClient();
-      rc.sendRequest(rc.formulateRequest("BYE"));
+      dialog.createNonInviteRequestClient("BYE").sendRequest();
       return ackTemplate;
     }
 
@@ -695,19 +1124,52 @@ OutboundCallHandler.fun(
 // zapISipInviteRCListener methods:
 OutboundCallHandler.fun(
   function notifyResponseReceived(rc, dialog, response) {
+    this._dump(response.statusCode+" response for call="+this.call);
     if (response.statusCode[0] == "1")
       this.call["urn:mozilla:zap:status"] =
         response.statusCode + " " + response.reasonPhrase;
-    else if (response.statusCode[0] == "2")
+    else if (response.statusCode[0] == "2") {
       this.call["urn:mozilla:zap:status"] = "Connected";
+      this.changeState("2XX_RECEIVED");
+      // we'll terminate from notifyTerminated now
+    }
+    else if (response.statusCode == "401" ||
+             response.statusCode == "407") {
+      if (wSipStack.authentication.
+          addAuthorizationHeaders(wCurrentLocation,
+                                  response,
+                                  rc.request)) {
+        // we've got new credentials -> retry
+        rc.sendInvite(this);
+      }
+    }
+//     else if (response.statusCode == "301" ||
+//              ...) {
+//       // retry with new destination
+//     }
     else {
       this.call["urn:mozilla:zap:status"] =
         response.statusCode + " " + response.reasonPhrase;
+      this.terminate();
     }
   });
 
-OutboundCallHandler.fun(
+OutboundCallHandler.statefun(
+  "2XX_RECEIVED",
   function notifyTerminated(rc) {
+    this._dump("terminated in 2XX_RECEIVED state. call="+this.call);
+    this.terminate();
+  });
+
+OutboundCallHandler.statefun(
+  "*",
+  function notifyTerminated(rc) {
+    this._dump("ignoring responsehandler termination.");
+  });
+
+OutboundCallHandler.fun(
+  function terminate() {
+    this.changeState("TERMINATED");
     if (!this.call.dialog) {
       this.call.terminated();
     }
@@ -715,7 +1177,6 @@ OutboundCallHandler.fun(
     delete this.call;
     delete this.rc;
   });
-
 
 //----------------------------------------------------------------------
 // InboundCall
@@ -727,6 +1188,10 @@ InboundCall.rdfLiteralAttrib("urn:mozilla:zap:direction", "inbound");
 InboundCall.fun(
   function receiveCall(rs) {
     this["urn:mozilla:zap:remote"] = rs.request.getFromHeader().address.serialize();
+    var subjectHeader = rs.request.getTopHeader("Subject");
+    if (subjectHeader) {
+      this["urn:mozilla:zap:subject"] = subjectHeader.QueryInterface(Compontents.interfaces.zapISipSubjectHeader).subject;
+    }
     this.callHandler = InboundCallHandler.instantiate();
     this.callHandler.handleCall(this, rs);
   });
@@ -744,7 +1209,8 @@ InboundCallHandler.fun(
     rs.listener = this;
     // reject based on busy settings:
     if (document.getElementById("button_dnd").checked) {
-      this._respond(wPrefs["urn:mozilla:zap:dnd_code"]);
+      this._respond(wPrefs["urn:mozilla:zap:dnd_code"],
+                    wPrefs["urn:mozilla:zap:dnd_headers"]);
       return;
     }
 
@@ -793,8 +1259,20 @@ InboundCallHandler.fun(
   });
 
 InboundCallHandler.fun(
-  function _respond(code) {
+  function _respond(code, extra_headers) {
     var resp = this.rs.formulateResponse(code);
+
+    if (extra_headers) {
+      // add in extra header, converting line endings appropriately:
+      var responseTxt = resp.serialize();
+      responseTxt = responseTxt.substring(0, responseTxt.length-2); // strip last CRLF
+      responseTxt += extra_headers;
+      responseTxt = responseTxt.replace(/\r/g, "");
+      responseTxt = responseTxt.replace(/\n/g, "\r\n");
+      responseTxt += "\r\n\r\n";
+      resp = wSipStack.syntaxFactory.deserializeMessage(responseTxt).QueryInterface(Components.interfaces.zapISipResponse);
+    }
+    
     this.call["urn:mozilla:zap:status"] = resp.statusCode+" "+resp.reasonPhrase;
     return this.rs.sendResponse(resp);
   });

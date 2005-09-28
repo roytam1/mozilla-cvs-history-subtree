@@ -39,32 +39,40 @@
 
 <!DOCTYPE window SYSTEM "chrome://zap/locale/zap.dtd">
 
-<page id="zap_account"
+<page id="zap_location"
       xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
       onload="initPage()">
 
   <!-- Overlays -->
-  <?xul-overlay href="chrome://zap/content/account-form.xul"?>
+  <?xul-overlay href="chrome://zap/content/location-form.xul"?>
 
   <!-- Scripts -->
   <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
 
   <script type="application/x-javascript">
   <![CDATA[
-    var account;
+    var wLocation;
     function initPage() {
-      account = parent.Account.instantiate();
-      account.initWithResource(parent.getSelectedSidebarResource());
-      account.fillDocument(document);
+      wLocation = parent.Location.instantiate();
+      wLocation.initWithResource(parent.getSelectedSidebarResource());
+      wLocation.fillDocument(document);
     }    
 
     function del() {
-      var ok = parent.wPromptService.confirm(null, "Delete Account", 
-                                             "Are you sure you wish to delete account '"+account["http://home.netscape.com/NC-rdf#Name"]+"'?");
+      if (parent.wPrefs["urn:mozilla:zap:location"] == wLocation.resource.Value) {
+        parent.wPromptService.alert(null, "Delete Location",
+                                    "The location profile '"+wLocation["http://home.netscape.com/NC-rdf#Name"]+
+                                    "' can't be deleted because it is the currently active location. "+
+                                    " Please activate a different location in the toolbar "+
+                                    "before deleting this one.");
+        return;
+      }
+
+      var ok = parent.wPromptService.confirm(null, "Delete Location", 
+                                             "Are you sure you wish to delete location '"+wLocation["http://home.netscape.com/NC-rdf#Name"]+"'?");
       if (ok) {
-        account.remove();
-        account.flush();
-        parent.selectSidebarNode("urn:mozilla:zap:accounts");
+        wLocation.remove();
+        parent.selectSidebarNode("urn:mozilla:zap:locations");
       }
     }
     
@@ -75,8 +83,10 @@
     }
 
     function commit() {
-      account.updateFromDocument(document);
-      account.flush();
+      wLocation.updateFromDocument(document);
+      wLocation.flush();
+      if (parent.wPrefs["urn:mozilla:zap:location"] == wLocation.resource.Value)
+        parent.currentLocationUpdated();
       parent.reloadPage();
     }
 
@@ -89,9 +99,9 @@
 
   <vbox id="module_page" readonly="true" flex="1">
 
-    <label class="titlebox" value="SIP Account"/>
+    <label class="titlebox" value="SIP Location"/>
 
-    <vbox id="zap_account_form"/>
+    <vbox id="zap_location_form"/>
 
     <hbox>
       <spacer flex="1"/>

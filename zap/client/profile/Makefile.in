@@ -13,6 +13,7 @@ FILES := \
 	contacts.rdf \
 	calls.rdf \
 	prefs.rdf \
+	locations.rdf \
 	$(NULL)
 
 FILES := $(addprefix $(srcdir)/, $(FILES))

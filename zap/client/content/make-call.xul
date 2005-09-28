@@ -76,24 +76,14 @@
       document.getElementById("urn:mozilla:zap:remote").value = wRemoteAddress.serialize();
 
       // kick off an async OPTIONS request:
-      wOptionsRS = parent.wSipStack.createNonInviteRequestClient(wRemoteAddress);
+      wOptionsRS = parent.wSipStack.createNonInviteRequestClient(wRemoteAddress, "OPTIONS");
       wOptionsRS.listener = {
-        responseReceived: false,
         notifyResponseReceived : function(rc, dialog, response) {
-          this.responseReceived = true;
           if (document)
             document.getElementById("options_result").value = response.serialize();
-        },
-        notifyTerminated : function(rc) {
-          if (!this.responseReceived) {
-            if (document)
-              document.getElementById("options_result").value = 
-                "Failed to contact the remote party. It is unlikely that dialling "+
-                "will succeed. Please check the address.";
-          }
         }
       }
-      wOptionsRS.sendRequest(wOptionsRS.formulateRequest("OPTIONS"));
+      wOptionsRS.sendRequest();
 
       // focus call button, so that the user just needs to press enter:
       document.getElementById("call_button").focus();

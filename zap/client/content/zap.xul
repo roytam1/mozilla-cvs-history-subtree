@@ -59,6 +59,7 @@
     <command id="cmd_request" oncommand="cmdRequest()"/>
     <command id="cmd_about" oncommand="cmdAbout()"/>
     <command id="cmd_generic_request" oncommand="cmdGenericRequest()"/>
+    <command id="cmd_register_request" oncommand="cmdRegisterRequest()"/>
   </commandset>
 
   <toolbox>
@@ -81,8 +82,11 @@
             accesskey="T">
         <menupopup>
           <menuitem label="Send generic request..."
-                    accesskey="s"
+                    accesskey="g"
                     command="cmd_generic_request" />
+          <menuitem label="Send REGISTER request..."
+                    accesskey="r"
+                    command="cmd_register_request" />
         </menupopup>
       </menu>
       <menu label="Help"
@@ -111,25 +115,26 @@
       <toolbarbutton id="button_go" label="Go" oncommand="cmdGo()" />
       <toolbarspacer/>
       <toolbaritem>
-        <label value="Outbound:"/>
-        <menulist id="outbound_list" 
+        <label value="Location:"/>
+        <menulist id="locations_list"
+                  oncommand="locationChange();" 
                   minwidth="100">
-          <menupopup id="outbound_list_popup"
+          <menupopup id="locations_list_popup"
                      datasources="rdf:null"
-                     ref="urn:mozilla:zap:accounts">
+                     ref="urn:mozilla:zap:locations">
             <template>
               <rule>
                 <conditions>
                   <content uri="?container"/>
-                  <member container="?container" child="?account"/>
+                  <member container="?container" child="?location"/>
                 </conditions>
                 <bindings>
-                  <binding subject="?account"
+                  <binding subject="?location"
                           predicate="http://home.netscape.com/NC-rdf#Name"
                           object="?name"/>
                 </bindings>
                 <action>
-                  <menuitem uri="?account" label="?name"/>
+                  <menuitem uri="?location" label="?name"/>
                 </action>
               </rule>
             </template>
@@ -165,13 +170,19 @@
               <binding subject="?node"
                        predicate="urn:mozilla:zap:nodetype"
                        object="?nodetype"/>
+              <binding subject="?node"
+                       predicate="urn:mozilla:zap:is_registered"
+                       object="?registered"/>
+              <binding subject="?node"
+                       predicate="urn:mozilla:zap:is_active"
+                       object="?active"/>
             </bindings>
             <action>
               <treechildren>
                 <treeitem uri="?node">
                   <treerow>
                     <treecell label="?name"
-                              properties="nodetype-?nodetype" />
+                              properties="nodetype-?nodetype registered-?registered active-?active" />
                   </treerow>
                 </treeitem>
               </treechildren>

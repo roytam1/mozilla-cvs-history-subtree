@@ -48,30 +48,89 @@
                  value="Account Name:"/>
           <textbox id="http://home.netscape.com/NC-rdf#Name"/>
         </row>
-        <row>
-          <label control="urn:mozilla:zap:display_name" 
-                 value="Optional Display Name:"/>
-          <textbox id="urn:mozilla:zap:display_name"/>
-        </row>
+          <row>
+            <label control="urn:mozilla:zap:authentication_realm" 
+                   value="Authentication Realm:"/>
+            <textbox id="urn:mozilla:zap:authentication_realm"/>
+          </row>
+          <row>
+            <label control="urn:mozilla:zap:authentication_username" 
+                   value="Username:"/>
+            <textbox id="urn:mozilla:zap:authentication_username"/>
+          </row>
+          <row>
+            <label control="urn:mozilla:zap:authentication_password" 
+                   value="Password:"/>
+            <textbox id="urn:mozilla:zap:authentication_password" type="password"/>
+          </row>
       </rows>
     </grid>
 
-    <cgroup title="Server settings">
+    <cgroup title="Registration">
+      <checkbox label="Register automatically" id="urn:mozilla:zap:automatic_registration"/>
       <grid>
         <columns><column/><column flex="1"/></columns>
         <rows>
           <row>
-            <label control="urn:mozilla:zap:sip_server" 
-                   value="SIP Server:"/>
-            <textbox id="urn:mozilla:zap:sip_server"/>
+            <label control="urn:mozilla:zap:registrar_server" 
+                   value="Registrar Server:"/>
+            <textbox id="urn:mozilla:zap:registrar_server"/>
           </row>
           <row>
-            <label control="urn:mozilla:zap:outbound_proxy" 
-                   value="Outbound Proxy:"/>
-            <textbox id="urn:mozilla:zap:outbound_proxy"/>
+            <label control="urn:mozilla:zap:address_of_record" 
+                   value="Address-of-record:"/>
+            <textbox id="urn:mozilla:zap:address_of_record"/>
+          </row>
+          <row>
+            <label control="urn:mozilla:zap:suggested_registration_interval" 
+                   value="Registration interval:"/>
+            <textbox id="urn:mozilla:zap:suggested_registration_interval"/>
           </row>
         </rows>
       </grid>
+    </cgroup>
+
+    <cgroup title="Active in Location Profiles:">
+      <vbox id="locations_template"
+            ref="urn:mozilla:zap:locations"
+            datasources="rdf:null">
+        <template>
+          <rule>
+            <conditions>
+              <content uri="?container"/>
+              <member container="?container" child="?location"/>
+              <triple subject="urn:mozilla:zap:root"
+                      predicate="urn:mozilla:zap:current-account"
+                      object="?account"/>
+              <triple subject="?location"
+                      predicate="urn:mozilla:zap:account"
+                      object="?account"/>
+            </conditions>
+            <bindings>
+              <binding subject="?location"
+                       predicate="http://home.netscape.com/NC-rdf#Name"
+                       object="?name"/>
+            </bindings>
+            <action>
+              <checkbox uri="?location" label="?name" checked="true"/>
+            </action>
+          </rule>
+          <rule>
+            <conditions>
+              <content uri="?container"/>
+              <member container="?container" child="?location"/>
+            </conditions>
+            <bindings>
+              <binding subject="?location"
+                       predicate="http://home.netscape.com/NC-rdf#Name"
+                       object="?name"/>
+            </bindings>
+            <action>
+              <checkbox uri="?location" label="?name"/>
+            </action>
+          </rule>
+        </template>
+      </vbox>
     </cgroup>
   </vbox>
 </overlay>

@@ -35,34 +35,30 @@
    -
    - ***** END LICENSE BLOCK ***** -->
 
-<?xml-stylesheet href="chrome://zap/skin/zap.css" type="text/css"?>
+<!DOCTYPE overlay SYSTEM "chrome://zap/locale/zap.dtd">
 
-<!DOCTYPE window SYSTEM "chrome://zap/locale/zap.dtd">
-
-<page id="zap_home"
-        xmlns = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-        xmlns:html="http://www.w3.org/1999/xhtml">
-
-
-  <!-- Scripts -->
-  <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
-
-  <vbox id="module_page" flex="1">
-    <label class="titlebox" value="&zap.title;"/>
-    <description>
-      <html:b>Welcome to zap! - the Open Source Mozilla SIP client.</html:b>
-      <html:p>
-        With zap! v0.1 you can make peer-to-peer voice calls to other SIP users.
-      </html:p>
-      <html:p>
-        Some things we are planning for the future:
-        <html:ul>
-          <html:li>More voice codecs. At the moment we only have speex, G.711 and (by separate download) iLBC.</html:li>
-          <html:li>Video chat</html:li>
-          <html:li>Peer-2-peer gaming</html:li>
-          <html:li>...</html:li>
-        </html:ul>
-      </html:p>
-    </description>
+<overlay id="zap_location_form_overlay"
+         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+  <vbox flex="1" id="zap_location_form">
+    <grid>
+      <columns><column/><column flex="1"/></columns>
+      <rows>
+        <row>
+          <label control="http://home.netscape.com/NC-rdf#Name" 
+                 value="Location Name:"/>
+          <textbox id="http://home.netscape.com/NC-rdf#Name"/>
+        </row>
+        <row>
+          <label control="urn:mozilla:zap:from_address" 
+                 value="From Address (for outbound request):"/>
+          <textbox id="urn:mozilla:zap:from_address"/>
+        </row>
+        <row>
+          <label control="urn:mozilla:zap:route_set" 
+                 value="Default Route Set:"/>
+          <textbox id="urn:mozilla:zap:route_set"/>
+        </row>
+      </rows>
+    </grid>
   </vbox>
-</page>
+</overlay>

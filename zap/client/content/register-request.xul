@@ -58,18 +58,28 @@
     function generateTemplate() {
       if (wRS)
         wRS.listener = null;
-      // try to parse address:
-      var address;
+      // try to parse registrar uri:
+      var registrar;
       try {
-        address = document.getElementById("remote").value;
-        address = parent.wSipStack.syntaxFactory.deserializeAddress(address);
+        registrar = document.getElementById("registrar").value;
+        registrar = parent.wSipStack.syntaxFactory.deserializeURI(registrar);
       } catch(e) {
-        dump("Invalid address: "+address+"\n");
+        dump("Invalid uri: "+registrar+"\n");
+        return;
+      }
+      // try to parse address-of-record:
+      var addressOfRecord;
+      try {
+        addressOfRecord = document.getElementById("address-of-record").value;
+        addressOfRecord = parent.wSipStack.syntaxFactory.deserializeAddress(addressOfRecord);
+      } catch(e) {
+        dump("Invalid address: "+addressOfRecord+"\n");
         return;
       }
       
-      wRS = parent.wSipStack.createNonInviteRequestClient(address, 
-                                                          document.getElementById("method").value);
+      wRS = parent.wSipStack.createRegisterRequestClient(registrar, 
+                                                         addressOfRecord,
+                                                         document.getElementById("expiration").value);
       document.getElementById("request").value = wRS.request.serialize();
     }
 
@@ -118,10 +128,12 @@
 
   <vbox id="module_page" flex="1">
     <label class="titlebox" value="Send Generic Non-Invite Request"/>
-    <label value="Remote party:"/>
-    <textbox id="remote" value="sip:afri@fwd.pulver.com"/>
-    <label value="Method:"/>
-    <textbox id="method" value="REGISTER"/>
+    <label value="URI of Registrar server:"/>
+    <textbox id="registrar" value="sip:fwd.pulver.com"/>
+    <label value="Address-of-record:"/>
+    <textbox id="address-of-record" value="sip:afri@fwd.pulver.com"/>
+    <label value="Expiration interval (s):"/>
+    <textbox id="expiration" value="3600"/>
     <hbox>
       <spacer flex="1"/>
       <button label="Generate template" oncommand="generateTemplate()"/>

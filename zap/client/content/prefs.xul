@@ -92,6 +92,11 @@
                  value="Do Not Disturb INVITE response code:"/>
           <textbox id="urn:mozilla:zap:dnd_code"/>
         </row>
+        <row>
+          <label control="urn:mozilla:zap:dnd_headers" 
+                 value="Additional headers for DND response:"/>
+          <textbox id="urn:mozilla:zap:dnd_headers" multiline="true" rows="2"/>
+        </row>
       </rows>
     </grid>
 

@@ -220,7 +220,7 @@
           </template>
         </tree>
       </vbox>
-      
+      <splitter/>     
       <vbox flex="1">
         <label control="http://home.netscape.com/NC-rdf#Name" value="Name:"/>
         <textbox id="http://home.netscape.com/NC-rdf#Name"/>

@@ -118,12 +118,28 @@ treechildren::-moz-tree-image(nodetype-home) {
   list-style-image: url("chrome://zap/skin/home.png");
 }
 
+treechildren::-moz-tree-image(nodetype-locations) {
+  list-style-image: url("chrome://zap/skin/accounts.png");
+}
+
+treechildren::-moz-tree-image(nodetype-location) {
+  list-style-image: url("chrome://zap/skin/account.png");
+}
+
 treechildren::-moz-tree-image(nodetype-accounts) {
   list-style-image: url("chrome://zap/skin/accounts.png");
 }
 
 treechildren::-moz-tree-image(nodetype-account) {
-  list-style-image: url("chrome://zap/skin/account.png");
+  list-style-image: url("chrome://zap/skin/account-inactive.png");
+}
+
+treechildren::-moz-tree-image(nodetype-account, active-true) { 
+  list-style-image: url("chrome://zap/skin/account.png"); 
+} 
+
+treechildren::-moz-tree-image(nodetype-account, active-true, registered-true) {
+  list-style-image: url("chrome://zap/skin/account-registered.png");
 }
 
 treechildren::-moz-tree-image(nodetype-buddies) {
@@ -302,6 +318,23 @@ treechildren::-moz-tree-image(nodetype-contact) {
 }
 
 #accounts_new:hover { 
+  cursor: pointer;
+  color: #39598E;
+}
+
+/* ---------------------------------------------------------------------- */
+/* locations page                                                         */
+
+#locations_new { 
+  background: url("chrome://zap/skin/new-account.png") no-repeat !important;
+  margin-left: 15px;
+  padding-left: 45px;
+  padding-top: .55em;
+  padding-bottom: .55em;
+  font-size: 120%;
+}
+
+#locations_new:hover { 
   cursor: pointer;
   color: #39598E;
 }

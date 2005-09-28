@@ -39,30 +39,52 @@
 
 <!DOCTYPE window SYSTEM "chrome://zap/locale/zap.dtd">
 
-<page id="zap_home"
-        xmlns = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-        xmlns:html="http://www.w3.org/1999/xhtml">
 
+<page id="zap_new_location"
+      xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+      onload="initPage()" >
+
+  <!-- Overlays -->
+  <?xul-overlay href="chrome://zap/content/location-form.xul"?>
 
   <!-- Scripts -->
   <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
 
+  <script type="application/x-javascript">
+  <![CDATA[
+    var wLocation;    
+    function initPage() {
+      wLocation = parent.Location.instantiate();
+      // fill document with location defaults:
+      wLocation.fillDocument(document);
+      document.getElementById("http://home.netscape.com/NC-rdf#Name").focus();
+    }
+
+    function commit() {
+      // add new location to locations datasource:
+      wLocation.createFromDocument(document);
+      wLocation.flush();
+      parent.selectSidebarNode(wLocation.resource.Value);
+    }
+
+    function cancel() {
+      parent.selectSidebarNode("urn:mozilla:zap:locations");
+    }
+
+  ]]>
+  </script>
+
   <vbox id="module_page" flex="1">
-    <label class="titlebox" value="&zap.title;"/>
-    <description>
-      <html:b>Welcome to zap! - the Open Source Mozilla SIP client.</html:b>
-      <html:p>
-        With zap! v0.1 you can make peer-to-peer voice calls to other SIP users.
-      </html:p>
-      <html:p>
-        Some things we are planning for the future:
-        <html:ul>
-          <html:li>More voice codecs. At the moment we only have speex, G.711 and (by separate download) iLBC.</html:li>
-          <html:li>Video chat</html:li>
-          <html:li>Peer-2-peer gaming</html:li>
-          <html:li>...</html:li>
-        </html:ul>
-      </html:p>
-    </description>
+
+    <label class="titlebox" value="Create new location"/>
+    
+    <vbox id="zap_location_form"/>
+
+    <hbox>
+      <spacer flex="1"/>
+      <button label="Create Location" oncommand="commit()" />
+      <button label="Cancel" oncommand="cancel()" />
+    </hbox>
+
   </vbox>
 </page>

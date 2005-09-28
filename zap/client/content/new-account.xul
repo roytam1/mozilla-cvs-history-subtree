@@ -52,14 +52,15 @@
 
   <script type="application/x-javascript">
   <![CDATA[
-    
+    var account;    
     function initPage() {
+      account = parent.Account.instantiate();
+      account.fillDocument(document);
       document.getElementById("http://home.netscape.com/NC-rdf#Name").focus();
     }
 
     function commit() {
       // add new account to accounts datasource:
-      var account = parent.Account.instantiate();
       account.createFromDocument(document);
       account.flush();
       parent.selectSidebarNode(account.resource.Value);
