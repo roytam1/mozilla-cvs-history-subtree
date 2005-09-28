@@ -261,11 +261,11 @@ function makeOneShotTimer(callback, duration) {
   // callback has the same global object). See also the comments in
   // ClassUtils.js, function makeClass().
   var timer = this.Components.classes[CLASS_TIMER].createInstance(this.Components.interfaces.nsITimer);
-  timer.initWithCallback(callback, duration, this.Components.interfaces.nsITimer);
+  timer.initWithCallback(callback, duration, this.Components.interfaces.nsITimer.TYPE_ONE_SHOT);
   return timer;
 }
 
 function resetOneShotTimer(timer, duration) {
-  timer.initWithCallback(timer.callback, duration, this.Components.interfaces.nsITimer);
+  timer.initWithCallback(timer.callback, duration, this.Components.interfaces.nsITimer.TYPE_ONE_SHOT);
   return timer;
 }
