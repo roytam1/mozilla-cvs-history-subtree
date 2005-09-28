@@ -305,6 +305,7 @@ nsSVGGradientFrame::DidModifySVGObservable(nsISVGValue* observable,
                                            nsISVGValue::modificationType aModType)
 {
   nsCOMPtr<nsISVGGradient> gradient = do_QueryInterface(observable);
+  // Is this a gradient we are observing that is going away?
   if (mNextGrad && aModType == nsISVGValue::mod_die && gradient) {
     // Yes, we need to handle this differently
     nsISVGGradient *grad;
@@ -626,9 +627,9 @@ nsSVGGradientFrame::checkURITarget(nsIAtom *attr) {
 PRBool
 nsSVGGradientFrame::checkURITarget(void) {
   nsIFrame *aNextGrad;
+  mLoopFlag = PR_TRUE; // Set our loop detection flag
   // Have we already figured out the next Gradient?
   if (mNextGrad != nsnull) {
-    mLoopFlag = PR_TRUE; // Set our loop detection flag
     return PR_TRUE;
   }
 
@@ -643,13 +644,6 @@ nsSVGGradientFrame::checkURITarget(void) {
   // Note that we are using *our* frame tree for this call, otherwise we're going to have
   // to get the PresShell in each call
   if (nsSVGUtils::GetReferencedFrame(&aNextGrad, aGradStr, mContent, GetPresContext()->PresShell()) == NS_OK) {
-    // Are we self-referencing?
-    if (aNextGrad == this) {
-      // Yes, remove the reference and return an error
-      NS_WARNING("Gradient references itself!");
-      CopyUTF8toUTF16("", mNextGradStr);
-      return PR_FALSE;
-    } 
     nsIAtom* frameType = aNextGrad->GetType();
     if ((frameType != nsLayoutAtoms::svgLinearGradientFrame) && 
         (frameType != nsLayoutAtoms::svgRadialGradientFrame))
@@ -668,7 +662,6 @@ nsSVGGradientFrame::checkURITarget(void) {
       // Can't use the NS_ADD macro here because of nsISupports ambiguity
       mNextGrad->AddObserver(this);
     }
-    mLoopFlag = PR_TRUE; // Set our loop detection flag
     return PR_TRUE;
   }
   return PR_FALSE;
@@ -1068,13 +1061,13 @@ nsSVGRadialGradientFrame::PrivateGetFy(nsIDOMSVGLength * *aFy)
   // See if the value was explicitly set --  the spec
   // states that if there is no explicit fy value, we return the cy value
   // see http://www.w3.org/TR/SVG11/pservers.html#RadialGradients
+  mLoopFlag = PR_FALSE;
   if (!mContent->HasAttr(kNameSpaceID_None, nsSVGAtoms::fy))
     return PrivateGetCy(aFy);
   // No, return the values
   nsCOMPtr<nsIDOMSVGAnimatedLength> aLen;
   aRgrad->GetFy(getter_AddRefs(aLen));
   aLen->GetAnimVal(aFy);
-  mLoopFlag = PR_FALSE;
   return NS_OK;
 }
 
