@@ -453,31 +453,6 @@ nsSVGGradientFrame::GetStopOpacity(PRInt32 aIndex, float *aStopOpacity)
 }
 
 NS_IMETHODIMP
-nsSVGGradientFrame::GetStopOpacity(PRInt32 aIndex, float *aStopOpacity) 
-{
-  nsIDOMSVGStopElement *stopElement = nsnull;
-  nsIFrame *stopFrame = nsnull;
-  nsresult rv = NS_OK;
-  PRInt32 stopCount = GetStopElement(aIndex, &stopElement, &stopFrame);
-  if (stopCount && !stopElement) {
-    *aStopOpacity = 0;
-    return NS_ERROR_FAILURE;
-  }
-  if (stopCount == 0 && !stopElement && checkURITarget()) {
-      rv = mNextGrad->GetStopOpacity(aIndex, aStopOpacity);
-  } else {
-    NS_ASSERTION(stopFrame, "No stop frame found!");
-    if (!stopFrame) {
-      *aStopOpacity = 1.0f;
-      return NS_ERROR_FAILURE;
-    }
-    *aStopOpacity = stopFrame->GetStyleSVGReset()->mStopOpacity;
-  }
-  mLoopFlag = PR_FALSE;
-  return rv;
-}
-
-NS_IMETHODIMP
 nsSVGGradientFrame::GetGradientType(PRUint32 *aType)
 {
   nsCOMPtr<nsIDOMSVGLinearGradientElement> aLe = do_QueryInterface(mContent);
