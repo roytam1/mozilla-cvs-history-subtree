@@ -34,12 +34,16 @@ CPPSRCS		= \
 		zapFilterNode.cpp \
 		zapSpeexEncoder.cpp \
 		zapSpeexDecoder.cpp \
+		zapSpeexRTPPacketizer.cpp \
+		zapSpeexRTPDepacketizer.cpp \
+		zapG711Encoder.cpp \
+		zapG711Decoder.cpp \
+		zapG711RTPPacketizer.cpp \
+		zapG711RTPDepacketizer.cpp \
 		zapUDPSocket.cpp \
 		zapUDPSocketPair.cpp \
 		zapDatagramFrame.cpp \
 		zapRTPFrame.cpp \
-		zapSpeexRTPPacketizer.cpp \
-		zapSpeexRTPDepacketizer.cpp \
 		zapRTPTransmitter.cpp \
 		zapRTPReceiver.cpp \
 		zapRTPSession.cpp \
@@ -65,6 +69,7 @@ XPIDLSRCS	= zapIMediaGraph.idl \
 SHARED_LIBRARY_LIBS += \
 		$(DIST)/lib/$(LIB_PREFIX)moz_portaudio_v18_1.$(LIB_SUFFIX) \
 		$(DIST)/lib/$(LIB_PREFIX)moz_speex_v1_1_10.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)moz_ccitt_adpcm.$(LIB_SUFFIX) \
 		$(NULL)
 
 ifeq ($(OS_ARCH),WINNT)

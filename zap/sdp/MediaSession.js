@@ -119,12 +119,14 @@ MediaSession.fun(
     mediaDescription.portCount = "";
     mediaDescription.protocol = "RTP/AVP";
     var fmt = gSdpService.createMediaFormat();
-    fmt.format  ="97";
+//    fmt.format  ="97";
+    fmt.format  ="0";
     mediaDescription.setFormats([fmt], 1);
     // a=
     var attribs = [];
     var attrib = gSdpService.createAttrib();
-    attrib.value = "rtpmap:97 speex/8000";
+    //attrib.value = "rtpmap:97 speex/8000";
+    attrib.value = "rtpmap:0 pcmu/8000/1";
     attribs.push(attrib);
     // //  attrib.value = "rtpmap:97 iLBC/8000";
 // //  var attrib = wSipClient.sdpService.createAttrib();
@@ -169,7 +171,7 @@ MediaSession.fun(
       var attribs = mediaDescriptions[0].getAttribs({});
       var match;
       for (var i=0,l=attribs.length; i<l; ++i)
-        if ((match = /rtpmap:(\d+) speex\/8000/(attribs[i].value))) {
+        if ((match = /rtpmap:(\d+) pcmu\/8000/i(attribs[i].value))) {
           remotePayloadFormat = match[1];
           break;
         }
@@ -214,14 +216,16 @@ MediaSession.fun(
     mediaDescription.portCount = "";
     mediaDescription.protocol = "RTP/AVP";
     var fmt = gSdpService.createMediaFormat();
-    fmt.format = "97";
+//    fmt.format = "97";
+    fmt.format = "0";
     mediaDescription.setFormats([fmt], 1);
     
     // a=
     var attribs = [];
     var attrib = gSdpService.createAttrib();
 //    attrib.value = "rtpmap:97 iLBC/8000";
-    attrib.value = "rtpmap:97 speex/8000";
+//    attrib.value = "rtpmap:97 speex/8000";
+    attrib.value = "rtpmap:0 pcmu/8000/1";
     attribs.push(attrib);
 //     var attrib = wSipClient.sdpService.createAttrib();
 //     attrib.value = "fmtp:97 mode=30";
@@ -266,7 +270,7 @@ MediaSession.fun(
       var attribs = mediaDescriptions[0].getAttribs({});
       var match;
       for (var i=0,l=attribs.length; i<l; ++i)
-        if ((match = /rtpmap:(\d+) speex\/8000/(attribs[i].value))) {
+        if ((match = /rtpmap:(\d+) pcmu\/8000/i(attribs[i].value))) {
           remotePayloadFormat = match[1];
           break;
         }
@@ -327,13 +331,18 @@ MediaSession.fun(
                  remoteRTCPPort, remotePayloadFormat) {
     this.ain = this.mediaGraph.addNode("audioin", null);
     this.aout = this.mediaGraph.addNode("audioout", null);
-    this.enc = this.mediaGraph.addNode("speex-encoder", null);
-    this.dec = this.mediaGraph.addNode("speex-decoder", null);
+//    this.enc = this.mediaGraph.addNode("speex-encoder", null);
+//    this.dec = this.mediaGraph.addNode("speex-decoder", null);
+    this.enc = this.mediaGraph.addNode("g711-encoder", null);
+    this.dec = this.mediaGraph.addNode("g711-decoder", null);
 //    this.buf1 = this.mediaGraph.addNode("buffer", PB({$prefill_size:1, $max_size:10}));
     this.buf2 = this.mediaGraph.addNode("buffer", PB({$prefill_size:4, $max_size:30}));
-    this.speex2rtp = this.mediaGraph.addNode("speex-rtp-packetizer",
+//     this.speex2rtp = this.mediaGraph.addNode("speex-rtp-packetizer",
+//                                              PB({$payload_type:remotePayloadFormat}));
+//     this.rtp2speex = this.mediaGraph.addNode("speex-rtp-depacketizer", null);
+    this.speex2rtp = this.mediaGraph.addNode("g711-rtp-packetizer",
                                              PB({$payload_type:remotePayloadFormat}));
-    this.rtp2speex = this.mediaGraph.addNode("speex-rtp-depacketizer", null);
+    this.rtp2speex = this.mediaGraph.addNode("g711-rtp-depacketizer", null);
     this.rtpsession = this.mediaGraph.addNode("rtp-session",
                                               PB({$address:remoteHost,
                                                   $rtp_port:remoteRTPPort,

@@ -44,6 +44,10 @@
 #include "zapSpeexDecoder.h"
 #include "zapSpeexRTPPacketizer.h"
 #include "zapSpeexRTPDepacketizer.h"
+#include "zapG711Encoder.h"
+#include "zapG711Decoder.h"
+#include "zapG711RTPPacketizer.h"
+#include "zapG711RTPDepacketizer.h"
 #include "zapUDPSocket.h"
 #include "zapUDPSocketPair.h"
 #include "zapRTPTransmitter.h"
@@ -58,6 +62,10 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(zapSpeexEncoder)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapSpeexDecoder)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapSpeexRTPPacketizer)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapSpeexRTPDepacketizer)
+NS_GENERIC_FACTORY_CONSTRUCTOR(zapG711Encoder)
+NS_GENERIC_FACTORY_CONSTRUCTOR(zapG711Decoder)
+NS_GENERIC_FACTORY_CONSTRUCTOR(zapG711RTPPacketizer)
+NS_GENERIC_FACTORY_CONSTRUCTOR(zapG711RTPDepacketizer)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapUDPSocket)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapUDPSocketPair)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapRTPTransmitter)
@@ -110,6 +118,26 @@ static const nsModuleComponentInfo gComponents[] =
     ZAP_SPEEXRTPDEPACKETIZER_CID,
     ZAP_SPEEXRTPDEPACKETIZER_CONTRACTID,
     zapSpeexRTPDepacketizerConstructor
+  },
+  { "Mozilla ZMK G.711 Encoder",
+    ZAP_G711ENCODER_CID,
+    ZAP_G711ENCODER_CONTRACTID,
+    zapG711EncoderConstructor
+  },
+  { "Mozilla ZMK G.711 Decoder",
+    ZAP_G711DECODER_CID,
+    ZAP_G711DECODER_CONTRACTID,
+    zapG711DecoderConstructor
+  },
+  { "Mozilla ZMK G.711 RTP Packetizer",
+    ZAP_G711RTPPACKETIZER_CID,
+    ZAP_G711RTPPACKETIZER_CONTRACTID,
+    zapG711RTPPacketizerConstructor
+  },
+  { "Mozilla ZMK G.711 RTP Depacketizer",
+    ZAP_G711RTPDEPACKETIZER_CID,
+    ZAP_G711RTPDEPACKETIZER_CONTRACTID,
+    zapG711RTPDepacketizerConstructor
   },
   { "Mozilla ZMK UDP Socket",
     ZAP_UDPSOCKET_CID,
