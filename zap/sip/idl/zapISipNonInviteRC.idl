@@ -44,11 +44,38 @@ interface zapISipRequest;
 [scriptable, uuid(352e19bb-a547-40d7-8fa9-abdd8034a578)]
 interface zapISipNonInviteRC : nsISupports
 {
+  /**
+   * Request object that will be sent out by sendRequest(). Request
+   * client users should ammend the request as appropriate before
+   * calling sendRequest().
+   */
+  attribute zapISipRequest request;
+  
+  /**
+   * A listener receiving notifications of received responses. The
+   * request client user must remove the listener by setting this
+   * attribute to null once they are finished with the request
+   * client. This is important to prevent leaks due to circular
+   * references.
+   */
   attribute zapISipNonInviteRCListener listener;
+
+  /**
+   * The dialog associated with this request. Will be null if this is
+   * a request outside of a dialog.
+   */
   readonly attribute zapISipDialog dialog;
-  readonly attribute zapISipAddress ToAddress;
-  
-  zapISipRequest formulateRequest(in ACString method);
-  
-  void sendRequest(in zapISipRequest request);
+
+  /**
+   * Send the current request.
+   *
+   * The request client user may call this repeatedly with updated
+   * requests afer receiving final responses.
+   *
+   * For requests outside of a dialog, the CSeq number will
+   * automatically be incremented by 1 for each request (RFC3261
+   * 8.1.3.5). For request within a dialog, CSeq will be set to the
+   * incremented local sequence number.
+   */
+  void sendRequest();
 };

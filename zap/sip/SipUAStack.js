@@ -65,6 +65,14 @@ var ITF_RESOLVER = Components.interfaces.zapISipResolver;
 var gResolver = CLASS_RESOLVER.getService(ITF_RESOLVER);
 
 //----------------------------------------------------------------------
+// authentication
+
+var CLASS_AUTH = Components.classes["@mozilla.org/zap/sipauth;1"];
+var ITF_AUTH = Components.interfaces.zapISipAuthentication;
+
+var gAuthentication = CLASS_AUTH.getService(ITF_AUTH);
+
+//----------------------------------------------------------------------
 // sip transport
 
 var CLASS_SIP_TRANSPORT = Components.classes["@mozilla.org/zap/siptransport;1"];
@@ -131,7 +139,7 @@ SipUAStack.fun(
   function init(handler, config) {
     this._dump("Building SIP User Agent Stack...");
 
-    this.FromAddress = gSyntaxFactory.deserializeAddress("sip:thisis@anonymous.invalid");
+    this.FromAddress = gSyntaxFactory.deserializeAddress('Anonymous <sip:thisis@anonymous.invalid>');
     
     this.requestHandler = handler;
 
@@ -176,22 +184,66 @@ SipUAStack.fun(
 // attribute zapISipAddress FromAddress;
 SipUAStack.obj("FromAddress", null);
 
+// void setDefaultRoute([array, size_is(count)] in zapISipAddress routeset,
+//                      in unsigned long count);
+SipUAStack.obj("_defaultRoute", []);
+SipUAStack.fun(
+  function setDefaultRoute(routeset, count) {
+    this._defaultRoute = routeset;
+  });
+
+// void getDefaultRoute(out unsigned long count,
+//                      [array, retval, size_is(count)]
+//                      out zapISipAddress routeset);
+SipUAStack.fun(
+  function getDefaultRoute(count) {
+    if (count)
+      count.value = this._defaultRoute.length;
+    return this._defaultRoute;
+  });
+
 //  attribute zapISipRequestHandler requestHandler;
 SipUAStack.obj("requestHandler", null);
 
-//  zapISipNonInviteRC createNonInviteRequestClient(in zapISipAddress ToAddress);
+//  zapISipNonInviteRC createNonInviteRequestClient(in zapISipAddress ToAddress, in ACString method);
 SipUAStack.fun(
-  function createNonInviteRequestClient(ToAddress) {
+  function createNonInviteRequestClient(ToAddress, method) {
     var rc = SipNonInviteRC.instantiate();
-    rc.init(this, null, ToAddress);
+    var request = this.formulateGenericRequest(method, ToAddress.uri,
+                                               ToAddress, this.FromAddress);
+    rc.init(this, null, request);
     return rc;
   });
+
+
+// zapISipNonInviteRC createRegisterRequestClient(in zapISipURI registrarServer,
+//                                                in zapISipAddress addressOfRecord,
+//                                                in unsigned long expiration);
+SipUAStack.fun(
+  function createRegisterRequestClient(registrar, addressOfRecord,
+                                       expiration) {
+    var rc = SipNonInviteRC.instantiate();
+    var request = this.formulateGenericRequest("REGISTER", registrar,
+                                               addressOfRecord,
+                                               addressOfRecord);
+    // add Contact header (RFC3261 10.2):
+    var contact = gSyntaxFactory.createContactHeader(this.getContactAddress());
+    contact.setParameter("expires", expiration.toString());
+    request.appendHeader(contact);
+    rc.init(this, null, request);
+    return rc;
+  });
+
 
 //  zapISipInviteRC createInviteRequestClient(in zapISipAddress ToAddress);
 SipUAStack.fun(
   function createInviteRequestClient(ToAddress) {
     var rc = SipInviteRC.instantiate();
-    rc.init(this, null, ToAddress);
+    var request = this.formulateGenericRequest("INVITE", ToAddress.uri,
+                                               ToAddress, this.FromAddress);
+    // add mandatory Contact header (rfc3261 8.1.1.8):
+    request.appendHeader(gSyntaxFactory.createContactHeader(this.getContactAddress()));
+    rc.init(this, null, request);
     return rc;
   });
 
@@ -255,6 +307,9 @@ SipUAStack.obj("syntaxFactory", gSyntaxFactory);
 //  readonly attribute zapISipResolver resolver;
 SipUAStack.obj("resolver", gResolver);
 
+//  readonly attribute zapISipAuthentication authentication;
+SipUAStack.obj("authentication", gAuthentication);
+
 //  readonly attribute ACString hostName;
 SipUAStack.getter(
   "hostName",
@@ -290,14 +345,24 @@ SipUAStack.fun(
       message.QueryInterface(Components.interfaces.zapISipRequest);
       log(message.method+" request received");
 
+      // Check if this is a request arriving by different paths
+      // (RFC3261 8.2.2.2):
+      if (this.transactionManager.isForkedRequest(message)) {
+        // reject with 482 (Loop Detected)
+        var response = this.formulateResponse("482", message, null);
+        this.sendTransactionalResponse(response, message);
+        return true;
+      }
+      
       // Match against supported extensions (RFC3261 8.2.2.3):
       var reqHeaders = message.getHeaders("Require", {});
       if (reqHeaders.length) {
         var unknowns = [];
+        var me = this;
         reqHeaders.forEach(
           function(h) {
             h = h.QueryInterface(Components.interfaces.zapISipRequireHeader);
-            if (!member(h.optionTag, this.supportedExtensions))
+            if (!member(h.optionTag, me.supportedExtensions))
               unknowns.push(h.optionTag);
           });
         if (unknowns.length) {
@@ -310,6 +375,7 @@ SipUAStack.fun(
               response.appendHeader(gSyntaxFactory.createUnsupportedHeader(t));
             });
           this.sendTransactionalResponse(response, message);
+          return true;
         }
       }
       
@@ -318,9 +384,11 @@ SipUAStack.fun(
         var dialog = this.findDialog(constructServerDialogID(message));
         if (dialog)
           dialog.handleRequest(message);
-        else {
+        else if (message.method != "ACK") {
           // The dialog does not exist. Reject with a 481
           // (Call/Transaction Does Not Exist). (RFC3261 12.2.2)
+          // But only if it's not an ACK!
+          
           var response = this.formulateResponse("481", message, null);
           this.sendTransactionalResponse(response, message);
         }
@@ -353,9 +421,9 @@ SipUAStack.fun(
       message.QueryInterface(Components.interfaces.zapISipResponse);
 
       // Try to match to a pending invite request client:
-      var rs = this.findInviteRC(constructClientTransactionKey(message));
-      if (rs)
-        rs.handleResponse(message);
+      var rc = this.findInviteRC(constructClientTransactionKey(message));
+      if (rc)
+        rc.handleResponse(message);
       else {
         // nope, this must be a stray response
         this._dump("Stray response (" + message.statusCode + " --- "+
@@ -389,8 +457,14 @@ SipUAStack.fun(
         // RFC3261 15.1.2
         if (rs.dialog)
           response = rs.formulateResponse("200");
-        else 
+        else {
+          this._dump("BYE request with dialog id "+
+                     constructServerDialogID(rs.request)+
+                     " doesn't match any dialog in pool:");
+          for (var d in this.dialogPool)
+            this._dump(d);
           response = rs.formulateResponse("481");
+        }
       }
       else if (method == "CANCEL") {
         // RFC3261 9.2
@@ -451,53 +525,6 @@ SipUAStack.fun(
 
 //----------------------------------------------------------------------
 // Interface to request servers/clients:
-
-SipUAStack.fun(
-  function formulateGenericRequest(method, ToAddress) {
-    // XXX handle RouteSet
-
-    var m = gSyntaxFactory.createRequest();
-    // method:
-    m.method = method;
-    // requestURI:
-    m.requestURI = ToAddress.uri;
-    // Via header:
-    var viaHeader = gSyntaxFactory.createViaHeader(); 
-    if (this.rport_client)
-      viaHeader.setParameter("rport", "");
-    m.appendHeader(viaHeader);
-    // To header:
-    m.appendHeader(gSyntaxFactory.createToHeader(ToAddress));
-    // From header + new tag:
-    var fromHeader = gSyntaxFactory.createFromHeader(this.FromAddress);
-    fromHeader.setParameter("tag", generateTag());
-    m.appendHeader(fromHeader);
-    // Call-ID header with new call id:
-    var callIDHeader =
-      gSyntaxFactory.createCallIDHeader(generateUUID() + "@" +
-                                        this.hostName);
-    m.appendHeader(callIDHeader);
-    // CSeq header matching the request method and containing a new
-    // sequence number:
-    m.appendHeader(gSyntaxFactory.createCSeqHeader(method, 1));
-    // Max-Forwards header:
-    m.appendHeader(gSyntaxFactory.createMaxForwardsHeader());
-
-    return m;
-  });
-
-// get the address to use for an Contact header for a
-// dialog-establishing message:
-// XXX this should be user configurable in some form or another
-// XXX get fqdn from elsewhere?
-// XXX should this also be the contact set for non-dialog establising requests?
-// XXX distinguish between sip and sips
-SipUAStack.fun(
-  function getContactAddress() {
-    var user = (this.FromAddress.uri).QueryInterface(Components.interfaces.zapISipSIPURI).userinfo;
-    var host = this.hostAddress;
-    return gSyntaxFactory.deserializeAddress("sip:"+user+"@"+host);
-  });
 
 // create a dialog at UAS end:
 SipUAStack.fun(
@@ -561,6 +588,19 @@ SipUAStack.fun(
 //----------------------------------------------------------------------
 // Implementation helpers:
 
+// get the address to use for an Contact header for a
+// dialog-establishing message:
+// XXX this should be user configurable in some form or another
+// XXX get fqdn from elsewhere?
+// XXX should this also be the contact set for non-dialog establising requests?
+// XXX distinguish between sip and sips
+SipUAStack.fun(
+  function getContactAddress() {
+    var user = (this.FromAddress.uri).QueryInterface(Components.interfaces.zapISipSIPURI).userinfo;
+    var host = this.hostAddress;
+    return gSyntaxFactory.deserializeAddress("sip:"+user+"@"+host);
+  });
+
 // Send a response to the given request via a server invite or
 // non-invite transaction, as appropriate for the request method.
 SipUAStack.fun(
@@ -579,6 +619,72 @@ SipUAStack.fun(
   });
 
   
+// formulate a request following RFC3261 8.1.1:
+SipUAStack.fun(
+  function formulateGenericRequest(method, remoteTarget,
+                                   ToAddress, FromAddress) {
+    var m = gSyntaxFactory.createRequest();
+    // method:
+    m.method = method;
+    // requestURI & route set:
+    if (this._defaultRoute.length) {
+      // we have a pre-existing route. Follow the procedures in
+      // RFC3261 12.2.1.1 for setting the Request-URI and Route
+      // headers:
+      var lr = this._defaultRoute[0].uri.QueryInterface(Components.interfaces.zapISipSIPURI).hasURIParameter("lr");
+      var i = 0;
+      if (lr) {
+        // We have a loose router. Set requestURI to remoteTarget and
+        // make sure we construct route headers for all proxies in the
+        // route set:
+        m.requestURI = remoteTarget;
+      }
+      else {
+        // We have a strict router. Set requestURI to first URI in
+        // route set, construct route headers for all other proxies
+        // and append remoteTarget:
+        m.requestURI = this._defaultRoute[0].uri;
+        i = 1;
+      }
+      // construct route headers:
+      for ( var l = this._defaultRoute.length; i<l; ++i) {
+        m.appendHeader(gSyntaxFactory.createRouteHeader(this._defaultRoute[i]));
+      }
+      if (!lr) {
+        // Append route header with remoteTarget
+        var remoteAddress = gSyntaxFactory.createAddress("", remoteTarget);
+        m.appendHeader(gSyntaxFactory.createRouteHeader(remoteAddress));
+        
+      }
+    }
+    else {
+      m.requestURI = remoteTarget;
+    }
+    
+    // Via header:
+    var viaHeader = gSyntaxFactory.createViaHeader(); 
+    if (this.rport_client)
+      viaHeader.setParameter("rport", "");
+    m.appendHeader(viaHeader);
+    // To header:
+    m.appendHeader(gSyntaxFactory.createToHeader(ToAddress));
+    // From header + new tag:
+    var fromHeader = gSyntaxFactory.createFromHeader(FromAddress);
+    fromHeader.setParameter("tag", generateTag());
+    m.appendHeader(fromHeader);
+    // Call-ID header with new call id:
+    var callIDHeader =
+      gSyntaxFactory.createCallIDHeader(generateUUID() + "@" +
+                                        this.hostName);
+    m.appendHeader(callIDHeader);
+    // CSeq header matching the request method and containing a new
+    // sequence number:
+    m.appendHeader(gSyntaxFactory.createCSeqHeader(method, 1));
+    // Max-Forwards header:
+    m.appendHeader(gSyntaxFactory.createMaxForwardsHeader());
+
+    return m;
+  });
 
 
 ////////////////////////////////////////////////////////////////////////

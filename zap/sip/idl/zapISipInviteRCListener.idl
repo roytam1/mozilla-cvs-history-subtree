@@ -63,6 +63,4 @@ interface zapISipInviteRCListener : nsISupports
   void notifyResponseReceived(in zapISipInviteRC requestClient,
                               in zapISipDialog dialog,
                               in zapISipResponse response);
-  
-  void notifyTerminated(in zapISipInviteRC requestClient);
 };

@@ -45,29 +45,42 @@ interface zapISipInviteResponseHandler;
 [scriptable, uuid(dd497847-1b53-4d86-a6aa-b9d41f1499fc)]
 interface zapISipInviteRC : nsISupports
 {
-  attribute zapISipInviteRCListener listener;
-  readonly attribute zapISipDialog dialog;
-  readonly attribute zapISipAddress ToAddress;
+  /**
+   * INVITE request object that will be sent out by
+   * sendInvite(). Request client users should ammend the request as
+   * appropriate before calling sendInvite().
+   */
+  attribute zapISipRequest request;
 
   /**
-   * Formulate an INVITE request appropriate for this request client,
-   * adding all required headers as per RFC3261.
-   *
-   * The request client user should ammend this request as appropriate
-   * and send it using zapISipInviteRC::sendInvite().
+   * A listener receiving notifications of received responses. The
+   * request client user must remove the listener by setting this
+   * attribute to null once finished with the request client. This is
+   * important to prevent potential leaks due to circular references.
    */
-  zapISipRequest formulateInvite();
-  
+  attribute zapISipInviteRCListener listener;
+
   /**
-   * Send the INVITE request which should have been constructed with
-   * zapISipInviteRC::formulateInvite(). This function must only be
-   * called once.
+   * The dialog associated with this request. Will be null if this is
+   * a request outside of a dialog.
+   */
+  readonly attribute zapISipDialog dialog;
+
+  /**
+   * Send the current INVITE request.
    *
    * Once a request has been sent it can be cancelled with a call to
    * zapISipInviteRC::cancel().
+   *
+   * sendInvite() may be called repeatedly but only AFTER a FINAL
+   * FAILURE RESPONSE has been received.
+   *
+   * For requests outside of a dialog, the CSeq number will
+   * automatically be incremented by 1 for each request (RFC3261
+   * 8.1.3.5). For requests within a dialog, CSeq will be set to the
+   * incremented local sequence number.
    */
-  void sendInvite(in zapISipRequest request,
-                  in zapISipInviteResponseHandler rh);
+  void sendInvite(in zapISipInviteResponseHandler rh);
   
   /**
    * Cancel the ongoing invite by sending a CANCEL request (RFC3261

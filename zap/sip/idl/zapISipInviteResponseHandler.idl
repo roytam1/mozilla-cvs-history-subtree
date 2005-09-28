@@ -58,4 +58,11 @@ interface zapISipInviteResponseHandler : nsISupports
                                    in zapISipDialog dialog,
                                    in zapISipResponse response,
                                    in zapISipRequest ackTemplate);
+
+  /**
+   * Called when processing for this INVITE request has finished.  The
+   * response handler will not receive further handle2XXResponse
+   * notifications after this notification.
+   */
+  void notifyTerminated(in zapISipInviteRC requestClient);
 };

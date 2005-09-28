@@ -84,7 +84,14 @@ SipDialog.fun(
     this.remoteAddress.displayName = "";
     this.remoteTarget = request.getTopContactHeader().address.uri;
     this.secure = false; // XXX
-    // XXX copy route set
+    var recordRouteHeaders = request.getHeaders("Record-Route", {});
+    if (recordRouteHeaders.length) {
+      this._routeSet = [];
+      var me = this;
+      recordRouteHeaders.forEach(function(rr) {
+                                   me._routeSet.push(rr.QueryInterface(Components.interfaces.zapISipRecordRouteHeader).address);
+                                 });
+    }
     
     this.changeState(response.statusCode[0] == '1' ?
                      "EARLY" :
@@ -116,7 +123,13 @@ SipDialog.fun(
     this.localAddress.displayName = "";
     this.remoteTarget = response.getTopContactHeader().address.uri;
     this.secure = false; // XXX
-    // XXX copy route set
+    // copy route set in reverse order:
+    var recordRouteHeaders = request.getHeaders("Record-Route", {});
+    if (recordRouteHeaders.length) {
+      this._routeSet = [];
+      for (var i=recordRouteHeaders.length-1; i>=0; --i)
+        this._routeSet.push(recordRouteHeaders[i].QueryInterface(Components.interfaces.zapISipRecordRouteHeader).address);
+    }
     
     this.changeState(response.statusCode[0] == '1' ?
                      "EARLY" :
@@ -143,11 +156,12 @@ SipDialog.obj("listener", null);
 //  attribute zapISipRequestHandler requestHandler;
 SipDialog.obj("requestHandler", null);
 
-//  zapISipNonInviteRC createNonInviteRequestClient();
+//  zapISipNonInviteRC createNonInviteRequestClient(in ACString method);
 SipDialog.fun(
-  function createNonInviteRequestClient() {
+  function createNonInviteRequestClient(method) {
     var rc = SipNonInviteRC.instantiate();
-    rc.init(this.stack, this, this.remoteURI);
+    var request = this.formulateGenericRequest(method);
+    rc.init(this.stack, this, request);
     return rc;
   });
 
@@ -155,7 +169,10 @@ SipDialog.fun(
 SipDialog.fun(
   function createInviteRequestClient() {
     var rc = SipInviteRC.instantiate();
-    rc.init(this.stack, this, this.remoteURI);
+    var request = this.formulateGenericRequest("INVITE");
+    // add mandatory Contact header (rfc3261 8.1.1.8):
+    request.appendHeader(gSyntaxFactory.createContactHeader(this.stack.getContactAddress()));    
+    rc.init(this.stack, this, request);
   });
   
 //  readonly attribute ACString dialogID;
@@ -199,7 +216,8 @@ SipDialog.obj("remoteTarget", null);
 SipDialog.obj("secure", false);
 
 //  void getRouteSet(out unsigned long count,
-//                   [array, retval, size_is(count)] out zapISipURI routeset);
+//                   [array, retval, size_is(count)] out
+//                   zapISipAddress routeset);
 SipDialog.obj("_routeSet", []);
 SipDialog.fun(
   function getRouteSet(count) {
@@ -295,8 +313,23 @@ SipDialog.obj("pendingInviteRC", null);
 
 SipDialog.statefun(
   "EARLY",
-  function confirm(response) {
-    // XXX recompute route set RFC3261 13.2.2.4
+  function confirmUAS(response) {
+    this._dump("Dialog confirmed");
+    this.changeState("CONFIRMED");
+  });
+
+SipDialog.statefun(
+  "EARLY",
+  function confirmUAC(response) {
+    // recompute route set RFC3261 13.2.2.4
+    // We're at the UAC end, so need to copy in reverse order:
+    this._routeSet = [];
+    var recordRouteHeaders = response.getHeaders("Record-Route", {});
+    if (recordRouteHeaders.length) {
+      for (var i=recordRouteHeaders.length-1; i>=0; --i)
+        this._routeSet.push(recordRouteHeaders[i].QueryInterface(Components.interfaces.zapISipRecordRouteHeader).address);
+    }
+    
     this._dump("Dialog confirmed");
     this.changeState("CONFIRMED");
   });
@@ -310,7 +343,17 @@ SipDialog.fun(
       this.listener.notifyDialogTerminated(this);
       this.listener = null;
     }
+    else
+      this._warning("Dialog "+this.dialogID+" ("+this.currentState+") terminated but no listener. Backtrace: "+this._backtrace());
   });
+
+SipDialog.fun(
+  function formulateACK() {
+    return this.formulateGenericRequest("ACK");
+  });
+
+//----------------------------------------------------------------------
+// Implementation helpers:
 
 SipDialog.fun(
   function formulateGenericRequest(method) {
@@ -318,9 +361,39 @@ SipDialog.fun(
     var m = gSyntaxFactory.createRequest();
     // method:
     m.method = method;
+    
     // request uri & route set:
-    // XXX
-    m.requestURI = this.remoteTarget;
+    if (this._routeSet.length) {
+      // we have a pre-existing route. 
+      var lr = this._routeSet[0].uri.QueryInterface(Components.interfaces.zapISipSIPURI).hasURIParameter("lr");
+      var i = 0;
+      if (lr) {
+        // We have a loose router. Set requestURI to remote target and
+        // make sure we construct route headers for all proxies in the
+        // route set:
+        m.requestURI = this.remoteTarget;
+      }
+      else {
+        // We have a strict router. Set requestURI to first URI in
+        // route set, construct route headers for all other proxies
+        // and append remoteTarget:
+        m.requestURI = this._routeSet[0].uri;
+        i = 1;
+      }
+      // construct route headers:
+      for ( var l = this._routeSet.length; i<l; ++i) {
+        m.appendHeader(gSyntaxFactory.createRouteHeader(this._routeSet[i]));
+      }
+      if (!lr) {
+        // Append route header with remoteTarget.
+        var remoteAddress = gSyntaxFactory.createAddress("", this.remoteTarget);
+        m.appendHeader(gSyntaxFactory.createRouteHeader(remoteAddress));
+      }
+    }
+    else {
+      m.requestURI = this.remoteTarget;
+    }
+
     // Via header:
     var viaHeader = gSyntaxFactory.createViaHeader();
     if (this.stack.rport_client)

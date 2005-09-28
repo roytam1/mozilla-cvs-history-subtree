@@ -65,7 +65,7 @@ var _doc_ = {};
 ////////////////////////////////////////////////////////////////////////
 // SipNonInviteRC
 // request client for sending non-invite requests
-// INITIALIZED --> RESOLVING --> CALLING --> TERMINATED
+// INITIALIZED --> RESOLVING --> CALLING --> INITIALIZED
 
 var SipNonInviteRC = makeClass("SipNonInviteRC", SupportsImpl, StateMachine);
 SipNonInviteRC.addInterfaces(Components.interfaces.zapISipNonInviteRC,
@@ -73,48 +73,41 @@ SipNonInviteRC.addInterfaces(Components.interfaces.zapISipNonInviteRC,
                              Components.interfaces.zapISipClientTransactionUser);
 
 SipNonInviteRC.fun(
-  function init(stack, dialog, ToAddress) {
+  function init(stack, dialog, request) {
     this.stack = stack;
     this.dialog = dialog;
-    this.ToAddress = ToAddress;
+    this.request = request;
+
     this.changeState("INITIALIZED");
   });
 
 //----------------------------------------------------------------------
 // zapISipNonInviteRC
 
+//  reaonly attribute zapISipRequest request;
+SipNonInviteRC.obj("request", null);
+
 //  attribute zapISipNonInviteRCListener listener;
 SipNonInviteRC.obj("listener", null);
-
-//  readonly attribute zapISipAddress ToAddress;
-SipNonInviteRC.obj("ToAddress", null);
 
 //  readonly attribute zapISipDialog dialog;
 SipNonInviteRC.obj("dialog", null);
 
-//  zapISipRequest formulateRequest(in ACString method);
+//  void sendRequest();
 SipNonInviteRC.statefun(
   "INITIALIZED",
-  function formulateRequest(method) {
-    var m;
-    if (this.dialog)
-      m = this.dialog.formulateGenericRequest(method);
-    else
-      m = this.stack.formulateGenericRequest(method, this.ToAddress);
+  function sendRequest() {
+    // If this is a BYE request terminate our associated dialog *now*:
+    if (this.dialog &&
+        this.request.method == "BYE" &&
+        this.dialog.dialogState != "TERMINATED") {
+      this.dialog.terminate();
+    }
 
-    return m;
-  });
-
-//  void sendRequest(in zapISipRequest request);
-SipNonInviteRC.statefun(
-  "INITIALIZED",
-  function sendRequest(request) {
-    this.request = request;
     // Asynchronously resolve possible destinations for the request:
     this.changeState("RESOLVING");
-    this.stack.resolver.resolveEndpointsAsync(request.requestURI,
-                                              /*request.getHeaders("Route", {}), */
-                                              this);
+    this.stack.resolver.resolveRequestDestinationsAsync(this.request,
+                                                        this);
   });
 
 //----------------------------------------------------------------------
@@ -134,13 +127,15 @@ SipNonInviteRC.statefun(
   "CALLING",
   function tryNextDestination() {
     if (!this._destinationIterator.hasMore()) {
+      this.changeState("INITIALIZED");
+      
       if (this.listener) {
         // generate a 408 (Request Timeout) to hand to the listener
         // (RFC3261 8.1.3.1):
         var r = this.stack.formulateResponse("408", this.request, this._ToTag);
         this.listener.notifyResponseReceived(this, this.dialog, r);
       }
-      return this.terminate();
+      return;
     }
     // send request to next destination:
     this.request.getTopViaHeader().setParameter("branch",
@@ -154,6 +149,9 @@ SipNonInviteRC.statefun(
       this.request.getCSeqHeader().sequenceNumber =
         ++this.dialog.localSequenceNumber;
     }
+    else {
+      this.request.getCSeqHeader().sequenceNumber += 1;
+    }
     this.stack.transactionManager.executeNonInviteClientTransaction(this.request,
                                                                      this._destinationIterator.getNext(),
                                                                      this);
@@ -166,9 +164,9 @@ SipNonInviteRC.statefun(
 SipNonInviteRC.statefun(
   "CALLING",
   function handleFailureResponse(response) {
+    this.changeState("INITIALIZED");
     if (this.listener)
       this.listener.notifyResponseReceived(this, this.dialog, response);
-    this.terminate();
   });
 
 //  void handleProvisionalResponse(in zapISipResponse response);
@@ -184,9 +182,10 @@ SipNonInviteRC.statefun(
 SipNonInviteRC.statefun(
   "CALLING",
   function handleSuccessResponse(response) {
+    this.changeState("INITIALIZED");
+    
     if (this.listener)
       this.listener.notifyResponseReceived(this, this.dialog, response);
-    this.terminate();
   });
 
 //  void handleTimeout();
@@ -196,30 +195,11 @@ SipNonInviteRC.statefun(
     this.tryNextDestination();
   });
 
-//----------------------------------------------------------------------
-// Implementation helpers
-
-SipNonInviteRC.fun(
-  function terminate() {
-    // make sure we terminate our associated dialog if this is a BYE:
-    if (this.dialog &&
-        this.request.method == "BYE" &&
-        this.dialog.dialogState != "TERMINATED") {
-      this.dialog.terminate();
-    }
-
-    this.changeState("TERMINATED");
-
-    if (this.listener) {
-      this.listener.notifyTerminated(this);
-      this.listener = null;
-    }
-  });
 
 ////////////////////////////////////////////////////////////////////////
 // SipInviteRC
 // request client for sending invite requests
-// INITIALIZED --> RESOLVING --> CALLING --> 2XX_RECEIVED --> TERMINATED
+// INITIALIZED --> RESOLVING --> CALLING --> 2XX_RECEIVED --> INITIALIZED
 
 var SipInviteRC = makeClass("SipInviteRC", SupportsImpl, StateMachine);
 SipInviteRC.addInterfaces(Components.interfaces.zapISipInviteRC,
@@ -227,15 +207,16 @@ SipInviteRC.addInterfaces(Components.interfaces.zapISipInviteRC,
                           Components.interfaces.zapISipClientTransactionUser);
 
 SipInviteRC.fun(
-  function init(stack, dialog, ToAddress) {
+  function init(stack, dialog, request) {
     this.stack = stack;
     this.dialog = dialog;
-    this.ToAddress = ToAddress;
+    this.request = request;
+
     this.changeState("INITIALIZED");
 
     // Array of spawned dialog (for INVITE outside of dialog).
     // dialogs that haven't transitioned to CONFIRMED state will be
-    // terminated in SipInviteRC::terminate()
+    // terminated in SipInviteRC::resetCall()
     this.spawnedDialogs = [];
 
     // Hash of dialogID -> ack sent for the dialog
@@ -257,52 +238,36 @@ SipInviteRC.obj("current_destination", null);
 //----------------------------------------------------------------------
 // zapISipInviteRC
 
+//  attribute zapISipRequest request;
+SipInviteRC.obj("request", null);
+
 //  attribute zapISipInviteRCListener listener;
 SipInviteRC.obj("listener", null);
 
 //  readonly attribute zapISipDialog dialog;
 SipInviteRC. obj("dialog", null);
 
-//  readonly attribute zapISipAddress ToAddress;
-SipInviteRC.obj("ToAddress", null);
-
-//  zapISipRequest formulateInvite();
+//  void sendInvite(in zapISipInviteResponseHandler rh);
 SipInviteRC.statefun(
   "INITIALIZED",
-  function formulateInvite() {
-    var m;
-    if (this.dialog) {
-      // request within dialog
-      m = this.dialog.formulateGenericRequest("INVITE");
-    }
-    else {
-      // request outside of a dialog
-      m = this.stack.formulateGenericRequest("INVITE", this.ToAddress);
-    }
-    // add mandatory Contact header (rfc3261 8.1.1.8):
-    m.appendHeader(gSyntaxFactory.createContactHeader(this.stack.getContactAddress()));
-    return m;
-
-  });
-
-//  void sendInvite(in zapISipRequest request, in zapISipInviteResponseHandler rh);
-SipInviteRC.statefun(
-  "INITIALIZED",
-  function sendInvite(request, rh) {
-    this.request = request;
+  function sendInvite(rh) {
+    // set ourselves as pending invite on the parent dialog (if any),
+    // so that concurrent Invites are dealt with appropriately:
+    if (this.dialog)
+        this.dialog.pendingInviteRC = this;
+    
     this.responsehandler = rh;
     // Asynchronously resolve possible destinations for the request:
     this.changeState("RESOLVING");
-    this.stack.resolver.resolveEndpointsAsync(request.requestURI,
-                                              /*request.getHeaders("Route", {}), */
-                                              this);
+    this.stack.resolver.resolveRequestDestinationsAsync(this.request,
+                                                        this);
   });
 
 //  void cancel();
 SipInviteRC.statefun(
   "*",
   function cancel() {
-    // XXX if the state is 2XX_RECEIVED or TERMINATED it is too late
+    // XXX if the state is 2XX_RECEIVED or INITIALIZED it is too late
     // to cancel. Should we throw an exception in these cases?
     this.cancelled = true;
   });
@@ -317,8 +282,13 @@ SipInviteRC.statefun(
     var req = gSyntaxFactory.createRequest();
     // method:
     req.method = "CANCEL";
-    // request uri & route set XXX:
+    // request uri:
     req.requestURI = this.request.requestURI;
+    // copy Route headers:
+    this.request.getHeaders("Route", {}).forEach(function(v) {
+                                                   req.appendHeader(v);
+                                                 });
+    
     // Via:
     req.appendHeader(this.request.getTopViaHeader());
     // To header:
@@ -362,24 +332,24 @@ SipInviteRC.statefun(
   "CALLING",
   function tryNextDestination() { 
     if (!this._destinationIterator.hasMore()) {
+      this.resetCall();
       if (this.listener) {
         // generate a 408 (Request Timeout) to hand to the listener
         // (RFC3261 8.1.3.1):
         var r = this.stack.formulateResponse("408", this.request, null);
         this.listener.notifyResponseReceived(this, this.dialog, r);
       }
-      this.terminate();
       return;
     }
 
     if (this.cancelled) {
+      this.resetCall();
       if (this.listener) {
         // generate a 487 (Request Terminated) to hand to the listener
         // (RFC3261 9.1):
         var r = this.stack.formulateResponse("487", this.request, null);
         this.listener.notifyResponseReceived(this, this.dialog, r);
       }
-      this.terminate();
       return;
     }
     
@@ -394,6 +364,9 @@ SipInviteRC.statefun(
         this.dialog.localSequenceNumber = 0;
       this.request.getCSeqHeader().sequenceNumber =
         ++this.dialog.localSequenceNumber;
+    }
+    else {
+      this.request.getCSeqHeader().sequenceNumber += 1;
     }
     this.current_destination = this._destinationIterator.getNext();
     this.stack.transactionManager.executeInviteClientTransaction(this.request,
@@ -430,7 +403,7 @@ SipInviteRC.statefun(
              response.getToHeader().getParameter("tag")) {
       // Spawn a new dialog if this is a response !=100 with a 'To'
       // tag and we can't find a matching dialog (RFC3261 12.1):
-      dialog = this.stack.findDialog(constructServerDialogID(response));
+      dialog = this.stack.findDialog(constructClientDialogID(response));
       if (!dialog) {
         // create new early dialog:
         dialog = this.stack.createDialogUAC(this.request, response);
@@ -447,9 +420,10 @@ SipInviteRC.statefun(
 SipInviteRC.statefun(
   "CALLING",
   function handleFailureResponse(response) {
+    this.resetCall();
+    
     if (this.listener)
       this.listener.notifyResponseReceived(this, this.dialog, response);
-    this.terminate();
   });
 
 //  void handleSuccessResponse(in zapISipResponse response);
@@ -484,7 +458,7 @@ SipInviteRC.statefun(
   "2XX_RECEIVED",
   function notify(timer) {
     // stop waiting for further responses:
-    this.terminate();
+    this.resetCall();
   });
 
 //----------------------------------------------------------------------
@@ -502,8 +476,9 @@ SipInviteRC.statefun(
 //----------------------------------------------------------------------
 // Implementation helpers
 
+
 SipInviteRC.fun(
-  function terminate() {
+  function resetCall() {
     // remove ourselves as pending invite & terminate all spawned
     // dialogs that haven't transitioned to CONFIRMED state:
     this.spawnedDialogs.forEach(
@@ -516,28 +491,37 @@ SipInviteRC.fun(
     // was an in-dialog request):
     if (this.dialog)
       this.dialog.pendingInviteRC = null;
-    
-    this.changeState("TERMINATED");
 
-    if (this.listener) {
-      this.listener.notifyTerminated(this);
-      this.listener = null;
+    // reset our cancel state:
+    this.cancelled = false;
+    this.provisional_received = false;
+      
+    // change state to INITIALIZED; we can resend the response again now:
+    this.changeState("INITIALIZED");
+
+    if (this.responsehandler) {
+      this.responsehandler.notifyTerminated(this);
+      this.responsehandler = null;
     }
   });
 
 SipInviteRC.fun(
   function handle2XXResponse(response) {
     // check if we already have a dialog for the given To tag:
-    var dialog = this.stack.findDialog(constructServerDialogID(response));
+    var dialog = this.stack.findDialog(constructClientDialogID(response));
     if (!dialog) {
+      this._dump("Creating new dialog "+constructClientDialogID(response)+
+                 " because there was no early dialog");
       // no -> create new dialog:
       this._assert(!this.dialog, "dialog establishing response for re-invite???");
       dialog = this.stack.createDialogUAC(this.request, response);
       dialog.pendingInviteRC = this;
       this.spawnedDialogs.push(dialog);
     }
-    else if (this.dialog.dialogState == "EARLY") {
-      dialog.confirm(response);
+    else if (dialog.dialogState == "EARLY") {
+      // confirm dialog. this will also recompute the routeset
+      // (RFC3261 13.2.2.4)
+      dialog.confirmUAC(response);
     }
     
     // We need to acknowledge the response.
@@ -550,11 +534,14 @@ SipInviteRC.fun(
         this.listener.notifyResponseReceived(this, dialog, response);
       
       // create an ACK template (RFC3261 13.2.2.4):
-      var ackTemplate = dialog.formulateGenericRequest("ACK");
+      var ackTemplate = dialog.formulateACK();
       // copy sequence number from INVITE:
       ackTemplate.getCSeqHeader().sequenceNumber =
         this.request.getCSeqHeader().sequenceNumber;
-      // XXX copy credentials (RFC3261 13.2.4)
+      // copy credentials (RFC3261 13.2.2.4/22.1):
+      // XXX should we copy?
+      this.request.getHeaders("Authorization", {}).forEach(function(v) { ackTemplate.appendHeader(v); });
+      this.request.getHeaders("Proxy-Authorization", {}).forEach(function(v) { ackTemplate.appendHeader(v); });
 
       // set a new branch id:
       ackTemplate.getTopViaHeader().setParameter("branch",
@@ -587,9 +574,8 @@ SipInviteRC.fun(
       }
     };
     
-    this.stack.resolver.resolveEndpointsAsync(ack.requestURI,
-                                              /* ack.getHeaders("Route", {}),*/
-                                              resolveListener);
+    this.stack.resolver.resolveRequestDestinationsAsync(ack,
+                                                        resolveListener);
   });
 
 
@@ -681,7 +667,6 @@ SipNonInviteRS.fun(
 //  void transactionTerminated(in zapISipServerTransaction transaction);
 SipNonInviteRS.fun(
   function transactionTerminated(transaction) {
-    this.terminate();
   });
 
 //----------------------------------------------------------------------
@@ -690,7 +675,8 @@ SipNonInviteRS.fun(
   function terminate() {
     // if this was a BYE request, we need to terminate our associated
     // dialog:
-    if (this.dialog && this.request.method == "BYE")
+    if (this.dialog && this.request.method == "BYE" &&
+        this.dialog.dialogState != "TERMINATED")
       this.dialog.terminate();
 
     this.changeState("TERMINATED");
@@ -777,7 +763,7 @@ SipInviteRS.statefun(
     if (response.statusCode[0] == "2") {
       this.response = response;
       if (this.dialog.dialogState != "CONFIRMED")
-        this.dialog.confirm(response);
+        this.dialog.confirmUAS(response);
       this.changeState("ACK_PENDING");
       // We need to periodically resend the response until the ACK
       // arrives (RFC3261 13.3.1.4)

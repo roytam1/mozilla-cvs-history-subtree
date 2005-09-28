@@ -41,6 +41,7 @@ interface zapISipRequestHandler;
 interface zapISipNonInviteRC;
 interface zapISipInviteRC;
 interface zapISipURI;
+interface zapISipAddress;
 
 [scriptable, uuid(a3995457-2090-490b-a9dc-b73dfbcac3dd)]
 interface zapISipDialog : nsISupports
@@ -48,7 +49,14 @@ interface zapISipDialog : nsISupports
   attribute zapISipDialogListener listener;
   attribute zapISipRequestHandler requestHandler;
 
-  zapISipNonInviteRC createNonInviteRequestClient();
+  /**
+   * Obtain a request client object for transactionally sending a
+   * NON-INVITE request within this dialog. The
+   * zapISipNonInviteRC::request attribute will be initialized with a
+   * suitable request template for the given method.
+   */
+  zapISipNonInviteRC createNonInviteRequestClient(in ACString method);
+  
   zapISipInviteRC createInviteRequestClient();
 
   /**
@@ -121,10 +129,11 @@ interface zapISipDialog : nsISupports
   readonly attribute boolean secure;
   
   /**
-   * Route set (taken from Record-Route)
+   * Route set (taken from Record-Route header)
    */
   void getRouteSet(out unsigned long count,
-                   [array, retval, size_is(count)] out zapISipURI routeset);
+                   [array, retval, size_is(count)] out
+                   zapISipAddress routeset);
   
   /**
    * "EARLY", "CONFIRMED" or "TERMINATED"

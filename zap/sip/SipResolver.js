@@ -71,11 +71,21 @@ SipResolver.addInterfaces(Components.interfaces.zapISipResolver);
 // zapISipResolver implementation:
 
 SipResolver.fun(
-  function resolveEndpointsAsync(uri, /*routeSet,*/ resolveListener) {
-    // XXX do this properly (rfc3261 8.1.2, rfc3263)
-
+  function resolveRequestDestinationsAsync(request, resolveListener) {
+    var uri;
+    // if we have a route set with a loose router we need to resolve
+    // it, otherwise we resolve the request uri:
+    var topRoute = request.getTopRouteHeader();
+    if (topRoute &&
+        topRoute.address.uri.QueryInterface(Components.interfaces.zapISipSIPURI).hasURIParameter("lr")) 
+      uri = topRoute.address.uri;
+    else
+      uri = request.requestURI;
+    
     // we can only resolve zapISipSIPURIs for the time being:
-    uri.QueryInterface(Components.interfaces.zapISipSIPURI);
+    uri = uri.QueryInterface(Components.interfaces.zapISipSIPURI);
+
+    // XXX do the lookup properly (SRV,NAPTR) (rfc3261 8.1.2, rfc3263)    
     
     var dnsListener = {
       onLookupComplete : function(req, rec, status) {
