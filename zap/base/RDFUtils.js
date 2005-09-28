@@ -270,7 +270,7 @@ PersistentRDFObject.fun(
           var elem = doc.getElementById(a.name);
           if (!elem) return;
           if (elem.tagName == "checkbox") {
-            elem.checked = a.defval;
+            elem.checked = (a.defval == "true");
           }
           else
             elem.value = a.defval;
