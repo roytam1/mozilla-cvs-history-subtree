@@ -1,0 +1,22 @@
+DEPTH		= ../../..
+topsrcdir	= @top_srcdir@
+srcdir		= @srcdir@
+VPATH		= @srcdir@
+
+include $(DEPTH)/config/autoconf.mk
+
+
+MODULE		= zmk
+LIBRARY_NAME	= moz_ccitt_adpcm
+#LIB_IS_C_ONLY   = 1
+FORCE_STATIC_LIB= 1
+
+CSRCS		= \
+		g711.c \
+		$(NULL)
+
+EXPORTS         = \
+		g711.h \
+		$(NULL)
+
+include $(topsrcdir)/config/rules.mk

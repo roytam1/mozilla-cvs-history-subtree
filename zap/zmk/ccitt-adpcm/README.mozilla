@@ -1,0 +1,7 @@
+The Mozilla zap media kit only uses the G711 (ulaw/alaw)
+compression/decompression (file g711.c).
+
+Mozilla-specific changes:
+
+- Added g711.h header
+- Converted types in g711.c to Mozilla PR* types
