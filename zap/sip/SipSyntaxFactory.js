@@ -247,7 +247,7 @@ var PATTERN_GENERIC_PARAM = PATTERN_TOKEN+"(?:"+PATTERN_EQUAL+
                             PATTERN_GEN_VALUE+")?";
 
 // rfc3261 'qvalue'
-var PATTERN_QVALUE = "(?:(?:0(?:\\.\\d{0,3}))|(?:1(?:\\.0{0,3})))";
+var PATTERN_QVALUE = "(?:(?:0(?:\\.\\d{0,3})?)|(?:1(?:\\.0{0,3})?))";
 
 // rfc3261 'delta-seconds'
 var PATTERN_DELTA_SECONDS = "\\d+";
@@ -731,6 +731,19 @@ SipSIPURI.parsedHash(
   REGEXP_URI_HEADER_NAME,
   REGEXP_URI_HEADER_VALUE,
   {});
+
+// boolean equals(in zapISipSIPURI other)
+SipSIPURI.fun(
+  function equals(other) {
+    // compare according to the rules of RFC3261 19.1.4
+    if (this.sips != other.sips) return false;
+    // XXX handle % HEX HEX encoding
+    if (this.userinfo != other.userinfo) return false;
+    if (this.host.toLowerCase() != other.host.toLowerCase()) return false;
+    if (this.port != other.port) return false;
+    // XXX compare URI parameters & headers
+    return true;
+  });
 
 //----------------------------------------------------------------------
 

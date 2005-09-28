@@ -74,4 +74,10 @@ interface zapISipSIPURI : zapISipURI
   void removeHeader(in ACString name);
   void getHeaderNames(out unsigned long count,
                       [retval, array, size_is(count)] out string names);
+
+  /**
+   * Compare this SIP URI to 'other' according to the rules of RFC3261
+   * 19.1.4.
+   */
+  boolean equals(in zapISipSIPURI other);
 };
