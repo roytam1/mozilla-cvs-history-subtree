@@ -78,8 +78,13 @@ SipTransaction.fun(
       newState.enterState(this);
   });
 
-// Initial request that created this transaction:
+// Initial request that created this transaction (initialized by
+// subclasses):
 SipTransaction.obj("initialRequest", null);
+
+// Key to identify this transaction in the client or server pool
+// (initialized by subclasses):
+SipTransaction.obj("key", null);
 
 //----------------------------------------------------------------------
 // nsITimerCallback implementation:
@@ -124,13 +129,13 @@ var SipInviteClientTransaction = makeClass("SipInviteClientTransaction",
 SipInviteClientTransaction.getter(
   "_name_",
   function get_name_() {
-    return "INVITE Client Transaction ("+
-      constructClientTransactionKey(this.initialRequest)+")";
+    return "INVITE Client Transaction ("+this.key+")";
   });
 
 SipInviteClientTransaction.fun(
   function execute(manager, transport, request, endpoint, TU, refresh) {
     this.initialRequest = request;
+    this.key = constructClientTransactionKey(request);
     log("Executing "+this._name_);
     
     this.manager = manager;
@@ -346,13 +351,13 @@ var SipNonInviteClientTransaction = makeClass("SipNonInviteClientTransaction",
 SipNonInviteClientTransaction.getter(
   "_name_",
   function get_name_() {
-    return "NON-INVITE Client Transaction ("+
-      constructClientTransactionKey(this.initialRequest)+")";
+    return "NON-INVITE Client Transaction ("+this.key+")";
   });
 
 SipNonInviteClientTransaction.fun(
   function execute(manager, transport, request, endpoint, TU) {
     this.initialRequest = request;
+    this.key = constructClientTransactionKey(request);
     log("Executing "+this._name_);
     
     this.manager = manager;
@@ -566,13 +571,13 @@ var SipInviteServerTransaction = makeClass("SipInviteServerTransaction",
 SipInviteServerTransaction.getter(
   "_name_",
   function get_name_() {
-    return "INVITE Server Transaction ("+
-      constructServerTransactionKey(this.initialRequest)+")";
+    return "INVITE Server Transaction ("+this.key+")";
   });
 
 SipInviteServerTransaction.fun(
   function execute(manager, transport, request, TU, generate100) {
     this.initialRequest = request;
+    this.key = constructServerTransactionKey(request);
     //XXX examine via header here:
     this.isReliableTransport = false;
     log("Executing "+this._name_);
@@ -761,13 +766,13 @@ var SipNonInviteServerTransaction = makeClass("SipNonInviteServerTransaction",
 SipNonInviteServerTransaction.getter(
   "_name_",
   function get_name_() {
-    return "NON-INVITE Server Transaction ("+
-      constructServerTransactionKey(this.initialRequest)+")";
+    return "NON-INVITE Server Transaction ("+this.key+")";
   });
 
 SipNonInviteServerTransaction.fun(
   function execute(manager, transport, request, TU, response) {
     this.initialRequest = request;
+    this.key = constructServerTransactionKey(request);
     log("Executing "+this._name_);
     
     this.manager = manager;
@@ -1055,28 +1060,22 @@ SipTransactionManager.fun(
 
 SipTransactionManager.fun(
   function registerClientTransaction(transaction) {
-    hashset(this._clientPool,
-            constructClientTransactionKey(transaction.initialRequest),
-            transaction);
+    hashset(this._clientPool, transaction.key, transaction);
   });
 
 SipTransactionManager.fun(
   function unregisterClientTransaction(transaction) {
-    hashdel(this._clientPool,
-            constructClientTransactionKey(transaction.initialRequest));
+    hashdel(this._clientPool, transaction.key);
   });
 
 SipTransactionManager.fun(
   function registerServerTransaction(transaction) {
-    hashset(this._serverPool,
-            constructServerTransactionKey(transaction.initialRequest),
-            transaction);
+    hashset(this._serverPool, transaction.key, transaction);
   });
 
 SipTransactionManager.fun(
   function unregisterServerTransaction(transaction) {
-    hashdel(this._serverPool,
-            constructServerTransactionKey(transaction.initialRequest));
+    hashdel(this._serverPool, transaction.key);
   });
 
 ////////////////////////////////////////////////////////////////////////
