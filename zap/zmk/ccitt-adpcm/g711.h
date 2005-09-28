@@ -10,7 +10,7 @@ extern "C"
 
   PRUint8 linear2ulaw(PRInt32 pcm_val);
   PRInt32 ulaw2linear(PRUint8 u_val);
-  PRUint8 linear2alaw(PRUint32 pcm_val);
+  PRUint8 linear2alaw(PRInt32 pcm_val);
   PRInt32 alaw2linear(PRUint8 a_val);
 
 #ifdef __cplusplus
