@@ -1135,7 +1135,9 @@ nsXULContentBuilder::CreateTemplateAndContainerContents(nsIContent* aElement,
         // The element has a resource; that means that it corresponds
         // to something in the graph, so we need to go to the graph to
         // create its contents.
-        CreateContainerContents(aElement, resource, PR_FALSE, aContainer, aNewIndexInContainer);
+        PRInt32 contentContainerIndex = -1;
+        CreateContainerContents(aElement, resource, PR_FALSE, *aContainer ? nsnull : aContainer, 
+                                *aContainer ? &contentContainerIndex : aNewIndexInContainer);
     }
 
     return NS_OK;
