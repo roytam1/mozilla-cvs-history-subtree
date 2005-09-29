@@ -596,9 +596,11 @@ SipUAStack.fun(
 // XXX distinguish between sip and sips
 SipUAStack.fun(
   function getContactAddress() {
-    var user = (this.FromAddress.uri).QueryInterface(Components.interfaces.zapISipSIPURI).userinfo;
-    var host = this.hostAddress;
-    return gSyntaxFactory.deserializeAddress("sip:"+user+"@"+host);
+    var address = "sip:" + (this.FromAddress.uri).QueryInterface(Components.interfaces.zapISipSIPURI).userinfo;
+    address += "@" + this.hostAddress;
+    if (this.listeningPort != 5060)
+      address += ":" + this.listeningPort;
+    return gSyntaxFactory.deserializeAddress(address);
   });
 
 // Send a response to the given request via a server invite or
