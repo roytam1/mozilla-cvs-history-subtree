@@ -48,22 +48,46 @@ class nsILocalFile;
  * dynamically linked versions of the glue.
  */
 
+struct GREVersionRange {
+    const char *lower;
+    PRBool      lowerInclusive;
+    const char *upper;
+    PRBool      upperInclusive;
+};
+
+struct GREProperty {
+    const char *property;
+    const char *value;
+};
+
 /**
- * Locate the path of a particular version of the GRE.
+ * Locate the path of the xpcom shared library from a GRE with specified
+ * properties.
  * 
- * @param version  The GRE version to search for.
- * @param buffer   A buffer to be filled with the appropriate path. If the
- *                 "local" GRE is specified (via the USE_LOCAL_GRE environment
- *                 variable, for example), this buffer will be set to the empty
- *                 string.
- * @param buflen   The length of buffer. This must be at least
- *                 PATH_MAX/MAXPATHLEN.
+ * @param versions         An array of version ranges: if any version range
+ *                         matches, the GRE is considered acceptable.
+ * @param versionsLength   The length of the versions array.
+ * @param properties       A null-terminated list of GRE property/value pairs
+ *                         which must all be satisfied.
+ * @param propertiesLength Length of the properties array.
+ * @param buffer           A buffer to be filled with the appropriate path. If
+ *                         the "local" GRE is specified (via the USE_LOCAL_GRE
+ *                         environment variable, for example), this buffer
+ *                         will be set to the empty string.
+ * @param buflen           The length of buffer. This must be at least
+ *                         PATH_MAX/MAXPATHLEN.
  * @throws NS_ERROR_FAILURE if an appropriate GRE could not be found.
+ * @note The properties parameter is ignored on macintosh, because of the
+ *       manner in which the XUL frameworks are installed by version.
+ * @note Currently this uses a "first-fit" algorithm, it does not select
+ *       the newest available GRE.
  */
 extern "C" NS_COM_GLUE nsresult
-GRE_GetGREPathForVersion(const char *version,
-                         char *buffer, PRUint32 buflen);
-
+GRE_GetGREPathWithProperties(const GREVersionRange *versions,
+                             PRUint32 versionsLength,
+                             const GREProperty *properties,
+                             PRUint32 propertiesLength,
+                             char *buffer, PRUint32 buflen);
 
 #ifdef XPCOM_GLUE
 
@@ -87,37 +111,27 @@ XPCOMGlueShutdown();
 
 
 /**
- * Locate the path of a compatible GRE. This looks for the GRE version in
+ * Locate the path of the XPCOM shared library of a compatible GRE.
+ * The result of this function is normally passed directly to
+ * XPCOMGlueStartup. This looks for the GRE version in
  * nsBuildID.h, which is generated at build time. Unless you set
  * MOZ_MILESTONE_RELEASE this will probably not be a useful GRE version string.
- * 
- * @return string buffer pointing to the GRE path (without a trailing
- *         directory separator). Callers do not need to free this buffer.
+ *
+ * @return string buffer pointing to the XPCOM DLL path. Callers do
+ *         not need to free this buffer.
+ * @status DEPRECATED - Use GRE_GetGREPathWithProperties
  */
 extern "C" NS_HIDDEN_(char const *)
-GRE_GetGREPath();
+GRE_GetXPCOMPath();
 
 
 /**
- * Locate the path of a compatible GRE. This is returned as an
- * nsILocalFile instead of a char*.
+ * Locate the directory of a compatible GRE as an nsIFile
  *
  * @param _retval   Ordinary XPCOM getter, returns an addrefed interface.
  */
 extern "C" NS_HIDDEN_(nsresult)
 GRE_GetGREDirectory(nsILocalFile* *_retval);
-
-
-/**
- * Locate the path of the XPCOM binary of a compatible GRE.
- * The result of this function is normally passed directly to
- * XPCOMGlueStartup.
- *
- * @return string buffer pointing to the XPCOM DLL path. Callers do
- *         not need to free this buffer.
- */
-extern "C" NS_HIDDEN_(char const *)
-GRE_GetXPCOMPath();
 
 
 /**
