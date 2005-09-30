@@ -3391,16 +3391,24 @@ nsGlobalWindow::Focus()
 
   /*
    * If caller is not chrome and dom.disable_window_flip is true,
-   * prevent setting window.focus() by exiting early
+   * prevent bringing a window to the front if the window is not the
+   * currently active window, but do change the currently focused
+   * window in the focus controller so that focus is in the right
+   * place when the window is activated again.
    */
 
-  if (!CanSetProperty("dom.disable_window_flip")) {
-    return NS_OK;
+  PRBool canFocus = CanSetProperty("dom.disable_window_flip");
+
+  PRBool isActive = PR_FALSE;
+  nsIFocusController *focusController =
+    nsGlobalWindow::GetRootFocusController();
+  if (focusController) {
+    focusController->GetActive(&isActive);
   }
 
   nsCOMPtr<nsIBaseWindow> treeOwnerAsWin;
   GetTreeOwner(getter_AddRefs(treeOwnerAsWin));
-  if (treeOwnerAsWin) {
+  if (treeOwnerAsWin && (canFocus || isActive)) {
     PRBool isEnabled = PR_TRUE;
     if (NS_SUCCEEDED(treeOwnerAsWin->GetEnabled(&isEnabled)) && !isEnabled) {
       NS_WARNING( "Should not try to set the focus on a disabled window" );
@@ -3419,7 +3427,7 @@ nsGlobalWindow::Focus()
   }
 
   nsresult result = NS_OK;
-  if (presShell) {
+  if (presShell && (canFocus || isActive)) {
     nsIViewManager* vm = presShell->GetViewManager();
     if (vm) {
       nsCOMPtr<nsIWidget> widget;
@@ -3430,8 +3438,6 @@ nsGlobalWindow::Focus()
     }
   }
   else {
-    nsIFocusController *focusController =
-      nsGlobalWindow::GetRootFocusController();
     if (focusController) {
       focusController->SetFocusedWindow(this);
     }
