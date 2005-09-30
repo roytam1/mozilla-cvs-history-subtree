@@ -78,9 +78,6 @@ public:
   // nsIDOMHTMLObjectElement
   NS_DECL_NSIDOMHTMLOBJECTELEMENT
 
-  // nsIContent
-  virtual PRBool IsFocusable(PRInt32 *aTabIndex = nsnull);
-
   // Overriden nsIFormControl methods
   NS_IMETHOD_(PRInt32) GetType() const { return NS_FORM_OBJECT; }
   NS_IMETHOD Reset();
@@ -172,18 +169,6 @@ nsHTMLObjectElement::GetForm(nsIDOMHTMLFormElement** aForm)
   return nsGenericHTMLFormElement::GetForm(aForm);
 }
 
-PRBool
-nsHTMLObjectElement::IsFocusable(PRInt32 *aTabIndex)
-{
-  if (!nsGenericHTMLElement::IsFocusable(aTabIndex)) {
-    return PR_FALSE;
-  }
-  if (aTabIndex && (sTabFocusModel & eTabFocus_formElementsMask) == 0) {
-    *aTabIndex = -1;
-  }
-  return PR_TRUE;
-}
-
 // nsIFormControl
 
 NS_IMETHODIMP
@@ -263,7 +248,7 @@ NS_IMPL_STRING_ATTR(nsHTMLObjectElement, Height, height)
 NS_IMPL_INT_ATTR(nsHTMLObjectElement, Hspace, hspace)
 NS_IMPL_STRING_ATTR(nsHTMLObjectElement, Name, name)
 NS_IMPL_STRING_ATTR(nsHTMLObjectElement, Standby, standby)
-NS_IMPL_INT_ATTR_DEFAULT_VALUE(nsHTMLObjectElement, TabIndex, tabindex, 0)
+NS_IMPL_INT_ATTR(nsHTMLObjectElement, TabIndex, tabindex)
 NS_IMPL_STRING_ATTR(nsHTMLObjectElement, Type, type)
 NS_IMPL_STRING_ATTR(nsHTMLObjectElement, UseMap, usemap)
 NS_IMPL_INT_ATTR(nsHTMLObjectElement, Vspace, vspace)
