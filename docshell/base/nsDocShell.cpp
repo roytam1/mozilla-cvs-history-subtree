@@ -8317,16 +8317,8 @@ nsDocShell::SetCanvasHasFocus(PRBool aCanvasHasFocus)
     frame = frame->GetParent();
     if (frame) {
       nsICanvasFrame* canvasFrame;
-      if (NS_SUCCEEDED(frame->QueryInterface(NS_GET_IID(nsICanvasFrame), (void**)&canvasFrame))) {
-        canvasFrame->SetHasFocus(aCanvasHasFocus);
-
-        nsIViewManager* vm = presShell->GetViewManager();
-        if (vm) {
-          vm->UpdateAllViews(NS_VMREFRESH_NO_SYNC);
-        }
-
-        return NS_OK;
-      }
+      if (NS_SUCCEEDED(frame->QueryInterface(NS_GET_IID(nsICanvasFrame), (void**)&canvasFrame)))
+        return canvasFrame->SetHasFocus(aCanvasHasFocus);
     }
   }
   return NS_ERROR_FAILURE;
