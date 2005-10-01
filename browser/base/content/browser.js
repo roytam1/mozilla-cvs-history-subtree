@@ -6097,7 +6097,7 @@ var FeedHandler = {
         feeds = browserForLink.feeds;
       var wrapper = event.target;
       feeds.push({ href: wrapper.href,
-                   type: eType,
+                   type: etype,
                    title: wrapper.title});
       browserForLink.feeds = feeds;
       if (browserForLink == gBrowser || browserForLink == gBrowser.mCurrentBrowser) {
