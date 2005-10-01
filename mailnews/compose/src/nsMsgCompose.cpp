@@ -3171,10 +3171,14 @@ nsMsgComposeSendListener::RemoveCurrentDraftMessage(nsIMsgCompose *compObj, PRBo
     // Reset draft (uid) url with the new uid.
     if (msgFolder && newUid != nsMsgKey_None)
     {
-      rv = msgFolder->GenerateMessageURI(newUid, getter_Copies(newDraftIdURL));
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      compFields->SetDraftId(newDraftIdURL.get());
+      PRUint32 folderFlags;
+      msgFolder->GetFlags(&folderFlags);
+      if (folderFlags & MSG_FOLDER_FLAG_DRAFTS)
+      {
+        rv = msgFolder->GenerateMessageURI(newUid, getter_Copies(newDraftIdURL));
+        NS_ENSURE_SUCCESS(rv, rv);
+        compFields->SetDraftId(newDraftIdURL.get());
+      }
     }
   }
   return rv;
