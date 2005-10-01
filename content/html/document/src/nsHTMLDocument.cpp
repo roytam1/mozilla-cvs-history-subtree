@@ -1928,6 +1928,9 @@ nsHTMLDocument::OpenCommon(const nsACString& aContentType, PRBool aReplace)
   nsCOMPtr<nsIContent> root(mRootContent);
 
   if (root) {
+    PRInt32 rootIndex = mChildren.IndexOfChild(mRootContent);
+    NS_ASSERTION(rootIndex >= 0, "Root must be in list!");
+    
     PRUint32 count = root->GetChildCount();
 
     // Remove all the children from the root.
@@ -1949,7 +1952,7 @@ nsHTMLDocument::OpenCommon(const nsACString& aContentType, PRBool aReplace)
     }
 
     // Remove the root from the childlist
-    mChildren.RemoveObject(root);
+    mChildren.RemoveChildAt(rootIndex);
 
     mRootContent = nsnull;
   }
@@ -1972,7 +1975,7 @@ nsHTMLDocument::OpenCommon(const nsACString& aContentType, PRBool aReplace)
     // frames for the root element and the scrollbars work as expected
     // (since the document in the root element was never set to null)
 
-    mChildren.AppendObject(root);
+    mChildren.AppendChild(root);
     mRootContent = root;
   }
 
