@@ -1520,6 +1520,7 @@ nsJSContext::BindCompiledEventHandler(nsISupports* aTarget, void *aScope,
                                       nsIAtom *aName,
                                       void *aHandler)
 {
+  NS_PRECONDITION(aHandler, "Null handler param");
   NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
 
   const char *charName = AtomToEventHandlerName(aName);
@@ -1554,11 +1555,11 @@ nsJSContext::BindCompiledEventHandler(nsISupports* aTarget, void *aScope,
   }
 
   // Make sure the handler function is parented by its event target object
-  //if (funobj && ::JS_GetParent(mContext, funobj) != target) {
+  if (funobj) { // && ::JS_GetParent(mContext, funobj) != target) {
     funobj = ::JS_CloneFunctionObject(mContext, funobj, target);
     if (!funobj)
       rv = NS_ERROR_OUT_OF_MEMORY;
-  //}
+  }
 
   if (NS_SUCCEEDED(rv) &&
       !::JS_DefineProperty(mContext, target, charName,
@@ -3093,7 +3094,7 @@ NS_IMPL_RELEASE(nsJSArgArray)
 nsresult
 nsJSArgArray::GetArgs(PRUint32 *argc, jsval **argv)
 {
-    if (*mArgv) {
+    if (!*mArgv) {
         NS_WARNING("nsJSArgArray has no argv!");
         return NS_ERROR_UNEXPECTED;
     }
