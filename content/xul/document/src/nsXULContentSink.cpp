@@ -1088,7 +1088,7 @@ XULContentSinkImpl::OpenRoot(const PRUnichar** aAttributes,
     PRUint32 i;
     for (i=0;i<aAttrLen;i++) {
         const nsDependentString key(aAttributes[i*2]);
-        if (key.EqualsLiteral("scripttype")) {
+        if (key.EqualsLiteral("script-type")) {
             const nsDependentString value(aAttributes[i*2+1]);
             if (!value.IsEmpty()) {
                 nsCOMPtr<nsILanguageRuntime> runtime;
