@@ -50,16 +50,62 @@ class nsIDocShell;
 class nsIDOMWindowInternal;
 class nsIScriptGlobalObjectOwner;
 class nsIArray;
-struct JSObject;
+class nsScriptErrorEvent;
+class nsIScriptGlobalObject;
+enum nsEventStatus;
+struct JSObject; // kill me!
 
-// {6E7EF978-47D0-47c9-9649-CDCDB1E4CCEC}
+// Some helpers for working with integer "language IDs", and specifically for
+// working with arrays of such objects.  For example, it is common for
+// implementations supporting multiple script languages to keep each
+// language's nsIScriptContext in an array indexed by the language ID.
+
+// Implementation note: We always ignore nsIProgrammingLanguage::UNKNOWN and
+// nsIProgrammingLanguage::CPLUSPLUS - this gives javascript slot 0.  We also
+// have no need to go all the way to nsIProgrammingLanguage::MAX; restricting
+// the upper bound to reduce the number of bits we need may end up useful.
+
+#define NS_SL_FIRST nsIProgrammingLanguage::JAVASCRIPT
+// last is kinda arbitrary.
+#define NS_SL_LAST (nsIProgrammingLanguage::JAVASCRIPT+3)
+
+// Use to declare the array size
+#define NS_SL_ARRAY_UBOUND (NS_SL_LAST-NS_SL_FIRST+1)
+
+// Is a language ID valid?
+#define NS_SL_VALID(langID) (langID >= NS_SL_FIRST && langID <= NS_SL_LAST)
+
+// Return an index for a given ID.
+#define NS_SL_INDEX(langID) (langID-NS_SL_FIRST)
+
+// Create a 'for' loop iterating over all possible language IDs (*not* indexes)
+#define NS_SL_FOR_ID(varName) \
+          for (PRUint32 varName=NS_SL_FIRST;varName<=NS_SL_LAST;varName++)
+
+// Create a 'for' loop iterating over all indexes (when you don't need to know
+// what language it is)
+#define NS_SL_FOR_INDEX(varName) \
+          for (PRUint32 varName=0;varName<=NS_SL_INDEX(NS_SL_LAST);varName++)
+
+// A helper function for nsIScriptGlobalObject implementations to use
+// when handling a script error.  Generally called by the global when a context
+// notifies it of an error via nsIScriptGlobalObject::HandleScriptError.
+// Returns PR_TRUE if HandleDOMEvent was actually called, in which case
+// aStatus will be filled in with the status.
+PRBool
+NS_HandleScriptError(nsIScriptGlobalObject *aScriptGlobal,
+                     nsScriptErrorEvent *aErrorEvent,
+                     nsEventStatus *aStatus);
+
+
 #define NS_ISCRIPTGLOBALOBJECT_IID \
-{ 0x6e7ef978, 0x47d0, 0x47c9, \
-{ 0x96, 0x49, 0xcd, 0xcd, 0xb1, 0xe4, 0xcc, 0xec } }
+{ /* {6E7EF978-47D0-47c9-9649-CDCDB1E4CCEC} */ \
+  0x6e7ef978, 0x47d0, 0x47c9, \
+  { 0x96, 0x49, 0xcd, 0xcd, 0xb1, 0xe4, 0xcc, 0xec } }
 
 /**
- * The JavaScript specific global object. This often used to store
- * per-window global state.
+ * The global object which keeps a script context for each supported script
+ * language. This often used to store per-window global state.
  */
 
 class nsIScriptGlobalObject : public nsISupports
@@ -145,6 +191,13 @@ public:
    * an array of args as appropriate for that language.
     */
   virtual nsresult SetNewArguments(nsIArray *aArguments) = 0;
+
+  /** Handle a script error.  Generally called by a script context.
+   */
+  virtual nsresult HandleScriptError(nsScriptErrorEvent *aErrorEvent,
+                                     nsEventStatus *aEventStatus) {
+    return NS_HandleScriptError(this, aErrorEvent, aEventStatus);
+  }
 };
 
 #endif

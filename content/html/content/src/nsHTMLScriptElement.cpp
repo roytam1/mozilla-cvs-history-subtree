@@ -58,7 +58,7 @@
 #include "nsIScriptEventHandler.h"
 #include "nsIDOMDocument.h"
 #include "nsIArray.h"
-
+#include "nsDOMJSUtils.h"
 
 //
 // Helper class used to support <SCRIPT FOR=object EVENT=handler ...>
@@ -298,15 +298,17 @@ nsHTMLScriptEventHandler::Invoke(nsISupports *aTargetObject,
     return rv;
   }
 
+  // Create an nsIArray for the args (the JS context will efficiently
+  // re-fetch the jsvals from this object)
+  nsCOMPtr<nsIArray> argarray;
+  rv = NS_CreateJSArgv(aArgCount, (jsval *)aArgs, getter_AddRefs(argarray));
+  if (NS_FAILED(rv))
+    return rv;
+
   // Invoke the event handler script...
-  // eeek - jsval <-> nsISupports???
-  NS_ERROR("HTML script args are being ignored");
-  nsIArray *arg = nsnull;
-  nsISupports *ret = nsnull;
-  
-  
+  nsCOMPtr<nsISupports> ret;
   return scriptContext->CallEventHandler(aTargetObject, scope, funcObject,
-                                         arg, &ret);
+                                         argarray, getter_AddRefs(ret));
 }
 
 

@@ -47,6 +47,7 @@
 #include "nsGUIEvent.h"
 #include "nsContentUtils.h"
 #include "nsArray.h"
+#include "nsSupportsPrimitives.h"
 
 
 /*
@@ -87,10 +88,7 @@ nsJSEventListener::HandleEvent(nsIDOMEvent* aEvent)
 {
   nsresult rv;
   nsCOMPtr<nsIArray> iargv;
-  jsval arg;
-  jsval *argv = &arg;
   PRInt32 argc = 0;
-  void *stackPtr; // For JS_[Push|Pop]Arguments()
   nsAutoString eventString;
   // XXX This doesn't seem like the correct context on which to execute
   // the event handler. Might need to get one from the JS thread context
@@ -138,13 +136,35 @@ nsJSEventListener::HandleEvent(nsIDOMEvent* aEvent)
     if (event->message == NS_SCRIPT_ERROR) {
       nsScriptErrorEvent *scriptEvent =
         NS_STATIC_CAST(nsScriptErrorEvent*, event);
+      // Create a temp argv for the error event.
+      nsCOMPtr<nsIMutableArray> tempargv;
+      rv = NS_NewArray(getter_AddRefs(tempargv));
+      NS_ENSURE_SUCCESS(rv, rv);
+      // Append the event args.
+      nsCOMPtr<nsISupportsString>
+          errorMsg(do_CreateInstance(NS_SUPPORTS_STRING_CONTRACTID, &rv));
+      NS_ENSURE_SUCCESS(rv, rv);
+      errorMsg->SetData(nsAutoString(scriptEvent->errorMsg));
+      rv = tempargv->AppendElement(errorMsg, PR_FALSE);
+      NS_ENSURE_SUCCESS(rv, rv);
+      // filename
+      nsCOMPtr<nsISupportsString>
+          fileName(do_CreateInstance(NS_SUPPORTS_STRING_CONTRACTID, &rv));
+      NS_ENSURE_SUCCESS(rv, rv);
+      fileName->SetData(nsAutoString(scriptEvent->fileName));
+      rv = tempargv->AppendElement(fileName, PR_FALSE);
+      NS_ENSURE_SUCCESS(rv, rv);
+      // line number
+      nsCOMPtr<nsISupportsPRUint32>
+          lineNr(do_CreateInstance(NS_SUPPORTS_PRUINT32_CONTRACTID, &rv));
+      NS_ENSURE_SUCCESS(rv, rv);
+      lineNr->SetData(scriptEvent->lineNr);
+      rv = tempargv->AppendElement(lineNr, PR_FALSE);
+      NS_ENSURE_SUCCESS(rv, rv);
+      // And set the real argv
+      iargv = do_QueryInterface(tempargv);
 
-      argv = ::JS_PushArguments(cx, &stackPtr, "WWi", scriptEvent->errorMsg,
-                                scriptEvent->fileName, scriptEvent->lineNr);
-      NS_ENSURE_TRUE(argv, NS_ERROR_OUT_OF_MEMORY);
-      argc = 3;
       handledScriptError = PR_TRUE;
-      NS_ERROR("nsJSEventListener ignoring args!");
     }
   }
 
@@ -163,10 +183,6 @@ nsJSEventListener::HandleEvent(nsIDOMEvent* aEvent)
   jsval rval = JSVAL_VOID;
   rv = mContext->CallEventHandler(mTarget, mScopeObject, funcval, iargv,
                                   getter_AddRefs(irv));
-
-  if (argv != &arg) {
-    ::JS_PopArguments(cx, stackPtr);
-  }
 
   if (NS_SUCCEEDED(rv)) {
     if (eventString.EqualsLiteral("onbeforeunload")) {

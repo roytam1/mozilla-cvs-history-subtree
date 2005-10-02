@@ -492,10 +492,10 @@ nsGlobalWindow::SetLanguageContext(PRUint32 lang_id, nsIScriptContext *aScriptCo
 {
   nsresult rv;
   
-  PRBool ok = lang_id > nsIProgrammingLanguage::UNKNOWN && lang_id <= nsIProgrammingLanguage::MAX;
+  PRBool ok = NS_SL_VALID(lang_id);
   NS_ASSERTION(ok, "Invalid programming language ID requested");
   NS_ENSURE_TRUE(ok, NS_ERROR_INVALID_ARG);
-  PRUint32 lang_ndx = lang_id - 1;
+  PRUint32 lang_ndx = NS_SL_INDEX(lang_id);
 
 //  NS_ASSERTION(IsOuterWindow(), "Uh, SetLanguageContext() called on inner window!");
 // XXXmarkh - the above assertion fails when a new language (ie, not JS) is first
@@ -568,10 +568,10 @@ nsGlobalWindow::EnsureScriptEnvironment(PRUint32 aLangID)
 {
     nsresult rv;
 
-    PRBool ok = aLangID > nsIProgrammingLanguage::UNKNOWN && aLangID <= nsIProgrammingLanguage::MAX;
+    PRBool ok = NS_SL_VALID(aLangID);
     NS_ASSERTION(ok, "Invalid programming language ID requested");
     NS_ENSURE_TRUE(ok, NS_ERROR_INVALID_ARG);
-    PRUint32 lang_ndx = aLangID - 1;
+    PRUint32 lang_ndx = NS_SL_INDEX(aLangID);
 
     if (mLanguageGlobals[lang_ndx])
         return NS_OK; // already initialized for this language.
@@ -593,11 +593,11 @@ nsGlobalWindow::GetLanguageContext(PRUint32 lang)
 {
   FORWARD_TO_OUTER(GetLanguageContext, (lang), nsnull);
 
-  PRBool ok = lang > nsIProgrammingLanguage::UNKNOWN && lang <= nsIProgrammingLanguage::MAX;
+  PRBool ok = NS_SL_VALID(lang);
   NS_ASSERTION(ok, "Invalid programming language ID requested");
   NS_ENSURE_TRUE(ok, nsnull);
 
-  PRUint32 lang_ndx = lang - 1;
+  PRUint32 lang_ndx = NS_SL_INDEX(lang);
 
   // for now we are still storing the JS versions in members.
   if (lang == nsIProgrammingLanguage::JAVASCRIPT) {
@@ -611,11 +611,11 @@ nsGlobalWindow::GetLanguageContext(PRUint32 lang)
 void *
 nsGlobalWindow::GetLanguageGlobal(PRUint32 lang)
 {
-  PRBool ok = lang > nsIProgrammingLanguage::UNKNOWN && lang <= nsIProgrammingLanguage::MAX;
+  PRBool ok = NS_SL_VALID(lang);
   NS_ASSERTION(ok, "Invalid programming language ID requested");
   NS_ENSURE_TRUE(ok, nsnull);
 
-  PRUint32 lang_ndx = lang - 1;
+  PRUint32 lang_ndx = NS_SL_INDEX(lang);
 
   // for now we are still storing the JS versions in members.
   if (lang == nsIProgrammingLanguage::JAVASCRIPT) {
@@ -1157,7 +1157,7 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
 
         mInnerWindowHolder->GetJSObject(&newInnerWindow->mJSObject);
         // ack - this sucks :(
-        newInnerWindow->mLanguageGlobals[nsIProgrammingLanguage::JAVASCRIPT-1] = newInnerWindow->mJSObject;
+        newInnerWindow->mLanguageGlobals[NS_SL_INDEX(nsIProgrammingLanguage::JAVASCRIPT)] = newInnerWindow->mJSObject;
       }
 
       if (currentInner && currentInner->mJSObject) {
@@ -1440,9 +1440,9 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
     mContext->GC();
 
     // force release of all script contexts now.
-    NS_ASSERTION(mContext == mLanguageContexts[nsIProgrammingLanguage::JAVASCRIPT-1],
+    NS_ASSERTION(mContext == mLanguageContexts[NS_SL_INDEX(nsIProgrammingLanguage::JAVASCRIPT)],
                  "Contexts confused");
-    for (PRUint32 lang_ndx=0;lang_ndx < nsIProgrammingLanguage::MAX; lang_ndx++) {
+    NS_SL_FOR_INDEX(lang_ndx) {
       if (mLanguageContexts[lang_ndx]) {
         mLanguageContexts[lang_ndx]->SetOwner(nsnull);
         mLanguageContexts[lang_ndx] = nsnull;
@@ -1729,7 +1729,7 @@ nsGlobalWindow::HandleDOMEvent(nsPresContext* aPresContext, nsEvent* aEvent,
 void
 nsGlobalWindow::OnFinalize()
 {
-  for (PRUint32 lang_ndx=0;lang_ndx < nsIProgrammingLanguage::MAX; lang_ndx++) {
+  NS_SL_FOR_INDEX(lang_ndx) {
     if (mLanguageContexts[lang_ndx]) {
       mLanguageContexts[lang_ndx]->FinalizeClasses(mLanguageGlobals[lang_ndx]);
       // xxxmarkh - should be no need to reset mLanguageContexts[] as it is an
@@ -1771,13 +1771,18 @@ nsGlobalWindow::SetNewArguments(nsIArray *aArguments)
 
   nsGlobalWindow *currentInner = GetCurrentInnerWindowInternal();
 
-  jsval args = OBJECT_TO_JSVAL(aArguments);
   nsresult rv;
 
   // todo: work out the best way to get this to *all* contexts?
-  if (currentInner && currentInner->mJSObject) {
-    rv = mContext->SetProperty(currentInner->mJSObject, "arguments", aArguments);
-    NS_ENSURE_SUCCESS(rv, rv);
+  if (currentInner) {
+    NS_SL_FOR_ID(langID) {
+      void *glob = currentInner->GetLanguageGlobal(langID);
+      nsIScriptContext *ctx = GetLanguageContext(langID);
+      if (glob && ctx) {
+        rv = ctx->SetProperty(glob, "arguments", aArguments);
+        NS_ENSURE_SUCCESS(rv, rv);
+      }
+    }
   }
 
   // Hold on to the arguments so that we can re-set them once the next
@@ -4388,7 +4393,6 @@ nsGlobalWindow::OpenDialog(nsIDOMWindow** _retval)
   ncc->GetArgvPtr(&argv);
 
   if (argc > 0) {
-    NS_ERROR("argv is being ignored!!!!");
     nsJSUtils::ConvertJSValToString(url, cx, argv[0]);
 
     if (argc > 1) {
@@ -4399,8 +4403,13 @@ nsGlobalWindow::OpenDialog(nsIDOMWindow** _retval)
       }
     }
   }
+  // Strip the url, name and options from the args seen by scripts.
+  PRUint32 argOffset = min(argc, 3);
+  nsCOMPtr<nsIArray> argvArray;
+  rv = NS_CreateJSArgv(argc-argOffset, argv+argOffset, getter_AddRefs(argvArray));
+  NS_ENSURE_SUCCESS(rv, rv);
 
-  return OpenInternal(url, name, options, PR_TRUE, nsnull, nsnull,
+  return OpenInternal(url, name, options, PR_TRUE, argvArray, nsnull,
                       _retval);
 }
 
@@ -5837,29 +5846,11 @@ nsGlobalWindow::OpenInternal(const nsAString& aUrl, const nsAString& aName,
         // dialog is open.
         nsAutoPopupStatePusher popupStatePusher(openAbused, PR_TRUE);
 
-        PRUint32 argc = 0;
-        if (argv)
-            argv->GetLength(&argc);
-        if (argc) {
+        if (argv) {
           nsCOMPtr<nsPIWindowWatcher> pwwatch(do_QueryInterface(wwatch));
           if (pwwatch) {
-            // Remove the first 3 args - the rest are the args as seen by scripts.
-            // Surely there is a better way to do this?  Apparently no
-            // "Clone" method like nsISupportsArray?
-            nsCOMPtr<nsIMutableArray> tempargv;
-            rv = NS_NewArray(getter_AddRefs(tempargv));
-            NS_ENSURE_SUCCESS(rv, rv);
-            NS_ENSURE_TRUE(tempargv != nsnull, NS_ERROR_OUT_OF_MEMORY);
-            unsigned long i;
-            for (i=3;i<argc;i++) {
-                nsCOMPtr<nsISupports> arg;
-                rv = argv->QueryElementAt(i, NS_GET_IID(nsISupports), getter_AddRefs(arg));
-                NS_ENSURE_SUCCESS(rv, rv);
-                rv = tempargv->AppendElement(arg, PR_FALSE);
-                NS_ENSURE_SUCCESS(rv, rv);
-            }
             rv = pwwatch->OpenWindowJS(this, url.get(), name_ptr, options_ptr,
-                                       aDialog, tempargv,
+                                       aDialog, argv,
                                        getter_AddRefs(domReturn));
           } else {
             NS_ERROR("WindowWatcher service not a nsPIWindowWatcher!");
@@ -6317,12 +6308,14 @@ nsGlobalWindow::RunTimeout(nsTimeout *aTimeout)
       timeout->mArgv[timeout->mArgc] = INT_TO_JSVAL((jsint) lateness);
 
       nsCOMPtr<nsISupports> dummy;
-      // Fix nsISupports -> argv
-      NS_ASSERTION(timeout->mArgc == 0, "Event firing ignoring args");
+      nsCOMPtr<nsIArray> argv;
+      if NS_FAILED(NS_CreateJSArgv(timeout->mArgc, timeout->mArgv,
+                                   getter_AddRefs(argv)))
+        return;
       nsCOMPtr<nsISupports> me(NS_STATIC_CAST(nsIDOMWindow *, this));
       scx->CallEventHandler(me,
                             GetLanguageGlobal(nsIProgrammingLanguage::JAVASCRIPT),
-                            timeout->mFunObj, nsnull, getter_AddRefs(dummy));
+                            timeout->mFunObj, argv, getter_AddRefs(dummy));
     }
 
     --mTimeoutFiringDepth;

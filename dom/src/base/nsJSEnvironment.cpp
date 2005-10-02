@@ -195,6 +195,39 @@ private:
   JSContext *mContext;
 };
 
+// A utility function for script languages to call.  Although it looks small,
+// the use of nsIDocShell and nsPresContext triggers a huge number of
+// dependencies that most languages would not otherwise need.
+// XXXmarkh - This function is mis-placed!
+PRBool
+NS_HandleScriptError(nsIScriptGlobalObject *aScriptGlobal,
+                     nsScriptErrorEvent *aErrorEvent,
+                     nsEventStatus *aStatus)
+{
+  PRBool called = PR_FALSE;
+  nsIDocShell *docShell = aScriptGlobal->GetDocShell();
+  if (docShell) {
+    nsCOMPtr<nsPresContext> presContext;
+    docShell->GetPresContext(getter_AddRefs(presContext));
+
+    static PRInt32 errorDepth; // Recursion prevention
+    ++errorDepth;
+    
+    if (presContext && errorDepth < 2) {
+      // HandleDOMEvent() must be synchronous for the recursion block
+      // (errorDepth) to work.
+      aScriptGlobal->HandleDOMEvent(presContext, aErrorEvent, nsnull,
+                                    NS_EVENT_FLAG_INIT, aStatus);
+      called = PR_TRUE;
+    }
+  }
+  return called;
+}
+
+// NOTE: This function could be refactored to use the above.  The only reason
+// it has not been done is that the code below only fills the error event
+// after it has a good nsPresContext - whereas using the above function
+// would involve always filling it.  Is that a concern?
 void JS_DLL_CALLBACK
 NS_ScriptErrorReporter(JSContext *cx,
                        const char *message,
@@ -1941,6 +1974,14 @@ nsJSContext::ConvertSupportsTojsvals(nsISupports *aArgs,
 {
   nsresult rv = NS_OK;
 
+  // If the array implements nsIJSArgArray, just grab the values directly.
+  nsCOMPtr<nsIJSArgArray> fastArray = do_QueryInterface(aArgs);
+  if (fastArray != nsnull) {
+    *aMarkp = nsnull;
+    return fastArray->GetArgs(aArgc, aArgv);
+  }
+  // Take the slower path converting each item.
+
   *aArgv = nsnull;
   *aArgc = 0;
   *aMarkp = nsnull;
@@ -3001,3 +3042,95 @@ nsresult NS_CreateJSRuntime(nsILanguageRuntime **aRuntime)
     return NS_OK;
 }
 
+// A fast-array class for JS.  This class supports both nsIJSScriptArray and
+// nsIArray.  If it is JS itself providing and consuming this class, all work
+// can be done via nsIJSScriptArray, and avoid the conversion of elements
+// to/from nsISupports.
+// When consumed by non-JS (eg, another script language), conversion is done
+// on-the-fly.
+class nsJSArgArray : public nsIJSArgArray, public nsIArray {
+public:
+  nsJSArgArray(PRUint32 argc, jsval *argv);
+  ~nsJSArgArray();
+  // nsISupports
+  NS_DECL_ISUPPORTS
+
+  // nsIArray
+  NS_DECL_NSIARRAY
+
+  // nsIJSArgArray
+  nsresult GetArgs(PRUint32 *argc, jsval **argv);
+protected:
+    jsval *mArgv;
+    PRUint32 mArgc;
+};
+
+nsJSArgArray::nsJSArgArray(PRUint32 argc, jsval *argv) :
+    mArgc(argc),
+    mArgv(argv)
+{
+    // gc??
+}
+
+nsJSArgArray::~nsJSArgArray()
+{
+}
+
+NS_DECL_CLASSINFO(nsJSArgArray)
+
+// QueryInterface implementation for nsJSArgArray
+NS_INTERFACE_MAP_BEGIN(nsJSArgArray)
+  NS_INTERFACE_MAP_ENTRY(nsIArray)
+  NS_INTERFACE_MAP_ENTRY(nsIJSArgArray)
+  //NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIJSArgArray)
+  NS_IMPL_QUERY_CLASSINFO(nsJSArgArray)
+NS_INTERFACE_MAP_END
+NS_IMPL_CI_INTERFACE_GETTER1(nsJSArgArray, nsIArray)
+
+NS_IMPL_ADDREF(nsJSArgArray)
+NS_IMPL_RELEASE(nsJSArgArray)
+
+nsresult
+nsJSArgArray::GetArgs(PRUint32 *argc, jsval **argv)
+{
+    if (*mArgv) {
+        NS_WARNING("nsJSArgArray has no argv!");
+        return NS_ERROR_UNEXPECTED;
+    }
+    *argv = mArgv;
+    *argc = mArgc;
+    return NS_OK;
+}
+
+// nsIArray impl
+NS_IMETHODIMP nsJSArgArray::GetLength(PRUint32 *aLength)
+{
+    *aLength = mArgc;
+    return NS_OK;
+}
+
+/* void queryElementAt (in unsigned long index, in nsIIDRef uuid, [iid_is (uuid), retval] out nsQIResult result); */
+NS_IMETHODIMP nsJSArgArray::QueryElementAt(PRUint32 index, const nsIID & uuid, void * *result)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* unsigned long indexOf (in unsigned long startIndex, in nsISupports element); */
+NS_IMETHODIMP nsJSArgArray::IndexOf(PRUint32 startIndex, nsISupports *element, PRUint32 *_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* nsISimpleEnumerator enumerate (); */
+NS_IMETHODIMP nsJSArgArray::Enumerate(nsISimpleEnumerator **_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+nsresult NS_CreateJSArgv(PRUint32 argc, jsval *argv, nsIArray **aArray)
+{
+    nsJSArgArray *ret = new nsJSArgArray(argc, argv);
+    if (ret == nsnull)
+        return NS_ERROR_OUT_OF_MEMORY;
+    return ret->QueryInterface(NS_GET_IID(nsIArray), (void **)aArray);
+}

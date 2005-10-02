@@ -284,7 +284,23 @@ public:
   static nsresult Init();
 };
 
-/* factory function */
+// An interface for fast and native conversion to/from nsIArray. If an object
+// supports this interface, JS can reach directly in for the argv, and avoid
+// nsISupports conversion. If this interface is not supported, the object will
+// be queried for nsIArray, and everything converted via xpcom objects.
+#define NS_IJSARGARRAY_IID \
+ { /*{E96FB2AE-CB4F-44a0-81F8-D91C80AFE9A3} */ \
+ 0xe96fb2ae, 0xcb4f, 0x44a0, \
+ { 0x81, 0xf8, 0xd9, 0x1c, 0x80, 0xaf, 0xe9, 0xa3 } }
+
+class nsIJSArgArray: public nsISupports
+{
+public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IJSARGARRAY_IID)
+  virtual nsresult GetArgs(PRUint32 *argc, jsval **argv) = 0;
+};
+
+/* factory functions */
 nsresult NS_CreateJSRuntime(nsILanguageRuntime **aRuntime);
 
 /* prototypes */
