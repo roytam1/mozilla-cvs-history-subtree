@@ -300,6 +300,7 @@ nsFrameManager::Destroy()
   
   nsFrameManager::ClearPrimaryFrameMap();
   delete mUndisplayedMap;
+  mUndisplayedMap = nsnull;
 
   mPresShell = nsnull;
 }
