@@ -475,6 +475,7 @@ init_xpcom() {
 
 	REGISTER_IID(nsISupports);
 	REGISTER_IID(nsISupportsCString);
+	REGISTER_IID(nsISupportsString);
 	REGISTER_IID(nsIModule);
 	REGISTER_IID(nsIFactory);
 	REGISTER_IID(nsIWeakReference);

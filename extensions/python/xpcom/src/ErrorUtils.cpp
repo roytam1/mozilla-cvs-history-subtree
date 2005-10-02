@@ -51,7 +51,6 @@
 #include "nspr.h" // PR_fprintf
 
 static char *PyTraceback_AsString(PyObject *exc_tb);
-static PRBool PyXPCOM_FormatCurrentException(nsCString &streamout);
 
 // The internal helper that actually moves the
 // formatted string to the target!
@@ -225,15 +224,17 @@ nsresult PyXPCOM_SetCOMErrorFromPyException()
 	if (!PyErr_Occurred())
 		// No error occurred
 		return NS_OK;
+	nsresult rv = NS_ERROR_FAILURE;
+	if (PyErr_ExceptionMatches(PyExc_MemoryError))
+		rv = NS_ERROR_OUT_OF_MEMORY;
 	// todo:
-	// * Translate PyExc_MemoryError to NS_ERROR_OUT_OF_MEMORY
 	// * Set an exception using the exception service.
 
-	// Once we have returned to pyxpcom, we don't want to leave a
+	// Once we have returned to the xpcom caller, we don't want to leave a
 	// Python exception pending - it may get noticed when the next call
 	// is made on the same thread.
 	PyErr_Clear();
-	return NS_ERROR_FAILURE;
+	return rv;
 }
 
 /* Obtains a string from a Python traceback.

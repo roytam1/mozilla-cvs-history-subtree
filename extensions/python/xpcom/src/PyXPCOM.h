@@ -118,6 +118,9 @@ PYXPCOM_EXPORT PyObject *PyXPCOM_BuildPyException(nsresult res);
 // NOTE: this function assumes it is operating within the Python context
 PYXPCOM_EXPORT nsresult PyXPCOM_SetCOMErrorFromPyException();
 
+// Write currrent exception and traceback to a string.
+PYXPCOM_EXPORT PRBool PyXPCOM_FormatCurrentException(nsCString &streamout);
+
 // A couple of logging/error functions.  These probably end up
 // being written to the console service.
 
@@ -141,14 +144,13 @@ PYXPCOM_EXPORT void PyXPCOM_LogDebug(const char *fmt, ...);
 #define PYXPCOM_LOG_DEBUG()
 #endif // DEBUG
 
-// Create a Unicode Object from the PRUnichar buffer src of the given size
-#define PyUnicode_FromPRUnichar(src, size) \
-	PyUnicode_DecodeUTF16((char*)(src),sizeof(PRUnichar)*(size),NULL,NULL)
-
 // Some utility converters
 // strings
-PYXPCOM_EXPORT PyObject *PyObject_FromNSString( const nsACString &s, PRBool bAssumeUTF8 = PR_FALSE );
+PYXPCOM_EXPORT PyObject *PyObject_FromNSString( const nsACString &s,
+					       PRBool bAssumeUTF8 = PR_FALSE );
 PYXPCOM_EXPORT PyObject *PyObject_FromNSString( const nsAString &s );
+PYXPCOM_EXPORT PyObject *PyObject_FromNSString( const PRUnichar *s,
+					        PRUint32 len = (PRUint32)-1);
 
 // Variants.
 PYXPCOM_EXPORT nsIVariant *PyObject_AsVariant( PyObject *ob);

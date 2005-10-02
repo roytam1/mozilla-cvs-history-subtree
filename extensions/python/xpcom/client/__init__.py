@@ -43,8 +43,10 @@ from xpcom import xpt, COMException, nsError
 logger = logging.getLogger('pyxpcom')
 
 # Suck in stuff from _xpcom we use regularly to prevent a module lookup
-from xpcom._xpcom import IID_nsISupports, IID_nsIClassInfo, IID_nsISupportsCString, IID_nsISupportsWeakReference, \
-        IID_nsIWeakReference, XPTI_GetInterfaceInfoManager, GetComponentManager, XPTC_InvokeByIndex
+from xpcom._xpcom import IID_nsISupports, IID_nsIClassInfo, \
+    IID_nsISupportsCString, IID_nsISupportsString, \
+    IID_nsISupportsWeakReference, IID_nsIWeakReference, \
+    XPTI_GetInterfaceInfoManager, GetComponentManager, XPTC_InvokeByIndex
 
 # Attribute names we may be __getattr__'d for, but know we don't want to delegate
 # Could maybe just look for startswith("__") but this may screw things for some objects.
@@ -186,6 +188,13 @@ class _XPCOMBase:
             return str(self._comobj_)
         except COMException:
             return self.__repr__()
+
+    def __unicode__(self):
+        try:
+            prin = self._comobj_.QueryInterface(IID_nsISupportsString)
+        except COMException:
+            return unicode(str(self))
+        return prin.data
 
     # Try the numeric support.
     def _do_conversion(self, interface_names, cvt):

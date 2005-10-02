@@ -57,7 +57,9 @@ tests = tests or test.regrtest.findtests(path, [])
 try:
     # unittest based tests first - hopefully soon this will be the default!
     if not sys.argv[1:]:
-        for t in "test_com_exceptions test_misc test_streams".split():
+        for t in """test_com_exceptions test_misc test_streams
+                    test_isupports_primitives
+                 """.split():
             m = __import__(t)
             try:
                 unittest.main(m)

@@ -330,7 +330,7 @@ class DefaultPolicy:
 
 _supports_primitives_data_ = [
     ("nsISupportsCString", "__str__", str),
-    ("nsISupportsString", "__str__", str),
+    ("nsISupportsString", "__unicode__", unicode),
     ("nsISupportsPRUint64", "__long__", long),
     ("nsISupportsPRInt64", "__long__", long),
     ("nsISupportsPRUint32", "__int__", int),

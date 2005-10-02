@@ -41,10 +41,11 @@
 # only if our class doesnt provide explicit support.
 
 from xpcom import components
+import xpcom.server, xpcom.client
+import unittest
 
 class NoSupportsString:
     _com_interfaces_ = [components.interfaces.nsISupports]
-    pass
 
 class ImplicitSupportsString:
     _com_interfaces_ = [components.interfaces.nsISupports]
@@ -52,13 +53,31 @@ class ImplicitSupportsString:
         return "<MyImplicitStrObject>"
 
 class ExplicitSupportsString:
-    _com_interfaces_ = [components.interfaces.nsISupports, components.interfaces.nsISupportsCString]
+    _com_interfaces_ = [components.interfaces.nsISupports,
+                        components.interfaces.nsISupportsCString]
     # __str__ will be ignored by XPCOM, as we have _explicit_ support.
     def __str__(self):
         return "<MyImplicitStrObject>"
     # This is the one that will be used.
     def toString(self):
         return "<MyExplicitStrObject>"
+
+class ImplicitSupportsUnicode:
+    _com_interfaces_ = [components.interfaces.nsISupports]
+    test_data = u"Copyright \xa9 the initial developer"
+    def __unicode__(self):
+        # An extended character in unicode tests can't hurt!
+        return self.test_data
+
+class ExplicitSupportsUnicode:
+    _com_interfaces_ = [components.interfaces.nsISupports,
+                        components.interfaces.nsISupportsString]
+    # __unicode__ will be ignored by XPCOM, as we have _explicit_ support.
+    test_data = u"Copyright \xa9 the initial developer"
+    def __unicode__(self):
+        return "<MyImplicitUnicodeObject>"
+    def get_data(self):
+        return self.test_data
 
 class ImplicitSupportsInt:
     _com_interfaces_ = [components.interfaces.nsISupports]
@@ -90,61 +109,82 @@ class ImplicitSupportsFloat:
     def __float__(self):
         return 99.99
 
-def test():
-    import xpcom.server, xpcom.client
-    ob = xpcom.server.WrapObject( NoSupportsString(), components.interfaces.nsISupports)
-    if not str(ob).startswith("<XPCOM "):
-        raise RuntimeError, "Wrong str() value: %s" % (ob,)
+class PrimitivesTestCase(unittest.TestCase):
+    def testNoSupports(self):
+        ob = xpcom.server.WrapObject( NoSupportsString(), components.interfaces.nsISupports)
+        if not str(ob).startswith("<XPCOM "):
+            raise RuntimeError, "Wrong str() value: %s" % (ob,)
 
-    ob = xpcom.server.WrapObject( ImplicitSupportsString(), components.interfaces.nsISupports)
-    if str(ob) != "<MyImplicitStrObject>":
-        raise RuntimeError, "Wrong str() value: %s" % (ob,)
+    def testImplicitString(self):
+        ob = xpcom.server.WrapObject( ImplicitSupportsString(), components.interfaces.nsISupports)
+        if str(ob) != "<MyImplicitStrObject>":
+            raise RuntimeError, "Wrong str() value: %s" % (ob,)
 
-    ob = xpcom.server.WrapObject( ExplicitSupportsString(), components.interfaces.nsISupports)
-    if str(ob) != "<MyExplicitStrObject>":
-        raise RuntimeError, "Wrong str() value: %s" % (ob,)
+    def testExplicitString(self):
+        ob = xpcom.server.WrapObject( ExplicitSupportsString(), components.interfaces.nsISupports)
+        if str(ob) != "<MyExplicitStrObject>":
+            raise RuntimeError, "Wrong str() value: %s" % (ob,)
 
-    # Try our conversions.
-    try:
-        int(ob)
-        raise RuntimeError, "Expected to get a ValueError converting this COM object to an int"
-    except ValueError:
-        pass
-    ob = xpcom.server.WrapObject( ExplicitSupportsInt(), components.interfaces.nsISupports)
-    if int(ob) != 99:
-        raise RuntimeError, "Bad value: %s" % (int(ob),)
-    if float(ob) != 99.0:
-        raise RuntimeError, "Bad value: %s" % (float(ob),)
+    def testImplicitUnicode(self):
+        ob = xpcom.server.WrapObject( ImplicitSupportsUnicode(), components.interfaces.nsISupports)
+        if unicode(ob) != ImplicitSupportsUnicode.test_data:
+            raise RuntimeError, "Wrong unicode() value: %s" % (ob,)
 
-    ob = xpcom.server.WrapObject( ImplicitSupportsInt(), components.interfaces.nsISupports)
-    if int(ob) != 99:
-        raise RuntimeError, "Bad value: %s" % (int(ob),)
-    if float(ob) != 99.0:
-        raise RuntimeError, "Bad value: %s" % (float(ob),)
+    def testExplicitUnicode(self):
+        ob = xpcom.server.WrapObject( ExplicitSupportsUnicode(), components.interfaces.nsISupports)
+        if unicode(ob) != ExplicitSupportsUnicode.test_data:
+            raise RuntimeError, "Wrong unicode() value: %s" % (ob,)
 
-    ob = xpcom.server.WrapObject( ExplicitSupportsLong(), components.interfaces.nsISupports)
-    if long(ob) != 99 or not repr(long(ob)).endswith("L"):
-        raise RuntimeError, "Bad value: %s" % (repr(long(ob)),)
-    if float(ob) != 99.0:
-        raise RuntimeError, "Bad value: %s" % (float(ob),)
+    def testConvertInt(self):
+        # Try our conversions.
+        ob = xpcom.server.WrapObject( ExplicitSupportsString(), components.interfaces.nsISupports)
+        try:
+            int(ob)
+            raise RuntimeError, "Expected to get a ValueError converting this COM object to an int"
+        except ValueError:
+            pass
 
-    ob = xpcom.server.WrapObject( ImplicitSupportsLong(), components.interfaces.nsISupports)
-    if long(ob) != 99 or not repr(long(ob)).endswith("L"):
-        raise RuntimeError, "Bad value: %s" % (repr(long(ob)),)
-    if float(ob) != 99.0:
-        raise RuntimeError, "Bad value: %s" % (float(ob),)
+    def testExplicitInt(self):
+        ob = xpcom.server.WrapObject( ExplicitSupportsInt(), components.interfaces.nsISupports)
+        if int(ob) != 99:
+            raise RuntimeError, "Bad value: %s" % (int(ob),)
+        if float(ob) != 99.0:
+            raise RuntimeError, "Bad value: %s" % (float(ob),)
 
-    ob = xpcom.server.WrapObject( ExplicitSupportsFloat(), components.interfaces.nsISupports)
-    if float(ob) != 99.99:
-        raise RuntimeError, "Bad value: %s" % (float(ob),)
-    if int(ob) != 99:
-        raise RuntimeError, "Bad value: %s" % (int(ob),)
+    def testImplicitInt(self):
+        ob = xpcom.server.WrapObject( ImplicitSupportsInt(), components.interfaces.nsISupports)
+        if int(ob) != 99:
+            raise RuntimeError, "Bad value: %s" % (int(ob),)
+        if float(ob) != 99.0:
+            raise RuntimeError, "Bad value: %s" % (float(ob),)
 
-    ob = xpcom.server.WrapObject( ImplicitSupportsFloat(), components.interfaces.nsISupports)
-    if float(ob) != 99.99:
-        raise RuntimeError, "Bad value: %s" % (float(ob),)
-    if int(ob) != 99:
-        raise RuntimeError, "Bad value: %s" % (int(ob),)
+    def testExplicitLong(self):
+        ob = xpcom.server.WrapObject( ExplicitSupportsLong(), components.interfaces.nsISupports)
+        if long(ob) != 99 or not repr(long(ob)).endswith("L"):
+            raise RuntimeError, "Bad value: %s" % (repr(long(ob)),)
+        if float(ob) != 99.0:
+            raise RuntimeError, "Bad value: %s" % (float(ob),)
 
-    print "The nsISupports primitive interface tests appeared to work"
-test()
+    def testImplicitLong(self):
+        ob = xpcom.server.WrapObject( ImplicitSupportsLong(), components.interfaces.nsISupports)
+        if long(ob) != 99 or not repr(long(ob)).endswith("L"):
+            raise RuntimeError, "Bad value: %s" % (repr(long(ob)),)
+        if float(ob) != 99.0:
+            raise RuntimeError, "Bad value: %s" % (float(ob),)
+
+    def testExplicitFloat(self):
+        ob = xpcom.server.WrapObject( ExplicitSupportsFloat(), components.interfaces.nsISupports)
+        if float(ob) != 99.99:
+            raise RuntimeError, "Bad value: %s" % (float(ob),)
+        if int(ob) != 99:
+            raise RuntimeError, "Bad value: %s" % (int(ob),)
+
+    def testImplicitFloat(self):
+        ob = xpcom.server.WrapObject( ImplicitSupportsFloat(), components.interfaces.nsISupports)
+        if float(ob) != 99.99:
+            raise RuntimeError, "Bad value: %s" % (float(ob),)
+        if int(ob) != 99:
+            raise RuntimeError, "Bad value: %s" % (int(ob),)
+
+if __name__=='__main__':
+    unittest.main()

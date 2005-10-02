@@ -72,6 +72,9 @@ IsNullDOMString( const nsACString& aString )
 	return PR_FALSE;
 }
 
+#define PyUnicode_FromPRUnichar(src, size) \
+	PyUnicode_DecodeUTF16((char*)(src),sizeof(PRUnichar)*(size),NULL,NULL)
+
 // Create a zero-terminated PRUnichar buffer from a Python unicode.
 // On success, returns 0.  On failure, returns -1 and sets an exception.
 // dest_out must not be null.  size_out may be null.
@@ -134,10 +137,17 @@ PyObject *PyObject_FromNSString( const nsAString &s )
 		ret = Py_None;
 		Py_INCREF(Py_None);
 	} else {
-                const nsPromiseFlatString& temp = PromiseFlatString(s);
-                ret = PyUnicode_FromPRUnichar(temp.get(), temp.Length());
+		const nsPromiseFlatString& temp = PromiseFlatString(s);
+		ret = PyUnicode_FromPRUnichar(temp.get(), temp.Length());
 	}
 	return ret;
+}
+
+PyObject *PyObject_FromNSString( const PRUnichar *s,
+                                 PRUint32 len /* = (PRUint32)-1*/)
+{
+	return PyUnicode_FromPRUnichar(s,
+	           len==((PRUint32)-1)? nsCRT::strlen(s) : len);
 }
 
 // Array utilities

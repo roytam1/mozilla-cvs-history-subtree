@@ -46,6 +46,7 @@
 // (c) 2000, ActiveState corp.
 
 #include "PyXPCOM_std.h"
+#include "nsISupportsPrimitives.h"
 
 static PRInt32 cInterfaces=0;
 static PyObject *g_obFuncMakeInterfaceCount = NULL; // XXX - never released!!!
@@ -117,6 +118,23 @@ Py_nsISupports::getattr(const char *name)
 	if (strcmp(name, "IID")==0)
 		return Py_nsIID::PyObjectFromIID( m_iid );
 
+	// Support for __unicode__ until we get a tp_unicode slot.
+	if (strcmp(name, "__unicode__")==0) {
+		nsresult rv;
+		PRUnichar *val = NULL;
+		Py_BEGIN_ALLOW_THREADS;
+		{ // scope to kill pointer while thread-lock released.
+		nsCOMPtr<nsISupportsString> ss( do_QueryInterface(m_obj, &rv ));
+		if (NS_SUCCEEDED(rv))
+			rv = ss->ToString(&val);
+		} // end-scope 
+		Py_END_ALLOW_THREADS;
+		PyObject *ret = NS_FAILED(rv) ?
+			PyXPCOM_BuildPyException(rv) :
+			PyObject_FromNSString(val);
+		if (val) nsMemory::Free(val);
+		return ret;
+	}
 	PyXPCOM_TypeObject *this_type = (PyXPCOM_TypeObject *)ob_type;
 	return Py_FindMethodInChain(&this_type->chain, this, (char *)name);
 }
