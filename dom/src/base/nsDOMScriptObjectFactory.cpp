@@ -107,8 +107,11 @@ nsDOMScriptObjectFactory::GetLanguageRuntime(const nsAString &aLanguageName,
                                              nsILanguageRuntime **aLanguage)
 {
   // For now, we just treat the category manager as a hash-table, looking
-  // up the contract ID each language request.  This never happens for
-  // javascript, so will do for now.
+  // up the contract ID each language request.
+  // Hard-code JS for now.
+  if (aLanguageName.Equals(NS_LITERAL_STRING("application/javascript")))
+    return GetLanguageRuntimeByID(nsIProgrammingLanguage::JAVASCRIPT, aLanguage);
+
   nsresult rv;
   nsCOMPtr<nsICategoryManager> catman =
         do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv);
@@ -127,7 +130,7 @@ nsDOMScriptObjectFactory::GetLanguageRuntime(const nsAString &aLanguageName,
   nsCOMPtr<nsILanguageRuntime> lang =
       do_GetService(cid, &rv);
   if (NS_FAILED(rv)) {
-    NS_ERROR("Failed to get the script language service");
+    NS_ERROR("Failed to get the script language");
     return rv;
   }
   // And stash it away in our array for fast lookup by ID.
