@@ -41,6 +41,8 @@
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptContext.h"
 #include "nsIScriptObjectPrincipal.h"
+#include "jsapi.h"
+#include "jscntxt.h"
 
 extern void init_nsdom();
 
@@ -179,6 +181,12 @@ PyObject *PyJSExec(PyObject *self, PyObject *args)
     nsresult rv;
     void *scope = scriptGlobal->GetLanguageGlobal(nsIProgrammingLanguage::JAVASCRIPT);
     void *scriptObject = nsnull;
+    JSContext *ctx = (JSContext *)scriptContext->GetNativeContext();
+
+    // must root the result until we sort out mem mgt.
+    if (!::JS_AddNamedRootRT(ctx->runtime, &scriptObject, "PyJSExec result root"))
+        return PyXPCOM_BuildPyException(NS_ERROR_UNEXPECTED);
+
     nsAutoString str;
     PRBool bIsUndefined;
     Py_BEGIN_ALLOW_THREADS
@@ -194,6 +202,9 @@ PyObject *PyJSExec(PyObject *self, PyObject *args)
         rv = scriptContext->ExecuteScript(scriptObject, scope, &str,
                                           &bIsUndefined);
     Py_END_ALLOW_THREADS
+
+    ::JS_RemoveRootRT(ctx->runtime, &scriptObject);
+
     if (NS_FAILED(rv))
         return PyXPCOM_BuildPyException(rv);
     return Py_BuildValue("NN", PyObject_FromNSString(str), PyBool_FromLong(bIsUndefined));

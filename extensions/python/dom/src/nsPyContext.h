@@ -208,8 +208,9 @@ protected:
   PyObject *mGlobal;
 
   nsIScriptContextOwner* mOwner;  /* NB: weak reference, not ADDREF'd */
+  nsIScriptGlobalObject *mScriptGlobal; // ditto - not ADDREF'd
 
-  static nsresult HandlePythonError();
+  nsresult HandlePythonError();
   
   // Implement our concept of a 'wrapped native'.  No concept of 'expandos'
   // yet - we explicitly know when we need to create a new permanent one.

@@ -43,6 +43,7 @@
 #include "nsIAtom.h"
 #include "prtime.h"
 #include "nsString.h"
+#include "nsGUIEvent.h"
 
 #include "nsPyContext.h"
 #include "compile.h"
@@ -75,14 +76,15 @@ AtomToEventHandlerName(nsIAtom *aName)
   return name;
 }
 
-nsPythonContext::nsPythonContext()
-    : mGlobal(NULL)
+nsPythonContext::nsPythonContext() :
+    mGlobal(NULL),
+    mScriptGlobal(nsnull),
+    mIsInitialized(PR_FALSE),
+    mNumEvaluations(0),
+    mOwner(nsnull),
+    mScriptsEnabled(PR_TRUE),
+    mProcessingScriptTag(PR_FALSE)
 {
-  mIsInitialized = PR_FALSE;
-  mNumEvaluations = 0;
-  mOwner = nsnull;
-  mScriptsEnabled = PR_TRUE;
-  mProcessingScriptTag=PR_FALSE;
   mMapPyObjects.Init();
   PYLEAK_STAT_INCREMENT(ScriptContext);
 }
@@ -104,11 +106,65 @@ NS_IMPL_ADDREF(nsPythonContext)
 NS_IMPL_RELEASE(nsPythonContext)
 
 
-/*static*/ nsresult nsPythonContext::HandlePythonError()
+nsresult nsPythonContext::HandlePythonError()
 {
-  // need to raise an exception
-  NS_WARNING("Python error calling DOM script");
-  PyXPCOM_LogError("Python error");
+  // It looks like we first need to call the DOM.  Depending on the result
+  // of the DOM error handler, we may then just treat it as unhandled.
+  if (!PyErr_Occurred())
+    return NS_OK;
+
+  nsScriptErrorEvent errorevent(PR_TRUE, NS_SCRIPT_ERROR);
+  nsAutoString strFilename;
+
+  PyObject *exc, *typ, *tb;
+  PyErr_Fetch(&exc, &typ, &tb);
+  // We must have a traceback object to report the filename/lineno.
+  // *sob* - PyTracebackObject not in a header file in 2.3.  Use getattr etc
+  if (tb) {
+    PyObject *frame = PyObject_GetAttrString(tb, "tb_frame");
+    if (frame) {
+      PyObject *obLineNo = PyObject_GetAttrString(frame, "f_lineno");
+      if (obLineNo) {
+        errorevent.lineNr = PyInt_AsLong(obLineNo);
+        Py_DECREF(obLineNo);
+      } else {
+        NS_ERROR("Traceback had no lineNo attribute?");
+        PyErr_Clear();
+      }
+      PyObject *code = PyObject_GetAttrString(frame, "f_code");
+      if (code) {
+        PyObject *filename = PyObject_GetAttrString(code, "co_filename");
+        if (filename && PyString_Check(filename)) {
+          CopyUTF8toUTF16(PyString_AsString(filename), strFilename);
+          errorevent.fileName = strFilename.get();
+        }
+        Py_XDECREF(filename);
+        Py_DECREF(code);
+      }
+      Py_DECREF(frame);
+    }
+  }
+  PRBool outOfMem = PyErr_GivenExceptionMatches(exc, PyExc_MemoryError);
+  PyErr_Restore(exc, typ, tb);
+  
+  nsCAutoString cerrMsg;
+  PyXPCOM_FormatCurrentException(cerrMsg);
+  nsAutoString errMsg;
+  CopyUTF8toUTF16(cerrMsg, errMsg);
+  errorevent.errorMsg = errMsg.get();
+  nsEventStatus status = nsEventStatus_eIgnore;
+
+  if (mScriptGlobal && !outOfMem) {
+    mScriptGlobal->HandleScriptError(&errorevent, &status);
+  }
+
+  if (status != nsEventStatus_eConsumeNoDefault) {
+    // report it 'normally'.  We probably should use nsIScriptError
+    // (OTOH, pyxpcom itself is probably what should)
+    NS_WARNING("Python error calling DOM script");
+    PyXPCOM_LogError("Python error");
+  }
+  // We always want the hresult.
   return PyXPCOM_SetCOMErrorFromPyException();
 }
 
@@ -174,16 +230,16 @@ nsPythonContext::InitContext(nsIScriptGlobalObject *aGlobalObject)
     obGlobal = Py_None;
     Py_INCREF(Py_None);
   }
+  mScriptGlobal = aGlobalObject;
   mGlobal = Py_BuildValue("{s:N}", "this", obGlobal);
   if (!mGlobal)
     return HandlePythonError();
   // Add builtins to globals (not necessary if .py code does an exec ??)
-  PyObject *bimod = PyImport_ImportModule("__builtin__");
-  if (bimod == NULL || PyDict_SetItemString(mGlobal, "__builtins__", bimod) != 0) {
+  if (PyDict_SetItemString(mGlobal, "__builtins__",
+                           PyEval_GetBuiltins()) != 0) {
     NS_ERROR("can't add __builtins__ to __main__");
     return NS_ERROR_UNEXPECTED;
   }
-  Py_DECREF(bimod);
   return NS_OK;
 }
 
@@ -371,6 +427,7 @@ nsPythonContext::CallEventHandler(nsISupports *aTarget, void *aScope, void* aHan
   }
   CEnterLeavePython _celp;
   PyObject *obEvent = NULL;
+  PyObject *obArgv = NULL;
   PyObject *obTarget = NULL;
   PyObject *thisGlobals = NULL;
   PyObject *ret = NULL;
@@ -391,10 +448,16 @@ nsPythonContext::CallEventHandler(nsISupports *aTarget, void *aScope, void* aHan
   PyDict_SetItemString(thisGlobals, "target", obTarget);
   // This sucks - 'compile' is passed the literal name 'event', but that
   // is too early for us.  It also kinda sucks it is hard-coded as argv[0]
+  // XXXmarkh - it *totally* sucks with onevent etc.  This must become a
+  // property bag.
+  // Always make 'arguments' available for now (a property bag will let us
+  // give real names.
+  // Later we could also check for a function object, extract the number of
+  // args, and pass only them (but always making 'arguments' available).
   if (aargv) {
     PRUint32 argc = 0;
     aargv->GetLength(&argc);
-    if (argc) {
+    if (argc==1) {
       nsCOMPtr<nsISupports> arg;
       nsresult rv;
       rv = aargv->QueryElementAt(0, NS_GET_IID(nsISupports), getter_AddRefs(arg));
@@ -402,9 +465,17 @@ nsPythonContext::CallEventHandler(nsISupports *aTarget, void *aScope, void* aHan
         obEvent = Py_nsISupports::PyObjectFromInterface(arg, NS_GET_IID(nsISupports),
                                                         PR_TRUE);
     }
+    obArgv = Py_nsISupports::PyObjectFromInterface(aargv, NS_GET_IID(nsISupports),
+                                                   PR_TRUE);
+    
+  } else {
+    obArgv = Py_None;
+    Py_INCREF(Py_None);
   }
   if (obEvent)
     PyDict_SetItemString(thisGlobals, "event", obEvent);
+  if (obArgv)
+    PyDict_SetItemString(thisGlobals, "arguments", obArgv);
 
   NS_ASSERTION(PyCode_Check((PyObject *)aHandler), "Not a Python code object");
   NS_ENSURE_TRUE(PyCode_Check((PyObject *)aHandler), NS_ERROR_UNEXPECTED);
@@ -419,6 +490,7 @@ done:
   Py_XDECREF(ret);
   Py_XDECREF(obEvent);
   Py_XDECREF(obTarget);
+  Py_XDECREF(obArgv);
   Py_XDECREF(thisGlobals);
   return rv;
 }
@@ -449,8 +521,20 @@ nsPythonContext::GetBoundEventHandler(nsISupports* aTarget, void *aScope,
 nsresult
 nsPythonContext::SetProperty(void *aTarget, const char *aPropName, nsISupports *aVal)
 {
-    NS_ERROR("SetProperty not impl");
-    return NS_ERROR_NOT_IMPLEMENTED;
+  PyObject *d = (PyObject *)aTarget;
+  if (!PyDict_Check(d)) {
+    NS_ERROR("Expecting a Python dictionary!?");
+    return NS_ERROR_UNEXPECTED;
+  }
+  PyObject *obVal;
+  obVal = Py_nsISupports::PyObjectFromInterface(aVal,
+                                                NS_GET_IID(nsISupports),
+                                                PR_TRUE);
+  if (!obVal)
+    return HandlePythonError();
+  PyDict_SetItemString(d, (char *)aPropName, obVal);
+  Py_DECREF(obVal);
+  return NS_OK;
 }
 
 nsresult
@@ -540,8 +624,7 @@ nsPythonContext::SetDefaultLanguageVersion(PRUint32 aVersion)
 nsIScriptGlobalObject *
 nsPythonContext::GetGlobalObject()
 {
-  NS_ERROR("Not implemented");
-  return nsnull;
+  return mScriptGlobal;
 }
 
 void *
@@ -644,7 +727,10 @@ nsPythonContext::GC()
 nsresult
 nsPythonContext::FinalizeClasses(void *aGlobalObj)
 {
+  mScriptGlobal = nsnull;
+  NS_ASSERTION(aGlobalObj == mGlobal, "Wrong object finalized?");
   Py_XDECREF((PyObject *)aGlobalObj);
+  mGlobal = NULL;
   CleanPyNamespaces();
   return NS_OK;
 }
