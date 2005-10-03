@@ -832,14 +832,9 @@ nsSVGTSpanFrame::GetX()
   nsCOMPtr<nsIDOMSVGTextPositioningElement> tpElement = do_QueryInterface(mContent);
   NS_ASSERTION(tpElement, "wrong content element");
 
-  if (!mContent->HasAttr(kNameSpaceID_None, nsSVGAtoms::x)) {
-    nsISVGTextContainerFrame *parent;
-    mParent->QueryInterface(NS_GET_IID(nsISVGTextContainerFrame), (void **)&parent);
-    if (parent)
-      return parent->GetX();
-    else
-      return nsnull;
-  }
+  if (!mContent->HasAttr(kNameSpaceID_None, nsSVGAtoms::x))
+    return nsnull;
+
   nsCOMPtr<nsIDOMSVGAnimatedLengthList> animLengthList;
   tpElement->GetX(getter_AddRefs(animLengthList));
   nsIDOMSVGLengthList *retval;
@@ -853,14 +848,9 @@ nsSVGTSpanFrame::GetY()
   nsCOMPtr<nsIDOMSVGTextPositioningElement> tpElement = do_QueryInterface(mContent);
   NS_ASSERTION(tpElement, "wrong content element");
 
-  if (!mContent->HasAttr(kNameSpaceID_None, nsSVGAtoms::y)) {
-    nsISVGTextContainerFrame *parent;
-    mParent->QueryInterface(NS_GET_IID(nsISVGTextContainerFrame), (void **)&parent);
-    if (parent)
-      return parent->GetY();
-    else
-      return nsnull;
-  }
+  if (!mContent->HasAttr(kNameSpaceID_None, nsSVGAtoms::y))
+    return nsnull;
+
   nsCOMPtr<nsIDOMSVGAnimatedLengthList> animLengthList;
   tpElement->GetY(getter_AddRefs(animLengthList));
   nsIDOMSVGLengthList *retval;
