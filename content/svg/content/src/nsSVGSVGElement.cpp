@@ -1591,10 +1591,13 @@ void nsSVGSVGElement::GetOffsetToAncestor(nsIContent* ancestor,
     return;
   }
 
-  nsIFrame* frame = presShell->GetPrimaryFrameFor(this);
-  nsIFrame* ancestorFrame = ancestor ?
-                            presShell->GetPrimaryFrameFor(ancestor) :
-                            presShell->GetRootFrame();
+  nsIFrame* frame;
+  presShell->GetPrimaryFrameFor(NS_STATIC_CAST(nsIStyledContent*, this), &frame);
+  nsIFrame* ancestorFrame;
+  if (ancestor)
+    presShell->GetPrimaryFrameFor(NS_STATIC_CAST(nsIStyledContent*, ancestor), &ancestorFrame);
+  else
+    ancestorFrame = presShell->GetRootFrame();
 
   if (frame && ancestorFrame) {
     nsPoint point = frame->GetOffsetTo(ancestorFrame);
