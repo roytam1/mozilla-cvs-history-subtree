@@ -84,35 +84,21 @@ public:
   nsAbAutoCompleteSession();
   virtual ~nsAbAutoCompleteSession(); 
 
-    typedef enum
-    {
-        DEFAULT_MATCH           = 0,
-        NICKNAME_EXACT_MATCH,
-        NAME_EXACT_MATCH,
-        EMAIL_EXACT_MATCH,
-        NICKNAME_MATCH,
-        NAME_MATCH,
-        EMAIL_MATCH,
-        LAST_MATCH_TYPE
-    } MatchType;
-
 protected:    
-    void ResetMatchTypeConters();
-    PRBool ItsADuplicate(PRUnichar* fullAddrStr, nsIAutoCompleteResults* results);
+    PRBool ItsADuplicate(PRUnichar* fullAddrStr, PRInt32 aPopularityIndex, nsIAutoCompleteResults* results);
     void AddToResult(const PRUnichar* pNickNameStr, 
                      const PRUnichar* pDisplayNameStr, 
                      const PRUnichar* pFirstNameStr,
                      const PRUnichar* pLastNameStr, 
                      const PRUnichar* pEmailStr, const PRUnichar* pNotes,
-                     const PRUnichar* pDirName, PRBool bIsMailList, 
-                     MatchType type, nsIAutoCompleteResults* results);
+                     const PRUnichar* pDirName, 
+                     PRUint32 aPopularityIndex, PRBool bIsMailList, 
+                     PRBool pDefaultMatch, nsIAutoCompleteResults* results);
     PRBool CheckEntry(nsAbAutoCompleteSearchString* searchStr, const PRUnichar* nickName,const PRUnichar* displayName, 
-      const PRUnichar* firstName, const PRUnichar* lastName, const PRUnichar* emailAddress, MatchType* matchType);
+                      const PRUnichar* firstName, const PRUnichar* lastName, const PRUnichar* emailAddress);
         
     nsCOMPtr<nsIMsgHeaderParser> mParser;
     nsString mDefaultDomain;
-    PRUint32 mMatchTypeConters[LAST_MATCH_TYPE];
-    PRUint32 mDefaultDomainMatchTypeCounters[LAST_MATCH_TYPE];
 
     // how to process the comment column, if at all.  this value
     // comes from "mail.autoComplete.commentColumn", or, if that
@@ -152,8 +138,8 @@ public:
                           const PRUnichar* emailAddress,
                           const PRUnichar* notes,
                           const PRUnichar* dirName,
-                          PRBool isMailList, 
-                          nsAbAutoCompleteSession::MatchType type)
+                          PRUint32 aPopularityIndex,
+                          PRBool isMailList)
   {
     const PRUnichar *empty = EmptyString().get();
 
@@ -165,7 +151,7 @@ public:
     mNotes = nsCRT::strdup(notes ? notes : empty);
     mDirName = nsCRT::strdup(dirName ? dirName : empty);
     mIsMailList = isMailList;
-    mType = type;
+    mPopularityIndex = aPopularityIndex;
   }
   
   virtual ~nsAbAutoCompleteParam()
@@ -187,8 +173,8 @@ protected:
     PRUnichar* mEmailAddress;
     PRUnichar* mNotes;
     PRUnichar* mDirName;
+    PRUint32 mPopularityIndex;
     PRBool mIsMailList;
-    nsAbAutoCompleteSession::MatchType  mType;
 
 public:
     friend class nsAbAutoCompleteSession;
