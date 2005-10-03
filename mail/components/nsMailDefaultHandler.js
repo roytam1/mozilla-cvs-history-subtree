@@ -57,7 +57,7 @@ function mayOpenURI(uri)
 
 function openURI(uri)
 {
-  if (!mayOpenURI())
+  if (!mayOpenURI(uri))
     throw Components.results.NS_ERROR_FAILURE;
 
   var io = Components.classes["@mozilla.org/network/io-service;1"]
@@ -182,14 +182,14 @@ var nsMailDefaultHandler = {
       var i = 0;
       while (i < count) {
         var curarg = cmdLine.getArgument(i);
-        if (curarg.match(/^-/)) {
-          dump ("Warning: unrecognized command line flag " + curarg + "\n");
-          // To emulate the pre-nsICommandLine behavior, we ignore the
-          // argument after an unrecognized flag.
-          ++i;
-          // xxxbsmedberg: make me use the console service!
-        }
-        ++i;
+        if (!curarg.match(/^-/))
+          break;
+
+        dump ("Warning: unrecognized command line flag " + curarg + "\n");
+        // To emulate the pre-nsICommandLine behavior, we ignore the
+        // argument after an unrecognized flag.
+        i += 2;
+        // xxxbsmedberg: make me use the console service!
       }
 
       if (i < count) {
@@ -197,15 +197,14 @@ var nsMailDefaultHandler = {
 
         // mailto: URIs are frequently passed with spaces in them. They should be
         // escaped into %20, but we hack around bad clients, see bug 231032
-        if (uri.match.(/^mailto:/)) {
-          do {
-            ++i;
-            var testarg = cmdLine.getArgument(++i);
+        if (uri.match(/^mailto:/)) {
+          while (++i < count) {
+            var testarg = cmdLine.getArgument(i);
             if (testarg.match(/^-/))
               break;
 
             uri += " " + testarg;
-          } while (1);
+          }
         }
       }
     }
@@ -216,23 +215,28 @@ var nsMailDefaultHandler = {
     // xxxbsmedberg: This should be using nsIURILoader.openURI, which is what
     // the 1.0 branch does (see nsAppShellService.cpp, revision 1.212.6.6).
     // However, nsIURILoader.openURI is async, which means that the event loop
-    // sometimes is not run when it is supposed to, and other badness. Fix
-    // this for 1.1!
+    // sometimes is not run when it is supposed to, and other badness.
 
-    if (!uri && cmdLine.state != nsICommandLine.STATE_INITIAL_LAUNCH) {
-      try {
-        var wmed = Components.classes["@mozilla.org/appshell/window-mediator;1"]
-                             .getService(nsIWindowMediator);
-
-        var wlist = wmed.getEnumerator("mail:3pane");
-        if (wlist.hasMoreElements()) {
-          var window = wlist.getNext().QueryInterface(nsIDOMWindowInternal);
-          window.focus();
-          return;
-        }
+    if (cmdLine.state != nsICommandLine.STATE_INITIAL_LAUNCH) {
+      if (uri) {
+        openURI(cmdLine.resolveURI(uri));
+        return;
       }
-      catch (e) {
-        dump(e);
+      else {
+        try {
+          var wmed = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                               .getService(nsIWindowMediator);
+
+          var wlist = wmed.getEnumerator("mail:3pane");
+          if (wlist.hasMoreElements()) {
+            var window = wlist.getNext().QueryInterface(nsIDOMWindowInternal);
+            window.focus();
+            return;
+          }
+        }
+        catch (e) {
+          dump(e);
+        }
       }
     }
 
@@ -241,10 +245,18 @@ var nsMailDefaultHandler = {
 
     var argstring = Components.classes["@mozilla.org/supports-string;1"]
                               .createInstance(nsISupportsString);
-    if (uri)
+
+    var chromeURI = "chrome://messenger/content/";
+
+    if (uri) {
       argstring.data = uri;
 
-    wwatch.openWindow(null, "chrome://messenger/content/", "_blank",
+      if (uri.match(/^mailto:/)) {
+        chromeURI = "chrome://messenger/content/messengercompose/messengercompose.xul";
+      }
+    }
+
+    wwatch.openWindow(null, chromeURI, "_blank",
                       "chrome,dialog=no,all", argstring);
   },
 
