@@ -2,7 +2,7 @@
 
 <overlay id="python_overlay"
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-         scripttype="application/x-python"
+         script-type="application/x-python"
 >
 
     <hbox id="language_box">

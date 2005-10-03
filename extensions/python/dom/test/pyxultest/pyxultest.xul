@@ -9,7 +9,7 @@
   id="main-window" orient="vertical"
   screenX="100" screenY="100"
   height="300" width="500"
-  scripttype="application/x-python"
+  script-type="application/x-python"
   onload="print 'hello from the window load event'"
   >
   <script type="application/x-python" src="chrome://pyxultest/content/pyxultest.py"/>
