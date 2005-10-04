@@ -1,4 +1,3 @@
-# Generated automatically from Makefile.in by configure.
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
 #
@@ -39,10 +38,10 @@
 
 DEPTH   =../../../..
 
-topsrcdir	= /cygdrive/c/src/moz_play/mozilla
-srcdir		= /cygdrive/c/src/moz_play/mozilla/extensions/python/dom/nsdom
-VPATH		= /cygdrive/c/src/moz_play/mozilla/extensions/python/dom/nsdom
-pyexecdir	= ${exec_prefix}/lib/python$(PYTHON_VER_DOTTED)/site-packages
+topsrcdir	= @top_srcdir@
+srcdir		= @srcdir@
+VPATH		= @srcdir@
+pyexecdir	= @libdir@/python$(PYTHON_VER_DOTTED)/site-packages
 
 include $(DEPTH)/config/autoconf.mk
 
