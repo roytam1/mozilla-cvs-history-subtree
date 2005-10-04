@@ -68,9 +68,8 @@ class zapFilterNode : public zapIMediaNode,
   virtual nsresult Filter(zapIMediaFrame* input, zapIMediaFrame** output)=0;
   
 private:
-  PRBool mStreamOpen;
-  PRBool mWaiting;
-  enum { IDLE_CLOSED, WAITING_CLOSED, IDLE_RUNNING, WAITING_RUNNING } mState;
+  PRBool mStreamOpen; 
+  PRBool mWaiting; // are we waiting for the next frame?
   nsCOMPtr<zapIMediaSink> mSink;
   nsCOMPtr<zapIMediaSource> mSource;
 };
