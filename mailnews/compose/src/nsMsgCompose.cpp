@@ -696,6 +696,7 @@ nsMsgCompose::Initialize(nsIDOMWindowInternal *aWindow, nsIMsgComposeParams *par
 
   nsXPIDLCString originalMsgURI;
   params->GetOriginalMsgURI(getter_Copies(originalMsgURI));
+  params->GetOrigMsgHdr(getter_AddRefs(mOrigMsgHdr));
   
   nsCOMPtr<nsIMsgCompFields> composeFields;
   params->GetComposeFields(getter_AddRefs(composeFields));
@@ -1440,6 +1441,21 @@ nsresult nsMsgCompose::CreateMessage(const char * originalMsgURI,
 
   mType = type;
 
+  nsCAutoString msgUri(originalMsgURI);
+  PRBool fileUrl = StringBeginsWith(msgUri, NS_LITERAL_CSTRING("file:"));
+  if (fileUrl)
+  {
+    // strip out ?type=application/x-message-display because it confuses libmime
+    PRInt32 typeIndex = msgUri.Find("?type=application/x-message-display");
+    if (typeIndex != kNotFound)
+    {
+      msgUri.Cut(typeIndex, sizeof("?type=application/x-message-display") - 1);
+      // we also need to replace the next '&' with '?'
+      if (msgUri.CharAt(typeIndex) == '&')
+        msgUri.SetCharAt('?', typeIndex);
+    }
+    originalMsgURI = msgUri.get();
+  }
   if (compFields)
   {
     NS_IF_RELEASE(m_compFields);
@@ -1490,7 +1506,7 @@ nsresult nsMsgCompose::CreateMessage(const char * originalMsgURI,
           bccStr.EndReading(end);
 
           nsXPIDLCString bccList;
-        m_identity->GetDoBccList(getter_Copies(bccList));
+          m_identity->GetDoBccList(getter_Copies(bccList));
           if (FindInReadable(bccList, start, end) == PR_FALSE) {
             if (bccStr.Length() > 0)
               bccStr.Append(',');
@@ -1559,10 +1575,15 @@ nsresult nsMsgCompose::CreateMessage(const char * originalMsgURI,
         *saveNextUri = ':';
       }
     }
-    nsCOMPtr <nsIMsgDBHdr> msgHdr;
-    rv = GetMsgDBHdrFromURI(uri, getter_AddRefs(msgHdr));
-    NS_ENSURE_SUCCESS(rv,rv);
 
+    nsCOMPtr <nsIMsgDBHdr> msgHdr;
+    if (mOrigMsgHdr)
+      msgHdr = mOrigMsgHdr;
+    else
+    {
+      rv = GetMsgDBHdrFromURI(uri, getter_AddRefs(msgHdr));
+      NS_ENSURE_SUCCESS(rv,rv);
+    }
     if (msgHdr)
     {
       nsXPIDLString subject;
@@ -1805,6 +1826,7 @@ QuotingOutputStreamListener::~QuotingOutputStreamListener()
 }
 
 QuotingOutputStreamListener::QuotingOutputStreamListener(const char * originalMsgURI,
+                                                         nsIMsgDBHdr *originalMsgHdr,
                                                          PRBool quoteHeaders,
                                                          PRBool headersOnly,
                                                          nsIMsgIdentity *identity,
@@ -1824,9 +1846,7 @@ QuotingOutputStreamListener::QuotingOutputStreamListener(const char * originalMs
   {
     nsXPIDLString replyHeaderOriginalmessage;
     // For the built message body...
-    nsCOMPtr <nsIMsgDBHdr> originalMsgHdr;
-    rv = GetMsgDBHdrFromURI(originalMsgURI, getter_AddRefs(originalMsgHdr));
-    if (NS_SUCCEEDED(rv) && originalMsgHdr && !quoteHeaders)
+    if (originalMsgHdr && !quoteHeaders)
     {
       // Setup the cite information....
       nsXPIDLCString myGetter;
@@ -2525,9 +2545,12 @@ nsMsgCompose::QuoteMessage(const char *msgURI)
   mQuote = do_CreateInstance(NS_MSGQUOTE_CONTRACTID, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
 
+  nsCOMPtr <nsIMsgDBHdr> msgHdr;
+  rv = GetMsgDBHdrFromURI(msgURI, getter_AddRefs(msgHdr));
+
   // Create the consumer output stream.. this will receive all the HTML from libmime
   mQuoteStreamListener =
-    new QuotingOutputStreamListener(msgURI, PR_FALSE, PR_FALSE, m_identity,
+    new QuotingOutputStreamListener(msgURI, msgHdr, PR_FALSE, PR_FALSE, m_identity,
                                     m_compFields->GetCharacterSet(), mCharsetOverride, PR_FALSE);
   
   if (!mQuoteStreamListener)
@@ -2561,9 +2584,16 @@ nsMsgCompose::QuoteOriginalMessage(const char *originalMsgURI, PRInt32 what) // 
   PRBool bAutoQuote = PR_TRUE;
   m_identity->GetAutoQuote(&bAutoQuote);
 
+  nsCOMPtr <nsIMsgDBHdr> originalMsgHdr = mOrigMsgHdr;
+  if (!originalMsgHdr)
+  {
+    rv = GetMsgDBHdrFromURI(originalMsgURI, getter_AddRefs(originalMsgHdr));
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
+
   // Create the consumer output stream.. this will receive all the HTML from libmime
   mQuoteStreamListener =
-    new QuotingOutputStreamListener(originalMsgURI, what != 1, !bAutoQuote, m_identity,
+    new QuotingOutputStreamListener(originalMsgURI, originalMsgHdr, what != 1, !bAutoQuote, m_identity,
                                     mQuoteCharset.get(), mCharsetOverride, PR_TRUE);
   
   if (!mQuoteStreamListener)
