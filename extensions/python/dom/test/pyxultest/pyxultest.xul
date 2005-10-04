@@ -42,6 +42,8 @@ print "Window location is", this.window.location.href
   <hbox oncommand="print 'You clicked on a', event.target.tagName">
     <button label = "click here"/>
     <button label = "or here"/>
+    <button id="test_error" label="test error event" oncommand="test_error_event()"/>
+
   </hbox>
 </window>
 

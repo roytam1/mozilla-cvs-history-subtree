@@ -44,3 +44,9 @@ def on_button_click():
     nsdom.JSExec(this, 'this.window.open("chrome://pyxultest/content/dialog.xul", "my-dialog", "chrome")')
     #new = this.window.open("chrome://pyxultest/content/dialog.xul", "my-dialog", "chrome")
     #print "The new window is", new
+
+def test_error_event():
+    import nsdom
+    nsdom.JSExec(this, 'this.window.openDialog("chrome://pyxultest/content/pytester.xul", "my-dialog", "modal", "test_error_event")')
+    #new = this.window.open("chrome://pyxultest/content/dialog.xul", "my-dialog", "chrome")
+    #print "The new window is", new

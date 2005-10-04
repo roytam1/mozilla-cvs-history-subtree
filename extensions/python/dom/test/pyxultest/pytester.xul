@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<?xml-stylesheet href="chrome://communicator/skin/" type="text/css"?>
+
+<!-- A container for general test code.  Relies on being passed an argument
+     for which test to run
+-->
+ 
+<window
+  xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+  id="main-window" orient="vertical"
+  screenX="100" screenY="100"
+  height="300" width="500"
+  script-type="application/x-python"
+  onload="do_onload()" onerror="do_onerror(event, source, lineno)"
+  >
+  <script src="chrome://pyxultest/content/pytester.py"/>
+  <script type="application/javascript">
+dump('hello from js\n');
+function x_onload() {
+    dump('JS Args are' + window.arguments + '\n');
+}
+//window.onload = onload;
+  </script>
+</window>
