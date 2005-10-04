@@ -522,7 +522,7 @@ NS_METHOD nsWindow::IsVisible(PRBool & bState)
 // Return PR_TRUE if the whether the component is visible, PR_FALSE otherwise
 //
 //-------------------------------------------------------------------------
-NS_METHOD nsWindow::IsShown()
+PRBool nsWindow::IsShown()
 {
   return mVisible;
 }
