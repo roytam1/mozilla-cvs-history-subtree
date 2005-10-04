@@ -227,16 +227,11 @@ nsresult nsTextAccessibleWrap::GetCharacterExtents(PRInt32 aStartOffset, PRInt32
   NS_ENSURE_TRUE(presContext, NS_ERROR_FAILURE);
   float t2p = presContext->TwipsToPixels();
 
-  nsIFrame *frame = nsnull;
-  nsCOMPtr<nsIContent> content(do_QueryInterface(mDOMNode));
-  presShell->GetPrimaryFrameFor(content, &frame);
+  nsIFrame *frame = GetFrame();
   NS_ENSURE_TRUE(frame, NS_ERROR_FAILURE);
 
-  nsIViewManager* viewManager = presShell->GetViewManager();
-  NS_ASSERTION(viewManager, "No view manager for pres shell");
-
-  nsCOMPtr<nsIWidget> widget;
-  viewManager->GetWidget(getter_AddRefs(widget));
+  nsIWidget *widget = frame->GetWindow();
+  NS_ENSURE_TRUE(widget, NS_ERROR_FAILURE);
 
   nsIRenderingContext *rendContext;
   rendContext = widget->GetRenderingContext();
