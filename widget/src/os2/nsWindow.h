@@ -148,6 +148,7 @@ class nsWindow : public nsBaseWidget,
    NS_IMETHOD SetFocus(PRBool aRaise);
    NS_IMETHOD GetBounds(nsRect &aRect);
    NS_IMETHOD IsVisible( PRBool &aState);
+   PRBool     IsShown();
    NS_IMETHOD PlaceBehind(nsTopLevelWidgetZPlacement aPlacement,
                           nsIWidget *aWidget, PRBool aActivate);
 
@@ -282,6 +283,7 @@ protected:
    PRUint32  mDragStatus;     // set while this object is being dragged over
    HPOINTER  mCssCursorHPtr;  // created by SetCursor(imgIContainer*)
    nsCOMPtr<imgIContainer> mCssCursorImg;  // saved by SetCursor(imgIContainer*)
+   BOOL      mIsVisible;
 
    HWND      GetParentHWND() const;
    HWND      GetHWND() const   { return mWnd; }

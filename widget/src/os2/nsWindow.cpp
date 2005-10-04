@@ -217,6 +217,7 @@ nsWindow::nsWindow() : nsBaseWidget()
     mHaveDeadKey        = FALSE;
     mIsDestroying       = PR_FALSE;
     mOnDestroyCalled    = PR_FALSE;
+    mIsVisible          = FALSE;
 
     mPreferredWidth     = 0;
     mPreferredHeight    = 0;
@@ -1228,6 +1229,7 @@ NS_METHOD nsWindow::Show(PRBool bState)
       else
          WinShowWindow( hwnd, FALSE);
    }
+   mIsVisible = bState;
 
    return NS_OK;
 }
@@ -1241,7 +1243,18 @@ NS_METHOD nsWindow::IsVisible(PRBool & bState)
 {
    // I guess this means visible & not showing...
    bState = WinIsWindowVisible( mWnd) ? PR_TRUE : PR_FALSE;
+   mIsVisible = bState;
    return NS_OK;
+}
+
+//-------------------------------------------------------------------------
+//
+// Return the last value passed to Show.
+//
+//-------------------------------------------------------------------------
+PRBool nsWindow::IsShown()
+{
+  return mIsVisible;
 }
 
 //-------------------------------------------------------------------------
