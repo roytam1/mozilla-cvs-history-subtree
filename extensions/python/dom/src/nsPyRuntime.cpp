@@ -230,6 +230,6 @@ init_nsdom() {
         return;
     CEnterLeavePython _celp;
     // Create the module and add the functions
-    Py_InitModule("nsdom", methods);
+    Py_InitModule("_nsdom", methods);
     have_init = PR_TRUE;
 }

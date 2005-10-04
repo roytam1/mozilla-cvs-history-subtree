@@ -36,7 +36,6 @@
 
 #include "nsIScriptContext.h"
 #include "nsITimer.h"
-#include "nsDataHashtable.h"
  
 #include "PyXPCOM.h"
 class nsIScriptObjectOwner;
@@ -136,7 +135,8 @@ public:
                                  PRBool* aIsUndefined);
   virtual nsresult CompileEventHandler(nsIPrincipal *aPrincipal,
                                        nsIAtom *aName,
-                                       const char *aEventName,
+                                       PRUint32 aArgCount,
+                                       const char** aArgNames,
                                        const nsAString& aBody,
                                        const char *aURL,
                                        PRUint32 aLineNo,
@@ -204,23 +204,12 @@ protected:
   PRPackedBool mIsInitialized;
   PRPackedBool mScriptsEnabled;
   PRPackedBool mProcessingScriptTag;
-  PRUint32 mNumEvaluations;
-  PyObject *mGlobal;
 
   nsIScriptContextOwner* mOwner;  /* NB: weak reference, not ADDREF'd */
-  nsIScriptGlobalObject *mScriptGlobal; // ditto - not ADDREF'd
+  // ditto - not ADDREF'd - but Python itself takes one!
+  nsIScriptGlobalObject *mScriptGlobal;
 
   nsresult HandlePythonError();
-  
-  // Implement our concept of a 'wrapped native'.  No concept of 'expandos'
-  // yet - we explicitly know when we need to create a new permanent one.
 
-  PyObject *GetPyNamespaceFor(nsISupports *pThing, PRBool bCreate);
-  void CleanPyNamespaces();
-  
-  // and the data.
-  nsDataHashtable<nsISupportsHashKey, PyObject *> mMapPyObjects;
-  // And other to keep an explicit strong ref to the target for as long as our
-  // context is alive.
-//  nsClassHashtable<nsISupportsHashKey, nsISupports> mMapNatives; 
+  PyObject *mDelegate;  // The Python code we delegate lots of code to.
 };

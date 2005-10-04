@@ -77,21 +77,17 @@ AtomToEventHandlerName(nsIAtom *aName)
 }
 
 nsPythonContext::nsPythonContext() :
-    mGlobal(NULL),
-    mScriptGlobal(nsnull),
     mIsInitialized(PR_FALSE),
-    mNumEvaluations(0),
     mOwner(nsnull),
     mScriptsEnabled(PR_TRUE),
-    mProcessingScriptTag(PR_FALSE)
+    mProcessingScriptTag(PR_FALSE),
+    mDelegate(NULL)
 {
-  mMapPyObjects.Init();
   PYLEAK_STAT_INCREMENT(ScriptContext);
 }
 
 nsPythonContext::~nsPythonContext()
 {
-  CleanPyNamespaces();
   PYLEAK_STAT_DECREMENT(ScriptContext);
 }
 
@@ -145,7 +141,6 @@ nsresult nsPythonContext::HandlePythonError()
     }
   }
   PRBool outOfMem = PyErr_GivenExceptionMatches(exc, PyExc_MemoryError);
-  PyErr_Restore(exc, typ, tb);
   
   nsCAutoString cerrMsg;
   PyXPCOM_FormatCurrentException(cerrMsg);
@@ -154,9 +149,12 @@ nsresult nsPythonContext::HandlePythonError()
   errorevent.errorMsg = errMsg.get();
   nsEventStatus status = nsEventStatus_eIgnore;
 
+  // Handle the script error before we restore the exception.
   if (mScriptGlobal && !outOfMem) {
     mScriptGlobal->HandleScriptError(&errorevent, &status);
   }
+
+  PyErr_Restore(exc, typ, tb);
 
   if (status != nsEventStatus_eConsumeNoDefault) {
     // report it 'normally'.  We probably should use nsIScriptError
@@ -164,82 +162,57 @@ nsresult nsPythonContext::HandlePythonError()
     NS_WARNING("Python error calling DOM script");
     PyXPCOM_LogError("Python error");
   }
-  // We always want the hresult.
-  return PyXPCOM_SetCOMErrorFromPyException();
-}
-
-nsCAutoString
-nsPythonContext::FixSource(const nsAString &aOrigSource)
-{
-  // As of python 2.3, this \r\n etc mangling is necessary.  However I heard
-  // a rumour later versions were fixing that.
-  nsCAutoString source;
-  CopyUTF16toUTF8(aOrigSource, source);
-
-  // Python insists on \n between lines and a trailing \n.  Fixup windows/mac
-
-  // Windows linebreaks: Map CRLF to LF:
-  source.ReplaceSubstring(NS_LITERAL_CSTRING("\r\n").get(),
-                          NS_LITERAL_CSTRING("\n").get());
-
-  // Mac linebreaks: Map any remaining CR to LF:
-  source.ReplaceSubstring(NS_LITERAL_CSTRING("\r").get(),
-                          NS_LITERAL_CSTRING("\n").get());
-
-  // trailing \n
-  source.Append(NS_LITERAL_CSTRING("\n"));
-  return source;
-}
-
-PyObject *
-nsPythonContext::InternalCompile(const nsAString &aOrigSource, const char *url,
-                                 PRUint32 lineNo)
-{
-  nsCAutoString source(FixSource(aOrigSource));
-  // It is very hard to trick Python into using a different line number.
-  // To do so would involve reimplementing PyParser_ParseStringFlagsFilename,
-  // but that relies on Python's Parser/tokenizer.h, which is not included in
-  // (windows at least) binary versions.
-  // Another options is to trick Python by prepending lineNo '\n' chars
-  // before the source, but that seems extreme!
-  PyCompilerFlags cf;
-  cf.cf_flags = PyCF_SOURCE_IS_UTF8;
-  return Py_CompileStringFlags(source.get(), url, Py_file_input, &cf);
+  // We always want the hresult and exception state cleared.
+  nsresult ret = PyXPCOM_SetCOMErrorFromPyException();
+  PyErr_Clear();
+  return ret;
 }
 
 nsresult
 nsPythonContext::InitContext(nsIScriptGlobalObject *aGlobalObject)
 {
+  NS_TIMELINE_MARK_FUNCTION("nsPythonContext::InitContext");
   // Make sure callers of this use
   // WillInitializeContext/DidInitializeContext around this call?
   // We don't really care though.
   NS_ENSURE_TRUE(!mIsInitialized, NS_ERROR_ALREADY_INITIALIZED);
+  // Load our delegate.
   CEnterLeavePython _celp;
-  // Setup our global dict.
-  Py_XDECREF(mGlobal);
+  // this assertion blowing means we need to create the delegate elsewhere...
+  NS_ASSERTION(mDelegate == NULL, "Init context called multiple times!");
+  Py_XDECREF(mDelegate);
+  PyObject *mod = PyImport_ImportModule("nsdom.context");
+  if (mod==NULL)
+    return HandlePythonError();
+  PyObject *klass = PyObject_GetAttrString(mod, "ScriptContext");
+  Py_DECREF(mod);
+  if (klass == NULL)
+    return HandlePythonError();
+  mDelegate = PyObject_Call(klass, NULL, NULL);
+  Py_DECREF(klass);
+
+  if (mDelegate == NULL)
+    return HandlePythonError();
+
   PyObject *obGlobal;
   if (aGlobalObject) {
     // must build the object with nsISupports, so it gets the automagic
     // interface flattening (I guess that is a bug in pyxpcom?)
     obGlobal = Py_nsISupports::PyObjectFromInterface(aGlobalObject,
                                                      NS_GET_IID(nsISupports),
-                                                     PR_TRUE);
+                                                     PR_TRUE, PR_FALSE);
     if (!obGlobal)
       return HandlePythonError();
   } else {
     obGlobal = Py_None;
     Py_INCREF(Py_None);
   }
-  mScriptGlobal = aGlobalObject;
-  mGlobal = Py_BuildValue("{s:N}", "this", obGlobal);
-  if (!mGlobal)
+
+  PyObject *ret = PyObject_CallMethod(mDelegate, "InitContext", "N", obGlobal);
+  if (ret == NULL)
     return HandlePythonError();
-  // Add builtins to globals (not necessary if .py code does an exec ??)
-  if (PyDict_SetItemString(mGlobal, "__builtins__",
-                           PyEval_GetBuiltins()) != 0) {
-    NS_ERROR("can't add __builtins__ to __main__");
-    return NS_ERROR_UNEXPECTED;
-  }
+  // stash the global away so we can fetch it locally.
+  mScriptGlobal = aGlobalObject;
   return NS_OK;
 }
 
@@ -287,7 +260,6 @@ nsPythonContext::EvaluateString(const nsAString& aScript,
 
     return NS_OK;
   }
-
   NS_ERROR("Not implemented");
   return NS_ERROR_NOT_IMPLEMENTED;
 }
@@ -298,40 +270,42 @@ nsPythonContext::ExecuteScript(void* aScriptObject,
                            nsAString* aRetValue,
                            PRBool* aIsUndefined)
 {
+  NS_TIMELINE_MARK_FUNCTION("nsPythonContext::ExecuteScript");
   NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
 
+  if (aIsUndefined) {
+    *aIsUndefined = PR_TRUE;
+  }
   if (!mScriptsEnabled) {
-    if (aIsUndefined) {
-      *aIsUndefined = PR_TRUE;
-    }
     if (aRetValue) {
       aRetValue->Truncate();
     }
     return NS_OK;
   }
   NS_ENSURE_TRUE(aScriptObject, NS_ERROR_NULL_POINTER);
-  NS_ASSERTION(aScopeObject == nsnull || aScopeObject == mGlobal,
-               "Global was changed??");
-  PyObject *pyScopeObject = (PyObject *)aScopeObject;
+  NS_ASSERTION(mDelegate, "Script context has no delegate");
+  NS_ENSURE_TRUE(mDelegate, NS_ERROR_UNEXPECTED);
   CEnterLeavePython _celp;
-  if (pyScopeObject) {
-    NS_ASSERTION(PyDict_Check(pyScopeObject), "aScopeObject globals not a dict?");
-  // sigh - I still don't understand mGlobal vs aScopeObject :(
-    NS_ASSERTION(pyScopeObject == mGlobal, "Scope is not the global?");
-    NS_ENSURE_TRUE(PyDict_Check(pyScopeObject), NS_ERROR_UNEXPECTED);
-  } else
-    pyScopeObject = mGlobal;
-  PyCodeObject *pyScriptObject = (PyCodeObject *)aScriptObject;
-  NS_ASSERTION(PyCode_Check(pyScriptObject), "aScriptObject not a code object?");
-  NS_ENSURE_TRUE(PyCode_Check(pyScriptObject), NS_ERROR_UNEXPECTED);
-  PyObject *ret = PyEval_EvalCode(pyScriptObject, pyScopeObject, NULL);
+
+  PyObject *ret = PyObject_CallMethod(mDelegate, "ExecuteScript", "OO",
+                                      aScriptObject, aScopeObject);
+  // We always want to return OK here - any errors are "just" script errors.
   if (!ret) {
     HandlePythonError();
-    // we should notify someone/something...
-    // but either way, we return OK - it was "just" a script error
-    return NS_OK;
+    if (aRetValue)
+      aRetValue->Truncate();
+  } else if (ret == Py_None) {
+    if (aRetValue)
+      aRetValue->Truncate();
+  } else {
+    if (aRetValue) {
+      PyObject_AsNSString(ret, *aRetValue);
+    }
+    if (aIsUndefined) {
+      *aIsUndefined = PR_FALSE;
+    }
   }
-  Py_DECREF(ret);
+  Py_XDECREF(ret);
   return NS_OK;
 }
 
@@ -348,33 +322,70 @@ nsPythonContext::CompileScript(const PRUnichar* aText,
   NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
   NS_TIMELINE_MARK_FUNCTION("nsPythonContext::CompileScript");
 
-  // nsDependentString looked good, but insists on no length!
-  nsAutoString strSource(aText, aTextLength);
+  NS_ASSERTION(mDelegate, "Script context has no delegate");
+  NS_ENSURE_TRUE(mDelegate, NS_ERROR_UNEXPECTED);
 
   CEnterLeavePython _celp;
-  PyObject *co = InternalCompile(strSource, aURL, aLineNo);
-  if (!co)
+
+  PyObject *obCode = PyObject_FromNSString(aText, aTextLength);
+  if (!obCode)
     return HandlePythonError();
-  *aScriptObject = co;
+  PyObject *obPrincipal = Py_None; // fix this when we can use it!
+
+  PyObject *ret = PyObject_CallMethod(mDelegate, "CompileScript",
+                                      "NOOsii",
+                                      obCode,
+                                      aScopeObject ? aScopeObject : Py_None,
+                                      obPrincipal,
+                                      aURL,
+                                      aLineNo,
+                                      aVersion);
+  if (!ret) {
+    *aScriptObject = nsnull;
+    return HandlePythonError();
+  }
   PYLEAK_STAT_INCREMENT(ScriptObject);
+  *aScriptObject = ret;
   return NS_OK;
 }
 
 nsresult
 nsPythonContext::CompileEventHandler(nsIPrincipal *aPrincipal, nsIAtom *aName,
-                                 const char *aEventName,
+                                 PRUint32 aArgCount,
+                                 const char** aArgNames,
                                  const nsAString& aBody,
                                  const char *aURL, PRUint32 aLineNo,
                                  void** aHandler)
 {
   NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
+  NS_TIMELINE_MARK_FUNCTION("nsPythonContext::CompileEventHandler");
+
+  NS_ASSERTION(mDelegate, "Script context has no delegate");
+  NS_ENSURE_TRUE(mDelegate, NS_ERROR_UNEXPECTED);
 
   CEnterLeavePython _celp;
-  PyObject *co = InternalCompile(aBody, aURL, aLineNo);
-  if (!co)
+
+  PyObject *argNames = PyList_New(aArgCount);
+  if (!argNames)
     return HandlePythonError();
+  for (PRUint32 i=0;i<aArgCount;i++) {
+    PyList_SET_ITEM(argNames, i, PyString_FromString(aArgNames[i]));
+  }
+  PyObject *obPrincipal = Py_None; // fix this when we can use it!
+
+  PyObject *ret = PyObject_CallMethod(mDelegate, "CompileEventHandler",
+                                      "OsNNsi",
+                                      obPrincipal,
+                                      AtomToEventHandlerName(aName),
+                                      argNames,
+                                      PyObject_FromNSString(aBody),
+                                      aURL, aLineNo);
+  if (!ret) {
+    *aHandler = nsnull;
+    return HandlePythonError();
+  }
   PYLEAK_STAT_INCREMENT(EventHandler);
-  *aHandler = co;
+  *aHandler = ret;
   return NS_OK;
 }
 
@@ -382,20 +393,27 @@ nsresult
 nsPythonContext::BindCompiledEventHandler(nsISupports *aTarget, void *aScope,
                                           nsIAtom *aName, void *aHandler)
 {
-  PyObject *d = GetPyNamespaceFor(aTarget, PR_TRUE);
-  if (!d)
+  NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
+
+  NS_ASSERTION(mDelegate, "Script context has no delegate");
+  NS_ENSURE_TRUE(mDelegate, NS_ERROR_UNEXPECTED);
+
+  CEnterLeavePython _celp;
+
+  PyObject *obTarget;
+  obTarget = Py_nsISupports::PyObjectFromInterface(aTarget,
+                                                   NS_GET_IID(nsISupports),
+                                                   PR_TRUE, PR_FALSE);
+  if (!obTarget)
     return HandlePythonError();
-  if (!PyDict_Check(d)) {
-    NS_ERROR("Expecting a Python dictionary!");
-    return NS_ERROR_UNEXPECTED;
-  }
-  if (!aHandler || !PyCode_Check((PyObject *)aHandler)) {
-    NS_ERROR("Expecting a Python code object");
-    return NS_ERROR_UNEXPECTED;
-  }
-  const char *charName = AtomToEventHandlerName(aName);
-  PyDict_SetItemString(d, (char *)charName, (PyObject *)aHandler);
-  return NS_OK;
+
+  PyObject *ret = PyObject_CallMethod(mDelegate, "BindCompiledEventHandler",
+                                      "NOsO",
+                                      obTarget, aScope,
+                                      AtomToEventHandlerName(aName),
+                                      aHandler);
+  Py_XDECREF(ret);
+  return HandlePythonError();
 }
 
 
@@ -410,6 +428,7 @@ nsPythonContext::CompileFunction(void* aTarget,
                              PRBool aShared,
                              void** aFunctionObject)
 {
+  NS_TIMELINE_MARK_FUNCTION("nsPythonContext::CompileFunction");
   NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
 
   NS_ERROR("CompileFunction not implemented");
@@ -420,79 +439,40 @@ nsresult
 nsPythonContext::CallEventHandler(nsISupports *aTarget, void *aScope, void* aHandler,
                                     nsIArray *aargv, nsISupports **arv)
 {
+  NS_TIMELINE_MARK_FUNCTION("nsPythonContext::CallEventHandler");
   NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
 
-  if (!mScriptsEnabled) {
-    return NS_OK;
-  }
+  NS_ASSERTION(mDelegate, "Script context has no delegate");
+  NS_ENSURE_TRUE(mDelegate, NS_ERROR_UNEXPECTED);
+
   CEnterLeavePython _celp;
-  PyObject *obEvent = NULL;
-  PyObject *obArgv = NULL;
-  PyObject *obTarget = NULL;
-  PyObject *thisGlobals = NULL;
-  PyObject *ret = NULL;
-  PRBool ok = PR_FALSE;
-  *arv = nsnull;
-  // exit via goto
-  thisGlobals = PyDict_Copy(mGlobal);
-  if (!thisGlobals)
-    goto done;
 
-  // Could get perf by caching wrapped object
+  PyObject *obTarget, *obArgv;
   obTarget = Py_nsISupports::PyObjectFromInterface(aTarget,
-                                                  NS_GET_IID(nsISupports),
-                                                  PR_TRUE);
+                                                   NS_GET_IID(nsISupports),
+                                                   PR_TRUE, PR_FALSE);
   if (!obTarget)
-    goto done;
-  // XXX - what should this be exposed as?
-  PyDict_SetItemString(thisGlobals, "target", obTarget);
-  // This sucks - 'compile' is passed the literal name 'event', but that
-  // is too early for us.  It also kinda sucks it is hard-coded as argv[0]
-  // XXXmarkh - it *totally* sucks with onevent etc.  This must become a
-  // property bag.
-  // Always make 'arguments' available for now (a property bag will let us
-  // give real names.
-  // Later we could also check for a function object, extract the number of
-  // args, and pass only them (but always making 'arguments' available).
-  if (aargv) {
-    PRUint32 argc = 0;
-    aargv->GetLength(&argc);
-    if (argc==1) {
-      nsCOMPtr<nsISupports> arg;
-      nsresult rv;
-      rv = aargv->QueryElementAt(0, NS_GET_IID(nsISupports), getter_AddRefs(arg));
-      if (NS_SUCCEEDED(rv))
-        obEvent = Py_nsISupports::PyObjectFromInterface(arg, NS_GET_IID(nsISupports),
-                                                        PR_TRUE);
-    }
-    obArgv = Py_nsISupports::PyObjectFromInterface(aargv, NS_GET_IID(nsISupports),
-                                                   PR_TRUE);
-    
-  } else {
-    obArgv = Py_None;
-    Py_INCREF(Py_None);
-  }
-  if (obEvent)
-    PyDict_SetItemString(thisGlobals, "event", obEvent);
-  if (obArgv)
-    PyDict_SetItemString(thisGlobals, "arguments", obArgv);
+    return HandlePythonError();
 
-  NS_ASSERTION(PyCode_Check((PyObject *)aHandler), "Not a Python code object");
-  NS_ENSURE_TRUE(PyCode_Check((PyObject *)aHandler), NS_ERROR_UNEXPECTED);
-  ret = PyEval_EvalCode((PyCodeObject *)aHandler,
-                        thisGlobals, NULL);
-  if (!ret)
-    goto done;
-  ok = Py_nsISupports::InterfaceFromPyObject(ret, NS_GET_IID(nsIVariant),
-                                             arv, PR_TRUE, PR_TRUE);
-done:
-  nsresult rv = ok ? NS_OK : HandlePythonError();
-  Py_XDECREF(ret);
-  Py_XDECREF(obEvent);
-  Py_XDECREF(obTarget);
-  Py_XDECREF(obArgv);
-  Py_XDECREF(thisGlobals);
-  return rv;
+  obArgv = Py_nsISupports::PyObjectFromInterface(aargv,
+                                                 NS_GET_IID(nsIArray),
+                                                 PR_TRUE, PR_TRUE);
+  if (!obArgv) {
+    Py_DECREF(obTarget);
+    return HandlePythonError();
+  }
+
+
+  PyObject *ret = PyObject_CallMethod(mDelegate, "CallEventHandler",
+                                      "NOON",
+                                      obTarget, aScope, aHandler,
+                                      obArgv);
+  if (ret) {
+    Py_nsISupports::InterfaceFromPyObject(ret, NS_GET_IID(nsIVariant),
+                                               arv, PR_TRUE, PR_TRUE);
+    Py_DECREF(ret);
+  }
+  return HandlePythonError();
 }
 
 nsresult
@@ -500,41 +480,60 @@ nsPythonContext::GetBoundEventHandler(nsISupports* aTarget, void *aScope,
                                       nsIAtom* aName,
                                       void** aHandler)
 {
-  *aHandler = nsnull;
-  PyObject *ns = GetPyNamespaceFor(aTarget, PR_FALSE);
-  if (!ns) {
-    NS_WARNING("Nothing has been bound to this object");
+  NS_TIMELINE_MARK_FUNCTION("nsPythonContext::GetBoundEventHandler");
+  NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
+
+  NS_ASSERTION(mDelegate, "Script context has no delegate");
+  NS_ENSURE_TRUE(mDelegate, NS_ERROR_UNEXPECTED);
+
+  CEnterLeavePython _celp;
+
+  PyObject *obTarget;
+  obTarget = Py_nsISupports::PyObjectFromInterface(aTarget,
+                                                   NS_GET_IID(nsISupports),
+                                                   PR_TRUE, PR_FALSE);
+  if (!obTarget)
+    return HandlePythonError();
+
+  PyObject *ret = PyObject_CallMethod(mDelegate, "GetBoundEventHandler",
+                                      "NOs",
+                                      obTarget, aScope,
+                                      AtomToEventHandlerName(aName));
+  if (!ret) {
+    *aHandler = nsnull;
+    return HandlePythonError();
+  }
+  if (ret == Py_None) {
+    *aHandler = nsnull;
     return NS_OK;
   }
-  const char *charName = AtomToEventHandlerName(aName);
-  PyObject *func = PyDict_GetItemString(ns, (char *)charName);
-  if (!func) {
-    NS_WARNING("No event handler of that name found");
-    return NS_OK;
-  }
-  *aHandler = func;
-  Py_INCREF(func);
   PYLEAK_STAT_INCREMENT(ScriptObject);
+  *aHandler = ret;
   return NS_OK;
 }
 
 nsresult
 nsPythonContext::SetProperty(void *aTarget, const char *aPropName, nsISupports *aVal)
 {
-  PyObject *d = (PyObject *)aTarget;
-  if (!PyDict_Check(d)) {
-    NS_ERROR("Expecting a Python dictionary!?");
-    return NS_ERROR_UNEXPECTED;
-  }
+  NS_TIMELINE_MARK_FUNCTION("nsPythonContext::SetProperty");
+  NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
+
+  NS_ASSERTION(mDelegate, "Script context has no delegate");
+  NS_ENSURE_TRUE(mDelegate, NS_ERROR_UNEXPECTED);
+
+  CEnterLeavePython _celp;
   PyObject *obVal;
   obVal = Py_nsISupports::PyObjectFromInterface(aVal,
                                                 NS_GET_IID(nsISupports),
-                                                PR_TRUE);
+                                                PR_TRUE, PR_FALSE);
   if (!obVal)
     return HandlePythonError();
-  PyDict_SetItemString(d, (char *)aPropName, obVal);
-  Py_DECREF(obVal);
-  return NS_OK;
+
+  PyObject *ret = PyObject_CallMethod(mDelegate, "SetProperty",
+                                      "OsN",
+                                      aTarget, aPropName, obVal);
+  Py_XDECREF(ret);
+  return HandlePythonError();
 }
 
 nsresult
@@ -549,8 +548,9 @@ nsPythonContext::Serialize(nsIObjectOutputStream* aStream, void *aScriptObject)
   NS_TIMELINE_MARK_FUNCTION("nsPythonContext::Serialize");
   CEnterLeavePython _celp;
   nsresult rv;
-  if (!PyCode_Check((PyObject *)aScriptObject)) {
-    NS_ERROR("aScriptObject is not a code object");
+  PyObject *pyScriptObject = (PyObject *)aScriptObject;
+  if (!PyCode_Check(pyScriptObject) && !PyFunction_Check(pyScriptObject)) {
+    NS_ERROR("aScriptObject is not a code or function object");
     return NS_ERROR_UNEXPECTED;
   }
   rv = aStream->Write32(PyImport_GetMagicNumber());
@@ -609,7 +609,8 @@ nsPythonContext::Deserialize(nsIObjectInputStream* aStream, void **aResult)
     nsMemory::Free(data);
   if (codeObject == NULL)
     return HandlePythonError();
-  NS_ASSERTION(PyCode_Check(codeObject), "unmarshal returned a non string?");
+  NS_ASSERTION(PyCode_Check(codeObject) || PyFunction_Check(codeObject),
+               "unmarshal returned non code/functions");
   *aResult = codeObject;
   PYLEAK_STAT_INCREMENT(ScriptObject);
   return NS_OK;
@@ -636,8 +637,18 @@ nsPythonContext::GetNativeContext()
 void *
 nsPythonContext::GetNativeGlobal()
 {
-  NS_ASSERTION(mGlobal, "GetNativeGlobal called before InitContext??");
-  return mGlobal;
+  NS_ASSERTION(mDelegate, "Script context has no delegate");
+  NS_ENSURE_TRUE(mDelegate, nsnull);
+  CEnterLeavePython _celp;
+  PyObject *ret = PyObject_CallMethod(mDelegate, "GetNativeGlobal", NULL);
+  if (!ret) {
+    HandlePythonError();
+    return nsnull;
+  }
+  // This is assumed a borrowed reference.
+  NS_ASSERTION(ret->ob_refcnt > 1, "Can't have a new object here!?");
+  Py_DECREF(ret);
+  return ret;
 }
 
 void
@@ -727,52 +738,21 @@ nsPythonContext::GC()
 nsresult
 nsPythonContext::FinalizeClasses(void *aGlobalObj)
 {
-  mScriptGlobal = nsnull;
-  NS_ASSERTION(aGlobalObj == mGlobal, "Wrong object finalized?");
-  Py_XDECREF((PyObject *)aGlobalObj);
-  mGlobal = NULL;
-  CleanPyNamespaces();
-  return NS_OK;
+  NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
+
+  NS_ASSERTION(mDelegate, "Script context has no delegate");
+  NS_ENSURE_TRUE(mDelegate, NS_ERROR_UNEXPECTED);
+
+  CEnterLeavePython _celp;
+  PyObject *ret = PyObject_CallMethod(mDelegate, "FinalizeClasses",
+                                      "O",
+                                      aGlobalObj);
+  Py_XDECREF(ret);
+  return HandlePythonError();
 }
 
 NS_IMETHODIMP
 nsPythonContext::Notify(nsITimer *timer)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-static PLDHashOperator
-CleanupPyObjects(nsISupports *aKey,
-                 PyObject *&aPyOb,
-                 void *closure)
-{
-  NS_RELEASE(aKey);
-  Py_DECREF(aPyOb);
-  return PL_DHASH_REMOVE;
-}
-
-void nsPythonContext::CleanPyNamespaces()
-{
-  mMapPyObjects.Enumerate(CleanupPyObjects, nsnull);  
-}
-
-PyObject *nsPythonContext::GetPyNamespaceFor(nsISupports *aThing, PRBool bCreate)
-{
-  PyObject *ret = NULL;
-  NS_ASSERTION(aThing, "Null pointer!");
-  NS_ENSURE_TRUE(aThing, NULL);
-  if (!mMapPyObjects.Get(aThing, &ret) && bCreate) {
-    ret = PyDict_New();
-    if (!ret)
-      return NULL;
-    // store the new object in the hash-table.  It then has ownership of the
-    // reference.
-    if (!mMapPyObjects.Put(aThing, ret)) {
-      NS_ERROR("Failed to store in the hash-table");
-      Py_DECREF(ret);
-      return NULL;
-    }
-    NS_ADDREF(aThing);
-  }
-  return ret;
 }
