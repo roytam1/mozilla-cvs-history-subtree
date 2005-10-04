@@ -78,6 +78,9 @@ public:
   // nsIDOMHTMLObjectElement
   NS_DECL_NSIDOMHTMLOBJECTELEMENT
 
+  // nsIContent
+  virtual PRBool IsFocusable(PRInt32 *aTabIndex = nsnull);
+
   // Overriden nsIFormControl methods
   NS_IMETHOD_(PRInt32) GetType() const { return NS_FORM_OBJECT; }
   NS_IMETHOD Reset();
@@ -168,6 +171,34 @@ nsHTMLObjectElement::GetForm(nsIDOMHTMLFormElement** aForm)
 {
   return nsGenericHTMLFormElement::GetForm(aForm);
 }
+
+// nsIContent
+
+PRBool
+nsHTMLObjectElement::IsFocusable(PRInt32 *aTabIndex)
+{
+  if (aTabIndex) {
+    GetTabIndex(aTabIndex);
+  }
+  
+  nsIFrame* frame = GetPrimaryFrame(PR_FALSE);
+  if (frame) {
+    nsIObjectFrame *objFrame = nsnull;
+    CallQueryInterface(frame, &objFrame);
+    if (objFrame) {
+      nsCOMPtr<nsIPluginInstance> pluginInstance;
+      objFrame->GetPluginInstance(*getter_AddRefs(pluginInstance));
+      if (pluginInstance) {
+        // Has a plugin: let the plugin decide what to do in terms of
+        // internal focus from mouse clicks
+        return PR_TRUE;
+      }
+    }
+  }
+  
+  return HasAttr(kNameSpaceID_None, nsHTMLAtoms::tabindex);
+}
+
 
 // nsIFormControl
 
