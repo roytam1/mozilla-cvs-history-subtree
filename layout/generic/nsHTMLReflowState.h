@@ -348,6 +348,10 @@ struct nsHTMLReflowState {
    */
   void ApplyMinMaxConstraints(nscoord* aContentWidth, nscoord* aContentHeight) const;
 
+  PRBool ShouldReflowAllKids() const {
+    return (frame->GetStateBits() & NS_FRAME_IS_DIRTY) || mFlags.mIsResize;
+  }
+
 protected:
 
   void InitCBReflowState();

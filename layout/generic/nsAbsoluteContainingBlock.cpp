@@ -166,11 +166,13 @@ nsAbsoluteContainingBlock::Reflow(nsIFrame*                aDelegatingFrame,
   if (aChildBounds)
     aChildBounds->SetRect(0, 0, 0, 0);
 
-  PRBool parentDirty = aDelegatingFrame->GetStateBits() & NS_FRAME_IS_DIRTY;
+  PRBool reflowAll = aReflowState.ShouldReflowAllKids();
 
   nsIFrame* kidFrame;
   for (kidFrame = mAbsoluteFrames.FirstChild(); kidFrame; kidFrame = kidFrame->GetNextSibling()) {
-    if (parentDirty || kidFrame->GetStateBits() & NS_FRAME_IS_DIRTY) {
+    if (reflowAll ||
+        kidFrame->GetStateBits() &
+          (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)) {
       // Reflow the frame
       nsReflowStatus  kidStatus;
       ReflowAbsoluteFrame(aDelegatingFrame, aPresContext, aReflowState, aContainingBlockWidth,
