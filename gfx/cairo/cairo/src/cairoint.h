@@ -139,6 +139,10 @@
 #endif
 
 #if !defined(CAIRO_MUTEX_DECLARE) && defined CAIRO_HAS_WIN32_SURFACE
+// if 0 this for mozilla; we're only going to use cairo single-threaded,
+// and we can't use DllMain since we link statically.  So this is
+// much simpler.
+#if 0
 # define WIN32_LEAN_AND_MEAN
 # include <windows.h>
   /* the real initialization must take place in DllMain */
@@ -146,6 +150,7 @@
 # define CAIRO_MUTEX_DECLARE_GLOBAL(name) extern LPCRITICAL_SECTION name;
 # define CAIRO_MUTEX_LOCK(name) EnterCriticalSection (&name)
 # define CAIRO_MUTEX_UNLOCK(name) LeaveCriticalSection (&name)
+#endif
 #endif
 
 #ifndef CAIRO_MUTEX_DECLARE
