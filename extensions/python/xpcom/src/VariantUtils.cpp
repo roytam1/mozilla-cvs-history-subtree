@@ -150,6 +150,38 @@ PyObject *PyObject_FromNSString( const PRUnichar *s,
 	           len==((PRUint32)-1)? nsCRT::strlen(s) : len);
 }
 
+PRBool PyObject_AsNSString( PyObject *val, nsAString &aStr)
+{
+	if (val == Py_None) {
+		aStr.Truncate();
+		return NS_OK;
+	}
+	PyObject *val_use = NULL;
+	PRBool ok = PR_TRUE;
+	if (!PyString_Check(val) && !PyUnicode_Check(val)) {
+		PyErr_SetString(PyExc_TypeError, "This parameter must be a string or Unicode object");
+		ok = PR_FALSE;
+	}
+	if (ok && (val_use = PyUnicode_FromObject(val))==NULL)
+		ok = PR_FALSE;
+	if (ok) {
+		if (PyUnicode_GET_SIZE(val_use) == 0) {
+			aStr.Truncate();
+		}
+		else {
+			PRUint32 nch;
+			PRUnichar *tempo;
+			// can we do this without the copy?
+			if (PyUnicode_AsPRUnichar(val_use, &tempo, &nch) < 0)
+				return PR_FALSE;
+			aStr.Assign(tempo, nch);
+			nsMemory::Free(tempo);
+		}
+	}
+	Py_XDECREF(val_use);
+	return ok;
+}
+
 // Array utilities
 static PRUint32 GetArrayElementSize( PRUint8 t)
 {
@@ -1227,35 +1259,17 @@ PRBool PyXPCOM_InterfaceVariantHelper::FillInVariant(const PythonTypeDescriptor 
 			break;
 		  case nsXPTType::T_ASTRING:
 		  case nsXPTType::T_DOMSTRING: {
-			if (val==Py_None) {
-				ns_v.val.p = new nsString();
-			} else {
-				if (!PyString_Check(val) && !PyUnicode_Check(val)) {
-					PyErr_SetString(PyExc_TypeError, "This parameter must be a string or Unicode object");
-					BREAK_FALSE;
-				}
-				if ((val_use = PyUnicode_FromObject(val))==NULL)
-					BREAK_FALSE;
-				// Sanity check should PyObject_Str() ever loosen its semantics wrt Unicode!
-				NS_ABORT_IF_FALSE(PyUnicode_Check(val_use), "PyUnicode_FromObject didnt return a unicode object!");
-				if (PyUnicode_GET_SIZE(val_use) == 0) {
-					ns_v.val.p = new nsString();
-				}
-				else {
-					PRUint32 nch;
-					PRUnichar *tempo;
-					if (PyUnicode_AsPRUnichar(val_use, &tempo, &nch) < 0)
-						BREAK_FALSE;
-					ns_v.val.p = new nsString(tempo, nch);
-					nsMemory::Free(tempo);
-				}
-			}
-			if (!ns_v.val.p) {
+			nsString *s = new nsString();
+			if (!s) {
 				PyErr_NoMemory();
 				BREAK_FALSE;
 			}
+			ns_v.val.p = s;
 			// We created it - flag as such for cleanup.
 			ns_v.flags |= nsXPTCVariant::VAL_IS_DOMSTR;
+			
+			if (!PyObject_AsNSString(val, *s))
+				BREAK_FALSE;
 			break;
 		  }
 		  case nsXPTType::T_CSTRING:
@@ -2264,29 +2278,8 @@ nsresult PyXPCOM_GatewayVariantHelper::BackFillVariant( PyObject *val, int index
 	  case nsXPTType::T_DOMSTRING: {
 		nsAString *ws = (nsAString *)ns_v.val.p;
 		NS_ABORT_IF_FALSE(ws->Length() == 0, "Why does this writable string already have chars??");
-		if (val == Py_None) {
-			(*ws) = (PRUnichar *)nsnull;
-		} else {
-			if (!PyString_Check(val) && !PyUnicode_Check(val)) {
-				PyErr_SetString(PyExc_TypeError, "This parameter must be a string or Unicode object");
-				BREAK_FALSE;
-			}
-			val_use = PyUnicode_FromObject(val);
-			if (!val_use)
-				BREAK_FALSE;
-			NS_ABORT_IF_FALSE(PyUnicode_Check(val_use), "PyUnicode_FromObject didn't return a Unicode object!");
-			if (PyUnicode_GET_SIZE(val_use) == 0) {
-				ws->Assign((PRUnichar*)NULL, 0);
-			}
-			else {
-				PRUint32 nch;
-				PRUnichar *sz;
-				if (PyUnicode_AsPRUnichar(val_use, &sz, &nch) < 0)
-					BREAK_FALSE;
-				ws->Assign(sz, nch);
-				nsMemory::Free(sz);
-			}
-		}
+		if (!PyObject_AsNSString(val, *ws))
+			BREAK_FALSE;
 		break;
 		}
 	  case nsXPTType::T_CSTRING: {
