@@ -38,9 +38,6 @@
 #include "cairo-atsui.h"
 #include "cairoint.h"
 #include "cairo.h"
-#if 0
-#include <iconv.h>
-#endif
 
 /*
  * FixedToFloat/FloatToFixed are 10.3+ SDK items - include definitions
@@ -245,8 +242,10 @@ _cairo_atsui_font_text_to_glyphs(void		*abstract_font,
     OSStatus err;
     ATSUTextLayout textLayout;
     ATSLayoutRecord *layoutRecords;
-    ItemCount glyphCount, charCount;
+    ItemCount glyphCount;
+    int charCount;
     UniChar *theText;
+    cairo_status_t status;
 
     // liberal estimate of size
     charCount = strlen(utf8);
@@ -257,20 +256,9 @@ _cairo_atsui_font_text_to_glyphs(void		*abstract_font,
        return CAIRO_STATUS_SUCCESS;
     }
 
-    // Set the text in the text layout object, so we can measure it
-    theText = (UniChar *) malloc(charCount * sizeof(UniChar));
-
-#if 1
-    for (i = 0; i < charCount; i++) {
-        theText[i] = utf8[i];
-    }
-#endif
-
-#if 0
-    size_t inBytes = charCount, outBytes = charCount;
-    iconv_t converter = iconv_open("UTF-8", "UTF-16");
-    charCount = iconv(converter, utf8, &inBytes, theText, &outBytes);
-#endif
+    status = _cairo_utf8_to_utf16 (utf8, -1, &theText, &charCount);
+    if (status)
+	return status;
 
     err = ATSUCreateTextLayout(&textLayout);
 
@@ -461,13 +449,14 @@ _cairo_atsui_font_show_glyphs(void *abstract_font,
     CGColorSpaceRef colorSpace;
     cairo_image_surface_t *destImageSurface;
     int i;
+    void *extra = NULL;
 
     cairo_rectangle_t rect = {dest_x, dest_y, width, height};
     _cairo_surface_acquire_dest_image(generic_surface,
 				      &rect,
 				      &destImageSurface,
 				      &rect,
-				      NULL);
+				      &extra);
 
     // Create a CGBitmapContext for the dest surface for drawing into
     colorSpace = CGColorSpaceCreateDeviceRGB();
@@ -531,7 +520,7 @@ _cairo_atsui_font_show_glyphs(void *abstract_font,
 				      &rect,
 				      destImageSurface,
 				      &rect,
-				      NULL);
+				      extra);
 
     return CAIRO_STATUS_SUCCESS;
 }

@@ -34,7 +34,7 @@ FbCreateAlphaPicture (pixman_image_t	*dst,
     int own_format = 0;
 
     if (width > 32767 || height > 32767)
-	return 0;
+	return NULL;
 
     if (!format)
     {
@@ -44,7 +44,7 @@ FbCreateAlphaPicture (pixman_image_t	*dst,
 	else
 	    format = pixman_format_create (PIXMAN_FORMAT_NAME_A8);
 	if (!format)
-	    return 0;
+	    return NULL;
     }
 
     image = pixman_image_create (format, width, height); 
