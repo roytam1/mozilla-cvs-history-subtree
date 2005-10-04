@@ -2691,10 +2691,6 @@ PresShell::ResizeReflow(nscoord aWidth, nscoord aHeight)
   }
 
   if (rootFrame) {
-    // Mark the root frame as dirty; this implies all descendants are
-    // dirty.
-    rootFrame->AddStateBits(NS_FRAME_IS_DIRTY);
-
     // Kick off a top-down reflow
     NS_FRAME_LOG(NS_FRAME_TRACE_CALLS,
                  ("enter nsPresShell::ResizeReflow: %d,%d", aWidth, aHeight));
