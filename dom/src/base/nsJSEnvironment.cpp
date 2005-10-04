@@ -1319,7 +1319,8 @@ AtomToEventHandlerName(nsIAtom *aName)
 nsresult
 nsJSContext::CompileEventHandler(nsIPrincipal *aPrincipal,
                                  nsIAtom *aName,
-                                 const char *aEventName,
+                                 PRUint32 aArgCount,
+                                 const char** aArgNames,
                                  const nsAString& aBody,
                                  const char *aURL, PRUint32 aLineNo,
                                  void** aHandler)
@@ -1344,12 +1345,10 @@ nsJSContext::CompileEventHandler(nsIPrincipal *aPrincipal,
 
   const char *charName = AtomToEventHandlerName(aName);
 
-  const char *argList[] = { aEventName };
-
   JSFunction* fun =
       ::JS_CompileUCFunctionForPrincipals(mContext,
                                           nsnull, jsprin,
-                                          charName, 1, argList,
+                                          charName, aArgCount, aArgNames,
                                           (jschar*)PromiseFlatString(aBody).get(),
                                           aBody.Length(),
                                           aURL, aLineNo);

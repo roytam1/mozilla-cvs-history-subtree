@@ -392,7 +392,8 @@ nsXULElement::Create(nsXULPrototypeElement* aPrototype,
             rv = global->EnsureScriptEnvironment(aPrototype->mLangID);
             NS_ENSURE_SUCCESS(rv, rv);
         } else {
-            NS_WARNING("No global object - can't setup default script lang");
+            //XXXmarkh - this needs more thought :(
+            //NS_WARNING("No global object - can't setup default script lang");
         }
 
         // Check each attribute on the prototype to see if we need to do
@@ -775,7 +776,8 @@ nsXULElement::CompileEventHandler(nsIScriptContext* aContext,
         // It could be possible the language has been setup on aContext but
         // not on the global - we don't demand-create language contexts on the
         // nsGlobalWindow
-        NS_ASSERTION(compileContext, "Failed to get a context of this language from the global!?");
+        NS_ASSERTION(compileContext,
+                     "Failed to get a language context from the global!?");
     }
     else {
         // We don't have a prototype; do a one-off compile.
@@ -784,10 +786,12 @@ nsXULElement::CompileEventHandler(nsIScriptContext* aContext,
     }
 
     // Compile the event handler
-    const char *eventName = nsContentUtils::GetEventArgName(kNameSpaceID_XUL);
-    rv = compileContext->CompileEventHandler(nsnull, aName, eventName,
-                                             aBody, aURL, aLineNo,
-                                             aHandler);
+    PRUint32 argCount;
+    const char **argNames;
+    nsContentUtils::GetEventArgNames(kNameSpaceID_XUL, aName, &argCount,
+                                     &argNames);
+    rv = compileContext->CompileEventHandler(nsnull, aName, argCount, argNames,
+                                             aBody, aURL, aLineNo, aHandler);
     if (NS_FAILED(rv)) return rv;
 
     if (mPrototype) {

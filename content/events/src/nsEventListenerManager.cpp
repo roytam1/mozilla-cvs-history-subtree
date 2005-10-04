@@ -1355,12 +1355,16 @@ nsEventListenerManager::AddScriptEventListener(nsISupports *aObject,
           if (root)
             nameSpace = root->GetNameSpaceID();
         }
-        const char *eventName = nsContentUtils::GetEventArgName(nameSpace);
+        PRUint32 argCount;
+        const char **argNames;
+        nsContentUtils::GetEventArgNames(nameSpace, aName, &argCount,
+                                         &argNames);
 
-        rv = context->CompileEventHandler(nsnull, aName, eventName,
+        rv = context->CompileEventHandler(nsnull, aName, argCount, argNames,
                                           aBody,
                                           url.get(), lineNo,
                                           &handler);
+        NS_ENSURE_SUCCESS(rv, rv);
         // And bind it.
         rv = context->BindCompiledEventHandler(aObject, scope,
                                                 aName, handler);
@@ -1584,10 +1588,13 @@ nsEventListenerManager::CompileEventHandlerInternal(nsIScriptContext *aContext,
                                                      &handler);
         }
         else {
-          const char *eventName =
-            nsContentUtils::GetEventArgName(content->GetNameSpaceID());
+          PRUint32 argCount;
+          const char **argNames;
+          nsContentUtils::GetEventArgNames(content->GetNameSpaceID(), aName, &argCount,
+                                           &argNames);
 
-          result = aContext->CompileEventHandler(nsnull, aName, eventName,
+          result = aContext->CompileEventHandler(nsnull, aName,
+                                                 argCount, argNames,
                                                  handlerBody,
                                                  url.get(), lineNo,
                                                  &handler);

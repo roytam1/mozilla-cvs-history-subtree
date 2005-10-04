@@ -178,7 +178,8 @@ public:
    */
   virtual nsresult CompileEventHandler(nsIPrincipal * aPrincipals,
                                        nsIAtom* aName,
-                                       const char* aEventName,
+                                       PRUint32 aArgCount,
+                                       const char** aArgNames,
                                        const nsAString& aBody,
                                        const char* aURL,
                                        PRUint32 aLineNo,

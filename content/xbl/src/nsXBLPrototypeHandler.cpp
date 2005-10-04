@@ -455,13 +455,17 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
   // should we use?
   void *scope = boundGlobal->GetLanguageGlobal(boundContext->GetLanguage());
 
-  const char *eventName = nsContentUtils::GetEventArgName(kNameSpaceID_XBL);
+  PRUint32 argCount;
+  const char **argNames;
+  nsContentUtils::GetEventArgNames(kNameSpaceID_XBL, onEventAtom, &argCount,
+                                   &argNames);
 
   if (isXULKey) {
     nsCAutoString documentURI;
     keyCommandContent->GetOwnerDoc()->GetDocumentURI()->GetSpec(documentURI);
-    rv = boundContext->CompileEventHandler(nsnull, onEventAtom, eventName,
-                                           xulText, documentURI.get(), 0, 
+    rv = boundContext->CompileEventHandler(nsnull, onEventAtom, argCount,
+                                           argNames, xulText,
+                                           documentURI.get(), 0, 
                                            &handler);
   }
   else {
@@ -472,9 +476,10 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
     nsCAutoString bindingURI;
     mPrototypeBinding->DocURI()->GetSpec(bindingURI);
     
-    rv = boundContext->CompileEventHandler(nsnull, onEventAtom, eventName,
-                                           handlerText, bindingURI.get(),
-                                           mLineNumber, &handler);
+    rv = boundContext->CompileEventHandler(nsnull, onEventAtom, argCount,
+                                           argNames, handlerText,
+                                           bindingURI.get(), mLineNumber,
+                                           &handler);
   }
   NS_ENSURE_SUCCESS(rv, rv);
 
