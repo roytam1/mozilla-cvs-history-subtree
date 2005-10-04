@@ -1013,22 +1013,28 @@ public:
   NS_IMETHOD  WillReflow(nsPresContext* aPresContext) = 0;
 
   /**
-   * The frame is given a maximum size and asked for its desired size.
-   * This is the frame's opportunity to reflow its children.
+   * The frame is given an available size and asked for its desired
+   * size.  This is the frame's opportunity to reflow its children.
+   *
+   * If the frame has the NS_FRAME_IS_DIRTY bit set then it is
+   * responsible for completely reflowing itself and all of its
+   * descendants.
+   *
+   * Otherwise, if the frame has the NS_FRAME_HAS_DIRTY_CHILDREN bit
+   * set, then it is responsible for reflowing at least those
+   * children that have NS_FRAME_DIRTY_CHILDREN or NS_FRAME_IS_DIRTY
+   * set.
+   *
+   * If a difference in available size from the previous reflow causes
+   * the frame's size to change, it should reflow descendants as needed.
    *
    * @param aDesiredSize <i>out</i> parameter where you should return the
    *          desired size and ascent/descent info. You should include any
    *          space you want for border/padding in the desired size you return.
    *
-   *          It's okay to return a desired size that exceeds the max
+   *          It's okay to return a desired size that exceeds the avail
    *          size if that's the smallest you can be, i.e. it's your
    *          minimum size.
-   *
-   *          maxElementSize is an optional parameter for returning your
-   *          maximum element size. If may be null in which case you
-   *          don't have to compute a maximum element size. The
-   *          maximum element size must be less than or equal to your
-   *          desired size.
    *
    *          For an incremental reflow you are responsible for invalidating
    *          any area within your frame that needs repainting (including
