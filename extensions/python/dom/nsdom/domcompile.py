@@ -73,7 +73,16 @@ def set_filename_and_offset(filename, offset, tree):
 def parse_function(src, func_name, arg_names, defaults=[]):
     tree = parse(src, "exec")
     # Insert a Stmt with function object.
-    func = compiler.ast.Function(func_name, arg_names, [], 0, None, tree.node)
+    try:
+        decs = compiler.ast.Decorators([])
+    except AttributeError:
+        # 2.3 has no such concept (and different args!)
+        func = compiler.ast.Function(func_name, arg_names, [], 0, None,
+                                     tree.node)
+    else:
+        # 2.4 and later
+        func = compiler.ast.Function(decs, func_name, arg_names, [], 0, None,
+                                     tree.node)
     stmt = compiler.ast.Stmt((func,))
     tree.node = stmt
     syntax.check(tree)
