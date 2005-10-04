@@ -94,8 +94,8 @@ typedef nsEventStatus (*PR_CALLBACK EVENT_CALLBACK)(nsGUIEvent *event);
 
 // e7f09105-d21b-406a-89d5-e6b731b8f665
 #define NS_IWIDGET_IID \
-{ 0xe7f09105, 0xd21b, 0x406a, \
-  { 0x89, 0xd5, 0xe6, 0xb7, 0x31, 0xb8, 0xf6, 0x65 } }
+{ 0x2950a8aa, 0x9a32, 0x4aff, \
+  { 0x9e, 0x9c, 0x67, 0xc4, 0xae, 0xf1, 0x5d, 0x99 } }
 
 
 // Hide the native window systems real window type so as to avoid
@@ -1033,6 +1033,10 @@ class nsIWidget : public nsISupports {
      */
     NS_IMETHOD GetLastInputEventTime(PRUint32& aTime) = 0;
 
+    /**
+     * Returns whether or not this widget is actually shown.
+     */
+    virtual PRBool IsShown() = 0;
 
 protected:
     // keep the list of children.  We also keep track of our siblings.

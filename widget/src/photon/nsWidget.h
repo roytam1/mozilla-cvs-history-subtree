@@ -111,6 +111,7 @@ public:
   inline NS_IMETHOD CaptureRollupEvents(nsIRollupListener *aListener, PRBool aDoCapture, PRBool aConsumeRollupEvent) { return NS_OK; }
 
   inline NS_IMETHOD IsVisible(PRBool &aState) { aState = mShown; return NS_OK; }
+  inline PRBool IsShown() { return mShown; }
 
   inline NS_IMETHOD ConstrainPosition(PRBool aAllowSlop, PRInt32 *aX, PRInt32 *aY) { return NS_OK; }
   NS_IMETHOD Move(PRInt32 aX, PRInt32 aY);

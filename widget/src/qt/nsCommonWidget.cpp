@@ -321,6 +321,12 @@ nsCommonWidget::IsVisible(PRBool &visible)
     return NS_OK;
 }
 
+PRBool
+nsCommonWidget::IsShown()
+{
+	return mIsShown;
+}
+
 NS_IMETHODIMP
 nsCommonWidget::ConstrainPosition(PRBool aAllowSlop, PRInt32 *aX, PRInt32 *aY)
 {

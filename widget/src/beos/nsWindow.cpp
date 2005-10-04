@@ -907,6 +907,17 @@ NS_METHOD nsWindow::IsVisible(PRBool & bState)
 
 //-------------------------------------------------------------------------
 //
+// IsShown
+//
+// Return PR_TRUE if the whether the component is visible, PR_FALSE otherwise
+//-------------------------------------------------------------------------
+PRBool nsWindow::IsShown()
+{
+	return mIsVisible;
+}
+
+//-------------------------------------------------------------------------
+//
 // Sanity check potential move coordinates
 //
 //-------------------------------------------------------------------------

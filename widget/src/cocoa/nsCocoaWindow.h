@@ -118,6 +118,7 @@ public:
     NS_IMETHOD              IsEnabled(PRBool *aState);
     NS_IMETHOD              SetModal(PRBool aState) { return NS_OK; }
     NS_IMETHOD              IsVisible(PRBool & aState);
+    PRBool                  IsShown();
     NS_IMETHOD              SetFocus(PRBool aState=PR_FALSE) { return NS_OK; }
     NS_IMETHOD SetMenuBar(nsIMenuBar * aMenuBar) { return NS_OK; }
     NS_IMETHOD ShowMenuBar(PRBool aShow) { return NS_OK; }

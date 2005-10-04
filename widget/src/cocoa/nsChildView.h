@@ -164,6 +164,7 @@ public:
 
   NS_IMETHOD              Show(PRBool aState);
   NS_IMETHOD              IsVisible(PRBool & aState);
+  PRBool                  IsShown();
 
   virtual nsIWidget*      GetParent(void);
   

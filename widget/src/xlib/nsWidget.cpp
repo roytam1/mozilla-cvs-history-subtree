@@ -670,6 +670,12 @@ NS_IMETHODIMP nsWidget::IsVisible(PRBool &aState)
   return NS_OK;
 }
 
+PRBool nsWidget::IsShown()
+{
+  // Note: IsShown is supposed to return the last value of the call to Show.
+  return mMapped;
+}
+
 NS_IMETHODIMP nsWidget::SetPreferredSize(PRInt32 aWidth, PRInt32 aHeight)
 {
   return NS_OK;

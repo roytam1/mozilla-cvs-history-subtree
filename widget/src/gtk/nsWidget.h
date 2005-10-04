@@ -105,6 +105,7 @@ public:
   virtual void OnDestroy();
 
   NS_IMETHOD Show(PRBool state);
+  PRBool     IsShown();
   NS_IMETHOD CaptureRollupEvents(nsIRollupListener *aListener, PRBool aDoCapture, PRBool aConsumeRollupEvent);
   NS_IMETHOD IsVisible(PRBool &aState);
 

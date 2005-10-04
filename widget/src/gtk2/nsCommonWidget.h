@@ -123,6 +123,8 @@ public:
     NS_IMETHOD         Enable           (PRBool  aState);
     NS_IMETHOD         IsEnabled        (PRBool *aState);
 
+    PRBool             IsShown();
+
     // called when we are destroyed
     void OnDestroy(void);
 

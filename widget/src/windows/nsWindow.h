@@ -326,6 +326,7 @@ public:
   virtual nsIWidget*      GetParent(void);
   NS_IMETHOD              Show(PRBool bState);
   NS_IMETHOD              IsVisible(PRBool & aState);
+  PRBool                  IsShown();
   NS_IMETHOD              PlaceBehind(nsTopLevelWidgetZPlacement aPlacement, nsIWidget *aWidget, PRBool aActivate);
   NS_IMETHOD              SetSizeMode(PRInt32 aMode);
   NS_IMETHOD              ModalEventFilter(PRBool aRealEvent, void *aEvent, PRBool *aForWindow);
