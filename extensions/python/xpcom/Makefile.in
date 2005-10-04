@@ -57,6 +57,7 @@ endif
 PYSRCS_XPCOM = \
 	__init__.py \
 	components.py \
+	primitives.py \
 	file.py \
 	nsError.py \
 	register.py \
