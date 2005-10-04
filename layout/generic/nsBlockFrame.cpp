@@ -844,6 +844,14 @@ nsBlockFrame::Reflow(nsPresContext*          aPresContext,
   // overflow line lists being cleared out between reflow passes.
   DrainOverflowLines(state);
 
+  // If we're not dirty (which means we'll mark everything dirty later)
+  // and our width has changed, mark the lines dirty that we need to
+  // mark dirty for a resize reflow.
+  if (!(GetStateBits() & NS_FRAME_IS_DIRTY) &&
+      mRect.width != aReflowState.mComputedWidth +
+                     aReflowState.mComputedBorderPadding.LeftRight())
+    PrepareResizeReflow(state);
+
   mState &= ~NS_FRAME_FIRST_REFLOW;
 
   // Now reflow...
@@ -1075,6 +1083,41 @@ nsBlockFrame::Reflow(nsPresContext*          aPresContext,
   return rv;
 }
 
+
+// XXXldb why do we check vertical and horizontal at the same time?  Don't
+// we usually care about one or the other?
+static PRBool
+IsPercentageAwareChild(const nsIFrame* aFrame)
+{
+  NS_ASSERTION(aFrame, "null frame is not allowed");
+
+  const nsStyleMargin* margin = aFrame->GetStyleMargin();
+  if (nsLineLayout::IsPercentageUnitSides(&margin->mMargin)) {
+    return PR_TRUE;
+  }
+
+  const nsStylePadding* padding = aFrame->GetStylePadding();
+  if (nsLineLayout::IsPercentageUnitSides(&padding->mPadding)) {
+    return PR_TRUE;
+  }
+
+  // Note that borders can't be aware of percentages
+
+  const nsStylePosition* pos = aFrame->GetStylePosition();
+
+  if (eStyleUnit_Percent == pos->mWidth.GetUnit()
+    || eStyleUnit_Percent == pos->mMaxWidth.GetUnit()
+    || eStyleUnit_Percent == pos->mMinWidth.GetUnit()
+    || eStyleUnit_Percent == pos->mHeight.GetUnit()
+    || eStyleUnit_Percent == pos->mMinHeight.GetUnit()
+    || eStyleUnit_Percent == pos->mMaxHeight.GetUnit()
+    || nsLineLayout::IsPercentageUnitSides(&pos->mOffset)) { // XXX need more here!!!
+    return PR_TRUE;
+  }
+
+  return PR_FALSE;
+}
+
 PRBool
 nsBlockFrame::CheckForCollapsedBottomMarginFromClearanceLine()
 {
@@ -1261,6 +1304,112 @@ nsBlockFrame::ComputeCombinedArea(const nsHTMLReflowState& aReflowState,
 
   aMetrics.mOverflowArea = area;
 }
+
+nsresult
+nsBlockFrame::PrepareResizeReflow(nsBlockReflowState& aState)
+{
+  // See if we can try and avoid marking all the lines as dirty
+  PRBool  tryAndSkipLines = PR_FALSE;
+
+  // we need to calculate if any part of then block itself 
+  // is impacted by a float (bug 19579)
+  aState.GetAvailableSpace();
+
+  if ((! aState.IsImpactedByFloat())) {
+
+    // If the text is left-aligned, then we try and avoid reflowing the lines
+    const nsStyleText* styleText = GetStyleText();
+
+    if ((NS_STYLE_TEXT_ALIGN_LEFT == styleText->mTextAlign) ||
+        ((NS_STYLE_TEXT_ALIGN_DEFAULT == styleText->mTextAlign) &&
+         (NS_STYLE_DIRECTION_LTR == aState.mReflowState.mStyleVisibility->mDirection))) {
+      tryAndSkipLines = PR_TRUE;
+    }
+  }
+
+#ifdef DEBUG
+  if (gDisableResizeOpt) {
+    tryAndSkipLines = PR_FALSE;
+  }
+  if (gNoisyReflow) {
+    if (!tryAndSkipLines) {
+      const nsStyleText* styleText = GetStyleText();
+      IndentBy(stdout, gNoiseIndent);
+      ListTag(stdout);
+      printf(": marking all lines dirty: availWidth=%d textAlign=%d\n",
+             aState.mReflowState.availableWidth,
+             styleText->mTextAlign);
+    }
+  }
+#endif
+
+  if (tryAndSkipLines) {
+    nscoord newAvailWidth = aState.mReflowState.mComputedBorderPadding.left +
+                            aState.mReflowState.mComputedWidth;
+    NS_ASSERTION(NS_UNCONSTRAINEDSIZE != aState.mReflowState.mComputedBorderPadding.left &&
+                 NS_UNCONSTRAINEDSIZE != aState.mReflowState.mComputedWidth,
+                 "math on NS_UNCONSTRAINEDSIZE");
+
+#ifdef DEBUG
+    if (gNoisyReflow) {
+      IndentBy(stdout, gNoiseIndent);
+      ListTag(stdout);
+      printf(": trying to avoid marking all lines dirty\n");
+    }
+#endif
+
+    for (line_iterator line = begin_lines(), line_end = end_lines();
+         line != line_end;
+         ++line)
+    {
+      // We let child blocks make their own decisions the same
+      // way we are here.
+      if (line->IsBlock() ||
+          // XXXldb We need HasPercentageDescendant, not HasPercentageChild!!!
+          // ... but is that what ResizeReflowOptimizationDisabled does?
+          line->HasPercentageChild() || 
+          line->HasFloats() ||
+          (line != mLines.back() && !line->HasBreakAfter()) ||
+          line->ResizeReflowOptimizationDisabled() ||
+          line->IsImpactedByFloat() ||
+          (line->mBounds.XMost() > newAvailWidth)) {
+        line->MarkDirty();
+      }
+
+#ifdef REALLY_NOISY_REFLOW
+      if (!line->IsBlock()) {
+        printf("PrepareResizeReflow thinks line %p is %simpacted by floats\n", 
+               line.get(), line->IsImpactedByFloat() ? "" : "not ");
+      }
+#endif
+#ifdef DEBUG
+      if (gNoisyReflow && !line->IsDirty()) {
+        IndentBy(stdout, gNoiseIndent + 1);
+        printf("skipped: line=%p next=%p %s %s%s%s breakTypeBefore/After=%d/%d xmost=%d\n",
+           NS_STATIC_CAST(void*, line.get()),
+           NS_STATIC_CAST(void*, (line.next() != end_lines() ? line.next().get() : nsnull)),
+           line->IsBlock() ? "block" : "inline",
+           line->HasBreakAfter() ? "has-break-after " : "",
+           line->HasFloats() ? "has-floats " : "",
+           line->IsImpactedByFloat() ? "impacted " : "",
+           line->GetBreakTypeBefore(), line->GetBreakTypeAfter(),
+           line->mBounds.XMost());
+      }
+#endif
+    }
+  }
+  else {
+    // Mark everything dirty
+    for (line_iterator line = begin_lines(), line_end = end_lines();
+         line != line_end;
+         ++line)
+    {
+      line->MarkDirty();
+    }
+  }
+  return NS_OK;
+}
+
 
 nsresult
 nsBlockFrame::MarkLineDirty(line_iterator aLine)
@@ -2989,7 +3138,7 @@ nsBlockFrame::DoReflowInlineFrames(nsBlockReflowState& aState,
   PRUint8 lineReflowStatus = LINE_REFLOW_OK;
   PRInt32 i;
   nsIFrame* frame = aLine->mFirstChild;
-
+  aLine->SetHasPercentageChild(PR_FALSE); // To be set by ReflowInlineFrame below
   // Determine whether this is a line of placeholders for out-of-flow
   // continuations
   PRBool isContinuingPlaceholders = PR_FALSE;
@@ -3141,6 +3290,11 @@ nsBlockFrame::ReflowInlineFrame(nsBlockReflowState& aState,
   nsFrame::ListTag(stdout, aFrame);
   printf(" reflowingFirstLetter=%s\n", reflowingFirstLetter ? "on" : "off");
 #endif
+
+  // Remember if we have a percentage aware child on this line
+  if (IsPercentageAwareChild(aFrame)) {
+    aLine->SetHasPercentageChild(PR_TRUE);
+  }
 
   // Reflow the inline frame
   nsReflowStatus frameReflowStatus;

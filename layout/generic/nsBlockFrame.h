@@ -396,6 +396,11 @@ protected:
   // Remove a float, abs, rel positioned frame from the appropriate block's list
   static void DoRemoveOutOfFlowFrame(nsIFrame* aFrame);
 
+  /** set up the conditions necessary for an resize reflow
+    * the primary task is to mark the minimumly sufficient lines dirty. 
+    */
+  nsresult PrepareResizeReflow(nsBlockReflowState& aState);
+
   /** reflow all lines that have been marked dirty */
   nsresult ReflowDirtyLines(nsBlockReflowState& aState, PRBool* aALineWasDirty);
 

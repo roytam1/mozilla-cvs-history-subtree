@@ -1418,6 +1418,75 @@ nsLineLayout::DumpPerSpanData(PerSpanData* psd, PRInt32 aIndent)
 #define VALIGN_TOP    1
 #define VALIGN_BOTTOM 2
 
+PRBool
+nsLineLayout::IsPercentageUnitSides(const nsStyleSides* aSides)
+{
+  return eStyleUnit_Percent == aSides->GetLeftUnit()
+      || eStyleUnit_Percent == aSides->GetRightUnit()
+      || eStyleUnit_Percent == aSides->GetTopUnit()
+      || eStyleUnit_Percent == aSides->GetBottomUnit();
+}
+
+PRBool
+nsLineLayout::IsPercentageAwareReplacedElement(nsPresContext *aPresContext, 
+                                               nsIFrame* aFrame)
+{
+  if (aFrame->GetStateBits() & NS_FRAME_REPLACED_ELEMENT)
+  {
+    nsIAtom* frameType = aFrame->GetType();
+    if (nsLayoutAtoms::brFrame != frameType && 
+        nsLayoutAtoms::textFrame != frameType)
+    {
+      const nsStyleMargin* margin = aFrame->GetStyleMargin();
+      if (IsPercentageUnitSides(&margin->mMargin)) {
+        return PR_TRUE;
+      }
+
+      const nsStylePadding* padding = aFrame->GetStylePadding();
+      if (IsPercentageUnitSides(&padding->mPadding)) {
+        return PR_TRUE;
+      }
+
+      // Borders aren't percentage aware
+
+      const nsStylePosition* pos = aFrame->GetStylePosition();
+      if (eStyleUnit_Percent == pos->mWidth.GetUnit()
+        || eStyleUnit_Percent == pos->mMaxWidth.GetUnit()
+        || eStyleUnit_Percent == pos->mMinWidth.GetUnit()
+        || eStyleUnit_Percent == pos->mHeight.GetUnit()
+        || eStyleUnit_Percent == pos->mMinHeight.GetUnit()
+        || eStyleUnit_Percent == pos->mMaxHeight.GetUnit()
+        || IsPercentageUnitSides(&pos->mOffset)) { // XXX need more here!!!
+        return PR_TRUE;
+      }
+    }
+  }
+
+  return PR_FALSE;
+}
+
+PRBool IsPercentageAwareFrame(nsPresContext *aPresContext, nsIFrame *aFrame)
+{
+  if (aFrame->GetStateBits() & NS_FRAME_REPLACED_ELEMENT) {
+    if (nsLineLayout::IsPercentageAwareReplacedElement(aPresContext, aFrame)) {
+      return PR_TRUE;
+    }
+  }
+  else
+  {
+    nsIFrame *child = aFrame->GetFirstChild(nsnull);
+    if (child)
+    { // aFrame is an inline container frame, check my frame state
+      if (aFrame->GetStateBits() & NS_INLINE_FRAME_CONTAINS_PERCENT_AWARE_CHILD) {
+        return PR_TRUE;
+      }
+    }
+    // else it's a frame we just don't care about
+  }  
+  return PR_FALSE;
+}
+
+
 void
 nsLineLayout::VerticalAlignLine(nsLineBox* aLineBox)
 {
@@ -1530,6 +1599,14 @@ nsLineLayout::VerticalAlignLine(nsLineBox* aLineBox)
     if (span) {
       nscoord distanceFromTop = pfd->mBounds.y - mTopEdge;
       PlaceTopBottomFrames(span, distanceFromTop, lineHeight);
+    }
+    // check to see if the frame is an inline replace element
+    // and if it is percent-aware.  If so, mark the line.
+    if ((PR_FALSE==aLineBox->ResizeReflowOptimizationDisabled()) &&
+         pfd->mFrameType & NS_CSS_FRAME_TYPE_INLINE)
+    {
+      if (IsPercentageAwareFrame(mPresContext, pfd->mFrame))
+        aLineBox->DisableResizeReflowOptimization();
     }
   }
 
