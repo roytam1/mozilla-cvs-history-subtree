@@ -4404,7 +4404,7 @@ nsGlobalWindow::OpenDialog(nsIDOMWindow** _retval)
     }
   }
   // Strip the url, name and options from the args seen by scripts.
-  PRUint32 argOffset = min(argc, 3);
+  PRUint32 argOffset = argc < 3 ? argc : 3;
   nsCOMPtr<nsIArray> argvArray;
   rv = NS_CreateJSArgv(argc-argOffset, argv+argOffset, getter_AddRefs(argvArray));
   NS_ENSURE_SUCCESS(rv, rv);
