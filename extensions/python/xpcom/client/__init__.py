@@ -218,7 +218,7 @@ class _XPCOMBase:
         return self._do_conversion(_float_interfaces, float)
     
 class Component(_XPCOMBase):
-    def __init__(self, ob, iid):
+    def __init__(self, ob, iid = IID_nsISupports):
         assert not hasattr(ob, "_comobj_"), "Should be a raw nsIWhatever, not a wrapped one"
         ob_name = None
         if not hasattr(ob, "IID"):
@@ -473,7 +473,7 @@ class WeakReference:
     >>> some_ob = components.classes['...']
     >>> weak_ref = WeakReference(some_ob)
     >>> new_ob = weak_ref() # new_ob is effectively "some_ob" at this point
-    >>> # EXCEPT: new_ob may be None of some_ob has already died - a
+    >>> # EXCEPT: new_ob may be None if some_ob has already died - a
     >>> # weak reference does not keep the object alive (that is the point)
 
     You should never hold onto this resulting strong object for a long time,
