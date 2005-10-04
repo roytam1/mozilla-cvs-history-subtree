@@ -2260,7 +2260,7 @@ nsFrame::DidReflow(nsPresContext*           aPresContext,
   // another reflow with a computed height. This happens in the case
   // where a table cell has no computed height but can fabricate one
   // when the cell height is known.
-  if (aReflowState->mPercentHeightObserver &&
+  if (aReflowState && aReflowState->mPercentHeightObserver &&
       ((NS_UNCONSTRAINEDSIZE == aReflowState->mComputedHeight) ||         // no computed height 
        (0                    == aReflowState->mComputedHeight))        && 
       (eStyleUnit_Percent == aReflowState->mStylePosition->mHeight.GetUnit())) {
