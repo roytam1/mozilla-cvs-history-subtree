@@ -60,7 +60,6 @@ PYSRCS_XPCOM = \
 	primitives.py \
 	file.py \
 	nsError.py \
-	register.py \
 	xpcom_consts.py \
 	xpt.py \
 	$(NULL)
