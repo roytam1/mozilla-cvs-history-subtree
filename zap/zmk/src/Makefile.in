@@ -47,6 +47,7 @@ CPPSRCS		= \
 		zapRTPTransmitter.cpp \
 		zapRTPReceiver.cpp \
 		zapRTPSession.cpp \
+		zapAudioMixer.cpp \
 		$(NULL)
 
 XPIDLSRCS	= zapIMediaGraph.idl \

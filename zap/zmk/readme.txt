@@ -59,7 +59,43 @@ audio stream with
 
 ----------------------------------------------------------------------
 
-3) buffer
+3) audio-mixer
+--------------
+
+Audio mixer node, mixes n audio sinks to one audio source.
+
+Control interfaces:
+- 
+
+Sources: 1
+Sinks: n
+
+Node parameters:
+- double "sample_rate" : sample rate in Hz (default: 8000)
+- double "frame_duration" : duration of one frame in s (default: 0.02)
+- unsigned long "channels" : number of channels (default: 1)
+- ACString "sample_format" : "float32_32768" (default: "float32_32768")
+
+Input streams:
+audio stream with
+- ACString "type" (== "audio")
+- double "sample_rate" (equals corresponding node parameter)
+- double "frame_duration" (equals corresponding node parameter)
+- unsigned long "channels" (equals corresponding node parameter)
+- unsigned long "sample_format" (== "float32_32768")
+
+Output stream:
+audio stream with
+- ACString "type" (== "audio")
+- double "sample_rate" (equals corresponding node parameter)
+- double "frame_duration" (equals corresponding node parameter)
+- unsigned long "channels" (equals corresponding node parameter)
+- unsigned long "sample_format" (== "float32_32768")
+
+
+----------------------------------------------------------------------
+
+4) buffer
 ---------
 
 General purpose packet buffer.
@@ -81,7 +117,7 @@ any
 
 ----------------------------------------------------------------------
 
-4) udp-socket
+5) udp-socket
 -------------
 
 A UDP socket for sending and receiving datagrams.
@@ -114,7 +150,7 @@ Frames implement nsIDatagram in addition to zapIMediaFrame
 
 ----------------------------------------------------------------------
 
-5) udp-socket-pair
+6) udp-socket-pair
 ------------------
 
 A UDP socket pair (for rtp/rtcp). port_a and port_b will be chosen
@@ -143,7 +179,7 @@ Output streams:
 
 ----------------------------------------------------------------------
 
-6) speex-encoder
+7) speex-encoder
 ----------------
 
 Filter for encoding audio streams into speex streams.
@@ -167,7 +203,7 @@ audio/speex stream with
 
 ----------------------------------------------------------------------
 
-7) speex-decoder
+8) speex-decoder
 ----------------
 
 Filter for decoding speex streams as encoded using speex-encoder
@@ -191,7 +227,7 @@ audio stream with
 
 ----------------------------------------------------------------------
 
-8) speex-rtp-packetizer
+9) speex-rtp-packetizer
 -----------------------
 
 Filter for converting speex streams into rtp streams.
@@ -208,8 +244,8 @@ Output stream:
 
 ----------------------------------------------------------------------
 
-9) speex-rtp-depacketizer
--------------------------
+10) speex-rtp-depacketizer
+--------------------------
 
 Filter for converting rtp streams into speex streams.
 
@@ -221,7 +257,83 @@ Output stream:
 
 ----------------------------------------------------------------------
 
-10) rtp-session
+11) g711-encoder
+----------------
+
+Filter for encoding audio streams into g.711 (pcmu or pcma) streams.
+
+Control interfaces: 
+
+Node parameters:
+
+Input stream:
+audio stream with
+- ACString "type" (== "audio")
+- double "sample_rate" (== 8000)
+- double "frame_duration" (== 0.02)
+- unsigned long "channels" (== 1)
+- unsigned long "sample_format" (== "float32_32768")
+
+Output stream:
+audio/pcmu stream with
+- ACString "type" == "audio/pcmu"
+
+----------------------------------------------------------------------
+
+12) g711-decoder
+----------------
+
+Filter for decoding g.711 streams as encoded using g711-encoder
+
+Control interfaces: 
+
+Node parameters:
+
+Input stream:
+audio/pcmu stream with
+- ACString "type" == "audio/pcmu"
+
+Output stream:
+audio stream with
+- ACString "type" (== "audio")
+- double "sample_rate" (== 8000)
+- double "frame_duration" (== 0.02)
+- unsigned long "channels" (== 1)
+- unsigned long "sample_format" (== "float32_32768")
+
+----------------------------------------------------------------------
+
+13) g711-rtp-packetizer
+-----------------------
+
+Filter for converting g.711 streams into rtp streams.
+
+Node parameters:
+- unsigned short "payload_type" (default: 0)
+
+Input stream:
+- ACString "type" (== "audio/pcmu")
+
+Output stream:
+- ACString "type" (== "rtp")
+- SSRC and sequence number NOT set.
+
+----------------------------------------------------------------------
+
+14) g711-rtp-depacketizer
+-------------------------
+
+Filter for converting rtp streams into g.711 streams.
+
+Input stream:
+- ACString "type" (== "rtp")
+
+Output stream:
+- ACString "type" (== "audio/pcmu")
+
+----------------------------------------------------------------------
+
+15) rtp-session
 ---------------
 
 Maintains a unicast RTP session.
@@ -236,7 +348,7 @@ Sources: 3 (ACString "name" == "local-rtp"|"remote-rtp"|"remote-rtcp")
 
 ----------------------------------------------------------------------
 
-11) rtp-transmitter
+16) rtp-transmitter
 -------------------
 
 Filter for transmitting RTP packets. Used internally by rtp-session.
@@ -257,7 +369,7 @@ Output stream:
 
 ----------------------------------------------------------------------
 
-12) rtp-receiver
+17) rtp-receiver
 ----------------
 
 Filter for receiving RTP datagrams. Used internally by rtp-session.
@@ -267,3 +379,5 @@ Input stream:
 
 Output stream:
 - ACString "type" (== "rtp")
+
+

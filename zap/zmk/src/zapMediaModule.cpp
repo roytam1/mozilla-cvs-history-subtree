@@ -39,6 +39,7 @@
 #include "zapAudioDeviceManager.h"
 #include "zapAudioIn.h"
 #include "zapAudioOut.h"
+#include "zapAudioMixer.h"
 #include "zapPacketBuffer.h"
 #include "zapSpeexEncoder.h"
 #include "zapSpeexDecoder.h"
@@ -57,6 +58,7 @@
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapAudioDeviceManager)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapAudioIn)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapAudioOut)
+NS_GENERIC_FACTORY_CONSTRUCTOR(zapAudioMixer)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapPacketBuffer)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapSpeexEncoder)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapSpeexDecoder)
@@ -93,6 +95,11 @@ static const nsModuleComponentInfo gComponents[] =
     ZAP_AUDIOOUT_CID,
     ZAP_AUDIOOUT_CONTRACTID,
     zapAudioOutConstructor
+  },
+  { "Mozilla ZMK Audio Mixer",
+    ZAP_AUDIOMIXER_CID,
+    ZAP_AUDIOMIXER_CONTRACTID,
+    zapAudioMixerConstructor
   },
   { "Mozilla ZMK Media Packet Buffer",
     ZAP_PACKETBUFFER_CID,
