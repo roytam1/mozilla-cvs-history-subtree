@@ -287,13 +287,11 @@ ViewportFrame::Reflow(nsPresContext*          aPresContext,
                "scrollbars in odd positions");
 #endif
 
-  // XXX this could be optimized
-  mFixedContainer.DirtyFramesDependingOnContainer(PR_TRUE, PR_TRUE);
-
   // Just reflow all the fixed-pos frames.
   rv = mFixedContainer.Reflow(this, aPresContext, reflowState,
                               reflowState.mComputedWidth, 
-                              reflowState.mComputedHeight);
+                              reflowState.mComputedHeight,
+                              PR_TRUE, PR_TRUE); // XXX could be optimized
 
   // If we were dirty then do a repaint
   if (GetStateBits() & NS_FRAME_IS_DIRTY) {

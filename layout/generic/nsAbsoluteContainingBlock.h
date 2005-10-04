@@ -100,14 +100,14 @@ public:
   //        placeholders for positioning and on whether the containing block
   //        width or height changed.
   nsresult Reflow(nsIFrame*                aDelegatingFrame,
-                  nsPresContext*          aPresContext,
+                  nsPresContext*           aPresContext,
                   const nsHTMLReflowState& aReflowState,
                   nscoord                  aContainingBlockWidth,
                   nscoord                  aContainingBlockHeight,
+                  PRBool                   aCBWidthChanged,
+                  PRBool                   aCBHeightChanged,
                   nsRect*                  aChildBounds = nsnull);
 
-  void DirtyFramesDependingOnContainer(PRBool aWidthChanged,
-                                       PRBool aHeightChanged);
 
   void DestroyFrames(nsIFrame*       aDelegatingFrame,
                      nsPresContext* aPresContext);

@@ -1014,12 +1014,11 @@ nsBlockFrame::Reflow(nsPresContext*          aPresContext,
     PRBool cbHeightChanged =
       !(isRoot && NS_UNCONSTRAINEDSIZE == aReflowState.mComputedHeight) &&
       aMetrics.height != oldSize.height;
-    mAbsoluteContainer.DirtyFramesDependingOnContainer(cbWidthChanged,
-                                                       cbHeightChanged);
 
     rv = mAbsoluteContainer.Reflow(this, aPresContext, aReflowState,
                                    containingBlockSize.width,
                                    containingBlockSize.height,
+                                   cbWidthChanged, cbHeightChanged,
                                    &childBounds);
 
     // Factor the absolutely positioned child bounds into the overflow area

@@ -1264,15 +1264,13 @@ nsPositionedInlineFrame::Reflow(nsPresContext*          aPresContext,
     nscoord containingBlockHeight =
       aDesiredSize.height - computedBorder.TopBottom();
 
-    // XXX This could be optimized.
-    mAbsoluteContainer.DirtyFramesDependingOnContainer(PR_TRUE, PR_TRUE);
-
     // Factor the absolutely positioned child bounds into the overflow area
     // Don't include this frame's bounds, nor its inline descendants' bounds,
     // and don't store the overflow property.
     // That will all be done by nsLineLayout::RelativePositionFrames.
     rv = mAbsoluteContainer.Reflow(this, aPresContext, aReflowState,
                                    containingBlockWidth, containingBlockHeight,
+                                   PR_TRUE, PR_TRUE, // XXX could be optimized
                                    &aDesiredSize.mOverflowArea);
   }
 

@@ -160,6 +160,8 @@ nsAbsoluteContainingBlock::Reflow(nsIFrame*                aDelegatingFrame,
                                   const nsHTMLReflowState& aReflowState,
                                   nscoord                  aContainingBlockWidth,
                                   nscoord                  aContainingBlockHeight,
+                                  PRBool                   aCBWidthChanged,
+                                  PRBool                   aCBHeightChanged,
                                   nsRect*                  aChildBounds)
 {
   // Initialize OUT parameter
@@ -171,8 +173,9 @@ nsAbsoluteContainingBlock::Reflow(nsIFrame*                aDelegatingFrame,
   nsIFrame* kidFrame;
   for (kidFrame = mAbsoluteFrames.FirstChild(); kidFrame; kidFrame = kidFrame->GetNextSibling()) {
     if (reflowAll ||
-        kidFrame->GetStateBits() &
-          (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)) {
+        (kidFrame->GetStateBits() &
+           (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)) ||
+        FrameDependsOnContainer(kidFrame, aCBWidthChanged, aCBHeightChanged)) {
       // Reflow the frame
       nsReflowStatus  kidStatus;
       ReflowAbsoluteFrame(aDelegatingFrame, aPresContext, aReflowState, aContainingBlockWidth,
@@ -289,15 +292,6 @@ nsAbsoluteContainingBlock::FrameDependsOnContainer(nsIFrame* f,
     }
   }
   return PR_FALSE;
-}
-
-void
-nsAbsoluteContainingBlock::DirtyFramesDependingOnContainer(PRBool aWidthChanged,
-                                                           PRBool aHeightChanged)
-{
-  for (nsIFrame* f = mAbsoluteFrames.FirstChild(); f; f = f->GetNextSibling())
-    if (FrameDependsOnContainer(f, aWidthChanged, aHeightChanged))
-      f->AddStateBits(NS_FRAME_IS_DIRTY);
 }
 
 void

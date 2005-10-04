@@ -133,8 +133,10 @@ NS_IMETHODIMP nsPageContentFrame::Reflow(nsPresContext*   aPresContext,
 #endif
     }
     // Reflow our fixed frames 
-    mFixedContainer.Reflow(this, aPresContext, aReflowState, aReflowState.availableWidth, 
-                           aReflowState.availableHeight);
+    mFixedContainer.Reflow(this, aPresContext, aReflowState,
+                           aReflowState.availableWidth,
+                           aReflowState.availableHeight,
+                           PR_TRUE, PR_TRUE); // XXX could be optimized
 
     // Return our desired size
     aDesiredSize.width = aReflowState.availableWidth;
