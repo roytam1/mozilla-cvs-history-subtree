@@ -4900,7 +4900,7 @@ nsFrame::RefreshSizeCache(nsBoxLayoutState& aState)
   // if we do have a reflow state
   nsresult rv = NS_OK;
   const nsHTMLReflowState* reflowState = aState.GetReflowState();
-  // XXX This is usually false now where it used to be true.
+  // XXX (MAJOR BUG) This is usually false now where it used to be true.
   if (reflowState) {
     nsPresContext* presContext = aState.PresContext();
     nsReflowStatus status = NS_FRAME_COMPLETE;
