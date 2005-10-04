@@ -185,6 +185,10 @@ nsHTMLReflowState::Init(nsPresContext* aPresContext,
   InitFrameType();
   InitCBReflowState();
   InitConstraints(aPresContext, aContainingBlockWidth, aContainingBlockHeight, aBorder, aPadding);
+
+  mFlags.mIsResize = !(frame->GetStateBits() & NS_FRAME_IS_DIRTY) &&
+                     frame->GetSize().width !=
+                       mComputedWidth + mComputedBorderPadding.LeftRight();
 }
 
 void nsHTMLReflowState::InitCBReflowState()

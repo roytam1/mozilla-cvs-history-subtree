@@ -847,9 +847,7 @@ nsBlockFrame::Reflow(nsPresContext*          aPresContext,
   // If we're not dirty (which means we'll mark everything dirty later)
   // and our width has changed, mark the lines dirty that we need to
   // mark dirty for a resize reflow.
-  if (!(GetStateBits() & NS_FRAME_IS_DIRTY) &&
-      mRect.width != aReflowState.mComputedWidth +
-                     aReflowState.mComputedBorderPadding.LeftRight())
+  if (aReflowState.mFlags.mIsResize)
     PrepareResizeReflow(state);
 
   mState &= ~NS_FRAME_FIRST_REFLOW;

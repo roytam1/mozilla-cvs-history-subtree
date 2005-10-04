@@ -235,6 +235,7 @@ struct nsHTMLReflowState {
     PRUint16 mBlinks:1;              // Keep track of text-decoration: blink
     PRUint16 mVisualBidiFormControl:1; // Keep track of descendants of form controls on Visual Bidi pages
     PRUint16 mHasClearance:1;        // Block has clearance
+    PRUint16 mIsResize:1;            // Is frame (a) not dirty and (b) a different width than before?
   } mFlags;
 
 #ifdef IBMBIDI
