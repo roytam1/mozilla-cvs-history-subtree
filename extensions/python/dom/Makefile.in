@@ -39,12 +39,12 @@ DEPTH   =../../..
 DIRS = \
         src \
         test \
+	nsdom \
         $(NULL)
 
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
 VPATH		= @srcdir@
-pyexecdir	= @libdir@/python$(PYTHON_VER_DOTTED)/site-packages
 
 include $(topsrcdir)/config/rules.mk
 
