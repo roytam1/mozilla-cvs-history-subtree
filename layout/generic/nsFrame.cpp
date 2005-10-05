@@ -6122,6 +6122,10 @@ void DR_State::FindMatchingRule(DR_FrameTreeNode& aNode)
     if (aNode.mDisplay || mIndentUndisplayedFrames) {
       aNode.mIndent++;
     }
+  } else if (aNode.mDisplay) {
+    aNode.mIndent = 0;
+    for (nsIFrame *f = aNode.mFrame->GetParent(); f; f = f->GetParent())
+      ++aNode.mIndent;
   }
 }
     
@@ -6319,10 +6323,7 @@ void nsFrame::DisplayIntrinsicWidthResult(nsIFrame* aFrame,
 
   DR_FrameTreeNode* treeNode = DR_state->CreateTreeNode(aFrame, nsnull);
   if (treeNode && treeNode->mDisplay) {
-    PRInt32 indent = 0;
-    for (nsIFrame *f = aFrame->GetParent(); f; f = f->GetParent())
-      ++indent;
-    DR_state->DisplayFrameTypeInfo(aFrame, indent);
+    DR_state->DisplayFrameTypeInfo(aFrame, treeNode->mIndent);
     printf("%s width=%d\n", aType, aResult);
   }
   DR_state->DeleteTreeNode(*treeNode);
@@ -6339,10 +6340,7 @@ void nsFrame::DisplayIntrinsicSizeResult(nsIFrame* aFrame,
 
   DR_FrameTreeNode* treeNode = DR_state->CreateTreeNode(aFrame, nsnull);
   if (treeNode && treeNode->mDisplay) {
-    PRInt32 indent = 0;
-    for (nsIFrame *f = aFrame->GetParent(); f; f = f->GetParent())
-      ++indent;
-    DR_state->DisplayFrameTypeInfo(aFrame, indent);
+    DR_state->DisplayFrameTypeInfo(aFrame, treeNode->mIndent);
 
     char width[16];
     char height[16];
