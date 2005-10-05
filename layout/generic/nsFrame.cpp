@@ -4916,7 +4916,8 @@ nsFrame::RefreshSizeCache(nsBoxLayoutState& aState)
     // do the nasty.
     nsHTMLReflowMetrics desiredSize;
     rv = BoxReflow(aState, presContext, desiredSize, rendContext,
-                   rect.x, rect.y, rect.width, rect.height);
+                   rect.x, rect.y,
+                   metrics->mBlockPrefSize.width, NS_UNCONSTRAINEDSIZE);
 
     nsRect newRect = GetRect();
 
