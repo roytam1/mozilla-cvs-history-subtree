@@ -227,12 +227,14 @@ BRFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
 /* virtual */ nscoord
 BRFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
+  DISPLAY_MIN_WIDTH_RESULT(this, 0);
   return 0;
 }
 
 /* virtual */ nscoord
 BRFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
+  DISPLAY_PREF_WIDTH_RESULT(this, 0);
   return 0;
 }
 

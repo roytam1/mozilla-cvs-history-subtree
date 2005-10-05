@@ -971,7 +971,9 @@ nsImageFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
   // convert from normal twips to scaled twips (printing...)
   float t2st = presContext->TwipsToPixels() *
                presContext->ScaledPixelsToTwips();
-  return NSToCoordRound(float(mIntrinsicSize.width) * t2st);
+  nscoord result = NSToCoordRound(float(mIntrinsicSize.width) * t2st);
+  DISPLAY_MIN_WIDTH_RESULT(this, result);
+  return result;
 }
 
 /* virtual */ nscoord
@@ -982,7 +984,9 @@ nsImageFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   // convert from normal twips to scaled twips (printing...)
   float t2st = presContext->TwipsToPixels() *
                presContext->ScaledPixelsToTwips();
-  return NSToCoordRound(float(mIntrinsicSize.width) * t2st);
+  nscoord result = NSToCoordRound(float(mIntrinsicSize.width) * t2st);
+  DISPLAY_PREF_WIDTH_RESULT(this, result);
+  return result;
 }
 
 NS_IMETHODIMP

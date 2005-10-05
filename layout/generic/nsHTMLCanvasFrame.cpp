@@ -75,14 +75,18 @@ nsHTMLCanvasFrame::~nsHTMLCanvasFrame()
 nsHTMLCanvasFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
   float p2t = GetPresContext()->PixelsToTwips();
-  return NSIntPixelsToTwips(mCanvasSize.width, p2t);
+  nscoord result = NSIntPixelsToTwips(mCanvasSize.width, p2t);
+  DISPLAY_MIN_WIDTH_RESULT(this, result);
+  return result;
 }
 
 /* virtual */ nscoord
 nsHTMLCanvasFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
   float p2t = GetPresContext()->PixelsToTwips();
-  return NSIntPixelsToTwips(mCanvasSize.width, p2t);
+  nscoord result = NSIntPixelsToTwips(mCanvasSize.width, p2t);
+  DISPLAY_PREF_WIDTH_RESULT(this, result);
+  return result;
 }
 
 NS_IMETHODIMP

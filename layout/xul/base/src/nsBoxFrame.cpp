@@ -708,6 +708,7 @@ nsBoxFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
   nsMargin bp;
   GetBorderAndPadding(bp);
 
+  DISPLAY_MIN_WIDTH_RESULT(this, minSize.width - bp.LeftRight());
   return minSize.width - bp.LeftRight();
 }
 
@@ -725,6 +726,7 @@ nsBoxFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   nsMargin bp;
   GetBorderAndPadding(bp);
 
+  DISPLAY_PREF_WIDTH_RESULT(this, prefSize.width - bp.LeftRight());
   return prefSize.width - bp.LeftRight();
 }
 

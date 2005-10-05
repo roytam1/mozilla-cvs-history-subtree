@@ -870,6 +870,8 @@ nsObjectFrame::CreateWidget(nscoord aWidth,
 /* virtual */ nscoord
 nsObjectFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
+  // XXX Add DISPLAY_MIN_WIDTH_RESULT(this, result) after merging.
+
   if (IsHidden(PR_FALSE))
     return 0;
 

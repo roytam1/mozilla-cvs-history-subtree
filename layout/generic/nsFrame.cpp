@@ -2137,6 +2137,7 @@ nsFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
   NS_NOTREACHED(nsCAutoString(NS_ConvertUTF16toUTF8(frameName) +
     nsDependentCString(" frame didn't implement GetMinWidth")).get());
 #endif
+  DISPLAY_MIN_WIDTH_RESULT(this, 0);
   return 0;
 }
 
@@ -2149,6 +2150,7 @@ nsFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   NS_NOTREACHED(nsCAutoString(NS_ConvertUTF16toUTF8(frameName) +
     nsDependentCString(" frame didn't implement GetPrefWidth")).get());
 #endif
+  DISPLAY_PREF_WIDTH_RESULT(this, 0);
   return 0;
 }
 
@@ -5639,7 +5641,7 @@ struct DR_State
   DR_FrameTypeInfo* GetFrameTypeInfo(char* aFrameName);
   void InitFrameTypeTable();
   DR_FrameTreeNode* CreateTreeNode(nsIFrame*                aFrame,
-                                   const nsHTMLReflowState& aReflowState);
+                                   const nsHTMLReflowState* aReflowState);
   void FindMatchingRule(DR_FrameTreeNode& aNode);
   PRBool RuleMatches(DR_Rule&          aRule,
                      DR_FrameTreeNode& aNode);
@@ -6118,11 +6120,16 @@ void DR_State::FindMatchingRule(DR_FrameTreeNode& aNode)
 }
     
 DR_FrameTreeNode* DR_State::CreateTreeNode(nsIFrame*                aFrame,
-                                           const nsHTMLReflowState& aReflowState)
+                                           const nsHTMLReflowState* aReflowState)
 {
   // find the frame of the parent reflow state (usually just the parent of aFrame)
-  const nsHTMLReflowState* parentRS = aReflowState.parentReflowState;
-  nsIFrame* parentFrame = (parentRS) ? parentRS->frame : nsnull;
+  nsIFrame* parentFrame;
+  if (aReflowState) {
+    const nsHTMLReflowState* parentRS = aReflowState->parentReflowState;
+    parentFrame = (parentRS) ? parentRS->frame : nsnull;
+  } else {
+    parentFrame = aFrame->GetParent();
+  }
 
   // find the parent tree node leaf
   DR_FrameTreeNode* parentNode = nsnull;
@@ -6235,7 +6242,7 @@ void* nsFrame::DisplayReflowEnter(nsPresContext*          aPresContext,
 
   NS_ASSERTION(aFrame, "invalid call");
 
-  DR_FrameTreeNode* treeNode = DR_state->CreateTreeNode(aFrame, aReflowState);
+  DR_FrameTreeNode* treeNode = DR_state->CreateTreeNode(aFrame, &aReflowState);
   if (treeNode) {
     DisplayReflowEnterPrint(aPresContext, aFrame, aReflowState, *treeNode, PR_FALSE);
   }
@@ -6293,6 +6300,22 @@ void nsFrame::DisplayReflowExit(nsPresContext*      aPresContext,
     }
   }
   DR_state->DeleteTreeNode(*treeNode);
+}
+
+void nsFrame::DisplayIntrinsicWidthResult(nsIFrame* aFrame,
+                                          const char* aType, // "min" or "pref"
+                                          nscoord aResult)
+{
+  if (!DR_state->mInited) DR_state->Init();
+  if (!DR_state->mActive) return;
+
+  NS_ASSERTION(aFrame, "invalid call");
+
+  DR_FrameTreeNode* treeNode = DR_state->CreateTreeNode(aFrame, nsnull);
+  if (treeNode && treeNode->mDisplay) {
+    DR_state->DisplayFrameTypeInfo(aFrame, treeNode->mIndent);
+    printf("%s=%d\n", aType, aResult);
+  }
 }
 
 /* static */ void

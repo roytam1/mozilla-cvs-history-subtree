@@ -440,17 +440,25 @@ CanvasFrame::Paint(nsPresContext*      aPresContext,
 /* virtual */ nscoord
 CanvasFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
+  nscoord result;
   if (mFrames.IsEmpty())
-    return 0;
-  return mFrames.FirstChild()->GetMinWidth(aRenderingContext);
+    result = 0;
+  else
+    result = mFrames.FirstChild()->GetMinWidth(aRenderingContext);
+  DISPLAY_MIN_WIDTH_RESULT(this, result);
+  return result;
 }
 
 /* virtual */ nscoord
 CanvasFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
+  nscoord result;
   if (mFrames.IsEmpty())
-    return 0;
-  return mFrames.FirstChild()->GetPrefWidth(aRenderingContext);
+    result = 0;
+  else
+    result = mFrames.FirstChild()->GetPrefWidth(aRenderingContext);
+  DISPLAY_PREF_WIDTH_RESULT(this, result);
+  return result;
 }
 
 NS_IMETHODIMP

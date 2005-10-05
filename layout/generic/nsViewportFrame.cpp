@@ -179,19 +179,31 @@ ViewportFrame::GetFirstChild(nsIAtom* aListName) const
 /* virtual */ nscoord
 ViewportFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
+  nscoord result;
   if (mFrames.IsEmpty())
-    return 0;
+    result = 0;
+  else
+    result = mFrames.FirstChild()->GetMinWidth(aRenderingContext);
+    
   // XXXldb Deal with mFixedContainer (matters for SizeToContent)!
-  return mFrames.FirstChild()->GetMinWidth(aRenderingContext);
+
+  DISPLAY_MIN_WIDTH_RESULT(this, result);
+  return result;
 }
 
 /* virtual */ nscoord
 ViewportFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
+  nscoord result;
   if (mFrames.IsEmpty())
-    return 0;
+    result = 0;
+  else
+    result = mFrames.FirstChild()->GetPrefWidth(aRenderingContext);
+    
   // XXXldb Deal with mFixedContainer (matters for SizeToContent)!
-  return mFrames.FirstChild()->GetPrefWidth(aRenderingContext);
+
+  DISPLAY_PREF_WIDTH_RESULT(this, result);
+  return result;
 }
 
 nsPoint

@@ -96,6 +96,7 @@ SpacerFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
   nsHTMLReflowMetrics metrics;
   GetDesiredSize(metrics, nsSize(0, 0));
+  DISPLAY_MIN_WIDTH_RESULT(this, metrics.width);
   return metrics.width;
 }
 
@@ -104,6 +105,7 @@ SpacerFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
   nsHTMLReflowMetrics metrics;
   GetDesiredSize(metrics, nsSize(0, 0));
+  DISPLAY_PREF_WIDTH_RESULT(this, metrics.width);
   return metrics.width;
 }
 

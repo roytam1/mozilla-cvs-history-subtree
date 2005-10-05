@@ -585,8 +585,10 @@ nsBlockFrame::MarkIntrinsicWidthsDirty()
 /* virtual */ nscoord
 nsBlockFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
-  if (mMinWidth != NS_INTRINSIC_WIDTH_UNKNOWN)
+  if (mMinWidth != NS_INTRINSIC_WIDTH_UNKNOWN) {
+    DISPLAY_MIN_WIDTH_RESULT(this, mMinWidth);
     return mMinWidth;
+  }
 
 #ifdef DEBUG
   if (gNoisyIntrinsic) {
@@ -635,14 +637,17 @@ nsBlockFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
   data.Break(aRenderingContext);
 
   mMinWidth = data.prevLines;
+  DISPLAY_MIN_WIDTH_RESULT(this, mMinWidth);
   return mMinWidth;
 }
 
 /* virtual */ nscoord
 nsBlockFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
-  if (mPrefWidth != NS_INTRINSIC_WIDTH_UNKNOWN)
+  if (mPrefWidth != NS_INTRINSIC_WIDTH_UNKNOWN) {
+    DISPLAY_PREF_WIDTH_RESULT(this, mPrefWidth);
     return mPrefWidth;
+  }
 
 #ifdef DEBUG
   if (gNoisyIntrinsic) {
@@ -691,6 +696,7 @@ nsBlockFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   data.Break(aRenderingContext);
 
   mPrefWidth = data.prevLines;
+  DISPLAY_PREF_WIDTH_RESULT(this, mPrefWidth);
   return mPrefWidth;
 }
 

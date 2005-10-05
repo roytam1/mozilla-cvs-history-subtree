@@ -69,6 +69,7 @@ nsLeafFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
                        nsSize(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE));
   nsHTMLReflowMetrics metrics;
   GetDesiredSize(GetPresContext(), rs, metrics);
+  DISPLAY_MIN_WIDTH_RESULT(this, metrics.width);
   return metrics.width;
 }
 
@@ -81,6 +82,7 @@ nsLeafFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
                        nsSize(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE));
   nsHTMLReflowMetrics metrics;
   GetDesiredSize(GetPresContext(), rs, metrics);
+  DISPLAY_PREF_WIDTH_RESULT(this, metrics.width);
   return metrics.width;
 }
 

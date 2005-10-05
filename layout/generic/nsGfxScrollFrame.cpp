@@ -648,6 +648,7 @@ nsHTMLScrollFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
     result += vScrollbarMinSize.width;
   }
 
+  DISPLAY_MIN_WIDTH_RESULT(this, result);
   return result;
 }
 
@@ -668,6 +669,7 @@ nsHTMLScrollFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
     result += vScrollbarMinSize.width;
   }
 
+  DISPLAY_PREF_WIDTH_RESULT(this, result);
   return result;
 }
 

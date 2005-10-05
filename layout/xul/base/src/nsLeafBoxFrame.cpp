@@ -205,7 +205,16 @@ nsLeafBoxFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
   nsBoxLayoutState state(GetPresContext(), aRenderingContext);
   nsSize minSize(0,0);
   GetMinSize(state, minSize);
-  return minSize.width;
+
+  // GetMinSize returns border-box width, and we want to return content
+  // width.  Since Reflow uses the reflow state's border and padding, we
+  // actually just want to subtract what GetMinSize added, which is the
+  // result of GetBorderAndPadding.
+  nsMargin bp;
+  GetBorderAndPadding(bp);
+
+  DISPLAY_MIN_WIDTH_RESULT(this, minSize.width - bp.LeftRight());
+  return minSize.width - bp.LeftRight();
 }
 
 /* virtual */ nscoord
@@ -214,7 +223,16 @@ nsLeafBoxFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   nsBoxLayoutState state(GetPresContext(), aRenderingContext);
   nsSize prefSize(0,0);
   GetPrefSize(state, prefSize);
-  return prefSize.width;
+
+  // GetPrefSize returns border-box width, and we want to return content
+  // width.  Since Reflow uses the reflow state's border and padding, we
+  // actually just want to subtract what GetPrefSize added, which is the
+  // result of GetBorderAndPadding.
+  nsMargin bp;
+  GetBorderAndPadding(bp);
+
+  DISPLAY_PREF_WIDTH_RESULT(this, prefSize.width - bp.LeftRight());
+  return prefSize.width - bp.LeftRight();
 }
 
 NS_IMETHODIMP
