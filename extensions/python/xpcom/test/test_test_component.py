@@ -40,6 +40,8 @@ import xpcom.components
 import xpcom._xpcom
 import xpcom.nsError
 
+MakeVariant = xpcom._xpcom.MakeVariant
+
 try:
     import gc
 except ImportError:
@@ -410,6 +412,12 @@ def test_derived_interface(c, test_flat = 0):
     test_method(c.AppendVariant, ((1,2),(3,4)), 10)
     test_method(c.AppendVariant, ("bar", "foo"), "foobar")
     test_method(c.AppendVariant, (None, None), None)
+
+    test_method(c.SumVariants, ([],), None)
+    # Array's dont expose their interface, so we are unable to auto-wrap
+    # variant arrays, as they aren't aware if the IID of the array
+    test_method(c.SumVariants, ([MakeVariant(1),MakeVariant(2),MakeVariant(3)],), 6)
+    test_method(c.SumVariants, ([MakeVariant('foo'), MakeVariant('bar')],), 'foobar')
 
     if not test_flat:
         c = c.queryInterface(xpcom.components.interfaces.nsIPythonTestInterfaceDOMStrings)
