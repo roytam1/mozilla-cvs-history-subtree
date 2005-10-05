@@ -955,6 +955,7 @@ nsMenuFrame::GetMinSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
   if (IsSizedToPopup(mContent, PR_TRUE))
     SizeToPopup(aBoxLayoutState, aSize);
 
+  DISPLAY_MIN_SIZE_RESULT(this, aSize);
   return rv;
 }
 
@@ -1933,6 +1934,7 @@ nsMenuFrame::GetPrefSize(nsBoxLayoutState& aState, nsSize& aSize)
     BoundsCheck(minSize, aSize, maxSize);
   }
 
+  DISPLAY_PREF_SIZE_RESULT(this, aSize);
   return rv;
 }
 

@@ -289,6 +289,7 @@ nsNativeScrollbarFrame::GetPrefSize(nsBoxLayoutState& aState, nsSize& aSize)
   // gecko
   Hookup();
     
+  DISPLAY_PREF_SIZE_RESULT(this, aSize);
   return NS_OK;
 }
 

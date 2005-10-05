@@ -541,6 +541,7 @@ nsBox::GetPrefSize(nsBoxLayoutState& aState, nsSize& aSize)
   GetMaxSize(aState, maxSize);
 
   BoundsCheck(minSize, aSize, maxSize);
+  DISPLAY_PREF_SIZE_RESULT(this, aSize);
 
   return NS_OK;
 }
@@ -559,6 +560,7 @@ nsBox::GetMinSize(nsBoxLayoutState& aState, nsSize& aSize)
   AddBorderAndPadding(aSize);
   AddInset(aSize);
   nsIBox::AddCSSMinSize(aState, this, aSize);
+  DISPLAY_MIN_SIZE_RESULT(this, aSize);
   return NS_OK;
 }
 
@@ -582,6 +584,7 @@ nsBox::GetMaxSize(nsBoxLayoutState& aState, nsSize& aSize)
   AddBorderAndPadding(aSize);
   AddInset(aSize);
   nsIBox::AddCSSMaxSize(aState, this, aSize);
+  DISPLAY_MAX_SIZE_RESULT(this, aSize);
   return NS_OK;
 }
 

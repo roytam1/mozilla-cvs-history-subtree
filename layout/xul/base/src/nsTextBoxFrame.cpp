@@ -856,6 +856,7 @@ nsTextBoxFrame::GetPrefSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
     AddInset(aSize);
     nsIBox::AddCSSPrefSize(aBoxLayoutState, this, aSize);
 
+    DISPLAY_PREF_SIZE_RESULT(this, aSize);
     return NS_OK;
 }
 
@@ -878,6 +879,7 @@ nsTextBoxFrame::GetMinSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
     AddInset(aSize);
     nsIBox::AddCSSMinSize(aBoxLayoutState, this, aSize);
 
+    DISPLAY_MIN_SIZE_RESULT(this, aSize);
     return NS_OK;
 }
 

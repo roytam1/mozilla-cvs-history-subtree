@@ -4980,6 +4980,7 @@ nsFrame::GetPrefSize(nsBoxLayoutState& aState, nsSize& aSize)
   nsBoxLayoutMetrics *metrics = BoxMetrics();
   if (!DoesNeedRecalc(metrics->mPrefSize)) {
      aSize = metrics->mPrefSize;
+     DISPLAY_PREF_SIZE_RESULT(this, aSize);
      return NS_OK;
   }
 
@@ -5008,6 +5009,7 @@ nsFrame::GetPrefSize(nsBoxLayoutState& aState, nsSize& aSize)
   }
 
   aSize = metrics->mPrefSize;
+  DISPLAY_PREF_SIZE_RESULT(this, aSize);
 
   return NS_OK;
 }
@@ -5019,6 +5021,7 @@ nsFrame::GetMinSize(nsBoxLayoutState& aState, nsSize& aSize)
   nsBoxLayoutMetrics *metrics = BoxMetrics();
   if (!DoesNeedRecalc(metrics->mMinSize)) {
      aSize = metrics->mMinSize;
+     DISPLAY_MIN_SIZE_RESULT(this, aSize);
      return NS_OK;
   }
 
@@ -5043,6 +5046,7 @@ nsFrame::GetMinSize(nsBoxLayoutState& aState, nsSize& aSize)
   }
 
   aSize = metrics->mMinSize;
+  DISPLAY_MIN_SIZE_RESULT(this, aSize);
 
   return NS_OK;
 }
@@ -5054,6 +5058,7 @@ nsFrame::GetMaxSize(nsBoxLayoutState& aState, nsSize& aSize)
   nsBoxLayoutMetrics *metrics = BoxMetrics();
   if (!DoesNeedRecalc(metrics->mMaxSize)) {
      aSize = metrics->mMaxSize;
+     DISPLAY_MAX_SIZE_RESULT(this, aSize);
      return NS_OK;
   }
 
@@ -5071,6 +5076,7 @@ nsFrame::GetMaxSize(nsBoxLayoutState& aState, nsSize& aSize)
   }
 
   aSize = metrics->mMaxSize;
+  DISPLAY_MAX_SIZE_RESULT(this, aSize);
 
   return NS_OK;
 }
@@ -6314,7 +6320,28 @@ void nsFrame::DisplayIntrinsicWidthResult(nsIFrame* aFrame,
   DR_FrameTreeNode* treeNode = DR_state->CreateTreeNode(aFrame, nsnull);
   if (treeNode && treeNode->mDisplay) {
     DR_state->DisplayFrameTypeInfo(aFrame, treeNode->mIndent);
-    printf("%s=%d\n", aType, aResult);
+    printf("%s width=%d\n", aType, aResult);
+  }
+}
+
+void nsFrame::DisplayIntrinsicSizeResult(nsIFrame* aFrame,
+                                         const char* aType, // "min" or "pref"
+                                         nsSize aResult)
+{
+  if (!DR_state->mInited) DR_state->Init();
+  if (!DR_state->mActive) return;
+
+  NS_ASSERTION(aFrame, "invalid call");
+
+  DR_FrameTreeNode* treeNode = DR_state->CreateTreeNode(aFrame, nsnull);
+  if (treeNode && treeNode->mDisplay) {
+    DR_state->DisplayFrameTypeInfo(aFrame, treeNode->mIndent);
+
+    char width[16];
+    char height[16];
+    DR_state->PrettyUC(aResult.width, width);
+    DR_state->PrettyUC(aResult.height, height);
+    printf("%s size=%s,%s\n", aType, width, height);
   }
 }
 

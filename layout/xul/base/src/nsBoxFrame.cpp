@@ -857,6 +857,7 @@ nsBoxFrame::GetPrefSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
 {
   if (!DoesNeedRecalc(mPrefSize)) {
      aSize = mPrefSize;
+     DISPLAY_PREF_SIZE_RESULT(this, aSize);
      return NS_OK;
   }
 
@@ -895,6 +896,7 @@ nsBoxFrame::GetPrefSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
   BoundsCheck(minSize, aSize, maxSize);
 
   mPrefSize = aSize;
+  DISPLAY_PREF_SIZE_RESULT(this, aSize);
  
   return rv;
 }
@@ -934,6 +936,7 @@ nsBoxFrame::GetMinSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
 {
   if (!DoesNeedRecalc(mMinSize)) {
      aSize = mMinSize;
+     DISPLAY_MIN_SIZE_RESULT(this, aSize);
      return NS_OK;
   }
 
@@ -965,6 +968,7 @@ nsBoxFrame::GetMinSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
   }
   
   mMinSize = aSize;
+  DISPLAY_MIN_SIZE_RESULT(this, aSize);
 
   return rv;
 }
@@ -974,6 +978,7 @@ nsBoxFrame::GetMaxSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
 {
   if (!DoesNeedRecalc(mMaxSize)) {
      aSize = mMaxSize;
+     DISPLAY_MAX_SIZE_RESULT(this, aSize);
      return NS_OK;
   }
 
@@ -1005,6 +1010,7 @@ nsBoxFrame::GetMaxSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
   }
 
   mMaxSize = aSize;
+  DISPLAY_MAX_SIZE_RESULT(this, aSize);
 
   return rv;
 }
