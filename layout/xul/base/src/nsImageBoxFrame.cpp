@@ -552,6 +552,7 @@ nsImageBoxFrame::GetMinSize(nsBoxLayoutState& aState, nsSize& aSize)
   AddBorderAndPadding(aSize);
   AddInset(aSize);
   nsIBox::AddCSSMinSize(aState, this, aSize);
+  DISPLAY_MIN_SIZE_RESULT(this, aSize);
   return NS_OK;
 }
 
