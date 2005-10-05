@@ -59,6 +59,28 @@ zapG711RTPDepacketizer::AddedToGraph(zapIMediaGraph *graph,
                                      const nsACString & id,
                                      nsIPropertyBag2 *node_pars)
 {
+  // default: pcmu
+  mType = pcmu;
+  
+  // extract node parameters:
+
+  if (node_pars) {
+    nsCAutoString type;
+    if (NS_SUCCEEDED(node_pars->GetPropertyAsACString(NS_LITERAL_STRING("type"),
+                                                    type))) {
+      if (type == NS_LITERAL_CSTRING("audio/pcmu")) {
+        mType = pcmu;
+      }
+      else if (type == NS_LITERAL_CSTRING("audio/pcma")) {
+        mType = pcma;
+      }
+      else {
+        NS_ERROR("unsupported type");
+        return NS_ERROR_FAILURE;
+      }
+    }
+  }
+
   return NS_OK;
 }
 
@@ -91,7 +113,9 @@ zapG711RTPDepacketizer::OpenStream(nsIPropertyBag2* streamInfo)
   NS_NewHashPropertyBag(getter_AddRefs(bag));
   mStreamInfo = do_QueryInterface(bag);
   mStreamInfo->SetPropertyAsACString(NS_LITERAL_STRING("type"),
-                                     NS_LITERAL_CSTRING("audio/pcmu"));
+                                     mType == pcmu ?
+                                     NS_LITERAL_CSTRING("audio/pcmu") :
+                                     NS_LITERAL_CSTRING("audio/pcma"));
   return NS_OK;
 }
 

@@ -265,6 +265,7 @@ Filter for encoding audio streams into g.711 (pcmu or pcma) streams.
 Control interfaces: 
 
 Node parameters:
+- ACString "type" == "audio/pcmu" | "audio/pcma" (default: "audio/pcmu")
 
 Input stream:
 audio stream with
@@ -275,8 +276,8 @@ audio stream with
 - unsigned long "sample_format" (== "float32_32768")
 
 Output stream:
-audio/pcmu stream with
-- ACString "type" == "audio/pcmu"
+audio stream with
+- ACString "type" == "audio/pcmu" | "audio/pcma" (as node parameter)
 
 ----------------------------------------------------------------------
 
@@ -290,8 +291,8 @@ Control interfaces:
 Node parameters:
 
 Input stream:
-audio/pcmu stream with
-- ACString "type" == "audio/pcmu"
+audio stream with
+- ACString "type" == "audio/pcmu" | "audio/pcma"
 
 Output stream:
 audio stream with
@@ -312,7 +313,7 @@ Node parameters:
 - unsigned short "payload_type" (default: 0)
 
 Input stream:
-- ACString "type" (== "audio/pcmu")
+- ACString "type" (== "audio/pcmu" | "audio/pcma")
 
 Output stream:
 - ACString "type" (== "rtp")
@@ -325,11 +326,14 @@ Output stream:
 
 Filter for converting rtp streams into g.711 streams.
 
+Node parameters:
+- ACString "type" == "audio/pcmu" | "audio/pcma" (default: "audio/pcmu")
+
 Input stream:
 - ACString "type" (== "rtp")
 
 Output stream:
-- ACString "type" (== "audio/pcmu")
+- ACString "type" == "audio/pcmu" | "audio/pcma" (as node parameter)
 
 ----------------------------------------------------------------------
 

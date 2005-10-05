@@ -86,8 +86,10 @@ zapG711RTPPacketizer::OpenStream(nsIPropertyBag2* streamInfo)
   nsCString type;
   if (NS_FAILED(streamInfo->GetPropertyAsACString(NS_LITERAL_STRING("type"),
                                                  type)) ||
-      type != NS_LITERAL_CSTRING("audio/pcmu")) {
-    NS_ERROR("can only convert audio/pcmu streams");
+      (type != NS_LITERAL_CSTRING("audio/pcmu") &&
+       type != NS_LITERAL_CSTRING("audio/pcma")))
+  {
+    NS_ERROR("can only convert audio/pcmu or audio/pcma streams");
     return NS_ERROR_FAILURE;
   }
 

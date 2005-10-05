@@ -74,6 +74,28 @@ NS_INTERFACE_MAP_END_INHERITING(zapFilterNode)
 NS_IMETHODIMP
 zapG711Encoder::AddedToGraph(zapIMediaGraph *graph, const nsACString & id, nsIPropertyBag2 *node_pars)
 {
+  // default: pcmu
+  mType = pcmu;
+  
+  // extract node parameters:
+
+  if (node_pars) {
+    nsCAutoString type;
+    if (NS_SUCCEEDED(node_pars->GetPropertyAsACString(NS_LITERAL_STRING("type"),
+                                                    type))) {
+      if (type == NS_LITERAL_CSTRING("audio/pcmu")) {
+        mType = pcmu;
+      }
+      else if (type == NS_LITERAL_CSTRING("audio/pcma")) {
+        mType = pcma;
+      }
+      else {
+        NS_ERROR("unsupported type");
+        return NS_ERROR_FAILURE;
+      }
+    }
+  }
+
   return NS_OK;
 }
 
@@ -142,7 +164,9 @@ zapG711Encoder::OpenStream(nsIPropertyBag2* streamInfo)
   NS_NewHashPropertyBag(getter_AddRefs(bag));
   mStreamInfo = do_QueryInterface(bag);
   mStreamInfo->SetPropertyAsACString(NS_LITERAL_STRING("type"),
-                                     NS_LITERAL_CSTRING("audio/pcmu"));
+                                     mType == pcmu ?
+                                     NS_LITERAL_CSTRING("audio/pcmu") :
+                                     NS_LITERAL_CSTRING("audio/pcma"));
   
   return NS_OK;
 }
@@ -168,8 +192,14 @@ zapG711Encoder::Filter(zapIMediaFrame* input, zapIMediaFrame** output)
   frame->mData.SetLength(samples);
   PRUint8* d = (PRUint8*)frame->mData.BeginWriting();
   float* s = (float*)data.BeginReading();
-  while (samples--)
-    *d++ = linear2ulaw((PRInt32)*s++);
+  if (mType == pcmu) {
+    while (samples--)
+      *d++ = linear2ulaw((PRInt32)*s++);
+  }
+  else {
+    while (samples--)
+      *d++ = linear2alaw((PRInt32)*s++);
+  }
 
   *output = frame;
   return NS_OK;

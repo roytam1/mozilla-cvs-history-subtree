@@ -67,6 +67,7 @@ public:
 
 private:
   nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
+  enum { pcmu, pcma } mType;
 };
 
 #endif // __ZAP_G711DECODER_H__

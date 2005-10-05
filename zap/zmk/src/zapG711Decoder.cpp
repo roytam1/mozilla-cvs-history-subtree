@@ -93,10 +93,15 @@ zapG711Decoder::OpenStream(nsIPropertyBag2* streamInfo)
   }
 
   nsCString type;
-  if (NS_FAILED(streamInfo->GetPropertyAsACString(NS_LITERAL_STRING("type"),
-                                                 type)) ||
-      type != NS_LITERAL_CSTRING("audio/pcmu")) {
-    NS_ERROR("can only decode audio/pcmu streams");
+  streamInfo->GetPropertyAsACString(NS_LITERAL_STRING("type"), type);
+  if (type == NS_LITERAL_CSTRING("audio/pcmu")) {
+    mType = pcmu;
+  }
+  else if (type == NS_LITERAL_CSTRING("audio/pcma")) {
+    mType = pcma;
+  }
+  else {
+    NS_ERROR("unsupported stream type");
     return NS_ERROR_FAILURE;
   }
   
@@ -142,9 +147,14 @@ zapG711Decoder::Filter(zapIMediaFrame* input, zapIMediaFrame** output)
   frame->mData.SetLength(samples*4);
   float* d = (float*)frame->mData.BeginWriting();
   PRUint8* s = (PRUint8*)data.BeginReading();
-  while (samples--)
-    *d++ = (float)ulaw2linear(*s++);
-
+  if (mType == pcmu) {
+    while (samples--)
+      *d++ = (float)ulaw2linear(*s++);
+  }
+  else {
+    while (samples--)
+      *d++ = (float)alaw2linear(*s++);
+  }
   *output = frame;
   return NS_OK;
 }
