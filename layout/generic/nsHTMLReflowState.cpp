@@ -1852,6 +1852,7 @@ nsHTMLReflowState::ComputeBlockBoxData(nsPresContext* aPresContext,
       } else if ((nsLayoutAtoms::tableFrame == fType) ||
                  (nsLayoutAtoms::tableCaptionFrame == fType)) {
         // The width is shrink-to-fit
+        // XXX We need to subtract border and padding from available width.
         nscoord prefWidth = frame->GetPrefWidth(rendContext);
         if (prefWidth < availableWidth) {
           mComputedWidth = prefWidth;

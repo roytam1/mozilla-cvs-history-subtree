@@ -4892,7 +4892,7 @@ nsFrame::RefreshSizeCache(nsBoxLayoutState& aState)
   //    The min height on the other hand is fairly easy we need to get the largest
   //    line height. This can be done with the line iterator.
 
-  // if we do have a reflow state
+  // if we do have a rendering context
   nsresult rv = NS_OK;
   nsIRenderingContext* rendContext = aState.GetRenderingContext();
   if (rendContext) {
@@ -4910,8 +4910,11 @@ nsFrame::RefreshSizeCache(nsBoxLayoutState& aState)
     // the rect we plan to size to.
     nsRect rect(oldRect);
 
-    metrics->mBlockPrefSize.width = GetPrefWidth(rendContext);
-    metrics->mBlockMinSize.width = GetMinWidth(rendContext);
+    nsMargin bp(0,0,0,0);
+    GetBorderAndPadding(bp);
+
+    metrics->mBlockPrefSize.width = GetPrefWidth(rendContext) + bp.LeftRight();
+    metrics->mBlockMinSize.width = GetMinWidth(rendContext) + bp.LeftRight();
 
     // do the nasty.
     nsHTMLReflowMetrics desiredSize;
@@ -5273,7 +5276,7 @@ nsFrame::BoxReflow(nsBoxLayoutState&        aState,
     // XXX Is it OK that this reflow state has no parent reflow state?
     // (It used to have a bogus parent, skipping all the boxes).
     nsHTMLReflowState reflowState(aPresContext, this, aRenderingContext,
-                                  nsSize(size.width, NS_INTRINSICSIZE));
+                                  nsSize(aWidth, NS_INTRINSICSIZE));
 
     // XXX this needs to subtract out the border and padding of mFrame since it is content size
     reflowState.mComputedWidth = size.width;

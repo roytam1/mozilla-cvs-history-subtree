@@ -699,10 +699,16 @@ nsBoxFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
   nsBoxLayoutState state(GetPresContext(), aRenderingContext);
   nsSize minSize(0,0);
-  // XXX should this really be doing the reverse of
-  // nsLayoutUtils::IntrinsicForContainer?
   GetMinSize(state, minSize);
-  return minSize.width;
+
+  // GetMinSize returns border-box width, and we want to return content
+  // width.  Since Reflow uses the reflow state's border and padding, we
+  // actually just want to subtract what GetMinSize added, which is the
+  // result of GetBorderAndPadding.
+  nsMargin bp;
+  GetBorderAndPadding(bp);
+
+  return minSize.width - bp.LeftRight();
 }
 
 /* virtual */ nscoord
@@ -710,10 +716,16 @@ nsBoxFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
   nsBoxLayoutState state(GetPresContext(), aRenderingContext);
   nsSize prefSize(0,0);
-  // XXX should this really be doing the reverse of
-  // nsLayoutUtils::IntrinsicForContainer?
   GetPrefSize(state, prefSize);
-  return prefSize.width;
+
+  // GetPrefSize returns border-box width, and we want to return content
+  // width.  Since Reflow uses the reflow state's border and padding, we
+  // actually just want to subtract what GetPrefSize added, which is the
+  // result of GetBorderAndPadding.
+  nsMargin bp;
+  GetBorderAndPadding(bp);
+
+  return prefSize.width - bp.LeftRight();
 }
 
 NS_IMETHODIMP
@@ -757,7 +769,9 @@ nsBoxFrame::Reflow(nsPresContext*          aPresContext,
   nsSize prefSize(0,0);
 
   // if we are told to layout intrinic then get our preferred size.
-  if (computedSize.width == NS_INTRINSICSIZE || computedSize.height == NS_INTRINSICSIZE) {
+  NS_ASSERTION(computedSize.width != NS_INTRINSICSIZE,
+               "computed width should always be computed");
+  if (computedSize.height == NS_INTRINSICSIZE) {
      nsSize minSize(0,0);
      nsSize maxSize(0,0);
      GetPrefSize(state, prefSize);
@@ -767,11 +781,7 @@ nsBoxFrame::Reflow(nsPresContext*          aPresContext,
   }
 
   // get our desiredSize
-  if (aReflowState.mComputedWidth == NS_INTRINSICSIZE) {
-    computedSize.width = prefSize.width;
-  } else {
-    computedSize.width += m.left + m.right;
-  }
+  computedSize.width += m.left + m.right;
 
   if (aReflowState.mComputedHeight == NS_INTRINSICSIZE) {
     computedSize.height = prefSize.height;
