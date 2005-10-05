@@ -37,7 +37,7 @@
 #include "nsIScriptContext.h"
 #include "nsITimer.h"
  
-#include "PyXPCOM.h"
+#include "nsPyDOM.h"
 class nsIScriptObjectOwner;
 class nsIArray;
 

@@ -78,6 +78,7 @@ AtomToEventHandlerName(nsIAtom *aName)
 
 nsPythonContext::nsPythonContext() :
     mIsInitialized(PR_FALSE),
+    mScriptGlobal(nsnull),
     mOwner(nsnull),
     mScriptsEnabled(PR_TRUE),
     mProcessingScriptTag(PR_FALSE),
@@ -143,14 +144,15 @@ nsresult nsPythonContext::HandlePythonError()
   PRBool outOfMem = PyErr_GivenExceptionMatches(exc, PyExc_MemoryError);
   
   nsCAutoString cerrMsg;
-  PyXPCOM_FormatCurrentException(cerrMsg);
+  PyXPCOM_FormatGivenException(cerrMsg, exc, typ, tb);
   nsAutoString errMsg;
   CopyUTF8toUTF16(cerrMsg, errMsg);
+  NS_ASSERTION(!errMsg.IsEmpty(), "Failed to extract a Python error message");
   errorevent.errorMsg = errMsg.get();
   nsEventStatus status = nsEventStatus_eIgnore;
 
   // Handle the script error before we restore the exception.
-  if (mScriptGlobal && !outOfMem) {
+  if (mScriptGlobal != nsnull && !outOfMem) {
     mScriptGlobal->HandleScriptError(&errorevent, &status);
   }
 
@@ -198,9 +200,7 @@ nsPythonContext::InitContext(nsIScriptGlobalObject *aGlobalObject)
   if (aGlobalObject) {
     // must build the object with nsISupports, so it gets the automagic
     // interface flattening (I guess that is a bug in pyxpcom?)
-    obGlobal = Py_nsISupports::PyObjectFromInterface(aGlobalObject,
-                                                     NS_GET_IID(nsISupports),
-                                                     PR_TRUE, PR_FALSE);
+    obGlobal = PyObject_FromDOMnsISupports(mDelegate, aGlobalObject);
     if (!obGlobal)
       return HandlePythonError();
   } else {
@@ -401,9 +401,7 @@ nsPythonContext::BindCompiledEventHandler(nsISupports *aTarget, void *aScope,
   CEnterLeavePython _celp;
 
   PyObject *obTarget;
-  obTarget = Py_nsISupports::PyObjectFromInterface(aTarget,
-                                                   NS_GET_IID(nsISupports),
-                                                   PR_TRUE, PR_FALSE);
+  obTarget = PyObject_FromDOMnsISupports(mDelegate, aTarget);
   if (!obTarget)
     return HandlePythonError();
 
@@ -448,15 +446,11 @@ nsPythonContext::CallEventHandler(nsISupports *aTarget, void *aScope, void* aHan
   CEnterLeavePython _celp;
 
   PyObject *obTarget, *obArgv;
-  obTarget = Py_nsISupports::PyObjectFromInterface(aTarget,
-                                                   NS_GET_IID(nsISupports),
-                                                   PR_TRUE, PR_FALSE);
+  obTarget = PyObject_FromDOMnsISupports(mDelegate, aTarget);
   if (!obTarget)
     return HandlePythonError();
 
-  obArgv = Py_nsISupports::PyObjectFromInterface(aargv,
-                                                 NS_GET_IID(nsIArray),
-                                                 PR_TRUE, PR_TRUE);
+  obArgv = PyObject_FromDOMnsISupports(mDelegate, aargv);
   if (!obArgv) {
     Py_DECREF(obTarget);
     return HandlePythonError();
@@ -489,9 +483,7 @@ nsPythonContext::GetBoundEventHandler(nsISupports* aTarget, void *aScope,
   CEnterLeavePython _celp;
 
   PyObject *obTarget;
-  obTarget = Py_nsISupports::PyObjectFromInterface(aTarget,
-                                                   NS_GET_IID(nsISupports),
-                                                   PR_TRUE, PR_FALSE);
+  obTarget = PyObject_FromDOMnsISupports(mDelegate, aTarget);
   if (!obTarget)
     return HandlePythonError();
 
@@ -523,9 +515,7 @@ nsPythonContext::SetProperty(void *aTarget, const char *aPropName, nsISupports *
 
   CEnterLeavePython _celp;
   PyObject *obVal;
-  obVal = Py_nsISupports::PyObjectFromInterface(aVal,
-                                                NS_GET_IID(nsISupports),
-                                                PR_TRUE, PR_FALSE);
+  obVal = PyObject_FromDOMnsISupports(mDelegate, aVal);
   if (!obVal)
     return HandlePythonError();
 
@@ -748,6 +738,7 @@ nsPythonContext::FinalizeClasses(void *aGlobalObj)
                                       "O",
                                       aGlobalObj);
   Py_XDECREF(ret);
+  mScriptGlobal = nsnull;
   return HandlePythonError();
 }
 

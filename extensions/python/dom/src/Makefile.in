@@ -32,6 +32,7 @@ CPPSRCS		=                   \
 		nsPyContext.cpp     \
 		nsPyRuntime.cpp     \
 		nsPyDOMModule.cpp   \
+                nsPyDOMISupports.cpp \
 		$(NULL)
 
 include $(topsrcdir)/config/config.mk

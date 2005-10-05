@@ -46,6 +46,8 @@
 
 extern void init_nsdom();
 
+static PRBool initialized = PR_FALSE;
+
 // QueryInterface implementation for nsPythonRuntime
 NS_INTERFACE_MAP_BEGIN(nsPythonRuntime)
   NS_INTERFACE_MAP_ENTRY(nsILanguageRuntime)
@@ -58,11 +60,14 @@ NS_IMPL_RELEASE(nsPythonRuntime)
 nsresult
 nsPythonRuntime::CreateContext(nsIScriptContext **ret)
 {
-    if (!Py_IsInitialized()) {
+    if (!Py_IsInitialized())
         Py_Initialize();
+    if (!initialized) {
         PyXPCOM_Globals_Ensure();
+        PyInit_DOMnsISupports();
+        init_nsdom();
+        initialized = PR_TRUE;
     }
-    init_nsdom();
     *ret = new nsPythonContext();
     if (!ret)
         return NS_ERROR_OUT_OF_MEMORY;
@@ -222,14 +227,10 @@ static struct PyMethodDef methods[]=
 // The module init code.
 //
 // *NOT* called by Python - this is not a regular Python module.
-static PRBool have_init = PR_FALSE;
-
+// Caller must ensure only called once!
 void 
 init_nsdom() {
-    if (have_init)
-        return;
     CEnterLeavePython _celp;
     // Create the module and add the functions
     Py_InitModule("_nsdom", methods);
-    have_init = PR_TRUE;
 }
