@@ -540,6 +540,7 @@ nsImageBoxFrame::GetPrefSize(nsBoxLayoutState& aState, nsSize& aSize)
 
   BoundsCheck(minSize, aSize, maxSize);
 
+  DISPLAY_PREF_SIZE_RESULT(this, aSize);
   return NS_OK;
 }
 
