@@ -54,6 +54,7 @@
 #include "zapRTPTransmitter.h"
 #include "zapRTPReceiver.h"
 #include "zapRTPSession.h"
+#include "zapSplitter.h"
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapAudioDeviceManager)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapAudioIn)
@@ -73,6 +74,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(zapUDPSocketPair)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapRTPTransmitter)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapRTPReceiver)
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapRTPSession)
+NS_GENERIC_FACTORY_CONSTRUCTOR(zapSplitter)
   
 static const nsModuleComponentInfo gComponents[] =
 {
@@ -170,6 +172,11 @@ static const nsModuleComponentInfo gComponents[] =
     ZAP_RTPSESSION_CID,
     ZAP_RTPSESSION_CONTRACTID,
     zapRTPSessionConstructor
+  },
+  { "Mozilla ZMK Splitter",
+    ZAP_SPLITTER_CID,
+    ZAP_SPLITTER_CONTRACTID,
+    zapSplitterConstructor
   }
 };
 

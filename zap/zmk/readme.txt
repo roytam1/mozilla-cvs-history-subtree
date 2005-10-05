@@ -381,3 +381,20 @@ Output stream:
 - ACString "type" (== "rtp")
 
 
+----------------------------------------------------------------------
+
+18) splitter
+------------
+
+Duplicates one input to several outputs.
+
+Sources: n
+Sinks: 1
+
+Node parameters:
+
+Input stream:
+any
+
+Output stream:
+any

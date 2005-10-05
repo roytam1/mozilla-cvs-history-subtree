@@ -29,6 +29,7 @@ CPPSRCS		= \
 		zapAudioStreamUtils.cpp \
 		zapAudioOut.cpp \
 		zapAudioIn.cpp \
+		zapAudioMixer.cpp \
 		zapMediaModule.cpp \
 		zapPacketBuffer.cpp \
 		zapFilterNode.cpp \
@@ -47,7 +48,7 @@ CPPSRCS		= \
 		zapRTPTransmitter.cpp \
 		zapRTPReceiver.cpp \
 		zapRTPSession.cpp \
-		zapAudioMixer.cpp \
+		zapSplitter.cpp \
 		$(NULL)
 
 XPIDLSRCS	= zapIMediaGraph.idl \
