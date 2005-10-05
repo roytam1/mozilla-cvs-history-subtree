@@ -93,6 +93,8 @@ void zapAudioMixerInput::Init(zapAudioMixer* mixer) {
   mMixer = mixer;
   // append ourselves to the mixer's array of inputs:
   mMixer->mInputs.AppendElement(this);
+  mWaiting = mMixer->mWaiting;
+
 }
 
 //----------------------------------------------------------------------
