@@ -72,6 +72,10 @@ public:
   void SetPaintingDisabled(PRBool aDisable) { mPaintingDisabled = aDisable; }
   PRBool PaintingDisabled() const { return mPaintingDisabled; }
 
+  // The rendering context may be null for specialized uses of
+  // nsBoxLayoutState and should be null-checked before it is used.
+  // However, passing a null rendering context to the constructor when
+  // doing box layout or intrinsic size calculation will cause bugs.
   nsIRenderingContext* GetRenderingContext() const { return mRenderingContext; }
 
   nsresult PushStackMemory() { return PresShell()->PushStackMemory(); }
