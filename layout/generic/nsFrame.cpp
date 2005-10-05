@@ -6319,9 +6319,13 @@ void nsFrame::DisplayIntrinsicWidthResult(nsIFrame* aFrame,
 
   DR_FrameTreeNode* treeNode = DR_state->CreateTreeNode(aFrame, nsnull);
   if (treeNode && treeNode->mDisplay) {
-    DR_state->DisplayFrameTypeInfo(aFrame, treeNode->mIndent);
+    PRInt32 indent = 0;
+    for (nsIFrame *f = aFrame->GetParent(); f; f = f->GetParent())
+      ++indent;
+    DR_state->DisplayFrameTypeInfo(aFrame, indent);
     printf("%s width=%d\n", aType, aResult);
   }
+  DR_state->DeleteTreeNode(*treeNode);
 }
 
 void nsFrame::DisplayIntrinsicSizeResult(nsIFrame* aFrame,
@@ -6335,7 +6339,10 @@ void nsFrame::DisplayIntrinsicSizeResult(nsIFrame* aFrame,
 
   DR_FrameTreeNode* treeNode = DR_state->CreateTreeNode(aFrame, nsnull);
   if (treeNode && treeNode->mDisplay) {
-    DR_state->DisplayFrameTypeInfo(aFrame, treeNode->mIndent);
+    PRInt32 indent = 0;
+    for (nsIFrame *f = aFrame->GetParent(); f; f = f->GetParent())
+      ++indent;
+    DR_state->DisplayFrameTypeInfo(aFrame, indent);
 
     char width[16];
     char height[16];
@@ -6343,6 +6350,7 @@ void nsFrame::DisplayIntrinsicSizeResult(nsIFrame* aFrame,
     DR_state->PrettyUC(aResult.height, height);
     printf("%s size=%s,%s\n", aType, width, height);
   }
+  DR_state->DeleteTreeNode(*treeNode);
 }
 
 /* static */ void
