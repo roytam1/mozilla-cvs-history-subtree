@@ -50,7 +50,7 @@ from xpcom._xpcom import IID_nsISupports, IID_nsIClassInfo, \
 
 # Attribute names we may be __getattr__'d for, but know we don't want to delegate
 # Could maybe just look for startswith("__") but this may screw things for some objects.
-_special_getattr_names = ["__del__", "__len__", "__nonzero__"]
+_special_getattr_names = ["__del__", "__len__", "__nonzero__", "__eq__", "__neq__"]
 
 _just_int_interfaces = ["nsISupportsPRInt32", "nsISupportsPRInt16", "nsISupportsPRUint32", "nsISupportsPRUint16", "nsISupportsPRUint8", "nsISupportsPRBool"]
 _just_long_interfaces = ["nsISupportsPRInt64", "nsISupportsPRUint64"]
@@ -180,6 +180,21 @@ class _XPCOMBase:
 
     def __hash__(self):
         return hash(self._comobj_)
+
+    # The basic rich compare ops for equality
+    def __eq__(self, other):
+        try:
+            other = other._comobj_
+        except AttributeError:
+            pass
+        return self._comobj_ == other
+
+    def __neq__(self, other):
+        try:
+            other = other._comobj_
+        except AttributeError:
+            pass
+        return self._comobj_ != other
 
     # See if the object support strings.
     def __str__(self):
@@ -423,7 +438,7 @@ class _Interface(_XPCOMBase):
             if len(param_infos)!=1: # Only expecting a retval
                 raise RuntimeError, "Can't get properties with this many args!"
             args = ( param_infos, () )
-            return XPTC_InvokeByIndex(self, method_index, args)
+            return XPTC_InvokeByIndex(self._comobj_, method_index, args)
 
         # See if we have a method info waiting to be turned into a method.
         # Do this last as it is a one-off hit.
@@ -451,7 +466,7 @@ class _Interface(_XPCOMBase):
         if len(param_infos)!=1: # Only expecting a single input val
             raise RuntimeError, "Can't set properties with this many args!"
         real_param_infos = ( param_infos, (val,) )
-        return XPTC_InvokeByIndex(self, method_index, real_param_infos)
+        return XPTC_InvokeByIndex(self._comobj_, method_index, real_param_infos)
 
     def __repr__(self):
         return "<XPCOM interface '%s'>" % (self._object_name_,)
