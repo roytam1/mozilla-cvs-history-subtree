@@ -43,6 +43,7 @@ interface zapISipListeningSocket;
 interface zapISipTrafficMonitor;
 
 /**
+ * \ingroup SIP_TRANSPORT_LAYER
  * Part of the SIP transport layer (RFC 3261 section 18).
  *
  * Implemented by component <b>'\@mozilla.org/zap/siptransceiver;1'</b>
@@ -85,6 +86,9 @@ interface zapISipTransceiver : nsISupports
 };
 
 
+/**
+ * \ingroup SIP_TRANSPORT_LAYER
+ */
 [scriptable, uuid(d26136ed-825f-4c8c-8190-886b23528b12)]
 interface zapISipTransceiverSink : nsISupports
 {
@@ -94,6 +98,9 @@ interface zapISipTransceiverSink : nsISupports
 };
 
 
+/**
+ * \ingroup SIP_TRANSPORT_LAYER
+ */
 [scriptable, uuid(dd7c4e01-8026-4e15-81f4-9e42853360e8)]
 interface zapISipTrafficMonitor : nsISupports
 {

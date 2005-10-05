@@ -38,6 +38,9 @@
 
 interface zapISipURI;
 
+/**
+ * \ingroup SIP_SYNTAX_LAYER
+ */
 [scriptable, uuid(a8394cac-61cf-4a5a-9190-a7853f1febc0)]
 interface zapISipAddress : zapISipSyntaxObject
 {

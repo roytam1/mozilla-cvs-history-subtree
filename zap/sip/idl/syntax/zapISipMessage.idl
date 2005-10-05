@@ -46,6 +46,9 @@ interface zapISipFromHeader;
 interface zapISipCSeqHeader;
 interface zapISipContactHeader;
 
+/**
+ * \ingroup SIP_SYNTAX_LAYER
+ */
 [scriptable, uuid(6dad27eb-ed2d-430c-9f60-bd97cc8efe1b)]
 interface zapISipMessage : zapISipSyntaxObject
 {

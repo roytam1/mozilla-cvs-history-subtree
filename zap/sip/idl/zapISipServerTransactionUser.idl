@@ -38,6 +38,9 @@
 
 interface zapISipServerTransaction;
 
+/**
+ * \ingroup SIP_TA_LAYER
+ */
 [scriptable, uuid(5f8118b1-40ca-44a4-8dfb-15afbade707b)]
 interface zapISipServerTransactionUser : nsISupports
 {

@@ -37,6 +37,7 @@
 #include "zapISipSyntaxObject.idl"
 
 /**
+ * \ingroup SIP_SYNTAX_LAYER
  * Base interface for URIs
  */
 [scriptable, uuid(a6b0812c-5ccb-4c9a-b9e7-0307dd866f83)]
@@ -45,6 +46,7 @@ interface zapISipURI : zapISipSyntaxObject
 };
 
 /**
+ * \ingroup SIP_SYNTAX_LAYER
  * A SIP or SIPS URI as defined in RFC3261
  */
 [scriptable, uuid(0ad293f0-54a8-418b-894d-20904b396154)]

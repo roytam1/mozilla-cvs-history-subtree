@@ -38,6 +38,9 @@
 
 interface zapISipURI;
 
+/**
+ * \ingroup SIP_SYNTAX_LAYER
+ */
 [scriptable, uuid(e9c4edcf-ff5f-4920-8167-4fadf24d25b7)]
 interface zapISipRequest : zapISipMessage
 {

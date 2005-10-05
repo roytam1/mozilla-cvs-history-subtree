@@ -38,6 +38,9 @@
 
 interface zapISipDialog;
 
+/**
+ * \ingroup SIP_UA_LAYER
+ */
 [scriptable, uuid(b7a26b03-45e6-4eb5-ab3d-5767d624ad0e)]
 interface zapISipDialogListener : nsISupports
 {

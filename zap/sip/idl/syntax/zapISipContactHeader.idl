@@ -39,6 +39,7 @@
 interface zapISipAddress;
 
 /**
+ * \ingroup SIP_SYNTAX_LAYER
  * Abstracts an RFC3261 'Contact' header value.
  *
  * The 'Contact' header grammar allows for combining several header

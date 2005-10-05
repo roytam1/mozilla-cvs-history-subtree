@@ -40,6 +40,9 @@ interface zapISipNonInviteRC;
 interface zapISipDialog;
 interface zapISipResponse;
 
+/**
+ * \ingroup SIP_UA_LAYER
+ */
 [scriptable, uuid(22ea95a9-5d89-4b32-b328-f6d700d73dd3)]
 interface zapISipNonInviteRCListener : nsISupports
 {

@@ -43,7 +43,8 @@ interface zapISipEndpoint;
 interface zapISipClientTransactionUser;
 interface zapISipServerTransactionUser;
 interface zapISipServerTransaction;
-/*
+/**
+ * \ingroup SIP_TA_LAYER
  * Implemented by component <b>'\@mozilla.org/zap/siptransactmgr;1'</b>
  */
 [scriptable, uuid(5767d856-dca2-4822-ac7d-ecd3cda5ff45)]

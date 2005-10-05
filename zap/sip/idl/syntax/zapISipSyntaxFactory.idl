@@ -57,12 +57,12 @@ interface zapISipUnsupportedHeader;
 interface zapISipAllowHeader;
 
 /**
+ * \ingroup SIP_SYNTAX_LAYER
  * An API for constructing syntacically correct SIP messages.
  * (see RFC 3261)
  *
  * Implemented by component <b>'\@mozilla.org/zap/sipsyntaxfactory;1'</b>
  */
-
 [scriptable, uuid(65c2a40b-b9c2-43ed-91f6-03d8276bdd3d)]
 interface zapISipSyntaxFactory : nsISupports
 {

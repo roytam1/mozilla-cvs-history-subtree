@@ -46,6 +46,7 @@ interface zapISipResponse;
 interface nsIPropertyBag2;
 
 /**
+ * \ingroup SIP_TRANSPORT_LAYER
  * API for the SIP transport layer (RFC 3261 section 18).
  *
  * Implemented by component <b>'\@mozilla.org/zap/siptransport;1'</b>
@@ -84,6 +85,9 @@ interface zapISipTransport : nsISupports
 };
 
 
+/**
+ * \ingroup SIP_TRANSPORT_LAYER
+ */
 [scriptable, uuid(de8739f6-9bc4-47c0-b200-bbbfef40c8c8)]
 interface zapISipTransportSink : nsISupports
 {

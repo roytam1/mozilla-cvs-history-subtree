@@ -39,6 +39,9 @@
 interface zapISipInviteRS;
 interface zapISipNonInviteRS;
 
+/**
+ * \ingroup SIP_UA_LAYER
+ */
 [scriptable, uuid(f8d39381-c162-47aa-ab69-f8631d945f7e)]
 interface zapISipRequestHandler : nsISupports
 {

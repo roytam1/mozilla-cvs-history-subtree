@@ -38,6 +38,9 @@
 
 interface zapISipAddress;
 
+/**
+ * \ingroup SIP_SYNTAX_LAYER
+ */
 [scriptable, uuid(a824073c-b4be-484e-82d8-470686393d06)]
 interface zapISipToHeader : zapISipHeader
 {

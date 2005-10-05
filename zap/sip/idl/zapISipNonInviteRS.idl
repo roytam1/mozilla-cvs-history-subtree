@@ -42,6 +42,7 @@ interface zapISipRequest;
 interface zapISipResponse;
 
 /**
+ * \ingroup SIP_UA_LAYER
  * A request server for handling remote NON-INVITE requests.
  */
 

@@ -41,6 +41,9 @@ interface zapISipAddress;
 interface zapISipDialog;
 interface zapISipRequest;
 
+/**
+ * \ingroup SIP_UA_LAYER
+ */
 [scriptable, uuid(352e19bb-a547-40d7-8fa9-abdd8034a578)]
 interface zapISipNonInviteRC : nsISupports
 {

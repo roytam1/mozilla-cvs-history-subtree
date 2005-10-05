@@ -37,6 +37,7 @@
 #include "nsISupports.idl"
 
 /**
+ * \ingroup SIP_TRANSPORT_LAYER
  * Describes the far end of a SIP connection.
  */
 [scriptable, uuid(bbe19de9-b85a-4491-a0ab-7e4ae2f9966c)]

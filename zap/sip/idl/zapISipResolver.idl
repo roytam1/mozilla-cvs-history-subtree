@@ -40,6 +40,7 @@ interface zapISipRequest;
 interface zapISipResolveListener;
 
 /**
+ * \ingroup SIP_UA_LAYER
  * SIP location resolver implementing the procedures of RFC3263
  *
  * Implemented by component <b>'\@mozilla.org/zap/sipresolver;1'</b>

@@ -36,6 +36,9 @@
 
 #include "zapISipHeader.idl"
 
+/**
+ * \ingroup SIP_SYNTAX_LAYER
+ */
 [scriptable, uuid(2fe17bb8-15f5-44f0-845f-6334c377a31b)]
 interface zapISipAcceptHeader : zapISipHeader
 {

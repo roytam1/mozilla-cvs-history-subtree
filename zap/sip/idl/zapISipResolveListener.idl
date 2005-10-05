@@ -38,6 +38,9 @@
 
 interface zapISipEndpoint;
 
+/**
+ * \ingroup SIP_UA_LAYER
+ */
 [scriptable, uuid(9f3ae46f-4c7a-4a08-92fe-c29e79ba7a1c)]
 interface zapISipResolveListener : nsISupports
 {

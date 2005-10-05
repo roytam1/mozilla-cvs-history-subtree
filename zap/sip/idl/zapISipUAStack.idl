@@ -52,11 +52,34 @@ interface zapISipRequest;
 interface zapISipMessage;
 
 /**
+ * \defgroup SIP_MODULE ZAP SIP module
+ */
+
+/**
+ * \defgroup SIP_UA_LAYER ZAP SIP UA layer
+ * \ingroup SIP_MODULE
+ */
+
+/**
+ * \defgroup SIP_TA_LAYER ZAP SIP transaction layer
+ * \ingroup SIP_MODULE
+ */
+
+/**
+ * \defgroup SIP_TRANSPORT_LAYER ZAP SIP transport layer
+ * \ingroup SIP_MODULE
+ */
+
+/**
+ * \defgroup SIP_SYNTAX_LAYER ZAP SIP syntax layer
+ * \ingroup SIP_MODULE
+ */
+
+
+/**
  * \mainpage
  *
- * \section ZAP SIP module
- *
- * The main entry point into the ZAP SIP module is the zapISipUAStack interface.
+ * \section SIP_MODULE_SECTION ZAP SIP Module
  *
  * The ZAP SIP module implements a UA Stack compliant with the following
  * specifications:
@@ -64,16 +87,18 @@ interface zapISipMessage;
  * -  <b>RFC3261</b>: SIP: Session Initiation Protocol
  * -  <b>RFC3581</b>: Symmetric Response Routing
  * 
+ * The main entry point into the \ref SIP_MODULE is the zapISipUAStack interface.
  *
  */
 
 /**
+ * \ingroup SIP_UA_LAYER
  * User Agent SIP stack interface.
  * 
  * Implemented by component <b>'\@mozilla.org/zap/sipstack;1'</b>.
  *
- * The User Agent SIP stack is the primary entry-point into the ZAP
- * SIP module. In conjunction with a user application component
+ * The User Agent SIP stack is the primary entry-point into the \ref SIP_MODULE
+ * module. In conjunction with a user application component
  * implementing zapISipRequestHandler, it constitutes the UAC and UAS
  * components described in RFC3261.
  *

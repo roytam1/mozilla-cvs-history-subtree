@@ -36,6 +36,9 @@
 
 #include "nsISupports.idl"
 
+/**
+ * \ingroup SIP_TRANSPORT_LAYER
+ */
 [scriptable, uuid(69351a08-cdb2-4b8c-b1f3-cd5278e673ea)]
 interface zapISipConnection : nsISupports
 {

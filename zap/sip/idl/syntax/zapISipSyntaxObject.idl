@@ -36,6 +36,9 @@
 
 #include "nsISupports.idl"
 
+/**
+ * \ingroup SIP_SYNTAX_LAYER
+ */
 [scriptable, uuid(7b72c655-7722-42e8-9fbb-2ecef5da96e6)]
 interface zapISipSyntaxObject : nsISupports
 {

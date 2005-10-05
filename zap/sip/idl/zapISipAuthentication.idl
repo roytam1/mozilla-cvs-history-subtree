@@ -41,6 +41,7 @@ interface zapISipRequest;
 interface zapISipResponse;
 
 /**
+ * \ingroup SIP_UA_LAYER
  * SIP authentication API
  *
  * Implemented by component <b>'\@mozilla.org/zap/sipauth;1'</b>

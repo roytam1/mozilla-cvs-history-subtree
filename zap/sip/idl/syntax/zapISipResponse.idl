@@ -36,6 +36,9 @@
 
 #include "zapISipMessage.idl"
 
+/**
+ * \ingroup SIP_SYNTAX_LAYER
+ */
 [scriptable, uuid(4445e469-13c0-45ae-9692-4ee13bdde158)]
 interface zapISipResponse : zapISipMessage
 {
