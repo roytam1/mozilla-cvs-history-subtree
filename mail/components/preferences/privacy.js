@@ -65,7 +65,7 @@ var gPrivacyPane = {
 
   createLocalDirectoriesList: function () 
   {
-    var abPopup = document.getElementById("abPopup-menupopup");
+    var abPopup = document.getElementById("whitelist-menupopup");
 
     if (abPopup) 
       this.loadLocalDirectories(abPopup);
