@@ -95,7 +95,7 @@ class ConsoleServiceStream:
     def close(self):
         pass
 
-logger = logging.getLogger('pyxpcom')
+logger = logging.getLogger('xpcom')
 if len(logger.handlers) == 0:
     hdlr = logging.StreamHandler(ConsoleServiceStream())
     fmt = logging.Formatter(logging.BASIC_FORMAT)
