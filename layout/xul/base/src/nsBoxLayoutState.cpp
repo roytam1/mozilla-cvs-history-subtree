@@ -44,41 +44,21 @@
 
 #include "nsBoxLayoutState.h"
 
-nsBoxLayoutState::nsBoxLayoutState(nsPresContext* aPresContext):mPresContext(aPresContext), 
-                                                                 mReflowState(nsnull), 
-                                                                 mLayoutFlags(0),
-                                                                 mPaintingDisabled(PR_FALSE)
+nsBoxLayoutState::nsBoxLayoutState(nsPresContext* aPresContext,
+                                   nsIRenderingContext* aRenderingContext)
+  : mPresContext(aPresContext)
+  , mRenderingContext(aRenderingContext)
+  , mLayoutFlags(0)
+  , mPaintingDisabled(PR_FALSE)
 {
   NS_ASSERTION(mPresContext, "PresContext must be non-null");
 }
 
 nsBoxLayoutState::nsBoxLayoutState(const nsBoxLayoutState& aState)
-{
-  mPresContext = aState.mPresContext;
-  mReflowState = aState.mReflowState;
-  mLayoutFlags = aState.mLayoutFlags;
-  mPaintingDisabled = aState.mPaintingDisabled;
-
-  NS_ASSERTION(mPresContext, "PresContext must be non-null");
-}
-
-nsBoxLayoutState::nsBoxLayoutState(nsIPresShell* aShell):mReflowState(nsnull), 
-                                                         mLayoutFlags(0),
-                                                         mPaintingDisabled(PR_FALSE)
-{
-  mPresContext = aShell->GetPresContext();
-  NS_ASSERTION(mPresContext, "PresContext must be non-null");
-}
-
-nsBoxLayoutState::nsBoxLayoutState(nsPresContext* aPresContext, 
-                                   const nsHTMLReflowState& aReflowState, 
-                                   nsHTMLReflowMetrics& aDesiredSize):mPresContext(aPresContext),
-                                                                      mReflowState(&aReflowState),                                                                    
-                                                                      mLayoutFlags(0),
-                                                                      mPaintingDisabled(PR_FALSE)
-
-                                                                                        
-
+  : mPresContext(aState.mPresContext)
+  , mRenderingContext(aState.mRenderingContext)
+  , mLayoutFlags(aState.mLayoutFlags)
+  , mPaintingDisabled(aState.mPaintingDisabled)
 {
   NS_ASSERTION(mPresContext, "PresContext must be non-null");
 }

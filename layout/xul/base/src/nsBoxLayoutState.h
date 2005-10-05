@@ -49,9 +49,8 @@
 #include "nsCOMPtr.h"
 #include "nsPresContext.h"
 #include "nsIPresShell.h"
-#include "nsHTMLReflowState.h"
 
-class nsReflowState;
+class nsIRenderingContext;
 class nsCalculatedBoxInfo;
 struct nsHTMLReflowMetrics;
 class nsString;
@@ -60,15 +59,11 @@ class nsHTMLReflowCommand;
 class nsBoxLayoutState
 {
 public:
-  nsBoxLayoutState(nsPresContext* aPresContext,
-                   const nsHTMLReflowState& aReflowState,
-                   nsHTMLReflowMetrics& aDesiredSize) NS_HIDDEN;
-  nsBoxLayoutState(nsPresContext* aPresContext) NS_HIDDEN;
-  nsBoxLayoutState(nsIPresShell* aShell) NS_HIDDEN;
+  nsBoxLayoutState(nsPresContext* aPresContext, nsIRenderingContext* aRenderingContext = nsnull) NS_HIDDEN;
   nsBoxLayoutState(const nsBoxLayoutState& aState) NS_HIDDEN;
 
-  nsPresContext* PresContext() { return mPresContext; }
-  nsIPresShell*   PresShell() { return mPresContext->PresShell(); }
+  nsPresContext* PresContext() const { return mPresContext; }
+  nsIPresShell* PresShell() const { return mPresContext->PresShell(); }
 
   PRUint32 LayoutFlags() const { return mLayoutFlags; }
   void SetLayoutFlags(PRUint32 aFlags) { mLayoutFlags = aFlags; }
@@ -77,7 +72,7 @@ public:
   void SetPaintingDisabled(PRBool aDisable) { mPaintingDisabled = aDisable; }
   PRBool PaintingDisabled() const { return mPaintingDisabled; }
 
-  const nsHTMLReflowState* GetReflowState() { return mReflowState; }
+  nsIRenderingContext* GetRenderingContext() const { return mRenderingContext; }
 
   nsresult PushStackMemory() { return PresShell()->PushStackMemory(); }
   nsresult PopStackMemory()  { return PresShell()->PopStackMemory(); }
@@ -86,7 +81,7 @@ public:
 
 private:
   nsCOMPtr<nsPresContext> mPresContext;
-  const nsHTMLReflowState* mReflowState;
+  nsIRenderingContext *mRenderingContext;
   PRUint32 mLayoutFlags;
   PRBool mPaintingDisabled;
 };

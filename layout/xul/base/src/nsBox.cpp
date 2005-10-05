@@ -819,9 +819,9 @@ nsIBox::AddCSSMinSize(nsBoxLayoutState& aState, nsIBox* aBox, nsSize& aSize)
       nsITheme *theme = aState.PresContext()->GetTheme();
       if (theme && theme->ThemeSupportsWidget(aState.PresContext(), aBox, display->mAppearance)) {
         nsSize size;
-        const nsHTMLReflowState* reflowState = aState.GetReflowState();
-        if (reflowState) {
-          theme->GetMinimumWidgetSize(reflowState->rendContext, aBox,
+        nsIRenderingContext* rendContext = aState.GetRenderingContext();
+        if (rendContext) {
+          theme->GetMinimumWidgetSize(rendContext, aBox,
                                       display->mAppearance, &size, &canOverride);
           float p2t = aState.PresContext()->ScaledPixelsToTwips();
           if (size.width) {

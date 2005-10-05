@@ -194,7 +194,7 @@ nsBoxFrame::SetInitialChildList(nsPresContext* aPresContext,
   nsresult r = nsContainerFrame::SetInitialChildList(aPresContext, aListName, aChildList);
   if (r == NS_OK) {
     // initialize our list of infos.
-    nsBoxLayoutState state(aPresContext->PresShell());
+    nsBoxLayoutState state(aPresContext);
     CheckBoxOrder(state);
     if (mLayoutManager)
       mLayoutManager->ChildrenSet(this, state, mFrames.FirstChild());
@@ -697,7 +697,7 @@ static void printSize(char * aDesc, nscoord aSize)
 /* virtual */ nscoord
 nsBoxFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
-  nsBoxLayoutState state(GetPresContext());
+  nsBoxLayoutState state(GetPresContext(), aRenderingContext);
   nsSize minSize(0,0);
   // XXX should this really be doing the reverse of
   // nsLayoutUtils::IntrinsicForContainer?
@@ -708,7 +708,7 @@ nsBoxFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 /* virtual */ nscoord
 nsBoxFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
-  nsBoxLayoutState state(GetPresContext());
+  nsBoxLayoutState state(GetPresContext(), aRenderingContext);
   nsSize prefSize(0,0);
   // XXX should this really be doing the reverse of
   // nsLayoutUtils::IntrinsicForContainer?
@@ -746,7 +746,7 @@ nsBoxFrame::Reflow(nsPresContext*          aPresContext,
   aStatus = NS_FRAME_COMPLETE;
 
   // create the layout state
-  nsBoxLayoutState state(aPresContext, aReflowState, aDesiredSize);
+  nsBoxLayoutState state(aPresContext, aReflowState.rendContext);
 
   nsSize computedSize(aReflowState.mComputedWidth,aReflowState.mComputedHeight);
 
@@ -1275,7 +1275,7 @@ nsBoxFrame::AttributeChanged(nsIContent* aChild,
       FrameNeedsReflow(this, nsIPresShell::eStyleChange);
   }
   else if (aAttribute == nsXULAtoms::ordinal) {
-    nsBoxLayoutState state(GetPresContext()->PresShell());
+    nsBoxLayoutState state(GetPresContext());
     
     nsIBox* parent;
     GetParentBox(&parent);

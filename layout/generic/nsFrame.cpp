@@ -4894,11 +4894,9 @@ nsFrame::RefreshSizeCache(nsBoxLayoutState& aState)
 
   // if we do have a reflow state
   nsresult rv = NS_OK;
-  const nsHTMLReflowState* reflowState = aState.GetReflowState();
-  // XXX (MAJOR BUG) This is usually false now where it used to be true.
-  if (reflowState) {
+  nsIRenderingContext* rendContext = aState.GetRenderingContext();
+  if (rendContext) {
     nsPresContext* presContext = aState.PresContext();
-    nsReflowStatus status = NS_FRAME_COMPLETE;
 
     // If we don't have any HTML constraints and its a resize, then nothing in the block
     // could have changed, so no refresh is necessary.
@@ -4912,13 +4910,12 @@ nsFrame::RefreshSizeCache(nsBoxLayoutState& aState)
     // the rect we plan to size to.
     nsRect rect(oldRect);
 
-    metrics->mBlockPrefSize.width = GetPrefWidth(reflowState->rendContext);
-    metrics->mBlockMinSize.width = GetMinWidth(reflowState->rendContext);
+    metrics->mBlockPrefSize.width = GetPrefWidth(rendContext);
+    metrics->mBlockMinSize.width = GetMinWidth(rendContext);
 
     // do the nasty.
-    nsHTMLReflowState childReflowState(*reflowState);
     nsHTMLReflowMetrics desiredSize;
-    rv = BoxReflow(aState, presContext, desiredSize, childReflowState, status,
+    rv = BoxReflow(aState, presContext, desiredSize, rendContext,
                    rect.x, rect.y, rect.width, rect.height);
 
     nsRect newRect = GetRect();
@@ -5121,15 +5118,14 @@ nsFrame::DoLayout(nsBoxLayoutState& aState)
 {
   nsRect ourRect(mRect);
 
-  const nsHTMLReflowState* reflowState = aState.GetReflowState();
+  nsIRenderingContext* rendContext = aState.GetRenderingContext();
   nsPresContext* presContext = aState.PresContext();
-  nsReflowStatus status = NS_FRAME_COMPLETE;
   nsHTMLReflowMetrics desiredSize(PR_FALSE);
   nsresult rv = NS_OK;
  
-  if (reflowState) {
+  if (rendContext) {
 
-    rv = BoxReflow(aState, presContext, desiredSize, *reflowState, status,
+    rv = BoxReflow(aState, presContext, desiredSize, rendContext,
                    ourRect.x, ourRect.y, ourRect.width, ourRect.height);
 
     PRBool collapsed = PR_FALSE;
@@ -5170,11 +5166,10 @@ nsFrame::DoLayout(nsBoxLayoutState& aState)
 }
 
 nsresult
-nsFrame::BoxReflow(nsBoxLayoutState& aState,
+nsFrame::BoxReflow(nsBoxLayoutState&        aState,
                    nsPresContext*           aPresContext,
                    nsHTMLReflowMetrics&     aDesiredSize,
-                   const nsHTMLReflowState& aReflowState,
-                   nsReflowStatus&          aStatus,
+                   nsIRenderingContext*     aRenderingContext,
                    nscoord                  aX,
                    nscoord                  aY,
                    nscoord                  aWidth,
@@ -5201,7 +5196,7 @@ nsFrame::BoxReflow(nsBoxLayoutState& aState,
   */
 
   nsBoxLayoutMetrics *metrics = BoxMetrics();
-  aStatus = NS_FRAME_COMPLETE;
+  nsReflowStatus status = NS_FRAME_COMPLETE;
 
   PRBool redrawAfterReflow = PR_FALSE;
   PRBool needsReflow = PR_FALSE;
@@ -5274,7 +5269,9 @@ nsFrame::BoxReflow(nsBoxLayoutState& aState,
           size.width = 0;
     }
 
-    nsHTMLReflowState reflowState(aPresContext, aReflowState, this,
+    // XXX Is it OK that this reflow state has no parent reflow state?
+    // (It used to have a bogus parent, skipping all the boxes).
+    nsHTMLReflowState reflowState(aPresContext, this, aRenderingContext,
                                   nsSize(size.width, NS_INTRINSICSIZE));
 
     // XXX this needs to subtract out the border and padding of mFrame since it is content size
@@ -5292,9 +5289,9 @@ nsFrame::BoxReflow(nsBoxLayoutState& aState,
        // place the child and reflow
     WillReflow(aPresContext);
 
-    Reflow(aPresContext, aDesiredSize, reflowState, aStatus);
+    Reflow(aPresContext, aDesiredSize, reflowState, status);
 
-    NS_ASSERTION(NS_FRAME_IS_COMPLETE(aStatus), "bad status");
+    NS_ASSERTION(NS_FRAME_IS_COMPLETE(status), "bad status");
 
     // Save the ascent.  (bug 103925)
     PRBool isCollapsed = PR_FALSE;
@@ -5337,7 +5334,7 @@ nsFrame::BoxReflow(nsBoxLayoutState& aState,
                  #endif
                  AddStateBits(NS_FRAME_IS_DIRTY);
                  WillReflow(aPresContext);
-                 Reflow(aPresContext, aDesiredSize, reflowState, aStatus);
+                 Reflow(aPresContext, aDesiredSize, reflowState, status);
                  if (GetStateBits() & NS_FRAME_OUTSIDE_CHILDREN)
                     aDesiredSize.height = aDesiredSize.mOverflowArea.YMost();
 
@@ -5396,7 +5393,6 @@ nsFrame::BoxReflow(nsBoxLayoutState& aState,
   gIndent2--;
 #endif
 
-  NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aDesiredSize);
   return NS_OK;
 }
 

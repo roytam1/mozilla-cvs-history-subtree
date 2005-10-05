@@ -269,9 +269,9 @@ struct ScrollReflowState {
   PRPackedBool mShowVScrollbar;
 
   ScrollReflowState(nsIScrollableFrame* aFrame,
-                    const nsHTMLReflowState& aState, nsHTMLReflowMetrics& aMetrics) :
+                    const nsHTMLReflowState& aState) :
     mReflowState(aState),
-    mBoxState(aState.frame->GetPresContext(), aState, aMetrics),
+    mBoxState(aState.frame->GetPresContext(), aState.rendContext),
     mStyles(aFrame->GetScrollbarStyles()) {
   }
 };
@@ -680,7 +680,7 @@ nsHTMLScrollFrame::Reflow(nsPresContext*           aPresContext,
   DO_GLOBAL_REFLOW_COUNT("nsHTMLScrollFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
 
-  ScrollReflowState state(this, aReflowState, aDesiredSize);
+  ScrollReflowState state(this, aReflowState);
   // sanity check: ensure that if we have no scrollbar, we treat it
   // as hidden.
   if (!mInner.mVScrollbarBox || mInner.mNeverHasVerticalScrollbar)

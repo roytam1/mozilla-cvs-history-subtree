@@ -792,7 +792,7 @@ nsListBoxBodyFrame::ComputeIntrinsicWidth(nsBoxLayoutState& aBoxLayoutState)
       nsIContent *child = listbox->GetChildAt(i);
 
       if (child->Tag() == nsXULAtoms::listitem) {
-        nsIRenderingContext* rendContext = aBoxLayoutState.GetReflowState()->rendContext;
+        nsIRenderingContext* rendContext = aBoxLayoutState.GetRenderingContext();
         if (rendContext) {
           nsAutoString value;
           PRUint32 textCount = child->GetChildCount();

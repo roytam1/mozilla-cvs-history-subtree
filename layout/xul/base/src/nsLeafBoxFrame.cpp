@@ -202,7 +202,7 @@ nsLeafBoxFrame::GetFrameForPoint(const nsPoint& aPoint,
 /* virtual */ nscoord
 nsLeafBoxFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
-  nsBoxLayoutState state(GetPresContext());
+  nsBoxLayoutState state(GetPresContext(), aRenderingContext);
   nsSize minSize(0,0);
   GetMinSize(state, minSize);
   return minSize.width;
@@ -211,7 +211,7 @@ nsLeafBoxFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 /* virtual */ nscoord
 nsLeafBoxFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
-  nsBoxLayoutState state(GetPresContext());
+  nsBoxLayoutState state(GetPresContext(), aRenderingContext);
   nsSize prefSize(0,0);
   GetPrefSize(state, prefSize);
   return prefSize.width;
@@ -263,7 +263,7 @@ nsLeafBoxFrame::Reflow(nsPresContext*   aPresContext,
   aStatus = NS_FRAME_COMPLETE;
 
   // create the layout state
-  nsBoxLayoutState state(aPresContext, aReflowState, aDesiredSize);
+  nsBoxLayoutState state(aPresContext, aReflowState.rendContext);
 
   nsSize computedSize(aReflowState.mComputedWidth,aReflowState.mComputedHeight);
 
