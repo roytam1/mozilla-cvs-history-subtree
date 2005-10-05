@@ -682,39 +682,39 @@ nsSHEntry::ContentRemoved(nsIDocument* aDocument,
   DocumentMutated();
 }
 
-class DestroyViewerEvent : public PLEvent
+class DropPresentationEvent : public PLEvent
 {
 public:
-  DestroyViewerEvent(nsIContentViewer* aViewer, nsIDocument* aDocument);
+  DropPresentationEvent(nsSHEntry* aSHEntry);
 
-  nsCOMPtr<nsIContentViewer> mViewer;
-  nsCOMPtr<nsIDocument> mDocument;
+  nsRefPtr<nsSHEntry> mSHEntry;
 };
 
 PR_STATIC_CALLBACK(void*)
-HandleDestroyViewerEvent(PLEvent *aEvent)
+HandleDropPresentationEvent(PLEvent *aEvent)
 {
-  nsIContentViewer* viewer = NS_STATIC_CAST(DestroyViewerEvent*, aEvent)->mViewer;
+  nsSHEntry* entry = NS_STATIC_CAST(DropPresentationEvent*, aEvent)->mSHEntry;
+  nsCOMPtr<nsIContentViewer> viewer;
+  entry->GetContentViewer(getter_AddRefs(viewer));
   if (viewer) {
     viewer->Destroy();
   }
+  entry->DropPresentationState();
 
   return nsnull;
 }
 
 PR_STATIC_CALLBACK(void)
-DestroyDestroyViewerEvent(PLEvent *aEvent)
+DestroyDropPresentationEvent(PLEvent *aEvent)
 {
-    delete NS_STATIC_CAST(DestroyViewerEvent*, aEvent);
+    delete NS_STATIC_CAST(DropPresentationEvent*, aEvent);
 }
 
-DestroyViewerEvent::DestroyViewerEvent(nsIContentViewer* aViewer,
-                                       nsIDocument* aDocument)
-    : mViewer(aViewer),
-      mDocument(aDocument)
+DropPresentationEvent::DropPresentationEvent(nsSHEntry* aSHEntry)
+    : mSHEntry(aSHEntry)
 {
-    PL_InitEvent(this, mViewer, ::HandleDestroyViewerEvent,
-                 ::DestroyDestroyViewerEvent);
+    PL_InitEvent(this, mSHEntry, ::HandleDropPresentationEvent,
+                 ::DestroyDropPresentationEvent);
 }
 
 void
@@ -731,7 +731,7 @@ nsSHEntry::DocumentMutated()
     return;
   }
 
-  PLEvent *evt = new DestroyViewerEvent(mContentViewer, mDocument);
+  PLEvent *evt = new DropPresentationEvent(this);
   if (!evt) {
     return;
   }
@@ -740,10 +740,7 @@ nsSHEntry::DocumentMutated()
   if (NS_FAILED(rv)) {
     PL_DestroyEvent(evt);
   }
-  else {
-    // Drop presentation. Also ensures that we don't post more then one
-    // PLEvent. Only do this if we succeeded in posting the event since
-    // otherwise the document could be torn down mid mutation causing crashes.
-    DropPresentationState();
-  }
+
+  // Ensure that we don't post more then one PLEvent
+  RemoveDocumentObserver();
 }
