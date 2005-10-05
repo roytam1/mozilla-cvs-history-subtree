@@ -94,6 +94,8 @@
 // An IID we treat as NULL when passing as a reference.
 extern PYXPCOM_EXPORT nsIID Py_nsIID_NULL;
 
+class Py_nsISupports;
+
 /*************************************************************************
 **************************************************************************
 
@@ -118,8 +120,12 @@ PYXPCOM_EXPORT PyObject *PyXPCOM_BuildPyException(nsresult res);
 // NOTE: this function assumes it is operating within the Python context
 PYXPCOM_EXPORT nsresult PyXPCOM_SetCOMErrorFromPyException();
 
-// Write currrent exception and traceback to a string.
+// Write current exception and traceback to a string.
 PYXPCOM_EXPORT PRBool PyXPCOM_FormatCurrentException(nsCString &streamout);
+// Write specified exception and traceback to a string.
+PYXPCOM_EXPORT PRBool PyXPCOM_FormatGivenException(nsCString &streamout,
+                                PyObject *exc_typ, PyObject *exc_val,
+                                PyObject *exc_tb);
 
 // A couple of logging/error functions.  These probably end up
 // being written to the console service.
@@ -158,7 +164,8 @@ PYXPCOM_EXPORT PRBool PyObject_AsNSString( PyObject *ob, nsAString &aStr);
 
 // Variants.
 PYXPCOM_EXPORT nsIVariant *PyObject_AsVariant( PyObject *ob);
-PYXPCOM_EXPORT PyObject *PyObject_FromVariant( nsIVariant *v);
+PYXPCOM_EXPORT PyObject *PyObject_FromVariant( Py_nsISupports *parent,
+                                               nsIVariant *v);
 
 /*************************************************************************
 **************************************************************************
@@ -167,8 +174,6 @@ PYXPCOM_EXPORT PyObject *PyObject_FromVariant( nsIVariant *v);
 
 **************************************************************************
 *************************************************************************/
-
-class Py_nsISupports;
 
 typedef Py_nsISupports* (* PyXPCOM_I_CTOR)(nsISupports *, const nsIID &);
 
@@ -213,6 +218,9 @@ public:
 class PYXPCOM_EXPORT Py_nsISupports : public PyObject
 {
 public:
+	// Check if a Python object can safely be cast to an Py_nsISupports,
+	// and optionally check that the object is wrapping the specified
+	// interface.
 	static PRBool Check( PyObject *ob, const nsIID &checkIID = Py_nsIID_NULL) {
 		Py_nsISupports *self = static_cast<Py_nsISupports *>(ob);
 		if (ob==NULL || !PyXPCOM_TypeObject::IsType(ob->ob_type ))
@@ -243,11 +251,6 @@ public:
 	                                       const nsIID &iid, 
 	                                       PRBool bAddRef,
 	                                       PRBool bMakeNicePyObject = PR_TRUE);
-
-	static PyObject *PyObjectFromInterfaceOrVariant(nsISupports *ps,
-	                                                const nsIID &iid, 
-	                                                PRBool bAddRef,
-	                                                PRBool bMakeNicePyObject = PR_TRUE);
 
 	// Given a Python object that is a registered COM type, return a given
 	// interface pointer on its underlying object, with a NEW REFERENCE ADDED.
@@ -287,6 +290,15 @@ public:
 	virtual ~Py_nsISupports();
 	virtual PyObject *getattr(const char *name);
 	virtual int setattr(const char *name, PyObject *val);
+	// A virtual function to sub-classes can customize the way
+	// nsISupports objects are returned from their methods.
+	// ps is a new object just obtained from some operation performed on us
+	virtual PyObject *MakeInterfaceResult(nsISupports *ps, const nsIID &iid,
+	                                      PRBool bMakeNicePyObject = PR_TRUE) {
+		// PRBool bAddRef is bogus and too error prone - drop it!
+		return PyObjectFromInterface(ps, iid, PR_TRUE, bMakeNicePyObject);
+	}
+
 protected:
 	// ctor is protected - must create objects via
 	// PyObjectFromInterface()
@@ -294,7 +306,9 @@ protected:
 		            const nsIID &iid, 
 			    PyTypeObject *type);
 
-	static PyObject *MakeInterfaceResult(PyObject *pyis, const nsIID &iid);
+	// Make a default wrapper for an ISupports (which is an
+	// xpcom.client.Component instance)
+	static PyObject *MakeDefaultWrapper(PyObject *pyis, const nsIID &iid);
 
 };
 
@@ -346,7 +360,7 @@ class PythonTypeDescriptor; // Forward declare.
 
 class PYXPCOM_EXPORT PyXPCOM_InterfaceVariantHelper {
 public:
-	PyXPCOM_InterfaceVariantHelper();
+	PyXPCOM_InterfaceVariantHelper(Py_nsISupports *parent);
 	~PyXPCOM_InterfaceVariantHelper();
 	PRBool Init(PyObject *obParams);
 	PRBool FillArray();
@@ -366,6 +380,7 @@ protected:
 	PyObject *m_typedescs; // desc of _all_ params, including hidden.
 	PythonTypeDescriptor *m_python_type_desc_array;
 	void **m_buffer_array;
+	Py_nsISupports *m_parent;
 
 };
 
@@ -538,7 +553,7 @@ private:
 	nsresult BackFillVariant( PyObject *ob, int index);
 	PyObject *MakeSingleParam(int index, PythonTypeDescriptor &td);
 	PRBool GetIIDForINTERFACE_ID(int index, const nsIID **ppret);
-	nsresult GetArrayType(PRUint8 index, PRUint8 *ret);
+	nsresult GetArrayType(PRUint8 index, PRUint8 *ret, nsIID **ppiid);
 	PRUint32 GetSizeIs( int var_index, PRBool is_arg1);
 	PRBool SetSizeIs( int var_index, PRBool is_arg1, PRUint32 new_size);
 	PRBool CanSetSizeIs( int var_index, PRBool is_arg1 );

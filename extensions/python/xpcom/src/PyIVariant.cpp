@@ -142,13 +142,13 @@ static PyObject *GetAsInterface(PyObject *self, PyObject *args) {
 	return Py_nsISupports::PyObjectFromInterface(p, *iid, PR_FALSE);
 }
 
-extern PyObject *PyObject_FromVariantArray( nsIVariant *v);
+extern PyObject *PyObject_FromVariantArray( Py_nsISupports*, nsIVariant *v);
 
 static PyObject *GetAsArray(PyObject *self, PyObject *args) {
 	nsIVariant *pI = GetI(self);
 	if (pI==NULL) return NULL;
 	if (!PyArg_ParseTuple(args, ":GetAsArray")) return NULL;
-	return PyObject_FromVariantArray(pI);
+	return PyObject_FromVariantArray((Py_nsISupports *)self, pI);
 }
 
 struct PyMethodDef 

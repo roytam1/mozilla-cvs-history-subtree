@@ -91,7 +91,7 @@ void DoLogMessage(const char *methodName, const char *pszMessageText)
 		HandleLogError(pszMessageText);
 		return;
 	}
-	PyObject *logger = PyObject_CallMethod(mod, "getLogger", "s", "pyxpcom");
+	PyObject *logger = PyObject_CallMethod(mod, "getLogger", "s", "xpcom");
 	Py_DECREF(mod);
 	if (!logger) {
 		HandleLogError(pszMessageText);
@@ -140,40 +140,50 @@ PRBool PyXPCOM_FormatCurrentException(nsCString &streamout)
 	PyObject *exc_typ = NULL, *exc_val = NULL, *exc_tb = NULL;
 	PyErr_Fetch( &exc_typ, &exc_val, &exc_tb);
 	if (exc_typ) {
-		streamout += "\n";
-		PyErr_NormalizeException( &exc_typ, &exc_val, &exc_tb);
+		ok = PyXPCOM_FormatGivenException(streamout, exc_typ, exc_val,
+						  exc_tb);
+	}
+	PyErr_Restore(exc_typ, exc_val, exc_tb);
+	return ok;
+}
 
-		if (exc_tb) {
-			const char *szTraceback = PyTraceback_AsString(exc_tb);
-			if (szTraceback == NULL)
-				streamout += "Can't get the traceback info!";
-			else {
-				streamout += "Traceback (most recent call last):\n";
-				streamout += szTraceback;
-				PyMem_Free((void *)szTraceback);
-			}
+PRBool PyXPCOM_FormatGivenException(nsCString &streamout,
+				    PyObject *exc_typ, PyObject *exc_val,
+				    PyObject *exc_tb)
+{
+	if (!exc_typ)
+		return PR_FALSE;
+	streamout += "\n";
+	PyErr_NormalizeException( &exc_typ, &exc_val, &exc_tb);
+
+	if (exc_tb) {
+		const char *szTraceback = PyTraceback_AsString(exc_tb);
+		if (szTraceback == NULL)
+			streamout += "Can't get the traceback info!";
+		else {
+			streamout += "Traceback (most recent call last):\n";
+			streamout += szTraceback;
+			PyMem_Free((void *)szTraceback);
 		}
-		PyObject *temp = PyObject_Str(exc_typ);
+	}
+	PyObject *temp = PyObject_Str(exc_typ);
+	if (temp) {
+		streamout += PyString_AsString(temp);
+		Py_DECREF(temp);
+	} else
+		streamout += "Can't convert exception to a string!";
+	streamout += ": ";
+	if (exc_val != NULL) {
+		temp = PyObject_Str(exc_val);
 		if (temp) {
 			streamout += PyString_AsString(temp);
 			Py_DECREF(temp);
 		} else
-			streamout += "Can't convert exception to a string!";
-		streamout += ": ";
-		if (exc_val != NULL) {
-			temp = PyObject_Str(exc_val);
-			if (temp) {
-				streamout += PyString_AsString(temp);
-				Py_DECREF(temp);
-			} else
-				streamout += "Can't convert exception value to a string!";
-		}
-		ok = PR_TRUE;
+			streamout += "Can't convert exception value to a string!";
 	}
-	PyErr_Restore(exc_typ, exc_val, exc_tb);
-	return ok;
-
+	return PR_TRUE;
 }
+
 void PyXPCOM_LogError(const char *fmt, ...)
 {
 	va_list marker;

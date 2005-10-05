@@ -292,28 +292,6 @@ Py_nsISupports::RegisterInterface( const nsIID &iid, PyTypeObject *t)
 }
 
 /*static */PyObject *
-Py_nsISupports::PyObjectFromInterfaceOrVariant(nsISupports *pis, 
-				      const nsIID &riid, 
-				      PRBool bAddRef, 
-				      PRBool bMakeNicePyObject /* = PR_TRUE */)
-{
-	// Quick exit.
-	if (pis==NULL) {
-		Py_INCREF(Py_None);
-		return Py_None;
-	}
-	if (riid.Equals(NS_GET_IID(nsIVariant))) {
-		PyObject *ret = PyObject_FromVariant((nsIVariant *)pis);
-		// If we were asked not to add a reference, then there
-		// will be a spare reference on pis() - remove it.
-		if (!bAddRef)
-			pis->Release();
-		return ret;
-	}
-	return PyObjectFromInterface(pis, riid, bAddRef, bMakeNicePyObject);
-}
-
-/*static */PyObject *
 Py_nsISupports::PyObjectFromInterface(nsISupports *pis, 
 				      const nsIID &riid, 
 				      PRBool bAddRef, 
@@ -361,14 +339,14 @@ Py_nsISupports::PyObjectFromInterface(nsISupports *pis,
 #endif
 	if (ret && bAddRef && pis) pis->AddRef();
 	if (ret && bMakeNicePyObject)
-		return MakeInterfaceResult(ret, riid);
+		return MakeDefaultWrapper(ret, riid);
 	return ret;
 }
 
 // Call back into Python, passing a raw nsIInterface object, getting back
 // the object to actually pass to Python.
 PyObject *
-Py_nsISupports::MakeInterfaceResult(PyObject *pyis, 
+Py_nsISupports::MakeDefaultWrapper(PyObject *pyis, 
 			     const nsIID &iid)
 {
 	NS_PRECONDITION(pyis, "NULL pyobject!");
@@ -429,10 +407,17 @@ Py_nsISupports::QueryInterface(PyObject *self, PyObject *args)
 	nsISupports *pMyIS = GetI(self);
 	if (pMyIS==NULL) return NULL;
 
-	nsISupports *pis;
+	// Optimization, If we already wrap the IID, just return
+	// ourself.
+	if (!bWrap && iid.Equals(((Py_nsISupports *)self)->m_iid)) {
+		Py_INCREF(self);
+		return self;
+	}
+
+	nsCOMPtr<nsISupports> pis;
 	nsresult r;
 	Py_BEGIN_ALLOW_THREADS;
-	r = pMyIS->QueryInterface(iid, (void **)&pis);
+	r = pMyIS->QueryInterface(iid, getter_AddRefs(pis));
 	Py_END_ALLOW_THREADS;
 
 	/* Note that this failure may include E_NOINTERFACE */
@@ -440,7 +425,7 @@ Py_nsISupports::QueryInterface(PyObject *self, PyObject *args)
 		return PyXPCOM_BuildPyException(r);
 
 	/* Return a type based on the IID (with no extra ref) */
-	return PyObjectFromInterface(pis, iid, PR_FALSE, (PRBool)bWrap);
+	return ((Py_nsISupports *)self)->MakeInterfaceResult(pis, iid, (PRBool)bWrap);
 }
 
 

@@ -189,6 +189,11 @@ PyXPCOMMethod_XPTC_InvokeByIndex(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "OiO", &obIS, &index, &obParams))
 		return NULL;
 
+	if (!Py_nsISupports::Check(obIS)) {
+		return PyErr_Format(PyExc_TypeError,
+		                    "First param must be a native nsISupports wrapper (got %s)",
+		                    obIS->ob_type->tp_name);
+	}
 	// Ack!  We must ask for the "native" interface supported by
 	// the object, not specifically nsISupports, else we may not
 	// back the same pointer (eg, Python, following identity rules,
@@ -200,7 +205,7 @@ PyXPCOMMethod_XPTC_InvokeByIndex(PyObject *self, PyObject *args)
 			PR_FALSE))
 		return NULL;
 
-	PyXPCOM_InterfaceVariantHelper arg_helper;
+	PyXPCOM_InterfaceVariantHelper arg_helper((Py_nsISupports *)obIS);
 	if (!arg_helper.Init(obParams))
 		return NULL;
 
@@ -365,6 +370,18 @@ PyXPCOMMethod_GetProxyForObject(PyObject *self, PyObject *args)
 	return result;
 }
 
+static PyObject *
+PyXPCOMMethod_MakeVariant(PyObject *self, PyObject *args)
+{
+	PyObject *ob;
+	if (!PyArg_ParseTuple(args, "O:MakeVariant", &ob))
+		return NULL;
+	nsIVariant *pVar = PyObject_AsVariant(ob);
+	if (pVar == nsnull)
+		return PyXPCOM_BuildPyException(NS_ERROR_UNEXPECTED);
+	return Py_nsISupports::PyObjectFromInterface(pVar, NS_GET_IID(nsIVariant), PR_FALSE);
+}
+
 PyObject *PyGetSpecialDirectory(PyObject *self, PyObject *args)
 {
 	char *dirname;
@@ -429,6 +446,7 @@ static struct PyMethodDef xpcom_methods[]=
 	{"GetSpecialDirectory", PyGetSpecialDirectory, 1},
 	{"AllocateBuffer", AllocateBuffer, 1},
 	{"LogConsoleMessage", LogConsoleMessage, 1, "Write a message to the xpcom console service"},
+	{"MakeVariant", PyXPCOMMethod_MakeVariant, 1},
 	// These should no longer be used - just use the logging.getLogger('pyxpcom')...
 	{ NULL }
 };
