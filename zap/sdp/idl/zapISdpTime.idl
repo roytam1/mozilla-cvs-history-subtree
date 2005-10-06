@@ -36,6 +36,9 @@
 
 #include "zapISdpGenericValue.idl"
 
+/**
+ * \ingroup SDP_MODULE
+ */
 [scriptable, uuid(4f49bdce-9af6-434a-a43e-72828e8090d5)]
 interface zapISdpTime : zapISdpGenericValue
 {

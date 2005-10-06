@@ -44,6 +44,17 @@ interface zapISdpMediaFormat;
 interface zapISdpConnection;
 
 /**
+ * \defgroup SDP_MODULE ZAP SDP module
+ *
+ * The ZAP SDP module implements SDP parsing and negotiation as
+ * described in the following specifications:
+ *
+ * - <b>RFC2327</b>: SDP: Session Description Protocol
+ * - <b>RFC3264</b>: SDP Offer/Answer Model
+ */
+
+/**
+ * \ingroup SDP_MODULE
  * SDP parsing service
  * Implemented by Component 5de0fd79-a03e-4640-ab99-186f5c66f5bb
  * ("@mozilla.org/zap/sdpservice;1")

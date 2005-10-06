@@ -36,6 +36,9 @@
 
 #include "nsISupports.idl"
 
+/**
+ * \ingroup SDP_MODULE
+ */
 [scriptable, uuid(161fe882-b850-4d50-8e52-a5c4d3d07951)]
 interface zapISdpSyntaxObject : nsISupports
 {

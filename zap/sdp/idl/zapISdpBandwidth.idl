@@ -36,6 +36,9 @@
 
 #include "zapISdpGenericValue.idl"
 
+/**
+ * \ingroup SDP_MODULE
+ */
 [scriptable, uuid(1ae90f77-0877-492b-a41a-834c64632027)]
 interface zapISdpBandwidth : zapISdpGenericValue
 {

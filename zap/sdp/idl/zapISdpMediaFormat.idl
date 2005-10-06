@@ -36,6 +36,9 @@
 
 #include "nsISupports.idl"
 
+/**
+ * \ingroup SDP_MODULE
+ */
 [scriptable, uuid(4000b2bf-b35c-4236-af67-4a4875be7841)]
 interface zapISdpMediaFormat : nsISupports
 {

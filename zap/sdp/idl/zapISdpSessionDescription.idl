@@ -47,104 +47,133 @@ interface zapISdpZoneAdjustments;
 interface zapISdpConnection;
 
 /**
+ * \ingroup SDP_MODULE
+ * \nosubgrouping
  * An RFC2327/draft-ietf-mmusic-sdp-new-24.txt session description
  */
-
 [scriptable, uuid(800e5e3a-3fd6-46f6-95f4-11373ede9fdb)]
 interface zapISdpSessionDescription : zapISdpSyntaxObject
 {
   /**
-   * version (v=) field:
+   * \name version (v=) field:
    */
+  //@{
   attribute ACString protocolVersion;
-
+  //@}
+  
   /**
-   * origin (o=) field:
+   * \name origin (o=) field:
    */
+  //@{
   attribute ACString username;
   attribute ACString sessionID;
   attribute ACString sessionVersion;
   attribute ACString originAddressType;
   attribute ACString originAddress;
+  //@}
 
   /**
-   * session name (s=) field:
+   * \name session name (s=) field:
    */
+  //@{
   attribute ACString sessionName;
+  //@}
 
   /**
-   * optional information (i=) field:
+   * \name optional information (i=) field:
    */
+  //@{
   attribute ACString information;
+  //@}
 
   /**
-   * optional uri (u=) field:
+   * \name optional uri (u=) field:
    */
+  //@{
   attribute ACString uri;
+  //@}
 
   /**
-   * optional email (e=) fields:
+   * \name optional email (e=) fields:
    */
+  //@{
   void getEmailAddresses(out unsigned long count,
                          [retval, array, size_is(count)] out zapISdpEmailAddress addresses);
   void setEmailAddresses([array, size_is(count)] in zapISdpEmailAddress addresses,
                          in unsigned long count);
+  //@}
 
   /**
-   * optional phone (p=) fields:
+   * \name optional phone (p=) fields:
    */
+  //@{
   void getPhoneNumbers(out unsigned long count,
                        [retval, array, size_is(count)] out zapISdpPhoneNumber numbers);
   void setPhoneNumbers([array, size_is(count)] in zapISdpPhoneNumber numbers,
                        in unsigned long count);
+  //@}
 
   /**
-   * optional connection (c=) field:
+   * \name optional connection (c=) field:
    * (a connection field must be present in every media description or
    * at the session level)
    */
+  //@{
   attribute zapISdpConnection connection;
+  //@}
 
   /**
-   * optional bandwidth (b=) fields:
+   * \name optional bandwidth (b=) fields:
    */
+  //@{
   void getBandwidths(out unsigned long count,
                      [retval, array, size_is(count)] out zapISdpBandwidth bws);
   void setBandwidths([array, size_is(count)] in zapISdpBandwidth bws,
                      in unsigned long count);
+  //@}
 
   /**
-   * time (t=, r=) fields:
+   * \name time (t=, r=) fields:
    * (at least 1 required)
    */
+  //@{
   void getTimes(out unsigned long count,
                 [retval, array, size_is(count)] out zapISdpTime times);
   void setTimes([array, size_is(count)] in zapISdpTime times,
                 in unsigned long count);
+  //@}
 
   /**
-   * optional zone adjustments (z=) field:
+   * \name optional zone adjustments (z=) field:
    */
+  //@{
   attribute zapISdpZoneAdjustments zoneAdjustments;
-  
-  /**
-   * optional key (k=) field:
-   */
-  attribute zapISdpKey key;
+  //@}
 
   /**
-   * optional attribute (a=) fields:
+   * \name optional key (k=) field:
    */
+  //@{
+  attribute zapISdpKey key;
+  //@}
+
+  /**
+   * \name optional attribute (a=) fields:
+   */
+  //@{
   void getAttribs(out unsigned long count,
                   [retval, array, size_is(count)] out zapISdpAttrib attribs);
   void setAttribs([array, size_is(count)] in zapISdpAttrib attribs,
                   in unsigned long count);
+  //@}
 
   /**
-   * optional media descriptions (m=, etc):
+   * \name optional media descriptions (m=, etc):
    */
+  //@{
   void getMediaDescriptions(out unsigned long count,
                             [retval, array, size_is(count)] out zapISdpMediaDescription media);
   void setMediaDescriptions([array, size_is(count)] in zapISdpMediaDescription media,
                             in unsigned long count);
+  //@}
 };

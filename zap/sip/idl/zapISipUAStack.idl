@@ -51,8 +51,18 @@ interface zapISipResponse;
 interface zapISipRequest;
 interface zapISipMessage;
 
+
 /**
  * \defgroup SIP_MODULE ZAP SIP module
+ *
+ * The ZAP SIP module implements a UA Stack compliant with the following
+ * specifications:
+ *
+ * -  <b>RFC3261</b>: SIP: Session Initiation Protocol
+ * -  <b>RFC3581</b>: Symmetric Response Routing
+ * 
+ * The main entry point into the \ref SIP_MODULE is the zapISipUAStack interface.
+ *
  */
 
 /**
@@ -73,22 +83,6 @@ interface zapISipMessage;
 /**
  * \defgroup SIP_SYNTAX_LAYER ZAP SIP syntax layer
  * \ingroup SIP_MODULE
- */
-
-
-/**
- * \mainpage
- *
- * \section SIP_MODULE_SECTION ZAP SIP Module
- *
- * The ZAP SIP module implements a UA Stack compliant with the following
- * specifications:
- *
- * -  <b>RFC3261</b>: SIP: Session Initiation Protocol
- * -  <b>RFC3581</b>: Symmetric Response Routing
- * 
- * The main entry point into the \ref SIP_MODULE is the zapISipUAStack interface.
- *
  */
 
 /**

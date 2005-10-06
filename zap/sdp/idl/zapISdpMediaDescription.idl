@@ -42,12 +42,17 @@ interface zapISdpKey;
 interface zapISdpAttrib;
 interface zapISdpConnection;
 
+/**
+ * \ingroup SDP_MODULE
+ * \nosubgrouping
+ */
 [scriptable, uuid(09debe48-e37c-42bd-a1eb-38cb5c4916f2)]
 interface zapISdpMediaDescription : zapISdpSyntaxObject
 {
   /**
-   * media (m=) field:
+   * \name media (m=) field:
    */
+  //@{
   attribute ACString media;
   attribute ACString port;
   attribute ACString portCount;
@@ -57,37 +62,48 @@ interface zapISdpMediaDescription : zapISdpSyntaxObject
                   [retval, array, size_is(count)] out zapISdpMediaFormat formats);
   void setFormats([array, size_is(count)] in zapISdpMediaFormat formats,
                   in unsigned long count);
-
+  //@}
+  
   /**
-   * optional information (i=) field:
+   * \name optional information (i=) field:
    */
+  //@{
   attribute ACString information;
-
+  //@}
+  
   /**
-   * optional connection (c=) field:
+   * \name optional connection (c=) field:
    * (a connection field must be present in every media description or
    * at the session level)
    */
+  //@{
   attribute zapISdpConnection connection;
-
+  //@}
+  
   /**
-   * optional bandwidth (b=) fields:
+   * \name optional bandwidth (b=) fields:
    */
+  //@{
   void getBandwidths(out unsigned long count,
                      [retval, array, size_is(count)] out zapISdpBandwidth bws);
   void setBandwidths([array, size_is(count)] in zapISdpBandwidth bws,
                      in unsigned long count);
-
+  //@}
+  
   /**
-   * optional key (k=) field:
+   * \name optional key (k=) field:
    */
+  //@{
   attribute zapISdpKey key;
-
+  //@}
+  
   /**
-   * optional attribute (a=) fields:
+   * \name optional attribute (a=) fields:
    */
+  //@{
   void getAttribs(out unsigned long count,
                   [retval, array, size_is(count)] out zapISdpAttrib attribs);
   void setAttribs([array, size_is(count)] in zapISdpAttrib attribs,
-                  in unsigned long count);  
+                  in unsigned long count);
+  //@}
 };

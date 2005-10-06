@@ -36,6 +36,9 @@
 
 #include "zapISdpSyntaxObject.idl"
 
+/**
+ * \ingroup SDP_MODULE
+ */
 [scriptable, uuid(605fa38d-156e-4863-b51d-ce6df907d642)]
 interface zapISdpConnection : zapISdpSyntaxObject
 {
