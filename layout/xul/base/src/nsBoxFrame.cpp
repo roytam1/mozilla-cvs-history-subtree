@@ -697,6 +697,9 @@ static void printSize(char * aDesc, nscoord aSize)
 /* virtual */ nscoord
 nsBoxFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
+  nscoord result;
+  DISPLAY_MIN_WIDTH(this, result);
+
   nsBoxLayoutState state(GetPresContext(), aRenderingContext);
   nsSize minSize(0,0);
   GetMinSize(state, minSize);
@@ -708,13 +711,17 @@ nsBoxFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
   nsMargin bp;
   GetBorderAndPadding(bp);
 
-  DISPLAY_MIN_WIDTH_RESULT(this, minSize.width - bp.LeftRight());
-  return minSize.width - bp.LeftRight();
+  result = minSize.width - bp.LeftRight();
+
+  return result;
 }
 
 /* virtual */ nscoord
 nsBoxFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
+  nscoord result;
+  DISPLAY_PREF_WIDTH(this, result);
+
   nsBoxLayoutState state(GetPresContext(), aRenderingContext);
   nsSize prefSize(0,0);
   GetPrefSize(state, prefSize);
@@ -726,8 +733,9 @@ nsBoxFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   nsMargin bp;
   GetBorderAndPadding(bp);
 
-  DISPLAY_PREF_WIDTH_RESULT(this, prefSize.width - bp.LeftRight());
-  return prefSize.width - bp.LeftRight();
+  result = prefSize.width - bp.LeftRight();
+
+  return result;
 }
 
 NS_IMETHODIMP
@@ -855,9 +863,9 @@ nsBoxFrame::Reflow(nsPresContext*          aPresContext,
 NS_IMETHODIMP
 nsBoxFrame::GetPrefSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
 {
+  DISPLAY_PREF_SIZE(this, aSize);
   if (!DoesNeedRecalc(mPrefSize)) {
      aSize = mPrefSize;
-     DISPLAY_PREF_SIZE_RESULT(this, aSize);
      return NS_OK;
   }
 
@@ -896,7 +904,6 @@ nsBoxFrame::GetPrefSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
   BoundsCheck(minSize, aSize, maxSize);
 
   mPrefSize = aSize;
-  DISPLAY_PREF_SIZE_RESULT(this, aSize);
  
   return rv;
 }
@@ -934,9 +941,9 @@ nsBoxFrame::GetAscent(nsBoxLayoutState& aBoxLayoutState, nscoord& aAscent)
 NS_IMETHODIMP
 nsBoxFrame::GetMinSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
 {
+  DISPLAY_MIN_SIZE(this, aSize);
   if (!DoesNeedRecalc(mMinSize)) {
      aSize = mMinSize;
-     DISPLAY_MIN_SIZE_RESULT(this, aSize);
      return NS_OK;
   }
 
@@ -968,7 +975,6 @@ nsBoxFrame::GetMinSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
   }
   
   mMinSize = aSize;
-  DISPLAY_MIN_SIZE_RESULT(this, aSize);
 
   return rv;
 }
@@ -976,9 +982,9 @@ nsBoxFrame::GetMinSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
 NS_IMETHODIMP
 nsBoxFrame::GetMaxSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
 {
+  DISPLAY_MAX_SIZE(this, aSize);
   if (!DoesNeedRecalc(mMaxSize)) {
      aSize = mMaxSize;
-     DISPLAY_MAX_SIZE_RESULT(this, aSize);
      return NS_OK;
   }
 
@@ -1010,7 +1016,6 @@ nsBoxFrame::GetMaxSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
   }
 
   mMaxSize = aSize;
-  DISPLAY_MAX_SIZE_RESULT(this, aSize);
 
   return rv;
 }

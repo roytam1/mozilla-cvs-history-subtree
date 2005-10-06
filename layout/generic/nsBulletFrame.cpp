@@ -1561,8 +1561,8 @@ nsBulletFrame::Reflow(nsPresContext* aPresContext,
 nsBulletFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
   nsHTMLReflowMetrics metrics;
+  DISPLAY_MIN_WIDTH(this, metrics.width);
   GetDesiredSize(GetPresContext(), aRenderingContext, metrics);
-  DISPLAY_MIN_WIDTH_RESULT(this, metrics.width);
   return metrics.width;
 }
 
@@ -1570,8 +1570,8 @@ nsBulletFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 nsBulletFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
   nsHTMLReflowMetrics metrics;
+  DISPLAY_PREF_WIDTH(this, metrics.width);
   GetDesiredSize(GetPresContext(), aRenderingContext, metrics);
-  DISPLAY_PREF_WIDTH_RESULT(this, metrics.width);
   return metrics.width;
 }
 

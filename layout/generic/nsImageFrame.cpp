@@ -966,26 +966,28 @@ nsImageFrame::GetContinuationOffset(nscoord* aWidth) const
 /* virtual */ nscoord
 nsImageFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
+  nscoord result;
+  DISPLAY_MIN_WIDTH(this, result);
   nsPresContext *presContext = GetPresContext();
   EnsureIntrinsicSize(presContext);
   // convert from normal twips to scaled twips (printing...)
   float t2st = presContext->TwipsToPixels() *
                presContext->ScaledPixelsToTwips();
-  nscoord result = NSToCoordRound(float(mIntrinsicSize.width) * t2st);
-  DISPLAY_MIN_WIDTH_RESULT(this, result);
+  result = NSToCoordRound(float(mIntrinsicSize.width) * t2st);
   return result;
 }
 
 /* virtual */ nscoord
 nsImageFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
+  nscoord result;
+  DISPLAY_PREF_WIDTH(this, result);
   nsPresContext *presContext = GetPresContext();
   EnsureIntrinsicSize(presContext);
   // convert from normal twips to scaled twips (printing...)
   float t2st = presContext->TwipsToPixels() *
                presContext->ScaledPixelsToTwips();
-  nscoord result = NSToCoordRound(float(mIntrinsicSize.width) * t2st);
-  DISPLAY_PREF_WIDTH_RESULT(this, result);
+  result = NSToCoordRound(float(mIntrinsicSize.width) * t2st);
   return result;
 }
 

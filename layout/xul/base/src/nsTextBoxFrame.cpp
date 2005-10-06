@@ -848,6 +848,7 @@ nsTextBoxFrame::CalcTextSize(nsBoxLayoutState& aBoxLayoutState)
 NS_IMETHODIMP
 nsTextBoxFrame::GetPrefSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
 {
+    DISPLAY_PREF_SIZE(this, aSize);
     CalcTextSize(aBoxLayoutState);
 
     aSize = mTextSize;
@@ -856,7 +857,6 @@ nsTextBoxFrame::GetPrefSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
     AddInset(aSize);
     nsIBox::AddCSSPrefSize(aBoxLayoutState, this, aSize);
 
-    DISPLAY_PREF_SIZE_RESULT(this, aSize);
     return NS_OK;
 }
 
@@ -866,6 +866,7 @@ nsTextBoxFrame::GetPrefSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
 NS_IMETHODIMP
 nsTextBoxFrame::GetMinSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
 {
+    DISPLAY_MIN_SIZE(this, aSize);
     CalcTextSize(aBoxLayoutState);
 
     aSize = mTextSize;
@@ -879,7 +880,6 @@ nsTextBoxFrame::GetMinSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
     AddInset(aSize);
     nsIBox::AddCSSMinSize(aBoxLayoutState, this, aSize);
 
-    DISPLAY_MIN_SIZE_RESULT(this, aSize);
     return NS_OK;
 }
 

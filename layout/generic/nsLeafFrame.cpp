@@ -63,26 +63,26 @@ nsLeafFrame::Paint(nsPresContext*      aPresContext,
 /* virtual */ nscoord
 nsLeafFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
+  nsHTMLReflowMetrics metrics;
+  DISPLAY_MIN_WIDTH(this, metrics.width);
   // XXX We really don't want to construct a reflow state here.  This
   // will probably cause problems, like setting dirty bits.
   nsHTMLReflowState rs(GetPresContext(), this, aRenderingContext,
                        nsSize(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE));
-  nsHTMLReflowMetrics metrics;
   GetDesiredSize(GetPresContext(), rs, metrics);
-  DISPLAY_MIN_WIDTH_RESULT(this, metrics.width);
   return metrics.width;
 }
 
 /* virtual */ nscoord
 nsLeafFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
+  nsHTMLReflowMetrics metrics;
+  DISPLAY_PREF_WIDTH(this, metrics.width);
   // XXX We really don't want to construct a reflow state here.  This
   // will probably cause problems, like setting dirty bits.
   nsHTMLReflowState rs(GetPresContext(), this, aRenderingContext,
                        nsSize(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE));
-  nsHTMLReflowMetrics metrics;
   GetDesiredSize(GetPresContext(), rs, metrics);
-  DISPLAY_PREF_WIDTH_RESULT(this, metrics.width);
   return metrics.width;
 }
 

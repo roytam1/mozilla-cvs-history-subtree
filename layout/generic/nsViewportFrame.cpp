@@ -180,6 +180,7 @@ ViewportFrame::GetFirstChild(nsIAtom* aListName) const
 ViewportFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
   nscoord result;
+  DISPLAY_MIN_WIDTH(this, result);
   if (mFrames.IsEmpty())
     result = 0;
   else
@@ -187,7 +188,6 @@ ViewportFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
     
   // XXXldb Deal with mFixedContainer (matters for SizeToContent)!
 
-  DISPLAY_MIN_WIDTH_RESULT(this, result);
   return result;
 }
 
@@ -195,6 +195,7 @@ ViewportFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 ViewportFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
   nscoord result;
+  DISPLAY_PREF_WIDTH(this, result);
   if (mFrames.IsEmpty())
     result = 0;
   else
@@ -202,7 +203,6 @@ ViewportFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
     
   // XXXldb Deal with mFixedContainer (matters for SizeToContent)!
 
-  DISPLAY_PREF_WIDTH_RESULT(this, result);
   return result;
 }
 

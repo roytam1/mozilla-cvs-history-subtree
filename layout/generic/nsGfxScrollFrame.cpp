@@ -634,8 +634,10 @@ nsHTMLScrollFrame::IsRTLTextControl()
 /* virtual */ nscoord
 nsHTMLScrollFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
+  nscoord result;
+  DISPLAY_MIN_WIDTH(this, result);
   // XXX Might this make us count padding/border/margin twice?
-  nscoord result = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
+  result = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
                               mInner.mScrolledFrame, nsLayoutUtils::MIN_WIDTH);
 
   nsGfxScrollFrameInner::ScrollbarStyles ss = GetScrollbarStyles();
@@ -648,15 +650,16 @@ nsHTMLScrollFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
     result += vScrollbarMinSize.width;
   }
 
-  DISPLAY_MIN_WIDTH_RESULT(this, result);
   return result;
 }
 
 /* virtual */ nscoord
 nsHTMLScrollFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
+  nscoord result;
+  DISPLAY_PREF_WIDTH(this, result);
   // XXX Might this make us count padding/border/margin twice?
-  nscoord result = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
+  result = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
                              mInner.mScrolledFrame, nsLayoutUtils::PREF_WIDTH);
 
   nsGfxScrollFrameInner::ScrollbarStyles ss = GetScrollbarStyles();
@@ -669,7 +672,6 @@ nsHTMLScrollFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
     result += vScrollbarMinSize.width;
   }
 
-  DISPLAY_PREF_WIDTH_RESULT(this, result);
   return result;
 }
 

@@ -441,17 +441,23 @@ public:
   static void* DisplayReflowEnter(nsPresContext*          aPresContext,
                                   nsIFrame*                aFrame,
                                   const nsHTMLReflowState& aReflowState);
+  static void* DisplayIntrinsicWidthEnter(nsIFrame* aFrame,
+                                          const char* aType);
+  static void* DisplayIntrinsicSizeEnter(nsIFrame* aFrame,
+                                         const char* aType);
   static void  DisplayReflowExit(nsPresContext*      aPresContext,
                                  nsIFrame*            aFrame,
                                  nsHTMLReflowMetrics& aMetrics,
                                  PRUint32             aStatus,
                                  void*                aFrameTreeNode);
-  static void DisplayIntrinsicWidthResult(nsIFrame* aFrame,
-                                          const char* aType, // "min" or "pref"
-                                          nscoord aResult);
-  static void DisplayIntrinsicSizeResult(nsIFrame* aFrame,
-                                         const char* aType, // "min" or "pref"
-                                         nsSize aResult);
+  static void  DisplayIntrinsicWidthExit(nsIFrame* aFrame,
+                                         const char* aType,
+                                         nscoord aResult,
+                                         void* aFrameTreeNode);
+  static void  DisplayIntrinsicSizeExit(nsIFrame* aFrame,
+                                        const char* aType,
+                                        nsSize aResult,
+                                        void* aFrameTreeNode);
 
   static void DisplayReflowStartup();
   static void DisplayReflowShutdown();
@@ -568,31 +574,53 @@ protected:
     nsReflowStatus&          mStatus;    
     void*                    mValue;
   };
+
+  struct DR_intrinsic_width_cookie {
+    DR_intrinsic_width_cookie(nsIFrame* aFrame, const char* aType,
+                              nscoord& aResult);
+    ~DR_intrinsic_width_cookie();
+
+    nsIFrame* mFrame;
+    const char* mType;
+    nscoord& mResult;
+    void* mValue;
+  };
+  
+  struct DR_intrinsic_size_cookie {
+    DR_intrinsic_size_cookie(nsIFrame* aFrame, const char* aType,
+                             nsSize& aResult);
+    ~DR_intrinsic_size_cookie();
+
+    nsIFrame* mFrame;
+    const char* mType;
+    nsSize& mResult;
+    void* mValue;
+  };
   
 #define DISPLAY_REFLOW(dr_pres_context, dr_frame, dr_rf_state, dr_rf_metrics, dr_rf_status) \
   DR_cookie dr_cookie(dr_pres_context, dr_frame, dr_rf_state, dr_rf_metrics, dr_rf_status); 
 #define DISPLAY_REFLOW_CHANGE() \
   dr_cookie.Change();
-#define DISPLAY_MIN_WIDTH_RESULT(dr_frame, dr_result) \
-  nsFrame::DisplayIntrinsicWidthResult(dr_frame, "min", dr_result)
-#define DISPLAY_PREF_WIDTH_RESULT(dr_frame, dr_result) \
-  nsFrame::DisplayIntrinsicWidthResult(dr_frame, "pref", dr_result)
-#define DISPLAY_PREF_SIZE_RESULT(dr_frame, dr_result) \
-  nsFrame::DisplayIntrinsicSizeResult(dr_frame, "pref", dr_result)
-#define DISPLAY_MIN_SIZE_RESULT(dr_frame, dr_result) \
-  nsFrame::DisplayIntrinsicSizeResult(dr_frame, "min", dr_result)
-#define DISPLAY_MAX_SIZE_RESULT(dr_frame, dr_result) \
-  nsFrame::DisplayIntrinsicSizeResult(dr_frame, "max", dr_result)
+#define DISPLAY_MIN_WIDTH(dr_frame, dr_result) \
+  DR_intrinsic_width_cookie dr_cookie(dr_frame, "Min", dr_result)
+#define DISPLAY_PREF_WIDTH(dr_frame, dr_result) \
+  DR_intrinsic_width_cookie dr_cookie(dr_frame, "Pref", dr_result)
+#define DISPLAY_PREF_SIZE(dr_frame, dr_result) \
+  DR_intrinsic_size_cookie dr_cookie(dr_frame, "Pref", dr_result)
+#define DISPLAY_MIN_SIZE(dr_frame, dr_result) \
+  DR_intrinsic_size_cookie dr_cookie(dr_frame, "Min", dr_result)
+#define DISPLAY_MAX_SIZE(dr_frame, dr_result) \
+  DR_intrinsic_size_cookie dr_cookie(dr_frame, "Max", dr_result)
 
 #else
 
 #define DISPLAY_REFLOW(dr_pres_context, dr_frame, dr_rf_state, dr_rf_metrics, dr_rf_status) 
 #define DISPLAY_REFLOW_CHANGE() 
-#define DISPLAY_MIN_WIDTH_RESULT(dr_frame, dr_result) PR_BEGIN_MACRO PR_END_MACRO
-#define DISPLAY_PREF_WIDTH_RESULT(dr_frame, dr_result) PR_BEGIN_MACRO PR_END_MACRO
-#define DISPLAY_PREF_SIZE_RESULT(dr_frame, dr_result) PR_BEGIN_MACRO PR_END_MACRO
-#define DISPLAY_MIN_SIZE_RESULT(dr_frame, dr_result) PR_BEGIN_MACRO PR_END_MACRO
-#define DISPLAY_MAX_SIZE_RESULT(dr_frame, dr_result) PR_BEGIN_MACRO PR_END_MACRO
+#define DISPLAY_MIN_WIDTH(dr_frame, dr_result) PR_BEGIN_MACRO PR_END_MACRO
+#define DISPLAY_PREF_WIDTH(dr_frame, dr_result) PR_BEGIN_MACRO PR_END_MACRO
+#define DISPLAY_PREF_SIZE(dr_frame, dr_result) PR_BEGIN_MACRO PR_END_MACRO
+#define DISPLAY_MIN_SIZE(dr_frame, dr_result) PR_BEGIN_MACRO PR_END_MACRO
+#define DISPLAY_MAX_SIZE(dr_frame, dr_result) PR_BEGIN_MACRO PR_END_MACRO
   
 #endif
 // End Display Reflow Debugging

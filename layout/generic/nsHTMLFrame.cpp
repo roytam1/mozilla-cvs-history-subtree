@@ -441,11 +441,11 @@ CanvasFrame::Paint(nsPresContext*      aPresContext,
 CanvasFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
   nscoord result;
+  DISPLAY_MIN_WIDTH(this, result);
   if (mFrames.IsEmpty())
     result = 0;
   else
     result = mFrames.FirstChild()->GetMinWidth(aRenderingContext);
-  DISPLAY_MIN_WIDTH_RESULT(this, result);
   return result;
 }
 
@@ -453,11 +453,11 @@ CanvasFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 CanvasFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
   nscoord result;
+  DISPLAY_PREF_WIDTH(this, result);
   if (mFrames.IsEmpty())
     result = 0;
   else
     result = mFrames.FirstChild()->GetPrefWidth(aRenderingContext);
-  DISPLAY_PREF_WIDTH_RESULT(this, result);
   return result;
 }
 

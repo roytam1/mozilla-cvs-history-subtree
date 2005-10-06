@@ -950,12 +950,12 @@ nsMenuFrame::IsSizedToPopup(nsIContent* aContent, PRBool aRequireAlways)
 NS_IMETHODIMP
 nsMenuFrame::GetMinSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
 {
+  DISPLAY_MIN_SIZE(this, aSize);
   nsresult rv = nsBoxFrame::GetMinSize(aBoxLayoutState, aSize);
 
   if (IsSizedToPopup(mContent, PR_TRUE))
     SizeToPopup(aBoxLayoutState, aSize);
 
-  DISPLAY_MIN_SIZE_RESULT(this, aSize);
   return rv;
 }
 
@@ -1920,6 +1920,7 @@ nsMenuFrame::SizeToPopup(nsBoxLayoutState& aState, nsSize& aSize)
 NS_IMETHODIMP
 nsMenuFrame::GetPrefSize(nsBoxLayoutState& aState, nsSize& aSize)
 {
+  DISPLAY_PREF_SIZE(this, aSize);
   nsresult rv = nsBoxFrame::GetPrefSize(aState, aSize);
 
   // If we are using sizetopopup="always" then
@@ -1934,7 +1935,6 @@ nsMenuFrame::GetPrefSize(nsBoxLayoutState& aState, nsSize& aSize)
     BoundsCheck(minSize, aSize, maxSize);
   }
 
-  DISPLAY_PREF_SIZE_RESULT(this, aSize);
   return rv;
 }
 

@@ -271,6 +271,7 @@ nsNativeScrollbarFrame::AttributeChanged(nsIContent* aChild,
 NS_IMETHODIMP
 nsNativeScrollbarFrame::GetPrefSize(nsBoxLayoutState& aState, nsSize& aSize)
 {
+  DISPLAY_PREF_SIZE(this, aSize);
   float p2t = 0.0;
   p2t = aState.PresContext()->PixelsToTwips();
   
@@ -289,7 +290,6 @@ nsNativeScrollbarFrame::GetPrefSize(nsBoxLayoutState& aState, nsSize& aSize)
   // gecko
   Hookup();
     
-  DISPLAY_PREF_SIZE_RESULT(this, aSize);
   return NS_OK;
 }
 

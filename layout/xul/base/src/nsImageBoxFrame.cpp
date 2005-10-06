@@ -521,6 +521,7 @@ nsImageBoxFrame::GetImageSize()
 NS_IMETHODIMP
 nsImageBoxFrame::GetPrefSize(nsBoxLayoutState& aState, nsSize& aSize)
 {
+  DISPLAY_PREF_SIZE(this, aSize);
   if (DoesNeedRecalc(mImageSize)) {
      GetImageSize();
   }
@@ -540,19 +541,18 @@ nsImageBoxFrame::GetPrefSize(nsBoxLayoutState& aState, nsSize& aSize)
 
   BoundsCheck(minSize, aSize, maxSize);
 
-  DISPLAY_PREF_SIZE_RESULT(this, aSize);
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsImageBoxFrame::GetMinSize(nsBoxLayoutState& aState, nsSize& aSize)
 {
+  DISPLAY_MIN_SIZE(this, aSize);
   // An image can always scale down to (0,0).
   aSize.width = aSize.height = 0;
   AddBorderAndPadding(aSize);
   AddInset(aSize);
   nsIBox::AddCSSMinSize(aState, this, aSize);
-  DISPLAY_MIN_SIZE_RESULT(this, aSize);
   return NS_OK;
 }
 

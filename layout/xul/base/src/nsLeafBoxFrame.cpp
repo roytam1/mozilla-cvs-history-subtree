@@ -202,6 +202,8 @@ nsLeafBoxFrame::GetFrameForPoint(const nsPoint& aPoint,
 /* virtual */ nscoord
 nsLeafBoxFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
+  nscoord result;
+  DISPLAY_MIN_WIDTH(this, result);
   nsBoxLayoutState state(GetPresContext(), aRenderingContext);
   nsSize minSize(0,0);
   GetMinSize(state, minSize);
@@ -213,13 +215,16 @@ nsLeafBoxFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
   nsMargin bp;
   GetBorderAndPadding(bp);
 
-  DISPLAY_MIN_WIDTH_RESULT(this, minSize.width - bp.LeftRight());
-  return minSize.width - bp.LeftRight();
+  result = minSize.width - bp.LeftRight();
+
+  return result;
 }
 
 /* virtual */ nscoord
 nsLeafBoxFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
+  nscoord result;
+  DISPLAY_PREF_WIDTH(this, result);
   nsBoxLayoutState state(GetPresContext(), aRenderingContext);
   nsSize prefSize(0,0);
   GetPrefSize(state, prefSize);
@@ -231,8 +236,9 @@ nsLeafBoxFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   nsMargin bp;
   GetBorderAndPadding(bp);
 
-  DISPLAY_PREF_WIDTH_RESULT(this, prefSize.width - bp.LeftRight());
-  return prefSize.width - bp.LeftRight();
+  result = prefSize.width - bp.LeftRight();
+
+  return result;
 }
 
 NS_IMETHODIMP

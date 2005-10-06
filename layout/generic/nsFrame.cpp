@@ -2137,7 +2137,8 @@ nsFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
   NS_NOTREACHED(nsCAutoString(NS_ConvertUTF16toUTF8(frameName) +
     nsDependentCString(" frame didn't implement GetMinWidth")).get());
 #endif
-  DISPLAY_MIN_WIDTH_RESULT(this, 0);
+  nscoord result = 0;
+  DISPLAY_MIN_WIDTH(this, result);
   return 0;
 }
 
@@ -2150,7 +2151,8 @@ nsFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   NS_NOTREACHED(nsCAutoString(NS_ConvertUTF16toUTF8(frameName) +
     nsDependentCString(" frame didn't implement GetPrefWidth")).get());
 #endif
-  DISPLAY_PREF_WIDTH_RESULT(this, 0);
+  nscoord result = 0;
+  DISPLAY_PREF_WIDTH(this, result);
   return 0;
 }
 
@@ -4975,12 +4977,12 @@ nsFrame::RefreshSizeCache(nsBoxLayoutState& aState)
 NS_IMETHODIMP
 nsFrame::GetPrefSize(nsBoxLayoutState& aState, nsSize& aSize)
 {
+  DISPLAY_PREF_SIZE(this, aSize);
   // If the size is cached, and there are no HTML constraints that we might
   // be depending on, then we just return the cached size.
   nsBoxLayoutMetrics *metrics = BoxMetrics();
   if (!DoesNeedRecalc(metrics->mPrefSize)) {
      aSize = metrics->mPrefSize;
-     DISPLAY_PREF_SIZE_RESULT(this, aSize);
      return NS_OK;
   }
 
@@ -5009,7 +5011,6 @@ nsFrame::GetPrefSize(nsBoxLayoutState& aState, nsSize& aSize)
   }
 
   aSize = metrics->mPrefSize;
-  DISPLAY_PREF_SIZE_RESULT(this, aSize);
 
   return NS_OK;
 }
@@ -5017,11 +5018,11 @@ nsFrame::GetPrefSize(nsBoxLayoutState& aState, nsSize& aSize)
 NS_IMETHODIMP
 nsFrame::GetMinSize(nsBoxLayoutState& aState, nsSize& aSize)
 {
+  DISPLAY_MIN_SIZE(this, aSize);
   // Don't use the cache if we have HTMLReflowState constraints --- they might have changed
   nsBoxLayoutMetrics *metrics = BoxMetrics();
   if (!DoesNeedRecalc(metrics->mMinSize)) {
      aSize = metrics->mMinSize;
-     DISPLAY_MIN_SIZE_RESULT(this, aSize);
      return NS_OK;
   }
 
@@ -5046,7 +5047,6 @@ nsFrame::GetMinSize(nsBoxLayoutState& aState, nsSize& aSize)
   }
 
   aSize = metrics->mMinSize;
-  DISPLAY_MIN_SIZE_RESULT(this, aSize);
 
   return NS_OK;
 }
@@ -5054,11 +5054,11 @@ nsFrame::GetMinSize(nsBoxLayoutState& aState, nsSize& aSize)
 NS_IMETHODIMP
 nsFrame::GetMaxSize(nsBoxLayoutState& aState, nsSize& aSize)
 {
+  DISPLAY_MAX_SIZE(this, aSize);
   // Don't use the cache if we have HTMLReflowState constraints --- they might have changed
   nsBoxLayoutMetrics *metrics = BoxMetrics();
   if (!DoesNeedRecalc(metrics->mMaxSize)) {
      aSize = metrics->mMaxSize;
-     DISPLAY_MAX_SIZE_RESULT(this, aSize);
      return NS_OK;
   }
 
@@ -5076,7 +5076,6 @@ nsFrame::GetMaxSize(nsBoxLayoutState& aState, nsSize& aSize)
   }
 
   aSize = metrics->mMaxSize;
-  DISPLAY_MAX_SIZE_RESULT(this, aSize);
 
   return NS_OK;
 }
@@ -5631,6 +5630,46 @@ DR_cookie::~DR_cookie()
   nsFrame::DisplayReflowExit(mPresContext, mFrame, mMetrics, mStatus, mValue);
 }
 
+MOZ_DECL_CTOR_COUNTER(DR_intrinsic_width_cookie)
+
+DR_intrinsic_width_cookie::DR_intrinsic_width_cookie(
+                     nsIFrame*                aFrame, 
+                     const char*              aType,
+                     nscoord&                 aResult)
+  : mFrame(aFrame)
+  , mType(aType)
+  , mResult(aResult)
+{
+  MOZ_COUNT_CTOR(DR_intrinsic_width_cookie);
+  mValue = nsFrame::DisplayIntrinsicWidthEnter(mFrame, mType);
+}
+
+DR_intrinsic_width_cookie::~DR_intrinsic_width_cookie()
+{
+  MOZ_COUNT_DTOR(DR_intrinsic_width_cookie);
+  nsFrame::DisplayIntrinsicWidthExit(mFrame, mType, mResult, mValue);
+}
+
+MOZ_DECL_CTOR_COUNTER(DR_intrinsic_size_cookie)
+
+DR_intrinsic_size_cookie::DR_intrinsic_size_cookie(
+                     nsIFrame*                aFrame, 
+                     const char*              aType,
+                     nsSize&                  aResult)
+  : mFrame(aFrame)
+  , mType(aType)
+  , mResult(aResult)
+{
+  MOZ_COUNT_CTOR(DR_intrinsic_size_cookie);
+  mValue = nsFrame::DisplayIntrinsicSizeEnter(mFrame, mType);
+}
+
+DR_intrinsic_size_cookie::~DR_intrinsic_size_cookie()
+{
+  MOZ_COUNT_DTOR(DR_intrinsic_size_cookie);
+  nsFrame::DisplayIntrinsicSizeExit(mFrame, mType, mResult, mValue);
+}
+
 struct DR_FrameTypeInfo;
 struct DR_FrameTreeNode;
 struct DR_Rule;
@@ -6122,10 +6161,6 @@ void DR_State::FindMatchingRule(DR_FrameTreeNode& aNode)
     if (aNode.mDisplay || mIndentUndisplayedFrames) {
       aNode.mIndent++;
     }
-  } else if (aNode.mDisplay) {
-    aNode.mIndent = 0;
-    for (nsIFrame *f = aNode.mFrame->GetParent(); f; f = f->GetParent())
-      ++aNode.mIndent;
   }
 }
     
@@ -6259,6 +6294,38 @@ void* nsFrame::DisplayReflowEnter(nsPresContext*          aPresContext,
   return treeNode;
 }
 
+void* nsFrame::DisplayIntrinsicWidthEnter(nsIFrame* aFrame,
+                                          const char* aType)
+{
+  if (!DR_state->mInited) DR_state->Init();
+  if (!DR_state->mActive) return nsnull;
+
+  NS_ASSERTION(aFrame, "invalid call");
+
+  DR_FrameTreeNode* treeNode = DR_state->CreateTreeNode(aFrame, nsnull);
+  if (treeNode && treeNode->mDisplay) {
+    DR_state->DisplayFrameTypeInfo(aFrame, treeNode->mIndent);
+    printf("Get%sWidth\n", aType);
+  }
+  return treeNode;
+}
+
+void* nsFrame::DisplayIntrinsicSizeEnter(nsIFrame* aFrame,
+                                         const char* aType)
+{
+  if (!DR_state->mInited) DR_state->Init();
+  if (!DR_state->mActive) return nsnull;
+
+  NS_ASSERTION(aFrame, "invalid call");
+
+  DR_FrameTreeNode* treeNode = DR_state->CreateTreeNode(aFrame, nsnull);
+  if (treeNode && treeNode->mDisplay) {
+    DR_state->DisplayFrameTypeInfo(aFrame, treeNode->mIndent);
+    printf("Get%sSize\n", aType);
+  }
+  return treeNode;
+}
+
 void nsFrame::DisplayReflowExit(nsPresContext*      aPresContext,
                                 nsIFrame*            aFrame,
                                 nsHTMLReflowMetrics& aMetrics,
@@ -6312,41 +6379,45 @@ void nsFrame::DisplayReflowExit(nsPresContext*      aPresContext,
   DR_state->DeleteTreeNode(*treeNode);
 }
 
-void nsFrame::DisplayIntrinsicWidthResult(nsIFrame* aFrame,
-                                          const char* aType, // "min" or "pref"
-                                          nscoord aResult)
+void nsFrame::DisplayIntrinsicWidthExit(nsIFrame*            aFrame,
+                                        const char*          aType,
+                                        nscoord              aResult,
+                                        void*                aFrameTreeNode)
 {
-  if (!DR_state->mInited) DR_state->Init();
   if (!DR_state->mActive) return;
 
-  NS_ASSERTION(aFrame, "invalid call");
+  NS_ASSERTION(aFrame, "non-null frame required");
+  if (!aFrameTreeNode) return;
 
-  DR_FrameTreeNode* treeNode = DR_state->CreateTreeNode(aFrame, nsnull);
-  if (treeNode && treeNode->mDisplay) {
+  DR_FrameTreeNode* treeNode = (DR_FrameTreeNode*)aFrameTreeNode;
+  if (treeNode->mDisplay) {
     DR_state->DisplayFrameTypeInfo(aFrame, treeNode->mIndent);
-    printf("%s width=%d\n", aType, aResult);
+    printf("Get%sSize=%d\n", aType, aResult);
   }
   DR_state->DeleteTreeNode(*treeNode);
 }
 
-void nsFrame::DisplayIntrinsicSizeResult(nsIFrame* aFrame,
-                                         const char* aType, // "min" or "pref"
-                                         nsSize aResult)
+void nsFrame::DisplayIntrinsicSizeExit(nsIFrame*            aFrame,
+                                       const char*          aType,
+                                       nsSize               aResult,
+                                       void*                aFrameTreeNode)
 {
-  if (!DR_state->mInited) DR_state->Init();
   if (!DR_state->mActive) return;
 
-  NS_ASSERTION(aFrame, "invalid call");
+  NS_ASSERTION(aFrame, "non-null frame required");
+  if (!aFrameTreeNode) return;
 
-  DR_FrameTreeNode* treeNode = DR_state->CreateTreeNode(aFrame, nsnull);
-  if (treeNode && treeNode->mDisplay) {
+  DR_FrameTreeNode* treeNode = (DR_FrameTreeNode*)aFrameTreeNode;
+  if (treeNode->mDisplay) {
     DR_state->DisplayFrameTypeInfo(aFrame, treeNode->mIndent);
 
     char width[16];
     char height[16];
+    char x[16];
+    char y[16];
     DR_state->PrettyUC(aResult.width, width);
     DR_state->PrettyUC(aResult.height, height);
-    printf("%s size=%s,%s\n", aType, width, height);
+    printf("Get%sSize=%s,%s\n", aType, width, height);
   }
   DR_state->DeleteTreeNode(*treeNode);
 }

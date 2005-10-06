@@ -524,6 +524,7 @@ nsBox::GetLayoutManager(nsIBoxLayout** aLayout)
 NS_IMETHODIMP
 nsBox::GetPrefSize(nsBoxLayoutState& aState, nsSize& aSize)
 {
+  DISPLAY_PREF_SIZE(this, aSize);
   aSize.width = 0;
   aSize.height = 0;
 
@@ -541,7 +542,6 @@ nsBox::GetPrefSize(nsBoxLayoutState& aState, nsSize& aSize)
   GetMaxSize(aState, maxSize);
 
   BoundsCheck(minSize, aSize, maxSize);
-  DISPLAY_PREF_SIZE_RESULT(this, aSize);
 
   return NS_OK;
 }
@@ -549,6 +549,7 @@ nsBox::GetPrefSize(nsBoxLayoutState& aState, nsSize& aSize)
 NS_IMETHODIMP
 nsBox::GetMinSize(nsBoxLayoutState& aState, nsSize& aSize)
 {
+  DISPLAY_MIN_SIZE(this, aSize);
   aSize.width = 0;
   aSize.height = 0;
 
@@ -560,7 +561,6 @@ nsBox::GetMinSize(nsBoxLayoutState& aState, nsSize& aSize)
   AddBorderAndPadding(aSize);
   AddInset(aSize);
   nsIBox::AddCSSMinSize(aState, this, aSize);
-  DISPLAY_MIN_SIZE_RESULT(this, aSize);
   return NS_OK;
 }
 
@@ -573,6 +573,7 @@ nsBox::GetMinSizeForScrollArea(nsBoxLayoutState& aBoxLayoutState)
 NS_IMETHODIMP
 nsBox::GetMaxSize(nsBoxLayoutState& aState, nsSize& aSize)
 {
+  DISPLAY_MAX_SIZE(this, aSize);
   aSize.width = NS_INTRINSICSIZE;
   aSize.height = NS_INTRINSICSIZE;
 
@@ -584,7 +585,6 @@ nsBox::GetMaxSize(nsBoxLayoutState& aState, nsSize& aSize)
   AddBorderAndPadding(aSize);
   AddInset(aSize);
   nsIBox::AddCSSMaxSize(aState, this, aSize);
-  DISPLAY_MAX_SIZE_RESULT(this, aSize);
   return NS_OK;
 }
 

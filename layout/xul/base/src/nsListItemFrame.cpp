@@ -70,13 +70,13 @@ nsListItemFrame::~nsListItemFrame()
 nsresult
 nsListItemFrame::GetPrefSize(nsBoxLayoutState& aState, nsSize& aSize)
 {
+  DISPLAY_PREF_SIZE(this, aSize);
   nsresult rv = nsBoxFrame::GetPrefSize(aState, aSize);
   if (NS_FAILED(rv)) return rv;
 
   // guarantee that our preferred height doesn't exceed the standard
   // listbox row height
   aSize.height = PR_MAX(mRect.height, aSize.height);
-  DISPLAY_PREF_SIZE_RESULT(this, aSize);
   return NS_OK;
 }
 

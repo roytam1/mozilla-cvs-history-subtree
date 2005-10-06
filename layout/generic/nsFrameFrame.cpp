@@ -347,6 +347,7 @@ nsSubDocumentFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
       // XUL frames don't have a default 300px width
   nscoord result;
+  DISPLAY_PREF_WIDTH(this, result);
   if (mContent->IsContentOfType(nsIContent::eXUL) ||
       // XXX Should we really treat percentages differently on iframes than
       // other things?
@@ -354,7 +355,6 @@ nsSubDocumentFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
     result = 0;
   else
     result = NSIntPixelsToTwips(300, GetPresContext()->ScaledPixelsToTwips());
-  DISPLAY_PREF_WIDTH_RESULT(this, result);
   return result;
 }
 

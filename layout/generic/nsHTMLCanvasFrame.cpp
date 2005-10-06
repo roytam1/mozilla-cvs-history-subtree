@@ -76,7 +76,7 @@ nsHTMLCanvasFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
   float p2t = GetPresContext()->PixelsToTwips();
   nscoord result = NSIntPixelsToTwips(mCanvasSize.width, p2t);
-  DISPLAY_MIN_WIDTH_RESULT(this, result);
+  DISPLAY_MIN_WIDTH(this, result);
   return result;
 }
 
@@ -85,7 +85,7 @@ nsHTMLCanvasFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
   float p2t = GetPresContext()->PixelsToTwips();
   nscoord result = NSIntPixelsToTwips(mCanvasSize.width, p2t);
-  DISPLAY_PREF_WIDTH_RESULT(this, result);
+  DISPLAY_PREF_WIDTH(this, result);
   return result;
 }
 
