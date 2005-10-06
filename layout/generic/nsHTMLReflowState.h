@@ -39,8 +39,8 @@
 
 #include "nsMargin.h"
 #include "nsStyleCoord.h"
+#include "nsIFrame.h"
 
-class nsIFrame;
 class nsPresContext;
 class nsIRenderingContext;
 class nsSpaceManager;
