@@ -6567,7 +6567,7 @@ nsGenericArraySH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     length = JSVAL_TO_INT(lenval);
     if (n < length) {
       *_retval = ::JS_DefineElement(cx, obj, n, JSVAL_VOID, nsnull, nsnull,
-                                    JSPROP_ENUMERATE);
+                                    JSPROP_ENUMERATE | JSPROP_SHARED);
       *objp = obj;
     }
   }
