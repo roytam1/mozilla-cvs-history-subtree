@@ -115,6 +115,7 @@ nsresult nsPythonContext::HandlePythonError()
 
   PyObject *exc, *typ, *tb;
   PyErr_Fetch(&exc, &typ, &tb);
+  PyErr_NormalizeException( &exc, &typ, &tb);
   // We must have a traceback object to report the filename/lineno.
   // *sob* - PyTracebackObject not in a header file in 2.3.  Use getattr etc
   if (tb) {
