@@ -139,6 +139,7 @@ PRBool PyXPCOM_FormatCurrentException(nsCString &streamout)
 	PRBool ok = PR_FALSE;
 	PyObject *exc_typ = NULL, *exc_val = NULL, *exc_tb = NULL;
 	PyErr_Fetch( &exc_typ, &exc_val, &exc_tb);
+	PyErr_NormalizeException( &exc_typ, &exc_val, &exc_tb);
 	if (exc_typ) {
 		ok = PyXPCOM_FormatGivenException(streamout, exc_typ, exc_val,
 						  exc_tb);
@@ -154,7 +155,6 @@ PRBool PyXPCOM_FormatGivenException(nsCString &streamout,
 	if (!exc_typ)
 		return PR_FALSE;
 	streamout += "\n";
-	PyErr_NormalizeException( &exc_typ, &exc_val, &exc_tb);
 
 	if (exc_tb) {
 		const char *szTraceback = PyTraceback_AsString(exc_tb);
