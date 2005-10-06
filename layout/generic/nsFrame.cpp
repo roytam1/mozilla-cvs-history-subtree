@@ -6395,7 +6395,7 @@ void nsFrame::DisplayIntrinsicWidthExit(nsIFrame*            aFrame,
   DR_FrameTreeNode* treeNode = (DR_FrameTreeNode*)aFrameTreeNode;
   if (treeNode->mDisplay) {
     DR_state->DisplayFrameTypeInfo(aFrame, treeNode->mIndent);
-    printf("Get%sSize=%d\n", aType, aResult);
+    printf("Get%sWidth=%d\n", aType, aResult);
   }
   DR_state->DeleteTreeNode(*treeNode);
 }
