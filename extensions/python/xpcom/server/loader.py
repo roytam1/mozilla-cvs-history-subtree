@@ -36,16 +36,13 @@
 # ***** END LICENSE BLOCK *****
 
 import xpcom
-from xpcom import components
+from xpcom import components, logger
 
 import module
 
 import glob, os, types
 
 from xpcom.client import Component
-
-import logging
-logger = logging.getLogger('pyxpcom')
 
 # Until we get interface constants.
 When_Startup = 0

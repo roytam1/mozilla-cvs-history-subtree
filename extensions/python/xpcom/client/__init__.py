@@ -38,9 +38,7 @@
 import os
 import new
 import logging
-from xpcom import xpt, COMException, nsError
-
-logger = logging.getLogger('pyxpcom')
+from xpcom import xpt, COMException, nsError, logger
 
 # Suck in stuff from _xpcom we use regularly to prevent a module lookup
 from xpcom._xpcom import IID_nsISupports, IID_nsIClassInfo, \

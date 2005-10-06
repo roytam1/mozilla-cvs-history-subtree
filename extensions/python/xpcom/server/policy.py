@@ -35,14 +35,14 @@
 #
 # ***** END LICENSE BLOCK *****
 
-from xpcom import xpcom_consts, _xpcom, client, nsError, ServerException, COMException
+from xpcom import xpcom_consts, _xpcom, client, nsError, logger
+from xpcom import ServerException, COMException
 import xpcom
 import xpcom.server
 import operator
 import types
-
 import logging
-logger = logging.getLogger('pyxpcom')
+
 
 IID_nsISupports = _xpcom.IID_nsISupports
 IID_nsIVariant = _xpcom.IID_nsIVariant

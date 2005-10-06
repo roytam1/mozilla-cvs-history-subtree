@@ -36,7 +36,7 @@
 
 # Test pyxpcom exception.
 
-from xpcom import components, nsError, ServerException, COMException
+from xpcom import components, nsError, ServerException, COMException, logger
 from xpcom.server import WrapObject
 
 import unittest
@@ -94,7 +94,6 @@ class ExceptionTests(unittest.TestCase):
     def _testit(self, expected_errno, num_tracebacks, func, *args):
 
         # Screw with the logger
-        logger = logging.getLogger('pyxpcom')
         old_handlers = logger.handlers
         test_handler = TestHandler()
         logger.handlers = [test_handler]

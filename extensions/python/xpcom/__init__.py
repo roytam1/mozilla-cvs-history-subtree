@@ -82,7 +82,7 @@ class ServerException(Exception):
             errno = nsError.NS_ERROR_FAILURE
         Exception.__init__(self, errno, *args, **kw)
 
-# Logging support - setup the 'pyxpcom' logger to write to the Mozilla
+# Logging support - setup the 'xpcom' logger to write to the Mozilla
 # console service.
 import logging
 class ConsoleServiceStream:
@@ -107,6 +107,6 @@ if len(logger.handlers) == 0:
     fmt = logging.Formatter(logging.BASIC_FORMAT)
     hdlr.setFormatter(fmt)
     logger.addHandler(hdlr)
-del ConsoleServiceStream, logging, logger, hdlr, fmt
+del ConsoleServiceStream, logging, hdlr, fmt
 
 # Some global functions.

@@ -39,10 +39,7 @@
 #
 # Hardly worth its own source file!
 import xpcom
-from xpcom import components, nsError, _xpcom
-
-import logging
-logger = logging.getLogger('pyxpcom')
+from xpcom import components, nsError, _xpcom, logger
 
 class Factory:
     _com_interfaces_ = components.interfaces.nsIFactory
