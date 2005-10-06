@@ -5710,7 +5710,7 @@ struct DR_State
   PRInt32     mCount;
   nsVoidArray mWildRules;
   PRInt32     mAssert;
-  PRInt32     mIndentStart;
+  PRInt32     mIndent;
   PRBool      mIndentUndisplayedFrames;
   nsVoidArray mFrameTypeTable;
   PRBool      mDisplayPixelErrors;
@@ -5819,7 +5819,7 @@ struct DR_FrameTreeNode
 MOZ_DECL_CTOR_COUNTER(DR_State)
 
 DR_State::DR_State() 
-: mInited(PR_FALSE), mActive(PR_FALSE), mCount(0), mAssert(-1), mIndentStart(0), 
+: mInited(PR_FALSE), mActive(PR_FALSE), mCount(0), mAssert(-1), mIndent(0), 
   mIndentUndisplayedFrames(PR_FALSE), mDisplayPixelErrors(PR_FALSE)
 {
   MOZ_COUNT_CTOR(DR_State);
@@ -5839,7 +5839,7 @@ void DR_State::Init()
   env = PR_GetEnv("GECKO_DISPLAY_REFLOW_INDENT_START");
   if (env) {
     if (GetNumber(env, num)) 
-      mIndentStart = num;
+      mIndent = num;
     else 
       printf("GECKO_DISPLAY_REFLOW_INDENT_START - invalid value = %s", env);
   }
@@ -6155,13 +6155,6 @@ void DR_State::FindMatchingRule(DR_FrameTreeNode& aNode)
       }
     }
   }
-
-  if (aNode.mParent) {
-    aNode.mIndent = aNode.mParent->mIndent;
-    if (aNode.mDisplay || mIndentUndisplayedFrames) {
-      aNode.mIndent++;
-    }
-  }
 }
     
 DR_FrameTreeNode* DR_State::CreateTreeNode(nsIFrame*                aFrame,
@@ -6188,6 +6181,12 @@ DR_FrameTreeNode* DR_State::CreateTreeNode(nsIFrame*                aFrame,
   }
   DR_FrameTreeNode* newNode = new DR_FrameTreeNode(aFrame, parentNode);
   FindMatchingRule(*newNode);
+
+  newNode->mIndent = mIndent;
+  if (newNode->mDisplay || mIndentUndisplayedFrames) {
+    ++mIndent;
+  }
+
   if (lastLeaf && (lastLeaf == parentNode)) {
     mFrameTreeLeaves.RemoveElementAt(mFrameTreeLeaves.Count() - 1);
   }
@@ -6220,6 +6219,10 @@ void DR_State::DeleteTreeNode(DR_FrameTreeNode& aNode)
   PRInt32 numLeaves = mFrameTreeLeaves.Count();
   if ((0 == numLeaves) || (aNode.mParent != (DR_FrameTreeNode*)mFrameTreeLeaves.ElementAt(numLeaves - 1))) {
     mFrameTreeLeaves.AppendElement(aNode.mParent);
+  }
+
+  if (aNode.mDisplay || mIndentUndisplayedFrames) {
+    --mIndent;
   }
   // delete the tree node 
   delete &aNode;
