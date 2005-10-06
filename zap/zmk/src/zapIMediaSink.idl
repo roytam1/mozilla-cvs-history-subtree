@@ -39,6 +39,9 @@
 interface zapIMediaSource;
 interface zapIMediaFrame;
 
+/**
+ * \ingroup ZMK_MODULE
+ */
 [scriptable, uuid(76ab2487-e3bb-41de-872e-e587fc790ec5)]
 interface zapIMediaSink : nsISupports
 {

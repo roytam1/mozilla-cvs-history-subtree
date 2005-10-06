@@ -36,6 +36,9 @@
 
 #include "zapIMediaFrame.idl"
 
+/**
+ * \ingroup ZMK_MODULE
+ */
 [scriptable, uuid(7b851f67-6870-4bab-889d-00dc1c0fd7c3)]
 interface zapIDatagramFrame : zapIMediaFrame
 {

@@ -38,6 +38,9 @@
 
 interface nsIPropertyBag2;
 
+/**
+ * \ingroup ZMK_MODULE
+ */
 [scriptable, uuid(3330d074-7663-48bd-879b-6787267fbc20)]
 interface zapIMediaFrame : nsISupports
 {

@@ -36,6 +36,9 @@
 
 #include "nsISupports.idl"
 
+/**
+ * \ingroup ZMK_MODULE
+ */
 [scriptable, uuid(3e19e795-0305-4450-9c2a-b7b888700170)]
 interface zapISpeexEncoder : nsISupports
 {

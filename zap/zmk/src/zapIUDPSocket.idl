@@ -36,6 +36,9 @@
 
 #include "nsISupports.idl"
 
+/**
+ * \ingroup ZMK_MODULE
+ */
 [scriptable, uuid(cbe6328c-1ad6-437b-9576-6fb3524b0537)]
 interface zapIUDPSocket : nsISupports
 {

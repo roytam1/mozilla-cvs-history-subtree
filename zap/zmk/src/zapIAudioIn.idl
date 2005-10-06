@@ -38,6 +38,9 @@
 
 interface zapIAudioDevice;
 
+/**
+ * \ingroup ZMK_MODULE
+ */
 [scriptable, uuid(cde103a9-19a9-410c-a457-7b38de07563f)]
 interface zapIAudioIn : nsISupports
 {

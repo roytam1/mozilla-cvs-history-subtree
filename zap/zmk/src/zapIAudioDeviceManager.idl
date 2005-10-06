@@ -38,14 +38,9 @@
 
 interface zapIAudioDevice;
 
-%{ C++
-// {A0662AD8-3C64-483D-BA22-82AFC434CC2A}
-#define ZAP_AUDIODEVICEMANAGER_CID \
-{ 0xa0662ad8, 0x3c64, 0x483d, { 0xba, 0x22, 0x82, 0xaf, 0xc4, 0x34, 0xcc, 0x2a } }
-
-#define ZAP_AUDIODEVICEMANAGER_CONTRACTID "@mozilla.org/zap/audiodevicemanager;1"
-%}
-
+/**
+ * \ingroup ZMK_MODULE
+ */
 [scriptable, uuid(df3f2743-91a4-4a9e-b80a-1fdb6f5501c7)]
 interface zapIAudioDeviceManager : nsISupports
 {
@@ -55,3 +50,12 @@ interface zapIAudioDeviceManager : nsISupports
   readonly attribute unsigned long deviceCount;
   zapIAudioDevice getDeviceAt(in unsigned long pos);
 };
+
+%{ C++
+// {A0662AD8-3C64-483D-BA22-82AFC434CC2A}
+#define ZAP_AUDIODEVICEMANAGER_CID \
+{ 0xa0662ad8, 0x3c64, 0x483d, { 0xba, 0x22, 0x82, 0xaf, 0xc4, 0x34, 0xcc, 0x2a } }
+
+#define ZAP_AUDIODEVICEMANAGER_CONTRACTID "@mozilla.org/zap/audiodevicemanager;1"
+%}
+

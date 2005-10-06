@@ -37,6 +37,7 @@
 #include "zapIMediaFrame.idl"
 
 /**
+ * \ingroup ZMK_MODULE
  * An RFC3550 RTP media frame.
  */
 [scriptable, uuid(ffbf6655-d72d-41a9-b90a-6bebd2dde428)]

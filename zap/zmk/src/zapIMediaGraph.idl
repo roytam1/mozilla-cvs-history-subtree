@@ -38,15 +38,14 @@
 interface nsIPropertyBag2;
 interface nsIEventQueue;
 
-%{ C++
-// {CF53EEE9-5A2E-4533-92C4-0E37E50B2E01}
-#define ZAP_MEDIAGRAPH_CID \
-{ 0xcf53eee9, 0x5a2e, 0x4533, { 0x92, 0xc4, 0x0e, 0x37, 0xe5, 0x0b, 0x2e, 0x01 } }
+/**
+ * \defgroup ZMK_MODULE ZAP Media Kit (ZMK) module
+ * \include readme.txt
+ */
 
-#define ZAP_MEDIAGRAPH_CONTRACTID "@mozilla.org/zap/mediagraph;1"
-%}
-
-
+/**
+ * \ingroup ZMK_MODULE
+ */
 [scriptable, uuid(5fc78f9c-1cbb-4628-8863-d23e25beabe1)]
 interface zapIMediaGraph : nsISupports
 {
@@ -82,3 +81,12 @@ interface zapIMediaGraph : nsISupports
    */
   readonly attribute nsIEventQueue eventQueue;
 };
+
+%{ C++
+// {CF53EEE9-5A2E-4533-92C4-0E37E50B2E01}
+#define ZAP_MEDIAGRAPH_CID \
+{ 0xcf53eee9, 0x5a2e, 0x4533, { 0x92, 0xc4, 0x0e, 0x37, 0xe5, 0x0b, 0x2e, 0x01 } }
+
+#define ZAP_MEDIAGRAPH_CONTRACTID "@mozilla.org/zap/mediagraph;1"
+%}
+

@@ -36,6 +36,9 @@
 
 #include "nsISupports.idl"
 
+/**
+ * \ingroup ZMK_MODULE
+ */
 [scriptable, uuid(a799474b-ba7b-40ad-9a33-fe7db12d6408)]
 interface zapIPortaudioDevice : nsISupports
 {

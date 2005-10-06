@@ -41,10 +41,9 @@ interface zapIMediaSource;
 interface zapIMediaSink;
 interface nsIPropertyBag2;
 
-%{ C++
-#define ZAP_MEDIANODE_CONTRACTID_PREFIX "@mozilla.org/zap/medianode;type="
-%}
-
+/**
+ * \ingroup ZMK_MODULE
+ */
 [scriptable, uuid(8477a773-8b2e-4e8b-8ca7-d37886750074)]
 interface zapIMediaNode : nsISupports
 {
@@ -79,4 +78,8 @@ interface zapIMediaNode : nsISupports
    */
   zapIMediaSink getSink(in nsIPropertyBag2 sink_pars);
 };
+
+%{ C++
+#define ZAP_MEDIANODE_CONTRACTID_PREFIX "@mozilla.org/zap/medianode;type="
+%}
 
