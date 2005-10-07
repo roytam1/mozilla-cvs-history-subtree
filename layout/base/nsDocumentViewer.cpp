@@ -2930,6 +2930,10 @@ NS_IMETHODIMP DocumentViewerImpl::SizeToContent()
    GetPresShell(getter_AddRefs(presShell));
    NS_ENSURE_TRUE(presShell, NS_ERROR_FAILURE);
 
+   // Flush out all content and style updates. We can't use a resize reflow
+   // because it won't change some sizes that a style change reflow will.
+   mDocument->FlushPendingNotifications(Flush_Layout);
+
   nsIFrame *root = presShell->GetRootFrame();
   NS_ENSURE_TRUE(root, NS_ERROR_FAILURE);
 
