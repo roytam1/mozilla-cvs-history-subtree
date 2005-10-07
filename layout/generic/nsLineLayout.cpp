@@ -918,6 +918,7 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
       if (outOfFlowFrame) {
         nsPlaceholderFrame* placeholder = NS_STATIC_CAST(nsPlaceholderFrame*, aFrame);
         PRBool didPlace;
+        // XXXldb What is this test supposed to be?
         if (!(aFrame->GetStateBits() &
               (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN))) {
           // incremental reflow of child

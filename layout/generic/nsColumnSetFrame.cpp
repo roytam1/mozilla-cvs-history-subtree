@@ -343,12 +343,8 @@ nsColumnSetFrame::ReflowChildren(nsHTMLReflowMetrics&     aDesiredSize,
                                  nsCollapsingMargin*      aBottomMarginCarriedOut) {
   PRBool allFit = PR_TRUE;
   PRBool RTL = GetStyleVisibility()->mDirection == NS_STYLE_DIRECTION_RTL;
-  PRBool shrinkingHeightOnly = mLastBalanceHeight > aConfig.mColMaxHeight;
-  for (nsIFrame* f = mFrames.FirstChild(); f && shrinkingHeightOnly;
-       f = f->GetNextSibling()) {
-    if (f->GetStateBits() & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN))
-      shrinkingHeightOnly = PR_FALSE;
-  }
+  PRBool shrinkingHeightOnly = !(GetStateBits() & (NS_FRAME_IS_DIRTY|NS_FRAME_HAS_DIRTY_CHILDREN)) &&
+    mLastBalanceHeight > aConfig.mColMaxHeight;
   
 #ifdef DEBUG_roc
   printf("*** Doing column reflow pass: mLastBalanceHeight=%d, mColMaxHeight=%d, RTL=%d\n, mBalanceColCount=%d, mColWidth=%d, mColGap=%d\n",

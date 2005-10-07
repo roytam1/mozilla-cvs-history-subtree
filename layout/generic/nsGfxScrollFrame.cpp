@@ -697,7 +697,7 @@ nsHTMLScrollFrame::Reflow(nsPresContext*           aPresContext,
   PRBool reflowHScrollbar = PR_TRUE;
   PRBool reflowVScrollbar = PR_TRUE;
   PRBool reflowScrollCorner = PR_TRUE;
-  if (!(GetStateBits() & NS_FRAME_IS_DIRTY)) {
+  if (!aReflowState.ShouldReflowAllKids()) {
     #define NEEDS_REFLOW(frame_) \
       (((frame_)->GetStateBits() & \
         (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)) != 0)
