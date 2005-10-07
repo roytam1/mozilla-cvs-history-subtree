@@ -5210,13 +5210,9 @@ nsFrame::BoxReflow(nsBoxLayoutState&        aState,
   nsReflowStatus status = NS_FRAME_COMPLETE;
 
   PRBool redrawAfterReflow = PR_FALSE;
-  PRBool needsReflow = PR_FALSE;
   PRBool redrawNow = PR_FALSE;
 
-  // If the NS_REFLOW_CALC_MAX_WIDTH flag is set on the nsHTMLReflowMetrics,
-  // then we need to do a reflow so that aDesiredSize.mMaximumWidth will be set
-  // correctly.
-  needsReflow =
+  PRBool needsReflow =
     (GetStateBits() & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)) != 0;
 
   if (redrawNow)
@@ -5239,10 +5235,8 @@ nsFrame::BoxReflow(nsBoxLayoutState&        aState,
             aDesiredSize.height = metrics->mLastSize.height;
 
             // remove the margin. The rect of our child does not include it but our calculated size does.
-            nscoord calcWidth = aWidth; 
-            nscoord calcHeight = aHeight; 
             // don't reflow if we are already the right size
-            if (metrics->mLastSize.width == calcWidth && metrics->mLastSize.height == calcHeight)
+            if (metrics->mLastSize.width == aWidth && metrics->mLastSize.height == aHeight)
                   needsReflow = PR_FALSE;
             else
                   needsReflow = PR_TRUE;
