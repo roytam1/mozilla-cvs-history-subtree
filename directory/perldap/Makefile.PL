@@ -34,30 +34,6 @@ use Config;
 use Carp;
 
 $osname   = $Config{'osname'};
-
-$ldapsdk_loc = $ENV{"LDAPSDKDIR"}; # Full Path to C SDK Top-Level
-$ldapsdk_ssl = $ENV{"LDAPSDKSSL"}; # N to exclude SSL
-$ldapsdk_pr = $ENV{"LDAPPR"};      # Y to include prldap_ functions
-
-$libexts = "so|sl|a|lib|dll";
-
-
-print "\nPerLDAP - Perl 5 Module for LDAP\n";
-print     "================================\n";
-
-$silent = 1;
-print "Directory containing 'include' and 'lib' directory of the Netscape\n";
-print "LDAP Software Developer Kit (default: /usr): ";
-if (!$ldapsdk_loc)
-{
-   $silent = 0;
-   chomp ($ldapsdk_loc = <STDIN>);
-   $ldapsdk_loc = "/usr" unless $ldapsdk_loc =~ /\S/;
-} else {
-  print "$ldapsdk_loc\n";
-}
-croak("Directory $ldapsdk_loc does not exist!") unless -d $ldapsdk_loc;
-
 if ($osname =~ /mswin/i)
 {
    $dir_sep = "\\";
@@ -65,9 +41,91 @@ if ($osname =~ /mswin/i)
    $dir_sep = "/";
 }
 
-$include_ldap = $ldapsdk_loc . $dir_sep . "include";
-$include_nspr = $ldapsdk_loc . $dir_sep . "include-nspr";
-$lib_ldap = $ldapsdk_loc . $dir_sep . "lib";
+$ldapsdk_loc = $ENV{"LDAPSDKDIR"}; # Full Path to C SDK Top-Level
+$include_ldap = $ENV{"LDAPSDKINCDIR"}; # Full Path to C SDK Include file directory
+$lib_ldap = $ENV{"LDAPSDKLIBDIR"}; # Full Path to C SDK Library directory
+$ldapsdk_ssl = $ENV{"LDAPSDKSSL"}; # N to exclude SSL
+$ldapsdk_pr = $ENV{"LDAPPR"};      # Y to include prldap_ functions
+$nspr_loc = $ENV{"NSPRDIR"};       # Full Path to NSPR Top-Level
+
+$libexts = "so|sl|a|lib|dll|dylib";
+$default_root = "${dir_sep}usr";
+
+# every linux distribution has the OpenLDAP SDK in /usr/lib and /usr/include, so
+# we need to use a different default to avoid problems
+if ($osname eq "linux") {
+   $default_root = "/opt/mozldap";
+}
+
+# examine our build environment - see if we are being built as part of the overall
+# mozilla build process - if so, we can default a lot of things based on that
+# for example, if perldap was checked out in mozilla/directory/perldap, and
+# nspr in mozilla/nsprpub, and nss in mozilla/security, and the ldap c sdk in
+# mozilla/directory/c-sdk, and everything was built according to the usual
+# build instructions, then we can just use ../../dist/public/ldap as our
+# include file location and ../../dist/lib as our lib location
+if ( !$include_ldap && -d '../../dist/public/ldap' ) {
+   $include_ldap = "..${dir_sep}..${dir_sep}dist${dir_sep}public${dir_sep}ldap";
+}
+if ( !$lib_ldap && -d '../../dist/lib' ) {
+   $lib_ldap = "..${dir_sep}..${dir_sep}dist${dir_sep}lib";
+}
+
+# find the path to NSPR
+if (!$nspr_loc && -d '../../dist') {
+	require File::Find;
+	$nspr_loc = findNSPR('../../dist');
+}
+
+print "\nPerLDAP - Perl 5 Module for LDAP\n";
+print     "================================\n";
+
+$silent = 1;
+print "Directory containing 'include' and 'lib' directory of the Mozilla\n";
+print "LDAP Software Developer Kit (default: $default_root): ";
+if (!$ldapsdk_loc)
+{
+   $silent = 0;
+   chomp ($ldapsdk_loc = <STDIN>);
+   $ldapsdk_loc = $default_root unless $ldapsdk_loc =~ /\S/;
+   if (! -d $ldapsdk_loc) {
+	   $ldapsdk_loc = undef;
+   }
+} else {
+  print "$ldapsdk_loc\n";
+}
+
+if (!$include_ldap && $ldapsdk_loc) {
+   $include_ldap = $ldapsdk_loc . $dir_sep . "include";
+}
+if (!$ldapsdk_loc) {
+   print "Directory containing 'include' directory of the Mozilla\n";
+   print "LDAP Software Developer Kit (default: $include_ldap): ";
+   if (! -f "$include_ldap${dir_sep}ldap.h") {
+      $silent = 0;
+	  chomp ($input = <STDIN>);
+	  $include_ldap = $input if $input =~ /\S/;
+	  croak("Missing required include file $include_ldap${dir_sep}ldap.h") unless -f "$include_ldap${dir_sep}ldap.h";
+  } else {
+	  print "$include_ldap\n";
+  }
+}
+
+if (!$lib_ldap && $ldapsdk_loc) {
+   $lib_ldap = $ldapsdk_loc . $dir_sep . "lib";
+}
+if (!$ldapsdk_loc) {
+   print "Directory containing 'lib' directory of the Mozilla\n";
+   print "LDAP Software Developer Kit (default: $lib_ldap): ";
+   if (! -d "$lib_ldap") {
+      $silent = 0;
+	  chomp ($input = <STDIN>);
+	  $lib_ldap = $input if $input =~ /\S/;
+	  croak("Missing required lib directory $lib_ldap") unless -d "$lib_ldap";
+  } else {
+	  print "$lib_ldap\n";
+  }
+}
 
 print "Include SSL Support (default: yes)?  ";
 if (!$ldapsdk_ssl)
@@ -79,14 +137,44 @@ if (!$ldapsdk_ssl)
 }
 $ssl_def = "-DUSE_SSL" unless ($ldapsdk_ssl =~ /^n/i);
 
+# see if ldap and nspr files are in the same place
+if ( -f "$include_ldap${dir_sep}nspr.h" ) {
+	$nspr_loc = $ldapsdk_loc;
+}
+
+print "Directory containing NSPR API 'include' and 'lib'\n";
+print "directories for NSPR support (type 'n' or 'none' to omit) (default: $nspr_loc): ";
+$silent = 0;
+chomp ($input = <STDIN>);
+if ($input =~ /^n/i) {
+	$nspr_loc = undef;
+} elsif ($input =~ /\S/) {
+	$nspr_loc = $input;
+} else {
+	print "$nspr_loc\n";
+}
+
+if ($nspr_loc) {
+   $lib_nspr = $nspr_loc . ${dir_sep} . 'lib';
+   $include_nspr = $nspr_loc . ${dir_sep} . 'include';
+   croak("Missing required include file $include_nspr${dir_sep}nspr.h") unless -f "$include_nspr${dir_sep}nspr.h";
+   $pr_def = "-DPRLDAP"
+}
+
 opendir(DIR,$lib_ldap);
 if ($ssl_def)
 {
    @libfiles = grep{/ldap|lber|ssl|nss|pl[cd]|nspr/} readdir(DIR);
 } else {
    @libfiles = grep{/ldap|lber/} readdir(DIR);
- }
+}
 closedir(DIR);
+
+if ($lib_nspr && -d $lib_nspr) {
+opendir(DIR,$lib_nspr);
+push @libfiles, grep{/pl[cd]|nspr/} readdir(DIR);
+closedir(DIR);
+}
 
 @libs = ();
 foreach $candidate (@libfiles) {
@@ -109,22 +197,6 @@ if (!((@ldaplib = grep{/ldapssl$/} @libs) && $ssl_def))
 }
 
 @nsprlib = grep{/^nspr[0-9].*$/} @libs;
-if ($#nsprlib >= 0)
-{
-  print "Support NSPR API functionality (default: yes)?  ";
-  if (!$ldapsdk_pr)
-    {
-      $silent = 0;
-      chomp ($ldapsdk_pr = <STDIN>);
-    } else {
-      print "$ldapsdk_pr\n";
-    }
-}
-unless ($ldapsdk_pr =~ /^n/i) {
-  $pr_def = "-DPRLDAP"
-} else {
-  @prldaplib = ();
-}
 
 if ($#ldaplib < 0)
 {
@@ -219,6 +291,7 @@ if ($liblist[3] ne "")
 #
 # Ok, let's do it!
 #
+print "\n######### before WriteMakefile #############\n";
 WriteMakefile(
               'ABSTRACT'	=> 'Perl methods for LDAP C API calls',
               'AUTHOR'		=> 'Leif Hedstrom <leif@ogre.com>',
@@ -234,6 +307,7 @@ WriteMakefile(
 	      @extras
 );
 
+print "\n######### after WriteMakefile #############\n";
 
 #
 # Generate a "make HTML" target
@@ -250,4 +324,16 @@ sub MY::postamble
 html:	Entry.html Conn.html Utils.html API.html LDIF.html $(FIRST_MAKEFILE)
 	@rm -f pod2html-itemcache pod2html-dircache
 '
+}
+
+sub find_helper {
+   if (/nspr\.h/) {
+	   $nspr_loc = File::Basename::dirname($File::Find::dir);
+   }
+}
+
+sub findNSPR {
+   my $dir = shift;
+   File::Find::find(\&find_helper, $dir);
+   return $nspr_loc;
 }
