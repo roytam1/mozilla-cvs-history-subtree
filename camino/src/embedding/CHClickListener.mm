@@ -224,8 +224,9 @@ CHClickListener::MouseDown(nsIDOMEvent* aEvent)
   if (!presShell)
     return NS_ERROR_FAILURE;
 
-  nsIFrame* selectFrame = presShell->GetPrimaryFrameFor(selContent);
-  if (!selectFrame)
+  nsIFrame* selectFrame;
+  nsresult rv = presShell->GetPrimaryFrameFor(selContent, &selectFrame);
+  if (NS_FAILED(rv) || !selectFrame)
     return NS_ERROR_FAILURE;
   
   nsIntRect selectRect = selectFrame->GetScreenRectExternal();
