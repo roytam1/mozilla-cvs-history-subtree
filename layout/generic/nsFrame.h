@@ -441,6 +441,7 @@ public:
   static void* DisplayReflowEnter(nsPresContext*          aPresContext,
                                   nsIFrame*                aFrame,
                                   const nsHTMLReflowState& aReflowState);
+  static void* DisplayLayoutEnter(nsIFrame* aFrame);
   static void* DisplayIntrinsicWidthEnter(nsIFrame* aFrame,
                                           const char* aType);
   static void* DisplayIntrinsicSizeEnter(nsIFrame* aFrame,
@@ -450,6 +451,8 @@ public:
                                  nsHTMLReflowMetrics& aMetrics,
                                  PRUint32             aStatus,
                                  void*                aFrameTreeNode);
+  static void  DisplayLayoutExit(nsIFrame* aFrame,
+                                 void* aFrameTreeNode);
   static void  DisplayIntrinsicWidthExit(nsIFrame* aFrame,
                                          const char* aType,
                                          nscoord aResult,
@@ -575,6 +578,14 @@ protected:
     void*                    mValue;
   };
 
+  struct DR_layout_cookie {
+    DR_layout_cookie(nsIFrame* aFrame);
+    ~DR_layout_cookie();
+
+    nsIFrame* mFrame;
+    void* mValue;
+  };
+  
   struct DR_intrinsic_width_cookie {
     DR_intrinsic_width_cookie(nsIFrame* aFrame, const char* aType,
                               nscoord& aResult);
@@ -601,6 +612,8 @@ protected:
   DR_cookie dr_cookie(dr_pres_context, dr_frame, dr_rf_state, dr_rf_metrics, dr_rf_status); 
 #define DISPLAY_REFLOW_CHANGE() \
   dr_cookie.Change();
+#define DISPLAY_LAYOUT(dr_frame) \
+  DR_layout_cookie dr_cookie(dr_frame); 
 #define DISPLAY_MIN_WIDTH(dr_frame, dr_result) \
   DR_intrinsic_width_cookie dr_cookie(dr_frame, "Min", dr_result)
 #define DISPLAY_PREF_WIDTH(dr_frame, dr_result) \
@@ -616,6 +629,7 @@ protected:
 
 #define DISPLAY_REFLOW(dr_pres_context, dr_frame, dr_rf_state, dr_rf_metrics, dr_rf_status) 
 #define DISPLAY_REFLOW_CHANGE() 
+#define DISPLAY_LAYOUT(dr_frame) PR_BEGIN_MACRO PR_END_MACRO
 #define DISPLAY_MIN_WIDTH(dr_frame, dr_result) PR_BEGIN_MACRO PR_END_MACRO
 #define DISPLAY_PREF_WIDTH(dr_frame, dr_result) PR_BEGIN_MACRO PR_END_MACRO
 #define DISPLAY_PREF_SIZE(dr_frame, dr_result) PR_BEGIN_MACRO PR_END_MACRO

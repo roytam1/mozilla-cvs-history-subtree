@@ -5624,6 +5624,21 @@ DR_cookie::~DR_cookie()
   nsFrame::DisplayReflowExit(mPresContext, mFrame, mMetrics, mStatus, mValue);
 }
 
+MOZ_DECL_CTOR_COUNTER(DR_layout_cookie)
+
+DR_layout_cookie::DR_layout_cookie(nsIFrame* aFrame)
+  : mFrame(aFrame)
+{
+  MOZ_COUNT_CTOR(DR_layout_cookie);
+  mValue = nsFrame::DisplayLayoutEnter(mFrame);
+}
+
+DR_layout_cookie::~DR_layout_cookie()
+{
+  MOZ_COUNT_DTOR(DR_layout_cookie);
+  nsFrame::DisplayLayoutExit(mFrame, mValue);
+}
+
 MOZ_DECL_CTOR_COUNTER(DR_intrinsic_width_cookie)
 
 DR_intrinsic_width_cookie::DR_intrinsic_width_cookie(
@@ -6247,7 +6262,7 @@ static void DisplayReflowEnterPrint(nsPresContext*          aPresContext,
 
     DR_state->PrettyUC(aReflowState.availableWidth, width);
     DR_state->PrettyUC(aReflowState.availableHeight, height);
-    printf("a=%s,%s ", width, height);
+    printf("Reflow a=%s,%s ", width, height);
 
     DR_state->PrettyUC(aReflowState.mComputedWidth, width);
     DR_state->PrettyUC(aReflowState.mComputedHeight, height);
@@ -6287,6 +6302,21 @@ void* nsFrame::DisplayReflowEnter(nsPresContext*          aPresContext,
   DR_FrameTreeNode* treeNode = DR_state->CreateTreeNode(aFrame, &aReflowState);
   if (treeNode) {
     DisplayReflowEnterPrint(aPresContext, aFrame, aReflowState, *treeNode, PR_FALSE);
+  }
+  return treeNode;
+}
+
+void* nsFrame::DisplayLayoutEnter(nsIFrame* aFrame)
+{
+  if (!DR_state->mInited) DR_state->Init();
+  if (!DR_state->mActive) return nsnull;
+
+  NS_ASSERTION(aFrame, "invalid call");
+
+  DR_FrameTreeNode* treeNode = DR_state->CreateTreeNode(aFrame, nsnull);
+  if (treeNode && treeNode->mDisplay) {
+    DR_state->DisplayFrameTypeInfo(aFrame, treeNode->mIndent);
+    printf("Layout\n");
   }
   return treeNode;
 }
@@ -6344,7 +6374,7 @@ void nsFrame::DisplayReflowExit(nsPresContext*      aPresContext,
     char y[16];
     DR_state->PrettyUC(aMetrics.width, width);
     DR_state->PrettyUC(aMetrics.height, height);
-    printf("d=%s,%s ", width, height);
+    printf("Reflow d=%s,%s ", width, height);
 
     if (NS_FRAME_IS_NOT_COMPLETE(aStatus)) {
       printf("status=0x%x", aStatus);
@@ -6372,6 +6402,23 @@ void nsFrame::DisplayReflowExit(nsPresContext*      aPresContext,
       CheckPixelError(aMetrics.width, p2t);
       CheckPixelError(aMetrics.height, p2t);
     }
+  }
+  DR_state->DeleteTreeNode(*treeNode);
+}
+
+void nsFrame::DisplayLayoutExit(nsIFrame*            aFrame,
+                                void*                aFrameTreeNode)
+{
+  if (!DR_state->mActive) return;
+
+  NS_ASSERTION(aFrame, "non-null frame required");
+  if (!aFrameTreeNode) return;
+
+  DR_FrameTreeNode* treeNode = (DR_FrameTreeNode*)aFrameTreeNode;
+  if (treeNode->mDisplay) {
+    DR_state->DisplayFrameTypeInfo(aFrame, treeNode->mIndent);
+    nsRect rect = aFrame->GetRect();
+    printf("Layout=%d,%d,%d,%d\n", rect.x, rect.y, rect.width, rect.height);
   }
   DR_state->DeleteTreeNode(*treeNode);
 }

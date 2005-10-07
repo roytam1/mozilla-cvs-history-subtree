@@ -636,6 +636,8 @@ nsresult
 nsIFrame::Layout(nsBoxLayoutState& aState)
 {
   nsBox *box = NS_STATIC_CAST(nsBox*, this);
+  DISPLAY_LAYOUT(box);
+
   box->BeginLayout(aState);
 
   box->DoLayout(aState);
