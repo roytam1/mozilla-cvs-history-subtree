@@ -138,6 +138,7 @@
                 </action>
               </rule>
             </template>
+            <menuitem/>
           </menupopup>
         </menulist>
       </toolbaritem>
