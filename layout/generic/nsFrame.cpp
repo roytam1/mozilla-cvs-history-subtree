@@ -5279,9 +5279,19 @@ nsFrame::BoxReflow(nsBoxLayoutState&        aState,
     nsHTMLReflowState reflowState(aPresContext, this, aRenderingContext,
                                   nsSize(aWidth, NS_INTRINSICSIZE));
 
-    // XXX this needs to subtract out the border and padding of mFrame since it is content size
+    // mComputedWidth and mComputedHeight are content-box, not
+    // border-box
     reflowState.mComputedWidth = size.width;
     reflowState.mComputedHeight = size.height;
+
+    // Box layout calls SetRect before Layout, whereas non-box layout
+    // calls SetRect after Reflow.
+    // XXX Perhaps we should be doing this by twiddling the rect back to
+    // mLastSize before calling Reflow and then switching it back, but
+    // I'm not sure mLastSize is guaranteed to be what it was before
+    // LayoutChildAt changed it.
+    if (metrics->mLastSize != GetSize())
+      reflowState.mFlags.mIsResize = PR_TRUE;
 
     #ifdef DEBUG_REFLOW
       nsAdaptorAddIndents();
@@ -6457,8 +6467,6 @@ void nsFrame::DisplayIntrinsicSizeExit(nsIFrame*            aFrame,
 
     char width[16];
     char height[16];
-    char x[16];
-    char y[16];
     DR_state->PrettyUC(aResult.width, width);
     DR_state->PrettyUC(aResult.height, height);
     printf("Get%sSize=%s,%s\n", aType, width, height);
