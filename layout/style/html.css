@@ -470,3 +470,7 @@ marquee[direction="up"], marquee[direction="down"] {
   }
  
 }
+
+
+/* XXX TEMPORARY! */
+table { display: none; }
