@@ -219,6 +219,8 @@ public:
    * @param aHandler the function object to name, created by an earlier call to
    *        CompileEventHandler
    * @return NS_OK if the function was successfully bound to the name
+   *
+   * XXXmarkh - fold this in with SetProperty?  Exactly the same concept!
    */
   virtual nsresult BindCompiledEventHandler(nsISupports* aTarget, void *aScope,
                                             nsIAtom* aName,
