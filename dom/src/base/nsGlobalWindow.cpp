@@ -274,7 +274,6 @@ nsGlobalWindow::nsGlobalWindow(nsGlobalWindow *aOuterWindow)
     mInClose(PR_FALSE), 
     mOpenerWasCleared(PR_FALSE),
     mIsPopupSpam(PR_FALSE),
-    mArguments(nsnull),
     mGlobalObjectOwner(nsnull),
     mDocShell(nsnull),
     mTimeouts(nsnull),
@@ -396,6 +395,8 @@ nsGlobalWindow::CleanUp()
   }
 
   mInnerWindowHolder = nsnull;
+  mArguments = nsnull;
+  mArgumentsLast = nsnull;
 }
 
 void
@@ -497,30 +498,7 @@ nsGlobalWindow::SetLanguageContext(PRUint32 lang_id, nsIScriptContext *aScriptCo
   NS_ENSURE_TRUE(ok, NS_ERROR_INVALID_ARG);
   PRUint32 lang_ndx = NS_SL_INDEX(lang_id);
 
-//  NS_ASSERTION(IsOuterWindow(), "Uh, SetLanguageContext() called on inner window!");
-// XXXmarkh - the above assertion fails when a new language (ie, not JS) is first
-// seen, as we are creating the context.  Therefore we only assert when not the
-// first call for this language on the outer, then forward it to that.
-  if (IsInnerWindow()) {
-    nsGlobalWindow *outer = GetOuterWindowInternal();
-    if (!outer) {
-      NS_WARNING("No outer window available!");
-      return NS_ERROR_FAILURE;
-    }
-    // The outer should assert in this case, but let's do it anyway.
-    NS_ASSERTION(outer->mLanguageContexts[lang_ndx] == nsnull,
-                 "SetLanguageContext on inner window for existing language");
-    rv = outer->SetLanguageContext(lang_id, aScriptContext);
-    // sob - but now the inner window has no global - just copy it
-    if (NS_SUCCEEDED(rv)) {
-        NS_ASSERTION(mLanguageGlobals[lang_ndx] == nsnull, "How did inner get a global?");
-        NS_ASSERTION(outer->mLanguageGlobals[lang_ndx] != nsnull, "Outer got no global?");
-        // XXXmarkh - memory management issue??  Tell context of copy?
-        mLanguageGlobals[lang_ndx] = outer->mLanguageGlobals[lang_ndx];
-    }
-    return rv;
-  }
-
+  NS_ASSERTION(IsOuterWindow(), "Uh, SetLanguageContext() called on inner window!");
 
   if (!aScriptContext)
     NS_WARNING("Possibly early removal of script object, see bug #41608");
@@ -566,26 +544,39 @@ nsGlobalWindow::SetLanguageContext(PRUint32 lang_id, nsIScriptContext *aScriptCo
 nsresult
 nsGlobalWindow::EnsureScriptEnvironment(PRUint32 aLangID)
 {
-    nsresult rv;
+  FORWARD_TO_OUTER(EnsureScriptEnvironment, (aLangID), NS_ERROR_NOT_INITIALIZED);
+  nsresult rv;
+ 
+  PRBool ok = NS_SL_VALID(aLangID);
+  NS_ASSERTION(ok, "Invalid programming language ID requested");
+  NS_ENSURE_TRUE(ok, NS_ERROR_INVALID_ARG);
+  PRUint32 lang_ndx = NS_SL_INDEX(aLangID);
 
-    PRBool ok = NS_SL_VALID(aLangID);
-    NS_ASSERTION(ok, "Invalid programming language ID requested");
-    NS_ENSURE_TRUE(ok, NS_ERROR_INVALID_ARG);
-    PRUint32 lang_ndx = NS_SL_INDEX(aLangID);
+  if (mLanguageGlobals[lang_ndx])
+      return NS_OK; // already initialized for this language.
+  nsCOMPtr<nsILanguageRuntime> languageRuntime;
+  rv = NS_GetLanguageRuntimeByID(aLangID, getter_AddRefs(languageRuntime));
+  NS_ENSURE_SUCCESS(rv, rv);
 
-    if (mLanguageGlobals[lang_ndx])
-        return NS_OK; // already initialized for this language.
-    nsCOMPtr<nsILanguageRuntime> languageRuntime;
-    rv = NS_GetLanguageRuntimeByID(aLangID, getter_AddRefs(languageRuntime));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    nsCOMPtr<nsIScriptContext> context;
-    rv = languageRuntime->CreateContext(getter_AddRefs(context));
-    NS_ENSURE_SUCCESS(rv, rv);
-    rv = SetLanguageContext(aLangID, context);
-    NS_ENSURE_SUCCESS(rv, rv);
-    // Note that SetLanguageContext has taken a reference to the context.
-    return NS_OK;
+  nsCOMPtr<nsIScriptContext> context;
+  rv = languageRuntime->CreateContext(getter_AddRefs(context));
+  NS_ENSURE_SUCCESS(rv, rv);
+  rv = SetLanguageContext(aLangID, context);
+  NS_ENSURE_SUCCESS(rv, rv);
+  // Note that SetLanguageContext has taken a reference to the context.
+  // If we have arguments, tell the new language about it.
+  nsGlobalWindow *currentInner = GetCurrentInnerWindowInternal();
+  if (currentInner) {
+    // Copy the outer global to the inner (what is the right thing here?
+    // Ask the inner for a new one?
+    // XXXmarkh - memory management issue??  Tell context of copy?
+    currentInner->mLanguageGlobals[lang_ndx] = mLanguageGlobals[lang_ndx];
+    if (mArgumentsLast != nsnull) {
+      context->SetProperty(currentInner->mLanguageGlobals[lang_ndx],
+                           "arguments", mArgumentsLast);
+    }
+  }
+  return NS_OK;
 }
 
 nsIScriptContext *
@@ -599,12 +590,12 @@ nsGlobalWindow::GetLanguageContext(PRUint32 lang)
 
   PRUint32 lang_ndx = NS_SL_INDEX(lang);
 
-  // for now we are still storing the JS versions in members.
-  if (lang == nsIProgrammingLanguage::JAVASCRIPT) {
-    NS_ASSERTION(mLanguageContexts[lang_ndx] == mContext &&
-                 mLanguageGlobals[lang_ndx] == mJSObject,
-                 "JS language contexts are confused");
-  }
+  // for now we are still storing the JS versions in members.  Check the
+  // JS elements of our array are still in sync.  Do this each time we are
+  // called, as much JS specific code still goes via GetContext
+  NS_ASSERTION(mLanguageContexts[NS_SL_INDEX(nsIProgrammingLanguage::JAVASCRIPT)] == mContext &&
+               mLanguageGlobals[NS_SL_INDEX(nsIProgrammingLanguage::JAVASCRIPT)] == mJSObject,
+               "JS language contexts are confused");
   return mLanguageContexts[lang_ndx];
 }
 
@@ -617,12 +608,12 @@ nsGlobalWindow::GetLanguageGlobal(PRUint32 lang)
 
   PRUint32 lang_ndx = NS_SL_INDEX(lang);
 
-  // for now we are still storing the JS versions in members.
-  if (lang == nsIProgrammingLanguage::JAVASCRIPT) {
-    NS_ASSERTION(mLanguageContexts[lang_ndx] == mContext &&
-                 mLanguageGlobals[lang_ndx] == mJSObject,
-                 "JS language contexts are confused");
-  }
+  // for now we are still storing the JS versions in members.  Check the
+  // JS elements of our array are still in sync.  Do this each time we are
+  // called, as much JS specific code still goes via GetGlobalJSObject
+  NS_ASSERTION(mLanguageContexts[NS_SL_INDEX(nsIProgrammingLanguage::JAVASCRIPT)] == mContext &&
+               mLanguageGlobals[NS_SL_INDEX(nsIProgrammingLanguage::JAVASCRIPT)] == mJSObject,
+               "JS language contexts are confused");
   return mLanguageGlobals[lang_ndx];
 }
 
@@ -631,12 +622,17 @@ nsGlobalWindow::GetContext()
 {
   FORWARD_TO_OUTER(GetContext, (), nsnull);
 
+  // check GetContext is indeed identical to GetLanguageContext()
+  NS_ASSERTION(mContext == GetLanguageContext(nsIProgrammingLanguage::JAVASCRIPT),
+               "GetContext confused?");
   return mContext;
 }
 
 JSObject *
 nsGlobalWindow::GetGlobalJSObject()
 {
+  NS_ASSERTION(mJSObject == GetLanguageGlobal(nsIProgrammingLanguage::JAVASCRIPT),
+               "GetGlobalJSObject confused?");
   return mJSObject;
 }
 
@@ -1431,7 +1427,6 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
     if (mArguments) { 
       // We got no new document after someone called
       // SetNewArguments(), drop our reference to the arguments.
-      ::JS_UnlockGCThing(cx, mArguments);
       mArguments = nsnull;
     }
 
@@ -1788,6 +1783,7 @@ nsGlobalWindow::SetNewArguments(nsIArray *aArguments)
   // Hold on to the arguments so that we can re-set them once the next
   // document is loaded.
   mArguments = aArguments;
+  mArgumentsLast = aArguments;
 
   return NS_OK;
 }
@@ -4406,7 +4402,7 @@ nsGlobalWindow::OpenDialog(nsIDOMWindow** _retval)
   // Strip the url, name and options from the args seen by scripts.
   PRUint32 argOffset = argc < 3 ? argc : 3;
   nsCOMPtr<nsIArray> argvArray;
-  rv = NS_CreateJSArgv(argc-argOffset, argv+argOffset, getter_AddRefs(argvArray));
+  rv = NS_CreateJSArgv(cx, argc-argOffset, argv+argOffset, getter_AddRefs(argvArray));
   NS_ENSURE_SUCCESS(rv, rv);
 
   return OpenInternal(url, name, options, PR_TRUE, argvArray, nsnull,
@@ -5907,7 +5903,7 @@ nsGlobalWindow::ClearWindowScope(nsISupports *aWindow)
   nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(aWindow));
 
   nsIScriptContext *scx = sgo->GetContext();
-
+  // XXXmarkh - delegate to all languages.
   if (scx) {
     JSContext *cx = (JSContext *)scx->GetNativeContext();
     JSObject *global = sgo->GetGlobalJSObject();
@@ -6309,7 +6305,7 @@ nsGlobalWindow::RunTimeout(nsTimeout *aTimeout)
 
       nsCOMPtr<nsISupports> dummy;
       nsCOMPtr<nsIArray> argv;
-      if NS_FAILED(NS_CreateJSArgv(timeout->mArgc, timeout->mArgv,
+      if NS_FAILED(NS_CreateJSArgv(cx, timeout->mArgc, timeout->mArgv,
                                    getter_AddRefs(argv)))
         return;
       nsCOMPtr<nsISupports> me(NS_STATIC_CAST(nsIDOMWindow *, this));
