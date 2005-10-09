@@ -66,6 +66,17 @@ var IO_TRUNCATE             = 0x20;
 var IO_SYNC                 = 0x40;
 var IO_EXCL                 = 0x80;
 
+// file mode bits for nsIFileOutputStream::init() (taken from prio.h):
+var IO_IRUSR = 00400;  /* read permission, owner */
+var IO_IWUSR = 00200;  /* write permission, owner */
+var IO_IXUSR = 00100;  /* execute/search permission, owner */
+var IO_IRGRP = 00040;  /* read permission, group */
+var IO_IWGRP = 00020;  /* write permission, group */
+var IO_IXGRP = 00010;  /* execute/search permission, group */
+var IO_IROTH = 00004;  /* read permission, others */
+var IO_IWOTH = 00002;  /* write permission, others */
+var IO_IXOTH = 00001;  /* execute/search permission, others */
+
 
 ////////////////////////////////////////////////////////////////////////
 //
@@ -87,11 +98,28 @@ function fileToURL(file) {
   return gFileProtocolHandler.getURLSpecFromFile(file);
 }
 
-// open a file for overwriting or appending. returns an
-// nsIFileOutputStream object
-function openFileForWriting(file, append)
+// Open a file for overwriting or appending. returns an
+// nsIFileOutputStream object. Permissions should be a 9 character
+// string describing the permissions as 'ls -l' would display
+// them. Default permissions are "rw-r--r--".
+function openFileForWriting(file, append, /* optional */ permissions)
 {
   var fos;
+  var perms = 0;
+  if (permissions) {
+    if (permissions[0] == "r") perms |= IO_IRUSR;
+    if (permissions[1] == "w") perms |= IO_IWUSR;
+    if (permissions[2] == "x") perms |= IO_IXUSR;
+    if (permissions[3] == "r") perms |= IO_IRGRP;
+    if (permissions[4] == "w") perms |= IO_IWGRP;
+    if (permissions[5] == "x") perms |= IO_IXGRP;
+    if (permissions[6] == "r") perms |= IO_IROTH;
+    if (permissions[7] == "w") perms |= IO_IWOTH;
+    if (permissions[8] == "x") perms |= IO_IXOTH;
+  }
+  else
+    perms = IO_IRUSR | IO_IWUSR | IO_IRGRP | IO_IROTH;
+  
   try {
     fos = Components.classes["@mozilla.org/network/file-output-stream;1"]
       .createInstance(Components.interfaces.nsIFileOutputStream);
@@ -100,7 +128,7 @@ function openFileForWriting(file, append)
       ioflags |= IO_APPEND;
     else
       ioflags |= IO_TRUNCATE;
-    fos.init(file, ioflags, 4, null);
+    fos.init(file, ioflags, perms, null);
   }
   catch(e) {
     if (fos)
