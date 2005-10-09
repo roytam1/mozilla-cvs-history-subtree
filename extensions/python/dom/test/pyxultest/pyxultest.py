@@ -3,10 +3,18 @@
 import sys
 import xpcom
 from xpcom import components
+import nsdom
 
-# This EventListener class is to work around the fact that
-# addEventListener can not automagically wrap a string or function like
-# JS can.
+# Utility functions
+# Write something to the textbox - eg, error or trace messages.
+def write( msg, *args):
+    tb = this.document.getElementById("output_box")
+    val = tb.getAttribute("value")
+    val += (msg % args) + "\n"
+    tb.setAttribute("value", val)
+
+# An event listener class to test explicit hooking of events via objects.
+# Note Python can now just call addEventListener a-la JS
 class EventListener:
     _com_interfaces_ = components.interfaces.nsIDOMEventListener
     def __init__(self, handler, globs = None):
@@ -22,22 +30,25 @@ class EventListener:
 # An event function to handle onload - but hooked up manually rather than via
 # having the magic name 'onload'
 def do_load():
-    input = this.document.getElementById("input-box")
-    val = "This is the Python on XUL demo using\nPython " + sys.version
-    input.setAttribute("value", val)
-    
-    # Sadly no inline event handlers yet - hook up a click event.
-    button = this.document.getElementById("button1")
-    button.addEventListener('click', EventListener('print "hello from the click event"'), False)
+    input = this.document.getElementById("output_box")
+    # Clear the text in the XUL
+    input.setAttribute("value", "")
+    write("This is the Python on XUL demo using\nPython " + sys.version)
 
-# Add the event listener.
-this.window.addEventListener('load', EventListener(do_load), False)
+    # Sadly no inline event handlers yet - hook up a click event.
+    button = this.document.getElementById("but_dialog")
+    button.addEventListener('click', 'write("hello from the click event for the dialog button")', False)
+
+# Add an event listener as a function
+this.window.addEventListener('load', do_load, False)
 # Add another one just to test passing a string instead of a function.
-this.window.addEventListener('load', EventListener('print "hello from the event " + str(this.document)'), False)
+this.window.addEventListener('load', "print 'hello from string event handler'", False)
+# And yet another with an explicit EventListener instance. (on error tests can't do this?)
+this.window.addEventListener('load', EventListener('print "hello from an object event handler"'), False)
 
 # Some other little functions called by the chrome
-def on_button_click():
-    print "Button clicked from", this.window.location.href
+def on_but_dialog_click():
+    write("Button clicked from %s" %  this.window.location.href)
     # window.open doesn't work as JS has special arg handling :(
     # for now, use our hacky (but quite wonderful) JSExec function.
     import nsdom
@@ -45,8 +56,19 @@ def on_button_click():
     #new = this.window.open("chrome://pyxultest/content/dialog.xul", "my-dialog", "chrome")
     #print "The new window is", new
 
-def test_error_event():
-    import nsdom
-    nsdom.JSExec(this, 'this.window.openDialog("chrome://pyxultest/content/pytester.xul", "my-dialog", "modal", "test_error_event")')
-    #new = this.window.open("chrome://pyxultest/content/dialog.xul", "my-dialog", "chrome")
-    #print "The new window is", new
+def run_tests():
+    tests = """test_error_explicit test_error_explicit_string
+                test_error_eventhandler""".split()
+    keep_open = this.document.getElementById("keep_tests_open").getAttribute("checked")
+    for test in tests:
+        write("Running test %s" % test)
+        suffix = ', "%s"' % test
+        if keep_open:
+            suffix += ', "-k"'
+        cmd = 'this.window.openDialog("chrome://pyxultest/content/pytester.xul", "my-dialog", "modal"%s)' % suffix
+        print "cmd is", cmd
+        nsdom.JSExec(this, cmd)
+    if keep_open:
+        write("Ran all the tests - the windows told you if the tests worked")
+    else:
+        write("Ran all the tests - if you saw no window, it worked!")

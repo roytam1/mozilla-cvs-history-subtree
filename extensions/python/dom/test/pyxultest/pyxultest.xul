@@ -8,9 +8,10 @@
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
   id="main-window" orient="vertical"
   screenX="100" screenY="100"
-  height="300" width="500"
+  height="450" width="600"
   script-type="application/x-python"
   onload="print 'hello from the window load event'"
+  title="Python in XUL demos and tests"
   >
   <script type="application/x-python" src="chrome://pyxultest/content/pyxultest.py"/>
   <script>
@@ -27,23 +28,45 @@ print "Window location is", this.window.location.href
     ]]>
   </script>
   <vbox flex="1">
-    <textbox id="input-box" style="width:100%" value = "hello there"
-             rows="5" multiline="true" flex="1"
+    <textbox id="output_box" style="width:100%"
+             value = "If you can see this, things aren't working well!"
+             rows="15" multiline="true" flex="1"
     />
-    <button id="button1" label="open dialog"
-            oncommand="on_button_click()"/>
   </vbox>
-  <!-- A box from our overlay - it will have one button using js events
-       and another using Python events -->
-  <hbox id="language_box"/>
-  
-  <button id="but_multi" label="click for both"/>
-  <!-- Here we have a script element defined at a parent node -->
-  <hbox oncommand="print 'You clicked on a', event.target.tagName">
-    <button label = "click here"/>
-    <button label = "or here"/>
-    <button id="test_error" label="test error event" oncommand="test_error_event()"/>
 
-  </hbox>
+  <groupbox>
+    <caption label="Items from Overlays"/>
+    <!-- A box from our overlay - it will have one button using js events
+         and another using Python events -->
+    <hbox>
+      <hbox id="language_box"/>
+      <button id="but_multi" label="click for both"/>
+    </hbox>
+  </groupbox>
+
+  <groupbox>
+    <caption label="Random Buttons"/>
+  
+    <hbox>
+      <!-- Here we have a script element defined at a parent node -->
+      <hbox oncommand="write('You clicked on a %s with id=%s' % (event.target.tagName, event.target.getAttribute('id')))">
+        <button id="some-button" label = "click here"/>
+        <button id="another-button" label = "or here"/>
+      </hbox>
+      <button id="but_dialog" label="open dialog"
+              oncommand="on_but_dialog_click()"/>
+    </hbox>
+  </groupbox>
+
+  <groupbox>
+    <caption label="Automated tests"/>
+    <hbox>
+      <button id="test_error" label="Run tests" oncommand="run_tests()"/>
+      <vbox flex="1">
+        <text class="label" value="The test window is not shown if the tests are successful"/>
+        <checkbox id="keep_tests_open" label="Always keep test window open"/>
+      </vbox>
+    </hbox>>
+  </groupbox>
 </window>
 

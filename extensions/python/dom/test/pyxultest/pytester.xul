@@ -2,7 +2,8 @@
 <?xml-stylesheet href="chrome://communicator/skin/" type="text/css"?>
 
 <!-- A container for general test code.  Relies on being passed an argument
-     for which test to run
+     for which test to run.  Generally it runs the test and closes, only
+     staying open when something goes wrong.
 -->
  
 <window
@@ -11,14 +12,16 @@
   screenX="100" screenY="100"
   height="300" width="500"
   script-type="application/x-python"
-  onload="do_onload()" onerror="do_onerror(event, source, lineno)"
+  onload="do_onload(event)"
+  onunload="print 'The test runner form is unloading'"
+  title="Test Runner"
   >
   <script src="chrome://pyxultest/content/pytester.py"/>
   <script type="application/javascript">
-dump('hello from js\n');
-function x_onload() {
-    dump('JS Args are' + window.arguments + '\n');
-}
-//window.onload = onload;
+dump('hello from js with args ' + window.arguments.length + '\n');
   </script>
+  <textbox id="output-box" style="width:100%" value = ""
+           rows="15" multiline="true" flex="1"
+  />
+  
 </window>
