@@ -301,7 +301,7 @@ nsHTMLScriptEventHandler::Invoke(nsISupports *aTargetObject,
   // Create an nsIArray for the args (the JS context will efficiently
   // re-fetch the jsvals from this object)
   nsCOMPtr<nsIArray> argarray;
-  rv = NS_CreateJSArgv(aArgCount, (jsval *)aArgs, getter_AddRefs(argarray));
+  rv = NS_CreateJSArgv(cx, aArgCount, (jsval *)aArgs, getter_AddRefs(argarray));
   if (NS_FAILED(rv))
     return rv;
 
