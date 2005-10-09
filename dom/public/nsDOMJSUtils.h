@@ -25,6 +25,7 @@ GetScriptContextFromJSContext(JSContext *cx)
 
 // A factory function for turning a jsval argv into an nsIArray
 // but also supports an effecient way of extracting the original argv.
-nsresult NS_CreateJSArgv(PRUint32 argc, jsval *argv, nsIArray **aArray);
+nsresult NS_CreateJSArgv(JSContext *aContext, PRUint32 argc, jsval *argv,
+                         nsIArray **aArray);
 
 #endif // nsDOMJSUtils_h__
