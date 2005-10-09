@@ -34,12 +34,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "PyXPCOM.h"
-
-static PyObject *g_obFuncMakeInterface = NULL;
-
-PyObject *PyObject_FromDOMnsISupports(PyObject *pycontext, nsISupports *pis,
-                                      PRBool bMakeNicePyObject = PR_TRUE);
+#include "nsPyDOM.h"
 
 struct PyMethodDef 
 Py_DOMnsISupports_Methods[] =
@@ -68,7 +63,8 @@ public:
 	                                      PRBool bMakeNicePyObject = PR_TRUE)
 	{
 		if (!iid.Equals(NS_GET_IID(nsIClassInfo)))
-			return PyObject_FromDOMnsISupports(m_pycontext, ps, bMakeNicePyObject);
+			return PyObject_FromNSDOMInterface(m_pycontext, ps,
+			                                   iid, bMakeNicePyObject);
 		return Py_nsISupports::MakeInterfaceResult(ps, iid, bMakeNicePyObject);
 	}
 
@@ -89,7 +85,8 @@ protected:
 };
 
 
-PyObject *PyObject_FromDOMnsISupports(PyObject *pycontext, nsISupports *pis,
+PyObject *PyObject_FromNSDOMInterface(PyObject *pycontext, nsISupports *pis,
+                                      const nsIID &iid, /* = nsISupports */
                                       PRBool bMakeNicePyObject /* = PR_TRUE */)
 {
 	if (pis==NULL) {
@@ -97,7 +94,6 @@ PyObject *PyObject_FromDOMnsISupports(PyObject *pycontext, nsISupports *pis,
 		return Py_None;
 	}
 
-	nsIID iid = NS_GET_IID(nsISupports);
 	Py_DOMnsISupports *ret = new Py_DOMnsISupports(pycontext, pis, iid);
 	pis->AddRef();
 	if (ret && bMakeNicePyObject)
@@ -113,33 +109,21 @@ Py_DOMnsISupports::MakeDefaultWrapper(PyObject *pycontext,
 {
 	NS_PRECONDITION(pyis, "NULL pyobject!");
 	PyObject *obIID = NULL;
-	PyObject *args = NULL;
-	PyObject *mod = NULL;
 	PyObject *ret = NULL;
 
 	obIID = Py_nsIID::PyObjectFromIID(iid);
 	if (obIID==NULL)
 		goto done;
 
-	if (g_obFuncMakeInterface==NULL) {
-		PyObject *mod = PyImport_ImportModule("nsdom.context");
-		if (mod) 
-			g_obFuncMakeInterface = PyObject_GetAttrString(mod, "MakeInterfaceResult");
-		Py_XDECREF(mod);
-	}
-	if (g_obFuncMakeInterface==NULL) goto done;
-
-	args = Py_BuildValue("OOO", pycontext, pyis, obIID);
-	if (args==NULL) goto done;
-	ret = PyEval_CallObject(g_obFuncMakeInterface, args);
+	return PyObject_CallMethod(pycontext, "MakeInterfaceResult",
+	                           "OO", pyis, obIID);
+	if (ret==NULL) goto done;
 done:
 	if (PyErr_Occurred()) {
 		NS_ABORT_IF_FALSE(ret==NULL, "Have an error, but also a return val!");
 		PyXPCOM_LogError("Creating an interface object to be used as a result failed\n");
 		PyErr_Clear();
 	}
-	Py_XDECREF(mod);
-	Py_XDECREF(args);
 	Py_XDECREF(obIID);
 	if (ret==NULL) // eek - error - return the original with no refcount mod.
 		ret = pyis; 

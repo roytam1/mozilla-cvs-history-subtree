@@ -41,8 +41,16 @@
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptContext.h"
 #include "nsIScriptObjectPrincipal.h"
+#include "nsIDOMEventReceiver.h"
+#include "nsIAtomService.h"
+#include "nsIEventListenerManager.h"
 #include "jsapi.h"
 #include "jscntxt.h"
+#include "nsPIDOMWindow.h"
+
+// just for constants...
+#include "nsIScriptContext.h"
+#include "nsIScriptGlobalObject.h"
 
 extern void init_nsdom();
 
@@ -60,8 +68,12 @@ NS_IMPL_RELEASE(nsPythonRuntime)
 nsresult
 nsPythonRuntime::CreateContext(nsIScriptContext **ret)
 {
-    if (!Py_IsInitialized())
+    if (!Py_IsInitialized()) {
         Py_Initialize();
+#ifndef NS_DEBUG
+        Py_OptimizeFlag = 1;
+#endif // NS_DEBUG
+    }
     if (!initialized) {
         PyXPCOM_Globals_Ensure();
         PyInit_DOMnsISupports();
@@ -203,7 +215,7 @@ PyObject *PyJSExec(PyObject *self, PyObject *args)
                                        lineNo,
                                        version,
                                        &scriptObject);
-    if (NS_SUCCEEDED(rv))
+    if (NS_SUCCEEDED(rv) && scriptObject)
         rv = scriptContext->ExecuteScript(scriptObject, scope, &str,
                                           &bIsUndefined);
     Py_END_ALLOW_THREADS
@@ -215,22 +227,281 @@ PyObject *PyJSExec(PyObject *self, PyObject *args)
     return Py_BuildValue("NN", PyObject_FromNSString(str), PyBool_FromLong(bIsUndefined));
     // XXX - cleanup scriptObject???
 }
+
+// Various helpers to avoid exposing non-scriptable interfaces when we only
+// need one or 2 functions.
+static PyObject *PyIsOuterWindow(PyObject *self, PyObject *args)
+{
+    PyObject *obTarget;
+    if (!PyArg_ParseTuple(args, "O", &obTarget))
+        return NULL;
+
+    // target
+    nsCOMPtr<nsPIDOMWindow> target;
+    if (!Py_nsISupports::InterfaceFromPyObject(
+                obTarget,
+                NS_GET_IID(nsPIDOMWindow),
+                getter_AddRefs(target),
+                PR_FALSE, PR_FALSE))
+        return NULL;
+
+    return PyBool_FromLong(target->IsOuterWindow());
+}
+
+static PyObject *PyGetCurrentInnerWindow(PyObject *self, PyObject *args)
+{
+    PyObject *obTarget;
+    if (!PyArg_ParseTuple(args, "O", &obTarget))
+        return NULL;
+
+    // target
+    nsCOMPtr<nsPIDOMWindow> target;
+    if (!Py_nsISupports::InterfaceFromPyObject(
+                obTarget,
+                NS_GET_IID(nsPIDOMWindow),
+                getter_AddRefs(target),
+                PR_FALSE, PR_FALSE))
+        return NULL;
+
+    return PyObject_FromNSInterface(target->GetCurrentInnerWindow(),
+                                    NS_GET_IID(nsISupports), PR_FALSE);
+}
+/***
+static PyObject *PyGetScriptContext(PyObject *self, PyObject *args)
+{
+    PyObject *obTarget;
+    if (!PyArg_ParseTuple(args, "O", &obTarget))
+        return NULL;
+
+    // target
+    nsCOMPtr<nsIScriptGlobalObject> target;
+    if (!Py_nsISupports::InterfaceFromPyObject(
+                obTarget,
+                NS_GET_IID(nsIScriptGlobalObject),
+                getter_AddRefs(target),
+                PR_FALSE, PR_FALSE))
+        return NULL;
+
+    nsCOMPtr<nsIScriptContext> ctxt(target->GetScriptContext(target)
+
+    return PyObject_FromNSInterface(target->GetCurrentInnerWindow(),
+                                    NS_GET_IID(nsISupports), PR_FALSE);
+}
+***/
+// Avoid exposing the entire non-scriptable event listener interface
+// We are exposing:
+//
+//nsEventListenerManager::AddScriptEventListener(nsISupports *aObject,
+//                                               nsIAtom *aName,
+//                                               const nsAString& aBody,
+//                                               PRUint32 aLanguage,
+//                                               PRBool aDeferCompilation,
+//                                               PRBool aPermitUntrustedEvents)
+//
+// Implementation of the above seems strange - if !aDeferCompilation then
+// aBody is ignored (presumably to later be fetched via GetAttr
+
+static PyObject *PyAddScriptEventListener(PyObject *self, PyObject *args)
+{
+    PyObject *obTarget, *obBody;
+    char *name;
+    int lang = nsIProgrammingLanguage::PYTHON;
+    int defer, untrusted;
+    if (!PyArg_ParseTuple(args, "OsOii|i", &obTarget, &name, &obBody,
+                          &defer, &untrusted, &lang))
+        return NULL;
+
+    // target
+    nsCOMPtr<nsISupports> target;
+    if (!Py_nsISupports::InterfaceFromPyObject(
+                obTarget,
+                NS_GET_IID(nsISupports),
+                getter_AddRefs(target),
+                PR_FALSE, PR_FALSE))
+        return NULL;
+
+    nsAutoString body;
+    if (!PyObject_AsNSString(obBody, body))
+        return NULL;
+
+    // The receiver, to get the manager.
+    nsCOMPtr<nsIDOMEventReceiver> receiver(do_QueryInterface(target));
+    if (!receiver) return PyXPCOM_BuildPyException(NS_ERROR_UNEXPECTED);
+
+    nsCOMPtr<nsIEventListenerManager> manager;
+    receiver->GetListenerManager(getter_AddRefs(manager));
+    if (!manager) return PyXPCOM_BuildPyException(NS_ERROR_UNEXPECTED);
+
+    nsCOMPtr<nsIAtom> atom(do_GetAtom(nsDependentCString(name)));
+    if (!atom) return PyXPCOM_BuildPyException(NS_ERROR_UNEXPECTED);
+
+    nsresult rv;
+    Py_BEGIN_ALLOW_THREADS
+    rv = manager->AddScriptEventListener(target, atom, body, lang, defer,
+                                         untrusted);
+    Py_END_ALLOW_THREADS
+    if (NS_FAILED(rv))
+        return PyXPCOM_BuildPyException(rv);
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+//  NS_IMETHOD RegisterScriptEventListener(nsIScriptContext *aContext,
+//                                         void *aScopeObject,
+//                                         nsISupports *aObject,
+//                                         nsIAtom* aName) = 0;
+static PyObject *PyRegisterScriptEventListener(PyObject *self, PyObject *args)
+{
+    PyObject *obTarget, *obGlobal, *obScope;
+    char *name;
+    if (!PyArg_ParseTuple(args, "OOOs", &obGlobal, &obScope, &obTarget, &name))
+        return NULL;
+
+    nsCOMPtr<nsISupports> isup;
+    if (!Py_nsISupports::InterfaceFromPyObject(
+                obGlobal,
+                NS_GET_IID(nsISupports),
+                getter_AddRefs(isup),
+                PR_FALSE, PR_FALSE))
+        return NULL;
+    nsCOMPtr<nsIScriptGlobalObject> scriptGlobal = do_QueryInterface(isup);
+    if (scriptGlobal == nsnull)
+        return PyErr_Format(PyExc_TypeError, "Object is not an nsIScriptGlobal");
+    nsIScriptContext *scriptContext =
+           scriptGlobal->GetLanguageContext(nsIProgrammingLanguage::PYTHON);
+    if (!scriptContext)
+        return PyErr_Format(PyExc_RuntimeError, "Can't find my context??");
+
+    // target
+    nsCOMPtr<nsISupports> target;
+    if (!Py_nsISupports::InterfaceFromPyObject(
+                obTarget,
+                NS_GET_IID(nsISupports),
+                getter_AddRefs(target),
+                PR_FALSE, PR_FALSE))
+        return NULL;
+
+    // sob - I don't quite understand this, but things get upset when
+    // an outer window gets the event.
+    nsCOMPtr<nsPIDOMWindow> win(do_QueryInterface(target));
+    if (win != nsnull && win->IsOuterWindow()) {
+        target = win->GetCurrentInnerWindow();
+    }
+    // The receiver, to get the manager.
+    nsCOMPtr<nsIDOMEventReceiver> receiver(do_QueryInterface(target));
+    if (!receiver) return PyXPCOM_BuildPyException(NS_ERROR_UNEXPECTED);
+
+    nsCOMPtr<nsIEventListenerManager> manager;
+    receiver->GetListenerManager(getter_AddRefs(manager));
+    if (!manager) return PyXPCOM_BuildPyException(NS_ERROR_UNEXPECTED);
+
+    nsCOMPtr<nsIAtom> atom(do_GetAtom(nsDependentCString(name)));
+    if (!atom) return PyXPCOM_BuildPyException(NS_ERROR_UNEXPECTED);
+
+    nsresult rv;
+    Py_BEGIN_ALLOW_THREADS
+    rv = manager->RegisterScriptEventListener(scriptContext, obScope,
+                                              target, atom);
+    Py_END_ALLOW_THREADS
+    if (NS_FAILED(rv))
+        return PyXPCOM_BuildPyException(rv);
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+//  NS_IMETHOD CompileScriptEventListener(nsIScriptContext *aContext,
+//                                        void *aScopeObject,
+//                                        nsISupports *aObject,
+//                                        nsIAtom* aName,
+//                                        PRBool *aDidCompile) = 0;
+static PyObject *PyCompileScriptEventListener(PyObject *self, PyObject *args)
+{
+    PyObject *obTarget, *obGlobal, *obScope;
+    char *name;
+    if (!PyArg_ParseTuple(args, "OOOs", &obGlobal, &obScope, &obTarget, &name))
+        return NULL;
+
+    nsCOMPtr<nsISupports> isup;
+    if (!Py_nsISupports::InterfaceFromPyObject(
+                obGlobal,
+                NS_GET_IID(nsISupports),
+                getter_AddRefs(isup),
+                PR_FALSE, PR_FALSE))
+        return NULL;
+    nsCOMPtr<nsIScriptGlobalObject> scriptGlobal = do_QueryInterface(isup);
+    if (scriptGlobal == nsnull)
+        return PyErr_Format(PyExc_TypeError, "Object is not an nsIScriptGlobal");
+    nsIScriptContext *scriptContext =
+           scriptGlobal->GetLanguageContext(nsIProgrammingLanguage::PYTHON);
+    if (!scriptContext)
+        return PyErr_Format(PyExc_RuntimeError, "Can't find my context??");
+
+    // target
+    nsCOMPtr<nsISupports> target;
+    if (!Py_nsISupports::InterfaceFromPyObject(
+                obTarget,
+                NS_GET_IID(nsISupports),
+                getter_AddRefs(target),
+                PR_FALSE, PR_FALSE))
+        return NULL;
+
+    // sob - I don't quite understand this, but things get upset when
+    // an outer window gets the event.
+    nsCOMPtr<nsPIDOMWindow> win(do_QueryInterface(target));
+    if (win != nsnull && win->IsOuterWindow()) {
+        target = win->GetCurrentInnerWindow();
+    }
+    // The receiver, to get the manager.
+    nsCOMPtr<nsIDOMEventReceiver> receiver(do_QueryInterface(target));
+    if (!receiver) return PyXPCOM_BuildPyException(NS_ERROR_UNEXPECTED);
+
+    nsCOMPtr<nsIEventListenerManager> manager;
+    receiver->GetListenerManager(getter_AddRefs(manager));
+    if (!manager) return PyXPCOM_BuildPyException(NS_ERROR_UNEXPECTED);
+
+    nsCOMPtr<nsIAtom> atom(do_GetAtom(nsDependentCString(name)));
+    if (!atom) return PyXPCOM_BuildPyException(NS_ERROR_UNEXPECTED);
+
+    nsresult rv;
+    PRBool didCompile;
+    Py_BEGIN_ALLOW_THREADS
+    rv = manager->CompileScriptEventListener(scriptContext, obScope,
+                                             target, atom, &didCompile);
+    Py_END_ALLOW_THREADS
+    if (NS_FAILED(rv))
+        return PyXPCOM_BuildPyException(rv);
+    return PyBool_FromLong(didCompile);
+}
+
 // We also setup a "fake" module called nsdom with a few utility functions
 // available to python.
 static struct PyMethodDef methods[]=
 {
     {"JSExec", PyJSExec, 1},
+    {"AddScriptEventListener", PyAddScriptEventListener, 1},
+    {"RegisterScriptEventListener", PyRegisterScriptEventListener, 1},
+    {"CompileScriptEventListener", PyCompileScriptEventListener, 1},
+    {"GetCurrentInnerWindow", PyGetCurrentInnerWindow, 1},
+    {"IsOuterWindow", PyIsOuterWindow, 1},
     { NULL }
 };
 
 ////////////////////////////////////////////////////////////
 // The module init code.
 //
+#define REGISTER_IID(t) { \
+	PyObject *iid_ob = Py_nsIID::PyObjectFromIID(NS_GET_IID(t)); \
+	PyDict_SetItemString(dict, "IID_"#t, iid_ob); \
+	Py_DECREF(iid_ob); \
+	}
+
 // *NOT* called by Python - this is not a regular Python module.
 // Caller must ensure only called once!
 void 
 init_nsdom() {
     CEnterLeavePython _celp;
     // Create the module and add the functions
-    Py_InitModule("_nsdom", methods);
+    PyObject *oModule = Py_InitModule("_nsdom", methods);
+    PyObject *dict = PyModule_GetDict(oModule);
+    REGISTER_IID(nsIScriptGlobalObject);
 }

@@ -36,6 +36,7 @@
 
 #include "PyXPCOM.h"
 
-PyObject *PyObject_FromDOMnsISupports(PyObject *pycontext, nsISupports *pis,
+PyObject *PyObject_FromNSDOMInterface(PyObject *pycontext, nsISupports *pis,
+                                      const nsIID &iid = NS_GET_IID(nsISupports),
                                       PRBool bMakeNicePyObject = PR_TRUE);
 void PyInit_DOMnsISupports();

@@ -199,9 +199,8 @@ nsPythonContext::InitContext(nsIScriptGlobalObject *aGlobalObject)
 
   PyObject *obGlobal;
   if (aGlobalObject) {
-    // must build the object with nsISupports, so it gets the automagic
-    // interface flattening (I guess that is a bug in pyxpcom?)
-    obGlobal = PyObject_FromDOMnsISupports(mDelegate, aGlobalObject);
+    obGlobal = PyObject_FromNSDOMInterface(mDelegate, aGlobalObject,
+                                           NS_GET_IID(nsIScriptGlobalObject));
     if (!obGlobal)
       return HandlePythonError();
   } else {
@@ -402,7 +401,7 @@ nsPythonContext::BindCompiledEventHandler(nsISupports *aTarget, void *aScope,
   CEnterLeavePython _celp;
 
   PyObject *obTarget;
-  obTarget = PyObject_FromDOMnsISupports(mDelegate, aTarget);
+  obTarget = PyObject_FromNSDOMInterface(mDelegate, aTarget);
   if (!obTarget)
     return HandlePythonError();
 
@@ -447,11 +446,11 @@ nsPythonContext::CallEventHandler(nsISupports *aTarget, void *aScope, void* aHan
   CEnterLeavePython _celp;
 
   PyObject *obTarget, *obArgv;
-  obTarget = PyObject_FromDOMnsISupports(mDelegate, aTarget);
+  obTarget = PyObject_FromNSDOMInterface(mDelegate, aTarget);
   if (!obTarget)
     return HandlePythonError();
 
-  obArgv = PyObject_FromDOMnsISupports(mDelegate, aargv);
+  obArgv = PyObject_FromNSDOMInterface(mDelegate, aargv);
   if (!obArgv) {
     Py_DECREF(obTarget);
     return HandlePythonError();
@@ -484,7 +483,7 @@ nsPythonContext::GetBoundEventHandler(nsISupports* aTarget, void *aScope,
   CEnterLeavePython _celp;
 
   PyObject *obTarget;
-  obTarget = PyObject_FromDOMnsISupports(mDelegate, aTarget);
+  obTarget = PyObject_FromNSDOMInterface(mDelegate, aTarget);
   if (!obTarget)
     return HandlePythonError();
 
@@ -516,7 +515,7 @@ nsPythonContext::SetProperty(void *aTarget, const char *aPropName, nsISupports *
 
   CEnterLeavePython _celp;
   PyObject *obVal;
-  obVal = PyObject_FromDOMnsISupports(mDelegate, aVal);
+  obVal = PyObject_FromNSDOMInterface(mDelegate, aVal);
   if (!obVal)
     return HandlePythonError();
 

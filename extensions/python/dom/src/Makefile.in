@@ -13,7 +13,7 @@ include $(DEPTH)/config/autoconf.mk
 LIBRARY_NAME	= pydom
 IS_COMPONENT	= 1
 REQUIRES	= pyxpcom xpcom string xpcom_obsolete dom \
-		  widget js gfx gklayout $(NULL)
+		  widget js gfx gklayout content layout necko $(NULL)
 
 MOZILLA_INTERNAL_API = 1
 FORCE_SHARED_LIB = 1 
