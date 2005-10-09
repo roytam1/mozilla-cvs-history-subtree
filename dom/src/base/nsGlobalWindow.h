@@ -443,6 +443,7 @@ protected:
   nsCOMPtr<nsIDOMWindowInternal> mOpener;
   nsCOMPtr<nsIControllers>      mControllers;
   nsCOMPtr<nsIArray>            mArguments;
+  nsCOMPtr<nsIArray>            mArgumentsLast;
   nsRefPtr<nsNavigator>         mNavigator;
   nsRefPtr<nsScreen>            mScreen;
   nsRefPtr<nsHistory>           mHistory;
