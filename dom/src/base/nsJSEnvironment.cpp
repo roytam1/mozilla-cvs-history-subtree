@@ -220,6 +220,7 @@ NS_HandleScriptError(nsIScriptGlobalObject *aScriptGlobal,
                                     NS_EVENT_FLAG_INIT, aStatus);
       called = PR_TRUE;
     }
+    --errorDepth;
   }
   return called;
 }
@@ -3050,7 +3051,7 @@ nsresult NS_CreateJSRuntime(nsILanguageRuntime **aRuntime)
 // on-the-fly.
 class nsJSArgArray : public nsIJSArgArray, public nsIArray {
 public:
-  nsJSArgArray(PRUint32 argc, jsval *argv);
+  nsJSArgArray(JSContext *aContext, PRUint32 argc, jsval *argv);
   ~nsJSArgArray();
   // nsISupports
   NS_DECL_ISUPPORTS
@@ -3061,11 +3062,13 @@ public:
   // nsIJSArgArray
   nsresult GetArgs(PRUint32 *argc, jsval **argv);
 protected:
+    JSContext *mContext;
     jsval *mArgv;
     PRUint32 mArgc;
 };
 
-nsJSArgArray::nsJSArgArray(PRUint32 argc, jsval *argv) :
+nsJSArgArray::nsJSArgArray(JSContext *aContext, PRUint32 argc, jsval *argv) :
+    mContext(aContext),
     mArgc(argc),
     mArgv(argv)
 {
@@ -3112,7 +3115,30 @@ NS_IMETHODIMP nsJSArgArray::GetLength(PRUint32 *aLength)
 /* void queryElementAt (in unsigned long index, in nsIIDRef uuid, [iid_is (uuid), retval] out nsQIResult result); */
 NS_IMETHODIMP nsJSArgArray::QueryElementAt(PRUint32 index, const nsIID & uuid, void * *result)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    if (index >= mArgc)
+      return NS_ERROR_INVALID_ARG;
+
+    nsCOMPtr<nsISupports> ret;
+    JSString *expr = nsnull;
+    nsresult rv;
+    switch (::JS_TypeOfValue(mContext, mArgv[index])) {
+        case JSTYPE_STRING: {
+            expr = ::JS_ValueToString(mContext, mArgv[index]);
+            nsCOMPtr<nsISupportsString>
+                val(do_CreateInstance(NS_SUPPORTS_STRING_CONTRACTID, &rv));
+            NS_ENSURE_SUCCESS(rv, rv);
+            val->SetData(nsDependentJSString(expr));
+            ret = val;
+            break;
+        }
+        default:
+            NS_WARNING("nsJSArgArray::QueryElementAt needs some lovin'");
+    }
+    if (!ret) {
+        NS_ERROR("Failed to get array element");
+        return NS_ERROR_UNEXPECTED;
+    }
+    return ret->QueryInterface(uuid, result);
 }
 
 /* unsigned long indexOf (in unsigned long startIndex, in nsISupports element); */
@@ -3127,9 +3153,10 @@ NS_IMETHODIMP nsJSArgArray::Enumerate(nsISimpleEnumerator **_retval)
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-nsresult NS_CreateJSArgv(PRUint32 argc, jsval *argv, nsIArray **aArray)
+nsresult NS_CreateJSArgv(JSContext *aContext, PRUint32 argc, jsval *argv,
+                         nsIArray **aArray)
 {
-    nsJSArgArray *ret = new nsJSArgArray(argc, argv);
+    nsJSArgArray *ret = new nsJSArgArray(aContext, argc, argv);
     if (ret == nsnull)
         return NS_ERROR_OUT_OF_MEMORY;
     return ret->QueryInterface(NS_GET_IID(nsIArray), (void **)aArray);
