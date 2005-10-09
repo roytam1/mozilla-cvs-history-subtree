@@ -42,7 +42,7 @@ interface zapISipResponse;
 
 /**
  * \ingroup SIP_UA_LAYER
- * SIP authentication API
+ * SIP authentication API compliant to RFC3261 section 22/RFC2617
  *
  * Implemented by component <b>'\@mozilla.org/zap/sipauth;1'</b>
  */
