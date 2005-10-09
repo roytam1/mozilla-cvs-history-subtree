@@ -1910,6 +1910,7 @@ SipMessage.fun(
 // void removeHeader(in zapISipHeader header);
 SipMessage.fun(
   function removeHeader(header) {
+    var headers = this._headers;
     // unwrap inner object:
     header = header.wrappedJSObject;
     if (!header) this._assert("Invalid argument");
