@@ -153,10 +153,10 @@ PYXPCOM_EXPORT void PyXPCOM_LogDebug(const char *fmt, ...);
 // Some utility converters
 // moz strings to PyObject.
 PYXPCOM_EXPORT PyObject *PyObject_FromNSString( const nsACString &s,
-					       PRBool bAssumeUTF8 = PR_FALSE );
+                                                PRBool bAssumeUTF8 = PR_FALSE );
 PYXPCOM_EXPORT PyObject *PyObject_FromNSString( const nsAString &s );
 PYXPCOM_EXPORT PyObject *PyObject_FromNSString( const PRUnichar *s,
-					        PRUint32 len = (PRUint32)-1);
+                                                PRUint32 len = (PRUint32)-1);
 
 // PyObjects to moz strings.  As per the moz string guide, we pass a reference
 // to an abstract string
@@ -166,6 +166,11 @@ PYXPCOM_EXPORT PRBool PyObject_AsNSString( PyObject *ob, nsAString &aStr);
 PYXPCOM_EXPORT nsIVariant *PyObject_AsVariant( PyObject *ob);
 PYXPCOM_EXPORT PyObject *PyObject_FromVariant( Py_nsISupports *parent,
                                                nsIVariant *v);
+
+// Interfaces - these are the "official" functions
+PYXPCOM_EXPORT PyObject *PyObject_FromNSInterface( nsISupports *aInterface,
+                                                   const nsIID &iid, 
+                                                   PRBool bMakeNicePyObject = PR_TRUE);
 
 /*************************************************************************
 **************************************************************************
@@ -788,5 +793,4 @@ PyXPCOM_ATTR_INTERFACE_DECLARE(Py_nsIClassInfo, nsIClassInfo, PyMethods_IClassIn
 PyXPCOM_ATTR_INTERFACE_DECLARE(Py_nsIVariant, nsIVariant, PyMethods_IVariant)
 // deprecated, but retained for backward compatibility:
 PyXPCOM_INTERFACE_DECLARE(Py_nsIComponentManagerObsolete, nsIComponentManagerObsolete, PyMethods_IComponentManagerObsolete)
-
 #endif // __PYXPCOM_H__

@@ -51,6 +51,15 @@
 static PRInt32 cInterfaces=0;
 static PyObject *g_obFuncMakeInterfaceCount = NULL; // XXX - never released!!!
 
+PyObject *PyObject_FromNSInterface( nsISupports *aInterface,
+                                    const nsIID &iid, 
+                                    PRBool bMakeNicePyObject /*= PR_TRUE */)
+{
+	return Py_nsISupports::PyObjectFromInterface(aInterface, iid,
+	                                             PR_TRUE,
+	                                             bMakeNicePyObject);
+}
+
 PRInt32 
 _PyXPCOM_GetInterfaceCount(void)
 {
