@@ -201,7 +201,7 @@ SipAuthentication.fun(
       for (var j=0, m=authorizationHeaders.length; i<m; ++i) {
         if (authorizationHeaders[j].QueryInterface(authorizationHeaderInterface).getParameter("realm") == realm) {
           // yes. check if the nonce was stale:
-          if (unquote(header.getParameter("stale")).toLowerCase == "true") {
+          if (unquote(header.getParameter("stale")).toLowerCase() == "true") {
             // yup. remove authorization header from request and try
             // new credentials again:
             request.removeHeader(authorizationHeaders[j]);
