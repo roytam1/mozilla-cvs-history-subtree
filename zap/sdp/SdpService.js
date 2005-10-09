@@ -145,6 +145,12 @@ var REGEXP_CONNECTION = new RegExp("^([^ ]*) ([^ ]*) ([^ ]*)$");
 // Parses a media description field value into (media, port, count, proto, formats):
 var REGEXP_MEDIADESCRIPTION = new RegExp("^([^ ]*) ([^/ ]*)(?:/([^ ]*))? ([^ ]*) (.*)$");
 
+// Parses an rtpmap attribute into (payloadType, encodingName, clockRate, encodingParameters?)
+var REGEXP_RTPMAP = new RegExp("^rtpmap:(\\d+) ([^/]*)/(\\d+)(?:/(.*))?$");
+
+// Parses an fmtp attribute into (payloadType, parameters)
+var REGEXP_FMTP = new RegExp("^fmtp:(\\d+) (.*)$");
+
 //----------------------------------------------------------------------
 // Tokenizers to be applied repeatedly to input:
 
@@ -246,14 +252,6 @@ SdpKey.obj("fieldName", "k");
 
 
 ////////////////////////////////////////////////////////////////////////
-// Class SdpAttrib XXX
-
-var SdpAttrib = makeClass("SdpAttrib", SdpGenericValue);
-SdpAttrib.addInterfaces(Components.interfaces.zapISdpAttrib);
-SdpAttrib.obj("fieldName", "a");
-
-
-////////////////////////////////////////////////////////////////////////
 // Class SdpConnection
 
 var SdpConnection = makeClass("SdpConnection", 
@@ -290,22 +288,29 @@ SdpConnection.parsedAttrib("address", REGEXP_UNICAST_ADDRESS, null); //XXX add m
 
 
 ////////////////////////////////////////////////////////////////////////
-// Class SdpMediaFormat
+// Class SdpRtpAvpMediaFormat
 
-var SdpMediaFormat = makeClass("SdpMediaFormat",
+var SdpRtpAvpMediaFormat = makeClass("SdpRtpAvpMediaFormat",
                                SupportsImpl, AttributeParser);
-SdpMediaFormat.addInterfaces(Components.interfaces.zapISdpMediaFormat);
-
-SdpMediaFormat.fun(
-  function deserialize(value) {
-    this.format = value;
-  });
+SdpRtpAvpMediaFormat.addInterfaces(Components.interfaces.zapISdpRtpAvpMediaFormat);
 
 //----------------------------------------------------------------------
-// zapISdpMediaFormat implementation:
+// zapISdpRtpAvpMediaFormat implementation:
 
-// attribute ACString format;
-SdpMediaFormat.parsedAttrib("format", REGEXP_TOKEN, null);
+// attribute ACString payloadType; XXX getter/setter set encodingName, etc for static payload types.
+SdpRtpAvpMediaFormat.parsedAttrib("payloadType", REGEXP_TOKEN, null);
+
+// attribute ACString encodingName; XXX parsedAttrib?
+SdpRtpAvpMediaFormat.obj("encodingName", null);
+
+// attribute ACString clockRate; XXX parsedAttrib?
+SdpRtpAvpMediaFormat.obj("clockRate", null);
+
+// attribute ACString encodingParameters; XXX parsedAttrib?
+SdpRtpAvpMediaFormat.obj("encodingParameters", null);
+
+// attribute ACString fmtParameters; XXX parsedAttrib?
+SdpRtpAvpMediaFormat.obj("fmtParameters", null);
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -367,7 +372,18 @@ SdpFieldContainer.fun(
   });
 
 SdpFieldContainer.fun(
-  function _deserializeArray(name, arrayName, elementClass, iter, optional) {
+  function _deserializeArray(name, arrayName, iter, optional) {
+    var arr = [];
+    while (iter.current && iter.current[1] == name) {
+      arr.push(iter.current[2]);
+      iter.advance();
+    }
+    if (!optional && arr.length==0) this._error(PARSE_ERROR);
+    this[arrayName] = arr;
+  });
+
+SdpFieldContainer.fun(
+  function _deserializeObjectArray(name, arrayName, elementClass, iter, optional) {
     var arr = [];
     while (iter.current && iter.current[1] == name) {
       var elem = elementClass.instantiate();
@@ -379,52 +395,49 @@ SdpFieldContainer.fun(
   });
 
 ////////////////////////////////////////////////////////////////////////
-// Class SdpMediaDescription
+// Class SdpGenericMediaDescription
 
-var SdpMediaDescription = makeClass("SdpMediaDescription", SdpFieldContainer);
-SdpMediaDescription.addInterfaces(Components.interfaces.zapISdpMediaDescription);
+var SdpGenericMediaDescription = makeClass("SdpGenericMediaDescription",
+                                           SdpFieldContainer);
+SdpGenericMediaDescription.addInterfaces(Components.interfaces.zapISdpMediaDescription,
+                                         Components.interfaces.zapISdpGenericMediaDescription);
 
 //----------------------------------------------------------------------
 // deserialization
 
-SdpMediaDescription.fun(
-  function deserialize(iter) {
-    this._assert(iter.current[1] == "m", "not a media description!");
-
+SdpGenericMediaDescription.fun(
+  function deserialize(matches, iter) {    
     // deserialize media description field components:
-    var matches = REGEXP_MEDIADESCRIPTION(iter.current[2]);
-    if (!matches) this._error(PARSE_ERROR);
     this.media = matches[1];
     this.port = matches[2];
     this.portCount = matches[3] ? matches[3] : "";
     this.protocol = matches[4];
+    
     this._Formats = [];
     resetTokenizer(TOKENIZER_FORMATS);
     var formatVal;
     while ((formatVal = TOKENIZER_FORMATS(matches[5]))) {
-      var format = SdpMediaFormat.instantiate();
-      format.deserialize(formatVal[1]);
-      this._Formats.push(format);
+      this._Formats.push(formatVal[1]);
     }
     if (this._Formats.length == 0) this._error(PARSE_ERROR);
     iter.advance();
     
     this._deserializeField("i", "information", iter, true);
     this._deserializeObjectField("c", "connection", SdpConnection, iter, true);
-    this._deserializeArray("b", "_Bandwidths", SdpBandwidth, iter, true);
+    this._deserializeObjectArray("b", "_Bandwidths", SdpBandwidth, iter, true);
     this._deserializeObjectField("k", "key", SdpKey, iter, true);
-    this._deserializeArray("a", "_Attribs", SdpAttrib, iter, true);
+    this._deserializeArray("a", "_Attribs", iter, true);
   });
 
 //----------------------------------------------------------------------
 // zapISdpSyntaxObject implementation:
 
 // ACString serialize();
-SdpMediaDescription.fun(
+SdpGenericMediaDescription.fun(
   function serialize() {
     var rv = "";
 
-    // helper to serialize an array:
+    // helper for array serialization:
     function callSerialize(e) {
       rv += e.serialize();
     }
@@ -434,7 +447,7 @@ SdpMediaDescription.fun(
     if (this.portCount)
       rv += "/" + this.portCount;
     rv += " " + this.protocol;
-    this._Formats.forEach(function(f) { rv+=" "+f.format; });
+    this._Formats.forEach(function(f) { rv+=" "+f; });
     rv += CRLF;
 
     if (this.information) 
@@ -444,7 +457,9 @@ SdpMediaDescription.fun(
     this._Bandwidths.forEach(callSerialize);
     if (this.key)
       rv += this.key.serialize();
-    this._Attribs.forEach(callSerialize);
+    this._Attribs.forEach(function(a) {
+                            rv += "a=" + a + CRLF;
+                          });
 
     return rv;
   });
@@ -453,43 +468,223 @@ SdpMediaDescription.fun(
 // zapISdpMediaDescription implementation:
 
 // attribute ACString media;
-SdpMediaDescription.parsedAttrib("media", REGEXP_TOKEN, null);
+SdpGenericMediaDescription.parsedAttrib("media", REGEXP_TOKEN, null);
   
 // attribute ACString long port;
-SdpMediaDescription.parsedAttrib("port", REGEXP_DIGITS, null);
+SdpGenericMediaDescription.parsedAttrib("port", REGEXP_DIGITS, null);
 
 // attribute ACString portCount;
-SdpMediaDescription.parsedAttrib("portCount", REGEXP_DIGITS_OR_NOTHING, null);
+SdpGenericMediaDescription.parsedAttrib("portCount", REGEXP_DIGITS_OR_NOTHING, null);
 
 // attribute ACString protocol;
-SdpMediaDescription.parsedAttrib("protocol", REGEXP_PROTOCOL, null);
-
-// void getFormats(out unsigned long count,
-//                 [retval, array, size_is(count)] out zapISdpMediaFormat formats);
-// void setFormats([array, size_is(count)] in zapISdpMediaFormat formats,
-//                 in unsigned long count);
-SdpMediaDescription.arr("Formats");
+SdpGenericMediaDescription.parsedAttrib("protocol", REGEXP_PROTOCOL, null);
 
 // attribute ACString information;
-SdpMediaDescription.parsedAttrib("information", REGEXP_TEXT, null);
+SdpGenericMediaDescription.parsedAttrib("information", REGEXP_TEXT, null);
 
 // attribute zapISdpConnection connection;
-SdpMediaDescription.obj("connection", null);
+SdpGenericMediaDescription.obj("connection", null);
 
 // void getBandwidths(out unsigned long count,
 //                    [retval, array, size_is(count)] out zapISdpBandwidth bws);
 // void setBandwidths([array, size_is(count)] in zapISdpBandwidth bws,
 //                    in unsigned long count);
-SdpMediaDescription.arr("Bandwidths");
+SdpGenericMediaDescription.arr("Bandwidths");
 
 // attribute zapISdpKey key;
-SdpMediaDescription.obj("key", null);
+SdpGenericMediaDescription.obj("key", null);
+
+//----------------------------------------------------------------------
+// zapISdpGenericMediaDescription implementation:
+
+// void getFormats(out unsigned long count,
+//                 [retval, array, size_is(count)] out string formats);
+// void setFormats([array, size_is(count)] in string formats,
+//                 in unsigned long count);
+SdpGenericMediaDescription.arr("Formats");
 
 // void getAttribs(out unsigned long count,
-//                 [retval, array, size_is(count)] out zapISdpAttrib attribs);
-// void setAttribs([array, size_is(count)] in zapISdpAttrib attribs,
+//                 [retval, array, size_is(count)] out string attribs);
+// void setAttribs([array, size_is(count)] in string attribs,
 //                 in unsigned long count);  
-SdpMediaDescription.arr("Attribs");
+SdpGenericMediaDescription.arr("Attribs");
+
+
+////////////////////////////////////////////////////////////////////////
+// Class SdpRtpAvpMediaDescription
+
+var SdpRtpAvpMediaDescription = makeClass("SdpRtpAvpMediaDescription",
+                                          SdpFieldContainer);
+SdpRtpAvpMediaDescription.addInterfaces(Components.interfaces.zapISdpMediaDescription,
+                                        Components.interfaces.zapISdpRtpAvpMediaDescription);
+
+//----------------------------------------------------------------------
+// deserialization
+
+SdpRtpAvpMediaDescription.fun(
+  function deserialize(matches, iter) {    
+    // deserialize media description field components:
+    this.media = matches[1];
+    this.port = matches[2];
+    this.portCount = matches[3] ? matches[3] : "";
+    this.protocol = matches[4];
+
+    // a hash of format, so that we can map rtpmap and fmtp attribs
+    // into the corresponding format:
+    var format_hash = {};    
+    this._RtpAvpFormats = [];
+    
+    resetTokenizer(TOKENIZER_FORMATS);
+    var formatVal;
+    while ((formatVal = TOKENIZER_FORMATS(matches[5]))) {
+      var fmtObj = SdpRtpAvpMediaFormat.instantiate();
+      fmtObj.payloadType = formatVal[1];
+      this._RtpAvpFormats.push(fmtObj);
+      format_hash[formatVal] = fmtObj;
+    }
+    if (this._RtpAvpFormats.length == 0) this._error(PARSE_ERROR);
+    iter.advance();
+    
+    this._deserializeField("i", "information", iter, true);
+    this._deserializeObjectField("c", "connection", SdpConnection, iter, true);
+    this._deserializeObjectArray("b", "_Bandwidths", SdpBandwidth, iter, true);
+    this._deserializeObjectField("k", "key", SdpKey, iter, true);
+
+    // deserialize attribs; map onto '_AdditionalAttribs' or corresponding
+    // RtpAvpFormat for rtpmap and fmtp attribs:
+    this._AdditionalAttribs = [];
+    while (iter.current && iter.current[1] == "a") {
+      var matches;
+      var fmtObj;
+      if ((matches = REGEXP_RTPMAP(iter.current[2]))) {
+        // an rtpmap attribute
+        if ((fmtObj = format_hash[matches[1]])) {
+          fmtObj.encodingName = matches[2];
+          fmtObj.clockRate = matches[3];
+          fmtObj.encodingParameters = matches[4];
+        }
+        else {
+          this._warning("ignoring rtpmap attribute for unknown payload type "+matches[1]);
+        }
+      }
+      else if ((matches = REGEXP_FMTP(iter.current[2]))) {
+        // an fmtp attribute
+        if ((fmtObj = format_hash[matches[1]])) {
+          fmtObj.fmtParameters = matches[2];
+        }
+        else {
+          this._warning("ignoring fmtp attribute for unknown payload type "+matches[1]);
+        }
+      }
+      else {
+        // an 'additional' attribute
+        this._AdditionalAttribs.push(iter.current[2]);
+      }
+      iter.advance();
+    }
+  });
+
+//----------------------------------------------------------------------
+// zapISdpSyntaxObject implementation:
+
+// ACString serialize();
+SdpRtpAvpMediaDescription.fun(
+  function serialize() {
+    var rv = "";
+
+    // helper for array serialization:
+    function callSerialize(e) {
+      rv += e.serialize();
+    }
+    
+    // serialize media field:
+    rv += "m=" + this.media + " " + this.port;
+    if (this.portCount)
+      rv += "/" + this.portCount;
+    rv += " " + this.protocol;
+    this._RtpAvpFormats.forEach(function(f) { rv += " "+f.payloadType; });
+    rv += CRLF;
+    
+    // serialize additional media-specific lines:
+    if (this.information)
+      rv += "i=" + this.information + CRLF;
+    if (this.connection)
+      rv += this.connection.serialize();
+    this._Bandwidths.forEach(callSerialize);
+    if (this.key)
+      rv += this.key.serialize();
+    this._AdditionalAttribs.forEach(callSerialize);
+
+    // serialize format-specific attributes (rtpmap, fmtp):
+    this._RtpAvpFormats.forEach(
+      function(f) {
+        // rtpmap attribute
+        if (f.encodingName) {
+          rv += "a=rtpmap:" + f.payloadType + " " +
+            f.encodingName + "/" + f.clockRate;
+          if (f.encodingParameters)
+            rv += "/" + f.encodingParameters;
+          rv += CRLF;
+        }
+        // fmtp attribute
+        if (f.fmtParameters) {
+          rv += "a=fmtp:" + f.payloadType + " " +
+            f.fmtParameters + CRLF;
+        }
+      });
+    
+    return rv;    
+  });
+
+//----------------------------------------------------------------------
+// zapISdpMediaDescription implementation:
+
+// attribute ACString media;
+SdpRtpAvpMediaDescription.parsedAttrib("media", REGEXP_TOKEN, null);
+  
+// attribute ACString long port;
+SdpRtpAvpMediaDescription.parsedAttrib("port", REGEXP_DIGITS, null);
+
+// attribute ACString portCount;
+SdpRtpAvpMediaDescription.parsedAttrib("portCount", REGEXP_DIGITS_OR_NOTHING, null);
+
+// attribute ACString protocol;
+SdpRtpAvpMediaDescription.parsedAttrib("protocol", REGEXP_PROTOCOL, null);
+
+// attribute ACString information;
+SdpRtpAvpMediaDescription.parsedAttrib("information", REGEXP_TEXT, null);
+
+// attribute zapISdpConnection connection;
+SdpRtpAvpMediaDescription.obj("connection", null);
+
+// void getBandwidths(out unsigned long count,
+//                    [retval, array, size_is(count)] out zapISdpBandwidth bws);
+// void setBandwidths([array, size_is(count)] in zapISdpBandwidth bws,
+//                    in unsigned long count);
+SdpRtpAvpMediaDescription.arr("Bandwidths");
+
+// attribute zapISdpKey key;
+SdpRtpAvpMediaDescription.obj("key", null);
+
+//----------------------------------------------------------------------
+// zapISdpRtpAvpMediaDescription implementation:
+
+// void getRtpAvpFormats(out unsigned long count,
+//                       [retval, array, size_is(count)] out
+//                       zapISdpRtpAvpMediaFormat formats);
+// void setRtpAvpFormats([array, size_is(count)] in
+//                       zapISdpRtpAvpMediaFormat formats,
+//                       in unsigned long count);
+SdpRtpAvpMediaDescription.arr("RtpAvpFormats");
+
+// void getAdditionalAttribs(out unsigned long count,
+//                           [retval, array, size_is(count)] out
+//                           string attribs);
+// void setAdditionalAttribs([array, size_is(count)] in
+//                           string attribs,
+//                           in unsigned long count);
+SdpRtpAvpMediaDescription.arr("AdditionalAttribs");
+
 
 ////////////////////////////////////////////////////////////////////////
 // Class SdpSessionDescription
@@ -530,16 +725,31 @@ SdpSessionDescription.fun(
     this._deserializeField("s", "sessionName", iter);
     this._deserializeField("i", "information", iter, true);
     this._deserializeField("u", "uri", iter, true);
-    this._deserializeArray("e", "_EmailAddresses", SdpEmailAddress, iter, true);
-    this._deserializeArray("p", "_PhoneNumbers", SdpPhoneNumber, iter, true);
+    this._deserializeObjectArray("e", "_EmailAddresses", SdpEmailAddress, iter, true);
+    this._deserializeObjectArray("p", "_PhoneNumbers", SdpPhoneNumber, iter, true);
     this._deserializeObjectField("c", "connection", SdpConnection, iter, true);
-    this._deserializeArray("b", "_Bandwidths", SdpBandwidth, iter, true);
+    this._deserializeObjectArray("b", "_Bandwidths", SdpBandwidth, iter, true);
     // XXX this won't parse 'r' fields yet:
-    this._deserializeArray("t", "_Times", SdpTime, iter);
+    this._deserializeObjectArray("t", "_Times", SdpTime, iter);
     this._deserializeObjectField("z", "zoneAdjustments", SdpZoneAdjustments, iter, true);
     this._deserializeObjectField("k", "key", SdpKey, iter, true);
-    this._deserializeArray("a", "_Attribs", SdpAttrib, iter, true);
-    this._deserializeArray("m", "_MediaDescriptions", SdpMediaDescription, iter, true);
+    this._deserializeArray("a", "_Attribs", iter, true);
+
+    // deserialize media descriptions:
+    while (iter.current && iter.current[1] == "m") {
+      var m_matches = REGEXP_MEDIADESCRIPTION(iter.current[2]);
+      if (!m_matches) this._error(PARSE_ERROR);
+      
+      var md;
+      if (m_matches[4] == "RTP/AVP")
+        md = SdpRtpAvpMediaDescription.instantiate();
+      else
+        md = SdpGenericMediaDescription.instantiate();
+      
+      md.deserialize(m_matches, iter);
+      this._MediaDescriptions.push(md);
+    }
+
   });
 
 //----------------------------------------------------------------------
@@ -576,7 +786,9 @@ SdpSessionDescription.fun(
       rv += this.zoneAdjustments.serialize();
     if (this.key)
       rv += this.key.serialize();
-    this._Attribs.forEach(callSerialize);
+    this._Attribs.forEach(function(a) {
+                            rv += "a=" + a + CRLF;
+                          });
     this._MediaDescriptions.forEach(callSerialize);
 
     return rv;
@@ -649,9 +861,9 @@ SdpSessionDescription.obj("zoneAdjustments", null);
 SdpSessionDescription.obj("key", null);
   
 // void getAttribs(out unsigned long count,
-//                 [retval, array, size_is(count)] out zapISdpAttrib attribs);
+//                 [retval, array, size_is(count)] out string attribs);
 
-// void setAttribs([array, size_is(count)] in zapISdpAttrib attribs,
+// void setAttribs([array, size_is(count)] in string attribs,
 //                 in unsigned long count);
 SdpSessionDescription.arr("Attribs");
 
@@ -692,16 +904,16 @@ SdpService.fun(
     return SdpConnection.instantiate();
   });
 
-// zapISdpMediaDescription createMediaDescription();
+// zapISdpGenericMediaDescription createGenericMediaDescription();
 SdpService.fun(
-  function createMediaDescription() {
-    return SdpMediaDescription.instantiate();
+  function createGenericMediaDescription() {
+    return SdpGenericMediaDescription.instantiate();
   });
 
-// zapISdpAttrib createAttrib();
+// zapISdpRtpAvpMediaDescription createRtpAvpMediaDescription();
 SdpService.fun(
-  function createAttrib() {
-    return SdpAttrib.instantiate();
+  function createRtpAvpMediaDescription() {
+    return SdpRtpAvpMediaDescription.instantiate();
   });
 
 // zapISdpTime createTime();
@@ -710,10 +922,44 @@ SdpService.fun(
     return SdpTime.instantiate();
   });
 
-// zapISdpMediaFormat createMediaFormat();
+//  zapISdpRtpAvpMediaFormat createRtpAvpMediaFormat();
 SdpService.fun(
-  function createMediaFormat() {
-    return SdpMediaFormat.instantiate();
+  function createRtpAvpMediaFormat() {
+    return SdpRtpAvpMediaFormat.instantiate();
+  });
+
+// zapISdpSessionDescription formulateSDPOffer(in ACString originUsername,
+//                                             in ACString originAddress,
+//                                             in ACString connectionAddress,
+//                                             [array, size_is(count)] in
+//                                             zapISdpMediaDescription streams,
+//                                             in unsigned long count);
+SdpService.fun(
+  function formulateSDPOffer(originUsername, originAddress,
+                             connectionAddress, streams, count) {
+    var offer = this.createSessionDescription();
+    // o=
+    offer.username = originUsername;
+    offer.sessionID = "0";
+    offer.sessionVersion = "0";
+    offer.originAddressType = "IP4";
+    offer.originAddress = originAddress;
+    // s=
+    offer.sessionName = " ";
+    // c=
+    if (connectionAddress) {
+      offer.connection = this.createConnection();
+      offer.connection.addressType = "IP4";
+      offer.connection.address = connectionAddress;
+    }
+    // t=
+    var time = this.createTime();
+    time.value = "0 0";
+    offer.setTimes([time], 1);
+    // media streams (m=, etc):
+    offer.setMediaDescriptions(streams, count);
+
+    return offer;
   });
 
 //----------------------------------------------------------------------

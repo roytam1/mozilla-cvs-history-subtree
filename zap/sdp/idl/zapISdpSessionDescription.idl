@@ -41,7 +41,6 @@ interface zapISdpPhoneNumber;
 interface zapISdpBandwidth;
 interface zapISdpTime;
 interface zapISdpKey;
-interface zapISdpAttrib;
 interface zapISdpMediaDescription;
 interface zapISdpZoneAdjustments;
 interface zapISdpConnection;
@@ -158,12 +157,12 @@ interface zapISdpSessionDescription : zapISdpSyntaxObject
   //@}
 
   /**
-   * \name optional attribute (a=) fields:
+   * \name optional session-level attribute (a=) fields:
    */
   //@{
   void getAttribs(out unsigned long count,
-                  [retval, array, size_is(count)] out zapISdpAttrib attribs);
-  void setAttribs([array, size_is(count)] in zapISdpAttrib attribs,
+                  [retval, array, size_is(count)] out string attribs);
+  void setAttribs([array, size_is(count)] in string attribs,
                   in unsigned long count);
   //@}
 

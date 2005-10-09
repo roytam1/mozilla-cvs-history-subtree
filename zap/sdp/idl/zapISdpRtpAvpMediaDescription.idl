@@ -34,14 +34,44 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
+#include "zapISdpMediaDescription.idl"
+
+interface zapISdpRtpAvpMediaFormat;
 
 /**
  * \ingroup SDP_MODULE
+ * \nosubgrouping
+ * An RTP/AVP (protocol=="RTP/AVP") media description
+ * (m= and follow-on lines) with automatic application of default
+ * mappings as described in RFC3551.
+ *
  */
-[scriptable, uuid(4000b2bf-b35c-4236-af67-4a4875be7841)]
-interface zapISdpMediaFormat : nsISupports
+[scriptable, uuid(4f1f24f1-cf97-434e-b663-7bb0795275ac)]
+interface zapISdpRtpAvpMediaDescription : zapISdpMediaDescription
 {
-  attribute ACString format;
+  /**
+   * \name media (m=) format fields
+   */
+  //@{
+  void getRtpAvpFormats(out unsigned long count,
+                        [retval, array, size_is(count)] out
+                        zapISdpRtpAvpMediaFormat formats);
+  void setRtpAvpFormats([array, size_is(count)] in
+                        zapISdpRtpAvpMediaFormat formats,
+                        in unsigned long count);
+  //@}
+  
+  /**
+   * \name optional additional media-level attributes (a=):
+   * (rtpmap & fmtp are mapped into zapIMediaRtpAvpMediaFormat and mustn't
+   * be set as additional attribs)
+   */
+  //@{
+  void getAdditionalAttribs(out unsigned long count,
+                            [retval, array, size_is(count)] out
+                            string attribs);
+  void setAdditionalAttribs([array, size_is(count)] in
+                            string attribs,
+                            in unsigned long count);
+  //@}
 };
-

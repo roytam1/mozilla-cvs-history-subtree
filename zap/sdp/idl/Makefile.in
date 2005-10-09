@@ -17,9 +17,10 @@ XPIDLSRCS = \
 	zapISdpBandwidth.idl \
 	zapISdpTime.idl \
 	zapISdpKey.idl \
-	zapISdpAttrib.idl \
 	zapISdpMediaDescription.idl \
-	zapISdpMediaFormat.idl \
+	zapISdpGenericMediaDescription.idl \
+	zapISdpRtpAvpMediaDescription.idl \
+	zapISdpRtpAvpMediaFormat.idl \
 	zapISdpZoneAdjustments.idl \
 	zapISdpGenericValue.idl \
 	zapISdpConnection.idl \

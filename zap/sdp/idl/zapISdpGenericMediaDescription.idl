@@ -34,13 +34,33 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "zapISdpGenericValue.idl"
+#include "zapISdpMediaDescription.idl"
 
 /**
  * \ingroup SDP_MODULE
+ * \nosubgrouping
+ * A generic media description (m= and follow-on lines)
  */
-[scriptable, uuid(e6186818-4809-4d45-aa9b-d86f93f90503)]
-interface zapISdpAttrib : zapISdpGenericValue
+[scriptable, uuid(e1f9372d-0e87-45b4-a515-e34c7cfa0c41)]
+interface zapISdpGenericMediaDescription : zapISdpMediaDescription
 {
-  // TO BE IMPLEMENTED
+  /**
+   * \name media (m=) format fields
+   */
+  //@{
+  void getFormats(out unsigned long count,
+                  [retval, array, size_is(count)] out string formats);
+  void setFormats([array, size_is(count)] in string formats,
+                  in unsigned long count);
+  //@}
+  
+  /**
+   * \name optional media-level attributes (a=):
+   */
+  //@{
+  void getAttribs(out unsigned long count,
+                  [retval, array, size_is(count)] out string attribs);
+  void setAttribs([array, size_is(count)] in string attribs,
+                  in unsigned long count);
+  //@}
 };

@@ -38,9 +38,10 @@
 
 interface zapISdpSessionDescription;
 interface zapISdpMediaDescription;
-interface zapISdpAttrib;
+interface zapISdpGenericMediaDescription;
+interface zapISdpRtpAvpMediaDescription;
 interface zapISdpTime;
-interface zapISdpMediaFormat;
+interface zapISdpRtpAvpMediaFormat;
 interface zapISdpConnection;
 
 /**
@@ -51,20 +52,35 @@ interface zapISdpConnection;
  *
  * - <b>RFC2327</b>: SDP: Session Description Protocol
  * - <b>RFC3264</b>: SDP Offer/Answer Model
+ *
+ * The main entry point into the \ref SDP_MODULE is the zapISdpService
+ * interface.
  */
 
 /**
  * \ingroup SDP_MODULE
- * SDP parsing service
+ * SDP parsing and negotiation service
+ *
  * Implemented by Component 5de0fd79-a03e-4640-ab99-186f5c66f5bb
  * ("@mozilla.org/zap/sdpservice;1")
+ *
  */
 [scriptable, uuid(a4cb8b11-e2d4-4486-b190-4c1f818a0450)]
 interface zapISdpService : nsISupports
 {
   /**
    * Deserialize an rfc2327 session description into a
-   * zapISdpSessionDescription object
+   * zapISdpSessionDescription object.
+   *
+   * RTP/AVP media descriptions will be parsed into
+   * zapISdpRtpAvpMediaDescription objects; other media protocol types will be
+   * parsed into zapISdpGenericMediaDescription objects.
+   *
+   * zapISdpRtpAvpMediaFormat objects with static encoding mappings as
+   * given in RFC3551 table 4, but without corresponding rtpmap
+   * attribute in the source SDP, will have the rtpmap values
+   * (encodingName, clockRate, encodingParameters) filled in
+   * automatically.
    */
   zapISdpSessionDescription deserializeSessionDescription(in ACString octets);
 
@@ -79,22 +95,34 @@ interface zapISdpService : nsISupports
   zapISdpConnection createConnection();
   
   /**
-   * Create a blank media description object
+   * Create a blank generic media description object
    */
-  zapISdpMediaDescription createMediaDescription();
+  zapISdpGenericMediaDescription createGenericMediaDescription();
 
   /**
-   * Create a blank attribute field object
+   * Create a blank RTP/AVP media description object
    */
-  zapISdpAttrib createAttrib();
-
+  zapISdpRtpAvpMediaDescription createRtpAvpMediaDescription();
+  
   /**
    * Create a blank time object
    */
   zapISdpTime createTime();
 
   /**
-   * Create a blank media format object
+   * Create a blank RTP/AVP media format object
    */
-  zapISdpMediaFormat createMediaFormat();
+  zapISdpRtpAvpMediaFormat createRtpAvpMediaFormat();
+
+  /**
+   * Formulate an SDP offer compliant to RFC3264.
+   *
+   * If connectionAddress is empty, no 'c=' field will be added.
+   */
+  zapISdpSessionDescription formulateSDPOffer(in ACString originUsername,
+                                              in ACString originAddress,
+                                              in ACString connectionAddress,
+                                              [array, size_is(count)] in
+                                              zapISdpMediaDescription streams,
+                                              in unsigned long count);
 };

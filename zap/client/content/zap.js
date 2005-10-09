@@ -111,8 +111,7 @@ function windowInit() {
   initContacts();
   initCalls();
   initSidebar();
-    
-  // initialize sip stack:
+  wMediaPipeline.init();
   initSipStack();
 
   // set the current location:
@@ -131,7 +130,8 @@ function windowInit() {
 
 function windowClose() {
   cleanupSipStack();
-
+  wMediaPipeline.cleanup();
+  
   // close error log:
   wErrorLog.close();
   wErrorLog = null;
@@ -773,6 +773,45 @@ function sidebarSelectionChange()
     wInteractPane.setAttribute("src", page);
   else
     wInteractPane.webNavigation.reload(0);
+}
+
+////////////////////////////////////////////////////////////////////////
+// MediaPipeline
+
+var PB = makePropertyBag;
+
+var wMediaPipeline = {
+  init : function() {
+    try {
+      // We use getService() instead of createInstance() to get a globally
+      // well-known media graph instance:
+      this.mediagraph = Components.classes["@mozilla.org/zap/mediagraph;1"].getService(Components.interfaces.zapIMediaGraph);
+
+      // 8000Hz, 20ms, 1 channel audio pipe:      
+      this.audioin = this.mediagraph.addNode("audioin", null);
+      this.asplitter = this.mediagraph.addNode("splitter", null);
+      this.audioout = this.mediagraph.addNode("audioout", null);
+      this.amixer = this.mediagraph.addNode("audio-mixer", null);
+      this.A = this.mediagraph.connect(this.audioin, null,
+                                       this.asplitter, null);
+      this.B = this.mediagraph.connect(this.amixer, null,
+                                       this.audioout, null);
+      this.mediagraph.setAlias("ain", this.asplitter);
+      this.mediagraph.setAlias("aout", this.amixer);
+    }
+    catch(e) {
+      dump("Error during media pipeline initialization: "+e+"\n");
+    }
+  },
+  
+  cleanup: function() {
+    try {
+      this.mediagraph.shutdown();
+    }
+    catch(e) {}
+    delete this.mediagraph;
+  }
+  
 }
 
 ////////////////////////////////////////////////////////////////////////
