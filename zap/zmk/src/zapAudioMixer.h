@@ -69,7 +69,7 @@ public:
 private:
   friend class zapAudioMixerInput;
 
-  void FrameAvailable(zapAudioMixerInput* input);
+  void FrameAvailable();
   void Mix();
   
   // zapAudioMixerInput inputs (weak references):

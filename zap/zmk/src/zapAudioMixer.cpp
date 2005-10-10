@@ -86,6 +86,11 @@ zapAudioMixerInput::~zapAudioMixerInput()
 #endif
   // clean up references:
   mMixer->mInputs.RemoveElement(this);
+
+  // make sure mixer gets EOF frame if this was the last input:
+  if (!mMixer->mInputs.Count())
+    mMixer->FrameAvailable();
+  
   mMixer = nsnull;
 }
 
@@ -147,7 +152,7 @@ zapAudioMixerInput::ProcessFrame(zapIMediaFrame *frame)
   else
     mActive = PR_FALSE;
   
-  mMixer->FrameAvailable(this);
+  mMixer->FrameAvailable();
   return NS_OK;
 }
 
@@ -157,7 +162,7 @@ void zapAudioMixerInput::RequestFrame()
 {
   if (mWaiting) return;
   if (mFrame) {
-    mMixer->FrameAvailable(this);
+    mMixer->FrameAvailable();
     return;
   }
 
@@ -350,7 +355,7 @@ zapAudioMixer::RequestFrame()
 
 //----------------------------------------------------------------------
 
-void zapAudioMixer::FrameAvailable(zapAudioMixerInput* input)
+void zapAudioMixer::FrameAvailable()
 {
   mFramesAvailable = PR_TRUE;
   if (mWaiting) {
@@ -360,6 +365,9 @@ void zapAudioMixer::FrameAvailable(zapAudioMixerInput* input)
 
 void zapAudioMixer::Mix()
 {
+  mWaiting = PR_FALSE;
+  mFramesAvailable = PR_FALSE;
+  
   nsCString outdata;
   outdata.SetLength(GetZapAudioSampleSize(sf_float32_32768) * mSamplesPerFrame);
   float* d = (float*)outdata.BeginWriting();
@@ -382,7 +390,12 @@ void zapAudioMixer::Mix()
 
   if (activeInputs == 0) {
     // EOF
-    mOutput->ProcessFrame(nsnull);
+    if (mOutput) {
+#ifdef DEBUG
+      printf("(mixer->EOF)");
+#endif
+      mOutput->ProcessFrame(nsnull);
+    }
     return;
   }
   
@@ -391,7 +404,7 @@ void zapAudioMixer::Mix()
     float scalefactor = 1.0f / sqrt((float)activeInputs);
     for (int sp=0; sp < mSamplesPerFrame; ++sp) {
       d[sp] *= scalefactor;
-    }
+      }
   }
   
   zapMediaFrame* frame = new zapMediaFrame();
@@ -404,7 +417,4 @@ void zapAudioMixer::Mix()
   if (mOutput)
     mOutput->ProcessFrame(frame);
   frame->Release();
-
-  mWaiting = PR_FALSE;
-  mFramesAvailable = PR_FALSE;
 }
