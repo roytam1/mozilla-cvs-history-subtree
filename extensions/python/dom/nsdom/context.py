@@ -69,17 +69,16 @@ class WrappedNative(Component):
         try:
             Component.__setattr__(self, attr, value)
         except AttributeError:
-            # Set it as an 'expando'
+            # Set it as an 'expando'.  It looks like we should delegate *all*
+            # to the outside object.
             logger.debug("%s set expando property %r=%r for object %r",
                          self, attr, value, self._comobj_)
             # and register if an event.
             if attr.startswith("on"):
                 # I'm quite confused by this :(
                 target = self._comobj_
-                print "target was", target
                 if _nsdom.IsOuterWindow(target):
                     target = _nsdom.GetCurrentInnerWindow(target)
-                print "target now", target
                 go = self._context_.globalObject
                 scope = self._context_.GetNativeGlobal()
                 if callable(value):
@@ -106,10 +105,8 @@ class WrappedNative(Component):
 class WrappedNativeGlobal(WrappedNative):
     # Special support for our global.
     def __repr__(self):
-        return "<GlobalWindow (outer=%s)>" % _nsdom.IsOuterWindow(self._comobj_)
-
-    
-    pass
+        return "<GlobalWindow (outer=%s) %r>" % (_nsdom.IsOuterWindow(self._comobj_),
+                                                 self._comobj_)
 
 class ScriptContext:
     def __init__(self):
@@ -244,6 +241,8 @@ class ScriptContext:
         # new globals
         f = new.function(handler.func_code, globs, handler.func_name)
         args = tuple(self._fixArg(argv))
+        # We support having less args declared than supplied, a-la JS.
+        args = args[:handler.func_code.co_argcount]
         return f(*args)
 
     def BindCompiledEventHandler(self, target, scope, name, handler):
@@ -269,7 +268,8 @@ class ScriptContext:
         try:
             return ns[name]
         except KeyError:
-            logger.info("Event handler %s not found in my namespace - checking scope")
+            logger.info("Event handler %s not found in my namespace - checking scope",
+                        name)
             return scope[name]
 
     def SetProperty(self, target, name, value):
