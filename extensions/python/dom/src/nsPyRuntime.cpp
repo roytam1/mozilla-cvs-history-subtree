@@ -263,8 +263,21 @@ static PyObject *PyGetCurrentInnerWindow(PyObject *self, PyObject *args)
                 PR_FALSE, PR_FALSE))
         return NULL;
 
-    return PyObject_FromNSInterface(target->GetCurrentInnerWindow(),
-                                    NS_GET_IID(nsISupports), PR_FALSE);
+    // Use the script global object to fetch the context.
+    nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(target));
+    if (!sgo)
+        return PyErr_Format(PyExc_ValueError, "Object does not supports nsIScriptGlobalObject");
+    nsIScriptContext *ctx = sgo->GetLanguageContext(nsIProgrammingLanguage::PYTHON);
+    if (!ctx)
+        return PyErr_Format(PyExc_ValueError, "Object not initialized for Python");
+
+    nsCOMPtr<nsIScriptGlobalObject> innerGlobal(
+               do_QueryInterface(target->GetCurrentInnerWindow()));
+    if (!innerGlobal)
+        return PyErr_Format(PyExc_ValueError, "Result object does not supports nsIScriptGlobalObject");
+    nsPythonContext *pyctx = (nsPythonContext *)ctx;
+    return pyctx->PyObject_FromInterface(innerGlobal,
+                                         NS_GET_IID(nsIScriptGlobalObject));
 }
 /***
 static PyObject *PyGetScriptContext(PyObject *self, PyObject *args)

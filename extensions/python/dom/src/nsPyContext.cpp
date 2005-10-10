@@ -45,6 +45,7 @@
 #include "nsString.h"
 #include "nsGUIEvent.h"
 
+#include "nsPyDOM.h"
 #include "nsPyContext.h"
 #include "compile.h"
 #include "eval.h"
@@ -78,8 +79,8 @@ AtomToEventHandlerName(nsIAtom *aName)
 
 nsPythonContext::nsPythonContext() :
     mIsInitialized(PR_FALSE),
-    mScriptGlobal(nsnull),
     mOwner(nsnull),
+    mScriptGlobal(nsnull),
     mScriptsEnabled(PR_TRUE),
     mProcessingScriptTag(PR_FALSE),
     mDelegate(NULL)
@@ -585,7 +586,7 @@ nsPythonContext::Deserialize(nsIObjectInputStream* aStream, void **aResult)
   rv = aStream->ReadBytes(nBytes, &data);
   if (NS_FAILED(rv)) return rv;
 
-  if (magic != PyImport_GetMagicNumber()) {
+  if (magic != (PRUint32)PyImport_GetMagicNumber()) {
     NS_WARNING("Python has different marshal version");
     if (data)
       nsMemory::Free(data);
@@ -720,26 +721,29 @@ nsPythonContext::ScriptEvaluated(PRBool aTerminated)
 }
 
 void
+nsPythonContext::FinalizeContext()
+{
+  ;
+}
+
+void
 nsPythonContext::GC()
 {
   ;
 }
 
-nsresult
-nsPythonContext::FinalizeClasses(void *aGlobalObj)
+void
+nsPythonContext::FinalizeClasses(void *aGlobalObj, PRBool aWhatever)
 {
-  NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
-
-  NS_ASSERTION(mDelegate, "Script context has no delegate");
-  NS_ENSURE_TRUE(mDelegate, NS_ERROR_UNEXPECTED);
-
   CEnterLeavePython _celp;
-  PyObject *ret = PyObject_CallMethod(mDelegate, "FinalizeClasses",
-                                      "O",
-                                      aGlobalObj);
-  Py_XDECREF(ret);
+  if (mDelegate) {
+    PyObject *ret = PyObject_CallMethod(mDelegate, "FinalizeClasses",
+                                        "O",
+                                        aGlobalObj);
+    Py_XDECREF(ret);
+  }
   mScriptGlobal = nsnull;
-  return HandlePythonError();
+  HandlePythonError();
 }
 
 NS_IMETHODIMP

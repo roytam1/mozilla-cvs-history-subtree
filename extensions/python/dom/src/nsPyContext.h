@@ -166,6 +166,7 @@ public:
   virtual void *GetNativeGlobal();
   virtual nsresult InitContext(nsIScriptGlobalObject *aGlobalObject);
   virtual PRBool IsContextInitialized();
+  virtual void FinalizeContext();
   virtual void GC();
 
   virtual void ScriptEvaluated(PRBool aTerminated);
@@ -185,7 +186,7 @@ public:
   virtual void SetGCOnDestruction(PRBool aGCOnDestruction) {;}
 
   virtual nsresult InitClasses(void *aGlobalObj);
-  virtual nsresult FinalizeClasses(void* aGlobalObj);
+  virtual void FinalizeClasses(void* aGlobalObj, PRBool aWhatever);
 
   virtual void WillInitializeContext();
   virtual void DidInitializeContext();
@@ -194,6 +195,12 @@ public:
   virtual nsresult Deserialize(nsIObjectInputStream* aStream, void **aResult);
 
   NS_DECL_NSITIMERCALLBACK
+  
+  PyObject *PyObject_FromInterface(nsISupports *target,
+                                   const nsIID &iid)
+  {
+    return ::PyObject_FromNSDOMInterface(mDelegate, target, iid);
+  }
 protected:
 
   // covert utf-16 source code into utf8 with normalized line endings.

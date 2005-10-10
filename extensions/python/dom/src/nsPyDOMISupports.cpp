@@ -85,17 +85,36 @@ protected:
 };
 
 
-PyObject *PyObject_FromNSDOMInterface(PyObject *pycontext, nsISupports *pis,
+PyObject *PyObject_FromNSDOMInterface(PyObject *pycontext, nsISupports *pisOrig,
                                       const nsIID &iid, /* = nsISupports */
                                       PRBool bMakeNicePyObject /* = PR_TRUE */)
 {
-	if (pis==NULL) {
+	if (pisOrig==NULL) {
 		Py_INCREF(Py_None);
 		return Py_None;
 	}
 
+	nsCOMPtr<nsISupports> pis;
+	// The default here is nsISupports as many callers don't really know
+	// the real interface.  Explicitly query for ISupports.
+	if (iid.Equals(NS_GET_IID(nsISupports))) {
+		pis = do_QueryInterface(pisOrig);
+		if (!pis) {
+			static const char *err = "Object failed QI for nsISupports!";
+			NS_ERROR(err);
+			PyErr_SetString(PyExc_RuntimeError, err);
+			return NULL;
+		}
+	} else
+		pis = pisOrig;
+#ifdef NS_DEBUG
+	nsISupports *queryResult = nsnull;
+	pis->QueryInterface(iid, (void **)&queryResult);
+	NS_ASSERTION(queryResult == pis, "QueryInterface needed");
+	NS_IF_RELEASE(queryResult);
+#endif
+
 	Py_DOMnsISupports *ret = new Py_DOMnsISupports(pycontext, pis, iid);
-	pis->AddRef();
 	if (ret && bMakeNicePyObject)
 		return Py_DOMnsISupports::MakeDefaultWrapper(pycontext, ret, iid);
 	return ret;
