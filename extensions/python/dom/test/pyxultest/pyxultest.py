@@ -57,8 +57,9 @@ def on_but_dialog_click():
     #print "The new window is", new
 
 def run_tests():
+    # I wish I could reach into the window and get all tests!
     tests = """test_error_explicit test_error_explicit_string
-                test_error_eventhandler""".split()
+                test_error_eventhandler test_wrong_event_args""".split()
     keep_open = this.document.getElementById("keep_tests_open").getAttribute("checked")
     for test in tests:
         write("Running test %s" % test)

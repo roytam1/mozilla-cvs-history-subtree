@@ -31,6 +31,11 @@ def cause_error():
 def handle_error_with_cancel(errMsg, source, lineno):
     success()
 
+# This is set as an event handler, but it has the wrong number of args.  It
+# should still work, a-la js.
+def handle_error_wrong_args(event):
+    success()
+
 def test_error_explicit():
     "Test an explicit assignment of a function object to onerror"
     # Assign a function to an onerror attribute
@@ -43,6 +48,13 @@ def test_error_explicit_string():
     # Assign a string to an onerror attribute
     write("Assigning a string to window.onerror")
     window.onerror = "handle_error_with_cancel(event, source, lineno)"
+    cause_error()
+
+def test_wrong_event_args():
+    "Test an error handler with too few args"
+    # Assign a string to an onerror attribute
+    write("Assigning a function taking only 1 arg to window.onerror")
+    window.onerror = handle_error_wrong_args
     cause_error()
 
 class EventListener:
