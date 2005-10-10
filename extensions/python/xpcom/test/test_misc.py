@@ -41,6 +41,7 @@ import xpcom.server
 import xpcom._xpcom
 import xpcom.components
 import string
+from pyxpcom_test_tools import testmain
 
 import unittest
 
@@ -224,9 +225,4 @@ class TestUnwrap(unittest.TestCase):
         self.failUnlessRaises(ValueError, xpcom.server.UnwrapObject, ob)
 
 if __name__=='__main__':
-    unittest.main()
-    xpcom._xpcom.NS_ShutdownXPCOM()
-    ni = xpcom._xpcom._GetInterfaceCount()
-    ng = xpcom._xpcom._GetGatewayCount()
-    if ni or ng:
-        print "********* WARNING - Leaving with %d/%d objects alive" % (ni,ng)
+    testmain()

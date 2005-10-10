@@ -43,6 +43,7 @@
 from xpcom import components
 from xpcom import primitives
 import xpcom.server, xpcom.client
+from pyxpcom_test_tools import testmain
 import unittest
 
 class NoSupportsString:
@@ -203,4 +204,4 @@ class PrimitivesModuleTestCase(unittest.TestCase):
         self.failUnlessEqual(primitives.GetPrimitive(ob), 99.99)
 
 if __name__=='__main__':
-    unittest.main()
+    testmain()

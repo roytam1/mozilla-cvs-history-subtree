@@ -38,6 +38,7 @@
 
 from xpcom import components, nsError, ServerException, COMException, logger
 from xpcom.server import WrapObject
+from pyxpcom_test_tools import testmain
 
 import unittest
 import logging
@@ -120,4 +121,4 @@ class ExceptionTests(unittest.TestCase):
         self._testit(nsError.NS_ERROR_FAILURE, 1, ob.do_unsigned_long_long, 0, 0)
 
 if __name__=='__main__':
-    unittest.main()
+    testmain()
