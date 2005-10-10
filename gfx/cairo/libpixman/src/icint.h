@@ -35,6 +35,9 @@
 
 #include "slim_internal.h"
 
+/* Include NSPR's prcpucfg.h for endianness information */
+#include "prcpucfg.h"
+
 #ifndef __GNUC__
 #define __inline
 #endif
@@ -108,7 +111,7 @@ typedef pixman_triangle_t	xTriangle;
 #define LSBFirst 0
 #define MSBFirst 1
 
-#ifdef WORDS_BIGENDIAN
+#if defined(WORDS_BIGENDIAN) || defined(IS_BIG_ENDIAN)
 #  define IMAGE_BYTE_ORDER MSBFirst
 #  define BITMAP_BIT_ORDER MSBFirst
 #else
