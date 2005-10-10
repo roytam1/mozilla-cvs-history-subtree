@@ -275,8 +275,18 @@ PyG_Base::MakeInterfaceParam(nsISupports *pis,
 	PyObject *result = NULL;
 
 	// get the basic interface first, as if we fail, we can try and use this.
-	nsIID iid_check = piid ? *piid : NS_GET_IID(nsISupports);
-	obISupports = Py_nsISupports::PyObjectFromInterface(pis, iid_check, PR_TRUE, PR_FALSE);
+	// If we don't know the IID, we must explicitly query for nsISupports.
+	nsCOMPtr<nsISupports> piswrap;
+	nsIID iid_check;
+	if (piid) {
+		iid_check = *piid;
+		piswrap = pis;
+	} else {
+		iid_check = NS_GET_IID(nsISupports);
+		pis->QueryInterface(iid_check, getter_AddRefs(piswrap));
+	}
+
+	obISupports = Py_nsISupports::PyObjectFromInterface(piswrap, iid_check, PR_FALSE);
 	if (!obISupports)
 		goto done;
 	if (piid==NULL) {
@@ -350,7 +360,11 @@ PyG_Base::QueryInterface(REFNSIID iid, void** ppv)
 		CEnterLeavePython celp;
 
 		PyObject * ob = Py_nsIID::PyObjectFromIID(iid);
-		PyObject * this_interface_ob = Py_nsISupports::PyObjectFromInterface((nsIInternalPython *)this, NS_GET_IID(nsISupports), PR_TRUE, PR_FALSE);
+		// must say this is an 'internal' call, else we recurse QI into
+		// oblivion.
+		PyObject * this_interface_ob = Py_nsISupports::PyObjectFromInterface(
+		                                       (nsXPTCStubBase *)this,
+		                                       iid, PR_FALSE, PR_TRUE);
 		if ( !ob || !this_interface_ob) {
 			Py_XDECREF(ob);
 			Py_XDECREF(this_interface_ob);
@@ -359,7 +373,7 @@ PyG_Base::QueryInterface(REFNSIID iid, void** ppv)
 
 		PyObject *result = PyObject_CallMethod(m_pPyObject, "_QueryInterface_",
 		                                                    "OO", 
-								    this_interface_ob, ob);
+		                                                    this_interface_ob, ob);
 		Py_DECREF(ob);
 		Py_DECREF(this_interface_ob);
 
@@ -808,12 +822,11 @@ void AddDefaultGateway(PyObject *instance, nsISupports *gateway)
 		NS_ABORT_IF_FALSE(swr, "Our gateway failed with a weak reference query");
 		// Create the new default gateway - get a weak reference for our gateway.
 		if (swr) {
-			nsIWeakReference *pWeakReference = NULL;
-			swr->GetWeakReference( &pWeakReference );
+			nsCOMPtr<nsIWeakReference> pWeakReference;
+			swr->GetWeakReference( getter_AddRefs(pWeakReference) );
 			if (pWeakReference) {
 				PyObject *ob_new_weak = Py_nsISupports::PyObjectFromInterface(pWeakReference, 
 										   NS_GET_IID(nsIWeakReference),
-										   PR_FALSE, /* bAddRef */
 										   PR_FALSE ); /* bMakeNicePyObject */
 				// pWeakReference reference consumed.
 				if (ob_new_weak) {

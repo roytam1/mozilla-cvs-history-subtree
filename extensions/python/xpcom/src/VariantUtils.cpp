@@ -646,14 +646,11 @@ static PRUint16 BestVariantTypeForPyObject( PyObject *ob, BVFTResult *pdata = NU
 	return (PRUint16)-1;
 }
 
-nsIVariant *PyObject_AsVariant( PyObject *ob)
+nsresult PyObject_AsVariant( PyObject *ob, nsIVariant **aRet)
 {
-	nsresult nr = NS_ERROR_UNEXPECTED;
-	nsCOMPtr<nsIWritableVariant> v = do_CreateInstance("@mozilla.org/variant;1", &nr); 
-	if (NS_FAILED(nr)) {
-		PyXPCOM_BuildPyException(nr);
-		return NULL;
-	}
+	nsresult nr = NS_OK;
+	nsCOMPtr<nsIWritableVariant> v = do_CreateInstance("@mozilla.org/variant;1", &nr);
+	NS_ENSURE_SUCCESS(nr, nr);
 	// *sigh* - I tried the abstract API (PyNumber_Check, etc)
 	// but our COM instances too often qualify.
 	BVFTResult cvt_result;
@@ -682,6 +679,7 @@ nsIVariant *PyObject_AsVariant( PyObject *ob)
 				PRUint32 nch;
 				PRUnichar *p;
 				if (PyUnicode_AsPRUnichar(ob, &p, &nch) < 0) {
+					PyXPCOM_LogWarning("Failed to convert object to unicode", ob->ob_type->tp_name);
 					nr = NS_ERROR_UNEXPECTED;
 					break;
 				}
@@ -719,8 +717,7 @@ nsIVariant *PyObject_AsVariant( PyObject *ob)
 			int cb_buffer_pointer = seq_length * element_size;
 			void *buffer_pointer;
 			if ((buffer_pointer = (void *)nsMemory::Alloc(cb_buffer_pointer)) == nsnull) {
-				PyErr_NoMemory();
-				nr = NS_ERROR_UNEXPECTED;
+				nr = NS_ERROR_OUT_OF_MEMORY;
 				break;
 			}
 			memset(buffer_pointer, 0, cb_buffer_pointer);
@@ -733,22 +730,22 @@ nsIVariant *PyObject_AsVariant( PyObject *ob)
 			break;
 		}
 		case nsIDataType::VTYPE_EMPTY:
-			v->SetAsEmpty();
+			nr = v->SetAsEmpty();
 			break;
 		case nsIDataType::VTYPE_EMPTY_ARRAY:
-			v->SetAsEmptyArray();
+			nr = v->SetAsEmptyArray();
 			break;
 		case (PRUint16)-1:
-			PyErr_Format(PyExc_TypeError, "Objects of type '%s' can not be converted to an nsIVariant", ob->ob_type->tp_name);
-			return NULL;
+			PyXPCOM_LogWarning("Objects of type '%s' can not be converted to an nsIVariant", ob->ob_type->tp_name);
+			nr = NS_ERROR_UNEXPECTED;
 		default:
 			NS_ABORT_IF_FALSE(0, "BestVariantTypeForPyObject() returned a variant type not handled here!");
-			PyErr_Format(PyExc_TypeError, "Objects of type '%s' can not be converted to an nsIVariant", ob->ob_type->tp_name);
-			return NULL;
+			PyXPCOM_LogWarning("Objects of type '%s' can not be converted to an nsIVariant", ob->ob_type->tp_name);
+			nr = NS_ERROR_UNEXPECTED;
 	}
-	nsIVariant *ret;
-	v->QueryInterface(NS_GET_IID(nsIVariant), (void **)&ret);
-	return ret;
+	if (NS_FAILED(nr))
+		return nr;
+	return v->QueryInterface(NS_GET_IID(nsIVariant), (void **)aRet);
 }
 
 static PyObject *MyBool_FromBool(PRBool v)

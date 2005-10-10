@@ -81,10 +81,10 @@ PyXPCOMMethod_NS_GetGlobalComponentManager(PyObject *self, PyObject *args)
 	       return NULL;
 	if (!PyArg_ParseTuple(args, ""))
 		return NULL;
-	nsIComponentManager* cm;
+	nsCOMPtr<nsIComponentManager> cm;
 	nsresult rv;
 	Py_BEGIN_ALLOW_THREADS;
-	rv = NS_GetComponentManager(&cm);
+	rv = NS_GetComponentManager(getter_AddRefs(cm));
 	Py_END_ALLOW_THREADS;
 	if ( NS_FAILED(rv) )
 		return PyXPCOM_BuildPyException(rv);
@@ -93,7 +93,7 @@ PyXPCOMMethod_NS_GetGlobalComponentManager(PyObject *self, PyObject *args)
 	if ( NS_FAILED(rv) )
 		return PyXPCOM_BuildPyException(rv);
 
-	return Py_nsISupports::PyObjectFromInterface(cm, NS_GET_IID(nsIComponentManagerObsolete), PR_FALSE, PR_FALSE);
+	return Py_nsISupports::PyObjectFromInterface(ocm, NS_GET_IID(nsIComponentManagerObsolete), PR_FALSE);
 }
 
 static PyObject *
@@ -101,15 +101,15 @@ PyXPCOMMethod_GetComponentManager(PyObject *self, PyObject *args)
 {
 	if (!PyArg_ParseTuple(args, ""))
 		return NULL;
-	nsIComponentManager* cm;
+	nsCOMPtr<nsIComponentManager> cm;
 	nsresult rv;
 	Py_BEGIN_ALLOW_THREADS;
-	rv = NS_GetComponentManager(&cm);
+	rv = NS_GetComponentManager(getter_AddRefs(cm));
 	Py_END_ALLOW_THREADS;
 	if ( NS_FAILED(rv) )
 		return PyXPCOM_BuildPyException(rv);
 
-	return Py_nsISupports::PyObjectFromInterface(cm, NS_GET_IID(nsIComponentManager), PR_FALSE, PR_FALSE);
+	return Py_nsISupports::PyObjectFromInterface(cm, NS_GET_IID(nsIComponentManager), PR_FALSE);
 }
 
 // No xpcom callable way to get at the registrar, even though the interface
@@ -119,15 +119,15 @@ PyXPCOMMethod_GetComponentRegistrar(PyObject *self, PyObject *args)
 {
 	if (!PyArg_ParseTuple(args, ""))
 		return NULL;
-	nsIComponentRegistrar* cm;
+	nsCOMPtr<nsIComponentRegistrar> cm;
 	nsresult rv;
 	Py_BEGIN_ALLOW_THREADS;
-	rv = NS_GetComponentRegistrar(&cm);
+	rv = NS_GetComponentRegistrar(getter_AddRefs(cm));
 	Py_END_ALLOW_THREADS;
 	if ( NS_FAILED(rv) )
 		return PyXPCOM_BuildPyException(rv);
 
-	return Py_nsISupports::PyObjectFromInterface(cm, NS_GET_IID(nsISupports), PR_FALSE, PR_FALSE);
+	return Py_nsISupports::PyObjectFromInterface(cm, NS_GET_IID(nsISupports), PR_FALSE);
 }
 
 static PyObject *
@@ -135,16 +135,16 @@ PyXPCOMMethod_GetServiceManager(PyObject *self, PyObject *args)
 {
 	if (!PyArg_ParseTuple(args, ""))
 		return NULL;
-	nsIServiceManager* sm;
+	nsCOMPtr<nsIServiceManager> sm;
 	nsresult rv;
 	Py_BEGIN_ALLOW_THREADS;
-	rv = NS_GetServiceManager(&sm);
+	rv = NS_GetServiceManager(getter_AddRefs(sm));
 	Py_END_ALLOW_THREADS;
 	if ( NS_FAILED(rv) )
 		return PyXPCOM_BuildPyException(rv);
 
 	// Return a type based on the IID.
-	return Py_nsISupports::PyObjectFromInterface(sm, NS_GET_IID(nsIServiceManager), PR_FALSE);
+	return Py_nsISupports::PyObjectFromInterface(sm, NS_GET_IID(nsIServiceManager));
 }
 
 /* deprecated, included for backward compatibility */
@@ -172,7 +172,9 @@ PyXPCOMMethod_XPTI_GetInterfaceInfoManager(PyObject *self, PyObject *args)
 	/* Return a type based on the IID (with no extra ref) */
 	// Can not auto-wrap the interface info manager as it is critical to
 	// building the support we need for autowrap.
-	return Py_nsISupports::PyObjectFromInterface(im, NS_GET_IID(nsIInterfaceInfoManager), PR_FALSE, PR_FALSE);
+	PyObject *ret = Py_nsISupports::PyObjectFromInterface(im, NS_GET_IID(nsIInterfaceInfoManager), PR_FALSE);
+	NS_IF_RELEASE(im);
+	return ret;
 }
 
 static PyObject *
@@ -234,8 +236,8 @@ PyXPCOMMethod_WrapObject(PyObject *self, PyObject *args)
 	if (!Py_nsIID::IIDFromPyObject(obIID, &iid))
 		return NULL;
 
-	nsISupports *ret = NULL;
-	nsresult r = PyXPCOM_XPTStub::CreateNew(ob, iid, (void **)&ret);
+	nsCOMPtr<nsISupports> ret;
+	nsresult r = PyXPCOM_XPTStub::CreateNew(ob, iid, getter_AddRefs(ret));
 	if ( NS_FAILED(r) )
 		return PyXPCOM_BuildPyException(r);
 
@@ -244,7 +246,7 @@ PyXPCOMMethod_WrapObject(PyObject *self, PyObject *args)
 	AddDefaultGateway(ob, ret); // inject a weak reference to myself into the instance.
 
 	// Now wrap it in an interface.
-	return Py_nsISupports::PyObjectFromInterface(ret, iid, PR_FALSE, bWrapClient);
+	return Py_nsISupports::PyObjectFromInterface(ret, iid, bWrapClient);
 }
 
 static PyObject *
@@ -345,7 +347,7 @@ PyXPCOMMethod_GetProxyForObject(PyObject *self, PyObject *args)
 	}
 
 	nsresult rv_proxy;
-	nsISupports *presult = nsnull;
+	nsCOMPtr<nsISupports> presult;
 	Py_BEGIN_ALLOW_THREADS;
 	nsCOMPtr<nsIProxyObjectManager> proxyMgr = 
 	         do_GetService(kProxyObjectManagerCID, &rv_proxy);
@@ -355,7 +357,7 @@ PyXPCOMMethod_GetProxyForObject(PyObject *self, PyObject *args)
 				iid,
 				pob,
 				flags,
-				(void **)&presult);
+				getter_AddRefs(presult));
 	}
 	if (pQueueRelease)
 		pQueueRelease->Release();
@@ -363,7 +365,7 @@ PyXPCOMMethod_GetProxyForObject(PyObject *self, PyObject *args)
 
 	PyObject *result;
 	if (NS_SUCCEEDED(rv_proxy) ) {
-		result = Py_nsISupports::PyObjectFromInterface(presult, iid, PR_FALSE);
+		result = Py_nsISupports::PyObjectFromInterface(presult, iid);
 	} else {
 		result = PyXPCOM_BuildPyException(rv_proxy);
 	}
@@ -376,10 +378,15 @@ PyXPCOMMethod_MakeVariant(PyObject *self, PyObject *args)
 	PyObject *ob;
 	if (!PyArg_ParseTuple(args, "O:MakeVariant", &ob))
 		return NULL;
-	nsIVariant *pVar = PyObject_AsVariant(ob);
-	if (pVar == nsnull)
+	nsCOMPtr<nsIVariant> pVar;
+	nsresult nr = PyObject_AsVariant(ob, getter_AddRefs(pVar));
+	if (NS_FAILED(nr))
+		return PyXPCOM_BuildPyException(nr);
+	if (pVar == nsnull) {
+		NS_ERROR("PyObject_AsVariant worked but returned a NULL ptr!");
 		return PyXPCOM_BuildPyException(NS_ERROR_UNEXPECTED);
-	return Py_nsISupports::PyObjectFromInterface(pVar, NS_GET_IID(nsIVariant), PR_FALSE);
+	}
+	return Py_nsISupports::PyObjectFromInterface(pVar, NS_GET_IID(nsIVariant));
 }
 
 PyObject *PyGetSpecialDirectory(PyObject *self, PyObject *args)
@@ -387,12 +394,12 @@ PyObject *PyGetSpecialDirectory(PyObject *self, PyObject *args)
 	char *dirname;
 	if (!PyArg_ParseTuple(args, "s:GetSpecialDirectory", &dirname))
 		return NULL;
-	nsIFile *file = NULL;
-	nsresult r = NS_GetSpecialDirectory(dirname, &file);
+	nsCOMPtr<nsIFile> file;
+	nsresult r = NS_GetSpecialDirectory(dirname, getter_AddRefs(file));
 	if ( NS_FAILED(r) )
 		return PyXPCOM_BuildPyException(r);
 	// returned object swallows our reference.
-	return Py_nsISupports::PyObjectFromInterface(file, NS_GET_IID(nsIFile), PR_FALSE);
+	return Py_nsISupports::PyObjectFromInterface(file, NS_GET_IID(nsIFile));
 }
 
 PyObject *AllocateBuffer(PyObject *self, PyObject *args)

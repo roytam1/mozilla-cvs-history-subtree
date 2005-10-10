@@ -150,9 +150,9 @@ nsresult PyXPCOM_NSGetModule(nsIComponentManager *servMgr,
 	if (!mod) goto done;
 	func = PyObject_GetAttrString(mod, "NS_GetModule");
 	if (func==NULL) goto done;
-	obServMgr = Py_nsISupports::PyObjectFromInterface(servMgr, NS_GET_IID(nsIComponentManager), PR_TRUE);
+	obServMgr = Py_nsISupports::PyObjectFromInterface(servMgr, NS_GET_IID(nsIComponentManager));
 	if (obServMgr==NULL) goto done;
-	obLocation = Py_nsISupports::PyObjectFromInterface(location, NS_GET_IID(nsIFile), PR_TRUE);
+	obLocation = Py_nsISupports::PyObjectFromInterface(location, NS_GET_IID(nsIFile));
 	if (obLocation==NULL) goto done;
 	args = Py_BuildValue("OO", obServMgr, obLocation);
 	if (args==NULL) goto done;

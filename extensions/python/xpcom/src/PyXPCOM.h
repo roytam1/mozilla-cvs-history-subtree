@@ -163,7 +163,7 @@ PYXPCOM_EXPORT PyObject *PyObject_FromNSString( const PRUnichar *s,
 PYXPCOM_EXPORT PRBool PyObject_AsNSString( PyObject *ob, nsAString &aStr);
 
 // Variants.
-PYXPCOM_EXPORT nsIVariant *PyObject_AsVariant( PyObject *ob);
+PYXPCOM_EXPORT nsresult PyObject_AsVariant( PyObject *ob, nsIVariant **aRet);
 PYXPCOM_EXPORT PyObject *PyObject_FromVariant( Py_nsISupports *parent,
                                                nsIVariant *v);
 
@@ -236,26 +236,24 @@ public:
 	}
 	// Get the nsISupports interface from the PyObject WITH NO REF COUNT ADDED
 	static nsISupports *GetI(PyObject *self, nsIID *ret_iid = NULL);
-	nsISupports *m_obj;
+	nsCOMPtr<nsISupports> m_obj;
 	nsIID m_iid;
 
 	// Given an nsISupports and an Interface ID, create and return an object
 	// Does not QI the object - the caller must ensure the nsISupports object
-	// is really a pointer to an object identified by the IID.
-	// PRBool bAddRef indicates if a COM reference count should be added to the interface.
-	//  This depends purely on the context in which it is called.  If the interface is obtained
-	//  from a function that creates a new ref (eg, ???) then you should use
-	//  FALSE.  If you receive the pointer as (eg) a param to a gateway function, then
-	//  you normally need to pass TRUE, as this is truly a new reference.
-	//  *** ALWAYS take the time to get this right. ***
+	// is really a pointer to an object identified by the IID (although
+	// debug builds should check this)
 	// PRBool bMakeNicePyObject indicates if we should call back into
 	//  Python to wrap the object.  This allows Python code to
 	//  see the correct xpcom.client.Interface object even when calling
-	//  xpcom function directly.
+	//  xpcom functions directly from C++.
+	// NOTE: There used to be a bAddRef param to this as an internal
+	// optimization, but  since removed.  This function *always* takes a
+	// reference to the nsISupports.
 	static PyObject *PyObjectFromInterface(nsISupports *ps, 
 	                                       const nsIID &iid, 
-	                                       PRBool bAddRef,
-	                                       PRBool bMakeNicePyObject = PR_TRUE);
+	                                       PRBool bMakeNicePyObject = PR_TRUE,
+	                                       PRBool bIsInternalCall = PR_FALSE);
 
 	// Given a Python object that is a registered COM type, return a given
 	// interface pointer on its underlying object, with a NEW REFERENCE ADDED.
@@ -300,8 +298,7 @@ public:
 	// ps is a new object just obtained from some operation performed on us
 	virtual PyObject *MakeInterfaceResult(nsISupports *ps, const nsIID &iid,
 	                                      PRBool bMakeNicePyObject = PR_TRUE) {
-		// PRBool bAddRef is bogus and too error prone - drop it!
-		return PyObjectFromInterface(ps, iid, PR_TRUE, bMakeNicePyObject);
+		return PyObjectFromInterface(ps, iid, bMakeNicePyObject);
 	}
 
 protected:
