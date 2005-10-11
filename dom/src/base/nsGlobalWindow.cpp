@@ -52,7 +52,6 @@
 #include "nsXPIDLString.h"
 #include "nsJSUtils.h"
 #include "prmem.h"
-#include "jsdbgapi.h"           // for JS_ClearWatchPointsForObject
 #include "nsReadableUtils.h"
 #include "nsDOMClassInfo.h"
 
@@ -420,7 +419,7 @@ nsGlobalWindow::ClearControllers()
 }
 
 void
-nsGlobalWindow::FreeInnerObjects(JSContext *cx)
+nsGlobalWindow::FreeInnerObjects(nsIScriptContext *scx)
 {
   NS_ASSERTION(IsInnerWindow(), "Don't free inner objects on an outer window");
 
@@ -444,12 +443,9 @@ nsGlobalWindow::FreeInnerObjects(JSContext *cx)
   // Remove our reference to the document and the document principal.
   mDocument = nsnull;
 
-  if (mJSObject && cx) {
-    ::JS_ClearScope(cx, mJSObject);
-    ::JS_ClearWatchPointsForObject(cx, mJSObject);
-
-    nsWindowSH::InvalidateGlobalScopePolluter(cx, mJSObject);
-  }
+  if (scx)
+    scx->FinalizeClasses(mLanguageGlobals[NS_SL_INDEX(scx->GetLanguage())],
+                         PR_TRUE);
 }
 
 //*****************************************************************************
@@ -567,9 +563,12 @@ nsGlobalWindow::EnsureScriptEnvironment(PRUint32 aLangID)
   // If we have arguments, tell the new language about it.
   nsGlobalWindow *currentInner = GetCurrentInnerWindowInternal();
   if (currentInner) {
-    // Copy the outer global to the inner (what is the right thing here?
+    // Copy the outer global to the inner 
     // Ask the inner for a new one?
     // XXXmarkh - memory management issue??  Tell context of copy?
+    // XXXmarkh - this is a hack.  We need to formalize some of the
+    // SetNewDocument tricks (InitClassesWithNewWrappedGlobal, get/set
+    // prototypes for inner and outer), and do that dance here.
     currentInner->mLanguageGlobals[lang_ndx] = mLanguageGlobals[lang_ndx];
     if (mArgumentsLast != nsnull) {
       context->SetProperty(currentInner->mLanguageGlobals[lang_ndx],
@@ -877,7 +876,7 @@ WindowStateHolder::~WindowStateHolder()
       return;
     }
 
-    mInnerWindow->FreeInnerObjects(cx);
+    mInnerWindow->FreeInnerObjects(GetScriptContextFromJSContext(cx));
 
     if (mLocation) {
       // Don't leave the weak reference to the docshell lying around.
@@ -1080,12 +1079,13 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
     // initialize the new inner window. If we don't, things
     // (Object.prototype etc) could leak from the old outer to the new
     // inner scope.
-    ::JS_ClearScope(cx, mJSObject);
-    ::JS_ClearWatchPointsForObject(cx, mJSObject);
-
-    // Clear the regexp statics for the new page unconditionally.
-    // XXX They don't get restored on the inner window when we go back.
-    ::JS_ClearRegExpStatics(cx);
+    PRUint32 lang_id;
+    NS_SL_FOR_ID(lang_id) {
+      nsIScriptContext *langContext = GetLanguageContextInternal(lang_id);
+      if (langContext)
+        langContext->FinalizeClasses(mLanguageGlobals[NS_SL_INDEX(lang_id)],
+                                     PR_FALSE);
+    }
 
     if (reUseInnerWindow) {
       // We're reusing the current inner window.
@@ -1151,6 +1151,8 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
 
         NS_ENSURE_SUCCESS(rv, rv);
 
+        // setup the language global for each language we are using.
+        // xxxmarkh - what to do here?
         mInnerWindowHolder->GetJSObject(&newInnerWindow->mJSObject);
         // ack - this sucks :(
         newInnerWindow->mLanguageGlobals[NS_SL_INDEX(nsIProgrammingLanguage::JAVASCRIPT)] = newInnerWindow->mJSObject;
@@ -1201,9 +1203,9 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
         // Don't clear scope on our current inner window if it's going to be
         // held in the bfcache.
         if (!currentInner->IsFrozen()) {
+          // xxxmarkh - 'termfunc' still js impl specific...
           if (!termFuncSet) {
-            ::JS_ClearScope(cx, currentInner->mJSObject);
-            ::JS_ClearWatchPointsForObject(cx, currentInner->mJSObject);
+            scx->FinalizeClasses(currentInner->mJSObject, PR_FALSE);
           }
 
           // Make the current inner window release its strong references
@@ -1240,6 +1242,7 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
       // Now that both the the inner and outer windows are initialized
       // we can clear the outer scope again to make *all* properties
       // forward to the inner window.
+      // xxxmarkh - tell other languages about this and the re-init code below!
       ::JS_ClearScope(cx, mJSObject);
 
       // Make the inner and outer window both share the same
@@ -1365,20 +1368,25 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
   if (aDocShell == mDocShell)
     return;
 
+  PRUint32 lang_id;
+  nsIScriptContext *langCtx;
   // SetDocShell(nsnull) means the window is being torn down. Drop our
   // reference to the script context, allowing it to be deleted
   // later. Meanwhile, keep our weak reference to the script object
   // (mJSObject) so that it can be retrieved later (until it is
   // finalized by the JS GC).
 
-  if (!aDocShell && mContext) {
+  if (!aDocShell) {
     NS_ASSERTION(!mTimeouts, "Uh, outer window holds timeouts!");
 
-    JSContext *cx = (JSContext *)mContext->GetNativeContext();
     nsGlobalWindow *currentInner = GetCurrentInnerWindowInternal();
 
     if (currentInner) {
-      currentInner->FreeInnerObjects(cx);
+      NS_SL_FOR_ID(lang_id) {
+        langCtx = mLanguageContexts[NS_SL_INDEX(lang_id)];
+        if (langCtx)
+          currentInner->FreeInnerObjects(langCtx);
+      }
 
       nsCOMPtr<nsIDocument> doc =
         do_QueryInterface(mDocument);
@@ -1389,17 +1397,14 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
       // Release our document reference
       mDocument = nsnull;
 
-      if (mJSObject) {
-        ::JS_ClearScope(cx, mJSObject);
-        ::JS_ClearWatchPointsForObject(cx, mJSObject);
-
-        // An outer window shouldn't have a global scope polluter, but
-        // in case code on a webpage took one and put it in an outer
-        // object's prototype, we need to invalidate it nonetheless.
-        nsWindowSH::InvalidateGlobalScopePolluter(cx, mJSObject);
+      // clear all scopes
+      NS_SL_FOR_ID(lang_id) {
+        langCtx = mLanguageContexts[NS_SL_INDEX(lang_id)];
+        if (langCtx)
+          langCtx->FinalizeClasses(
+                        currentInner->mLanguageGlobals[NS_SL_INDEX(lang_id)],
+                        PR_TRUE);
       }
-
-      ::JS_ClearRegExpStatics(cx);
     }
 
     // if we are closing the window while in full screen mode, be sure
@@ -1428,25 +1433,31 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
       // We got no new document after someone called
       // SetNewArguments(), drop our reference to the arguments.
       mArguments = nsnull;
+      // xxxmarkh - should we also drop mArgumentsLast?
     }
 
     mInnerWindowHolder = nsnull;
 
-    mContext->GC();
+    // Tell each context to cleanup.
+    NS_SL_FOR_ID(lang_id) {
+      langCtx = currentInner->mLanguageContexts[NS_SL_INDEX(lang_id)];
+      if (langCtx)
+        langCtx->GC();
+    }
 
     // force release of all script contexts now.
     NS_ASSERTION(mContext == mLanguageContexts[NS_SL_INDEX(nsIProgrammingLanguage::JAVASCRIPT)],
                  "Contexts confused");
+    PRUint32 lang_ndx;
     NS_SL_FOR_INDEX(lang_ndx) {
-      if (mLanguageContexts[lang_ndx]) {
-        mLanguageContexts[lang_ndx]->SetOwner(nsnull);
+      langCtx = mLanguageContexts[lang_ndx];
+      if (langCtx) {
+        langCtx->SetOwner(nsnull);
+        langCtx->FinalizeContext();
         mLanguageContexts[lang_ndx] = nsnull;
       }
     }
-    // js already had SetOwner called above - but we still have this extra ref.
-    // This sucks too!
-    if (mContext)
-      mContext = nsnull;
+    mContext = nsnull; // we nuked it above also
   }
 
   mDocShell = aDocShell;        // Weak Reference
@@ -1724,9 +1735,11 @@ nsGlobalWindow::HandleDOMEvent(nsPresContext* aPresContext, nsEvent* aEvent,
 void
 nsGlobalWindow::OnFinalize()
 {
+  PRUint32 lang_ndx;
   NS_SL_FOR_INDEX(lang_ndx) {
     if (mLanguageContexts[lang_ndx]) {
-      mLanguageContexts[lang_ndx]->FinalizeClasses(mLanguageGlobals[lang_ndx]);
+      mLanguageContexts[lang_ndx]->FinalizeClasses(mLanguageGlobals[lang_ndx],
+                                                   PR_FALSE);
       // xxxmarkh - should be no need to reset mLanguageContexts[] as it is an
       // array of nsCOMPtrs.  I'll delete it once I have found the leaks I am
       // tracking!
@@ -1770,6 +1783,7 @@ nsGlobalWindow::SetNewArguments(nsIArray *aArguments)
 
   // todo: work out the best way to get this to *all* contexts?
   if (currentInner) {
+    PRUint32 langID;
     NS_SL_FOR_ID(langID) {
       void *glob = currentInner->GetLanguageGlobal(langID);
       nsIScriptContext *ctx = GetLanguageContext(langID);
@@ -5901,19 +5915,11 @@ void
 nsGlobalWindow::ClearWindowScope(nsISupports *aWindow)
 {
   nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(aWindow));
-
-  nsIScriptContext *scx = sgo->GetContext();
-  // XXXmarkh - delegate to all languages.
-  if (scx) {
-    JSContext *cx = (JSContext *)scx->GetNativeContext();
-    JSObject *global = sgo->GetGlobalJSObject();
-
-    if (global) {
-      ::JS_ClearScope(cx, global);
-      ::JS_ClearWatchPointsForObject(cx, global);
-    }
-
-    ::JS_ClearRegExpStatics(cx);
+  PRUint32 lang_id;
+  NS_SL_FOR_ID(lang_id) {
+    nsIScriptContext *scx = sgo->GetLanguageContext(lang_id);
+    void *global = sgo->GetLanguageGlobal(lang_id);
+    scx->FinalizeClasses(global, PR_FALSE);
   }
 }
 

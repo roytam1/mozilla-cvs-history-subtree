@@ -121,8 +121,8 @@ protected:
 
     nsIScriptGlobalObjectOwner* mGlobalObjectOwner; // weak reference
 
-    nsCOMPtr<nsIScriptContext>  mLanguageContexts[nsIProgrammingLanguage::MAX];
-    void *                      mLanguageGlobals[nsIProgrammingLanguage::MAX];
+    nsCOMPtr<nsIScriptContext>  mLanguageContexts[NS_SL_ARRAY_UBOUND];
+    void *                      mLanguageGlobals[NS_SL_ARRAY_UBOUND];
 
     static JSClass gSharedGlobalClass;
 };
@@ -816,10 +816,10 @@ nsXULPDGlobalObject::SetLanguageContext(PRUint32 lang_id, nsIScriptContext *aScr
   // almost a clone of nsGlobalWindow
   nsresult rv;
 
-  PRBool ok = lang_id > nsIProgrammingLanguage::UNKNOWN && lang_id <= nsIProgrammingLanguage::MAX;
+  PRBool ok = NS_SL_VALID(lang_id);
   NS_ASSERTION(ok, "Invalid programming language ID requested");
   NS_ENSURE_TRUE(ok, NS_ERROR_INVALID_ARG);
-  PRUint32 lang_ndx = lang_id - 1;
+  PRUint32 lang_ndx = NS_SL_INDEX(lang_id);
 
   if (!aScriptContext)
     NS_WARNING("Possibly early removal of script object, see bug #41608");
@@ -853,11 +853,10 @@ nsXULPDGlobalObject::SetLanguageContext(PRUint32 lang_id, nsIScriptContext *aScr
 nsresult
 nsXULPDGlobalObject::EnsureScriptEnvironment(PRUint32 lang_id)
 {
-  // All languages are stored in table, indexed by language-1
-  PRBool ok = lang_id > nsIProgrammingLanguage::UNKNOWN && lang_id <= nsIProgrammingLanguage::MAX;
+  PRBool ok = NS_SL_VALID(lang_id);
   NS_ASSERTION(ok, "Invalid programming language ID requested");
   NS_ENSURE_TRUE(ok, NS_ERROR_INVALID_ARG);
-  PRUint32 lang_ndx = lang_id - 1;
+  PRUint32 lang_ndx = NS_SL_INDEX(lang_id);
 
   if (mLanguageContexts[lang_ndx] == nsnull) {
     nsresult rv;
@@ -905,17 +904,16 @@ nsXULPDGlobalObject::GetLanguageContext(PRUint32 lang_id)
     return nsnull;
   }
   // Note that EnsureScriptEnvironment has validated lang_id
-  return mLanguageContexts[lang_id-1];
+  return mLanguageContexts[NS_SL_INDEX(lang_id)];
 }
 
 void *
 nsXULPDGlobalObject::GetLanguageGlobal(PRUint32 lang_id)
 {
-  // All languages are stored in table, indexed by language-1
-  PRBool ok = lang_id > nsIProgrammingLanguage::UNKNOWN && lang_id <= nsIProgrammingLanguage::MAX;
+  PRBool ok = NS_SL_VALID(lang_id);
   NS_ASSERTION(ok, "Invalid programming language ID requested");
   NS_ENSURE_TRUE(ok, nsnull);
-  PRUint32 lang_ndx = lang_id - 1;
+  PRUint32 lang_ndx = NS_SL_INDEX(lang_id);
 
   NS_ASSERTION(mLanguageContexts[lang_ndx] != nsnull, "Querying for global before setting up context?");
   return mLanguageGlobals[lang_ndx];
@@ -984,16 +982,20 @@ nsXULPDGlobalObject::HandleDOMEvent(nsPresContext* aPresContext,
 void
 nsXULPDGlobalObject::OnFinalize()
 {
-  for (PRUint32 lang_ndx=0;lang_ndx < nsIProgrammingLanguage::MAX; lang_ndx++) {
-    if (mLanguageContexts[lang_ndx])
-      mLanguageContexts[lang_ndx]->FinalizeClasses(mLanguageGlobals[lang_ndx]);
-    else
-      NS_ASSERTION(mLanguageGlobals[lang_ndx] == nsnull,
-                   "OnFinalize has a global without matching context!");
-    mLanguageContexts[lang_ndx] = nsnull;
-    mLanguageGlobals[lang_ndx] = nsnull;
-  }
-  SetGlobalObjectOwner(nsnull);
+    PRUint32 lang_ndx;
+    NS_SL_FOR_INDEX(lang_ndx) {
+        nsIScriptContext *ctx = mLanguageContexts[lang_ndx];
+        if (ctx) {
+            // xxxmarkh - FinalizeClasses necessary/correct?
+            ctx->FinalizeClasses(mLanguageGlobals[lang_ndx], PR_TRUE);
+            ctx->FinalizeContext();
+        } else
+            NS_ASSERTION(mLanguageGlobals[lang_ndx] == nsnull,
+                         "OnFinalize has a global without matching context!");
+        mLanguageContexts[lang_ndx] = nsnull;
+        mLanguageGlobals[lang_ndx] = nsnull;
+    }
+    SetGlobalObjectOwner(nsnull);
 }
 
 void

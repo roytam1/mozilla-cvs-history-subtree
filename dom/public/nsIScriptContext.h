@@ -292,6 +292,11 @@ public:
   virtual PRBool IsContextInitialized() = 0;
 
   /**
+   * Called as the global object discards its reference to the context.
+   */
+  virtual void FinalizeContext() = 0;
+
+  /**
    * For garbage collected systems, do a synchronous collection pass.
    * May be a no-op on other systems
    *
@@ -376,9 +381,12 @@ public:
   virtual nsresult InitClasses(void *aGlobalObj) = 0;
 
   /**
-   * Finalize script objects on aGlobalObj
+   * Finalize the scope.
+   * XXXmarkh - aClearPolluter is quite likely bogus - just that some places
+   * that did a finalize did not call InvalidateGlobalScopePolluter.  It
+   * seems likely this param should be dropped and that fn always called.
    */
-  virtual nsresult FinalizeClasses(void* aGlobalObj) = 0;
+  virtual void FinalizeClasses(void* aGlobalObj, PRBool aClearPolluter) = 0;
 
   /**
    * Tell the context we're about to be reinitialize it.

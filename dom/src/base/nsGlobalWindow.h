@@ -261,6 +261,16 @@ public:
     return mContext;
   }
 
+  nsIScriptContext *GetLanguageContextInternal(PRUint32 aLangID)
+  {
+    NS_ASSERTION(NS_SL_VALID(aLangID), "Invalid language");
+    if (mOuterWindow) {
+      return GetOuterWindowInternal()->mLanguageContexts[NS_SL_INDEX(aLangID)];
+    }
+
+    return mLanguageContexts[NS_SL_INDEX(aLangID)];
+  }
+
   nsGlobalWindow *GetOuterWindowInternal()
   {
     return NS_STATIC_CAST(nsGlobalWindow *, GetOuterWindow());
@@ -296,7 +306,7 @@ protected:
   void CleanUp();
   void ClearControllers();
 
-  void FreeInnerObjects(JSContext *cx);
+  void FreeInnerObjects(nsIScriptContext *cx);
 
   nsresult SetNewDocument(nsIDOMDocument *aDocument,
                           nsISupports *aState,

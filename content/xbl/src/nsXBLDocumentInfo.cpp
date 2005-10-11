@@ -366,7 +366,8 @@ nsXBLDocGlobalObject::OnFinalize()
   NS_ASSERTION(mJSObject && mScriptContext, 
                "OnFinalize called multiple times or before init?");
   if (mScriptContext) {
-    mScriptContext->FinalizeClasses(mJSObject);
+    mScriptContext->FinalizeClasses(mJSObject, PR_TRUE);
+    mScriptContext->FinalizeContext();
     mScriptContext = nsnull;
   }
   mJSObject = nsnull;

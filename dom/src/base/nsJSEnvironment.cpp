@@ -94,6 +94,8 @@
 #include "nsICollation.h"
 #include "nsCollationCID.h"
 
+#include "jsdbgapi.h"           // for JS_ClearWatchPointsForObject
+
 #ifdef NS_DEBUG
 #include "jsgc.h"       // for WAY_TOO_MUCH_GC, if defined for GC debugging
 #endif
@@ -2588,11 +2590,20 @@ nsJSContext::InitClasses(void *aGlobalObj)
   return rv;
 }
 
-nsresult
-nsJSContext::FinalizeClasses(void *aGlobalObj)
+void
+nsJSContext::FinalizeClasses(void *aGlobalObj, PRBool aClearPolluter)
 {
-  // nothing to do here!
-  return NS_OK;
+  if (aGlobalObj) {
+    JSObject *obj = (JSObject *)aGlobalObj;
+    ::JS_ClearScope(mContext, obj);
+    ::JS_ClearWatchPointsForObject(mContext, obj);
+
+    // xxxmarkh: aClearPolluter is bogus???
+    if (aClearPolluter)
+        nsWindowSH::InvalidateGlobalScopePolluter(mContext, obj);
+  }
+  ::JS_ClearRegExpStatics(mContext);
+
 }
 
 void
@@ -2611,6 +2622,12 @@ PRBool
 nsJSContext::IsContextInitialized()
 {
   return mIsInitialized;
+}
+
+void
+nsJSContext::FinalizeContext()
+{
+    ;
 }
 
 void
@@ -3085,7 +3102,7 @@ NS_DECL_CLASSINFO(nsJSArgArray)
 NS_INTERFACE_MAP_BEGIN(nsJSArgArray)
   NS_INTERFACE_MAP_ENTRY(nsIArray)
   NS_INTERFACE_MAP_ENTRY(nsIJSArgArray)
-  //NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIJSArgArray)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIJSArgArray)
   NS_IMPL_QUERY_CLASSINFO(nsJSArgArray)
 NS_INTERFACE_MAP_END
 NS_IMPL_CI_INTERFACE_GETTER1(nsJSArgArray, nsIArray)

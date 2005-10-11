@@ -124,6 +124,7 @@ public:
   virtual void *GetNativeGlobal();
   virtual nsresult InitContext(nsIScriptGlobalObject *aGlobalObject);
   virtual PRBool IsContextInitialized();
+  virtual void FinalizeContext();
 
   virtual void GC();
 
@@ -143,7 +144,7 @@ public:
   virtual void SetGCOnDestruction(PRBool aGCOnDestruction);
 
   virtual nsresult InitClasses(void *aGlobalObj);
-  virtual nsresult FinalizeClasses(void* aGlobalObj);
+  virtual void FinalizeClasses(void* aGlobalObj, PRBool bClearPolluters);
 
   virtual void WillInitializeContext();
   virtual void DidInitializeContext();

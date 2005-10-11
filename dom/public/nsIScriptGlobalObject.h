@@ -80,12 +80,12 @@ struct JSObject; // kill me!
 
 // Create a 'for' loop iterating over all possible language IDs (*not* indexes)
 #define NS_SL_FOR_ID(varName) \
-          for (PRUint32 varName=NS_SL_FIRST;varName<=NS_SL_LAST;varName++)
+          for (varName=NS_SL_FIRST;varName<=NS_SL_LAST;varName++)
 
 // Create a 'for' loop iterating over all indexes (when you don't need to know
 // what language it is)
 #define NS_SL_FOR_INDEX(varName) \
-          for (PRUint32 varName=0;varName<=NS_SL_INDEX(NS_SL_LAST);varName++)
+          for (varName=0;varName<=NS_SL_INDEX(NS_SL_LAST);varName++)
 
 // A helper function for nsIScriptGlobalObject implementations to use
 // when handling a script error.  Generally called by the global when a context

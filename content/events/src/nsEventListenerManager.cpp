@@ -1367,7 +1367,7 @@ nsEventListenerManager::AddScriptEventListener(nsISupports *aObject,
         NS_ENSURE_SUCCESS(rv, rv);
         // And bind it.
         rv = context->BindCompiledEventHandler(aObject, scope,
-                                                aName, handler);
+                                               aName, handler);
         NS_ENSURE_SUCCESS(rv, rv);
       }
       if (NS_FAILED(rv)) return rv;
