@@ -8071,7 +8071,7 @@ nsDocShell::EnsureScriptEnvironment()
 
     // Ensure the script object is set to run javascript - other languages
     // setup on demand.
-    // XXX - should this be setup to run the default language for this doc?
+    // XXXmarkh - should this be setup to run the default language for this doc?
     nsresult rv;
     rv = mScriptGlobal->EnsureScriptEnvironment(nsIProgrammingLanguage::JAVASCRIPT);
     NS_ENSURE_SUCCESS(rv, rv);
