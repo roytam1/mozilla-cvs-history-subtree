@@ -1439,6 +1439,13 @@ var gMsgEditorCreationObserver =
         editorStyle.addStyleSheet("chrome://messenger/skin/messageQuotes.css");
         InitEditor();
       }
+      // Now that we know this document is an editor, update commands now if
+      // the document has focus, or next time it receives focus via
+      // CommandUpdate_MsgCompose()
+      if (gLastWindowToHaveFocus == document.commandDispatcher.focusedWindow)
+        updateComposeItems();
+      else
+        gLastWindowToHaveFocus = null;
     }
   }
 }
