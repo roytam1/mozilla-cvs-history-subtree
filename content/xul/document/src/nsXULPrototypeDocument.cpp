@@ -103,7 +103,7 @@ public:
                                     nsIDOMEvent** aDOMEvent,
                                     PRUint32 aFlags,
                                     nsEventStatus* aEventStatus);
-    virtual void OnFinalize();
+    virtual void OnFinalize(PRUint32 aLangID, void *aGlobal);
     virtual void SetScriptsEnabled(PRBool aEnabled, PRBool aFireTimeouts);
     virtual nsresult SetNewArguments(nsIArray *aArguments);
 
@@ -213,10 +213,7 @@ nsXULPDGlobalObject_finalize(JSContext *cx, JSObject *obj)
     nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(nativeThis));
 
     if (sgo) {
-        // We previously passed 'obj' to OnFinalize which did this check...
-        NS_ASSERTION(obj == sgo->GetLanguageGlobal(nsIProgrammingLanguage::JAVASCRIPT),
-                     "Finalizing global that doesn't have our global obj");
-        sgo->OnFinalize();
+        sgo->OnFinalize(nsIProgrammingLanguage::JAVASCRIPT, obj);
     }
 
     // The addref was part of JSObject construction
@@ -277,10 +274,8 @@ nsXULPrototypeDocument::Init()
 nsXULPrototypeDocument::~nsXULPrototypeDocument()
 {
     if (mGlobalObject) {
-        // XXXmarkh - this previously just did SetContext(nsnull), but this
-        // also wipes out the script globals.
-        mGlobalObject->OnFinalize();
-        mGlobalObject->SetGlobalObjectOwner(nsnull); // just in case
+        // cleaup cycles etc.
+        mGlobalObject->SetDocShell(nsnull);
     }
     
     if (mRoot)
@@ -934,7 +929,16 @@ nsXULPDGlobalObject::SetNewDocument(nsIDOMDocument *aDocument,
 void
 nsXULPDGlobalObject::SetDocShell(nsIDocShell *aDocShell)
 {
-    NS_NOTREACHED("waaah!");
+    NS_ASSERTION(aDocShell == nsnull,
+                 "This is only used to trigger cleanup!");
+    PRUint32 lang_ndx;
+    NS_SL_FOR_INDEX(lang_ndx) {
+        if (mLanguageContexts[lang_ndx]) {
+            mLanguageContexts[lang_ndx]->FinalizeContext();
+            mLanguageContexts[lang_ndx] = nsnull;
+        }
+    }
+    SetGlobalObjectOwner(nsnull); // just in case
 }
 
 
@@ -980,22 +984,12 @@ nsXULPDGlobalObject::HandleDOMEvent(nsPresContext* aPresContext,
 }
 
 void
-nsXULPDGlobalObject::OnFinalize()
+nsXULPDGlobalObject::OnFinalize(PRUint32 aLangID, void *aObject)
 {
-    PRUint32 lang_ndx;
-    NS_SL_FOR_INDEX(lang_ndx) {
-        nsIScriptContext *ctx = mLanguageContexts[lang_ndx];
-        if (ctx) {
-            // xxxmarkh - FinalizeClasses necessary/correct?
-            ctx->FinalizeClasses(mLanguageGlobals[lang_ndx], PR_TRUE);
-            ctx->FinalizeContext();
-        } else
-            NS_ASSERTION(mLanguageGlobals[lang_ndx] == nsnull,
-                         "OnFinalize has a global without matching context!");
-        mLanguageContexts[lang_ndx] = nsnull;
-        mLanguageGlobals[lang_ndx] = nsnull;
-    }
-    SetGlobalObjectOwner(nsnull);
+    NS_ASSERTION(NS_SL_VALID(aLangID), "Invalid language ID");
+    NS_ASSERTION(aObject == mLanguageGlobals[NS_SL_INDEX(aLangID)],
+                 "Wrong object finalized!");
+    mLanguageGlobals[NS_SL_INDEX(aLangID)] = nsnull;
 }
 
 void

@@ -144,7 +144,7 @@ public:
   virtual void SetGCOnDestruction(PRBool aGCOnDestruction);
 
   virtual nsresult InitClasses(void *aGlobalObj);
-  virtual void FinalizeClasses(void* aGlobalObj, PRBool bClearPolluters);
+  virtual void ClearScope(void* aGlobalObj, PRBool bClearPolluters);
 
   virtual void WillInitializeContext();
   virtual void DidInitializeContext();

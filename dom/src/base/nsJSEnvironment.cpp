@@ -1264,7 +1264,7 @@ nsJSContext::ExecuteScript(void *aScriptObject,
   ok = ::JS_ExecuteScript(mContext,
                           (JSObject *)aScopeObject,
                           (JSScript*) ::JS_GetPrivate(mContext,
-                                                    (JSObject*)aScriptObject),
+                          (JSObject*)aScriptObject),
                           &val);
 
   if (ok) {
@@ -2591,7 +2591,7 @@ nsJSContext::InitClasses(void *aGlobalObj)
 }
 
 void
-nsJSContext::FinalizeClasses(void *aGlobalObj, PRBool aClearPolluter)
+nsJSContext::ClearScope(void *aGlobalObj, PRBool aClearPolluter)
 {
   if (aGlobalObj) {
     JSObject *obj = (JSObject *)aGlobalObj;

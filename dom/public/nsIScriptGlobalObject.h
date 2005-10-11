@@ -171,13 +171,14 @@ public:
   virtual nsresult SetLanguageContext(PRUint32 lang, nsIScriptContext *aContext) = 0;
 
   /**
-   * Called when the global script is finalized.  Finalizes all contexts and globals
-   * for all languages.
-   * XXXmarkh - that is not the original intent - OnFinalize generally called
-   * as part of js class destruction.
+   * Called when the global script for a language is finalized, typically as
+   * part of its GC process.  By the time this call is made, the
+   * nsIScriptContext for the language has probably already been removed.
+   * After this call, the passed object is dead - which should generally be the
+   * same object the global is using for a global for that language.
    */
 
-  virtual void OnFinalize() = 0;
+  virtual void OnFinalize(PRUint32 aLangID, void *aScriptGlobal) = 0;
 
   /**
    * Called to enable/disable scripts.

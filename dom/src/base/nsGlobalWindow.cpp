@@ -444,7 +444,7 @@ nsGlobalWindow::FreeInnerObjects(nsIScriptContext *scx)
   mDocument = nsnull;
 
   if (scx)
-    scx->FinalizeClasses(mLanguageGlobals[NS_SL_INDEX(scx->GetLanguage())],
+    scx->ClearScope(mLanguageGlobals[NS_SL_INDEX(scx->GetLanguage())],
                          PR_TRUE);
 }
 
@@ -1083,7 +1083,7 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
     NS_SL_FOR_ID(lang_id) {
       nsIScriptContext *langContext = GetLanguageContextInternal(lang_id);
       if (langContext)
-        langContext->FinalizeClasses(mLanguageGlobals[NS_SL_INDEX(lang_id)],
+        langContext->ClearScope(mLanguageGlobals[NS_SL_INDEX(lang_id)],
                                      PR_FALSE);
     }
 
@@ -1205,7 +1205,7 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
         if (!currentInner->IsFrozen()) {
           // xxxmarkh - 'termfunc' still js impl specific...
           if (!termFuncSet) {
-            scx->FinalizeClasses(currentInner->mJSObject, PR_FALSE);
+            scx->ClearScope(currentInner->mJSObject, PR_FALSE);
           }
 
           // Make the current inner window release its strong references
@@ -1401,7 +1401,7 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
       NS_SL_FOR_ID(lang_id) {
         langCtx = mLanguageContexts[NS_SL_INDEX(lang_id)];
         if (langCtx)
-          langCtx->FinalizeClasses(
+          langCtx->ClearScope(
                         currentInner->mLanguageGlobals[NS_SL_INDEX(lang_id)],
                         PR_TRUE);
       }
@@ -1733,25 +1733,22 @@ nsGlobalWindow::HandleDOMEvent(nsPresContext* aPresContext, nsEvent* aEvent,
 }
 
 void
-nsGlobalWindow::OnFinalize()
+nsGlobalWindow::OnFinalize(PRUint32 aLangID, void *aObject)
 {
-  PRUint32 lang_ndx;
-  NS_SL_FOR_INDEX(lang_ndx) {
-    if (mLanguageContexts[lang_ndx]) {
-      mLanguageContexts[lang_ndx]->FinalizeClasses(mLanguageGlobals[lang_ndx],
-                                                   PR_FALSE);
-      // xxxmarkh - should be no need to reset mLanguageContexts[] as it is an
-      // array of nsCOMPtrs.  I'll delete it once I have found the leaks I am
-      // tracking!
-      mLanguageContexts[lang_ndx] = nsnull;
-    } else
-      NS_ASSERTION(mLanguageGlobals[lang_ndx] == nsnull,
-                   "OnFinalize has a global without matching context!");
-    mLanguageGlobals[lang_ndx] = nsnull;
+  if (!NS_SL_VALID(aLangID)) {
+    NS_ERROR("Invalid language ID");
+    return;
   }
-  mJSObject = nsnull;
-  mContext = nsnull;
-  SetGlobalObjectOwner(nsnull);
+  PRUint32 lang_ndx = NS_SL_INDEX(aLangID);
+  if (aObject == mLanguageGlobals[lang_ndx]) {
+    mLanguageGlobals[lang_ndx] = nsnull;
+  } else if (mLanguageGlobals[lang_ndx]) {
+    NS_ERROR("Huh? Script language created more than one wrapper for this global!");
+  } else {
+    NS_WARNING("Weird, we're finalized with a null language global?");
+  }
+  if (aLangID==nsIProgrammingLanguage::JAVASCRIPT)
+    mJSObject = nsnull; // all relevant assertions and nulling done above.
 }
 
 void
@@ -5919,7 +5916,7 @@ nsGlobalWindow::ClearWindowScope(nsISupports *aWindow)
   NS_SL_FOR_ID(lang_id) {
     nsIScriptContext *scx = sgo->GetLanguageContext(lang_id);
     void *global = sgo->GetLanguageGlobal(lang_id);
-    scx->FinalizeClasses(global, PR_FALSE);
+    scx->ClearScope(global, PR_FALSE);
   }
 }
 

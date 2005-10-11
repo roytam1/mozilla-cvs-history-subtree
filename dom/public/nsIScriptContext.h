@@ -381,12 +381,14 @@ public:
   virtual nsresult InitClasses(void *aGlobalObj) = 0;
 
   /**
-   * Finalize the scope.
+   * Clear the scope object - may be called either as we are being torn down,
+   * or before we are attached to a different document.
    * XXXmarkh - aClearPolluter is quite likely bogus - just that some places
-   * that did a finalize did not call InvalidateGlobalScopePolluter.  It
+   * that did this clear did not call InvalidateGlobalScopePolluter.  It
    * seems likely this param should be dropped and that fn always called.
+   * OR some extra virtual added to abstract when that Invalidate need happen.
    */
-  virtual void FinalizeClasses(void* aGlobalObj, PRBool aClearPolluter) = 0;
+  virtual void ClearScope(void* aGlobalObj, PRBool aClearPolluter) = 0;
 
   /**
    * Tell the context we're about to be reinitialize it.

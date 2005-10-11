@@ -5784,10 +5784,7 @@ nsWindowSH::Finalize(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryWrappedNative(wrapper));
   NS_ENSURE_TRUE(sgo, NS_ERROR_UNEXPECTED);
 
-  NS_ASSERTION(obj == sgo->GetLanguageGlobal(nsIProgrammingLanguage::JAVASCRIPT),
-             "Finalizing global that doesn't have our global obj");
-
-  sgo->OnFinalize();
+  sgo->OnFinalize(nsIProgrammingLanguage::JAVASCRIPT, obj);
 
   return NS_OK;
 }

@@ -93,7 +93,7 @@ public:
                                   PRUint32 aFlags,
                                   nsEventStatus* aEventStatus);
   virtual JSObject *GetGlobalJSObject();
-  virtual void OnFinalize();
+  virtual void OnFinalize(PRUint32 aLangID, void *aScriptGlobal);
   virtual void SetScriptsEnabled(PRBool aEnabled, PRBool aFireTimeouts);
   virtual nsresult SetNewArguments(nsIArray *aArguments);
 
@@ -128,14 +128,7 @@ void PR_CALLBACK nsXBLDocGlobalObject_finalize(JSContext *cx, JSObject *obj)
   nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(nativeThis));
 
   if (sgo) {
-    // We previously passed 'obj' to OnFinalize which did this check...
-    // This assertion now commonly fails - the script context has already been
-    // set to nsnull, so sgo>GetLanguageGlobal early returns.  Looking in the
-    // debugger shows it does have mJSObject as obj though.
-    // xxxmarkh - fix this!
-    NS_ASSERTION(obj == sgo->GetLanguageGlobal(nsIProgrammingLanguage::JAVASCRIPT),
-                 "Finalizing global that doesn't have our global obj");
-    sgo->OnFinalize();
+    sgo->OnFinalize(nsIProgrammingLanguage::JAVASCRIPT, obj);
   }
 
   // The addref was part of JSObject construction
@@ -361,17 +354,13 @@ nsXBLDocGlobalObject::GetGlobalJSObject()
 }
 
 void
-nsXBLDocGlobalObject::OnFinalize()
+nsXBLDocGlobalObject::OnFinalize(PRUint32 aLangID, void *aObject)
 {
-  NS_ASSERTION(mJSObject && mScriptContext, 
-               "OnFinalize called multiple times or before init?");
-  if (mScriptContext) {
-    mScriptContext->FinalizeClasses(mJSObject, PR_TRUE);
-    mScriptContext->FinalizeContext();
-    mScriptContext = nsnull;
-  }
+  NS_ASSERTION(aLangID == nsIProgrammingLanguage::JAVASCRIPT,
+               "Only JS supported");
+  NS_ASSERTION(aObject == mJSObject, "Wrong object finalized!");
+
   mJSObject = nsnull;
-  SetGlobalObjectOwner(nsnull);
 }
 
 void
@@ -444,9 +433,8 @@ nsXBLDocumentInfo::~nsXBLDocumentInfo()
 {
   /* destructor code */
   if (mGlobalObject) {
-    // xxxmarkh - note we can't call OnFinalize here, as the mJSObject
-    // is actually cleaned up in the _finalize call.  What to do about this?
-    mGlobalObject->SetLanguageContext(nsIProgrammingLanguage::JAVASCRIPT, nsnull); // remove circular reference
+    // remove circular reference
+    mGlobalObject->SetLanguageContext(nsIProgrammingLanguage::JAVASCRIPT, nsnull);
     mGlobalObject->SetGlobalObjectOwner(nsnull); // just in case
   }
   delete mBindingTable;

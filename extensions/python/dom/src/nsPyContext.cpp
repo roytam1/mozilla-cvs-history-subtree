@@ -723,7 +723,16 @@ nsPythonContext::ScriptEvaluated(PRBool aTerminated)
 void
 nsPythonContext::FinalizeContext()
 {
-  ;
+  NS_ASSERTION(mDelegate, "No delegate?");
+  NS_ASSERTION(!mScriptGlobal, "ClearScope not called to clean me up?");
+  CEnterLeavePython _celp;
+  if (mDelegate) {
+    PyObject *ret = PyObject_CallMethod(mDelegate, "FinalizeContext", NULL);
+    HandlePythonError();
+    Py_XDECREF(ret);
+    Py_DECREF(mDelegate);
+    mDelegate = NULL;
+  }
 }
 
 void
@@ -733,11 +742,11 @@ nsPythonContext::GC()
 }
 
 void
-nsPythonContext::FinalizeClasses(void *aGlobalObj, PRBool aWhatever)
+nsPythonContext::ClearScope(void *aGlobalObj, PRBool aWhatever)
 {
   CEnterLeavePython _celp;
   if (mDelegate) {
-    PyObject *ret = PyObject_CallMethod(mDelegate, "FinalizeClasses",
+    PyObject *ret = PyObject_CallMethod(mDelegate, "ClearScope",
                                         "O",
                                         aGlobalObj);
     Py_XDECREF(ret);
