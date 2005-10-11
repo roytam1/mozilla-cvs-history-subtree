@@ -1529,6 +1529,13 @@ function updateGoMenu(goMenu)
 function addBookmarkAs(aBrowser, aBookmarkAllTabs, aIsWebPanel)
 {
   const browsers = aBrowser.browsers;
+
+  // we only disable the menu item on onpopupshowing; if we get
+  // here via keyboard shortcut, we need to pretend like
+  // nothing happened if we have no tabs
+  if ((!browsers || browsers.length == 1) && aBookmarkAllTabs)
+    return;
+
   if (browsers && browsers.length > 1)
     addBookmarkForTabBrowser(aBrowser, aBookmarkAllTabs);
   else
@@ -3492,7 +3499,6 @@ nsBrowserStatusHandler.prototype =
       }
     }
     UpdateBackForwardButtons();
-    UpdateBookmarkAllTabsMenuitem();
     if (findField && gFindMode != FIND_NORMAL) {
       // Close the Find toolbar if we're in old-style TAF mode
       closeFindBar();
