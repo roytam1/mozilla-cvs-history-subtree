@@ -6424,8 +6424,8 @@ if test `echo "$MOZ_EXTENSIONS" | grep -c python/xpcom` -ne 0; then
         MOZ_PYTHON_DLL_SUFFIX=$DLL_SUFFIX
         MOZ_PYTHON_INCLUDES="-I$MOZ_PYTHON_PREFIX/include/python$MOZ_PYTHON_VER_DOTTED"
         dnl Check for dynamic Python lib
-        dnl - A static Python is no good now, though I don't know
-        dnl   exactly why.
+        dnl - A static Python is no good - multiple dynamic libraries (xpcom
+        dnl - core, xpcom loader, pydom etc) all need to share Python.
         dnl - Python 2.3's std --enable-shared configure option will
         dnl   create a libpython2.3.so.1.0. We should first try this
         dnl   dotted versioned .so file because this is the one that
@@ -6433,6 +6433,7 @@ if test `echo "$MOZ_EXTENSIONS" | grep -c python/xpcom` -ne 0; then
         dnl   XXX Should find a better way than hardcoding "1.0".
         dnl - Python developement tree dir layouts are NOT allowed here
         dnl   because the PyXPCOM build just dies on it later anyway.
+        dnl - Fixes to the above by Python/*nix knowledgable people welcome!
         if test -f "$MOZ_PYTHON_PREFIX/lib/libpython$MOZ_PYTHON_VER_DOTTED.so.1.0"; then
             MOZ_PYTHON_LIBS="-L$MOZ_PYTHON_PREFIX/lib -lpython$MOZ_PYTHON_VER_DOTTED"
         elif test -f "$MOZ_PYTHON_PREFIX/lib/libpython$MOZ_PYTHON_VER_DOTTED.so"; then
