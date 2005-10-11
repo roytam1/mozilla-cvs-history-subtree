@@ -1398,6 +1398,21 @@ DrawSelectionIterator::IsBeforeOrAfter()
 
 //----------------------------------------------------------------------
 
+#if defined(DEBUG_rbs) || defined(DEBUG_bzbarsky)
+static void
+VerifyNotDirty(nsFrameState state)
+{
+  PRBool isZero = state & NS_FRAME_FIRST_REFLOW;
+  PRBool isDirty = state & NS_FRAME_IS_DIRTY;
+  if (!isZero && isDirty)
+    NS_WARNING("internal offsets may be out-of-sync");
+}
+#define DEBUG_VERIFY_NOT_DIRTY(state) \
+VerifyNotDirty(state)
+#else
+#define DEBUG_VERIFY_NOT_DIRTY(state)
+#endif
+
 nsresult
 NS_NewTextFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 {
@@ -3803,6 +3818,10 @@ nsTextFrame::GetPosition(nsPresContext*  aPresContext,
   // initialize out param
   *aNewContent = nsnull;
 
+  DEBUG_VERIFY_NOT_DIRTY(mState);
+  if (mState & NS_FRAME_IS_DIRTY)
+    return NS_ERROR_UNEXPECTED;
+
   nsIPresShell *shell = aPresContext->GetPresShell();
   if (shell) {
     nsCOMPtr<nsIRenderingContext> rendContext;      
@@ -3970,6 +3989,10 @@ nsTextFrame::GetContentAndOffsetsFromPoint(nsPresContext*  aPresContext,
   aContentOffset = 0;
   aContentOffsetEnd = 0;
   aBeginFrameContent = 0;
+
+  DEBUG_VERIFY_NOT_DIRTY(mState);
+  if (mState & NS_FRAME_IS_DIRTY)
+    return NS_ERROR_UNEXPECTED;
 
   nsPoint newPoint;
   newPoint.y = aPoint.y;
@@ -4144,9 +4167,14 @@ nsTextFrame::GetPointFromOffset(nsPresContext* aPresContext,
   if (!aPresContext || !inRendContext || !outPoint)
     return NS_ERROR_NULL_POINTER;
 
+  outPoint->x = 0;
+  outPoint->y = 0;
+
+  DEBUG_VERIFY_NOT_DIRTY(mState);
+  if (mState & NS_FRAME_IS_DIRTY)
+    return NS_ERROR_UNEXPECTED;
+
   if (mContentLength <= 0) {
-    outPoint->x = 0;
-    outPoint->y = 0;
     return NS_OK;
   }
 
@@ -4316,6 +4344,10 @@ nsTextFrame::GetChildFrameContainingOffset(PRInt32 inContentOffset,
 NS_IMETHODIMP
 nsTextFrame::PeekOffset(nsPresContext* aPresContext, nsPeekOffsetStruct *aPos) 
 {
+  DEBUG_VERIFY_NOT_DIRTY(mState);
+  if (mState & NS_FRAME_IS_DIRTY)
+    return NS_ERROR_UNEXPECTED;
+
 #ifdef IBMBIDI
   // XXX TODO: - this explanation may not be accurate
   //           - need to better explain what aPos->mPreferLeft means
