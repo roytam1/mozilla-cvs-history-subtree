@@ -2553,28 +2553,36 @@ function buildHelpMenu()
 
   if (!gMessengerBundle)
     gMessengerBundle = document.getElementById("bundle_messenger");
-  
-  var label = gMessengerBundle.getString("updates_checkForUpdates");
+
   var activeUpdate = um.activeUpdate;
-  if (activeUpdate) 
-  {
-    if (updates.isDownloading) 
-    {
-      if (activeUpdate.name) 
-        label = gMessengerBundle.getFormattedString("updates_downloadingUpdates", [activeUpdate.name]);
-      else
-        label = gMessengerBundle.getString("updates_downloadingUpdatesFallback");
-    }
-    else 
-    {
-      if (activeUpdate.name) 
-        label = gMessengerBundle.getFormattedString("updates_resumeDownloading", [activeUpdate.name]);
-      else
-        label = gMessengerBundle.getString("updates_resumeDownloadingFallback");
+  
+  // If there's an active update, substitute its name into the label
+  // we show for this item, otherwise display a generic label.
+  function getStringWithUpdateName(key) {
+    if (activeUpdate && activeUpdate.name)
+      return gMessengerBundle.getFormattedString(key, [activeUpdate.name]);
+    return gMessengerBundle.getString(key + "Fallback");
+  }
+  
+  // By default, show "Check for Updates..."
+  var key = "default";
+  if (activeUpdate) {
+    switch (activeUpdate.state) {
+    case "downloading":
+      // If we're downloading an update at present, show the text:
+      // "Downloading Firefox x.x..." otherwise we're paused, and show
+      // "Resume Downloading Firefox x.x..."
+      key = updates.isDownloading ? "downloading" : "resume";
+      break;
+    case "pending":
+      // If we're waiting for the user to restart, show: "Apply Downloaded
+      // Updates Now..."
+      key = "pending";
+      break;
     }
   }
 
-  checkForUpdates.label = label;
+  checkForUpdates.label = getStringWithUpdateName("updatesItem_" + key);
   if (um.activeUpdate && updates.isDownloading)
     checkForUpdates.setAttribute("loading", "true");
   else
