@@ -1282,6 +1282,7 @@ nsEventListenerManager::AddScriptEventListener(nsISupports *aObject,
     NS_ASSERTION(aLanguage == nsIProgrammingLanguage::JAVASCRIPT,
                  "Need a multi-language stack?!?!?");
     // OTOH, maybe using JS will do here - all we need is the global.
+    // I've never seen the above warning fire...
     JSContext* cx = nsnull;
     // Get JSContext from stack, or use the safe context (and hidden
     // window global) if no JS is running.
@@ -1310,7 +1311,7 @@ nsEventListenerManager::AddScriptEventListener(nsISupports *aObject,
     return NS_ERROR_NOT_AVAILABLE;
   }
 
-  void *scope = global->GetLanguageGlobal(context->GetLanguage());
+  void *scope = global->GetLanguageGlobal(aLanguage);
   nsresult rv;
   if (!aDeferCompilation) {
     nsCOMPtr<nsIScriptEventHandlerOwner> handlerOwner =
