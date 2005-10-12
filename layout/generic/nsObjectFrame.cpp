@@ -1061,8 +1061,8 @@ nsObjectFrame::InstantiatePlugin(nsIPluginHost* aPluginHost,
 
   // XXX having to do this sucks. it'd be better to move the code from DidReflow
   // to FixupWindow or something.
-  nsIPresShell *shell = GetPresContext()->GetPresShell();
-  shell->AppendReflowCommand(this, eReflowType_StyleChanged, nsnull);
+  GetPresContext()->GetPresShell()->
+    FrameNeedsReflow(this, nsIPresShell::eStyleChange);
   return rv;
 }
 
@@ -1818,8 +1818,8 @@ nsObjectFrame::Instantiate(nsIChannel* aChannel, nsIStreamListener** aStreamList
 
   // XXX having to do this sucks. it'd be better to move the code from DidReflow
   // to FixupWindow.
-  nsIPresShell *shell = GetPresContext()->GetPresShell();
-  shell->AppendReflowCommand(this, eReflowType_StyleChanged, nsnull);
+  GetPresContext()->GetPresShell()->
+    FrameNeedsReflow(this, nsIPresShell::eStyleChange);
   return rv;
 }
 
