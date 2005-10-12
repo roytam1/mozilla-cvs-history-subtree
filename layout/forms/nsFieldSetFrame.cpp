@@ -366,7 +366,7 @@ nsFieldSetFrame::Reflow(nsPresContext*           aPresContext,
     reflowContent = PR_TRUE;
   } else if (reason == eReflowReason_Dirty) {
     // if dirty then check dirty flags
-    if (GetStateBits() & NS_FRAME_IS_DIRTY) {
+    if (aReflowState.ShouldReflowAllKids()) {
       reflowLegend = PR_TRUE;
       reflowContent = PR_TRUE;
     } else {

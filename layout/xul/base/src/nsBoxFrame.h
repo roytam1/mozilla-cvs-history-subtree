@@ -113,7 +113,6 @@ public:
 #endif
   NS_IMETHOD GetVAlign(Valignment& aAlign);
   NS_IMETHOD GetHAlign(Halignment& aAlign);
-  NS_IMETHOD NeedsRecalc();
   NS_IMETHOD DoLayout(nsBoxLayoutState& aBoxLayoutState);
 
   NS_IMETHOD GetMouseThrough(PRBool& aMouseThrough);
@@ -130,8 +129,6 @@ public:
                        nsIFrame::Cursor& aCursor);
 
 
-  NS_IMETHOD ReflowDirtyChild(nsIPresShell* aPresShell, nsIFrame* aChild);
-
   NS_IMETHOD  Init(nsPresContext*  aPresContext,
                    nsIContent*      aContent,
                    nsIFrame*        aParent,
@@ -143,6 +140,9 @@ public:
                               nsIAtom*        aAttribute,
                               PRInt32         aModType);
 
+  virtual void MarkIntrinsicWidthsDirty();
+  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
+  virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
 
   NS_IMETHOD Reflow(nsPresContext*          aPresContext,
                     nsHTMLReflowMetrics&     aDesiredSize,
@@ -189,10 +189,6 @@ public:
                     nsFramePaintLayer    aWhichLayer,
                     PRUint32             aFlags = 0);
 
-
-  // returns true if it is an Initial Reflow and doing Print Preview
-  static PRBool IsInitialReflowForPrintPreview(nsBoxLayoutState& aState, PRBool& aIsChrome);
-
   nsIBox* GetBoxAt(PRInt32 aIndex) { return mFrames.FrameAt(aIndex); }
   PRInt32 GetChildCount() { return mFrames.GetLength(); }
   
@@ -209,9 +205,6 @@ protected:
 #ifdef DEBUG_LAYOUT
     virtual void GetBoxName(nsAutoString& aName);
 #endif
-
-    virtual PRBool HasStyleChange();
-    virtual void SetStyleChangeFlag(PRBool aDirty);
 
     virtual PRBool GetWasCollapsed(nsBoxLayoutState& aState);
     virtual void SetWasCollapsed(nsBoxLayoutState& aState, PRBool aWas);

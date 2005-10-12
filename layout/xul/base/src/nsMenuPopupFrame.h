@@ -136,10 +136,6 @@ public:
   virtual nsIFrame* GetFrameForPoint(const nsPoint&    aPoint,
                                      nsFramePaintLayer aWhichLayer);
 
-  NS_IMETHOD MarkStyleChange(nsBoxLayoutState& aState);
-  NS_IMETHOD MarkDirty(nsBoxLayoutState& aState);
-  NS_IMETHOD RelayoutDirtyChild(nsBoxLayoutState& aState, nsIBox* aChild);
-
   void GetViewOffset(nsIView* aView, nsPoint& aPoint);
   static void GetRootViewForPopup(nsIFrame* aStartFrame,
                                   PRBool aStopAtViewManagerRoot,

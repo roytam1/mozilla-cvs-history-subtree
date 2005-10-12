@@ -598,11 +598,8 @@ nsSplitterFrameInner::MouseDrag(nsPresContext* aPresContext, nsGUIEvent* aEvent)
     /*
       nsIPresShell *shell = aPresContext->PresShell();
 
-      shell->AppendReflowCommand(mOuter->mParent, eReflowType_StyleChanged,
-                                 nsnull);
-     
       mOuter->mState |= NS_FRAME_IS_DIRTY;
-      mOuter->mParent->ReflowDirtyChild(shell, mOuter);
+      shell->FrameNeedsReflow(mOuter, nsIPresShell::eStyleChange);
     */
     mDidDrag = PR_TRUE;
   }
@@ -998,8 +995,9 @@ nsSplitterFrameInner::AdjustChildren(nsPresContext* aPresContext)
     aPresContext->PresShell()->FlushPendingNotifications(Flush_Display);
   }
   else {
-    nsBoxLayoutState state(aPresContext);
-    mOuter->MarkDirty(state);
+    mOuter->AddStateBits(NS_FRAME_IS_DIRTY);
+    aPresContext->PresShell()->
+      FrameNeedsReflow(mOuter, nsIPresShell::eTreeChange);
   }
 }
 
@@ -1096,7 +1094,8 @@ nsSplitterFrameInner::SetPreferredSize(nsBoxLayoutState& aState, nsIBox* aChildB
      return;
 
   content->SetAttr(kNameSpaceID_None, attribute, prefValue, PR_TRUE);
-  aChildBox->MarkDirty(aState);
+  aChildBox->AddStateBits(NS_FRAME_IS_DIRTY);
+  aState.PresShell()->FrameNeedsReflow(aChildBox, nsIPresShell::eStyleChange);
 }
 
 

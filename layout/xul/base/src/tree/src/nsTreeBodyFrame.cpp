@@ -1476,8 +1476,8 @@ nsTreeBodyFrame::MarkDirtyIfSelect()
     // XXX optimize this more
 
     mStringWidth = -1;
-    nsBoxLayoutState state(mPresContext);
-    MarkDirty(state);
+    AddStateBits(NS_FRAME_IS_DIRTY);
+    mPresContext->PresShell()->FrameNeedsReflow(this, nsIPresShell::eTreeChange);
   }
 }
 
@@ -2235,9 +2235,9 @@ nsTreeBodyFrame::Paint(nsPresContext*      aPresContext,
       mPageLength = mInnerBox.height/mRowHeight;
 
     if (oldPageCount != mPageLength || mHorzWidth != CalcHorzWidth()) {
-      // Schedule a ResizeReflow that will update our info properly.
-      nsBoxLayoutState state(mPresContext);
-      MarkDirty(state);
+      // Schedule a ResizeReflow that will update our page count properly.
+      AddStateBits(NS_FRAME_IS_DIRTY);
+      aPresContext->PresShell()->FrameNeedsReflow(this, nsIPresShell::eResize);
     }
 
 #ifdef DEBUG

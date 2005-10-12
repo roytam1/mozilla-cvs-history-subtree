@@ -155,6 +155,11 @@ public:
 #endif
   
   // nsIHTMLReflow
+  virtual void MarkIntrinsicWidthsDirty();
+  virtual void AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
+                                 InlineMinWidthData *aData);
+  virtual void AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
+                                  InlinePrefWidthData *aData);
   NS_IMETHOD Reflow(nsPresContext* aPresContext,
                     nsHTMLReflowMetrics& aMetrics,
                     const nsHTMLReflowState& aReflowState,
@@ -207,7 +212,6 @@ public:
   struct TextReflowData {
     PRInt32             mX;                   // OUT
     PRInt32             mOffset;              // IN/OUT How far along we are in the content
-    nscoord             mMaxWordWidth;        // OUT
     nscoord             mAscent;              // OUT
     nscoord             mDescent;             // OUT
     PRPackedBool        mWrapping;            // IN
@@ -216,7 +220,6 @@ public:
     PRPackedBool        mInWord;              // IN
     PRPackedBool        mFirstLetterOK;       // IN
     PRPackedBool        mCanBreakBefore;         // IN
-    PRPackedBool        mComputeMaxWordWidth; // IN
     PRPackedBool        mTrailingSpaceTrimmed; // IN/OUT
     
     TextReflowData(PRInt32 aStartingOffset,
@@ -226,11 +229,9 @@ public:
                    PRBool  aInWord,
                    PRBool  aFirstLetterOK,
                    PRBool  aCanBreakBefore,
-                   PRBool  aComputeMaxWordWidth,
                    PRBool  aTrailingSpaceTrimmed)
       : mX(0),
       mOffset(aStartingOffset),
-      mMaxWordWidth(0),
       mAscent(0),
       mDescent(0),
       mWrapping(aWrapping),
@@ -239,7 +240,6 @@ public:
       mInWord(aInWord),
       mFirstLetterOK(aFirstLetterOK),
       mCanBreakBefore(aCanBreakBefore),
-      mComputeMaxWordWidth(aComputeMaxWordWidth),
       mTrailingSpaceTrimmed(aTrailingSpaceTrimmed)
     {}
   };
@@ -284,7 +284,7 @@ public:
                     nscoord aWidth,
                     SelectionDetails *aDetails = nsnull);
   
-  void MeasureSmallCapsText(const nsHTMLReflowState& aReflowState,
+  void MeasureSmallCapsText(nsIRenderingContext* aRenderingContext,
                             TextStyle& aStyle,
                             PRUnichar* aWord,
                             PRInt32 aWordLength,
@@ -340,7 +340,7 @@ public:
   
   nsTextDimensions ComputeTotalWordDimensions(nsPresContext* aPresContext,
                                               nsLineLayout& aLineLayout,
-                                              const nsHTMLReflowState& aReflowState,
+                                              nsIRenderingContext* aRenderingContext,
                                               nsIFrame* aNextFrame,
                                               const nsTextDimensions& aBaseDimensions,
                                               PRUnichar* aWordBuf,
@@ -350,7 +350,7 @@ public:
   
   nsTextDimensions ComputeWordFragmentDimensions(nsPresContext* aPresContext,
                                                  nsLineLayout& aLineLayout,
-                                                 const nsHTMLReflowState& aReflowState,
+                                                 nsIRenderingContext* aRenderingContext,
                                                  nsIFrame* aNextFrame,
                                                  nsIContent* aContent,
                                                  nsITextContent* aText,

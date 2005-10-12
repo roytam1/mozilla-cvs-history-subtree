@@ -75,7 +75,7 @@ public:
   NS_IMETHOD ReplaceFrame(nsIAtom*        aListName,
                           nsIFrame*       aOldFrame,
                           nsIFrame*       aNewFrame);
-  NS_IMETHOD ReflowDirtyChild(nsIPresShell* aPresShell, nsIFrame* aChild);
+  virtual PRBool ChildIsDirty(nsIFrame* aChild);
 
   virtual PRBool IsLeaf() const;
   

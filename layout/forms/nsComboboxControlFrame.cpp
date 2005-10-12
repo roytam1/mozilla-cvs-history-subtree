@@ -1824,7 +1824,8 @@ nsComboboxControlFrame::HandleRedisplayTextEvent()
 
   ActuallyDisplayText(PR_TRUE);
   mDisplayFrame->AddStateBits(NS_FRAME_IS_DIRTY);
-  ReflowDirtyChild(GetPresContext()->PresShell(), mDisplayFrame);
+  GetPresContext()->PresShell()->FrameNeedsReflow(mDisplayFrame,
+                                                  nsIPresShell::eStyleChange);
 
   mInRedisplayText = PR_FALSE;
 }

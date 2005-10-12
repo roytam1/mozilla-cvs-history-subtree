@@ -75,6 +75,12 @@ public:
                     nsHTMLReflowMetrics& aDesiredSize,
                     const nsHTMLReflowState& aReflowState,
                     nsReflowStatus& aStatus);
+  virtual void AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
+                                 InlineMinWidthData *aData);
+  virtual void AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
+                                  InlinePrefWidthData *aData);
+  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
+  virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
   virtual nsIAtom* GetType() const;
 protected:
   virtual ~BRFrame();
@@ -124,11 +130,8 @@ BRFrame::Reflow(nsPresContext* aPresContext,
                 const nsHTMLReflowState& aReflowState,
                 nsReflowStatus& aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("BRFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("BRFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aMetrics, aStatus);
-  if (aMetrics.mComputeMEW) {
-    aMetrics.mMaxElementWidth = 0;
-  }
   aMetrics.height = 0; // BR frames with height 0 are ignored in quirks
                        // mode by nsLineLayout::VerticalAlignFrames .
                        // However, it's not always 0.  See below.
@@ -188,11 +191,6 @@ BRFrame::Reflow(nsPresContext* aPresContext,
       // Warning: nsTextControlFrame::CalculateSizeStandard depends on
       // the following line, see bug 228752.
       aMetrics.width = 1;
-
-      // Update max-element-width to keep us honest
-      if (aMetrics.mComputeMEW && aMetrics.width > aMetrics.mMaxElementWidth) {
-        aMetrics.mMaxElementWidth = aMetrics.width;
-      }
     }
 
     // Return our reflow status
@@ -211,6 +209,36 @@ BRFrame::Reflow(nsPresContext* aPresContext,
 
   NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aMetrics);
   return NS_OK;
+}
+
+/* virtual */ void
+BRFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
+                           nsIFrame::InlineMinWidthData *aData)
+{
+  aData->Break(aRenderingContext);
+}
+
+/* virtual */ void
+BRFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
+                            nsIFrame::InlinePrefWidthData *aData)
+{
+  aData->Break(aRenderingContext);
+}
+
+/* virtual */ nscoord
+BRFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
+{
+  nscoord result = 0;
+  DISPLAY_MIN_WIDTH(this, result);
+  return result;
+}
+
+/* virtual */ nscoord
+BRFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
+{
+  nscoord result = 0;
+  DISPLAY_PREF_WIDTH(this, result);
+  return result;
 }
 
 nsIAtom*

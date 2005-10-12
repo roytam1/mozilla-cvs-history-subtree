@@ -134,8 +134,9 @@ nsTextBoxFrame::AttributeChanged(PRInt32         aNameSpaceID,
     UpdateAttributes(presContext, aAttribute, aResize, aRedraw);
 
     if (aResize) {
-        nsBoxLayoutState state(presContext);
-        MarkDirty(state);
+        AddStateBits(NS_FRAME_IS_DIRTY);
+        presContext->PresShell()->
+          FrameNeedsReflow(this, nsIPresShell::eStyleChange);
     } else if (aRedraw) {
         nsBoxLayoutState state(presContext);
         Redraw(state);
@@ -152,7 +153,7 @@ nsTextBoxFrame::AttributeChanged(PRInt32         aNameSpaceID,
 nsTextBoxFrame::nsTextBoxFrame(nsIPresShell* aShell):nsLeafBoxFrame(aShell), mCropType(CropRight),mAccessKeyInfo(nsnull)
 {
     mState |= NS_STATE_NEED_LAYOUT;
-    NeedsRecalc();
+    MarkIntrinsicWidthsDirty();
 }
 
 nsTextBoxFrame::~nsTextBoxFrame()
@@ -804,11 +805,10 @@ nsTextBoxFrame::DoLayout(nsBoxLayoutState& aBoxLayoutState)
     return nsLeafBoxFrame::DoLayout(aBoxLayoutState);
 }
 
-NS_IMETHODIMP
-nsTextBoxFrame::NeedsRecalc()
+/* virtual */ void
+nsTextBoxFrame::MarkIntrinsicWidthsDirty()
 {
     mNeedsRecalc = PR_TRUE;
-    return NS_OK;
 }
 
 void
@@ -831,12 +831,7 @@ nsTextBoxFrame::CalcTextSize(nsBoxLayoutState& aBoxLayoutState)
     {
         nsSize size;
         nsPresContext* presContext = aBoxLayoutState.PresContext();
-        const nsHTMLReflowState* rstate = aBoxLayoutState.GetReflowState();
-        if (!rstate)
-            return;
-
-        nsIRenderingContext* rendContext = rstate->rendContext;
-
+        nsIRenderingContext* rendContext = aBoxLayoutState.GetRenderingContext();
         if (rendContext) {
             GetTextSize(presContext, *rendContext,
                         mTitle, size, mAscent);
@@ -852,6 +847,7 @@ nsTextBoxFrame::CalcTextSize(nsBoxLayoutState& aBoxLayoutState)
 NS_IMETHODIMP
 nsTextBoxFrame::GetPrefSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
 {
+    DISPLAY_PREF_SIZE(this, aSize);
     CalcTextSize(aBoxLayoutState);
 
     aSize = mTextSize;
@@ -869,6 +865,7 @@ nsTextBoxFrame::GetPrefSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
 NS_IMETHODIMP
 nsTextBoxFrame::GetMinSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
 {
+    DISPLAY_MIN_SIZE(this, aSize);
     CalcTextSize(aBoxLayoutState);
 
     aSize = mTextSize;

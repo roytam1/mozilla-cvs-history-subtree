@@ -99,7 +99,6 @@ EXPORTS		= \
 		nsIScrollableFrame.h \
 		nsIScrollableViewProvider.h \
 		nsIStatefulFrame.h \
-		nsReflowType.h \
 		$(NULL)
 
 ifdef IBMBIDI
@@ -131,7 +130,6 @@ CPPSRCS		= \
 		nsHTMLCanvasFrame.cpp \
 		nsHTMLContainerFrame.cpp \
 		nsHTMLFrame.cpp \
-		nsHTMLReflowCommand.cpp \
 		nsHTMLReflowState.cpp \
 		nsImageFrame.cpp \
 		nsImageMap.cpp \
@@ -144,7 +142,6 @@ CPPSRCS		= \
 		nsPageContentFrame.cpp \
 		nsPageFrame.cpp \
 		nsPlaceholderFrame.cpp \
-		nsReflowPath.cpp \
 		nsSelection.cpp \
 		nsSimplePageSequence.cpp \
 		nsSpaceManager.cpp \

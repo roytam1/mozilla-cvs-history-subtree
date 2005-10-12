@@ -107,7 +107,7 @@ public:
   virtual nsIAtom* GetType() const;
   
 #ifdef DEBUG
-  NS_IMETHOD GetFrameName(nsString& aResult) const;
+  NS_IMETHOD GetFrameName(nsAString& aResult) const;
 #endif
 
   nsIFrame* mPopupSetFrame;
@@ -216,7 +216,7 @@ nsRootBoxFrame::Reflow(nsPresContext*          aPresContext,
                        const nsHTMLReflowState& aReflowState,
                        nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsRootBoxFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsRootBoxFrame");
 
 #ifdef DEBUG_REFLOW
   gReflows++;
@@ -340,7 +340,7 @@ NS_INTERFACE_MAP_END_INHERITING(nsBoxFrame)
 
 #ifdef DEBUG
 NS_IMETHODIMP
-nsRootBoxFrame::GetFrameName(nsString& aResult) const
+nsRootBoxFrame::GetFrameName(nsAString& aResult) const
 {
   return MakeFrameName(NS_LITERAL_STRING("RootBox"), aResult);
 }

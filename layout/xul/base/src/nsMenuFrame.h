@@ -153,7 +153,6 @@ public:
   virtual nsIFrame *GetMenuChild() { return mPopupFrames.FirstChild(); }
   NS_IMETHOD GetRadioGroupName(nsString &aName) { aName = mGroupName; return NS_OK; };
   NS_IMETHOD GetMenuType(nsMenuType &aType) { aType = mType; return NS_OK; };
-  NS_IMETHOD MarkChildrenStyleChange();
   NS_IMETHOD MarkAsGenerated();
 
   // nsIScrollableViewProvider methods

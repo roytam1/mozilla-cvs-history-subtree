@@ -83,9 +83,6 @@ public:
   // the containing block frame.
   nsRect mCombinedArea;
 
-  // The float's max-element-width.
-  nscoord mMaxElementWidth;
-
 protected:
   nsFloatCache* mNext;
 
@@ -449,9 +446,6 @@ public:
   nsIFrame* mFirstChild;
 
   nsRect mBounds;
-  nscoord mMaxElementWidth;  // width part of max-element-size
-  nscoord mMaximumWidth;     // maximum width (needed for incremental reflow of tables)
-                             // includes the left border/padding but not the right
 
   struct FlagBits {
     PRUint32 mDirty : 1;
