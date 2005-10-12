@@ -8030,7 +8030,11 @@ nsCSSFrameConstructor::GetAbsoluteContainingBlock(nsIFrame* aFrame)
     // positioned child frames.
     const nsStyleDisplay* disp = frame->GetStyleDisplay();
 
-    if (disp->IsPositioned() && !IsTableRelated(disp->mDisplay, PR_TRUE)) {
+    if (disp->IsPositioned()
+#ifdef CSS_TABLES
+        && !IsTableRelated(disp->mDisplay, PR_TRUE)
+#endif
+       ) {
       // Find the outermost wrapped block under this frame
       for (nsIFrame* wrappedFrame = aFrame; wrappedFrame != frame->GetParent();
            wrappedFrame = wrappedFrame->GetParent()) {
@@ -9524,6 +9528,7 @@ nsCSSFrameConstructor::ContentInserted(nsIContent*            aContainer,
       RecoverLetterFrames(state, state.mFloatedItems.containingBlock);
     }
   }
+#ifdef CSS_TABLES
   else {
     // we might have a caption treat it here
     nsIFrame* newCaptionFrame = captionItems.childList;
@@ -9545,6 +9550,7 @@ nsCSSFrameConstructor::ContentInserted(nsIContent*            aContainer,
       }
     }
   }
+#endif
 
 #ifdef HTML_FORMS
   // Here we have been notified that content has been insert
@@ -10032,6 +10038,7 @@ nsCSSFrameConstructor::ContentRemoved(nsIContent*     aContainer,
       } else {
         // Notify the parent frame that it should delete the frame
         // check for a table caption which goes on an additional child list with a different parent
+#ifdef CSS_TABLES
         nsIFrame* outerTableFrame; 
         if (GetCaptionAdjustedParent(parentFrame, childFrame, &outerTableFrame)) {
           rv = frameManager->RemoveFrame(outerTableFrame,
@@ -10039,8 +10046,11 @@ nsCSSFrameConstructor::ContentRemoved(nsIContent*     aContainer,
                                          childFrame);
         }
         else {
+#endif
           rv = frameManager->RemoveFrame(parentFrame, nsnull, childFrame);
+#ifdef CSS_TABLES
         }
+#endif
       }
 
       if (mInitialContainingBlock == childFrame) {
