@@ -2235,7 +2235,7 @@ nsTreeBodyFrame::Paint(nsPresContext*      aPresContext,
       mPageLength = mInnerBox.height/mRowHeight;
 
     if (oldPageCount != mPageLength || mHorzWidth != CalcHorzWidth()) {
-      // Schedule a ResizeReflow that will update our page count properly.
+      // Schedule a ResizeReflow that will update our info properly.
       AddStateBits(NS_FRAME_IS_DIRTY);
       aPresContext->PresShell()->FrameNeedsReflow(this, nsIPresShell::eResize);
     }
