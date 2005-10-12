@@ -47,7 +47,7 @@
 menu,
 menuitem {
   -moz-appearance: menuitem;
-  -moz-box-align: center;
+  -moz-box-orient: vertical;
   color: MenuText;
   font: menu;
   list-style-image: none;
@@ -73,6 +73,15 @@ menuitem[_moz-menuactive="true"][disabled="true"] {
 }
 
 /* ..... internal content .... */
+
+.menu-inner-content {
+  -moz-box-orient: horizontal;
+  -moz-box-align: center;
+}
+
+.menu-drop-marker-box {
+
+}
 
 .menu-accel,
 .menu-iconic-accel,
