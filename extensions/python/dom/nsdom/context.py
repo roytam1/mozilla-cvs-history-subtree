@@ -12,6 +12,7 @@ from xpcom import components, primitives, COMException, nsError
 import _nsdom
 
 IID_nsIScriptGlobalObject = _nsdom.IID_nsIScriptGlobalObject
+IID_nsIDOMXULElement = components.interfaces.nsIDOMXULElement
 
 # Borrow the xpcom logger (but use a new sub-logger)
 logger = logging.getLogger("xpcom.nsdom")
@@ -20,6 +21,15 @@ logger = logging.getLogger("xpcom.nsdom")
 # critical areas.
 
 # Also note that assert statements have no cost in non-debug builds.
+
+# XUL Elements don't expose the XBL implemented interfaces via classinfo.
+# So we cheat :)
+xul_element_interfaces = {
+    'textbox' : [components.interfaces.nsIDOMXULTextBoxElement],
+    'button': [components.interfaces.nsIDOMXULButtonElement],
+    'checkbox': [components.interfaces.nsIDOMXULCheckboxElement],
+    'image': [components.interfaces.nsIDOMXULImageElement],
+}
 
 # The event listener class we attach to an object for addEventListener
 class EventListener:
@@ -52,7 +62,8 @@ class WrappedNative(Component):
         Component.__init__(self, obj)
 
     def __repr__(self):
-        return "<XPCOM DOM object wrapping %s>" % (self._comobj_,)
+        iface_desc = self._get_classinfo_repr_()
+        return "<DOM object '%s' (%s)>" % (self._object_name_,iface_desc)
         
     def __getattr__(self, attr):
         # If it exists in expandos, always return it.
@@ -92,6 +103,28 @@ class WrappedNative(Component):
                 self._expandos_[attr] = value
             self._context_._remember_object(self)
 
+    def _build_all_supported_interfaces_(self):
+        # Generally called as pyxpcom is finding an attribute.
+        Component._build_all_supported_interfaces_(self)
+        # Now hard-code certain element names we know about, as the XBL
+        # implemented interfaces are not exposed by this.
+        ii = self.__dict__['_interface_infos_']
+        if ii.has_key(IID_nsIDOMXULElement):
+            # Is a DOM element - see if in our map.
+            tagName = self.tagName
+            interfaces = xul_element_interfaces.get(tagName, [])
+            for interface in interfaces:
+                if not ii.has_key(interface):
+                        try:
+                            self._remember_interface_info(interface)
+                        except COMException, why:
+                            # eeek - if we fail to build an interface we will just
+                            # try and fail again next time.  We need None in the map
+                            logger.warning("Failed to build interface info for %s: %s" \
+                                           % (interface, why))
+        else:
+            logger.info("Not a DOM element - not hooking extra interfaces")
+
     def addEventListener(self, event, handler, useCapture=False):
         # We need to transform string or function objects into
         # nsIDOMEventListener interfaces.
@@ -105,8 +138,9 @@ class WrappedNative(Component):
 class WrappedNativeGlobal(WrappedNative):
     # Special support for our global.
     def __repr__(self):
-        return "<GlobalWindow (outer=%s) %r>" % (_nsdom.IsOuterWindow(self._comobj_),
-                                                 self._comobj_)
+        iface_desc = self._get_classinfo_repr_()
+        outer = _nsdom.IsOuterWindow(self._comobj_)
+        return "<GlobalWindow outer=%s %s>" % (outer, iface_desc)
 
 class ScriptContext:
     def __init__(self):
@@ -202,6 +236,17 @@ class ScriptContext:
                 logger.warning("'this' object has no document global")
 
     def FinalizeClasses(self, globalObject):
+        self._reset()
+
+    def ClearScope(self, globalObject):
+        if __debug__:
+            logger.debug("%s.ClearScope %r (%d)", self, globalObject, id(globalObject))
+        assert globalObject is self.GetNativeGlobal(), "Wrong global being cleared?"
+        self._reset()
+
+    def FinalizeContext(self):
+        if __debug__:
+            logger.debug("%s.FinalizeContext", self)
         self._reset()
 
     def ExecuteScript(self, scriptObject, scopeObject):
