@@ -676,7 +676,8 @@ SipUAStack.fun(
     m.appendHeader(fromHeader);
     // Call-ID header with new call id:
     var callIDHeader =
-      gSyntaxFactory.createCallIDHeader(generateUUID() + "@" +
+      gSyntaxFactory.createCallIDHeader(gUUIDGenerator.generateUUIDString() +
+                                        "@" +
                                         this.hostName);
     m.appendHeader(callIDHeader);
     // CSeq header matching the request method and containing a new

@@ -53,7 +53,7 @@ EXPORTED_SYMBOLS = ["BRANCH_COOKIE",
                     "gDNSService",
                     "gLoggingService",
                     "generateTag",
-                    "generateUUID",
+                    "gUUIDGenerator",
                     "constructClientTransactionKey",
                     "constructServerTransactionKey",
                     "constructClientDialogID",
@@ -152,6 +152,12 @@ var gDNSService = CLASS_DNS_SERVICE.getService(ITF_DNS_SERVICE);
 // access to non-xpcom interface):
 var gLoggingService = Components.classes['@mozilla.org/moz/jsloader;1'].getService(Components.interfaces.xpcIJSComponentLoader).importModule('rel:LoggingService.js').theLoggingService;
 
+////////////////////////////////////////////////////////////////////////
+// gUUIDGenerator: global UUID generator service instance
+
+// access directly via JS:
+var gUUIDGenerator = Components.classes["@mozilla.org/moz/jsloader;1"].getService(Components.interfaces.xpcIJSComponentLoader).importModule('rel:zapUUIDGenerator.js').theUUIDGenerator;
+
 
 ////////////////////////////////////////////////////////////////////////
 // Utilities for generating tags & branch parameters:
@@ -171,26 +177,6 @@ function generateTag() {
   
   // return as base 36 to get as few chars as possible:
   return r.toString(36);
-}
-
-function generateUUID() {
-  // generate a 'version 4'-type UUID following
-  // draft-leach-uuids-guids-01.txt
-  var time_low_32 = getRandom32();
-  var time_mid_16 = getRandom32() & 0xFFFF;
-  var time_high_and_version_16 = 0x4000 | (getRandom32() & 0x0FFF);
-  var clock_seq_hi_and_reserved_8 = 0x80 | (getRandom32() & 0x3F);
-  var clock_seq_low_8 = getRandom32() & 0xFF;
-  var node1_16 = getRandom32() & 0xFFFF;
-  var node2_32 = getRandom32();
-  
-  return padleft(time_low_32.toString(16), "0", 8) + "-" +
-    padleft(time_mid_16.toString(16), "0", 4) + "-" +
-    padleft(time_high_and_version_16.toString(16), "0", 4) + "-" +
-    padleft(clock_seq_hi_and_reserved_8.toString(16), "0", 2) +
-    padleft(clock_seq_low_8.toString(16), "0", 2) + "-" +
-    padleft(node1_16.toString(16), "0", 4) +
-    padleft(node2_32.toString(16), "0", 8);
 }
 
 ////////////////////////////////////////////////////////////////////////

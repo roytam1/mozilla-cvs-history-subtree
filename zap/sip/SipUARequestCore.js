@@ -139,7 +139,7 @@ SipNonInviteRC.statefun(
     }
     // send request to next destination:
     this.request.getTopViaHeader().setParameter("branch",
-                                                 BRANCH_COOKIE+generateUUID());
+                                                 BRANCH_COOKIE+gUUIDGenerator.generateUUIDString());
     if (this.dialog) {
       // we're sending a request within a dialog.
       // update local sequence number
@@ -355,7 +355,7 @@ SipInviteRC.statefun(
     
     // send request to next destination:
     this.request.getTopViaHeader().setParameter("branch",
-                                                 BRANCH_COOKIE+generateUUID());
+                                                 BRANCH_COOKIE+gUUIDGenerator.generateUUIDString());
     if (this.dialog) {
       // we're sending a request within a dialog.
       // update local sequence number
@@ -545,7 +545,7 @@ SipInviteRC.fun(
 
       // set a new branch id:
       ackTemplate.getTopViaHeader().setParameter("branch",
-                                                 BRANCH_COOKIE+generateUUID());
+                                                 BRANCH_COOKIE+gUUIDGenerator.generateUUIDString());
       
       // invoke the response handler to generate the ACK:
       ack = this.responsehandler.handle2XXResponse(this, dialog,
