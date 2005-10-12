@@ -6084,13 +6084,8 @@ nsTextFrame::ComputeTotalWordDimensions(nsPresContext* aPresContext,
 
         if(newWordBuf)  {
           moreDimensions =
-<<<<<<< nsTextFrame.cpp
             ComputeWordFragmentDimensions(aPresContext,
-                                          aLineLayout, aReflowState,
-=======
-            ComputeWordFragmentDimensions(aPresContext, aLineBreaker,
                                           aLineLayout, aRenderingContext,
->>>>>>> 1.513.2.2
                                           aNextFrame, content, tc, &stop,
                                           newWordBuf, aWordLen, newWordBufSize,
                                           aCanBreakBefore);
