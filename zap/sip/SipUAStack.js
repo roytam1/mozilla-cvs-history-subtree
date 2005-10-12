@@ -144,14 +144,18 @@ SipUAStack.fun(
     this.requestHandler = handler;
 
     // Unpack configuration parameters:
+    var instance_id = "";
+    // port_base will be unpacked by transport
     var methods = "OPTIONS";
     var extensions = "";
     this.rport_client = true;
     if (config) {
+      try { instance_id = config.getProperty("instance_id"); }catch(e){}
       try { methods = config.getProperty("methods"); }catch(e){}
       try { extensions = config.getProperty("extensions"); }catch(e){}
       try { rport_client = config.getProperty("rport_client"); }catch(e){}
     }
+    this.instanceID = instance_id ? instance_id : gUUIDGenerator.generateUUIDURNString();
     this.allowedMethods = methods.split(",");
     this.supportedExtensions = extensions.split(",");
     
@@ -334,6 +338,9 @@ SipUAStack.getter(
   function get_listeningPort() {
     return this.transport.listeningPort;
   });
+
+//  readonly attribute ACString instanceID;
+SipUAStack.obj("instanceID", null);
 
 //----------------------------------------------------------------------
 // zapISipTransportSink implementation:

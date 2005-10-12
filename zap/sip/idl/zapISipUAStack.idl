@@ -126,6 +126,14 @@ interface zapISipUAStack : nsISupports
    * configuration parameters.
    *
    * Valid configuration parameters:
+   *
+   * - ACString <b>"instance_id"</b>: instance id of the UA as defined
+   *                                  in draft-ietf-sip-gruu-05.txt.
+   *                                  This must be a UUID URN string
+   *                                  (RFC4122).
+   *                                  Default: A new UUID URN will be
+   *                                  generated if this parameter is not
+   *                                  given.
    * - unsigned short <b>"port_base"</b> : port at which to listen for
    *                                       tcp and udp SIP traffic. If
    *                                       the port is not available,
@@ -339,4 +347,13 @@ interface zapISipUAStack : nsISupports
   readonly attribute ACString hostName;
   readonly attribute ACString hostAddress;
   readonly attribute unsigned short listeningPort;
+
+  /**
+   * The instance id of this UA as defined in
+   * draft-ietf-sip-gruu-05.txt
+   *
+   * This will be set to the value of the 'instance_id' parameter
+   * handed to the UAStack in init().
+   */
+  readonly attribute ACString instanceID;
 };

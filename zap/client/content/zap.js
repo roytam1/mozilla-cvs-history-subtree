@@ -194,6 +194,7 @@ Prefs.prototype.datasources["default"] = wPrefsDS;
 
 Prefs.rdfResourceAttrib("urn:mozilla:zap:location",
                         "urn:mozilla:zap:initial_location");
+Prefs.rdfLiteralAttrib("urn:mozilla:zap:instance_id", "");
 Prefs.rdfLiteralAttrib("urn:mozilla:zap:max_recent_calls", "10");
 Prefs.rdfLiteralAttrib("urn:mozilla:zap:dnd_code", "480"); // Temporarily unavail.
 Prefs.rdfLiteralAttrib("urn:mozilla:zap:dnd_headers", ""); // additional headers for DND response
@@ -823,8 +824,18 @@ function initSipStack() {
     getService(Components.interfaces.zapISdpService);
   
   wSipStack = Components.classes["@mozilla.org/zap/sipstack;1"].createInstance(Components.interfaces.zapISipUAStack);
+
+  // make sure we generate a UA instance id now if we haven't got one
+  // already: (see draft-ietf-sip-gruu-05.txt)
+  if (!wPrefs["urn:mozilla:zap:instance_id"]) {
+    var uuidgen = Components.classes["@mozilla.org/zap/uuid-generator;1"].getService(Components.interfaces.zapIUUIDGenerator);
+    wPrefs["urn:mozilla:zap:instance_id"] = uuidgen.generateUUIDURNString();
+    wPrefs.flush();
+  }
+  
   wSipStack.init(wUAHandler,
-                 makePropertyBag({$port_base:5060,
+                 makePropertyBag({$instance_id:wPrefs["urn:mozilla:zap:instance_id"],
+                                  $port_base:5060,
                                   $methods: "OPTIONS,INVITE,ACK,CANCEL,BYE"}));
   document.getElementById("status_text").label = "Listening for UDP/TCP SIP traffic on port "+wSipStack.listeningPort;
 
