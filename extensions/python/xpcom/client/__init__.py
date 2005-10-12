@@ -382,8 +382,7 @@ class Component(_XPCOMBase):
             setattr(interface, attr, val)
             return
         raise AttributeError, "XPCOM component '%s' has no attribute '%s'" % (self._object_name_, attr)
-    def __repr__(self):
-        # We can advantage from nsIClassInfo - use it.
+    def _get_classinfo_repr_(self):
         try:
             if not self._tried_classinfo_:
                 self._build_all_supported_interfaces_()
@@ -393,15 +392,23 @@ class Component(_XPCOMBase):
             # we are flagged as *not* having built, so the error is seen
             # by the first caller who actually *needs* this to work.
             self.__dict__['_tried_classinfo_'] = 0
+
+        iface_names = self.__dict__['_interface_names_'].keys()
+        try:
+            iface_names .remove("nsISupports")
+        except ValueError:
+            pass
+        
         infos = self.__dict__['_interface_infos_']
         if infos:
-            iface_names = ",".join([iid.name for iid in infos.keys()])
-            iface_desc = " (implementing %s)" % (iface_names,)
-        else:
-            # no class info, so we only implement the interface on our
-            # underlying object.
-            iface_desc = " (implementing %s)" % (self.__dict__['_comobj_'].IID.name,)
-        return "<XPCOM component '%s'%s>" % (self._object_name_,iface_desc)
+            iface_names.extend([iid.name for iid in infos.keys()])
+        iface_desc = "implementing %s" % (",".join(iface_names),)
+        return iface_desc
+        
+    def __repr__(self):
+        # We can advantage from nsIClassInfo - use it.
+        iface_desc = self._get_classinfo_repr_()
+        return "<XPCOM component '%s' (%s)>" % (self._object_name_,iface_desc)
 
 class _Interface(_XPCOMBase):
     def __init__(self, comobj, iid, method_infos, getters, setters, constants):
