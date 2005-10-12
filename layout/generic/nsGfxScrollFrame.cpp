@@ -699,7 +699,8 @@ nsHTMLScrollFrame::Reflow(nsPresContext*           aPresContext,
   PRBool reflowScrollCorner = PR_TRUE;
   if (!aReflowState.ShouldReflowAllKids()) {
     #define NEEDS_REFLOW(frame_) \
-      (((frame_)->GetStateBits() & \
+      ((frame_) && \
+       ((frame_)->GetStateBits() & \
         (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)) != 0)
 
     reflowContents = NEEDS_REFLOW(mInner.mScrolledFrame);
