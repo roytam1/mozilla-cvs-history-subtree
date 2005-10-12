@@ -39,6 +39,15 @@ def do_load():
     button = this.document.getElementById("but_dialog")
     button.addEventListener('click', 'write("hello from the click event for the dialog button")', False)
 
+def do_textbox_keypress(event):
+    if event.keyCode==13:
+        val = event.target.value
+        if val:
+            write('You wrote: ' + val)
+        else:
+            write("You wrote nothing!")
+        event.target.value = ""
+
 # Add an event listener as a function
 this.window.addEventListener('load', do_load, False)
 # Add another one just to test passing a string instead of a function.
@@ -55,6 +64,15 @@ def on_but_dialog_click():
     nsdom.JSExec(this, 'this.window.open("chrome://pyxultest/content/dialog.xul", "my-dialog", "chrome")')
     #new = this.window.open("chrome://pyxultest/content/dialog.xul", "my-dialog", "chrome")
     #print "The new window is", new
+
+# An on-click handler for the image control
+def change_image():
+    image = document.getElementById("image-python");
+    import random
+    num = random.randrange(64) + 1
+    url = "http://www.python.org/pics/PyBanner%03d.gif" % num
+    print "Changing image source from", image.src, "to", url
+    image.src = url
 
 def run_tests():
     # I wish I could reach into the window and get all tests!

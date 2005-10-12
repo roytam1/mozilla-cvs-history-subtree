@@ -27,12 +27,10 @@ print "Window location is", this.window.location.href
 
     ]]>
   </script>
-  <vbox flex="1">
-    <textbox id="output_box" style="width:100%"
-             value = "If you can see this, things aren't working well!"
-             rows="15" multiline="true" flex="1"
-    />
-  </vbox>
+  <textbox id="output_box" style="width:100%"
+           value = "If you can see this, things aren't working well!"
+           rows="15" multiline="true" flex="1"
+  />
 
   <groupbox>
     <caption label="Items from Overlays"/>
@@ -44,19 +42,29 @@ print "Window location is", this.window.location.href
     </hbox>
   </groupbox>
 
-  <groupbox>
-    <caption label="Random Buttons"/>
-  
-    <hbox>
-      <!-- Here we have a script element defined at a parent node -->
-      <hbox oncommand="write('You clicked on a %s with id=%s' % (event.target.tagName, event.target.getAttribute('id')))">
-        <button id="some-button" label = "click here"/>
-        <button id="another-button" label = "or here"/>
+  <hbox>
+    <groupbox>
+      <caption label="Random Buttons"/>
+    
+      <hbox>
+        <!-- Here we have a script element defined at a parent node -->
+        <vbox oncommand="write('You clicked on a %s with id=%s and type=%s' % (event.target.tagName, event.target.id, event.target.type))">
+          <hbox>
+            <button id="some-button" label = "click here"/>
+            <button id="another-button" label = "or here"/>
+          </hbox>
+          <button type="checkbox" autocheck="1" id="some-checkbox" label="Click on this checkbox too"/>
+        </vbox>
+        <button id="but_dialog" label="open dialog"
+                oncommand="on_but_dialog_click()"/>
       </hbox>
-      <button id="but_dialog" label="open dialog"
-              oncommand="on_but_dialog_click()"/>
-    </hbox>
-  </groupbox>
+    </groupbox>
+    <groupbox flex="1">
+      <caption label="Key Event Tests"/>
+      <textbox id="input_test_intrinsic" value="Type something and press Enter"
+               onkeypress="return do_textbox_keypress(event)"/>
+    </groupbox>
+  </hbox>
 
   <groupbox>
     <caption label="Automated tests"/>
@@ -66,7 +74,14 @@ print "Window location is", this.window.location.href
         <text class="label" value="The test window is not shown if the tests are successful"/>
         <checkbox id="keep_tests_open" label="Always keep test window open"/>
       </vbox>
-    </hbox>>
+      <vbox>
+        <text class="label" value="Click to change image"/>
+        <image id="image-python" src="http://www.python.org/pics/PyBanner011.gif"
+               width="150" height="35" flex="0"
+               onclick="change_image()"/>
+      </vbox>
+    </hbox>
+
   </groupbox>
 </window>
 
