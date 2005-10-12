@@ -654,6 +654,20 @@ private:
                             nsIFrame**       aFrame,
                             nsStyleContext*  aStyleContext);
 
+  // A function that can be invoked to create some sort of image frame.
+  typedef nsresult (* ImageFrameCreatorFunc)(nsIPresShell*, nsIFrame**);
+
+  /**
+   * CreateHTMLImageFrame will do some tests on aContent, and if it determines
+   * that the content should get an image frame it'll create one via aFunc and
+   * return it in *aFrame.  Note that if this content node isn't supposed to
+   * have an image frame this method will return NS_OK and set *aFrame to null.
+   */
+  nsresult CreateHTMLImageFrame(nsIContent*           aContent,
+                                nsStyleContext*       aStyleContext,
+                                ImageFrameCreatorFunc aFunc,
+                                nsIFrame**            aFrame);
+
 #ifdef HTML_FORMS
   nsresult AddDummyFrameToSelect(nsFrameConstructorState& aState,
                                  nsIFrame*                aListFrame,
