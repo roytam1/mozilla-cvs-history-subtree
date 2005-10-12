@@ -38,6 +38,8 @@
 
 #import <Cocoa/Cocoa.h>
 
+// this implements the mozWindow protocol (see mozView.h)
+
 @interface BrowserWindow : NSWindow
 {
   IBOutlet id mAutoCompleteTextField;
