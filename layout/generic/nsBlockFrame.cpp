@@ -1305,6 +1305,39 @@ nsBlockFrame::ComputeCombinedArea(const nsHTMLReflowState& aReflowState,
 }
 
 nsresult
+nsBlockFrame::MarkLineDirty(line_iterator aLine)
+{
+  // Mark aLine dirty
+  aLine->MarkDirty();
+#ifdef DEBUG
+  if (gNoisyReflow) {
+    IndentBy(stdout, gNoiseIndent);
+    ListTag(stdout);
+    printf(": mark line %p dirty\n", NS_STATIC_CAST(void*, aLine.get()));
+  }
+#endif
+
+  // Mark previous line dirty if its an inline line so that it can
+  // maybe pullup something from the line just affected.
+  // XXX We don't need to do this if aPrevLine ends in a break-after...
+  if (aLine != mLines.front() &&
+      aLine->IsInline() &&
+      aLine.prev()->IsInline()) {
+    aLine.prev()->MarkDirty();
+#ifdef DEBUG
+    if (gNoisyReflow) {
+      IndentBy(stdout, gNoiseIndent);
+      ListTag(stdout);
+      printf(": mark prev-line %p dirty\n",
+             NS_STATIC_CAST(void*, aLine.prev().get()));
+    }
+#endif
+  }
+
+  return NS_OK;
+}
+
+nsresult
 nsBlockFrame::PrepareResizeReflow(nsBlockReflowState& aState)
 {
   // See if we can try and avoid marking all the lines as dirty
@@ -1406,40 +1439,6 @@ nsBlockFrame::PrepareResizeReflow(nsBlockReflowState& aState)
       line->MarkDirty();
     }
   }
-  return NS_OK;
-}
-
-
-nsresult
-nsBlockFrame::MarkLineDirty(line_iterator aLine)
-{
-  // Mark aLine dirty
-  aLine->MarkDirty();
-#ifdef DEBUG
-  if (gNoisyReflow) {
-    IndentBy(stdout, gNoiseIndent);
-    ListTag(stdout);
-    printf(": mark line %p dirty\n", NS_STATIC_CAST(void*, aLine.get()));
-  }
-#endif
-
-  // Mark previous line dirty if its an inline line so that it can
-  // maybe pullup something from the line just affected.
-  // XXX We don't need to do this if aPrevLine ends in a break-after...
-  if (aLine != mLines.front() &&
-      aLine->IsInline() &&
-      aLine.prev()->IsInline()) {
-    aLine.prev()->MarkDirty();
-#ifdef DEBUG
-    if (gNoisyReflow) {
-      IndentBy(stdout, gNoiseIndent);
-      ListTag(stdout);
-      printf(": mark prev-line %p dirty\n",
-             NS_STATIC_CAST(void*, aLine.prev().get()));
-    }
-#endif
-  }
-
   return NS_OK;
 }
 
