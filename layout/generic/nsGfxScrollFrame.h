@@ -478,8 +478,6 @@ protected:
 private:
   friend class nsGfxScrollFrameInner;
   nsGfxScrollFrameInner mInner;
-  PRPackedBool mHorizontalOverflow;
-  PRPackedBool mVerticalOverflow;
 };
 
 #endif /* nsGfxScrollFrame_h___ */

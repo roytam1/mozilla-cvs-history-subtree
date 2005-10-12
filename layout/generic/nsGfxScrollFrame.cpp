@@ -908,9 +908,7 @@ NS_NewXULScrollFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame, PRBool aIsR
 
 nsXULScrollFrame::nsXULScrollFrame(nsIPresShell* aShell, PRBool aIsRoot)
   : nsBoxFrame(aShell, aIsRoot),
-    mInner(this, aIsRoot),
-    mHorizontalOverflow(PR_FALSE),
-    mVerticalOverflow(PR_FALSE)
+    mInner(this, aIsRoot)
 {
     SetLayoutManager(nsnull);
 }
