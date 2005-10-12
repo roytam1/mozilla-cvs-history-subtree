@@ -5457,8 +5457,7 @@ nsTextFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
                                (0 != ts.mWordSpacing) ||
                                (0 != ts.mLetterSpacing) ||
                                ts.mJustifying);
-  nsTextTransformer tx(mContent->GetOwnerDoc()->GetLineBreaker(), nsnull,
-                       presContext);
+  nsTextTransformer tx(presContext);
   // Keep the text in ascii if possible. Note that if we're measuring small
   // caps text then transform to Unicode because the helper function only
   // accepts Unicode text
@@ -5548,8 +5547,7 @@ nsTextFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
                                (0 != ts.mWordSpacing) ||
                                (0 != ts.mLetterSpacing) ||
                                ts.mJustifying);
-  nsTextTransformer tx(mContent->GetOwnerDoc()->GetLineBreaker(), nsnull,
-                       presContext);
+  nsTextTransformer tx(presContext);
   // Keep the text in ascii if possible. Note that if we're measuring small
   // caps text then transform to Unicode because the helper function only
   // accepts Unicode text
