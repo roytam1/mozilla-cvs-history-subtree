@@ -97,6 +97,10 @@ toolbarbutton.bookmark-item[open="true"] {
   display: none;
 }
 
+#personal-bookmarks {
+  min-width: 21px; /* size of the chevron button */
+}
+
 #wrapper-personal-bookmarks .toolbarpaletteitem-box {
   width: 16px;
   height: 16px;
@@ -154,17 +158,17 @@ menuitem.bookmark-item {
 
 /* ..... drag and drop styles ..... */
 
-.bookmark-item[dragover-left="true"] {
-  -moz-border-left-colors: #000000;
+.bookmark-item[dragover-left="true"], .bookmark-item[dragover-left="true"] > * > .menu-drop-marker-box {
+  border-left: 1px solid #000000;
 }
-.bookmark-item[dragover-right="true"] {
-  -moz-border-right-colors: #000000;
+.bookmark-item[dragover-right="true"], .bookmark-item[dragover-right="true"] > * > .menu-drop-marker-box {
+  border-right: 1px solid #000000;
 }
-.bookmark-item[dragover-top="true"] {
-  -moz-border-top-colors: #000000;
+.bookmark-item[dragover-top="true"], .bookmark-item[dragover-top="true"] > * > .menu-drop-marker-box {
+  border-top: 1px solid #000000;
 }
-.bookmark-item[dragover-bottom="true"] {
-  -moz-border-bottom-colors: #000000;
+.bookmark-item[dragover-bottom="true"], .bookmark-item[dragover-bottom="true"] > * > .menu-drop-marker-box {
+  border-bottom: 1px solid #000000;
 }
 
 /* ::::: bookmark items ::::: */

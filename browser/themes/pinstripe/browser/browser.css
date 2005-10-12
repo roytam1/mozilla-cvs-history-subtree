@@ -178,6 +178,10 @@ list-style-image: url("chrome://browser/skin/bookmarks/livemark-item.png");
   background: url("chrome://browser/skin/bookmarks/Toolbar-bookmarks.png") no-repeat;
 }
 
+#personal-bookmarks {
+  min-width: 21px; /* size of the chevron button */
+}
+
 .bookmarks-toolbar-customize {
   display: none;
   max-width: 15em !important;
