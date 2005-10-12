@@ -141,6 +141,7 @@ CSS_KEY(-moz-mac-menushadow, _moz_mac_menushadow)
 CSS_KEY(-moz-mac-menutextselect, _moz_mac_menutextselect)
 CSS_KEY(-moz-malayalam, _moz_malayalam)
 CSS_KEY(-moz-marker, _moz_marker) // Disabled because not supported correctly.
+CSS_KEY(-moz-menubarhovertext, _moz_menubarhovertext)
 CSS_KEY(-moz-menuhover, _moz_menuhover)
 CSS_KEY(-moz-menuhovertext, _moz_menuhovertext)
 CSS_KEY(-moz-middle-with-baseline, _moz_middle_with_baseline)
