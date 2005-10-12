@@ -536,7 +536,7 @@ nsHTMLScrollFrame::ReflowContents(ScrollReflowState* aState,
                                   const nsHTMLReflowMetrics& aDesiredSize)
 {
   PRBool currentlyUsingVScrollbar = GuessVScrollbarNeeded(*aState);
-  nsHTMLReflowMetrics kidDesiredSize(aDesiredSize.mComputeMEW, aDesiredSize.mFlags);
+  nsHTMLReflowMetrics kidDesiredSize(aDesiredSize.mFlags);
   nsresult rv = ReflowScrolledFrame(*aState, currentlyUsingVScrollbar,
                                     &kidDesiredSize, PR_TRUE);
   if (NS_FAILED(rv))
@@ -811,7 +811,8 @@ nsHTMLScrollFrame::Reflow(nsPresContext*           aPresContext,
   aDesiredSize.mOverflowArea = nsRect(0, 0, aDesiredSize.width, aDesiredSize.height);
   FinishAndStoreOverflow(&aDesiredSize);
 
-  if (reason != eReflowReason_Initial && !mInner.mHadNonInitialReflow) {
+  if (!(GetStateBits() & NS_FRAME_FIRST_REFLOW) &&
+      !mInner.mHadNonInitialReflow) {
     mInner.mHadNonInitialReflow = PR_TRUE;
     if (mInner.mIsRoot) {
       // For viewports, record whether we needed a vertical scrollbar
@@ -2232,7 +2233,7 @@ nsXULScrollFrame::Layout(nsBoxLayoutState& aState)
     mInner.LayoutScrollbars(aState, clientRect, oldScrollAreaBounds, scrollAreaRect);
   }
   mInner.ScrollToRestoredPosition();
-  if (aState.GetReflowState()->reason != eReflowReason_Initial) {
+  if (!(GetStateBits() & NS_FRAME_FIRST_REFLOW)) {
     mInner.mHadNonInitialReflow = PR_TRUE;
   }
   return NS_OK;
