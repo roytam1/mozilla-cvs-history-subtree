@@ -50,7 +50,11 @@ MOZ_PKG_FORMAT  = DMG
 else
 ifeq (,$(filter-out OS2 WINNT, $(OS_ARCH)))
 MOZ_PKG_FORMAT  = ZIP
+ifeq ($(OS_ARCH),OS2)
+INSTALLER_DIR   = os2
+else
 INSTALLER_DIR   = windows
+endif
 else
 ifeq (,$(filter-out SunOS, $(OS_ARCH)))
 MOZ_PKG_FORMAT  = BZ2
@@ -192,6 +196,7 @@ NO_PKG_FILES += \
 	res/throbber \
 	shlibsign* \
 	winEmbed.exe \
+	os2Embed.exe \
 	chrome/chrome.rdf \
 	chrome/app-chrome.manifest \
 	chrome/overlayinfo \
@@ -252,7 +257,7 @@ ifdef MOZ_PKG_MANIFEST
 	$(PERL) -I$(topsrcdir)/xpinstall/packager -e 'use Packager; \
 	  Packager::Copy("$(DIST)", "$(DIST)/$(MOZ_PKG_APPNAME)", \
 	                 "$(MOZ_PKG_MANIFEST)", "$(PKGCP_OS)", 1, 0, 1);'
-	$(PERL) $(topsrcdir)/xpinstall/packager/xptlink.pl -s $(DIST) -d $(DIST)/xpt -f $(DIST)/$(MOZ_PKG_APPNAME)/components -v -o $(PKGCP_OS)
+	$(PERL) $(topsrcdir)/xpinstall/packager/xptlink.pl -s $(DIST) -d $(DIST)/xpt -f $(DIST)/$(MOZ_PKG_APPNAME)/components -v
 else # !MOZ_PKG_MANIFEST
 ifeq ($(MOZ_PKG_FORMAT),DMG)
 	@cd $(DIST) && rsync -auv --copy-unsafe-links $(_APPNAME) $(MOZ_PKG_APPNAME)
