@@ -2251,6 +2251,26 @@ ObjectPrincipalFinder(JSContext *cx, JSObject *obj)
   return jsPrincipals;
 }
 
+static int PR_CALLBACK
+MaxScriptRunTimePrefChangedCallback(const char *aPrefName, void *aClosure)
+{
+  // Default limit on script run time to 5 seconds. 0 means let
+  // scripts run forever.
+  PRInt32 time = nsContentUtils::GetIntPref(aPrefName, 5);
+
+  if (time == 0) {
+    // Let scripts run for a really, really long time.
+    sMaxScriptRunTime = LL_INIT(0x40000000, 0);
+  } else {
+    PRTime usec_per_sec;
+    LL_I2L(usec_per_sec, PR_USEC_PER_SEC);
+    LL_I2L(sMaxScriptRunTime, time);
+    LL_MUL(sMaxScriptRunTime, sMaxScriptRunTime, usec_per_sec);
+  }
+
+  return 0;
+}
+
 // static
 nsresult
 nsJSEnvironment::Init()
@@ -2314,18 +2334,10 @@ nsJSEnvironment::Init()
   }
 #endif /* OJI */
 
-  // Initialize limit on script run time to 5 seconds
-  PRInt32 maxtime = 5;
-  PRInt32 time = nsContentUtils::GetIntPref("dom.max_script_run_time");
-
-  // Force the default for unreasonable values
-  if (time > 0)
-    maxtime = time;
-
-  PRTime usec_per_sec;
-  LL_I2L(usec_per_sec, PR_USEC_PER_SEC);
-  LL_I2L(sMaxScriptRunTime, maxtime);
-  LL_MUL(sMaxScriptRunTime, sMaxScriptRunTime, usec_per_sec);
+  nsContentUtils::RegisterPrefCallback("dom.max_script_run_time",
+                                       MaxScriptRunTimePrefChangedCallback,
+                                       nsnull);
+  MaxScriptRunTimePrefChangedCallback("dom.max_script_run_time", nsnull);
 
   rv = CallGetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID, &sSecurityManager);
 
