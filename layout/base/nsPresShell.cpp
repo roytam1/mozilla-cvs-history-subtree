@@ -3297,8 +3297,11 @@ PresShell::FrameNeedsReflow(nsIFrame *aFrame, IntrinsicDirty aIntrinsicDirty)
     }
   }
 
-  if (gAsyncReflowDuringDocLoad && mDocumentLoading && !mDummyLayoutRequest)
-    AddDummyLayoutRequest();
+  if (gAsyncReflowDuringDocLoad && mDocumentLoading &&
+      !mDocumentOnloadBlocked) {
+    mDocument->BlockOnload();
+    mDocumentOnloadBlocked = PR_TRUE;
+  }
 
   // For async reflow during doc load, post a reflow event if we are not batching reflow commands.
   // For sync reflow during doc load, post a reflow event if we are not batching reflow commands
@@ -6247,7 +6250,8 @@ PresShell::DoneRemovingDirtyRoots()
   // We want to unblock here even if we're destroying, since onload
   // can well fire with no presentation in sight.  So just check
   // whether we actually blocked onload.
-  if (mRCCreatedDuringLoad == 0 && mDocumentOnloadBlocked) {
+  // XXXldb Do we want to readd the mIsReflowing check?
+  if (mDocumentOnloadBlocked && mDirtyRoots.Count() == 0 && !mIsReflowing) {
     mDocument->UnblockOnload(PR_FALSE);
     mDocumentOnloadBlocked = PR_FALSE;
   }
