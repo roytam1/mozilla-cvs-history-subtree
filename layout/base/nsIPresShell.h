@@ -326,6 +326,7 @@ public:
    * root.
    */
   enum IntrinsicDirty {
+    // XXXldb eResize should be renamed
     eResize,     // don't mark any intrinsic widths dirty
     eTreeChange, // mark intrinsic widths dirty on aFrame and its ancestors
     eStyleChange // Do eTreeChange, plus all of aFrame's descendants
