@@ -100,6 +100,7 @@ private:
 nsSVGCairoGlyphMetrics::nsSVGCairoGlyphMetrics(nsISVGGlyphMetricsSource *src)
   : mSource(src)
 {
+  memset(&mExtents, 0, sizeof(cairo_text_extents_t));
   mCT = cairo_create(gSVGCairoDummySurface);
 }
 
@@ -243,16 +244,15 @@ nsSVGCairoGlyphMetrics::GetExtentOfChar(PRUint32 charnum, nsIDOMSVGRect **_retva
 {
   *_retval = nsnull;
 
-  cairo_glyph_t glyph;
   cairo_text_extents_t extent;
-  glyph.x = glyph.y = 0;
 
   nsAutoString text;
   mSource->GetCharacterData(text);
-  glyph.index = text[charnum];
 
   SelectFont(mCT);
-  cairo_glyph_extents(mCT, &glyph, 1, &extent);
+  cairo_text_extents(mCT,
+                     NS_ConvertUCS2toUTF8(Substring(text, charnum, 1)).get(),
+                     &extent);
 
   nsCOMPtr<nsIDOMSVGRect> rect = do_CreateInstance(NS_SVGRECT_CONTRACTID);
 
@@ -296,7 +296,7 @@ nsSVGCairoGlyphMetrics::Update(PRUint32 updatemask, PRBool *_retval)
                        NS_ConvertUCS2toUTF8(text).get(),
                        &mExtents);
   }
-  
+
   return NS_OK;
 }
 

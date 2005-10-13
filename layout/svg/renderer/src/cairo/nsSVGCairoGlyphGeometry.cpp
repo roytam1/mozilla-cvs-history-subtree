@@ -452,15 +452,13 @@ nsSVGCairoGlyphGeometry::GetCoveredRegion(nsISVGRendererRegion **_retval)
 
   nsAutoString text;
   mSource->GetCharacterData(text);
-
+  
   if (text.Length() == 0) {
     double xx = x, yy = y;
     cairo_user_to_device(ctx, &xx, &yy);
     cairo_destroy(ctx);
     return NS_NewSVGCairoRectRegion(_retval, xx, yy, 0, 0);
   }
-
-  cairo_text_path(ctx, NS_ConvertUCS2toUTF8(text).get());
 
   double xmin, ymin, xmax, ymax;
 
@@ -500,9 +498,18 @@ nsSVGCairoGlyphGeometry::GetCoveredRegion(nsISVGRendererRegion **_retval)
       cairo_set_line_join(ctx, CAIRO_LINE_JOIN_BEVEL);
       break;
     }
+
+    cairo_text_path(ctx, NS_ConvertUCS2toUTF8(text).get());
     
     cairo_stroke_extents(ctx, &xmin, &ymin, &xmax, &ymax);
   } else {
+    cairo_text_extents_t extent;
+    cairo_text_extents(ctx,
+                       NS_ConvertUCS2toUTF8(text).get(),
+                       &extent);
+    cairo_rectangle(ctx, x + extent.x_bearing, y + extent.y_bearing,
+                    extent.width, extent.height);
+
     cairo_fill_extents(ctx, &xmin, &ymin, &xmax, &ymax);
   }
 
@@ -531,23 +538,45 @@ nsSVGCairoGlyphGeometry::ContainsPoint(float x, float y, PRBool *_retval)
       return NS_ERROR_FAILURE;
   }
 
-  nsCOMPtr<nsIDOMSVGRect> box;
-  metrics->GetBoundingBox(getter_AddRefs(box));
-
   cairo_t *ctx = cairo_create(gSVGCairoDummySurface);
   if (NS_FAILED(GetGlobalTransform(ctx, nsnull))) {
     cairo_destroy(ctx);
     return NS_ERROR_FAILURE;
   }
 
-  float sX, sY, eX, eY, eWidth, eHeight;
-  mSource->GetX(&sX);
-  mSource->GetY(&sY);
-  box->GetX(&eX);
-  box->GetY(&eY);
-  box->GetWidth(&eWidth);
-  box->GetHeight(&eHeight);
-  cairo_rectangle(ctx, sX + eX, sY + eY, eWidth, eHeight);
+  metrics->SelectFont(ctx);
+
+  nsAutoString text;
+  mSource->GetCharacterData(text);
+
+  float xx, yy;
+  mSource->GetX(&xx);
+  mSource->GetY(&yy);
+
+  cairo_matrix_t matrix;
+
+  /* Generate a path consisting of a box around each character */
+
+  for (PRUint32 i=0; i<text.Length(); i++) {
+    cairo_get_matrix(ctx, &matrix);
+
+    cairo_move_to(ctx, xx, yy);
+
+    cairo_text_extents_t extent;
+    cairo_text_extents(ctx,
+                       NS_ConvertUCS2toUTF8(Substring(text, i, 1)).get(),
+                       &extent);
+    cairo_rel_move_to(ctx, extent.x_bearing, extent.y_bearing);
+    cairo_rel_line_to(ctx, extent.width, 0);
+    cairo_rel_line_to(ctx, 0, extent.height);
+    cairo_rel_line_to(ctx, -extent.width, 0);
+    cairo_close_path(ctx);
+
+    cairo_set_matrix(ctx, &matrix);
+
+    xx += extent.x_advance;
+    yy += extent.y_advance;
+  }
 
   cairo_identity_matrix(ctx);
   *_retval = cairo_in_fill(ctx, x, y);
@@ -592,7 +621,6 @@ nsSVGCairoGlyphGeometry::GetGlobalTransform(cairo_t *ctx, nsISVGCairoCanvas* aCa
   cairo_matrix_t inverse = matrix;
   if (cairo_matrix_invert(&inverse)) {
     cairo_identity_matrix(ctx);
-    cairo_new_path(ctx);
     return NS_ERROR_FAILURE;
   }
 
