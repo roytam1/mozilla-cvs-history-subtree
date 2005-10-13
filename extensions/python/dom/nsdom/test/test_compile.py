@@ -86,6 +86,23 @@ class TestCompile(unittest.TestCase):
         f = new.function(f.func_code, globs, f.func_name)
         self.failUnlessEqual(f(1,2,3), 'wow')
 
+    def testFunctionArgs(self):
+        # Compile a test function, then execute it.
+        src = u"assert a==1\nassert b=='b'\nassert c is None\nreturn 'yes'"
+   
+        defs = (1, "b", None)
+        co = compile_function(src, "foo.py", "func_name",
+                              ["a", "b", "c"],
+                              defs,
+                              lineno=100)
+        globs = {}
+        exec co in globs
+        f = globs['func_name']
+        # re-create the function - so we can bind to different globals
+        globs = {'__debug__': __debug__}
+        f = new.function(f.func_code, globs, f.func_name, defs)
+        self.failUnlessEqual(f(), 'yes')
+
     def testSimple(self):
         globs = {}
         # And the simple compile.

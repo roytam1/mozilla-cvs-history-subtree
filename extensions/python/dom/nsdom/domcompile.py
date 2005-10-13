@@ -72,27 +72,29 @@ def set_filename_and_offset(filename, offset, tree):
 
 def parse_function(src, func_name, arg_names, defaults=[]):
     tree = parse(src, "exec")
+    defaults = [compiler.ast.Const(d) for d in defaults]
     # Insert a Stmt with function object.
     try:
         decs = compiler.ast.Decorators([])
     except AttributeError:
         # 2.3 has no such concept (and different args!)
-        func = compiler.ast.Function(func_name, arg_names, [], 0, None,
+        func = compiler.ast.Function(func_name, arg_names, defaults, 0, None,
                                      tree.node)
     else:
         # 2.4 and later
-        func = compiler.ast.Function(decs, func_name, arg_names, [], 0, None,
+        func = compiler.ast.Function(decs, func_name, arg_names, defaults, 0, None,
                                      tree.node)
     stmt = compiler.ast.Stmt((func,))
     tree.node = stmt
     syntax.check(tree)
     return tree
 
-def compile_function(src, filename, func_name, arg_names, # more args to come...
+def compile_function(src, filename, func_name, arg_names, defaults=[],
+                     # more args to come...
                      lineno=0): 
     assert filename, "filename is required"
     try:
-        tree = parse_function(_fix_src(src), func_name, arg_names)
+        tree = parse_function(_fix_src(src), func_name, arg_names, defaults)
     except SyntaxError, err:
         err.lineno += lineno
         err.filename = filename
