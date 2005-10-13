@@ -158,6 +158,13 @@ static PyObject *GetAsArray(PyObject *self, PyObject *args) {
 	return PyObject_FromVariantArray((Py_nsISupports *)self, pI);
 }
 
+static PyObject *Get(PyObject *self, PyObject *args) {
+	nsIVariant *pI = GetI(self);
+	if (pI==NULL) return NULL;
+	if (!PyArg_ParseTuple(args, ":Get")) return NULL;
+	return PyObject_FromVariant((Py_nsISupports *)self, pI);
+}
+
 struct PyMethodDef 
 PyMethods_IVariant[] =
 {
@@ -182,6 +189,7 @@ PyMethods_IVariant[] =
 	{ "getAsInterface", GetAsInterface, 1},
 	{ "getAsArray", GetAsArray, 1},
 	{ "getAsID", GetAsID, 1},
+	{ "get", Get, 1},
 	{NULL}
 };
 
