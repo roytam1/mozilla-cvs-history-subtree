@@ -1278,7 +1278,7 @@ nsEventListenerManager::AddScriptEventListener(nsISupports *aObject,
     }
   }
 
-  if (context == nsnull) {
+  if (!context) {
     NS_ASSERTION(aLanguage == nsIProgrammingLanguage::JAVASCRIPT,
                  "Need a multi-language stack?!?!?");
     // OTOH, maybe using JS will do here - all we need is the global.
@@ -1313,6 +1313,7 @@ nsEventListenerManager::AddScriptEventListener(nsISupports *aObject,
 
   void *scope = global->GetLanguageGlobal(aLanguage);
   nsresult rv;
+
   if (!aDeferCompilation) {
     nsCOMPtr<nsIScriptEventHandlerOwner> handlerOwner =
       do_QueryInterface(aObject);
