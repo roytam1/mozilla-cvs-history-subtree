@@ -210,6 +210,11 @@ void PyXPCOM_LogWarning(const char *fmt, ...)
 	VLogF(LOGGER_WARNING, fmt, marker);
 }
 
+void PyXPCOM_Log(const char *level, const nsCString &msg)
+{
+	DoLogMessage(level, msg.get());
+}
+
 #ifdef DEBUG
 void PyXPCOM_LogDebug(const char *fmt, ...)
 {

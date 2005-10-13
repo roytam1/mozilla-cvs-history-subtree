@@ -141,6 +141,9 @@ PYXPCOM_EXPORT void PyXPCOM_LogWarning(const char *fmt, ...);
 // As it's designed for user error/warning, it exists in non-debug builds.
 PYXPCOM_EXPORT void PyXPCOM_LogError(const char *fmt, ...);
 
+// The raw one
+PYXPCOM_EXPORT void PyXPCOM_Log(const char *level, const nsCString &msg);
+
 #ifdef DEBUG
 // Mainly designed for developers of the XPCOM package.
 // Only enabled in debug builds.
