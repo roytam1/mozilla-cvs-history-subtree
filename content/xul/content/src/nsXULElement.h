@@ -126,7 +126,6 @@ public:
 
     ~nsXULPrototypeAttribute();
 
-
     nsAttrName mName;
     nsAttrValue mValue;
     // mEventHandler is only valid for the language ID specified in the
