@@ -45,6 +45,8 @@ Components.utils.importModule("resource:/jscodelib/zap/FileUtils.js");
 ////////////////////////////////////////////////////////////////////////
 // globals
 
+var wUserAgent = "zap/0.1.1"; // String to be sent in User-Agent
+                              // header for SIP requests
 var wPromptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService);
 var wRDF = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
 var wRDFContainerUtils = Components.classes["@mozilla.org/rdf/container-utils;1"].createInstance(Components.interfaces.nsIRDFContainerUtils);
@@ -836,7 +838,9 @@ function initSipStack() {
   wSipStack.init(wUAHandler,
                  makePropertyBag({$instance_id:wPrefs["urn:mozilla:zap:instance_id"],
                                   $port_base:5060,
-                                  $methods: "OPTIONS,INVITE,ACK,CANCEL,BYE"}));
+                                  $methods: "OPTIONS,INVITE,ACK,CANCEL,BYE",
+                                  $user_agent: wUserAgent
+                                 }));
   document.getElementById("status_text").label = "Listening for UDP/TCP SIP traffic on port "+wSipStack.listeningPort;
 
   // set up logging to profile_dir/zap.sbox:

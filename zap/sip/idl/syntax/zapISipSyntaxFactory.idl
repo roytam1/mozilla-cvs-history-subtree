@@ -86,6 +86,14 @@ interface zapISipSyntaxFactory : nsISupports
   zapISipAddress deserializeAddress(in ACString octets);
 
   /**
+   * Deserialize the given headerName and headerValue into
+   * a zapISipHeader structure. The returned value can be QIed to
+   * one of the zapISipHeader subclasses, as appropriate for the given
+   * header name.
+   */
+  zapISipHeader deserializeHeader(in ACString headerName, in ACString headerValue);
+  
+  /**
    * Deserialize a comma-separated list of RFC3261 'name-addr' into an
    * array of zapISipAddress objects. The syntax parsed is that of a
    * Route or Record-Route header value (or an empty string):

@@ -417,6 +417,9 @@ SipDialog.fun(
                                                    Components.interfaces.zapISipDialog.UNINITIALIZED_SEQUENCE_NUMBER));
     // Max-Forwards header:
     m.appendHeader(gSyntaxFactory.createMaxForwardsHeader());
+    // User-Agent header:
+    if (this.stack.userAgent)
+      m.appendHeader(gSyntaxFactory.deserializeHeader("User-Agent", this.stack.userAgent));
     
     return m;
   });

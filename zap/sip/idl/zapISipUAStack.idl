@@ -160,6 +160,12 @@ interface zapISipUAStack : nsISupports
    *                                   be retransmitted every 20s as
    *                                   specified in RFC3581 3.
    *                                   Default: true
+   * - AUTF8String <b>"user_agent"</b> : value for the User-Agent header
+   *                                     of outgoing requests. If this is
+   *                                     equal to the empty string, no
+   *                                     User-Agent headers will be added
+   *                                     to requests.
+   *                                     Default: ""
    */
   void init(in zapISipRequestHandler handler,
             in nsIPropertyBag2 stackConfiguration);
@@ -264,6 +270,8 @@ interface zapISipUAStack : nsISupports
    * - Call-ID header: will be set to a new call id.
    * - CSeq: will be set to a number < 2^31
    * - Max-Forwards header: will be set to 70
+   * - User-Agent: will be set to the value of the userAgent attribute if it is
+   *   != ""
    */
   zapISipNonInviteRC createNonInviteRequestClient(in zapISipAddress ToAddress,
                                                   in ACString method);
@@ -356,4 +364,14 @@ interface zapISipUAStack : nsISupports
    * handed to the UAStack in init().
    */
   readonly attribute ACString instanceID;
+
+  /**
+   * The value that will be put into User-Agent headers of outgoing
+   * requests If this is equal to the empty string no User-Agent
+   * header will be added.
+   *
+   * Will be set to the value of the 'user_agent' parameter handed to
+   * the UAStack in init().
+   */
+  readonly attribute AUTF8String userAgent;
 };

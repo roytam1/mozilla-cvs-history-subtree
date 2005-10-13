@@ -149,11 +149,13 @@ SipUAStack.fun(
     var methods = "OPTIONS";
     var extensions = "";
     this.rport_client = true;
+    this.userAgent = "";
     if (config) {
       try { instance_id = config.getProperty("instance_id"); }catch(e){}
       try { methods = config.getProperty("methods"); }catch(e){}
       try { extensions = config.getProperty("extensions"); }catch(e){}
-      try { rport_client = config.getProperty("rport_client"); }catch(e){}
+      try { this.rport_client = config.getProperty("rport_client"); }catch(e){}
+      try { this.userAgent = config.getProperty("user_agent"); }catch(e){}
     }
     this.instanceID = instance_id ? instance_id : gUUIDGenerator.generateUUIDURNString();
     this.allowedMethods = methods.split(",");
@@ -341,6 +343,9 @@ SipUAStack.getter(
 
 //  readonly attribute ACString instanceID;
 SipUAStack.obj("instanceID", null);
+
+//  readonly attribute AUTF8String userAgent;
+SipUAStack.obj("userAgent", null);
 
 //----------------------------------------------------------------------
 // zapISipTransportSink implementation:
@@ -692,7 +697,9 @@ SipUAStack.fun(
     m.appendHeader(gSyntaxFactory.createCSeqHeader(method, 1));
     // Max-Forwards header:
     m.appendHeader(gSyntaxFactory.createMaxForwardsHeader());
-
+    // User-Agent header:
+    if (this.userAgent)
+      m.appendHeader(gSyntaxFactory.deserializeHeader("User-Agent", this.userAgent));
     return m;
   });
 

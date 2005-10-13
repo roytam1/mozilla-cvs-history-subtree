@@ -462,6 +462,10 @@ var REGEXP_AUTH_VALUE = new RegExp("^"+PATTERN_AUTH_VALUE+"$");
 // matches TEXT_UTF8_TRIM|nothing:
 var REGEXP_TEXT_UTF8_TRIM = new RegExp("^(?:"+PATTERN_TEXT_UTF8_TRIM+")?$");
 
+// matches (server-val *(LWS server-val)):
+// XXX implement the proper parsing here
+var REGEXP_SERVER_VALS = new RegExp("^.*$");
+
 //----------------------------------------------------------------------
 // Tokenizers to be applied repeatedly to input:
 
@@ -1798,7 +1802,7 @@ SipOrganizationHeader.fun(
   });
 
 //----------------------------------------------------------------------
-// zapISipPriorityHeader implementation
+// zapISipOrganizationHeader implementation
 
 // attribute AUTF8String organization;
 SipOrganizationHeader.parsedAttrib("organization",
@@ -1810,6 +1814,67 @@ SipOrganizationHeader.fun(
   function deserialize(name, data) {
     this.organization = data;
   });
+
+
+////////////////////////////////////////////////////////////////////////
+// Class SipServerHeader
+
+var SipServerHeader = makeClass("SipServerHeader", SipHeader);
+SipServerHeader.addInterfaces(Components.interfaces.zapISipServerHeader);
+SipServerHeader.setAliases("Server");
+
+//----------------------------------------------------------------------
+// zapISipSyntaxObject implementation
+
+SipServerHeader.fun(
+  function serialize() {
+    return this.name + ": " + this.userAgent;
+  });
+
+//----------------------------------------------------------------------
+// zapISipServerHeader implementation
+
+// attribute AUTF8String organization;
+SipServerHeader.parsedAttrib("userAgent",
+                                REGEXP_SERVER_VALS, null);
+
+//----------------------------------------------------------------------
+
+SipServerHeader.fun(
+  function deserialize(name, data) {
+    this.userAgent = data;
+  });
+
+
+////////////////////////////////////////////////////////////////////////
+// Class SipUserAgentHeader
+
+var SipUserAgentHeader = makeClass("SipUserAgentHeader", SipHeader);
+SipUserAgentHeader.addInterfaces(Components.interfaces.zapISipUserAgentHeader);
+SipUserAgentHeader.setAliases("User-Agent");
+
+//----------------------------------------------------------------------
+// zapISipSyntaxObject implementation
+
+SipUserAgentHeader.fun(
+  function serialize() {
+    return this.name + ": " + this.userAgent;
+  });
+
+//----------------------------------------------------------------------
+// zapISipUserAgentHeader implementation
+
+// attribute AUTF8String organization;
+SipUserAgentHeader.parsedAttrib("userAgent",
+                                REGEXP_SERVER_VALS, null);
+
+//----------------------------------------------------------------------
+
+SipUserAgentHeader.fun(
+  function deserialize(name, data) {
+    this.userAgent = data;
+  });
+
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -2261,6 +2326,14 @@ SipSyntaxFactory.fun(
     var addr = SipAddress.instantiate();
     addr.deserialize(octets);
     return addr;
+  });
+
+// zapISipHeader deserializeHeader(in ACString headerName, in ACString headerValue);
+SipSyntaxFactory.fun(
+  function deserializeHeader(headerName, headerValue) {
+    var h = this.createHeader(headerName);
+    h.deserialize(headerName, headerValue);
+    return h;
   });
 
 // void deserializeRouteSet(in ACString octets, out unsigned long count,

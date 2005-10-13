@@ -42,8 +42,5 @@
 [scriptable, uuid(c930fb18-29ec-40f4-87b8-8875e469040a)]
 interface zapISipServerHeader : zapISipHeader
 {
-  /**
-   * To be implemented
-   */
-
+  attribute AUTF8String server;
 };
