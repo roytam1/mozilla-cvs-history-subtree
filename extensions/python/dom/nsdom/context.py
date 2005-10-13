@@ -7,7 +7,7 @@ import types, new, logging
 import domcompile
 
 from xpcom.client import Component
-from xpcom import components, primitives, COMException, nsError
+from xpcom import components, primitives, COMException, nsError, _xpcom
 
 import _nsdom
 
@@ -25,24 +25,45 @@ logger = logging.getLogger("xpcom.nsdom")
 # XUL Elements don't expose the XBL implemented interfaces via classinfo.
 # So we cheat :)
 xul_element_interfaces = {
-    'textbox' : [components.interfaces.nsIDOMXULTextBoxElement],
-    'button': [components.interfaces.nsIDOMXULButtonElement],
-    'checkbox': [components.interfaces.nsIDOMXULCheckboxElement],
-    'image': [components.interfaces.nsIDOMXULImageElement],
+    # tagName:      [IID, ...]
+    'textbox':      [components.interfaces.nsIDOMXULTextBoxElement],
+    'button':       [components.interfaces.nsIDOMXULButtonElement],
+    'checkbox':     [components.interfaces.nsIDOMXULCheckboxElement],
+    'image':        [components.interfaces.nsIDOMXULImageElement],
 }
 
 # The event listener class we attach to an object for addEventListener
 class EventListener:
     _com_interfaces_ = components.interfaces.nsIDOMEventListener
-    def __init__(self, handler, globs = None):
-        try:
-            self.co = handler.func_code
-        except AttributeError:
-            self.co = compile(handler, "inline event", "exec")
+    def __init__(self, evt_name, handler, globs = None):
+        if callable(handler):
+            self.func = handler
+        else:
+            # event name for addEventListener has no 'on' prefix
+            func_name = "on" + evt_name
+            # xxx - what to do about arg names?  It looks like onerror
+            # still only gets one arg here anyway - handleEvent only takes
+            # one!
+            arg_names = ('event',)
+            co = domcompile.compile_function(handler,
+                                             "inline event '%s'" % evt_name,
+                                             func_name,
+                                             arg_names)
+            g = {}
+            exec co in g
+            self.func = g[func_name]
         self.globals = globs or globals()
-    
+
     def handleEvent(self, event):
-        exec self.co in self.globals
+        # Although handler is already a function object, we must re-bind to
+        # new globals
+        f = new.function(self.func.func_code, self.globals, self.func.func_name)
+        args = (event,)
+        # We support having less args declared than supplied, a-la JS.
+        # (This can only happen when passed a function object - we always
+        # compile a string handler into a function with 1 arg
+        args = args[:f.func_code.co_argcount]
+        return f(*args)
 
 class WrappedNative(Component):
     """Implements the xpconnect concept of 'wrapped natives' and 'expandos'.
@@ -130,7 +151,7 @@ class WrappedNative(Component):
         # nsIDOMEventListener interfaces.
         if not hasattr(handler, "handleEvent"): # may already be a handler instance.
             # Wrap it in our instance, which knows how to convert
-            handler = EventListener(handler, self._context_.GetNativeGlobal())
+            handler = EventListener(event, handler, self._context_.GetNativeGlobal())
         
         base = self.__getattr__('addEventListener')
         base(event, handler, useCapture)
@@ -194,12 +215,23 @@ class ScriptContext:
         except COMException, why:
             if why.errno != nsError.NS_NOINTERFACE:
                 raise
-            # This is not an array - see if it is a primitive.
+            # This is not an array - see if it is a variant or primitive.
             try:
-                return primitives.GetPrimitive(arg)
+                var = arg.queryInterface(components.interfaces.nsIVariant)
+                parent = None
+                if self.globalObject is not None:
+                    parent = self.globalObject._comobj_
+                if parent is None:
+                    logger.warning("_fixArg for context with no global??")
+                return _xpcom.GetVariantValue(var, parent)
             except COMException, why:
                 if why.errno != nsError.NS_NOINTERFACE:
                     raise
+                try:
+                    return primitives.GetPrimitive(arg)
+                except COMException, why:
+                    if why.errno != nsError.NS_NOINTERFACE:
+                        raise
                 return arg
         # Its an array - do each item
         ret = []
@@ -253,13 +285,9 @@ class ScriptContext:
         if __debug__:
             logger.debug("%s.ExecuteScript %r in scope %s",
                          self, scriptObject, id(scopeObject))
-        globals = self.GetNativeGlobal()
-        assert globals is not None
-        assert scopeObject is None or scopeObject is globals, \
-               "Global was changed??"
         if scopeObject is None:
-            scopeObject = globals
-        assert type(scopeObject)==dict, "expecting scope to be a dict!"
+            scopeObject = self.GetNativeGlobal()
+        assert scopeObject is self.GetNativeGlobal(), "Global was changed??"
         assert type(scriptObject) == types.CodeType, \
                "Script object should be a code object (got %r)" % (scriptObject,)
         exec scriptObject in scopeObject
@@ -284,7 +312,8 @@ class ScriptContext:
         globs['this'] = target # XXX - what should this be exposed as?
         # Although handler is already a function object, we must re-bind to
         # new globals
-        f = new.function(handler.func_code, globs, handler.func_name)
+        f = new.function(handler.func_code, globs, handler.func_name,
+                         handler.func_defaults)
         args = tuple(self._fixArg(argv))
         # We support having less args declared than supplied, a-la JS.
         args = args[:handler.func_code.co_argcount]
