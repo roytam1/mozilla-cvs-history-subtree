@@ -4969,6 +4969,39 @@ nsDocument::UnblockOnload()
 }
 
 void
+nsDocument::DispatchEventToWindow(nsEvent *aEvent)
+{
+  nsIScriptGlobalObject *sgo = GetScriptGlobalObject();
+  if (!sgo)
+    return;
+
+  nsEventStatus status = nsEventStatus_eIgnore;
+
+  // There's not always a prescontext that we can use for the event.
+  // So, we force creation of a DOMEvent so that it can explicitly targeted.
+
+  nsCOMPtr<nsIEventListenerManager> lm;
+  GetListenerManager(getter_AddRefs(lm));
+  if (!lm)
+    return;
+
+  nsCOMPtr<nsIDOMEvent> domEvt;
+  lm->CreateEvent(nsnull, aEvent, EmptyString(), getter_AddRefs(domEvt));
+  if (!domEvt)
+    return;
+
+  nsCOMPtr<nsIPrivateDOMEvent> privEvt = do_QueryInterface(domEvt);
+  NS_ASSERTION(privEvt, "DOM Event objects must implement nsIPrivateDOMEvent");
+
+  privEvt->SetTarget(this);
+
+  nsIDOMEvent *domEvtPtr = domEvt;
+  sgo->HandleDOMEvent(nsnull, aEvent, &domEvtPtr, NS_EVENT_FLAG_INIT, &status);
+
+  NS_ASSERTION(domEvtPtr == domEvt, "event modified during dipatch");
+}
+
+void
 nsDocument::OnPageShow(PRBool aPersisted)
 {
   mVisible = PR_TRUE;
@@ -4992,17 +5025,8 @@ nsDocument::OnPageShow(PRBool aPersisted)
     }
   }
 
-  nsIPresShell *shell = NS_STATIC_CAST(nsIPresShell*, mPresShells[0]);
-  if (shell && mScriptGlobalObject) {
-    nsPresContext *pc = shell->GetPresContext();
-    if (pc) {
-      nsPageTransitionEvent event(PR_TRUE, NS_PAGE_SHOW, aPersisted);
-      nsEventStatus status = nsEventStatus_eIgnore;
-
-      mScriptGlobalObject->HandleDOMEvent(pc, &event, nsnull,
-                                          NS_EVENT_FLAG_INIT, &status);
-    }
-  }
+  nsPageTransitionEvent event(PR_TRUE, NS_PAGE_SHOW, aPersisted);
+  DispatchEventToWindow(&event);
 }
 
 void
@@ -5028,18 +5052,9 @@ nsDocument::OnPageHide(PRBool aPersisted)
   }
 
   // Now send out a PageHide event.
-  nsIPresShell *shell = NS_STATIC_CAST(nsIPresShell*, mPresShells[0]);
-  if (shell && mScriptGlobalObject) {
-    nsPresContext *pc = shell->GetPresContext();
-    if (pc) {
-      nsPageTransitionEvent event(PR_TRUE, NS_PAGE_HIDE, aPersisted);
-      nsEventStatus status = nsEventStatus_eIgnore;
+  nsPageTransitionEvent event(PR_TRUE, NS_PAGE_HIDE, aPersisted);
+  DispatchEventToWindow(&event);
 
-      mScriptGlobalObject->HandleDOMEvent(pc, &event, nsnull,
-                                          NS_EVENT_FLAG_INIT, &status);
-    }
-  }
-  
   mVisible = PR_FALSE;
 }
 
