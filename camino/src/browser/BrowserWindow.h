@@ -52,9 +52,11 @@
 
 - (BOOL)makeFirstResponder:(NSResponder*) responder;
 
+// mozWindow protocol
 - (BOOL)suppressMakeKeyFront;
 - (void)setSuppressMakeKeyFront:(BOOL)inSuppress;
 
+// scripting
 - (NSString*)getURL;
 
 @end
