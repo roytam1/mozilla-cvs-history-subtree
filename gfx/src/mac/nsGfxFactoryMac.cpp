@@ -58,6 +58,9 @@
 #include "nsCOMPtr.h"
 #include "nsUnicodeMappingUtil.h"
 #include "gfxImageFrame.h"
+#ifdef MOZ_WIDGET_COCOA
+#include "nsQDFlushManager.h"
+#endif
 
 #include "nsIGenericFactory.h"
 
@@ -78,6 +81,9 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsFontList)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsScreenManagerMac)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsNativeThemeMac)
 NS_GENERIC_FACTORY_CONSTRUCTOR(gfxImageFrame)
+#ifdef MOZ_WIDGET_COCOA
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsQDFlushManager)
+#endif
 
 static NS_IMETHODIMP
 nsScriptableRegionConstructor(nsISupports* aOuter, REFNSIID aIID, void** aResult)
@@ -161,7 +167,13 @@ static const nsModuleComponentInfo components[] =
   { "Native Theme Renderer", 
     NS_THEMERENDERER_CID,
     "@mozilla.org/chrome/chrome-native-theme;1", 
-    nsNativeThemeMacConstructor }
+    nsNativeThemeMacConstructor },
+#ifdef MOZ_WIDGET_COCOA
+  { NS_QDFLUSHMANAGER_CLASSNAME,
+    NS_QDFLUSHMANAGER_CID,
+    NS_QDFLUSHMANAGER_CONTRACTID,
+    nsQDFlushManagerConstructor },
+#endif
 };
 
 PR_STATIC_CALLBACK(void)
