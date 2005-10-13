@@ -953,7 +953,6 @@ nsXULElement::BindToTree(nsIDocument* aDocument, nsIContent* aParent,
 
         PRInt32 count = mAttrsAndChildren.AttrCount();
         PRBool haveLocalAttributes = (count > 0);
-
         PRInt32 i;
         for (i = 0; i < count; i++) {
             AddListenerFor(*mAttrsAndChildren.GetSafeAttrNameAt(i),
@@ -974,8 +973,7 @@ nsXULElement::BindToTree(nsIDocument* aDocument, nsIContent* aParent,
                                               protoattr->mName.NamespaceID())) {
                     continue;
                 }
-                // scripts from prototype nodes must use the language
-                // specified in the node.
+
                 AddListenerFor(protoattr->mName, aCompileEventHandlers);
             }
         }
