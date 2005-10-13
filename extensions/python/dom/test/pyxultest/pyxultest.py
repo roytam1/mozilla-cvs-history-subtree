@@ -1,4 +1,4 @@
-# An out-of-line script for this Python demo
+# The main script for the top-level pyxultest chrome.
 
 import sys
 import xpcom
@@ -39,15 +39,6 @@ def do_load():
     button = this.document.getElementById("but_dialog")
     button.addEventListener('click', 'write("hello from the click event for the dialog button")', False)
 
-def do_textbox_keypress(event):
-    if event.keyCode==13:
-        val = event.target.value
-        if val:
-            write('You wrote: ' + val)
-        else:
-            write("You wrote nothing!")
-        event.target.value = ""
-
 # Add an event listener as a function
 this.window.addEventListener('load', do_load, False)
 # Add another one just to test passing a string instead of a function.
@@ -63,7 +54,15 @@ def on_but_dialog_click():
     import nsdom
     nsdom.JSExec(this, 'this.window.open("chrome://pyxultest/content/dialog.xul", "my-dialog", "chrome")')
     #new = this.window.open("chrome://pyxultest/content/dialog.xul", "my-dialog", "chrome")
-    #print "The new window is", new
+
+def do_textbox_keypress(event):
+    if event.keyCode==13:
+        val = event.target.value
+        if val:
+            write('You wrote: ' + val)
+        else:
+            write("You wrote nothing!")
+        event.target.value = ""
 
 # An on-click handler for the image control
 def change_image():
@@ -76,12 +75,15 @@ def change_image():
 
 def run_tests():
     # I wish I could reach into the window and get all tests!
-    tests = """ test_error_explicit
+    tests = """ test_wrong_event_args
+                test_error_eventlistener_function_noargs
+                test_error_eventlistener_string
+                test_error_explicit
+                test_error_eventlistener_function
+                test_error_eventlistener_object
                 test_error_explicit_string
-                test_wrong_event_args
-                test_error_eventhandler_object
-                test_error_eventhandler_function
-                test_error_eventhandler_string""".split()
+                test_error_explicit_no_cancel
+                """.split()
     keep_open = this.document.getElementById("keep_tests_open").getAttribute("checked")
     for test in tests:
         write("Running test %s" % test)
