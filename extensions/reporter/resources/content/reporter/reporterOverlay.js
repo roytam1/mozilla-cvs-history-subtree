@@ -20,6 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *   Gavin Sharp <gavin@gavinsharp.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -34,9 +35,50 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
+ 
+var reporterListener = {
 
-function loadReporterWizard()
-{
-  window.openDialog("chrome://reporter/content/reportWizard.xul", "", "chrome,centerscreen,dialog,resizable=no,width=535,height=442",getBrowser().currentURI.spec);
+  QueryInterface: function(aIID) {
+    if (aIID.equals(Components.interfaces.nsIWebProgressListener)   ||
+        aIID.equals(Components.interfaces.nsISupportsWeakReference) ||
+        aIID.equals(Components.interfaces.nsISupports))
+      return this;
+    throw Components.results.NS_NOINTERFACE;
+  },
+
+  onLocationChange: function(aProgress, aRequest, aURI) {
+    var broadcaster = document.getElementById("reporterItemsBroadcaster");
+    var isEnabled = false;
+
+    if (aURI instanceof Components.interfaces.nsIURI) {
+      switch (aURI.scheme) {
+        case "http":
+        case "https":
+        case "ftp":
+        case "gopher":
+          isEnabled = true;
+      }
+    }
+
+    broadcaster.setAttribute("disabled", !isEnabled);
+  },
+
+  onStateChange: function() {  },
+  onProgressChange: function() {  },
+  onStatusChange: function() {  },
+  onSecurityChange: function() {  },
+  onLinkIconAvailable: function() {  }
+}
+
+function onBrowserLoad() {
+  gBrowser.addProgressListener(reporterListener);
+}
+
+function loadReporterWizard() {
+  window.openDialog("chrome://reporter/content/reportWizard.xul", "",
+                    "chrome,centerscreen,dialog,resizable=no,width=535,height=442",
+                    getBrowser().currentURI.spec);
   return true;
 }
+
+window.addEventListener("load", onBrowserLoad, false);
