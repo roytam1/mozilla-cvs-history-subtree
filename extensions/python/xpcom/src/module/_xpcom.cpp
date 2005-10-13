@@ -390,10 +390,10 @@ PyXPCOMMethod_MakeVariant(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-PyXPCOMMethod_UnwrapVariant(PyObject *self, PyObject *args)
+PyXPCOMMethod_GetVariantValue(PyObject *self, PyObject *args)
 {
 	PyObject *ob, *obParent = NULL;
-	if (!PyArg_ParseTuple(args, "O|O:MakeVariant", &ob, &obParent))
+	if (!PyArg_ParseTuple(args, "O|O:GetVariantValue", &ob, &obParent))
 		return NULL;
 
 	nsCOMPtr<nsIVariant> var;
@@ -406,7 +406,7 @@ PyXPCOMMethod_UnwrapVariant(PyObject *self, PyObject *args)
 				    ob->ob_type->tp_name);
 
 	Py_nsISupports *parent = nsnull;
-	if (obParent) {
+	if (obParent && obParent != Py_None) {
 		if (!Py_nsISupports::Check(obParent)) {
 			PyErr_SetString(PyExc_ValueError,
 					"Object not an nsISupports wrapper");
@@ -482,7 +482,7 @@ static struct PyMethodDef xpcom_methods[]=
 	{"AllocateBuffer", AllocateBuffer, 1},
 	{"LogConsoleMessage", LogConsoleMessage, 1, "Write a message to the xpcom console service"},
 	{"MakeVariant", PyXPCOMMethod_MakeVariant, 1},
-	{"UnwrapVariant", PyXPCOMMethod_UnwrapVariant, 1},
+	{"GetVariantValue", PyXPCOMMethod_GetVariantValue, 1},
 	// These should no longer be used - just use the logging.getLogger('pyxpcom')...
 	{ NULL }
 };
