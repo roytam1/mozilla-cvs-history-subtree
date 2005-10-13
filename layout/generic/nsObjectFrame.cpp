@@ -3832,6 +3832,16 @@ nsEventStatus nsPluginInstanceOwner::ProcessEvent(const nsGUIEvent& anEvent)
         event = &macEvent;
       }
 
+#ifdef MOZ_WIDGET_COCOA
+      if (anEvent.message == NS_FOCUS_CONTENT)
+      {
+        // Work around an issue in the Flash plugin, which can cache a pointer
+        // to a doomed TSM document (one that belongs to a NSTSMInputContext)
+        // and try to activate it after it has been deleted. See bug 183313.
+        ::DeactivateTSMDocument(::TSMGetActiveDocument());
+      }
+#endif
+      
       nsPluginPort* pluginPort = FixUpPluginWindow(ePluginPaintIgnore);
       PRBool eventHandled = PR_FALSE;
       if (pluginPort) {
