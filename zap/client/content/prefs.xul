@@ -83,6 +83,11 @@
       <columns><column/><column flex="1"/></columns>
       <rows>
         <row>
+          <label control="urn:mozilla:zap:instance_id"
+                 value="UA Instance ID:"/>
+          <textbox id="urn:mozilla:zap:instance_id"/>
+        </row>
+        <row>
           <label control="urn:mozilla:zap:max_recent_calls" 
                  value="Length of recent calls history:"/>
           <textbox id="urn:mozilla:zap:max_recent_calls"/>
