@@ -65,8 +65,5 @@ include $(topsrcdir)/config/rules.mk
 libs::
 	$(INSTALL) $(PYSRCS_NSDOM) $(DIST)/bin/python/nsdom
 
-#install::
-#	$(SYSINSTALL) $(IFLAGS1) $(PYSRCS_NSDOM) $(DISTDIR)$(pyexecdir)/nsdom
-
 clobber::
 	rm -rf $(DIST)/bin/python/nsdom
