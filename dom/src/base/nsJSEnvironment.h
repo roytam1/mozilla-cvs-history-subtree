@@ -162,10 +162,10 @@ protected:
   // aHolder should be holding our global object
   nsresult FindXPCNativeWrapperClass(nsIXPConnectJSObjectHolder *aHolder);
 
-  // Helper to convert xpcom datatypes to jsvals
+  // Helper to convert xpcom datatypes to jsvals.
   nsresult ConvertSupportsTojsvals(nsISupports *aArgs,
                                    void *aScope,
-                                   PRUint32 *aArgc, jsval **aArgv,
+                                   PRUint32 *aArgc, void **aArgv,
                                    void **aMarkp);
 
   nsresult AddSupportsPrimitiveTojsvals(nsISupports *aArg, jsval *aArgv);
@@ -259,7 +259,8 @@ class nsIJSRuntimeService;
 
 class nsJSRuntime : public nsILanguageRuntime
 {
-private:
+public:
+  // let people who can see us use our runtime for convenience.
   static JSRuntime *sRuntime;
 
 public:
@@ -300,7 +301,10 @@ class nsIJSArgArray: public nsISupports
 {
 public:
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_IJSARGARRAY_IID)
-  virtual nsresult GetArgs(PRUint32 *argc, jsval **argv) = 0;
+  // Bug 312003 describes why this must be "void **", but after calling argv
+  // may be cast to jsval* and the args found at:
+  //    ((jsval*)argv)[0], ..., ((jsval*)argv)[argc - 1]
+  virtual nsresult GetArgs(PRUint32 *argc, void **argv) = 0;
 };
 
 /* factory functions */

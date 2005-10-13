@@ -85,6 +85,7 @@
 #include "nsIObjectInputStream.h"
 #include "nsIObjectOutputStream.h"
 #include "nsITimelineService.h"
+#include "prmem.h"
 
 // For locale aware string methods
 #include "plstr.h"
@@ -1471,7 +1472,8 @@ nsJSContext::CallEventHandler(nsISupports* aTarget, void *aScope, void *aHandler
     PRUint32 argc = 0;
     jsval *argv = nsnull;
 
-    rv = ConvertSupportsTojsvals(aargv, aScope, &argc, &argv, &mark);
+    rv = ConvertSupportsTojsvals(aargv, aScope, &argc,
+                                 NS_REINTERPRET_CAST(void **, &argv), &mark);
     NS_ENSURE_SUCCESS(rv, rv);
   
     AutoFreeJSStack stackGuard(mContext, mark); // ensure always freed.
@@ -1943,7 +1945,8 @@ nsJSContext::SetProperty(void *aTarget, const char *aPropName, nsISupports *aArg
   void *mark;
   
   nsresult rv;
-  rv = ConvertSupportsTojsvals(aArgs, GetNativeGlobal(), &argc, &argv, &mark);
+  rv = ConvertSupportsTojsvals(aArgs, GetNativeGlobal(), &argc,
+                               NS_REINTERPRET_CAST(void **, &argv), &mark);
   NS_ENSURE_SUCCESS(rv, rv);
   AutoFreeJSStack stackGuard(mContext, mark); // ensure always freed.
 
@@ -1961,7 +1964,7 @@ nsJSContext::SetProperty(void *aTarget, const char *aPropName, nsISupports *aArg
 nsresult
 nsJSContext::ConvertSupportsTojsvals(nsISupports *aArgs,
                                      void *aScope,
-                                     PRUint32 *aArgc, jsval **aArgv,
+                                     PRUint32 *aArgc, void **aArgv,
                                      void **aMarkp)
 {
   nsresult rv = NS_OK;
@@ -3071,7 +3074,7 @@ nsresult NS_CreateJSRuntime(nsILanguageRuntime **aRuntime)
 // on-the-fly.
 class nsJSArgArray : public nsIJSArgArray, public nsIArray {
 public:
-  nsJSArgArray(JSContext *aContext, PRUint32 argc, jsval *argv);
+  nsJSArgArray(JSContext *aContext, PRUint32 argc, jsval *argv, nsresult *prv);
   ~nsJSArgArray();
   // nsISupports
   NS_DECL_ISUPPORTS
@@ -3080,23 +3083,47 @@ public:
   NS_DECL_NSIARRAY
 
   // nsIJSArgArray
-  nsresult GetArgs(PRUint32 *argc, jsval **argv);
+  nsresult GetArgs(PRUint32 *argc, void **argv);
 protected:
   JSContext *mContext;
   jsval *mArgv;
   PRUint32 mArgc;
 };
 
-nsJSArgArray::nsJSArgArray(JSContext *aContext, PRUint32 argc, jsval *argv) :
+nsJSArgArray::nsJSArgArray(JSContext *aContext, PRUint32 argc, jsval *argv,
+                           nsresult *prv) :
     mContext(aContext),
     mArgc(argc),
     mArgv(argv)
 {
-    // gc??
+  // copy the array - we don't know its lifetime, and ours is tied to xpcom
+  // refcounting.  Alloc zero'd array so cleanup etc is safe.
+  mArgv = (jsval *) PR_CALLOC((argc - 1) * sizeof(jsval));
+  if (!mArgv) {
+    *prv = NS_ERROR_OUT_OF_MEMORY;
+    return;
+  }
+  for (PRUint32 i = 0; i < argc; ++i) {
+    if (argv)
+      mArgv[i] = argv[i];
+    if (!::JS_AddNamedRoot(aContext, &mArgv[i], "nsJSArgArray.mArgv[i]")) {
+      *prv = NS_ERROR_UNEXPECTED;
+      return;
+    }
+  }
 }
 
 nsJSArgArray::~nsJSArgArray()
 {
+  if (mArgv) {
+    NS_ASSERTION(nsJSRuntime::sRuntime, "Where's the runtime gone?");
+    if (nsJSRuntime::sRuntime) {
+      for (PRUint32 i = 0; i < mArgc; ++i) {
+        ::JS_RemoveRootRT(nsJSRuntime::sRuntime, &mArgv[i]);
+      }
+    }
+    PR_DELETE(mArgv);
+  }
 }
 
 NS_DECL_CLASSINFO(nsJSArgArray)
@@ -3114,13 +3141,13 @@ NS_IMPL_ADDREF(nsJSArgArray)
 NS_IMPL_RELEASE(nsJSArgArray)
 
 nsresult
-nsJSArgArray::GetArgs(PRUint32 *argc, jsval **argv)
+nsJSArgArray::GetArgs(PRUint32 *argc, void **argv)
 {
   if (!*mArgv) {
     NS_WARNING("nsJSArgArray has no argv!");
     return NS_ERROR_UNEXPECTED;
   }
-  *argv = mArgv;
+  *argv = (void *)mArgv;
   *argc = mArgc;
   return NS_OK;
 }
@@ -3159,11 +3186,18 @@ NS_IMETHODIMP nsJSArgArray::Enumerate(nsISimpleEnumerator **_retval)
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-nsresult NS_CreateJSArgv(JSContext *aContext, PRUint32 argc, jsval *argv,
+// The factory function
+nsresult NS_CreateJSArgv(JSContext *aContext, PRUint32 argc, void *argv,
                          nsIArray **aArray)
 {
-  nsJSArgArray *ret = new nsJSArgArray(aContext, argc, argv);
+  nsresult rv;
+  nsJSArgArray *ret = new nsJSArgArray(aContext, argc,
+                                       NS_STATIC_CAST(jsval *, argv), &rv);
   if (ret == nsnull)
-      return NS_ERROR_OUT_OF_MEMORY;
+    return NS_ERROR_OUT_OF_MEMORY;
+  if (NS_FAILED(rv)) {
+    delete ret;
+    return rv;
+  }
   return ret->QueryInterface(NS_GET_IID(nsIArray), (void **)aArray);
 }
