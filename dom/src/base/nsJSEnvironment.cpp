@@ -20,6 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *   Mark Hammond <mhammond@skippinet.com.au>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -1419,7 +1420,7 @@ nsJSContext::CompileFunction(void* aTarget,
 
 nsresult
 nsJSContext::CallEventHandler(nsISupports* aTarget, void *aScope, void *aHandler,
-                              nsIArray *aargv, nsISupports **arv)
+                              nsIArray *aargv, nsIVariant **arv)
 {
   NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
 
@@ -1447,9 +1448,7 @@ nsJSContext::CallEventHandler(nsISupports* aTarget, void *aScope, void *aHandler
   NS_ENSURE_SUCCESS(rv, rv);
 
   JSObject *handler = (JSObject *)aHandler;
-  //XXX - fix this!
-  jsval rval_local = JSVAL_VOID;
-  jsval *rval = &rval_local;
+  jsval rval = JSVAL_VOID;
 
   // This one's a lot easier than EvaluateString because we don't have to
   // hassle with principals: they're already compiled into the JS function.
@@ -1472,14 +1471,14 @@ nsJSContext::CallEventHandler(nsISupports* aTarget, void *aScope, void *aHandler
     PRUint32 argc = 0;
     jsval *argv = nsnull;
 
-    rv = ConvertSupportsTojsvals(aargv, &argc, &argv, &mark);
+    rv = ConvertSupportsTojsvals(aargv, aScope, &argc, &argv, &mark);
     NS_ENSURE_SUCCESS(rv, rv);
   
     AutoFreeJSStack stackGuard(mContext, mark); // ensure always freed.
 
     jsval funval = OBJECT_TO_JSVAL(aHandler);
     PRBool ok = ::JS_CallFunctionValue(mContext, target,
-                                       funval, argc, argv, rval);
+                                       funval, argc, argv, &rval);
 
     if (!ok) {
       // Tell XPConnect about any pending exceptions. This is needed
@@ -1489,7 +1488,7 @@ nsJSContext::CallEventHandler(nsISupports* aTarget, void *aScope, void *aHandler
       nsContentUtils::NotifyXPCIfExceptionPending(mContext);
 
       // Don't pass back results from failed calls.
-      *rval = JSVAL_VOID;
+      rval = JSVAL_VOID;
 
       // Tell the caller that the handler threw an error.
       rv = NS_ERROR_FAILURE;
@@ -1499,21 +1498,13 @@ nsJSContext::CallEventHandler(nsISupports* aTarget, void *aScope, void *aHandler
   if (NS_FAILED(stack->Pop(nsnull)))
     return NS_ERROR_FAILURE;
 
-  // Need to lock, since ScriptEvaluated can GC.
-  PRBool locked = PR_FALSE;
-  if (NS_SUCCEEDED(rv) && JSVAL_IS_GCTHING(*rval)) {
-    locked = ::JS_LockGCThing(mContext, JSVAL_TO_GCTHING(*rval));
-    if (!locked) {
-      rv = NS_ERROR_OUT_OF_MEMORY;
-    }
+  if (NS_SUCCEEDED(rv)) {
+    rv = nsContentUtils::XPConnect()->JSToVariant(mContext, rval, arv);
   }
 
   // ScriptEvaluated needs to come after we pop the stack
   ScriptEvaluated(PR_TRUE);
 
-  if (locked) {
-    ::JS_UnlockGCThing(mContext, JSVAL_TO_GCTHING(*rval));
-  }
   return rv;
 }
 
@@ -1947,20 +1938,17 @@ nsJSContext::InitializeLiveConnectClasses(JSObject *aGlobalObj)
 nsresult
 nsJSContext::SetProperty(void *aTarget, const char *aPropName, nsISupports *aArgs)
 {
-  // eeek - do we need to ::JS_LockGCThing(cx, ...);
   PRUint32  argc;
   jsval    *argv = nsnull;
   void *mark;
   
   nsresult rv;
-  rv = ConvertSupportsTojsvals(aArgs, &argc, &argv, &mark);
+  rv = ConvertSupportsTojsvals(aArgs, GetNativeGlobal(), &argc, &argv, &mark);
   NS_ENSURE_SUCCESS(rv, rv);
   AutoFreeJSStack stackGuard(mContext, mark); // ensure always freed.
 
-
   // got the array, now attach it.
   JSObject *args = ::JS_NewArrayObject(mContext, argc, argv);
-  // this looks suspect!
   jsval vargs = OBJECT_TO_JSVAL(args);
 
   rv = ::JS_SetProperty(mContext, NS_REINTERPRET_CAST(JSObject *, aTarget), aPropName, &vargs) ?
@@ -1972,6 +1960,7 @@ nsJSContext::SetProperty(void *aTarget, const char *aPropName, nsISupports *aArg
 
 nsresult
 nsJSContext::ConvertSupportsTojsvals(nsISupports *aArgs,
+                                     void *aScope,
                                      PRUint32 *aArgc, jsval **aArgv,
                                      void **aMarkp)
 {
@@ -1984,18 +1973,21 @@ nsJSContext::ConvertSupportsTojsvals(nsISupports *aArgs,
     return fastArray->GetArgs(aArgc, aArgv);
   }
   // Take the slower path converting each item.
+  // Handle only nsIArray and nsIVariant.  nsIArray is only needed for
+  // SetProperty('arguments', ...);
 
   *aArgv = nsnull;
   *aArgc = 0;
   *aMarkp = nsnull;
 
-  // copy the elements in aArgsArray into the JS array
+  nsIXPConnect *xpc = nsContentUtils::XPConnect();
+  NS_ENSURE_TRUE(xpc, NS_ERROR_UNEXPECTED);
 
   if (!aArgs)
     return NS_OK;
   PRUint32 argCtr, argCount;
-  // XXX - this was copied from window.args handling.  I don't think we
-  // need to handle an array and a simple object here?
+  // This general purpose function may need to convert an arg array
+  // (window.arguments, event-handler args) and a generic property.
   nsCOMPtr<nsIArray> argsArray(do_QueryInterface(aArgs));
 
   if (argsArray) {
@@ -2006,67 +1998,78 @@ nsJSContext::ConvertSupportsTojsvals(nsISupports *aArgs,
   } else
     argCount = 1; // the nsISupports which is not an array
 
-  JSContext           *cx = mContext;
-  NS_ENSURE_TRUE(cx, NS_ERROR_UNEXPECTED);
-
-  jsval *argv = js_AllocStack(cx, argCount, aMarkp);
+  jsval *argv = js_AllocStack(mContext, argCount, aMarkp);
   NS_ENSURE_TRUE(argv, NS_ERROR_OUT_OF_MEMORY);
 
-  if (argsArray)
+  if (argsArray) {
     for (argCtr = 0; argCtr < argCount && NS_SUCCEEDED(rv); argCtr++) {
-        nsCOMPtr<nsISupports> s;
-        rv = argsArray->QueryElementAt(argCtr, NS_GET_IID(nsISupports),
-                                       getter_AddRefs(s));
-        if (NS_SUCCEEDED(rv))
-            rv = AddSupportsTojsvals(s, argv + argCtr);
+      nsCOMPtr<nsISupports> arg;
+      jsval *thisval = argv + argCtr;
+      rv = argsArray->QueryElementAt(argCtr, NS_GET_IID(nsISupports),
+                                     getter_AddRefs(arg));
+      NS_ASSERTION(NS_SUCCEEDED(rv), "Array elt doesn't have nsISupports?");
+      nsCOMPtr<nsIVariant> variant(do_QueryInterface(arg));
+      if (variant != nsnull) {
+        rv = xpc->VariantToJS(mContext, (JSObject *)aScope, variant, 
+                              thisval);
+      } else {
+        // And finally, support the nsISupportsPrimitives supplied
+        // by the AppShell.  It generally will pass only strings, but
+        // as we have code for handling all, we may as well use it.
+        rv = AddSupportsPrimitiveTojsvals(arg, thisval);
+        if (rv == NS_ERROR_NO_INTERFACE) {
+          // something else - probably an event object or similar - just
+          // just wrap it.
+#ifdef NS_DEBUG
+          // but first, check its not another nsISupportsPrimitive, as
+          // these are now deprecated for use with script contexts.
+          nsCOMPtr<nsISupportsPrimitive> prim(do_QueryInterface(arg));
+          NS_ASSERTION(prim == nsnull,
+                       "Don't pass nsISupportsPrimitives - use nsIVariant!");
+#endif
+          nsCOMPtr<nsIXPConnectJSObjectHolder> wrapper;
+          rv = xpc->WrapNative(mContext, (JSObject *)aScope, arg,
+                               NS_GET_IID(nsISupports),
+                               getter_AddRefs(wrapper));
+          if (NS_SUCCEEDED(rv)) {
+            JSObject *obj;
+            rv = wrapper->GetJSObject(&obj);
+            if (NS_SUCCEEDED(rv)) {
+              *thisval = OBJECT_TO_JSVAL(obj);
+            }
+          }
+        }
+      }
     }
-  else
-    rv = AddSupportsTojsvals(aArgs, argv);
-
+  } else {
+    nsCOMPtr<nsIVariant> variant(do_QueryInterface(aArgs));
+    if (variant)
+      rv = xpc->VariantToJS(mContext, (JSObject *)aScope, variant, argv);
+    else {
+      NS_ERROR("Not an array, not an interface?");
+      rv = NS_ERROR_UNEXPECTED;
+    }
+  }
   if (NS_FAILED(rv)) {
-    js_FreeStack(cx, *aMarkp);
+    js_FreeStack(mContext, *aMarkp);
     return rv;
   }
   *aArgv = argv;
   *aArgc = argCount;
   return NS_OK;
 }
-                                 
+
+// This really should go into xpconnect somewhere...
 nsresult
-nsJSContext::AddInterfaceTojsvals(nsISupports *aArg, jsval *aArgv)
+nsJSContext::AddSupportsPrimitiveTojsvals(nsISupports *aArg, jsval *aArgv)
 {
-  nsresult rv;
-  JSContext *cx = mContext;
-  nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID(), &rv));
-  NS_ENSURE_SUCCESS(rv, rv);
+  NS_PRECONDITION(aArg, "Empty arg");
 
-  nsCOMPtr<nsIXPConnectJSObjectHolder> wrapper;
-  rv = xpc->WrapNative(cx, GetGlobalObject()->GetGlobalJSObject(), aArg,
-              NS_GET_IID(nsISupports), getter_AddRefs(wrapper));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  JSObject *obj;
-  rv = wrapper->GetJSObject(&obj);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  *aArgv = OBJECT_TO_JSVAL(obj);
-  return NS_OK;
-}
-
-
-nsresult
-nsJSContext::AddSupportsTojsvals(nsISupports *aArg, jsval *aArgv)
-{
-  if (!aArg) {
-    *aArgv = JSVAL_NULL;
-    return NS_OK;
-  }
-
-  JSContext *cx = mContext;
   nsCOMPtr<nsISupportsPrimitive> argPrimitive(do_QueryInterface(aArg));
   if (!argPrimitive)
-    return AddInterfaceTojsvals(aArg, aArgv);
+    return NS_ERROR_NO_INTERFACE;
 
+  JSContext *cx = mContext;
   PRUint16 type;
   argPrimitive->GetType(&type);
 
@@ -3040,24 +3043,24 @@ nsJSRuntime::LockGCThing(void* aScriptObject)
 nsresult
 nsJSRuntime::UnlockGCThing(void* aScriptObject)
 {
-    NS_ASSERTION(sIsInitialized, "runtime not initialized");
-    if (! sRuntime) {
-        NS_NOTREACHED("couldn't remove GC root");
-        return NS_ERROR_FAILURE;
-    }
+  NS_ASSERTION(sIsInitialized, "runtime not initialized");
+  if (! sRuntime) {
+    NS_NOTREACHED("couldn't remove GC root");
+    return NS_ERROR_FAILURE;
+  }
 
-    ::JS_UnlockGCThingRT(sRuntime, aScriptObject);
-    return NS_OK;
+  ::JS_UnlockGCThingRT(sRuntime, aScriptObject);
+  return NS_OK;
 }
 
 // A factory for the runtime.
 nsresult NS_CreateJSRuntime(nsILanguageRuntime **aRuntime)
 {
-    *aRuntime = new nsJSRuntime();
-    if (*aRuntime == nsnull)
-        return NS_ERROR_OUT_OF_MEMORY;
-    NS_IF_ADDREF(*aRuntime);
-    return NS_OK;
+  *aRuntime = new nsJSRuntime();
+  if (*aRuntime == nsnull)
+    return NS_ERROR_OUT_OF_MEMORY;
+  NS_IF_ADDREF(*aRuntime);
+  return NS_OK;
 }
 
 // A fast-array class for JS.  This class supports both nsIJSScriptArray and
@@ -3079,9 +3082,9 @@ public:
   // nsIJSArgArray
   nsresult GetArgs(PRUint32 *argc, jsval **argv);
 protected:
-    JSContext *mContext;
-    jsval *mArgv;
-    PRUint32 mArgc;
+  JSContext *mContext;
+  jsval *mArgv;
+  PRUint32 mArgc;
 };
 
 nsJSArgArray::nsJSArgArray(JSContext *aContext, PRUint32 argc, jsval *argv) :
@@ -3113,68 +3116,54 @@ NS_IMPL_RELEASE(nsJSArgArray)
 nsresult
 nsJSArgArray::GetArgs(PRUint32 *argc, jsval **argv)
 {
-    if (!*mArgv) {
-        NS_WARNING("nsJSArgArray has no argv!");
-        return NS_ERROR_UNEXPECTED;
-    }
-    *argv = mArgv;
-    *argc = mArgc;
-    return NS_OK;
+  if (!*mArgv) {
+    NS_WARNING("nsJSArgArray has no argv!");
+    return NS_ERROR_UNEXPECTED;
+  }
+  *argv = mArgv;
+  *argc = mArgc;
+  return NS_OK;
 }
 
 // nsIArray impl
 NS_IMETHODIMP nsJSArgArray::GetLength(PRUint32 *aLength)
 {
-    *aLength = mArgc;
-    return NS_OK;
+  *aLength = mArgc;
+  return NS_OK;
 }
 
 /* void queryElementAt (in unsigned long index, in nsIIDRef uuid, [iid_is (uuid), retval] out nsQIResult result); */
 NS_IMETHODIMP nsJSArgArray::QueryElementAt(PRUint32 index, const nsIID & uuid, void * *result)
 {
-    if (index >= mArgc)
-      return NS_ERROR_INVALID_ARG;
+  *result = nsnull;
+  if (index >= mArgc)
+    return NS_ERROR_INVALID_ARG;
 
-    nsCOMPtr<nsISupports> ret;
-    JSString *expr = nsnull;
-    nsresult rv;
-    switch (::JS_TypeOfValue(mContext, mArgv[index])) {
-        case JSTYPE_STRING: {
-            expr = ::JS_ValueToString(mContext, mArgv[index]);
-            nsCOMPtr<nsISupportsString>
-                val(do_CreateInstance(NS_SUPPORTS_STRING_CONTRACTID, &rv));
-            NS_ENSURE_SUCCESS(rv, rv);
-            val->SetData(nsDependentJSString(expr));
-            ret = val;
-            break;
-        }
-        default:
-            NS_WARNING("nsJSArgArray::QueryElementAt needs some lovin'");
-    }
-    if (!ret) {
-        NS_ERROR("Failed to get array element");
-        return NS_ERROR_UNEXPECTED;
-    }
-    return ret->QueryInterface(uuid, result);
+  if (uuid.Equals(NS_GET_IID(nsIVariant)) || uuid.Equals(NS_GET_IID(nsISupports))) {
+    return nsContentUtils::XPConnect()->JSToVariant(mContext, mArgv[index],
+                                                    (nsIVariant **)result);
+  }
+  NS_WARNING("nsJSArgArray only handles nsIVariant");
+  return NS_ERROR_NO_INTERFACE;
 }
 
 /* unsigned long indexOf (in unsigned long startIndex, in nsISupports element); */
 NS_IMETHODIMP nsJSArgArray::IndexOf(PRUint32 startIndex, nsISupports *element, PRUint32 *_retval)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* nsISimpleEnumerator enumerate (); */
 NS_IMETHODIMP nsJSArgArray::Enumerate(nsISimpleEnumerator **_retval)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 nsresult NS_CreateJSArgv(JSContext *aContext, PRUint32 argc, jsval *argv,
                          nsIArray **aArray)
 {
-    nsJSArgArray *ret = new nsJSArgArray(aContext, argc, argv);
-    if (ret == nsnull)
-        return NS_ERROR_OUT_OF_MEMORY;
-    return ret->QueryInterface(NS_GET_IID(nsIArray), (void **)aArray);
+  nsJSArgArray *ret = new nsJSArgArray(aContext, argc, argv);
+  if (ret == nsnull)
+      return NS_ERROR_OUT_OF_MEMORY;
+  return ret->QueryInterface(NS_GET_IID(nsIArray), (void **)aArray);
 }

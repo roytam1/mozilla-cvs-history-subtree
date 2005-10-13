@@ -100,7 +100,7 @@ public:
                                        void** aHandler);
   virtual nsresult CallEventHandler(nsISupports* aTarget, void *aScope,
                                     void* aHandler,
-                                    nsIArray *argv, nsISupports **rv);
+                                    nsIArray *argv, nsIVariant **rv);
   virtual nsresult BindCompiledEventHandler(nsISupports *aTarget,
                                             void *aScope,
                                             nsIAtom *aName,
@@ -152,10 +152,6 @@ public:
   virtual nsresult Serialize(nsIObjectOutputStream* aStream, void *aScriptObject);
   virtual nsresult Deserialize(nsIObjectInputStream* aStream, void **aResult);
 
-  nsresult ConvertSupportsTojsvals(nsISupports *aArgs,
-                                   PRUint32 *aArgc, jsval **aArgv,
-                                   void **aMarkp);
-
   NS_DECL_NSIXPCSCRIPTNOTIFY
 
   NS_DECL_NSITIMERCALLBACK
@@ -166,10 +162,15 @@ protected:
   // aHolder should be holding our global object
   nsresult FindXPCNativeWrapperClass(nsIXPConnectJSObjectHolder *aHolder);
 
-  void FireGCTimer();
+  // Helper to convert xpcom datatypes to jsvals
+  nsresult ConvertSupportsTojsvals(nsISupports *aArgs,
+                                   void *aScope,
+                                   PRUint32 *aArgc, jsval **aArgv,
+                                   void **aMarkp);
 
-  nsresult   AddSupportsTojsvals(nsISupports *aArg, jsval *aArgv);
-  nsresult   AddInterfaceTojsvals(nsISupports *aArg, jsval *aArgv);
+  nsresult AddSupportsPrimitiveTojsvals(nsISupports *aArg, jsval *aArgv);
+
+  void FireGCTimer();
 
 private:
   JSContext *mContext;

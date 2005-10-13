@@ -163,8 +163,16 @@ nsresult nsPythonContext::HandlePythonError()
   if (status != nsEventStatus_eConsumeNoDefault) {
     // report it 'normally'.  We probably should use nsIScriptError
     // (OTOH, pyxpcom itself is probably what should)
-    NS_WARNING("Python error calling DOM script");
-    PyXPCOM_LogError("Python error");
+    nsCAutoString streamout("Python DOM script error");
+    nsCAutoString level;
+    if (status != nsEventStatus_eIgnore) {
+      streamout += NS_LITERAL_CSTRING(" (suppressed by event handler)");
+      level = NS_LITERAL_CSTRING("info");
+    } else {
+      level = NS_LITERAL_CSTRING("warning");
+    }
+    PyXPCOM_FormatCurrentException(streamout);
+    PyXPCOM_Log(level.get(), streamout);
   }
   // We always want the hresult and exception state cleared.
   nsresult ret = PyXPCOM_SetCOMErrorFromPyException();
@@ -436,7 +444,7 @@ nsPythonContext::CompileFunction(void* aTarget,
 
 nsresult
 nsPythonContext::CallEventHandler(nsISupports *aTarget, void *aScope, void* aHandler,
-                                    nsIArray *aargv, nsISupports **arv)
+                                    nsIArray *aargv, nsIVariant **arv)
 {
   NS_TIMELINE_MARK_FUNCTION("nsPythonContext::CallEventHandler");
   NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
@@ -463,8 +471,7 @@ nsPythonContext::CallEventHandler(nsISupports *aTarget, void *aScope, void* aHan
                                       obTarget, aScope, aHandler,
                                       obArgv);
   if (ret) {
-    Py_nsISupports::InterfaceFromPyObject(ret, NS_GET_IID(nsIVariant),
-                                               arv, PR_TRUE, PR_TRUE);
+    PyObject_AsVariant(ret, arv);
     Py_DECREF(ret);
   }
   return HandlePythonError();

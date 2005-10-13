@@ -306,7 +306,7 @@ nsHTMLScriptEventHandler::Invoke(nsISupports *aTargetObject,
     return rv;
 
   // Invoke the event handler script...
-  nsCOMPtr<nsISupports> ret;
+  nsCOMPtr<nsIVariant> ret;
   return scriptContext->CallEventHandler(aTargetObject, scope, funcObject,
                                          argarray, getter_AddRefs(ret));
 }

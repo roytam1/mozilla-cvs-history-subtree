@@ -279,6 +279,7 @@ static PyObject *PyGetCurrentInnerWindow(PyObject *self, PyObject *args)
     return pyctx->PyObject_FromInterface(innerGlobal,
                                          NS_GET_IID(nsIScriptGlobalObject));
 }
+
 /***
 static PyObject *PyGetScriptContext(PyObject *self, PyObject *args)
 {

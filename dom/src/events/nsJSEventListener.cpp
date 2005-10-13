@@ -47,7 +47,7 @@
 #include "nsGUIEvent.h"
 #include "nsContentUtils.h"
 #include "nsArray.h"
-#include "nsSupportsPrimitives.h"
+#include "nsVariant.h"
 
 
 /*
@@ -141,26 +141,26 @@ nsJSEventListener::HandleEvent(nsIDOMEvent* aEvent)
       rv = NS_NewArray(getter_AddRefs(tempargv));
       NS_ENSURE_SUCCESS(rv, rv);
       // Append the event args.
-      nsCOMPtr<nsISupportsString>
-          errorMsg(do_CreateInstance(NS_SUPPORTS_STRING_CONTRACTID, &rv));
+      nsCOMPtr<nsIWritableVariant>
+          var(do_CreateInstance(NS_VARIANT_CONTRACTID, &rv));
       NS_ENSURE_SUCCESS(rv, rv);
-      errorMsg->SetData(nsAutoString(scriptEvent->errorMsg));
-      rv = tempargv->AppendElement(errorMsg, PR_FALSE);
+      rv = var->SetAsWString(scriptEvent->errorMsg);
+      NS_ENSURE_SUCCESS(rv, rv);
+      rv = tempargv->AppendElement(var, PR_FALSE);
       NS_ENSURE_SUCCESS(rv, rv);
       // filename
-      nsCOMPtr<nsISupportsString>
-          fileName(do_CreateInstance(NS_SUPPORTS_STRING_CONTRACTID, &rv));
+      var = do_CreateInstance(NS_VARIANT_CONTRACTID, &rv);
+      rv = var->SetAsWString(scriptEvent->fileName);
       NS_ENSURE_SUCCESS(rv, rv);
-      fileName->SetData(nsAutoString(scriptEvent->fileName));
-      rv = tempargv->AppendElement(fileName, PR_FALSE);
+      rv = tempargv->AppendElement(var, PR_FALSE);
       NS_ENSURE_SUCCESS(rv, rv);
       // line number
-      nsCOMPtr<nsISupportsPRUint32>
-          lineNr(do_CreateInstance(NS_SUPPORTS_PRUINT32_CONTRACTID, &rv));
+      var = do_CreateInstance(NS_VARIANT_CONTRACTID, &rv);
+      rv = var->SetAsUint32(scriptEvent->lineNr);
       NS_ENSURE_SUCCESS(rv, rv);
-      lineNr->SetData(scriptEvent->lineNr);
-      rv = tempargv->AppendElement(lineNr, PR_FALSE);
+      rv = tempargv->AppendElement(var, PR_FALSE);
       NS_ENSURE_SUCCESS(rv, rv);
+
       // And set the real argv
       iargv = do_QueryInterface(tempargv);
 
@@ -178,13 +178,14 @@ nsJSEventListener::HandleEvent(nsIDOMEvent* aEvent)
     iargv = do_QueryInterface(tempargv);
   }
 
-  nsCOMPtr<nsISupports> irv;
-  // XXX - fix return val!
-  jsval rval = JSVAL_VOID;
+  nsCOMPtr<nsIVariant> vrv;
   rv = mContext->CallEventHandler(mTarget, mScopeObject, funcval, iargv,
-                                  getter_AddRefs(irv));
+                                  getter_AddRefs(vrv));
 
   if (NS_SUCCEEDED(rv)) {
+    PRUint16 dataType = nsIDataType::VTYPE_VOID;
+    if (vrv)
+      vrv->GetDataType(&dataType);
     if (eventString.EqualsLiteral("onbeforeunload")) {
       nsCOMPtr<nsIPrivateDOMEvent> priv(do_QueryInterface(aEvent));
       NS_ENSURE_TRUE(priv, NS_ERROR_UNEXPECTED);
@@ -197,23 +198,36 @@ nsJSEventListener::HandleEvent(nsIDOMEvent* aEvent)
       nsBeforePageUnloadEvent *beforeUnload =
         NS_STATIC_CAST(nsBeforePageUnloadEvent *, event);
 
-      if (!JSVAL_IS_VOID(rval)) {
+      if (dataType != nsIDataType::VTYPE_VOID) {
         aEvent->PreventDefault();
 
         // Set the text in the beforeUnload event as long as it wasn't
         // already set (through event.returnValue, which takes
         // precedence over a value returned from a JS function in IE)
-        if (JSVAL_IS_STRING(rval) && beforeUnload->text.IsEmpty()) {
-          beforeUnload->text = nsDependentJSString(JSVAL_TO_STRING(rval));
+        if ((dataType == nsIDataType::VTYPE_DOMSTRING ||
+             dataType == nsIDataType::VTYPE_CHAR_STR ||
+             dataType == nsIDataType::VTYPE_WCHAR_STR ||
+             dataType == nsIDataType::VTYPE_STRING_SIZE_IS ||
+             dataType == nsIDataType::VTYPE_WSTRING_SIZE_IS ||
+             dataType == nsIDataType::VTYPE_CSTRING ||
+             dataType == nsIDataType::VTYPE_ASTRING)
+            && beforeUnload->text.IsEmpty()) {
+          vrv->GetAsDOMString(beforeUnload->text);
         }
       }
-    } else if (JSVAL_IS_BOOLEAN(rval)) {
+    } else if (dataType == nsIDataType::VTYPE_BOOL ||
+               dataType == nsIDataType::VTYPE_INT8 ||
+               dataType == nsIDataType::VTYPE_INT16 ||
+               dataType == nsIDataType::VTYPE_INT32 ||
+               dataType == nsIDataType::VTYPE_UINT8 ||
+               dataType == nsIDataType::VTYPE_UINT16 ||
+               dataType == nsIDataType::VTYPE_UINT32) {
       // If the handler returned false and its sense is not reversed,
       // or the handler returned true and its sense is reversed from
       // the usual (false means cancel), then prevent default.
-
-      if (JSVAL_TO_BOOLEAN(rval) ==
-          (mReturnResult == nsReturnResult_eReverseReturnResult)) {
+      PRBool brv;
+      if (NS_SUCCEEDED(vrv->GetAsBool(&brv)) &&
+          brv == (mReturnResult == nsReturnResult_eReverseReturnResult)) {
         aEvent->PreventDefault();
       }
     }

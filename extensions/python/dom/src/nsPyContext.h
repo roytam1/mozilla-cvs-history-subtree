@@ -143,7 +143,7 @@ public:
                                        void** aHandler);
   virtual nsresult CallEventHandler(nsISupports* aTarget, void *aScope,
                                     void* aHandler,
-                                    nsIArray *argv, nsISupports **rv);
+                                    nsIArray *argv, nsIVariant **rv);
   virtual nsresult BindCompiledEventHandler(nsISupports*aTarget, void *aScope,
                                             nsIAtom *aName,
                                             void *aHandler);

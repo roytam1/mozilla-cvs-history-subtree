@@ -27,6 +27,7 @@
  *   Dan Rosen <dr@netscape.com>
  *   Vidur Apparao <vidur@netscape.com>
  *   Johnny Stenback <jst@netscape.com>
+ *   Mark Hammond <mhammond@skippinet.com.au>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -126,7 +127,6 @@
 #include "nsIWindowWatcher.h"
 #include "nsPIWindowWatcher.h"
 #include "nsIContentViewer.h"
-#include "nsISupportsPrimitives.h"
 #include "nsDOMClassInfo.h"
 #include "nsIJSNativeInitializer.h"
 #include "nsIFullScreen.h"
@@ -6306,7 +6306,7 @@ nsGlobalWindow::RunTimeout(nsTimeout *aTimeout)
         PR_IntervalToMilliseconds(now - timeout->mWhen);
       timeout->mArgv[timeout->mArgc] = INT_TO_JSVAL((jsint) lateness);
 
-      nsCOMPtr<nsISupports> dummy;
+      nsCOMPtr<nsIVariant> dummy;
       nsCOMPtr<nsIArray> argv;
       if NS_FAILED(NS_CreateJSArgv(cx, timeout->mArgc, timeout->mArgv,
                                    getter_AddRefs(argv)))

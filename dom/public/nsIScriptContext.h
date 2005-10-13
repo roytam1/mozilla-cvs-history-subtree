@@ -49,6 +49,7 @@ class nsIScriptContextOwner;
 class nsIPrincipal;
 class nsIAtom;
 class nsIArray;
+class nsIVariant;
 class nsIObjectInputStream;
 class nsIObjectOutputStream;
 
@@ -192,12 +193,14 @@ public:
    * @param aTarget an object telling the scope in which to bind the compiled
    *        event handler function.
    * @param aHandler function object (function and static scope) to invoke.
-   * @param argv vector of arguments
+   * @param argv vector of arguments.  Note each element is assumed to
+   *        be an nsIVariant - xxxmarkh - should we just use nsIVariant there
+   *        too?
    * @param rval out parameter returning result
    **/
   virtual nsresult CallEventHandler(nsISupports* aTarget,
                                     void *aScope, void* aHandler,
-                                    nsIArray *argv, nsISupports **rv) = 0;
+                                    nsIArray *argv, nsIVariant **rval) = 0;
 
   /**
    * Bind an already-compiled event handler function to a name in the given
