@@ -399,6 +399,8 @@ private:
    * @param aChildDisplay the display struct for aChildContent
    * @param aParentFrame the frame we think should be the parent.  This will be
    *        adjusted to point to a pseudo-frame if needed.
+   * @param aTag tag that would be used for frame construction
+   * @param aNameSpaceID namespace that will be used for frame construction
    * @param aFrameItems the framelist we think we need to put the child frame
    *        into.  If we have to construct pseudo-frames, we'll modify the
    *        pointer to point to the list the child frame should go into.
@@ -414,6 +416,8 @@ private:
   // be kept track of in the state...
   nsresult AdjustParentFrame(nsIContent* aChildContent,
                              const nsStyleDisplay* aChildDisplay,
+                             nsIAtom* aTag,
+                             PRInt32 aNameSpaceID,
                              nsIFrame* & aParentFrame,
                              nsFrameItems* & aFrameItems,
                              nsFrameConstructorState& aState,
