@@ -85,7 +85,6 @@ public:
   virtual ~nsNativeThemeWin();
 
 protected:
-  void UpdateConfig();
   void CloseData();
   HANDLE GetTheme(PRUint8 aWidgetType);
   nsresult GetThemePartAndState(nsIFrame* aFrame, PRUint8 aWidgetType,
@@ -126,12 +125,9 @@ private:
   HANDLE mComboBoxTheme;
   HANDLE mHeaderTheme;
 
-  BOOL mFlatMenus;
-
   nsCOMPtr<nsIAtom> mInputAtom;
   nsCOMPtr<nsIAtom> mInputCheckedAtom;
   nsCOMPtr<nsIAtom> mTypeAtom;
-  nsCOMPtr<nsIAtom> mMenuActiveAtom;
 };
 
 // Creator function
