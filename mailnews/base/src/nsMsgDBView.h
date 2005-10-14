@@ -105,7 +105,8 @@ public:
   NS_DECL_NSIJUNKMAILCLASSIFICATIONLISTENER
 
   nsMsgViewIndex GetInsertIndexHelper(nsIMsgDBHdr *msgHdr, nsMsgKeyArray *keys,
-                                        nsMsgViewSortOrderValue sortOrder);
+                                        nsMsgViewSortOrderValue sortOrder,
+                                        nsMsgViewSortTypeValue sortType);
 protected:
   static nsrefcnt gInstanceCount;
   // atoms used for styling the view. we're going to have a lot of
@@ -212,7 +213,7 @@ protected:
   // helper routines for thread expanding and collapsing.
   nsresult		GetThreadCount(nsMsgKey messageKey, PRUint32 *pThreadCount);
   nsMsgViewIndex GetIndexOfFirstDisplayedKeyInThread(nsIMsgThread *threadHdr);
-  nsresult GetFirstMessageHdrToDisplayInThread(nsIMsgThread *threadHdr, nsIMsgDBHdr **result);
+  virtual nsresult GetFirstMessageHdrToDisplayInThread(nsIMsgThread *threadHdr, nsIMsgDBHdr **result);
   virtual nsMsgViewIndex ThreadIndexOfMsg(nsMsgKey msgKey, 
 				  nsMsgViewIndex msgIndex = nsMsgViewIndex_None,
 				  PRInt32 *pThreadCount = nsnull,
@@ -220,7 +221,7 @@ protected:
   virtual nsresult GetThreadContainingMsgHdr(nsIMsgDBHdr *msgHdr, nsIMsgThread **pThread);
   nsMsgKey GetKeyOfFirstMsgInThread(nsMsgKey key);
   PRInt32 CountExpandedThread(nsMsgViewIndex index);
-  nsresult ExpansionDelta(nsMsgViewIndex index, PRInt32 *expansionDelta);
+  virtual  nsresult ExpansionDelta(nsMsgViewIndex index, PRInt32 *expansionDelta);
   nsresult ReverseSort();
   nsresult ReverseThreads();
   nsresult SaveSortInfo(nsMsgViewSortTypeValue sortType, nsMsgViewSortOrderValue sortOrder);
@@ -235,7 +236,7 @@ protected:
   virtual nsresult GetFolders(nsISupportsArray **folders);
   virtual nsresult GetFolderFromMsgURI(const char *aMsgURI, nsIMsgFolder **aFolder);
 
-  nsresult ListIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex viewIndex, PRUint32 *pNumListed);
+  virtual nsresult ListIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex viewIndex, PRUint32 *pNumListed);
   nsresult ListUnreadIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex startOfThreadViewIndex, PRUint32 *pNumListed);
   nsMsgViewIndex FindParentInThread(nsMsgKey parentKey, nsMsgViewIndex startOfThreadViewIndex);
   nsresult ListIdsInThreadOrder(nsIMsgThread *threadHdr, nsMsgKey parentKey, PRInt32 level, nsMsgViewIndex *viewIndex, PRUint32 *pNumListed);

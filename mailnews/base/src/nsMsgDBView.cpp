@@ -3706,22 +3706,22 @@ void nsMsgDBView::FreeAll(nsVoidArray *ptrs)
 
 nsMsgViewIndex nsMsgDBView::GetIndexOfFirstDisplayedKeyInThread(nsIMsgThread *threadHdr)
 {
-	nsMsgViewIndex	retIndex = nsMsgViewIndex_None;
-	PRUint32	childIndex = 0;
-	// We could speed up the unreadOnly view by starting our search with the first
-	// unread message in the thread. Sometimes, that will be wrong, however, so
-	// let's skip it until we're sure it's necessary.
-//	(m_viewFlags & nsMsgViewFlagsType::kUnreadOnly) 
-//		? threadHdr->GetFirstUnreadKey(m_db) : threadHdr->GetChildAt(0);
+  nsMsgViewIndex  retIndex = nsMsgViewIndex_None;
+  PRUint32        childIndex = 0;
+  // We could speed up the unreadOnly view by starting our search with the first
+  // unread message in the thread. Sometimes, that will be wrong, however, so
+  // let's skip it until we're sure it's necessary.
+  //	(m_viewFlags & nsMsgViewFlagsType::kUnreadOnly) 
+  //		? threadHdr->GetFirstUnreadKey(m_db) : threadHdr->GetChildAt(0);
   PRUint32 numThreadChildren;
   threadHdr->GetNumChildren(&numThreadChildren);
-	while (retIndex == nsMsgViewIndex_None && childIndex < numThreadChildren)
-	{
-		nsMsgKey childKey;
+  while (retIndex == nsMsgViewIndex_None && childIndex < numThreadChildren)
+  {
+    nsMsgKey childKey;
     threadHdr->GetChildKeyAt(childIndex++, &childKey);
-		retIndex = FindViewIndex(childKey);
-	}
-	return retIndex;
+    retIndex = FindViewIndex(childKey);
+  }
+  return retIndex;
 }
 
 nsresult nsMsgDBView::GetFirstMessageHdrToDisplayInThread(nsIMsgThread *threadHdr, nsIMsgDBHdr **result)
@@ -4218,7 +4218,7 @@ nsMsgViewIndex nsMsgDBView::GetIndexForThread(nsIMsgDBHdr *hdr)
 }
 
 nsMsgViewIndex nsMsgDBView::GetInsertIndexHelper(nsIMsgDBHdr *msgHdr, nsMsgKeyArray *keys, 
-                                                 nsMsgViewSortOrderValue sortOrder)
+                                                 nsMsgViewSortOrderValue sortOrder, nsMsgViewSortTypeValue sortType)
 {
   nsMsgViewIndex highIndex = keys->GetSize();
   nsMsgViewIndex lowIndex = 0;
@@ -4230,7 +4230,7 @@ nsMsgViewIndex nsMsgDBView::GetInsertIndexHelper(nsIMsgDBHdr *msgHdr, nsMsgKeyAr
   nsresult rv;
   PRUint16	maxLen;
   eFieldType fieldType;
-  rv = GetFieldTypeAndLenForSort(m_sortType, &maxLen, &fieldType);
+  rv = GetFieldTypeAndLenForSort(sortType, &maxLen, &fieldType);
   const void *pValue1 = &EntryInfo1, *pValue2 = &EntryInfo2;
   
   int (* PR_CALLBACK comparisonFun) (const void *pItem1, const void *pItem2, void *privateData)=nsnull;
@@ -4239,18 +4239,16 @@ nsMsgViewIndex nsMsgDBView::GetInsertIndexHelper(nsIMsgDBHdr *msgHdr, nsMsgKeyAr
   switch (fieldType)
   {
     case kCollationKey:
-      rv = GetCollationKey(msgHdr, m_sortType, &EntryInfo1.key, &EntryInfo1.dword);
+      rv = GetCollationKey(msgHdr, sortType, &EntryInfo1.key, &EntryInfo1.dword);
       NS_ASSERTION(NS_SUCCEEDED(rv),"failed to create collation key");
       comparisonFun = FnSortIdKeyPtr;
       comparisonContext = m_db.get();
       break;
     case kU32:
-      if (m_sortType == nsMsgViewSortType::byId) {
+      if (sortType == nsMsgViewSortType::byId) 
         EntryInfo1.dword = EntryInfo1.id;
-      }
-      else {
-        GetLongField(msgHdr, m_sortType, &EntryInfo1.dword);
-      }
+      else
+        GetLongField(msgHdr, sortType, &EntryInfo1.dword);
       comparisonFun = FnSortIdDWord;
       break;
     default:
@@ -4267,16 +4265,16 @@ nsMsgViewIndex nsMsgDBView::GetInsertIndexHelper(nsIMsgDBHdr *msgHdr, nsMsgKeyAr
     if (fieldType == kCollationKey)
     {
       PR_FREEIF(EntryInfo2.key);
-      rv = GetCollationKey(tryHdr, m_sortType, &EntryInfo2.key, &EntryInfo2.dword);
+      rv = GetCollationKey(tryHdr, sortType, &EntryInfo2.key, &EntryInfo2.dword);
       NS_ASSERTION(NS_SUCCEEDED(rv),"failed to create collation key");
     }
     else if (fieldType == kU32)
     {
-      if (m_sortType == nsMsgViewSortType::byId) {
+      if (sortType == nsMsgViewSortType::byId) {
         EntryInfo2.dword = EntryInfo2.id;
       }
       else {
-        GetLongField(tryHdr, m_sortType, &EntryInfo2.dword);
+        GetLongField(tryHdr, sortType, &EntryInfo2.dword);
       }
     }
     retStatus = (*comparisonFun)(&pValue1, &pValue2, comparisonContext);
@@ -4313,7 +4311,7 @@ nsMsgViewIndex nsMsgDBView::GetInsertIndex(nsIMsgDBHdr *msgHdr)
         && m_sortOrder != nsMsgViewSortType::byId)
     return GetIndexForThread(msgHdr);
 
-  return GetInsertIndexHelper(msgHdr, &m_keys, m_sortOrder);
+  return GetInsertIndexHelper(msgHdr, &m_keys, m_sortOrder, m_sortType);
 }
 
 nsresult	nsMsgDBView::AddHdr(nsIMsgDBHdr *msgHdr)
@@ -4323,7 +4321,8 @@ nsresult	nsMsgDBView::AddHdr(nsIMsgDBHdr *msgHdr)
   NS_ASSERTION((int) m_keys.GetSize() == m_flags.GetSize() && (int) m_keys.GetSize() == m_levels.GetSize(), "view arrays out of sync!");
 #endif
 
-  if (!GetShowingIgnored()) {
+  if (!GetShowingIgnored()) 
+  {
     nsCOMPtr <nsIMsgThread> thread;
     m_db->GetThreadContainingMsgHdr(msgHdr, getter_AddRefs(thread));
     if (thread)
@@ -4471,7 +4470,7 @@ nsresult nsMsgDBView::ListIdsInThreadOrder(nsIMsgThread *threadHdr, nsMsgKey par
   return rv; // we don't want to return the rv from the enumerator when it reaches the end, do we?
 }
 
-nsresult	nsMsgDBView::ListIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex startOfThreadViewIndex, PRUint32 *pNumListed)
+nsresult nsMsgDBView::ListIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex startOfThreadViewIndex, PRUint32 *pNumListed)
 {
   NS_ENSURE_ARG(threadHdr);
   // these children ids should be in thread order.
@@ -4807,10 +4806,11 @@ NS_IMETHODIMP nsMsgDBView::SetViewFlags(nsMsgViewFlagsTypeValue aViewFlags)
   }
   m_viewFlags = aViewFlags;
   
-  if (m_folder)
+  if (m_viewFolder)
   {
+    nsCOMPtr <nsIMsgDatabase> db;
     nsCOMPtr <nsIDBFolderInfo> folderInfo;
-    nsresult rv = m_folder->GetDBFolderInfoAndDB(getter_AddRefs(folderInfo), getter_AddRefs(m_db));
+    nsresult rv = m_viewFolder->GetDBFolderInfoAndDB(getter_AddRefs(folderInfo), getter_AddRefs(db));
     NS_ENSURE_SUCCESS(rv,rv);
     return folderInfo->SetViewFlags(aViewFlags);
   }
@@ -5419,8 +5419,8 @@ nsresult nsMsgDBView::ToggleIgnored(nsMsgViewIndex * indices, PRInt32 numIndices
 nsMsgViewIndex	nsMsgDBView::GetThreadFromMsgIndex(nsMsgViewIndex index, 
                                                    nsIMsgThread **threadHdr)
 {
-  nsMsgKey			msgKey = GetAt(index);
-  nsMsgViewIndex		threadIndex;
+  nsMsgKey        msgKey = GetAt(index);
+  nsMsgViewIndex  threadIndex;
   
   NS_ENSURE_ARG(threadHdr);
   nsresult rv = GetThreadContainingIndex(index, threadHdr);
