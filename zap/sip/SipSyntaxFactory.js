@@ -1137,17 +1137,16 @@ SipContactHeader.fun(
   });
 
 ////////////////////////////////////////////////////////////////////////
-// Class SipRouteHeader
+// Class SipRouteHeaderBase: base class for 'Route'-like headers
+// (Route, Record-Route, Path, Service-Route)
 
-var SipRouteHeader = makeClass("SipRouteHeader", SipHeader);
-SipRouteHeader.addInterfaces(Components.interfaces.zapISipRouteHeader);
-SipRouteHeader.setAliases("Route");
-SipRouteHeader.metaobj("isCommaSeparatedList", true);
+var SipRouteHeaderBase = makeClass("SipRouteHeaderBase", SipHeader);
+SipRouteHeaderBase.metaobj("isCommaSeparatedList", true);
 
 //----------------------------------------------------------------------
 // zapISipSyntaxObject implementation
 
-SipRouteHeader.fun(
+SipRouteHeaderBase.fun(
   function serialize() {
     var rv = "";
     rv += this.name + ": ";
@@ -1157,10 +1156,11 @@ SipRouteHeader.fun(
   });
 
 //----------------------------------------------------------------------
-// zapISipRouteHeader implementation
+//zapISipRouteHeader, zapISipRecordRouteHeader, zapISipPathHeader,
+//zapISipServiceRouteHeader implementation
 
 // attribute zapISipAddress address;
-SipRouteHeader.obj("address", null);
+SipRouteHeaderBase.obj("address", null);
 
 // ACString getParameter(in ACString name);
 // boolean hasParameter(in ACString name);
@@ -1168,7 +1168,7 @@ SipRouteHeader.obj("address", null);
 // void removeParameter(in ACString name);
 // void getParameterNames(out unsigned long count,
 //                        [retval, array, size_is(count)] out string names);
-SipRouteHeader.parsedHash(
+SipRouteHeaderBase.parsedHash(
   "Parameter",
   SERIALIZER_PARAMS,
   TOKENIZER_GENERIC_PARAMS,
@@ -1178,69 +1178,46 @@ SipRouteHeader.parsedHash(
 
 //----------------------------------------------------------------------
 
-SipRouteHeader.fun(
+SipRouteHeaderBase.fun(
   function deserialize(name, data) {
     // parse into (name-addr[parsed], parameters[unparsed])
     var matches = REGEXP_NAME_ADDR_PARS(data);
-    if (!matches) this._verboseError(PARSE_ERROR+": malformed Record-Route header ("+data+")");
+    if (!matches) this._verboseError(PARSE_ERROR+": malformed "+this.name+" header ("+data+")");
     
     this.address = theSyntaxFactory.deserializeAddress(matches[1]);
     this._deserializeParameters(matches[2]);
   });
 
 ////////////////////////////////////////////////////////////////////////
+// Class SipRouteHeader
+
+var SipRouteHeader = makeClass("SipRouteHeader", SipRouteHeaderBase);
+SipRouteHeader.addInterfaces(Components.interfaces.zapISipRouteHeader);
+SipRouteHeader.setAliases("Route");
+
+////////////////////////////////////////////////////////////////////////
 // Class SipRecordRouteHeader
 
-var SipRecordRouteHeader = makeClass("SipRecordRouteHeader", SipHeader);
+var SipRecordRouteHeader = makeClass("SipRecordRouteHeader",
+                                     SipRouteHeaderBase);
 SipRecordRouteHeader.addInterfaces(Components.interfaces.zapISipRecordRouteHeader);
 SipRecordRouteHeader.setAliases("Record-Route");
-SipRecordRouteHeader.metaobj("isCommaSeparatedList", true);
 
-//----------------------------------------------------------------------
-// zapISipSyntaxObject implementation
+////////////////////////////////////////////////////////////////////////
+// Class SipPathHeader (RFC3327)
 
-SipRecordRouteHeader.fun(
-  function serialize() {
-    var rv = "";
-    rv += this.name + ": ";
-    rv += this.address.serialize();
-    rv += this._serializeParameters();
-    return rv;
-  });
+var SipPathHeader = makeClass("SipPathHeader",
+                              SipRouteHeaderBase);
+SipPathHeader.addInterfaces(Components.interfaces.zapISipPathHeader);
+SipPathHeader.setAliases("Path");
 
-//----------------------------------------------------------------------
-// SipRecordRouteHeader implementation
+////////////////////////////////////////////////////////////////////////
+// Class SipServiceRouteHeader (RFC3608)
 
-// attribute zapISipAddress address;
-SipRecordRouteHeader.obj("address", null);
-
-// ACString getParameter(in ACString name);
-// boolean hasParameter(in ACString name);
-// void setParameter(in ACString name, in ACString value);
-// void removeParameter(in ACString name);
-// void getParameterNames(out unsigned long count,
-//                        [retval, array, size_is(count)] out string names);
-SipRecordRouteHeader.parsedHash(
-  "Parameter",
-  SERIALIZER_PARAMS,
-  TOKENIZER_GENERIC_PARAMS,
-  REGEXP_TOKEN,
-  REGEXP_GEN_VALUE,
-  {});
-
-//----------------------------------------------------------------------
-
-SipRecordRouteHeader.fun(
-  function deserialize(name, data) {
-    // parse into (name-addr[parsed], parameters[unparsed])
-    var matches = REGEXP_NAME_ADDR_PARS(data);
-    if (!matches) this._verboseError(PARSE_ERROR+": malformed Route header ("+data+")");
-    
-    this.address = theSyntaxFactory.deserializeAddress(matches[1]);
-    this._deserializeParameters(matches[2]);
-  });
-
-
+var SipServiceRouteHeader = makeClass("SipServiceRouteHeader",
+                                      SipRouteHeaderBase);
+SipServiceRouteHeader.addInterfaces(Components.interfaces.zapISipServiceRouteHeader);
+SipServiceRouteHeader.setAliases("Service-Route");
 
 ////////////////////////////////////////////////////////////////////////
 // Class SipMaxForwardsHeader

@@ -57,6 +57,24 @@ interface zapISipUnsupportedHeader;
 interface zapISipAllowHeader;
 
 /**
+ * \defgroup SIP_SYNTAX_LAYER ZAP SIP syntax layer
+ * \ingroup SIP_MODULE
+ *
+ * The main entry point into the ZAP SIP syntax layer is the
+ * zapISipSyntaxFactory interface: an API for parsing, serializing and
+ * constructing SIP message objects with lazy header parsing.  In
+ * addition to the headers defined in RFC3261, the syntax layer can
+ * handle generic headers (zapISipUnknownHeader) as well as extension
+ * headers from the following specifications:
+ *
+ * - RFC3327: 'Path' header
+ * - RFC3608: 'Service-Route' header
+ *
+ * 
+ */
+
+
+/**
  * \ingroup SIP_SYNTAX_LAYER
  * An API for constructing syntacically correct SIP messages.
  * (see RFC 3261)

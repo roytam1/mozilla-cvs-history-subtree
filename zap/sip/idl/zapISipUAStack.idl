@@ -81,11 +81,6 @@ interface zapISipMessage;
  */
 
 /**
- * \defgroup SIP_SYNTAX_LAYER ZAP SIP syntax layer
- * \ingroup SIP_MODULE
- */
-
-/**
  * \ingroup SIP_UA_LAYER
  * User Agent SIP stack interface.
  * 

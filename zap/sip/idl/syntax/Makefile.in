@@ -62,6 +62,8 @@ XPIDLSRCS = \
 	zapISipWarningHeader.idl \
 	zapISipWWWAuthenticateHeader.idl \
 	zapISipUnknownHeader.idl \
+	zapISipPathHeader.idl \
+	zapISipServiceRouteHeader.idl \
 	$(NULL)
 
 include $(topsrcdir)/config/rules.mk
