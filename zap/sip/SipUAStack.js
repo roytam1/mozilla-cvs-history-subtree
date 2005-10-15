@@ -289,6 +289,14 @@ SipUAStack.fun(
 
     // for 405 add Allow headers:
     if (statusCode == "405") this.appendAllowHeaders(m);
+
+    // for 2XX add Supported headers:
+    if (statusCode[0] == "2") {
+      this.supportedExtensions.forEach(
+        function(opt) {
+          m.appendHeader(gSyntaxFactory.deserializeHeader("Supported", opt));
+        });
+    }
     
     return m;
   });
@@ -700,6 +708,14 @@ SipUAStack.fun(
     // User-Agent header:
     if (this.userAgent)
       m.appendHeader(gSyntaxFactory.deserializeHeader("User-Agent", this.userAgent));
+    // Supported headers:
+    if (method != "ACK") {
+      this.supportedExtensions.forEach(
+        function(opt) {
+          m.appendHeader(gSyntaxFactory.deserializeHeader("Supported", opt));
+        });
+    }
+    
     return m;
   });
 

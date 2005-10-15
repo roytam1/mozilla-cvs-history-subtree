@@ -420,6 +420,13 @@ SipDialog.fun(
     // User-Agent header:
     if (this.stack.userAgent)
       m.appendHeader(gSyntaxFactory.deserializeHeader("User-Agent", this.stack.userAgent));
+    // Supported headers:
+    if (method != "ACK") {
+      this.stack.supportedExtensions.forEach(
+        function(opt) {
+          m.appendHeader(gSyntaxFactory.deserializeHeader("Supported", opt));
+        });
+    }
     
     return m;
   });

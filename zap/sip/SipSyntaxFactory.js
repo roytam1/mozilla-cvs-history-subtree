@@ -1618,60 +1618,64 @@ SipPriorityHeader.fun(
   });
 
 ////////////////////////////////////////////////////////////////////////
-// Class SipRequireHeader
+// Class SipOptionTagHeaderBase: baseclass for SipRequireHeader,
+// SipProxyRequireHeader, SipSupportedHeader and SipUnsupportedHeader
 
-var SipRequireHeader = makeClass("SipRequireHeader", SipHeader);
-SipRequireHeader.addInterfaces(Components.interfaces.zapISipRequireHeader);
-SipRequireHeader.setAliases("Require");
-SipRequireHeader.metaobj("isCommaSeparatedList", true);
+var SipOptionTagHeaderBase = makeClass("SipOptionTagHeaderBase", SipHeader);
+SipOptionTagHeaderBase.metaobj("isCommaSeparatedList", true);
 
 //----------------------------------------------------------------------
 // zapISipSyntaxObject implementation
 
-SipRequireHeader.fun(
+SipOptionTagHeaderBase.fun(
   function serialize() {
     return this.name + ": " + this._optionTag;
   });
 
 //----------------------------------------------------------------------
-// zapISipRequireHeader implementation
+// zapISipRequireHeader, zapISipProxyRequireHeader, zapISipSupportedHeader,
+// SipUnsupportedHeader implementation
 
-SipRequireHeader.parsedAttrib("optionTag", REGEXP_TOKEN, null);
+SipOptionTagHeaderBase.parsedAttrib("optionTag", REGEXP_TOKEN, null);
 
 //----------------------------------------------------------------------
 
-SipRequireHeader.fun(
+SipOptionTagHeaderBase.fun(
   function deserialize(name, data) {
-    this.optionTag  =data;
+    this.optionTag = data;
   });
+
+////////////////////////////////////////////////////////////////////////
+// Class SipRequireHeader
+
+var SipRequireHeader = makeClass("SipRequireHeader", SipOptionTagHeaderBase);
+SipRequireHeader.addInterfaces(Components.interfaces.zapISipRequireHeader);
+SipRequireHeader.setAliases("Require");
+
+////////////////////////////////////////////////////////////////////////
+// Class SipProxyRequireHeader
+
+var SipProxyRequireHeader = makeClass("SipProxyRequireHeader",
+                                      SipOptionTagHeaderBase);
+SipProxyRequireHeader.addInterfaces(Components.interfaces.zapISipProxyRequireHeader);
+SipProxyRequireHeader.setAliases("Proxy-Require");
+
+////////////////////////////////////////////////////////////////////////
+// Class SipSupportedHeader
+
+var SipSupportedHeader = makeClass("SipSupportedHeader",
+                                   SipOptionTagHeaderBase);
+SipSupportedHeader.addInterfaces(Components.interfaces.zapISipSupportedHeader);
+SipSupportedHeader.setAliases("Supported", "k");
 
 ////////////////////////////////////////////////////////////////////////
 // Class SipUnsupportedHeader
 
-var SipUnsupportedHeader = makeClass("SipUnsupportedHeader", SipHeader);
+var SipUnsupportedHeader = makeClass("SipUnsupportedHeader",
+                                     SipOptionTagHeaderBase);
 SipUnsupportedHeader.addInterfaces(Components.interfaces.zapISipUnsupportedHeader);
 SipUnsupportedHeader.setAliases("Unsupported");
-SipUnsupportedHeader.metaobj("isCommaSeparatedList", true);
 
-//----------------------------------------------------------------------
-// zapISipSyntaxObject implementation
-
-SipUnsupportedHeader.fun(
-  function serialize() {
-    return this.name + ": " + this._optionTag;
-  });
-
-//----------------------------------------------------------------------
-// zapISipUnsupportedHeader implementation
-
-SipUnsupportedHeader.parsedAttrib("optionTag", REGEXP_TOKEN, null);
-
-//----------------------------------------------------------------------
-
-SipUnsupportedHeader.fun(
-  function deserialize(name, data) {
-    this.optionTag  =data;
-  });
 
 
 ////////////////////////////////////////////////////////////////////////

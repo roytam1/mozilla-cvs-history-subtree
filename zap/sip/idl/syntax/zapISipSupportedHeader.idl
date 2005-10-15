@@ -42,8 +42,5 @@
 [scriptable, uuid(2b9bd44c-8215-466d-b0ba-948a299b2b5e)]
 interface zapISipSupportedHeader : zapISipHeader
 {
-  /**
-   * To be implemented
-   */
-
+  attribute ACString optionTag;
 };

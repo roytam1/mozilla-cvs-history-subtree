@@ -272,6 +272,8 @@ interface zapISipUAStack : nsISupports
    * - Max-Forwards header: will be set to 70
    * - User-Agent: will be set to the value of the userAgent attribute if it is
    *   != ""
+   * - If method != 'ACK', Supported headers will be added for all
+   *   option tags specified in the 'extensions' parameter passed to init().
    */
   zapISipNonInviteRC createNonInviteRequestClient(in zapISipAddress ToAddress,
                                                   in ACString method);
@@ -333,6 +335,9 @@ interface zapISipUAStack : nsISupports
    * must not already contain a tag or an error will be thrown.
    *
    * For SC==405: Allow headers will be added with appendAllowHeaders()
+   *
+   * For SC==2XX: Supported headers will be added for all option tags
+   * specified in the 'extensions' parameter passed to init().
    *
    */
   zapISipResponse formulateResponse(in ACString statusCode,
