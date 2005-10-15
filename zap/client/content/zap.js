@@ -839,6 +839,7 @@ function initSipStack() {
                  makePropertyBag({$instance_id:wPrefs["urn:mozilla:zap:instance_id"],
                                   $port_base:5060,
                                   $methods: "OPTIONS,INVITE,ACK,CANCEL,BYE",
+                                  $extensions: "path", // path: RFC3327
                                   $user_agent: wUserAgent
                                  }));
   document.getElementById("status_text").label = "Listening for UDP/TCP SIP traffic on port "+wSipStack.listeningPort;
