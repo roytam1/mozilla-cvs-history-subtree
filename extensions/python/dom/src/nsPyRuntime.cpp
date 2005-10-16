@@ -44,6 +44,7 @@
 #include "nsIDOMEventReceiver.h"
 #include "nsIAtomService.h"
 #include "nsIEventListenerManager.h"
+#include "nsIScriptTimeoutHandler.h"
 #include "jsapi.h"
 #include "jscntxt.h"
 #include "nsPIDOMWindow.h"
@@ -280,28 +281,81 @@ static PyObject *PyGetCurrentInnerWindow(PyObject *self, PyObject *args)
                                          NS_GET_IID(nsIScriptGlobalObject));
 }
 
-/***
-static PyObject *PyGetScriptContext(PyObject *self, PyObject *args)
+static PyObject *PySetTimeoutOrInterval(PyObject *self, PyObject *args)
 {
     PyObject *obTarget;
-    if (!PyArg_ParseTuple(args, "O", &obTarget))
+    PyObject *obHandler;
+    PyObject *obArgs;
+    double interval;
+    int isInterval;
+    if (!PyArg_ParseTuple(args, "OdOOi", &obTarget, &interval, &obHandler,
+                          &obArgs, &isInterval))
         return NULL;
 
+    if (!PySequence_Check(obArgs))
+        return PyErr_Format(PyExc_TypeError, "args param must be a sequence (got %s)",
+                            obArgs->ob_type->tp_name);
+
+    PyObject *funObject = NULL;
+    nsAutoString strExpr;
+    if (PyCallable_Check(obHandler)) {
+        funObject = obHandler;
+    } else {
+        if (!PyObject_AsNSString(obHandler, strExpr))
+            return NULL;
+    }
+
     // target
-    nsCOMPtr<nsIScriptGlobalObject> target;
+    nsCOMPtr<nsPIDOMWindow> target;
     if (!Py_nsISupports::InterfaceFromPyObject(
                 obTarget,
-                NS_GET_IID(nsIScriptGlobalObject),
+                NS_GET_IID(nsPIDOMWindow),
                 getter_AddRefs(target),
                 PR_FALSE, PR_FALSE))
         return NULL;
 
-    nsCOMPtr<nsIScriptContext> ctxt(target->GetScriptContext(target)
+    nsCOMPtr<nsIScriptTimeoutHandler> handler;
+    nsresult rv;
+    rv = CreatePyTimeoutHandler(strExpr, funObject, obArgs,
+                                getter_AddRefs(handler));
+    if (NS_FAILED(rv))
+        return PyXPCOM_BuildPyException(rv);
 
-    return PyObject_FromNSInterface(target->GetCurrentInnerWindow(),
-                                    NS_GET_IID(nsISupports), PR_FALSE);
+    PRInt32 ret;
+    Py_BEGIN_ALLOW_THREADS;
+    rv = target->SetTimeoutOrInterval(handler, interval, isInterval, &ret);
+    Py_END_ALLOW_THREADS;
+    if (NS_FAILED(rv))
+        return PyXPCOM_BuildPyException(rv);
+    return PyInt_FromLong(ret);
 }
-***/
+
+static PyObject *PyClearTimeoutOrInterval(PyObject *self, PyObject *args)
+{
+    int tid;
+    PyObject *obTarget;
+    if (!PyArg_ParseTuple(args, "Oi", &obTarget, &tid))
+        return NULL;
+
+    // target
+    nsCOMPtr<nsPIDOMWindow> target;
+    if (!Py_nsISupports::InterfaceFromPyObject(
+                obTarget,
+                NS_GET_IID(nsPIDOMWindow),
+                getter_AddRefs(target),
+                PR_FALSE, PR_FALSE))
+        return NULL;
+
+    nsresult rv;
+    Py_BEGIN_ALLOW_THREADS;
+    rv = target->ClearTimeoutOrInterval((PRInt32)tid);
+    Py_END_ALLOW_THREADS;
+    if (NS_FAILED(rv))
+        return PyXPCOM_BuildPyException(rv);
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
 // Avoid exposing the entire non-scriptable event listener interface
 // We are exposing:
 //
@@ -497,6 +551,8 @@ static struct PyMethodDef methods[]=
     {"CompileScriptEventListener", PyCompileScriptEventListener, 1},
     {"GetCurrentInnerWindow", PyGetCurrentInnerWindow, 1},
     {"IsOuterWindow", PyIsOuterWindow, 1},
+    {"SetTimeoutOrInterval", PySetTimeoutOrInterval, 1},
+    {"ClearTimeoutOrInterval", PyClearTimeoutOrInterval, 1},
     { NULL }
 };
 

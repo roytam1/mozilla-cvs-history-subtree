@@ -258,19 +258,34 @@ nsPythonContext::EvaluateString(const nsAString& aScript,
                             nsAString *aRetValue,
                             PRBool* aIsUndefined)
 {
+  NS_TIMELINE_MARK_FUNCTION("nsPythonContext::EvaluateString");
   NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
 
+  *aIsUndefined = PR_TRUE;
   if (!mScriptsEnabled) {
     *aIsUndefined = PR_TRUE;
-
     if (aRetValue) {
       aRetValue->Truncate();
     }
-
     return NS_OK;
   }
-  NS_ERROR("Not implemented");
-  return NS_ERROR_NOT_IMPLEMENTED;
+
+  CEnterLeavePython _celp;
+
+  // ignore principal param - no one uses it yet.
+  PyObject *obScript = PyObject_FromNSString(aScript);
+
+  PyObject *ret = PyObject_CallMethod(mDelegate, "EvaluateString", "NOOsii",
+                                      obScript,
+                                      (PyObject *)aScopeObject,
+                                      Py_None, // principal place holder
+                                      aURL,
+                                      aLineNo,
+                                      aVersion);
+
+  // We happen to know that no impls use the return value.
+  Py_DECREF(ret);
+  return HandlePythonError();
 }
 
 nsresult
@@ -454,17 +469,26 @@ nsPythonContext::CallEventHandler(nsISupports *aTarget, void *aScope, void* aHan
 
   CEnterLeavePython _celp;
 
-  PyObject *obTarget, *obArgv;
+  PyObject *obTarget;
   obTarget = PyObject_FromNSDOMInterface(mDelegate, aTarget);
   if (!obTarget)
     return HandlePythonError();
 
-  obArgv = PyObject_FromNSDOMInterface(mDelegate, aargv);
-  if (!obArgv) {
-    Py_DECREF(obTarget);
-    return HandlePythonError();
+  // See if our argv was originally supplied by Python, and if so, just pass
+  // the original args.
+  PyObject *obArgv = NULL;
+  nsCOMPtr<nsIPyArgArray> pyargv(do_QueryInterface(aargv));
+  if (pyargv) {
+    obArgv = pyargv->GetArgs();
+    Py_XINCREF(obArgv); // match the non-py case
   }
-
+  if (!obArgv) {
+    obArgv = PyObject_FromNSDOMInterface(mDelegate, aargv);
+    if (!obArgv) {
+      Py_DECREF(obTarget);
+      return HandlePythonError();
+    }
+  }
 
   PyObject *ret = PyObject_CallMethod(mDelegate, "CallEventHandler",
                                       "NOON",

@@ -9,9 +9,7 @@ import nsdom
 # Write something to the textbox - eg, error or trace messages.
 def write( msg, *args):
     tb = this.document.getElementById("output_box")
-    val = tb.getAttribute("value")
-    val += (msg % args) + "\n"
-    tb.setAttribute("value", val)
+    tb.value = tb.value + (msg % args) + "\n"
 
 # An event listener class to test explicit hooking of events via objects.
 # Note Python can now just call addEventListener a-la JS
@@ -23,35 +21,52 @@ class EventListener:
         except AttributeError:
             self.co = compile(handler, "inline script", "exec")
         self.globals = globs or globals()
-    
+
     def handleEvent(self, event):
         exec self.co in self.globals
+
+# A timer function
+timer_id = None
+timer_count = 0
+
+def on_timer(max):
+    global timer_count, timer_id
+    assert timer_id is not None, "We must have a timer id!"
+    change_image() # pick a random image
+    timer_count += 1
+    if timer_count >= max:
+        write("Stopping the image timer")
+        this.clearTimeout(timer_id)
+        time_id = None
 
 # An event function to handle onload - but hooked up manually rather than via
 # having the magic name 'onload'
 def do_load():
     input = this.document.getElementById("output_box")
     # Clear the text in the XUL
-    input.setAttribute("value", "")
-    write("This is the Python on XUL demo using\nPython " + sys.version)
+    input.value = ""
+    write("This is the Python on XUL demo using\nPython %s", sys.version)
 
-    # Sadly no inline event handlers yet - hook up a click event.
-    button = this.document.getElementById("but_dialog")
+    # hook up a click event using addEventListener
+    button = document.getElementById("but_dialog")
     button.addEventListener('click', 'write("hello from the click event for the dialog button")', False)
+
+    # And a 2 second 'interval' timer to change the image.
+    global timer_id
+    timer_id = this.setInterval(on_timer, 2000, 10)
 
 # Add an event listener as a function
 this.window.addEventListener('load', do_load, False)
 # Add another one just to test passing a string instead of a function.
 this.window.addEventListener('load', "print 'hello from string event handler'", False)
-# And yet another with an explicit EventListener instance. (on error tests can't do this?)
+# And yet another with an explicit EventListener instance.
 this.window.addEventListener('load', EventListener('print "hello from an object event handler"'), False)
 
 # Some other little functions called by the chrome
 def on_but_dialog_click():
-    write("Button clicked from %s" %  this.window.location.href)
+    write("Button clicked from %s", this.window.location.href)
     # window.open doesn't work as JS has special arg handling :(
     # for now, use our hacky (but quite wonderful) JSExec function.
-    import nsdom
     nsdom.JSExec(this, 'this.window.open("chrome://pyxultest/content/dialog.xul", "my-dialog", "chrome")')
     #new = this.window.open("chrome://pyxultest/content/dialog.xul", "my-dialog", "chrome")
 
@@ -59,7 +74,7 @@ def do_textbox_keypress(event):
     if event.keyCode==13:
         val = event.target.value
         if val:
-            write('You wrote: ' + val)
+            write('You wrote: %s', val)
         else:
             write("You wrote nothing!")
         event.target.value = ""
@@ -70,23 +85,27 @@ def change_image():
     import random
     num = random.randrange(64) + 1
     url = "http://www.python.org/pics/PyBanner%03d.gif" % num
-    print "Changing image source from", image.src, "to", url
     image.src = url
 
 def run_tests():
     # I wish I could reach into the window and get all tests!
-    tests = """ test_wrong_event_args
+    tests = """
+                test_error_eventlistener_function
                 test_error_eventlistener_function_noargs
+                test_error_eventlistener_object
                 test_error_eventlistener_string
                 test_error_explicit
-                test_error_eventlistener_function
-                test_error_eventlistener_object
-                test_error_explicit_string
                 test_error_explicit_no_cancel
+                test_error_explicit_string
+                test_interval_func
+                test_timeout_func
+                test_timeout_func_lateness
+                test_timeout_string
+                test_wrong_event_args
                 """.split()
     keep_open = this.document.getElementById("keep_tests_open").getAttribute("checked")
     for test in tests:
-        write("Running test %s" % test)
+        write("Running test %s", test)
         suffix = ', "%s"' % test
         if keep_open:
             suffix += ', "-k"'
@@ -96,4 +115,4 @@ def run_tests():
     if keep_open:
         write("Ran all the tests - the windows told you if the tests worked")
     else:
-        write("Ran all the tests - if you saw no window, it worked!")
+        write("Ran all the tests - if no window stayed open, it worked!")

@@ -41,7 +41,7 @@ class EventListener:
         else:
             # event name for addEventListener has no 'on' prefix
             func_name = "on" + evt_name
-            # xxx - what to do about arg names?  It looks like onerror
+            # What to do about arg names?  It looks like onerror
             # still only gets one arg here anyway - handleEvent only takes
             # one!
             arg_names = ('event',)
@@ -61,7 +61,7 @@ class EventListener:
         args = (event,)
         # We support having less args declared than supplied, a-la JS.
         # (This can only happen when passed a function object - we always
-        # compile a string handler into a function with 1 arg
+        # compile a string handler into a function with 1 arg)
         args = args[:f.func_code.co_argcount]
         return f(*args)
 
@@ -156,6 +156,21 @@ class WrappedNative(Component):
         base = self.__getattr__('addEventListener')
         base(event, handler, useCapture)
 
+    def setTimeout(self, interval, handler, *args):
+        return _nsdom.SetTimeoutOrInterval(self._comobj_, interval, handler,
+                                           args, False)
+
+    # SetInterval appears to have reversed args???
+    def setInterval(self, handler, interval, *args):
+        return _nsdom.SetTimeoutOrInterval(self._comobj_, interval, handler,
+                                           args, True)
+
+    def clearTimeout(self, tid):
+        return _nsdom.ClearTimeoutOrInterval(self._comobj_, tid)
+
+    def clearInterval(self, tid):
+        return _nsdom.ClearTimeoutOrInterval(self._comobj_, tid)
+
 class WrappedNativeGlobal(WrappedNative):
     # Special support for our global.
     def __repr__(self):
@@ -210,6 +225,12 @@ class ScriptContext:
                      len(self._remembered_objects_))
 
     def _fixArg(self, arg):
+        if arg is None:
+            return []
+        # Already a tuple?  This means the original Python args have been
+        # found and passed directly.
+        if type(arg) == types.TupleType:
+            return arg
         try:
             argv = arg.QueryInterface(components.interfaces.nsIArray)
         except COMException, why:
@@ -281,6 +302,15 @@ class ScriptContext:
             logger.debug("%s.FinalizeContext", self)
         self._reset()
 
+    def EvaluateString(self, script, glob, principal, url, lineno, ver):
+        # This appears misnamed - return value it not used.  Therefore we can
+        # just to a simple 'exec'.  If we needed a return value, we would have
+        # to treat this like a string event-handler, and compile as a temp
+        # function.
+        assert type(glob) == types.DictType
+        # XXX - use lineno etc
+        exec script in glob
+
     def ExecuteScript(self, scriptObject, scopeObject):
         if __debug__:
             logger.debug("%s.ExecuteScript %r in scope %s",
@@ -308,8 +338,10 @@ class ScriptContext:
             logger.debug("CallEventHandler %r on target %s in scope %s",
                          handler, target, id(scope))
         assert scope is self.GetNativeGlobal(), "scope was changed??"
-        globs = self.globalObject._expandos_.copy()
-        globs['this'] = target # XXX - what should this be exposed as?
+        # Event handlers must fire in our real globals (not a copy) so
+        # it can set global vars!
+        globs = self.globalObject._expandos_
+        #globs['this'] = target # XXX - what should this be exposed as?
         # Although handler is already a function object, we must re-bind to
         # new globals
         f = new.function(handler.func_code, globs, handler.func_name,

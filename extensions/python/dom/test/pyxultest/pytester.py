@@ -25,9 +25,7 @@ close_on_success = True
 # Write something to the textbox - eg, error or trace messages.
 def write( msg, *args):
     tb = this.document.getElementById("output-box")
-    val = tb.getAttribute("value")
-    val += (msg % args) + "\n"
-    tb.setAttribute("value", val)
+    tb.value = tb.value + (msg % args) + "\n"
 
 def success():
     # This gets called if the test works.  If it is not called, it must not
@@ -133,6 +131,58 @@ def find_tests():
             ret[name] = val
     return ret
 
+#
+# Timeout and Interval tests.
+#
+timer_id = None
+_interval_counter = 0
+def interval_func():
+    global _interval_counter
+    _interval_counter += 1
+    if _interval_counter > 1:
+        window.clearInterval(timer_id)
+        write("Interval timer fired twice - looks good!")
+        success()
+    
+def test_interval_func():
+    "Test setInterval function"
+    global timer_id
+    write("Assigning an interval using a function")
+    timer_id = window.setInterval(interval_func, 100)
+
+def timer_func(arg1, arg2):
+    # Also checks we can pass arbitrary Python objects.
+    if arg1 == "hello" and arg2 is test_timeout_func:
+        success()
+    else:
+        write("Args seemed wrong - test failed!")
+
+def timer_func_lateness(lateness):
+    # Also checks we can pass arbitrary Python objects.
+    write("lateness is %r", lateness)
+    # Check value reasonbleness - we should always be an int and never more
+    # than a second late.
+    if type(lateness) == type(0) and lateness < 1000:
+        success()
+    else:
+        write("Eeek - lateness is %r", lateness)
+
+def test_timeout_func():
+    "Test setTimeout function and general arg handling"
+    write("Assigning an interval using a function")
+    timer_id = window.setTimeout(100, timer_func, "hello", test_timeout_func)
+
+def test_timeout_string():
+    "Test setTimeout function with a string"
+    write("Assigning an interval using a function")
+    timer_id = window.setTimeout(100, "write('The timeout string fired'); success()")
+
+def test_timeout_func_lateness():
+    "Test setTimeout function handling of 'lateness' arg"
+    write("Assigning an interval using a function")
+    timer_id = window.setTimeout(100, timer_func_lateness)
+
+
 # The general event handlers and test runner code.
 def do_onload(event):
     global close_on_success
@@ -158,7 +208,9 @@ def do_onload(event):
                 write("You can specify '-test test_name' on the command-line" \
                       " to specify a test to run")
                 write("The following tests can be specified:")
-                for name in tests:
+                names = tests.keys()
+                names.sort()
+                for name in names:
                     write("  " + name)
             close_on_success = False
         except xpcom.COMException:

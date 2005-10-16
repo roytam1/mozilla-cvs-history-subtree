@@ -69,15 +69,13 @@ print "Window location is", this.window.location.href
     <hbox>
       <button id="test_error" label="Run tests" oncommand="run_tests()"/>
       <vbox flex="1">
-        <text class="label" value="The test window is not shown if the tests are successful"/>
+        <text class="label"
+              value="The test window is not shown (or closes quickly) if the tests work"/>
         <checkbox id="keep_tests_open" label="Always keep test window open"/>
       </vbox>
-      <vbox>
-        <text class="label" value="Click to change image"/>
-        <image id="image-python" src="http://www.python.org/pics/PyBanner011.gif"
-               width="150" height="35" flex="0"
-               onclick="change_image()"/>
-      </vbox>
+      <image id="image-python" src="http://www.python.org/pics/PyBanner011.gif"
+             width="150" height="35" flex="0"
+             onclick="change_image()"/>
     </hbox>
 
   </groupbox>
