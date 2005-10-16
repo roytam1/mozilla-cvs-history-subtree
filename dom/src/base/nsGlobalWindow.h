@@ -86,7 +86,6 @@
 #include "nsPluginArray.h"
 #include "nsMimeTypeArray.h"
 #include "nsIXPCScriptable.h"
-#include "nsIArray.h"
 #include "nsPoint.h"
 #include "nsSize.h"
 #include "mozFlushType.h"
@@ -100,6 +99,7 @@ class nsIContent;
 class nsPresContext;
 class nsIDOMEvent;
 class nsIScrollableView;
+class nsIArray;
 
 typedef struct nsTimeout nsTimeout;
 
@@ -110,6 +110,12 @@ class nsScreen;
 class nsHistory;
 class nsIDocShellLoadInfo;
 class WindowStateHolder;
+
+extern nsresult
+NS_CreateJSTimeoutHandler(nsIScriptContext *aContext,
+                          PRBool aIsInterval,
+                          PRFloat64 *aInterval,
+                          nsIScriptTimeoutHandler **aRet);
 
 //*****************************************************************************
 // nsGlobalWindow: Global Object for Scripting
@@ -361,10 +367,6 @@ protected:
   nsresult ClearTimeoutOrInterval();
 
   // The timeout implementation functions.
-  nsresult CreateJSTimeoutHandler(PRBool aIsInterval,
-                                  nsIScriptTimeoutHandler **aRet,
-                                  PRFloat64 *aInterval);
-
   void RunTimeout(nsTimeout *aTimeout);
 
   void ClearAllTimeouts();
@@ -612,57 +614,6 @@ struct nsTimeout
 private:
   // reference count for shared usage
   PRInt32 mRefCnt;
-};
-
-// Our JS nsIScriptTimeoutHandler implementation.
-class nsJSScriptTimeoutHandler: public nsIScriptTimeoutHandler
-{
-public:
-  // nsISupports
-  NS_DECL_ISUPPORTS
-
-  nsJSScriptTimeoutHandler();
-  ~nsJSScriptTimeoutHandler();
-
-  virtual const PRUnichar *GetHandlerText();
-  virtual void *GetScriptObject() {
-    return mFunObj;
-  }
-  virtual void GetLocation(const char **aFileName, PRUint32 *aLineNo) {
-    *aFileName = mFileName.get();
-    *aLineNo = mLineNo;
-  }
-
-  virtual PRUint32 GetLanguageID() {
-        return nsIProgrammingLanguage::JAVASCRIPT;
-  }
-  virtual PRUint32 GetLanguageVersion() {
-        return mVersion;
-  }
-
-  virtual nsIArray *GetArgv() {
-    return mArgv;
-  }
-  // Called by the timeout mechanism so the secret 'lateness' arg can be
-  // added.
-  virtual void SetLateness(PRIntervalTime aHowLate);
-
-  nsresult Init(nsIScriptContext *aContext, PRBool aIsInterval,
-                PRFloat64 *aInterval);
-private:
-
-  nsCOMPtr<nsIScriptContext> mContext;
-
-  // filename, line number and JS language version string of the
-  // caller of setTimeout()
-  nsCAutoString mFileName;
-  PRUint32 mLineNo;
-  PRUint32 mVersion;
-  nsCOMPtr<nsIArray> mArgv;
-
-  // The JS expression to evaluate or function to call, if !mExpr
-  JSString *mExpr;
-  JSObject *mFunObj;
 };
 
 //*****************************************************************************
