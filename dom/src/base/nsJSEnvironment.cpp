@@ -3098,7 +3098,7 @@ nsJSArgArray::nsJSArgArray(JSContext *aContext, PRUint32 argc, jsval *argv,
 {
   // copy the array - we don't know its lifetime, and ours is tied to xpcom
   // refcounting.  Alloc zero'd array so cleanup etc is safe.
-  mArgv = (jsval *) PR_CALLOC((argc - 1) * sizeof(jsval));
+  mArgv = (jsval *) PR_CALLOC(argc * sizeof(jsval));
   if (!mArgv) {
     *prv = NS_ERROR_OUT_OF_MEMORY;
     return;
@@ -3126,16 +3126,12 @@ nsJSArgArray::~nsJSArgArray()
   }
 }
 
-NS_DECL_CLASSINFO(nsJSArgArray)
-
 // QueryInterface implementation for nsJSArgArray
 NS_INTERFACE_MAP_BEGIN(nsJSArgArray)
   NS_INTERFACE_MAP_ENTRY(nsIArray)
   NS_INTERFACE_MAP_ENTRY(nsIJSArgArray)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIJSArgArray)
-  NS_IMPL_QUERY_CLASSINFO(nsJSArgArray)
 NS_INTERFACE_MAP_END
-NS_IMPL_CI_INTERFACE_GETTER1(nsJSArgArray, nsIArray)
 
 NS_IMPL_ADDREF(nsJSArgArray)
 NS_IMPL_RELEASE(nsJSArgArray)
@@ -3143,7 +3139,7 @@ NS_IMPL_RELEASE(nsJSArgArray)
 nsresult
 nsJSArgArray::GetArgs(PRUint32 *argc, void **argv)
 {
-  if (!*mArgv) {
+  if (!mArgv) {
     NS_WARNING("nsJSArgArray has no argv!");
     return NS_ERROR_UNEXPECTED;
   }

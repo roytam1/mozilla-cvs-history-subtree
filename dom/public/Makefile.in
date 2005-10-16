@@ -58,6 +58,7 @@ EXPORTS=nsIScriptContext.h		\
 	nsIScriptObjectPrincipal.h	\
 	nsIScriptGlobalObject.h		\
 	nsIScriptGlobalObjectOwner.h	\
+	nsIScriptTimeoutHandler.h	\
 	nsIDOMScriptObjectFactory.h	\
 	nsDOMCID.h			\
 	nsIScriptExternalNameSet.h	\

@@ -74,11 +74,13 @@ enum OpenAllowValue {
 class nsIDocShell;
 class nsIFocusController;
 class nsIDocument;
+class nsIScriptTimeoutHandler;
 struct nsTimeout;
 
 #define NS_PIDOMWINDOW_IID \
-{ 0x55f987bc, 0xca30, 0x494c, \
-  { 0xa9, 0x85, 0xf1, 0xf3, 0x4b, 0x9d, 0x47, 0xd8 } }
+{ /* {D0A82BF8-969B-4092-8FE7-D885622DA5BF} */ \
+  0xd0a82bf8, 0x969b, 0x4092, \
+  { 0x8f, 0xe7, 0xd8, 0x85, 0x62, 0x2d, 0xa5, 0xbf } }
 
 class nsPIDOMWindow : public nsIDOMWindowInternal
 {
@@ -269,6 +271,14 @@ public:
 
   // Resume suspended timeouts in this window and in child windows.
   virtual nsresult ResumeTimeouts() = 0;
+
+  // Add a timeout to this window.
+  virtual nsresult SetTimeoutOrInterval(nsIScriptTimeoutHandler *aHandler,
+                                        PRFloat64 interval,
+                                        PRBool aIsInterval, PRInt32 *aReturn) = 0;
+
+  // Clear a timeout from this window.
+  virtual nsresult ClearTimeoutOrInterval(PRInt32 aTimerID) = 0;
 
   nsPIDOMWindow *GetOuterWindow()
   {

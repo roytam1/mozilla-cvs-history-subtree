@@ -73,6 +73,7 @@
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptContext.h"
 #include "nsIScriptObjectPrincipal.h"
+#include "nsIScriptTimeoutHandler.h"
 #include "nsITimer.h"
 #include "nsIWebBrowserChrome.h"
 #include "nsPIDOMWindow.h"
@@ -85,11 +86,11 @@
 #include "nsPluginArray.h"
 #include "nsMimeTypeArray.h"
 #include "nsIXPCScriptable.h"
+#include "nsIArray.h"
 #include "nsPoint.h"
 #include "nsSize.h"
 #include "mozFlushType.h"
 #include "prclist.h"
-
 #define DEFAULT_HOME_PAGE "www.mozilla.org"
 #define PREF_BROWSER_STARTUP_HOMEPAGE "browser.startup.homepage"
 
@@ -109,7 +110,6 @@ class nsScreen;
 class nsHistory;
 class nsIDocShellLoadInfo;
 class WindowStateHolder;
-class nsIArray;
 
 //*****************************************************************************
 // nsGlobalWindow: Global Object for Scripting
@@ -350,9 +350,23 @@ protected:
   static void ClearWindowScope(nsISupports* aWindow);
 
   // Timeout Functions
+  // Language agnostic timeout function (all args passed)
+  nsresult SetTimeoutOrInterval(nsIScriptTimeoutHandler *aHandler,
+                                PRFloat64 interval,
+                                PRBool aIsInterval, PRInt32 *aReturn);
+  nsresult ClearTimeoutOrInterval(PRInt32 aTimerID);
+
+  // JS specific timeout functions (JS args grabbed from context).
   nsresult SetTimeoutOrInterval(PRBool aIsInterval, PRInt32* aReturn);
-  void RunTimeout(nsTimeout *aTimeout);
   nsresult ClearTimeoutOrInterval();
+
+  // The timeout implementation functions.
+  nsresult CreateJSTimeoutHandler(PRBool aIsInterval,
+                                  nsIScriptTimeoutHandler **aRet,
+                                  PRFloat64 *aInterval);
+
+  void RunTimeout(nsTimeout *aTimeout);
+
   void ClearAllTimeouts();
   void InsertTimeoutIntoList(nsTimeout **aInsertionPoint, nsTimeout *aTimeout);
   static void TimerCallback(nsITimer *aTimer, void *aClosure);
@@ -520,8 +534,9 @@ protected:
 };
 
 /*
- * Timeout struct that holds information about each JavaScript
- * timeout.
+ * Timeout struct that holds information about each script
+ * timeout.  Holds a strong reference to an nsIScriptTimeoutHandler, which
+ * abstracts the language specific cruft.
  */
 struct nsTimeout
 {
@@ -553,22 +568,14 @@ struct nsTimeout
     MOZ_COUNT_DTOR(nsTimeout);
   }
 
-  void Release(nsIScriptContext* aContext);
-  void AddRef();
+  nsrefcnt Release();
+  nsrefcnt AddRef();
 
   // Window for which this timeout fires
-  nsGlobalWindow *mWindow;
-
-  // The JS expression to evaluate or function to call, if !mExpr
-  JSString *mExpr;
-  JSObject *mFunObj;
+  nsRefPtr<nsGlobalWindow> mWindow;
 
   // The actual timer object
   nsCOMPtr<nsITimer> mTimer;
-
-  // Function actual arguments and argument count
-  jsval *mArgv;
-  PRUint16 mArgc;
 
   // True if the timeout was cleared
   PRPackedBool mCleared;
@@ -588,12 +595,6 @@ struct nsTimeout
   // Principal with which to execute
   nsCOMPtr<nsIPrincipal> mPrincipal;
 
-  // filename, line number and JS language version string of the
-  // caller of setTimeout()
-  char *mFileName;
-  PRUint32 mLineNo;
-  PRUint32 mVersion;
-
   // stack depth at which timeout is firing
   PRUint32 mFiringDepth;
 
@@ -605,9 +606,63 @@ struct nsTimeout
   // another timeout
   PopupControlState mPopupState;
 
+  // The language-specific information about the callback.
+  nsCOMPtr<nsIScriptTimeoutHandler> mScriptHandler;
+
 private:
   // reference count for shared usage
   PRInt32 mRefCnt;
+};
+
+// Our JS nsIScriptTimeoutHandler implementation.
+class nsJSScriptTimeoutHandler: public nsIScriptTimeoutHandler
+{
+public:
+  // nsISupports
+  NS_DECL_ISUPPORTS
+
+  nsJSScriptTimeoutHandler();
+  ~nsJSScriptTimeoutHandler();
+
+  virtual const PRUnichar *GetHandlerText();
+  virtual void *GetScriptObject() {
+    return mFunObj;
+  }
+  virtual void GetLocation(const char **aFileName, PRUint32 *aLineNo) {
+    *aFileName = mFileName.get();
+    *aLineNo = mLineNo;
+  }
+
+  virtual PRUint32 GetLanguageID() {
+        return nsIProgrammingLanguage::JAVASCRIPT;
+  }
+  virtual PRUint32 GetLanguageVersion() {
+        return mVersion;
+  }
+
+  virtual nsIArray *GetArgv() {
+    return mArgv;
+  }
+  // Called by the timeout mechanism so the secret 'lateness' arg can be
+  // added.
+  virtual void SetLateness(PRIntervalTime aHowLate);
+
+  nsresult Init(nsIScriptContext *aContext, PRBool aIsInterval,
+                PRFloat64 *aInterval);
+private:
+
+  nsCOMPtr<nsIScriptContext> mContext;
+
+  // filename, line number and JS language version string of the
+  // caller of setTimeout()
+  nsCAutoString mFileName;
+  PRUint32 mLineNo;
+  PRUint32 mVersion;
+  nsCOMPtr<nsIArray> mArgv;
+
+  // The JS expression to evaluate or function to call, if !mExpr
+  JSString *mExpr;
+  JSObject *mFunObj;
 };
 
 //*****************************************************************************
