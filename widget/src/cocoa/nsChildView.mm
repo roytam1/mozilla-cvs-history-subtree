@@ -1111,7 +1111,7 @@ void nsChildView::RemovedFromWindow()
   if (mPluginPort && !mDestroyCalled)
   {
     // force a redraw, so that the plugin knows that it's view is being hidden
-    //Invalidate(PR_TRUE);
+    Invalidate(PR_TRUE);
   }
 }
 
@@ -1129,7 +1129,7 @@ void nsChildView::AddedToWindow()
     // force a redraw, so that the plugin knows that it's view is being shown
     // note that we can't do a sync invalidate here, because the view
     // hierarchy is in flux.
-    //Invalidate(PR_FALSE);
+    Invalidate(PR_FALSE);
   }
 }
 
