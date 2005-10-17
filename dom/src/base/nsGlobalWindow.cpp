@@ -5916,8 +5916,10 @@ nsGlobalWindow::ClearWindowScope(nsISupports *aWindow)
   PRUint32 lang_id;
   NS_SL_FOR_ID(lang_id) {
     nsIScriptContext *scx = sgo->GetLanguageContext(lang_id);
-    void *global = sgo->GetLanguageGlobal(lang_id);
-    scx->ClearScope(global, PR_FALSE);
+    if (scx) {
+      void *global = sgo->GetLanguageGlobal(lang_id);
+      scx->ClearScope(global, PR_FALSE);
+    }
   }
 }
 
