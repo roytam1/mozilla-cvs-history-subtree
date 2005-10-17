@@ -449,11 +449,17 @@ PyObject *LogConsoleMessage(PyObject *self, PyObject *args)
 		return NULL;
 
 	nsCOMPtr<nsIConsoleService> consoleService = do_GetService(NS_CONSOLESERVICE_CONTRACTID);
-	NS_ASSERTION(consoleService != nsnull, "pyxpcom can't find the console service");
 	if (consoleService)
 		consoleService->LogStringMessage(NS_ConvertASCIItoUCS2(msg).get());
-	else
-		PR_fprintf(PR_STDERR,"%s\n", &msg);
+	else {
+	// This either means no such service, or in shutdown - hardly worth
+	// the warning, and not worth reporting an error to Python about - its
+	// log handler would just need to catch and ignore it.
+	// And as this is only called by this logging setup, any messages should
+	// still go to stderr or a logfile.
+		NS_WARNING("pyxpcom can't log console message.");
+	}
+
 	Py_INCREF(Py_None);
 	return Py_None;
 }
@@ -550,6 +556,8 @@ init_xpcom() {
 	// for backward compatibility:
 	REGISTER_IID(nsIComponentManagerObsolete);
 
+	// No good reason not to expose this impl detail, and tests can use it
+	REGISTER_IID(nsIInternalPython);
     // We have special support for proxies - may as well add their constants!
     REGISTER_INT(PROXY_SYNC);
     REGISTER_INT(PROXY_ASYNC);
