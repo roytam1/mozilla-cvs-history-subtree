@@ -103,10 +103,18 @@ class ConsoleServiceStream:
         pass
 
 def setupLogging():
-    import sys, os
+    import sys, os, threading, thread
     hdlr = logging.StreamHandler(ConsoleServiceStream())
     fmt = logging.Formatter(logging.BASIC_FORMAT)
     hdlr.setFormatter(fmt)
+    # There is a bug in 2.3 and 2.4.x logging module in that it doesn't
+    # use an RLock, leading to deadlocks in some cases (specifically,
+    # logger.warning("ob is %r", ob), and where repr(ob) itself tries to log)
+    # Later versions of logging use an RLock, so we detect an "old" style
+    # handler and update its lock
+    if type(hdlr.lock) == thread.LockType:
+        hdlr.lock = threading.RLock()
+
     logger.addHandler(hdlr)
     # The console handler in mozilla does not go to the console!?
     # Add a handler to print to stderr, or optionally a file
@@ -123,6 +131,10 @@ def setupLogging():
             # stream remains default
 
     hdlr = logging.StreamHandler(stream)
+    # see above - fix a deadlock problem on this handler too.
+    if type(hdlr.lock) == thread.LockType:
+        hdlr.lock = threading.RLock()
+
     fmt = logging.Formatter(logging.BASIC_FORMAT)
     hdlr.setFormatter(fmt)
     logger.addHandler(hdlr)
