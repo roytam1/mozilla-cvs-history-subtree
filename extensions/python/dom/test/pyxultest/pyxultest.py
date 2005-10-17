@@ -8,7 +8,7 @@ import nsdom
 # Utility functions
 # Write something to the textbox - eg, error or trace messages.
 def write( msg, *args):
-    tb = this.document.getElementById("output_box")
+    tb = document.getElementById("output_box")
     tb.value = tb.value + (msg % args) + "\n"
 
 # An event listener class to test explicit hooking of events via objects.
@@ -42,7 +42,7 @@ def on_timer(max):
 # An event function to handle onload - but hooked up manually rather than via
 # having the magic name 'onload'
 def do_load():
-    input = this.document.getElementById("output_box")
+    input = document.getElementById("output_box")
     # Clear the text in the XUL
     input.value = ""
     write("This is the Python on XUL demo using\nPython %s", sys.version)
@@ -56,19 +56,16 @@ def do_load():
     timer_id = this.setInterval(on_timer, 2000, 10)
 
 # Add an event listener as a function
-this.window.addEventListener('load', do_load, False)
+window.addEventListener('load', do_load, False)
 # Add another one just to test passing a string instead of a function.
-this.window.addEventListener('load', "print 'hello from string event handler'", False)
+window.addEventListener('load', "print 'hello from string event handler'", False)
 # And yet another with an explicit EventListener instance.
-this.window.addEventListener('load', EventListener('print "hello from an object event handler"'), False)
+window.addEventListener('load', EventListener('print "hello from an object event handler"'), False)
 
 # Some other little functions called by the chrome
 def on_but_dialog_click():
-    write("Button clicked from %s", this.window.location.href)
-    # window.open doesn't work as JS has special arg handling :(
-    # for now, use our hacky (but quite wonderful) JSExec function.
-    nsdom.JSExec(this, 'this.window.open("chrome://pyxultest/content/dialog.xul", "my-dialog", "chrome")')
-    #new = this.window.open("chrome://pyxultest/content/dialog.xul", "my-dialog", "chrome")
+    write("Button clicked from %s", window.location.href)
+    w = window.open("chrome://pyxultest/content/dialog.xul", "my-dialog", "chrome")
 
 def do_textbox_keypress(event):
     if event.keyCode==13:
@@ -103,15 +100,14 @@ def run_tests():
                 test_timeout_string
                 test_wrong_event_args
                 """.split()
-    keep_open = this.document.getElementById("keep_tests_open").getAttribute("checked")
+    keep_open = document.getElementById("keep_tests_open").getAttribute("checked")
     for test in tests:
         write("Running test %s", test)
-        suffix = ', "%s"' % test
         if keep_open:
-            suffix += ', "-k"'
-        cmd = 'this.window.openDialog("chrome://pyxultest/content/pytester.xul", "my-dialog", "modal"%s)' % suffix
-        print "cmd is", cmd
-        nsdom.JSExec(this, cmd)
+            args = (test, "-k")
+        else:
+            args = (test,)
+        window.openDialog("chrome://pyxultest/content/pytester.xul", "my-dialog", "modal", *args)
     if keep_open:
         write("Ran all the tests - the windows told you if the tests worked")
     else:
