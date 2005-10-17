@@ -11,7 +11,9 @@ from xpcom import components, primitives, COMException, nsError, _xpcom
 
 import _nsdom
 
-IID_nsIScriptGlobalObject = _nsdom.IID_nsIScriptGlobalObject
+GlobalWindowIIDs = [_nsdom.IID_nsIScriptGlobalObject,
+                    components.interfaces.nsIDOMWindow]
+
 IID_nsIDOMXULElement = components.interfaces.nsIDOMXULElement
 
 # Borrow the xpcom logger (but use a new sub-logger)
@@ -72,7 +74,7 @@ class WrappedNative(Component):
     the first time, it gets stored in a map in the context.  This leads to
     cycles, which must be cleaned up when the context is closed.
     """
-    def __init__(self, context, obj):
+    def __init__(self, context, obj, iid):
         # Store our context - but our context doesn't keep a reference
         # to us until we call _remember_object() on the context.
         self.__dict__['_context_'] = context
@@ -80,7 +82,7 @@ class WrappedNative(Component):
         # __dict__.  No real need for this other than to prevent these
         # attributes clobbering ones we need to work!
         self.__dict__['_expandos_'] = {}
-        Component.__init__(self, obj)
+        Component.__init__(self, obj, iid)
 
     def __repr__(self):
         iface_desc = self._get_classinfo_repr_()
@@ -125,7 +127,8 @@ class WrappedNative(Component):
             self._context_._remember_object(self)
 
     def _build_all_supported_interfaces_(self):
-        # Generally called as pyxpcom is finding an attribute.
+        # Generally called as pyxpcom is finding an attribute, overridden to
+        # work around lack of class info for xbl bindings.
         Component._build_all_supported_interfaces_(self)
         # Now hard-code certain element names we know about, as the XBL
         # implemented interfaces are not exposed by this.
@@ -136,13 +139,7 @@ class WrappedNative(Component):
             interfaces = xul_element_interfaces.get(tagName, [])
             for interface in interfaces:
                 if not ii.has_key(interface):
-                        try:
-                            self._remember_interface_info(interface)
-                        except COMException, why:
-                            # eeek - if we fail to build an interface we will just
-                            # try and fail again next time.  We need None in the map
-                            logger.warning("Failed to build interface info for %s: %s" \
-                                           % (interface, why))
+                        self._remember_interface_info(interface)
         else:
             logger.info("Not a DOM element - not hooking extra interfaces")
 
@@ -152,15 +149,40 @@ class WrappedNative(Component):
         if not hasattr(handler, "handleEvent"): # may already be a handler instance.
             # Wrap it in our instance, which knows how to convert
             handler = EventListener(event, handler, self._context_.GetNativeGlobal())
-        
+
         base = self.__getattr__('addEventListener')
         base(event, handler, useCapture)
 
+class WrappedNativeGlobal(WrappedNative):
+    # Special support for our global object.  Certain methods exposed by
+    # IDL are JS specific - generally ones that take a variable number of args,
+    # a concept that doesn't exist in xpcom.
+    def __repr__(self):
+        iface_desc = self._get_classinfo_repr_()
+        outer = _nsdom.IsOuterWindow(self._comobj_)
+        return "<GlobalWindow outer=%s %s>" % (outer, iface_desc)
+
+    # Open window/dialog
+    def openDialog(self, url, name, features, *args):
+        svc = components.classes['@mozilla.org/embedcomp/window-watcher;1'] \
+                .getService(components.interfaces.nsIWindowWatcher)
+        # Wrap in an nsIArray with special support for Python being able to
+        # access the raw objects if the call-site is smart enough
+        args = _nsdom.MakeArray(args)
+        ret = svc.openWindow(self._comobj_, url, name, features, args)
+        # and re-wrap in one of our "dom" objects
+        return self._context_.MakeInterfaceResult(ret._comobj_,
+                                            components.interfaces.nsIDOMWindow)
+
+    # window.open and window.openDialog seem identical except for *args???
+    open = openDialog
+
+    # Timeout related functions.
     def setTimeout(self, interval, handler, *args):
         return _nsdom.SetTimeoutOrInterval(self._comobj_, interval, handler,
                                            args, False)
 
-    # SetInterval appears to have reversed args???
+    # setInterval appears to have reversed args???
     def setInterval(self, handler, interval, *args):
         return _nsdom.SetTimeoutOrInterval(self._comobj_, interval, handler,
                                            args, True)
@@ -171,20 +193,21 @@ class WrappedNative(Component):
     def clearInterval(self, tid):
         return _nsdom.ClearTimeoutOrInterval(self._comobj_, tid)
 
-class WrappedNativeGlobal(WrappedNative):
-    # Special support for our global.
-    def __repr__(self):
-        iface_desc = self._get_classinfo_repr_()
-        outer = _nsdom.IsOuterWindow(self._comobj_)
-        return "<GlobalWindow outer=%s %s>" % (outer, iface_desc)
-
+# Our "script context" - morally an nsIScriptContext, although that lives
+# in our C++ code and delegates to this.
 class ScriptContext:
     def __init__(self):
         self.globalNamespace = {} # must not change identity!
+        self._remembered_objects_ = {} # could, but doesn't
         self._reset()
 
     def _reset(self):
-        self._remembered_objects_ = {}
+        # Explicitly wipe all 'expandos' for our remembered objects.
+        # Its not clear this is necessary, but it is easy to envisage someone
+        # setting up a cycle via expandos.
+        for ro in self._remembered_objects_.itervalues():
+            ro._expandos_.clear()
+        self._remembered_objects_.clear()
         self.globalObject = None
         self.globalNamespace.clear()
 
@@ -208,11 +231,11 @@ class ScriptContext:
             # We should probably QI for nsIClassInfo, and only do this special
             # wrapping for objects with the DOM flag set.
         
-            if iid == IID_nsIScriptGlobalObject:
+            if iid in GlobalWindowIIDs:
                 klass = WrappedNativeGlobal
             else:
                 klass = WrappedNative
-            return klass(self, object)
+            return klass(self, object, iid)
 
     def _remember_object(self, object):
         # You must only try and remember a wrapped object.
@@ -221,8 +244,9 @@ class ScriptContext:
         assert self._remembered_objects_.get(object._comobj_, object)==object, \
                "Previously remembered object is not this object!"
         self._remembered_objects_[object._comobj_] = object
-        logger.debug("%s remembering object %r - now %d items", self, object,
-                     len(self._remembered_objects_))
+        if __debug__:
+            logger.debug("%s remembering object %r - now %d items", self,
+                         object, len(self._remembered_objects_))
 
     def _fixArg(self, arg):
         if arg is None:
@@ -272,7 +296,7 @@ class ScriptContext:
                          id(self.globalNamespace))
         else:
             assert isinstance(globalObject, WrappedNativeGlobal), \
-                   "Out global should have been wrapped in WrappedNativeGlobal"
+                   "Our global should have been wrapped in WrappedNativeGlobal"
             if __debug__:
                 logger.debug("%r initializing (outer=%s), ns=%d", self,
                              _nsdom.IsOuterWindow(globalObject),
@@ -293,7 +317,7 @@ class ScriptContext:
 
     def ClearScope(self, globalObject):
         if __debug__:
-            logger.debug("%s.ClearScope %r (%d)", self, globalObject, id(globalObject))
+            logger.debug("%s.ClearScope (%d)", self, id(globalObject))
         assert globalObject is self.GetNativeGlobal(), "Wrong global being cleared?"
         self._reset()
 

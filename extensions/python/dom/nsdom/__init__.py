@@ -35,9 +35,3 @@
 # ***** END LICENSE BLOCK *****
 
 # This is a Python package used by the Python DOM integration.
-
-try:
-    from _nsdom import JSExec
-except ImportError:
-    # Probably running the test suite!
-    JSExec = None
