@@ -207,8 +207,16 @@ class PythonComponentLoader:
         # bool return
         logger.debug("Python component loader - registerDeferred() called")
         return 0 # no more to register
+
     def unloadAll (self, when):
-        logger.debug("Python component loader being asked to unload all components!")
+        # This is called at shutdown time - don't get too upset if an error
+        # results from logging due to the logfile being closed
+        try:
+            logger.debug("Python component loader being asked to unload all components!")
+        except:
+            # Evil blank except, but restricting to just catching IOError
+            # failure means custom logs could still screw us
+            pass
         self.comp_mgr = None
         self.com_modules = {}
 
