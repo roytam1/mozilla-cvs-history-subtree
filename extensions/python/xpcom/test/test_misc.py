@@ -224,5 +224,13 @@ class TestUnwrap(unittest.TestCase):
             return
         self.failUnlessRaises(ValueError, xpcom.server.UnwrapObject, ob)
 
+class TestNonScriptable(unittest.TestCase):
+    def testQI(self):
+        # Test we can QI for a non-scriptable interface.  We can't *do* much
+        # with it (other than pass it on), but we should still work and get
+        # a basic wrapper.
+        ob = xpcom.components.classes["Python.TestComponent"].createInstance()
+        ob = ob.queryInterface(xpcom._xpcom.IID_nsIInternalPython)
+
 if __name__=='__main__':
     testmain()
