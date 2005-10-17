@@ -62,18 +62,22 @@ class nsPyDOMObjectLeakStats
           CHECKLEAK(mScriptObjectCount);
           CHECKLEAK(mBindingCount);
           CHECKLEAK(mScriptContextCount);
+          extern PRInt32 cPyDOMISupportsObjects;
           if (_PyXPCOM_GetInterfaceCount()) {
-            printf(" => %-20s % 6d\n",
-                   "pyxpcom interfaces:", _PyXPCOM_GetInterfaceCount());
+            printf(" => %-20s % 6d (%d are nsdom objects)\n",
+                   "pyxpcom interfaces:",
+                   _PyXPCOM_GetInterfaceCount(), cPyDOMISupportsObjects
+                   );
             leaked = PR_TRUE;
           }
+
           if (_PyXPCOM_GetGatewayCount()) {
             printf(" => %-20s % 6d\n",
                    "pyxpcom gateways:", _PyXPCOM_GetGatewayCount());
             leaked = PR_TRUE;
           }
           if (!leaked)
-            printf("No leaks.objects");
+            printf("No leaks.\n");
         }
 
       PRInt32 mEventHandlerCount;

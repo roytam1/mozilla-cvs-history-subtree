@@ -756,8 +756,8 @@ nsPythonContext::FinalizeContext()
 {
   NS_ASSERTION(mDelegate, "No delegate?");
   NS_ASSERTION(!mScriptGlobal, "ClearScope not called to clean me up?");
-  CEnterLeavePython _celp;
   if (mDelegate) {
+	CEnterLeavePython _celp;
     PyObject *ret = PyObject_CallMethod(mDelegate, "FinalizeContext", NULL);
     HandlePythonError();
     Py_XDECREF(ret);

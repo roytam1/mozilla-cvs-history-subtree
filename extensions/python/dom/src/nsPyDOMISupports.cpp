@@ -36,6 +36,8 @@
 
 #include "nsPyDOM.h"
 
+PRInt32 cPyDOMISupportsObjects=0;
+
 struct PyMethodDef 
 Py_DOMnsISupports_Methods[] =
 {
@@ -74,9 +76,12 @@ public:
 		/* The IID _must_ be the IID of the interface we are wrapping! */
 		//NS_ABORT_IF_FALSE(iid.Equals(NS_GET_IID(InterfaceName)), "Bad IID");
 		Py_INCREF(pycontext);
+		PR_AtomicIncrement(&cPyDOMISupportsObjects);
+
 	}
 	virtual ~Py_DOMnsISupports() {
 		Py_DECREF(m_pycontext);
+		PR_AtomicDecrement(&cPyDOMISupportsObjects);
 	}
 	static PyObject *MakeDefaultWrapper(PyObject *pycontext,
 	                                    PyObject *pyis, const nsIID &iid);
@@ -134,8 +139,8 @@ Py_DOMnsISupports::MakeDefaultWrapper(PyObject *pycontext,
 	if (obIID==NULL)
 		goto done;
 
-	return PyObject_CallMethod(pycontext, "MakeInterfaceResult",
-	                           "OO", pyis, obIID);
+	ret = PyObject_CallMethod(pycontext, "MakeInterfaceResult",
+	                          "OO", pyis, obIID);
 	if (ret==NULL) goto done;
 done:
 	if (PyErr_Occurred()) {
@@ -157,5 +162,5 @@ void PyInit_DOMnsISupports()
 {
 	Py_DOMnsISupports::InitType();
 }
+
 PyXPCOM_TypeObject *Py_DOMnsISupports::type = NULL;
-//PyXPCOM_INTERFACE_DEFINE(Py_DOMnsISupports, ?, PyMethods_DOMnsISupports)
