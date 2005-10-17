@@ -1105,12 +1105,13 @@ NS_IMETHODIMP nsChildView::EndDrawPlugin()
 //-------------------------------------------------------------------------
 void nsChildView::RemovedFromWindow()
 {
+  if (!mInWindow) return;
   mInWindow = PR_FALSE;
 
   if (mPluginPort && !mDestroyCalled)
   {
     // force a redraw, so that the plugin knows that it's view is being hidden
-    Invalidate(PR_TRUE);
+    //Invalidate(PR_TRUE);
   }
 }
 
@@ -1120,6 +1121,7 @@ void nsChildView::RemovedFromWindow()
 //-------------------------------------------------------------------------
 void nsChildView::AddedToWindow()
 {
+  if (mInWindow) return;
   mInWindow = PR_TRUE;
 
   if (mPluginPort)
@@ -1127,7 +1129,7 @@ void nsChildView::AddedToWindow()
     // force a redraw, so that the plugin knows that it's view is being shown
     // note that we can't do a sync invalidate here, because the view
     // hierarchy is in flux.
-    Invalidate(PR_FALSE);
+    //Invalidate(PR_FALSE);
   }
 }
 
