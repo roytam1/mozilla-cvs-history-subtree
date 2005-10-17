@@ -3152,6 +3152,12 @@ static PRBool SelectorMatches(RuleProcessorData &data,
     else if (nsCSSPseudoClasses::outOfRange == pseudoClass->mAtom) {
       result = STATE_CHECK(NS_EVENT_STATE_OUTOFRANGE);
     }
+    else if (nsCSSPseudoClasses::mozReadOnly == pseudoClass->mAtom) {
+      result = STATE_CHECK(NS_EVENT_STATE_MOZ_READONLY);
+    }
+    else if (nsCSSPseudoClasses::mozReadWrite == pseudoClass->mAtom) {
+      result = STATE_CHECK(NS_EVENT_STATE_MOZ_READWRITE);
+    }
     else {
       NS_ERROR("CSS parser parsed a pseudo-class that we do not handle");
       result = PR_FALSE;  // unknown pseudo class
@@ -3674,7 +3680,9 @@ PRBool IsStateSelector(nsCSSSelector& aSelector)
         (pseudoClass->mAtom == nsCSSPseudoClasses::valid) ||
         (pseudoClass->mAtom == nsCSSPseudoClasses::invalid) ||
         (pseudoClass->mAtom == nsCSSPseudoClasses::inRange) ||
-        (pseudoClass->mAtom == nsCSSPseudoClasses::outOfRange)) {
+        (pseudoClass->mAtom == nsCSSPseudoClasses::outOfRange) ||
+        (pseudoClass->mAtom == nsCSSPseudoClasses::mozReadOnly) ||
+        (pseudoClass->mAtom == nsCSSPseudoClasses::mozReadWrite)) {
       return PR_TRUE;
     }
   }
