@@ -201,7 +201,7 @@ gc_new_arena(JSArenaPool *pool, size_t nbytes)
     a = pool->current;
 
     /* Reset a->avail to start at the flags split, aka the first thing page. */
-    p = a->avail = FIRST_THING_PAGE(a);
+    p = FIRST_THING_PAGE(a);
     split = pagep = (uint8 *) p;
     a->avail = FIRST_THING(p, nbytes);
     JS_ASSERT(a->avail >= p + sizeof(JSGCPageInfo));
@@ -1747,8 +1747,11 @@ restart:
                 GC_MARK(cx, fp->thisp, "this", NULL);
                 if (fp->argv) {
                     nslots = fp->argc;
-                    if (fp->fun && fp->fun->nargs > nslots)
-                        nslots = fp->fun->nargs;
+                    if (fp->fun) {
+                        if (fp->fun->nargs > nslots)
+                            nslots = fp->fun->nargs;
+                        nslots += fp->fun->extra;
+                    }
                     GC_MARK_JSVALS(cx, nslots, fp->argv, "arg");
                 }
                 if (JSVAL_IS_GCTHING(fp->rval))
