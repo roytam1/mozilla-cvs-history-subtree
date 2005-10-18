@@ -470,6 +470,7 @@ nsHTMLScrollFrame::TryLayout(ScrollReflowState* aState,
 
 nsresult
 nsHTMLScrollFrame::ReflowScrolledFrame(const ScrollReflowState& aState,
+                                       PRBool aAssumeHScroll,
                                        PRBool aAssumeVScroll,
                                        nsHTMLReflowMetrics* aMetrics,
                                        PRBool aFirstPass)
@@ -502,6 +503,8 @@ nsHTMLScrollFrame::ReflowScrolledFrame(const ScrollReflowState& aState,
                                    mInner.mScrolledFrame,
                                    nsSize(availWidth, NS_UNCONSTRAINEDSIZE),
                                    aFirstPass ? aState.mNewReason : eReflowReason_Resize);
+  kidReflowState.mFlags.mAssumingHScrollbar = aAssumeHScroll;
+  kidReflowState.mFlags.mAssumingVScrollbar = aAssumeVScroll;
 
   if (IsRTLTextControl()) {
     kidReflowState.mRightEdge = mInner.GetScrolledSize().width;
@@ -563,7 +566,7 @@ nsHTMLScrollFrame::ReflowContents(ScrollReflowState* aState,
     currentlyUsingVScrollbar = PR_FALSE;
 
   nsHTMLReflowMetrics kidDesiredSize(aDesiredSize.mComputeMEW, aDesiredSize.mFlags);
-  nsresult rv = ReflowScrolledFrame(*aState, currentlyUsingVScrollbar,
+  nsresult rv = ReflowScrolledFrame(*aState, PR_FALSE, currentlyUsingVScrollbar,
                                     &kidDesiredSize, PR_TRUE);
   if (NS_FAILED(rv))
     return rv;
@@ -595,7 +598,7 @@ nsHTMLScrollFrame::ReflowContents(ScrollReflowState* aState,
         kidDesiredSize.mOverflowArea.YMost() <= insideBorderSize.height) {
       // Let's pretend we had no vertical scrollbar coming in here
       currentlyUsingVScrollbar = PR_FALSE;
-      rv = ReflowScrolledFrame(*aState, currentlyUsingVScrollbar,
+      rv = ReflowScrolledFrame(*aState, PR_FALSE, currentlyUsingVScrollbar,
                                &kidDesiredSize, PR_FALSE);
       if (NS_FAILED(rv))
         return rv;
@@ -606,6 +609,9 @@ nsHTMLScrollFrame::ReflowContents(ScrollReflowState* aState,
   // First try a layout without a horizontal scrollbar, then with.
   if (TryLayout(aState, kidDesiredSize, didUseScrollbar, PR_FALSE, PR_FALSE))
     return NS_OK;
+  // XXX Adding a horizontal scrollbar could cause absolute children positioned
+  // relative to the bottom padding-edge to need to be reflowed. But we don't,
+  // because that would be slow.
   if (TryLayout(aState, kidDesiredSize, didUseScrollbar, PR_TRUE, PR_FALSE))
     return NS_OK;
 
@@ -613,13 +619,16 @@ nsHTMLScrollFrame::ReflowContents(ScrollReflowState* aState,
   // But don't try to show a scrollbar if we know there can't be one.
   if (currentlyUsingVScrollbar || canHaveVerticalScrollbar) {
     nsHTMLReflowMetrics kidRetrySize(aDesiredSize.mComputeMEW, aDesiredSize.mFlags);
-    rv = ReflowScrolledFrame(*aState, !currentlyUsingVScrollbar,
+    rv = ReflowScrolledFrame(*aState, PR_FALSE, !currentlyUsingVScrollbar,
                              &kidRetrySize, PR_FALSE);
     if (NS_FAILED(rv))
       return rv;
     didUseScrollbar = !currentlyUsingVScrollbar;
     if (TryLayout(aState, kidRetrySize, didUseScrollbar, PR_FALSE, PR_FALSE))
       return NS_OK;
+    // XXX Adding a horizontal scrollbar could cause absolute children positioned
+    // relative to the bottom padding-edge to need to be reflowed. But we don't,
+    // because that would be slow.
     if (TryLayout(aState, kidRetrySize, didUseScrollbar, PR_TRUE, PR_FALSE))
       return NS_OK;
 
@@ -631,7 +640,7 @@ nsHTMLScrollFrame::ReflowContents(ScrollReflowState* aState,
   // Fall back to no scrollbars --- even if NS_STYLE_OVERFLOW_SCROLL is
   // in effect. They might not fit anyway.
   if (didUseScrollbar) {
-    rv = ReflowScrolledFrame(*aState, PR_FALSE, &kidDesiredSize, PR_FALSE);
+    rv = ReflowScrolledFrame(*aState, PR_FALSE, PR_FALSE, &kidDesiredSize, PR_FALSE);
     if (NS_FAILED(rv))
       return rv;
   }
@@ -773,7 +782,7 @@ nsHTMLScrollFrame::Reflow(nsPresContext*           aPresContext,
       // is deleted, because the XMost of the frame's overflow area is always
       // at least the right edge. But it looks like it has always worked this way.
       nsHTMLReflowMetrics kidDesiredSize(aDesiredSize.mComputeMEW, aDesiredSize.mFlags);
-      rv = ReflowScrolledFrame(state, state.mShowVScrollbar,
+      rv = ReflowScrolledFrame(state, state.mShowHScrollbar, state.mShowVScrollbar,
                                &kidDesiredSize, PR_FALSE);
       if (NS_FAILED(rv))
         return rv;
@@ -964,10 +973,10 @@ nsMargin nsXULScrollFrame::GetDesiredScrollbarSizes(nsBoxLayoutState* aState) {
 nsMargin nsGfxScrollFrameInner::GetDesiredScrollbarSizes(nsBoxLayoutState* aState) {
   nsMargin result(0, 0, 0, 0);
 
-  if (mHScrollbarBox) {
+  if (mVScrollbarBox) {
     nsSize size;
-    mHScrollbarBox->GetPrefSize(*aState, size);
-    nsBox::AddMargin(mHScrollbarBox, size);
+    mVScrollbarBox->GetPrefSize(*aState, size);
+    nsBox::AddMargin(mVScrollbarBox, size);
 #ifdef IBMBIDI
     if (IsScrollbarOnRight())
       result.left = size.width;
@@ -976,10 +985,10 @@ nsMargin nsGfxScrollFrameInner::GetDesiredScrollbarSizes(nsBoxLayoutState* aStat
       result.right = size.width;
   }
 
-  if (mVScrollbarBox) {
+  if (mHScrollbarBox) {
     nsSize size;
-    mVScrollbarBox->GetPrefSize(*aState, size);
-    nsBox::AddMargin(mVScrollbarBox, size);
+    mHScrollbarBox->GetPrefSize(*aState, size);
+    nsBox::AddMargin(mHScrollbarBox, size);
     // We don't currently support any scripts that would require a scrollbar
     // at the top. (Are there any?)
     result.bottom = size.height;
