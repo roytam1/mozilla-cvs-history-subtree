@@ -163,7 +163,7 @@ class WrappedNativeGlobal(WrappedNative):
         return "<GlobalWindow outer=%s %s>" % (outer, iface_desc)
 
     # Open window/dialog
-    def openDialog(self, url, name, features, *args):
+    def openDialog(self, url, name, features="", *args):
         svc = components.classes['@mozilla.org/embedcomp/window-watcher;1'] \
                 .getService(components.interfaces.nsIWindowWatcher)
         # Wrap in an nsIArray with special support for Python being able to
