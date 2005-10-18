@@ -1191,7 +1191,11 @@ PushbackInputStream.prototype = {
     _read_characters: '',
 
     available: function() {
-        return this._read_characters.length + this._stream.available();
+        try {
+            return this._read_characters.length + this._stream.available();
+        } catch (e) {
+            return this._read_characters.length;
+        }
     },
 
     read: function(length) {
