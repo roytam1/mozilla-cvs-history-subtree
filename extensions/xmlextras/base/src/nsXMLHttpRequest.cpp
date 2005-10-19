@@ -1142,7 +1142,16 @@ nsXMLHttpRequest::StreamReaderFunc(nsIInputStream* in,
 
     if (NS_SUCCEEDED(rv)) {
       NS_ASSERTION(copyStream, "NS_NewByteInputStream lied");
-      rv = xmlHttpRequest->mXMLParserStreamListener->OnDataAvailable(xmlHttpRequest->mReadRequest,xmlHttpRequest->mContext,copyStream,toOffset,count);
+      nsresult parsingResult = xmlHttpRequest->mXMLParserStreamListener
+                                  ->OnDataAvailable(xmlHttpRequest->mReadRequest,
+                                                    xmlHttpRequest->mContext,
+                                                    copyStream, toOffset, count);
+
+      // No use to continue parsing if we failed here, but we
+      // should still finish reading the stream
+      if (NS_FAILED(parsingResult)) {
+        xmlHttpRequest->mState &= ~XML_HTTP_REQUEST_PARSEBODY;
+      }
     }
   }
 
@@ -1229,12 +1238,18 @@ nsXMLHttpRequest::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
     if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
   }
 
-  if (mOverrideMimeType.IsEmpty()) {
-    // If we are not overriding the mime type, we can gain a huge
-    // performance win by not even trying to parse non-XML data. This
-    // also protects us from the situation where we have an XML
-    // document and sink, but HTML (or other) parser, which can
-    // produce unreliable results.
+  nsresult status;
+  request->GetStatus(&status);
+
+  if (NS_SUCCEEDED(status)) {
+    if (!mOverrideMimeType.IsEmpty()) {
+      channel->SetContentType(mOverrideMimeType);
+    }
+
+    // We can gain a huge performance win by not even trying to
+    // parse non-XML data. This also protects us from the situation
+    // where we have an XML document and sink, but HTML (or other)
+    // parser, which can produce unreliable results.
     nsCAutoString type;
     channel->GetContentType(type);
 
@@ -1242,14 +1257,8 @@ nsXMLHttpRequest::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
       mState &= ~XML_HTTP_REQUEST_PARSEBODY;
     }
   } else {
-    nsresult status;
-    request->GetStatus(&status);
-    if (NS_SUCCEEDED(status)) {
-      channel->SetContentType(mOverrideMimeType);
-    } else {
-      // The request failed, so we shouldn't be parsing anyway
-      mState &= ~XML_HTTP_REQUEST_PARSEBODY;
-    }
+    // The request failed, so we shouldn't be parsing anyway
+    mState &= ~XML_HTTP_REQUEST_PARSEBODY;
   }
 
   if (mState & XML_HTTP_REQUEST_PARSEBODY) {
