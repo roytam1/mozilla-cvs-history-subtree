@@ -38,10 +38,12 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
                       "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd"
   [
-    <!ENTITY % brandDTD SYSTEM "chrome://branding/locale/brand.dtd">
-    %brandDTD;
-    <!ENTITY % startDTD SYSTEM "chrome://messenger/locale/start.dtd">
-    %startDTD;
+  <!ENTITY % brandDTD SYSTEM "chrome://branding/locale/brand.dtd">
+  %brandDTD;
+  <!ENTITY % globalDTD SYSTEM "chrome://global/locale/global.dtd">
+  %globalDTD;
+  <!ENTITY % startDTD SYSTEM "chrome://messenger/locale/start.dtd">
+  %startDTD;
   ]
 > 
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -54,6 +56,10 @@ body {
   background: url(startpage-back.png) repeat-y top right white;
 }
 
+body[dir="rtl"] {
+  background: url(startpage-back-rtl.png) repeat-y white;
+}
+
 h1 {
   color: white;
   background: url(startpage-h1.png) no-repeat transparent;
@@ -64,6 +70,11 @@ h1 {
   font-size: 160%;
 }
 
+body[dir="rtl"] h1 {
+  background: url(startpage-h1-rtl.png) no-repeat top right transparent;
+  padding: 0.3ex 25px 0.3ex 0.3ex;
+}
+
 h2 {
   color: #445;
   background: transparent url(startpage-h2.png) no-repeat bottom left;
@@ -72,8 +83,13 @@ h2 {
   font-weight: normal;
   font-size: 100%;
   letter-spacing: 2px;
-  margin-left: -25px;
+  -moz-margin-start: -25px;
   padding: 0px 0px 0px 25px;
+}
+
+body[dir="rtl"] h2 {
+  background: transparent url(startpage-h2-rtl.png) no-repeat bottom right;
+  padding: 0px 25px 0px 0px;
 }
 
 #indent {
@@ -83,14 +99,18 @@ h2 {
   min-height:  280px;
 }
 
+body[dir="rtl"] #indent {
+  background: url(chrome://branding/content/thunderbird-watermark.png) no-repeat top left;
+}
+
 p, li {
   font-size: 85%;
   letter-spacing: 1px;
 }
 
 ul {
-  margin-left: 30px;
-  padding-left: 0px;
+  -moz-margin-start: 30px;
+  -moz-padding-start: 0px;
   line-height: 1.2em;
 }
 
@@ -123,16 +143,22 @@ a:active, a:hover {
   padding-top: 1px;
 }
 
+body[dir="rtl"] #gecko {
+  right: 0px;
+  text-align: left;
+  background: url(startpage-gecko-rtl.png) no-repeat top left;
+}
+
 #gecko a:link, #gecko a:visited {
   color: #fff;
   background: transparent;
-  padding-right: 5px;
+  -moz-padding-end: 5px;
 }
 
   </style> 
 </head>
 
-<body>
+<body dir="&locale.dir;">
 <h1>&startpage.welcome;</h1>
 
 <div id="indent">
