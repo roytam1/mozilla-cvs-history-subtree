@@ -143,7 +143,6 @@ public:
 
     NS_IMETHOD              Show(PRBool aState);
     NS_IMETHOD              IsVisible(PRBool & aState);
-    PRBool                  IsShown();
 
     NS_IMETHOD              ModalEventFilter(PRBool aRealEvent, void *aEvent,
                                              PRBool *aForWindow);

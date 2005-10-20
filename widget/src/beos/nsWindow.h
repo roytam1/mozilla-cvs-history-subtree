@@ -123,7 +123,6 @@ public:
 	                                            PRBool aDoCapture,
 	                                            PRBool aConsumeRollupEvent);
 	NS_IMETHOD              IsVisible(PRBool & aState);
-	PRBool                  IsShown();
 
 	NS_IMETHOD              ConstrainPosition(PRBool aAllowSlop,
 	                                          PRInt32 *aX, PRInt32 *aY);

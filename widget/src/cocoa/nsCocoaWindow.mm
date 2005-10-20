@@ -856,12 +856,6 @@ nsCocoaWindow::IsVisible(PRBool & aState)
   aState = mVisible;
   return NS_OK;
 }
-
-PRBool
-nsCocoaWindow::IsShown()
-{
-  return mVisible;
-}
    
 //-------------------------------------------------------------------------
 //

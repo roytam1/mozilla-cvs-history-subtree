@@ -90,7 +90,6 @@ public:
   virtual nsIWidget *GetParent(void);
   NS_IMETHOD Show(PRBool bState);
   NS_IMETHOD IsVisible(PRBool &aState);
-  PRBool     IsShown();
 
   NS_IMETHOD ConstrainPosition(PRBool aAllowSlop, PRInt32 *aX, PRInt32 *aY);
   NS_IMETHOD Move(PRInt32 aX, PRInt32 aY);

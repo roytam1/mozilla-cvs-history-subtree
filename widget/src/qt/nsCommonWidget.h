@@ -71,7 +71,6 @@ public:
 
     NS_IMETHOD Show(PRBool);
     NS_IMETHOD IsVisible(PRBool&);
-	PRBool     IsShown();
 
     NS_IMETHOD ConstrainPosition(PRBool, PRInt32*, PRInt32*);
     NS_IMETHOD Move(PRInt32, PRInt32);

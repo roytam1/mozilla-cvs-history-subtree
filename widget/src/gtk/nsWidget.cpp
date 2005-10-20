@@ -448,11 +448,6 @@ NS_IMETHODIMP nsWidget::Show(PRBool bState)
   return NS_OK;
 }
 
-PRBool nsWidget::IsShown()
-{
-  return mShown;
-}
-
 void nsWidget::ResetInternalVisibility()
 {
   PRBool show = mShown;

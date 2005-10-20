@@ -436,12 +436,6 @@ nsCommonWidget::IsEnabled(PRBool *aState)
     return NS_OK;
 }
 
-PRBool
-nsCommonWidget::IsShown()
-{
-    return mIsShown;
-}
-
 void
 nsCommonWidget::OnDestroy(void)
 {
