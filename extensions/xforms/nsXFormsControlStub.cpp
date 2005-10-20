@@ -57,6 +57,7 @@
 #include "nsIServiceManager.h"
 #include "nsIPrefBranch.h"
 #include "nsIPrefService.h"
+#include "nsIEventStateManager.h"
 
 /** This class is used to generate xforms-hint and xforms-help events.*/
 class nsXFormsHintHelpListener : public nsIDOMEventListener {
@@ -528,9 +529,7 @@ nsXFormsControlStubBase::Create(nsIXTFElementWrapper *aWrapper)
   ResetHelpAndHint(PR_TRUE);
 
   // enabled is on pr. default
-  ///
-  /// @bug This is only a hack until bug 271720 is landed (XXX)
-  mElement->SetAttribute(kStateAttributes[6], NS_LITERAL_STRING("1"));
+  aWrapper->SetIntrinsicState(NS_EVENT_STATE_ENABLED);
 
 #ifdef DEBUG_smaug
   sControlList->AppendElement(this);
@@ -667,20 +666,13 @@ nsXFormsControlStubBase::GetContext(nsAString      &aModelID,
 void
 nsXFormsControlStubBase::ResetProperties()
 {
-  if (!mElement) {
+  nsCOMPtr<nsIXTFElementWrapper> xtfWrap(do_QueryInterface(mElement));
+  if (!xtfWrap) {
     return;
-  }
-  
-  ///
-  /// @todo removes the attributes we use, until bug 271720 is landed (XXX)
-  for (PRUint32 i = 0; i < NS_ARRAY_LENGTH(kStateAttributes); ++i) {
-    mElement->RemoveAttribute(kStateAttributes[i]);
   }
 
   // enabled is on pr. default
-  ///
-  /// @bug This is only a hack until bug 271720 is landed (XXX)
-  mElement->SetAttribute(kStateAttributes[6], NS_LITERAL_STRING("1"));
+  xtfWrap->SetIntrinsicState(NS_EVENT_STATE_ENABLED);
 }
 
 void
