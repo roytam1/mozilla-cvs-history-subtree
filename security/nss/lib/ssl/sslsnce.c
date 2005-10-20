@@ -146,15 +146,17 @@ struct sidCacheEntryStr {
 /*  2 */    ssl3CipherSuite  cipherSuite;
 /*  2 */    PRUint16    compression; 	/* SSL3CompressionMethod */
 
-/*100 */    ssl3SidKeys keys;	/* keys and ivs, wrapped as needed. */
+/*122 */    ssl3SidKeys keys;	/* keys and ivs, wrapped as needed. */
+/*  1 */    PRUint8     hasFortezza;
+/*  1 */    PRUint8     resumable;
 
 /*  4 */    PRUint32    masterWrapMech; 
 /*  4 */    SSL3KEAType exchKeyType;
 /*  4 */    PRInt32     certIndex;
-/*116 */} ssl3;
-#if defined(LINUX)                      /* XXX Why only on Linux ? */
+/*140 */} ssl3;
+#if defined(LINUX)
 	struct {
-	    PRUint8     filler[144];	/* XXX why this number ? */
+	    PRUint8     filler[144];	
 	} forceSize;
 #endif
     } u;
@@ -439,6 +441,8 @@ ConvertFromSID(sidCacheEntry *to, sslSessionID *from)
 
 	to->u.ssl3.cipherSuite      = from->u.ssl3.cipherSuite;
 	to->u.ssl3.compression      = (uint16)from->u.ssl3.compression;
+	to->u.ssl3.resumable        = from->u.ssl3.resumable;
+	to->u.ssl3.hasFortezza      = from->u.ssl3.hasFortezza;
 	to->u.ssl3.keys             = from->u.ssl3.keys;
 	to->u.ssl3.masterWrapMech   = from->u.ssl3.masterWrapMech;
 	to->u.ssl3.exchKeyType      = from->u.ssl3.exchKeyType;
@@ -513,6 +517,8 @@ ConvertToSID(sidCacheEntry *from, certCacheEntry *pcce,
 	to->u.ssl3.sessionIDLength  = from->sessionIDLength;
 	to->u.ssl3.cipherSuite      = from->u.ssl3.cipherSuite;
 	to->u.ssl3.compression      = (SSL3CompressionMethod)from->u.ssl3.compression;
+	to->u.ssl3.resumable        = from->u.ssl3.resumable;
+	to->u.ssl3.hasFortezza      = from->u.ssl3.hasFortezza;
 	to->u.ssl3.keys             = from->u.ssl3.keys;
 	to->u.ssl3.masterWrapMech   = from->u.ssl3.masterWrapMech;
 	to->u.ssl3.exchKeyType      = from->u.ssl3.exchKeyType;
@@ -524,7 +530,7 @@ ConvertToSID(sidCacheEntry *from, certCacheEntry *pcce,
 	 */
 	to->u.ssl3.clientWriteKey   = NULL;
 	to->u.ssl3.serverWriteKey   = NULL;
-
+	to->u.ssl3.tek              = NULL;
 	to->urlSvrName              = NULL;
 
 	to->u.ssl3.masterModuleID   = (SECMODModuleID)-1; /* invalid value */
@@ -537,6 +543,8 @@ ConvertToSID(sidCacheEntry *from, certCacheEntry *pcce,
 	to->u.ssl3.clAuthSlotID     = (CK_SLOT_ID)-1;     /* invalid value */
 	to->u.ssl3.clAuthSeries     = 0;
 	to->u.ssl3.clAuthValid      = PR_FALSE;
+
+	to->u.ssl3.clientWriteSaveLen = 0;
 
 	if (from->u.ssl3.certIndex != -1 && pcce) {
 	    SECItem          derCert;

@@ -194,20 +194,13 @@ secmod_argFetchValue(char *string, int *pcount)
     char *end = secmod_argFindEnd(string);
     char *retString, *copyString;
     PRBool lastEscape = PR_FALSE;
-    int len;
 
-    len = end - string;
-    if (len == 0) {
-	*pcount = 0;
-	return NULL;
-    }
+    *pcount = (end - string)+1;
 
-    copyString = retString = (char *)PORT_Alloc(len+1);
+    if (*pcount == 0) return NULL;
 
-    if (*end) len++;
-    *pcount = len;
+    copyString = retString = (char *)PORT_Alloc(*pcount);
     if (retString == NULL) return NULL;
-
 
     if (secmod_argIsQuote(*string)) string++;
     for (; string < end; string++) {

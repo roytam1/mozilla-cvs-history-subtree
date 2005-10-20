@@ -44,11 +44,7 @@ include $(CORE_DEPTH)/coreconf/UNIX.mk
 DEFAULT_COMPILER = cc
 
 CPU_ARCH   = hppa
-ifeq ($(OS_TEST),ia64)
-DLL_SUFFIX = so
-else
 DLL_SUFFIX = sl
-endif
 CC         = cc
 CCC        = CC
 OS_CFLAGS  += -Ae $(DSO_CFLAGS) -DHPUX -D$(CPU_ARCH) -D_HPUX_SOURCE -D_USE_BIG_FDS
@@ -75,7 +71,7 @@ MKSHLIB			= $(LD) $(DSO_LDOPTS)
 ifdef MAPFILE
 MKSHLIB += -c $(MAPFILE)
 endif
-PROCESS_MAP_FILE = grep -v ';+' $< | grep -v ';-' | \
+PROCESS_MAP_FILE = grep -v ';+' $(LIBRARY_NAME).def | grep -v ';-' | \
          sed -e 's; DATA ;;' -e 's,;;,,' -e 's,;.*,,' -e 's,^,+e ,' > $@
 
 DSO_LDOPTS		= -b +h $(notdir $@)

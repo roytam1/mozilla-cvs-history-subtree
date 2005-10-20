@@ -1,39 +1,24 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- * 
- * The contents of this file are subject to the Mozilla Public License Version 
- * 1.1 (the "License"); you may not use this file except in compliance with 
- * the License. You may obtain a copy of the License at 
- * http://www.mozilla.org/MPL/
- * 
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- * 
+/* 
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *  
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *  
  * The Original Code is Mozilla Communicator client code, released
  * March 31, 1998.
  * 
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1998-1999
- * the Initial Developer. All Rights Reserved.
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998-1999 Netscape Communications Corporation. All
+ * Rights Reserved.
  * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the terms of
- * either of the GNU General Public License Version 2 or later (the "GPL"),
- * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- * 
- * ***** END LICENSE BLOCK ***** */
+ * Contributor(s): 
+ */
 
 /*
  *  LDAP tools fileurl.c -- functions for handling file URLs.
@@ -234,76 +219,72 @@ ldaptool_berval_from_ldif_value( const char *value, int vlen,
 	struct berval *bvp, int recognize_url_syntax, int always_try_file,
 	int reporterrs )
 {
-    int		rc = LDAPTOOL_FILEURL_SUCCESS;	/* optimistic */
-    const char	*url = NULL;
+    int	rc = LDAPTOOL_FILEURL_SUCCESS;	/* optimistic */
     struct stat	fstats;
 
     /* recognize "attr :< url" syntax if LDIF version is >= 1 */
 
     if ( recognize_url_syntax && *value == '<' ) {
+        const char	*url;
+        char		*path;
 
 	for ( url = value + 1; isspace( *url ); ++url ) {
 	    ;	/* NULL */
 	}
 
-	if (strlen(url) < 6 || strncasecmp(url, "file:/", 6) != 0) {
+	if (strlen(url) > 7 && strncasecmp(url, "file://", 7) == 0) {
 	  /*
-	   * We only support file:/ URLs for now.
+	   * We only support file:// URLs for now.
 	   */
-	  url = NULL;
-	}
-    }
+	  rc = ldaptool_fileurl2path( url, &path );
+	  switch( rc ) {
+	  case LDAPTOOL_FILEURL_NOTAFILEURL:
+	      if ( reporterrs ) fprintf( stderr, "%s: unsupported URL \"%s\";"
+		  " use a file:// URL instead.\n", ldaptool_progname, url );
+	      break;
 
-    if ( NULL != url ) {
-	char	*path;
-
-	rc = ldaptool_fileurl2path( url, &path );
-	switch( rc ) {
-	case LDAPTOOL_FILEURL_NOTAFILEURL:
-	    if ( reporterrs ) fprintf( stderr, "%s: unsupported URL \"%s\";"
-		    " use a file:/ URL instead.\n", ldaptool_progname, url );
-	    break;
-
-	case LDAPTOOL_FILEURL_MISSINGPATH:
-	    if ( reporterrs ) fprintf( stderr,
+	  case LDAPTOOL_FILEURL_MISSINGPATH:
+	      if ( reporterrs ) fprintf( stderr,
 		    "%s: unable to process URL \"%s\" --"
 		    " missing path.\n", ldaptool_progname, url );
-	    break;
+	      break;
 
-	    case LDAPTOOL_FILEURL_NONLOCAL:
-		if ( reporterrs ) fprintf( stderr,
-			"%s: unable to process URL \"%s\" -- only"
-			" local file:/ URLs are supported.\n",
-			ldaptool_progname, url );
-		break;
+	  case LDAPTOOL_FILEURL_NONLOCAL:
+	      if ( reporterrs ) fprintf( stderr,
+		    "%s: unable to process URL \"%s\" -- only"
+		    " local file:// URLs are supported.\n",
+		    ldaptool_progname, url );
+	      break;
 
-	    case LDAPTOOL_FILEURL_NOMEMORY:
-		if ( reporterrs ) perror( "ldaptool_fileurl2path" );
-		break;
+	  case LDAPTOOL_FILEURL_NOMEMORY:
+	      if ( reporterrs ) perror( "ldaptool_fileurl2path" );
+	      break;
 
-	    case LDAPTOOL_FILEURL_SUCCESS:
-		if ( stat( path, &fstats ) != 0 ) {
-		    if ( reporterrs ) perror( path );
-		} else if ( fstats.st_mode & S_IFDIR ) {	
-		    if ( reporterrs ) fprintf( stderr,
-			    "%s: %s is a directory, not a file\n",
-			    ldaptool_progname, path );
-		    rc = LDAPTOOL_FILEURL_FILEIOERROR;
-		} else {
-		    rc = berval_from_file( path, bvp, reporterrs );
-		}
-		free( path );
-		break;
+	  case LDAPTOOL_FILEURL_SUCCESS:
+	      if ( stat( path, &fstats ) != 0 ) {
+		  if ( reporterrs ) perror( path );
+	      } else if ( fstats.st_mode & S_IFDIR ) {	
+		  if ( reporterrs ) fprintf( stderr,
+			"%s: %s is a directory, not a file\n",
+			ldaptool_progname, path );
+		  rc = LDAPTOOL_FILEURL_FILEIOERROR;
+	      } else {
+		  rc = berval_from_file( path, bvp, reporterrs );
+	      }
+	      free( path );
+	      break;
 
-	default:
-	    if ( reporterrs ) fprintf( stderr,
+	  default:
+	      if ( reporterrs ) fprintf( stderr,
 		    "%s: unable to process URL \"%s\""
 		    " -- unknown error\n", ldaptool_progname, url );
+	  }
 	}
-    } else if ( always_try_file && (stat( value, &fstats ) == 0) &&
-	    !(fstats.st_mode & S_IFDIR)) {	/* get value from file */
+    }
+    if ( always_try_file && (stat( value, &fstats ) == 0) &&
+	     !(fstats.st_mode & S_IFDIR)) {	/* get value from file */
 	rc = berval_from_file( value, bvp, reporterrs );
-    } else {					/* use value as-is */
+    } else {
 	bvp->bv_len = vlen;
 	if (( bvp->bv_val = (char *)malloc( vlen + 1 )) == NULL ) {
 	    if ( reporterrs ) perror( "malloc" );
@@ -357,13 +338,14 @@ berval_from_file( const char *path, struct berval *bvp, int reporterrs )
 {
     FILE	*fp;
     long	rlen;
+    int		eof;
 #if defined( XP_WIN32 )
     char	mode[20] = "r+b";
 #else
     char	mode[20] = "r";
 #endif
 
-    if (( fp = ldaptool_open_file( path, mode )) == NULL ) {
+    if (( fp = fopen( path, mode )) == NULL ) {
 	if ( reporterrs ) perror( path );
 	return( LDAPTOOL_FILEURL_FILEIOERROR );
     }
@@ -389,6 +371,7 @@ berval_from_file( const char *path, struct berval *bvp, int reporterrs )
     }
 
     rlen = fread( bvp->bv_val, 1, bvp->bv_len, fp );
+    eof = feof( fp );
     fclose( fp );
 
     if ( rlen != (long)bvp->bv_len ) {

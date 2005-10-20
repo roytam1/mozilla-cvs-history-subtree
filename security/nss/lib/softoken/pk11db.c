@@ -120,9 +120,9 @@ secmod_parseTokens(char *tokenParams, sftk_parameters *parsed)
 	tokenIndex += next;
 
 	tokens[i].slotID = secmod_argDecodeNumber(name);
-        tokens[i].readOnly = PR_FALSE;
-	tokens[i].noCertDB = PR_FALSE;
-	tokens[i].noKeyDB = PR_FALSE;
+        tokens[i].readOnly = PR_TRUE;
+	tokens[i].noCertDB = PR_TRUE;
+	tokens[i].noKeyDB = PR_TRUE;
 	if (!secmod_argIsBlank(*tokenIndex)) {
 	    char *args = secmod_argFetchValue(tokenIndex,&next);
 	    tokenIndex += next;
@@ -167,8 +167,8 @@ secmod_parseParameters(char *param, sftk_parameters *parsed, PRBool isFIPS)
         SECMOD_HANDLE_STRING_ARG(index,slotdes,"cryptoSlotDescription=",;)
         SECMOD_HANDLE_STRING_ARG(index,pslotdes,"dbSlotDescription=",;)
         SECMOD_HANDLE_STRING_ARG(index,fslotdes,"FIPSSlotDescription=",;)
-        SECMOD_HANDLE_STRING_ARG(index,fpslotdes,"FIPSTokenDescription=",;)
-	SECMOD_HANDLE_STRING_ARG(index,minPW,"minPWLen=",;)
+        SECMOD_HANDLE_STRING_ARG(index,minPW,"FIPSTokenDescription=",;)
+	SECMOD_HANDLE_STRING_ARG(index,tmp,"minPWLen=",;)
 
 	SECMOD_HANDLE_STRING_ARG(index,tmp,"flags=", 
 		if(tmp) { secmod_parseFlags(param,parsed); PORT_Free(tmp); })

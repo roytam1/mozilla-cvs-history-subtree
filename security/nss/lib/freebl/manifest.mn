@@ -21,7 +21,8 @@
 #
 # Contributor(s):
 #   Dr Vipul Gupta <vipul.gupta@sun.com> and
-#   Douglas Stebila <douglas@stebila.ca>, Sun Microsystems Laboratories
+#   Douglas Stebila <douglas@stebila.ca>, Sun Microsystems
+#   Laboratories
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -36,48 +37,25 @@
 # the terms of any one of the MPL, the GPL or the LGPL.
 #
 # ***** END LICENSE BLOCK *****
-
-# NOTE: any ifdefs in this file must be defined on the gmake command line
-# (if anywhere).  They cannot come from Makefile or config.mk 
-
 CORE_DEPTH = ../../..
 
 MODULE = nss
 
-LIBRARY_NAME = freebl
-LIBRARY_VERSION = 3
-
-ifdef FREEBL_CHILD_BUILD
-  ifdef USE_ABI32_INT32
-    LIBRARY_NAME = freebl_32int
-  endif
-  ifdef USE_ABI32_INT64
-    LIBRARY_NAME = freebl_32int64
-  endif
-  ifdef USE_ABI32_FPU
-    LIBRARY_NAME = freebl_32fpu
-  endif
-  ifdef USE_ABI64_INT
-    LIBRARY_NAME = freebl_64int
-  endif
-  ifdef USE_ABI64_FPU
-    LIBRARY_NAME = freebl_64fpu
+ifndef FREEBL_RECURSIVE_BUILD
+  LIBRARY_NAME = freebl
+else
+  ifdef USE_PURE_32
+    CORE_DEPTH = ../../../..
+    LIBRARY_NAME = freebl_pure32
+  else
+    LIBRARY_NAME = freebl_hybrid
   endif
 endif
 
-# if the library name contains _, we prefix the version with _
-ifneq (,$(findstring _,$(LIBRARY_NAME)))
-  LIBRARY_VERSION := _$(LIBRARY_VERSION)
-endif
+# same version as rest of freebl
+LIBRARY_VERSION = _3
 
-MAPFILE_SOURCE = freebl.def
-MAPFILE = $(OBJDIR)/$(LIBRARY_NAME).def
-
-SOFTOKEN_LIBRARY_VERSION = 3
-
-DEFINES += -DSHLIB_SUFFIX=\"$(DLL_SUFFIX)\" -DSHLIB_PREFIX=\"$(DLL_PREFIX)\" \
-	-DSHLIB_VERSION=\"$(LIBRARY_VERSION)\" \
-	-DSOFTOKEN_SHLIB_VERSION=\"$(SOFTOKEN_LIBRARY_VERSION)\"
+DEFINES += -DSHLIB_SUFFIX=\"$(DLL_SUFFIX)\" -DSHLIB_PREFIX=\"$(DLL_PREFIX)\"
 
 REQUIRES = 
 
@@ -88,7 +66,6 @@ EXPORTS = \
 	$(NULL)
 
 PRIVATE_EXPORTS = \
-	alghmac.h \
 	blapi.h \
 	secmpi.h \
 	secrng.h \
@@ -99,8 +76,6 @@ PRIVATE_EXPORTS = \
 
 MPI_HDRS = mpi-config.h mpi.h mpi-priv.h mplogic.h mpprime.h logtab.h mp_gf2m.h
 MPI_SRCS = mpprime.c mpmontg.c mplogic.c mpi.c mp_gf2m.c
-
-
 ECL_HDRS = ecl-exp.h ecl.h ec2.h ecp.h ecl-priv.h
 ifdef NSS_ENABLE_ECC
 ECL_SRCS = ecl.c ecl_curve.c ecl_mult.c ecl_gf.c \
@@ -112,19 +87,15 @@ ECL_SRCS = ecl.c ecl_curve.c ecl_mult.c ecl_gf.c \
 else
 ECL_SRCS = $(NULL)
 endif
-SHA_SRCS = sha_fast.c
 
 CSRCS = \
-	freeblver.c \
 	ldvector.c \
 	prng_fips1861.c \
 	sysrand.c \
-	$(SHA_SRCS) \
+	sha_fast.c \
 	md2.c \
 	md5.c \
 	sha512.c \
-	alghmac.c \
-	rawhash.c \
 	alg2268.c \
 	arcfour.c \
 	arcfive.c \
@@ -138,7 +109,6 @@ CSRCS = \
 	dsa.c \
 	rsa.c \
 	shvfy.c \
-	tlsprfalg.c \
 	$(MPI_SRCS) \
 	$(ECL_SRCS) \
 	$(NULL)
@@ -146,7 +116,6 @@ CSRCS = \
 ALL_CSRCS := $(CSRCS)
 
 ALL_HDRS =  \
-	alghmac.h \
 	blapi.h \
 	blapit.h \
 	des.h \
@@ -159,7 +128,6 @@ ALL_HDRS =  \
 	shsign.h \
 	vis_proto.h \
 	$(NULL)
-
 
 ifdef NSS_ENABLE_ECC
 DEFINES += -DNSS_ENABLE_ECC

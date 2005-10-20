@@ -98,13 +98,12 @@ endif
 
 ARCH		= darwin
 
-DSO_CFLAGS	= -fPIC
 # May override this with -bundle to create a loadable module.
 DSO_LDOPTS	= -dynamiclib -compatibility_version 1 -current_version 1 -install_name @executable_path/$(notdir $@) -headerpad_max_install_names $(DARWIN_SDK_LDFLAGS)
 
 MKSHLIB		= $(CC) -arch $(CPU_ARCH) $(DSO_LDOPTS)
 DLL_SUFFIX	= dylib
-PROCESS_MAP_FILE = grep -v ';+' $< | grep -v ';-' | \
+PROCESS_MAP_FILE = grep -v ';+' $(LIBRARY_NAME).def | grep -v ';-' | \
                 sed -e 's; DATA ;;' -e 's,;;,,' -e 's,;.*,,' -e 's,^,_,' > $@
 
 G++INCLUDES	= -I/usr/include/g++

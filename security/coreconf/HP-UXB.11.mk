@@ -36,11 +36,15 @@
 # ***** END LICENSE BLOCK *****
 include $(CORE_DEPTH)/coreconf/HP-UX.mk
 
+ifdef USE_LONG_LONGS
+USE_HYBRID = 1
+endif
+
 ifndef NS_USE_GCC
     CCC                 = /opt/aCC/bin/aCC -ext
     ifeq ($(USE_64), 1)
 	ifeq ($(OS_TEST), ia64)
-	    ARCHFLAG	= -Aa +e +p +DD64
+	    OS_CFLAGS	+= -Aa +e +p +DD64
 	else
 	    # Our HP-UX build machine has a strange problem.  If
 	    # a 64-bit PA-RISC executable calls getcwd() in a
@@ -53,23 +57,27 @@ ifndef NS_USE_GCC
 	    # as a 32-bit PA-RISC executable for 64-bit PA-RISC
 	    # builds.  -- wtc 2003-06-03
 	    ifdef INTERNAL_TOOLS
-	    ARCHFLAG	= +DAportable +DS2.0
+	    OS_CFLAGS	+= +DAportable +DS2.0
 	    else
-	    ARCHFLAG	= -Aa +e +DA2.0W +DS2.0 +DChpux
+	    OS_CFLAGS	+= -Aa +e +DA2.0W +DS2.0 +DChpux
 	    endif
 	endif
     else
 	ifeq ($(OS_TEST), ia64)
-	    ARCHFLAG	= -Aa +e +p +DD32
+	    OS_CFLAGS	+= -Aa +e +p +DD32
 	else
-	    ARCHFLAG	= +DAportable +DS2.0
+	    ifdef USE_HYBRID
+		OS_CFLAGS += -Aa +e +DA2.0 +DS2.0 
+	    else
+		OS_CFLAGS += +DAportable +DS2.0
+	    endif
 	endif
     endif
 else
     CCC = aCC
 endif
 
-OS_CFLAGS += $(ARCHFLAG) -DHPUX11
+OS_CFLAGS += -DHPUX11 
 OS_LIBS   += -lpthread -lm -lrt
 #ifeq ($(USE_64), 1)
 #OS_LIBS   += -ldl

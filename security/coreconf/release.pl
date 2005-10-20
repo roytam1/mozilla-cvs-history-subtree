@@ -41,14 +41,7 @@ require('coreconf.pl');
 
 #######-- read in variables on command line into %var
 
-$use_jar = 1;
-$ZIP     = "$ENV{JAVA_HOME}/bin/jar";
-
-if ( $ENV{JAVA_HOME} eq "" ) {
-    $ZIP      = "zip";
-    $use_jar  = 0;
-}
-
+$var{ZIP} = "zip";
 
 &parse_argv;
 
@@ -63,15 +56,11 @@ foreach $jarfile (split(/ /,$var{FILES}) ) {
 
     ($jardir,$jaropts) = split(/\|/,$jarinfo);
 
-    if ( $use_jar ) {
-        $zipoptions = "-cvf";
-    } else {
-        $zipoptions = "-T -r";
-        if ($jaropts =~ /a/) {
-            if ($var{OS_ARCH} eq 'WINNT') {
-                $zipoptions .= ' -ll';
-            }
-        }
+    $zipoptions = "-T";
+    if ($jaropts =~ /a/) {
+	if ($var{OS_ARCH} eq 'WINNT') {
+	    $zipoptions .= ' -ll';
+	}
     }
 
 # just in case the directory ends in a /, remove it
@@ -128,8 +117,8 @@ foreach $jarfile (split(/ /,$var{FILES}) ) {
 	}
 	closedir(DIR);	
 
-	print STDERR "$ZIP $zipoptions $jarfile $filelist\n";
-	system("$ZIP $zipoptions $jarfile $filelist");
+	print STDERR "zip $zipoptions -r $jarfile $filelist\n";
+	system("zip $zipoptions -r $jarfile $filelist");
 	rmdir("META-INF");
 	    for $i (1 .. $dirdepth) {
 	    chdir("..");

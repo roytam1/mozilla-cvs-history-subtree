@@ -1,39 +1,24 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- * 
- * The contents of this file are subject to the Mozilla Public License Version 
- * 1.1 (the "License"); you may not use this file except in compliance with 
- * the License. You may obtain a copy of the License at 
- * http://www.mozilla.org/MPL/
- * 
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- * 
+/*
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
  * The Original Code is Mozilla Communicator client code, released
  * March 31, 1998.
- * 
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1998-1999
- * the Initial Developer. All Rights Reserved.
- * 
+ *
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998-1999 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
  * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the terms of
- * either of the GNU General Public License Version 2 or later (the "GPL"),
- * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- * 
- * ***** END LICENSE BLOCK ***** */
+ */
 /*
  *  Copyright (c) 1995 Regents of the University of Michigan.
  *  All rights reserved.
@@ -108,10 +93,9 @@ nsldapi_getdxbyname( char *domain )
 
     /* XXX not MT safe XXX */
     if (( rc = res_search( domain, C_IN, T_TXT, buf, sizeof( buf ))) < 0
-		|| ( rc > sizeof( buf ))
 		|| ( dxs = decode_answer( buf, rc )) == NULL ) {
 	/*
-	 * punt:  return list consisting of the original domain name only
+	 * punt:  return list conisting of the original domain name only
 	 */
 	if (( dxs = (char **)NSLDAPI_MALLOC( 2 * sizeof( char * ))) == NULL ||
 		( dxs[ 0 ] = nsldapi_strdup( domain )) == NULL ) {
@@ -147,11 +131,6 @@ decode_answer( unsigned char *answer, int len )
     hp = (HEADER *)answer;
     eom = answer + len;
 
-    if ( len < sizeof( *hp ) ) {
-	h_errno = NO_RECOVERY;
-	return( NULL );
-    }
-
     if ( ntohs( hp->qdcount ) != 1 ) {
 	h_errno = NO_RECOVERY;
 	return( NULL );
@@ -183,10 +162,6 @@ decode_answer( unsigned char *answer, int len )
 	    continue;
 	}
 	p += rc;	/* skip over name */
-	if ( p + 3 * INT16SZ + INT32SZ > eom ) {
-	    err = NO_RECOVERY;
-	    continue;
-	}
 	type = _getshort( p );
 	p += INT16SZ;
 	class = _getshort( p );
@@ -194,10 +169,6 @@ decode_answer( unsigned char *answer, int len )
 	p += INT32SZ;		/* skip over TTL */
 	rr_len = _getshort( p );
 	p += INT16SZ;
-	if ( p + rr_len > eom ) {
-	    err = NO_RECOVERY;
-	    continue;
-	}
 	if ( class == C_IN && type == T_TXT ) {
 	    int 	i, n, pref, txt_len;
 	    char	*q, *r;

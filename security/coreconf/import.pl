@@ -46,6 +46,7 @@ $returncode =0;
 
 #######-- read in variables on command line into %var
 
+$var{ZIP} = "zip";
 $var{UNZIP} = "unzip -o";
 
 &parse_argv;

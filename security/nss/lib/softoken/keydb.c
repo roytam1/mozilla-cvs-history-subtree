@@ -161,21 +161,20 @@ free_dbt(DBT *dbt)
     return;
 }
 
-static int keydb_Get(NSSLOWKEYDBHandle *db, DBT *key, DBT *data, 
-		     unsigned int flags);
-static int keydb_Put(NSSLOWKEYDBHandle *db, DBT *key, DBT *data, 
-		     unsigned int flags);
-static int keydb_Sync(NSSLOWKEYDBHandle *db, unsigned int flags);
-static int keydb_Del(NSSLOWKEYDBHandle *db, DBT *key, unsigned int flags);
-static int keydb_Seq(NSSLOWKEYDBHandle *db, DBT *key, DBT *data, 
-		     unsigned int flags);
-static void keydb_Close(NSSLOWKEYDBHandle *db);
+static int keydb_Get(DB *db, DBT *key, DBT *data, unsigned int flags);
+static int keydb_Put(DB *db, DBT *key, DBT *data, unsigned int flags);
+static int keydb_Sync(DB *db, unsigned int flags);
+static int keydb_Del(DB *db, DBT *key, unsigned int flags);
+static int keydb_Seq(DB *db, DBT *key, DBT *data, unsigned int flags);
+static void keydb_Close(DB *db);
+
+static PZLock *kdbLock = NULL;
 
 static void
 keydb_InitLocks(NSSLOWKEYDBHandle *handle) 
 {
-    if (handle->lock == NULL) {
-	nss_InitLock(&handle->lock, nssILockKeyDB);
+    if (kdbLock == NULL) {
+	nss_InitLock(&kdbLock, nssILockKeyDB);
     }
 
     return;
@@ -184,9 +183,9 @@ keydb_InitLocks(NSSLOWKEYDBHandle *handle)
 static void
 keydb_DestroyLocks(NSSLOWKEYDBHandle *handle)
 {
-    if (handle->lock != NULL) {
-	PZ_DestroyLock(handle->lock);
-	handle->lock = NULL;
+    if (kdbLock != NULL) {
+	PZ_DestroyLock(kdbLock);
+	kdbLock = NULL;
     }
 
     return;
@@ -349,7 +348,7 @@ get_dbkey(NSSLOWKEYDBHandle *handle, DBT *index)
     int ret;
     
     /* get it from the database */
-    ret = keydb_Get(handle, index, &entry, 0);
+    ret = keydb_Get(handle->db, index, &entry, 0);
     if ( ret ) {
 	PORT_SetError(SEC_ERROR_BAD_DATABASE);
 	return NULL;
@@ -375,9 +374,9 @@ put_dbkey(NSSLOWKEYDBHandle *handle, DBT *index, NSSLOWKEYDBKey *dbkey, PRBool u
     
     /* put it in the database */
     if ( update ) {
-	status = keydb_Put(handle, index, keydata, 0);
+	status = keydb_Put(handle->db, index, keydata, 0);
     } else {
-	status = keydb_Put(handle, index, keydata, R_NOOVERWRITE);
+	status = keydb_Put(handle->db, index, keydata, R_NOOVERWRITE);
     }
     
     if ( status ) {
@@ -385,7 +384,7 @@ put_dbkey(NSSLOWKEYDBHandle *handle, DBT *index, NSSLOWKEYDBKey *dbkey, PRBool u
     }
 
     /* sync the database */
-    status = keydb_Sync(handle, 0);
+    status = keydb_Sync(handle->db, 0);
     if ( status ) {
 	goto loser;
     }
@@ -415,7 +414,7 @@ nsslowkey_TraverseKeys(NSSLOWKEYDBHandle *handle,
 	return(SECFailure);
     }
 
-    ret = keydb_Seq(handle, &key, &data, R_FIRST);
+    ret = keydb_Seq(handle->db, &key, &data, R_FIRST);
     if ( ret ) {
 	return(SECFailure);
     }
@@ -442,7 +441,7 @@ nsslowkey_TraverseKeys(NSSLOWKEYDBHandle *handle,
 		return(status);
 	    }
 	}
-    } while ( keydb_Seq(handle, &key, &data, R_NEXT) == 0 );
+    } while ( keydb_Seq(handle->db, &key, &data, R_NEXT) == 0 );
 
     return(SECSuccess);
 }
@@ -522,7 +521,7 @@ GetKeyDBGlobalSalt(NSSLOWKEYDBHandle *handle)
     saltKey.data = SALT_STRING;
     saltKey.size = sizeof(SALT_STRING) - 1;
 
-    ret = keydb_Get(handle, &saltKey, &saltData, 0);
+    ret = keydb_Get(handle->db, &saltKey, &saltData, 0);
     if ( ret ) {
 	return(NULL);
     }
@@ -544,7 +543,7 @@ StoreKeyDBGlobalSalt(NSSLOWKEYDBHandle *handle)
     saltData.size = handle->global_salt->len;
 
     /* put global salt into the database now */
-    status = keydb_Put(handle, &saltKey, &saltData, 0);
+    status = keydb_Put(handle->db, &saltKey, &saltData, 0);
     if ( status ) {
 	return(SECFailure);
     }
@@ -567,7 +566,7 @@ makeGlobalVersion(NSSLOWKEYDBHandle *handle)
     versionKey.size = sizeof(VERSION_STRING)-1;
 		
     /* put version string into the database now */
-    status = keydb_Put(handle, &versionKey, &versionData, 0);
+    status = keydb_Put(handle->db, &versionKey, &versionData, 0);
     if ( status ) {
 	return(SECFailure);
     }
@@ -593,7 +592,7 @@ makeGlobalSalt(NSSLOWKEYDBHandle *handle)
     RNG_GenerateGlobalRandomBytes(saltbuf, sizeof(saltbuf));
 
     /* put global salt into the database now */
-    status = keydb_Put(handle, &saltKey, &saltData, 0);
+    status = keydb_Put(handle->db, &saltKey, &saltData, 0);
     if ( status ) {
 	return(SECFailure);
     }
@@ -624,7 +623,7 @@ encodePWCheckEntry(PLArenaPool *arena, SECItem *entry, SECOidTag alg,
 		   SECItem *encCheck);
 
 static unsigned char
-nsslowkey_version(NSSLOWKEYDBHandle *handle)
+nsslowkey_version(DB *db)
 {
     DBT versionKey;
     DBT versionData;
@@ -632,12 +631,8 @@ nsslowkey_version(NSSLOWKEYDBHandle *handle)
     versionKey.data = VERSION_STRING;
     versionKey.size = sizeof(VERSION_STRING)-1;
 
-    if (handle->db == NULL) {
-	return 255;
-    }
-
     /* lookup version string in database */
-    ret = keydb_Get( handle, &versionKey, &versionData, 0 );
+    ret = keydb_Get( db, &versionKey, &versionData, 0 );
 
     /* error accessing the database */
     if ( ret < 0 ) {
@@ -651,14 +646,14 @@ nsslowkey_version(NSSLOWKEYDBHandle *handle)
 }
 
 static PRBool
-seckey_HasAServerKey(NSSLOWKEYDBHandle *handle)
+seckey_HasAServerKey(DB *db)
 {
     DBT key;
     DBT data;
     int ret;
     PRBool found = PR_FALSE;
 
-    ret = keydb_Seq(handle, &key, &data, R_FIRST);
+    ret = keydb_Seq(db, &key, &data, R_FIRST);
     if ( ret ) {
 	return PR_FALSE;
     }
@@ -695,14 +690,10 @@ seckey_HasAServerKey(NSSLOWKEYDBHandle *handle)
 	    }
 	    
 	}
-    } while ( keydb_Seq(handle, &key, &data, R_NEXT) == 0 );
+    } while ( keydb_Seq(db, &key, &data, R_NEXT) == 0 );
 
     return found;
 }
-
-/* forward declare local create function */
-static NSSLOWKEYDBHandle * nsslowkey_NewHandle(DB *dbHandle);
-
 /*
  * currently updates key database from v2 to v3
  */
@@ -719,29 +710,18 @@ nsslowkey_UpdateKeyDBPass1(NSSLOWKEYDBHandle *handle)
     unsigned char version;
     SECItem *rc4key = NULL;
     NSSLOWKEYDBKey *dbkey = NULL;
-    NSSLOWKEYDBHandle *update = NULL;
     SECItem *oldSalt = NULL;
     int ret;
     SECItem checkitem;
 
     if ( handle->updatedb == NULL ) {
-	return SECSuccess;
+	return(SECSuccess);
     }
-
-    /* create a full DB Handle for our update so we 
-     * can use the correct locks for the db primatives */
-    update = nsslowkey_NewHandle(handle->updatedb);
-    if ( update == NULL) {
-	return SECSuccess;
-    }
-
-    /* update has now inherited the database handle */
-    handle->updatedb = NULL;
 
     /*
      * check the version record
      */
-    version = nsslowkey_version(update);
+    version = nsslowkey_version(handle->updatedb);
     if (version != 2) {
 	goto done;
     }
@@ -749,7 +729,7 @@ nsslowkey_UpdateKeyDBPass1(NSSLOWKEYDBHandle *handle)
     saltKey.data = SALT_STRING;
     saltKey.size = sizeof(SALT_STRING) - 1;
 
-    ret = keydb_Get(update, &saltKey, &saltData, 0);
+    ret = keydb_Get(handle->updatedb, &saltKey, &saltData, 0);
     if ( ret ) {
 	/* no salt in old db, so it is corrupted */
 	goto done;
@@ -767,7 +747,8 @@ nsslowkey_UpdateKeyDBPass1(NSSLOWKEYDBHandle *handle)
     checkKey.data = KEYDB_PW_CHECK_STRING;
     checkKey.size = KEYDB_PW_CHECK_LEN;
     
-    ret = keydb_Get(update, &checkKey, &checkData, 0 );
+    ret = keydb_Get(handle->updatedb, &checkKey,
+				   &checkData, 0 );
     if (ret) {
 	/*
 	 * if we have a key, but no KEYDB_PW_CHECK_STRING, then this must
@@ -775,7 +756,7 @@ nsslowkey_UpdateKeyDBPass1(NSSLOWKEYDBHandle *handle)
 	 * with it. Put a fake entry in so we can identify this db when we do
 	 * get the password for it.
 	 */
-	if (seckey_HasAServerKey(update)) {
+	if (seckey_HasAServerKey(handle->updatedb)) {
 	    DBT fcheckKey;
 	    DBT fcheckData;
 
@@ -787,11 +768,11 @@ nsslowkey_UpdateKeyDBPass1(NSSLOWKEYDBHandle *handle)
 	    fcheckData.data = "1";
 	    fcheckData.size = 1;
 	    /* put global salt into the new database now */
-	    ret = keydb_Put( handle, &saltKey, &saltData, 0);
+	    ret = keydb_Put( handle->db, &saltKey, &saltData, 0);
 	    if ( ret ) {
 		goto done;
 	    }
-	    ret = keydb_Put( handle, &fcheckKey, &fcheckData, 0);
+	    ret = keydb_Put( handle->db, &fcheckKey, &fcheckData, 0);
 	    if ( ret ) {
 		goto done;
 	    }
@@ -800,7 +781,7 @@ nsslowkey_UpdateKeyDBPass1(NSSLOWKEYDBHandle *handle)
 	}
     } else {
 	/* put global salt into the new database now */
-	ret = keydb_Put( handle, &saltKey, &saltData, 0);
+	ret = keydb_Put( handle->db, &saltKey, &saltData, 0);
 	if ( ret ) {
 	    goto done;
 	}
@@ -830,7 +811,7 @@ nsslowkey_UpdateKeyDBPass1(NSSLOWKEYDBHandle *handle)
     
     
     /* now traverse the database */
-    ret = keydb_Seq(update, &key, &data, R_FIRST);
+    ret = keydb_Seq(handle->updatedb, &key, &data, R_FIRST);
     if ( ret ) {
 	goto done;
     }
@@ -876,15 +857,17 @@ nsslowkey_UpdateKeyDBPass1(NSSLOWKEYDBHandle *handle)
 
 	    sec_destroy_dbkey(dbkey);
 	}
-    } while ( keydb_Seq(update, &key, &data, R_NEXT) == 0 );
+    } while ( keydb_Seq(handle->updatedb, &key, &data,
+					R_NEXT) == 0 );
 
     dbkey = NULL;
 
 done:
     /* sync the database */
-    ret = keydb_Sync(handle, 0);
+    ret = keydb_Sync(handle->db, 0);
 
-    nsslowkey_CloseKeyDB(update);
+    keydb_Close(handle->updatedb);
+    handle->updatedb = NULL;
     
     if ( rc4key ) {
 	SECITEM_FreeItem(rc4key, PR_TRUE);
@@ -930,7 +913,7 @@ openNewDB(const char *appName, const char *prefix, const char *dbname,
 
     /* force a transactional read, which will verify that one and only one
      * process attempts the update. */
-    if (nsslowkey_version(handle) == NSSLOWKEY_DB_FILE_VERSION) {
+    if (nsslowkey_version(handle->db) == NSSLOWKEY_DB_FILE_VERSION) {
 	/* someone else has already updated the database for us */
 	db_FinishTransaction(handle->db, PR_FALSE);
 	db_InitComplete(handle->db);
@@ -942,35 +925,20 @@ openNewDB(const char *appName, const char *prefix, const char *dbname,
      * local database we can update from.
      */
     if (appName) {
-        NSSLOWKEYDBHandle *updateHandle = nsslowkey_NewHandle(updatedb);
 	updatedb = dbopen( dbname, NO_RDONLY, 0600, DB_HASH, 0 );
-	if (!updatedb) {
-	    goto noupdate;
+	if (updatedb) {
+	    handle->version = nsslowkey_version(updatedb);
+	    if (handle->version != NSSLOWKEY_DB_FILE_VERSION) {
+		keydb_Close(updatedb);
+	    } else {
+		db_Copy(handle->db, updatedb);
+		keydb_Close(updatedb);
+		db_FinishTransaction(handle->db,PR_FALSE);
+		db_InitComplete(handle->db);
+		return SECSuccess;
+	    }
 	}
-
-	/* nsslowkey_version needs a full handle because it calls
-         * the kdb_Get() function, which needs to lock.
-         */
-        updateHandle = nsslowkey_NewHandle(updatedb);
-	if (!updateHandle) {
-	    updatedb->close(updatedb);
-	    goto noupdate;
-	}
-
-	handle->version = nsslowkey_version(updateHandle);
-	if (handle->version != NSSLOWKEY_DB_FILE_VERSION) {
-	    nsslowkey_CloseKeyDB(updateHandle);
-	    goto noupdate;
-	}
-
-	/* copy the new DB from the old one */
-	db_Copy(handle->db, updatedb);
-	nsslowkey_CloseKeyDB(updateHandle);
-	db_FinishTransaction(handle->db,PR_FALSE);
-	db_InitComplete(handle->db);
-	return SECSuccess;
     }
-noupdate:
 
     /* update the version number */
     rv = makeGlobalVersion(handle);
@@ -1010,7 +978,7 @@ noupdate:
     }
 	
     /* sync the database */
-    ret = keydb_Sync(handle, 0);
+    ret = keydb_Sync(handle->db, 0);
     if ( ret ) {
 	rv = SECFailure;
 	goto loser;
@@ -1026,7 +994,7 @@ loser:
 
 static DB *
 openOldDB(const char *appName, const char *prefix, const char *dbname, 
-					PRBool openflags) {
+					PRBool openflags, int *version) {
     DB *db = NULL;
 
     if (appName) {
@@ -1035,79 +1003,54 @@ openOldDB(const char *appName, const char *prefix, const char *dbname,
 	db = dbopen( dbname, openflags, 0600, DB_HASH, 0 );
     }
 
-    return db;
-}
-
-/* check for correct version number */
-static PRBool
-verifyVersion(NSSLOWKEYDBHandle *handle)
-{
-    int version = nsslowkey_version(handle);
-
-    handle->version = version;
-    if (version != NSSLOWKEY_DB_FILE_VERSION ) {
-	if (handle->db) {
-	    keydb_Close(handle);
-	    handle->db = NULL;
+    /* check for correct version number */
+    if (db != NULL) {
+	*version = nsslowkey_version(db);
+	if (*version != NSSLOWKEY_DB_FILE_VERSION ) {
+	    /* bogus version number record, reset the database */
+	    keydb_Close( db );
+	    db = NULL;
 	}
     }
-    return handle->db != NULL;
-}
-
-static NSSLOWKEYDBHandle *
-nsslowkey_NewHandle(DB *dbHandle)
-{
-    NSSLOWKEYDBHandle *handle;
-    handle = (NSSLOWKEYDBHandle *)PORT_ZAlloc (sizeof(NSSLOWKEYDBHandle));
-    if (handle == NULL) {
-	PORT_SetError (SEC_ERROR_NO_MEMORY);
-	return NULL;
-    }
-
-    handle->appname = NULL;
-    handle->dbname = NULL;
-    handle->global_salt = NULL;
-    handle->updatedb = NULL;
-    handle->db = dbHandle;
-    handle->ref = 1;
-
-    keydb_InitLocks(handle);
-    return handle;
+    return db;
 }
 
 NSSLOWKEYDBHandle *
 nsslowkey_OpenKeyDB(PRBool readOnly, const char *appName, const char *prefix,
 				NSSLOWKEYDBNameFunc namecb, void *cbarg)
 {
-    NSSLOWKEYDBHandle *handle = NULL;
+    NSSLOWKEYDBHandle *handle;
     SECStatus rv;
     int openflags;
     char *dbname = NULL;
-
-
-    handle = nsslowkey_NewHandle(NULL);
+    
+    handle = (NSSLOWKEYDBHandle *)PORT_ZAlloc (sizeof(NSSLOWKEYDBHandle));
+    if (handle == NULL) {
+	PORT_SetError (SEC_ERROR_NO_MEMORY);
+	return NULL;
+    }
 
     openflags = readOnly ? NO_RDONLY : NO_RDWR;
-
 
     dbname = (*namecb)(cbarg, NSSLOWKEY_DB_FILE_VERSION);
     if ( dbname == NULL ) {
 	goto loser;
     }
+
     handle->appname = appName ? PORT_Strdup(appName) : NULL ;
     handle->dbname = (appName == NULL) ? PORT_Strdup(dbname) : 
 			(prefix ? PORT_Strdup(prefix) : NULL);
     handle->readOnly = readOnly;
 
+    keydb_InitLocks(handle);
 
 
-    handle->db = openOldDB(appName, prefix, dbname, openflags);
-    if (handle->db) {
-	verifyVersion(handle);
-	if (handle->version == 255) {
-	    goto loser;
-	}
+    handle->db = openOldDB(appName, prefix, dbname, openflags, 
+							&handle->version);
+    if (handle->version == 255) {
+	goto loser;
     }
+  
 
     /* if first open fails, try to create a new DB */
     if ( handle->db == NULL ) {
@@ -1120,8 +1063,8 @@ nsslowkey_OpenKeyDB(PRBool readOnly, const char *appName, const char *prefix,
 	 * The multiprocess code blocked the second one, then had it retry to
 	 * see if it can just open the database normally */
 	if (rv == SECWouldBlock) {
-	    handle->db = openOldDB(appName,prefix,dbname, openflags);
-	    verifyVersion(handle);
+	    handle->db = openOldDB(appName,prefix,dbname, 
+						openflags, &handle->version);
 	    if (handle->db == NULL) {
 		goto loser;
 	    }
@@ -1140,7 +1083,14 @@ loser:
     if ( dbname )
         PORT_Free( dbname );
     PORT_SetError(SEC_ERROR_BAD_DATABASE);
-    nsslowkey_CloseKeyDB(handle);
+
+    if ( handle->db ) {
+	keydb_Close(handle->db);
+    }
+    if ( handle->updatedb ) {
+	keydb_Close(handle->updatedb);
+    }
+    PORT_Free(handle);
     return NULL;
 }
 
@@ -1152,11 +1102,8 @@ nsslowkey_CloseKeyDB(NSSLOWKEYDBHandle *handle)
 {
     if (handle != NULL) {
 	if (handle->db != NULL) {
-	    keydb_Close(handle);
+	    keydb_Close(handle->db);
 	}
-	if (handle->updatedb) {
-	    handle->updatedb->close(handle->updatedb);
-        }
 	if (handle->dbname) PORT_Free(handle->dbname);
 	if (handle->appname) PORT_Free(handle->appname);
 	if (handle->global_salt) {
@@ -1196,14 +1143,14 @@ nsslowkey_DeleteKey(NSSLOWKEYDBHandle *handle, SECItem *pubkey)
     namekey.size = pubkey->len;
 
     /* delete it from the database */
-    ret = keydb_Del(handle, &namekey, 0);
+    ret = keydb_Del(handle->db, &namekey, 0);
     if ( ret ) {
 	PORT_SetError(SEC_ERROR_BAD_DATABASE);
 	return(SECFailure);
     }
 
     /* sync the database */
-    ret = keydb_Sync(handle, 0);
+    ret = keydb_Sync(handle->db, 0);
     if ( ret ) {
 	PORT_SetError(SEC_ERROR_BAD_DATABASE);
 	return(SECFailure);
@@ -1248,7 +1195,7 @@ nsslowkey_KeyForIDExists(NSSLOWKEYDBHandle *handle, SECItem *id)
 
     namekey.data = (char *)id->data;
     namekey.size = id->len;
-    status = keydb_Get(handle, &namekey, &dummy, 0);
+    status = keydb_Get(handle->db, &namekey, &dummy, 0);
     if ( status ) {
 	return PR_FALSE;
     }
@@ -1306,7 +1253,7 @@ nsslowkey_KeyForCertExists(NSSLOWKEYDBHandle *handle, NSSLOWCERTCertificate *cer
 	namekey.size = sizeof(buf);
     }
 
-    status = keydb_Get(handle, &namekey, &dummy, 0);
+    status = keydb_Get(handle->db, &namekey, &dummy, 0);
     /* some databases have the key stored as a signed value */
     if (status) {
 	unsigned char *buf = (unsigned char *)PORT_Alloc(namekey.size+1);
@@ -1315,7 +1262,7 @@ nsslowkey_KeyForCertExists(NSSLOWKEYDBHandle *handle, NSSLOWCERTCertificate *cer
 	    buf[0] = 0;
 	    namekey.data = buf;
 	    namekey.size ++;
-    	    status = keydb_Get(handle, &namekey, &dummy, 0);
+    	    status = keydb_Get(handle->db, &namekey, &dummy, 0);
 	    PORT_Free(buf);
 	}
     }
@@ -1343,12 +1290,12 @@ nsslowkey_HasKeyDBPassword(NSSLOWKEYDBHandle *handle)
     checkkey.data = KEYDB_PW_CHECK_STRING;
     checkkey.size = KEYDB_PW_CHECK_LEN;
     
-    ret = keydb_Get(handle, &checkkey, &checkdata, 0 );
+    ret = keydb_Get(handle->db, &checkkey, &checkdata, 0 );
     if ( ret ) {
 	/* see if this was an updated DB first */
 	checkkey.data = KEYDB_FAKE_PW_CHECK_STRING;
 	checkkey.size = KEYDB_FAKE_PW_CHECK_LEN;
-	ret = keydb_Get(handle, &checkkey, &checkdata, 0 );
+	ret = keydb_Get(handle->db, &checkkey, &checkdata, 0 );
     	if ( ret ) {
 	    return(SECFailure);
 	}
@@ -2476,7 +2423,7 @@ nsslowkey_CheckKeyDBPassword(NSSLOWKEYDBHandle *handle, SECItem *pwitem)
     if ( dbkey == NULL ) {
 	checkkey.data = KEYDB_FAKE_PW_CHECK_STRING;
 	checkkey.size = KEYDB_FAKE_PW_CHECK_LEN;
-	ret = keydb_Get(handle, &checkkey, &checkdata, 0 );
+	ret = keydb_Get(handle->db, &checkkey, &checkdata, 0 );
 	if (ret) {
 	    goto loser;
 	}
@@ -2621,7 +2568,7 @@ ChangeKeyDBPasswordAlg(NSSLOWKEYDBHandle *handle,
 	}
 
 	/* delete the old record */
-	ret = keydb_Del(handle, &node->key, 0);
+	ret = keydb_Del(handle->db, &node->key, 0);
 	if ( ret ) {
 	    PORT_SetError(SEC_ERROR_BAD_DATABASE);
 	    rv = SECFailure;
@@ -2738,7 +2685,7 @@ nsslowkey_ResetKeyDB(NSSLOWKEYDBHandle *handle)
 	return SECFailure;
     }
 
-    keydb_Close(handle);
+    keydb_Close(handle->db);
     if (handle->appname) {
 	handle->db= 
 	    rdbopen(handle->appname, handle->dbname, "key", NO_CREATE, NULL);
@@ -2770,19 +2717,17 @@ nsslowkey_ResetKeyDB(NSSLOWKEYDBHandle *handle)
 
 done:
     /* sync the database */
-    ret = keydb_Sync(handle, 0);
+    ret = keydb_Sync(handle->db, 0);
     db_InitComplete(handle->db);
 
     return (errors == 0 ? SECSuccess : SECFailure);
 }
 
 static int
-keydb_Get(NSSLOWKEYDBHandle *kdb, DBT *key, DBT *data, unsigned int flags)
+keydb_Get(DB *db, DBT *key, DBT *data, unsigned int flags)
 {
     PRStatus prstat;
     int ret;
-    PRLock *kdbLock = kdb->lock;
-    DB *db = kdb->db;
     
     PORT_Assert(kdbLock != NULL);
     PZ_Lock(kdbLock);
@@ -2795,12 +2740,10 @@ keydb_Get(NSSLOWKEYDBHandle *kdb, DBT *key, DBT *data, unsigned int flags)
 }
 
 static int
-keydb_Put(NSSLOWKEYDBHandle *kdb, DBT *key, DBT *data, unsigned int flags)
+keydb_Put(DB *db, DBT *key, DBT *data, unsigned int flags)
 {
     PRStatus prstat;
     int ret = 0;
-    PRLock *kdbLock = kdb->lock;
-    DB *db = kdb->db;
 
     PORT_Assert(kdbLock != NULL);
     PZ_Lock(kdbLock);
@@ -2813,12 +2756,10 @@ keydb_Put(NSSLOWKEYDBHandle *kdb, DBT *key, DBT *data, unsigned int flags)
 }
 
 static int
-keydb_Sync(NSSLOWKEYDBHandle *kdb, unsigned int flags)
+keydb_Sync(DB *db, unsigned int flags)
 {
     PRStatus prstat;
     int ret;
-    PRLock *kdbLock = kdb->lock;
-    DB *db = kdb->db;
 
     PORT_Assert(kdbLock != NULL);
     PZ_Lock(kdbLock);
@@ -2831,12 +2772,10 @@ keydb_Sync(NSSLOWKEYDBHandle *kdb, unsigned int flags)
 }
 
 static int
-keydb_Del(NSSLOWKEYDBHandle *kdb, DBT *key, unsigned int flags)
+keydb_Del(DB *db, DBT *key, unsigned int flags)
 {
     PRStatus prstat;
     int ret;
-    PRLock *kdbLock = kdb->lock;
-    DB *db = kdb->db;
 
     PORT_Assert(kdbLock != NULL);
     PZ_Lock(kdbLock);
@@ -2849,12 +2788,10 @@ keydb_Del(NSSLOWKEYDBHandle *kdb, DBT *key, unsigned int flags)
 }
 
 static int
-keydb_Seq(NSSLOWKEYDBHandle *kdb, DBT *key, DBT *data, unsigned int flags)
+keydb_Seq(DB *db, DBT *key, DBT *data, unsigned int flags)
 {
     PRStatus prstat;
     int ret;
-    PRLock *kdbLock = kdb->lock;
-    DB *db = kdb->db;
     
     PORT_Assert(kdbLock != NULL);
     PZ_Lock(kdbLock);
@@ -2867,11 +2804,9 @@ keydb_Seq(NSSLOWKEYDBHandle *kdb, DBT *key, DBT *data, unsigned int flags)
 }
 
 static void
-keydb_Close(NSSLOWKEYDBHandle *kdb)
+keydb_Close(DB *db)
 {
     PRStatus prstat;
-    PRLock *kdbLock = kdb->lock;
-    DB *db = kdb->db;
 
     PORT_Assert(kdbLock != NULL);
     PZ_Lock(kdbLock);
