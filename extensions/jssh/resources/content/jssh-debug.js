@@ -217,6 +217,20 @@ function jssh(startupURI) {
    .runShell(getInputStream(), getOutputStream(), startupURI, true);
 }
 
+//----------------------------------------------------------------------
+_help_strings.hex = "hex(str, octets_per_line) returns the hexadecimal representation of the given string. octets_per_line is optional and defaults to 4.";
+function hex(str, octets_per_line) {
+  var rv = "";
+  if (!octets_per_line) octets_per_line = 4;
+  for (var i=0, l=str.length; i<l; ++i) {
+    var code = str.charCodeAt(i).toString(16);
+    if (code.length == 1) code = "0"+code;
+    rv += code + " ";
+    if (i % octets_per_line == octets_per_line-1) rv += "\n";
+  }
+  return rv;
+}
+
 //**********************************************************************
 // Function instrumentation:
 
@@ -571,10 +585,33 @@ function time(fct) {
   return end.getTime() - start.getTime();
 }
 
+////////////////////////////////////////////////////////////////////////
+// ZAP specific debug functions:
+
 //----------------------------------------------------------------------
 _help_strings.lastError = "lastError() returns the last verbose error from the zap verbose error service";
 function lastError() {
   var errorService = Components.classes["@mozilla.org/zap/verbose-error-service;1"]
     .getService(Components.interfaces.zapIVerboseErrorService);
   return errorService.lastMessage;
+}
+
+//----------------------------------------------------------------------
+_help_strings.dialogs = "dialogs() returns a list of currently active dialogs & associated info";
+function dialogs() {
+  var rv = "";
+  var pool = getWindows()[0].wSipStack.wrappedJSObject.dialogPool;
+  for (var d in pool) {
+    rv += "callid="+pool[d].callID+"\n"+
+      "state="+pool[d].dialogState+"\n"+
+      "local tag="+pool[d].localTag+
+      " remote tag="+pool[d].remoteTag+"\n"+
+      "local uri="+pool[d].localURI.serialize()+"\n"+
+      "remote uri="+pool[d].remoteURI.serialize()+"\n"+
+      "remote target="+pool[d].remoteTarget.serialize()+"\n"+
+      "local seq="+pool[d].localSequenceNumber+
+      " remote seq="+pool[d].remoteSequenceNumber+
+      "\n\n";
+  }
+  return rv;
 }
