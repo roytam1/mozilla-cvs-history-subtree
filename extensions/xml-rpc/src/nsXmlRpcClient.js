@@ -254,7 +254,7 @@ nsXmlRpcClient.prototype = {
             catch(ex) {
                 debug('Exception in listener.onFault: ' + ex);
             }
-        } else {
+        } else if (this._result) { 
             debug('Result: ' + this._result);
             try { 
                 this._listener.onResult(this, ctxt, this._result);
@@ -438,9 +438,9 @@ nsXmlRpcClient.prototype = {
         if (this._useAuth){
             if (this._passwordTried){
                 try { 
-                    this._listener.onError(this, ctxt, 
+                    this._listener.onError(this, null, 
                         Components.results.NS_ERROR_FAIL, 
-                        'Server returned invalid Fault');
+                        'Invalid credentials');
                 }
                 catch(ex) {
                     debug('Exception in listener.onError: ' + ex);
