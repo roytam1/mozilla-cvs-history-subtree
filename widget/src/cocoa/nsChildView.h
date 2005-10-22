@@ -292,7 +292,6 @@ protected:
   PRPackedBool          mDestroyCalled;
   PRPackedBool          mDestructorCalled;
   PRPackedBool          mVisible;
-  PRPackedBool          mInWindow;    // true if the widget is in a visible tab
 
   PRPackedBool          mDrawing;
   PRPackedBool          mTempRenderingContextMadeHere;
