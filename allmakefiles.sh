@@ -1507,7 +1507,6 @@ for extension in $MOZ_EXTENSIONS; do
             " ;;
         xforms ) MAKEFILES_extensions="$MAKEFILES_extensions
             extensions/xforms/Makefile
-            extensions/xforms/package/Makefile
             " ;;
         xmlextras ) MAKEFILES_extensions="$MAKEFILES_extensions
             extensions/xmlextras/Makefile
