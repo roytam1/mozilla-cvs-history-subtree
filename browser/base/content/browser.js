@@ -4757,7 +4757,8 @@ nsContextMenu.prototype = {
             pattern.test(searchStr);
             searchStr = RegExp.lastMatch;
         }
-        searchStr = searchStr.replace(/\s*(.*?)\s*$/, "$1");
+        searchStr = searchStr.replace(/^\s+/, "");
+        searchStr = searchStr.replace(/\s+$/, "");
         searchStr = searchStr.replace(/\s+/g, " ");
         return searchStr;
     },
