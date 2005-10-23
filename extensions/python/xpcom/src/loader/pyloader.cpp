@@ -193,7 +193,6 @@ extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,
 #ifndef NS_DEBUG
 		Py_OptimizeFlag = 1;
 #endif // NS_DEBUG
-		AddStandardPaths();
 		PyEval_InitThreads();
 		NS_TIMELINE_STOP_TIMER("PyXPCOM: Python initializing");
 		NS_TIMELINE_MARK_TIMER("PyXPCOM: Python initializing");
@@ -226,6 +225,10 @@ extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,
 		PyErr_Clear(); // but don't care if we can't.
 	}
 #endif
+	// Add the standard paths always - we may not have been the first to
+	// init Python.
+	AddStandardPaths();
+
 #ifndef PYXPCOM_USE_PYGILSTATE
 	// Abandon the thread-lock, as the first thing Python does
 	// is re-establish the lock (the Python thread-state story SUCKS!!!)
