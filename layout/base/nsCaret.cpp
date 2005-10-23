@@ -66,6 +66,10 @@
 
 #include "nsCaret.h"
 
+#if defined(XP_MACOSX) && !defined(MOZ_WIDGET_COCOA)
+#include <Carbon/Carbon.h> 
+#endif 
+
 // The bidi indicator hangs off the caret to one side, to show which
 // direction the typing is in. It needs to be at least 2x2 to avoid looking like 
 // an insignificant dot
@@ -943,6 +947,15 @@ void nsCaret::GetCaretRectAndInvert(nsIFrame* aFrame, PRInt32 aFrameOffset)
   
   nsPresContext *presContext = presShell->GetPresContext();
 
+#if defined(XP_MACOSX) && !defined(MOZ_WIDGET_COCOA)
+  CGrafPtr savePort = nsnull;
+  GDHandle saveDevice = nsnull;
+  Rect savePortRect;
+  ::GetGWorld(&savePort, &saveDevice);
+  if (savePort)
+    ::GetPortBounds(savePort, &savePortRect);
+#endif
+
   // if the view changed, or we don't have a rendering context, make one
   // because of drawing issues, always make a new RC at the moment. See bug 28068
   if (
@@ -1079,6 +1092,15 @@ void nsCaret::GetCaretRectAndInvert(nsIFrame* aFrame, PRInt32 aFrameOffset)
           if (NS_SUCCEEDED(domSelection->SelectionLanguageChange(mKeyboardRTL)))
           {
             mRendContext->PopState();
+#ifdef DONT_REUSE_RENDERING_CONTEXT
+            mRendContext = nsnull;
+#endif
+#if defined(XP_MACOSX) && !defined(MOZ_WIDGET_COCOA)
+            if (savePort) {
+              ::SetGWorld(savePort, saveDevice);
+              ::SetOrigin(savePortRect.left, savePortRect.top);
+            }
+#endif
             return;
           }
         }
@@ -1123,6 +1145,13 @@ void nsCaret::GetCaretRectAndInvert(nsIFrame* aFrame, PRInt32 aFrameOffset)
 
 #ifdef DONT_REUSE_RENDERING_CONTEXT
   mRendContext = nsnull;
+#endif
+
+#if defined(XP_MACOSX) && !defined(MOZ_WIDGET_COCOA)
+  if (savePort) {
+    ::SetGWorld(savePort, saveDevice);
+    ::SetOrigin(savePortRect.left, savePortRect.top);
+  }
 #endif
 }
 
