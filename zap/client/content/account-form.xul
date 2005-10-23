@@ -90,43 +90,43 @@
       </grid>
     </cgroup>
 
-    <cgroup title="Active in Location Profiles:">
-      <vbox id="locations_template"
-            ref="urn:mozilla:zap:locations"
+    <cgroup title="Active in Identity Profiles:">
+      <vbox id="identities_template"
+            ref="urn:mozilla:zap:identities"
             datasources="rdf:null">
         <template>
           <rule>
             <conditions>
               <content uri="?container"/>
-              <member container="?container" child="?location"/>
+              <member container="?container" child="?identity"/>
               <triple subject="urn:mozilla:zap:root"
                       predicate="urn:mozilla:zap:current-account"
                       object="?account"/>
-              <triple subject="?location"
+              <triple subject="?identity"
                       predicate="urn:mozilla:zap:account"
                       object="?account"/>
             </conditions>
             <bindings>
-              <binding subject="?location"
+              <binding subject="?identity"
                        predicate="http://home.netscape.com/NC-rdf#Name"
                        object="?name"/>
             </bindings>
             <action>
-              <checkbox uri="?location" label="?name" checked="true"/>
+              <checkbox uri="?identity" label="?name" checked="true"/>
             </action>
           </rule>
           <rule>
             <conditions>
               <content uri="?container"/>
-              <member container="?container" child="?location"/>
+              <member container="?container" child="?identity"/>
             </conditions>
             <bindings>
-              <binding subject="?location"
+              <binding subject="?identity"
                        predicate="http://home.netscape.com/NC-rdf#Name"
                        object="?name"/>
             </bindings>
             <action>
-              <checkbox uri="?location" label="?name"/>
+              <checkbox uri="?identity" label="?name"/>
             </action>
           </rule>
         </template>

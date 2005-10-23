@@ -115,26 +115,26 @@
       <toolbarbutton id="button_go" label="Go" oncommand="cmdGo()" />
       <toolbarspacer/>
       <toolbaritem>
-        <label value="Location:"/>
-        <menulist id="locations_list"
-                  oncommand="locationChange();" 
+        <label value="Identity:"/>
+        <menulist id="identities_list"
+                  oncommand="identityChange();" 
                   minwidth="100">
-          <menupopup id="locations_list_popup"
+          <menupopup id="identities_list_popup"
                      datasources="rdf:null"
-                     ref="urn:mozilla:zap:locations">
+                     ref="urn:mozilla:zap:identities">
             <template>
               <rule>
                 <conditions>
                   <content uri="?container"/>
-                  <member container="?container" child="?location"/>
+                  <member container="?container" child="?identity"/>
                 </conditions>
                 <bindings>
-                  <binding subject="?location"
+                  <binding subject="?identity"
                           predicate="http://home.netscape.com/NC-rdf#Name"
                           object="?name"/>
                 </bindings>
                 <action>
-                  <menuitem uri="?location" label="?name"/>
+                  <menuitem uri="?identity" label="?name"/>
                 </action>
               </rule>
             </template>

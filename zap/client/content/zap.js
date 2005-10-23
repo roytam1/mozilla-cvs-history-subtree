@@ -45,7 +45,7 @@ Components.utils.importModule("resource:/jscodelib/zap/FileUtils.js");
 ////////////////////////////////////////////////////////////////////////
 // globals
 
-var wUserAgent = "zap/0.1.1"; // String to be sent in User-Agent
+var wUserAgent = "zap/0.1.2"; // String to be sent in User-Agent
                               // header for SIP requests
 var wPromptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService);
 var wRDF = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
@@ -60,9 +60,9 @@ var wSidebarDS;
 var wPrefs;
 var wPrefsDS = wRDF.GetDataSourceBlocking(getProfileFileURL("prefs.rdf"));
 
-var wLocationsDS = wRDF.GetDataSourceBlocking(getProfileFileURL("locations.rdf"));
-var wLocationsContainer;
-var wCurrentLocation;
+var wIdentitiesDS = wRDF.GetDataSourceBlocking(getProfileFileURL("identities.rdf"));
+var wIdentitiesContainer;
+var wCurrentIdentity;
 
 var wAccountsDS = wRDF.GetDataSourceBlocking(getProfileFileURL("accounts.rdf"));
 var wAccountsContainer;
@@ -108,7 +108,7 @@ function windowInit() {
   wURLField = document.getElementById("url_field");
 
   initPrefs();
-  initLocations();
+  initIdentities();
   initAccounts();
   initContacts();
   initCalls();
@@ -116,16 +116,16 @@ function windowInit() {
   wMediaPipeline.init();
   initSipStack();
 
-  // set the current location:
-  var locationsList = document.getElementById("locations_list_popup");
-  locationsList.database.AddDataSource(wLocationsDS);
-  locationsList.builder.rebuild();
-  // select correct location in locations list:
-  document.getElementById("locations_list").selectedItem = document.getElementById(wPrefs["urn:mozilla:zap:location"]);
-  // make sure out stack is configured for this location profile:
-  wCurrentLocation = Location.instantiate();
-  wCurrentLocation.initWithResource(wRDF.GetResource(wPrefs["urn:mozilla:zap:location"]));
-  currentLocationUpdated();
+  // set the current identity:
+  var identitiesList = document.getElementById("identities_list_popup");
+  identitiesList.database.AddDataSource(wIdentitiesDS);
+  identitiesList.builder.rebuild();
+  // select correct identity in identities list:
+  document.getElementById("identities_list").selectedItem = document.getElementById(wPrefs["urn:mozilla:zap:identity"]);
+  // make sure out stack is configured for this identity profile:
+  wCurrentIdentity = Identity.instantiate();
+  wCurrentIdentity.initWithResource(wRDF.GetResource(wPrefs["urn:mozilla:zap:identity"]));
+  currentIdentityUpdated();
   
   dump("... Done initializing zap main window\n");
 }
@@ -194,91 +194,91 @@ var Prefs = makeClass("Prefs", PersistentRDFObject);
 
 Prefs.prototype.datasources["default"] = wPrefsDS;
 
-Prefs.rdfResourceAttrib("urn:mozilla:zap:location",
-                        "urn:mozilla:zap:initial_location");
+Prefs.rdfResourceAttrib("urn:mozilla:zap:identity",
+                        "urn:mozilla:zap:initial_identity");
 Prefs.rdfLiteralAttrib("urn:mozilla:zap:instance_id", "");
 Prefs.rdfLiteralAttrib("urn:mozilla:zap:max_recent_calls", "10");
 Prefs.rdfLiteralAttrib("urn:mozilla:zap:dnd_code", "480"); // Temporarily unavail.
 Prefs.rdfLiteralAttrib("urn:mozilla:zap:dnd_headers", ""); // additional headers for DND response
 
 ////////////////////////////////////////////////////////////////////////
-// Locations:
+// Identities:
 
-function initLocations() {
-  wLocationsContainer = Components.classes["@mozilla.org/rdf/container;1"].
+function initIdentities() {
+  wIdentitiesContainer = Components.classes["@mozilla.org/rdf/container;1"].
     createInstance(Components.interfaces.nsIRDFContainer);
-  wLocationsContainer.Init(wLocationsDS,
-                           wRDF.GetResource("urn:mozilla:zap:locations"));
+  wIdentitiesContainer.Init(wIdentitiesDS,
+                           wRDF.GetResource("urn:mozilla:zap:identities"));
 }
 
-// called when the user selects a different location in the locations_list:
-function locationChange() {
-  var l = document.getElementById("locations_list").selectedItem.getAttribute("id");
-  if (wPrefs["urn:mozilla:zap:location"] == l)
+// called when the user selects a different identity in the identities_list:
+function identityChange() {
+  var l = document.getElementById("identities_list").selectedItem.getAttribute("id");
+  if (wPrefs["urn:mozilla:zap:identity"] == l)
     return;
   else {
-    wPrefs["urn:mozilla:zap:location"] = l;
+    wPrefs["urn:mozilla:zap:identity"] = l;
     wPrefs.flush();
   }
-  wCurrentLocation = Location.instantiate();
-  wCurrentLocation.initWithResource(wRDF.GetResource(wPrefs["urn:mozilla:zap:location"]));
-  currentLocationUpdated();
+  wCurrentIdentity = Identity.instantiate();
+  wCurrentIdentity.initWithResource(wRDF.GetResource(wPrefs["urn:mozilla:zap:identity"]));
+  currentIdentityUpdated();
 }
 
-// we call this function every time the current location profile is
+// we call this function every time the current identity profile is
 // updated or a new one is selected so that we can reconfigure the
-// stack from here. Alternatively we could listen in on the location
+// stack from here. Alternatively we could listen in on the identity
 // and prefs datasources, which we should probably do at some point.
-function currentLocationUpdated() {
+function currentIdentityUpdated() {
   // XXX these try/catch blocks will be redundant once we hook up
   // syntax checking to PersistentRDFObject
   try {
-    wSipStack.FromAddress = wSipStack.syntaxFactory.deserializeAddress(wCurrentLocation["urn:mozilla:zap:from_address"]);
+    wSipStack.FromAddress = wSipStack.syntaxFactory.deserializeAddress(wCurrentIdentity["urn:mozilla:zap:from_address"]);
   }
   catch(e) {
-    alert("The From-Address in the currently selected location has invalid syntax");
+    alert("The From-Address in the currently selected identity has invalid syntax");
   }
   try {
-    var routeSet = wSipStack.syntaxFactory.deserializeRouteSet(wCurrentLocation["urn:mozilla:zap:route_set"], {});
+    var routeSet = wSipStack.syntaxFactory.deserializeRouteSet(wCurrentIdentity["urn:mozilla:zap:route_set"], {});
     wSipStack.setDefaultRoute(routeSet, routeSet.length);
   }
   catch(e) {
-    alert("The Route Set in the currently selected location has invalid syntax");
+    alert("The Route Set in the currently selected identity has invalid syntax");
   }
 
   currentAccountsUpdated();
 }
 
 //----------------------------------------------------------------------
-// Location class
+// Identity class
 
-var Location = makeClass("Location", PersistentRDFObject, SupportsImpl);
-Location.addInterfaces(Components.interfaces.zapISipCredentialsProvider);
+var Identity = makeClass("Identity", PersistentRDFObject, SupportsImpl);
+Identity.addInterfaces(Components.interfaces.zapISipCredentialsProvider);
 
-Location.prototype.datasources["default"] = wLocationsDS;
+Identity.prototype.datasources["default"] = wIdentitiesDS;
 
-Location.rdfResourceAttrib("urn:mozilla:zap:sidebarparent",
-                           "urn:mozilla:zap:locations");
-Location.rdfLiteralAttrib("urn:mozilla:zap:chromepage",
-                          "chrome://zap/content/location.xul");
-Location.rdfLiteralAttrib("http://home.netscape.com/NC-rdf#Name", "");
-Location.rdfLiteralAttrib("urn:mozilla:zap:nodetype", "location");
-Location.rdfLiteralAttrib("urn:mozilla:zap:from_address",
+Identity.rdfResourceAttrib("urn:mozilla:zap:sidebarparent",
+                           "urn:mozilla:zap:identities");
+Identity.rdfLiteralAttrib("urn:mozilla:zap:chromepage",
+                          "chrome://zap/content/identity.xul");
+Identity.rdfLiteralAttrib("http://home.netscape.com/NC-rdf#Name", "");
+Identity.rdfLiteralAttrib("urn:mozilla:zap:nodetype", "identity");
+Identity.rdfLiteralAttrib("urn:mozilla:zap:from_address",
                           "Anonymous <sip:thisis@anonymous.invalid>");
-Location.rdfLiteralAttrib("urn:mozilla:zap:route_set", "");
+Identity.rdfLiteralAttrib("urn:mozilla:zap:route_set", "");
 
-Location.spec(
+Identity.spec(
   function createFromDocument(doc) {
-    this._Location_createFromDocument(doc);
-    // append to locations:
-    wLocationsContainer.AppendElement(this.resource);
+    this._Identity_createFromDocument(doc);
+    // append to identities:
+    wIdentitiesContainer.AppendElement(this.resource);
   });
 
 // zapISipCredentialsProvider methods:
-Location.fun(
+Identity.fun(
   function getCredentialsForRealm(realm, username, password) {
     // try our active accounts first:
-    var accounts = wLocationsDS.GetTargets(this.resource,
+    var accounts = wIdentitiesDS.GetTargets(this.resource,
                                            wRDF.GetResource("urn:mozilla:zap:account"),
                                            true);
     while (accounts.hasMoreElements()) {
@@ -315,7 +315,7 @@ function initAccounts() {
 var Account = makeClass("Account", PersistentRDFObject);
 
 Account.prototype.datasources["default"] = wAccountsDS;
-Account.prototype.datasources["locations"] = wLocationsDS;
+Account.prototype.datasources["identities"] = wIdentitiesDS;
 Account.prototype.datasources["global-ephemeral"] = wGlobalEphemeralDS;
 Account.addInMemoryDS("ephemeral");
 
@@ -344,39 +344,39 @@ Account.spec(
     this._Account_createFromDocument(doc);
     // append to accounts:
     wAccountsContainer.AppendElement(this.resource);
-    this.updateLocationProfiles(doc);
+    this.updateIdentityProfiles(doc);
   });
 
 Account.spec(
   function updateFromDocument(doc) {
     this._Account_updateFromDocument(doc);
-    this.updateLocationProfiles(doc);
+    this.updateIdentityProfiles(doc);
   });
 
-// helper to update resource links from location profiles to this
+// helper to update resource links from identity profiles to this
 // account:
 Account.fun(
-  function updateLocationProfiles(doc) {
-    // iterate through locations container and add/clear
-    // (location,account,this) triples:
-    var locations = wLocationsContainer.GetElements();
+  function updateIdentityProfiles(doc) {
+    // iterate through identities container and add/clear
+    // (identity,account,this) triples:
+    var identities = wIdentitiesContainer.GetElements();
     var resourceAccount = wRDF.GetResource("urn:mozilla:zap:account");
-    while (locations.hasMoreElements()) {
-      var location = locations.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
-      var elem = doc.getElementById(location.Value);
+    while (identities.hasMoreElements()) {
+      var identity = identities.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
+      var elem = doc.getElementById(identity.Value);
       if (!elem) continue;
-      var hasTriple = wLocationsDS.HasAssertion(location,
+      var hasTriple = wIdentitiesDS.HasAssertion(identity,
                                                 resourceAccount,
                                                 this.resource, true);
       if (elem.checked) {
         // add a triple if there isn't one already:
         if (!hasTriple)
-          wLocationsDS.Assert(location, resourceAccount, this.resource, true);
+          wIdentitiesDS.Assert(identity, resourceAccount, this.resource, true);
       }
       else {
         // remove triple if there is one:
         if (hasTriple)
-          wLocationsDS.Unassert(location, resourceAccount, this.resource);
+          wIdentitiesDS.Unassert(identity, resourceAccount, this.resource);
       }
     }
   });
@@ -384,11 +384,11 @@ Account.fun(
 Account.spec(
   function fillDocument(doc) {
     this._Account_fillDocument(doc);
-    // initialize locations template:
-    var ltemplate = doc.getElementById("locations_template");
+    // initialize identities template:
+    var ltemplate = doc.getElementById("identities_template");
     if (!ltemplate) return;
 
-    ltemplate.database.AddDataSource(wLocationsDS);
+    ltemplate.database.AddDataSource(wIdentitiesDS);
     ltemplate.database.AddDataSource(this.datasources["ephemeral"]);
     ltemplate.builder.rebuild();
   });
@@ -411,9 +411,9 @@ ActiveAccount.fun(
   function activate() {
     this["urn:mozilla:zap:is_active"] = "true";
     // remember the credentials context, so that we can correctly
-    // authenticate on deactivation when the location profile might
+    // authenticate on deactivation when the identity profile might
     // have changed:
-    this.credentials = wCurrentLocation;
+    this.credentials = wCurrentIdentity;
 
     if (this["urn:mozilla:zap:automatic_registration"] != "true")
       return;
@@ -575,7 +575,7 @@ function getAccount(resource) {
   return account;
 }
 
-// This will be called whenever the current location changes and we
+// This will be called whenever the current identity changes and we
 // might need to add/remove accounts to/from wActiveAccounts:
 function currentAccountsUpdated() {
   // walk through all accounts:
@@ -583,9 +583,9 @@ function currentAccountsUpdated() {
   var resourceAccount = wRDF.GetResource("urn:mozilla:zap:account");
   while (accounts.hasMoreElements()) {
     var account = accounts.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
-    // check if this account is active in the current location
+    // check if this account is active in the current identity
     // profile:
-    var active = wLocationsDS.HasAssertion(wCurrentLocation.resource,
+    var active = wIdentitiesDS.HasAssertion(wCurrentIdentity.resource,
                                            resourceAccount,
                                            account,
                                            true);
@@ -701,7 +701,7 @@ function initSidebar() {
   wSidebarDS = wRDF.GetDataSourceBlocking(getProfileFileURL("sidebar.rdf"));
   wSidebarTree = document.getElementById("sidebar");
   wSidebarTree.database.AddDataSource(wSidebarDS);
-  wSidebarTree.database.AddDataSource(wLocationsDS);
+  wSidebarTree.database.AddDataSource(wIdentitiesDS);
   wSidebarTree.database.AddDataSource(wAccountsDS);
   wSidebarTree.database.AddDataSource(wContactsDS);
   wSidebarTree.database.AddDataSource(wGlobalEphemeralDS);
@@ -1196,7 +1196,7 @@ OutboundCallHandler.fun(
     else if (response.statusCode == "401" ||
              response.statusCode == "407") {
       if (wSipStack.authentication.
-          addAuthorizationHeaders(wCurrentLocation,
+          addAuthorizationHeaders(wCurrentIdentity,
                                   response,
                                   rc.request)) {
         // we've got new credentials -> retry
