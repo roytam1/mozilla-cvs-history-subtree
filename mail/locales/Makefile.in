@@ -60,6 +60,7 @@ APP_VERSION = $(shell cat $(srcdir)/../config/version.txt)
 
 DEFINES += \
 	-DAB_CD=$(AB_CD) \
+	-DMOZ_LANGPACK_EID=langpack-$(AB_CD)@thunderbird.mozilla.org \
 	-DMOZ_APP_VERSION=$(APP_VERSION) \
 	-DLOCALE_SRCDIR=$(LOCALE_SRCDIR) \
 	-DPKG_BASENAME=$(PKG_BASENAME) \
