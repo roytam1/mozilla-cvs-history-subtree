@@ -738,27 +738,28 @@ nsSVGTextFrame::GetBBox(nsIDOMSVGRect **_retval)
     if (SVGFrame) {
       nsCOMPtr<nsIDOMSVGRect> r;
       SVGFrame->GetBBox(getter_AddRefs(r));
-      NS_ASSERTION(r, "no bounding box");
-      if (!r) continue;
-
-      float x,y,w,h;
-      r->GetX(&x);
-      r->GetY(&y);
-      r->GetWidth(&w);
-      r->GetHeight(&h);
+      if (!r) {
+        NS_WARNING("no bounding box");
+      } else {
+        float x,y,w,h;
+        r->GetX(&x);
+        r->GetY(&y);
+        r->GetWidth(&w);
+        r->GetHeight(&h);
       
-      if (bFirst) {
-        bFirst = PR_FALSE;
-        x1 = x;
-        y1 = y;
-        x2 = x+w;
-        y2 = y+h;
-      }
-      else {
-        if (x<x1) x1 = x;
-        if (x+w>x2) x2 = x+w;
-        if (y<y1) y1 = y;
-        if (y+h>y2) y2 = y+h;
+        if (bFirst) {
+          bFirst = PR_FALSE;
+          x1 = x;
+          y1 = y;
+          x2 = x+w;
+          y2 = y+h;
+        }
+        else {
+          if (x<x1) x1 = x;
+          if (x+w>x2) x2 = x+w;
+          if (y<y1) y1 = y;
+          if (y+h>y2) y2 = y+h;
+        }
       }
     }
     kid = kid->GetNextSibling();
