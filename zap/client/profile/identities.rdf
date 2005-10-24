@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:NC="http://home.netscape.com/NC-rdf#"
+     xmlns:zap="urn:mozilla:zap:">
+  <rdf:Seq rdf:about="urn:mozilla:zap:identities">
+    <rdf:li rdf:resource="urn:mozilla:zap:initial_identity"/>
+  </rdf:Seq>
+
+  <rdf:Description rdf:about="urn:mozilla:zap:initial_identity">
+    <NC:Name>Default</NC:Name>
+    <zap:chromepage>chrome://zap/content/identity.xul</zap:chromepage>
+    <zap:nodetype>identity</zap:nodetype>
+    <zap:sidebarparent rdf:resource="urn:mozilla:zap:identities"/>
+  </rdf:Description>
+
+</rdf:RDF>
