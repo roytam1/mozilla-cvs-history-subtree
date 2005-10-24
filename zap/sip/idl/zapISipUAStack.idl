@@ -179,19 +179,6 @@ interface zapISipUAStack : nsISupports
   attribute zapISipAddress FromAddress;
 
   /**
-   * Set the default route for outbound requests.
-   */
-  void setDefaultRoute([array, size_is(count)] in zapISipAddress routeset,
-                       in unsigned long count);
-
-  /**
-   * Returns the current default route set for outbound requests.
-   */
-  void getDefaultRoute(out unsigned long count,
-                       [array, retval, size_is(count)] out
-                       zapISipAddress routeset);
-  
-  /**
    * Remote requests received by the stack will be routed as follows:
    *
    * - Requests with Require headers will be checked against the list
@@ -255,7 +242,7 @@ interface zapISipUAStack : nsISupports
    *
    * - method: will be set to the given method.
    * - requestURI and route set: will be set from the ToAddress uri part and
-   *   the current default route following the procedures outlined in RFC3261
+   *   the given route following the procedures outlined in RFC3261
    *   8.1.1 and 12.2.1.1.
    * - Via header: a new Via header will be created. sent-protocol and sent-by
    *   will be filled in when the request is sent by the transport.
@@ -271,7 +258,10 @@ interface zapISipUAStack : nsISupports
    *   option tags specified in the 'extensions' parameter passed to init().
    */
   zapISipNonInviteRC createNonInviteRequestClient(in zapISipAddress ToAddress,
-                                                  in ACString method);
+                                                  in ACString method,
+                                                  [array, size_is(count)]
+                                                  in zapISipAddress routeset,
+                                                  in unsigned long count);
 
   /**
    * Obtain a request client object for transactionally sending a
@@ -290,7 +280,10 @@ interface zapISipUAStack : nsISupports
    */
   zapISipNonInviteRC createRegisterRequestClient(in zapISipURI registrarServer,
                                                  in zapISipAddress addressOfRecord,
-                                                 in unsigned long expiration);
+                                                 in unsigned long expiration,
+                                                 [array, size_is(count)]
+                                                 in zapISipAddress routeset,
+                                                 in unsigned long count);
   
   /**
    * Obtain a request client object for transactionally sending an
@@ -300,7 +293,10 @@ interface zapISipUAStack : nsISupports
    * createNonInviteRequestClient(), and in addition a Contact header
    * set to the current Contact address will be added.
    */
-  zapISipInviteRC createInviteRequestClient(in zapISipAddress ToAddress);
+  zapISipInviteRC createInviteRequestClient(in zapISipAddress ToAddress,
+                                            [array, size_is(count)]
+                                            in zapISipAddress routeset,
+                                            in unsigned long count);
 
   /**
    * Formulate a method-agnostic response with the given status code

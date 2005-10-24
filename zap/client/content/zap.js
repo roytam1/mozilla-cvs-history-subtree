@@ -239,9 +239,7 @@ function currentIdentityUpdated() {
     alert("The From-Address in the currently selected identity has invalid syntax");
   }
   try {
-    var routeSet = wSipStack.syntaxFactory.deserializeRouteSet(wCurrentIdentity["urn:mozilla:zap:route_set"], {});
-    wSipStack.setDefaultRoute(routeSet, routeSet.length);
-  }
+    wCurrentIdentity.routeset = wSipStack.syntaxFactory.deserializeRouteSet(wCurrentIdentity["urn:mozilla:zap:route_set"], {});  }
   catch(e) {
     alert("The Route Set in the currently selected identity has invalid syntax");
   }
@@ -421,7 +419,10 @@ ActiveAccount.fun(
     this.aor = wSipStack.syntaxFactory.deserializeAddress(this["urn:mozilla:zap:address_of_record"]);
     var interval = this["urn:mozilla:zap:suggested_registration_interval"];
     this.registrationRC =
-      wSipStack.createRegisterRequestClient(server, this.aor, interval);
+      wSipStack.createRegisterRequestClient(server, this.aor,
+                                            interval,
+                                            wCurrentIdentity.routeset,
+                                            wCurrentIdentity.routeset.length);
 
     this.registrationRC.listener = this;
     this.registrationRC.sendRequest();
@@ -1103,7 +1104,9 @@ OutboundCall.fun(
     this.callHandler = OutboundCallHandler.instantiate();
     this.callHandler.call = this;
 
-    var rc = wSipStack.createInviteRequestClient(toAddress);
+    var rc = wSipStack.createInviteRequestClient(toAddress,
+                                                 wCurrentIdentity.routeset,
+                                                 wCurrentIdentity.routeset.length);
     rc.listener = this.callHandler;
     this.callHandler.rc = rc;
 
@@ -1170,6 +1173,7 @@ OutboundCallHandler.fun(
       // send a BYE:
       // XXX need a way to send ACK first
       dialog.createNonInviteRequestClient("BYE").sendRequest();
+
       return ackTemplate;
     }
 

@@ -190,33 +190,16 @@ SipUAStack.fun(
 // attribute zapISipAddress FromAddress;
 SipUAStack.obj("FromAddress", null);
 
-// void setDefaultRoute([array, size_is(count)] in zapISipAddress routeset,
-//                      in unsigned long count);
-SipUAStack.obj("_defaultRoute", []);
-SipUAStack.fun(
-  function setDefaultRoute(routeset, count) {
-    this._defaultRoute = routeset;
-  });
-
-// void getDefaultRoute(out unsigned long count,
-//                      [array, retval, size_is(count)]
-//                      out zapISipAddress routeset);
-SipUAStack.fun(
-  function getDefaultRoute(count) {
-    if (count)
-      count.value = this._defaultRoute.length;
-    return this._defaultRoute;
-  });
-
 //  attribute zapISipRequestHandler requestHandler;
 SipUAStack.obj("requestHandler", null);
 
 //  zapISipNonInviteRC createNonInviteRequestClient(in zapISipAddress ToAddress, in ACString method);
 SipUAStack.fun(
-  function createNonInviteRequestClient(ToAddress, method) {
+  function createNonInviteRequestClient(ToAddress, method, routeset, count) {
     var rc = SipNonInviteRC.instantiate();
     var request = this.formulateGenericRequest(method, ToAddress.uri,
-                                               ToAddress, this.FromAddress);
+                                               ToAddress, this.FromAddress,
+                                               routeset, count);
     rc.init(this, null, request);
     return rc;
   });
@@ -227,11 +210,12 @@ SipUAStack.fun(
 //                                                in unsigned long expiration);
 SipUAStack.fun(
   function createRegisterRequestClient(registrar, addressOfRecord,
-                                       expiration) {
+                                       expiration, routeset, count) {
     var rc = SipNonInviteRC.instantiate();
     var request = this.formulateGenericRequest("REGISTER", registrar,
                                                addressOfRecord,
-                                               addressOfRecord);
+                                               addressOfRecord,
+                                               routeset, count);
     // add Contact header (RFC3261 10.2):
     var contact = gSyntaxFactory.createContactHeader(this.getContactAddress());
     contact.setParameter("expires", expiration.toString());
@@ -243,10 +227,11 @@ SipUAStack.fun(
 
 //  zapISipInviteRC createInviteRequestClient(in zapISipAddress ToAddress);
 SipUAStack.fun(
-  function createInviteRequestClient(ToAddress) {
+  function createInviteRequestClient(ToAddress, routeset, count) {
     var rc = SipInviteRC.instantiate();
     var request = this.formulateGenericRequest("INVITE", ToAddress.uri,
-                                               ToAddress, this.FromAddress);
+                                               ToAddress, this.FromAddress,
+                                               routeset, count);
     // add mandatory Contact header (rfc3261 8.1.1.8):
     request.appendHeader(gSyntaxFactory.createContactHeader(this.getContactAddress()));
     rc.init(this, null, request);
@@ -644,16 +629,17 @@ SipUAStack.fun(
 // formulate a request following RFC3261 8.1.1:
 SipUAStack.fun(
   function formulateGenericRequest(method, remoteTarget,
-                                   ToAddress, FromAddress) {
+                                   ToAddress, FromAddress,
+                                   routeset, count) {
     var m = gSyntaxFactory.createRequest();
     // method:
     m.method = method;
     // requestURI & route set:
-    if (this._defaultRoute.length) {
+    if (routeset.length) {
       // we have a pre-existing route. Follow the procedures in
       // RFC3261 12.2.1.1 for setting the Request-URI and Route
       // headers:
-      var lr = this._defaultRoute[0].uri.QueryInterface(Components.interfaces.zapISipSIPURI).hasURIParameter("lr");
+      var lr = routeset[0].uri.QueryInterface(Components.interfaces.zapISipSIPURI).hasURIParameter("lr");
       var i = 0;
       if (lr) {
         // We have a loose router. Set requestURI to remoteTarget and
@@ -665,12 +651,12 @@ SipUAStack.fun(
         // We have a strict router. Set requestURI to first URI in
         // route set, construct route headers for all other proxies
         // and append remoteTarget:
-        m.requestURI = this._defaultRoute[0].uri;
+        m.requestURI = routeset[0].uri;
         i = 1;
       }
       // construct route headers:
-      for ( var l = this._defaultRoute.length; i<l; ++i) {
-        m.appendHeader(gSyntaxFactory.createRouteHeader(this._defaultRoute[i]));
+      for ( var l = routeset.length; i<l; ++i) {
+        m.appendHeader(gSyntaxFactory.createRouteHeader(routeset[i]));
       }
       if (!lr) {
         // Append route header with remoteTarget

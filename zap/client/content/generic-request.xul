@@ -69,7 +69,9 @@
       }
       
       wRS = parent.wSipStack.createNonInviteRequestClient(address, 
-                                                          document.getElementById("method").value);
+                                                          document.getElementById("method").value,
+                                                          parent.wCurrentIdentity.routeset,
+                                                          parent.wCurrentIdentity.routeset.length);
       document.getElementById("request").value = wRS.request.serialize();
     }
 

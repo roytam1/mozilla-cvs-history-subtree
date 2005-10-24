@@ -79,7 +79,9 @@
       
       wRS = parent.wSipStack.createRegisterRequestClient(registrar, 
                                                          addressOfRecord,
-                                                         document.getElementById("expiration").value);
+                                                         document.getElementById("expiration").value,
+                                                         parent.wCurrentIdentity.routeset,
+                                                         parent.wCurrentIdentity.routeset.length);
       document.getElementById("request").value = wRS.request.serialize();
     }
 
