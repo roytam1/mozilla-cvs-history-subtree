@@ -1,4 +1,5 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* vim: set ts=2 sw=2 et tw=80: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -4076,6 +4077,9 @@ nsEventStateManager::SendFocusBlur(nsPresContext* aPresContext,
   if (previousFocus && !previousFocus->GetDocument())
     previousFocus = nsnull;
 
+  // Track the old focus controller if any focus suppressions is used on it.
+  nsFocusSuppressor oldFocusSuppressor;
+  
   if (nsnull != gLastFocusedPresContext) {
 
     nsCOMPtr<nsIContent> focusAfterBlur;
@@ -4122,10 +4126,9 @@ nsEventStateManager::SendFocusBlur(nsPresContext* aPresContext,
               nsCOMPtr<nsPIDOMWindow> oldWindow =
                 do_QueryInterface(GetDocumentOuterWindow(gLastFocusedDocument));
               if (oldWindow) {
-                nsIFocusController *oldFocusController =
-                  oldWindow->GetRootFocusController();
-                if (oldFocusController && oldFocusController != newFocusController) {
-                  oldFocusController->SetSuppressFocus(PR_TRUE, "SendFocusBlur Window Switch");
+                nsIFocusController *suppressed = oldWindow->GetRootFocusController();
+                if (suppressed != newFocusController) {
+                  oldFocusSuppressor.Suppress(suppressed, "SendFocusBlur Window Switch #1");
                 }
               }
             }
@@ -4172,8 +4175,8 @@ nsEventStateManager::SendFocusBlur(nsPresContext* aPresContext,
       nsEvent event(PR_TRUE, NS_BLUR_CONTENT);
 
       // Make sure we're not switching command dispatchers, if so,
-      // surpress the blurred one
-      if (mDocument) {
+      // suppress the blurred one if it isn't already suppressed
+      if (mDocument && !oldFocusSuppressor.Suppressing()) {
         nsCOMPtr<nsPIDOMWindow> newWindow =
           do_QueryInterface(GetDocumentOuterWindow(mDocument));
 
@@ -4182,9 +4185,9 @@ nsEventStateManager::SendFocusBlur(nsPresContext* aPresContext,
             do_QueryInterface(GetDocumentOuterWindow(gLastFocusedDocument));
           nsIFocusController *newFocusController = newWindow->GetRootFocusController();
           if (oldWindow) {
-            nsIFocusController *oldFocusController = oldWindow->GetRootFocusController();
-            if (oldFocusController && oldFocusController != newFocusController) {
-              oldFocusController->SetSuppressFocus(PR_TRUE, "SendFocusBlur Window Switch #2");
+            nsIFocusController *suppressed = oldWindow->GetRootFocusController();
+            if (suppressed != newFocusController) {
+              oldFocusSuppressor.Suppress(suppressed, "SendFocusBlur Window Switch #2");
             }
           }
         }
