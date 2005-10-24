@@ -65,7 +65,6 @@ NS_IMETHODIMP nsDatagram::GetPort(PRInt32 *aPort)
   return NS_OK;
 }
 
-
 //-----------------------------------------------------------------------------
 
 typedef void (nsUDPSocket:: *nsUDPSocketFunc)(void);
@@ -355,6 +354,13 @@ nsUDPSocket::OnSocketReady(PRFileDesc *fd, PRInt16 outFlags)
       //mCondition = NS_ERROR_UNEXPECTED;
       return;
     }
+    else if (rv != avail) {
+#ifdef DEBUG
+      printf("nsUDPSocket receive error: read bytes %d != avail bytes %d\n",
+             rv, avail);
+#endif
+      return;
+    }
     else {
       mReceiver->HandleDatagram(this, datagram);
     }
@@ -536,6 +542,17 @@ nsUDPSocket::GetPort(PRInt32 *aResult)
   else
     port = mAddr.ipv6.port;
   *aResult = (PRInt32) PR_ntohs(port);
+  return NS_OK;
+}
+
+/* readonly attribute ACString address; */
+NS_IMETHODIMP
+nsUDPSocket::GetAddress(nsACString & aAddress)
+{
+  char buf[254];
+  if (PR_NetAddrToString(&mAddr, buf, sizeof(buf)) != PR_SUCCESS)
+    return NS_ERROR_FAILURE;
+  aAddress = buf;
   return NS_OK;
 }
 
