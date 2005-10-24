@@ -371,7 +371,7 @@ nsXFormsItemElement::LabelRefreshed()
         nsXFormsUtils::IsXFormsElement(parent, NS_LITERAL_STRING("select"))) {
       nsCOMPtr<nsIXFormsControl> select(do_QueryInterface(parent));
       if (select) {
-        //select->Refresh();
+        select->Refresh();
       }
       return NS_OK;
     }
