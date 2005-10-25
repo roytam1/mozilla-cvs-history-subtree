@@ -335,6 +335,7 @@ var gUpdates = {
             }
             catch (e) {
             }
+            dump("****** patchFailed: " + patchFailed + "\n");
             if (patchFailed == "partial") {
               // If the system failed to apply the partial patch, show the 
               // screen which best describes this condition, which is triggered
