@@ -145,13 +145,15 @@ if ( -f "$include_ldap${dir_sep}nspr.h" ) {
 print "Directory containing NSPR API 'include' and 'lib'\n";
 print "directories for NSPR support (type 'n' or 'none' to omit) (default: $nspr_loc): ";
 $silent = 0;
-chomp ($input = <STDIN>);
-if ($input =~ /^n/i) {
-	$nspr_loc = undef;
-} elsif ($input =~ /\S/) {
-	$nspr_loc = $input;
+if (!$ENV{NSPRDIR}) {
+   chomp ($input = <STDIN>);
+   if ($input =~ /^n/i) {
+      $nspr_loc = undef;
+   } elsif ($input =~ /\S/) {
+       $nspr_loc = $input;
+   }
 } else {
-	print "$nspr_loc\n";
+   print "$nspr_loc\n";
 }
 
 if ($nspr_loc) {
