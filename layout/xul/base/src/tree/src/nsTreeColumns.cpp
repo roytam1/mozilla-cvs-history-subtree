@@ -255,8 +255,7 @@ nsTreeColumn::CacheAttributes()
 
 nsTreeColumns::nsTreeColumns(nsITreeBoxObject* aTree)
   : mTree(aTree),
-    mFirstColumn(nsnull),
-    mDirty(PR_TRUE)
+    mFirstColumn(nsnull)
 {
 }
 
@@ -440,7 +439,7 @@ nsTreeColumns::GetColumnAt(PRInt32 aIndex, nsITreeColumn** _retval)
 NS_IMETHODIMP
 nsTreeColumns::InvalidateColumns()
 {
-  mDirty = PR_TRUE;
+  NS_IF_RELEASE(mFirstColumn);
   return NS_OK;
 }
 
@@ -468,7 +467,7 @@ nsTreeColumns::RestoreNaturalOrder()
     child->SetAttr(kNameSpaceID_None, nsXULAtoms::ordinal, ordinal, PR_TRUE);
   }
 
-  mDirty = PR_TRUE;
+  NS_IF_RELEASE(mFirstColumn);
 
   mTree->Invalidate();
 
@@ -490,7 +489,7 @@ nsTreeColumns::GetPrimaryColumn()
 void
 nsTreeColumns::EnsureColumns()
 {
-  if (mTree && (!mFirstColumn || mDirty)) {
+  if (mTree && !mFirstColumn) {
     nsCOMPtr<nsIBoxObject> boxObject = do_QueryInterface(mTree);
     nsCOMPtr<nsIDOMElement> treeElement;
     boxObject->GetElement(getter_AddRefs(treeElement));
@@ -514,7 +513,6 @@ nsTreeColumns::EnsureColumns()
     nsIBox* colBox = nsnull;
     colsFrame->GetChildBox(&colBox);
 
-    NS_IF_RELEASE(mFirstColumn);
     nsTreeColumn* currCol = nsnull;
     while (colBox) {
       nsIContent* colContent = colBox->GetContent();
@@ -538,7 +536,5 @@ nsTreeColumns::EnsureColumns()
 
       colBox->GetNextBox(&colBox);
     }
-
-    mDirty = PR_FALSE;
   }
 }
