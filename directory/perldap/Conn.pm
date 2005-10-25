@@ -1012,6 +1012,180 @@ sub setNSPRTimeout
 
 
 #############################################################################
+# SearchIter allows PerLDAP to support asynchronous searching - that is, to
+# support having a Conn doing two or more simultaneous searches.  Objects
+# of the class SearchIter should not be created directly, but should only
+# be created by calling the Conn->async_search method (see below).  The
+# nextEntry method is used to iterate over the search results and works
+# just like the Conn method of the same name.  If search result
+# processing is aborted before all of the search results have been
+# returned, the abandon method should be called to close the connection
+# to allow the server and client to reclaim resources.
+#
+{
+  package SearchIter;
+
+  import Mozilla::LDAP::API qw(:api :ssl :apiv3 :constant); # Direct access to C API
+
+  # arguments to new() are the Conn object used to invoke the search
+  # and the msgid returned from the ldap_search* call
+  sub new {
+	my $that = shift;
+	my ($conn, $msgid, $timeout) = @_;
+	my $class = ref($that) || $that;
+    if (!$timeout) {
+	  ldap_get_option($conn->getLD(), LDAP_OPT_TIMELIMIT(), \$timeout);
+	  if (!$timeout) {
+		  $timeout = 30; # 30 seconds
+	  }
+	}
+	my $self = { conn => $conn, msgid => $msgid, timeout => $timeout };
+	bless $self, $class;
+	return $self;
+  }
+
+  # just returns the error code from the underlying Conn
+  sub getErrorCode {
+	my $self = shift;
+	return $self->{conn}->getErrorCode();
+  }
+
+  # this function returns the next Entry
+  sub nextEntry {
+	my $self = shift;
+	my $timeout = shift;
+	my ($rc, $ld, $res);
+	my (%entry, $obj, $berv);
+	my $ber = \$berv;
+
+	return "" unless $self->{msgid};
+	if ($timeout) {
+	  $self->{timeout} = $timeout; # change timeout
+	} else {
+	  $timeout = $self->{timeout}; # use pre configured one
+	}
+
+	# I use the object directly, to avoid setting the "change" flags
+	$obj = tie %entry, 'Mozilla::LDAP::Entry';
+
+	$ld = $self->{conn}->getLD();
+	$rc = ldap_result($ld, $self->{msgid}, 0, $timeout, $res);
+	if ($rc == -1) { # error
+	  print "Error getting ldap result for msgid ", $self->{msgid}, "\n";
+	  undef $self->{msgid};
+	} elsif ($rc == 0) { # timeout
+	  print "Timeout getting ldap result for msgid ", $self->{msgid}, "\n";
+	} elsif ($rc == LDAP_RES_SEARCH_RESULT()) { # done - get result
+#	  print "Search done, got result for msgid ", $self->{msgid}, "\n" if $verbose;
+	  undef $self->{msgid};
+	} elsif ($rc == LDAP_RES_SEARCH_REFERENCE()) { # referral?
+	  print "Got a referral as a search result\n";
+	} else { # regular entry search result
+	  my $dn = ldap_get_dn($ld, $res);
+	  $self->{dn} = $dn; # keep last DN that was read
+	  $self->{res} = $res; # keep last res that was read
+#	  print "Got $dn as next entry for msgid ", $self->{msgid}, "\n" if $verbose;
+	  $obj->{"_oc_numattr_"} = 0;
+	  $obj->{"_oc_keyidx_"} = 0;
+	  $obj->{"dn"} = $dn;
+	  my $attr = ldap_first_attribute($ld, $res, $ber);
+	  return (bless \%entry, 'Mozilla::LDAP::Entry') unless $attr;
+
+	  my $lcattr = lc $attr;
+	  my @vals = ldap_get_values_len($ld, $res, $attr);
+	  $obj->{$lcattr} = [@vals];
+	  my @ocorder;
+	  push(@ocorder, $lcattr);
+
+	  my $count = 1;
+	  while ($attr = ldap_next_attribute($ld, $res, $ber)) {
+		$lcattr = lc $attr;
+		@vals = ldap_get_values_len($ld, $res, $attr);
+		$obj->{$lcattr} = [@vals];
+		push(@ocorder, $lcattr);
+		$count++;
+	  }
+
+	  $obj->{"_oc_order_"} = \@ocorder;
+	  $obj->{"_oc_numattr_"} = $count;
+
+	  ldap_ber_free($ber, 0) if $ber;
+	  ldap_msgfree($res) if $res;
+
+	  return bless \%entry, 'Mozilla::LDAP::Entry';
+	}
+
+	ldap_msgfree($res) if $res;
+	return ""; # search failed
+  }
+
+  # use this method when it is desired to abort search result processing
+  # before all of the results have been returned from the server
+  sub abandon {
+	my $self = shift;
+	ldap_abandon($self->{conn}->getLD(), $self->{msgid});
+	undef $self->{msgid};
+  }
+}
+
+#############################################################################
+# This starts an asynchronous search.  It returns a SearchIter
+# use the SearchIter->nextEntry method to get the next entry
+# you can have multiple async searches going at once, so you can do
+# nested searches, for example
+# use SearchIter->getErrorCode() to see if the search had errors
+#
+sub async_search
+{
+  my $self = shift;
+  my ($basedn, $scope, $filter, $attrsonly, $attrs, $msgid, $iter);
+
+  if (ref $_[$[] eq "HASH")
+    {
+      my $hash = shift;
+
+      $basedn = $hash->{"base"} || "";
+      $scope = Mozilla::LDAP::Utils::str2Scope($hash->{"scope"});
+      $filter = $hash->{"filter"} || "(objectclass=*)";
+      $attrsonly = $hash->{"attrsonly"} || undef;
+      $attrs = $hash->{"attrs"} || undef;
+    }
+  else
+    {
+      my @rest;
+
+      ($basedn, $scope, $filter, $attrsonly, @rest) = @_;
+      $scope = Mozilla::LDAP::Utils::str2Scope($scope);
+      if (ref($rest[0]) eq "ARRAY")
+        {
+          $attrs = $rest[0];
+        }
+      elsif (scalar(@rest) > 0)
+        {
+          $attrs = \@rest;
+        }
+      else
+        {
+          $attrs = undef;
+        }
+    }
+  $filter = "(objectclass=*)" if ($filter =~ /^ALL$/i);
+
+  if (ldap_is_ldap_url($filter))
+    {
+      $msgid = ldap_url_search($self->{"ld"}, $filter, $attrsonly);
+    }
+  else
+    {
+      $msgid = ldap_search($self->{"ld"}, $basedn, $scope, $filter,
+                           defined($attrs) ? $attrs : 0,
+                           defined($attrsonly) ? $attrsonly : 0)
+	}
+  $iter = new SearchIter($self, $msgid);
+  return $iter;
+}
+
+#############################################################################
 # Mandatory TRUE return value.
 #
 1;
@@ -1278,6 +1452,30 @@ is a boolean value indicating if we should retrieve only the attribute
 names (and no values). In most cases you want this to be FALSE, to
 retrieve both the attribute names, and all their values. To do this with
 the B<searchURL> method, add a second argument, which should be 0 or 1.
+
+=head1 PERFORMING ASYNCHRONOUS SEARCHES
+
+Conn also supports an async_search method that takes the same arguments
+as the search method but returns an instance of SearchIter instead
+of Entry.  As its name implies, the SearchIter is used to iterate
+through the search results.  The nextEntry method works just like
+the nextEntry method of Conn.  The abandon method should be called
+if search result processing is aborted before the last result is
+received, to allow the client and server to release resources.
+Example:
+
+	$iter = $conn->async_search($base, $scope, $filter, ...);
+    if ($rc = $iter->getResultCode()) {
+	    # process error condition
+	} else {
+	    while (my $entry = $iter->nextEntry) {
+			# process entry
+            if (some abort condition) {
+                $iter->abandon;
+                last;
+            }
+        }
+    }
 
 =head1 MODIFYING AND CREATING NEW LDAP ENTRIES
 
