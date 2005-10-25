@@ -31,7 +31,7 @@ dateEnd='</font></td></tr></table>'
 </search>
 
 <BROWSER
-   update="https://addons.mozilla.org/searchplugins/updates/ebay.src" 
+   update="https://addons.mozilla.org/searchplugins/updates/eBay.src" 
    updateIcon="https://addons.mozilla.org/searchplugins/updates/eBay.gif" 
    updateCheckDays="3"
 >
