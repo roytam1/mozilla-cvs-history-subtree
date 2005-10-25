@@ -713,6 +713,7 @@ sub setValues
 #############################################################################
 # Get the entire array of attribute values. This returns the array, not
 # the pointer to the array...
+# in a scalar context, returns the first attribute
 #
 sub getValues
 {
@@ -722,7 +723,7 @@ sub getValues
   return unless (defined($attr) && ($attr ne ""));
   return unless defined($self->{$attr});
 
-  return @{$self->{$attr}};
+  return (wantarray ? @{$self->{$attr}} : $self->{$attr}->[0]);
 }
 *getValue = \*getValues;
 
@@ -1179,9 +1180,14 @@ indicates we should normalize the DN before returning it to the caller.
 =item B<getValues>
 
 Returns an entire array of values for the attribute specified.  Note that
-this returns an array, and not a pointer to an array.
+this returns an array, and not a pointer to an array.  In a scalar
+context, this returns the first value.  This is different - this method
+used to always return an array, which meant the array size in a scalar
+context.  If you need to get the array size, use the B<size> method
+described below.
 
     @someArray = $entry->getValues("description");
+    $scalval = $entry->getValues("cn");
 
 =item B<hasValue>
 
