@@ -443,36 +443,32 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
   nsIScriptContext *boundContext = boundGlobal->GetContext();
   if (!boundContext) return NS_OK;
 
-  JSObject* scriptObject = nsnull;
-
+  nsISupports *scriptTarget;
   // strong ref to a GC root we'll need to protect scriptObject in the case
   // where it is not the global object (!winRoot).
   nsCOMPtr<nsIXPConnectJSObjectHolder> wrapper;
 
   if (winRoot) {
-    scriptObject = boundGlobal->GetGlobalJSObject();
+    scriptTarget = boundGlobal;
   } else {
-    JSObject *global = boundGlobal->GetGlobalJSObject();
-    JSContext *cx = (JSContext *)boundContext->GetNativeContext();
-
-    // XXX: Don't use the global object!
-    rv = nsContentUtils::XPConnect()->WrapNative(cx, global, aReceiver,
-                                                 NS_GET_IID(nsISupports),
-                                                 getter_AddRefs(wrapper));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    rv = wrapper->GetJSObject(&scriptObject);
-    NS_ENSURE_SUCCESS(rv, rv);
+    scriptTarget = aReceiver;
   }
+  // XXX - apparently we should not be using the global as the scope - what
+  // should we use?
+  void *scope = boundGlobal->GetLanguageGlobal(boundContext->GetLanguage());
 
-  const char *eventName = nsContentUtils::GetEventArgName(kNameSpaceID_XBL);
+  PRUint32 argCount;
+  const char **argNames;
+  nsContentUtils::GetEventArgNames(kNameSpaceID_XBL, onEventAtom, &argCount,
+                                   &argNames);
 
   if (isXULKey) {
     nsCAutoString documentURI;
     keyCommandContent->GetOwnerDoc()->GetDocumentURI()->GetSpec(documentURI);
-    rv = boundContext->CompileEventHandler(scriptObject, onEventAtom, eventName,
-                                           xulText, documentURI.get(), 0, 
-                                           PR_TRUE, &handler);
+    rv = boundContext->CompileEventHandler(nsnull, onEventAtom, argCount,
+                                           argNames, xulText,
+                                           documentURI.get(), 0, 
+                                           &handler);
   }
   else {
     nsDependentString handlerText(mHandlerText);
@@ -482,22 +478,27 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
     nsCAutoString bindingURI;
     mPrototypeBinding->DocURI()->GetSpec(bindingURI);
     
-    rv = boundContext->CompileEventHandler(scriptObject, onEventAtom, eventName,
-                                           handlerText, bindingURI.get(),
-                                           mLineNumber, PR_TRUE, &handler);
+    rv = boundContext->CompileEventHandler(nsnull, onEventAtom, argCount,
+                                           argNames, handlerText,
+                                           bindingURI.get(), mLineNumber,
+                                           &handler);
   }
   NS_ENSURE_SUCCESS(rv, rv);
 
+  NS_ASSERTION(boundContext->GetLanguage()==nsIProgrammingLanguage::JAVASCRIPT,
+               "Still need to work on gc etc for non JS");
   nsAutoGCRoot root(&handler, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
 
   // Temporarily bind it to the bound element
-  boundContext->BindCompiledEventHandler(scriptObject, onEventAtom, handler);
+  rv = boundContext->BindCompiledEventHandler(scriptTarget, scope,
+                                              onEventAtom, handler);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   // Execute it.
   nsCOMPtr<nsIDOMEventListener> eventListener;
-  NS_NewJSEventListener(boundContext, boundGlobal->GetGlobalJSObject(),
-                        aReceiver, getter_AddRefs(eventListener));
+  NS_NewJSEventListener(boundContext, scope,
+                        scriptTarget, getter_AddRefs(eventListener));
 
   nsCOMPtr<nsIJSEventListener> jsListener(do_QueryInterface(eventListener));
   jsListener->SetEventName(onEventAtom);

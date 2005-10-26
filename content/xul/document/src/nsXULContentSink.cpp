@@ -69,6 +69,7 @@
 #include "nsIParser.h"
 #include "nsIPresShell.h"
 #include "nsIScriptContext.h"
+#include "nsILanguageRuntime.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIServiceManager.h"
 #include "nsITextContent.h"
@@ -149,6 +150,7 @@ protected:
     PRInt32 mTextLength;
     PRInt32 mTextSize;
     PRBool mConstrainSize;
+    PRUint32 mLangID; // The language ID extracted from the root node.
 
     nsresult AddAttributes(const PRUnichar** aAttributes, 
                            const PRUint32 aAttrLen, 
@@ -320,7 +322,8 @@ XULContentSinkImpl::XULContentSinkImpl(nsresult& rv)
       mTextSize(0),
       mConstrainSize(PR_TRUE),
       mState(eInProlog),
-      mParser(nsnull)
+      mParser(nsnull),
+      mLangID(nsIProgrammingLanguage::JAVASCRIPT)
 {
 
     if (gRefCnt++ == 0) {
@@ -665,6 +668,7 @@ XULContentSinkImpl::CreateElement(nsINodeInfo *aNodeInfo,
         return NS_ERROR_OUT_OF_MEMORY;
 
     element->mNodeInfo    = aNodeInfo;
+    element->mLangID      = mLangID;
     
     *aResult = element;
     return NS_OK;
@@ -807,7 +811,7 @@ XULContentSinkImpl::HandleEndElement(const PRUnichar *aName)
             NS_STATIC_CAST(nsXULPrototypeScript*, node);
 
         // If given a src= attribute, we must ignore script tag content.
-        if (! script->mSrcURI && ! script->mJSObject) {
+        if (! script->mSrcURI && ! script->GetScriptObject()) {
             nsCOMPtr<nsIDocument> doc = do_QueryReferent(mDocument);
 
             script->mOutOfLine = PR_FALSE;
@@ -1066,6 +1070,28 @@ XULContentSinkImpl::OpenRoot(const PRUnichar** aAttributes,
         return NS_ERROR_UNEXPECTED;
     }
 
+    // Check for default script language before creating the first node.
+    PRUint32 i;
+    for (i=0;i<aAttrLen;i++) {
+        const nsDependentString key(aAttributes[i*2]);
+        if (key.EqualsLiteral("script-type")) {
+            const nsDependentString value(aAttributes[i*2+1]);
+            if (!value.IsEmpty()) {
+                nsCOMPtr<nsILanguageRuntime> runtime;
+                rv = NS_GetLanguageRuntime(value, getter_AddRefs(runtime));
+                if (NS_SUCCEEDED(rv))
+                    mLangID = runtime->GetLanguage();
+                else {
+                    NS_ERROR("Failed to load the root object's script language!");
+                    // Set the default language to unknown - we don't want js
+                    // trying to execute this stuff.
+                    mLangID = nsIProgrammingLanguage::UNKNOWN;
+                }
+            }
+            break;
+        }
+    }
+
     // Create the element
     nsXULPrototypeElement* element;
     rv = CreateElement(aNodeInfo, &element);
@@ -1163,9 +1189,9 @@ XULContentSinkImpl::OpenScript(const PRUnichar** aAttributes,
                                const PRUint32 aLineNumber)
 {
   nsresult rv = NS_OK;
-  PRBool isJavaScript = PR_TRUE;
-  PRBool hasE4XOption = PR_TRUE;
-  const char* jsVersionString = nsnull;
+
+  PRUint32 langID = mLangID;
+  PRUint32 version = 0;
 
   // Look for SRC attribute and look for a LANGUAGE attribute
   nsAutoString src;
@@ -1187,6 +1213,7 @@ XULContentSinkImpl::OpenScript(const PRUnichar** aAttributes,
                                            mimeType);
           NS_ENSURE_SUCCESS(rv, rv);
 
+          // Javascript keeps the fast path, optimized for most-likely type
           // Table ordered from most to least likely JS MIME types. For .xul
           // files that we host, the likeliest type is application/x-javascript.
           // See bug 62485, feel free to add <script type="..."> survey data to it,
@@ -1200,7 +1227,7 @@ XULContentSinkImpl::OpenScript(const PRUnichar** aAttributes,
               nsnull
           };
 
-          isJavaScript = PR_FALSE;
+          PRBool isJavaScript = PR_FALSE;
           for (PRInt32 i = 0; jsTypes[i]; i++) {
               if (mimeType.LowerCaseEqualsASCII(jsTypes[i])) {
                   isJavaScript = PR_TRUE;
@@ -1209,30 +1236,44 @@ XULContentSinkImpl::OpenScript(const PRUnichar** aAttributes,
           }
 
           if (isJavaScript) {
-              JSVersion jsVersion = JSVERSION_DEFAULT;
-              nsAutoString value;
-              rv = mimeHdrParser->GetParameter(typeAndParams, "version",
-                                               EmptyCString(), PR_FALSE, nsnull,
-                                               value);
-              if (NS_FAILED(rv)) {
+              langID = nsIProgrammingLanguage::JAVASCRIPT;
+          } else {
+              // Use the script object factory to locate the language.
+              nsCOMPtr<nsILanguageRuntime> runtime;
+              rv = NS_GetLanguageRuntime(mimeType, getter_AddRefs(runtime));
+              if (NS_FAILED(rv) || runtime == nsnull) {
+                  // Failed to get the explicitly specified language
+                  NS_WARNING("Failed to find a scripting language");
+                  langID = nsIProgrammingLanguage::UNKNOWN;
+              } else
+                  langID = runtime->GetLanguage();
+          }
+
+          if (langID != nsIProgrammingLanguage::UNKNOWN) {
+            // Get the version string, and ensure the language supports it.
+            nsAutoString versionName;
+            rv = mimeHdrParser->GetParameter(typeAndParams, "version",
+                                             EmptyCString(), PR_FALSE, nsnull,
+                                             versionName);
+            if (NS_FAILED(rv)) {
+              // no version specified - version remains 0.
                   if (rv != NS_ERROR_INVALID_ARG)
                       return rv;
               } else {
-                  if (value.Length() != 3 || value[0] != '1' || value[1] != '.')
-                      jsVersion = JSVERSION_UNKNOWN;
-                  else switch (value[2]) {
-                      case '0': jsVersion = JSVERSION_1_0; break;
-                      case '1': jsVersion = JSVERSION_1_1; break;
-                      case '2': jsVersion = JSVERSION_1_2; break;
-                      case '3': jsVersion = JSVERSION_1_3; break;
-                      case '4': jsVersion = JSVERSION_1_4; break;
-                      case '5': jsVersion = JSVERSION_1_5; break;
-                      case '6': jsVersion = JSVERSION_1_6; break;
-                      default:  jsVersion = JSVERSION_UNKNOWN;
+                nsCOMPtr<nsILanguageRuntime> runtime;
+                rv = NS_GetLanguageRuntimeByID(langID, getter_AddRefs(runtime));
+                if (NS_FAILED(rv))
+                    return rv;
+                rv = runtime->ParseVersion(versionName, &version);
+                if (NS_FAILED(rv)) {
+                    NS_WARNING("This script language version is not supported - ignored");
+                    langID = nsIProgrammingLanguage::UNKNOWN;
                   }
               }
-              jsVersionString = ::JS_VersionToString(jsVersion);
-
+          }
+          // Some js specifics yet to be abstracted.
+          if (langID == nsIProgrammingLanguage::JAVASCRIPT) {
+            nsAutoString value;
               rv = mimeHdrParser->GetParameter(typeAndParams, "e4x",
                                                EmptyCString(), PR_FALSE, nsnull,
                                                value);
@@ -1241,29 +1282,30 @@ XULContentSinkImpl::OpenScript(const PRUnichar** aAttributes,
                       return rv;
               } else {
                   if (value.Length() == 1 && value[0] == '0')
-                      hasE4XOption = PR_FALSE;
+                    version |= JSOPTION_XML;
               }
           }
       }
       else if (key.EqualsLiteral("language")) {
+        // Language is deprecated, and the impl in nsScriptLoader ignores the
+        // various version strings anyway.  So we make no attempt to support
+        // languages other than JS for language=
           nsAutoString lang(aAttributes[1]);
-          isJavaScript =
-              nsParserUtils::IsJavaScriptLanguage(lang, &jsVersionString);
+          if (nsParserUtils::IsJavaScriptLanguage(lang, &version))
+            langID = nsIProgrammingLanguage::JAVASCRIPT;
       }
       aAttributes += 2;
   }
-
-  // Don't process scripts that aren't JavaScript
-  if (isJavaScript) {
+  // Don't process scripts that aren't known
+  if (langID != nsIProgrammingLanguage::UNKNOWN) {
+      nsIScriptGlobalObject* globalObject = nsnull; // borrowed reference
+      nsCOMPtr<nsIDocument> doc(do_QueryReferent(mDocument));
+      if (doc)
+          globalObject = doc->GetScriptGlobalObject();
       nsXULPrototypeScript* script =
-          new nsXULPrototypeScript(aLineNumber, jsVersionString, hasE4XOption,
-                                   &rv);
+          new nsXULPrototypeScript(langID, aLineNumber, version);
       if (! script)
           return NS_ERROR_OUT_OF_MEMORY;
-      if (NS_FAILED(rv)) {
-          delete script;
-          return rv;
-      }      
 
       // If there is a SRC attribute...
       if (! src.IsEmpty()) {
@@ -1297,15 +1339,8 @@ XULContentSinkImpl::OpenScript(const PRUnichar** aAttributes,
           // file right away.  Otherwise we'll end up reloading the script and
           // corrupting the FastLoad file trying to serialize it, in the case
           // where it's already there.
-          nsCOMPtr<nsIDocument> doc(do_QueryReferent(mDocument));
-          if (doc) {
-              nsIScriptGlobalObject* globalObject = doc->GetScriptGlobalObject();
-              if (globalObject) {
-                  nsIScriptContext *scriptContext = globalObject->GetContext();
-                  if (scriptContext)
-                      script->DeserializeOutOfLine(nsnull, scriptContext);
-              }
-          }
+          if (globalObject)
+                script->DeserializeOutOfLine(nsnull, globalObject);
       }
 
       nsVoidArray* children;

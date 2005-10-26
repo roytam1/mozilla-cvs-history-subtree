@@ -49,15 +49,63 @@ class nsPresContext;
 class nsIDocShell;
 class nsIDOMWindowInternal;
 class nsIScriptGlobalObjectOwner;
-struct JSObject;
+class nsIArray;
+class nsScriptErrorEvent;
+class nsIScriptGlobalObject;
+enum nsEventStatus;
+struct JSObject; // kill me!
+
+// Some helpers for working with integer "language IDs", and specifically for
+// working with arrays of such objects.  For example, it is common for
+// implementations supporting multiple script languages to keep each
+// language's nsIScriptContext in an array indexed by the language ID.
+
+// Implementation note: We always ignore nsIProgrammingLanguage::UNKNOWN and
+// nsIProgrammingLanguage::CPLUSPLUS - this gives javascript slot 0.  We also
+// have no need to go all the way to nsIProgrammingLanguage::MAX; restricting
+// the upper bound to reduce the number of bits we need may end up useful.
+
+#define NS_SL_FIRST nsIProgrammingLanguage::JAVASCRIPT
+// last is kinda arbitrary.
+#define NS_SL_LAST (nsIProgrammingLanguage::JAVASCRIPT+3)
+
+// Use to declare the array size
+#define NS_SL_ARRAY_UBOUND (NS_SL_LAST-NS_SL_FIRST+1)
+
+// Is a language ID valid?
+#define NS_SL_VALID(langID) (langID >= NS_SL_FIRST && langID <= NS_SL_LAST)
+
+// Return an index for a given ID.
+#define NS_SL_INDEX(langID) (langID-NS_SL_FIRST)
+
+// Create a 'for' loop iterating over all possible language IDs (*not* indexes)
+#define NS_SL_FOR_ID(varName) \
+          for (varName=NS_SL_FIRST;varName<=NS_SL_LAST;varName++)
+
+// Create a 'for' loop iterating over all indexes (when you don't need to know
+// what language it is)
+#define NS_SL_FOR_INDEX(varName) \
+          for (varName=0;varName<=NS_SL_INDEX(NS_SL_LAST);varName++)
+
+// A helper function for nsIScriptGlobalObject implementations to use
+// when handling a script error.  Generally called by the global when a context
+// notifies it of an error via nsIScriptGlobalObject::HandleScriptError.
+// Returns PR_TRUE if HandleDOMEvent was actually called, in which case
+// aStatus will be filled in with the status.
+PRBool
+NS_HandleScriptError(nsIScriptGlobalObject *aScriptGlobal,
+                     nsScriptErrorEvent *aErrorEvent,
+                     nsEventStatus *aStatus);
+
 
 #define NS_ISCRIPTGLOBALOBJECT_IID \
-{ 0xd326a211, 0xdc31, 0x45c6, \
- { 0x98, 0x97, 0x22, 0x11, 0xea, 0xbc, 0xd0, 0x1c } }
+{ /* {6E7EF978-47D0-47c9-9649-CDCDB1E4CCEC} */ \
+  0x6e7ef978, 0x47d0, 0x47c9, \
+  { 0x96, 0x49, 0xcd, 0xcd, 0xb1, 0xe4, 0xcc, 0xec } }
 
 /**
- * The JavaScript specific global object. This often used to store
- * per-window global state.
+ * The global object which keeps a script context for each supported script
+ * language. This often used to store per-window global state.
  */
 
 class nsIScriptGlobalObject : public nsISupports
@@ -65,8 +113,6 @@ class nsIScriptGlobalObject : public nsISupports
 public:
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISCRIPTGLOBALOBJECT_IID)
 
-  virtual void SetContext(nsIScriptContext *aContext) = 0;
-  virtual nsIScriptContext *GetContext() = 0;
   virtual nsresult SetNewDocument(nsIDOMDocument *aDocument,
                                   nsISupports *aState,
                                   PRBool aRemoveEventListeners,
@@ -97,31 +143,62 @@ public:
                                   PRUint32 aFlags,
                                   nsEventStatus* aEventStatus)=0;
 
-  virtual JSObject *GetGlobalJSObject() = 0;
+  virtual nsresult EnsureScriptEnvironment(PRUint32 aLangID) = 0;
+  /**
+   * Get a script context (WITHOUT added reference) for the specified language.
+   */
+  virtual nsIScriptContext *GetLanguageContext(PRUint32 lang) = 0;
+  
+  /**
+   * Get the opaque "global" object for the specified lang.
+   */
+  virtual void *GetLanguageGlobal(PRUint32 lang) = 0;
+
+  // Set/GetContext deprecated methods - use GetLanguageContext/Global
+  virtual JSObject *GetGlobalJSObject() {
+        return (JSObject *)GetLanguageGlobal(nsIProgrammingLanguage::JAVASCRIPT);
+  }
+
+  virtual nsIScriptContext *GetContext() {
+        return GetLanguageContext(nsIProgrammingLanguage::JAVASCRIPT);
+  }
 
   /**
-   * Called when the global JSObject is finalized
+   * Set a new language context for this global.  The native global for the
+   * context is created by the context's GetNativeGlobal() method.
    */
 
-  virtual void OnFinalize(JSObject *aJSObject) = 0;
+  virtual nsresult SetLanguageContext(PRUint32 lang, nsIScriptContext *aContext) = 0;
+
+  /**
+   * Called when the global script for a language is finalized, typically as
+   * part of its GC process.  By the time this call is made, the
+   * nsIScriptContext for the language has probably already been removed.
+   * After this call, the passed object is dead - which should generally be the
+   * same object the global is using for a global for that language.
+   */
+
+  virtual void OnFinalize(PRUint32 aLangID, void *aScriptGlobal) = 0;
 
   /**
    * Called to enable/disable scripts.
    */
   virtual void SetScriptsEnabled(PRBool aEnabled, PRBool aFireTimeouts) = 0;
 
-  /**
-   * Set a new arguments array for this window. This will be set on
+  /** Set a new arguments object for this window. This will be set on
    * the window right away (if there's an existing document) and it
    * will also be installed on the window when the next document is
-   * loaded.  If argc is nonzero, argv must be non-null.
-   *
-   * @param aArgc the number of args
-   * @param aArgv the pointer to the args.  This may be cast to jsval* and the
-   *        args are found at
-   *        ((jsval*)aArgv)[0], ..., ((jsval*)aArgv)[aArgc - 1]
+   * loaded.  Each language impl is responsible for converting to
+   * an array of args as appropriate for that language.
    */
-  virtual nsresult SetNewArguments(PRUint32 aArgc, void* aArgv) = 0;
+  virtual nsresult SetNewArguments(nsIArray *aArguments) = 0;
+
+  /** Handle a script error.  Generally called by a script context.
+   */
+  virtual nsresult HandleScriptError(nsScriptErrorEvent *aErrorEvent,
+                                     nsEventStatus *aEventStatus) {
+    return NS_HandleScriptError(this, aErrorEvent, aEventStatus);
+  }
 };
 
 #endif

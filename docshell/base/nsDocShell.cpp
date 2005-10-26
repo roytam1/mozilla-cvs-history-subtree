@@ -86,6 +86,7 @@
 #include "nsAutoPtr.h"
 #include "nsIPrefService.h"
 #include "nsIPrefBranch.h"
+#include "nsDOMJSUtils.h" // GetScriptContextFromJSContext
 #include "nsIPrefBranch2.h"
 #include "nsIWritablePropertyBag2.h"
 #include "nsObserverService.h"
@@ -8215,13 +8216,12 @@ nsDocShell::EnsureScriptEnvironment()
         SetGlobalObjectOwner(NS_STATIC_CAST
                              (nsIScriptGlobalObjectOwner *, this));
 
-    nsCOMPtr<nsIScriptContext> context;
-    factory->NewScriptContext(mScriptGlobal, getter_AddRefs(context));
-    NS_ENSURE_TRUE(context, NS_ERROR_FAILURE);
-
-    // Note that mScriptGlobal has taken a reference to the script
-    // context, so we don't have to.
-
+    // Ensure the script object is set to run javascript - other languages
+    // setup on demand.
+    // XXXmarkh - should this be setup to run the default language for this doc?
+    nsresult rv;
+    rv = mScriptGlobal->EnsureScriptEnvironment(nsIProgrammingLanguage::JAVASCRIPT);
+    NS_ENSURE_SUCCESS(rv, rv);
     return NS_OK;
 }
 

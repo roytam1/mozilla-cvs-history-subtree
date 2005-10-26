@@ -43,7 +43,6 @@
 class nsIScriptObjectOwner;
 class nsIDOMEventListener;
 class nsIAtom;
-struct JSObject;
 
 #define NS_IJSEVENTLISTENER_IID     \
 { 0xa6cf9118, 0x15b3, 0x11d2,       \
@@ -56,7 +55,7 @@ class nsIJSEventListener : public nsISupports
 public:
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_IJSEVENTLISTENER_IID)
 
-  nsIJSEventListener(nsIScriptContext *aContext, JSObject *aScopeObject,
+  nsIJSEventListener(nsIScriptContext *aContext, void *aScopeObject,
                      nsISupports *aTarget)
     : mContext(aContext), mScopeObject(aScopeObject), mTarget(aTarget)
   {
@@ -78,7 +77,7 @@ public:
     return mTarget;
   }
 
-  JSObject *GetEventScope()
+  void* GetEventScope()
   {
     return mScopeObject;
   }
@@ -88,17 +87,18 @@ public:
 protected:
   ~nsIJSEventListener()
   {
+    // COMPtr??
     NS_IF_RELEASE(mContext);
   }
 
   nsIScriptContext *mContext;
-  JSObject *mScopeObject;
+  void *mScopeObject;
   nsISupports *mTarget;
 };
 
 /* factory function */
 nsresult NS_NewJSEventListener(nsIScriptContext *aContext,
-                               JSObject *aScopeObject, nsISupports *aObject,
+                               void *aScopeObject, nsISupports *aTarget,
                                nsIDOMEventListener **aReturn);
 
 #endif // nsIJSEventListener_h__

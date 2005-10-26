@@ -6058,7 +6058,7 @@ nsWindowSH::Finalize(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryWrappedNative(wrapper));
   NS_ENSURE_TRUE(sgo, NS_ERROR_UNEXPECTED);
 
-  sgo->OnFinalize(obj);
+  sgo->OnFinalize(nsIProgrammingLanguage::JAVASCRIPT, obj);
 
   return NS_OK;
 }

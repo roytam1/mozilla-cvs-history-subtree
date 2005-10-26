@@ -55,6 +55,7 @@
 #include "nsCOMPtr.h"
 #include "nsContentUtils.h"
 
+#include "nsDOMJSUtils.h" // for GetScriptContextFromJSContext
 
 JSBool
 nsJSUtils::GetCallingLocation(JSContext* aContext, const char* *aFilename,
@@ -194,7 +195,7 @@ nsJSUtils::GetStaticScriptContext(JSContext* aContext, JSObject* aObj)
   if (!nativeGlobal)
     return nsnull;
 
-  return nativeGlobal->GetContext();
+  return nativeGlobal->GetLanguageContext(nsIProgrammingLanguage::JAVASCRIPT);
 }
 
 nsIScriptGlobalObject *

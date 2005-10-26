@@ -42,20 +42,23 @@
 #include "nsString.h"
 #include "nsISupports.h"
 #include "nsCOMPtr.h"
-#include "jsapi.h"
 
 class nsIScriptGlobalObject;
 class nsIScriptSecurityManager;
 class nsIScriptContextOwner;
 class nsIPrincipal;
 class nsIAtom;
+class nsIArray;
+class nsIVariant;
+class nsIObjectInputStream;
+class nsIObjectOutputStream;
 
 typedef void (*nsScriptTerminationFunc)(nsISupports* aRef);
 
 #define NS_ISCRIPTCONTEXT_IID \
-{ /* b3fd8821-b46d-4160-913f-cc8fe8176f5f */ \
-  0xb3fd8821, 0xb46d, 0x4160, \
-  {0x91, 0x3f, 0xcc, 0x8f, 0xe8, 0x17, 0x6f, 0x5f} }
+{ /* {52B46C37-A078-4952-AED7-035D83C810C0} */ \
+  0x52b46c37, 0xa078, 0x4952, \
+  {0xae, 0xd7, 0x3, 0x5d, 0x83, 0xc8, 0x10, 0xc0 } }
 
 /**
  * It is used by the application to initialize a runtime and run scripts.
@@ -69,6 +72,7 @@ class nsIScriptContext : public nsISupports
 public:
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISCRIPTCONTEXT_IID)
 
+  virtual PRUint32 GetLanguage() = 0;
   /**
    * Compile and execute a script.
    *
@@ -93,7 +97,7 @@ public:
                                   nsIPrincipal *aPrincipal,
                                   const char *aURL,
                                   PRUint32 aLineNo,
-                                  const char* aVersion,
+                                  PRUint32 aVersion,
                                   nsAString *aRetValue,
                                   PRBool* aIsUndefined) = 0;
 
@@ -102,7 +106,7 @@ public:
                                            nsIPrincipal *aPrincipal,
                                            const char *aURL,
                                            PRUint32 aLineNo,
-                                           const char* aVersion,
+                                           PRUint32 aVersion,
                                            void* aRetValue,
                                            PRBool* aIsUndefined) = 0;
 
@@ -130,7 +134,7 @@ public:
                                  nsIPrincipal* aPrincipal,
                                  const char* aURL,
                                  PRUint32 aLineNo,
-                                 const char* aVersion,
+                                 PRUint32 aVersion,
                                  void** aScriptObject) = 0;
 
   /**
@@ -154,11 +158,12 @@ public:
 
   /**
    * Compile the event handler named by atom aName, with function body aBody
-   * into a function object returned if ok via *aHandler.  Bind the lowercase
-   * ASCII name to the function in its parent object aTarget.
+   * into a function object returned if ok via *aHandler.  Does NOT bind the
+   * function to anything - BindCompiledEventHandler() should be used for that
+   * purpose.
    *
-   * @param aTarget an object telling the scope in which to bind the compiled
-   *        event handler function to aName.
+   * @param aPrincipals the principals to compile the function with.  May be
+   *        nsnull.
    * @param aName an nsIAtom pointer naming the function; it must be lowercase
    *        and ASCII, and should not be longer than 63 chars.  This bound on
    *        length is enforced only by assertions, so caveat caller!
@@ -166,24 +171,19 @@ public:
    * @param aBody the event handler function's body
    * @param aURL the URL or filename for error messages
    * @param aLineNo the starting line number of the script for error messages
-   * @param aShared flag telling whether the compiled event handler will be
-   *        shared via nsIScriptEventHandlerOwner, in which case any static
-   *        link compiled into it based on aTarget should be cleared, both
-   *        to avoid entraining garbage to be collected, and to trigger static
-   *        link re-binding in BindCompiledEventHandler (see below).
    * @param aHandler the out parameter in which a void pointer to the compiled
    *        function object is returned on success; may be null, meaning the
    *        caller doesn't need to store the handler for later use.
    *
    * @return NS_OK if the function body was valid and got compiled
    */
-  virtual nsresult CompileEventHandler(void* aTarget,
+  virtual nsresult CompileEventHandler(nsIPrincipal * aPrincipals,
                                        nsIAtom* aName,
-                                       const char* aEventName,
+                                       PRUint32 aArgCount,
+                                       const char** aArgNames,
                                        const nsAString& aBody,
                                        const char* aURL,
                                        PRUint32 aLineNo,
-                                       PRBool aShared,
                                        void** aHandler) = 0;
 
   /**
@@ -193,14 +193,14 @@ public:
    * @param aTarget an object telling the scope in which to bind the compiled
    *        event handler function.
    * @param aHandler function object (function and static scope) to invoke.
-   * @param argc actual argument count; length of argv
-   * @param argv vector of arguments; length is argc
-   * @param aBoolResult out parameter returning boolean function result, or
-   *        true if the result was not boolean.
+   * @param argv vector of arguments.  Note each element is assumed to
+   *        be an nsIVariant - xxxmarkh - should we just use nsIVariant there
+   *        too?
+   * @param rval out parameter returning result
    **/
-  virtual nsresult CallEventHandler(JSObject* aTarget, JSObject* aHandler,
-                                    uintN argc, jsval* argv,
-                                    jsval* rval) = 0;
+  virtual nsresult CallEventHandler(nsISupports* aTarget,
+                                    void *aScope, void* aHandler,
+                                    nsIArray *argv, nsIVariant **rval) = 0;
 
   /**
    * Bind an already-compiled event handler function to a name in the given
@@ -209,18 +209,36 @@ public:
    * static scoping must re-bind the scope chain for aHandler to begin (after
    * the activation scope for aHandler itself, typically) with aTarget's scope.
    *
+   * Logically, this 'bind' operation is more of a 'copy' - it simply
+   * stashes/associates the event handler function with the event target, so
+   * it can be fetched later with GetBoundEventHandler().
+   *
    * @param aTarget an object telling the scope in which to bind the compiled
-   *        event handler function.
+   *        event handler function.  The context will presumably associate
+   *        this nsISupports with a native script object.
    * @param aName an nsIAtom pointer naming the function; it must be lowercase
    *        and ASCII, and should not be longer than 63 chars.  This bound on
    *        length is enforced only by assertions, so caveat caller!
    * @param aHandler the function object to name, created by an earlier call to
    *        CompileEventHandler
    * @return NS_OK if the function was successfully bound to the name
+   *
+   * XXXmarkh - fold this in with SetProperty?  Exactly the same concept!
    */
-  virtual nsresult BindCompiledEventHandler(void* aTarget,
+  virtual nsresult BindCompiledEventHandler(nsISupports* aTarget, void *aScope,
                                             nsIAtom* aName,
                                             void* aHandler) = 0;
+
+  /**
+   * Lookup a previously bound event handler for the specified target.  This
+   * will return an object equivilent to the one passed to
+   * BindCompiledEventHandler (although the pointer may not be the same).
+   *
+   * The result native object must be 'unlocked'. xxxmarkh - update this!
+   */
+  virtual nsresult GetBoundEventHandler(nsISupports* aTarget, void *aScope,
+                                        nsIAtom* aName,
+                                        void** aHandler) = 0;
 
   virtual nsresult CompileFunction(void* aTarget,
                                    const nsACString& aName,
@@ -232,13 +250,12 @@ public:
                                    PRBool aShared,
                                    void** aFunctionObject) = 0;
 
-
   /**
    * Set the default scripting language version for this context, which must
    * be a context specific to a particular scripting language.
    *
    **/
-  virtual void SetDefaultLanguageVersion(const char* aVersion) = 0;
+  virtual void SetDefaultLanguageVersion(PRUint32 aVersion) = 0;
 
   /**
    * Return the global object.
@@ -251,6 +268,12 @@ public:
    *
    **/
   virtual void *GetNativeContext() = 0;
+
+  /**
+   * Return the native global object for this context.
+   *
+   **/
+  virtual void *GetNativeGlobal() = 0;
 
   /**
    * Init this context.
@@ -270,6 +293,11 @@ public:
    *
    */
   virtual PRBool IsContextInitialized() = 0;
+
+  /**
+   * Called as the global object discards its reference to the context.
+   */
+  virtual void FinalizeContext() = 0;
 
   /**
    * For garbage collected systems, do a synchronous collection pass.
@@ -292,6 +320,11 @@ public:
    * @return NS_OK if the method is successful
    */
   virtual void ScriptEvaluated(PRBool aTerminated) = 0;
+
+  virtual nsresult Serialize(nsIObjectOutputStream* aStream,
+                             void *aScriptObject) = 0;
+  virtual nsresult Deserialize(nsIObjectInputStream* aStream,
+                               void **aResult) = 0;
 
   /**
    * Let the script context know who its owner is.
@@ -326,6 +359,9 @@ public:
   virtual PRBool GetScriptsEnabled() = 0;
   virtual void SetScriptsEnabled(PRBool aEnabled, PRBool aFireTimeouts) = 0;
 
+  // SetProperty is suspect and jst believes should not be needed.  Currenly
+  // used only for "arguments".
+  virtual nsresult SetProperty(void *aTarget, const char *aPropName, nsISupports *aVal) = 0;
   /** 
    * Called to set/get information if the script context is
    * currently processing a script tag
@@ -344,7 +380,18 @@ public:
    * call DidInitializeContext() when a context is fully
    * (successfully) initialized.
    */
-  virtual nsresult InitClasses(JSObject *aGlobalObj) = 0;
+  // xxxmarkh - is this really public?  Only caller is nsJSContext?
+  virtual nsresult InitClasses(void *aGlobalObj) = 0;
+
+  /**
+   * Clear the scope object - may be called either as we are being torn down,
+   * or before we are attached to a different document.
+   * XXXmarkh - aClearPolluter is quite likely bogus - just that some places
+   * that did this clear did not call InvalidateGlobalScopePolluter.  It
+   * seems likely this param should be dropped and that fn always called.
+   * OR some extra virtual added to abstract when that Invalidate need happen.
+   */
+  virtual void ClearScope(void* aGlobalObj, PRBool aClearPolluter) = 0;
 
   /**
    * Tell the context we're about to be reinitialize it.
@@ -356,22 +403,6 @@ public:
    */
   virtual void DidInitializeContext() = 0;
 };
-
-inline nsIScriptContext *
-GetScriptContextFromJSContext(JSContext *cx)
-{
-  if (!(::JS_GetOptions(cx) & JSOPTION_PRIVATE_IS_NSISUPPORTS)) {
-    return nsnull;
-  }
-
-  nsCOMPtr<nsIScriptContext> scx =
-    do_QueryInterface(NS_STATIC_CAST(nsISupports *,
-                                     ::JS_GetContextPrivate(cx)));
-
-  // This will return a pointer to something that's about to be
-  // released, but that's ok here.
-  return scx;
-}
 
 #endif // nsIScriptContext_h__
 

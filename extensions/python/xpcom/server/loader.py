@@ -36,12 +36,11 @@
 # ***** END LICENSE BLOCK *****
 
 import xpcom
-from xpcom import components
+from xpcom import components, logger
 
 import module
 
 import glob, os, types
-import traceback
 
 from xpcom.client import Component
 
@@ -121,21 +120,18 @@ class PythonComponentLoader:
     def init(self, comp_mgr, registry):
         # void
         self.comp_mgr = comp_mgr
-        if xpcom.verbose:
-            print "Python component loader init() called"
+        logger.debug("Python component loader init() called")
 
      # Called when a component of the appropriate type is registered,
      # to give the component loader an opportunity to do things like
      # annotate the registry and such.
     def onRegister (self, clsid, type, className, proId, location, replace, persist):
-        if xpcom.verbose:
-            print "Python component loader - onRegister() called"
+        logger.debug("Python component loader - onRegister() called")
 
     def autoRegisterComponents (self, when, directory):
         directory_path = directory.path
         self.num_modules_this_register = 0
-        if xpcom.verbose:
-            print "Auto-registering all Python components in", directory_path
+        logger.debug("Auto-registering all Python components in '%s'", directory_path)
 
         # ToDo - work out the right thing here
         # eg - do we recurse?
@@ -151,18 +147,17 @@ class PythonComponentLoader:
                     from xpcom import nsError
                     # If the interface name does not exist, suppress the traceback
                     if details.errno==nsError.NS_ERROR_NO_INTERFACE:
-                        print "** Registration of '%s' failed\n %s" % (entry.leafName,details.message,)
+                        logger.error("Registration of '%s' failed\n %s",
+                                     entry.leafName, details.message)
                     else:
-                        print "** Registration of '%s' failed!" % (entry.leafName,)
-                        traceback.print_exc()
+                        logger.exception("Registration of '%s' failed!", entry.leafName)
                 except SyntaxError, details:
                     # Syntax error in source file - no useful traceback here either.
-                    print "** Registration of '%s' failed!" % (entry.leafName,)
-                    traceback.print_exception(SyntaxError, details, None)
+                    logger.error("Registration of '%s' failed\n %s",
+                                 entry.leafName, details)
                 except:
                     # All other exceptions get the full traceback.
-                    print "** Registration of '%s' failed!" % (entry.leafName,)
-                    traceback.print_exc()
+                    logger.exception("Registration of '%s' failed.", entry.leafName)
 
     def autoRegisterComponent (self, when, componentFile):
         # bool return
@@ -186,8 +181,7 @@ class PythonComponentLoader:
                 dirname.append("python")
                 site.addsitedir(dirname.path)
             except:
-                print "PyXPCOM loader failed to process site directory before component registration"
-                traceback.print_exc()
+                logger.exception("PyXPCOM loader failed to process site directory before component registration")
 
         self.num_modules_this_register += 1
 
@@ -211,12 +205,18 @@ class PythonComponentLoader:
 
     def registerDeferredComponents (self, when):
         # bool return
-        if xpcom.verbose:
-            print "Python component loader - registerDeferred() called"
+        logger.debug("Python component loader - registerDeferred() called")
         return 0 # no more to register
+
     def unloadAll (self, when):
-        if xpcom.verbose:
-            print "Python component loader being asked to unload all components!"
+        # This is called at shutdown time - don't get too upset if an error
+        # results from logging due to the logfile being closed
+        try:
+            logger.debug("Python component loader being asked to unload all components!")
+        except:
+            # Evil blank except, but restricting to just catching IOError
+            # failure means custom logs could still screw us
+            pass
         self.comp_mgr = None
         self.com_modules = {}
 
