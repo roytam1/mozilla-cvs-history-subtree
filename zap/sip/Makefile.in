@@ -16,20 +16,11 @@ EXTRA_PP_COMPONENTS = \
 	SipTransactions.js \
 	SipResolver.js \
 	SipAuthentication.js \
-	$(NULL)
-
-include $(topsrcdir)/config/rules.mk
-
-JS_CODELIB_RESOURCES = \
 	SipUtils.js \
 	SipUARequestCore.js \
 	SipDialog.js \
 	$(NULL)
 
-libs::  $(JS_CODELIB_RESOURCES)
-	$(INSTALL) $^ $(DIST)/bin/jscodelib/zap
-
-install::  $(JS_CODELIB_RESOURCES)
-	$(INSTALL) $^ $(DESTDIR)$(mozappdir)/bin/jscodelib/zap
+include $(topsrcdir)/config/rules.mk
 
 

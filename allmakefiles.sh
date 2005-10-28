@@ -279,7 +279,6 @@ js/src/xpconnect/shell/Makefile
 js/src/xpconnect/tools/Makefile
 js/src/xpconnect/tools/idl/Makefile
 js/src/xpconnect/tools/idl/Makefile
-js/src/xpconnect/codelib/Makefile
 "
 
 MAKEFILES_jsdebugger="
@@ -807,6 +806,7 @@ embedding/minimo/app/Makefile
 embedding/minimo/popuplite/Makefile
 minimo/Makefile
 minimo/base/Makefile
+minimo/base/wince/Makefile
 minimo/components/Makefile
 minimo/components/phone/Makefile
 minimo/components/softkb/Makefile
@@ -1533,7 +1533,6 @@ for extension in $MOZ_EXTENSIONS; do
             " ;;
         xforms ) MAKEFILES_extensions="$MAKEFILES_extensions
             extensions/xforms/Makefile
-            extensions/xforms/package/Makefile
             " ;;
         xmlextras ) MAKEFILES_extensions="$MAKEFILES_extensions
             extensions/xmlextras/Makefile

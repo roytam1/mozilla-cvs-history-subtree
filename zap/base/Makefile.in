@@ -13,11 +13,6 @@ EXTRA_PP_COMPONENTS = \
 	LoggingService.js \
 	zapVerboseErrorService.js \
 	zapUUIDGenerator.js \
-	$(NULL)
-
-include $(topsrcdir)/config/rules.mk
-
-JS_CODELIB_RESOURCES = \
 	ObjectUtils.js \
 	ArrayUtils.js \
 	ClassUtils.js  \
@@ -27,10 +22,5 @@ JS_CODELIB_RESOURCES = \
 	FileUtils.js \
 	$(NULL)
 
-libs::  $(JS_CODELIB_RESOURCES)
-	$(INSTALL) $^ $(DIST)/bin/jscodelib/zap
-
-install::  $(JS_CODELIB_RESOURCES)
-	$(INSTALL) $^ $(DESTDIR)$(mozappdir)/bin/jscodelib/zap
-
+include $(topsrcdir)/config/rules.mk
 

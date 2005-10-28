@@ -38,9 +38,9 @@
 ////////////////////////////////////////////////////////////////////////
 // imports
 
-Components.utils.importModule("resource:/jscodelib/zap/ClassUtils.js");
-Components.utils.importModule("resource:/jscodelib/zap/RDFUtils.js");
-Components.utils.importModule("resource:/jscodelib/zap/FileUtils.js");
+Components.utils.importModule("rel:ClassUtils.js");
+Components.utils.importModule("rel:RDFUtils.js");
+Components.utils.importModule("rel:FileUtils.js");
 
 ////////////////////////////////////////////////////////////////////////
 // globals

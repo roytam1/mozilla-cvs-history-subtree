@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.classes['@mozilla.org/moz/jsloader;1'].getService(Components.interfaces.xpcIJSComponentLoader).importModule('rel:SipUAStack.js')" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.importModule('rel:SipUAStack.js', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -38,14 +38,14 @@
 
 debug("*** loading SipUAStack\n");
 
-Components.utils.importModule("resource:/jscodelib/JSComponentUtils.js");
-Components.utils.importModule("resource:/jscodelib/zap/ClassUtils.js");
-Components.utils.importModule("resource:/jscodelib/zap/ArrayUtils.js");
-Components.utils.importModule("resource:/jscodelib/zap/StringUtils.js");
-Components.utils.importModule("resource:/jscodelib/zap/ObjectUtils.js");
-Components.utils.importModule("resource:/jscodelib/zap/SipUtils.js");
-Components.utils.importModule("resource:/jscodelib/zap/SipUARequestCore.js");
-Components.utils.importModule("resource:/jscodelib/zap/SipDialog.js");
+Components.utils.importModule("rel:ComponentUtils.jsm");
+Components.utils.importModule("rel:ClassUtils.js");
+Components.utils.importModule("rel:ArrayUtils.js");
+Components.utils.importModule("rel:StringUtils.js");
+Components.utils.importModule("rel:ObjectUtils.js");
+Components.utils.importModule("rel:SipUtils.js");
+Components.utils.importModule("rel:SipUARequestCore.js");
+Components.utils.importModule("rel:SipDialog.js");
 
 // name our global object:
 function toString() { return "[SipUAStack.js]"; }
@@ -84,7 +84,7 @@ function createSipTransport() {
 
   // create a sip transport object directly from js (less overhead, no
   // type safety, access to non-xpcom interface):
-  return Components.classes["@mozilla.org/moz/jsloader;1"].getService(Components.interfaces.xpcIJSComponentLoader).importModule("rel:SipTransport.js").SipTransport.instantiate();
+  return Components.utils.importModule("rel:SipTransport.js", null).SipTransport.instantiate();
 }
 
 //----------------------------------------------------------------------
@@ -99,7 +99,7 @@ function createSipTransactionManager() {
 
   // create a sip transaction manager directly from js (less overhead,
   // no type safety, access to non-xpcom interface):
-  return Components.classes["@mozilla.org/moz/jsloader;1"].getService(Components.interfaces.xpcIJSComponentLoader).importModule("rel:SipTransactions.js").SipTransactionManager.instantiate();
+  return Components.utils.importModule("rel:SipTransactions.js", null).SipTransactionManager.instantiate();
 }
 
 //----------------------------------------------------------------------

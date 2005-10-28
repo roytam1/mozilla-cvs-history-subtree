@@ -62,19 +62,11 @@ LOCAL_INCLUDES  = \
 		-I$(srcdir)/../src \
 		$(NULL)
 
-XPIDLSRCS       = xpcIJSComponentLoader.idl
+
+EXTRA_PP_COMPONENTS = ComponentUtils.jsm
 
 include $(topsrcdir)/config/rules.mk
 
 DEFINES		+= -DJSFILE -DJS_THREADSAFE
 
-JS_CODELIB_RESOURCES = \
-	JSComponentUtils.js \
-	$(NULL)
-
-libs::  $(JS_CODELIB_RESOURCES)
-	$(INSTALL) $^ $(DIST)/bin/jscodelib
-
-install::  $(JS_CODELIB_RESOURCES)
-	$(INSTALL) $^ $(DESTDIR)$(mozappdir)/bin/jscodelib
 

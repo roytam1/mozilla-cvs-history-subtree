@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.importModule('resource:/jscodelib/zap/SipUARequestCore.js', null)" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.importModule('rel:SipUARequestCore.js', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -47,11 +47,11 @@ EXPORTED_SYMBOLS = [ "SipNonInviteRC",
                      "SipNonInviteRS",
                      "SipInviteRS"];
 
-Components.utils.importModule("resource:/jscodelib/zap/ClassUtils.js");
-Components.utils.importModule("resource:/jscodelib/zap/ArrayUtils.js");
-Components.utils.importModule("resource:/jscodelib/zap/StringUtils.js");
-Components.utils.importModule("resource:/jscodelib/zap/ObjectUtils.js");
-Components.utils.importModule("resource:/jscodelib/zap/SipUtils.js");
+Components.utils.importModule("rel:ClassUtils.js");
+Components.utils.importModule("rel:ArrayUtils.js");
+Components.utils.importModule("rel:StringUtils.js");
+Components.utils.importModule("rel:ObjectUtils.js");
+Components.utils.importModule("rel:SipUtils.js");
 
 
 

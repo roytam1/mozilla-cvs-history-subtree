@@ -1,4 +1,4 @@
-// -*- moz-jssh-buffer-globalobj: "Components.classes['@mozilla.org/moz/jsloader;1'].getService(Components.interfaces.xpcIJSComponentLoader).importModule('rel:LoggingService.js')" -*-
+// -*- moz-jssh-buffer-globalobj: "Components.utils.importModule('rel:LoggingService.js', null)" -*-
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -37,11 +37,11 @@
 
 debug("*** loading LoggingService.js\n");
 
-Components.utils.importModule("resource:/jscodelib/JSComponentUtils.js");
-Components.utils.importModule("resource:/jscodelib/zap/ClassUtils.js");
-Components.utils.importModule("resource:/jscodelib/zap/ArrayUtils.js");
-Components.utils.importModule("resource:/jscodelib/zap/StringUtils.js");
-Components.utils.importModule("resource:/jscodelib/zap/ObjectUtils.js");
+Components.utils.importModule("rel:ComponentUtils.jsm");
+Components.utils.importModule("rel:ClassUtils.js");
+Components.utils.importModule("rel:ArrayUtils.js");
+Components.utils.importModule("rel:StringUtils.js");
+Components.utils.importModule("rel:ObjectUtils.js");
 
 // name our global object:
 function toString() { return "[LoggingService.js]"; }

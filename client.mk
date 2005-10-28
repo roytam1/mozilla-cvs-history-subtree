@@ -859,15 +859,11 @@ ZAP_BRANCH_MODIFIED_FILES = \
 	configure \
 	configure.in \
 	Makefile.in \
-	js/src/xpconnect/Makefile.in \
 	js/src/xpconnect/idl/xpccomponents.idl \
 	js/src/xpconnect/loader/Makefile.in \
 	js/src/xpconnect/loader/mozJSComponentLoader.cpp \
 	js/src/xpconnect/loader/mozJSComponentLoader.h \
-	js/src/xpconnect/src/Makefile.in \
 	js/src/xpconnect/src/xpccomponents.cpp \
-	js/src/xpconnect/src/xpcmodule.cpp \
-	js/src/xpconnect/src/xpcprivate.h \
 	netwerk/base/public/Makefile.in \
 	netwerk/base/src/Makefile.in \
 	netwerk/build/nsNetCID.h \
@@ -895,12 +891,8 @@ ZAP_BRANCH_MODIFIED_FILES = \
 	xpcom/reflect/xptcall/public/xptcall.h
 
 ZAP_BRANCH_NEW_FILES = \
-	js/src/xpconnect/codelib/Makefile.in \
-	js/src/xpconnect/codelib/xpcIJSCodeLoader.idl \
-	js/src/xpconnect/codelib/mozJSCodeLib.cpp \
-	js/src/xpconnect/codelib/mozJSCodeLib.h \
-	js/src/xpconnect/loader/JSComponentUtils.js \
-	js/src/xpconnect/loader/xpcIJSComponentLoader.idl \
+	js/src/xpconnect/loader/ComponentUtils.jsm \
+	js/src/xpconnect/idl/xpcIJSModuleLoader.idl \
 	netwerk/base/public/nsIUDPSocket.idl \
 	netwerk/base/src/nsUDPSocket.cpp \
 	netwerk/base/src/nsUDPSocket.h \

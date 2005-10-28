@@ -44,9 +44,13 @@
 
 #include "xpcprivate.h"
 #include "nsReadableUtils.h"
-#include "xpcIJSCodeLoader.h"
+#include "xpcIJSModuleLoader.h"
 #include "nsIScriptObjectPrincipal.h"
 #include "nsIDOMWindow.h"
+
+#ifdef MOZ_JSLOADER
+#include "mozJSComponentLoader.h"
+#endif
 
 /***************************************************************************/
 // stuff used by all
@@ -2463,12 +2467,16 @@ nsXPCComponents_Utils::EvalInSandbox(const nsAString &source)
 
 /* JSObject importModule (in AUTF8String moduleURL, [optional] in JSObject targetObj); */
 NS_IMETHODIMP
-nsXPCComponents_Utils::ImportModule(const nsACString & moduleURL)
+nsXPCComponents_Utils::ImportModule(const nsACString & registryLocation)
 {
-    nsCOMPtr<xpcIJSCodeLoader> codeloader = do_GetService(MOZ_JSCODELIB_CONTRACTID);
-    if (!codeloader)
+#ifdef MOZ_JSLOADER
+    nsCOMPtr<xpcIJSModuleLoader> moduleloader = do_GetService(MOZJSCOMPONENTLOADER_CONTRACTID);
+    if (!moduleloader)
         return NS_ERROR_FAILURE;
-    return codeloader->ImportModule(moduleURL);
+    return moduleloader->ImportModule(registryLocation);
+#else
+    return NS_ERROR_NOT_AVAILABLE;
+#endif
 }
 
 #ifdef XPC_USE_SECURITY_CHECKED_COMPONENT

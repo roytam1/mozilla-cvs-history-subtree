@@ -48,28 +48,58 @@
 #include "nsIModule.h"
 #include "nsSupportsArray.h"
 #include "nsIFile.h"
+#include "nsAutoPtr.h"
+#include "nsIFastLoadService.h"
+#include "nsIObjectInputStream.h"
+#include "nsIObjectOutputStream.h"
+#include "nsITimer.h"
+#include "nsIObserver.h"
+#include "xpcIJSModuleLoader.h"
 #ifndef XPCONNECT_STANDALONE
 #include "nsIPrincipal.h"
 #endif
-#include "xpcIJSComponentLoader.h"
 
-extern const char mozJSComponentLoaderContractID[];
-extern const char jsComponentTypeName[];
+class nsIFastLoadService;
 
 /* 6bd13476-1dd2-11b2-bbef-f0ccb5fa64b6 (thanks, mozbot) */
 
 #define MOZJSCOMPONENTLOADER_CID \
   {0x6bd13476, 0x1dd2, 0x11b2, \
     { 0xbb, 0xef, 0xf0, 0xcc, 0xb5, 0xfa, 0x64, 0xb6 }}
+#define MOZJSCOMPONENTLOADER_CONTRACTID "@mozilla.org/moz/jsloader;1"
+#define MOZJSCOMPONENTLOADER_TYPE_NAME "text/javascript"
+
+// nsIFastLoadFileIO implementation for component fastload
+class nsXPCFastLoadIO : public nsIFastLoadFileIO
+{
+ public:
+    NS_DECL_ISUPPORTS
+    NS_DECL_NSIFASTLOADFILEIO
+
+    nsXPCFastLoadIO(nsIFile *file) : mFile(file) {}
+
+    void SetInputStream(nsIInputStream *stream) { mInputStream = stream; }
+    void SetOutputStream(nsIOutputStream *stream) { mOutputStream = stream; }
+
+ private:
+    ~nsXPCFastLoadIO() {}
+
+    nsCOMPtr<nsIFile> mFile;
+    nsCOMPtr<nsIInputStream> mInputStream;
+    nsCOMPtr<nsIOutputStream> mOutputStream;
+};
+
 
 class mozJSComponentLoader : public nsIComponentLoader,
-                             public xpcIJSComponentLoader {
-
-public:
+                             public xpcIJSModuleLoader,
+                             public nsIObserver
+{
+ public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSICOMPONENTLOADER
-    NS_DECL_XPCIJSCOMPONENTLOADER
-    
+    NS_DECL_XPCIJSMODULELOADER
+    NS_DECL_NSIOBSERVER
+
     mozJSComponentLoader();
     virtual ~mozJSComponentLoader();
 
@@ -78,15 +108,31 @@ public:
     nsresult AttemptRegistration(nsIFile *component, PRBool deferred);
     nsresult UnregisterComponent(nsIFile *component);
     nsresult RegisterComponentsInDir(PRInt32 when, nsIFile *dir);
-    JSObject *GlobalForLocation(const char *aLocation, nsIFile *component);
-    nsIModule *ModuleForLocation(const char *aLocation, nsIFile *component);
+    nsresult GlobalForLocation(const char *aLocation, nsIFile *aComponent,
+                               JSObject **aGlobal);
+    nsIModule* ModuleForLocation(const char *aLocation, nsIFile *component,
+                                 nsresult *status);
     PRBool HasChanged(const char *registryLocation, nsIFile *component);
     nsresult SetRegistryInfo(const char *registryLocation, nsIFile *component);
     nsresult RemoveRegistryInfo(nsIFile *component, const char *registryLocation);
 
+    nsresult StartFastLoad(nsIFastLoadService *flSvc);
+    nsresult ReadScript(nsIFastLoadService *flSvc, const char *nativePath,
+                        nsIURI *uri, JSContext *cx, JSScript **script);
+    nsresult WriteScript(nsIFastLoadService *flSvc, JSScript *script,
+                         nsIFile *component, const char *nativePath,
+                         nsIURI *uri, JSContext *cx);
+    static void CloseFastLoad(nsITimer *timer, void *closure);
+    void CloseFastLoad();
+
     nsCOMPtr<nsIComponentManager> mCompMgr;
     nsCOMPtr<nsIComponentLoaderManager> mLoaderManager;
     nsCOMPtr<nsIJSRuntimeService> mRuntimeService;
+    nsCOMPtr<nsIFile> mFastLoadFile;
+    nsRefPtr<nsXPCFastLoadIO> mFastLoadIO;
+    nsCOMPtr<nsIObjectInputStream> mFastLoadInput;
+    nsCOMPtr<nsIObjectOutputStream> mFastLoadOutput;
+    nsCOMPtr<nsITimer> mFastLoadTimer;
 #ifndef XPCONNECT_STANDALONE
     nsCOMPtr<nsIPrincipal> mSystemPrincipal;
 #endif

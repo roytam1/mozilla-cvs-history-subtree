@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.importModule('resource:/jscodelib/zap/SipUtils.js', null)" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.importModule('rel:SipUtils.js', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -43,7 +43,7 @@
 
 debug("*** loading SipUtils\n");
 
-Components.utils.importModule("resource:/jscodelib/zap/StringUtils.js");
+Components.utils.importModule("rel:StringUtils.js");
 
 EXPORTED_SYMBOLS = ["BRANCH_COOKIE",
                     "gSIPEventQ",
@@ -130,7 +130,7 @@ function callAsync(fct) {
 
 // access the syntax factory directly (less overhead, no type safety,
 // access to non-xpcom interface):
-var gSyntaxFactory = Components.classes['@mozilla.org/moz/jsloader;1'].getService(Components.interfaces.xpcIJSComponentLoader).importModule('rel:SipSyntaxFactory.js').theSyntaxFactory;
+var gSyntaxFactory = Components.utils.importModule('rel:SipSyntaxFactory.js', null).theSyntaxFactory;
 
 ////////////////////////////////////////////////////////////////////////
 // gDNSService: global dns service instance
@@ -150,13 +150,13 @@ var gDNSService = CLASS_DNS_SERVICE.getService(ITF_DNS_SERVICE);
 
 // access the logging service directly (less overhead, no type safety,
 // access to non-xpcom interface):
-var gLoggingService = Components.classes['@mozilla.org/moz/jsloader;1'].getService(Components.interfaces.xpcIJSComponentLoader).importModule('rel:LoggingService.js').theLoggingService;
+var gLoggingService = Components.utils.importModule('rel:LoggingService.js', null).theLoggingService;
 
 ////////////////////////////////////////////////////////////////////////
 // gUUIDGenerator: global UUID generator service instance
 
 // access directly via JS:
-var gUUIDGenerator = Components.classes["@mozilla.org/moz/jsloader;1"].getService(Components.interfaces.xpcIJSComponentLoader).importModule('rel:zapUUIDGenerator.js').theUUIDGenerator;
+var gUUIDGenerator = Components.utils.importModule('rel:zapUUIDGenerator.js', null).theUUIDGenerator;
 
 
 ////////////////////////////////////////////////////////////////////////
