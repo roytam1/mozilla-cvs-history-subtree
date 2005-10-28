@@ -2928,43 +2928,6 @@ class nsJSRuntimeServiceImpl : public nsIJSRuntimeService,
     nsCOMPtr<nsIXPCScriptable> mBackstagePass;
 };
 
-
-/***************************************************************************/
-class JSContextHelper
-{
-public:
-    JSContextHelper(JSContext* cx)
-            : mContext(cx), mContextThread(0)
-    {
-        mContextThread = JS_GetContextThread(mContext);
-        if (mContextThread)
-            JS_BeginRequest(mContext);
-    }
-    ~JSContextHelper()
-    {
-        JS_ClearNewbornRoots(mContext);
-        if (mContextThread)
-            JS_EndRequest(mContext);
-    }
-
-    operator JSContext*() const {return mContext;}
-
-private:
-    JSContextHelper(); // not implemented
-    JSContext* mContext;
-    intN       mContextThread; 
-};
-
-/***************************************************************************/
-// JS functions shared between sandbox, codelib, component-loader
-
-JSBool JS_DLL_CALLBACK
-JSDump(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
-
-JSBool JS_DLL_CALLBACK
-JSDebug(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
-
-
 /***************************************************************************/
 // 'Components' object
 
@@ -3185,20 +3148,6 @@ private:
     JSContext*        mCX;
     JSErrorReporter   mOldErrorReporter;
     JSExceptionState* mOldExceptionState;
-};
-
-/***************************************************************************/
-class AutoJSErrorReporterSetter
-{
-public:
-    AutoJSErrorReporterSetter(JSContext* cx, JSErrorReporter reporter)
-        {mContext = cx; mOldReporter = JS_SetErrorReporter(cx, reporter);}
-    ~AutoJSErrorReporterSetter()
-        {JS_SetErrorReporter(mContext, mOldReporter);} 
-private:
-    AutoJSErrorReporterSetter(); // not implemented
-    JSContext* mContext;
-    JSErrorReporter mOldReporter;
 };
 
 /******************************************************************************

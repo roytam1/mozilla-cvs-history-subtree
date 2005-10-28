@@ -62,7 +62,6 @@ PACKAGE_FILE = xpconnect.pkg
 REQUIRES	= xpcom \
 		  string \
 		  js \
-		  jsloader \
 		  caps \
 		  necko \
 		  dom \
@@ -127,13 +126,6 @@ SHARED_LIBRARY_LIBS = \
 		$(DIST)/lib/$(LIB_PREFIX)jsloader_s.$(LIB_SUFFIX) \
 		$(NULL)
 endif
-
-SHARED_LIBRARY_LIBS += \
-		$(DIST)/lib/$(LIB_PREFIX)jscodelib_s.$(LIB_SUFFIX) \
-		$(NULL)
-LOCAL_INCLUDES += \
-		-I$(srcdir)/../codelib \
-		$(NULL)
 
 include $(topsrcdir)/config/rules.mk
 

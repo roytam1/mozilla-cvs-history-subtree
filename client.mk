@@ -852,7 +852,18 @@ echo_objdir:
 #######################################################################
 # Branch maintenance
 
+# These files are now identical to the trunk, but we keep them tagged
+# for posterity (deleting branch tags is not a good idea):
+# js/src/xpconnect/Makefile.in
+# js/src/xpconnect/src/Makefile.in
+# js/src/xpconnect/src/xpcmodule.cpp
+# js/src/xpconnect/src/xpcprivate.h
+
 ZAP_BRANCH_MODIFIED_FILES = \
+	js/src/xpconnect/Makefile.in \
+	js/src/xpconnect/src/Makefile.in \
+	js/src/xpconnect/src/xpcmodule.cpp \
+	js/src/xpconnect/src/xpcprivate.h \
 	allmakefiles.sh \
 	client.mk \
 	config/autoconf.mk.in \
