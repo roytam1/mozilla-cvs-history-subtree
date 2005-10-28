@@ -870,6 +870,7 @@ ZAP_BRANCH_MODIFIED_FILES = \
 	configure \
 	configure.in \
 	Makefile.in \
+	js/src/xpconnect/idl/Makefile.in \
 	js/src/xpconnect/idl/xpccomponents.idl \
 	js/src/xpconnect/loader/Makefile.in \
 	js/src/xpconnect/loader/mozJSComponentLoader.cpp \

@@ -63,6 +63,7 @@ XPIDLSRCS	= \
 		nsIXPCScriptNotify.idl \
 		nsIScriptableInterfaces.idl \
 		XPCIDispatch.idl \
+		xpcIJSModuleLoader.idl \
 		$(NULL)
 
 ifdef XPC_IDISPATCH_SUPPORT
