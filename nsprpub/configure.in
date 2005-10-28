@@ -995,10 +995,12 @@ tools are selected during the Xcode/Developer Tools installation.])
             changequote([,])
             GCC_VERSION_MAJOR=`echo $GCC_VERSION_FULL | $PERL -pe 's/(^\d*).*/$1/;'`
             if test "$GCC_VERSION_MAJOR" -lt "4" ; then
-                SDK_C_INCLUDE="-isystem ${MACOS_SDK_DIR}/usr/include/gcc/darwin/${GCC_VERSION} -isystem ${MACOS_SDK_DIR}/usr/include -F${MACOS_SDK_DIR}/System/Library/Frameworks"
+                SDK_C_FRAMEWORK="-F${MACOS_SDK_DIR}/System/Library/Frameworks"
                 if test -d "${MACOS_SDK_DIR}/Library/Frameworks" ; then
-                    SDK_C_INCLUDE="$SDK_C_INCLUDE -F${MACOS_SDK_DIR}/Library/Frameworks"
+                    SDK_C_FRAMEWORK="$SDK_C_FRAMEWORK -F${MACOS_SDK_DIR}/Library/Frameworks"
                 fi
+
+                SDK_C_INCLUDE="-isystem ${MACOS_SDK_DIR}/usr/include/gcc/darwin/${GCC_VERSION} -isystem ${MACOS_SDK_DIR}/usr/include ${SDK_C_FRAMEWORK}"
 
                 CFLAGS="$CFLAGS -nostdinc ${SDK_C_INCLUDE}"
 
@@ -1015,8 +1017,9 @@ tools are selected during the Xcode/Developer Tools installation.])
                 dnl LDFLAGS is for the utilities built in config (now and
                 dnl nsinstall).  DSO_LDOPTS is used when linking shared
                 dnl libraries.
-                LDFLAGS="-L${MACOS_SDK_DIR}/usr/lib/gcc/darwin -L${MACOS_SDK_DIR}/usr/lib/gcc/darwin/${GCC_VERSION_FULL} -L${MACOS_SDK_DIR}/usr/lib $LDFLAGS"
-                DSO_LDOPTS="-L${MACOS_SDK_DIR}/usr/lib/gcc/darwin -L${MACOS_SDK_DIR}/usr/lib/gcc/darwin/${GCC_VERSION_FULL} -L${MACOS_SDK_DIR}/usr/lib $DSO_LDOPTS"
+                MACOS_SDK_LIBS="-L${MACOS_SDK_DIR}/usr/lib/gcc/darwin -L${MACOS_SDK_DIR}/usr/lib/gcc/darwin/${GCC_VERSION_FULL} -L${MACOS_SDK_DIR}/usr/lib ${SDK_C_FRAMEWORK}"
+                LDFLAGS="${MACOS_SDK_LIBS} $LDFLAGS"
+                DSO_LDOPTS="${MACOS_SDK_LIBS} $DSO_LDOPTS"
                 export NEXT_ROOT=$MACOS_SDK_DIR
             else
                 dnl gcc >= 4.0 uses different paths than above, but knows
