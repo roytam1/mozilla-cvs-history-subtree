@@ -2102,8 +2102,8 @@ PrincipalHolder::GetPrincipal()
     return mHoldee;
 }
 
-JSBool JS_DLL_CALLBACK
-JSDump(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+JS_STATIC_DLL_CALLBACK(JSBool)
+SandboxDump(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSString *str;
     if (!argc)
@@ -2121,11 +2121,11 @@ JSDump(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return JS_TRUE;
 }
 
-JSBool JS_DLL_CALLBACK
-JSDebug(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+JS_STATIC_DLL_CALLBACK(JSBool)
+SandboxDebug(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
 #ifdef DEBUG
-    return JSDump(cx, obj, argc, argv, rval);
+    return SandboxDump(cx, obj, argc, argv, rval);
 #else
     return JS_TRUE;
 #endif
@@ -2160,8 +2160,8 @@ static JSClass SandboxClass = {
 };
 
 static JSFunctionSpec SandboxFunctions[] = {
-    {"dump", JSDump, 1},
-    {"debug", JSDebug, 1},
+    {"dump", SandboxDump, 1},
+    {"debug", SandboxDebug, 1},
     {0}
 };
 
