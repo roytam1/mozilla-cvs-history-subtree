@@ -14,7 +14,7 @@ extern "C"
   PRInt32 alaw2linear(PRUint8 a_val);
 
 #ifdef __cplusplus
-};
+}
 #endif
 
 #endif /* __G711_H__ */
