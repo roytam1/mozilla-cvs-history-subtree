@@ -1,0 +1,89 @@
+/* ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1/GPL 2.0/LGPL 2.1
+ *
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License.
+ *
+ * The Original Code is the Mozilla SIP client project.
+ *
+ * The Initial Developer of the Original Code is 8x8 Inc.
+ * Portions created by the Initial Developer are Copyright (C) 2005
+ * the Initial Developer. All Rights Reserved.
+ *
+ * Contributor(s):
+ *   Alex Fritze <alex@croczilla.com> (original author)
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * in which case the provisions of the GPL or the LGPL are applicable instead
+ * of those above. If you wish to allow use of your version of this file only
+ * under the terms of either the GPL or the LGPL, and not to allow others to
+ * use your version of this file under the terms of the MPL, indicate your
+ * decision by deleting the provisions above and replace them with the notice
+ * and other provisions required by the GPL or the LGPL. If you do not delete
+ * the provisions above, a recipient may use your version of this file under
+ * the terms of any one of the MPL, the GPL or the LGPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
+
+#include "nsISupports.idl"
+
+interface zapIStunMessage;
+
+/**
+ * \defgroup NETUTILS_MODULE ZAP NetUtils module
+ */
+
+/**
+ * \ingroup NETUTILS_MODULE
+ */
+[scriptable, uuid(93fa38d7-aad3-4857-ad1c-b353c79481f1)]
+interface zapINetUtils : nsISupports
+{
+  /**
+   * Create an empty STUN message
+   */
+  zapIStunMessage createStunMessage();
+
+  /**
+   * Deserialize a STUN packet to a zapIStunMessage structure.
+   *
+   * If parsing of the packet succeeds, unknownAttribs will contain
+   * any attributes with values less than or equal to 0x7fff which
+   * were not understood.
+   */
+  zapIStunMessage deserializeStunPacket(in ACString packet,
+                                        [array, size_is(count)] out
+                                        unsigned short unknownAttribs,
+                                        out unsigned long count);
+  
+  /**
+   * Checks if the buffer contains a (possibly partial) STUN packet
+   *
+   * retval will be -2 if the buffer definitely isn't a STUN packet,
+   * -1 if the buffer might be a STUN message but the buffer doesn't
+   * contain enough bytes to be sure yet,
+   * 0 if the buffer appears to be a STUN message but the length can't
+   * be determined yet (because it only contains the first 2 bytes of
+   * the header), or n>20 (== the length of the STUN message including
+   * header) if the buffer appears to be a (possibly partial) STUN
+   * message and the length can be determined.
+   */
+  PRInt32 snoopStunPacket(in ACString buffer);
+};
+
+%{ C++
+// {D08216D7-FAEC-4C38-B6D3-2AB69AB9512A}
+#define ZAP_NETUTILS_CID                             \
+    { 0xd08216d7, 0xfaec, 0x4c38, { 0xb6, 0xd3, 0x2a, 0xb6, 0x9a, 0xb9, 0x51, 0x2a } }
+
+#define ZAP_NETUTILS_CONTRACTID "@mozilla.org/zap/netutils;1"
+%}

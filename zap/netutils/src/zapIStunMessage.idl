@@ -1,0 +1,259 @@
+/* ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1/GPL 2.0/LGPL 2.1
+ *
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License.
+ *
+ * The Original Code is the Mozilla SIP client project.
+ *
+ * The Initial Developer of the Original Code is 8x8 Inc.
+ * Portions created by the Initial Developer are Copyright (C) 2005
+ * the Initial Developer. All Rights Reserved.
+ *
+ * Contributor(s):
+ *   Alex Fritze <alex@croczilla.com> (original author)
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * in which case the provisions of the GPL or the LGPL are applicable instead
+ * of those above. If you wish to allow use of your version of this file only
+ * under the terms of either the GPL or the LGPL, and not to allow others to
+ * use your version of this file under the terms of the MPL, indicate your
+ * decision by deleting the provisions above and replace them with the notice
+ * and other provisions required by the GPL or the LGPL. If you do not delete
+ * the provisions above, a recipient may use your version of this file under
+ * the terms of any one of the MPL, the GPL or the LGPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
+
+#include "nsISupports.idl"
+
+/**
+ * \ingroup NETUTILS_MODULE
+ */
+[scriptable, uuid(a86483da-1baf-4417-a644-562e0c3ae87a)]
+interface zapIStunMessage : nsISupports
+{
+  /**
+   * Serialize this message to a STUN package
+   */
+  ACString serialize();
+  
+  /**
+   * \name Constants for messageType attribute
+   * @{
+   */
+  const unsigned short BINDING_REQUEST_MESSAGE              = 0x0001;
+  const unsigned short BINDING_RESPONSE_MESSAGE             = 0x0101;
+  const unsigned short BINDING_ERROR_RESPONSE_MESSAGE       = 0x0111;
+  const unsigned short SHARED_SECRET_REQUEST_MESSAGE        = 0x0002;
+  const unsigned short SHARED_SECRET_RESPONSE_MESSAGE       = 0x0102;
+  const unsigned short SHARED_SECRET_ERROR_RESPONSE_MESSAGE = 0x0112;
+  /** @} */
+
+  /**
+   * \name STUN message header
+   * @{
+   */
+  attribute unsigned short messageType;
+
+  /**
+   * Transaction ID (16 octets)
+   */
+  attribute ACString transactionID;
+
+  /**
+   * Fill transactionID with a new random 16 byte value
+   */
+  void initTransactionID();
+  
+  /** @} */
+  
+  /**
+   * \name MAPPED-ADDRESS attribute (0x0001)
+   * @{
+   */
+  attribute boolean hasMappedAddressAttrib;
+  attribute unsigned short mappedAddressPort;
+  /**
+   * IPv4 or IPv6 IP address string.
+   *
+   * - IPv4: 1*3DIGIT "." 1*3DIGIT "." 1*3DIGIT "." 1*3DIGIT
+   * - IPv6: IPv6address (see e.g. RFC3261 for BNF)
+   */
+  attribute ACString mappedAddress;
+  /** @} */
+
+  /**
+   * \name RESPONSE-ADDRESS attribute (0x0002)
+   * @{
+   */
+  attribute boolean hasResponseAddressAttrib;
+  attribute unsigned short responseAddressPort;
+  /**
+   * IPv4 or IPv6 IP address string.
+   *
+   * - IPv4: 1*3DIGIT "." 1*3DIGIT "." 1*3DIGIT "." 1*3DIGIT
+   * - IPv6: IPv6address (see e.g. RFC3261 for BNF)
+   */
+  attribute ACString responseAddress;
+  /** @} */
+
+  /**
+   * \name CHANGE-REQUEST attribute (0x0003)
+   * @{
+   */
+  attribute boolean hasChangeRequestAttrib;
+  attribute boolean changeRequestChangeIP;
+  attribute boolean changeRequestChangePort;
+  /** @} */
+
+  /**
+   * \name SOURCE-ADDRESS attribute (0x0004)
+   * @{
+   */
+  attribute boolean hasSourceAddressAttrib;
+  attribute unsigned short sourceAddressPort;
+  /**
+   * IPv4 or IPv6 IP address string.
+   *
+   * - IPv4: 1*3DIGIT "." 1*3DIGIT "." 1*3DIGIT "." 1*3DIGIT
+   * - IPv6: IPv6address (see e.g. RFC3261 for BNF)
+   */
+  attribute ACString sourceAddress;
+  /** @} */
+  
+  /**
+   * \name CHANGED-ADDRESS attribute (0x0005)
+   * @{
+   */
+  attribute boolean hasChangedAddressAttrib;
+  attribute unsigned short changedAddressPort;
+  /**
+   * IPv4 or IPv6 IP address string.
+   *
+   * - IPv4: 1*3DIGIT "." 1*3DIGIT "." 1*3DIGIT "." 1*3DIGIT
+   * - IPv6: IPv6address (see e.g. RFC3261 for BNF)
+   */
+  attribute ACString changedAddress;
+  /** @} */
+  
+  /**
+   * \name USERNAME attribute (0x0006)
+   * @{
+   */
+  attribute boolean hasUsernameAttrib;
+  /**
+   * Username length (in bytes) must be a multiple of 4
+   */
+  attribute ACString username;
+  /** @} */
+  
+  /**
+   * \name PASSWORD attribute (0x0007)
+   * @{
+   */
+  attribute boolean hasPasswordAttrib;
+  /**
+   * Password length (in bytes) must be a multiple of 4
+   */
+  attribute ACString password;
+  /** @} */
+
+  /**
+   * \name MESSAGE-INTEGRITY attribute (0x0008)
+   * @{
+   */
+  attribute boolean hasMessageIntegrityAttrib;
+  /**
+   * HMAC-SHA1 (20 byte octet string)
+   */
+  attribute ACString messageIntegrity;
+  /** @} */
+
+  /**
+   * \name ERROR-CODE attribute (0x0009)
+   * @{
+   */
+  attribute boolean hasErrorCodeAttrib;
+  /**
+   * 3 ASCII character error code (100-699)
+   */
+  attribute ACString errorCode;
+  /**
+   * Reason phrase. Setter automatically pads with spaces so that
+   * length (in bytes) is a multiple of 4.
+   */
+  attribute ACString errorCodeReasonPhrase;
+  /** @} */
+
+  /**
+   * \name UNKNOWN-ATTRIBUTES attribute (0x000a)
+   * @{
+   */
+  attribute boolean hasUnknownAttributesAttrib;
+  void getUnknownAttributes(out unsigned long count,
+                            [array, size_is(count), retval] out
+                            unsigned short attribs);
+  void setUnknownAttributes([array, size_is(count)] in unsigned short attribs,
+                            in unsigned long count);
+  /** @} */
+
+  /**
+   * \name REFLECTED-FROM attribute (0x000b)
+   * @{
+   */
+  attribute boolean hasReflectedFromAttrib;
+  attribute unsigned short reflectedFromPort;
+  /**
+   * IPv4 or IPv6 IP address string.
+   *
+   * - IPv4: 1*3DIGIT "." 1*3DIGIT "." 1*3DIGIT "." 1*3DIGIT
+   * - IPv6: IPv6address (see e.g. RFC3261 for BNF)
+   */
+  attribute ACString reflectedFrom;
+  /** @} */
+  
+  /**
+   * \name XOR-MAPPED-ADDRESS attribute (0x8020)
+   * @{
+   */
+  attribute boolean hasXORMappedAddressAttrib;
+  attribute unsigned short XORMappedAddressPort;
+  /**
+   * IPv4 or IPv6 IP address string.
+   *
+   * - IPv4: 1*3DIGIT "." 1*3DIGIT "." 1*3DIGIT "." 1*3DIGIT
+   * - IPv6: IPv6address (see e.g. RFC3261 for BNF)
+   */
+  attribute ACString XORMappedAddress;
+  /** @} */
+
+  /**
+   * \name XOR-ONLY attribute (0x0021)
+   * @{
+   */
+  attribute boolean hasXOROnlyAttrib;
+  /** @} */
+  
+  /**
+   * \name SERVER attribute (0x8022)
+   * @{
+   */
+  attribute boolean hasServerAttrib;
+  /**
+   * Server information. Setter automatically pads with spaces so that
+   * length (in bytes) is a multiple of 4.
+   */
+  attribute ACString server;
+  /** @} */  
+};
+
