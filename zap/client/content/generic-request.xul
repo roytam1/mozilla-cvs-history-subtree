@@ -79,7 +79,7 @@
       if (!wRS) return;
       wRS.listener = {
         triedCredentials : false,
-        notifyResponseReceived : function(rc, dialog, response) {
+        notifyResponseReceived : function(rc, dialog, response, flow) {
           if (document) {
             document.getElementById("response").value = response.serialize();
             // update the request field, so that we get the updated CSeq, etc:

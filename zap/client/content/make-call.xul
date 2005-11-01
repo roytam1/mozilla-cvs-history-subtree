@@ -81,7 +81,7 @@
                                                                  parent.wCurrentIdentity.routeset,
                                                                  parent.wCurrentIdentity.routeset.length);
       wOptionsRS.listener = {
-        notifyResponseReceived : function(rc, dialog, response) {
+        notifyResponseReceived : function(rc, dialog, response, flow) {
           if (document)
             document.getElementById("options_result").value = response.serialize();
         }

@@ -41,12 +41,14 @@
 Components.utils.importModule("rel:ClassUtils.js");
 Components.utils.importModule("rel:RDFUtils.js");
 Components.utils.importModule("rel:FileUtils.js");
+Components.utils.importModule("rel:StringUtils.js");
 
 ////////////////////////////////////////////////////////////////////////
 // globals
 
-var wUserAgent = "zap/0.1.2"; // String to be sent in User-Agent
+var wUserAgent = "zap/0.1.3"; // String to be sent in User-Agent
                               // header for SIP requests
+var wNetUtils = Components.classes["@mozilla.org/zap/netutils;1"].getService(Components.interfaces.zapINetUtils);
 var wPromptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService);
 var wRDF = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
 var wRDFContainerUtils = Components.classes["@mozilla.org/rdf/container-utils;1"].createInstance(Components.interfaces.nsIRDFContainerUtils);
@@ -197,6 +199,7 @@ Prefs.prototype.datasources["default"] = wPrefsDS;
 Prefs.rdfResourceAttrib("urn:mozilla:zap:identity",
                         "urn:mozilla:zap:initial_identity");
 Prefs.rdfLiteralAttrib("urn:mozilla:zap:instance_id", "");
+Prefs.rdfLiteralAttrib("urn:mozilla:zap:sip_port_base", "5060");
 Prefs.rdfLiteralAttrib("urn:mozilla:zap:max_recent_calls", "10");
 Prefs.rdfLiteralAttrib("urn:mozilla:zap:dnd_code", "480"); // Temporarily unavail.
 Prefs.rdfLiteralAttrib("urn:mozilla:zap:dnd_headers", ""); // additional headers for DND response
@@ -331,6 +334,10 @@ Account.rdfLiteralAttrib("urn:mozilla:zap:registrar_server", "");
 Account.rdfLiteralAttrib("urn:mozilla:zap:address_of_record", "");
 Account.rdfLiteralAttrib("urn:mozilla:zap:suggested_registration_interval", "60");
 
+//XXX
+Account.rdfLiteralAttrib("urn:mozilla:zap:flow_id", "1");
+
+  
 // A pointer so that we can use the current account as a parameter in
 // a template rule triple. See account-template.xul
 Account.rdfPointerAttrib("urn:mozilla:zap:root",
@@ -396,6 +403,7 @@ Account.spec(
 
 var ActiveAccount = makeClass("ActiveAccount", Account, SupportsImpl);
 ActiveAccount.addInterfaces(Components.interfaces.zapISipNonInviteRCListener,
+                            Components.interfaces.zapISipFlowMonitor,
                             Components.interfaces.nsITimerCallback);
 
 // true if this account is currently successfully registered with a server:
@@ -415,15 +423,26 @@ ActiveAccount.fun(
 
     if (this["urn:mozilla:zap:automatic_registration"] != "true")
       return;
-    var server = wSipStack.syntaxFactory.deserializeURI(this["urn:mozilla:zap:registrar_server"]);
+    var domain = wSipStack.syntaxFactory.deserializeURI("sip:"+this["urn:mozilla:zap:authentication_realm"]);
+//    var server = wSipStack.syntaxFactory.deserializeURI(this["urn:mozilla:zap:registrar_server"]);
     this.aor = wSipStack.syntaxFactory.deserializeAddress(this["urn:mozilla:zap:address_of_record"]);
     var interval = this["urn:mozilla:zap:suggested_registration_interval"];
-    this.registrationRC =
-      wSipStack.createRegisterRequestClient(server, this.aor,
-                                            interval,
-                                            wCurrentIdentity.routeset,
-                                            wCurrentIdentity.routeset.length);
+    var route = wSipStack.syntaxFactory.deserializeRouteSet(this["urn:mozilla:zap:registrar_server"], {});
 
+    // check if we should keep this flow alive with STUN requests:
+    this.stunKeepAlive = route[0].uri.QueryInterface(Components.interfaces.zapISipSIPURI).hasURIParameter("sip-stun");
+
+    this.registrationRC =
+      wSipStack.createRegisterRequestClient(domain, this.aor,
+                                            interval,
+                                            route, route.length);
+    
+    // add instance id and flow-id to contact:
+    // XXX if (use_outbound)
+    var contact = this.registrationRC.request.getTopContactHeader().QueryInterface(Components.interfaces.zapISipContactHeader);
+    contact.setParameter("+sip.instance", '"<'+wSipStack.instanceID+'>"');
+    contact.setParameter("flow-id", this["urn:mozilla:zap:flow_id"]);
+    
     this.registrationRC.listener = this;
     this.registrationRC.sendRequest();
   });
@@ -433,6 +452,10 @@ ActiveAccount.fun(
     this["urn:mozilla:zap:is_active"] = "false";
     if (this.registrationRC) {
       this.clearRefresh();
+      if (this.flow) {
+        this.flow.removeFlowMonitor(this);
+        delete this.flow;
+      }
       this.deactivating = true;
       var contact = this.registrationRC.request.getTopContactHeader();
       if (contact) {
@@ -453,7 +476,7 @@ ActiveAccount.fun(
 
 // zapISipNonInviteRCListener methods:
 ActiveAccount.fun(
-  function notifyResponseReceived(rc, dialog, response) {
+  function notifyResponseReceived(rc, dialog, response, flow) {
     this._dump("response: "+response.statusCode);
     if (response.statusCode[0] == "1")
       return; // just a provisional response
@@ -513,6 +536,10 @@ ActiveAccount.fun(
           this["urn:mozilla:zap:is_registered"] = "true";
           // set up a refresh timer:
           this.scheduleRefresh(expires*1000*0.9);
+          if (this.stunKeepAlive && !this.flow) {
+            this.flow = flow;
+            this.flow.addFlowMonitor(this, 1);
+          }
           return;
         }
       }
@@ -523,6 +550,10 @@ ActiveAccount.fun(
       this._dump("Registration failure for "+this.aor.serialize()+". Retrying in 1 minute");
       // try again in a minute:
       this.scheduleRefresh(60000);
+      if (this.flow) {
+        this.flow.removeFlowMonitor(this);
+        delete this.flow;
+      }
     }
   });
 
@@ -550,13 +581,30 @@ ActiveAccount.fun(
 // nsITimerCallback methods:
 ActiveAccount.fun(
   function notify(timer) {
-    this.registrationRC.listener = this;
-    try {
-      this.registrationRC.sendRequest();
-    } catch(e) {
-      // the rc might still be busy with the last request.
-      // XXX we should have a 'state' member on rc's
+    if (timer == this.refreshTimer) {
+      this.registrationRC.listener = this;
+      try {
+        this.registrationRC.sendRequest();
+      } catch(e) {
+        // the rc might still be busy with the last request.
+        // XXX we should have a 'state' member on rc's
+      }
     }
+    else
+      this._dump("unknown timer callback: "+timer);
+  });
+
+// zapISipFlowMonitor
+
+//  void flowChanged(in zapISipFlow flow, in unsigned short changeFlags);
+ActiveAccount.fun(
+  function flowChanged(flow, changeFlags) {
+    // stop monitoring the flow; recover as described in
+    // draft-ietf-sip-outbound-01.txt
+    flow.removeFlowMonitor(this);
+    this["urn:mozilla:zap:is_registered"] = "false";
+    // XXX recover properly
+    this.scheduleRefresh(30000);
   });
 
 //----------------------------------------------------------------------
@@ -838,7 +886,7 @@ function initSipStack() {
   
   wSipStack.init(wUAHandler,
                  makePropertyBag({$instance_id:wPrefs["urn:mozilla:zap:instance_id"],
-                                  $port_base:5060,
+                                  $port_base:wPrefs["urn:mozilla:zap:sip_port_base"],
                                   $methods: "OPTIONS,INVITE,ACK,CANCEL,BYE",
                                   $extensions: "path", // path: RFC3327
                                   $user_agent: wUserAgent
@@ -869,7 +917,11 @@ var wSipTrafficLogger = {
       entry += "<--";
     entry += remoteAddress+":" + remotePort + " " + protocol + " ";
     entry += data.length + "bytes " + (new Date()).toUTCString() + "\n";
-    entry += data + "\n\n";
+    if (wNetUtils.snoopStunPacket(data) != -2)
+      entry += bin2hex(data, 16);
+    else
+      entry += data;
+    entry += "\n\n";
 
     this.logOutputStream.write(entry, entry.length);
   }
@@ -1187,7 +1239,7 @@ OutboundCallHandler.fun(
 
 // zapISipInviteRCListener methods:
 OutboundCallHandler.fun(
-  function notifyResponseReceived(rc, dialog, response) {
+  function notifyResponseReceived(rc, dialog, response, flow) {
     this._dump(response.statusCode+" response for call="+this.call);
     if (response.statusCode[0] == "1")
       this.call["urn:mozilla:zap:status"] =

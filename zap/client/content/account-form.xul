@@ -86,6 +86,11 @@
                    value="Registration interval:"/>
             <textbox id="urn:mozilla:zap:suggested_registration_interval"/>
           </row>
+          <row>
+            <label control="urn:mozilla:zap:flow_id" 
+                   value="Flow ID:"/>
+            <textbox id="urn:mozilla:zap:flow_id"/>
+          </row>
         </rows>
       </grid>
     </cgroup>

@@ -88,6 +88,11 @@
           <textbox id="urn:mozilla:zap:instance_id"/>
         </row>
         <row>
+          <label control="urn:mozilla:zap:sip_port_base"
+                 value="SIP port base:"/>
+          <textbox id="urn:mozilla:zap:sip_port_base"/>
+        </row>
+        <row>
           <label control="urn:mozilla:zap:max_recent_calls" 
                  value="Length of recent calls history:"/>
           <textbox id="urn:mozilla:zap:max_recent_calls"/>
