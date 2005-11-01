@@ -38,7 +38,8 @@
 EXPORTED_SYMBOLS = [ "utf8ToUnicode",
                      "unicodeToUTF8",
                      "padright",
-                     "padleft"];
+                     "padleft",
+                     "bin2hex"];
 
 // object to hold module's documentation:
 var _doc_ = {};
@@ -111,3 +112,18 @@ function padleft(str, c, l) {
   return str;
 }
 
+//----------------------------------------------------------------------
+// bin2hex
+
+_doc_.bin2hex = "bin2hex(str, octets_per_line) returns the hexadecimal representation of the given string of octets. octets_per_line is optional and defaults to 4.";
+function bin2hex(str, octets_per_line) {
+  var rv = "";
+  if (!octets_per_line) octets_per_line = 4;
+  for (var i=0, l=str.length; i<l; ++i) {
+    var code = str.charCodeAt(i).toString(16);
+    if (code.length == 1) code = "0"+code;
+    rv += code + " ";
+    if (i % octets_per_line == octets_per_line-1) rv += "\n";
+  }
+  return rv;
+}
