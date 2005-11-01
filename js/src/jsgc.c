@@ -1777,6 +1777,10 @@ restart:
             GC_MARK(cx, acx->newborn[i], gc_typenames[i], NULL);
         if (acx->lastAtom)
             GC_MARK_ATOM(cx, acx->lastAtom, NULL);
+        if (JSVAL_IS_GCTHING(acx->lastInternalResult)) {
+            GC_MARK(cx, JSVAL_TO_GCTHING(acx->lastInternalResult),
+                    "lastInternalResult", NULL);
+        }
 #if JS_HAS_EXCEPTIONS
         if (acx->throwing && JSVAL_IS_GCTHING(acx->exception))
             GC_MARK(cx, JSVAL_TO_GCTHING(acx->exception), "exception", NULL);
