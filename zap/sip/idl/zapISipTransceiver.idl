@@ -41,6 +41,7 @@ interface zapISipMessage;
 interface zapISipConnection;
 interface zapISipListeningSocket;
 interface zapISipTrafficMonitor;
+interface zapISipEndpoint;
 
 /**
  * \ingroup SIP_TRANSPORT_LAYER
@@ -51,28 +52,33 @@ interface zapISipTrafficMonitor;
 [scriptable, uuid(ddd9ae8a-a25d-4e83-b611-9754f2623804)]
 interface zapISipTransceiver : nsISupports
 {
-  void openListeningSocket(in ACString protocol, in unsigned long port);
-  void closeListeningSocket(in ACString protocol, in unsigned long port);
+  void openListeningSocket(in ACString transportProtocol,
+                           in unsigned long port);
+  void closeListeningSocket(in ACString transportProtocol,
+                            in unsigned long port);
   void getListeningSockets(out unsigned long count,
                            [retval, array, size_is(count)] out zapISipListeningSocket sockets);
   
   /**
-   * Send 'message' to 'destAddress':'destPort' using 'protocol'.
+   * Send 'packet' to 'destAddress':'destPort' using 'transportProtocol'.
    *
-   * For non connection-oriented protocols (i.e. udp), the message
-   * will be sent from the same port as the first udp listening
+   * For non connection-oriented transport protocols (i.e. udp), the
+   * packet will be sent from the same port as the first udp listening
    * socket. The 'connection' parameter is ignored for udp.
    *
-   * For connection-oriented protocols, if 'connection' is non-zero,
-   * try to send over that connection first. If 'connection' is not
-   * alive any longer, open a new connection. Return the connection
-   * over which the message was sent.
+   * For connection-oriented transport protocols, if 'connection' is
+   * non-zero, try to send over that connection first. If 'connection'
+   * is not alive any longer, open a new connection. Return the
+   * connection over which the packet was sent (==null for non
+   * connection-oriented protocols).
    */
-  zapISipConnection sendMessage(in zapISipMessage message, in ACString protocol,
-                                in ACString destAddress, in ACString destPort,
-                                in zapISipConnection connection);
+  zapISipConnection sendPacket(in ACString packet,
+                               in ACString transportProtocol,
+                               in ACString destAddress, in ACString destPort,
+                               in zapISipConnection connection);
   
-  void setTransceiverSink(in zapISipTransceiverSink receiver);
+  void prependTransceiverSink(in zapISipTransceiverSink receiver);
+  void removeTransceiverSink(in zapISipTransceiverSink receiver);
 
   /**
    * The trafficMonitor receives all raw incoming and outgoing traffic.
@@ -92,9 +98,18 @@ interface zapISipTransceiver : nsISupports
 [scriptable, uuid(d26136ed-825f-4c8c-8190-886b23528b12)]
 interface zapISipTransceiverSink : nsISupports
 {
-  void handleSipMessage(in zapISipMessage message, in ACString protocol,
-                        in ACString sourceAddress, in ACString sourcePort,
-                        in zapISipConnection connection);
+  const unsigned short APPLICATION_SIP  = 1;
+  const unsigned short APPLICATION_STUN = 2;
+
+  
+  boolean handlePacket(in ACString data,
+                       in unsigned short application,
+                       in ACString transportProtocol,
+                       in ACString localAddress,
+                       in unsigned short localPort,
+                       in ACString remoteAddress,
+                       in unsigned short remotePort,
+                       in zapISipConnection connection);
 };
 
 
@@ -104,9 +119,12 @@ interface zapISipTransceiverSink : nsISupports
 [scriptable, uuid(dd7c4e01-8026-4e15-81f4-9e42853360e8)]
 interface zapISipTrafficMonitor : nsISupports
 {
-  void notifyPacket(in ACString data, in ACString protocol,
-                    in ACString localAddress, in ACString localPort,
-                    in ACString remoteAddress, in ACString remotePort,
+  void notifyPacket(in ACString data,
+                    in ACString transportProtocol,
+                    in ACString localAddress,
+                    in unsigned short localPort,
+                    in ACString remoteAddress,
+                    in unsigned short remotePort,
                     in boolean outbound);
 };
 

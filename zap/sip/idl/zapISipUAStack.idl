@@ -271,14 +271,14 @@ interface zapISipUAStack : nsISupports
    * for createNonInviteRequestClient(), with the following exceptions:
    *
    * - The requestURI and route set will be based on the given
-   *   registrarServer parameter (rather than the ToAddress as in
+   *   domain parameter (rather than the ToAddress as in
    *   createNonInviteRequestClient()).
    * - The ToAddress will be set to the given addressOfRecord.
    * - The FromAddress will be set to the given addressOfRecord.
    * - A Contact header will be added, set to the current Contact address
    *   and with an 'expires' tag set to the given expiration value.
    */
-  zapISipNonInviteRC createRegisterRequestClient(in zapISipURI registrarServer,
+  zapISipNonInviteRC createRegisterRequestClient(in zapISipURI domain,
                                                  in zapISipAddress addressOfRecord,
                                                  in unsigned long expiration,
                                                  [array, size_is(count)]

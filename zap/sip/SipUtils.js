@@ -51,6 +51,7 @@ EXPORTED_SYMBOLS = ["BRANCH_COOKIE",
                     "callAsync",
                     "gSyntaxFactory",
                     "gDNSService",
+                    "gNetUtils",
                     "gLoggingService",
                     "generateTag",
                     "gUUIDGenerator",
@@ -139,6 +140,11 @@ var CLASS_DNS_SERVICE = Components.classes["@mozilla.org/network/dns-service;1"]
 var ITF_DNS_SERVICE = Components.interfaces.nsIDNSService;
 
 var gDNSService = CLASS_DNS_SERVICE.getService(ITF_DNS_SERVICE);
+
+////////////////////////////////////////////////////////////////////////
+// NetUtils
+
+var gNetUtils = Components.classes["@mozilla.org/zap/netutils;1"].getService(Components.interfaces.zapINetUtils);
 
 ////////////////////////////////////////////////////////////////////////
 // gLoggingService: global logging service instance

@@ -61,7 +61,6 @@ function toString() { return "[SipUARequestCore.js]"; }
 // object to hold component's documentation:
 var _doc_ = {};
 
-
 ////////////////////////////////////////////////////////////////////////
 // SipNonInviteRC
 // request client for sending non-invite requests
@@ -133,7 +132,7 @@ SipNonInviteRC.statefun(
         // generate a 408 (Request Timeout) to hand to the listener
         // (RFC3261 8.1.3.1):
         var r = this.stack.formulateResponse("408", this.request, this._ToTag);
-        this.listener.notifyResponseReceived(this, this.dialog, r);
+        this.listener.notifyResponseReceived(this, this.dialog, r, null);
       }
       return;
     }
@@ -160,32 +159,32 @@ SipNonInviteRC.statefun(
 //----------------------------------------------------------------------
 // zapISipClientTransactionUser
 
-//  void handleFailureResponse(in zapISipResponse response);
+//  void handleFailureResponse(in zapISipResponse response, in zapISipFlow flow);
 SipNonInviteRC.statefun(
   "CALLING",
-  function handleFailureResponse(response) {
+  function handleFailureResponse(response, flow) {
     this.changeState("INITIALIZED");
     if (this.listener)
-      this.listener.notifyResponseReceived(this, this.dialog, response);
+      this.listener.notifyResponseReceived(this, this.dialog, response, flow);
   });
 
-//  void handleProvisionalResponse(in zapISipResponse response);
+//  void handleProvisionalResponse(in zapISipResponse response, in zapISipFlow flow);
 SipNonInviteRC.statefun(
   "CALLING",
-  function handleProvisionalResponse(response) {
+  function handleProvisionalResponse(response, flow) {
     if (this.listener)
-      this.listener.notifyResponseReceived(this, this.dialog, response);
+      this.listener.notifyResponseReceived(this, this.dialog, response, flow);
     // stay in CALLING state
   });
 
-//  void handleSuccessResponse(in zapISipResponse response);
+//  void handleSuccessResponse(in zapISipResponse response, in zapISipFlow flow);
 SipNonInviteRC.statefun(
   "CALLING",
-  function handleSuccessResponse(response) {
+  function handleSuccessResponse(response, flow) {
     this.changeState("INITIALIZED");
     
     if (this.listener)
-      this.listener.notifyResponseReceived(this, this.dialog, response);
+      this.listener.notifyResponseReceived(this, this.dialog, response, flow);
   });
 
 //  void handleTimeout();
@@ -337,7 +336,7 @@ SipInviteRC.statefun(
         // generate a 408 (Request Timeout) to hand to the listener
         // (RFC3261 8.1.3.1):
         var r = this.stack.formulateResponse("408", this.request, null);
-        this.listener.notifyResponseReceived(this, this.dialog, r);
+        this.listener.notifyResponseReceived(this, this.dialog, r, null);
       }
       return;
     }
@@ -348,7 +347,7 @@ SipInviteRC.statefun(
         // generate a 487 (Request Terminated) to hand to the listener
         // (RFC3261 9.1):
         var r = this.stack.formulateResponse("487", this.request, null);
-        this.listener.notifyResponseReceived(this, this.dialog, r);
+        this.listener.notifyResponseReceived(this, this.dialog, r, null);
       }
       return;
     }
@@ -378,10 +377,10 @@ SipInviteRC.statefun(
 //----------------------------------------------------------------------
 // zapISipClientTransactionUser
 
-//  void handleProvisionalResponse(in zapISipResponse response);
+//  void handleProvisionalResponse(in zapISipResponse response, in zapISipFlow flow);
 SipInviteRC.statefun(
   "CALLING",
-  function handleProvisionalResponse(response) {
+  function handleProvisionalResponse(response, flow) {
 
     if (this.cancelled && !this.provisional_received) {
       // we have received the first provisional response. send a
@@ -413,26 +412,26 @@ SipInviteRC.statefun(
     }
 
     if (this.listener)
-      this.listener.notifyResponseReceived(this, dialog, response);
+      this.listener.notifyResponseReceived(this, dialog, response, flow);
   });
 
-//  void handleFailureResponse(in zapISipResponse response);
+//  void handleFailureResponse(in zapISipResponse response, in zapISipFlow flow);
 SipInviteRC.statefun(
   "CALLING",
-  function handleFailureResponse(response) {
+  function handleFailureResponse(response, flow) {
     this.resetCall();
     
     if (this.listener)
-      this.listener.notifyResponseReceived(this, this.dialog, response);
+      this.listener.notifyResponseReceived(this, this.dialog, response, flow);
   });
 
-//  void handleSuccessResponse(in zapISipResponse response);
+//  void handleSuccessResponse(in zapISipResponse response, in zapISipFlow flow);
 SipInviteRC.statefun(
   "CALLING",
-  function handleSuccessResponse(response) {
+  function handleSuccessResponse(response, flow) {
     this.changeState("2XX_RECEIVED");
 
-    this.handle2XXResponse(response);
+    this.handle2XXResponse(response, flow);
     
     // RFC3261 13.2.24: We now wait for 64*T1 for further 2XX
     // responses.
@@ -468,9 +467,9 @@ SipInviteRC.statefun(
 // received by the stack:
 SipInviteRC.statefun(
   "2XX_RECEIVED",
-  function handleResponse(response) {
+  function handleResponse(response, flow) {
     // take care of resending ACKs and generating new dialogs:
-    this.handle2XXResponse(response);
+    this.handle2XXResponse(response, flow);
   });
 
 //----------------------------------------------------------------------
@@ -506,7 +505,7 @@ SipInviteRC.fun(
   });
 
 SipInviteRC.fun(
-  function handle2XXResponse(response) {
+  function handle2XXResponse(response, flow) {
     // check if we already have a dialog for the given To tag:
     var dialog = this.stack.findDialog(constructClientDialogID(response));
     if (!dialog) {
@@ -531,7 +530,7 @@ SipInviteRC.fun(
       // We only inform the listener of the response when there is no
       // ack yet to filter out 2xx retransmissions:
       if (this.listener)
-        this.listener.notifyResponseReceived(this, dialog, response);
+        this.listener.notifyResponseReceived(this, dialog, response, flow);
       
       // create an ACK template (RFC3261 13.2.2.4):
       var ackTemplate = dialog.formulateACK();

@@ -269,16 +269,14 @@ SipTCPConnection.fun(
 
 SipTCPConnection.fun(
   function _handleMessage(bytes, message) {
-    if (this._transceiver.trafficMonitor)
-      this._transceiver.trafficMonitor.notifyPacket(bytes,
-                                                    "tcp",
-                                                    "xxx-local-address",
-                                                    this._socket.port,
-                                                    this.host, this.port,
-                                                    false);
-    if (message)
-      this._transceiver._handleReceivedMessage("tcp", this.host, this.port,
-                                               message, this);
+    this._transceiver._dispatchPacket(bytes,
+                                      Components.interfaces.zapISipTransceiverSink.APPLICATION_SIP,
+                                      "tcp",
+                                      "xxx-local-address",
+                                      this._socket.port,
+                                      this.host,
+                                      this.port,
+                                      this);
   });
 
 
@@ -293,59 +291,64 @@ SipTransceiver.addInterfaces(Components.interfaces.zapISipTransceiver,
 
 SipTransceiver.appendCtor(
   function() {
-    // hash of listening socket indexed by protocol+port
+    // hash of listening socket indexed by transportProtocol+port
     this._listeningSockets = {};
 
-    // hash of persistent connections indexed by protocol+peer
+    // hash of persistent connections indexed by transportProtocol+peer
     // address+peer port
     this._connections = {};
+
+    // stack of transceiver sinks. 
+    this._sinks = [];
   });
 
 //----------------------------------------------------------------------
 // zapISipTransceiver implementation:
 
-// void openListeningSocket(in ACString protocol, in unsigned long port);
+// void openListeningSocket(in ACString transportProtocol,
+//                          in unsigned long port);
 SipTransceiver.fun(
-  function openListeningSocket(protocol, port) {
-    protocol = protocol.toLowerCase();
-    var key = protocol+":"+port;
+  function openListeningSocket(transportProtocol, port) {
+    transportProtocol = transportProtocol.toLowerCase();
+    var key = transportProtocol+":"+port;
     if (hashhas(this._listeningSockets, key))
-      this._error("SipTransceiver: "+protocol+
+      this._error("SipTransceiver: "+transportProtocol+
                   " listening socket at "+port+" already open");
 
     var socket;
-    if (protocol == "udp") {
+    if (transportProtocol == "udp") {
       socket = CLASS_UDP_SOCKET.createInstance();
       socket.QueryInterface(ITF_UDP_SOCKET);
       socket.init(port);
       socket.setReceiver(this);
     }
-    else if (protocol == "tcp") {
+    else if (transportProtocol == "tcp") {
       socket = CLASS_SERVER_SOCKET.createInstance();
       socket.QueryInterface(ITF_SERVER_SOCKET);
       socket.init(port, false, -1);
       socket.asyncListen(this);
     }
     else {
-      this._error("SipTransceiver: Unsupported protocol '"+protocol+"'");
+      this._error("SipTransceiver: Unsupported transport protocol '"+transportProtocol+"'");
     }
     
     hashset(this._listeningSockets, key, socket);
   });
 
-// void closeListeningSocket(in ACString protocol, in unsigned long port);
+// void closeListeningSocket(in ACString transportProtocol,
+//                           in unsigned long port);
 SipTransceiver.fun(
-  function closeListeningSocket(protocol, port) {
-    protocol = protocol.toLowerCase();
-    var key = protocol+":"+port;
+  function closeListeningSocket(transportProtocol, port) {
+    transportProtocol = transportProtocol.toLowerCase();
+    var key = transportProtocol+":"+port;
     var socket;
     if (!(socket = hashget(this._listeningSockets, key)))
       this._error("SipTransceiver: Trying to close unknown "+
-                  protocol+" socket at "+port);
-    if (protocol == "udp" || protocol == "tcp")
+                  transportProtocol+" socket at "+port);
+    if (transportProtocol == "udp" || transportProtocol == "tcp")
       socket.close();
     else
-      this._error("SipTransceiver: Unsupported protocol '"+protocol+"'");
+      this._error("SipTransceiver: Unsupported transport protocol '"+transportProtocol+"'");
     
     hashdel(this._listeningSockets, key);
   });
@@ -367,21 +370,24 @@ SipTransceiver.fun(
     return rv;
   });
 
-// zapISipConnection sendMessage(in zapISipMessage message, in ACString protocol,
-//                               in ACString destAddress, in ACString destPort,
-//                               in zapISipConnection connection);
+// zapISipConnection sendPacket(in ACString packet,
+//                              in ACString transportProtocol,
+//                              in ACString destAddress, in ACString destPort,
+//                              in zapISipConnection connection);
 SipTransceiver.fun(
-  function sendMessage(message, protocol, destAddress, destPort, connection) {
+  function sendPacket(packet, transportProtocol, destAddress, destPort, connection) {
     var localPort;
-    if (protocol == "udp") {
+    var localAddress;
+    if (transportProtocol == "udp") {
       this._assert(connection==null,
                    "Connection provided for connection-less protocol!");
       var socket = this._getUDPSendSocket();
       if (!socket) this._error("SipTransceiver: No UDP socket available");
-      socket.send(message.serialize(), destAddress, destPort);
+      socket.send(packet, destAddress, destPort);
       localPort = socket.port;
+      localAddress = socket.address;
     }
-    else if (protocol == "tcp") {
+    else if (transportProtocol == "tcp") {
       // if a connection has been provided, use it:
       if (connection && connection.isAlive()) {
         this._dump("using provided connection");
@@ -396,27 +402,37 @@ SipTransceiver.fun(
           connection = this._createTCPConnection(socket);
         }
       }
-      log("Sending packet via TCP :\n"+message.serialize());
-      connection.send(message.serialize());
+      connection.send(packet);
       localPort = connection._socket.port;
+      localAddress = "xxx-local-address";
     }
     else
-      this._error("SipTransceiver: Unsupported protocol '"+protocol+"'");
+      this._error("SipTransceiver: Unsupported protocol '"+transportProtocol+"'");
 
     if (this.trafficMonitor)
-      this.trafficMonitor.notifyPacket(message.serialize(),
-                                       protocol,
-                                       "xxx-local-address",
+      this.trafficMonitor.notifyPacket(packet,
+                                       transportProtocol,
+                                       localAddress,
                                        localPort,
                                        destAddress, destPort,
                                        true);
     return connection;
   });
 
-// void setTransceiverSink(in zapISipTransceiverSink receiver);
+//  void prependTransceiverSink(in zapISipTransceiverSink receiver);
 SipTransceiver.fun(
-  function setTransceiverSink(receiver) {
-    this._receiver = receiver;
+  function prependTransceiverSink(receiver) {
+    this._sinks.splice(0, 0, receiver);
+  });
+
+//  void removeTransceiverSink(in zapISipTransceiverSink receiver);
+SipTransceiver.fun(
+  function removeTransceiverSink(receiver) {
+    for (var i=0, l=this._sinks; i<l; ++i)
+      if (this._sinks[i] == receiver) {
+        this._sinks.splice(i, 1);
+        return;
+      }
   });
 
 // attribute zapISipTrafficMonitor trafficMonitor;
@@ -438,26 +454,20 @@ SipTransceiver.fun(
 
 SipTransceiver.fun(
   function handleDatagram(socket, data) {
-    if (this.trafficMonitor)
-      this.trafficMonitor.notifyPacket(data.data,
-                                       "udp",
-                                       "xxx-local-address",
-                                       socket.port,
-                                       data.address, data.port,
-                                       false);
-    
-    try {
-      var message = gSyntaxFactory.deserializeMessage(data.data);
+    var application = Components.interfaces.zapISipTransceiverSink.APPLICATION_SIP;
+    if (gNetUtils.snoopStunPacket(data.data) != -2) {
+      // data appears to be a STUN packet
+      application = Components.interfaces.zapISipTransceiverSink.APPLICATION_STUN;
     }
-    catch(e) {
-      this._warning("Rejecting malformed datagram from"+data.address+":"+
-                    data.port+", received on port "+socket.port+". Error was:"+e);
-      return;
-    }
-
-    //XXX make sure content is not longer than indicated by Content-Length
     
-    this._handleReceivedMessage("udp", data.address, data.port, message, null);
+    this._dispatchPacket(data.data,
+                         application,
+                         "udp",
+                         socket.address,
+                         socket.port,
+                         data.address,
+                         data.port,
+                         null);
   });
 
 //----------------------------------------------------------------------
@@ -477,22 +487,6 @@ SipTransceiver.fun(
 //----------------------------------------------------------------------
 // implementation helpers:
 
-// all messages received on tcp or udp connections will be routed
-// through this function:
-SipTransceiver.fun(
-  function _handleReceivedMessage(protocol, sourceAddress, sourcePort,
-                                  message, connection) {
-    this._dump("Message received via "+protocol+
-               " from "+sourceAddress+":"+sourcePort);
-    if (this._receiver)
-      this._receiver.handleSipMessage(message,
-                                      { transport: protocol,
-                                        address:   sourceAddress,
-                                        port:      sourcePort
-                                      },
-                                      connection);
-  });
-
 // create a new tcp connection from the given socket and enter it into
 // our connection cache:
 SipTransceiver.fun(
@@ -506,9 +500,9 @@ SipTransceiver.fun(
 
 // callback for zapISipConnections to inform us of closure
 SipTransceiver.fun(
-  function _connectionClosed(protocol, host, port) {
+  function _connectionClosed(transportProtocol, host, port) {
     // remove from connections hash
-    hashdel(this._connections, protocol+":"+host+":"+port);
+    hashdel(this._connections, transportProtocol+":"+host+":"+port);
   });
 
 SipTransceiver.fun(
@@ -527,6 +521,327 @@ SipTransceiver.fun(
                    });
   });
 
+// all incoming packets will be routed through this function:
+SipTransceiver.fun(
+  function _dispatchPacket(data,
+                           application, transportProtocol,
+                           localAddress, localPort,
+                           remoteAddress, remotePort,
+                           connection) {
+    if (this.trafficMonitor)
+      this.trafficMonitor.notifyPacket(data,
+                                       transportProtocol,
+                                       localAddress,
+                                       localPort,
+                                       remoteAddress, remotePort,
+                                       false);
+    var handled = this._sinks.some(function(s) {
+                                     return s.handlePacket(data,
+                                                           application,
+                                                           transportProtocol,
+                                                           localAddress,
+                                                           localPort,
+                                                           remoteAddress,
+                                                           remotePort,
+                                                           connection); });
+    if (!handled)
+      this._dump("unhandled "+ transportProtocol+" packet (app="+
+                 application+", length="+data.length+") from "+remoteAddress+
+                 ":"+remotePort+" received on "+localAddress+":"+
+                 localPort);
+  });
+
+////////////////////////////////////////////////////////////////////////
+// SipFlow
+
+var SipFlow = makeClass("SipFlow", SupportsImpl);
+SipFlow.addInterfaces(Components.interfaces.zapISipFlow,
+                      Components.interfaces.nsITimerCallback);
+
+SipFlow.fun(
+  function init(transport,
+                localAddress, localPort,
+                remoteAddress, remotePort,
+                transportProtocol, connection) {
+    this.transport = transport;
+    this.localAddress = localAddress;
+    this.localPort = localPort;
+    this.remoteAddress = remoteAddress;
+    this.remotePort = remotePort;
+    this.transportProtocol = transportProtocol;
+    this.connection = connection;
+  });
+
+function makeFlowID(localAddress, localPort,
+                    remoteAddress, remotePort,
+                    transportProtocol) {
+  return localAddress+":"+localPort+":"+remoteAddress+":"+transportProtocol;
+}
+
+SipFlow.getter(
+  "flowID",
+  function get_flowID() {
+    if (!this._flowID) {
+      this._flowID = makeFlowID(this.localAddress, this.localPort,
+                                this.remoteAddress, this.remotePort,
+                                this.transportProtocol);
+    }
+    return this._flowID;
+  });
+
+
+SipFlow.fun(
+  function addFlowMonitorInternal(monitor, type) {
+    if (!this._monitors) this._monitors = [];
+    var monitors = this._monitors;
+
+    // make sure we don't get redundant registrations:
+    for (var i=0,l=monitors.length; i<l; ++i) {
+      if (monitors[i] == monitor)
+        this._error("Monitor already set");
+    }
+    
+    this._monitors.push(monitor);
+    this._dump("Added monitor "+monitor+" to flow "+this.flowID);
+    if (monitors.length == 1) {
+      this.startMonitoring(type);
+    }
+  });
+
+SipFlow.fun(
+  function removeFlowMonitorInternal(monitor) {
+    var monitors = this._monitors;
+    for (var i=monitors.length-1; i>=0; --i) {
+      if (monitors[i] == monitor) {
+        monitors.splice(i, 1);
+        this._dump("Removing monitor "+monitor+" from flow "+this.flowID);
+        break;
+      }
+    }
+    if (monitors.length == 0) {
+      this.stopMonitoring();
+      hashdel(this.transport._monitoredFlows, this.flowID);
+      this._dump("Stopping monitoring of flow "+this.flowID);
+    }
+  });
+
+SipFlow.fun(
+  function getStunInterval() {
+    // see draft-ietf-sip-outbound-01 4.2
+    if (this.transportProtocol == "udp")
+      return 24000+Math.floor(Math.random()*5000);
+    else
+      return 95000+Math.floor(Math.random()*7000);
+  });
+
+SipFlow.fun(
+  function startMonitoring(type) {
+    this._assert(!this.isMonitored, "already monitored");
+    this.isMonitored = true;
+    this.stunTries = 0; // number of times we haven't received an
+                        // answer to a STUN request
+    this.stunRequest = gNetUtils.createStunMessage();
+    this.stunRequest.messageType = this.stunRequest.BINDING_REQUEST_MESSAGE;
+    this.stunRequest.initTransactionID();
+    // send a stun request immediately so that we get a reference
+    // address, port:
+    this.stunKeepAliveTimer = makeOneShotTimer(this, 0);
+  });
+
+SipFlow.fun(
+  function stopMonitoring() {
+    this._assert(this.isMonitored, "flow not monitored??");
+    this.stunKeepAliveTimer.cancel();
+    this._dump("stopping monitoring");
+    delete this.stunKeepAliveTimer;
+    delete this.stunRequest;
+    delete this.isMonitored;
+  });
+
+SipFlow.fun(
+  function handleStunPacket(packet) {
+    if (this.stunTries > 0) {
+      this._dump("received a STUN packet after "+this.stunTries+" tries");
+      try {
+        var message = gNetUtils.deserializeStunPacket(packet, {}, {});
+      }
+      catch(e) {
+        // error parsing the STUN response
+        // maybe this wasn't a STUN packet after all?
+        // -> don't handle it
+        this._dump("not handling malformed STUN packet");
+        return false;
+      }
+      switch (message.messageType) {
+        case Components.interfaces.zapIStunMessage.BINDING_RESPONSE_MESSAGE:
+          if (message.transactionID != this.stunRequest.transactionID) {
+            // not a response to our current query; possibly a
+            // retransmission. let it fall through in case there are
+            // other stun handlers down the chain:
+            return false;
+          }
+          var address, port;
+          if (message.hasXORMappedAddressAttrib) {
+            address = message.XORMappedAddress;
+            port = message.XORMappedAddressPort;
+          }
+          else if (message.hasMappedAddressAttrib) {
+            address = message.mappedAddress;
+            port = message.mappedAddressPort;
+          }
+          else {
+            // the response is malformed
+            this.notifyMonitors(Components.interfaces.zapISipFlowMonitor.MONITOR_PROTOCOL_ERROR);
+            break;
+          }
+          if (!this.stunAddress) {
+            this.stunAddress = address;
+            this.stunPort = port;
+          }
+          else {
+            var changeFlags = 0;
+            // check if the flow has changed in some way:
+            if (address != this.stunAddress) changeFlags |= Components.interfaces.zapISipFlowMonitor.ADDRESS_CHANGED;
+            if (port != this.stunPort) changeFlags |= Components.interfaces.zapISipFlowMonitor.PORT_CHANGED;
+            if (changeFlags != 0) {
+              this.notifyMonitors(changeFlags);
+              // reset our stored stunAddress & port:
+              this.stunAddress = address;
+              this.stunPort = port;
+            }
+          }
+          break;
+        case Components.interfaces.zapIStunMessage.BINDING_ERROR_RESPONSE_MESSAGE:
+          if (message.transactionID != this.stunRequest.transactionID) {
+            // not a response to our current query; possibly a
+            // retransmission. let it fall through in case there are
+            // other stun handlers down the chain:
+            return false;
+          }
+          // inform monitors of a protocol error, but fall through to
+          // rescheduling nontheless
+          this.notifyMonitors(Components.interfaces.zapISipFlowMonitor.MONITOR_PROTOCOL_ERROR);
+          break;
+        default:
+          // probably not meant for us:
+          return false;
+      }
+            
+      // if we still have monitors: reset counter; generate new
+      // transaction id; reschedule:
+      if (this.stunKeepAliveTimer) {
+        this.stunTries = 0;
+        this.stunRequest.initTransactionID();
+        resetOneShotTimer(this.stunKeepAliveTimer, this.getStunInterval());
+      }
+    }
+    else
+      this._dump("received redundant STUN packet");
+    return true;
+  });
+
+SipFlow.fun(
+  function notifyMonitors(flags) {
+    if (!this._monitors) {
+      this._dump("no monitors!");
+      return;
+    }
+    // do the notification robustly, so that monitors can remove
+    // themselves reentrantly:
+    for (var i=this._monitors.length-1; i>=0; --i) {
+      this._monitors[i].flowChanged(this, flags);
+      if (i>this._monitors.length) i = this._monitors.length;
+    }
+  });
+
+//----------------------------------------------------------------------
+// nsITimerCallback
+
+SipFlow.fun(
+  function notify(timer) {
+    // see rfc3489bis 9.3 for information on the binding request
+    // retransmission logic
+    
+    if (this.stunTries == 9) {
+      // the flow has failed!
+      this._dump("flow "+this.flowID+" has failed");
+      this.notifyMonitors(Components.interfaces.zapISipFlowMonitor.FLOW_FAILED);
+      // reschedule if we still have monitors:
+      if (this.stunKeepAliveTimer) {
+        // reset counter; generate new transaction id; reschedule:
+        this.stunTries = 0;
+        this.stunRequest.initTransactionID();
+        resetOneShotTimer(this.stunKeepAliveTimer, this.getStunInterval());
+      }
+    }
+    else {
+      // send (or resend) a STUN binding request and reschedule timer:
+      this.transport.transceiver.sendPacket(this.stunRequest.serialize(),
+                                            this.transportProtocol,
+                                            this.remoteAddress,
+                                            this.remotePort,
+                                            this.connection);
+      var delay = this.stunTries == 0 ? 100 : Math.min(2*this.stunKeepAliveTimer.delay, 1600);
+      resetOneShotTimer(this.stunKeepAliveTimer, delay);
+      ++this.stunTries;
+    }
+  });
+
+//----------------------------------------------------------------------
+// zapISipFlow
+
+//  boolean equals(in zapISipFlow other);
+SipFlow.fun(
+  function equals(other) {
+    return (this.remoteAddress == other.remoteAddress) &&
+           (this.remotePort == other.remotePort) &&
+           (this.transportProtocol == other.transportProtocol) &&
+           (this.localAddress == other.localAddress) &&
+           (this.localPort == other.localPort);
+  });
+
+//  readonly attribute ACString localAddress;
+SipFlow.obj("localAddress", null);
+
+//  readonly attribute unsigned short localPort;
+SipFlow.obj("localPort", null);
+
+//  readonly attribute ACString remoteAddress;
+SipFlow.obj("remoteAddress", null);
+
+//  readonly attribute unsigned short remotePort;
+SipFlow.obj("remotePort", null);
+
+//  readonly attribute ACString transportProtocol;
+SipFlow.obj("transportProtocol", null);
+
+//  readonly attribute zapISipConnection connection;
+SipFlow.obj("connection", null);
+
+//  void addFlowMonitor(in zapISipFlowMonitor monitor, in unsigned short type);
+SipFlow.fun(
+  function addFlowMonitor(monitor, type) {
+    var monitoredFlow = hashget(this.transport._monitoredFlows, this.flowID);
+    if (!monitoredFlow) {
+      // we take the role of monitored flow:
+      monitoredFlow = this;
+      this._dump("New monitored flow: "+this.flowID);
+      hashset(this.transport._monitoredFlows, this.flowID, monitoredFlow);
+    }
+    
+    monitoredFlow.addFlowMonitorInternal(monitor, type);
+  });
+
+//  void removeFlowMonitor(in zapISipFlowMonitor monitor);
+SipFlow.fun(
+  function removeFlowMonitor(monitor) {
+    var monitoredFlow = hashget(this.transport._monitoredFlows, this.flowID);
+    this._assert(monitoredFlow, "hmm - "+this.flowID+" not monitored???");
+
+    monitoredFlow.removeFlowMonitorInternal(monitor);
+  });
+
+
 ////////////////////////////////////////////////////////////////////////
 // SipTransport : sip transport layer frontend
 
@@ -536,6 +851,9 @@ SipTransport.addInterfaces(Components.interfaces.zapISipTransceiverSink);
 SipTransport.appendCtor(
   function ctor() {
     this._sinks = [];
+
+    // hash of currently monitored flows:
+    this._monitoredFlows = {};
   });
 
 //----------------------------------------------------------------------
@@ -545,7 +863,7 @@ SipTransport.fun(
   function init(config) {
     this._assert(!this.transceiver, "already initialized");
     this.transceiver = SipTransceiver.instantiate();
-    this.transceiver.setTransceiverSink(this);
+    this.transceiver.prependTransceiverSink(this);
 
     var port = 5060;
     if (config) {
@@ -615,9 +933,10 @@ SipTransport.fun(
     // Add transport portion of 'sent-protocol':
     topVia.transport = endpoint.transport.toUpperCase();
     
-    return this.transceiver.sendMessage(request, endpoint.transport,
-                                        endpoint.address,
-                                        endpoint.port, connection);
+    return this.transceiver.sendPacket(request.serialize(),
+                                       endpoint.transport,
+                                       endpoint.address,
+                                       endpoint.port, connection);
   });
 
 SipTransport.fun(
@@ -642,24 +961,56 @@ SipTransport.fun(
     if (!port)
       port = "5060";
     
-    return this.transceiver.sendMessage(response, transport,
-                                        address,
-                                        port,
-                                        connection);
+    return this.transceiver.sendPacket(response.serialize(),
+                                       transport,
+                                       address,
+                                       port,
+                                       connection);
   });
 
 //----------------------------------------------------------------------
 //zapISipTransceiverSink
 
 SipTransport.fun(
-  function handleSipMessage(message, endpoint, connection) {
+  function handlePacket(data, application,
+                        transportProtocol, localAddress, localPort,
+                        remoteAddress, remotePort, connection) {
+
+    if (application == Components.interfaces.zapISipTransceiverSink.APPLICATION_STUN) {
+      // let's see if we have a monitored flow interested in this STUN packet:
+      var id = makeFlowID(localAddress, localPort,
+                          remoteAddress, remotePort, transportProtocol);
+      var monitoredFlow = hashget(this._monitoredFlows, id);
+      if (!monitoredFlow) return;
+      return monitoredFlow.handleStunPacket(data);       
+    }
+      
+    // we only handle SIP traffic:
+    if (application != Components.interfaces.zapISipTransceiverSink.APPLICATION_SIP)
+      return false;
+    
+    var flow = SipFlow.instantiate();
+    flow.init(this, localAddress, localPort, remoteAddress, remotePort,
+              transportProtocol, connection);
+    
+    try {
+      var message = gSyntaxFactory.deserializeMessage(data);
+      //XXX make sure content is not longer than indicated by Content-Length  
+    }
+    catch(e) {
+      this._warning("Rejecting malformed datagram from "+remoteAddress+":"+
+                    remotePort+", received on "+localAddress+":"+localPort+
+                    ". Error was: "+e);
+      return false;
+    }
+    
     if (message.isRequest) {
       // Process according to RFC3261 18.2.1 and RFC3581 4:
       var topVia = message.getTopViaHeader();
       if (topVia.hasParameter("rport")) {
         // RFC3581 4: unconditionally insert rport & received parameters
-        topVia.setParameter("received", endpoint.address);
-        topVia.setParameter("rport", endpoint.port);
+        topVia.setParameter("received", remoteAddress);
+        topVia.setParameter("rport", remotePort);
       }
       else {
         // RFC3261 18.2.1:      
@@ -674,8 +1025,8 @@ SipTransport.fun(
         // to assist the server transport layer in sending the response,
         // since it must be sent to the source IP address from which the
         // request came.
-        if (topVia.host != endpoint.address) {
-          topVia.setParameter("received", endpoint.address);
+        if (topVia.host != remoteAddress) {
+          topVia.setParameter("received", remoteAddress);
         }
       }
     }
@@ -691,19 +1042,17 @@ SipTransport.fun(
        var ViaPort = topVia.port ? topVia.port : 5060;
        if (topVia.host != this._getMyFQDN() ||
            ViaPort != this.listeningPort ) {
-         this._dump("Response from "+endpoint.address+":"+endpoint.port+
+         this._dump("Response from "+remoteAddress+":"+remotePort+
                     " to request from "+topVia.host+":"+topVia.port+
                     " discarded!");
-         return;
+         return true;
       }
     }
-
-    log("Message received via "+endpoint.transport+
-        " from "+endpoint.address+":"+endpoint.port+" :\n"+message.serialize());
     
     // hand messages to transport sinks until one returns true:
     this._sinks.some(function(s) {
-                       return s.handleSipMessage(message, endpoint, connection); });
+                       return s.handleSipMessage(message, flow); });
+    return true;
   });
 
 //----------------------------------------------------------------------

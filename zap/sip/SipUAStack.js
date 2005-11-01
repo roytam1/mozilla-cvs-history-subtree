@@ -205,14 +205,14 @@ SipUAStack.fun(
   });
 
 
-// zapISipNonInviteRC createRegisterRequestClient(in zapISipURI registrarServer,
+// zapISipNonInviteRC createRegisterRequestClient(in zapISipURI domain,
 //                                                in zapISipAddress addressOfRecord,
 //                                                in unsigned long expiration);
 SipUAStack.fun(
-  function createRegisterRequestClient(registrar, addressOfRecord,
+  function createRegisterRequestClient(domain, addressOfRecord,
                                        expiration, routeset, count) {
     var rc = SipNonInviteRC.instantiate();
-    var request = this.formulateGenericRequest("REGISTER", registrar,
+    var request = this.formulateGenericRequest("REGISTER", domain,
                                                addressOfRecord,
                                                addressOfRecord,
                                                routeset, count);
@@ -344,7 +344,7 @@ SipUAStack.obj("userAgent", null);
 // zapISipTransportSink implementation:
 
 SipUAStack.fun(
-  function handleSipMessage(message, endpoint, connection) {
+  function handleSipMessage(message, flow) {
     if (message.isRequest) {
       // We have received a request.      
       message.QueryInterface(Components.interfaces.zapISipRequest);
@@ -428,7 +428,7 @@ SipUAStack.fun(
       // Try to match to a pending invite request client:
       var rc = this.findInviteRC(constructClientTransactionKey(message));
       if (rc)
-        rc.handleResponse(message);
+        rc.handleResponse(message, flow);
       else {
         // nope, this must be a stray response
         this._dump("Stray response (" + message.statusCode + " --- "+

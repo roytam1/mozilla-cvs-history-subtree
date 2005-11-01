@@ -105,11 +105,11 @@ var SipClientTransaction = makeClass("SipClientTransaction",
                                      SipTransaction);      
 
 SipClientTransaction.fun(
-  function handleResponse(r) {
+  function handleResponse(r, flow) {
     this._dump("Received a "+r.statusCode+" response ("+r.reasonPhrase+")");
     // dispatch to current state:
     if (this._state.handleResponse)
-      this._state.handleResponse(this, r);
+      this._state.handleResponse(this, r, flow);
   });
 
 ////////////////////////////////////////////////////////////////////////
@@ -201,22 +201,22 @@ SipInviteClientTransaction.obj(
       }
     },
       
-    handleResponse : function handleResponse_Calling(t, r) {
+      handleResponse : function handleResponse_Calling(t, r, flow) {
       switch (r.statusCode[0]) {
         case '1':
           if (t.TU)
-            callAsync(function() { t.TU.handleProvisionalResponse(r); });
+            callAsync(function() { t.TU.handleProvisionalResponse(r, flow); });
           t.changeState(t.Proceeding);
           break;
         case '2':
           if (t.TU)
-            callAsync(function() { t.TU.handleSuccessResponse(r); });
+            callAsync(function() { t.TU.handleSuccessResponse(r, flow); });
           t.changeState(t.Terminated);
           break;
         default: // 300 - 699
           t.sendACK(r);
           if (t.TU)
-            callAsync(function() { t.TU.handleFailureResponse(r); });
+            callAsync(function() { t.TU.handleFailureResponse(r, flow); });
           t.changeState(t.Completed);
           break;
       }
@@ -254,21 +254,21 @@ SipInviteClientTransaction.obj(
         t.timerR = makeOneShotTimer(t, t.manager.Trefresh);
     },
       
-    handleResponse : function handleResponse_Proceeding(t, r) {
+      handleResponse : function handleResponse_Proceeding(t, r, flow) {
       switch (r.statusCode[0]) {
         case '1':
           if (t.TU)
-            callAsync(function() { t.TU.handleProvisionalResponse(r); });
+            callAsync(function() { t.TU.handleProvisionalResponse(r, flow); });
           break;
         case '2':
           if (t.TU)
-            callAsync(function() { t.TU.handleSuccessResponse(r); });
+            callAsync(function() { t.TU.handleSuccessResponse(r, flow); });
           t.changeState(t.Terminated);
           break;
         default: // 300 - 699
           t.sendACK(r);
           if (t.TU)
-            callAsync(function() { t.TU.handleFailureResponse(r); });
+            callAsync(function() { t.TU.handleFailureResponse(r, flow); });
           t.changeState(t.Completed);
           break;
       }
@@ -306,7 +306,7 @@ SipInviteClientTransaction.obj(
       }
     },
       
-    handleResponse : function handleResponse_Completed(t, r) {
+      handleResponse : function handleResponse_Completed(t, r, flow) {
       switch (r.statusCode[0]) {
         case '1':
         case '2':
@@ -393,21 +393,21 @@ SipNonInviteClientTransaction.obj(
       }
     },
 
-    handleResponse : function handleResponse_Trying(t, r) {
+      handleResponse : function handleResponse_Trying(t, r, flow) {
       switch (r.statusCode[0]) {
         case '1':
           if (t.TU)
-            callAsync(function() { t.TU.handleProvisionalResponse(r); });
+            callAsync(function() { t.TU.handleProvisionalResponse(r, flow); });
           t.changeState(t.Proceeding);
           break;
         case '2':
           if (t.TU)
-            callAsync(function() { t.TU.handleSuccessResponse(r); });
+            callAsync(function() { t.TU.handleSuccessResponse(r, flow); });
           t.changeState(t.Completed);
           break;
         default: // 300 - 699
           if (t.TU)
-            callAsync(function() { t.TU.handleFailureResponse(r); });
+            callAsync(function() { t.TU.handleFailureResponse(r, flow); });
           t.changeState(t.Completed);
           break;
       }
@@ -441,20 +441,20 @@ SipNonInviteClientTransaction.obj(
       t._dump("Entering 'PROCEEDING' state");
     },
 
-    handleResponse : function handleResponse_Proceeding(t, r) {
+      handleResponse : function handleResponse_Proceeding(t, r, flow) {
       switch (r.statusCode[0]) {
         case '1':
           if (t.TU)
-            callAsync(function() { t.TU.handleProvisionalResponse(r); });
+            callAsync(function() { t.TU.handleProvisionalResponse(r, flow); });
           break;
         case '2':
           if (t.TU)
-            callAsync(function() { t.TU.handleSuccessResponse(r); });
+            callAsync(function() { t.TU.handleSuccessResponse(r, flow); });
           t.changeState(t.Completed);
           break;
         default: // 300 - 699
           if (t.TU)
-            callAsync(function() { t.TU.handleFailureResponse(r); });
+            callAsync(function() { t.TU.handleFailureResponse(r, flow); });
           t.changeState(t.Completed);
           break;
       }
@@ -497,7 +497,7 @@ SipNonInviteClientTransaction.obj(
       }
     },
       
-    handleResponse : function handleResponse_Completed(t, r) {
+      handleResponse : function handleResponse_Completed(t, r, flow) {
       t._dump("Buffering obsolete response!");
     },
 
@@ -1019,8 +1019,7 @@ SipTransactionManager.fun(
 // zapISipTransportSink implementation:
 
 SipTransactionManager.fun(
-  function handleSipMessage(message, endpoint,
-                            connection) {
+  function handleSipMessage(message, flow) {
     var rv = false;
     
     // Try to match message to a transaction:
@@ -1041,7 +1040,7 @@ SipTransactionManager.fun(
       var transaction;
       if ((transaction = hashget(this._clientPool, key))) {
         message.QueryInterface(Components.interfaces.zapISipResponse);
-        transaction.handleResponse(message);
+        transaction.handleResponse(message, flow);
         rv = true;
       }
       else {

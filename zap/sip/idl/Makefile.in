@@ -12,6 +12,8 @@ XPIDL_MODULE = zap_sip
 
 XPIDLSRCS = \
 	zapISipConnection.idl \
+	zapISipFlow.idl \
+	zapISipFlowMonitor.idl \
 	zapISipTransceiver.idl \
 	zapISipListeningSocket.idl \
 	zapISipUAStack.idl \

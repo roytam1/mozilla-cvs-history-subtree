@@ -41,6 +41,7 @@ interface zapISipTransceiver;
 interface zapISipMessage;
 interface zapISipConnection;
 interface zapISipEndpoint;
+interface zapISipFlow;
 interface zapISipRequest;
 interface zapISipResponse;
 interface nsIPropertyBag2;
@@ -92,6 +93,5 @@ interface zapISipTransport : nsISupports
 interface zapISipTransportSink : nsISupports
 {
   boolean handleSipMessage(in zapISipMessage message,
-                           in zapISipEndpoint endpoint,
-                           in zapISipConnection connection);
+                           in zapISipFlow flow);
 };

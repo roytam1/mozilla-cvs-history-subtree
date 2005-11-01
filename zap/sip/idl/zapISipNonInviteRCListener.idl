@@ -39,6 +39,7 @@
 interface zapISipNonInviteRC;
 interface zapISipDialog;
 interface zapISipResponse;
+interface zapISipFlow;
 
 /**
  * \ingroup SIP_UA_LAYER
@@ -55,5 +56,6 @@ interface zapISipNonInviteRCListener : nsISupports
    */
   void notifyResponseReceived(in zapISipNonInviteRC requestClient,
                               in zapISipDialog dialog,
-                              in zapISipResponse response);  
+                              in zapISipResponse response,
+                              in zapISipFlow flow);  
 };

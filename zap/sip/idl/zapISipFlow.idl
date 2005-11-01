@@ -36,18 +36,57 @@
 
 #include "nsISupports.idl"
 
-interface zapISipResponse;
-interface zapISipFlow;
+interface zapISipConnection;
+interface zapISipFlowMonitor;
 
 /**
- * \ingroup SIP_TA_LAYER
+ * \ingroup SIP_TRANSPORT_LAYER
+ * Describes a network protocol layer connection between two hosts
  */
-[scriptable, uuid(30bfcf75-b975-4507-9db9-5616465a595b)]
-interface zapISipClientTransactionUser : nsISupports
+[scriptable, uuid(9e26bde0-4181-4724-abbe-39f61a15c3bb)]
+interface zapISipFlow : nsISupports
 {
-  void handleFailureResponse(in zapISipResponse response, in zapISipFlow flow);
-  void handleProvisionalResponse(in zapISipResponse response, in zapISipFlow flow);
-  void handleSuccessResponse(in zapISipResponse response, in zapISipFlow flow);
-  void handleTimeout();
-};
+  /**
+   * Compare two flows for equality
+   */
+  boolean equals(in zapISipFlow other);
+  
+  /**
+   * IP address of local endpoint
+   */
+  readonly attribute ACString localAddress;
 
+  /**
+   * Port of local endpoint
+   */
+  readonly attribute unsigned short localPort;
+
+  /**
+   * IP address of remote endpoint
+   */
+  readonly attribute ACString remoteAddress;
+
+  /**
+   * Port of remote endpoint
+   */
+  readonly attribute unsigned short remotePort;
+
+  /**
+   * Transport protocol to remote endpoint (udp, tcp, ...)
+   */
+  readonly attribute ACString transportProtocol;
+
+  /**
+   * Connection object of the flow (null for connection-less protocols)
+   */
+  readonly attribute zapISipConnection connection;
+
+  /**
+   * Monitor the flow using periodic STUN binding requests as
+   * specified in draft-ietf-sip-outbound-01
+   */
+  const unsigned short IETF_SIP_OUTBOUND_01_MONITOR = 0x0001;
+  
+  void addFlowMonitor(in zapISipFlowMonitor monitor, in unsigned short type);
+  void removeFlowMonitor(in zapISipFlowMonitor monitor);
+};
