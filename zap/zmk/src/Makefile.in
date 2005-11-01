@@ -49,6 +49,7 @@ CPPSRCS		= \
 		zapRTPReceiver.cpp \
 		zapRTPSession.cpp \
 		zapSplitter.cpp \
+		zapRtttlPlayer.cpp \
 		$(NULL)
 
 XPIDLSRCS	= zapIMediaGraph.idl \

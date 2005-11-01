@@ -402,3 +402,37 @@ any
 
 Output stream:
 any
+
+
+----------------------------------------------------------------------
+
+19) rtttl-player 
+----------------
+
+Audio source for playing RTTTL-encoded ringtones.
+RTTTL is the "Ringing Tones Text Transfer Language", a popular format
+for Nokia mobile phone ringtones.
+
+Sources: 1
+Sinks: none
+
+Control interfaces:
+
+Node parameters: 
+- ACString "rtttl" : The rtttl source code to be played
+- boolean "loop" : true: the sample should be looped indefinitely (default: true)
+
+Source parameters:
+- double "sample_rate" : sample rate in Hz (default: 8000)
+- double "frame_duration" : duration of one frame in s (default: 0.02)
+- unsigned long "channels" : number of channels (default: 1)
+- ACString "sample_format" : "float32_1" | "float32_32768" | "int16" | "int32"
+                             (default: "float32_32768")
+
+Output stream:
+audio stream with
+- ACString "type" == "audio"
+- double "sample_rate"
+- double "frame_duration"
+- unsigned long "channels"
+- unsigned long "sample_format"
