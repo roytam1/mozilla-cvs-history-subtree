@@ -39,54 +39,32 @@
 
 <!DOCTYPE window SYSTEM "chrome://zap/locale/zap.dtd">
 
-<page id="zap_identity"
+<page id="zap_new_account"
       xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
       onload="initPage()">
 
   <!-- Overlays -->
-  <?xul-overlay href="chrome://zap/content/identity-form.xul"?>
+  <?xul-overlay href="chrome://zap/content/account-form.xul"?>
 
   <!-- Scripts -->
   <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
 
   <script type="application/x-javascript">
   <![CDATA[
-    var wIdentity;
+    var config;
     function initPage() {
-      wIdentity = parent.Identity.instantiate();
-      wIdentity.initWithResource(parent.getSelectedSidebarResource());
-      wIdentity.fillDocument(document);
+      parent.wConfig.fillDocument(document);
     }    
 
-    function del() {
-      if (parent.wConfig["urn:mozilla:zap:identity"] == wIdentity.resource.Value) {
-        parent.wPromptService.alert(null, "Delete Identity",
-                                    "The identity profile '"+wIdentity["http://home.netscape.com/NC-rdf#Name"]+
-                                    "' can't be deleted because it is the currently active identity. "+
-                                    " Please activate a different identity in the toolbar "+
-                                    "before deleting this one.");
-        return;
-      }
-
-      var ok = parent.wPromptService.confirm(null, "Delete Identity", 
-                                             "Are you sure you wish to delete identity '"+wIdentity["http://home.netscape.com/NC-rdf#Name"]+"'?");
-      if (ok) {
-        wIdentity.remove();
-        parent.selectSidebarNode("urn:mozilla:zap:identities");
-      }
-    }
-    
     function edit() {
       document.getElementById("module_page").setAttribute("readonly", "false");
-      document.getElementById("http://home.netscape.com/NC-rdf#Name").select();
+      document.getElementById("urn:mozilla:zap:max_recent_calls").select();
       document.getElementById("button_deck").selectedIndex = 1;
     }
 
     function commit() {
-      wIdentity.updateFromDocument(document);
-      wIdentity.flush();
-      if (parent.wConfig["urn:mozilla:zap:identity"] == wIdentity.resource.Value)
-        parent.currentIdentityUpdated();
+      parent.wConfig.updateFromDocument(document);
+      parent.wConfig.flush();
       parent.reloadPage();
     }
 
@@ -99,18 +77,48 @@
 
   <vbox id="module_page" readonly="true" flex="1">
 
-    <label class="titlebox" value="SIP Identity"/>
+    <label class="titlebox" value="Configuration"/>
 
-    <vbox id="zap_identity_form"/>
+    <grid>
+      <columns><column/><column flex="1"/></columns>
+      <rows>
+        <row>
+          <label control="urn:mozilla:zap:instance_id"
+                 value="UA Instance ID:"/>
+          <textbox id="urn:mozilla:zap:instance_id"/>
+        </row>
+        <row>
+          <label control="urn:mozilla:zap:sip_port_base"
+                 value="SIP port base:"/>
+          <textbox id="urn:mozilla:zap:sip_port_base"/>
+        </row>
+        <row>
+          <label control="urn:mozilla:zap:max_recent_calls" 
+                 value="Length of recent calls history:"/>
+          <textbox id="urn:mozilla:zap:max_recent_calls"/>
+        </row>
+        <row>
+          <label control="urn:mozilla:zap:dnd_code" 
+                 value="Do Not Disturb INVITE response code:"/>
+          <textbox id="urn:mozilla:zap:dnd_code"/>
+        </row>
+        <row>
+          <label control="urn:mozilla:zap:dnd_headers" 
+                 value="Additional headers for DND response:"/>
+          <textbox id="urn:mozilla:zap:dnd_headers" multiline="true" rows="2"/>
+        </row>
+      </rows>
+    </grid>
+
 
     <hbox>
-      <spacer flex="1"/>
-      <deck id="button_deck">
+      <deck id="button_deck" flex="1">
         <hbox>
-          <button label="Delete" oncommand="del()" />
+          <spacer flex="1"/>
           <button label="Edit" oncommand="edit()" />
         </hbox>
         <hbox>
+          <spacer flex="1"/>
           <button label="Commit" oncommand="commit()" />
           <button label="Cancel" oncommand="cancel()" />
         </hbox>

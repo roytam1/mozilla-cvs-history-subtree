@@ -12,7 +12,7 @@ FILES := \
 	accounts.rdf \
 	contacts.rdf \
 	calls.rdf \
-	prefs.rdf \
+	config.rdf \
 	identities.rdf \
 	$(NULL)
 

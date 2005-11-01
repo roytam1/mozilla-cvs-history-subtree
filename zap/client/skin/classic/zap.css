@@ -154,8 +154,8 @@ treechildren::-moz-tree-image(nodetype-logs) {
   list-style-image: url("chrome://zap/skin/logs.png");
 }
 
-treechildren::-moz-tree-image(nodetype-prefs) {
-  list-style-image: url("chrome://zap/skin/prefs.png");
+treechildren::-moz-tree-image(nodetype-config) {
+  list-style-image: url("chrome://zap/skin/config.png");
 }
 
 treechildren::-moz-tree-image(nodetype-contact) {

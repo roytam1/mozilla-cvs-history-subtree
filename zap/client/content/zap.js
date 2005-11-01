@@ -59,8 +59,8 @@ var wURLField;
 var wSidebarTree;
 var wSidebarDS;
 
-var wPrefs;
-var wPrefsDS = wRDF.GetDataSourceBlocking(getProfileFileURL("prefs.rdf"));
+var wConfig;
+var wConfigDS = wRDF.GetDataSourceBlocking(getProfileFileURL("config.rdf"));
 
 var wIdentitiesDS = wRDF.GetDataSourceBlocking(getProfileFileURL("identities.rdf"));
 var wIdentitiesContainer;
@@ -109,7 +109,7 @@ function windowInit() {
   wInteractPane = document.getElementById("interactpane");
   wURLField = document.getElementById("url_field");
 
-  initPrefs();
+  initConfig();
   initIdentities();
   initAccounts();
   initContacts();
@@ -123,10 +123,10 @@ function windowInit() {
   identitiesList.database.AddDataSource(wIdentitiesDS);
   identitiesList.builder.rebuild();
   // select correct identity in identities list:
-  document.getElementById("identities_list").selectedItem = document.getElementById(wPrefs["urn:mozilla:zap:identity"]);
+  document.getElementById("identities_list").selectedItem = document.getElementById(wConfig["urn:mozilla:zap:identity"]);
   // make sure out stack is configured for this identity profile:
   wCurrentIdentity = Identity.instantiate();
-  wCurrentIdentity.initWithResource(wRDF.GetResource(wPrefs["urn:mozilla:zap:identity"]));
+  wCurrentIdentity.initWithResource(wRDF.GetResource(wConfig["urn:mozilla:zap:identity"]));
   currentIdentityUpdated();
   
   dump("... Done initializing zap main window\n");
@@ -185,24 +185,24 @@ function reloadPage()
 }
 
 ////////////////////////////////////////////////////////////////////////
-// Prefs:
+// Config:
 
-function initPrefs() {
-  wPrefs = Prefs.instantiate();
-  wPrefs.initWithResource(wRDF.GetResource("urn:mozilla:zap:prefs"));
+function initConfig() {
+  wConfig = Config.instantiate();
+  wConfig.initWithResource(wRDF.GetResource("urn:mozilla:zap:config"));
 }
 
-var Prefs = makeClass("Prefs", PersistentRDFObject);
+var Config = makeClass("Config", PersistentRDFObject);
 
-Prefs.prototype.datasources["default"] = wPrefsDS;
+Config.prototype.datasources["default"] = wConfigDS;
 
-Prefs.rdfResourceAttrib("urn:mozilla:zap:identity",
-                        "urn:mozilla:zap:initial_identity");
-Prefs.rdfLiteralAttrib("urn:mozilla:zap:instance_id", "");
-Prefs.rdfLiteralAttrib("urn:mozilla:zap:sip_port_base", "5060");
-Prefs.rdfLiteralAttrib("urn:mozilla:zap:max_recent_calls", "10");
-Prefs.rdfLiteralAttrib("urn:mozilla:zap:dnd_code", "480"); // Temporarily unavail.
-Prefs.rdfLiteralAttrib("urn:mozilla:zap:dnd_headers", ""); // additional headers for DND response
+Config.rdfResourceAttrib("urn:mozilla:zap:identity",
+                         "urn:mozilla:zap:initial_identity");
+Config.rdfLiteralAttrib("urn:mozilla:zap:instance_id", "");
+Config.rdfLiteralAttrib("urn:mozilla:zap:sip_port_base", "5060");
+Config.rdfLiteralAttrib("urn:mozilla:zap:max_recent_calls", "10");
+Config.rdfLiteralAttrib("urn:mozilla:zap:dnd_code", "480"); // Temporarily unavail.
+Config.rdfLiteralAttrib("urn:mozilla:zap:dnd_headers", ""); // additional headers for DND response
 
 ////////////////////////////////////////////////////////////////////////
 // Identities:
@@ -217,21 +217,21 @@ function initIdentities() {
 // called when the user selects a different identity in the identities_list:
 function identityChange() {
   var l = document.getElementById("identities_list").selectedItem.getAttribute("id");
-  if (wPrefs["urn:mozilla:zap:identity"] == l)
+  if (wConfig["urn:mozilla:zap:identity"] == l)
     return;
   else {
-    wPrefs["urn:mozilla:zap:identity"] = l;
-    wPrefs.flush();
+    wConfig["urn:mozilla:zap:identity"] = l;
+    wConfig.flush();
   }
   wCurrentIdentity = Identity.instantiate();
-  wCurrentIdentity.initWithResource(wRDF.GetResource(wPrefs["urn:mozilla:zap:identity"]));
+  wCurrentIdentity.initWithResource(wRDF.GetResource(wConfig["urn:mozilla:zap:identity"]));
   currentIdentityUpdated();
 }
 
 // we call this function every time the current identity profile is
 // updated or a new one is selected so that we can reconfigure the
 // stack from here. Alternatively we could listen in on the identity
-// and prefs datasources, which we should probably do at some point.
+// and config datasources, which we should probably do at some point.
 function currentIdentityUpdated() {
   // XXX these try/catch blocks will be redundant once we hook up
   // syntax checking to PersistentRDFObject
@@ -878,15 +878,15 @@ function initSipStack() {
 
   // make sure we generate a UA instance id now if we haven't got one
   // already: (see draft-ietf-sip-gruu-05.txt)
-  if (!wPrefs["urn:mozilla:zap:instance_id"]) {
+  if (!wConfig["urn:mozilla:zap:instance_id"]) {
     var uuidgen = Components.classes["@mozilla.org/zap/uuid-generator;1"].getService(Components.interfaces.zapIUUIDGenerator);
-    wPrefs["urn:mozilla:zap:instance_id"] = uuidgen.generateUUIDURNString();
-    wPrefs.flush();
+    wConfig["urn:mozilla:zap:instance_id"] = uuidgen.generateUUIDURNString();
+    wConfig.flush();
   }
   
   wSipStack.init(wUAHandler,
-                 makePropertyBag({$instance_id:wPrefs["urn:mozilla:zap:instance_id"],
-                                  $port_base:wPrefs["urn:mozilla:zap:sip_port_base"],
+                 makePropertyBag({$instance_id:wConfig["urn:mozilla:zap:instance_id"],
+                                  $port_base:wConfig["urn:mozilla:zap:sip_port_base"],
                                   $methods: "OPTIONS,INVITE,ACK,CANCEL,BYE",
                                   $extensions: "path", // path: RFC3327
                                   $user_agent: wUserAgent
@@ -1061,7 +1061,7 @@ Call.fun(
 
     // check if we need to remove items from the recent calls list:
     var last_call_index = wRecentCallsContainer.GetCount();
-    var overflow = last_call_index - wPrefs["urn:mozilla:zap:max_recent_calls"];
+    var overflow = last_call_index - wConfig["urn:mozilla:zap:max_recent_calls"];
     while (overflow > 0 && last_call_index >= 1) {
       this._dump("looking at "+last_call_index);
       var target = wCallsDS.GetTarget(wRDF.GetResource("urn:mozilla:zap:recent_calls"),
@@ -1325,8 +1325,8 @@ InboundCallHandler.fun(
     rs.listener = this;
     // reject based on busy settings:
     if (document.getElementById("button_dnd").checked) {
-      this._respond(wPrefs["urn:mozilla:zap:dnd_code"],
-                    wPrefs["urn:mozilla:zap:dnd_headers"]);
+      this._respond(wConfig["urn:mozilla:zap:dnd_code"],
+                    wConfig["urn:mozilla:zap:dnd_headers"]);
       return;
     }
 

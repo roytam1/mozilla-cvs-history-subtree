@@ -9,7 +9,7 @@
     <rdf:li rdf:resource="urn:mozilla:zap:accounts"/>
     <rdf:li rdf:resource="urn:mozilla:zap:friends"/>
     <rdf:li rdf:resource="urn:mozilla:zap:logs"/>
-    <rdf:li rdf:resource="urn:mozilla:zap:prefs"/>
+    <rdf:li rdf:resource="urn:mozilla:zap:config"/>
   </rdf:Seq>
 
   <rdf:Description rdf:about="urn:mozilla:zap:home">
@@ -42,10 +42,10 @@
     <zap:chromepage>chrome://zap/content/logs.xul</zap:chromepage>
   </rdf:Description>
 
-  <rdf:Description rdf:about="urn:mozilla:zap:prefs">
-    <NC:Name>Preferences</NC:Name> 
-    <zap:nodetype>prefs</zap:nodetype>
-    <zap:chromepage>chrome://zap/content/prefs.xul</zap:chromepage>
+  <rdf:Description rdf:about="urn:mozilla:zap:config">
+    <NC:Name>Configuration</NC:Name> 
+    <zap:nodetype>config</zap:nodetype>
+    <zap:chromepage>chrome://zap/content/config.xul</zap:chromepage>
   </rdf:Description>
 
 </rdf:RDF>
