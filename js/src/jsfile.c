@@ -462,7 +462,7 @@ js_canonicalPath(JSContext *cx, char *oldpath)
     /* file:// support. */
     if (!strncmp(path, URL_PREFIX, strlen(URL_PREFIX))) {
         tmp = js_canonicalPath(cx, path + strlen(URL_PREFIX));
-        JS_free(path);
+        JS_free(cx, path);
         return tmp;
     }
 
@@ -808,7 +808,7 @@ static int32
 js_FileRead(JSContext *cx, JSFile *file, jschar *buf, int32 len, int32 mode)
 {
     unsigned char *aux;
-    int32 count, i;
+    int32 count = 0, i;
     jsint remainder;
     unsigned char utfbuf[3];
 
@@ -892,7 +892,7 @@ js_FileRead(JSContext *cx, JSFile *file, jschar *buf, int32 len, int32 mode)
 static int32
 js_FileSeek(JSContext *cx, JSFile *file, int32 len, int32 mode)
 {
-    int32 count, i;
+    int32 count = 0, i;
     jsint remainder;
     unsigned char utfbuf[3];
     jschar tmp;
@@ -955,7 +955,7 @@ static int32
 js_FileWrite(JSContext *cx, JSFile *file, jschar *buf, int32 len, int32 mode)
 {
     unsigned char   *aux;
-    int32           count, i, j;
+    int32           count = 0, i, j;
     unsigned char   *utfbuf;
 
     switch (mode) {
@@ -1172,12 +1172,29 @@ js_parent(JSContext *cx, JSFile *file, jsval *resultp)
     return JS_TRUE;
 }
 
-static jsval
-js_name(JSContext *cx, JSFile *file){
-    /* XXX This needs to return PRBool and handle failure. */
-    return file->isPipe
-           ? JSVAL_VOID
-           : STRING_TO_JSVAL(JS_NewString(cx, js_fileBaseName(cx, file->path)));
+static JSBool
+js_name(JSContext *cx, JSFile *file, jsval *vp)
+{
+    char *name;
+    JSString *str;
+
+    if (file->isPipe) {
+        *vp = JSVAL_VOID;
+        return JS_TRUE;
+    }
+
+    name = js_fileBaseName(cx, file->path);
+    if (!name)
+        return JS_FALSE;
+
+    str = JS_NewString(cx, name, strlen(name));
+    if (!str) {
+        JS_free(cx, name);
+        return JS_FALSE;
+    }
+
+    *vp = STRING_TO_JSVAL(str);
+    return JS_TRUE;
 }
 
 /* ------------------------------ File object methods ---------------------------- */
@@ -1300,6 +1317,7 @@ file_open(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
                                  JSFILEMSG_BIDIRECTIONAL_PIPE_NOT_SUPPORTED);
             goto out;
         } else {
+            int i = 0;
             char pipemode[3];
             SECURITY_CHECK(cx, NULL, "pipe_open", file);
 
@@ -1311,9 +1329,11 @@ file_open(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
                     goto out;
                 }
                 /* open(SPOOLER, "| cat -v | lpr -h 2>/dev/null") -- pipe for writing */
-                pipemode[0] = 'r';
-                pipemode[1] = file->type==UTF8 ? 'b' : 't';
-                pipemode[2] = '\0';
+                pipemode[i++] = 'r';
+#ifndef XP_UNIX
+                pipemode[i++] = file->type==UTF8 ? 'b' : 't';
+#endif
+                pipemode[i++] = '\0';
                 file->nativehandle = POPEN(&file->path[1], pipemode);
             } else if(file->path[len-1] == PIPE_SYMBOL) {
                 char *command = JS_malloc(cx, len);
@@ -1321,9 +1341,11 @@ file_open(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
                 strncpy(command, file->path, len-1);
                 command[len-1] = '\0';
                 /* open(STATUS, "netstat -an 2>&1 |") */
-                pipemode[0] = 'w';
-                pipemode[1] = file->type==UTF8 ? 'b' : 't';
-                pipemode[2] = '\0';
+                pipemode[i++] = 'w';
+#ifndef XP_UNIX
+                pipemode[i++] = file->type==UTF8 ? 'b' : 't';
+#endif
+                pipemode[i++] = '\0';
                 file->nativehandle = POPEN(command, pipemode);
                 JS_free(cx, command);
             }
@@ -1769,7 +1791,7 @@ file_readln(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 
 eof:
     if (offset == 0) {
-        *rval = JSVAL_FALSE;
+        *rval = JSVAL_NULL;
         return JS_TRUE;
     }
 
@@ -1800,23 +1822,26 @@ file_readAll(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     JSObject    *array;
     jsint       len;
     jsval       line;
+    JSBool      lineok = JS_FALSE;
 
     SECURITY_CHECK(cx, NULL, "readAll", file);
     JSFILE_CHECK_READ;
 
     array = JS_NewArrayObject(cx, 0, NULL);
+    if (!array)
+        return JS_FALSE;
+    *rval = OBJECT_TO_JSVAL(array);
+
     len = 0;
 
-    while(file_readln(cx, obj, 0, NULL, &line)){
-        JS_SetElement(cx, array, len, &line);
-        len++;
+    lineok = file_readln(cx, obj, 0, NULL, &line);
+    while (lineok && !JSVAL_IS_NULL(line)) {
+        JS_SetElement(cx, array, len++, &line);
+        lineok = file_readln(cx, obj, 0, NULL, &line);
     }
 
-    *rval = OBJECT_TO_JSVAL(array);
-    return JS_TRUE;
 out:
-    *rval = JSVAL_FALSE;
-    return JS_FALSE;
+    return lineok;
 }
 
 static JSBool
@@ -2246,15 +2271,16 @@ static JSBool
 file_getProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 {
     JSFile      *file = JS_GetInstancePrivate(cx, obj, &file_class, NULL);
-    char        *str;
+    char        *bytes;
+    JSString    *str;
     jsint       tiny;
     PRFileInfo  info;
-	JSBool		flag;
-    PRExplodedTime
-                expandedTime;
+    JSBool      flag;
+    PRExplodedTime expandedTime;
 
     tiny = JSVAL_TO_INT(id);
-    if(!file) return JS_TRUE;
+    if (!file)
+        return JS_TRUE;
 
     switch (tiny) {
     case FILE_PARENT:
@@ -2263,10 +2289,14 @@ file_getProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
             return JS_FALSE;
         break;
     case FILE_PATH:
-        *vp = STRING_TO_JSVAL(JS_NewStringCopyZ(cx, file->path));
+        str = JS_NewStringCopyZ(cx, file->path);
+        if (!str)
+            return JS_FALSE;
+        *vp = STRING_TO_JSVAL(str);
         break;
     case FILE_NAME:
-        *vp = js_name(cx, file);
+        if (!js_name(cx, file, vp))
+            return JS_FALSE;
         break;
     case FILE_ISDIR:
         SECURITY_CHECK(cx, NULL, "isDirectory", file);
@@ -2339,47 +2369,47 @@ file_getProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
     case FILE_MODE:
         SECURITY_CHECK(cx, NULL, "mode", file);
         JSFILE_CHECK_OPEN("mode");
-        str = (char*)JS_malloc(cx, MODE_SIZE);
-        str[0] = '\0';
+        bytes = JS_malloc(cx, MODE_SIZE);
+        bytes[0] = '\0';
         flag = JS_FALSE;
 
         if ((file->mode&PR_RDONLY)==PR_RDONLY) {
-            if (flag) strcat(str, ",");
-            strcat(str, "read");
+            if (flag) strcat(bytes, ",");
+            strcat(bytes, "read");
             flag = JS_TRUE;
         }
         if ((file->mode&PR_WRONLY)==PR_WRONLY) {
-            if (flag) strcat(str, ",");
-            strcat(str, "write");
+            if (flag) strcat(bytes, ",");
+            strcat(bytes, "write");
             flag = JS_TRUE;
         }
         if ((file->mode&PR_RDWR)==PR_RDWR) {
-            if (flag) strcat(str, ",");
-            strcat(str, "readWrite");
+            if (flag) strcat(bytes, ",");
+            strcat(bytes, "readWrite");
             flag = JS_TRUE;
         }
         if ((file->mode&PR_APPEND)==PR_APPEND) {
-            if (flag) strcat(str, ",");
-            strcat(str, "append");
+            if (flag) strcat(bytes, ",");
+            strcat(bytes, "append");
             flag = JS_TRUE;
         }
         if ((file->mode&PR_CREATE_FILE)==PR_CREATE_FILE) {
-            if (flag) strcat(str, ",");
-            strcat(str, "create");
+            if (flag) strcat(bytes, ",");
+            strcat(bytes, "create");
             flag = JS_TRUE;
         }
         if ((file->mode&PR_TRUNCATE)==PR_TRUNCATE) {
-            if (flag) strcat(str, ",");
-            strcat(str, "replace");
+            if (flag) strcat(bytes, ",");
+            strcat(bytes, "replace");
             flag = JS_TRUE;
         }
         if (file->hasAutoflush) {
-            if (flag) strcat(str, ",");
-            strcat(str, "hasAutoFlush");
+            if (flag) strcat(bytes, ",");
+            strcat(bytes, "hasAutoFlush");
             flag = JS_TRUE;
         }
-        *vp = STRING_TO_JSVAL(JS_NewStringCopyZ(cx, str));
-        JS_free(cx, str);
+        *vp = STRING_TO_JSVAL(JS_NewStringCopyZ(cx, bytes));
+        JS_free(cx, bytes);
         break;
     case FILE_CREATED:
         SECURITY_CHECK(cx, NULL, "creationTime", file);
@@ -2489,31 +2519,39 @@ file_getProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
         break;
     default:
         SECURITY_CHECK(cx, NULL, "file_access", file);
-		/* this is some other property -- try to use the dir["file"] syntax */
-        if(js_isDirectory(cx, file)){
-			PRDir *dir = NULL;
-			PRDirEntry *entry = NULL;
-            char *prop_name = JS_GetStringBytes(JS_ValueToString(cx, id));
+
+        /* this is some other property -- try to use the dir["file"] syntax */
+        if (js_isDirectory(cx, file)) {
+            PRDir *dir = NULL;
+            PRDirEntry *entry = NULL;
+            char *prop_name;
+
+            str = JS_ValueToString(cx, id);
+            if (!str)
+                return JS_FALSE;
+
+            prop_name = JS_GetStringBytes(str);
 
             /* no native files past this point */
             dir = PR_OpenDir(file->path);
             if(!dir) {
                 /* This is probably not a directory */
-				JS_ReportWarning(cx, "Can't open directory %s", file->path);
+                JS_ReportWarning(cx, "Can't open directory %s", file->path);
                 return JS_FALSE;
             }
 
-            while((entry = PR_ReadDir(dir, PR_SKIP_NONE))!=NULL){
-				if(!strcmp(entry->name, prop_name)){
-                    str = js_combinePath(cx, file->path, prop_name);
-                    *vp = OBJECT_TO_JSVAL(js_NewFileObject(cx, str));
-					JS_free(cx, str);
+            while ((entry = PR_ReadDir(dir, PR_SKIP_NONE)) != NULL) {
+                if (!strcmp(entry->name, prop_name)){
+                    bytes = js_combinePath(cx, file->path, prop_name);
+                    *vp = OBJECT_TO_JSVAL(js_NewFileObject(cx, bytes));
+                    JS_free(cx, bytes);
                     return JS_TRUE;
-				}
-			}
-		}
+                }
+            }
+        }
     }
     return JS_TRUE;
+
 out:
     return JS_FALSE;
 }
