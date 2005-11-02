@@ -27,8 +27,7 @@
  */
 
 #include "MITREObject.h"
-#include "String.h"
-#include "baseutils.h"
+#include "dom.h"
 #include "primitives.h"
 
 #ifndef MITREXSL_EXPRRESULT_H
@@ -70,7 +69,7 @@ public:
      * Creates a String representation of this ExprResult
      * @param str the destination string to append the String representation to.
     **/
-    virtual void stringValue(String& str) = 0;
+    virtual void stringValue(DOMString& str) = 0;
 
     /**
      * Converts this ExprResult to a Boolean (MBool) value
@@ -101,7 +100,7 @@ public:
     void setValue(const BooleanResult& boolResult);
 
     virtual short  getResultType();
-    virtual void   stringValue(String& str);
+    virtual void   stringValue(DOMString& str);
     virtual MBool  booleanValue();
     virtual double numberValue();
 
@@ -126,7 +125,7 @@ public:
     MBool isNaN() const;
 
     virtual short  getResultType();
-    virtual void   stringValue(String& str);
+    virtual void   stringValue(DOMString& str);
     virtual MBool  booleanValue();
     virtual double numberValue();
 
@@ -149,7 +148,7 @@ public:
     void setValue(const String& str);
 
     virtual short  getResultType();
-    virtual void   stringValue(String& str);
+    virtual void   stringValue(DOMString& str);
     virtual MBool  booleanValue();
     virtual double numberValue();
 

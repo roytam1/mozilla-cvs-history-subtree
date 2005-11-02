@@ -62,7 +62,7 @@ MBool RelationalExpr::compareResults(ExprResult* left, ExprResult* right) {
     if (ltype == ExprResult::NODESET) {
         NodeSet* nodeSet = (NodeSet*)left;
         for ( int i = 0; i < nodeSet->size(); i++) {
-                String str;
+                DOMString str;
                 Node* node = nodeSet->get(i);
                 XMLDOMUtils::getNodeValue(node, &str);
                 StringResult strResult(str);
@@ -74,7 +74,7 @@ MBool RelationalExpr::compareResults(ExprResult* left, ExprResult* right) {
     else if ( rtype == ExprResult::NODESET) {
         NodeSet* nodeSet = (NodeSet*)right;
         for ( int i = 0; i < nodeSet->size(); i++) {
-                String str;
+                DOMString str;
                 Node* node = nodeSet->get(i);
                 XMLDOMUtils::getNodeValue(node, &str);
                 StringResult strResult(str);
