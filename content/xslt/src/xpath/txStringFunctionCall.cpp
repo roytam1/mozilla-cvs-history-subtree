@@ -146,16 +146,17 @@ ExprResult* StringFunctionCall::evaluate(Node* context, ContextState* cs) {
                 Int32 endIdx = src.length();
                 if ( argc == 3) {
                     dbl += evaluateToNumber((Expr*)iter->next(),context, cs);
-                    if (dbl == Double::POSITIVE_INFINITY) endIdx++;
+                    if (dbl == Double::POSITIVE_INFINITY) ++endIdx;
                     else if ( dbl == Double::NEGATIVE_INFINITY ) endIdx = 0;
                     else endIdx = (Int32)floor(dbl);
                 }
                 String resultStr;
                 //-- strings are indexed starting at 1 for XSL
                 //-- adjust to a 0-based index
-                if (startIdx > 0) startIdx--;
-                else if (startIdx == 0 ) endIdx--;
+                if (startIdx > 0) --startIdx;
+                else if (startIdx == 0 ) --endIdx;
                 else startIdx=0;
+
                 src.subString(startIdx,endIdx,resultStr);
                 result  = new StringResult(resultStr);
             }
