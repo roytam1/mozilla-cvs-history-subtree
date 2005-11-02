@@ -166,7 +166,7 @@ protected:
      * Evaluates the given Expression and converts it's result to a String.
      * The value is appended to the given destination String
     **/
-    void FunctionCall::evaluateToString
+    void evaluateToString
         (Expr* expr, Node* context, ContextState* cs, String& dest);
 
     /**
