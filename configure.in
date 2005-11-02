@@ -360,7 +360,9 @@ case "$target" in
             AC_MSG_ERROR([\$(CXX) test failed.  You must have MS VC++ in your path to build.]) )
         AC_LANG_RESTORE
         
-        _MSVC_VER_FILTER='s|.* \([[0-9]][[0-9]]*\.[[0-9]][[0-9]]*\.[[0-9]][[0-9]]*\).*|\1|p'
+        changequote(,)
+        _MSVC_VER_FILTER='s|.* \([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*|\1|p'
+        changequote([,])
         
         # Determine compiler version
         CC_VERSION=`"${CC}" -v 2>&1 | sed -ne "$_MSVC_VER_FILTER"`
@@ -986,7 +988,9 @@ OS_2)
     ;;
 QNX)
     if test "$OS_TARGET" != "NTO"; then
+        changequote(,)
         OS_RELEASE=`uname -v | sed 's/^\([0-9]\)\([0-9]*\)$/\1.\2/'`
+        changequote([,])
     fi
     OS_TEST=x86
     ;;
@@ -1012,7 +1016,9 @@ Darwin)
 esac
 
 if test "$OS_ARCH" = "NCR"; then
+    changequote(,)
     OS_RELEASE=`awk '{print $3}' /etc/.relid | sed 's/^\([0-9]\)\(.\)\(..\)\(.*\)$/\2.\3/'`
+    changequote([,])
 fi
 
 # Only set CPU_ARCH if we recognize the value of OS_TEST
@@ -2024,8 +2030,10 @@ dnl the qsort routine under solaris is faulty
         CC_VERSION=`$CC -V 2>&1 | grep '^cc:' 2>/dev/null | $AWK -F\: '{ print $2 }'`
         CXX_VERSION=`$CXX -V 2>&1 | grep '^CC:' 2>/dev/null | $AWK -F\: '{ print $2 }'`
        AC_MSG_CHECKING([for Forte compiler version >= WS6U2])
+       AC_LANG_SAVE
+       AC_LANG_CPLUSPLUS
        AC_TRY_COMPILE([],
-           [#if (__SUNPRO_C < 0x530)
+           [#if (__SUNPRO_CC < 0x530)
            #error "Denied"
            #endif],
            _BAD_COMPILER=,_BAD_COMPILER=1)
@@ -2036,6 +2044,7 @@ dnl the qsort routine under solaris is faulty
             _res="yes"
         fi
         AC_MSG_RESULT([$_res])
+        AC_LANG_RESTORE
     else
        ASFLAGS="$ASFLAGS -fPIC"
        DSO_LDOPTS='-G -h $@'
@@ -3839,7 +3848,7 @@ fi
 
 if test "$MOZ_ENABLE_GTK2"
 then
-    PKG_CHECK_MODULES(MOZ_GTK2, gtk+-2.0 >= 1.3.7)
+    PKG_CHECK_MODULES(MOZ_GTK2, gtk+-2.0 >= 1.3.7 gdk-x11-2.0 glib-2.0 gobject-2.0)
 fi
 
 if test "$MOZ_ENABLE_XLIB"
@@ -6174,7 +6183,7 @@ then
     fi
 
     if test "$MOZ_ENABLE_GTK2"; then
-        PKG_CHECK_MODULES(LIBIDL, libIDL-2.0 >= 0.8.0,_LIBIDL_FOUND=1,_LIBIDL_FOUND=)
+        PKG_CHECK_MODULES(LIBIDL, libIDL-2.0 >= 0.8.0 glib-2.0 gobject-2.0, _LIBIDL_FOUND=1,_LIBIDL_FOUND=)
     fi
     if test "$MOZ_ENABLE_GTK"; then
         AM_PATH_LIBIDL($LIBIDL_VERSION,_LIBIDL_FOUND=1)
@@ -6259,7 +6268,7 @@ fi
 if test -z "$SKIP_PATH_CHECKS"; then
 if test -z "${GLIB_CFLAGS}" || test -z "${GLIB_LIBS}" ; then
     if test "$MOZ_ENABLE_GTK2"; then
-        PKG_CHECK_MODULES(GLIB, glib-2.0 >= 1.3.7)
+        PKG_CHECK_MODULES(GLIB, glib-2.0 >= 1.3.7 gobject-2.0)
     else
         AM_PATH_GLIB(${GLIB_VERSION})
     fi
@@ -6444,8 +6453,10 @@ if test `echo "$MOZ_EXTENSIONS" | grep -c python/xpcom` -ne 0; then
     fi
     MOZ_PYTHON=$PYTHON
     dnl Ask Python what its version number is
-    MOZ_PYTHON_VER=`$PYTHON -c "import sys;print '%d%d' % sys.version_info[[0:2]]"`
-    MOZ_PYTHON_VER_DOTTED=`$PYTHON -c "import sys;print '%d.%d' % sys.version_info[[0:2]]"`
+    changequote(,)
+    MOZ_PYTHON_VER=`$PYTHON -c "import sys;print '%d%d' % sys.version_info[0:2]"`
+    MOZ_PYTHON_VER_DOTTED=`$PYTHON -c "import sys;print '%d.%d' % sys.version_info[0:2]"`
+    changequote([,])
     dnl Ask for the Python "prefix" (ie, home/source dir)
     MOZ_PYTHON_PREFIX=`$PYTHON -c "import sys; print sys.prefix"`
     dnl Setup the include and library directories.
