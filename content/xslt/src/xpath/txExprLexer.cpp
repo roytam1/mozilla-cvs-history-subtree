@@ -631,7 +631,10 @@ void ExprLexer::parse(const String& pattern) {
                     matchDelimiter(ch);
                     break;
                 case HYPHEN :
-                    if ( isValidQName(tokenBuffer) ) tokenBuffer.append(ch);
+                    if ( isValidQName(tokenBuffer) && 
+                         !( prevCh==SPACE || prevCh==TX_TAB||
+                            prevCh==TX_CR || prevCh==TX_LF ) )
+                        tokenBuffer.append(ch);
                     else {
                         switch ( prevToken->type ) {
                             case Token::NULL_TOKEN:
