@@ -3,4 +3,30 @@
      xmlns:NC="http://home.netscape.com/NC-rdf#"
      xmlns:zap="urn:mozilla:zap:">
   <rdf:resource rdf:about="urn:mozilla:zap:config"/>
+  <rdf:Seq rdf:about="urn:mozilla:zap:services">
+    <RDF:li RDF:resource="rdf:#$vmowo"/>
+    <RDF:li RDF:resource="rdf:#$wmowo"/>
+    <RDF:li RDF:resource="rdf:#$xmowo"/>
+  </rdf:Seq>
+  <rdf:Description rdf:about="rdf:#$wmowo"
+                   NC:Name="Free World Dialup"
+                   zap:domain="fwd.pulver.com"
+                   zap:route1="&lt;sip:fwdnat.pulver.com:5082;lr&gt;"
+                   zap:route2=""
+                   zap:route3=""
+                   zap:route4="" />
+  <rdf:Description rdf:about="rdf:#$vmowo"
+                   NC:Name="isciade"
+                   zap:domain="isciade.org"
+                   zap:route1="&lt;sip:node001.sc1.isciade.org;sip-stun;lr&gt;"
+                   zap:route2=""
+                   zap:route3=""
+                   zap:route4="" />
+  <rdf:Description rdf:about="rdf:#$xmowo"
+                   NC:Name="Freedom2surf"
+                   zap:route1="&lt;sip:sip.f2s.com&gt;"
+                   zap:route2=""
+                   zap:route3=""
+                   zap:route4=""
+                   zap:domain="f2s.com" />
 </rdf:RDF>

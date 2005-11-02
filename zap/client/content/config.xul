@@ -51,7 +51,6 @@
 
   <script type="application/x-javascript">
   <![CDATA[
-    var config;
     function initPage() {
       parent.wConfig.fillDocument(document);
     }    
@@ -72,6 +71,10 @@
       parent.reloadPage();
     }
 
+    function configureServices() {
+      parent.loadPage('chrome://zap/content/services.xul');
+    }
+
   ]]>
   </script>
 
@@ -79,37 +82,52 @@
 
     <label class="titlebox" value="Configuration"/>
 
-    <grid>
-      <columns><column/><column flex="1"/></columns>
-      <rows>
-        <row>
-          <label control="urn:mozilla:zap:instance_id"
-                 value="UA Instance ID:"/>
-          <textbox id="urn:mozilla:zap:instance_id"/>
-        </row>
-        <row>
-          <label control="urn:mozilla:zap:sip_port_base"
-                 value="SIP port base:"/>
-          <textbox id="urn:mozilla:zap:sip_port_base"/>
-        </row>
-        <row>
-          <label control="urn:mozilla:zap:max_recent_calls" 
-                 value="Length of recent calls history:"/>
-          <textbox id="urn:mozilla:zap:max_recent_calls"/>
-        </row>
-        <row>
-          <label control="urn:mozilla:zap:dnd_code" 
-                 value="Do Not Disturb INVITE response code:"/>
-          <textbox id="urn:mozilla:zap:dnd_code"/>
-        </row>
-        <row>
-          <label control="urn:mozilla:zap:dnd_headers" 
-                 value="Additional headers for DND response:"/>
-          <textbox id="urn:mozilla:zap:dnd_headers" multiline="true" rows="2"/>
-        </row>
-      </rows>
-    </grid>
+    <cgroup title="UI Preferences">
+      <grid>
+        <columns><column/><column flex="1"/></columns>
+        <rows>
+          <row>
+            <label control="urn:mozilla:zap:max_recent_calls" 
+                   value="Length of recent calls history:"/>
+            <textbox id="urn:mozilla:zap:max_recent_calls"/>
+          </row>
+        </rows>
+      </grid>
+    </cgroup>
 
+    <cgroup title="SIP Settings">
+      <grid>
+        <columns><column/><column flex="1"/></columns>
+        <rows>
+          <row>
+            <label control="urn:mozilla:zap:instance_id"
+                   value="UA Instance ID:"/>
+            <textbox id="urn:mozilla:zap:instance_id"/>
+          </row>
+          <row>
+            <label control="urn:mozilla:zap:sip_port_base"
+                   value="SIP port base:"/>
+            <textbox id="urn:mozilla:zap:sip_port_base"/>
+          </row>
+          <row>
+            <label control="urn:mozilla:zap:default_registration_interval"
+                   value="Default registration interval:"/>
+            <textbox id="urn:mozilla:zap:default_registration_interval"/>
+          </row>
+          <row>
+            <label control="urn:mozilla:zap:dnd_code" 
+                   value="Do Not Disturb INVITE response code:"/>
+            <textbox id="urn:mozilla:zap:dnd_code"/>
+          </row>
+          <row>
+            <label control="urn:mozilla:zap:dnd_headers" 
+                   value="Additional headers for DND response:"/>
+            <textbox id="urn:mozilla:zap:dnd_headers" multiline="true" rows="2"/>
+          </row>
+        </rows>
+      </grid>
+      <button label="Configure SIP Services..." oncommand="configureServices()"/>
+    </cgroup>
 
     <hbox>
       <deck id="button_deck" flex="1">

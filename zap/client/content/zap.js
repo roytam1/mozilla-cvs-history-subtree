@@ -61,6 +61,7 @@ var wSidebarDS;
 
 var wConfig;
 var wConfigDS = wRDF.GetDataSourceBlocking(getProfileFileURL("config.rdf"));
+var wServicesContainer;
 
 var wIdentitiesDS = wRDF.GetDataSourceBlocking(getProfileFileURL("identities.rdf"));
 var wIdentitiesContainer;
@@ -188,21 +189,40 @@ function reloadPage()
 // Config:
 
 function initConfig() {
+  wServicesContainer = Components.classes["@mozilla.org/rdf/container;1"].
+    createInstance(Components.interfaces.nsIRDFContainer);
+  wServicesContainer.Init(wConfigDS,
+                          wRDF.GetResource("urn:mozilla:zap:services"));
+  
   wConfig = Config.instantiate();
   wConfig.initWithResource(wRDF.GetResource("urn:mozilla:zap:config"));
 }
 
 var Config = makeClass("Config", PersistentRDFObject);
-
 Config.prototype.datasources["default"] = wConfigDS;
-
 Config.rdfResourceAttrib("urn:mozilla:zap:identity",
                          "urn:mozilla:zap:initial_identity");
 Config.rdfLiteralAttrib("urn:mozilla:zap:instance_id", "");
-Config.rdfLiteralAttrib("urn:mozilla:zap:sip_port_base", "5060");
 Config.rdfLiteralAttrib("urn:mozilla:zap:max_recent_calls", "10");
+Config.rdfLiteralAttrib("urn:mozilla:zap:sip_port_base", "5060");
+Config.rdfLiteralAttrib("urn:mozilla:zap:default_registration_interval", "300");
 Config.rdfLiteralAttrib("urn:mozilla:zap:dnd_code", "480"); // Temporarily unavail.
 Config.rdfLiteralAttrib("urn:mozilla:zap:dnd_headers", ""); // additional headers for DND response
+
+var Service = makeClass("Service", PersistentRDFObject);
+Service.prototype.datasources["default"] = wConfigDS;
+Service.rdfLiteralAttrib("http://home.netscape.com/NC-rdf#Name", "");
+Service.rdfLiteralAttrib("urn:mozilla:zap:domain", "");
+Service.rdfLiteralAttrib("urn:mozilla:zap:route1", "");
+Service.rdfLiteralAttrib("urn:mozilla:zap:route2", "");
+Service.rdfLiteralAttrib("urn:mozilla:zap:route3", "");
+Service.rdfLiteralAttrib("urn:mozilla:zap:route4", "");
+Service.spec(
+  function createFromDocument(doc) {
+    this._Service_createFromDocument(doc);
+    // append to services container:
+    wServicesContainer.AppendElement(this.resource);
+  });
 
 ////////////////////////////////////////////////////////////////////////
 // Identities:
