@@ -100,6 +100,7 @@ void PredicateList::evaluatePredicates(NodeSet* nodes, ContextState* cs) {
                         if (! exprResult->booleanValue() ) remNodes.add(node);
                         break;
                 }
+                delete exprResult;
             }
         }
         //-- remove unmatched nodes
