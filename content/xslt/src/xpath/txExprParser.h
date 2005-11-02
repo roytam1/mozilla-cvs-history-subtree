@@ -56,7 +56,6 @@ public:
 
     Expr*          createExpr        (const String& pattern);
     Expr*          createPatternExpr (const String& pattern);
-    LocationStep*  createLocationStep(const String& path);
 
     /**
      * Creates an Attribute Value Template using the given value

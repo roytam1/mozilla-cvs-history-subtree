@@ -66,21 +66,6 @@ PathExpr::~PathExpr()
 /**
  * Adds the Expr to this PathExpr
  * @param expr the Expr to add to this PathExpr
- * @param index the index at which to add the given Expr
-**/
-void PathExpr::addExpr(int index, Expr* expr, short ancestryOp)
-{
-    if (expr) {
-        PathExprItem* pxi = new PathExprItem;
-        pxi->expr = expr;
-        pxi->ancestryOp = ancestryOp;
-        expressions.insert(index, pxi);
-    }
-} //-- addPattenExpr
-
-/**
- * Adds the Expr to this PathExpr
- * @param expr the Expr to add to this PathExpr
 **/
 void PathExpr::addExpr(Expr* expr, short ancestryOp)
 {

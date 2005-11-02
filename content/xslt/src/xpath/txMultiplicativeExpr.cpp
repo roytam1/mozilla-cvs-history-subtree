@@ -38,15 +38,6 @@
 #include <math.h>
 
 /**
- * Creates a new MultiplicativeExpr using the default operator (MULTIPLY)
-**/
-MultiplicativeExpr::MultiplicativeExpr() {
-    this->op = MULTIPLY;
-    this->leftExpr  = 0;
-    this->rightExpr = 0;
-} //-- RelationalExpr
-
-/**
  * Creates a new MultiplicativeExpr using the given operator
 **/
 MultiplicativeExpr::MultiplicativeExpr(Expr* leftExpr, Expr* rightExpr, short op) {
@@ -59,20 +50,6 @@ MultiplicativeExpr::~MultiplicativeExpr() {
     delete leftExpr;
     delete rightExpr;
 } //-- ~MultiplicativeExpr
-
-/**
- * Sets the left side of this MultiplicativeExpr
-**/
-void MultiplicativeExpr::setLeftExpr(Expr* leftExpr) {
-    this->leftExpr = leftExpr;
-} //-- setLeftExpr
-
-/**
- * Sets the right side of this MultiplicativeExpr
-**/
-void MultiplicativeExpr::setRightExpr(Expr* rightExpr) {
-    this->rightExpr = rightExpr;
-} //-- setRightExpr
 
 /**
  * Evaluates this Expr based on the given context node and processor state

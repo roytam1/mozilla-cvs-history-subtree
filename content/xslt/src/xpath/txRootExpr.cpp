@@ -26,10 +26,6 @@
 
 #include "Expr.h"
 
-MBool RootExpr::isAbsolute() {
-    return MB_TRUE;
-} //-- isAbsolute
-
 /**
  * Evaluates this Expr based on the given context node and processor state
  * @param context the context node for evaluation of this Expr

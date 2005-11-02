@@ -36,15 +36,6 @@
 #include "Expr.h"
 
 /**
- * Creates a new AdditiveExpr using the default operator (ADDITION)
-**/
-AdditiveExpr::AdditiveExpr() {
-    this->op = ADDITION;
-    this->leftExpr  = 0;
-    this->rightExpr = 0;
-} //-- AdditiveExpr
-
-/**
  * Creates a new AdditiveExpr using the given operator
 **/
 AdditiveExpr::AdditiveExpr(Expr* leftExpr, Expr* rightExpr, short op) {
@@ -57,20 +48,6 @@ AdditiveExpr::~AdditiveExpr() {
     delete leftExpr;
     delete rightExpr;
 } //-- ~AdditiveExpr
-
-/**
- * Sets the left side of this AdditiveExpr
-**/
-void AdditiveExpr::setLeftExpr(Expr* leftExpr) {
-    this->leftExpr = leftExpr;
-} //-- setLeftExpr
-
-/**
- * Sets the right side of this AdditiveExpr
-**/
-void AdditiveExpr::setRightExpr(Expr* rightExpr) {
-    this->rightExpr = rightExpr;
-} //-- setRightExpr
 
 /**
  * Evaluates this Expr based on the given context node and processor state

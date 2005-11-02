@@ -31,12 +31,6 @@
  //- RelationalExpr -/
 //------------------/
 
-RelationalExpr::RelationalExpr() {
-    this->op = EQUAL;
-    this->leftExpr  = 0;
-    this->rightExpr = 0;
-} //-- RelationalExpr
-
 RelationalExpr::RelationalExpr(Expr* leftExpr, Expr* rightExpr, short op) {
     this->op = op;
     this->leftExpr = leftExpr;
