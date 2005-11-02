@@ -468,10 +468,9 @@ FunctionCall* ExprParser::createFunctionCall(ExprLexer& lexer) {
     }
     // OG-
     else {
-        //-- create error function() for now, should be ext function
-        String err = "not a valid function: ";
-        err.append(tok->value);
-        fnCall = new ErrorFunctionCall(err);
+        //-- Most likely an Extension Function, or error, but it's
+        //-- not our job to report an invalid function call here
+        fnCall = new ExtensionFunctionCall(fnName);
     }
     //-- handle parametes
     List params;
