@@ -806,6 +806,9 @@ nsresult
 nsSpaceManager::AddRectRegion(nsIFrame* aFrame, const nsRect& aUnavailableSpace)
 {
   NS_PRECONDITION(nsnull != aFrame, "null frame");
+  NS_PRECONDITION(aUnavailableSpace.width >= 0 &&
+                  aUnavailableSpace.height >= 0,
+                  "Negative dimensions not allowed");
 
   // See if there is already a region associated with aFrame
   FrameInfo*  frameInfo = GetFrameInfoFor(aFrame);
@@ -1328,7 +1331,8 @@ nsSpaceManager::BandRect::~BandRect()
 nsSpaceManager::BandRect*
 nsSpaceManager::BandRect::SplitVertically(nscoord aBottom)
 {
-  NS_PRECONDITION((aBottom > mTop) && (aBottom < mBottom), "bad argument");
+  // Allow aBottom == mTop, so we can split off an empty rectangle
+  NS_PRECONDITION((aBottom >= mTop) && (aBottom < mBottom), "bad argument");
 
   // Create a new band rect for the bottom part
   BandRect* bottomBandRect;
@@ -1347,7 +1351,8 @@ nsSpaceManager::BandRect::SplitVertically(nscoord aBottom)
 nsSpaceManager::BandRect*
 nsSpaceManager::BandRect::SplitHorizontally(nscoord aRight)
 {
-  NS_PRECONDITION((aRight > mLeft) && (aRight < mRight), "bad argument");
+  // Allow aRight == mLeft, so we can split off an empty rectangle
+  NS_PRECONDITION((aRight >= mLeft) && (aRight < mRight), "bad argument");
   
   // Create a new band rect for the right part
   BandRect* rightBandRect;
