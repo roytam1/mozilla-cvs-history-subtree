@@ -254,8 +254,8 @@ ExprResult* StringFunctionCall::evaluate(Node* context, ContextState* cs) {
                 for (i = 0; i < size; i++) {
                     Int32 idx = oldChars.indexOf(chars[i]);
                     if (idx >= 0) {
-                        UNICODE_CHAR nchar = newChars.charAt(idx);
-                        if (nchar != -1) src.append(nchar);
+                        if (idx<newChars.length())
+                            src.append(newChars.charAt(idx));
                     }
                     else src.append(chars[i]);
                 }
