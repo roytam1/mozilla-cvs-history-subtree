@@ -70,7 +70,7 @@
 #include "nsNetUtil.h"
 #include "nsIScriptSecurityManager.h"
 #include "nsDOMError.h"
-#include "nsPIDOMWindow.h"
+#include "nsIDOMWindowInternal.h"
 #include "nsIJSContextStack.h"
 #include "nsIDocShell.h"
 #include "nsIDocShellTreeItem.h"
@@ -896,22 +896,19 @@ nsContentUtils::GetDocumentFromCaller()
   JSContext *cx = nsnull;
   sThreadJSContextStack->Peek(&cx);
 
-  nsIDOMDocument *doc = nsnull;
+  nsCOMPtr<nsIDOMDocument> doc;
 
   if (cx) {
-    JSObject *callee = nsnull;
-    JSStackFrame *fp = nsnull;
-    while (!callee && (fp = ::JS_FrameIterator(cx, &fp))) {
-      callee = ::JS_GetFrameCalleeObject(cx, fp);
-    }
+    nsIScriptGlobalObject *sgo = nsJSUtils::GetDynamicScriptGlobal(cx);
 
-    nsCOMPtr<nsPIDOMWindow> win =
-      do_QueryInterface(nsJSUtils::GetStaticScriptGlobal(cx, callee));
+    nsCOMPtr<nsIDOMWindowInternal> win(do_QueryInterface(sgo));
     if (win) {
-      doc = win->GetExtantDocument();
+      win->GetDocument(getter_AddRefs(doc));
     }
   }
 
+  // This will return a pointer to something we're about to release,
+  // but that's ok here.
   return doc;
 }
 
