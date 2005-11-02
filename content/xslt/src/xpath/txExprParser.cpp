@@ -676,11 +676,11 @@ PathExpr* ExprParser::createPathExpr(ExprLexer& lexer) {
             case Token::R_PAREN:
             case Token::R_BRACKET:
             case Token::UNION_OP:
-				//Marina, addition start
-				// When parsing a list of parameters for a function comma should signal a spot
-				// without it further processing pathExpr was causing "invalid token" error
-			case Token::COMMA:
-				// Marina, addition ends
+                //Marina, addition start
+                // When parsing a list of parameters for a function comma should signal a spot
+                // without it further processing pathExpr was causing "invalid token" error
+            case Token::COMMA:
+                // Marina, addition ends
                 lexer.pushBack();
                 return pathExpr;
             case Token::ANCESTOR_OP :

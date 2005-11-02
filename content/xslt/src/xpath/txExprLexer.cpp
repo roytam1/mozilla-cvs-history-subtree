@@ -564,7 +564,7 @@ void ExprLexer::parse(const String& pattern) {
                 case TX_LF:
                     break;
                 case S_QUOTE :
-	        case D_QUOTE :
+            case D_QUOTE :
                     matchToken(tokenBuffer, ch);
                     inLiteral = ch;
                     break;
