@@ -75,7 +75,6 @@ ExprResult* BooleanFunctionCall::evaluate(Node* context, ContextState* cs) {
 
     MBool result = MB_FALSE;
     ListIterator* iter = params.iterator();
-    int argc = params.getLength();
     Expr* param = 0;
     String err;
 

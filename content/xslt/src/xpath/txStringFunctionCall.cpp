@@ -123,7 +123,7 @@ ExprResult* StringFunctionCall::evaluate(Node* context, ContextState* cs) {
                 // Leading & Trailing Whitespace
                 resultStr.trim();
                 MBool hasSpace = MB_FALSE;
-                PRInt32 lastchar=-1, dest=0;
+                PRInt32 dest=0;
                 String normed(resultStr.length());
                 UNICODE_CHAR current;
                 for (PRInt32 src=0; src<resultStr.length(); src++) {
@@ -252,7 +252,6 @@ ExprResult* StringFunctionCall::evaluate(Node* context, ContextState* cs) {
                 PRInt32 size = src.length();
                 UNICODE_CHAR* chars = src.toUnicode(new UNICODE_CHAR[size]);
                 src.clear();
-                PRInt32 newIdx = 0;
                 PRInt32 i;
                 for (i = 0; i < size; i++) {
                     PRInt32 idx = oldChars.indexOf(chars[i]);

@@ -797,8 +797,6 @@ MBool ExprParser::isNodeTypeToken(Token* token) {
 **/
 MBool ExprParser::parsePredicates(PredicateList* predicateList, ExprLexer& lexer) {
 
-    String* errorMsg = 0;
-
     while (lexer.peek()->type == Token::L_BRACKET) {
         //-- eat Token
         lexer.nextToken();

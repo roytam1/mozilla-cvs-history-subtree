@@ -94,7 +94,6 @@ static double rint(double r)
 ExprResult* NumberFunctionCall::evaluate(Node* context, ContextState* cs) {
     NumberResult* result = 0;
     ListIterator* iter = params.iterator();
-    int argc = params.getLength();
     Expr* param = 0;
     String err;
 
