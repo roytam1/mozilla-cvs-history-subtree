@@ -23,11 +23,10 @@
  * Bob Miller, kbob@oblix.com
  *    -- plugged core leak.
  *
- * $Id$
  */
 
 #include "List.h"
-#ifndef MOZ_XSL
+#ifdef TX_EXE
 #include <iostream.h>
 #endif
 
