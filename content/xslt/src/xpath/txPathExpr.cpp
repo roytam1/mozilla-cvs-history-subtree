@@ -239,7 +239,11 @@ MBool PathExpr::matches(Node* node, Node* context, ContextState* cs) {
             case PARENT_OP:
             {
                 Node* parent = cs->getParentNode(node);
-                if (parent) return pxi->pExpr->matches(node, parent, cs);
+                if (parent) {
+                    //-- make sure node is Document node
+                    if (parent->getNodeType() == Node::DOCUMENT_NODE)
+                        return pxi->pExpr->matches(node, parent, cs);
+                }
                 break;
             }
             default:
@@ -285,6 +289,11 @@ MBool PathExpr::matches(Node* node, Node* context, ContextState* cs) {
                 {
                     Node* parent = cs->getParentNode(tnode);
                     if (parent) {
+
+                        //-- make sure we have a document node if necessary
+                        if ( !iter->hasNext() )
+                            if (parent->getNodeType() != Node::DOCUMENT_NODE) break;
+
                         if (pxi->pExpr->matches(tnode, parent, cs))
                             tmpNodes.add(parent);
                     }
