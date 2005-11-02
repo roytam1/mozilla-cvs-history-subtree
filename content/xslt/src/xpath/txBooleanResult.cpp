@@ -24,11 +24,9 @@
  * $Id$
  */
 
-/**
+/*
  * Boolean Expression result
- * @author <A href="mailto:kvisco@ziplink.net">Keith Visco</A>
- * @version $Revision$ $Date$
-**/
+*/
 
 #include "ExprResult.h"
 
@@ -58,22 +56,6 @@ BooleanResult::BooleanResult(MBool boolean) {
 MBool BooleanResult::getValue() const {
     return this->value;
 } //-- getValue
-
-/**
- * Sets the value of this BooleanResult
- * @param boolean the MBool to use for this BooleanResult's value
-**/
-void BooleanResult::setValue(MBool boolean) {
-    this->value = boolean;
-} //-- setValue
-
-/**
- * Sets the value of this BooleanResult
- * @param boolResult the BooleanResult to use for setting this BooleanResult's value
-**/
-void BooleanResult::setValue(const BooleanResult& boolResult) {
-    this->value = boolResult.getValue();
-} //-- setValue
 
 /*
  * Virtual Methods from ExprResult

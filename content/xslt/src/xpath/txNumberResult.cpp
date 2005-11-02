@@ -66,21 +66,6 @@ double NumberResult::getValue() const {
 MBool NumberResult::isNaN() const {
     return Double::isNaN(value);
 } //-- isNaN
-/**
- * Sets the value of this NumberResult
- * @param dbl the double to use for this NumberResult's value
-**/
-void NumberResult::setValue(double dbl) {
-    this->value = dbl;
-} //-- setValue
-
-/**
- * Sets the value of this NumberResult
- * @param nbrResult the NumberResult to use for setting this NumberResult's value
-**/
-void NumberResult::setValue(const NumberResult& nbrResult) {
-    this->value = nbrResult.getValue();
-} //-- setValue
 
 /*
  * Virtual Methods from ExprResult

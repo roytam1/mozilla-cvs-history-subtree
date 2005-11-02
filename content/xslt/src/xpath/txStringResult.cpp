@@ -64,15 +64,6 @@ String& StringResult::getValue() {
     return this->value;
 } //-- getValue
 
-/**
- * Sets the value of this StringResult
- * @param str the String to use for this StringResult's value
-**/
-void StringResult::setValue(const String& str){
-    // copy str
-    this->value = str;
-} //-- setValue
-
 /*
  * Virtual Methods from ExprResult
 */

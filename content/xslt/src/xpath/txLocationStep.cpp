@@ -281,6 +281,9 @@ void LocationStep::toString(String& str) {
         case ANCESTOR_OR_SELF_AXIS :
             str.append("ancestor-or-self::");
             break;
+        case ATTRIBUTE_AXIS:
+            str.append("attribute::");
+            break;
         case DESCENDANT_AXIS:
             str.append("descendant::");
             break;
