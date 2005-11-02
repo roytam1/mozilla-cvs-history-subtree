@@ -35,7 +35,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-EXPORTED_SYMBOLS = [ "noop" ];
+EXPORTED_SYMBOLS = [ "noop",
+                     "makeServiceGetter" ];
 
 // object to hold module's documentation:
 var _doc_ = {};
@@ -47,3 +48,19 @@ _doc_.noop = "\
  A function that does nothing.                                        ";
 
 function noop() {}
+
+//----------------------------------------------------------------------
+// makeServiceGetter
+
+_doc_.makeServiceGetter = "\
+ Returns a function that returns and caches the service (clsid,itf)   ";
+
+function makeServiceGetter(clsid, itf) {
+  var theService;
+  return function() {
+    if (!theService) {
+      theService = Components.classes[clsid].getService(itf);
+    }
+    return theService;
+  };
+}
