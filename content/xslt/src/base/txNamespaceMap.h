@@ -12,15 +12,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the TransforMiiX XSLT processor.
+ * The Original Code is TransforMiiX XSLT processor.
  *
  * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2001
- * the Initial Developer. All Rights Reserved.
+ * Jonas Sicking.
+ * Portions created by the Initial Developer are Copyright (C) 2002
+ * Jonas Sicking. All Rights Reserved.
  *
  * Contributor(s):
- *   Peter Van der Beken <peterv@netscape.com>
+ *   Jonas Sicking <sicking@bigfoot.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -36,25 +36,43 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef TRANSFRMX_TEXT_HANDLER_H
-#define TRANSFRMX_TEXT_HANDLER_H
+#ifndef TRANSFRMX_TXNAMESPACEMAP_H
+#define TRANSFRMX_TXNAMESPACEMAP_H
 
-#include "txXMLEventHandler.h"
-#include "nsString.h"
+#include "txError.h"
+#include "baseutils.h"
+#include "nsIAtom.h"
+#include "nsCOMArray.h"
 
-class txTextHandler : public txAXMLEventHandler
+class txNamespaceMap
 {
 public:
-    txTextHandler(MBool aOnlyText);
-    virtual ~txTextHandler();
+    txNamespaceMap();
+    txNamespaceMap(const txNamespaceMap& aOther);
 
-    TX_DECL_TXAXMLEVENTHANDLER
+    nsrefcnt AddRef()
+    {
+        return ++mRefCnt;
+    }
+    nsrefcnt Release()
+    {
+        if (--mRefCnt == 0) {
+            mRefCnt = 1; //stabilize
+            delete this;
+            return 0;
+        }
+        return mRefCnt;
+    }
 
-    nsString mValue;
+    nsresult addNamespace(nsIAtom* aPrefix, const nsAString& aNamespaceURI);
+    PRInt32 lookupNamespace(nsIAtom* aPrefix);
+    PRInt32 lookupNamespace(const nsAString& aPrefix);
+    PRInt32 lookupNamespaceWithDefault(const nsAString& aPrefix);
 
 private:
-    PRUint32 mLevel;
-    MBool mOnlyText;
+    nsAutoRefCnt mRefCnt;
+    nsCOMArray<nsIAtom> mPrefixes;
+    nsVoidArray mNamespaces;
 };
 
-#endif
+#endif //TRANSFRMX_TXNAMESPACEMAP_H

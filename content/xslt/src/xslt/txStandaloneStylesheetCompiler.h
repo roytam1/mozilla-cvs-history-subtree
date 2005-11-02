@@ -12,15 +12,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the TransforMiiX XSLT processor.
+ * The Original Code is TransforMiiX XSLT Processor.
  *
  * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2001
+ * Axel Hecht.
+ * Portions created by the Initial Developer are Copyright (C) 2003
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Peter Van der Beken <peterv@netscape.com>
+ *  Axel Hecht <axel@pike.org>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -36,25 +36,20 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef TRANSFRMX_TEXT_HANDLER_H
-#define TRANSFRMX_TEXT_HANDLER_H
+#ifndef __TX_STANDALONE_STYLESHEET_COMPILER_H__
+#define __TX_STANDALONE_STYLESHEET_COMPILER_H__
 
-#include "txXMLEventHandler.h"
-#include "nsString.h"
+#include "txStylesheet.h"
 
-class txTextHandler : public txAXMLEventHandler
-{
-public:
-    txTextHandler(MBool aOnlyText);
-    virtual ~txTextHandler();
+/**
+ * API to load XML files into compiled stylesheets.
+ * Parsing is done by expat.
+ */
 
-    TX_DECL_TXAXMLEVENTHANDLER
+/**
+ * Parse a stylesheet from the aPath.
+ */
+nsresult
+TX_CompileStylesheetPath(const nsAString& aHref, txStylesheet** aResult);
 
-    nsString mValue;
-
-private:
-    PRUint32 mLevel;
-    MBool mOnlyText;
-};
-
-#endif
+#endif // __TX_STANDALONE_STYLESHEET_COMPILER_H__

@@ -20,7 +20,7 @@
  * Jonas Sicking. All Rights Reserved.
  *
  * Contributor(s):
- *   Jonas Sicking <sicking@bigfoot.com>
+ *   Jonas Sicking <jonas@sicking.cc>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -36,70 +36,58 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef TRANSFRMX_VARIABLEMAP_H
-#define TRANSFRMX_VARIABLEMAP_H
+#ifndef TRANSFRMX_TXSTYLESHEETCOMPILEHANDLERS_H
+#define TRANSFRMX_TXSTYLESHEETCOMPILEHANDLERS_H
 
 #include "txError.h"
-#include "XMLUtils.h"
-#include "ExprResult.h"
+#include "txNamespaceMap.h"
 #include "txExpandedNameMap.h"
 
-class txVariableMap {
-public:
-    txVariableMap();
-    
-    nsresult bindVariable(const txExpandedName& aName,
-                          ExprResult* aValue, MBool aOwned);
+struct txStylesheetAttr;
+class txStylesheetCompilerState;
 
-    ExprResult* getVariable(const txExpandedName& aName);
-    
-    void removeVariable(const txExpandedName& aName);
+typedef nsresult (*HandleStartFn) (PRInt32 aNamespaceID,
+                                   nsIAtom* aLocalName,
+                                   nsIAtom* aPrefix,
+                                   txStylesheetAttr* aAttributes,
+                                   PRInt32 aAttrCount,
+                                   txStylesheetCompilerState& aState);
+typedef nsresult (*HandleEndFn)   (txStylesheetCompilerState& aState);
+typedef nsresult (*HandleTextFn)  (const nsAString& aStr,
+                                   txStylesheetCompilerState& aState);
 
-private:
-    // Map with owned variables
-    txExpandedNameMap mOwnedVariables;
-
-    // Map with non-owned variables
-    txExpandedNameMap mNonOwnedVariables;
+struct txElementHandler {
+    PRInt32 mNamespaceID;
+    char* mLocalName;
+    HandleStartFn mStartFunction;
+    HandleEndFn mEndFunction;
 };
 
+struct txHandlerTableData {
+    txElementHandler mHandlers[20]; // XXX find a better solution for this
+    txElementHandler mOtherHandler;
+    txElementHandler mLREHandler;
+    HandleTextFn mTextHandler;
+};
 
-inline txVariableMap::txVariableMap()
-    : mOwnedVariables(MB_TRUE),
-      mNonOwnedVariables(MB_FALSE)
+class txHandlerTable
 {
-}
+public:
+    txHandlerTable();
+    nsresult init(txHandlerTableData* aTableData);
+    txElementHandler* find(PRInt32 aNamespaceID, nsIAtom* aLocalName);
+    
+    HandleTextFn mTextHandler;
+    txElementHandler* mLREHandler;
 
-inline nsresult txVariableMap::bindVariable(const txExpandedName& aName,
-                                            ExprResult* aValue, MBool aOwned)
-{
-    nsresult rv = NS_ERROR_FAILURE;
-    if (aOwned) {
-        if (!mNonOwnedVariables.get(aName)) {
-            rv = mOwnedVariables.add(aName, aValue);
-        }
-    }
-    else {
-        if (!mOwnedVariables.get(aName)) {
-            rv = mNonOwnedVariables.add(aName, aValue);
-        }
-    }
-    return rv;
-}
+    static MBool init();
+    static void shutdown();
 
-inline ExprResult* txVariableMap::getVariable(const txExpandedName& aName)
-{
-    ExprResult* var = (ExprResult*)mOwnedVariables.get(aName);
-    if (!var) {
-        var = (ExprResult*)mNonOwnedVariables.get(aName);
-    }
-    return var;
-}
+private:
+    txElementHandler* mOtherHandler;
+    txExpandedNameMap mHandlers;
+};
 
-inline void txVariableMap::removeVariable(const txExpandedName& aName)
-{
-    mOwnedVariables.remove(aName);
-    mNonOwnedVariables.remove(aName);
-}
+extern txHandlerTable* gTxRootHandler;
 
-#endif //TRANSFRMX_VARIABLEMAP_H
+#endif //TRANSFRMX_TXSTYLESHEETCOMPILEHANDLERS_H

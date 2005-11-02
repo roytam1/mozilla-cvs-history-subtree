@@ -12,15 +12,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the TransforMiiX XSLT processor.
+ * The Original Code is TransforMiiX XSLT processor.
  *
  * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2001
- * the Initial Developer. All Rights Reserved.
+ * Jonas Sicking.
+ * Portions created by the Initial Developer are Copyright (C) 2002
+ * Jonas Sicking. All Rights Reserved.
  *
  * Contributor(s):
- *   Peter Van der Beken <peterv@netscape.com>
+ *   Jonas Sicking <jonas@sicking.cc>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -36,25 +36,78 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef TRANSFRMX_TEXT_HANDLER_H
-#define TRANSFRMX_TEXT_HANDLER_H
-
-#include "txXMLEventHandler.h"
-#include "nsString.h"
-
-class txTextHandler : public txAXMLEventHandler
-{
-public:
-    txTextHandler(MBool aOnlyText);
-    virtual ~txTextHandler();
-
-    TX_DECL_TXAXMLEVENTHANDLER
-
-    nsString mValue;
-
-private:
-    PRUint32 mLevel;
-    MBool mOnlyText;
-};
-
+#include "txXSLTProcessor.h"
+#include "txInstructions.h"
+#include "txAtoms.h"
+#include "TxLog.h"
+#include "txStylesheetCompileHandlers.h"
+#include "txExecutionState.h"
+#ifdef TX_EXE
+#include "txHTMLOutput.h"
 #endif
+
+TX_LG_IMPL;
+
+/* static */
+MBool
+txXSLTProcessor::init()
+{
+    TX_LG_CREATE;
+
+#ifdef TX_EXE
+    if (!txNamespaceManager::init())
+        return MB_FALSE;
+
+    if (NS_FAILED(txHTMLOutput::init())) {
+        return MB_FALSE;
+    }
+#endif
+
+    if (!txHTMLAtoms::init())
+        return MB_FALSE;
+    if (!txXMLAtoms::init())
+        return MB_FALSE;
+    if (!txXPathAtoms::init())
+        return MB_FALSE;
+    if (!txXSLTAtoms::init())
+        return MB_FALSE;
+    
+    if (!txHandlerTable::init())
+        return MB_FALSE;
+
+    return MB_TRUE;
+}
+
+/* static */
+void
+txXSLTProcessor::shutdown()
+{
+#ifdef TX_EXE
+    txNamespaceManager::shutdown();
+    txHTMLOutput::shutdown();
+#endif
+
+    txHTMLAtoms::shutdown();
+    txXMLAtoms::shutdown();
+    txXPathAtoms::shutdown();
+    txXSLTAtoms::shutdown();
+
+    txHandlerTable::shutdown();
+
+    TX_LG_DELETE;
+}
+
+
+/* static */
+nsresult
+txXSLTProcessor::execute(txExecutionState& aEs)
+{
+    nsresult rv = NS_OK;
+    txInstruction* instr;
+    while ((instr = aEs.getNextInstruction())) {
+        rv = instr->execute(aEs);
+        NS_ENSURE_SUCCESS(rv, rv);
+    }
+
+    return NS_OK;
+}

@@ -12,15 +12,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the TransforMiiX XSLT processor.
+ * The Original Code is TransforMiiX XSLT processor.
  *
  * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2001
- * the Initial Developer. All Rights Reserved.
+ * Jonas Sicking.
+ * Portions created by the Initial Developer are Copyright (C) 2002
+ * Jonas Sicking. All Rights Reserved.
  *
  * Contributor(s):
- *   Peter Van der Beken <peterv@netscape.com>
+ *   Jonas Sicking <jonas@sicking.cc>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -36,57 +36,50 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "txTextHandler.h"
-#include "nsAString.h"
+#include "txToplevelItems.h"
+#include "txStylesheet.h"
+#include "txInstructions.h"
+#include "txXSLTPatterns.h"
 
-txTextHandler::txTextHandler(MBool aOnlyText) : mLevel(0),
-                                                mOnlyText(aOnlyText)
+TX_IMPL_GETTYPE(txAttributeSetItem, txToplevelItem::attributeSet)
+TX_IMPL_GETTYPE(txImportItem, txToplevelItem::import)
+TX_IMPL_GETTYPE(txOutputItem, txToplevelItem::output)
+TX_IMPL_GETTYPE(txDummyItem, txToplevelItem::dummy)
+
+TX_IMPL_GETTYPE(txStripSpaceItem, txToplevelItem::stripSpace)
+
+txStripSpaceItem::~txStripSpaceItem()
+{
+    PRInt32 i, count = mStripSpaceTests.Count();
+    for (i = 0; i < count; ++i) {
+        delete NS_STATIC_CAST(txStripSpaceTest*, mStripSpaceTests[0]);
+    }
+}
+
+nsresult
+txStripSpaceItem::addStripSpaceTest(txStripSpaceTest* aStripSpaceTest)
+{
+    if (!mStripSpaceTests.AppendElement(aStripSpaceTest)) {
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    return NS_OK;
+}
+
+TX_IMPL_GETTYPE(txTemplateItem, txToplevelItem::templ)
+
+txTemplateItem::txTemplateItem(nsAutoPtr<txPattern> aMatch,
+                               const txExpandedName& aName,
+                               const txExpandedName& aMode, double aPrio)
+    : mMatch(aMatch), mName(aName), mMode(aMode), mPrio(aPrio)
 {
 }
 
-txTextHandler::~txTextHandler()
-{
-}
+TX_IMPL_GETTYPE(txVariableItem, txToplevelItem::variable)
 
-void txTextHandler::attribute(const nsAString& aName,
-                              const PRInt32 aNsID,
-                              const nsAString& aValue)
+txVariableItem::txVariableItem(const txExpandedName& aName,
+                               nsAutoPtr<Expr> aValue,
+                               PRBool aIsParam)
+    : mName(aName), mValue(aValue), mIsParam(aIsParam)
 {
-}
-
-void txTextHandler::characters(const nsAString& aData, PRBool aDOE)
-{
-    if (mLevel == 0)
-        mValue.Append(aData);
-}
-
-void txTextHandler::comment(const nsAString& aData)
-{
-}
-
-void txTextHandler::endDocument()
-{
-}
-
-void txTextHandler::endElement(const nsAString& aName,
-                               const PRInt32 aNsID)
-{
-    if (mOnlyText)
-        --mLevel;
-}
-
-void txTextHandler::processingInstruction(const nsAString& aTarget,
-                                          const nsAString& aData)
-{
-}
-
-void txTextHandler::startDocument()
-{
-}
-
-void txTextHandler::startElement(const nsAString& aName,
-                                 const PRInt32 aNsID)
-{
-    if (mOnlyText)
-        ++mLevel;
 }

@@ -12,15 +12,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the TransforMiiX XSLT processor.
+ * The Original Code is TransforMiiX XSLT processor.
  *
  * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2001
- * the Initial Developer. All Rights Reserved.
+ * Jonas Sicking.
+ * Portions created by the Initial Developer are Copyright (C) 2002
+ * Jonas Sicking. All Rights Reserved.
  *
  * Contributor(s):
- *   Peter Van der Beken <peterv@netscape.com>
+ *   Jonas Sicking <jonas@sicking.cc>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -36,25 +36,26 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef TRANSFRMX_TEXT_HANDLER_H
-#define TRANSFRMX_TEXT_HANDLER_H
+#ifndef TRANSFRMX_TXXSLTPROCESSOR_H
+#define TRANSFRMX_TXXSLTPROCESSOR_H
 
-#include "txXMLEventHandler.h"
-#include "nsString.h"
+#include "txExecutionState.h"
 
-class txTextHandler : public txAXMLEventHandler
+class txXSLTProcessor
 {
 public:
-    txTextHandler(MBool aOnlyText);
-    virtual ~txTextHandler();
+    /**
+     * Initialisation and shutdown routines. Initilizes and cleansup all
+     * dependant classes
+     */
+    static MBool init();
+    static void shutdown();
 
-    TX_DECL_TXAXMLEVENTHANDLER
 
-    nsString mValue;
+    static nsresult execute(txExecutionState& aEs);
 
-private:
-    PRUint32 mLevel;
-    MBool mOnlyText;
+    // once we want to have interuption we should probably have functions for
+    // running X number of steps or running until a condition is true.
 };
 
 #endif
