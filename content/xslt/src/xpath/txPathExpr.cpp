@@ -154,7 +154,7 @@ ExprResult* PathExpr::evaluate(Node* context, ContextState* cs) {
         }
         delete (NodeSet*) cs->getNodeSetStack()->pop();
         nodes = tmpNodes;
-        if ( nodes->size() == 0 ) break;
+        if ( !nodes || nodes->size() == 0 ) break;
     }
     delete iter;
 
@@ -173,7 +173,7 @@ void PathExpr::fromDescendants
     if (( !context ) || (! pExpr )) return;
 
     NodeList* nl = context->getChildNodes();
-    for (int i = 0; i < nl->getLength(); i++) {
+    for (UInt32 i = 0; i < nl->getLength(); i++) {
         Node* child = nl->item(i);
         if (pExpr->matches(child, context, cs))
             nodes->add(child);

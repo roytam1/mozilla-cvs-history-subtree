@@ -65,6 +65,7 @@ public:
      * @return the type of ExprResult represented
     **/
     virtual short getResultType()      = 0;
+
     /**
      * Creates a String representation of this ExprResult
      * @param str the destination string to append the String representation to.

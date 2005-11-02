@@ -123,7 +123,7 @@ ExprResult* LocationStep::evaluate(Node* context, ContextState* cs) {
         {
             NamedNodeMap* atts = context->getAttributes();
             if ( atts ) {
-                for ( int i = 0; i < atts->getLength(); i++ ) {
+                for ( UInt32 i = 0; i < atts->getLength(); i++ ) {
                     Attr* attr = (Attr*)atts->item(i);
                     if ( nodeExpr->matches(attr, context, cs) ) nodes->add(attr);
                 }
@@ -202,7 +202,7 @@ ExprResult* LocationStep::evaluate(Node* context, ContextState* cs) {
         default: //-- Children Axis
         {
             NodeList* nl = context->getChildNodes();
-            for (int i = 0; i < nl->getLength(); i++  ) {
+            for ( UInt32 i = 0; i < nl->getLength(); i++  ) {
                 if ( nodeExpr->matches(nl->item(i), context, cs) )
                     nodes->add(nl->item(i));
             }
@@ -240,7 +240,7 @@ void LocationStep::fromDescendants(Node* context, ContextState* cs, NodeSet* nod
     if (( !context ) || (! nodeExpr )) return;
 
     NodeList* nl = context->getChildNodes();
-    for (int i = 0; i < nl->getLength(); i++) {
+    for (UInt32 i = 0; i < nl->getLength(); i++) {
         Node* child = nl->item(i);
         if (nodeExpr->matches(child, context, cs))
             nodes->add(child);

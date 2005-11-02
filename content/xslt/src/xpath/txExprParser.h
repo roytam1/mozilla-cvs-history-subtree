@@ -41,7 +41,9 @@
 #include "FunctionLib.h"
 #include "List.h"
 #include "Stack.h"
+#ifndef MOZ_XSL
 #include <iostream.h>
+#endif
 
 class ExprParser {
 

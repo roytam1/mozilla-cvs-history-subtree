@@ -34,7 +34,9 @@
 
 #include "TxString.h"
 #include "baseutils.h"
+#ifndef MOZ_XSL
 #include <iostream.h>
+#endif
 
 /**
  * A Token class for the ExprLexer.

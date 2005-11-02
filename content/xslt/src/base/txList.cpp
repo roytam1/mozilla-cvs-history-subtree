@@ -27,7 +27,9 @@
  */
 
 #include "List.h"
+#ifndef MOZ_XSL
 #include <iostream.h>
+#endif
 
   //--------------------------/
  //- Implementation of List -/
