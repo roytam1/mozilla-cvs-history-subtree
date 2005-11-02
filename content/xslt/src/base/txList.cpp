@@ -92,12 +92,14 @@ void* List::get(int index) {
 
     int c = 0;
     ListItem* item = firstItem;
-    while (c != index) {
+    while ((c != index) && item) {
         item = item->nextItem;
         ++c;
     }
 
-    return item->objPtr;
+    if (item)
+        return item->objPtr;
+    return 0;
 } //-- get(int)
 
 List::ListItem* List::getFirstItem() {
@@ -139,6 +141,9 @@ void List::insertAfter(void* objPtr, ListItem* refItem) {
 void List::insertBefore(void* objPtr, ListItem* refItem) {
 
     ListItem* item = new ListItem;
+    if (!item)
+        return;
+
     item->objPtr = objPtr;
     item->nextItem = 0;
     item->prevItem = 0;
