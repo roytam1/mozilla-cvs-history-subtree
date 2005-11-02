@@ -163,9 +163,9 @@ public:
         COLON          = ':',
         //-- whitespace tokens
         SPACE          = ' ',
-        TAB            = '\t',
-        CR             = '\n',
-        LF             = '\r'
+        TX_TAB            = '\t',
+        TX_CR             = '\n',
+        TX_LF             = '\r'
     };
 
 

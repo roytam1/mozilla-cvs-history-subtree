@@ -559,9 +559,9 @@ void ExprLexer::parse(const String& pattern) {
             switch (ch) {
                 //-- ignore whitespace
                 case SPACE:
-                case TAB:
-                case CR:
-                case LF:
+                case TX_TAB:
+                case TX_CR:
+                case TX_LF:
                     break;
                 case S_QUOTE :
 	        case D_QUOTE :
@@ -679,9 +679,9 @@ void ExprLexer::parse(const String& pattern) {
                 default:
                     switch (prevCh) {
                         case SPACE :
-                        case TAB :
-                        case CR :
-                        case LF :
+                        case TX_TAB :
+                        case TX_CR :
+                        case TX_LF :
                             matchToken(tokenBuffer, ch);
                             tokenBuffer.append(ch);
                             break;
