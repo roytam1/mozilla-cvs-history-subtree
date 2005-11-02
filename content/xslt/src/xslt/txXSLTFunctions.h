@@ -26,16 +26,14 @@
  * $Id$
  */
 
-#include "dom.h"
+#ifndef TRANSFRMX_XSLT_FUNCTIONS_H
+#define TRANSFRMX_XSLT_FUNCTIONS_H
+
 #include "Expr.h"
 #include "ExprResult.h"
-#include "Names.h"
 #include "DOMHelper.h"
 #include "TxString.h"
 #include "ProcessorState.h"
-
-#ifndef TRANSFRMX_XSLT_FUNCTIONS_H
-#define TRANSFRMX_XSLT_FUNCTIONS_H
 
 /**
  * The definition for the XSLT document() function

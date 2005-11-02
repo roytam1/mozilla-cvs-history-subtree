@@ -24,10 +24,10 @@
  * $Id$
  */
 
-#include "baseutils.h"
-
 #ifndef TRANSFRMX_LIST_H
 #define TRANSFRMX_LIST_H
+
+#include "baseutils.h"
 
 /**
  * Represents an ordered list of Object pointers. Modeled after a Java 2 List.

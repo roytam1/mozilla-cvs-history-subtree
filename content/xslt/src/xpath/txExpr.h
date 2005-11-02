@@ -29,19 +29,19 @@
  */
 
 
-#include <math.h>
+#ifndef TRANSFRMX_EXPR_H
+#define TRANSFRMX_EXPR_H
+
+
 #include "TxString.h"
 #include "ErrorObserver.h"
 #include "NodeSet.h"
-#include "List.h"
 #include "Stack.h"
-#include "dom.h"
 #include "ExprResult.h"
 #include "baseutils.h"
-#include "MITREObject.h"
+#include "TxObject.h"
 #include "primitives.h"
 #include "NamespaceResolver.h"
-#include "XMLDOMUtils.h"
 
 /*
   XPath class definitions.
@@ -49,13 +49,8 @@
   @version $Revision$ $Date$
 */
 
-#ifndef TRANSFRMX_EXPR_H
-#define TRANSFRMX_EXPR_H
-
-
 //necessary prototypes
 class FunctionCall;
-class NodeSet;
 
 /**
  * The expression context and state class used when evaluating XPath Expressions.
@@ -113,7 +108,7 @@ public:
 /**
  * A Base Class for all XSL Expressions
 **/
-class Expr : public MITREObject {
+class Expr : public TxObject {
 
 public:
 

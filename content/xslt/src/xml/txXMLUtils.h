@@ -29,11 +29,11 @@
  * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
 **/
 
-#include "TxString.h"
-#include "baseutils.h"
-
 #ifndef MITRE_XMLUTILS_H
 #define MITRE_XMLUTILS_H
+
+#include "TxString.h"
+#include "baseutils.h"
 
 class XMLUtils {
 

@@ -42,6 +42,8 @@
 **/
 
 #include "ExprParser.h"
+#include "FunctionLib.h"
+#include "Names.h"
 
 const String ExprParser::L_CURLY_BRACE = "{";
 const String ExprParser::R_CURLY_BRACE = "}";

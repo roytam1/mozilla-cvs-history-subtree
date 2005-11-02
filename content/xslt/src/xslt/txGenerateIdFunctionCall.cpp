@@ -24,6 +24,7 @@
  */
 
 #include "XSLTFunctions.h"
+#include "Names.h"
 
 /*
   Implementation of XSLT 1.0 extension function: generate-id
