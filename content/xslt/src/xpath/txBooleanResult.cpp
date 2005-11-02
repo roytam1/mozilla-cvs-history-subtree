@@ -83,7 +83,7 @@ short BooleanResult::getResultType() {
     return ExprResult::BOOLEAN;
 } //-- getResultType
 
-void BooleanResult::stringValue(DOMString& str)  {
+void BooleanResult::stringValue(String& str)  {
     if ( value ) str.append("true");
     else str.append("false");
 } //-- toString
