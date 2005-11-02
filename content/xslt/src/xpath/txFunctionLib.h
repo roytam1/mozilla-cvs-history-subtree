@@ -38,6 +38,7 @@
 #include "ExprResult.h"
 #include "baseutils.h"
 #include "Expr.h"
+#include "XMLDOMUtils.h"
 #include "Names.h"
 #include "XMLUtils.h"
 #include <math.h>
