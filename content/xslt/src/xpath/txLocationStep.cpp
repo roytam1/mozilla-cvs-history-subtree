@@ -1,4 +1,4 @@
-/*
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- 
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
@@ -211,10 +211,11 @@ ExprResult* LocationStep::evaluate(Node* context, ContextState* cs) {
             break;
         default: //-- Children Axis
         {
-            NodeList* nl = context->getChildNodes();
-            for ( UInt32 i = 0; i < nl->getLength(); i++  ) {
-                if ( nodeExpr->matches(nl->item(i), context, cs) )
-                    nodes->add(nl->item(i));
+            Node* tmpNode = context->getFirstChild();
+            while (tmpNode) {
+                if ( nodeExpr->matches(tmpNode, context, cs) )
+                    nodes->add(tmpNode);
+                tmpNode = tmpNode->getNextSibling();
             }
             break;
         }
