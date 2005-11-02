@@ -65,7 +65,7 @@ NumberFunctionCall::NumberFunctionCall(short type) : FunctionCall() {
     }
 } //-- NumberFunctionCall
 
-#if !defined(HAVE_RINT) && !defined(XP_MAC)
+#if !defined(HAVE_RINT)
 static double rint(double r)
 {
   double integerPart = 0;
