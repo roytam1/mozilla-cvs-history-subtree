@@ -126,11 +126,11 @@ ExprResult* NodeSetFunctionCall::evaluate(Node* context, ContextState* cs) {
                     exprResult->stringValue(lIDList);
                 };
                 lIDList.trim();
-                Int32 start=0;
+                Int32 start=0,end;
                 MBool hasSpace = MB_FALSE, isSpace;
                 UNICODE_CHAR cc;
                 String thisID;
-                for (Int32 end=0; end<lIDList.length(); end++){
+                for (end=0; end<lIDList.length(); end++){
                     cc = lIDList.charAt(end);
                     isSpace = (cc==' ' || cc=='\n' || cc=='\t'|| cc=='\r');
                     if (isSpace && !hasSpace){
@@ -142,6 +142,8 @@ ExprResult* NodeSetFunctionCall::evaluate(Node* context, ContextState* cs) {
                         hasSpace = MB_FALSE;
                     };
                 };
+                lIDList.subString(start, end, thisID);
+                resultSet->add(context->getOwnerDocument()->getElementById(thisID));
                 result = resultSet;
             };
             break;
