@@ -100,7 +100,7 @@ public:
     void setValue(const BooleanResult& boolResult);
 
     virtual short  getResultType();
-    virtual void   stringValue(String& str);
+    virtual void   stringValue(DOMString& str);
     virtual MBool  booleanValue();
     virtual double numberValue();
 
@@ -125,7 +125,7 @@ public:
     MBool isNaN() const;
 
     virtual short  getResultType();
-    virtual void   stringValue(String& str);
+    virtual void   stringValue(DOMString& str);
     virtual MBool  booleanValue();
     virtual double numberValue();
 
@@ -148,7 +148,7 @@ public:
     void setValue(const String& str);
 
     virtual short  getResultType();
-    virtual void   stringValue(String& str);
+    virtual void   stringValue(DOMString& str);
     virtual MBool  booleanValue();
     virtual double numberValue();
 
