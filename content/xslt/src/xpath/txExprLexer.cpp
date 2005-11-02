@@ -25,6 +25,10 @@
  * Bob Miller, Oblix Inc., kbob@oblix.com
  *   -- fixed bug with single quotes inside double quotes
  *
+ * Marina Mechtcheriakova, mmarina@mindspring.com
+ *   -- Fixed bug in parse method so that we make sure we check for
+ *      axis identifier wild cards, such as ancestor::*
+ *
  * $Id$
  */
 
@@ -640,6 +644,10 @@ void ExprLexer::parse(const String& pattern) {
                 case ASTERIX:
                     matchToken(tokenBuffer, ch);
                     switch ( prevToken->type ) {
+                        //-- Fix: make sure check for axis identifier wild cards, such as
+                        //-- ancestor::* - Marina M.
+                        case Token::AXIS_IDENTIFIER :
+                        //-- End Fix
                         case Token::PARENT_OP :
                         case Token::ANCESTOR_OP:
                         case Token::AT_SIGN :
