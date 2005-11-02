@@ -592,6 +592,11 @@ void ExprLexer::parse(const String& pattern) {
                         prevToken->type = Token::ANCESTOR_OP;
                         prevToken->value.append(ch);
                     }
+                    //-- handle possible error in using /
+                    else if ( prevToken->type == Token::NUMBER ) {
+                        prevToken->type = Token::ERROR;
+                        prevToken->value = "Error in expression, misuse of '/', try 'div' instead.";
+                    }
                     else matchDelimiter(ch);
                     break;
                 case BANG : //-- used as previous...see EQUAL
