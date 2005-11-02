@@ -81,7 +81,7 @@ short StringResult::getResultType() {
     return ExprResult::STRING;
 } //-- getResultType
 
-void StringResult::stringValue(String& str)  {
+void StringResult::stringValue(DOMString& str)  {
     str.append(this->value);
 } //-- stringValue
 
