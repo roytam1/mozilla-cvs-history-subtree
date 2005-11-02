@@ -29,7 +29,7 @@
  * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
 **/
 
-#include "String.h"
+#include "TxString.h"
 #include "baseutils.h"
 
 #ifndef MITRE_XMLUTILS_H

@@ -35,7 +35,7 @@
 #ifndef MITREXSL_EXPRPARSER_H
 #define MITREXSL_EXPRPARSER_H
 
-#include "String.h"
+#include "TxString.h"
 #include "ExprLexer.h"
 #include "Expr.h"
 #include "FunctionLib.h"
