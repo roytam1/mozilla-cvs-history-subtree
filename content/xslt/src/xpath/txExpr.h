@@ -1430,7 +1430,7 @@ private:
     * all nodes that match the PatternExpr
     * -- this will be moving to a Utility class
    **/
-   void fromDescendants(PatternExpr* pExpr,
+   void evalDescendants(PatternExpr* pExpr,
                         Node* context,
                         ContextState* cs,
                         NodeSet* nodes);
