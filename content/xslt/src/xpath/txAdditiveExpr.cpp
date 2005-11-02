@@ -20,17 +20,14 @@
  * Contributor(s): 
  * Keith Visco, kvisco@ziplink.net
  *   -- original author.
- *    
- * $Id$
+ * 
  */
 
 /**
  * Represents a AdditiveExpr, an binary expression that
- * performs an additive operation between it's lvalue and rvalue:<BR/>
+ * performs an additive operation between it's lvalue and rvalue:
  *  +   : addition
  *  -   : subtraction
- * @author <A HREF="mailto:kvisco@ziplink.net">Keith Visco</A>
- * @version $Revision$ $Date$
 **/
 
 #include "Expr.h"

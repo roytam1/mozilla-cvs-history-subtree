@@ -20,13 +20,11 @@
  * Contributor(s): 
  * Keith Visco, kvisco@ziplink.net
  *   -- original author.
- *    
- * $Id$
+ * 
  */
 
 /*
   Implementation of an XPath LocationStep
-  @version $Revision$ $Date$
 */
 
 #include "Expr.h"

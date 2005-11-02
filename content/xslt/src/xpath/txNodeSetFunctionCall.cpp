@@ -23,15 +23,12 @@
  *
  * Marina Mechtcheriakova, mmarina@mindspring.com
  *   -- changed some behavoir to be more compliant with spec
- *    
- * $Id$
+ * 
  */
 
 /**
  * NodeSetFunctionCall
  * A representation of the XPath NodeSet funtions
- * @author <A HREF="mailto:kvisco@ziplink.net">Keith Visco</a>
- * @version $Revision$ $Date$
 **/
 
 #include "FunctionLib.h"

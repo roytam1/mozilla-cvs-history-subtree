@@ -27,7 +27,6 @@
  * Marina Mechtcheriakova
  *   -- added support for lang function
  *
- * $Id$
  */
 
 #ifndef TRANSFRMX_FUNCTIONLIB_H

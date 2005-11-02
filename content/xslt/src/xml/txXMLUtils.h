@@ -21,12 +21,10 @@
  * Keith Visco, kvisco@ziplink.net
  *    -- original author.
  *
- * $Id$
  */
 
 /**
  * An XML Utility class
- * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
 **/
 
 #ifndef MITRE_XMLUTILS_H

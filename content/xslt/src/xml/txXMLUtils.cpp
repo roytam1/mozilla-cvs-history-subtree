@@ -23,11 +23,10 @@
  * Lidong, lidong520@263.net
  *    -- unicode bug fix
  *
- * $Id$
  */
+
 /**
  * An XML utility class
- * @author <a href="mailto:kvisco@mitre.org">Keith Visco</a>
 **/
 
 #include "XMLUtils.h"

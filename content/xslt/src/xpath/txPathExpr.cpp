@@ -29,7 +29,6 @@
  *       - foo//bar would not match properly if there was more than
  *         one node in the NodeSet (nodes) on the final iteration
  *
- * $Id$
  */
 
 #include "Expr.h"

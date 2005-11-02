@@ -26,15 +26,12 @@
  *      - If the left hand was false, the right hand expression
  *        was not getting checked.
  *
- * $Id$
  */
 
 
 /**
  * Represents a BooleanExpr, a binary expression that
- * performs a boolean operation between it's lvalue and rvalue:<BR/>
- * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
- * @version $Revision$ $Date$
+ * performs a boolean operation between it's lvalue and rvalue.
 **/
 
 #include "Expr.h"
