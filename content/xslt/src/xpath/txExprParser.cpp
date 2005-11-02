@@ -66,7 +66,7 @@ AttributeValueTemplate* ExprParser::createAttributeValueTemplate
 {
 
     AttributeValueTemplate* avt = new AttributeValueTemplate();
-    Int32 size = attValue.length();
+    PRInt32 size = attValue.length();
     int cc = 0;
     String buffer;
     MBool inExpr    = MB_FALSE;

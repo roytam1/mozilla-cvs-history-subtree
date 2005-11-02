@@ -77,22 +77,22 @@ private:
     /**
      * Returns true if the given character represents an Alpha letter
     **/
-    static MBool isAlphaChar(Int32 ch);
+    static MBool isAlphaChar(PRInt32 ch);
 
     /**
      * Returns true if the given character represents a numeric letter (digit)
     **/
-    static MBool isDigit(Int32 ch);
+    static MBool isDigit(PRInt32 ch);
 
     /**
      * Returns true if the given character is an allowable QName character
     **/
-    static MBool isQNameChar(Int32 ch);
+    static MBool isQNameChar(PRInt32 ch);
 
     /**
      * Returns true if the given character is an allowable NCName character
     **/
-    static MBool isNCNameChar(Int32 ch);
+    static MBool isNCNameChar(PRInt32 ch);
 
 }; //-- XMLUtils
 #endif

@@ -112,7 +112,7 @@ List::ListItem* List::getLastItem() {
 /**
  * Returns the number of items in this List
 **/
-Int32 List::getLength() {
+PRInt32 List::getLength() {
    return itemCount;
 } //-- getLength
 

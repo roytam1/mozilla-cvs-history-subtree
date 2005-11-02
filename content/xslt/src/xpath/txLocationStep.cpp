@@ -123,7 +123,7 @@ ExprResult* LocationStep::evaluate(Node* context, ContextState* cs) {
         {
             NamedNodeMap* atts = context->getAttributes();
             if ( atts ) {
-                for ( UInt32 i = 0; i < atts->getLength(); i++ ) {
+                for ( PRUint32 i = 0; i < atts->getLength(); i++ ) {
                     Node* attr = atts->item(i);
                     if ( nodeExpr->matches(attr, context, cs) ) nodes->add(attr);
                 }
