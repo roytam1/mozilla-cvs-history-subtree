@@ -82,7 +82,10 @@ void PredicateList::evaluatePredicates(NodeSet* nodes, ContextState* cs) {
             //-- then we can keep it, otherwise add to remove list
             ExprResult* exprResult = expr->evaluate(node,cs);
             if ( !exprResult ) {
+#if 0
+                // XXX DEBUG OUTPUT
                 cout << "ExprResult == null" << endl;
+#endif
             }
             else {
                 switch(exprResult->getResultType()) {
