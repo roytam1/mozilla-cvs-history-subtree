@@ -49,6 +49,13 @@ public:
     virtual ~List();
 
     /**
+     * Returns the object located at the given index. This may
+     * be slow or fast depending on the implementation.
+     * @return the object located at the given index
+    **/
+    void* get(int index);
+
+    /**
      * Returns the number of items in this List
     **/
     Int32 getLength();
