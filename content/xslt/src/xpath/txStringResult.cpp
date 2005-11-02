@@ -58,6 +58,15 @@ StringResult::StringResult(const String& str) {
 } //-- StringResult
 
 /**
+ * Creates a new StringResult with the value of the given String parameter
+ * @param str the String to use for initialization of this StringResult's value
+**/
+StringResult::StringResult(const char* str) {
+    //-- copy str
+    this->value = str;
+} //-- StringResult
+
+/**
  * Returns the value of this StringResult
 **/
 String& StringResult::getValue() {

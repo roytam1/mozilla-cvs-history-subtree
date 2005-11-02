@@ -1048,6 +1048,7 @@ public:
     StringExpr();
     StringExpr(String& value);
     StringExpr(const String& value);
+    StringExpr(const char* value);
     ~StringExpr();
 
     /**

@@ -131,6 +131,7 @@ public:
     StringResult(String& str);
     StringResult(const String& str);
     StringResult(const StringResult& strResult);
+    StringResult(const char* str);
 
     String& getValue();
 
