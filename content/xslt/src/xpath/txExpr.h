@@ -105,6 +105,22 @@ public:
 
 }; //-- ContextState
 
+
+/**
+ * A class that returns the relevant namespace URI for a node.
+**/
+class NamespaceResolver {
+
+public:
+
+    /**
+     * Returns the namespace URI for the given name
+    **/ 
+    virtual void getNameSpaceURI(String& name, String& nameSpaceURI) = 0;
+
+}; //-- NamespaceResolver
+
+
 /**
  * A Base Class for all XSL Expressions
 **/
