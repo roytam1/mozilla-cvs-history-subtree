@@ -4,9 +4,9 @@
      xmlns:zap="urn:mozilla:zap:">
   <rdf:resource rdf:about="urn:mozilla:zap:config"/>
   <rdf:Seq rdf:about="urn:mozilla:zap:services">
-    <RDF:li RDF:resource="rdf:#$vmowo"/>
-    <RDF:li RDF:resource="rdf:#$wmowo"/>
-    <RDF:li RDF:resource="rdf:#$xmowo"/>
+    <rdf:li rdf:resource="rdf:#$vmowo"/>
+    <rdf:li rdf:resource="rdf:#$wmowo"/>
+    <rdf:li rdf:resource="rdf:#$xmowo"/>
   </rdf:Seq>
   <rdf:Description rdf:about="rdf:#$wmowo"
                    NC:Name="Free World Dialup"
