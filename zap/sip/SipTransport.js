@@ -455,7 +455,7 @@ SipTransceiver.fun(
 SipTransceiver.fun(
   function handleDatagram(socket, data) {
     var application = Components.interfaces.zapISipTransceiverSink.APPLICATION_SIP;
-    if (gNetUtils.snoopStunPacket(data.data) != -2) {
+    if (getNetUtils().snoopStunPacket(data.data) != -2) {
       // data appears to be a STUN packet
       application = Components.interfaces.zapISipTransceiverSink.APPLICATION_STUN;
     }
@@ -640,7 +640,7 @@ SipFlow.fun(
     this.isMonitored = true;
     this.stunTries = 0; // number of times we haven't received an
                         // answer to a STUN request
-    this.stunRequest = gNetUtils.createStunMessage();
+    this.stunRequest = getNetUtils().createStunMessage();
     this.stunRequest.messageType = this.stunRequest.BINDING_REQUEST_MESSAGE;
     this.stunRequest.initTransactionID();
     // send a stun request immediately so that we get a reference
@@ -663,7 +663,7 @@ SipFlow.fun(
     if (this.stunTries > 0) {
       this._dump("received a STUN packet after "+this.stunTries+" tries");
       try {
-        var message = gNetUtils.deserializeStunPacket(packet, {}, {});
+        var message = getNetUtils().deserializeStunPacket(packet, {}, {});
       }
       catch(e) {
         // error parsing the STUN response
@@ -1061,9 +1061,9 @@ SipTransport.fun(
 SipTransport.fun(
   function _getMyFQDN() {
     if (!this._fqdn) {
-      // XXX gDNSService.myHostName might not be a FQDN, so we
+      // XXX getDNSService().myHostName might not be a FQDN, so we
       // better resolve it:
-      this._fqdn = gDNSService.resolve(gDNSService.myHostName,0).getNextAddrAsString();
+      this._fqdn = getDNSService().resolve(getDNSService().myHostName,0).getNextAddrAsString();
     }
     return this._fqdn;
   });

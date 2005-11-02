@@ -46,6 +46,7 @@ Components.utils.importModule("rel:ObjectUtils.js");
 Components.utils.importModule("rel:SipUtils.js");
 Components.utils.importModule("rel:SipUARequestCore.js");
 Components.utils.importModule("rel:SipDialog.js");
+Components.utils.importModule("rel:FunctionUtils.js");
 
 // name our global object:
 function toString() { return "[SipUAStack.js]"; }
@@ -59,28 +60,21 @@ var _doc_ = {};
 //----------------------------------------------------------------------
 // resolver
 
-var CLASS_RESOLVER = Components.classes["@mozilla.org/zap/sipresolver;1"];
-var ITF_RESOLVER = Components.interfaces.zapISipResolver;
-
-var gResolver = CLASS_RESOLVER.getService(ITF_RESOLVER);
+var getResolver = makeServiceGetter("@mozilla.org/zap/sipresolver;1",
+                                    Components.interfaces.zapISipResolver);
 
 //----------------------------------------------------------------------
 // authentication
 
-var CLASS_AUTH = Components.classes["@mozilla.org/zap/sipauth;1"];
-var ITF_AUTH = Components.interfaces.zapISipAuthentication;
-
-var gAuthentication = CLASS_AUTH.getService(ITF_AUTH);
+var getAuthentication = makeServiceGetter("@mozilla.org/zap/sipauth;1",
+                                          Components.interfaces.zapISipAuthentication);
 
 //----------------------------------------------------------------------
 // sip transport
 
-var CLASS_SIP_TRANSPORT = Components.classes["@mozilla.org/zap/siptransport;1"];
-var ITF_SIP_TRANSPORT = Components.interfaces.zapISipTransport;
-
 function createSipTransport() {
   // create a sip transport object via xpcom (more overhead):
-  // return CLASS_SIP_TRANSPORT.createInstance().QueryInterface(ITF_SIP_TRANSPORT);
+  // return Components.classes["@mozilla.org/zap/siptransport;1"].createInstance().QueryInterface(Components.interfaces.zapISipTransport);
 
   // create a sip transport object directly from js (less overhead, no
   // type safety, access to non-xpcom interface):
@@ -90,12 +84,9 @@ function createSipTransport() {
 //----------------------------------------------------------------------
 // sip transaction manager
 
-var CLASS_SIP_TRANSACTION_MANAGER = Components.classes["@mozilla.org/zap/siptransactmgr"];
-var ITF_SIP_TRANSACTION_MANAGER = Components.interfaces.zapISipTransactionManager;
-
 function createSipTransactionManager() {
   // create a sip transaction manager via xpcom (more overhead):
-  // return CLASS_SIP_TRANSACTION_MANAGER.createInstance().QueryInterface(ITF_SIP_TRANSACTION_MANAGER);
+  // return Components.classes["@mozilla.org/zap/siptransactmgr"].createInstance().QueryInterface(Components.interfaces.zapISipTransactionManager);
 
   // create a sip transaction manager directly from js (less overhead,
   // no type safety, access to non-xpcom interface):
@@ -304,16 +295,16 @@ SipUAStack.obj("transport", null);
 SipUAStack.obj("syntaxFactory", gSyntaxFactory);
 
 //  readonly attribute zapISipResolver resolver;
-SipUAStack.obj("resolver", gResolver);
+SipUAStack.getter("resolver", getResolver);
 
 //  readonly attribute zapISipAuthentication authentication;
-SipUAStack.obj("authentication", gAuthentication);
+SipUAStack.getter("authentication", getAuthentication);
 
 //  readonly attribute ACString hostName;
 SipUAStack.getter(
   "hostName",
   function get_hostName() {
-    return gDNSService.myHostName;
+    return getDNSService().myHostName;
   });
 
 //  readonly attribute ACString hostAddress;
@@ -321,7 +312,7 @@ SipUAStack.getter(
   "hostAddress",
   function get_hostAddress() {
     try {
-      return gDNSService.resolve(gDNSService.myHostName,0).getNextAddrAsString();
+      return getDNSService().resolve(gDNSService.myHostName,0).getNextAddrAsString();
     } catch(e) {
       return "127.0.0.1";
     }

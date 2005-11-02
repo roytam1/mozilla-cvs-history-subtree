@@ -44,14 +44,15 @@
 debug("*** loading SipUtils\n");
 
 Components.utils.importModule("rel:StringUtils.js");
+Components.utils.importModule("rel:FunctionUtils.js");
 
 EXPORTED_SYMBOLS = ["BRANCH_COOKIE",
-                    "gSIPEventQ",
+                    "getSIPEventQ",
                     "getProxyOnSIPThread",
                     "callAsync",
                     "gSyntaxFactory",
-                    "gDNSService",
-                    "gNetUtils",
+                    "getDNSService",
+                    "getNetUtils",
                     "gLoggingService",
                     "generateTag",
                     "gUUIDGenerator",
@@ -79,14 +80,15 @@ var BRANCH_COOKIE = "z9hG4bK";
 ////////////////////////////////////////////////////////////////////////
 // Thread management:
 
-var ITF_EVENT_Q_SERVICE = Components.interfaces.nsIEventQueueService;
-
-var eventQService = Components.classes["@mozilla.org/event-queue-service;1"].getService(ITF_EVENT_Q_SERVICE);
+var getEventQService = makeServiceGetter("@mozilla.org/event-queue-service;1",
+                                         Components.interfaces.nsIEventQueueService);
 
 // The SIP stack runs on the main UI thread; handing off to other
 // threads for asynchronous actions, such as sending data or querying
 // dns.
-var gSIPEventQ = eventQService.getSpecialEventQueue(ITF_EVENT_Q_SERVICE.UI_THREAD_EVENT_QUEUE);
+function getSIPEventQ() {
+  return getEventQService().getSpecialEventQueue(Components.interfaces.nsIEventQueueService.UI_THREAD_EVENT_QUEUE);
+}
 
 // Some of our objects need to be manually proxied so that they only
 // get called on the main SIP thread,
@@ -100,7 +102,7 @@ function getProxyOnSIPThread(aObject, aInterface) {
     var proxyManager = Components. classes["@mozilla.org/xpcomproxy;1"].
             getService(Components.interfaces.nsIProxyObjectManager);
 
-    return proxyManager.getProxyForObject(gSIPEventQ,
+    return proxyManager.getProxyForObject(getSIPEventQ(),
                                           aInterface, aObject, 5);
     // 5 == PROXY_ALWAYS | PROXY_SYNC
 }
@@ -134,17 +136,16 @@ function callAsync(fct) {
 var gSyntaxFactory = Components.utils.importModule('rel:SipSyntaxFactory.js', null).theSyntaxFactory;
 
 ////////////////////////////////////////////////////////////////////////
-// gDNSService: global dns service instance
+// getDNSService: get the global dns service instance
 
-var CLASS_DNS_SERVICE = Components.classes["@mozilla.org/network/dns-service;1"];
-var ITF_DNS_SERVICE = Components.interfaces.nsIDNSService;
-
-var gDNSService = CLASS_DNS_SERVICE.getService(ITF_DNS_SERVICE);
+var getDNSService = makeServiceGetter("@mozilla.org/network/dns-service;1",
+                                      Components.interfaces.nsIDNSService);
 
 ////////////////////////////////////////////////////////////////////////
-// NetUtils
+// getNetUtils
 
-var gNetUtils = Components.classes["@mozilla.org/zap/netutils;1"].getService(Components.interfaces.zapINetUtils);
+var getNetUtils = makeServiceGetter("@mozilla.org/zap/netutils;1",
+                                    Components.interfaces.zapINetUtils);
 
 ////////////////////////////////////////////////////////////////////////
 // gLoggingService: global logging service instance

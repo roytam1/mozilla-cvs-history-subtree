@@ -106,7 +106,7 @@ SipResolver.fun(
       }
     };
     
-    gDNSService.asyncResolve(uri.host, 0, dnsListener, gSIPEventQ);
+    getDNSService().asyncResolve(uri.host, 0, dnsListener, getSIPEventQ());
     
   });
 
