@@ -588,7 +588,7 @@ LocationStep* ExprParser::createLocationStep(ExprLexer& lexer) {
     }
     // NodeType
     else {
-       NodeExpr* nodeExpr = createNodeExpr(lexer);
+       nodeExpr = createNodeExpr(lexer);
     }
 
     lstep->setNodeExpr(nodeExpr);
