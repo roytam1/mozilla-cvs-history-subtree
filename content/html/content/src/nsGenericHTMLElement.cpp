@@ -1807,7 +1807,7 @@ nsGenericHTMLElement::SetAttrAndNotify(PRInt32 aNamespaceID,
 
       mutation.mAttrName = aAttribute;
       nsAutoString newValue;
-      aParsedValue.ToString(newValue);
+      GetAttr(aNamespaceID, aAttribute, newValue);
       if (!newValue.IsEmpty()) {
         mutation.mNewAttrValue = do_GetAtom(newValue);
       }
