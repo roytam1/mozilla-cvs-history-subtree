@@ -1800,7 +1800,7 @@ bool nsWindow::CallMethod(MethodInfo *info)
 				return false;
 			// close popup when clicked outside of the popup window
 			uint32 eventID = ((int32 *)info->args)[0];
-			bool rollup = false;
+			PRBool rollup = PR_FALSE;
 
 			if ((eventID == NS_MOUSE_LEFT_BUTTON_DOWN ||
 			        eventID == NS_MOUSE_RIGHT_BUTTON_DOWN ||
@@ -1809,11 +1809,12 @@ bool nsWindow::CallMethod(MethodInfo *info)
 			{
 				BPoint p(((int32 *)info->args)[1], ((int32 *)info->args)[2]);
 				mView->ConvertToScreen(&p);
-				if (DealWithPopups(nsWindow::ONMOUSE, nsPoint(p.x, p.y)))
-					rollup = true;
+				rollup = DealWithPopups(nsWindow::ONMOUSE, nsPoint(p.x, p.y));
 				mView->UnlockLooper();
 			}
-
+			// Drop click event - bug 314330
+			if (rollup)
+				return false;
 			DispatchMouseEvent(((int32 *)info->args)[0],
 			                   nsPoint(((int32 *)info->args)[1], ((int32 *)info->args)[2]),
 			                   ((int32 *)info->args)[3],
