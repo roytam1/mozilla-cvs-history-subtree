@@ -1,39 +1,24 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- * 
- * The contents of this file are subject to the Mozilla Public License Version 
- * 1.1 (the "License"); you may not use this file except in compliance with 
- * the License. You may obtain a copy of the License at 
- * http://www.mozilla.org/MPL/
- * 
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- * 
+/*
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
  * The Original Code is Mozilla Communicator client code, released
  * March 31, 1998.
- * 
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1998-1999
- * the Initial Developer. All Rights Reserved.
- * 
+ *
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998-1999 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
  * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the terms of
- * either of the GNU General Public License Version 2 or later (the "GPL"),
- * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- * 
- * ***** END LICENSE BLOCK ***** */
+ */
 #include "ldap-int.h"
 
 struct ldaperror {
@@ -158,12 +143,7 @@ ldap_perror( LDAP *ld, const char *s )
 	}
 
 	if ( ld == NULL ) {
-#ifdef HAVE_SNPRINTF
-		snprintf( msg, sizeof(msg),
-#else
-		sprintf( msg,
-#endif
-		    "%s%s%s", s, separator,
+		sprintf( msg, "%s%s%s", s, separator,
 		    nsldapi_safe_strerror( errno ) );
 		ber_err_print( msg );
 		return;
@@ -173,13 +153,8 @@ ldap_perror( LDAP *ld, const char *s )
 	err = LDAP_GET_LDERRNO( ld, &matched, &errmsg );
 	for ( i = 0; ldap_errlist[i].e_code != -1; i++ ) {
 		if ( err == ldap_errlist[i].e_code ) {
-#ifdef HAVE_SNPRINTF
-			snprintf( msg, sizeof(msg),
-#else
-			sprintf( msg,
-#endif
-			    "%s%s%s", s, separator,
-			    ldap_errlist[i].e_reason );
+			sprintf( msg, "%s%s%s", s, separator,
+				    ldap_errlist[i].e_reason );
 			ber_err_print( msg );
 			if ( err == LDAP_CONNECT_ERROR ) {
 				ber_err_print( " - " );
@@ -188,22 +163,12 @@ ldap_perror( LDAP *ld, const char *s )
 			}
 			ber_err_print( "\n" );
 			if ( matched != NULL && *matched != '\0' ) {
-#ifdef HAVE_SNPRINTF
-				snprintf( msg, sizeof(msg),
-#else
-				sprintf( msg,
-#endif
-				    "%s%smatched: %s\n",
+				sprintf( msg, "%s%smatched: %s\n",
 				    s, separator, matched );
 				ber_err_print( msg );
 			}
 			if ( errmsg != NULL && *errmsg != '\0' ) {
-#ifdef HAVE_SNPRINTF
-				snprintf( msg, sizeof(msg),
-#else
-				sprintf( msg,
-#endif
-				    "%s%sadditional info: %s\n",
+				sprintf( msg, "%s%sadditional info: %s\n",
 				    s, separator, errmsg );
 				ber_err_print( msg );
 			}
@@ -211,12 +176,7 @@ ldap_perror( LDAP *ld, const char *s )
 			return;
 		}
 	}
-#ifdef HAVE_SNPRINTF
-	snprintf( msg, sizeof(msg),
-#else
-	sprintf( msg,
-#endif
-	    "%s%sNot an LDAP errno %d\n", s, separator, err );
+	sprintf( msg, "%s%sNot an LDAP errno %d\n", s, separator, err );
 	ber_err_print( msg );
 	LDAP_MUTEX_UNLOCK( ld, LDAP_ERR_LOCK );
 }
@@ -382,8 +342,8 @@ nsldapi_parse_result( LDAP *ld, int msgtype, BerElement *rber, int *errcodep,
 {
 	BerElement	ber;
 	unsigned long	len;
-	int		berrc, err, errcode = 0;
-	long		along = 0;
+	int		berrc, err, errcode;
+	long		along;
 	char		*m, *e;
 
 	/*

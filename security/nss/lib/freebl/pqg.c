@@ -76,11 +76,13 @@ static const unsigned char fips_186_1_a5_pqseed[] = {
 ** global random number generator.
 */
 static SECStatus
-getPQseed(SECItem *seed, PRArenaPool* arena)
+getPQseed(SECItem *seed)
 {
-    if (!seed->data) {
-        seed->data = (unsigned char*)PORT_ArenaZAlloc(arena, seed->len);
+    if (seed->data) {
+        PORT_Free(seed->data);
+        seed->data = NULL;
     }
+    seed->data = (unsigned char*)PORT_ZAlloc(seed->len);
     if (!seed->data) {
 	PORT_SetError(SEC_ERROR_NO_MEMORY);
 	return SECFailure;
@@ -453,7 +455,7 @@ step_1:
         goto cleanup;
     }
     seed->len = seedBytes;
-    CHECK_SEC_OK( getPQseed(seed, verify->arena) );
+    CHECK_SEC_OK( getPQseed(seed) );
     /* ******************************************************************
     ** Step 2.
     ** "Compute U = SHA[SEED] XOR SHA[(SEED+1) mod 2**g]."
@@ -566,9 +568,6 @@ cleanup:
     if (rv) {
 	PORT_FreeArena(params->arena, PR_TRUE);
 	PORT_FreeArena(verify->arena, PR_TRUE);
-    }
-    if (hit.data) {
-        SECITEM_FreeItem(&hit, PR_FALSE);
     }
     return rv;
 }

@@ -66,20 +66,25 @@ EXTRA_LIBS += \
 	$(DIST)/lib/$(LIB_PREFIX)certdb.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)softokn.$(LIB_SUFFIX) \
 	$(CRYPTOLIB) \
+	$(DIST)/lib/$(LIB_PREFIX)swfci.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)secutil.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)nsspki.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)nssdev.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)nssb.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)dbm.$(LIB_SUFFIX) \
-	$(NSPR_LIB_DIR)/$(NSPR31_LIB_PREFIX)plc4.$(LIB_SUFFIX) \
-	$(NSPR_LIB_DIR)/$(NSPR31_LIB_PREFIX)plds4.$(LIB_SUFFIX) \
-	$(NSPR_LIB_DIR)/$(NSPR31_LIB_PREFIX)nspr4.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(NSPR31_LIB_PREFIX)plc4.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(NSPR31_LIB_PREFIX)plds4.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(NSPR31_LIB_PREFIX)nspr4.$(LIB_SUFFIX) \
 	$(NULL)
 
 # $(PROGRAM) has NO explicit dependencies on $(OS_LIBS)
 #OS_LIBS += \
 	wsock32.lib \
 	winmm.lib \
+	$(NULL)
+
+JAR_LIBS = $(DIST)/lib/$(LIB_PREFIX)jar.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)zlib.$(LIB_SUFFIX) \
 	$(NULL)
 else
 
@@ -111,6 +116,7 @@ EXTRA_LIBS += \
 	$(DIST)/lib/$(LIB_PREFIX)nsspki.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)nssdev.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)nssb.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)swfci.$(LIB_SUFFIX) \
 	$(CRYPTOLIB) \
 	$(DIST)/lib/$(LIB_PREFIX)secutil.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)dbm.$(LIB_SUFFIX) \
@@ -124,19 +130,23 @@ endif
 # $(EXTRA_SHARED_LIBS) come before $(OS_LIBS), except on AIX.
 ifdef XP_OS2_VACPP
 EXTRA_SHARED_LIBS += \
-	$(NSPR_LIB_DIR)/plc4.lib \
-	$(NSPR_LIB_DIR)/plds4.lib \
-	$(NSPR_LIB_DIR)/nspr4.lib \
+	$(DIST)/lib/plc4.lib \
+	$(DIST)/lib/plds4.lib \
+	$(DIST)/lib/nspr4.lib \
 	$(NULL)
 else
 EXTRA_SHARED_LIBS += \
-	-L$(NSPR_LIB_DIR) \
+	-L$(DIST)/lib \
 	-lplc4 \
 	-lplds4 \
 	-lnspr4 \
 	$(NULL)
 endif
 endif
+
+JAR_LIBS = $(DIST)/lib/$(LIB_PREFIX)jar.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)zlib.$(LIB_SUFFIX) \
+	$(NULL)
 
 else # USE_STATIC_LIBS
 # can't do this in manifest.mn because OS_ARCH isn't defined there.
@@ -148,15 +158,19 @@ EXTRA_LIBS += \
 	$(DIST)/lib/$(IMPORT_LIB_PREFIX)smime3$(IMPORT_LIB_SUFFIX) \
 	$(DIST)/lib/$(IMPORT_LIB_PREFIX)ssl3$(IMPORT_LIB_SUFFIX) \
 	$(DIST)/lib/$(IMPORT_LIB_PREFIX)nss3$(IMPORT_LIB_SUFFIX) \
-	$(NSPR_LIB_DIR)/$(NSPR31_LIB_PREFIX)plc4.$(LIB_SUFFIX) \
-	$(NSPR_LIB_DIR)/$(NSPR31_LIB_PREFIX)plds4.$(LIB_SUFFIX) \
-	$(NSPR_LIB_DIR)/$(NSPR31_LIB_PREFIX)nspr4.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(NSPR31_LIB_PREFIX)plc4.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(NSPR31_LIB_PREFIX)plds4.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(NSPR31_LIB_PREFIX)nspr4.$(LIB_SUFFIX) \
 	$(NULL)
 
 # $(PROGRAM) has NO explicit dependencies on $(OS_LIBS)
 #OS_LIBS += \
 	wsock32.lib \
 	winmm.lib \
+	$(NULL)
+
+JAR_LIBS = $(DIST)/lib/$(LIB_PREFIX)jar.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)zlib.$(LIB_SUFFIX) \
 	$(NULL)
 else
 
@@ -208,22 +222,14 @@ EXTRA_SHARED_LIBS += \
 	-lssl3 \
 	-lsmime3 \
 	-lnss3 \
-	-L$(NSPR_LIB_DIR) \
 	-lplc4 \
 	-lplds4 \
 	-lnspr4 \
 	$(NULL)
+
+JAR_LIBS = $(DIST)/lib/$(LIB_PREFIX)jar.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)zlib.$(LIB_SUFFIX) \
+	$(NULL)
 endif
 
 endif # USE_STATIC_LIBS
-
-# If a platform has a system zlib, set USE_SYSTEM_ZLIB to 1 and
-# ZLIB_LIBS to the linker command-line arguments for the system zlib
-# (for example, -lz) in the platform's config file in coreconf.
-ifndef USE_SYSTEM_ZLIB
-ZLIB_LIBS = $(DIST)/lib/$(LIB_PREFIX)zlib.$(LIB_SUFFIX)
-endif
-
-JAR_LIBS = $(DIST)/lib/$(LIB_PREFIX)jar.$(LIB_SUFFIX) \
-	$(ZLIB_LIBS) \
-	$(NULL)

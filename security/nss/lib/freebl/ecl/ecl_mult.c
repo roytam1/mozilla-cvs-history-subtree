@@ -41,6 +41,7 @@
 #include "ecl.h"
 #include "ecl-priv.h"
 #include <stdlib.h>
+#include <strings.h>
 
 /* Elliptic curve scalar-point multiplication. Computes R(x, y) = k * P(x, 
  * y).  If x, y = NULL, then P is assumed to be the generator (base point) 
@@ -344,13 +345,17 @@ ECPoints_mul(const ECGroup *group, const mp_int *k1, const mp_int *k2,
 
 	/* if points_mul is defined, then use it */
 	if (group->points_mul) {
-		res = group->points_mul(k1p, k2p, px, py, rx, ry, group);
+		return group->points_mul(k1p, k2p, px, py, rx, ry, group);
 	} else {
-		res = ec_pts_mul_simul_w2(k1p, k2p, px, py, rx, ry, group);
+		return ec_pts_mul_simul_w2(k1p, k2p, px, py, rx, ry, group);
 	}
 
   CLEANUP:
-	mp_clear(&k1t);
-	mp_clear(&k2t);
+	if (k1 != k1p) {
+		mp_clear(&k1t);
+	}
+	if (k2 != k2p) {
+		mp_clear(&k2t);
+	}
 	return res;
 }

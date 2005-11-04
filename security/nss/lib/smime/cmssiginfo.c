@@ -19,7 +19,6 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Dr Vipul Gupta <vipul.gupta@sun.com>, Sun Microsystems Laboratories
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -348,9 +347,7 @@ NSS_CMSSignerInfo_Verify(NSSCMSSignerInfo *signerinfo,
     CERTCertificate *cert;
     NSSCMSVerificationStatus vs = NSSCMSVS_Unverified;
     PLArenaPool *poolp;
-    SECOidTag    digestalgtag;
-    SECOidTag    pubkAlgTag;
-    SECOidTag    signAlgTag;
+    SECOidTag    tag;
 
     if (signerinfo == NULL)
 	return SECFailure;
@@ -369,8 +366,6 @@ NSS_CMSSignerInfo_Verify(NSSCMSSignerInfo *signerinfo,
 	goto loser;
     }
 
-    digestalgtag = NSS_CMSSignerInfo_GetDigestAlgTag(signerinfo);
-
     /*
      * XXX This may not be the right set of algorithms to check.
      * I'd prefer to trust that just calling VFY_Verify{Data,Digest}
@@ -379,14 +374,13 @@ NSS_CMSSignerInfo_Verify(NSSCMSSignerInfo *signerinfo,
      * and we would Just Work.  So this check should just be removed,
      * but not until the VFY code is better at setting errors.
      */
-    pubkAlgTag = SECOID_GetAlgorithmTag(&(signerinfo->digestEncAlg));
-    switch (pubkAlgTag) {
+    tag = SECOID_GetAlgorithmTag(&(signerinfo->digestEncAlg));
+    switch (tag) {
     case SEC_OID_PKCS1_RSA_ENCRYPTION:
     case SEC_OID_ANSIX9_DSA_SIGNATURE:
     case SEC_OID_ANSIX9_DSA_SIGNATURE_WITH_SHA1_DIGEST:
     case SEC_OID_PKCS1_SHA1_WITH_RSA_ENCRYPTION:
     case SEC_OID_PKCS1_MD5_WITH_RSA_ENCRYPTION:
-    case SEC_OID_ANSIX962_EC_PUBLIC_KEY:
 	/* ok */
 	break;
     case SEC_OID_UNKNOWN:
@@ -396,8 +390,6 @@ NSS_CMSSignerInfo_Verify(NSSCMSSignerInfo *signerinfo,
 	vs = NSSCMSVS_SignatureAlgorithmUnsupported;
 	goto loser;
     }
-
-    signAlgTag = NSS_CMSUtil_MakeSignatureAlgorithm(digestalgtag, pubkAlgTag);
 
     if (!NSS_CMSArray_IsEmpty((void **)signerinfo->authAttr)) {
 	if (contentType) {
@@ -462,7 +454,8 @@ NSS_CMSSignerInfo_Verify(NSSCMSSignerInfo *signerinfo,
 	}
 
 	vs = (VFY_VerifyData (encoded_attrs.data, encoded_attrs.len,
-			publickey, &(signerinfo->encDigest), signAlgTag,
+			publickey, &(signerinfo->encDigest),
+			SECOID_GetAlgorithmTag(&(signerinfo->digestEncAlg)),
 			signerinfo->cmsg->pwfn_arg) != SECSuccess) 
 			? NSSCMSVS_BadSignature : NSSCMSVS_GoodSignature;
 
@@ -479,7 +472,8 @@ NSS_CMSSignerInfo_Verify(NSSCMSSignerInfo *signerinfo,
 	    goto loser;
 
 	vs = (!digest || 
-	      VFY_VerifyDigest(digest, publickey, sig, signAlgTag,
+	      VFY_VerifyDigest(digest, publickey, sig,
+			SECOID_GetAlgorithmTag(&(signerinfo->digestEncAlg)),
 			signerinfo->cmsg->pwfn_arg) != SECSuccess) 
 			? NSSCMSVS_BadSignature : NSSCMSVS_GoodSignature;
     }

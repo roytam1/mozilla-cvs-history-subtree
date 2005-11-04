@@ -463,7 +463,7 @@ main(int argc, char **argv)
         CERTCertDBHandle* certdb = NULL;
 	certdb = CERT_GetDefaultCertDB();
         
-        cert = PK11_FindCertFromNickname(nickname, &pwData);
+        cert = CERT_FindCertByNickname(certdb, nickname);
         if (cert == NULL) {
             fprintf(stderr,
                     "Can't find certificate by name \"%s\"\n", nickname);

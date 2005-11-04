@@ -283,7 +283,9 @@ SECKEY_AddPublicKeyToListTail( SECKEYPublicKeyList *list,
 #define PUBKEY_LIST_NEXT(n) ((SECKEYPublicKeyListNode *)n->links.next)
 #define PUBKEY_LIST_END(n,l) (((void *)n) == ((void *)&l->list))
 
+#ifdef NSS_ENABLE_ECC
 extern int SECKEY_ECParamsToKeySize(const SECItem *params);
+#endif /* NSS_ENABLE_ECC */
 
 SEC_END_PROTOS
 

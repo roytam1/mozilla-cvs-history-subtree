@@ -42,6 +42,8 @@ MODULE		= coreconf
 
 CSRCS		= nsinstall.c pathsub.c
 
+PLSRCS		= nfspwd.pl
+
 PROGRAM		= nsinstall
 
 # Indicate that this directory builds build tools.
@@ -53,7 +55,7 @@ include $(DEPTH)/coreconf/config.mk
 ifeq (,$(filter-out OS2 WIN%,$(OS_TARGET)))
 PROGRAM		=
 else
-TARGETS		= $(PROGRAM)
+TARGETS		= $(PROGRAM) $(PLSRCS:.pl=)
 INSTALL		= true
 endif
 

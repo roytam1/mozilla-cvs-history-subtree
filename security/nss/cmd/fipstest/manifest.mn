@@ -37,11 +37,13 @@
 
 CORE_DEPTH = ../../..
 
-MODULE = nss
+MODULE = security
+
+REQUIRES = seccmd 
 
 PROGRAM = fipstest
 
-USE_STATIC_LIBS = 1
+ USE_STATIC_LIBS = 1
 
 EXPORTS = \
 	$(NULL)

@@ -82,9 +82,6 @@ nss_cms_recipients_traverse(NSSCMSRecipientInfo **recipientinfos, NSSCMSRecipien
 		    rle->kind = RLSubjKeyID;
 		    rle->id.subjectKeyID = ri->ri.keyTransRecipientInfo.recipientIdentifier.id.subjectKeyID;
 		    break;
-		default:
-		    PORT_SetError(SEC_ERROR_INVALID_ARGS);
-		    return -1;
 		}
 		recipient_list[rlindex++] = rle;
 	    } else {

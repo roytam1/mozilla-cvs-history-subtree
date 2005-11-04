@@ -93,14 +93,17 @@ NSS_CMSCipherContext_StartDecrypt(PK11SymKey *key, SECAlgorithmID *algid)
     /* set param and mechanism */
     if (SEC_PKCS5IsAlgorithmPBEAlg(algid)) {
 	CK_MECHANISM pbeMech, cryptoMech;
-	SECItem *pbeParams, *pwitem;
+	SECItem *pbeParams;
+	SEC_PKCS5KeyAndPassword *keyPwd;
 
 	PORT_Memset(&pbeMech, 0, sizeof(CK_MECHANISM));
 	PORT_Memset(&cryptoMech, 0, sizeof(CK_MECHANISM));
 
-	pwitem = PK11_GetSymKeyUserData(key);
-	if (!pwitem) 
-	    return NULL;
+	/* HACK ALERT!
+	 * in this case, key is not actually a PK11SymKey *, but a SEC_PKCS5KeyAndPassword *
+	 */
+	keyPwd = (SEC_PKCS5KeyAndPassword *)key;
+	key = keyPwd->key;
 
 	/* find correct PK11 mechanism and parameters to initialize pbeMech */
 	pbeMech.mechanism = PK11_AlgtagToMechanism(algtag);
@@ -111,7 +114,7 @@ NSS_CMSCipherContext_StartDecrypt(PK11SymKey *key, SECAlgorithmID *algid)
 	pbeMech.ulParameterLen = pbeParams->len;
 
 	/* now map pbeMech to cryptoMech */
-	if (PK11_MapPBEMechanismToCryptoMechanism(&pbeMech, &cryptoMech, pwitem,
+	if (PK11_MapPBEMechanismToCryptoMechanism(&pbeMech, &cryptoMech, keyPwd->pwitem,
 						  PR_FALSE) != CKR_OK) { 
 	    SECITEM_ZfreeItem(pbeParams, PR_TRUE);
 	    return NULL;
@@ -184,14 +187,17 @@ NSS_CMSCipherContext_StartEncrypt(PRArenaPool *poolp, PK11SymKey *key, SECAlgori
     /* set param and mechanism */
     if (SEC_PKCS5IsAlgorithmPBEAlg(algid)) {
 	CK_MECHANISM pbeMech, cryptoMech;
-	SECItem *pbeParams, *pwitem;
+	SECItem *pbeParams;
+	SEC_PKCS5KeyAndPassword *keyPwd;
 
 	PORT_Memset(&pbeMech, 0, sizeof(CK_MECHANISM));
 	PORT_Memset(&cryptoMech, 0, sizeof(CK_MECHANISM));
 
-	pwitem = PK11_GetSymKeyUserData(key);
-	if (!pwitem) 
-	    return NULL;
+	/* HACK ALERT!
+	 * in this case, key is not actually a PK11SymKey *, but a SEC_PKCS5KeyAndPassword *
+	 */
+	keyPwd = (SEC_PKCS5KeyAndPassword *)key;
+	key = keyPwd->key;
 
 	/* find correct PK11 mechanism and parameters to initialize pbeMech */
 	pbeMech.mechanism = PK11_AlgtagToMechanism(algtag);
@@ -202,7 +208,7 @@ NSS_CMSCipherContext_StartEncrypt(PRArenaPool *poolp, PK11SymKey *key, SECAlgori
 	pbeMech.ulParameterLen = pbeParams->len;
 
 	/* now map pbeMech to cryptoMech */
-	if (PK11_MapPBEMechanismToCryptoMechanism(&pbeMech, &cryptoMech, pwitem,
+	if (PK11_MapPBEMechanismToCryptoMechanism(&pbeMech, &cryptoMech, keyPwd->pwitem,
 						  PR_FALSE) != CKR_OK) { 
 	    SECITEM_ZfreeItem(pbeParams, PR_TRUE);
 	    return NULL;

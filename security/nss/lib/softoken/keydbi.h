@@ -56,8 +56,6 @@ struct NSSLOWKEYDBHandleStr {
     char *appname;		/* multiaccess app name */
     char *dbname;		/* name of the openned DB */
     PRBool readOnly;		/* is the DB read only */
-    PRLock *lock;
-    PRInt32 ref;		/* reference count */
 };
 
 /*

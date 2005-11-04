@@ -2,7 +2,7 @@
 case "${3}" in
 WIN*)
     if echo "${PATH}" | grep -c \; >/dev/null; then
-        PATH=${1}/bin\;${1}/lib\;${4}\;${PATH}
+        PATH=${1}/bin\;${1}/lib\;${PATH}
     else
         # ARG1 is ${1} with the drive letter escaped.
         if echo "${1}" | grep -c : >/dev/null; then
@@ -10,16 +10,11 @@ WIN*)
         else
             ARG1=${1}
         fi
-        if echo "${4}" | grep -c : >/dev/null; then
-            ARG4=`(cd ${4}; pwd)`
-        else
-            ARG4=${4}
-        fi
-        PATH=${ARG1}/bin:${ARG1}/lib:${ARG4}:${PATH}
+        PATH=${ARG1}/bin:${ARG1}/lib:${PATH}
     fi
     export PATH
-    echo ${2}/shlibsign -v -i ${5}
-    ${2}/shlibsign -v -i ${5}
+    echo ${2}/shlibsign -v -i ${4}
+    ${2}/shlibsign -v -i ${4}
     ;;
 OpenVMS)
     temp="tmp$$.tmp"
@@ -31,8 +26,8 @@ OpenVMS)
     echo '$ define/job getipnodebyname xxx' >> $temp2
     echo '$ define/job vms_null_dl_name sys$share:decc$shr' >> $temp2
     dcl @$temp2
-    echo ${2}/shlibsign -v -i ${5}
-    ${2}/shlibsign -v -i ${5}
+    echo ${2}/shlibsign -v -i ${4}
+    ${2}/shlibsign -v -i ${4}
     sed -e "s/\([^\.]*\)\.so/\$ deass\/job \1/" $temp > $temp2
     echo '$ deass/job getipnodebyname' >> $temp2
     echo '$ deass/job vms_null_dl_name' >> $temp2
@@ -40,17 +35,17 @@ OpenVMS)
     rm $temp $temp2
     ;;
 *)
-    LIBPATH=`(cd ${1}/lib; pwd)`:`(cd ${4}; pwd)`:$LIBPATH
+    LIBPATH=`(cd ${1}/lib; pwd)`:$LIBPATH
     export LIBPATH
-    SHLIB_PATH=${1}/lib:${4}:$SHLIB_PATH
+    SHLIB_PATH=${1}/lib:$SHLIB_PATH
     export SHLIB_PATH
-    LD_LIBRARY_PATH=${1}/lib:${4}:$LD_LIBRARY_PATH
+    LD_LIBRARY_PATH=${1}/lib:$LD_LIBRARY_PATH
     export LD_LIBRARY_PATH
-    DYLD_LIBRARY_PATH=${1}/lib:${4}:$DYLD_LIBRARY_PATH
+    DYLD_LIBRARY_PATH=${1}/lib:$DYLD_LIBRARY_PATH
     export DYLD_LIBRARY_PATH
-    LIBRARY_PATH=${1}/lib:${4}:$LIBRARY_PATH
+    LIBRARY_PATH=${1}/lib:$LIBRARY_PATH
     export LIBRARY_PATH
-    echo ${2}/shlibsign -v -i ${5}
-    ${2}/shlibsign -v -i ${5}
+    echo ${2}/shlibsign -v -i ${4}
+    ${2}/shlibsign -v -i ${4}
     ;;
 esac

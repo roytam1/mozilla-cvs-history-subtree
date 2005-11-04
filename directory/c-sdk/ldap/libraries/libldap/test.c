@@ -1,39 +1,24 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- * 
- * The contents of this file are subject to the Mozilla Public License Version 
- * 1.1 (the "License"); you may not use this file except in compliance with 
- * the License. You may obtain a copy of the License at 
- * http://www.mozilla.org/MPL/
- * 
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- * 
+/*
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
  * The Original Code is Mozilla Communicator client code, released
  * March 31, 1998.
- * 
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1998-1999
- * the Initial Developer. All Rights Reserved.
- * 
+ *
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998-1999 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
  * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the terms of
- * either of the GNU General Public License Version 2 or later (the "GPL"),
- * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- * 
- * ***** END LICENSE BLOCK ***** */
+ */
 
 /* test.c - a simple test harness. */
 #include <stdio.h>
@@ -74,20 +59,19 @@
 #endif /* DOS */
 #endif /* MACOS */
 
+#undef NET_SSL
+
+#if defined(NET_SSL)
+#include <sec.h>
+static SECCertDBHandle        certdbhandle;
+#endif
+
 #include "ldap.h"
 #include "disptmpl.h"
 #include "ldaplog.h"
-#include "portable.h"
 #ifndef NO_LIBLCACHE
 #include "lcache.h"
 #endif /* !NO_LIBLCACHE */
-
-#undef NET_SSL
-#if defined(NET_SSL)
-#include <nss.h>
-#include <ldap_ssl.h>
-#endif
-
 
 #if !defined( PCNFS ) && !defined( WINSOCK ) && !defined( MACOS )
 #define MOD_USE_BVALS
@@ -177,7 +161,7 @@ file_read( char *path, struct berval *bv )
 	long		rlen;
 	int		eof;
 
-	if (( fp = NSLDAPI_FOPEN( path, "r" )) == NULL ) {
+	if (( fp = fopen( path, "r" )) == NULL ) {
 	    	perror( path );
 		return( -1 );
 	}
@@ -330,13 +314,12 @@ bind_prompt( LDAP *ld, char **dnp, char **passwdp, int *authmethodp,
 }
 
 
-#define HEX2BIN( h )	( (h) >= '0' && (h) <='9' ? (h) - '0' : (h) - 'A' + 10 )
+#define HEX2BIN( h )	( (h) >= '0' && (h) <='0' ? (h) - '0' : (h) - 'A' + 10 )
 
 void
 berval_from_hex( struct berval *bvp, char *hexstr )
 {
-    char	*src, *dst, c;
-	unsigned char abyte;
+    char	*src, *dst, c, abyte;
 
     dst = bvp->bv_val;
     bvp->bv_len = 0;
@@ -819,13 +802,9 @@ main(
 
 			getline( oid, sizeof(oid), stdin, "oid? " );
 			getline( value, sizeof(value), stdin, "value? " );
-			if ( strncmp( value, "0x", 2 ) == 0 ) {
-				val.bv_val = (char *)malloc( strlen( value ) / 2 );
-				berval_from_hex( &val, value + 2 );
-			} else {
-				val.bv_val = strdup( value );
-				val.bv_len = strlen( value );
-			}
+
+			val.bv_val = value;
+			val.bv_len = strlen( value );
 			if ( ldap_extended_operation( ld, oid, &val, NULL,
 			    NULL, &id ) != LDAP_SUCCESS ) {
 				ldap_perror( ld, "ldap_extended_operation" );
@@ -833,7 +812,6 @@ main(
 				printf( "Extended op initiated with id %d\n",
 				    id );
 			}
-			free( val.bv_val );
 			}
 			break;
 
@@ -1288,7 +1266,7 @@ main(
 				getline( line, sizeof(line), stdin,
 				    "security DB path?" ); 
 				if ( ldapssl_client_init( (*line == '\0') ?
-				    NULL : line, NULL ) < 0 ) {
+				    NULL : line, &certdbhandle ) < 0 ) {
 					perror( "ldapssl_client_init" );
 					optval = 0;     /* SSL not avail. */
 				} else if ( ldapssl_install_routines( ld )
@@ -1301,36 +1279,10 @@ main(
 
 			ldap_set_option( ld, LDAP_OPT_SSL,
 			    optval ? LDAP_OPT_ON : LDAP_OPT_OFF );
-
-			getline( line, sizeof(line), stdin,
-				"Set SSL options (0=no, 1=yes)?" );
-			optval = ( atoi( line ) != 0 );
-			while ( 1 ) {
-			    PRInt32 sslopt;
-			    PRBool  on;
-
-			    getline( line, sizeof(line), stdin,
-				    "Option to set (0 if done)?" );
-			    sslopt = atoi(line);
-			    if ( sslopt == 0 ) {
-				break;
-			    }
-			    getline( line, sizeof(line), stdin,
-				    "On=1, Off=0?" );
-			    on = ( atoi( line ) != 0 );
-			    if ( ldapssl_set_option( ld, sslopt, on ) != 0 ) {
-				ldap_perror( ld, "ldapssl_set_option" );
-			    }
-			}
 #endif
 
 			getline( line, sizeof(line), stdin, "Reconnect?" );
 			ldap_set_option( ld, LDAP_OPT_RECONNECT,
-			    ( atoi( line ) == 0 ) ? LDAP_OPT_OFF :
-			    LDAP_OPT_ON );
-
-			getline( line, sizeof(line), stdin, "Async I/O?" );
-			ldap_set_option( ld, LDAP_OPT_ASYNC_CONNECT,
 			    ( atoi( line ) == 0 ) ? LDAP_OPT_OFF :
 			    LDAP_OPT_ON );
 			break;
