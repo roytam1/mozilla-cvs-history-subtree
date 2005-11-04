@@ -573,7 +573,18 @@ function updateRegistry(rootKey) {
       getService(Components.interfaces.nsIStringBundleService);
   var brandBundle = sbs.createBundle(URI_BRAND_PROPERTIES);
   var brandFullName = brandBundle.GetStringFromName("brandFullName");
-  var vendorShortName = brandBundle.GetStringFromName("vendorShortName");
+
+  var vendorShortName;
+  try {
+    var prefs =
+      Components.classes["@mozilla.org/preferences-service;1"].
+      getService(Components.interfaces.nsIPrefBranch);
+
+    vendorShortName = prefs.getCharPref("app.update.vendorName.override");
+  }
+  catch (e) {
+    vendorShortName = brandBundle.GetStringFromName("vendorShortName");
+  }
 
   var key = new RegKey();
 
