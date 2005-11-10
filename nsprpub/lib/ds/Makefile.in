@@ -102,6 +102,12 @@ endif
 MKSHLIB += -R '$$ORIGIN'
 endif
 
+ifeq ($(OS_ARCH),HP-UX)
+ifeq ($(OS_TEST),ia64)
+MKSHLIB += +b '$$ORIGIN'
+endif
+endif
+
 ifeq ($(OS_ARCH),OS2)
 MAPFILE = $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION).def
 GARBAGE += $(MAPFILE)
