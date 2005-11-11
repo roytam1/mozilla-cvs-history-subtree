@@ -103,9 +103,9 @@ char * xpc_CheckAccessList(const PRUnichar* wideName, const char* list[])
 
 /***************************************************************************/
 
-nsXPCComponents_Interfaces::nsXPCComponents_Interfaces()
+nsXPCComponents_Interfaces::nsXPCComponents_Interfaces() :
+    mManager(do_GetService(NS_INTERFACEINFOMANAGER_SERVICE_CONTRACTID))
 {
-    mManager = dont_AddRef(XPTI_GetInterfaceInfoManager());
 }
 
 nsXPCComponents_Interfaces::~nsXPCComponents_Interfaces()
@@ -347,9 +347,9 @@ private:
 };
 
 
-nsXPCComponents_InterfacesByID::nsXPCComponents_InterfacesByID()
+nsXPCComponents_InterfacesByID::nsXPCComponents_InterfacesByID() :
+    mManager(do_GetService(NS_INTERFACEINFOMANAGER_SERVICE_CONTRACTID))
 {
-    mManager = dont_AddRef(XPTI_GetInterfaceInfoManager());
 }
 
 nsXPCComponents_InterfacesByID::~nsXPCComponents_InterfacesByID()
