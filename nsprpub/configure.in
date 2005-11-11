@@ -1010,6 +1010,7 @@ case "$target" in
     PR_MD_CSRCS=hpux.c
     if test "$OS_TEST" = "ia64"; then
         DLL_SUFFIX=so
+        DSO_LDOPTS="$DSO_LDOPTS +b '\$\$ORIGIN'"
         CPU_ARCH_TAG=_$OS_TEST 
         if test -z "$USE_64"; then
             COMPILER_TAG=_32
