@@ -97,8 +97,13 @@ PersistentRDFObject.metafun(
       _name,
       function() {
         var prop = gRDF.GetResource(_name);
-        var target = this.datasources[_datasourceid].GetTarget(this.resource,
-                                                               prop, true);
+        try {
+          var target = this.datasources[_datasourceid].GetTarget(this.resource,
+                                                                 prop, true);
+        }
+        catch(e) {
+          this._error("Exception getting "+_name+": "+e);
+        }
         if (target)
           target = target.QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
         else
