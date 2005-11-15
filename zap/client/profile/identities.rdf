@@ -7,7 +7,7 @@
   </rdf:Seq>
 
   <rdf:Description rdf:about="urn:mozilla:zap:initial_identity">
-    <NC:Name>thisis@anonymous.invalid</NC:Name>
+    <NC:Name>&lt;sip:thisis@anonymous.invalid&gt;</NC:Name>
     <zap:chromepage>chrome://zap/content/identity.xul</zap:chromepage>
     <zap:nodetype>identity</zap:nodetype>
     <zap:sidebarparent rdf:resource="urn:mozilla:zap:identities"/>
