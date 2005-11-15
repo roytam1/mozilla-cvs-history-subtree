@@ -39,26 +39,85 @@
 
 <overlay id="zap_identity_form_overlay"
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+  <script type="application/x-javascript">
+  <![CDATA[
+    var wServicesList;
+    function initIdentityForm() {
+      wServicesList = document.getElementById("services_list_popup");
+      wServicesList.database.AddDataSource(parent.wConfigDS);
+      wServicesList.builder.rebuild();
+    }
+  ]]>
+  </script>
+
   <vbox flex="1" id="zap_identity_form">
     <grid>
       <columns><column/><column flex="1"/></columns>
       <rows>
         <row>
           <label control="http://home.netscape.com/NC-rdf#Name" 
-                 value="Identity Name:"/>
+                 value="Address-of-register:"/>
           <textbox id="http://home.netscape.com/NC-rdf#Name"/>
         </row>
         <row>
-          <label control="urn:mozilla:zap:from_address" 
-                 value="From Address (for outbound request):"/>
-          <textbox id="urn:mozilla:zap:from_address"/>
+          <label control="urn:mozilla:zap:display_name" 
+                 value="Display Name:"/>
+          <textbox id="urn:mozilla:zap:display_name"/>
         </row>
         <row>
-          <label control="urn:mozilla:zap:route_set" 
-                 value="Default Route Set:"/>
-          <textbox id="urn:mozilla:zap:route_set"/>
+          <label control="urn:mozilla:zap:organization" 
+                 value="Organization:"/>
+          <textbox id="urn:mozilla:zap:organization"/>
+        </row>
+        <row>
+          <label control="urn:mozilla:zap:preference" 
+                 value="Preference (0.001-1.000):"/>
+          <textbox id="urn:mozilla:zap:preference"/>
         </row>
       </rows>
     </grid>
+
+    <cgroup title="Advanced">
+      <grid>
+        <columns><column/><column flex="1"/></columns>
+        <rows>
+          <row>
+            <label control="urn:mozilla:zap:authentication_username" 
+                   value="Authentication Username:"/>
+            <textbox id="urn:mozilla:zap:authentication_username"/>
+          </row>
+          <row>
+            <label control="urn:mozilla:zap:service"
+                   value="Service:"/>
+            <menulist id="urn:mozilla:zap:service">
+              <menupopup id="services_list_popup"
+                         datasources="rdf:null"                         
+                         ref="urn:mozilla:zap:services">
+                  <menuitem value="urn:mozilla:zap:automatic_service"
+                            label="(automatic)"/>
+                <template>
+                  <rule>
+                    <conditions>
+                      <content uri="?container"/>
+                      <member container="?container" child="?service"/>
+                    </conditions>
+                    <bindings>  
+                      <binding subject="?service"
+                               predicate="http://home.netscape.com/NC-rdf#Name"
+                               object="?name"/>
+                    </bindings>
+                    <action>
+                      <menuitem uri="?service" 
+                                value="?service" label="?name"/>
+                    </action>
+                  </rule>
+                </template>
+              </menupopup>
+            </menulist>
+          </row>
+        </rows>
+      </grid>
+    </cgroup>
   </vbox>
 </overlay>

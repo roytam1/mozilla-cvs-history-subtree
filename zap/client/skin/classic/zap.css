@@ -126,19 +126,7 @@ treechildren::-moz-tree-image(nodetype-identity) {
   list-style-image: url("chrome://zap/skin/account.png");
 }
 
-treechildren::-moz-tree-image(nodetype-accounts) {
-  list-style-image: url("chrome://zap/skin/accounts.png");
-}
-
-treechildren::-moz-tree-image(nodetype-account) {
-  list-style-image: url("chrome://zap/skin/account-inactive.png");
-}
-
-treechildren::-moz-tree-image(nodetype-account, active-true) { 
-  list-style-image: url("chrome://zap/skin/account.png"); 
-} 
-
-treechildren::-moz-tree-image(nodetype-account, active-true, registered-true) {
+treechildren::-moz-tree-image(nodetype-identity, registered-true) { 
   list-style-image: url("chrome://zap/skin/account-registered.png");
 }
 
@@ -292,6 +280,24 @@ treechildren::-moz-tree-image(nodetype-contact) {
   -moz-border-right-colors: #c0c0c0;
   -moz-border-bottom-colors: #c0c0c0;
   border: 1px solid;
+}
+
+#module_page[readonly="true"] menulist
+{
+  -moz-user-focus: ignore;
+  -moz-user-input: disabled;
+  -moz-border-top-colors: #c0c0c0;
+  -moz-border-left-colors: #c0c0c0;
+  -moz-border-right-colors: #c0c0c0;
+  -moz-border-bottom-colors: #c0c0c0;
+  border: 1px solid;
+  font-weight: bold;
+  -moz-appearance: none;
+}
+
+#module_page[readonly="true"] menulist > dropmarker
+{
+  visibility: collapse;
 }
 
 /* a style for title labels */

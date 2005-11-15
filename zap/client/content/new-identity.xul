@@ -65,6 +65,7 @@
       wIdentity.createFromDocument(document);
       wIdentity.flush();
       parent.selectSidebarNode(wIdentity.resource.Value);
+      parent.registerIdentity(wIdentity.resource);
     }
 
     function cancel() {

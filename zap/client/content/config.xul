@@ -111,8 +111,23 @@
           </row>
           <row>
             <label control="urn:mozilla:zap:default_registration_interval"
-                   value="Default registration interval:"/>
+                   value="Default registration interval (s):"/>
             <textbox id="urn:mozilla:zap:default_registration_interval"/>
+          </row>
+          <row>
+            <label control="urn:mozilla:zap:registration_recovery_max_time"
+                   value="Max time for re-attempting registration (s):"/>
+            <textbox id="urn:mozilla:zap:registration_recovery_max_time"/>
+          </row>
+          <row>
+            <label control="urn:mozilla:zap:registration_recovery_base_time_not_failed"
+                   value="Base time for re-connecting registrations flows (s):"/>
+            <textbox id="urn:mozilla:zap:registration_recovery_base_time_not_failed"/>
+          </row>
+          <row>
+            <label control="urn:mozilla:zap:registration_recovery_base_time_all_fail"
+                   value="Base time for re-attempting registrations (s):"/>
+            <textbox id="urn:mozilla:zap:registration_recovery_base_time_all_fail"/>
           </row>
           <row>
             <label control="urn:mozilla:zap:dnd_code" 

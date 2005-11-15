@@ -9,7 +9,6 @@ include $(topsrcdir)/config/rules.mk
 
 FILES := \
 	sidebar.rdf \
-	accounts.rdf \
 	contacts.rdf \
 	calls.rdf \
 	config.rdf \

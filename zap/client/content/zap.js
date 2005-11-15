@@ -67,9 +67,6 @@ var wIdentitiesDS = wRDF.GetDataSourceBlocking(getProfileFileURL("identities.rdf
 var wIdentitiesContainer;
 var wCurrentIdentity;
 
-var wAccountsDS = wRDF.GetDataSourceBlocking(getProfileFileURL("accounts.rdf"));
-var wAccountsContainer;
-
 var wContactsDS = wRDF.GetDataSourceBlocking(getProfileFileURL("contacts.rdf"));
 // all contacts live in the urn:mozilla:zap:contacts sequence:
 var wContactsContainer;
@@ -91,6 +88,11 @@ var wSdpService;
 
 var wErrorLog;
 
+// helper to emit a warning to the current error sink:
+function warning(message) {
+  ErrorReporterSink.reporterFunction(message);
+}
+
 ////////////////////////////////////////////////////////////////////////
 // Initialization:
 
@@ -111,24 +113,12 @@ function windowInit() {
   wURLField = document.getElementById("url_field");
 
   initConfig();
-  initIdentities();
-  initAccounts();
   initContacts();
   initCalls();
   initSidebar();
   wMediaPipeline.init();
   initSipStack();
-
-  // set the current identity:
-  var identitiesList = document.getElementById("identities_list_popup");
-  identitiesList.database.AddDataSource(wIdentitiesDS);
-  identitiesList.builder.rebuild();
-  // select correct identity in identities list:
-  document.getElementById("identities_list").selectedItem = document.getElementById(wConfig["urn:mozilla:zap:identity"]);
-  // make sure out stack is configured for this identity profile:
-  wCurrentIdentity = Identity.instantiate();
-  wCurrentIdentity.initWithResource(wRDF.GetResource(wConfig["urn:mozilla:zap:identity"]));
-  currentIdentityUpdated();
+  initIdentities();
   
   dump("... Done initializing zap main window\n");
 }
@@ -206,6 +196,11 @@ Config.rdfLiteralAttrib("urn:mozilla:zap:instance_id", "");
 Config.rdfLiteralAttrib("urn:mozilla:zap:max_recent_calls", "10");
 Config.rdfLiteralAttrib("urn:mozilla:zap:sip_port_base", "5060");
 Config.rdfLiteralAttrib("urn:mozilla:zap:default_registration_interval", "300");
+// time constants for flow failure recovery (draft-ietf-sip-outbound-01.txt 4.3):
+Config.rdfLiteralAttrib("urn:mozilla:zap:registration_recovery_max_time", "1800");
+Config.rdfLiteralAttrib("urn:mozilla:zap:registration_recovery_base_time_all_fail", "30");
+Config.rdfLiteralAttrib("urn:mozilla:zap:registration_recovery_base_time_not_failed", "60");
+
 Config.rdfLiteralAttrib("urn:mozilla:zap:dnd_code", "480"); // Temporarily unavail.
 Config.rdfLiteralAttrib("urn:mozilla:zap:dnd_headers", ""); // additional headers for DND response
 
@@ -232,6 +227,23 @@ function initIdentities() {
     createInstance(Components.interfaces.nsIRDFContainer);
   wIdentitiesContainer.Init(wIdentitiesDS,
                            wRDF.GetResource("urn:mozilla:zap:identities"));
+
+  // set the current identity:
+  var identitiesList = document.getElementById("identities_list_popup");
+  identitiesList.database.AddDataSource(wIdentitiesDS);
+  identitiesList.builder.rebuild();
+  // select correct identity in identities list:
+  document.getElementById("identities_list").selectedItem = document.getElementById(wConfig["urn:mozilla:zap:identity"]);
+  // make sure out stack is configured for this identity profile:
+  wCurrentIdentity = Identity.instantiate();
+  wCurrentIdentity.initWithResource(wRDF.GetResource(wConfig["urn:mozilla:zap:identity"]));
+  currentIdentityUpdated();
+
+  // register identities:
+  var identity_resources = wIdentitiesContainer.GetElements();
+  while (identity_resources.hasMoreElements()) {
+    registerIdentity(identity_resources.getNext().QueryInterface(Components.interfaces.nsIRDFResource));
+  }
 }
 
 // called when the user selects a different identity in the identities_list:
@@ -253,21 +265,21 @@ function identityChange() {
 // stack from here. Alternatively we could listen in on the identity
 // and config datasources, which we should probably do at some point.
 function currentIdentityUpdated() {
-  // XXX these try/catch blocks will be redundant once we hook up
-  // syntax checking to PersistentRDFObject
-  try {
-    wSipStack.FromAddress = wSipStack.syntaxFactory.deserializeAddress(wCurrentIdentity["urn:mozilla:zap:from_address"]);
-  }
-  catch(e) {
-    alert("The From-Address in the currently selected identity has invalid syntax");
-  }
-  try {
-    wCurrentIdentity.routeset = wSipStack.syntaxFactory.deserializeRouteSet(wCurrentIdentity["urn:mozilla:zap:route_set"], {});  }
-  catch(e) {
-    alert("The Route Set in the currently selected identity has invalid syntax");
-  }
+//   // XXX these try/catch blocks will be redundant once we hook up
+//   // syntax checking to PersistentRDFObject
+//   try {
+//     wSipStack.FromAddress = wSipStack.syntaxFactory.deserializeAddress(wCurrentIdentity["urn:mozilla:zap:from_address"]);
+//   }
+//   catch(e) {
+//     alert("The From-Address in the currently selected identity has invalid syntax");
+//   }
+//   try {
+//     wCurrentIdentity.routeset = wSipStack.syntaxFactory.deserializeRouteSet(wCurrentIdentity["urn:mozilla:zap:route_set"], {});  }
+//   catch(e) {
+//     alert("The Route Set in the currently selected identity has invalid syntax");
+//   }
 
-  currentAccountsUpdated();
+//   currentAccountsUpdated();
 }
 
 //----------------------------------------------------------------------
@@ -277,16 +289,23 @@ var Identity = makeClass("Identity", PersistentRDFObject, SupportsImpl);
 Identity.addInterfaces(Components.interfaces.zapISipCredentialsProvider);
 
 Identity.prototype.datasources["default"] = wIdentitiesDS;
+Identity.prototype.datasources["global-ephemeral"] = wGlobalEphemeralDS;
 
 Identity.rdfResourceAttrib("urn:mozilla:zap:sidebarparent",
                            "urn:mozilla:zap:identities");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:chromepage",
                           "chrome://zap/content/identity.xul");
-Identity.rdfLiteralAttrib("http://home.netscape.com/NC-rdf#Name", "");
+Identity.rdfLiteralAttrib("http://home.netscape.com/NC-rdf#Name", "<sip:thisis@anonymous.invalid>");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:nodetype", "identity");
-Identity.rdfLiteralAttrib("urn:mozilla:zap:from_address",
-                          "Anonymous <sip:thisis@anonymous.invalid>");
-Identity.rdfLiteralAttrib("urn:mozilla:zap:route_set", "");
+Identity.rdfLiteralAttrib("urn:mozilla:zap:display_name", "");
+Identity.rdfLiteralAttrib("urn:mozilla:zap:organization", "");
+Identity.rdfLiteralAttrib("urn:mozilla:zap:preference", "0.1");
+Identity.rdfLiteralAttrib("urn:mozilla:zap:authentication_username", "");
+Identity.rdfResourceAttrib("urn:mozilla:zap:service",
+                           "urn:mozilla:zap:automatic_service");
+Identity.rdfLiteralAttrib("urn:mozilla:zap:is_registered",
+                          "false", "global-ephemeral");
+
 
 Identity.spec(
   function createFromDocument(doc) {
@@ -298,20 +317,7 @@ Identity.spec(
 // zapISipCredentialsProvider methods:
 Identity.fun(
   function getCredentialsForRealm(realm, username, password) {
-    // try our active accounts first:
-    var accounts = wIdentitiesDS.GetTargets(this.resource,
-                                           wRDF.GetResource("urn:mozilla:zap:account"),
-                                           true);
-    while (accounts.hasMoreElements()) {
-      var ar = accounts.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
-      var account = getAccount(ar);
-      if (account["urn:mozilla:zap:authentication_realm"] == realm) {
-        username.value = account["urn:mozilla:zap:authentication_username"];
-        password.value = account["urn:mozilla:zap:authentication_password"];
-        return true;
-      }
-    }
-    // our accounts don't have the credentials; prompt instead:
+    // XXX fill in password
     var rv = wPromptService.promptUsernameAndPassword(null, "Enter credentials",
                                                       "Enter credentials for realm "+
                                                       realm+":",
@@ -322,191 +328,296 @@ Identity.fun(
     return rv;
   });
 
-////////////////////////////////////////////////////////////////////////
-// Accounts:
 
-
-function initAccounts() {
-  wAccountsContainer = Components.classes["@mozilla.org/rdf/container;1"].
-    createInstance(Components.interfaces.nsIRDFContainer);
-  wAccountsContainer.Init(wAccountsDS,
-                          wRDF.GetResource("urn:mozilla:zap:accounts"));
-}
-
-var Account = makeClass("Account", PersistentRDFObject);
-
-Account.prototype.datasources["default"] = wAccountsDS;
-Account.prototype.datasources["identities"] = wIdentitiesDS;
-Account.prototype.datasources["global-ephemeral"] = wGlobalEphemeralDS;
-Account.addInMemoryDS("ephemeral");
-
-Account.rdfResourceAttrib("urn:mozilla:zap:sidebarparent",
-                          "urn:mozilla:zap:accounts");
-Account.rdfLiteralAttrib("urn:mozilla:zap:chromepage",
-                         "chrome://zap/content/account.xul");
-Account.rdfLiteralAttrib("http://home.netscape.com/NC-rdf#Name", "");
-Account.rdfLiteralAttrib("urn:mozilla:zap:nodetype", "account");
-Account.rdfLiteralAttrib("urn:mozilla:zap:authentication_realm", "");
-Account.rdfLiteralAttrib("urn:mozilla:zap:authentication_username", "");
-Account.rdfLiteralAttrib("urn:mozilla:zap:authentication_password", "");
-Account.rdfLiteralAttrib("urn:mozilla:zap:automatic_registration", "false");
-Account.rdfLiteralAttrib("urn:mozilla:zap:registrar_server", "");
-Account.rdfLiteralAttrib("urn:mozilla:zap:address_of_record", "");
-Account.rdfLiteralAttrib("urn:mozilla:zap:suggested_registration_interval", "60");
-
-//XXX
-Account.rdfLiteralAttrib("urn:mozilla:zap:flow_id", "1");
-
-  
-// A pointer so that we can use the current account as a parameter in
-// a template rule triple. See account-template.xul
-Account.rdfPointerAttrib("urn:mozilla:zap:root",
-                         "urn:mozilla:zap:current-account",
-                         "ephemeral");
-
-Account.spec(
-  function createFromDocument(doc) {
-    this._Account_createFromDocument(doc);
-    // append to accounts:
-    wAccountsContainer.AppendElement(this.resource);
-    this.updateIdentityProfiles(doc);
+// Return host part of the AOR (or empty string if the AOR can't be
+// parsed)
+Identity.fun(
+  function getHost() {
+    // XXX these try/catch blocks will be redundant once we hook up
+    // syntax checking in PersistentRDFObject
+    try {
+      var aor = wSipStack.syntaxFactory.deserializeAddress(this["http://home.netscape.com/NC-rdf#Name"]);
+      var host = aor.uri.QueryInterface(Components.interfaces.zapISipSIPURI).host;
+    }
+    catch(e) {
+      this._dump("Can't determine domain from "+this["http://home.netscape.com/NC-rdf#Name"]);
+      return "";
+    }
+    return host;
   });
 
-Account.spec(
-  function updateFromDocument(doc) {
-    this._Account_updateFromDocument(doc);
-    this.updateIdentityProfiles(doc);
-  });
-
-// helper to update resource links from identity profiles to this
-// account:
-Account.fun(
-  function updateIdentityProfiles(doc) {
-    // iterate through identities container and add/clear
-    // (identity,account,this) triples:
-    var identities = wIdentitiesContainer.GetElements();
-    var resourceAccount = wRDF.GetResource("urn:mozilla:zap:account");
-    while (identities.hasMoreElements()) {
-      var identity = identities.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
-      var elem = doc.getElementById(identity.Value);
-      if (!elem) continue;
-      var hasTriple = wIdentitiesDS.HasAssertion(identity,
-                                                resourceAccount,
-                                                this.resource, true);
-      if (elem.checked) {
-        // add a triple if there isn't one already:
-        if (!hasTriple)
-          wIdentitiesDS.Assert(identity, resourceAccount, this.resource, true);
-      }
-      else {
-        // remove triple if there is one:
-        if (hasTriple)
-          wIdentitiesDS.Unassert(identity, resourceAccount, this.resource);
+// Work out which Service this Identity uses and return its ID.
+Identity.fun(
+  function getServiceId() {
+    var service_id = this["urn:mozilla:zap:service"];
+    if (service_id != "urn:mozilla:zap:automatic_service")
+      return service_id;
+    //else...
+    // we need to try to figure out the service from the AOR:
+    // walk through known Services:
+    var services = wServicesContainer.GetElements();
+    var resourceDomain = wRDF.GetResource("urn:mozilla:zap:domain");
+    var resourceTheDomain = wRDF.GetLiteral(this.getHost());
+    while (services.hasMoreElements()) {
+      var service = services.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
+      if (wConfigDS.HasAssertion(service,
+                                 resourceDomain,
+                                 resourceTheDomain, true)) {
+        return service.Value;
       }
     }
+    // nope, we don't know the service; use the default service:
+    return "urn:mozilla:zap:default_service";
   });
 
-Account.spec(
-  function fillDocument(doc) {
-    this._Account_fillDocument(doc);
-    // initialize identities template:
-    var ltemplate = doc.getElementById("identities_template");
-    if (!ltemplate) return;
+////////////////////////////////////////////////////////////////////////
+// Registration:
 
-    ltemplate.database.AddDataSource(wIdentitiesDS);
-    ltemplate.database.AddDataSource(this.datasources["ephemeral"]);
-    ltemplate.builder.rebuild();
+// hash of registration groups indexed by identity resource:
+
+// XXX We currently use one registration group per identity. This is a
+// bit wasteful if we have several identities with the same
+// AOR. Investigate whether this is common enough to care.
+var wRegistrations = {};
+
+// set up or refresh a registration group for the given identity resource
+function registerIdentity(resource) {
+  var identity = Identity.instantiate();
+  identity.initWithResource(resource);
+  warning("registering "+identity["http://home.netscape.com/NC-rdf#Name"]+"\n");
+  var registrationGroup = wRegistrations[resource.Value];
+  if (registrationGroup) {
+    // We already have a registration group for this identity. We
+    // are probably getting called because the user has modified the
+    // identity or the service associated with the identity.
+    // -> Clear old registration group before creating a new one
+    warning("unregistering "+identity["http://home.netscape.com/NC-rdf#Name"]+"\n");
+    registrationGroup.unregister();
+  }
+  // create a new registration group :
+  registrationGroup = RegistrationGroup.instantiate();
+  if (registrationGroup.init(identity))
+    wRegistrations[resource.Value] = registrationGroup;
+}
+
+
+function unregisterIdentity(resource) {
+  var registrationGroup = wRegistrations[resource.Value];
+  if (!registrationGroup) return; // not registered
+  
+  warning("unregistering "+registrationGroup.identity["http://home.netscape.com/NC-rdf#Name"]+"\n");
+  registrationGroup.unregister();
+  delete wRegistrations[resource.Value];
+}
+
+// called whenever the user edits a service
+function notifyServiceUpdated(service_resource) {
+  var service_id = service_resource.Value;
+  // reregister any identities that use this service:
+  for (var r in wRegistrations) {
+    if (wRegistrations[r].service.resource.Value == service_id)
+      registerIdentity(wRDF.GetResource(r));
+  }
+}
+
+//----------------------------------------------------------------------
+
+var RegistrationGroup = makeClass("RegistrationGroup", ErrorReporter);
+
+// true if we are currently unregistering:
+RegistrationGroup.obj("unregistering", false);
+
+RegistrationGroup.fun(
+  function init(identity) {
+    this.identity = identity;
+    this.service = Service.instantiate();
+    this.service.initWithResource(wRDF.GetResource(this.identity.getServiceId()));
+    
+    this.domain = this.service["urn:mozilla:zap:domain"];
+    
+    if (!this.domain) {
+      // the service isn't bound to a particular domain (probably
+      // because it is the 'default' service.
+      // -> use the identity's host:
+      this.domain = this.identity.getHost();
+    }
+  
+    if (this.domain == "anonymous.invalid") {
+      // don't attempt to register our 'anonymous' identity
+      return false;
+    }
+      
+    this.domain = "sip:"+this.domain;
+    
+    // parse domain and aor into SIP syntax objects:
+    try {
+      this.domain = wSipStack.syntaxFactory.deserializeURI(this.domain);
+    } catch(e) { warning("Domain parse error: "+this.domain+"\n"); return false; }
+    try {
+      this.aor = wSipStack.syntaxFactory.deserializeAddress(this.identity["http://home.netscape.com/NC-rdf#Name"]);
+    } catch(e) { warning("AOR parse error: "+this.identity["http://home.netscape.com/NC-rdf#Name"]); return false; }
+
+    this.interval = wConfig["urn:mozilla:zap:default_registration_interval"];
+
+    // add a registration for each flow:
+    this.registrations = [];
+    var flow_counter = 0;
+    for (var i=1; i<=4; ++i) {
+      var route = this.service["urn:mozilla:zap:route"+i];
+      if (!route) continue;
+      try {
+        route = wSipStack.syntaxFactory.deserializeRouteSet(route, {});
+      } catch(e) { warning("Invalid route set: "+route+"\n"); continue; }
+      var registration = Registration.instantiate();
+      registration.init(this,
+                        route,
+                        ++flow_counter);
+      this.registrations.push(registration);
+    }
+    if (!flow_counter) {
+      // The service didn't specify any route.
+      // -> Try domain:
+      try {
+        var route = wSipStack.syntaxFactory.deserializeRouteSet("<"+this.domain.serialize()+">", {});
+      } catch(e) { this._warning("Invalid route set: <"+this.domain.serialize()+">"); return false; }
+      var registration = Registration.instantiate();
+      registration.init(this,
+                        route,
+                        1);
+      this.registrations.push(registration);
+    }
+
+    return true;
+  });
+
+RegistrationGroup.fun(
+  function unregister() {
+    // make sure that we don't act upon pending notifications:
+    this.unregistering = true;
+    // mark our identity as un-registered:
+    this.identity["urn:mozilla:zap:is_registered"] = "false";
+    // walk through registrations and unregister:
+    this.registrations.forEach(function(r) {
+                                 r.unregister();
+                               });
+  });
+
+RegistrationGroup.fun(
+  function notifyRegistrationSuccess(registration) {
+    if (this.unregistering) return;
+    // mark our identity as registered:
+    this._dump("Registration to "+this.identity["http://home.netscape.com/NC-rdf#Name"]+" over flow "+registration.flowid+" succeeded");
+    this.identity["urn:mozilla:zap:is_registered"] = "true";
+  });
+
+RegistrationGroup.fun(
+  function notifyRegistrationFailure(registration) {
+    if (this.unregistering) return;
+    this._dump("Registration to "+this.identity["http://home.netscape.com/NC-rdf#Name"]+" over flow "+registration.flowid+" has failed");
+    this.recoverFromFailure(registration);
+  });
+
+RegistrationGroup.fun(
+  function notifyFlowFailure(registration) {
+    if (this.unregistering) return;
+    this._dump("Flow "+registration.flowid+" to "+this.identity["http://home.netscape.com/NC-rdf#Name"]+" has failed");
+    this.recoverFromFailure(registration);
+  });
+
+RegistrationGroup.fun(
+  function recoverFromFailure(registration) {
+    // recover as described in draft-ietf-outbound-01.txt 4.3:
+    var some_active = this.registrations.some(function(r) {
+                                                return r.registered;
+                                              });
+    var base_time;
+    if (some_active) {
+      base_time = wConfig["urn:mozilla:zap:registration_recovery_base_time_not_failed"];
+    }
+    else {
+      // mark our identity as un-registered:
+      this.identity["urn:mozilla:zap:is_registered"] = "false";
+    
+      base_time = wConfig["urn:mozilla:zap:registration_recovery_base_time_all_fail"];
+    }
+    base_time = parseFloat(base_time);
+
+    var max_time = parseFloat(wConfig["urn:mozilla:zap:registration_recovery_max_time"]);
+
+    var wait_time_ms = Math.min(max_time, base_time*Math.pow(2, registration.failureCount))*1000*(0.5+0.5*Math.random());
+    this._dump("reregistering "+this.identity["http://home.netscape.com/NC-rdf#Name"]+", flow "+registration.flowid+" in "+wait_time_ms+"ms");
+    registration.scheduleRefresh(wait_time_ms);
   });
 
 //----------------------------------------------------------------------
-// ActiveAccount
 
-var ActiveAccount = makeClass("ActiveAccount", Account, SupportsImpl);
-ActiveAccount.addInterfaces(Components.interfaces.zapISipNonInviteRCListener,
-                            Components.interfaces.zapISipFlowMonitor,
-                            Components.interfaces.nsITimerCallback);
+var Registration = makeClass("Registration", SupportsImpl);
+Registration.addInterfaces(Components.interfaces.zapISipNonInviteRCListener,
+                           Components.interfaces.zapISipFlowMonitor,
+                           Components.interfaces.nsITimerCallback);
 
-// true if this account is currently successfully registered with a server:
-ActiveAccount.rdfLiteralAttrib("urn:mozilla:zap:is_registered", "false", "global-ephemeral");
-// true if this account has been activated:
-ActiveAccount.rdfLiteralAttrib("urn:mozilla:zap:is_active", "false", "global-ephemeral");
-// current registration interval as returned by the server
-ActiveAccount.rdfLiteralAttrib("urn:mozilla:zap:registration_interval", "", "ephemeral");
+Registration.obj("registered", false);
+Registration.obj("failureCount", 0);
 
-ActiveAccount.fun(
-  function activate() {
-    this["urn:mozilla:zap:is_active"] = "true";
-    // remember the credentials context, so that we can correctly
-    // authenticate on deactivation when the identity profile might
-    // have changed:
-    this.credentials = wCurrentIdentity;
-
-    if (this["urn:mozilla:zap:automatic_registration"] != "true")
-      return;
-    var domain = wSipStack.syntaxFactory.deserializeURI("sip:"+this["urn:mozilla:zap:authentication_realm"]);
-//    var server = wSipStack.syntaxFactory.deserializeURI(this["urn:mozilla:zap:registrar_server"]);
-    this.aor = wSipStack.syntaxFactory.deserializeAddress(this["urn:mozilla:zap:address_of_record"]);
-    var interval = this["urn:mozilla:zap:suggested_registration_interval"];
-    var route = wSipStack.syntaxFactory.deserializeRouteSet(this["urn:mozilla:zap:registrar_server"], {});
-
-    // check if we should keep this flow alive with STUN requests:
+Registration.fun(
+  function init(group, route, flowid) {
+    this._dump("group="+group+", route="+route+", flowid="+flowid);
+    this.group = group;
+    this.flowid = flowid;
+    // should we keep this flow alive with STUN requests?
     this.stunKeepAlive = route[0].uri.QueryInterface(Components.interfaces.zapISipSIPURI).hasURIParameter("sip-stun");
-
-    this.registrationRC =
-      wSipStack.createRegisterRequestClient(domain, this.aor,
-                                            interval,
-                                            route, route.length);
     
-    // add instance id and flow-id to contact:
+    this.registrationRC =
+      wSipStack.createRegisterRequestClient(group.domain,
+                                            group.aor,
+                                            group.interval,
+                                            route,
+                                            route.length);
     // XXX if (use_outbound)
     var contact = this.registrationRC.request.getTopContactHeader().QueryInterface(Components.interfaces.zapISipContactHeader);
     contact.setParameter("+sip.instance", '"<'+wSipStack.instanceID+'>"');
-    contact.setParameter("flow-id", this["urn:mozilla:zap:flow_id"]);
-    
+    contact.setParameter("flow-id", flowid);
+
     this.registrationRC.listener = this;
     this.registrationRC.sendRequest();
   });
 
-ActiveAccount.fun(
-  function deactivate() {
-    this["urn:mozilla:zap:is_active"] = "false";
-    if (this.registrationRC) {
-      this.clearRefresh();
-      if (this.flow) {
-        this.flow.removeFlowMonitor(this);
-        delete this.flow;
-      }
-      this.deactivating = true;
-      var contact = this.registrationRC.request.getTopContactHeader();
-      if (contact) {
-        contact = contact.QueryInterface(Components.interfaces.zapISipContactHeader);
-        contact.setParameter("expires", "0");
-        this.registrationRC.request.removeHeaders("Authorization");
-        this.registrationRC.listener = this;
-        try {
-          this.registrationRC.sendRequest();
-        } catch(e) {
-          // the rc might still be busy with the last request.
-          // XXX we should have a 'state' member on rc's
-        }
-      }
-      delete this.registrationRC;
+Registration.fun(
+  function unregister() {
+    if (this.refreshTimer) {
+      this.refreshTimer.cancel();
+      delete this.refreshTimer;
     }
+    if (this.flow) {
+      this.flow.removeFlowMonitor(this);
+      delete this.flow;
+    }
+    
+    if (this.registrationRC.listener) {
+      // We are currently waiting for a registration to complete.
+      // XXX what we want to do is cancel the RC.
+      this.registrationRC.listener = null;
+    }
+    else if (this.registered) {
+      // XXX maybe we shouldn't send unregistrations.
+      var contact = this.registrationRC.request.getTopContactHeader();
+      contact.setParameter("expires", "0");
+      this.registrationRC.sendRequest();
+    }
+    delete this.registrationRC;
   });
 
 // zapISipNonInviteRCListener methods:
-ActiveAccount.fun(
+Registration.fun(
   function notifyResponseReceived(rc, dialog, response, flow) {
-    this._dump("response: "+response.statusCode);
     if (response.statusCode[0] == "1")
       return; // just a provisional response
     rc.listener = null;
     if ((response.statusCode == "401" ||
          response.statusCode == "407") &&
-        wSipStack.authentication.
-          addAuthorizationHeaders(this.credentials,
-                                  response,
-                                  rc.request)) {
+        wSipStack.authentication.addAuthorizationHeaders(this.group.identity,
+                                                         response,
+                                                         rc.request)) {
       // retry with credentials:
       rc.listener = this;
       rc.sendRequest();
@@ -531,13 +642,13 @@ ActiveAccount.fun(
           }
         }
         catch(e) {
-          // there was an error parsing the uri in the contact header. ignore
+          // there was an error parsing the uri in the contact header. ignore.
           this._dump("exception during registration response parsing: "+e);
         }
       }
       if (contact) {
-        // looks like we're registered ok. let's see when the registration
-        // expires (RFC3261 10.2.4):
+        // looks like we're registered ok. let's see when the
+        // registration expires (RFC3261 10.2.4):
         var expires = contact.getParameter("expires");
         if (!expires) {
           var expiresHeader = response.getTopHeader("Expires");
@@ -546,14 +657,20 @@ ActiveAccount.fun(
           }
         }
         else {
-          // the 'expires' uri parameter is a string. parse it:
+          // the 'expires' uri parameter is a string (in contrast to a
+          // deltaSeconds value which is already an integer). parse it:
           expires = parseInt(expires);
         }
-        if (expires != null && !isNaN(expires) && expires!=0) {
+        
+        if (expires != null && !isNaN(expires) && expires != 0) {
           // we've got a valid registration!
           // update our state:
-          this["urn:mozilla:zap:registration_interval"] = expires.toString();
-          this["urn:mozilla:zap:is_registered"] = "true";
+          if (!this.registered) {
+            this.failureCount = 0;
+            this.registered = true;
+            // inform our group:
+            this.group.notifyRegistrationSuccess(this);
+          }
           // set up a refresh timer:
           this.scheduleRefresh(expires*1000*0.9);
           if (this.stunKeepAlive && !this.flow) {
@@ -564,20 +681,17 @@ ActiveAccount.fun(
         }
       }
     }
-    // failure (or success if we are unregistering). update state:
-    this["urn:mozilla:zap:is_registered"] = "false";
-    if (!this.deactivating) {
-      this._dump("Registration failure for "+this.aor.serialize()+". Retrying in 1 minute");
-      // try again in a minute:
-      this.scheduleRefresh(60000);
-      if (this.flow) {
-        this.flow.removeFlowMonitor(this);
-        delete this.flow;
-      }
+    // failure:
+    this.registered = false;
+    ++this.failureCount;
+    if (this.flow) {
+      this.flow.removeFlowMonitor(this);
+      delete this.flow;
     }
+    this.group.notifyRegistrationFailure(this);
   });
 
-ActiveAccount.fun(
+Registration.fun(
   function scheduleRefresh(delay_ms) {
     if (this.refreshTimer) {
       this.refreshTimer.cancel();
@@ -590,100 +704,32 @@ ActiveAccount.fun(
                                        Components.interfaces.nsITimer.TYPE_ONE_SHOT);
   });
 
-ActiveAccount.fun(
-  function clearRefresh() {
-    if (this.refreshTimer) {
-      this.refreshTimer.cancel();
-      delete this.refreshTimer;
-    }
-  });
-
 // nsITimerCallback methods:
-ActiveAccount.fun(
+Registration.fun(
   function notify(timer) {
-    if (timer == this.refreshTimer) {
-      this.registrationRC.listener = this;
-      try {
-        this.registrationRC.sendRequest();
-      } catch(e) {
-        // the rc might still be busy with the last request.
-        // XXX we should have a 'state' member on rc's
-      }
+    this.registrationRC.listener = this;
+    try {
+      this.registrationRC.sendRequest();
+    } catch(e) {
+      // the rc might still be busy with the last request.
+      this._warning("racing registrations");
     }
-    else
-      this._dump("unknown timer callback: "+timer);
   });
 
-// zapISipFlowMonitor
+// zapISipFlowMonitor methods:
 
-//  void flowChanged(in zapISipFlow flow, in unsigned short changeFlags);
-ActiveAccount.fun(
+// void flowChanged(in zapISipFlow flow, in unsigned short changeFlags);
+Registration.fun(
   function flowChanged(flow, changeFlags) {
     // stop monitoring the flow; recover as described in
     // draft-ietf-sip-outbound-01.txt
     flow.removeFlowMonitor(this);
-    this["urn:mozilla:zap:is_registered"] = "false";
-    // XXX recover properly
-    this.scheduleRefresh(30000);
+    delete this.flow;
+    this.registered = false;
+    // we leave recovery up to our group:
+    ++this.failureCount;
+    this.group.notifyFlowFailure(this);
   });
-
-//----------------------------------------------------------------------
-// active account management
-
-// hash of currently active accounts:
-var wActiveAccounts = {};
-
-// Get the Account object for the given resource. This will either be
-// a new Account instance or a cached active account object:
-function getAccount(resource) {
-  var account = wActiveAccounts[resource.Value];
-  if (!account) {
-    account = Account.instantiate();
-    account.initWithResource(resource);
-  }
-  return account;
-}
-
-// This will be called whenever the current identity changes and we
-// might need to add/remove accounts to/from wActiveAccounts:
-function currentAccountsUpdated() {
-  // walk through all accounts:
-  var accounts = wAccountsContainer.GetElements();
-  var resourceAccount = wRDF.GetResource("urn:mozilla:zap:account");
-  while (accounts.hasMoreElements()) {
-    var account = accounts.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
-    // check if this account is active in the current identity
-    // profile:
-    var active = wIdentitiesDS.HasAssertion(wCurrentIdentity.resource,
-                                           resourceAccount,
-                                           account,
-                                           true);
-    if (active) {
-      if (wActiveAccounts[account.Value]) {
-        // Account is already active. Activate it again (route set or
-        // contact might have changed:
-        dump("Reactivating account "+account.Value+"\n");
-        wActiveAccounts[account.Value].activate();
-      }
-      else {
-        // activate account:
-        dump("Activating account "+account.Value+"\n");
-        var aa = ActiveAccount.instantiate();
-        aa.initWithResource(account);
-        wActiveAccounts[account.Value] = aa;
-        aa.activate();
-      }
-    }
-    else {
-      var aa = wActiveAccounts[account.Value];
-      if (aa) {
-        dump("Deactivating account "+account.Value+"\n");
-        aa.deactivate();
-        delete wActiveAccounts[account.Value];
-      }
-    }
-  }
-}
 
 ////////////////////////////////////////////////////////////////////////
 // Contacts:
@@ -771,7 +817,6 @@ function initSidebar() {
   wSidebarTree = document.getElementById("sidebar");
   wSidebarTree.database.AddDataSource(wSidebarDS);
   wSidebarTree.database.AddDataSource(wIdentitiesDS);
-  wSidebarTree.database.AddDataSource(wAccountsDS);
   wSidebarTree.database.AddDataSource(wContactsDS);
   wSidebarTree.database.AddDataSource(wGlobalEphemeralDS);
 

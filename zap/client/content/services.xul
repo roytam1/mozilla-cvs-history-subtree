@@ -129,8 +129,10 @@
       else if (wMode == "editing") {
         wCurrentService.updateFromDocument(document);
         wCurrentService.flush();
+        parent.notifyServiceUpdated(wCurrentService.resource);
+
         document.getElementById("module_page").setAttribute("readonly", "true");
-        document.getElementById("button_deck").selectedIndex = 0;      
+        document.getElementById("button_deck").selectedIndex = 0;
         wMode = "browsing";
       }
     }
