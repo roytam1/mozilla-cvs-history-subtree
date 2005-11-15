@@ -65,6 +65,7 @@
 #include "nsLoadListenerProxy.h"
 #include "nsStreamUtils.h"
 #include "nsNetCID.h"
+#include "nsDOMJSUtils.h" // for GetScriptContextFromJSContext
 
 static NS_DEFINE_IID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 
