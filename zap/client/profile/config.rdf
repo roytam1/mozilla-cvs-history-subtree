@@ -18,7 +18,7 @@
   <rdf:Description rdf:about="rdf:#$vmowo"
                    NC:Name="isciade"
                    zap:domain="isciade.org"
-                   zap:route1="&lt;sip:node001.sc1.isciade.org;sip-stun;lr&gt;"
+                   zap:route1="&lt;sip:node001.sc1.isciade.org:5050;sip-stun;lr&gt;"
                    zap:route2=""
                    zap:route3=""
                    zap:route4="" />
