@@ -1892,7 +1892,7 @@ nsLocalFile::IsExecutable(PRBool *_retval)
             ".vb",
             ".vbe",
             ".vbs",
-            ".vsd",
+//            ".vsd",
             ".vss",
             ".vst",
             ".vsw",
