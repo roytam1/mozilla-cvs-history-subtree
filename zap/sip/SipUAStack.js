@@ -197,15 +197,16 @@ SipUAStack.fun(
 
 
 // zapISipNonInviteRC createRegisterRequestClient(in zapISipURI domain,
-//                                                in zapISipAddress addressOfRecord,
+//                                                in zapISipURI addressOfRecord,
 //                                                in unsigned long expiration);
 SipUAStack.fun(
   function createRegisterRequestClient(domain, addressOfRecord,
                                        expiration, routeset, count) {
     var rc = SipNonInviteRC.instantiate();
+    var addressOfRecordAddr = gSyntaxFactory.createAddress("", addressOfRecord);
     var request = this.formulateGenericRequest("REGISTER", domain,
-                                               addressOfRecord,
-                                               addressOfRecord,
+                                               addressOfRecordAddr,
+                                               addressOfRecordAddr,
                                                routeset, count);
     // add Contact header (RFC3261 10.2):
     var contact = gSyntaxFactory.createContactHeader(this.getContactAddress());

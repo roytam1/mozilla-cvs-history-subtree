@@ -71,7 +71,7 @@
       var addressOfRecord;
       try {
         addressOfRecord = document.getElementById("address-of-record").value;
-        addressOfRecord = parent.wSipStack.syntaxFactory.deserializeAddress(addressOfRecord);
+        addressOfRecord = parent.wSipStack.syntaxFactory.deserializeURI(addressOfRecord);
       } catch(e) {
         dump("Invalid address: "+addressOfRecord+"\n");
         return;
@@ -133,7 +133,7 @@
     <label value="URI of Registrar server:"/>
     <textbox id="registrar" value="sip:fwd.pulver.com"/>
     <label value="Address-of-record:"/>
-    <textbox id="address-of-record" value="sip:afri@fwd.pulver.com"/>
+    <textbox id="address-of-record" value="sip:test@isciade.org"/>
     <label value="Expiration interval (s):"/>
     <textbox id="expiration" value="3600"/>
     <hbox>

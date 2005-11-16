@@ -57,7 +57,7 @@
       <rows>
         <row>
           <label control="http://home.netscape.com/NC-rdf#Name" 
-                 value="Address-of-register:"/>
+                 value="Address of record:"/>
           <textbox id="http://home.netscape.com/NC-rdf#Name"/>
         </row>
         <row>

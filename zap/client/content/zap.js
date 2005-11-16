@@ -295,7 +295,7 @@ Identity.rdfResourceAttrib("urn:mozilla:zap:sidebarparent",
                            "urn:mozilla:zap:identities");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:chromepage",
                           "chrome://zap/content/identity.xul");
-Identity.rdfLiteralAttrib("http://home.netscape.com/NC-rdf#Name", "<sip:thisis@anonymous.invalid>");
+Identity.rdfLiteralAttrib("http://home.netscape.com/NC-rdf#Name", "sip:thisis@anonymous.invalid");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:nodetype", "identity");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:display_name", "");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:organization", "");
@@ -336,8 +336,8 @@ Identity.fun(
     // XXX these try/catch blocks will be redundant once we hook up
     // syntax checking in PersistentRDFObject
     try {
-      var aor = wSipStack.syntaxFactory.deserializeAddress(this["http://home.netscape.com/NC-rdf#Name"]);
-      var host = aor.uri.QueryInterface(Components.interfaces.zapISipSIPURI).host;
+      var aor = wSipStack.syntaxFactory.deserializeURI(this["http://home.netscape.com/NC-rdf#Name"]);
+      var host = aor.QueryInterface(Components.interfaces.zapISipSIPURI).host;
     }
     catch(e) {
       this._dump("Can't determine domain from "+this["http://home.netscape.com/NC-rdf#Name"]);
@@ -454,7 +454,7 @@ RegistrationGroup.fun(
       this.domain = wSipStack.syntaxFactory.deserializeURI(this.domain);
     } catch(e) { warning("Domain parse error: "+this.domain+"\n"); return false; }
     try {
-      this.aor = wSipStack.syntaxFactory.deserializeAddress(this.identity["http://home.netscape.com/NC-rdf#Name"]);
+      this.aor = wSipStack.syntaxFactory.deserializeURI(this.identity["http://home.netscape.com/NC-rdf#Name"]);
     } catch(e) { warning("AOR parse error: "+this.identity["http://home.netscape.com/NC-rdf#Name"]); return false; }
 
     this.interval = wConfig["urn:mozilla:zap:default_registration_interval"];

@@ -279,7 +279,7 @@ interface zapISipUAStack : nsISupports
    *   and with an 'expires' tag set to the given expiration value.
    */
   zapISipNonInviteRC createRegisterRequestClient(in zapISipURI domain,
-                                                 in zapISipAddress addressOfRecord,
+                                                 in zapISipURI addressOfRecord,
                                                  in unsigned long expiration,
                                                  [array, size_is(count)]
                                                  in zapISipAddress routeset,
