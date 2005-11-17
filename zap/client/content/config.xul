@@ -43,9 +43,6 @@
       xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
       onload="initPage()">
 
-  <!-- Overlays -->
-  <?xul-overlay href="chrome://zap/content/account-form.xul"?>
-
   <!-- Scripts -->
   <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
 
