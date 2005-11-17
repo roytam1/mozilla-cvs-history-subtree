@@ -75,7 +75,6 @@
 #include "nsIAuthPrompt.h"
 #include "nsIStringStream.h"
 #include "nsIStreamConverterService.h"
-#include "nsDOMJSUtils.h" // GetScriptContextFromJSContext
 #include "nsICachingChannel.h"
 #include "nsDOMJSUtils.h"
 
