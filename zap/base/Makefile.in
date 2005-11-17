@@ -20,6 +20,7 @@ EXTRA_PP_COMPONENTS = \
 	StringUtils.js \
 	RDFUtils.js \
 	FileUtils.js \
+	AsyncUtils.js \
 	$(NULL)
 
 include $(topsrcdir)/config/rules.mk

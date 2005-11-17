@@ -45,6 +45,7 @@ debug("*** loading SipUtils\n");
 
 Components.utils.importModule("rel:StringUtils.js");
 Components.utils.importModule("rel:FunctionUtils.js");
+Components.utils.importModule("rel:AsyncUtils.js");
 
 EXPORTED_SYMBOLS = ["BRANCH_COOKIE",
                     "getSIPEventQ",
@@ -60,8 +61,9 @@ EXPORTED_SYMBOLS = ["BRANCH_COOKIE",
                     "constructServerTransactionKey",
                     "constructClientDialogID",
                     "constructServerDialogID",
-                    "makeOneShotTimer",
-                    "resetOneShotTimer"];
+                    "makeOneShotTimer", // from AsyncUtils.js
+                    "resetOneShotTimer" // from AsyncUtils.js
+                    ];
 
 // name our global object:
 function toString() { return "[SipUtils.js]"; }
@@ -80,15 +82,10 @@ var BRANCH_COOKIE = "z9hG4bK";
 ////////////////////////////////////////////////////////////////////////
 // Thread management:
 
-var getEventQService = makeServiceGetter("@mozilla.org/event-queue-service;1",
-                                         Components.interfaces.nsIEventQueueService);
-
 // The SIP stack runs on the main UI thread; handing off to other
 // threads for asynchronous actions, such as sending data or querying
 // dns.
-function getSIPEventQ() {
-  return getEventQService().getSpecialEventQueue(Components.interfaces.nsIEventQueueService.UI_THREAD_EVENT_QUEUE);
-}
+var getSIPEventQ = getUIEventQ; // from AsyncUtils.js
 
 // Some of our objects need to be manually proxied so that they only
 // get called on the main SIP thread,
@@ -235,30 +232,3 @@ function constructServerDialogID(message) {
 }
 
 
-////////////////////////////////////////////////////////////////////////
-// Timer utilities:
-
-var CLASS_TIMER = "@mozilla.org/timer;1";
-
-/** Create a new one-shot timer
- *
- * 'callback' must implement nsITimerCallback
- * 'duration' is the time in ms after which the timer fires
- *
- * The timer can be cancelled with timer.cancel() and reset with a
- * different duration using resetOneShotTimer(.).
- */
-function makeOneShotTimer(callback, duration) {
-  // We need to use 'this.Components' to ensure that xpconnect wraps
-  // the timer for the caller's global object (assuming that the
-  // callback has the same global object). See also the comments in
-  // ClassUtils.js, function makeClass().
-  var timer = this.Components.classes[CLASS_TIMER].createInstance(this.Components.interfaces.nsITimer);
-  timer.initWithCallback(callback, duration, this.Components.interfaces.nsITimer.TYPE_ONE_SHOT);
-  return timer;
-}
-
-function resetOneShotTimer(timer, duration) {
-  timer.initWithCallback(timer.callback, duration, this.Components.interfaces.nsITimer.TYPE_ONE_SHOT);
-  return timer;
-}
