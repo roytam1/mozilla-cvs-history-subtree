@@ -57,6 +57,7 @@
 #include "nsIScriptSecurityManager.h"
 #include "nsIPrincipal.h"
 #include "nsIScriptContext.h"
+#include "nsDOMJSUtils.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIDOMClassInfo.h"
 #include "nsReadableUtils.h"

@@ -77,6 +77,7 @@
 #include "nsIStreamConverterService.h"
 #include "nsDOMJSUtils.h" // GetScriptContextFromJSContext
 #include "nsICachingChannel.h"
+#include "nsDOMJSUtils.h"
 
 static const char* kLoadAsData = "loadAsData";
 #define LOADSTR NS_LITERAL_STRING("load")
