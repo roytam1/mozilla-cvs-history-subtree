@@ -12,6 +12,7 @@ Checklist of things to do before releasing a new Camino version:
   (CAMINO_VERSION)
 - Run a new automated build
 - Tag the tree
+- Test Talkback
 - Move the build to releases/
 - Flip the wizard UI switch back to off on the Talkback server
 - Update version number in all-camino.js to (N.n+)
