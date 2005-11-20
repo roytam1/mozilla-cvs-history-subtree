@@ -40,6 +40,7 @@ interface zapISipInviteRSListener;
 interface zapISipDialog;
 interface zapISipRequest;
 interface zapISipResponse;
+interface zapISipAddress;
 
 /**
  * \ingroup SIP_UA_LAYER
@@ -64,11 +65,11 @@ interface zapISipInviteRS : nsISupports
    *
    * In addition, for dialog-establishing responses (!=100), copy
    * Record-Route headers to response and add a Contact header
-   * composed of the username part of the FromAddress and the
-   * hostAddress as obtained from the UAStack.
+   * constructed from the given Contact address.
    *
    */
-  zapISipResponse formulateResponse(in ACString statusCode);
+  zapISipResponse formulateResponse(in ACString statusCode,
+                                    in zapISipAddress contactAddress);
   
   zapISipDialog sendResponse(in zapISipResponse response);
 };

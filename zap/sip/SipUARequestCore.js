@@ -726,7 +726,7 @@ SipInviteRS.obj("request", null);
 //  readonly attribute zapISipDialog dialog;
 SipInviteRS.obj("dialog", null);
 
-//  zapISipResponse formulateResponse(in ACString statusCode);
+//  zapISipResponse formulateResponse(in ACString statusCode, in zapISipAddress contactAddress);
 SipInviteRS.statefun(
   "INITIALIZED",
   function formulateResponse(statusCode) {
@@ -746,7 +746,7 @@ SipInviteRS.statefun(
                                                             m.appendHeader(v);
                                                           });
       // set Contact header:
-      m.appendHeader(gSyntaxFactory.createContactHeader(this.stack.getContactAddress()));
+      m.appendHeader(gSyntaxFactory.createContactHeader(contactAddress));
     }
     return m;
   });

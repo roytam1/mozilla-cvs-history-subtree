@@ -41,6 +41,7 @@ var rl =
   "CSeq: 314159 INVITE\r\n"+
   "Contact: <sip:alex@192.168.123.184>\r\n"+
   "Content-Type: application/sdp\r\n"+
+  'WWW-Authenticate: Digest realm="ipl.sipit.net", nonce="423ec792" \r\n'+
   "Content-Length: 190\r\n"+
   "\r\n"+
   "v=0\r\n"+

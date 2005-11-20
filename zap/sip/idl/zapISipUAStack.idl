@@ -173,12 +173,6 @@ interface zapISipUAStack : nsISupports
   void shutdown();
 
   /**
-   * Address that will be inserted into From headers.
-   * Initialized to "Anonymous <sip:thisis@anonymous.invalid>".
-   */
-  attribute zapISipAddress FromAddress;
-
-  /**
    * Remote requests received by the stack will be routed as follows:
    *
    * - Requests with Require headers will be checked against the list
@@ -247,7 +241,7 @@ interface zapISipUAStack : nsISupports
    * - Via header: a new Via header will be created. sent-protocol and sent-by
    *   will be filled in when the request is sent by the transport.
    * - To header: will be set to the given ToAddress.
-   * - From header: will be set to the current FromAddress. A new 'tag' will
+   * - From header: will be set to the given FromAddress. A new 'tag' will
    *   be generated.
    * - Call-ID header: will be set to a new call id.
    * - CSeq: will be set to a number < 2^31
@@ -258,6 +252,7 @@ interface zapISipUAStack : nsISupports
    *   option tags specified in the 'extensions' parameter passed to init().
    */
   zapISipNonInviteRC createNonInviteRequestClient(in zapISipAddress ToAddress,
+                                                  in zapISipAddress FromAddress,
                                                   in ACString method,
                                                   [array, size_is(count)]
                                                   in zapISipAddress routeset,
@@ -275,11 +270,12 @@ interface zapISipUAStack : nsISupports
    *   createNonInviteRequestClient()).
    * - The ToAddress will be set to the given addressOfRecord.
    * - The FromAddress will be set to the given addressOfRecord.
-   * - A Contact header will be added, set to the current Contact address
+   * - A Contact header will be added, set to the given Contact address
    *   and with an 'expires' tag set to the given expiration value.
    */
   zapISipNonInviteRC createRegisterRequestClient(in zapISipURI domain,
                                                  in zapISipURI addressOfRecord,
+                                                 in zapISipAddress contactAddress,
                                                  in unsigned long expiration,
                                                  [array, size_is(count)]
                                                  in zapISipAddress routeset,
@@ -291,9 +287,11 @@ interface zapISipUAStack : nsISupports
    *
    * The zapISipInviteRC::request attribute will be initialized as for
    * createNonInviteRequestClient(), and in addition a Contact header
-   * set to the current Contact address will be added.
+   * set to the given Contact address will be added.
    */
   zapISipInviteRC createInviteRequestClient(in zapISipAddress ToAddress,
+                                            in zapISipAddress FromAddress,
+                                            in zapISipAddress contactAddress,
                                             [array, size_is(count)]
                                             in zapISipAddress routeset,
                                             in unsigned long count);

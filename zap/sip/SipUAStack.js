@@ -178,18 +178,16 @@ SipUAStack.fun(
     this.transport.shutdown();
   });
 
-// attribute zapISipAddress FromAddress;
-SipUAStack.obj("FromAddress", null);
-
 //  attribute zapISipRequestHandler requestHandler;
 SipUAStack.obj("requestHandler", null);
 
-//  zapISipNonInviteRC createNonInviteRequestClient(in zapISipAddress ToAddress, in ACString method);
+//  zapISipNonInviteRC createNonInviteRequestClient(in zapISipAddress ToAddress, in zapSSipAddress FromAddress, in ACString method);
 SipUAStack.fun(
-  function createNonInviteRequestClient(ToAddress, method, routeset, count) {
+  function createNonInviteRequestClient(ToAddress, FromAddress, method,
+                                        routeset, count) {
     var rc = SipNonInviteRC.instantiate();
     var request = this.formulateGenericRequest(method, ToAddress.uri,
-                                               ToAddress, this.FromAddress,
+                                               ToAddress, FromAddress,
                                                routeset, count);
     rc.init(this, null, request);
     return rc;
@@ -198,9 +196,10 @@ SipUAStack.fun(
 
 // zapISipNonInviteRC createRegisterRequestClient(in zapISipURI domain,
 //                                                in zapISipURI addressOfRecord,
+//                                                in zapISipAddress contactAddress,
 //                                                in unsigned long expiration);
 SipUAStack.fun(
-  function createRegisterRequestClient(domain, addressOfRecord,
+  function createRegisterRequestClient(domain, addressOfRecord, contactAddress,
                                        expiration, routeset, count) {
     var rc = SipNonInviteRC.instantiate();
     var addressOfRecordAddr = gSyntaxFactory.createAddress("", addressOfRecord);
@@ -209,7 +208,7 @@ SipUAStack.fun(
                                                addressOfRecordAddr,
                                                routeset, count);
     // add Contact header (RFC3261 10.2):
-    var contact = gSyntaxFactory.createContactHeader(this.getContactAddress());
+    var contact = gSyntaxFactory.createContactHeader(contactAddress);
     contact.setParameter("expires", expiration.toString());
     request.appendHeader(contact);
     rc.init(this, null, request);
@@ -217,15 +216,16 @@ SipUAStack.fun(
   });
 
 
-//  zapISipInviteRC createInviteRequestClient(in zapISipAddress ToAddress);
+//  zapISipInviteRC createInviteRequestClient(in zapISipAddress ToAddress, in zapISipAddress FromAddress, in zapISipAddress ContactAddress, [array, size_is(count)] in zapISipAddress routeset, in unsigned long count);
 SipUAStack.fun(
-  function createInviteRequestClient(ToAddress, routeset, count) {
+  function createInviteRequestClient(ToAddress, FromAddress, contactAddress,
+                                     routeset, count) {
     var rc = SipInviteRC.instantiate();
     var request = this.formulateGenericRequest("INVITE", ToAddress.uri,
-                                               ToAddress, this.FromAddress,
+                                               ToAddress, FromAddress,
                                                routeset, count);
     // add mandatory Contact header (rfc3261 8.1.1.8):
-    request.appendHeader(gSyntaxFactory.createContactHeader(this.getContactAddress()));
+    request.appendHeader(gSyntaxFactory.createContactHeader(contactAddress));
     rc.init(this, null, request);
     return rc;
   });
@@ -585,20 +585,20 @@ SipUAStack.fun(
 //----------------------------------------------------------------------
 // Implementation helpers:
 
-// get the address to use for an Contact header for a
-// dialog-establishing message:
-// XXX this should be user configurable in some form or another
-// XXX get fqdn from elsewhere?
-// XXX should this also be the contact set for non-dialog establising requests?
-// XXX distinguish between sip and sips
-SipUAStack.fun(
-  function getContactAddress() {
-    var address = "sip:" + (this.FromAddress.uri).QueryInterface(Components.interfaces.zapISipSIPURI).userinfo;
-    address += "@" + this.hostAddress;
-    if (this.listeningPort != 5060)
-      address += ":" + this.listeningPort;
-    return gSyntaxFactory.deserializeAddress(address);
-  });
+// // get the address to use for an Contact header for a
+// // dialog-establishing message:
+// // XXX this should be user configurable in some form or another
+// // XXX get fqdn from elsewhere?
+// // XXX should this also be the contact set for non-dialog establising requests?
+// // XXX distinguish between sip and sips
+// SipUAStack.fun(
+//   function getContactAddress() {
+//     var address = "sip:" + (this.FromAddress.uri).QueryInterface(Components.interfaces.zapISipSIPURI).userinfo;
+//     address += "@" + this.hostAddress;
+//     if (this.listeningPort != 5060)
+//       address += ":" + this.listeningPort;
+//     return gSyntaxFactory.deserializeAddress(address);
+//   });
 
 // Send a response to the given request via a server invite or
 // non-invite transaction, as appropriate for the request method.
