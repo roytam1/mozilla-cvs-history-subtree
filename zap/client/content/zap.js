@@ -46,7 +46,7 @@ Components.utils.importModule("rel:StringUtils.js");
 ////////////////////////////////////////////////////////////////////////
 // globals
 
-var wUserAgent = "zap/0.1.3"; // String to be sent in User-Agent
+var wUserAgent = "zap/0.1.4"; // String to be sent in User-Agent
                               // header for SIP requests
 var wNetUtils = Components.classes["@mozilla.org/zap/netutils;1"].getService(Components.interfaces.zapINetUtils);
 var wPromptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService);
@@ -204,6 +204,19 @@ Config.rdfLiteralAttrib("urn:mozilla:zap:registration_recovery_base_time_not_fai
 Config.rdfLiteralAttrib("urn:mozilla:zap:dnd_code", "480"); // Temporarily unavail.
 Config.rdfLiteralAttrib("urn:mozilla:zap:dnd_headers", ""); // additional headers for DND response
 
+// pool of services, indexed by resource id:
+var wServices = {};
+
+function getService(resourceID) {
+  var service = wServices[resourceID];
+  if (!service) {
+    service = Service.instantiate();
+    service.initWithResource(wRDF.GetResource(resourceID));
+    wServices[resourceID] = service;
+  }
+  return service;  
+}
+
 var Service = makeClass("Service", PersistentRDFObject);
 Service.prototype.datasources["default"] = wConfigDS;
 Service.rdfLiteralAttrib("http://home.netscape.com/NC-rdf#Name", "");
@@ -212,6 +225,21 @@ Service.rdfLiteralAttrib("urn:mozilla:zap:route1", "");
 Service.rdfLiteralAttrib("urn:mozilla:zap:route2", "");
 Service.rdfLiteralAttrib("urn:mozilla:zap:route3", "");
 Service.rdfLiteralAttrib("urn:mozilla:zap:route4", "");
+// address of STUN server for this service. (if empty we just use the domain name):
+Service.rdfLiteralAttrib("urn:mozilla:zap:stun_server", "");
+// whether or not we should use our mapped address as determined by a
+// STUN request in contact addresses of registrations:
+Service.rdfLiteralAttrib("urn:mozilla:zap:use_stun_contact_address", "false");
+// whether or not we should send OPTIONS requests to keep alive the connection:
+Service.rdfLiteralAttrib("urn:mozilla:zap:options_keep_alive", "false");
+
+Service.fun(
+  function getStunServer() {
+    var s = this["urn:mozilla:zap:stun_server"];
+    if (!s) s = this["urn:mozilla:zap:domain"];
+    return s;
+  });
+
 Service.spec(
   function createFromDocument(doc) {
     this._Service_createFromDocument(doc);
@@ -221,6 +249,19 @@ Service.spec(
 
 ////////////////////////////////////////////////////////////////////////
 // Identities:
+
+// pool of identities, indexed by resource id:
+var wIdentities = {};
+
+function getIdentity(resourceID) {
+  var identity = wIdentities[resourceID];
+  if (!identity) {
+    identity = Identity.instantiate();
+    identity.initWithResource(wRDF.GetResource(resourceID));
+    wIdentities[resourceID] = identity;
+  }
+  return identity;
+}
 
 function initIdentities() {
   wIdentitiesContainer = Components.classes["@mozilla.org/rdf/container;1"].
@@ -235,8 +276,7 @@ function initIdentities() {
   // select correct identity in identities list:
   document.getElementById("identities_list").selectedItem = document.getElementById(wConfig["urn:mozilla:zap:identity"]);
   // make sure out stack is configured for this identity profile:
-  wCurrentIdentity = Identity.instantiate();
-  wCurrentIdentity.initWithResource(wRDF.GetResource(wConfig["urn:mozilla:zap:identity"]));
+  wCurrentIdentity = getIdentity(wConfig["urn:mozilla:zap:identity"]);
   currentIdentityUpdated();
 
   // register identities:
@@ -255,8 +295,7 @@ function identityChange() {
     wConfig["urn:mozilla:zap:identity"] = l;
     wConfig.flush();
   }
-  wCurrentIdentity = Identity.instantiate();
-  wCurrentIdentity.initWithResource(wRDF.GetResource(wConfig["urn:mozilla:zap:identity"]));
+  wCurrentIdentity = getIdentity(wConfig["urn:mozilla:zap:identity"]);
   currentIdentityUpdated();
 }
 
@@ -265,27 +304,28 @@ function identityChange() {
 // stack from here. Alternatively we could listen in on the identity
 // and config datasources, which we should probably do at some point.
 function currentIdentityUpdated() {
-//   // XXX these try/catch blocks will be redundant once we hook up
-//   // syntax checking to PersistentRDFObject
-//   try {
-//     wSipStack.FromAddress = wSipStack.syntaxFactory.deserializeAddress(wCurrentIdentity["urn:mozilla:zap:from_address"]);
-//   }
-//   catch(e) {
-//     alert("The From-Address in the currently selected identity has invalid syntax");
-//   }
-//   try {
-//     wCurrentIdentity.routeset = wSipStack.syntaxFactory.deserializeRouteSet(wCurrentIdentity["urn:mozilla:zap:route_set"], {});  }
-//   catch(e) {
-//     alert("The Route Set in the currently selected identity has invalid syntax");
-//   }
+}
 
-//   currentAccountsUpdated();
+// helper to determine our public address and call the success or
+// failure continuation as appropriate:
+function withMappedStunAddress(stunServer, success, failure) {
+  wNetUtils.resolveMappedAddress(
+    {
+      onAddressResolveComplete: function(mappedAddress, status) {
+        if (status == Components.results.NS_OK)
+          success(mappedAddress);
+        else
+          failure(mappedAddress);
+      }
+    },
+    stunServer);
 }
 
 //----------------------------------------------------------------------
 // Identity class
 
-var Identity = makeClass("Identity", PersistentRDFObject, SupportsImpl);
+var Identity = makeClass("Identity",
+                         PersistentRDFObject, SupportsImpl, AsyncObject);
 Identity.addInterfaces(Components.interfaces.zapISipCredentialsProvider);
 
 Identity.prototype.datasources["default"] = wIdentitiesDS;
@@ -306,6 +346,42 @@ Identity.rdfResourceAttrib("urn:mozilla:zap:service",
 Identity.rdfLiteralAttrib("urn:mozilla:zap:is_registered",
                           "false", "global-ephemeral");
 
+// This will be set after we have attempted to resolve our stun
+// address (if requested). Once this condition is reached, the
+// Identity can be used for making calls, registering, etc (although
+// it might not be fully operational).
+Identity.addCondition("InitializationAttempted");
+
+Identity.spec(
+  function initWithResource(r) {
+    this._Identity_initWithResource(r);
+    this.service = getService(this.getServiceId());
+    this.hostAddress = wSipStack.hostAddress;
+    if (this.service["urn:mozilla:zap:use_stun_contact_address"] == "true")
+      this.resolveStunAddress();
+    else
+      this.setInitializationAttempted();
+  });
+
+Identity.fun(
+  function resolveStunAddress() {
+    var me = this;
+    withMappedStunAddress(this.service.getStunServer(),
+                          function(addr) {
+                            me.hostAddress = addr;
+                            me.setInitializationAttempted();
+                          },
+                          function(addr) {
+                            // unsuccessful
+                            // -> reschedule in 10s
+                            schedule(function() {
+                                       // go ahead with registrations etc anyway: 
+                                       //me.setInitializationAttempted();
+                                       me.resolveStunAddress();
+                                     },
+                                     10000);
+                          });
+  });
 
 Identity.spec(
   function createFromDocument(doc) {
@@ -336,14 +412,70 @@ Identity.fun(
     // XXX these try/catch blocks will be redundant once we hook up
     // syntax checking in PersistentRDFObject
     try {
-      var aor = wSipStack.syntaxFactory.deserializeURI(this["http://home.netscape.com/NC-rdf#Name"]);
-      var host = aor.QueryInterface(Components.interfaces.zapISipSIPURI).host;
+      var host = this.getAOR().QueryInterface(Components.interfaces.zapISipSIPURI).host;
     }
     catch(e) {
       this._dump("Can't determine domain from "+this["http://home.netscape.com/NC-rdf#Name"]);
       return "";
     }
     return host;
+  });
+
+// Get the AOR URI object for this Identity:
+Identity.fun(
+  function getAOR() {
+    // XXX these try/catch blocks will become redundant once we hook
+    // up syntax checking in PersistentRDFObject
+    try {
+      var aor = wSipStack.syntaxFactory.deserializeURI(this["http://home.netscape.com/NC-rdf#Name"]);
+    }
+    catch(e) {
+      this._dump("Can't parse AOR "+this["http://home.netscape.com/NC-rdf#Name"]);
+      return null;
+    }
+    return aor;
+  });
+
+// Returns the userinfo part of our register contact address:
+Identity.fun(
+  function getRegisterContactUserinfo() {
+    // we use our AOR (with '@' replaced by '_') to distinguish
+    // incoming calls:
+    var aor = this.getAOR().QueryInterface(Components.interfaces.zapISipSIPURI);
+    return aor.userinfo + "_" + aor.host;
+  });
+
+// this will be initially be set to our internal address and
+// asynchronously resolved to our public STUN address if our
+// associated service has urn:mozilla:zap:use_stun_contact_address set
+// to true:
+Identity.obj("hostAddress", null);
+
+// contact address used for registration
+Identity.fun(
+  function getRegisterContactAddress() {
+      var addr = "sip:"+this.getRegisterContactUserinfo() +
+                 "@" + this.hostAddress;
+      return wSipStack.syntaxFactory.deserializeAddress(addr);
+  });
+
+// this will be filled in by our associated registration group after a
+// successful registration:
+Identity.obj("dialogContactAddress", null);
+
+// Work out our contact address to be used for INVITE
+// requests. Depending on whether or not we use GRUU, this will be
+// equal to the register contact address:
+Identity.fun(
+  function getDialogContactAddress() {
+    if (this.dialogContactAddress)
+      return this.dialogContactAddress;
+    else {
+      this._dump("using unreliable contact address for non-registered identity");
+      // our local address is as good as any other
+      return this.getRegisterContactAddress();
+    }
+    
   });
 
 // Work out which Service this Identity uses and return its ID.
@@ -382,8 +514,7 @@ var wRegistrations = {};
 
 // set up or refresh a registration group for the given identity resource
 function registerIdentity(resource) {
-  var identity = Identity.instantiate();
-  identity.initWithResource(resource);
+  var identity = getIdentity(resource.Value);
   warning("registering "+identity["http://home.netscape.com/NC-rdf#Name"]+"\n");
   var registrationGroup = wRegistrations[resource.Value];
   if (registrationGroup) {
@@ -430,10 +561,16 @@ RegistrationGroup.obj("unregistering", false);
 RegistrationGroup.fun(
   function init(identity) {
     this.identity = identity;
-    this.service = Service.instantiate();
-    this.service.initWithResource(wRDF.GetResource(this.identity.getServiceId()));
-    
-    this.domain = this.service["urn:mozilla:zap:domain"];
+    var me = this;
+    this.identity.whenInitializationAttempted(function() {
+                                                if (!me.unregistering)
+                                                  me.init2();
+                                              });
+  });
+
+RegistrationGroup.fun(
+  function init2() {
+    this.domain = this.identity.service["urn:mozilla:zap:domain"];
     
     if (!this.domain) {
       // the service isn't bound to a particular domain (probably
@@ -449,21 +586,18 @@ RegistrationGroup.fun(
       
     this.domain = "sip:"+this.domain;
     
-    // parse domain and aor into SIP syntax objects:
+    // parse domain into SIP syntax objects:
     try {
       this.domain = wSipStack.syntaxFactory.deserializeURI(this.domain);
     } catch(e) { warning("Domain parse error: "+this.domain+"\n"); return false; }
-    try {
-      this.aor = wSipStack.syntaxFactory.deserializeURI(this.identity["http://home.netscape.com/NC-rdf#Name"]);
-    } catch(e) { warning("AOR parse error: "+this.identity["http://home.netscape.com/NC-rdf#Name"]); return false; }
-
+    
     this.interval = wConfig["urn:mozilla:zap:default_registration_interval"];
 
     // add a registration for each flow:
     this.registrations = [];
     var flow_counter = 0;
     for (var i=1; i<=4; ++i) {
-      var route = this.service["urn:mozilla:zap:route"+i];
+      var route = this.identity.service["urn:mozilla:zap:route"+i];
       if (!route) continue;
       try {
         route = wSipStack.syntaxFactory.deserializeRouteSet(route, {});
@@ -503,29 +637,45 @@ RegistrationGroup.fun(
   });
 
 RegistrationGroup.fun(
-  function notifyRegistrationSuccess(registration) {
+  function notifyRegistrationSuccess(registration, contact) {
     if (this.unregistering) return;
-    // mark our identity as registered:
     this._dump("Registration to "+this.identity["http://home.netscape.com/NC-rdf#Name"]+" over flow "+registration.flowid+" succeeded");
-    this.identity["urn:mozilla:zap:is_registered"] = "true";
+    if (this.identity["urn:mozilla:zap:is_registered"] != "true") {
+      // set the contact address for dialog-establishing messages:
+      if (contact.hasParameter("gruu")) {
+        try {
+          var gruu = contact.getParameter("gruu").split('"')[0];
+          gruu = wSipStack.syntaxFactory.deserializeAddress(gruu);
+          this.identity.dialogContactAddress = gruu;
+        } catch(e) { this._dump("gruu parse error: "+e); }
+      }
+      else {
+        // use address as registered and hope that record-routed server
+        // will sort things out through NAT. XXX maybe infer from
+        // received/rport
+        this.identity.dialogContactAddress = contact.address;
+      }
+      // mark our identity as registered:      
+      this.identity["urn:mozilla:zap:is_registered"] = "true";
+    }
   });
 
 RegistrationGroup.fun(
   function notifyRegistrationFailure(registration) {
     if (this.unregistering) return;
     this._dump("Registration to "+this.identity["http://home.netscape.com/NC-rdf#Name"]+" over flow "+registration.flowid+" has failed");
-    this.recoverFromFailure(registration);
+    this.recoverFromRegistrationFailure(registration);
   });
 
 RegistrationGroup.fun(
   function notifyFlowFailure(registration) {
     if (this.unregistering) return;
     this._dump("Flow "+registration.flowid+" to "+this.identity["http://home.netscape.com/NC-rdf#Name"]+" has failed");
-    this.recoverFromFailure(registration);
+    this.recoverFromRegistrationFailure(registration);
   });
 
 RegistrationGroup.fun(
-  function recoverFromFailure(registration) {
+  function recoverFromRegistrationFailure(registration) {
     // recover as described in draft-ietf-outbound-01.txt 4.3:
     var some_active = this.registrations.some(function(r) {
                                                 return r.registered;
@@ -569,7 +719,8 @@ Registration.fun(
     
     this.registrationRC =
       wSipStack.createRegisterRequestClient(group.domain,
-                                            group.aor,
+                                            group.identity.getAOR(),
+                                            group.identity.getRegisterContactAddress(),
                                             group.interval,
                                             route,
                                             route.length);
@@ -668,8 +819,8 @@ Registration.fun(
           if (!this.registered) {
             this.failureCount = 0;
             this.registered = true;
-            // inform our group:
-            this.group.notifyRegistrationSuccess(this);
+            // inform our group:            
+            this.group.notifyRegistrationSuccess(this, contact);
           }
           // set up a refresh timer:
           this.scheduleRefresh(expires*1000*0.9);
@@ -953,7 +1104,7 @@ function initSipStack() {
                  makePropertyBag({$instance_id:wConfig["urn:mozilla:zap:instance_id"],
                                   $port_base:wConfig["urn:mozilla:zap:sip_port_base"],
                                   $methods: "OPTIONS,INVITE,ACK,CANCEL,BYE",
-                                  $extensions: "path", // path: RFC3327
+                                  $extensions: "path,gruu", // path: RFC3327, gruu: draft-ietf-sip-gruu-05.txt
                                   $user_agent: wUserAgent
                                  }));
   document.getElementById("status_text").label = "Listening for UDP/TCP SIP traffic on port "+wSipStack.listeningPort;
@@ -1217,11 +1368,14 @@ var OutboundCall = makeClass("OutboundCall", ActiveCall);
 OutboundCall.rdfLiteralAttrib("urn:mozilla:zap:direction", "outbound");
 
 OutboundCall.fun(
-  function makeCall(toAddress) {
+  function makeCall(toAddress, identity) {
+    this.identity = identity;
     this.callHandler = OutboundCallHandler.instantiate();
     this.callHandler.call = this;
 
     var rc = wSipStack.createInviteRequestClient(toAddress,
+                                                 identity.getAOR(),
+                                                 identity.getDialogContactAddress(),
                                                  wCurrentIdentity.routeset,
                                                  wCurrentIdentity.routeset.length);
     rc.listener = this.callHandler;
@@ -1388,6 +1542,10 @@ InboundCallHandler.fun(
     this.call = call;
     this.rs = rs;
     rs.listener = this;
+
+    // XXX work out identity based on To-address
+    this.identity = wCurrentIdentity;
+    
     // reject based on busy settings:
     if (document.getElementById("button_dnd").checked) {
       this._respond(wConfig["urn:mozilla:zap:dnd_code"],
@@ -1423,7 +1581,7 @@ InboundCallHandler.fun(
 InboundCallHandler.fun(
   function acceptCall() {
     // formulate accepting response:
-    var resp = this.rs.formulateResponse("200");
+    var resp = this.rs.formulateResponse("200", this.identity.getDialogContactAddress());
     // append session description:
     resp.setContent("application", "sdp", this.answer.serialize());
     this.call["urn:mozilla:zap:status"] = resp.statusCode+" "+resp.reasonPhrase;
@@ -1441,7 +1599,7 @@ InboundCallHandler.fun(
 
 InboundCallHandler.fun(
   function _respond(code, extra_headers) {
-    var resp = this.rs.formulateResponse(code);
+    var resp = this.rs.formulateResponse(code, this.identity.getDialogContactAddress());
 
     if (extra_headers) {
       // add in extra header, converting line endings appropriately:

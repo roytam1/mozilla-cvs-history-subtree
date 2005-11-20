@@ -69,6 +69,7 @@
       }
       
       wRS = parent.wSipStack.createNonInviteRequestClient(address, 
+                                                          parent.wCurrentIdentity.getAOR(),
                                                           document.getElementById("method").value,
                                                           parent.wCurrentIdentity.routeset,
                                                           parent.wCurrentIdentity.routeset.length);

@@ -54,8 +54,7 @@
     var wIdentity;
     function initPage() {
       initIdentityForm();
-      wIdentity = parent.Identity.instantiate();
-      wIdentity.initWithResource(parent.getSelectedSidebarResource());
+      wIdentity = parent.getIdentity(parent.getSelectedSidebarResource().Value);
       wIdentity.fillDocument(document);
     }    
 

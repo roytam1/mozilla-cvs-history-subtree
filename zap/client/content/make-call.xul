@@ -76,7 +76,8 @@
       document.getElementById("urn:mozilla:zap:remote").value = wRemoteAddress.serialize();
 
       // kick off an async OPTIONS request:
-      wOptionsRS = parent.wSipStack.createNonInviteRequestClient(wRemoteAddress, 
+      wOptionsRS = parent.wSipStack.createNonInviteRequestClient(wRemoteAddress,
+                                                                 parent.wCurrentIdentity.getAOR(), 
                                                                  "OPTIONS",
                                                                  parent.wCurrentIdentity.routeset,
                                                                  parent.wCurrentIdentity.routeset.length);
@@ -108,7 +109,7 @@
       oc["urn:mozilla:zap:status"] = "Calling...";
       oc.flush();
       // start the ball rolling:
-      oc.makeCall(wRemoteAddress);
+      oc.makeCall(wRemoteAddress, parent.wCurrentIdentity);
       parent.selectCall(oc.resource);
     }
   ]]>

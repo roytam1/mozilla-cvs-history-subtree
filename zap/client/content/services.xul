@@ -208,7 +208,11 @@
         <label control="urn:mozilla:zap:route3" value="Route 3:"/>
         <textbox id="urn:mozilla:zap:route3"/>
         <label control="urn:mozilla:zap:route4" value="Route 4:"/>
-        <textbox id="urn:mozilla:zap:route4"/>                
+        <textbox id="urn:mozilla:zap:route4"/>
+        <label control="urn:mozilla:zap:stun_server" value="STUN server:"/>
+        <textbox id="urn:mozilla:zap:stun_server"/>
+        <checkbox label="Use STUN address for registrations" id="urn:mozilla:zap:use_stun_contact_address"/>
+        <checkbox label="Send OPTIONS keep-alive requests" id="urn:mozilla:zap:options_keep_alive"/>
       </vbox>
 
     </hbox>
