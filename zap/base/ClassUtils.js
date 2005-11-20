@@ -49,7 +49,8 @@ EXPORTED_SYMBOLS = [ "StdClass",
                      "Unwrappable",
                      "PropertyBag",
                      "makePropertyBag",
-                     "StateMachine"];
+                     "StateMachine",
+                     "AsyncObject"];
 
 // name our global object:
 function toString() { return "[ClassUtils.js]"; }
@@ -782,4 +783,50 @@ StateMachine.metafun(
 
     // define state function:
     this.prototype.states[state][name] = fct;
+  });
+
+////////////////////////////////////////////////////////////////////////
+// Class AsyncObject
+
+var AsyncObject = makeClass("AsyncObject", ErrorReporter);
+
+AsyncObject.metafun(
+  function addCondition(/*[opt] doc, condition*/) {
+    var i = arguments.length-1;
+    var condition = arguments[i--];
+
+    // optional documentation:
+    if (i>0)
+      this.prototype._doc_[attrib] = arguments[i--];
+
+    // add a property '_condition':
+    this.obj("_"+condition, false);
+
+    // add a property '_conditionHook':
+    this.obj("_"+condition+"Hook", null);
+
+    // install a constructor to initialize the hook to an empty array:
+    var f;
+    eval("f = function() { this._"+condition+"Hook = [] };");
+    this.appendCtor(f);
+    
+    // install condition setter 'setCondition':
+    eval("f = function set"+condition+"() {"+
+         "  this._"+condition+"=true;"+
+         "  this._"+condition+"Hook.forEach(function(a) {a();});"+
+         "  this._"+condition+"Hook = []; };");
+    this.fun(f);
+
+    // install condition unsetter 'unsetCondition':
+    eval("f = function unset"+condition+"() {"+
+         "  this._"+condition+"=false;};");
+    this.fun(f);
+
+    // install 'whenCondition':
+    eval("f = function when"+condition+"(fct) {"+
+         "  if (this._"+condition+"==true)"+
+         "    fct();"+
+         "  else"+
+         "    this._"+condition+"Hook.push(fct);};");
+    this.fun(f);    
   });
