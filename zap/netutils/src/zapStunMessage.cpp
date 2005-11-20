@@ -160,8 +160,13 @@ nsresult ParseAddressAttrib(PRNetAddr& addr, PRUint16* p, PRUint16 length)
     addr.raw.family = PR_AF_INET6;
     memcpy(addr.ipv6.ip.pr_s6_addr, p+2, 16);          
   }
-  else return NS_ERROR_FAILURE; // XXX ZAP_STUN_ATTRIBUTE_ERROR
-
+  else {
+    #ifdef DEBUG
+      printf("zapStunMessage::ParseAddressAttrib: parsing error\n");
+#endif
+    return NS_ERROR_FAILURE; // XXX ZAP_STUN_ATTRIBUTE_ERROR
+  }
+  
   return NS_OK;
 }
 
@@ -200,9 +205,19 @@ zapStunMessage::Deserialize(const nsACString& packet,
   
   PRUint32 l = packet.Length();
   // we need at least a header:
-  if (l < 20) return NS_ERROR_FAILURE;
+  if (l < 20) {
+#ifdef DEBUG
+    printf("zapStunMessage::Deserialize: message too short (%d)\n", l);
+#endif
+    return NS_ERROR_FAILURE;
+  }
   // the length must be a multiple of 4:
-  if (l % 4) return NS_ERROR_FAILURE;
+  if (l % 4) {
+#ifdef DEBUG
+    printf("zapStunMessage::Deserialize: message length (%d) not a multiple of 4\n", l);
+#endif
+    return NS_ERROR_FAILURE;
+  }
   
   nsACString::const_iterator iter;
   packet.BeginReading(iter);
@@ -230,10 +245,16 @@ zapStunMessage::Deserialize(const nsACString& packet,
     PRUint16 type = PR_ntohs(*p++);
     PRUint16 length = PR_ntohs(*p++);
     if (length % 4) {
+#ifdef DEBUG
+      printf("zapStunMessage::Deserialize: attribute %d framing error (%d)\n", type, length);
+#endif
       // attribute framing error
       return NS_ERROR_FAILURE;
     }
     if (p+(length>>1) > endp) {
+#ifdef DEBUG
+      printf("zapStunMessage::Deserialize: message framing error\n");
+#endif
       // message framing error
       return NS_ERROR_FAILURE;
     }

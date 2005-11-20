@@ -37,6 +37,9 @@
 #include "zapNetUtils.h"
 #include "zapStunMessage.h"
 #include "prnetdb.h"
+#include "zapIStunResolver.h"
+#include "nsCOMPtr.h"
+#include "nsIServiceManager.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapNetUtils
@@ -147,3 +150,11 @@ zapNetUtils::SnoopStunPacket(const nsACString & buffer, PRInt32 *_retval)
   return NS_OK;
 }
   
+/* void resolveMappedAddress (in zapIStunAddressResolveListener listener, in ACString stunServer); */
+NS_IMETHODIMP
+zapNetUtils::ResolveMappedAddress(zapIStunAddressResolveListener *listener, const nsACString & stunServer)
+{
+  nsCOMPtr<zapIStunResolver> resolver = do_CreateInstance("@mozilla.org/zap/stun-resolver;1");
+  if (!resolver) return NS_ERROR_FAILURE;
+  return resolver->ResolveMappedAddress(listener, stunServer);
+}

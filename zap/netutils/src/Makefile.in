@@ -28,7 +28,13 @@ CPPSRCS		= \
 XPIDLSRCS	= \
 		zapINetUtils.idl \
 		zapIStunMessage.idl \
+		zapIStunAddressResolveListener.idl \
+		zapIStunResolver.idl \
 		$(NULL)
+
+EXTRA_PP_COMPONENTS = \
+	zapStunResolver.js \
+	$(NULL)
 
 include $(topsrcdir)/config/rules.mk
 

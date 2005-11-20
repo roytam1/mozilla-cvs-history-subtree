@@ -36,50 +36,14 @@
 
 #include "nsISupports.idl"
 
-interface zapIStunMessage;
 interface zapIStunAddressResolveListener;
-
-/**
- * \defgroup NETUTILS_MODULE ZAP NetUtils module
- */
 
 /**
  * \ingroup NETUTILS_MODULE
  */
-[scriptable, uuid(93fa38d7-aad3-4857-ad1c-b353c79481f1)]
-interface zapINetUtils : nsISupports
+[scriptable, uuid(f0f85649-f62f-4d75-9069-d0b7565862f3)]
+interface zapIStunResolver : nsISupports
 {
-  /**
-   * Create an empty STUN message
-   */
-  zapIStunMessage createStunMessage();
-
-  /**
-   * Deserialize a STUN packet to a zapIStunMessage structure.
-   *
-   * If parsing of the packet succeeds, unknownAttribs will contain
-   * any attributes with values less than or equal to 0x7fff which
-   * were not understood.
-   */
-  zapIStunMessage deserializeStunPacket(in ACString packet,
-                                        [array, size_is(count)] out
-                                        unsigned short unknownAttribs,
-                                        out unsigned long count);
-  
-  /**
-   * Checks if the buffer contains a (possibly partial) STUN packet
-   *
-   * retval will be -2 if the buffer definitely isn't a STUN packet,
-   * -1 if the buffer might be a STUN message but the buffer doesn't
-   * contain enough bytes to be sure yet,
-   * 0 if the buffer appears to be a STUN message but the length can't
-   * be determined yet (because it only contains the first 2 bytes of
-   * the header), or n>20 (== the length of the STUN message including
-   * header) if the buffer appears to be a (possibly partial) STUN
-   * message and the length can be determined.
-   */
-  PRInt32 snoopStunPacket(in ACString buffer);
-
   /**
    * Asynchronously resolve our mapped NAT address using the given
    * stun server. 'stunServer' can be a domain name or IP address,
@@ -87,13 +51,5 @@ interface zapINetUtils : nsISupports
    */
   void resolveMappedAddress(in zapIStunAddressResolveListener listener,
                             in ACString stunServer);
-
 };
 
-%{ C++
-// {D08216D7-FAEC-4C38-B6D3-2AB69AB9512A}
-#define ZAP_NETUTILS_CID                             \
-    { 0xd08216d7, 0xfaec, 0x4c38, { 0xb6, 0xd3, 0x2a, 0xb6, 0x9a, 0xb9, 0x51, 0x2a } }
-
-#define ZAP_NETUTILS_CONTRACTID "@mozilla.org/zap/netutils;1"
-%}
