@@ -12482,7 +12482,7 @@
 		4DC41D3E0869D7A400947045 = {
 			isa = PBXFileReference;
 			lastKnownFileType = archive.ar;
-			name = libmozpng.a;
+			name = libmozcairo.a;
 			path = ../dist/lib/libmozcairo.a;
 			refType = 2;
 			sourceTree = SOURCE_ROOT;
@@ -12490,7 +12490,7 @@
 		4DC41D3E0869D7A400947046 = {
 			isa = PBXFileReference;
 			lastKnownFileType = archive.ar;
-			name = libmozpng.a;
+			name = libmozlibpixman.a;
 			path = ../dist/lib/libmozlibpixman.a;
 			refType = 2;
 			sourceTree = SOURCE_ROOT;
@@ -17090,7 +17090,7 @@
 		F6BD639701B3131201A962F8 = {
 			isa = PBXFileReference;
 			lastKnownFileType = file;
-			name = dom_core.xpt;
+			name = dom_canvas.xpt;
 			path = ../dist/Embed/components/dom_canvas.xpt;
 			refType = 2;
 			sourceTree = SOURCE_ROOT;
