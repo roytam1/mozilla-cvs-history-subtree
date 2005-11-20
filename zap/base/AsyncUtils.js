@@ -40,7 +40,8 @@ Components.utils.importModule("rel:FunctionUtils.js");
 
 EXPORTED_SYMBOLS = [ "getUIEventQ",
                      "makeOneShotTimer",
-                     "resetOneShotTimer" ];
+                     "resetOneShotTimer",
+                     "schedule" ];
 
 // object to hold module's documentation:
 var _doc_ = {};
@@ -82,4 +83,15 @@ function makeOneShotTimer(callback, duration) {
 function resetOneShotTimer(timer, duration) {
   timer.initWithCallback(timer.callback, duration, this.Components.interfaces.nsITimer.TYPE_ONE_SHOT);
   return timer;
+}
+
+// asynchronously call 'fct' after 'interval' ms:
+function schedule(fct, interval) {
+  var timer = makeOneShotTimer(
+    {
+      notify : function(timer) {
+        fct();
+      }
+    },
+    interval);
 }
