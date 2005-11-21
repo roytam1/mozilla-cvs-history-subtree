@@ -855,13 +855,11 @@ echo_objdir:
 # These files are now identical to the trunk, but we keep them tagged
 # for posterity (deleting branch tags is not a good idea):
 # js/src/xpconnect/Makefile.in
-# js/src/xpconnect/src/Makefile.in
 # js/src/xpconnect/src/xpcmodule.cpp
 # js/src/xpconnect/src/xpcprivate.h
 
 ZAP_BRANCH_MODIFIED_FILES = \
 	js/src/xpconnect/Makefile.in \
-	js/src/xpconnect/src/Makefile.in \
 	js/src/xpconnect/src/xpcmodule.cpp \
 	js/src/xpconnect/src/xpcprivate.h \
 	allmakefiles.sh \
@@ -875,6 +873,7 @@ ZAP_BRANCH_MODIFIED_FILES = \
 	js/src/xpconnect/loader/Makefile.in \
 	js/src/xpconnect/loader/mozJSComponentLoader.cpp \
 	js/src/xpconnect/loader/mozJSComponentLoader.h \
+	js/src/xpconnect/src/Makefile.in \
 	js/src/xpconnect/src/xpccomponents.cpp \
 	netwerk/base/public/Makefile.in \
 	netwerk/base/src/Makefile.in \
@@ -905,6 +904,9 @@ ZAP_BRANCH_MODIFIED_FILES = \
 ZAP_BRANCH_NEW_FILES = \
 	js/src/xpconnect/loader/ComponentUtils.jsm \
 	js/src/xpconnect/idl/xpcIJSModuleLoader.idl \
+	js/src/xpconnect/idl/xpcIJSWeakRef.idl \
+	js/src/xpconnect/src/xpcJSWeakRef.h \
+	js/src/xpconnect/src/xpcJSWeakRef.cpp \
 	netwerk/base/public/nsIUDPSocket.idl \
 	netwerk/base/src/nsUDPSocket.cpp \
 	netwerk/base/src/nsUDPSocket.h \
