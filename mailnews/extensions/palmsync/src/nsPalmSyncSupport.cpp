@@ -49,6 +49,10 @@
 #include "PalmSyncImp.h"
 #include "nsPalmSyncSupport.h"
 #include "Registry.h"
+#include "nspr.h"
+
+extern PRLogModuleInfo *PALMSYNC;
+
 
 /** Implementation of the IPalmSyncSupport interface.
  *  Use standard implementation of nsISupports stuff.
@@ -67,6 +71,7 @@ static NS_METHOD nsPalmSyncRegistrationProc(nsIComponentManager *aCompMgr,
     
   nsresult rv;
 
+  PR_LOG(PALMSYNC, PR_LOG_DEBUG, ("registration proc Palm Sync Support\n"));
   nsCOMPtr<nsICategoryManager> categoryManager(do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv));
   if (NS_SUCCEEDED(rv)) 
       rv = categoryManager->AddCategoryEntry(APPSTARTUP_CATEGORY, "PalmSync Support", 
@@ -81,6 +86,7 @@ nsPalmSyncSupport::Observe(nsISupports *aSubject, const char *aTopic, const PRUn
 {
     nsresult rv = NS_OK ;
 
+    PR_LOG(PALMSYNC, PR_LOG_DEBUG, ("observing topic proc %s Palm Sync Support\n", aTopic));
     if (!strcmp(aTopic, "profile-after-change"))
         return InitializePalmSyncSupport();
 
@@ -101,6 +107,10 @@ nsPalmSyncSupport::nsPalmSyncSupport()
 : m_dwRegister(0),
   m_nsPalmSyncFactory(nsnull)
 {
+  if (!PALMSYNC)
+    PALMSYNC = PR_NewLogModule("PALMSYNC");
+
+  PR_LOG(PALMSYNC, PR_LOG_DEBUG, ("constructing Palm Sync Support\n"));
 }
 
 nsPalmSyncSupport::~nsPalmSyncSupport()
@@ -110,6 +120,11 @@ nsPalmSyncSupport::~nsPalmSyncSupport()
 NS_IMETHODIMP
 nsPalmSyncSupport::InitializePalmSyncSupport()
 {
+  if (!PALMSYNC)
+    PALMSYNC = PR_NewLogModule("PALMSYNC");
+
+  PR_LOG(PALMSYNC, PR_LOG_DEBUG, ("initializing Palm Sync Support\n"));
+
     ::CoInitialize(nsnull) ;
 
     if (m_nsPalmSyncFactory == nsnull)    // No Registering if already done.  Sanity Check!!
@@ -157,6 +172,7 @@ nsPalmSyncSupport::ShutdownPalmSyncSupport()
 NS_IMETHODIMP
 nsPalmSyncSupport::RegisterPalmSync()
 {
+    PR_LOG(PALMSYNC, PR_LOG_DEBUG, ("Registering Server for Palm Sync Support\n"));
     return RegisterServerForPalmSync(CLSID_CPalmSyncImp, "Mozilla PalmSync", "MozillaPalmSync", "MozillaPalmSync.1");
 }
 
