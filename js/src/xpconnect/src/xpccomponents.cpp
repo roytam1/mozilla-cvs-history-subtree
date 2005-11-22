@@ -2541,6 +2541,57 @@ nsXPCComponents_Utils::ForceGC()
     return NS_OK;
 }
 
+/* String getObjectId(in JSObject obj); */
+NS_IMETHODIMP
+nsXPCComponents_Utils::GetObjectId()
+{
+    nsXPConnect* xpc = nsXPConnect::GetXPConnect();
+    if (!xpc)
+        return NS_ERROR_FAILURE;
+    
+    // get the xpconnect native call context
+    nsCOMPtr<nsIXPCNativeCallContext> cc;
+    xpc->GetCurrentNativeCallContext(getter_AddRefs(cc));
+    if (!cc)
+        return NS_ERROR_FAILURE;
+
+    // Get JSContext of current call
+    JSContext* cx;
+    cc->GetJSContext(&cx);
+    if (!cx)
+        return NS_ERROR_FAILURE;
+
+    PRUint32 argc = 0;
+    cc->GetArgc(&argc);
+    if (argc != 1)
+        return NS_ERROR_FAILURE;
+
+    jsval *argv = nsnull;
+    cc->GetArgvPtr(&argv);
+    if (!argv || JSVAL_IS_NULL(argv[0]))
+        return NS_ERROR_FAILURE;
+
+    JSObject *obj;
+    if (!JS_ValueToObject(cx, argv[0], &obj))
+        return NS_ERROR_FAILURE;
+    
+    jsid id;
+    if (!JS_GetObjectId(cx, obj, &id))
+        return NS_ERROR_FAILURE;
+
+    jsval *retval = nsnull;
+    cc->GetRetValPtr(&retval);
+    if (!retval)
+        return NS_ERROR_UNEXPECTED;
+    
+    char buf[80];
+    sprintf(buf,"%p", id);
+    JSString *str = JS_NewStringCopyZ(cx, buf);
+    *retval = STRING_TO_JSVAL(str);
+    
+    return NS_OK;
+}
+
 #ifdef XPC_USE_SECURITY_CHECKED_COMPONENT
 /* string canCreateWrapper (in nsIIDPtr iid); */
 NS_IMETHODIMP

@@ -206,6 +206,14 @@ interface nsIXPCComponents_Utils : nsISupports
      * Force an immediate garbage collection cycle.
      */
     void forceGC();
+
+    /*
+     * To be called from JS only.
+     *
+     * Returns a unique identifier for obj, good for the lifetime of
+     * obj.
+     */
+    void /* String */ getObjectId(/* in JSObject obj */);
 };
 
 /**
