@@ -4044,7 +4044,7 @@ MOZ_BRANDING_DIRECTORY=
 MOZ_CALENDAR=
 MOZ_DBGRINFO_MODULES=
 MOZ_ENABLE_LIBXUL=
-MOZ_EXTENSIONS_ALL=" cookie wallet content-packs xml-rpc xmlextras help p3p pref venkman inspector irc universalchardet typeaheadfind webservices spellcheck gnomevfs auth sroaming xmlterm datetime finger cview layout-debug tasks sql xforms permissions schema-validation reporter"
+MOZ_EXTENSIONS_ALL=" cookie wallet content-packs xml-rpc help p3p pref venkman inspector irc universalchardet typeaheadfind webservices spellcheck gnomevfs auth sroaming xmlterm datetime finger cview layout-debug tasks sql xforms permissions schema-validation reporter"
 MOZ_IMG_DECODERS_DEFAULT="png gif jpeg bmp xbm"
 MOZ_IMG_ENCODERS_DEFAULT="png jpeg"
 MOZ_IPCD=
@@ -4080,6 +4080,7 @@ MOZ_UI_LOCALE=en-US
 MOZ_USE_NATIVE_UCONV=
 MOZ_V1_STRING_ABI=1
 MOZ_VIEW_SOURCE=1
+MOZ_XMLEXTRAS=1
 MOZ_XPFE_COMPONENTS=1
 MOZ_XPINSTALL=1
 MOZ_XSLT_STANDALONE=
@@ -4128,7 +4129,7 @@ suite)
   MOZ_SUITE=1
   MOZ_PROFILESHARING=
   MOZ_APP_VERSION=$SEAMONKEY_VERSION
-  MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs xml-rpc xmlextras help p3p pref venkman inspector irc universalchardet typeaheadfind webservices spellcheck gnomevfs auth sroaming permissions reporter"
+  MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs xml-rpc help p3p pref venkman inspector irc universalchardet typeaheadfind webservices spellcheck gnomevfs auth sroaming permissions reporter"
   AC_DEFINE(MOZ_SUITE)
   ;;
 
@@ -4139,7 +4140,7 @@ browser)
   MOZ_UPDATER=1
   MOZ_PHOENIX=1
   MOZ_APP_VERSION=$FIREFOX_VERSION
-  MOZ_EXTENSIONS_DEFAULT=" cookie xml-rpc xmlextras pref universalchardet webservices inspector gnomevfs auth permissions reporter"
+  MOZ_EXTENSIONS_DEFAULT=" cookie xml-rpc pref universalchardet webservices inspector gnomevfs auth permissions reporter"
   AC_DEFINE(MOZ_PHOENIX)
   ;;
 
@@ -4154,7 +4155,7 @@ minimo)
   MOZ_APP_VERSION=`cat $topsrcdir/minimo/config/version.txt`
   MOZ_COMPOSER=
   MOZ_ENABLE_POSTSCRIPT=
-  MOZ_EXTENSIONS_DEFAULT="xml-rpc xmlextras webservices permissions spatialnavigation"
+  MOZ_EXTENSIONS_DEFAULT="xml-rpc webservices permissions spatialnavigation"
   MOZ_IMG_DECODERS_DEFAULT="png gif jpeg"
   MOZ_IMG_ENCODERS_DEFAULT=
   MOZ_IMG_ENCODERS=
@@ -4179,7 +4180,7 @@ minimo)
   MOZ_XTF=
   MOZ_XUL_APP=1
   NECKO_DISK_CACHE=
-  NECKO_PROTOCOLS_DEFAULT=="about data http file res"
+  NECKO_PROTOCOLS_DEFAULT="about data http file res"
   NECKO_SMALL_BUFFERS=1
   NS_DISABLE_LOGGING=1
   NS_PRINTING=
@@ -4204,7 +4205,7 @@ mail)
   MOZ_STATIC_MAIL_BUILD=1
   MOZ_COMPOSER=1
   MOZ_APP_VERSION=$THUNDERBIRD_VERSION
-  MOZ_EXTENSIONS_DEFAULT=" wallet spellcheck xmlextras pref webservices universalchardet auth"
+  MOZ_EXTENSIONS_DEFAULT=" wallet spellcheck pref webservices universalchardet auth"
   AC_DEFINE(MOZ_THUNDERBIRD)
   ;;
 
@@ -4227,7 +4228,7 @@ calendar)
   MOZ_SUNBIRD=1
   MOZ_CALENDAR=1
   MOZ_APP_VERSION=`cat $topsrcdir/calendar/sunbird/config/version.txt`
-  MOZ_EXTENSIONS_DEFAULT=" pref xmlextras"
+  MOZ_EXTENSIONS_DEFAULT=" pref"
   AC_DEFINE(MOZ_SUNBIRD)
   ;;
 
@@ -4239,7 +4240,7 @@ xulrunner)
   MOZ_XULRUNNER=1
   MOZ_ENABLE_LIBXUL=1
   MOZ_APP_VERSION=$MOZILLA_VERSION
-  MOZ_EXTENSIONS_DEFAULT=" xml-rpc xmlextras pref universalchardet webservices gnomevfs auth"
+  MOZ_EXTENSIONS_DEFAULT=" xml-rpc pref universalchardet webservices gnomevfs auth"
   AC_DEFINE(MOZ_XULRUNNER)
   AC_DEFINE(MOZ_ZAP)
   ;;
@@ -4248,7 +4249,7 @@ macbrowser)
   MOZ_APP_NAME=mozilla
   MOZ_APP_DISPLAYNAME=Mozilla
   MOZ_APP_VERSION=$MOZILLA_VERSION
-  MOZ_EXTENSIONS_DEFAULT=" cookie xmlextras universalchardet typeaheadfind permissions"
+  MOZ_EXTENSIONS_DEFAULT=" cookie universalchardet typeaheadfind permissions"
   AC_DEFINE(MOZ_MACBROWSER)
   ;;
 
@@ -4871,6 +4872,14 @@ if test "$MOZ_XTF"; then
 fi
 
 dnl ========================================================
+dnl XMLExtras
+dnl ========================================================
+MOZ_ARG_DISABLE_BOOL(xmlextras,
+[  --disable-xmlextras Disable XMLExtras such as XMLHttpRequest ],
+    MOZ_XMLEXTRAS=,
+    MOZ_XMLEXTRAS=1 )
+
+dnl ========================================================
 dnl = Enable compilation of specific extension modules
 dnl ========================================================
 
@@ -4941,6 +4950,11 @@ if test `echo "$MOZ_EXTENSIONS" | grep -c xforms` -ne 0 && test `echo "$MOZ_EXTE
     MOZ_EXTENSIONS=`echo $MOZ_EXTENSIONS | sed -e 's|xforms||g'`
 fi
 
+if test `echo "$MOZ_EXTENSIONS" | grep -c xmlextras` -ne 0; then
+    AC_MSG_WARN([xmlextras is no longer an extension, use --disable-xmlextras to disable.])
+    MOZ_EXTENSIONS=`echo $MOZ_EXTENSIONS | sed -e 's|xmlextras||g'`
+fi
+
 MOZ_ENABLE_JAVAXPCOM=
 JAVAC=
 JAR=
@@ -4948,7 +4962,7 @@ if test `echo "$MOZ_EXTENSIONS" | grep -c java` -ne 0; then
   MOZ_ENABLE_JAVAXPCOM=1
 
   case "$host_os" in
-    mingw*|cygwin*|msvc*|mks*)
+    cygwin*|msvc*|mks*)
       if test -n "$JAVA_HOME"; then
         JAVA_HOME=`cygpath -u \`cygpath -m -s "$JAVA_HOME"\``
       fi
@@ -6755,6 +6769,7 @@ AC_SUBST(MOZ_UPDATE_XTERM)
 AC_SUBST(MINIMO)
 AC_SUBST(MOZ_MATHML)
 AC_SUBST(MOZ_XTF)
+AC_SUBST(MOZ_XMLEXTRAS)
 AC_SUBST(MOZ_SVG)
 AC_SUBST(MOZ_SVG_FOREIGNOBJECT)
 AC_SUBST(MOZ_SVG_RENDERER_GDIPLUS)
@@ -7091,8 +7106,6 @@ AC_SUBST(WIN_TOP_SRC)
 AC_SUBST(MOZILLA_VERSION)
 
 . ${srcdir}/config/chrome-versions.sh
-AC_SUBST(MOZILLA_LOCALE_VERSION)
-AC_SUBST(MOZILLA_REGION_VERSION)
 AC_DEFINE_UNQUOTED(MOZILLA_LOCALE_VERSION,"$MOZILLA_LOCALE_VERSION")
 AC_DEFINE_UNQUOTED(MOZILLA_REGION_VERSION,"$MOZILLA_REGION_VERSION")
 AC_DEFINE_UNQUOTED(MOZILLA_SKIN_VERSION,"$MOZILLA_SKIN_VERSION")
