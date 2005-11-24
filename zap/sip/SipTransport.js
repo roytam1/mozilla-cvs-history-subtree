@@ -552,11 +552,182 @@ SipTransceiver.fun(
   });
 
 ////////////////////////////////////////////////////////////////////////
+// StunMonitorTransaction
+// helper class for monitoring sip flows
+
+var StunMonitorTransaction = makeClass("StunMonitorTransaction",
+                                       Schedule);
+
+StunMonitorTransaction.fun(
+  function execute(monitorSchedule) {
+    this._assert(!this.Terminated, "transaction terminated");
+    this.monitorSchedule = monitorSchedule;
+    this.flow = monitorSchedule.flow;
+    this.request = getNetUtils().createStunMessage();
+    this.request.messageType = this.request.BINDING_REQUEST_MESSAGE;
+    this.request.initTransactionID();
+    this.tries = 0;
+    this.interval = 50; // this will be multiplied by 2 to give our
+                        // first 'real' interval of 100
+    this.sendRequest();
+  });
+
+StunMonitorTransaction.fun(
+  function sendRequest() {
+    if (this.tries == 9) {
+      // we've transmitted 9 requests and received no response.
+      // -> failure
+      this.Terminated = true;
+      this.monitorSchedule.notifyRequestFailure(Components.interfaces.zapISipFlowMonitor.FLOW_FAILED);
+    }
+    else {
+      ++ this.tries;
+      this.flow.transport.transceiver.sendPacket(this.request.serialize(),
+                                                 this.flow.transportProtocol,
+                                                 this.flow.remoteAddress,
+                                                 this.flow.remotePort,
+                                                 this.flow.connection);
+      this.interval = Math.min(2*this.interval, 1600);
+      this.schedule(this.sendRequest, this.interval);
+    }
+  });
+
+StunMonitorTransaction.fun(
+  function cancel() {
+    // setting Terminated to true will automatically clear the
+    // schedule timer
+    this.Terminated = true;
+  });
+
+StunMonitorTransaction.fun(
+  function handleStunPacket(packet) {
+    this._assert(this.tries > 0, "hmm, handleStunPacket called, but we haven't even sent the request???");
+    try {
+      var message = getNetUtils().deserializeStunPacket(packet, {}, {});
+    }
+    catch(e) {
+      // error parsing this as a STUN packet. Maybe it wasn't one?
+      // -> don't handle
+      this._dump("not handling malformed STUN packet");
+      return false;
+    }
+    switch (message.messageType) {
+      case Components.interfaces.zapIStunMessage.BINDING_RESPONSE_MESSAGE:
+        if (message.transactionID != this.request.transactionID) {
+          // not a response to our current query; possibly a
+          // retransmission. let it fall through in case there are
+          // other stun handlers down the chain:
+          return false;
+        }
+        var address, port;
+        if (message.hasXORMappedAddressAttrib) {
+          address = message.XORMappedAddress;
+          port = message.XORMappedAddressPort;
+        }
+        else if (message.hasMappedAddressAttrib) {
+          address = message.mappedAddress;
+          port = message.mappedAddressPort;
+        }
+        else {
+          // the response is malformed
+          this.Terminated = true;
+          this.monitorSchedule.notifyRequestFailure(Components.interfaces.zapISipFlowMonitor.MONITOR_PROTOCOL_ERROR);
+          return true;
+        }
+        this.Terminated = true;
+        this.monitorSchedule.notifyRequestSuccess(address, port);
+        return true;
+        break;
+      case Components.interfaces.zapIStunMessage.BINDING_ERROR_RESPONSE_MESSAGE:
+        if (message.transactionID != this.request.transactionID) {
+          // not a response to our current query; possibly a
+          // retransmission. let it fall through in case there are
+          // other stun handlers down the chain:
+          return false;
+        }
+        // else...
+        this.Terminated = true;
+        this.monitorSchedule.notifyRequestFailure(Components.interfaces.zapISipFlowMonitor.MONITOR_PROTOCOL_ERROR);
+        return true;
+        break;
+    }
+
+    // probably not meant for us:
+    return false;
+  });
+
+////////////////////////////////////////////////////////////////////////
+// StunMonitorSchedule
+// helper class for monitoring sip flows
+
+var StunMonitorSchedule = makeClass("StunMonitorSchedule", Schedule);
+
+StunMonitorSchedule.fun(
+  function start(flow) {
+    this.flow = flow;
+    this.sendRequest();
+  });
+
+StunMonitorSchedule.fun(
+  function getRequestInterval() {
+    // see draft-ietf-sip-outbound-01 4.2
+    if (this.flow.transportProtocol == "udp")
+      return 24000+Math.floor(Math.random()*5000);
+    else
+      return 95000+Math.floor(Math.random()*7000);
+  });
+
+StunMonitorSchedule.fun(
+  function terminate() {
+    this.Terminated = true;
+  });
+
+StunMonitorSchedule.fun(
+  function handleStunPacket(packet) {
+    if (this.currentRequest)
+      return this.currentRequest.handleStunPacket(packet);
+    return false;
+  });
+
+StunMonitorSchedule.fun(
+  function notifyRequestSuccess(address, port) {
+    delete this.currentRequest;
+    if (!this.address) {
+      this.address = address;
+      this.port = port;
+    }
+    else {
+      var changeFlags = 0;
+      // check if the flow has changed in some way:
+      if (address != this.address) changeFlags |= Components.interfaces.zapISipFlowMonitor.ADDRESS_CHANGED;
+      if (port != this.port) changeFlags |= Components.interfaces.zapISipFlowMonitor.PORT_CHANGED;
+      if (changeFlags != 0) {
+        this.flow.notifyMonitors(changeFlags);
+        this.address = address;
+        this.port = port;
+      }
+    }   
+    // reschedule:
+    this.schedule(this.sendRequest, this.getRequestInterval());
+  });
+
+StunMonitorSchedule.fun(
+  function notifyRequestFailure(flags) {
+    delete this.currentRequest;
+    this.flow.notifyMonitors(flags);
+  });
+
+StunMonitorSchedule.fun(
+  function sendRequest() {
+    this.currentRequest = StunMonitorTransaction.instantiate();
+    this.currentRequest.execute(this);
+  });
+
+////////////////////////////////////////////////////////////////////////
 // SipFlow
 
 var SipFlow = makeClass("SipFlow", SupportsImpl);
-SipFlow.addInterfaces(Components.interfaces.zapISipFlow,
-                      Components.interfaces.nsITimerCallback);
+SipFlow.addInterfaces(Components.interfaces.zapISipFlow);
 
 SipFlow.fun(
   function init(transport,
@@ -589,155 +760,28 @@ SipFlow.getter(
     return this._flowID;
   });
 
-
-SipFlow.fun(
-  function addFlowMonitorInternal(monitor, type) {
-    if (!this._monitors) this._monitors = [];
-    var monitors = this._monitors;
-
-    // make sure we don't get redundant registrations:
-    for (var i=0,l=monitors.length; i<l; ++i) {
-      if (monitors[i] == monitor)
-        this._error("Monitor already set");
-    }
-    
-    this._monitors.push(monitor);
-    this._dump("Added monitor "+monitor+" to flow "+this.flowID);
-    if (monitors.length == 1) {
-      this.startMonitoring(type);
-    }
-  });
-
-SipFlow.fun(
-  function removeFlowMonitorInternal(monitor) {
-    var monitors = this._monitors;
-    for (var i=monitors.length-1; i>=0; --i) {
-      if (monitors[i] == monitor) {
-        monitors.splice(i, 1);
-        this._dump("Removing monitor "+monitor+" from flow "+this.flowID);
-        break;
-      }
-    }
-    if (monitors.length == 0) {
-      this.stopMonitoring();
-      hashdel(this.transport._monitoredFlows, this.flowID);
-      this._dump("Stopping monitoring of flow "+this.flowID);
-    }
-  });
-
-SipFlow.fun(
-  function getStunInterval() {
-    // see draft-ietf-sip-outbound-01 4.2
-    if (this.transportProtocol == "udp")
-      return 24000+Math.floor(Math.random()*5000);
-    else
-      return 95000+Math.floor(Math.random()*7000);
-  });
-
 SipFlow.fun(
   function startMonitoring(type) {
-    this._assert(!this.isMonitored, "already monitored");
-    this.isMonitored = true;
-    this.stunTries = 0; // number of times we haven't received an
-                        // answer to a STUN request
-    this.stunRequest = getNetUtils().createStunMessage();
-    this.stunRequest.messageType = this.stunRequest.BINDING_REQUEST_MESSAGE;
-    this.stunRequest.initTransactionID();
-    // send a stun request immediately so that we get a reference
-    // address, port:
-    this.stunKeepAliveTimer = makeOneShotTimer(this, 0);
+    this._assert(!this.monitorSchedule, "already monitored");
+    if (type == Components.interfaces.zapISipFlow.IETF_SIP_OUTBOUND_01_MONITOR) {
+      this.monitorSchedule = StunMonitorSchedule.instantiate();
+    }
+    this.monitorSchedule.start(this);
   });
 
 SipFlow.fun(
   function stopMonitoring() {
-    this._assert(this.isMonitored, "flow not monitored??");
-    this.stunKeepAliveTimer.cancel();
+    this._assert(this.monitorSchedule, "flow not monitored??");
     this._dump("stopping monitoring");
-    delete this.stunKeepAliveTimer;
-    delete this.stunRequest;
-    delete this.isMonitored;
+    this.monitorSchedule.terminate();
+    delete this.monitorSchedule;
   });
 
 SipFlow.fun(
   function handleStunPacket(packet) {
-    if (this.stunTries > 0) {
-      this._dump("received a STUN packet after "+this.stunTries+" tries");
-      try {
-        var message = getNetUtils().deserializeStunPacket(packet, {}, {});
-      }
-      catch(e) {
-        // error parsing the STUN response
-        // maybe this wasn't a STUN packet after all?
-        // -> don't handle it
-        this._dump("not handling malformed STUN packet");
-        return false;
-      }
-      switch (message.messageType) {
-        case Components.interfaces.zapIStunMessage.BINDING_RESPONSE_MESSAGE:
-          if (message.transactionID != this.stunRequest.transactionID) {
-            // not a response to our current query; possibly a
-            // retransmission. let it fall through in case there are
-            // other stun handlers down the chain:
-            return false;
-          }
-          var address, port;
-          if (message.hasXORMappedAddressAttrib) {
-            address = message.XORMappedAddress;
-            port = message.XORMappedAddressPort;
-          }
-          else if (message.hasMappedAddressAttrib) {
-            address = message.mappedAddress;
-            port = message.mappedAddressPort;
-          }
-          else {
-            // the response is malformed
-            this.notifyMonitors(Components.interfaces.zapISipFlowMonitor.MONITOR_PROTOCOL_ERROR);
-            break;
-          }
-          if (!this.stunAddress) {
-            this.stunAddress = address;
-            this.stunPort = port;
-          }
-          else {
-            var changeFlags = 0;
-            // check if the flow has changed in some way:
-            if (address != this.stunAddress) changeFlags |= Components.interfaces.zapISipFlowMonitor.ADDRESS_CHANGED;
-            if (port != this.stunPort) changeFlags |= Components.interfaces.zapISipFlowMonitor.PORT_CHANGED;
-            if (changeFlags != 0) {
-              this.notifyMonitors(changeFlags);
-              // reset our stored stunAddress & port:
-              this.stunAddress = address;
-              this.stunPort = port;
-            }
-          }
-          break;
-        case Components.interfaces.zapIStunMessage.BINDING_ERROR_RESPONSE_MESSAGE:
-          if (message.transactionID != this.stunRequest.transactionID) {
-            // not a response to our current query; possibly a
-            // retransmission. let it fall through in case there are
-            // other stun handlers down the chain:
-            return false;
-          }
-          // inform monitors of a protocol error, but fall through to
-          // rescheduling nontheless
-          this.notifyMonitors(Components.interfaces.zapISipFlowMonitor.MONITOR_PROTOCOL_ERROR);
-          break;
-        default:
-          // probably not meant for us:
-          return false;
-      }
-            
-      // if we still have monitors: reset counter; generate new
-      // transaction id; reschedule:
-      if (this.stunKeepAliveTimer) {
-        this.stunTries = 0;
-        this.stunRequest.initTransactionID();
-        resetOneShotTimer(this.stunKeepAliveTimer, this.getStunInterval());
-      }
-    }
-    else
-      this._dump("received redundant STUN packet");
-    return true;
+    if (this.monitorSchedule)
+      return this.monitorSchedule.handleStunPacket(packet);
+    return false;
   });
 
 SipFlow.fun(
@@ -754,51 +798,9 @@ SipFlow.fun(
     }
   });
 
-//----------------------------------------------------------------------
-// nsITimerCallback
-
-SipFlow.fun(
-  function notify(timer) {
-    // see rfc3489bis 9.3 for information on the binding request
-    // retransmission logic
-    
-    if (this.stunTries == 9) {
-      // the flow has failed!
-      this._dump("flow "+this.flowID+" has failed");
-      this.notifyMonitors(Components.interfaces.zapISipFlowMonitor.FLOW_FAILED);
-      // reschedule if we still have monitors:
-      if (this.stunKeepAliveTimer) {
-        // reset counter; generate new transaction id; reschedule:
-        this.stunTries = 0;
-        this.stunRequest.initTransactionID();
-        resetOneShotTimer(this.stunKeepAliveTimer, this.getStunInterval());
-      }
-    }
-    else {
-      // send (or resend) a STUN binding request and reschedule timer:
-      this.transport.transceiver.sendPacket(this.stunRequest.serialize(),
-                                            this.transportProtocol,
-                                            this.remoteAddress,
-                                            this.remotePort,
-                                            this.connection);
-      var delay = this.stunTries == 0 ? 100 : Math.min(2*this.stunKeepAliveTimer.delay, 1600);
-      resetOneShotTimer(this.stunKeepAliveTimer, delay);
-      ++this.stunTries;
-    }
-  });
 
 //----------------------------------------------------------------------
 // zapISipFlow
-
-//  boolean equals(in zapISipFlow other);
-SipFlow.fun(
-  function equals(other) {
-    return (this.remoteAddress == other.remoteAddress) &&
-           (this.remotePort == other.remotePort) &&
-           (this.transportProtocol == other.transportProtocol) &&
-           (this.localAddress == other.localAddress) &&
-           (this.localPort == other.localPort);
-  });
 
 //  readonly attribute ACString localAddress;
 SipFlow.obj("localAddress", null);
@@ -821,24 +823,37 @@ SipFlow.obj("connection", null);
 //  void addFlowMonitor(in zapISipFlowMonitor monitor, in unsigned short type);
 SipFlow.fun(
   function addFlowMonitor(monitor, type) {
-    var monitoredFlow = hashget(this.transport._monitoredFlows, this.flowID);
-    if (!monitoredFlow) {
-      // we take the role of monitored flow:
-      monitoredFlow = this;
-      this._dump("New monitored flow: "+this.flowID);
-      hashset(this.transport._monitoredFlows, this.flowID, monitoredFlow);
+    if (!this._monitors) this._monitors = [];
+    var monitors = this._monitors;
+
+    // make sure we don't get redundant registrations:
+    for (var i=0,l=monitors.length; i<l; ++i) {
+      if (monitors[i] == monitor)
+        this._error("Monitor already set");
     }
     
-    monitoredFlow.addFlowMonitorInternal(monitor, type);
+    this._monitors.push(monitor);
+    this._dump("Added monitor "+monitor+" to flow "+this.flowID);
+    if (monitors.length == 1) {
+      this.startMonitoring(type);
+    }
   });
 
 //  void removeFlowMonitor(in zapISipFlowMonitor monitor);
 SipFlow.fun(
   function removeFlowMonitor(monitor) {
-    var monitoredFlow = hashget(this.transport._monitoredFlows, this.flowID);
-    this._assert(monitoredFlow, "hmm - "+this.flowID+" not monitored???");
-
-    monitoredFlow.removeFlowMonitorInternal(monitor);
+    var monitors = this._monitors;
+    for (var i=monitors.length-1; i>=0; --i) {
+      if (monitors[i] == monitor) {
+        monitors.splice(i, 1);
+        this._dump("Removing monitor "+monitor+" from flow "+this.flowID);
+        break;
+      }
+    }
+    if (monitors.length == 0) {
+      this.stopMonitoring();
+      this._dump("Stopping monitoring of flow "+this.flowID);
+    }
   });
 
 
@@ -853,7 +868,7 @@ SipTransport.appendCtor(
     this._sinks = [];
 
     // hash of currently monitored flows:
-    this._monitoredFlows = {};
+    this._flows = WeakHash.instantiate();
   });
 
 //----------------------------------------------------------------------
@@ -975,23 +990,26 @@ SipTransport.fun(
   function handlePacket(data, application,
                         transportProtocol, localAddress, localPort,
                         remoteAddress, remotePort, connection) {
+    // try to find a corresponding flow or create a new one:
+    var id = makeFlowID(localAddress, localPort,
+                        remoteAddress, remotePort, transportProtocol);
 
+    var flow = this._flows.get(id);
+    if (!flow) {
+      flow = SipFlow.instantiate();
+      flow.init(this, localAddress, localPort, remoteAddress, remotePort,
+                transportProtocol, connection);
+      this._flows.set(id, flow);
+    }
+    
     if (application == Components.interfaces.zapISipTransceiverSink.APPLICATION_STUN) {
-      // let's see if we have a monitored flow interested in this STUN packet:
-      var id = makeFlowID(localAddress, localPort,
-                          remoteAddress, remotePort, transportProtocol);
-      var monitoredFlow = hashget(this._monitoredFlows, id);
-      if (!monitoredFlow) return;
-      return monitoredFlow.handleStunPacket(data);       
+      // give the flow a chance to handle this STUN packet:
+      return flow.handleStunPacket(data);       
     }
       
-    // we only handle SIP traffic:
+    // from here on we only handle SIP traffic:
     if (application != Components.interfaces.zapISipTransceiverSink.APPLICATION_SIP)
       return false;
-    
-    var flow = SipFlow.instantiate();
-    flow.init(this, localAddress, localPort, remoteAddress, remotePort,
-              transportProtocol, connection);
     
     try {
       var message = gSyntaxFactory.deserializeMessage(data);

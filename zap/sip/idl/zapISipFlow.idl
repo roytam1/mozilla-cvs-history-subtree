@@ -47,11 +47,6 @@ interface zapISipFlowMonitor;
 interface zapISipFlow : nsISupports
 {
   /**
-   * Compare two flows for equality
-   */
-  boolean equals(in zapISipFlow other);
-  
-  /**
    * IP address of local endpoint
    */
   readonly attribute ACString localAddress;
