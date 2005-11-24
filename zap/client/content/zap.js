@@ -240,6 +240,12 @@ Service.fun(
     return s;
   });
 
+Service.fun(
+  function getDefaultRoute() {
+    // XXX
+    return [];
+  });
+
 Service.spec(
   function createFromDocument(doc) {
     this._Service_createFromDocument(doc);
@@ -360,7 +366,7 @@ Identity.spec(
     if (this.service["urn:mozilla:zap:use_stun_contact_address"] == "true")
       this.resolveStunAddress();
     else
-      this.setInitializationAttempted();
+      this.InitializationAttempted = true;
   });
 
 Identity.fun(
@@ -369,14 +375,14 @@ Identity.fun(
     withMappedStunAddress(this.service.getStunServer(),
                           function(addr) {
                             me.hostAddress = addr;
-                            me.setInitializationAttempted();
+                            me.InitializationAttempted = true;
                           },
                           function(addr) {
                             // unsuccessful
                             // -> reschedule in 10s
                             schedule(function() {
                                        // go ahead with registrations etc anyway: 
-                                       //me.setInitializationAttempted();
+                                       me.InitializationAttempted = true;
                                        me.resolveStunAddress();
                                      },
                                      10000);
@@ -436,6 +442,12 @@ Identity.fun(
     return aor;
   });
 
+// Get From Address for non-REGISTER requests:
+Identity.fun(
+  function getFromAddress() {
+    return wSipStack.syntaxFactory.createAddress(this["urn:mozilla:zap:display_name"], this.getAOR());
+  });
+
 // Returns the userinfo part of our register contact address:
 Identity.fun(
   function getRegisterContactUserinfo() {
@@ -459,24 +471,30 @@ Identity.fun(
       return wSipStack.syntaxFactory.deserializeAddress(addr);
   });
 
-// this will be filled in by our associated registration group after a
-// successful registration:
-Identity.obj("dialogContactAddress", null);
-
-// Work out our contact address to be used for INVITE
-// requests. Depending on whether or not we use GRUU, this will be
-// equal to the register contact address:
+// Returns a structure {contact, routeset} with routing information
+// for non-REGISTER requests:
 Identity.fun(
-  function getDialogContactAddress() {
-    if (this.dialogContactAddress)
-      return this.dialogContactAddress;
-    else {
-      this._dump("using unreliable contact address for non-registered identity");
-      // our local address is as good as any other
-      return this.getRegisterContactAddress();
+  function getRoutingInfo() {
+    var routingInfo;
+    if (this.registrationGroup)
+      routingInfo = this.registrationGroup.getRoutingInfo();
+
+    if (!routingInfo) {
+      this._dump("using unreliable routing for non-registered identity");
+      return this._constructFallbackRoutingInfo();
     }
-    
+
+    return routingInfo;
   });
+
+Identity.fun(
+  function _constructFallbackRoutingInfo() {
+    return {
+      contact : this.getRegisterContactAddress(),
+      routeset: this.service.getDefaultRoute()
+    };
+  });
+
 
 // Work out which Service this Identity uses and return its ID.
 Identity.fun(
@@ -531,7 +549,6 @@ function registerIdentity(resource) {
     wRegistrations[resource.Value] = registrationGroup;
 }
 
-
 function unregisterIdentity(resource) {
   var registrationGroup = wRegistrations[resource.Value];
   if (!registrationGroup) return; // not registered
@@ -561,6 +578,7 @@ RegistrationGroup.obj("unregistering", false);
 RegistrationGroup.fun(
   function init(identity) {
     this.identity = identity;
+    identity.registrationGroup = this;
     var me = this;
     this.identity.whenInitializationAttempted(function() {
                                                 if (!me.unregistering)
@@ -609,7 +627,7 @@ RegistrationGroup.fun(
       this.registrations.push(registration);
     }
     if (!flow_counter) {
-      // The service didn't specify any route.
+      // The service didn't specify any specific registration routes.
       // -> Try domain:
       try {
         var route = wSipStack.syntaxFactory.deserializeRouteSet("<"+this.domain.serialize()+">", {});
@@ -637,24 +655,31 @@ RegistrationGroup.fun(
   });
 
 RegistrationGroup.fun(
-  function notifyRegistrationSuccess(registration, contact) {
+  function getRoutingInfo() {
+    // find first active flow:
+    for (var i=0,l=this.registrations.length; i<l; ++i) {
+      if (this.registrations[i].registered) {
+        var contactAddr = this.registrations[i].gruu;
+        if (!contactAddr) {
+          // hmm, no gruu. best we can do is return our registered
+          // contact address and hope that our outbound route does
+          // some helping with any NATs:
+          contactAddr = this.identity.getRegisterContactAddress();
+        }
+        return {
+          contact : contactAddr,
+          routeset: this.registrations[i].outboundRoute
+        };
+      }
+    }
+    return null;
+  });
+
+RegistrationGroup.fun(
+  function notifyRegistrationSuccess(registration) {
     if (this.unregistering) return;
     this._dump("Registration to "+this.identity["http://home.netscape.com/NC-rdf#Name"]+" over flow "+registration.flowid+" succeeded");
     if (this.identity["urn:mozilla:zap:is_registered"] != "true") {
-      // set the contact address for dialog-establishing messages:
-      if (contact.hasParameter("gruu")) {
-        try {
-          var gruu = contact.getParameter("gruu").split('"')[0];
-          gruu = wSipStack.syntaxFactory.deserializeAddress(gruu);
-          this.identity.dialogContactAddress = gruu;
-        } catch(e) { this._dump("gruu parse error: "+e); }
-      }
-      else {
-        // use address as registered and hope that record-routed server
-        // will sort things out through NAT. XXX maybe infer from
-        // received/rport
-        this.identity.dialogContactAddress = contact.address;
-      }
       // mark our identity as registered:      
       this.identity["urn:mozilla:zap:is_registered"] = "true";
     }
@@ -706,14 +731,33 @@ Registration.addInterfaces(Components.interfaces.zapISipNonInviteRCListener,
                            Components.interfaces.zapISipFlowMonitor,
                            Components.interfaces.nsITimerCallback);
 
+// is this flow currently registered?
 Registration.obj("registered", false);
+
+// how many consecutive times has this flow failed?
 Registration.obj("failureCount", 0);
+
+// the last response received from the registrar
+Registration.obj("lastResponse", null);
+
+// if we are currently registered, this will contain the contact
+// header as returned by the registrar:
+Registration.obj("contact", null);
+
+// this will contain our GRUU if we are currently registered and the
+// registrar returned one:
+Registration.obj("gruu", null);
+
+// contains the route to be used for non-REGISTER outbound requests
+// over this flow:
+Registration.obj("outboundRoute", null);
 
 Registration.fun(
   function init(group, route, flowid) {
     this._dump("group="+group+", route="+route+", flowid="+flowid);
     this.group = group;
     this.flowid = flowid;
+    this.outboundRoute = route;
     // should we keep this flow alive with STUN requests?
     this.stunKeepAlive = route[0].uri.QueryInterface(Components.interfaces.zapISipSIPURI).hasURIParameter("sip-stun");
     
@@ -758,9 +802,24 @@ Registration.fun(
     delete this.registrationRC;
   });
 
+// helper to extract a gruu from a contact header
+function extractGRUU(contact)
+{
+  if (!contact.hasParameter("gruu")) return null;
+  try {
+    var gruu = /"(.*)"/(contact.getParameter("gruu"))[1];
+    gruu = wSipStack.syntaxFactory.deserializeAddress(gruu);
+    return gruu;
+  }
+  catch (e) { warning("gruu parse error: "+e); }
+  return null;
+}
+
 // zapISipNonInviteRCListener methods:
 Registration.fun(
   function notifyResponseReceived(rc, dialog, response, flow) {
+    this.lastResponse = response;
+          
     if (response.statusCode[0] == "1")
       return; // just a provisional response
     rc.listener = null;
@@ -816,11 +875,13 @@ Registration.fun(
         if (expires != null && !isNaN(expires) && expires != 0) {
           // we've got a valid registration!
           // update our state:
+          this.contact = contact;
+          this.gruu = extractGRUU(contact);
           if (!this.registered) {
             this.failureCount = 0;
             this.registered = true;
             // inform our group:            
-            this.group.notifyRegistrationSuccess(this, contact);
+            this.group.notifyRegistrationSuccess(this);
           }
           // set up a refresh timer:
           this.scheduleRefresh(expires*1000*0.9);
@@ -834,6 +895,8 @@ Registration.fun(
     }
     // failure:
     this.registered = false;
+    this.contact = null;
+    this.gruu = null;
     ++this.failureCount;
     if (this.flow) {
       this.flow.removeFlowMonitor(this);
@@ -1370,14 +1433,15 @@ OutboundCall.rdfLiteralAttrib("urn:mozilla:zap:direction", "outbound");
 OutboundCall.fun(
   function makeCall(toAddress, identity) {
     this.identity = identity;
+    this.routingInfo = identity.getRoutingInfo();
     this.callHandler = OutboundCallHandler.instantiate();
     this.callHandler.call = this;
 
     var rc = wSipStack.createInviteRequestClient(toAddress,
-                                                 identity.getAOR(),
-                                                 identity.getDialogContactAddress(),
-                                                 wCurrentIdentity.routeset,
-                                                 wCurrentIdentity.routeset.length);
+                                                 identity.getFromAddress(),
+                                                 this.routingInfo.contact,
+                                                 this.routingInfo.routeset,
+                                                 this.routingInfo.routeset.length);
     rc.listener = this.callHandler;
     this.callHandler.rc = rc;
 
@@ -1545,6 +1609,7 @@ InboundCallHandler.fun(
 
     // XXX work out identity based on To-address
     this.identity = wCurrentIdentity;
+    this.contact = this.identity.getRoutingInfo().contact;
     
     // reject based on busy settings:
     if (document.getElementById("button_dnd").checked) {
@@ -1581,7 +1646,7 @@ InboundCallHandler.fun(
 InboundCallHandler.fun(
   function acceptCall() {
     // formulate accepting response:
-    var resp = this.rs.formulateResponse("200", this.identity.getDialogContactAddress());
+    var resp = this.rs.formulateResponse("200", this.contact);
     // append session description:
     resp.setContent("application", "sdp", this.answer.serialize());
     this.call["urn:mozilla:zap:status"] = resp.statusCode+" "+resp.reasonPhrase;
@@ -1599,7 +1664,7 @@ InboundCallHandler.fun(
 
 InboundCallHandler.fun(
   function _respond(code, extra_headers) {
-    var resp = this.rs.formulateResponse(code, this.identity.getDialogContactAddress());
+    var resp = this.rs.formulateResponse(code, this.contact);
 
     if (extra_headers) {
       // add in extra header, converting line endings appropriately:

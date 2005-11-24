@@ -76,12 +76,13 @@
         dump("Invalid address: "+addressOfRecord+"\n");
         return;
       }
-      
+
+      var route = parent.wCurrentIdentity.getRoutingInfo().routeset;      
       wRS = parent.wSipStack.createRegisterRequestClient(registrar, 
                                                          addressOfRecord,
                                                          document.getElementById("expiration").value,
-                                                         parent.wCurrentIdentity.routeset,
-                                                         parent.wCurrentIdentity.routeset.length);
+                                                         route,
+                                                         route.length);
       document.getElementById("request").value = wRS.request.serialize();
     }
 

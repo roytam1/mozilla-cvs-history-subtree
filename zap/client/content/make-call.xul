@@ -76,11 +76,12 @@
       document.getElementById("urn:mozilla:zap:remote").value = wRemoteAddress.serialize();
 
       // kick off an async OPTIONS request:
+      var route = parent.wCurrentIdentity.getRoutingInfo().routeset;
       wOptionsRS = parent.wSipStack.createNonInviteRequestClient(wRemoteAddress,
-                                                                 parent.wCurrentIdentity.getAOR(), 
+                                                                 parent.wCurrentIdentity.getFromAddress(), 
                                                                  "OPTIONS",
-                                                                 parent.wCurrentIdentity.routeset,
-                                                                 parent.wCurrentIdentity.routeset.length);
+                                                                 route,
+                                                                 route.length);
       wOptionsRS.listener = {
         notifyResponseReceived : function(rc, dialog, response, flow) {
           if (document)

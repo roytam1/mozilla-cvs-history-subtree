@@ -68,11 +68,13 @@
         return;
       }
       
+      var route = parent.wCurrentIdentity.getRoutingInfo().routeset;
+
       wRS = parent.wSipStack.createNonInviteRequestClient(address, 
-                                                          parent.wCurrentIdentity.getAOR(),
+                                                          parent.wCurrentIdentity.getFromAddress(),
                                                           document.getElementById("method").value,
-                                                          parent.wCurrentIdentity.routeset,
-                                                          parent.wCurrentIdentity.routeset.length);
+                                                          route,
+                                                          route.length);
       document.getElementById("request").value = wRS.request.serialize();
     }
 
@@ -124,7 +126,7 @@
     <label value="Remote party:"/>
     <textbox id="remote" value="sip:afri@fwd.pulver.com"/>
     <label value="Method:"/>
-    <textbox id="method" value="REGISTER"/>
+    <textbox id="method" value="OPTIONS"/>
     <hbox>
       <spacer flex="1"/>
       <button label="Generate template" oncommand="generateTemplate()"/>
