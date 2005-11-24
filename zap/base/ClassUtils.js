@@ -37,6 +37,7 @@
 
 Components.utils.importModule("rel:ArrayUtils.js");
 Components.utils.importModule("rel:ObjectUtils.js");
+Components.utils.importModule("rel:AsyncUtils.js");
 
 EXPORTED_SYMBOLS = [ "StdClass",
                      "makeClass",
@@ -50,7 +51,9 @@ EXPORTED_SYMBOLS = [ "StdClass",
                      "PropertyBag",
                      "makePropertyBag",
                      "StateMachine",
-                     "AsyncObject"];
+                     "AsyncObject",
+                     "Schedule",
+                     "WeakHash"];
 
 // name our global object:
 function toString() { return "[ClassUtils.js]"; }
@@ -787,6 +790,7 @@ StateMachine.metafun(
 
 ////////////////////////////////////////////////////////////////////////
 // Class AsyncObject
+// A class with some facilities for asynchronous notifications
 
 var AsyncObject = makeClass("AsyncObject", ErrorReporter);
 
@@ -810,23 +814,116 @@ AsyncObject.metafun(
     eval("f = function() { this._"+condition+"Hook = [] };");
     this.appendCtor(f);
     
-    // install condition setter 'setCondition':
-    eval("f = function set"+condition+"() {"+
-         "  this._"+condition+"=true;"+
+    // install condition setter/getter:
+    var s,g;
+    eval("s = function set"+condition+"(v) {"+
+         "  this._"+condition+"=v;"+
+         "  if (!v) return; "+
          "  this._"+condition+"Hook.forEach(function(a) {a();});"+
          "  this._"+condition+"Hook = []; };");
     this.fun(f);
 
-    // install condition unsetter 'unsetCondition':
-    eval("f = function unset"+condition+"() {"+
-         "  this._"+condition+"=false;};");
-    this.fun(f);
+    eval("g = function get"+condition+"() {"+
+         "  return this._"+condition+";};");
+    
+    this.gettersetter(condition, g, s);
 
     // install 'whenCondition':
     eval("f = function when"+condition+"(fct) {"+
-         "  if (this._"+condition+"==true)"+
+         "  if (this._"+condition+")"+
          "    fct();"+
          "  else"+
          "    this._"+condition+"Hook.push(fct);};");
     this.fun(f);    
   });
+
+AsyncObject.addCondition("Terminated");
+// XXX maybe clear pending functions on hooks when we enter the
+// Terminated condition. This would aid GC in the face of XPCOM<->JS
+// reference cycles.
+
+
+////////////////////////////////////////////////////////////////////////
+// Class Schedule
+// A class with facilites for asynchronous scheduling of member calls.
+// All active schedules will automatically be descheduled on
+// termination (i.e. when scheduleObj.Terminated is set to 'true').
+
+var Schedule = makeClass("Schedule", AsyncObject);
+
+Schedule.appendCtor(
+  function() {
+    this._activeSchedules = {};
+    var me = this;
+    this.whenTerminated(
+      function() {
+        for (var s in me._activeSchedules) {
+          me._activeSchedules[s].cancel();
+          delete me._activeSchedules[s];
+        }
+      });
+  });
+
+Schedule.fun(
+  function schedule(method, interval, args) {
+    var me = this;
+    var scheduleId;
+    var timer = makeOneShotTimer(
+      {
+        notify : function(timer) {
+          delete me._activeSchedules[scheduleId];
+          method.apply(me, args);
+        }
+      },
+      interval);
+    scheduleId = Components.utils.getObjectId(timer);
+    this._activeSchedules[scheduleId] = timer;
+    return scheduleId;
+  });
+
+////////////////////////////////////////////////////////////////////////
+// Class WeakHash
+
+var WeakHash = makeClass("WeakHash", ErrorReporter);
+
+// The hash will be checked for stale references after 'reapThreshold'
+// set() calls:
+WeakHash.obj("reapThreshold", 100);
+
+WeakHash.obj("_hashSize", 0);
+
+WeakHash.fun(
+  function reapStaleReferences() {
+    this._hashSize = 0;
+    var hash = this;
+    hashmap(this, function(key, val) {
+              if (!val.get())
+                hashdel(hash, key);
+            });
+  });
+
+WeakHash.fun(
+  function set(key, value) {
+    if (++this._hashSize > this.reapThreshold)
+      this.reapStaleReferences();
+    hashset(this, key, Components.utils.getWeakRef(value));
+  });
+
+WeakHash.fun(
+  function get(key) {
+    var val = hashget(this, key);
+    if (!val || !(val = val.get())) return null;
+    return val;
+  });
+
+WeakHash.fun(
+  function getKeys() {
+    return hashkeys(this);
+  });
+
+WeakHash.fun(
+  function remove(key) {
+    --this._hashSize;
+    hashdel(this, key);
+  });
+
