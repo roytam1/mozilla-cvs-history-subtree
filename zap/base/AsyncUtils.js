@@ -85,7 +85,9 @@ function resetOneShotTimer(timer, duration) {
   return timer;
 }
 
-// asynchronously call 'fct' after 'interval' ms:
+// Asynchronously call 'fct' after 'interval' ms. Return timer
+// object. Calling cancel() on the return value will cancel the
+// scheduled function call.
 function schedule(fct, interval) {
   var timer = makeOneShotTimer(
     {
@@ -94,4 +96,5 @@ function schedule(fct, interval) {
       }
     },
     interval);
+  return timer;
 }
