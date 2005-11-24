@@ -194,7 +194,6 @@ zapStunResolver.fun(
       this._dump("ignoring packet from unknown source");
       return;
     }
-    A = data.data;
     try {
       var message = getNetUtils().deserializeStunPacket(data.data, {}, {});
     }
@@ -247,7 +246,7 @@ zapStunResolver.fun(
 zapStunResolver.fun(
   function notify(timer) {
     // see rfc3489bis 9.3 for information on the retransmission logic
-    if (this.resends == 9) {
+    if (this.resends == 8) {
       // failure to get an answer from this server.
       // -> try next server
       this.tryNextStunServer();
