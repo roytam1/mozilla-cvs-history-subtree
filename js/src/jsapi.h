@@ -135,6 +135,19 @@ JS_BEGIN_EXTERN_C
 #define JSFUN_FLAGS_MASK        0xf8    /* overlay JSFUN_* attributes */
 
 /*
+ * Re-use JSFUN_LAMBDA, which applies only to scripted functions, for use in
+ * JSFunctionSpec arrays that specify generic native prototype methods, i.e.,
+ * methods of a class prototype that are exposed as static methods taking an
+ * extra leading argument: the generic |this| parameter.
+ *
+ * If you set this flag in a JSFunctionSpec struct's flags initializer, then
+ * that struct must live at least as long as the native static method object
+ * created due to this flag by JS_DefineFunctions or JS_InitClass.  Typically
+ * JSFunctionSpec structs are allocated in static arrays.
+ */
+#define JSFUN_GENERIC_NATIVE    JSFUN_LAMBDA
+
+/*
  * Well-known JS values.  The extern'd variables are initialized when the
  * first JSContext is created by JS_NewContext (see below).
  */
@@ -816,12 +829,12 @@ struct JSExtendedClass {
     JSClass             base;
     JSEqualityOp        equality;
     JSObjectOp          outerObject;
+    JSObjectOp          innerObject;
     jsword              reserved0;
     jsword              reserved1;
     jsword              reserved2;
     jsword              reserved3;
     jsword              reserved4;
-    jsword              reserved5;
 };
 
 #define JSCLASS_HAS_PRIVATE             (1<<0)  /* objects have private slot */
@@ -859,7 +872,7 @@ struct JSExtendedClass {
 
 /* Initializer for unused members of statically initialized JSClass structs. */
 #define JSCLASS_NO_OPTIONAL_MEMBERS     0,0,0,0,0,0,0,0
-#define JSCLASS_NO_RESERVED_MEMBERS     0,0,0,0,0,0
+#define JSCLASS_NO_RESERVED_MEMBERS     0,0,0,0,0
 
 /* For detailed comments on these function pointer types, see jspubtd.h. */
 struct JSObjectOps {
@@ -895,6 +908,7 @@ struct JSObjectOps {
 struct JSXMLObjectOps {
     JSObjectOps         base;
     JSGetMethodOp       getMethod;
+    JSSetMethodOp       setMethod;
     JSEnumerateValuesOp enumerateValues;
     JSEqualityOp        equality;
     JSConcatenateOp     concatenate;
@@ -1259,6 +1273,22 @@ JS_ClearScope(JSContext *cx, JSObject *obj);
 
 extern JS_PUBLIC_API(JSIdArray *)
 JS_Enumerate(JSContext *cx, JSObject *obj);
+
+/*
+ * Create an object to iterate over enumerable properties of obj, in arbitrary
+ * property definition order.  NB: This differs from longstanding for..in loop
+ * order, which uses order of property definition in obj.
+ */
+extern JS_PUBLIC_API(JSObject *)
+JS_NewPropertyIterator(JSContext *cx, JSObject *obj);
+
+/*
+ * Return true on success with *idp containing the id of the next enumerable
+ * property to visit using iterobj, or JSVAL_VOID if there is no such property
+ * left to visit.  Return false on error.
+ */
+extern JS_PUBLIC_API(JSBool)
+JS_NextProperty(JSContext *cx, JSObject *iterobj, jsid *idp);
 
 extern JS_PUBLIC_API(JSBool)
 JS_CheckAccess(JSContext *cx, JSObject *obj, jsid id, JSAccessMode mode,

@@ -1,4 +1,5 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ * vim: set ts=8 sw=4 et tw=80:
  *
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -393,8 +394,11 @@ args_setProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
         break;
 
       default:
-        if ((uintN)slot < fp->argc && !ArgWasDeleted(cx, fp, slot))
+        if (fp->fun->interpreted &&
+            (uintN)slot < fp->argc &&
+            !ArgWasDeleted(cx, fp, slot)) {
             fp->argv[slot] = *vp;
+        }
         break;
     }
     return JS_TRUE;
@@ -1039,13 +1043,20 @@ fun_resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags,
                                   &pval)) {
                 return JS_FALSE;
             }
-            if (JSVAL_IS_OBJECT(pval))
+            if (!JSVAL_IS_PRIMITIVE(pval)) {
+                /*
+                 * We are about to allocate a new object, so hack the newborn
+                 * root until then to protect pval in case it is figuratively
+                 * up in the air, with no strong refs protecting it.
+                 */
+                cx->newborn[GCX_OBJECT] = JSVAL_TO_GCTHING(pval);
                 parentProto = JSVAL_TO_OBJECT(pval);
+            }
         }
 
         /*
          * Beware of the wacky case of a user function named Object -- trying
-         * to find a prototype for that will recur back here ad perniciem.
+         * to find a prototype for that will recur back here _ad perniciem_.
          */
         if (!parentProto && fun->atom == cx->runtime->atomState.ObjectAtom)
             return JS_TRUE;
@@ -1104,7 +1115,9 @@ fun_finalize(JSContext *cx, JSObject *obj)
     JS_ATOMIC_DECREMENT(&fun->nrefs);
     if (fun->nrefs)
         return;
-    if (fun->interpreted)
+
+    /* Null-check required since the parser sets interpreted very early. */
+    if (fun->interpreted && fun->u.script)
         js_DestroyScript(cx, fun->u.script);
 }
 
@@ -1351,7 +1364,7 @@ fun_mark(JSContext *cx, JSObject *obj, void *arg)
         JS_MarkGCThing(cx, fun, js_private_str, arg);
         if (fun->atom)
             GC_MARK_ATOM(cx, fun->atom, arg);
-        if (fun->interpreted)
+        if (fun->interpreted && fun->u.script)
             js_MarkScript(cx, fun->u.script, arg);
     }
     return 0;
@@ -1407,6 +1420,7 @@ js_fun_toString(JSContext *cx, JSObject *obj, uint32 indent,
                                                      &fval)) {
                     return JS_FALSE;
                 }
+                argv[-1] = fval;
             }
             if (!JSVAL_IS_FUNCTION(cx, fval)) {
                 JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
@@ -1707,6 +1721,10 @@ Function(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         lineno = 0;
         principals = NULL;
     }
+
+    /* Belt-and-braces: check that the caller has access to parent. */
+    if (!js_CheckPrincipalsAccess(cx, parent, principals, "Function"))
+        return JS_FALSE;
 
     n = argc ? argc - 1 : 0;
     if (n > 0) {
@@ -2058,6 +2076,49 @@ js_ValueToFunction(JSContext *cx, jsval *vp, uintN flags)
         return NULL;
     }
     return (JSFunction *) JS_GetPrivate(cx, obj);
+}
+
+JSObject *
+js_ValueToFunctionObject(JSContext *cx, jsval *vp, uintN flags)
+{
+    JSFunction *fun;
+    JSObject *funobj;
+    JSStackFrame *caller;
+
+    if (JSVAL_IS_FUNCTION(cx, *vp))
+        return JSVAL_TO_OBJECT(*vp);
+
+    fun = js_ValueToFunction(cx, vp, flags);
+    if (!fun)
+        return NULL;
+    funobj = fun->object;
+    *vp = OBJECT_TO_JSVAL(funobj);
+
+    caller = JS_GetScriptedCaller(cx, cx->fp);
+    if (caller &&
+        !js_CheckPrincipalsAccess(cx, funobj,
+                                  caller->script->principals,
+                                  JS_GetFunctionName(fun))) {
+        return NULL;
+    }
+    return funobj;
+}
+
+JSObject *
+js_ValueToCallableObject(JSContext *cx, jsval *vp, uintN flags)
+{
+    JSObject *callable;
+
+    callable = JSVAL_IS_PRIMITIVE(*vp) ? NULL : JSVAL_TO_OBJECT(*vp);
+    if (callable &&
+        ((callable->map->ops == &js_ObjectOps)
+         ? OBJ_GET_CLASS(cx, callable)->call
+         : callable->map->ops->call)) {
+        *vp = OBJECT_TO_JSVAL(callable);
+    } else {
+        callable = js_ValueToFunctionObject(cx, vp, flags);
+    }
+    return callable;
 }
 
 void

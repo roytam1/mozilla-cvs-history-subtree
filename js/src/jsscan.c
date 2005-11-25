@@ -690,8 +690,8 @@ ReportCompileErrorNumber(JSContext *cx, void *handle, uintN flags,
          */
 
         /*
-         * Only try to raise an exception if there isn't one already set -
-         * otherwise the exception will describe only the last compile error,
+         * Try to raise an exception only if there isn't one already set --
+         * otherwise the exception will describe the last compile-time error,
          * which is likely spurious.
          */
         if (!ts || !(ts->flags & TSF_ERROR)) {
@@ -705,12 +705,16 @@ ReportCompileErrorNumber(JSContext *cx, void *handle, uintN flags,
          * don't really want to call the error reporter, as when js is called
          * by other code which could catch the error.
          */
-        if (cx->interpLevel != 0)
+        if (cx->interpLevel != 0 && !JSREPORT_IS_WARNING(flags))
             onError = NULL;
 #endif
-        if (cx->runtime->debugErrorHook && onError) {
+        if (onError) {
             JSDebugErrorHook hook = cx->runtime->debugErrorHook;
-            /* test local in case debugErrorHook changed on another thread */
+
+            /*
+             * If debugErrorHook is present then we give it a chance to veto
+             * sending the error on to the regular error reporter.
+             */
             if (hook && !hook(cx, message, report,
                               cx->runtime->debugErrorHookData)) {
                 onError = NULL;
@@ -1049,7 +1053,9 @@ js_PeekTokenSameLine(JSContext *cx, JSTokenStream *ts)
     JSTokenType tt;
 
     JS_ASSERT(ts->lookahead == 0 ||
-              ON_CURRENT_LINE(ts, CURRENT_TOKEN(ts).pos));
+              ON_CURRENT_LINE(ts, CURRENT_TOKEN(ts).pos) ||
+              ts->tokens[(ts->cursor + ts->lookahead) & NTOKENS_MASK].type
+                  == TOK_EOL);
     ts->flags |= TSF_NEWLINES;
     tt = js_PeekToken(cx, ts);
     ts->flags &= ~TSF_NEWLINES;
@@ -1299,9 +1305,6 @@ retry:
         goto out;
     }
 
-    if (c != '-' && c != '\n')
-        ts->flags |= TSF_DIRTYLINE;
-
     hadUnicodeEscape = JS_FALSE;
     if (JS_ISIDSTART(c) ||
         (c == '\\' &&
@@ -1530,7 +1533,7 @@ retry:
     }
 
     switch (c) {
-      case '\n': tt = TOK_EOL; break;
+      case '\n': tt = TOK_EOL; goto eol_out;
       case ';':  tt = TOK_SEMI; break;
       case '[':  tt = TOK_LB; break;
       case ']':  tt = TOK_RB; break;
@@ -1552,7 +1555,7 @@ retry:
 
       case ':':
 #if JS_HAS_XML_SUPPORT
-        if (JS_HAS_XML_OPTION(cx) && MatchChar(ts, c)) {
+        if (MatchChar(ts, c)) {
             tt = TOK_DBLCOLON;
             break;
         }
@@ -1626,16 +1629,34 @@ retry:
 
 #if JS_HAS_XML_SUPPORT
       case '@':
-        if (JS_HAS_XML_OPTION(cx)) {
-            tt = TOK_AT;
-            break;
-        }
-        goto badchar;
+        tt = TOK_AT;
+        break;
 #endif
 
       case '<':
 #if JS_HAS_XML_SUPPORT
-        if (JS_HAS_XML_OPTION(cx) && (ts->flags & TSF_OPERAND)) {
+        /*
+         * After much testing, it's clear that Postel's advice to protocol
+         * designers ("be liberal in what you accept, and conservative in what
+         * you send") invites a natural-law repercussion for JS as "protocol":
+         *
+         * "If you are liberal in what you accept, others will utterly fail to
+         *  be conservative in what they send."
+         *
+         * Which means you will get <!-- comments to end of line in the middle
+         * of .js files, and after if conditions whose then statements are on
+         * the next line, and other wonders.  See at least the following bugs:
+         * https://bugzilla.mozilla.org/show_bug.cgi?id=309242
+         * https://bugzilla.mozilla.org/show_bug.cgi?id=309712
+         * https://bugzilla.mozilla.org/show_bug.cgi?id=310993
+         *
+         * So without JSOPTION_XML, we never scan an XML comment or CDATA
+         * literal.  We always scan <! as the start of an HTML comment hack
+         * to end of line, used since Netscape 2 to hide script tag content
+         * from script-unaware browsers.
+         */
+        if ((ts->flags & TSF_OPERAND) &&
+            (JS_HAS_XML_OPTION(cx) || PeekChar(ts) != '!')) {
             /* Check for XML comment or CDATA section. */
             if (MatchChar(ts, '!')) {
                 INIT_TOKENBUF();
@@ -1747,8 +1768,10 @@ retry:
         /* NB: treat HTML begin-comment as comment-till-end-of-line */
         if (MatchChar(ts, '!')) {
             if (MatchChar(ts, '-')) {
-                if (MatchChar(ts, '-'))
+                if (MatchChar(ts, '-')) {
+                    ts->flags |= TSF_IN_HTML_COMMENT;
                     goto skipline;
+                }
                 UngetChar(ts, '-');
             }
             UngetChar(ts, '!');
@@ -1846,8 +1869,16 @@ retry:
             }
 
 skipline:
-            while ((c = GetChar(ts)) != EOF && c != '\n')
-                continue;
+            /* Optimize line skipping if we are not in an HTML comment. */
+            if (ts->flags & TSF_IN_HTML_COMMENT) {
+                while ((c = GetChar(ts)) != EOF && c != '\n') {
+                    if (c == '-' && MatchChar(ts, '-') && MatchChar(ts, '>'))
+                        ts->flags &= ~TSF_IN_HTML_COMMENT;
+                }
+            } else {
+                while ((c = GetChar(ts)) != EOF && c != '\n')
+                    continue;
+            }
             UngetChar(ts, c);
             ts->cursor = (ts->cursor - 1) & NTOKENS_MASK;
             goto retry;
@@ -1872,9 +1903,11 @@ skipline:
         if (ts->flags & TSF_OPERAND) {
             JSObject *obj;
             uintN flags;
+            JSBool inCharClass = JS_FALSE;
 
             INIT_TOKENBUF();
-            while ((c = GetChar(ts)) != '/') {
+            for (;;) {
+                c = GetChar(ts);
                 if (c == '\n' || c == EOF) {
                     UngetChar(ts, c);
                     js_ReportCompileErrorNumber(cx, ts,
@@ -1885,6 +1918,13 @@ skipline:
                 if (c == '\\') {
                     ADD_TO_TOKENBUF(c);
                     c = GetChar(ts);
+                } else if (c == '[') {
+                    inCharClass = JS_TRUE;
+                } else if (c == ']') {
+                    inCharClass = JS_FALSE;
+                } else if (c == '/' && !inCharClass) {
+                    /* For compat with IE, allow unescaped / in char classes. */
+                    break;
                 }
                 ADD_TO_TOKENBUF(c);
             }
@@ -1966,14 +2006,15 @@ skipline:
             tp->t_op = JSOP_SUB;
             tt = TOK_ASSIGN;
         } else if (MatchChar(ts, c)) {
-            if (PeekChar(ts) == '>' && !(ts->flags & TSF_DIRTYLINE))
+            if (PeekChar(ts) == '>' && !(ts->flags & TSF_DIRTYLINE)) {
+                ts->flags &= ~TSF_IN_HTML_COMMENT;
                 goto skipline;
+            }
             tt = TOK_DEC;
         } else {
             tp->t_op = JSOP_NEG;
             tt = TOK_MINUS;
         }
-        ts->flags |= TSF_DIRTYLINE;
         break;
 
 #if JS_HAS_SHARP_VARS
@@ -2034,6 +2075,10 @@ skipline:
     }
 
 out:
+    JS_ASSERT(tt != TOK_EOL);
+    ts->flags |= TSF_DIRTYLINE;
+
+eol_out:
     if (!STRING_BUFFER_OK(&ts->tokenbuf))
         tt = TOK_ERROR;
     JS_ASSERT(tt < TOK_LIMIT);

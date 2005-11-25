@@ -1,4 +1,5 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ * vim: set ts=8 sw=4 et tw=80:
  *
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -62,6 +63,9 @@
 #endif
 
 #if JS_HAS_SCRIPT_OBJECT
+
+static const char js_script_exec[] = "Script.prototype.exec";
+static const char js_script_compile[] = "Script.prototype.compile";
 
 #if JS_HAS_TOSOURCE
 static JSBool
@@ -176,6 +180,7 @@ script_compile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     str = js_ValueToString(cx, argv[0]);
     if (!str)
         return JS_FALSE;
+    argv[0] = STRING_TO_JSVAL(str);
 
     /* Compile using the caller's scope chain, which js_Invoke passes to fp. */
     fp = cx->fp;
@@ -200,6 +205,11 @@ script_compile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
         line = 0;
         principals = NULL;
     }
+
+    /* Ensure we compile this script with the right (inner) principals. */
+    scopeobj = js_CheckScopeChainValidity(cx, scopeobj, js_script_compile);
+    if (!scopeobj)
+        return JS_FALSE;
 
     /*
      * Compile the new script using the caller's scope chain, a la eval().
@@ -239,8 +249,7 @@ script_exec(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     JSScript *script;
     JSObject *scopeobj, *parent;
     JSStackFrame *fp, *caller;
-    JSPrincipals *principals, *scopePrincipals;
-    JSRuntime *rt;
+    JSPrincipals *principals;
 
     if (!JS_InstanceOf(cx, obj, &js_ScriptClass, argv))
         return JS_FALSE;
@@ -300,21 +309,14 @@ script_exec(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         }
     }
 
+    scopeobj = js_CheckScopeChainValidity(cx, scopeobj, js_script_exec);
+    if (!scopeobj)
+        return JS_FALSE;
+
     /* Belt-and-braces: check that this script object has access to scopeobj. */
     principals = script->principals;
-    if (principals) {
-        rt = cx->runtime;
-        if (rt->findObjectPrincipals) {
-            scopePrincipals = rt->findObjectPrincipals(cx, scopeobj);
-            if (scopePrincipals &&
-                !principals->subsume(principals, scopePrincipals)) {
-                JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
-                                     JSMSG_BAD_INDIRECT_CALL,
-                                     "Script.prototype.exec");
-                return JS_FALSE;
-            }
-        }
-    }
+    if (!js_CheckPrincipalsAccess(cx, scopeobj, principals, js_script_exec))
+        return JS_FALSE;
 
     return js_Execute(cx, scopeobj, script, caller, JSFRAME_EVAL, rval);
 }
@@ -723,6 +725,7 @@ script_thaw(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     str = js_ValueToString(cx, argv[0]);
     if (!str)
         return JS_FALSE;
+    argv[0] = STRING_TO_JSVAL(str);
 
     /* create new XDR */
     xdr = JS_XDRNewMem(cx, JSXDR_DECODE);

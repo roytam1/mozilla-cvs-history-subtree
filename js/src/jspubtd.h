@@ -69,6 +69,7 @@ typedef enum JSVersion {
     JSVERSION_1_4     = 140,
     JSVERSION_ECMA_3  = 148,
     JSVERSION_1_5     = 150,
+    JSVERSION_1_6     = 160,
     JSVERSION_DEFAULT = 0,
     JSVERSION_UNKNOWN = -1
 } JSVersion;
@@ -501,6 +502,10 @@ typedef JSBool
 
 typedef JSObject *
 (* JS_DLL_CALLBACK JSGetMethodOp)(JSContext *cx, JSObject *obj, jsid id,
+                                  jsval *vp);
+
+typedef JSBool
+(* JS_DLL_CALLBACK JSSetMethodOp)(JSContext *cx, JSObject *obj, jsid id,
                                   jsval *vp);
 
 typedef JSBool

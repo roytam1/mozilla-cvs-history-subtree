@@ -689,7 +689,7 @@ date_parseString(JSString *str, jsdouble *result)
                     mday = /*byte*/ n;
                 else
                     goto syntax;
-            } else if (i < limit && c != ',' && c > ' ' && c != '-') {
+            } else if (i < limit && c != ',' && c > ' ' && c != '-' && c != '(') {
                 goto syntax;
             } else if (seenplusminus && n < 60) {  /* handle GMT-3:30 */
                 if (tzoffset < 0)
@@ -698,7 +698,7 @@ date_parseString(JSString *str, jsdouble *result)
                     tzoffset += n;
             } else if (hour >= 0 && min < 0) {
                 min = /*byte*/ n;
-            } else if (min >= 0 && sec < 0) {
+            } else if (prevc == ':' && min >= 0 && sec < 0) {
                 sec = /*byte*/ n;
             } else if (mon < 0) {
                 mon = /*byte*/n;
@@ -802,7 +802,7 @@ date_parseString(JSString *str, jsdouble *result)
                  ii. If m >= 70, the date is invalid.
     */
     if (seenmonthname) {
-        if (mday >= 70 && year >= 70 || mday < 70 && year < 70) {
+        if ((mday >= 70 && year >= 70) || (mday < 70 && year < 70)) {
             goto syntax;
         }
         if (mday > year) {

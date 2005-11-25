@@ -577,7 +577,7 @@ BuildSpanDepTable(JSContext *cx, JSCodeGenerator *cg)
             pc2 += JUMP_OFFSET_LEN;
             for (i = low; i <= high; i++) {
                 off = GET_JUMP_OFFSET(pc2);
-                if (off != 0 && !AddSpanDep(cx, cg, pc, pc2, off))
+                if (!AddSpanDep(cx, cg, pc, pc2, off))
                     return JS_FALSE;
                 pc2 += JUMP_OFFSET_LEN;
             }
@@ -788,7 +788,7 @@ OptimizeSpanDeps(JSContext *cx, JSCodeGenerator *cg)
             }
 
             if (!JOF_TYPE_IS_EXTENDED_JUMP(type)) {
-                span = SD_TARGET_OFFSET(sd) - pivot;
+                span = SD_SPAN(sd, pivot);
                 if (span < JUMP_OFFSET_MIN || JUMP_OFFSET_MAX < span) {
                     ptrdiff_t deltaFromTop = 0;
 
@@ -910,7 +910,7 @@ OptimizeSpanDeps(JSContext *cx, JSCodeGenerator *cg)
         }
 
         oldpc = base + sd->before;
-        span = SD_TARGET_OFFSET(sd) - pivot;
+        span = SD_SPAN(sd, pivot);
 
         /*
          * If this jump didn't need to be extended, restore its span immediate
@@ -1112,7 +1112,7 @@ OptimizeSpanDeps(JSContext *cx, JSCodeGenerator *cg)
         } else {
             span = GET_JUMP_OFFSET(pc);
         }
-        JS_ASSERT(SD_TARGET_OFFSET(sd) == pivot + span);
+        JS_ASSERT(SD_SPAN(sd, pivot) == span);
     }
     JS_ASSERT(!JOF_TYPE_IS_EXTENDED_JUMP(type) || bigspans != 0);
   }
@@ -2066,6 +2066,25 @@ CheckSideEffects(JSContext *cx, JSTreeContext *tc, JSParseNode *pn,
     return ok;
 }
 
+/*
+ * Secret handshake with js_EmitTree's TOK_LP/TOK_NEW case logic, to flag all
+ * uses of JSOP_GETMETHOD that implicitly qualify the method-property name with
+ * a function:: prefix.  All other JSOP_GETMETHOD and JSOP_SETMETHOD uses must
+ * be explicit, so need a distinct source note (SRC_PCDELTA rather than PCBASE)
+ * for round-tripping through the beloved decompiler.
+ */
+#define JSPROP_IMPLICIT_FUNCTION_NAMESPACE      0x100
+
+static jssrcnote
+SrcNoteForPropOp(JSParseNode *pn, JSOp op)
+{
+    return ((op == JSOP_GETMETHOD &&
+             !(pn->pn_attrs & JSPROP_IMPLICIT_FUNCTION_NAMESPACE)) ||
+            op == JSOP_SETMETHOD)
+           ? SRC_PCDELTA
+           : SRC_PCBASE;
+}
+
 static JSBool
 EmitPropOp(JSContext *cx, JSParseNode *pn, JSOp op, JSCodeGenerator *cg)
 {
@@ -2111,7 +2130,7 @@ EmitPropOp(JSContext *cx, JSParseNode *pn, JSOp op, JSCodeGenerator *cg)
 
         do {
             /* Walk back up the list, emitting annotated name ops. */
-            if (js_NewSrcNote2(cx, cg, SRC_PCBASE,
+            if (js_NewSrcNote2(cx, cg, SrcNoteForPropOp(pndot, pndot->pn_op),
                                CG_OFFSET(cg) - pndown->pn_offset) < 0) {
                 return JS_FALSE;
             }
@@ -2128,8 +2147,10 @@ EmitPropOp(JSContext *cx, JSParseNode *pn, JSOp op, JSCodeGenerator *cg)
             return JS_FALSE;
     }
 
-    if (js_NewSrcNote2(cx, cg, SRC_PCBASE, CG_OFFSET(cg) - pn2->pn_offset) < 0)
+    if (js_NewSrcNote2(cx, cg, SrcNoteForPropOp(pn, op),
+                       CG_OFFSET(cg) - pn2->pn_offset) < 0) {
         return JS_FALSE;
+    }
     if (!pn->pn_atom) {
         JS_ASSERT(op == JSOP_IMPORTALL);
         if (js_Emit1(cx, cg, op) < 0)
@@ -2761,7 +2782,7 @@ js_EmitFunctionBody(JSContext *cx, JSCodeGenerator *cg, JSParseNode *body,
     fun->u.script = js_NewScriptFromCG(cx, cg, fun);
     if (!fun->u.script)
         return JS_FALSE;
-    fun->interpreted = JS_TRUE;
+    JS_ASSERT(fun->interpreted);
     if (cg->treeContext.flags & TCF_FUN_HEAVYWEIGHT)
         fun->flags |= JSFUN_HEAVYWEIGHT;
     return JS_TRUE;
@@ -4102,9 +4123,10 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
         }
 
         /* Left parts such as a.b.c and a[b].c need a decompiler note. */
-        if (pn2->pn_type != TOK_NAME) {
-            if (js_NewSrcNote2(cx, cg, SRC_PCBASE, CG_OFFSET(cg) - top) < 0)
-                return JS_FALSE;
+        if (pn2->pn_type != TOK_NAME &&
+            js_NewSrcNote2(cx, cg, SrcNoteForPropOp(pn2, pn2->pn_op),
+                           CG_OFFSET(cg) - top) < 0) {
+            return JS_FALSE;
         }
 
         /* Finally, emit the specialized assignment bytecode. */
@@ -4451,16 +4473,17 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
          * First, emit code for the left operand to evaluate the callable or
          * constructable object expression.
          *
-         * For E4X, if calling rather than constructing (TOK_LP), and if this
-         * expression is a member reference, select JSOP_GETMETHOD instead of
-         * JSOP_GETPROP.  ECMA-357 separates XML method lookup from the normal
-         * property lookup done for native objects.
+         * For E4X, if this expression is a dotted member reference, select
+         * JSOP_GETMETHOD instead of JSOP_GETPROP.  ECMA-357 separates XML
+         * method lookup from the normal property id lookup done for native
+         * objects.
          */
         pn2 = pn->pn_head;
 #if JS_HAS_XML_SUPPORT
         if (pn2->pn_type == TOK_DOT && pn2->pn_op != JSOP_GETMETHOD) {
             JS_ASSERT(pn2->pn_op == JSOP_GETPROP);
             pn2->pn_op = JSOP_GETMETHOD;
+            pn2->pn_attrs |= JSPROP_IMPLICIT_FUNCTION_NAMESPACE;
         }
 #endif
         if (!js_EmitTree(cx, cg, pn2))
@@ -4709,7 +4732,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
         }
 
         JS_ASSERT(pn->pn_type == TOK_XMLLIST || pn->pn_count != 0);
-        switch (pn->pn_head->pn_type) {
+        switch (pn->pn_head ? pn->pn_head->pn_type : TOK_XMLLIST) {
           case TOK_XMLETAGO:
             JS_ASSERT(0);
             /* FALL THROUGH */

@@ -540,7 +540,7 @@ js_printf(JSPrinter *jp, const char *format, ...)
 
     /* Suppress newlines (must be once per format, at the end) if not pretty. */
     fp = NULL;
-    if (!jp->pretty && format[cc = strlen(format)-1] == '\n') {
+    if (!jp->pretty && format[cc = strlen(format) - 1] == '\n') {
         fp = JS_strdup(jp->sprinter.context, format);
         if (!fp)
             return -1;
@@ -847,7 +847,12 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
     JSObject *obj;
     JSFunction *fun;
     JSString *str;
-    JSBool ok, inXML, quoteAttr;
+    JSBool ok;
+#if JS_HAS_XML_SUPPORT
+    JSBool inXML, quoteAttr;
+#else
+#define inXML JS_FALSE
+#endif
     jsval val;
     static const char catch_cookie[] = "/*CATCH*/";
     static const char with_cookie[] = "/*WITH*/";
@@ -905,7 +910,9 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
     op = JSOP_NOP;
     sn = NULL;
     rval = NULL;
-    inXML = JS_FALSE;
+#if JS_HAS_XML_SUPPORT
+    inXML = quoteAttr = JS_FALSE;
+#endif
 
     while (pc < endpc) {
         lastop = op;
@@ -1881,18 +1888,37 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 
               do_getprop:
                 GET_QUOTE_AND_FMT("%s[%s]", "%s.%s", rval);
+
+              do_getprop_lval:
                 lval = POP_STR();
                 todo = Sprint(&ss->sprinter, fmt, lval, rval);
                 break;
 
 #if JS_HAS_XML_SUPPORT
               BEGIN_LITOPX_CASE(JSOP_GETMETHOD)
-                goto do_getprop;
-              END_LITOPX_CASE
+                sn = js_GetSrcNote(jp->script, pc);
+                if (sn && SN_TYPE(sn) == SRC_PCBASE)
+                    goto do_getprop;
+                GET_QUOTE_AND_FMT("%s.function::[%s]", "%s.function::%s", rval);
+                goto do_getprop_lval;
+
+              BEGIN_LITOPX_CASE(JSOP_SETMETHOD)
+                sn = js_GetSrcNote(jp->script, pc);
+                if (sn && SN_TYPE(sn) == SRC_PCBASE)
+                    goto do_setprop;
+                GET_QUOTE_AND_FMT("%s.function::[%s] %s= %s",
+                                  "%s.function::%s %s= %s",
+                                  xval);
+                goto do_setprop_rval;
 #endif
 
               case JSOP_SETPROP:
-                GET_ATOM_QUOTE_AND_FMT("%s[%s] %s= %s", "%s.%s %s= %s", xval);
+                atom = GET_ATOM(cx, jp->script, pc);
+
+              do_setprop:
+                GET_QUOTE_AND_FMT("%s[%s] %s= %s", "%s.%s %s= %s", xval);
+
+              do_setprop_rval:
                 rval = POP_STR();
                 lval = POP_STR();
                 sn = js_GetSrcNote(jp->script, pc - 1);
@@ -2011,6 +2037,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 #endif
 #if JS_HAS_XML_SUPPORT
                   case JSOP_GETMETHOD:    goto do_JSOP_GETMETHOD;
+                  case JSOP_SETMETHOD:    goto do_JSOP_SETMETHOD;
 #endif
                   case JSOP_NAMEDFUNOBJ:  goto do_JSOP_NAMEDFUNOBJ;
                   case JSOP_NUMBER:       goto do_JSOP_NUMBER;
@@ -2097,7 +2124,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 jsbytecode *pc2;
                 ptrdiff_t jmplen, off, off2;
                 jsint j, n, low, high;
-                TableEntry *table;
+                TableEntry *table, pivot;
 
                 sn = js_GetSrcNote(jp->script, pc);
                 JS_ASSERT(sn && SN_TYPE(sn) == SRC_SWITCH);
@@ -2140,7 +2167,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                         }
                         pc2 += jmplen;
                     }
-                    js_HeapSort(table, (size_t) j, sizeof(TableEntry),
+                    js_HeapSort(table, (size_t) j, &pivot, sizeof(TableEntry),
                                 CompareOffsets, NULL);
                 }
 
@@ -2421,13 +2448,15 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                               rval);
 #else
                 if (lastop == JSOP_GETTER || lastop == JSOP_SETTER) {
-                    todo = Sprint(&ss->sprinter, "%s%s%s %s%s",
+                    rval += strlen(js_function_str) + 1;
+                    todo = Sprint(&ss->sprinter, "%s%s%s %s%.*s",
                                   lval,
                                   (lval[1] != '\0') ? ", " : "",
                                   (lastop == JSOP_GETTER)
                                   ? js_get_str : js_set_str,
                                   xval,
-                                  rval + strlen(js_function_str) + 1);
+                                  strlen(rval) - 1,
+                                  rval);
                 } else {
                     todo = Sprint(&ss->sprinter, "%s%s%s:%s",
                                   lval,
@@ -2555,8 +2584,12 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 quoteAttr = JS_FALSE;
                 break;
 
-              case JSOP_TOXML:
               case JSOP_TOXMLLIST:
+                todo = Sprint(&ss->sprinter, "<>%s</>", POP_STR());
+                inXML = JS_FALSE;
+                break;
+
+              case JSOP_TOXML:
                 inXML = JS_FALSE;
                 /* fall through */
 
@@ -2641,6 +2674,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 /*
  * Undefine local macros.
  */
+#undef inXML
 #undef DECOMPILE_CODE
 #undef POP_STR
 #undef LOCAL_ASSERT
@@ -2845,7 +2879,8 @@ js_DecompileValueGenerator(JSContext *cx, intN spindex, jsval v,
     JSPrinter *jp;
     JSString *name;
 
-    fp = cx->fp;
+    for (fp = cx->fp; fp && !fp->script; fp = fp->down)
+        continue;
     if (!fp)
         goto do_fallback;
 
@@ -2957,7 +2992,7 @@ js_DecompileValueGenerator(JSContext *cx, intN spindex, jsval v,
         begin = pc;
     } else {
         sn = js_GetSrcNote(script, pc);
-        if (!sn || SN_TYPE(sn) != SRC_PCBASE) {
+        if (!sn || (SN_TYPE(sn) != SRC_PCBASE && SN_TYPE(sn) != SRC_PCDELTA)) {
             if (cs->token)
                 return JS_NewStringCopyZ(cx, cs->token);
             goto do_fallback;

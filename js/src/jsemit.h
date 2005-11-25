@@ -173,11 +173,16 @@ struct JSJumpTarget {
 #define JT_TO_BPDELTA(jt)       ((ptrdiff_t)((jsword)(jt) >> JT_UNTAG_SHIFT))
 
 #define SD_SET_TARGET(sd,jt)    ((sd)->target = JT_SET_TAG(jt))
+#define SD_GET_TARGET(sd)       (JS_ASSERT(JT_HAS_TAG((sd)->target)),         \
+                                 JT_CLR_TAG((sd)->target))
 #define SD_SET_BPDELTA(sd,bp)   ((sd)->target = BPDELTA_TO_JT(bp))
 #define SD_GET_BPDELTA(sd)      (JS_ASSERT(!JT_HAS_TAG((sd)->target)),        \
                                  JT_TO_BPDELTA((sd)->target))
-#define SD_TARGET_OFFSET(sd)    (JS_ASSERT(JT_HAS_TAG((sd)->target)),         \
-                                 JT_CLR_TAG((sd)->target)->offset)
+
+/* Avoid asserting twice by expanding SD_GET_TARGET in the "then" clause. */
+#define SD_SPAN(sd,pivot)       (SD_GET_TARGET(sd)                            \
+                                 ? JT_CLR_TAG((sd)->target)->offset - (pivot) \
+                                 : 0)
 
 struct JSCodeGenerator {
     JSTreeContext   treeContext;    /* base state: statement info stack, etc. */
@@ -392,13 +397,16 @@ typedef enum JSSrcNoteType {
                                    also used on JSOP_ENDINIT if extra comma
                                    at end of array literal: [1,2,,] */
     SRC_VAR         = 6,        /* JSOP_NAME/SETNAME/FORNAME in a var decl */
-    SRC_PCDELTA     = 7,        /* offset from comma-operator to next POP,
-                                   or from CONDSWITCH to first CASE opcode */
+    SRC_PCDELTA     = 7,        /* distance from comma-operator to next POP,
+                                   or from CONDSWITCH to first CASE opcode --
+                                   or SRC_PCBASE variant for obj.function::foo
+                                   gets and sets */
     SRC_ASSIGNOP    = 8,        /* += or another assign-op follows */
     SRC_COND        = 9,        /* JSOP_IFEQ is from conditional ?: operator */
     SRC_RESERVED0   = 10,       /* reserved for future use */
     SRC_HIDDEN      = 11,       /* opcode shouldn't be decompiled */
-    SRC_PCBASE      = 12,       /* offset of first obj.prop.subprop bytecode */
+    SRC_PCBASE      = 12,       /* distance back from annotated get- or setprop
+                                   op to first obj.prop.subprop bytecode */
     SRC_LABEL       = 13,       /* JSOP_NOP for label: with atomid immediate */
     SRC_LABELBRACE  = 14,       /* JSOP_NOP for label: {...} begin brace */
     SRC_ENDBRACE    = 15,       /* JSOP_NOP for label: {...} end brace */

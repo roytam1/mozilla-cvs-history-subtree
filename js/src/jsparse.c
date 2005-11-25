@@ -740,7 +740,7 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
             JSBool lambda)
 {
     JSOp op, prevop;
-    JSParseNode *pn, *body;
+    JSParseNode *pn, *body, *result;
     JSAtom *funAtom, *argAtom;
     JSStackFrame *fp;
     JSObject *varobj, *pobj;
@@ -761,11 +761,13 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
 
     /* Scan the optional function name into funAtom. */
     funAtom = js_MatchToken(cx, ts, TOK_NAME) ? CURRENT_TOKEN(ts).t_atom : NULL;
+#if !JS_HAS_LEXICAL_CLOSURE
     if (!funAtom && !lambda) {
         js_ReportCompileErrorNumber(cx, ts, JSREPORT_TS | JSREPORT_ERROR,
                                     JSMSG_SYNTAX_ERROR);
         return NULL;
     }
+#endif
 
     /* Find the nearest variable-declaring scope and use it as our parent. */
     fp = cx->fp;
@@ -861,6 +863,12 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
         fun->flags |= (op == JSOP_GETTER) ? JSPROP_GETTER : JSPROP_SETTER;
 #endif
 
+    /*
+     * Set interpreted early so js_EmitTree can test it to decide whether to
+     * eliminate useless expressions.
+     */
+    fun->interpreted = JS_TRUE;
+
     /* Now parse formal argument list and compute fun->nargs. */
     MUST_MATCH_TOKEN(TOK_LP, JSMSG_PAREN_BEFORE_FORMAL);
     if (!js_MatchToken(cx, ts, TOK_RP)) {
@@ -955,15 +963,27 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
     }
 #endif
 
+    result = pn;
 #if JS_HAS_LEXICAL_CLOSURE
-    JS_ASSERT(lambda || funAtom);
     if (lambda) {
         /*
-         * ECMA ed. 3 standard: function expression, possibly anonymous (even
-         * if at top-level, an unnamed function is an expression statement, not
-         * a function declaration).
+         * ECMA ed. 3 standard: function expression, possibly anonymous.
          */
         op = funAtom ? JSOP_NAMEDFUNOBJ : JSOP_ANONFUNOBJ;
+    } else if (!funAtom) {
+        /*
+         * If this anonymous function definition is *not* embedded within a
+         * larger expression, we treat it as an expression statement, not as
+         * a function declaration -- and not as a syntax error (as ECMA-262
+         * Edition 3 would have it).  Backward compatibility trumps all.
+         */
+        result = NewParseNode(cx, ts, PN_UNARY, tc);
+        if (!result)
+            return NULL;
+        result->pn_type = TOK_SEMI;
+        result->pn_pos = pn->pn_pos;
+        result->pn_kid = pn;
+        op = JSOP_ANONFUNOBJ;
     } else if (tc->topStmt) {
         /*
          * ECMA ed. 3 extension: a function expression statement not at the
@@ -992,7 +1012,7 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
     pn->pn_flags = funtc.flags & (TCF_FUN_FLAGS | TCF_HAS_DEFXMLNS);
     pn->pn_tryCount = funtc.tryCount;
     TREE_CONTEXT_FINISH(&funtc);
-    return pn;
+    return result;
 }
 
 static JSParseNode *
@@ -2408,7 +2428,9 @@ AssignExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
             tc->flags |= TCF_FUN_HEAVYWEIGHT;
         break;
       case TOK_DOT:
-        pn2->pn_op = JSOP_SETPROP;
+        pn2->pn_op = (pn2->pn_op == JSOP_GETMETHOD)
+                     ? JSOP_SETMETHOD
+                     : JSOP_SETPROP;
         break;
       case TOK_LB:
         pn2->pn_op = JSOP_SETELEM;
@@ -2727,6 +2749,8 @@ UnaryExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 {
     JSTokenType tt;
     JSParseNode *pn, *pn2;
+
+    CHECK_RECURSION();
 
     ts->flags |= TSF_OPERAND;
     tt = js_GetToken(cx, ts);
@@ -3640,6 +3664,25 @@ XMLElementOrList(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
     return pn;
 }
 
+static JSParseNode *
+XMLElementOrListRoot(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
+                     JSBool allowList)
+{
+    uint32 oldopts;
+    JSParseNode *pn;
+
+    /*
+     * Force XML support to be enabled so that comments and CDATA literals
+     * are recognized, instead of <! followed by -- starting an HTML comment
+     * to end of line (used in script tags to hide content from old browsers
+     * that don't recognize <script>).
+     */
+    oldopts = JS_SetOptions(cx, cx->options | JSOPTION_XML);
+    pn = XMLElementOrList(cx, ts, tc, allowList);
+    JS_SetOptions(cx, oldopts);
+    return pn;
+}
+
 JS_FRIEND_API(JSParseNode *)
 js_ParseXMLTokenStream(JSContext *cx, JSObject *chain, JSTokenStream *ts,
                        JSBool allowList)
@@ -3681,7 +3724,7 @@ js_ParseXMLTokenStream(JSContext *cx, JSObject *chain, JSTokenStream *ts,
                                     JSMSG_BAD_XML_MARKUP);
         pn = NULL;
     } else {
-        pn = XMLElementOrList(cx, ts, &tc, allowList);
+        pn = XMLElementOrListRoot(cx, ts, &tc, allowList);
     }
 
     ts->flags &= ~TSF_XMLONLYMODE;
@@ -3970,7 +4013,7 @@ PrimaryExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
         break;
 
       case TOK_XMLSTAGO:
-        pn = XMLElementOrList(cx, ts, tc, JS_TRUE);
+        pn = XMLElementOrListRoot(cx, ts, tc, JS_TRUE);
         if (!pn)
             return NULL;
         notsharp = JS_TRUE;     /* XXXbe could be sharp? */
