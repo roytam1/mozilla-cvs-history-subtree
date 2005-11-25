@@ -6,10 +6,21 @@
   <rdf:Seq rdf:about="urn:mozilla:zap:services">
     <rdf:li rdf:resource="rdf:#$vmowo"/>
     <rdf:li rdf:resource="rdf:#$wmowo"/>
+    <rdf:li rdf:resource="rdf:#$ymowo"/>
     <rdf:li rdf:resource="rdf:#$xmowo"/>
   </rdf:Seq>
   <rdf:Description rdf:about="rdf:#$wmowo"
                    NC:Name="Free World Dialup"
+                   zap:domain="fwd.pulver.com"
+                   zap:route1="&lt;sip:fwd.pulver.com;lr&gt;"
+                   zap:route2=""
+                   zap:route3=""
+                   zap:route4="" 
+                   zap:use_stun_contact_address="true"
+                   zap:options_keep_alive="true"
+                   zap:stun_server="stun.fwdnet.net" />
+  <rdf:Description rdf:about="rdf:#$ymowo"
+                   NC:Name="Free World Dialup (NAT)"
                    zap:domain="fwd.pulver.com"
                    zap:route1="&lt;sip:fwdnat.pulver.com:5082;lr&gt;"
                    zap:route2=""
