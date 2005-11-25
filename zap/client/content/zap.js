@@ -759,7 +759,10 @@ Registration.fun(
     this.flowid = flowid;
     this.outboundRoute = route;
     // should we keep this flow alive with STUN requests?
-    this.stunKeepAlive = route[0].uri.QueryInterface(Components.interfaces.zapISipSIPURI).hasURIParameter("sip-stun");
+    if (route[0].uri.QueryInterface(Components.interfaces.zapISipSIPURI).hasURIParameter("sip-stun"))
+      this.monitorType = Components.interfaces.zapISipFlow.IETF_SIP_OUTBOUND_01_MONITOR;
+    else if (this.group.identity.service["urn:mozilla:zap:options_keep_alive"]=="true")
+      this.monitorType = Components.interfaces.zapISipFlow.OPTIONS_MONITOR;
     
     this.registrationRC =
       wSipStack.createRegisterRequestClient(group.domain,
@@ -885,9 +888,9 @@ Registration.fun(
           }
           // set up a refresh timer:
           this.scheduleRefresh(expires*1000*0.9);
-          if (this.stunKeepAlive && !this.flow) {
+          if (this.monitorType && !this.flow) {
             this.flow = flow;
-            this.flow.addFlowMonitor(this, 1);
+            this.flow.addFlowMonitor(this, this.monitorType);
           }
           return;
         }

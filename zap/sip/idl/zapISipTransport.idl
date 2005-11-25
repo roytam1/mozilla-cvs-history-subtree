@@ -45,6 +45,7 @@ interface zapISipFlow;
 interface zapISipRequest;
 interface zapISipResponse;
 interface nsIPropertyBag2;
+interface zapISipUAStack;
 
 /**
  * \ingroup SIP_TRANSPORT_LAYER
@@ -68,11 +69,19 @@ interface zapISipTransport : nsISupports
    *                                be used instead. Default: 5060
    */
   void init(in nsIPropertyBag2 transportConfiguration);
-  
+
   void shutdown();
 
   void appendTransportSink(in zapISipTransportSink sink);
 
+  /**
+   * If this transport layer is part of a user agent stack, this
+   * attribute can be set to the stack instance. The transport layer
+   * will then be able to use OPTIONS flow monitoring. See also
+   * zapISipFlow::OPTIONS_MONITOR.
+   */
+  attribute zapISipUAStack UAStack;
+  
   readonly attribute zapISipTransceiver transceiver;
   
   readonly attribute unsigned short listeningPort;

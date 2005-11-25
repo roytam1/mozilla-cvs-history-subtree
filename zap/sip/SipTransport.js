@@ -724,6 +724,79 @@ StunMonitorSchedule.fun(
   });
 
 ////////////////////////////////////////////////////////////////////////
+// OptionsMonitorSchedule
+
+var OptionsMonitorSchedule = makeClass("OptionsMonitorSchedule",
+                                       Schedule, SupportsImpl);
+OptionsMonitorSchedule.addInterfaces(Components.interfaces.zapISipNonInviteRCListener);
+
+OptionsMonitorSchedule.fun(
+  function start(flow) {
+    this.flow = flow;
+
+    // XXX temporary hack to get some local address when the flow is from 0.0.0.0:
+    var localAddress = flow.localAddress;
+    if (localAddress == "0.0.0.0") {
+      localAddress = flow.transport.UAStack.hostAddress;
+    }
+    
+    var to = gSyntaxFactory.deserializeAddress("sip:" +
+                                               flow.remoteAddress + ":" +
+                                               flow.remotePort);
+    
+    var from = gSyntaxFactory.deserializeAddress("sip:NATkeepalive@" +
+                                                 localAddress + ":" +
+                                                 flow.localPort);
+
+    this.rc = flow.transport.UAStack.createNonInviteRequestClient(to, from,
+                                                                  "OPTIONS",
+                                                                  [], 0);        
+    this.schedule(this.sendRequest, this.getRequestInterval());
+  });
+
+OptionsMonitorSchedule.fun(
+  function getRequestInterval() {
+    // we use the same interval as the stun monitor
+    // see draft-ietf-sip-outbound-01 4.2
+    if (this.flow.transportProtocol == "udp")
+      return 24000+Math.floor(Math.random()*5000);
+    else
+      return 95000+Math.floor(Math.random()*7000);
+  });
+
+OptionsMonitorSchedule.fun(
+  function terminate() {
+    this.Terminated = true;
+    this.rc.listener = null;
+  });
+
+OptionsMonitorSchedule.fun(
+  function handleStunPacket(packet) {
+    return false;
+  });
+
+OptionsMonitorSchedule.fun(
+  function sendRequest() {
+    this.rc.listener = this;
+    this.rc.sendRequest();
+  });
+
+// zapISipNonInviteRCListener
+OptionsMonitorSchedule.fun(
+  function notifyResponseReceived(rc, dialog, response, flow) {
+    if (response.statusCode[0] == "1") return; // just a provisional response
+
+    // we'll interpret anything apart from a timeout (408) as 'success':
+    if (response.statusCode == "408")
+      this.flow.notifyMonitors(Components.interfaces.zapISipFlowMonitor.FLOW_FAILED);
+
+    // XXX be smart in checking for changes in the flow
+
+    // reschedule:
+    this.schedule(this.sendRequest, this.getRequestInterval());
+  });
+
+////////////////////////////////////////////////////////////////////////
 // SipFlow
 
 var SipFlow = makeClass("SipFlow", SupportsImpl);
@@ -763,8 +836,11 @@ SipFlow.getter(
 SipFlow.fun(
   function startMonitoring(type) {
     this._assert(!this.monitorSchedule, "already monitored");
-    if (type == Components.interfaces.zapISipFlow.IETF_SIP_OUTBOUND_01_MONITOR) {
+    if (type == Components.interfaces.zapISipFlow.IETF_SIP_OUTBOUND_01_MONITOR)
       this.monitorSchedule = StunMonitorSchedule.instantiate();
+    else if (type == Components.interfaces.zapISipFlow.OPTIONS_MONITOR) {
+      this._assert(this.transport.UAStack, "can't use OPTIONS monitoring without UA stack");
+      this.monitorSchedule = OptionsMonitorSchedule.instantiate();
     }
     this.monitorSchedule.start(this);
   });
@@ -918,12 +994,15 @@ SipTransport.fun(
 SipTransport.fun(
   function shutdown() {
     this.transceiver.shutdown();
+    this.UAStack = null;
   });
 
 SipTransport.fun(
   function appendTransportSink(sink) {
     this._sinks.push(sink);
   });
+
+SipTransport.obj("UAStack", null);
 
 //  readonly attribute zapISipTransceiver transceiver;
 SipTransport.obj("transceiver", null);

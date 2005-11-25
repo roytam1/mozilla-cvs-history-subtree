@@ -81,6 +81,15 @@ interface zapISipFlow : nsISupports
    * specified in draft-ietf-sip-outbound-01
    */
   const unsigned short IETF_SIP_OUTBOUND_01_MONITOR = 0x0001;
+
+  /**
+   * Monitor the flow by sending periodic OPTIONS requests.
+   *
+   * OPTIONS monitoring will only be available if the transport layer
+   * has been initialized with a zapISipUAStack. See
+   * zapISipTransport::UAStack
+   */
+  const unsigned short OPTIONS_MONITOR              = 0x0002;
   
   void addFlowMonitor(in zapISipFlowMonitor monitor, in unsigned short type);
   void removeFlowMonitor(in zapISipFlowMonitor monitor);

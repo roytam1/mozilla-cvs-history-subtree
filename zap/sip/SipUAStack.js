@@ -169,6 +169,10 @@ SipUAStack.fun(
     // Add ourselves as 'last-stop' transport sink:
     this.transport.appendTransportSink(this);
 
+    // Let the transport know about the sip ua stack, so that
+    // it can use transactions for flow monitoring:
+    this.transport.UAStack = this;
+
     this._dump("SIP User Agent Stack built.");    
   });
   
