@@ -807,7 +807,7 @@ public abstract class PluggableJVM
 		    }
 		  break;
 		default:		    
-		    trace("Unknow event type: "+evt.getType(), LOG_ERROR);
+		    trace("Unknown event type: "+evt.getType(), LOG_ERROR);
 		    break;
 		}	    
 	    if (evt.isSync())

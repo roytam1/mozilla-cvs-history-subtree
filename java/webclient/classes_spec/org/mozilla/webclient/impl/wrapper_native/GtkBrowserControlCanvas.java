@@ -56,7 +56,7 @@ public class GtkBrowserControlCanvas extends BrowserControlCanvas /* implements 
     private int gtkTopWindow;
     private int canvasWinID;
     private int gtkWinPtr;
-    // We dont need this, now that we use the JAWT Native Interface
+    // We don't need this, now that we use the JAWT Native Interface
     //    private MDrawingSurfaceInfo drawingSurfaceInfo;
 
     native int createTopLevelWindow();
@@ -74,7 +74,7 @@ public class GtkBrowserControlCanvas extends BrowserControlCanvas /* implements 
         this.gtkWinID = 0;
         this.canvasWinID = 0;
         this.gtkWinPtr = 0;
-        // We dont need this, now that we use the JAWT Native Interface
+        // We don't need this, now that we use the JAWT Native Interface
         //        this.drawingSurfaceInfo = null;
 
     }
