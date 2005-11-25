@@ -407,7 +407,7 @@ static jint JNICALL JVMP_StopJVM(JVMP_CallingContext* ctx) {
       (*env)->ExceptionClear(env);
       return JNI_FALSE;
     };
-    /* FIXME: I don't know how to completly destroy JVM.
+    /* FIXME: I don't know how to completely destroy JVM.
        Current code waits until only one thread left - but how to kill 'em?
        Host application should be able to control such stuff as execution of 
        JVM, even if there are some java threads running

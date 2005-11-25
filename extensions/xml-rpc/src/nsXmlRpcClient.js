@@ -197,7 +197,7 @@ nsXmlRpcClient.prototype = {
         return chann;
     },
 
-    // Flag indicating wether or not we are calling the server.
+    // Flag indicating whether or not we are calling the server.
     _inProgress: false,
     get inProgress() { return this._inProgress; },
 

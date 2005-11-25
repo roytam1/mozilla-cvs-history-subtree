@@ -2233,7 +2233,7 @@ resolveSourceFile(tmmethodnode * aMethod)
 ** Output an html anchor that will resolve to the callsite in question.
 ** If no text is provided, we provide our own.
 **
-** RealName determines wether or not we crawl our parents until the point
+** RealName determines whether or not we crawl our parents until the point
 **  we no longer match stats.
 */
 void

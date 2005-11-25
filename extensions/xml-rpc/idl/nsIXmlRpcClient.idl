@@ -125,7 +125,7 @@ interface nsIXmlRpcClient: nsISupports {
         [array, size_is(count)] in nsISupports arguments, in PRUint32 count);
 
     /**
-     * Wether or not a call is in progress
+     * Whether or not a call is in progress
      */
     readonly attribute boolean inProgress;
     
