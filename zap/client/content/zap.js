@@ -198,7 +198,6 @@ Config.rdfResourceAttrib("urn:mozilla:zap:identity",
 Config.rdfLiteralAttrib("urn:mozilla:zap:instance_id", "");
 Config.rdfLiteralAttrib("urn:mozilla:zap:max_recent_calls", "10");
 Config.rdfLiteralAttrib("urn:mozilla:zap:sip_port_base", "5060");
-Config.rdfLiteralAttrib("urn:mozilla:zap:default_registration_interval", "300");
 // time constants for flow failure recovery (draft-ietf-sip-outbound-01.txt 4.3):
 Config.rdfLiteralAttrib("urn:mozilla:zap:registration_recovery_max_time", "1800");
 Config.rdfLiteralAttrib("urn:mozilla:zap:registration_recovery_base_time_all_fail", "30");
@@ -235,6 +234,7 @@ Service.rdfLiteralAttrib("urn:mozilla:zap:stun_server", "");
 Service.rdfLiteralAttrib("urn:mozilla:zap:use_stun_contact_address", "false");
 // whether or not we should send OPTIONS requests to keep alive the connection:
 Service.rdfLiteralAttrib("urn:mozilla:zap:options_keep_alive", "false");
+Service.rdfLiteralAttrib("urn:mozilla:zap:suggested_registration_interval", "");
 
 Service.fun(
   function getStunServer() {
@@ -535,8 +535,8 @@ Identity.obj("hostAddress", null);
 // contact address used for registration
 Identity.fun(
   function getRegisterContactAddress() {
-      var addr = "sip:"+this.getRegisterContactUserinfo() +
-                 "@" + this.hostAddress;
+      var addr = "<sip:"+this.getRegisterContactUserinfo() +
+                 "@" + this.hostAddress + ";inst="+wSipStack.instanceID+">";
       return wSipStack.syntaxFactory.deserializeAddress(addr);
   });
 
@@ -679,7 +679,7 @@ RegistrationGroup.fun(
       this.domain = wSipStack.syntaxFactory.deserializeURI(this.domain);
     } catch(e) { warning("Domain parse error: "+this.domain+"\n"); return false; }
     
-    this.interval = wConfig["urn:mozilla:zap:default_registration_interval"];
+    this.interval = this.identity.service["urn:mozilla:zap:suggested_registration_interval"];
 
     // add a registration for each flow:
     this.registrations = [];
@@ -838,11 +838,17 @@ Registration.fun(
       wSipStack.createRegisterRequestClient(group.domain,
                                             group.identity.getAOR(),
                                             group.identity.getRegisterContactAddress(),
-                                            group.interval,
                                             route,
                                             route.length);
-    // XXX if (use_outbound)
+
     var contact = this.registrationRC.request.getTopContactHeader().QueryInterface(Components.interfaces.zapISipContactHeader);
+    
+    if (group.interval) {
+      // add an expires parameter
+      contact.setParameter("expires", group.interval);
+    }
+    
+    // XXX if (use_outbound)
     contact.setParameter("+sip.instance", '"<'+wSipStack.instanceID+'>"');
     contact.setParameter("flow-id", flowid);
 
@@ -902,6 +908,28 @@ Registration.fun(
                                                          response,
                                                          rc.request)) {
       // retry with credentials:
+      rc.listener = this;
+      rc.sendRequest();
+      return;
+    }
+    else if (response.statusCode == "423") {
+      // interval too brief. see RFC3261 10.2.8
+      // we need to modify our request and retry
+      var contact = rc.request.getTopContactHeader().QueryInterface(Components.interfaces.zapISipContactHeader);
+      // look for a min-expires header:
+      var minExpires = response.getTopHeader("Min-Expires");
+      if (minExpires) {
+        minExpires = minExpires.QueryInterface(Components.interfaces.zapISipMinExpiresHeader);
+        // remember minimum interval for future registrations:
+        this.group.interval = minExpires.deltaSeconds.toString();
+        contact.setParameter("expires", this.group.interval);
+      }
+      else {
+        this._dump("warning: 424 response without Min-Expires header");
+        delete this.group.interval;
+        contact.removeParameter("expires");
+      }
+      // retry the ammended request:
       rc.listener = this;
       rc.sendRequest();
       return;

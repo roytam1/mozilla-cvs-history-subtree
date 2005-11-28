@@ -143,11 +143,6 @@
             <textbox id="urn:mozilla:zap:sip_port_base"/>
           </row>
           <row>
-            <label control="urn:mozilla:zap:default_registration_interval"
-                   value="Default registration interval (s):"/>
-            <textbox id="urn:mozilla:zap:default_registration_interval"/>
-          </row>
-          <row>
             <label control="urn:mozilla:zap:registration_recovery_max_time"
                    value="Max time for re-attempting registration (s):"/>
             <textbox id="urn:mozilla:zap:registration_recovery_max_time"/>
