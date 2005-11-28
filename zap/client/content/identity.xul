@@ -85,7 +85,6 @@
 
     function commit() {
       wIdentity.updateFromDocument(document);
-      wIdentity.flush();
       if (parent.wConfig["urn:mozilla:zap:identity"] == wIdentity.resource.Value)
         parent.currentIdentityUpdated();
       parent.registerIdentity(wIdentity.resource);

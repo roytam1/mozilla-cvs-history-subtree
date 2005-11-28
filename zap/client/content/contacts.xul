@@ -129,13 +129,11 @@
     function commit() {
       if (wMode == "adding") {
         wCurrentContact.createFromDocument(document);
-        wCurrentContact.flush();
         // select newly created contact (will automatically restore "browsing" mode)
         selectResource(wContactsTree, wCurrentContact.resource);
       }
       else if (wMode == "editing") {
         wCurrentContact.updateFromDocument(document);
-        wCurrentContact.flush();
         document.getElementById("module_page").setAttribute("readonly", "true");
         document.getElementById("button_deck").selectedIndex = 0;      
         wMode = "browsing";

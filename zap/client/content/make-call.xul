@@ -108,7 +108,6 @@
                            parent.wSipStack.hostAddress);
 
       oc["urn:mozilla:zap:status"] = "Calling...";
-      oc.flush();
       // start the ball rolling:
       oc.makeCall(wRemoteAddress, parent.wCurrentIdentity);
       parent.selectCall(oc.resource);
