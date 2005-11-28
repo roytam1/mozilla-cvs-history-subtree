@@ -121,6 +121,11 @@ PersistentRDFObject.metafun(
         else 
           this.datasources[_datasourceid].Assert(this.resource, prop,
                                                  gRDF.GetLiteral(val), true);
+        if (this.autoflush) {
+          try {
+            this.datasources[_datasourceid].QueryInterface(Components.interfaces.nsIRDFRemoteDataSource).Flush();
+          } catch (e) { /* not a remote datasource */ }
+        }
       });
   });
 
@@ -153,6 +158,11 @@ PersistentRDFObject.metafun(
         else 
           this.datasources[_datasourceid].Assert(this.resource, prop,
                                                  gRDF.GetResource(val), true);
+        if (this.autoflush) {
+          try {
+            this.datasources[_datasourceid].QueryInterface(Components.interfaces.nsIRDFRemoteDataSource).Flush();
+          } catch (e) { /* not a remote datasource */ }
+        }
       });
   });
 
@@ -186,6 +196,7 @@ PersistentRDFObject.fun(
           me.datasources[a.dsid].Change(subj, pred, target, me.resource, true);
         else
           me.datasources[a.dsid].Assert(subj, pred, me.resource, true);
+        //XXX should we flush here?
       });
   });
 
@@ -219,6 +230,8 @@ PersistentRDFObject.fun(
           val = gRDF.GetResource(a.defval);
         me.datasources[a.dsid].Assert(me.resource, prop, val, true);
       });
+    if (this.autoflush)
+      this.flush();
   });
 
 // create a new resource from the given document:
@@ -249,6 +262,8 @@ PersistentRDFObject.fun(
           val = gRDF.GetResource(val);
         
         me.datasources[a.dsid].Assert(me.resource, prop, val, true);
+        if (this.autoflush)
+          this.flush();
       });
   });
 
@@ -317,6 +332,8 @@ PersistentRDFObject.fun(
         else
           me.datasources[a.dsid].Assert(me.resource, prop, val, true);
       });
+    if (this.autoflush)
+      this.flush();
   });
 
 
@@ -347,9 +364,14 @@ PersistentRDFObject.fun(
         }
       }
     }
-    
+    if (this.autoflush)
+      this.flush();
     this.resource = null;
   });
+
+// should we automatically flush associated datasources whenever data
+// is being set?
+PersistentRDFObject.obj("autoflush", true);
 
 PersistentRDFObject.fun(
   function flush() {
