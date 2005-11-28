@@ -99,6 +99,7 @@ interface zapISipMessage : zapISipSyntaxObject
   
   /**
    * Helper to get the top-most header with the given name.
+   * Returns null if no matching header can be found.
    */
   zapISipHeader getTopHeader(in ACString name);
   
