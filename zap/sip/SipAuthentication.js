@@ -187,33 +187,29 @@ SipAuthentication.fun(
     var requestURI = request.requestURI.serialize();
     var method = request.method;
 
-    var wwwAuthenticateHeaders = response.getHeaders(authenticateHeaderName, {});
+    var authenticateHeaders = response.getHeaders(authenticateHeaderName, {});
     var authorizationHeaders = request.getHeaders(authorizationHeaderName, {});
 
-    for (var i=0, l=wwwAuthenticateHeaders.length; i<l; ++i) {
-      var header = wwwAuthenticateHeaders[i].QueryInterface(authenticateHeaderInterface);
+    for (var i=0, l=authenticateHeaders.length; i<l; ++i) {
+      var header = authenticateHeaders[i].QueryInterface(authenticateHeaderInterface);
 
       if (header.scheme.toLowerCase() != "digest") continue;
       var realm = header.getParameter("realm");
 
       // check if there is already an Authorization for the given
       // realm in the request:
+      var hasRejectedCredentials = false;      
       for (var j=0, m=authorizationHeaders.length; i<m; ++i) {
         if (authorizationHeaders[j].QueryInterface(authorizationHeaderInterface).getParameter("realm") == realm) {
-          // yes. check if the nonce was stale:
-          if (unquote(header.getParameter("stale")).toLowerCase() == "true") {
-            // yup. remove authorization header from request and try
-            // new credentials again:
-            request.removeHeader(authorizationHeaders[j]);
-            authorizationHeaders.splice(j, 1);
-          }
-          else {
-            // We've tried the credentials and they were rejected.
-            // Don't try them again. If the authorization user has new
-            // credentials they should remove the relevant
-            // Authorization headers prior to calling addAuthorizationHeaders.
-            break;
-          }
+          // yes, we have an authorization header already. check
+          // whether the credentials were rejected or whether the
+          // nonce was just stale:
+          var hasRejectedCredentials = (unquote(header.getParameter("stale")).toLowerCase() != "true");
+          
+          // remove authorization header from request and try
+          // new credentials again:
+          request.removeHeader(authorizationHeaders[j]);
+          authorizationHeaders.splice(j, 1);
         }
       }
       if (i<m)
@@ -228,7 +224,7 @@ SipAuthentication.fun(
       
       // try to obtain credentials for the given realm:
       var username  = {}, password = {};
-      if (!credentials.getCredentialsForRealm(unquote(realm), username, password))
+      if (!credentials.getCredentialsForRealm(unquote(realm), username, password, hasRejectedCredentials))
         continue;
 
       // ok, we have credentials; we understand the challange. let's

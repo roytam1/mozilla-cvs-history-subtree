@@ -37,7 +37,11 @@
 
 <?xml-stylesheet href="chrome://zap/skin/zap.css" type="text/css"?>
 
-<!DOCTYPE window SYSTEM "chrome://zap/locale/zap.dtd">
+<!DOCTYPE window [
+<!ENTITY % zapDTD SYSTEM "chrome://zap/locale/zap.dtd">
+%zapDTD;
+]>
+
 
 <page id="zap_new_account"
       xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
@@ -50,6 +54,7 @@
   <![CDATA[
     function initPage() {
       parent.wConfig.fillDocument(document);
+      updateMasterPasswordButtons();
     }    
 
     function edit() {
@@ -60,7 +65,6 @@
 
     function commit() {
       parent.wConfig.updateFromDocument(document);
-      parent.wConfig.flush();
       parent.reloadPage();
     }
 
@@ -72,6 +76,38 @@
       parent.loadPage('chrome://zap/content/services.xul');
     }
 
+    function manageCredentials() {
+      window.openDialog("chrome://passwordmgr/content/passwordManager.xul",
+                        "managecredentials",
+                        "chrome,modal", null);
+    }
+
+    function manageMasterPassword() {
+      window.openDialog("chrome://mozapps/content/preferences/changemp.xul",
+                        "managemasterpassword",
+                        "chrome,modal", null);
+      updateMasterPasswordButtons();
+    }
+
+    function removeMasterPassword() {
+      window.openDialog("chrome://mozapps/content/preferences/removemp.xul",
+                        "removemasterpassword",
+                        "chrome,modal", null);
+      updateMasterPasswordButtons();
+    }
+
+    function updateMasterPasswordButtons() {
+      // see if there's a master password and set master password button 
+      // labels accordingly
+      var secmonDB = Components.classes["@mozilla.org/security/pkcs11moduledb;1"].
+                     getService(Components.interfaces.nsIPKCS11ModuleDB);
+      var slot = secmonDB.findSlotByName("");
+      var status = slot.status;
+      var noMP = (status == Components.interfaces.nsIPKCS11Slot.SLOT_UNINITIALIZED ||
+                  status == Components.interfaces.nsIPKCS11Slot.SLOT_READY);
+      document.getElementById("manageMasterPassword").label = noMP ? "Set Master Password..." : "Change Master Password...";
+      document.getElementById("removeMasterPassword").disabled = noMP;
+    }
   ]]>
   </script>
 
@@ -141,6 +177,26 @@
       <button label="Configure SIP Services..." oncommand="configureServices()"/>
     </cgroup>
 
+    <cgroup title="Security">
+      <grid>
+        <columns><column flex="1"/><column/></columns>
+        <rows>
+          <row>
+            <label value="Manage saved passwords:"/>
+            <button label="View Saved Passwords..." oncommand="manageCredentials()"/>
+          </row>
+          <row>
+            <label value="Manage master password:"/>
+            <vbox>
+              <button id="manageMasterPassword" oncommand="manageMasterPassword()"/>
+              <button id="removeMasterPassword" 
+                      label="Remove Master Password..." oncommand="removeMasterPassword()"/>
+            </vbox>
+          </row>
+        </rows>
+      </grid>
+    </cgroup>
+    
     <hbox>
       <deck id="button_deck" flex="1">
         <hbox>

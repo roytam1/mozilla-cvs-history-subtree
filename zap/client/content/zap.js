@@ -42,11 +42,12 @@ Components.utils.importModule("rel:ClassUtils.js");
 Components.utils.importModule("rel:RDFUtils.js");
 Components.utils.importModule("rel:FileUtils.js");
 Components.utils.importModule("rel:StringUtils.js");
+Components.utils.importModule("rel:AsyncUtils.js");
 
 ////////////////////////////////////////////////////////////////////////
 // globals
 
-var wUserAgent = "zap/0.1.4"; // String to be sent in User-Agent
+var wUserAgent = "zap/0.1.5"; // String to be sent in User-Agent
                               // header for SIP requests
 var wNetUtils = Components.classes["@mozilla.org/zap/netutils;1"].getService(Components.interfaces.zapINetUtils);
 var wPromptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService);
@@ -66,6 +67,8 @@ var wServicesContainer;
 var wIdentitiesDS = wRDF.GetDataSourceBlocking(getProfileFileURL("identities.rdf"));
 var wIdentitiesContainer;
 var wCurrentIdentity;
+var wPasswordManager;
+var wPasswordManagerInt;
 
 var wContactsDS = wRDF.GetDataSourceBlocking(getProfileFileURL("contacts.rdf"));
 // all contacts live in the urn:mozilla:zap:contacts sequence:
@@ -270,6 +273,9 @@ function getIdentity(resourceID) {
 }
 
 function initIdentities() {
+  wPasswordManager = Components.classes["@mozilla.org/passwordmanager;1"].
+    createInstance(Components.interfaces.nsIPasswordManager);
+  wPasswordManagerInt = wPasswordManager.QueryInterface(Components.interfaces.nsIPasswordManagerInternal);
   wIdentitiesContainer = Components.classes["@mozilla.org/rdf/container;1"].
     createInstance(Components.interfaces.nsIRDFContainer);
   wIdentitiesContainer.Init(wIdentitiesDS,
@@ -299,7 +305,6 @@ function identityChange() {
     return;
   else {
     wConfig["urn:mozilla:zap:identity"] = l;
-    wConfig.flush();
   }
   wCurrentIdentity = getIdentity(wConfig["urn:mozilla:zap:identity"]);
   currentIdentityUpdated();
@@ -398,18 +403,82 @@ Identity.spec(
 
 // zapISipCredentialsProvider methods:
 Identity.fun(
-  function getCredentialsForRealm(realm, username, password) {
-    // XXX fill in password
-    var rv = wPromptService.promptUsernameAndPassword(null, "Enter credentials",
-                                                      "Enter credentials for realm "+
-                                                      realm+":",
-                                                      username,
-                                                      password,
-                                                      null,
-                                                      {});
-    return rv;
+  function getCredentialsForRealm(realm, username, password,
+                                  hasRejectedCredentials) {
+    var is_our_realm = (realm == this.getHost());
+    // first check if we have stored values for the current session:
+    if (is_our_realm && this.session_credentials) {
+      username.value = this.session_credentials.username;
+      password.value = this.session_credentials.password;
+      if (!hasRejectedCredentials) return true;
+    }
+    else {
+      // try to get the credentials from the password manager:
+      
+      if (is_our_realm) {
+        // fill in username from identity database
+        username.value = this["urn:mozilla:zap:username"];
+        if (!username.value)
+          username.value = this.getUserinfo();
+      }
+      
+      try {
+        wPasswordManagerInt.findPasswordEntry(realm, username.value, null,
+                                              {}, username, password);
+        if (!hasRejectedCredentials) return true;
+      }
+      catch(e) {
+      }
+    }
+    
+    // either we don't know the credentials yet or we have previously
+    // tried them and they have been rejected. in either case we want
+    // to prompt:
+
+    var saveCredentials = {value:is_our_realm};
+    if (!wPromptService.promptUsernameAndPassword(null, "Enter credentials",
+                                                  "Enter credentials for realm "+
+                                                  realm+":",
+                                                  username,
+                                                  password,
+                                                  "Save credentials for future sessions",
+                                                  saveCredentials))
+      return false;
+
+    // remember credentials for this session:
+    if (is_our_realm) {
+      this.session_credentials = {};
+      this.session_credentials.username = username.value;
+      this.session_credentials.password = password.value;
+    }
+    if (saveCredentials) {
+      // store credentials for future sessions:
+      if (is_our_realm) {
+        if (username.value != this.getUserinfo()) {
+          this["urn:mozilla:zap:username"] = username.value;
+        }
+      }
+      wPasswordManager.addUser(realm, username.value, password.value);
+    }
+        
+    return true;
   });
 
+// Return userinfo part of the AOR (or empty string if the AOR can't
+// be parsed)
+Identity.fun(
+  function getUserinfo() {
+    // XXX these try/catch blocks will be redundant once we hook up
+    // syntax checking in PersistentRDFObject
+    try {
+      var userinfo = this.getAOR().QueryInterface(Components.interfaces.zapISipSIPURI).userinfo;
+    }
+    catch(e) {
+      this._dump("Can't determine userinfo from "+this["http://home.netscape.com/NC-rdf#Name"]);
+      return "";
+    }
+    return userinfo;
+  });
 
 // Return host part of the AOR (or empty string if the AOR can't be
 // parsed)
@@ -584,6 +653,7 @@ RegistrationGroup.fun(
                                                 if (!me.unregistering)
                                                   me.init2();
                                               });
+    return true;
   });
 
 RegistrationGroup.fun(
@@ -763,7 +833,7 @@ Registration.fun(
       this.monitorType = Components.interfaces.zapISipFlow.IETF_SIP_OUTBOUND_01_MONITOR;
     else if (this.group.identity.service["urn:mozilla:zap:options_keep_alive"]=="true")
       this.monitorType = Components.interfaces.zapISipFlow.OPTIONS_MONITOR;
-    
+
     this.registrationRC =
       wSipStack.createRegisterRequestClient(group.domain,
                                             group.identity.getAOR(),
@@ -1163,7 +1233,6 @@ function initSipStack() {
   if (!wConfig["urn:mozilla:zap:instance_id"]) {
     var uuidgen = Components.classes["@mozilla.org/zap/uuid-generator;1"].getService(Components.interfaces.zapIUUIDGenerator);
     wConfig["urn:mozilla:zap:instance_id"] = uuidgen.generateUUIDURNString();
-    wConfig.flush();
   }
   
   wSipStack.init(wUAHandler,
@@ -1416,7 +1485,6 @@ ActiveCall.fun(
       this.mediasession = null;
     }
     this.dialog = null;
-    this.flush();
   });
 
 // zapISipDialogListener methods:

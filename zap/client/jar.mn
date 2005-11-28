@@ -22,6 +22,8 @@ zap.jar:
 
 en-US.jar:
   locale/en-US/zap/zap.dtd           (locale/en-US/zap.dtd)
+  locale/en-US/branding/brand.dtd    (locale/en-US/brand.dtd)
+  locale/en-US/branding/brand.properties    (locale/en-US/brand.properties)
 
 classic.jar:
   skin/classic/zap/splash.jpg        (skin/classic/splash.jpg)

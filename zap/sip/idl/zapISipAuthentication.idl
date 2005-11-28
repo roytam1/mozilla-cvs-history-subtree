@@ -66,5 +66,6 @@ interface zapISipCredentialsProvider : nsISupports
 {
   boolean getCredentialsForRealm(in ACString realm,
                                  inout wstring username,
-                                 inout wstring password);
+                                 inout wstring password,
+                                 in boolean hasRejectedCredentials);
 };
