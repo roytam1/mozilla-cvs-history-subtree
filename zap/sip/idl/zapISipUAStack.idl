@@ -271,12 +271,10 @@ interface zapISipUAStack : nsISupports
    * - The ToAddress will be set to the given addressOfRecord.
    * - The FromAddress will be set to the given addressOfRecord.
    * - A Contact header will be added, set to the given Contact address
-   *   and with an 'expires' tag set to the given expiration value.
    */
   zapISipNonInviteRC createRegisterRequestClient(in zapISipURI domain,
                                                  in zapISipURI addressOfRecord,
                                                  in zapISipAddress contactAddress,
-                                                 in unsigned long expiration,
                                                  [array, size_is(count)]
                                                  in zapISipAddress routeset,
                                                  in unsigned long count);

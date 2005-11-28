@@ -80,7 +80,6 @@
       var route = parent.wCurrentIdentity.getRoutingInfo().routeset;      
       wRS = parent.wSipStack.createRegisterRequestClient(registrar, 
                                                          addressOfRecord,
-                                                         document.getElementById("expiration").value,
                                                          route,
                                                          route.length);
       document.getElementById("request").value = wRS.request.serialize();
@@ -135,8 +134,6 @@
     <textbox id="registrar" value="sip:fwd.pulver.com"/>
     <label value="Address-of-record:"/>
     <textbox id="address-of-record" value="sip:test@isciade.org"/>
-    <label value="Expiration interval (s):"/>
-    <textbox id="expiration" value="3600"/>
     <hbox>
       <spacer flex="1"/>
       <button label="Generate template" oncommand="generateTemplate()"/>
