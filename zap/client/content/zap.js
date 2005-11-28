@@ -842,6 +842,11 @@ Registration.fun(
                                             route.length);
 
     var contact = this.registrationRC.request.getTopContactHeader().QueryInterface(Components.interfaces.zapISipContactHeader);
+
+    if (group.identity["urn:mozilla:zap:preference"]) {
+      // add a q-value
+      contact.setParameter("q", group.identity["urn:mozilla:zap:preference"]);
+    }
     
     if (group.interval) {
       // add an expires parameter
@@ -1296,8 +1301,11 @@ var wSipTrafficLogger = {
       entry += "<--";
     entry += remoteAddress+":" + remotePort + " " + protocol + " ";
     entry += data.length + "bytes " + (new Date()).toUTCString() + "\n";
-    if (wNetUtils.snoopStunPacket(data) != -2)
+    if (wNetUtils.snoopStunPacket(data) != -2) {
       entry += bin2hex(data, 16);
+      // XXX log or not?
+      return;
+    }
     else
       entry += data;
     entry += "\n\n";
