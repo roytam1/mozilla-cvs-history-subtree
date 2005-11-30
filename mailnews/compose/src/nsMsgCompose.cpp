@@ -3126,8 +3126,8 @@ nsMsgComposeSendListener::RemoveCurrentDraftMessage(nsIMsgCompose *compObj, PRBo
       {
         PRUint32 folderFlags;
         msgFolder->GetFlags(&folderFlags);
-        // only do this if it's a drafts or templates folder.
-        if (folderFlags & (MSG_FOLDER_FLAG_DRAFTS | MSG_FOLDER_FLAG_TEMPLATES))
+        // only do this if it's a drafts folder.
+        if (folderFlags & MSG_FOLDER_FLAG_DRAFTS)
         {  // build the msg arrary
           nsCOMPtr<nsISupportsArray> messageArray;
           rv = NS_NewISupportsArray(getter_AddRefs(messageArray));
@@ -3198,6 +3198,7 @@ nsMsgComposeSendListener::RemoveCurrentDraftMessage(nsIMsgCompose *compObj, PRBo
   // regardless whether or not the exiting msg can be deleted.
   if (calledByCopy)
   {
+    nsCOMPtr<nsIMsgFolder> savedToFolder;
     nsCOMPtr<nsIMsgSend> msgSend;
     rv = compObj->GetMessageSend(getter_AddRefs(msgSend));
     NS_ASSERTION(msgSend, "RemoveCurrentDraftMessage msgSend is null.");
@@ -3208,20 +3209,16 @@ nsMsgComposeSendListener::RemoveCurrentDraftMessage(nsIMsgCompose *compObj, PRBo
     NS_ENSURE_SUCCESS(rv, rv);
 
     // Make sure we have a folder interface pointer
-    if (!msgFolder)
-    {
-      rv = GetMsgFolder(compObj, getter_AddRefs(msgFolder));
-      NS_ENSURE_SUCCESS(rv, rv);
-    }
+    rv = GetMsgFolder(compObj, getter_AddRefs(savedToFolder));
 
     // Reset draft (uid) url with the new uid.
-    if (msgFolder && newUid != nsMsgKey_None)
+    if (savedToFolder && newUid != nsMsgKey_None)
     {
       PRUint32 folderFlags;
-      msgFolder->GetFlags(&folderFlags);
+      savedToFolder->GetFlags(&folderFlags);
       if (folderFlags & MSG_FOLDER_FLAG_DRAFTS)
       {
-        rv = msgFolder->GenerateMessageURI(newUid, getter_Copies(newDraftIdURL));
+        rv = savedToFolder->GenerateMessageURI(newUid, getter_Copies(newDraftIdURL));
         NS_ENSURE_SUCCESS(rv, rv);
         compFields->SetDraftId(newDraftIdURL.get());
       }
