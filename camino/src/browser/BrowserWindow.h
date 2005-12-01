@@ -59,7 +59,4 @@
 // scripting
 - (NSString*)getURL;
 
-// look and feel
-- (BOOL)hasUnifiedToolbarAppearance;
-
 @end

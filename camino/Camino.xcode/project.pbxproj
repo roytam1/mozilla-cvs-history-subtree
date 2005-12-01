@@ -1131,26 +1131,6 @@
 			settings = {
 			};
 		};
-		0F21007F0926FC99001130FA = {
-			isa = PBXFileReference;
-			lastKnownFileType = image.tiff;
-			name = unknown_file_icon.tif;
-			path = resources/images/chrome/unknown_file_icon.tif;
-			refType = 2;
-			sourceTree = SOURCE_ROOT;
-		};
-		0F2100800926FC99001130FA = {
-			fileRef = 0F21007F0926FC99001130FA;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		0F2100810926FC99001130FA = {
-			fileRef = 0F21007F0926FC99001130FA;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
 		0F222C6008C6102B00B34F14 = {
 			fileEncoding = 30;
 			isa = PBXFileReference;
@@ -1209,30 +1189,6 @@
 		};
 		0F2453D708C96478001C264F = {
 			fileRef = 0F2453D508C96478001C264F;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		0F2C5CB3092D9F6C000C7C89 = {
-			children = (
-				0F2C5CB4092D9F6C000C7C89,
-			);
-			isa = PBXGroup;
-			name = images;
-			path = PreferencePanes/Privacy/images;
-			refType = 2;
-			sourceTree = SOURCE_ROOT;
-		};
-		0F2C5CB4092D9F6C000C7C89 = {
-			isa = PBXFileReference;
-			lastKnownFileType = image.tiff;
-			name = action_button.tiff;
-			path = PreferencePanes/Privacy/images/action_button.tiff;
-			refType = 2;
-			sourceTree = SOURCE_ROOT;
-		};
-		0F2C5CB5092D9F6C000C7C89 = {
-			fileRef = 0F2C5CB4092D9F6C000C7C89;
 			isa = PBXBuildFile;
 			settings = {
 			};
@@ -1523,7 +1479,6 @@
 				F6BD639601B3131201A962F7,
 				F6BD63A201B3131201A962F7,
 				F6BD639701B3131201A962F7,
-				F6BD639701B3131201A962F8,
 				F6BD639801B3131201A962F7,
 				F6BD639901B3131201A962F7,
 				F6BD639A01B3131201A962F7,
@@ -2571,69 +2526,6 @@
 			settings = {
 			};
 		};
-		0FEA7E270926BDF000B06154 = {
-			fileEncoding = 30;
-			isa = PBXFileReference;
-			lastKnownFileType = sourcecode.cpp.objcpp;
-			name = SiteIconCache.mm;
-			path = src/browser/SiteIconCache.mm;
-			refType = 2;
-			sourceTree = SOURCE_ROOT;
-		};
-		0FEA7E280926BDF000B06154 = {
-			fileRef = 0FEA7E270926BDF000B06154;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		0FEA7E290926BDF000B06154 = {
-			fileRef = 0FEA7E270926BDF000B06154;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		0FEA7E2B0926BE0E00B06154 = {
-			fileEncoding = 30;
-			isa = PBXFileReference;
-			lastKnownFileType = sourcecode.c.h;
-			name = "NSFileManager+Utils.h";
-			path = "src/extensions/NSFileManager+Utils.h";
-			refType = 2;
-			sourceTree = SOURCE_ROOT;
-		};
-		0FEA7E2C0926BE0E00B06154 = {
-			fileRef = 0FEA7E2B0926BE0E00B06154;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		0FEA7E2D0926BE0E00B06154 = {
-			fileRef = 0FEA7E2B0926BE0E00B06154;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		0FEA7E2E0926BE1A00B06154 = {
-			fileEncoding = 30;
-			isa = PBXFileReference;
-			lastKnownFileType = sourcecode.c.objc;
-			name = "NSFileManager+Utils.m";
-			path = "src/extensions/NSFileManager+Utils.m";
-			refType = 2;
-			sourceTree = SOURCE_ROOT;
-		};
-		0FEA7E2F0926BE1A00B06154 = {
-			fileRef = 0FEA7E2E0926BE1A00B06154;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		0FEA7E300926BE1A00B06154 = {
-			fileRef = 0FEA7E2E0926BE1A00B06154;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
 		0FEBFCA1044F989900A96652 = {
 			isa = PBXFileReference;
 			lastKnownFileType = archive.ar;
@@ -3651,7 +3543,6 @@
 				0F222C6108C6102B00B34F14,
 				0F08FB1508D37DA90022DD45,
 				0F0F5E3D08FC660300B4EBCD,
-				0FEA7E2C0926BE0E00B06154,
 			);
 			isa = PBXHeadersBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -4278,7 +4169,6 @@
 				0FBB8CC908D260D800D58D8D,
 				0FBB8CCA08D260D800D58D8D,
 				0F01117408F2FE7C00423C02,
-				0F2100800926FC99001130FA,
 			);
 			isa = PBXResourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -4802,8 +4692,6 @@
 				0FDEEA3B08CBD04200754D9B,
 				0F08FB1808D37DB30022DD45,
 				0F0F5E3A08FC65FB00B4EBCD,
-				0FEA7E280926BDF000B06154,
-				0FEA7E2F0926BE1A00B06154,
 			);
 			isa = PBXSourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -5250,7 +5138,6 @@
 				3F44ACD705BDFB9F00CB4B08,
 				3F44ACD905BDFB9F00CB4B08,
 				3F44ACDA05BDFB9F00CB4B08,
-				3F44ACDA05BDFB9F00CB4B09,
 				3F44ACDB05BDFB9F00CB4B08,
 				3F44ACDC05BDFB9F00CB4B08,
 				3F44ACDD05BDFB9F00CB4B08,
@@ -5346,12 +5233,6 @@
 		};
 		3F44ACDA05BDFB9F00CB4B08 = {
 			fileRef = F6BD639701B3131201A962F7;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		3F44ACDA05BDFB9F00CB4B09 = {
-			fileRef = F6BD639701B3131201A962F8;
 			isa = PBXBuildFile;
 			settings = {
 			};
@@ -6874,7 +6755,6 @@
 				3F44ADC705BDFBA000CB4B08,
 				3F44ADC805BDFBA000CB4B08,
 				3F44ADC905BDFBA000CB4B08,
-				0F2C5CB5092D9F6C000C7C89,
 			);
 			isa = PBXResourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -7550,7 +7430,6 @@
 				0F222C6208C6102B00B34F14,
 				0F08FB1608D37DA90022DD45,
 				0F0F5E3E08FC660300B4EBCD,
-				0FEA7E2D0926BE0E00B06154,
 			);
 			isa = PBXHeadersBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -8183,7 +8062,6 @@
 				0FBB8CCE08D260D800D58D8D,
 				0FBB8CCF08D260D800D58D8D,
 				0F01117508F2FE7C00423C02,
-				0F2100810926FC99001130FA,
 			);
 			isa = PBXResourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -8708,8 +8586,6 @@
 				0FDEEA3C08CBD04200754D9B,
 				0F08FB1908D37DB30022DD45,
 				0F0F5E3B08FC65FB00B4EBCD,
-				0FEA7E290926BDF000B06154,
-				0FEA7E300926BE1A00B06154,
 			);
 			isa = PBXSourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -9158,7 +9034,6 @@
 				3F44AF0E05BDFBA000CB4B08,
 				3F44AF0F05BDFBA000CB4B08,
 				3F44AF1005BDFBA000CB4B08,
-				3F44AF1005BDFBA000CB4B09,
 				3F44AF1105BDFBA000CB4B08,
 				3F44AF1205BDFBA000CB4B08,
 				3F44AF1305BDFBA000CB4B08,
@@ -9232,12 +9107,6 @@
 		};
 		3F44AF1005BDFBA000CB4B08 = {
 			fileRef = F6BD639701B3131201A962F7;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		3F44AF1005BDFBA000CB4B09 = {
-			fileRef = F6BD639701B3131201A962F8;
 			isa = PBXBuildFile;
 			settings = {
 			};
@@ -10119,8 +9988,6 @@
 				4DC41D400869D7A400947044,
 				4DC41D3F0869D7A400947044,
 				4DC41D410869D7A400947044,
-				4DC41D410869D7A400947045,
-				4DC41D410869D7A400947046,
 				3F44AFBB05BDFBA000CB4B08,
 				3F44AFBC05BDFBA000CB4B08,
 				3F44AFBD05BDFBA000CB4B08,
@@ -12479,22 +12346,6 @@
 			refType = 2;
 			sourceTree = SOURCE_ROOT;
 		};
-		4DC41D3E0869D7A400947045 = {
-			isa = PBXFileReference;
-			lastKnownFileType = archive.ar;
-			name = libmozcairo.a;
-			path = ../dist/lib/libmozcairo.a;
-			refType = 2;
-			sourceTree = SOURCE_ROOT;
-		};
-		4DC41D3E0869D7A400947046 = {
-			isa = PBXFileReference;
-			lastKnownFileType = archive.ar;
-			name = libmozlibpixman.a;
-			path = ../dist/lib/libmozlibpixman.a;
-			refType = 2;
-			sourceTree = SOURCE_ROOT;
-		};
 		4DC41D3F0869D7A400947044 = {
 			fileRef = 4DC41D3C0869D7A400947044;
 			isa = PBXBuildFile;
@@ -12509,18 +12360,6 @@
 		};
 		4DC41D410869D7A400947044 = {
 			fileRef = 4DC41D3E0869D7A400947044;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		4DC41D410869D7A400947045 = {
-			fileRef = 4DC41D3E0869D7A400947045;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		4DC41D410869D7A400947046 = {
-			fileRef = 4DC41D3E0869D7A400947046;
 			isa = PBXBuildFile;
 			settings = {
 			};
@@ -14008,7 +13847,6 @@
 				0FE7703508C799BB00AFB850,
 				0FE7703608C799BB00AFB850,
 				0FE7703708C799BB00AFB850,
-				0F21007F0926FC99001130FA,
 			);
 			isa = PBXGroup;
 			name = images;
@@ -15367,7 +15205,6 @@
 			children = (
 				F558137C030AEF9B0176F207,
 				F558137D030AEF9B0176F207,
-				0FEA7E270926BDF000B06154,
 			);
 			isa = PBXGroup;
 			name = "Site icons";
@@ -15641,8 +15478,6 @@
 				4DC41D3D0869D7A400947044,
 				4DC41D3C0869D7A400947044,
 				4DC41D3E0869D7A400947044,
-				4DC41D3E0869D7A400947045,
-				4DC41D3E0869D7A400947046,
 			);
 			isa = PBXGroup;
 			name = "Gecko Static Components";
@@ -15946,7 +15781,6 @@
 			children = (
 				F507A85D0311948201026D5D,
 				F57F205F029997E701000106,
-				0F2C5CB3092D9F6C000C7C89,
 				F57F2060029997E701000106,
 				F57F2061029997E701000106,
 				F517052F034B5E9701026D5D,
@@ -16464,7 +16298,6 @@
 				3FB2BA960545EA80002B9691,
 				F5D98EBC031AC38601A96654,
 				0FBC0ED40798F96100E8E0E2,
-				0FEA7E2B0926BE0E00B06154,
 				0FBC0ED30798F96100E8E0E2,
 				F5B34B04034A50C901A80166,
 				0F5FD71B07F48CDC00E8EDBD,
@@ -16500,7 +16333,6 @@
 				3FB2BA970545EA80002B9691,
 				F5D98EB9031AC37801A96654,
 				0FBC0ECD0798F94900E8E0E2,
-				0FEA7E2E0926BE1A00B06154,
 				0FBC0ED00798F95400E8E0E2,
 				F5B34B01034A505F01A80166,
 				0F5FD71E07F48CE500E8EDBD,
@@ -17084,14 +16916,6 @@
 			lastKnownFileType = file;
 			name = dom_base.xpt;
 			path = ../dist/Embed/components/dom_base.xpt;
-			refType = 2;
-			sourceTree = SOURCE_ROOT;
-		};
-		F6BD639701B3131201A962F8 = {
-			isa = PBXFileReference;
-			lastKnownFileType = file;
-			name = dom_canvas.xpt;
-			path = ../dist/Embed/components/dom_canvas.xpt;
 			refType = 2;
 			sourceTree = SOURCE_ROOT;
 		};

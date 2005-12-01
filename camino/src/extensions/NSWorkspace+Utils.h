@@ -51,10 +51,5 @@
 - (NSString*)identifierForBundle:(NSURL*)inBundleURL;
 - (NSString*)displayNameForFile:(NSURL*)inFileURL;
 
-// OS feature checks
-+ (BOOL)supportsBonjour;
-+ (BOOL)supportsSpotlight;
-+ (BOOL)supportsUnifiedToolbar;
-
 @end
 
