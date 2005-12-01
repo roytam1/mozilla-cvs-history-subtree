@@ -41,6 +41,7 @@
 @interface NSArray(CaminoNSArrayUtils)
 
 - (id)firstObject;
+- (id)lastObject;
 
 // just returns nil if out of range, rather than throwing.
 - (id)safeObjectAtIndex:(unsigned)inIndex;
