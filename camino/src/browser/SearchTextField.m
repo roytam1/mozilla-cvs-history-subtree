@@ -44,12 +44,6 @@
 - (NSString *)stringByRemovingCharactersInSet:(NSCharacterSet*)characterSet;
 @end
 
-@interface SearchTextField(Private)
-
-- (void)windowKeyStatusChanged:(NSNotification*)aNotification;
-
-@end
-
 @implementation SearchTextField
 
 + (Class)cellClass
@@ -57,11 +51,6 @@
   return [SearchTextFieldCell class];
 }
 
-- (void)dealloc
-{
-  [[NSNotificationCenter defaultCenter] removeObserver:self];
-  [super dealloc];
-}
 
 - (void)awakeFromNib
 {
@@ -92,6 +81,7 @@
   }
 }
 
+
 // Do not remove.  This method must be empty to setup cursor rects properly
 - (void)resetCursorRects
 {
@@ -100,10 +90,9 @@
 
 - (BOOL)isFirstResponder
 {
-  NSResponder *first = [[self window] firstResponder];
-  // what this is really doing is asking if we're the superview of
-  // the current field editor
-  while ([first isKindOfClass:[NSView class]]) {
+  NSResponder *first = ([self window] != nil) ? [[self window] firstResponder] : nil;
+
+  while (first != nil && [first isKindOfClass:[NSView class]]) {
     first = [(NSView*)first superview];
 
     if (first == self)
@@ -324,33 +313,6 @@
     [self sendAction:[self action] to:[self target]];
   }
   return YES;
-}
-
-- (void)viewDidMoveToWindow
-{
-  // clear any existing observer registrations
-  [[NSNotificationCenter defaultCenter] removeObserver:self name:NSWindowDidBecomeKeyNotification object:nil];
-  [[NSNotificationCenter defaultCenter] removeObserver:self name:NSWindowDidResignKeyNotification object:nil];
-
-  if ([self window])
-  {
-    // register for key status changes on our new window
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(windowKeyStatusChanged:)
-                                                 name:NSWindowDidBecomeKeyNotification
-                                               object:[self window]];
-  
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(windowKeyStatusChanged:)
-                                                 name:NSWindowDidResignKeyNotification
-                                               object:[self window]];
-  }
-}
-
-- (void)windowKeyStatusChanged:(NSNotification*)aNotification
-{
-  if ([self isFirstResponder])
-    [self setKeyboardFocusRingNeedsDisplayInRect:[self bounds]];
 }
 
 @end

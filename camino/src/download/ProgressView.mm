@@ -39,15 +39,6 @@
 
 #import "ProgressView.h"
 
-
-@interface ProgressView(Private)
-
--(BOOL)isSelected;
--(void)setSelected:(BOOL)inSelected;
-
-@end
-
-
 @implementation ProgressView
 
 - (id)initWithFrame:(NSRect)frame
@@ -55,13 +46,14 @@
   self = [super initWithFrame:frame];
   if (self) {
     mLastModifier = kNoKey;
+    mIsSelected = NO;
   }
   return self;
 }
 
 -(void)drawRect:(NSRect)rect
 {
-  if ([self isSelected]) {
+  if (mIsSelected) {
     [[NSColor selectedTextBackgroundColor] set];
   }
   else {
@@ -81,8 +73,9 @@
       mLastModifier = kShiftKey;
     }
     else if (mods & NSCommandKeyMask) {
-      if ([self isSelected])
+      if (mIsSelected) {
         shouldSelect = NO;
+      }
       mLastModifier = kCommandKey;
     }
   }
@@ -97,19 +90,20 @@
     [[NSNotificationCenter defaultCenter] postNotificationName:@"DownloadInstanceOpened" object:self];
 }
 
+-(BOOL)isSelected
+{
+  return mIsSelected;
+}
+
+-(void)setSelected:(BOOL)flag
+{
+  mIsSelected = flag;
+  [self setNeedsDisplay:YES];
+}
+
 -(int)lastModifier
 {
   return mLastModifier;
-}
-
-- (BOOL)isSelected
-{
-  return [mProgressController isSelected];
-}
-
--(void)setSelected:(BOOL)inSelected
-{
-  [mProgressController setSelected:inSelected];
 }
 
 -(void)setController:(ProgressViewController*)controller
@@ -126,9 +120,9 @@
 -(NSMenu*)menuForEvent:(NSEvent*)theEvent
 {  
   // if the item is unselected, select it and deselect everything else before displaying the contextual menu
-  if (![self isSelected]) {
+  if (!mIsSelected) {
     mLastModifier = kNoKey; // control is only special because it means its contextual menu time
-    [self setSelected:YES];
+    mIsSelected = YES;
     [self display]; // change selection immediately
     [[NSNotificationCenter defaultCenter] postNotificationName:@"DownloadInstanceSelected" object:self];
   }
