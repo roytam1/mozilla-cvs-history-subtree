@@ -262,9 +262,7 @@ nsHTMLEditorMouseListener::MouseDown(nsIDOMEvent* aMouseEvent)
       //   for all context clicks
       if (element || isContextClick)
       {
-      #ifndef XP_OS2
         mouseEvent->PreventDefault();
-      #endif
         return NS_OK;
       }
     }

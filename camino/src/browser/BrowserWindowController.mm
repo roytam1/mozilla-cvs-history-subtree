@@ -522,31 +522,16 @@ enum BWCOpenDest {
   }
 }
 
-- (void)windowDidChangeMain
-{
-  // On 10.4, the unified title bar and toolbar is used, and the bookmark
-  // toolbar's appearance is tweaked to better match the unified look.
-  // Its active/inactive state needs to change along with the toolbar's.
-  BrowserWindow* browserWin = [self window];
-  if ([browserWin hasUnifiedToolbarAppearance]) {
-    BookmarkToolbar* bookmarkToolbar = [self bookmarkToolbar];
-    if (bookmarkToolbar)
-      [bookmarkToolbar setNeedsDisplay:YES];
-  }
-}
-
 - (void)windowDidBecomeMain:(NSNotification *)notification
 {
-  // MainController listens for window layering notifications and updates
-  // bookmarks.
-  [self windowDidChangeMain];
+  // MainController listens for window layering notifications and updates bookmarks,
+  // so we don't need to do anything here
 }
 
 - (void)windowDidResignMain:(NSNotification *)notification
 {
-  // MainController listens for window layering notifications and updates
-  // bookmarks.
-  [self windowDidChangeMain];
+  // MainController listens for window layering notifications and updates bookmarks,
+  // so we don't need to do anything here
 }
 
 -(void)mouseMoved:(NSEvent*)aEvent
@@ -3573,13 +3558,10 @@ enum BWCOpenDest {
 //
 // handle command-return in location or search field, opening a new tab or window as appropriate
 //
-- (BOOL)handleCommandReturn:(BOOL)aShiftIsDown
+- (BOOL) handleCommandReturn
 {
   // determine whether to load in background
   BOOL loadInBG  = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadInBackground" withSuccess:NULL];
-  if (aShiftIsDown)  // if shift is being held down, do the opposite of the pref
-    loadInBG = !loadInBG;
-
   // determine whether to load in tab or window
   BOOL loadInTab = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.opentabfor.middleclick" withSuccess:NULL];
 
