@@ -23,7 +23,6 @@
  *   Calum Robinson <calumr@mac.com>
  *   Simon Fraser <sfraser@netscape.com>
  *   Josh Aas <josha@mac.com>
- *   Nick Kreeger <nick.kreeger@park.edu>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -65,6 +64,8 @@ enum {
 //
 @interface ProgressViewController : NSObject<CHDownloadProgressDisplay>
 {
+  // we share one progress bar between both views. It's in the expanded
+  // view by default
   IBOutlet NSProgressIndicator *mProgressBar;
 
   IBOutlet ProgressView *mProgressView;      // in-progress view, STRONG ref
@@ -75,12 +76,7 @@ enum {
   BOOL            mDownloadingError;
   BOOL            mDownloadDone;
   BOOL            mRefreshIcon;
-  BOOL            mFileExists;
-  BOOL            mIsSelected;
-  
-  FNSubscriptionRef mSubRef;
-  FNSubscriptionUPP mSubUPP;
-
+    
   NSTimeInterval  mDownloadTime; // only set when done
 
   long long       mCurrentProgress; // if progress bar is indeterminate, can still calc stats.
@@ -111,13 +107,8 @@ enum {
 
 -(BOOL)isActive;
 -(BOOL)isCanceled;
--(BOOL)isPaused;
--(BOOL)fileExists;
-
 -(BOOL)isSelected;
--(void)setSelected:(BOOL)inSelected;
-
--(void)checkFileExists;
+-(BOOL)isPaused;
 
 -(NSDictionary*)downloadInfoDictionary;
 

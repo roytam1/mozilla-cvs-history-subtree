@@ -570,13 +570,24 @@ static CertificatesWindowController* gCertificatesWindowController;
   
   [theOpenPanel beginSheetForDirectory:nil
                                   file:nil
-                                 types:[NSArray arrayWithObjects:@"crt", @"cert", @"cer", @"pem", @"der", @"p7b", @"pkcs7", nil]
+                                 types:[NSArray arrayWithObjects:@"crt", @"cert", @"cer", @"pem", @"der", nil]
                         modalForWindow:[self window]
                          modalDelegate:self
                         didEndSelector:@selector(importPanelDidEnd:returnCode:contextInfo:)
                            contextInfo:NULL];
 
 
+}
+
+// testing
+#include "nsITokenPasswordDialogs.h"
+
+- (IBAction)changePassword:(id)sender
+{
+  nsCOMPtr<nsITokenPasswordDialogs> tokenDlgs = do_GetService(NS_TOKENPASSWORDSDIALOG_CONTRACTID);
+  PRBool cancelled;
+  NS_NAMED_LITERAL_STRING(deviceName, "Software Security Device");
+  tokenDlgs->SetPassword(NULL, deviceName.get(), &cancelled);
 }
 
 #pragma mark -
