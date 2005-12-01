@@ -360,6 +360,6 @@ typedef enum
 - (nsIWebNavigation*) currentWebNavigation;
 
 // handle command-return in location or search field
-- (BOOL)handleCommandReturn:(BOOL)aShiftIsDown;
+- (BOOL) handleCommandReturn;
 
 @end
