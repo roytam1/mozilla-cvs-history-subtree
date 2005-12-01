@@ -335,24 +335,8 @@
 
       <constructor>
         <![CDATA[
-          this.init();
-        ]]>
-      </constructor>
-      
-      <destructor>
-        <![CDATA[
-          this.destroy();
-        ]]>
-      </destructor>
-
-      <!-- This is necessary because the tabbrowser constructor is called
-           before the browser constructor for the first tab in a window. -->
-      <method name="init">
-        <body>
-        <![CDATA[
           try {
-            if (!this.webNavigation.sessionHistory &&
-                !this.hasAttribute("disablehistory")) {
+            if (!this.hasAttribute("disablehistory")) {
               // wire up session history
               this.webNavigation.sessionHistory = Components.classes["@mozilla.org/browser/shistory;1"].createInstance(Components.interfaces.nsISHistory);
 
@@ -363,16 +347,14 @@
           catch (e) {
           }
           try {
-            if (!this.mDragDropHandler) {
-              this.mDragDropHandler = Components.classes["@mozilla.org:/content/content-area-dragdrop;1"].createInstance(Components.interfaces.nsIDragDropHandler);
-              this.mDragDropHandler.hookupTo(this, null);
-            }
+            this.mDragDropHandler = Components.classes["@mozilla.org:/content/content-area-dragdrop;1"].createInstance(Components.interfaces.nsIDragDropHandler);
+            this.mDragDropHandler.hookupTo(this, null);
           }
           catch (e) {
           }
           try {
             const SECUREBROWSERUI_CONTRACTID = "@mozilla.org/secure_browser_ui;1";
-            if (!this.securityUI && !this.hasAttribute("disablesecurity") &&
+            if (!this.hasAttribute("disablesecurity") &&
                 SECUREBROWSERUI_CONTRACTID in Components.classes) {
               var securityUI = Components.classes[SECUREBROWSERUI_CONTRACTID].createInstance(Components.interfaces.nsISecureBrowserUI);
               securityUI.init(this.contentWindow);
@@ -381,9 +363,14 @@
           catch (e) {
           }
         ]]>
-        </body>
-      </method>
+      </constructor>
       
+      <destructor>
+        <![CDATA[
+          this.destroy();
+        ]]>
+      </destructor>
+
       <!-- This is necessary because the destructor is not called
            promptly when we are removed from a tabbrowser. This will be
            explicitly called by tabbrowser -->

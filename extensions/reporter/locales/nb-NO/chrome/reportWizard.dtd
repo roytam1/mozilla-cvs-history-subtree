@@ -5,8 +5,8 @@
 <!ENTITY reportWizardPrivacy.description            "Dette verktøyet lar deg fortelle Evangelism-teamet om nettsider som ikke virker ordentlig med Firefox, eller som stenger ute Firefox. På denne måten kan den beste opplevelsen sikres for Firefox-brukere. Les gjennom følgende, så du er oppmerksom på hvordan vi behandler data vi samler, om du velger å delta.">
 <!ENTITY reportWizardMustAgree.description          "For å fortsette, må du godta personvern-avtalen ovenfor.">
 
-<!ENTITY dontShowPrivacyStatement.label             "Jeg godtar avtalen.">
-<!ENTITY dontShowPrivacyStatement.accesskey         "J">
+<!ENTITY dontShowPrivacyStatement.label             "Ikke vis personvern-avtalen igjen">
+<!ENTITY dontShowPrivacyStatement.accesskey         "I">
 
 <!ENTITY reportForm.label                           "Fyll ut rapport">
 
