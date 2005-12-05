@@ -73,7 +73,7 @@ public:
     *aFileName = mFileName.get();
     *aLineNo = mLineNo;
   }
-  virtual nsIArray *nsPyTimeoutHandler::GetArgv();
+  virtual nsIArray *GetArgv();
 
   virtual PRUint32 GetLanguageID() {
         return nsIProgrammingLanguage::PYTHON;
