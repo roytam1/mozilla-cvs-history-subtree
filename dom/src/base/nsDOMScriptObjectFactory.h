@@ -93,6 +93,9 @@ public:
                                   PRUint32 aScriptableFlags,
                                   PRBool aHasClassInterface,
                                   const nsCID *aConstructorCID);
+
+  static nsresult Startup();
+
 protected:
   PRBool mLoadedAllLanguages;
   nsresult LoadAllLanguages();
