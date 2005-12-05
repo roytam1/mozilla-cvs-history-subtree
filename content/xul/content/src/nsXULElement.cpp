@@ -204,30 +204,6 @@ static struct {
 } gFaults;
 #endif
 
-static nsresult LockScriptThing(PRUint32 aLangID, void *aThing)
-{
-    nsresult rv;
-    nsCOMPtr<nsILanguageRuntime> langRT;
-    rv = NS_GetLanguageRuntimeByID(aLangID, getter_AddRefs(langRT));
-    if (NS_SUCCEEDED(rv))
-        rv = langRT->LockGCThing(aThing);
-    if (NS_FAILED(rv))
-        NS_ERROR("Failed to lock the script object");
-    return rv;
-}
-
-static nsresult UnlockScriptThing(PRUint32 aLangID, void *aThing)
-{
-    nsresult rv;
-    nsCOMPtr<nsILanguageRuntime> langRT;
-    rv = NS_GetLanguageRuntimeByID(aLangID, getter_AddRefs(langRT));
-    if (NS_SUCCEEDED(rv))
-        rv = langRT->UnlockGCThing(aThing);
-    if (NS_FAILED(rv))
-        NS_ERROR("Failed to unlock the script object");
-    return rv;
-}
-
 //----------------------------------------------------------------------
 
 
@@ -688,16 +664,17 @@ nsXULElement::IsFocusable(PRInt32 *aTabIndex)
 // nsIScriptEventHandlerOwner interface
 
 nsresult
-nsXULElement::GetCompiledEventHandler(nsIAtom *aName, void** aHandler)
+nsXULElement::GetCompiledEventHandler(nsIAtom *aName,
+                                      nsScriptObjectHolder &aHandler)
 {
     XUL_PROTOTYPE_ATTRIBUTE_METER(gNumCacheTests);
-    *aHandler = nsnull;
+    aHandler.drop();
 
     nsXULPrototypeAttribute *attr =
         FindPrototypeAttribute(kNameSpaceID_None, aName);
     if (attr) {
         XUL_PROTOTYPE_ATTRIBUTE_METER(gNumCacheHits);
-        *aHandler = attr->mEventHandler;
+        aHandler.set(attr->mEventHandler);
     }
 
     return NS_OK;
@@ -710,7 +687,7 @@ nsXULElement::CompileEventHandler(nsIScriptContext* aContext,
                                   const nsAString& aBody,
                                   const char* aURL,
                                   PRUint32 aLineNo,
-                                  void** aHandler)
+                                  nsScriptObjectHolder &aHandler)
 {
     nsresult rv;
 
@@ -770,7 +747,7 @@ nsXULElement::CompileEventHandler(nsIScriptContext* aContext,
         // XXX: Shouldn't this use context and not aContext?
         // XXXmarkh - is GetNativeGlobal() the correct scope?
         rv = aContext->BindCompiledEventHandler(aTarget, aContext->GetNativeGlobal(),
-                                                aName, *aHandler);
+                                                aName, aHandler);
         if (NS_FAILED(rv)) return rv;
     }
 
@@ -778,10 +755,10 @@ nsXULElement::CompileEventHandler(nsIScriptContext* aContext,
         FindPrototypeAttribute(kNameSpaceID_None, aName);
     if (attr) {
         XUL_PROTOTYPE_ATTRIBUTE_METER(gNumCacheFills);
-        attr->mEventHandler = *aHandler;
-
+        // take a copy of the event handler, and tell the language about it.
+        attr->mEventHandler = (void *)aHandler;
         if (attr->mEventHandler) {
-            rv = LockScriptThing(aContext->GetLanguage(), attr->mEventHandler);
+            rv = aContext->HoldScriptObject(attr->mEventHandler);
             if (NS_FAILED(rv)) return rv;
         }
     }
@@ -2896,7 +2873,7 @@ void
 nsXULPrototypeAttribute::Finalize(PRUint32 aLangID)
 {
     if (mEventHandler) {
-        if (NS_FAILED(UnlockScriptThing(aLangID, mEventHandler)))
+        if (NS_FAILED(NS_DropScriptObject(aLangID, mEventHandler)))
             NS_ERROR("Failed to unlock script object");
         mEventHandler = nsnull;
     }
@@ -2964,7 +2941,7 @@ nsXULPrototypeElement::Serialize(nsIObjectOutputStream* aStream,
             rv |= aStream->Write32(child->mType);
             nsXULPrototypeScript* script = NS_STATIC_CAST(nsXULPrototypeScript*, child);
 
-            rv |= aStream->Write32(script->mLangID);
+            rv |= aStream->Write32(script->mScriptObject.getLanguage());
 
             rv |= aStream->Write8(script->mOutOfLine);
             if (! script->mOutOfLine) {
@@ -2974,7 +2951,7 @@ nsXULPrototypeElement::Serialize(nsIObjectOutputStream* aStream,
                                                    NS_GET_IID(nsIURI),
                                                    PR_TRUE);
 
-                if (script->GetScriptObject()) {
+                if (script->mScriptObject) {
                     // This may return NS_OK without muxing script->mSrcURI's
                     // data into the FastLoad file, in the case where that
                     // muxed document is already there (written by a prior
@@ -3174,8 +3151,7 @@ nsXULPrototypeScript::nsXULPrototypeScript(PRUint32 aLangID, PRUint32 aLineNo, P
       mSrcLoading(PR_FALSE),
       mOutOfLine(PR_TRUE),
       mSrcLoadWaiters(nsnull),
-      mScriptObject(nsnull),
-      mLangID(aLangID),
+      mScriptObject(aLangID, nsnull),
       mLangVersion(aVersion)
 {
     NS_LOG_ADDREF(this, 1, ClassName(), ClassSize());
@@ -3186,29 +3162,6 @@ nsXULPrototypeScript::nsXULPrototypeScript(PRUint32 aLangID, PRUint32 aLineNo, P
 
 nsXULPrototypeScript::~nsXULPrototypeScript()
 {
-    SetScriptObject(nsnull);
-}
-
-nsresult nsXULPrototypeScript::SetScriptObject(void *aScriptObject)
-{
-    nsresult rv = NS_OK;
-    if (mScriptObject) {
-        rv = UnlockScriptThing(mLangID, mScriptObject);
-        if (NS_FAILED(rv)) {
-            NS_ERROR("Failed to unlock script thing");
-            return rv;
-        }
-    }
-    mScriptObject = aScriptObject;
-    if (mScriptObject) {
-        rv = LockScriptThing(mLangID, mScriptObject);
-        if (NS_FAILED(rv)) {
-            NS_ERROR("Failed to lock script thing");
-            // reset to null to we don't try and lock
-            mScriptObject = nsnull;
-        }
-    }
-    return rv;
 }
 
 nsresult
@@ -3216,7 +3169,8 @@ nsXULPrototypeScript::Serialize(nsIObjectOutputStream* aStream,
                                 nsIScriptGlobalObject* aGlobal,
                                 const nsCOMArray<nsINodeInfo> *aNodeInfos)
 {
-    nsIScriptContext *context = aGlobal->GetLanguageContext(mLangID);
+    nsIScriptContext *context = aGlobal->GetLanguageContext(
+                                                mScriptObject.getLanguage());
     NS_ASSERTION(!mSrcLoading || mSrcLoadWaiters != nsnull || !mScriptObject,
                  "script source still loading when serializing?!");
     if (!mScriptObject)
@@ -3317,19 +3271,16 @@ nsXULPrototypeScript::Deserialize(nsIObjectInputStream* aStream,
     aStream->Read32(&mLineNo);
     aStream->Read32(&mLangVersion);
 
-    nsIScriptContext *context = aGlobal->GetLanguageContext(mLangID);
+    nsIScriptContext *context = aGlobal->GetLanguageContext(
+                                                    mScriptObject.getLanguage());
     NS_ASSERTION(context != nsnull, "Have no context for deserialization");
-    void *newScriptObject = nsnull;
-    rv = context->Deserialize(aStream, &newScriptObject);
+    nsScriptObjectHolder newScriptObject(context);
+    rv = context->Deserialize(aStream, newScriptObject);
     if (NS_FAILED(rv)) {
         NS_WARNING("Language deseralization failed");
         return rv;
     }
-    rv = SetScriptObject(newScriptObject);
-    if (NS_FAILED(rv)) {
-        NS_WARNING("Language GC rooting failed");
-        return rv;
-    }
+    mScriptObject = newScriptObject;
     return NS_OK;
 }
 
@@ -3373,18 +3324,23 @@ nsXULPrototypeScript::DeserializeOutOfLine(nsIObjectInputStream* aInput,
                 PRUint32 newLangID = nsIProgrammingLanguage::UNKNOWN;
                 cache->GetScript(mSrcURI, &newLangID, &newScriptObject);
                 if (newScriptObject) {
-                    NS_ASSERTION(mLangID == newLangID,
-                                 "XUL cache gave me an incorrect script language");
-                    // eeek - we can't simply assign to mLangID as the GC stuff
-                    // will not work
-                    if (mLangID != newLangID)
+                    // Things may blow here if we simply change the script
+                    // language - other code may already have pre-fetched the
+                    // global for the language. (You can see this code by
+                    // setting langID to UNKNOWN in the nsXULPrototypeScript
+                    // ctor and not setting it until the scriptObject is set -
+                    // code that pre-fetches these globals will then start
+                    // asserting.)
+                    if (mScriptObject.getLanguage() != newLangID) {
+                        NS_ERROR("XUL cache gave different language?");
                         return NS_ERROR_UNEXPECTED;
+                    }
                 }
-                SetScriptObject(newScriptObject);
+                mScriptObject.set(newScriptObject);
             }
         }
 
-        if (! GetScriptObject()) {
+        if (! mScriptObject) {
             nsCOMPtr<nsIURI> oldURI;
 
             if (mSrcURI) {
@@ -3431,7 +3387,8 @@ nsXULPrototypeScript::DeserializeOutOfLine(nsIObjectInputStream* aInput,
                     PRBool isChrome = PR_FALSE;
                     mSrcURI->SchemeIs("chrome", &isChrome);
                     if (isChrome) {
-                        cache->PutScript(mSrcURI, mLangID, GetScriptObject());
+                        cache->PutScript(mSrcURI, mScriptObject.getLanguage(),
+                                         mScriptObject);
                     }
                 }
             } else {
@@ -3479,7 +3436,7 @@ nsXULPrototypeScript::Compile(const PRUnichar* aText,
         if (! global)
             return NS_ERROR_UNEXPECTED;
 
-        context = global->GetLanguageContext(mLangID);
+        context = global->GetLanguageContext(mScriptObject.getLanguage());
         NS_ASSERTION(context != nsnull, "no context for script global");
         if (! context)
             return NS_ERROR_UNEXPECTED;
@@ -3496,7 +3453,7 @@ nsXULPrototypeScript::Compile(const PRUnichar* aText,
 
     // Ok, compile it to create a prototype script object!
 
-    void *newScriptObject = nsnull;
+    nsScriptObjectHolder newScriptObject(context);
     rv = context->CompileScript(aText,
                                 aTextLength,
                                 nsnull,
@@ -3504,8 +3461,11 @@ nsXULPrototypeScript::Compile(const PRUnichar* aText,
                                 urlspec.get(),
                                 aLineNo,
                                 mLangVersion,
-                                (void**)&newScriptObject);
-    SetScriptObject(newScriptObject);
+                                newScriptObject);
+    if (NS_FAILED(rv))
+        return rv;
+
+    mScriptObject = newScriptObject;
     return rv;
 }
 

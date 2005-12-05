@@ -359,6 +359,16 @@ nsDOMScriptObjectFactory::RegisterDOMClassInfo(const char *aName,
                                               aConstructorCID);
 }
 
+/* static */ nsresult
+nsDOMScriptObjectFactory::Startup()
+{
+  nsJSRuntime::Startup();
+  // nsDOMScriptObjectFactory is a service - assuming that reinitialzing
+  // xpcom also recreates all services, then everything else should
+  // reinitialize correctly.
+  return NS_OK;
+}
+
 // Factories
 nsresult NS_GetLanguageRuntime(const nsAString &aLanguageName,
                                nsILanguageRuntime **aLanguage)

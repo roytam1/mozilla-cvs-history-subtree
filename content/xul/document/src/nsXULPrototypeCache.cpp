@@ -366,7 +366,7 @@ nsXULPrototypeCache::PutScript(nsIURI* aURI, PRUint32 aLangID, void* aScriptObje
     nsCOMPtr<nsILanguageRuntime> rt;
     rv = NS_GetLanguageRuntimeByID(aLangID, getter_AddRefs(rt));
     if (NS_SUCCEEDED(rv))
-        rv = rt->LockGCThing(aScriptObject);
+        rv = rt->HoldScriptObject(aScriptObject);
     NS_ASSERTION(NS_SUCCEEDED(rv), "Failed to GC lock the object");
     // On failure doing the lock, we should remove the map entry?
     return rv;
@@ -378,7 +378,7 @@ ReleaseScriptObjectCallback(nsIURI* aKey, CacheScriptEntry &aData, void* aClosur
 {
     nsCOMPtr<nsILanguageRuntime> rt;
     if (NS_SUCCEEDED(NS_GetLanguageRuntimeByID(aData.mLangID, getter_AddRefs(rt))))
-        rt->UnlockGCThing(aData.mScriptObject);
+        rt->DropScriptObject(aData.mScriptObject);
     return PL_DHASH_REMOVE;
 }
 

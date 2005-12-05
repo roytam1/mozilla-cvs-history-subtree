@@ -85,6 +85,7 @@
 #include "nsIObjectInputStream.h"
 #include "nsIObjectOutputStream.h"
 #include "nsITimelineService.h"
+#include "nsDOMScriptObjectHolder.h"
 #include "prmem.h"
 
 // For locale aware string methods
@@ -134,7 +135,9 @@ static PRLogModuleInfo* gJSDiagnostics;
 #define NS_GC_DELAY                2000 // ms
 #define NS_FIRST_GC_DELAY          10000 // ms
 
-// if you add statics here, add them to the list in nsJSEnvironment::Startup
+#define JAVASCRIPT nsIProgrammingLanguage::JAVASCRIPT
+
+// if you add statics here, add them to the list in nsJSRuntime::Startup
 
 static nsITimer *sGCTimer;
 static PRBool sReadyForGC;
@@ -872,7 +875,6 @@ NS_INTERFACE_MAP_END
 NS_IMPL_ADDREF(nsJSContext)
 NS_IMPL_RELEASE(nsJSContext)
 
-
 nsresult
 nsJSContext::EvaluateStringWithValue(const nsAString& aScript,
                                      void *aScopeObject,
@@ -982,6 +984,9 @@ nsJSContext::EvaluateStringWithValue(const nsAString& aScript,
     }
 
     *NS_STATIC_CAST(jsval*, aRetValue) = val;
+    // XXX - nsScriptObjectHolder should be used once this method moves to
+    // the new world order. However, use of 'jsval' appears to make this
+    // tricky...
   }
   else {
     if (aIsUndefined) {
@@ -1186,7 +1191,7 @@ nsJSContext::CompileScript(const PRUnichar* aText,
                            const char *aURL,
                            PRUint32 aLineNo,
                            PRUint32 aVersion,
-                           void** aScriptObject)
+                           nsScriptObjectHolder &aScriptObject)
 {
   NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
 
@@ -1208,7 +1213,7 @@ nsJSContext::CompileScript(const PRUnichar* aText,
     return NS_ERROR_FAILURE;
   }
 
-  *aScriptObject = nsnull;
+  aScriptObject.drop(); // ensure old object not used on failure...
   if (ok) {
     // SecurityManager said "ok", but don't compile if aVersion is specified
     // and unknown.  Do compile with the default version (and avoid thrashing
@@ -1228,8 +1233,12 @@ nsJSContext::CompileScript(const PRUnichar* aText,
                                           aURL,
                                           aLineNo);
     if (script) {
-        *aScriptObject = (void*) ::JS_NewScriptObject(mContext, script);
-        if (! *aScriptObject) {
+        JSObject *scriptObject = ::JS_NewScriptObject(mContext, script);
+        if (scriptObject) {
+            NS_ASSERTION(aScriptObject.getLanguage()==JAVASCRIPT,
+                         "Expecting JS script object holder");
+            rv = aScriptObject.set(scriptObject);
+        } else {
           ::JS_DestroyScript(mContext, script);
           script = nsnull;
         }
@@ -1352,7 +1361,7 @@ nsJSContext::CompileEventHandler(nsIPrincipal *aPrincipal,
                                  const char** aArgNames,
                                  const nsAString& aBody,
                                  const char *aURL, PRUint32 aLineNo,
-                                 void** aHandler)
+                                 nsScriptObjectHolder &aHandler)
 {
   NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
 
@@ -1390,11 +1399,13 @@ nsJSContext::CompileEventHandler(nsIPrincipal *aPrincipal,
   }
 
   JSObject *handler = ::JS_GetFunctionObject(fun);
-  if (aHandler)
-    *aHandler = (void*) handler;
-  return NS_OK;
+  NS_ASSERTION(aHandler.getLanguage()==JAVASCRIPT,
+               "Expecting JS script object holder");
+  return aHandler.set((void *)handler);
 }
 
+// XXX - note that CompileFunction doesn't yet play the nsScriptObjectHolder
+// game - caller must still ensure JS GC root.
 nsresult
 nsJSContext::CompileFunction(void* aTarget,
                              const nsACString& aName,
@@ -1602,7 +1613,7 @@ nsJSContext::BindCompiledEventHandler(nsISupports* aTarget, void *aScope,
 nsresult
 nsJSContext::GetBoundEventHandler(nsISupports* aTarget, void *aScope,
                                   nsIAtom* aName,
-                                  void** aHandler)
+                                  nsScriptObjectHolder &aHandler)
 {
     nsresult rv;
     nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
@@ -1631,11 +1642,12 @@ nsJSContext::GetBoundEventHandler(nsISupports* aTarget, void *aScope,
 
     if (JS_TypeOfValue(mContext, funval) != JSTYPE_FUNCTION) {
         NS_WARNING("Event handler object not a function");
-        *aHandler = nsnull;
+        aHandler.drop();
         return NS_OK;
     }
-    *aHandler = JSVAL_TO_OBJECT(funval);
-    return NS_OK;
+    NS_ASSERTION(aHandler.getLanguage()==JAVASCRIPT,
+                 "Expecting JS script object holder");
+    return aHandler.set(JSVAL_TO_OBJECT(funval));
 }
 
 // serialization
@@ -1690,7 +1702,8 @@ nsJSContext::Serialize(nsIObjectOutputStream* aStream, void *aScriptObject)
 }
 
 nsresult
-nsJSContext::Deserialize(nsIObjectInputStream* aStream, void **aResult)
+nsJSContext::Deserialize(nsIObjectInputStream* aStream,
+                         nsScriptObjectHolder &aResult)
 {
     JSObject *result = nsnull;
     nsresult rv;
@@ -1756,8 +1769,9 @@ nsJSContext::Deserialize(nsIObjectInputStream* aStream, void **aResult)
     // XPCOM object (e.g., a principal) beneath ::JS_XDRScript.
     if (data)
         nsMemory::Free(data);
-    *aResult = result;
-    return NS_OK;
+    NS_ASSERTION(aResult.getLanguage()==JAVASCRIPT,
+                 "Expecting JS script object holder");
+    return aResult.set(result);
 }
 
 void
@@ -2845,6 +2859,35 @@ DOMGCCallback(JSContext *cx, JSGCStatus status)
 
   return result;
 }
+
+// Script object mananagement - note duplicate implementation
+// in nsJSRuntime below...
+nsresult
+nsJSContext::HoldScriptObject(void* aScriptObject)
+{
+    NS_ASSERTION(sIsInitialized, "runtime not initialized");
+    if (! nsJSRuntime::sRuntime) {
+        NS_NOTREACHED("couldn't remove GC root - no runtime");
+        return NS_ERROR_FAILURE;
+    }
+
+    ::JS_LockGCThingRT(nsJSRuntime::sRuntime, aScriptObject);
+    return NS_OK;
+}
+
+nsresult
+nsJSContext::DropScriptObject(void* aScriptObject)
+{
+  NS_ASSERTION(sIsInitialized, "runtime not initialized");
+  if (! nsJSRuntime::sRuntime) {
+    NS_NOTREACHED("couldn't remove GC root");
+    return NS_ERROR_FAILURE;
+  }
+
+  ::JS_UnlockGCThingRT(nsJSRuntime::sRuntime, aScriptObject);
+  return NS_OK;
+}
+
 /**********************************************************************
  * nsJSRuntime implementation
  *********************************************************************/
@@ -2861,15 +2904,12 @@ NS_IMPL_RELEASE(nsJSRuntime)
 nsresult
 nsJSRuntime::CreateContext(nsIScriptContext **aContext)
 {
-  nsresult rv = nsJSRuntime::Init();
-  NS_ENSURE_SUCCESS(rv, rv);
-
   nsCOMPtr<nsIScriptContext> scriptContext;
-  
+
   *aContext = new nsJSContext(sRuntime);
   NS_ENSURE_TRUE(*aContext, NS_ERROR_OUT_OF_MEMORY);
   NS_ADDREF(*aContext);
-  return rv;
+  return NS_OK;
 }
 
 nsresult
@@ -3068,12 +3108,14 @@ void nsJSRuntime::ShutDown()
   sDidShutdown = PR_TRUE;
 }
 
+// Script object mananagement - note duplicate implementation
+// in nsJSContext above...
 nsresult
-nsJSRuntime::LockGCThing(void* aScriptObject)
+nsJSRuntime::HoldScriptObject(void* aScriptObject)
 {
     NS_ASSERTION(sIsInitialized, "runtime not initialized");
     if (! sRuntime) {
-        NS_NOTREACHED("couldn't remove GC root");
+        NS_NOTREACHED("couldn't remove GC root - no runtime");
         return NS_ERROR_FAILURE;
     }
 
@@ -3082,7 +3124,7 @@ nsJSRuntime::LockGCThing(void* aScriptObject)
 }
 
 nsresult
-nsJSRuntime::UnlockGCThing(void* aScriptObject)
+nsJSRuntime::DropScriptObject(void* aScriptObject)
 {
   NS_ASSERTION(sIsInitialized, "runtime not initialized");
   if (! sRuntime) {
@@ -3097,6 +3139,9 @@ nsJSRuntime::UnlockGCThing(void* aScriptObject)
 // A factory for the runtime.
 nsresult NS_CreateJSRuntime(nsILanguageRuntime **aRuntime)
 {
+  nsresult rv = nsJSRuntime::Init();
+  NS_ENSURE_SUCCESS(rv, rv);
+
   *aRuntime = new nsJSRuntime();
   if (*aRuntime == nsnull)
     return NS_ERROR_OUT_OF_MEMORY;

@@ -44,6 +44,7 @@
 #include "prtime.h"
 #include "nsString.h"
 #include "nsGUIEvent.h"
+#include "nsDOMScriptObjectHolder.h"
 
 #include "nsPyDOM.h"
 #include "nsPyContext.h"
@@ -341,7 +342,7 @@ nsPythonContext::CompileScript(const PRUnichar* aText,
                            const char *aURL,
                            PRUint32 aLineNo,
                            PRUint32 aVersion,
-                           void** aScriptObject)
+                           nsScriptObjectHolder &aScriptObject)
 {
   NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
   NS_TIMELINE_MARK_FUNCTION("nsPythonContext::CompileScript");
@@ -365,11 +366,12 @@ nsPythonContext::CompileScript(const PRUnichar* aText,
                                       aLineNo,
                                       aVersion);
   if (!ret) {
-    *aScriptObject = nsnull;
     return HandlePythonError();
   }
-  PYLEAK_STAT_INCREMENT(ScriptObject);
-  *aScriptObject = ret;
+  NS_ASSERTION(aScriptObject.getLanguage()==nsIProgrammingLanguage::PYTHON,
+               "Expecting Python script object holder");
+  aScriptObject.set(ret);
+  Py_DECREF(ret);
   return NS_OK;
 }
 
@@ -379,7 +381,7 @@ nsPythonContext::CompileEventHandler(nsIPrincipal *aPrincipal, nsIAtom *aName,
                                  const char** aArgNames,
                                  const nsAString& aBody,
                                  const char *aURL, PRUint32 aLineNo,
-                                 void** aHandler)
+                                 nsScriptObjectHolder &aHandler)
 {
   NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
   NS_TIMELINE_MARK_FUNCTION("nsPythonContext::CompileEventHandler");
@@ -388,6 +390,8 @@ nsPythonContext::CompileEventHandler(nsIPrincipal *aPrincipal, nsIAtom *aName,
   NS_ENSURE_TRUE(mDelegate, NS_ERROR_UNEXPECTED);
 
   CEnterLeavePython _celp;
+
+  aHandler.drop();
 
   PyObject *argNames = PyList_New(aArgCount);
   if (!argNames)
@@ -404,12 +408,13 @@ nsPythonContext::CompileEventHandler(nsIPrincipal *aPrincipal, nsIAtom *aName,
                                       argNames,
                                       PyObject_FromNSString(aBody),
                                       aURL, aLineNo);
-  if (!ret) {
-    *aHandler = nsnull;
+  if (!ret)
     return HandlePythonError();
-  }
-  PYLEAK_STAT_INCREMENT(EventHandler);
-  *aHandler = ret;
+
+  NS_ASSERTION(aHandler.getLanguage()==nsIProgrammingLanguage::PYTHON,
+               "Expecting Python script object holder");
+  aHandler.set(ret);
+  Py_DECREF(ret);
   return NS_OK;
 }
 
@@ -504,7 +509,7 @@ nsPythonContext::CallEventHandler(nsISupports *aTarget, void *aScope, void* aHan
 nsresult
 nsPythonContext::GetBoundEventHandler(nsISupports* aTarget, void *aScope,
                                       nsIAtom* aName,
-                                      void** aHandler)
+                                      nsScriptObjectHolder &aHandler)
 {
   NS_TIMELINE_MARK_FUNCTION("nsPythonContext::GetBoundEventHandler");
   NS_ENSURE_TRUE(mIsInitialized, NS_ERROR_NOT_INITIALIZED);
@@ -513,6 +518,8 @@ nsPythonContext::GetBoundEventHandler(nsISupports* aTarget, void *aScope,
   NS_ENSURE_TRUE(mDelegate, NS_ERROR_UNEXPECTED);
 
   CEnterLeavePython _celp;
+
+  aHandler.drop();
 
   PyObject *obTarget;
   obTarget = PyObject_FromNSDOMInterface(mDelegate, aTarget);
@@ -523,16 +530,14 @@ nsPythonContext::GetBoundEventHandler(nsISupports* aTarget, void *aScope,
                                       "NOs",
                                       obTarget, aScope,
                                       AtomToEventHandlerName(aName));
-  if (!ret) {
-    *aHandler = nsnull;
+  if (!ret)
     return HandlePythonError();
-  }
-  if (ret == Py_None) {
-    *aHandler = nsnull;
+  if (ret == Py_None)
     return NS_OK;
-  }
-  PYLEAK_STAT_INCREMENT(ScriptObject);
-  *aHandler = ret;
+  NS_ASSERTION(aHandler.getLanguage()==nsIProgrammingLanguage::PYTHON,
+               "Expecting Python script object holder");
+  aHandler.set(ret);
+  Py_DECREF(ret);
   return NS_OK;
 }
 
@@ -597,11 +602,13 @@ nsPythonContext::Serialize(nsIObjectOutputStream* aStream, void *aScriptObject)
 }
 
 nsresult
-nsPythonContext::Deserialize(nsIObjectInputStream* aStream, void **aResult)
+nsPythonContext::Deserialize(nsIObjectInputStream* aStream,
+                             nsScriptObjectHolder &aResult)
 {
   NS_TIMELINE_MARK_FUNCTION("nsPythonContext::Deserialize");
   nsresult rv;
   PRUint32 magic;
+  aResult.drop();
   rv = aStream->Read32(&magic);
   if (NS_FAILED(rv)) return rv;
 
@@ -621,7 +628,6 @@ nsPythonContext::Deserialize(nsIObjectInputStream* aStream, void **aResult)
     NS_WARNING("Python has different marshal version");
     if (data)
       nsMemory::Free(data);
-    *aResult = nsnull;
     return NS_OK;
   }
 
@@ -633,8 +639,10 @@ nsPythonContext::Deserialize(nsIObjectInputStream* aStream, void **aResult)
     return HandlePythonError();
   NS_ASSERTION(PyCode_Check(codeObject) || PyFunction_Check(codeObject),
                "unmarshal returned non code/functions");
-  *aResult = codeObject;
-  PYLEAK_STAT_INCREMENT(ScriptObject);
+  NS_ASSERTION(aResult.getLanguage()==nsIProgrammingLanguage::PYTHON,
+               "Expecting Python script object holder");
+  aResult.set(codeObject);
+  Py_DECREF(codeObject);
   return NS_OK;
 }
 
@@ -790,4 +798,26 @@ NS_IMETHODIMP
 nsPythonContext::Notify(nsITimer *timer)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+nsresult
+nsPythonContext::DropScriptObject(void *object)
+{
+  if (object) {
+    PYLEAK_STAT_DECREMENT(ScriptObject);
+    CEnterLeavePython _celp;
+    Py_DECREF((PyObject *)object);
+  }
+  return NS_OK;
+}
+
+nsresult
+nsPythonContext::HoldScriptObject(void *object)
+{
+  if (object) {
+    PYLEAK_STAT_INCREMENT(ScriptObject);
+    CEnterLeavePython _celp;
+    Py_INCREF((PyObject *)object);
+  }
+  return NS_OK;
 }

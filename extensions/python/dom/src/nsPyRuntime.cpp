@@ -136,13 +136,23 @@ nsPythonRuntime::UnregisterSelf(nsIComponentManager* aCompMgr,
 }
 
 nsresult
-nsPythonRuntime::LockGCThing(void *object)
+nsPythonRuntime::DropScriptObject(void *object)
 {
+    if (object) {
+        PYLEAK_STAT_DECREMENT(ScriptObject);
+        CEnterLeavePython _celp;
+        Py_DECREF((PyObject *)object);
+    }
     return NS_OK;
 }
 
 nsresult
-nsPythonRuntime::UnlockGCThing(void *object)
+nsPythonRuntime::HoldScriptObject(void *object)
 {
+    if (object) {
+        PYLEAK_STAT_INCREMENT(ScriptObject);
+        CEnterLeavePython _celp;
+        Py_INCREF((PyObject *)object);
+    }
     return NS_OK;
 }

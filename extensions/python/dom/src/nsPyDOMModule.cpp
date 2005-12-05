@@ -51,9 +51,9 @@
 #include "nsIScriptTimeoutHandler.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIArray.h"
-#include "jsapi.h"
 #include "jscntxt.h"
 #include "nsPIDOMWindow.h"
+#include "nsDOMScriptObjectHolder.h"
 
 // just for constants...
 #include "nsIScriptContext.h"
@@ -110,12 +110,8 @@ PyObject *PyJSExec(PyObject *self, PyObject *args)
 
     nsresult rv;
     void *scope = scriptGlobal->GetLanguageGlobal(nsIProgrammingLanguage::JAVASCRIPT);
-    void *scriptObject = nsnull;
+    nsScriptObjectHolder scriptObject(scriptContext);
     JSContext *ctx = (JSContext *)scriptContext->GetNativeContext();
-
-    // must root the result until we sort out mem mgt.
-    if (!::JS_AddNamedRootRT(ctx->runtime, &scriptObject, "PyJSExec result root"))
-        return PyXPCOM_BuildPyException(NS_ERROR_UNEXPECTED);
 
     nsAutoString str;
     PRBool bIsUndefined;
@@ -127,13 +123,11 @@ PyObject *PyJSExec(PyObject *self, PyObject *args)
                                        url,
                                        lineNo,
                                        version,
-                                       &scriptObject);
+                                       scriptObject);
     if (NS_SUCCEEDED(rv) && scriptObject)
         rv = scriptContext->ExecuteScript(scriptObject, scope, &str,
                                           &bIsUndefined);
     Py_END_ALLOW_THREADS
-
-    ::JS_RemoveRootRT(ctx->runtime, &scriptObject);
 
     if (NS_FAILED(rv))
         return PyXPCOM_BuildPyException(rv);

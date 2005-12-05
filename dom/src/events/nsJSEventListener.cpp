@@ -47,6 +47,7 @@
 #include "nsIPrivateDOMEvent.h"
 #include "nsGUIEvent.h"
 #include "nsContentUtils.h"
+#include "nsDOMScriptObjectHolder.h"
 #include "nsArray.h"
 #include "nsVariant.h"
 
@@ -56,36 +57,18 @@
  */
 nsJSEventListener::nsJSEventListener(nsIScriptContext *aContext,
                                      void *aScopeObject,
-                                     nsISupports *aTarget,
-                                     nsresult *rv)
+                                     nsISupports *aTarget)
   : nsIJSEventListener(aContext, aScopeObject, aTarget),
     mReturnResult(nsReturnResult_eNotSet)
 {
-  *rv = NS_OK;
-  if (aScopeObject && aContext) {
-
-    nsCOMPtr<nsILanguageRuntime> langRT;
-    *rv = NS_GetLanguageRuntimeByID(aContext->GetLanguage(),
-                                   getter_AddRefs(langRT));
-    if (NS_SUCCEEDED(*rv))
-      *rv = langRT->LockGCThing(aScopeObject);
-    NS_ASSERTION( NS_SUCCEEDED(*rv), "Failed to lock the script object");
-  }
+    // mScopeObject is the "script global" for a context - this
+    // does not need explicit memory management so long we we don't
+    // outlive the context - which we don't.
 }
 
 nsJSEventListener::~nsJSEventListener() 
 {
-  if (mScopeObject && mContext) {
-    JSContext *cx = (JSContext *)mContext->GetNativeContext();
-    nsresult rv;
-
-    nsCOMPtr<nsILanguageRuntime> langRT;
-    rv = NS_GetLanguageRuntimeByID(mContext->GetLanguage(),
-                                   getter_AddRefs(langRT));
-    if (NS_SUCCEEDED(rv))
-      rv = langRT->UnlockGCThing(mScopeObject);
-    NS_ASSERTION( NS_SUCCEEDED(rv), "Failed to unlock the script object");
-  }
+  // as above, no need to "drop" our reference...
 }
 
 NS_INTERFACE_MAP_BEGIN(nsJSEventListener)
@@ -142,9 +125,9 @@ nsJSEventListener::HandleEvent(nsIDOMEvent* aEvent)
   }
 
 
-  void *funcval;
+  nsScriptObjectHolder funcval(mContext);
   rv = mContext->GetBoundEventHandler(mTarget, mScopeObject, atomName,
-                                      &funcval);
+                                      funcval);
   NS_ENSURE_SUCCESS(rv, rv);
   if (!funcval)
     return NS_OK;
@@ -267,17 +250,11 @@ nsresult
 NS_NewJSEventListener(nsIScriptContext *aContext, void *aScopeObject,
                       nsISupports*aTarget, nsIDOMEventListener ** aReturn)
 {
-  nsresult rv;
   nsJSEventListener* it =
-    new nsJSEventListener(aContext, aScopeObject, aTarget, &rv);
+    new nsJSEventListener(aContext, aScopeObject, aTarget);
   if (!it) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
-  if (NS_FAILED(rv)) {
-    delete it;
-    return rv;
-  }
-
   NS_ADDREF(*aReturn = it);
 
   return NS_OK;

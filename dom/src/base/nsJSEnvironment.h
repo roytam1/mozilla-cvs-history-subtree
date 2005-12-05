@@ -84,7 +84,7 @@ public:
                                  const char *aURL,
                                  PRUint32 aLineNo,
                                  PRUint32 aVersion,
-                                 void** aScriptObject);
+                                 nsScriptObjectHolder &aScriptObject);
   virtual nsresult ExecuteScript(void* aScriptObject,
                                  void *aScopeObject,
                                  nsAString* aRetValue,
@@ -97,7 +97,7 @@ public:
                                        const nsAString& aBody,
                                        const char *aURL,
                                        PRUint32 aLineNo,
-                                       void** aHandler);
+                                       nsScriptObjectHolder &aHandler);
   virtual nsresult CallEventHandler(nsISupports* aTarget, void *aScope,
                                     void* aHandler,
                                     nsIArray *argv, nsIVariant **rv);
@@ -107,7 +107,7 @@ public:
                                             void *aHandler);
   virtual nsresult GetBoundEventHandler(nsISupports* aTarget, void *aScope,
                                         nsIAtom* aName,
-                                        void** aHandler);
+                                        nsScriptObjectHolder &aHandler);
   virtual nsresult CompileFunction(void* aTarget,
                                    const nsACString& aName,
                                    PRUint32 aArgCount,
@@ -150,7 +150,11 @@ public:
   virtual void DidInitializeContext();
 
   virtual nsresult Serialize(nsIObjectOutputStream* aStream, void *aScriptObject);
-  virtual nsresult Deserialize(nsIObjectInputStream* aStream, void **aResult);
+  virtual nsresult Deserialize(nsIObjectInputStream* aStream,
+                               nsScriptObjectHolder &aResult);
+
+  virtual nsresult DropScriptObject(void *object);
+  virtual nsresult HoldScriptObject(void *object);
 
   NS_DECL_NSIXPCSCRIPTNOTIFY
 
@@ -278,13 +282,13 @@ public:
 
   virtual nsresult ParseVersion(const nsString &aVersionStr, PRUint32 *flags);
 
-  virtual nsresult LockGCThing(void *object);
-  virtual nsresult UnlockGCThing(void *object);
+  virtual nsresult DropScriptObject(void *object);
+  virtual nsresult HoldScriptObject(void *object);
   
   // Private stuff.
-  // called from the module Ctor to initialize statics
+  // called by the nsDOMScriptObjectFactory to initialize statics
   static void Startup();
-
+  // Setup all the statics etc - safe to call multiple times after Startup()
   static nsresult Init();
 };
 

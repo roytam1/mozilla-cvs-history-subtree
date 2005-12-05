@@ -811,7 +811,7 @@ XULContentSinkImpl::HandleEndElement(const PRUnichar *aName)
             NS_STATIC_CAST(nsXULPrototypeScript*, node);
 
         // If given a src= attribute, we must ignore script tag content.
-        if (! script->mSrcURI && ! script->GetScriptObject()) {
+        if (! script->mSrcURI && ! script->mScriptObject) {
             nsCOMPtr<nsIDocument> doc = do_QueryReferent(mDocument);
 
             script->mOutOfLine = PR_FALSE;

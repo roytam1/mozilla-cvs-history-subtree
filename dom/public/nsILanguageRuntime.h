@@ -76,15 +76,12 @@ public:
   /* Factory for a new context for this language */
   virtual nsresult CreateContext(nsIScriptContext **ret) = 0;
   
-  /* Some GC stuff we really need to rationalize, given other languages can't
-   * really play with the JS GC magic.
+  /* Memory managment for script objects returned from various
+   * nsIScriptContext methods.  These are identical to those in
+   * nsIScriptContext, but are useful when a script context is not known.
    */
-    /**
-   *  Inform the language that something is being held and may have no other
-   *  reference keeping it alive.
-   */
-  virtual nsresult LockGCThing(void *object) = 0;
-  virtual nsresult UnlockGCThing(void *object) = 0;
-
+  virtual nsresult DropScriptObject(void *object) = 0;
+  virtual nsresult HoldScriptObject(void *object) = 0;
 };
+
 #endif // nsILanguageRuntime_h__

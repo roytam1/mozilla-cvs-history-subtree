@@ -84,6 +84,7 @@
 #include "nsCRT.h"
 #include "nsXBLEventHandler.h"
 #include "nsHTMLAtoms.h"
+#include "nsDOMScriptObjectHolder.h"
 
 static NS_DEFINE_CID(kDOMScriptObjectFactoryCID,
                      NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
@@ -367,8 +368,6 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
   onEvent += str;
   nsCOMPtr<nsIAtom> onEventAtom = do_GetAtom(onEvent);
 
-  void* handler = nsnull;
-  
   // Compile the event handler.
   nsAutoString xulText;
   nsIContent* keyCommandContent = nsnull;
@@ -443,6 +442,7 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
   nsIScriptContext *boundContext = boundGlobal->GetContext();
   if (!boundContext) return NS_OK;
 
+  nsScriptObjectHolder handler(boundContext);
   nsISupports *scriptTarget;
   // strong ref to a GC root we'll need to protect scriptObject in the case
   // where it is not the global object (!winRoot).
@@ -468,7 +468,7 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
     rv = boundContext->CompileEventHandler(nsnull, onEventAtom, argCount,
                                            argNames, xulText,
                                            documentURI.get(), 0, 
-                                           &handler);
+                                           handler);
   }
   else {
     nsDependentString handlerText(mHandlerText);
@@ -481,14 +481,12 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
     rv = boundContext->CompileEventHandler(nsnull, onEventAtom, argCount,
                                            argNames, handlerText,
                                            bindingURI.get(), mLineNumber,
-                                           &handler);
+                                           handler);
   }
   NS_ENSURE_SUCCESS(rv, rv);
 
   NS_ASSERTION(boundContext->GetLanguage()==nsIProgrammingLanguage::JAVASCRIPT,
                "Still need to work on gc etc for non JS");
-  nsAutoGCRoot root(&handler, &rv);
-  NS_ENSURE_SUCCESS(rv, rv);
 
   // Temporarily bind it to the bound element
   rv = boundContext->BindCompiledEventHandler(scriptTarget, scope,

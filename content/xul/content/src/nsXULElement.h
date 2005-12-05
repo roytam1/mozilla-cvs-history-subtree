@@ -80,6 +80,7 @@
 #include "nsXULAtoms.h"
 #include "nsAutoPtr.h"
 #include "nsGenericElement.h"
+#include "nsDOMScriptObjectHolder.h"
 
 class nsIDocument;
 class nsIRDFService;
@@ -129,7 +130,8 @@ public:
     nsAttrName mName;
     nsAttrValue mValue;
     // mEventHandler is only valid for the language ID specified in the
-    // containing nsXULPrototypeElement
+    // containing nsXULPrototypeElement.  We would ideally use
+    // nsScriptObjectHolder, but want to avoid the extra lang ID.
     void* mEventHandler;
 
     // Containing element must tell us the langID so we can cleanup.
@@ -354,16 +356,8 @@ public:
     PRPackedBool             mSrcLoading;
     PRPackedBool             mOutOfLine;
     nsXULDocument*           mSrcLoadWaiters;   // [OWNER] but not COMPtr
-    PRUint32                 mLangID;
     PRUint32                 mLangVersion;
-
-    // We need to take care with ownership of mScriptObject - so we expose
-    // getters and setters instead of the object itself.
-    void *GetScriptObject() {
-        return mScriptObject;
-    }
-    // Setting it is where ownership is tricky
-    nsresult SetScriptObject(void *aScriptObject);
+    nsScriptObjectHolder     mScriptObject;
 
     static void ReleaseGlobals()
     {
@@ -379,7 +373,6 @@ protected:
         return sXULPrototypeCache;
     }
     static nsIXULPrototypeCache* sXULPrototypeCache;
-    void *mScriptObject;
 };
 
 class nsXULPrototypeText : public nsXULPrototypeNode
@@ -595,8 +588,9 @@ public:
                                  const nsAString& aBody,
                                  const char* aURL,
                                  PRUint32 aLineNo,
-                                 void** aHandler);
-    nsresult GetCompiledEventHandler(nsIAtom *aName, void** aHandler);
+                                 nsScriptObjectHolder &aHandler);
+    nsresult GetCompiledEventHandler(nsIAtom *aName,
+                                     nsScriptObjectHolder &aHandler);
 
     // nsIChromeEventHandler
     NS_DECL_NSICHROMEEVENTHANDLER

@@ -75,7 +75,7 @@ public:
 
   virtual nsresult ParseVersion(const nsString &aVersionStr, PRUint32 *flags);
 
-  virtual nsresult LockGCThing(void *object);
-  virtual nsresult UnlockGCThing(void *object);
+  virtual nsresult HoldScriptObject(void *object);
+  virtual nsresult DropScriptObject(void *object);
  
 };

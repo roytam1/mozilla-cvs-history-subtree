@@ -68,6 +68,7 @@
 #include "nsIJSEventListener.h"
 #include "prmem.h"
 #include "nsIScriptGlobalObject.h"
+#include "nsILanguageRuntime.h"
 #include "nsLayoutAtoms.h"
 #include "nsLayoutUtils.h"
 #ifdef MOZ_XUL
@@ -105,6 +106,7 @@
 #include "nsDOMJSUtils.h"
 #include "nsIDOMEventGroup.h"
 #include "nsContentCID.h"
+#include "nsDOMScriptObjectHolder.h"
 
 static NS_DEFINE_CID(kDOMScriptObjectFactoryCID,
                      NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
@@ -1334,11 +1336,11 @@ nsEventListenerManager::AddScriptEventListener(nsISupports *aObject,
     nsCOMPtr<nsIScriptEventHandlerOwner> handlerOwner =
       do_QueryInterface(aObject);
 
-    void *handler = nsnull;
+    nsScriptObjectHolder handler(context);
     PRBool done = PR_FALSE;
 
     if (handlerOwner) {
-      rv = handlerOwner->GetCompiledEventHandler(aName, &handler);
+      rv = handlerOwner->GetCompiledEventHandler(aName, handler);
       if (NS_SUCCEEDED(rv) && handler) {
         rv = context->BindCompiledEventHandler(aObject, scope, aName, handler);
         if (NS_FAILED(rv))
@@ -1362,7 +1364,7 @@ nsEventListenerManager::AddScriptEventListener(nsISupports *aObject,
         // Always let the handler owner compile the event handler, as
         // it may want to use a special context or scope object.
         rv = handlerOwner->CompileEventHandler(context, aObject, aName,
-                                               aBody, url.get(), lineNo, &handler);
+                                               aBody, url.get(), lineNo, handler);
       }
       else {
         PRInt32 nameSpace = kNameSpaceID_Unknown;
@@ -1381,7 +1383,7 @@ nsEventListenerManager::AddScriptEventListener(nsISupports *aObject,
         rv = context->CompileEventHandler(nsnull, aName, argCount, argNames,
                                           aBody,
                                           url.get(), lineNo,
-                                          &handler);
+                                          handler);
         NS_ENSURE_SUCCESS(rv, rv);
         // And bind it.
         rv = context->BindCompiledEventHandler(aObject, scope,
@@ -1539,10 +1541,11 @@ nsEventListenerManager::CompileEventHandlerInternal(nsIScriptContext *aContext,
 
   nsCOMPtr<nsIScriptEventHandlerOwner> handlerOwner =
     do_QueryInterface(aObject);
-  void* handler = nsnull;
+  nsScriptObjectHolder handler(aContext);
 
   if (handlerOwner) {
-    result = handlerOwner->GetCompiledEventHandler(aName, &handler);
+    result = handlerOwner->GetCompiledEventHandler(aName,
+                                                   handler);
     if (NS_SUCCEEDED(result) && handler) {
       // XXXmarkh - why do we bind here, but not after compilation below?
       result = aContext->BindCompiledEventHandler(aObject, aScope, aName, handler);
@@ -1603,7 +1606,7 @@ nsEventListenerManager::CompileEventHandlerInternal(nsIScriptContext *aContext,
           result = handlerOwner->CompileEventHandler(aContext, aObject, aName,
                                                      handlerBody,
                                                      url.get(), lineNo,
-                                                     &handler);
+                                                     handler);
         }
         else {
           PRUint32 argCount;
@@ -1615,7 +1618,7 @@ nsEventListenerManager::CompileEventHandlerInternal(nsIScriptContext *aContext,
                                                  argCount, argNames,
                                                  handlerBody,
                                                  url.get(), lineNo,
-                                                 &handler);
+                                                 handler);
           // And bind it.
           result = aContext->BindCompiledEventHandler(aObject, aScope,
                                                       aName, handler);

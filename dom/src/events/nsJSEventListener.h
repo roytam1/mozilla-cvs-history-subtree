@@ -53,7 +53,7 @@ class nsJSEventListener : public nsIDOMEventListener,
 {
 public:
   nsJSEventListener(nsIScriptContext *aContext, void *aScopeObject,
-                    nsISupports* aObject, nsresult *rv);
+                    nsISupports* aObject);
   virtual ~nsJSEventListener();
 
   NS_DECL_ISUPPORTS

@@ -77,7 +77,7 @@ class nsPyDOMObjectLeakStats
             leaked = PR_TRUE;
           }
           if (!leaked)
-            printf("No leaks.\n");
+            printf(" => no leaks.\n");
         }
 
       PRInt32 mEventHandlerCount;
@@ -132,7 +132,7 @@ public:
                                  const char *aURL,
                                  PRUint32 aLineNo,
                                  PRUint32 aVersion,
-                                 void** aScriptObject);
+                                 nsScriptObjectHolder &aScriptObject);
   virtual nsresult ExecuteScript(void* aScriptObject,
                                  void *aScopeObject,
                                  nsAString* aRetValue,
@@ -144,7 +144,7 @@ public:
                                        const nsAString& aBody,
                                        const char *aURL,
                                        PRUint32 aLineNo,
-                                       void** aHandler);
+                                       nsScriptObjectHolder &aHandler);
   virtual nsresult CallEventHandler(nsISupports* aTarget, void *aScope,
                                     void* aHandler,
                                     nsIArray *argv, nsIVariant **rv);
@@ -153,7 +153,7 @@ public:
                                             void *aHandler);
   virtual nsresult GetBoundEventHandler(nsISupports* aTarget, void *aScope,
                                         nsIAtom* aName,
-                                        void** aHandler);
+                                        nsScriptObjectHolder &aHandler);
   virtual nsresult CompileFunction(void* aTarget,
                                    const nsACString& aName,
                                    PRUint32 aArgCount,
@@ -196,7 +196,11 @@ public:
   virtual void DidInitializeContext();
 
   virtual nsresult Serialize(nsIObjectOutputStream* aStream, void *aScriptObject);
-  virtual nsresult Deserialize(nsIObjectInputStream* aStream, void **aResult);
+  virtual nsresult Deserialize(nsIObjectInputStream* aStream,
+                               nsScriptObjectHolder &aResult);
+
+  virtual nsresult HoldScriptObject(void *object);
+  virtual nsresult DropScriptObject(void *object);
 
   NS_DECL_NSITIMERCALLBACK
   

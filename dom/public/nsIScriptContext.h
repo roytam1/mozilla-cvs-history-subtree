@@ -52,6 +52,7 @@ class nsIArray;
 class nsIVariant;
 class nsIObjectInputStream;
 class nsIObjectOutputStream;
+class nsScriptObjectHolder;
 
 typedef void (*nsScriptTerminationFunc)(nsISupports* aRef);
 
@@ -101,6 +102,8 @@ public:
                                   nsAString *aRetValue,
                                   PRBool* aIsUndefined) = 0;
 
+  // Note JS bigotry remains here - 'void *aRetValue' is assumed to be a
+  // jsval.  This must move to JSObject before it can be made agnostic.
   virtual nsresult EvaluateStringWithValue(const nsAString& aScript,
                                            void *aScopeObject,
                                            nsIPrincipal *aPrincipal,
@@ -122,10 +125,9 @@ public:
    * @param aLineNo the starting line number of the script for error messages
    * @param aVersion the script language version to use when executing
    * @param aScriptObject an executable object that's the result of compiling
-   *                      the script.  The caller is responsible for GC rooting
-   *                      this object.
+   *                      the script.
    *
-   * @return NS_OK if the script source was valid and got compiled
+   * @return NS_OK if the script source was valid and got compiled.
    *
    **/
   virtual nsresult CompileScript(const PRUnichar* aText,
@@ -135,7 +137,7 @@ public:
                                  const char* aURL,
                                  PRUint32 aLineNo,
                                  PRUint32 aVersion,
-                                 void** aScriptObject) = 0;
+                                 nsScriptObjectHolder &aScriptObject) = 0;
 
   /**
    * Execute a precompiled script object.
@@ -172,8 +174,7 @@ public:
    * @param aURL the URL or filename for error messages
    * @param aLineNo the starting line number of the script for error messages
    * @param aHandler the out parameter in which a void pointer to the compiled
-   *        function object is returned on success; may be null, meaning the
-   *        caller doesn't need to store the handler for later use.
+   *        function object is stored on success
    *
    * @return NS_OK if the function body was valid and got compiled
    */
@@ -184,7 +185,7 @@ public:
                                        const nsAString& aBody,
                                        const char* aURL,
                                        PRUint32 aLineNo,
-                                       void** aHandler) = 0;
+                                       nsScriptObjectHolder &aHandler) = 0;
 
   /**
    * Call the function object with given args and return its boolean result,
@@ -234,12 +235,18 @@ public:
    * will return an object equivilent to the one passed to
    * BindCompiledEventHandler (although the pointer may not be the same).
    *
-   * The result native object must be 'unlocked'. xxxmarkh - update this!
    */
   virtual nsresult GetBoundEventHandler(nsISupports* aTarget, void *aScope,
                                         nsIAtom* aName,
-                                        void** aHandler) = 0;
+                                        nsScriptObjectHolder &aHandler) = 0;
 
+  /**
+   * Compile a function that isn't used as an event handler.
+   *
+   * NOTE: Not yet language agnostic (main problem is XBL - not yet agnostic)
+   * Caller must make sure aFunctionObject is a JS GC root.
+   *
+   **/
   virtual nsresult CompileFunction(void* aTarget,
                                    const nsACString& aName,
                                    PRUint32 aArgCount,
@@ -248,7 +255,7 @@ public:
                                    const char* aURL,
                                    PRUint32 aLineNo,
                                    PRBool aShared,
-                                   void** aFunctionObject) = 0;
+                                   void **aFunctionObject) = 0;
 
   /**
    * Set the default scripting language version for this context, which must
@@ -323,8 +330,11 @@ public:
 
   virtual nsresult Serialize(nsIObjectOutputStream* aStream,
                              void *aScriptObject) = 0;
+  
+  /* Deserialize a script from a stream.
+   */
   virtual nsresult Deserialize(nsIObjectInputStream* aStream,
-                               void **aResult) = 0;
+                               nsScriptObjectHolder &aResult) = 0;
 
   /**
    * Let the script context know who its owner is.
@@ -402,6 +412,16 @@ public:
    * Tell the context we're done reinitializing it.
    */
   virtual void DidInitializeContext() = 0;
+
+  /* Memory managment for script objects.  Used by the implementation of
+   * nsScriptObjectHolder to manage the lifetimes of the held script objects/
+   *
+   * See also nsILanguageRuntime, which has identical methods and is useful
+   * in situations when you do not have an nsIScriptContext.
+   * 
+   */
+  virtual nsresult DropScriptObject(void *object) = 0;
+  virtual nsresult HoldScriptObject(void *object) = 0;
 };
 
 #endif // nsIScriptContext_h__
