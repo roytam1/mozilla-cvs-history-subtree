@@ -98,7 +98,6 @@
 #include "nsISelection.h"
 #include "nsIXBLService.h"
 #include "nsICaret.h"
-#include "nsJSEnvironment.h"
 #include "nsLayoutAtoms.h"
 #include "nsPlainTextSerializer.h"
 #include "mozSanitizingSerializer.h"
@@ -265,9 +264,7 @@ Initialize(nsIModule* aSelf)
 
   gInitialized = PR_TRUE;
 
-  // XXXmarkh - This nsJSRuntime::Startup should be changed to a
-  // nsDOMScriptObjectFactory startup, so it can re-init *all* languages.
-  nsJSRuntime::Startup();
+  nsDOMScriptObjectFactory::Startup();
   nsresult rv = nsContentUtils::Init();
   if (NS_FAILED(rv)) {
     NS_ERROR("Could not initialize nsContentUtils");
