@@ -40,6 +40,9 @@
 #import <AppKit/AppKit.h>
 #import "ProgressViewController.h"
 
+extern NSString* const kDownloadInstanceSelectedNotificationName;
+extern NSString* const kDownloadInstanceOpenedNotificationName;
+
 //
 // interface ProgressView
 //
