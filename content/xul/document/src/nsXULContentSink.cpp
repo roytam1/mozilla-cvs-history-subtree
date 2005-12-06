@@ -92,7 +92,7 @@
 #include "nsXULElement.h"
 #include "prlog.h"
 #include "prmem.h"
-#include "jsapi.h"  // for JSVERSION_*, JS_VersionToString, etc.
+#include "jscntxt.h"  // for JSVERSION_HAS_XML
 #include "nsCRT.h"
 
 #include "nsIFastLoadService.h"         // XXXbe temporary
@@ -1282,7 +1282,11 @@ XULContentSinkImpl::OpenScript(const PRUnichar** aAttributes,
                       return rv;
               } else {
                   if (value.Length() == 1 && value[0] == '0')
-                    version |= JSOPTION_XML;
+                    // This means that we need to set JSOPTION_XML in the JS options.
+                    // We re-use our knowledge of the implementation to reuse
+                    // JSVERSION_HAS_XML as a safe version flag.
+                    // If version has JSVERSION_UNKNOWN (-1), then this is still OK.
+                    version |= JSVERSION_HAS_XML;
               }
           }
       }

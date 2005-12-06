@@ -943,16 +943,31 @@ nsJSContext::EvaluateStringWithValue(const nsAString& aScript,
   jsval val;
 
   nsJSContext::TerminationFuncHolder holder(this);
-  if (ok) {
-    JSVersion newVersion = JSVERSION_UNKNOWN;
 
-    // SecurityManager said "ok", but don't execute if aVersion is specified
-    // and unknown.  Do execute with the default version (and avoid thrashing
-    // the context's version) if aVersion is not specified.
-    // XXX - is this correct - see above.
-    JSVersion oldVersion = JSVERSION_UNKNOWN;
-    if (aVersion != JSVERSION_UNKNOWN)
-      oldVersion = ::JS_SetVersion(mContext, (JSVersion)aVersion);
+  // SecurityManager said "ok", but don't compile if aVersion is unknown.
+  // Do compile with the default version (and avoid thrashing the context's
+  // version) if aVersion is the default.
+  // As the caller is responsible for parsing the version strings, we just
+  // check it isn't JSVERSION_UNKNOWN.
+  if (ok && aVersion != JSVERSION_UNKNOWN) {
+    // JSVERSION_HAS_XML may be set in our version mask - however, we can't
+    // simply pass this directly to JS_SetOptions as it masks out that bit -
+    // the only way to make this happen is via JS_SetOptions.
+    JSBool hasxml = (aVersion & JSVERSION_HAS_XML) != 0;
+    uint32 jsoptions = ::JS_GetOptions(mContext);
+    JSBool optionsChanged = ((hasxml) ^ !!(jsoptions & JSOPTION_XML));
+
+    if (optionsChanged) {
+      ::JS_SetOptions(mContext,
+                      hasxml
+                      ? jsoptions | JSOPTION_XML
+                      : jsoptions & ~JSOPTION_XML);
+    }
+    // Change the version - this is cheap when the versions match, so no need
+    // to optimize here...
+    JSVersion newVer = (JSVersion)(aVersion & JSVERSION_MASK);
+    JSVersion oldVer = ::JS_SetVersion(mContext, newVer);
+
     ok = ::JS_EvaluateUCScriptForPrincipals(mContext,
                                             (JSObject *)aScopeObject,
                                             jsprin,
@@ -962,8 +977,11 @@ nsJSContext::EvaluateStringWithValue(const nsAString& aScript,
                                             aLineNo,
                                             &val);
 
-    if (aVersion != JSVERSION_UNKNOWN)
-      ::JS_SetVersion(mContext, oldVersion);
+    ::JS_SetVersion(mContext, oldVer);
+
+    if (optionsChanged) {
+      ::JS_SetOptions(mContext, jsoptions);
+    }
 
     if (!ok) {
         // Tell XPConnect about any pending exceptions. This is needed
@@ -1125,15 +1143,31 @@ nsJSContext::EvaluateString(const nsAString& aScript,
   jsval val;
 
   nsJSContext::TerminationFuncHolder holder(this);
-  if (ok) {
-    // SecurityManager said "ok", but don't execute if aVersion is specified
-    // and unknown.  Do execute with the default version (and avoid thrashing
-    // the context's version) if aVersion is not specified.
-    // XXX - markh isn't sure what needs to be checked here.
-    JSVersion oldVersion = JSVERSION_UNKNOWN;
-    if (aVersion != JSVERSION_UNKNOWN)
-        oldVersion = ::JS_SetVersion(mContext, (JSVersion)aVersion);
-    
+
+  // SecurityManager said "ok", but don't compile if aVersion is unknown.
+  // Do compile with the default version (and avoid thrashing the context's
+  // version) if aVersion is the default.
+  // As the caller is responsible for parsing the version strings, we just
+  // check it isn't JSVERSION_UNKNOWN.
+  if (ok && aVersion != JSVERSION_UNKNOWN) {
+    // JSVERSION_HAS_XML may be set in our version mask - however, we can't
+    // simply pass this directly to JS_SetOptions as it masks out that bit -
+    // the only way to make this happen is via JS_SetOptions.
+    JSBool hasxml = (aVersion & JSVERSION_HAS_XML) != 0;
+    uint32 jsoptions = ::JS_GetOptions(mContext);
+    JSBool optionsChanged = ((hasxml) ^ !!(jsoptions & JSOPTION_XML));
+
+    if (optionsChanged) {
+      ::JS_SetOptions(mContext,
+                      hasxml
+                      ? jsoptions | JSOPTION_XML
+                      : jsoptions & ~JSOPTION_XML);
+    }
+    // Change the version - this is cheap when the versions match, so no need
+    // to optimize here...
+    JSVersion newVer = (JSVersion)(aVersion & JSVERSION_MASK);
+    JSVersion oldVer = ::JS_SetVersion(mContext, newVer);
+
     ok = ::JS_EvaluateUCScriptForPrincipals(mContext,
                                               (JSObject *)aScopeObject,
                                               jsprin,
@@ -1143,9 +1177,11 @@ nsJSContext::EvaluateString(const nsAString& aScript,
                                               aLineNo,
                                               &val);
 
-    if (oldVersion != JSVERSION_UNKNOWN) {
-        ::JS_SetVersion(mContext, oldVersion);
-      }
+    ::JS_SetVersion(mContext, oldVer);
+
+    if (optionsChanged) {
+      ::JS_SetOptions(mContext, jsoptions);
+    }
 
     if (!ok) {
         // Tell XPConnect about any pending exceptions. This is needed
@@ -1214,15 +1250,30 @@ nsJSContext::CompileScript(const PRUnichar* aText,
   }
 
   aScriptObject.drop(); // ensure old object not used on failure...
-  if (ok) {
-    // SecurityManager said "ok", but don't compile if aVersion is specified
-    // and unknown.  Do compile with the default version (and avoid thrashing
-    // the context's version) if aVersion is not specified.
-    
-    // XXX - markh isn't sure what needs to be checked here.
-    JSVersion oldVersion = JSVERSION_UNKNOWN;
-    if (aVersion != JSVERSION_UNKNOWN)
-        oldVersion = ::JS_SetVersion(mContext, (JSVersion)aVersion);
+
+  // SecurityManager said "ok", but don't compile if aVersion is unknown.
+  // Do compile with the default version (and avoid thrashing the context's
+  // version) if aVersion is the default.
+  // As the caller is responsible for parsing the version strings, we just
+  // check it isn't JSVERSION_UNKNOWN.
+  if (ok && aVersion != JSVERSION_UNKNOWN) {
+    // JSVERSION_HAS_XML may be set in our version mask - however, we can't
+    // simply pass this directly to JS_SetOptions as it masks out that bit -
+    // the only way to make this happen is via JS_SetOptions.
+    JSBool hasxml = (aVersion & JSVERSION_HAS_XML) != 0;
+    uint32 jsoptions = ::JS_GetOptions(mContext);
+    JSBool optionsChanged = ((hasxml) ^ !!(jsoptions & JSOPTION_XML));
+
+    if (optionsChanged) {
+      ::JS_SetOptions(mContext,
+                      hasxml
+                      ? jsoptions | JSOPTION_XML
+                      : jsoptions & ~JSOPTION_XML);
+    }
+    // Change the version - this is cheap when the versions match, so no need
+    // to optimize here...
+    JSVersion newVer = (JSVersion)(aVersion & JSVERSION_MASK);
+    JSVersion oldVer = ::JS_SetVersion(mContext, newVer);
 
     JSScript* script =
         ::JS_CompileUCScriptForPrincipals(mContext,
@@ -1233,24 +1284,27 @@ nsJSContext::CompileScript(const PRUnichar* aText,
                                           aURL,
                                           aLineNo);
     if (script) {
-        JSObject *scriptObject = ::JS_NewScriptObject(mContext, script);
-        if (scriptObject) {
-            NS_ASSERTION(aScriptObject.getLanguage()==JAVASCRIPT,
-                         "Expecting JS script object holder");
-            rv = aScriptObject.set(scriptObject);
-        } else {
-          ::JS_DestroyScript(mContext, script);
-          script = nsnull;
-        }
+      JSObject *scriptObject = ::JS_NewScriptObject(mContext, script);
+      if (scriptObject) {
+        NS_ASSERTION(aScriptObject.getLanguage()==JAVASCRIPT,
+                     "Expecting JS script object holder");
+        rv = aScriptObject.set(scriptObject);
+      } else {
+        ::JS_DestroyScript(mContext, script);
+        script = nsnull;
+      }
     }
     if (!script)
-        rv = NS_ERROR_OUT_OF_MEMORY;
+      rv = NS_ERROR_OUT_OF_MEMORY;
 
-    if (aVersion != JSVERSION_UNKNOWN)
-        ::JS_SetVersion(mContext, oldVersion);
+    ::JS_SetVersion(mContext, oldVer);
+
+    if (optionsChanged) {
+      ::JS_SetOptions(mContext, jsoptions);
+    }
   }
 
-  // Whew!  Finally done with these manually ref-counted things.
+  // Whew!  Finally done.
   JSPRINCIPALS_DROP(mContext, jsprin);
   return rv;
 }

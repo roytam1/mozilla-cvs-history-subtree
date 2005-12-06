@@ -57,7 +57,7 @@
 #include "nsIScriptElement.h"
 #include "nsIDOMHTMLScriptElement.h"
 #include "nsIDocShell.h"
-#include "jsapi.h"
+#include "jscntxt.h"  // for JSVERSION_HAS_XML
 #include "nsContentUtils.h"
 #include "nsUnicharUtils.h"
 #include "nsAutoPtr.h"
@@ -482,7 +482,11 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement,
           return rv;
       } else {
         if (value.Length() == 1 && value[0] == '1')
-          version |= JSOPTION_XML;
+          // This means that we need to set JSOPTION_XML in the JS options.
+          // We re-use our knowledge of the implementation to reuse
+          // JSVERSION_HAS_XML as a safe version flag.
+          // If version has JSVERSION_UNKNOWN (-1), then this is still OK.
+          version |= JSVERSION_HAS_XML;
       }
     }
   } else {
