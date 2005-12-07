@@ -77,19 +77,13 @@
 
 #include <Python.h>
 
-#ifdef XP_WIN
-#	ifdef BUILD_PYXPCOM
-		/* We are building the main dll */
-#		define PYXPCOM_EXPORT __declspec(dllexport)
-#	else
-		/* This module uses the dll */
-#		define PYXPCOM_EXPORT __declspec(dllimport)
-#	endif // BUILD_PYXPCOM
-
-#else // XP_WIN
-#	define PYXPCOM_EXPORT
-#endif // XP_WIN
-
+#ifdef BUILD_PYXPCOM
+    /* We are building the main dll */
+#   define PYXPCOM_EXPORT NS_EXPORT
+#else
+    /* This module uses the dll */
+#   define PYXPCOM_EXPORT NS_IMPORT
+#endif // BUILD_PYXPCOM
 
 // An IID we treat as NULL when passing as a reference.
 extern PYXPCOM_EXPORT nsIID Py_nsIID_NULL;
@@ -638,8 +632,8 @@ public:
 
 // NEVER new one of these objects - only use on the stack!
 
-extern PYXPCOM_EXPORT void PyXPCOM_MakePendingCalls();
-extern PYXPCOM_EXPORT PRBool PyXPCOM_Globals_Ensure();
+PYXPCOM_EXPORT void PyXPCOM_MakePendingCalls();
+PYXPCOM_EXPORT PRBool PyXPCOM_Globals_Ensure();
 
 // For 2.3, use the PyGILState_ calls
 #if (PY_VERSION_HEX >= 0x02030000)
@@ -664,12 +658,12 @@ public:
 };
 #else
 
-extern PYXPCOM_EXPORT PyInterpreterState *PyXPCOM_InterpreterState;
-extern PYXPCOM_EXPORT PRBool PyXPCOM_ThreadState_Ensure();
-extern PYXPCOM_EXPORT void PyXPCOM_ThreadState_Free();
-extern PYXPCOM_EXPORT void PyXPCOM_ThreadState_Clear();
-extern PYXPCOM_EXPORT void PyXPCOM_InterpreterLock_Acquire();
-extern PYXPCOM_EXPORT void PyXPCOM_InterpreterLock_Release();
+PYXPCOM_EXPORT PyInterpreterState *PyXPCOM_InterpreterState;
+PYXPCOM_EXPORT PRBool PyXPCOM_ThreadState_Ensure();
+PYXPCOM_EXPORT void PyXPCOM_ThreadState_Free();
+PYXPCOM_EXPORT void PyXPCOM_ThreadState_Clear();
+PYXPCOM_EXPORT void PyXPCOM_InterpreterLock_Acquire();
+PYXPCOM_EXPORT void PyXPCOM_InterpreterLock_Release();
 
 // Pre 2.3 thread-state dances.
 class CEnterLeavePython {
