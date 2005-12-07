@@ -280,8 +280,8 @@ public:
 	static PyObject *QueryInterface(PyObject *self, PyObject *args);
 
 	// Internal (sort-of) objects.
-	static PyXPCOM_TypeObject *type;
-	static PyMethodDef methods[];
+	static NS_EXPORT_STATIC_MEMBER_(PyXPCOM_TypeObject) *type;
+	static NS_EXPORT_STATIC_MEMBER_(PyMethodDef) methods[];
 	static PyObject *mapIIDToType;
 	static void SafeRelease(Py_nsISupports *ob);
 	static void RegisterInterface( const nsIID &iid, PyTypeObject *t);
@@ -348,8 +348,8 @@ public:
 	static long PyTypeMethod_hash(PyObject *self);
 	static PyObject *PyTypeMethod_str(PyObject *self);
 	static void PyTypeMethod_dealloc(PyObject *self);
-	static PyTypeObject type;
-	static PyMethodDef methods[];
+	static NS_EXPORT_STATIC_MEMBER_(PyTypeObject) type;
+	static NS_EXPORT_STATIC_MEMBER_(PyMethodDef) methods[];
 };
 
 ///////////////////////////////////////////////////////
