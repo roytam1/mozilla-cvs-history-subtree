@@ -83,27 +83,42 @@ static const char *LOGGER_DEBUG = "debug";
 // Our "normal" error logger - calls back to the logging module.
 void DoLogMessage(const char *methodName, const char *pszMessageText)
 {
-	// We now go back via the 'logging' module, which itself generally
-	// arranges to pump back to the console service.  This makes all
-	// logging consistent with the package.
-	PyObject *mod = PyImport_ImportModule("logging");
-	if (!mod) {
-		HandleLogError(pszMessageText);
-		return;
+	// We use the logging module now.  Originally this code called
+	// the logging module directly by way of the C API's
+	// PyImport_ImportModule/PyObject_CallMethod etc.  However, this
+	// causes problems when there is no Python caller on the stack -
+	// the logging module's findCaller method fails with a None frame.
+	// We now work around this by calling PyRun_SimpleString - this
+	// causes a new frame to be created for executing the compiled
+	// string, and the logging module no longer fails.
+	// XXX - this implementation is less than ideal - findCaller now
+	// returns ("<string>", 2).  Ideally we would compile with a
+	// filename something similar to "<pydom error reporter>".
+
+	// But this also means we need a clear error state...
+	PyObject *exc_typ = NULL, *exc_val = NULL, *exc_tb = NULL;
+	PyErr_Fetch(&exc_typ, &exc_val, &exc_tb);
+// We will execute:
+//  import logging
+//  logging.getLogger('xpcom').{warning/error/etc}("%s", {msg_text})
+	nsCAutoString c("import logging\nlogging.getLogger('xpcom').");
+	c += methodName;
+	c += "('%s', ";
+	// Pull a trick to ensure a valid string - use Python repr!
+	PyObject *obMessage = PyString_FromString(pszMessageText);
+	if (obMessage) {
+		PyObject *repr = PyObject_Repr(obMessage);
+		if (repr) {
+			c += PyString_AsString(repr);
+			Py_DECREF(repr);
+		}
+		Py_DECREF(obMessage);
 	}
-	PyObject *logger = PyObject_CallMethod(mod, "getLogger", "s", "xpcom");
-	Py_DECREF(mod);
-	if (!logger) {
+	c += ")\n";
+	if (PyRun_SimpleString(c.get()) != 0) {
 		HandleLogError(pszMessageText);
-		return;
 	}
-	PyObject *result = PyObject_CallMethod(logger, (char *)methodName, "ss", "%s", pszMessageText);
-	Py_DECREF(logger);
-	if (!result) {
-		HandleLogError(pszMessageText);
-		return;
-	}
-	Py_DECREF(result);
+	PyErr_Restore(exc_typ, exc_val, exc_tb);
 }
 
 void LogMessage(const char *methodName, const char *pszMessageText)
