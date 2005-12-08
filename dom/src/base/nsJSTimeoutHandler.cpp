@@ -253,6 +253,8 @@ nsJSScriptTimeoutHandler::Init(nsIScriptContext *aContext, PRBool aIsInterval,
       return NS_ERROR_OUT_OF_MEMORY;
     }
 
+    mFunObj = funobj;
+
     /* Create our arg array - leave an extra slot for a secret final argument
       that indicates to the called function how "late" the timeout is.  We
       will fill that in when SetLateness is called.
@@ -273,8 +275,6 @@ nsJSScriptTimeoutHandler::Init(nsIScriptContext *aContext, PRBool aIsInterval,
     }
     // final arg slot remains null, array has rooted vals.
     mArgv = array;
-
-    mFunObj = funobj;
 
     // Get the calling location.
     const char *filename;
