@@ -220,10 +220,8 @@ PyXPCOMMethod_XPTI_GetInterfaceInfoManager(PyObject *self, PyObject *args)
 {
 	if (!PyArg_ParseTuple(args, ""))
 		return NULL;
-	nsIInterfaceInfoManager* im;
-	Py_BEGIN_ALLOW_THREADS;
-	im = XPTI_GetInterfaceInfoManager();
-	Py_END_ALLOW_THREADS;
+	nsCOMPtr<nsIInterfaceInfoManager> im(do_GetService(
+	                NS_INTERFACEINFOMANAGER_SERVICE_CONTRACTID));
 	if ( im == nsnull )
 		return PyXPCOM_BuildPyException(NS_ERROR_FAILURE);
 
