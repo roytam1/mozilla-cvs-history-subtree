@@ -150,7 +150,8 @@ PyXPCOM_TypeObject::Py_repr(PyObject *self)
 		iid_repr = pis->m_iid.ToString();
 	// XXX - need some sort of buffer overflow.
 	char buf[512];
-	sprintf(buf, "<XPCOM object (%s) at 0x%p/0x%p>", iid_repr, self, pis->m_obj);
+	sprintf(buf, "<XPCOM object (%s) at 0x%p/0x%p>",
+	        iid_repr, (void *)self, (void *)pis->m_obj.get());
 	nsMemory::Free(iid_repr);
 	return PyString_FromString(buf);
 }
