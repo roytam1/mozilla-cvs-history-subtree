@@ -89,52 +89,6 @@ nsPythonRuntime::ParseVersion(const nsString &aVersionStr, PRUint32 *aFlags) {
     return NS_ERROR_UNEXPECTED;
   }
 
-NS_METHOD
-nsPythonRuntime::RegisterSelf(nsIComponentManager* aCompMgr,
-                                   nsIFile* aPath,
-                                   const char* aRegistryLocation,
-                                   const char* aComponentType,
-                                   const nsModuleComponentInfo *info)
-{
-    nsresult rv = NS_OK;
-    nsCOMPtr<nsICategoryManager> catman =
-        do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv);
-
-    if (NS_FAILED(rv))
-        return rv;
-
-    nsXPIDLCString previous;
-    rv = catman->AddCategoryEntry(SCRIPT_LANGUAGE_CATEGORY,
-                                  "application/x-python",
-                                  NS_SCRIPT_LANGUAGE_PYTHON_CONTRACTID,
-                                  PR_TRUE, PR_TRUE, getter_Copies(previous));
-
-    if (NS_FAILED(rv))
-        return rv;
-
-    return rv;
-}
-
-
-NS_METHOD
-nsPythonRuntime::UnregisterSelf(nsIComponentManager* aCompMgr,
-                                     nsIFile* aPath,
-                                     const char* aRegistryLocation,
-                                     const nsModuleComponentInfo *info)
-{
-
-    nsresult rv = NS_OK;
-    nsCOMPtr<nsICategoryManager> catman =
-        do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv);
-
-    if (NS_FAILED(rv))
-        return rv;
-
-    catman->DeleteCategoryEntry(SCRIPT_LANGUAGE_CATEGORY,
-                                "application/x-python", PR_TRUE);
-    return rv;
-}
-
 nsresult
 nsPythonRuntime::DropScriptObject(void *object)
 {

@@ -39,9 +39,6 @@
 
 #include "nsIScriptContext.h"
 
-#define SCRIPT_LANGUAGE_CATEGORY \
-    "script-language"
-
 // {47032A4D-0C22-4125-94B7-864A4B744335}
 #define NS_ISCRIPTLANGUAGEENVIRONMENT_IID \
 { 0x47032a4d, 0xc22, 0x4125, { 0x94, 0xb7, 0x86, 0x4a, 0x4b, 0x74, 0x43, 0x35 } }

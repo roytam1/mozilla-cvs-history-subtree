@@ -54,6 +54,7 @@
 #include "nsIObserver.h"
 #include "nsIExceptionService.h"
 #include "nsILanguageRuntime.h"
+#include "nsIScriptGlobalObject.h" // for misplaced NS_SL_ macros.
 
 class nsDOMScriptObjectFactory : public nsIDOMScriptObjectFactory,
                                  public nsIObserver,
@@ -98,7 +99,5 @@ public:
 
 protected:
   PRBool mLoadedAllLanguages;
-  nsresult LoadAllLanguages();
-  // Indexed by language_id-1
-  nsCOMPtr<nsILanguageRuntime> mLanguageArray[nsIProgrammingLanguage::MAX-1];
+  nsCOMPtr<nsILanguageRuntime> mLanguageArray[NS_SL_ARRAY_UBOUND];
 };

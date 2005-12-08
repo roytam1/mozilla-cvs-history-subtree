@@ -63,10 +63,12 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsPythonRuntime)
 
 static const nsModuleComponentInfo components[] = {
      {"Python Script Language", NS_SCRIPT_LANGUAGE_PYTHON_CID,
-      NS_SCRIPT_LANGUAGE_PYTHON_CONTRACTID,
-      nsPythonRuntimeConstructor,
-      nsPythonRuntime::RegisterSelf,
-      nsPythonRuntime::UnregisterSelf,},
+      NS_SCRIPT_LANGUAGE_PYTHON_CONTRACTID_NAME,
+      nsPythonRuntimeConstructor,},
+     // And again with the contract ID including the language ID
+     {"Python Script Language", NS_SCRIPT_LANGUAGE_PYTHON_CID,
+      NS_SCRIPT_LANGUAGE_PYTHON_CONTRACTID_ID,
+      nsPythonRuntimeConstructor,},
 };
 
 // Implementation of the module object.
