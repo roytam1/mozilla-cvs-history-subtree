@@ -198,8 +198,8 @@ public:
       js_FreeStack(mContext, mStack);
   }
 private:
-  void *mStack;
   JSContext *mContext;
+  void *mStack;
 };
 
 // A utility function for script languages to call.  Although it looks small,
@@ -949,7 +949,7 @@ nsJSContext::EvaluateStringWithValue(const nsAString& aScript,
   // version) if aVersion is the default.
   // As the caller is responsible for parsing the version strings, we just
   // check it isn't JSVERSION_UNKNOWN.
-  if (ok && aVersion != JSVERSION_UNKNOWN) {
+  if (ok && ((JSVersion)aVersion) != JSVERSION_UNKNOWN) {
     // JSVERSION_HAS_XML may be set in our version mask - however, we can't
     // simply pass this directly to JS_SetOptions as it masks out that bit -
     // the only way to make this happen is via JS_SetOptions.
@@ -1149,7 +1149,7 @@ nsJSContext::EvaluateString(const nsAString& aScript,
   // version) if aVersion is the default.
   // As the caller is responsible for parsing the version strings, we just
   // check it isn't JSVERSION_UNKNOWN.
-  if (ok && aVersion != JSVERSION_UNKNOWN) {
+  if (ok && ((JSVersion)aVersion) != JSVERSION_UNKNOWN) {
     // JSVERSION_HAS_XML may be set in our version mask - however, we can't
     // simply pass this directly to JS_SetOptions as it masks out that bit -
     // the only way to make this happen is via JS_SetOptions.
@@ -1256,7 +1256,7 @@ nsJSContext::CompileScript(const PRUnichar* aText,
   // version) if aVersion is the default.
   // As the caller is responsible for parsing the version strings, we just
   // check it isn't JSVERSION_UNKNOWN.
-  if (ok && aVersion != JSVERSION_UNKNOWN) {
+  if (ok && ((JSVersion)aVersion) != JSVERSION_UNKNOWN) {
     // JSVERSION_HAS_XML may be set in our version mask - however, we can't
     // simply pass this directly to JS_SetOptions as it masks out that bit -
     // the only way to make this happen is via JS_SetOptions.
@@ -1537,7 +1537,6 @@ nsJSContext::CallEventHandler(nsISupports* aTarget, void *aScope, void *aHandler
   rv = jsholder->GetJSObject(&target);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  JSObject *handler = (JSObject *)aHandler;
   jsval rval = JSVAL_VOID;
 
   // This one's a lot easier than EvaluateString because we don't have to
@@ -2970,7 +2969,7 @@ nsresult
 nsJSRuntime::ParseVersion(const nsString &aVersionStr, PRUint32 *flags)
 {
     NS_PRECONDITION(flags, "Null flags param?");
-    PRUint32 jsVersion = JSVERSION_UNKNOWN;
+    JSVersion jsVersion = JSVERSION_UNKNOWN;
     if (aVersionStr.Length() != 3 || aVersionStr[0] != '1' || aVersionStr[1] != '.')
         jsVersion = JSVERSION_UNKNOWN;
     else switch (aVersionStr[2]) {
@@ -2982,7 +2981,7 @@ nsJSRuntime::ParseVersion(const nsString &aVersionStr, PRUint32 *flags)
         case '5': jsVersion = JSVERSION_1_5; break;
         default:  jsVersion = JSVERSION_UNKNOWN;
     }
-    *flags = jsVersion;
+    *flags = (PRUint32)jsVersion;
     return NS_OK;
 }
 
@@ -3230,8 +3229,8 @@ protected:
 nsJSArgArray::nsJSArgArray(JSContext *aContext, PRUint32 argc, jsval *argv,
                            nsresult *prv) :
     mContext(aContext),
-    mArgc(argc),
-    mArgv(argv)
+    mArgv(argv),
+    mArgc(argc)
 {
   // copy the array - we don't know its lifetime, and ours is tied to xpcom
   // refcounting.  Alloc zero'd array so cleanup etc is safe.
@@ -3248,6 +3247,7 @@ nsJSArgArray::nsJSArgArray(JSContext *aContext, PRUint32 argc, jsval *argv,
       return;
     }
   }
+  *prv = NS_OK;
 }
 
 nsJSArgArray::~nsJSArgArray()
