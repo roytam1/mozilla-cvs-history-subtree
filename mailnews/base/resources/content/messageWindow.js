@@ -389,14 +389,9 @@ function CreateView(originalView)
 function extractMsgKeyFromURI()
 {
   var msgKey = -1;
-  var msgService = messenger.messageServiceFromURI(gCurrentMessageUri);
-  if (msgService)
-  {
-    var msgHdr = msgService.messageURIToMsgHdr(gCurrentMessageUri);
-    if (msgHdr)
-      msgKey = msgHdr.messageKey;
-  }
-
+  var msgHdr = messenger.msgHdrFromURI(gCurrentMessageUri);
+  if (msgHdr)
+    msgKey = msgHdr.messageKey;
   return msgKey;
 }
 
@@ -440,10 +435,7 @@ function GetFirstSelectedMessage()
 
 function GetNumSelectedMessages()
 {
-	if (gCurrentMessageUri)
-		return 1;
-	else
-		return 0;
+  return (gCurrentMessageUri) ? 1 : 0;
 }
 
 function GetSelectedMessages()
@@ -572,7 +564,7 @@ function RerootFolderForStandAlone(uri)
 
 function GetMsgHdrFromUri(messageUri)
 {
-  return messenger.messageServiceFromURI(messageUri).messageURIToMsgHdr(messageUri);
+  return messenger.msgHdrFromURI(messageUri);
 }
 
 function SelectMessage(messageUri)
@@ -615,17 +607,6 @@ var MessageWindowController =
   {
     switch (command)
     {
-      case "cmd_reply":
-      case "button_reply":
-      case "cmd_replySender":
-      case "cmd_replyGroup":
-      case "cmd_replyall":
-      case "button_replyall":
-      case "cmd_forward":
-      case "button_forward":
-      case "cmd_forwardInline":
-      case "cmd_forwardAttachment":
-      case "cmd_editAsNew":
       case "cmd_delete":
       case "cmd_undo":
       case "cmd_redo":
@@ -669,6 +650,17 @@ var MessageWindowController =
       case "cmd_previousUnreadMsg": 
       case "cmd_previousFlaggedMsg":
         return (gDBView.keyForFirstSelectedMessage != nsMsgKey_None);
+      case "cmd_reply":
+      case "button_reply":
+      case "cmd_replySender":
+      case "cmd_replyGroup":
+      case "cmd_replyall":
+      case "button_replyall":
+      case "cmd_forward":
+      case "button_forward":
+      case "cmd_forwardInline":
+      case "cmd_forwardAttachment":
+      case "cmd_editAsNew":
       case "cmd_getNextNMessages":
       case "cmd_find":
       case "cmd_findAgain":
