@@ -16,7 +16,7 @@
 #
 # The Original Code is Netscape DS Plugins. 
 #
-# The Initial Developer of the  Original Code is Leif Hedstrom and Netscape 
+# The Initial Developer of the Original Code is Leif Hedstrom and Netscape
 # Communications Corp. 
 # Portions created by the Initial Developer are Copyright (C) 2001
 # the Initial Developer. All Rights Reserved.
