@@ -261,7 +261,7 @@ function ValidateData()
 {
   href = TrimString(gDialog.hrefInput.value);
   // if no protocol specified, assume http://
-  if (href.indexOf(":") == -1)
+  if (href.indexOf(":") == -1 && href[0] != '#')
     href = "http://" + href;
 
   if (href)
