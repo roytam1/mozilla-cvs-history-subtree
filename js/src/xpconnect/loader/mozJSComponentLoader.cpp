@@ -1,4 +1,4 @@
-/* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -49,7 +49,6 @@
 
 #include "nsCOMPtr.h"
 #include "nsICategoryManager.h"
-#include "nsIComponentLoader.h"
 #include "nsIComponentManager.h"
 #include "nsIComponentManagerObsolete.h"
 #include "nsIGenericFactory.h"
@@ -62,17 +61,15 @@
 #include "nsIJSContextStack.h"
 #include "nsIXPConnect.h"
 #include "nsCRT.h"
+#include "nsString.h"
 #include "nsMemory.h"
-#include "nsXPIDLString.h"
 #include "nsIObserverService.h"
 #include "nsIXPCScriptable.h"
-#include "nsString.h"
 #ifndef XPCONNECT_STANDALONE
 #include "nsIScriptSecurityManager.h"
 #include "nsIURI.h"
 #include "nsNetUtil.h"
 #endif
-#include "nsIComponentLoaderManager.h"
 #include "jsxdrapi.h"
 #include "nsIFastLoadFileControl.h"
 // For reporting errors with the console service
@@ -84,7 +81,8 @@ static const char kXPConnectServiceContractID[] = "@mozilla.org/js/xpc/XPConnect
 static const char kObserverServiceContractID[] = "@mozilla.org/observer-service;1";
 
 /* Some platforms don't have an implementation of PR_MemMap(). */
-#if !defined(XP_BEOS) && !defined(XP_OS2)
+/* See bug 318077 for WinCE.                                   */
+#if !defined(XP_BEOS) && !defined(XP_OS2) && !defined(WINCE)
 #define HAVE_PR_MEMMAP
 #endif
 
@@ -380,11 +378,15 @@ mozJSComponentLoader::mozJSComponentLoader()
       mGlobals(nsnull),
       mInitialized(PR_FALSE)
 {
+    NS_ASSERTION(!sSelf, "mozJSComponentLoader should be a singleton");
+
 #ifdef PR_LOGGING
     if (!gJSCLLog) {
         gJSCLLog = PR_NewLogModule("JSComponentLoader");
     }
 #endif
+
+    sSelf = this;
 }
 
 static PRIntn PR_CALLBACK
@@ -399,77 +401,33 @@ UnrootGlobals(PLHashEntry *he, PRIntn i, void *arg)
 }
 
 static PRIntn PR_CALLBACK
-UnloadAndReleaseModules(PLHashEntry *he, PRIntn i, void *arg)
+ReleaseModules(PLHashEntry *he, PRIntn i, void *arg)
 {
     nsIModule *module = NS_STATIC_CAST(nsIModule *, he->value);
-    nsIComponentManager *mgr = NS_STATIC_CAST(nsIComponentManager *, arg);
-    PRBool canUnload;
-    nsresult rv = module->CanUnload(mgr, &canUnload);
-    NS_ASSERTION(NS_SUCCEEDED(rv), "module CanUnload failed");
-    if (NS_SUCCEEDED(rv) && canUnload) {
-        NS_RELEASE(module);
-        /* XXX need to unroot the global for the module as well */
-        nsCRT::free((char *)he->key);
-        return HT_ENUMERATE_REMOVE;
-    }
-    return HT_ENUMERATE_NEXT;
+    NS_RELEASE(module);
+    nsCRT::free((char *)he->key);
+    return HT_ENUMERATE_REMOVE;
 }
 
 mozJSComponentLoader::~mozJSComponentLoader()
 {
+    if (mInitialized) {
+        NS_ERROR("'xpcom-shutdown-loaders' was not fired before cleaning up mozJSComponentLoader");
+        UnloadModules();
+    }
+
     NS_ASSERTION(!mFastLoadTimer,
                  "Fastload file should have been closed via xpcom-shutdown");
+    sSelf = nsnull;
 }
+
+mozJSComponentLoader*
+mozJSComponentLoader::sSelf;
 
 NS_IMPL_ISUPPORTS3(mozJSComponentLoader,
-                   nsIComponentLoader,
+                   nsIModuleLoader,
                    xpcIJSModuleLoader,
                    nsIObserver)
-
-NS_IMETHODIMP
-mozJSComponentLoader::GetFactory(const nsIID &aCID,
-                                 const char *aLocation,
-                                 const char *aType,
-                                 nsIFactory **_retval)
-{
-    if (!_retval)
-        return NS_ERROR_NULL_POINTER;
-
-#ifdef DEBUG_shaver_off
-    char *cidString = aCID.ToString();
-    fprintf(stderr, "mJCL::GetFactory(%s,%s,%s)\n", cidString, aLocation, aType);
-    delete [] cidString;
-#endif
-    
-    nsresult rv;
-    nsIModule *module = ModuleForLocation(aLocation, 0, &rv);
-    if (NS_FAILED(rv)) {
-#ifdef DEBUG_shaver_off
-        fprintf(stderr, "ERROR: couldn't get module for %s\n", aLocation);
-#endif
-        return rv;
-    }
-    
-    rv = module->GetClassObject(mCompMgr, aCID, NS_GET_IID(nsIFactory),
-                                (void **)_retval);
-#ifdef DEBUG_shaver_off
-    fprintf(stderr, "GetClassObject %s\n", NS_FAILED(rv) ? "FAILED" : "ok");
-#endif
-    return rv;
-}
-
-NS_IMETHODIMP
-mozJSComponentLoader::Init(nsIComponentManager *aCompMgr, nsISupports *aReg)
-{
-    mCompMgr = aCompMgr;
-
-    nsresult rv;
-    mLoaderManager = do_QueryInterface(mCompMgr, &rv);
-    if (NS_FAILED(rv))
-        return rv;
-
-    return NS_OK;
-}
 
 nsresult
 mozJSComponentLoader::ReallyInit()
@@ -510,7 +468,7 @@ mozJSComponentLoader::ReallyInit()
                                PL_CompareValues, 0, 0);
     if (!mModules)
         return NS_ERROR_OUT_OF_MEMORY;
-    
+
     mGlobals = PL_NewHashTable(16, PL_HashString, PL_CompareStrings,
                                PL_CompareValues, 0, 0);
     if (!mGlobals)
@@ -534,6 +492,9 @@ mozJSComponentLoader::ReallyInit()
     rv = obsSvc->AddObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID, PR_FALSE);
     NS_ENSURE_SUCCESS(rv, rv);
 
+    rv = obsSvc->AddObserver(this, "xpcom-shutdown-loaders", PR_FALSE);
+    NS_ENSURE_SUCCESS(rv, rv);
+
 #ifdef DEBUG_shaver_off
     fprintf(stderr, "mJCL: ReallyInit success!\n");
 #endif
@@ -543,411 +504,67 @@ mozJSComponentLoader::ReallyInit()
 }
 
 NS_IMETHODIMP
-mozJSComponentLoader::AutoRegisterComponents(PRInt32 when,
-                                             nsIFile *aDirectory)
-{
-    return RegisterComponentsInDir(when, aDirectory);
-}
-
-nsresult
-mozJSComponentLoader::RegisterComponentsInDir(PRInt32 when, nsIFile *dir)
+mozJSComponentLoader::LoadModule(nsILocalFile* aComponentFile,
+                                 nsIModule* *aResult)
 {
     nsresult rv;
-    PRBool isDir;
-    
-    if (NS_FAILED(rv = dir->IsDirectory(&isDir)))
-        return rv;
-    
-    if (!isDir)
+
+    nsCAutoString leafName;
+    aComponentFile->GetNativeLeafName(leafName);
+    if (!StringTail(leafName, 3).LowerCaseEqualsLiteral(".js"))
         return NS_ERROR_INVALID_ARG;
 
-    // Create a directory iterator
-    nsCOMPtr<nsISimpleEnumerator> dirIterator;
-    rv = dir->GetDirectoryEntries(getter_AddRefs(dirIterator));
-    
-    if (NS_FAILED(rv)) return rv;
-    
-   // whip through the directory to register every file
-    nsIFile *dirEntry = NULL;
-    PRBool more = PR_FALSE;
-
-    rv = dirIterator->HasMoreElements(&more);
-    if (NS_FAILED(rv)) return rv;
-    while (more == PR_TRUE)
-    {
-        rv = dirIterator->GetNext((nsISupports**)&dirEntry);
-        if (NS_SUCCEEDED(rv))
-        {
-            rv = dirEntry->IsDirectory(&isDir);
-            if (NS_SUCCEEDED(rv))
-            {
-                if (isDir == PR_TRUE)
-                {
-                    // This is a directory. Grovel for components into the directory.
-                    rv = RegisterComponentsInDir(when, dirEntry);
-                }
-                else
-                {
-                    PRBool registered;
-                    // This is a file. Try to register it.
-                    rv = AutoRegisterComponent(when, dirEntry, &registered);
-                }
-            }
-            NS_RELEASE(dirEntry);
-        }
-        rv = dirIterator->HasMoreElements(&more);
-        if (NS_FAILED(rv)) return rv;
-    }
-
-    return NS_OK;
-}
-
-
-nsresult
-mozJSComponentLoader::SetRegistryInfo(const char *registryLocation,
-                                      nsIFile *component)
-{
-    nsresult rv;
-    if (!mLoaderManager)
-        return NS_ERROR_FAILURE;
-    
-    PRInt64 modDate;
-    rv = component->GetLastModifiedTime(&modDate);
-    if (NS_FAILED(rv))
-        return rv;
-
-#ifdef DEBUG_shaver_off
-    fprintf(stderr, "SetRegistryInfo(%s) => (%d,%d)\n", registryLocation,
-            modDate, fileSize);
-#endif
-    return mLoaderManager->SaveFileInfo(component, registryLocation, modDate);                                                          
-}
-
-nsresult
-mozJSComponentLoader::RemoveRegistryInfo(nsIFile *component, const char *registryLocation)
-{
-    if (!mLoaderManager)
-        return NS_ERROR_FAILURE;
-    
-    return mLoaderManager->RemoveFileInfo(component, registryLocation);                                                          
-}
-
-
-PRBool
-mozJSComponentLoader::HasChanged(const char *registryLocation,
-                                 nsIFile *component)
-{
-    if (!mLoaderManager)
-        return NS_ERROR_FAILURE;
-    
-    PRInt64 lastTime;
-    component->GetLastModifiedTime(&lastTime);
-
-    PRBool hasChanged = PR_TRUE;
-    mLoaderManager->HasFileChanged(component, registryLocation, lastTime, &hasChanged);                                                          
-    return hasChanged;
-}
-
-NS_IMETHODIMP
-mozJSComponentLoader::AutoRegisterComponent(PRInt32 when,
-                                            nsIFile *component,
-                                            PRBool *registered)
-{
-    nsresult rv;
-    if (!registered)
-        return NS_ERROR_NULL_POINTER;
-
-    const char jsExtension[] = ".js";
-    int jsExtensionLen = 3;
-    nsCAutoString leafName;
-
-    *registered = PR_FALSE;
-
-    /* we only do files */
-    PRBool isFile = PR_FALSE;
-    if (NS_FAILED(rv = component->IsFile(&isFile)) || !isFile)
-        return rv;
-
-    if (NS_FAILED(rv = component->GetNativeLeafName(leafName)))
-        return rv;
-    int len = leafName.Length();
-    
-    /* if it's not *.js, return now */
-    if (len < jsExtensionLen || // too short
-        PL_strcasecmp(leafName.get() + len - jsExtensionLen, jsExtension))
-        return NS_OK;
-
-#ifdef DEBUG_shaver_off
-    fprintf(stderr, "mJCL: registering JS component %s\n",
-            leafName.get());
-#endif
-      
-    rv = AttemptRegistration(component, PR_FALSE);
-#ifdef DEBUG_shaver_off
-    if (NS_SUCCEEDED(rv))
-        fprintf(stderr, "registered module %s\n", leafName.get());
-    else if (rv == NS_ERROR_FACTORY_REGISTER_AGAIN) 
-        fprintf(stderr, "deferred module %s\n", leafName.get());
-    else
-        fprintf(stderr, "failed to register %s\n", leafName.get());
-#endif    
-    *registered = (PRBool) NS_SUCCEEDED(rv);
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-mozJSComponentLoader::AutoUnregisterComponent(PRInt32 when,
-                                              nsIFile *component,
-                                              PRBool *unregistered)
-{
-    nsresult rv;
-    if (!unregistered)
-        return NS_ERROR_NULL_POINTER;
-
-    const char jsExtension[] = ".js";
-    int jsExtensionLen = 3;
-    nsCAutoString leafName;
-
-    *unregistered = PR_FALSE;
-
-    /* we only do files */
-    PRBool isFile = PR_FALSE;
-    if (NS_FAILED(rv = component->IsFile(&isFile)) || !isFile)
-        return rv;
-
-    if (NS_FAILED(rv = component->GetNativeLeafName(leafName)))
-        return rv;
-    int len = leafName.Length();
-    
-    /* if it's not *.js, return now */
-    if (len < jsExtensionLen || // too short
-        PL_strcasecmp(leafName.get() + len - jsExtensionLen, jsExtension))
-        return NS_OK;
-
-    rv = UnregisterComponent(component);
-#ifdef DEBUG_dp
-    if (NS_SUCCEEDED(rv))
-        fprintf(stderr, "unregistered module %s\n", leafName.get());
-    else
-        fprintf(stderr, "failed to unregister %s\n", leafName.get());
-#endif    
-    *unregistered = (PRBool) NS_SUCCEEDED(rv);
-    return NS_OK;
-}
-
-nsresult
-mozJSComponentLoader::AttemptRegistration(nsIFile *component,
-                                          PRBool deferred)
-{
-    nsXPIDLCString registryLocation;
-    nsresult rv;
-    
-    // what I want to do here is QI for a Component Registration Manager.  Since this 
-    // has not been invented yet, QI to the obsolete manager.  Kids, don't do this at home.
-    nsCOMPtr<nsIComponentManagerObsolete> obsoleteManager = do_QueryInterface(mCompMgr, &rv);
-    if (obsoleteManager)
-        rv = obsoleteManager->RegistryLocationForSpec(component, 
-                                                      getter_Copies(registryLocation));
-    if (NS_FAILED(rv))
-        return rv;
-    
-    /* no need to check registry data on deferred reg */
-    if (!deferred && !HasChanged(registryLocation, component))
-        return NS_OK;
-    
-    nsIModule *module = ModuleForLocation(registryLocation, component, &rv);
-    if (NS_FAILED(rv)) {
-        SetRegistryInfo(registryLocation, component);
-        return rv;
-    }
-
-    // Notify observers, if any, of autoregistration work
-    nsCOMPtr<nsIObserverService> observerService = 
-        do_GetService(kObserverServiceContractID, &rv);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    nsCOMPtr<nsIServiceManager> mgr;
-    rv = NS_GetServiceManager(getter_AddRefs(mgr));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    // this string can't come from a string bundle, because we
-    // don't have string bundles yet.
-    NS_ConvertASCIItoUCS2 fileName("(no name)");
-
-    // get the file name
-    if (component) {
-        component->GetLeafName(fileName);
-    }
-
-    // this string can't come from a string bundle, because we
-    // don't have string bundles yet.
-    const nsPromiseFlatString &msg =
-        PromiseFlatString(NS_LITERAL_STRING("Registering JS component ") +
-                          fileName);
-
-    observerService->NotifyObservers(mgr,
-                                     NS_XPCOM_AUTOREGISTRATION_OBSERVER_ID,
-                                     msg.get());
-    
-    rv = module->RegisterSelf(mCompMgr, component, registryLocation,
-                              MOZJSCOMPONENTLOADER_TYPE_NAME);
-    if (rv == NS_ERROR_FACTORY_REGISTER_AGAIN) {
-        if (!deferred) {
-            mDeferredComponents.AppendElement(component);
-        }
-        /*
-         * we don't enter in the registry because we may want to
-         * try again on a later autoreg, in case a dependency has
-         * become available. 
-         */
-    } else {
-        SetRegistryInfo(registryLocation, component);
-    }
-
-    return rv;
-}
-
-nsresult
-mozJSComponentLoader::UnregisterComponent(nsIFile *component)
-{
-    nsXPIDLCString registryLocation;
-    nsresult rv;
-    
-    // what I want to do here is QI for a Component Registration Manager.  Since this 
-    // has not been invented yet, QI to the obsolete manager.  Kids, don't do this at home.
-    nsCOMPtr<nsIComponentManagerObsolete> obsoleteManager = do_QueryInterface(mCompMgr, &rv);
-    if (obsoleteManager)
-        rv = obsoleteManager->RegistryLocationForSpec(component, 
-                                                      getter_Copies(registryLocation));
-    if (NS_FAILED(rv))
-        return rv;
-    
-    nsIModule *module = ModuleForLocation(registryLocation, component, &rv);
-    NS_ENSURE_SUCCESS(rv, rv);
-    
-    // Notify observers, if any, of autoregistration work
-    nsCOMPtr<nsIObserverService> observerService = 
-        do_GetService(kObserverServiceContractID, &rv);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    nsCOMPtr<nsIServiceManager> mgr;
-    rv = NS_GetServiceManager(getter_AddRefs(mgr));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    const nsAFlatString &msg = NS_LITERAL_STRING("Unregistering JS component");
-    observerService->NotifyObservers(mgr,
-                                     NS_XPCOM_AUTOREGISTRATION_OBSERVER_ID,
-                                     msg.get());
-    
-    rv = module->UnregisterSelf(mCompMgr, component, registryLocation);
-    if (NS_SUCCEEDED(rv)) {
-        // Remove any autoreg specific info. Ignore error.
-        RemoveRegistryInfo(component, registryLocation);
-    }
-        
-    return rv;
-}
-
-
-nsresult
-mozJSComponentLoader::RegisterDeferredComponents(PRInt32 aWhen,
-                                                 PRBool *aRegistered)
-{
-    nsresult rv;
-    *aRegistered = PR_FALSE;
-
-    PRUint32 count;
-    rv = mDeferredComponents.Count(&count);
-#ifdef DEBUG_shaver_off
-    fprintf(stderr, "mJCL: registering deferred (%d)\n", count);
-#endif
-    if (NS_FAILED(rv) || !count)
-        return NS_OK;
-    
-    for (PRUint32 i = 0; i < count; i++) {
-        nsCOMPtr<nsIFile> component;
-        rv = mDeferredComponents.QueryElementAt(i, NS_GET_IID(nsIFile), getter_AddRefs(component));
-        if (NS_FAILED(rv))
-            continue;
-
-        rv = AttemptRegistration(component, PR_TRUE /* deferred */);
-        if (rv != NS_ERROR_FACTORY_REGISTER_AGAIN) {
-            if (NS_SUCCEEDED(rv))
-                *aRegistered = PR_TRUE;
-            mDeferredComponents.RemoveElementAt(i);
-        }
-    }
-
-#ifdef DEBUG_shaver_off
-    rv = mDeferredComponents.Count(&count);
-    if (NS_SUCCEEDED(rv)) {
-        if (*aRegistered)
-            fprintf(stderr, "mJCL: registered deferred, %d left\n",
-                    count);
-        else
-            fprintf(stderr, "mJCL: didn't register any components, %d left\n",
-                    count);
-    }
-#endif
-    /* are there any fatal errors? */
-    return NS_OK;
-}
-
-
-nsIModule*
-mozJSComponentLoader::ModuleForLocation(const char *registryLocation,
-                                        nsIFile *component, nsresult *status)
-{
-    nsresult rv;
     if (!mInitialized) {
         rv = ReallyInit();
-        if (NS_FAILED(rv)) {
-            *status = rv;
-            return nsnull;
-        }
+        if (NS_FAILED(rv))
+            return rv;
     }
 
-    PLHashNumber hash = PL_HashString(registryLocation);
+    nsCAutoString path;
+    aComponentFile->GetNativePath(path);
+    PLHashNumber hash = PL_HashString(path.get());
     PLHashEntry **hep = PL_HashTableRawLookup(mModules, hash,
-                                              registryLocation);
+                                              path.get());
     PLHashEntry *he = *hep;
     if (he) {
-        *status = NS_OK;
-        return NS_STATIC_CAST(nsIModule*, he->value);
+        *aResult = NS_STATIC_CAST(nsIModule*, he->value);
+        NS_ADDREF(*aResult);
+        return NS_OK;
     }
-
+    
     JSObject *global;
-    rv = GlobalForLocation(registryLocation, component, &global);
+    rv = GlobalForLocation(aComponentFile, &global);
     if (NS_FAILED(rv)) {
 #ifdef DEBUG_shaver
         fprintf(stderr, "GlobalForLocation failed!\n");
 #endif
-        *status = rv;
-        return nsnull;
+        return rv;
     }
 
     nsCOMPtr<nsIXPConnect> xpc = do_GetService(kXPConnectServiceContractID,
                                                &rv);
-    if (NS_FAILED(rv)) {
-        *status = rv;
-        return nsnull;
-    }
+    if (NS_FAILED(rv))
+        return rv;
+
+    nsCOMPtr<nsIComponentManager> cm;
+    rv = NS_GetComponentManager(getter_AddRefs(cm));
+    if (NS_FAILED(rv))
+        return rv;
 
     JSCLContextHelper cx(mContext);
 
     JSObject* cm_jsobj;
     nsCOMPtr<nsIXPConnectJSObjectHolder> cm_holder;
-    rv = xpc->WrapNative(cx, global, mCompMgr, 
+    rv = xpc->WrapNative(cx, global, cm, 
                          NS_GET_IID(nsIComponentManager),
                          getter_AddRefs(cm_holder));
 
     if (NS_FAILED(rv)) {
 #ifdef DEBUG_shaver
         fprintf(stderr, "WrapNative(%p,%p,nsIComponentManager) failed: %x\n",
-                (void *)(JSContext*)cx, (void *)mCompMgr, rv);
+                (void *)(JSContext*)cx, (void *)cm, rv);
 #endif
-        *status = rv;
-        return nsnull;
+        return rv;
     }
 
     rv = cm_holder->GetJSObject(&cm_jsobj);
@@ -955,8 +572,22 @@ mozJSComponentLoader::ModuleForLocation(const char *registryLocation,
 #ifdef DEBUG_shaver
         fprintf(stderr, "GetJSObject of ComponentManager failed\n");
 #endif
-        *status = rv;
-        return nsnull;
+        return rv;
+    }
+
+    JSObject* file_jsobj;
+    nsCOMPtr<nsIXPConnectJSObjectHolder> file_holder;
+    rv = xpc->WrapNative(cx, global, aComponentFile, 
+                         NS_GET_IID(nsIFile),
+                         getter_AddRefs(file_holder));
+
+    if (NS_FAILED(rv)) {
+        return rv;
+    }
+
+    rv = cm_holder->GetJSObject(&file_jsobj);
+    if (NS_FAILED(rv)) {
+        return rv;
     }
 
     JSCLAutoErrorReporterSetter aers(cx, Reporter);
@@ -965,39 +596,32 @@ mozJSComponentLoader::ModuleForLocation(const char *registryLocation,
 
     if (!JS_GetProperty(cx, global, "NSGetModule", &NSGetModule_val) ||
         JSVAL_IS_VOID(NSGetModule_val)) {
-        *status = NS_ERROR_FAILURE;
-        return nsnull;
+        return NS_ERROR_FAILURE;
     }
 
     if (JS_TypeOfValue(cx, NSGetModule_val) != JSTYPE_FUNCTION) {
         JS_ReportError(cx, "%s has NSGetModule property that is not a function",
-                       registryLocation);
-        *status = NS_ERROR_FAILURE;
-        return nsnull;
+                       path.get());
+        return NS_ERROR_FAILURE;
     }
     
     argv[0] = OBJECT_TO_JSVAL(cm_jsobj);
-    argv[1] = STRING_TO_JSVAL(JS_NewStringCopyZ(cx, registryLocation));
-    if (!JS_CallFunctionValue(cx, global, NSGetModule_val, 2, argv, &retval)) {
-        *status = NS_ERROR_FAILURE;
-        return nsnull;
+    argv[1] = OBJECT_TO_JSVAL(file_jsobj);
+    if (!JS_CallFunctionValue(cx, global, NSGetModule_val,
+                              2, argv, &retval)) {
+        return NS_ERROR_FAILURE;
     }
 
 #ifdef DEBUG_shaver_off
     JSString *s = JS_ValueToString(cx, retval);
     fprintf(stderr, "mJCL: %s::NSGetModule returned %s\n",
-            registryLocation, JS_GetStringBytes(s));
+            path.get(), JS_GetStringBytes(s));
 #endif
 
     JSObject *jsModuleObj;
     if (!JS_ValueToObject(cx, retval, &jsModuleObj)) {
         /* XXX report error properly */
-#ifdef DEBUG
-        fprintf(stderr, "mJCL: couldn't convert %s's nsIModule to obj\n",
-                registryLocation);
-#endif
-        *status = NS_ERROR_FAILURE;
-        return nsnull;
+        return NS_ERROR_FAILURE;
     }
 
     nsIModule *module;
@@ -1007,16 +631,16 @@ mozJSComponentLoader::ModuleForLocation(const char *registryLocation,
 #ifdef DEBUG
         fprintf(stderr, "mJCL: couldn't get nsIModule from jsval\n");
 #endif
-        *status = rv;
-        return nsnull;
+        return rv;
     }
 
     /* we hand our reference to the hash table, it'll be released much later */
     he = PL_HashTableRawAdd(mModules, hep, hash,
-                            nsCRT::strdup(registryLocation), module);
+                            nsCRT::strdup(path.get()), module);
 
-    *status = NS_OK;
-    return module;
+    NS_ADDREF(*aResult = module);
+
+    return NS_OK;
 }
 
 // Some stack based classes for cleaning up on early return
@@ -1310,8 +934,7 @@ mozJSComponentLoader::WriteScript(nsIFastLoadService *flSvc, JSScript *script,
 }
 
 nsresult
-mozJSComponentLoader::GlobalForLocation(const char *aLocation,
-                                        nsIFile *aComponent,
+mozJSComponentLoader::GlobalForLocation(nsILocalFile *aComponent,
                                         JSObject **aGlobal)
 {
     nsresult rv;
@@ -1320,16 +943,17 @@ mozJSComponentLoader::GlobalForLocation(const char *aLocation,
         NS_ENSURE_SUCCESS(rv, rv);
     }
 
-    PLHashNumber hash = PL_HashString(aLocation);
-    PLHashEntry **hep = PL_HashTableRawLookup(mGlobals, hash, aLocation);
+    nsCAutoString path;
+    aComponent->GetNativePath(path);    
+    
+    PLHashNumber hash = PL_HashString(path.get());
+    PLHashEntry **hep = PL_HashTableRawLookup(mGlobals, hash, path.get());
     PLHashEntry *he = *hep;
     if (he) {
         *aGlobal = NS_STATIC_CAST(JSObject*, he->value);
         return NS_OK;
     }
-
-    *aGlobal = nsnull;
-
+    
     JSPrincipals* jsPrincipals = nsnull;
     JSCLContextHelper cx(mContext);
 
@@ -1370,24 +994,8 @@ mozJSComponentLoader::GlobalForLocation(const char *aLocation,
         return NS_ERROR_FAILURE;
     }
 
-    nsCOMPtr<nsIFile> component = aComponent;
-    if (!component) {
-        // what I want to do here is QI for a Component Registration Manager.  Since this 
-        // has not been invented yet, QI to the obsolete manager.  Kids, don't do this at home.
-        nsCOMPtr<nsIComponentManagerObsolete> mgr = do_QueryInterface(mCompMgr,
-                                                                      &rv);
-        NS_ENSURE_SUCCESS(rv, rv);
-
-        rv = mgr->SpecForRegistryLocation(aLocation,
-                                          getter_AddRefs(component));
-        NS_ENSURE_SUCCESS(rv, rv);
-    }
-
-    nsCOMPtr<nsILocalFile> localFile = do_QueryInterface(component, &rv);
-    NS_ENSURE_SUCCESS(rv, rv);
-
     nsCOMPtr<nsIXPConnectJSObjectHolder> locationHolder;
-    rv = xpc->WrapNative(cx, global, localFile,
+    rv = xpc->WrapNative(cx, global, aComponent,
                          NS_GET_IID(nsILocalFile),
                          getter_AddRefs(locationHolder));
     NS_ENSURE_SUCCESS(rv, rv);
@@ -1401,15 +1009,15 @@ mozJSComponentLoader::GlobalForLocation(const char *aLocation,
         return NS_ERROR_FAILURE;
     }
 
-    nsCAutoString nativePath;
+    nsCAutoString urlSpec;
     // Quick hack to unbust XPCONNECT_STANDALONE.
     // This leaves the jsdebugger with a non-URL pathname in the 
     // XPCONNECT_STANDALONE case - but at least it builds and runs otherwise.
     // See: http://bugzilla.mozilla.org/show_bug.cgi?id=121438
 #ifdef XPCONNECT_STANDALONE
-    localFile->GetNativePath(nativePath);
+    urlSpec = path;
 #else
-    NS_GetURLSpecFromFile(localFile, nativePath);
+    NS_GetURLSpecFromFile(aComponent, urlSpec);
 #endif
 
     // Before compiling the script, first check to see if we have it in
@@ -1429,22 +1037,22 @@ mozJSComponentLoader::GlobalForLocation(const char *aLocation,
     }
 
     nsCOMPtr<nsIURI> uri;
-    rv = NS_NewURI(getter_AddRefs(uri), nativePath);
+    rv = NS_NewURI(getter_AddRefs(uri), urlSpec);
     NS_ENSURE_SUCCESS(rv, rv);
 
     JSScript *script = nsnull;
 
     if (fastLoading) {
-        rv = ReadScript(flSvc, nativePath.get(), uri, cx, &script);
+        rv = ReadScript(flSvc, urlSpec.get(), uri, cx, &script);
         if (NS_SUCCEEDED(rv)) {
-            LOG(("Successfully loaded %s from fastload\n", nativePath.get()));
+            LOG(("Successfully loaded %s from fastload\n", urlSpec.get()));
             fastLoading = PR_FALSE; // no need to write out the script
         } else if (rv == NS_ERROR_NOT_AVAILABLE) {
             // This is ok, it just means the script is not yet in the
             // fastload file.
             rv = NS_OK;
         } else {
-            LOG(("Failed to deserialize %s\n", nativePath.get()));
+            LOG(("Failed to deserialize %s\n", urlSpec.get()));
 
             // Remove the fastload file, it may be corrupted.
             LOG(("Invalid fastload file detected, removing it\n"));
@@ -1470,11 +1078,11 @@ mozJSComponentLoader::GlobalForLocation(const char *aLocation,
 
     if (!script || NS_FAILED(rv)) {
         // The script wasn't in the fastload cache, so compile it now.
-        LOG(("Slow loading %s\n", nativePath.get()));
+        LOG(("Slow loading %s\n", urlSpec.get()));
 
 #ifdef HAVE_PR_MEMMAP
         PRInt64 fileSize;
-        localFile->GetFileSize(&fileSize);
+        aComponent->GetFileSize(&fileSize);
 
         PRInt64 maxSize;
         LL_UI2L(maxSize, PR_UINT32_MAX);
@@ -1484,7 +1092,7 @@ mozJSComponentLoader::GlobalForLocation(const char *aLocation,
         }
 
         PRFileDesc *fileHandle;
-        rv = localFile->OpenNSPRFileDesc(PR_RDONLY, 0, &fileHandle);
+        rv = aComponent->OpenNSPRFileDesc(PR_RDONLY, 0, &fileHandle);
         NS_ENSURE_SUCCESS(rv, rv);
 
         // Make sure the file is closed, no matter how we return.
@@ -1512,7 +1120,7 @@ mozJSComponentLoader::GlobalForLocation(const char *aLocation,
         script = JS_CompileScriptForPrincipals(cx, global,
                                                jsPrincipals,
                                                buf, fileSize32,
-                                               nativePath.get(), 0);
+                                               urlSpec.get(), 0);
         PR_MemUnmap(buf, fileSize32);
 
 #else  /* HAVE_PR_MEMMAP */
@@ -1523,11 +1131,11 @@ mozJSComponentLoader::GlobalForLocation(const char *aLocation,
          */
 
         FILE *fileHandle;
-        rv = localFile->OpenANSIFileDesc("r", &fileHandle);
+        rv = aComponent->OpenANSIFileDesc("r", &fileHandle);
         NS_ENSURE_SUCCESS(rv, rv);
 
         script = JS_CompileFileHandleForPrincipals(cx, global,
-                                                   nativePath.get(),
+                                                   urlSpec.get(),
                                                    fileHandle, jsPrincipals);
 
         /* JS will close the filehandle after compilation is complete. */
@@ -1538,7 +1146,7 @@ mozJSComponentLoader::GlobalForLocation(const char *aLocation,
     if (!script) {
 #ifdef DEBUG_shaver_off
         fprintf(stderr, "mJCL: script compilation of %s FAILED\n",
-                nativePath.get());
+                urlSpec.get());
 #endif
         return NS_ERROR_FAILURE;
     }
@@ -1548,12 +1156,12 @@ mozJSComponentLoader::GlobalForLocation(const char *aLocation,
 
 #ifdef DEBUG_shaver_off
     fprintf(stderr, "mJCL: compiled JS component %s\n",
-            nativePath.get());
+            urlSpec.get());
 #endif
 
     if (fastLoading) {
         // We successfully compiled the script, so cache it in fastload.
-        rv = WriteScript(flSvc, script, component, nativePath.get(), uri, cx);
+        rv = WriteScript(flSvc, script, aComponent, urlSpec.get(), uri, cx);
 
         // Don't treat failure to write as fatal, since we might be working
         // with a read-only fastload file.
@@ -1570,67 +1178,40 @@ mozJSComponentLoader::GlobalForLocation(const char *aLocation,
     jsval retval;
     if (!JS_ExecuteScript(cx, global, script, &retval)) {
 #ifdef DEBUG_shaver_off
-        fprintf(stderr, "mJCL: failed to execute %s\n", nativePath.get());
+        fprintf(stderr, "mJCL: failed to execute %s\n", urlSpec.get());
 #endif
         return NS_ERROR_FAILURE;
     }
 
-    *aGlobal = global;
-
     /* Freed when we remove from the table. */
-    char *location = nsCRT::strdup(aLocation);
+    char *location = nsCRT::strdup(path.get());
     NS_ENSURE_TRUE(location, NS_ERROR_OUT_OF_MEMORY);
 
+    *aGlobal = global;
+    
     he = PL_HashTableRawAdd(mGlobals, hep, hash, location, global);
     JS_AddNamedRoot(cx, &he->value, location);
     return NS_OK;
 }
 
-NS_IMETHODIMP
-mozJSComponentLoader::OnRegister(const nsIID &aCID, const char *aType,
-                                 const char *aClassName, const char *aContractID,
-                                 const char *aLocation,
-                                 PRBool aReplace, PRBool aPersist)
-
+void
+mozJSComponentLoader::UnloadModules()
 {
-#ifdef DEBUG_shaver_off
-    fprintf(stderr, "mJCL: registered %s/%s in %s\n", aClassName, aContractID,
-            aLocation);
-#endif
-    return NS_OK;
-}    
+    mInitialized = PR_FALSE;
 
-NS_IMETHODIMP
-mozJSComponentLoader::UnloadAll(PRInt32 aWhen)
-{
-    if (mInitialized) {
-        mInitialized = PR_FALSE;
+    PL_HashTableEnumerateEntries(mModules, ReleaseModules, nsnull);
+    PL_HashTableDestroy(mModules);
+    mModules = nsnull;
+    
+    PL_HashTableEnumerateEntries(mGlobals, UnrootGlobals, mContext);
+    PL_HashTableDestroy(mGlobals);
+    mGlobals = nsnull;
 
-        // stabilize the component manager, etc.
-        nsCOMPtr<nsIComponentManager> kungFuDeathGrip = mCompMgr;
+    // Destroying our context will force a GC.
+    JS_DestroyContext(mContext);
+    mContext = nsnull;
 
-        PL_HashTableEnumerateEntries(mModules, 
-                                     UnloadAndReleaseModules,
-                                     mCompMgr);
-        PL_HashTableDestroy(mModules);
-        mModules = nsnull;
-
-        PL_HashTableEnumerateEntries(mGlobals, UnrootGlobals, mContext);
-        PL_HashTableDestroy(mGlobals);
-        mGlobals = nsnull;
-
-        // Destroying our context will force a GC.
-        JS_DestroyContext(mContext);
-        mContext = nsnull;
-
-        mRuntimeService = nsnull;
-    }
-
-#ifdef DEBUG_shaver_off
-    fprintf(stderr, "mJCL: UnloadAll(%d)\n", aWhen);
-#endif
-
-    return NS_OK;
+    mRuntimeService = nsnull;
 }
 
 /* void importModule (in AUTF8String registryLocation); */
@@ -1705,10 +1286,31 @@ NS_IMETHODIMP
 mozJSComponentLoader::ImportModuleToJSObject(const nsACString & registryLocation,
                                              JSObject * targetObj, JSObject * *_retval)
 {
+    nsresult rv;
+    
+    nsCOMPtr<nsIComponentManager> cm;
+    rv = NS_GetComponentManager(getter_AddRefs(cm));
+    if (NS_FAILED(rv))
+        return rv;
+    nsCOMPtr<nsIComponentManagerObsolete> obsoleteMgr = do_QueryInterface(cm, &rv);
+    if (NS_FAILED(rv))
+        return rv;
+
+    // get file object for registry location
+    nsCOMPtr<nsIFile> file;
+    rv = obsoleteMgr->SpecForRegistryLocation(PromiseFlatCString(registryLocation).get(),
+                                              getter_AddRefs(file));
+    if (NS_FAILED(rv))
+        return rv;
+    nsCOMPtr<nsILocalFile> localFile = do_QueryInterface(file);
+    if (!localFile) {
+        NS_ERROR("can only import local modules");
+        return NS_ERROR_FAILURE;
+    }
+    
     JSObject *globalObj = nsnull;
     
-    GlobalForLocation(PromiseFlatCString(registryLocation).get(),
-                      nsnull, &globalObj);
+    GlobalForLocation(localFile, &globalObj);
 
     if (globalObj)
         *_retval = globalObj;
@@ -1775,14 +1377,22 @@ NS_IMETHODIMP
 mozJSComponentLoader::Observe(nsISupports *subject, const char *topic,
                               const PRUnichar *data)
 {
-    NS_ASSERTION(!strcmp(topic, NS_XPCOM_SHUTDOWN_OBSERVER_ID),
-                 "Unexpected observer topic");
+    if (!strcmp(topic, NS_XPCOM_SHUTDOWN_OBSERVER_ID)) {
+        if (mFastLoadTimer) {
+            mFastLoadTimer->Cancel();
+        }
 
-    if (mFastLoadTimer) {
-        mFastLoadTimer->Cancel();
+        JS_GC(mContext);
+
+        CloseFastLoad();
+    }
+    else if (!strcmp(topic, "xpcom-shutdown-loaders")) {
+        UnloadModules();
+    }
+    else {
+        NS_ERROR("Unexpected observer topic.");
     }
 
-    CloseFastLoad();
     return NS_OK;
 }
 
@@ -1803,7 +1413,3 @@ JSCLContextHelper::~JSCLContextHelper()
     if (mContextThread)
         JS_EndRequest(mContext);
 }        
-
-//----------------------------------------------------------------------
-
-/* XXX this should all be data-driven, via NS_IMPL_GETMODULE_WITH_CATEGORIES */
