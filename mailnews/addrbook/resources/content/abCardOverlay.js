@@ -287,9 +287,16 @@ function OnLoadEditCard()
 
       if (!(directory.operations & directory.opWrite)) 
       {
-        var disableElements = document.getElementsByAttribute("disableforreadonly", "true");
-        for (var i = disableElements.length; i-- > 0; )
-          disableElements[i].disabled = true;
+        // Set all the editable vcard fields to read only
+        for (var i = kVcardFields.length; i-- > 0; )
+          document.getElementById(kVcardFields[i][0]).readonly = true;
+
+        // And the phonetic fields
+        document.getElementById(kPhoneticFields[0]).readonly = true;
+        document.getElementById(kPhoneticFields[3]).readonly = true;
+
+        // Also disable the mail format popup.
+        document.getElementById("PreferMailFormatPopup").disabled = true;
 
         document.documentElement.buttons = "accept";
         document.documentElement.removeAttribute("ondialogaccept");
@@ -502,7 +509,7 @@ function CheckCardRequiredDataPresence(doc)
   // Simple checks that the primary email should be of the form |user@host|.
   // Note: if the length of the primary email is 0 then we skip the check
   // as some other field must have something as per the check above.
-  if (!((primaryEmail.textLength != 0 && !/.@./.test(primaryEmail.value))
+  if (primaryEmail.textLength != 0 && !/.@./.test(primaryEmail.value))
   {
     Components
       .classes["@mozilla.org/embedcomp/prompt-service;1"]
