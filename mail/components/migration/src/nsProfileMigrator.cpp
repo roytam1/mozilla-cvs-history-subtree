@@ -51,6 +51,8 @@
 #include "nsProfileMigrator.h"
 #include "nsMailMigrationCID.h"
 
+#include "nsIRegistry.h"
+
 #include "nsCRT.h"
 #include "NSReg.h"
 #include "nsReadableUtils.h"
@@ -160,6 +162,25 @@ nsProfileMigrator::Import()
   return NS_ERROR_FAILURE;
 }
 
+#define kRegistryProfileSubtreeString (NS_LITERAL_STRING("Profiles"))
+#define kRegistryCurrentProfileString (NS_LITERAL_STRING("CurrentProfile"))
+#define kRegistryNCServiceDenialString (NS_LITERAL_STRING("NCServiceDenial"))
+#define kRegistryNCProfileNameString (NS_LITERAL_STRING("NCProfileName"))
+#define kRegistryNCUserEmailString (NS_LITERAL_STRING("NCEmailAddress"))
+#define kRegistryNCHavePREGInfoString (NS_LITERAL_STRING("NCHavePregInfo"))
+#define kRegistryHavePREGInfoString (NS_LITERAL_STRING("HavePregInfo"))
+#define kRegistryMigratedString (NS_LITERAL_STRING("migrated"))
+#define kRegistryDirectoryString (NS_LITERAL_STRING("directory"))
+#define kRegistryNeedMigrationString (NS_LITERAL_STRING("NeedMigration"))
+#define kRegistryMozRegDataMovedString (NS_LITERAL_STRING("OldRegDataMoved"))
+#define kRegistryCreationTimeString (NS_LITERAL_CSTRING("CreationTime"))
+#define kRegistryLastModTimeString (NS_LITERAL_CSTRING("LastModTime"))
+#define kRegistryMigratedFromString (NS_LITERAL_CSTRING("MigFromDir"))
+#define kRegistryVersionString (NS_LITERAL_STRING("Version"))
+#define kRegistryVersion_1_0 (NS_LITERAL_STRING("1.0"))
+#define kRegistryCurrentVersion (NS_LITERAL_STRING("1.0"))
+#define kRegistryStartWithLastString (NS_LITERAL_CSTRING("AutoStartWithLast"))
+
 PRBool
 nsProfileMigrator::ImportRegistryProfiles(const nsACString& aAppName)
 {
@@ -216,9 +237,38 @@ nsProfileMigrator::ImportRegistryProfiles(const nsACString& aAppName)
   RKEY profiles = 0;
   REGENUM enumstate = 0;
   char profileName[MAXREGNAMELEN];
+  nsXPIDLString tmpCurrentProfile;
+  nsCOMPtr<nsIRegistry> registry(do_CreateInstance(NS_REGISTRY_CONTRACTID, &rv));
+  if (NS_FAILED(rv)) return rv;
 
   if (NR_RegOpen(path.get(), &reg))
     goto cleanup;
+
+  rv = registry->Open(regFile);
+  if (NS_FAILED(rv)) return rv;
+
+  // Enumerate all subkeys (immediately) under the given node.
+  nsRegistryKey profilesTreeKey;
+
+  rv = registry->GetKey(nsIRegistry::Common,
+                          kRegistryProfileSubtreeString.get(),
+                          &profilesTreeKey);
+  PRInt32 tempLong;
+  rv = registry->GetInt(profilesTreeKey,
+                         kRegistryStartWithLastString.get(),
+                         &tempLong);
+  if (NS_SUCCEEDED(rv))
+      profileSvc->SetStartWithLastProfile(tempLong != 0);
+  
+  // For the following variables, we do not check for the rv value
+  // but check for the variable instead, because it is valid to proceed
+  // without the variables having a value. That's why there are no returns
+  // for invalid rv values.
+
+  // Get the current profile
+  rv = registry->GetString(profilesTreeKey,
+                             kRegistryCurrentProfileString.get(),
+                             getter_Copies(tmpCurrentProfile));
 
   if (NR_RegGetKey(reg, ROOTKEY_COMMON, "Profiles", &profiles))
     goto cleanup;
@@ -255,6 +305,10 @@ nsProfileMigrator::ImportRegistryProfiles(const nsACString& aAppName)
     nsCOMPtr<nsIToolkitProfile> tprofile;
     profileSvc->CreateProfile(profileFile, nsDependentCString(profileName),
                               getter_AddRefs(tprofile));
+
+    if (tmpCurrentProfile.EqualsWithConversion(profileName))
+      profileSvc->SetSelectedProfile(tprofile);
+
     migrated = PR_TRUE;
   }
 
