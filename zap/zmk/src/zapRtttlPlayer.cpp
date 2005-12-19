@@ -47,7 +47,9 @@
 zapRtttlPlayer::zapRtttlPlayer()
     : mPlay(PR_TRUE),
       mWaiting(PR_FALSE),
-      mTones(nsnull)
+      mTones(nsnull),
+      mAmplitude(0.5),
+      mLoop(PR_TRUE)
 {
 #ifdef DEBUG
   printf("zapRtttlPlayer::zapRtttlPlayer()\n");
@@ -94,6 +96,7 @@ zapRtttlPlayer::AddedToGraph(zapIMediaGraph *graph,
     node_pars->GetPropertyAsACString(NS_LITERAL_STRING("rtttl"),
                                      rtttl);
     node_pars->GetPropertyAsBool(NS_LITERAL_STRING("loop"), &mLoop);
+    node_pars->GetPropertyAsDouble(NS_LITERAL_STRING("amplitude"), &mAmplitude);
   }
   
   // parse rtttl into Tone structure:
@@ -233,7 +236,7 @@ zapRtttlPlayer::RequestFrame()
     float sample_time = mTonePointer.offset;
     float omega = 6.28318530718*mTones[mTonePointer.current].frequency;
     while (c--) {
-      *d++ = (float)(mAmplitude*sin(omega*sample_time));
+      *d++ = (float)(mAmplitude*32768.0*sin(omega*sample_time));
       sample_time += sample_step;
     }
     if (samples_left > tone_samples_left) {

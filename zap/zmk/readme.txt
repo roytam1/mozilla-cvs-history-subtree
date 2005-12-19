@@ -421,6 +421,7 @@ Control interfaces:
 Node parameters: 
 - ACString "rtttl" : The rtttl source code to be played
 - boolean "loop" : true: the sample should be looped indefinitely (default: true)
+- double "amplitude" : 0.0 <= amplitude <= 1.0 (default: 0.5)
 
 Source parameters:
 - double "sample_rate" : sample rate in Hz (default: 8000)
