@@ -41,7 +41,13 @@ interface zapISipFlowMonitor;
 
 /**
  * \ingroup SIP_TRANSPORT_LAYER
- * Describes a network protocol layer connection between two hosts
+ * Describes a network protocol layer connection between two hosts.
+ *
+ * Flow objects are managed by the the transport layer, see
+ * zapISipTransport.
+ *
+ * Clients can add monitor callbacks to flows to observe the
+ * connectivity status and keep alive a connection through NAT.
  */
 [scriptable, uuid(9e26bde0-4181-4724-abbe-39f61a15c3bb)]
 interface zapISipFlow : nsISupports
@@ -90,7 +96,7 @@ interface zapISipFlow : nsISupports
    * zapISipTransport::UAStack
    */
   const unsigned short OPTIONS_MONITOR              = 0x0002;
-  
+
   void addFlowMonitor(in zapISipFlowMonitor monitor, in unsigned short type);
   void removeFlowMonitor(in zapISipFlowMonitor monitor);
 };

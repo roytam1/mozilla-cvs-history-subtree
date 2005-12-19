@@ -750,7 +750,7 @@ OptionsMonitorSchedule.fun(
 
     this.rc = flow.transport.UAStack.createNonInviteRequestClient(to, from,
                                                                   "OPTIONS",
-                                                                  [], 0);        
+                                                                  [], 0, 0);
     this.schedule(this.sendRequest, this.getRequestInterval());
   });
 
@@ -1060,6 +1060,23 @@ SipTransport.fun(
                                        address,
                                        port,
                                        connection);
+  });
+
+SipTransport.fun(
+  function getFlow(localAddress, localPort, remoteAddress, remotePort,
+                   transportProtocol) {
+    // try to find a corresponding flow or create a new one:
+    var id = makeFlowID(localAddress, localPort,
+                        remoteAddress, remotePort, transportProtocol);
+
+    var flow = this._flows.get(id);
+    if (!flow) {
+      flow = SipFlow.instantiate();
+      flow.init(this, localAddress, localPort, remoteAddress, remotePort,
+                transportProtocol, null);
+      this._flows.set(id, flow);
+    }
+    return flow;
   });
 
 //----------------------------------------------------------------------

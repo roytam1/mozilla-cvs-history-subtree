@@ -92,6 +92,10 @@ interface zapISipTransport : nsISupports
 
   zapISipConnection sendResponse(in zapISipResponse response,
                                  in zapISipConnection connection);
+
+  zapISipFlow getFlow(in ACString localAddress, in unsigned short localPort,
+                      in ACString remoteAddress, in unsigned short remotePort,
+                      in ACString transportProtocol);
 };
 
 
