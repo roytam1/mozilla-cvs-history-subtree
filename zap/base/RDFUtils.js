@@ -72,8 +72,8 @@ PersistentRDFObject.appendCtor(
 // the actual resource:
 PersistentRDFObject.obj("resource", null);
 
-// array to hold descriptions of the resource's outgoing arcs
-PersistentRDFObject.obj("_arcsOut", []);
+// hash to hold descriptions of the resource's outgoing arcs
+PersistentRDFObject.obj("_arcsOut", {});
 
 // array to hold descriptions of the resource's incoming arcs
 PersistentRDFObject.obj("_arcsIn", []);
@@ -91,8 +91,9 @@ PersistentRDFObject.metafun(
 PersistentRDFObject.metafun(
   function rdfLiteralAttrib(_name, _defval, _datasourceid) {
     if (!_datasourceid) _datasourceid = "default";
-    this.prototype._arcsOut.push({name:_name, defval:_defval,
-                                  type:"literal", dsid:_datasourceid});
+    this.prototype._arcsOut[_name] = {name:_name, defval:_defval,
+                                      type:"literal", dsid:_datasourceid,
+                                      triggers:[]};
     this.gettersetter(
       _name,
       function() {
@@ -114,9 +115,9 @@ PersistentRDFObject.metafun(
         var prop = gRDF.GetResource(_name);
         var old = this.datasources[_datasourceid].GetTarget(this.resource, prop, true);
         if (old) {
-          if (old.Value != val)
-            this.datasources[_datasourceid].Change(this.resource, prop, old,
-                                                   gRDF.GetLiteral(val), true);
+          if (old.Value == val) return;
+          this.datasources[_datasourceid].Change(this.resource, prop, old,
+                                                 gRDF.GetLiteral(val), true);
         }
         else 
           this.datasources[_datasourceid].Assert(this.resource, prop,
@@ -126,6 +127,10 @@ PersistentRDFObject.metafun(
             this.datasources[_datasourceid].QueryInterface(Components.interfaces.nsIRDFRemoteDataSource).Flush();
           } catch (e) { /* not a remote datasource */ }
         }
+
+        var me = this;
+        this._arcsOut[_name].triggers.forEach(
+          function(f) { f(me, val); });
       });
   });
 
@@ -133,8 +138,8 @@ PersistentRDFObject.metafun(
 PersistentRDFObject.metafun(
   function rdfResourceAttrib(_name, _defval, _datasourceid) {
     if (!_datasourceid) _datasourceid = "default";
-    this.prototype._arcsOut.push({name:_name, defval:_defval,
-                                  type:"resource",dsid:_datasourceid});
+    this.prototype._arcsOut[_name] = {name:_name, defval:_defval,
+                                      type:"resource",dsid:_datasourceid};
     this.gettersetter(
       _name,
       function() {
@@ -164,6 +169,23 @@ PersistentRDFObject.metafun(
           } catch (e) { /* not a remote datasource */ }
         }
       });
+  });
+
+// Add a trigger that will be executed whenever the given attribute is
+// changed by a setter call on this PersistentRDFObject:
+// XXX maybe need this to execute even if the attrib gets manipulated
+// from elsewhere.
+PersistentRDFObject.metafun(
+  function rdfAttribTrigger(_name, _function) {
+    // XXX cloning triggers here is a little bit of a hack so that we
+    // don't pollute the base class's triggers array: Merging doesn't
+    // do deep cloning, so the triggers arrays of base- and subclasses
+    // are the same object. What we really want is deep cloning on
+    // merging (at least for this particular case)
+    var arcObj = objclone(this.prototype._arcsOut[_name]);
+    arcObj.triggers = arrayclone(arcObj.triggers);
+    arcObj.triggers.push(_function);
+    this.prototype._arcsOut[_name] = arcObj;
   });
 
 // Add a triple(subject, predicate, this.resource) in datasource dsid
@@ -217,19 +239,18 @@ PersistentRDFObject.fun(
     if (!addAssertions) return;
     this._assertArcsIn();
     // add default assertions for all attributes:
-    var me = this;
-    this._arcsOut.forEach(
-      function(a) {
-        var prop = gRDF.GetResource(a.name);
-        var val;
-        if (a.type == "literal")
-          val = gRDF.GetLiteral(a.defval);
-//         else if (a.type == "this")
-//           val = me.resource;
-        else
-          val = gRDF.GetResource(a.defval);
-        me.datasources[a.dsid].Assert(me.resource, prop, val, true);
-      });
+    for (var id in this._arcsOut) {
+      var a = this._arcsOut[id];
+      var prop = gRDF.GetResource(a.name);
+      var val;
+      if (a.type == "literal")
+        val = gRDF.GetLiteral(a.defval);
+//    else if (a.type == "this")
+//      val = this.resource;
+      else
+        val = gRDF.GetResource(a.defval);
+      this.datasources[a.dsid].Assert(this.resource, prop, val, true);
+    }
     if (this.autoflush)
       this.flush();
   });
@@ -241,60 +262,58 @@ PersistentRDFObject.fun(
     this.resource = gRDF.GetAnonymousResource();
     this._assertArcsIn();
     // add assertions for all attributes:
-    var me = this;
-    this._arcsOut.forEach(
-      function(a) {
-        var prop = gRDF.GetResource(a.name);
-        var val;
-        var elem = doc.getElementById(a.name);
-        if (!elem)
-          val = a.defval;
-        else if (elem.tagName == "checkbox")
-          val = elem.checked;
-        else
-          val = elem.value;
+    for (var id in this._arcsOut) {
+      var a = this._arcsOut[id];
+      var prop = gRDF.GetResource(a.name);
+      var val;
+      var elem = doc.getElementById(a.name);
+      if (!elem)
+        val = a.defval;
+      else if (elem.tagName == "checkbox")
+        val = elem.checked;
+      else
+        val = elem.value;
         
-        if (a.type == "literal")
-          val = gRDF.GetLiteral(val);
-//         else if (a.type == "this")
-//           val = me.resource;
-        else
-          val = gRDF.GetResource(val);
+      if (a.type == "literal")
+        val = gRDF.GetLiteral(val);
+//    else if (a.type == "this")
+//      val = this.resource;
+      else
+        val = gRDF.GetResource(val);
         
-        me.datasources[a.dsid].Assert(me.resource, prop, val, true);
-        if (this.autoflush)
-          this.flush();
-      });
+      this.datasources[a.dsid].Assert(this.resource, prop, val, true);
+    }
+    if (this.autoflush)
+      this.flush();
   });
 
 // fill the given document with values from this resource, or with
 // default values if there is no resource attached:
 PersistentRDFObject.fun(
   function fillDocument(doc) {
-    var me = this;
     if (this.resource) {
-      this._arcsOut.forEach(
-        function(a) {
-          var elem = doc.getElementById(a.name);
-          if (!elem) return;
-          if (elem.tagName == "checkbox")
-            elem.checked = (me[a.name] == "true");
-          else
-            elem.value = me[a.name];
-        });
+      for (var id in this._arcsOut) {
+        var a = this._arcsOut[id];
+        var elem = doc.getElementById(a.name);
+        if (!elem) return;
+        if (elem.tagName == "checkbox")
+          elem.checked = (this[a.name] == "true");
+        else
+          elem.value = this[a.name];
+      }
     }
     else {
       // fill with defaults:
-      this._arcsOut.forEach(
-        function(a) {
-          var elem = doc.getElementById(a.name);
-          if (!elem) return;
-          if (elem.tagName == "checkbox") {
-            elem.checked = (a.defval == "true");
-          }
-          else
-            elem.value = a.defval;
-        });
+      for (var id in this._arcsOut) {
+        var a = this._arcsOut[id];
+        var elem = doc.getElementById(a.name);
+        if (!elem) return;
+        if (elem.tagName == "checkbox") {
+          elem.checked = (a.defval == "true");
+        }
+        else
+          elem.value = a.defval;
+      }
     }
   });
 
@@ -304,34 +323,33 @@ PersistentRDFObject.fun(
     this._assert(this.resource, "need resource to update!");
     
     // add/update assertions for all attributes:
-    var me = this;
-    this._arcsOut.forEach(
-      function(a) {
-        var prop = gRDF.GetResource(a.name);
-        var val;
-        var elem = doc.getElementById(a.name);
-        if (!elem)
-          val = a.defval;
-        else if (elem.tagName == "checkbox")
-          val = elem.checked;
-        else
-          val = elem.value;
-        
-        if (a.type == "literal")
-          val = gRDF.GetLiteral(val);
-//         else if (a.type == "this")
-//           val = me.resource;
-        else
-          val = gRDF.GetResource(val);
-        
-        var old = me.datasources[a.dsid].GetTarget(me.resource, prop, true);
-        if (old) {
-          if (old.Value != val.Value)
-            me.datasources[a.dsid].Change(me.resource, prop, old, val, true);
-        }
-        else
-          me.datasources[a.dsid].Assert(me.resource, prop, val, true);
-      });
+    for (var id in this._arcsOut) {
+      var a = this._arcsOut[id];
+      var prop = gRDF.GetResource(a.name);
+      var val;
+      var elem = doc.getElementById(a.name);
+      if (!elem)
+        val = a.defval;
+      else if (elem.tagName == "checkbox")
+        val = elem.checked;
+      else
+        val = elem.value;
+      
+      if (a.type == "literal")
+        val = gRDF.GetLiteral(val);
+//    else if (a.type == "this")
+//      val = this.resource;
+      else
+        val = gRDF.GetResource(val);
+      
+      var old = this.datasources[a.dsid].GetTarget(this.resource, prop, true);
+      if (old) {
+        if (old.Value != val.Value)
+          this.datasources[a.dsid].Change(this.resource, prop, old, val, true);
+      }
+      else
+        this.datasources[a.dsid].Assert(this.resource, prop, val, true);
+    }
     if (this.autoflush)
       this.flush();
   });
