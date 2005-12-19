@@ -98,8 +98,6 @@ SipAuthentication.fun(
 // calculate MD5 hash of data and convert to hex representation as
 // explained in RFC2617:
 
-var hexDigits = "0123456789abcdef";
-
 function MD5Hex(data) {
   CryptoHash.initWithString("md5");
   if (data) {
@@ -112,8 +110,7 @@ function MD5Hex(data) {
   var hash = CryptoHash.finish(false);
   var hashHex = "";
   for (var i=0,l=hash.length; i<l; ++i) {
-    var code = hash.charCodeAt(i);
-    hashHex += hexDigits[code >> 4] + hexDigits[code & 15];
+    hashHex += hexCharCodeAt(hash, i);
   }
   return hashHex;
 }
