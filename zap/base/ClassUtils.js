@@ -598,8 +598,10 @@ var AttributeParser = makeClass("AttributeParser", ErrorReporter);
 AttributeParser.metafun(
   "\
  Adds a getter/setter pair for 'attrib' and a variable with name     \n\
- '_attrib' to the prototype. The setter will peform a syntax check   \n\
- using 'regex' and throw an error if the syntax is invalid.           ",
+ '_attrib' to the prototype. The setter will perform a syntax check  \n\
+ using 'regex' and throw an error if the syntax is invalid. A null   \n\
+ argument will be converted to the empty string prior to the syntax  \n\
+ check.                                                               ",
   function parsedAttrib(/*[opt] doc, attrib, regex, default*/) {
     var i = arguments.length-1;
     var defval = arguments[i--];
@@ -617,6 +619,7 @@ AttributeParser.metafun(
     var getter, setter;
     eval("getter = function "+attrib+"_get() { return this._"+attrib+";}");
     eval("setter = function "+attrib+"_set(v) { "+
+         "if (v==null) v='';"+
          "if (!regex.test(v)) this._error('Attribute parse error'); "+
          "return this._"+attrib+"=v;}");
 
