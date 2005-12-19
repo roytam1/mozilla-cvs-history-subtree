@@ -2,7 +2,7 @@
 # a Java .properties file and does *not* use \escapes
 
 Welcome_Title=$ProductName$ Setup
-Welcome_MessageWelcome=Welcome to %s!
+Welcome_MessageWelcome=Welcome to %s
 Welcome_Message0=You are about to install %s.
 Welcome_Message1=It is strongly recommended that you exit all Windows programs before running this Setup program.
 Welcome_Message2=Click Cancel to quit Setup and then close any programs you have running.  Click Next to continue the Setup program.
@@ -74,7 +74,7 @@ Check_Message=Download of $ProductName$ was successful. $ProductNameInternal$ mu
 Check_FullMessage=$ProductNameInternal$ must be closed to proceed with installation. Click OK to exit $ProductNameInternal$ automatically and to begin installation.
 Check_Wait=Shutting down $ProductNameInternal$.  Please wait...
 
-Component_XPCOM=Cross Platform COM
+Component_XPCOM=Cross-Platform COM
 Component_Mail=$ProductName$
 Component_Offline=Offline Support
 Component_Offline_Long=Adds Offline support to $ProductName$ Mail.

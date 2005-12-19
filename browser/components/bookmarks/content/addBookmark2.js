@@ -154,7 +154,7 @@ function Startup()
     localStore.Unassert(rDialog, rPersist, rElement, true);
     gExpander.setAttribute("class", "down");
   }
-
+  
   // Select the specified folder after the window is made visible
   function initMenulist() {
     if ("folderURI" in gArg) {
@@ -165,8 +165,11 @@ function Startup()
     gSelectedFolder = RDF.GetResource(gMenulist.selectedItem.id);
   }
   setTimeout(initMenulist, 0);
+
+  // Reset the |id| attribute on the toolbar folder attribute to the URI of the
+  // Bookmarks toolbar folder. 
   var btfMenuItem = document.getElementById("btfMenuItem");
-  btfMenuItem.setAttribute("id", BMSVC.getBookmarksToolbarFolder().Value);
+  btfMenuItem.id = BMSVC.getBookmarksToolbarFolder().Value;
 } 
 
 function initTitle()

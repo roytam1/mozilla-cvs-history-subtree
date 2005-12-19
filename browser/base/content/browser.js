@@ -140,10 +140,12 @@ function pageShowEventHandlers(event)
     targetBrowser = gBrowser.mCurrentBrowser;
   }
 
+#ifndef MOZ_PLACES
   // update the last visited date
   if (targetBrowser.currentURI.spec)
     BMSVC.updateLastVisitedDate(targetBrowser.currentURI.spec,
                                 targetBrowser.contentDocument.characterSet);
+#endif
 }
 
 /**
@@ -286,7 +288,10 @@ const gPopupBlockerObserver = {
 
     if (gBrowser.selectedBrowser.pageReport) {
       this._reportButton.setAttribute("blocked", "true");
-      if (gPrefService && gPrefService.getBoolPref("privacy.popups.showBrowserMessage")) {
+      if (!gPrefService)
+        gPrefService = Components.classes["@mozilla.org/preferences-service;1"]
+                                 .getService(Components.interfaces.nsIPrefBranch);
+      if (gPrefService.getBoolPref("privacy.popups.showBrowserMessage")) {
         var bundle_browser = document.getElementById("bundle_browser");
         var brandBundle = document.getElementById("bundle_brand");
         var brandShortName = brandBundle.getString("brandShortName");
@@ -493,8 +498,7 @@ const gXPInstallObserver = {
     var tabbrowser = getBrowser();
     for (var i = 0; i < tabbrowser.browsers.length; ++i) {
       var browser = tabbrowser.getBrowserAtIndex(i);
-      var shell = this._findChildShell(browser.docShell, aDocShell);
-      if (shell)
+      if (this._findChildShell(browser.docShell, aDocShell))
         return browser;
     }
     return null;
@@ -617,10 +621,10 @@ function BrowserStartup()
 
   var sidebarSplitter;
   if (window.opener && !window.opener.closed) {
-    if (window.opener.gFindMode == FIND_NORMAL) {
+    if (window.opener.gFindBar && window.opener.gFindBar.mFindMode == FIND_NORMAL) {
       var openerFindBar = window.opener.document.getElementById("FindToolbar");
       if (openerFindBar && !openerFindBar.hidden)
-        openFindBar();
+        gFindBar.openFindBar();
     }
 
     var openerSidebarBox = window.opener.document.getElementById("sidebar-box");
@@ -791,8 +795,9 @@ function delayedStartup()
   os.addObserver(gXPInstallObserver, "xpinstall-install-edit-permissions", false);
   os.addObserver(gMissingPluginInstaller, "missing-plugin", false);
 
-  gPrefService = Components.classes["@mozilla.org/preferences-service;1"]
-                           .getService(Components.interfaces.nsIPrefBranch);
+  if (!gPrefService)
+    gPrefService = Components.classes["@mozilla.org/preferences-service;1"]
+                             .getService(Components.interfaces.nsIPrefBranch);
   BrowserOffline.init();
   
   if (gURLBar && document.documentElement.getAttribute("chromehidden").indexOf("toolbar") != -1) {
@@ -808,7 +813,9 @@ function delayedStartup()
 
   // loads the services
   initServices();
+#ifndef MOZ_PLACES
   initBMService();
+#endif
   gBrowser.addEventListener("pageshow", function(evt) { setTimeout(pageShowEventHandlers, 0, evt); }, true);
 
   window.addEventListener("keypress", ctrlNumberTabSelection, false);
@@ -819,11 +826,12 @@ function delayedStartup()
     sidebar.setAttribute("src", sidebarBox.getAttribute("src"));
   }
 
-  initFindBar();
+  gFindBar.initFindBar();
 
   // add bookmark options to context menu for tabs
   addBookmarkMenuitems();
   // now load bookmarks
+#ifndef MOZ_PLACES
   BMSVC.readBookmarks();
   var bt = document.getElementById("bookmarks-ptf");
   if (bt) {
@@ -832,9 +840,12 @@ function delayedStartup()
     document.getElementById("bookmarks-chevron").ref = btf;
     bt.database.AddObserver(BookmarksToolbarRDFObserver);
   }
+#endif
   window.addEventListener("resize", BookmarksToolbar.resizeFunc, false);
+#ifndef MOZ_PLACES
   document.getElementById("PersonalToolbar")
           .controllers.appendController(BookmarksMenuController);
+#endif
 
   // called when we go into full screen, even if it is
   // initiated by a web page script
@@ -890,8 +901,6 @@ function delayedStartup()
   gHomeButton.updateTooltip();
 
   gClickSelectsAll = gPrefService.getBoolPref("browser.urlbar.clickSelectsAll");
-
-  clearObsoletePrefs();
 
 #ifdef HAVE_SHELL_SERVICE
   // Perform default browser checking (after window opens).
@@ -982,8 +991,8 @@ function BrowserShutdown()
     gSanitizeListener.shutdown();
 
   BrowserOffline.uninit();
-
-  uninitFindBar();
+  
+  gFindBar.uninitFindBar();
 
   var windowManager = Components.classes['@mozilla.org/appshell/window-mediator;1'].getService();
   var windowManagerInterface = windowManager.QueryInterface(Components.interfaces.nsIWindowMediator);
@@ -1058,7 +1067,9 @@ function nonBrowserWindowDelayedStartup()
 {
   // loads the services
   initServices();
+#ifndef MOZ_PLACES
   initBMService();
+#endif
 
   // init global pref service
   gPrefService = Components.classes["@mozilla.org/preferences-service;1"]
@@ -1184,10 +1195,8 @@ function SanitizeListener()
   if (gPrefService.prefHasUserValue(this.didSanitizeDomain)) {
     gPrefService.clearUserPref(this.didSanitizeDomain);
     // We need to persist this preference change, since we want to
-    // check it at next app start even if the browser exits abruptly,
-    // but we can afford some delay before I/O, so perceived 
-    // startup speed is not affected :)
-    window.setTimeout(function() { gPrefService.savePrefFile(null); }, 1000);
+    // check it at next app start even if the browser exits abruptly
+    gPrefService.savePrefFile(null);
   }
 }
 
@@ -1333,7 +1342,26 @@ function BrowserBack(aEvent, aIgnoreAlt)
 
 function BrowserHandleBackspace()
 {
-  BrowserBack();
+  switch (gPrefService.getIntPref("browser.backspace_action")) {
+  case 0:
+    BrowserBack();
+    break;
+  case 1:
+    goDoCommand("cmd_scrollPageUp");
+    break;
+  }
+}
+
+function BrowserHandleShiftBackspace()
+{
+  switch (gPrefService.getIntPref("browser.backspace_action")) {
+  case 0:
+    BrowserForward();
+    break;
+  case 1:
+    goDoCommand("cmd_scrollPageDown");
+    break;
+  }
 }
 
 function BrowserBackMenu(event)
@@ -1912,12 +1940,11 @@ function readFromClipboard()
 
 function BrowserViewSourceOfDocument(aDocument)
 {
-  var docCharset;
   var pageCookie;
   var webNav;
 
   // Get the document charset
-  docCharset = "charset=" + aDocument.characterSet;
+  var docCharset = "charset=" + aDocument.characterSet;
 
   // Get the nsIWebNavigation associated with the document
   try {
@@ -1953,16 +1980,17 @@ function BrowserViewSourceOfDocument(aDocument)
     // If no page descriptor is available, just use the view-source URL...
   }
 
-  BrowserViewSourceOfURL(webNav.currentURI.spec, docCharset, pageCookie);
+  ViewSourceOfURL(webNav.currentURI.spec, pageCookie, aDocument);
 }
 
-function BrowserViewSourceOfURL(url, charset, pageCookie)
+function ViewSourceOfURL(aURL, aPageDescriptor, aDocument)
 {
-  // try to open a view-source window while inheriting the charset (if any)
-  openDialog("chrome://global/content/viewSource.xul",
-             "_blank",
-             "scrollbars,resizable,chrome,dialog=no",
-             url, charset, pageCookie);
+  if (getBoolPref("view_source.editor.external", false)) {
+    gViewSourceUtils.openInExternalEditor(aURL, aPageDescriptor, aDocument);
+  }
+  else {
+    gViewSourceUtils.openInInternalViewer(aURL, aPageDescriptor, aDocument);
+  }
 }
 
 // doc - document to use for source, or null for this window's document
@@ -2190,6 +2218,17 @@ function SetPageProxyState(aState)
 
 function PageProxySetIcon (aURL)
 {
+#ifdef MOZ_PLACES
+  // Save this favicon in the favicon service
+  if (aURL) {
+    var faviconService = Components.classes["@mozilla.org/browser/favicon-service;1"].
+      getService(Components.interfaces.nsIFaviconService);
+    var uri = Components.classes["@mozilla.org/network/io-service;1"]
+        .getService(Components.interfaces.nsIIOService).newURI(aURL, null, null);
+    faviconService.setAndLoadFaviconForPage(gBrowser.currentURI, uri, false);
+  }
+#endif
+
   if (!gProxyFavIcon)
     return;
 
@@ -2385,7 +2424,7 @@ function toggleAffectedChrome(aHide)
 
     var findBar = document.getElementById("FindToolbar");
     gChromeState.findOpen = !findBar.hidden;
-    closeFindBar();
+    gFindBar.closeFindBar();
   }
   else {
     if (gChromeState.messageOpen) {
@@ -2399,7 +2438,7 @@ function toggleAffectedChrome(aHide)
     }
 
     if (gChromeState.findOpen)
-      openFindBar();
+      gFindBar.openFindBar();
   }
 
   if (gChromeState.sidebarOpen)
@@ -2606,10 +2645,12 @@ var newTabButtonObserver = {
   onDrop: function (aEvent, aXferData, aDragSession)
     {
       var xferData = aXferData.data.split("\n");
-      var url = xferData[0] ? xferData[0] : xferData[1];
+      var draggedText = xferData[0] || xferData[1];
+      var postData = {};
+      var url = getShortcutOrURI(draggedText, postData);
       if (url) {
         getBrowser().dragDropSecurityCheck(aEvent, aDragSession, url);
-        openNewTabWith(url, null, null, aEvent);
+        openNewTabWith(url, null, postData.value, aEvent);
       }
     },
   getSupportedFlavours: function ()
@@ -2639,10 +2680,12 @@ var newWindowButtonObserver = {
   onDrop: function (aEvent, aXferData, aDragSession)
     {
       var xferData = aXferData.data.split("\n");
-      var url = xferData[0] ? xferData[0] : xferData[1];
+      var draggedText = xferData[0] || xferData[1];
+      var postData = {};
+      var url = getShortcutOrURI(draggedText, postData);
       if (url) {
         getBrowser().dragDropSecurityCheck(aEvent, aDragSession, url);
-        openNewWindowWith(url, null, null);
+        openNewWindowWith(url, null, postData.value);
       }
     },
   getSupportedFlavours: function ()
@@ -2672,7 +2715,9 @@ var goButtonObserver = {
   onDrop: function (aEvent, aXferData, aDragSession)
     {
       var xferData = aXferData.data.split("\n");
-      var url = xferData[0] ? xferData[0] : xferData[1];
+      var draggedText = xferData[0] || xferData[1];
+      var postData = {};
+      var url = getShortcutOrURI(draggedText, postData);
       try {
         getBrowser().dragDropSecurityCheck(aEvent, aDragSession, url);
         var uri = makeURI(url);
@@ -2680,7 +2725,7 @@ var goButtonObserver = {
                                  .getService(Components.interfaces.nsIScriptSecurityManager);
         const nsIScriptSecMan = Components.interfaces.nsIScriptSecurityManager;
         secMan.checkLoadURI(gBrowser.currentURI, uri, nsIScriptSecMan.DISALLOW_SCRIPT_OR_DATA);
-        loadURI(uri.spec, null, null);
+        loadURI(uri.spec, null, postData.value);
       } catch (ex) {}
     },
   getSupportedFlavours: function ()
@@ -3058,6 +3103,7 @@ function BrowserToolboxCustomizeDone(aToolboxChanged)
   // fix up the personal toolbar folder
   var bt = document.getElementById("bookmarks-ptf");
   if (bt) {
+#ifndef MOZ_PLACES
     var btf = BMSVC.getBookmarksToolbarFolder().Value;
     var btchevron = document.getElementById("bookmarks-chevron");
     bt.ref = btf;
@@ -3071,6 +3117,7 @@ function BrowserToolboxCustomizeDone(aToolboxChanged)
     bt.database.AddObserver(BookmarksToolbarRDFObserver);
     bt.builder.rebuild();
     btchevron.builder.rebuild();
+#endif
 
     // fake a resize; this function takes care of flowing bookmarks
     // from the bar to the overflow item
@@ -3221,6 +3268,7 @@ nsBrowserStatusHandler.prototype =
     this.statusTextField        = document.getElementById("statusbar-display");
     this.securityButton         = document.getElementById("security-button");
     this.urlBar                 = document.getElementById("urlbar");
+    this.isImage                = document.getElementById("isImage");
 
     // Initialize the security button's state and tooltip text
     var securityUI = getBrowser().securityUI;
@@ -3276,6 +3324,14 @@ nsBrowserStatusHandler.prototype =
       this.statusTextField.label = text;
       this.statusText = text;
     }
+  },
+  
+  mimeTypeIsTextBased : function(contentType)
+  {
+    return /^text\/|\+xml$/.test(contentType) ||
+           contentType == "application/x-javascript" ||
+           contentType == "application/xml" ||
+           contentType == "mozilla.application/cached-xul";
   },
 
   onLinkIconAvailable : function(aBrowser)
@@ -3383,6 +3439,12 @@ nsBrowserStatusHandler.prototype =
           }
           this.status = "";
           this.setDefaultStatus(msg);
+
+          // Disable menu entries for images, enable otherwise
+          if (content.document && this.mimeTypeIsTextBased(content.document.contentType))
+            this.isImage.removeAttribute('disabled');
+          else
+            this.isImage.setAttribute('disabled', 'true');
         }
 
         // Turn the progress meter and throbber off.
@@ -3426,6 +3488,12 @@ nsBrowserStatusHandler.prototype =
     }
     selectedBrowser.lastURI = aLocation;
 
+    // Disable menu entries for images, enable otherwise
+    if (content.document && this.mimeTypeIsTextBased(content.document.contentType))
+      this.isImage.removeAttribute('disabled');
+    else
+      this.isImage.setAttribute('disabled', 'true');
+
     this.setOverLink("", null);
 
     // We should probably not do this if the value has changed since the user
@@ -3449,7 +3517,7 @@ nsBrowserStatusHandler.prototype =
       }
 
       // The document loaded correctly, clear the value if we should
-      if (browser.userTypedClear > 0)
+      if (browser.userTypedClear > 0 && aRequest)
         browser.userTypedValue = null;
 
       if (!gBrowser.mTabbedMode && aWebProgress.isLoadingDocument)
@@ -3497,15 +3565,17 @@ nsBrowserStatusHandler.prototype =
       }
     }
     UpdateBackForwardButtons();
-    if (findField && gFindMode != FIND_NORMAL) {
+    if (findField && gFindBar.mFindMode != FIND_NORMAL) {
       // Close the Find toolbar if we're in old-style TAF mode
-      closeFindBar();
-      gBackProtectBuffer = 0;
+      gFindBar.closeFindBar();
     }
 
     //fix bug 253793 - turn off highlight when page changes
     if (document.getElementById("highlight").checked)
       document.getElementById("highlight").removeAttribute("checked");
+
+    //fix bug 271359 - reset mFavIconURL
+    getBrowser().selectedBrowser.mFavIconURL = null;
 
     setTimeout(function () { FeedHandler.updateFeeds(); }, 0);
 #ifdef ALTSS_ICON
@@ -4028,7 +4098,7 @@ nsContextMenu.prototype = {
         this.menu = popup;
 
         // Get contextual info.
-        this.setTarget( document.popupNode );
+        this.setTarget( document.popupNode, document.popupEvent );
 
         this.isTextSelected = this.isTextSelection();
         this.isContentSelected = this.isContentSelection();
@@ -4041,6 +4111,7 @@ nsContextMenu.prototype = {
         this.initNavigationItems();
         this.initViewItems();
         this.initMiscItems();
+        this.initSpellingItems();
         this.initSaveItems();
         this.initClipboardItems();
         this.initMetadataItems();
@@ -4153,6 +4224,35 @@ nsContextMenu.prototype = {
         // Only show the block image item if the image can be blocked
         this.showItem( "context-blockimage", this.onImage && hostLabel);
     },
+    initSpellingItems : function () {
+        var canSpell = InlineSpellCheckerUI.canSpellCheck;
+        var onMisspelling = InlineSpellCheckerUI.overMisspelling;
+        this.showItem("spell-check-enabled", canSpell);
+        this.showItem("spell-separator", canSpell);
+        if (canSpell)
+            document.getElementById("spell-check-enabled").setAttribute("checked",
+                                                                        InlineSpellCheckerUI.enabled);
+        this.showItem("spell-add-to-dictionary", onMisspelling);
+
+        // suggestion list
+        this.showItem("spell-suggestions-separator", onMisspelling);
+        if (onMisspelling) {
+            var menu = document.getElementById("contentAreaContextMenu");
+            var suggestionsSeparator = document.getElementById("spell-suggestions-separator");
+            var numsug = InlineSpellCheckerUI.addSuggestionsToMenu(menu, suggestionsSeparator, 5);
+            this.showItem("spell-no-suggestions", numsug == 0);
+        } else {
+            this.showItem("spell-no-suggestions", false);
+        }
+
+        // dictionary list
+        this.showItem("spell-dictionaries", InlineSpellCheckerUI.enabled);
+        if (canSpell) {
+            var dictMenu = document.getElementById("spell-dictionaries-menu");
+            var dictSep = document.getElementById("spell-language-separator");
+            InlineSpellCheckerUI.addDictionaryListToMenu(dictMenu, dictSep);
+        }
+    },
     initClipboardItems : function () {
 
         // Copy depends on whether there is selected text.
@@ -4196,8 +4296,13 @@ nsContextMenu.prototype = {
         // Show if user clicked on something which has metadata.
         this.showItem( "context-metadata", this.onMetaDataItem );
     },
+    // called when the menu is going away
+    hiding : function() {
+        InlineSpellCheckerUI.clearSuggestionsFromMenu();
+        InlineSpellCheckerUI.clearDictionaryListFromMenu();
+    },
     // Set various context menu attributes based on the state of the world.
-    setTarget : function ( node ) {
+    setTarget : function ( node, event ) {
         const xulNS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
         if ( node.namespaceURI == xulNS ) {
           this.shouldDisplay = false;
@@ -4220,6 +4325,7 @@ nsContextMenu.prototype = {
         this.inFrame           = false;
         this.hasBGImage        = false;
         this.bgImageURL        = "";
+        InlineSpellCheckerUI.uninit();
 
         // Remember the node that was clicked.
         this.target = node;
@@ -4244,9 +4350,18 @@ nsContextMenu.prototype = {
                    this.onStandaloneImage = true;
             } else if ( this.target instanceof HTMLInputElement ) {
                this.onTextInput = this.isTargetATextBox(this.target);
+               // allow spellchecking UI on all writable text boxes except passwords
+               if (this.onTextInput && ! this.target.readOnly && this.target.type != "password") {
+                   InlineSpellCheckerUI.init(this.target);
+                   InlineSpellCheckerUI.initFromEvent(event);
+               }
                this.onKeywordField = this.isTargetAKeywordField(this.target);
             } else if ( this.target instanceof HTMLTextAreaElement ) {
                  this.onTextInput = true;
+                 if (! this.target.readOnly) {
+                     InlineSpellCheckerUI.init(this.target);
+                     InlineSpellCheckerUI.initFromEvent(event);
+                 }
             } else if ( this.target instanceof HTMLHtmlElement ) {
                // pages with multiple <body>s are lame. we'll teach them a lesson.
                var bodyElt = this.target.ownerDocument.getElementsByTagName("body")[0];
@@ -5401,16 +5516,7 @@ function setStyleDisabled(disabled) {
 }
 
 #ifdef ALTSS_ICON
-function updatePageStyles(evt)
-{
-  // XXX - Accessing window.content.document can generate an
-  // onLocationChange for the current tab, this can cause the url
-  // bar to be cleared. Prevent that happening by setting the clear
-  // state to zero for the duration of this function.
-  var browser = getBrowser().selectedBrowser;
-  var userTypedClear = browser.userTypedClear;
-  browser.userTypedClear = 0;
-
+function updatePageStyles(evt) {
   if (!gPageStyleButton)
     gPageStyleButton = document.getElementById("page-theme-button");
 
@@ -5437,71 +5543,9 @@ function updatePageStyles(evt)
   }
   else
     gPageStyleButton.removeAttribute("themes");
-
-  // Restore clear state
-  browser.userTypedClear = userTypedClear;
 }
 #endif
 /* End of the Page Style functions */
-
-function clearObsoletePrefs()
-{
-  // removed 10/03/2003
-  try {
-    PREF.clearUserPref("timebomb.first_launch_time");
-  } catch (e) {}
-
-  // removed 10/16/2003
-  // migrate firebird cookie prefs, if they exist.
-  try {
-    PREF.clearUserPref("network.cookie.enable");
-    // No error: it means this pref was not the default one, cookie were disabled.
-    PREF.SetIntPref("network.cookie.cookieBehavior", 2);
-  } catch (e) {
-    try {
-      PREF.clearUserPref("network.cookie.enableForOriginatingWebsiteOnly");
-      // No error: it means that enableForOriginatingWebsiteOnly was true.
-      PREF.SetIntPref("network.cookie.cookieBehavior", 1);
-    } catch (e) {
-    // here, either we already have migrated the cookie pref
-    // or the new and old behavior are the same (0). In any case: nothing to do.
-    }
-  }
-
-  // removed 03/09/2003
-  // last of the forked cookie prefs
-  try {
-    PREF.clearUserPref("network.cookie.enableForCurrentSessionOnly");
-    // No error, therefore we were limiting cookies to session
-    PREF.setIntPref("network.cookie.lifetimePolicy", 2);
-  } catch (e) {
-    // nothing to do in this case
-  }
-
-  try {
-    PREF.clearUserPref("network.cookie.warnAboutCookies");
-    // No error: the pref is set to ask for cookies, set the correct pref
-    // This will replace the setting if enableForCurrentSessionOnly was
-    // also true, because dialogs explictly allow accepting for session
-    PREF.setIntPref("network.cookie.lifetimePolicy", 1);
-  } catch (e) {
-    // nothing to do in this case
-  }
-
-  // removed 10/22/2003
-  try {
-    PREF.clearUserPref("browser.search.defaultengine");
-  } catch (e) {}
-
-  // removed 11/01/2003
-  try {
-    PREF.clearUserPref("print.use_global_printsettings");
-  } catch (e) {}
-  try {
-    PREF.clearUserPref("print.save_print_settings");
-  } catch (e) {}
-
-}
 
 var BrowserOffline = {
   /////////////////////////////////////////////////////////////////////////////
@@ -5698,49 +5742,69 @@ function BrowserOpenExtensions(aOpenMode)
   }
 }
 
+function escapeNameValuePair(aName, aValue, aIsFormUrlEncoded)
+{
+  if (aIsFormUrlEncoded)
+    return escape(aName + "=" + aValue);
+  else
+    return escape(aName) + "=" + escape(aValue);
+}
+
 function AddKeywordForSearchField()
 {
   var node = document.popupNode;
-  var ioService = Components.classes["@mozilla.org/network/io-service;1"]
-                            .getService(Components.interfaces.nsIIOService);
-  var uri = ioService.newURI(node.ownerDocument.URL, node.ownerDocument.characterSet, null);
 
-  var keywordURL = ioService.newURI(node.form.getAttribute("action"), node.ownerDocument.characterSet, uri);
-  var spec = keywordURL.spec;
-  var postData = "";
-  var i, e;
+  var docURI = makeURI(node.ownerDocument.URL,
+                       node.ownerDocument.characterSet);
 
-  if (node.form.method.toUpperCase() == "POST" &&
-      (node.form.enctype == "application/x-www-form-urlencoded" || node.form.enctype == "")) {
-    for (i=0; i < node.form.elements.length; ++i) {
-      e = node.form.elements[i];
-      if (e.type.toLowerCase() == "text" || e.type.toLowerCase() == "hidden" ||
-          e instanceof HTMLTextAreaElement)
-        postData += escape(e.name + "=" + (e == node ? "%s" : e.value)) + "&";
-      else if (e instanceof HTMLSelectElement && e.selectedIndex >= 0)
-        postData += escape(e.name + "=" + e.options[e.selectedIndex].value) + "&";
-      else if ((e.type.toLowerCase() == "checkbox" ||
-	  	e.type.toLowerCase() == "radio") && e.checked)
-	 postData += escape(e.name + "=" + e.value) + "&";
+  var formURI = makeURI(node.form.getAttribute("action"),
+                        node.ownerDocument.characterSet,
+                        docURI);
+
+  var spec = formURI.spec;
+
+  var isURLEncoded = 
+               (node.form.method.toUpperCase() == "POST"
+                && (node.form.enctype == "application/x-www-form-urlencoded" ||
+                    node.form.enctype == ""));
+
+  var el, type;
+  var formData = [];
+
+  for (var i=0; i < node.form.elements.length; i++) {
+    el = node.form.elements[i];
+
+    if (!el.type) // happens with fieldsets
+      continue;
+
+    if (el == node) {
+      formData.push((isURLEncoded) ? escapeNameValuePair(el.name, "%s", true) :
+                                     // Don't escape "%s", just append
+                                     escapeNameValuePair(el.name, "", false) + "%s");
+      continue;
+    }
+
+    type = el.type.toLowerCase();
+    
+    if ((type == "text" || type == "hidden" || type == "textarea") ||
+        ((type == "checkbox" || type == "radio") && el.checked)) {
+      formData.push(escapeNameValuePair(el.name, el.value, isURLEncoded));
+    } else if (el instanceof HTMLSelectElement && el.selectedIndex >= 0) {
+      for (var j=0; j < el.options.length; j++) {
+        if (el.options[j].selected)
+          formData.push(escapeNameValuePair(el.name, el.options[j].value,
+                                            isURLEncoded));
+      }
     }
   }
-  else {
-    spec += "?" + escape(node.name) + "=%s";
-    for (i=0; i < node.form.elements.length; ++i) {
-      e = node.form.elements[i];
-      if (e == node) // avoid duplication of the target field value, which was populated above.
-        continue;
 
-      if (e.type.toLowerCase() == "text" || e.type.toLowerCase() == "hidden" ||
-          e instanceof HTMLTextAreaElement)
-        spec += "&" + escape(e.name) + "=" + escape(e.value);
-      else if (e instanceof HTMLSelectElement && e.selectedIndex >= 0)
-        spec += "&" + escape(e.name) + "=" + escape(e.options[e.selectedIndex].value);
-      else if ((e.type.toLowerCase() == "checkbox" ||
-	  	e.type.toLowerCase() == "radio") && e.checked)
-	 spec += "&" + escape(e.name) + "=" + escape(e.value);
-    }
-  }
+  var postData;
+
+  if (isURLEncoded)
+    postData = formData.join("&");
+  else
+    spec += "?" + formData.join("&");
+
   var dialogArgs = {
     name: "",
     url: spec,
@@ -5776,15 +5840,20 @@ function getPluginInfo(pluginElement)
     } else {
       pluginsPage = pluginElement.getAttribute("pluginspage");
     }
-    var doc = pluginElement.ownerDocument;
-    var docShell = findChildShell(doc, gBrowser.selectedBrowser.docShell, null);
-    try {
-      pluginsPage = makeURI(pluginsPage, doc.characterSet, docShell.currentURI).spec;
-    } catch (ex) { 
-      pluginsPage = "";
+
+    // only attempt if a pluginsPage is defined.
+    if (pluginsPage) {
+      var doc = pluginElement.ownerDocument;
+      var docShell = findChildShell(doc, gBrowser.selectedBrowser.docShell, null);
+      try {
+        pluginsPage = makeURI(pluginsPage, doc.characterSet, docShell.currentURI).spec;
+      } catch (ex) { 
+        pluginsPage = "";
+      }
     }
 
-    tagMimetype = pluginElement.QueryInterface(Components.interfaces.nsIPluginElement).actualType;
+    tagMimetype = pluginElement.QueryInterface(Components.interfaces.nsIObjectLoadingContent)
+                               .actualType;
 
     if (tagMimetype == "") {
       tagMimetype = pluginElement.type;
@@ -6000,7 +6069,7 @@ var FeedHandler = {
   /**
    * Locate the shell that has a specified document loaded in it. 
    * @param   doc
-   *          The document that contains the feed
+   *          The document to find a shell for.
    * @returns The doc shell that contains the specified document.
    */
   _getContentShell: function(doc) {
@@ -6102,8 +6171,11 @@ var FeedHandler = {
       browserForLink.feeds = feeds;
       if (browserForLink == gBrowser || browserForLink == gBrowser.mCurrentBrowser) {
         var feedButton = document.getElementById("feed-button");
-        if (feedButton)
+        if (feedButton) {
           feedButton.setAttribute("feeds", "true");
+          feedButton.setAttribute("tooltiptext", 
+                                  gNavigatorBundle.getString("feedHasFeeds"));
+        }
       }
     }
   }

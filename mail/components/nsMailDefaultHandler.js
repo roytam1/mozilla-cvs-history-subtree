@@ -1,3 +1,4 @@
+/* -*- indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -42,6 +43,7 @@ const nsICommandLineHandler    = Components.interfaces.nsICommandLineHandler;
 const nsIDOMWindowInternal     = Components.interfaces.nsIDOMWindowInternal;
 const nsIFactory               = Components.interfaces.nsIFactory;
 const nsISupportsString        = Components.interfaces.nsISupportsString;
+const nsIURILoader             = Components.interfaces.nsIURILoader;
 const nsIWindowMediator        = Components.interfaces.nsIWindowMediator;
 const nsIWindowWatcher         = Components.interfaces.nsIWindowWatcher;
 
@@ -65,6 +67,37 @@ function openURI(uri)
   var channel = io.newChannelFromURI(uri);
   var loader = Components.classes["@mozilla.org/uriloader;1"]
                          .getService(Components.interfaces.nsIURILoader);
+
+  // We cannot load a URI on startup asynchronously without protecting
+  // the startup
+
+  var loadgroup = Components.classes["@mozilla.org/network/load-group;1"]
+                            .createInstance(Components.interfaces.nsILoadGroup);
+
+  var appstartup = Components.classes["@mozilla.org/toolkit/app-startup;1"]
+                             .getService(Components.interfaces.nsIAppStartup);
+
+  var loadlistener = {
+    onStartRequest: function ll_start(aRequest, aContext) {
+      appstartup.enterLastWindowClosingSurvivalArea();
+    },
+
+    onStopRequest: function ll_stop(aRequest, aContext, aStatusCode) {
+      appstartup.exitLastWindowClosingSurvivalArea();
+    },
+
+    QueryInterface: function ll_QI(iid) {
+      if (iid.equals(nsISupports) ||
+          iid.equals(Components.interfaces.nsIRequestObserver) ||
+          iid.equals(Components.interfaces.nsISupportsWeakReference))
+        return this;
+
+      throw Components.results.NS_ERROR_NO_INTERFACE;
+    }
+  };
+
+  loadgroup.groupObserver = loadlistener;
+
   var listener = {
     onStartURIOpen: function(uri) { return false; },
     doContent: function(ctype, preferred, request, handler) { return false; },
@@ -75,6 +108,9 @@ function openURI(uri)
     getInterface: function(iid) {
       if (iid.equals(Components.interfaces.nsIURIContentListener))
         return this;
+
+      if (iid.equals(Components.interfaces.nsILoadGroup))
+        return loadgroup;
 
       throw Components.results.NS_ERROR_NO_INTERFACE;
     }
@@ -214,52 +250,36 @@ var nsMailDefaultHandler = {
     if (!uri && cmdLine.preventDefault)
       return;
 
-    // xxxbsmedberg: This should be using nsIURILoader.openURI, which is what
-    // the 1.0 branch does (see nsAppShellService.cpp, revision 1.212.6.6).
-    // However, nsIURILoader.openURI is async, which means that the event loop
-    // sometimes is not run when it is supposed to, and other badness.
+    if (!uri && cmdLine.state != nsICommandLine.STATE_INITIAL_LAUNCH) {
+      try {
+        var wmed = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                             .getService(nsIWindowMediator);
 
-    if (cmdLine.state != nsICommandLine.STATE_INITIAL_LAUNCH) {
-      if (uri) {
-        openURI(cmdLine.resolveURI(uri));
-        return;
+        var wlist = wmed.getEnumerator("mail:3pane");
+        if (wlist.hasMoreElements()) {
+          var window = wlist.getNext().QueryInterface(nsIDOMWindowInternal);
+          window.focus();
+          return;
+        }
       }
-      else {
-        try {
-          var wmed = Components.classes["@mozilla.org/appshell/window-mediator;1"]
-                               .getService(nsIWindowMediator);
-
-          var wlist = wmed.getEnumerator("mail:3pane");
-          if (wlist.hasMoreElements()) {
-            var window = wlist.getNext().QueryInterface(nsIDOMWindowInternal);
-            window.focus();
-            return;
-          }
-        }
-        catch (e) {
-          dump(e);
-        }
+      catch (e) {
+        dump(e);
       }
     }
-
-    var wwatch = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
-                           .getService(nsIWindowWatcher);
-
-    var argstring = Components.classes["@mozilla.org/supports-string;1"]
-                              .createInstance(nsISupportsString);
-
-    var chromeURI = "chrome://messenger/content/";
 
     if (uri) {
-      argstring.data = uri;
+      openURI(cmdLine.resolveURI(uri));
+      // XXX: add error-handling here! (error dialog, if nothing else)
+    } else {
+      var wwatch = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
+                             .getService(nsIWindowWatcher);
 
-      if (uri.match(/^mailto:/)) {
-        chromeURI = "chrome://messenger/content/messengercompose/messengercompose.xul";
-      }
+      var argstring = Components.classes["@mozilla.org/supports-string;1"]
+                                .createInstance(nsISupportsString);
+
+      wwatch.openWindow(null, "chrome://messenger/content/", "_blank",
+                        "chrome,dialog=no,all", argstring);
     }
-
-    wwatch.openWindow(null, chromeURI, "_blank",
-                      "chrome,dialog=no,all", argstring);
   },
 
   helpInfo : "",

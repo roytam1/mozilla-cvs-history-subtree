@@ -205,7 +205,7 @@ var Module = {
       const catman = Components.classes['@mozilla.org/categorymanager;1']
                                .getService(Components.interfaces.nsICategoryManager);
       var len = kServiceCats.length;
-      for (var j = 0;  j < len; ++j) {
+      for (var j = 0; j < len; j++) {
         catman.addCategoryEntry(kServiceCats[j],
           kServiceCtrId, kServiceCtrId, true, true, null);
       }
@@ -220,7 +220,7 @@ var Module = {
     const catman = Components.classes['@mozilla.org/categorymanager;1']
                              .getService(Components.interfaces.nsICategoryManager);
     var len = kServiceCats.length;
-    for (var j = 0;  j < len; ++j) {
+    for (var j = 0; j < len; j++) {
       catman.deleteCategoryEntry(kServiceCats[j], kServiceCtrId, true);
     }
   },

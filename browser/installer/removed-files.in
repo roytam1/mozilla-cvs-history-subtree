@@ -31,6 +31,7 @@ components/nsBackgroundUpdateService.js
 components/autocomplete.xpt
 #endif
 @DLL_PREFIX@zlib@DLL_SUFFIX@
+#Remove Talkback files from old location (in case user updates from 1.0.x)
 components/BrandRes.dll
 components/fullsoft.dll
 components/master.ini

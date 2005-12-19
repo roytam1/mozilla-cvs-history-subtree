@@ -64,10 +64,10 @@ function isMsgEmailScam(aUrl)
   // loop through all of the link nodes in the message's DOM, looking for phishing URLs...
   var msgDocument = document.getElementById('messagepane').contentDocument;
 
-  // examine all anchor tags...
-  var anchorNodes = msgDocument.getElementsByTagName("a");
-  for (var index = 0; index < anchorNodes.length && !isEmailScam; index++)
-    isEmailScam = isPhishingURL(anchorNodes[index], true);
+  // examine all links...
+  var linkNodes = msgDocument.links;
+  for (var index = 0; index < linkNodes.length && !isEmailScam; index++)
+    isEmailScam = isPhishingURL(linkNodes[index], true);
 
   // if an e-mail contains a form element, then assume the message is a phishing attack.
   // Legitimate sites should not be using forms inside of e-mail.
@@ -100,7 +100,15 @@ function isPhishingURL(aLinkNode, aSilentMode)
   var isPhishingURL = false;
 
   var ioService = Components.classes["@mozilla.org/network/io-service;1"].getService(Components.interfaces.nsIIOService);
-  hrefURL  = ioService.newURI(href, null, null);
+  var hrefURL;
+  // make sure relative link urls don't make us bail out
+  try {
+    hrefURL = ioService.newURI(href, null, null);
+  }
+  catch(ex) 
+  { 
+    return false;
+  }
   
   // only check for phishing urls if the url is an http or https link. 
   // this prevents us from flagging imap and other internally handled urls

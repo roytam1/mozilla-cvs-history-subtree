@@ -1,0 +1,399 @@
+<?xml version="1.0"?>
+
+<bindings id="placesToolbarBindings"
+          xmlns="http://www.mozilla.org/xbl"
+          xmlns:xbl="http://www.mozilla.org/xbl"
+          xmlns:html="http://www.w3.org/1999/xhtml"
+          xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+  <binding id="places-bar">
+    <implementation>
+      <constructor><![CDATA[ 
+        this._places = 
+          Cc["@mozilla.org/browser/nav-history-service;1"].
+          getService(Ci.nsINavHistoryService);
+        this._bms = 
+          Cc["@mozilla.org/browser/nav-bookmarks-service;1"].
+          getService(Ci.nsINavBookmarksService);
+          
+        this._bms.addObserver(this._observer, false);
+        this.init();
+        var t = this;
+        window.addEventListener("resize",
+                                function f(e) { t.updateChevron(e); },
+                                false);
+      ]]></constructor>
+      
+      <destructor><![CDATA[ 
+        this._bms.removeObserver(this._observer);
+      ]]></destructor>
+      
+      <method name="init">
+        <body><![CDATA[
+        var query = this._places.getNewQuery();
+        query.setFolders([this._bms.toolbarRoot], 1);
+        var options = this._places.getNewQueryOptions();
+        options.setGroupingMode([Ci.nsINavHistoryQueryOptions.GROUP_BY_FOLDER], 1);
+        this._result = this._places.executeQuery(query, options);
+                                                     
+        // Check if the new query needs a show event.
+        if (PlacesController.nodeIsContainer(this._result)) {
+          var serv = Cc[this._result.folderType]
+                     .getService(Ci.nsIBookmarksContainer);
+          if (serv.onContainerOpening(this._result.folderId))
+            this._result = this._places.executeQueries(queries, queries.length,
+                                                       options);
+        }
+                                                         
+        this._rebuild();
+        ]]></body>
+      </method>
+      
+      <field name="_selection">null</field>
+      
+      <field name="_openedMenuButton">null</field>
+      
+      <field name="_result">null</field>
+      <method name="getResult">
+        <body><![CDATA[
+          return this._result;
+        ]]></body>
+      </method>
+      
+      <field name="_chevron">null</field>
+      <method name="_rebuild">
+        <body><![CDATA[ 
+          while (this.hasChildNodes())
+            this.removeChild(this.firstChild);
+          const XULNS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
+          var cc = this._result.childCount;
+          for (var i = 0; i < cc; ++i) {
+            var child = this._result.getChild(i);
+            var button = document.createElementNS(XULNS, "toolbarbutton");
+            button.setAttribute("label", child.title);
+            if (PlacesController.nodeIsURL(child)) {
+              button.setAttribute("url", child.url);
+              button.setAttribute("image", child.icon.spec);
+            } else if (PlacesController.nodeIsFolder(child)) {
+              button.setAttribute("type", "menu");
+              button.setAttribute("container", "true");
+              var popup = document.createElementNS(XULNS, "menupopup");
+              popup.setAttribute("type", "places");
+              button.appendChild(popup);
+              popup.folderId = child.folderId;
+            }
+            button.className = "menuitem-iconic bookmark-item";
+            button.node = child;
+            this.appendChild(button);
+          }
+          
+          var overflowPadder = document.createElementNS(XULNS, "hbox");
+          overflowPadder.setAttribute("mousethrough", "always");
+          overflowPadder.setAttribute("flex", "1");
+          overflowPadder.setAttribute("pack", "end");
+          this.appendChild(overflowPadder);
+          this._chevron = document.createElementNS(XULNS, "toolbarbutton");
+          this._chevron.setAttribute("type", "menu");
+          this._chevron.setAttribute("class", "chevron");
+          this._chevron.setAttribute("mousethrough", "never");
+          this._chevron.setAttribute("collapsed", "true");
+          overflowPadder.appendChild(this._chevron);
+          var popup = document.createElementNS(XULNS, "menupopup");
+          popup.setAttribute("type", "places");
+          popup.folderId = this._result.folderId;
+          var t = this;
+          popup.popupShowingCallback = function() {t.chevronPopupShowing();};
+          this._chevron.appendChild(popup);
+
+          this.updateChevron();
+        ]]></body>
+        
+      </method>
+      <method name="chevronPopupShowing">
+        <body><![CDATA[
+          var popup = this._chevron.firstChild;
+          for (var i = 0; i < popup.childNodes.length; i++) {
+            if (!this.childNodes[i].collapsed) {
+              popup.childNodes[i].hidden = true;
+            }
+          }
+        ]]></body>
+      </method>
+      
+      <method name="getElementWidth">
+        <parameter name="element"/>
+        <body><![CDATA[
+          var style = document.defaultView.getComputedStyle(element, '');
+          var leftMargin = style.getPropertyValue("margin-left");
+          leftMargin = leftMargin ? Math.round(parseFloat(leftMargin)) : 0;
+          var rightMargin = style.getPropertyValue("margin-right");
+          rightMargin = rightMargin ? Math.round(parseFloat(rightMargin)) : 0;
+          return element.boxObject.width + leftMargin + rightMargin;
+        ]]></body>
+      </method>
+      
+      <method name="updateChevron">
+        <parameter name="event"/>
+        <body><![CDATA[
+        
+          // Ignore events that aren't on the document or the window
+          // (html document, tooltips, etc)
+          if (event && event.target != document && event.target != window)
+            return;
+        
+          this._chevron.collapsed = false;
+          var chevronWidth = this._chevron.boxObject.width;          
+          var totalWidth = this.boxObject.width;
+          var spaceLeft = totalWidth;
+          var overflowed = false;
+          for (var i = 0; i < this.childNodes.length - 1; i++) {
+            var child = this.childNodes[i];
+            child.collapsed = false;
+            spaceLeft -= this.getElementWidth(child);
+            var spaceNeeded = (i == this.childNodes.length - 2) ? 0 : chevronWidth;
+            if (spaceLeft < spaceNeeded) {
+              overflowed = true;
+              child.collapsed = true;
+            }
+          }
+          this._chevron.collapsed = !overflowed;
+        ]]></body>
+      </method>
+      
+      <method name="load">
+        <parameter name="queries"/>
+        <parameter name="options"/>
+        <body><![CDATA[
+          // Check if the old query needs a hidden event.
+          if (PlacesController.nodeIsContainer(this._result)) {
+            var serv = Cc[this._result.folderType]
+                       .getService(Ci.nsIBookmarksContainer);
+            serv.onContainerClosed(this._result.folderId);
+          }
+          
+          this._result = this._places.executeQueries(queries, queries.length,
+                                                     options);
+
+          // Check if the new query needs a show event.
+          if (PlacesController.nodeIsContainer(this._result)) {
+            var serv = Cc[this._result.folderType]
+                       .getService(Ci.nsIBookmarksContainer);
+            if (serv.onContainerOpening(this._result.folderId))
+              this._result = this._places.executeQueries(queries, queries.length,
+                                                         options);
+          }
+          this._rebuild();
+        ]]></body>
+      </method>
+      
+      <property name="hasSelection">
+        <getter><![CDATA[ 
+          return this._selection != null;
+        ]]></getter>
+      </property>
+      
+      <property name="hasSingleSelection">
+        <getter><![CDATA[ 
+          return this.hasSelection;
+        ]]></getter>
+      </property>
+      
+      <method name="getSelectionNodes">
+        <body><![CDATA[
+          return this.hasSelection ? [this.selectedNode] : [];
+        ]]></body>
+      </method>
+      
+      <method name="getCopyableSelection">
+        <body><![CDATA[ 
+          return this.getSelectionNodes();
+        ]]></body>
+      </method>
+      
+      <property name="selectedNode">
+        <getter><![CDATA[ 
+          return this.hasSelection ? this._selection : null;
+        ]]></getter>
+      </property>
+      
+      <property name="selectedURLNode">
+        <getter><![CDATA[
+          var node = this.selectedNode;
+          return node && PlacesController.nodeIsURL(node) ? node : null;
+        ]]></getter>
+      </property>
+      
+      <property name="insertionPoint">
+        <getter><![CDATA[
+          // By default, the insertion point is at the top level, at the end. 
+          var index = -1;
+          var folderId = this._result.folderId;
+          
+          if (this.hasSelection) {
+            if(PlacesController.nodeIsFolder(this.selectedNode))
+              // If there is a folder selected, the insertion point is the
+              // end of the folder.
+              folderId = this.selectedNode.folderId;
+            else
+              // If there is another type of node selected, the insertion point
+              // is after that node.
+              index = PlacesController.getIndexOfNode(this.selectedNode)
+          }
+          return new InsertionPoint(folderId, index);
+        ]]></getter>
+      </property>
+      
+      <property name="browserWindow" onget="return window;"/>
+      
+      <field name="supportedDropTypes">
+        [TYPE_X_MOZ_PLACE_CONTAINER, TYPE_X_MOZ_PLACE, TYPE_X_MOZ_URL]
+      </field>
+
+      <field name="supportedDropOnTypes">
+        [TYPE_X_MOZ_PLACE_CONTAINER, TYPE_X_MOZ_PLACE, TYPE_X_MOZ_URL]
+      </field>
+      
+      <method name="selectAll">
+        <body><![CDATA[ 
+          // Nothing
+        ]]></body>
+      </method>
+      
+      <!-- nsINavBookmarkObserver -->
+      <field name="_observer"><![CDATA[({
+        _numBatches: 0,
+        _self: this,
+        onBeginUpdateBatch: function TB_O_onBeginUpdateBatch() {
+          ++this._numBatches;
+        },
+        onEndUpdateBatch: function TB_O_onEndUpdateBatch() {
+          if (!--this._numBatches)
+            this._self.init();
+        },
+        get wantAllDetails() { 
+          return false;
+        },
+        onItemAdded: function TB_O_onItemAdded(bookmark, folder, index) {
+          this._self.init();
+        },
+        onItemRemoved: function TB_O_onItemRemoved(bookmark, folder, index) {
+          this._self.init();
+        },
+        onItemMoved: function TB_O_onItemMoved(bookmark, folder, oldIndex, newIndex) {
+          this._self.init();
+        },
+        onItemChanged: function TB_O_onItemChanged(bookmark, property) {
+          this._self.init();
+        },
+        onFolderAdded: function TB_O_onFolderAdded(folder, parent, index) {
+          this._self.init();
+        },
+        onFolderRemoved: function TB_O_onFolderRemoved(folder, parent, index) {
+          this._self.init();
+        },
+        onFolderMoved: function TB_O_onFolderMoved(folder, oldParent, oldIndex, newParent, newIndex) {
+          this._self.init();
+        },
+        onFolderChanged: function TB_O_onFolderChanged(folder, property) {
+          this._self.init();
+        },
+      })]]></field>
+      <field name="_DNDObserver"><![CDATA[({
+        // XXXben ew.
+        _self: this,
+        onDragStart: function TBV_DO_onDragStart(event, xferData, dragAction) {
+          xferData.data = PlacesController.getTransferData();
+          // XXXben - the drag wrapper should do this automatically. 
+          if (event.ctrlKey)
+            dragAction.action = Ci.nsIDragService.DRAGDROP_ACTION_COPY;
+        },
+        
+        canDrop: function TBV_DO_canDrop(event, session) {
+          return PlacesControllerDragHelper.canDrop(this._self, -1);
+        },
+        onDragOver: function TBV_DO_onDragOver(event, flavor, session) {
+        },
+        onDrop: function TBV_DO_onDrop(event, dropData, session) {
+          var result = this._self.getResult();
+          var destContainer = result.folderId;
+          var destIndex = -1;
+          var orientation = 1;
+          if (event.target.localName == "toolbarbutton") {
+            if (PlacesController.nodeIsFolder(event.target.node)) {
+              destContainer = event.target.node.folderId;
+              destIndex = -1;
+              orientation = 0;
+            }
+            else {
+              destIndex = PlacesController.getIndexOfNode(event.target.node);
+              var bo = event.target.boxObject;
+              orientation = (event.screenX < bo.screenX + (bo.width / 2)) ? -1 : 1;
+              if (orientation == 1)
+                ++destIndex;
+            }
+          }
+          var ip = new InsertionPoint(destContainer, destIndex);
+          PlacesControllerDragHelper.onDrop(null, this._self,
+                                            ip, orientation);
+        },
+        getSupportedFlavours: function TBV_DO_getSupportedFlavours() {
+          var flavorSet = new FlavourSet();
+          for (var i = 0; i < this._self.supportedDropTypes.length; ++i)
+            flavorSet.appendFlavour(this._self.supportedDropTypes[i]);
+          return flavorSet;
+        },
+        
+      })]]></field>
+    </implementation>
+    <handlers>
+      <handler event="mousedown"><![CDATA[
+        // When the user clicks down on a button, set it as the selection and 
+        // tell the controller that we are the active view. 
+        if (event.target.localName == "toolbarbutton")
+          this._selection = event.target.node;
+        else 
+          this._selection = this.getResult();
+        PlacesController.activeView = this;
+        document.commandDispatcher.updateCommands("mousedown");
+      ]]></handler>
+      <handler event="click">
+        PlacesController.mouseLoadURI(event);
+      </handler>
+      <handler event="draggesture"><![CDATA[
+        // XXXben ew.
+        if (event.target.localName == "toolbarbutton" && 
+            !event.target.hasAttribute("type"))
+          nsDragAndDrop.startDrag(event, this._DNDObserver);
+      ]]></handler>
+      <handler event="dragover"><![CDATA[
+        // XXXben ew.
+        nsDragAndDrop.dragOver(event, this._DNDObserver);
+      ]]></handler>
+      <handler event="dragdrop"><![CDATA[
+        // XXXben ew.
+        nsDragAndDrop.drop(event, this._DNDObserver);
+      ]]></handler>
+      <handler event="popupshowing"><![CDATA[
+        if (event.target.parentNode.localName == "toolbarbutton")
+          this._openedMenuButton = event.target.parentNode;
+      ]]></handler>
+      <handler event="popuphidden"><![CDATA[
+        if (event.target.parentNode.localName == "toolbarbutton")
+          this._openedMenuButton = null;
+      ]]></handler>
+      <handler event="mousemove"><![CDATA[
+        if (this._openedMenuButton == null)
+          return;
+      
+        var target = event.target;
+        if (this._openedMenuButton != target &&
+            target.nodeName == "toolbarbutton" &&
+            target.type == "menu") {
+          this._openedMenuButton.open = false;
+          target.open = true;
+        }
+      ]]></handler>
+    </handlers>
+  </binding>
+
+</bindings>

@@ -66,7 +66,7 @@ typedef struct __struct_Options
 **  mOutput         Output file, append.
 **                  Default is stdout.
 **  mOutputName     Name of the file.
-**  mHelp           Wether or not help should be shown.
+**  mHelp           Whether or not help should be shown.
 **  mOverhead       How much overhead an allocation will have.
 **  mAlignment      What boundry will the end of an allocation line up on.
 **  mAverages       Whether or not to display averages.
@@ -381,7 +381,7 @@ int initOptions(Options* outOptions, int inArgc, char** inArgv)
             else
             {
                 retval = __LINE__;
-                ERROR_REPORT(retval, current->mLongName, "No hanlder for command line switch.");
+                ERROR_REPORT(retval, current->mLongName, "No handler for command line switch.");
             }
         }
     }

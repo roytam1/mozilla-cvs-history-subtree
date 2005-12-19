@@ -168,7 +168,7 @@ typedef struct __struct_Options
 **  mOutput             Output file, append.
 **                      Default is stdout.
 **  mOutputName         Name of the file.
-**  mHelp               Wether or not help should be shown.
+**  mHelp               Whether or not help should be shown.
 **  mMatchModules       Array of strings which the module name should match.
 **  mMatchModuleCount   Number of items in array.
 **  mSymDBName          Symbol DB filename.
@@ -403,7 +403,7 @@ int readSymDB(const char* inDBName, SymDB_Container** outDB)
                     trimWhite(lineBuf);
                     
                     /*
-                    **  Each line has four arguments.  tab seperated values (tsv).
+                    **  Each line has four arguments.  tab separated values (tsv).
                     **      Symbol
                     **      Section
                     **      Length
@@ -1597,7 +1597,7 @@ static int qsortRVABase(const void* in1, const void* in2)
 
 static int tsvout(Options* inOptions, unsigned inSize, MSMap_SegmentClass inClass, MSMap_SymbolScope inScope, const char* inModule, const char* inSegment, const char* inObject, const char* inSymbol)
 /*
-**  Output a line of map information seperated by tabs.
+**  Output a line of map information separated by tabs.
 **  Some items (const char*), if not present, will receive a default value.
 */
 {
@@ -1715,7 +1715,7 @@ void cleanModule(MSMap_Module* inModule)
 int map2tsv(Options* inOptions)
 /*
 **  Read all input.
-**  Output tab seperated value data.
+**  Output tab separated value data.
 */
 {
     int retval = 0;
@@ -2050,7 +2050,7 @@ int initOptions(Options* outOptions, int inArgc, char** inArgv)
             else
             {
                 retval = __LINE__;
-                ERROR_REPORT(retval, current->mLongName, "No hanlder for command line switch.");
+                ERROR_REPORT(retval, current->mLongName, "No handler for command line switch.");
             }
         }
     }

@@ -119,7 +119,9 @@ var gAddressBookAbListener = {
 
 function OnUnloadAddressBook()
 {  
-  var addrbookSession = Components.classes["@mozilla.org/addressbook/services/session;1"].getService().QueryInterface(Components.interfaces.nsIAddrBookSession);
+  var addrbookSession =
+        Components.classes["@mozilla.org/addressbook/services/session;1"]
+                  .getService(Components.interfaces.nsIAddrBookSession);
   addrbookSession.removeAddressBookListener(gAddressBookAbListener);
 
   RemovePrefObservers();
@@ -185,10 +187,15 @@ function delayedOnLoadAddressBook()
   InitCommonJS();
 
   //This migrates the LDAPServer Preferences from 4.x to mozilla format.
+  var ldapPrefs = null;
   try {
-      gLDAPPrefsService = Components.classes["@mozilla.org/ldapprefs-service;1"].getService();       
-      gLDAPPrefsService = gLDAPPrefsService.QueryInterface( Components.interfaces.nsILDAPPrefsService);                  
-  } catch (ex) {dump ("ERROR: Cannot get the LDAP service\n" + ex + "\n");}
+    ldapPrefs = Components.classes["@mozilla.org/ldapprefs-service;1"]
+                          .getService(Components.interfaces.nsILDAPPrefsService);
+  } catch (ex) {Components.utils.reportError("ERROR: Cannot get the LDAP service\n" + ex + "\n");}
+
+  if (ldapPrefs) {
+    ldapPrefs.migratePrefsIfNeeded();
+  }
 
   GetCurrentPrefs();
 
@@ -208,7 +215,9 @@ function delayedOnLoadAddressBook()
 
   // add a listener, so we can switch directories if
   // the current directory is deleted
-  var addrbookSession = Components.classes["@mozilla.org/addressbook/services/session;1"].getService().QueryInterface(Components.interfaces.nsIAddrBookSession);
+  var addrbookSession =
+        Components.classes["@mozilla.org/addressbook/services/session;1"]
+                  .getService(Components.interfaces.nsIAddrBookSession);
   // this listener cares when a directory (= address book), or a directory item
   // is/are removed. In the case of directory items, we are only really
   // interested in mailing list changes and not cards but we have to have both.
@@ -226,6 +235,12 @@ function delayedOnLoadAddressBook()
 
   var toolbarset = document.getElementById('customToolbars');
   toolbox.toolbarset = toolbarset;
+
+  // Ensure we don't load xul error pages into the main window
+  window.QueryInterface(Components.interfaces.nsIInterfaceRequestor)
+        .getInterface(Components.interfaces.nsIWebNavigation)
+        .QueryInterface(Components.interfaces.nsIDocShell)
+        .useErrorPages = false;
 }
 
 function OnLoadDirTree() {
@@ -872,9 +887,11 @@ function IsCardViewAndAbResultsPaneSplitterCollapsed()
 
 function LaunchUrl(url)
 {
-  var messenger = Components.classes["@mozilla.org/messenger;1"].createInstance(Components.interfaces.nsIMessenger);
-  messenger.SetWindow(window,null);
-  messenger.OpenURL(url);
+  // Doesn't matter if this bit fails, window.location contains its own prompts
+  try {
+    window.location = url;
+  }
+  catch (ex) {}
 }
 
 function AbIMSelected()

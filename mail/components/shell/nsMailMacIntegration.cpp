@@ -274,7 +274,6 @@ nsMailMacIntegration::ShowMailIntegrationDialog(nsIDOMWindow* aParentWindow)
     }
   }
 
-#if 0
   if (mShowNewsDialog && showNewsDialog) {
     nsXPIDLString dialogText;
     rv = mapiBundle->FormatStringFromName(
@@ -324,7 +323,6 @@ nsMailMacIntegration::ShowMailIntegrationDialog(nsIDOMWindow* aParentWindow)
       NS_ENSURE_SUCCESS(rv, rv);
     }
   }
-#endif
 
   return rv;
 }

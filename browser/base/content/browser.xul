@@ -44,6 +44,7 @@
 # ***** END LICENSE BLOCK *****
 
 <?xml-stylesheet href="chrome://browser/skin/" type="text/css"?> 
+<?xml-stylesheet href="chrome://global/skin/toolbar.css" type="text/css"?>
 <?xml-stylesheet href="chrome://browser/content/browser.css" type="text/css"?>
 <?xml-stylesheet href="chrome://global/skin/findBar.css" type="text/css"?>
 
@@ -114,6 +115,7 @@
 # The hacky hidden tree used by the Go menu to build items.
 #include browser-gotreehack.inc
 
+#ifndef MOZ_PLACES
   <!-- bookmarks context menu -->
   <popupset>
     <menupopup id="bookmarks-context-menu" 
@@ -129,6 +131,7 @@
       <label id="btUrlText" />
     </vbox>
   </tooltip>
+#endif
 
   <toolbox id="navigator-toolbox" class="toolbox-top" mode="icons">
     <!-- Menu -->
@@ -222,7 +225,7 @@
                              this.parentNode.selectedIndex = 0;"
                     tooltiptext="&proxyIcon.tooltip;"/>
           </deck>
-          <hbox>
+          <hbox id="urlbar-icons">
             <button type="menu" style="-moz-user-focus: none" class="plain" id="feed-button" chromedir="&locale.dir;">
               <menupopup onpopupshowing="return FeedHandler.buildFeedList(event);" position="after_end"
                          oncommand="FeedHandler.addLiveBookmark(event.target.getAttribute('feed'));" />
@@ -258,10 +261,11 @@
                 onclick="checkForMiddleClick(this, event);"
                 tooltiptext="&throbber.tooltip;"/>
       </toolbaritem>
-      
+
+#ifndef MOZ_PLACES
       <toolbaritem id="personal-bookmarks" title="&bookmarksItem.title;" flex="1"
                    class="chromeclass-directories">
-        <stack id="bookmarks-stack" flex="1" style="min-width:0px; width:0px;"
+        <stack id="bookmarks-stack" flex="1" style="min-width:0px; width:0px; overflow: hidden;"
                onpopupshowing="BookmarksToolbar.setOpenedMenu(event);"
                onpopuphidden="BookmarksToolbar.unsetOpenedMenu(event);">
           <hbox id="bookmarks-ptf" class="bookmarks-toolbar-items" contextmenu="bookmarks-context-menu"
@@ -307,6 +311,7 @@
                            label="&bookmarksToolbarItem.label;"/>
           </stack>
         </toolbaritem>
+#endif
 
         <toolbarbutton id="downloads-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
                        observes="Tools:Downloads"
@@ -336,12 +341,14 @@
         </toolbarbutton>                       
 #endif
 
+#ifndef MOZ_PLACES
         <toolbarbutton id="bookmarks-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
                        observes="viewBookmarksSidebar"
                        tooltiptext="&bookmarksButton.tooltip;"
                        ondragover="nsDragAndDrop.dragOver(event, bookmarksButtonObserver);"
                        ondragdrop="nsDragAndDrop.drop(event, bookmarksButtonObserver);"
                        ondragexit="nsDragAndDrop.dragExit(event, bookmarksButtonObserver);"/>
+#endif
 
         <toolbarbutton id="new-tab-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
                        label="&tabCmd.label;"
@@ -406,10 +413,12 @@
  
     <toolbarset id="customToolbars" context="toolbar-context-menu"/>
 
+#ifndef MOZ_PLACES
     <toolbar id="PersonalToolbar" class="chromeclass-directories" iconsize="small"
              customizable="true" defaultset="personal-bookmarks" mode="icons"
              toolbarname="&personalbarCmd.label;" accesskey="&personalbarCmd.accesskey;"
-             context="toolbar-context-menu"/>   
+             context="toolbar-context-menu"/>
+#endif
   </toolbox>
   
   <hbox flex="1" id="browser">

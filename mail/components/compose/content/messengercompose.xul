@@ -66,7 +66,7 @@
 
 <stringbundleset id="stringbundleset">
   <stringbundle id="bundle_composeMsgs" src="chrome://messenger/locale/messengercompose/composeMsgs.properties"/>
-  <stringbundle id="bundle_messenger" src="chrome://messenger/locale/messenger.properties"/>
+  <stringbundle id="bundle_messenger"   src="chrome://messenger/locale/messenger.properties"/>
   <stringbundle id="languageBundle"     src="chrome://global/locale/languageNames.properties"/>
 </stringbundleset>
 
@@ -197,6 +197,7 @@
   <key id="key_cut" key="&cutCmd.key;" modifiers="accel"/>
   <key id="key_copy" key="&copyCmd.key;" modifiers="accel"/>
   <key id="key_paste" key="&pasteCmd.key;" modifiers="accel"/>
+  <key id="key_rewrap" key="&editRewrapCmd.key;" modifiers="accel"/>
   <key id="key_delete" keycode="VK_DELETE"/>
   <key id="key_selectAll" key="&selectAllCmd.key;" modifiers="accel"/>
   <key id="key_find" key="&findCmd.key;" command="cmd_find" modifiers="accel"/>
@@ -343,7 +344,7 @@
           <menuitem id="menu_paste" label="&pasteCmd.label;" key="key_paste" accesskey="&pasteCmd.accesskey;" command="cmd_paste"/>
           <menuitem id="menu_pasteNoFormatting" command="cmd_pasteNoFormatting"/>
           <menuitem id="menu_pasteQuote"/>
-          <menuitem label="&editRewrapCmd.label;" accesskey="&editRewrapCmd.accesskey;" command="cmd_rewrap"/>
+          <menuitem id="menu_rewrap" label="&editRewrapCmd.label;" key="key_rewrap" accesskey="&editRewrapCmd.accesskey;" command="cmd_rewrap"/>
           <menuitem id="menu_delete" label="&deleteCmd.label;" key="key_delete" accesskey="&deleteCmd.accesskey;" command="cmd_delete"/>
           <menuseparator/>
           <menuitem id="menu_selectAll" label="&selectAllCmd.label;" key="key_selectAll" accesskey="&selectAllCmd.accesskey;" command="cmd_selectAll"/>
@@ -696,7 +697,7 @@
         <vbox flex="1" id="addresses-box">
           <hbox align="center">
             <label value="&fromAddr.label;" accesskey="&fromAddr.accesskey;" control="msgIdentity"/>
-            <menulist id="msgIdentity" class="identity-menulist" label="..." flex="1" oncommand="LoadIdentity(false);">
+            <menulist id="msgIdentity" type="description" flex="1" oncommand="LoadIdentity(false);">
               <menupopup id="msgIdentityPopup"/>
             </menulist>
           </hbox> 

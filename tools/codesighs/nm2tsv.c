@@ -60,7 +60,7 @@ typedef struct __struct_Options
 **  mOutput         Output file, append.
 **                  Default is stdout.
 **  mOutputName     Name of the file.
-**  mHelp           Wether or not help should be shown.
+**  mHelp           Whether or not help should be shown.
 */
 {
     const char* mProgramName;
@@ -141,7 +141,7 @@ void trimWhite(char* inString)
 int nm2tsv(Options* inOptions)
 /*
 **  Read all input.
-**  Output tab seperated value data.
+**  Output tab separated value data.
 **
 **  We expect our data to be in a particular format.
 **  nm --format=bsd --size-sort --print-file-name --demangle
@@ -419,7 +419,7 @@ int initOptions(Options* outOptions, int inArgc, char** inArgv)
             else
             {
                 retval = __LINE__;
-                ERROR_REPORT(retval, current->mLongName, "No hanlder for command line switch.");
+                ERROR_REPORT(retval, current->mLongName, "No handler for command line switch.");
             }
         }
     }

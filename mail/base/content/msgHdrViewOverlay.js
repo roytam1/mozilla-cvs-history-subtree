@@ -121,12 +121,12 @@ var gMessageListeners = new Array;
 // Our first view is the collapsed view. This is very light weight view of the data. We only show a couple
 // fields.
 var gCollapsedHeaderList = [ {name:"subject", outputFunction:updateHeaderValueInTextNode},
-                             {name:"from", useShortView:true, outputFunction:OutputEmailAddresses},
+                             {name:"from", useToggle:true, useShortView:true, outputFunction:OutputEmailAddresses},
                              {name:"date", outputFunction:updateHeaderValueInTextNode}];
 
 // We also have an expanded header view. This shows many of your more common (and useful) headers.
 var gExpandedHeaderList = [ {name:"subject"}, 
-                            {name:"from", outputFunction:OutputEmailAddresses},
+                            {name:"from", useToggle:true, outputFunction:OutputEmailAddresses},
                             {name:"sender", outputFunction:OutputEmailAddresses},
                             {name:"reply-to", outputFunction:OutputEmailAddresses},
                             {name:"date"},
@@ -167,10 +167,20 @@ var currentAttachments = new Array();
 // headerListInfo --> entry from a header list.
 function createHeaderEntry(prefix, headerListInfo)
 {
+  var useShortView = false;
   var partialIDName = prefix + headerListInfo.name;
   this.enclosingBox = document.getElementById(partialIDName + 'Box');
   this.textNode = document.getElementById(partialIDName + 'Value');
   this.isValid = false;
+
+  if ("useShortView" in headerListInfo)
+  {
+    useShortView = headerListInfo.useShortView;
+    if (useShortView)
+      this.enclosingBox = this.textNode;
+    else
+      this.enclosingBox.emailAddressNode = this.textNode;
+  }
 
   if ("useToggle" in headerListInfo)
   {
@@ -185,13 +195,8 @@ function createHeaderEntry(prefix, headerListInfo)
   else
    this.useToggle = false;
 
-  if ("useShortView" in headerListInfo)
-  {
-    this.useShortView = headerListInfo.useShortView;
-    this.enclosingBox.emailAddressNode = this.textNode;
-  }
-  else
-    this.useShortView = false;
+  if (this.textNode)
+    this.textNode.useShortView = useShortView;
 
   if ("outputFunction" in headerListInfo)
     this.outputFunction = headerListInfo.outputFunction;
@@ -359,8 +364,8 @@ var messageHeaderSink = {
     processHeaders: function(headerNameEnumerator, headerValueEnumerator, dontCollectAddress)
     {
       this.onStartHeaders(); 
-      var fromMailbox;
 
+      const kMailboxSeparator = ", ";
       var index = 0;
       while (headerNameEnumerator.hasMore()) 
       {
@@ -376,12 +381,7 @@ var messageHeaderSink = {
         // already. 
         if (lowerCaseHeaderName == "x-mailer" || lowerCaseHeaderName == "x-mimeole")
           lowerCaseHeaderName = "user-agent";   
-        else if (lowerCaseHeaderName == "sender" && msgHeaderParser &&
-            header.headerValue && fromMailbox)
-        {
-          if (msgHeaderParser.extractHeaderAddressMailboxes(null, header.headerValue) == fromMailbox)
-            continue;
-        }
+
         if (this.mDummyMsgHeader)
         {
           if (lowerCaseHeaderName == "from")
@@ -414,38 +414,40 @@ var messageHeaderSink = {
         }
         else
          currentHeaderData[lowerCaseHeaderName] = header;
+
         if (lowerCaseHeaderName == "from")
         {
-          if (msgHeaderParser && header.headerValue)
-            fromMailbox = msgHeaderParser.extractHeaderAddressMailboxes(null, header.headerValue);
-
-          if (header.headerValue) {
+          if (header.headerValue)
+          {
             try
             {
-              if ((gCollectIncoming && !dontCollectAddress) || 
-                  (gCollectNewsgroup && dontCollectAddress))
+              var createCard = (gCollectIncoming && !dontCollectAddress) || (gCollectNewsgroup && dontCollectAddress);
+              if (createCard || gCollectOutgoing)
               {
                 if (!abAddressCollector)
-                  abAddressCollector = Components.classes[abAddressCollectorContractID].getService(Components.interfaces.nsIAbAddressCollecter);
+                  abAddressCollector = Components.classes[abAddressCollectorContractID]
+                                                 .getService(Components.interfaces.nsIAbAddressCollecter);
 
                 gCollectAddress = header.headerValue;
-                // collect, and add card if doesn't exist, unknown preferred send format
-                gCollectAddressTimer = setTimeout('abAddressCollector.collectUnicodeAddress(gCollectAddress, true, Components.interfaces.nsIAbPreferMailFormat.unknown);', 2000);
-              }
-              else if (gCollectOutgoing) 
-              {
-                if (!abAddressCollector)
-                  abAddressCollector = Components.classes[abAddressCollectorContractID].getService(Components.interfaces.nsIAbAddressCollecter);
-
-                // collect, but only update existing cards, unknown preferred send format
-                gCollectAddress = header.headerValue;
-                gCollectAddressTimer = setTimeout('abAddressCollector.collectUnicodeAddress(gCollectAddress, false, Components.interfaces.nsIAbPreferMailFormat.unknown);', 2000);
+                // collect, add card if doesn't exist and gCollectOutgoing is set, 
+                // otherwise only update existing cards, unknown preferred send format
+                gCollectAddressTimer = setTimeout('abAddressCollector.collectUnicodeAddress(gCollectAddress, ' + createCard + ', Components.interfaces.nsIAbPreferMailFormat.unknown);', 2000);
               }
             }
             catch(ex) {}
-          } 
+          }
         } // if lowerCaseHeaderName == "from"
       } // while we have more headers to parse
+
+      if (("from" in currentHeaderData) && ("sender" in currentHeaderData) && msgHeaderParser)
+      {
+        var senderMailbox = kMailboxSeparator + msgHeaderParser.extractHeaderAddressMailboxes(null,
+                            currentHeaderData.sender.headerValue) + kMailboxSeparator;
+        var fromMailboxes = kMailboxSeparator + msgHeaderParser.extractHeaderAddressMailboxes(null,
+                            currentHeaderData.from.headerValue) + kMailboxSeparator;
+        if (fromMailboxes.indexOf(senderMailbox) >= 0)
+          delete currentHeaderData.sender;
+      }
 
       this.onEndHeaders();
     },
@@ -473,7 +475,7 @@ var messageHeaderSink = {
 
       // display name optimization. Eliminate any large quantities of white space from the display name.
       // such that Hello       World.txt becomes Hello World.txt.
-      var displayName = displayName.replace(/ +/g, " ");
+      displayName = displayName.replace(/ +/g, " ");
           
       currentAttachments.push (new createNewAttachmentInfo(contentType, url, displayName, uri, isExternalAttachment));
       // if we have an attachment, set the MSG_FLAG_ATTACH flag on the hdr
@@ -745,7 +747,6 @@ function createNewHeaderView(headerName)
   this.enclosingBox = newHeader;
   this.isValid = false;
   this.useToggle = false;
-  this.useShortView = false;
   this.outputFunction = updateHeaderValue;
 }
 
@@ -757,6 +758,7 @@ function UpdateMessageHeaders()
   // iterate over each header we received and see if we have a matching entry in each
   // header view table...
 
+  var headerName;
   for (headerName in currentHeaderData)
   {
     var headerField = currentHeaderData[headerName];
@@ -874,17 +876,12 @@ function OutputNewsgroups(headerEntry, headerValue)
 // extracts them one by one, linkifying each email address into a mailto url. 
 // Then we add the link-ified email address to the parentDiv passed in.
 // 
-// defaultParentDiv --> the div to add the link-ified email addresses into. 
 // emailAddresses --> comma separated list of the addresses for this header field
-// includeShortLongToggle --> true if you want to include the ability to toggle between short/long
-// address views for this header field. If true, then pass in a another div which is the div the long
-// view will be added too...
-// useShortView --> if true, we'll only generate the Name of the email address field instead of
-//                        showing the name + the email address.
 
 function OutputEmailAddresses(headerEntry, emailAddresses)
 {
-  if ( !emailAddresses ) return;
+  if (!emailAddresses)
+    return;
 
   if (msgHeaderParser)
   {
@@ -900,19 +897,14 @@ function OutputEmailAddresses(headerEntry, emailAddresses)
       // if we want to include short/long toggle views and we have a long view, always add it.
       // if we aren't including a short/long view OR if we are and we haven't parsed enough
       // addresses to reach the cutoff valve yet then add it to the default (short) div.
+      var address = {};
+      address.emailAddress = addresses.value[index];
+      address.fullAddress = fullNames.value[index];
+      address.displayName = names.value[index];
       if (headerEntry.useToggle)
-      {
-        var address = {};
-        address.emailAddress = addresses.value[index];
-        address.fullAddress = fullNames.value[index];
-        address.displayName = names.value[index];
         headerEntry.enclosingBox.addAddressView(address);
-      }
       else
-      {
-        updateEmailAddressNode(headerEntry.enclosingBox.emailAddressNode, addresses.value[index], 
-                               fullNames.value[index], names.value[index], headerEntry.useShortView);
-      }
+        updateEmailAddressNode(headerEntry.enclosingBox.emailAddressNode, address);
 
       if (headerEntry.enclosingBox.getAttribute("id") == "expandedfromBox") {
         setFromBuddyIcon(addresses.value[index]);
@@ -971,22 +963,16 @@ function setFromBuddyIcon(email)
    fromBuddyIcon.setAttribute("src", "");
 }
 
-function updateEmailAddressNode(emailAddressNode, emailAddress, fullAddress, displayName, useShortView)
+function updateEmailAddressNode(emailAddressNode, address)
 {
-  if (useShortView && displayName) {
-    emailAddressNode.setAttribute("label", displayName);
-    emailAddressNode.setAttribute("tooltiptext", emailAddress);
-  } else {
-    emailAddressNode.setAttribute("label", fullAddress);
-    emailAddressNode.removeAttribute("tooltiptext");
-  }
-
-  emailAddressNode.setTextAttribute("emailAddress", emailAddress);
-  emailAddressNode.setTextAttribute("fullAddress", fullAddress);  
-  emailAddressNode.setTextAttribute("displayName", displayName);  
+  emailAddressNode.setAttribute("label", address.fullAddress || address.displayName);
+  emailAddressNode.removeAttribute("tooltiptext");
+  emailAddressNode.setTextAttribute("emailAddress", address.emailAddress);
+  emailAddressNode.setTextAttribute("fullAddress", address.fullAddress);
+  emailAddressNode.setTextAttribute("displayName", address.displayName);
   
   if ("AddExtraAddressProcessing" in this)
-    AddExtraAddressProcessing(emailAddress, emailAddressNode);
+    AddExtraAddressProcessing(address.emailAddress, emailAddressNode);
 }
 
 // thunderbird has smart logic for determining if we should show just the display name.
@@ -997,7 +983,7 @@ function updateEmailAddressNode(emailAddressNode, emailAddress, fullAddress, dis
 function AddExtraAddressProcessing(emailAddress, addressNode)
 {
   var displayName = addressNode.getTextAttribute("displayName");  
-  var emailAddress = addressNode.getTextAttribute("emailAddress");
+  var mailAddress = addressNode.getTextAttribute("emailAddress");
 
   // always show the address for the from and reply-to fields
   var parentElementId = addressNode.parentNode.id;
@@ -1005,10 +991,10 @@ function AddExtraAddressProcessing(emailAddress, addressNode)
   if (parentElementId == "expandedfromBox" || parentElementId == "expandedreply-toBox")
     condenseName = false;
 
-  if (condenseName && gShowCondensedEmailAddresses && displayName && useDisplayNameForAddress(emailAddress))
+  if (condenseName && gShowCondensedEmailAddresses && displayName && useDisplayNameForAddress(mailAddress))
   {
     addressNode.setAttribute('label', displayName); 
-    addressNode.setAttribute("tooltiptext", emailAddress);
+    addressNode.setAttribute("tooltiptext", mailAddress);
     addressNode.setAttribute("tooltip", "emailAddressTooltip");
   }
   else
@@ -1426,7 +1412,7 @@ function addAttachmentToPopup(popup, attachment, attachmentIndex)
       // find the separator
       var indexOfSeparator = 0;
       while (popup.childNodes[indexOfSeparator].localName != 'menuseparator')
-        indexOfSeparator++;      
+        indexOfSeparator++;
 
       var formattedDisplayNameString = gMessengerBundle.getFormattedString("attachmentDisplayNameFormat",
                                        [attachmentIndex, attachment.displayName]);
@@ -1435,7 +1421,7 @@ function addAttachmentToPopup(popup, attachment, attachmentIndex)
       item.setAttribute('accesskey', attachmentIndex); 
 
       // each attachment in the list gets its own menupopup with options for saving, deleting, detaching, etc. 
-      var openpopup = document.createElement('menupopup'); 
+      var openpopup = document.createElement('menupopup');
       openpopup = item.appendChild(openpopup);
 
       // Due to Bug #314228, we must append our menupopup to the new attachment menu item
@@ -1445,7 +1431,7 @@ function addAttachmentToPopup(popup, attachment, attachmentIndex)
 
       var menuitementry = document.createElement('menuitem');
       menuitementry.attachment = cloneAttachment(attachment);
-      menuitementry.setAttribute('oncommand', 'openAttachment(this.attachment)');
+      menuitementry.setAttribute('oncommand', 'openAttachment(this.attachment)'); 
 
       if (!gSaveLabel)
         gSaveLabel = gMessengerBundle.getString("saveLabel");
@@ -1698,6 +1684,9 @@ function nsDummyMsgHeader()
 
 nsDummyMsgHeader.prototype =
 {
+  mProperties : new Array,
+  getStringProperty : function(property) {return this.mProperties[property];},
+  setStringProperty : function(property, val) {this.mProperties[property] = val;},
   messageSize : 0,
   recipients : null,
   from : null,

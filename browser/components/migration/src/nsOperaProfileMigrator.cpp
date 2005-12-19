@@ -311,6 +311,7 @@ nsOperaProfileMigrator::GetSourceHomePageURL(nsACString& aResult)
 
   return NS_OK;
 }
+ 
 
 #define _OPM(type) nsOperaProfileMigrator::type
 
@@ -324,7 +325,7 @@ nsOperaProfileMigrator::PrefTransform gTransforms[] = {
   { nsnull, "Allow script to raise window", _OPM(BOOL), "dom.disable_window_flip", _OPM(SetBool), PR_FALSE, -1 },
   { nsnull, "Allow script to change status", _OPM(BOOL), "dom.disable_window_status_change", _OPM(SetBool), PR_FALSE, -1 },
   { nsnull, "Ignore Unrequested Popups", _OPM(BOOL), "dom.disable_open_during_load", _OPM(SetBool), PR_FALSE, -1 },
-  { nsnull, "Load Figures", _OPM(BOOL), "network.image.imageBehavior", _OPM(SetImageBehavior), PR_FALSE, -1 },
+  { nsnull, "Load Figures", _OPM(BOOL), "permissions.default.image", _OPM(SetImageBehavior), PR_FALSE, -1 },
 
   { "Visited link", nsnull, _OPM(COLOR), "browser.visited_color", _OPM(SetString), PR_FALSE, -1 },
   { "Link", nsnull, _OPM(COLOR), "browser.anchor_color", _OPM(SetString), PR_FALSE, -1 },
@@ -359,7 +360,7 @@ nsresult
 nsOperaProfileMigrator::SetImageBehavior(void* aTransform, nsIPrefBranch* aBranch)
 {
   PrefTransform* xform = (PrefTransform*)aTransform;
-  return aBranch->SetIntPref(xform->targetPrefName, xform->boolValue ? 0 : 2);
+  return aBranch->SetIntPref(xform->targetPrefName, xform->boolValue ? 1 : 2);
 }
 
 nsresult 
@@ -504,7 +505,9 @@ nsOperaProfileMigrator::CopyProxySettings(nsINIParser &aParser,
 
     sprintf(serverPrefBuf, "network.proxy.%s", protocols_l[i]);
     sprintf(serverPortPrefBuf, "network.proxy.%s_port", protocols_l[i]);
-    SetProxyPref(proxyServer, serverPrefBuf, serverPortPrefBuf, aBranch);
+    // strings in Opera pref. file are in UTF-8
+    SetProxyPref(NS_ConvertUTF8toUTF16(proxyServer),
+                 serverPrefBuf, serverPortPrefBuf, aBranch);
   }
 
   GetInteger(aParser, "Proxy", "Use Automatic Proxy Configuration", &enabled);
@@ -522,7 +525,8 @@ nsOperaProfileMigrator::CopyProxySettings(nsINIParser &aParser,
     nsCAutoString servers;
     rv = aParser.GetString("Proxy", "No Proxy Servers", servers);
     if (NS_SUCCEEDED(rv))
-      ParseOverrideServers(servers.get(), aBranch);
+      // strings in Opera pref. file are in UTF-8
+      ParseOverrideServers(NS_ConvertUTF8toUTF16(servers), aBranch);
   }
 
   aBranch->SetIntPref("network.proxy.type", networkProxyType);
@@ -885,7 +889,7 @@ nsresult
 nsOperaCookieMigrator::AddCookie(nsICookieManager2* aManager)
 {
   // This is where we use the information gathered in all the other 
-  // states to add a cookie to the Firebird Cookie Manager.
+  // states to add a cookie to the Firebird/Firefox Cookie Manager.
   nsXPIDLCString domain;
   SynthesizeDomain(getter_Copies(domain));
 

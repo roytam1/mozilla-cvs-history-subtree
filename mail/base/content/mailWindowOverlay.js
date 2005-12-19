@@ -2136,8 +2136,9 @@ function HandleJunkStatusChanged(folder)
         var sanitizeJunkMail = gPrefBranch.getBoolPref("mailnews.display.sanitizeJunkMail");
         if (changedJunkStatus && sanitizeJunkMail) // only bother doing this if we are modifying the html for junk mail....
         {
-          var folder = GetLoadedMsgFolder();
-          var moveJunkMail = (folder && folder.server && folder.server.spamSettings) ? folder.server.spamSettings.manualMark : false;
+          var loadedFolder = GetLoadedMsgFolder();
+          var moveJunkMail = (loadedFolder && loadedFolder.server && loadedFolder.server.spamSettings) ?
+	                     loadedFolder.server.spamSettings.manualMark : false;
 
           var junkScore = msgHdr.getStringProperty("junkscore"); 
           var isJunk = ((junkScore != "") && (junkScore != "0"));
@@ -2396,7 +2397,7 @@ function HandleMDNResponse(aUrl)
   if (SelectedMessagesAreJunk())
     return;
 
-  var msgHdr = messenger.messageServiceFromURI(msgURI).messageURIToMsgHdr(msgURI);
+  var msgHdr = messenger.msgHdrFromURI(msgURI);
   var mimeHdr;
 
   try {
@@ -2542,7 +2543,7 @@ function checkForUpdates()
   if (um.activeUpdate && um.activeUpdate.state == "pending")
     prompter.showUpdateDownloaded(um.activeUpdate);
   else
-    prompter.checkForUpdates();
+  prompter.checkForUpdates();
 }
 
 function buildHelpMenu()
@@ -2564,7 +2565,7 @@ function buildHelpMenu()
 
   if (!gMessengerBundle)
     gMessengerBundle = document.getElementById("bundle_messenger");
-
+  
   var activeUpdate = um.activeUpdate;
   
   // If there's an active update, substitute its name into the label
@@ -2573,7 +2574,7 @@ function buildHelpMenu()
     if (activeUpdate && activeUpdate.name)
       return gMessengerBundle.getFormattedString(key, [activeUpdate.name]);
     return gMessengerBundle.getString(key + "Fallback");
-  }
+    }
   
   // By default, show "Check for Updates..."
   var key = "default";

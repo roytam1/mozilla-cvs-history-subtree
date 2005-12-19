@@ -61,7 +61,7 @@ const nsIWindowWatcher       = Components.interfaces.nsIWindowWatcher;
 const nsICategoryManager     = Components.interfaces.nsICategoryManager;
 const nsIWebNavigationInfo   = Components.interfaces.nsIWebNavigationInfo;
 
-const NS_BINDING_ABORTED = 0x80020006;
+const NS_BINDING_ABORTED = 0x804b0002;
 const NS_ERROR_WONT_HANDLE_CONTENT = 0x805d0001;
 const NS_ERROR_ABORT = Components.results.NS_ERROR_ABORT;
 
@@ -247,7 +247,14 @@ var nsBrowserContentHandler = {
       try {
         var a = /^\s*(\w+)\(([^\)]*)\)\s*$/.exec(remoteCommand);
         var remoteVerb = a[1].toLowerCase();
-        var remoteParams = a[2].split(",");
+        var remoteParams = [];
+        var sepIndex = a[2].lastIndexOf(",");
+        if (sepIndex == -1)
+          remoteParams[0] = a[2];
+        else {
+          remoteParams[0] = a[2].substring(0, sepIndex);
+          remoteParams[1] = a[2].substring(sepIndex + 1);
+        }
 
         switch (remoteVerb) {
         case "openurl":

@@ -83,11 +83,12 @@
     <command id="cmd_bm_moveBookmark"              oncommand="goDoCommand('cmd_bm_moveBookmark');"/>
     <command id="cmd_bm_sortbyname"                oncommand="goDoCommand('cmd_bm_sortbyname');"/>
 
-    <command id="cmd_handleBackspace"  oncommand="BrowserHandleBackspace();" />
-
+    <command id="cmd_handleBackspace" oncommand="BrowserHandleBackspace();" />
+    <command id="cmd_handleShiftBackspace" oncommand="BrowserHandleShiftBackspace();" />
     <command id="cmd_newNavigatorTab" oncommand="BrowserOpenTab();"/>
     <command id="Browser:OpenFile"  oncommand="BrowserOpenFileWindow();"/>
     <command id="Browser:SavePage" oncommand="saveDocument(window.content.document);"/>
+    <command id="Browser:SaveFrame" oncommand="saveFrameDocument();"/>
 
     <command id="Browser:SendLink" oncommand="MailIntegration.sendLinkForContent();"/>
     <command id="Browser:NewMessage" oncommand="MailIntegration.sendMessage('', '');"/>
@@ -98,6 +99,7 @@
 
     <command id="cmd_pageSetup" oncommand="PrintUtils.showPageSetup();"/>
     <command id="cmd_print" oncommand="PrintUtils.print();"/>
+    <command id="cmd_printPreview" oncommand="PrintUtils.printPreview(onEnterPrintPreview, onExitPrintPreview);"/>
     <command id="cmd_close" oncommand="BrowserCloseTabOrWindow()"/>
     <command id="cmd_closeWindow" oncommand="BrowserTryToCloseWindow()"/>
     <command id="cmd_toggleTaskbar" oncommand="goToggleToolbar('status-bar','toggle_taskbar');"/>
@@ -138,12 +140,12 @@
              oncommand="goDoCommand('cmd_switchTextDirection');"
              disabled="true"/>
 
-    <command id="View:PageSource" oncommand="BrowserViewSourceOfDocument(content.document);"/>
+    <command id="View:PageSource" oncommand="BrowserViewSourceOfDocument(content.document);" observes="isImage"/>
     <command id="View:PageInfo" oncommand="BrowserPageInfo();"/>
     <command id="View:FullScreen" oncommand="BrowserFullScreen();"/>
-    <command id="cmd_find" oncommand="onFindCmd();"/>
-    <command id="cmd_findAgain" oncommand="onFindAgainCmd();"/>
-    <command id="cmd_findPrevious" oncommand="onFindPreviousCmd();"/>    
+    <command id="cmd_find" oncommand="gFindBar.onFindCmd();" observes="isImage"/>
+    <command id="cmd_findAgain" oncommand="gFindBar.onFindAgainCmd();" observes="isImage"/>
+    <command id="cmd_findPrevious" oncommand="gFindBar.onFindPreviousCmd();" observes="isImage"/>    
     <command id="Browser:AddBookmarkAs" oncommand="addBookmarkAs(document.getElementById('content'), false);"/>
     <command id="Browser:BookmarkAllTabs" oncommand="addBookmarkAs(document.getElementById('content'), true);"/>
     <command id="Browser:Home"    oncommand="BrowserHome();"/>
@@ -196,7 +198,7 @@
                  type="checkbox"
                  oncommand="gPopupBlockerObserver.dontShowMessage();"/>
     <broadcaster id="blockedPopupsSeparator"/>
-
+    <broadcaster id="isImage"/>
   </broadcasterset>
 
   <keyset id="mainKeyset">
@@ -266,7 +268,7 @@
     <key id="key_selectAll" key="&selectAllCmd.key;" modifiers="accel"/>
 
     <key keycode="VK_BACK" command="cmd_handleBackspace"/>
-    <key keycode="VK_BACK" command="Browser:Forward" modifiers="shift"/>
+    <key keycode="VK_BACK" command="cmd_handleShiftBackspace" modifiers="shift"/>
 #ifndef XP_MACOSX
     <key id="goBackKb"  keycode="VK_LEFT" command="Browser:Back" modifiers="alt"/>
     <key id="goForwardKb"  keycode="VK_RIGHT" command="Browser:Forward" modifiers="alt"/>

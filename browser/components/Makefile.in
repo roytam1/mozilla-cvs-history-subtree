@@ -63,7 +63,12 @@ DIRS = \
 	preferences \
 	shell \
 	sidebar \
-	build \
 	$(NULL)
+
+ifdef MOZ_PLACES
+DIRS += places
+endif
+
+DIRS += build
 
 include $(topsrcdir)/config/rules.mk

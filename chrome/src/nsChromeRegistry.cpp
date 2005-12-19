@@ -823,6 +823,10 @@ static void FlushSkinBindingsForWindow(nsIDOMWindowInternal* aWindow)
 // XXXbsmedberg: move this to nsIWindowMediator
 NS_IMETHODIMP nsChromeRegistry::RefreshSkins()
 {
+  nsCOMPtr<nsICSSLoader> cssLoader(do_CreateInstance(kCSSLoaderCID));
+  if (!cssLoader)
+    return NS_OK;
+
   nsCOMPtr<nsIWindowMediator> windowMediator
     (do_GetService(NS_WINDOWMEDIATOR_CONTRACTID));
   if (!windowMediator)
@@ -853,7 +857,7 @@ NS_IMETHODIMP nsChromeRegistry::RefreshSkins()
     if (protoWindow) {
       nsCOMPtr<nsIDOMWindowInternal> domWindow = do_QueryInterface(protoWindow);
       if (domWindow)
-        RefreshWindow(domWindow);
+        RefreshWindow(domWindow, cssLoader);
     }
     windowEnumerator->HasMoreElements(&more);
   }
@@ -881,7 +885,8 @@ static PRBool IsChromeURI(nsIURI* aURI)
 }
 
 // XXXbsmedberg: move this to windowmediator
-nsresult nsChromeRegistry::RefreshWindow(nsIDOMWindowInternal* aWindow)
+nsresult nsChromeRegistry::RefreshWindow(nsIDOMWindowInternal* aWindow,
+                                         nsICSSLoader* aCSSLoader)
 {
   // Deal with our subframes first.
   nsCOMPtr<nsIDOMWindowCollection> frames;
@@ -893,7 +898,7 @@ nsresult nsChromeRegistry::RefreshWindow(nsIDOMWindowInternal* aWindow)
     nsCOMPtr<nsIDOMWindow> childWin;
     frames->Item(j, getter_AddRefs(childWin));
     nsCOMPtr<nsIDOMWindowInternal> childInt(do_QueryInterface(childWin));
-    RefreshWindow(childInt);
+    RefreshWindow(childInt, aCSSLoader);
   }
 
   nsresult rv;
@@ -928,7 +933,7 @@ nsresult nsChromeRegistry::RefreshWindow(nsIDOMWindowInternal* aWindow)
       if (IsChromeURI(uri)) {
         // Reload the sheet.
         nsCOMPtr<nsICSSStyleSheet> newSheet;
-        rv = LoadStyleSheetWithURL(uri, getter_AddRefs(newSheet));
+        rv = aCSSLoader->LoadSheetSync(uri, getter_AddRefs(newSheet));
         if (NS_FAILED(rv)) return rv;
         if (newSheet) {
           rv = newAgentSheets.AppendObject(newSheet) ? NS_OK : NS_ERROR_FAILURE;
@@ -980,7 +985,7 @@ nsresult nsChromeRegistry::RefreshWindow(nsIDOMWindowInternal* aWindow)
       // XXX what about chrome sheets that have a title or are disabled?  This
       // only works by sheer dumb luck.
       // XXXbz this should really use the document's CSSLoader!
-      LoadStyleSheetWithURL(uri, getter_AddRefs(newSheet));
+      aCSSLoader->LoadSheetSync(uri, getter_AddRefs(newSheet));
       // Even if it's null, we put in in there.
       newSheets.AppendObject(newSheet);
     }
@@ -1047,17 +1052,6 @@ nsChromeRegistry::ReloadChrome()
     }
   }
   return rv;
-}
-
-nsresult
-nsChromeRegistry::LoadStyleSheetWithURL(nsIURI* aURL, nsICSSStyleSheet** aSheet)
-{
-  *aSheet = nsnull;
-
-  nsCOMPtr<nsICSSLoader> cssLoader = do_GetService(kCSSLoaderCID);
-  if (!cssLoader) return NS_ERROR_FAILURE;
-
-  return cssLoader->LoadAgentSheet(aURL, aSheet);
 }
 
 NS_IMETHODIMP
@@ -2024,6 +2018,16 @@ CheckVersionFlag(const nsSubstring& aFlag, const nsSubstring& aData,
   return PR_TRUE;
 }
 
+static void
+EnsureLowerCase(char *aBuf)
+{
+  for (; *aBuf; ++aBuf) {
+    char ch = *aBuf;
+    if (ch >= 'A' && ch <= 'Z')
+      *aBuf = ch + 'a' - 'A';
+  }
+}
+
 nsresult
 nsChromeRegistry::ProcessManifestBuffer(char *buf, PRInt32 length,
                                         nsILocalFile* aManifest,
@@ -2088,6 +2092,8 @@ nsChromeRegistry::ProcessManifestBuffer(char *buf, PRInt32 length,
                               "Warning: Malformed content registration.");
         continue;
       }
+
+      EnsureLowerCase(package);
 
       // NOTE: We check for platform and xpcnativewrappers modifiers on
       // content packages, but they are *applied* to content|skin|locale.
@@ -2163,6 +2169,8 @@ nsChromeRegistry::ProcessManifestBuffer(char *buf, PRInt32 length,
         continue;
       }
 
+      EnsureLowerCase(package);
+
       TriState stAppVersion = eUnspecified;
       TriState stApp = eUnspecified;
 
@@ -2210,6 +2218,8 @@ nsChromeRegistry::ProcessManifestBuffer(char *buf, PRInt32 length,
                               "Warning: Malformed skin registration.");
         continue;
       }
+
+      EnsureLowerCase(package);
 
       TriState stAppVersion = eUnspecified;
       TriState stApp = eUnspecified;

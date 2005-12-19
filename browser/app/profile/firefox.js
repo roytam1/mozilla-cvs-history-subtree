@@ -217,6 +217,9 @@ pref("browser.search.order.Yahoo",            "chrome://branding/content/searchc
 // (note: must be a string representation of a float or it'll default to 0.0)
 pref("browser.search.basic.min_ver", "0.0");
 
+// search bar results always open in a new tab
+pref("browser.search.openintab", false);
+
 // send ping to the server to update
 pref("browser.search.update", true);
 
@@ -239,7 +242,6 @@ pref("browser.link.open_newwindow.restriction", 2);
 pref("browser.tabs.loadInBackground", true);
 pref("browser.tabs.loadFolderAndReplace", true);
 pref("browser.tabs.opentabfor.middleclick", true);
-pref("browser.tabs.opentabfor.urlbar", true);
 pref("browser.tabs.loadDivertedInBackground", false);
 pref("browser.tabs.loadBookmarksInBackground", false);
 
@@ -265,10 +267,10 @@ pref("dom.disable_window_open_feature.status",    true);
 // cannot do it by default because it affects UE for web applications.
 pref("dom.disable_window_open_feature.location",  false);
 pref("dom.disable_window_status_change",          true);
-// allow JS to move and resize existing windows
-pref("dom.disable_window_move_resize",            false);
+// prevent JS from moving/resizing existing windows
+pref("dom.disable_window_move_resize",            true);
 // prevent JS from monkeying with window focus, etc
-pref("dom.disable_window_flip",                   false);
+pref("dom.disable_window_flip",                   true);
  
 pref("browser.trim_user_and_password",            true);
 
@@ -319,18 +321,29 @@ pref("intl.menuitems.insertseparatorbeforeaccesskeys","chrome://global/locale/in
 // On OS X, if the wheel has one axis only, shift+wheel comes through as a
 // horizontal scroll event. Thus, we can't assign anything other than normal
 // scrolling to shift+wheel.
-pref("mousewheel.withmetakey.action",3);
+pref("mousewheel.withshiftkey.action",0);
+pref("mousewheel.withshiftkey.sysnumlines",true);
+pref("mousewheel.withshiftkey.numlines",1);
+pref("mousewheel.withaltkey.action",2);
+pref("mousewheel.withaltkey.sysnumlines",false);
+pref("mousewheel.withaltkey.numlines",1);
+pref("mousewheel.withmetakey.action",0);
 pref("mousewheel.withmetakey.sysnumlines",false);
-pref("mousewheel.withcontrolkey.action",2);
-pref("mousewheel.withcontrolkey.sysnumlines",false);
+pref("mousewheel.withmetakey.numlines",1);
 #else
-pref("mousewheel.withcontrolkey.action",3);
-pref("mousewheel.withcontrolkey.sysnumlines",false);
 pref("mousewheel.withshiftkey.action",2);
 pref("mousewheel.withshiftkey.sysnumlines",false);
-#endif
+pref("mousewheel.withshiftkey.numlines",1);
 pref("mousewheel.withaltkey.action",0);
 pref("mousewheel.withaltkey.sysnumlines",false);
+pref("mousewheel.withaltkey.numlines",1);
+pref("mousewheel.withmetakey.action",0);
+pref("mousewheel.withmetakey.sysnumlines",true);
+pref("mousewheel.withmetakey.numlines",1);
+#endif
+pref("mousewheel.withcontrolkey.action",3);
+pref("mousewheel.withcontrolkey.sysnumlines",false);
+pref("mousewheel.withcontrolkey.numlines",1);
 
 pref("profile.allow_automigration", false);   // setting to false bypasses automigration in the profile code
 
@@ -415,3 +428,16 @@ pref("browser.download.hide_plugins_without_extensions", true);
 // Setting this pref to |true| forces BiDi UI menu items and keyboard shortcuts
 // to be exposed. By default, only expose it for bidi-associated system locales.
 pref("bidi.browser.ui", false);
+
+// Backspace and Shift+Backspace behavior
+// 0 goes Back/Forward
+// 1 act like PgUp/PgDown
+// 2 and other values, nothing
+pref("browser.backspace_action", 0);
+
+// this will automatically enable inline spellchecking (if it is available) for
+// multi-line text entry controls <textarea>s in HTML
+pref("layout.textarea.spellcheckDefault", true);
+
+pref("view_source.editor.path", "");
+pref("view_source.editor.external", false);

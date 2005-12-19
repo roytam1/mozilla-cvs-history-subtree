@@ -123,7 +123,6 @@ bin\components\necko_cache.xpt
 bin\components\necko_cookie.xpt
 bin\components\necko_strconv.xpt
 bin\components\necko_about.xpt
-bin\components\necko_data.xpt
 bin\components\necko_dns.xpt
 bin\components\necko_file.xpt
 bin\components\necko_ftp.xpt
@@ -134,6 +133,7 @@ bin\components\necko_socket.xpt
 bin\components\necko_viewsource.xpt
 bin\components\oji.xpt
 bin\components\passwordmgr.xpt
+bin\components\places.xpt
 bin\components\plugin.xpt
 bin\components\pref.xpt
 bin\components\prefetch.xpt
@@ -148,6 +148,7 @@ bin\components\search.xpt
 bin\components\shistory.xpt
 bin\components\sidebar.xpt
 bin\components\signonviewer.xpt
+bin\components\storage.xpt
 bin\components\toolkitprofile.xpt
 bin\components\txtsvc.xpt
 bin\components\txmgr.xpt
@@ -271,6 +272,13 @@ bin\res\svg.css
 bin\res\svg.properties
 bin\components\dom_svg.xpt
 
+; spellchecker (may not be present)
+bin\components\myspell.dll
+bin\components\spellchecker.xpt
+bin\components\spellchk.dll
+;; XXX these two files are bogus, they should not be in components\myspell...
+bin\components\myspell\*
+
 ; [Personal Security Manager]
 ;
 bin\nssckbi.dll
@@ -307,6 +315,7 @@ bin\extensions\inspector@mozilla.org\chrome\icons\default\winInspectorMain.ico
 [talkback]
 bin\README.txt,bin\readme.txt
 bin\extensions\talkback@mozilla.org\install.rdf
+bin\extensions\talkback@mozilla.org\chrome.manifest
 bin\extensions\talkback@mozilla.org\components\qfaservices.dll
 bin\extensions\talkback@mozilla.org\components\qfaservices.xpt
 bin\extensions\talkback@mozilla.org\components\BrandRes.dll

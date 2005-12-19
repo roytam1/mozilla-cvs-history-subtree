@@ -52,12 +52,12 @@
                 <menuitem id="menu_close" label="&closeCmd.label;" key="key_close" accesskey="&closeCmd.accesskey;" command="cmd_close"/>
                 <menuseparator/>
                 <menuitem label="&savePageCmd.label;" accesskey="&savePageCmd.accesskey;" key="key_savePage" command="Browser:SavePage"/>
-                <menuitem id="menu_saveFrame" label="&saveFrameCmd.label;" accesskey="&saveFrameCmd.accesskey;" oncommand="saveFrameDocument();" hidden="true"/>
+                <menuitem id="menu_saveFrame" label="&saveFrameCmd.label;" accesskey="&saveFrameCmd.accesskey;" command="Browser:SaveFrame" hidden="true"/>
                 <menuitem id="menu_sendLink"  label="&sendPageCmd.label;"  accesskey="&sendPageCmd.accesskey;"  command="Browser:SendLink"/>
                 <menuseparator/>
                 <menuitem label="&printSetupCmd.label;" accesskey="&printSetupCmd.accesskey;" command="cmd_pageSetup"/>
 #ifndef XP_MACOSX
-                <menuitem label="&printPreviewCmd.label;" accesskey="&printPreviewCmd.accesskey;" oncommand="PrintUtils.printPreview(onEnterPrintPreview, onExitPrintPreview);"/>
+                <menuitem label="&printPreviewCmd.label;" accesskey="&printPreviewCmd.accesskey;" command="cmd_printPreview"/>
 #endif
                 <menuitem label="&printCmd.label;" accesskey="&printCmd.accesskey;" key="printKb" command="cmd_print"/>
                 <menuseparator/>
@@ -114,7 +114,7 @@
                           accesskey="&selectAllCmd.accesskey;"
                           command="cmd_selectAll"/>
                 <menuseparator/>
-                <menuitem label="&findOnCmd.label;" accesskey="&findOnCmd.accesskey;" key="key_find" command="cmd_find"/>
+                <menuitem id="menu_find" label="&findOnCmd.label;" accesskey="&findOnCmd.accesskey;" key="key_find" command="cmd_find"/>
                 <menuitem label="&findAgainCmd.label;" accesskey="&findAgainCmd.accesskey;" key="key_findAgain" command="cmd_findAgain"/>
                 <menuseparator hidden="true" id="textfieldDirection-separator"/>
                 <menuitem id="textfieldDirection-swap"
@@ -146,6 +146,7 @@
                   </menupopup>
                 </menu>
                 <menuitem id="toggle_taskbar" label="&taskbarCmd.label;" accesskey="&taskbarCmd.accesskey;" type="checkbox" command="cmd_toggleTaskbar" checked="true" />
+#ifndef MOZ_PLACES
                 <menu id="viewSidebarMenuMenu"
                       label="&viewSidebarMenu.label;"
                       accesskey="&viewSidebarMenu.accesskey;">
@@ -153,7 +154,8 @@
                     <menuitem key="viewBookmarksSidebarKb" observes="viewBookmarksSidebar" accesskey="&bookmarksSidebarCmd.accesskey;"/>
                     <menuitem key="key_gotoHistory" observes="viewHistorySidebar" accesskey="&historySidebarCmd.accesskey;"/>
                   </menupopup>
-                </menu>            
+                </menu>
+#endif
                 <menuseparator/>
                 <menuitem label="&stopCmd.label;"
                           accesskey="&stopCmd.accesskey;"
@@ -165,7 +167,7 @@
 #endif
                 <menuitem label="&reloadCmd.label;" accesskey="&reloadCmd.accesskey;" command="Browser:Reload" key="key_reload"/>
                 <menuseparator/>
-                <menu id="viewTextZoomMenu" label="&textSize.label;" accesskey="&textSize.accesskey;">
+                <menu id="viewTextZoomMenu" label="&textSize.label;" accesskey="&textSize.accesskey;" observes="isImage">
                   <menupopup>                    
                     <menuitem key="key_textZoomEnlarge" label="&textZoomEnlargeCmd.label;" accesskey="&textZoomEnlargeCmd.accesskey;"
                               command="cmd_textZoomEnlarge"/>
@@ -176,7 +178,7 @@
                               command="cmd_textZoomReset"/>
                   </menupopup>
                 </menu>
-                <menu id="pageStyleMenu" label="&pageStyleMenu.label;" accesskey="&pageStyleMenu.accesskey;">
+                <menu id="pageStyleMenu" label="&pageStyleMenu.label;" accesskey="&pageStyleMenu.accesskey;" observes="isImage">
                   <menupopup onpopupshowing="stylesheetFillPopup(this);"
                              oncommand="stylesheetSwitchAll(window.content, event.target.getAttribute('data')); setStyleDisabled(false);">
                     <menuitem label="&pageStyleNoStyle.label;" accesskey="&pageStyleNoStyle.accesskey;"
@@ -192,7 +194,8 @@
                       ref="NC:BrowserCharsetMenuRoot"
                       oncommand="MultiplexHandler(event)"
                       onpopupshowing="CreateMenu('browser');UpdateMenus(event)"
-                      onpopupshown="CreateMenu('more-menu');">
+                      onpopupshown="CreateMenu('more-menu');"
+                      observes="isImage">
                     <template>
                         <rule rdf:type="http://home.netscape.com/NC-rdf#BookmarkSeparator">
                             <menupopup>
@@ -347,11 +350,11 @@
                           key="goHome"/>
                 <menuseparator id="startHistorySeparator"/>
                 <menuseparator hidden="true" id="endHistorySeparator"/>
-                <menuitem observes="viewHistorySidebar"
-                          key="key_gotoHistory"/>
+                <menuitem observes="viewHistorySidebar" key="key_gotoHistory"/>
               </menupopup>
             </menu>
 
+#ifndef MOZ_PLACES
             <menu id="bookmarks-menu" label="&bookmarksMenu.label;" accesskey="&bookmarksMenu.accesskey;"
                   datasources="rdf:bookmarks rdf:files rdf:localsearch" 
                   ref="NC:BookmarksRoot" flags="dont-test-empty"
@@ -383,6 +386,18 @@
                 <menuseparator/>
               </menupopup>
             </menu>
+#else
+  <menu id="bookmarksMenu" 
+        label="&bookmarksMenu.label;" accesskey="&bookmarksMenu.accesskey;">
+    <menupopup id="bookmarksMenuPopup" type="places">
+      <menuitem label="&addCurPageAsCmd.label;" 
+                command="Browser:AddBookmarkAs" key="addBookmarkAsKb"/>
+      <menuitem label="&manBookmarksCmd.label;" 
+                command="Browser:ShowPlaces" key="manBookmarkKb"/>
+      <menuseparator builder="start"/>
+    </menupopup>
+  </menu>
+#endif
         
             <menu id="tools-menu" label="&toolsMenu.label;" accesskey="&toolsMenu.accesskey;">
               <menupopup id="menu_ToolsPopup"
@@ -395,23 +410,16 @@
 #ifdef HAVE_SHELL_SERVICE
               <menuseparator/>
               <menuitem label="&mailButton.readMail.label;" 
-                               accesskey="&mailButton.readMail.accesskey;"
-                               command="Browser:ReadMail"/>
+                        accesskey="&mailButton.readMail.accesskey;"
+                        command="Browser:ReadMail"/>
               <menuitem label="&mailButton.newMessage.label;" 
-                               accesskey="&mailButton.newMessage.accesskey;"
-                               key="key_newMessage" command="Browser:NewMessage"/>
+                        accesskey="&mailButton.newMessage.accesskey;"
+                        key="key_newMessage" command="Browser:NewMessage"/>
 
 #endif
               <menuseparator/>
               <menuitem label="&downloads.label;" accesskey="&downloads.accesskey;"
-# all platforms except Unix, because Ctrl+J is used for web search there
-#ifndef XP_UNIX
-                        key="key_openDownloads"
-#endif
-#ifdef XP_MACOSX
-                        key="key_openDownloads"
-#endif
-                        command="Tools:Downloads"/>
+                        key="key_openDownloads" command="Tools:Downloads"/>
               <menuitem label="&extensions.label;" accesskey="&extensions.accesskey;" 
                         command="Tools:Extensions"/>
               <menuitem label="&themes.label;" accesskey="&themes.accesskey;" 
@@ -429,8 +437,7 @@
 #endif
               <menuseparator id="sanitizeSeparator"/>
               <menuitem id="sanitizeItem" 
-                        accesskey="&clearPrivateDataCmd.accesskey;"
-                        label="&clearPrivateDataCmd.label;"
+                        accesskey="&clearPrivateDataCmd.accesskey;" label="&clearPrivateDataCmd.label;"
                         key="key_sanitize" command="Tools:Sanitize"/>
 #ifndef XP_UNIX
               <menuseparator id="prefSep"/>
@@ -448,7 +455,7 @@
           <menu id="helpMenu" />
         </menubar>
 
-
+#ifndef MOZ_PLACES
   <template id='bookmarks-template' xmlns:nc="http://home.netscape.com/NC-rdf#">
     <rule parent="hbox" rdf:type="http://home.netscape.com/NC-rdf#BookmarkSeparator">
       <toolbarseparator uri="rdf:*"
@@ -529,3 +536,5 @@
       </menupopup>
     </rule>
   </template>
+
+#endif

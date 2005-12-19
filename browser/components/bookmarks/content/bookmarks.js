@@ -325,8 +325,8 @@ var BookmarksCommand = {
       break;
     case "Folder":
     case "PersonalToolbarFolder":
-      commands = ["bm_openfolder", "bm_separator", "bm_newbookmark", 
-                  "bm_newfolder", "bm_newseparator", "bm_separator",
+      commands = ["bm_openfolder", "bm_separator", 
+                  "bm_newbookmark", "bm_newfolder", "bm_newseparator", "bm_separator",
                   "cut", "copy", "paste", "bm_separator",
                   "delete", "bm_separator",
                   "bm_sortbyname", "bm_separator",
@@ -494,6 +494,8 @@ var BookmarksCommand = {
       sTextUnicode += url + "\n";
       sTextHTML += "<A HREF=\"" + url + "\">" + name + "</A>";
     }
+    sTextUnicode = sTextUnicode.replace(/\n$/,"");
+    
     // generate unique separator and combine the array to one string 
     var bmSeparator = "]-[", extrarSeparator = "@";
     for (var i = 0; i < tmpBmItem.length; ++i) {
@@ -702,6 +704,7 @@ var BookmarksCommand = {
     if (aTargetBrowser == "current" || aTargetBrowser == "tab") {
       var browser  = w.document.getElementById("content");
       var tabPanels = browser.browsers;
+      var tabs = browser.mTabContainer.childNodes;
       var tabCount  = tabPanels.length;
       var doReplace = PREF.getBoolPref("browser.tabs.loadFolderAndReplace");
       var loadInBackground = PREF.getBoolPref("browser.tabs.loadBookmarksInBackground");
@@ -710,7 +713,7 @@ var BookmarksCommand = {
         index0 = 0;
       else {
         for (index0=tabCount-1; index0>=0; --index0)
-          if (browser.browsers[index0].webNavigation.currentURI.spec != "about:blank")
+          if (tabPanels[index0].webNavigation.currentURI.spec != "about:blank")
             break;
         ++index0;
       }
@@ -741,7 +744,6 @@ var BookmarksCommand = {
         function selectNewForegroundTab(browser, tab) {
           browser.selectedTab = tab;
         }
-        var tabs = browser.mTabContainer.childNodes;
         setTimeout(selectNewForegroundTab, 0, browser, tabs[index0]);
       }
 
@@ -1790,7 +1792,6 @@ var BookmarksUtils = {
     setTimeout(function () {remoteDS.Flush()}, 100);
   },
 
-  // should update the caller, aShowDialog is no more necessary
   addBookmark: function (aURL, aTitle, aCharset, aIsWebPanel, aDescription)
   {
     var dArgs = {

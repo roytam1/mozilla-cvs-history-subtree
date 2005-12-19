@@ -181,7 +181,6 @@
 <!ENTITY goMenu.label "Go">
 <!ENTITY goMenu.accesskey "g">
 <!ENTITY goHomeCmd.label "Home">
-<!ENTITY goHomeCmd.accesskey "h">
 <!ENTITY earlierHistory.label "Earlier History">
 
 <!ENTITY releaseCmd.accesskey "R">
@@ -304,10 +303,6 @@
 <!ENTITY mailButton.readMail.accesskey    "M">
 <!ENTITY mailButton.newMessage.label      "New Message...">
 <!ENTITY mailButton.newMessage.accesskey  "w">
-<!ENTITY mailButton.sendLink.label        "Send Link...">
-<!ENTITY mailButton.sendLink.accesskey    "L">
-<!ENTITY mailButton.readNews.label        "Read News">
-<!ENTITY mailButton.readNews.accesskey    "N">
 <!ENTITY sendMessage.commandkey           "m">
 
 <!ENTITY newTabButton.tooltip           "Open a new tab">
@@ -362,3 +357,13 @@
 <!ENTITY findAgainCmd.accesskey "g">
 <!ENTITY findAgainCmd.commandkey "g">
 <!ENTITY findAgainCmd.commandkey2 "VK_F3">
+
+<!ENTITY spellAddToDictionary.label "Add to dictionary">
+<!ENTITY spellAddToDictionary.accesskey "t">
+<!ENTITY spellEnable.label "Spell check this field">
+<!ENTITY spellEnable.accesskey "S">
+<!ENTITY spellNoSuggestions.label "(No spelling suggestions)">
+<!ENTITY spellDictionaries.label "Languages">
+<!ENTITY spellDictionaries.accesskey "l">
+<!ENTITY spellAddDictionaries.label "Add dictionaries...">
+<!ENTITY spellAddDictionaries.accesskey "A">
