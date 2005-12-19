@@ -76,10 +76,10 @@ SipDialog.fun(
     this.remoteSequenceNumber = request.getCSeqHeader().sequenceNumber;
     // we store local/remoteURI as local/remoteAddress, because that's
     // what we'll need for constructing the headers when sending messages:
-    this.localAddress = response.getToHeader().address.clone()
+    this.localAddress = response.getToHeader().address.clone(false)
       .QueryInterface(Components.interfaces.zapISipAddress);
     this.localAddress.displayName = "";
-    this.remoteAddress = request.getFromHeader().address.clone()
+    this.remoteAddress = request.getFromHeader().address.clone(false)
       .QueryInterface(Components.interfaces.zapISipAddress);
     this.remoteAddress.displayName = "";
     this.remoteTarget = request.getTopContactHeader().address.uri;
@@ -115,10 +115,10 @@ SipDialog.fun(
     this.localSequenceNumber = request.getCSeqHeader().sequenceNumber;
     // we store local/remoteURI as local/remoteAddress, because that's
     // what we'll need for constructing the headers when sending messages:
-    this.remoteAddress = response.getToHeader().address.clone()
+    this.remoteAddress = response.getToHeader().address.clone(false)
       .QueryInterface(Components.interfaces.zapISipAddress);
     this.remoteAddress.displayName = "";
-    this.localAddress = request.getFromHeader().address.clone()
+    this.localAddress = request.getFromHeader().address.clone(false)
       .QueryInterface(Components.interfaces.zapISipAddress);
     this.localAddress.displayName = "";
     this.remoteTarget = response.getTopContactHeader().address.uri;
@@ -161,7 +161,7 @@ SipDialog.fun(
   function createNonInviteRequestClient(method) {
     var rc = SipNonInviteRC.instantiate();
     var request = this.formulateGenericRequest(method);
-    rc.init(this.stack, this, request);
+    rc.init(this.stack, this, request, 0);
     return rc;
   });
 
@@ -172,7 +172,7 @@ SipDialog.fun(
     var request = this.formulateGenericRequest("INVITE");
     // add mandatory Contact header (rfc3261 8.1.1.8):
     request.appendHeader(gSyntaxFactory.createContactHeader(this.stack.getContactAddress()));    
-    rc.init(this.stack, this, request);
+    rc.init(this.stack, this, request, 0);
   });
   
 //  readonly attribute ACString dialogID;

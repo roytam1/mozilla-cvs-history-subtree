@@ -43,5 +43,5 @@
 interface zapISipSyntaxObject : nsISupports
 {
   ACString serialize();
-  zapISipSyntaxObject clone();
+  zapISipSyntaxObject clone(in boolean deep);
 };

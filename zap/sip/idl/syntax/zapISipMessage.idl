@@ -78,8 +78,9 @@ interface zapISipMessage : zapISipSyntaxObject
   attribute ACString body;
 
   /**
-   * Helper to get a list of all headers with the given name. The list
-   * will be sorted with the top-most matching header coming first.
+   * Helper to get a (possibly empty) list of all headers with the
+   * given name. The list will be sorted with the top-most matching
+   * header coming first.
    */
   void getHeaders(in ACString name, out unsigned long count,
                   [retval, array, size_is(count)] out zapISipHeader headers);

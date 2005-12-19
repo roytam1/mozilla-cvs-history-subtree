@@ -60,8 +60,26 @@ var PARSE_ERROR = "SIP parse error"; // generic error message for parse failure
 
 
 ////////////////////////////////////////////////////////////////////////
-// Patterns, regexps and tokenizers for parsing various SIP
+// Charsets, patterns, regexps and tokenizers for parsing various SIP
 // constructs:
+
+//----------------------------------------------------------------------
+// Basic charsets for constructing patters:
+
+// rfc2234 'WSP'
+// var CHARSET_WSP = " \\t"; (inlined)
+
+// rfc3261 'unreserved'
+var CHARSET_UNRESERVED = "A-Za-z0-9\\-_.!~*'()";
+
+// rfc3261 'param-unreserved'
+var CHARSET_PARAM_UNRESERVED = "\\[\\]\\/:&+$";
+
+// rdf3261 'user-unreserved'
+var CHARSET_USER_UNRESERVED = "&=+$,;?\\/";
+
+// characters unreserved in 'password'
+var CHARSET_PASSWORD_UNRESERVED = "&=+$,";
 
 //----------------------------------------------------------------------
 // Basic patterns used to construct regexps and tokenizers below:
@@ -75,9 +93,6 @@ var PATTERN_HEXDIG = "[0-9AaBbCcDdEeFf]";
 
 // rfc3261 'reserved'
 var PATTERN_RESERVED = "[;/?:@&=+$,]";
-
-// rfc3261 'unreserved'
-var PATTERN_UNRESERVED = "[A-Za-z0-9\\-_.!~*'()]";
 
 // rfc3261 'escaped'
 var PATTERN_ESCAPED = "%"+PATTERN_HEXDIG+PATTERN_HEXDIG;
@@ -151,12 +166,14 @@ var PATTERN_QUOTED_STRING = PATTERN_SWS+'\\"(?:'+PATTERN_QDTEXT+'|'+
 var PATTERN_SIP_VERSION = "[sS][iI][pP]\\/\\d+\\.\\d+";
 
 // rfc3261 'user'
-var PATTERN_USER = "(?:"+PATTERN_UNRESERVED+"|"+
-                   PATTERN_ESCAPED+"|[&=+$,;?\\/])+";
+var PATTERN_USER = "(?:["+CHARSET_USER_UNRESERVED+
+                   CHARSET_UNRESERVED+"]|"+
+                   PATTERN_ESCAPED+")+";
 
 // rfc3261 'password'
-var PATTERN_PASSWORD = "(?:"+PATTERN_UNRESERVED+"|"+
-                       PATTERN_ESCAPED+"|[&=+$,])*";
+var PATTERN_PASSWORD = "(?:["+CHARSET_PASSWORD_UNRESERVED+
+                       CHARSET_UNRESERVED+"]|"+
+                       PATTERN_ESCAPED+")*";
 
 // ~ rfc3261 'userinfo'
 // XXX PATTERN_USERINFO doesn't include telephone-subscriber yet.
@@ -191,11 +208,12 @@ var PATTERN_HOST = "(?:"+PATTERN_HOSTNAME+"|"+
 var PATTERN_PORT = "\\d+";
 
 // rfc3261 'paramchar'
-var PATTERN_PARAMCHAR = "(?:[\\[\\]\\/:&+$]|"+ PATTERN_UNRESERVED+"|"+
+var PATTERN_PARAMCHAR = "(?:["+CHARSET_PARAM_UNRESERVED+
+                        CHARSET_UNRESERVED+"]|"+
                         PATTERN_ESCAPED+")";
 
 // rfc3261 '(hnv-unreserved|unreserved|escaped)'
-var PATTERN_HEADERCHAR = "(?:[\\[\\]\\/?:+$]|"+PATTERN_UNRESERVED+"|"+
+var PATTERN_HEADERCHAR = "(?:[\\[\\]\\/?:+$]|["+CHARSET_UNRESERVED+"]|"+
                          PATTERN_ESCAPED+")";
 
 // rfc3261 'display-name'
@@ -259,11 +277,11 @@ var PATTERN_CALLID = PATTERN_WORD+"(?:@"+PATTERN_WORD+")?";
 var PATTERN_STATUS_CODE = "\\d{3}";
 
 // rfc3261 'Reason-Phrase'
-var PATTERN_REASON_PHRASE = "(?:"+PATTERN_RESERVED+"|"+
-                            PATTERN_UNRESERVED+"|"+
+var PATTERN_REASON_PHRASE = "(?:"+PATTERN_RESERVED+"|["+
+                            CHARSET_UNRESERVED+"]|"+
                             PATTERN_ESCAPED+"|"+
                             PATTERN_UTF8_NONASCII+"|"+
-                            PATTERN_UTF8_CONT+"|[ \t])*";
+                            PATTERN_UTF8_CONT+"|[ \\t])*";
 
 // (token / quoted-string)
 var PATTERN_AUTH_VALUE = "(?:"+PATTERN_TOKEN+"|"+PATTERN_QUOTED_STRING+")";
@@ -274,8 +292,17 @@ var PATTERN_AUTH_VALUE = "(?:"+PATTERN_TOKEN+"|"+PATTERN_QUOTED_STRING+")";
 // Matches the empty string only:
 var REGEXP_NOTHING = new RegExp("^$");
 
+// Trim whitespace either side of an arbitrary string:
+var REGEXP_TRIM_WSP = new RegExp("^[ \\t]*([^ \\t]+(?:.*[^ \\t])?)[ \\t]*$");
+
 // Match a token:
 var REGEXP_TOKEN = new RegExp("^"+PATTERN_TOKEN+"$");
+
+// Match a sequence of tokens separated by single spaces (used for
+// deciding when to the token or quoted string forms for display
+// names):
+var REGEXP_DISPLAY_NAME_TOKENS = new RegExp("^"+PATTERN_TOKEN+
+                                            "(?: "+PATTERN_TOKEN+")*$");
 
 // Tests whether input is a sip response (as opposed to a request):
 var REGEXP_IS_RESPONSE = new RegExp("^SIP\\/", "i");
@@ -334,8 +361,11 @@ var REGEXP_STATUS_CODE = new RegExp("^"+PATTERN_STATUS_CODE+"$");
 // Matches a Reason-Phrase:
 var REGEXP_REASON_PHRASE = new RegExp("^"+PATTERN_REASON_PHRASE+"$");
 
-// Matches a userinfo or nothing:
-var REGEXP_USERINFO = new RegExp("^(?:"+PATTERN_USERINFO+")?$");
+// Matches a user:
+var REGEXP_USER = new RegExp("^"+PATTERN_USER+"$");
+
+// Matches a password:
+var REGEXP_PASSWORD = new RegExp("^"+PATTERN_PASSWORD+"$");
 
 // Matches a host:
 var REGEXP_HOST = new RegExp("^"+PATTERN_HOST+"$");
@@ -354,11 +384,12 @@ var REGEXP_URI_PARAM_VALUE = new RegExp("^"+PATTERN_PARAMCHAR+"*$"); // generic 
 var REGEXP_URI_HEADER_NAME = new RegExp("^"+PATTERN_HEADERCHAR+"+$");
 var REGEXP_URI_HEADER_VALUE = new RegExp("^"+PATTERN_HEADERCHAR+"*$");
 
-// parse a sip(s) uri into (secure?, userinfo, host, port, uri-parameters, headers):
-var REGEXP_SIPURI = new RegExp("^[Ss][Ii][Pp]([Ss]?)\\:(?:("+PATTERN_USERINFO+")@)?"+
+// parse a sip(s) uri into (secure?, user?, :?, password?, host, port?, uri-parameters?, headers?):
+var REGEXP_SIPURI = new RegExp("^[Ss][Ii][Pp]([Ss])?\\:(?:("+PATTERN_USER+
+                               ")(?:(\\:)("+PATTERN_PASSWORD+"))?@)?"+
                                "("+PATTERN_HOST+")(?:\\:("+PATTERN_PORT+"))?"+
                                "(;[^?]*)?(?:\\?(.*))?$");
-
+                               
 // parses a display-name or nothing:
 var REGEXP_DISPLAY_NAME = new RegExp("^"+PATTERN_DISPLAY_NAME+"?$");
 
@@ -514,14 +545,67 @@ var TOKENIZER_COMMA_SEPARATED_LIST =
 ////////////////////////////////////////////////////////////////////////
 // Escaping/unescaping/serializers:
 
+function ESCAPE_NONE(v) { return v; }
+function UNESCAPE_NONE(v) { return v; }
+
+var REGEXP_ESCAPED_HEX = new RegExp(PATTERN_ESCAPED, "g");
+
+function UNESCAPE_HEX(v) {
+  // unescape all %XX:
+  return v.replace(REGEXP_ESCAPED_HEX, function(p) {
+                     return String.fromCharCode(parseInt(p.substring(1), 16));
+                   });
+}
+
+var REGEXP_QUOTED_PAIR = new RegExp(PATTERN_QUOTED_PAIR, "g");
+
+// unescape a quoted string. the argument must be a trimmed quoted
+// string including the quotation marks.
+function UNESCAPE_QUOTED_STRING(v) {
+  // remove quotation marks:
+  v = v.substring(1,v.length-1);
+  return utf8ToUnicode(v.replace(REGEXP_QUOTED_PAIR, function(p) {
+                                   return p.substring(1);
+                                 }));
+}
+
+function makeHexEscaper(literal_set) {
+  var escapee_re = new RegExp("[^"+literal_set+"]", "g");
+  return function(v) {
+    return v.replace(escapee_re, function(c) {
+                       return "%"+hexCharCodeAt(c, 0);
+                     });
+  };
+}
+
+// pname/pvalue escaping:
+var ESCAPE_URI_PARAM = makeHexEscaper(CHARSET_UNRESERVED+
+                                      CHARSET_PARAM_UNRESERVED);
+// user escaping:
+var ESCAPE_USER = makeHexEscaper(CHARSET_UNRESERVED+
+                                 CHARSET_USER_UNRESERVED);
+
+// password escaping:
+var ESCAPE_PASSWORD = makeHexEscaper(CHARSET_UNRESERVED+
+                                     CHARSET_PASSWORD_UNRESERVED);
+
+// regexp containing characters that need to be escaped in a quoted
+// string. This is a subset of the valid characters for quoted-pair:
+var REGEXP_QUOTED_STRING_ESCAPEE = new RegExp("[\\x00-\\x08\\x0b-\\x0c\\x0e-\\x1F\\x22\\x5c\\x7f]", "g");
+
+function ESCAPE_QUOTED_STRING(v) {
+  return '"'+unicodeToUTF8(v).replace(REGEXP_QUOTED_STRING_ESCAPEE,
+                                      function(p) { return "\\"+p; })+'"';
+}
+
 // serializes a hash of generic parameters (header value params,
 // uri-params):
 function SERIALIZER_PARAMS(hash) {
   var rv = "";
   for (var n in hash) {
-    rv += ";" + n.substring(1);
-    if (hash[n])
-      rv += "=" + hash[n];
+    rv += ";" + hash[n][0];
+    if (hash[n][1])
+      rv += "=" + hash[n][1];
   }
   return rv;
 }
@@ -535,7 +619,7 @@ function SERIALIZER_AUTH_PARAMS(hash) {
       rv += ",";
     else
       first = false;
-    rv += n.substring(1) + "=" + hash[n];
+    rv += hash[n][0] + "=" + hash[n][1];
   }
   return rv;
 }
@@ -546,7 +630,7 @@ function SERIALIZER_URI_HEADERS(hash) {
   var first = true;
   for (var n in hash) {
     rv += first ? "?" : "&";
-    rv += n.substring(1) + "=" + hash[n];
+    rv += hash[n][0] + "=" + hash[n][1];
     first = false;
   }    
   return rv;
@@ -565,22 +649,38 @@ SipSyntaxObject.metafun(
   and manipulation methods 'get<name>', 'has<name>', 'set<name>',         \n\
   'remove<name>' and 'get<name>Names', as well as '_deserialize<name>s'   \n\
   and '_serialize<name>s'.                                                \n\
-  Keys are canonicized to lower case and will be tested against <re_name>.\n\
-  Values will be tested against <re_value> or, if hash <re_hash> contains \n\
+  Parameter names will be parsed against <re_name>.                       \n\
+  Values will be parsed against <re_value> or, if hash <re_hash> contains \n\
   a regular expression for the value's corresponding name, against this   \n\
   latter regular expression.                                              \n\
   For deserialization, <tokenizer> is expected to tokenize data passed to \n\
   '_deserialize<name>s' into (name, value) pairs.                         \n\
   For serialization, <serializer> is a function of one arg (the hash)     \n\
   which should return a serialized string representation of the elements. \n\
-  TODO: XXX add escaping filters.                                          ",
+  The parameter name and value passed to get<name>, has<name> and         \n\
+  remove<name> will be escaped using name_escape and value_escape.        \n\
+  The parameter names returned by get<name>Names are unescaped using      \n\
+  name_unescape.                                                          \n\
+  The parameter value returned by get<name> will be unescaped using       \n\
+  value_unescape.                                                         \n\
+  get<name>, has<name>, remove<name>, set<name> locate paramters case-    \n\
+  insensitively. get<name> returns '' if the parameter can't be found.    \n\
+  The hash keys are in lower-case, unescaped form (as needed for          \n\
+  comparison) and  contain as value an array: [pname, pvalue], where both \n\
+  pname and pvalue are in escaped form (as serialized).                    ",
   function parsedHash(/*[opt] doc, name, serializer, tokenizer,
+                        name_escape, name_unescape,
+                        value_escape, value_unescape,
                         re_name, re_value,  re_hash*/) {
     // unpack args:
     var i = arguments.length-1;
     var re_hash = arguments[i--];
     var re_value = arguments[i--];
     var re_name = arguments[i--];
+    var vunescape = arguments[i--];
+    var vescape = arguments[i--];
+    var nunescape = arguments[i--];
+    var nescape = arguments[i--];
     var tokenizer = arguments[i--];
     var serializer = arguments[i--];
     var name = arguments[i--];
@@ -588,54 +688,81 @@ SipSyntaxObject.metafun(
     if (i>=0)
       doc = arguments[i];
 
-    // add a ctor that adds the hash to new instances:
+    // add a ctor that adds the hash to new instances:    
+    // the hash is indexed by the canonicized lower-case unescaped
+    // pname and contains as value an array: [pname, pvalue] (both
+    // escaped as for serialization)
     var hashname = "_"+name+"Hash";
     this.appendCtor(function() { this[hashname] = {}; });
 
     // construct our 7 hash manipulation functions:
-    var get_fct, has_fct, set_fct, remove_fct, getnames_fct, deserialize_fct, serialize_fct;
     
-    eval("get_fct = function get"+name+"(n) { return hashget(this[hashname], n.toLowerCase()); }");
-    
-    eval("has_fct = function has"+name+"(n) { return hashhas(this[hashname], n.toLowerCase()); }");
-    
-    eval("set_fct = function set"+name+"(n, v) {"+
-         "var name = n.toLowerCase();"+
-         "if (!re_name.test(name)) this._verboseError(PARSE_ERROR);"+
-         "var _re_value = hashget(re_hash, name);"+
-         "if (!_re_value) _re_value = re_value;"+
-         "if (!v) v = '';"+ // <-- this is to avoid 'null' or 'undefined' to be stringified when applying the regexp
-         "if (!_re_value.test(v)) this._verboseError(PARSE_ERROR);"+
-         "return hashset(this[hashname], name, v);}");
-    
-    eval("remove_fct = function remove"+name+"(n) { hashdel(this[hashname], n.toLowerCase()); }");
-    
-    eval("getnames_fct = function get"+name+"Names(count) {"+
-         "var keys = hashkeys(this[hashname]);"+
-         "if (count) count.value = keys.length;"+
-         "return keys; }");
+    var get_fct = function(pname) {
+      var hentry = hashget(this[hashname], pname.toLowerCase());
+      if (!hentry ||!hentry[1]) return "";
+      return vunescape(hentry[1]);
+    };
 
-    eval("deserialize_fct = function _deserialize"+name+"s(data) {"+
-         "this[hashname] = {};"+ // clear old hash
-         "if (!data) return;"+ // all done; no pars
-         "resetTokenizer(tokenizer);"+
-         "var match;"+
-         "while ((match = tokenizer(data))) {"+
-         "  if (this.has"+name+"(match[1]))"+
-         "    this._verboseError(PARSE_ERROR);"+
-         "  this.set"+name+"(match[1], match[2]);}}");
+    var has_fct = function(pname) {
+      return hashhas(this[hashname], pname.toLowerCase());
+    };
 
-    eval("serialize_fct = function _serialize"+name+"s() {"+
-         "return serializer(this[hashname]);}");
+    // 'args_escaped' is a flag to signify escaped pname, pvalue arguments
+    // (for internal use by deserialize_fct).
+    var set_fct = function(pname, pvalue, args_escaped) {
+      var key = args_escaped ? nunescape(pname) : pname;
+      key = key.toLowerCase();
+      if (!pvalue) pvalue = ''; 
+      if (!args_escaped) {
+        pname = nescape(pname);
+        if (pvalue)
+          pvalue = vescape(pvalue);
+      }
+      if (!re_name.test(pname)) this._verboseError(PARSE_ERROR);
+      var _re_value = hashget(re_hash, key);
+      if (!_re_value) _re_value = re_value;
+      if (!_re_value.test(pvalue)) this._verboseError(PARSE_ERROR);
+      return hashset(this[hashname], key, [pname, pvalue]);
+    };
+
+    var remove_fct = function(pname) {
+      hashdel(this[hashname], pname.toLowerCase());
+    };
+
+    // returns unescaped pnames (rather than keys) to maintain case
+    var getnames_fct = function(count) {
+      var rv = [];
+      hashmap(this[hashname],
+              function(k,v) {rv.push(nunescape(v[0]));});
+      if (count) count.value = rv.length;
+      return rv;
+    };
+
+    var deserialize_fct = function(data) {
+      // clear old hash:
+      this[hashname] = {};
+      if (!data) return; // all done
+      resetTokenizer(tokenizer);
+      var match;
+      while ((match = tokenizer(data))) {
+        if (has_fct.call(this, match[1]))
+          this._verboseError(PARSE_ERROR);
+        set_fct.call(this, match[1], match[2], true);
+      }
+    };
+
+    var serialize_fct = function(data) {
+      return serializer(this[hashname]);
+    };
     
     // install functions:
-    this.fun(doc, get_fct);
-    this.fun(doc, has_fct);
-    this.fun(doc, set_fct);
-    this.fun(doc, remove_fct);
-    this.fun(doc, getnames_fct);
-    this.fun(doc, deserialize_fct);
-    this.fun(doc, serialize_fct);
+    this.obj(doc, "get"+name, get_fct);
+    this.obj(doc, "has"+name, has_fct);
+    this.obj(doc, "set"+name, set_fct);
+    this.obj(doc, "remove"+name, remove_fct);
+    this.obj(doc, "get"+name+"Names", getnames_fct);
+    this.obj(doc, "_deserialize"+name+"s", deserialize_fct);
+    this.obj(doc, "_serialize"+name+"s", serialize_fct);
   });
 
 //----------------------------------------------------------------------
@@ -664,8 +791,12 @@ SipSIPURI.fun(
   function serialize() {
     var rv = "";
     rv += this.sips ? "sips:" : "sip:";
-    if (this._userinfo)
-      rv += this._userinfo + "@";
+    if (this._user) {
+      rv += this._user;
+      if (this._password != null)
+        rv += ":" + this._password;
+      rv += "@";
+    }
     rv += this._host;
     if (this._port)
       rv += ":" + this._port;
@@ -675,9 +806,10 @@ SipSIPURI.fun(
   });
 
 SipSIPURI.fun(
-  function clone() {
+  function clone(deep) {
     var rv =SipSIPURI.instantiate();
-    rv._userinfo= this._userinfo;
+    rv._user= this._user;
+    rv._password = this._password;
     rv._host = this._host;
     rv._port = this._port;
     rv._URIParameterHash = objclone(this._URIParameterHash);
@@ -692,14 +824,41 @@ SipSIPURI.fun(
 // attribute boolean sips;
 SipSIPURI.obj("sips", false);
 
-// attribute ACString userinfo;
-SipSIPURI.parsedAttrib("userinfo", REGEXP_USERINFO, null);
+// attribute ACString user;
+SipSIPURI.obj("_user", "");
+SipSIPURI.gettersetter(
+  "user",
+  function get_user() {
+    if (!this._user) return "";
+    return UNESCAPE_HEX(this._user);
+  },
+  function set_user(v) {
+    if (!v)
+      this._user = "";
+    else
+      this._user = ESCAPE_USER(v);
+  });
+
+// attribute ACString password;
+SipSIPURI.obj("_password", "");
+SipSIPURI.gettersetter(
+  "password",
+  function get_password() {
+    if (!this._password) return this._password; // note that this can be either null or ''
+    return UNESCAPE_HEX(this._password);
+  },
+  function set_password(v) {
+    if (!v)
+      this._password = v;
+    else
+      this._password = ESCAPE_PASSWORD(v);
+  });
 
 // attribute ACString host;
 SipSIPURI.parsedAttrib("host", REGEXP_HOST, null);
 
 // attribute ACString port;
-SipSIPURI.parsedAttrib("port", REGEXP_PORT, null);
+SipSIPURI.parsedAttrib("port", REGEXP_PORT, "");
 
 // ACString getURIParameter(in ACString name);
 // boolean hasURIParameter(in ACString name);
@@ -711,6 +870,8 @@ SipSIPURI.parsedHash(
   "URIParameter",
   SERIALIZER_PARAMS,
   TOKENIZER_URI_PARAMS,
+  ESCAPE_URI_PARAM, UNESCAPE_HEX,
+  ESCAPE_URI_PARAM, UNESCAPE_HEX,
   REGEXP_URI_PARAM_NAME,
   REGEXP_URI_PARAM_VALUE,
   { "$transport" : REGEXP_TOKEN,
@@ -732,6 +893,8 @@ SipSIPURI.parsedHash(
   "Header",
   SERIALIZER_URI_HEADERS,
   TOKENIZER_URI_HEADERS,
+  ESCAPE_NONE, UNESCAPE_NONE,
+  ESCAPE_NONE, UNESCAPE_NONE,
   REGEXP_URI_HEADER_NAME,
   REGEXP_URI_HEADER_VALUE,
   {});
@@ -741,8 +904,8 @@ SipSIPURI.fun(
   function equals(other) {
     // compare according to the rules of RFC3261 19.1.4
     if (this.sips != other.sips) return false;
-    // XXX handle % HEX HEX encoding
-    if (this.userinfo != other.userinfo) return false;
+    if (this.user != other.user) return false;
+    if (this.password != other.password) return false;
     if (this.host.toLowerCase() != other.host.toLowerCase()) return false;
     if (this.port != other.port) return false;
     // XXX compare URI parameters & headers
@@ -753,19 +916,30 @@ SipSIPURI.fun(
 
 SipSIPURI.fun(
   function deserialize(octets) {
-    // parse into (secure?, userinfo, host, port, uri-parameters, headers):
+    // parse into (secure?, user?, :?, password?, host, port?, uri-parameters, headers):
     var matches = REGEXP_SIPURI(octets);
     if (!matches) this._verboseError(PARSE_ERROR+": malformed SIP URI ("+octets+")");
 
-    if (matches[1].length)
+    if (matches[1])
       this.sips = true;
     else
       this.sips = false;
-    this._userinfo = matches[2];
-    this._host = matches[3];
-    this._port = matches[4];
-    this._deserializeURIParameters(matches[5]);
-    this._deserializeHeaders(matches[6]);
+    if (matches[2]) {
+      this._user = matches[2];
+      if (matches[3]) {
+        this._password = matches[4];
+      }
+      else
+        this._password = null;
+    }
+    else {
+      this._user = "";
+      this._password = null;
+    }
+    this._host = matches[5];
+    this._port = matches[6] ? matches[6] : "";
+    this._deserializeURIParameters(matches[7]);
+    this._deserializeHeaders(matches[8]);
   });
 
 
@@ -792,10 +966,13 @@ SipAddress.fun(
   });
 
 SipAddress.fun(
-  function clone() {
+  function clone(deep) {
     var rv =SipAddress.instantiate();
     rv._displayName = this._displayName;
-    rv.uri = this.uri.clone().QueryInterface(Components.interfaces.zapISipURI);
+    if (deep)
+      rv.uri = this.uri.clone(true).QueryInterface(Components.interfaces.zapISipURI);
+    else
+      rv.uri = this.uri;
     return rv;
   });
 
@@ -803,7 +980,30 @@ SipAddress.fun(
 // zapISipAddress implementation:
 
 // attribute AUTF8String displayName;
-SipAddress.parsedAttrib("displayName", REGEXP_DISPLAY_NAME, null);
+SipAddress.obj("_displayName", "");
+SipAddress.gettersetter(
+  "displayName",
+  function get_displayName() {
+    if (this._displayName && this._displayName[0] == '"') {
+      // a quoted string. -> unescape
+      return UNESCAPE_QUOTED_STRING(this._displayName);
+    }
+    // tokens separated by whitespace. -> no need to unescape anything
+    return this._displayName;
+  },
+  function set_displayName(v) {
+    if (!v) {
+      this._displayName = "";
+      return;
+    }
+    if (REGEXP_DISPLAY_NAME_TOKENS.test(v))
+      this._displayName = v; // a sequence of tokens with non-significant ws
+    else if (!/[\n\r]/(v)) {
+      this._displayName = ESCAPE_QUOTED_STRING(v);
+    }
+    else
+      this._error("Can't have carriage returns or newlines in display name");
+  });
 
 // attribute zapISipURI uri;
 SipAddress.obj("uri", null);
@@ -821,12 +1021,12 @@ SipAddress.fun(
       // -> parse into (display-name[parsed,?], addr-spec[unparsed])
       var matches = REGEXP_NAME_ADDR(octets);
       if (!matches) this._verboseError(PARSE_ERROR+": malformed address ("+octets+")");
-      this.displayName = matches[1];
+      this._displayName = matches[1] ? REGEXP_TRIM_WSP(matches[1])[1] : "";
       this.uri = theSyntaxFactory.deserializeURI(matches[2]);
     }
     else {
       // an 'addr-spec':
-      this.displayName = "";
+      this.displayName = null;
       this.uri = theSyntaxFactory.deserializeURI(octets);
     }
   });
@@ -904,9 +1104,12 @@ SipToHeader.fun(
   });
 
 SipToHeader.fun(
-  function clone() {
+  function clone(deep) {
     var rv =SipToHeader.instantiate();
-    rv.address = this.address.clone().QueryInterface(Components.interfaces.zapISipAddress);
+    if (deep)
+      rv.address = this.address.clone(true).QueryInterface(Components.interfaces.zapISipAddress);
+    else
+      rv.address = this.address;
     rv._ParameterHash = objclone(this._ParameterHash);
     return rv;
   });
@@ -927,6 +1130,8 @@ SipToHeader.parsedHash(
   "Parameter",
   SERIALIZER_PARAMS,
   TOKENIZER_GENERIC_PARAMS,
+  ESCAPE_NONE, UNESCAPE_NONE,
+  ESCAPE_NONE, UNESCAPE_NONE,
   REGEXP_TOKEN,
   REGEXP_GEN_VALUE,
   { "$tag" : REGEXP_TOKEN });
@@ -978,6 +1183,8 @@ SipReplyToHeader.parsedHash(
   "Parameter",
   SERIALIZER_PARAMS,
   TOKENIZER_GENERIC_PARAMS,
+  ESCAPE_NONE, UNESCAPE_NONE,
+  ESCAPE_NONE, UNESCAPE_NONE,
   REGEXP_TOKEN,
   REGEXP_GEN_VALUE,
   {});
@@ -1031,6 +1238,8 @@ SipFromHeader.parsedHash(
   "Parameter",
   SERIALIZER_PARAMS,
   TOKENIZER_GENERIC_PARAMS,
+  ESCAPE_NONE, UNESCAPE_NONE,
+  ESCAPE_NONE, UNESCAPE_NONE,
   REGEXP_TOKEN,
   REGEXP_GEN_VALUE,
   { "$tag" : REGEXP_TOKEN });
@@ -1114,6 +1323,8 @@ SipContactHeader.parsedHash(
   "Parameter",
   SERIALIZER_PARAMS,
   TOKENIZER_GENERIC_PARAMS,
+  ESCAPE_NONE, UNESCAPE_NONE,
+  ESCAPE_NONE, UNESCAPE_NONE,
   REGEXP_TOKEN,
   REGEXP_GEN_VALUE,
   { "$q" : REGEXP_QVALUE,
@@ -1172,6 +1383,8 @@ SipRouteHeaderBase.parsedHash(
   "Parameter",
   SERIALIZER_PARAMS,
   TOKENIZER_GENERIC_PARAMS,
+  ESCAPE_NONE, UNESCAPE_NONE,
+  ESCAPE_NONE, UNESCAPE_NONE,
   REGEXP_TOKEN,
   REGEXP_GEN_VALUE,
   {});
@@ -1356,6 +1569,8 @@ SipContentTypeHeader.parsedHash(
   "Parameter",
   SERIALIZER_PARAMS,
   TOKENIZER_GENERIC_PARAMS,
+  ESCAPE_NONE, UNESCAPE_NONE,
+  ESCAPE_NONE, UNESCAPE_NONE,
   REGEXP_TOKEN,
   REGEXP_GEN_VALUE,
   {});
@@ -1454,6 +1669,8 @@ SipViaHeader.parsedHash(
   "Parameter",
   SERIALIZER_PARAMS,
   TOKENIZER_GENERIC_PARAMS,
+  ESCAPE_NONE, UNESCAPE_NONE,
+  ESCAPE_NONE, UNESCAPE_NONE,
   REGEXP_TOKEN,
   REGEXP_GEN_VALUE,
   { "$ttl" : REGEXP_TTL,
@@ -1690,6 +1907,8 @@ SipAuthHeaderBase.parsedHash(
   "Parameter",
   SERIALIZER_AUTH_PARAMS,
   TOKENIZER_AUTH_PARAMS,
+  ESCAPE_NONE, UNESCAPE_NONE,
+  ESCAPE_NONE, UNESCAPE_NONE,
   REGEXP_TOKEN,
   REGEXP_AUTH_VALUE,
   {});
@@ -1959,7 +2178,7 @@ SipMessage.fun(
     var headers = this._headers;
     // unwrap inner object:
     header = header.wrappedJSObject;
-    if (!header) this._assert("Invalid argument");
+    this._assert(header, "Invalid argument");
     
     for (var i=0,l=headers.length; i<l; ++i) {
       if (headers[i].wrappedJSObject == header) {
@@ -2202,6 +2421,20 @@ SipRequest.fun(
     rv += this._serializeBody();
     return rv;
   });
+
+SipRequest.fun(
+  function clone(deep) {
+    this._assert(!deep, "can't do deep request copy! write me!");
+    
+    var rv =SipRequest.instantiate();
+    rv._method = this._method;
+    rv.requestURI = this.requestURI;
+    rv._version = this._version;
+    rv._headers = arrayclone(this._headers);
+    rv.body = this.body;
+    return rv;
+  });
+
 
 //----------------------------------------------------------------------
 

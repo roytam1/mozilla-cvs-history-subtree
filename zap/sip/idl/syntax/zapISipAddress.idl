@@ -55,7 +55,7 @@ interface zapISipAddress : zapISipSyntaxObject
    * Whitespace (even that around quoted-string) will always be
    * preserved across serialization/deserialization.
    */
-  attribute AUTF8String displayName;
+  attribute AString displayName;
   
   attribute zapISipURI uri;
 };
