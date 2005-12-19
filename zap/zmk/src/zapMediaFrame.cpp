@@ -42,14 +42,14 @@
 
 zapMediaFrame::zapMediaFrame()
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
 //  printf("/");
 #endif
 }
 
 zapMediaFrame::~zapMediaFrame()
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
 //  printf("\\");
 #endif
 }

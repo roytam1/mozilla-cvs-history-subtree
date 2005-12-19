@@ -61,7 +61,7 @@ zapMediaGraph::zapMediaGraph()
       mNodeIdCounter(0),
       mConnectionIdCounter(0)
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapMediaGraph::zapMediaGraph()\n");
 #endif
 
@@ -71,7 +71,7 @@ zapMediaGraph::zapMediaGraph()
 
 zapMediaGraph::~zapMediaGraph()
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapMediaGraph::~zapMediaGraph()\n");
 #endif
   Shutdown();
@@ -170,7 +170,7 @@ zapMediaGraph::Run()
 
 #ifndef SAME_THREAD_MEDIA_GRAPH
   // run event loop:
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("running media thread\n");
 #endif
   
@@ -178,7 +178,7 @@ zapMediaGraph::Run()
   mPumpingEvents = PR_TRUE;
   
   while (mPumpingEvents) {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
 //    printf(".");
 #endif
     rv = mEventQ->WaitForEvent(&event);
@@ -288,7 +288,7 @@ zapMediaGraph::AddNode(const nsACString & type, nsIPropertyBag2* node_pars,
 {
   // create a new instance of the given type:
   nsCString clazz = NS_LITERAL_CSTRING(ZAP_MEDIANODE_CONTRACTID_PREFIX)+type;
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("Trying to instantiate component %s\n", clazz.get());
 #endif
   nsCOMPtr<zapIMediaNode> node = do_CreateInstance(clazz.get());

@@ -49,14 +49,14 @@
 
 zapG711Decoder::zapG711Decoder()
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapG711Decoder::zapG711Decoder()");
 #endif
 }
 
 zapG711Decoder::~zapG711Decoder()
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapG711Decoder::~zapG711Decoder()");
 #endif
 }

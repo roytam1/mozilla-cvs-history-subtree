@@ -50,7 +50,7 @@
 zapSpeexDecoder::zapSpeexDecoder()
     : mDecoderState(nsnull)
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapSpeexDecoder::zapSpeexDecoder()");
 #endif
 }
@@ -58,7 +58,7 @@ zapSpeexDecoder::zapSpeexDecoder()
 zapSpeexDecoder::~zapSpeexDecoder()
 {
   NS_ASSERTION(!mDecoderState, "unclean shutdown");
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapSpeexDecoder::~zapSpeexDecoder()");
 #endif
 }

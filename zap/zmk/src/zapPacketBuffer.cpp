@@ -65,7 +65,7 @@ zapPacketBuffer::zapPacketBuffer()
       mSourceState(zapPacketBufferSource_STOP_IDLE::Instance()),
       mSinkState(zapPacketBufferSink_IDLE_PREFILLING::Instance())
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapPacketBuffer::zapPacketBuffer()\n");
 #endif
 }
@@ -73,7 +73,7 @@ zapPacketBuffer::zapPacketBuffer()
 zapPacketBuffer::~zapPacketBuffer()
 {
   ClearBuffer();
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapPacketBuffer::~zapPacketBuffer()\n");
 #endif
 }
@@ -285,7 +285,7 @@ zapPacketBufferSourceState::ConnectSource(zapPacketBuffer* pb,
                                           zapIMediaSource* source,
                                           const nsACString & connection_id)
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapPacketBufferSourceState::ConnectSource: protocol error in state %s\n",
          GetName());
 #endif
@@ -297,7 +297,7 @@ zapPacketBufferSourceState::DisconnectSource(zapPacketBuffer* pb,
                                              zapIMediaSource* source,
                                              const nsACString& connection_id)
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapPacketBufferSourceState::DisconnectSource: protocol error in state %s\n",
          GetName());
 #endif
@@ -308,7 +308,7 @@ nsresult
 zapPacketBufferSourceState::ProcessFrame(zapPacketBuffer* pb,
                                          zapIMediaFrame* frame)
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapPacketBufferSourceState::ProcessFrame: protocol error in state %s\n",
          GetName());
 #endif
@@ -421,7 +421,7 @@ zapPacketBufferSource_STOP_WAITING::ProcessFrame(zapPacketBuffer* pb,
                                                  zapIMediaFrame* frame)
 {
   // silently discard frame; the sink doesn't want it:
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("(buffer discard)");
 #endif
   ChangeState(pb, zapPacketBufferSource_STOP_IDLE::Instance());
@@ -562,7 +562,7 @@ nsresult
 zapPacketBufferSinkState::ConnectSink(zapPacketBuffer* pb, zapIMediaSink* sink,
                                       const nsACString& connection_id)
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapPacketBufferSinkState::ConnectSink: protocol error in state %s\n",
          GetName());
 #endif
@@ -573,7 +573,7 @@ nsresult
 zapPacketBufferSinkState::DisconnectSink(zapPacketBuffer* pb, zapIMediaSink *sink,
                                          const nsACString & connection_id)
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapPacketBufferSinkState::DisconnectSink: protocol error in state %s\n",
          GetName());
 #endif
@@ -583,7 +583,7 @@ zapPacketBufferSinkState::DisconnectSink(zapPacketBuffer* pb, zapIMediaSink *sin
 nsresult
 zapPacketBufferSinkState::RequestFrame(zapPacketBuffer* pb)
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapPacketBufferSinkState::RequestFrame: protocol error in state %s\n",
          GetName());
 #endif
@@ -727,7 +727,7 @@ zapPacketBufferSink_IDLE::RequestFrame(zapPacketBuffer* pb)
   }
   else {
     // nothing in buffer
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
     printf("E");
 #endif
     if (pb->mRebuffer)

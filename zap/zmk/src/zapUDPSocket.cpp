@@ -48,7 +48,7 @@ zapUDPSocket::zapUDPSocket()
     : mSinkWaiting(PR_FALSE),
       mWaitingOnSource(PR_FALSE)
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapUDPSocket::zapUDPSocket()\n");
 #endif
 }
@@ -56,7 +56,7 @@ zapUDPSocket::zapUDPSocket()
 zapUDPSocket::~zapUDPSocket()
 {
   NS_ASSERTION(!mSocket, "unclean shutdown");
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapUDPSocket::~zapUDPSocket()\n");
 #endif
 }
@@ -231,7 +231,7 @@ zapUDPSocket::ProcessFrame(zapIMediaFrame *frame)
 {
   nsCOMPtr<nsIDatagram> dg = do_QueryInterface(frame);
   if (!dg) {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
     printf("n");
 #endif
     // silently drop EOF or incompatible frame
@@ -262,7 +262,7 @@ zapUDPSocket::HandleDatagram(nsIUDPSocket *socket, nsIDatagram *data)
 {
   if (!mSinkWaiting) {
     // silently discard datagram:
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
     printf("d");
 #endif
   }

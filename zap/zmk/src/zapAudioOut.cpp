@@ -53,12 +53,12 @@ zapAudioOut::zapAudioOut()
   
   PaError err;
   if ((err = Pa_Initialize()) != paNoError) {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
     printf("Failed to initialize portaudio: %s\n", Pa_GetErrorText(err));
 #endif
   }
   
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapAudioOut::zapAudioOut()\n");
 #endif
 }
@@ -70,7 +70,7 @@ zapAudioOut::~zapAudioOut()
   NS_ASSERTION(!mStream, "stream still running");
 
   Pa_Terminate();
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapAudioOut::~zapAudioOut()\n");
 #endif
 }
@@ -110,7 +110,7 @@ zapAudioOut::AddedToGraph(zapIMediaGraph *graph,
     if (device)
       device->GetDeviceID(&mOutputDevice);
   }
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("(audioout using device %d)", mOutputDevice);
 #endif
   return NS_OK;
@@ -180,7 +180,7 @@ int AudioOutCallback(void* inputBuffer, void* outputBuffer,
                      unsigned long framesPerBuffer,
                      PaTimestamp outTime, void* userData)
 {
-#ifdef DEBUG  
+#ifdef DEBUG_afri_zmk  
 //  printf("[");
 #endif
 
@@ -191,7 +191,7 @@ int AudioOutCallback(void* inputBuffer, void* outputBuffer,
 
   if (audioout->mWaiting) {
     // underflow: we are still waiting for the next frame.
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
     printf("U");
 #endif
     // Generate a silence buffer
@@ -208,7 +208,7 @@ int AudioOutCallback(void* inputBuffer, void* outputBuffer,
   else {
     if (audioout->mFrame) {
       // We've got a frame. Consume it.
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
 //       PRUint32 timestamp;
 //       audioout->mFrame->GetTimestamp(&timestamp);
 //       printf("<%d>", timestamp);
@@ -246,7 +246,7 @@ int AudioOutCallback(void* inputBuffer, void* outputBuffer,
       audioout->mEventQ->ExitMonitor();
       if (!result) {
         // the event was cancelled
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
         printf("(audioout stop1)");
 #endif
         stopStream = PR_TRUE;
@@ -254,14 +254,14 @@ int AudioOutCallback(void* inputBuffer, void* outputBuffer,
     }
     else {
       // EOF
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
       printf("(audioout stop2)");
 #endif
       stopStream = PR_TRUE;
     }
   }
 
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
 //  printf("]");
 #endif
   
@@ -353,7 +353,7 @@ zapAudioOut::ProcessFrame(zapIMediaFrame *frame)
       nsCOMPtr<nsIPropertyBag2> streamInfo;
       frame->GetStreamInfo(getter_AddRefs(streamInfo));
       if (NS_FAILED(StartStream(streamInfo))) {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
         NS_ERROR("Error opening stream");
 #endif
       }
@@ -451,7 +451,7 @@ nsresult zapAudioOut::StartStream(nsIPropertyBag2* streamInfo)
                               AudioOutCallback, this);
   
   if (err != paNoError) {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
     printf("Failed to open portaudio output stream: %s\n", Pa_GetErrorText(err));
 #endif
     return NS_ERROR_FAILURE;
@@ -498,7 +498,7 @@ void zapAudioOut::CloseStream()
     
   Pa_CloseStream(mStream);
   mStream = nsnull;
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("(audioout stream closed)");
 #endif
 

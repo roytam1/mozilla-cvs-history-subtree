@@ -55,12 +55,12 @@ zapAudioIn::zapAudioIn()
   
   PaError err;
   if ((err = Pa_Initialize()) != paNoError) {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
     printf("Failed to initialize portaudio: %s\n", Pa_GetErrorText(err));
 #endif
   }
   
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapAudioIn::zapAudioIn()\n");
 #endif
 }
@@ -72,7 +72,7 @@ zapAudioIn::~zapAudioIn()
   NS_ASSERTION(!mStream, "stream still running");
 
   Pa_Terminate();
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapAudioIn::~zapAudioIn()\n");
 #endif
 }
@@ -113,7 +113,7 @@ zapAudioIn::AddedToGraph(zapIMediaGraph *graph,
       device->GetDeviceID(&mInputDevice);
     }
   }
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("(audioin using device %d)", mInputDevice);
 #endif
   return NS_OK;
@@ -267,7 +267,7 @@ int AudioInCallback(void* inputBuffer, void* outputBuffer,
                     unsigned long framesPerBuffer,
                     PaTimestamp outTime, void* userData)
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
 //  printf("{");
 #endif
 
@@ -276,7 +276,7 @@ int AudioInCallback(void* inputBuffer, void* outputBuffer,
   nsAutoLock lock(audioin->mCallbackLock);
 
   if (!audioin->mKeepRunning) {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
     printf("(audioin cb stopped)}");
 #endif
     return 1; // stop stream
@@ -299,7 +299,7 @@ int AudioInCallback(void* inputBuffer, void* outputBuffer,
   audioin->mEventQ->PostSynchronousEvent(ev, &result);
   audioin->mEventQ->ExitMonitor();
   
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
 //  printf("}");
 #endif
   return 0;
@@ -350,7 +350,7 @@ nsresult zapAudioIn::StartStream()
                               AudioInCallback, this);
 
   if (err != paNoError) {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
     printf("Failed to open portaudio input stream: %s\n", Pa_GetErrorText(err));
 #endif
     mKeepRunning = PR_FALSE;
@@ -377,7 +377,7 @@ void zapAudioIn::CloseStream()
 
   Pa_CloseStream(mStream);
   mStream = nsnull;
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("(audioin stream closed)");
 #endif
 }
@@ -417,7 +417,7 @@ void zapAudioIn::SendFrame(const nsACString& data, double timestamp)
 nsresult zapAudioInState::ConnectSink(zapAudioIn* audioin, zapIMediaSink* sink,
                                       const nsACString& connection_id)
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapAudioInState::ConnectSink: protocol error in state %s\n", GetName());
 #endif
   return NS_ERROR_FAILURE;
@@ -425,7 +425,7 @@ nsresult zapAudioInState::ConnectSink(zapAudioIn* audioin, zapIMediaSink* sink,
 
 nsresult zapAudioInState::RequestFrame(zapAudioIn* audioin)
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapAudioInState::RequestFrame: protocol error in state %s\n", GetName());
 #endif
   return NS_ERROR_FAILURE;
@@ -433,14 +433,14 @@ nsresult zapAudioInState::RequestFrame(zapAudioIn* audioin)
   
 void zapAudioInState::SendFrame(zapAudioIn* audioin, zapIMediaFrame* frame)
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapAudioInState::SendFrame: protocol error in state %s\n", GetName());
 #endif
 }
   
 void zapAudioInState::ChangeState(zapAudioIn* audioin, zapAudioInState* state)
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   if (!((this == zapAudioIn_PLAY_IDLE_OPEN::Instance() &&
          state == zapAudioIn_PLAY_WAITING_OPEN::Instance()) ||
         (this == zapAudioIn_PLAY_WAITING_OPEN::Instance() &&
@@ -606,7 +606,7 @@ void zapAudioIn_PLAY_IDLE_OPEN::SendFrame(zapAudioIn* audioin,
                                           zapIMediaFrame* frame)
 {
   // Sink is not waiting. We have buffer overflow.
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("O");
 #endif
   // Silently discard frame

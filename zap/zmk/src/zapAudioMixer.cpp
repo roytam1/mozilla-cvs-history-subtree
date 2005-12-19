@@ -73,7 +73,7 @@ zapAudioMixerInput::zapAudioMixerInput()
     : mWaiting(PR_FALSE),
       mActive(PR_FALSE)
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapAudioMixerInput::zapAudioMixerInput()\n");
 #endif
 }
@@ -81,7 +81,7 @@ zapAudioMixerInput::zapAudioMixerInput()
 zapAudioMixerInput::~zapAudioMixerInput()
 {
   NS_ASSERTION(mMixer, "Never initialized");
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapAudioMixerInput::~zapAudioMixerInput()\n");
 #endif
   // clean up references:
@@ -173,7 +173,7 @@ void zapAudioMixerInput::RequestFrame()
 
 PRBool zapAudioMixerInput::ConsumeFrame(zapIMediaFrame** frame)
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   if (mActive && mWaiting)
     printf("Underflow in audiomixer input %p\n", this);
 #endif
@@ -190,14 +190,14 @@ zapAudioMixer::zapAudioMixer()
     : mFramesAvailable(PR_FALSE),
       mWaiting(PR_FALSE)
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapAudioMixer::zapAudioMixer()\n");
 #endif
 }
 
 zapAudioMixer::~zapAudioMixer()
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapAudioMixer::~zapAudioMixer()\n");
 #endif
 }
@@ -391,7 +391,7 @@ void zapAudioMixer::Mix()
   if (activeInputs == 0) {
     // EOF
     if (mOutput) {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
       printf("(mixer->EOF)");
 #endif
       mOutput->ProcessFrame(nsnull);

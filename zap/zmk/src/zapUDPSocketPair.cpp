@@ -48,14 +48,14 @@
 
 zapUDPSocketPair::zapUDPSocketPair()
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapUDPSocketPair::zapUDPSocketPair()\n");
 #endif
 }
 
 zapUDPSocketPair::~zapUDPSocketPair()
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapUDPSocketPair::~zapUDPSocketPair()\n");
 #endif
 }

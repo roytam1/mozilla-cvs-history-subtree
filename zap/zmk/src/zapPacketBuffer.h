@@ -124,7 +124,7 @@ public:
   virtual nsresult DisconnectSource(zapPacketBuffer* pb, zapIMediaSource* source,
                                     const nsACString& connection_id);
   virtual nsresult ProcessFrame(zapPacketBuffer* pb, zapIMediaFrame* frame);
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   virtual const char* GetName()=0;
 #endif
   
@@ -148,7 +148,7 @@ public:
                                  const nsACString & connection_id);
   virtual nsresult DisconnectSource(zapPacketBuffer* pb, zapIMediaSource* source,
                                     const nsACString& connection_id);
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   virtual const char* GetName() {
     static const char* name = "STOP_IDLE";
     return name;
@@ -174,7 +174,7 @@ public:
   virtual nsresult DisconnectSource(zapPacketBuffer* pb, zapIMediaSource* source,
                                     const nsACString& connection_id);
   virtual nsresult ProcessFrame(zapPacketBuffer* pb, zapIMediaFrame* frame);
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   virtual const char* GetName() {
     static const char* name = "STOP_WAITING";
     return name;
@@ -200,7 +200,7 @@ public:
   virtual nsresult DisconnectSource(zapPacketBuffer* pb, zapIMediaSource* source,
                                     const nsACString& connection_id);
   virtual nsresult ProcessFrame(zapPacketBuffer* pb, zapIMediaFrame* frame);
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   virtual const char* GetName() {
     static const char* name = "RUN_WAITING";
     return name;
@@ -227,7 +227,7 @@ public:
                                  const nsACString & connection_id);
   virtual nsresult DisconnectSource(zapPacketBuffer* pb, zapIMediaSource* source,
                                     const nsACString& connection_id);
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   virtual const char* GetName() {
     static const char* name = "RUN_IDLE";
     return name;
@@ -253,7 +253,7 @@ public:
   virtual nsresult DisconnectSink(zapPacketBuffer* pb, zapIMediaSink *sink,
                                   const nsACString & connection_id);
   virtual nsresult RequestFrame(zapPacketBuffer* pb);  
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   virtual const char* GetName()=0;
 #endif
   
@@ -274,7 +274,7 @@ public:
   // zapIMediaSource handlers:
   virtual nsresult DisconnectSink(zapPacketBuffer* pb, zapIMediaSink *sink,
                                   const nsACString & connection_id);
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   virtual const char* GetName() {
     static const char* name = "WAITING_PREFILLING";
     return name;
@@ -298,7 +298,7 @@ public:
   // zapIMediaSource handlers:
   virtual nsresult DisconnectSink(zapPacketBuffer* pb, zapIMediaSink *sink,
                                   const nsACString & connection_id);
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   virtual const char* GetName() {
     static const char* name = "WAITING";
     return name;
@@ -323,7 +323,7 @@ public:
   virtual nsresult DisconnectSink(zapPacketBuffer* pb, zapIMediaSink *sink,
                                   const nsACString & connection_id);
   virtual nsresult RequestFrame(zapPacketBuffer* pb);  
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   virtual const char* GetName() {
     static const char* name = "IDLE";
     return name;
@@ -350,7 +350,7 @@ public:
   virtual nsresult DisconnectSink(zapPacketBuffer* pb, zapIMediaSink *sink,
                                   const nsACString & connection_id);
   virtual nsresult RequestFrame(zapPacketBuffer* pb);  
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   virtual const char* GetName() {
     static const char* name = "IDLE_PREFILLING";
     return name;

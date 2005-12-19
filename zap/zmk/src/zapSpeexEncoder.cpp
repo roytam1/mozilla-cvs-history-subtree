@@ -49,7 +49,7 @@
 zapSpeexEncoder::zapSpeexEncoder()
     : mEncoderState(nsnull)
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapSpeexEncoder::zapSpeexEncoder()");
 #endif
 }
@@ -57,7 +57,7 @@ zapSpeexEncoder::zapSpeexEncoder()
 zapSpeexEncoder::~zapSpeexEncoder()
 {
   NS_ASSERTION(!mEncoderState, "unclean shutdown");
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapSpeexEncoder::~zapSpeexEncoder()");
 #endif
 }
@@ -284,7 +284,7 @@ zapSpeexEncoder::OpenStream(nsIPropertyBag2* streamInfo)
                                                 &sampleRate)) ||
       sampleRate != mSampleRate) {
     NS_ERROR("unsupported sample rate");
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
     printf("%f != %f\n", sampleRate, mSampleRate);
 #endif
     return NS_ERROR_FAILURE;

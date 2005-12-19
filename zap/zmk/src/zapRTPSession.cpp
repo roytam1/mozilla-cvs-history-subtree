@@ -44,7 +44,7 @@
 
 zapRTPSession::zapRTPSession()
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapRTPSession::zapRTPSession()\n");
 #endif
 }
@@ -52,7 +52,7 @@ zapRTPSession::zapRTPSession()
 zapRTPSession::~zapRTPSession()
 {
   NS_ASSERTION(!mTransmitter && !mReceiver, "unclean shutdown");
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapRTPSession::~zapRTPSession()\n");
 #endif
 }

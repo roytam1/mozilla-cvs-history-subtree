@@ -138,7 +138,7 @@ public:
   // portaudio callback handlers:
   virtual void SendFrame(zapAudioIn* audioin, zapIMediaFrame* frame);
 
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   virtual const char* GetName()=0;
 #endif
   
@@ -163,7 +163,7 @@ public:
                                   const nsACString & connection_id);
   virtual nsresult RequestFrame(zapAudioIn* audioin);
   
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   virtual const char* GetName() {
     static const char* name = "STOP_IDLE_CLOSED";
     return name;
@@ -190,7 +190,7 @@ public:
   virtual nsresult DisconnectSink(zapAudioIn* audioin, zapIMediaSink *sink,
                                   const nsACString & connection_id);
   virtual nsresult RequestFrame(zapAudioIn* audioin);
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   virtual const char* GetName() {
     static const char* name = "PLAY_IDLE_CLOSED";
     return name;
@@ -217,7 +217,7 @@ public:
   virtual nsresult RequestFrame(zapAudioIn* audioin);
 
   virtual void SendFrame(zapAudioIn* audioin, zapIMediaFrame* frame);
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   virtual const char* GetName() {
     static const char* name = "PLAY_IDLE_OPEN";
     return name;
@@ -241,7 +241,7 @@ public:
   
   virtual nsresult DisconnectSink(zapAudioIn* audioin, zapIMediaSink *sink,
                                   const nsACString & connection_id);
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   virtual const char* GetName() {
     static const char* name = "STOP_WAITING_CLOSED";
     return name;
@@ -266,7 +266,7 @@ public:
   virtual nsresult DisconnectSink(zapAudioIn* audioin, zapIMediaSink *sink,
                                   const nsACString & connection_id);
   virtual nsresult RequestFrame(zapAudioIn* audioin);
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   virtual const char* GetName() {
     static const char* name = "STOP_IDLEEOF_CLOSED";
     return name;
@@ -291,7 +291,7 @@ public:
   virtual nsresult DisconnectSink(zapAudioIn* audioin, zapIMediaSink *sink,
                                   const nsACString & connection_id);
   virtual nsresult RequestFrame(zapAudioIn* audioin);
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   virtual const char* GetName() {
     static const char* name = "PLAY_IDLEEOF_CLOSED";
     return name;
@@ -318,7 +318,7 @@ public:
                                   const nsACString & connection_id);
 
   virtual void SendFrame(zapAudioIn* audioin, zapIMediaFrame* frame);
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   virtual const char* GetName() {
     static const char* name = "PLAY_WAITING_OPEN";
     return name;

@@ -49,14 +49,14 @@
 
 zapRTPTransmitter::zapRTPTransmitter()
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapRTPTransmitter::zapRTPTransmitter()\n");
 #endif
 }
 
 zapRTPTransmitter::~zapRTPTransmitter()
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapRTPTransmitter::~zapRTPTransmitter()\n");
 #endif
 }

@@ -48,14 +48,14 @@
 
 zapG711Encoder::zapG711Encoder()
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapG711Encoder::zapG711Encoder()");
 #endif
 }
 
 zapG711Encoder::~zapG711Encoder()
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapG711Encoder::~zapG711Encoder()");
 #endif
 }
@@ -126,7 +126,7 @@ zapG711Encoder::OpenStream(nsIPropertyBag2* streamInfo)
                                                 &sampleRate)) ||
       sampleRate != 8000.0) {
     NS_ERROR("unsupported sample rate");
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
     printf("%f != 8000\n", sampleRate);
 #endif
     return NS_ERROR_FAILURE;

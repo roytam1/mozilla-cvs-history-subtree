@@ -69,7 +69,7 @@ zapSplitterOutput::zapSplitterOutput()
     : mWaiting(PR_FALSE),
       mFrameAvailable(PR_FALSE)
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapSplitterOutput::zapSplitterOutput()\n");
 #endif
 }
@@ -77,7 +77,7 @@ zapSplitterOutput::zapSplitterOutput()
 zapSplitterOutput::~zapSplitterOutput()
 {
   NS_ASSERTION(mSplitter, "Never initialized");
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapSplitterOutput::~zapSplitterOutput()\n");
 #endif
   // clean up references:
@@ -149,7 +149,7 @@ void zapSplitterOutput::FrameAvailable()
 {
   if (!mWaiting) {
     // we're not ready to accept a frame
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
     if (mFrameAvailable)
       printf("overflow in splitter output %p\n", this);
 #endif
@@ -172,14 +172,14 @@ zapSplitter::zapSplitter()
     : mWaiting(PR_FALSE),
       mProcessing(PR_FALSE)
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapSplitter::zapSplitter()\n");
 #endif
 }
 
 zapSplitter::~zapSplitter()
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapSplitter::~zapSplitter()\n");
 #endif
 }

@@ -51,7 +51,7 @@ zapRtttlPlayer::zapRtttlPlayer()
       mAmplitude(0.5),
       mLoop(PR_TRUE)
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapRtttlPlayer::zapRtttlPlayer()\n");
 #endif
 }
@@ -63,7 +63,7 @@ zapRtttlPlayer::~zapRtttlPlayer()
     mTones = nsnull;
   }
   
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapRtttlPlayer::~zapRtttlPlayer()\n");
 #endif
 }

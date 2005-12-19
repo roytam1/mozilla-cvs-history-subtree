@@ -49,14 +49,14 @@
 
 zapRTPReceiver::zapRTPReceiver()
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapRTPReceiver::zapRTPReceiver()\n");
 #endif
 }
 
 zapRTPReceiver::~zapRTPReceiver()
 {
-#ifdef DEBUG
+#ifdef DEBUG_afri_zmk
   printf("zapRTPReceiver::~zapRTPReceiver()\n");
 #endif
 }
