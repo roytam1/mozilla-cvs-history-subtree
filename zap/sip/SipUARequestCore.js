@@ -72,10 +72,11 @@ SipNonInviteRC.addInterfaces(Components.interfaces.zapISipNonInviteRC,
                              Components.interfaces.zapISipClientTransactionUser);
 
 SipNonInviteRC.fun(
-  function init(stack, dialog, request) {
+  function init(stack, dialog, request, flags) {
     this.stack = stack;
     this.dialog = dialog;
     this.request = request;
+    this.flags = flags;
 
     this.changeState("INITIALIZED");
   });
@@ -83,7 +84,7 @@ SipNonInviteRC.fun(
 //----------------------------------------------------------------------
 // zapISipNonInviteRC
 
-//  reaonly attribute zapISipRequest request;
+//  readonly attribute zapISipRequest request;
 SipNonInviteRC.obj("request", null);
 
 //  attribute zapISipNonInviteRCListener listener;
@@ -103,10 +104,41 @@ SipNonInviteRC.statefun(
       this.dialog.terminate();
     }
 
+    // Figure out our destination uri (rfc3261 8.1.2):
+    // If we have the top route is a loose router it will be our
+    // destination. Otherwise we use the request uri:
+    var destinationURI;
+    var removeTopRoute; // should we remove the top route header prior
+                        // to sending?
+    var topRoute = this.request.getTopRouteHeader();
+    if (topRoute &&
+        topRoute.address.uri.QueryInterface(Components.interfaces.zapISipSIPURI).hasURIParameter("lr")) {
+      destinationURI = topRoute.address.uri;
+      removeTopRoute = this.flags & Components.interfaces.zapISipUAStack.ELIDE_DESTINATION_ROUTE_HEADER;
+    }
+    else {
+      destinationURI = this.request.requestURI;
+      removeTopRoute = false;
+    }
+    destinationURI = destinationURI.QueryInterface(Components.interfaces.zapISipSIPURI);
+
+    // construct a (possibly cloned) request just for this send iteration:
+    if (removeTopRoute) {
+      // We need to specify somewhere which parts of the request
+      // object are ok to be modified without cloning (like CSeq,
+      // branch parameter, ...). At the moment we do a shallow clone,
+      // so any header modifications feed through to the original
+      // request. Maybe we should always clone deep.
+      this.currentRequest = this.request.clone(false);
+      this.currentRequest.removeHeader(this.currentRequest.getTopHeader("Route"));
+    }
+    else
+      this.currentRequest = this.request;
+    
     // Asynchronously resolve possible destinations for the request:
     this.changeState("RESOLVING");
-    this.stack.resolver.resolveRequestDestinationsAsync(this.request,
-                                                        this);
+    this.stack.resolver.resolveDestinationsAsync(destinationURI,
+                                                 this);
   });
 
 //----------------------------------------------------------------------
@@ -137,23 +169,24 @@ SipNonInviteRC.statefun(
       return;
     }
     // send request to next destination:
-    this.request.getTopViaHeader().setParameter("branch",
-                                                 BRANCH_COOKIE+gUUIDGenerator.generateUUIDString());
+    this.currentRequest.getTopViaHeader().setParameter("branch",
+                                                       BRANCH_COOKIE+gUUIDGenerator.generateUUIDString());
     if (this.dialog) {
       // we're sending a request within a dialog.
       // update local sequence number
       if (this.dialog.localSequenceNumber ==
           Components.interfaces.zapISipDialog.UNINITIALIZED_SEQUENCE_NUMBER)
         this.dialog.localSequenceNumber = 0;
-      this.request.getCSeqHeader().sequenceNumber =
+      this.currentRequest.getCSeqHeader().sequenceNumber =
         ++this.dialog.localSequenceNumber;
     }
     else {
-      this.request.getCSeqHeader().sequenceNumber += 1;
+      this.currentRequest.getCSeqHeader().sequenceNumber += 1;
     }
-    this.stack.transactionManager.executeNonInviteClientTransaction(this.request,
-                                                                     this._destinationIterator.getNext(),
-                                                                     this);
+
+    this.stack.transactionManager.executeNonInviteClientTransaction(this.currentRequest,
+                                                                    this._destinationIterator.getNext(),
+                                                                    this);
   });
 
 //----------------------------------------------------------------------
@@ -206,11 +239,12 @@ SipInviteRC.addInterfaces(Components.interfaces.zapISipInviteRC,
                           Components.interfaces.zapISipClientTransactionUser);
 
 SipInviteRC.fun(
-  function init(stack, dialog, request) {
+  function init(stack, dialog, request, flags) {
     this.stack = stack;
     this.dialog = dialog;
     this.request = request;
-
+    this.flags = flags;
+    
     this.changeState("INITIALIZED");
 
     // Array of spawned dialog (for INVITE outside of dialog).
@@ -256,10 +290,42 @@ SipInviteRC.statefun(
         this.dialog.pendingInviteRC = this;
     
     this.responsehandler = rh;
+    
+    // Figure out our destination uri (rfc3261 8.1.2):
+    // If we have the top route is a loose router it will be our
+    // destination. Otherwise we use the request uri:
+    var destinationURI;
+    var removeTopRoute; // should we remove the top route header prior
+                        // to sending?
+    var topRoute = this.request.getTopRouteHeader();
+    if (topRoute &&
+        topRoute.address.uri.QueryInterface(Components.interfaces.zapISipSIPURI).hasURIParameter("lr")) {
+      destinationURI = topRoute.address.uri;
+      removeTopRoute = this.flags & Components.interfaces.zapISipUAStack.ELIDE_DESTINATION_ROUTE_HEADER;
+    }
+    else {
+      destinationURI = this.request.requestURI;
+      removeTopRoute = false;
+    }
+    destinationURI = destinationURI.QueryInterface(Components.interfaces.zapISipSIPURI);
+    
+    // construct a (possibly cloned) request for this send iteration
+    if (removeTopRoute) {
+      // We need to specify somewhere which parts of the request
+      // object are ok to be modified without cloning (like CSeq,
+      // branch parameter, ...). At the moment we do a shallow clone,
+      // so any header modifications feed through to the original
+      // request. Maybe we should always clone deep.
+      this.currentRequest = this.request.clone(false);
+      this.currentRequest.removeHeader(this.currentRequest.getTopHeader("Route"));
+    }
+    else
+      this.currentRequest = this.request;
+    
     // Asynchronously resolve possible destinations for the request:
     this.changeState("RESOLVING");
-    this.stack.resolver.resolveRequestDestinationsAsync(this.request,
-                                                        this);
+    this.stack.resolver.resolveDestinationsAsync(destinationURI,
+                                                 this);
   });
 
 //  void cancel();
@@ -282,25 +348,25 @@ SipInviteRC.statefun(
     // method:
     req.method = "CANCEL";
     // request uri:
-    req.requestURI = this.request.requestURI;
+    req.requestURI = this.currentRequest.requestURI;
     // copy Route headers:
-    this.request.getHeaders("Route", {}).forEach(function(v) {
-                                                   req.appendHeader(v);
-                                                 });
+    this.currentRequest.getHeaders("Route", {}).forEach(function(v) {
+                                                          req.appendHeader(v);
+                                                        });
     
     // Via:
-    req.appendHeader(this.request.getTopViaHeader());
+    req.appendHeader(this.currentRequest.getTopViaHeader());
     // To header:
-    req.appendHeader(this.request.getToHeader());
+    req.appendHeader(this.currentRequest.getToHeader());
     // From header:
-    req.appendHeader(this.request.getFromHeader());
+    req.appendHeader(this.currentRequest.getFromHeader());
     // Call-ID header:
-    req.appendHeader(this.request.getCallIDHeader());
+    req.appendHeader(this.currentRequest.getCallIDHeader());
     // CSeq header:
-    req.appendHeader(this.request.getCSeqHeader()); //XXX maybe clone
+    req.appendHeader(this.currentRequest.getCSeqHeader()); //XXX maybe clone
     req.getCSeqHeader().method = "CANCEL";
     // Max-Forwards header:
-    req.appendHeader(this.request.getSingleHeader("Max-Forwards"));
+    req.appendHeader(this.currentRequest.getSingleHeader("Max-Forwards"));
 
     this.stack.transactionManager.executeNonInviteClientTransaction(req,
                                                                     this.current_destination,
@@ -353,22 +419,22 @@ SipInviteRC.statefun(
     }
     
     // send request to next destination:
-    this.request.getTopViaHeader().setParameter("branch",
-                                                 BRANCH_COOKIE+gUUIDGenerator.generateUUIDString());
+    this.currentRequest.getTopViaHeader().setParameter("branch",
+                                                       BRANCH_COOKIE+gUUIDGenerator.generateUUIDString());
     if (this.dialog) {
       // we're sending a request within a dialog.
       // update local sequence number
       if (this.dialog.localSequenceNumber ==
           Components.interfaces.zapISipDialog.UNINITIALIZED_SEQUENCE_NUMBER)
         this.dialog.localSequenceNumber = 0;
-      this.request.getCSeqHeader().sequenceNumber =
+      this.currentRequest.getCSeqHeader().sequenceNumber =
         ++this.dialog.localSequenceNumber;
     }
     else {
-      this.request.getCSeqHeader().sequenceNumber += 1;
+      this.currentRequest.getCSeqHeader().sequenceNumber += 1;
     }
     this.current_destination = this._destinationIterator.getNext();
-    this.stack.transactionManager.executeInviteClientTransaction(this.request,
+    this.stack.transactionManager.executeInviteClientTransaction(this.currentRequest,
                                                                  this.current_destination,
                                                                  this,
                                                                  this.stack.rport_client);
@@ -405,7 +471,7 @@ SipInviteRC.statefun(
       dialog = this.stack.findDialog(constructClientDialogID(response));
       if (!dialog) {
         // create new early dialog:
-        dialog = this.stack.createDialogUAC(this.request, response);
+        dialog = this.stack.createDialogUAC(this.currentRequest, response);
         dialog.pendingInviteRC = this;
         this.spawnedDialogs.push(dialog);
       }
@@ -438,7 +504,7 @@ SipInviteRC.statefun(
     var timerA = makeOneShotTimer(this, this.stack.transactionManager.T1 * 64);
     // To ensure that we get any further 2XX responses, we register with the
     // stack:
-    this.stack.registerInviteRC(this, constructClientTransactionKey(this.request));
+    this.stack.registerInviteRC(this, constructClientTransactionKey(this.currentRequest));
     
   });
 
@@ -513,7 +579,7 @@ SipInviteRC.fun(
                  " because there was no early dialog");
       // no -> create new dialog:
       this._assert(!this.dialog, "dialog establishing response for re-invite???");
-      dialog = this.stack.createDialogUAC(this.request, response);
+      dialog = this.stack.createDialogUAC(this.currentRequest, response);
       dialog.pendingInviteRC = this;
       this.spawnedDialogs.push(dialog);
     }
@@ -536,11 +602,11 @@ SipInviteRC.fun(
       var ackTemplate = dialog.formulateACK();
       // copy sequence number from INVITE:
       ackTemplate.getCSeqHeader().sequenceNumber =
-        this.request.getCSeqHeader().sequenceNumber;
+        this.currentRequest.getCSeqHeader().sequenceNumber;
       // copy credentials (RFC3261 13.2.2.4/22.1):
       // XXX should we copy?
-      this.request.getHeaders("Authorization", {}).forEach(function(v) { ackTemplate.appendHeader(v); });
-      this.request.getHeaders("Proxy-Authorization", {}).forEach(function(v) { ackTemplate.appendHeader(v); });
+      this.currentRequest.getHeaders("Authorization", {}).forEach(function(v) { ackTemplate.appendHeader(v); });
+      this.currentRequest.getHeaders("Proxy-Authorization", {}).forEach(function(v) { ackTemplate.appendHeader(v); });
 
       // set a new branch id:
       ackTemplate.getTopViaHeader().setParameter("branch",
@@ -573,8 +639,20 @@ SipInviteRC.fun(
       }
     };
     
-    this.stack.resolver.resolveRequestDestinationsAsync(ack,
-                                                        resolveListener);
+    // Figure out our destination uri (rfc3261 8.1.2):
+    // If we have the top route is a loose router it will be our
+    // destination. Otherwise we use the request uri:
+    var ackDestinationURI;
+    var topRoute = ack.getTopRouteHeader();
+    if (topRoute &&
+        topRoute.address.uri.QueryInterface(Components.interfaces.zapISipSIPURI).hasURIParameter("lr"))
+      ackDestinationURI = topRoute.address.uri;
+    else
+      ackDestinationURI = ack.requestURI;
+    ackDestinationURI = ackDestinationURI.QueryInterface(Components.interfaces.zapISipSIPURI);
+    
+    this.stack.resolver.resolveDestinationsAsync(ackDestinationURI,
+                                                 resolveListener);
   });
 
 
@@ -729,7 +807,7 @@ SipInviteRS.obj("dialog", null);
 //  zapISipResponse formulateResponse(in ACString statusCode, in zapISipAddress contactAddress);
 SipInviteRS.statefun(
   "INITIALIZED",
-  function formulateResponse(statusCode) {
+  function formulateResponse(statusCode, contactAddress) {
     var m;
     if (!this._ToTag) {
       // Generate a To-tag.

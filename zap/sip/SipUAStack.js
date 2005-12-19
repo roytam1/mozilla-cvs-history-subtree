@@ -185,15 +185,15 @@ SipUAStack.fun(
 //  attribute zapISipRequestHandler requestHandler;
 SipUAStack.obj("requestHandler", null);
 
-//  zapISipNonInviteRC createNonInviteRequestClient(in zapISipAddress ToAddress, in zapSSipAddress FromAddress, in ACString method);
+//  zapISipNonInviteRC createNonInviteRequestClient(in zapISipAddress ToAddress, in zapSSipAddress FromAddress, in ACString method, in unsigned long rcFlags);
 SipUAStack.fun(
   function createNonInviteRequestClient(ToAddress, FromAddress, method,
-                                        routeset, count) {
+                                        routeset, count, rcFlags) {
     var rc = SipNonInviteRC.instantiate();
     var request = this.formulateGenericRequest(method, ToAddress.uri,
                                                ToAddress, FromAddress,
                                                routeset, count);
-    rc.init(this, null, request);
+    rc.init(this, null, request, rcFlags);
     return rc;
   });
 
@@ -203,10 +203,11 @@ SipUAStack.fun(
 //                                                in zapISipAddress contactAddress,
 //                                                [array, size_is(count)]
 //                                                in zapISipAddress routeset,
-//                                                in unsigned long count);
+//                                                in unsigned long count,
+//                                                in unsigned long rcFlags);
 SipUAStack.fun(
   function createRegisterRequestClient(domain, addressOfRecord, contactAddress,
-                                       routeset, count) {
+                                       routeset, count, rcFlags) {
     var rc = SipNonInviteRC.instantiate();
     var addressOfRecordAddr = gSyntaxFactory.createAddress("", addressOfRecord);
     var request = this.formulateGenericRequest("REGISTER", domain,
@@ -216,22 +217,22 @@ SipUAStack.fun(
     // add Contact header (RFC3261 10.2):
     var contact = gSyntaxFactory.createContactHeader(contactAddress);
     request.appendHeader(contact);
-    rc.init(this, null, request);
+    rc.init(this, null, request, rcFlags);
     return rc;
   });
 
 
-//  zapISipInviteRC createInviteRequestClient(in zapISipAddress ToAddress, in zapISipAddress FromAddress, in zapISipAddress ContactAddress, [array, size_is(count)] in zapISipAddress routeset, in unsigned long count);
+//  zapISipInviteRC createInviteRequestClient(in zapISipAddress ToAddress, in zapISipAddress FromAddress, in zapISipAddress ContactAddress, [array, size_is(count)] in zapISipAddress routeset, in unsigned long count, in unsigned long rcFlags);
 SipUAStack.fun(
   function createInviteRequestClient(ToAddress, FromAddress, contactAddress,
-                                     routeset, count) {
+                                     routeset, count, rcFlags) {
     var rc = SipInviteRC.instantiate();
     var request = this.formulateGenericRequest("INVITE", ToAddress.uri,
                                                ToAddress, FromAddress,
                                                routeset, count);
     // add mandatory Contact header (rfc3261 8.1.1.8):
     request.appendHeader(gSyntaxFactory.createContactHeader(contactAddress));
-    rc.init(this, null, request);
+    rc.init(this, null, request, rcFlags);
     return rc;
   });
 
@@ -248,7 +249,7 @@ SipUAStack.fun(
     // copy From:
     m.appendHeader(request.getFromHeader());
     // copy To:
-    var toHeader = request.getToHeader().clone().QueryInterface(Components.interfaces.zapISipToHeader);
+    var toHeader = request.getToHeader().clone(false).QueryInterface(Components.interfaces.zapISipToHeader);
     m.appendHeader(toHeader);
     // maybe add tag:
     var tag = toHeader.getParameter("tag");
@@ -598,7 +599,7 @@ SipUAStack.fun(
 // // XXX distinguish between sip and sips
 // SipUAStack.fun(
 //   function getContactAddress() {
-//     var address = "sip:" + (this.FromAddress.uri).QueryInterface(Components.interfaces.zapISipSIPURI).userinfo;
+//     var address = "sip:" + (this.FromAddress.uri).QueryInterface(Components.interfaces.zapISipSIPURI).user;
 //     address += "@" + this.hostAddress;
 //     if (this.listeningPort != 5060)
 //       address += ":" + this.listeningPort;

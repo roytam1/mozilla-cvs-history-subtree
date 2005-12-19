@@ -36,7 +36,7 @@
 
 #include "nsISupports.idl"
 
-interface zapISipRequest;
+interface zapISipSIPURI;
 interface zapISipResolveListener;
 
 /**
@@ -48,6 +48,6 @@ interface zapISipResolveListener;
 [scriptable, uuid(b593a9cd-8cf5-4abf-9591-8576a411e8cf)]
 interface zapISipResolver : nsISupports
 {
-  void resolveRequestDestinationsAsync(in zapISipRequest request,
-                                       in zapISipResolveListener listener);
+  void resolveDestinationsAsync(in zapISipSIPURI uri,
+                                in zapISipResolveListener listener);
 };

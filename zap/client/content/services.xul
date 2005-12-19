@@ -214,6 +214,7 @@
         <textbox id="urn:mozilla:zap:stun_server"/>
         <checkbox label="Use STUN address for registrations" id="urn:mozilla:zap:use_stun_contact_address"/>
         <checkbox label="Send OPTIONS keep-alive requests" id="urn:mozilla:zap:options_keep_alive"/>
+        <checkbox label="Elide destination route header" id="urn:mozilla:zap:elide_destination_route_header"/>
       </vbox>
 
     </hbox>

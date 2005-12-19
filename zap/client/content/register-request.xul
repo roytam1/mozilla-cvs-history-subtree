@@ -50,14 +50,14 @@
 
   <script type="application/x-javascript">
   <![CDATA[
-    var wRS;
+    var wRC;
 
     function initPage() {
     }    
 
     function generateTemplate() {
-      if (wRS)
-        wRS.listener = null;
+      if (wRC)
+        wRC.listener = null;
       // try to parse registrar uri:
       var registrar;
       try {
@@ -78,16 +78,17 @@
       }
 
       var route = parent.wCurrentIdentity.getRoutingInfo().routeset;      
-      wRS = parent.wSipStack.createRegisterRequestClient(registrar, 
+      wRC = parent.wSipStack.createRegisterRequestClient(registrar, 
                                                          addressOfRecord,
                                                          route,
-                                                         route.length);
-      document.getElementById("request").value = wRS.request.serialize();
+                                                         route.length,
+                                                         parent.wCurrentIdentity.getRCFlags());
+      document.getElementById("request").value = wRC.request.serialize();
     }
 
     function sendRequest() {
-      if (!wRS) return;
-      wRS.listener = {
+      if (!wRC) return;
+      wRC.listener = {
         triedCredentials : false,
         notifyResponseReceived : function(rc, dialog, response, flow) {
           if (document) {
@@ -113,14 +114,14 @@
       requestTxt = requestTxt.replace(/\r/g, "");
       requestTxt = requestTxt.replace(/\n/g, "\r\n");
 
-      wRS.request = parent.wSipStack.syntaxFactory.deserializeMessage(requestTxt);
-      wRS.sendRequest();
+      wRC.request = parent.wSipStack.syntaxFactory.deserializeMessage(requestTxt);
+      wRC.sendRequest();
     }
 
     function cleanup() {
-      if (wRS) {
-        wRS.listener = null;
-        wRS = null;
+      if (wRC) {
+        wRC.listener = null;
+        wRC = null;
       }
     }
 

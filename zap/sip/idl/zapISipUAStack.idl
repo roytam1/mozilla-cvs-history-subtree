@@ -229,6 +229,15 @@ interface zapISipUAStack : nsISupports
   attribute zapISipRequestHandler requestHandler;
 
   /**
+   * \name Request client flag constants for createNonInviteRequestClient(),
+   * createInviteRequestClient() and createRegisterRequestClient()
+   *
+   */
+  //@{
+  const unsigned long ELIDE_DESTINATION_ROUTE_HEADER = 0x0001;
+  //@}
+  
+  /**
    * Obtain a generic request client object for transactionally
    * sending a NON-INVITE request to ToAddress outside of a
    * dialog. The zapISipNonInviteRC::request attribute will be
@@ -256,7 +265,8 @@ interface zapISipUAStack : nsISupports
                                                   in ACString method,
                                                   [array, size_is(count)]
                                                   in zapISipAddress routeset,
-                                                  in unsigned long count);
+                                                  in unsigned long count,
+                                                  in unsigned long rcFlags);
 
   /**
    * Obtain a request client object for transactionally sending a
@@ -277,7 +287,8 @@ interface zapISipUAStack : nsISupports
                                                  in zapISipAddress contactAddress,
                                                  [array, size_is(count)]
                                                  in zapISipAddress routeset,
-                                                 in unsigned long count);
+                                                 in unsigned long count,
+                                                 in unsigned long rcFlags);
   
   /**
    * Obtain a request client object for transactionally sending an
@@ -292,7 +303,8 @@ interface zapISipUAStack : nsISupports
                                             in zapISipAddress contactAddress,
                                             [array, size_is(count)]
                                             in zapISipAddress routeset,
-                                            in unsigned long count);
+                                            in unsigned long count,
+                                            in unsigned long rcFlags);
 
   /**
    * Formulate a method-agnostic response with the given status code

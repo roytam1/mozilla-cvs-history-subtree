@@ -81,14 +81,16 @@
                                                                  parent.wCurrentIdentity.getFromAddress(), 
                                                                  "OPTIONS",
                                                                  route,
-                                                                 route.length);
+                                                                 route.length,
+                                                                 parent.wCurrentIdentity.getRCFlags());
       wOptionsRS.listener = {
         notifyResponseReceived : function(rc, dialog, response, flow) {
           if (document)
             document.getElementById("options_result").value = response.serialize();
         }
       }
-      wOptionsRS.sendRequest();
+      // XXX
+      // wOptionsRS.sendRequest(0);
 
       // focus call button, so that the user just needs to press enter:
       document.getElementById("call_button").focus();
@@ -104,8 +106,10 @@
       oc.createFromDocument(document);
       oc.mediasession = Components.classes["@mozilla.org/zap/mediasession;1"].createInstance(Components.interfaces.zapIMediaSession);
       oc.mediasession.init("zap",
-                           parent.wSipStack.hostAddress,
-                           parent.wSipStack.hostAddress);
+"83.67.107.30",
+"83.67.107.30");
+//                           parent.wSipStack.hostAddress,
+//                           parent.wSipStack.hostAddress);
 
       oc["urn:mozilla:zap:status"] = "Calling...";
       // start the ball rolling:
