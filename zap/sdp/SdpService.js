@@ -54,11 +54,17 @@ var _doc_ = {};
 // global constants
 
 var CRLF = "\r\n";
-var PARSE_ERROR = "Parse error"; // error to throw when parsing fails
+var PARSE_ERROR = "SDP parse error"; // generic error message for SDP parsing failures
 
 ////////////////////////////////////////////////////////////////////////
-// Patterns, regexps and tokenizers for parsing various SDP
+// Charsets, patterns, regexps and tokenizers for parsing various SDP
 // constructs:
+
+//----------------------------------------------------------------------
+// Basic charsets for constructing patterns:
+
+// draft-ietf-mmusic-sdp-new-24.txt 'text':
+var CHARSET_TEXT = "\\x01-\\x09\\x0b\\x0c\\x0e-\\xff";
 
 //----------------------------------------------------------------------
 // Basic patterns used to construct regexps and tokenizers below:
@@ -68,9 +74,6 @@ var PATTERN_HEXDIG = "[0-9AaBbCcDdEeFf]";
 
 // rfc2234 'VCHAR'
 var PATTERN_VCHAR = "[\\x21-\\x7e]";
-
-// draft-ietf-mmusic-sdp-new-24.txt 'text'
-var PATTERN_TEXT = "[\\x01-\\x09\\x0b\\x0c\\x0e-\\xff]+";
 
 // draft-ietf-mmusic-sdp-new-24.txt 'non-ws-string' (similar to
 // rfc2327 'safe')
@@ -117,7 +120,10 @@ var REGEXP_DIGITS = new RegExp("^\\d+$");
 var REGEXP_DIGITS_OR_NOTHING = new RegExp("^\\d*$");
 
 // Match a draft-ietf-mmusic-sdp-new-24.txt 'text':
-var REGEXP_TEXT = new RegExp("^"+PATTERN_TEXT+"$");
+var REGEXP_TEXT = new RegExp("^["+CHARSET_TEXT+"]+$");
+
+// Match a draft-ietf-mmusic-sdp-new-24.txt 'text' or nothing:
+var REGEXP_TEXT_OR_NOTHING = new RegExp("^["+CHARSET_TEXT+"]*$");
 
 // Matches a prototype field value:
 var REGEXP_PROTOCOLVERSION = new RegExp("^\\d+$");
@@ -130,7 +136,7 @@ var REGEXP_UNICAST_ADDRESS = new RegExp("^"+PATTERN_UNICAST_ADDRESS+"$");
 
 // Matches a uri field value:
 // XXX to be implemented properly
-var REGEXP_URI = REGEXP_TEXT;
+var REGEXP_URI_OR_NOTHING = REGEXP_TEXT_OR_NOTHING;
 
 // Matches a draft-ietf-mmusic-sdp-new-24.txt 'proto':
 var REGEXP_PROTOCOL = new RegExp("^"+PATTERN_TOKEN+"(?:/"+PATTERN_TOKEN+")*$");
@@ -262,7 +268,7 @@ SdpConnection.addInterfaces(Components.interfaces.zapISdpConnection,
 SdpConnection.fun(
   function deserialize(iter) {
     var matches = REGEXP_CONNECTION(iter.current[2]);
-    if (!matches) this._error(PARSE_ERROR);
+    if (!matches) this._verboseError(PARSE_ERROR+': "'+iter.current[2]+'" is not a valid connection field');
     this.addressType = matches[2];
     this.address = matches[3];
     iter.advance();
@@ -348,13 +354,17 @@ SdpFieldContainer.metafun(
 SdpFieldContainer.fun(
   function _deserializeField(name, variableName, iter, optional) {
     if (iter.current && iter.current[1] == name) {
-      this[variableName] = iter.current[2];
+      try {
+        this[variableName] = iter.current[2];
+      } catch(e) {
+        this._verboseError(PARSE_ERROR+': "'+iter.current[2]+'" is not valid for "'+name+'" field.');
+      }
       iter.advance();
     }
     else {
       this[variableName] = null;
       if (!optional)
-        this._error(PARSE_ERROR);
+        this._verboseError(PARSE_ERROR+': "'+name+'" field missing.');
     }
   });
 
@@ -367,7 +377,7 @@ SdpFieldContainer.fun(
     else {
       this[variableName] = null;
       if (!optional)
-        this._error(PARSE_ERROR);
+        this._verboseError(PARSE_ERROR+': "'+name+'" object field missing.');
     }
   });
 
@@ -378,7 +388,7 @@ SdpFieldContainer.fun(
       arr.push(iter.current[2]);
       iter.advance();
     }
-    if (!optional && arr.length==0) this._error(PARSE_ERROR);
+    if (!optional && arr.length==0) this._verboseError(PARSE_ERROR+': "'+name+'" array missing.');
     this[arrayName] = arr;
   });
 
@@ -390,7 +400,7 @@ SdpFieldContainer.fun(
       elem.deserialize(iter);
       arr.push(elem);
     }
-    if (!optional && arr.length==0) this._error(PARSE_ERROR);
+    if (!optional && arr.length==0) this._verboseError(PARSE_ERROR+': "'+name+'" object array missing.');
     this[arrayName] = arr;
   });
 
@@ -419,9 +429,8 @@ SdpGenericMediaDescription.fun(
     while ((formatVal = TOKENIZER_FORMATS(matches[5]))) {
       this._Formats.push(formatVal[1]);
     }
-    if (this._Formats.length == 0) this._error(PARSE_ERROR);
+    if (this._Formats.length == 0) this._verboseError(PARSE_ERROR+": formats missing.");
     iter.advance();
-    
     this._deserializeField("i", "information", iter, true);
     this._deserializeObjectField("c", "connection", SdpConnection, iter, true);
     this._deserializeObjectArray("b", "_Bandwidths", SdpBandwidth, iter, true);
@@ -470,7 +479,7 @@ SdpGenericMediaDescription.fun(
 // attribute ACString media;
 SdpGenericMediaDescription.parsedAttrib("media", REGEXP_TOKEN, null);
   
-// attribute ACString long port;
+// attribute ACString port;
 SdpGenericMediaDescription.parsedAttrib("port", REGEXP_DIGITS, null);
 
 // attribute ACString portCount;
@@ -480,7 +489,7 @@ SdpGenericMediaDescription.parsedAttrib("portCount", REGEXP_DIGITS_OR_NOTHING, n
 SdpGenericMediaDescription.parsedAttrib("protocol", REGEXP_PROTOCOL, null);
 
 // attribute ACString information;
-SdpGenericMediaDescription.parsedAttrib("information", REGEXP_TEXT, null);
+SdpGenericMediaDescription.parsedAttrib("information", REGEXP_TEXT_OR_NOTHING, "");
 
 // attribute zapISdpConnection connection;
 SdpGenericMediaDescription.obj("connection", null);
@@ -542,7 +551,7 @@ SdpRtpAvpMediaDescription.fun(
       this._RtpAvpFormats.push(fmtObj);
       format_hash[formatVal] = fmtObj;
     }
-    if (this._RtpAvpFormats.length == 0) this._error(PARSE_ERROR);
+    if (this._RtpAvpFormats.length == 0) this._verboseError(PARSE_ERROR+": rtp/avp formats missing.");
     iter.advance();
     
     this._deserializeField("i", "information", iter, true);
@@ -652,7 +661,7 @@ SdpRtpAvpMediaDescription.parsedAttrib("portCount", REGEXP_DIGITS_OR_NOTHING, nu
 SdpRtpAvpMediaDescription.parsedAttrib("protocol", REGEXP_PROTOCOL, null);
 
 // attribute ACString information;
-SdpRtpAvpMediaDescription.parsedAttrib("information", REGEXP_TEXT, null);
+SdpRtpAvpMediaDescription.parsedAttrib("information", REGEXP_TEXT_OR_NOTHING, "");
 
 // attribute zapISdpConnection connection;
 SdpRtpAvpMediaDescription.obj("connection", null);
@@ -711,9 +720,9 @@ SdpSessionDescription.fun(
     this._deserializeField("v", "protocolVersion", iter);
     
     // deserialize origin field components:
-    if (!iter.current || !iter.current[1] == "o") this._error(PARSE_ERROR);
+    if (!iter.current || !iter.current[1] == "o") this._verboseError(PARSE_ERROR+': "o" field missing');
     var matches = REGEXP_ORIGIN(iter.current[2]);
-    if (!matches) this._error(PARSE_ERROR);
+    if (!matches) this._verboseError(PARSE_ERROR+': "'+iter.current[2]+'" is not a valid origin field');
     this.username = matches[1];
     this.sessionID = matches[2];
     this.sessionVersion = matches[3];
@@ -738,7 +747,7 @@ SdpSessionDescription.fun(
     // deserialize media descriptions:
     while (iter.current && iter.current[1] == "m") {
       var m_matches = REGEXP_MEDIADESCRIPTION(iter.current[2]);
-      if (!m_matches) this._error(PARSE_ERROR);
+      if (!m_matches) this._error(PARSE_ERROR+": no valid media descriptions");
       
       var md;
       if (m_matches[4] == "RTP/AVP")
@@ -819,10 +828,10 @@ SdpSessionDescription.parsedAttrib("originAddress", REGEXP_UNICAST_ADDRESS, null
 SdpSessionDescription.parsedAttrib("sessionName", REGEXP_TEXT, null);
 
 // attribute ACString information;
-SdpSessionDescription.parsedAttrib("information", REGEXP_TEXT, null);
+SdpSessionDescription.parsedAttrib("information", REGEXP_TEXT_OR_NOTHING, "");
 
 // attribute ACString uri;
-SdpSessionDescription.parsedAttrib("uri", REGEXP_URI, null);
+SdpSessionDescription.parsedAttrib("uri", REGEXP_URI_OR_NOTHING, "");
 
 // void getEmailAddresses(out unsigned long count,
 //                        [retval, array, size_is(count)] out zapISdpEmailAddress addresses);

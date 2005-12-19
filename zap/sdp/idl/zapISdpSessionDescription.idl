@@ -80,6 +80,7 @@ interface zapISdpSessionDescription : zapISdpSyntaxObject
 
   /**
    * \name optional information (i=) field:
+   * (empty string if not specified)
    */
   //@{
   attribute ACString information;
