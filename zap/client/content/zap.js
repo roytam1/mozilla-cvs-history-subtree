@@ -47,7 +47,7 @@ Components.utils.importModule("rel:AsyncUtils.js");
 ////////////////////////////////////////////////////////////////////////
 // globals
 
-var wUserAgent = "zap/0.1.5"; // String to be sent in User-Agent
+var wUserAgent = "zap/0.1.7"; // String to be sent in User-Agent
                               // header for SIP requests
 var wNetUtils = Components.classes["@mozilla.org/zap/netutils;1"].getService(Components.interfaces.zapINetUtils);
 var wPromptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService);
@@ -235,6 +235,9 @@ Service.rdfLiteralAttrib("urn:mozilla:zap:use_stun_contact_address", "false");
 // whether or not we should send OPTIONS requests to keep alive the connection:
 Service.rdfLiteralAttrib("urn:mozilla:zap:options_keep_alive", "false");
 Service.rdfLiteralAttrib("urn:mozilla:zap:suggested_registration_interval", "");
+// whether or not the top (loose) route header should be removed from
+// (non-dialog) requests:
+Service.rdfLiteralAttrib("urn:mozilla:zap:elide_destination_route_header", "false");
 
 Service.fun(
   function getStunServer() {
@@ -251,9 +254,16 @@ Service.fun(
 
 Service.spec(
   function createFromDocument(doc) {
+    // Temporarily defer flushing until later, so that the container
+    // changes get flushed as well:
+    this.autoflush = false;
     this._Service_createFromDocument(doc);
-    // append to services container:
+    this.autoflush = true;
+    
+    // Append to services container:
     wServicesContainer.AppendElement(this.resource);
+
+    this.flush();
   });
 
 ////////////////////////////////////////////////////////////////////////
@@ -270,6 +280,14 @@ function getIdentity(resourceID) {
     wIdentities[resourceID] = identity;
   }
   return identity;
+}
+
+function getIdentityByAOR(uri) {
+  for (var id in wIdentities) {
+    if (wIdentities[id].getAOR().equals(uri))
+      return wIdentities[id];
+  }
+  return null;
 }
 
 function initIdentities() {
@@ -396,9 +414,16 @@ Identity.fun(
 
 Identity.spec(
   function createFromDocument(doc) {
+    // Temporarily defer flushing until later, so that the container
+    // changes get flushed as well:
+    this.autoflush = false;
     this._Identity_createFromDocument(doc);
-    // append to identities:
+    this.autoflush = true;
+    
+    // Append to identities:
     wIdentitiesContainer.AppendElement(this.resource);
+
+    this.flush();
   });
 
 // zapISipCredentialsProvider methods:
@@ -419,7 +444,7 @@ Identity.fun(
         // fill in username from identity database
         username.value = this["urn:mozilla:zap:username"];
         if (!username.value)
-          username.value = this.getUserinfo();
+          username.value = this.getUser();
       }
       
       try {
@@ -454,30 +479,35 @@ Identity.fun(
     if (saveCredentials) {
       // store credentials for future sessions:
       if (is_our_realm) {
-        if (username.value != this.getUserinfo()) {
+        if (username.value != this.getUser()) {
           this["urn:mozilla:zap:username"] = username.value;
         }
       }
+      try {
+        // addUser doesn't update when there already is an existing entry.
+        // -> try removing first
+        wPasswordManager.removeUser(realm, username.value);
+      } catch(e) {}
       wPasswordManager.addUser(realm, username.value, password.value);
     }
         
     return true;
   });
 
-// Return userinfo part of the AOR (or empty string if the AOR can't
+// Return user part of the AOR (or empty string if the AOR can't
 // be parsed)
 Identity.fun(
-  function getUserinfo() {
+  function getUser() {
     // XXX these try/catch blocks will be redundant once we hook up
     // syntax checking in PersistentRDFObject
     try {
-      var userinfo = this.getAOR().QueryInterface(Components.interfaces.zapISipSIPURI).userinfo;
+      var user = this.getAOR().QueryInterface(Components.interfaces.zapISipSIPURI).user;
     }
     catch(e) {
-      this._dump("Can't determine userinfo from "+this["http://home.netscape.com/NC-rdf#Name"]);
+      this._dump("Can't determine user from "+this["http://home.netscape.com/NC-rdf#Name"]);
       return "";
     }
-    return userinfo;
+    return user;
   });
 
 // Return host part of the AOR (or empty string if the AOR can't be
@@ -517,15 +547,6 @@ Identity.fun(
     return wSipStack.syntaxFactory.createAddress(this["urn:mozilla:zap:display_name"], this.getAOR());
   });
 
-// Returns the userinfo part of our register contact address:
-Identity.fun(
-  function getRegisterContactUserinfo() {
-    // we use our AOR (with '@' replaced by '_') to distinguish
-    // incoming calls:
-    var aor = this.getAOR().QueryInterface(Components.interfaces.zapISipSIPURI);
-    return aor.userinfo + "_" + aor.host;
-  });
-
 // this will be initially be set to our internal address and
 // asynchronously resolved to our public STUN address if our
 // associated service has urn:mozilla:zap:use_stun_contact_address set
@@ -535,9 +556,26 @@ Identity.obj("hostAddress", null);
 // contact address used for registration
 Identity.fun(
   function getRegisterContactAddress() {
-      var addr = "<sip:"+this.getRegisterContactUserinfo() +
-                 "@" + this.hostAddress + ";inst="+wSipStack.instanceID+">";
-      return wSipStack.syntaxFactory.deserializeAddress(addr);
+    // Synthesize from the 'From Address', adjusting host and port. 
+    // XXX We DO want to keep the From address's display name, but what about
+    // uri parameters???
+    var addr = this.getFromAddress();
+    var uri = addr.uri.QueryInterface(Components.interfaces.zapISipSIPURI);
+    uri.host = this.hostAddress;
+    if (wSipStack.listeningPort == 5060)
+      uri.port = "";
+    else
+      uri.port = wSipStack.listeningPort;
+
+    // The zid will allow us to identify the identity for incoming
+    // calls. The hex encoding (which will be encoded again for
+    // transmission!) is necessary since uri parameters are not case
+    // sensitive, but rdf resource ids are...    
+    // XXX this is only needed when there are several identities/aor.
+    // investigate whether this is a feasible use-case
+    // uri.setURIParameter("zid", octetToHex(this.resource.Value));
+    
+    return addr;
   });
 
 // Returns a structure {contact, routeset} with routing information
@@ -554,6 +592,15 @@ Identity.fun(
     }
 
     return routingInfo;
+  });
+
+// Constructs request client flags based on this identity's service:
+Identity.fun(
+  function getRCFlags() {
+    var flags = 0;
+    if (this.service["urn:mozilla:zap:elide_destination_route_header"]=="true")
+      flags |= Components.interfaces.zapISipUAStack.ELIDE_DESTINATION_ROUTE_HEADER;
+    return flags;
   });
 
 Identity.fun(
@@ -631,15 +678,17 @@ function unregisterIdentity(resource) {
 function notifyServiceUpdated(service_resource) {
   var service_id = service_resource.Value;
   // reregister any identities that use this service:
-  for (var r in wRegistrations) {
-    if (wRegistrations[r].service.resource.Value == service_id)
-      registerIdentity(wRDF.GetResource(r));
+  for (var identity in wIdentities) {
+    if (wIdentities[identity].service.resource.Value == service_id)
+      registerIdentity(wIdentities[identity].resource);
   }
 }
 
 //----------------------------------------------------------------------
 
 var RegistrationGroup = makeClass("RegistrationGroup", ErrorReporter);
+
+RegistrationGroup.obj("registrations", null);
 
 // true if we are currently unregistering:
 RegistrationGroup.obj("unregistering", false);
@@ -726,12 +775,13 @@ RegistrationGroup.fun(
 
 RegistrationGroup.fun(
   function getRoutingInfo() {
+    if (!this.registrations) return null;
     // find first active flow:
     for (var i=0,l=this.registrations.length; i<l; ++i) {
       if (this.registrations[i].registered) {
         var contactAddr = this.registrations[i].gruu;
         if (!contactAddr) {
-          // hmm, no gruu. best we can do is return our registered
+          // hmm, no gruu. best we can do is use our registered
           // contact address and hope that our outbound route does
           // some helping with any NATs:
           contactAddr = this.identity.getRegisterContactAddress();
@@ -818,8 +868,12 @@ Registration.obj("contact", null);
 // registrar returned one:
 Registration.obj("gruu", null);
 
-// contains the route to be used for non-REGISTER outbound requests
-// over this flow:
+// our default outbound route. might be different to the current
+// outbound route (see below) if there is a Service-Route in force.
+Registration.obj("defaultOutboundRoute", null);
+
+// this will contain the default route or the service route (RFC3608)
+// returned by the registrar:
 Registration.obj("outboundRoute", null);
 
 Registration.fun(
@@ -827,39 +881,73 @@ Registration.fun(
     this._dump("group="+group+", route="+route+", flowid="+flowid);
     this.group = group;
     this.flowid = flowid;
+    this.defaultOutboundRoute = route;
     this.outboundRoute = route;
-    // should we keep this flow alive with STUN requests?
-    if (route[0].uri.QueryInterface(Components.interfaces.zapISipSIPURI).hasURIParameter("sip-stun"))
-      this.monitorType = Components.interfaces.zapISipFlow.IETF_SIP_OUTBOUND_01_MONITOR;
-    else if (this.group.identity.service["urn:mozilla:zap:options_keep_alive"]=="true")
-      this.monitorType = Components.interfaces.zapISipFlow.OPTIONS_MONITOR;
+    
+    this._initRC();
+    this.registrationRC.listener = this;
+    this.registrationRC.sendRequest();
+  });
 
+Registration.fun(
+  function _maybeMonitorFlow(flow) {
+    if (this.flow) {
+      if (this.flow == flow)
+        return; // we're already monitoring this flow
+      this._unmonitorFlow();
+    }
+    // check if we should monitor the current flow
+    var monitorType = null;
+    if (this.outboundRoute.length &&
+        this.outboundRoute[0].uri.QueryInterface(Components.interfaces.zapISipSIPURI).hasURIParameter("sip-stun")) {
+      monitorType = Components.interfaces.zapISipFlow.IETF_SIP_OUTBOUND_01_MONITOR;
+    }
+    else if (this.group.identity.service["urn:mozilla:zap:options_keep_alive"]=="true") {
+      monitorType = Components.interfaces.zapISipFlow.OPTIONS_MONITOR;
+    }
+
+    if (monitorType != null) {
+      this.flow = flow;
+      this.flow.addFlowMonitor(this, monitorType);
+    }
+  });
+
+Registration.fun(
+  function _unmonitorFlow() {
+    if (this.flow) {
+      this.flow.removeFlowMonitor(this);
+      delete this.flow;
+    }
+  });
+
+// helper to initialize a register request client:
+Registration.fun(
+  function _initRC() {
+    var route = this.outboundRoute;
     this.registrationRC =
-      wSipStack.createRegisterRequestClient(group.domain,
-                                            group.identity.getAOR(),
-                                            group.identity.getRegisterContactAddress(),
+      wSipStack.createRegisterRequestClient(this.group.domain,
+                                            this.group.identity.getAOR(),
+                                            this.group.identity.getRegisterContactAddress(),
                                             route,
-                                            route.length);
+                                            route.length,
+                                            this.group.identity.getRCFlags());
 
     var contact = this.registrationRC.request.getTopContactHeader().QueryInterface(Components.interfaces.zapISipContactHeader);
 
-    if (group.identity["urn:mozilla:zap:preference"]) {
+    if (this.group.identity["urn:mozilla:zap:preference"]) {
       // add a q-value
-      contact.setParameter("q", group.identity["urn:mozilla:zap:preference"]);
+      contact.setParameter("q", this.group.identity["urn:mozilla:zap:preference"]);
     }
     
-    if (group.interval) {
+    if (this.group.interval) {
       // add an expires parameter
-      contact.setParameter("expires", group.interval);
+      contact.setParameter("expires", this.group.interval);
     }
     
     // XXX if (use_outbound)
     contact.setParameter("+sip.instance", '"<'+wSipStack.instanceID+'>"');
-    contact.setParameter("flow-id", flowid);
-
-    this.registrationRC.listener = this;
-    this.registrationRC.sendRequest();
-  });
+    contact.setParameter("flow-id", this.flowid);
+  });    
 
 Registration.fun(
   function unregister() {
@@ -867,10 +955,7 @@ Registration.fun(
       this.refreshTimer.cancel();
       delete this.refreshTimer;
     }
-    if (this.flow) {
-      this.flow.removeFlowMonitor(this);
-      delete this.flow;
-    }
+    this._unmonitorFlow();
     
     if (this.registrationRC.listener) {
       // We are currently waiting for a registration to complete.
@@ -884,6 +969,62 @@ Registration.fun(
       this.registrationRC.sendRequest();
     }
     delete this.registrationRC;
+  });
+
+// Helper to compare the first hop in the new route to the remote ip
+// address. Returns 'true' if the first hop has changed. 
+function firstHopChanged(newRoute, oldRoute, currentFlow) {
+  if (!newRoute.length) return (oldRoute.length>0);
+  if (!oldRoute.length) return true;
+  //XXX this needs some more thought
+  // See http://www.croczilla.com/zap/codedocs/notes A.
+  // var hop1 = newRoute[0].uri.QueryInterface(Components.interfaces.zapISipSIPURI);
+  //   if (hop1.host == currentFlow.remoteAddress &&
+  //       (hop1.port == "" || hop1.port == currentFlow.remotePort))
+  //     return false; // endpoint addresses are equal
+  var uri1 = newRoute[0].uri.QueryInterface(Components.interfaces.zapISipSIPURI);
+  var uri2 = oldRoute[0].uri.QueryInterface(Components.interfaces.zapISipSIPURI);
+  return !uri1.equals(uri2);
+}
+
+// Update the current request route from the service route on the
+// given registration response (which can be null - in which case the
+// preloaded route will be restored).  Returns 'true' if the first hop
+// in the new route is different to the remote end of the flow over
+// which the response was received. See http://www.croczilla.com/zap/codedocs/notes A.
+Registration.fun(
+  function _updateRequestRoute(response, flow) {
+    var newRoute = null;
+    var serviceRouteHeaders = response.getHeaders("Service-Route", {});
+    if (serviceRouteHeaders.length) {
+      newRoute = [];
+      serviceRouteHeaders.forEach(
+        function(h) {
+          newRoute.push(h.QueryInterface(Components.interfaces.zapISipServiceRouteHeader).address);
+        });
+    }
+    else
+      newRoute = this.defaultOutboundRoute;
+          
+    var oldRoute = this.outboundRoute;
+    if (oldRoute != newRoute) {
+      this.outboundRoute = newRoute;
+      // Use the service route as a new route for *all* outbound
+      // request over this flow, including future REGISTERs
+      // (RFC3608, draft-rosenberg-sip-route-construct-00).
+      
+      // We need to create a new request client with the updated route:
+      var oldRequest = this.registrationRC.request;
+      this._initRC();
+      var newRequest = this.registrationRC.request;
+      // copy credentials:
+      oldRequest.getHeaders("Authorization", {}).forEach(
+        function(h) {newRequest.appendHeader(h);});
+      oldRequest.getHeaders("Proxy-Authorization", {}).forEach(
+        function(h) {newRequest.appendHeader(h);});
+    }
+    
+    return firstHopChanged(newRoute, oldRoute, flow);
   });
 
 // helper to extract a gruu from a contact header
@@ -983,6 +1124,18 @@ Registration.fun(
           // update our state:
           this.contact = contact;
           this.gruu = extractGRUU(contact);
+
+          var hopChanged = this._updateRequestRoute(response, flow);
+
+          if (hopChanged) {
+            // The new service route has a first hop that is different
+            // to the one we were using.
+            // Send the request again using the updated route:
+            this.registrationRC.listener = this;
+            this.registrationRC.sendRequest();
+            return;
+          }
+          
           if (!this.registered) {
             this.failureCount = 0;
             this.registered = true;
@@ -991,10 +1144,7 @@ Registration.fun(
           }
           // set up a refresh timer:
           this.scheduleRefresh(expires*1000*0.9);
-          if (this.monitorType && !this.flow) {
-            this.flow = flow;
-            this.flow.addFlowMonitor(this, this.monitorType);
-          }
+          this._maybeMonitorFlow(flow);
           return;
         }
       }
@@ -1004,10 +1154,8 @@ Registration.fun(
     this.contact = null;
     this.gruu = null;
     ++this.failureCount;
-    if (this.flow) {
-      this.flow.removeFlowMonitor(this);
-      delete this.flow;
-    }
+    this._unmonitorFlow();
+    // let our registration group handle recovery:
     this.group.notifyRegistrationFailure(this);
   });
 
@@ -1043,8 +1191,7 @@ Registration.fun(
   function flowChanged(flow, changeFlags) {
     // stop monitoring the flow; recover as described in
     // draft-ietf-sip-outbound-01.txt
-    flow.removeFlowMonitor(this);
-    delete this.flow;
+    this._unmonitorFlow();
     this.registered = false;
     // we leave recovery up to our group:
     ++this.failureCount;
@@ -1085,28 +1232,40 @@ Contact.rdfLiteralAttrib("urn:mozilla:zap:isfriend", "true");
 
 Contact.spec(
   function createFromDocument(doc) {
+    // Temporarily defer flushing until later, so that the container
+    // changes get flushed as well:
+    this.autoflush = false;
     this._Contact_createFromDocument(doc);
-    // append to contacts:
+    this.autoflush = true;
+    
+    // Append to contacts:
     wContactsContainer.AppendElement(this.resource);
     // ... and if it's a friend, to the friends list as well:
     if (this["urn:mozilla:zap:isfriend"] == "true")
       wFriendsContainer.AppendElement(this.resource);
+
+    this.flush();
   });
 
- Contact.spec(
-   function updateFromDocument(doc) {
-     this._Contact_updateFromDocument(doc);
-     // add/remove from friends container:
-     var index = wFriendsContainer.IndexOf(this.resource);
-     if (this["urn:mozilla:zap:isfriend"] == "true") {
-       if (index == -1)
-         wFriendsContainer.AppendElement(this.resource);
-     }
-     else {
-       if (index != -1)
-         wFriendsContainer.RemoveElementAt(index, true);
-     }
-   });
+Contact.spec(
+  function updateFromDocument(doc) {
+    // Temporarily defer flushing until later, so that the container
+    // changes get flushed as well:
+    this.autoflush = false;
+    this._Contact_updateFromDocument(doc);
+    this.autoflush = true;
+    // add/remove from friends container:
+    var index = wFriendsContainer.IndexOf(this.resource);
+    if (this["urn:mozilla:zap:isfriend"] == "true") {
+      if (index == -1)
+        wFriendsContainer.AppendElement(this.resource);
+    }
+    else {
+      if (index != -1)
+        wFriendsContainer.RemoveElementAt(index, true);
+    }
+    this.flush();
+  });
 
 ////////////////////////////////////////////////////////////////////////
 // Sidebar:
@@ -1302,7 +1461,7 @@ var wSipTrafficLogger = {
     entry += remoteAddress+":" + remotePort + " " + protocol + " ";
     entry += data.length + "bytes " + (new Date()).toUTCString() + "\n";
     if (wNetUtils.snoopStunPacket(data) != -2) {
-      entry += bin2hex(data, 16);
+      entry += octetToHex(data, " ", 16);
       // XXX log or not?
       return;
     }
@@ -1435,7 +1594,6 @@ Call.rdfPointerAttrib("urn:mozilla:zap:root",
                       "urn:mozilla:zap:current-call",
                       "ephemeral");
 
-
 // Add this call to the recent calls container (so that it displays
 // in the call list). Maybe remove old items if the list is getting too large:
 Call.fun(
@@ -1487,20 +1645,31 @@ ActiveCall.obj("dialog", null);
 
 ActiveCall.spec(
   function createFromDocument(doc) {
+    // Temporarily defer flushing until later, so that the container
+    // changes get flushed as well:
+    this.autoflush = false;
     this._ActiveCall_createFromDocument(doc);
-    // append to calls container:
-    wCallsContainer.AppendElement(this.resource);
+    this.autoflush = true;
     
+    // append to calls container:
+    wCallsContainer.AppendElement(this.resource);    
     // ... and to recent calls as well:
     this.addToRecentCalls();
 
     // enter into active calls hash:
     wActiveCalls[this.resource.Value] = this;
+
+    this.flush();
   });
 
 ActiveCall.spec(
   function createNew(addAssertions) {
+    // Temporarily defer flushing until later, so that the container
+    // changes get flushed as well:
+    this.autoflush = false;
     this._ActiveCall_createNew(addAssertions);
+    this.autoflush = true;
+    
     // append to calls container:
     wCallsContainer.AppendElement(this.resource);
 
@@ -1509,6 +1678,8 @@ ActiveCall.spec(
 
     // enter into active calls hash:
     wActiveCalls[this.resource.Value] = this;
+
+    this.flush();
   });
 
 // clean up after call has terminated
@@ -1548,7 +1719,8 @@ OutboundCall.fun(
                                                  identity.getFromAddress(),
                                                  this.routingInfo.contact,
                                                  this.routingInfo.routeset,
-                                                 this.routingInfo.routeset.length);
+                                                 this.routingInfo.routeset.length,
+                                                 identity.getRCFlags());
     rc.listener = this.callHandler;
     this.callHandler.rc = rc;
 
@@ -1582,6 +1754,11 @@ OutboundCallHandler.addInterfaces(Components.interfaces.zapISipInviteResponseHan
 // zapISipInviteResponseHandler methods:
 OutboundCallHandler.fun(
   function handle2XXResponse(rc, dialog, response, ackTemplate) {
+    // we have a positive answer for this request, so we won't
+    // resend. make sure that notifyTerminated really terminates from
+    // now on:
+    this.changeState("2XX_RECEIVED"); 
+    
     if (this.call.dialog) {
       this._dump("received additional dialog for outbound call");
       // we already have a dialog. this must be a subsequent dialog
@@ -1597,7 +1774,7 @@ OutboundCallHandler.fun(
       sd = wSdpService.deserializeSessionDescription(response.body);
     }
     catch(e) {
-      this["urn:mozilla:zap:status"] = "Can't parse other party's session description";
+      this.call["urn:mozilla:zap:status"] = "Can't parse other party's session description";
       // send a BYE:
       // XXX need a way to send ACK first
       dialog.createNonInviteRequestClient("BYE").sendRequest();
@@ -1610,7 +1787,7 @@ OutboundCallHandler.fun(
     }
     catch(e) {
       // XXX add verbose error
-      this["urn:mozilla:zap:status"] = "Session negotiation failed";
+      this.call["urn:mozilla:zap:status"] = "Session negotiation failed";
       
       // send a BYE:
       // XXX need a way to send ACK first
@@ -1624,6 +1801,7 @@ OutboundCallHandler.fun(
     this.call.dialog = dialog;
     this.call.dialog.listener = this.call;
     this.call["urn:mozilla:zap:session-running"] = "true";
+    this.call["urn:mozilla:zap:status"] = "Connected";
     return ackTemplate;
   });
 
@@ -1635,9 +1813,7 @@ OutboundCallHandler.fun(
       this.call["urn:mozilla:zap:status"] =
         response.statusCode + " " + response.reasonPhrase;
     else if (response.statusCode[0] == "2") {
-      this.call["urn:mozilla:zap:status"] = "Connected";
-      this.changeState("2XX_RECEIVED");
-      // we'll terminate from notifyTerminated now
+      // we handle 2XX codes in handle2XXResponse
     }
     else if (response.statusCode == "401" ||
              response.statusCode == "407") {
@@ -1714,8 +1890,17 @@ InboundCallHandler.fun(
     this.rs = rs;
     rs.listener = this;
 
-    // XXX work out identity based on To-address
-    this.identity = wCurrentIdentity;
+    // Work out identity based on To-address
+    this.identity = null;
+    try {
+      var uri = rs.request.getToHeader().address.uri.QueryInterface(Components.interfaces.zapISipSIPURI);
+      this.identity = getIdentityByAOR(uri);
+    }
+    catch(e) { /* To address probably wasn't a SIP URI -> fall through */ }
+
+    if (!this.identity)
+      this.identity = wCurrentIdentity; // XXX maybe need a separate config for this?
+    
     this.contact = this.identity.getRoutingInfo().contact;
     
     // reject based on busy settings:
@@ -1748,6 +1933,19 @@ InboundCallHandler.fun(
 
     // the offer is acceptable; we have an answer at hand. ring the user:
     this._respond("180");
+    this.playRinger();
+  });
+
+InboundCallHandler.fun(
+  function playRinger() {
+    this.ringer = wMediaPipeline.mediagraph.addNode("rtttl-player", null);
+    wMediaPipeline.mediagraph.connect(this.ringer, null,
+                                      "aout", null);
+  });
+
+InboundCallHandler.fun(
+  function stopRinger() {
+    if (this.ringer) wMediaPipeline.mediagraph.removeNode(this.ringer);
   });
 
 InboundCallHandler.fun(
@@ -1757,7 +1955,7 @@ InboundCallHandler.fun(
     // append session description:
     resp.setContent("application", "sdp", this.answer.serialize());
     this.call["urn:mozilla:zap:status"] = resp.statusCode+" "+resp.reasonPhrase;
-    
+    this.stopRinger();
     this.call.mediasession.startSession();
     this.call.dialog = this.rs.sendResponse(resp);
     this.call.dialog.listener = this.call;    
@@ -1785,17 +1983,20 @@ InboundCallHandler.fun(
     }
     
     this.call["urn:mozilla:zap:status"] = resp.statusCode+" "+resp.reasonPhrase;
+    this.stopRinger();
     return this.rs.sendResponse(resp);
   });
   
 // zapISipInviteRSListener methods:
 InboundCallHandler.fun(
   function notifyCancelled(rs) {
+    this.stopRinger();
     this.call["urn:mozilla:zap:status"] = "Missed";
   });
 
 InboundCallHandler.fun(
   function notifyACKReceived(rs, ack) {
+    this.stopRinger();
     this.call["urn:mozilla:zap:status"] = "Confirmed";
   });
 
