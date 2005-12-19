@@ -37,9 +37,12 @@
 
 EXPORTED_SYMBOLS = [ "utf8ToUnicode",
                      "unicodeToUTF8",
+                     "octetToHex",
+                     "hexToOctet",
+                     "hexCharCodeAt",
                      "padright",
-                     "padleft",
-                     "bin2hex"];
+                     "padleft"
+                     ];
 
 // object to hold module's documentation:
 var _doc_ = {};
@@ -85,6 +88,50 @@ function unicodeToUTF8(str) {
 }
 
 //----------------------------------------------------------------------
+// octetToHex
+
+var hexDigits = "0123456789abcdef";
+
+_doc_.octetToHex = "octetToHex(str, [opt] separator, [opt] octets_per_line) returns the lower-case hexadecimal octet representation of the 'str'. 'str' must be a string of characters with codes between 0 and 255. Codes outside of this range will be truncated. 'separator' is an optional string to insert between the hex octets of the output (default=''). 'octets_per_line' is an optional count determining how many octets should be placed into the output string before a newline is inserted (default=0, don't place newlines). hexToOctet(octetToHex(s)) == s, if the separator string doesn't contain characters in the range [0-9a-fA-F].";
+function octetToHex(str, separator, octets_per_line) {
+  var rv = "";
+  for (var i=0, l=str.length; i<l; ++i) {
+    var code = str.charCodeAt(i);
+    rv += hexDigits[(code >> 4) & 0x0F] + hexDigits[code & 0x0F];
+    if (octets_per_line &&
+        i % octets_per_line == octets_per_line-1)
+      rv += "\n";
+    else if (separator && i!=l-1) rv += separator;
+  }
+  return rv;
+}
+
+//----------------------------------------------------------------------
+// hexToOctet
+
+var hexTokenizer = /[0-9a-fA-F][0-9a-fA-F]/g;
+
+_doc_.hexToOctet = "hexToOctet(str) converts the given string of hexadecimal octets (as encoded by octetToHex) into a string of characters with codes between 0 and 255. characters outside of [0-9a-fA-F] will be skipped.";
+function hexToOctet(str) {
+  var rv = "";
+  hexTokenizer.lastIndex = 0;
+  var match;
+  while ((match = hexTokenizer(str))) {
+    rv += String.fromCharCode(parseInt(match[0], 16));
+  };
+  return rv;
+}
+
+//----------------------------------------------------------------------
+// hexCharCodeAt
+
+_doc_.hexCharCodeAt = "hexCharCodeAt(str, i) returns the charcode of str[i] as a 2 digit lower-case hexadecimal value. The charcode must be between 0 and 255 or it will be truncated.";
+function hexCharCodeAt(str, i) {
+  var code = str.charCodeAt(i);
+  return hexDigits[(code >> 4) & 0x0F] + hexDigits[code & 0x0F];
+}
+
+//----------------------------------------------------------------------
 // padright
 
 _doc_.padright = "\
@@ -112,18 +159,3 @@ function padleft(str, c, l) {
   return str;
 }
 
-//----------------------------------------------------------------------
-// bin2hex
-
-_doc_.bin2hex = "bin2hex(str, octets_per_line) returns the hexadecimal representation of the given string of octets. octets_per_line is optional and defaults to 4.";
-function bin2hex(str, octets_per_line) {
-  var rv = "";
-  if (!octets_per_line) octets_per_line = 4;
-  for (var i=0, l=str.length; i<l; ++i) {
-    var code = str.charCodeAt(i).toString(16);
-    if (code.length == 1) code = "0"+code;
-    rv += code + " ";
-    if (i % octets_per_line == octets_per_line-1) rv += "\n";
-  }
-  return rv;
-}
