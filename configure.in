@@ -2015,19 +2015,19 @@ dnl the qsort routine under solaris is faulty
     SYSTEM_MAKEDEPEND=
     # $ORIGIN/.. is for shared libraries under components/ to locate shared
     # libraries one level up (e.g. libnspr4.so)
-    LDFLAGS="$LDFLAGS -R '\$\$ORIGIN:\$\$ORIGIN/..'"
+    LDFLAGS="$LDFLAGS -z ignore -R '\$\$ORIGIN:\$\$ORIGIN/..'"
     if test -z "$GNU_CC"; then
        NS_USE_NATIVE=1
        AC_DEFINE(NSCAP_DISABLE_DEBUG_PTR_TYPES)
        CFLAGS="$CFLAGS -xstrconst -xbuiltin=%all"
        CXXFLAGS="$CXXFLAGS -xbuiltin=%all -features=tmplife -norunpath"
-       LDFLAGS="-xildoff -zlazyload -zcombreloc $LDFLAGS"
+       LDFLAGS="-xildoff -z lazyload -z combreloc $LDFLAGS"
        MOZ_OPTIMIZE_FLAGS="-xO4"
        MKSHLIB='$(CXX) $(CXXFLAGS) $(DSO_PIC_FLAGS) $(DSO_LDOPTS) -h $@ -o $@'
-       MKCSHLIB='$(CC) $(CFLAGS) $(DSO_PIC_FLAGS) -G -Wl,-z -Wl,muldefs -h $@ -o $@'
-       MKSHLIB_FORCE_ALL='-Qoption ld -z,allextract'
+       MKCSHLIB='$(CC) $(CFLAGS) $(DSO_PIC_FLAGS) -G -z muldefs -h $@ -o $@'
+       MKSHLIB_FORCE_ALL='-z allextract'
        MKSHLIB_UNFORCE_ALL=''
-       DSO_LDOPTS='-G -Qoption ld -z,muldefs'
+       DSO_LDOPTS='-G -z muldefs'
        AR_LIST="$AR t"
        AR_EXTRACT="$AR x"
        AR_DELETE="$AR d"
@@ -2753,7 +2753,6 @@ then
 			dnl -pthread links in -lc_r, so don't specify it explicitly.
 			if test "$ac_cv_have_dash_pthread" = "yes"; then
                 _PTHREAD_LDFLAGS="-pthread"
-                LDFLAGS="${_PTHREAD_LDFLAGS} ${LDFLAGS}"
 			fi
 			;;
 
@@ -2785,6 +2784,7 @@ then
 			fi
 			;;
 	esac
+    LDFLAGS="${_PTHREAD_LDFLAGS} ${LDFLAGS}"
 fi
 
 dnl ========================================================
@@ -4038,10 +4038,11 @@ MOZ_BRANDING_DIRECTORY=
 MOZ_CALENDAR=
 MOZ_DBGRINFO_MODULES=
 MOZ_ENABLE_LIBXUL=
-MOZ_EXTENSIONS_ALL=" cookie wallet content-packs xml-rpc help p3p pref venkman inspector irc universalchardet typeaheadfind webservices spellcheck gnomevfs auth sroaming xmlterm datetime finger cview layout-debug tasks sql xforms permissions schema-validation reporter"
+MOZ_EXTENSIONS_ALL=" cookie wallet content-packs xml-rpc help p3p venkman inspector irc typeaheadfind webservices spellcheck gnomevfs auth sroaming xmlterm datetime finger cview layout-debug tasks sql xforms permissions schema-validation reporter"
 MOZ_IMG_DECODERS_DEFAULT="png gif jpeg bmp xbm icon"
 MOZ_IMG_ENCODERS_DEFAULT="png jpeg"
 MOZ_IPCD=
+MOZ_JAVAXPCOM=
 MOZ_JSDEBUGGER=1
 MOZ_JSLOADER=1
 MOZ_LDAP_XPCOM=
@@ -4055,6 +4056,7 @@ MOZ_NO_FAST_LOAD=
 MOZ_OJI=1
 MOZ_PLAINTEXT_EDITOR_ONLY=
 MOZ_PLUGINS=1
+MOZ_PREF_EXTENSIONS=1
 MOZ_PROFILELOCKING=1
 MOZ_PROFILESHARING=1
 MOZ_PSM=1
@@ -4072,6 +4074,7 @@ MOZ_SINGLE_PROFILE=
 MOZ_STATIC_MAIL_BUILD=
 MOZ_TIMELINE=
 MOZ_UI_LOCALE=en-US
+MOZ_UNIVERSALCHARDET=1
 MOZ_USE_NATIVE_UCONV=
 MOZ_V1_STRING_ABI=1
 MOZ_VIEW_SOURCE=1
@@ -4125,7 +4128,7 @@ suite)
   MOZ_SUITE=1
   MOZ_PROFILESHARING=
   MOZ_APP_VERSION=$SEAMONKEY_VERSION
-  MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs xml-rpc help p3p pref venkman inspector irc universalchardet typeaheadfind webservices spellcheck gnomevfs auth sroaming permissions reporter"
+  MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs xml-rpc help p3p venkman inspector irc typeaheadfind webservices spellcheck gnomevfs auth sroaming permissions reporter"
   AC_DEFINE(MOZ_SUITE)
   ;;
 
@@ -4136,7 +4139,7 @@ browser)
   MOZ_UPDATER=1
   MOZ_PHOENIX=1
   MOZ_APP_VERSION=$FIREFOX_VERSION
-  MOZ_EXTENSIONS_DEFAULT=" cookie xml-rpc pref universalchardet webservices inspector gnomevfs auth permissions reporter"
+  MOZ_EXTENSIONS_DEFAULT=" cookie xml-rpc webservices inspector gnomevfs auth permissions reporter"
   AC_DEFINE(MOZ_PHOENIX)
   ;;
 
@@ -4165,9 +4168,11 @@ minimo)
   MOZ_NO_FAST_LOAD=1
   MOZ_OJI=
   MOZ_PLAINTEXT_EDITOR_ONLY=1
+  MOZ_PREF_EXTENSIONS=
   MOZ_PROFILELOCKING=
   MOZ_PROFILESHARING=
   MOZ_SINGLE_PROFILE=1
+  MOZ_UNIVERSALCHARDET=
   MOZ_UPDATER=
   MOZ_USE_NATIVE_UCONV=1
   MOZ_V1_STRING_ABI=
@@ -4203,7 +4208,7 @@ mail)
   MOZ_STATIC_MAIL_BUILD=1
   MOZ_COMPOSER=1
   MOZ_APP_VERSION=$THUNDERBIRD_VERSION
-  MOZ_EXTENSIONS_DEFAULT=" wallet spellcheck pref webservices universalchardet auth"
+  MOZ_EXTENSIONS_DEFAULT=" wallet spellcheck webservices auth"
   AC_DEFINE(MOZ_THUNDERBIRD)
   ;;
 
@@ -4227,6 +4232,7 @@ calendar)
   MOZ_CALENDAR=1
   MOZ_APP_VERSION=`cat $topsrcdir/calendar/sunbird/config/version.txt`
   MOZ_EXTENSIONS_DEFAULT=" pref"
+  MOZ_UNIVERSALCHARDET=
   AC_DEFINE(MOZ_SUNBIRD)
   ;;
 
@@ -4238,7 +4244,8 @@ xulrunner)
   MOZ_XULRUNNER=1
   MOZ_ENABLE_LIBXUL=1
   MOZ_APP_VERSION=$MOZILLA_VERSION
-  MOZ_EXTENSIONS_DEFAULT=" xml-rpc pref universalchardet webservices gnomevfs auth"
+  MOZ_JAVAXPCOM=1
+  MOZ_EXTENSIONS_DEFAULT=" xml-rpc webservices gnomevfs auth"
   AC_DEFINE(MOZ_XULRUNNER)
   AC_DEFINE(MOZ_ZAP)
   ;;
@@ -4247,7 +4254,8 @@ macbrowser)
   MOZ_APP_NAME=mozilla
   MOZ_APP_DISPLAYNAME=Mozilla
   MOZ_APP_VERSION=$MOZILLA_VERSION
-  MOZ_EXTENSIONS_DEFAULT=" cookie universalchardet typeaheadfind permissions"
+  MOZ_EXTENSIONS_DEFAULT=" cookie typeaheadfind permissions"
+  MOZ_PREF_EXTENSIONS=
   AC_DEFINE(MOZ_MACBROWSER)
   ;;
 
@@ -4278,7 +4286,11 @@ standalone)
   ;;
 
 *)
-  AC_MSG_ERROR([--enable-application=APP is required])
+  if test -z "$MOZ_BUILD_APP"; then
+    AC_MSG_ERROR([--enable-application=APP is required.])
+  else
+    AC_MSG_ERROR([--enable-application value not recognized.])
+  fi
   ;;
 
 esac
@@ -4892,6 +4904,79 @@ MOZ_ARG_DISABLE_BOOL(xmlextras,
     MOZ_XMLEXTRAS=1 )
 
 dnl ========================================================
+dnl Pref extensions (autoconfig and system-pref)
+dnl ========================================================
+MOZ_ARG_DISABLE_BOOL(pref-extensions,
+[  --disable-pref-extensions
+                          Disable pref extensions such as autoconfig and
+                          system-pref],
+  MOZ_PREF_EXTENSIONS=,
+  MOZ_PREF_EXTENSIONS=1 )
+
+dnl ========================================================
+dnl = Universalchardet
+dnl ========================================================
+MOZ_ARG_DISABLE_BOOL(universalchardet,
+[  --disable-universalchardet
+                          Disable universal encoding detection],
+  MOZ_UNIVERSALCHARDET=,
+  MOZ_UNIVERSALCHARDET=1 )
+
+dnl ========================================================
+dnl Javaconnect
+dnl ========================================================
+MOZ_ARG_ENABLE_BOOL(javaconnect,
+[  --enable-javaxpcom
+                          Enable Java-XPCOM bridge],
+    MOZ_JAVAXPCOM=1,
+    MOZ_JAVAXPCOM= )
+
+if test -n "${MOZ_JAVAXPCOM}"; then
+  case "$host_os" in
+    cygwin*|msvc*|mks*)
+      if test -n "$JAVA_HOME"; then
+        JAVA_HOME=`cygpath -u \`cygpath -m -s "$JAVA_HOME"\``
+      fi
+      ;;
+  esac
+
+  if test -n "${JAVA_INCLUDE_PATH}"; then
+    dnl Make sure jni.h exists in the given include path.
+    if test ! -f "$JAVA_INCLUDE_PATH/jni.h"; then
+      AC_MSG_ERROR([jni.h was not found in given include path $JAVA_INCLUDE_PATH.])
+    fi
+  else
+    case "$target_os" in
+      darwin*)
+        dnl Default to java system location
+        JAVA_INCLUDE_PATH=/System/Library/Frameworks/JavaVM.framework/Headers
+        ;;
+      *)
+        dnl Try $JAVA_HOME
+        JAVA_INCLUDE_PATH="$JAVA_HOME/include"
+        ;;
+    esac
+    if test ! -f "$JAVA_INCLUDE_PATH/jni.h"; then
+      AC_MSG_ERROR([The header jni.h was not found.  Set \$JAVA_HOME or use --with-java-include-path={java-include-dir}.])
+    fi
+  fi
+
+  if test -n "${JAVA_BIN_PATH}"; then
+    dnl Look for javac and jar in the specified path.
+    JAVA_PATH="$JAVA_BIN_PATH"
+  else
+    dnl No path specified, so look for javac and jar in $JAVA_HOME & $PATH.
+    JAVA_PATH="$JAVA_HOME/bin:$PATH"
+  fi
+
+  AC_PATH_PROG(JAVAC, javac, :, $JAVA_PATH)
+  AC_PATH_PROG(JAR, jar, :, $JAVA_PATH)
+  if test -z "$JAVAC" || test "$JAVAC" = ":" || test -z "$JAR" || test "$JAR" = ":"; then
+    AC_MSG_ERROR([The programs javac and jar were not found.  Set \$JAVA_HOME or use --with-java-bin-path={java-bin-dir}.])
+  fi
+fi
+
+dnl ========================================================
 dnl = Enable compilation of specific extension modules
 dnl ========================================================
 
@@ -4967,54 +5052,19 @@ if test `echo "$MOZ_EXTENSIONS" | grep -c xmlextras` -ne 0; then
     MOZ_EXTENSIONS=`echo $MOZ_EXTENSIONS | sed -e 's|xmlextras||g'`
 fi
 
-MOZ_ENABLE_JAVAXPCOM=
-JAVAC=
-JAR=
+if test `echo "$MOZ_EXTENSIONS" | grep -c pref` -ne 0; then
+    AC_MSG_WARN([pref is no longer an extension, use --disable-pref-extensions to disable.])
+    MOZ_EXTENSIONS=`echo $MOZ_EXTENSIONS | sed -e 's|pref||g'`
+fi
+
+if test `echo "$MOZ_EXTENSIONS" | grep -c universalchardet` -ne 0; then
+    AC_MSG_WARN([universalchardet is no longer an extension, use --disable-universalchardet to disable.])
+    MOZ_EXTENSIONS=`echo $MOZ_EXTENSIONS | sed -e 's|universalchardet||g'`
+fi
+
 if test `echo "$MOZ_EXTENSIONS" | grep -c java` -ne 0; then
-  MOZ_ENABLE_JAVAXPCOM=1
-
-  case "$host_os" in
-    cygwin*|msvc*|mks*)
-      if test -n "$JAVA_HOME"; then
-        JAVA_HOME=`cygpath -u \`cygpath -m -s "$JAVA_HOME"\``
-      fi
-      ;;
-  esac
-
-  if test -n "${JAVA_INCLUDE_PATH}"; then
-    dnl Make sure jni.h exists in the given include path.
-    if test ! -f "$JAVA_INCLUDE_PATH/jni.h"; then
-      AC_MSG_ERROR([jni.h was not found in given include path $JAVA_INCLUDE_PATH.])
-    fi
-  else
-    case "$target_os" in
-      darwin*)
-        dnl Default to java system location
-        JAVA_INCLUDE_PATH=/System/Library/Frameworks/JavaVM.framework/Headers
-        ;;
-      *)
-        dnl Try $JAVA_HOME
-        JAVA_INCLUDE_PATH="$JAVA_HOME/include"
-        ;;
-    esac
-    if test ! -f "$JAVA_INCLUDE_PATH/jni.h"; then
-      AC_MSG_ERROR([The header jni.h was not found.  Set \$JAVA_HOME or use --with-java-include-path={java-include-dir}.])
-    fi
-  fi
-
-  if test -n "${JAVA_BIN_PATH}"; then
-    dnl Look for javac and jar in the specified path.
-    JAVA_PATH="$JAVA_BIN_PATH"
-  else
-    dnl No path specified, so look for javac and jar are in $JAVA_HOME & $PATH.
-    JAVA_PATH="$JAVA_HOME/bin:$PATH"
-  fi
-
-  AC_PATH_PROG(JAVAC, javac, :, $JAVA_PATH)
-  AC_PATH_PROG(JAR, jar, :, $JAVA_PATH)
-  if test -z "$JAVAC" || test "$JAVAC" = ":" || test -z "$JAR" || test "$JAR" = ":"; then
-    AC_MSG_ERROR([The programs javac and jar were not found.  Set \$JAVA_HOME or use --with-java-bin-path={java-bin-dir}.])
-  fi
+    AC_MSG_WARN([java is no longer an extension, use --enable-javaxpcom to enable.])
+    MOZ_EXTENSIONS=`echo $MOZ_EXTENSIONS | sed -e 's|java||g'`
 fi
 
 dnl Remove dupes
@@ -6796,6 +6846,7 @@ AC_SUBST(MINIMO)
 AC_SUBST(MOZ_MATHML)
 AC_SUBST(MOZ_XTF)
 AC_SUBST(MOZ_XMLEXTRAS)
+AC_SUBST(MOZ_PREF_EXTENSIONS)
 AC_SUBST(MOZ_SVG)
 AC_SUBST(MOZ_SVG_FOREIGNOBJECT)
 AC_SUBST(MOZ_SVG_RENDERER_GDIPLUS)
@@ -6846,7 +6897,7 @@ AC_SUBST(MOZ_PLACES)
 AC_SUBST(MOZ_STORAGE)
 AC_SUBST(NS_PRINTING)
 
-AC_SUBST(MOZ_ENABLE_JAVAXPCOM)
+AC_SUBST(MOZ_JAVAXPCOM)
 AC_SUBST(JAVA_INCLUDE_PATH)
 AC_SUBST(JAVAC)
 AC_SUBST(JAR)
@@ -6871,6 +6922,7 @@ AC_SUBST(MOZ_ENABLE_LIBXUL)
 AC_SUBST(ENABLE_TESTS)
 AC_SUBST(IBMBIDI)
 AC_SUBST(SUNCTL)
+AC_SUBST(MOZ_UNIVERSALCHARDET)
 AC_SUBST(ACCESSIBILITY)
 AC_SUBST(MOZ_XPINSTALL)
 AC_SUBST(MOZ_VIEW_SOURCE)

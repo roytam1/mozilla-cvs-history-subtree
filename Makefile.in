@@ -184,6 +184,10 @@ ifdef MOZ_XMLEXTRAS
 tier_9_dirs += extensions/xmlextras
 endif
 
+ifdef MOZ_UNIVERSALCHARDET
+tier_9_dirs += extensions/universalchardet
+endif
+
 ifdef MOZ_OJI
 tier_9_dirs	+= \
 		js/src/liveconnect \
@@ -248,6 +252,14 @@ endif
 
 ifdef MOZ_PSM
 tier_50_dirs	+= security/manager
+endif
+
+ifdef MOZ_PREF_EXTENSIONS
+tier_50_dirs += extensions/pref
+endif
+
+ifdef MOZ_JAVAXPCOM
+tier_50_dirs += extensions/java
 endif
 
 ifdef MOZ_XUL_APP
