@@ -319,10 +319,13 @@ SipUAStack.getter(
   "hostAddress",
   function get_hostAddress() {
     try {
-      return getDNSService().resolve(gDNSService.myHostName,0).getNextAddrAsString();
+      var record = getDNSService().resolve(getDNSService().myHostName, 0);
+      if (record.hasMore())
+        return record.getNextAddrAsString();
     } catch(e) {
-      return "127.0.0.1";
+      this._dump("exception resolving our host: "+e);
     }
+    return "127.0.0.1";
   });
 
 //  readonly attribute unsigned short listeningPort;

@@ -1891,17 +1891,17 @@ InboundCallHandler.fun(
     rs.listener = this;
 
     // Work out identity based on To-address
-    this.identity = null;
+    this.call.identity = null;
     try {
       var uri = rs.request.getToHeader().address.uri.QueryInterface(Components.interfaces.zapISipSIPURI);
-      this.identity = getIdentityByAOR(uri);
+      this.call.identity = getIdentityByAOR(uri);
     }
     catch(e) { /* To address probably wasn't a SIP URI -> fall through */ }
 
-    if (!this.identity)
-      this.identity = wCurrentIdentity; // XXX maybe need a separate config for this?
+    if (!this.call.identity)
+      this.call.identity = wCurrentIdentity; // XXX maybe need a separate config for this?
     
-    this.contact = this.identity.getRoutingInfo().contact;
+    this.contact = this.call.identity.getRoutingInfo().contact;
     
     // reject based on busy settings:
     if (document.getElementById("button_dnd").checked) {
@@ -1919,8 +1919,8 @@ InboundCallHandler.fun(
       this.call.mediasession = Components.classes["@mozilla.org/zap/mediasession;1"]
         .createInstance(Components.interfaces.zapIMediaSession);
       this.call.mediasession.init("zap",
-                                  wSipStack.hostAddress,
-                                  wSipStack.hostAddress);
+                                  this.call.identity.hostAddress,
+                                  this.call.identity.hostAddress);
       this.answer = this.call.mediasession.processSDPOffer(offer);
     }
     catch(e) {

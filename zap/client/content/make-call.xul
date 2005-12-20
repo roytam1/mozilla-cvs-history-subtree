@@ -106,10 +106,8 @@
       oc.createFromDocument(document);
       oc.mediasession = Components.classes["@mozilla.org/zap/mediasession;1"].createInstance(Components.interfaces.zapIMediaSession);
       oc.mediasession.init("zap",
-"83.67.107.30",
-"83.67.107.30");
-//                           parent.wSipStack.hostAddress,
-//                           parent.wSipStack.hostAddress);
+                           parent.wCurrentIdentity.hostAddress,
+                           parent.wCurrentIdentity.hostAddress);
 
       oc["urn:mozilla:zap:status"] = "Calling...";
       // start the ball rolling:
