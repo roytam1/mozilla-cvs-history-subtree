@@ -48,6 +48,7 @@
 #import "NSThread+Utils.h"
 #import "NSFileManager+Utils.h"
 #import "NSWorkspace+Utils.h"
+#import "NSPasteboard+Utils.h"
 
 #import "PreferenceManager.h"
 #import "BookmarkManager.h"
@@ -99,7 +100,7 @@ enum {
 // Reading bookmark files
 - (BOOL)readBookmarks;
 
-// these versions assume that we're readinog all the bookmarks from the file (i.e. not an import into a subfolder)
+// these versions assume that we're reading all the bookmarks from the file (i.e. not an import into a subfolder)
 - (BOOL)readPListBookmarks:(NSString *)pathToFile;    // camino or safari
 - (BOOL)readCaminoPListBookmarks:(NSDictionary *)plist;
 - (BOOL)readSafariPListBookmarks:(NSDictionary *)plist;
@@ -278,6 +279,7 @@ static BookmarkManager* gBookmarkManager = nil;
   // All interested parties haven't been init'd yet, and/or will receive the
   // managerStartedNotification when setup is actually complete.
   [BookmarkItem setSuppressAllUpdateNotifications:YES];
+
   BOOL bookmarksReadOK = [self readBookmarks];
   if (!bookmarksReadOK)
   {
@@ -338,14 +340,14 @@ static BookmarkManager* gBookmarkManager = nil;
   [[self toolbarFolder] refreshIcon];
 
   NSArray* allBookmarks = [[self rootBookmarks] allChildBookmarks];
-
+  
   NSEnumerator* bmEnum = [allBookmarks objectEnumerator];
   Bookmark* thisBM;
   while ((thisBM = [bmEnum nextObject]))
   {
     [self registerBookmarkForLoads:thisBM];
   }
-
+  
   // load favicons (w/out hitting the network, cache only). Spread it out so that we only get
   // ten every three seconds to avoid locking up the UI with large bookmark lists.
   // XXX probably want a better way to do this. This sets up a timer (internally) for every
@@ -566,6 +568,25 @@ static BookmarkManager* gBookmarkManager = nil;
   }
 }
 
+//
+// -clearAllVisits:
+//
+// resets all bookmarks visit counts to zero as part of Reset Camino
+//
+
+-(void)clearAllVisits
+{
+  // XXX this will fire a lot of changed notifications.
+  NSEnumerator* bookmarksEnum = [[self rootBookmarks] objectEnumerator];
+  BookmarkItem* curItem;
+  while (curItem = [bookmarksEnum nextObject])
+  {
+    if ([curItem isKindOfClass:[Bookmark class]])
+      [(Bookmark*)curItem setNumberOfVisits:0];
+  }
+}
+
+
 -(NSArray *)resolveBookmarksKeyword:(NSString *)keyword
 {
   NSArray *resolvedArray = nil;
@@ -680,7 +701,18 @@ static BookmarkManager* gBookmarkManager = nil;
   menuItem = [[[NSMenuItem alloc] initWithTitle:menuTitle action:@selector(openBookmarkInNewTab:) keyEquivalent:@""] autorelease];
   [menuItem setTarget:target];
   [contextMenu addItem:menuItem];
-  
+
+  [contextMenu addItem:[NSMenuItem separatorItem]];
+
+  // copy URL(s) to clipboard
+  if (itemsContainsFolder || multipleItems)
+    menuTitle = NSLocalizedString(@"Copy URLs to Clipboard", @"");
+  else
+    menuTitle = NSLocalizedString(@"Copy URL to Clipboard", @"");
+  menuItem = [[[NSMenuItem alloc] initWithTitle:menuTitle action:@selector(copyURLs:) keyEquivalent:@""] autorelease];
+  [menuItem setTarget:target];
+  [contextMenu addItem:menuItem];
+
   if (!outlineView || ([items count] == 1)) {
     [contextMenu addItem:[NSMenuItem separatorItem]];
     menuTitle = NSLocalizedString(@"Get Info", @"");
@@ -697,11 +729,8 @@ static BookmarkManager* gBookmarkManager = nil;
   }
   
   BOOL allowNewFolder = NO;
-  if ([target isKindOfClass:[BookmarkViewController class]]) {
-    if (![[target activeCollection] isSmartFolder])
-      allowNewFolder = YES;
-  } else
-    allowNewFolder = YES;
+  if ([target isKindOfClass:[BookmarkViewController class]])
+    allowNewFolder = ![[target activeCollection] isSmartFolder];
 
   if (allowNewFolder) {
     // space
@@ -729,6 +758,28 @@ static BookmarkManager* gBookmarkManager = nil;
   return contextMenu;
 }
 
+
+//
+// Copy a set of bookmarks URLs to the specified pasteboard.
+// We don't care about item titles here, nor do we care about format.
+//
+- (void)copyBookmarksURLs:(NSArray*)bookmarkItems toPasteboard:(NSPasteboard*)aPasteboard
+{
+  // handle URLs, and nothing else, for simplicity.
+  [aPasteboard declareTypes:[NSArray arrayWithObject:kCorePasteboardFlavorType_url] owner:nil];
+
+  NSMutableArray* urlList = [NSMutableArray array];
+  NSEnumerator* bookmarkItemsEnum = [bookmarkItems objectEnumerator];
+  BookmarkItem* curItem;
+  while (curItem = [bookmarkItemsEnum nextObject])
+  {
+    if ([curItem isKindOfClass:[Bookmark class]])
+      [urlList addObject:[(Bookmark*)curItem url]];
+  }
+  [aPasteboard setURLs:urlList withTitles:nil];
+}
+
+
 #pragma mark -
 
 // 
@@ -740,8 +791,9 @@ static BookmarkManager* gBookmarkManager = nil;
   NSMutableSet* urlSet = [urlMap objectForKey:inURL];
   if (!urlSet)
   {
-    urlSet = [NSMutableSet setWithCapacity:1];
+    urlSet = [[NSMutableSet alloc] initWithCapacity:1];
     [urlMap setObject:urlSet forKey:inURL];
+    [urlSet release];
   }
   [urlSet addObject:inBookmark];
 }
@@ -793,7 +845,9 @@ static BookmarkManager* gBookmarkManager = nil;
   [BookmarkManager addItem:inBookmark toURLMap:mBookmarkURLMap usingURL:bookmarkURL];
 
   // and add it to the site icon map
-  [BookmarkManager addItem:inBookmark toURLMap:mBookmarkFaviconURLMap usingURL:[BookmarkManager faviconURLForBookmark:inBookmark]];
+  NSString* faviconURL = [BookmarkManager faviconURLForBookmark:inBookmark];
+  if ([faviconURL length] > 0)
+    [BookmarkManager addItem:inBookmark toURLMap:mBookmarkFaviconURLMap usingURL:faviconURL];
 }
 
 - (void)unregisterBookmarkForLoads:(Bookmark*)inBookmark ignoringURL:(BOOL)inIgnoreURL
@@ -801,7 +855,9 @@ static BookmarkManager* gBookmarkManager = nil;
   NSString* bookmarkURL = inIgnoreURL ? nil : [BookmarkManager canonicalBookmarkURL:[inBookmark url]];
   [BookmarkManager removeItem:inBookmark fromURLMap:mBookmarkURLMap usingURL:bookmarkURL];
   
-  [BookmarkManager removeItem:inBookmark fromURLMap:mBookmarkFaviconURLMap usingURL:[BookmarkManager faviconURLForBookmark:inBookmark]];
+  NSString* faviconURL = [BookmarkManager faviconURLForBookmark:inBookmark];
+  if ([faviconURL length] > 0)
+    [BookmarkManager removeItem:inBookmark fromURLMap:mBookmarkFaviconURLMap usingURL:faviconURL];
 }
 
 
@@ -812,7 +868,7 @@ static BookmarkManager* gBookmarkManager = nil;
   if (!userInfo)
     return;
 
-	NSImage*  iconImage     = [userInfo objectForKey:SiteIconLoadImageKey];
+  NSImage*  iconImage    = [userInfo objectForKey:SiteIconLoadImageKey];
   NSString* siteIconURI  = [userInfo objectForKey:SiteIconLoadURIKey];
   NSString* pageURI      = [userInfo objectForKey:SiteIconLoadUserDataKey];
   pageURI = [BookmarkManager canonicalBookmarkURL:pageURI];

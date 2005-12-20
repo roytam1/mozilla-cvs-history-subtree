@@ -160,6 +160,8 @@ typedef enum
   BOOL mShouldAutosave;
   BOOL mShouldLoadHomePage;
 
+  BOOL mWindowClosesQuietly;  // if YES, don't warn on multi-tab window close
+  
   unsigned int mChromeMask; // Indicates which parts of the window to show (e.g., don't show toolbars)
 
   // C++ object that holds owning refs to XPCOM objects (and related data)
@@ -265,7 +267,7 @@ typedef enum
 - (IBAction)frameToNewTab:(id)sender;
 - (IBAction)frameToThisWindow:(id)sender;
 
-- (void)openNewWindowWithURL: (NSString*)aURLSpec referrer:(NSString*)aReferrer loadInBackground: (BOOL)aLoadInBG allowPopups:(BOOL)inAllowPopups;
+- (BrowserWindowController*)openNewWindowWithURL: (NSString*)aURLSpec referrer:(NSString*)aReferrer loadInBackground: (BOOL)aLoadInBG allowPopups:(BOOL)inAllowPopups;
 - (void)openNewTabWithURL: (NSString*)aURLSpec referrer: (NSString*)aReferrer loadInBackground: (BOOL)aLoadInBG allowPopups:(BOOL)inAllowPopups;
 
 - (void)openURLArray:(NSArray*)urlArray tabOpenPolicy:(ETabOpenPolicy)tabPolicy allowPopups:(BOOL)inAllowPopups;
@@ -326,7 +328,8 @@ typedef enum
 - (void) showProgressIndicator;
 - (void) hideProgressIndicator;
 
-- (BOOL) isResponderGeckoView:(NSResponder*) responder;
+- (BOOL)windowClosesQuietly;
+- (void)setWindowClosesQuietly:(BOOL)inClosesQuietly;
 
 // called when the internal window focus has changed
 // this allows us to dispatch activate and deactivate events as necessary

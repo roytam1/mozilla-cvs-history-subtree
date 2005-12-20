@@ -121,6 +121,7 @@ static const int kDisabledQuicksearchPopupItemTag = 9999;
 - (BookmarkFolder*)selectedContainerFolder;
 
 - (void)selectItems:(NSArray*)items expandingContainers:(BOOL)expandContainers scrollIntoView:(BOOL)scroll;
+- (BookmarkItem*)selectedBookmarkItem;
 
 - (id)itemTreeRootContainer;   // something that responds to NSArray-like selectors
 
@@ -480,12 +481,11 @@ static const int kDisabledQuicksearchPopupItemTag = 9999;
   while ((curItem = [itemsEnum nextObject]))
   {
     // see if it's a rendezvous item
-    id parent = [curItem parent];
-    if (![parent isKindOfClass:[BookmarkItem class]])
+    if ([curItem isKindOfClass:[RendezvousBookmark class]] && ![curItem resolved])
     {
-      [[NetworkServices sharedNetworkServices] attemptResolveService:[parent intValue] forSender:curItem];
+      [[NetworkServices sharedNetworkServices] attemptResolveService:[(RendezvousBookmark*)curItem serviceID] forSender:curItem];
       mOpenActionFlag = kOpenBookmarkAction;
-    }
+    }    
     else if ([curItem isKindOfClass:[BookmarkFolder class]])
     {
       if (![curItem isGroup])
@@ -517,10 +517,9 @@ static const int kDisabledQuicksearchPopupItemTag = 9999;
   while ((curItem = [itemsEnum nextObject]))
   {
     // see if it's a rendezvous item
-    id parent = [curItem parent];
-    if (![parent isKindOfClass:[BookmarkItem class]])
+    if ([curItem isKindOfClass:[RendezvousBookmark class]] && ![curItem resolved])
     {
-      [[NetworkServices sharedNetworkServices] attemptResolveService:[parent intValue] forSender:curItem];
+      [[NetworkServices sharedNetworkServices] attemptResolveService:[(RendezvousBookmark*)curItem serviceID] forSender:curItem];
       mOpenActionFlag = kOpenInNewTabAction;
     }
     else
@@ -547,10 +546,9 @@ static const int kDisabledQuicksearchPopupItemTag = 9999;
   while ((curItem = [itemsEnum nextObject]))
   {
     // see if it's a rendezvous item (this won't open in the new window, because we suck)
-    id parent = [curItem parent];
-    if (![parent isKindOfClass:[BookmarkItem class]])
+    if ([curItem isKindOfClass:[RendezvousBookmark class]] && ![curItem resolved])
     {
-      [[NetworkServices sharedNetworkServices] attemptResolveService:[parent intValue] forSender:curItem];
+      [[NetworkServices sharedNetworkServices] attemptResolveService:[(RendezvousBookmark*)curItem serviceID] forSender:curItem];
       mOpenActionFlag = kOpenInNewTabAction;
     }
     else
@@ -585,10 +583,9 @@ static const int kDisabledQuicksearchPopupItemTag = 9999;
   while ((curItem = [itemsEnum nextObject]))
   {
     // see if it's a rendezvous item
-    id parent = [curItem parent];
-    if (![parent isKindOfClass:[BookmarkItem class]])
+    if ([curItem isKindOfClass:[RendezvousBookmark class]] && ![curItem resolved])
     {
-      [[NetworkServices sharedNetworkServices] attemptResolveService:[parent intValue] forSender:curItem];
+      [[NetworkServices sharedNetworkServices] attemptResolveService:[(RendezvousBookmark*)curItem serviceID] forSender:curItem];
       mOpenActionFlag = kOpenInNewWindowAction;
     }
     else
@@ -602,10 +599,7 @@ static const int kDisabledQuicksearchPopupItemTag = 9999;
 -(IBAction)showBookmarkInfo:(id)aSender
 {
   BookmarkInfoController *bic = [BookmarkInfoController sharedBookmarkInfoController];
-  BookmarkItem* item = nil;
-
-  int index = [mBookmarksOutlineView selectedRow];
-  item = [mBookmarksOutlineView itemAtRow: index];
+  BookmarkItem* item = [self selectedBookmarkItem];
 
   [bic setBookmark:item];
   [bic showWindow:bic];
@@ -683,6 +677,11 @@ static const int kDisabledQuicksearchPopupItemTag = 9999;
 -(IBAction) delete:(id)aSender
 {
   [self deleteBookmarks:aSender];
+}
+
+- (IBAction)copyURLs:(id)aSender
+{
+  [[BookmarkManager sharedBookmarkManager] copyBookmarksURLs:[mBookmarksOutlineView selectedItems] toPasteboard:[NSPasteboard generalPasteboard]];
 }
 
 -(IBAction)quicksearchPopupChanged:(id)aSender
@@ -777,8 +776,7 @@ static const int kDisabledQuicksearchPopupItemTag = 9999;
 
   if ([mBookmarksOutlineView numberOfSelectedRows] == 1)
   {
-    int row = [mBookmarksOutlineView selectedRow];
-    BookmarkItem *item = [mBookmarksOutlineView itemAtRow:row];
+    BookmarkItem *item = [self selectedBookmarkItem];
     // if it's a folder, use it
     if ([item isKindOfClass:[BookmarkFolder class]])
     {
@@ -1068,17 +1066,17 @@ static const int kDisabledQuicksearchPopupItemTag = 9999;
   // category takes care of working out what formats to write.
   NSMutableArray* urlList = [NSMutableArray array];
   NSMutableArray* titleList = [NSMutableArray array];
-  for ( unsigned int i = 0; i < [bookmarkItemsToCopy count]; ++i ) {
-    BookmarkItem* bookmarkItem = [bookmarkItemsToCopy objectAtIndex:i];
-    if ([bookmarkItem isKindOfClass:[Bookmark class]]) {
-      Bookmark* bookmark = (Bookmark*) bookmarkItem;
-      [urlList addObject:[bookmark url]];
-      [titleList addObject:[bookmark title]];
+  NSEnumerator* bookmarkItemsEnum = [bookmarkItemsToCopy objectEnumerator];
+  BookmarkItem* curItem;
+  while (curItem = [bookmarkItemsEnum nextObject])
+  {
+    if ([curItem isKindOfClass:[Bookmark class]]) {
+      [urlList addObject:[(Bookmark*)curItem url]];
+      [titleList addObject:[(Bookmark*)curItem title]];
     }
   }
   [aPasteboard setURLs:urlList withTitles:titleList];
 }
-
 
 -(BOOL) canPasteFromPasteboard:(NSPasteboard*)aPasteboard
 {
@@ -1509,10 +1507,10 @@ static const int kDisabledQuicksearchPopupItemTag = 9999;
   if (mBookmarkUpdatesDisabled)
     return;
 
-  if (!item)
+  if (!item || (item == mActiveRootCollection))
     [mBookmarksOutlineView reloadData];
   else
-    [mBookmarksOutlineView reloadItem: item reloadChildren: aReloadChildren];
+    [mBookmarksOutlineView reloadItem:item reloadChildren:aReloadChildren];
 }
 
 - (int)numberOfSelectedRows
@@ -1527,16 +1525,13 @@ static const int kDisabledQuicksearchPopupItemTag = 9999;
 
 -(void)outlineViewSelectionDidChange: (NSNotification*) aNotification
 {
-  BookmarkInfoController *bic = [BookmarkInfoController sharedBookmarkInfoController];
-  if ([mBookmarksOutlineView numberOfSelectedRows] == 1) {
-    //[mInfoButton setEnabled:YES];
-    if ([[bic window] isVisible]) {
-      [bic setBookmark:[mBookmarksOutlineView itemAtRow:[mBookmarksOutlineView selectedRow]]];
-    }
-  }
-  else {
-    //[mInfoButton setEnabled:NO];
-    [bic close];
+  BookmarkInfoController* bic = [BookmarkInfoController existingSharedBookmarkInfoController];
+  if ([[bic window] isVisible])
+  {
+    if ([mBookmarksOutlineView numberOfSelectedRows] == 1)
+        [bic setBookmark:[self selectedBookmarkItem]];
+    else
+        [bic setBookmark:nil];
   }
 }
 
@@ -1552,7 +1547,7 @@ static const int kDisabledQuicksearchPopupItemTag = 9999;
       return (![activeCollection isRoot] && ![activeCollection isSmartFolder]);
     }
 
-    BookmarkItem* selItem = [mBookmarksOutlineView itemAtRow:[mBookmarksOutlineView selectedRow]];
+    BookmarkItem* selItem = [self selectedBookmarkItem];
 
     if (action == @selector(openBookmark:))
       return (selItem != nil);
@@ -1701,6 +1696,14 @@ static const int kDisabledQuicksearchPopupItemTag = 9999;
   }
 }
 
+- (BookmarkItem*)selectedBookmarkItem
+{
+  int index = [mBookmarksOutlineView selectedRow];
+  if (index == -1) return nil;
+
+  return (BookmarkItem*)[mBookmarksOutlineView itemAtRow:index];
+}
+
 - (id)itemTreeRootContainer
 {
   if (mSearchResultArray)
@@ -1778,17 +1781,22 @@ static const int kDisabledQuicksearchPopupItemTag = 9999;
     return;
   NSDictionary *dict = [note userInfo];
   id aClient = [dict objectForKey:NetworkServicesClientKey];
-  if ([aClient isKindOfClass:[Bookmark class]]) {
-    switch (mOpenActionFlag) {
+  if ([aClient isKindOfClass:[Bookmark class]])
+  {
+    switch (mOpenActionFlag)
+    {
       case (kOpenBookmarkAction):
-        [[NSRunLoop currentRunLoop] performSelector:@selector(openBookmark:) target:self argument:aClient order:10 modes:[NSArray arrayWithObject:NSDefaultRunLoopMode]];
+        [self performSelector:@selector(openBookmark:) withObject:aClient afterDelay:0];
         break;
+
       case (kOpenInNewTabAction):
-        [[NSRunLoop currentRunLoop] performSelector:@selector(openBookmarkInNewTab:) target:self argument:aClient order:10 modes:[NSArray arrayWithObject:NSDefaultRunLoopMode]];
+        [self performSelector:@selector(openBookmarkInNewTab:) withObject:aClient afterDelay:0];
         break;
+
       case (kOpenInNewWindowAction):
-        [[NSRunLoop currentRunLoop] performSelector:@selector(openBookmarkInNewWindow:) target:self argument:aClient order:10 modes:[NSArray arrayWithObject:NSDefaultRunLoopMode]];
+        [self performSelector:@selector(openBookmarkInNewWindow:) withObject:aClient afterDelay:0];
         break;
+
       default:
         break;
     }
@@ -1846,7 +1854,18 @@ static const int kDisabledQuicksearchPopupItemTag = 9999;
 
 - (void)bookmarkChanged:(NSNotification *)note
 {
-  [self reloadDataForItem:[note object] reloadChildren:NO];
+  const unsigned int kVisibleAttributeChangedFlags = (kBookmarkItemTitleChangedMask |
+                                                      kBookmarkItemURLChangedMask |
+                                                      kBookmarkItemKeywordChangedMask |
+                                                      kBookmarkItemDescriptionChangedMask |
+                                                      kBookmarkItemLastVisitChangedMask | 
+                                                      kBookmarkItemStatusChangedMask);
+
+  BOOL reloadItem     = [BookmarkItem bookmarkChangedNotificationUserInfo:[note userInfo] containsFlags:kVisibleAttributeChangedFlags];
+  BOOL reloadChildren = [BookmarkItem bookmarkChangedNotificationUserInfo:[note userInfo] containsFlags:kBookmarkItemChildrenChangedMask];
+
+  if (reloadItem || reloadChildren)
+    [self reloadDataForItem:[note object] reloadChildren:reloadChildren];
 }
 
 - (void)bookmarksViewDidMoveToWindow:(NSWindow*)inWindow

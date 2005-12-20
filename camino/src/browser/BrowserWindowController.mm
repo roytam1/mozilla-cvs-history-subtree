@@ -89,7 +89,6 @@
 #include "nsIClipboardCommands.h"
 #include "nsICommandManager.h"
 #include "nsICommandParams.h"
-#include "nsIContentViewerEdit.h"
 #include "nsIWebBrowser.h"
 #include "nsIInterfaceRequestorUtils.h"
 #include "nsServiceManagerUtils.h"
@@ -151,6 +150,7 @@ public:
 
   BWCDataOwner()
   : mContextMenuFlags(0)
+  , mGotOnContextMenu(false)
   {
     mGlobalHistory = do_GetService("@mozilla.org/browser/global-history;2");
     mURIFixer      = do_GetService("@mozilla.org/docshell/urifixup;1");
@@ -162,6 +162,7 @@ public:
   int                           mContextMenuFlags;
   nsCOMPtr<nsIDOMEvent>         mContextMenuEvent;
   nsCOMPtr<nsIDOMNode>          mContextMenuNode;
+  bool                          mGotOnContextMenu;
 };
 
 
@@ -423,6 +424,7 @@ enum BWCOpenDest {
 
 - (void)setupToolbar;
 - (void)setGeckoActive:(BOOL)inActive;
+- (BOOL)isResponderGeckoView:(NSResponder*) responder;
 - (NSString*)getContextMenuNodeDocumentURL;
 - (void)loadSourceOfURL:(NSString*)urlStr;
 - (void)transformFormatString:(NSMutableString*)inFormat domain:(NSString*)inDomain search:(NSString*)inSearch;
@@ -479,12 +481,6 @@ enum BWCOpenDest {
   return self;
 }
 
-- (BOOL)isResponderGeckoView:(NSResponder*) responder
-{
-  return ([responder isKindOfClass:[NSView class]] &&
-          [(NSView*)responder isDescendantOf:[mBrowserView getBrowserView]]);
-}
-
 - (void)windowDidBecomeKey:(NSNotification *)notification
 {
   BOOL windowWithMultipleTabs = ([mTabBrowser numberOfTabViewItems] > 1);
@@ -523,12 +519,18 @@ enum BWCOpenDest {
   }
 }
 
+- (BOOL)isResponderGeckoView:(NSResponder*) responder
+{
+  return ([responder isKindOfClass:[NSView class]] &&
+          [(NSView*)responder isDescendantOf:[mBrowserView getBrowserView]]);
+}
+
 - (void)windowDidChangeMain
 {
   // On 10.4, the unified title bar and toolbar is used, and the bookmark
   // toolbar's appearance is tweaked to better match the unified look.
   // Its active/inactive state needs to change along with the toolbar's.
-  BrowserWindow* browserWin = [self window];
+  BrowserWindow* browserWin = (BrowserWindow*)[self window];
   if ([browserWin hasUnifiedToolbarAppearance]) {
     BookmarkToolbar* bookmarkToolbar = [self bookmarkToolbar];
     if (bookmarkToolbar)
@@ -580,7 +582,8 @@ enum BWCOpenDest {
 
 - (BOOL)windowShouldClose:(id)sender 
 {
-  if ([[PreferenceManager sharedInstance] getBooleanPref:"camino.warn_when_closing" withSuccess:NULL])
+  if (!mWindowClosesQuietly &&
+      [[PreferenceManager sharedInstance] getBooleanPref:"camino.warn_when_closing" withSuccess:NULL])
   {
     unsigned int numberOfTabs = [mTabBrowser numberOfTabViewItems];
     if (numberOfTabs > 1)
@@ -849,7 +852,7 @@ enum BWCOpenDest {
     const int kWindowStaggerOffset = 22;
     
     NSWindow* lastBrowser = [[NSApp delegate] getFrontmostBrowserWindow];
-    if ( lastBrowser != [self window] ) {
+    if ( lastBrowser && lastBrowser != [self window] ) {
       NSRect screenRect = [[lastBrowser screen] visibleFrame];
       NSRect testBrowserFrame = [lastBrowser frame];
       NSPoint previousOrigin = testBrowserFrame.origin;
@@ -1053,7 +1056,7 @@ enum BWCOpenDest {
 }
 
 // XXX use a dictionary to speed up the following?
-
+// Better to just read it from a plist.
 - (NSToolbarItem *) toolbar:(NSToolbar *)toolbar
       itemForItemIdentifier:(NSString *)itemIdent
   willBeInsertedIntoToolbar:(BOOL)willBeInserted
@@ -2765,10 +2768,12 @@ enum BWCOpenDest {
   return mBrowserView;
 }
 
--(void)openNewWindowWithURL:(NSString*)aURLSpec referrer:(NSString*)aReferrer loadInBackground:(BOOL)aLoadInBG allowPopups:(BOOL)inAllowPopups
+// this should really be a class method
+-(BrowserWindowController*)openNewWindowWithURL:(NSString*)aURLSpec referrer:(NSString*)aReferrer loadInBackground:(BOOL)aLoadInBG allowPopups:(BOOL)inAllowPopups
 {
   BrowserWindowController* browser = [self openNewWindow:aLoadInBG];
-  [browser loadURL: aURLSpec referrer:aReferrer activate:!aLoadInBG allowPopups:inAllowPopups];
+  [browser loadURL:aURLSpec referrer:aReferrer activate:!aLoadInBG allowPopups:inAllowPopups];
+  return browser;
 }
 
 //
@@ -2776,6 +2781,8 @@ enum BWCOpenDest {
 //
 // open a new window, but doesn't load anything into it. Must be matched
 // with a call to do that.
+// 
+// this should really be a class method
 //
 - (BrowserWindowController*)openNewWindow:(BOOL)aLoadInBG
 {
@@ -2785,13 +2792,13 @@ enum BWCOpenDest {
   BrowserWindowController* browser = [[BrowserWindowController alloc] initWithWindowNibName: @"BrowserWindow"];
   if (aLoadInBG)
   {
-    BrowserWindow* browserWin = [browser window];
+    BrowserWindow* browserWin = (BrowserWindow*)[browser window];
     [browserWin setSuppressMakeKeyFront:YES];	// prevent gecko focus bringing the window to the front
     [browserWin orderWindow: NSWindowBelow relativeTo: [[self window] windowNumber]];
     [browserWin setSuppressMakeKeyFront:NO];
   }
   else
-    [browser showWindow:self];
+    [browser showWindow:nil];
 
   return browser;
 }
@@ -2979,6 +2986,7 @@ enum BWCOpenDest {
     mDataOwner->mContextMenuFlags = flags;
     mDataOwner->mContextMenuNode  = aNode;
     mDataOwner->mContextMenuEvent = aEvent;
+    mDataOwner->mGotOnContextMenu = true;
   }
   
   // There is no simple way of getting a callback when the context menu handling
@@ -3001,6 +3009,7 @@ enum BWCOpenDest {
     mDataOwner->mContextMenuFlags = 0;
     mDataOwner->mContextMenuNode  = nsnull;
     mDataOwner->mContextMenuEvent = nsnull;
+    mDataOwner->mGotOnContextMenu = false;
   }
 }
 
@@ -3092,6 +3101,9 @@ enum BWCOpenDest {
 
 - (NSMenu*)getContextMenu
 {
+  if (!mDataOwner->mGotOnContextMenu)
+    return nil;
+
   BOOL showFrameItems = NO;
   
   NSMenu* menuPrototype = nil;
@@ -3311,6 +3323,16 @@ enum BWCOpenDest {
 - (void)hideProgressIndicator
 {
   [mProgress removeFromSuperview];
+}
+
+- (BOOL)windowClosesQuietly
+{
+  return mWindowClosesQuietly;
+}
+
+- (void)setWindowClosesQuietly:(BOOL)inClosesQuietly
+{
+  mWindowClosesQuietly = inClosesQuietly;
 }
 
 //

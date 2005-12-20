@@ -151,6 +151,8 @@
 -(IBAction) paste:(id)aSender;
 -(IBAction) delete:(id)aSender;
 
+-(IBAction) copyURLs:(id)aSender;
+
 -(IBAction) quicksearchPopupChanged:(id)aSender;
 - (void)resetSearchField;
 
