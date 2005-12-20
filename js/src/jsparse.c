@@ -2437,11 +2437,8 @@ AssignExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
         break;
 #if JS_HAS_LVALUE_RETURN
       case TOK_LP:
-        if (pn2->pn_op == JSOP_CALL) {
-            pn2->pn_op = JSOP_SETCALL;
-            break;
-        }
-        /* FALL THROUGH */
+        pn2->pn_op = JSOP_SETCALL;
+        break;
 #endif
 #if JS_HAS_XML_SUPPORT
       case TOK_UNARYOP:
@@ -4336,6 +4333,8 @@ FoldXMLConstants(JSContext *cx, JSParseNode *pn, JSTreeContext *tc)
           case TOK_XMLSPACE:
           case TOK_XMLTEXT:
           case TOK_STRING:
+            if (pn->pn_arity == PN_LIST)
+                goto cantfold;
             str = ATOM_TO_STRING(pn2->pn_atom);
             break;
 
@@ -4358,6 +4357,7 @@ FoldXMLConstants(JSContext *cx, JSParseNode *pn, JSTreeContext *tc)
                 return JS_FALSE;
             break;
 
+          cantfold:
           default:
             JS_ASSERT(*pnp == pn1);
             if ((tt == TOK_XMLSTAGO || tt == TOK_XMLPTAGC) &&
