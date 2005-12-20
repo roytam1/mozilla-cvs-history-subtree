@@ -1945,7 +1945,10 @@ InboundCallHandler.fun(
 
 InboundCallHandler.fun(
   function stopRinger() {
-    if (this.ringer) wMediaPipeline.mediagraph.removeNode(this.ringer);
+    if (this.ringer) {
+      wMediaPipeline.mediagraph.removeNode(this.ringer);
+      delete this.ringer;
+    }
   });
 
 InboundCallHandler.fun(
