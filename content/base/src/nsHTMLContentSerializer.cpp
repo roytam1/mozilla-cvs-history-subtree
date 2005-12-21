@@ -1325,13 +1325,15 @@ nsHTMLContentSerializer::SerializeLIValueAttribute(nsIDOMElement* aElement,
 PRBool
 nsHTMLContentSerializer::IsFirstChildOfOL(nsIDOMElement* aElement){
   nsCOMPtr<nsIDOMNode> node = do_QueryInterface(aElement);
-  nsIDOMNode* parentNode;
   nsAutoString parentName;
-  node->GetParentNode(&parentNode);
-  if (parentNode)
-    parentNode->GetNodeName(parentName);
-  else
-    return PR_FALSE;
+  {
+    nsCOMPtr<nsIDOMNode> parentNode;
+    node->GetParentNode(getter_AddRefs(parentNode));
+    if (parentNode)
+      parentNode->GetNodeName(parentName);
+    else
+      return PR_FALSE;
+  }
   
   if (parentName.LowerCaseEqualsLiteral("ol")) {
     olState defaultOLState(0, PR_FALSE);
