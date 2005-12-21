@@ -148,9 +148,9 @@ static gboolean visibility_notify_event_cb(GtkWidget *widget,
                                            GdkEventVisibility *event);
 static gboolean window_state_event_cb     (GtkWidget *widget,
                                            GdkEventWindowState *event);
-static void     style_set_cb              (GtkWidget *widget,
-                                           GtkStyle *previous_style,
-                                           gpointer data);
+static void     theme_changed_cb          (GtkSettings *settings,
+                                           GParamSpec *pspec,
+                                           nsWindow *data);
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -371,6 +371,10 @@ nsWindow::Destroy(void)
     LOG(("nsWindow::Destroy [%p]\n", (void *)this));
     mIsDestroyed = PR_TRUE;
     mCreated = PR_FALSE;
+
+    g_signal_handlers_disconnect_by_func(gtk_settings_get_default(),
+                                         (gpointer)G_CALLBACK(theme_changed_cb),
+                                         this);
 
     // ungrab if required
     nsCOMPtr<nsIWidget> rollupWidget = do_QueryReferent(gRollupWindow);
@@ -1420,6 +1424,7 @@ nsWindow::OnDeleteEvent(GtkWidget *aWidget, GdkEventAny *aEvent)
 void
 nsWindow::OnEnterNotifyEvent(GtkWidget *aWidget, GdkEventCrossing *aEvent)
 {
+    // XXXldb Is this the right test for embedding cases?
     if (aEvent->subwindow != NULL)
         return;
 
@@ -1437,6 +1442,7 @@ nsWindow::OnEnterNotifyEvent(GtkWidget *aWidget, GdkEventCrossing *aEvent)
 void
 nsWindow::OnLeaveNotifyEvent(GtkWidget *aWidget, GdkEventCrossing *aEvent)
 {
+    // XXXldb Is this the right test for embedding cases?
     if (aEvent->subwindow != NULL)
         return;
 
@@ -2434,8 +2440,17 @@ nsWindow::NativeCreate(nsIWidget        *aParent,
                          G_CALLBACK(delete_event_cb), NULL);
         g_signal_connect(G_OBJECT(mShell), "window_state_event",
                          G_CALLBACK(window_state_event_cb), NULL);
-        g_signal_connect(G_OBJECT(mShell), "style_set",
-                         G_CALLBACK(style_set_cb), NULL);
+
+        GtkSettings* default_settings = gtk_settings_get_default();
+        g_signal_connect_after(default_settings,
+                               "notify::gtk-theme-name",
+                               G_CALLBACK(theme_changed_cb), this);
+        g_signal_connect_after(default_settings,
+                               "notify::gtk-key-theme-name",
+                               G_CALLBACK(theme_changed_cb), this);
+        g_signal_connect_after(default_settings,
+                               "notify::gtk-font-name",
+                               G_CALLBACK(theme_changed_cb), this);
     }
 
     if (mContainer) {
@@ -3916,11 +3931,9 @@ window_state_event_cb (GtkWidget *widget, GdkEventWindowState *event)
 
 /* static */
 void
-style_set_cb (GtkWidget *widget, GtkStyle *previous_style, gpointer data)
+theme_changed_cb (GtkSettings *settings, GParamSpec *pspec, nsWindow *data)
 {
-    nsWindow *window = get_window_for_gtk_widget(widget);
-    if (window)
-        window->ThemeChanged();
+    data->ThemeChanged();
 }
 
 //////////////////////////////////////////////////////////////////////
