@@ -44,6 +44,23 @@
 #include "nsCOMPtr.h"
 #include "nsIEventQueue.h"
 
+/*
+#define ZAP_PACKET_BUFFER_ASYNC_REQUESTS
+
+Define this constant to enable the 'async frame request mode' in which
+the packet buffer posts RequestFrame messages to the mediagraph's event queue
+rather than directly calling RequestFrame on the source.
+
+Advantages of async mode:
+- Sinks waiting for data from the buffer don't get starved during a
+long run of buffer filling.
+- The stack doesn't grow during long runs of buffer filling.
+
+Problems with async mode:
+- Some sources have problems being paced this way (e.g. the udp socket
+for some reason)
+*/
+
 class zapPacketBufferSourceState;
 class zapPacketBufferSinkState;
 
@@ -101,8 +118,10 @@ private:
 
   nsDeque mBuffer; // the actual buffer
 
+#ifdef ZAP_PACKET_BUFFER_ASYNC_REQUESTS
   nsCOMPtr<nsIEventQueue> mEventQueue; // media graph event queue
-
+#endif
+  
   nsCOMPtr<zapIMediaSink> mSink;
   nsCOMPtr<zapIMediaSource> mSource;
 };

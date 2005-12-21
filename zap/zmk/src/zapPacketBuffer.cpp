@@ -100,8 +100,9 @@ zapPacketBuffer::AddedToGraph(zapIMediaGraph *graph,
                               const nsACString & id,
                               nsIPropertyBag2* node_pars)
 {
+#ifdef ZAP_PACKET_BUFFER_ASYNC_REQUESTS
   graph->GetEventQueue(getter_AddRefs(mEventQueue));
-
+#endif
   // node parameter defaults:
   mPrefillSize = 0;
   mMaxSize = 10;
@@ -242,6 +243,7 @@ void zapPacketBuffer::ClearBuffer()
   mBuffer.Empty();
 }
 
+#ifdef ZAP_PACKET_BUFFER_ASYNC_REQUESTS
 class zapPacketBufferRequestFrameEvent : public PLEvent
 {
 public:
@@ -268,13 +270,19 @@ public:
 
   nsRefPtr<zapPacketBuffer> packetbuffer;
 };
+#endif
 
 void zapPacketBuffer::PostFrameRequest()
 {
-  mEventQueue->EnterMonitor();
-  zapPacketBufferRequestFrameEvent* ev = new zapPacketBufferRequestFrameEvent(this);
-  mEventQueue->PostEvent(ev);
-  mEventQueue->ExitMonitor();
+#ifdef ZAP_PACKET_BUFFER_ASYNC_REQUESTS
+   mEventQueue->EnterMonitor();
+   zapPacketBufferRequestFrameEvent* ev = new zapPacketBufferRequestFrameEvent(this);
+   mEventQueue->PostEvent(ev);
+   mEventQueue->ExitMonitor();
+#else
+   if (mSource)
+     mSource->RequestFrame();
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -483,6 +491,9 @@ zapPacketBufferSource_RUN_WAITING::ProcessFrame(zapPacketBuffer* pb,
     pb->PostFrameRequest();
   }
   else {
+#ifdef DEBUG_afri_zmk_buffer
+    printf("(buffer full! %d)\n", pb->mMaxSize);
+#endif
     ChangeState(pb, zapPacketBufferSource_RUN_IDLE::Instance());
   }
   pb->PacketQueued();
