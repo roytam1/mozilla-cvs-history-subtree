@@ -295,7 +295,7 @@ PersistentRDFObject.fun(
       for (var id in this._arcsOut) {
         var a = this._arcsOut[id];
         var elem = doc.getElementById(a.name);
-        if (!elem) return;
+        if (!elem) continue;
         if (elem.tagName == "checkbox")
           elem.checked = (this[a.name] == "true");
         else
@@ -307,7 +307,7 @@ PersistentRDFObject.fun(
       for (var id in this._arcsOut) {
         var a = this._arcsOut[id];
         var elem = doc.getElementById(a.name);
-        if (!elem) return;
+        if (!elem) continue;
         if (elem.tagName == "checkbox") {
           elem.checked = (a.defval == "true");
         }
