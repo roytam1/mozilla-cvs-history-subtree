@@ -64,7 +64,7 @@
 
   <toolbox>
     <!-- Main menu bar -->
-    <menubar>
+    <menubar id="menubar">
       <menu label="File"
             accesskey="F">
         <menupopup>
@@ -100,8 +100,8 @@
     </menubar>
 
     <!-- URL bar -->
-    <toolbar flex="1">
-      <toolbaritem flex="1">
+    <toolbar flex="1" id="main_toolbar">
+      <toolbaritem id="url_field_container" flex="1">
         <textbox id="url_field" flex="1"
                  type="autocomplete"
                  autocompletesearch="zap-autocomplete"
@@ -112,10 +112,10 @@
                  showcommentcolumn="false"
                  />
       </toolbaritem>
-      <toolbarbutton id="button_go" label="Go" oncommand="cmdGo()" />
+      <button id="button_go" label="Go" oncommand="cmdGo()" class="zap_tb_button" />
       <toolbarspacer/>
       <toolbaritem>
-        <label value="Identity:"/>
+        <hbox align="center"><label class="zap_tb_label" value="Identity:"/></hbox>
         <menulist id="identities_list"
                   oncommand="identityChange();" 
                   minwidth="100">
@@ -142,7 +142,8 @@
           </menupopup>
         </menulist>
       </toolbaritem>
-      <toolbarbutton id="button_dnd" label="DND" type="checkbox"/>
+      <toolbarspacer/>
+      <button class="zap_tb_button" id="button_dnd" label="DND" type="checkbox"/>
     </toolbar>
   </toolbox>
 

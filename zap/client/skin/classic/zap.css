@@ -38,12 +38,111 @@
 @import url("chrome://zap/content/zap-widgets.css");
 
 @namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
+@namespace html url("http://www.w3.org/1999/xhtml");
+
+/* ---------------------------------------------------------------------- */
+/* main toolbox & statusbar                                               */
+
+#menubar, #menubar > menu, statusbarpanel { 
+  -moz-appearance: none !important;
+  background-color: #b9b9b9;
+  color: #000000;
+  font-size: 11px;
+}
+
+statusbarpanel { 
+  border: none;
+  border-top: 2px solid;
+  -moz-border-top-colors: #7a7a7a #f3f3f3;
+}
+
+#main_toolbar { 
+  padding-bottom: 4px;
+  padding-left: 4px;
+  padding-right: 4px;
+  -moz-appearance: none !important;
+  background-color: #b9b9b9;
+  color: #000000;
+  border-bottom: 1px solid #7a7a7a;
+}
+
+.zap_tb_button { 
+  -moz-appearance: none !important;
+  background-color: #e3e3e3;
+  -moz-border-radius: 1px;
+  min-width: 0px;
+  margin: 0px;
+  padding: 0px 2px 0px 0px;
+  border-width: 2px;
+  -moz-border-left-colors: #7a7a7a #e3e3e3;
+  -moz-border-right-colors: #7a7a7a #e3e3e3;
+  -moz-border-top-colors: #7a7a7a #f3f3f3;
+  -moz-border-bottom-colors: #7a7a7a #c3c3c3;
+  font-size: 11px;
+}
+
+.zap_tb_button:hover:active, .zap_tb_button[checked="true"] {
+  -moz-border-radius-topleft: 1px;
+  -moz-border-radius-topright: 1px;
+  -moz-border-radius-bottomleft: 1px;
+  -moz-border-radius-bottomright: 1px;
+  background-color: #f3f3f3;
+  -moz-border-bottom-colors: #7a7a7a #ffffff;
+  -moz-border-top-colors: #7a7a7a #c3c3c3;
+}
+
+.zap_tb_button[checked="true"] { 
+  color: blue;
+}
+
+.zap_tb_label { 
+  font-size: 11px;
+}
 
 /* ---------------------------------------------------------------------- */
 /* url field                                                              */
 
-#field_url { 
-  margin-left: 1em;
+#url_field_container { 
+  margin: 0px;
+  padding: 0px;
+  border: 2px solid;
+  -moz-border-radius: 1px;
+  -moz-border-left-colors: #7a7a7a #e3e3e3;
+  -moz-border-right-colors: #7a7a7a #e3e3e3;
+  -moz-border-bottom-colors: #7a7a7a #f3f3f3;
+  -moz-border-top-colors: #7a7a7a #c3c3c3;
+}
+
+#url_field { 
+  margin: 0px;
+  padding: 0px;
+  -moz-appearance: none !important;
+}
+
+#url_field > * { 
+  -moz-appearance: none !important;
+  border: none;
+  padding: 0px;
+  margin: 0px;
+  background-color: #f3f3f3;
+  font-size: 11px;
+}
+
+/* ---------------------------------------------------------------------- */
+/* identities list                                                        */
+
+#identities_list { 
+  -moz-appearance: none !important;
+  background-color: #e3e3e3;
+  margin: 0px;
+  padding: 0px;
+  border: 2px solid;
+  -moz-border-radius: 1px;
+  -moz-border-left-colors: #7a7a7a #e3e3e3;
+  -moz-border-right-colors: #7a7a7a #e3e3e3;
+  -moz-border-top-colors: #7a7a7a #f3f3f3;
+  -moz-border-bottom-colors: #7a7a7a #c3c3c3;
+  font-size: 11px;
 }
 
 
@@ -51,31 +150,33 @@
 /* go button                                                              */
 
 #button_go {  
+  margin-left: 1px;
   list-style-image: url("chrome://zap/skin/go.png");
-  -moz-image-region: rect(0px 20px 20px 0px);
-  padding-top: 2px;
-  padding-bottom: 2px;
-  -moz-padding-start: 3px;
-  -moz-padding-end: 5px;
+  -moz-image-region: rect(2px 20px 18px 0px);
 }
 
 #button_go:hover {
-  -moz-image-region: rect(0px 40px 20px 20px);
-}
-
-#button_go:hover:active {
-  padding: 3px 4px 1px 4px;
+  -moz-image-region: rect(2px 40px 18px 20px);
 }
 
 #button_go[disabled="true"] {
-  -moz-image-region: rect(0px 60px 20px 40px);
+  -moz-image-region: rect(2px 60px 18px 40px);
 }
 
 /* ---------------------------------------------------------------------- */
 /* calls tree                                                             */
 
 #calls {
+  border: none;
   margin: 0px;
+  -moz-appearance: none !important;
+  font-size: 11px;
+}
+
+#calls > treecols > treecol { 
+  margin: 0px;
+  border: 1px solid #7a7a7a;
+  background-color: white;
 }
 
 treechildren::-moz-tree-row(callactive-true) { 
@@ -98,6 +199,9 @@ treechildren::-moz-tree-image(calls_direction, direction-outbound) {
 
 #sidebar { 
   margin: 0px;
+  border:none;
+  background-color: #f7f8ff;
+  font-size: 11px;
 }
 
 treechildren::-moz-tree-row(selected,focus) { 
@@ -156,19 +260,21 @@ treechildren::-moz-tree-image(nodetype-contact) {
 
 #calls_splitter { 
   border: none;
+  -moz-appearance     : none !important; 
+  background-color: #7a7a7a;
+  min-height: 1px;
+  height: 1px;
 }
 
 #sidebar_splitter { 
   border: none;
-  min-width: 5px;
-  width: 5px;
+  -moz-appearance     : none !important; 
+  background-color: #7a7a7a;
+  width: 1px;
+  min-width: 1px;
 }
 
 #box_interact { 
-  border-left: 1px solid;
-  border-bottom: 1px solid;
-  -moz-border-left-colors: ThreeDShadow;
-  -moz-border-bottom-colors: ThreeDShadow;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -182,7 +288,10 @@ treechildren::-moz-tree-image(nodetype-contact) {
 }
 
 .cgroup-title { 
-  -moz-appearance: toolbox;
+  background-color: #c0c0d0;
+  color: #ffffff;
+  -moz-border-radius-topleft  : 4px;
+  -moz-border-radius-topright : 4px;
   min-height: 20px;
   max-height: 20px;
   padding: 0px 2px 0px 8px;
@@ -302,11 +411,13 @@ treechildren::-moz-tree-image(nodetype-contact) {
 
 /* a style for title labels */
 .titlebox { 
+  background-color            : #c0c0d0;
+  color: #ffffff;
+  -moz-border-radius  : 4px;
   padding-left: 5px;
   padding-top: 3px;
   padding-bottom: 3px;
   margin-bottom: 10px;
-  -moz-appearance: toolbox;
   font-size: 130%;
   font-weight: bold;
 }
