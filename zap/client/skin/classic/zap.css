@@ -48,9 +48,11 @@
   background-color: #b9b9b9;
   color: #000000;
   font-size: 11px;
+  border: none;
 }
 
-statusbarpanel { 
+statusbar { 
+  -moz-appearance: none !important;
   border: none;
   border-top: 2px solid;
   -moz-border-top-colors: #7a7a7a #f3f3f3;
@@ -63,22 +65,33 @@ statusbarpanel {
   -moz-appearance: none !important;
   background-color: #b9b9b9;
   color: #000000;
+  border: none;
   border-bottom: 1px solid #7a7a7a;
 }
 
 .zap_tb_button { 
   -moz-appearance: none !important;
+  -moz-user-focus: ignore;
   background-color: #e3e3e3;
   -moz-border-radius: 1px;
   min-width: 0px;
   margin: 0px;
-  padding: 0px 2px 0px 0px;
+  padding: 1px;
   border-width: 2px;
   -moz-border-left-colors: #7a7a7a #e3e3e3;
   -moz-border-right-colors: #7a7a7a #e3e3e3;
   -moz-border-top-colors: #7a7a7a #f3f3f3;
   -moz-border-bottom-colors: #7a7a7a #c3c3c3;
   font-size: 11px;
+}
+
+.zap_tb_button > hbox {
+  border: none;
+  -moz-appearance: none !important;
+  -moz-padding-start: 0px !important;
+  -moz-padding-end: 0px !important;
+  padding: 0px 0px 1px 1px!important;
+  
 }
 
 .zap_tb_button:hover:active, .zap_tb_button[checked="true"] {
@@ -116,10 +129,11 @@ statusbarpanel {
 #url_field { 
   margin: 0px;
   padding: 0px;
+  border: none;
   -moz-appearance: none !important;
 }
 
-#url_field > * { 
+#url_field > *{ 
   -moz-appearance: none !important;
   border: none;
   padding: 0px;
@@ -133,6 +147,7 @@ statusbarpanel {
 
 #identities_list { 
   -moz-appearance: none !important;
+  -moz-user-focus: ignore;
   background-color: #e3e3e3;
   margin: 0px;
   padding: 0px;
@@ -145,6 +160,15 @@ statusbarpanel {
   font-size: 11px;
 }
 
+#identities_list > dropmarker { 
+  -moz-appearance: none !important;
+  background-color: #e3e3e3;
+  border: none;
+}
+
+#identities_list > menupopup > * { 
+  font-size: 11px;
+}
 
 /* ---------------------------------------------------------------------- */
 /* go button                                                              */
@@ -152,15 +176,15 @@ statusbarpanel {
 #button_go {  
   margin-left: 1px;
   list-style-image: url("chrome://zap/skin/go.png");
-  -moz-image-region: rect(2px 20px 18px 0px);
+  -moz-image-region: rect(2px 20px 17px 2px);
 }
 
 #button_go:hover {
-  -moz-image-region: rect(2px 40px 18px 20px);
+  -moz-image-region: rect(2px 40px 17px 22px);
 }
 
 #button_go[disabled="true"] {
-  -moz-image-region: rect(2px 60px 18px 40px);
+  -moz-image-region: rect(2px 60px 17px 42px);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -197,7 +221,8 @@ treechildren::-moz-tree-image(calls_direction, direction-outbound) {
 /* ---------------------------------------------------------------------- */
 /* sidebar tree                                                           */
 
-#sidebar { 
+#sidebar {
+  -moz-appearance: none !important;
   margin: 0px;
   border:none;
   background-color: #f7f8ff;
