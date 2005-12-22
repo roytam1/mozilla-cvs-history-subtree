@@ -138,15 +138,12 @@ nsAbQueryLDAPMessageListener::nsAbQueryLDAPMessageListener (
     mLock(0)
 
 {
-    NS_ADDREF(mDirectoryQuery);
 }
 
 nsAbQueryLDAPMessageListener::~nsAbQueryLDAPMessageListener ()
 {
     if (mLock)
         PR_DestroyLock (mLock);
-
-    NS_RELEASE(mDirectoryQuery);
 }
 
 nsresult nsAbQueryLDAPMessageListener::Initiate ()
