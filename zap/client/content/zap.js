@@ -1872,7 +1872,7 @@ InboundCall.fun(
     this["urn:mozilla:zap:remote"] = rs.request.getFromHeader().address.serialize();
     var subjectHeader = rs.request.getTopHeader("Subject");
     if (subjectHeader) {
-      this["urn:mozilla:zap:subject"] = subjectHeader.QueryInterface(Compontents.interfaces.zapISipSubjectHeader).subject;
+      this["urn:mozilla:zap:subject"] = subjectHeader.QueryInterface(Components.interfaces.zapISipSubjectHeader).subject;
     }
     this.callHandler = InboundCallHandler.instantiate();
     this.callHandler.handleCall(this, rs);
