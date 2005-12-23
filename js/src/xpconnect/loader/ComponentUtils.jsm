@@ -1,4 +1,4 @@
-/* -*- moz-jssh-buffer-globalobj: "Components.utils.importModule('rel:JSComponentUtils.jsm', null)" -*- */
+/* -*- moz-jssh-buffer-globalobj: "Components.utils.importModule('gre:JSComponentUtils.jsm', null)" -*- */
 /*
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1

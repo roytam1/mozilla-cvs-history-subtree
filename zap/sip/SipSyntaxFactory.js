@@ -1,4 +1,4 @@
-// -*- moz-jssh-buffer-globalobj: "Components.utils.importModule('rel:SipSyntaxFactory.js', null)" -*-
+// -*- moz-jssh-buffer-globalobj: "Components.utils.importModule('gre:SipSyntaxFactory.js', null)" -*-
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -37,11 +37,11 @@
 
 debug("*** loading SipSyntaxFactory\n");
 
-Components.utils.importModule("rel:ComponentUtils.jsm");
-Components.utils.importModule("rel:ClassUtils.js");
-Components.utils.importModule("rel:ArrayUtils.js");
-Components.utils.importModule("rel:StringUtils.js");
-Components.utils.importModule("rel:ObjectUtils.js");
+Components.utils.importModule("gre:ComponentUtils.jsm");
+Components.utils.importModule("gre:ClassUtils.js");
+Components.utils.importModule("gre:ArrayUtils.js");
+Components.utils.importModule("gre:StringUtils.js");
+Components.utils.importModule("gre:ObjectUtils.js");
 
 // name our global object:
 function toString() { return "[SipSyntaxFactory.js]"; }

@@ -38,11 +38,11 @@
 ////////////////////////////////////////////////////////////////////////
 // imports
 
-Components.utils.importModule("rel:ClassUtils.js");
-Components.utils.importModule("rel:RDFUtils.js");
-Components.utils.importModule("rel:FileUtils.js");
-Components.utils.importModule("rel:StringUtils.js");
-Components.utils.importModule("rel:AsyncUtils.js");
+Components.utils.importModule("gre:ClassUtils.js");
+Components.utils.importModule("gre:RDFUtils.js");
+Components.utils.importModule("gre:FileUtils.js");
+Components.utils.importModule("gre:StringUtils.js");
+Components.utils.importModule("gre:AsyncUtils.js");
 
 ////////////////////////////////////////////////////////////////////////
 // globals

@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.importModule('rel:zapStunResolver.js', null)" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.importModule('gre:zapStunResolver.js', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -37,13 +37,13 @@
 
 debug("*** loading zapStunResolver\n");
 
-Components.utils.importModule("rel:ComponentUtils.jsm");
-Components.utils.importModule("rel:ClassUtils.js");
-Components.utils.importModule("rel:ArrayUtils.js");
-Components.utils.importModule("rel:StringUtils.js");
-Components.utils.importModule("rel:ObjectUtils.js");
-Components.utils.importModule("rel:FunctionUtils.js");
-Components.utils.importModule("rel:AsyncUtils.js");
+Components.utils.importModule("gre:ComponentUtils.jsm");
+Components.utils.importModule("gre:ClassUtils.js");
+Components.utils.importModule("gre:ArrayUtils.js");
+Components.utils.importModule("gre:StringUtils.js");
+Components.utils.importModule("gre:ObjectUtils.js");
+Components.utils.importModule("gre:FunctionUtils.js");
+Components.utils.importModule("gre:AsyncUtils.js");
 
 // object to hold component's documentation:
 var _doc_ = {};

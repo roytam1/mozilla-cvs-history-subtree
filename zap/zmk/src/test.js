@@ -1,4 +1,4 @@
-Components.utils.importModule("rel:ClassUtils.js");
+Components.utils.importModule("gre:ClassUtils.js");
 
 var adev = Components.classes["@mozilla.org/zap/audiodevicemanager;1"].getService(Components.interfaces.zapIAudioDeviceManager);
 

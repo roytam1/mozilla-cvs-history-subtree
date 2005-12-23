@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.importModule('rel:SipUtils.js', null)" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.importModule('gre:SipUtils.js', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -43,9 +43,9 @@
 
 debug("*** loading SipUtils\n");
 
-Components.utils.importModule("rel:StringUtils.js");
-Components.utils.importModule("rel:FunctionUtils.js");
-Components.utils.importModule("rel:AsyncUtils.js");
+Components.utils.importModule("gre:StringUtils.js");
+Components.utils.importModule("gre:FunctionUtils.js");
+Components.utils.importModule("gre:AsyncUtils.js");
 
 EXPORTED_SYMBOLS = ["BRANCH_COOKIE",
                     "getSIPEventQ",
@@ -131,7 +131,7 @@ function callAsync(fct) {
 
 // access the syntax factory directly (less overhead, no type safety,
 // access to non-xpcom interface):
-var gSyntaxFactory = Components.utils.importModule('rel:SipSyntaxFactory.js', null).theSyntaxFactory;
+var gSyntaxFactory = Components.utils.importModule('gre:SipSyntaxFactory.js', null).theSyntaxFactory;
 
 ////////////////////////////////////////////////////////////////////////
 // getDNSService: get the global dns service instance
@@ -155,13 +155,13 @@ var getNetUtils = makeServiceGetter("@mozilla.org/zap/netutils;1",
 
 // access the logging service directly (less overhead, no type safety,
 // access to non-xpcom interface):
-var gLoggingService = Components.utils.importModule('rel:LoggingService.js', null).theLoggingService;
+var gLoggingService = Components.utils.importModule('gre:LoggingService.js', null).theLoggingService;
 
 ////////////////////////////////////////////////////////////////////////
 // gUUIDGenerator: global UUID generator service instance
 
 // access directly via JS:
-var gUUIDGenerator = Components.utils.importModule('rel:zapUUIDGenerator.js', null).theUUIDGenerator;
+var gUUIDGenerator = Components.utils.importModule('gre:zapUUIDGenerator.js', null).theUUIDGenerator;
 
 
 ////////////////////////////////////////////////////////////////////////
