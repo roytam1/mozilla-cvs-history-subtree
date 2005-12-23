@@ -197,6 +197,7 @@ Config.rdfResourceAttrib("urn:mozilla:zap:identity",
                          "urn:mozilla:zap:initial_identity");
 Config.rdfLiteralAttrib("urn:mozilla:zap:instance_id", "");
 Config.rdfLiteralAttrib("urn:mozilla:zap:max_recent_calls", "10");
+Config.rdfLiteralAttrib("urn:mozilla:zap:ringtone", "zap:d=32,o=5,b=140:b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,8p.,f4,f4,8p.,f4,f4,1p"); //"nuages_gris:d=4,o=4,b=180:p,d,g,2c#5,d5,a#,g,p,d,g,c#5,c#5,d5,a#,g,1p");
 Config.rdfLiteralAttrib("urn:mozilla:zap:sip_port_base", "5060");
 // time constants for flow failure recovery (draft-ietf-sip-outbound-01.txt 4.3):
 Config.rdfLiteralAttrib("urn:mozilla:zap:registration_recovery_max_time", "1800");
@@ -309,10 +310,12 @@ function initIdentities() {
   wCurrentIdentity = getIdentity(wConfig["urn:mozilla:zap:identity"]);
   currentIdentityUpdated();
 
-  // register identities:
+  // register all identities that want automatic registration:
   var identity_resources = wIdentitiesContainer.GetElements();
   while (identity_resources.hasMoreElements()) {
-    registerIdentity(identity_resources.getNext().QueryInterface(Components.interfaces.nsIRDFResource));
+    var identity = getIdentity(identity_resources.getNext().QueryInterface(Components.interfaces.nsIRDFResource).Value);
+    if (identity["urn:mozilla:zap:automatic_registration"]=="true")
+      registerIdentity(identity);
   }
 }
 
@@ -369,6 +372,7 @@ Identity.rdfLiteralAttrib("urn:mozilla:zap:nodetype", "identity");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:display_name", "");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:organization", "");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:preference", "0.1");
+Identity.rdfLiteralAttrib("urn:mozilla:zap:automatic_registration", "true");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:authentication_username", "");
 Identity.rdfResourceAttrib("urn:mozilla:zap:service",
                            "urn:mozilla:zap:automatic_service");
@@ -646,11 +650,10 @@ Identity.fun(
 // AOR. Investigate whether this is common enough to care.
 var wRegistrations = {};
 
-// set up or refresh a registration group for the given identity resource
-function registerIdentity(resource) {
-  var identity = getIdentity(resource.Value);
+// set up or refresh a registration group for the given identity
+function registerIdentity(identity) {
   warning("registering "+identity["http://home.netscape.com/NC-rdf#Name"]+"\n");
-  var registrationGroup = wRegistrations[resource.Value];
+  var registrationGroup = wRegistrations[identity.resource.Value];
   if (registrationGroup) {
     // We already have a registration group for this identity. We
     // are probably getting called because the user has modified the
@@ -662,25 +665,28 @@ function registerIdentity(resource) {
   // create a new registration group :
   registrationGroup = RegistrationGroup.instantiate();
   if (registrationGroup.init(identity))
-    wRegistrations[resource.Value] = registrationGroup;
+    wRegistrations[identity.resource.Value] = registrationGroup;
 }
 
-function unregisterIdentity(resource) {
-  var registrationGroup = wRegistrations[resource.Value];
+function unregisterIdentity(identity) {
+  var registrationGroup = wRegistrations[identity.resource.Value];
   if (!registrationGroup) return; // not registered
   
   warning("unregistering "+registrationGroup.identity["http://home.netscape.com/NC-rdf#Name"]+"\n");
   registrationGroup.unregister();
-  delete wRegistrations[resource.Value];
+  delete wRegistrations[identity.resource.Value];
 }
 
 // called whenever the user edits a service
 function notifyServiceUpdated(service_resource) {
   var service_id = service_resource.Value;
-  // reregister any identities that use this service:
+  // reregister any identities that use this service and have
+  // automatic registration or are currently registered:
   for (var identity in wIdentities) {
-    if (wIdentities[identity].service.resource.Value == service_id)
-      registerIdentity(wIdentities[identity].resource);
+    if (wIdentities[identity].service.resource.Value == service_id &&
+        (wIdentities[identity]["urn:mozilla:zap:is_registered"]=="true" ||
+         wIdentities[identity]["urn:mozilla:zap:automatic_registration"]=="true"))
+      registerIdentity(wIdentities[identity]);
   }
 }
 
@@ -1374,8 +1380,6 @@ function sidebarSelectionChange()
 ////////////////////////////////////////////////////////////////////////
 // MediaPipeline
 
-var PB = makePropertyBag;
-
 var wMediaPipeline = {
   init : function() {
     try {
@@ -1938,7 +1942,9 @@ InboundCallHandler.fun(
 
 InboundCallHandler.fun(
   function playRinger() {
-    this.ringer = wMediaPipeline.mediagraph.addNode("rtttl-player", null);
+    this.ringer = wMediaPipeline.mediagraph.addNode("rtttl-player",
+                                                    makePropertyBag(
+                                                      {$rtttl:wConfig["urn:mozilla:zap:ringtone"]}));
     wMediaPipeline.mediagraph.connect(this.ringer, null,
                                       "aout", null);
   });

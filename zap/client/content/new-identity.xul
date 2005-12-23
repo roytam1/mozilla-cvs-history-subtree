@@ -64,7 +64,7 @@
       // add new identity to identities datasource:
       wIdentity.createFromDocument(document);
       parent.selectSidebarNode(wIdentity.resource.Value);
-      parent.registerIdentity(wIdentity.resource);
+      parent.registerIdentity(wIdentity);
     }
 
     function cancel() {

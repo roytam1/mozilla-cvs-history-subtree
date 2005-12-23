@@ -79,6 +79,7 @@
     </grid>
 
     <cgroup title="Advanced">
+      <checkbox label="Automatic registration" id="urn:mozilla:zap:automatic_registration"/>
       <grid>
         <columns><column/><column flex="1"/></columns>
         <rows>

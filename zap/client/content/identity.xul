@@ -71,7 +71,7 @@
       var ok = parent.wPromptService.confirm(null, "Delete Identity", 
                                              "Are you sure you wish to delete identity '"+wIdentity["http://home.netscape.com/NC-rdf#Name"]+"'?");
       if (ok) {
-        parent.unregisterIdentity(wIdentity.resource);
+        parent.unregisterIdentity(wIdentity);
         wIdentity.remove();
         parent.selectSidebarNode("urn:mozilla:zap:identities");
       }
@@ -87,7 +87,7 @@
       wIdentity.updateFromDocument(document);
       if (parent.wConfig["urn:mozilla:zap:identity"] == wIdentity.resource.Value)
         parent.currentIdentityUpdated();
-      parent.registerIdentity(wIdentity.resource);
+      parent.registerIdentity(wIdentity);
       parent.reloadPage();
     }
 
