@@ -1,3 +1,11 @@
 cgroup { 
   -moz-binding: url("chrome://zap/content/zap-widgets.xml#cgroup");
 }
+
+igroup { 
+  -moz-binding: url("chrome://zap/content/zap-widgets.xml#igroup");
+}
+
+irow { 
+  -moz-binding: url("chrome://zap/content/zap-widgets.xml#irow");
+}

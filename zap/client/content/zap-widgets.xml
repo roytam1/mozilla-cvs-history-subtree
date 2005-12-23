@@ -70,4 +70,64 @@
     </handlers>
   </binding>
 
+  <!-- 'info' group widget -->
+  <binding id="igroup">
+    <content>
+      <xul:box class="igroup-content">
+        <children/>
+        <xul:spacer flex="1"/>
+        <xul:button class="igroup-info-button"/>
+      </xul:box>
+      <xul:hbox class="igroup-info">
+        <children includes="info"/>
+      </xul:hbox>
+    </content>
+    <handlers>
+      <handler event="click" button="0">
+      <![CDATA[
+        // toggle 'showinfo' attribute if the info button was clicked:
+        if (event.originalTarget.className.indexOf("igroup-info-button") == -1)
+          return;
+        if (this.getAttribute("showinfo") == "true") 
+          this.setAttribute("showinfo", "false");
+        else
+           this.setAttribute("showinfo", "true");
+        event.cancelBubble = true;
+      ]]>
+      </handler>
+    </handlers>
+  </binding>
+
+  <!-- info row widget -->
+  <binding id="irow" >
+    <content>
+      <children/>
+      <xul:button class="irow-info-button"/>
+      <xul:irow-hidden>
+        <children includes="irow-info"/>
+      </xul:irow-hidden>
+    </content>
+    <handlers>
+      <handler event="click" button="0">
+      <![CDATA[
+        // toggle 'showinfo' attribute if the info button was clicked:
+        if (event.originalTarget.className.indexOf("irow-info-button") == -1)
+          return;
+        if (this.getAttribute("showinfo") == "true") {
+          this.setAttribute("showinfo", "false");
+          this.parentNode.removeChild(this.infoNode);
+        }
+        else {
+           this.setAttribute("showinfo", "true");
+           // insert the info content as a column-spanning row:
+           if (!this.infoNode)
+             this.infoNode = this.getElementsByTagName("irow-info").item(0);
+           this.parentNode.insertBefore(this.infoNode, this.nextSibling);
+        }
+        event.cancelBubble = true;
+      ]]>
+      </handler>
+    </handlers>
+  </binding>
+                  
 </bindings>

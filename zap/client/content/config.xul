@@ -43,8 +43,9 @@
 ]>
 
 
-<page id="zap_new_account"
+<page id="zap_config"
       xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+      xmlns:html="http://www.w3.org/1999/xhtml"
       onload="initPage()">
 
   <!-- Scripts -->
@@ -117,56 +118,131 @@
 
     <cgroup title="UI Preferences">
       <grid>
+        <columns><column/><column flex="1"/><column/></columns>
+        <rows>
+          <irow>
+            <label control="urn:mozilla:zap:max_recent_calls" 
+                   value="Recent calls history size:"/>
+            <textbox id="urn:mozilla:zap:max_recent_calls"/>
+            <irow-info>
+              <description>
+                Maximum number of inactive calls to keep in the recent
+                calls history. Older calls can still be accessed through the 
+                logs.
+              </description>
+            </irow-info>
+          </irow>
+        </rows>
+      </grid>
+    </cgroup>
+
+    <cgroup title="Notifications">
+      <grid>
         <columns><column/><column flex="1"/></columns>
         <rows>
-          <row>
-            <label control="urn:mozilla:zap:max_recent_calls" 
-                   value="Length of recent calls history:"/>
-            <textbox id="urn:mozilla:zap:max_recent_calls"/>
-          </row>
+          <irow>
+            <label control="urn:mozilla:zap:ringtone" value="Ringtone:"/>
+            <textbox id="urn:mozilla:zap:ringtone"/>
+            <irow-info>
+              <description>
+                Ringtone for incoming calls in <html:a href="http://en.wikipedia.org/wiki/RTTTL">RTTTL format</html:a>. In future other formats will be supported
+                as well (midi, ogg/vorbis, ...).
+              </description>
+            </irow-info>
+          </irow>
         </rows>
       </grid>
     </cgroup>
 
     <cgroup title="SIP Settings">
       <grid>
-        <columns><column/><column flex="1"/></columns>
+        <columns><column/><column flex="1"/><column/></columns>
         <rows>
-          <row>
+          <irow>
             <label control="urn:mozilla:zap:instance_id"
                    value="UA Instance ID:"/>
             <textbox id="urn:mozilla:zap:instance_id"/>
-          </row>
-          <row>
+            <irow-info>
+              <description>
+              A unique identifier assigned to this instance of zap when it was
+              first started. It is used by GRUU-enabled services to route
+              messages to this zap instance. 
+              See <html:a href="http://www.croczilla.com/zap/rfcs/draft-ietf-sip-gruu-05.txt">draft-ietf-sip-gruu-05.txt</html:a>.
+              </description>
+            </irow-info>
+          </irow>
+          <irow>
             <label control="urn:mozilla:zap:sip_port_base"
                    value="SIP port base:"/>
             <textbox id="urn:mozilla:zap:sip_port_base"/>
-          </row>
-          <row>
+            <irow-info>
+              <description>
+                zap will use the first available socket greater than or 
+                equal to this value to listen for SIP traffic.
+              </description>
+            </irow-info>
+          </irow>
+          <irow>
             <label control="urn:mozilla:zap:registration_recovery_max_time"
-                   value="Max time for re-attempting registration (s):"/>
+                   value="Registration failure Tmax:"/>
             <textbox id="urn:mozilla:zap:registration_recovery_max_time"/>
-          </row>
-          <row>
+            <irow-info>
+              <description>
+                Maximum time (in seconds) to wait before re-attempting a failed registration.
+                See <html:a href="http://www.croczilla.com/zap/rfcs/draft-ietf-sip-outbound-01.txt">draft-ietf-sip-outbound-01.txt</html:a> section 4.3 for the 
+                re-registration logic used in zap.                
+              </description>
+            </irow-info>
+          </irow>
+          <irow>
             <label control="urn:mozilla:zap:registration_recovery_base_time_not_failed"
-                   value="Base time for re-connecting registrations flows (s):"/>
+                   value="Flow failure Tbase:"/>
             <textbox id="urn:mozilla:zap:registration_recovery_base_time_not_failed"/>
-          </row>
-          <row>
+            <irow-info>
+              <description>
+                Base time (in seconds) to wait before attempting to reconnect a failed 
+                flow when other flows for the same registration are still alive.
+                See <html:a href="http://www.croczilla.com/zap/rfcs/draft-ietf-sip-outbound-01.txt">draft-ietf-sip-outbound-01.txt</html:a> section 4.3 for the 
+                re-registration logic used in zap.                
+              </description>
+            </irow-info>
+          </irow>
+          <irow>
             <label control="urn:mozilla:zap:registration_recovery_base_time_all_fail"
-                   value="Base time for re-attempting registrations (s):"/>
+                   value="Registration failure Tbase:"/>
             <textbox id="urn:mozilla:zap:registration_recovery_base_time_all_fail"/>
-          </row>
-          <row>
+            <irow-info>
+              <description>
+                Base time (in seconds) to wait before attempting to a failed registration.
+                See <html:a href="http://www.croczilla.com/zap/rfcs/draft-ietf-sip-outbound-01.txt">draft-ietf-sip-outbound-01.txt</html:a> section 4.3 for the 
+                re-registration logic used in zap.
+              </description>
+            </irow-info>
+          </irow>
+          <irow>
             <label control="urn:mozilla:zap:dnd_code" 
-                   value="Do Not Disturb INVITE response code:"/>
+                   value="DND response code:"/>
             <textbox id="urn:mozilla:zap:dnd_code"/>
-          </row>
-          <row>
+            <irow-info>
+              <description>
+                Response code to send for INVITE requests when zap is in 
+                "Do Not Disturb" mode (i.e. when the DND button in the toolbar 
+                is depressed). Default: 480 (Temporarily Unavailable).
+              </description>
+            </irow-info>
+          </irow>
+          <irow>
             <label control="urn:mozilla:zap:dnd_headers" 
-                   value="Additional headers for DND response:"/>
+                   value="Additional DND headers:"/>
             <textbox id="urn:mozilla:zap:dnd_headers" multiline="true" rows="2"/>
-          </row>
+            <irow-info>
+              <description>
+                Additional headers to append to a "Do Not Disturb" response.
+                Each header must begin on a new line and be formatted as it
+                should appear in the serialized SIP message.
+              </description>
+            </irow-info>
+          </irow>
         </rows>
       </grid>
       <button label="Configure SIP Services..." oncommand="configureServices()"/>

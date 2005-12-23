@@ -41,13 +41,17 @@
 @namespace html url("http://www.w3.org/1999/xhtml");
 
 /* ---------------------------------------------------------------------- */
-/* main toolbox & statusbar                                               */
+/* main window & toolbox & statusbar                                      */
+
+.zap_main_window { 
+  font-size: 11px !important;
+}
 
 #menubar, #menubar > menu, statusbarpanel { 
   -moz-appearance: none !important;
   background-color: #b9b9b9;
   color: #000000;
-  font-size: 11px;
+  font-size: inherit;
   border: none;
 }
 
@@ -76,13 +80,16 @@ statusbar {
   -moz-border-radius: 1px;
   min-width: 0px;
   margin: 0px;
+%ifdef XP_WIN
   padding: 1px;
+%else
+  padding: 2px;
+%endif
   border-width: 2px;
   -moz-border-left-colors: #7a7a7a #e3e3e3;
   -moz-border-right-colors: #7a7a7a #e3e3e3;
   -moz-border-top-colors: #7a7a7a #f3f3f3;
   -moz-border-bottom-colors: #7a7a7a #c3c3c3;
-  font-size: 11px;
 }
 
 .zap_tb_button > hbox {
@@ -90,8 +97,11 @@ statusbar {
   -moz-appearance: none !important;
   -moz-padding-start: 0px !important;
   -moz-padding-end: 0px !important;
-  padding: 0px 0px 1px 1px!important;
-  
+%ifdef XP_WIN
+  padding: 0px 0px 1px 1px !important;
+%else
+  padding: 0px !important;
+%endif
 }
 
 .zap_tb_button:hover:active, .zap_tb_button[checked="true"] {
@@ -108,8 +118,7 @@ statusbar {
   color: blue;
 }
 
-.zap_tb_label { 
-  font-size: 11px;
+.zap_tb_label {
 }
 
 /* ---------------------------------------------------------------------- */
@@ -139,7 +148,6 @@ statusbar {
   padding: 0px;
   margin: 0px;
   background-color: #f3f3f3;
-  font-size: 11px;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -157,7 +165,6 @@ statusbar {
   -moz-border-right-colors: #7a7a7a #e3e3e3;
   -moz-border-top-colors: #7a7a7a #f3f3f3;
   -moz-border-bottom-colors: #7a7a7a #c3c3c3;
-  font-size: 11px;
 }
 
 #identities_list > dropmarker { 
@@ -167,7 +174,7 @@ statusbar {
 }
 
 #identities_list > menupopup > * { 
-  font-size: 11px;
+  font-size: inherit;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -194,7 +201,6 @@ statusbar {
   border: none;
   margin: 0px;
   -moz-appearance: none !important;
-  font-size: 11px;
 }
 
 #calls > treecols > treecol { 
@@ -226,7 +232,6 @@ treechildren::-moz-tree-image(calls_direction, direction-outbound) {
   margin: 0px;
   border:none;
   background-color: #f7f8ff;
-  font-size: 11px;
 }
 
 treechildren::-moz-tree-row(selected,focus) { 
@@ -306,10 +311,10 @@ treechildren::-moz-tree-image(nodetype-contact) {
 /* cgroup collapsable group widget                                        */
 
 .cgroup { 
-  margin-top: 10px;
-  margin-bottom: 10px;
-  margin-left: 5px;
-  margin-right: 5px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+  margin-left: 4px;
+  margin-right: 4px;
 }
 
 .cgroup-title { 
@@ -321,6 +326,7 @@ treechildren::-moz-tree-image(nodetype-contact) {
   max-height: 20px;
   padding: 0px 2px 0px 8px;
   font-weight: bold;
+  -moz-box-align: center;
 }
 
 .cgroup-title:hover { 
@@ -367,14 +373,129 @@ treechildren::-moz-tree-image(nodetype-contact) {
   visibility: collapse;
 }
 
+/* ---------------------------------------------------------------------- */
+/* igroup collapsable 'info' widget                                       */
+
+igroup { 
+  -moz-box-orient: vertical;
+  padding: 2px 0px 0px 2px;
+}
+
+igroup[showinfo=true] { 
+  border: 1px solid yellow;
+  -moz-border-radius: 4px;
+  background-color: #fdffc2;
+  padding: 1px 0px 0px 1px;
+}
+
+igroup[showinfo=true] > .igroup-info { 
+  visibility: visible;
+}
+
+.igroup-info-button { 
+  list-style-image    : url("chrome://zap/skin/info.png");
+  -moz-appearance     : none !important; 
+  border              : none !important; 
+  background-color    : transparent !important;
+  padding             : 0px !important; 
+  margin              : 0px !important; 
+  margin-right        : 1px !important;
+  -moz-user-focus     : ignore !important;
+  max-width           : 21px !important; 
+  min-width           : 21px !important;
+}
+
+.igroup-info-button:hover { 
+  cursor: pointer;
+}
+
+igroup[showinfo=true] .igroup-info-button { 
+  list-style-image    : url("chrome://zap/skin/info-2.png");
+}
+
+.igroup-content { 
+}
+
+.igroup-info { 
+  visibility: hidden;
+}
+
+/* ---------------------------------------------------------------------- */
+/* irow collapsable row 'info' widget                                       */
+
+irow { 
+  display: -moz-grid-line;
+  -moz-box-orient: horizontal;
+  padding: 1px 1px 0px 1px;
+}
+
+irow[showinfo=true] { 
+  border: 1px solid yellow;
+  border-bottom: none;
+  margin-bottom: 0px;
+  -moz-border-radius-topright: 4px;
+  -moz-border-radius-topleft: 4px;
+  padding: 0px;
+  background-color: #fdffc2;
+}
+
+irow-info { 
+  margin: 0px;
+  margin-bottom: 4px;
+  border: 1px solid yellow;
+  border-top: none;
+  -moz-border-radius-bottomright: 4px;
+  -moz-border-radius-bottomleft: 4px;
+  background-color: #fdffc2;
+}
+
+.irow-info-button { 
+  list-style-image    : url("chrome://zap/skin/info.png");
+  -moz-appearance     : none !important; 
+  border              : none !important; 
+  background-color    : transparent !important;
+  padding             : 0px !important; 
+  margin              : 0px !important; 
+  margin-right        : 1px !important;
+  -moz-user-focus     : ignore !important;
+  max-width           : 21px !important; 
+  min-width           : 21px !important;
+}
+
+.irow-info-button:hover { 
+  cursor: pointer;
+}
+
+irow[showinfo=true] .irow-info-button { 
+  list-style-image    : url("chrome://zap/skin/info-2.png");
+}
+
+irow-hidden { 
+  display: none;
+}
+
+/* ---------------------------------------------------------------------- */
+/* various element styles                                                 */
+
+description { 
+  width: 50px;
+  -moz-box-flex: 1;
+}
+
+html|a { 
+  -moz-user-focus: ignore;  
+  color: blue;
+  text-decoration: underline;
+}
 
 /* ---------------------------------------------------------------------- */
 /* module pages                                                           */
 
 #module_page {
   overflow: auto;
-  background-color: #FFFFFF;
+  background-color: #e3e3e3;
   padding: 10px;
+  font-size: 11px !important;
 }
 
 /*

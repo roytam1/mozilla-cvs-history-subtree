@@ -28,7 +28,7 @@ en-US.jar:
 classic.jar:
   skin/classic/zap/splash.jpg        (skin/classic/splash.jpg)
   skin/classic/zap/go.png            (skin/classic/go.png)
-  skin/classic/zap/zap.css           (skin/classic/zap.css)
+* skin/classic/zap/zap.css           (skin/classic/zap.css)
   skin/classic/zap/new-account.png   (skin/classic/new-account.png)
   skin/classic/zap/accounts.png      (skin/classic/accounts.png)
   skin/classic/zap/account.png       (skin/classic/account.png)
@@ -49,3 +49,5 @@ classic.jar:
   skin/classic/zap/home.png          (skin/classic/home.png)
   skin/classic/zap/inbound.png       (skin/classic/inbound.png)
   skin/classic/zap/outbound.png      (skin/classic/outbound.png)
+  skin/classic/zap/info.png          (skin/classic/info.png)
+  skin/classic/zap/info-2.png        (skin/classic/info-2.png)
