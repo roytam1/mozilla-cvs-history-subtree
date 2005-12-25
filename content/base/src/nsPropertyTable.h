@@ -121,7 +121,15 @@ class nsPropertyTable
    **/
   NS_HIDDEN_(void) DeleteAllPropertiesFor(const void *aObject);
 
-  ~nsPropertyTable() NS_HIDDEN;
+  /**
+   * Deletes all of the properties for all objects in the property
+   * table, calling the destructor function for each property.
+   */
+  NS_HIDDEN_(void) DeleteAllProperties();
+  
+  ~nsPropertyTable() {
+    DeleteAllProperties();
+  }
 
   struct PropertyList;
 

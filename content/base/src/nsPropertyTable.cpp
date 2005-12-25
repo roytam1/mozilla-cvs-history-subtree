@@ -77,19 +77,18 @@ struct nsPropertyTable::PropertyList {
   NS_HIDDEN_(void) Destroy();
 };
 
-nsPropertyTable::~nsPropertyTable()
+void
+nsPropertyTable::DeleteAllProperties()
 {
-  if (mPropertyList) {
-    while (mPropertyList) {
-      PropertyList* tmp = mPropertyList;
+  while (mPropertyList) {
+    PropertyList* tmp = mPropertyList;
 
-      mPropertyList = mPropertyList->mNext;
-      tmp->Destroy();
-      delete tmp;
-    }
+    mPropertyList = mPropertyList->mNext;
+    tmp->Destroy();
+    delete tmp;
   }
 }
-
+ 
 void
 nsPropertyTable::DeleteAllPropertiesFor(const void *aObject)
 {
