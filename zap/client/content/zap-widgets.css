@@ -1,3 +1,5 @@
+@namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"); 
+
 cgroup { 
   -moz-binding: url("chrome://zap/content/zap-widgets.xml#cgroup");
 }
@@ -8,4 +10,12 @@ igroup {
 
 irow { 
   -moz-binding: url("chrome://zap/content/zap-widgets.xml#irow");
+}
+
+textbox[type="zap-formwidget"] { 
+  -moz-binding: url("chrome://zap/content/zap-widgets.xml#textbox-formwidget");
+}
+
+textbox[type="zap-formwidget"][multiline="true"] { 
+  -moz-binding: url("chrome://zap/content/zap-widgets.xml#textarea-formwidget");
 }

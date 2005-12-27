@@ -103,7 +103,7 @@ PersistentRDFObject.metafun(
                                                                  prop, true);
         }
         catch(e) {
-          this._error("Exception getting "+_name+": "+e);
+//          this._error("Exception getting "+_name+": "+e);
         }
         if (target)
           target = target.QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
@@ -291,28 +291,18 @@ PersistentRDFObject.fun(
 // default values if there is no resource attached:
 PersistentRDFObject.fun(
   function fillDocument(doc) {
-    if (this.resource) {
-      for (var id in this._arcsOut) {
-        var a = this._arcsOut[id];
-        var elem = doc.getElementById(a.name);
-        if (!elem) continue;
-        if (elem.tagName == "checkbox")
-          elem.checked = (this[a.name] == "true");
-        else
-          elem.value = this[a.name];
-      }
-    }
-    else {
-      // fill with defaults:
-      for (var id in this._arcsOut) {
-        var a = this._arcsOut[id];
-        var elem = doc.getElementById(a.name);
-        if (!elem) continue;
-        if (elem.tagName == "checkbox") {
-          elem.checked = (a.defval == "true");
-        }
-        else
-          elem.value = a.defval;
+    for (var id in this._arcsOut) {
+      var a = this._arcsOut[id];
+      var elem = doc.getElementById(a.name);
+      if (!elem) continue;
+      if (elem.tagName == "checkbox")
+        elem.checked = (this[a.name] == "true");
+      else
+        elem.value = this[a.name];
+      if (elem.isZapFormWidget) {
+        // reset modified & invalid state:
+        // XXX regexp test???
+        elem.state = 0x0000;
       }
     }
   });
@@ -330,10 +320,18 @@ PersistentRDFObject.fun(
       var elem = doc.getElementById(a.name);
       if (!elem)
         val = a.defval;
-      else if (elem.tagName == "checkbox")
-        val = elem.checked;
-      else
-        val = elem.value;
+      else {
+        if (elem.isZapFormWidget) {
+          // reset modified & invalid state:
+          // XXX regexp test???
+          elem.state = 0x0000;
+        }      
+
+        if (elem.tagName == "checkbox")
+          val = elem.checked;
+        else
+          val = elem.value;
+      }
       
       if (a.type == "literal")
         val = gRDF.GetLiteral(val);
