@@ -81,14 +81,6 @@
 #define MOZILLA_PROGRAM_PROP   "_MOZILLA_PROGRAM"
 #define MOZILLA_COMMANDLINE_PROP "_MOZILLA_COMMANDLINE"
 
-#ifdef IS_BIG_ENDIAN
-#define TO_LITTLE_ENDIAN32(x) \
-    ((((x) & 0xff000000) >> 24) | (((x) & 0x00ff0000) >> 8) | \
-    (((x) & 0x0000ff00) << 8) | (((x) & 0x000000ff) << 24))
-#else
-#define TO_LITTLE_ENDIAN32(x) (x)
-#endif
-
 #ifdef MOZ_XUL_APP
 const unsigned char kRemoteVersion[] = "5.1";
 #else
@@ -348,7 +340,7 @@ nsGTKRemoteService::HandleCommandLine(char* aBuffer, nsIDOMWindow* aWindow)
   // [argc][offsetargv0][offsetargv1...]<workingdir>\0<argv[0]>\0argv[1]...\0
   // (offset is from the beginning of the buffer)
 
-  PRInt32 argc = TO_LITTLE_ENDIAN32(*NS_REINTERPRET_CAST(PRInt32*, aBuffer));
+  PRInt32 argc = *NS_REINTERPRET_CAST(PRInt32*, aBuffer);
   char *wd   = aBuffer + ((argc + 1) * sizeof(PRInt32));
 
 #ifdef DEBUG_bsmedberg
@@ -370,7 +362,7 @@ nsGTKRemoteService::HandleCommandLine(char* aBuffer, nsIDOMWindow* aWindow)
   PRInt32  *offset = NS_REINTERPRET_CAST(PRInt32*, aBuffer) + 1;
 
   for (int i = 0; i < argc; ++i) {
-    argv[i] = aBuffer + TO_LITTLE_ENDIAN32(offset[i]);
+    argv[i] = aBuffer + offset[i];
 
 #ifdef DEBUG_bsmedberg
     printf("  argv[%i]:\t%s\n", i, argv[i]);
@@ -482,7 +474,7 @@ nsGTKRemoteService::HandlePropertyChange(GtkWidget *aWidget,
       return FALSE;
 
     // Failed to get the data off the window or it was the wrong type?
-    if (!data || !TO_LITTLE_ENDIAN32(*NS_REINTERPRET_CAST(PRInt32*, data)))
+    if (!data || !*data)
       return FALSE;
 
     // cool, we got the property data.
@@ -527,7 +519,7 @@ nsGTKRemoteService::HandlePropertyChange(GtkWidget *aWidget,
       return FALSE;
 
     // Failed to get the data off the window or it was the wrong type?
-    if (!data || !TO_LITTLE_ENDIAN32(*NS_REINTERPRET_CAST(PRInt32*, data)))
+    if (!data || !*data)
       return FALSE;
 
     // cool, we got the property data.
