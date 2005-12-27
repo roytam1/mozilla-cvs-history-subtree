@@ -44,33 +44,61 @@
 
 
 <page id="zap_config"
+      class="zap-form"
       xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
       xmlns:html="http://www.w3.org/1999/xhtml"
       onload="initPage()">
 
   <!-- Scripts -->
   <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
+  <script type="text/javascript" src="chrome://zap/content/chromeUtils.js"/>
 
   <script type="application/x-javascript">
   <![CDATA[
     function initPage() {
       parent.wConfig.fillDocument(document);
       updateMasterPasswordButtons();
+      hideButtonBar("buttonbar", false);
     }    
-
-    function edit() {
-      document.getElementById("module_page").setAttribute("readonly", "false");
-      document.getElementById("urn:mozilla:zap:max_recent_calls").select();
-      document.getElementById("button_deck").selectedIndex = 1;
-    }
 
     function commit() {
       parent.wConfig.updateFromDocument(document);
-      parent.reloadPage();
     }
 
     function cancel() {
-      parent.reloadPage();
+      parent.wConfig.fillDocument(document);
+    }
+
+    var modifiedWidgets = 0;
+    var invalidWidgets  = 0;
+    function widgetStateChanged(widget, oldState, newState) {
+      if (oldState & 0x0002 && !(newState & 0x0002)) {
+        // modified -> non modified
+        modifiedWidgets -= 1;
+      }
+      else if (newState & 0x0002 && !(oldState & 0x0002)) {
+        // non modified -> modified
+        modifiedWidgets += 1;
+      }
+
+      if (oldState & 0x0001 && !(newState & 0x0001)) {
+        // invalid -> valid
+        invalidWidgets -= 1;
+      }
+      else if (newState & 0x0001 && !(oldState & 0x0001)) {
+        // valid -> invalid
+        invalidWidgets += 1;
+      }
+      dump("state changed: modified:"+modifiedWidgets+" invalid:"+invalidWidgets+"\n");
+      if (modifiedWidgets > 0) 
+        showButtonBar("buttonbar", true);
+      else 
+        hideButtonBar("buttonbar", true);
+      if (invalidWidgets > 0)
+        document.getElementById("apply").setAttribute("disabled", "true");
+      else
+        document.getElementById("apply").setAttribute("disabled", "false");        
+      
     }
 
     function configureServices() {
@@ -112,10 +140,8 @@
   ]]>
   </script>
 
-  <vbox id="module_page" readonly="true" flex="1">
-
-    <label class="titlebox" value="Configuration"/>
-
+  <vbox class="zap-form-body">
+    <label class="zap-form-title" value="Configuration"/>
     <cgroup title="UI Preferences">
       <grid>
         <columns><column/><column flex="1"/><column/></columns>
@@ -123,7 +149,7 @@
           <irow>
             <label control="urn:mozilla:zap:max_recent_calls" 
                    value="Recent calls history size:"/>
-            <textbox id="urn:mozilla:zap:max_recent_calls"/>
+            <textbox type="zap-formwidget" id="urn:mozilla:zap:max_recent_calls"/>
             <irow-info>
               <description>
                 Maximum number of inactive calls to keep in the recent
@@ -142,7 +168,7 @@
         <rows>
           <irow>
             <label control="urn:mozilla:zap:ringtone" value="Ringtone:"/>
-            <textbox id="urn:mozilla:zap:ringtone"/>
+            <textbox type="zap-formwidget" id="urn:mozilla:zap:ringtone"/>
             <irow-info>
               <description>
                 Ringtone for incoming calls in <html:a href="http://en.wikipedia.org/wiki/RTTTL">RTTTL format</html:a>. In future other formats will be supported
@@ -161,7 +187,7 @@
           <irow>
             <label control="urn:mozilla:zap:instance_id"
                    value="UA Instance ID:"/>
-            <textbox id="urn:mozilla:zap:instance_id"/>
+            <textbox type="zap-formwidget" id="urn:mozilla:zap:instance_id"/>
             <irow-info>
               <description>
               A unique identifier assigned to this instance of zap when it was
@@ -174,7 +200,7 @@
           <irow>
             <label control="urn:mozilla:zap:sip_port_base"
                    value="SIP port base:"/>
-            <textbox id="urn:mozilla:zap:sip_port_base"/>
+            <textbox type="zap-formwidget" id="urn:mozilla:zap:sip_port_base"/>
             <irow-info>
               <description>
                 zap will use the first available socket greater than or 
@@ -185,7 +211,7 @@
           <irow>
             <label control="urn:mozilla:zap:registration_recovery_max_time"
                    value="Registration failure Tmax:"/>
-            <textbox id="urn:mozilla:zap:registration_recovery_max_time"/>
+            <textbox type="zap-formwidget" id="urn:mozilla:zap:registration_recovery_max_time"/>
             <irow-info>
               <description>
                 Maximum time (in seconds) to wait before re-attempting a failed registration.
@@ -197,7 +223,7 @@
           <irow>
             <label control="urn:mozilla:zap:registration_recovery_base_time_not_failed"
                    value="Flow failure Tbase:"/>
-            <textbox id="urn:mozilla:zap:registration_recovery_base_time_not_failed"/>
+            <textbox type="zap-formwidget" id="urn:mozilla:zap:registration_recovery_base_time_not_failed"/>
             <irow-info>
               <description>
                 Base time (in seconds) to wait before attempting to reconnect a failed 
@@ -210,7 +236,7 @@
           <irow>
             <label control="urn:mozilla:zap:registration_recovery_base_time_all_fail"
                    value="Registration failure Tbase:"/>
-            <textbox id="urn:mozilla:zap:registration_recovery_base_time_all_fail"/>
+            <textbox type="zap-formwidget" id="urn:mozilla:zap:registration_recovery_base_time_all_fail"/>
             <irow-info>
               <description>
                 Base time (in seconds) to wait before attempting to a failed registration.
@@ -222,7 +248,7 @@
           <irow>
             <label control="urn:mozilla:zap:dnd_code" 
                    value="DND response code:"/>
-            <textbox id="urn:mozilla:zap:dnd_code"/>
+            <textbox type="zap-formwidget" id="urn:mozilla:zap:dnd_code"/>
             <irow-info>
               <description>
                 Response code to send for INVITE requests when zap is in 
@@ -234,7 +260,7 @@
           <irow>
             <label control="urn:mozilla:zap:dnd_headers" 
                    value="Additional DND headers:"/>
-            <textbox id="urn:mozilla:zap:dnd_headers" multiline="true" rows="2"/>
+            <textbox type="zap-formwidget" id="urn:mozilla:zap:dnd_headers" multiline="true" rows="2"/>
             <irow-info>
               <description>
                 Additional headers to append to a "Do Not Disturb" response.
@@ -266,21 +292,11 @@
           </row>
         </rows>
       </grid>
-    </cgroup>
-    
-    <hbox>
-      <deck id="button_deck" flex="1">
-        <hbox>
-          <spacer flex="1"/>
-          <button label="Edit" oncommand="edit()" />
-        </hbox>
-        <hbox>
-          <spacer flex="1"/>
-          <button label="Commit" oncommand="commit()" />
-          <button label="Cancel" oncommand="cancel()" />
-        </hbox>
-      </deck>
-    </hbox>
-
+    </cgroup>    
   </vbox>
+  <hbox class="zap-form-buttonbar" id="buttonbar">
+    <spacer flex="1"/>
+    <button id="apply" label="Apply changes" oncommand="commit()"/>
+    <button id="cancel" label="Cancel" oncommand="cancel()"/>
+  </hbox>
 </page>
