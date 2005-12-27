@@ -522,6 +522,7 @@ textbox[type="zap-formwidget"][invalid="true"] {
 /* forms                                                                  */
 
 .zap-form {
+  -moz-appearance: none;
   background-color: #e3e3e3;
   font-size: 11px !important;
 }
