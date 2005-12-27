@@ -8,6 +8,8 @@ function loadExternalURL(url) {
   extProtocolSvc.loadUrl(uri);
 }
 
+//----------------------------------------------------------------------
+
 // get the resource for the current selection in a ds-filled tree:
 function getSelectedResource(tree) {
   var start = {};
@@ -26,6 +28,7 @@ function selectResource(tree, resource) {
   tree.treeBoxObject.ensureRowIsVisible(index);
 }
 
+//----------------------------------------------------------------------
 
 function showButtonBar(elem, animate) {
   var bar = document.getElementById(elem);
@@ -67,4 +70,18 @@ function hideButtonBar(elem, animate) {
       bar.style.visibility = "hidden";
   }
   slideOut();
+}
+
+//----------------------------------------------------------------------
+
+function makeNumberValidator(min, max) {
+  return function(v) {
+    if (!/^\d+$/.test(v)) return false;
+    v = parseInt(v);
+    if (min !== undefined &&
+        v < min) return false;
+    if (max !== undefined &&
+        v > max) return false;
+    return true;
+  };
 }

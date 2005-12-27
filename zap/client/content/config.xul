@@ -149,7 +149,8 @@
           <irow>
             <label control="urn:mozilla:zap:max_recent_calls" 
                    value="Recent calls history size:"/>
-            <textbox type="zap-formwidget" id="urn:mozilla:zap:max_recent_calls"/>
+            <textbox type="zap-formwidget" id="urn:mozilla:zap:max_recent_calls"
+                     validator="makeNumberValidator(0, 1000)"/>
             <irow-info>
               <description>
                 Maximum number of inactive calls to keep in the recent
@@ -200,7 +201,8 @@
           <irow>
             <label control="urn:mozilla:zap:sip_port_base"
                    value="SIP port base:"/>
-            <textbox type="zap-formwidget" id="urn:mozilla:zap:sip_port_base"/>
+            <textbox type="zap-formwidget" id="urn:mozilla:zap:sip_port_base"
+                     validator="makeNumberValidator(1, 65535)"/>
             <irow-info>
               <description>
                 zap will use the first available socket greater than or 
@@ -211,7 +213,8 @@
           <irow>
             <label control="urn:mozilla:zap:registration_recovery_max_time"
                    value="Registration failure Tmax:"/>
-            <textbox type="zap-formwidget" id="urn:mozilla:zap:registration_recovery_max_time"/>
+            <textbox type="zap-formwidget" id="urn:mozilla:zap:registration_recovery_max_time"
+                     validator="makeNumberValidator()"/>
             <irow-info>
               <description>
                 Maximum time (in seconds) to wait before re-attempting a failed registration.
@@ -223,7 +226,8 @@
           <irow>
             <label control="urn:mozilla:zap:registration_recovery_base_time_not_failed"
                    value="Flow failure Tbase:"/>
-            <textbox type="zap-formwidget" id="urn:mozilla:zap:registration_recovery_base_time_not_failed"/>
+            <textbox type="zap-formwidget" id="urn:mozilla:zap:registration_recovery_base_time_not_failed"
+                     validator="makeNumberValidator()"/>
             <irow-info>
               <description>
                 Base time (in seconds) to wait before attempting to reconnect a failed 
@@ -236,7 +240,8 @@
           <irow>
             <label control="urn:mozilla:zap:registration_recovery_base_time_all_fail"
                    value="Registration failure Tbase:"/>
-            <textbox type="zap-formwidget" id="urn:mozilla:zap:registration_recovery_base_time_all_fail"/>
+            <textbox type="zap-formwidget" id="urn:mozilla:zap:registration_recovery_base_time_all_fail"
+                     validator="makeNumberValidator()"/>
             <irow-info>
               <description>
                 Base time (in seconds) to wait before attempting to a failed registration.
