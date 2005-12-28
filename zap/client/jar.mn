@@ -11,7 +11,7 @@ zap.jar:
   content/zap/logs.xul               (content/logs.xul)
   content/zap/home.xul               (content/home.xul)
   content/zap/contacts.xul           (content/contacts.xul)
-  content/zap/zap-widgets.xml        (content/zap-widgets.xml)
+* content/zap/zap-widgets.xml        (content/zap-widgets.xml)
   content/zap/zap-widgets.css        (content/zap-widgets.css)
   content/zap/make-call.xul          (content/make-call.xul)
   content/zap/call.xul               (content/call.xul)

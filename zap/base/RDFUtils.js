@@ -303,6 +303,7 @@ PersistentRDFObject.fun(
         // reset modified & invalid state:
         // XXX regexp test???
         elem.state = 0x0000;
+        elem.defaultVal = elem.value;
       }
     }
   });
@@ -325,6 +326,7 @@ PersistentRDFObject.fun(
           // reset modified & invalid state:
           // XXX regexp test???
           elem.state = 0x0000;
+          elem.defaultVal = elem.value;
         }      
 
         if (elem.tagName == "checkbox")
