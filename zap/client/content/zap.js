@@ -773,10 +773,12 @@ RegistrationGroup.fun(
     this.unregistering = true;
     // mark our identity as un-registered:
     this.identity["urn:mozilla:zap:is_registered"] = "false";
-    // walk through registrations and unregister:
-    this.registrations.forEach(function(r) {
-                                 r.unregister();
-                               });
+    // walk through existing registrations and unregister:
+    if (this.registrations) {
+      this.registrations.forEach(function(r) {
+                                   r.unregister();
+                                 });
+    }
   });
 
 RegistrationGroup.fun(

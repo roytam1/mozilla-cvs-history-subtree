@@ -41,6 +41,7 @@
 
 
 <page id="zap_new_identity"
+      class="zap-form"
       xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
       onload="initPage()" >
 
@@ -49,11 +50,16 @@
 
   <!-- Scripts -->
   <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
+  <script type="text/javascript" src="chrome://zap/content/chromeUtils.js"/>
 
   <script type="application/x-javascript">
   <![CDATA[
     var wIdentity;    
     function initPage() {
+      widgetStateChanged = formWidgetStateChanged;
+      // make sure we always show the buttonbar:
+      modifiedFormWidgets = 1;
+      initIdentityForm();
       wIdentity = parent.Identity.instantiate();
       // fill document with identity defaults:
       wIdentity.fillDocument(document);
@@ -74,17 +80,13 @@
   ]]>
   </script>
 
-  <vbox id="module_page" flex="1">
-
-    <label class="titlebox" value="Create new identity"/>
-    
+  <vbox class="zap-form-body">
+    <label class="zap-form-title" value="Create new identity"/>
     <vbox id="zap_identity_form"/>
-
-    <hbox>
-      <spacer flex="1"/>
-      <button label="Create Identity" oncommand="commit()" />
-      <button label="Cancel" oncommand="cancel()" />
-    </hbox>
-
   </vbox>
+  <hbox class="zap-form-hidden-buttonbar" id="buttonbar">
+    <spacer flex="1"/>
+    <button id="apply" label="Create Identity" oncommand="commit()" />
+    <button label="Cancel" oncommand="cancel()" />
+  </hbox>
 </page>

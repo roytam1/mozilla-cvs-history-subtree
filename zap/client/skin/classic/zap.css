@@ -386,10 +386,15 @@ igroup[showinfo=true] {
   -moz-border-radius: 4px;
   background-color: #fdffc2;
   padding: 1px 0px 0px 1px;
+  margin-bottom: 4px;
 }
 
-igroup[showinfo=true] > .igroup-info { 
+igroup[showinfo=true] > info { 
   visibility: visible;
+}
+
+igroup > info { 
+  visibility: collapse;
 }
 
 .igroup-info-button { 
@@ -416,10 +421,6 @@ igroup[showinfo=true] .igroup-info-button {
 .igroup-content { 
 }
 
-.igroup-info { 
-  visibility: hidden;
-}
-
 /* ---------------------------------------------------------------------- */
 /* irow collapsable row 'info' widget                                       */
 
@@ -439,7 +440,7 @@ irow[showinfo=true] {
   background-color: #fdffc2;
 }
 
-irow-info { 
+rows info { 
   margin: 0px;
   margin-bottom: 4px;
   border: 1px solid yellow;
@@ -518,6 +519,32 @@ textbox[type="zap-formwidget"][invalid="true"] {
   -moz-border-top-colors: #9a2222 #cf2222;
 }
 
+checkbox[type="zap-formwidget"][modified="true"] { 
+  font-weight: bold;
+}
+
+menulist[type="zap-formwidget"] { 
+  -moz-appearance: none;
+  border: 1px solid;
+  -moz-border-top-colors: #9a9a9a;
+  -moz-border-left-colors: #9a9a9a;
+  -moz-border-right-colors: #9a9a9a;
+  -moz-border-bottom-colors: #9a9a9a;
+}
+
+menulist[type="zap-formwidget"] * { 
+  font-size: inherit;
+}
+
+menulist[type="zap-formwidget"][modified="true"] { 
+  font-weight: bold;
+  border: 1px solid;
+  -moz-border-top-colors: #5a5a5a;
+  -moz-border-left-colors: #5a5a5a;
+  -moz-border-right-colors: #5a5a5a;
+  -moz-border-bottom-colors: #5a5a5a;
+}
+
 /* ---------------------------------------------------------------------- */
 /* forms                                                                  */
 
@@ -534,6 +561,7 @@ textbox[type="zap-formwidget"][invalid="true"] {
 }
 
 .zap-form-title { 
+  -moz-box-flex: 1;
   background-color: #c0c0d0;
   color: #ffffff;
   -moz-border-radius: 4px;
@@ -545,7 +573,13 @@ textbox[type="zap-formwidget"][invalid="true"] {
   font-weight: bold;
 }
 
-.zap-form-buttonbar {
+.zap-form-buttonbar { 
+  overflow: hidden;
+  background-color: #ffaaaa;
+  border: none;  
+}
+
+.zap-form-hidden-buttonbar {
   max-height: 0px;
   visibility: hidden;
   overflow: hidden;

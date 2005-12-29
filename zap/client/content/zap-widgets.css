@@ -19,3 +19,11 @@ textbox[type="zap-formwidget"] {
 textbox[type="zap-formwidget"][multiline="true"] { 
   -moz-binding: url("chrome://zap/content/zap-widgets.xml#textarea-formwidget");
 }
+
+checkbox[type="zap-formwidget"] { 
+  -moz-binding: url("chrome://zap/content/zap-widgets.xml#checkbox-formwidget");
+}
+
+menulist[type="zap-formwidget"] { 
+  -moz-binding: url("chrome://zap/content/zap-widgets.xml#menulist-formwidget")
+}

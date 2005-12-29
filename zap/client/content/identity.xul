@@ -40,6 +40,7 @@
 <!DOCTYPE window SYSTEM "chrome://zap/locale/zap.dtd">
 
 <page id="zap_identity"
+      class="zap-form"
       xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
       onload="initPage()">
 
@@ -48,11 +49,13 @@
 
   <!-- Scripts -->
   <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
+  <script type="text/javascript" src="chrome://zap/content/chromeUtils.js"/>
 
   <script type="application/x-javascript">
   <![CDATA[
     var wIdentity;
     function initPage() {
+      widgetStateChanged = formWidgetStateChanged;
       initIdentityForm();
       wIdentity = parent.getIdentity(parent.getSelectedSidebarResource().Value);
       wIdentity.fillDocument(document);
@@ -77,46 +80,34 @@
       }
     }
     
-    function edit() {
-      document.getElementById("module_page").setAttribute("readonly", "false");
-      document.getElementById("http://home.netscape.com/NC-rdf#Name").select();
-      document.getElementById("button_deck").selectedIndex = 1;
-    }
-
     function commit() {
       wIdentity.updateFromDocument(document);
       if (parent.wConfig["urn:mozilla:zap:identity"] == wIdentity.resource.Value)
         parent.currentIdentityUpdated();
       parent.registerIdentity(wIdentity);
-      parent.reloadPage();
     }
 
     function cancel() {
-      parent.reloadPage();
+      wIdentity.fillDocument(document);
     }
 
   ]]>
   </script>
 
-  <vbox id="module_page" readonly="true" flex="1">
-
-    <label class="titlebox" value="SIP Identity"/>
-
-    <vbox id="zap_identity_form"/>
-
-    <hbox>
-      <spacer flex="1"/>
-      <deck id="button_deck">
-        <hbox>
-          <button label="Delete" oncommand="del()" />
-          <button label="Edit" oncommand="edit()" />
-        </hbox>
-        <hbox>
-          <button label="Commit" oncommand="commit()" />
-          <button label="Cancel" oncommand="cancel()" />
-        </hbox>
-      </deck>
+  <vbox class="zap-form-body">
+    <hbox align="start">
+      <label class="zap-form-title" value="SIP Identity"/>
+      <button label="Delete this identity" oncommand="del()"/>
     </hbox>
-
+    <vbox id="zap_identity_form"/>
   </vbox>
+  <hbox style="display:none" class="zap-form-buttonbar">
+    <spacer flex="1"/>
+    <button label="Delete identity" oncommand="del()" />
+  </hbox>
+  <hbox class="zap-form-hidden-buttonbar" id="buttonbar">
+    <spacer flex="1"/>
+    <button id="apply" label="Apply changes" oncommand="commit()" />
+    <button label="Cancel" oncommand="cancel()" />
+  </hbox>
 </page>

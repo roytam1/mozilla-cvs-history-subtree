@@ -38,6 +38,7 @@
 <!DOCTYPE overlay SYSTEM "chrome://zap/locale/zap.dtd">
 
 <overlay id="zap_identity_form_overlay"
+         xmlns:html="http://www.w3.org/1999/xhtml"
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
   <script type="application/x-javascript">
@@ -53,45 +54,90 @@
 
   <vbox flex="1" id="zap_identity_form">
     <grid>
-      <columns><column/><column flex="1"/></columns>
+      <columns><column/><column flex="1"/><column/></columns>
       <rows>
-        <row>
+        <irow>
           <label control="http://home.netscape.com/NC-rdf#Name" 
                  value="Address of record:"/>
-          <textbox id="http://home.netscape.com/NC-rdf#Name"/>
-        </row>
-        <row>
+          <textbox type="zap-formwidget" id="http://home.netscape.com/NC-rdf#Name"/>
+          <info>
+            <description>
+              SIP address-of-record for this account. Example: 
+              <html:br/><html:i>sip:username@my_sip_service_provider.com</html:i>
+            </description>
+          </info>
+        </irow>
+        <irow>
           <label control="urn:mozilla:zap:display_name" 
                  value="Display Name:"/>
-          <textbox id="urn:mozilla:zap:display_name"/>
-        </row>
-        <row>
+          <textbox type="zap-formwidget" id="urn:mozilla:zap:display_name"/>
+          <info>
+            <description>
+              Optional human-readable display name which will
+              typically be displayed by remote clients calling 
+              or being called from this identity.
+              This can be an arbitrary unicode string 
+              but must not contain carriage return or linefeed characters.
+            </description>
+          </info>
+        </irow>
+        <irow>
           <label control="urn:mozilla:zap:organization" 
                  value="Organization:"/>
-          <textbox id="urn:mozilla:zap:organization"/>
-        </row>
-        <row>
-          <label control="urn:mozilla:zap:preference" 
-                 value="Preference (0.001-1.000):"/>
-          <textbox id="urn:mozilla:zap:preference"/>
-        </row>
+          <textbox type="zap-formwidget" id="urn:mozilla:zap:organization"/>
+          <info>
+            <description>
+              Optional organizational affiliation of
+              this identity. It may be used by remote clients to filter calls.
+            </description>
+          </info>
+        </irow>
       </rows>
     </grid>
 
     <cgroup title="Advanced">
-      <checkbox label="Automatic registration" id="urn:mozilla:zap:automatic_registration"/>
+      <igroup>
+        <checkbox type="zap-formwidget" label="Automatic registration" 
+                  id="urn:mozilla:zap:automatic_registration"/>
+        <info>
+          <description>
+            If checked, zap will automatically attempt to register (and maintain the
+            registration) with the registrar for this address-of-register.
+          </description>
+        </info>
+      </igroup>
       <grid>
-        <columns><column/><column flex="1"/></columns>
+        <columns><column/><column flex="1"/><column/></columns>
         <rows>
-          <row>
+          <irow>
+            <label control="urn:mozilla:zap:preference" 
+                   value="Preference:"/>
+            <textbox type="zap-formwidget" id="urn:mozilla:zap:preference"/>
+            <info>
+              <description>
+                Optional value ("q" parameter) in the range 0.001-1.000 indicating
+                the relative preference for this user agent/identity compared to
+                other registration bindings for this address-of-record.
+              </description>
+            </info>
+          </irow>
+          <irow>
             <label control="urn:mozilla:zap:authentication_username" 
                    value="Authentication Username:"/>
-            <textbox id="urn:mozilla:zap:authentication_username"/>
-          </row>
-          <row>
+            <textbox type="zap-formwidget" id="urn:mozilla:zap:authentication_username"/>
+            <info>
+              <description>
+                Optional username for authenticating with the registrar for this 
+                address-of-record. If this field is left blank, zap assumes that 
+                the authentication username is identical to the username part of
+                the address-of-record (as it usually is).
+              </description>
+            </info>
+          </irow>
+          <irow>
             <label control="urn:mozilla:zap:service"
                    value="Service:"/>
-            <menulist id="urn:mozilla:zap:service">
+            <menulist type="zap-formwidget" id="urn:mozilla:zap:service">
               <menupopup id="services_list_popup"
                          datasources="rdf:null"                         
                          ref="urn:mozilla:zap:services">
@@ -116,7 +162,16 @@
                 </template>
               </menupopup>
             </menulist>
-          </row>
+            <info>
+              <description>
+                SIP service to use for registration and outbound calls from this identity.
+                The default '(automatic)' setting chooses the first appropriate service from 
+                the services list (configured from the 'Configuration' form), i.e. the first 
+                service for which the domain matches the host part of the 
+                address-of-record of this identity.
+              </description>
+            </info>
+          </irow>
         </rows>
       </grid>
     </cgroup>

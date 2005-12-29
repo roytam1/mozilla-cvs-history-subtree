@@ -29,7 +29,6 @@
     ]]>
     </setter>
   </property>
-
   <property name="validator" readonly="true">
     <getter>
     <![CDATA[
@@ -42,22 +41,60 @@
     ]]>
     </getter>
   </property>
+  <method name="valueModified">
+    <body>
+    <![CDATA[
+      var newState = 0x0002; // modified
+      if (this.defaultVal != undefined) {
+        if (this.value == this.defaultVal)
+          newState = 0x0000; // not modfied
+      }
+      if (this.validator(this.value))
+        newState &= ~0x0001;
+      else
+        newState |= 0x0001;
+      this.state = newState;
+    ]]>
+    </body>
+  </method>
+#ifdef ZAP_CHECKBOX_FORMWIDGET
+  <!-- XXX The value property should really go into the normal checkbox binding -->
+  <property name="value">
+    <getter>
+    <![CDATA[
+      return this.checked;
+    ]]>
+    </getter>
+    <setter>
+    <![CDATA[
+      this.checked = (val=='true');
+    ]]>
+    </setter>
+  </property>
+#endif
 </implementation>
 <handlers>
+#ifdef ZAP_TEXTBOX_FORMWIDGET
   <handler event="input">
   <![CDATA[
-    var newState = 0x0002; // modified
-    if (this.defaultVal != undefined) {
-      if (this.value == this.defaultVal)
-        newState = 0x0000; // not modfied
-    }
-    if (this.validator(this.value))
-      newState &= ~0x0001;
-    else
-      newState |= 0x0001;
-    this.state = newState;
+    this.valueModified();
   ]]>
   </handler>
+#endif
+#ifdef ZAP_CHECKBOX_FORMWIDGET
+  <handler event="command">
+  <![CDATA[
+    this.valueModified();
+  ]]>
+  </handler>
+#endif
+#ifdef ZAP_MENULIST_FORMWIDGET
+  <handler event="command">
+  <![CDATA[
+    this.valueModified();
+  ]]>
+  </handler>
+#endif
 </handlers>
 
 

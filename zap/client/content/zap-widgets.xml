@@ -78,9 +78,7 @@
         <xul:spacer flex="1"/>
         <xul:button class="igroup-info-button"/>
       </xul:box>
-      <xul:hbox class="igroup-info">
-        <children includes="info"/>
-      </xul:hbox>
+      <children includes="info"/>
     </content>
     <handlers>
       <handler event="click" button="0">
@@ -104,7 +102,7 @@
       <children/>
       <xul:button class="irow-info-button"/>
       <xul:irow-hidden>
-        <children includes="irow-info"/>
+        <children includes="info"/>
       </xul:irow-hidden>
     </content>
     <handlers>
@@ -121,7 +119,7 @@
            this.setAttribute("showinfo", "true");
            // insert the info content as a column-spanning row:
            if (!this.infoNode)
-             this.infoNode = this.getElementsByTagName("irow-info").item(0);
+             this.infoNode = this.getElementsByTagName("info").item(0);
            this.parentNode.insertBefore(this.infoNode, this.nextSibling);
         }
         event.cancelBubble = true;
@@ -132,12 +130,30 @@
 
   <binding id="textbox-formwidget" 
            extends="chrome://global/content/bindings/textbox.xml#textbox">
+#define ZAP_TEXTBOX_FORMWIDGET
 #include zap-widget-body.inc
+#undef ZAP_TEXTBOX_FORMWIDGET
   </binding>
 
   <binding id="textarea-formwidget" 
            extends="chrome://global/content/bindings/textbox.xml#textarea">
+#define ZAP_TEXTBOX_FORMWIDGET
 #include zap-widget-body.inc
+#undef ZAP_TEXTBOX_FORMWIDGET
   </binding>
-  
+
+  <binding id="checkbox-formwidget"
+           extends="chrome://global/content/bindings/checkbox.xml#checkbox">
+#define ZAP_CHECKBOX_FORMWIDGET
+#include zap-widget-body.inc
+#undef ZAP_CHECKBOX_FORMWIDGET
+  </binding>
+
+  <binding id="menulist-formwidget"
+           extends="chrome://global/content/bindings/menulist.xml#menulist">
+#define ZAP_MENULIST_FORMWIDGET
+#include zap-widget-body.inc
+#undef ZAP_MENULIST_FORMWIDGET
+  </binding>
+
 </bindings>

@@ -85,3 +85,42 @@ function makeNumberValidator(min, max) {
     return true;
   };
 }
+
+//----------------------------------------------------------------------
+// formWidgetStateChanged: A 'widgetStateChanged' implementation used
+// for zap forms to show/hide the 'buttonbar' element and
+// enable/disable the 'apply' button as appropriate for the state of
+// the widgets in the form. See e.g. config.xul for how this is used.
+
+var modifiedFormWidgets = 0;
+var invalidFormWidgets  = 0;
+
+function formWidgetStateChanged(widget, oldState, newState) {
+      if (oldState & 0x0002 && !(newState & 0x0002)) {
+        // modified -> non modified
+        modifiedFormWidgets -= 1;
+      }
+      else if (newState & 0x0002 && !(oldState & 0x0002)) {
+        // non modified -> modified
+        modifiedFormWidgets += 1;
+      }
+
+      if (oldState & 0x0001 && !(newState & 0x0001)) {
+        // invalid -> valid
+        invalidFormWidgets -= 1;
+      }
+      else if (newState & 0x0001 && !(oldState & 0x0001)) {
+        // valid -> invalid
+        invalidFormWidgets += 1;
+      }
+      dump(widget.tagName+" state changed: modified:"+modifiedFormWidgets+" invalid:"+invalidFormWidgets+"\n");
+      if (modifiedFormWidgets > 0) 
+        showButtonBar("buttonbar", true);
+      else 
+        hideButtonBar("buttonbar", true);
+      if (invalidFormWidgets > 0)
+        document.getElementById("apply").setAttribute("disabled", "true");
+      else
+        document.getElementById("apply").setAttribute("disabled", "false");        
+      
+    }

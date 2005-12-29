@@ -98,9 +98,11 @@ PersistentRDFObject.metafun(
       _name,
       function() {
         var prop = gRDF.GetResource(_name);
+        var target = null;
         try {
-          var target = this.datasources[_datasourceid].GetTarget(this.resource,
-                                                                 prop, true);
+          if (this.resource) 
+            target = this.datasources[_datasourceid].GetTarget(this.resource,
+                                                               prop, true);
         }
         catch(e) {
 //          this._error("Exception getting "+_name+": "+e);
@@ -144,8 +146,13 @@ PersistentRDFObject.metafun(
       _name,
       function() {
         var prop = gRDF.GetResource(_name);
-        var target = this.datasources[_datasourceid].GetTarget(this.resource,
+        var target = null;
+        try {
+          if (this.resource) 
+            target = this.datasources[_datasourceid].GetTarget(this.resource,
                                                                prop, true);
+        }
+        catch(e) {}
         if (target)
           target = target.QueryInterface(Components.interfaces.nsIRDFResource).Value;
         else
@@ -269,10 +276,7 @@ PersistentRDFObject.fun(
       var elem = doc.getElementById(a.name);
       if (!elem)
         val = a.defval;
-      else if (elem.tagName == "checkbox")
-        val = elem.checked;
-      else
-        val = elem.value;
+      val = elem.value;
         
       if (a.type == "literal")
         val = gRDF.GetLiteral(val);
@@ -295,10 +299,7 @@ PersistentRDFObject.fun(
       var a = this._arcsOut[id];
       var elem = doc.getElementById(a.name);
       if (!elem) continue;
-      if (elem.tagName == "checkbox")
-        elem.checked = (this[a.name] == "true");
-      else
-        elem.value = this[a.name];
+      elem.value = this[a.name];
       if (elem.isZapFormWidget) {
         // reset modified & invalid state:
         // XXX regexp test???
@@ -328,11 +329,7 @@ PersistentRDFObject.fun(
           elem.state = 0x0000;
           elem.defaultVal = elem.value;
         }      
-
-        if (elem.tagName == "checkbox")
-          val = elem.checked;
-        else
-          val = elem.value;
+        val = elem.value;
       }
       
       if (a.type == "literal")
