@@ -1215,7 +1215,8 @@
         <parameter name="aDragSession"/>
         <body>
           <![CDATA[
-            if (aDragSession.sourceNode.parentNode == this.mTabContainer) {
+            if (aDragSession.sourceNode &&
+                aDragSession.sourceNode.parentNode == this.mTabContainer) {
               var newIndex = this.getDropIndex(aEvent);
               var tabIndex = this.getTabIndex(aDragSession.sourceNode);
               if (newIndex == tabIndex || newIndex == tabIndex + 1)
@@ -1232,7 +1233,8 @@
         <parameter name="aDragSession"/>
         <body>
           <![CDATA[
-            if (aDragSession.sourceNode.parentNode == this.mTabContainer) {
+            if (aDragSession.sourceNode &&
+                aDragSession.sourceNode.parentNode == this.mTabContainer) {
               var ib = document.getAnonymousElementByAttribute(this, "class", "tab-drop-indicator-bar");
 
               if (!aDragSession.canDrop)
@@ -1279,7 +1281,8 @@
         <parameter name="aDragSession"/>
         <body>
           <![CDATA[
-            if (aDragSession.sourceNode && aDragSession.sourceNode.parentNode == this.mTabContainer) {
+            if (aDragSession.sourceNode &&
+                aDragSession.sourceNode.parentNode == this.mTabContainer) {
               var newIndex = this.getDropIndex(aEvent);
               var tabIndex = this.getTabIndex(aDragSession.sourceNode);
               if (newIndex > tabIndex)
@@ -1321,7 +1324,8 @@
         <parameter name="aDragSession"/>
         <body>
           <![CDATA[
-            if (aDragSession.sourceNode.parentNode == this.mTabContainer) {
+            if (aDragSession.sourceNode &&
+                aDragSession.sourceNode.parentNode == this.mTabContainer) {
               var target = aEvent.relatedTarget;
               while (target && target != this.mStrip)
                 target = target.parentNode;
