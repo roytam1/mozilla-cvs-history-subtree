@@ -132,6 +132,7 @@ else
     # Check default compile-time libdir
     if [ -x "$moz_libdir/run-mozilla.sh" ]; then
       dist_bin=$moz_libdir
+      run_moz="$moz_libdir/run-mozilla.sh"
     else 
       echo "Cannot find %MOZ_APP_DISPLAYNAME% runtime directory. Exiting."
       exit 1
