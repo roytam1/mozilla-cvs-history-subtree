@@ -236,7 +236,7 @@
                 // onLocationChange, this flag also gets set to false
                 // (so we keep it while switching tabs after failed load
                 if (aWebProgress.DOMWindow == this.mBrowser.contentWindow)
-                  this.mBrowser.userTypedClear++;
+                  this.mBrowser.userTypedClear += 2;
 
                 if (!this.mBlank) {
                   this.mTab.removeAttribute("progress");
@@ -253,7 +253,9 @@
                 // The document is done loading, it's okay to clear
                 // the value again.
                 if (aWebProgress.DOMWindow == this.mBrowser.contentWindow)
-                  if (this.mBrowser.userTypedClear > 0)
+                  if (this.mBrowser.userTypedClear > 1)
+                    this.mBrowser.userTypedClear -= 2;
+                  else if (this.mBrowser.userTypedClear > 0)
                     this.mBrowser.userTypedClear--;
 
                 if (this.mBlank)
