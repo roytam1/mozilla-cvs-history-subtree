@@ -365,7 +365,7 @@ function RerootFolder(uri, newFolder, viewType, viewFlags, sortType, sortOrder)
 
   SetUpToolbarButtons(uri);
 
-  UpdateStatusMessageCounts(newFolder);
+  UpdateStatusMessageCounts(gMsgFolderSelected);
   
   UpdateMailToolbar("reroot folder in 3 pane");
   // hook for extra toolbar items

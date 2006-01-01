@@ -531,7 +531,7 @@ function ThreadPaneOnLoad()
 
 function ThreadPaneSelectionChanged()
 {
-  UpdateStatusMessageCounts(msgWindow.openFolder);
+  UpdateStatusMessageCounts(gMsgFolderSelected);
   if (!gRightMouseButtonDown)
     GetThreadTree().view.selectionChanged();
 }
