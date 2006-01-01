@@ -45,7 +45,7 @@
 function RefreshSort()
 {
   var current_column = find_sort_column();
-  SortColumn(current_column);
+  SortColumnElement(current_column);
 }
 
 // set the sort direction on the currently sorted column
@@ -59,10 +59,16 @@ function SortInNewDirection(direction)
   else if (direction == "natural")
     direction = "descending";
   current_column.setAttribute("sortDirection", direction);
-  SortColumn(current_column);
+  SortColumnElement(current_column);
 }
 
-function SortColumn(column)
+function SortColumn(columnId)
+{
+  var column = document.getElementById(columnId);
+  SortColumnElement(column);
+}
+
+function SortColumnElement(column)
 {
   var tree = column.parentNode.parentNode;
   var col = tree.columns.getColumnFor(column);
@@ -177,7 +183,10 @@ function fillViewMenu(popup)
       var column = columns[i];
       // Construct an entry for each cell in the row.
       var column_name = column.getAttribute("label");
+      var column_accesskey = column.getAttribute("accesskey");
       var item = document.createElement("menuitem");
+      if (column_accesskey)
+        item.setAttribute("accesskey", column_accesskey);
       item.setAttribute("type", "radio");
       item.setAttribute("name", "sort_column");
       if (column_name == "")
