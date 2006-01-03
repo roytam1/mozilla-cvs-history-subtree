@@ -86,13 +86,18 @@ function resetOneShotTimer(timer, duration) {
 }
 
 // Asynchronously call 'fct' after 'interval' ms. Return timer
-// object. Calling cancel() on the return value will cancel the
-// scheduled function call.
+// object. Calling 'cancel()' on the return value will cancel the
+// scheduled function call (or any subsequent re-schedules).
+// fct will be called with a function argument 'reschedule(interval)',
+// which can be used to schedule another call of 'fct'
 function schedule(fct, interval) {
+  function reschedule(_interval) {
+    resetOneShotTimer(timer, _interval ? _interval : interval);
+  }
   var timer = makeOneShotTimer(
     {
       notify : function(timer) {
-        fct();
+        fct(reschedule);
       }
     },
     interval);
