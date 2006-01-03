@@ -5,6 +5,9 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
+MODULE		= zap
+XPI_NAME	= zap
+
 include $(topsrcdir)/config/rules.mk
 
 FILES := \
@@ -18,7 +21,4 @@ FILES := \
 FILES := $(addprefix $(srcdir)/, $(FILES))
 
 libs::
-	$(INSTALL) $(FILES) $(DIST)/bin/defaults/profile
-
-install::
-	$(SYSINSTALL) $(IFLAGS1) $(FILES) $(DESTDIR)$(mozappdir)/defaults/profile
+	$(INSTALL) $(FILES) $(FINAL_TARGET)/defaults/profile
