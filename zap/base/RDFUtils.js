@@ -179,9 +179,14 @@ PersistentRDFObject.metafun(
   });
 
 // Add a trigger that will be executed whenever the given attribute is
-// changed by a setter call on this PersistentRDFObject:
+// changed by a setter call on this PersistentRDFObject.
+// The trigger function takes 2 arguments: the PersistentRDFObject and
+// the new value of observed attribute.
 // XXX maybe need this to execute even if the attrib gets manipulated
 // from elsewhere.
+// XXX Currently this will only be called if the attrib gets
+// manipulated directly (not from updateFromDocument, etc.). Need to
+// change this.
 PersistentRDFObject.metafun(
   function rdfAttribTrigger(_name, _function) {
     // XXX cloning triggers here is a little bit of a hack so that we
