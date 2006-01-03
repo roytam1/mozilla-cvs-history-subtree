@@ -59,7 +59,7 @@
       widgetStateChanged = formWidgetStateChanged;
       parent.wConfig.fillDocument(document);
       updateMasterPasswordButtons();
-      hideButtonBar("buttonbar", false);
+      hideVSlideBar("buttonbar", false);
     }    
 
     function commit() {

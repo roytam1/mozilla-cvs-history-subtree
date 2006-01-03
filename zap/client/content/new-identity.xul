@@ -59,11 +59,12 @@
       widgetStateChanged = formWidgetStateChanged;
       // make sure we always show the buttonbar:
       modifiedFormWidgets = 1;
+      showVSlideBar("buttonbar");
       initIdentityForm();
       wIdentity = parent.Identity.instantiate();
       // fill document with identity defaults:
       wIdentity.fillDocument(document);
-      document.getElementById("http://home.netscape.com/NC-rdf#Name").focus();
+      document.getElementById("http://home.netscape.com/NC-rdf#Name").select();
     }
 
     function commit() {

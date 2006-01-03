@@ -104,6 +104,7 @@
     function call() {
       var oc = parent.OutboundCall.instantiate();
       oc.createFromDocument(document);
+      oc["urn:mozilla:zap:local"] = parent.wCurrentIdentity.getFromAddress().serialize();
       oc.mediasession = Components.classes["@mozilla.org/zap/mediasession;1"].createInstance(Components.interfaces.zapIMediaSession);
       oc.mediasession.init("zap",
                            parent.wCurrentIdentity.hostAddress,
@@ -112,7 +113,7 @@
       oc["urn:mozilla:zap:status"] = "Calling...";
       // start the ball rolling:
       oc.makeCall(wRemoteAddress, parent.wCurrentIdentity);
-      parent.selectCall(oc.resource);
+      parent.loadPage("chrome://zap/content/call.xul?resource="+escape(oc.resource.Value));
     }
   ]]>
   </script>

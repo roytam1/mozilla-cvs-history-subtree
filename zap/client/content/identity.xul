@@ -84,7 +84,11 @@
       wIdentity.updateFromDocument(document);
       if (parent.wConfig["urn:mozilla:zap:identity"] == wIdentity.resource.Value)
         parent.currentIdentityUpdated();
-      parent.registerIdentity(wIdentity);
+      // (re-)register if this identity is currently registered or if it has
+      // the automatic registration flag set:
+      if (wIdentity["urn:mozilla:zap:is_registered"] == "true" ||
+          wIdentity["urn:mozilla:zap:automatic_registration"] == "true")
+        parent.registerIdentity(wIdentity);
     }
 
     function cancel() {
@@ -96,7 +100,7 @@
 
   <vbox class="zap-form-body">
     <hbox align="start">
-      <label class="zap-form-title" value="SIP Identity"/>
+      <label class="zap-form-title" flex="1" value="SIP Identity"/>
       <button label="Delete this identity" oncommand="del()"/>
     </hbox>
     <vbox id="zap_identity_form"/>

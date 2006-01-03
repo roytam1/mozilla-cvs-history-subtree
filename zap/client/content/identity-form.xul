@@ -59,7 +59,8 @@
         <irow>
           <label control="http://home.netscape.com/NC-rdf#Name" 
                  value="Address of record:"/>
-          <textbox type="zap-formwidget" id="http://home.netscape.com/NC-rdf#Name"/>
+          <textbox type="zap-formwidget" id="http://home.netscape.com/NC-rdf#Name"
+                   validator="validateSIPURI"/>
           <info>
             <description>
               SIP address-of-record for this account. Example: 
@@ -101,8 +102,9 @@
                   id="urn:mozilla:zap:automatic_registration"/>
         <info>
           <description>
-            If checked, zap will automatically attempt to register (and maintain the
-            registration) with the registrar for this address-of-register.
+            If checked, zap will automatically attempt to register (and continue to
+            attempt re-registration when registration fails)
+            with the registrar for this address-of-record.
           </description>
         </info>
       </igroup>

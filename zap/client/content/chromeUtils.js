@@ -30,11 +30,14 @@ function selectResource(tree, resource) {
 
 //----------------------------------------------------------------------
 
-function showButtonBar(elem, animate) {
+// maximum height before the slidebar gets scrollbars:
+var VSLIDEBAR_MAX_HEIGHT = 100;
+
+function showVSlideBar(elem, animate) {
   var bar = document.getElementById(elem);
   bar.style.visibility = "visible";
   if (!animate) {
-    bar.style.maxHeight = "200px"; // 200px should be enough
+    bar.style.maxHeight = VSLIDEBAR_MAX_HEIGHT+"px";
     return;
   }
   // ... else animate:
@@ -44,6 +47,10 @@ function showButtonBar(elem, animate) {
   function slideIn() {
     var height = bar.boxObject.height;
     if (height == oldHeight) return; // all done
+    if (height > VSLIDEBAR_MAX_HEIGHT) {
+      bar.style.overflow = "-moz-scrollbars-vertical";
+      return; // all done
+    }
     oldHeight = height;
     height += 2;
     bar.style.maxHeight = height+"px";
@@ -52,8 +59,9 @@ function showButtonBar(elem, animate) {
   slideIn();
 }
 
-function hideButtonBar(elem, animate) {
+function hideVSlideBar(elem, animate) {
   var bar = document.getElementById(elem);
+  bar.style.overflow = "hidden";
   if (!animate) {
     bar.style.maxHeight = "0px";
     bar.style.visibility = "hidden";
@@ -66,8 +74,10 @@ function hideButtonBar(elem, animate) {
     i -= 2;
     if (i>=0)
       setTimeout(slideOut, 10);
-    else
+    else {
+      bar.style.maxHeight = "0px";
       bar.style.visibility = "hidden";
+    }
   }
   slideOut();
 }
@@ -84,6 +94,18 @@ function makeNumberValidator(min, max) {
         v > max) return false;
     return true;
   };
+}
+
+function validateSIPURI(v) {
+  var sipstack = window.wSipStack;
+  if (!sipstack) sipstack = parent.wSipStack;
+  try {
+    sipstack.syntaxFactory.deserializeURI(v);
+  }
+  catch (e) {
+    return false;
+  }
+  return true;
 }
 
 //----------------------------------------------------------------------
@@ -115,9 +137,9 @@ function formWidgetStateChanged(widget, oldState, newState) {
       }
       dump(widget.tagName+" state changed: modified:"+modifiedFormWidgets+" invalid:"+invalidFormWidgets+"\n");
       if (modifiedFormWidgets > 0) 
-        showButtonBar("buttonbar", true);
+        showVSlideBar("buttonbar", true);
       else 
-        hideButtonBar("buttonbar", true);
+        hideVSlideBar("buttonbar", true);
       if (invalidFormWidgets > 0)
         document.getElementById("apply").setAttribute("disabled", "true");
       else

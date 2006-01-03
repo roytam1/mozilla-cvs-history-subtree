@@ -1,0 +1,177 @@
+<?xml version="1.0"?>
+<!-- ***** BEGIN LICENSE BLOCK *****
+   - Version: MPL 1.1/GPL 2.0/LGPL 2.1
+   -
+   - The contents of this file are subject to the Mozilla Public License Version
+   - 1.1 (the "License"); you may not use this file except in compliance with
+   - the License. You may obtain a copy of the License at
+   - http://www.mozilla.org/MPL/
+   -
+   - Software distributed under the License is distributed on an "AS IS" basis,
+   - WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+   - for the specific language governing rights and limitations under the
+   - License.
+   -
+   - The Original Code is the Mozilla SIP client project.
+   -
+   - The Initial Developer of the Original Code is 8x8 Inc.
+   - Portions created by the Initial Developer are Copyright (C) 2005
+   - the Initial Developer. All Rights Reserved.
+   -
+   - Contributor(s):
+   -   Alex Fritze <alex@croczilla.com> (original author)
+   -
+   - Alternatively, the contents of this file may be used under the terms of
+   - either of the GNU General Public License Version 2 or later (the "GPL"),
+   - or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+   - in which case the provisions of the GPL or the LGPL are applicable instead
+   - of those above. If you wish to allow use of your version of this file only
+   - under the terms of either the GPL or the LGPL, and not to allow others to
+   - use your version of this file under the terms of the MPL, indicate your
+   - decision by deleting the provisions above and replace them with the notice
+   - and other provisions required by the GPL or the LGPL. If you do not delete
+   - the provisions above, a recipient may use your version of this file under
+   - the terms of any one of the MPL, the GPL or the LGPL.
+   -
+   - ***** END LICENSE BLOCK ***** -->
+
+<?xml-stylesheet href="chrome://zap/skin/zap.css" type="text/css"?>
+
+<!DOCTYPE window SYSTEM "chrome://zap/locale/zap.dtd">
+
+<page id="zap_calls"
+      class="zap-form"
+      xmlns = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+      onload="initPage()">
+
+  <!-- Overlays -->
+  <?xul-overlay href="chrome://zap/content/call-form.xul"?>
+
+  <!-- Scripts -->
+  <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
+  <script type="text/javascript" src="chrome://zap/content/chromeUtils.js"/>
+
+  <script type="application/x-javascript">
+  <![CDATA[
+    var wCallsTree;
+    var wCallsConditions;
+    var wFilter;
+    var wListTitle;
+
+    function initPage() {
+      wCallsTree = document.getElementById("calls");
+      wCallsConditions = document.getElementById("calls-conditions");
+      wListTitle = document.getElementById("list-title");
+      wCallsTree.database.AddDataSource(parent.wCallsDS);
+
+      // set filter based on uri parameter:
+      var filterpar = /\?filter=(\w+)/(document.documentURI);
+      filter(filterpar ? filterpar[1] : "all");
+      wCallsTree.builder.rebuild();
+    }
+
+    // par = "all" | "missed" | "received" | "dialled"
+    function filter(par) {
+      if (wFilter) {
+        wCallsConditions.removeChild(wFilter);
+        wFilter = null;
+      }
+
+      if (par == "all") {
+        wListTitle.value = "Calls";
+      }
+      else {
+        wFilter = document.createElement("triple"); 
+        wFilter.setAttribute("subject", "?node");
+        if (par == "missed") {
+          wFilter.setAttribute("predicate", "urn:mozilla:zap:status");
+          wFilter.setAttribute("object", "Missed");
+          wListTitle.value = "Missed Calls";
+        }
+        else if (par == "received") {
+          wFilter.setAttribute("predicate", "urn:mozilla:zap:direction");
+          wFilter.setAttribute("object", "inbound");
+          wListTitle.value = "Received Calls";
+        }
+        else if (par == "dialled") {
+          wFilter.setAttribute("predicate", "urn:mozilla:zap:direction");
+          wFilter.setAttribute("object", "outbound");
+          wListTitle.value = "Dialled Calls";
+        }
+        wCallsConditions.appendChild(wFilter);
+      }          
+
+      wCallsTree.builder.rebuild();
+    }
+
+    function callsSelectionChange() {
+      var selection = getSelectedResource(wCallsTree);
+      if (selection) {
+        initCallForm(selection);
+      }
+    }
+
+
+  ]]>
+  </script>
+
+
+  <vbox class="zap-form-list">
+    <label id="list-title" class="zap-form-title" value="Calls"/>
+    <tree id="calls" flex="1" 
+          seltype="single"
+          datasources="rdf:null"
+          ref="urn:mozilla:zap:calls"
+          sortDirection="ascending"
+          onselect="callsSelectionChange()"
+          flags="dont-build-content">
+      <treecols>
+        <treecol id="calls_direction" display="Direction" style="min-width:20px;"/>
+        <treecol id="calls_status" label="Status" flex="1" />
+        <treecol id="calls_remote" label="Remote" flex="2" />
+        <treecol id="calls_subject" label="Subject" flex="2" />
+        <treecol id="calls_actions" display="Actions" />
+      </treecols>
+      <template>
+        <rule>
+          <conditions id="calls-conditions">
+            <content uri="?container"/>
+            <member container="?container" child="?node"/>
+          </conditions>
+          <bindings>
+            <binding subject="?node"
+                     predicate="urn:mozilla:zap:active"
+                     object="?active"/>
+            <binding subject="?node"
+                     predicate="urn:mozilla:zap:status"
+                     object="?status"/>
+            <binding subject="?node"
+                     predicate="urn:mozilla:zap:remote"
+                     object="?remote"/>
+            <binding subject="?node"
+                     predicate="urn:mozilla:zap:subject"
+                     object="?subject"/>
+            <binding subject="?node"
+                     predicate="urn:mozilla:zap:direction"
+                     object="?direction"/>              
+          </bindings>
+          <action>
+            <treechildren>
+              <treeitem uri="?node">
+                <treerow properties="callactive-?active">
+                  <treecell properties="direction-?direction"/>
+                  <treecell label="?status"/>
+                  <treecell label="?remote"/>
+                  <treecell label="?subject"/>
+                  <treecell/>
+                </treerow>
+              </treeitem>
+            </treechildren>
+          </action>
+        </rule>
+      </template>
+    </tree>
+  </vbox>
+  <splitter id="calls-splitter"/>
+  <vbox id="call-form"/>
+</page>

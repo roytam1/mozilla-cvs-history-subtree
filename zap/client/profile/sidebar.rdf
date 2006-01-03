@@ -3,13 +3,43 @@
      xmlns:NC="http://home.netscape.com/NC-rdf#"
      xmlns:zap="urn:mozilla:zap:">
 
-  <rdf:Seq rdf:about="urn:mozilla:zap:sidebar" >
+  <rdf:Seq rdf:about="urn:mozilla:zap:sidebar">
     <rdf:li rdf:resource="urn:mozilla:zap:home"/>
-    <rdf:li rdf:resource="urn:mozilla:zap:identities"/>
     <rdf:li rdf:resource="urn:mozilla:zap:friends"/>
-    <rdf:li rdf:resource="urn:mozilla:zap:logs"/>
+    <rdf:li rdf:resource="urn:mozilla:zap:recent_calls"/>
+    <rdf:li rdf:resource="urn:mozilla:zap:identities"/>
     <rdf:li rdf:resource="urn:mozilla:zap:config"/>
   </rdf:Seq>
+
+  <rdf:Description rdf:about="urn:mozilla:zap:recent_calls">
+    <NC:Name>Calls</NC:Name>
+    <zap:nodetype>calls</zap:nodetype>
+    <zap:chromepage>chrome://zap/content/calls.xul</zap:chromepage>
+  </rdf:Description>
+
+  <rdf:Seq rdf:about="urn:mozilla:zap:recent_calls">
+    <rdf:li rdf:resource="urn:mozilla:zap:missed_calls"/>
+    <rdf:li rdf:resource="urn:mozilla:zap:received_calls"/>
+    <rdf:li rdf:resource="urn:mozilla:zap:dialled_calls"/>
+  </rdf:Seq>
+
+  <rdf:Description rdf:about="urn:mozilla:zap:missed_calls">
+    <NC:Name>Missed</NC:Name>
+    <zap:nodetype>calls</zap:nodetype>
+    <zap:chromepage>chrome://zap/content/calls.xul?filter=missed</zap:chromepage>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="urn:mozilla:zap:received_calls">
+    <NC:Name>Received</NC:Name>
+    <zap:nodetype>calls</zap:nodetype>
+    <zap:chromepage>chrome://zap/content/calls.xul?filter=received</zap:chromepage>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="urn:mozilla:zap:dialled_calls">
+    <NC:Name>Dialled</NC:Name>
+    <zap:nodetype>calls</zap:nodetype>
+    <zap:chromepage>chrome://zap/content/calls.xul?filter=dialled</zap:chromepage>
+  </rdf:Description>
 
   <rdf:Description rdf:about="urn:mozilla:zap:home">
     <NC:Name>Home</NC:Name>

@@ -148,6 +148,7 @@
     </toolbar>
   </toolbox>
 
+  <vbox id="alertbar"/>
   <!-- Main content box -->
   <hbox flex="1">
     <vbox id="box_sidebar"  minwidth="100" width="200" persist="width">
@@ -161,7 +162,7 @@
           <treecol id="sidebar_col_name" primary="true" hideheader="true" flex="1" />
         </treecols>
         <template>
-          <rule>
+          <rule><!-- GENERIC SIDEBAR NODE -->
             <conditions>
               <content uri="?container"/>
               <member container="?container" child="?node"/>
@@ -195,77 +196,18 @@
       </tree>
     </vbox>
 
-   <splitter id="sidebar_splitter" collapse="before" persist="state"/>
+   <splitter id="sidebar-splitter" collapse="before" persist="state"/>
 
     <vbox flex="1">
-
       <box id="box_interact" flex="2" minwidth="200" minheight="200">
         <iframe id="interactpane" flex="1"  src="about:blank" />
       </box>
-
-      <splitter id="calls_splitter" persist="state hidden"/>
-
-      <box id="box_calls"  minwidth="200" minheight="50" persist="height">
-        <tree id="calls" flex="1" 
-              seltype="single"
-              datasources="rdf:null"
-              ref="urn:mozilla:zap:recent_calls"
-              sortDirection="ascending"
-              onselect="callsSelectionChange()"
-              flags="dont-build-content">
-          <treecols>
-            <treecol id="calls_status_icon" display="Status Icon" />
-            <treecol id="calls_direction" display="Direction" style="min-width:20px;"/>
-            <treecol id="calls_status" label="Status" flex="1" />
-            <treecol id="calls_remote" label="Remote" flex="2" />
-            <treecol id="calls_subject" label="Subject" flex="2" />
-            <treecol id="calls_actions" display="Actions" />
-          </treecols>
-          <template>
-            <rule>
-              <conditions>
-                <content uri="?container"/>
-                <member container="?container" child="?node"/>              
-              </conditions>
-              <bindings>
-                <binding subject="?node"
-                         predicate="urn:mozilla:zap:active"
-                         object="?active"/>
-                <binding subject="?node"
-                         predicate="urn:mozilla:zap:status"
-                         object="?status"/>
-                <binding subject="?node"
-                         predicate="urn:mozilla:zap:remote"
-                         object="?remote"/>
-                <binding subject="?node"
-                         predicate="urn:mozilla:zap:subject"
-                         object="?subject"/>
-                <binding subject="?node"
-                         predicate="urn:mozilla:zap:direction"
-                         object="?direction"/>              
-              </bindings>
-              <action>
-                <treechildren>
-                  <treeitem uri="?node">
-                    <treerow properties="callactive-?active">
-                      <treecell/>
-                      <treecell properties="direction-?direction"/>
-                      <treecell label="?status"/>
-                      <treecell label="?remote"/>
-                      <treecell label="?subject"/>
-                      <treecell/>
-                    </treerow>
-                  </treeitem>
-                </treechildren>
-              </action>
-            </rule>
-          </template>
-        </tree>
-      </box>
-
     </vbox>
+
   </hbox>
+
   <statusbar>
     <statusbarpanel id="status_text" crop="right" flex="1"/>
   </statusbar>
+
 </window>

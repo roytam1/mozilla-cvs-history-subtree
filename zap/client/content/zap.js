@@ -57,6 +57,8 @@ var wRDFContainerUtils = Components.classes["@mozilla.org/rdf/container-utils;1"
 var wInteractPane;
 var wURLField;
 
+var wAlertBar;
+
 var wSidebarTree;
 var wSidebarDS;
 
@@ -77,7 +79,6 @@ var wContactsContainer;
 // urn:mozilla:zap:friends sequence:
 var wFriendsContainer;
 
-var wCallsTree;
 var wCallsDS = wRDF.GetDataSourceBlocking(getProfileFileURL("calls.rdf"));
 var wCallsContainer;
 var wRecentCallsContainer;
@@ -114,7 +115,8 @@ function windowInit() {
   
   wInteractPane = document.getElementById("interactpane");
   wURLField = document.getElementById("url_field");
-
+  wAlertBar = document.getElementById("alertbar");
+  
   initConfig();
   initContacts();
   initCalls();
@@ -196,7 +198,7 @@ Config.prototype.datasources["default"] = wConfigDS;
 Config.rdfResourceAttrib("urn:mozilla:zap:identity",
                          "urn:mozilla:zap:initial_identity");
 Config.rdfLiteralAttrib("urn:mozilla:zap:instance_id", "");
-Config.rdfLiteralAttrib("urn:mozilla:zap:max_recent_calls", "10");
+Config.rdfLiteralAttrib("urn:mozilla:zap:max_recent_calls", "3");
 Config.rdfLiteralAttrib("urn:mozilla:zap:ringtone", "zap:d=32,o=5,b=140:b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,8p.,f4,f4,8p.,f4,f4,1p"); //"nuages_gris:d=4,o=4,b=180:p,d,g,2c#5,d5,a#,g,p,d,g,c#5,c#5,d5,a#,g,1p");
 Config.rdfLiteralAttrib("urn:mozilla:zap:sip_port_base", "5060");
 // time constants for flow failure recovery (draft-ietf-sip-outbound-01.txt 4.3):
@@ -680,7 +682,7 @@ function unregisterIdentity(identity) {
 // called whenever the user edits a service
 function notifyServiceUpdated(service_resource) {
   var service_id = service_resource.Value;
-  // reregister any identities that use this service and have
+  // (re-)register any identities that use this service and have
   // automatic registration or are currently registered:
   for (var identity in wIdentities) {
     if (wIdentities[identity].service.resource.Value == service_id &&
@@ -1369,7 +1371,6 @@ function sidebarSelectionChange()
   var selection = getSelectedSidebarResource();
   if (!selection) return;
 
-  clearCallsSelection();
   page = getSidebarResourceAttrib(selection, "urn:mozilla:zap:chromepage");
   if (!page) page = "about:blank";
 
@@ -1497,13 +1498,10 @@ var wUAHandler = {
 ////////////////////////////////////////////////////////////////////////
 // Calls
 
-// initialize wCallsDS, wCallsTree, wCallsContainer and
+// initialize wCallsDS, wCallsContainer and
 // wRecentCallsContainer:
 function initCalls() {
   wCallsDS = wRDF.GetDataSourceBlocking(getProfileFileURL("calls.rdf"));
-  wCallsTree = document.getElementById("calls");
-  wCallsTree.database.AddDataSource(wCallsDS);
-  wCallsTree.builder.rebuild();
 
   wCallsContainer = Components.classes["@mozilla.org/rdf/container;1"].
     createInstance(Components.interfaces.nsIRDFContainer);
@@ -1529,36 +1527,6 @@ function initCalls() {
       wCallsDS.Change(resource, resourceStatus, old_status, wRDF.GetLiteral("zombied"), true);
     }
   }
-}
-
-function clearCallsSelection() {
-  var selection = wCallsTree.view.selection;
-  if (selection)
-    selection.clearSelection();
-}
-
-function selectCall(resource) {
-  selectResource(wCallsTree, resource);
-}
-
-var wSuppressSelectionChangeNotifications = false;
-
-function callsSelectionChange() {
-  if (wSuppressSelectionChangeNotifications) return;
-  
-  var selection = getSelectedResource(wCallsTree);
-  if (!selection) return;
-  
-  clearSidebarSelection();
-  if (wInteractPane.getAttribute("src") != "chrome://zap/content/call.xul")
-    wInteractPane.setAttribute("src", "chrome://zap/content/call.xul");
-  else
-    wInteractPane.webNavigation.reload(0);
-}
-
-function getSelectedCallResource()
-{
-  return getSelectedResource(wCallsTree);
 }
 
 // hash of active calls, indexed by resource name:
@@ -1588,13 +1556,14 @@ Call.addInMemoryDS("ephemeral");
 Call.rdfLiteralAttrib("urn:mozilla:zap:active", "true");
 Call.rdfLiteralAttrib("urn:mozilla:zap:status", "");
 Call.rdfLiteralAttrib("urn:mozilla:zap:remote", "");
+Call.rdfLiteralAttrib("urn:mozilla:zap:local", "");
 Call.rdfLiteralAttrib("urn:mozilla:zap:subject", "");
 
 // ephemeral attributes:
 Call.rdfLiteralAttrib("urn:mozilla:zap:session-running", "false", "ephemeral");
 
 // This is to provide an entrypoint for template recursion. see
-// e.g. call.xul for usage and comments in
+// e.g. calls.xul for usage and comments in
 // RDFUtils.js::rdfPointerAttrib:
 Call.rdfPointerAttrib("urn:mozilla:zap:root",
                       "urn:mozilla:zap:current-call",
@@ -1604,8 +1573,6 @@ Call.rdfPointerAttrib("urn:mozilla:zap:root",
 // in the call list). Maybe remove old items if the list is getting too large:
 Call.fun(
   function addToRecentCalls() {
-    wSuppressSelectionChangeNotifications = true;
-    
     this._assert(this.resource, "can't add noninitialized call object");
     wRecentCallsContainer.InsertElementAt(this.resource, 1, true);
     // XXX renumber etc.
@@ -1635,7 +1602,6 @@ Call.fun(
       --last_call_index;
       --overflow;
     }
-    wSuppressSelectionChangeNotifications = false;
   });
 
 //----------------------------------------------------------------------
@@ -1876,6 +1842,7 @@ InboundCall.rdfLiteralAttrib("urn:mozilla:zap:direction", "inbound");
 InboundCall.fun(
   function receiveCall(rs) {
     this["urn:mozilla:zap:remote"] = rs.request.getFromHeader().address.serialize();
+    this["urn:mozilla:zap:local"] = rs.request.getToHeader().address.serialize();
     var subjectHeader = rs.request.getTopHeader("Subject");
     if (subjectHeader) {
       this["urn:mozilla:zap:subject"] = subjectHeader.QueryInterface(Components.interfaces.zapISipSubjectHeader).subject;
@@ -1937,13 +1904,18 @@ InboundCallHandler.fun(
       return;
     }
 
-    // the offer is acceptable; we have an answer at hand. ring the user:
+    // the offer is acceptable; we have an answer at hand. alert the user:
     this._respond("180");
-    this.playRinger();
+    this.alertUser();
   });
 
 InboundCallHandler.fun(
-  function playRinger() {
+  function alertUser() {
+    // construct a new alert box:
+    this.alertBox = this.createAltertBox();
+    showAlert(this.alertBox);
+
+    // start the ringer:
     this.ringer = wMediaPipeline.mediagraph.addNode("rtttl-player",
                                                     makePropertyBag(
                                                       {$rtttl:wConfig["urn:mozilla:zap:ringtone"]}));
@@ -1951,8 +1923,81 @@ InboundCallHandler.fun(
                                       "aout", null);
   });
 
+// helper to create a label element:
+function createLabel(value) {
+  var l = document.createElement("label");
+  l.setAttribute("value", value);
+  return l;
+}
+
 InboundCallHandler.fun(
-  function stopRinger() {
+  function createAltertBox() {
+    var me = this;
+    var rv = document.createElement("groupbox");
+    rv.setAttribute("class", "alertbox");
+    rv.setAttribute("onclick", "this.handleClick();");
+    rv.handleClick = function() { loadPage("chrome://zap/content/call.xul?resource="+escape(me.call.resource.Value)); };
+    
+    var caption = document.createElement("caption");
+    caption.setAttribute("label", "Incoming call for "+this.call["urn:mozilla:zap:local"]);
+    rv.appendChild(caption);
+
+    var hbox = document.createElement("hbox");
+    
+    // 2 column grid:
+    var grid = document.createElement("grid");
+    grid.setAttribute("flex", "1");
+    var columns = document.createElement("columns");
+    var column = document.createElement("column");
+    columns.appendChild(column);
+    column = document.createElement("column");
+    column.setAttribute("flex", "1");
+    columns.appendChild(column);
+    grid.appendChild(columns);
+
+    // grid rows:
+    var rows = document.createElement("rows");
+    var row = document.createElement("row");
+    row.appendChild(createLabel("Caller:"));
+    row.appendChild(createLabel(this.call["urn:mozilla:zap:remote"]));
+    rows.appendChild(row);
+    if (this.call["urn:mozilla:zap:subject"]) {
+      row = document.createElement("row");
+      row.appendChild(createLabel("Subject:"));
+      row.appendChild(createLabel(this.call["urn:mozilla:zap:subject"]));
+      rows.appendChild(row);
+    }
+    grid.appendChild(rows);
+
+    hbox.appendChild(grid);
+
+    // button box:
+    var buttons = document.createElement("hbox");
+    var button = document.createElement("button");
+    button.setAttribute("label", "Accept");
+    button.setAttribute("oncommand", "this.accept();");
+    button.accept = function() { me.acceptCall(); };
+    buttons.appendChild(button);
+    button = document.createElement("button");
+    button.setAttribute("label", "Reject");
+    button.setAttribute("onclick", "event.cancelBubble = true;");
+    button.setAttribute("oncommand", "this.reject();");
+    button.reject = function() { me.rejectCall(); };
+    buttons.appendChild(button);
+
+    hbox.appendChild(buttons);
+
+    rv.appendChild(hbox);
+    
+    return rv;    
+  });
+
+InboundCallHandler.fun(
+  function unalertUser() {
+    if (this.alertBox) {
+      hideAlert(this.alertBox);
+      this.alertBox = null;
+    }
     if (this.ringer) {
       wMediaPipeline.mediagraph.removeNode(this.ringer);
       delete this.ringer;
@@ -1966,7 +2011,7 @@ InboundCallHandler.fun(
     // append session description:
     resp.setContent("application", "sdp", this.answer.serialize());
     this.call["urn:mozilla:zap:status"] = resp.statusCode+" "+resp.reasonPhrase;
-    this.stopRinger();
+    this.unalertUser();
     this.call.mediasession.startSession();
     this.call.dialog = this.rs.sendResponse(resp);
     this.call.dialog.listener = this.call;    
@@ -1994,20 +2039,20 @@ InboundCallHandler.fun(
     }
     
     this.call["urn:mozilla:zap:status"] = resp.statusCode+" "+resp.reasonPhrase;
-    this.stopRinger();
+    this.unalertUser();
     return this.rs.sendResponse(resp);
   });
   
 // zapISipInviteRSListener methods:
 InboundCallHandler.fun(
   function notifyCancelled(rs) {
-    this.stopRinger();
+    this.unalertUser();
     this.call["urn:mozilla:zap:status"] = "Missed";
   });
 
 InboundCallHandler.fun(
   function notifyACKReceived(rs, ack) {
-    this.stopRinger();
+    this.unalertUser();
     this.call["urn:mozilla:zap:status"] = "Confirmed";
   });
 
@@ -2021,3 +2066,16 @@ InboundCallHandler.fun(
     this.rs = null;
   });
 
+//----------------------------------------------------------------------
+// Alerting
+
+function showAlert(node) {
+  wAlertBar.appendChild(node);
+  showVSlideBar("alertbar", true);
+}
+
+function hideAlert(node) {
+  wAlertBar.removeChild(node);
+  if (!wAlertBar.hasChildNodes())
+    hideVSlideBar("alertbar", true);
+}

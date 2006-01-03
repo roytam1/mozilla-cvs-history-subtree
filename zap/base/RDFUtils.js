@@ -272,12 +272,9 @@ PersistentRDFObject.fun(
     for (var id in this._arcsOut) {
       var a = this._arcsOut[id];
       var prop = gRDF.GetResource(a.name);
-      var val;
       var elem = doc.getElementById(a.name);
-      if (!elem)
-        val = a.defval;
-      val = elem.value;
-        
+      var val = elem ? elem.value : a.defval;
+      
       if (a.type == "literal")
         val = gRDF.GetLiteral(val);
 //    else if (a.type == "this")
@@ -309,6 +306,24 @@ PersistentRDFObject.fun(
     }
   });
 
+// Initialize a XUL template with the datasources of this PersistentRDFObject.
+// 'node' should be the parent DOM node of a <template> element.
+// If 'removeOldDataSources' is true, old datasources will be removed from the
+// template before adding the new datasources.
+// After adding the PersistentRDFObject's datasources the template will be rebuilt.
+PersistentRDFObject.fun(
+  function initXULTemplate(node, removeOldDataSources) {
+    if (removeOldDataSources) {
+      var enumerator = node.database.GetDataSources();
+      while (enumerator.hasMoreElements())
+        node.database.RemoveDataSource(enumerator.getNext());
+    }
+    for (var ds in this.datasources) {
+      node.database.AddDataSource(this.datasources[ds]);
+    }
+    node.builder.rebuild();
+  });
+
 // update the resource from the given document:
 PersistentRDFObject.fun(
   function updateFromDocument(doc) {
@@ -320,8 +335,17 @@ PersistentRDFObject.fun(
       var prop = gRDF.GetResource(a.name);
       var val;
       var elem = doc.getElementById(a.name);
-      if (!elem)
+      if (!elem) {
+        // check if the datasource already has an assertion with this
+        // predicate:
+        if (this.datasources[a.dsid].GetTarget(this.resource, prop, true) != null) {
+          dump("Already have an assertion for "+a.name+". Not adding default assertion.\n");
+          continue; // yes -> don't add a default assertion
+        }
+        dump("No assertion for "+a.name+". Adding default assertion ("+a.defval+").\n");
+        // no -> proceed to add default assertion
         val = a.defval;
+      }
       else {
         if (elem.isZapFormWidget) {
           // reset modified & invalid state:
