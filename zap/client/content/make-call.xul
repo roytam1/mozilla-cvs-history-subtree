@@ -104,7 +104,6 @@
     function call() {
       var oc = parent.OutboundCall.instantiate();
       oc.createFromDocument(document);
-      oc["urn:mozilla:zap:local"] = parent.wCurrentIdentity.getFromAddress().serialize();
       oc.mediasession = Components.classes["@mozilla.org/zap/mediasession;1"].createInstance(Components.interfaces.zapIMediaSession);
       oc.mediasession.init("zap",
                            parent.wCurrentIdentity.hostAddress,

@@ -1558,6 +1558,7 @@ Call.rdfLiteralAttrib("urn:mozilla:zap:status", "");
 Call.rdfLiteralAttrib("urn:mozilla:zap:remote", "");
 Call.rdfLiteralAttrib("urn:mozilla:zap:local", "");
 Call.rdfLiteralAttrib("urn:mozilla:zap:subject", "");
+Call.rdfLiteralAttrib("urn:mozilla:zap:timestamp", ""); // yyyy-mm-dd hh:mm:ss (XXX timezone ???) 
 
 // ephemeral attributes:
 Call.rdfLiteralAttrib("urn:mozilla:zap:session-running", "false", "ephemeral");
@@ -1568,6 +1569,19 @@ Call.rdfLiteralAttrib("urn:mozilla:zap:session-running", "false", "ephemeral");
 Call.rdfPointerAttrib("urn:mozilla:zap:root",
                       "urn:mozilla:zap:current-call",
                       "ephemeral");
+
+// set timestamp to current date/time:
+Call.fun(
+  function setTimestamp() {
+    var now = new Date();
+    this["urn:mozilla:zap:timestamp"] =
+      now.getFullYear() + "-" +
+      padleft((now.getMonth()+1).toString(), "0", 2) + "-" +
+      padleft(now.getDate().toString(), "0", 2) + " " +
+      padleft(now.getHours().toString(), "0", 2) + ":" +
+      padleft(now.getMinutes().toString(), "0", 2) + ":" +
+      padleft(now.getSeconds().toString(), "0", 2);
+  });
 
 // Add this call to the recent calls container (so that it displays
 // in the call list). Maybe remove old items if the list is getting too large:
@@ -1707,6 +1721,8 @@ OutboundCall.fun(
         this._warning("Exception during Subject header construction: "+e);
       }
     }
+    this["urn:mozilla:zap:local"] = identity.getFromAddress().serialize();
+    this.setTimestamp();
     
     var offer = this.mediasession.generateSDPOffer();
 
@@ -1841,6 +1857,7 @@ InboundCall.rdfLiteralAttrib("urn:mozilla:zap:direction", "inbound");
 
 InboundCall.fun(
   function receiveCall(rs) {
+    this.setTimestamp();
     this["urn:mozilla:zap:remote"] = rs.request.getFromHeader().address.serialize();
     this["urn:mozilla:zap:local"] = rs.request.getToHeader().address.serialize();
     var subjectHeader = rs.request.getTopHeader("Subject");

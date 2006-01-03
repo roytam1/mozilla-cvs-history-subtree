@@ -145,6 +145,9 @@
             <binding subject="?node"
                      predicate="urn:mozilla:zap:direction"
                      object="?direction"/>              
+            <binding subject="?node"
+                     predicate="urn:mozilla:zap:timestamp"
+                     object="?timestamp"/>              
           </bindings>
           <action>
             <vbox uri="?node" flex="1">
@@ -156,7 +159,9 @@
                 <textbox value="?remote" readonly="true"/>
                 <label value="Subject:"/>
                 <textbox value="?subject" readonly="true"/>
-                <label value="Status:"/>
+                <label value="Date:"/>
+                <textbox value="?timestamp" readonly="true"/>
+                <label value="Last Status:"/>
                 <textbox value="?status" readonly="true"/>
               </vbox>
             </vbox>
