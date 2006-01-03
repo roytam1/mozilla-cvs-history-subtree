@@ -1554,11 +1554,13 @@ Call.addInMemoryDS("ephemeral");
 
 // persistent attributes:
 Call.rdfLiteralAttrib("urn:mozilla:zap:active", "true");
-Call.rdfLiteralAttrib("urn:mozilla:zap:status", "");
-Call.rdfLiteralAttrib("urn:mozilla:zap:remote", "");
-Call.rdfLiteralAttrib("urn:mozilla:zap:local", "");
-Call.rdfLiteralAttrib("urn:mozilla:zap:subject", "");
-Call.rdfLiteralAttrib("urn:mozilla:zap:timestamp", ""); // yyyy-mm-dd hh:mm:ss (XXX timezone ???) 
+Call.rdfLiteralAttrib("urn:mozilla:zap:status", ""); // last received/sent SIP status code
+Call.rdfLiteralAttrib("urn:mozilla:zap:remote", ""); // remote SIP address
+Call.rdfLiteralAttrib("urn:mozilla:zap:local", ""); // local SIP address
+Call.rdfLiteralAttrib("urn:mozilla:zap:subject", ""); // SIP Subject header value
+Call.rdfLiteralAttrib("urn:mozilla:zap:callid", ""); // SIP Call-ID header value
+Call.rdfLiteralAttrib("urn:mozilla:zap:timestamp", ""); // yyyy-mm-dd hh:mm:ss (XXX timezone ???)
+Call.rdfLiteralAttrib("urn:mozilla:zap:duration", ""); // duration in seconds
 
 // ephemeral attributes:
 Call.rdfLiteralAttrib("urn:mozilla:zap:session-running", "false", "ephemeral");
@@ -1569,6 +1571,26 @@ Call.rdfLiteralAttrib("urn:mozilla:zap:session-running", "false", "ephemeral");
 Call.rdfPointerAttrib("urn:mozilla:zap:root",
                       "urn:mozilla:zap:current-call",
                       "ephemeral");
+
+// triggers:
+Call.rdfAttribTrigger(
+  "urn:mozilla:zap:session-running",
+  function(me, val) {
+    if (val == "true") {
+      me.sessionStart = new Date();
+      me.sessionTimer = schedule(
+        function(reschedule) {
+          var duration_ms = (new Date()) - me.sessionStart;
+          me["urn:mozilla:zap:duration"] = Math.round(duration_ms/1000);
+          reschedule();
+        }, 1000);
+    }
+    else {
+      me.sessionTimer.cancel();
+      delete me.sessionTimer;
+      delete me.sessionStart;
+    }
+  });
 
 // set timestamp to current date/time:
 Call.fun(
@@ -1672,6 +1694,7 @@ ActiveCall.spec(
 ActiveCall.fun(
   function terminated() { 
     this["urn:mozilla:zap:active"] = "false";
+    this["urn:mozilla:zap:session-running"] = "false";
     delete wActiveCalls[this.resource.Value];
     if (this.mediasession) {
       this.mediasession.shutdown();
@@ -1722,6 +1745,7 @@ OutboundCall.fun(
       }
     }
     this["urn:mozilla:zap:local"] = identity.getFromAddress().serialize();
+    this["urn:mozilla:zap:callid"] = rc.request.getCallIDHeader().callID;
     this.setTimestamp();
     
     var offer = this.mediasession.generateSDPOffer();
@@ -1860,6 +1884,7 @@ InboundCall.fun(
     this.setTimestamp();
     this["urn:mozilla:zap:remote"] = rs.request.getFromHeader().address.serialize();
     this["urn:mozilla:zap:local"] = rs.request.getToHeader().address.serialize();
+    this["urn:mozilla:zap:callid"] = rs.request.getCallIDHeader().callID;
     var subjectHeader = rs.request.getTopHeader("Subject");
     if (subjectHeader) {
       this["urn:mozilla:zap:subject"] = subjectHeader.QueryInterface(Components.interfaces.zapISipSubjectHeader).subject;

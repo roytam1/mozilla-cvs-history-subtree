@@ -128,7 +128,7 @@
         <treecol id="calls_direction" display="Direction" style="min-width:20px;"/>
         <treecol id="calls_status" label="Status" flex="1" hidden="true"/>
         <treecol id="calls_remote" label="Remote" flex="2" />
-        <treecol id="calls_subject" label="Subject" flex="2" />
+        <treecol id="calls_subject" label="Subject" flex="2" hidden="true"/>
         <treecol id="calls_subject" label="Date" flex="1" 
                  sortActive="true" sortDirection="descending" 
                  sort="?timestamp"/>

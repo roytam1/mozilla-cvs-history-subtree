@@ -104,11 +104,19 @@
             <binding subject="?node"
                      predicate="urn:mozilla:zap:direction"
                      object="?direction"/>              
+            <binding subject="?node"
+                     predicate="urn:mozilla:zap:callid"
+                     object="?callid"/>              
+            <binding subject="?node"
+                     predicate="urn:mozilla:zap:duration"
+                     object="?duration"/>              
           </bindings>
           <action>
             <vbox uri="?node" flex="1">
               <label class="zap-form-title" value="Active ?direction call"/>
               <vbox flex="1">
+                <label value="SIP Call-ID:"/>
+                <textbox value="?callid" readonly="true"/>
                 <label value="Local Address:"/>
                 <textbox value="?local" readonly="true"/>
                 <label value="Remote Address:"/>
@@ -117,6 +125,8 @@
                 <textbox value="?subject" readonly="true"/>
                 <label value="Current Status:"/>
                 <textbox value="?status" readonly="true"/>
+                <label value="Duration (s):"/>
+                <textbox value="?duration" readonly="true"/>
               </vbox>
             </vbox>
           </action>
@@ -148,21 +158,31 @@
             <binding subject="?node"
                      predicate="urn:mozilla:zap:timestamp"
                      object="?timestamp"/>              
+            <binding subject="?node"
+                     predicate="urn:mozilla:zap:callid"
+                     object="?callid"/>              
+            <binding subject="?node"
+                     predicate="urn:mozilla:zap:duration"
+                     object="?duration"/>              
           </bindings>
           <action>
             <vbox uri="?node" flex="1">
               <label class="zap-form-title" value="Inactive ?direction call"/>
               <vbox flex="1">
+                <label value="SIP Call-ID:"/>
+                <textbox value="?callid" readonly="true"/>
                 <label value="Local Address:"/>
                 <textbox value="?local" readonly="true"/>
                 <label value="Remote Address:"/>
                 <textbox value="?remote" readonly="true"/>
                 <label value="Subject:"/>
                 <textbox value="?subject" readonly="true"/>
-                <label value="Date:"/>
-                <textbox value="?timestamp" readonly="true"/>
                 <label value="Last Status:"/>
                 <textbox value="?status" readonly="true"/>
+                <label value="Date:"/>
+                <textbox value="?timestamp" readonly="true"/>
+                <label value="Duration (s):"/>
+                <textbox value="?duration" readonly="true"/>
               </vbox>
             </vbox>
           </action>
