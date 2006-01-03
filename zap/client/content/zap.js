@@ -103,6 +103,8 @@ function warning(message) {
 function windowInit() {
   dump("Initializing zap main window...\n");
 
+  ensureProfile();
+  
   // set up error logging:
   // XXX this should be configurable (enable/disable)
   wErrorLog = openFileForWriting(getProfileFile("zap.log"), true);
@@ -135,6 +137,16 @@ function windowClose() {
   // close error log:
   wErrorLog.close();
   wErrorLog = null;
+}
+
+function ensureProfile() {
+  if (!ensureProfileFile("calls.rdf") ||
+      !ensureProfileFile("config.rdf") ||
+      !ensureProfileFile("contacts.rdf") ||
+      !ensureProfileFile("identities.rdf") ||
+      !ensureProfileFile("sidebar.rdf")) {
+    alert("Profile Error!");
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////

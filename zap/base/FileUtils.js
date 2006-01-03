@@ -40,6 +40,8 @@ EXPORTED_SYMBOLS = [ "urlToFile",
                      "openFileForWriting",
                      "getProfileDir",
                      "getProfileFile",
+                     "getProfileDefaultsFile",
+                     "ensureProfileFile",
                      "getProfileFileURL"];
 
 
@@ -154,9 +156,38 @@ function getProfileFile(name)
   return file;
 }
 
+// get a file in the profile defaults directory:
+function getProfileDefaultsFile(name)
+{
+  var file = gDirectoryService.get("ProfDefNoLoc",
+                                   Components.interfaces.nsIFile);
+  file.append(name);
+  return file;
+}
+
 // get the url of a file in the profile directory (e.g. for opening a
 // datasource):
 function getProfileFileURL(name)
 {
   return gFileProtocolHandler.getURLSpecFromFile(getProfileFile(name));
+}
+
+// Ensure the given profile file exists; copying it from the profile
+// defaults directory if necessary. Returns 'false' if the file
+// doesn't exist or can't be copied; 'true' otherwise.
+function ensureProfileFile(name)
+{
+  var file = getProfileFile(name);
+  if (file.exists()) return true;
+
+  // file doesn't exist. try copying from profile defaults directory:
+  var dfile = getProfileDefaultsFile(name);
+  if (!dfile.exists()) return false;
+  try {
+    dfile.copyTo(getProfileDir(), "");
+  }
+  catch(e) {
+    return false;
+  }
+  return true;
 }
