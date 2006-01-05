@@ -135,9 +135,6 @@
           <conditions>
             <content uri="?dummy"/>
             <member container="?dummy" child="?node"/>
-            <triple subject="?node"
-                    predicate="urn:mozilla:zap:active"
-                    object="false"/>
           </conditions>
           <bindings>
             <binding subject="?node"
