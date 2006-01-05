@@ -4517,7 +4517,8 @@ nsContextMenu.prototype = {
     // Save URL of clicked-on link.
     saveLink : function () {
         urlSecurityCheck(this.linkURL, this.docURL);
-        saveURL( this.linkURL, this.linkText(), null, true, false, makeURI(this.docURL) );
+        saveURL( this.linkURL, this.linkText(), null, true, false,
+                 makeURI(this.docURL, this.target.ownerDocument.characterSet) );
     },
     sendLink : function () {
         MailIntegration.sendMessage( this.linkURL, "" ); // we don't know the title of the link so pass in an empty string
@@ -5015,7 +5016,8 @@ function handleLinkClick(event, href, linkNode)
       }
 
       if (event.altKey) {
-        saveURL(href, linkNode ? gatherTextUnder(linkNode) : "", null, true, true, makeURI(docURL));
+        saveURL(href, linkNode ? gatherTextUnder(linkNode) : "", null, true,
+                true, makeURI(docURL, event.target.ownerDocument.characterSet));
         return true;
       }
 
