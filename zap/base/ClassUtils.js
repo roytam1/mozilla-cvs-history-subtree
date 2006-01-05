@@ -461,7 +461,7 @@ NamedObject.fun(
     else if (this._class_.prototype == this)
       return "["+this._class_.toString()+".prototype]";
     else
-      return "[Instance of "+this._class_.toString()+"]";
+      return "["+this._class_.toString()+" instance@"+Components.utils.getObjectId(this)+"]";
   });
 
 
