@@ -117,7 +117,7 @@ PersistentRDFObject.metafun(
         var prop = gRDF.GetResource(_name);
         var old = this.datasources[_datasourceid].GetTarget(this.resource, prop, true);
         if (old) {
-          if (old.Value == val) return;
+          if (old.QueryInterface(Components.interfaces.nsIRDFLiteral).Value == val) return;
           this.datasources[_datasourceid].Change(this.resource, prop, old,
                                                  gRDF.GetLiteral(val), true);
         }
@@ -132,7 +132,7 @@ PersistentRDFObject.metafun(
 
         var me = this;
         this._arcsOut[_name].triggers.forEach(
-          function(f) { f(me, val); });
+          function(f) { f.apply(me, [prop, val]); });
       });
   });
 
@@ -179,14 +179,12 @@ PersistentRDFObject.metafun(
   });
 
 // Add a trigger that will be executed whenever the given attribute is
-// changed by a setter call on this PersistentRDFObject.
-// The trigger function takes 2 arguments: the PersistentRDFObject and
-// the new value of observed attribute.
+// initialized or changed by a setter call on this PersistentRDFObject.
+// The trigger function takes 2 arguments: the name of the observed
+// resource and the new value of the observed attribute. It will be
+// called with 'this' set to the PersistentRDFObject.
 // XXX maybe need this to execute even if the attrib gets manipulated
 // from elsewhere.
-// XXX Currently this will only be called if the attrib gets
-// manipulated directly (not from updateFromDocument, etc.). Need to
-// change this.
 PersistentRDFObject.metafun(
   function rdfAttribTrigger(_name, _function) {
     // XXX cloning triggers here is a little bit of a hack so that we
@@ -251,6 +249,7 @@ PersistentRDFObject.fun(
     if (!addAssertions) return;
     this._assertArcsIn();
     // add default assertions for all attributes:
+    var me = this;
     for (var id in this._arcsOut) {
       var a = this._arcsOut[id];
       var prop = gRDF.GetResource(a.name);
@@ -262,6 +261,9 @@ PersistentRDFObject.fun(
       else
         val = gRDF.GetResource(a.defval);
       this.datasources[a.dsid].Assert(this.resource, prop, val, true);
+      if (a.triggers && a.triggers.length)
+        a.triggers.forEach(
+          function(f) {f.apply(me, [prop, val.Value]);});
     }
     if (this.autoflush)
       this.flush();
@@ -274,6 +276,7 @@ PersistentRDFObject.fun(
     this.resource = gRDF.GetAnonymousResource();
     this._assertArcsIn();
     // add assertions for all attributes:
+    var me = this;
     for (var id in this._arcsOut) {
       var a = this._arcsOut[id];
       var prop = gRDF.GetResource(a.name);
@@ -288,6 +291,9 @@ PersistentRDFObject.fun(
         val = gRDF.GetResource(val);
         
       this.datasources[a.dsid].Assert(this.resource, prop, val, true);
+      if (a.triggers && a.triggers.length)
+        a.triggers.forEach(
+          function(f) {f.apply(me, [prop, val.Value]);});
     }
     if (this.autoflush)
       this.flush();
