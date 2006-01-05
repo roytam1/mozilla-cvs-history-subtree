@@ -41,7 +41,7 @@
 /**
  * nsIScriptableInputStreamEx provides extended scriptable access to
  * the nsIInputStream. It implements different read semantics than
- * nsIScriptableInputStream and allows reading of buffers with null
+ * nsIScriptableInputStream and allows reading of buffers with '\0'
  * characters.
  */
 [scriptable, uuid(e0a5739e-243a-4e03-9815-b605b01a6d95)]
@@ -51,7 +51,8 @@ interface nsIScriptableInputStreamEx : nsIScriptableInputStream
      *  @param aCount [in] the number of bytes to read. If the
      *  underlying stream is blocking, specifying more than the
      *  available number of bytes will block the stream until enough
-     *  bytes are available.     
+     *  bytes are available. If the underlying stream is non-blocking
+     *  the returned string might contain fewer bytes than requested.
      *  @param _retval [out] the data
      */ 
     ACString readEx(in unsigned long aCount); 

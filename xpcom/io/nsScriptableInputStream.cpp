@@ -109,8 +109,11 @@ nsScriptableInputStream::ReadEx(PRUint32 aCount, nsACString & _retval) {
         _retval.SetLength(0);
         return rv;
     }
-    NS_ASSERTION(amtRead == aCount, "read error");
-        
+    if (amtRead != aCount) {
+        NS_WARNING("bytes read != bytes requested");
+        _retval.SetLength(amtRead);
+    }
+    
     return NS_OK;
 }
 
