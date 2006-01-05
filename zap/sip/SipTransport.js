@@ -44,6 +44,8 @@ Components.utils.importModule("gre:StringUtils.js");
 Components.utils.importModule("gre:ObjectUtils.js");
 Components.utils.importModule("gre:SipUtils.js");
 
+debug("*** SipTransport 1\n");
+
 // object to hold component's documentation:
 var _doc_ = {};
 
@@ -68,7 +70,7 @@ var ITF_SERVER_SOCKET = Components.interfaces.nsIServerSocket;
 var ITF_ASYNC_INPUT_STREAM = Components.interfaces.nsIAsyncInputStream;
 
 var CLASS_SCRIPT_INPUT_STREAM = Components.classes["@mozilla.org/scriptableinputstream;1"];
-var ITF_SCRIPT_INPUT_STREAM = Components.interfaces.nsIScriptableInputStream;
+var ITF_SCRIPT_INPUT_STREAM = Components.interfaces.nsIScriptableInputStreamEx;
 
 //----------------------------------------------------------------------
 // socket transport service
@@ -95,6 +97,7 @@ function log(mes, level) {
   gLoggingService.log("SIP TRANSPORT", level, mes);
 }
 
+debug("*** SipTransport 2\n");
 
 ////////////////////////////////////////////////////////////////////////
 // SipTCPConnection
@@ -130,7 +133,7 @@ SipTCPConnection.fun(
   function onInputStreamReady(stream) {
     try {
       var oldLength = this._readBuffer.length;
-      this._readBuffer += this._scriptableInputStream.read(this._scriptableInputStream.available());
+      this._readBuffer += this._scriptableInputStream.readEx(this._scriptableInputStream.available());
       this._dump("Data received from "+this._socket.host+":"+this._socket.port);
       this._processBuffer(oldLength);
       this._inputStream.asyncWait(this._proxy, 0, 0, null);
@@ -1182,6 +1185,7 @@ SipTransport.fun(
     return this._fqdn;
   });
 
+debug("*** SipTransport 3\n");
 
 ////////////////////////////////////////////////////////////////////////
 // Module definition
@@ -1199,3 +1203,5 @@ NSGetModule = ComponentUtils.generateNSGetModule(
      factory    : ComponentUtils.generateFactory(function() { return SipTransport.instantiate(); })
    }
   ]);
+
+debug("*** SipTransport 4\n");
