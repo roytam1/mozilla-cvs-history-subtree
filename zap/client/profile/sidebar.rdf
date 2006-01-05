@@ -3,71 +3,70 @@
      xmlns:NC="http://home.netscape.com/NC-rdf#"
      xmlns:zap="urn:mozilla:zap:">
 
-  <rdf:Seq rdf:about="urn:mozilla:zap:sidebar">
+  <rdf:Bag rdf:about="urn:mozilla:zap:sidebar">
     <rdf:li rdf:resource="urn:mozilla:zap:home"/>
     <rdf:li rdf:resource="urn:mozilla:zap:friends"/>
-    <rdf:li rdf:resource="urn:mozilla:zap:recent_calls"/>
+    <rdf:li rdf:resource="urn:mozilla:zap:recent_calls_node"/>
     <rdf:li rdf:resource="urn:mozilla:zap:identities"/>
     <rdf:li rdf:resource="urn:mozilla:zap:config"/>
-  </rdf:Seq>
-
-  <rdf:Description rdf:about="urn:mozilla:zap:recent_calls">
-    <NC:Name>Calls</NC:Name>
-    <zap:nodetype>calls</zap:nodetype>
-    <zap:chromepage>chrome://zap/content/calls.xul</zap:chromepage>
-  </rdf:Description>
-
-  <rdf:Seq rdf:about="urn:mozilla:zap:recent_calls">
-    <rdf:li rdf:resource="urn:mozilla:zap:missed_calls"/>
-    <rdf:li rdf:resource="urn:mozilla:zap:received_calls"/>
-    <rdf:li rdf:resource="urn:mozilla:zap:dialled_calls"/>
-  </rdf:Seq>
-
-  <rdf:Description rdf:about="urn:mozilla:zap:missed_calls">
-    <NC:Name>Missed</NC:Name>
-    <zap:nodetype>calls</zap:nodetype>
-    <zap:chromepage>chrome://zap/content/calls.xul?filter=missed</zap:chromepage>
-  </rdf:Description>
-
-  <rdf:Description rdf:about="urn:mozilla:zap:received_calls">
-    <NC:Name>Received</NC:Name>
-    <zap:nodetype>calls</zap:nodetype>
-    <zap:chromepage>chrome://zap/content/calls.xul?filter=received</zap:chromepage>
-  </rdf:Description>
-
-  <rdf:Description rdf:about="urn:mozilla:zap:dialled_calls">
-    <NC:Name>Dialled</NC:Name>
-    <zap:nodetype>calls</zap:nodetype>
-    <zap:chromepage>chrome://zap/content/calls.xul?filter=dialled</zap:chromepage>
-  </rdf:Description>
+  </rdf:Bag>
 
   <rdf:Description rdf:about="urn:mozilla:zap:home">
     <NC:Name>Home</NC:Name>
     <zap:nodetype>home</zap:nodetype>
+    <zap:sidebarindex>0100</zap:sidebarindex>
     <zap:chromepage>chrome://zap/content/home.xul</zap:chromepage>
-  </rdf:Description>
-
-  <rdf:Description rdf:about="urn:mozilla:zap:identities">
-    <NC:Name>Identities</NC:Name> 
-    <zap:nodetype>identities</zap:nodetype>
-    <zap:chromepage>chrome://zap/content/identities.xul</zap:chromepage>
   </rdf:Description>
 
   <rdf:Description rdf:about="urn:mozilla:zap:friends">
     <NC:Name>Contacts</NC:Name> 
     <zap:nodetype>contacts</zap:nodetype>
+    <zap:sidebarindex>0110</zap:sidebarindex>
     <zap:chromepage>chrome://zap/content/contacts.xul</zap:chromepage>
   </rdf:Description>
 
-  <rdf:Description rdf:about="urn:mozilla:zap:logs">
-    <NC:Name>Logs</NC:Name> 
-    <zap:nodetype>logs</zap:nodetype>
-    <zap:chromepage>chrome://zap/content/logs.xul</zap:chromepage>
+  <rdf:Description rdf:about="urn:mozilla:zap:recent_calls_node">
+    <NC:Name>Calls</NC:Name>
+    <zap:nodetype>calls</zap:nodetype>
+    <zap:sidebarindex>0120</zap:sidebarindex>
+    <zap:chromepage>chrome://zap/content/calls.xul</zap:chromepage>
+  </rdf:Description>
+
+  <rdf:Seq rdf:about="urn:mozilla:zap:recent_calls_node">
+    <rdf:li rdf:resource="urn:mozilla:zap:missed_calls_node"/>
+    <rdf:li rdf:resource="urn:mozilla:zap:received_calls_node"/>
+    <rdf:li rdf:resource="urn:mozilla:zap:dialled_calls_node"/>
+  </rdf:Seq>
+
+  <rdf:Description rdf:about="urn:mozilla:zap:missed_calls_node">
+    <NC:Name>Missed</NC:Name>
+    <zap:nodetype>missed_calls</zap:nodetype>
+    <zap:chromepage>chrome://zap/content/calls.xul?filter=missed</zap:chromepage>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="urn:mozilla:zap:received_calls_node">
+    <NC:Name>Received</NC:Name>
+    <zap:nodetype>received_calls</zap:nodetype>
+    <zap:chromepage>chrome://zap/content/calls.xul?filter=received</zap:chromepage>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="urn:mozilla:zap:dialled_calls_node">
+    <NC:Name>Dialled</NC:Name>
+    <zap:nodetype>dialled_calls</zap:nodetype>
+    <zap:chromepage>chrome://zap/content/calls.xul?filter=dialled</zap:chromepage>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="urn:mozilla:zap:identities">
+    <NC:Name>Identities</NC:Name> 
+    <zap:nodetype>identities</zap:nodetype>
+    <zap:sidebarindex>0130</zap:sidebarindex>
+    <zap:chromepage>chrome://zap/content/identities.xul</zap:chromepage>
   </rdf:Description>
 
   <rdf:Description rdf:about="urn:mozilla:zap:config">
     <NC:Name>Configuration</NC:Name> 
     <zap:nodetype>config</zap:nodetype>
+    <zap:sidebarindex>0140</zap:sidebarindex>
     <zap:chromepage>chrome://zap/content/config.xul</zap:chromepage>
   </rdf:Description>
 

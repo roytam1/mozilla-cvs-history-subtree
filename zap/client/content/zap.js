@@ -61,27 +61,27 @@ var wAlertBar;
 
 var wSidebarTree;
 var wSidebarDS;
+var wEphemeralSidebarContainer;
 
 var wConfig;
-var wConfigDS = wRDF.GetDataSourceBlocking(getProfileFileURL("config.rdf"));
+var wConfigDS;
 var wServicesContainer;
 
-var wIdentitiesDS = wRDF.GetDataSourceBlocking(getProfileFileURL("identities.rdf"));
+var wIdentitiesDS;
 var wIdentitiesContainer;
 var wCurrentIdentity;
 var wPasswordManager;
 var wPasswordManagerInt;
 
-var wContactsDS = wRDF.GetDataSourceBlocking(getProfileFileURL("contacts.rdf"));
+var wContactsDS;
 // all contacts live in the urn:mozilla:zap:contacts sequence:
 var wContactsContainer;
 // ... those displayed in the sidebar are also pointed to from the
 // urn:mozilla:zap:friends sequence:
 var wFriendsContainer;
 
-var wCallsDS = wRDF.GetDataSourceBlocking(getProfileFileURL("calls.rdf"));
+var wCallsDS;
 var wCallsContainer;
-var wRecentCallsContainer;
 
 // an application-global ds for storing emphemeral state, e.g. whether
 // a registration is active or not:
@@ -100,11 +100,13 @@ function warning(message) {
 ////////////////////////////////////////////////////////////////////////
 // Initialization:
 
+// this needs to be called inline here to load the datasources required by
+// the PersistentRDFObject subclasses defined below:
+ensureProfile();
+
 function windowInit() {
   dump("Initializing zap main window...\n");
 
-  ensureProfile();
-  
   // set up error logging:
   // XXX this should be configurable (enable/disable)
   wErrorLog = openFileForWriting(getProfileFile("zap.log"), true);
@@ -140,6 +142,9 @@ function windowClose() {
 }
 
 function ensureProfile() {
+  // XXX At some point we need proper profile migration.
+  // For now just copy files from profile defaults dir if they are not
+  // found in the profile dir:
   if (!ensureProfileFile("calls.rdf") ||
       !ensureProfileFile("config.rdf") ||
       !ensureProfileFile("contacts.rdf") ||
@@ -147,6 +152,13 @@ function ensureProfile() {
       !ensureProfileFile("sidebar.rdf")) {
     alert("Profile Error!");
   }
+
+  // load datasources from profile:
+  wCallsDS = wRDF.GetDataSourceBlocking(getProfileFileURL("calls.rdf"));
+  wConfigDS = wRDF.GetDataSourceBlocking(getProfileFileURL("config.rdf"));
+  wContactsDS = wRDF.GetDataSourceBlocking(getProfileFileURL("contacts.rdf"));
+  wIdentitiesDS = wRDF.GetDataSourceBlocking(getProfileFileURL("identities.rdf"));
+  wSidebarDS = wRDF.GetDataSourceBlocking(getProfileFileURL("sidebar.rdf"));
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -210,7 +222,6 @@ Config.prototype.datasources["default"] = wConfigDS;
 Config.rdfResourceAttrib("urn:mozilla:zap:identity",
                          "urn:mozilla:zap:initial_identity");
 Config.rdfLiteralAttrib("urn:mozilla:zap:instance_id", "");
-Config.rdfLiteralAttrib("urn:mozilla:zap:max_recent_calls", "3");
 Config.rdfLiteralAttrib("urn:mozilla:zap:ringtone", "zap:d=32,o=5,b=140:b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,8p.,f4,f4,8p.,f4,f4,1p"); //"nuages_gris:d=4,o=4,b=180:p,d,g,2c#5,d5,a#,g,p,d,g,c#5,c#5,d5,a#,g,1p");
 Config.rdfLiteralAttrib("urn:mozilla:zap:sip_port_base", "5060");
 // time constants for flow failure recovery (draft-ietf-sip-outbound-01.txt 4.3):
@@ -1314,12 +1325,17 @@ Contact.spec(
 
 // initialize wSidebarDS and wSidebarTree:
 function initSidebar() {
-  wSidebarDS = wRDF.GetDataSourceBlocking(getProfileFileURL("sidebar.rdf"));
-  wSidebarTree = document.getElementById("sidebar");
+  // Construct an ephemeral sidebar container. Its content will be
+  // merged with the static sibar content from sidebar.rdf.
+  wEphemeralSidebarContainer = wRDFContainerUtils.MakeBag(wGlobalEphemeralDS,
+                                                          wRDF.GetResource("urn:mozilla:zap:sidebar"));
+
+  wSidebarTree = document.getElementById("sidebar-tree");
+  wSidebarTree.database.AddDataSource(wGlobalEphemeralDS);
+  wSidebarTree.database.AddDataSource(wCallsDS);
   wSidebarTree.database.AddDataSource(wSidebarDS);
   wSidebarTree.database.AddDataSource(wIdentitiesDS);
   wSidebarTree.database.AddDataSource(wContactsDS);
-  wSidebarTree.database.AddDataSource(wGlobalEphemeralDS);
 
   wSidebarTree.builder.rebuild();
   selectSidebarNode("urn:mozilla:zap:home");
@@ -1510,8 +1526,7 @@ var wUAHandler = {
 ////////////////////////////////////////////////////////////////////////
 // Calls
 
-// initialize wCallsDS, wCallsContainer and
-// wRecentCallsContainer:
+// initialize wCallsDS, wCallsContainer:
 function initCalls() {
   wCallsDS = wRDF.GetDataSourceBlocking(getProfileFileURL("calls.rdf"));
 
@@ -1519,26 +1534,6 @@ function initCalls() {
     createInstance(Components.interfaces.nsIRDFContainer);
   wCallsContainer.Init(wCallsDS,
                               wRDF.GetResource("urn:mozilla:zap:calls"));
-  wRecentCallsContainer = Components.classes["@mozilla.org/rdf/container;1"].
-    createInstance(Components.interfaces.nsIRDFContainer);
-  wRecentCallsContainer.Init(wCallsDS,
-                              wRDF.GetResource("urn:mozilla:zap:recent_calls"));
-
-  // Check database for any active call zombies left over from
-  // unclean shutdown:
-  var recent = wRecentCallsContainer.GetElements();
-  var resourceActive = wRDF.GetResource("urn:mozilla:zap:active");
-  var resourceStatus = wRDF.GetResource("urn:mozilla:zap:status");
-  while (recent.hasMoreElements()) {
-    var resource = recent.getNext();
-    var active = wCallsDS.GetTarget(resource, resourceActive, true).QueryInterface(Components.interfaces.nsIRDFLiteral);
-    if (active.Value == "true") {
-      // aha, a zombie!
-      wCallsDS.Change(resource, resourceActive, active, wRDF.GetLiteral("false"), true);
-      var old_status = wCallsDS.GetTarget(resource, resourceStatus, true);
-      wCallsDS.Change(resource, resourceStatus, old_status, wRDF.GetLiteral("zombied"), true);
-    }
-  }
 }
 
 // hash of active calls, indexed by resource name:
@@ -1562,20 +1557,27 @@ function getCall(resource) {
 var Call = makeClass("Call", PersistentRDFObject);
 
 Call.prototype.datasources["default"] = wCallsDS;
+Call.prototype.datasources["global-ephemeral"] = wGlobalEphemeralDS;
 Call.addInMemoryDS("ephemeral");
 
 // persistent attributes:
-Call.rdfLiteralAttrib("urn:mozilla:zap:active", "true");
 Call.rdfLiteralAttrib("urn:mozilla:zap:status", ""); // last received/sent SIP status code
 Call.rdfLiteralAttrib("urn:mozilla:zap:remote", ""); // remote SIP address
 Call.rdfLiteralAttrib("urn:mozilla:zap:local", ""); // local SIP address
 Call.rdfLiteralAttrib("urn:mozilla:zap:subject", ""); // SIP Subject header value
 Call.rdfLiteralAttrib("urn:mozilla:zap:callid", ""); // SIP Call-ID header value
 Call.rdfLiteralAttrib("urn:mozilla:zap:timestamp", ""); // yyyy-mm-dd hh:mm:ss (XXX timezone ???)
-Call.rdfLiteralAttrib("urn:mozilla:zap:duration", ""); // duration in seconds
+Call.rdfLiteralAttrib("urn:mozilla:zap:duration", "-"); // duration in seconds
 
 // ephemeral attributes:
-Call.rdfLiteralAttrib("urn:mozilla:zap:session-running", "false", "ephemeral");
+Call.rdfLiteralAttrib("urn:mozilla:zap:active", "false", "global-ephemeral");
+Call.rdfLiteralAttrib("urn:mozilla:zap:session-running", "false", "global-ephemeral");
+Call.rdfLiteralAttrib("http://home.netscape.com/NC-rdf#Name",
+                      "", "global-ephemeral"); // name to be shown for active calls in the sidebar; initialized from remote address trigger
+Call.rdfLiteralAttrib("urn:mozilla:zap:sidebarindex", "0050",
+                      "global-ephemeral"); // ensure active calls are at the top of the sidebar
+Call.rdfLiteralAttrib("urn:mozilla:zap:chromepage",
+                      "chrome://zap/content/call.xul", "global-ephemeral");
 
 // This is to provide an entrypoint for template recursion. see
 // e.g. calls.xul for usage and comments in
@@ -1586,21 +1588,42 @@ Call.rdfPointerAttrib("urn:mozilla:zap:root",
 
 // triggers:
 Call.rdfAttribTrigger(
+  "urn:mozilla:zap:remote",
+  function(prop, val) {
+    this._dump("TRIGGER remote ->"+val);
+    this["http://home.netscape.com/NC-rdf#Name"] = val;
+  });
+
+Call.rdfAttribTrigger(
   "urn:mozilla:zap:session-running",
-  function(me, val) {
+  function(prop, val) {
+    this._dump("TRIGGER session-running -> "+val);
+    var me = this;
     if (val == "true") {
-      me.sessionStart = new Date();
-      me.sessionTimer = schedule(
+      this.sessionStart = new Date();
+      this.sessionTimer = schedule(
         function(reschedule) {
           var duration_ms = (new Date()) - me.sessionStart;
           me["urn:mozilla:zap:duration"] = Math.round(duration_ms/1000);
           reschedule();
         }, 1000);
     }
+    else if (this.sessionTimer) {
+      this.sessionTimer.cancel();
+      delete this.sessionTimer;
+      delete this.sessionStart;
+    }
+  });
+
+Call.rdfAttribTrigger(
+  "urn:mozilla:zap:active",
+  function(prop, val) {
+    this._dump("TRIGGER active -> "+val);
+    if (val == "true") {
+      wEphemeralSidebarContainer.AppendElement(this.resource);
+    }
     else {
-      me.sessionTimer.cancel();
-      delete me.sessionTimer;
-      delete me.sessionStart;
+      wEphemeralSidebarContainer.RemoveElement(this.resource, false);
     }
   });
 
@@ -1615,41 +1638,6 @@ Call.fun(
       padleft(now.getHours().toString(), "0", 2) + ":" +
       padleft(now.getMinutes().toString(), "0", 2) + ":" +
       padleft(now.getSeconds().toString(), "0", 2);
-  });
-
-// Add this call to the recent calls container (so that it displays
-// in the call list). Maybe remove old items if the list is getting too large:
-Call.fun(
-  function addToRecentCalls() {
-    this._assert(this.resource, "can't add noninitialized call object");
-    wRecentCallsContainer.InsertElementAt(this.resource, 1, true);
-    // XXX renumber etc.
-
-    // check if we need to remove items from the recent calls list:
-    var last_call_index = wRecentCallsContainer.GetCount();
-    var overflow = last_call_index - wConfig["urn:mozilla:zap:max_recent_calls"];
-    while (overflow > 0 && last_call_index >= 1) {
-      this._dump("looking at "+last_call_index);
-      var target = wCallsDS.GetTarget(wRDF.GetResource("urn:mozilla:zap:recent_calls"),
-                                        wRDFContainerUtils.IndexToOrdinalResource(last_call_index), true);
-
-      //this._assert(target, "recent calls ds broken at "+last_call_index);
-      if (!target) {
-        --last_call_index;
-        continue;
-      }
-      
-      // if this is an inactive call, remove it:
-      var active = wCallsDS.GetTarget(target, wRDF.GetResource("urn:mozilla:zap:active"), true).QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
-      if (active == "true") {
-        --last_call_index;
-        continue;
-      }
-      
-      wRecentCallsContainer.RemoveElementAt(last_call_index, true);
-      --last_call_index;
-      --overflow;
-    }
   });
 
 //----------------------------------------------------------------------
@@ -1673,9 +1661,10 @@ ActiveCall.spec(
     
     // append to calls container:
     wCallsContainer.AppendElement(this.resource);    
-    // ... and to recent calls as well:
-    this.addToRecentCalls();
-
+    
+    // mark as active:
+    this["urn:mozilla:zap:active"] = "true";
+    
     // enter into active calls hash:
     wActiveCalls[this.resource.Value] = this;
 
@@ -1693,9 +1682,9 @@ ActiveCall.spec(
     // append to calls container:
     wCallsContainer.AppendElement(this.resource);
 
-    // ... and to recent calls as well:
-    this.addToRecentCalls();
-
+    // mark as active:
+    this["urn:mozilla:zap:active"] = "true";
+    
     // enter into active calls hash:
     wActiveCalls[this.resource.Value] = this;
 
@@ -1759,7 +1748,6 @@ OutboundCall.fun(
     this["urn:mozilla:zap:local"] = identity.getFromAddress().serialize();
     this["urn:mozilla:zap:callid"] = rc.request.getCallIDHeader().callID;
     this.setTimestamp();
-    
     var offer = this.mediasession.generateSDPOffer();
 
     rc.request.setContent("application", "sdp", offer.serialize());

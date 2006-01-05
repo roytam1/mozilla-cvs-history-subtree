@@ -4,6 +4,4 @@
      xmlns:zap="urn:mozilla:zap:">
   <rdf:Seq rdf:about="urn:mozilla:zap:calls">
   </rdf:Seq>
-  <rdf:Seq rdf:about="urn:mozilla:zap:recent_calls">
-  </rdf:Seq>
 </rdf:RDF>

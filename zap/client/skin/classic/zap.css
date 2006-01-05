@@ -262,9 +262,9 @@ statusbar {
 }
 
 /* ---------------------------------------------------------------------- */
-/* sidebar tree                                                           */
+/* sidebar & current calls trees                                          */
 
-#sidebar {
+#sidebar-tree {
   -moz-appearance: none !important;
   margin: 0px;
   padding-left: 2px;
@@ -274,54 +274,79 @@ statusbar {
 %expand  background-color: __SIDEBAR_BG_COLOR__;
 }
 
-#sidebar > treechildren::-moz-tree-row(selected,focus) { 
+#sidebar-tree > treechildren::-moz-tree-row(selected,focus) { 
   border: 1px dotted #000000;
 }
 
-#sidebar > treechildren::-moz-tree-image(sidebar_col_name) { 
+#sidebar-tree > treechildren::-moz-tree-row(active-true) { 
+  background-color: #FF8080;
+}
+
+#sidebar-tree > treechildren::-moz-tree-row(active-true, selected, focus) { 
+  background-color: #FF4040;
+}
+
+#sidebar-tree > treechildren::-moz-tree-image(sidebar_col_name) { 
   padding-right: 2px;
   margin: 0px 2px;
   list-style-image: url("chrome://zap/skin/folder-closed.png");
 }
 
-#sidebar > treechildren::-moz-tree-image(sidebar_col_name, open) { 
+#sidebar-tree > treechildren::-moz-tree-image(sidebar_col_name, open) { 
   list-style-image: url("chrome://zap/skin/folder-open.png");
 }
 
-#sidebar > treechildren::-moz-tree-image(nodetype-home) {
+#sidebar-tree > treechildren::-moz-tree-image(nodetype-home) {
   list-style-image: url("chrome://zap/skin/home.png");
 }
 
-#sidebar > treechildren::-moz-tree-image(nodetype-identities) {
+#sidebar-tree > treechildren::-moz-tree-image(nodetype-identities) {
   list-style-image: url("chrome://zap/skin/accounts.png");
 }
 
-#sidebar > treechildren::-moz-tree-image(nodetype-identity) {
+#sidebar-tree > treechildren::-moz-tree-image(nodetype-identity) {
   list-style-image: url("chrome://zap/skin/account.png");
 }
 
-#sidebar > treechildren::-moz-tree-image(nodetype-identity, registered-true) { 
+#sidebar-tree > treechildren::-moz-tree-image(nodetype-identity, registered-true) { 
   list-style-image: url("chrome://zap/skin/account-registered.png");
 }
 
-#sidebar > treechildren::-moz-tree-image(nodetype-buddies) {
+#sidebar-tree > treechildren::-moz-tree-image(nodetype-contacts) {
   list-style-image: url("chrome://zap/skin/contacts.png");
 }
 
-#sidebar > treechildren::-moz-tree-image(nodetype-contacts) {
-  list-style-image: url("chrome://zap/skin/contacts.png");
-}
-
-#sidebar > treechildren::-moz-tree-image(nodetype-calls) {
+#sidebar-tree > treechildren::-moz-tree-image(nodetype-calls) {
   list-style-image: url("chrome://zap/skin/logs.png");
 }
 
-#sidebar > treechildren::-moz-tree-image(nodetype-config) {
+#sidebar-tree > treechildren::-moz-tree-image(nodetype-missed_calls) {
+  list-style-image: url("chrome://zap/skin/missed.png");
+}
+
+#sidebar-tree > treechildren::-moz-tree-image(nodetype-received_calls) {
+  list-style-image: url("chrome://zap/skin/inbound.png");
+}
+
+#sidebar-tree > treechildren::-moz-tree-image(nodetype-dialled_calls) {
+  list-style-image: url("chrome://zap/skin/outbound.png");
+}
+
+#sidebar-tree > treechildren::-moz-tree-image(nodetype-config) {
   list-style-image: url("chrome://zap/skin/config.png");
 }
 
-#sidebar > treechildren::-moz-tree-image(nodetype-contact) {
+#sidebar-tree > treechildren::-moz-tree-image(nodetype-contact) {
   list-style-image: url("chrome://zap/skin/contact.png");
+}
+
+/* current call styles */
+#sidebar-tree > treechildren::-moz-tree-image(direction-inbound) {
+  list-style-image: url("chrome://zap/skin/inbound.png");
+}
+
+#sidebar-tree > treechildren::-moz-tree-image(direction-outbound) {
+  list-style-image: url("chrome://zap/skin/outbound.png");
 }
 
 

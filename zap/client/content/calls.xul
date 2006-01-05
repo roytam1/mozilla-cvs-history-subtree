@@ -63,7 +63,7 @@
       wCallsConditions = document.getElementById("calls-conditions");
       wListTitle = document.getElementById("list-title");
       wCallsTree.database.AddDataSource(parent.wCallsDS);
-
+      wCallsTree.database.AddDataSource(parent.wGlobalEphemeralDS);
       // set filter based on uri parameter:
       var filterpar = /\?filter=(\w+)/(document.documentURI);
       filter(filterpar ? filterpar[1] : "all");

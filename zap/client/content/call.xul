@@ -54,11 +54,13 @@
   <script type="application/x-javascript">
   <![CDATA[
     function initPage() {
-      // initialize with 'resource' uri parameter:
+      // initialize with 'resource' uri parameter or sidebar resource:
       var resourcepar = /\?resource=(.+)/(document.documentURI);
-      dump("uri="+document.documentURI+" resourcepar = "+resourcepar+"\n");
-      if (!resourcepar) return;
-      initCallForm(parent.wRDF.GetResource(unescape(resourcepar[1])));
+      var resource = resourcepar ? 
+                     parent.wRDF.GetResource(unescape(resourcepar[1])) :
+                     parent.getSelectedSidebarResource();
+      if (!resource) return;
+      initCallForm(resource);
     }
   ]]>
   </script>

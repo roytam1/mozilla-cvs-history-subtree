@@ -115,19 +115,8 @@
       <grid>
         <columns><column/><column flex="1"/><column/></columns>
         <rows>
-          <irow>
-            <label control="urn:mozilla:zap:max_recent_calls" 
-                   value="Recent calls history size:"/>
-            <textbox type="zap-formwidget" id="urn:mozilla:zap:max_recent_calls"
-                     validator="makeNumberValidator(0, 1000)"/>
-            <info>
-              <description>
-                Maximum number of inactive calls to keep in the recent
-                calls history. Older calls can still be accessed through the 
-                logs.
-              </description>
-            </info>
-          </irow>
+          <row>
+          </row>
         </rows>
       </grid>
     </cgroup>

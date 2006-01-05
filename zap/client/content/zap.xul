@@ -152,14 +152,19 @@
   <!-- Main content box -->
   <hbox flex="1">
     <vbox id="box_sidebar"  minwidth="100" width="200" persist="width">
-      <tree id="sidebar" flex="1" hidecolumnpicker="true" 
+      <tree id="sidebar-tree" 
+            flex="1" hidecolumnpicker="true" 
             seltype="single"
             datasources="rdf:null"
             ref="urn:mozilla:zap:sidebar"
             onselect="sidebarSelectionChange()"
             flags="dont-build-content">
         <treecols>
-          <treecol id="sidebar_col_name" primary="true" hideheader="true" flex="1" />
+          <treecol id="sidebar_col_name" primary="true" 
+                   hideheader="true" flex="1" 
+                   sortActive="true"
+                   sortDirection="ascending"
+                   sort="?sidebarindex" />
         </treecols>
         <template>
           <rule><!-- GENERIC SIDEBAR NODE -->
@@ -178,15 +183,24 @@
                        predicate="urn:mozilla:zap:is_registered"
                        object="?registered"/>
               <binding subject="?node"
-                       predicate="urn:mozilla:zap:is_active"
+                       predicate="urn:mozilla:zap:active"
                        object="?active"/>
+              <binding subject="?node"
+                       predicate="urn:mozilla:zap:sidebarindex"
+                       object="?sidebarindex"/>
+              <binding subject="?node"
+                       predicate="urn:mozilla:zap:direction"
+                       object="?direction"/>
+              <binding subject="?node"
+                       predicate="urn:mozilla:zap:status"
+                       object="?status"/>
             </bindings>
             <action>
               <treechildren>
                 <treeitem uri="?node">
-                  <treerow>
+                  <treerow properties="active-?active">
                     <treecell label="?name"
-                              properties="nodetype-?nodetype registered-?registered active-?active" />
+                              properties="nodetype-?nodetype registered-?registered direction-?direction status-?status" />
                   </treerow>
                 </treeitem>
               </treechildren>
@@ -196,7 +210,7 @@
       </tree>
     </vbox>
 
-   <splitter id="sidebar-splitter" collapse="before" persist="state"/>
+  <splitter id="sidebar-splitter" collapse="before" persist="state"/>
 
     <vbox flex="1">
       <box id="box_interact" flex="2" minwidth="200" minheight="200">
