@@ -2296,6 +2296,11 @@ EscapeElementValue(JSContext *cx, JSStringBuffer *sb, JSString *str)
             newlength += 3;
         else if (c == '&')
             newlength += 4;
+
+        if (newlength < length) {
+            JS_ReportOutOfMemory(cx);
+            return NULL;
+        }
     }
     if ((sb && STRING_BUFFER_OFFSET(sb) != 0) || newlength > length) {
         JSStringBuffer localSB;
@@ -2303,7 +2308,7 @@ EscapeElementValue(JSContext *cx, JSStringBuffer *sb, JSString *str)
             sb = &localSB;
             js_InitStringBuffer(sb);
         }
-        if (!sb->grow(sb, STRING_BUFFER_OFFSET(sb) + newlength)) {
+        if (!sb->grow(sb, newlength)) {
             JS_ReportOutOfMemory(cx);
             return NULL;
         }
@@ -2346,6 +2351,11 @@ EscapeAttributeValue(JSContext *cx, JSStringBuffer *sb, JSString *str)
             newlength += 3;
         else if (c == '&' || c == '\n' || c == '\r' || c == '\t')
             newlength += 4;
+
+        if (newlength < length) {
+            JS_ReportOutOfMemory(cx);
+            return NULL;
+        }
     }
     if ((sb && STRING_BUFFER_OFFSET(sb) != 0) || newlength > length) {
         JSStringBuffer localSB;
@@ -2353,7 +2363,7 @@ EscapeAttributeValue(JSContext *cx, JSStringBuffer *sb, JSString *str)
             sb = &localSB;
             js_InitStringBuffer(sb);
         }
-        if (!sb->grow(sb, STRING_BUFFER_OFFSET(sb) + newlength)) {
+        if (!sb->grow(sb, newlength)) {
             JS_ReportOutOfMemory(cx);
             return NULL;
         }
