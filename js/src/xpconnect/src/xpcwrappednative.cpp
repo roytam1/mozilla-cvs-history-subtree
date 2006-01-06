@@ -1,4 +1,5 @@
 /* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ * vim: set ts=8 sw=4 et tw=78:
  *
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -273,26 +274,38 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
     // It is possible that we will then end up forwarding this entire call
     // to this same function but with a different scope.
 
-    nsCOMPtr<nsIClassInfo> info(do_QueryInterface(identity));
-#ifdef XPC_IDISPATCH_SUPPORT
-    // If this is an IDispatch wrapper and it didn't give us a class info
-    // we'll provide a default one
-    if(isIDispatch && !info)
-    {
-        info = already_AddRefed<nsIClassInfo>(XPCIDispatchClassInfo::GetSingleton());
-    }
-#endif
-
     // If we are making a wrapper for the nsIClassInfo interface then
     // We *don't* want to have it use the prototype meant for instances
     // of that class.
     JSBool isClassInfo = Interface->GetIID()->Equals(NS_GET_IID(nsIClassInfo));
 
+    nsCOMPtr<nsIClassInfo> info;
+
+    if(!isClassInfo)
+        info = do_QueryInterface(identity);
+
+#ifdef XPC_IDISPATCH_SUPPORT
+    // If this is an IDispatch wrapper and it didn't give us a class info
+    // we'll provide a default one
+    if(isIDispatch && !info)
+    {
+        info = dont_AddRef(NS_STATIC_CAST(nsIClassInfo*,
+                                          XPCIDispatchClassInfo::GetSingleton()));
+    }
+#endif
+
     XPCNativeScriptableCreateInfo sciProto;
     XPCNativeScriptableCreateInfo sciWrapper;
 
-    if(NS_FAILED(GatherScriptableCreateInfo(identity,
-                                            isClassInfo ? nsnull : info.get(),
+    // Gather scriptable create info if we are wrapping something
+    // other than an nsIClassInfo object. We need to not do this for
+    // nsIClassInfo objects because often nsIClassInfo implementations
+    // are also nsIXPCScriptable helper implmentations, but the helper
+    // code is obviously intended for the implementation of the class
+    // described by the nsIClassInfo, not for the class info object
+    // itself.
+    if(!isClassInfo &&
+       NS_FAILED(GatherScriptableCreateInfo(identity, info.get(),
                                             &sciProto, &sciWrapper)))
         return NS_ERROR_FAILURE;
 
