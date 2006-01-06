@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Mozilla embedding code.
+ * The Original Code is Java XPCOM Bindings.
  *
  * The Initial Developer of the Original Code is
- * Benjamin Smedberg <benjamin@smedbergs.us>
- *
+ * IBM Corporation.
  * Portions created by the Initial Developer are Copyright (C) 2005
- * the Initial Developer. All Rights Reserved.
+ * IBM Corporation. All Rights Reserved.
  *
  * Contributor(s):
+ *   Javier Pedemonte (jhpedemonte@gmail.com)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -35,13 +35,31 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsXULAppAPI.h"
+#include "nsJavaInterfaces.h"
 
-void xxxNeverCalledXUL()
+
+void XXXNeverCalled_javaxpcom()
 {
-  XRE_main(0, nsnull, nsnull);
-  XRE_GetFileFromPath(nsnull, nsnull);
-  XRE_GetStaticComponents(nsnull, nsnull);
-  XRE_InitEmbedding(nsnull, nsnull, nsnull, nsnull, 0);
-  XRE_TermEmbedding();
+  GRE_NATIVE(initEmbedding) (nsnull, nsnull, nsnull, nsnull, nsnull);
+
+  GRE_NATIVE(termEmbedding) (nsnull, nsnull);
+
+  XPCOM_NATIVE(initXPCOM) (nsnull, nsnull, nsnull, nsnull);
+
+  XPCOM_NATIVE(shutdownXPCOM) (nsnull, nsnull, nsnull);
+
+  XPCOM_NATIVE(newLocalFile) (nsnull, nsnull, nsnull, nsnull);
+
+  XPCOM_NATIVE(getComponentManager) (nsnull, nsnull);
+
+  XPCOM_NATIVE(getComponentRegistrar) (nsnull, nsnull);
+
+  XPCOM_NATIVE(getServiceManager) (nsnull, nsnull);
+
+  JAVAPROXY_NATIVE(callXPCOMMethod) (nsnull, nsnull, nsnull, nsnull, nsnull);
+
+  JAVAPROXY_NATIVE(finalizeProxy) (nsnull, nsnull, nsnull);
+
+  JAVAPROXY_NATIVE(isSameXPCOMObject) (nsnull, nsnull, nsnull, nsnull);
 }
+

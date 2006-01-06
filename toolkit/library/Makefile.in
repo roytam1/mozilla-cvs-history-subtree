@@ -279,6 +279,20 @@ endif
 
 LOCAL_INCLUDES += -I$(topsrcdir)/config
 
+ifdef MOZ_JAVAXPCOM
+LOCAL_INCLUDES += \
+	-I$(topsrcdir)/extensions/java/xpcom/src \
+	-I$(JAVA_INCLUDE_PATH) \
+	$(NULL)
+ifeq ($(OS_ARCH),WINNT)
+CPPSRCS += dlldeps-javaxpcom.cpp
+LOCAL_INCLUDES += -I$(JAVA_INCLUDE_PATH)/win32
+else
+LOCAL_INCLUDES += -I$(JAVA_INCLUDE_PATH)/linux
+endif
+STATIC_LIBS += javaxpcom
+endif
+
 include $(topsrcdir)/config/rules.mk
 
 EXTRA_DSO_LDOPTS += $(EXTRA_DSO_LIBS)
@@ -354,3 +368,10 @@ dlldeps.cpp: $(topsrcdir)/xpcom/build/dlldeps.cpp
 
 dlldeps-obs.cpp: $(topsrcdir)/xpcom/obsolete/dlldeps-obs.cpp
 	$(INSTALL) $^ .
+
+ifdef MOZ_JAVAXPCOM
+export:: dlldeps-javaxpcom.cpp
+
+dlldeps-javaxpcom.cpp: $(topsrcdir)/extensions/java/xpcom/src/dlldeps-javaxpcom.cpp
+	$(INSTALL) $^ .
+endif

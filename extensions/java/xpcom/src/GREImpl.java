@@ -35,48 +35,30 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-package org.mozilla.xpcom;
+package org.mozilla.xpcom.internal;
 
 import java.io.*;
+import org.mozilla.xpcom.*;
 
-/**
- *  Provides access to functions that are used to embed Mozilla's Gecko layer.
- */
-public final class GeckoEmbed {
 
-  /**
-   * Initializes the Gecko embedding layer. You <i>must</i>
-   * call this method before proceeding to use Gecko. This function ensures
-   * XPCOM is started, creates the component registry if necessary and
-   * starts global services.
-   *
-   * @param aMozBinDirectory The Gecko directory containing the component
-   *                         registry and runtime libraries;
-   *                         or use <code>null</code> to use the working
-   *                         directory.
-   * @param aAppFileLocProvider The object to be used by Gecko that specifies
-   *                         to Gecko where to find profiles, the component
-   *                         registry preferences and so on; or use
-   *                         <code>null</code> for the default behaviour.
-   *
-   * @exception XPCOMException  if a failure occurred during initialization
-   */
-  public static native
-  void initEmbedding(File aMozBinDirectory,
-                     AppFileLocProvider aAppFileLocProvider);
+public class GREImpl implements IGRE {
 
-  /**
-   * Terminates the Gecko embedding layer. Call this function during shutdown to
-   * ensure that global services are unloaded, files are closed and
-   * XPCOM is shutdown.
-   * <p>
-   * NOTE: Release any XPCOM objects within Gecko that you may be holding a
-   *       reference to before calling this function.
-   * </p>
-   *
-   * @exception XPCOMException  if a failure occurred during termination
-   */
-  public static native
-  void termEmbedding();
+  public void initEmbedding(File aLibXULDirectory, File aAppDirectory,
+                            IAppFileLocProvider aAppDirProvider) {
+    // load JNI library
+    String path = "";
+    if (aLibXULDirectory != null) {
+      path = aLibXULDirectory + File.separator;
+    }
+    System.load(path + System.mapLibraryName("javaxpcomglue"));
+
+    initEmbeddingNative(aLibXULDirectory, aAppDirectory, aAppDirProvider);
+  }
+
+  public native void initEmbeddingNative(File aLibXULDirectory,
+          File aAppDirectory, IAppFileLocProvider aAppDirProvider);
+
+  public native void termEmbedding();
 
 }
+

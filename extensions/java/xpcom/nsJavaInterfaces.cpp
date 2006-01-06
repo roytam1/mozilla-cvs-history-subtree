@@ -35,10 +35,10 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#include "nsJavaInterfaces.h"
 #include "nsJavaWrapper.h"
 #include "nsJavaXPCOMBindingUtils.h"
 #include "nsJavaXPTCStub.h"
-#include "nsEmbedAPI.h"
 #include "nsIComponentRegistrar.h"
 #include "nsString.h"
 #include "nsISimpleEnumerator.h"
@@ -48,52 +48,48 @@
 #include "nsArray.h"
 #include "nsAppFileLocProviderProxy.h"
 #include "nsIEventQueueService.h"
-
-#define GECKO_NATIVE(func) Java_org_mozilla_xpcom_GeckoEmbed_##func
-#define XPCOM_NATIVE(func) Java_org_mozilla_xpcom_XPCOM_##func
+#include "nsXULAppAPI.h"
+#include "nsILocalFile.h"
 
 
 nsresult
-InitEmbedding_Impl(JNIEnv* env, jobject aMozBinDirectory,
-                   jobject aAppFileLocProvider)
+InitEmbedding_Impl(JNIEnv* env, jobject aLibXULDirectory,
+                   jobject aAppDirectory, jobject aAppDirProvider)
 {
   nsresult rv;
   if (!InitializeJavaGlobals(env))
     return NS_ERROR_FAILURE;
 
   // create an nsILocalFile from given java.io.File
-  nsCOMPtr<nsILocalFile> directory;
-  if (aMozBinDirectory) {
-    rv = File_to_nsILocalFile(env, aMozBinDirectory, getter_AddRefs(directory));
+  nsCOMPtr<nsILocalFile> libXULDir;
+  if (aLibXULDirectory) {
+    rv = File_to_nsILocalFile(env, aLibXULDirectory, getter_AddRefs(libXULDir));
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
+  nsCOMPtr<nsILocalFile> appDir;
+  if (aAppDirectory) {
+    rv = File_to_nsILocalFile(env, aAppDirectory, getter_AddRefs(appDir));
     NS_ENSURE_SUCCESS(rv, rv);
   }
 
   // create nsAppFileLocProviderProxy from given Java object
   nsCOMPtr<nsIDirectoryServiceProvider> provider;
-  if (aAppFileLocProvider) {
-    rv = NS_NewAppFileLocProviderProxy(aAppFileLocProvider,
+  if (aAppDirProvider) {
+    rv = NS_NewAppFileLocProviderProxy(aAppDirProvider,
                                        getter_AddRefs(provider));
     NS_ENSURE_SUCCESS(rv, rv);
   }
 
-  // init Gecko
-  rv = NS_InitEmbedding(directory, provider);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  // init Event Queue
-  nsCOMPtr<nsIEventQueueService>
-             eventQService(do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv));
-  NS_ENSURE_SUCCESS(rv, rv);
-  rv = eventQService->CreateThreadEventQueue();
-
-  return rv;
+  // init libXUL
+  return XRE_InitEmbedding(libXULDir, appDir, provider, nsnull, 0);
 }
 
-extern "C" JX_EXPORT void JNICALL
-GECKO_NATIVE(initEmbedding) (JNIEnv* env, jclass, jobject aMozBinDirectory,
-                             jobject aAppFileLocProvider)
+extern "C" NS_EXPORT void
+GRE_NATIVE(initEmbedding) (JNIEnv* env, jobject, jobject aLibXULDirectory,
+                           jobject aAppDirectory, jobject aAppDirProvider)
 {
-  nsresult rv = InitEmbedding_Impl(env, aMozBinDirectory, aAppFileLocProvider);
+  nsresult rv = InitEmbedding_Impl(env, aLibXULDirectory, aAppDirectory,
+                                   aAppDirProvider);
 
   if (NS_FAILED(rv)) {
     ThrowException(env, rv, "Failure in initEmbedding");
@@ -101,16 +97,14 @@ GECKO_NATIVE(initEmbedding) (JNIEnv* env, jclass, jobject aMozBinDirectory,
   }
 }
 
-extern "C" JX_EXPORT void JNICALL
-GECKO_NATIVE(termEmbedding) (JNIEnv *env, jclass)
+extern "C" NS_EXPORT void
+GRE_NATIVE(termEmbedding) (JNIEnv *env, jobject)
 {
-  // Free globals before calling NS_TermEmbedding(), since we need some
+  // Free globals before calling XRE_TermEmbedding(), since we need some
   // XPCOM services.
   FreeJavaGlobals(env);
 
-  nsresult rv = NS_TermEmbedding();
-  if (NS_FAILED(rv))
-    ThrowException(env, rv, "NS_TermEmbedding failed");
+  XRE_TermEmbedding();
 }
 
 nsresult
@@ -137,30 +131,27 @@ InitXPCOM_Impl(JNIEnv* env, jobject aMozBinDirectory,
   }
 
   // init XPCOM
-  nsIServiceManager* servMan = nsnull;
-  rv = NS_InitXPCOM2(&servMan, directory, provider);
+  nsCOMPtr<nsIServiceManager> servMan;
+  rv = NS_InitXPCOM2(getter_AddRefs(servMan), directory, provider);
   if (provider) {
     delete provider;
   }
   NS_ENSURE_SUCCESS(rv, rv);
 
   // init Event Queue
-  nsCOMPtr<nsIEventQueueService>
-             eventQService(do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv));
+  nsCOMPtr<nsIEventQueueService> eventQService =
+            do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
   rv = eventQService->CreateThreadEventQueue();
   NS_ENSURE_SUCCESS(rv, rv);
 
   // create Java proxy for service manager returned by NS_InitXPCOM2
-  rv = CreateJavaProxy(env, servMan, NS_GET_IID(nsIServiceManager),
-                       aResult);
-  NS_RELEASE(servMan);   // Java proxy has owning ref
-
-  return rv;
+  return GetNewOrUsedJavaObject(env, servMan, NS_GET_IID(nsIServiceManager),
+                                aResult);
 }
 
-extern "C" JX_EXPORT jobject JNICALL
-XPCOM_NATIVE(initXPCOM) (JNIEnv* env, jclass, jobject aMozBinDirectory,
+extern "C" NS_EXPORT jobject
+XPCOM_NATIVE(initXPCOM) (JNIEnv* env, jobject, jobject aMozBinDirectory,
                          jobject aAppFileLocProvider)
 {
   jobject servMan;
@@ -174,24 +165,19 @@ XPCOM_NATIVE(initXPCOM) (JNIEnv* env, jclass, jobject aMozBinDirectory,
   return nsnull;
 }
 
-extern "C" JX_EXPORT void JNICALL
-XPCOM_NATIVE(shutdownXPCOM) (JNIEnv *env, jclass, jobject aServMgr)
+extern "C" NS_EXPORT void
+XPCOM_NATIVE(shutdownXPCOM) (JNIEnv *env, jobject, jobject aServMgr)
 {
   nsresult rv;
   nsCOMPtr<nsIServiceManager> servMgr;
   if (aServMgr) {
     // Get native XPCOM instance
-    void* xpcom_obj;
-    rv = GetXPCOMInstFromProxy(env, aServMgr, &xpcom_obj);
+    rv = GetNewOrUsedXPCOMObject(env, aServMgr, NS_GET_IID(nsIServiceManager),
+                                 getter_AddRefs(servMgr), nsnull);
     NS_ASSERTION(NS_SUCCEEDED(rv), "Failed to get XPCOM obj for ServiceMgr.");
 
     // Even if we failed to get the matching xpcom object, we don't abort this
     // function.  Just call NS_ShutdownXPCOM with a null service manager.
-
-    if (NS_SUCCEEDED(rv)) {
-      JavaXPCOMInstance* inst = NS_STATIC_CAST(JavaXPCOMInstance*, xpcom_obj);
-      servMgr = do_QueryInterface(inst->GetInstance());
-    }
   }
 
   // Free globals before calling NS_ShutdownXPCOM(), since we need some
@@ -203,8 +189,8 @@ XPCOM_NATIVE(shutdownXPCOM) (JNIEnv *env, jclass, jobject aServMgr)
     ThrowException(env, rv, "NS_ShutdownXPCOM failed");
 }
 
-extern "C" JX_EXPORT jobject JNICALL
-XPCOM_NATIVE(newLocalFile) (JNIEnv *env, jclass, jstring aPath,
+extern "C" NS_EXPORT jobject
+XPCOM_NATIVE(newLocalFile) (JNIEnv *env, jobject, jstring aPath,
                             jboolean aFollowLinks)
 {
   // Create a Mozilla string from the jstring
@@ -219,13 +205,13 @@ XPCOM_NATIVE(newLocalFile) (JNIEnv *env, jclass, jstring aPath,
   env->ReleaseStringChars(aPath, buf);
 
   // Make call to given function
-  nsILocalFile* file = nsnull;
-  nsresult rv = NS_NewLocalFile(path_str, aFollowLinks, &file);
+  nsCOMPtr<nsILocalFile> file;
+  nsresult rv = NS_NewLocalFile(path_str, aFollowLinks, getter_AddRefs(file));
 
   if (NS_SUCCEEDED(rv)) {
     jobject javaProxy;
-    rv = CreateJavaProxy(env, file, NS_GET_IID(nsILocalFile), &javaProxy);
-    NS_RELEASE(file);   // JavaXPCOMInstance has owning ref
+    rv = GetNewOrUsedJavaObject(env, file, NS_GET_IID(nsILocalFile),
+                                &javaProxy);
     if (NS_SUCCEEDED(rv))
       return javaProxy;
   }
@@ -234,17 +220,17 @@ XPCOM_NATIVE(newLocalFile) (JNIEnv *env, jclass, jstring aPath,
   return nsnull;
 }
 
-extern "C" JX_EXPORT jobject JNICALL
-XPCOM_NATIVE(getComponentManager) (JNIEnv *env, jclass)
+extern "C" NS_EXPORT jobject
+XPCOM_NATIVE(getComponentManager) (JNIEnv *env, jobject)
 {
   // Call XPCOM method
-  nsIComponentManager* cm = nsnull;
-  nsresult rv = NS_GetComponentManager(&cm);
+  nsCOMPtr<nsIComponentManager> cm;
+  nsresult rv = NS_GetComponentManager(getter_AddRefs(cm));
 
   if (NS_SUCCEEDED(rv)) {
     jobject javaProxy;
-    rv = CreateJavaProxy(env, cm, NS_GET_IID(nsIComponentManager), &javaProxy);
-    NS_RELEASE(cm);   // JavaXPCOMInstance has owning ref
+    rv = GetNewOrUsedJavaObject(env, cm, NS_GET_IID(nsIComponentManager),
+                                &javaProxy);
     if (NS_SUCCEEDED(rv))
       return javaProxy;
   }
@@ -253,17 +239,17 @@ XPCOM_NATIVE(getComponentManager) (JNIEnv *env, jclass)
   return nsnull;
 }
 
-extern "C" JX_EXPORT jobject JNICALL
-XPCOM_NATIVE(getComponentRegistrar) (JNIEnv *env, jclass)
+extern "C" NS_EXPORT jobject
+XPCOM_NATIVE(getComponentRegistrar) (JNIEnv *env, jobject)
 {
   // Call XPCOM method
-  nsIComponentRegistrar* cr = nsnull;
-  nsresult rv = NS_GetComponentRegistrar(&cr);
+  nsCOMPtr<nsIComponentRegistrar> cr;
+  nsresult rv = NS_GetComponentRegistrar(getter_AddRefs(cr));
 
   if (NS_SUCCEEDED(rv)) {
     jobject javaProxy;
-    rv = CreateJavaProxy(env, cr, NS_GET_IID(nsIComponentRegistrar), &javaProxy);
-    NS_RELEASE(cr);   // JavaXPCOMInstance has owning ref
+    rv = GetNewOrUsedJavaObject(env, cr, NS_GET_IID(nsIComponentRegistrar),
+                                &javaProxy);
     if (NS_SUCCEEDED(rv))
       return javaProxy;
   }
@@ -272,17 +258,17 @@ XPCOM_NATIVE(getComponentRegistrar) (JNIEnv *env, jclass)
   return nsnull;
 }
 
-extern "C" JX_EXPORT jobject JNICALL
-XPCOM_NATIVE(getServiceManager) (JNIEnv *env, jclass)
+extern "C" NS_EXPORT jobject
+XPCOM_NATIVE(getServiceManager) (JNIEnv *env, jobject)
 {
   // Call XPCOM method
-  nsIServiceManager* sm = nsnull;
-  nsresult rv = NS_GetServiceManager(&sm);
+  nsCOMPtr<nsIServiceManager> sm;
+  nsresult rv = NS_GetServiceManager(getter_AddRefs(sm));
 
   if (NS_SUCCEEDED(rv)) {
     jobject javaProxy;
-    rv = CreateJavaProxy(env, sm, NS_GET_IID(nsIServiceManager), &javaProxy);
-    NS_RELEASE(sm);   // JavaXPCOMInstance has owning ref
+    rv = GetNewOrUsedJavaObject(env, sm, NS_GET_IID(nsIServiceManager),
+                                &javaProxy);
     if (NS_SUCCEEDED(rv))
       return javaProxy;
   }

@@ -270,6 +270,10 @@ ifdef MOZ_JSDEBUGGER
 tier_50_dirs += js/jsd
 endif
 
+ifdef MOZ_JAVAXPCOM
+tier_50_dirs += extensions/java
+endif
+
 ifdef MOZ_ENABLE_LIBXUL
 tier_50_dirs += \
 		toolkit/library \

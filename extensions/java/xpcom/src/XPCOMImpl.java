@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Mozilla embedding code.
+ * The Original Code is Java XPCOM Bindings.
  *
  * The Initial Developer of the Original Code is
- * Benjamin Smedberg <benjamin@smedbergs.us>
- *
- * Portions created by the Initial Developer are Copyright (C) 2005
- * the Initial Developer. All Rights Reserved.
+ * IBM Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 2004
+ * IBM Corporation. All Rights Reserved.
  *
  * Contributor(s):
+ *   Javier Pedemonte (jhpedemonte@gmail.com)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -35,13 +35,38 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsXULAppAPI.h"
+package org.mozilla.xpcom.internal;
 
-void xxxNeverCalledXUL()
-{
-  XRE_main(0, nsnull, nsnull);
-  XRE_GetFileFromPath(nsnull, nsnull);
-  XRE_GetStaticComponents(nsnull, nsnull);
-  XRE_InitEmbedding(nsnull, nsnull, nsnull, nsnull, 0);
-  XRE_TermEmbedding();
+import java.io.*;
+import org.mozilla.xpcom.*;
+
+
+public class XPCOMImpl implements IXPCOM {
+
+  public nsIServiceManager initXPCOM(File aMozBinDirectory,
+          IAppFileLocProvider aAppFileLocProvider) {
+    // load JNI library
+    String path = "";
+    if (aMozBinDirectory != null) {
+      path = aMozBinDirectory + File.separator;
+    }
+    System.load(path + System.mapLibraryName("javaxpcomglue"));
+
+    return initXPCOMNative(aMozBinDirectory, aAppFileLocProvider);
+  }
+
+  public native nsIServiceManager initXPCOMNative(File aMozBinDirectory,
+          IAppFileLocProvider aAppFileLocProvider);
+
+  public native void shutdownXPCOM(nsIServiceManager aServMgr);
+
+  public native nsIComponentManager getComponentManager();
+
+  public native nsIComponentRegistrar getComponentRegistrar();
+
+  public native nsIServiceManager getServiceManager();
+
+  public native nsILocalFile newLocalFile(String aPath, boolean aFollowLinks);
+
 }
+

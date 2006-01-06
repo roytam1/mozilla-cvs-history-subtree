@@ -47,6 +47,7 @@
 #include "nsHashSets.h"
 #include "nsIWeakReference.h"
 #include <stdio.h>
+#include <ctype.h>
 
 #ifdef WIN32
 #define snprintf  _snprintf
@@ -106,7 +107,7 @@ public:
 
     } else {
 
-      // In Javaconnect, we handle weak references internally; no need for the
+      // In JavaXPCOM, we handle weak references internally; no need for the
       // |nsIWeakReference| interface.  So just return |nsISupports|.
       if (iid->Equals(NS_GET_IID(nsIWeakReference))) {
         *aResult = (char*) nsMemory::Clone(isupp_str, sizeof(isupp_str));
@@ -772,7 +773,7 @@ public:
         break;
 
       case nsXPTType::T_VOID:
-        rv = out->Write("int", 3, &count);
+        rv = out->Write("long", 4, &count);
         break;
 
       case nsXPTType::T_ARRAY:

@@ -43,6 +43,7 @@
 #include "nsString.h"
 #include "nsString.h"
 #include "nsCRT.h"
+#include "nsServiceManagerUtils.h"
 
 
 nsJavaXPTCStub::nsJavaXPTCStub(jobject aJavaObject, nsIInterfaceInfo *aIInfo)
@@ -210,6 +211,8 @@ nsJavaXPTCStub::DeleteStrongRef()
 NS_IMETHODIMP
 nsJavaXPTCStub::QueryInterface(const nsID &aIID, void **aInstancePtr)
 {
+  nsresult rv;
+
   LOG(("JavaStub::QueryInterface()\n"));
   *aInstancePtr = nsnull;
   nsJavaXPTCStub *master = mMaster ? mMaster : this;
@@ -290,8 +293,9 @@ nsJavaXPTCStub::QueryInterface(const nsID &aIID, void **aInstancePtr)
 
   // Get interface info for new java object
   nsCOMPtr<nsIInterfaceInfoManager> iim = XPTI_GetInterfaceInfoManager();
+
   nsCOMPtr<nsIInterfaceInfo> iinfo;
-  nsresult rv = iim->GetInfoForIID(&aIID, getter_AddRefs(iinfo));
+  rv = iim->GetInfoForIID(&aIID, getter_AddRefs(iinfo));
   if (NS_FAILED(rv))
     return rv;
 
@@ -459,24 +463,29 @@ nsJavaXPTCStub::CallMethod(PRUint16 aMethodIndex,
       switch (retvalInfo->GetType().TagPart())
       {
         case nsXPTType::T_I8:
-        case nsXPTType::T_U8:
           retval.b = env->CallByteMethodA(javaObject, mid, java_params);
           break;
 
         case nsXPTType::T_I16:
-        case nsXPTType::T_U16:
+        case nsXPTType::T_U8:
           retval.s = env->CallShortMethodA(javaObject, mid, java_params);
           break;
 
         case nsXPTType::T_I32:
-        case nsXPTType::T_U32:
+        case nsXPTType::T_U16:
           retval.i = env->CallIntMethodA(javaObject, mid, java_params);
+          break;
+
+        case nsXPTType::T_I64:
+        case nsXPTType::T_U32:
+          retval.j = env->CallLongMethodA(javaObject, mid, java_params);
           break;
 
         case nsXPTType::T_FLOAT:
           retval.f = env->CallFloatMethodA(javaObject, mid, java_params);
           break;
 
+        case nsXPTType::T_U64:
         case nsXPTType::T_DOUBLE:
           retval.d = env->CallDoubleMethodA(javaObject, mid, java_params);
           break;
@@ -503,7 +512,7 @@ nsJavaXPTCStub::CallMethod(PRUint16 aMethodIndex,
           break;
 
         case nsXPTType::T_VOID:
-          retval.i = env->CallIntMethodA(javaObject, mid, java_params);
+          retval.j = env->CallLongMethodA(javaObject, mid, java_params);
           break;
 
         default:
@@ -892,6 +901,7 @@ nsJavaXPTCStub::SetupJavaParams(const nsXPTParamInfo &aParamInfo,
       // get name of interface
       char* iface_name = nsnull;
       nsCOMPtr<nsIInterfaceInfoManager> iim = XPTI_GetInterfaceInfoManager();
+
       rv = iim->GetNameForIID(&iid, &iface_name);
       if (NS_FAILED(rv) || !iface_name)
         break;
@@ -1011,26 +1021,26 @@ nsJavaXPTCStub::SetupJavaParams(const nsXPTParamInfo &aParamInfo,
     }
     break;
 
-    // Pass the 'void*' address as an integer
+    // Pass the 'void*' address as a long
     case nsXPTType::T_VOID:
     {
       if (!aParamInfo.IsOut()) {  // 'in'
-        aJValue.i = (jint) aVariant.val.p;
-        aMethodSig.Append('I');
+        aJValue.j = (jlong) aVariant.val.p;
+        aMethodSig.Append('J');
       } else {  // 'inout' & 'out'
         if (aVariant.val.p) {
-          jintArray array = env->NewIntArray(1);
+          jlongArray array = env->NewLongArray(1);
           if (!array) {
             rv = NS_ERROR_OUT_OF_MEMORY;
             break;
           }
 
-          env->SetIntArrayRegion(array, 0, 1, (jint*) aVariant.val.p);
+          env->SetLongArrayRegion(array, 0, 1, (jlong*) aVariant.val.p);
           aJValue.l = array;
         } else {
           aJValue.l = nsnull;
         }
-        aMethodSig.AppendLiteral("[I");
+        aMethodSig.AppendLiteral("[J");
       }
     }
     break;
@@ -1119,6 +1129,7 @@ nsJavaXPTCStub::GetRetvalSig(const nsXPTParamInfo* aParamInfo,
       // get name of interface
       char* iface_name = nsnull;
       nsCOMPtr<nsIInterfaceInfoManager> iim = XPTI_GetInterfaceInfoManager();
+
       rv = iim->GetNameForIID(&iid, &iface_name);
       if (NS_FAILED(rv) || !iface_name)
         break;
@@ -1135,7 +1146,7 @@ nsJavaXPTCStub::GetRetvalSig(const nsXPTParamInfo* aParamInfo,
       break;
 
     case nsXPTType::T_VOID:
-      aRetvalSig.Append('I');
+      aRetvalSig.Append('J');
       break;
 
     case nsXPTType::T_ARRAY:
@@ -1462,7 +1473,7 @@ nsJavaXPTCStub::FinalizeJavaParams(const nsXPTParamInfo &aParamInfo,
         java_obj = env->GetObjectArrayElement((jobjectArray) aJValue.l, 0);
       }
 
-      nsISupports** variant = NS_STATIC_CAST(nsISupports**, aVariant.val.p);
+      nsISupports* xpcom_obj = nsnull;
       if (java_obj) {
         // Get IID for this param
         nsID iid;
@@ -1483,7 +1494,6 @@ nsJavaXPTCStub::FinalizeJavaParams(const nsXPTParamInfo &aParamInfo,
           isWeakRef = PR_FALSE;
         }
 
-        nsISupports* xpcom_obj;
         PRBool isXPTCStub;
         rv = GetNewOrUsedXPCOMObject(env, java_obj, iid, &xpcom_obj,
                                      &isXPTCStub);
@@ -1519,25 +1529,21 @@ nsJavaXPTCStub::FinalizeJavaParams(const nsXPTParamInfo &aParamInfo,
               xpcom_obj = nsnull;
             }
           }
-
-        } else if (!isXPTCStub) { // if is native XPCOM object
-          xpcom_obj->Release();
         }
-
-//        } else if (isXPTCStub) {
-          // nothing to do
-
-        if (*variant && !aParamInfo.IsRetval()) {
-          NS_RELEASE(*variant);
-        }
-        *variant = xpcom_obj;
-      } else {
-        // If were passed in an object, release it now, and set to null.
-        if (*variant && !aParamInfo.IsRetval()) {
-          NS_RELEASE(*variant);
-        }
-        *variant = nsnull;
       }
+
+      // For 'inout' params, if the resulting xpcom value is different than the
+      // one passed in, then we must release the incoming xpcom value.
+      nsISupports** variant = NS_STATIC_CAST(nsISupports**, aVariant.val.p);
+      if (aParamInfo.IsIn() && *variant) {
+        nsCOMPtr<nsISupports> in = do_QueryInterface(*variant);
+        nsCOMPtr<nsISupports> out = do_QueryInterface(xpcom_obj);
+        if (in != out) {
+          NS_RELEASE(*variant);
+        }
+      }
+
+      *variant = xpcom_obj;
     }
     break;
 
@@ -1566,7 +1572,7 @@ nsJavaXPTCStub::FinalizeJavaParams(const nsXPTParamInfo &aParamInfo,
           string->Assign(wchar_ptr);
         } else {
           // If the argument that was passed in was null, then we need to
-          // create a new nsID.
+          // create a new string.
           nsString* embedStr = new nsString(wchar_ptr);
           if (embedStr) {
             *variant = embedStr;
@@ -1640,10 +1646,10 @@ nsJavaXPTCStub::FinalizeJavaParams(const nsXPTParamInfo &aParamInfo,
     case nsXPTType::T_VOID:
     {
       if (aParamInfo.IsRetval()) {  // 'retval'
-        *((PRUint32 *) aVariant.val.p) = aJValue.i;
+        aVariant.val.p = NS_REINTERPRET_CAST(void*, aJValue.j);
       } else if (aJValue.l) {  // 'inout' & 'out'
-        env->GetIntArrayRegion((jintArray) aJValue.l, 0, 1,
-                               (jint*) aVariant.val.p);
+        env->GetLongArrayRegion((jlongArray) aJValue.l, 0, 1,
+                                (jlong*) aVariant.val.p);
       }
     }
     break;

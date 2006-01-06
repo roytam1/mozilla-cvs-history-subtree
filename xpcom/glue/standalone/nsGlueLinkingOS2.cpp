@@ -147,4 +147,30 @@ XPCOMGlueUnload()
 
         delete temp;
     }
+
+    if (sXULLibrary) {
+        DosFreeModule(sXULLibrary);
+        sXULLibrary = nsnull;
+    }
+}
+
+nsresult
+XPCOMGlueLoadXULFunctions(const nsDynamicFunctionLoad *symbols)
+{
+    ULONG ulrc = NO_ERROR;
+
+    if (!sXULLibrary)
+        return NS_ERROR_NOT_INITIALIZED;
+
+    nsresult rv = NS_OK;
+    while (symbols->functionName) {
+        ulrc = DosQueryProcAddr(sXULLibrary, 0, symbols->functionName, (PFN*)symbols->function);
+
+        if (ulrc != NO_ERROR)
+            rv = NS_ERROR_LOSS_OF_SIGNIFICANT_DATA;
+
+        ++symbols;
+    }
+
+    return rv;
 }

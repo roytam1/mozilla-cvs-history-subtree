@@ -35,9 +35,10 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-package org.mozilla.xpcom;
+package org.mozilla.xpcom.internal;
 
 import java.lang.reflect.*;
+import org.mozilla.xpcom.*;
 
 
 /**
@@ -45,7 +46,7 @@ import java.lang.reflect.*;
  * <code>java.lang.reflect.Proxy</code> instance is created using the expected
  * interface, and all calls to the proxy are forwarded to the XPCOM object.
  */
-public final class XPCOMJavaProxy implements InvocationHandler {
+public class XPCOMJavaProxy implements InvocationHandler {
 
   /**
    * Pointer to the XPCOM object for which we are a proxy.
@@ -57,9 +58,20 @@ public final class XPCOMJavaProxy implements InvocationHandler {
    *
    * @param aXPCOMInstance  address of XPCOM object as a long
    */
-  public XPCOMJavaProxy(long aXPCOMInstance)
-  {
+  public XPCOMJavaProxy(long aXPCOMInstance) {
     nativeXPCOMPtr = aXPCOMInstance;
+  }
+
+  /**
+   * Returns the XPCOM object that the given proxy references.
+   *
+   * @param aProxy  Proxy created by <code>createProxy</code>
+   *
+   * @return  address of XPCOM object as a long
+   */
+  protected static long getNativeXPCOMInstance(Object aProxy) {
+    XPCOMJavaProxy proxy = (XPCOMJavaProxy) Proxy.getInvocationHandler(aProxy);
+    return proxy.nativeXPCOMPtr;
   }
 
   /**
@@ -70,12 +82,16 @@ public final class XPCOMJavaProxy implements InvocationHandler {
    *
    * @return  Proxy of given XPCOM object
    */
-  protected static Object createProxy(Class aInterface, long aXPCOMInstance)
-  {
-    return Proxy.newProxyInstance(aInterface.getClassLoader(),
-                                  new Class[] { aInterface,
-                                                XPCOMJavaProxyBase.class },
-                                  new XPCOMJavaProxy(aXPCOMInstance));
+  protected static Object createProxy(Class aInterface, long aXPCOMInstance) {
+    // XXX We should really get the class loader from |aInterface|.  However,
+    //     that class loader doesn't know about |XPCOMJavaProxyBase|.  So for
+    //     now, we get the class loader that loaded |XPCOMJavaProxy|.  When
+    //     we get rid of the "XPCOMJavaProxyBase.java" class, we can revert
+    //     to the old method below.
+//    return Proxy.newProxyInstance(aInterface.getClassLoader(),
+    return Proxy.newProxyInstance(XPCOMJavaProxy.class.getClassLoader(),
+            new Class[] { aInterface, XPCOMJavaProxyBase.class },
+            new XPCOMJavaProxy(aXPCOMInstance));
   }
 
   /**
@@ -90,8 +106,7 @@ public final class XPCOMJavaProxy implements InvocationHandler {
    * @return  return value as defined by given <code>aMethod</code>
    */
   public Object invoke(Object aProxy, Method aMethod, Object[] aParams)
-    throws Throwable
-  {
+          throws Throwable {
     String methodName = aMethod.getName();
 
     // Handle the three java.lang.Object methods that are passed to us.
@@ -134,8 +149,7 @@ public final class XPCOMJavaProxy implements InvocationHandler {
    *
    * @see Object#hashCode()
    */
-  protected static Integer proxyHashCode(Object aProxy)
-  {
+  protected static Integer proxyHashCode(Object aProxy) {
     return new Integer(System.identityHashCode(aProxy));
   }
 
@@ -150,24 +164,18 @@ public final class XPCOMJavaProxy implements InvocationHandler {
    *
    * @see Object#equals(Object)
    */
-  protected static Boolean proxyEquals(Object aProxy, Object aOther)
-  {
-    return (aProxy == aOther ? Boolean.TRUE : Boolean.FALSE);
-  }
-
-  /**
-   * Handles method calls of <code>java.lang.Object.toString</code>
-   *
-   * @param aProxy  Proxy created by <code>createProxy</code>
-   *
-   * @return  String representation of given object
-   *
-   * @see Object#toString()
-   */
-  protected static String proxyToString(Object aProxy)
-  {
-    return aProxy.getClass().getInterfaces()[0].getName() + '@' +
-           Integer.toHexString(aProxy.hashCode());
+  protected static Boolean proxyEquals(Object aProxy, Object aOther) {
+    // See if the two are the same Java object
+    if (aProxy == aOther) {
+      return Boolean.TRUE;
+    } else {
+      // If not, then see if they represent the same XPCOM object.  But first,
+      // we need to check if |aOther| is an XPCOMJavaProxy.
+      if (isXPCOMJavaProxy(aOther) && isSameXPCOMObject(aProxy, aOther)) {
+        return Boolean.TRUE;
+      }
+    }
+    return Boolean.FALSE;
   }
 
   /**
@@ -178,12 +186,10 @@ public final class XPCOMJavaProxy implements InvocationHandler {
    * @return  <code>true</code> if the given object is an XPCOMJavaProxy;
    *          <code>false</code> otherwise
    */
-  protected static boolean isXPCOMJavaProxy(Object aObject)
-  {
-    Class objectClass = aObject.getClass();
-    if (Proxy.isProxyClass(objectClass)) {
-      Class[] interfaces = objectClass.getInterfaces();
-      if (interfaces[interfaces.length-1] == XPCOMJavaProxyBase.class) {
+  protected static boolean isXPCOMJavaProxy(Object aObject) {
+    if (Proxy.isProxyClass(aObject.getClass())) {
+      InvocationHandler h = Proxy.getInvocationHandler(aObject);
+      if (h instanceof XPCOMJavaProxy) {
         return true;
       }
     }
@@ -191,17 +197,44 @@ public final class XPCOMJavaProxy implements InvocationHandler {
   }
 
   /**
-   * Returns the XPCOM object that the given proxy references.
+   * Checks if the two given XPCOMJavaProxy objects are proxies for
+   * the same XPCOM object.
+   *
+   * @param aProxy1  XPCOMJavaProxy created by <code>createProxy</code>
+   * @param aProxy2  XPCOMJavaProxy created by <code>createProxy</code>
+   *
+   * @return <code>true</code> if both proxies represent the same XPCOM object;
+   *         <code>false</code> otherwise
+   */
+  protected static native boolean isSameXPCOMObject(Object aProxy1,
+          Object aProxy2);
+
+  /**
+   * Handles method calls of <code>java.lang.Object.toString</code>
    *
    * @param aProxy  Proxy created by <code>createProxy</code>
    *
-   * @return  address of XPCOM object as a long
+   * @return  String representation of given object
+   *
+   * @see Object#toString()
    */
-  protected static long getNativeXPCOMInstance(Object aProxy)
-  {
-    XPCOMJavaProxy proxy = (XPCOMJavaProxy) Proxy.getInvocationHandler(aProxy);
-    return proxy.nativeXPCOMPtr;
+  protected static String proxyToString(Object aProxy) {
+    return aProxy.getClass().getInterfaces()[0].getName() + '@' +
+           Integer.toHexString(aProxy.hashCode());
   }
+
+  /**
+   * Called when the proxy is garbage collected by the JVM.  Allows us to clean
+   * up any references to the XPCOM object.
+   *
+   * @param aProxy  reference to Proxy that is being garbage collected
+   */
+  protected void finalizeProxy(Object aProxy) throws Throwable {
+    finalizeProxyNative(aProxy);
+    super.finalize();
+  }
+
+  protected static native void finalizeProxyNative(Object aProxy);
 
   /**
    * Calls the XPCOM object referenced by the proxy with the given method.
@@ -215,16 +248,8 @@ public final class XPCOMJavaProxy implements InvocationHandler {
    * @exception XPCOMException if XPCOM method failed.  Values of XPCOMException
    *            are defined by the method called.
    */
-  protected static native
-   Object callXPCOMMethod(Object aProxy, String aMethodName, Object[] aParams);
-
-  /**
-   * Called when the proxy is garbage collected by the JVM.  Allows us to clean
-   * up any references to the XPCOM object.
-   *
-   * @param aProxy  reference to Proxy that is being garbage collected
-   */
-  protected static native
-   void finalizeProxy(Object aProxy);
+  protected static native Object callXPCOMMethod(Object aProxy,
+          String aMethodName, Object[] aParams);
 
 }
+
