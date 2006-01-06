@@ -115,8 +115,7 @@
   ]]>
   </script>
 
-
-  <vbox class="zap-form-list">
+  <vbox class="zap-form-list" id="calls-box" flex="1" height="200" minheight="50" persist="height">
     <label id="list-title" class="zap-form-title" value="Calls"/>
     <tree id="calls" flex="1" 
           seltype="single"
@@ -179,5 +178,5 @@
     </tree>
   </vbox>
   <splitter id="calls-splitter"/>
-  <vbox id="call-form"/>
+  <vbox id="call-form" flex="100" height="200" persist="height"/>
 </page>
