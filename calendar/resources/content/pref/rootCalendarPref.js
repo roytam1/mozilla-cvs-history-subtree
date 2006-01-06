@@ -40,8 +40,9 @@ function calendarPrefObserver( CalendarPreferences )
 {
    this.CalendarPreferences = CalendarPreferences;
    try {
-     var pbi = rootPrefNode.QueryInterface(Components.interfaces.nsIPrefBranch2);
-     pbi.addObserver("calendar.", this, false);
+     var pb2 = Components.classes["@mozilla.org/preferences-service;1"].
+                        getService(Components.interfaces.nsIPrefBranch2);
+     pb2.addObserver("calendar.", this, false);
      window.addEventListener("unload", this, false);
   } catch(ex) {
     dump("Calendar: Failed to observe prefs: " + ex + "\n");
@@ -53,11 +54,13 @@ calendarPrefObserver.prototype =
     domain: "calendar.",
     observe: function(subject, topic, prefName)
     {
+        subject = subject.QueryInterface(Components.interfaces.nsIPrefBranch2);
+
         // when calendar pref was changed, we reinitialize 
         switch( prefName )
         {
-            case "calendar.event.defaultstarthour":
-            case "calendar.event.defaultendhour":
+            case "calendar.view.defaultstarthour":
+            case "calendar.view.defaultendhour":
             case "calendar.previousweeks.inview":
             case "calendar.week.d0sundaysoff":
             case "calendar.week.d1mondaysoff":
@@ -97,9 +100,7 @@ calendarPrefObserver.prototype =
 
             case "calendar.alarms.showmissed":
                 if( subject.getBoolPref( prefName ) ) {
-                    //this triggers the alarmmanager if show missed is turned on
-                    gICalLib.batchMode = true; 
-                    gICalLib.batchMode = false;
+                  // XXX: trigger the alarmmanager to show missed events
                 }
                 break;
 
@@ -123,8 +124,9 @@ calendarPrefObserver.prototype =
 
     handleEvent: function handleEvent(event)
     {
-      var pbi = rootPrefNode.QueryInterface(Components.interfaces.nsIPrefBranch2);
-      pbi.removeObserver(this.domain, this);
+      var pb2 = Components.classes["@mozilla.org/preferences-service;1"].
+                         getService(Components.interfaces.nsIPrefBranch2);
+      pb2.removeObserver(this.domain, this);
     }
 }
 
@@ -159,8 +161,8 @@ function calendarPreferences( CalendarWindow )
    getIntPref( this.calendarPref, "alarms.defaultsnoozelength", calendarStringBundle.GetStringFromName("defaultSnoozeAlarmLength" ) );
    getIntPref( this.calendarPref, "date.format", calendarStringBundle.GetStringFromName("dateFormat" ) );
    getBoolPref( this.calendarPref, "dateformat.storeingmt", calendarStringBundle.GetStringFromName("storeInGmt") );
-   getIntPref( this.calendarPref, "event.defaultstarthour", calendarStringBundle.GetStringFromName("defaultStartHour" ) );
-   getIntPref( this.calendarPref, "event.defaultendhour", calendarStringBundle.GetStringFromName("defaultEndHour" ) );
+   getIntPref( this.calendarPref, "view.defaultstarthour", calendarStringBundle.GetStringFromName("defaultStartHour" ) );
+   getIntPref( this.calendarPref, "view.defaultendhour", calendarStringBundle.GetStringFromName("defaultEndHour" ) );
    getIntPref( this.calendarPref, "week.start", calendarStringBundle.GetStringFromName("defaultWeekStart" ) );
    getBoolPref( this.calendarPref, "week.d0sundaysoff", "true"==calendarStringBundle.GetStringFromName("defaultWeekSundaysOff" ) );
    getBoolPref( this.calendarPref, "week.d1mondaysoff", "true"==calendarStringBundle.GetStringFromName("defaultWeekMondaysOff" ) );
@@ -175,5 +177,6 @@ function calendarPreferences( CalendarWindow )
    getIntPref( this.calendarPref, "alarms.onfortodos", 0 );
    getCharPref( this.calendarPref, "alarms.eventalarmunit", calendarStringBundle.GetStringFromName("defaulteventalarmunit"));
    getCharPref( this.calendarPref, "alarms.todoalarmunit", calendarStringBundle.GetStringFromName("defaulttodoalarmunit"));
+   getCharPref( this.calendarPref, "alarms.soundURL", calendarStringBundle.GetStringFromName("soundURL"));
 }
 

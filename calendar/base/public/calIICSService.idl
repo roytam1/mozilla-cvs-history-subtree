@@ -43,9 +43,11 @@
 
 interface calIItemBase;
 interface calIDateTime;
+interface calIDuration;
 
 interface calIIcalProperty;
 interface nsIUTF8StringEnumerator;
+interface nsIInputStream;
 
 [ptr] native icalpropertyptr(struct icalproperty_impl);
 [ptr] native icalcomponentptr(struct icalcomponent_impl);
@@ -109,6 +111,7 @@ interface calIIcalComponent : nsISupports
 
     attribute calIDateTime startTime;
     attribute calIDateTime endTime;
+    readonly attribute calIDuration duration;
     attribute calIDateTime dueTime;
     attribute calIDateTime stampTime;
 
@@ -117,6 +120,18 @@ interface calIIcalComponent : nsISupports
     attribute calIDateTime lastModified;
 
     AUTF8String serializeToICS();
+
+    /**
+     * Serializes this component (and subcomponents) directly to an
+     * input stream.  Typically used for performance to avoid
+     * unnecessary conversions and XPConnect traversals.
+     * 
+     * @result     an input stream which can be read to get the serialized
+     *             version of this component, encoded in UTF-8.  Implements
+     *             nsISeekableStream so that it can be used with
+     *             nsIUploadChannel.
+     */
+    nsIInputStream serializeToICSStream();
 
     void addSubcomponent(in calIIcalComponent comp);
     void removeSubcomponent(in calIIcalComponent comp);
@@ -155,7 +170,19 @@ interface calIIcalComponent : nsISupports
 [scriptable,uuid(17349a10-5d80-47fa-9bea-f22957357675)]
 interface calIIcalProperty : nsISupports
 {
-    attribute AUTF8String stringValue;
+    /**
+     * The value of the property as string.
+     * The exception for properties of TEXT or X- type, those will be unescaped
+     * when getting, and also expects an unescaped string when setting.
+     * Datetime, numeric and other non-text types are represented as ical string
+     */
+    attribute AUTF8String value;
+
+    /**
+     * The value of the property in (escaped) ical format.
+     */
+    attribute AUTF8String valueAsIcalString;
+
     // XXX attribute AUTF8String stringValueWithParams; ?
     readonly attribute AUTF8String propertyName;
 

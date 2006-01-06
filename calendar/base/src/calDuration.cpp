@@ -20,6 +20,7 @@
  *
  * Contributor(s):
  *   Stuart Parmenter <stuart.parmenter@oracle.com>
+ *   Dan Mosedale <dan.mosedale@oracle.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -67,6 +68,11 @@ calDuration::calDuration(const calDuration& cdt)
 
     // copies are always mutable
     mImmutable = PR_FALSE;
+}
+
+calDuration::calDuration(const struct icaldurationtype * const aDurationPtr)
+{
+    FromIcalDuration(aDurationPtr);
 }
 
 NS_IMETHODIMP
@@ -279,6 +285,19 @@ calDuration::ToIcalDuration(struct icaldurationtype *icald)
     icald->hours   = mDuration.hours;
     icald->minutes = mDuration.minutes;
     icald->seconds = mDuration.seconds;
+    return;
+}
+
+void
+calDuration::FromIcalDuration(const struct icaldurationtype * const icald)
+{
+    mDuration.is_neg  = icald->is_neg;
+    mDuration.weeks   = icald->weeks;
+    mDuration.days    = icald->days;
+    mDuration.hours   = icald->hours;
+    mDuration.minutes = icald->minutes;
+    mDuration.seconds = icald->seconds;
+    return;
 }
 
 NS_IMETHODIMP
@@ -294,3 +313,31 @@ calDuration::GetIcalString(nsACString& aResult)
 
     return NS_ERROR_OUT_OF_MEMORY;
 }
+
+NS_IMETHODIMP
+calDuration::SetIcalString(const nsACString& aIcalString)
+{
+    mDuration = icaldurationtype_from_string(nsPromiseFlatCString(aIcalString).get());
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+calDuration::Compare(calIDuration *aOther, PRInt32 *aResult)
+{
+    PRInt32 thisInSeconds, otherInSeconds;
+
+    // cast to void because these calls can't fail
+    (void)GetInSeconds(&thisInSeconds);
+    (void)aOther->GetInSeconds(&otherInSeconds);
+
+    if ( thisInSeconds < otherInSeconds ) {
+      *aResult = -1;
+    } else if ( thisInSeconds > otherInSeconds ) {
+      *aResult = 1;
+    } else {
+      *aResult = 0;
+    }
+
+    return NS_OK;
+}
+

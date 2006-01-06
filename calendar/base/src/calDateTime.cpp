@@ -21,6 +21,7 @@
  *
  * Contributor(s):
  *   Vladimir Vukicevic <vladimir.vukicevic@oracle.com>
+ *   Dan Mosedale <dan.mosedale@oracle.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -46,6 +47,7 @@
 #include "nsServiceManagerUtils.h"
 #include "calIICSService.h"
 #include "calIDuration.h"
+#include "calIErrors.h"
 
 #include "jsdate.h"
 
@@ -206,6 +208,19 @@ calDateTime::SetTimezone(const nsACString& aTimezone)
 }
 
 NS_IMETHODIMP
+calDateTime::GetTimezoneOffset(PRInt32 *aResult)
+{
+    struct icaltimetype icalt;
+    ToIcalTime(&icalt);
+
+    int dst;
+    *aResult = 
+        icaltimezone_get_utc_offset(NS_CONST_CAST(icaltimezone* ,icalt.zone),
+                                    &icalt, &dst);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
 calDateTime::GetNativeTime(PRTime *aResult)
 {
     *aResult = mNativeTime;
@@ -331,7 +346,8 @@ calDateTime::GetInTimezone(const nsACString& aTimezone, calIDateTime **aResult)
         // if it's a date, we really just want to make a copy of this
         // and set the timezone.
         cdt = new calDateTime(*this);
-        cdt->mTimezone.Assign(aTimezone);
+        if (!mTimezone.EqualsLiteral("floating"))
+            cdt->mTimezone.Assign(aTimezone);
     } else {
         struct icaltimetype icalt;
         icaltimezone *tz = nsnull;
@@ -352,7 +368,8 @@ calDateTime::GetInTimezone(const nsACString& aTimezone, calIDateTime **aResult)
         else
             icalt.is_utc = 0;
 
-        icalt.zone = tz;
+        if (!mTimezone.EqualsLiteral("floating"))
+            icalt.zone = tz;
 
         cdt = new calDateTime(&icalt);
     }
@@ -526,7 +543,18 @@ calDateTime::FromIcalTime(icaltimetype *icalt)
         mTimezone.AssignLiteral("floating");
 
     // reconstruct nativetime
+    //
+    // Gross hack alert: the reason that we muck with mIsDate here is
+    // because we don't want icaltime_as_timet_with_zone() to force the
+    // hours/mins/seconds to UTC-based 0: since we're not moving the 
+    // existing date to UTC, but merely representing it a UTC-based way.
+    if (mIsDate) {
+        icalt->is_date = 0;
+    }
     time_t tt = icaltime_as_timet_with_zone(*icalt, icaltimezone_get_utc_timezone());
+    if (mIsDate) {
+        icalt->is_date = 1;
+    }
     PRInt64 temp, million;
     LL_I2L(million, PR_USEC_PER_SEC);
     LL_I2L(temp, tt);
@@ -551,10 +579,16 @@ calDateTime::Compare(calIDateTime *aOther, PRInt32 *aResult)
     ToIcalTime(&a);
     aOther->ToIcalTime(&b);
 
-    if (mIsDate || otherIsDate)
-        *aResult = icaltime_compare_date_only(a,b);
-    else
+    if (mIsDate || otherIsDate) {
+        icaltimezone *tz;
+        nsresult rv = GetIcalTZ(mTimezone, &tz);
+        if (NS_FAILED(rv))
+            return calIErrors::INVALID_TIMEZONE;
+
+        *aResult = icaltime_compare_date_only(a, b, tz);
+    } else {
         *aResult = icaltime_compare(a, b);
+    }
 
     return NS_OK;
 }
@@ -633,7 +667,11 @@ calDateTime::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
             LL_DIV(tmp, mNativeTime, thousand);
             LL_L2D(msec, tmp);
 
-            JSObject *obj = ::js_NewDateObjectMsec(cx, msec);
+            JSObject *obj;
+            if (mTimezone.EqualsLiteral("floating"))
+                obj = ::js_NewDateObject(cx, mYear, mMonth, mDay, mHour, mMinute, mSecond);
+            else
+                obj = ::js_NewDateObjectMsec(cx, msec);
 
             *vp = OBJECT_TO_JSVAL(obj);
             *_retval = PR_TRUE;

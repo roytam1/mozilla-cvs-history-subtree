@@ -35,6 +35,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+var gReadOnlyMode = false;
+
 /* dialog stuff */
 function onLoad()
 {
@@ -44,6 +46,10 @@ function onLoad()
     window.calendarItem = args.calendarEvent;
     window.mode = args.mode;
     window.recurrenceInfo = null;
+
+    if (window.calendarItem.calendar && window.calendarItem.calendar.readOnly) {
+        gReadOnlyMode = true;
+    }
 
     /* add calendars to the calendar menulist */
     var calendarList = document.getElementById("item-calendar");
@@ -155,6 +161,10 @@ function loadDialog(item)
             if (item.calendar.uri.equals(calendars[i].uri))
                 calendarList.selectedIndex = i;
         }
+    } else {
+        // no calendar attached to item
+        // select first entry in calendar list as default
+        document.getElementById("item-calendar").selectedIndex = 0;
     }
 
     /* recurrence */
@@ -319,6 +329,25 @@ function updateAccept()
         acceptButton.setAttribute("disabled", "true");
     else if (acceptButton.getAttribute("disabled"))
         acceptButton.removeAttribute("disabled");
+
+    // don't allow for end dates to be before start dates
+    var startDate = jsDateToDateTime(getElementValue("event-starttime"));
+    var endDate = jsDateToDateTime(getElementValue("event-endtime"));
+    if (endDate.compare(startDate) == -1) {
+        acceptButton.setAttribute("disabled", "true");
+    } else if (acceptButton.getAttribute("disabled")) {
+        acceptButton.removeAttribute("disabled");
+    }
+
+    // can't add/edit items in readOnly calendars
+    document.getElementById("read-only-item").setAttribute("hidden", !gReadOnlyMode);
+    var cal = document.getElementById("item-calendar").selectedItem.calendar;
+    document.getElementById("read-only-cal").setAttribute("hidden", 
+                                              !cal.readOnly);
+    if (gReadOnlyMode || cal.readOnly) {
+        acceptButton.setAttribute("disabled", "true");
+    }
+    return;
 }
 
 function updateDuedate()

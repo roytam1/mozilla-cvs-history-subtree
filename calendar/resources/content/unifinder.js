@@ -48,6 +48,7 @@
 *   improve this to make it usable in general.
 */
 const UnifinderTreeName = "unifinder-search-results-listbox";
+const kEventStatusOrder = ["TENTATIVE", "CONFIRMED", "CANCELLED"];
 
 var gCalendarEventTreeClicked = false; //set this to true when the calendar event tree is clicked
                                        //to allow for multiple selection
@@ -80,7 +81,6 @@ function selectSelectedEventsInTree( EventsToSelect )
 
    if( EventsToSelect === false )
       EventsToSelect = gCalendarWindow.EventSelection.selectedEvents;
-
    var SearchTree = document.getElementById( UnifinderTreeName );
       
    /* The following is a brutal hack, caused by 
@@ -112,14 +112,11 @@ function selectSelectedEventsInTree( EventsToSelect )
    }
    else if( EventsToSelect.length > 1 )
    {
-      /* selecting all events is taken care of in the selectAllEvents in calendar.js 
-      ** Other than that, there's no other way to get in here. */
-      if( gSelectAll === true )
-      {
-         SearchTree.view.selection.selectAll( );
-         
-         gSelectAll = false;
-      }   
+      SearchTree.view.selection.clearSelection( );
+      for (var i in EventsToSelect) {
+         var row = SearchTree.eventView.getRowOfCalendarEvent(EventsToSelect[i]);
+         SearchTree.view.selection.rangedSelect(row,row,true);
+      }
    }
    else
    {
@@ -220,7 +217,6 @@ function prepareCalendarUnifinder( )
 
 function finishCalendarUnifinder( )
 {
-  //gICalLib.removeObserver( unifinderEventDataSourceObserver  );
    var ccalendar = getDisplayComposite();
    ccalendar.removeObserver(unifinderObserver);
 }
@@ -252,7 +248,7 @@ function unifinderDoubleClickEvent( event )
    var calendarEvent = getCalendarEventFromEvent( event );
    
    if( calendarEvent != null )
-      editEvent( calendarEvent );
+      editEvent( calendarEvent.parentItem );
    else
       newEvent();
 }
@@ -360,7 +356,7 @@ function clearSearchTimer( )
 }
 
 /*
-** This function returns the event table. The event table also gets set in the gEventSource
+** This function returns the event table.
 */
 
 function changeEventFilter( event )
@@ -462,10 +458,10 @@ var treeView =
             return formatUnifinderEventDateTime(eventEndDate);         
 
          case "unifinder-search-results-tree-col-categories":
-            return( calendarEvent.categories );
+            return( calendarEvent.getProperty("CATEGORIES") );
          
          case "unifinder-search-results-tree-col-location":
-            return( calendarEvent.location );
+            return( calendarEvent.getProperty("LOCATION") );
          
          case "unifinder-search-results-tree-col-status":
             return getEventStatusString(calendarEvent);
@@ -503,16 +499,19 @@ function compareEvents( eventA, eventB )
         return compareMSTime(msNextEndA, msNextEndB) * modifier;
    
       case "unifinder-search-results-tree-col-categories":
-         return compareString(eventA.categories, eventB.categories) * modifier;
+         return compareString(eventA.getProperty("CATEGORIES"), 
+                              eventB.getProperty("CATEGORIES")) * modifier;
    
       case "unifinder-search-results-tree-col-location":
-         return compareString(eventA.location, eventB.location) * modifier;
+        return compareString(eventA.getProperty("LOCATION"),
+                             eventB.getProperty("LOCATION")) * modifier;
    
       case "unifinder-search-results-tree-col-status":
-         return compareString(eventA.status, eventB.status) * modifier;
+        return compareNumber(kEventStatusOrder.indexOf(eventA.status),
+                             kEventStatusOrder.indexOf(eventB.status)) * modifier;
 
       case "unifinder-search-results-tree-col-calendarname":
-        return compareString(eventA.parent.name, eventB.parent.name) * modifier;
+        return compareString(eventA.calendar.name, eventB.calendar.name) * modifier;
 
       default:
          return 0;
@@ -550,6 +549,8 @@ function msNextOrPreviousRecurrenceStart( calendarEvent ) {
 }
 
 function msNextOrPreviousRecurrenceEnd(event) {
+  return event.endDate.nativeTime;
+  //XXX reimplement the following
   var msNextStart = msNextOrPreviousRecurrenceStart(event);
   var msDuration=dateToMilliseconds(event.endDate)-dateToMilliseconds(event.startDate);
   return msNextStart + msDuration;
@@ -655,7 +656,7 @@ function refreshEventTree( eventArray )
       case "current":
          var SelectedDate = gCalendarWindow.getSelectedDate();
          StartDate = new Date( SelectedDate.getFullYear(), SelectedDate.getMonth(), SelectedDate.getDate(), 0, 0, 0 );
-         EndDate = new Date( MidnightSelectedDate.getTime() + ( 1000 * 60 * 60 * 24 ) - 1000 );
+         EndDate = new Date( StartDate.getTime() + ( 1000 * 60 * 60 * 24 ) - 1000 );
          break;
       
       default: 
@@ -663,8 +664,8 @@ function refreshEventTree( eventArray )
          EndDate = StartDate;
          break;
    }
-   var s = StartDate ? jsDateToDateTime(StartDate) : null;
-   var e = EndDate ? jsDateToDateTime(EndDate) : null;
+   var s = StartDate ? jsDateToDateTime(StartDate).getInTimezone(calendarDefaultTimezone()) : null;
+   var e = EndDate ? jsDateToDateTime(EndDate).getInTimezone(calendarDefaultTimezone()) : null;
    if (StartDate && EndDate) {
        filter |= ccalendar.ITEM_FILTER_CLASS_OCCURRENCES;
    }
@@ -675,21 +676,26 @@ function refreshEventTree( eventArray )
 function refreshEventTreeInternal(eventArray)
 {
    var searchText = document.getElementById( "unifinder-search-field" ).value;
+   searchText = searchText.toLowerCase();
 
    // XXX match for strings with only whitespace. Skip those too
    if (searchText.length) {
        gEventArray = new Array();
-       var fieldsToSearch = new Array("description", "location", "categories" );
+       var fieldsToSearch = ["DESCRIPTION", "LOCATION", "CATEGORIES", "URL"];
 
        for (var j in eventArray) {
            var event = eventArray[j];
            if (event.title && 
-               event.title.toLowerCase().indexOf(searchText) != -1 )
+               event.title.toLowerCase().indexOf(searchText) != -1 ) {
                gEventArray.push(event);
-           for (var k in fieldsToSearch) {
-               var val = event.getProperty(fieldsToSearch[k]);
-               if (val && val.toLowerCase().indexOf(searchText) != -1 )
-                   gEventArray.push(event);
+           } else { 
+               for (var k in fieldsToSearch) {
+                   var val = event.getProperty(fieldsToSearch[k]);
+                   if (val && val.toLowerCase().indexOf(searchText) != -1 ) {
+                       gEventArray.push(event);
+                       break;
+                   }
+               }
            }
        }
    } else {
@@ -713,7 +719,7 @@ function refreshEventTreeInternal(eventArray)
 
    document.getElementById( UnifinderTreeName ).view = treeView;
 
-   document.getElementById( UnifinderTreeName ).eventView = new calendarEventView( eventArray );
+   document.getElementById( UnifinderTreeName ).eventView = new calendarEventView( gEventArray );
 
    //select selected events in the tree.
    selectSelectedEventsInTree( false );

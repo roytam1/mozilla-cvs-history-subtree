@@ -39,7 +39,7 @@
    - ***** END LICENSE BLOCK *****
 -->
 
-<bindings id="calendar-multiday-view-bindings"
+<bindings id="calendar-month-view-bindings"
   xmlns="http://www.mozilla.org/xbl"
   xmlns:html="http://www.w3.org/1999/xhtml"
   xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
@@ -93,7 +93,7 @@
 
           var str = null;
           if (val instanceof Components.interfaces.calIEvent) {
-            str = formatTime(val.startDate) + " " + val.title;
+            str = formatTime(val.startDate.getInTimezone(this.calendarView.mTimezone)) + " " + val.title;
           } else if (val instanceof Components.interfaces.calITodo) {
             // yeah, this should really be a little picture instead of a "*"
             str = "* " + val.title;
@@ -118,7 +118,12 @@
         if (this.calendarView)
             this.calendarView.selectedItem = this.item;
       ]]></handler>
-
+      <handler event="mouseover"><![CDATA[
+        if (this.calendarView && this.calendarView.controller) {
+            event.preventBubble();
+            onMouseOverItem(event);
+        }
+      ]]></handler>
       <handler event="dblclick"><![CDATA[
         if (this.calendarView && this.calendarView.controller) {
             event.preventBubble();
@@ -197,6 +202,12 @@
             daylabel.setAttribute("value", aDate.day + " " + monthNames[aDate.month]);
           } else {
             daylabel.setAttribute("value", aDate.day);
+          }
+
+          // Remove all the old events
+          this.mItemData = new Array();
+          while(this.hasChildNodes()) {
+                this.dayitems.removeChild(this.dayitems.lastChild);
           }
         ]]></body>
       </method>
@@ -332,11 +343,25 @@
               box.setAttribute("context", this.getAttribute("item-context") || this.getAttribute("context"));
               box.setAttribute("class", "calendar-item");
               box.setAttribute("item-calendar", itd.item.calendar.uri.spec);
+              box.setAttribute("tooltip", "itemTooltip");
+
+              var categoriesSelectorList = "";
+              if (itd.item.getProperty("CATEGORIES") != null) {
+                var categoriesList = itd.item.getProperty("CATEGORIES").split(",");
+                for (var i = 0; i < categoriesList.length; i++ ) {
+                  // Remove illegal chars.
+                  categoriesList[i] = categoriesList[i].replace(' ','_');
+                  categoriesList[i] = categoriesList[i].toLowerCase();
+                }
+                categoriesSelectorList = categoriesList.join(" ");
+              }
+              box.setAttribute("item-category", categoriesSelectorList);
 
               this.dayitems.insertBefore(box, before);
 
               box.calendarView = this.monthView;
               box.item = itd.item;
+              box.occurrence = itd.item;
               itd.box = box;
             }
           }
@@ -345,11 +370,15 @@
     </implementation>
 
     <handlers>
-      <handler event="mousedown" button="0"><![CDATA[
+      <handler event="mousedown"><![CDATA[
         event.preventBubble();
 
         if (this.mDate)
           this.monthView.selectedDay = this.mDate;
+      ]]></handler>
+      <handler event="dblclick"><![CDATA[
+        event.preventBubble();
+        this.monthView.controller.createNewEvent();
       ]]></handler>
     </handlers>
   </binding>
@@ -445,11 +474,32 @@
       <field name="mStartDate">null</field>
       <field name="mEndDate">null</field>
       <field name="mDateBoxes">null</field>
+      <field name="mTimezone">"floating"</field>
 
       <field name="mSelectedItem">null</field>
       <field name="mSelectedDayBox">null</field>
 
       <field name="mShowDaysOutsideMonth">true</field>
+      <field name="mTasksInView">true</field>
+
+      <field name="mSelectionObserver"><![CDATA[
+      ({  calView: this,
+          onSelectionChanged: function selectionObserverCallback(itemSelectionArray) {
+	       // The selection manager is smart enough to call this only when
+	       // the selection really did change, so don't bother checking
+               if (this.calView.mSelectedItem) {
+                   var oldbox = this.calView.findBoxForItem(this.calView.mSelectedItem);
+                   if (oldbox)
+                       oldbox.box.unselectItem(this.calView.mSelectedItem);
+               }
+               this.calView.mSelectedItem = itemSelectionArray[0];
+
+               var newbox = this.calView.findBoxForItem(this.calView.mSelectedItem);
+               if (newbox)
+                   newbox.box.selectItem(this.calView.mSelectedItem);
+          }
+      })
+      ]]></field>
 
       <!-- other methods -->
       <method name="setAttribute">
@@ -483,6 +533,7 @@
         <setter><![CDATA[
            if (this.mCalendar != val) {
              this.mCalendar = val;
+             this.mCalendar.addObserver(this.mObserver);
              this.refresh();
            }
            return val;
@@ -518,6 +569,15 @@
         ]]></getter>
       </property>
 
+      <property name="tasksInView">
+        <getter><![CDATA[
+          return this.mTasksInView;
+        ]]></getter>
+        <setter><![CDATA[
+          this.mTasksInView = val;
+        ]]></setter>
+      </property>    
+
       <property name="selectedItem">
         <getter><![CDATA[
           return this.mSelectedItem;
@@ -525,14 +585,18 @@
         <setter><![CDATA[
           if (this.mSelectedItem) {
               var oldbox = this.findBoxForItem(this.mSelectedItem);
-              oldbox.box.unselectItem(this.mSelectedItem);
+              if (oldbox)
+                  oldbox.box.unselectItem(this.mSelectedItem);
           }
 
           this.mSelectedItem = val;
 
           if (this.mSelectedItem) {
               var newbox = this.findBoxForItem(this.mSelectedItem);
-              newbox.box.selectItem(this.mSelectedItem);
+              if (newbox)
+                  newbox.box.selectItem(this.mSelectedItem);
+              if (this.mController.selectionManager)
+                  this.mController.selectionManager.replaceSelection(this.mSelectedItem);
           }
         ]]></setter>
       </property>
@@ -576,6 +640,10 @@
         <body><![CDATA[
           this.mStartDate = aStartDate.startOfWeek;
           this.mEndDate = aEndDate.endOfWeek;
+
+          if (this.mTimezone != aStartDate.timezone) {
+            this.mTimezone = aStartDate.timezone;
+          }
 
           this.refresh();
         ]]></body>
@@ -646,9 +714,15 @@
           if (!this.mCalendar)
             return;
 
-          this.mCalendar.getItems(this.mCalendar.ITEM_FILTER_COMPLETED_ALL |
-                                  this.mCalendar.ITEM_FILTER_TYPE_ALL |
-                                  this.mCalendar.ITEM_FILTER_CLASS_OCCURRENCES,
+          var filter = this.mCalendar.ITEM_FILTER_COMPLETED_ALL |
+                       this.mCalendar.ITEM_FILTER_CLASS_OCCURRENCES;
+
+          if (this.mTasksInView)
+            filter |= this.mCalendar.ITEM_FILTER_TYPE_ALL; 
+          else
+            filter |= this.mCalendar.ITEM_FILTER_TYPE_EVENT;
+
+          this.mCalendar.getItems(filter,
                                   0,
                                   this.startDate,
                                   this.queryEndDate,
@@ -662,36 +736,101 @@
               return document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul", el);
           }
 
-	  var gridrows = this.monthgridrows;
+          if (this.mSelectedItem) {
+            this.selectedItem = null;
+          }
+	  
+	  // Clear out the old selection, since it won't be valid after relayout
+          if (this.mSelectedDayBox) {
+            this.mSelectedDayBox.box.selected = false;
+          }
 
-          // XXX - reuse the grid boxes!
-          // clear out the grid
-          if (this.mSelectedItem)
-            this.mSelectedItem = null;
+          if (!this.mStartDate || !this.mEndDate)
+            throw NS_ERROR_FAILURE;
 
-          if (this.mSelectedDayBox)
-            this.mSelectedDayBox = null;
+          // If we've already drawn a view once, then in almost all cases we
+          // can resuse most of the grid.  We may need to add or subtract a row
+          // but this is still much faster than recreating all rows.
+          var canReuse = false;
+          if (this.mDateBoxes) {
+            canReuse = true;
+            var oldDuration = this.mDateBoxes[this.mDateBoxes.length-1].date.subtractDate(this.mDateBoxes[0].date);
+            var newDuration = this.mEndDate.subtractDate(this.mStartDate);
+            newDuration.isNegative = true;
+            newDuration.normalize();
+            newDuration.addDuration(oldDuration);
 
-          while (gridrows.lastChild)
+            switch (newDuration.days + newDuration.weeks*7) {
+              case 0: // Perfect!
+                break;
+              case -7:
+                // The new month takes up an extra week, so we need to create
+                // a new row and fill it with day-boxes
+                var newGridRow =  createXULElement("row");
+                newGridRow.setAttribute("flex", "1");
+                newGridRow.setAttribute("class", "calendar-month-view-grid-row");
+                this.monthgridrows.appendChild(newGridRow);
+                for (var i = 0; i < 7; i++) {
+                  var box = createXULElement("calendar-month-day-box");
+                  box.setAttribute("context", this.getAttribute("context"));
+                  box.setAttribute("item-context", this.getAttribute("item-context") || this.getAttribute("context"));
+                  box.setAttribute("class", boxClass);
+                  box.monthView = this;
+                  newGridRow.appendChild(box);
+                  var boxdata = {
+                    date: null,
+                    row: curRow,
+                    box: box
+                  };
+                  this.mDateBoxes.push(boxdata);
+                }
+                break;
+              case 7:
+                // The old month took up an extra week, so remove a row
+                this.monthgridrows.removeChild(this.monthgridrows.lastChild);
+                this.mDateBoxes.splice(this.mDateBoxes.length - 7, 7);
+                break;
+              default: //Right now, this can never happen, but some day it might
+                canReuse = false;
+                break;
+            }
+          }
+
+          if (canReuse) {
+            this.reuseExistingGrid();
+          } else {
+            this.createDayGrid();
+          }
+	]]></body>
+      </method>
+
+      <method name="createDayGrid">
+        <body><![CDATA[
+          function createXULElement(el) {
+              return document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul", el);
+          }
+
+          // clear out the old grid, if one exists
+          var gridrows = this.monthgridrows;
+          while (gridrows.hasChildNodes()) {
             gridrows.removeChild(gridrows.lastChild);
-
-	  if (!this.mStartDate || !this.mEndDate)
-            return;
-
-	  // we're going to cheat and make sure that the first full
-	  // month is "even".  The only time when this wouldn't be
-	  // valid is if the first of the month actually falls to
-	  // whatever the first weekday is that we're displaying.
-
-	  var isEven = 0;
-	  if (this.mStartDate.day == 1)
-            isEven = 1;
+          }
 
           var dateBoxes = [];
 
-          var first = true;
-          var lastMonth = this.mStartDate.month;
-          var lastWeekNo = null;
+          // Days that are not in the main month on display are displayed with
+          // a gray background.  Unless the month actually starts on a Sunday,
+          // this means that mStartDate.month is 1 month less than the main month
+          var mainMonth = this.mStartDate.month;
+          if (this.mStartDate.day != 1) {
+            mainMonth++;
+            mainMonth = mainMonth % 12;
+          }
+
+          // Right now, we always show 7 days in a week.  Everytime this
+          // reaches 0, we start a new week, so this will need to change once
+          // removing days off is implemented.
+          var dayCount = 7;
           var curRow = null;
 
           for each (var date in this.getDateList({})) {
@@ -699,47 +838,108 @@
             box.setAttribute("context", this.getAttribute("context"));
             box.setAttribute("item-context", this.getAttribute("item-context") || this.getAttribute("context"));
 
-            if (lastMonth != date.month && !first) {
-              isEven = !isEven;
-              lastMonth = date.month;
-            }
-
-            // XXX take into account real start week
-            var weekno = Math.floor ((date.yearday - date.weekday) / 7);
-
-            if (weekno != lastWeekNo) {
-              // start a new row
+            if (dayCount == 7) {
+              // start adding to a new row
               curRow = createXULElement("row");
               curRow.setAttribute("flex", "1");
               curRow.setAttribute("class", "calendar-month-view-grid-row");
 
               gridrows.appendChild(curRow);
-              lastWeekNo = weekno;
+              dayCount = 0;
             }
 
-            var class = "calendar-month-day-box-" + (isEven ? "even" : "odd");
+            dayCount++;
+
+            //XXX rename these css classes
+            // Set the box-class depending on if this box displays a day in the
+            // main month being shown or not.
+            var boxClass = "calendar-month-day-box-" + 
+                           (mainMonth == date.month ? "even" : "odd");
             // XXX isWeekend?
             if (date.weekday == 0 || date.weekday == 6)
-              class = "calendar-month-day-box-weekend " + class;
-            box.setAttribute("class", class);
+              boxClass = "calendar-month-day-box-weekend " + boxClass;
+            box.setAttribute("class", boxClass);
             curRow.appendChild(box);
 
             box.setDate(date);
             box.monthView = this;
 
+            // add the box and its data to our stored array
             var boxdata = {
               date: date,
               row: curRow,
               box: box
             };
 
-            first = false;
-
             dateBoxes.push(boxdata);
           }
 
+          // Store these, so that we can access them later
           this.mDateBoxes = dateBoxes;
-	]]></body>
+        ]]></body>
+      </method>
+
+      <method name="reuseExistingGrid">
+        <body><![CDATA[
+          // These counters keep track of where we are in the iteration
+          // of old rows/boxes, so we know which one to update
+          var dateBoxCount = 0;
+          var gridRowCount = 0;
+
+          // Right now, we always show 7 days in a week.  Everytime this
+          // reaches 0, we start a new week, so this will need to change once
+          // removing days off is implemented.
+          var dayCount = 7;
+          var curRow = null;
+
+          // Days that are not in the main month on display are displayed with
+          // a gray background.  Unless the month actually starts on a Sunday,
+          // this means that mStartDate.month is 1 month less than the main month
+          var mainMonth = this.mStartDate.month;
+          if (this.mStartDate.day != 1) {
+            mainMonth++;
+            mainMonth = mainMonth % 12;
+          }
+
+          for each (var date in this.getDateList({})) {
+            var box;
+            // Get the next box that we haven't updated from the previously
+            // stored array of boxes/data.
+            this.mDateBoxes[dateBoxCount].date = date;
+            box = this.mDateBoxes[dateBoxCount].box;
+
+            // These might have changed.  Since we don't expose a 'refresh'
+            // method, make sure we set them again.
+            box.setAttribute("context", this.getAttribute("context"));
+            box.setAttribute("item-context", this.getAttribute("item-context") || this.getAttribute("context"));
+
+            if (dayCount == 7) {
+              // start adding to the next row
+              curRow = gridrows.childNodes[gridRowCount];
+              gridRowCount++;
+
+              dayCount = 0;
+            }
+
+            dayCount ++;
+
+            //XXX rename these css classes
+            // Set the box-class depending on if this box displays a day in the
+            // main month being shown or not.
+            var boxClass = "calendar-month-day-box-" + 
+                           ((mainMonth == date.month) ? "even" : "odd");
+
+            if (date.weekday == 0 || date.weekday == 6)
+              boxClass = "calendar-month-day-box-weekend " + boxClass;
+            box.setAttribute("class", boxClass);
+
+            box.setDate(date);
+
+            // The box and its data is already in the array.  We fixed the
+            // date at the beginning, when we got it from the array.
+            dateBoxCount++;
+          }
+        ]]></body>
       </method>
 
       <method name="findBoxForDate">
@@ -791,7 +991,7 @@
           if (this.mSelectedItem == aItem)
               this.mSelectedItem = null;
 
-          box.deleteItem(aItem);
+          box.box.deleteItem(aItem);
         ]]></body>
       </method>
 
@@ -811,8 +1011,10 @@
           },
   
           onOperationComplete: function(aCalendar, aStatus, aOperationType, aId, aDetail) {
-            // nothing to do
-            //dump ("+++ OnOperationComplete (detail: " + aDetail + ")\n");
+              if (this.calView.controller.selectionManager &&
+                  this.calView.controller.selectionManager.selectedEvents[0])
+                this.calView.selectedItem = (this.calView.controller
+                                             .selectionManager.selectedEvents[0]);
           },
           onGetResult: function(aCalendar, aStatus, aItemType, aDetail, aCount, aItems) {
             if (!Components.isSuccessCode(aStatus))
@@ -881,7 +1083,7 @@
                                                    this.calView.queryEndDate,
                                                    {});
             for each (var occ in occs) {
-              this.calView.doDeleteEvent(occ);
+              this.calView.doDeleteItem(occ);
             }
           },
           //XXXvv Alarm could, in theory, flash the event or something

@@ -43,6 +43,8 @@
 const calCalendarManagerContractID = "@mozilla.org/calendar/manager;1";
 const calICalendarManager = Components.interfaces.calICalendarManager;
 
+const USECS_PER_SECOND = 1000000;
+
 var activeCalendarManager = null;
 function getCalendarManager()
 {
@@ -100,6 +102,16 @@ calMemoryCalendar.prototype = {
     // readonly attribute AUTF8String type;
     get type() { return "memory"; },
 
+    mReadOnly: false,
+
+    // Most of the time you can just let the ics calendar handle this
+    get readOnly() { 
+        return this.mReadOnly;
+    },
+    set readOnly(bool) {
+        this.mReadOnly = bool;
+    },
+
     // attribute nsIURI uri;
     mUri: null,
     get uri() { return this.mUri; },
@@ -130,6 +142,8 @@ calMemoryCalendar.prototype = {
 
     // void addItem( in calIItemBase aItem, in calIOperationListener aListener );
     addItem: function (aItem, aListener) {
+        if (this.readOnly) 
+            throw Components.interfaces.calIErrors.CAL_IS_READONLY;
         if (aItem.id == null && aItem.isMutable)
             aItem.id = "uuid" + (new Date()).getTime();
 
@@ -173,6 +187,8 @@ calMemoryCalendar.prototype = {
 
     // void modifyItem( in calIItemBase aNewItem, in calIItemBase aOldItem, in calIOperationListener aListener );
     modifyItem: function (aNewItem, aOldItem, aListener) {
+        if (this.readOnly) 
+            throw Components.interfaces.calIErrors.CAL_IS_READONLY;
         if (!aNewItem) {
             throw Components.results.NS_ERROR_FAILURE;
         }
@@ -235,6 +251,8 @@ calMemoryCalendar.prototype = {
 
     // void deleteItem( in calIItemBase aItem, in calIOperationListener aListener );
     deleteItem: function (aItem, aListener) {
+        if (this.readOnly) 
+            throw Components.interfaces.calIErrors.CAL_IS_READONLY;
         if (aItem.id == null || this.mItems[aItem.id] == null) {
             if (aListener)
                 aListener.onOperationComplete (this.calendarToReturn,
@@ -387,10 +405,10 @@ calMemoryCalendar.prototype = {
             var tmpitem = item;
             if (wantEvents && (item instanceof calIEvent)) {
                 tmpitem = item.QueryInterface(calIEvent);
-                itemStartTime = (item.startDate.isValid
+                itemStartTime = (item.startDate
                                  ? item.startDate.nativeTime
                                  : START_OF_TIME);
-                itemEndTime = (item.endDate.isValid
+                itemEndTime = (item.endDate
                                ? item.endDate.nativeTime
                                : END_OF_TIME);
             } else if (wantTodos && (item instanceof calITodo)) {
@@ -406,6 +424,12 @@ calMemoryCalendar.prototype = {
                 // XXX unknown item type, wth do we do?
                 continue;
             }
+
+            // Correct for floating
+            if (aRangeStart && item.startDate && item.startDate.timezone == 'floating')
+                itemStartTime -= aRangeStart.timezoneOffset * USECS_PER_SECOND;
+            if (aRangeEnd && item.endDate && item.endDate.timezone == 'floating')
+                itemEndTime -= aRangeEnd.timezoneOffset * USECS_PER_SECOND;
 
             if (itemStartTime < endTime) {
                 // figure out if there are recurrences here we care about
@@ -435,6 +459,15 @@ calMemoryCalendar.prototype = {
                                        aListener.GET,
                                        null,
                                        null);
+    },
+
+    startBatch: function ()
+    {
+        this.observeBatchChange(true);
+    },
+    endBatch: function ()
+    {
+        this.observeBatchChange(false);
     },
 
     //

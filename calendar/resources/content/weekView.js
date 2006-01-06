@@ -124,7 +124,6 @@ WeekView.prototype.refreshEvents = function()
     this.displayStartDate = new Date(gHeaderDateItemArray[1].getAttribute("date"));
     this.displayEndDate = new Date(this.displayStartDate);
     this.displayEndDate.setDate(this.displayEndDate.getDate() + 7);
-    this.displayEndDate.setSeconds(this.displayEndDate.getSeconds() - 1);
 
     // Save this off so we can get it again in onGetResult below
     var eventController = this;
@@ -143,10 +142,13 @@ WeekView.prototype.refreshEvents = function()
 
     var ccalendar = getDisplayComposite();
 
-    debug("Fetching events from " + this.displayStartDate.toString() + " to " + this.displayEndDate.toString() + "\n");
+    var start = jsDateToDateTime(this.displayStartDate).getInTimezone(calendarDefaultTimezone());
+    var end = jsDateToDateTime(this.displayEndDate).getInTimezone(calendarDefaultTimezone());
+
+    dump("Fetching events from " + start + " to " + end + "\n");
 
     ccalendar.getItems(ccalendar.ITEM_FILTER_TYPE_EVENT | ccalendar.ITEM_FILTER_CLASS_OCCURRENCES,
-                       0, jsDateToDateTime(this.displayStartDate), jsDateToDateTime(this.displayEndDate), getListener);
+                       0, start, end, getListener);
 
     return;
 
@@ -323,10 +325,12 @@ WeekView.prototype.drawEventBoxes = function()
     this.lowestStartHour = getIntPref(this.calendarWindow.calendarPreferences.calendarPref, "event.defaultstarthour", 8);
     this.highestEndHour = getIntPref(this.calendarWindow.calendarPreferences.calendarPref, "event.defaultendhour", 17);
     for each (event in this.eventList) {
-        if(event.end.hour > this.highestEndHour)
-            this.highestEndHour = event.end.hour;
-        if(event.start.hour < this.lowestStartHour)
-            this.lowestStartHour = event.start.hour;
+        if (!(event.start.isDate)) { 
+             if(event.end.hour > this.highestEndHour)
+                 this.highestEndHour = event.end.hour;
+             if(event.start.hour < this.lowestStartHour)
+                 this.lowestStartHour = event.start.hour;
+        }
     }
 
     //now hide those that aren't applicable
@@ -378,7 +382,9 @@ WeekView.prototype.createEventBoxInternal = function (event)
 
     // Check if the event is within the bounds of events to be displayed.
     if ((adjustedEndDate < this.displayStartDate) ||
-        (adjustedStartDate > this.displayEndDate))
+        (adjustedStartDate > this.displayEndDate) ||
+        (adjustedEndDate == this.displayStartDate &&
+         adjustedStartDate < this.displayStartDate))
         return;
 
     /*
@@ -406,12 +412,16 @@ WeekView.prototype.createEventBoxInternal = function (event)
     eventBox.event = calEvent;
 
     // figure out what column we need to put this on
-    debug("d: "+gHeaderDateItemArray[1].getAttribute("date")+"\n");
-    var dayIndex = new Date(gHeaderDateItemArray[1].getAttribute("date"));
-    var index = startDate.weekday - dayIndex.getDay();
-    debug("index is:" + index + "(" + startDate.weekday + " - " + dayIndex.getDay() + ")\n");
+    var index = (startDate.weekday - this.displayStartDate.getDay() + 7) % 7;
 
     var ElementOfRef = document.getElementById("week-tree-day-" + gRefColumnIndex + "-item-" + startHour) ;
+    // All-day events won't find a good ElementOfRef normally,
+    if (!ElementOfRef.boxObject.width) {
+        var sHour = getIntPref(this.calendarWindow.calendarPreferences.calendarPref,
+                               "event.defaultstarthour", 8);
+        ElementOfRef = document.getElementById("week-tree-day-" + gRefColumnIndex 
+                                                + "-item-" + sHour);
+    }
     var hourHeight = ElementOfRef.boxObject.height;
     var ElementOfRefEnd = document.getElementById("week-tree-day-" + gRefColumnIndex + "-item-" + endDate.hour) ;
     var hourHeightEnd = ElementOfRefEnd.boxObject.height;
@@ -447,9 +457,6 @@ WeekView.prototype.createEventBoxInternal = function (event)
     eventBox.setAttribute("dayindex", index + 1);
     eventBox.setAttribute("onclick", "weekEventItemClick(this, event)" );
     eventBox.setAttribute("ondblclick", "weekEventItemDoubleClick(this, event)");
-    eventBox.setAttribute("ondraggesture", "nsDragAndDrop.startDrag(event,calendarViewDNDObserver);");
-    eventBox.setAttribute("ondragover", "nsDragAndDrop.dragOver(event,calendarViewDNDObserver)");
-    eventBox.setAttribute("ondragdrop", "nsDragAndDrop.drop(event,calendarViewDNDObserver)");
     eventBox.setAttribute("id", "week-view-event-box-" + calEvent.id);
     eventBox.setAttribute("name", "week-view-event-box-" + calEvent.id);
     eventBox.setAttribute("onmouseover", "onMouseOverGridOccurrence(event)" );

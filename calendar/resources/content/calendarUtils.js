@@ -119,10 +119,31 @@ function createAttachment()
     return Components.classes["@mozilla.org/calendar/attachment;1"].createInstance(Components.interfaces.calIAttachment);
 }
 
+function now()
+{
+    var d = Components.classes['@mozilla.org/calendar/datetime;1'].createInstance(Components.interfaces.calIDateTime);
+    d.jsDate = new Date();
+    return d.getInTimezone(calendarDefaultTimezone());
+}
+
 function jsDateToDateTime(date)
 {
     var newDate = createDateTime();
     newDate.jsDate = date;
+    return newDate;
+}
+
+function jsDateToFloatingDateTime(date)
+{
+    var newDate = createDateTime();
+    newDate.timezone = "floating";
+    newDate.year = date.getFullYear();
+    newDate.month = date.getMonth();
+    newDate.day = date.getDate();
+    newDate.hour = date.getHours();
+    newDate.minute = date.getMinutes();
+    newDate.second = date.getSeconds();
+    newDate.normalize();
     return newDate;
 }
 
@@ -135,6 +156,41 @@ function isEvent(aObject)
 function isToDo(aObject)
 {
    return aObject instanceof Components.interfaces.calITodo;
+}
+
+/** If now is during an occurrence, return the ocurrence.
+    Else if now is before an ocurrence, return the next ocurrence.
+    Otherwise return the previous ocurrence. **/
+function getCurrentNextOrPreviousRecurrence(calendarEvent)
+{
+    var isValid = false;
+    var eventStartDate;
+
+    if (calendarEvent.recur) {
+        var now = new Date();
+        var result = new Object();
+        var dur = calendarEvent.endDate.jsDate - calendarEvent.startDate.jsDate;
+
+        // To find current event when now is during event, look for occurrence
+        // starting duration ago.
+        var probeTime = now.getTime() - dur;
+        isValid = calendarEvent.getNextRecurrence(probeTime, result);
+
+        if (isValid) {
+            eventStartDate = new Date(result.value);
+        } else {
+            isValid = calendarEvent.getPreviousOccurrence(probeTime, result);
+            if (isValid) {
+                eventStartDate = new Date(result.value);
+            }
+        }
+    }
+   
+    if (!isValid) {
+        eventStartDate = new Date( calendarEvent.startDate.jsDate );
+    }
+      
+    return eventStartDate;
 }
 
 //
@@ -172,32 +228,32 @@ function calendarDefaultTimezone() {
 function guessSystemTimezone()
 {
     var probableTZ = null;
-    var summerTZname = null;
-    var winterTZname = null;
-    var summerDate = (new Date(2005,6,20)).toString();
-    var winterDate = (new Date(2005,12,20)).toString();
-    var summerData = summerDate.match(/[^(]* ([^ ]*) \(([^)]+)\)/);
-    var winterData = winterDate.match(/[^(]* ([^ ]*) \(([^)]+)\)/);
-    if (summerData && summerData[2]) 
-        summerTZname = summerData[2];
-    if (winterData && winterData[2])
-        winterTZname = winterData[2];
+    var TZname1 = null;
+    var TZname2 = null;
+    var Date1 = (new Date(2005,6,20)).toString();
+    var Date2 = (new Date(2005,12,20)).toString();
+    var nameData1 = Date1.match(/[^(]* ([^ ]*) \(([^)]+)\)/);
+    var nameData2 = Date2.match(/[^(]* ([^ ]*) \(([^)]+)\)/);
+    if (nameData1 && nameData1[2]) 
+        TZname1 = nameData1[2];
+    if (nameData2 && nameData2[2])
+        TZname2 = nameData2[2];
 
-    var index = summerDate.indexOf('+');
+    var index = Date1.indexOf('+');
     if (index < 0)
-        index = summerDate.indexOf('-');
+        index = Date2.indexOf('-');
     // the offset is always 5 characters long
-    var summerOffset = summerDate.substr(index, 5);
-    index = winterDate.indexOf('+');
+    var TZoffset1 = Date1.substr(index, 5);
+    index = Date2.indexOf('+');
     if (index < 0)
-        index = winterDate.indexOf('-');
+        index = Date2.indexOf('-');
     // the offset is always 5 characters long
-    var winterOffset = winterDate.substr(index, 5);
+    var TZoffset2 = Date2.substr(index, 5);
 
     dump("Guessing system timezone:\n");
-    dump("summerOffset: " + summerOffset + "\nwinterOffset: " + winterOffset + "\n");
-    if (summerTZname && winterTZname)
-        dump("summerTZname: " + summerTZname + "\nwinterTZname: " + winterTZname + "\n");
+    dump("TZoffset1: " + TZoffset1 + "\nTZoffset2: " + TZoffset2 + "\n");
+    if (TZname1 && TZname2)
+        dump("TZname1: " + TZname1 + "\nTZname2: " + TZname2 + "\n");
 
     var icssrv = Components.classes["@mozilla.org/calendar/ics-service;1"]
                        .getService(Components.interfaces.calIICSService);
@@ -208,25 +264,38 @@ function guessSystemTimezone()
         var comp = icssrv.getTimezone(someTZ);
         var subComp = comp.getFirstSubcomponent("VTIMEZONE");
         var standard = subComp.getFirstSubcomponent("STANDARD");
-        var standardTZOffset = standard.getFirstProperty("TZOFFSETTO").stringValue;
-        var standardName = standard.getFirstProperty("TZNAME").stringValue;
+        var standardTZOffset = standard.getFirstProperty("TZOFFSETTO").valueAsIcalString;
+        var standardName = standard.getFirstProperty("TZNAME").valueAsIcalString;
         var daylight = subComp.getFirstSubcomponent("DAYLIGHT");
         var daylightTZOffset = null;
         var daylightName = null;
         if (daylight) {
-            daylightTZOffset = daylight.getFirstProperty("TZOFFSETTO").stringValue;
-            daylightName = daylight.getFirstProperty("TZNAME").stringValue;
+            daylightTZOffset = daylight.getFirstProperty("TZOFFSETTO").valueAsIcalString;
+            daylightName = daylight.getFirstProperty("TZNAME").valueAsIcalString;
         }
-        if (winterOffset == standardTZOffset && winterOffset == summerOffset &&
+        if (TZoffset2 == standardTZOffset && TZoffset2 == TZoffset1 &&
            !daylight) {
-            if(!standardName || standardName == summerTZName)
+            if(!standardName || standardName == TZname1)
                 return 2;
             return 1;
         }
-        if (winterOffset == standardTZOffset && summerOffset == daylightTZOffset) {
-            // This seems backwards to me too, but it's how the data is written
-            if ((!standardName || standardName == summerTZname) &&
-                (!daylightName || daylightName == winterTZname))
+        if (TZoffset2 == standardTZOffset && TZoffset1 == daylightTZOffset) {
+            if ((!standardName || standardName == TZname1) &&
+                (!daylightName || daylightName == TZname2))
+                return 2;
+            return 1;
+        }
+
+        // Now flip them and check again, to cover the southern hemisphere case
+        if (TZoffset1 == standardTZOffset && TZoffset2 == TZoffset1 &&
+           !daylight) {
+            if(!standardName || standardName == TZname2)
+                return 2;
+            return 1;
+        }
+        if (TZoffset1 == standardTZOffset && TZoffset2 == daylightTZOffset) {
+            if ((!standardName || standardName == TZname2) &&
+                (!daylightName || daylightName == TZname1))
                 return 2;
             return 1;
         }
@@ -234,6 +303,14 @@ function guessSystemTimezone()
     }
     try {
         var stringBundleTZ = gCalendarBundle.getString("likelyTimezone");
+
+        if (stringBundleTZ.indexOf("/mozilla.org/") == -1) {
+            // This happens if the l10n team didn't know how to get a time from
+            // tzdata.c.  To convert an Olson time to a ics-timezone-string we
+            // need to append this prefix.
+            stringBundleTZ = "/mozilla.org/20050126_1/" + stringBundleTZ;
+        }
+
         switch (checkTZ(stringBundleTZ)) {
             case 0: break;
             case 1: 
@@ -248,7 +325,7 @@ function guessSystemTimezone()
         
     var tzIDs = icssrv.timezoneIds;
     while (tzIDs.hasMore()) {
-        theTZ = tzIDs.getNext();
+        var theTZ = tzIDs.getNext();
         switch (checkTZ(theTZ)) {
             case 0: break;
             case 1: 
@@ -264,4 +341,35 @@ function guessSystemTimezone()
         return probableTZ;
     // Everything failed, so this is our only option.
     return "floating";
+}
+
+/**
+ * Pick whichever of "black" or "white" will look better when used as a text
+ * color against a background of bgColor. 
+ *
+ * @param bgColor   the background color as a "#RRGGBB" string
+ */
+function getContrastingTextColor(bgColor)
+{
+    var calcColor = bgColor.replace(/#/g, "");
+    var red = parseInt(calcColor.substring(0, 2), 16);
+    var green = parseInt(calcColor.substring(2, 4), 16);
+    var blue = parseInt(calcColor.substring(4, 6), 16);
+
+    // Calculate the L(ightness) value of the HSL color system.
+    // L = (max(R, G, B) + min(R, G, B)) / 2
+    var max = Math.max(Math.max(red, green), blue);
+    var min = Math.min(Math.min(red, green), blue);
+    var lightness = (max + min) / 2;
+
+    // Consider all colors with less than 50% Lightness as dark colors
+    // and use white as the foreground color; otherwise use black.
+    // Actually we use a threshold a bit below 50%, so colors like
+    // #FF0000, #00FF00 and #0000FF still get black text which looked
+    // better when we tested this.
+    if (lightness < 120) {
+        return "white";
+    }
+    
+    return "black";
 }

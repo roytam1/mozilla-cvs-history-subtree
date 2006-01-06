@@ -171,7 +171,6 @@ calItemBase.prototype = {
     // for subclasses to use; copies the ItemBase's values
     // into m. aNewParent is optional
     cloneItemBaseInto: function (m, aNewParent) {
-        this.updateStampTime();
         this.ensureNotDirty();
 
         m.mImmutable = false;
@@ -485,7 +484,7 @@ calItemBase.prototype = {
         
         var gen = icalcomp.getFirstProperty("X-MOZILLA-GENERATION");
         if (gen)
-            this.mGeneration = parseInt(gen.stringValue);
+            this.mGeneration = parseInt(gen.value);
 
         // find recurrence properties
         var rec = null;
@@ -517,6 +516,34 @@ calItemBase.prototype = {
         }
         this.mRecurrenceInfo = rec;
 
+        var alarmComp = icalcomp.getFirstSubcomponent("VALARM");
+        if (alarmComp) {
+            var triggerProp = alarmComp.getFirstProperty("TRIGGER");
+            var duration = Components.classes["@mozilla.org/calendar/duration;1"]
+                                     .createInstance(Components.interfaces.calIDuration);
+            duration.icalString = triggerProp.valueAsIcalString;
+
+            if (duration.minutes) {
+                this.setProperty("alarmLength", duration.minutes);
+                this.setProperty("alarmUnits", "minutes");
+            } else if (duration.hours) {
+                this.setProperty("alarmLength", duration.hours);
+                this.setProperty("alarmUnits", "hours");
+            } else if (duration.days) {
+                this.setProperty("alarmLength", duration.days);
+                this.setProperty("alarmUnits", "days");
+            }
+
+            var related = triggerProp.getParameter("RELATED");
+            if (related && related == "END")
+                this.setProperty("alarmRelated", "END");
+            else
+                this.setProperty("alarmRelated", "START");
+
+            var email = alarmComp.getFirstProperty("X-EMAILADDRESS");
+            if (email)
+                this.setProperty("alarmEmailAddress", email);
+        }
     },
 
     importUnpromotedProperties: function (icalcomp, promoted) {
@@ -525,7 +552,7 @@ calItemBase.prototype = {
              prop = icalcomp.getNextProperty("ANY")) {
             if (!promoted[prop.propertyName]) {
                 // XXX keep parameters around, sigh
-                this.setProperty(prop.propertyName, prop.stringValue);
+                this.setProperty(prop.propertyName, prop.value);
             }
         }
     },
@@ -552,7 +579,7 @@ calItemBase.prototype = {
 
         if (this.mGeneration) {
             var genprop = icalProp("X-MOZILLA-GENERATION");
-            genprop.stringValue = String(this.mGeneration);
+            genprop.value = String(this.mGeneration);
             icalcomp.addProperty(genprop);
         }
 
@@ -562,7 +589,33 @@ calItemBase.prototype = {
                 icalcomp.addProperty(ritems[i].icalProperty);
             }
         }
+        
+        if (this.alarmTime) {
+            const icssvc = Components.classes["@mozilla.org/calendar/ics-service;1"]
+                                     .getService(Components.interfaces.calIICSService);
+            var alarmComp = icssvc.createIcalComponent("VALARM");
 
+            var duration = Components.classes["@mozilla.org/calendar/duration;1"]
+                                     .createInstance(Components.interfaces.calIDuration);
+            duration.isNegative = true;
+            duration[this.getProperty("alarmUnits")] = this.getProperty("alarmLength");
+
+            var triggerProp = icssvc.createIcalProperty("TRIGGER");
+            triggerProp.valueAsIcalString = duration.icalString;
+
+            if (this.getProperty("alarmRelated") == "END") 
+                triggerProp.setParameter("RELATED", "END");
+
+            alarmComp.addProperty(triggerProp);
+
+            if (this.getProperty("alarmEmailAddress")) {
+                var emailProp = icssvc.createIcalProperty("X-EMAILADDRESS");
+                emailProp.value = this.getProperty("alarmEmailAddress");
+                alarmComp.addProperty(emailProp);
+            }
+
+            icalcomp.addSubcomponent(alarmComp);
+        }
     },
     
     getOccurrencesBetween: function(aStartDate, aEndDate, aCount) {

@@ -24,6 +24,7 @@
    -                 ArentJan Banck <ajbanck@planet.nl>
    -                 Eric Belhaire <belhaire@ief.u-psud.fr>
    -                 Matthew Willis <mattwillis@gmail.com>
+   -                 Simon Paquet <bugzilla@babylonsounds.com>
    -
    - Alternatively, the contents of this file may be used under the terms of
    - either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -43,13 +44,18 @@
 <!ENTITY calendar.file.default.name  "My Calendar" >
 
 <!-- Alarm -->
-<!ENTITY alarm.units.minutes  "Minutes" >
-<!ENTITY alarm.units.hours    "Hours" >
-<!ENTITY alarm.units.days     "Days" >
+<!ENTITY alarm.units.minutes  "minutes" >
+<!ENTITY alarm.units.hours    "hours" >
+<!ENTITY alarm.units.days     "days" >
 
-<!ENTITY alarm.units.minutes.singular  "Minute" >
-<!ENTITY alarm.units.hours.singular    "Hour" >
-<!ENTITY alarm.units.days.singular     "Day" >
+<!ENTITY alarm.units.minutes.singular  "minute " >
+<!ENTITY alarm.units.hours.singular    "hour " >
+<!ENTITY alarm.units.days.singular     "day " >
+
+<!ENTITY repeat.units.days.both         "Day(s)" >
+<!ENTITY repeat.units.weeks.both        "Week(s)" >
+<!ENTITY repeat.units.months.both       "Month(s)" >
+<!ENTITY repeat.units.years.both        "Year(s)" >
 
 
 <!ENTITY repeat.units.days     "Days" >
@@ -62,7 +68,7 @@
 <!ENTITY repeat.units.months.singular   "Month" >
 <!ENTITY repeat.units.years.singular    "Year" >
 
-<!ENTITY priority.level.none              "None">
+<!ENTITY priority.level.none              "Not specified">
 <!ENTITY priority.level.none.accesskey    "N">
 <!ENTITY priority.level.low               "Low">
 <!ENTITY priority.level.low.accesskey     "L">
@@ -76,47 +82,92 @@
 <!ENTITY newevent.start.label        "Start" >
 <!ENTITY newevent.date.label         "Date" >
 <!ENTITY newevent.startdate.label    "Start" >
+<!ENTITY newevent.from.label         "From" >
+<!ENTITY newevent.to.label           "To" >
 <!ENTITY newevent.enddate.label      "End" >
-<!ENTITY newevent.end.label          "End" >
+<!ENTITY newevent.set.label          "set..." >
+<!ENTITY newevent.settings.label     "General Settings" >
+<!ENTITY newevent.none.label         "none" >
+<!ENTITY newevent.custom.label       "Custom..." >
 <!ENTITY newevent.alldayevent.label  "All Day" >
 <!ENTITY newevent.description.label  "Description" >
 <!ENTITY newevent.uri.label          "URL" >
 <!ENTITY newevent.uri.visit.label    "Visit URL" >
+<!ENTITY newevent.before.label       "before" >
+<!ENTITY newevent.after.label        "after" >
 <!ENTITY newevent.private.label      "Private" >
+<!ENTITY newevent.privacy.label      "Privacy" >
 <!ENTITY newevent.private.note       "This event is private." >
+<!ENTITY newevent.public.label       "Public" >
+<!ENTITY newevent.confidential.label "Confidential" >
 <!ENTITY newevent.alarm.label        "Alarm" >
 <!ENTITY newevent.server.label       "Calendar" >
 <!ENTITY newevent.invite.label       "Invite" >
+<!ENTITY newevent.details.label      "Details" >
 <!ENTITY newevent.email.label        "Email Alarm To:" >
-<!ENTITY newevent.beforealarm.label  "before the event starts" >
-<!ENTITY newevent.beforealarmends.label  "before the event ends" >
+<!ENTITY newevent.beforealarm.label  "before this event" >
+<!ENTITY newevent.begin.label        "begins" >
+<!ENTITY newevent.end.label          "ends" >
+<!ENTITY newevent.isdue.label        "is due" >
 <!ENTITY newevent.repeat.label       "Repeat every" >
+<!ENTITY newevent.repeat.label2      "Repeat" >
 <!ENTITY newevent.until.label        "Until" >
 <!ENTITY newevent.forever.label      "Forever" >
 <!ENTITY newevent.numberoftimes.label "Number of times" >
 <!ENTITY newevent.category.label      "Category" >
-<!ENTITY newevent.exceptions.caption "Exceptions">
+<!ENTITY newevent.popup.label         "Popup" >
+<!ENTITY newevent.popupsound.label    "Popup &amp; Play Sound" >
+<!ENTITY newevent.sendmail.label      "Send Email to:" >
+<!ENTITY newevent.exceptions.caption  "Exceptions">
 <!ENTITY newevent.addexceptions.label "Add Exception">
 <!ENTITY newevent.deleteexceptions.label "Delete Exception">
 <!ENTITY newevent.endtime.warning    "Your start time is after your end time.">
 <!ENTITY newevent.enddate.warning    "Your start date is after your end date.">
 <!ENTITY newevent.repeatdate.tooltip    "Choose a date to end on" >
 <!ENTITY newevent.recurend.warning    "Your repeat-until time is before your end time.">
+<!ENTITY newevent.15minutes.before.label        "15 minutes before" >
+<!ENTITY newevent.30minutes.before.label        "30 minutes before" >
 <!ENTITY newevent.recurnumberoftimes.warning    "Your must specify the number of times to repeat.">
+<!ENTITY newevent.readonly.item.warning    "This item is in a read-only calendar.  You may not edit it.">
+<!ENTITY newevent.readonly.cal.warning    "This calendar is read-only.">
 <!ENTITY newevent.recurinterval.warning    "Your must specify how often to repeat.">
 <!ENTITY newevent.endtime.tooltip    "Choose an end time for this event" >
 <!ENTITY newevent.starttimeerror.alertmessage "Your event cannot end before it has started. Please fix either the start time or the end time." >
 <!ENTITY newevent.recurendtimeerror.alertmessage "Your event's repeat time cannot be before the event end time. Please fix this, or disable repeating." >
 <!ENTITY newevent.general.tab.label         "General" >
+
 <!ENTITY newevent.recurrence.tab.label      "Recurrence" >
+<!ENTITY newevent.recurrence.title          "Edit Recurrence" >
+<!ENTITY newevent.recurrence.remove.label   "Remove" >
+<!ENTITY newevent.recurrence.occurs.label   "Occurs" >
+<!ENTITY newevent.recurrence.day.label      "daily" >
+<!ENTITY newevent.recurrence.week.label     "weekly" >
+<!ENTITY newevent.recurrence.month.label    "monthly" >
+<!ENTITY newevent.recurrence.year.label     "annually" >
+<!ENTITY newevent.recurrence.on.label       "On:" >
+<!ENTITY newevent.recurrence.every.label    "Every" >
+<!ENTITY newevent.repeat.first.label        "every first" >
+<!ENTITY newevent.repeat.second.label       "every second" >
+<!ENTITY newevent.repeat.third.label        "every third" >
+<!ENTITY newevent.repeat.fourth.label       "every fourth" >
+<!ENTITY newevent.repeat.fifth.label        "every fifth" >
+<!ENTITY newevent.repeat.last.label         "every last" >
+<!ENTITY newevent.repeat.onthe.label        "Repeat on the" >
+<!ENTITY newevent.repeat.forever.label      "Repeat forever" >
+<!ENTITY newevent.repeat.for.label          "Repeat for" >
+<!ENTITY newevent.repeat.until.label        "Repeat until" >
+<!ENTITY newevent.recurrence.exceptions.label    "Exceptions:" >
+
 <!ENTITY newevent.attendees.tab.label       "Attendees" >
+<!ENTITY newevent.attendees.label           "Attendees" >
 <!ENTITY newevent.attachments.tab.label     "Attachments" >
 <!ENTITY newevent.advanced.tab.label        "Advanced" >
+<!ENTITY newevent.completed.label           "Completed" >
 <!ENTITY newevent.status.label "Status" >
 <!ENTITY newevent.status.longlabel "Event Status">
 <!ENTITY newevent.status.needsaction.label "Needs Action" >
 <!ENTITY newevent.status.inprogress.label  "In Process" >
-<!ENTITY newevent.status.completed.label   "Completed" >
+<!ENTITY newevent.status.completed.label   "Completed on" >
 <!ENTITY newevent.status.cancelled.label   "Cancelled" >
 <!ENTITY newevent.status.tentative.label   "Tentative" >
 <!ENTITY newevent.status.confirmed.label   "Confirmed" >
@@ -124,6 +175,8 @@
 <!ENTITY newevent.itemType.event.label      "Event" >
 <!ENTITY newevent.itemType.todo.label       "Task" >
 <!ENTITY newevent.itemType.journal.label    "Journal" >
+<!ENTITY newevent.add.contact.label         "Add" >
+<!ENTITY newevent.attach.file.label         "Attach File…" >
 
 <!ENTITY newevent.advanced.repeat.dayofmonth.label "On the xth day of the month">
 <!ENTITY newevent.advanced.repeat.dayofweek.label "4th Tuesday of the month">
@@ -141,7 +194,6 @@
 <!ENTITY newevent.advanced.repeat.third.extension "rd">
 <!ENTITY newevent.advanced.repeat.nth.extension "th">
 
-<!ENTITY newevent.choosefile.label "Choose File">
 <!ENTITY newevent.removeselectedfile.label "Remove Selected File">
 
 <!ENTITY newtodo.completed.label "Completed">
@@ -153,7 +205,7 @@
 <!ENTITY newtodo.starttime.warning "Your start date occurs after your due date.">
 <!ENTITY newtodo.cancelled.label "Cancelled">
 <!ENTITY newtodo.status.label "Status">
-<!ENTITY newtodo.beforealarm.label  "before the task starts" >
+<!ENTITY newtodo.beforealarm.label  "before this task" >
 <!ENTITY newtodo.beforealarmends.label  "before the task is due" >
 <!ENTITY newtodo.newtodo.tab.label "Task" >
 <!ENTITY newtodo.status.longlabel "Task Status">
@@ -169,8 +221,8 @@
 
 <!ENTITY event.title.alarm         "Alarm" >
 <!ENTITY event.title.new         "New Event" >
+<!ENTITY event.title.label       "Edit Item" >
 <!ENTITY event.title.edit        "Edit Event" >
-<!ENTITY event.title.heading        "Calendar Alarm" >
 
 <!ENTITY onthe-text            "On the ">
 <!ENTITY last-text             "Last ">
@@ -207,7 +259,7 @@
 <!ENTITY calendar.tools.modify.tooltip         "Modify Event" >
 
 <!ENTITY calendar.newtask.button.tooltip          "Create a new task" >
-<!ENTITY calendar.newevent.button.tooltip         "Create a new calendar event" >
+<!ENTITY calendar.newevent.button.tooltip         "Create a new event" >
 <!ENTITY calendar.delete.button.tooltip           "Delete selected event" >
 <!ENTITY calendar.edit.button.tooltip             "Edit selected event" >
 
@@ -355,10 +407,14 @@
 <!ENTITY calendar.context.modifyevent.accesskey       "E">
 <!ENTITY calendar.context.modifytask.label            "Edit Task…">
 <!ENTITY calendar.context.modifytask.accesskey        "E">
+<!ENTITY calendar.context.modifyitem.label            "Edit Item">
+<!ENTITY calendar.context.modifyitem.accesskey        "E">
 <!ENTITY calendar.context.deleteevent.label           "Delete Selected Event">
 <!ENTITY calendar.context.deleteevent.accesskey       "l">
 <!ENTITY calendar.context.deletetask.label            "Delete Task">
 <!ENTITY calendar.context.deletetask.accesskey        "l">
+<!ENTITY calendar.context.deleteitem.label            "Delete Item">
+<!ENTITY calendar.context.deleteitem.accesskey        "l">
 <!ENTITY calendar.context.cutevent.label              "Cut">
 <!ENTITY calendar.context.cutevent.accesskey          "t">
 <!ENTITY calendar.context.copyevent.label             "Copy">
@@ -429,6 +485,9 @@
 <!ENTITY calendar.alarm.editevent.label             "Edit Event" >
 <!ENTITY calendar.alarm.acknowledgeall.label        "Acknowledge All Alarms" >
 <!ENTITY calendar.alarm.snooze.label                "Snooze" >
+<!ENTITY calendar.alarm.title.label                "Calendar Alarm" >
+<!ENTITY calendar.alarm.dismiss.label               "Dismiss" >
+<!ENTITY calendar.alarm.dismissall.label            "Dismiss All" >
 
 
 <!-- Calendar Server Dialog -->
@@ -451,6 +510,10 @@
 <!ENTITY calendarproperties.format.label   "Format:">
 <!ENTITY calendarproperties.location.label "Location:">
 <!ENTITY calendarproperties.name.label     "Name:">
+<!ENTITY calendarproperties.readonly.label "Read-only">
+
+<!-- Sunbird Help -->
+<!ENTITY calendar.help.label               "Help Contents">
 
 <!-- Calendar Publish Dialog -->
 <!ENTITY calendar.publish.dialog.title              "Publish Calendar">
@@ -495,9 +558,18 @@
 <!ENTITY calendar.print.window.title "Print A Calendar">
 <!ENTITY calendar.print.selectoptions.label "Select your options below, and use OK to print">
 <!ENTITY calendar.print.selectviews.label "Select View to Print">
+<!ENTITY calendar.print.currentview.label "List all events in current view">
 <!ENTITY calendar.print.listselected.label "List Selected Events">
+<!ENTITY calendar.print.custom.label "List events between:">
 <!ENTITY calendar.print.onlyitemsstatus.label "Print only items with this status:">
 <!ENTITY calendar.print.onlyitemscategory.label "Print only items with this category:">
+
+<!-- Error reporting -->
+<!ENTITY calendar.error.detail "Details...">
+<!ENTITY calendar.error.number "Error number:">
+<!ENTITY calendar.error.description "Description:">
+<!ENTITY calendar.error.title "An error has occurred">
+
 
 <!-- LOCALIZATION NOTE (mainWindow.title): DONT_TRANSLATE -->
 <!ENTITY mainWindow.title "&brandFullName;">

@@ -198,7 +198,7 @@ calTodo.prototype = {
             try {
                 if (!this.todoPromotedProps[iprop.name]) {
                     var icalprop = icssvc.createIcalProperty(iprop.name);
-                    icalprop.stringValue = iprop.value;
+                    icalprop.value = iprop.value;
                     icalcomp.addProperty(icalprop);
                 }
             } catch (e) {
@@ -231,6 +231,24 @@ calTodo.prototype = {
     isPropertyPromoted: function (name) {
         return (this.todoPromotedProps[name]);
     },
+
+    getOccurrencesBetween: function(aStartDate, aEndDate, aCount) {
+        if (this.recurrenceInfo) {
+            return this.recurrenceInfo.getOccurrences(aStartDate, aEndDate, 0, aCount);
+        }
+        if (!this.entryDate && !this.dueDate)
+            return null;
+
+        if ((this.entryDate && this.entryDate.compare(aStartDate) >= 0 && this.entryDate.compare(aEndDate) <= 0) ||
+            (this.dueDate && this.dueDate.compare(aStartDate) >= 0 && this.dueDate.compare(aEndDate) <= 0))
+        {
+            aCount.value = 1;
+            return ([ this ]);
+        }
+
+        aCount.value = 0;
+        return null;
+    }
 };
         
 // var decl to prevent spurious error messages when loaded as component

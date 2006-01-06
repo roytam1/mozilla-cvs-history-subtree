@@ -249,14 +249,7 @@ function unifinderMouseDownToDo( event )
 function checkboxClick(thisTodo, completed)
 {
     var newTodo = thisTodo.clone().QueryInterface(Components.interfaces.calITodo);
-    if(completed) {
-        newTodo.completedDate = jsDateToDateTime(new Date());
-        newTodo.percentComplete = 100;
-    } else {
-        newTodo.completedDate = null;
-        if (newTodo.percentComplete == 100)
-            newTodo.percentComplete = 0;
-    }
+    newTodo.isCompleted = completed;
    
     doTransaction('modify', newTodo, newTodo.calendar, thisTodo, null);
 }
@@ -269,9 +262,8 @@ completed, overdue, duetoday, inprogress, future
 function ToDoProgressAtom( aTodo )
 {
   var now = new Date();
-  var completed = (aTodo.percentComplete == 100);
 
-  if (completed)
+  if (aTodo.isCompleted)
       return "completed";
 
   if (aTodo.dueDate && aTodo.dueDate.isValid) {
@@ -386,7 +378,7 @@ var toDoTreeView =
       }
       element.setAttribute("sortActive", sortActive);
       element.setAttribute("sortDirection", this.sortDirection);
-      this.sortStartedTime = new Date().getTime(); // for null dates during sort
+      this.sortStartedTime = now(); // for null dates during sort
       gTaskArray.sort( compareTasks );
 
       document.getElementById( ToDoUnifinderTreeName ).view = this;
@@ -411,15 +403,15 @@ var toDoTreeView =
            // return title, or "Untitled" if empty/null
            return calendarToDo.title || gCalendarBundle.getString( "eventUntitled" );
          case "unifinder-todo-tree-col-startdate":
-            return( formatUnifinderToDoDateTime( calendarToDo.start ) );
+            return( formatUnifinderToDoDateTime( calendarToDo.entryDate ) );
          case "unifinder-todo-tree-col-duedate":
-            return( formatUnifinderToDoDateTime( calendarToDo.due ) );
+            return( formatUnifinderToDoDateTime( calendarToDo.dueDate ) );
          case "unifinder-todo-tree-col-completeddate":
-            return( formatUnifinderToDoDateTime( calendarToDo.completed ) );
+            return( formatUnifinderToDoDateTime( calendarToDo.completedDate ) );
          case "unifinder-todo-tree-col-percentcomplete":
-            return( calendarToDo.percent+"%" );
+            return( calendarToDo.percentComplete+"%" );
          case "unifinder-todo-tree-col-categories":
-            return( calendarToDo.categories );
+            return( calendarToDo.getProperty("CATEGORIES") );
          case "unifinder-todo-tree-col-location":
             return( calendarToDo.getProperty("LOCATION") );
          case "unifinder-todo-tree-col-status":
@@ -443,33 +435,38 @@ function compareTasks( taskA, taskB )
    switch(toDoTreeView.selectedColumn)
    {
       case "unifinder-todo-tree-col-priority":  // 0-9
-         return compareNumber(taskA.priority, taskB.priority) * modifier;
+         //0=none, but 1=high.  Intuitively, none should be after low
+         var aFix = taskA.priority == 0 ? 10 : taskA.priority;
+         var bFix = taskB.priority == 0 ? 10 : taskB.priority;
+         return compareNumber(aFix, bFix) * modifier;
    
       case "unifinder-todo-tree-col-title":
          return compareString(taskA.title, taskB.title) * modifier;
    
       case "unifinder-todo-tree-col-startdate":
-         return compareDate(taskA.start, taskB.start) * modifier;
+         return compareDate(taskA.entryDate, taskB.entryDate) * modifier;
    
       case "unifinder-todo-tree-col-duedate":
-         return compareDate(taskA.due, taskB.due) * modifier;
+         return compareDate(taskA.dueDate, taskB.dueDate) * modifier;
    
       case "unifinder-todo-tree-col-completed": // checkbox if date exists
       case "unifinder-todo-tree-col-completeddate":
-         return compareDate(taskA.completed, taskB.completed) * modifier;
+         return compareDate(taskA.completedDate, taskB.completedDate) * modifier;
       
       case "unifinder-todo-tree-col-percentcomplete":
-         return compareNumber(taskA.percent, taskB.percent) * modifier;
+         return compareNumber(taskA.percentComplete, taskB.percentComplete) * modifier;
    
       case "unifinder-todo-tree-col-categories":
-         return compareString(taskA.categories, taskB.categories) * modifier;
+         return compareString(taskA.getProperty("CATEGORIES"), taskB.getProperty("CATEGORIES")) * modifier;
 
       case "unifinder-todo-tree-col-location":
          return compareString(taskA.getProperty("LOCATION"), taskB.getProperty("LOCATION")) * modifier;
+
       case "unifinder-todo-tree-col-status":
         return compareNumber(kStatusOrder.indexOf(taskA.status), kStatusOrder.indexOf(taskB.status)) * modifier;
+
       case "unifinder-todo-tree-col-calendarname":
-        return compareString(taskA.parent.name, taskB.parent.name) * modifier;
+        return compareString(taskA.calendar.name, taskB.calendar.name) * modifier;
 
       default:
          return 0;
@@ -494,25 +491,18 @@ function compareNumber(a, b) {
   return ((a < b) ? -1 :      // avoid underflow problems of subtraction
           (a > b) ?  1 : 0); 
 }
+// Takes two calDateTimes
 function compareDate(a, b) {
-  a = dateToMilliseconds(a);
-  b = dateToMilliseconds(b);
-  return ((a < b) ? -1 :      // avoid underflow problems of subtraction
-          (a > b) ?  1 : 0); 
+  if (!a)
+    a = toDoTreeView.sortStartedTime;
+  if (!b)
+    b = toDoTreeView.sortStartedTime;
+  return (a.compare(b)); 
 }
-function dateToMilliseconds(oeICalDateTime) {
-  // Treat unset time as "time when sort started", so incomplete tasks
-  // stay current.  "Time when sort started" is computed once per sort
-  // (just before sort) so sort is stable.
-  if (oeICalDateTime && oeICalDateTime.isSet)
-    return oeICalDateTime.getTime();
-  else 
-    return treeView.sortStartedTime;
-}
-
 
 function calendarTaskView( taskArray )
 {
+   this.contextTask = null;
    this.taskArray = taskArray;   
 }
 
@@ -552,7 +542,7 @@ function refreshToDoTree( taskArray )
       {
          toDoTreeView.selectedColumn = ArrayOfTreeCols[i].getAttribute( "id" );
          toDoTreeView.sortDirection = ArrayOfTreeCols[i].getAttribute("sortDirection");
-         toDoTreeView.sortStartedTime = new Date().getTime(); //for null/0 dates
+         toDoTreeView.sortStartedTime = now(); //for null/0 dates
          gTaskArray.sort(compareTasks);
          break;
       }
@@ -582,11 +572,23 @@ function contextChangeProgress( event, Progress )
    startBatchTransaction();
    for (var t = 0; t < numRanges; t++) {
       tree.view.selection.getRangeAt(t, start, end);
-      for (v = start.value; v <= end.value; v++) {
-          todoItem = tree.taskView.getCalendarTaskAtRow( v );
-          var newItem = todoItem.clone().QueryInterface( Components.interfaces.calITodo );
+      for (var v = start.value; v <= end.value; v++) {
+          toDoItem = tree.taskView.getCalendarTaskAtRow( v );
+          var newItem = toDoItem.clone().QueryInterface( Components.interfaces.calITodo );
           newItem.percentComplete = Progress;
-          doTransaction('modify', newItem, newItem.calendar, todoItem, null);
+          switch (Progress) {
+              case 0:
+                  newItem.isCompleted = false;
+                  break;
+              case 100:
+                  newItem.isCompleted = true;
+                  break;
+              default:
+                  newItem.status = "IN-PROCESS";
+                  newItem.completedDate = null;
+                  break;
+          }
+          doTransaction('modify', newItem, newItem.calendar, toDoItem, null);
       }
    }
    endBatchTransaction();
@@ -604,42 +606,73 @@ function contextChangePriority( event, Priority )
    startBatchTransaction();
    for (var t = 0; t < numRanges; t++) {
       tree.view.selection.getRangeAt(t, start, end);
-      for (v = start.value; v <= end.value; v++) {
-          todoItem = tree.taskView.getCalendarTaskAtRow( v );
-          var newItem = todoItem.clone().QueryInterface( Components.interfaces.calITodo );
+      for (var v = start.value; v <= end.value; v++) {
+          toDoItem = tree.taskView.getCalendarTaskAtRow( v );
+          var newItem = toDoItem.clone().QueryInterface( Components.interfaces.calITodo );
           newItem.priority = Priority;
-          doTransaction('modify', newItem, newItem.calendar, todoItem, null);
+          doTransaction('modify', newItem, newItem.calendar, toDoItem, null);
       }
    }
    endBatchTransaction();
 }
 
-function changeContextMenuForToDo( event )
+function modifyTaskFromContext() {
+   var task = document.getElementById( ToDoUnifinderTreeName ).taskView.contextTask;
+   if(task)
+       editToDo(task);
+}
+
+function changeContextMenuForToDo(event)
 {
    if (event.target.id != "taskitem-context-menu")
      return;
 
-   var toDoItem = getToDoFromEvent( event );
-   if( toDoItem )
+   var toDoItem = getToDoFromEvent(event);
+
+   // If only one task is selected, enable 'Edit Task'
+   var tree = document.getElementById(ToDoUnifinderTreeName); 
+   var start = new Object();
+   var end = new Object();
+   var numRanges = tree.view.selection.getRangeCount();
+   tree.view.selection.getRangeAt(0, start, end);
+   if (numRanges == 1 && (start.value == end.value) && toDoItem) {
+       document.getElementById("task-context-menu-modify")
+               .removeAttribute("disabled");
+       tree.taskView.contextTask = toDoItem;
+   }
+   else {
+       document.getElementById("task-context-menu-modify")
+               .setAttribute("disabled", true);
+       tree.taskView.contextTask = null;
+   }
+
+   // make progress and priority popup menu visible
+   document.getElementById("is_editable").removeAttribute("hidden");
+
+   // enable/disable progress and priority popup menus
+   if (toDoItem)
    {
       document.getElementById("is_editable").removeAttribute("disabled");
-      var liveList = document.getElementById( "taskitem-context-menu" ).getElementsByAttribute( "checked", "true" );
+      var liveList = document.getElementById("taskitem-context-menu")
+                             .getElementsByAttribute("checked", "true");
       // Delete in reverse order.  Moz1.8+ getElementsByAttribute list is
       // 'live', so when attribute is deleted the indexes of later elements
       // change, but Moz1.7- is not.  Reversed order works with both.
       for (var i = liveList.length - 1; i >= 0; i-- )
       {
-         liveList.item(i).removeAttribute( "checked" );
+         liveList.item(i).removeAttribute("checked");
       }
 
-      if( document.getElementById( "percent-"+toDoItem.percent+"-menuitem" ) )
+      if (document.getElementById("percent-"+toDoItem.percentComplete+"-menuitem"))
       {
-         document.getElementById( "percent-"+toDoItem.percent+"-menuitem" ).setAttribute( "checked", "true" );
+         document.getElementById("percent-"+toDoItem.percentComplete+"-menuitem")
+                 .setAttribute("checked", "true");
       }
    
-      if( document.getElementById( "priority-"+toDoItem.priority+"-menuitem" ) )
+      if (document.getElementById("priority-"+toDoItem.priority+"-menuitem"))
       {
-         document.getElementById( "priority-"+toDoItem.priority+"-menuitem" ).setAttribute( "checked", "true" );
+         document.getElementById("priority-"+toDoItem.priority+"-menuitem")
+                 .setAttribute("checked", "true");
       }
    } else {
       document.getElementById("is_editable").setAttribute("disabled", "true");

@@ -3,14 +3,14 @@
 //
 
 var calendarPrefStyleSheet = null;
-for (var i = 0; i < document.styleSheets.length; i++) {
-    if (document.styleSheets[i].title == "calendar-dynamic-style-sheet") {
-        calendarPrefStyleSheet = document.styleSheets[i];
+for each(sheet in document.styleSheets) {
+    if (sheet.href == "chrome://lightning/skin/lightning.css") {
+        calendarPrefStyleSheet = sheet;
         break;
     }
 }
 if (!calendarPrefStyleSheet)
-    Components.reportError("Couldn't find our magic empty style sheet.")
+    Components.utils.reportError("Couldn't find the lightning style sheet.")
 
 function updateStyleSheetForCalendar(aCalendar)
 {
@@ -38,10 +38,12 @@ function updateStyleSheetForCalendar(aCalendar)
     }
     
     var color = getCalendarManager().getCalendarPref(aCalendar, 'color');
+    // This color looks nice with the gripbars, etc.
     if (!color)
-        color = "black";
+        color = "#4e84c2";
     
-    rule.style.color = color;
+    rule.style.backgroundColor = color;
+    rule.style.color = getContrastingTextColor(color);
 }
 
 function addCalendarToTree(aCalendar)
@@ -138,6 +140,10 @@ var ltnCalendarViewController = {
         // XXX If we're adding an item from the view, let's make sure that
         // XXX the calendar in question is visible!
         
+        if (!aCalendar) {
+            aCalendar = ltnSelectedCalendar();
+        }
+
         // if we're given both times, skip the dialog
         if (aStartTime && aEndTime && !aStartTime.isDate && !aEndTime.isDate) {
             var event = createEvent();
@@ -151,7 +157,9 @@ var ltnCalendarViewController = {
             aCalendar.addItem(event, null);
         } else {
             // default pop up the dialog
-            createEventWithDialog(aCalendar, aStartTime, aEndTime);
+            var date = document.getElementById("calendar-view-box").selectedPanel.selectedDay;
+            date.isDate = false;
+            createEventWithDialog(aCalendar, date, date);
         }
     },
 
@@ -258,8 +266,12 @@ var ltnCalendarTreeView = {
     {
         if (col.id == "col-calendar-Checkbox") {
             var cal = getCalendars()[row];
+            // We key off this to set the images for the checkboxes
             if (getCompositeCalendar().getCalendar(cal.uri)) {
                 properties.AppendElement(ltnGetAtom("checked"));
+            }
+            else {
+                properties.AppendElement(ltnGetAtom("unchecked"));
             }
         }
     },
@@ -332,12 +344,35 @@ var ltnCalendarTreeView = {
     getImageSrc: function(row, col) { return null; },
     getRowProperties: function(row, props) { },
     getColumnProperties: function(colid, col, props) { },
-    cycleHeader: function() { }
+    cycleHeader: function() { },
+    onDoubleClick: function(event)
+    {
+        // We only care about left-clicks
+        if (event.button != 0) 
+            return;
+
+        // Find the row clicked on
+        var tree = document.getElementById("agenda-tree");
+        var row = tree.treeBoxObject.getRowAt(event.clientX, event.clientY);
+
+        // If we clicked on a calendar, edit it, otherwise create a new one
+        var cal = getCalendars()[row];
+        if (!cal) {
+            ltnNewCalendar();
+        } else {
+            ltnEditCalendarProperties(cal);
+        }
+    }
 };
 
 function ltnSetTreeView()
 {
     document.getElementById("calendarTree").view = ltnCalendarTreeView;
+
+    // Ensure that a calendar is selected in calendar tree after startup.
+    if (document.getElementById("calendarTree").currentIndex == -1) {
+        document.getElementById("calendarTree").view.selection.select(0);
+    }
 }
 
 window.addEventListener("load", ltnSetTreeView, false);

@@ -53,14 +53,6 @@
   <command id="send_event_command" oncommand="sendEvent()" disabled="true" disabledwhennoeventsselected="true"/>
   <command id="print_command" oncommand="print()"/>
   
-#  <command id="Edit:Undo"      oncommand="goDoCommand('cmd_undo')"      disabled="true"/>
-#  <command id="Edit:Redo"      oncommand="goDoCommand('cmd_redo')"      disabled="true"/>
-#  <command id="Edit:Cut"       oncommand="goDoCommand('cmd_cut')"       disabled="true"/>
-#  <command id="Edit:Copy"      oncommand="goDoCommand('cmd_copy')"      disabled="true"/>
-#  <command id="Edit:Paste"     oncommand="goDoCommand('cmd_paste')"     disabled="true"/>
-#  <command id="Edit:Delete"    oncommand="goDoCommand('cmd_delete')"    disabled="true"/>
-#  <command id="Edit:SelectAll" oncommand="goDoCommand('cmd_selectAll')" disabled="true"/>
-  
   <command id="undo_command" oncommand="undo()" disabled="true"/>
   <command id="redo_command" oncommand="redo()" disabled="true"/>
   <command id="cut_command" oncommand="cutToClipboard()" disabled="true" disabledwhennoeventsselected="true"/>
@@ -94,7 +86,13 @@
   <command id="publish_calendar" oncommand="publishEntireCalendar()"/>
   <command id="publish_events_command" oncommand="publishCalendarData()" disabled="true" disabledwhennoeventsselected="true"/>
 
-<!-- <command id="change_display_todo_in_view" oncommand="" checked="true"/> -->
+  <command id="toggle_tasks_in_view" 
+           oncommand="changeDisplayToDoInViewCheckbox()" 
+           checked="true" 
+           persist="checked"/>
+  <command id="toggle_workdays_only" 
+           oncommand="changeOnlyWorkdayCheckbox()"
+           persist="checked"/>
 
   <command id="close_calendar_command" oncommand="closeCalendar()"/>
 
@@ -132,8 +130,12 @@
 #endif
   <key id="print_key"            key="&calendar.print.key;"              observes="print_command"               modifiers="accel"/>
 
-  <key id="undo_key"             key="&calendar.undo.key;"               modifiers="accel"/>
-  <key id="redo_key"             key="&calendar.redo.key;"               modifiers="accel"/>
+  <key id="undo_key"             key="&calendar.undo.key;"               observes="undo_command"                modifiers="accel"/>
+#ifdef XP_UNIX
+  <key id="redo_key"             key="&calendar.undo.key;"               observes="redo_command"                modifiers="shift, accel"/>
+#else
+  <key id="redo_key"             key="&calendar.redo.key;"               observes="redo_command"                modifiers="accel"/>
+#endif
 
   <key id="key_cut"              key="&calendar.cut.key;"                observes="cut_command"                 modifiers="accel"/>
   <key id="key_copy"             key="&calendar.copy.key;"               observes="copy_command"                modifiers="accel"/>

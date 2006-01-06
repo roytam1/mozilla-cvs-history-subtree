@@ -69,7 +69,7 @@
 *   firstDateOfView        - A date equal to the date of the first box of the View (the date of 
 *                            dayBoxItemArray[0])
 *
-*   lastDateOfView        - A date equal to the date of the last box of the View (the date of 
+*   endExDateOfView        - A date equal to the date of the last box of the View (the date of 
 *                            dayBoxItemArray[41])
 *
 *
@@ -169,7 +169,7 @@ function MonthView( calendarWindow )
    this.weekNumberItemArray = new Array();
 //   this.kungFooDeathGripOnEventBoxes = new Array();
    this.firstDateOfView = new Date();
-   this.lastDateOfView = new Date();
+   this.endExDateOfView = new Date();
 
    var dayItemIndex = 0;
    
@@ -194,10 +194,6 @@ function MonthView( calendarWindow )
          
          dayBoxItem.setAttribute( "onclick", "gCalendarWindow.monthView.clickDay( event )" );
          dayBoxItem.setAttribute( "oncontextmenu", "gCalendarWindow.monthView.contextClickDay( event )" );
-
-         //set the drop
-         dayBoxItem.setAttribute( "ondragdrop", "nsDragAndDrop.drop(event,monthViewEventDragAndDropObserver)" );
-         dayBoxItem.setAttribute( "ondragover", "nsDragAndDrop.dragOver(event,monthViewEventDragAndDropObserver)" );
          
          //set the double click of day boxes
          dayBoxItem.setAttribute( "ondblclick", "gCalendarWindow.monthView.doubleClickDay( event )" );
@@ -223,9 +219,10 @@ MonthView.prototype.refreshEvents = function()
   
     // Figure out the start and end days for the week we're currently viewing
     var startDate = new Date(this.firstDateOfView);
-    var endDate = new Date(this.lastDateOfView);
+    var endDate = new Date(this.endExDateOfView);
     endDate.setDate(endDate.getDate() + 1);
-    endDate.setSeconds(endDate.getSeconds() - 1);
+
+    this.eventList = new Array();
 
     // Save this off so we can get it again in onGetResult below
     var eventController = this;
@@ -245,8 +242,11 @@ MonthView.prototype.refreshEvents = function()
 
     dump("Fetching events from " + startDate.toString() + " to " + endDate.toString() + "\n");
 
+    var start = jsDateToDateTime(startDate).getInTimezone(calendarDefaultTimezone());
+    var end = jsDateToDateTime(endDate).getInTimezone(calendarDefaultTimezone());
+
     ccalendar.getItems(ccalendar.ITEM_FILTER_TYPE_EVENT | ccalendar.ITEM_FILTER_CLASS_OCCURRENCES,
-                      0, jsDateToDateTime(startDate), jsDateToDateTime(endDate), getListener);
+                      0, start, end, getListener);
 }
 
 MonthView.prototype.createEventDotInternal = function(itemOccurrence, startDate, endDate)
@@ -283,7 +283,6 @@ MonthView.prototype.createEventDotInternal = function(itemOccurrence, startDate,
     eventDot.setAttribute("ondblclick", "monthEventBoxDoubleClickEvent( this, event )" );
     eventDot.setAttribute("onmouseover", "onMouseOverGridOccurrence(event)" );
     eventDot.setAttribute("tooltip", "gridOccurrenceTooltip" );
-    eventDot.setAttribute("ondraggesture", "nsDragAndDrop.startDrag(event,monthViewEventDragAndDropObserver);" );
     eventDot.occurrence = itemOccurrence; // for mouseover preview
     eventDot.event = calEvent;
     eventDotBox.appendChild( eventDot );
@@ -319,12 +318,11 @@ MonthView.prototype.maxEventsToShow = function( dayBox ) {
 
 MonthView.prototype.createEventBoxInternal = function(itemOccurrence, startDate, endDate)
 {
+    this.eventList.push({event:itemOccurrence, start:startDate, end:endDate});
+
     //This is a HACK because startDate and indexOfDate don't get along well
     //in terms of timezones.
-    var adjustedDate = new Date();
-    adjustedDate.setDate(startDate.day);
-    adjustedDate.setMonth(startDate.month);
-    adjustedDate.setFullYear(startDate.year);
+    var adjustedDate = new Date(startDate.year, startDate.month, startDate.day);
     dayBoxItem = this.dayBoxItemArray[this.indexOfDate(adjustedDate)];
     if (!dayBoxItem)
         return;
@@ -349,7 +347,6 @@ MonthView.prototype.createEventBoxInternal = function(itemOccurrence, startDate,
     eventBox.setAttribute("ondblclick", "monthEventBoxDoubleClickEvent( this, event )" );
     eventBox.setAttribute("onmouseover", "onMouseOverGridOccurrence(event)" );
     eventBox.setAttribute("tooltip", "gridOccurrenceTooltip" );
-    eventBox.setAttribute("ondraggesture", "nsDragAndDrop.startDrag(event,monthViewEventDragAndDropObserver);" );
     // add a property to the event box that holds the calendarEvent that the
     // box represents
 
@@ -380,7 +377,6 @@ MonthView.prototype.createEventBoxInternal = function(itemOccurrence, startDate,
         eventBox.setAttribute( "eventselected", "true" );
 
     eventBoxText.setAttribute("flex", "1");
-    eventBoxText.setAttribute("ondraggesture", "nsDragAndDrop.startDrag(event,monthViewEventDragAndDropObserver);");
 
     // add the text to the event box and the event box to the day box
 
@@ -395,7 +391,7 @@ MonthView.prototype.createEventBoxInternal = function(itemOccurrence, startDate,
          this.setNumberOfEventsToShow();
 
    // get this month's events and display them
-   var monthEventList = gEventSource.getEventsDisplayForRange( this.firstDateOfView,this.lastDateOfView );
+   var monthEventList = gEventSource.getEventsDisplayForRange( this.firstDateOfView,this.endExDateOfView );
    
    // remove old event boxes
   this.removeElementsByAttribute("eventbox", "monthview");
@@ -450,7 +446,6 @@ MonthView.prototype.createEventBoxInternal = function(itemOccurrence, startDate,
          eventBox.setAttribute( "ondblclick", "monthEventBoxDoubleClickEvent( this, event )" );
          eventBox.setAttribute( "onmouseover", "gCalendarWindow.changeMouseOverInfo( calendarEventDisplay, event )" );
          eventBox.setAttribute( "tooltip", "gridOccurrenceTooltip" );
-         eventBox.setAttribute( "ondraggesture", "nsDragAndDrop.startDrag(event,monthViewEventDragAndDropObserver);" );
          // add a property to the event box that holds the calendarEvent that the
          // box represents
 
@@ -484,7 +479,6 @@ MonthView.prototype.createEventBoxInternal = function(itemOccurrence, startDate,
 
          //you need this flex in order for text to crop
          eventBoxText.setAttribute( "flex", "1" );
-         eventBoxText.setAttribute( "ondraggesture", "nsDragAndDrop.startDrag(event,monthViewEventDragAndDropObserver);" );
 
          // add the text to the event box and the event box to the day box
          
@@ -656,7 +650,7 @@ MonthView.prototype.refreshDisplay = function()
    var lastDateCol = (firstDateCol + lastDayOfMonth - 1) % 7;
 
    this.firstDateOfView = new Date( newYear, newMonth, 1 - firstDateCol, 0, 0, 0 );
-   this.lastDateOfView = new Date( newYear, newMonth,  42 - firstDateCol, 0, 0, 0 );
+   this.endExDateOfView = new Date( newYear, newMonth,  42 - firstDateCol, 0, 0, 0 );
    
   // hide or unhide columns for days off
   for(var day = 0; day < 7; day++) {

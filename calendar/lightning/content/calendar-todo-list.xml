@@ -12,7 +12,22 @@
         <field name="mOperationListener"><![CDATA[
         ({
             todoList: this,
-            
+
+            onStartBatch: function onStartBatch()
+            {
+              return;
+            },
+
+            onEndBatch: function onEndBatch()
+            {
+              return;
+            },
+
+            onLoad: function onLoad() 
+            {
+              return;
+            },
+
             onAddItem: function onAddItem(aItem)
             {
                 if (!(aItem instanceof Components.interfaces.calITodo))
@@ -43,12 +58,20 @@
             {
                 this.todoList.rebuildDisplay();
             },
-            
+
+            onDefaultCalendarChanged: function onDefaultCalendarChanged(aCalendar)
+            {
+                return;
+            },
+
             onGetResult: function onGetResult(aCalendar, aStatus, aItemType, aDetail, aCount, aItems)
             {
-                if (!Components.isSuccessCode(aStatus))
-                    return Components.utils.reportError("Failed to fetch todo items: " + aStatus)
-
+                if (!Components.isSuccessCode(aStatus)) {
+                    Components.utils.reportError(
+                        "Failed to fetch todo items: 0x" +
+                        aStatus.toString(16));
+                    return;
+                }
                 aItems.forEach(this.todoList.addTodo, this.todoList);
             },
             
@@ -56,8 +79,9 @@
                                                               aDetail)
             {
                 if (!Components.isSuccessCode(aStatus))
-                    Components.utils.reportError("Failed to fetch todo item (" +
-                                                aId + "): " + aStatus);
+                    Components.utils.reportError("Failed to fetch todo item"
+                                                 + "(" + aId + "): 0x" + 
+                                                 aStatus.toString(16));
             },
 
             QueryInterface: function QueryInterface(aIID) {

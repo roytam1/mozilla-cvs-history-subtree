@@ -73,47 +73,51 @@ function toAddressBook()
 
 function launchBrowser(UrlToGoTo)
 {
-   if( navigator.vendor != "Mozilla Sunbird" ) {
-     var navWindow;
+  // 1. try to get (most recent) browser window, in case in browser app.
+  var navWindow;
+  try {
+    var wm = (Components
+              .classes["@mozilla.org/appshell/window-mediator;1"]
+              .getService(Components.interfaces.nsIWindowMediator));
+    navWindow = wm.getMostRecentWindow("navigator:browser");
+  } catch (e) {
+    dump("launchBrowser (getMostRecentWindow) exception:\n" + e + "\n");
+  }
+  if (navWindow) {
+    if ("delayedOpenTab" in navWindow)
+      navWindow.delayedOpenTab(UrlToGoTo);
+    else if ("loadURI" in navWindow)
+      navWindow.loadURI(UrlToGoTo);
+    else
+      navWindow.content.location.href = UrlToGoTo;
+    return;
+  }
 
-     // if not, get the most recently used browser window
-       try {
-         var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
-           .getService(Components.interfaces.nsIWindowMediator);
-         navWindow = wm.getMostRecentWindow("navigator:browser");
-       } catch (e) {
-         dump("launchBrowser: Exception: " + e + "\n");
-       }
-     
-     if (navWindow) {
-       if ("delayedOpenTab" in navWindow)
-         navWindow.delayedOpenTab(UrlToGoTo);
-       else if ("loadURI" in navWindow)
-         navWindow.loadURI(UrlToGoTo);
-       else
-         navWindow.content.location.href = UrlToGoTo;
-     }
-     // if all else fails, open a new window 
-     else {
+  // 2. try a new browser window, in case in suite (seamonkey)
+  var messenger;
+  try {
+    var messenger = (Components
+                     .classes["@mozilla.org/messenger;1"]
+                     .createInstance());
+    messenger = messenger.QueryInterface(Components.interfaces.nsIMessenger);
+  } catch (e) {
+    dump("launchBrowser (messenger) exception:\n"+e+"\n");
+  }
+  if (messenger) {
+    messenger.launchExternalURL(UrlToGoTo);  
+    return;
+  } 
 
-       var ass = Components.classes["@mozilla.org/appshell/appShellService;1"].getService(Components.interfaces.nsIAppShellService);
-       w = ass.hiddenDOMWindow;
-
-       w.openDialog( getBrowserURL(), "_blank", "chrome,all,dialog=no", UrlToGoTo );
-     }
-   } 
-   else
-     {
-       try {
-         var messenger = Components.classes["@mozilla.org/messenger;1"].createInstance();
-         messenger = messenger.QueryInterface(Components.interfaces.nsIMessenger);
-         messenger.launchExternalURL(UrlToGoTo);  
-       } catch (e) {
-         dump("launchBrowser: Exception: "+e+"\n");
-       }
-     }
-   //window.open(UrlToGoTo, "_blank", "chrome,menubar,toolbar,resizable,dialog=no");
-   //window.open( UrlToGoTo, "calendar-opened-window" );
+  // 3. try an external app, in case not in a browser app (SB, TB, etc).
+  var externalLoader =
+    (Components
+     .classes["@mozilla.org/uriloader/external-protocol-service;1"]
+     .getService(Components.interfaces.nsIExternalProtocolService));
+  var nsURI = (Components
+               .classes["@mozilla.org/network/io-service;1"]
+               .getService(Components.interfaces.nsIIOService)
+               .newURI(UrlToGoTo, null, null));
+  externalLoader.loadUrl(nsURI);
 }
 
 
@@ -154,7 +158,6 @@ function goOpenExtensions(aOpenMode)
     if (needToOpen) {
         const EMURL = "chrome://mozapps/content/extensions/extensions.xul?type=" + aOpenMode;
         const EMFEATURES = "chrome,dialog=no,resizable";
-        debug("EMURL: "+EMURL+"\n");
         window.openDialog(EMURL, "", EMFEATURES);
     }
 }
@@ -163,7 +166,6 @@ function goOpenExtensions(aOpenMode)
 function showElement(elementId)
 {
     try {
-        debug("showElement: showing " + elementId);
         document.getElementById(elementId).removeAttribute("hidden");
     } catch (e) {
         dump("showElement: Couldn't remove hidden attribute from " + elementId + "\n");
@@ -174,7 +176,6 @@ function showElement(elementId)
 function hideElement(elementId)
 {
     try {
-        debug("hideElement: hiding " + elementId);
         document.getElementById(elementId).setAttribute("hidden", "true");
     } catch (e) {
         dump("hideElement: Couldn't set hidden attribute on " + elementId + "\n");
@@ -185,7 +186,6 @@ function hideElement(elementId)
 function enableElement(elementId)
 {
     try {
-        debug("enableElement: enabling " + elementId);
         //document.getElementById(elementId).setAttribute("disabled", "false");
 
         // call remove attribute beacuse some widget code checks for the presense of a 
@@ -200,7 +200,6 @@ function enableElement(elementId)
 function disableElement(elementId)
 {
     try {
-        debug("disableElement: disabling " + elementId);
         document.getElementById(elementId).setAttribute( "disabled", "true");
     } catch (e) {
         dump("disableElement: Couldn't set disabled attribute to true on " +
@@ -395,18 +394,4 @@ function hasPositiveIntegerValue(elementId)
         return true;
     return false;
 }
-
-function debug(text)
-{
-    if(gDebugEnabled)
-        dump(text + "\n");
-}
-
-
-function debugVar(variable)
-{
-    if(gDebugEnabled)
-        dump(variable + ": " + variable + "\n");
-}
-
 

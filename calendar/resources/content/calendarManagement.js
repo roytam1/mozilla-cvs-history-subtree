@@ -40,7 +40,7 @@ function getListItem(aCalendar) {
     for (item = calendarList.firstChild;
          item;
          item = item.nextSibling) {
-        if (item.calendar == aCalendar ) {
+        if (item.calendar && item.calendar.uri.equals(aCalendar.uri)) {
             return item;
         }
     }
@@ -218,8 +218,10 @@ function initCalendarManager()
     if (calMgr.getCalendars({}).length == 0) {
         var homeCalendar = calMgr.createCalendar("storage", makeURL("moz-profile-calendar://"));
         calMgr.registerCalendar(homeCalendar);
-        // XXX Localize me
-        homeCalendar.name = "Home";
+        var name = srGetStrBundle("chrome://calendar/locale/calendar.properties")
+                                 .GetStringFromName("homeCalendarName");
+                                 
+        homeCalendar.name = name;
         composite.addCalendar(homeCalendar);
     }
     calMgr.addObserver(calCalendarManagerObserver);
@@ -306,7 +308,7 @@ function updateStyleSheetForObject(object) {
     {
         for (var i = 0; i < calStyleSheet.cssRules.length; i++) {
             var rule = calStyleSheet.cssRules[i];
-            if (rule.selectorText == selectorForObject(name))
+            if (rule.selectorText && (rule.selectorText == selectorForObject(name)))
                 return rule;
         }
         return null;
@@ -322,9 +324,10 @@ function updateStyleSheetForObject(object) {
     var color;
     if (object.uri) {
         color = getCalendarManager().getCalendarPref(object, 'color');
+        if (!color)
+            color = "#4e84c2";
         rule.style.backgroundColor = color;
-        if (color)
-            rule.style.color = getContrastingTextColor(color);
+        rule.style.color = getContrastingTextColor(color);
         return;
     }
     var categoryPrefBranch = prefService.getBranch("calendar.category.color.");
@@ -333,8 +336,7 @@ function updateStyleSheetForObject(object) {
     }
     catch(ex) { return; }
 
-    rule.style.borderColor = color;
-    rule.style.borderWidth = "2px";
+    rule.style.border = color + " solid 2px";
 }
 
 var categoryPrefObserver =

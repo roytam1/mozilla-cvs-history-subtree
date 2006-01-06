@@ -64,8 +64,8 @@
 *   firstDateOfView        - A date equal to the date of the first box of the View (the date of 
 *                            dayBoxItemArray[0])
 *
-*   lastDateOfView        - A date equal to the date of the last box of the View (the date of 
-*                            dayBoxItemArray[41])
+*   endExDateOfView        - A date equal to the date AFTER the last box of the View (AFTER date of 
+*                            dayBoxItemArray[41]) (exclusive end date)
 *
 *
 *    kungFooDeathGripOnEventBoxes - This is to keep the event box javascript objects around so 
@@ -167,7 +167,7 @@ function MultiweekView( calendarWindow )
    this.weekNumberItemArray = new Array();
    this.kungFooDeathGripOnEventBoxes = new Array();
    this.firstDateOfView = new Date();
-   this.lastDateOfView = new Date();
+   this.endExDateOfView = new Date();
 
    // Get the default number of WeeksInView
    this.localeDefaultsStringBundle = srGetStrBundle("chrome://calendar/locale/calendar.properties");
@@ -198,10 +198,6 @@ function MultiweekView( calendarWindow )
          
          dayBoxItem.setAttribute( "onclick", "gCalendarWindow.multiweekView.clickDay( event )" );
          dayBoxItem.setAttribute( "oncontextmenu", "gCalendarWindow.multiweekView.contextClickDay( event )" );
-
-         //set the drop
-         dayBoxItem.setAttribute( "ondragdrop", "nsDragAndDrop.drop(event,monthViewEventDragAndDropObserver)" );
-         dayBoxItem.setAttribute( "ondragover", "nsDragAndDrop.dragOver(event,monthViewEventDragAndDropObserver)" );
          
          //set the double click of day boxes
          dayBoxItem.setAttribute( "ondblclick", "gCalendarWindow.multiweekView.doubleClickDay( event )" );
@@ -223,7 +219,7 @@ function MultiweekView( calendarWindow )
 MultiweekView.prototype.refreshEvents = function multiweekView_refreshEvents( )
 {
     var startDate = new Date( this.firstDateOfView );
-    var endDate = new Date( this.lastDateOfView );
+    var endExDate = new Date( this.endExDateOfView );
     //First just make it work with events
 
     //Clear out all current events
@@ -231,6 +227,8 @@ MultiweekView.prototype.refreshEvents = function multiweekView_refreshEvents( )
     
     //Save this so we can use it again in onGetResult below in getListener
     var eventController = this;
+
+    this.eventList = new Array();
 
     //Start of our getListener callback
     var getListener =
@@ -258,9 +256,11 @@ MultiweekView.prototype.refreshEvents = function multiweekView_refreshEvents( )
 
     var ccalendar = getDisplayComposite();
 
+    var start = jsDateToDateTime(startDate).getInTimezone(calendarDefaultTimezone());
+    var end = jsDateToDateTime(endExDate).getInTimezone(calendarDefaultTimezone());
+
     ccalendar.getItems(ccalendar.ITEM_FILTER_TYPE_EVENT | ccalendar.ITEM_FILTER_CLASS_OCCURRENCES,
-                       0, jsDateToDateTime(startDate), jsDateToDateTime(endDate),
-                       getListener);
+                       0, start, end, getListener);
 
 }
 
@@ -298,7 +298,6 @@ MultiweekView.prototype.createEventDotInternal = function(itemOccurrence, startD
     eventDot.setAttribute("ondblclick", "monthEventBoxDoubleClickEvent( this, event )" );
     eventDot.setAttribute("onmouseover", "onMouseOverGridOccurrence(event)" );
     eventDot.setAttribute("tooltip", "gridOccurrenceTooltip" );
-    eventDot.setAttribute("ondraggesture", "nsDragAndDrop.startDrag(event,monthViewEventDragAndDropObserver);" );
     eventDot.occurrence = itemOccurrence; // for mouseover preview
     eventDot.event = calEvent;
     eventDotBox.appendChild( eventDot );
@@ -336,12 +335,11 @@ MultiweekView.prototype.maxEventsToShow = function( dayBox ) {
 // Create an eventbox. Expects an ItemOccurence
 MultiweekView.prototype.createEventBoxInternal = function multiweekView_createEventBox(itemOccurrence, startDate, endDate)
 {
+    this.eventList.push({event:itemOccurrence, start:startDate, end:endDate});
+
     //This is a HACK because startDate and indexOfDate don't get along well
     //in terms of timezones.
-    var adjustedDate = new Date();
-    adjustedDate.setDate(startDate.day);
-    adjustedDate.setMonth(startDate.month);
-    adjustedDate.setFullYear(startDate.year);
+    var adjustedDate = new Date(startDate.year, startDate.month, startDate.day);
     var DisplayDate = new Date(adjustedDate);
     dayBoxItem = this.dayBoxItemArray[this.indexOfDate(DisplayDate)];
     // Check if the day is visible
@@ -366,7 +364,6 @@ MultiweekView.prototype.createEventBoxInternal = function multiweekView_createEv
     eventBox.setAttribute( "ondblclick", "monthEventBoxDoubleClickEvent( this, event )" );
     eventBox.setAttribute( "onmouseover", "onMouseOverGridOccurrence(event)" );
     eventBox.setAttribute( "tooltip", "gridOccurrenceTooltip" );
-    eventBox.setAttribute( "ondraggesture", "nsDragAndDrop.startDrag(event,monthViewEventDragAndDropObserver);" );
 
     eventBox.occurrence = itemOccurrence;
     eventBox.event = calEvent;
@@ -427,7 +424,6 @@ MultiweekView.prototype.getToDoBox = function multiweekView_getToDoBox( calendar
   eventBox.setAttribute( "ondblclick", "multiweekToDoBoxDoubleClickEvent( this, event )" );
   eventBox.setAttribute( "onmouseover", "gCalendarWindow.changeMouseOverInfo( calendarToDo, event )" );
   eventBox.setAttribute( "tooltip", "gridOccurrenceTooltip" );
-  //eventBox.setAttribute( "ondraggesture", "nsDragAndDrop.startDrag(event,monthViewEventDragAndDropObserver);" );
   // add a property to the event box that holds the calendarEvent that the
   // box represents
   
@@ -566,7 +562,7 @@ MultiweekView.prototype.refreshDisplay = function multiweekView_refreshDisplay( 
 MultiweekView.prototype.refreshDisplayFromDate = function multiweekView_refreshDisplayFromDate(startDate) { 
   // figure out first and last days of the month, first and last date of view
   this.firstDateOfView = startDate;
-  this.lastDateOfView = new Date( startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + this.WeeksInView*7 - 1, 23, 59, 59 );
+  this.endExDateOfView = new Date( startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + this.WeeksInView*7);
   // set the year in the header (top-left)
   document.getElementById( "multiweek-title" ).setAttribute( "value" , startDate.getFullYear() );
 

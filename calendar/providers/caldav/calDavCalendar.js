@@ -135,6 +135,15 @@ calDavCalendar.prototype = {
     // readonly attribute AUTF8String type;
     get type() { return "caldav"; },
 
+    mReadOnly: false,
+
+    get readOnly() { 
+        return this.mReadOnly;
+    },
+    set readOnly(bool) {
+        this.mReadOnly = bool;
+    },
+
     // attribute nsIURI uri;
     mUri: null,
     get uri() { return this.mUri; },
@@ -142,7 +151,7 @@ calDavCalendar.prototype = {
 
     get mCalendarUri() { 
         calUri = this.mUri.clone();
-        calUri.spec += "calendar/";
+        calUri.spec += "/";
         return calUri;
     },
 
@@ -173,6 +182,9 @@ calDavCalendar.prototype = {
 
     // void addItem( in calIItemBase aItem, in calIOperationListener aListener );
     addItem: function (aItem, aListener) {
+        if (this.readOnly) {
+            throw Components.interfaces.calIErrors.CAL_IS_READONLY;
+        }
 
         if (aItem.id == null && aItem.isMutable)
             // XXX real UUID here!!
@@ -214,6 +226,10 @@ calDavCalendar.prototype = {
                       + " mean server malfunction/n");
                 retVal = Components.results.NS_ERROR_FAILURE;
             } else {
+                if (aStatusCode > 999) {
+                    aStatusCode = "0x" + aStatusCode.toString(16);
+                }
+
                 // XXX real error handling
                 debug("Error adding item: " + aStatusCode + "\n");
                 retVal = Components.results.NS_ERROR_FAILURE;
@@ -259,6 +275,9 @@ calDavCalendar.prototype = {
 
     // void modifyItem( in calIItemBase aNewItem, in calIItemBase aOldItem, in calIOperationListener aListener );
     modifyItem: function modifyItem(aNewItem, aOldItem, aListener) {
+        if (this.readOnly) {
+            throw Components.interfaces.calIErrors.CAL_IS_READONLY;
+        }
 
         if (aNewItem.id == null) {
 
@@ -296,13 +315,17 @@ calDavCalendar.prototype = {
         listener.onOperationComplete = function(aStatusCode, aResource,
                                                 aOperation, aClosure) {
 
+            // 201 = HTTP "Created"
             // 204 = HTTP "No Content"
             //
-            if (aStatusCode == 204) {
+            if (aStatusCode == 204 || aStatusCode == 201) {
                 debug("Item modified successfully.\n");
                 var retVal = Components.results.NS_OK;
 
             } else {
+                if (aStatusCode > 999) {
+                    aStatusCode = "0x " + aStatusCode.toString(16);
+                }
                 debug("Error modifying item: " + aStatusCode + "\n");
 
                 // XXX deal with non-existent item here, other
@@ -351,6 +374,9 @@ calDavCalendar.prototype = {
 
     // void deleteItem( in calIItemBase aItem, in calIOperationListener aListener );
     deleteItem: function (aItem, aListener) {
+        if (this.readOnly) {
+            throw Components.interfaces.calIErrors.CAL_IS_READONLY;
+        }
 
         if (aItem.id == null) {
             if (aListener)
@@ -434,9 +460,12 @@ calDavCalendar.prototype = {
         // XXX get rid of vevent filter?
         // XXX need a prefix in the namespace decl?
         default xml namespace = "urn:ietf:params:xml:ns:caldav";
+        var D = new Namespace("D", "DAV:");
         queryXml = 
-          <calendar-query xmlns:C="urn:ietf:params:xml:ns:caldav">
-            <calendar-data/>
+          <calendar-query xmlns:D="DAV:">
+            <D:prop>
+              <calendar-data/>
+            </D:prop>
             <filter>
               <comp-filter name="VCALENDAR">
                 <comp-filter name="VEVENT">
@@ -508,9 +537,12 @@ calDavCalendar.prototype = {
 
                 // cause returned data to be parsed into the event item
                 var calData = responseElement..C::["calendar-data"];
-                if (calData.length == 0) {
-                    debug("server returned empty or non-existing "
-                          + "calendar-data element!\n");
+                if (!calData.toString().length) {
+                  Components.utils.reportError(
+                    "Empty or non-existent <calendar-data> element returned" +
+                    " by CalDAV server for URI <" + aResource.spec +
+                    ">; ignoring");
+                  return;
                 }
                 debug("item result = \n" + calData + "\n");
                 // XXX try-catch
@@ -634,11 +666,15 @@ calDavCalendar.prototype = {
             return;
 
         // this is our basic report xml
-        var C = new Namespace("urn:ietf:params:xml:ns:caldav")
+        var C = new Namespace("C", "urn:ietf:params:xml:ns:caldav");
+        var D = new Namespace("D", "DAV:");
         default xml namespace = C;
+
         var queryXml = 
-          <calendar-query>
-            <calendar-data/>
+          <calendar-query xmlns:D={D}>
+            <D:prop>
+              <calendar-data/>
+            </D:prop>
             <filter>
               <comp-filter name="VCALENDAR">
                 <comp-filter/>
@@ -686,13 +722,22 @@ calDavCalendar.prototype = {
         }
 
         var queryString = xmlHeader + queryXml.toXMLString();
-        debug("getItems(): querying CalDAV server for events: " + 
+        debug("getItems(): querying CalDAV server for events: \n" + 
               queryString + "\n");
 
         var occurrences = (aItemFilter &
                            calICalendar.ITEM_FILTER_CLASS_OCCURRENCES) != 0; 
         this.reportInternal(queryString, occurrences, aRangeStart, aRangeEnd,
                             aCount, aListener);
+    },
+
+    startBatch: function ()
+    {
+        this.observeBatchChange(true);
+    },
+    endBatch: function ()
+    {
+        this.observeBatchChange(false);
     },
 
     //

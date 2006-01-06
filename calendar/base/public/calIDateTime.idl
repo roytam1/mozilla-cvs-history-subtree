@@ -21,6 +21,7 @@
  *
  * Contributor(s):
  *   Vladimir Vukicevic <vladimir.vukicevic@oracle.com>
+ *   Dan Mosedale <dan.mosedale@oracle.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -75,6 +76,14 @@ interface calIDateTime : nsISupports
    * on this instance.  If nativeTime is set, the given UTC PRTime
    * value is exploded into year/month/etc, taking into account
    * the timezone setting.
+   *
+   * @warning: When the timezone is set to 'floating', this will return
+   * the nativeTime as-if the timezone was UTC. Take this into account
+   * when comparing values.
+   * 
+   * @note on objects that are pinned to a timezone and have isDate set,
+   * nativeTime will be 00:00:00 in the timezone of that date, not 00:00:00 in 
+   * UTC.
    */
   attribute PRTime nativeTime;
 
@@ -126,6 +135,12 @@ interface calIDateTime : nsISupports
    * @throws NS_ERROR_INVALID_ARG if an invalid timezone is passed in.
    */
   attribute AUTF8String timezone;
+
+  /**
+   * The offset of the timezone this datetime is in, relative to UTC, in
+   * seconds. A positive number means that the timezone is ahead of UTC.
+   */
+  readonly attribute long timezoneOffset;
 
   /**
    * isDate indicates that this calIDateTime instance represents a date
@@ -206,6 +221,9 @@ interface calIDateTime : nsISupports
    *
    * If either this or aOther has isDate set, then only the date portion is
    * compared.
+   * 
+   * @exception calIErrors.INVALID_TIMEZONE  bad timezone on this object
+   *                                         (not the argument object)
    */
   long compare (in calIDateTime aOther);
 

@@ -45,16 +45,16 @@
 <!-- Style sheets -->
 
 <?xml-stylesheet href="chrome://global/skin/global.css" type="text/css"?> 
+<?xml-stylesheet href="chrome://global/skin/toolbar.css" type="text/css"?> 
 <?xml-stylesheet href="chrome://calendar/skin/calendar.css" type="text/css"?>
 <?xml-stylesheet href="chrome://calendar/content/datetimepickers/minimonth.css" type="text/css"?>
 
+<?xml-stylesheet href="chrome://calendar/content/calendar-multiday-view.css" type="text/css"?>
+<?xml-stylesheet href="chrome://calendar/content/calendar-month-view.css" type="text/css"?>
+<?xml-stylesheet href="chrome://calendar/content/calendar-decorated-views.css" type="text/css"?>
+
 <!-- Overlays -->
 <?xul-overlay href="chrome://global/content/globalOverlay.xul"?>
-
-<?xul-overlay href="chrome://calendar/content/dayView.xul"?>
-<?xul-overlay href="chrome://calendar/content/weekView.xul"?>
-<?xul-overlay href="chrome://calendar/content/monthView.xul"?>
-<?xul-overlay href="chrome://calendar/content/multiweekView.xul"?>
 
 <!-- All DTD information is stored in a separate file so that it can be shared by
      hiddenWindow.xul. -->
@@ -149,16 +149,12 @@
             type="checkbox"
             label="&calendar.onlyworkday.checkbox.label;"
             accesskey="&calendar.onlyworkday.checkbox.accesskey;"
-            oncommand="changeOnlyWorkdayCheckbox(2);"
-            persist="checked"
-            disabled="true"/>
+            observes="toggle_workdays_only"/>
   <menuitem id="display-todo-inview-checkbox-2"
             type="checkbox"
             label="&calendar.displaytodos.checkbox.label;"
             accesskey="&calendar.displaytodos.checkbox.accesskey;"
-            oncommand="changeDisplayToDoInViewCheckbox(2);"
-            persist="checked"
-            disabled="true"/>
+            observes="toggle_tasks_in_view"/>
 
   <menuseparator/>
   <menuitem label="&calendar.context.emailevent.label;"
@@ -171,9 +167,10 @@
   <menuitem label="&calendar.context.newtodo.label;"
             accesskey="&calendar.context.newtodo.accesskey;"
             observes="new_todo_command"/>
-  <!--
-  Currently no way to get the item that we clicked on originally 
-  <menuitem label="&calendar.context.modifytask.label;" accesskey="&calendar.context.modifytask.accesskey;" observes="modify_todo_command"/>-->
+  <menuitem id="task-context-menu-modify"
+            label="&calendar.context.modifytask.label;"
+            accesskey="&calendar.context.modifytask.accesskey;"
+            oncommand="modifyTaskFromContext()"/>
   <menuitem label="&calendar.context.deletetask.label;"
             accesskey="&calendar.context.deletetask.accesskey;"
             observes="delete_todo_command"/>
@@ -403,7 +400,7 @@
   </toolbarpalette>
   <toolbar class="toolbar-primary chromeclass-toolbar" id="calendar-bar"
            iconsize="big"
-           defaultset="calendar-new-event-button,calendar-new-task-button,calendar-edit-event-button,calendar-delete-event-button,separator,calendar-day-view-button,calendar-week-view-button,calendar-multiweek-view-button,calendar-month-view-button,spring,throbber-box"
+           defaultset="calendar-new-event-button,calendar-new-task-button,calendar-edit-event-button,calendar-delete-event-button,separator,calendar-go-to-today-button,separator,calendar-day-view-button,calendar-week-view-button,calendar-multiweek-view-button,calendar-month-view-button,spring,throbber-box"
            customizable="true" mode="full"
            toolbarname="&calendar.maintoolbar.name;" accesskey="&calendar.maintoolbar.accesskey;"
            context="toolbar-context-menu"/>
@@ -419,24 +416,29 @@
          onpopupshowing="return onMouseOverTaskTree( this, event )"
          noautohide="true"/>
 
-<tooltip id="gridOccurrenceTooltip"
+<tooltip id="itemTooltip"
          noautohide="true"/>
 
 <!-- V I S I B L E  C O N T E N T  -->
 
 <vbox id="calendar-top-box"
       flex="1"
+      context="context-menu">
+
+<!--Bug 306877: Removed drag and drop support for 0.3a1.  Reimplement this!
+<vbox id="calendar-top-box"
+      flex="1"
       context="context-menu"
       ondraggesture="nsDragAndDrop.startDrag(event,calendarManagerDNDObserver);"
       ondragover="nsDragAndDrop.dragOver(event,calendarManagerDNDObserver)"
-      ondragdrop="nsDragAndDrop.drop(event,calendarManagerDNDObserver)">
+      ondragdrop="nsDragAndDrop.drop(event,calendarManagerDNDObserver)">-->
 
   <!-- Calendar Controls-->
  
   <hbox id="calendar-content-box" flex="1">
 
     <vbox id="left-hand-content" persist="width">
-      <tabbox id="tablist">
+      <tabbox id="tablist" persist="selectedIndex">
         <tabs>
           <tab label="&calendar.calendartab.label;"/>
           <tab label="&calendar.listofcalendarstab.label;"/>
@@ -654,22 +656,16 @@
         <grippy class="sidebar-splitter-grippy"/>
       </splitter>
 
-      <!-- Begin Day/Month/Week Deck -->
-      <deck id="calendar-deck" persist="selectedIndex" flex="1">
-
-        <!-- Calendar Month View -->
-        <vbox id="month-view-box"/>
-
-        <!-- Calendar Week View -->
-        <vbox id="week-view-box"/>
-
-        <!-- Calendar Day View -->
-        <vbox id="day-view-box"/>
-                      
-        <!-- Calendar Near Future View -->
-        <vbox id="multiweek-view-box"/>
-
-      </deck>  <!-- End: Day/Month/Week Deck -->
+      <deck id="view-deck" flex="1" persist="selectedIndex">
+          <calendar-decorated-day-view id="day-view" flex="1" 
+                                       context="context-menu"/>
+          <calendar-decorated-week-view id="week-view" flex="1" 
+                                        context="context-menu"/>
+          <calendar-decorated-multiweek-view id="multiweek-view" flex="1" 
+                                             context="context-menu"/>
+          <calendar-decorated-month-view id="month-view" flex="1" 
+                                         context="context-menu"/>
+      </deck>
 
     </vbox>
   </hbox> <!-- End: box with unifinder on left, calendar on right -->

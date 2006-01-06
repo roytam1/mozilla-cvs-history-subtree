@@ -40,8 +40,52 @@
 [scriptable, uuid(404c7d78-bec7-474c-aa2a-82c0d0563bb6)]
 interface calIErrors : nsISupports
 {
-  // sync with nsError.h
-  const unsigned long NS_ERROR_MODULE_CALENDAR = 5;
+  /**
+   * The first two constants are copied from nsError.h, but named slightly
+   * differently, because if they're named the same, the names collide and
+   * the compiler can't deal.
+   */
+  const unsigned long CAL_ERROR_MODULE_CALENDAR = 5;
+  const unsigned long CAL_ERROR_MODULE_BASE_OFFSET = 0x45;
 
-  const unsigned long CAL_ERROR_BASE = (1<<31) | (NS_ERROR_MODULE_CALENDAR + 0x45) << 16;
+  /**
+   * The beginning of this set of error codes, also copied from the macros
+   * in nsError.h.
+   */
+  const unsigned long ERROR_BASE = (1<<31) | 
+    (CAL_ERROR_MODULE_CALENDAR + CAL_ERROR_MODULE_BASE_OFFSET) << 16;
+
+  /* Onto the actual errors! */
+
+  /**
+   * An invalid or nonexistent timezone was encountered.
+   */
+  const unsigned long INVALID_TIMEZONE = ERROR_BASE + 1;
+
+  /**
+   * Attempted to modify a readOnly calendar.
+   */
+  const unsigned long CAL_IS_READONLY = ERROR_BASE + 2;  
+
+
+  /* ICS specific errors */
+  const unsigned long ICS_ERROR_BASE = ERROR_BASE + 0x100;
+
+  /**
+   * ICS errors, copied from icalerror.h.
+   * The numbers (minus ICS_ERROR_BASE) should match with the enum
+   * values from icalerror.h
+   */
+  const unsigned long ICS_NO_ERROR = ICS_ERROR_BASE + 0;
+  const unsigned long ICS_BADARG = ICS_ERROR_BASE + 1;
+  const unsigned long ICS_NEWFAILED = ICS_ERROR_BASE + 2;
+  const unsigned long ICS_ALLOCATION = ICS_ERROR_BASE + 3;
+  const unsigned long ICS_MALFORMEDDATA = ICS_ERROR_BASE + 4;
+  const unsigned long ICS_PARSE = ICS_ERROR_BASE + 5;
+  const unsigned long ICS_INTERNAL = ICS_ERROR_BASE + 6;
+  const unsigned long ICS_FILE = ICS_ERROR_BASE + 7;
+  const unsigned long ICS_USAGE = ICS_ERROR_BASE + 8;
+  const unsigned long ICS_UNIMPLEMENTED = ICS_ERROR_BASE + 9;
+  const unsigned long ICS_UNKNOWN = ICS_ERROR_BASE + 10;
 };
+

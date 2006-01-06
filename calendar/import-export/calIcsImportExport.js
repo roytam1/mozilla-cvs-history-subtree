@@ -54,40 +54,64 @@ function QueryInterface(aIID) {
 calIcsImporter.prototype.getFileTypes =
 function getFileTypes(aCount) {
     aCount.value = 1;
-    return([{extension:'ics',description:'iCalendar'}]);
+    return([{defaultExtension:'ics', 
+             extensionFilter:'*.ics', 
+             description:'iCalendar'}]);
 };
 
 calIcsImporter.prototype.importFromStream =
 function ics_importFromStream(aStream, aCount) {
     var items = new Array();
 
-    var scriptableInputStream = Components.classes["@mozilla.org/scriptableinputstream;1"]
-                                      .createInstance(Components.interfaces.nsIScriptableInputStream);
-    scriptableInputStream.init(aStream);
-    var str = scriptableInputStream.read(-1);
+    // Interpret the byte-array as an utf8 string, and convert into a
+    // javascript string.
+    var convStream = Components.classes["@mozilla.org/intl/converter-input-stream;1"]
+                               .getService(Components.interfaces.nsIConverterInputStream);
+    convStream.init(aStream, 'UTF-8', 0, 0x0000);
+
+    var tmpStr = {};
+    var str = "";
+    while (convStream.readString(-1, tmpStr)) {
+        str += tmpStr.value;
+    }
 
     icssrv = Components.classes["@mozilla.org/calendar/ics-service;1"]
                        .getService(Components.interfaces.calIICSService);
-    var calComp = icssrv.parseICS(str);
-    var subComp = calComp.getFirstSubcomponent("ANY");
-    while (subComp) {
-        switch (subComp.componentType) {
-        case "VEVENT":
-            var event = Components.classes["@mozilla.org/calendar/event;1"]
-                                  .createInstance(Components.interfaces.calIEvent);
-            event.icalComponent = subComp;
-            items.push(event);
-            break;
-        case "VTODO":
-            var todo = Components.classes["@mozilla.org/calendar/todo;1"]
-                                 .createInstance(Components.interfaces.calITodo);
-            todo.icalComponent = subComp;
-            items.push(todo);
-            break;
-        default:
-            // Nothing
+
+    var rootComp = icssrv.parseICS(str);
+    var calComp;
+    // libical returns the vcalendar component if there is just
+    // one vcalendar. If there are multiple vcalendars, it returns
+    // an xroot component, with those vcalendar childs. We need to
+    // handle both.
+    if (rootComp.componentType == 'VCALENDAR') {
+        calComp = rootComp;
+    } else {
+        calComp = rootComp.getFirstSubcomponent('VCALENDAR');
+    }
+
+    while (calComp) {
+        var subComp = calComp.getFirstSubcomponent("ANY");
+        while (subComp) {
+            switch (subComp.componentType) {
+            case "VEVENT":
+                var event = Components.classes["@mozilla.org/calendar/event;1"]
+                                      .createInstance(Components.interfaces.calIEvent);
+                event.icalComponent = subComp;
+                items.push(event);
+                break;
+            case "VTODO":
+                var todo = Components.classes["@mozilla.org/calendar/todo;1"]
+                                     .createInstance(Components.interfaces.calITodo);
+                todo.icalComponent = subComp;
+                items.push(todo);
+                break;
+            default:
+                // Nothing
+            }
+            subComp = calComp.getNextSubcomponent("ANY");
         }
-        subComp = calComp.getNextSubcomponent("ANY");
+        calComp = rootComp.getNextSubcomponent('VCALENDAR');
     }
 
     aCount.value = items.length;
@@ -114,7 +138,9 @@ function QueryInterface(aIID) {
 calIcsExporter.prototype.getFileTypes =
 function getFileTypes(aCount) {
     aCount.value = 1;
-    return([{extension:'ics',description:'iCalendar'}]);
+    return([{defaultExtension:'ics', 
+             extensionFilter:'*.ics', 
+             description:'iCalendar'}]);
 };
 
 // not prototype.export. export is reserved.
@@ -130,6 +156,15 @@ function ics_exportToStream(aStream, aCount, aItems) {
         calComp.addSubcomponent(item.icalComponent);
     }
     var str = calComp.serializeToICS();
-    aStream.write(str, str.length);
+
+    // Convert the javascript string to an araay of bytes, using the
+    // utf8 encoder
+    var convStream = Components.classes["@mozilla.org/intl/converter-output-stream;1"]
+                               .getService(Components.interfaces.nsIConverterOutputStream);
+    convStream.init(aStream, 'UTF-8', 0, 0x0000);
+
+    convStream.writeString(str);
+    convStream.close();
+
     return;
 };

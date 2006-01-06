@@ -99,6 +99,8 @@ const CAL_ITEM_FLAG_EVENT_ALLDAY = 8;
 const CAL_ITEM_FLAG_HAS_RECURRENCE = 16;
 const CAL_ITEM_FLAG_HAS_EXCEPTIONS = 32;
 
+const USECS_PER_SECOND = 1000000;
+
 function initCalStorageCalendarComponent() {
     CalEvent = new Components.Constructor(kCalEventContractID, kCalIEvent);
     CalTodo = new Components.Constructor(kCalTodoContractID, kCalITodo);
@@ -122,8 +124,9 @@ function createStatement (dbconn, sql) {
         wrapper.initialize(stmt);
         return wrapper;
     } catch (e) {
-        Components.reportError("mozStorage exception: createStatement failed, statement: '" + 
-                               sql + "', error: '" + dbconn.lastErrorString + "'");
+        Components.utils.reportError(
+            "mozStorage exception: createStatement failed, statement: '" + 
+            sql + "', error: '" + dbconn.lastErrorString + "'");
     }
 
     return null;
@@ -256,6 +259,15 @@ calStorageCalendar.prototype = {
     // readonly attribute AUTF8String type;
     get type() { return "storage"; },
 
+    mReadOnly: false,
+
+    get readOnly() { 
+        return this.mReadOnly;
+    },
+    set readOnly(bool) {
+        this.mReadOnly = bool;
+    },
+
     mURI: null,
     // attribute nsIURI uri;
     get uri() { return this.mURI; },
@@ -287,9 +299,16 @@ calStorageCalendar.prototype = {
             this.mDBTwo = dbService.openDatabase (fileURL.file);
         } else if (aURI.scheme == "moz-profile-calendar") {
             dbService = Components.classes[kStorageServiceContractID].getService(kStorageServiceIID);
-            this.mDB = dbService.getProfileStorage("profile");
-            this.mDBTwo = dbService.getProfileStorage("profile");
-        }
+	    if ( "getProfileStorage" in dbService ) {
+	      // 1.8 branch
+	      this.mDB = dbService.getProfileStorage("profile");
+	      this.mDBTwo = dbService.getProfileStorage("profile");
+	    } else {
+	      // trunk 
+	      this.mDB = dbService.openSpecialDatabase("profile");
+	      this.mDBTwo = dbService.openSpecialDatabase("profile");
+	    }
+	}
 
         this.initDB();
 
@@ -300,10 +319,6 @@ calStorageCalendar.prototype = {
     refresh: function() {
         // no-op
     },
-
-    // attribute boolean readOnly;
-    get readOnly() { return false; },
-    set readOnly() { throw Components.results.NS_ERROR_NOT_IMPLEMENTED; },
 
     // attribute boolean suppressAlarms;
     get suppressAlarms() { return false; },
@@ -331,6 +346,8 @@ calStorageCalendar.prototype = {
 
     // void addItem( in calIItemBase aItem, in calIOperationListener aListener );
     addItem: function (aItem, aListener) {
+        if (this.readOnly) 
+            throw Components.interfaces.calIErrors.CAL_IS_READONLY;
         // Ensure that we're looking at the base item
         // if we were given an occurrence.  Later we can
         // optimize this.
@@ -376,6 +393,8 @@ calStorageCalendar.prototype = {
 
     // void modifyItem( in calIItemBase aNewItem, in calIItemBase aOldItem, in calIOperationListener aListener );
     modifyItem: function (aNewItem, aOldItem, aListener) {
+        if (this.readOnly) 
+            throw Components.interfaces.calIErrors.CAL_IS_READONLY;
         function reportError(errId, errStr) {
             if (aListener)
                 aListener.onOperationComplete (this,
@@ -442,6 +461,8 @@ calStorageCalendar.prototype = {
 
     // void deleteItem( in string id, in calIOperationListener aListener );
     deleteItem: function (aItem, aListener) {
+        if (this.readOnly) 
+            throw Components.interfaces.calIErrors.CAL_IS_READONLY;
         if (aItem.parentItem != aItem) {
             aItem.parentItem.recurrenceInfo.removeExceptionFor(aItem.recurrenceId);
             return;
@@ -633,8 +654,10 @@ calStorageCalendar.prototype = {
             // to fall within the range
             sp = this.mSelectEventsByRange.params;
             sp.cal_id = this.mCalId;
-            sp.event_start = startTime;
-            sp.event_end = endTime;
+            sp.range_start = startTime;
+            sp.range_end = endTime;
+            sp.start_offset = aRangeStart ? aRangeStart.timezoneOffset * USECS_PER_SECOND : 0;
+            sp.end_offset = aRangeEnd ? aRangeEnd.timezoneOffset * USECS_PER_SECOND : 0;
 
             while (this.mSelectEventsByRange.step()) {
                 var row = this.mSelectEventsByRange.row;
@@ -690,8 +713,9 @@ calStorageCalendar.prototype = {
             // to fall within the range
             sp = this.mSelectTodosByRange.params;
             sp.cal_id = this.mCalId;
-            sp.todo_start = startTime;
-            sp.todo_end = endTime;
+            sp.range_start = startTime;
+            sp.range_end = endTime;
+            sp.offset = aRangeStart ? aRangeStart.timezoneOffset * USECS_PER_SECOND : 0;
 
             while (this.mSelectTodosByRange.step()) {
                 var row = this.mSelectTodosByRange.row;
@@ -767,6 +791,15 @@ calStorageCalendar.prototype = {
 
         //var profEndTime = Date.now();
         //dump ("++++ getItems took: " + (profEndTime - profStartTime) + " ms\n");
+    },
+
+    startBatch: function ()
+    {
+        this.observeBatchChange(true);
+    },
+    endBatch: function ()
+    {
+        this.observeBatchChange(false);
     },
 
     //
@@ -893,7 +926,8 @@ calStorageCalendar.prototype = {
                 oldVersion = 3;
             } catch (e) {
                 dump ("+++++++++++++++++ DB Error: " + this.mDB.lastErrorString + "\n");
-                Components.reportError("Upgrade failed! DB Error: " + this.mDB.lastErrorString);
+                Components.utils.reportError("Upgrade failed! DB Error: " + 
+                                             this.mDB.lastErrorString);
                 this.mDB.rollbackTransaction();
                 throw e;
             }
@@ -925,7 +959,8 @@ calStorageCalendar.prototype = {
                 oldVersion = 4;
             } catch (e) {
                 dump ("+++++++++++++++++ DB Error: " + this.mDB.lastErrorString + "\n");
-                Components.reportError("Upgrade failed! DB Error: " + this.mDB.lastErrorString);
+                Components.utils.reportError("Upgrade failed! DB Error: " +
+                                             this.mDB.lastErrorString);
                 this.mDB.rollbackTransaction();
                 throw e;
             }
@@ -963,18 +998,39 @@ calStorageCalendar.prototype = {
             "LIMIT 1"
             );
 
+        // The more readable version of the next where-clause is:
+        //   WHERE event_end >= :range_start AND event_start < :event_end
+        // but that doesn't work with floating start or end times. The logic
+        // is the same though.
+        // For readability, a few helpers:
+        var floatingEventStart = "event_start_tz = 'floating' AND event_start - :start_offset"
+        var nonFloatingEventStart = "event_start_tz != 'floating' AND event_start"
+        var floatingEventEnd = "event_end_tz = 'floating' AND event_end - :end_offset"
+        var nonFloatingEventEnd = "event_end_tz != 'floating' AND event_end"
+        // The query needs to take both floating and non floating into account
         this.mSelectEventsByRange = createStatement(
             this.mDB,
             "SELECT * FROM cal_events " +
-            "WHERE event_end >= :event_start AND event_start < :event_end " +
+            "WHERE " +
+            " (("+floatingEventEnd+" >= :range_start) OR " +
+            "  ("+nonFloatingEventEnd+" >= :range_start)) AND " +
+            " (("+floatingEventStart+" < :range_end) OR " +
+            "  ("+nonFloatingEventStart+" < :range_end)) " +
             "  AND cal_id = :cal_id AND recurrence_id IS NULL"
             );
 
+        var floatingTodoEntry = "todo_entry_tz = 'floating' AND todo_entry - :offset"
+        var nonFloatingTodoEntry = "todo_entry_tz != 'floating' AND todo_entry"
         this.mSelectTodosByRange = createStatement(
             this.mDB,
             "SELECT * FROM cal_todos " +
-            "WHERE ((todo_entry >= :todo_start AND todo_entry < :todo_end) OR (todo_entry IS NULL)) " +
-            "  AND cal_id = :cal_id AND recurrence_id IS NULL"
+            "WHERE " +
+            " (((("+floatingTodoEntry+" >= :range_start) OR " +
+            "    ("+nonFloatingTodoEntry+" >= :range_start)) AND " +
+            "   (("+floatingTodoEntry+" < :range_end) OR " +
+            "    ("+nonFloatingTodoEntry+" < :range_end))) " +
+            "  OR (todo_entry IS NULL)) " +
+            " AND cal_id = :cal_id AND recurrence_id IS NULL"
             );
 
         this.mSelectEventsWithRecurrence = createStatement(
@@ -1253,7 +1309,10 @@ calStorageCalendar.prototype = {
                     if (row.count) {
                         ritem.count = row.count;
                     } else {
-                        ritem.endDate = newDateTime(row.end_date);
+                        if (row.end_date)
+                            ritem.endDate = newDateTime(row.end_date);
+                        else
+                            ritem.endDate = null;
                     }
                     ritem.interval = row.interval;
 
@@ -1270,7 +1329,7 @@ calStorageCalendar.prototype = {
                     for (i = 0; i < rtypes.length; i++) {
                         var comp = "BY" + rtypes[i].toUpperCase();
                         if (row[rtypes[i]]) {
-                            var rstr = row[rtypes[i]].split(",");
+                            var rstr = row[rtypes[i]].toString().split(",");
                             var rarray = [];
                             for (var j = 0; j < rstr.length; j++) {
                                 rarray[j] = parseInt(rstr[j]);
@@ -1413,7 +1472,8 @@ calStorageCalendar.prototype = {
             this.mDB.commitTransaction();
         } catch (e) {
             dump("flushItem DB error: " + this.mDB.lastErrorString + "\n");
-            Components.reportError("flushItem DB error: " + this.mDB.lastErrorString);
+            Components.utils.reportError("flushItem DB error: " +
+                                         this.mDB.lastErrorString);
             this.mDB.rollbackTransaction();
             throw e;
         }
@@ -1522,8 +1582,8 @@ calStorageCalendar.prototype = {
             ip.last_modified = tmp.nativeTime;
 
         ip.title = item.getUnproxiedProperty("SUMMARY");
-        ip.priority = item.getUnproxiedProperty("PRIROITY");
-        ip.privacy = item.getUnproxiedProperty("PRIVACY");
+        ip.priority = item.getUnproxiedProperty("PRIORITY");
+        ip.privacy = item.getUnproxiedProperty("CLASS");
         ip.ical_status = item.getUnproxiedProperty("STATUS");
 
         if (!item.parentItem)
@@ -1627,7 +1687,7 @@ calStorageCalendar.prototype = {
                     if (ritem.isByCount)
                         ap.count = ritem.count;
                     else
-                        ap.end_date = ritem.endDate.nativeTime;
+                        ap.end_date = ritem.endDate ? ritem.endDate.nativeTime : null;
 
                     ap.interval = ritem.interval;
 
@@ -1641,7 +1701,7 @@ calStorageCalendar.prototype = {
                                   "month",
                                   "setpos"];
                     for (j = 0; j < rtypes.length; j++) {
-                        var comp = "BY" + rtypes[i].toUpperCase();
+                        var comp = "BY" + rtypes[j].toUpperCase();
                         var comps = ritem.getComponent(comp, {});
                         if (comps && comps.length > 0) {
                             var compstr = comps.join(",");
@@ -1692,7 +1752,8 @@ calStorageCalendar.prototype = {
             this.mDeleteTodo(aID);
             this.mDB.commitTransaction();
         } catch (e) {
-            Components.reportError("deleteItemById DB error: " + this.mDB.lastErrorString);
+            Components.utils.reportError("deleteItemById DB error: " + 
+                                         this.mDB.lastErrorString);
             this.mDB.rollbackTransaction();
             throw e;
         }

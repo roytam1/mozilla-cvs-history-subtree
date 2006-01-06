@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 20; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/* -*- Mode: java; tab-width: 20; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -21,6 +21,8 @@
  *
  * Contributor(s):
  *   Vladimir Vukicevic <vladimir.vukicevic@oracle.com>
+ *   Dan Mosedale <dan.mosedale@oracle.com>
+ *   Joey Minta <jminta@gmail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -45,6 +47,7 @@
 //
 // XXX Should do locks, so that external changes are not overwritten.
 
+const CI = Components.interfaces;
 const calIOperationListener = Components.interfaces.calIOperationListener;
 const calICalendar = Components.interfaces.calICalendar;
 const calCalendarManagerContractID = "@mozilla.org/calendar/manager;1";
@@ -107,11 +110,21 @@ calICSCalendar.prototype = {
 
     get type() { return "ics"; },
 
+    mReadOnly: false,
+
+    get readOnly() { 
+        return this.mReadOnly;
+    },
+    set readOnly(bool) {
+        this.mReadOnly = bool;
+    },
+
     mUri: null,
     get uri() { return this.mUri },
     set uri(aUri) {
-        this.mMemoryCalendar.uri = this.mUri;
         this.mUri = aUri;
+        this.mMemoryCalendar.uri = this.mUri;
+
         this.refresh();
     },
 
@@ -130,7 +143,15 @@ calICSCalendar.prototype = {
 
         var streamLoader = Components.classes["@mozilla.org/network/stream-loader;1"]
                                      .createInstance(Components.interfaces.nsIStreamLoader);
-        streamLoader.init(channel, this, this);
+        try {
+            streamLoader.init(channel, this, this);
+        } catch(e) {
+            // File not found: a new calendar. No problem.
+            this.mObserver.onEndBatch();
+            this.mObserver.onLoad();
+            this.locked = false;
+            this.processQueue();
+        }
     },
 
     calendarPromotedProps: {
@@ -138,10 +159,212 @@ calICSCalendar.prototype = {
         "VERSION": true
     },
 
+    /**
+     * Make a backup of the (remote) calendar
+     *
+     * This will download the remote file into the profile dir.
+     * It should be called before every upload, so every change can be
+     * restored. By default, it will keep 3 backups. It also keeps one
+     * file each day, for 3 days. That way, even if the user doesn't notice
+     * the remote calendar has become corrupted, he will still loose max 1
+     * day of work.
+     * After the back up is finished, will call doWriteICS.
+     */
+    makeBackup: function() {
+        // Uses |pseudoID|, an id of the calendar, defined below
+        function makeName(type) {
+            return 'calBackupData_'+pseudoID+'_'+type+'.ics';
+        }
+        
+        // This is a bit messy. createUnique creates an empty file,
+        // but we don't use that file. All we want is a filename, to be used
+        // in the call to copyTo later. So we create a file, get the filename,
+        // and never use the file again, but write over it.
+        // Using createUnique anyway, because I don't feel like 
+        // re-implementing it
+        function makeDailyFileName() {
+            var dailyBackupFile = backupDir.clone();
+            dailyBackupFile.append(makeName('day'));
+            dailyBackupFile.createUnique(CI.nsIFile.NORMAL_FILE_TYPE, 0600);
+            dailyBackupFileName = dailyBackupFile.leafName;
+
+            // Remove the reference to the nsIFile, because we need to
+            // write over the file later, and you never know what happens
+            // if something still has a reference.
+            // Also makes it explicit that we don't need the file itself,
+            // just the name.
+            dailyBackupFile = null;
+
+            return dailyBackupFileName;
+        }
+
+        function purgeBackupsByType(files, type) {
+            // filter out backups of the type we care about.
+            var filteredFiles = files.filter(
+                function f(v) { 
+                    return (v.name.indexOf("calBackupData_"+pseudoID+"_"+type) != -1)
+                });
+            // Sort by lastmodifed
+            filteredFiles.sort(
+                function s(a,b) {
+                    return (a.lastmodified - b.lastmodified);
+                });
+            // And delete the oldest files, and keep the desired number of
+            // old backups
+            var i;
+            for (i = 0; i < filteredFiles.length - numBackupFiles; ++i) {
+                file = backupDir.clone();
+                file.append(filteredFiles[i].name);
+                file.remove(false);
+            }
+            return;
+        }
+
+        function purgeOldBackups() {
+            // Enumerate files in the backupdir for expiry of old backups
+            var dirEnum = backupDir.directoryEntries;
+            var files = [];
+            while (dirEnum.hasMoreElements()) {
+                var file = dirEnum.getNext().QueryInterface(CI.nsIFile);
+                if (file.isFile()) {
+                    files.push({name: file.leafName, lastmodified: file.lastModifiedTime});
+                }
+            }
+
+            if (doDailyBackup)
+                purgeBackupsByType(files, 'day');
+            else
+                purgeBackupsByType(files, 'edit');
+
+            return;
+        }
+        
+        function copyToOverwriting(oldFile, newParentDir, newName) {
+            try {
+                var newFile = newParentDir.clone();
+                newFile.append(newName);
+            
+                if (newFile.exists()) {
+                    newFile.remove(false);
+                }
+                oldFile.copyTo(newParentDir, newName);
+            } catch(e) {
+                Components.utils.reportError("Backup failed, no copy:"+e);
+                // Error in making a daily/initial backup.
+                // not fatal, so just continue
+            }
+        }
+
+        function getIntPrefSafe(prefName, defaultValue)
+        {
+            try {
+                var prefValue = backupBranch.getIntPref(prefName);
+                return prefValue;
+            }
+            catch (ex) {
+                return defaultValue;
+            }
+        }
+        var backupDays = getIntPrefSafe("days", 1);
+        var numBackupFiles = getIntPrefSafe("filenum", 3);
+
+        try {
+            var dirService = Components.classes["@mozilla.org/file/directory_service;1"]
+                                       .getService(CI.nsIProperties);
+            var backupDir = dirService.get("ProfD", CI.nsILocalFile);
+            backupDir.append("backupData");
+            if (!backupDir.exists()) {
+                backupDir.create(CI.nsIFile.DIRECTORY_TYPE, 0755);
+            }
+        } catch(e) {
+            // Backup dir wasn't found. Likely because we are running in
+            // xpcshell. Don't die, but continue the upload.
+            dump("Backup failed, no backupdir:"+e+"\n");
+            this.doWriteICS();
+            return;
+        }
+
+        try {
+            var pseudoID = getCalendarManager().getCalendarPref(this, "UNIQUENUM");
+            if (!pseudoID) {
+                pseudoID = new Date().getTime();
+                getCalendarManager().setCalendarPref(this, "UNIQUENUM", pseudoID);
+            }
+        } catch(e) {
+            // calendarmgr not found. Likely because we are running in
+            // xpcshell. Don't die, but continue the upload.
+            dump("Backup failed, no calendarmanager:"+e+"\n");
+            this.doWriteICS();
+            return;
+        }
+
+        var doInitialBackup = false;
+        var initialBackupFile = backupDir.clone();
+        initialBackupFile.append(makeName('initial'));
+        if (!initialBackupFile.exists())
+            doInitialBackup = true;
+
+        var doDailyBackup = false;
+        var backupTime = new Number(getCalendarManager().
+                                       getCalendarPref(this, 'backup-time'));
+        if (!backupTime ||
+            (new Date().getTime() > backupTime + backupDays*24*60*60*1000)) {
+            // It's time do to a daily backup
+            doDailyBackup = true;
+            getCalendarManager().setCalendarPref(this, 'backup-time', 
+                                                 new Date().getTime());
+        }
+
+        var dailyBackupFileName;
+        if (doDailyBackup) {
+            dailyBackupFileName = makeDailyFileName(backupDir);
+        }
+
+        var backupFile = backupDir.clone();
+        backupFile.append(makeName('edit'));
+        backupFile.createUnique(CI.nsIFile.NORMAL_FILE_TYPE, 0600);
+        
+        purgeOldBackups();
+
+        // Now go download the remote file, and store it somewhere local.
+        var ioService = Components.classes["@mozilla.org/network/io-service;1"]
+                                  .getService(CI.nsIIOService);
+        var channel = ioService.newChannelFromURI(fixupUri(this.mUri));
+        channel.loadFlags |= Components.interfaces.nsIRequest.LOAD_BYPASS_CACHE;
+        channel.notificationCallbacks = this;
+
+        var downloader = Components.classes["@mozilla.org/network/downloader;1"]
+                                   .createInstance(CI.nsIDownloader);
+
+        var provider = this;
+        var listener = {
+            onDownloadComplete: function(downloader, request, ctxt, status, result) {
+                if (doInitialBackup)
+                    copyToOverwriting(result, backupDir, makeName('initial'));
+                if (doDailyBackup)
+                    copyToOverwriting(result, backupDir, dailyBackupFileName);
+
+                provider.doWriteICS();
+            },
+        }
+
+        downloader.init(listener, backupFile);
+        try {
+            channel.asyncOpen(downloader, null);
+        } catch(e) {
+            // For local files, asyncOpen throws on new (calendar) files
+            // No problem, go and upload something
+            dump("Backup failed in asyncOpen:"+e+"\n");
+            this.doWriteICS();
+            return;
+        }
+
+        return;
+    },
+
     // nsIStreamLoaderObserver impl
     // Listener for download. Parse the downloaded file
 
-    // XXX use the onError observer calls
     onStreamComplete: function(loader, ctxt, status, resultLength, result)
     {
         // Create a new calendar, to get rid of all the old events
@@ -153,54 +376,89 @@ calICSCalendar.prototype = {
 
         this.mObserver.onStartBatch();
 
+        // This conversion is needed, because the stream only knows about
+        // byte arrays, not about strings or encodings. The array of bytes
+        // need to be interpreted as utf8 and put into a javascript string.
         var unicodeConverter = Components.classes["@mozilla.org/intl/scriptableunicodeconverter"]
                                          .createInstance(Components.interfaces.nsIScriptableUnicodeConverter);
         // ics files are always utf8
         unicodeConverter.charset = "UTF-8";
-        var str = unicodeConverter.convertFromByteArray(result, result.length);
+        var str;
+        try {
+            str = unicodeConverter.convertFromByteArray(result, result.length);
+        } catch(e) {
+            this.mObserver.onError(e.result, e.toString());
+        }
 
         // Wrap parsing in a try block. Will ignore errors. That's a good thing
         // for non-existing or empty files, but not good for invalid files.
-        // We should not accidently overwrite third party files.
-        // XXX Fix that
+        // That's why we put them in readOnly mode
         try {
-            var calComp = this.mICSService.parseICS(str);
+            var rootComp = this.mICSService.parseICS(str);
 
-            // Get unknown properties
-            var prop = calComp.getFirstProperty("ANY");
-            while (prop) {
-                if (!this.calendarPromotedProps[prop.propertyName]) {
-                    this.unmappedProperties.push(prop);
-                    dump(prop.propertyName+"\n");
-                }
-                prop = calComp.getNextProperty("ANY");
+            var calComp;
+            // libical returns the vcalendar component if there is just
+            // one vcalendar. If there are multiple vcalendars, it returns
+            // an xroot component, with those vcalendar childs. We need to
+            // handle both.
+            if (rootComp.componentType == 'VCALENDAR') {
+                calComp = rootComp;
+            } else {
+                calComp = rootComp.getFirstSubcomponent('VCALENDAR');
             }
 
-            var subComp = calComp.getFirstSubcomponent("ANY");
-            while (subComp) {
-                switch (subComp.componentType) {
-                case "VEVENT":
-                    var event = Components.classes["@mozilla.org/calendar/event;1"]
-                                          .createInstance(Components.interfaces.calIEvent);
-                    event.icalComponent = subComp;
-                    this.mMemoryCalendar.addItem(event, null);
-                    break;
-                case "VTODO":
-                    // XXX Last time i tried, vtodo didn't work. Sadly no time to
-                    // debug now.
-                    var todo = Components.classes["@mozilla.org/calendar/todo;1"]
-                                         .createInstance(Components.interfaces.calITodo);
-                    todo.icalComponent = subComp;
-                    this.mMemoryCalendar.addItem(todo, null);
-                    break;
-                default:
-                    this.unmappedComponents.push(subComp);
-                    dump(subComp.componentType+"\n");
+            while (calComp) {
+                // Get unknown properties
+                var prop = calComp.getFirstProperty("ANY");
+                while (prop) {
+                    if (!this.calendarPromotedProps[prop.propertyName]) {
+                        this.unmappedProperties.push(prop);
+                        dump(prop.propertyName+"\n");
+                    }
+                    prop = calComp.getNextProperty("ANY");
                 }
-                subComp = calComp.getNextSubcomponent("ANY");
+
+                var subComp = calComp.getFirstSubcomponent("ANY");
+                while (subComp) {
+                    // Place each subcomp in a try block, to hopefully get as
+                    // much of a bad calendar as possible
+                    try {
+                        switch (subComp.componentType) {
+                        case "VEVENT":
+                            var event = Components.classes["@mozilla.org/calendar/event;1"]
+                                                  .createInstance(Components.interfaces.calIEvent);
+                            event.icalComponent = subComp;
+                            this.mMemoryCalendar.addItem(event, null);
+                            break;
+                        case "VTODO":
+                            var todo = Components.classes["@mozilla.org/calendar/todo;1"]
+                                                 .createInstance(Components.interfaces.calITodo);
+                            todo.icalComponent = subComp;
+                            this.mMemoryCalendar.addItem(todo, null);
+                            break;
+
+                        case "VTIMEZONE":
+                            // this should already be attached to the relevant
+                            // events in the calendar, so there's no need to
+                            // do anything with it here.
+                            break;
+
+                        default:
+                            this.unmappedComponents.push(subComp);
+                            dump(subComp.componentType+"\n");
+                        }
+                    }
+                    catch(ex) { 
+                        this.mObserver.onError(ex.result, ex.toString());
+                    }
+                    subComp = calComp.getNextSubcomponent("ANY");
+                }
+                calComp = rootComp.getNextSubcomponent('VCALENDAR');
             }
-            
-        } catch(e) { dump(e+"\n");}
+        } catch(e) {
+            dump("Parsing the file failed:"+e+"\n");
+            this.mObserver.onError(e.result, e.toString());
+        }
 
         this.mObserver.onEndBatch();
         this.mObserver.onLoad();
@@ -209,41 +467,51 @@ calICSCalendar.prototype = {
     },
 
     writeICS: function () {
-        // Don't save right after loading. There are no changes anyway.
-        if (this.loading) {
-            this.loading = false;
-            return;
-        }
-
         this.locked = true;
 
         if (!this.mUri)
             throw Components.results.NS_ERROR_FAILURE;
 
+        // makeBackup will call doWriteICS
+        this.makeBackup();
+    },
+
+    doWriteICS: function () {
         var savedthis = this;
         var listener =
         {
             onOperationComplete: function(aCalendar, aStatus, aOperationType, aId, aDetail)
             {
-                // All events are returned. Now set up a channel and a
-                // streamloader to upload.
-                // Will call onStopRequest when finised.
-                var icsStr = calComp.serializeToICS();
+                try  {
+                    // All events are returned. Now set up a channel and a
+                    // streamloader to upload.  onStopRequest will be called
+                    // once the write has finished
+                    var ioService = Components.classes
+                        ["@mozilla.org/network/io-service;1"]
+                        .getService(Components.interfaces.nsIIOService);
+                    var channel = ioService.newChannelFromURI(
+                        fixupUri(savedthis.mUri));
+                    channel.notificationCallbacks = savedthis;
+                    var uploadChannel = channel.QueryInterface(
+                        Components.interfaces.nsIUploadChannel);
 
-                var ioService = Components.classes["@mozilla.org/network/io-service;1"]
-                                          .getService(Components.interfaces.nsIIOService);
-                var channel = ioService.newChannelFromURI(fixupUri(savedthis.mUri));
-                channel.notificationCallbacks = savedthis;
-                var uploadChannel = channel.QueryInterface(Components.interfaces.nsIUploadChannel);
-                var postStream = Components.classes["@mozilla.org/io/string-input-stream;1"]
-                                           .createInstance(Components.interfaces.nsIStringInputStream);
-                postStream.setData(icsStr, icsStr.length);
-                uploadChannel.setUploadStream(postStream, "text/calendar", -1);
-                channel.asyncOpen(savedthis, savedthis);
+                    // do the actual serialization
+                    var icsStream = calComp.serializeToICSStream();
+
+                    uploadChannel.setUploadStream(icsStream, "text/calendar",
+                                                  -1);
+
+                    channel.asyncOpen(savedthis, savedthis);
+                } catch (ex) {
+                    savedthis.mObserver.onError(
+                        ex.result, "The calendar could not be saved; there " +
+                        "was a failure: 0x" + ex.result.toString(16));
+                }
+
+                return;
             },
             onGetResult: function(aCalendar, aStatus, aItemType, aDetail, aCount, aItems)
             {
-                var lastmodifed;
                 for (var i=0; i<aCount; i++) {
                     calComp.addSubcomponent(aItems[i].icalComponent);
                 }
@@ -283,13 +551,13 @@ calICSCalendar.prototype = {
         }
 
         if (channel && !channel.requestSucceeded) {
-            ctxt.mObserver.onError(null,
+            ctxt.mObserver.onError(channel.requestSucceeded,
                                    "Publishing the calendar file failed\n" +
                                        "Status code: "+channel.responseStatus+": "+channel.responseStatusText+"\n");
         }
 
         else if (!channel && !Components.isSuccessCode(request.status)) {
-            ctxt.mObserver.onError(null,
+            ctxt.mObserver.onError(request.status,
                                    "Publishing the calendar file failed\n" +
                                        "Status code: "+request.status.toString(16)+"\n");
         }
@@ -308,17 +576,23 @@ calICSCalendar.prototype = {
     // this.mMemoryCalendar.addItem() and friends are called. less
     // copied code.
     addItem: function (aItem, aListener) {
+        if (this.readOnly) 
+            throw Components.interfaces.calIErrors.CAL_IS_READONLY;
         this.queue.push({action:'add', item:aItem, listener:aListener});
         this.processQueue();
     },
 
     modifyItem: function (aNewItem, aOldItem, aListener) {
+        if (this.readOnly) 
+            throw Components.interfaces.calIErrors.CAL_IS_READONLY;
         this.queue.push({action:'modify', oldItem: aOldItem,
                          newItem: aNewItem, listener:aListener});
         this.processQueue();
     },
 
     deleteItem: function (aItem, aListener) {
+        if (this.readOnly) 
+            throw Components.interfaces.calIErrors.CAL_IS_READONLY;
         this.queue.push({action:'delete', item:aItem, listener:aListener});
         this.processQueue();
     },
@@ -340,6 +614,7 @@ calICSCalendar.prototype = {
         if (this.locked)
             return;
         var a;
+        var hasItems = this.queue.length;
         while ((a = this.queue.shift())) {
             switch (a.action) {
                 case 'add':
@@ -354,6 +629,17 @@ calICSCalendar.prototype = {
                     break;
             }
         }
+        if (hasItems)
+            this.writeICS();
+    },
+
+    startBatch: function ()
+    {
+        this.mObserver.onStartBatch();
+    },
+    endBatch: function ()
+    {
+        this.mObserver.onEndBatch();
     },
 
     // nsIInterfaceRequestor impl
@@ -403,7 +689,6 @@ calICSObserver.prototype = {
             this.mObservers[i].onEndBatch();
 
         this.mInBatch = false;
-        this.mCalendar.writeICS();
     },
     onLoad: function() {
         for (var i = 0; i < this.mObservers.length; i++)
@@ -412,31 +697,36 @@ calICSObserver.prototype = {
     onAddItem: function(aItem) {
         for (var i = 0; i < this.mObservers.length; i++)
             this.mObservers[i].onAddItem(aItem);
-
-        if (!this.mInBatch)
-            this.mCalendar.writeICS();
     },
     onModifyItem: function(aNewItem, aOldItem) {
         for (var i = 0; i < this.mObservers.length; i++)
             this.mObservers[i].onModifyItem(aNewItem, aOldItem);
-
-        if (!this.mInBatch)
-            this.mCalendar.writeICS();
     },
     onDeleteItem: function(aDeletedItem) {
         for (var i = 0; i < this.mObservers.length; i++)
             this.mObservers[i].onDeleteItem(aDeletedItem);
-
-        if (!this.mInBatch)
-            this.mCalendar.writeICS();
     },
     onAlarm: function(aAlarmItem) {
         for (var i = 0; i < this.mObservers.length; i++)
             this.mObservers[i].onAlarm(aAlarmItem);
     },
-    onError: function(aMessage) {
+
+    // Unless an error number is in this array, we consider it very bad, set
+    // the calendar to readOnly, and give up.
+    acceptableErrorNums: [],
+
+    onError: function(aErrNo, aMessage) {
+        var errorIsOk = false;
+        for each (num in this.acceptableErrorNums) {
+            if (num == aErrNo) {
+                errorIsOk = true;
+                break;
+            }
+        }
+        if (!errorIsOk)
+            this.mCalendar.readOnly = true;
         for (var i = 0; i < this.mObservers.length; i++)
-            this.mObservers[i].onError(aMessage);
+            this.mObservers[i].onError(aErrNo, aMessage);
     },
 
     // This observer functions as proxy for all the other observers

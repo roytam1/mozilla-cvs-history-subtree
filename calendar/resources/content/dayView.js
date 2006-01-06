@@ -119,7 +119,6 @@ DayView.prototype.refreshEvents = function()
                                      selectedDateTime.getDate());
     this.displayEndDate = new Date(this.displayStartDate);
     this.displayEndDate.setDate(this.displayEndDate.getDate() + 1)
-    this.displayEndDate.setMilliseconds(this.displayEndDate.getMilliseconds() - 1);
 
     // Save this off so we can get it again in onGetResult below
     var eventController = this;
@@ -137,11 +136,13 @@ DayView.prototype.refreshEvents = function()
 
     var ccalendar = getDisplayComposite();
 
-    dump("Fetching events from " + this.displayStartDate.toString() + " to " + this.displayEndDate.toString() + "\n");
+    var start = jsDateToDateTime(this.displayStartDate).getInTimezone(calendarDefaultTimezone());
+    var end = jsDateToDateTime(this.displayEndDate).getInTimezone(calendarDefaultTimezone());
+
+    dump("Fetching events from " + start + " to " + end + "\n");
 
     ccalendar.getItems(ccalendar.ITEM_FILTER_TYPE_EVENT | ccalendar.ITEM_FILTER_CLASS_OCCURRENCES,
-                      0, jsDateToDateTime(this.displayStartDate),
-                      jsDateToDateTime(this.displayEndDate), getListener);
+                      0, start, end, getListener);
 
     return;
     
@@ -359,7 +360,9 @@ DayView.prototype.addToDisplayList = function(itemOccurrence, startDate, endDate
 
     // Check if the event is within the bounds of events to be displayed.
     if ((adjustedEndDate < this.displayStartDate) ||
-        (adjustedStartDate > this.displayEndDate))
+        (adjustedStartDate >= this.displayEndDate) ||
+        (adjustedEndDate == this.displayStartDate &&
+         adjustedStartDate < this.displayStartDate))
         return;
 
     this.eventList.push({event:itemOccurrence, start:startDate.clone(), end:endDate.clone()});
@@ -370,10 +373,12 @@ DayView.prototype.drawEventBoxes = function()
     var sHour = getIntPref(this.calendarWindow.calendarPreferences.calendarPref, "event.defaultstarthour", 8);
     var eHour = getIntPref(this.calendarWindow.calendarPreferences.calendarPref, "event.defaultendhour", 17);
     for each (event in this.eventList) {        
-        if(event.end.hour > eHour)
-            eHour = event.end.hour;
-        if(event.start.hour < sHour)
-            sHour = event.start.hour;
+        if (!(event.start.isDate)) { 
+            if(event.end.hour > eHour)
+                eHour = event.end.hour;
+            if(event.start.hour < sHour)
+                sHour = event.start.hour;
+        }
     }
     var i;
     for (i = 0; i < 24; i++) {
@@ -479,9 +484,6 @@ DayView.prototype.createEventBoxInternal = function(event)
    eventBox.setAttribute( "ondblclick", "dayEventItemDoubleClick( this, event )" );
    eventBox.setAttribute( "onmouseover", "onMouseOverGridOccurrence(event)" );
    eventBox.setAttribute( "tooltip", "gridOccurrenceTooltip" );
-   eventBox.setAttribute( "ondraggesture", "nsDragAndDrop.startDrag(event,calendarViewDNDObserver);" );
-   eventBox.setAttribute( "ondragover", "nsDragAndDrop.dragOver(event,calendarViewDNDObserver)" );
-   eventBox.setAttribute( "ondragdrop", "nsDragAndDrop.drop(event,calendarViewDNDObserver)" );
    
    // mark the box as selected, if the event is
    if (this.calendarWindow.EventSelection.isSelectedEvent(calEvent))

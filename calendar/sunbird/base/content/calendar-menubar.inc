@@ -263,16 +263,12 @@
                      type="checkbox"
                      label="&calendar.onlyworkday.checkbox.label;"
                      accesskey="&calendar.onlyworkday.checkbox.accesskey;"
-                     oncommand="changeOnlyWorkdayCheckbox(1);"
-                     persist="checked"
-                     disabled="true"/>
+                     observes="toggle_workdays_only"/>
            <menuitem id="display-todo-inview-checkbox-1"
                      type="checkbox"
                      label="&calendar.displaytodos.checkbox.label;"
                      accesskey="&calendar.displaytodos.checkbox.accesskey;"
-                     oncommand="changeDisplayToDoInViewCheckbox(1);"
-                     persist="checked"
-                     disabled="true"/>
+                     observes="toggle_tasks_in_view"/>
            <menu id="menu-numberofweeks-inview"
                  label="&calendar.menu.numberofweeks.label;"
                  oncommand="gCalendarWindow.currentView.changeNumberOfWeeks(event.target)"
@@ -323,6 +319,7 @@
                      label="&goDateCmd.label;"
                      accesskey="&goDateCmd.accesskey;"
                      observes="go_date_command"/>
+           <menuseparator/>
            <menuitem id="calendar-go-menu-previous"
                      key="go_backward_key"
                      label="&goPreviousCmd.label;"
@@ -410,12 +407,11 @@
              accesskey="&helpMenu.accesskey;">
          <menupopup id="menu_HelpPopup">
            <!-- XXX lilmatt: Finish/localize this!  oncommand="openTopWin('&helpURL;');" -->
-           <menuitem label="Help Contents"
+           <menuitem label="&calendar.help.label;"
                      disabled="true"/>
            <menuitem accesskey="&releaseCmd.accesskey;"
                      label="&releaseCmd.label;"
-                     oncommand="openTopWin('&releaseURL;');"
-                     disabled="true"/>
+                     oncommand="launchBrowser('&releaseURL;');" />
            <menuseparator id="menu_HelpAboutSeparator"/>
            <menuitem id="aboutName"
                      label="&aboutCmd.label;"

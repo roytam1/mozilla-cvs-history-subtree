@@ -232,8 +232,8 @@ calRecurrenceRule::GetEndDate(calIDateTime * *aRecurEnd)
 
         NS_ADDREF (*aRecurEnd = cdt);
     } else {
-        // this thing was set by count, so we don't know
-        return NS_ERROR_FAILURE;
+        // infinite recurrence
+        *aRecurEnd = nsnull; 
     }
     return NS_OK;
 }
@@ -430,7 +430,7 @@ calRecurrenceRule::GetOccurrences(calIDateTime *aStartTime,
 
     nsCOMArray<calIDateTime> dates;
 
-#ifdef DEBUG
+#ifdef DEBUG_vlad
     {
         char* ss = icalrecurrencetype_as_string(mIcalRecur);
         nsCAutoString tst, tend;

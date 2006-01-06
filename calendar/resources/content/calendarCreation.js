@@ -84,7 +84,7 @@ function doCreateCalendar()
         if (already.length) {
             if (type != 'local') {
                 // signalError("Already have calendar at this URI.");
-                Components.reportError("Already have calendar with URI " + uri);
+                Components.utils.reportError("Already have calendar with URI " + uri);
                 return false;
             }
             uri = uri.replace(/id=(\d+)/,
@@ -110,6 +110,19 @@ function doCreateCalendar()
     calManager.setCalendarPref(newCalendar, 'color', cal_color);
 
     return true;
+}
+
+function initNameFromURI() {
+    var path = document.getElementById("calendar-uri").value;
+    var nameField = document.getElementById("calendar-name");
+    if (!path || nameField.value)
+        return;
+
+    var fullPathRegex = new RegExp("([^/:]+)[.]ics$");
+    var captures = path.match(fullPathRegex);
+    if (captures && captures.length >= 1) {
+        nameField.value = captures[1];
+    }
 }
 
 //Don't let the wizard advance if the URL isn't valid, since the calendar
