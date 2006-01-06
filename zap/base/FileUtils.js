@@ -38,6 +38,7 @@
 EXPORTED_SYMBOLS = [ "urlToFile",
                      "fileToURL",
                      "openFileForWriting",
+                     "openFileForReading",
                      "getProfileDir",
                      "getProfileFile",
                      "getProfileDefaultsFile",
@@ -100,7 +101,7 @@ function fileToURL(file) {
   return gFileProtocolHandler.getURLSpecFromFile(file);
 }
 
-// Open a file for overwriting or appending. returns an
+// Open a file for overwriting or appending. Returns an
 // nsIFileOutputStream object. Permissions should be a 9 character
 // string describing the permissions as 'ls -l' would display
 // them. Default permissions are "rw-r--r--".
@@ -138,6 +139,24 @@ function openFileForWriting(file, append, /* optional */ permissions)
     fos = null;
   }
   return fos;
+}
+
+// Open a file for reading. Returns an nsIScriptableInputStreamEx object.
+function openFileForReading(file) {
+  try {
+    var fis = Components.classes["@mozilla.org/network/file-input-stream;1"]
+      .createInstance(Components.interfaces.nsIFileInputStream);
+    var ioflags = IO_RDONLY;
+    fis.init(file, ioflags, 0, 0);
+  }
+  catch(e) {
+    if (fis)
+      fis.close();
+    fis = null;
+  }
+  var sis = Components.classes["@mozilla.org/scriptableinputstream;1"].createInstance(Components.interfaces.nsIScriptableInputStreamEx);
+  sis.init(fis);
+  return sis;  
 }
 
 // returns the profile directory
