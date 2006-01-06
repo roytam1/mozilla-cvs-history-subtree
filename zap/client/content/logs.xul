@@ -53,23 +53,28 @@
 
   <script type="application/x-javascript">
   <![CDATA[
+
+  var wContentDoc;
+
   function windowInit() {
     Components.utils.importModule("gre:FileUtils.js");
-    var contentDoc = document.getElementById("content").contentDocument;
+    wContentDoc = document.getElementById("content").contentDocument;
     // determine log filter from uri query part:
     var callidpar = /\?callid=(.+)/(document.documentURI);
     if (!callidpar) return;
     var callid = unescape(callidpar[1]);
-    document.getElementById("title").value = "SIP Call Logs for "+callid;
-    contentDoc.open("text/plain");
+    var title = "SIP Call Logs for "+callid;
+    document.getElementById("title").value = title; 
+    wContentDoc.open("text/plain");
+    wContentDoc.title = title;
 
     processSbox(getProfileFile("zap.sbox"),
                 function(record) {
                   if (record.indexOf(callid) != -1)
-                    contentDoc.write(record);
+                    wContentDoc.write(record);
                 });
 
-    contentDoc.close();
+    wContentDoc.close();
   }
 
   // This is a quick and dirty, *very* slow and inaccurate function for
@@ -105,6 +110,10 @@
 
   ]]>
   </script>
-  <label class="zap-form-title" id="title"/>
-  <iframe id="content" flex="1" src="about:blank" />
+    <label class="zap-form-title" crop="end" id="title"/>
+  <iframe id="content" flex="1" />
+    <hbox>
+      <spacer flex="1"/>
+      <button label="Print..." oncommand="wContentDoc.defaultView.print()"/>
+    </hbox>
 </window>
