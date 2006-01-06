@@ -1032,7 +1032,8 @@ Disassemble(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
             }
         }
 
-        js_Disassemble(cx, script, lines, stdout);
+        if (!js_Disassemble(cx, script, lines, stdout))
+            return JS_FALSE;
         SrcNotes(cx, script);
         TryNotes(cx, script);
     }
