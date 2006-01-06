@@ -68,6 +68,12 @@
     function cmdCancel() {
       wCall.callHandler.rc.cancel();
     }
+
+    function cmdLogs() {
+      window.open("chrome://zap/content/logs.xul?callid="+escape(wCall["urn:mozilla:zap:callid"]),
+                  "",
+                  "chrome,resizable");
+    }
   ]]>
   </script>
 
@@ -251,6 +257,20 @@
                 <spacer flex="1"/>
                 <button label="Reject" oncommand="cmdReject()"/>
                 <button label="Accept" oncommand="cmdAccept()"/>
+              </hbox>
+            </vbox>
+          </action>
+        </rule>
+        <rule><!-- INACTIVE CALL -->
+          <conditions>
+            <content uri="?dummy"/>
+            <member container="?dummy" child="?node"/>
+          </conditions>
+          <action>
+            <vbox uri="?node" flex="1">
+              <hbox>
+                <spacer flex="1"/>
+                <button label="Show SIP call logs" oncommand="cmdLogs()"/>
               </hbox>
             </vbox>
           </action>

@@ -39,14 +39,72 @@
 
 <!DOCTYPE window SYSTEM "chrome://zap/locale/zap.dtd">
 
-<page id="zap_logs"
+<window id="zap_logs"
+        class="zap_form"
+        width="640" height="480" screenX="20" screenY="20" 
+        persist="width height screenX screenY sizemode"
+        title = "zap! call logs"
+        onload="windowInit();"
         xmlns = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
   <!-- Scripts -->
   <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
+  <script type="text/javascript" src="chrome://zap/content/chromeUtils.js"/>
 
-  <vbox id="module_page" flex="1">
-    <label class="titlebox" value="Call Logs"/>
+  <script type="application/x-javascript">
+  <![CDATA[
+  function windowInit() {
+    Components.utils.importModule("gre:FileUtils.js");
+    var contentDoc = document.getElementById("content").contentDocument;
+    // determine log filter from uri query part:
+    var callidpar = /\?callid=(.+)/(document.documentURI);
+    if (!callidpar) return;
+    var callid = unescape(callidpar[1]);
+    document.getElementById("title").value = "SIP Call Logs for "+callid;
+    contentDoc.open("text/plain");
 
-  </vbox>
-</page>
+    processSbox(getProfileFile("zap.sbox"),
+                function(record) {
+                  if (record.indexOf(callid) != -1)
+                    contentDoc.write(record);
+                });
+
+    contentDoc.close();
+  }
+
+  // This is a quick and dirty, *very* slow and inaccurate function for
+  // running a 'process' function over all records in the given
+  // sbox-formatted file. XXX we need this in C++
+  var MAX_SBOX_RECORD_SIZE = 10240;
+  function processSbox(file, process) {
+    var is = openFileForReading(file);
+    if (!is) return;
+    var avail;
+    var buffer = "";
+    var record_matcher = /- From (?:.|\n|\r)*?\n\n/m;
+    while (1) {
+      if (is && buffer.length < MAX_SBOX_RECORD_SIZE) {
+        var avail = is.available();
+        if (!avail) {
+          is.close();
+          is = null;
+        }
+        else {
+          buffer += is.readEx(Math.min(MAX_SBOX_RECORD_SIZE, avail));
+        }
+      }
+      var match = record_matcher(buffer);
+      if (!match) break;
+      process(match[0]);
+      buffer = buffer.substring(match.index+match[0].length);
+    }
+    if (is)
+      is.close();
+  }
+
+
+  ]]>
+  </script>
+  <label class="zap-form-title" id="title"/>
+  <iframe id="content" flex="1" src="about:blank" />
+</window>
