@@ -2551,7 +2551,9 @@ nsHTMLDocument::GetWidth(PRInt32* aWidth)
 
   // We make the assumption that the first presentation shell
   // is the one for which we need information.
-  nsIPresShell *shell = GetShellAt(0);
+  // Since GetPixelDimensions flushes and flushing can destroy
+  // our shell, hold a strong ref to it.
+  nsCOMPtr<nsIPresShell> shell = GetShellAt(0);
   if (!shell) {
     return NS_OK;
   }
@@ -2571,7 +2573,9 @@ nsHTMLDocument::GetHeight(PRInt32* aHeight)
 
   // We make the assumption that the first presentation shell
   // is the one for which we need information.
-  nsIPresShell *shell = GetShellAt(0);
+  // Since GetPixelDimensions flushes and flushing can destroy
+  // our shell, hold a strong ref to it.
+  nsCOMPtr<nsIPresShell> shell = GetShellAt(0);
   if (!shell) {
     return NS_OK;
   }
