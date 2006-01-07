@@ -4787,7 +4787,6 @@ nsDocShell::EndPageLoad(nsIWebProgress * aProgress,
     // will set it up for us. 
     RefreshURIFromQueue();
 
-    printf("EndPageLoad: %llu\n", PR_Now());
     return NS_OK;
 }
 
