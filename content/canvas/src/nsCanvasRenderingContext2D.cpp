@@ -1047,7 +1047,7 @@ NS_IMETHODIMP
 nsCanvasRenderingContext2D::Fill()
 {
     ApplyStyle(STYLE_FILL);
-    cairo_fill(mCairo);
+    cairo_fill_preserve(mCairo);
     return Redraw();
 }
 
@@ -1055,14 +1055,14 @@ NS_IMETHODIMP
 nsCanvasRenderingContext2D::Stroke()
 {
     ApplyStyle(STYLE_STROKE);
-    cairo_stroke(mCairo);
+    cairo_stroke_preserve(mCairo);
     return Redraw();
 }
 
 NS_IMETHODIMP
 nsCanvasRenderingContext2D::Clip()
 {
-    cairo_clip(mCairo);
+    cairo_clip_preserve(mCairo);
     return Redraw();
 }
 
@@ -1083,7 +1083,20 @@ nsCanvasRenderingContext2D::LineTo(float x, float y)
 NS_IMETHODIMP
 nsCanvasRenderingContext2D::QuadraticCurveTo(float cpx, float cpy, float x, float y)
 {
-    cairo_curve_to(mCairo, cpx, cpy, cpx, cpy, x, y);
+    double cx, cy;
+
+    cairo_get_current_point(mCairo, &cx, &cy);
+    if (cairo_status(mCairo))
+        return NS_ERROR_INVALID_ARG;
+
+    cairo_curve_to(mCairo,
+                   (cx + cpx * 2.0) / 3.0,
+                   (cy + cpy * 2.0) / 3.0,
+                   (cpx * 2.0 + x) / 3.0,
+                   (cpy * 2.0 + y) / 3.0,
+                   x,
+                   y);
+
     return NS_OK;
 }
 
@@ -1771,12 +1784,40 @@ nsCanvasRenderingContext2D::CairoSurfaceFromElement(nsIDOMElement *imgElt,
     return NS_OK;
 }
 
+static PRBool
+CheckSaneImageSize (PRInt32 width, PRInt32 height)
+{
+    if (width <= 0 || height <= 0)
+        return PR_FALSE;
+
+    /* check to make sure we don't overflow a 32-bit */
+    PRInt32 tmp = width * height;
+    if (tmp / height != width)
+        return PR_FALSE;
+
+    tmp = tmp * 4;
+    if (tmp / 4 != width * height)
+        return PR_FALSE;
+
+    /* reject over-wide or over-tall images */
+    const PRInt32 k64KLimit = 0x0000FFFF;
+    if (width > k64KLimit || height > k64KLimit)
+        return PR_FALSE;
+
+    return PR_TRUE;
+}
+
 NS_IMETHODIMP
 nsCanvasRenderingContext2D::DrawWindow(nsIDOMWindow* aWindow, PRInt32 aX, PRInt32 aY,
                                        PRInt32 aW, PRInt32 aH, 
                                        const nsAString& aBGColor)
 {
     NS_ENSURE_ARG(aWindow != nsnull);
+
+    // protect against too-large surfaces that will cause allocation
+    // or overflow issues
+    if (!CheckSaneImageSize (aW, aH))
+        return NS_ERROR_FAILURE;
 
     // We can't allow web apps to call this until we fix at least the
     // following potential security issues:
@@ -1885,7 +1926,12 @@ nsCanvasRenderingContext2D::DrawNativeSurfaces(nsIDrawingSurface* aBlackSurface,
         NS_ERROR("Must have image frame already");
         return NS_ERROR_FAILURE;
     }
-    
+
+    // check if the dimensions are too large;
+    // if they are, we may easily overflow malloc later on
+    if (!CheckSaneImageSize (aSurfaceSize.width, aSurfaceSize.height))
+        return NS_ERROR_FAILURE;
+
     // Acquire alpha values
     nsAutoArrayPtr<PRUint8> alphas;
     nsresult rv;
