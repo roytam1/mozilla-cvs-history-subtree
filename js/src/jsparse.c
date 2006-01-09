@@ -1911,15 +1911,6 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
         break;
 
       case TOK_WITH:
-        if (!js_ReportCompileErrorNumber(cx, ts,
-                                         JSREPORT_TS |
-                                         JSREPORT_WARNING |
-                                         JSREPORT_STRICT,
-                                         JSMSG_DEPRECATED_USAGE,
-                                         js_with_statement_str)) {
-            return NULL;
-        }
-
         pn = NewParseNode(cx, ts, PN_BINARY, tc);
         if (!pn)
             return NULL;
