@@ -35,22 +35,43 @@
 #
 # ***** END LICENSE BLOCK *****
 
-DEPTH		= ../../..
+DEPTH		= ../../../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
 VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS = src
+MODULE		= javaxpcomglue
+LIBRARY_NAME	= javaxpcomglue
 
-TOOL_DIRS = \
-	tools/genifaces \
-	interfaces \
-	glue \
+# On Mac OS X, JNI libraries must end with a '.jnilib' extension
+ifeq ($(OS_ARCH),Darwin)
+DLL_SUFFIX = .jnilib
+endif
+
+CPPSRCS	= nsJavaXPCOMGlue.cpp
+
+DEFINES += -DXPCOM_GLUE
+
+LOCAL_INCLUDES	= -I$(JAVA_INCLUDE_PATH)
+
+ifeq ($(OS_ARCH),WINNT)
+LOCAL_INCLUDES += -I$(JAVA_INCLUDE_PATH)/win32
+else
+LOCAL_INCLUDES += -I$(JAVA_INCLUDE_PATH)/linux
+endif
+
+LOCAL_INCLUDES += -I$(topsrcdir)/xpcom/build
+
+EXTRA_DSO_LDOPTS = \
+	$(XPCOM_STANDALONE_GLUE_LDOPTS) \
 	$(NULL)
+
+# Need to link with CoreFoundation on Mac
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+EXTRA_DSO_LDOPTS += $(TK_LIBS)
+endif
 
 include $(topsrcdir)/config/rules.mk
 
-tools::
-	$(MAKE) -C src jarfile

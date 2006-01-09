@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Mozilla embedding code.
+ * The Original Code is Java XPCOM Bindings.
  *
  * The Initial Developer of the Original Code is
- * Benjamin Smedberg <benjamin@smedbergs.us>
- *
+ * IBM Corporation.
  * Portions created by the Initial Developer are Copyright (C) 2005
- * the Initial Developer. All Rights Reserved.
+ * IBM Corporation. All Rights Reserved.
  *
  * Contributor(s):
+ *   Javier Pedemonte (jhpedemonte@gmail.com)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -35,13 +35,46 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsXULAppAPI.h"
+package org.mozilla.xpcom;
 
-void xxxNeverCalledXUL()
-{
-  XRE_main(0, nsnull, nsnull);
-  XRE_GetFileFromPath(nsnull, nsnull);
-  XRE_GetStaticComponents(nsnull, nsnull);
-  XRE_InitEmbedding(nsnull, nsnull, nsnull, nsnull, 0);
-  XRE_TermEmbedding();
+
+public class GREVersionRange {
+
+  private String lower;
+  private boolean lowerInclusive;
+  private String upper;
+  private boolean upperInclusive;
+
+  public GREVersionRange(String aLower, boolean aLowerInclusive,
+                         String aUpper, boolean aUpperInclusive) {
+    lower = aLower;
+    lowerInclusive = aLowerInclusive;
+    upper = aUpper;
+    upperInclusive = aUpperInclusive;
+  }
+
+  public boolean check(String aVersion) {
+    VersionComparator comparator = new VersionComparator();
+    int c = comparator.compare(aVersion, lower);
+    if (c < 0) {
+      return false;
+    }
+
+    if (c == 0 && !lowerInclusive) {
+      return false;
+    }
+
+    c = comparator.compare(aVersion, upper);
+    if (c > 0) {
+      return false;
+    }
+
+    if (c == 0 && !upperInclusive) {
+      return false;
+    }
+
+    return true;
+  }
+
 }
+

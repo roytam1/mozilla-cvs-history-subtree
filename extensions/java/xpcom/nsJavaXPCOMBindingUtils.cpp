@@ -97,24 +97,6 @@ PRLock* gJavaXPCOMLock = nsnull;
 
 
 /******************************
- *  JNI Load & Unload
- ******************************/
-extern "C" JX_EXPORT jint JNICALL
-JNI_OnLoad(JavaVM* vm, void* reserved)
-{
-  // Save pointer to JavaVM, which is valid across threads.
-  gCachedJVM = vm;
-
-  // Let the JVM know that we are using JDK 1.2 JNI features.
-  return JNI_VERSION_1_2;
-}
-
-extern "C" JX_EXPORT void JNICALL
-JNI_OnUnload(JavaVM* vm, void* reserved)
-{
-}
-
-/******************************
  *  InitializeJavaGlobals
  ******************************/
 PRBool
@@ -122,6 +104,13 @@ InitializeJavaGlobals(JNIEnv *env)
 {
   if (gJavaXPCOMInitialized)
     return PR_TRUE;
+
+  // Save pointer to JavaVM, which is valid across threads.
+  jint rc = env->GetJavaVM(&gCachedJVM);
+  if (rc != 0) {
+    NS_WARNING("Failed to get JavaVM");
+    goto init_error;
+  }
 
   jclass clazz;
   if (!(clazz = env->FindClass("java/lang/Object")) ||
@@ -224,7 +213,7 @@ InitializeJavaGlobals(JNIEnv *env)
     goto init_error;
   }
 
-  if (!(clazz = env->FindClass("org/mozilla/xpcom/XPCOMJavaProxy")) ||
+  if (!(clazz = env->FindClass("org/mozilla/xpcom/internal/XPCOMJavaProxy")) ||
       !(xpcomJavaProxyClass = (jclass) env->NewGlobalRef(clazz)) ||
       !(createProxyMID = env->GetStaticMethodID(clazz, "createProxy",
                                    "(Ljava/lang/Class;J)Ljava/lang/Object;")) ||
@@ -234,7 +223,7 @@ InitializeJavaGlobals(JNIEnv *env)
                                                        "getNativeXPCOMInstance",
                                                        "(Ljava/lang/Object;)J")))
   {
-    NS_WARNING("Problem creating org.mozilla.xpcom.XPCOMJavaProxy globals");
+    NS_WARNING("Problem creating org.mozilla.xpcom.internal.XPCOMJavaProxy globals");
     goto init_error;
   }
 
@@ -283,11 +272,14 @@ init_error:
 void
 FreeJavaGlobals(JNIEnv* env)
 {
-  PR_Lock(gJavaXPCOMLock);
+  PRLock* tempLock = nsnull;
+  if (gJavaXPCOMLock) {
+    PR_Lock(gJavaXPCOMLock);
 
-  // null out global lock so no one else can use it
-  PRLock* tempLock = gJavaXPCOMLock;
-  gJavaXPCOMLock = nsnull;
+    // null out global lock so no one else can use it
+    tempLock = gJavaXPCOMLock;
+    gJavaXPCOMLock = nsnull;
+  }
 
   gJavaXPCOMInitialized = PR_FALSE;
 
@@ -354,8 +346,10 @@ FreeJavaGlobals(JNIEnv* env)
     xpcomJavaProxyClass = nsnull;
   }
 
-  PR_Unlock(tempLock);
-  PR_DestroyLock(tempLock);
+  if (tempLock) {
+    PR_Unlock(tempLock);
+    PR_DestroyLock(tempLock);
+  }
 }
 
 
@@ -727,24 +721,27 @@ GetNewOrUsedJavaObject(JNIEnv* env, nsISupports* aXPCOMObject,
     return NS_OK;
   }
 
+  // Get the root nsISupports of the xpcom object
+  nsCOMPtr<nsISupports> rootObject = do_QueryInterface(aXPCOMObject, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
   // Get associated Java object from hash table
-  rv = gNativeToJavaProxyMap->Find(env, aXPCOMObject, aIID, aResult);
-  if (NS_FAILED(rv))
-    return rv;
+  rv = gNativeToJavaProxyMap->Find(env, rootObject, aIID, aResult);
+  NS_ENSURE_SUCCESS(rv, rv);
   if (*aResult)
     return NS_OK;
 
   // No Java object is associated with the given XPCOM object, so we
   // create a Java proxy.
-  return CreateJavaProxy(env, aXPCOMObject, aIID, aResult);
+  return CreateJavaProxy(env, rootObject, aIID, aResult);
 }
 
 nsresult
 GetNewOrUsedXPCOMObject(JNIEnv* env, jobject aJavaObject, const nsIID& aIID,
                         nsISupports** aResult, PRBool* aIsXPTCStub)
 {
-  NS_PRECONDITION(aResult != nsnull && aIsXPTCStub != nsnull, "null ptr");
-  if (!aResult || !aIsXPTCStub)
+  NS_PRECONDITION(aResult != nsnull, "null ptr");
+  if (!aResult)
     return NS_ERROR_NULL_POINTER;
 
   nsresult rv;
@@ -763,23 +760,28 @@ GetNewOrUsedXPCOMObject(JNIEnv* env, jobject aJavaObject, const nsIID& aIID,
   if (isProxy) {
     void* inst;
     rv = GetXPCOMInstFromProxy(env, aJavaObject, &inst);
-    if (NS_SUCCEEDED(rv)) {
-      *aResult = NS_STATIC_CAST(JavaXPCOMInstance*, inst)->GetInstance();
-      NS_ADDREF(*aResult);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    nsISupports* rootObject =
+              NS_STATIC_CAST(JavaXPCOMInstance*, inst)->GetInstance();
+    rv = rootObject->QueryInterface(aIID, (void**) aResult);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    if (aIsXPTCStub) {
       *aIsXPTCStub = PR_FALSE;
-      return NS_OK;
     }
+    return NS_OK;
   }
 
-  *aIsXPTCStub = PR_TRUE;
+  if (aIsXPTCStub) {
+    *aIsXPTCStub = PR_TRUE;
+  }
 
   nsJavaXPTCStub* stub;
   rv = gJavaToXPTCStubMap->Find(env, aJavaObject, aIID, &stub);
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
+  NS_ENSURE_SUCCESS(rv, rv);
   if (stub) {
-    // stub is already AddRef'd
+    // stub is already AddRef'd and QI'd
     *aResult = NS_STATIC_CAST(nsISupports*,
                               NS_STATIC_CAST(nsXPTCStubBase*, stub));
     return NS_OK;
@@ -792,10 +794,10 @@ GetNewOrUsedXPCOMObject(JNIEnv* env, jobject aJavaObject, const nsIID& aIID,
 
   // Get interface info for class
   nsCOMPtr<nsIInterfaceInfoManager> iim = XPTI_GetInterfaceInfoManager();
+
   nsCOMPtr<nsIInterfaceInfo> iinfo;
   rv = iim->GetInfoForIID(&aIID, getter_AddRefs(iinfo));
-  if (NS_FAILED(rv))
-    return rv;
+  NS_ENSURE_SUCCESS(rv, rv);
 
   // Create XPCOM stub
   stub = new nsJavaXPTCStub(aJavaObject, iinfo);
@@ -904,23 +906,12 @@ ThrowException(JNIEnv* env, const nsresult aErrorCode, const char* aMessage)
 
   // Create parameters and method signature. Max of 2 params.  The error code
   // comes before the message string.
-  PRUint32 index = 0;
-  jvalue* args = new jvalue[2];
-  if (!args) {
-    ThrowException(env, NS_ERROR_OUT_OF_MEMORY,
-                   "Out of memory while throwing another exception");
-    return;
-  }
-
-  nsCAutoString methodSig("(");
-  if (aErrorCode) {
-    args[index++].j = aErrorCode;
-    methodSig.Append('J');
-  }
+  PRInt64 errorCode = aErrorCode ? aErrorCode : NS_ERROR_FAILURE;
+  nsCAutoString methodSig("(J");
+  jstring message = nsnull;
   if (aMessage) {
-    args[index].l = env->NewStringUTF(aMessage);
-    if (args[index].l == nsnull) {
-      delete[] args;
+    message = env->NewStringUTF(aMessage);
+    if (!message) {
       return;
     }
     methodSig.AppendLiteral("Ljava/lang/String;");
@@ -928,13 +919,14 @@ ThrowException(JNIEnv* env, const nsresult aErrorCode, const char* aMessage)
   methodSig.AppendLiteral(")V");
 
   // In some instances (such as in shutdownXPCOM() and termEmbedding()), we
-  // will need to throw an exception when Javaconnect has already been
+  // will need to throw an exception when JavaXPCOM has already been
   // terminated.  In such a case, 'xpcomExceptionClass' will be null.  So we
   // reset it temporarily in order to throw the appropriate exception.
   if (xpcomExceptionClass == nsnull) {
     xpcomExceptionClass = env->FindClass("org/mozilla/xpcom/XPCOMException");
-    if (!xpcomExceptionClass)
+    if (!xpcomExceptionClass) {
       return;
+    }
   }
 
   // create exception object
@@ -942,7 +934,8 @@ ThrowException(JNIEnv* env, const nsresult aErrorCode, const char* aMessage)
   jmethodID mid = env->GetMethodID(xpcomExceptionClass, "<init>",
                                    methodSig.get());
   if (mid) {
-    throwObj = (jthrowable) env->NewObjectA(xpcomExceptionClass, mid, args);
+    throwObj = (jthrowable) env->NewObject(xpcomExceptionClass, mid, errorCode,
+                                           message);
   }
   NS_ASSERTION(throwObj, "Failed to create XPCOMException object");
 
@@ -950,9 +943,6 @@ ThrowException(JNIEnv* env, const nsresult aErrorCode, const char* aMessage)
   if (throwObj) {
     env->Throw(throwObj);
   }
-
-  // cleanup
-  delete[] args;
 }
 
 nsAString*

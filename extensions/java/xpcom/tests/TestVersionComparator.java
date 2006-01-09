@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Mozilla embedding code.
+ * The Original Code is Java XPCOM Bindings.
  *
  * The Initial Developer of the Original Code is
- * Benjamin Smedberg <benjamin@smedbergs.us>
- *
+ * IBM Corporation.
  * Portions created by the Initial Developer are Copyright (C) 2005
- * the Initial Developer. All Rights Reserved.
+ * IBM Corporation. All Rights Reserved.
  *
  * Contributor(s):
+ *   Javier Pedemonte (jhpedemonte@gmail.com)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -35,13 +35,68 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsXULAppAPI.h"
+import org.mozilla.xpcom.VersionComparator;
 
-void xxxNeverCalledXUL()
-{
-  XRE_main(0, nsnull, nsnull);
-  XRE_GetFileFromPath(nsnull, nsnull);
-  XRE_GetStaticComponents(nsnull, nsnull);
-  XRE_InitEmbedding(nsnull, nsnull, nsnull, nsnull, 0);
-  XRE_TermEmbedding();
+public class TestVersionComparator {
+
+  public static void main(String[] args) {
+    String[] comparisons = {
+        "0.9",
+        "0.9.1",
+        "1.0pre1",
+        "1.0pre2",
+        "1.0",
+        "1.1pre",
+        "1.1pre1a",
+        "1.1pre1",
+        "1.1pre10a",
+        "1.1pre10",
+        "1.1",
+        "1.1.0.1",
+        "1.1.1",
+        "1.1.*",
+        "1.*",
+        "2.0",
+        "2.1",
+        "3.0.-1",
+        "3.0"
+    };
+
+    String[] equality = {
+        "1.1pre",
+        "1.1pre0",
+        "1.0+"
+    };
+
+    VersionComparator comp = new VersionComparator();
+
+    // test comparisons in both directions
+    for (int i = 0; i < comparisons.length - 1; i++) {
+      int res = comp.compare(comparisons[i], comparisons[i + 1]);
+      _assert(res < 0);
+
+      res = comp.compare(comparisons[i + 1], comparisons[i]);
+      _assert(res > 0);
+    }
+
+    // test equality in both directions
+    for (int i = 0; i < equality.length - 1; i++) {
+      int res = comp.compare(equality[i], equality[i + 1]);
+      _assert(res == 0);
+
+      res = comp.compare(equality[i + 1], equality[i]);
+      _assert(res == 0);
+    }
+
+    System.out.println("-- passed");
+  }
+
+  private static void _assert(boolean expression) {
+    if (!expression) {
+      Throwable t = new Throwable();
+      t.printStackTrace();
+      System.exit(1);
+    }
+  }
 }
+
