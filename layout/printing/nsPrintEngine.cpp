@@ -2609,6 +2609,10 @@ nsPrintEngine::ReflowPrintObject(nsPrintObject * aPO, PRBool aDoCalcShrink)
     return rv;
   }
 
+  // Don't paint selection stuff for images while printing.
+  // XXXbz should we be painting it for text, even?
+  aPO->mPresShell->SetSelectionFlags(nsISelectionDisplay::DISPLAY_TEXT);
+
   aPO->mStyleSet->EndUpdate();
   
   // The pres shell now owns the style set object.
