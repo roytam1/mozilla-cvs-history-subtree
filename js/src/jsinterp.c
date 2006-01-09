@@ -1908,7 +1908,6 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             break;
 
           case JSOP_GROUP:
-            obj = NULL;
             break;
 
           case JSOP_PUSH:
@@ -2638,6 +2637,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
                 goto out;
             sp--;
             STORE_OPND(-1, rval);
+            obj = NULL;
             break;
 
 #define INTEGER_OP(OP, EXTRA_CODE)                                            \
@@ -3360,6 +3360,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             PROPERTY_OP(-2, CACHED_SET(OBJ_SET_PROPERTY(cx, obj, id, &rval)));
             sp--;
             STORE_OPND(-1, rval);
+            obj = NULL;
             break;
 
           case JSOP_GETELEM:
@@ -3373,6 +3374,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             ELEMENT_OP(-2, CACHED_SET(OBJ_SET_PROPERTY(cx, obj, id, &rval)));
             sp -= 2;
             STORE_OPND(-1, rval);
+            obj = NULL;
             break;
 
           case JSOP_ENUMELEM:
@@ -4247,6 +4249,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
                 GC_POKE(cx, obj->slots[slot]);
                 OBJ_SET_SLOT(cx, obj, slot, rval);
             }
+            obj = NULL;
             break;
 
           case JSOP_DEFCONST:
@@ -4731,6 +4734,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             if (!ok)
                 goto out;
 
+            obj = NULL;
             sp += i;
             if (cs->ndefs)
                 STORE_OPND(-1, rval);
@@ -5081,6 +5085,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
                 goto out;
             sp -= 2;
             STORE_OPND(-1, rval);
+            obj = NULL;
             break;
 
           case JSOP_XMLNAME:
@@ -5273,6 +5278,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
                 goto out;
             --sp;
             STORE_OPND(-1, rval);
+            obj = NULL;
           END_LITOPX_CASE
 
           case JSOP_GETFUNNS:
