@@ -310,6 +310,24 @@ nsPKCS12Blob::LoadCerts(const PRUnichar **certNames, int numCerts)
 }
 #endif
 
+static PRBool
+isExtractable(SECKEYPrivateKey *privKey)
+{
+  SECItem value;
+  PRBool  isExtractable = PR_FALSE;
+  SECStatus rv;
+
+  rv=PK11_ReadRawAttribute(PK11_TypePrivKey, privKey, CKA_EXTRACTABLE, &value);
+  if (rv != SECSuccess) {
+    return PR_FALSE;
+  }
+  if ((value.len == 1) && (value.data != NULL)) {
+    isExtractable = *(CK_BBOOL*)value.data;
+  }
+  SECITEM_FreeItem(&value, PR_FALSE);
+  return isExtractable;
+}
+  
 // nsPKCS12Blob::ExportToFile
 //
 // Having already loaded the certs, form them into a blob (loading the keys
@@ -387,11 +405,23 @@ nsPKCS12Blob::ExportToFile(nsILocalFile *file,
     // shape or form) from the card.  So let's punt if 
     // the cert is not in the internal db.
     if (nssCert->slot && !PK11_IsInternal(nssCert->slot)) {
-      if (!InformedUserNoSmartcardBackup) {
-        InformedUserNoSmartcardBackup = PR_TRUE;
-        handleError(PIP_PKCS12_NOSMARTCARD_EXPORT);
+      // we aren't the internal token, see if the key is extractable.
+      SECKEYPrivateKey *privKey=PK11_FindKeyByDERCert(nssCert->slot,
+                                                      nssCert, this);
+
+      if (privKey) {
+        PRBool privKeyIsExtractable = isExtractable(privKey);
+
+        SECKEY_DestroyPrivateKey(privKey);
+
+        if (!privKeyIsExtractable) {
+          if (!InformedUserNoSmartcardBackup) {
+            InformedUserNoSmartcardBackup = PR_TRUE;
+            handleError(PIP_PKCS12_NOSMARTCARD_EXPORT);
+          }
+          continue;
+        }
       }
-      continue;
     }
 
     // XXX this is why, to verify the slot is the same
