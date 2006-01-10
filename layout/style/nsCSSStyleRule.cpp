@@ -750,6 +750,7 @@ MOZ_DECL_CTOR_COUNTER(nsCSSSelectorList)
 
 nsCSSSelectorList::nsCSSSelectorList(void)
   : mSelectors(nsnull),
+    mWeight(0),
     mNext(nsnull)
 {
   MOZ_COUNT_CTOR(nsCSSSelectorList);
@@ -803,6 +804,7 @@ nsCSSSelectorList::Clone()
       delete list;
       return nsnull;
     }
+    lcopy->mWeight = l->mWeight;
     *list_cur = lcopy;
     list_cur = &lcopy->mNext;
 
@@ -1270,7 +1272,8 @@ CSSStyleRuleImpl::CSSStyleRuleImpl(nsCSSSelectorList* aSelector,
     mSelector(aSelector),
     mDeclaration(aDeclaration), 
     mImportantRule(nsnull),
-    mDOMRule(nsnull)
+    mDOMRule(nsnull),
+    mLineNumber(0)
 {
   mDeclaration->AddRef();
 }
@@ -1281,7 +1284,8 @@ CSSStyleRuleImpl::CSSStyleRuleImpl(const CSSStyleRuleImpl& aCopy)
     mSelector(aCopy.mSelector ? aCopy.mSelector->Clone() : nsnull),
     mDeclaration(aCopy.mDeclaration->Clone()),
     mImportantRule(nsnull),
-    mDOMRule(nsnull)
+    mDOMRule(nsnull),
+    mLineNumber(aCopy.mLineNumber)
 {
   if (mDeclaration)
     mDeclaration->AddRef();
@@ -1295,7 +1299,8 @@ CSSStyleRuleImpl::CSSStyleRuleImpl(CSSStyleRuleImpl& aCopy,
     mSelector(aCopy.mSelector),
     mDeclaration(aDeclaration),
     mImportantRule(nsnull),
-    mDOMRule(aCopy.mDOMRule)
+    mDOMRule(aCopy.mDOMRule),
+    mLineNumber(aCopy.mLineNumber)
 {
   // The DOM rule is replacing |aCopy| with |this|, so transfer
   // the reverse pointer as well (and transfer ownership).
