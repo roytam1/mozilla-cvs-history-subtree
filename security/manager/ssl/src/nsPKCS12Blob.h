@@ -109,9 +109,14 @@ private:
   
   nsresult ImportFromFileHelper(nsILocalFile *file, ImportMode aImportMode, RetryReason &aWantRetry);
 
-  // NSPR file I/O for temporary digest file
+  // NSPR file I/O for export file
   PRFileDesc *mTmpFile;
   char       *mTmpFilePath;
+
+  // simulated file I/O for "in memory" temporary digest data
+  nsCString                 *mDigest;
+  nsCString::const_iterator *mDigestIterator;
+
   PRBool      mTokenSet;
 
   // C-style callback functions for the NSS PKCS#12 library
