@@ -279,7 +279,8 @@ IdAndNameHashInitEntry(PLDHashTable *table, PLDHashEntryHdr *entry,
 
 nsHTMLDocument::nsHTMLDocument()
   : mCompatMode(eCompatibility_NavQuirks),
-    mTexttype(IBMBIDI_TEXTTYPE_LOGICAL)
+    mTexttype(IBMBIDI_TEXTTYPE_LOGICAL),
+    mDefaultNamespaceID(kNameSpaceID_None)
 {
 
   // NOTE! nsDocument::operator new() zeroes out all members, so don't
@@ -313,6 +314,12 @@ nsHTMLDocument::Init()
 {
   nsresult rv = nsDocument::Init();
   NS_ENSURE_SUCCESS(rv, rv);
+
+  // Now reset the case-sensitivity of the CSSLoader, since we default
+  // to being HTML, not XHTML.  Also, reset the compatibility mode to
+  // match our compat mode.
+  CSSLoader()->SetCaseSensitive(IsXHTML());
+  CSSLoader()->SetCompatibilityMode(mCompatMode);
 
   static PLDHashTableOps hash_table_ops =
   {
