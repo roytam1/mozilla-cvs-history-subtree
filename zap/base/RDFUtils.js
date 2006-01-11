@@ -187,6 +187,9 @@ PersistentRDFObject.metafun(
 // from elsewhere.
 PersistentRDFObject.metafun(
   function rdfAttribTrigger(_name, _function) {
+    this._assert(this.prototype._arcsOut[_name] &&
+                 this.prototype._arcsOut[_name].triggers,
+                 "Trying to set trigger for unknown or incompatible property "+_name);
     // XXX cloning triggers here is a little bit of a hack so that we
     // don't pollute the base class's triggers array: Merging doesn't
     // do deep cloning, so the triggers arrays of base- and subclasses
@@ -238,6 +241,16 @@ PersistentRDFObject.fun(
     this._assert(!this.resource, "already initialized");
     this.resource = resource;
     this._assertArcsIn();
+    var me = this;
+    for (var id in this._arcsOut) {
+      var a = this._arcsOut[id];
+      if (a.triggers && a.triggers.length) {
+        var prop = gRDF.GetResource(a.name);
+        var val = this[id];
+        a.triggers.forEach(
+          function(f) { f.apply(me, [prop, val]); });
+      }
+    }
   });
 
 // create a new resource.
@@ -341,6 +354,7 @@ PersistentRDFObject.fun(
     this._assert(this.resource, "need resource to update!");
     
     // add/update assertions for all attributes:
+    var me = this;
     for (var id in this._arcsOut) {
       var a = this._arcsOut[id];
       var prop = gRDF.GetResource(a.name);
@@ -376,11 +390,16 @@ PersistentRDFObject.fun(
       
       var old = this.datasources[a.dsid].GetTarget(this.resource, prop, true);
       if (old) {
-        if (old.Value != val.Value)
-          this.datasources[a.dsid].Change(this.resource, prop, old, val, true);
+        if (old.Value == val.Value)
+          continue;
+        // ... else
+        this.datasources[a.dsid].Change(this.resource, prop, old, val, true);
       }
       else
         this.datasources[a.dsid].Assert(this.resource, prop, val, true);
+      if (a.triggers && a.triggers.length)
+        a.triggers.forEach(
+          function(f) {f.apply(me, [prop, val.Value]);});      
     }
     if (this.autoflush)
       this.flush();
