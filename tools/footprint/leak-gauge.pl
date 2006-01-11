@@ -51,11 +51,11 @@
 #   NSPR_LOG_FILE=nspr.log     (or any other filename of your choice)
 # in your shell and then run the program.
 # * In a Windows command prompt, set environment variables with
-#   "set VAR=value".
+#     set VAR=value
 # * In an sh-based shell such as bash, set environment variables with
-#   "export VAR=value".
+#     export VAR=value
 # * In a csh-based shell such as tcsh, set environment variables with
-#   "setenv VAR value".)
+#     setenv VAR value
 #
 # Then run this perl script over the log.  Either of the following
 # commands should work:
