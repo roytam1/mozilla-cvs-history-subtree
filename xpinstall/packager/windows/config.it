@@ -233,7 +233,7 @@ C5=Component En US lang pack
 C6=Component US region pack
 ; Make sure Component QFA is LAST so 3rd party developers who might not want
 ; this component can easily remove it.
-C7=Component QFA
+;C7=Component QFA
 
 [Setup Type1]
 ;*** LOCALIZE ME BABY ***
@@ -260,7 +260,7 @@ C12=Component SRoaming
 C13=Component RPT
 ; Make sure Component QFA is LAST so 3rd party developers who might not want
 ; this component can easily remove it.
-C14=Component QFA
+;C14=Component QFA
 
 [Setup Type2]
 ;*** LOCALIZE ME BABY ***
@@ -289,7 +289,7 @@ C12=Component SRoaming
 C13=Component RPT
 ; Make sure Component QFA is LAST so 3rd party developers who might not want
 ; this component can easily remove it.
-C14=Component QFA
+;C14=Component QFA
 
 
 
