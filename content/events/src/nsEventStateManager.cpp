@@ -3077,6 +3077,26 @@ nsEventStateManager::ChangeFocusWith(nsIContent* aFocusContent,
     SetContentState(nsnull, NS_EVENT_STATE_FOCUS);
     return NS_OK;
   }
+
+  // Get focus controller.
+  EnsureDocument(mPresContext);
+  nsCOMPtr<nsIFocusController> focusController = nsnull;
+  nsCOMPtr<nsPIDOMWindow> window =
+    do_QueryInterface(GetDocumentOuterWindow(mDocument));
+  if (window)
+    focusController = window->GetRootFocusController();
+
+  // If this is called from mouse event, we lock to scroll.
+  // Because the part of element is always in view. See bug 105894.
+  PRBool suppressFocusScroll =
+    focusController && (aFocusedWith == eEventFocusedByMouse);
+  if (suppressFocusScroll) {
+    PRBool currentState = PR_FALSE;
+    focusController->GetSuppressFocusScroll(&currentState);
+    NS_ASSERTION(!currentState, "locked scroll already!");
+    focusController->SetSuppressFocusScroll(PR_TRUE);
+  }
+
   aFocusContent->SetFocus(mPresContext);
   if (aFocusedWith != eEventFocusedByMouse) {
     MoveCaretToFocus();
@@ -3114,6 +3134,10 @@ nsEventStateManager::ChangeFocusWith(nsIContent* aFocusContent,
       }
     }
   }
+
+  // Unlock scroll
+  if (suppressFocusScroll)
+    focusController->SetSuppressFocusScroll(PR_FALSE);
 
   return NS_OK;
 }
