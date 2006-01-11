@@ -153,6 +153,7 @@
               first started. It is used by GRUU-enabled services to route
               messages to this zap instance. 
               See <html:a href="http://www.croczilla.com/zap/rfcs/draft-ietf-sip-gruu-05.txt">draft-ietf-sip-gruu-05.txt</html:a>.
+                <html:br/>Changes to this field will take effect after a restart.
               </description>
             </info>
           </irow>
@@ -165,6 +166,7 @@
               <description>
                 zap will use the first available socket greater than or 
                 equal to this value to listen for SIP traffic.
+                <html:br/>Changes to this field will take effect after a restart.
               </description>
             </info>
           </irow>
@@ -234,6 +236,19 @@
           </irow>
         </rows>
       </grid>
+      <igroup>
+        <checkbox type="zap-formwidget" label="Use short branch parameters"
+                  id="urn:mozilla:zap:short_branch_parameters"/>
+        <info>
+          <description>
+            By default, zap uses UUIDs (RFC4122) in transaction branch parameters to 
+            guarantee uniqueness across space and time as required by RFC3261. The
+            resulting branch parameters are 39 characters long, which some endpoints
+            have trouble processing. When this option is checked, zap will use 32 bit
+            branch parameters instead.
+          </description>
+        </info>
+      </igroup>
       <button label="Configure SIP Services..." oncommand="configureServices()"/>
     </cgroup>
 

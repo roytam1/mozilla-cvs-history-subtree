@@ -140,12 +140,14 @@ SipUAStack.fun(
     var methods = "OPTIONS";
     var extensions = "";
     this.rport_client = true;
+    this.shortBranchParameters = false;
     this.userAgent = "";
     if (config) {
       try { instance_id = config.getProperty("instance_id"); }catch(e){}
       try { methods = config.getProperty("methods"); }catch(e){}
       try { extensions = config.getProperty("extensions"); }catch(e){}
       try { this.rport_client = config.getProperty("rport_client"); }catch(e){}
+      try { this.shortBranchParameters = config.getProperty("short_branch_parameters"); }catch(e){}
       try { this.userAgent = config.getProperty("user_agent"); }catch(e){}
     }
     this.instanceID = instance_id ? instance_id : gUUIDGenerator.generateUUIDURNString();
@@ -340,6 +342,9 @@ SipUAStack.obj("instanceID", null);
 
 //  readonly attribute AUTF8String userAgent;
 SipUAStack.obj("userAgent", null);
+
+//  attribute boolean shortBranchParameters;
+SipUAStack.obj("shortBranchParameters", false);
 
 //----------------------------------------------------------------------
 // zapISipTransportSink implementation:

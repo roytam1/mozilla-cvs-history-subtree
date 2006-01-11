@@ -228,9 +228,18 @@ Config.rdfLiteralAttrib("urn:mozilla:zap:sip_port_base", "5060");
 Config.rdfLiteralAttrib("urn:mozilla:zap:registration_recovery_max_time", "1800");
 Config.rdfLiteralAttrib("urn:mozilla:zap:registration_recovery_base_time_all_fail", "30");
 Config.rdfLiteralAttrib("urn:mozilla:zap:registration_recovery_base_time_not_failed", "60");
+Config.rdfLiteralAttrib("urn:mozilla:zap:short_branch_parameters", "false");
 
 Config.rdfLiteralAttrib("urn:mozilla:zap:dnd_code", "480"); // Temporarily unavail.
 Config.rdfLiteralAttrib("urn:mozilla:zap:dnd_headers", ""); // additional headers for DND response
+
+// triggers:
+Config.rdfAttribTrigger(
+  "urn:mozilla:zap:short_branch_parameters",
+  function(prop, val) {
+    if (wSipStack)
+      wSipStack.shortBranchParameters = (val == "true");
+  });
 
 // pool of services, indexed by resource id:
 var wServices = {};
@@ -1577,6 +1586,7 @@ function initSipStack() {
   wSipStack.init(wUAHandler,
                  makePropertyBag({$instance_id:wConfig["urn:mozilla:zap:instance_id"],
                                   $port_base:wConfig["urn:mozilla:zap:sip_port_base"],
+                                     $short_branch_parameters:(wConfig["urn:mozilla:zap:short_branch_parameters"]=="true"),
                                   $methods: "OPTIONS,INVITE,ACK,CANCEL,BYE",
                                   $extensions: "path,gruu", // path: RFC3327, gruu: draft-ietf-sip-gruu-05.txt
                                   $user_agent: wUserAgent

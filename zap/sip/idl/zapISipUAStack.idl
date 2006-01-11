@@ -155,6 +155,10 @@ interface zapISipUAStack : nsISupports
    *                                   be retransmitted every 20s as
    *                                   specified in RFC3581 3.
    *                                   Default: true
+   * - boolean <b>"short_branch_parameters"</b> : if 'true', zap will use
+   *                                     32 bit branch parameters instead
+   *                                     of UUIDs. See zapISipUAStack::shortBranchParameters.
+   *                                     Default: false
    * - AUTF8String <b>"user_agent"</b> : value for the User-Agent header
    *                                     of outgoing requests. If this is
    *                                     equal to the empty string, no
@@ -378,4 +382,15 @@ interface zapISipUAStack : nsISupports
    * the UAStack in init().
    */
   readonly attribute AUTF8String userAgent;
+
+  /**
+   * By default, zap uses UUIDs (RFC4122) in transaction branch
+   * parameters to guarantee uniqueness across space and time as
+   * required by RFC3261. The resulting branch parameters are 39
+   * characters long, which some endpoints have trouble processing. If
+   * this is set to 'true', zap will use 32bit branch parameters instead.
+   *
+   * Can also be set from init() in the 'short_branch_parameters' parameter.
+   */
+  attribute boolean shortBranchParameters;
 };
