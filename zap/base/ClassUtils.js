@@ -52,7 +52,7 @@ EXPORTED_SYMBOLS = [ "StdClass",
                      "makePropertyBag",
                      "StateMachine",
                      "AsyncObject",
-                     "Schedule",
+                     "Scheduler",
                      "WeakHash"];
 
 // name our global object:
@@ -822,7 +822,8 @@ AsyncObject.metafun(
     eval("s = function set"+condition+"(v) {"+
          "  this._"+condition+"=v;"+
          "  if (!v) return; "+
-         "  this._"+condition+"Hook.forEach(function(a) {a();});"+
+         "  var me = this; "+
+         "  this._"+condition+"Hook.forEach(function(a) {a.apply(me);});"+
          "  this._"+condition+"Hook = []; };");
     this.fun(f);
 
@@ -847,27 +848,22 @@ AsyncObject.addCondition("Terminated");
 
 
 ////////////////////////////////////////////////////////////////////////
-// Class Schedule
+// Class Scheduler
 // A class with facilites for asynchronous scheduling of member calls.
 // All active schedules will automatically be descheduled on
 // termination (i.e. when scheduleObj.Terminated is set to 'true').
 
-var Schedule = makeClass("Schedule", AsyncObject);
+var Scheduler = makeClass("Scheduler", AsyncObject);
 
-Schedule.appendCtor(
+Scheduler.appendCtor(
   function() {
     this._activeSchedules = {};
     var me = this;
-    this.whenTerminated(
-      function() {
-        for (var s in me._activeSchedules) {
-          me._activeSchedules[s].cancel();
-          delete me._activeSchedules[s];
-        }
-      });
+    this.whenTerminated(this.cancelAllSchedules);
   });
 
-Schedule.fun(
+// schedules a call of 'method' (or updates the existing schedule)
+Scheduler.fun(
   function schedule(method, interval, args) {
     var me = this;
     var scheduleId;
@@ -880,8 +876,28 @@ Schedule.fun(
       },
       interval);
     scheduleId = Components.utils.getObjectId(timer);
-    this._activeSchedules[scheduleId] = timer;
+    this._activeSchedules[scheduleId] = [timer,
+                                         Components.utils.getObjectId(method)];
     return scheduleId;
+  });
+
+Scheduler.fun(
+  function cancelSchedulesForMethod(method) {
+    var methodId = Components.utils.getObjectId(method);
+    for (var s in this._activeSchedules) {
+      if (this._activeSchedules[s][1] == methodId) {
+        this._activeSchedules[s][0].cancel();
+        delete this._activeSchedules[s];
+      }
+    }
+  });
+
+Scheduler.fun(
+  function cancelAllSchedules() {
+    for (var s in this._activeSchedules) {
+      this._activeSchedules[s][0].cancel();
+      delete this._activeSchedules[s];
+    }
   });
 
 ////////////////////////////////////////////////////////////////////////

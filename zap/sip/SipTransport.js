@@ -559,13 +559,13 @@ SipTransceiver.fun(
 // helper class for monitoring sip flows
 
 var StunMonitorTransaction = makeClass("StunMonitorTransaction",
-                                       Schedule);
+                                       Scheduler);
 
 StunMonitorTransaction.fun(
-  function execute(monitorSchedule) {
+  function execute(monitorScheduler) {
     this._assert(!this.Terminated, "transaction terminated");
-    this.monitorSchedule = monitorSchedule;
-    this.flow = monitorSchedule.flow;
+    this.monitorScheduler = monitorScheduler;
+    this.flow = monitorScheduler.flow;
     this.request = getNetUtils().createStunMessage();
     this.request.messageType = this.request.BINDING_REQUEST_MESSAGE;
     this.request.initTransactionID();
@@ -581,7 +581,7 @@ StunMonitorTransaction.fun(
       // we've transmitted 9 requests and received no response.
       // -> failure
       this.Terminated = true;
-      this.monitorSchedule.notifyRequestFailure(Components.interfaces.zapISipFlowMonitor.FLOW_FAILED);
+      this.monitorScheduler.notifyRequestFailure(Components.interfaces.zapISipFlowMonitor.FLOW_FAILED);
     }
     else {
       ++ this.tries;
@@ -634,11 +634,11 @@ StunMonitorTransaction.fun(
         else {
           // the response is malformed
           this.Terminated = true;
-          this.monitorSchedule.notifyRequestFailure(Components.interfaces.zapISipFlowMonitor.MONITOR_PROTOCOL_ERROR);
+          this.monitorScheduler.notifyRequestFailure(Components.interfaces.zapISipFlowMonitor.MONITOR_PROTOCOL_ERROR);
           return true;
         }
         this.Terminated = true;
-        this.monitorSchedule.notifyRequestSuccess(address, port);
+        this.monitorScheduler.notifyRequestSuccess(address, port);
         return true;
         break;
       case Components.interfaces.zapIStunMessage.BINDING_ERROR_RESPONSE_MESSAGE:
@@ -650,7 +650,7 @@ StunMonitorTransaction.fun(
         }
         // else...
         this.Terminated = true;
-        this.monitorSchedule.notifyRequestFailure(Components.interfaces.zapISipFlowMonitor.MONITOR_PROTOCOL_ERROR);
+        this.monitorScheduler.notifyRequestFailure(Components.interfaces.zapISipFlowMonitor.MONITOR_PROTOCOL_ERROR);
         return true;
         break;
     }
@@ -660,18 +660,18 @@ StunMonitorTransaction.fun(
   });
 
 ////////////////////////////////////////////////////////////////////////
-// StunMonitorSchedule
+// StunMonitorScheduler
 // helper class for monitoring sip flows
 
-var StunMonitorSchedule = makeClass("StunMonitorSchedule", Schedule);
+var StunMonitorScheduler = makeClass("StunMonitorScheduler", Scheduler);
 
-StunMonitorSchedule.fun(
+StunMonitorScheduler.fun(
   function start(flow) {
     this.flow = flow;
     this.sendRequest();
   });
 
-StunMonitorSchedule.fun(
+StunMonitorScheduler.fun(
   function getRequestInterval() {
     // see draft-ietf-sip-outbound-01 4.2
     if (this.flow.transportProtocol == "udp")
@@ -680,19 +680,19 @@ StunMonitorSchedule.fun(
       return 95000+Math.floor(Math.random()*7000);
   });
 
-StunMonitorSchedule.fun(
+StunMonitorScheduler.fun(
   function terminate() {
     this.Terminated = true;
   });
 
-StunMonitorSchedule.fun(
+StunMonitorScheduler.fun(
   function handleStunPacket(packet) {
     if (this.currentRequest)
       return this.currentRequest.handleStunPacket(packet);
     return false;
   });
 
-StunMonitorSchedule.fun(
+StunMonitorScheduler.fun(
   function notifyRequestSuccess(address, port) {
     delete this.currentRequest;
     if (!this.address) {
@@ -714,26 +714,26 @@ StunMonitorSchedule.fun(
     this.schedule(this.sendRequest, this.getRequestInterval());
   });
 
-StunMonitorSchedule.fun(
+StunMonitorScheduler.fun(
   function notifyRequestFailure(flags) {
     delete this.currentRequest;
     this.flow.notifyMonitors(flags);
   });
 
-StunMonitorSchedule.fun(
+StunMonitorScheduler.fun(
   function sendRequest() {
     this.currentRequest = StunMonitorTransaction.instantiate();
     this.currentRequest.execute(this);
   });
 
 ////////////////////////////////////////////////////////////////////////
-// OptionsMonitorSchedule
+// OptionsMonitorScheduler
 
-var OptionsMonitorSchedule = makeClass("OptionsMonitorSchedule",
-                                       Schedule, SupportsImpl);
-OptionsMonitorSchedule.addInterfaces(Components.interfaces.zapISipNonInviteRCListener);
+var OptionsMonitorScheduler = makeClass("OptionsMonitorScheduler",
+                                        Scheduler, SupportsImpl);
+OptionsMonitorScheduler.addInterfaces(Components.interfaces.zapISipNonInviteRCListener);
 
-OptionsMonitorSchedule.fun(
+OptionsMonitorScheduler.fun(
   function start(flow) {
     this.flow = flow;
 
@@ -757,7 +757,7 @@ OptionsMonitorSchedule.fun(
     this.schedule(this.sendRequest, this.getRequestInterval());
   });
 
-OptionsMonitorSchedule.fun(
+OptionsMonitorScheduler.fun(
   function getRequestInterval() {
     // we use the same interval as the stun monitor
     // see draft-ietf-sip-outbound-01 4.2
@@ -767,25 +767,25 @@ OptionsMonitorSchedule.fun(
       return 95000+Math.floor(Math.random()*7000);
   });
 
-OptionsMonitorSchedule.fun(
+OptionsMonitorScheduler.fun(
   function terminate() {
     this.Terminated = true;
     this.rc.listener = null;
   });
 
-OptionsMonitorSchedule.fun(
+OptionsMonitorScheduler.fun(
   function handleStunPacket(packet) {
     return false;
   });
 
-OptionsMonitorSchedule.fun(
+OptionsMonitorScheduler.fun(
   function sendRequest() {
     this.rc.listener = this;
     this.rc.sendRequest();
   });
 
 // zapISipNonInviteRCListener
-OptionsMonitorSchedule.fun(
+OptionsMonitorScheduler.fun(
   function notifyResponseReceived(rc, dialog, response, flow) {
     if (response.statusCode[0] == "1") return; // just a provisional response
 
@@ -838,28 +838,28 @@ SipFlow.getter(
 
 SipFlow.fun(
   function startMonitoring(type) {
-    this._assert(!this.monitorSchedule, "already monitored");
+    this._assert(!this.monitorScheduler, "already monitored");
     if (type == Components.interfaces.zapISipFlow.IETF_SIP_OUTBOUND_01_MONITOR)
-      this.monitorSchedule = StunMonitorSchedule.instantiate();
+      this.monitorScheduler = StunMonitorScheduler.instantiate();
     else if (type == Components.interfaces.zapISipFlow.OPTIONS_MONITOR) {
       this._assert(this.transport.UAStack, "can't use OPTIONS monitoring without UA stack");
-      this.monitorSchedule = OptionsMonitorSchedule.instantiate();
+      this.monitorScheduler = OptionsMonitorScheduler.instantiate();
     }
-    this.monitorSchedule.start(this);
+    this.monitorScheduler.start(this);
   });
 
 SipFlow.fun(
   function stopMonitoring() {
-    this._assert(this.monitorSchedule, "flow not monitored??");
+    this._assert(this.monitorScheduler, "flow not monitored??");
     this._dump("stopping monitoring");
-    this.monitorSchedule.terminate();
-    delete this.monitorSchedule;
+    this.monitorScheduler.terminate();
+    delete this.monitorScheduler;
   });
 
 SipFlow.fun(
   function handleStunPacket(packet) {
-    if (this.monitorSchedule)
-      return this.monitorSchedule.handleStunPacket(packet);
+    if (this.monitorScheduler)
+      return this.monitorScheduler.handleStunPacket(packet);
     return false;
   });
 
