@@ -1467,7 +1467,8 @@ nsXULDocument::Persist(const nsAString& aID,
     }
     else {
         // Make sure that this QName is going to be valid.
-        nsIParserService *parserService = nsContentUtils::GetParserService();
+        nsIParserService *parserService =
+            nsContentUtils::GetParserServiceWeakRef();
         NS_ASSERTION(parserService, "Running scripts during shutdown?");
 
         const PRUnichar *colon;
