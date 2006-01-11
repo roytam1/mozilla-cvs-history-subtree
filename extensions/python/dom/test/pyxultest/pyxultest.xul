@@ -6,11 +6,11 @@
   
 <window
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-  id="main-window" orient="vertical"
+  id="mainWindow" orient="vertical"
   screenX="100" screenY="100"
   height="450" width="600"
   script-type="application/x-python"
-  onload="dump('hello from the inline window load event')"
+  onload="write('hello from the inline window load event')"
   title="Python in XUL demos and tests"
   >
   <script type="application/x-python" src="chrome://pyxultest/content/pyxultest.py"/>
@@ -25,6 +25,47 @@ dump("Window location is %s", this.window.location.href)
 
     ]]>
   </script>
+  <script type="application/javascript">
+    // a 'write' function that writes to our window - like the Python one
+    // although this version does *not* auto-append a '\n' char.  This keeps
+    // 'write' like 'dump', but also serves as a useful test that the wrong
+    // language isn't accidently being used.
+    function write(msg) {
+      tb = document.getElementById("output_box");
+      tb.value = tb.value + msg;
+    }
+  </script>
+
+  <command id="menu-file-close:command"
+           oncommand="print 'Python closing the window';window.close()"/>
+
+  <!-- explicitly reset the keyset to JS - just to check that the command
+       itself, which is Python, works correctly
+       XXX - which it doesn't :(
+  -->
+  <keyset id="mainkeys" script-type="application/x-python">
+    <key
+       id        =  "menu-file-close:key"
+       key       =  "q"
+       observes  =  "menu-file-close:command"
+       modifiers =  "accel" />
+  </keyset>
+
+  <toolbox id="main-toolbox"> 
+    <menubar id="menu">
+      <menu id="menu-file" label="File" accesskey="f">
+        <menupopup id="menu-file-popup">
+          <menuitem
+             id        =  "menu-file-close"
+             key       =  "menu-file-close:key"
+             label     = "Close"
+             command   =  "menu-file-close:command"
+             accesskey = "C"/>
+        </menupopup>
+      </menu>
+    </menubar>
+  </toolbox>
+
   <textbox id="output_box" style="width:100%"
            value = "If you can see this, things aren't working well!"
            rows="15" multiline="true" flex="1"
@@ -50,6 +91,11 @@ dump("Window location is %s", this.window.location.href)
           <hbox>
             <button id="some-button" label = "click here"/>
             <button id="another-button" label = "or here"/>
+            <!-- a button that overrides script-type and oncommand in a different language -->
+            <button id="js-button" label = "JS"
+                    script-type="application/javascript" 
+                    oncommand="write('This is a JS button with ID ' + event.target.id + '\n');"
+            />
           </hbox>
           <button type="checkbox" autocheck="1" id="some-checkbox" label="Click on this checkbox too"/>
         </vbox>
