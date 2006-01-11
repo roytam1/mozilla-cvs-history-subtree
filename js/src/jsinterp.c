@@ -2933,24 +2933,12 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
                     sp--;
                     STORE_OPND(-1, STRING_TO_JSVAL(str));
                 } else {
-                    str2 = JSVAL_TO_STRING(rtmp);
-                    ok = (str = js_ValueToString(cx, ltmp)) != NULL;
+                    VALUE_TO_NUMBER(cx, lval, d);
+                    VALUE_TO_NUMBER(cx, rval, d2);
+                    d += d2;
+                    sp--;
+                    STORE_NUMBER(cx, -1, d);
                 }
-                if (!ok)
-                    goto out;
-                str = js_ConcatStrings(cx, str, str2);
-                if (!str) {
-                    ok = JS_FALSE;
-                    goto out;
-                }
-                sp--;
-                STORE_OPND(-1, STRING_TO_JSVAL(str));
-            } else {
-                VALUE_TO_NUMBER(cx, lval, d);
-                VALUE_TO_NUMBER(cx, rval, d2);
-                d += d2;
-                sp--;
-                STORE_NUMBER(cx, -1, d);
             }
             break;
 
@@ -3382,7 +3370,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             OBJ_SET_SLOT(cx, obj, slot, rval);
             STORE_OPND(-1, rtmp);
             len = cs->length;
-            DO_NEXT_OP(len);
+            break;
           }
 
           case JSOP_GETPROP:
