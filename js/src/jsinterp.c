@@ -3361,17 +3361,12 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
 #undef FAST_GLOBAL_INCREMENT_OP
 
           do_nonint_fast_global_incop:
-          {
-            const JSCodeSpec *cs = &js_CodeSpec[op];
-
             vp = sp++;
             SAVE_SP(fp);
             NONINT_INCREMENT_OP_MIDDLE();
             OBJ_SET_SLOT(cx, obj, slot, rval);
             STORE_OPND(-1, rtmp);
-            len = cs->length;
             break;
-          }
 
           case JSOP_GETPROP:
             /* Get an immediate atom naming the property. */
