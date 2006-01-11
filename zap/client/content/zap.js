@@ -247,7 +247,7 @@ function getService(resourceID) {
 
 var Service = makeClass("Service", PersistentRDFObject);
 Service.prototype.datasources["default"] = wConfigDS;
-Service.rdfLiteralAttrib("http://home.netscape.com/NC-rdf#Name", "");
+Service.rdfLiteralAttrib("http://home.netscape.com/NC-rdf#Name", "New Service");
 Service.rdfLiteralAttrib("urn:mozilla:zap:domain", "");
 Service.rdfLiteralAttrib("urn:mozilla:zap:route1", "");
 Service.rdfLiteralAttrib("urn:mozilla:zap:route2", "");
@@ -255,9 +255,10 @@ Service.rdfLiteralAttrib("urn:mozilla:zap:route3", "");
 Service.rdfLiteralAttrib("urn:mozilla:zap:route4", "");
 // address of STUN server for this service. (if empty we just use the domain name):
 Service.rdfLiteralAttrib("urn:mozilla:zap:stun_server", "");
-// whether or not we should use our mapped address as determined by a
-// STUN request in contact addresses of registrations:
-Service.rdfLiteralAttrib("urn:mozilla:zap:use_stun_contact_address", "false");
+// type of address resolution to perform for ua address that will be
+// registered ('local'|'stun'|'options'):
+Service.rdfLiteralAttrib("urn:mozilla:zap:ua_contact_address_type", "local");
+
 // whether or not we should send OPTIONS requests to keep alive the connection:
 Service.rdfLiteralAttrib("urn:mozilla:zap:options_keep_alive", "false");
 Service.rdfLiteralAttrib("urn:mozilla:zap:suggested_registration_interval", "");
@@ -399,10 +400,26 @@ Identity.rdfLiteralAttrib("urn:mozilla:zap:organization", "");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:preference", "0.1");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:automatic_registration", "true");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:authentication_username", "");
-Identity.rdfResourceAttrib("urn:mozilla:zap:service",
-                           "urn:mozilla:zap:automatic_service");
+Identity.rdfLiteralAttrib("urn:mozilla:zap:service",
+                          "urn:mozilla:zap:automatic_service");
 Identity.rdfLiteralAttrib("urn:mozilla:zap:is_registered",
                           "false", "global-ephemeral");
+
+
+// make sure that we re-resolve the service when certain attributes change:
+Identity.rdfAttribTrigger(
+  "urn:mozilla:zap:service",
+  function(prop, val) {
+    this._service = null;
+  });
+
+Identity.rdfAttribTrigger(
+  "http://home.netscape.com/NC-rdf#Name",
+  function(prop, val) {
+    this._service = null;
+  });
+
+
 
 // This will be set after we have attempted to resolve our stun
 // address (if requested). Once this condition is reached, the
@@ -413,9 +430,8 @@ Identity.addCondition("InitializationAttempted");
 Identity.spec(
   function initWithResource(r) {
     this._Identity_initWithResource(r);
-    this.service = getService(this.getServiceId());
     this.hostAddress = wSipStack.hostAddress;
-    if (this.service["urn:mozilla:zap:use_stun_contact_address"] == "true")
+    if (this.service["urn:mozilla:zap:ua_contact_address_type"] == "stun")
       this.resolveStunAddress();
     else
       this.InitializationAttempted = true;
@@ -578,13 +594,13 @@ Identity.fun(
 
 // this will be initially be set to our internal address and
 // asynchronously resolved to our public STUN address if our
-// associated service has urn:mozilla:zap:use_stun_contact_address set
-// to true:
+// associated service has urn:mozilla:zap:ua_contact_address_type set
+// to 'stun':
 Identity.obj("hostAddress", null);
 
 // contact address used for registration
 Identity.fun(
-  function getRegisterContactAddress() {
+  function getUAContactAddress() {
     // Synthesize from the 'From Address', adjusting host and port. 
     // XXX We DO want to keep the From address's display name, but what about
     // uri parameters???
@@ -607,8 +623,16 @@ Identity.fun(
     return addr;
   });
 
-// Returns a structure {contact, routeset} with routing information
-// for non-REGISTER requests:
+// Returns a structure with routing information for non-REGISTER
+// requests:
+// {
+//   contact (zapISipAddress)        : the contact address for INVITEs etc.
+//                                     it might be a gruu.
+//   directContact (zapISipAddress)  : direct contact address for the UA.
+//                                     it will be the same as 'contact' unless 'contact'
+//                                     is a gruu obtained from our registrar.
+//   routeset (zapISipAddress array) : the routeset for new requests over this identity
+// }
 Identity.fun(
   function getRoutingInfo() {
     var routingInfo;
@@ -635,7 +659,8 @@ Identity.fun(
 Identity.fun(
   function _constructFallbackRoutingInfo() {
     return {
-      contact : this.getRegisterContactAddress(),
+      contact : this.getUAContactAddress(),
+      directContact: this.getUAContactAddress(),
       routeset: this.service.getDefaultRoute()
     };
   });
@@ -665,6 +690,17 @@ Identity.fun(
     return "urn:mozilla:zap:default_service";
   });
 
+Identity.obj("_service", null);
+Identity.getter(
+  "service",
+  function() {
+    if (!this._service) {
+      this._service = getService(this.getServiceId());
+    }
+    return this._service;
+  });
+
+
 ////////////////////////////////////////////////////////////////////////
 // Registration:
 
@@ -672,7 +708,8 @@ Identity.fun(
 
 // XXX We currently use one registration group per identity. This is a
 // bit wasteful if we have several identities with the same
-// AOR. Investigate whether this is common enough to care.
+// AOR. Investigate whether this is common enough to care or whether
+// we should remove registration groups altogether.
 var wRegistrations = {};
 
 // set up or refresh a registration group for the given identity
@@ -812,15 +849,17 @@ RegistrationGroup.fun(
     // find first active flow:
     for (var i=0,l=this.registrations.length; i<l; ++i) {
       if (this.registrations[i].registered) {
+        var directAddr = this.registrations[i].publicUAContactAddress; // XXX maybe we want a config option to prefer local ua contact addresses
+        if (!directAddr) 
+          directAddr = this.identity.getUAContactAddress();
         var contactAddr = this.registrations[i].gruu;
         if (!contactAddr) {
-          // hmm, no gruu. best we can do is use our registered
-          // contact address and hope that our outbound route does
-          // some helping with any NATs:
-          contactAddr = this.identity.getRegisterContactAddress();
+          // hmm, no gruu. best we can do is use our direct address:
+          contactAddr = directAddr;
         }
         return {
           contact : contactAddr,
+          directContact : directAddr,
           routeset: this.registrations[i].outboundRoute
         };
       }
@@ -879,10 +918,14 @@ RegistrationGroup.fun(
 
 //----------------------------------------------------------------------
 
-var Registration = makeClass("Registration", SupportsImpl);
+var Registration = makeClass("Registration", SupportsImpl, Scheduler);
 Registration.addInterfaces(Components.interfaces.zapISipNonInviteRCListener,
-                           Components.interfaces.zapISipFlowMonitor,
-                           Components.interfaces.nsITimerCallback);
+                           Components.interfaces.zapISipFlowMonitor);
+
+// This will be set as soon as the contact address to send in the
+// initial REGISTER has been resolved. The resolution method is
+// determined by Service["urn:mozilla:zap:ua_contact_address_type"].
+Registration.addCondition("UAContactAddressResolved");
 
 // is this flow currently registered?
 Registration.obj("registered", false);
@@ -895,11 +938,15 @@ Registration.obj("lastResponse", null);
 
 // if we are currently registered, this will contain the contact
 // header as returned by the registrar:
-Registration.obj("contact", null);
+Registration.obj("contactHeader", null);
 
 // this will contain our GRUU if we are currently registered and the
 // registrar returned one:
 Registration.obj("gruu", null);
+
+// this will contain our best-guess public ua contact address as determined by
+// received/rport:
+Registration.obj("publicUAContactAddress", null);
 
 // our default outbound route. might be different to the current
 // outbound route (see below) if there is a Service-Route in force.
@@ -916,7 +963,48 @@ Registration.fun(
     this.flowid = flowid;
     this.defaultOutboundRoute = route;
     this.outboundRoute = route;
-    
+    this.whenUAContactAddressResolved(this.proceedWithRegistration);
+    if (this.group.identity.service["urn:mozilla:zap:ua_contact_address_type"]=="options") {
+      this.resolveUAContactByOPTIONS();
+    }
+    else
+      this.UAContactAddressResolved = true;
+  });
+
+// resolve our public address:port, store in XXX and signal
+// UAContactAddressResolved
+Registration.fun(
+  function resolveUAContactByOPTIONS() {
+    var toAddr = wSipStack.syntaxFactory.createAddress(null, this.group.domain);
+    var rc = wSipStack.createNonInviteRequestClient(toAddr,
+                                                    this.group.identity.getFromAddress(),
+                                                    "OPTIONS",
+                                                    this.outboundRoute,
+                                                    this.outboundRoute.length,
+                                                    this.group.identity.getRCFlags());
+    var me = this;
+    rc.listener = {
+      notifyResponseReceived : function resolveUAContactByOPTIONS_response(_rc,
+                                                                           dialog,
+                                                                           response,
+                                                                           flow) {
+        rc.listener = null;
+        if (response.statusCode == "408") {
+          // the request didn't make it. -> reschedule in 10s
+          me._warning("failed to reach host. rescheduling in 10s.");
+          me.schedule(me.resolveUAContactByOPTIONS, 10000);
+          return;
+        }
+        // else... any response will do:
+        me.updatePublicUAContactAddress(response);
+        me.UAContactAddressResolved = true;
+      }
+    };
+    rc.sendRequest();
+  });
+
+Registration.fun(
+  function proceedWithRegistration() {
     this._initRC();
     this.registrationRC.listener = this;
     this.registrationRC.sendRequest();
@@ -951,6 +1039,38 @@ Registration.fun(
       this.flow.removeFlowMonitor(this);
       delete this.flow;
     }
+    // don't send any more registration requests over this flow:
+    this.cancelSchedulesForMethod(this.refreshRegistration);
+  });
+
+// return either our public or local contact address as specified in
+// the service config:
+Registration.fun(
+  function getUAContactAddress() {
+    if (this.group.identity.service["urn:mozilla:zap:ua_contact_address_type"]=="options" &&
+        this.publicUAContactAddress)
+      return this.publicUAContactAddress;
+    else
+      return this.group.identity.getUAContactAddress();
+  });
+
+// infer our public ua contact address from the given message's received/rport:
+Registration.fun(
+  function updatePublicUAContactAddress(message) {
+    // examine the top Via for received & rport and synthesize public contact address from
+    // identity's UAContactAddress:
+    var via = message.getTopViaHeader();
+    if (!via) return;
+    
+    var addr = this.group.identity.getUAContactAddress();
+    var uri = addr.uri.QueryInterface(Components.interfaces.zapISipSIPURI);
+    if (via.hasParameter("received")) {
+      uri.host = via.getParameter("received");
+    }
+    if (via.hasParameter("rport")) {
+      uri.port = via.getParameter("rport");
+    }
+    this.publicUAContactAddress = addr;
   });
 
 // helper to initialize a register request client:
@@ -960,48 +1080,48 @@ Registration.fun(
     this.registrationRC =
       wSipStack.createRegisterRequestClient(this.group.domain,
                                             this.group.identity.getAOR(),
-                                            this.group.identity.getRegisterContactAddress(),
+                                            this.getUAContactAddress(),
                                             route,
                                             route.length,
                                             this.group.identity.getRCFlags());
 
-    var contact = this.registrationRC.request.getTopContactHeader().QueryInterface(Components.interfaces.zapISipContactHeader);
+    var contactHeader = this.registrationRC.request.getTopContactHeader().QueryInterface(Components.interfaces.zapISipContactHeader);
 
     if (this.group.identity["urn:mozilla:zap:preference"]) {
       // add a q-value
-      contact.setParameter("q", this.group.identity["urn:mozilla:zap:preference"]);
+      contactHeader.setParameter("q", this.group.identity["urn:mozilla:zap:preference"]);
     }
     
     if (this.group.interval) {
       // add an expires parameter
-      contact.setParameter("expires", this.group.interval);
+      contactHeader.setParameter("expires", this.group.interval);
     }
     
     // XXX if (use_outbound)
-    contact.setParameter("+sip.instance", '"<'+wSipStack.instanceID+'>"');
-    contact.setParameter("flow-id", this.flowid);
+    contactHeader.setParameter("+sip.instance", '"<'+wSipStack.instanceID+'>"');
+    contactHeader.setParameter("flow-id", this.flowid);
   });    
 
 Registration.fun(
   function unregister() {
-    if (this.refreshTimer) {
-      this.refreshTimer.cancel();
-      delete this.refreshTimer;
-    }
-    this._unmonitorFlow();
+    this.Terminated = true; // this will clear any pending schedules
     
-    if (this.registrationRC.listener) {
-      // We are currently waiting for a registration to complete.
-      // XXX what we want to do is cancel the RC.
-      this.registrationRC.listener = null;
+    this._unmonitorFlow();
+
+    if (this.registrationRC) {
+      if (this.registrationRC.listener) {
+        // We are currently waiting for a registration to complete.
+        // XXX what we want to do is cancel the RC.
+        this.registrationRC.listener = null;
+      }
+      else if (this.registered) {
+        // XXX maybe we shouldn't send unregistrations.
+        var contactHeader = this.registrationRC.request.getTopContactHeader();
+        contactHeader.setParameter("expires", "0");
+        this.registrationRC.sendRequest();
+      }
+      delete this.registrationRC;
     }
-    else if (this.registered) {
-      // XXX maybe we shouldn't send unregistrations.
-      var contact = this.registrationRC.request.getTopContactHeader();
-      contact.setParameter("expires", "0");
-      this.registrationRC.sendRequest();
-    }
-    delete this.registrationRC;
   });
 
 // Helper to compare the first hop in the new route to the remote ip
@@ -1061,11 +1181,11 @@ Registration.fun(
   });
 
 // helper to extract a gruu from a contact header
-function extractGRUU(contact)
+function extractGRUU(contactHeader)
 {
-  if (!contact.hasParameter("gruu")) return null;
+  if (!contactHeader.hasParameter("gruu")) return null;
   try {
-    var gruu = /"(.*)"/(contact.getParameter("gruu"))[1];
+    var gruu = /"(.*)"/(contactHeader.getParameter("gruu"))[1];
     gruu = wSipStack.syntaxFactory.deserializeAddress(gruu);
     return gruu;
   }
@@ -1094,19 +1214,19 @@ Registration.fun(
     else if (response.statusCode == "423") {
       // interval too brief. see RFC3261 10.2.8
       // we need to modify our request and retry
-      var contact = rc.request.getTopContactHeader().QueryInterface(Components.interfaces.zapISipContactHeader);
+      var contactHeader = rc.request.getTopContactHeader().QueryInterface(Components.interfaces.zapISipContactHeader);
       // look for a min-expires header:
       var minExpires = response.getTopHeader("Min-Expires");
       if (minExpires) {
         minExpires = minExpires.QueryInterface(Components.interfaces.zapISipMinExpiresHeader);
         // remember minimum interval for future registrations:
         this.group.interval = minExpires.deltaSeconds.toString();
-        contact.setParameter("expires", this.group.interval);
+        contactHeader.setParameter("expires", this.group.interval);
       }
       else {
         this._dump("warning: 424 response without Min-Expires header");
         delete this.group.interval;
-        contact.removeParameter("expires");
+        contactHeader.removeParameter("expires");
       }
       // retry the ammended request:
       rc.listener = this;
@@ -1116,7 +1236,7 @@ Registration.fun(
     else if (response.statusCode[0] == "2") {
       // find our registration among the returned contact headers:
       var contacts = response.getHeaders("Contact", {});
-      var contact;
+      var contactHeader;
       var myURI = rc.request.getTopContactHeader().QueryInterface(Components.interfaces.zapISipContactHeader).address.uri.QueryInterface(Components.interfaces.zapISipSIPURI);
       for (var i=0,l=contacts.length; i<l; ++i) {
         var c = contacts[i].QueryInterface(Components.interfaces.zapISipContactHeader);
@@ -1124,7 +1244,7 @@ Registration.fun(
           var uri = c.address.uri.QueryInterface(Components.interfaces.zapISipSIPURI);
           if (uri.equals(myURI)) {
             // we've found a match
-            contact = c;
+            contactHeader = c;
             break;
           }
           else {
@@ -1136,10 +1256,10 @@ Registration.fun(
           this._dump("exception during registration response parsing: "+e);
         }
       }
-      if (contact) {
+      if (contactHeader) {
         // looks like we're registered ok. let's see when the
         // registration expires (RFC3261 10.2.4):
-        var expires = contact.getParameter("expires");
+        var expires = contactHeader.getParameter("expires");
         if (!expires) {
           var expiresHeader = response.getTopHeader("Expires");
           if (expiresHeader) {
@@ -1155,8 +1275,8 @@ Registration.fun(
         if (expires != null && !isNaN(expires) && expires != 0) {
           // we've got a valid registration!
           // update our state:
-          this.contact = contact;
-          this.gruu = extractGRUU(contact);
+          this.contactHeader = contactHeader;
+          this.gruu = extractGRUU(contactHeader);
 
           var hopChanged = this._updateRequestRoute(response, flow);
 
@@ -1184,7 +1304,7 @@ Registration.fun(
     }
     // failure:
     this.registered = false;
-    this.contact = null;
+    this.contactHeader = null;
     this.gruu = null;
     ++this.failureCount;
     this._unmonitorFlow();
@@ -1194,20 +1314,12 @@ Registration.fun(
 
 Registration.fun(
   function scheduleRefresh(delay_ms) {
-    if (this.refreshTimer) {
-      this.refreshTimer.cancel();
-    }
-    else {
-      this.refreshTimer =
-        Components.classes["@mozilla.org/timer;1"].createInstance(Components.interfaces.nsITimer);
-    }
-    this.refreshTimer.initWithCallback(this, delay_ms,
-                                       Components.interfaces.nsITimer.TYPE_ONE_SHOT);
+    this.schedule(this.refreshRegistration, delay_ms);
   });
 
-// nsITimerCallback methods:
+// refresh the registration:
 Registration.fun(
-  function notify(timer) {
+  function refreshRegistration() {
     this.registrationRC.listener = this;
     try {
       this.registrationRC.sendRequest();
@@ -1590,14 +1702,12 @@ Call.rdfPointerAttrib("urn:mozilla:zap:root",
 Call.rdfAttribTrigger(
   "urn:mozilla:zap:remote",
   function(prop, val) {
-    this._dump("TRIGGER remote ->"+val);
     this["http://home.netscape.com/NC-rdf#Name"] = val;
   });
 
 Call.rdfAttribTrigger(
   "urn:mozilla:zap:session-running",
   function(prop, val) {
-    this._dump("TRIGGER session-running -> "+val);
     var me = this;
     if (val == "true") {
       this.sessionStart = new Date();
@@ -1618,7 +1728,6 @@ Call.rdfAttribTrigger(
 Call.rdfAttribTrigger(
   "urn:mozilla:zap:active",
   function(prop, val) {
-    this._dump("TRIGGER active -> "+val);
     if (val == "true") {
       wEphemeralSidebarContainer.AppendElement(this.resource);
     }
@@ -1916,7 +2025,7 @@ InboundCallHandler.fun(
     if (!this.call.identity)
       this.call.identity = wCurrentIdentity; // XXX maybe need a separate config for this?
     
-    this.contact = this.call.identity.getRoutingInfo().contact;
+    this.routingInfo = this.call.identity.getRoutingInfo();
     
     // reject based on busy settings:
     if (document.getElementById("button_dnd").checked) {
@@ -1933,9 +2042,15 @@ InboundCallHandler.fun(
       var offer = wSdpService.deserializeSessionDescription(rs.request.body);
       this.call.mediasession = Components.classes["@mozilla.org/zap/mediasession;1"]
         .createInstance(Components.interfaces.zapIMediaSession);
+
+      // infer connectionAddress as best we can (this will yield our
+      // public NAT address if the identity is registered:
+      var connectionAddress = this.routingInfo.directContact.uri.QueryInterface(Components.interfaces.zapISipSIPURI).host;
+        
+      // initialize a mediasession:
       this.call.mediasession.init("zap",
-                                  this.call.identity.hostAddress,
-                                  this.call.identity.hostAddress);
+                                  connectionAddress,
+                                  connectionAddress);
       this.answer = this.call.mediasession.processSDPOffer(offer);
     }
     catch(e) {
@@ -2049,7 +2164,7 @@ InboundCallHandler.fun(
 InboundCallHandler.fun(
   function acceptCall() {
     // formulate accepting response:
-    var resp = this.rs.formulateResponse("200", this.contact);
+    var resp = this.rs.formulateResponse("200", this.routingInfo.contact);
     // append session description:
     resp.setContent("application", "sdp", this.answer.serialize());
     this.call["urn:mozilla:zap:status"] = resp.statusCode+" "+resp.reasonPhrase;
@@ -2067,7 +2182,7 @@ InboundCallHandler.fun(
 
 InboundCallHandler.fun(
   function _respond(code, extra_headers) {
-    var resp = this.rs.formulateResponse(code, this.contact);
+    var resp = this.rs.formulateResponse(code, this.routingInfo.contact);
 
     if (extra_headers) {
       // add in extra header, converting line endings appropriately:

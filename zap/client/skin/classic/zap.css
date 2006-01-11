@@ -126,9 +126,6 @@ statusbar {
   color: blue;
 }
 
-.zap_tb_label {
-}
-
 #alertbar {
   max-height: 0px;
   visibility: hidden;
@@ -217,34 +214,12 @@ statusbar {
 /* ---------------------------------------------------------------------- */
 /* calls tree                                                             */
 
-#calls {
-  border: none;
-  margin: 0px;
-  -moz-appearance: none;
-}
-
 /* #calls > treecols > treecol {  */
 /*   margin: 0px; */
 /*   border: 1px solid #7a7a7a; */
 /*   background-color: white; */
 /*   -moz-appearance: none; */
 /* } */
-
-#calls > treechildren::-moz-tree-row(even) { 
-  background-color: #f7f8ff;
-}
-
-#calls > treechildren::-moz-tree-row(odd) { 
-  background-color: #eaebff;
-}
-
-#calls > treechildren::-moz-tree-row(selected) { 
-  background-color: #ece9d8;
-}
-
-#calls > treechildren::-moz-tree-row(selected, focus) { 
-  background-color: #316ac5;
-}
 
 #calls > treechildren::-moz-tree-row(callactive-true) { 
   background-color: #FF8080;
@@ -259,6 +234,10 @@ statusbar {
 
 #calls > treechildren::-moz-tree-image(calls_direction, direction-outbound) {
   list-style-image: url("chrome://zap/skin/outbound.png");
+}
+
+#calls > treechildren::-moz-tree-image(calls_direction, status-Missed) {
+  list-style-image: url("chrome://zap/skin/missed.png");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -352,15 +331,6 @@ statusbar {
 
 /* ---------------------------------------------------------------------- */
 /* various chrome tweaks                                                  */
-
-#calls-splitter { 
-  border: none;
-  border-top: 2px solid;
-%expand -moz-border-top-colors: __ZAP_FORM_BG_COLOR__;
-  background-color: #7a7a7a;
-  min-height: 3px;
-  height: 3px;
-}
 
 #sidebar-splitter {
   border: none;
@@ -586,6 +556,10 @@ textbox[type="zap-formwidget"][invalid="true"] {
   -moz-border-top-colors: #9a2222 #cf2222;
 }
 
+checkbox[type="zap-formwidget"] { 
+  -moz-box-flex: 1;
+}
+
 checkbox[type="zap-formwidget"][modified="true"] { 
   font-weight: bold;
 }
@@ -610,6 +584,10 @@ menulist[type="zap-formwidget"][modified="true"] {
   -moz-border-left-colors: #5a5a5a;
   -moz-border-right-colors: #5a5a5a;
   -moz-border-bottom-colors: #5a5a5a;
+}
+
+radiogroup[type="zap-formwidget"][modified="true"] > radio[selected="true"] { 
+  font-weight: bold;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -646,6 +624,17 @@ menulist[type="zap-formwidget"][modified="true"] {
   font-weight: bold;
 }
 
+.zap-form-title-box { 
+  background-color: #c0c0d0;
+  color: #ffffff;
+  -moz-box-align: center;
+}
+
+.zap-form-title-box > label {
+  font-size: 130%;
+  font-weight: bold;
+}
+
 .zap-form-buttonbar { 
   overflow: hidden;
   background-color: #ffaaaa;
@@ -659,6 +648,38 @@ menulist[type="zap-formwidget"][modified="true"] {
   background-color: #ffaaaa;
   border: none;
 }
+
+.zap-form-splitter { 
+  border: none;
+  border-top: 2px solid;
+%expand -moz-border-top-colors: __ZAP_FORM_BG_COLOR__;
+  background-color: #7a7a7a;
+  min-height: 3px;
+  height: 3px;
+}
+
+.zap-form-tree { 
+  border: none;
+  margin: 0px;
+  -moz-appearance: none;
+}
+
+.zap-form-tree > treechildren::-moz-tree-row(even) { 
+  background-color: #f7f8ff;
+}
+
+.zap-form-tree > treechildren::-moz-tree-row(odd) { 
+  background-color: #eaebff;
+}
+
+.zap-form-tree > treechildren::-moz-tree-row(selected) { 
+  background-color: #ece9d8;
+}
+
+.zap-form-tree > treechildren::-moz-tree-row(selected, focus) { 
+  background-color: #316ac5;
+}
+
 
 /* ---------------------------------------------------------------------- */
 /* module pages                                                           */

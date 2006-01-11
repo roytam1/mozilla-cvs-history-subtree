@@ -95,6 +95,13 @@
   ]]>
   </handler>
 #endif
+#ifdef ZAP_RADIOGROUP_FORMWIDGET
+  <handler event="command">
+  <![CDATA[
+    this.valueModified();
+  ]]>
+  </handler>
+#endif
 </handlers>
 
 

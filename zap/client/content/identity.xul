@@ -99,10 +99,11 @@
   </script>
 
   <vbox class="zap-form-body">
-    <hbox align="start">
-      <label class="zap-form-title" flex="1" value="SIP Identity"/>
+    <box class="zap-form-title-box">
+      <label value="SIP Identity" crop="right"/>
+      <spacer flex="1"/>
       <button label="Delete this identity" oncommand="del()"/>
-    </hbox>
+    </box>
     <vbox id="zap_identity_form"/>
   </vbox>
   <hbox style="display:none" class="zap-form-buttonbar">

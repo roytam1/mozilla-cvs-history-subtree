@@ -105,9 +105,14 @@
       var oc = parent.OutboundCall.instantiate();
       oc.createFromDocument(document);
       oc.mediasession = Components.classes["@mozilla.org/zap/mediasession;1"].createInstance(Components.interfaces.zapIMediaSession);
+
+      // infer connectionAddress as best we can (this will yield our
+      // public NAT address if the identity is registered:
+      var connectionAddress = parent.wCurrentIdentity.getRoutingInfo().directContact.uri.QueryInterface(Components.interfaces.zapISipSIPURI).host;
+
       oc.mediasession.init("zap",
-                           parent.wCurrentIdentity.hostAddress,
-                           parent.wCurrentIdentity.hostAddress);
+                           connectionAddress,
+                           connectionAddress);
 
       oc["urn:mozilla:zap:status"] = "Calling...";
       // start the ball rolling:

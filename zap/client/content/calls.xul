@@ -118,6 +118,7 @@
   <vbox class="zap-form-list" id="calls-box" flex="1" height="200" minheight="50" persist="height">
     <label id="list-title" class="zap-form-title" value="Calls"/>
     <tree id="calls" flex="1" 
+          class="zap-form-tree"
           seltype="single"
           datasources="rdf:null"
           ref="urn:mozilla:zap:calls"
@@ -163,7 +164,7 @@
             <treechildren>
               <treeitem uri="?node">
                 <treerow properties="callactive-?active">
-                  <treecell properties="direction-?direction"/>
+                  <treecell properties="direction-?direction status-?status"/>
                   <treecell label="?status"/>
                   <treecell label="?remote"/>
                   <treecell label="?subject"/>
@@ -177,6 +178,6 @@
       </template>
     </tree>
   </vbox>
-  <splitter id="calls-splitter"/>
+  <splitter class="zap-form-splitter"/>
   <vbox id="call-form" flex="100" height="200" persist="height"/>
 </page>

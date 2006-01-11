@@ -75,7 +75,7 @@
     <content>
       <xul:box class="igroup-content">
         <children/>
-        <xul:spacer flex="1"/>
+<!--        <xul:spacer flex="1"/>-->
         <xul:button class="igroup-info-button"/>
       </xul:box>
       <children includes="info"/>
@@ -154,6 +154,13 @@
 #define ZAP_MENULIST_FORMWIDGET
 #include zap-widget-body.inc
 #undef ZAP_MENULIST_FORMWIDGET
+  </binding>
+
+  <binding id="radiogroup-formwidget"
+           extends="chrome://global/content/bindings/radio.xml#radiogroup">
+#define ZAP_RADIOGROUP_FORMWIDGET
+#include zap-widget-body.inc
+#undef ZAP_RADIOGROUP_FORMWIDGET
   </binding>
 
 </bindings>

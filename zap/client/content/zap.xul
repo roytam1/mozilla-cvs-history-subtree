@@ -116,7 +116,7 @@
       <button id="button_go" label="Go" oncommand="cmdGo()" class="zap_tb_button" />
       <toolbarspacer/>
       <toolbaritem>
-        <hbox align="center"><label class="zap_tb_label" value="Identity:"/></hbox>
+        <hbox align="center"><label value="Identity:"/></hbox>
         <menulist id="identities_list"
                   oncommand="identityChange();" 
                   minwidth="100">

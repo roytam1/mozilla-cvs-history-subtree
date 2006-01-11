@@ -57,9 +57,10 @@
     var wIdentity;    
     function initPage() {
       widgetStateChanged = formWidgetStateChanged;
-      // make sure we always show the buttonbar:
-      modifiedFormWidgets = 1;
-      showVSlideBar("buttonbar");
+
+      // make sure we have a sticky buttonbar:
+      setButtonBarState(true);
+
       initIdentityForm();
       wIdentity = parent.Identity.instantiate();
       // fill document with identity defaults:

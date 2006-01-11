@@ -40,52 +40,48 @@
 <!DOCTYPE window SYSTEM "chrome://zap/locale/zap.dtd">
 
 <page id="zap_services"
-        xmlns = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-        onload="initPage()" >
-
-  <broadcasterset>
-    <broadcaster id="selection_state" disabled="true"/>
-  </broadcasterset>
-
+      class="zap-form"
+      xmlns:html="http://www.w3.org/1999/xhtml"
+      xmlns = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+      onload="initPage()" >
   <!-- Scripts -->
   <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
   <script type="text/javascript" src="chrome://zap/content/chromeUtils.js"/>
+
   <script type="application/x-javascript">
   <![CDATA[
-    var wServicesTree;    
-    var wSelectionState;
+    var wServicesTree;
+    var wServiceBox;
+    var wDeleteButton;
     var wCurrentService;
-    var wMode = "browsing"; // browsing|editing|adding
 
     function initPage() {
-      wServicesTree = document.getElementById("services_tree");
-      wSelectionState = document.getElementById("selection_state");
+      widgetStateChanged = formWidgetStateChanged;
+
+      wServicesTree = document.getElementById("services");
+      wServiceBox = document.getElementById("service-box");
+      wDeleteButton = document.getElementById("delete-button");
+
       wServicesTree.database.AddDataSource(parent.wConfigDS);
       wServicesTree.builder.rebuild();
-      parent.clearSidebarSelection();
     }
 
     function servicesSelectionChange() {
-      if (wMode != "browsing") {
-        document.getElementById("module_page").setAttribute("readonly", "true");
-        document.getElementById("button_deck").selectedIndex = 0;      
-        wMode = "browsing";
-      }
+      // make sure we have a non-sticky buttonbar:
+      setButtonBarState(false);
+
+      // enable delete button:
+      wDeleteButton.disabled = false;
 
       var resource = getSelectedResource(wServicesTree);
       if (!resource) {
-        // fill with blank data
-        wCurrentService = parent.Service.instantiate();
-        wCurrentService.fillDocument(document);
-
-        wSelectionState.setAttribute("disabled", "true");
+        wServiceBox.hidden = true;
+        return;
       }
-      else {
-        wSelectionState.removeAttribute("disabled");
-        wCurrentService = parent.Service.instantiate();
-        wCurrentService.initWithResource(resource);
-        wCurrentService.fillDocument(document);      
-      }
+      wCurrentService = parent.Service.instantiate();
+      wCurrentService.initWithResource(resource);
+      wCurrentService.fillDocument(document);
+      wServiceBox.hidden = false;
     }
 
     function clearSelection() {
@@ -97,18 +93,16 @@
     function add() {
       clearSelection();
       wCurrentService = parent.Service.instantiate();
-      wCurrentService.fillDocument(document);
-      document.getElementById("module_page").setAttribute("readonly", "false");
-      document.getElementById("button_deck").selectedIndex = 1;      
-      document.getElementById("http://home.netscape.com/NC-rdf#Name").select();
-      wMode = "adding";      
-    }
 
-    function edit() {
-      document.getElementById("module_page").setAttribute("readonly", "false");
-      document.getElementById("button_deck").selectedIndex = 1;      
+      // make sure we have a sticky buttonbar:
+      setButtonBarState(true);
+
+      // disable delete button:
+      wDeleteButton.disabled = true;
+
+      wCurrentService.fillDocument(document);
+      wServiceBox.hidden = false;
       document.getElementById("http://home.netscape.com/NC-rdf#Name").select();
-      wMode = "editing";            
     }
 
     function del() {
@@ -116,124 +110,263 @@
                                              "Are you sure you wish to delete service '"+wCurrentService["http://home.netscape.com/NC-rdf#Name"]+"'?");
       if (ok) {
         wCurrentService.remove();
-      }      
+      }
     }
 
     function commit() {
-      if (wMode == "adding") {
-        wCurrentService.createFromDocument(document);
-        // select newly created service (will automatically restore "browsing" mode)
-        selectResource(wServicesTree, wCurrentService.resource);
-      }
-      else if (wMode == "editing") {
+      if (wCurrentService.resource) {
         wCurrentService.updateFromDocument(document);
         parent.notifyServiceUpdated(wCurrentService.resource);
-
-        document.getElementById("module_page").setAttribute("readonly", "true");
-        document.getElementById("button_deck").selectedIndex = 0;
-        wMode = "browsing";
+      }
+      else {
+        // we're adding a new record
+        wCurrentService.createFromDocument(document);
+        // select newly created service:
+        selectResource(wServicesTree, wCurrentService.resource);
       }
     }
 
     function cancel() {
-      if (wMode == "adding") {
-        parent.reloadPage();
-      }
-      else if (wMode == "editing") {
-        document.getElementById("module_page").setAttribute("readonly", "true");
-        document.getElementById("button_deck").selectedIndex = 0;
+      if (wCurrentService.resource)
         wCurrentService.fillDocument(document);
-        wMode = "browsing";      
+      else {
+        // we're canceling adding a record
+        wServiceBox.hidden = true;
+        // reset sticky button bar
+        setButtonBarState(false);
       }
     }
-
   ]]>
   </script>
 
-  <vbox id="module_page" flex="1" readonly="true">
-    <label class="titlebox" value="SIP Services"/>
-
-    <hbox flex="1">
-      <vbox flex="1">
-        <tree id="services_tree" flex="1" 
-              seltype="single"
-              datasources="rdf:null"
-              ref="urn:mozilla:zap:services"
-              onselect="servicesSelectionChange()"
-              flags="dont-build-content">
-          <treecols>
-            <treecol id="services_col_name" label="Name" flex="1"/>
-            <treecol id="services_col_domain" label="Domain" flex="1" hidden="true"/>
-          </treecols>
-          <template>
-            <rule>
-              <conditions>
-                <content uri="?container"/>
-                <member container="?container" child="?node"/>
-              </conditions>
-              <bindings>
-                <binding subject="?node"
-                         predicate="http://home.netscape.com/NC-rdf#Name"
-                         object="?name"/>
-                <binding subject="?node"
-                         predicate="urn:mozilla:zap:domain"
-                         object="?domain"/>
-              </bindings>
-              <action>
-                <treechildren>
-                  <treeitem uri="?node">
-                    <treerow>
-                      <treecell label="?name"/>
-                      <treecell label="?domain"/>
-                    </treerow>
-                  </treeitem>
-                </treechildren>
-              </action>
-            </rule>
-          </template>
-        </tree>
-      </vbox>
-      <splitter/>     
-      <vbox flex="1">
-        <label control="http://home.netscape.com/NC-rdf#Name" value="Name:"/>
-        <textbox id="http://home.netscape.com/NC-rdf#Name"/>
-        <label control="urn:mozilla:zap:domain" value="Domain:"/>
-        <textbox id="urn:mozilla:zap:domain"/>
-        <label control="urn:mozilla:zap:route1" value="Route 1:"/>
-        <textbox id="urn:mozilla:zap:route1"/>
-        <label control="urn:mozilla:zap:route2" value="Route 2:"/>
-        <textbox id="urn:mozilla:zap:route2"/>
-        <label control="urn:mozilla:zap:route3" value="Route 3:"/>
-        <textbox id="urn:mozilla:zap:route3"/>
-        <label control="urn:mozilla:zap:route4" value="Route 4:"/>
-        <textbox id="urn:mozilla:zap:route4"/>
-        <label control="urn:mozilla:zap:suggested_registration_interval"
-               value="Suggested registration interval (s):"/>
-        <textbox id="urn:mozilla:zap:suggested_registration_interval"/>
-        <label control="urn:mozilla:zap:stun_server" value="STUN server:"/>
-        <textbox id="urn:mozilla:zap:stun_server"/>
-        <checkbox label="Use STUN address for registrations" id="urn:mozilla:zap:use_stun_contact_address"/>
-        <checkbox label="Send OPTIONS keep-alive requests" id="urn:mozilla:zap:options_keep_alive"/>
-        <checkbox label="Elide destination route header" id="urn:mozilla:zap:elide_destination_route_header"/>
-      </vbox>
-
-    </hbox>
-
-    <hbox>
-      <deck id="button_deck" flex="1">
-        <hbox flex="1">
-          <spacer flex="1"/>
-          <button label="New" oncommand="add()" />
-          <button label="Delete" oncommand="del()" observes="selection_state"/>
-          <button label="Edit" oncommand="edit()" observes="selection_state"/>
-        </hbox>
-        <hbox flex="1">
-          <spacer flex="1"/>
-          <button label="Commit" oncommand="commit()" />
-          <button label="Cancel" oncommand="cancel()" />
-        </hbox>
-      </deck>
-    </hbox>
-
+  <vbox flex="1">
+  <vbox class="zap-form-list" id="services-box" flex="1" 
+        height="200" minheight="50" persist="height">
+    <box class="zap-form-title-box">
+      <label value="Services" crop="right"/>
+      <spacer flex="1"/>
+      <button label="Add new Service" oncommand="add()"/>
+    </box>
+    <tree id="services" flex="1"
+          class="zap-form-tree"
+          seltype="single"
+          datasources="rdf:null"
+          ref="urn:mozilla:zap:services"
+          onselect="servicesSelectionChange()"
+          flags="dont-build-content">
+      <treecols>
+        <treecol id="services_col_name" label="Name" flex="1"/>
+        <treecol id="services_col_domain" label="Domain" flex="1"/>
+      </treecols>
+      <template>
+        <rule>
+          <conditions>
+            <content uri="?container"/>
+            <member container="?container" child="?node"/>
+          </conditions>
+          <bindings>
+            <binding subject="?node"
+                     predicate="http://home.netscape.com/NC-rdf#Name"
+                     object="?name"/>
+            <binding subject="?node"
+                     predicate="urn:mozilla:zap:domain"
+                     object="?domain"/>
+          </bindings>
+          <action>
+            <treechildren>
+              <treeitem uri="?node">
+                <treerow>
+                  <treecell label="?name"/>
+                  <treecell label="?domain"/>
+                </treerow>
+              </treeitem>
+            </treechildren>
+          </action>
+        </rule>
+      </template>
+    </tree>
   </vbox>
+  <splitter class="zap-form-splitter"/>
+  <vbox flex="100" height="200" persist="height" class="zap-form-body">
+    <vbox id="service-box" hidden="true" flex="1">
+      <box class="zap-form-title-box">
+        <label value="Service" crop="right"/>
+        <spacer flex="1"/>
+        <button id="delete-button" label="Delete" oncommand="del()"/>
+      </box>
+      <grid>
+        <columns><column/><column flex="1"/><column/></columns>
+        <rows>
+          <irow>
+            <label control="http://home.netscape.com/NC-rdf#Name" value="Name:"/>
+            <textbox type="zap-formwidget" id="http://home.netscape.com/NC-rdf#Name"/>
+            <info>
+              <description>
+                Human-readable name for this service.
+              </description>
+            </info>
+          </irow>
+          <irow>
+            <label control="urn:mozilla:zap:domain" value="Domain:"/>
+            <textbox type="zap-formwidget" id="urn:mozilla:zap:domain"/>
+            <info>
+              <description>
+                Home domain of the SIP service. It will be used as the request URI 
+                when registering an identity with the service and is typically identical 
+                to the host part of the address-of-record of an identity using this
+                SIP service.<html:br/>
+                Zap also uses this field to choose an appropriate service for identities
+                configured for '(automatic)' service.
+              </description>
+            </info>
+          </irow>
+        </rows>
+      </grid>
+      <igroup>
+        <groupbox flex="1">
+          <caption><label value="Service Routes"/></caption>
+          <grid>
+            <columns><column/><column flex="1"/><column/></columns>
+            <rows>
+              <row>
+                <label control="urn:mozilla:zap:route1" value="Route 1:"/>
+                <textbox type="zap-formwidget" id="urn:mozilla:zap:route1" 
+                         validator="validateSIPRouteSet"/>
+              </row>
+              <row>
+                <label control="urn:mozilla:zap:route2" value="Route 2:"/>
+                <textbox type="zap-formwidget" id="urn:mozilla:zap:route2"
+                         validator="validateSIPRouteSet"/>
+              </row>
+              <row>
+                <label control="urn:mozilla:zap:route3" value="Route 3:"/>
+                <textbox type="zap-formwidget" id="urn:mozilla:zap:route3"
+                         validator="validateSIPRouteSet"/>
+              </row>
+              <row>
+                <label control="urn:mozilla:zap:route4" value="Route 4:"/>
+                <textbox type="zap-formwidget" id="urn:mozilla:zap:route4"
+                         validator="validateSIPRouteSet"/>
+              </row>
+            </rows>
+          </grid>
+        </groupbox>
+        <info>
+          <description>
+            Routes to use as initial preloaded routes when registering 
+            an identity with this service. <html:br/>
+            A route is a possibly empty, comma-separated list
+            of SIP URIs enclosed in angle quotes (RFC3261 'name-addr').<html:br/>
+            <html:a href="http://www.croczilla.com/zap/rfcs/draft-ietf-sip-outbound-01.txt">draft-ietf-sip-outbound-01.txt</html:a> suggests that a
+            UA should support sets of up to four <html:b>URIs</html:b> with with to register.
+            Zap extends this scheme by allowing four <html:b>routes</html:b>, so any
+            proxies that need to be traversed (e.g. to traverse a company intranet) can be 
+            specified.<html:br/>
+            Zap will attempt to simultaneously register over all specified non-empty routes 
+            and maintain flows over them as described in 
+            <html:a href="http://www.croczilla.com/zap/rfcs/draft-ietf-sip-outbound-01.txt">draft-ietf-sip-outbound-01.txt</html:a>. Outbound calls will be routed over the first active flow.<html:br/>
+            Service-Route headers returned by a registration over a flow will override the 
+            inital route for that flow as described in <html:a href="http://www.croczilla.com/zap/rfcs/draft-rosenberg-sip-route-construct-00.txt">draft-rosenberg-sip-route-construct-00.txt</html:a>. If the first hop of the new route differs from the old route, zap will immediately re-register the flow over the new route.
+          </description>
+        </info>
+      </igroup>
+      <grid>
+        <columns><column/><column flex="1"/><column/></columns>
+        <rows>
+          <irow>
+            <label control="urn:mozilla:zap:suggested_registration_interval"
+                   value="Registration Texpire:"/>
+            <textbox type="zap-formwidget" 
+                     validator="makeNumberValidator(1, undefined, true)"
+                     id="urn:mozilla:zap:suggested_registration_interval"/>
+            <info>
+              <description>
+                Optional suggested expiration interval in seconds to indicate how long zap 
+                would like a registration to be valid. This might be overruled by the 
+                registrar by a 423 (Interval Too Brief) response or an expires header or 
+                field - in either case zap will adjust the actual expiration interval 
+                accordingly.
+              </description>
+            </info>
+          </irow>
+          <irow>
+            <label control="urn:mozilla:zap:stun_server" value="STUN server:"/>
+            <textbox type="zap-formwidget" id="urn:mozilla:zap:stun_server"/>
+            <info>
+              <description>
+              Optional address of STUN server to use for STUN requests made for
+              this service (e.g. to resolve the UA Contact Address, see below).
+              If this field is empty, zap will use attempt to use the home domain 
+              name of this service instead.
+              </description>
+            </info>
+          </irow>
+        </rows>
+      </grid>
+      <igroup>
+        <checkbox type="zap-formwidget" label="Send OPTIONS keep-alive requests" 
+                  id="urn:mozilla:zap:options_keep_alive"/>
+        <info>
+          <description>
+          If checked, zap will send periodic OPTIONS requests over all registered flows to
+          keep alive any NAT bindings. The interval between OPTIONS requests is the same as
+          that used for STUN monitored flows (see <html:a href="http://www.croczilla.com/zap/rfcs/draft-ietf-sip-outbound-01.txt">draft-ietf-sip-outbound-01.txt</html:a>).
+          </description>
+        </info>
+      </igroup>
+      <igroup>
+        <checkbox type="zap-formwidget" label="Elide destination route header" 
+                  id="urn:mozilla:zap:elide_destination_route_header"/>
+        <info>
+          <description>
+          Zap uses preloaded routes to set the first hop destination of outbound packets.
+          This means that outgoing requests outside of a dialog will contain a top Route 
+          header that is identical to the first hop. While this behavior is compliant to 
+          RFC3261, some registrars get confused by it and end up forwarding the request 
+          to themselves over and over until the Max-Forwards count is exhausted. 
+          To fix these buggy registrars, setting this checkbox will instruct zap to remove 
+          the top Route header of outgoing outside-of-dialog requests.
+          </description>
+        </info>      
+      </igroup>
+      <igroup>
+        <groupbox flex="1">
+          <caption><label value="UA Contact Address"/></caption>
+          <radiogroup type="zap-formwidget" id="urn:mozilla:zap:ua_contact_address_type">
+            <radio value="local" label="Local address"/>
+            <radio value="stun" label="Resolve by STUN"/>
+            <radio value="options" label="Resolve by OPTIONS"/>
+          </radiogroup>
+        </groupbox>
+        <info>
+          <description>
+            Determines the address:port that will be sent as the 
+            'Contact' in registrations.<html:br/>
+            <html:b>Local address</html:b>: The local machine's IP address
+            (or 127.0.0.1 if it can't be determined, e.g. on some Linux setups) and the
+            local SIP port will be sent.<html:br/>
+            <html:b>Resolve by STUN</html:b>: The address will be determined by sending a
+            STUN request to the service's STUN server, yielding a public address
+            through any NATs between the UA and the registrar. The port will not be resolved
+            (The local SIP port will be sent). This method of determining the public address
+            is deprecated, since it fails to work in many NAT scenarios. It might be
+            removed in future versions of zap. The 'Resolve by
+            OPTIONS' should work in all cases where a public address is required.<html:br/>
+            <html:b>Resolve by OPTIONS</html:b>: The address will be determined from the 
+            'received-by' parameter returned by the registrar's reply to an OPTIONS request.
+            In addition, if the registrar implements RFC3581 (as most will), the port will
+            be determined from the 'rport' parameter. This method will work even if the
+            registrar doesn't honour OPTIONS requests; error responses contain the required
+            information as well.
+          </description>
+        </info>
+      </igroup>
+    </vbox>
+  </vbox>
+  </vbox>
+  <hbox class="zap-form-hidden-buttonbar" id="buttonbar">
+    <spacer flex="1"/>
+    <button id="apply" label="Apply changes" oncommand="commit()" />
+    <button label="Cancel" oncommand="cancel()" />
+  </hbox>
 </page>
