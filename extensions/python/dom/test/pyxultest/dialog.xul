@@ -7,7 +7,7 @@ so 'ondialogaccept' handler does not execute Python
 <dialog
   script-type="application/x-python"
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-  id="my-dialog" orient="vertical"
+  id="myDialog" orient="vertical"
   buttons="accept,cancel"
   ondialogaccept="dump('hello')"
   >

@@ -65,7 +65,7 @@ window.addEventListener('load', EventListener('dump("hello from an object event 
 # Some other little functions called by the chrome
 def on_but_dialog_click():
     write("Button clicked from %s", window.location.href)
-    w = window.open("chrome://pyxultest/content/dialog.xul", "my-dialog", "chrome")
+    w = window.open("chrome://pyxultest/content/dialog.xul", "myDialog", "chrome")
 
 def do_textbox_keypress(event):
     if event.keyCode==13:
@@ -107,7 +107,7 @@ def run_tests():
             args = (test, "-k")
         else:
             args = (test,)
-        window.openDialog("chrome://pyxultest/content/pytester.xul", "my-dialog", "modal", *args)
+        window.openDialog("chrome://pyxultest/content/pytester.xul", "testDialog", "modal", *args)
     if keep_open:
         write("Ran all the tests - the windows told you if the tests worked")
     else:
