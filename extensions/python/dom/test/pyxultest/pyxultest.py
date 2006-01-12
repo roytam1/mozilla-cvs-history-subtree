@@ -35,7 +35,7 @@ def on_timer(max):
     change_image() # pick a random image
     timer_count += 1
     if timer_count >= max:
-        write("Stopping the image timer")
+        write("Stopping the image timer (but clicking it will still change it)")
         this.clearTimeout(timer_id)
         time_id = None
 
