@@ -112,6 +112,11 @@ my $handlers = {
                     print " ... with URI \"$uri\".\n";
                 }
             }
+        },
+        summary => sub($) {
+            my ($self) = @_;
+            my $windows = ${$self}{windows};
+            print 'Leaked DOM windows: ' . keys(%{$windows}) . "\n";
         }
     },
     "DOCUMENT" => {
@@ -142,6 +147,11 @@ my $handlers = {
                     print " ... with URI \"$uri\".\n";
                 }
             }
+        },
+        summary => sub($) {
+            my ($self) = @_;
+            my $docs = ${$self}{docs};
+            print 'Leaked documents: ' . keys(%{$docs}) . "\n";
         }
     },
     "DOCSHELL" => {
@@ -172,6 +182,11 @@ my $handlers = {
                     print " ... which loaded URI \"$uri\".\n";
                 }
             }
+        },
+        summary => sub($) {
+            my ($self) = @_;
+            my $shells = ${$self}{shells};
+            print 'Leaked docshells: ' . keys(%{$shells}) . "\n";
         }
     }
 };
@@ -189,4 +204,8 @@ while (<>) {
 
 foreach my $key (keys(%{$handlers})) {
     call("dump", ${$handlers}{$key});
+}
+print "Summary:\n";
+foreach my $key (keys(%{$handlers})) {
+    call("summary", ${$handlers}{$key});
 }
