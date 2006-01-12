@@ -36,18 +36,29 @@ dump("Window location is %s", this.window.location.href)
     }
   </script>
 
-  <command id="menu-file-close:command"
-           oncommand="print 'Python closing the window';window.close()"/>
+  <commandset id="cmdset">
+    <command id="menu-file-close:command"
+             oncommand="print 'Python closing the window';window.close()"/>
+  </commandset>
 
   <!-- explicitly reset the keyset to JS - just to check that the command
        itself, which is Python, works correctly
-       XXX - which it doesn't :(
   -->
-  <keyset id="mainkeys" script-type="application/x-python">
+  <keyset id="mainkeys" script-type="application/javascript">
     <key
        id        =  "menu-file-close:key"
        key       =  "q"
        observes  =  "menu-file-close:command"
+       modifiers =  "accel" />
+    <key
+       id        =  "menu-file-test-js:key"
+       key       =  "j"
+       observes  =  "menu-file-test-js:command"
+       modifiers =  "accel" />
+    <key
+       id        =  "menu-file-test-python:key"
+       key       =  "p"
+       observes  =  "menu-file-test-python:command"
        modifiers =  "accel" />
   </keyset>
 
@@ -56,11 +67,29 @@ dump("Window location is %s", this.window.location.href)
       <menu id="menu-file" label="File" accesskey="f">
         <menupopup id="menu-file-popup">
           <menuitem
+             id        =  "menu-file-test-js"
+             key       =  "menu-file-test-js:key"
+             label     =  "Test JS"
+             command   =  "menu-file-test-js:command"
+             accesskey = "J"/>
+          <menuitem
+             id        =  "menu-file-test-python"
+             key       =  "menu-file-test-python:key"
+             label     =  "Test Python"
+             command   =  "menu-file-test-python:command"
+             accesskey =  "P"/>
+          <menuitem
+             id        =  "menu-file-test-inline"
+             key       =  "menu-file-test-inline:key"
+             label     =  "Test Inline menu handler"
+             oncommand =  "write('Hello from an inline menu handler')"
+             accesskey =  "I"/>
+          <menuitem
              id        =  "menu-file-close"
              key       =  "menu-file-close:key"
-             label     = "Close"
+             label     =  "Close"
              command   =  "menu-file-close:command"
-             accesskey = "C"/>
+             accesskey =  "C"/>
         </menupopup>
       </menu>
     </menubar>
@@ -84,7 +113,7 @@ dump("Window location is %s", this.window.location.href)
   <hbox>
     <groupbox>
       <caption label="Random Buttons"/>
-    
+
       <hbox>
         <!-- Here we have a script element defined at a parent node -->
         <vbox oncommand="write('You clicked on a %s with id=%s and type=%s' % (event.target.tagName, event.target.id, event.target.type))">

@@ -5,7 +5,7 @@
 
     <hbox id="language_box">
         <button id="but_js" label="click for js"
-                oncommand="dump('hello from js\n');"/>
+                oncommand="write('hello from js\n');"/>
     </hbox>
 
     <!-- The intent here is to test a XUL element merged from multiple
@@ -15,5 +15,10 @@
     The Python version uses 'oncommand', this JS version uses 'onclick'
     -->
     <button id="but_multi"
-            onclick="dump('hello from the js click event\n');"/>
+            onclick="write('hello from the js click event\n');"/>
+
+    <commandset id="cmdset">
+        <command id="menu-file-test-js:command"
+                 oncommand="write('You selected a command implemented in JS\n');"/>
+    </commandset>
 </overlay>
