@@ -625,9 +625,7 @@ Identity.fun(
     // calls. The hex encoding (which will be encoded again for
     // transmission!) is necessary since uri parameters are not case
     // sensitive, but rdf resource ids are...    
-    // XXX this is only needed when there are several identities/aor.
-    // investigate whether this is a feasible use-case
-    // uri.setURIParameter("zid", octetToHex(this.resource.Value));
+    uri.setURIParameter("zid", octetToHex(this.resource.Value));
     
     return addr;
   });
@@ -667,9 +665,10 @@ Identity.fun(
 
 Identity.fun(
   function _constructFallbackRoutingInfo() {
+    var contactAddr = this.getUAContactAddress();
     return {
-      contact : this.getUAContactAddress(),
-      directContact: this.getUAContactAddress(),
+      contact : contactAddr,
+      directContact: contactAddr,
       routeset: this.service.getDefaultRoute()
     };
   });
@@ -2018,24 +2017,44 @@ InboundCall.fun(
 var InboundCallHandler = makeClass("InboundCallHandler", SupportsImpl);
 InboundCallHandler.addInterfaces(Components.interfaces.zapISipInviteRSListener);
 
+
+// helper returning a routing info structure to use for incoming calls that
+// can't be matched up with an identity:
+function getDirectRoutingInfo() {
+  var contactAddr = wSipStack.syntaxFactory.deserializeAddress("<sip:"+wSipStack.hostAddress+">");
+  return {
+    contact : contactAddr,
+    directContact: contactAddr,
+    routeset: []
+  };
+}
+
 InboundCallHandler.fun(
   function handleCall(call, rs) {
     this.call = call;
     this.rs = rs;
     rs.listener = this;
 
-    // Work out identity based on To-address
     this.call.identity = null;
-    try {
-      var uri = rs.request.getToHeader().address.uri.QueryInterface(Components.interfaces.zapISipSIPURI);
-      this.call.identity = getIdentityByAOR(uri);
+    // Work out identity based on requestURI:
+    var zid = rs.request.requestURI.QueryInterface(Components.interfaces.zapISipSIPURI).getURIParameter("zid");
+    if (zid) {
+      this.call.identity = getIdentity(hexToOctet(zid));
     }
-    catch(e) { /* To address probably wasn't a SIP URI -> fall through */ }
 
-    if (!this.call.identity)
-      this.call.identity = wCurrentIdentity; // XXX maybe need a separate config for this?
-    
-    this.routingInfo = this.call.identity.getRoutingInfo();
+    if (!this.call.identity) {
+      // try AOR next:
+      try {
+        var uri = rs.request.getToHeader().address.uri.QueryInterface(Components.interfaces.zapISipSIPURI);
+        this.call.identity = getIdentityByAOR(uri);
+      }
+      catch(e) { /* To address probably wasn't a SIP URI -> fall through */ }
+    }
+
+    if (this.call.identity)
+      this.routingInfo = this.call.identity.getRoutingInfo();
+    else
+      this.routingInfo = getDirectRoutingInfo();
     
     // reject based on busy settings:
     if (document.getElementById("button_dnd").checked) {
