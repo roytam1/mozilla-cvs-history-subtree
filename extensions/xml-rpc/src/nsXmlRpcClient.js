@@ -464,7 +464,7 @@ nsXmlRpcClient.prototype = {
         writer.endElement('methodName');
 
         writer.startElement('params');
-        for (var i in methodArgs) {
+        for (var i = 0; i < methodArgs.length; i++) {
             writer.startElement('param');
             this._generateArgumentBody(writer, methodArgs[i]);
             writer.endElement('param');
@@ -547,7 +547,7 @@ nsXmlRpcClient.prototype = {
                 obj = obj.QueryInterface(Components.interfaces.nsIDictionary);
                 writer.startElement('struct');
                 var keys = obj.getKeys({});
-                for (var k in keys) {
+                for (var k = 0; k < keys.length; k++) {
                     writer.startElement('member');
                     writer.startElement('name');
                     writer.write(keys[k]);
@@ -1388,7 +1388,7 @@ function base64ToString(data) {
     var leftdata = 0; // bits decoded, bt yet to be appended
 
     // Convert one by one.
-    for (var i in data) {
+    for (var i = 0; i < data.length; i++) {
         var c = toBinaryTable[data.charCodeAt(i) & 0x7f];
         var padding = (data[i] == base64Pad);
         // Skip illegal characters and whitespace
