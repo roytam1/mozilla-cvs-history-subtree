@@ -48,8 +48,10 @@ class nsIAtom;
 { 0xa6cf9118, 0x15b3, 0x11d2,       \
 {0x93, 0x2e, 0x00, 0x80, 0x5f, 0x8a, 0xdd, 0x32} }
 
-// Implemented by JS event listeners. Used to retrieve the
-// JSObject corresponding to the event target.
+// Implemented by script event listeners. Used to retrieve the
+// script object corresponding to the event target.
+// (Note this interface is now used to store script objects for all
+// script languages, so is no longer JS specific)
 class nsIJSEventListener : public nsISupports
 {
 public:
@@ -59,12 +61,8 @@ public:
                      nsISupports *aTarget)
     : mContext(aContext), mScopeObject(aScopeObject), mTarget(aTarget)
   {
-    // mTarget is a weak reference. We are guaranteed because of the
-    // ownership model that the target will be freed (and the
-    // references dropped) before either the context or the owner goes
-    // away.
-
-    NS_IF_ADDREF(mContext);
+    // mTarget used to be weak, but is now a strong reference. In some cases
+    // this reference will be the only reference to the event target.
   }
 
   nsIScriptContext *GetEventContext()
@@ -85,15 +83,9 @@ public:
   virtual void SetEventName(nsIAtom* aName) = 0;
 
 protected:
-  ~nsIJSEventListener()
-  {
-    // COMPtr??
-    NS_IF_RELEASE(mContext);
-  }
-
-  nsIScriptContext *mContext;
+  nsCOMPtr<nsIScriptContext> mContext;
   void *mScopeObject;
-  nsISupports *mTarget;
+  nsCOMPtr<nsISupports> mTarget;
 };
 
 /* factory function */

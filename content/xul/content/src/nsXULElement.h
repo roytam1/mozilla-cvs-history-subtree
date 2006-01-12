@@ -246,7 +246,7 @@ public:
           mChildren(nsnull),
           mNumAttributes(0),
           mAttributes(nsnull),
-          mLangID(nsIProgrammingLanguage::UNKNOWN)
+          mScriptTypeID(nsIProgrammingLanguage::UNKNOWN)
     {
         NS_LOG_ADDREF(this, 1, ClassName(), ClassSize());
     }
@@ -255,7 +255,7 @@ public:
     {
         PRInt32 i;
         for (i = 0; i < mNumAttributes; i++)
-            mAttributes[i].Finalize(mLangID);
+            mAttributes[i].Finalize(mScriptTypeID);
         delete[] mAttributes;
         delete[] mChildren;
     }
@@ -300,7 +300,7 @@ public:
     // so that the language ID from the originating root can be used
     // (eg, when a node from an overlay ends up in our document, that node
     // must use its original script language, not our document's default.
-    PRUint32                 mLangID;
+    PRUint32                 mScriptTypeID;
     static void ReleaseGlobals()
     {
         NS_IF_RELEASE(sCSSParser);
@@ -509,16 +509,6 @@ public:
                                    nsIAtom** aName, nsIAtom** aPrefix) const;
     virtual PRUint32 GetAttrCount() const;
 
-    virtual PRUint32 GetDefaultScriptLanguage() const
-        { return mDefaultScriptLanguage; }
-
-    virtual nsresult SetDefaultScriptLanguage(PRUint32 aLang)
-    { NS_ASSERTION(aLang != nsIProgrammingLanguage::UNKNOWN,
-                   "Must set to a real language");
-      mDefaultScriptLanguage = aLang;
-      return NS_OK;
-    }
-
 #ifdef DEBUG
     virtual void List(FILE* out, PRInt32 aIndent) const;
     virtual void DumpContent(FILE* out, PRInt32 aIndent,PRBool aDumpAll) const
@@ -663,7 +653,6 @@ protected:
 
     const nsAttrName* InternalGetExistingAttrNameFromQName(const nsAString& aStr) const;
 
-    PRUint32 mDefaultScriptLanguage;
 protected:
     // Internal accessor. This shadows the 'Slots', and returns
     // appropriate value.

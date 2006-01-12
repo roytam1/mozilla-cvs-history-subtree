@@ -291,8 +291,7 @@ PRUint32             nsXULPrototypeAttribute::gNumCacheFills;
 
 nsXULElement::nsXULElement(nsINodeInfo* aNodeInfo)
     : nsGenericElement(aNodeInfo),
-      mBindingParent(nsnull),
-      mDefaultScriptLanguage(nsIProgrammingLanguage::JAVASCRIPT)
+      mBindingParent(nsnull)
 {
     XUL_PROTOTYPE_ATTRIBUTE_METER(gNumElements);
 }
@@ -323,9 +322,9 @@ nsXULElement::Create(nsXULPrototypeElement* aPrototype, nsINodeInfo *aNodeInfo,
 
         element->mPrototype = aPrototype;
 
-        NS_ASSERTION(aPrototype->mLangID != nsIProgrammingLanguage::UNKNOWN,
+        NS_ASSERTION(aPrototype->mScriptTypeID != nsIProgrammingLanguage::UNKNOWN,
                     "Need to know the language!");
-        element->SetDefaultScriptLanguage(aPrototype->mLangID);
+        element->SetScriptTypeID(aPrototype->mScriptTypeID);
 
         if (aIsScriptable) {
             // Check each attribute on the prototype to see if we need to do
@@ -484,7 +483,7 @@ nsXULElement::Clone(nsINodeInfo *aNodeInfo, PRBool aDeep,
     nsRefPtr<nsXULElement> element;
     if (mPrototype) {
         element = nsXULElement::Create(mPrototype, aNodeInfo, PR_TRUE);
-        NS_ASSERTION(GetDefaultScriptLanguage() == mPrototype->mLangID,
+        NS_ASSERTION(GetScriptTypeID() == mPrototype->mScriptTypeID,
                      "Didn't get the default language from proto?");
 
         fakeBeingInDocument = IsInDoc();
@@ -494,7 +493,7 @@ nsXULElement::Clone(nsINodeInfo *aNodeInfo, PRBool aDeep,
         if (element) {
         	// If created from a prototype, we will already have the script
         	// language specified by the proto - otherwise copy it directly
-        	element->SetDefaultScriptLanguage(GetDefaultScriptLanguage());
+        	element->SetScriptTypeID(GetScriptTypeID());
         }
     }
 
@@ -602,7 +601,7 @@ nsXULElement::AddScriptEventListener(nsIAtom* aName, const nsAString& aValue,
     if (NS_FAILED(rv)) return rv;
 
     return manager->AddScriptEventListener(target, aName, aValue,
-                                           GetDefaultScriptLanguage(),
+                                           GetScriptTypeID(),
                                            defer, !nsContentUtils::IsChromeDoc(doc));
 }
 
@@ -907,7 +906,7 @@ nsXULElement::BindToTree(nsIDocument* aDocument, nsIContent* aParent,
         }
 
         if (mPrototype) {
-            NS_ASSERTION(mPrototype->mLangID == GetDefaultScriptLanguage(),
+            NS_ASSERTION(mPrototype->mScriptTypeID == GetScriptTypeID(),
                          "Prototype and node confused about default language?");
             PRInt32 count = mPrototype->mNumAttributes;
             for (i = 0; i < count; i++) {
@@ -1286,13 +1285,13 @@ nsXULElement::SetAttr(PRInt32 aNamespaceID, nsIAtom* aName, nsIAtom* aPrefix,
         // the attribute isn't set yet.
         MaybeAddPopupListener(aName);
         if (IsEventHandler(aName)) {
-            // If mPrototype->mLangID != GetDefaultScriptLanguage(), it means
+            // If mPrototype->mScriptTypeID != GetScriptTypeID(), it means
             // we are resolving an overlay with a different default script
             // language.  We can't defer compilation of those handlers as
             // we will have lost the script language (storing it on each
             // nsXULPrototypeAttribute is expensive!)
             PRBool defer = mPrototype == nsnull ||
-                           mPrototype->mLangID == GetDefaultScriptLanguage();
+                           mPrototype->mScriptTypeID == GetScriptTypeID();
             AddScriptEventListener(aName, aValue, defer);
         }
 
@@ -2896,7 +2895,7 @@ nsXULPrototypeElement::Serialize(nsIObjectOutputStream* aStream,
     rv = aStream->Write32(mType);
 
     // Write script language
-    rv |= aStream->Write32(mLangID);
+    rv |= aStream->Write32(mScriptTypeID);
 
     // Write Node Info
     PRInt32 index = aNodeInfos->IndexOf(mNodeInfo);
@@ -2977,7 +2976,7 @@ nsXULPrototypeElement::Deserialize(nsIObjectInputStream* aStream,
     nsresult rv;
 
     // Read script language
-    rv = aStream->Read32(&mLangID);
+    rv = aStream->Read32(&mScriptTypeID);
     // Read Node Info
     PRUint32 number;
     rv |= aStream->Read32(&number);

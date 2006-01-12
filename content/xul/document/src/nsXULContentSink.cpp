@@ -150,7 +150,6 @@ protected:
     PRInt32 mTextLength;
     PRInt32 mTextSize;
     PRBool mConstrainSize;
-    PRUint32 mLangID; // The language ID extracted from the root node.
 
     nsresult AddAttributes(const PRUnichar** aAttributes, 
                            const PRUint32 aAttrLen, 
@@ -170,6 +169,9 @@ protected:
 
     static PRBool IsDataInBuffer(PRUnichar* aBuffer, PRInt32 aLength);
 
+    nsresult SetElementScriptType(nsXULPrototypeElement* element,
+                                  const PRUnichar** aAttributes, 
+                                  const PRUint32 aAttrLen);
 
     // Text management
     nsresult FlushText(PRBool aCreateTextNode = PR_TRUE);
@@ -223,6 +225,7 @@ protected:
 
         nsresult GetTopNode(nsXULPrototypeNode** aNode);
         nsresult GetTopChildren(nsVoidArray** aChildren);
+        nsresult GetTopNodeScriptType(PRUint32 *aScriptType);
     };
 
     friend class ContextStack;
@@ -312,6 +315,38 @@ XULContentSinkImpl::ContextStack::GetTopChildren(nsVoidArray** aChildren)
     return NS_OK;
 }
 
+nsresult
+XULContentSinkImpl::ContextStack::GetTopNodeScriptType(PRUint32 *aScriptType)
+{
+    if (mDepth == 0)
+        return NS_ERROR_UNEXPECTED;
+
+    // This would be much simpler if nsXULPrototypeNode itself
+    // stored the language ID - but text elements don't need it!
+    nsresult rv = NS_OK;
+    nsXULPrototypeNode* node;
+    rv = GetTopNode(&node);
+    if (NS_FAILED(rv)) return rv;
+    switch (node->mType) {
+        case nsXULPrototypeNode::eType_Element: {
+            nsXULPrototypeElement *parent = \
+                NS_REINTERPRET_CAST(nsXULPrototypeElement*, node);
+            *aScriptType = parent->mScriptTypeID;
+            break;
+        }
+        case nsXULPrototypeNode::eType_Script: {
+            nsXULPrototypeScript *parent = \
+                NS_REINTERPRET_CAST(nsXULPrototypeScript*, node);
+            *aScriptType = parent->mScriptObject.getLanguage();
+            break;
+        }
+        default: {
+            NS_WARNING("Unexpected parent node type");
+            rv = NS_ERROR_UNEXPECTED;
+        }
+    }
+    return rv;
+}
 
 //----------------------------------------------------------------------
 
@@ -322,8 +357,7 @@ XULContentSinkImpl::XULContentSinkImpl(nsresult& rv)
       mTextSize(0),
       mConstrainSize(PR_TRUE),
       mState(eInProlog),
-      mParser(nsnull),
-      mLangID(nsIProgrammingLanguage::JAVASCRIPT)
+      mParser(nsnull)
 {
 
     if (gRefCnt++ == 0) {
@@ -668,7 +702,6 @@ XULContentSinkImpl::CreateElement(nsINodeInfo *aNodeInfo,
         return NS_ERROR_OUT_OF_MEMORY;
 
     element->mNodeInfo    = aNodeInfo;
-    element->mLangID      = mLangID;
     
     *aResult = element;
     return NS_OK;
@@ -1050,6 +1083,52 @@ XULContentSinkImpl::ReportError(const PRUnichar* aErrorText,
   return rv;
 }
 
+nsresult
+XULContentSinkImpl::SetElementScriptType(nsXULPrototypeElement* element,
+                                         const PRUnichar** aAttributes, 
+                                         const PRUint32 aAttrLen)
+{
+    // First check if the attributes specify an explicit script type.
+    nsresult rv = NS_OK;
+    PRUint32 i;
+    PRBool found = PR_FALSE;
+    for (i=0;i<aAttrLen;i++) {
+        const nsDependentString key(aAttributes[i*2]);
+        if (key.EqualsLiteral("script-type")) {
+            const nsDependentString value(aAttributes[i*2+1]);
+            if (!value.IsEmpty()) {
+                nsCOMPtr<nsILanguageRuntime> runtime;
+                rv = NS_GetLanguageRuntime(value, getter_AddRefs(runtime));
+                if (NS_SUCCEEDED(rv))
+                    element->mScriptTypeID = runtime->GetLanguage();
+                else {
+                    // probably just a bad language name (typo, etc)
+                    NS_WARNING("Failed to load the node's script language!");
+                    // Leave the default language as unknown - we don't want js
+                    // trying to execute this stuff.
+                    NS_ASSERTION(element->mScriptTypeID == nsIProgrammingLanguage::UNKNOWN,
+                                 "Default script type should be unknown");
+                }
+                found = PR_TRUE;
+                break;
+            }
+        }
+    }
+    // If not specified, look at the context stack and use the element
+    // there.
+    if (!found) {
+        if (mContextStack.Depth() == 0) {
+            // This is the root element - default to JS
+            element->mScriptTypeID = nsIProgrammingLanguage::JAVASCRIPT;
+        } else {
+            // Ask the top-node for its script type (which has already
+            // had this function called for it - so no need to recurse
+            // until we find it)
+            rv = mContextStack.GetTopNodeScriptType(&element->mScriptTypeID);
+        }
+    }
+    return rv;
+}
 
 nsresult
 XULContentSinkImpl::OpenRoot(const PRUnichar** aAttributes, 
@@ -1070,28 +1149,6 @@ XULContentSinkImpl::OpenRoot(const PRUnichar** aAttributes,
         return NS_ERROR_UNEXPECTED;
     }
 
-    // Check for default script language before creating the first node.
-    PRUint32 i;
-    for (i=0;i<aAttrLen;i++) {
-        const nsDependentString key(aAttributes[i*2]);
-        if (key.EqualsLiteral("script-type")) {
-            const nsDependentString value(aAttributes[i*2+1]);
-            if (!value.IsEmpty()) {
-                nsCOMPtr<nsILanguageRuntime> runtime;
-                rv = NS_GetLanguageRuntime(value, getter_AddRefs(runtime));
-                if (NS_SUCCEEDED(rv))
-                    mLangID = runtime->GetLanguage();
-                else {
-                    NS_ERROR("Failed to load the root object's script language!");
-                    // Set the default language to unknown - we don't want js
-                    // trying to execute this stuff.
-                    mLangID = nsIProgrammingLanguage::UNKNOWN;
-                }
-            }
-            break;
-        }
-    }
-
     // Create the element
     nsXULPrototypeElement* element;
     rv = CreateElement(aNodeInfo, &element);
@@ -1110,6 +1167,10 @@ XULContentSinkImpl::OpenRoot(const PRUnichar** aAttributes,
 
         return rv;
     }
+
+    // Set the correct script-type for the element.
+    rv = SetElementScriptType(element, aAttributes, aAttrLen);
+    if (NS_FAILED(rv)) return rv;
 
     // Push the element onto the context stack, so that child
     // containers will hook up to us as their parent.
@@ -1170,10 +1231,18 @@ XULContentSinkImpl::OpenTag(const PRUnichar** aAttributes,
 
     if (aNodeInfo->Equals(nsHTMLAtoms::script, kNameSpaceID_XHTML) || 
         aNodeInfo->Equals(nsHTMLAtoms::script, kNameSpaceID_XUL)) {
-        // Do scripty things now.  OpenScript will push the
-        // nsPrototypeScriptElement onto the stack, so we're done after this.
+        // Do scripty things now.  Set a script language for the element,
+        // even though it is ignored (the nsPrototypeScriptElement
+        // has its own script-type).
+        element->mScriptTypeID = nsIProgrammingLanguage::JAVASCRIPT;
+        // OpenScript will push the nsPrototypeScriptElement onto the 
+        // stack, so we're done after this.
         return OpenScript(aAttributes, aLineNumber);
     }
+
+    // Set the correct script-type for the element.
+    rv = SetElementScriptType(element, aAttributes, aAttrLen);
+    if (NS_FAILED(rv)) return rv;
 
     // Push the element onto the context stack, so that child
     // containers will hook up to us as their parent.
@@ -1188,9 +1257,9 @@ nsresult
 XULContentSinkImpl::OpenScript(const PRUnichar** aAttributes,
                                const PRUint32 aLineNumber)
 {
-  nsresult rv = NS_OK;
-
-  PRUint32 langID = mLangID;
+  PRUint32 langID;
+  nsresult rv = mContextStack.GetTopNodeScriptType(&langID);
+  if (NS_FAILED(rv)) return rv;
   PRUint32 version = 0;
 
   // Look for SRC attribute and look for a LANGUAGE attribute

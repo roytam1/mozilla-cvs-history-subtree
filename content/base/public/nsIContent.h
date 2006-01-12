@@ -726,15 +726,18 @@ public:
     return 0;
   }
     
-  /* The default script language for this content.
-     All content must support fetching the default language.
+  /* The default script type (language) ID for this content.
+     All content must support fetching the default script language.
    */
-  virtual PRUint32 GetDefaultScriptLanguage() const
+  virtual PRUint32 GetScriptTypeID() const
   { return nsIProgrammingLanguage::JAVASCRIPT; }
 
   /* Not all content supports setting a new default language */
-  virtual nsresult SetDefaultScriptLanguage(PRUint32 aLang)
-  { return NS_ERROR_NOT_IMPLEMENTED; }
+  virtual nsresult SetScriptTypeID(PRUint32 aLang)
+  {
+    NS_NOTREACHED("SetScriptTypeID not implemented");
+    return NS_ERROR_NOT_IMPLEMENTED;
+  }
 
   /* Methods for manipulating content node properties.  For documentation on
    * properties, see nsPropertyTable.h.

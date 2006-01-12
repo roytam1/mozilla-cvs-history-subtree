@@ -369,6 +369,9 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
   nsCOMPtr<nsIAtom> onEventAtom = do_GetAtom(onEvent);
 
   // Compile the event handler.
+  // XUL is language aware, so although XBL isn't, we still need to
+  // help when we can.
+  PRUint32 stID = nsIProgrammingLanguage::JAVASCRIPT;
   nsAutoString xulText;
   nsIContent* keyCommandContent = nsnull;
   if (isXULKey) {
@@ -382,10 +385,13 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
         // It is!  See if it has an oncommand attribute.
         content->GetAttr(kNameSpaceID_None, nsLayoutAtoms::oncommand, xulText);
         keyCommandContent = content;
+        stID = content->GetScriptTypeID();
       }
       
       if (xulText.IsEmpty())
         return NS_ERROR_FAILURE; // For whatever reason, they didn't give us anything to do.
+    } else {
+      stID = mHandlerElement->GetScriptTypeID();
     }
   }
   
@@ -439,14 +445,11 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
   if (!boundGlobal)
     return NS_OK;
 
-  nsIScriptContext *boundContext = boundGlobal->GetContext();
+  nsIScriptContext *boundContext = boundGlobal->GetLanguageContext(stID);
   if (!boundContext) return NS_OK;
 
   nsScriptObjectHolder handler(boundContext);
   nsISupports *scriptTarget;
-  // strong ref to a GC root we'll need to protect scriptObject in the case
-  // where it is not the global object (!winRoot).
-  nsCOMPtr<nsIXPConnectJSObjectHolder> wrapper;
 
   if (winRoot) {
     scriptTarget = boundGlobal;
@@ -455,7 +458,7 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
   }
   // XXX - apparently we should not be using the global as the scope - what
   // should we use?
-  void *scope = boundGlobal->GetLanguageGlobal(boundContext->GetLanguage());
+  void *scope = boundGlobal->GetLanguageGlobal(stID);
 
   PRUint32 argCount;
   const char **argNames;
@@ -484,9 +487,6 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
                                            handler);
   }
   NS_ENSURE_SUCCESS(rv, rv);
-
-  NS_ASSERTION(boundContext->GetLanguage()==nsIProgrammingLanguage::JAVASCRIPT,
-               "Still need to work on gc etc for non JS");
 
   // Temporarily bind it to the bound element
   rv = boundContext->BindCompiledEventHandler(scriptTarget, scope,

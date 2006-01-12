@@ -660,6 +660,20 @@ nsDOMEventRTTearoff::GetSystemEventGroup(nsIDOMEventGroup **aGroup)
   return manager->GetSystemEventGroupLM(aGroup);
 }
 
+NS_IMETHODIMP
+nsDOMEventRTTearoff::GetScriptTypeID(PRUint32 *aLang)
+{
+    *aLang = mContent->GetScriptTypeID();
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDOMEventRTTearoff::SetScriptTypeID(PRUint32 aLang)
+{
+    return mContent->SetScriptTypeID(aLang);
+}
+
+
 // nsIDOMEventTarget
 NS_IMETHODIMP
 nsDOMEventRTTearoff::AddEventListener(const nsAString& aType,
@@ -849,7 +863,8 @@ nsGenericElement::Shutdown()
 
 nsGenericElement::nsGenericElement(nsINodeInfo *aNodeInfo)
   : nsIXMLContent(aNodeInfo),
-    mFlagsOrSlots(GENERIC_ELEMENT_DOESNT_HAVE_DOMSLOTS)
+    mFlagsOrSlots(GENERIC_ELEMENT_DOESNT_HAVE_DOMSLOTS),
+    mScriptType(nsIProgrammingLanguage::JAVASCRIPT)
 {
 }
 
@@ -2679,6 +2694,19 @@ nsGenericElement::MayHaveFrame() const
   return !!(GetFlags() & GENERIC_ELEMENT_MAY_HAVE_FRAME);
 }
 
+PRUint32
+nsGenericElement::GetScriptTypeID() const
+{
+    return mScriptType;
+}
+
+nsresult
+nsGenericElement::SetScriptTypeID(PRUint32 aLang)
+{
+    mScriptType = aLang;
+    return NS_OK;
+}
+
 nsresult
 nsGenericElement::InsertChildAt(nsIContent* aKid,
                                 PRUint32 aIndex,
@@ -3800,7 +3828,7 @@ nsGenericElement::AddScriptEventListener(nsIAtom* aAttribute,
   if (manager) {
     nsIDocument *ownerDoc = GetOwnerDoc();
 
-    PRUint32 lang = GetDefaultScriptLanguage();
+    PRUint32 lang = GetScriptTypeID();
     rv =
       manager->AddScriptEventListener(target, aAttribute, aValue, lang, defer,
                                       !nsContentUtils::IsChromeDoc(ownerDoc));

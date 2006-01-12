@@ -830,6 +830,10 @@ nsXULDocument::SynchronizeBroadcastListener(nsIDOMElement   *aBroadcaster,
     nsCOMPtr<nsIContent> broadcaster = do_QueryInterface(aBroadcaster);
     nsCOMPtr<nsIContent> listener = do_QueryInterface(aListener);
 
+	// We may be copying event handlers etc, so we must also copy
+	// the script-type to the listener.
+	listener->SetScriptTypeID(broadcaster->GetScriptTypeID());
+
     if (aAttr.EqualsLiteral("*")) {
         PRUint32 count = broadcaster->GetAttrCount();
         while (count-- > 0) {
@@ -3812,10 +3816,10 @@ nsXULDocument::OverlayForwardReference::Resolve()
     // the language from the overlay - attributes will then be correctly
     // hooked up with the appropriate language (while child nodes ignore
     // the default language - they have it in their proto.
-    PRUint32 oldDefLang = target->GetDefaultScriptLanguage();
-    target->SetDefaultScriptLanguage(mOverlay->GetDefaultScriptLanguage());
+    PRUint32 oldDefLang = target->GetScriptTypeID();
+    target->SetScriptTypeID(mOverlay->GetScriptTypeID());
     rv = Merge(target, mOverlay, notify);
-    target->SetDefaultScriptLanguage(oldDefLang);
+    target->SetScriptTypeID(oldDefLang);
     if (NS_FAILED(rv)) return eResolve_Error;
 
     // Add child and any descendants to the element map

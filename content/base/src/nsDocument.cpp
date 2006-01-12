@@ -5295,3 +5295,17 @@ nsDocument::UpdateLinkMap()
   }
   mVisitednessChangedURIs.Clear();
 }
+
+NS_IMETHODIMP
+nsDocument::GetScriptTypeID(PRUint32 *aScriptType)
+{
+    NS_ERROR("No default script type here - ask some element");
+    return nsIProgrammingLanguage::UNKNOWN;
+}
+
+NS_IMETHODIMP
+nsDocument::SetScriptTypeID(PRUint32 aScriptType)
+{
+    NS_ERROR("Can't change default script type for a document");
+    return NS_ERROR_NOT_IMPLEMENTED;
+}

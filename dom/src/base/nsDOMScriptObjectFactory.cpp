@@ -126,8 +126,12 @@ NS_IMETHODIMP
 nsDOMScriptObjectFactory::GetLanguageRuntime(const nsAString &aLanguageName,
                                              nsILanguageRuntime **aLanguage)
 {
-  // Note that this will only rarely be used to ask for JS, as the callers
-  // of this function have optimized detection of JS.
+  // Note that many callers have optimized detection for JS (along with
+  // supporting various alternate names for JS), so don't call this.
+  // One exception is for the new "script-type" attribute on a node - and
+  // there is no need to support backwards compatible names.
+  // As JS is the default language, this is still rarely called for JS -
+  // only when a node explicitly sets JS) - so that is done last.
   nsCAutoString contractid(NS_LITERAL_CSTRING(
                           "@mozilla.org/script-language;1?script-type="));
   // Arbitrarily use utf8 encoding should the name have extended chars
@@ -137,8 +141,11 @@ nsDOMScriptObjectFactory::GetLanguageRuntime(const nsAString &aLanguageName,
         do_GetService(contractid.get(), &rv);
 
   if (NS_FAILED(rv)) {
-    NS_ERROR("Failed to get the script language");
-    return rv;
+    if (aLanguageName.Equals(NS_LITERAL_STRING("application/javascript")))
+      return GetLanguageRuntimeByID(nsIProgrammingLanguage::JAVASCRIPT, aLanguage);
+    // Not JS and nothing else we know about.
+    NS_WARNING("No script language registered for this mime-type");
+    return NS_ERROR_FACTORY_NOT_REGISTERED;
   }
   // And stash it away in our array for fast lookup by ID.
   PRUint32 lang_ndx = NS_SL_INDEX(lang->GetLanguage());

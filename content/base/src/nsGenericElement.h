@@ -434,6 +434,9 @@ public:
   virtual void SetMayHaveFrame(PRBool aMayHaveFrame);
   virtual PRBool MayHaveFrame() const;
 
+  virtual PRUint32 GetScriptTypeID() const;
+  virtual nsresult SetScriptTypeID(PRUint32 aLang);
+
   /**
    * This calls Clone to do the actual cloning so that we end up with the
    * right class for the clone.
@@ -872,6 +875,10 @@ protected:
    * Array containing all attributes and children for this element
    */
   nsAttrAndChildArray mAttrsAndChildren;
+
+  // XXXmarkh - this should move into flags, and will as soon as we remerge
+  // with the trunk, which has many more free bits due to ContentID changes.
+  PRUint32 mScriptType;
 };
 
 // Internal non-public interface
