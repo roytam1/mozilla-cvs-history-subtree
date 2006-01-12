@@ -179,7 +179,7 @@ my $handlers = {
 while (<>) {
     # strip off initial "-", thread id, and thread pointer; separate
     # first word and rest
-    if (/^\-[0-9]*\[[0-9a-f]*\]: (\S*) (.*)$/) {
+    if (/^\-?[0-9]*\[[0-9a-f]*\]: (\S*) ([^\n\r]*)[\n\r]*$/) {
         my ($handler, $data) = ($1, $2);
         if (defined(${$handlers}{$handler})) {
             call("handle_line", ${$handlers}{$handler}, $data);
