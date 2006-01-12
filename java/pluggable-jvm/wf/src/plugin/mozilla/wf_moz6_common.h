@@ -28,7 +28,7 @@
 /** Ideology behind this file:
  *  To keep generic binary compatibility, and be independent from Mozilla 
  *  build system for Mozilla extension (not very good idea, but currently
- *  it's more convinient) we need some kind of fixed API/ABI between
+ *  it's more convenient) we need some kind of fixed API/ABI between
  *  extension and Java service in browser. This file is _only_ (beside 
  *  jvmp.h) common header between Java component and extension. It's written
  *  in pure C and has no Mozilla dependencies. So JVM service in browser fills
