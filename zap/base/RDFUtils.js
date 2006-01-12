@@ -121,7 +121,7 @@ PersistentRDFObject.metafun(
           this.datasources[_datasourceid].Change(this.resource, prop, old,
                                                  gRDF.GetLiteral(val), true);
         }
-        else 
+        else
           this.datasources[_datasourceid].Assert(this.resource, prop,
                                                  gRDF.GetLiteral(val), true);
         if (this.autoflush) {
@@ -130,9 +130,7 @@ PersistentRDFObject.metafun(
           } catch (e) { /* not a remote datasource */ }
         }
 
-        var me = this;
-        this._arcsOut[_name].triggers.forEach(
-          function(f) { f.apply(me, [prop, val]); });
+        this._executeTriggers(this._arcsOut[_name], gRDF.GetLiteral(val));
       });
   });
 
@@ -201,6 +199,24 @@ PersistentRDFObject.metafun(
     this.prototype._arcsOut[_name] = arcObj;
   });
 
+// helper to execute all triggers for the given attribute:
+PersistentRDFObject.fun(
+  function _executeTriggers(attrib, val) {
+    if (!attrib.triggers || !attrib.triggers.length) return;
+    var me = this;
+    var value;
+    // we need to QI here, since e.g. vals returned by GetTarget will be
+    // just nsIRDFNodes...
+    if (attrib.type == "literal")
+      value = val.QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
+    else
+      value = val.QueryInterface(Components.interfaces.nsIRDFResource).Value;
+
+    var args = [attrib.name, value];
+    this._dump("calling triggers for "+args[0]+", value="+args[1]);
+    attrib.triggers.forEach(function(f) { f.apply(me, args); });
+  });
+
 // Add a triple(subject, predicate, this.resource) in datasource dsid
 // when this object is initialized or created. Unassert in remove()
 //
@@ -241,15 +257,25 @@ PersistentRDFObject.fun(
     this._assert(!this.resource, "already initialized");
     this.resource = resource;
     this._assertArcsIn();
-    var me = this;
+
+    // make sure we have assertions for all attributes:
     for (var id in this._arcsOut) {
       var a = this._arcsOut[id];
-      if (a.triggers && a.triggers.length) {
-        var prop = gRDF.GetResource(a.name);
-        var val = this[id];
-        a.triggers.forEach(
-          function(f) { f.apply(me, [prop, val]); });
+      var prop = gRDF.GetResource(a.name);
+      var val = this.datasources[a.dsid].GetTarget(this.resource, prop, true);
+      if ( val == null) {
+        // add default assertion:
+        if (a.type == "literal")
+          val = gRDF.GetLiteral(a.defval);
+//         else if (a.type == "this")
+//           val = this.resource;
+        else
+          val = gRDF.GetResource(a.defval);
+        
+        this.datasources[a.dsid].Assert(this.resource, prop,
+                                        val, true);
       }
+      this._executeTriggers(a, val);
     }
   });
 
@@ -262,7 +288,6 @@ PersistentRDFObject.fun(
     if (!addAssertions) return;
     this._assertArcsIn();
     // add default assertions for all attributes:
-    var me = this;
     for (var id in this._arcsOut) {
       var a = this._arcsOut[id];
       var prop = gRDF.GetResource(a.name);
@@ -274,9 +299,7 @@ PersistentRDFObject.fun(
       else
         val = gRDF.GetResource(a.defval);
       this.datasources[a.dsid].Assert(this.resource, prop, val, true);
-      if (a.triggers && a.triggers.length)
-        a.triggers.forEach(
-          function(f) {f.apply(me, [prop, val.Value]);});
+      this._executeTriggers(a, val);
     }
     if (this.autoflush)
       this.flush();
@@ -289,7 +312,6 @@ PersistentRDFObject.fun(
     this.resource = gRDF.GetAnonymousResource();
     this._assertArcsIn();
     // add assertions for all attributes:
-    var me = this;
     for (var id in this._arcsOut) {
       var a = this._arcsOut[id];
       var prop = gRDF.GetResource(a.name);
@@ -304,9 +326,7 @@ PersistentRDFObject.fun(
         val = gRDF.GetResource(val);
         
       this.datasources[a.dsid].Assert(this.resource, prop, val, true);
-      if (a.triggers && a.triggers.length)
-        a.triggers.forEach(
-          function(f) {f.apply(me, [prop, val.Value]);});
+      this._executeTriggers(a, val);
     }
     if (this.autoflush)
       this.flush();
@@ -354,7 +374,6 @@ PersistentRDFObject.fun(
     this._assert(this.resource, "need resource to update!");
     
     // add/update assertions for all attributes:
-    var me = this;
     for (var id in this._arcsOut) {
       var a = this._arcsOut[id];
       var prop = gRDF.GetResource(a.name);
@@ -397,9 +416,7 @@ PersistentRDFObject.fun(
       }
       else
         this.datasources[a.dsid].Assert(this.resource, prop, val, true);
-      if (a.triggers && a.triggers.length)
-        a.triggers.forEach(
-          function(f) {f.apply(me, [prop, val.Value]);});      
+      this._executeTriggers(a, val);
     }
     if (this.autoflush)
       this.flush();
