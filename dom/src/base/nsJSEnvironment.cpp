@@ -1631,6 +1631,9 @@ nsJSContext::BindCompiledEventHandler(nsISupports* aTarget, void *aScope,
 
   JSObject *funobj = (JSObject*) aHandler;
 
+  NS_ASSERTION(JS_TypeOfValue(mContext, OBJECT_TO_JSVAL(funobj)) == JSTYPE_FUNCTION,
+               "Event handler object not a function");
+
   // Push our JSContext on our thread's context stack, in case native code
   // called from JS calls back into JS via XPConnect.
   nsCOMPtr<nsIJSContextStack> stack =
