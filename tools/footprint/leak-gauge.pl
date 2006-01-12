@@ -79,6 +79,7 @@ sub call {
 # call, above), along with any private data they need.
 my $handlers = {
     "DOMWINDOW" => {
+        count => 0,
         windows => {},
         handle_line => sub($$) {
             my ($self, $line) = @_;
@@ -89,6 +90,7 @@ my $handlers = {
                     $rest =~ / outer=([0-9a-f]*)$/ || die "outer expected";
                     my $outer = $1;
                     ${$windows}{$addr} = { outer => $1 };
+                    ++${$self}{count};
                 } elsif ($verb eq "destroyed") {
                     delete ${$windows}{$addr};
                 } elsif ($verb eq "SetNewDocument") {
@@ -116,10 +118,12 @@ my $handlers = {
         summary => sub($) {
             my ($self) = @_;
             my $windows = ${$self}{windows};
-            print 'Leaked DOM windows: ' . keys(%{$windows}) . "\n";
+            print 'Leaked ' . keys(%{$windows}) . ' out of ' .
+                  ${$self}{count} . " DOM Windows\n";
         }
     },
     "DOCUMENT" => {
+        count => 0,
         docs => {},
         handle_line => sub($$) {
             my ($self, $line) = @_;
@@ -128,6 +132,7 @@ my $handlers = {
                 my ($addr, $verb, $rest) = ($1, $2, $');
                 if ($verb eq "created") {
                     ${$docs}{$addr} = {};
+                    ++${$self}{count};
                 } elsif ($verb eq "destroyed") {
                     delete ${$docs}{$addr};
                 } elsif ($verb eq "ResetToURI" ||
@@ -151,10 +156,12 @@ my $handlers = {
         summary => sub($) {
             my ($self) = @_;
             my $docs = ${$self}{docs};
-            print 'Leaked documents: ' . keys(%{$docs}) . "\n";
+            print 'Leaked ' . keys(%{$docs}) . ' out of ' .
+                  ${$self}{count} . " documents\n";
         }
     },
     "DOCSHELL" => {
+        count => 0,
         shells => {},
         handle_line => sub($$) {
             my ($self, $line) = @_;
@@ -163,6 +170,7 @@ my $handlers = {
                 my ($addr, $verb, $rest) = ($1, $2, $');
                 if ($verb eq "created") {
                     ${$shells}{$addr} = {};
+                    ++${$self}{count};
                 } elsif ($verb eq "destroyed") {
                     delete ${$shells}{$addr};
                 } elsif ($verb eq "InternalLoad" ||
@@ -186,7 +194,8 @@ my $handlers = {
         summary => sub($) {
             my ($self) = @_;
             my $shells = ${$self}{shells};
-            print 'Leaked docshells: ' . keys(%{$shells}) . "\n";
+            print 'Leaked ' . keys(%{$shells}) . ' out of ' .
+                  ${$self}{count} . " docshells\n";
         }
     }
 };
