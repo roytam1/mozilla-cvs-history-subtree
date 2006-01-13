@@ -188,6 +188,13 @@ statusbar {
   -moz-appearance: none !important;
   background-color: #e3e3e3;
   border: none;
+%ifndef XP_WIN
+  display: -moz-box;
+  min-width: 16px;
+  -moz-box-align: center;
+  -moz-box-pack: center;
+  list-style-image: url("chrome://global/skin/arrow/arrow-dn.gif");
+%endif
 }
 
 #identities_list > menupopup > * { 
@@ -564,6 +571,7 @@ checkbox[type="zap-formwidget"][modified="true"] {
   font-weight: bold;
 }
 
+%ifdef XP_WIN
 menulist[type="zap-formwidget"] { 
   -moz-appearance: none;
   border: 1px solid;
@@ -572,6 +580,7 @@ menulist[type="zap-formwidget"] {
   -moz-border-right-colors: #9a9a9a;
   -moz-border-bottom-colors: #9a9a9a;
 }
+%endif
 
 menulist[type="zap-formwidget"] * { 
   font-size: inherit;
