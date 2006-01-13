@@ -434,11 +434,12 @@ igroup[showinfo=true] {
 }
 
 igroup[showinfo=true] > info { 
-  visibility: visible;
+  display: -moz-box;
+  -moz-box-flex: 1;
 }
 
 igroup > info { 
-  visibility: collapse;
+  display: none;
 }
 
 .igroup-info-button { 
