@@ -327,7 +327,7 @@ StdClass.fun(
     // Then we merge the class object itself:
     //  documentation and ctorhook are treated specially:
     objmerge(this._doc_, c._doc_);
-    objmerge(this.ctorhook, c.ctorhook);
+    arraymerge(this.ctorhook, c.ctorhook);
     objmerge(this, c);
   });
 
