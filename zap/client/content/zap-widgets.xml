@@ -143,7 +143,11 @@
   </binding>
 
   <binding id="checkbox-formwidget"
+#ifdef XP_WIN
            extends="chrome://global/content/bindings/checkbox.xml#checkbox">
+#else
+           extends="chrome://global/content/bindings/checkbox.xml#checkbox-with-spacing">
+#endif
 #define ZAP_CHECKBOX_FORMWIDGET
 #include zap-widget-body.inc
 #undef ZAP_CHECKBOX_FORMWIDGET
