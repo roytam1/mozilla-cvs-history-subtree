@@ -820,6 +820,7 @@ AsyncObject.metafun(
     // install condition setter/getter:
     var s,g;
     eval("s = function set"+condition+"(v) {"+
+         "  if (this._Terminated) return; "+
          "  this._"+condition+"=v;"+
          "  if (!v) return; "+
          "  var me = this; "+
@@ -841,6 +842,8 @@ AsyncObject.metafun(
     this.fun(f);    
   });
 
+
+// When Terminated=true, no more hooks will be executed:
 AsyncObject.addCondition("Terminated");
 // XXX maybe clear pending functions on hooks when we enter the
 // Terminated condition. This would aid GC in the face of XPCOM<->JS
