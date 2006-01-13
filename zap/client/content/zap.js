@@ -642,16 +642,12 @@ Identity.fun(
 // }
 Identity.fun(
   function getRoutingInfo() {
-    var routingInfo;
     if (this.registrationGroup)
-      routingInfo = this.registrationGroup.getRoutingInfo();
-
-    if (!routingInfo) {
-      this._dump("using unreliable routing for non-registered identity");
-      return this._constructFallbackRoutingInfo();
+      return this.registrationGroup.getRoutingInfo();
+    else {
+      this._dump("don't have routing info for non-registered identity");
+      return null;
     }
-
-    return routingInfo;
   });
 
 // Constructs request client flags based on this identity's service:
@@ -662,17 +658,6 @@ Identity.fun(
       flags |= Components.interfaces.zapISipUAStack.ELIDE_DESTINATION_ROUTE_HEADER;
     return flags;
   });
-
-Identity.fun(
-  function _constructFallbackRoutingInfo() {
-    var contactAddr = this.getUAContactAddress();
-    return {
-      contact : contactAddr,
-      directContact: contactAddr,
-      routeset: this.service.getDefaultRoute()
-    };
-  });
-
 
 // Work out which Service this Identity uses and return its ID.
 Identity.fun(
@@ -1761,7 +1746,7 @@ Call.fun(
 //----------------------------------------------------------------------
 // Active call
 
-var ActiveCall = makeClass("ActiveCall", Call, SupportsImpl);
+var ActiveCall = makeClass("ActiveCall", Call, Scheduler, SupportsImpl);
 ActiveCall.addInterfaces(Components.interfaces.zapISipDialogListener);
 
 // Mediasession and dialog will only be valid for our subclasses
@@ -1810,8 +1795,12 @@ ActiveCall.spec(
   });
 
 // clean up after call has terminated
+// XXX we should code this as whenTerminated() 
 ActiveCall.fun(
-  function terminated() { 
+  function terminated() {
+    if (this.Terminated) return; // already terminated
+    
+    this.Terminated = true; // clears any pending schedules
     this["urn:mozilla:zap:active"] = "false";
     this["urn:mozilla:zap:session-running"] = "false";
     delete wActiveCalls[this.resource.Value];
@@ -1836,22 +1825,14 @@ var OutboundCall = makeClass("OutboundCall", ActiveCall);
 
 OutboundCall.rdfLiteralAttrib("urn:mozilla:zap:direction", "outbound");
 
+// This will be set as soon as we have routing info available:
+OutboundCall.addCondition("RoutingInfoResolved");
+
 OutboundCall.fun(
   function makeCall(toAddress, identity) {
+    this.toAddress = toAddress;
     this.identity = identity;
-    this.routingInfo = identity.getRoutingInfo();
-    this.callHandler = OutboundCallHandler.instantiate();
-    this.callHandler.call = this;
-
-    var rc = wSipStack.createInviteRequestClient(toAddress,
-                                                 identity.getFromAddress(),
-                                                 this.routingInfo.contact,
-                                                 this.routingInfo.routeset,
-                                                 this.routingInfo.routeset.length,
-                                                 identity.getRCFlags());
-    rc.listener = this.callHandler;
-    this.callHandler.rc = rc;
-
+    
     var subject = this["urn:mozilla:zap:subject"];
     if (subject) {
       try {
@@ -1864,14 +1845,103 @@ OutboundCall.fun(
       }
     }
     this["urn:mozilla:zap:local"] = identity.getFromAddress().serialize();
-    this["urn:mozilla:zap:callid"] = rc.request.getCallIDHeader().callID;
     this.setTimestamp();
+
+    this.whenRoutingInfoResolved(this.proceedWithCall);
+    
+    this.routingInfo = identity.getRoutingInfo();
+    if (!this.routingInfo)
+      this.resolveRoutingInfoByOPTIONS();
+    else
+      this.RoutingInfoResolved = true;
+  });
+
+OutboundCall.fun(
+  function resolveRoutingInfoByOPTIONS() {
+    this["urn:mozilla:zap:status"] = "Resolving route";
+    var rc = wSipStack.createNonInviteRequestClient(this.toAddress,
+                                                    this.identity.getFromAddress(),
+                                                    "OPTIONS",
+                                                    [], 0,
+                                                    this.identity.getRCFlags());
+    var me = this;
+    rc.listener = {
+      notifyResponseReceived : function resolveRoutingInfoByOPTIONS_response(_rc,
+                                                                             dialog,
+                                                                             response,
+                                                                             flow) {
+        rc.listener = null;
+        if (response.statusCode == "408") {
+          // the request didn't make it. give up.
+          me["urn:mozilla:zap:status"] = "Destination can't be reached";
+          me.terminated();
+        }
+        // else... any response will do:
+        // synthesize contact address from identity's UAContactAddress:
+        var addr = me.identity.getUAContactAddress();
+        var uri = addr.uri.QueryInterface(Components.interfaces.zapISipSIPURI);
+        var via = response.getTopViaHeader();
+        if (via) {
+          if (via.hasParameter("received")) {
+            uri.host = via.getParameter("received");
+          }
+          if (via.hasParameter("rport")) {
+            uri.port = via.getParameter("rport");
+          }
+        }
+        me.routingInfo = {
+          contact: addr,
+          directContact: addr,
+          routeset: []
+        };  
+        me.RoutingInfoResolved = true;
+      }
+    };
+    rc.sendRequest();
+  });
+
+OutboundCall.fun(
+  function proceedWithCall() {
+    this["urn:mozilla:zap:status"] = "Calling...";
+    this.callHandler = OutboundCallHandler.instantiate();
+    this.callHandler.call = this;
+
+    var rc = wSipStack.createInviteRequestClient(this.toAddress,
+                                                 this.identity.getFromAddress(),
+                                                 this.routingInfo.contact,
+                                                 this.routingInfo.routeset,
+                                                 this.routingInfo.routeset.length,
+                                                 this.identity.getRCFlags());
+    rc.listener = this.callHandler;
+    this.callHandler.rc = rc;    
+
+    this["urn:mozilla:zap:callid"] = rc.request.getCallIDHeader().callID;
+        
+    this.mediasession = Components.classes["@mozilla.org/zap/mediasession;1"].createInstance(Components.interfaces.zapIMediaSession);
+
+    // infer connectionAddress as best we can 
+    var connectionAddress = this.routingInfo.directContact.uri.QueryInterface(Components.interfaces.zapISipSIPURI).host;
+
+    this.mediasession.init("zap",
+                           connectionAddress,
+                           connectionAddress);
     var offer = this.mediasession.generateSDPOffer();
 
     rc.request.setContent("application", "sdp", offer.serialize());
     rc.sendInvite(this.callHandler);
   });
 
+OutboundCall.fun(
+  function cancel() {
+    if (this.rc)
+      this.rc.cancel();
+    else if (!this.Terminated){
+      // we might e.g. still be resolving_by_OPTIONS
+      this["urn:mozilla:zap:status"] = "Cancelled";
+      this.terminated();
+    }
+  });
+    
 //----------------------------------------------------------------------
 // OutboundCallHandler
 // CALLING -> 2XX_RECEIVED -> TERMINATED
@@ -2051,11 +2121,26 @@ InboundCallHandler.fun(
       catch(e) { /* To address probably wasn't a SIP URI -> fall through */ }
     }
 
-    if (this.call.identity)
+    if (this.call.identity) {
       this.routingInfo = this.call.identity.getRoutingInfo();
-    else
+      if (!this.routingInfo) {
+        this._warning("Call arrived for unregistered identity");
+        // synthesize from identity's UAContactAddress:
+        // XXX maybe resolve_by_OPTIONS
+        var addr = this.identity.getUAContactAddress();
+        this.routingInfo = {
+          contact: addr,
+          directContact: addr,
+          routeset: []
+        };
+      }
+    }
+    else {
+      // XXX maybe resolve_by_OPTIONS
+      this._warning("Call doesn't match any identity");
       this.routingInfo = getDirectRoutingInfo();
-    
+    }
+      
     // reject based on busy settings:
     if (document.getElementById("button_dnd").checked) {
       this._respond(wConfig["urn:mozilla:zap:dnd_code"],

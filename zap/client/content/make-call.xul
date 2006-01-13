@@ -51,7 +51,7 @@
   <script type="application/x-javascript">
   <![CDATA[
     var wRemoteAddress;
-    var wOptionsRS;
+//    var wOptionsRS;
 
     function initPage() {
       // try to parse the url_field into a sip address:
@@ -75,46 +75,35 @@
       // fill in remote party:
       document.getElementById("urn:mozilla:zap:remote").value = wRemoteAddress.serialize();
 
-      // kick off an async OPTIONS request:
-      var route = parent.wCurrentIdentity.getRoutingInfo().routeset;
-      wOptionsRS = parent.wSipStack.createNonInviteRequestClient(wRemoteAddress,
-                                                                 parent.wCurrentIdentity.getFromAddress(), 
-                                                                 "OPTIONS",
-                                                                 route,
-                                                                 route.length,
-                                                                 parent.wCurrentIdentity.getRCFlags());
-      wOptionsRS.listener = {
-        notifyResponseReceived : function(rc, dialog, response, flow) {
-          if (document)
-            document.getElementById("options_result").value = response.serialize();
-        }
-      }
-      // XXX
-      // wOptionsRS.sendRequest(0);
-
+//      // kick off an async OPTIONS request:
+//      var route = parent.wCurrentIdentity.getRoutingInfo().routeset;
+//      wOptionsRS = parent.wSipStack.createNonInviteRequestClient(wRemoteAddress,
+//                                                                 parent.wCurrentIdentity.getFromAddress(), 
+//                                                                 "OPTIONS",
+//                                                                 route,
+//                                                                 route.length,
+//                                                                 parent.wCurrentIdentity.getRCFlags());
+//      wOptionsRS.listener = {
+//        notifyResponseReceived : function(rc, dialog, response, flow) {
+//          if (document)
+//            document.getElementById("options_result").value = response.serialize();
+//        }
+//      }
+//      // XXX
+//      // wOptionsRS.sendRequest(0);
+//
       // focus call button, so that the user just needs to press enter:
       document.getElementById("call_button").focus();
     }    
 
     function cleanup() {
       dump("cleanup make-call.xul:"+wRemoteAddress.serialize()+"\n");
-      wOptionsRS.listener = null;
+//      wOptionsRS.listener = null;
     }
 
     function call() {
       var oc = parent.OutboundCall.instantiate();
       oc.createFromDocument(document);
-      oc.mediasession = Components.classes["@mozilla.org/zap/mediasession;1"].createInstance(Components.interfaces.zapIMediaSession);
-
-      // infer connectionAddress as best we can (this will yield our
-      // public NAT address if the identity is registered:
-      var connectionAddress = parent.wCurrentIdentity.getRoutingInfo().directContact.uri.QueryInterface(Components.interfaces.zapISipSIPURI).host;
-
-      oc.mediasession.init("zap",
-                           connectionAddress,
-                           connectionAddress);
-
-      oc["urn:mozilla:zap:status"] = "Calling...";
       // start the ball rolling:
       oc.makeCall(wRemoteAddress, parent.wCurrentIdentity);
       parent.loadPage("chrome://zap/content/call.xul?resource="+escape(oc.resource.Value));
