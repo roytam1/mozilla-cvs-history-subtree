@@ -63,6 +63,9 @@ public:
   {
     // mTarget used to be weak, but is now a strong reference. In some cases
     // this reference will be the only reference to the event target.
+#ifdef NS_DEBUG
+    PR_AtomicIncrement(&sNumJSEventListeners);
+#endif
   }
 
   nsIScriptContext *GetEventContext()
@@ -82,7 +85,17 @@ public:
 
   virtual void SetEventName(nsIAtom* aName) = 0;
 
+#ifdef NS_DEBUG
+  static PRInt32 sNumJSEventListeners;
+#endif
+
 protected:
+  virtual nsIJSEventListener::~nsIJSEventListener()
+  {
+#ifdef NS_DEBUG
+    PR_AtomicDecrement(&sNumJSEventListeners);
+#endif
+  }
   nsCOMPtr<nsIScriptContext> mContext;
   void *mScopeObject;
   nsCOMPtr<nsISupports> mTarget;

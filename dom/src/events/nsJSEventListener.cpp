@@ -52,6 +52,26 @@
 #include "nsVariant.h"
 
 
+#ifdef NS_DEBUG
+
+#include "nspr.h" // PR_fprintf
+
+PRInt32 nsIJSEventListener::sNumJSEventListeners = 0;
+
+class EventListenerCounter
+{
+public:
+  ~EventListenerCounter() {
+    if (nsIJSEventListener::sNumJSEventListeners) {
+      PR_fprintf(PR_STDERR,"WARNING: LEAKED %d nsIJSEventListeners\n",
+                 nsIJSEventListener::sNumJSEventListeners);
+    }
+  }
+};
+
+static EventListenerCounter sEventListenerCounter;
+#endif
+
 /*
  * nsJSEventListener implementation
  */
