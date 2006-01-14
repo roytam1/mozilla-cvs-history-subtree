@@ -57,8 +57,8 @@
 # * In a csh-based shell such as tcsh, set environment variables with
 #     setenv VAR value
 #
-# Then run this perl script over the log.  Either of the following
-# commands should work:
+# Then, after you have exited the browser, run this perl script over the
+# log.  Either of the following commands should work:
 #   perl ./path/to/leak-gauge.pl nspr.log
 #   cat nspr.log | perl ./path/to/leak-gauge.pl
 # and it will tell you which of certain core objects leaked and the URLs
