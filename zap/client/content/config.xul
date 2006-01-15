@@ -151,7 +151,9 @@
               <description>
               A unique identifier assigned to this instance of zap when it was
               first started. It is used by GRUU-enabled services to route
-              messages to this zap instance. 
+              messages to this zap instance. It also forms part of the 'grid' uri 
+              parameter (in MD5 hashed form) to identify this zap instance among
+              several registered contacts in replies to REGISTER requests.
               See <html:a href="http://www.croczilla.com/zap/rfcs/draft-ietf-sip-gruu-05.txt">draft-ietf-sip-gruu-05.txt</html:a>.
                 <html:br/>Changes to this field will take effect after a restart.
               </description>
