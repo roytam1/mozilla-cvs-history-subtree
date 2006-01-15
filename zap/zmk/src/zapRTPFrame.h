@@ -66,4 +66,4 @@ CreateRTPFrame(const nsACString & octets, nsIPropertyBag2* streamInfo);
 zapRTPFrame *
 CreateRTPFrame();
 
-#endif // __ZAP_RTPPACKET_H__
+#endif // __ZAP_RTPFRAME_H__
