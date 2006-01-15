@@ -40,6 +40,7 @@ EXPORTED_SYMBOLS = [ "utf8ToUnicode",
                      "octetToHex",
                      "hexToOctet",
                      "hexCharCodeAt",
+                     "MD5Hex",
                      "padright",
                      "padleft"
                      ];
@@ -48,7 +49,7 @@ EXPORTED_SYMBOLS = [ "utf8ToUnicode",
 var _doc_ = {};
 
 //----------------------------------------------------------------------
-// 
+// Globals
 
 var CLASS_CHARCONV = Components.classes["@mozilla.org/intl/scriptableunicodeconverter"];
 var ITF_CHARCONV = Components.interfaces.nsIScriptableUnicodeConverter;
@@ -57,12 +58,22 @@ var _gUTF8Conv; // global UTF-8 -> Unicode converter
 
 function getUTF8Converter() {
   if (!_gUTF8Conv) {
-    _gUTF8Conv = CLASS_CHARCONV.createInstance();
-    _gUTF8Conv.QueryInterface(ITF_CHARCONV);
+    _gUTF8Conv = CLASS_CHARCONV.createInstance(ITF_CHARCONV);
     _gUTF8Conv.charset = "UTF-8";
   }
   return _gUTF8Conv;
 }
+
+
+var _gCryptoHash; 
+
+function getCryptoHash() {
+  if (!_gCryptoHash) {
+    _gCryptoHash = Components.classes["@mozilla.org/security/hash;1"].createInstance(Components.interfaces.nsICryptoHash);
+  }
+  return _gCryptoHash;
+}
+
 
 //----------------------------------------------------------------------
 // utf8ToUnicode
@@ -130,6 +141,29 @@ function hexCharCodeAt(str, i) {
   var code = str.charCodeAt(i);
   return hexDigits[(code >> 4) & 0x0F] + hexDigits[code & 0x0F];
 }
+
+//----------------------------------------------------------------------
+// MD5Hex:
+// calculate MD5 hash of data and convert to hex representation as
+// explained in RFC2617:
+
+function MD5Hex(data) {
+  getCryptoHash().initWithString("md5");
+  if (data) {
+    // XXX add update(ACString) method to nsICryptoHash interface so
+    // that we don't have to jump through these hoops
+    var stream = Components.classes["@mozilla.org/io/string-input-stream;1"].createInstance(Components.interfaces.nsIStringInputStream);
+    stream.setData(data, data.length);
+    getCryptoHash().updateFromStream(stream, data.length);
+  }
+  var hash = getCryptoHash().finish(false);
+  var hashHex = "";
+  for (var i=0,l=hash.length; i<l; ++i) {
+    hashHex += hexCharCodeAt(hash, i);
+  }
+  return hashHex;
+}
+
 
 //----------------------------------------------------------------------
 // padright

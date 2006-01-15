@@ -52,12 +52,6 @@ function toString() { return "[SipAuthentication.js]"; }
 var _doc_ = {};
 
 ////////////////////////////////////////////////////////////////////////
-// Globals
-
-var CryptoHash = Components.classes["@mozilla.org/security/hash;1"].createInstance(Components.interfaces.nsICryptoHash);
-
-
-////////////////////////////////////////////////////////////////////////
 // SipAuthentication
 
 var SipAuthentication = makeClass("SipAuthentication", SupportsImpl);
@@ -93,27 +87,6 @@ SipAuthentication.fun(
 
 //----------------------------------------------------------------------
 // implementation helpers
-
-// MD5Hex:
-// calculate MD5 hash of data and convert to hex representation as
-// explained in RFC2617:
-
-function MD5Hex(data) {
-  CryptoHash.initWithString("md5");
-  if (data) {
-    // XXX add update(ACString) method to nsICryptoHash interface so
-    // that we don't have to jump through these hoops
-    var stream = Components.classes["@mozilla.org/io/string-input-stream;1"].createInstance(Components.interfaces.nsIStringInputStream);
-    stream.setData(data, data.length);
-    CryptoHash.updateFromStream(stream, data.length);
-  }
-  var hash = CryptoHash.finish(false);
-  var hashHex = "";
-  for (var i=0,l=hash.length; i<l; ++i) {
-    hashHex += hexCharCodeAt(hash, i);
-  }
-  return hashHex;
-}
 
 // remove quotes around data
 function unquote(data) {
