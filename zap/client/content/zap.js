@@ -1147,6 +1147,15 @@ Registration.fun(
     }
   });
 
+// Helper to compare two routes. Returns true if the routes are equal
+// (by URI comparsion), false otherwise
+function routesEqual(r1, r2) {
+  if (r1.length != r2.length) return false;
+  for (var i=0, l=r1.length; i<l; ++i)
+    if (!r1[i].uri.QueryInterface(Components.interfaces.zapISipSIPURI).equals(r2[i].uri.QueryInterface(Components.interfaces.zapISipSIPURI))) return false;
+  return true;
+}
+
 // Helper to compare the first hop in the new route to the remote ip
 // address. Returns 'true' if the first hop has changed. 
 function firstHopChanged(newRoute, oldRoute, currentFlow) {
@@ -1183,7 +1192,7 @@ Registration.fun(
       newRoute = this.defaultOutboundRoute;
           
     var oldRoute = this.outboundRoute;
-    if (oldRoute != newRoute) {
+    if (!routesEqual(oldRoute, newRoute)) {
       this.outboundRoute = newRoute;
       // Use the service route as a new route for *all* outbound
       // request over this flow, including future REGISTERs
