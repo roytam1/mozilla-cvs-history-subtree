@@ -557,6 +557,27 @@ PRBool nsWindow::DispatchAppCommandEvent(PRUint32 aEventCommand)
 }
 
 //-------------------------------------------------------------------------
+//
+// Dispatch DragDrop (target) event
+//
+//-------------------------------------------------------------------------
+PRBool nsWindow::DispatchDragDropEvent(PRUint32 aMsg)
+{
+  nsMouseEvent event(PR_TRUE, aMsg, this, nsMouseEvent::eReal);
+  InitEvent(event);
+
+  event.isShift   = WinIsKeyDown(VK_SHIFT);
+  event.isControl = WinIsKeyDown(VK_CTRL);
+  event.isAlt     = WinIsKeyDown(VK_ALT) || WinIsKeyDown(VK_ALTGRAF);
+  event.isMeta    = PR_FALSE;
+
+  PRBool result = DispatchWindowEvent(&event);
+  NS_RELEASE(event.widget);
+
+  return result;
+}
+
+//-------------------------------------------------------------------------
 NS_IMETHODIMP nsWindow::CaptureRollupEvents(nsIRollupListener * aListener, 
                                             PRBool aDoCapture, 
                                             PRBool aConsumeRollupEvent)
@@ -3935,10 +3956,10 @@ PRBool nsWindow::OnDragDropMsg(ULONG msg, MPARAM mp1, MPARAM mp2, MRESULT &mr)
         mDragStatus = gDragStatus = (dragFlags & DND_DragStatus);
 
         if (dragFlags & DND_DispatchEnterEvent)
-          DispatchStandardEvent(NS_DRAGDROP_ENTER);
+          DispatchDragDropEvent(NS_DRAGDROP_ENTER);
 
         if (dragFlags & DND_DispatchEvent)
-          DispatchStandardEvent(eventType);
+          DispatchDragDropEvent(eventType);
 
         if (dragFlags & DND_GetDragoverResult)
           dragSession->GetDragoverResult(mr);
