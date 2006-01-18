@@ -1025,7 +1025,7 @@ fi
 # Only set CPU_ARCH if we recognize the value of OS_TEST
 
 case "$OS_TEST" in
-*86)
+*86 | i86pc)
     CPU_ARCH=x86
     ;;
 
@@ -1037,8 +1037,12 @@ Alpha | alpha | ALPHA)
     CPU_ARCH=Alpha
     ;;
 
+sun4u)
+    CPU_ARCH=sparc
+    ;;
+
 x86_64 | sparc | ppc | ia64)
-    CPU_ARCH="$CPU_ARCH_TEST"
+    CPU_ARCH="$OS_TEST"
     ;;
 esac
 
@@ -2023,6 +2027,14 @@ dnl the qsort routine under solaris is faulty
        CFLAGS="$CFLAGS -xstrconst -xbuiltin=%all"
        CXXFLAGS="$CXXFLAGS -xbuiltin=%all -features=tmplife -norunpath"
        LDFLAGS="-xildoff -z lazyload -z combreloc $LDFLAGS"
+       if test -z "$CROSS_COMPILE" && test -f /usr/lib/ld/map.noexstk; then
+           _SAVE_LDFLAGS=$LDFLAGS
+           LDFLAGS="-M /usr/lib/ld/map.noexstk $LDFLAGS" 
+           AC_TRY_LINK([#include <stdio.h>],
+                       [printf("Hello World\n");],
+                       ,
+                       [LDFLAGS=$_SAVE_LDFLAGS])
+       fi
        MOZ_OPTIMIZE_FLAGS="-xO4"
        MKSHLIB='$(CXX) $(CXXFLAGS) $(DSO_PIC_FLAGS) $(DSO_LDOPTS) -h $@ -o $@'
        MKCSHLIB='$(CC) $(CFLAGS) $(DSO_PIC_FLAGS) -G -z muldefs -h $@ -o $@'
@@ -2037,6 +2049,7 @@ dnl the qsort routine under solaris is faulty
        AS='/usr/ccs/bin/as'
        ASFLAGS="$ASFLAGS -K PIC -L -P -D_ASM -D__STDC__=0"
        AS_DASH_C_FLAG=''
+       TARGET_COMPILER_ABI="sunc"
         CC_VERSION=`$CC -V 2>&1 | grep '^cc:' 2>/dev/null | $AWK -F\: '{ print $2 }'`
         CXX_VERSION=`$CXX -V 2>&1 | grep '^CC:' 2>/dev/null | $AWK -F\: '{ print $2 }'`
        AC_MSG_CHECKING([for Forte compiler version >= WS6U2])
@@ -4078,7 +4091,7 @@ MOZ_BRANDING_DIRECTORY=
 MOZ_CALENDAR=
 MOZ_DBGRINFO_MODULES=
 MOZ_ENABLE_LIBXUL=
-MOZ_EXTENSIONS_ALL=" cookie wallet content-packs xml-rpc help p3p venkman inspector irc typeaheadfind webservices spellcheck gnomevfs sroaming xmlterm datetime finger cview layout-debug tasks sql xforms permissions schema-validation reporter"
+MOZ_EXTENSIONS_ALL=" cookie wallet content-packs xml-rpc help p3p venkman inspector irc typeaheadfind spellcheck gnomevfs sroaming xmlterm datetime finger cview layout-debug tasks sql xforms permissions schema-validation reporter"
 MOZ_IMG_DECODERS_DEFAULT="png gif jpeg bmp xbm icon"
 MOZ_IMG_ENCODERS_DEFAULT="png jpeg"
 MOZ_IPCD=
@@ -4196,7 +4209,7 @@ minimo)
   MOZ_APP_VERSION=`cat $topsrcdir/minimo/config/version.txt`
   MOZ_COMPOSER=
   MOZ_ENABLE_POSTSCRIPT=
-  MOZ_EXTENSIONS_DEFAULT="xml-rpc permissions spatialnavigation"
+  MOZ_EXTENSIONS_DEFAULT=" cookie xml-rpc spatialnavigation permissions"
   MOZ_IMG_DECODERS_DEFAULT="png gif jpeg"
   MOZ_IMG_ENCODERS_DEFAULT=
   MOZ_IMG_ENCODERS=
@@ -4531,7 +4544,8 @@ fi
 if test "$MOZ_ENABLE_PANGO" && test "$MOZ_ENABLE_CAIRO_GFX"
 then
     AC_DEFINE(MOZ_ENABLE_PANGO)
-    PKG_CHECK_MODULES(MOZ_PANGO, pango >= 1.10.0 pangocairo >= 1.10.0)
+    dnl PKG_CHECK_MODULES(MOZ_PANGO, pango >= 1.10.0 pangocairo >= 1.10.0)
+    PKG_CHECK_MODULES(MOZ_PANGO, pango >= 1.6.0 pangoft2 >= 1.6.0 pangoxft >= 1.6.0)
 
     AC_SUBST(MOZ_ENABLE_PANGO)
     AC_SUBST(MOZ_PANGO_CFLAGS)
@@ -5098,7 +5112,7 @@ if test -z "$MOZ_XTF" && test `echo "$MOZ_EXTENSIONS" | grep -c xforms` -ne 0; t
     AC_MSG_WARN([Cannot build XForms without XTF support.  Removing XForms from MOZ_EXTENSIONS.])
     MOZ_EXTENSIONS=`echo $MOZ_EXTENSIONS | sed -e 's|xforms||g'`
 fi
-if test `echo "$MOZ_EXTENSIONS" | grep -c xforms` -ne 0 && test `echo "$MOZ_EXTENSIONS" | grep -c webservices` -eq 0; then
+if test -z "$MOZ_WEBSERVICES" && test `echo "$MOZ_EXTENSIONS" | grep -c xforms` -ne 0; then
     AC_MSG_WARN([Cannot build XForms without webservices.  Removing XForms from MOZ_EXTENSIONS.])
     MOZ_EXTENSIONS=`echo $MOZ_EXTENSIONS | sed -e 's|xforms||g'`
 fi
@@ -6605,17 +6619,18 @@ if test "$MOZ_SVG_RENDERER_CAIRO" -o "$MOZ_ENABLE_CANVAS" -o "$MOZ_ENABLE_CAIRO_
 
        AC_SUBST(PS_SURFACE_FEATURE)
        AC_SUBST(PDF_SURFACE_FEATURE)
-       AC_SUBST(PNG_FUNCTIONS_FEATURE)
+       AC_SUBST(SVG_SURFACE_FEATURE)
        AC_SUBST(XLIB_SURFACE_FEATURE)
        AC_SUBST(QUARTZ_SURFACE_FEATURE)
        AC_SUBST(XCB_SURFACE_FEATURE)
        AC_SUBST(WIN32_SURFACE_FEATURE)
+       AC_SUBST(BEOS_SURFACE_FEATURE)
        AC_SUBST(GLITZ_SURFACE_FEATURE)
+       AC_SUBST(DIRECTFB_SURFACE_FEATURE)
        AC_SUBST(FT_FONT_FEATURE)
        AC_SUBST(WIN32_FONT_FEATURE)
        AC_SUBST(ATSUI_FONT_FEATURE)
        AC_SUBST(PNG_FUNCTIONS_FEATURE)
-       AC_SUBST(SANITY_CHECKING_FEATURE)
 
        if test "$_WIN32_MSVC"; then
            MOZ_CAIRO_LIBS='$(DIST)/lib/mozcairo.lib $(DIST)/lib/mozlibpixman.lib'
@@ -6626,7 +6641,7 @@ if test "$MOZ_SVG_RENDERER_CAIRO" -o "$MOZ_ENABLE_CANVAS" -o "$MOZ_ENABLE_CAIRO_
            MOZ_CAIRO_LIBS="-lmozcairo -lmozlibpixman"
 
            if test "$MOZ_X11"; then
-               MOZ_CAIRO_LIBS="$MOZ_CAIRO_LIBS $XLDFLAGS -lXrender -lfreetype"
+               MOZ_CAIRO_LIBS="$MOZ_CAIRO_LIBS $XLDFLAGS -lXrender -lfreetype -lfontconfig"
            fi
 
            if test "$MOZ_ENABLE_GLITZ"; then
