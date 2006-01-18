@@ -716,6 +716,7 @@ CheckLDAPOperationResult(nsHashKey *aKey, void *aData, void* aClosure)
             switch (rv) {
 
             case NS_OK: 
+#if 0 // we seem to be hitting this with v3 servers, and it's causing problems.
               {
                 PRInt32 errorCode;
                 rawMsg->GetErrorCode(&errorCode);
@@ -738,6 +739,7 @@ CheckLDAPOperationResult(nsHashKey *aKey, void *aData, void* aClosure)
                   }
                 }
               }
+#endif
                 break;
 
             case NS_ERROR_LDAP_DECODING_ERROR:
