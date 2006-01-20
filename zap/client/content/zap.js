@@ -1875,17 +1875,6 @@ OutboundCall.fun(
     this.toAddress = toAddress;
     this.identity = identity;
     
-    var subject = this["urn:mozilla:zap:subject"];
-    if (subject) {
-      try {
-        var s = wSipStack.syntaxFactory.createHeader("Subject").QueryInterface(Components.interfaces.zapISipSubjectHeader);
-        s.subject = subject;
-        rc.request.appendHeader(s);
-      }
-      catch(e) {
-        this._warning("Exception during Subject header construction: "+e);
-      }
-    }
     this["urn:mozilla:zap:local"] = identity.getFromAddress().serialize();
     this.setTimestamp();
 
@@ -1957,6 +1946,18 @@ OutboundCall.fun(
     rc.listener = this.callHandler;
     this.callHandler.rc = rc;    
 
+    var subject = this["urn:mozilla:zap:subject"];
+    if (subject) {
+      try {
+        var s = wSipStack.syntaxFactory.createHeader("Subject").QueryInterface(Components.interfaces.zapISipSubjectHeader);
+        s.subject = subject;
+        rc.request.appendHeader(s);
+      }
+      catch(e) {
+        this._warning("Exception during Subject header construction: "+e);
+      }
+    }
+    
     this["urn:mozilla:zap:callid"] = rc.request.getCallIDHeader().callID;
         
     this.mediasession = Components.classes["@mozilla.org/zap/mediasession;1"].createInstance(Components.interfaces.zapIMediaSession);
@@ -2169,7 +2170,7 @@ InboundCallHandler.fun(
         this._warning("Call arrived for unregistered identity");
         // synthesize from identity's UAContactAddress:
         // XXX maybe resolve_by_OPTIONS
-        var addr = this.identity.getUAContactAddress();
+        var addr = this.call.identity.getUAContactAddress();
         this.routingInfo = {
           contact: addr,
           directContact: addr,
