@@ -41,6 +41,7 @@
 #include "nsAbsoluteContainingBlock.h"
 #include "nsLineLayout.h"
 #include "nsLayoutAtoms.h"
+#include "nsLayoutUtils.h"
 
 class nsAnonymousBlockFrame;
 
@@ -86,7 +87,6 @@ public:
                    const nsRect&        aDirtyRect,
                    nsFramePaintLayer    aWhichLayer,
                    PRUint32             aFlags = 0);
-  NS_IMETHOD ReflowDirtyChild(nsIPresShell* aPresShell, nsIFrame* aChild);
 
 #ifdef ACCESSIBILITY
   NS_IMETHODIMP GetAccessible(nsIAccessible** aAccessible);
@@ -101,6 +101,10 @@ public:
   virtual PRBool IsSelfEmpty();
 
   // nsIHTMLReflow overrides
+  virtual void AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
+                                 InlineMinWidthData *aData);
+  virtual void AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
+                                  InlinePrefWidthData *aData);
   NS_IMETHOD Reflow(nsPresContext* aPresContext,
                     nsHTMLReflowMetrics& aDesiredSize,
                     const nsHTMLReflowState& aReflowState,
@@ -132,6 +136,10 @@ protected:
   nsInlineFrame();
 
   virtual PRIntn GetSkipSides() const;
+
+  void DoInlineIntrinsicWidth(nsIRenderingContext *aRenderingContext,
+                              InlineIntrinsicWidthData *aData,
+                              nsLayoutUtils::IntrinsicWidthType aType);
 
   nsresult ReflowFrames(nsPresContext* aPresContext,
                         const nsHTMLReflowState& aReflowState,

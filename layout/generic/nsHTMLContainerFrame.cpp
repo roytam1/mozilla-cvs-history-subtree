@@ -59,7 +59,6 @@
 #include "nsCOMPtr.h"
 #include "nsIDeviceContext.h"
 #include "nsIFontMetrics.h"
-#include "nsReflowPath.h"
 #include "nsCSSFrameConstructor.h"
 
 NS_IMETHODIMP

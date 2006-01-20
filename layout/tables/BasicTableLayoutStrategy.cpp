@@ -678,8 +678,8 @@ BasicTableLayoutStrategy::ComputeNonPctColspanWidths(const nsHTMLReflowState& aR
 }
 
 #ifdef DEBUG
-static char* widths[] = {"MIN", "DES", "FIX"};
-static char* limits[] = {"PCT", "FIX", "DES", "NONE"};
+static const char* widths[] = {"MIN", "DES", "FIX"};
+static const char* limits[] = {"PCT", "FIX", "DES", "NONE"};
 static PRInt32 dumpCount = 0;
 void DumpColWidths(nsTableFrame& aTableFrame,
                    char*         aMessage,

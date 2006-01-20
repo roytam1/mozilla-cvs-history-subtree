@@ -132,11 +132,11 @@ NS_IMETHODIMP nsPageFrame::Reflow(nsPresContext*          aPresContext,
                                   const nsHTMLReflowState& aReflowState,
                                   nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsPageFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsPageFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
   aStatus = NS_FRAME_COMPLETE;  // initialize out parameter
 
-  if (eReflowReason_Incremental != aReflowState.reason) {
+  if (GetStateBits() & NS_FRAME_IS_DIRTY) {
     // Do we have any children?
     // XXX We should use the overflow list instead...
     nsIFrame*           firstFrame  = mFrames.FirstChild();
@@ -725,9 +725,6 @@ nsPageBreakFrame::GetDesiredSize(nsPresContext*          aPresContext,
     aDesiredSize.height -= aDesiredSize.height % onePixel;
   }
 
-  if (aDesiredSize.mComputeMEW) {
-    aDesiredSize.mMaxElementWidth  = onePixel;
-  }
   aDesiredSize.ascent  = 0;
   aDesiredSize.descent = 0;
 }
@@ -739,7 +736,7 @@ nsPageBreakFrame::Reflow(nsPresContext*          aPresContext,
                          nsReflowStatus&          aStatus)
 {
   NS_PRECONDITION(aPresContext, "null pres context");
-  DO_GLOBAL_REFLOW_COUNT("nsTableFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsTableFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
 
   aStatus = NS_FRAME_COMPLETE; 

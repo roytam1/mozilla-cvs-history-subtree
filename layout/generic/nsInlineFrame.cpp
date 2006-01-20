@@ -47,7 +47,6 @@
 #include "nsAbsoluteContainingBlock.h"
 #include "nsLayoutAtoms.h"
 #include "nsCSSAnonBoxes.h"
-#include "nsReflowPath.h"
 #include "nsAutoPtr.h"
 #include "nsFrameManager.h"
 #ifdef ACCESSIBILITY
@@ -180,7 +179,9 @@ nsInlineFrame::AppendFrames(nsIAtom*        aListName,
     mFrames.AppendFrames(this, aFrameList);
 
     // Ask the parent frame to reflow me.
-    ReflowDirtyChild(GetPresContext()->PresShell(), nsnull);
+    AddStateBits(NS_FRAME_IS_DIRTY);
+    GetPresContext()->PresShell()->
+      FrameNeedsReflow(this, nsIPresShell::eTreeChange);
   }
   return NS_OK;
 }
@@ -204,7 +205,9 @@ nsInlineFrame::InsertFrames(nsIAtom*        aListName,
     if (nsnull == aListName)
 #endif
     // Ask the parent frame to reflow me.
-    ReflowDirtyChild(GetPresContext()->PresShell(), nsnull);
+    AddStateBits(NS_FRAME_IS_DIRTY);
+    GetPresContext()->PresShell()->
+      FrameNeedsReflow(this, nsIPresShell::eTreeChange);
   }
   return NS_OK;
 }
@@ -256,7 +259,9 @@ nsInlineFrame::RemoveFrame(nsIAtom*        aListName,
 
     if (generateReflowCommand) {
       // Ask the parent frame to reflow me.
-      ReflowDirtyChild(GetPresContext()->PresShell(), nsnull);
+      AddStateBits(NS_FRAME_IS_DIRTY);
+      GetPresContext()->PresShell()->
+        FrameNeedsReflow(this, nsIPresShell::eTreeChange);
     }
   }
 
@@ -297,13 +302,81 @@ nsInlineFrame::Paint(nsPresContext*      aPresContext,
 //////////////////////////////////////////////////////////////////////
 // Reflow methods
 
+static nscoord GetCoord(const nsStyleCoord& aCoord, nscoord aIfNotCoord)
+{
+  return aCoord.GetUnit() == eStyleUnit_Coord
+           ? aCoord.GetCoordValue()
+           : aIfNotCoord;
+}
+
+void
+nsInlineFrame::DoInlineIntrinsicWidth(nsIRenderingContext *aRenderingContext,
+                                      InlineIntrinsicWidthData *aData,
+                                      nsLayoutUtils::IntrinsicWidthType aType)
+{
+  if (mPrevInFlow)
+    return; // Already added.
+
+  NS_PRECONDITION(aType == nsLayoutUtils::MIN_WIDTH ||
+                  aType == nsLayoutUtils::PREF_WIDTH, "bad type");
+
+  PRUint8 startSide, endSide;
+  // XXX set these correctly!  (not trivial, and GetSkipSides() and
+  // maybe some reflow logic needs this too, and should all be fixed at
+  // once)
+  startSide = NS_SIDE_LEFT;
+  endSide = NS_SIDE_RIGHT;
+
+  const nsStylePadding *stylePadding = GetStylePadding();
+  const nsStyleBorder *styleBorder = GetStyleBorder();
+  const nsStyleMargin *styleMargin = GetStyleMargin();
+  nsStyleCoord tmp;
+
+  aData->currentLine +=
+    GetCoord(stylePadding->mPadding.Get(startSide, tmp), 0) +
+    styleBorder->GetBorderWidth(startSide) +
+    GetCoord(styleMargin->mMargin.Get(startSide, tmp), 0);
+
+  for (nsInlineFrame *nif = this; nif;
+       nif = (nsInlineFrame*) nif->mNextInFlow) {
+    for (nsIFrame *kid = nif->mFrames.FirstChild(); kid;
+         kid = kid->GetNextSibling()) {
+      if (aType == nsLayoutUtils::MIN_WIDTH)
+        kid->AddInlineMinWidth(aRenderingContext,
+                               NS_STATIC_CAST(InlineMinWidthData*, aData));
+      else
+        kid->AddInlinePrefWidth(aRenderingContext,
+                                NS_STATIC_CAST(InlinePrefWidthData*, aData));
+    }
+  }
+
+  aData->currentLine +=
+    GetCoord(stylePadding->mPadding.Get(endSide, tmp), 0) +
+    styleBorder->GetBorderWidth(endSide) +
+    GetCoord(styleMargin->mMargin.Get(endSide, tmp), 0);
+}
+
+/* virtual */ void
+nsInlineFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
+                                 nsIFrame::InlineMinWidthData *aData)
+{
+  DoInlineIntrinsicWidth(aRenderingContext, aData, nsLayoutUtils::MIN_WIDTH);
+}
+
+/* virtual */ void
+nsInlineFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
+                                  nsIFrame::InlinePrefWidthData *aData)
+{
+  DoInlineIntrinsicWidth(aRenderingContext, aData, nsLayoutUtils::PREF_WIDTH);
+}
+
 NS_IMETHODIMP
 nsInlineFrame::Reflow(nsPresContext*          aPresContext,
                       nsHTMLReflowMetrics&     aMetrics,
                       const nsHTMLReflowState& aReflowState,
                       nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsInlineFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsInlineFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aMetrics, aStatus);
   if (nsnull == aReflowState.mLineLayout) {
     return NS_ERROR_INVALID_ARG;
@@ -322,7 +395,7 @@ nsInlineFrame::Reflow(nsPresContext*          aPresContext,
       nsHTMLContainerFrame::ReparentFrameViewList(aPresContext, prevOverflowFrames,
                                                   prevInFlow, this);
 
-      if (aReflowState.reason == eReflowReason_Initial) {
+      if (GetStateBits() & NS_FRAME_FIRST_REFLOW) {
         // If it's the initial reflow, then our child list must be empty, so
         // just set the child list rather than calling InsertFrame(). This avoids
         // having to get the last child frame in the list.
@@ -343,7 +416,7 @@ nsInlineFrame::Reflow(nsPresContext*          aPresContext,
 
   // It's also possible that we have an overflow list for ourselves
 #ifdef DEBUG
-  if (aReflowState.reason == eReflowReason_Initial) {
+  if (GetStateBits() & NS_FRAME_FIRST_REFLOW) {
     // If it's our initial reflow, then we should not have an overflow list.
     // However, add an assertion in case we get reflowed more than once with
     // the initial reflow reason
@@ -351,7 +424,7 @@ nsInlineFrame::Reflow(nsPresContext*          aPresContext,
     NS_ASSERTION(!overflowFrames, "overflow list is not empty for initial reflow");
   }
 #endif
-  if (aReflowState.reason != eReflowReason_Initial) {
+  if (!(GetStateBits() & NS_FRAME_FIRST_REFLOW)) {
     nsIFrame* overflowFrames = GetOverflowFrames(aPresContext, PR_TRUE);
     if (overflowFrames) {
       NS_ASSERTION(mFrames.NotEmpty(), "overflow list w/o frames");
@@ -407,30 +480,6 @@ nsInlineFrame::CanContinueTextRun(PRBool& aContinueTextRun) const
 {
   // We can continue a text run through an inline frame
   aContinueTextRun = PR_TRUE;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsInlineFrame::ReflowDirtyChild(nsIPresShell* aPresShell, nsIFrame* aChild)
-{
-  // The inline container frame does not handle the reflow
-  // request.  It passes it up to its parent container.
-
-  // If you don't already have dirty children,
-  if (!(mState & NS_FRAME_HAS_DIRTY_CHILDREN)) {
-    if (mParent) {
-      // Record that you are dirty and have dirty children
-      mState |= NS_FRAME_IS_DIRTY;
-      mState |= NS_FRAME_HAS_DIRTY_CHILDREN; 
-
-      // Pass the reflow request up to the parent
-      mParent->ReflowDirtyChild(aPresShell, this);
-    }
-    else {
-      NS_ERROR("No parent to pass the reflow request up to.");
-    }
-  }
-
   return NS_OK;
 }
 
@@ -541,8 +590,7 @@ nsInlineFrame::ReflowFrames(nsPresContext* aPresContext,
   // that are empty we force to empty so that things like collapsed
   // whitespace in an inline element don't affect the line-height.
   nsSize size;
-  lineLayout->EndSpan(this, size,
-                    aMetrics.mComputeMEW ? &aMetrics.mMaxElementWidth : nsnull);
+  lineLayout->EndSpan(this, size);
   if ((0 == size.height) && (0 == size.width) &&
       ((nsnull != mPrevInFlow) || (nsnull != mNextInFlow))) {
     // This is a continuation of a previous inline. Therefore make
@@ -551,9 +599,6 @@ nsInlineFrame::ReflowFrames(nsPresContext* aPresContext,
     aMetrics.height = 0;
     aMetrics.ascent = 0;
     aMetrics.descent = 0;
-    if (aMetrics.mComputeMEW) {
-      aMetrics.mMaxElementWidth = 0;
-    }
   }
   else {
     // Compute final width
@@ -601,9 +646,6 @@ nsInlineFrame::ReflowFrames(nsPresContext* aPresContext,
   ListTag(stdout);
   printf(": metrics=%d,%d ascent=%d descent=%d\n",
          aMetrics.width, aMetrics.height, aMetrics.ascent, aMetrics.descent);
-  if (aMetrics.mComputeMEW) {
-    printf(" maxElementWidth %d\n", aMetrics.mMaxElementWidth);
-  }
 #endif
 
   return rv;
@@ -789,6 +831,11 @@ nsInlineFrame::PushFrames(nsPresContext* aPresContext,
 PRIntn
 nsInlineFrame::GetSkipSides() const
 {
+  // XXX This is wrong for RTL (see bug 299063).  (Bidi cases will be
+  // fun, even once we fix bug 299065 and split inlines into multiple
+  // continuations.)
+  // DoInlineIntrinsicWidth needs to be fixed as well (and they should
+  // be fixed at the same time).
   PRIntn skip = 0;
   if (nsnull != mPrevInFlow) {
     nsInlineFrame* prev = (nsInlineFrame*) mPrevInFlow;
@@ -1151,20 +1198,13 @@ nsPositionedInlineFrame::Reflow(nsPresContext*          aPresContext,
     nscoord containingBlockHeight =
       aDesiredSize.height - computedBorder.TopBottom();
 
-    // Do any incremental reflows ... would be nice to merge with
-    // the reflows below but that would be more work, and more risky
-    if (eReflowReason_Incremental == aReflowState.reason) {
-      mAbsoluteContainer.IncrementalReflow(this, aPresContext, aReflowState,
-                                           containingBlockWidth,
-                                           containingBlockHeight);
-    }
-
     // Factor the absolutely positioned child bounds into the overflow area
     // Don't include this frame's bounds, nor its inline descendants' bounds,
     // and don't store the overflow property.
     // That will all be done by nsLineLayout::RelativePositionFrames.
     rv = mAbsoluteContainer.Reflow(this, aPresContext, aReflowState,
                                    containingBlockWidth, containingBlockHeight,
+                                   PR_TRUE, PR_TRUE, // XXX could be optimized
                                    &aDesiredSize.mOverflowArea);
   }
 

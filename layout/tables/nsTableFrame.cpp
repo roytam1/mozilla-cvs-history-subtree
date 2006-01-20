@@ -63,7 +63,6 @@
 #include "nsIView.h"
 #include "nsHTMLAtoms.h"
 #include "nsCSSAnonBoxes.h"
-#include "nsHTMLReflowCommand.h"
 #include "nsLayoutAtoms.h"
 #include "nsIDeviceContext.h"
 #include "nsIPresShell.h"
@@ -71,7 +70,6 @@
 #include "nsIDOMHTMLElement.h"
 #include "nsIDOMHTMLBodyElement.h"
 #include "nsIScrollableFrame.h"
-#include "nsHTMLReflowCommand.h"
 #include "nsFrameManager.h"
 #include "nsCSSRendering.h"
 #include "nsLayoutErrors.h"
@@ -346,8 +344,7 @@ nsTableFrame::AppendDirtyReflowCommand(nsIFrame* aFrame)
 {
   aFrame->AddStateBits(NS_FRAME_IS_DIRTY);  // mark the table frame as dirty
 
-  return aFrame->GetPresContext()->PresShell()->
-          AppendReflowCommand(aFrame, eReflowType_ReflowDirty, nsnull);
+  return aPresShell->FrameNeedsReflow(aFrame, nsIPresShell::eStyleChange);
 }
 
 // Make sure any views are positioned properly
