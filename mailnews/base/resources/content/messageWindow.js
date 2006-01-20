@@ -370,7 +370,7 @@ function CreateView(originalView)
   }
   else
   {
-    viewType = nsMsgViewType.eSearch;
+    viewType = nsMsgViewType.eShowSearch;
   }
 
   // create a db view
