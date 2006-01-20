@@ -283,7 +283,6 @@
     <command id="cmd_markAsJunk" oncommand="goDoCommand('cmd_markAsJunk'); event.preventBubble()" disabled="true"/>
     <command id="cmd_markAsNotJunk" oncommand="goDoCommand('cmd_markAsNotJunk'); event.preventBubble()" disabled="true"/>
     <command id="cmd_recalculateJunkScore" oncommand="goDoCommand('cmd_recalculateJunkScore');" disabled="true"/>
-    <command id="cmd_markAsShowRemote" oncommand="goDoCommand('cmd_markAsShowRemote'); event.preventBubble()" disabled="true"/>
     <command id="cmd_markAsNotPhish" oncommand="goDoCommand('cmd_markAsNotPhish'); event.preventBubble()" disabled="true"/>
 </commandset>
 
@@ -333,8 +332,6 @@
   <key id="key_toggleFlagged" key="&markFlaggedCmd.key;"             oncommand="goDoCommand('cmd_markAsFlagged');"/>
   <key id="key_markJunk" key="&markAsJunkCmd.key;"                   oncommand="goDoCommand('cmd_markAsJunk');"/>
   <key id="key_markNotJunk" key="&markAsNotJunkCmd.key;"             oncommand="goDoCommand('cmd_markAsNotJunk');"
-       modifiers="shift"/>
-  <key id="key_markShowRemote" key="&markAsShowRemoteCmd.key;"       oncommand="goDoCommand('cmd_markAsShowRemote');"
        modifiers="shift"/>
   <key id="key_markNotPhish" key="&markAsNotPhishCmd.key;"           oncommand="goDoCommand('cmd_markAsNotPhish');"
        modifiers="shift"/>
@@ -645,9 +642,6 @@
         <menuitem label="&recalculateJunkScoreCmd.label;"
                   accesskey="&recalculateJunkScoreCmd.accesskey;"
                   command="cmd_recalculateJunkScore"/>
-        <menuitem label="&markAsShowRemoteCmd.label;"
-                  accesskey="&markAsShowRemoteCmd.accesskey;"
-                  command="cmd_markAsShowRemote"/>
         <menuitem label="&markAsNotPhishCmd.label;"
                   accesskey="&markAsNotPhishCmd.accesskey;"
                   command="cmd_markAsNotPhish"/>
@@ -995,9 +989,6 @@
         <menuitem label="&recalculateJunkScoreCmd.label;"
                   accesskey="&recalculateJunkScoreCmd.accesskey;"
                   command="cmd_recalculateJunkScore"/>
-        <menuitem label="&markAsShowRemoteCmd.label;"
-                  accesskey="&markAsShowRemoteCmd.accesskey;"
-                  command="cmd_markAsShowRemote"/>
         <menuitem label="&markAsNotPhishCmd.label;"
                   accesskey="&markAsNotPhishCmd.accesskey;"
                   command="cmd_markAsNotPhish"/>
@@ -1645,10 +1636,6 @@
         <menuitem label="&recalculateJunkScoreCmd.label;"
                   accesskey="&recalculateJunkScoreCmd.accesskey;"
                   command="cmd_recalculateJunkScore"/>
-        <menuitem id="markAsShowRemoteMenuitem"
-                  label="&markAsShowRemoteCmd.label;"
-                  accesskey="&markAsShowRemoteCmd.accesskey;"
-                  command="cmd_markAsShowRemote"/>
         <menuitem id="markAsNotPhishMenuItem"
                   label="&markAsNotPhishCmd.label;"
                   accesskey="&markAsNotPhishCmd.accesskey;"
