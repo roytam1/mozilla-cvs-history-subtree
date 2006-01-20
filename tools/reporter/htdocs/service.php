@@ -41,6 +41,9 @@ require_once($config['base_path'].'/includes/iolib.inc.php');
 require_once($config['base_path'].'/includes/contrib/adodb/adodb.inc.php');
 require_once($config['base_path'].'/includes/contrib/nusoap/lib/nusoap.php');
 
+// Turn off Error Reporting
+error_reporting(0);
+
 // Create the server instance
 $server = new soap_server;
 
