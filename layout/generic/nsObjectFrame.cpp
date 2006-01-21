@@ -617,32 +617,18 @@ nsObjectFrame::CreateWidget(nscoord aWidth,
 /* virtual */ nscoord
 nsObjectFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
-  // XXX Add DISPLAY_MIN_WIDTH(this, result) after merging.
+  nscoord result = 0;
 
-  if (IsHidden(PR_FALSE))
-    return 0;
-
-  nsIFrame * child = mFrames.FirstChild();
-  if (IsBroken() && !child) {
-    nsHTMLReflowMetrics metrics;
-    nsHTMLReflowState rs(GetPresContext(), this, aRenderingContext,
-                         nsSize(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE));
-    CreateDefaultFrames(GetPresContext(), metrics, rs);
-    child = mFrames.FirstChild();
-
-    // XXX SizeAnchor stuff
+  if (!IsHidden(PR_FALSE)) {
+    nsIAtom *atom = mContent->Tag();
+    if (atom == nsHTMLAtoms::applet || atom == nsHTMLAtoms::embed) {
+      float p2t = GetPresContext()->ScaledPixelsToTwips();
+      result = NSIntPixelsToTwips(EMBED_DEF_WIDTH, p2t);
+    }
   }
 
-  if (child)
-    return child->GetMinWidth(aRenderingContext);
-  
-  nsIAtom *atom = mContent->Tag();
-  if (atom == nsHTMLAtoms::applet || atom == nsHTMLAtoms::embed) {
-    float p2t = GetPresContext()->ScaledPixelsToTwips();
-    return NSIntPixelsToTwips(EMBED_DEF_WIDTH, p2t);
-  }
-
-  return 0;
+  DISPLAY_MIN_WIDTH(this, result);
+  return result;
 }
 
 /* virtual */ nscoord
