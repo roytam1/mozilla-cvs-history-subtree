@@ -5900,7 +5900,7 @@ nsTextFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
   nsresult rv;
 
   nsPresContext *presContext = GetPresContext();
-  TextStyle ts(presContext, *aRenderingContext, mStyleContext);
+  nsTextStyle ts(presContext, *aRenderingContext, mStyleContext);
   if (!ts.mFont->mSize)
     // XXX If font size is zero, we still need to figure out whether we've
     // got non-whitespace text and whether we end in whitespace.
@@ -5990,7 +5990,7 @@ nsTextFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
   nsresult rv;
 
   nsPresContext *presContext = GetPresContext();
-  TextStyle ts(presContext, *aRenderingContext, mStyleContext);
+  nsTextStyle ts(presContext, *aRenderingContext, mStyleContext);
   if (!ts.mFont->mSize)
     // XXX If font size is zero, we still need to figure out whether we've
     // got non-whitespace text and whether we end in whitespace.

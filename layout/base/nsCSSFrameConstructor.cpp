@@ -3355,6 +3355,7 @@ nsCSSFrameConstructor::GetParentFrame(nsTableCreator&          aTableCreator,
 
   return rv;
 }
+#endif
 
 static PRBool
 IsSpecialContent(nsIContent*     aContent,
@@ -3515,6 +3516,7 @@ IsSpecialContent(nsIContent*     aContent,
   return PR_FALSE;
 }
                                       
+#ifdef CSS_TABLES
 nsresult
 nsCSSFrameConstructor::AdjustParentFrame(nsFrameConstructorState&     aState,
                                          nsIContent*                  aChildContent,
@@ -7161,12 +7163,14 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsFrameConstructorState& aSta
         ProcessPseudoFrames(aState, aFrameItems); 
       }
       // Create the inline frame
-      rv = NS_NewInlineFrame(mPresShell, &newFrame);
-      if (NS_SUCCEEDED(rv)) { // That worked so construct the inline and its children
+      newFrame = NS_NewInlineFrame(mPresShell);
+      if (newFrame) { // That worked so construct the inline and its children
         // Note that we want to insert the inline after processing kids, since
         // processing of kids may split the inline.
         rv = ConstructInline(aState, aDisplay, aContent,
                              aParentFrame, aStyleContext, PR_FALSE, newFrame);
+      } else {
+        rv = NS_ERROR_OUT_OF_MEMORY;
       }
 
       // To keep the hash table small don't add inline frames (they're
@@ -9215,7 +9219,11 @@ nsCSSFrameConstructor::NeedSpecialFrameReframe(nsIContent*     aParent1,
     nsRefPtr<nsStyleContext> styleContext;
     styleContext = ResolveStyleContext(aParentFrame, aChild);
     const nsStyleDisplay* display = styleContext->GetStyleDisplay();
-    childIsBlock = display->IsBlockLevel() || IsTableRelated(display->mDisplay, PR_TRUE);
+    childIsBlock = display->IsBlockLevel()
+#ifdef CSS_TABLES
+      || IsTableRelated(display->mDisplay, PR_TRUE)
+#endif
+      ;
   }
   nsIFrame* prevParent; // parent of prev sibling
   nsIFrame* nextParent; // parent of next sibling

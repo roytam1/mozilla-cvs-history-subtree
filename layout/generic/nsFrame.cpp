@@ -5034,10 +5034,6 @@ nsFrame::RefreshSizeCache(nsBoxLayoutState& aState)
     metrics->mBlockPrefSize.width = GetPrefWidth(rendContext) + bp.LeftRight();
     metrics->mBlockMinSize.width = GetMinWidth(rendContext) + bp.LeftRight();
 
-    // a line layout from outside the box shouldn't be used for inline
-    // frames inside the box
-    childReflowState.mLineLayout = nsnull;
-
     // do the nasty.
     nsHTMLReflowMetrics desiredSize;
     rv = BoxReflow(aState, presContext, desiredSize, rendContext,

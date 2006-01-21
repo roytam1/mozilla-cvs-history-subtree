@@ -412,7 +412,7 @@ nsAbsoluteContainingBlock::ReflowAbsoluteFrame(nsIFrame*                aDelegat
   // if the frame moved, then the view would have invalidated everything so
   // we don't need to do any invalidation here.
   if (oldRect.TopLeft() == rect.TopLeft() &&
-      aReason != eReflowReason_Initial &&
+      !(aDelegatingFrame->GetStateBits() & NS_FRAME_FIRST_REFLOW) &&
       oldRect.Size() != rect.Size()) {
     // Invalidate the area where the frame changed size. We can't
     // rely on the view to do this ... the view size might not change even
