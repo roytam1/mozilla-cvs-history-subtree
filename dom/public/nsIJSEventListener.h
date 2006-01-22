@@ -90,7 +90,7 @@ public:
 #endif
 
 protected:
-  virtual nsIJSEventListener::~nsIJSEventListener()
+  virtual ~nsIJSEventListener()
   {
 #ifdef NS_DEBUG
     PR_AtomicDecrement(&sNumJSEventListeners);
