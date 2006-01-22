@@ -160,7 +160,7 @@
 <!ENTITY showSearchToolbarCmd.label		"Search Bar">
 <!ENTITY showSearchToolbarCmd.accesskey	"e">
 
-<!ENTITY showLocationToolbarCmd.label		".Location Toolbar">
+<!ENTITY showLocationToolbarCmd.label "Location Toolbar">
 <!ENTITY showLocationToolbarCmd.accesskey "L">
 
 <!ENTITY messagePaneLayoutStyle.label "Layout">
