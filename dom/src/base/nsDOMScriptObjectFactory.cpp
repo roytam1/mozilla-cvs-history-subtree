@@ -115,9 +115,9 @@ NS_IMPL_RELEASE(nsDOMScriptObjectFactory)
  *
  *  The most common case is that languages are looked up by ID.  For this
  *  reason, we keep an array of languages indexed by this ID - the registry
- *  is only looked the first request for a language.
+ *  is only looked the first request for a language ID.
  *  
- *  The registry is looked up and getService called for each query by ID.
+ *  The registry is looked up and getService called for each query by name.
  *  (As services are cached by CID, multiple contractIDs will still work
  *  correctly)
  **/
@@ -131,7 +131,7 @@ nsDOMScriptObjectFactory::GetLanguageRuntime(const nsAString &aLanguageName,
   // One exception is for the new "script-type" attribute on a node - and
   // there is no need to support backwards compatible names.
   // As JS is the default language, this is still rarely called for JS -
-  // only when a node explicitly sets JS) - so that is done last.
+  // only when a node explicitly sets JS - so that is done last.
   nsCAutoString contractid(NS_LITERAL_CSTRING(
                           "@mozilla.org/script-language;1?script-type="));
   // Arbitrarily use utf8 encoding should the name have extended chars
