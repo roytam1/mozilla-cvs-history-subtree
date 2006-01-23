@@ -6865,6 +6865,12 @@ if test "$ACCESSIBILITY" -a "$MOZ_ENABLE_GTK2" ; then
     AC_DEFINE(MOZ_ACCESSIBILITY_ATK)
 fi
 
+# Define MOZILLA_1_8_BRANCH on the branch for code that is kept in sync
+# between branch and trunk.
+AC_DEFINE(MOZILLA_1_8_BRANCH)
+MOZILLA_1_8_BRANCH=1
+AC_SUBST(MOZILLA_1_8_BRANCH)
+
 # Used for LD_LIBRARY_PATH of run_viewer target
 LIBS_PATH=
 for lib_arg in $NSPR_LIBS $TK_LIBS; do
