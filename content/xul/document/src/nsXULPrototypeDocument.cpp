@@ -878,7 +878,6 @@ nsXULPDGlobalObject::EnsureScriptEnvironment(PRUint32 lang_id)
       // Add an owning reference from JS back to us. This'll be
       // released when the JSObject is finalized.
       ::JS_SetPrivate(cx, newGlob, this);
-      // What is this addref for?
       NS_ADDREF(this);
     }
 
