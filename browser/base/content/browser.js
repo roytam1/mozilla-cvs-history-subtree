@@ -140,10 +140,12 @@ function pageShowEventHandlers(event)
     targetBrowser = gBrowser.mCurrentBrowser;
   }
 
+#ifndef MOZ_PLACES
   // update the last visited date
   if (targetBrowser.currentURI.spec)
     BMSVC.updateLastVisitedDate(targetBrowser.currentURI.spec,
                                 targetBrowser.contentDocument.characterSet);
+#endif
 }
 
 /**
@@ -812,7 +814,9 @@ function delayedStartup()
 
   // loads the services
   initServices();
+#ifndef MOZ_PLACES
   initBMService();
+#endif
   gBrowser.addEventListener("pageshow", function(evt) { setTimeout(pageShowEventHandlers, 0, evt); }, true);
 
   window.addEventListener("keypress", ctrlNumberTabSelection, false);
@@ -828,6 +832,7 @@ function delayedStartup()
   // add bookmark options to context menu for tabs
   addBookmarkMenuitems();
   // now load bookmarks
+#ifndef MOZ_PLACES
   BMSVC.readBookmarks();
   var bt = document.getElementById("bookmarks-ptf");
   if (bt) {
@@ -836,9 +841,12 @@ function delayedStartup()
     document.getElementById("bookmarks-chevron").ref = btf;
     bt.database.AddObserver(BookmarksToolbarRDFObserver);
   }
+#endif
   window.addEventListener("resize", BookmarksToolbar.resizeFunc, false);
+#ifndef MOZ_PLACES
   document.getElementById("PersonalToolbar")
           .controllers.appendController(BookmarksMenuController);
+#endif
 
   // called when we go into full screen, even if it is
   // initiated by a web page script
@@ -1062,7 +1070,9 @@ function nonBrowserWindowDelayedStartup()
 {
   // loads the services
   initServices();
+#ifndef MOZ_PLACES
   initBMService();
+#endif
 
   // init global pref service
   gPrefService = Components.classes["@mozilla.org/preferences-service;1"]
@@ -2194,6 +2204,17 @@ function SetPageProxyState(aState)
 
 function PageProxySetIcon (aURL)
 {
+#ifdef MOZ_PLACES
+  // Save this favicon in the favicon service
+  if (aURL) {
+    var faviconService = Components.classes["@mozilla.org/browser/favicon-service;1"].
+      getService(Components.interfaces.nsIFaviconService);
+    var uri = Components.classes["@mozilla.org/network/io-service;1"]
+        .getService(Components.interfaces.nsIIOService).newURI(aURL, null, null);
+    faviconService.setAndLoadFaviconForPage(gBrowser.currentURI, uri, false);
+  }
+#endif
+
   if (!gProxyFavIcon)
     return;
 
@@ -3062,6 +3083,7 @@ function BrowserToolboxCustomizeDone(aToolboxChanged)
   // fix up the personal toolbar folder
   var bt = document.getElementById("bookmarks-ptf");
   if (bt) {
+#ifndef MOZ_PLACES
     var btf = BMSVC.getBookmarksToolbarFolder().Value;
     var btchevron = document.getElementById("bookmarks-chevron");
     bt.ref = btf;
@@ -3075,6 +3097,7 @@ function BrowserToolboxCustomizeDone(aToolboxChanged)
     bt.database.AddObserver(BookmarksToolbarRDFObserver);
     bt.builder.rebuild();
     btchevron.builder.rebuild();
+#endif
 
     // fake a resize; this function takes care of flowing bookmarks
     // from the bar to the overflow item
