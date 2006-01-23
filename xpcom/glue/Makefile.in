@@ -75,6 +75,7 @@ EXPORTS		= \
 		nsInterfaceHashtable.h \
 		nsRefPtrHashtable.h \
 		nsTHashtable.h \
+		nsTArray.h \
 		$(NULL)
 
 SDK_HEADERS     = \

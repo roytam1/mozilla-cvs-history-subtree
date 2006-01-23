@@ -58,6 +58,7 @@ CPPSRCS		= \
 		nsIFileEnumerator.cpp \
 		nsIFileTest.cpp \
 		TestArray.cpp \
+		TestTArray.cpp \
 		TestAtoms.cpp \
 		TestAutoLock.cpp \
 		TestCallTemplates.cpp \

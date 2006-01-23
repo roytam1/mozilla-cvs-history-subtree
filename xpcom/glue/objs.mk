@@ -53,6 +53,7 @@ XPCOM_GLUE_SRC_LCPPSRCS =        \
   nsGREGlue.cpp                  \
   nsVersionComparator.cpp        \
   nsTHashtable.cpp               \
+  nsTArray.cpp                   \
   $(NULL)
 
 XPCOM_GLUE_SRC_CPPSRCS = $(addprefix $(topsrcdir)/xpcom/glue/, $(XPCOM_GLUE_SRC_LCPPSRCS))
