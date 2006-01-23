@@ -58,6 +58,7 @@ REQUIRES =	xpcom \
 
 CPPSRCS = nsAutoCompleteController.cpp \
           nsAutoCompleteMdbResult.cpp \
+          nsAutoCompleteSimpleResult.cpp \
           $(NULL)
 
 include $(topsrcdir)/config/rules.mk

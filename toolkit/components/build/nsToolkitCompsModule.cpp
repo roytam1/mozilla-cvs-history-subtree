@@ -48,6 +48,7 @@
 #include "nsDocShellCID.h"
 #include "nsAutoCompleteController.h"
 #include "nsAutoCompleteMdbResult.h"
+#include "nsAutoCompleteSimpleResult.h"
 #ifdef MOZ_XPINSTALL
 #include "nsDownloadManager.h"
 #include "nsDownloadProxy.h"
@@ -72,6 +73,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsAlertsService)
 #ifndef MOZ_THUNDERBIRD
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAutoCompleteController)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAutoCompleteMdbResult)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsAutoCompleteSimpleResult)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsTypeAheadFind)
 NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(nsFormHistory, nsFormHistory::GetInstance)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsFormFillController)
@@ -119,6 +121,11 @@ static const nsModuleComponentInfo components[] =
     NS_AUTOCOMPLETECONTROLLER_CID, 
     NS_AUTOCOMPLETECONTROLLER_CONTRACTID,
     nsAutoCompleteControllerConstructor },
+
+  { "AutoComplete Simple Result",
+    NS_AUTOCOMPLETESIMPLERESULT_CID,
+    NS_AUTOCOMPLETESIMPLERESULT_CONTRACTID,
+    nsAutoCompleteSimpleResultConstructor },
 
   { "AutoComplete Mdb Result",
     NS_AUTOCOMPLETEMDBRESULT_CID, 
