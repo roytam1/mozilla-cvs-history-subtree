@@ -36,15 +36,19 @@ dump("Window location is %s", this.window.location.href)
     }
   </script>
 
+  <!-- This commandset drags in commands from our overlays, each
+       implemented in different languages
+  -->
   <commandset id="cmdset">
+    <!-- and one define inline -->
     <command id="menu-file-close:command"
              oncommand="print 'Python closing the window';window.close()"/>
   </commandset>
 
-  <!-- explicitly reset the keyset to JS - just to check that the command
-       itself, which is Python, works correctly
+  <!-- this keyset and menu reference commands implemented in multiple
+       languages
   -->
-  <keyset id="mainkeys" script-type="application/javascript">
+  <keyset id="mainkeys">
     <key
        id        =  "menu-file-close:key"
        key       =  "q"
