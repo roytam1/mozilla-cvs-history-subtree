@@ -191,3 +191,8 @@ components/talkback/master.ini
 components/talkback/talkback
 components/talkback/talkback.so
 components/talkback/XTalkback.ad
+HSAPI.dll
+CondMgr.dll
+mozABConduit.dll
+components/palmsync.dll
+components/palmSync.xpt
