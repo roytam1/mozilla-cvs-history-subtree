@@ -49,7 +49,7 @@
 
 class nsIScriptContext;
 class nsIScriptGlobalObject;
-class nsILanguageRuntime;
+class nsIScriptRuntime;
 class nsIDOMEventListener;
 
 class nsIDOMScriptObjectFactory : public nsISupports {
@@ -61,21 +61,21 @@ public:
   // use the name "application/javascript" (but also note that all existing
   // callers of this function optimize the detection of JS, so do not
   // ask this function for JS)
-  NS_IMETHOD GetLanguageRuntime(const nsAString &aLanguageName,
-                                nsILanguageRuntime **aLanguage) = 0;
+  NS_IMETHOD GetScriptRuntime(const nsAString &aLanguageName,
+                              nsIScriptRuntime **aLanguage) = 0;
 
   // Get a script language given its nsIProgrammingLanguage ID.  Note that for
   // languages other than javascript, if the language has not previosly been
   // loaded by name, the factory will instantiate *all* registered
-  // nsILanguageRuntime components to match the ID (we have no way of mapping
+  // nsIScriptRuntime components to match the ID (we have no way of mapping
   // language IDs directly to contract IDs at the moment.)
-  NS_IMETHOD GetLanguageRuntimeByID(PRUint32 aLanguageID, 
-                                    nsILanguageRuntime **aLanguage) = 0;
+  NS_IMETHOD GetScriptRuntimeByID(PRUint32 aScriptTypeID, 
+                                  nsIScriptRuntime **aLanguage) = 0;
 
-  // Get the ID for a language given its name - but like GetLanguageRuntime,
+  // Get the ID for a language given its name - but like GetScriptRuntime,
   // only "application/javascript" is currently supported for JS.
-  NS_IMETHOD GetIDForLanguage(const nsAString &aLanguageName,
-                              PRUint32 *aLanguageID) = 0;
+  NS_IMETHOD GetIDForScriptType(const nsAString &aLanguageName,
+                                PRUint32 *aScriptTypeID) = 0;
 
   NS_IMETHOD NewScriptGlobalObject(PRBool aIsChrome,
                                    nsIScriptGlobalObject **aGlobal) = 0;
@@ -98,10 +98,10 @@ public:
 };
 
 /* helper functions */
-nsresult NS_GetLanguageRuntime(const nsAString &aLanguageName,
-                               nsILanguageRuntime **aLanguage);
+nsresult NS_GetScriptRuntime(const nsAString &aScriptType,
+                             nsIScriptRuntime **aLanguage);
 
-nsresult NS_GetLanguageRuntimeByID(PRUint32 aLanguageID,
-                                   nsILanguageRuntime **aLanguage);
+nsresult NS_GetScriptRuntimeByID(PRUint32 aScriptTypeID,
+                                 nsIScriptRuntime **aLanguage);
 
 #endif /* nsIDOMScriptObjectFactory_h__ */

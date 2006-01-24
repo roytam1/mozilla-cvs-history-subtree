@@ -75,10 +75,10 @@ public:
   }
   virtual nsIArray *GetArgv();
 
-  virtual PRUint32 GetLanguageID() {
+  virtual PRUint32 GetScriptTypeID() {
         return nsIProgrammingLanguage::PYTHON;
   }
-  virtual PRUint32 GetLanguageVersion() {
+  virtual PRUint32 GetScriptVersion() {
         return 0;
   }
 

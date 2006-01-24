@@ -108,7 +108,7 @@
 #include "nsIRDFNode.h"
 #include "nsIRDFService.h"
 #include "nsIScriptContext.h"
-#include "nsILanguageRuntime.h"
+#include "nsIScriptRuntime.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptGlobalObjectOwner.h"
 #include "nsIServiceManager.h"
@@ -716,7 +716,7 @@ nsXULElement::CompileEventHandler(nsIScriptContext* aContext,
         nsIScriptGlobalObject* global = globalOwner->GetScriptGlobalObject();
         NS_ENSURE_TRUE(global, NS_ERROR_UNEXPECTED);
 
-        context = global->GetLanguageContext(aContext->GetLanguage());
+        context = global->GetScriptContext(aContext->GetScriptTypeID());
         // It could be possible the language has been setup on aContext but
         // not on the global - we don't demand-create language contexts on the
         // nsGlobalWindow
@@ -2940,7 +2940,7 @@ nsXULPrototypeElement::Serialize(nsIObjectOutputStream* aStream,
             rv |= aStream->Write32(child->mType);
             nsXULPrototypeScript* script = NS_STATIC_CAST(nsXULPrototypeScript*, child);
 
-            rv |= aStream->Write32(script->mScriptObject.getLanguage());
+            rv |= aStream->Write32(script->mScriptObject.getScriptTypeID());
 
             rv |= aStream->Write8(script->mOutOfLine);
             if (! script->mOutOfLine) {
@@ -3168,8 +3168,8 @@ nsXULPrototypeScript::Serialize(nsIObjectOutputStream* aStream,
                                 nsIScriptGlobalObject* aGlobal,
                                 const nsCOMArray<nsINodeInfo> *aNodeInfos)
 {
-    nsIScriptContext *context = aGlobal->GetLanguageContext(
-                                                mScriptObject.getLanguage());
+    nsIScriptContext *context = aGlobal->GetScriptContext(
+                                        mScriptObject.getScriptTypeID());
     NS_ASSERTION(!mSrcLoading || mSrcLoadWaiters != nsnull || !mScriptObject,
                  "script source still loading when serializing?!");
     if (!mScriptObject)
@@ -3270,8 +3270,8 @@ nsXULPrototypeScript::Deserialize(nsIObjectInputStream* aStream,
     aStream->Read32(&mLineNo);
     aStream->Read32(&mLangVersion);
 
-    nsIScriptContext *context = aGlobal->GetLanguageContext(
-                                                    mScriptObject.getLanguage());
+    nsIScriptContext *context = aGlobal->GetScriptContext(
+                                            mScriptObject.getScriptTypeID());
     NS_ASSERTION(context != nsnull, "Have no context for deserialization");
     nsScriptObjectHolder newScriptObject(context);
     rv = context->Deserialize(aStream, newScriptObject);
@@ -3330,7 +3330,7 @@ nsXULPrototypeScript::DeserializeOutOfLine(nsIObjectInputStream* aInput,
                     // ctor and not setting it until the scriptObject is set -
                     // code that pre-fetches these globals will then start
                     // asserting.)
-                    if (mScriptObject.getLanguage() != newLangID) {
+                    if (mScriptObject.getScriptTypeID() != newLangID) {
                         NS_ERROR("XUL cache gave different language?");
                         return NS_ERROR_UNEXPECTED;
                     }
@@ -3386,7 +3386,8 @@ nsXULPrototypeScript::DeserializeOutOfLine(nsIObjectInputStream* aInput,
                     PRBool isChrome = PR_FALSE;
                     mSrcURI->SchemeIs("chrome", &isChrome);
                     if (isChrome) {
-                        cache->PutScript(mSrcURI, mScriptObject.getLanguage(),
+                        cache->PutScript(mSrcURI,
+                                         mScriptObject.getScriptTypeID(),
                                          mScriptObject);
                     }
                 }
@@ -3435,7 +3436,7 @@ nsXULPrototypeScript::Compile(const PRUnichar* aText,
         if (! global)
             return NS_ERROR_UNEXPECTED;
 
-        context = global->GetLanguageContext(mScriptObject.getLanguage());
+        context = global->GetScriptContext(mScriptObject.getScriptTypeID());
         NS_ASSERTION(context != nsnull, "no context for script global");
         if (! context)
             return NS_ERROR_UNEXPECTED;

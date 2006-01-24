@@ -68,7 +68,7 @@
 #include "nsIJSEventListener.h"
 #include "prmem.h"
 #include "nsIScriptGlobalObject.h"
-#include "nsILanguageRuntime.h"
+#include "nsIScriptRuntime.h"
 #include "nsLayoutAtoms.h"
 #include "nsLayoutUtils.h"
 #ifdef MOZ_XUL
@@ -1260,7 +1260,7 @@ nsEventListenerManager::AddScriptEventListener(nsISupports *aObject,
         // but fall through and let the inevitable failure below handle it.
       }
 
-      context = global->GetLanguageContext(aLanguage);
+      context = global->GetScriptContext(aLanguage);
       NS_ASSERTION(context, "Failed to get language context from global");
     }
   } else {
@@ -1288,7 +1288,7 @@ nsEventListenerManager::AddScriptEventListener(nsISupports *aObject,
         NS_WARNING("Failed to setup script environment for this language");
         // but fall through and let the inevitable failure below handle it.
       }
-      context = global->GetLanguageContext(aLanguage);
+      context = global->GetScriptContext(aLanguage);
     }
   }
 
@@ -1319,7 +1319,7 @@ nsEventListenerManager::AddScriptEventListener(nsISupports *aObject,
 
     global = context->GetGlobalObject();
     // but if the language is *not* js , we now have the wrong context.
-    context = global->GetLanguageContext(aLanguage);
+    context = global->GetScriptContext(aLanguage);
     NS_ENSURE_TRUE(context, NS_ERROR_FAILURE);
   }
   if (!global) {
@@ -1329,7 +1329,7 @@ nsEventListenerManager::AddScriptEventListener(nsISupports *aObject,
     return NS_ERROR_NOT_AVAILABLE;
   }
 
-  void *scope = global->GetLanguageGlobal(aLanguage);
+  void *scope = global->GetScriptGlobal(aLanguage);
   nsresult rv;
 
   if (!aDeferCompilation) {
@@ -1457,7 +1457,7 @@ nsEventListenerManager::RegisterScriptEventListener(nsIScriptContext *aContext,
         STRING_TO_JSVAL(::JS_InternString(cx, "addEventListener"));
     }
 
-    if (aContext->GetLanguage() == nsIProgrammingLanguage::JAVASCRIPT) {
+    if (aContext->GetScriptTypeID() == nsIProgrammingLanguage::JAVASCRIPT) {
         nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
         rv = nsContentUtils::XPConnect()->
           WrapNative(cx, (JSObject *)aScope, aObject, NS_GET_IID(nsISupports),

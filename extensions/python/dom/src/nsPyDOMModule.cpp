@@ -98,7 +98,7 @@ PyObject *PyJSExec(PyObject *self, PyObject *args)
     if (scriptGlobal == nsnull)
         return PyErr_Format(PyExc_TypeError, "Object is not an nsIScriptGlobal");
     nsIScriptContext *scriptContext =
-           scriptGlobal->GetLanguageContext(nsIProgrammingLanguage::JAVASCRIPT);
+           scriptGlobal->GetScriptContext(nsIProgrammingLanguage::JAVASCRIPT);
     if (!scriptContext)
         return PyErr_Format(PyExc_RuntimeError, "No javascript context available");
 
@@ -111,7 +111,7 @@ PyObject *PyJSExec(PyObject *self, PyObject *args)
         return PyErr_Format(PyExc_RuntimeError, "No nsIPrincipal available");
 
     nsresult rv;
-    void *scope = scriptGlobal->GetLanguageGlobal(nsIProgrammingLanguage::JAVASCRIPT);
+    void *scope = scriptGlobal->GetScriptGlobal(nsIProgrammingLanguage::JAVASCRIPT);
     nsScriptObjectHolder scriptObject(scriptContext);
     JSContext *ctx = (JSContext *)scriptContext->GetNativeContext();
 
@@ -176,7 +176,7 @@ static PyObject *PyGetCurrentInnerWindow(PyObject *self, PyObject *args)
     nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(target));
     if (!sgo)
         return PyErr_Format(PyExc_ValueError, "Object does not supports nsIScriptGlobalObject");
-    nsIScriptContext *ctx = sgo->GetLanguageContext(nsIProgrammingLanguage::PYTHON);
+    nsIScriptContext *ctx = sgo->GetScriptContext(nsIProgrammingLanguage::PYTHON);
     if (!ctx)
         return PyErr_Format(PyExc_ValueError, "Object not initialized for Python");
 
@@ -346,7 +346,7 @@ static PyObject *PyRegisterScriptEventListener(PyObject *self, PyObject *args)
     if (scriptGlobal == nsnull)
         return PyErr_Format(PyExc_TypeError, "Object is not an nsIScriptGlobal");
     nsIScriptContext *scriptContext =
-           scriptGlobal->GetLanguageContext(nsIProgrammingLanguage::PYTHON);
+           scriptGlobal->GetScriptContext(nsIProgrammingLanguage::PYTHON);
     if (!scriptContext)
         return PyErr_Format(PyExc_RuntimeError, "Can't find my context??");
 
@@ -410,7 +410,7 @@ static PyObject *PyCompileScriptEventListener(PyObject *self, PyObject *args)
     if (scriptGlobal == nsnull)
         return PyErr_Format(PyExc_TypeError, "Object is not an nsIScriptGlobal");
     nsIScriptContext *scriptContext =
-           scriptGlobal->GetLanguageContext(nsIProgrammingLanguage::PYTHON);
+           scriptGlobal->GetScriptContext(nsIProgrammingLanguage::PYTHON);
     if (!scriptContext)
         return PyErr_Format(PyExc_RuntimeError, "Can't find my context??");
 

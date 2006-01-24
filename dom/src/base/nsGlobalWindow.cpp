@@ -140,7 +140,7 @@
 #include "nsIURIFixup.h"
 #include "nsCDefaultURIFixup.h"
 #include "nsArray.h"
-#include "nsILanguageRuntime.h"
+#include "nsIScriptRuntime.h"
 #include "nsJSEnvironment.h" // only for JSArgArray
 
 #include "plbase64.h"
@@ -306,7 +306,7 @@ nsGlobalWindow::nsGlobalWindow(nsGlobalWindow *aOuterWindow)
     mTimeoutFiringDepth(0),
     mJSObject(nsnull)
 {
-  memset(mLanguageGlobals, 0, sizeof(mLanguageGlobals));
+  memset(mScriptGlobals, 0, sizeof(mScriptGlobals));
   // Initialize the PRCList (this).
   PR_INIT_CLIST(this);
 
@@ -469,7 +469,7 @@ nsGlobalWindow::FreeInnerObjects(nsIScriptContext *scx)
   mDocument = nsnull;
 
   if (scx)
-    scx->ClearScope(mLanguageGlobals[NS_SL_INDEX(scx->GetLanguage())],
+    scx->ClearScope(mScriptGlobals[NS_STID_INDEX(scx->GetScriptTypeID())],
                          PR_TRUE);
 }
 
@@ -510,16 +510,16 @@ NS_IMPL_RELEASE(nsGlobalWindow)
 //*****************************************************************************
 
 nsresult
-nsGlobalWindow::SetLanguageContext(PRUint32 lang_id, nsIScriptContext *aScriptContext)
+nsGlobalWindow::SetScriptContext(PRUint32 lang_id, nsIScriptContext *aScriptContext)
 {
   nsresult rv;
   
-  PRBool ok = NS_SL_VALID(lang_id);
+  PRBool ok = NS_STID_VALID(lang_id);
   NS_ASSERTION(ok, "Invalid programming language ID requested");
   NS_ENSURE_TRUE(ok, NS_ERROR_INVALID_ARG);
-  PRUint32 lang_ndx = NS_SL_INDEX(lang_id);
+  PRUint32 lang_ndx = NS_STID_INDEX(lang_id);
 
-  NS_ASSERTION(IsOuterWindow(), "Uh, SetLanguageContext() called on inner window!");
+  NS_ASSERTION(IsOuterWindow(), "Uh, SetScriptContext() called on inner window!");
 
   if (!aScriptContext)
     NS_WARNING("Possibly early removal of script object, see bug #41608");
@@ -532,7 +532,7 @@ nsGlobalWindow::SetLanguageContext(PRUint32 lang_id, nsIScriptContext *aScriptCo
   }
 
   nsIScriptContext *existing;
-  existing = mLanguageContexts[lang_ndx];
+  existing = mScriptContexts[lang_ndx];
   NS_ASSERTION(!aScriptContext || !existing, "Bad call to SetContext()!");
 
   if (existing)
@@ -557,8 +557,8 @@ nsGlobalWindow::SetLanguageContext(PRUint32 lang_id, nsIScriptContext *aScriptCo
     mContext = aScriptContext;
     mJSObject = (JSObject *)script_glob;
   }
-  mLanguageContexts[lang_ndx] = aScriptContext;
-  mLanguageGlobals[lang_ndx] = script_glob;
+  mScriptContexts[lang_ndx] = aScriptContext;
+  mScriptGlobals[lang_ndx] = script_glob;
   return NS_OK;
 }
 
@@ -568,23 +568,23 @@ nsGlobalWindow::EnsureScriptEnvironment(PRUint32 aLangID)
   FORWARD_TO_OUTER(EnsureScriptEnvironment, (aLangID), NS_ERROR_NOT_INITIALIZED);
   nsresult rv;
  
-  PRBool ok = NS_SL_VALID(aLangID);
+  PRBool ok = NS_STID_VALID(aLangID);
   NS_ASSERTION(ok, "Invalid programming language ID requested");
   NS_ENSURE_TRUE(ok, NS_ERROR_INVALID_ARG);
-  PRUint32 lang_ndx = NS_SL_INDEX(aLangID);
+  PRUint32 lang_ndx = NS_STID_INDEX(aLangID);
 
-  if (mLanguageGlobals[lang_ndx])
+  if (mScriptGlobals[lang_ndx])
       return NS_OK; // already initialized for this language.
-  nsCOMPtr<nsILanguageRuntime> languageRuntime;
-  rv = NS_GetLanguageRuntimeByID(aLangID, getter_AddRefs(languageRuntime));
+  nsCOMPtr<nsIScriptRuntime> scriptRuntime;
+  rv = NS_GetScriptRuntimeByID(aLangID, getter_AddRefs(scriptRuntime));
   NS_ENSURE_SUCCESS(rv, rv);
 
   nsCOMPtr<nsIScriptContext> context;
-  rv = languageRuntime->CreateContext(getter_AddRefs(context));
+  rv = scriptRuntime->CreateContext(getter_AddRefs(context));
   NS_ENSURE_SUCCESS(rv, rv);
-  rv = SetLanguageContext(aLangID, context);
+  rv = SetScriptContext(aLangID, context);
   NS_ENSURE_SUCCESS(rv, rv);
-  // Note that SetLanguageContext has taken a reference to the context.
+  // Note that SetScriptContext has taken a reference to the context.
   // If we have arguments, tell the new language about it.
   nsGlobalWindow *currentInner = GetCurrentInnerWindowInternal();
   if (currentInner) {
@@ -594,9 +594,9 @@ nsGlobalWindow::EnsureScriptEnvironment(PRUint32 aLangID)
     // XXXmarkh - this is a hack.  We need to formalize some of the
     // SetNewDocument tricks (InitClassesWithNewWrappedGlobal, get/set
     // prototypes for inner and outer), and do that dance here.
-    currentInner->mLanguageGlobals[lang_ndx] = mLanguageGlobals[lang_ndx];
+    currentInner->mScriptGlobals[lang_ndx] = mScriptGlobals[lang_ndx];
     if (mArgumentsLast != nsnull) {
-      context->SetProperty(currentInner->mLanguageGlobals[lang_ndx],
+      context->SetProperty(currentInner->mScriptGlobals[lang_ndx],
                            "arguments", mArgumentsLast);
     }
   }
@@ -604,41 +604,41 @@ nsGlobalWindow::EnsureScriptEnvironment(PRUint32 aLangID)
 }
 
 nsIScriptContext *
-nsGlobalWindow::GetLanguageContext(PRUint32 lang)
+nsGlobalWindow::GetScriptContext(PRUint32 lang)
 {
-  FORWARD_TO_OUTER(GetLanguageContext, (lang), nsnull);
+  FORWARD_TO_OUTER(GetScriptContext, (lang), nsnull);
 
-  PRBool ok = NS_SL_VALID(lang);
+  PRBool ok = NS_STID_VALID(lang);
   NS_ASSERTION(ok, "Invalid programming language ID requested");
   NS_ENSURE_TRUE(ok, nsnull);
 
-  PRUint32 lang_ndx = NS_SL_INDEX(lang);
+  PRUint32 lang_ndx = NS_STID_INDEX(lang);
 
   // for now we are still storing the JS versions in members.  Check the
   // JS elements of our array are still in sync.  Do this each time we are
   // called, as much JS specific code still goes via GetContext
-  NS_ASSERTION(mLanguageContexts[NS_SL_INDEX(nsIProgrammingLanguage::JAVASCRIPT)] == mContext &&
-               mLanguageGlobals[NS_SL_INDEX(nsIProgrammingLanguage::JAVASCRIPT)] == mJSObject,
+  NS_ASSERTION(mScriptContexts[NS_STID_INDEX(nsIProgrammingLanguage::JAVASCRIPT)] == mContext &&
+               mScriptGlobals[NS_STID_INDEX(nsIProgrammingLanguage::JAVASCRIPT)] == mJSObject,
                "JS language contexts are confused");
-  return mLanguageContexts[lang_ndx];
+  return mScriptContexts[lang_ndx];
 }
 
 void *
-nsGlobalWindow::GetLanguageGlobal(PRUint32 lang)
+nsGlobalWindow::GetScriptGlobal(PRUint32 lang)
 {
-  PRBool ok = NS_SL_VALID(lang);
+  PRBool ok = NS_STID_VALID(lang);
   NS_ASSERTION(ok, "Invalid programming language ID requested");
   NS_ENSURE_TRUE(ok, nsnull);
 
-  PRUint32 lang_ndx = NS_SL_INDEX(lang);
+  PRUint32 lang_ndx = NS_STID_INDEX(lang);
 
   // for now we are still storing the JS versions in members.  Check the
   // JS elements of our array are still in sync.  Do this each time we are
   // called, as much JS specific code still goes via GetGlobalJSObject
-  NS_ASSERTION(mLanguageContexts[NS_SL_INDEX(nsIProgrammingLanguage::JAVASCRIPT)] == mContext &&
-               mLanguageGlobals[NS_SL_INDEX(nsIProgrammingLanguage::JAVASCRIPT)] == mJSObject,
+  NS_ASSERTION(mScriptContexts[NS_STID_INDEX(nsIProgrammingLanguage::JAVASCRIPT)] == mContext &&
+               mScriptGlobals[NS_STID_INDEX(nsIProgrammingLanguage::JAVASCRIPT)] == mJSObject,
                "JS language contexts are confused");
-  return mLanguageGlobals[lang_ndx];
+  return mScriptGlobals[lang_ndx];
 }
 
 nsIScriptContext *
@@ -646,8 +646,8 @@ nsGlobalWindow::GetContext()
 {
   FORWARD_TO_OUTER(GetContext, (), nsnull);
 
-  // check GetContext is indeed identical to GetLanguageContext()
-  NS_ASSERTION(mContext == GetLanguageContext(nsIProgrammingLanguage::JAVASCRIPT),
+  // check GetContext is indeed identical to GetScriptContext()
+  NS_ASSERTION(mContext == GetScriptContext(nsIProgrammingLanguage::JAVASCRIPT),
                "GetContext confused?");
   return mContext;
 }
@@ -655,7 +655,7 @@ nsGlobalWindow::GetContext()
 JSObject *
 nsGlobalWindow::GetGlobalJSObject()
 {
-  NS_ASSERTION(mJSObject == GetLanguageGlobal(nsIProgrammingLanguage::JAVASCRIPT),
+  NS_ASSERTION(mJSObject == GetScriptGlobal(nsIProgrammingLanguage::JAVASCRIPT),
                "GetGlobalJSObject confused?");
   return mJSObject;
 }
@@ -1105,10 +1105,10 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
     // (Object.prototype etc) could leak from the old outer to the new
     // inner scope.
     PRUint32 lang_id;
-    NS_SL_FOR_ID(lang_id) {
-      nsIScriptContext *langContext = GetLanguageContextInternal(lang_id);
+    NS_STID_FOR_ID(lang_id) {
+      nsIScriptContext *langContext = GetScriptContextInternal(lang_id);
       if (langContext)
-        langContext->ClearScope(mLanguageGlobals[NS_SL_INDEX(lang_id)],
+        langContext->ClearScope(mScriptGlobals[NS_STID_INDEX(lang_id)],
                                      PR_FALSE);
     }
 
@@ -1180,7 +1180,7 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
         // xxxmarkh - what to do here?
         mInnerWindowHolder->GetJSObject(&newInnerWindow->mJSObject);
         // ack - this sucks :(
-        newInnerWindow->mLanguageGlobals[NS_SL_INDEX(nsIProgrammingLanguage::JAVASCRIPT)] = newInnerWindow->mJSObject;
+        newInnerWindow->mScriptGlobals[NS_STID_INDEX(nsIProgrammingLanguage::JAVASCRIPT)] = newInnerWindow->mJSObject;
       }
 
       if (currentInner && currentInner->mJSObject) {
@@ -1408,8 +1408,8 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
     nsGlobalWindow *currentInner = GetCurrentInnerWindowInternal();
 
     if (currentInner) {
-      NS_SL_FOR_ID(lang_id) {
-        langCtx = mLanguageContexts[NS_SL_INDEX(lang_id)];
+      NS_STID_FOR_ID(lang_id) {
+        langCtx = mScriptContexts[NS_STID_INDEX(lang_id)];
         if (langCtx)
           currentInner->FreeInnerObjects(langCtx);
       }
@@ -1424,11 +1424,11 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
       mDocument = nsnull;
 
       // clear all scopes
-      NS_SL_FOR_ID(lang_id) {
-        langCtx = mLanguageContexts[NS_SL_INDEX(lang_id)];
+      NS_STID_FOR_ID(lang_id) {
+        langCtx = mScriptContexts[NS_STID_INDEX(lang_id)];
         if (langCtx)
           langCtx->ClearScope(
-                        currentInner->mLanguageGlobals[NS_SL_INDEX(lang_id)],
+                        currentInner->mScriptGlobals[NS_STID_INDEX(lang_id)],
                         PR_TRUE);
       }
     }
@@ -1465,22 +1465,22 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
     mInnerWindowHolder = nsnull;
 
     // Tell each context to cleanup.
-    NS_SL_FOR_ID(lang_id) {
-      langCtx = currentInner->mLanguageContexts[NS_SL_INDEX(lang_id)];
+    NS_STID_FOR_ID(lang_id) {
+      langCtx = currentInner->mScriptContexts[NS_STID_INDEX(lang_id)];
       if (langCtx)
         langCtx->GC();
     }
 
     // force release of all script contexts now.
-    NS_ASSERTION(mContext == mLanguageContexts[NS_SL_INDEX(nsIProgrammingLanguage::JAVASCRIPT)],
+    NS_ASSERTION(mContext == mScriptContexts[NS_STID_INDEX(nsIProgrammingLanguage::JAVASCRIPT)],
                  "Contexts confused");
     PRUint32 lang_ndx;
-    NS_SL_FOR_INDEX(lang_ndx) {
-      langCtx = mLanguageContexts[lang_ndx];
+    NS_STID_FOR_INDEX(lang_ndx) {
+      langCtx = mScriptContexts[lang_ndx];
       if (langCtx) {
         langCtx->SetOwner(nsnull);
         langCtx->FinalizeContext();
-        mLanguageContexts[lang_ndx] = nsnull;
+        mScriptContexts[lang_ndx] = nsnull;
       }
     }
     mContext = nsnull; // we nuked it above also
@@ -1761,14 +1761,14 @@ nsGlobalWindow::HandleDOMEvent(nsPresContext* aPresContext, nsEvent* aEvent,
 void
 nsGlobalWindow::OnFinalize(PRUint32 aLangID, void *aObject)
 {
-  if (!NS_SL_VALID(aLangID)) {
+  if (!NS_STID_VALID(aLangID)) {
     NS_ERROR("Invalid language ID");
     return;
   }
-  PRUint32 lang_ndx = NS_SL_INDEX(aLangID);
-  if (aObject == mLanguageGlobals[lang_ndx]) {
-    mLanguageGlobals[lang_ndx] = nsnull;
-  } else if (mLanguageGlobals[lang_ndx]) {
+  PRUint32 lang_ndx = NS_STID_INDEX(aLangID);
+  if (aObject == mScriptGlobals[lang_ndx]) {
+    mScriptGlobals[lang_ndx] = nsnull;
+  } else if (mScriptGlobals[lang_ndx]) {
     NS_ERROR("Huh? Script language created more than one wrapper for this global!");
   } else {
     NS_WARNING("Weird, we're finalized with a null language global?");
@@ -1808,9 +1808,9 @@ nsGlobalWindow::SetNewArguments(nsIArray *aArguments)
 
   if (currentInner) {
     PRUint32 langID;
-    NS_SL_FOR_ID(langID) {
-      void *glob = currentInner->GetLanguageGlobal(langID);
-      nsIScriptContext *ctx = GetLanguageContext(langID);
+    NS_STID_FOR_ID(langID) {
+      void *glob = currentInner->GetScriptGlobal(langID);
+      nsIScriptContext *ctx = GetScriptContext(langID);
       if (glob && ctx) {
         rv = ctx->SetProperty(glob, "arguments", aArguments);
         NS_ENSURE_SUCCESS(rv, rv);
@@ -5957,10 +5957,10 @@ nsGlobalWindow::ClearWindowScope(nsISupports *aWindow)
 {
   nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(aWindow));
   PRUint32 lang_id;
-  NS_SL_FOR_ID(lang_id) {
-    nsIScriptContext *scx = sgo->GetLanguageContext(lang_id);
+  NS_STID_FOR_ID(lang_id) {
+    nsIScriptContext *scx = sgo->GetScriptContext(lang_id);
     if (scx) {
-      void *global = sgo->GetLanguageGlobal(lang_id);
+      void *global = sgo->GetScriptGlobal(lang_id);
       scx->ClearScope(global, PR_FALSE);
     }
   }
@@ -6103,8 +6103,8 @@ nsGlobalWindow::RunTimeout(nsTimeout *aTimeout)
 
   // Make sure that the script context doesn't go away as a result of
   // running timeouts
-  nsCOMPtr<nsIScriptContext> scx = GetLanguageContextInternal(
-                                    aTimeout->mScriptHandler->GetLanguageID());
+  nsCOMPtr<nsIScriptContext> scx = GetScriptContextInternal(
+                                    aTimeout->mScriptHandler->GetScriptTypeID());
 
   if (!scx) {
     // No context means this window was closed or never properly
@@ -6240,9 +6240,9 @@ nsGlobalWindow::RunTimeout(nsTimeout *aTimeout)
 
       PRBool is_undefined;
       scx->EvaluateString(nsDependentString(script),
-                          GetLanguageGlobal(handler->GetLanguageID()),
+                          GetScriptGlobal(handler->GetScriptTypeID()),
                           timeout->mPrincipal, filename, lineNo,
-                          handler->GetLanguageVersion(), nsnull,
+                          handler->GetScriptVersion(), nsnull,
                           &is_undefined);
     } else {
       // Let the script handler know about the "secret" final argument that
@@ -6255,7 +6255,7 @@ nsGlobalWindow::RunTimeout(nsTimeout *aTimeout)
       nsCOMPtr<nsIVariant> dummy;
       nsCOMPtr<nsISupports> me(NS_STATIC_CAST(nsIDOMWindow *, this));
       scx->CallEventHandler(me,
-                            GetLanguageGlobal(handler->GetLanguageID()),
+                            GetScriptGlobal(handler->GetScriptTypeID()),
                             scriptObject, handler->GetArgv(),
                             // XXXmarkh - consider allowing CallEventHandler to
                             // accept nsnull?

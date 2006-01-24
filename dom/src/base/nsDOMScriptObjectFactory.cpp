@@ -87,7 +87,7 @@ nsDOMScriptObjectFactory::nsDOMScriptObjectFactory() :
 #endif
   }
   // And pre-create the javascript language.
-  NS_CreateJSRuntime(getter_AddRefs(mLanguageArray[NS_SL_INDEX(nsIProgrammingLanguage::JAVASCRIPT)]));
+  NS_CreateJSRuntime(getter_AddRefs(mLanguageArray[NS_STID_INDEX(nsIProgrammingLanguage::JAVASCRIPT)]));
 }
 
 NS_INTERFACE_MAP_BEGIN(nsDOMScriptObjectFactory)
@@ -123,8 +123,8 @@ NS_IMPL_RELEASE(nsDOMScriptObjectFactory)
  **/
 
 NS_IMETHODIMP
-nsDOMScriptObjectFactory::GetLanguageRuntime(const nsAString &aLanguageName,
-                                             nsILanguageRuntime **aLanguage)
+nsDOMScriptObjectFactory::GetScriptRuntime(const nsAString &aLanguageName,
+                                           nsIScriptRuntime **aLanguage)
 {
   // Note that many callers have optimized detection for JS (along with
   // supporting various alternate names for JS), so don't call this.
@@ -137,18 +137,18 @@ nsDOMScriptObjectFactory::GetLanguageRuntime(const nsAString &aLanguageName,
   // Arbitrarily use utf8 encoding should the name have extended chars
   AppendUTF16toUTF8(aLanguageName, contractid);
   nsresult rv;
-  nsCOMPtr<nsILanguageRuntime> lang =
+  nsCOMPtr<nsIScriptRuntime> lang =
         do_GetService(contractid.get(), &rv);
 
   if (NS_FAILED(rv)) {
     if (aLanguageName.Equals(NS_LITERAL_STRING("application/javascript")))
-      return GetLanguageRuntimeByID(nsIProgrammingLanguage::JAVASCRIPT, aLanguage);
+      return GetScriptRuntimeByID(nsIProgrammingLanguage::JAVASCRIPT, aLanguage);
     // Not JS and nothing else we know about.
     NS_WARNING("No script language registered for this mime-type");
     return NS_ERROR_FACTORY_NOT_REGISTERED;
   }
   // And stash it away in our array for fast lookup by ID.
-  PRUint32 lang_ndx = NS_SL_INDEX(lang->GetLanguage());
+  PRUint32 lang_ndx = NS_STID_INDEX(lang->GetScriptTypeID());
   if (mLanguageArray[lang_ndx] == nsnull) {
     mLanguageArray[lang_ndx] = lang;
   } else {
@@ -162,14 +162,14 @@ nsDOMScriptObjectFactory::GetLanguageRuntime(const nsAString &aLanguageName,
 }
 
 NS_IMETHODIMP
-nsDOMScriptObjectFactory::GetLanguageRuntimeByID(PRUint32 aLanguageID, 
-                                                 nsILanguageRuntime **aLanguage)
+nsDOMScriptObjectFactory::GetScriptRuntimeByID(PRUint32 aLanguageID, 
+                                               nsIScriptRuntime **aLanguage)
 {
-  if (!NS_SL_VALID(aLanguageID)) {
+  if (!NS_STID_VALID(aLanguageID)) {
     NS_WARNING("Unknown script language");
     return NS_ERROR_UNEXPECTED;
   }
-  *aLanguage = mLanguageArray[NS_SL_INDEX(aLanguageID)];
+  *aLanguage = mLanguageArray[NS_STID_INDEX(aLanguageID)];
   if (!*aLanguage) {
     nsCAutoString contractid(NS_LITERAL_CSTRING(
                         "@mozilla.org/script-language;1?script-type="));
@@ -177,7 +177,7 @@ nsDOMScriptObjectFactory::GetLanguageRuntimeByID(PRUint32 aLanguageID,
     sprintf(langIdStr, "%d", aLanguageID);
     contractid += langIdStr;
     nsresult rv;
-    nsCOMPtr<nsILanguageRuntime> lang = do_GetService(contractid.get(), &rv);
+    nsCOMPtr<nsIScriptRuntime> lang = do_GetService(contractid.get(), &rv);
 
     if (NS_FAILED(rv)) {
       NS_ERROR("Failed to get the script language");
@@ -190,16 +190,16 @@ nsDOMScriptObjectFactory::GetLanguageRuntimeByID(PRUint32 aLanguageID,
 }
 
 NS_IMETHODIMP
-nsDOMScriptObjectFactory::GetIDForLanguage(const nsAString &aLanguageName,
-                                           PRUint32 *aLang)
+nsDOMScriptObjectFactory::GetIDForScriptType(const nsAString &aLanguageName,
+                                             PRUint32 *aScriptTypeID)
 {
-  nsCOMPtr<nsILanguageRuntime> languageRuntime;
+  nsCOMPtr<nsIScriptRuntime> languageRuntime;
   nsresult rv;
-  rv = GetLanguageRuntime(aLanguageName, getter_AddRefs(languageRuntime));
+  rv = GetScriptRuntime(aLanguageName, getter_AddRefs(languageRuntime));
   if (NS_FAILED(rv))
     return rv;
 
-  *aLang = languageRuntime->GetLanguage();
+  *aScriptTypeID = languageRuntime->GetScriptTypeID();
   return NS_OK;
 }
 
@@ -282,7 +282,7 @@ nsDOMScriptObjectFactory::Observe(nsISupports *aSubject,
     nsDOMClassInfo::ShutDown();
 
     PRUint32 i;
-    NS_SL_FOR_INDEX(i) {
+    NS_STID_FOR_INDEX(i) {
       if (mLanguageArray[i] != nsnull) {
         mLanguageArray[i]->ShutDown();
         mLanguageArray[i] = nsnull;
@@ -355,8 +355,8 @@ nsDOMScriptObjectFactory::Startup()
 }
 
 // Factories
-nsresult NS_GetLanguageRuntime(const nsAString &aLanguageName,
-                               nsILanguageRuntime **aLanguage)
+nsresult NS_GetScriptRuntime(const nsAString &aLanguageName,
+                             nsIScriptRuntime **aLanguage)
 {
   nsresult rv;
   *aLanguage = nsnull;
@@ -364,11 +364,11 @@ nsresult NS_GetLanguageRuntime(const nsAString &aLanguageName,
         do_GetService(kDOMScriptObjectFactoryCID, &rv);
   if (NS_FAILED(rv))
     return rv;
-  return factory->GetLanguageRuntime(aLanguageName, aLanguage);
+  return factory->GetScriptRuntime(aLanguageName, aLanguage);
 }
 
-nsresult NS_GetLanguageRuntimeByID(PRUint32 aLanguageID,
-                               nsILanguageRuntime **aLanguage)
+nsresult NS_GetScriptRuntimeByID(PRUint32 aScriptTypeID,
+                                 nsIScriptRuntime **aLanguage)
 {
   nsresult rv;
   *aLanguage = nsnull;
@@ -376,5 +376,5 @@ nsresult NS_GetLanguageRuntimeByID(PRUint32 aLanguageID,
         do_GetService(kDOMScriptObjectFactoryCID, &rv);
   if (NS_FAILED(rv))
     return rv;
-  return factory->GetLanguageRuntimeByID(aLanguageID, aLanguage);
+  return factory->GetScriptRuntimeByID(aScriptTypeID, aLanguage);
 }

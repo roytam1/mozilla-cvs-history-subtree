@@ -53,39 +53,39 @@ class nsIArray;
 class nsScriptErrorEvent;
 class nsIScriptGlobalObject;
 enum nsEventStatus;
-struct JSObject; // kill me!
+struct JSObject; // until we finally remove GetGlobalJSObject...
 
-// Some helpers for working with integer "language IDs", and specifically for
-// working with arrays of such objects.  For example, it is common for
+// Some helpers for working with integer "script type IDs", and specifically
+// for working with arrays of such objects. For example, it is common for
 // implementations supporting multiple script languages to keep each
 // language's nsIScriptContext in an array indexed by the language ID.
 
 // Implementation note: We always ignore nsIProgrammingLanguage::UNKNOWN and
 // nsIProgrammingLanguage::CPLUSPLUS - this gives javascript slot 0.  We also
 // have no need to go all the way to nsIProgrammingLanguage::MAX; restricting
-// the upper bound to reduce the number of bits we need may end up useful.
+// the upper bound to reduce the number of bits we need is useful.
 
-#define NS_SL_FIRST nsIProgrammingLanguage::JAVASCRIPT
+#define NS_STID_FIRST nsIProgrammingLanguage::JAVASCRIPT
 // last is kinda arbitrary.
-#define NS_SL_LAST (nsIProgrammingLanguage::JAVASCRIPT+3)
+#define NS_STID_LAST (nsIProgrammingLanguage::JAVASCRIPT+3)
 
 // Use to declare the array size
-#define NS_SL_ARRAY_UBOUND (NS_SL_LAST-NS_SL_FIRST+1)
+#define NS_STID_ARRAY_UBOUND (NS_STID_LAST-NS_STID_FIRST+1)
 
 // Is a language ID valid?
-#define NS_SL_VALID(langID) (langID >= NS_SL_FIRST && langID <= NS_SL_LAST)
+#define NS_STID_VALID(langID) (langID >= NS_STID_FIRST && langID <= NS_STID_LAST)
 
 // Return an index for a given ID.
-#define NS_SL_INDEX(langID) (langID-NS_SL_FIRST)
+#define NS_STID_INDEX(langID) (langID-NS_STID_FIRST)
 
 // Create a 'for' loop iterating over all possible language IDs (*not* indexes)
-#define NS_SL_FOR_ID(varName) \
-          for (varName=NS_SL_FIRST;varName<=NS_SL_LAST;varName++)
+#define NS_STID_FOR_ID(varName) \
+          for (varName=NS_STID_FIRST;varName<=NS_STID_LAST;varName++)
 
 // Create a 'for' loop iterating over all indexes (when you don't need to know
 // what language it is)
-#define NS_SL_FOR_INDEX(varName) \
-          for (varName=0;varName<=NS_SL_INDEX(NS_SL_LAST);varName++)
+#define NS_STID_FOR_INDEX(varName) \
+          for (varName=0;varName<=NS_STID_INDEX(NS_STID_LAST);varName++)
 
 // A helper function for nsIScriptGlobalObject implementations to use
 // when handling a script error.  Generally called by the global when a context
@@ -147,20 +147,20 @@ public:
   /**
    * Get a script context (WITHOUT added reference) for the specified language.
    */
-  virtual nsIScriptContext *GetLanguageContext(PRUint32 lang) = 0;
+  virtual nsIScriptContext *GetScriptContext(PRUint32 lang) = 0;
   
   /**
    * Get the opaque "global" object for the specified lang.
    */
-  virtual void *GetLanguageGlobal(PRUint32 lang) = 0;
+  virtual void *GetScriptGlobal(PRUint32 lang) = 0;
 
-  // Set/GetContext deprecated methods - use GetLanguageContext/Global
+  // Set/GetContext deprecated methods - use GetScriptContext/Global
   virtual JSObject *GetGlobalJSObject() {
-        return (JSObject *)GetLanguageGlobal(nsIProgrammingLanguage::JAVASCRIPT);
+        return (JSObject *)GetScriptGlobal(nsIProgrammingLanguage::JAVASCRIPT);
   }
 
   virtual nsIScriptContext *GetContext() {
-        return GetLanguageContext(nsIProgrammingLanguage::JAVASCRIPT);
+        return GetScriptContext(nsIProgrammingLanguage::JAVASCRIPT);
   }
 
   /**
@@ -168,7 +168,7 @@ public:
    * context is created by the context's GetNativeGlobal() method.
    */
 
-  virtual nsresult SetLanguageContext(PRUint32 lang, nsIScriptContext *aContext) = 0;
+  virtual nsresult SetScriptContext(PRUint32 lang, nsIScriptContext *aContext) = 0;
 
   /**
    * Called when the global script for a language is finalized, typically as

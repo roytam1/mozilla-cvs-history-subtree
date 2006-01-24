@@ -368,7 +368,7 @@ nsPythonContext::CompileScript(const PRUnichar* aText,
   if (!ret) {
     return HandlePythonError();
   }
-  NS_ASSERTION(aScriptObject.getLanguage()==nsIProgrammingLanguage::PYTHON,
+  NS_ASSERTION(aScriptObject.getScriptTypeID()==nsIProgrammingLanguage::PYTHON,
                "Expecting Python script object holder");
   aScriptObject.set(ret);
   Py_DECREF(ret);
@@ -411,7 +411,7 @@ nsPythonContext::CompileEventHandler(nsIPrincipal *aPrincipal, nsIAtom *aName,
   if (!ret)
     return HandlePythonError();
 
-  NS_ASSERTION(aHandler.getLanguage()==nsIProgrammingLanguage::PYTHON,
+  NS_ASSERTION(aHandler.getScriptTypeID()==nsIProgrammingLanguage::PYTHON,
                "Expecting Python script object holder");
   aHandler.set(ret);
   Py_DECREF(ret);
@@ -534,7 +534,7 @@ nsPythonContext::GetBoundEventHandler(nsISupports* aTarget, void *aScope,
     return HandlePythonError();
   if (ret == Py_None)
     return NS_OK;
-  NS_ASSERTION(aHandler.getLanguage()==nsIProgrammingLanguage::PYTHON,
+  NS_ASSERTION(aHandler.getScriptTypeID()==nsIProgrammingLanguage::PYTHON,
                "Expecting Python script object holder");
   aHandler.set(ret);
   Py_DECREF(ret);
@@ -639,7 +639,7 @@ nsPythonContext::Deserialize(nsIObjectInputStream* aStream,
     return HandlePythonError();
   NS_ASSERTION(PyCode_Check(codeObject) || PyFunction_Check(codeObject),
                "unmarshal returned non code/functions");
-  NS_ASSERTION(aResult.getLanguage()==nsIProgrammingLanguage::PYTHON,
+  NS_ASSERTION(aResult.getScriptTypeID()==nsIProgrammingLanguage::PYTHON,
                "Expecting Python script object holder");
   aResult.set(codeObject);
   Py_DECREF(codeObject);

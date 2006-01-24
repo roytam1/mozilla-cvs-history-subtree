@@ -54,7 +54,7 @@
 #include "nsIXBLDocumentInfo.h"
 #include "nsIServiceManager.h"
 #include "nsXULDocument.h"
-#include "nsILanguageRuntime.h"
+#include "nsIScriptRuntime.h"
 
 #include "nsIChromeRegistry.h"
 #include "nsIFastLoadService.h"
@@ -73,8 +73,8 @@
 
 struct CacheScriptEntry
 {
-    PRUint32    mLangID;
-    void*       mScriptObject;
+    PRUint32    mScriptTypeID; // the script language ID.
+    void*       mScriptObject; // the script object.
 };
 
 class nsXULPrototypeCache : public nsIXULPrototypeCache,
@@ -348,7 +348,7 @@ nsXULPrototypeCache::GetScript(nsIURI* aURI, PRUint32 *aLangID,
         *aScriptObject = nsnull;
     } else {
         *aScriptObject = entry.mScriptObject;
-        *aLangID = entry.mLangID;
+        *aLangID = entry.mScriptTypeID;
     }
     return NS_OK;
 }
@@ -363,8 +363,8 @@ nsXULPrototypeCache::PutScript(nsIURI* aURI, PRUint32 aLangID, void* aScriptObje
 
     // Lock the object from being gc'd until it is removed from the cache
     nsresult rv;
-    nsCOMPtr<nsILanguageRuntime> rt;
-    rv = NS_GetLanguageRuntimeByID(aLangID, getter_AddRefs(rt));
+    nsCOMPtr<nsIScriptRuntime> rt;
+    rv = NS_GetScriptRuntimeByID(aLangID, getter_AddRefs(rt));
     if (NS_SUCCEEDED(rv))
         rv = rt->HoldScriptObject(aScriptObject);
     NS_ASSERTION(NS_SUCCEEDED(rv), "Failed to GC lock the object");
@@ -376,8 +376,8 @@ nsXULPrototypeCache::PutScript(nsIURI* aURI, PRUint32 aLangID, void* aScriptObje
 PR_STATIC_CALLBACK(PLDHashOperator)
 ReleaseScriptObjectCallback(nsIURI* aKey, CacheScriptEntry &aData, void* aClosure)
 {
-    nsCOMPtr<nsILanguageRuntime> rt;
-    if (NS_SUCCEEDED(NS_GetLanguageRuntimeByID(aData.mLangID, getter_AddRefs(rt))))
+    nsCOMPtr<nsIScriptRuntime> rt;
+    if (NS_SUCCEEDED(NS_GetScriptRuntimeByID(aData.mScriptTypeID, getter_AddRefs(rt))))
         rt->DropScriptObject(aData.mScriptObject);
     return PL_DHASH_REMOVE;
 }

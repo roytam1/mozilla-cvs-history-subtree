@@ -34,13 +34,13 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsILanguageRuntime_h__
-#define nsILanguageRuntime_h__
+#ifndef nsIScriptRuntime_h__
+#define nsIScriptRuntime_h__
 
 #include "nsIScriptContext.h"
 
 // {47032A4D-0C22-4125-94B7-864A4B744335}
-#define NS_ISCRIPTLANGUAGEENVIRONMENT_IID \
+#define NS_ISCRIPTRUNTIME_IID \
 { 0x47032a4d, 0xc22, 0x4125, { 0x94, 0xb7, 0x86, 0x4a, 0x4b, 0x74, 0x43, 0x35 } }
 
 
@@ -49,14 +49,14 @@
  * initializing and cleaning up the global language environment, and a factory
  * for language contexts
  */
-class nsILanguageRuntime : public nsISupports
+class nsIScriptRuntime : public nsISupports
 {
 public:
-  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISCRIPTLANGUAGEENVIRONMENT_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISCRIPTRUNTIME_IID)
   /*
    * Return the language ID of this script language
    */
-  virtual PRUint32 GetLanguage() = 0;
+  virtual PRUint32 GetScriptTypeID() = 0;
 
   /*
    * Called as the language factory is shutting down.
@@ -81,4 +81,4 @@ public:
   virtual nsresult HoldScriptObject(void *object) = 0;
 };
 
-#endif // nsILanguageRuntime_h__
+#endif // nsIScriptRuntime_h__

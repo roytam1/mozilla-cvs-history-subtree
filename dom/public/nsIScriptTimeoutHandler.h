@@ -56,8 +56,8 @@ class nsIScriptTimeoutHandler : public nsISupports
 public:
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISCRIPTTIMEOUTHANDLER_IID)
 
-  // Get the language implementing this timeout.
-  virtual PRUint32 GetLanguageID() = 0;
+  // Get the script-type (language) implementing this timeout.
+  virtual PRUint32 GetScriptTypeID() = 0;
 
   // Get a script object for the language suitable for passing back to
   // the language's context as an event handler.  If this returns nsnull,
@@ -75,7 +75,7 @@ public:
   virtual nsIArray *GetArgv() = 0;
 
   // Get the language version for this timeout.
-  virtual PRUint32 GetLanguageVersion() = 0;
+  virtual PRUint32 GetScriptVersion() = 0;
 
   // Set the "secret" final lateness arg.  This will be called before
   // GetArgv(), which should reflect this lateness value.

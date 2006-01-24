@@ -48,7 +48,7 @@
 #include "nsNetUtil.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptContext.h"
-#include "nsILanguageRuntime.h"
+#include "nsIScriptRuntime.h"
 #include "nsIScriptSecurityManager.h"
 #include "nsIPrincipal.h"
 #include "nsContentPolicyUtils.h"
@@ -378,7 +378,7 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement,
   nsIScriptGlobalObject *globalObject = mDocument->GetScriptGlobalObject();
   if (globalObject)
   {
-    nsIScriptContext *context = globalObject->GetLanguageContext(
+    nsIScriptContext *context = globalObject->GetScriptContext(
                                           nsIProgrammingLanguage::JAVASCRIPT);
 
     // If scripts aren't enabled in the current context, there's no
@@ -436,14 +436,14 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement,
       langID = nsIProgrammingLanguage::JAVASCRIPT;
     else {
       // Use the object factory to locate a matching language.
-      nsCOMPtr<nsILanguageRuntime> runtime;
-      rv = NS_GetLanguageRuntime(mimeType, getter_AddRefs(runtime));
+      nsCOMPtr<nsIScriptRuntime> runtime;
+      rv = NS_GetScriptRuntime(mimeType, getter_AddRefs(runtime));
       if (NS_FAILED(rv) || runtime == nsnull) {
         // Failed to get the explicitly specified language
         NS_WARNING("Failed to find a scripting language");
         langID = nsIProgrammingLanguage::UNKNOWN;
       } else
-        langID = runtime->GetLanguage();
+        langID = runtime->GetScriptTypeID();
     }
     if (langID != nsIProgrammingLanguage::UNKNOWN) {
       // Get the version string, and ensure the language supports it.
@@ -456,8 +456,8 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement,
         if (rv != NS_ERROR_INVALID_ARG)
           return rv;
       } else {
-        nsCOMPtr<nsILanguageRuntime> runtime;
-        rv = NS_GetLanguageRuntimeByID(langID, getter_AddRefs(runtime));
+        nsCOMPtr<nsIScriptRuntime> runtime;
+        rv = NS_GetScriptRuntimeByID(langID, getter_AddRefs(runtime));
         if (NS_FAILED(rv)) {
           NS_ERROR("Failed to locate the language with this ID");
           return rv;
@@ -773,7 +773,7 @@ nsScriptLoader::EvaluateScript(nsScriptLoadRequest* aRequest,
   mCurrentScript = aRequest->mElement;
 
   PRBool isUndefined;
-  void *scope = globalObject->GetLanguageGlobal(nsIProgrammingLanguage::JAVASCRIPT);
+  void *scope = globalObject->GetScriptGlobal(nsIProgrammingLanguage::JAVASCRIPT);
   context->EvaluateString(aScript, scope,
                           principal, url.get(), aRequest->mLineNo,
                           aRequest->mJSVersion, nsnull, &isUndefined);

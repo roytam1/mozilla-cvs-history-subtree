@@ -106,7 +106,8 @@ public:
 
   NS_DECL_ISUPPORTS
 
-  virtual PRUint32 GetLanguage() { return nsIProgrammingLanguage::PYTHON; }
+  virtual PRUint32 GetScriptTypeID()
+    { return nsIProgrammingLanguage::PYTHON; }
 
   virtual nsresult EvaluateString(const nsAString& aScript,
                                   void *aScopeObject,

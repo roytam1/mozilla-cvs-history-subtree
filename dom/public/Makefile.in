@@ -53,7 +53,7 @@ XPIDLSRCS	= nsIScriptContextOwner.idl \
 
 EXPORTS=nsIScriptContext.h		\
 	nsIJSNativeInitializer.h	\
-	nsILanguageRuntime.h		\
+	nsIScriptRuntime.h		\
 	nsIScriptObjectOwner.h		\
 	nsIScriptObjectPrincipal.h	\
 	nsIScriptGlobalObject.h		\

@@ -109,7 +109,7 @@
 #include "nsContentList.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptGlobalObjectOwner.h"
-#include "nsILanguageRuntime.h"
+#include "nsIScriptRuntime.h"
 #include "nsIScriptSecurityManager.h"
 #include "nsNodeInfoManager.h"
 #include "nsContentCreatorFunctions.h"
@@ -3231,7 +3231,7 @@ nsXULDocument::LoadScript(nsXULPrototypeScript* aScriptProto, PRBool* aBlock)
         if (newScriptObject) {
             // The script language for a proto must remain constant - we
             // can't just change it for this unexpected language.
-            if (aScriptProto->mScriptObject.getLanguage() != fetchedLang) {
+            if (aScriptProto->mScriptObject.getScriptTypeID() != fetchedLang) {
                 NS_ERROR("XUL cache gave me an incorrect script language");
                 return NS_ERROR_UNEXPECTED;
             }
@@ -3373,7 +3373,7 @@ nsXULDocument::OnStreamComplete(nsIStreamLoader* aLoader,
 
             if (useXULCache && IsChromeURI(mDocumentURI)) {
                 gXULCache->PutScript(scriptProto->mSrcURI,
-                                     scriptProto->mScriptObject.getLanguage(),
+                                     scriptProto->mScriptObject.getScriptTypeID(),
                                      scriptProto->mScriptObject);
             }
 
@@ -3396,9 +3396,9 @@ nsXULDocument::OnStreamComplete(nsIStreamLoader* aLoader,
 
                 NS_ASSERTION(global != nsnull, "master prototype w/o global?!");
                 if (global) {
-                    PRUint32 langID = scriptProto->mScriptObject.getLanguage();
+                    PRUint32 stid = scriptProto->mScriptObject.getScriptTypeID();
                     nsIScriptContext *scriptContext = \
-                          global->GetLanguageContext(langID);
+                          global->GetScriptContext(stid);
                     NS_ASSERTION(scriptContext != nsnull,
                                  "Failed to get script context for language");
                     if (scriptContext)
@@ -3448,7 +3448,8 @@ nsXULDocument::ExecuteScript(nsIScriptContext * aContext, void * aScriptObject)
 
     // Execute the precompiled script with the given version
     nsresult rv;
-    void *global = mScriptGlobalObject->GetLanguageGlobal(aContext->GetLanguage());
+    void *global = mScriptGlobalObject->GetScriptGlobal(
+                                            aContext->GetScriptTypeID());
     rv = aContext->ExecuteScript(aScriptObject,
                                  global,
                                  nsnull, nsnull);
@@ -3461,14 +3462,14 @@ nsXULDocument::ExecuteScript(nsXULPrototypeScript *aScript)
 {
     NS_PRECONDITION(aScript != nsnull, "null ptr");
     NS_ENSURE_TRUE(aScript, NS_ERROR_NULL_POINTER);
-    PRUint32 langID = aScript->mScriptObject.getLanguage();
+    PRUint32 stid = aScript->mScriptObject.getScriptTypeID();
 
     nsresult rv;
-    rv = mScriptGlobalObject->EnsureScriptEnvironment(langID);
+    rv = mScriptGlobalObject->EnsureScriptEnvironment(stid);
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsIScriptContext *context;
-    context = mScriptGlobalObject->GetLanguageContext(langID);
+    context = mScriptGlobalObject->GetScriptContext(stid);
     // failure getting a script context is fatal.
     NS_ENSURE_TRUE(context != nsnull, NS_ERROR_UNEXPECTED);
 

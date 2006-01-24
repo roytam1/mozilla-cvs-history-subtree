@@ -46,7 +46,7 @@ static PRBool initialized = PR_FALSE;
 
 // QueryInterface implementation for nsPythonRuntime
 NS_INTERFACE_MAP_BEGIN(nsPythonRuntime)
-  NS_INTERFACE_MAP_ENTRY(nsILanguageRuntime)
+  NS_INTERFACE_MAP_ENTRY(nsIScriptRuntime)
 NS_INTERFACE_MAP_END
 
 

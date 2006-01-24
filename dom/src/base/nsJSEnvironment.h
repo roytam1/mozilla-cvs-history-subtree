@@ -38,7 +38,7 @@
 #define nsJSEnvironment_h___
 
 #include "nsIScriptContext.h"
-#include "nsILanguageRuntime.h"
+#include "nsIScriptRuntime.h"
 #include "nsCOMPtr.h"
 #include "jsapi.h"
 #include "nsIObserver.h"
@@ -58,7 +58,8 @@ public:
 
   NS_DECL_ISUPPORTS
 
-  virtual PRUint32 GetLanguage() { return nsIProgrammingLanguage::JAVASCRIPT; }
+  virtual PRUint32 GetScriptTypeID()
+    { return nsIProgrammingLanguage::JAVASCRIPT; }
 
   virtual nsresult EvaluateString(const nsAString& aScript,
                                   void *aScopeObject,
@@ -261,7 +262,7 @@ private:
 
 class nsIJSRuntimeService;
 
-class nsJSRuntime : public nsILanguageRuntime
+class nsJSRuntime : public nsIScriptRuntime
 {
 public:
   // let people who can see us use our runtime for convenience.
@@ -271,10 +272,10 @@ public:
   // nsISupports
   NS_DECL_ISUPPORTS
 
-  // nsILanguageRuntime
+  // nsIScriptRuntime
   virtual void ShutDown();
 
-  virtual PRUint32 GetLanguage() {
+  virtual PRUint32 GetScriptTypeID() {
             return nsIProgrammingLanguage::JAVASCRIPT;
   }
 
@@ -312,7 +313,7 @@ public:
 };
 
 /* factory functions */
-nsresult NS_CreateJSRuntime(nsILanguageRuntime **aRuntime);
+nsresult NS_CreateJSRuntime(nsIScriptRuntime **aRuntime);
 
 /* prototypes */
 void JS_DLL_CALLBACK NS_ScriptErrorReporter(JSContext *cx, const char *message, JSErrorReport *report);

@@ -34,7 +34,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsILanguageRuntime.h"
+#include "nsIScriptRuntime.h"
 #include "nsIGenericFactory.h"
 
 
@@ -48,14 +48,14 @@
 #define NS_SCRIPT_LANGUAGE_PYTHON_CONTRACTID_ID \
   "@mozilla.org/script-language;1?id=3"
 
-class nsPythonRuntime : public nsILanguageRuntime
+class nsPythonRuntime : public nsIScriptRuntime
 {
 public:
   // nsISupports
   NS_DECL_ISUPPORTS
 
   // nsIScriptLanguage
-  virtual PRUint32 GetLanguage() {
+  virtual PRUint32 GetScriptTypeID() {
     return nsIProgrammingLanguage::PYTHON;
   }
 

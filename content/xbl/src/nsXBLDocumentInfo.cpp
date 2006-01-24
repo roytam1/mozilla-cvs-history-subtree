@@ -43,7 +43,7 @@
 #include "nsIScriptObjectPrincipal.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptContext.h"
-#include "nsILanguageRuntime.h"
+#include "nsIScriptRuntime.h"
 #include "nsIDOMScriptObjectFactory.h"
 #include "jsapi.h"
 #include "nsIURI.h"
@@ -73,7 +73,7 @@ public:
   // nsIScriptGlobalObject methods
   virtual nsresult EnsureScriptEnvironment(PRUint32 aLangID);
   virtual void SetContext(nsIScriptContext *aContext);
-  virtual nsresult SetLanguageContext(PRUint32 lang_id, nsIScriptContext *aContext) {
+  virtual nsresult SetScriptContext(PRUint32 lang_id, nsIScriptContext *aContext) {
     NS_ASSERTION(lang_id == nsIProgrammingLanguage::JAVASCRIPT, "Only JS allowed!");
     SetContext(aContext);
     return NS_OK;
@@ -99,12 +99,12 @@ public:
   virtual void SetScriptsEnabled(PRBool aEnabled, PRBool aFireTimeouts);
   virtual nsresult SetNewArguments(nsIArray *aArguments);
 
-  virtual nsIScriptContext *GetLanguageContext(PRUint32 language) {
+  virtual nsIScriptContext *GetScriptContext(PRUint32 language) {
             // This impl still assumes JS
             NS_ENSURE_TRUE(language==nsIProgrammingLanguage::JAVASCRIPT, nsnull);
             return GetContext();
   }
-  virtual void *GetLanguageGlobal(PRUint32 language) {
+  virtual void *GetScriptGlobal(PRUint32 language) {
             // This impl still assumes JS
             NS_ENSURE_TRUE(language==nsIProgrammingLanguage::JAVASCRIPT, nsnull);
             return GetGlobalJSObject();
@@ -253,7 +253,8 @@ nsXBLDocGlobalObject::SetContext(nsIScriptContext *aScriptContext)
     mScriptContext = nsnull;
     return;
   }
-  NS_ASSERTION(aScriptContext->GetLanguage() == nsIProgrammingLanguage::JAVASCRIPT,
+  NS_ASSERTION(aScriptContext->GetScriptTypeID() ==
+                                        nsIProgrammingLanguage::JAVASCRIPT,
                "xbl is not multi-language");
   NS_ASSERTION(aScriptContext, "Must provide a context");
   aScriptContext->WillInitializeContext();
@@ -280,15 +281,15 @@ nsXBLDocGlobalObject::EnsureScriptEnvironment(PRUint32 aLangID)
     NS_ENSURE_TRUE(factory, nsnull);
 
     nsresult rv;
-    PRUint32 langID = nsIProgrammingLanguage::JAVASCRIPT;
+    PRUint32 stid = nsIProgrammingLanguage::JAVASCRIPT;
 
-    nsCOMPtr<nsILanguageRuntime> languageRuntime;
-    rv = NS_GetLanguageRuntimeByID(langID, getter_AddRefs(languageRuntime));
+    nsCOMPtr<nsIScriptRuntime> scriptRuntime;
+    rv = NS_GetScriptRuntimeByID(stid, getter_AddRefs(scriptRuntime));
     NS_ENSURE_SUCCESS(rv, nsnull);
     nsCOMPtr<nsIScriptContext> newCtx;
-    rv = languageRuntime->CreateContext(getter_AddRefs(newCtx));
+    rv = scriptRuntime->CreateContext(getter_AddRefs(newCtx));
     NS_ENSURE_SUCCESS(rv, nsnull);
-    rv = SetLanguageContext(langID, newCtx);
+    rv = SetScriptContext(stid, newCtx);
 
     JSContext *cx = (JSContext *)mScriptContext->GetNativeContext();
 
@@ -479,7 +480,7 @@ nsXBLDocumentInfo::~nsXBLDocumentInfo()
   /* destructor code */
   if (mGlobalObject) {
     // remove circular reference
-    mGlobalObject->SetLanguageContext(nsIProgrammingLanguage::JAVASCRIPT, nsnull);
+    mGlobalObject->SetScriptContext(nsIProgrammingLanguage::JAVASCRIPT, nsnull);
     mGlobalObject->SetGlobalObjectOwner(nsnull); // just in case
   }
   delete mBindingTable;

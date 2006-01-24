@@ -69,7 +69,7 @@
 #include "nsIParser.h"
 #include "nsIPresShell.h"
 #include "nsIScriptContext.h"
-#include "nsILanguageRuntime.h"
+#include "nsIScriptRuntime.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIServiceManager.h"
 #include "nsITextContent.h"
@@ -337,7 +337,7 @@ XULContentSinkImpl::ContextStack::GetTopNodeScriptType(PRUint32 *aScriptType)
         case nsXULPrototypeNode::eType_Script: {
             nsXULPrototypeScript *parent = \
                 NS_REINTERPRET_CAST(nsXULPrototypeScript*, node);
-            *aScriptType = parent->mScriptObject.getLanguage();
+            *aScriptType = parent->mScriptObject.getScriptTypeID();
             break;
         }
         default: {
@@ -1097,10 +1097,10 @@ XULContentSinkImpl::SetElementScriptType(nsXULPrototypeElement* element,
         if (key.EqualsLiteral("script-type")) {
             const nsDependentString value(aAttributes[i*2+1]);
             if (!value.IsEmpty()) {
-                nsCOMPtr<nsILanguageRuntime> runtime;
-                rv = NS_GetLanguageRuntime(value, getter_AddRefs(runtime));
+                nsCOMPtr<nsIScriptRuntime> runtime;
+                rv = NS_GetScriptRuntime(value, getter_AddRefs(runtime));
                 if (NS_SUCCEEDED(rv))
-                    element->mScriptTypeID = runtime->GetLanguage();
+                    element->mScriptTypeID = runtime->GetScriptTypeID();
                 else {
                     // probably just a bad language name (typo, etc)
                     NS_WARNING("Failed to load the node's script language!");
@@ -1308,14 +1308,14 @@ XULContentSinkImpl::OpenScript(const PRUnichar** aAttributes,
               langID = nsIProgrammingLanguage::JAVASCRIPT;
           } else {
               // Use the script object factory to locate the language.
-              nsCOMPtr<nsILanguageRuntime> runtime;
-              rv = NS_GetLanguageRuntime(mimeType, getter_AddRefs(runtime));
+              nsCOMPtr<nsIScriptRuntime> runtime;
+              rv = NS_GetScriptRuntime(mimeType, getter_AddRefs(runtime));
               if (NS_FAILED(rv) || runtime == nsnull) {
                   // Failed to get the explicitly specified language
                   NS_WARNING("Failed to find a scripting language");
                   langID = nsIProgrammingLanguage::UNKNOWN;
               } else
-                  langID = runtime->GetLanguage();
+                  langID = runtime->GetScriptTypeID();
           }
 
           if (langID != nsIProgrammingLanguage::UNKNOWN) {
@@ -1329,8 +1329,8 @@ XULContentSinkImpl::OpenScript(const PRUnichar** aAttributes,
                   if (rv != NS_ERROR_INVALID_ARG)
                       return rv;
               } else {
-                nsCOMPtr<nsILanguageRuntime> runtime;
-                rv = NS_GetLanguageRuntimeByID(langID, getter_AddRefs(runtime));
+                nsCOMPtr<nsIScriptRuntime> runtime;
+                rv = NS_GetScriptRuntimeByID(langID, getter_AddRefs(runtime));
                 if (NS_FAILED(rv))
                     return rv;
                 rv = runtime->ParseVersion(versionName, &version);

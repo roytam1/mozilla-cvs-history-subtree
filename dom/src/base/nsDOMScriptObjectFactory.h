@@ -53,8 +53,8 @@
 #include "nsIDOMScriptObjectFactory.h"
 #include "nsIObserver.h"
 #include "nsIExceptionService.h"
-#include "nsILanguageRuntime.h"
-#include "nsIScriptGlobalObject.h" // for misplaced NS_SL_ macros.
+#include "nsIScriptRuntime.h"
+#include "nsIScriptGlobalObject.h" // for misplaced NS_STID_ macros.
 
 class nsDOMScriptObjectFactory : public nsIDOMScriptObjectFactory,
                                  public nsIObserver,
@@ -72,14 +72,14 @@ public:
   NS_DECL_NSIEXCEPTIONPROVIDER
 
   // nsIDOMScriptObjectFactory
-  NS_IMETHOD GetLanguageRuntime(const nsAString &aLanguageName,
-                                nsILanguageRuntime **aLanguage);
+  NS_IMETHOD GetScriptRuntime(const nsAString &aLanguageName,
+                              nsIScriptRuntime **aLanguage);
 
-  NS_IMETHOD GetLanguageRuntimeByID(PRUint32 aLanguageID, 
-                                    nsILanguageRuntime **aLanguage);
+  NS_IMETHOD GetScriptRuntimeByID(PRUint32 aLanguageID, 
+                                  nsIScriptRuntime **aLanguage);
 
-  NS_IMETHOD GetIDForLanguage(const nsAString &aLanguageName,
-                              PRUint32 *aLanguageID);
+  NS_IMETHOD GetIDForScriptType(const nsAString &aLanguageName,
+                                PRUint32 *aLanguageID);
 
   NS_IMETHOD NewScriptGlobalObject(PRBool aIsChrome,
                                    nsIScriptGlobalObject **aGlobal);
@@ -99,5 +99,5 @@ public:
 
 protected:
   PRBool mLoadedAllLanguages;
-  nsCOMPtr<nsILanguageRuntime> mLanguageArray[NS_SL_ARRAY_UBOUND];
+  nsCOMPtr<nsIScriptRuntime> mLanguageArray[NS_STID_ARRAY_UBOUND];
 };

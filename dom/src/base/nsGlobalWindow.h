@@ -163,12 +163,12 @@ public:
 
   virtual nsresult EnsureScriptEnvironment(PRUint32 aLangID);
 
-  virtual nsIScriptContext *GetLanguageContext(PRUint32 lang);
-  virtual void *GetLanguageGlobal(PRUint32 lang);
+  virtual nsIScriptContext *GetScriptContext(PRUint32 lang);
+  virtual void *GetScriptGlobal(PRUint32 lang);
 
-  // Set a new language context for this global.  The native global for the
-  // context is created by the context's GetNativeGlobal() method.
-  virtual nsresult SetLanguageContext(PRUint32 lang, nsIScriptContext *aContext);
+  // Set a new script language context for this global.  The native global
+  // for the context is created by the context's GetNativeGlobal() method.
+  virtual nsresult SetScriptContext(PRUint32 lang, nsIScriptContext *aContext);
   
   virtual nsresult SetNewDocument(nsIDOMDocument *aDocument,
                                   nsISupports *aState,
@@ -267,14 +267,14 @@ public:
     return mContext;
   }
 
-  nsIScriptContext *GetLanguageContextInternal(PRUint32 aLangID)
+  nsIScriptContext *GetScriptContextInternal(PRUint32 aLangID)
   {
-    NS_ASSERTION(NS_SL_VALID(aLangID), "Invalid language");
+    NS_ASSERTION(NS_STID_VALID(aLangID), "Invalid language");
     if (mOuterWindow) {
-      return GetOuterWindowInternal()->mLanguageContexts[NS_SL_INDEX(aLangID)];
+      return GetOuterWindowInternal()->mScriptContexts[NS_STID_INDEX(aLangID)];
     }
 
-    return mLanguageContexts[NS_SL_INDEX(aLangID)];
+    return mScriptContexts[NS_STID_INDEX(aLangID)];
   }
 
   nsGlobalWindow *GetOuterWindowInternal()
@@ -490,8 +490,8 @@ protected:
   nsString                      mStatus;
   nsString                      mDefaultStatus;
   // index 0->language_id 1, so index MAX-1 == language_id MAX
-  nsCOMPtr<nsIScriptContext>    mLanguageContexts[nsIProgrammingLanguage::MAX];
-  void *                        mLanguageGlobals[nsIProgrammingLanguage::MAX];
+  nsCOMPtr<nsIScriptContext>    mScriptContexts[NS_STID_ARRAY_UBOUND];
+  void *                        mScriptGlobals[NS_STID_ARRAY_UBOUND];
 
   nsIScriptGlobalObjectOwner*   mGlobalObjectOwner; // Weak Reference
   nsIDocShell*                  mDocShell;  // Weak Reference

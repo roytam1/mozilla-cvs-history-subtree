@@ -445,7 +445,7 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
   if (!boundGlobal)
     return NS_OK;
 
-  nsIScriptContext *boundContext = boundGlobal->GetLanguageContext(stID);
+  nsIScriptContext *boundContext = boundGlobal->GetScriptContext(stID);
   if (!boundContext) return NS_OK;
 
   nsScriptObjectHolder handler(boundContext);
@@ -458,7 +458,7 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
   }
   // XXX - apparently we should not be using the global as the scope - what
   // should we use?
-  void *scope = boundGlobal->GetLanguageGlobal(stID);
+  void *scope = boundGlobal->GetScriptGlobal(stID);
 
   PRUint32 argCount;
   const char **argNames;

@@ -73,7 +73,9 @@ class nsIScriptContext : public nsISupports
 public:
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISCRIPTCONTEXT_IID)
 
-  virtual PRUint32 GetLanguage() = 0;
+  /* Get the ID of this language. */
+  virtual PRUint32 GetScriptTypeID() = 0;
+
   /**
    * Compile and execute a script.
    *
@@ -416,7 +418,7 @@ public:
   /* Memory managment for script objects.  Used by the implementation of
    * nsScriptObjectHolder to manage the lifetimes of the held script objects/
    *
-   * See also nsILanguageRuntime, which has identical methods and is useful
+   * See also nsIScriptRuntime, which has identical methods and is useful
    * in situations when you do not have an nsIScriptContext.
    * 
    */

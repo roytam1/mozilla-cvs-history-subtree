@@ -1286,7 +1286,7 @@ nsJSContext::CompileScript(const PRUnichar* aText,
     if (script) {
       JSObject *scriptObject = ::JS_NewScriptObject(mContext, script);
       if (scriptObject) {
-        NS_ASSERTION(aScriptObject.getLanguage()==JAVASCRIPT,
+        NS_ASSERTION(aScriptObject.getScriptTypeID()==JAVASCRIPT,
                      "Expecting JS script object holder");
         rv = aScriptObject.set(scriptObject);
       } else {
@@ -1453,7 +1453,7 @@ nsJSContext::CompileEventHandler(nsIPrincipal *aPrincipal,
   }
 
   JSObject *handler = ::JS_GetFunctionObject(fun);
-  NS_ASSERTION(aHandler.getLanguage()==JAVASCRIPT,
+  NS_ASSERTION(aHandler.getScriptTypeID()==JAVASCRIPT,
                "Expecting JS script object holder");
   return aHandler.set((void *)handler);
 }
@@ -1701,7 +1701,7 @@ nsJSContext::GetBoundEventHandler(nsISupports* aTarget, void *aScope,
         aHandler.drop();
         return NS_OK;
     }
-    NS_ASSERTION(aHandler.getLanguage()==JAVASCRIPT,
+    NS_ASSERTION(aHandler.getScriptTypeID()==JAVASCRIPT,
                  "Expecting JS script object holder");
     return aHandler.set(JSVAL_TO_OBJECT(funval));
 }
@@ -1825,7 +1825,7 @@ nsJSContext::Deserialize(nsIObjectInputStream* aStream,
     // XPCOM object (e.g., a principal) beneath ::JS_XDRScript.
     if (data)
         nsMemory::Free(data);
-    NS_ASSERTION(aResult.getLanguage()==JAVASCRIPT,
+    NS_ASSERTION(aResult.getScriptTypeID()==JAVASCRIPT,
                  "Expecting JS script object holder");
     return aResult.set(result);
 }
@@ -2729,7 +2729,7 @@ nsJSContext::IsContextInitialized()
 void
 nsJSContext::FinalizeContext()
 {
-    ;
+  ;
 }
 
 void
@@ -2950,7 +2950,7 @@ nsJSContext::DropScriptObject(void* aScriptObject)
 
 // QueryInterface implementation for nsJSRuntime
 NS_INTERFACE_MAP_BEGIN(nsJSRuntime)
-  NS_INTERFACE_MAP_ENTRY(nsILanguageRuntime)
+  NS_INTERFACE_MAP_ENTRY(nsIScriptRuntime)
 NS_INTERFACE_MAP_END
 
 
@@ -3193,7 +3193,7 @@ nsJSRuntime::DropScriptObject(void* aScriptObject)
 }
 
 // A factory for the runtime.
-nsresult NS_CreateJSRuntime(nsILanguageRuntime **aRuntime)
+nsresult NS_CreateJSRuntime(nsIScriptRuntime **aRuntime)
 {
   nsresult rv = nsJSRuntime::Init();
   NS_ENSURE_SUCCESS(rv, rv);

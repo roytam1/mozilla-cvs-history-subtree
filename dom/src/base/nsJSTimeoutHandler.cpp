@@ -70,10 +70,10 @@ public:
     *aLineNo = mLineNo;
   }
 
-  virtual PRUint32 GetLanguageID() {
+  virtual PRUint32 GetScriptTypeID() {
         return nsIProgrammingLanguage::JAVASCRIPT;
   }
-  virtual PRUint32 GetLanguageVersion() {
+  virtual PRUint32 GetScriptVersion() {
         return mVersion;
   }
 
