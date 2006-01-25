@@ -218,7 +218,7 @@ zapTToneGenerator::ProduceFrame(zapIMediaFrame ** _retval)
     mSampleClock += mMaxSamplesPerFrame;
   }
 #ifdef DEBUG_afri_zmk
-  printf("T<%u, %u>", frame->mTimestamp, frame->mToneData.GetDuration());
+  //printf("T<%u, %u>", frame->mTimestamp, frame->mToneData.GetDuration());
 #endif
   
   *_retval = frame;

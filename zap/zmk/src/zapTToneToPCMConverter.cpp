@@ -210,7 +210,7 @@ zapTToneToPCMConverter::ProduceFrame(zapIMediaFrame ** _retval)
     }
     else {
 #ifdef DEBUG_afri_zmk
-      printf("P<>");
+//      printf("P<>");
 #endif
       // we have a frame and it has samples in the current
       // sampling window
