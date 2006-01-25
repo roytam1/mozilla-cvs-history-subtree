@@ -622,7 +622,7 @@ SdpRtpAvpMediaDescription.fun(
     this._Bandwidths.forEach(callSerialize);
     if (this.key)
       rv += this.key.serialize();
-    this._AdditionalAttribs.forEach(callSerialize);
+    this._AdditionalAttribs.forEach(function(a) { rv += "a="+a+CRLF; });
 
     // serialize format-specific attributes (rtpmap, fmtp):
     this._RtpAvpFormats.forEach(
