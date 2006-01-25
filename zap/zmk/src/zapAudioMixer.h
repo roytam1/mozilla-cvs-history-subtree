@@ -74,6 +74,8 @@ private:
 
   // zapAudioMixerInput inputs (weak references):
   nsVoidArray mInputs;
+
+  PRUint32 mSampleClock;
   
   nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
   

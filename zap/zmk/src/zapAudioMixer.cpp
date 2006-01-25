@@ -276,6 +276,9 @@ zapAudioMixer::DisconnectSink(zapIMediaSink *sink,
 NS_IMETHODIMP
 zapAudioMixer::ProduceFrame(zapIMediaFrame ** _retval)
 {
+  PRUint32 samplesPerFrame = mStreamParameters.GetSamplesPerFrame();
+  mSampleClock += samplesPerFrame;
+  
   PRInt32 activeInputs = mInputs.Count();//XXX
   if (!activeInputs) {
     *_retval = nsnull;
@@ -286,11 +289,10 @@ zapAudioMixer::ProduceFrame(zapIMediaFrame ** _retval)
   zapMediaFrame* frame = new zapMediaFrame();
   frame->AddRef();
   frame->mStreamInfo = mStreamInfo;
-  frame->mTimestamp = 0; // XXX
-
+  frame->mTimestamp = mSampleClock;
+  
   frame->mData.SetLength(mStreamParameters.GetFrameLength());
   float* d = (float*)frame->mData.BeginWriting();
-  PRUint32 samplesPerFrame = mStreamParameters.GetSamplesPerFrame();
   memset(d, 0, frame->mData.Length());
 
   for (PRInt32 i=0; i<activeInputs; ++i) {
