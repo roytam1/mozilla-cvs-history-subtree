@@ -316,11 +316,18 @@ function replaceVars(str, vars)
     return str.replace(/(\$\w[\w\d\-]+)/g, doReplace);
 }
 
-function formatException (ex)
+function formatException(ex)
 {
-    if (ex instanceof Error)
-        return getMsg (MSG_FMT_JSEXCEPTION, [ex.name, ex.message, ex.fileName,
-                                             ex.lineNumber]);
+    if (isinstance(ex, Error))
+    {
+        return getMsg(MSG_FMT_JSEXCEPTION, [ex.name, ex.message, ex.fileName,
+                                            ex.lineNumber]);
+    }
+    if ((typeof ex == "object") && ("filename" in ex))
+    {
+        return getMsg(MSG_FMT_JSEXCEPTION, [ex.name, ex.message, ex.filename,
+                                            ex.lineNumber]);
+    }
 
     return String(ex);
 }
@@ -336,8 +343,21 @@ function Clone (obj)
 {
     var robj = new Object();
 
-    for (var p in obj)
-        robj[p] = obj[p];
+    if ("__proto__" in obj)
+    {
+        // Special clone for Spidermonkey.
+        for (var p in obj)
+        {
+            if (obj.hasOwnProperty(p))
+                robj[p] = obj[p];
+        }
+        robj.__proto__ = obj.__proto__;
+    }
+    else
+    {
+        for (var p in obj)
+            robj[p] = obj[p];
+    }
 
     return robj;
 
@@ -359,7 +379,7 @@ function Copy(source, dest, overwrite)
 
 /*
  * matches a real object against one or more pattern objects.
- * if you pass an array of pattern objects, |negate| controls wether to check
+ * if you pass an array of pattern objects, |negate| controls whether to check
  * if the object matches ANY of the patterns, or NONE of the patterns.
  */
 function matchObject (o, pattern, negate)
@@ -520,7 +540,7 @@ function newObject(contractID, iface)
 
     var rv;
     var cls = Components.classes[contractID];
-    
+
     if (!cls)
         return null;
 
@@ -554,7 +574,7 @@ function getService(contractID, iface)
 
     var rv;
     var cls = Components.classes[contractID];
-    
+
     if (!cls)
         return null;
 
@@ -906,7 +926,7 @@ function getFileFromURLSpec(url)
 {
     const nsIFileProtocolHandler = Components.interfaces.nsIFileProtocolHandler;
 
-    var service = getService("@mozilla.org/network/io-service;1", 
+    var service = getService("@mozilla.org/network/io-service;1",
                              "nsIIOService");
 
     /* In sept 2002, bug 166792 moved this method to the nsIFileProtocolHandler
@@ -984,7 +1004,7 @@ function confirm(msg, parent, title)
     return ps.confirm (parent, title, msg);
 }
 
-function confirmEx(msg, buttons, defaultButton, checkText, 
+function confirmEx(msg, buttons, defaultButton, checkText,
                    checkVal, parent, title)
 {
     /* Note that on versions before Mozilla 0.9, using 3 buttons,
@@ -993,7 +1013,7 @@ function confirmEx(msg, buttons, defaultButton, checkText,
      * The buttons should be listed in the 'accept', 'cancel' and 'extra' order,
      * and the exact button order is host app- and platform-dependant.
      * For example, on Windows this is usually [button 1] [button 3] [button 2],
-     * and on Linux [button 3] [button 2] [button 1]. 
+     * and on Linux [button 3] [button 2] [button 1].
      */
     var PROMPT_CTRID = "@mozilla.org/embedcomp/prompt-service;1";
     var nsIPromptService = Components.interfaces.nsIPromptService;
@@ -1011,7 +1031,7 @@ function confirmEx(msg, buttons, defaultButton, checkText,
     var buttonFlags = 0;
     var buttonText = [null, null, null];
 
-    if (!isinstance(buttons, Array)) 
+    if (!isinstance(buttons, Array))
         throw "buttons parameter must be an Array";
     if ((buttons.length < 1) || (buttons.length > 3))
         throw "the buttons array must have 1, 2 or 3 elements";
@@ -1039,8 +1059,8 @@ function confirmEx(msg, buttons, defaultButton, checkText,
     if (!checkVal)
         checkVal = new Object();
 
-    rv = ps.confirmEx(parent, title, msg, buttonFlags, buttonText[0], 
-                      buttonText[1], buttonText[2], checkText, checkVal);
+    var rv = ps.confirmEx(parent, title, msg, buttonFlags, buttonText[0],
+                          buttonText[1], buttonText[2], checkText, checkVal);
     return rv;
 }
 
@@ -1053,7 +1073,7 @@ function prompt(msg, initial, parent, title)
         parent = window;
     if (!title)
         title = MSG_PROMPT;
-    rv = { value: initial };
+    var rv = { value: initial };
 
     if (!ps.prompt (parent, title, msg, rv, null, {value: null}))
         return null;
@@ -1070,7 +1090,7 @@ function promptPassword(msg, initial, parent, title)
         parent = window;
     if (!title)
         title = MSG_PROMPT;
-    rv = { value: initial };
+    var rv = { value: initial };
 
     if (!ps.promptPassword (parent, title, msg, rv, null, {value: null}))
         return null;
@@ -1122,6 +1142,69 @@ function isinstance(inst, base)
      * 254067 which makes instanceof fail if the two sides are 'from'
      * different windows (something we don't care about).
      */
-    return (inst && inst.constructor && base &&
-            (inst.constructor.name == base.name));
+    return (inst && base &&
+            ((inst instanceof base) ||
+             (inst.constructor && (inst.constructor.name == base.name))));
+}
+
+function scaleNumberBy1024(number)
+{
+    var scale = 0;
+    while ((number >= 1000) && (scale < 6))
+    {
+        scale++;
+        number /= 1024;
+    }
+
+    return [scale, number];
+}
+
+function getSISize(size)
+{
+    var data = scaleNumberBy1024(size);
+
+    if (data[1] < 10)
+        data[1] = data[1].toFixed(2);
+    else if (data[1] < 100)
+        data[1] = data[1].toFixed(1);
+    else
+        data[1] = data[1].toFixed(0);
+
+    return getMsg(MSG_SI_SIZE, [data[1], getMsg("msg.si.size." + data[0])]);
+}
+
+function getSISpeed(speed)
+{
+    var data = scaleNumberBy1024(speed);
+
+    if (data[1] < 10)
+        data[1] = data[1].toFixed(2);
+    else if (data[1] < 100)
+        data[1] = data[1].toFixed(1);
+    else
+        data[1] = data[1].toFixed(0);
+
+    return getMsg(MSG_SI_SPEED, [data[1], getMsg("msg.si.speed." + data[0])]);
+}
+
+// Returns -1 if version 1 is newer, +1 if version 2 is newer, and 0 for same.
+function compareVersions(ver1, ver2)
+{
+    var ver1parts = ver1.split(".");
+    var ver2parts = ver2.split(".");
+
+    while ((ver1parts.length > 0) && (ver2parts.length > 0))
+    {
+        if (ver1parts[0] < ver2parts[0])
+            return 1;
+        if (ver1parts[0] > ver2parts[0])
+            return -1;
+        ver1parts.shift();
+        ver2parts.shift();
+    }
+    if (ver1parts.length > 0)
+        return -1;
+    if (ver2parts.length > 0)
+        return 1;
+    return 0;
 }

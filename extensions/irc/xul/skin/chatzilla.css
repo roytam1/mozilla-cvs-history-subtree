@@ -47,7 +47,7 @@ window {
 }
 
 #tabpanels-contents-box {
-    margin: 3px;
+    margin: 3px 0;
 }
 
 #header-url:hover {
@@ -84,6 +84,10 @@ window {
     background: darkslategrey !important;
 }
 
+#view-tabs {
+    overflow-x: hidden;
+}
+
 #views-tbar-spacer {
     -moz-box-flex: 10000;
 }
@@ -111,15 +115,10 @@ window {
     color: red;
 }
 
-/* spaces after the 4th and 8th tab, so you can line them up with your Fn
- * keys */
-.view-button[viewKey="4"],
-.view-button[viewKey="8"] {
-    margin-left: 5px;
-}
-
 .output-container {
     border: thin silver inset;
+    border-left: none;
+    border-right: none;
 }
 
 treecol { 

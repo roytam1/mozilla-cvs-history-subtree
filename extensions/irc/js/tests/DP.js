@@ -170,7 +170,7 @@ function DPM_getPhraseDirected(seedWord, dir)
         else
             word= this.wordPivots[word].previousList.getRandomLink().link;
         
-        if (word != "")  // if it isnt blank
+        if (word != "")  // if it isn't blank
         {
             dpprint ("DPM_getPhraseDirected: got word '" + word + "'");
 
@@ -470,7 +470,7 @@ function CWordPivot (word)
     dpprint ("* new pivot : '" + word + "'");
     this.word = word;
     this.nextList = new CPhraseLinkList(word, "next");
-    this.previousList = new CPhraseLinkList(word, "prevoius");
+    this.previousList = new CPhraseLinkList(word, "previous");
 
 }
 

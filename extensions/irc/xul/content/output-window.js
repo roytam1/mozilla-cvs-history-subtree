@@ -130,7 +130,8 @@ function stock_initOutputWindow(newClient, newView, newClickHandler)
     }
 
     changeCSS(view.prefs["motif.current"]);
-    
+    updateMotifSettings();
+
     var output = document.getElementById("output");
     output.appendChild(view.messages);
 
@@ -248,6 +249,46 @@ function changeCSS(url, id)
 
     node.setAttribute("href", url);
     window.scrollTo(0, window.document.height);
+}
+
+function updateMotifSettings(existingTimeout)
+{
+    // Try... catch with a repeat to cope with the style sheet not being loaded
+    const TIMEOUT = 100;
+    try
+    {
+        existingTimeout += TIMEOUT;
+        view.motifSettings = getMotifSettings();
+    }
+    catch(ex) 
+    {
+        if (existingTimeout >= 30000) // Stop after trying for 30 seconds
+            return;
+        if (ex.name == "NS_ERROR_DOM_INVALID_ACCESS_ERR") //not ready, try again
+            setTimeout(updateMotifSettings, TIMEOUT, existingTimeout);
+        else // something else, panic!
+            dd(ex);
+    }
+}
+
+function getMotifSettings()
+{
+    var re = new RegExp("czsettings\\.(\\w*)", "i");
+    var rules = document.getElementById("main-css").sheet.cssRules;
+    var rv = new Object();
+    var ary;
+    // Copy any settings, which are available in the motif using the
+    // "CZSETTINGS" selector. We only store the regexp match after checking
+    // the rule type because selectorText is not defined on other rule types.
+    for (var i = 0; i < rules.length; i++)
+    {
+        if ((rules[i].type == CSSRule.STYLE_RULE) &&
+            ((ary = rules[i].selectorText.match(re)) != null))
+        {
+            rv[ary[1]] = true;
+        }
+    }
+    return rv;
 }
 
 function setText(field, text, checkCondition)
@@ -396,8 +437,9 @@ function updateChannel()
 
         if (view.topic)
         {
-            var nodes = client.munger.munge(view.topic, null,
-                                            getObjectDetails(view));
+            var data = getObjectDetails(view);
+            data.dontLogURLs = true;
+            var nodes = client.munger.munge(view.topic, null, data);
             header["topicnodes"].appendChild(nodes);
         }
         else
@@ -434,9 +476,10 @@ function updateUser()
     header["descnodes"].removeChild(header["descnodes"].firstChild);
     if (typeof view.desc != "undefined")
     {
-        var nodes = client.munger.munge(view.desc, null,
-                                        getObjectDetails(view));
-            header["descnodes"].appendChild(nodes);
+        var data = getObjectDetails(view);
+        data.dontLogURLs = true;
+        var nodes = client.munger.munge(view.desc, null, data);
+        header["descnodes"].appendChild(nodes);
     }
     else
     {
@@ -466,7 +509,9 @@ function updateDCCFile()
     
     setText("file", view.filename);
     setText("progress", getMsg(MSG_DCCFILE_PROGRESS,
-                               [pcent, view.position, view.size]));
+                               [pcent, mainWindow.getSISize(view.position),
+                                mainWindow.getSISize(view.size),
+                                mainWindow.getSISpeed(view.speed)]));
 
     setAttribute("progressbar", "width", pcent + "%");
 }

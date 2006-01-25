@@ -39,10 +39,11 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-const __cz_version   = "0.9.67+";
+const __cz_version   = "0.9.70";
 const __cz_condition = "green";
 const __cz_suffix    = "";
 const __cz_guid      = "59c81df5-4b7a-477b-912d-4e0fdf64e5f2";
+const __cz_locale    = "0.9.70.0";
 
 var warn;
 var ASSERT;
@@ -69,7 +70,7 @@ var client = new Object();
 
 client.TYPE = "IRCClient";
 client.COMMAND_CHAR = "/";
-client.STEP_TIMEOUT = 100;
+client.STEP_TIMEOUT = 500;
 client.MAX_MESSAGES = 200;
 client.MAX_HISTORY = 50;
 /* longest nick to show in display before forcing the message to a block level
@@ -101,20 +102,30 @@ client.HIDE_CODES = true;      /* true if you'd prefer to show numeric response
  * copy to work properly. */
 client.NO_BROWSER_FOCUS = (navigator.platform.search(/mac|win/i) == -1);
 client.DEFAULT_RESPONSE_CODE = "===";
+/* Minimum number of users above or below the conference limit the user count
+ * must go, before it is changed. This allows the user count to fluctuate
+ * around the limit without continously going on and off.
+ */
+client.CONFERENCE_LOW_PASS = 10;
 
 
 client.viewsArray = new Array();
 client.activityList = new Object();
+client.hostCompat = new Object();
 client.inputHistory = new Array();
 client.lastHistoryReferenced = -1;
 client.incompleteLine = "";
 client.lastTabUp = new Date();
+client.awayMsgs = new Array();
+client.awayMsgCount = 5;
 
 CIRCNetwork.prototype.INITIAL_CHANNEL = "";
 CIRCNetwork.prototype.MAX_MESSAGES = 100;
 CIRCNetwork.prototype.IGNORE_MOTD = false;
 CIRCNetwork.prototype.RECLAIM_WAIT = 15000;
 CIRCNetwork.prototype.RECLAIM_TIMEOUT = 400000;
+CIRCNetwork.prototype.MIN_RECONNECT_MS = 15 * 1000;             // 15s
+CIRCNetwork.prototype.MAX_RECONNECT_MS = 2 * 60 * 60 * 1000;    // 2h
 
 CIRCServer.prototype.READ_TIMEOUT = 0;
 CIRCServer.prototype.PRUNE_OLD_USERS = 0; // prune on user quit.
@@ -168,12 +179,16 @@ function init()
     if (client.prefs["log"])
         client.openLogFile(client);
 
+    // Make sure the userlist is on the correct side.
+    updateUserlistSide(client.prefs["userlistLeft"]);
+
     client.display(MSG_WELCOME, "HELLO");
     client.dispatch("set-current-view", { view: client });
 
     importFromFrame("updateHeader");
     importFromFrame("setHeaderState");
     importFromFrame("changeCSS");
+    importFromFrame("updateMotifSettings");
     importFromFrame("addUsers");
     importFromFrame("updateUsers");
     importFromFrame("removeUsers");
@@ -190,10 +205,11 @@ function init()
 
     client.initialized = true;
 
+    dispatch("help", { hello: true });
     dispatch("networks");
-    dispatch("commands");
 
-    processStartupURLs();
+    initInstrumentation();
+    setTimeout(processStartupURLs, 0);
 }
 
 function initStatic()
@@ -264,6 +280,11 @@ function initStatic()
         setListMode("symbol");
     else
         setListMode("graphic");
+
+    var tree = document.getElementById('user-list');
+    tree.setAttribute("ondraggesture",
+                      "nsDragAndDrop.startDrag(event, userlistDNDObserver);");
+
     setDebugMode(client.prefs["debugMode"]);
 
     var ver = __cz_version + (__cz_suffix ? "-" + __cz_suffix : "");
@@ -321,7 +342,7 @@ function initStatic()
 
     client.statusBar = new Object();
 
-    client.statusBar["server-nick"] = document.getElementById ("server-nick");
+    client.statusBar["server-nick"] = document.getElementById("server-nick");
 
     client.statusElement = document.getElementById("status-text");
     client.defaultStatus = MSG_DEFAULT_STATUS;
@@ -333,6 +354,34 @@ function initStatic()
     setInterval("onNotifyTimeout()", client.NOTIFY_TIMEOUT);
     setInterval("onWhoTimeout()", client.AWAY_TIMEOUT);
 
+    client.awayMsgs = [{ message: MSG_AWAY_DEFAULT }];
+    var awayFile = new nsLocalFile(client.prefs["profilePath"]);
+    awayFile.append("awayMsgs.txt");
+    if (awayFile.exists())
+    {
+        var awayLoader = new TextSerializer(awayFile);
+        if (awayLoader.open("<"))
+        {
+            // Load the first item from the file.
+            var item = awayLoader.deserialize();
+            if (item instanceof Array)
+            {
+                // If the first item is an array, it is the entire thing.
+                client.awayMsgs = item;
+            }
+            else
+            {
+                /* Not an array, so we have the old format of a single object
+                 * per entry.
+                 */
+                client.awayMsgs = [item];
+                while ((item = awayLoader.deserialize()))
+                    client.awayMsgs.push(item);
+            }
+            awayLoader.close();
+        }
+    }
+
     client.defaultCompletion = client.COMMAND_CHAR + "help ";
 
     client.deck = document.getElementById('output-deck');
@@ -343,9 +392,40 @@ function initApplicationCompatibility()
     // This routine does nothing more than tweak the UI based on the host
     // application.
 
+    /* client.hostCompat.typeChromeBrowser indicates whether we should use
+     * type="chrome" <browser> elements for the output window documents.
+     * Using these is necessary to work properly with xpcnativewrappers, but
+     * broke selection in older builds.
+     */
+    client.hostCompat.typeChromeBrowser = false;
+
     // Set up simple host and platform information.
     client.host = "Unknown";
-    if ("getBrowserURL" in window)
+    var app = getService("@mozilla.org/xre/app-info;1", "nsIXULAppInfo");
+    if (app)
+    {
+        // Use the XULAppInfo.ID to find out what host we run on.
+        switch (app.ID)
+        {
+            case "{ec8030f7-c20a-464f-9b0e-13a3a9e97384}":
+                client.host = "Firefox";
+                if (compareVersions(app.version, "1.4") <= 0)
+                    client.hostCompat.typeChromeBrowser = true;
+                break;
+            case "{" + __cz_guid + "}":
+                // We ARE the app, in other words, we're running in XULrunner.
+                client.host = "XULrunner";
+                client.hostCompat.typeChromeBrowser = true;
+                break;
+            case "{92650c4d-4b8e-4d2a-b7eb-24ecf4f6b63a}": // SeaMonkey
+                client.host = "Mozilla";
+                client.hostCompat.typeChromeBrowser = true;
+                break;
+            default:
+                client.host = ""; // Unknown host, show an error later.
+        }
+    }
+    else if ("getBrowserURL" in window)
     {
         var url = getBrowserURL();
         if (url == "chrome://navigator/content/navigator.xul")
@@ -354,10 +434,6 @@ function initApplicationCompatibility()
             client.host = "Firefox";
         else
             client.host = ""; // We don't know this host. Show an error later.
-    }
-    else
-    {
-        client.host = "XULrunner";
     }
 
     client.platform = "Unknown";
@@ -386,7 +462,7 @@ function initApplicationCompatibility()
 function initNetworks()
 {
     client.addNetwork("moznet",
-                      [{name: "irc.mozilla.org", port:6667}, 
+                      [{name: "irc.mozilla.org", port:6667},
                        {name: "irc.mozilla.org", port:6697, isSecure:true}]);
     client.addNetwork("hybridnet", [{name: "irc.ssc.net", port: 6667}]);
     client.addNetwork("slashnet", [{name: "irc.slashnet.org", port:6667}]);
@@ -395,7 +471,7 @@ function initNetworks()
     client.addNetwork("webbnet", [{name: "irc.webbnet.info", port:6667}]);
     client.addNetwork("quakenet", [{name: "irc.quakenet.org", port:6667}]);
     client.addNetwork("freenode", [{name: "irc.freenode.net", port:6667}]);
-    client.addNetwork("serenia", 
+    client.addNetwork("serenia",
                       [{name: "chat.serenia.net", port:9999, isSecure:true}]);
     client.addNetwork("efnet",
                       [{name: "irc.prison.net", port: 6667},
@@ -410,14 +486,26 @@ function initIcons()
 
     /* when installing on Mozilla, the XPI has the power to put the icons where
      * they are needed - in Firefox, it doesn't. So we move them here, instead.
+     * In XULRunner, things are more fun, as we're not an extension.
      */
-    if (client.host != "Firefox")
+    var sourceDir;
+    if (client.host == "Firefox")
+    {
+        sourceDir = getSpecialDirectory("ProfD");
+        sourceDir.append("extensions");
+        sourceDir.append("{" + __cz_guid + "}");
+        sourceDir.append("defaults");
+    }
+    else if (client.host == "XULrunner")
+    {
+        sourceDir = getSpecialDirectory("resource:app");
+        sourceDir.append("chrome");
+        sourceDir.append("icons");
+    }
+    else
+    {
         return;
-
-    var sourceDir = getSpecialDirectory("ProfD");
-    sourceDir.append("extensions");
-    sourceDir.append("{" + __cz_guid + "}");
-    sourceDir.append("defaults");
+    }
 
     var destDir = getSpecialDirectory("AChrom");
     destDir.append("icons");
@@ -452,12 +540,128 @@ function initIcons()
     }
 }
 
+function initInstrumentation()
+{
+    // Make sure we assign the user a random key - this is not used for
+    // anything except percentage chance of participation.
+    if (client.prefs["instrumentation.key"] == 0)
+    {
+        var rand = 1 + Math.round(Math.random() * 10000);
+        client.prefs["instrumentation.key"] = rand;
+    }
+
+    runInstrumentation("inst1");
+}
+
+function runInstrumentation(name, firstRun)
+{
+    if (!/^inst\d+$/.test(name))
+        return;
+
+    // Values:
+    //   0 = not answered question
+    //   1 = allowed inst
+    //   2 = denied inst
+
+    if (client.prefs["instrumentation." + name] == 0)
+    {
+        // We only want 1% of people to be asked here.
+        if (client.prefs["instrumentation.key"] > 100)
+            return;
+
+        // User has not seen the info about this system. Show them the info.
+        var cmdYes = "allow-" + name;
+        var cmdNo = "deny-" + name;
+        var btnYes = getMsg(MSG_INST1_COMMAND_YES, cmdYes);
+        var btnNo  = getMsg(MSG_INST1_COMMAND_NO,  cmdNo);
+        client.munger.entries[".inline-buttons"].enabled = true;
+        client.display(getMsg("msg." + name + ".msg1", [btnYes, btnNo]));
+        client.display(getMsg("msg." + name + ".msg2", [cmdYes, cmdNo]));
+        client.munger.entries[".inline-buttons"].enabled = false;
+
+        // Don't hide *client* if we're asking the user about the startup ping.
+        client.lockView = true;
+        return;
+    }
+
+    if (client.prefs["instrumentation." + name] != 1)
+        return;
+
+    if (name == "inst1")
+        runInstrumentation1(firstRun);
+}
+
+function runInstrumentation1(firstRun)
+{
+    function inst1onLoad()
+    {
+        if (/OK/.test(req.responseText))
+            client.display(MSG_INST1_MSGRPLY2);
+        else
+            client.display(getMsg(MSG_INST1_MSGRPLY1, MSG_UNKNOWN));
+    };
+
+    function inst1onError()
+    {
+        client.display(getMsg(MSG_INST1_MSGRPLY1, req.statusText));
+    };
+
+    try
+    {
+        const baseURI = "http://silver.warwickcompsoc.co.uk/" +
+                        "mozilla/chatzilla/instrumentation/startup?";
+
+        if (firstRun)
+        {
+            // Do a first-run ping here.
+            var frReq = new XMLHttpRequest();
+            frReq.open("GET", baseURI + "first-run");
+            frReq.send(null);
+        }
+
+        var data = new Array();
+        data.push("ver=" + encodeURIComponent(CIRCServer.prototype.VERSION_RPLY));
+        data.push("host=" + encodeURIComponent(client.hostPlatform));
+        data.push("chost=" + encodeURIComponent(CIRCServer.prototype.HOST_RPLY));
+        data.push("cos=" + encodeURIComponent(CIRCServer.prototype.OS_RPLY));
+
+        var url = baseURI + data.join("&");
+
+        var req = new XMLHttpRequest();
+        req.onload = inst1onLoad;
+        req.onerror = inst1onError;
+        req.open("GET", url);
+        req.send(null);
+    }
+    catch (ex)
+    {
+        client.display(getMsg(MSG_INST1_MSGRPLY1, formatException(ex)));
+    }
+}
+
 function getFindData(e)
 {
     var findData = new nsFindInstData();
     findData.browser = e.sourceObject.frame;
     findData.rootSearchWindow = e.sourceObject.frame.contentWindow;
     findData.currentSearchWindow = e.sourceObject.frame.contentWindow;
+
+    /* Yay, evil hacks! findData.init doesn't care about the findService, it
+     * gets option settings from webBrowserFind. As we want the wrap option *on*
+     * when we use /find foo, we set it on the findService there. However,
+     * restoring the original value afterwards doesn't help, because init() here
+     * overrides that value. Unless we make .init do something else, of course:
+     */
+    findData._init = findData.init;
+    findData.init =
+        function init()
+        {
+            this._init();
+            const FINDSVC_ID = "@mozilla.org/find/find_service;1";
+            var findService = getService(FINDSVC_ID, "nsIFindService");
+            this.webBrowserFind.wrapFind = findService.wrapFind;
+        };
+
     return findData;
 }
 
@@ -616,6 +820,30 @@ function processStartupURLs()
             wentSomewhere = true;
         }
     }
+    /* check to see whether the URL has been passed via the command line
+       instead. */
+    else if ("arguments" in window &&
+        0 in window.arguments && typeof window.arguments[0] == "string")
+    {
+        var url = window.arguments[0]
+        var urlMatches = url.match(/^ircs?:\/\/\/?(.*)$/)
+        if (urlMatches)
+        {
+            if (urlMatches[1])
+            {
+                /* if the url is not "irc://", "irc:///" or an ircs equiv then
+                   go to it. */
+                gotoIRCURL(url);
+                wentSomewhere = true;
+            }
+        }
+        else if (url)
+        {
+            /* URL parameter is not blank, but does not not conform to the
+               irc[s] scheme. */
+            display(getMsg(MSG_ERR_INVALID_SCHEME, url), MT_ERROR);
+        }
+    }
 
     if (!wentSomewhere)
     {
@@ -683,7 +911,7 @@ function getConnectedNetworks()
     return rv;
 }
 
-function insertLink (matchText, containerTag)
+function insertLink (matchText, containerTag, data)
 {
     var href;
     var linkText;
@@ -729,10 +957,19 @@ function insertLink (matchText, containerTag)
         href = "http://" + linkText;
     }
 
-    var max = client.prefs["urls.store.max"];
-    if (client.prefs["urls.list"].unshift(href) > max)
-        client.prefs["urls.list"].pop();
-    client.prefs["urls.list"].update();
+    /* This gives callers to the munger control over URLs being logged; the
+     * channel topic munger uses this, as well as the "is important" checker.
+     * If either of |dontLogURLs| or |noStateChange| is present and true, we
+     * don't log.
+     */
+    if ((!("dontLogURLs" in data) || !data.dontLogURLs) &&
+        (!("noStateChange" in data) || !data.noStateChange))
+    {
+        var max = client.prefs["urls.store.max"];
+        if (client.prefs["urls.list"].unshift(href) > max)
+            client.prefs["urls.list"].pop();
+        client.prefs["urls.list"].update();
+    }
 
     var anchor = document.createElementNS ("http://www.w3.org/1999/xhtml",
                                            "html:a");
@@ -790,7 +1027,7 @@ function insertChannelLink (matchText, containerTag, eventData)
 
 function insertBugzillaLink (matchText, containerTag, eventData)
 {
-    var number = matchText.match (/(\d+)/)[1];
+    var idOrAlias = matchText.match(/bug\s+#?(\d{3,6}|[^\s,]{1,20})/i)[1];
 
     var anchor = document.createElementNS ("http://www.w3.org/1999/xhtml",
                                            "html:a");
@@ -803,7 +1040,7 @@ function insertBugzillaLink (matchText, containerTag, eventData)
     else
         bugURL = client.prefs["bugURL"];
 
-    anchor.setAttribute ("href", bugURL.replace("%s", number));
+    anchor.setAttribute ("href", bugURL.replace("%s", idOrAlias));
     anchor.setAttribute ("class", "chatzilla-link");
     anchor.setAttribute ("target", "_content");
     insertHyphenatedWord (matchText, anchor);
@@ -913,46 +1150,43 @@ function insertSmiley(emoticon, containerTag)
 
 function mircChangeColor (colorInfo, containerTag, data)
 {
-    if (!client.enableColors)
+    /* If colors are disabled, the caller doesn't want colors specifically, or
+     * the caller doesn't want any state-changing effects, we drop out.
+     */
+    if (!client.enableColors ||
+        (("noMircColors" in data) && data.noMircColors) ||
+        (("noStateChange" in data) && data.noStateChange))
+    {
         return;
+    }
 
     var ary = colorInfo.match (/.(\d{1,2}|)(,(\d{1,2})|)/);
 
-    var fgColor = ary[1];
-    if (fgColor > 16)
-        fgColor &= 16;
-
-    switch (fgColor.length)
+    // Do we have a BG color specified...?
+    if (!arrayHasElementAt(ary, 1) || !ary[1])
     {
-        case 0:
-            delete data.currFgColor;
-            delete data.currBgColor;
-            return;
-
-        case 1:
-            data.currFgColor = "0" + fgColor;
-            break;
-
-        case 2:
-            data.currFgColor = fgColor;
-            break;
+        // Oops, no colors.
+        delete data.currFgColor;
+        delete data.currBgColor;
+        return;
     }
 
-    if (fgColor == 1)
-        delete data.currFgColor;
-    if (arrayHasElementAt(ary, 3))
+    var fgColor = String(Number(ary[1]) % 16);
+
+    if (fgColor.length == 1)
+        data.currFgColor = "0" + fgColor;
+    else
+        data.currFgColor = fgColor;
+
+    // Do we have a BG color specified...?
+    if (arrayHasElementAt(ary, 3) && ary[3])
     {
-        var bgColor = ary[3];
-        if (bgColor > 16)
-            bgColor &= 16;
+        var bgColor = String(Number(ary[3]) % 16);
 
         if (bgColor.length == 1)
             data.currBgColor = "0" + bgColor;
         else
             data.currBgColor = bgColor;
-
-        if (bgColor == 0)
-            delete data.currBgColor;
     }
 
     data.hasColorInfo = true;
@@ -960,8 +1194,12 @@ function mircChangeColor (colorInfo, containerTag, data)
 
 function mircToggleBold (colorInfo, containerTag, data)
 {
-    if (!client.enableColors)
+    if (!client.enableColors ||
+        (("noMircColors" in data) && data.noMircColors) ||
+        (("noStateChange" in data) && data.noStateChange))
+    {
         return;
+    }
 
     if ("isBold" in data)
         delete data.isBold;
@@ -972,8 +1210,12 @@ function mircToggleBold (colorInfo, containerTag, data)
 
 function mircToggleUnder (colorInfo, containerTag, data)
 {
-    if (!client.enableColors)
+    if (!client.enableColors ||
+        (("noMircColors" in data) && data.noMircColors) ||
+        (("noStateChange" in data) && data.noStateChange))
+    {
         return;
+    }
 
     if ("isUnderline" in data)
         delete data.isUnderline;
@@ -984,8 +1226,13 @@ function mircToggleUnder (colorInfo, containerTag, data)
 
 function mircResetColor (text, containerTag, data)
 {
-    if (!client.enableColors || !("hasColorInfo" in data))
+    if (!client.enableColors ||
+        (("noMircColors" in data) && data.noMircColors) ||
+        (("noStateChange" in data) && data.noStateChange) ||
+        !("hasColorInfo" in data))
+    {
         return;
+    }
 
     delete data.currFgColor;
     delete data.currBgColor;
@@ -996,16 +1243,23 @@ function mircResetColor (text, containerTag, data)
 
 function mircReverseColor (text, containerTag, data)
 {
-    if (!client.enableColors)
+    if (!client.enableColors ||
+        (("noMircColors" in data) && data.noMircColors) ||
+        (("noStateChange" in data) && data.noStateChange))
+    {
         return;
+    }
 
-    var tempColor = ("currFgColor" in data ? data.currFgColor : "01");
+    var tempColor = ("currFgColor" in data ? data.currFgColor : "");
 
     if ("currBgColor" in data)
         data.currFgColor = data.currBgColor;
     else
-        data.currFgColor = "00";
-    data.currBgColor = tempColor;
+        delete data.currFgColor;
+    if (tempColor)
+        data.currBgColor = tempColor;
+    else
+        delete data.currBgColor;
     data.hasColorInfo = true;
 }
 
@@ -1059,6 +1313,7 @@ function insertInlineButton(text, containerTag, data)
     var link = document.createElementNS("http://www.w3.org/1999/xhtml", "a");
     link.setAttribute("href", "x-cz-command:" + encodeURI(command));
     link.setAttribute("title", title);
+    link.setAttribute("class", "chatzilla-link");
     link.appendChild(document.createTextNode(label));
 
     containerTag.appendChild(document.createTextNode("["));
@@ -1237,7 +1492,10 @@ function getTabContext(cx, element)
     while (element)
     {
         if (element.localName == "tab")
-            return getObjectDetails(element.view);
+        {
+            cx.__proto__ = getObjectDetails(element.view);
+            return cx;
+        }
         element = element.parentNode;
     }
 
@@ -1252,13 +1510,35 @@ function getUserlistContext(cx)
     if (!cx.channel)
         return cx;
 
+    var user, tree = document.getElementById("user-list");
     cx.userList = new Array();
-    cx.nicknameList = new Array();
     cx.canonNickList = new Array();
+    cx.nicknameList = getSelectedNicknames(tree);
 
-    var tree = document.getElementById("user-list");
+    for (var i = 0; i < cx.nicknameList.length; ++i)
+    {
+        user = cx.channel.getUser(cx.nicknameList[i])
+        cx.userList.push(user);
+        cx.canonNickList.push(user.canonicalName);
+        if (i == 0)
+        {
+            cx.user = user;
+            cx.nickname = user.unicodeName;
+            cx.canonNick = user.canonicalName;
+        }
+    }
+
+    return cx;
+}
+
+function getSelectedNicknames(tree)
+{
+    var rv = [];
+    if (!tree || !tree.view || !tree.view.selection)
+        return rv;
     var rangeCount = tree.view.selection.getRangeCount();
 
+    // Loop through the selection ranges.
     for (var i = 0; i < rangeCount; ++i)
     {
         var start = {}, end = {};
@@ -1266,29 +1546,47 @@ function getUserlistContext(cx)
 
         // If they == -1, we've got no selection, so bail.
         if ((start.value == -1) && (end.value == -1))
-            return cx;
+            continue;
+        /* Workaround: Because we use select(-1) instead of clearSelection()
+         * (see bug 197667) the tree will then give us selection ranges
+         * starting from -1 instead of 0! (See bug 319066.)
+         */
+        if (start.value == -1)
+            start.value = 0;
 
+        // Loop through the contents of the current selection range.
         for (var k = start.value; k <= end.value; ++k)
         {
-            var item = tree.contentView.getItemAtIndex(k);
-            var cell = item.firstChild.firstChild;
-            var user = cx.channel.getUser(cell.getAttribute("unicodeName"));
-            if (user)
-            {
-                cx.userList.push(user);
-                cx.nicknameList.push(user.unicodeName);
-                cx.canonNickList.push(user.canonicalName);
-                if (i == 0 && k == start.value)
-                {
-                    cx.user = user;
-                    cx.nickname = user.unicodeName;
-                    cx.canonNick = user.canonicalName;
-                }
-            }
+            var item = tree.contentView.getItemAtIndex(k).firstChild.firstChild;
+            var userName = item.getAttribute("unicodeName");
+            rv.push(userName);
         }
     }
+    return rv;
+}
 
-    return cx;
+function setSelectedNicknames(tree, nicknameAry)
+{
+    if (!tree || !tree.view || !tree.view.selection || !nicknameAry)
+        return;
+    var item, unicodeName, resultAry = [];
+    // Clear selection:
+    tree.view.selection.select(-1);
+    // Loop through the tree to (re-)select nicknames
+    for (var i = 0; i < tree.view.rowCount; i++)
+    {
+        item = tree.contentView.getItemAtIndex(i).firstChild.firstChild;
+        unicodeName = item.getAttribute("unicodeName");
+        if ((unicodeName != "") && arrayContains(nicknameAry, unicodeName))
+        {
+            tree.view.selection.toggleSelect(i);
+            resultAry.push(unicodeName);
+        }
+    }
+    // Make sure we pass back a correct array:
+    nicknameAry.length = 0;
+    for (var j = 0; j < resultAry.length; j++)
+        nicknameAry.push(resultAry[j]);
 }
 
 function getFontContext(cx)
@@ -1326,8 +1624,11 @@ function msgIsImportant (msg, sourceNick, network)
      *   a) works, and
      *   b) is fast enough to not cause problems,
      * so it will do for now.
+     *
+     * Note also that we don't want to log URLs munged here, or generally do
+     * any state-changing stuff.
      */
-    var plainMsg = client.munger.munge(msg, null, {});
+    var plainMsg = client.munger.munge(msg, null, { noStateChange: true });
     plainMsg = plainMsg.innerHTML.replace(/<[^>]+>/g, "");
 
     var re = network.stalkExpression;
@@ -1459,8 +1760,20 @@ function playSound(file)
 /* timer-based mainloop */
 function mainStep()
 {
-    client.eventPump.stepEvents();
-    setTimeout ("mainStep()", client.STEP_TIMEOUT);
+    try
+    {
+        var count = client.eventPump.stepEvents();
+        if (count > 0)
+            setTimeout("mainStep()", client.STEP_TIMEOUT);
+        else
+            setTimeout("mainStep()", client.STEP_TIMEOUT / 5);
+    }
+    catch(ex)
+    {
+        dd("Exception in mainStep!");
+        dd(formatException(ex));
+        setTimeout("mainStep()", client.STEP_TIMEOUT);
+    }
 }
 
 function openQueryTab(server, nick)
@@ -1596,6 +1909,26 @@ function getObjectDetails (obj, rv)
             rv.viewType = MSG_TAB;
             break;
 
+        case "IRCDCCUser":
+            //rv.viewType = MSG_USER;
+            rv.user = obj;
+            rv.userName = obj.unicodeName;
+            break;
+
+        case "IRCDCCChat":
+            //rv.viewType = MSG_USER;
+            rv.chat = obj;
+            rv.user = obj.user;
+            rv.userName = obj.unicodeName;
+            break;
+
+        case "IRCDCCFileTransfer":
+            //rv.viewType = MSG_USER;
+            rv.file = obj;
+            rv.user = obj.user;
+            rv.fileName = obj.unicodeName;
+            break;
+
         default:
             /* no setup for unknown object */
             break;
@@ -1713,7 +2046,7 @@ function parseIRCURL (url)
         return rv;
 
     /* split url into <host>/<everything-else> pieces */
-    var ary = url.match (/^ircs?:\/\/([^\/\s]+)?(\/.*)?\s*$/i);
+    var ary = url.match (/^ircs?:\/\/([^\/\s]+)?(\/[^\s]*)?$/i);
     if (!ary || !ary[1])
     {
         dd ("parseIRCURL: initial split failed");
@@ -1723,7 +2056,7 @@ function parseIRCURL (url)
     var rest = arrayHasElementAt(ary, 2) ? ary[2] : "";
 
     /* split <host> into server (or network) / port */
-    ary = host.match (/^([^\s\:]+)?(\:\d+)?$/);
+    ary = host.match (/^([^\:]+)?(\:\d+)?$/);
     if (!ary)
     {
         dd ("parseIRCURL: host/port split failed");
@@ -1750,25 +2083,28 @@ function parseIRCURL (url)
 
     if (rest)
     {
-        ary = rest.match (/^\/([^\,\?\s\/]*)?\/?(,[^\?]*)?(\?.*)?$/);
+        ary = rest.match (/^\/([^\?\s\/,]*)?\/?(,[^\?]*)?(\?.*)?$/);
         if (!ary)
         {
             dd ("parseIRCURL: rest split failed ``" + rest + "''");
             return null;
         }
 
-        rv.target = arrayHasElementAt(ary, 1) ?
-            ecmaUnescape(ary[1]).replace("\n", "\\n") : "";
-        var i = rv.target.indexOf(" ");
-        if (i != -1)
-            rv.target = rv.target.substr(0, i);
+        rv.target = arrayHasElementAt(ary, 1) ? ecmaUnescape(ary[1]) : "";
+
+        if (rv.target.search(/[\x07,:\s]/) != -1)
+        {
+            dd ("parseIRCURL: invalid characters in channel name");
+            return null;
+        }
+
         var params = arrayHasElementAt(ary, 2) ? ary[2].toLowerCase() : "";
         var query = arrayHasElementAt(ary, 3) ? ary[3] : "";
 
         if (params)
         {
             rv.isnick =
-                (params.search (/,\s*isnick\s*,|,\s*isnick\s*$/) != -1);
+                (params.search (/,isnick(?:,|$)/) != -1);
             if (rv.isnick && !rv.target)
             {
                 dd ("parseIRCURL: isnick w/o target");
@@ -1779,7 +2115,7 @@ function parseIRCURL (url)
             if (!rv.isserver)
             {
                 rv.isserver =
-                    (params.search (/,\s*isserver\s*,|,\s*isserver\s*$/) != -1);
+                    (params.search (/,isserver(?:,|$)/) != -1);
             }
 
             if (rv.isserver && !specifiedHost)
@@ -1790,10 +2126,10 @@ function parseIRCURL (url)
             }
 
             rv.needpass =
-                (params.search (/,\s*needpass\s*,|,\s*needpass\s*$/) != -1);
+                (params.search (/,needpass(?:,|$)/) != -1);
 
             rv.needkey =
-                (params.search (/,\s*needkey\s*,|,\s*needkey\s*$/) != -1);
+                (params.search (/,needkey(?:,|$)/) != -1);
 
         }
 
@@ -1969,8 +2305,11 @@ function gotoIRCURL (url)
                  * NOTE: This is always a "#" so that URLs may be compared
                  * properly without involving the server (e.g. off-line).
                  */
-                if (arrayIndexOf(serv.channelTypes, target[0]) == -1)
+                if ((arrayIndexOf(["#", "&", "+", "!"], target[0]) == -1) &&
+                    (arrayIndexOf(serv.channelTypes, target[0]) == -1))
+                {
                     target = "#" + target;
+                }
 
                 var chan = new CIRCChannel(serv, null, target);
 
@@ -1988,13 +2327,13 @@ function gotoIRCURL (url)
             var msg;
             if (url.msg.indexOf("\01ACTION") == 0)
             {
-                msg = filterOutput(url.msg, "ACTION", "ME!");
+                msg = filterOutput(url.msg, "ACTION", targetObject);
                 targetObject.display(msg, "ACTION", "ME!",
                                      client.currentObject);
             }
             else
             {
-                msg = filterOutput(url.msg, "PRIVMSG", "ME!");
+                msg = filterOutput(url.msg, "PRIVMSG", targetObject);
                 targetObject.display(msg, "PRIVMSG", "ME!",
                                      client.currentObject);
             }
@@ -2010,17 +2349,6 @@ function gotoIRCURL (url)
     }
 }
 
-function setTopicText (text)
-{
-    var topic = client.statusBar["channel-topic"];
-    var span = document.createElementNS ("http://www.w3.org/1999/xhtml",
-                                         "html:span");
-
-    span.appendChild(stringToMsg(text, client.currentObject));
-    topic.removeChild(topic.firstChild);
-    topic.appendChild(span);
-}
-
 function updateProgress()
 {
     var busy;
@@ -2032,16 +2360,13 @@ function updateProgress()
     if ("progress" in client.currentObject)
         progress = client.currentObject.progress;
 
+    if (!busy)
+        progress = 0;
+
     client.progressPanel.collapsed = !busy;
-    if (busy && (progress >= 0))
-    {
+    client.progressBar.mode = (progress < 0 ? "undetermined" : "determined");
+    if (progress >= 0)
         client.progressBar.value = progress;
-        client.progressBar.mode = "determined";
-    }
-    else
-    {
-        client.progressBar.mode = "undetermined";
-    }
 }
 
 function updateSecurityIcon()
@@ -2058,7 +2383,7 @@ function updateSecurityIcon()
     }
 
     var securityState = o.server.connection.getSecurityState()
-    switch (securityState[0]) 
+    switch (securityState[0])
     {
         case STATE_IS_SECURE:
             securityButton.firstChild.value = o.server.hostname;
@@ -2199,6 +2524,27 @@ function updateTitle (obj)
     client.statusBar["server-nick"].setAttribute("label", nick);
 }
 
+// Where 'right' is orientation, not wrong/right:
+function updateUserlistSide(shouldBeLeft)
+{
+    var listParent = document.getElementById("tabpanels-contents-box");
+    var isLeft = (listParent.childNodes[0].id == "user-list-box");
+    if (isLeft == shouldBeLeft)
+        return;
+    if (shouldBeLeft) // Move from right to left.
+    {
+        listParent.insertBefore(listParent.childNodes[1], listParent.childNodes[0]);
+        listParent.insertBefore(listParent.childNodes[2], listParent.childNodes[0]);
+        listParent.childNodes[1].setAttribute("collapse", "before");
+    }
+    else // Move from left to right.
+    {
+        listParent.appendChild(listParent.childNodes[1]);
+        listParent.appendChild(listParent.childNodes[0]);
+        listParent.childNodes[1].setAttribute("collapse", "after");
+    }
+}
+
 function multilineInputMode (state)
 {
     var multiInput = document.getElementById("multiline-input");
@@ -2223,6 +2569,7 @@ function multilineInputMode (state)
         multiInputBox.setAttribute ("collapsed", "false");
         // multiInput should have the same direction as singleInput
         multiInput.setAttribute("dir", singleInput.getAttribute("dir"));
+        multiInput.value = (client.input ? client.input.value : "");
         client.input = multiInput;
     }
     else  /* turn off multiline input mode */
@@ -2236,6 +2583,7 @@ function multilineInputMode (state)
         singleInputBox.setAttribute ("collapsed", "false");
         // singleInput should have the same direction as multiInput
         singleInput.setAttribute("dir", multiInput.getAttribute("dir"));
+        singleInput.value = (client.input ? client.input.value : "");
         client.input = singleInput;
     }
 
@@ -2344,10 +2692,15 @@ function setCurrentObject (obj)
         return;
 
     var tb, userList;
+    userList = document.getElementById("user-list");
 
     if ("currentObject" in client && client.currentObject)
     {
-        tb = getTabForObject(client.currentObject);
+        var co = client.currentObject;
+        // Save any nicknames selected
+        if (client.currentObject.TYPE == "IRCChannel")
+            co.userlistSelection = getSelectedNicknames(userList);
+        tb = getTabForObject(co);
     }
     if (tb)
     {
@@ -2355,9 +2708,8 @@ function setCurrentObject (obj)
         tb.setAttribute ("state", "normal");
     }
 
-    /* Unselect currently selected users. */
-    userList = document.getElementById("user-list");
-    /* If the splitter's collapsed, the userlist *isn't* visible, but we'll not
+    /* Unselect currently selected users.
+     * If the splitter's collapsed, the userlist *isn't* visible, but we'll not
      * get told when it becomes visible, so update it even if it's only the
      * splitter visible. */
     if (isVisible("user-list-box") || isVisible("main-splitter"))
@@ -2370,7 +2722,10 @@ function setCurrentObject (obj)
         if (obj.TYPE == "IRCChannel")
         {
             client.rdf.setTreeRoot("user-list", obj.getGraphResource());
-            updateUserList();
+            reSortUserlist(userList);
+            // Restore any selections previously made
+            if (("userlistSelection" in obj) && obj.userlistSelection)
+                setSelectedNicknames(userList, obj.userlistSelection);
         }
         else
         {
@@ -2569,13 +2924,28 @@ function setListMode(mode)
 
 function updateUserList()
 {
-    var node;
-    var sortDirection;
+    var node, chan;
 
     node = document.getElementById("user-list");
     if (!node.view)
         return;
 
+    // We'll lose the selection in a bit, if we don't save it if necessary:
+    if (("currentObject" in client) && client.currentObject &&
+        client.currentObject.TYPE == "IRCChannel")
+    {
+        chan = client.currentObject;
+        chan.userlistSelection = getSelectedNicknames(node, chan);
+    }
+    reSortUserlist(node);
+
+    // If this is a channel, restore the selection in the userlist.
+    if (chan)
+        setSelectedNicknames(node, client.currentObject.userlistSelection);
+}
+
+function reSortUserlist(node)
+{
     const nsIXULSortService = Components.interfaces.nsIXULSortService;
     const isupports_uri = "@mozilla.org/xul/xul-sort-service;1";
 
@@ -2589,7 +2959,7 @@ function updateUserList()
     if (client.prefs["sortUsersByMode"])
         sortResource = RES_PFX + "sortname";
     else
-        sortResource = RES_PFX + "nick";
+        sortResource = RES_PFX + "unicodeName";
 
     try
     {
@@ -2873,7 +3243,11 @@ function getTabForObject (source, create)
 
         var browser = document.createElement ("browser");
         browser.setAttribute("class", "output-container");
-        browser.setAttribute("type", "content");
+        // Only use type="chrome" if the host app supports it properly:
+        if (client.hostCompat.typeChromeBrowser)
+            browser.setAttribute("type", "chrome");
+        else
+            browser.setAttribute("type", "content");
         browser.setAttribute("flex", "1");
         browser.setAttribute("tooltip", "html-tooltip-node");
         browser.setAttribute("context", "context:messages");
@@ -2955,6 +3329,24 @@ function tabdnd_dstart (aEvent, aXferData, aDragAction)
                                      name + "</a>");
 }
 
+var userlistDNDObserver = new Object();
+
+userlistDNDObserver.onDragStart =
+function userlistdnd_dstart(event, transferData, dragAction)
+{
+    var col = new Object(), row = new Object(), cell = new Object();
+    var tree = document.getElementById('user-list');
+    tree.treeBoxObject.getCellAt(event.clientX, event.clientY, row, col, cell);
+    // Check whether we're actually on a normal row and cell
+    if (!cell.value || (row.value == -1)) 
+        return;
+    var user = tree.contentView.getItemAtIndex(row.value).firstChild.firstChild;
+    var nickname = user.getAttribute("unicodeName");
+
+    transferData.data = new TransferData();
+    transferData.data.addDataForFlavour("text/unicode", nickname);
+}
+
 function deleteTab (tb)
 {
     if (!ASSERT(tb.hasAttribute("viewKey"),
@@ -2978,14 +3370,14 @@ function deleteTab (tb)
     return key;
 }
 
-function filterOutput (msg, msgtype)
+function filterOutput(msg, msgtype, dest)
 {
     if ("outputFilters" in client)
     {
         for (var f in client.outputFilters)
         {
             if (client.outputFilters[f].enabled)
-                msg = client.outputFilters[f].func(msg, msgtype);
+                msg = client.outputFilters[f].func(msg, msgtype, dest);
         }
     }
 
@@ -3082,7 +3474,7 @@ function cli_say(msg)
 {
     if ("say" in client.currentObject)
     {
-        msg = filterOutput (msg, "PRIVMSG");
+        msg = filterOutput(msg, "PRIVMSG", client.currentObject);
         display(msg, "PRIVMSG", "ME!", client.currentObject);
         client.currentObject.say(msg);
 
@@ -3097,10 +3489,7 @@ function cli_say(msg)
 
         default:
             if (msg != "")
-            {
-                display(getMsg(MSG_ERR_NO_DEFAULT, client.currentObject.TYPE),
-                        MT_ERROR);
-            }
+                display(MSG_ERR_NO_DEFAULT, MT_ERROR);
             break;
     }
 }
@@ -3187,6 +3576,54 @@ function usr_getprefmgr()
     }
 
     return this._prefManager;
+}
+
+CIRCDCCUser.prototype.__defineGetter__("prefs", dccusr_getprefs);
+function dccusr_getprefs()
+{
+    if (!("_prefs" in this))
+    {
+        this._prefManager = getDCCUserPrefManager(this);
+        this._prefs = this._prefManager.prefs;
+    }
+
+    return this._prefs;
+}
+
+CIRCDCCUser.prototype.__defineGetter__("prefManager", dccusr_getprefmgr);
+function dccusr_getprefmgr()
+{
+    if (!("_prefManager" in this))
+    {
+        this._prefManager = getDCCUserPrefManager(this);
+        this._prefs = this._prefManager.prefs;
+    }
+
+    return this._prefManager;
+}
+
+CIRCDCCChat.prototype.__defineGetter__("prefs", dccchat_getprefs);
+function dccchat_getprefs()
+{
+    return this.user.prefs;
+}
+
+CIRCDCCChat.prototype.__defineGetter__("prefManager", dccchat_getprefmgr);
+function dccchat_getprefmgr()
+{
+    return this.user.prefManager;
+}
+
+CIRCDCCFileTransfer.prototype.__defineGetter__("prefs", dccfile_getprefs);
+function dccfile_getprefs()
+{
+    return this.user.prefs;
+}
+
+CIRCDCCFileTransfer.prototype.__defineGetter__("prefManager", dccfile_getprefmgr);
+function dccfile_getprefmgr()
+{
+    return this.user.prefManager;
 }
 
 CIRCNetwork.prototype.display =
@@ -3763,17 +4200,43 @@ function addHistory (source, obj, mergeData)
         var rowExtents = ci.extents;
         var nickColumnCount = nickColumns.length;
 
-        // Are we the same user as last time?
-        var sameNick = (nickColumnCount > 0 &&
-                        nickColumns[nickColumnCount - 1].parentNode.
-                        getAttribute("msg-user") ==
-                        thisUserCol.parentNode.getAttribute("msg-user"));
+        var lastRowSpan, sameNick, sameDest, haveSameType, needSameType;
+        var isAction, collapseActions;
+        if (nickColumnCount == 0) // No message to collapse to.
+        {
+            sameNick = sameDest = needSameType = haveSameType = false;
+            lastRowSpan = 0;
+        }
+        else // 1 or more messages, check for doubles
+        {
+            var lastRow = nickColumns[nickColumnCount - 1].parentNode;
+            // What was the span last time?
+            lastRowSpan = Number(nickColumns[0].getAttribute("rowspan"));
+            // Are we the same user as last time?
+            sameNick = (lastRow.getAttribute("msg-user") ==
+                        inobj.getAttribute("msg-user"));
+            // Do we have the same destination as last time?
+            sameDest = (lastRow.getAttribute("msg-dest") ==
+                        inobj.getAttribute("msg-dest"));
+            // Is this message the same type as the last one?
+            haveSameType = (lastRow.getAttribute("msg-type") ==
+                            inobj.getAttribute("msg-type"));
+            // Is either of the messages an action? We may not want to collapse
+            // depending on the collapseActions pref
+            isAction = ((inobj.getAttribute("msg-type") == "ACTION") ||
+                        (lastRow.getAttribute("msg-type") == "ACTION"));
+            // Do we collapse actions?
+            collapseActions = source.prefs["collapseActions"];
 
-        // What was the span last time?
-        var lastRowSpan = (nickColumnCount > 0) ?
-            Number(nickColumns[0].getAttribute("rowspan")) : 0;
+            // Does the motif collapse everything, regardless of type?
+            // NOTE: the collapseActions pref can override this for actions
+            needSameType = !(("motifSettings" in source) &&
+                             source.motifSettings &&
+                             ("collapsemore" in source.motifSettings));
+        }
 
-        if (sameNick)
+        if (sameNick && sameDest && (haveSameType || !needSameType) &&
+            (!isAction || collapseActions))
         {
             obj = inobj;
             if (ci.nested)
@@ -3902,6 +4365,10 @@ function findPreviousColumnInfo(table)
 
 function getLogPath(obj)
 {
+    // If we're logging, return the currently-used URL.
+    if (obj.logFile)
+        return getURLSpecFromFile(obj.logFile.path);
+    // If not, return the ideal URL.
     return getURLSpecFromFile(obj.prefs["logFileName"]);
 }
 
@@ -3922,10 +4389,39 @@ function cli_gccount ()
 client.quit =
 function cli_quit (reason)
 {
+    var net, netReason;
     for (var n in client.networks)
     {
-        if (client.networks[n].isConnected())
-            client.networks[n].quit(reason);
+        net = client.networks[n];
+        if (net.isConnected())
+        {
+            netReason = (reason ? reason : net.prefs["defaultQuitMsg"]);
+            netReason = (netReason ? netReason : client.userAgent);
+            net.quit(netReason);
+        }
+    }
+}
+
+client.wantToQuit =
+function cli_wantToQuit(reason)
+{
+    
+    var close = true;
+    if (client.prefs["warnOnClose"])
+    {
+        const buttons = ["!yes", "!no"];
+        var checkState = { value: true };
+        var rv = confirmEx(MSG_CONFIRM_QUIT, buttons, 0, MSG_WARN_ON_EXIT,
+                           checkState);
+        close = (rv == 0);
+        client.prefs["warnOnClose"] = checkState.value;
+    }
+
+    if (close)
+    {
+        client.userClose = true;
+        display(MSG_CLOSING);
+        client.quit(reason);
     }
 }
 
@@ -4185,8 +4681,8 @@ function usr_updres()
         }
     }
 
-    // Counts up from Z to A.
-    var sortname = String.fromCharCode(90 - modeLevel) + "-" + this.unicodeName;
+    // Counts numerically down from 9.
+    var sortname = (9 - modeLevel) + "-" + this.unicodeName;
 
     // We want to show mode symbols, but only those we don't 'style'.
     if (mode && !mode.match(/^[@%+]$/))

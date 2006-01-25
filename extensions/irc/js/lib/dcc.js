@@ -129,7 +129,11 @@ function dcc_addhost(host, auth)
     };
 
     try {
-        var dnsRecord = this._dnsSvc.asyncResolve(host, false, listener, null);
+        const EQS = getService("@mozilla.org/event-queue-service;1",
+                               "nsIEventQueueService");
+        var th = EQS.getSpecialEventQueue(EQS.CURRENT_THREAD_EVENT_QUEUE);
+
+        var dnsRecord = this._dnsSvc.asyncResolve(host, false, listener, th);
     } catch (ex) {
         dd("Error resolving host to IP: " + ex);
     }
@@ -150,19 +154,25 @@ function dcc_addip(ip, auth)
 CIRCDCC.prototype.getMatches =
 function dcc_getmatches(nickname, filename, types, dirs, states)
 {
+    function matchNames(name, otherName)
+    {
+        return ((name.match(new RegExp(otherName, "i"))) ||
+                (name.toLowerCase().indexOf(otherName.toLowerCase()) != -1));
+    };
+
     var k;
     var list = new Array();
     if (!types)
         types = ["chat", "file"];
 
-    var n = new RegExp(nickname, "i");
-    var f = new RegExp(filename, "i");
+    var n = nickname;
+    var f = filename;
 
     if (arrayIndexOf(types, "chat") >= 0)
     {
         for (k = 0; k < this.chats.length; k++)
         {
-            if ((!nickname || this.chats[k].user.unicodeName.match(n)) &&
+            if ((!nickname || matchNames(this.chats[k].user.unicodeName, n)) &&
                 (!dirs || arrayIndexOf(dirs, this.chats[k].state.dir) >= 0) &&
                 (!states || arrayIndexOf(states, this.chats[k].state.state) >= 0))
             {
@@ -174,8 +184,8 @@ function dcc_getmatches(nickname, filename, types, dirs, states)
     {
         for (k = 0; k < this.files.length; k++)
         {
-            if ((!nickname || this.files[k].user.unicodeName.match(n)) &&
-                (!filename || this.files[k].fileName.match(f)) &&
+            if ((!nickname || matchNames(this.files[k].user.unicodeName, n)) &&
+                (!filename || matchNames(this.files[k].filename, f)) &&
                 (!dirs || arrayIndexOf(dirs, this.files[k].state.dir) >= 0) &&
                 (!states || arrayIndexOf(states, this.files[k].state.state) >= 0))
             {
@@ -866,6 +876,9 @@ function serv_ctcp(e)
         return false;
     }
 
+    e.CTCPCode = toUnicode(e.CTCPCode, e.replyTo);
+    e.CTCPData = toUnicode(e.CTCPData, e.replyTo);
+
     e.type = "ctcp-" + e.CTCPCode;
     e.destMethod = "onCTCP" + ary[1][0].toUpperCase() +
                    ary[1].substr(1, ary[1].length).toLowerCase();
@@ -892,13 +905,14 @@ function dchat_ctcp(code, msg)
 {
     msg = msg || "";
 
-    this.connection.sendData("\x01" + code + " " + msg + "\x01\n");
+    this.connection.sendData("\x01" + fromUnicode(code, this) + " " +
+                             fromUnicode(msg, this) + "\x01\n");
 }
 
 CIRCDCCChat.prototype.say =
 function dchat_say (msg)
 {
-    this.connection.sendData(msg + "\n");
+    this.connection.sendData(fromUnicode(msg, this) + "\n");
 }
 
 CIRCDCCChat.prototype.act =
