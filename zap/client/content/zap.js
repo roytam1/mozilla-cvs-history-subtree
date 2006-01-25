@@ -2135,6 +2135,11 @@ OutboundCallHandler.fun(
       return ackTemplate;
     }
 
+    // we have a new dialog; set ourselves as listener so that we get
+    // any BYEs etc from now on:
+    this.call.dialog = dialog;
+    this.call.dialog.listener = this.call;
+    
     // try to parse answer:
     var sd;
     try {
@@ -2168,8 +2173,6 @@ OutboundCallHandler.fun(
 
     // finally. we've cleared all the hurdles:
     this.call.mediasession.startSession();
-    this.call.dialog = dialog;
-    this.call.dialog.listener = this.call;
     this.call["urn:mozilla:zap:session-running"] = "true";
     this.call["urn:mozilla:zap:status"] = "Connected";
     this.call.ringback.play("");
