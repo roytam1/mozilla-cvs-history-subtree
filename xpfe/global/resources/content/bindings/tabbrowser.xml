@@ -594,9 +594,14 @@
                 this.mCurrentBrowser.focusedElement = document.commandDispatcher.focusedElement;
               }
 
-              if (this.mCurrentBrowser.focusedElement) {
+              if (this.mCurrentBrowser.focusedElement instanceof NSHTMLElement || 
+                  this.mCurrentBrowser.focusedElement instanceof XULElement) {
                 // Clear focus outline before we draw on top of it
                 this.mCurrentBrowser.focusedElement.blur();
+              }
+              else {
+                // non-HTML/XUL elements have no blur method, see bug 323806
+                this.mCurrentBrowser.focusedElement = null;
               }
               this.mCurrentBrowser.setAttribute("type", "content");
             }
